@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/23 23:20:57  smite-meister
+// WAD2+WAD3 support added!
+//
 // Revision 1.2  2002/12/16 22:19:37  smite-meister
 // HUD fix
 //
@@ -473,13 +476,13 @@ static void readweapon(MYFILE *f,int num)
       value=searchvalue(s);
       word=strtok(s," ");
 
-           if(!strcmp(word,"Ammo"))       doomweaponinfo[num].ammo      =(ammotype_t)value;
-      else if(!strcmp(word,"Deselect"))   doomweaponinfo[num].upstate   =(statenum_t)value;
-      else if(!strcmp(word,"Select"))     doomweaponinfo[num].downstate =(statenum_t)value;
-      else if(!strcmp(word,"Bobbing"))    doomweaponinfo[num].readystate=(statenum_t)value;
-      else if(!strcmp(word,"Shooting"))   doomweaponinfo[num].atkstate  =
-					    doomweaponinfo[num].holdatkstate = (statenum_t)value;
-      else if(!strcmp(word,"Firing"))     doomweaponinfo[num].flashstate=(statenum_t)value;
+           if(!strcmp(word,"Ammo"))       wpnlev1info[num].ammo      =(ammotype_t)value;
+      else if(!strcmp(word,"Deselect"))   wpnlev1info[num].upstate   =(statenum_t)value;
+      else if(!strcmp(word,"Select"))     wpnlev1info[num].downstate =(statenum_t)value;
+      else if(!strcmp(word,"Bobbing"))    wpnlev1info[num].readystate=(statenum_t)value;
+      else if(!strcmp(word,"Shooting"))   wpnlev1info[num].atkstate  =
+					    wpnlev1info[num].holdatkstate = (statenum_t)value;
+      else if(!strcmp(word,"Firing"))     wpnlev1info[num].flashstate=(statenum_t)value;
       else deh_error("Weapon %d : unknow word '%s'\n",num,word);
     }
   } while(s[0]!='\n' && !myfeof(f));
@@ -506,7 +509,7 @@ static void readammo(MYFILE *f,int num)
 	word=strtok(s," ");
 
 	if(!strcmp(word,"Max"))
-	  maxammo[num] = value;
+	  maxammo1[num] = value;
 	else if(!strcmp(word,"Per"))
 	  {
 	    clipammo[num]=value;
@@ -578,7 +581,7 @@ static void readmisc(MYFILE *f)
          if(!strcmp(word2,"="))               idkfa_armor=value;
          else if(!strcmp(word2,"Class"))      idkfa_armor_class=value;
       }
-      else if(!strcmp(word,"BFG"))            doomweaponinfo[wp_bfg].ammopershoot = value;
+      else if(!strcmp(word,"BFG"))            wpnlev1info[wp_bfg].ammopershoot = value;
       else if(!strcmp(word,"Monsters"))      {} // i don't found where is implemented
       else deh_error("Misc : unknow word '%s'\n",word);
     }
