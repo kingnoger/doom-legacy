@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by Raven Software, Corp.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,14 +18,11 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/11/04 21:12:52  smite-meister
+// save/load fixed
+//
 // Revision 1.12  2004/07/05 16:53:25  smite-meister
 // Netcode replaced
-//
-// Revision 1.11  2004/01/06 14:37:45  smite-meister
-// six bugfixes, cleanup
-//
-// Revision 1.10  2004/01/02 14:25:01  smite-meister
-// cleanup
 //
 // Revision 1.9  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
@@ -35,9 +32,6 @@
 //
 // Revision 1.7  2003/11/12 11:07:21  smite-meister
 // Serialization done. Map progression.
-//
-// Revision 1.6  2003/05/11 21:23:50  smite-meister
-// Hexen fixes
 //
 // Revision 1.5  2003/03/15 20:07:16  smite-meister
 // Initial Hexen compatibility!
@@ -54,12 +48,10 @@
 // Revision 1.1.1.1  2002/11/16 14:17:58  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//   Heretic player sprite action functions (Heretic weapons)
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Heretic weapon action functions
 
 #include "doomdef.h"
 #include "doomdata.h"
@@ -73,8 +65,8 @@
 #include "info.h"
 
 #include "p_enemy.h"
-#include "r_main.h"
 #include "r_sprite.h"
+#include "r_defs.h"
 #include "sounds.h"
 #include "m_random.h"
 #include "tables.h"

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.24  2004/11/04 21:12:52  smite-meister
+// save/load fixed
+//
 // Revision 1.23  2004/10/27 17:37:06  smite-meister
 // netcode update
 //
@@ -108,20 +111,19 @@
 // Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
 // Initial import into CVS (v1.29 pr3)
 //
-//
-// DESCRIPTION:
-//      Enemy thinking, AI.
-//      Action Pointer Functions
-//      that are associated with states/frames.
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Enemy thinking, AI.
+/// Action Functions that are associated with states/frames.
 
 #include "doomdef.h"
 #include "doomtype.h"
-#include "p_enemy.h"
 #include "command.h"
 #include "cvars.h"
+
 #include "p_spec.h"
+#include "p_enemy.h"
 
 #include "g_game.h"
 #include "g_map.h"
@@ -129,7 +131,6 @@
 #include "g_pawn.h"
 #include "g_player.h"
 
-#include "r_main.h"
 #include "sounds.h"
 #include "m_random.h"
 #include "p_maputl.h"

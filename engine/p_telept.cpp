@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,26 +18,17 @@
 //
 //
 // $Log$
-// Revision 1.15  2004/08/29 20:48:48  smite-meister
-// bugfixes. wow.
+// Revision 1.16  2004/11/04 21:12:53  smite-meister
+// save/load fixed
 //
 // Revision 1.14  2004/04/25 16:26:50  smite-meister
 // Doxygen
 //
-// Revision 1.13  2004/01/02 14:25:01  smite-meister
-// cleanup
-//
 // Revision 1.12  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
-// Revision 1.11  2003/11/23 00:41:55  smite-meister
-// bugfixes
-//
 // Revision 1.10  2003/06/20 20:56:07  smite-meister
 // Presentation system tweaked
-//
-// Revision 1.9  2003/05/11 21:23:51  smite-meister
-// Hexen fixes
 //
 // Revision 1.8  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
@@ -64,11 +55,10 @@
 // Revision 1.1.1.1  2002/11/16 14:18:04  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//      Teleportation.
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Teleportation.
 
 #include "doomdef.h"
 #include "g_game.h"
@@ -77,10 +67,10 @@
 
 #include "m_random.h"
 #include "p_maputl.h"
-#include "r_state.h"
-#include "r_main.h"
-#include "sounds.h"
 
+#include "r_defs.h"
+#include "sounds.h"
+#include "tables.h"
 
 bool Actor::Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent)
 {
@@ -148,9 +138,11 @@ bool Actor::Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent)
   return true;
 }
 
-// =========================================================================
+
+
+//=========================================================================
 //                            TELEPORTATION
-// =========================================================================
+//=========================================================================
 
 bool Map::EV_Teleport(int tag, line_t *line, Actor *thing, int type, int flags)
 {
@@ -310,4 +302,3 @@ bool Map::EV_SilentLineTeleport(int tag, line_t *line, Actor *thing, bool revers
       }
   return false;
 }
-

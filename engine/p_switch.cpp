@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2004/11/04 21:12:53  smite-meister
+// save/load fixed
+//
 // Revision 1.16  2004/08/29 20:48:48  smite-meister
 // bugfixes. wow.
 //
@@ -79,9 +82,7 @@
 
 #include "p_spec.h"
 #include "sounds.h"
-#include "r_main.h"
 #include "r_data.h"
-#include "r_state.h"
 
 #include "w_wad.h"
 #include "z_zone.h"

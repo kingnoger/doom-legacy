@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2004/11/04 21:12:54  smite-meister
+// save/load fixed
+//
 // Revision 1.15  2004/10/27 17:37:10  smite-meister
 // netcode update
 //
@@ -220,7 +223,7 @@ consvar_t cv_exitmode   = {"exitmode", "1", CV_NETVAR, exitmode_cons_t, NULL};
 consvar_t cv_fraglimit  = {"fraglimit" ,"0",CV_NETVAR | CV_CALL | CV_NOINIT,fraglimit_cons_t, FragLimit_OnChange};
 consvar_t cv_timelimit  = {"timelimit" ,"0",CV_NETVAR | CV_CALL | CV_NOINIT,CV_Unsigned, TimeLimit_OnChange};
 
-consvar_t cv_allowjump       = {"allowjump","1",CV_NETVAR,CV_YesNo};
+consvar_t cv_allowjump       = {"allowjump","6",CV_NETVAR,CV_Unsigned};// Doom 6, Hexen 9/6
 consvar_t cv_allowrocketjump = {"allowrocketjump","0",CV_NETVAR,CV_YesNo};
 consvar_t cv_allowautoaim    = {"allowautoaim","1",CV_NETVAR,CV_YesNo};
 consvar_t cv_allowmlook      = {"allowfreelook","1",CV_NETVAR,CV_YesNo};
@@ -415,8 +418,6 @@ bool GameInfo::SV_SpawnServer()
   bool local = !netgame; // temp HACK
   SV_Reset();
   CONS_Printf("Starting server...\n");
-
-  Consoleplayer.clear();
 
   if (!dedicated)
     {

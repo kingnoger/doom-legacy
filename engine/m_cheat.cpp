@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2004/11/04 21:12:52  smite-meister
+// save/load fixed
+//
 // Revision 1.22  2004/10/27 17:37:06  smite-meister
 // netcode update
 //
@@ -619,7 +622,7 @@ static void CheatWarpFunc(PlayerPawn *p, const byte *arg)
       mapnum = (arg[0] - '0')*10 + arg[1] - '0';
       if (mapnum < 1 || mapnum > 99)
 	return;
-      sprintf(name, "MAP%2d", mapnum);
+      sprintf(name, "%2d", mapnum);
       break;
 
     default:
@@ -628,7 +631,7 @@ static void CheatWarpFunc(PlayerPawn *p, const byte *arg)
       mapnum = arg[1] - '0';
       if (episode < 1 || episode > 9 || mapnum < 1 || mapnum > 9)
 	return;
-      sprintf(name, "E%1dM%1d", episode, mapnum);
+      sprintf(name, "%1d%1d", episode-1, mapnum);
     }
 
   if (game.mode == gm_heretic)

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2004/11/04 21:12:51  smite-meister
+// save/load fixed
+//
 // Revision 1.16  2004/10/27 17:37:05  smite-meister
 // netcode update
 //
@@ -84,7 +87,6 @@
 #include "p_maputl.h"
 #include "p_enemy.h"
 #include "sounds.h"
-#include "r_main.h"
 #include "tables.h"
 #include "info.h"
 
@@ -392,7 +394,7 @@ void A_PotteryExplode(DActor *actor)
 
 void A_PotteryChooseBit(DActor *actor)
 {
-  actor->SetState(statenum_t(actor->info->deathstate + P_Random()%5 + 1));
+  actor->SetState(statenum_t(actor->info->deathstate + 1 + 2*(P_Random() % 5)));
   actor->tics = 256+(P_Random()<<1);
 }
 

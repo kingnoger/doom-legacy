@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/11/04 21:12:54  smite-meister
+// save/load fixed
+//
 // Revision 1.8  2004/08/06 18:54:39  smite-meister
 // netcode update
 //
@@ -128,7 +131,7 @@ LNetInterface::LNetInterface(const Address &bind)
 {
   master_con = NULL;
   server_con = NULL;
-  netstate = NS_Unconnected;
+  netstate = SV_Unconnected;
 
   nowtime = nextpingtime = 0;
   autoconnect = false;
@@ -393,17 +396,22 @@ void LNetInterface::CL_Reset()
   if (server_con)
     disconnect(server_con, NetConnection::ReasonSelfDisconnect, "Client quits.\n");
 
-  netstate = NS_Unconnected;
+  netstate = SV_Unconnected;
 }
 
 
 
 
 
-void LNetInterface::SV_Open()
+void LNetInterface::SV_Open(bool wait)
 {
   setAllowsConnections(true);
-  netstate = SV_WaitingClients;
+
+  if (wait)
+    netstate = SV_WaitingClients;
+  else
+    netstate = SV_Running;
+
   //if (cv_internetserver.value) RegisterServer(0, 0);
 }
 
@@ -436,7 +444,7 @@ void LNetInterface::SV_Reset()
   master_con = NULL;
 
   CL_Reset();
-  netstate = NS_Unconnected;
+  netstate = SV_Unconnected;
 }
 
 

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by Raven Software, Corp.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,11 +18,11 @@
 //
 //
 // $Log$
+// Revision 1.22  2004/11/04 21:12:52  smite-meister
+// save/load fixed
+//
 // Revision 1.21  2004/08/12 18:30:23  smite-meister
 // cleaned startup
-//
-// Revision 1.20  2004/01/06 14:37:45  smite-meister
-// six bugfixes, cleanup
 //
 // Revision 1.19  2004/01/02 14:25:01  smite-meister
 // cleanup
@@ -35,9 +35,6 @@
 //
 // Revision 1.16  2003/12/03 10:49:49  smite-meister
 // Save/load bugfix, text strings updated
-//
-// Revision 1.15  2003/11/23 00:41:55  smite-meister
-// bugfixes
 //
 // Revision 1.14  2003/11/12 11:07:21  smite-meister
 // Serialization done. Map progression.
@@ -81,11 +78,10 @@
 // Revision 1.1.1.1  2002/11/16 14:17:58  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//   Heretic/Hexen specific extra game routines, gametype patching
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Heretic/Hexen specific extra game routines, gametype patching
 
 #include "doomdef.h"
 #include "g_game.h"
@@ -97,15 +93,15 @@
 #include "p_spec.h"
 #include "p_enemy.h"
 #include "p_maputl.h"
-#include "r_main.h"
+#include "p_heretic.h"
+
 #include "sounds.h"
 #include "m_random.h"
 #include "dstrings.h"
-#include "p_heretic.h"
+
 #include "tables.h"
 
-//---------------------------------------------------------------------------
-// P_MinotaurSlam
+
 
 void P_MinotaurSlam(Actor *source, Actor *target)
 {
@@ -127,8 +123,6 @@ void P_MinotaurSlam(Actor *source, Actor *target)
   */
 }
 
-//---------------------------------------------------------------------------
-// P_TouchWhirlwind
 
 bool P_TouchWhirlwind(Actor *target)
 {
@@ -159,13 +153,9 @@ bool P_TouchWhirlwind(Actor *target)
 
 
 //----------------------------------------------------------------------------
-//
-// was P_FaceMobj
-//
 // Returns 1 if 'source' needs to turn clockwise, or 0 if 'source' needs
 // to turn counter clockwise.  'delta' is set to the amount 'source'
 // needs to turn.
-//
 //----------------------------------------------------------------------------
 int P_FaceMobj(Actor *source, Actor *target, angle_t *delta)
 {
@@ -205,14 +195,8 @@ int P_FaceMobj(Actor *source, Actor *target, angle_t *delta)
     }
 }
 
-//----------------------------------------------------------------------------
-//
-// was P_SeekerMissile
-//
-// Returns true if target was tracked, false if not.
-//
-//----------------------------------------------------------------------------
 
+// Returns true if target was tracked, false if not.
 bool DActor::SeekerMissile(angle_t thresh, angle_t turnMax)
 {
   int dir;
@@ -258,15 +242,9 @@ bool DActor::SeekerMissile(angle_t thresh, angle_t turnMax)
   return true;
 }
 
-//---------------------------------------------------------------------------
-//
-// was P_SpawnMissileAngle
-//
+
 // Returns NULL if the missile exploded immediately, otherwise returns
 // a Actor pointer to the missile.
-//
-//---------------------------------------------------------------------------
-
 DActor *DActor::SpawnMissileAngle(mobjtype_t t, angle_t angle, fixed_t momz)
 {
   fixed_t mz;

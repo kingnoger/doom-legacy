@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2004/11/04 21:12:53  smite-meister
+// save/load fixed
+//
 // Revision 1.16  2004/10/27 17:37:07  smite-meister
 // netcode update
 //
@@ -65,8 +68,8 @@
 #include "cvars.h"
 #include "d_items.h"
 #include "m_random.h"
+#include "r_defs.h"
 
-#include "r_main.h"
 #include "sounds.h"
 #include "tables.h"
 

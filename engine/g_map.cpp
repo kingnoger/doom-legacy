@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.46  2004/11/04 21:12:51  smite-meister
+// save/load fixed
+//
 // Revision 1.45  2004/10/31 22:30:53  smite-meister
 // cleanup
 //
@@ -99,9 +102,9 @@
 
 #include "p_spec.h"
 #include "p_hacks.h"
-#include "r_main.h"
 #include "hud.h"
 #include "m_random.h"
+
 #include "sounds.h"
 #include "z_zone.h"
 #include "tables.h"

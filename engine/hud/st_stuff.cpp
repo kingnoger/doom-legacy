@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.26  2004/11/04 21:12:53  smite-meister
+// save/load fixed
+//
 // Revision 1.25  2004/10/31 22:30:54  smite-meister
 // cleanup
 //
@@ -280,6 +283,7 @@ static Texture *PatchFaceBack; // face background
 #define NUMCARDS 6
 static Texture *PatchKeys[NUMCARDS]; // 3 key-cards, 3 skulls
 static Texture *PatchSTATBAR;
+static Texture *PatchKEYBAR;
 
 // ammo type pics (Texture's)
 static const char DHAmmoPics[NUMAMMO + 1][10] =
@@ -445,7 +449,7 @@ void ST_LoadHexenData()
   //PatchH2TOP = tc.GetPtr("H2TOP");
 
   PatchSTATBAR = tc.GetPtr("STATBAR");
-  //PatchKEYBAR = tc.GetPtr("KEYBAR");
+  PatchKEYBAR = tc.GetPtr("KEYBAR");
 
   //PatchARTICLEAR = tc.GetPtr("ARTICLS");
   PatchARMCLEAR = tc.GetPtr("ARMCLS");
@@ -804,7 +808,11 @@ void HUD::ST_RefreshBackground()
 
   if (game.mode == gm_hexen)
     {
-      PatchH2BAR->Draw(st_x, st_y-1, flags); // y = 134
+      PatchH2BAR->Draw(st_x, st_y-1, flags); // x=0, y = 134
+      if (!automap.active)
+	PatchSTATBAR->Draw(st_x+38, st_y-135+162, flags);
+      else
+	PatchKEYBAR->Draw(st_x+38, st_y-135+162, flags);
     }
   else if (game.mode == gm_heretic)
     {

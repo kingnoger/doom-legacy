@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.38  2004/11/04 21:12:52  smite-meister
+// save/load fixed
+//
 // Revision 1.37  2004/10/27 17:37:06  smite-meister
 // netcode update
 //
@@ -109,13 +112,12 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief  Handling Actor interactions (i.e., collisions).
+/// \brief Actor interactions (collisions, damage, death).
 
 #include "doomdef.h"
 #include "command.h"
 #include "cvars.h"
 
-#include "am_map.h"
 #include "dstrings.h"
 #include "m_random.h"
 #include "g_damage.h"
@@ -132,16 +134,22 @@
 #include "p_heretic.h"
 #include "sounds.h"
 #include "r_sprite.h"
-#include "r_main.h"
 #include "tables.h"
 
 #include "hud.h"
 
-#define BONUSADD        6
+#define BONUSADD 6
+#define BASETHRESHOLD 100
 
+extern int ArmorIncrement[NUMCLASSES][NUMARMOR];
 
-// Actor::Killed is called when PlayerPawn dies.
+//======================================================
+//   Killing a PlayerPawn
+//======================================================
+
+// XXX::Killed is called when a class XXX member kills a PlayerPawn.
 // It returns the proper death message and updates the score.
+
 void Actor::Killed(PlayerPawn *victim, Actor *inflictor)
 {
   CONS_Printf("%s is killed by an inanimate carbon rod.\n", victim->player->name.c_str());
@@ -280,9 +288,11 @@ void PlayerPawn::Killed(PlayerPawn *victim, Actor *inflictor)
 
 
 
+
+//======================================================
+//    Touching another Actor
 //======================================================
 
-//---------------------------------------------
 // Called when two actors touch one another
 // Returns true if any interaction takes place.
 
@@ -483,6 +493,7 @@ bool DActor::Touch(Actor *p)
   */
 }
 
+
 bool PlayerPawn::Touch(Actor *p)
 {
   if ((p->flags2 & MF2_PUSHABLE) && !(flags2 & MF2_CANNOTPUSH))
@@ -510,8 +521,18 @@ bool PlayerPawn::Touch(Actor *p)
   return (p->flags & MF_SOLID);
 }
 
+
+
+//======================================================
+//    Giving damage
+//======================================================
+
 // Gives damage to the Actor. If the damage is "stopped" (absorbed), returns true.
-// Damage comes directly from inflictor but is caused by source.
+// Inflictor is the thing that caused the damage
+// (creature or missile, can also be NULL (slime, etc.))
+// Source is the thing responsible for the damage (the one to get angry at).
+// It may also be NULL. Source and inflictor are the same for melee attacks.
+
 bool Actor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 {
   if (!(flags & MF_SHOOTABLE))
@@ -584,7 +605,6 @@ bool Actor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 }
 
 
-#define BASETHRESHOLD 100
 
 bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 {
@@ -773,7 +793,133 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 }
 
 
+bool P_AutoUseChaosDevice(PlayerPawn *p);
+void P_AutoUseHealth(PlayerPawn *p, int saveHealth);
 
+bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
+{
+  if (dtype & dt_always)
+    {
+      // unavoidable damage
+      // pain flash
+      player->damagecount += damage;
+      return Actor::Damage(inflictor, source, damage, dtype);
+    }
+
+  if (game.skill == sk_baby)
+    damage >>= 1;   // take half damage in trainer mode
+  
+  if (inflictor && inflictor->IsOf(DActor::_type))
+    {
+      DActor *d = (DActor *)inflictor;
+      switch (d->type)
+	{
+	case MT_MACEFX4: // Death ball
+	  if (powers[pw_invulnerability])
+	    // Can't hurt invulnerable players
+	    damage = 0;
+	    break;	  
+	  if (P_AutoUseChaosDevice(this))
+	    // Player was saved using chaos device
+	    return false;	
+	  damage = 10000; // Something's gonna die
+	  break;
+        case MT_PHOENIXFX2: // Flame thrower
+	  if (P_Random() < 128)
+            { // Freeze player for a bit
+	      reactiontime += 4;
+            }
+	  break;
+	default:
+	  break;
+	}
+    }
+
+  int i, temp;
+  // player specific
+  if (!(flags & MF_CORPSE))
+    {
+      // end of game hellslime hack
+      if (subsector->sector->special == 11 && damage >= health)
+	damage = health - 1;
+
+      // ignore damage in GOD mode, or with INVUL power.
+      if ((cheats & CF_GODMODE) || powers[pw_invulnerability])
+	return false;
+
+      // doom armor
+      temp = armorpoints[armor_field];
+      if (temp > 0)
+        {
+	  int saved = int(damage * armorfactor[armor_field]);
+
+	  if (temp <= saved)
+            {
+	      // armor is used up
+	      saved = temp;
+	      armorfactor[armor_field] = 0;
+            }
+	  armorpoints[armor_field] -= saved;
+	  damage -= saved;
+        }
+
+      // hexen armor
+      float save = toughness;
+      for (i = armor_armor; i < NUMARMOR; i++)
+	save += float(armorpoints[i])/100;
+      if (save > 0)
+	{
+	  // armor absorbed some damage
+	  if (save > 1)
+	    save = 1;
+
+	  // armor deteriorates
+	  for (i = armor_armor; i < NUMARMOR; i++)
+	    if (armorpoints[i])
+	      {
+		armorpoints[i] -= int(damage * ArmorIncrement[pclass][i] / (100 * armorfactor[i]));
+		if (armorpoints[i] <= 2)
+		  armorpoints[i] = 0;
+	      }
+
+	  int saved = int(damage * save);
+	  if (damage > 200)
+	    saved = int(200 * save);
+	  damage -= saved;
+	}      
+
+      PlayerPawn *s = NULL;
+      if (source && source->IsOf(PlayerPawn::_type))
+	s = (PlayerPawn *)source;
+
+      // added team play and teamdamage (view logboris at 13-8-98 to understand)
+      if (s && (s->player->team == player->team) && !cv_teamdamage.value && (s != this))
+	return false;
+
+      // autosavers
+      if (damage >= health && (game.skill == sk_baby) && !morphTics)
+	{ // Try to use some inventory health
+	  P_AutoUseHealth(this, damage-health+1);
+	}
+
+      // pain flash
+      player->damagecount += damage;
+
+      pres->SetAnim(presentation_t::Pain);
+    }
+
+  attacker = source;
+
+  bool ret = Actor::Damage(inflictor, source, damage, dtype);
+
+  return ret;
+}
+
+
+
+//======================================================
+//   Dying
+//======================================================
 
 // inflictor is the bullet, source is the one who pulled the trigger ;)
 void Actor::Die(Actor *inflictor, Actor *source)
@@ -878,7 +1024,6 @@ void DActor::Die(Actor *inflictor, Actor *source)
 
 
 
-
 void PlayerPawn::Die(Actor *inflictor, Actor *source)
 {
   Actor::Die(inflictor, source);
@@ -947,7 +1092,12 @@ void PlayerPawn::Die(Actor *inflictor, Actor *source)
 
 
 
-//============================================================
+
+//======================================================
+//   Picking things up
+//======================================================
+
+
 //  The Heretic way of respawning items. Unused.
 
 void P_HideSpecialThing(DActor *thing)
@@ -975,11 +1125,10 @@ void A_RestoreSpecialThing2(DActor *thing)
 }
 
 
-
 int  p_sound;  // pickupsound
 bool p_remove; // should the stuff be removed?
 
-// pickups.
+
 void PlayerPawn::TouchSpecialThing(DActor *special)
 {                  
   // Dead thing touching.

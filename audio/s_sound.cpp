@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.28  2004/11/04 21:12:51  smite-meister
+// save/load fixed
+//
 // Revision 1.27  2004/10/31 22:23:59  smite-meister
 // default sound
 //
@@ -100,11 +103,10 @@
 // Revision 1.1.1.1  2002/11/16 14:17:48  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:  
-//   Sound system and cache
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Sound system and cache
 
 #include <stdlib.h> // rand
 
@@ -118,7 +120,7 @@
 #include "g_player.h"
 
 #include "m_argv.h"
-#include "r_main.h"     //R_PointToAngle2() used to calc stereo sep.
+#include "r_defs.h"
 
 #include "i_sound.h"
 #include "s_sound.h"

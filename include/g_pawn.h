@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.23  2004/11/04 21:12:54  smite-meister
+// save/load fixed
+//
 // Revision 1.22  2004/10/27 17:37:09  smite-meister
 // netcode update
 //
@@ -85,8 +88,6 @@
 
 using namespace std;
 
-#define JUMPSPEED (6*FRACUNIT/NEWTICRATERATIO)
-
 
 /// Player internal flags, for cheats and debug. Must fit into an int.
 enum cheat_t
@@ -128,7 +129,6 @@ private:
 
 public:
   int color; // stupid extra color value for automap
-  //int skin;
 
   int maxhealth;
   float speed; ///< walking speed (units/tic), runspeed = 2*speed
@@ -161,80 +161,79 @@ class PlayerPawn : public Pawn
 {
   DECLARE_CLASS(PlayerPawn);
 public:
-  // Overlay view sprites (gun, etc).
-  pspdef_t psprites[NUMPSPRITES];
+  /// Controlling player
+  class PlayerInfo *player; 
 
-  class PlayerInfo *player; // controlling player
+  /// player class, a Hexen kludge
+  byte pclass;
 
-  byte pclass; // player class, a Hexen kludge
-
-  int morphTics;   // player is in a morphed state if > 0
-
-  // Inventory
-  int invTics; // when >0 show inventory in hud
-  vector<inventory_t> inventory;
-  int invSlot;   // active inventory slot is inventory[invSlot]
-
-  // Tic counters for power ups.
-  int powers[NUMPOWERS];
-
-  // Bit flags, for cheats and debug.
-  int cheats;
-
-  // True if button was down last tic. (into eflags?)
+  /// True if the corresponding button was down last tic.
   bool attackdown;
   bool usedown;
-  bool jumpdown;   // dont jump like a monkey!
+  bool jumpdown;  // don't jump like a monkey!
 
-  int  refire;     // Refired shots are less accurate.
+  int refire;     ///< Refired shots are less accurate. to Pawn?
+  int morphTics;  ///< Player is in a morphed state if >0
+  int fly_zspeed; ///< For smoothing the z motion while flying
 
-  int  keycards; // bit field, see the definition of keycard_t
+  /// First person sprites (weapon and muzzle flash)
+  pspdef_t psprites[NUMPSPRITES];
+
+
+  /// Inventory
+  vector<inventory_t> inventory;
+  int invTics;  ///< When >0, show inventory in HUD
+  int invSlot;  ///< Active inventory slot is inventory[invSlot]
+
+  int  keycards; ///< Bit field, see the definition of keycard_t
   bool backpack;
 
-  weapontype_t pendingweapon;   // Is wp_nochange if not changing.
-  weapontype_t readyweapon;
+  weapontype_t readyweapon;   ///< Current weapon
+  weapontype_t pendingweapon; ///< Weapon we are changing to or wp_nochange
   bool         weaponowned[NUMWEAPONS];
 
-  const weaponinfo_t *weaponinfo; // can be changed when use level2 weapons (heretic)
+  const weaponinfo_t *weaponinfo; ///< Changed when using level2 weapons (Heretic)
 
   int ammo[NUMAMMO];
   const int *maxammo;
 
-  float toughness; // natural armor
+  float toughness; ///< Natural armor, depends on class.
   float armorfactor[NUMARMOR];
   int   armorpoints[NUMARMOR];
 
-  int specialsector; // current sector special (lava/slime/water...)
+  /// Tic counters for power ups.
+  int powers[NUMPOWERS];
 
-  // So gun flashes light up areas.
-  int  extralight;
-  // Current PLAYPAL, ???
-  //  can be set to REDCOLORMAP for pain, etc.
+  /// Bit flags, for cheats and debug.
+  int cheats;
+
+
+  /// Current sector special (lava/slime/water...)
+  int specialsector;
+
+  /// Gun flashes light up nearby areas.
+  int extralight;
+
+  /// Colormap to replace the lightlevel-based colormap in rendering.
+  /// Used for invulnerability, IR goggles etc.
   int fixedcolormap;
-
-  int fly_zspeed; //  for smoothing the z motion while flying
 
 public:
   // in g_pawn.cpp
   PlayerPawn(fixed_t x, fixed_t y, fixed_t z, int type);
 
+  virtual void Think();
+  void DeathThink();
+  void MorphThink();
+
+  void Move();
   virtual void XYMovement();
   virtual void ZMovement();
   virtual void XYFriction(fixed_t oldx, fixed_t oldy, bool oldfriction);
-
-  virtual void Think();
-  void DeathThink();
-
-  void MorphThink();
-  bool UndoMorph();
+  virtual bool Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent = false);
 
   void Reset();
-
-  bool GivePower(int /*powertype_t*/ power);
-
   weapontype_t FindWeapon(int g);
-
-  void MovePsprites();
 
   inline DActor *SpawnPlayerMissile(mobjtype_t type) { return SPMAngle(type, angle); }
   DActor *SPMAngle(mobjtype_t type, angle_t ang);
@@ -244,9 +243,16 @@ public:
   void PlayerOnSpecial3DFloor();
   void PlayerInSpecialSector();
 
+  bool GivePower(int power);
+  bool GiveAmmo(ammotype_t at, int count);
+  bool GiveWeapon(weapontype_t wt, bool dropped);
+  bool GiveArmor(armortype_t type, float factor, int points);
+  bool GiveKey(keycard_t k);
+  bool GiveArtifact(artitype_t arti, DActor *from);
+
   // in p_user.cpp
-  virtual bool Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent = false);
-  void Move();
+  virtual bool Morph(mobjtype_t form);
+  bool UndoMorph();
 
   void UseArtifact(artitype_t arti);
   bool InventoryResponder(short (*gc)[2], struct event_t *ev);
@@ -256,19 +262,14 @@ public:
   bool UsePuzzleItem(int type);
 
   // in p_inter.cpp
-  bool GiveAmmo(ammotype_t at, int count);
-  bool GiveWeapon(weapontype_t wt, bool dropped);
-  bool GiveArmor(armortype_t type, float factor, int points);
-  bool GiveKey(keycard_t k);
-  bool GiveArtifact(artitype_t arti, DActor *from);
   void TouchSpecialThing(DActor *special);
-  virtual bool Touch(Actor *a); // PPawn touches another Actor
+  virtual bool Touch(Actor *a);
   virtual void Die(Actor *inflictor, Actor *source);
   virtual void Killed(PlayerPawn *victim, Actor *inflictor);
-  virtual bool Morph(mobjtype_t form);
   virtual bool Damage(Actor *inflictor, Actor *source, int damage, int dtype = dt_normal);
 
   // in p_pspr.cpp
+  void MovePsprites();
   void UseFavoriteWeapon();
   void SetupPsprites();
   void SetPsprite(int position, weaponstatenum_t stnum, bool call = true);

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/11/04 21:12:54  smite-meister
+// save/load fixed
+//
 // Revision 1.11  2004/10/27 17:37:10  smite-meister
 // netcode update
 //
@@ -85,7 +88,6 @@
 
 
 void Command_Setcontrol_f();
-void Command_Setcontrol2_f();
 void Command_BindJoyaxis_f();
 void Command_UnbindJoyaxis_f();
 

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/11/04 21:12:54  smite-meister
+// save/load fixed
+//
 // Revision 1.7  2004/10/27 17:37:10  smite-meister
 // netcode update
 //
@@ -138,25 +141,37 @@ bool LConnection::readConnectRequest(BitStream *stream, const char **errorString
   byte n;
   stream->read(&n);
 
-  if (game.Players.size() + n > unsigned(cv_maxplayers.value))
+
+  LNetInterface *net = (LNetInterface *)getInterface();
+
+  if (net->netstate == LNetInterface::SV_Running)
     {
-      sprintf(temp, "Maximum number of players reached (%d).", cv_maxplayers.value);
-      return false;
+      if (game.Players.size() + n > unsigned(cv_maxplayers.value))
+	{
+	  sprintf(temp, "Maximum number of players reached (%d).", cv_maxplayers.value);
+	  return false;
+	}
+
+      // read playerdata
+      for (int i = 0; i<n; i++)
+	{
+	  stream->readString(temp);
+	  temp[32] = '\0'; // limit name length
+
+	  PlayerInfo *p = new PlayerInfo(temp);
+	  p->connection = this;
+	  p->client_hash = getNetAddress().hash();
+
+	  // TODO check that name is unique, change if necessary
+
+	  player.push_back(p);
+	  if (!game.AddPlayer(p))
+	    I_Error("shouldn't happen! rotten!\n");
+	}
     }
-
-  // read playerdata
-  for (int i = 0; i<n; i++)
+  else
     {
-      stream->readString(temp);
-      temp[32] = '\0'; // limit name length
-
-      PlayerInfo *p = new PlayerInfo(temp);
-      p->connection = this;
-      // TODO check that name is unique, change if necessary
-
-      player.push_back(p);
-      if (!game.AddPlayer(p))
-	I_Error("shouldn't happen! rotten!\n");
+      // TODO waiting for specific clients to return (check names and hashes!)
     }
 
   return true; // server accepts
@@ -193,8 +208,13 @@ bool LConnection::readConnectAccept(BitStream *stream, const char **errorString)
     stream->read(&localplayer2.number);
 
   // read server properties
-  serverinfo_t s(getNetAddress());
-  s.Read(*stream);
+  LNetInterface *net = (LNetInterface *)getInterface();
+
+  serverinfo_t *s = net->SL_FindServer(getNetAddress());
+  if (!s)
+    s = net->SL_AddServer(getNetAddress());
+
+  s->Read(*stream);
 
   consvar_t::LoadNetVars(*stream);
   // FIXME read needed files, check them, download them...

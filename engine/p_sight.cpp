@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/11/04 21:12:52  smite-meister
+// save/load fixed
+//
 // Revision 1.5  2004/07/25 20:19:21  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -33,12 +36,10 @@
 // Revision 1.1.1.1  2002/11/16 14:18:03  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//      LineOfSight/Visibility checks, uses REJECT Lookup Table.
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief LineOfSight/Visibility checks, uses REJECT and BSP
 
 #include "doomdef.h"
 #include "doomdata.h"
@@ -47,7 +48,6 @@
 #include "p_maputl.h"
 #include "r_defs.h"
 
-extern int validcount; // in r_main.cpp, really awful
 
 //
 // P_CheckSight

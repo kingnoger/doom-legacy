@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/11/04 21:12:54  smite-meister
+// save/load fixed
+//
 // Revision 1.3  2004/08/15 18:08:30  smite-meister
 // palette-to-palette colormaps etc.
 //
@@ -26,18 +29,6 @@
 //
 // Revision 1.1.1.1  2002/11/16 14:18:42  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.3  2002/07/01 21:01:09  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:37  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.2  2000/02/27 00:42:11  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //-----------------------------------------------------------------------------
 
@@ -67,54 +58,153 @@
 
 // unfortunatly methode 1 and 2 get demos outof sync
 #define METHODE 0
-
 #if METHODE==0
-    int SlopeDiv (unsigned num, unsigned den)
-    {
-        unsigned ans;
-        if (den < 512)
-            return SLOPERANGE;
-        ans = (num<<3)/(den>>8);
-        return ans <= SLOPERANGE ? ans : SLOPERANGE;
-    }
+int SlopeDiv (unsigned num, unsigned den)
+{
+  unsigned ans;
+  if (den < 512)
+    return SLOPERANGE;
+  ans = (num<<3)/(den>>8);
+  return ans <= SLOPERANGE ? ans : SLOPERANGE;
+}
 #else
-    #if METHODE==1
-    //
-    int SlopeDiv ( unsigned      num,
-                   unsigned      den)
-    {
-    ULONG  ans;
-    INT64  t;
+# if METHODE==1
+int SlopeDiv (unsigned  num, unsigned den)
+{
+  if (den < 512)
+    return SLOPERANGE;
 
-    if (den < 512)
-        return SLOPERANGE;
+  INT64 t=num;
+  t<<=11;
+  ULONG ans = t/den;
 
-    t=num;
-    t<<=11;
-    ans = t/den;
+  return ans <= SLOPERANGE ? ans : SLOPERANGE;
+}
+# else
+int SlopeDiv (unsigned  num, unsigned den)
+{
+  unsigned ans;
 
-    return ans <= SLOPERANGE ? ans : SLOPERANGE;
-    }
-    #else
-    //
-    int SlopeDiv ( unsigned      num,
-                   unsigned      den)
-    {
-    unsigned             ans;
+  asm (" xorl  %%edx,%%edx     \n\t "
+       " shldl $11,%%eax,%%edx \n\t "
+       " shll  $11,%%eax       \n\t "
+       " divl  %0                 "
 
-    asm (" xorl  %%edx,%%edx     \n\t "
-         " shldl $11,%%eax,%%edx \n\t "
-         " shll  $11,%%eax       \n\t "
-         " divl  %0                 "
+       : "=a" (ans)             // output
+       : "a" (num), "r" (den)  // input
+       : "%edx" );
 
-         : "=a" (ans)             // output
-         : "a" (num), "r" (den)  // input
-         : "%edx" );
-
-    return ans <= SLOPERANGE ? ans : SLOPERANGE;
-    }
-    #endif
+  return ans <= SLOPERANGE ? ans : SLOPERANGE;
+}
+# endif
 #endif
+
+
+// To get a global angle from cartesian coordinates,
+//  the coordinates are flipped until they are in
+//  the first octant of the coordinate system, then
+//  the y (<=x) is scaled and divided by x to get a
+//  tangent (slope) value which is looked up in the
+//  tantoangle[] table.
+angle_t R_PointToAngle2(fixed_t x2, fixed_t y2, fixed_t x1, fixed_t y1)
+{
+  x1 -= x2;
+  y1 -= y2;
+
+  if (!x1 && !y1)
+    return 0;
+
+  if (x1 >= 0)
+    {
+      // x >=0
+      if (y1 >= 0)
+        {
+	  // y >= 0
+	  if (x1>y1)
+            {
+	      // octant 0
+	      return tantoangle[SlopeDiv(y1,x1)];
+            }
+	  else
+            {
+	      // octant 1
+	      return ANG90-1-tantoangle[ SlopeDiv(x1,y1)];
+            }
+        }
+      else
+        {
+	  // y<0
+	  y1 = -y1;
+	  if (x1>y1)
+            {
+	      // octant 8
+	      return -tantoangle[SlopeDiv(y1,x1)];
+            }
+	  else
+            {
+	      // octant 7
+	      return ANG270+tantoangle[ SlopeDiv(x1,y1)];
+            }
+        }
+    }
+  else
+    {
+      // x<0
+      x1 = -x1;
+      if (y1 >= 0)
+        {
+	  // y >= 0
+	  if (x1>y1)
+            {
+	      // octant 3
+	      return ANG180-1-tantoangle[ SlopeDiv(y1,x1)];
+            }
+	  else
+            {
+	      // octant 2
+	      return ANG90+ tantoangle[ SlopeDiv(x1,y1)];
+            }
+        }
+      else
+        {
+	  // y<0
+	  y1 = -y1;
+	  if (x1>y1)
+            {
+	      // octant 4
+	      return ANG180+tantoangle[ SlopeDiv(y1,x1)];
+            }
+	  else
+            {
+	      // octant 5
+	      return ANG270-1-tantoangle[ SlopeDiv(x1,y1)];
+            }
+        }
+    }
+  return 0;
+}
+
+
+fixed_t R_PointToDist2(fixed_t x2, fixed_t y2, fixed_t x1, fixed_t y1)
+{
+  fixed_t dx = abs(x1 - x2);
+  fixed_t dy = abs(y1 - y2);
+
+  if (dy > dx)
+    {
+      fixed_t temp = dx;
+      dx = dy;
+      dy = temp;
+    }
+
+  if (dy == 0)
+    return dx;
+
+  int angle = tantoangle[FixedDiv(dy,dx) >> DBITS] >> ANGLETOFINESHIFT;
+
+  return FixedDiv(dx, finecosine[angle]);
+}
+
 
 
 fixed_t *finecosine = &finesine[FINEANGLES/4];

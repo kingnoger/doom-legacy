@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.42  2004/11/04 21:12:52  smite-meister
+// save/load fixed
+//
 // Revision 1.41  2004/10/31 22:30:53  smite-meister
 // cleanup
 //
@@ -128,21 +131,24 @@
 #include "cvars.h"
 
 #include "d_ticcmd.h"
-#include "dstrings.h"
 
-#include "p_camera.h" // camera
 #include "p_spec.h"
 
-#include "sounds.h"
+#include "dstrings.h"
 #include "hardware/hw3sound.h" // ugh.
 #include "hud.h"
-#include "tables.h" // angle
-#include "r_main.h" // PointToAngle functions FIXME which do not belong there
+#include "sounds.h"
+#include "tables.h"
 #include "r_sprite.h"
 #include "m_random.h"
 
+#define ANG5    (ANG90/18)
 
-static int ArmorIncrement[NUMCLASSES][NUMARMOR] =
+#define BLINKTHRESHOLD  (4*32) // for powers
+#define INVERSECOLORMAP  32    // special effects (INVUL inverse) colormap.
+#define STOPSPEED (0x1000/NEWTICRATERATIO)  // friction
+
+int ArmorIncrement[NUMCLASSES][NUMARMOR] =
 {
   { 0, 0, 0, 0, 0 },
   { 0, 25, 20, 15, 5 },
@@ -386,12 +392,6 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, int type)
 }
 
 
-//--------------------------------------------------------
-
-#define BLINKTHRESHOLD  (4*32) // for powers
-
-// Index of the special effects (INVUL inverse) map.
-#define INVERSECOLORMAP  32
 
 void PlayerPawn::Think()
 {
@@ -607,12 +607,9 @@ void PlayerPawn::Think()
 }
 
 
-//--------------------------------------------------------
+
 // Fall on your face when dying.
 // Decrease POV height to floor height.
-
-#define ANG5    (ANG90/18)
-
 void PlayerPawn::DeathThink()
 {
   MovePsprites();
@@ -659,8 +656,6 @@ void PlayerPawn::DeathThink()
 }
 
 
-
-//----------------------------------------------
 
 void PlayerPawn::MorphThink()
 {
@@ -709,7 +704,103 @@ void PlayerPawn::MorphThink()
     }
 }
 
-//-----------------------------------------
+
+
+//=================================================
+//    Movement
+//=================================================
+
+void PlayerPawn::Move()
+{
+  ticcmd_t *cmd = &player->cmd;
+
+  angle = cmd->yaw << 16;
+  aiming = cmd->pitch << 16;
+
+  fixed_t movepushforward = 0, movepushside = 0;
+
+  //CONS_Printf("p = (%d, %d), v = %f / tic\n", px, py, sqrt(px*px+py*py)/FRACUNIT);
+
+  float mf = GetMoveFactor();
+
+  // limit speed = push/(1-friction) => multiplier = 2*(1-friction) = 0.1875
+  float magic = 0.1875 * FRACUNIT * speed * mf;
+
+  if (cmd->forward)
+    {
+      //CONS_Printf("::m %d, %f, magic = %f\n", cmd->forwardmove, mf, magic);
+      movepushforward = int(magic * cmd->forward/100);
+      Thrust(angle, movepushforward);
+    }
+
+  if (cmd->side)
+    {
+      movepushside = int(magic * cmd->side/100);
+      Thrust(angle-ANG90, movepushside);
+    }
+
+  // mouselook swim when waist underwater
+  eflags &= ~MFE_SWIMMING;
+  if (eflags & MFE_UNDERWATER)
+    {
+      fixed_t a;
+      // swim up/down full move when forward full speed
+      a = FixedMul(movepushforward*50, finesine[aiming >> ANGLETOFINESHIFT] >>5 );
+      
+      if ( a != 0 )
+	{
+	  eflags |= MFE_SWIMMING;
+	  pz += a;
+	}
+    }
+
+  bool onground = (z <= floorz) || (eflags & (MFE_ONMOBJ | MFE_FLY)) || (cheats & CF_FLYAROUND);
+
+#define JUMPSPEED (6*FRACUNIT/NEWTICRATERATIO)
+
+
+  // jumping
+  if (cmd->buttons & ticcmd_t::BT_JUMP)
+    {
+      if (eflags & MFE_FLY)
+	fly_zspeed = 10;
+      else if (eflags & MFE_UNDERWATER)
+	//TODO: goub gloub when push up in water
+	pz = cv_allowjump.value * FRACUNIT/2;
+      else if (onground && !jumpdown) // can't jump while in air, can't jump while jumping
+	{
+	  pz = cv_allowjump.value * FRACUNIT;
+	  if (!(cheats & CF_FLYAROUND))
+	    {
+	      S_StartScreamSound(this, sfx_jump);
+	      // keep jumping ok if FLY mode.
+	      jumpdown = true;
+	    }
+	}
+    }
+  else
+    jumpdown = false;
+
+  if (cmd->forward || cmd->side)
+    {
+      // set the running state if nothing more important is going on
+      int anim = pres->GetAnim();
+      if (anim == presentation_t::Idle)
+	pres->SetAnim(presentation_t::Run);
+    }
+
+  if (eflags & MFE_FLY)
+    {
+      if (cmd->buttons & ticcmd_t::BT_FLYDOWN)
+	fly_zspeed = -10;
+
+      pz = fly_zspeed*FRACUNIT;
+      if (fly_zspeed)
+	fly_zspeed /= 2;
+    }
+}
+
+
 
 void PlayerPawn::XYMovement()
 {
@@ -735,6 +826,8 @@ void PlayerPawn::XYMovement()
   //          XYFriction(oldx, oldy, false);
 
 }
+
+
 
 void PlayerPawn::ZMovement()
 {
@@ -774,7 +867,7 @@ void PlayerPawn::ZMovement()
     }
 }
 
-#define STOPSPEED               (0x1000/NEWTICRATERATIO)
+
 
 void PlayerPawn::XYFriction(fixed_t oldx, fixed_t oldy, bool oldfriction)
 {
@@ -797,6 +890,34 @@ void PlayerPawn::XYFriction(fixed_t oldx, fixed_t oldy, bool oldfriction)
 
 
 
+bool PlayerPawn::Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent)
+{
+  bool ret = Actor::Teleport(nx, ny, nangle, silent);
+
+  // don't move for a bit
+  if (!powers[pw_weaponlevel2])
+    reactiontime = 18;
+    
+  // FIXME code below is useless, right?
+  // Adjust player's view, in case there has been a height change
+  
+  // Save the current deltaviewheight, used in stepping
+  //  fixed_t deltaviewheight = player->deltaviewheight;
+  // Clear deltaviewheight, since we don't want any changes
+  //  player->deltaviewheight = 0;
+  // Set player's view according to the newly set parameters
+  //  CalcHeight(player);
+  // Reset the delta to have the same dynamics as before
+  // player->deltaviewheight = deltaviewheight;
+
+  return ret;
+}
+
+
+
+//=================================================
+//   Other stuff
+//=================================================
 
 //  Called when a player exits a map.
 //  Throws away extra items, removes powers, keys, curses
@@ -852,9 +973,7 @@ weapontype_t PlayerPawn::FindWeapon(int g)
 
 
 
-//
 // Tries to aim at a nearby monster
-//
 DActor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
 {
   extern Actor *linetarget;
@@ -954,7 +1073,6 @@ bool P_CheckKeys(Actor *mo, int lock)
 //
 // Note: The linedef passed MUST be a generalized locked door type
 //       or results are undefined.
-//
 bool PlayerPawn::CanUnlockGenDoor(line_t *line)
 {
   // does this line special distinguish between skulls and keys?
@@ -1218,215 +1336,6 @@ void PlayerPawn::PlayerInSpecialSector()
   ProcessSpecialSector(sec, instantdamage);
 }
 
-
-
-
-
-//---------------------------------------------------------------------------
-//
-// FUNC P_AutoUseChaosDevice
-//
-//---------------------------------------------------------------------------
-
-bool P_AutoUseChaosDevice(PlayerPawn *p)
-{
-  int i, n = p->inventory.size();
-    
-  for (i = 0; i < n; i++)
-    {
-      if (p->inventory[i].type == arti_teleport)
-        {
-	  p->UseArtifact(arti_teleport);
-	  p->health = (p->health + 1) / 2;
-	  return true;
-        }
-    }
-  return false;
-}
-
-//---------------------------------------------------------------------------
-//
-// PROC P_AutoUseHealth
-//
-//---------------------------------------------------------------------------
-
-void P_AutoUseHealth(PlayerPawn *p, int saveHealth)
-{
-  int i, n = p->inventory.size();
-  int count;
-  int normalCount;
-  int normalSlot;
-  int superCount;
-  int superSlot;
-    
-  normalCount = superCount = 0;
-  for(i = 0; i < n; i++)
-    {
-      if (p->inventory[i].type == arti_health)
-        {
-	  normalSlot = i;
-	  normalCount = p->inventory[i].count;
-        }
-      else if (p->inventory[i].type == arti_superhealth)
-        {
-	  superSlot = i;
-	  superCount = p->inventory[i].count;
-        }
-    }
-  if((game.skill == sk_baby) && (normalCount*25 >= saveHealth))
-    { // Use quartz flasks
-      count = (saveHealth+24)/25;
-      for(i = 0; i < count; i++)
-	p->UseArtifact(arti_health);
-    }
-  else if(superCount*100 >= saveHealth)
-    { // Use mystic urns
-      count = (saveHealth+99)/100;
-      for(i = 0; i < count; i++)
-	p->UseArtifact(arti_superhealth);
-    }
-  else if((game.skill == sk_baby) && (superCount*100+normalCount*25 >= saveHealth))
-    { // Use mystic urns and quartz flasks
-      count = (saveHealth+24)/25;
-      for(i = 0; i < count; i++)
-	p->UseArtifact(arti_health);
-
-      saveHealth -= count*25;
-      count = (saveHealth+99)/100;
-      for(i = 0; i < count; i++)
-	p->UseArtifact(arti_superhealth);
-    }
-}
-
-
-
-//---------------------------------------------
-// "inflictor" is the thing that caused the damage
-//  creature or missile, can be NULL (slime, etc)
-// "source" is the thing to target after taking damage
-//  creature or NULL
-// Source and inflictor are the same for melee attacks.
-// Source can be NULL for slime, barrel explosions
-// and other environmental stuff.
-
-bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
-{
-  if (dtype & dt_always)
-    {
-      // unavoidable damage
-      // pain flash
-      player->damagecount += damage;
-      return Actor::Damage(inflictor, source, damage, dtype);
-    }
-
-  if (game.skill == sk_baby)
-    damage >>= 1;   // take half damage in trainer mode
-  
-  if (inflictor && inflictor->IsOf(DActor::_type))
-    {
-      DActor *d = (DActor *)inflictor;
-      switch (d->type)
-	{
-	case MT_MACEFX4: // Death ball
-	  if (powers[pw_invulnerability])
-	    // Can't hurt invulnerable players
-	    damage = 0;
-	    break;	  
-	  if (P_AutoUseChaosDevice(this))
-	    // Player was saved using chaos device
-	    return false;	
-	  damage = 10000; // Something's gonna die
-	  break;
-        case MT_PHOENIXFX2: // Flame thrower
-	  if (P_Random() < 128)
-            { // Freeze player for a bit
-	      reactiontime += 4;
-            }
-	  break;
-	default:
-	  break;
-	}
-    }
-
-  int i, temp;
-  // player specific
-  if (!(flags & MF_CORPSE))
-    {
-      // end of game hellslime hack
-      if (subsector->sector->special == 11 && damage >= health)
-	damage = health - 1;
-
-      // ignore damage in GOD mode, or with INVUL power.
-      if ((cheats & CF_GODMODE) || powers[pw_invulnerability])
-	return false;
-
-      // doom armor
-      temp = armorpoints[armor_field];
-      if (temp > 0)
-        {
-	  int saved = int(damage * armorfactor[armor_field]);
-
-	  if (temp <= saved)
-            {
-	      // armor is used up
-	      saved = temp;
-	      armorfactor[armor_field] = 0;
-            }
-	  armorpoints[armor_field] -= saved;
-	  damage -= saved;
-        }
-
-      // hexen armor
-      float save = toughness;
-      for (i = armor_armor; i < NUMARMOR; i++)
-	save += float(armorpoints[i])/100;
-      if (save > 0)
-	{
-	  // armor absorbed some damage
-	  if (save > 1)
-	    save = 1;
-
-	  // armor deteriorates
-	  for (i = armor_armor; i < NUMARMOR; i++)
-	    if (armorpoints[i])
-	      {
-		armorpoints[i] -= int(damage * ArmorIncrement[pclass][i] / (100 * armorfactor[i]));
-		if (armorpoints[i] <= 2)
-		  armorpoints[i] = 0;
-	      }
-
-	  int saved = int(damage * save);
-	  if (damage > 200)
-	    saved = int(200 * save);
-	  damage -= saved;
-	}      
-
-      PlayerPawn *s = NULL;
-      if (source && source->IsOf(PlayerPawn::_type))
-	s = (PlayerPawn *)source;
-
-      // added team play and teamdamage (view logboris at 13-8-98 to understand)
-      if (s && (s->player->team == player->team) && !cv_teamdamage.value && (s != this))
-	return false;
-
-      // autosavers
-      if (damage >= health && (game.skill == sk_baby) && !morphTics)
-	{ // Try to use some inventory health
-	  P_AutoUseHealth(this, damage-health+1);
-	}
-
-      // pain flash
-      player->damagecount += damage;
-
-      pres->SetAnim(presentation_t::Pain);
-    }
-
-  attacker = source;
-
-  bool ret = Actor::Damage(inflictor, source, damage, dtype);
-
-  return ret;
-}
 
 
 
@@ -1753,11 +1662,10 @@ bool PlayerPawn::GiveKey(keycard_t k)
 }
 
 
+
 //---------------------------------------------------------------------------
-//
-// Removes the MF_SPECIAL flag, and initiates the artifact pickup
-// animation. The artifact is restored after a number of tics by an action function.
-//
+// The Hexen artifact respawn system.
+// The artifact is restored after a number of tics by an action function.
 //---------------------------------------------------------------------------
 
 static void SetDormantArtifact(DActor *arti)
@@ -1776,8 +1684,6 @@ static void SetDormantArtifact(DActor *arti)
     }
   else
     arti->SetState(S_DEADARTI1); // Don't respawn
-
-  S_StartSound(arti, sfx_artiup);
 }
 
 
@@ -1827,6 +1733,7 @@ bool PlayerPawn::GiveArtifact(artitype_t arti, DActor *from)
 	j = TXT_ARTIPUZZGEAR;
       player->SetMessage(text[j], false);
       SetDormantArtifact(from);
+      p_sound = sfx_artiup;
       /*
 	if (!game.multiplayer || cv_deathmatch.value)
 	p_remove = true; // TODO remove puzzle items if not cooperative netplay?

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2004/11/04 21:12:52  smite-meister
+// save/load fixed
+//
 // Revision 1.18  2004/09/06 19:58:03  smite-meister
 // Doom linedefs done!
 //
@@ -97,7 +100,6 @@
 
 #include "r_sprite.h"
 #include "sounds.h"
-#include "r_main.h"
 #include "m_random.h"
 #include "tables.h"
 
@@ -157,9 +159,7 @@ void PlayerPawn::SetupPsprites()
 }
 
 
-//
-// was P_SetPsprite
-//
+
 void PlayerPawn::SetPsprite(int position, weaponstatenum_t stnum, bool call)
 {
   weaponstate_t  *state;
@@ -260,7 +260,6 @@ void PlayerPawn::MovePsprites()
 
 
 //
-// was P_BringUpWeapon
 // Starts bringing the pending weapon up
 // from the bottom of the screen.
 // Uses player
@@ -337,9 +336,7 @@ bool PlayerPawn::CheckAmmo()
 }
 
 
-//
-// was P_FireWeapon.
-//
+
 void PlayerPawn::FireWeapon()
 {
   weaponstatenum_t  newstate;
@@ -370,7 +367,6 @@ void PlayerPawn::FireWeapon()
 
 
 //
-// was P_DropWeapon
 // Player died, so put the weapon away.
 //
 void PlayerPawn::DropWeapon()
@@ -380,7 +376,6 @@ void PlayerPawn::DropWeapon()
 
 
 //
-// A_WeaponReady
 // The player can fire the weapon
 // or change to another weapon at this time.
 // Follows after getting weapon up,

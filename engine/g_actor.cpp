@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.35  2004/11/04 21:12:51  smite-meister
+// save/load fixed
+//
 // Revision 1.34  2004/09/23 23:21:16  smite-meister
 // HUD updated
 //
@@ -110,9 +113,7 @@
 #include "p_spec.h"
 #include "p_maputl.h"
 
-#include "r_main.h"
 #include "r_sprite.h"
-
 #include "sounds.h"
 #include "s_sound.h"
 

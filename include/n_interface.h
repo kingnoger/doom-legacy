@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/11/04 21:12:54  smite-meister
+// save/load fixed
+//
 // Revision 1.6  2004/07/13 20:23:37  smite-meister
 // Mod system basics
 //
@@ -34,7 +37,6 @@
 //
 // Revision 1.1  2004/06/18 08:17:02  smite-meister
 // New TNL netcode!
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -59,19 +61,19 @@ using namespace TNL;
 
 class LNetInterface : public NetInterface
 {
+  friend class LConnection;
   typedef NetInterface Parent;
 
 public:
 
   enum netstate_t
   {
-    NS_Unconnected,    ///< uninitialized or no network connections
+    SV_Unconnected,    ///< uninitialized or no network connections
+    SV_WaitingClients, ///< server ready and waiting for players to join in
+    SV_Running,        ///< server running the game
     CL_PingingServers, ///< client looking for servers
     CL_Connecting,     ///< client trying to connect to a server
     CL_Connected,      ///< client connected to a server
-    SV_Loading,        ///< server loading a map (clients should be loading it also)
-    SV_WaitingClients, ///< server ready but not starting the game yet
-    SV_Running         ///< server running the game
   };
 
   /// network state
@@ -149,7 +151,7 @@ public:
   void CL_Reset();
 
   /// Opens a server to the world
-  void SV_Open();
+  void SV_Open(bool waitforplayers = false);
 
   /// Closes all connections, disallows new connections
   void SV_Reset();

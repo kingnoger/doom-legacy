@@ -79,7 +79,12 @@ const char *FileCache::Access(const char *f)
   if (!access(f, F_OK))
     return f; // first try the current dir
 
-  static string n = datapath + '/' + f;
+  static string n;
+
+  n.assign(datapath);
+  n.push_back('/');
+  n.append(f);
+
   if (!access(n.c_str(), F_OK))
     return n.c_str();
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.34  2004/11/04 21:12:55  smite-meister
+// save/load fixed
+//
 // Revision 1.33  2004/10/31 22:22:13  smite-meister
 // Hasta la vista, pic_t!
 //
@@ -1018,10 +1021,16 @@ int texturecache_t::ReadTextures()
       Insert(tex);
     }
 
-
   Z_Free(maptex1);
   if (maptex2)
     Z_Free(maptex2);
+
+  // this is a HACK for "fixing" a nasty Doom1/2 texture/flat namespace overlap.
+  if (game.mode < gm_heretic)
+    {
+      Insert(new LumpTexture("STEP1", fc.FindNumForName("STEP1"), 64, 64));
+      Insert(new LumpTexture("STEP2", fc.FindNumForName("STEP2"), 64, 64));
+    }
 
   return numtextures;
 }

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by Raven Software, Corp.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:17:58  hurdler
-// Initial revision
+// Revision 1.2  2004/11/04 21:12:52  smite-meister
+// save/load fixed
+//
+// Revision 1.1.1.1  2002/11/16 14:17:58  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.7  2002/08/21 16:58:33  vberghol
 // Version 1.41 Experimental compiles and links!
@@ -48,16 +51,13 @@
 // Revision 1.2  2001/02/10 13:20:55  hurdler
 // update license
 //
-//
-//
-// DESCRIPTION:
-// Heretic sight routines. Mostly unused?
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Heretic sight routines. Mostly unused?
 
 #include "doomdef.h"
 #include "p_maputl.h"
-#include "r_main.h"
-#include "r_state.h"
 
 
 //=============================================================================

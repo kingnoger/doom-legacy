@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/11/04 21:12:54  smite-meister
+// save/load fixed
+//
 // Revision 1.6  2004/10/17 02:01:39  smite-meister
 // bots!
 //
@@ -46,8 +49,9 @@
 #include "m_fixed.h"
 
 
-// P_MAP
+extern int validcount;
 
+// P_MAP
 // variables used by movement functions to communicate
 extern bool    floatok;
 extern fixed_t tmfloorz, tmceilingz;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.35  2004/11/04 21:12:52  smite-meister
+// save/load fixed
+//
 // Revision 1.34  2004/10/27 17:37:07  smite-meister
 // netcode update
 //
@@ -127,7 +130,6 @@
 
 #include "doomdef.h"
 #include "doomdata.h"
-#include "dstrings.h"
 
 #include "command.h"
 #include "console.h"
@@ -142,6 +144,7 @@
 #include "g_player.h"
 #include "g_actor.h"
 #include "g_pawn.h"
+#include "n_interface.h"
 
 #include "p_spec.h"
 #include "r_poly.h"
@@ -166,12 +169,6 @@
 // NOTE! The Map *mp is not saved for Thinkers in general, because it can be deduced
 // from the context. However, some thinkers are not always associated with a Map.
 // Hence they must save the Map reference as well.
-
-
-
-// Pads save_p to a 4-byte boundary
-//  so that the load/save works on SGI&Gecko.
-//#define PADSAVEP()      save_p += (4 - ((int) save_p & 3)) & 3
 
 
 enum consistency_marker_t
@@ -417,7 +414,7 @@ int presentation_t::Serialize(presentation_t *p, LArchive &a)
 {
   // much simpler than the Thinker serialization.
   int temp;
-  CONS_Printf("serializing a presentation\n");
+  //CONS_Printf("serializing a presentation\n");
   if (p)
     p->Marshal(a); // handles the type id as well.
   else
@@ -430,7 +427,7 @@ presentation_t *presentation_t::Unserialize(LArchive &a)
   presentation_t *p;
   int temp;
   a << temp; // read the type id
-  CONS_Printf("unserializing a presentation, %d\n", temp);
+  //CONS_Printf("unserializing a presentation, %d\n", temp);
   if (temp == 0)
     return NULL;
   else if (temp == 1)      
@@ -833,9 +830,6 @@ int PlayerPawn::Marshal(LArchive &a)
 	  a << psprites[i].tics << psprites[i].sx << psprites[i].sy;
 	}
 
-      // store the player number (if there is one)
-      //a << (n = player ? player->number : -1);
-
       // inventory is closed.
       a << invSlot;
       a << (n = inventory.size());
@@ -870,6 +864,8 @@ int PlayerPawn::Marshal(LArchive &a)
 
       if (diff & PD_REFIRE) a << refire;
       if (diff & PD_MORPHTICS) a << morphTics;
+
+      a << int(pendingweapon) << int(readyweapon);
     }
   else
     {
@@ -880,16 +876,6 @@ int PlayerPawn::Marshal(LArchive &a)
 	  psprites[i].state = (n == -1) ? NULL : &weaponstates[n];
 	  a << psprites[i].tics << psprites[i].sx << psprites[i].sy;
 	}
-
-      /*
-      a << n; //player->number;
-      player = game.FindPlayer(n);
-      if (player)
-	{
-	  player->mp = mp;
-	  player->pawn = this;
-	}
-      */
 
       a << invSlot;
       a << n;
@@ -916,23 +902,25 @@ int PlayerPawn::Marshal(LArchive &a)
 
       weaponinfo = (powers[pw_weaponlevel2] ? wpnlev2info : wpnlev1info);
       maxammo = (backpack ? maxammo2 : maxammo1);
+
+      a << n; pendingweapon = weapontype_t(n);
+      a << n; readyweapon = weapontype_t(n);
     }
 
   // non-coded stuff (just read/write the numbers)
   a << pclass;
-  a << cheats;
+  a << fly_zspeed;
   a << keycards;
-  a << int(pendingweapon) << int(readyweapon);
+  a << cheats;
 
   for (i=0; i<NUMAMMO; i++)
     a << ammo[i];
 
   a << toughness;
-
   for (i=0; i<NUMARMOR; i++)
     a << armorfactor[i] << armorpoints[i];
 
-  a << specialsector << extralight << fixedcolormap << fly_zspeed;
+  a << specialsector << extralight << fixedcolormap;
 
   return 0;
 }
@@ -1366,9 +1354,9 @@ int Map::Serialize(LArchive &a)
   a << n;
   for (t = TIDmap.begin(); t != TIDmap.end(); t++)
     {
-      stemp = (*t).first;
+      stemp = t->first;
       a << stemp;
-      if (a.HasStored((*t).second, temp))
+      if (a.HasStored(t->second, temp))
 	a << temp;
       else
 	I_Error("Crap in TIDmap!\n");
@@ -1515,7 +1503,7 @@ int Map::Unserialize(LArchive &a)
 
   for (i = 0; i < ACScriptCount; i++)
     {
-      a << int(ACSInfo[i].state);
+      a << n; ACSInfo[i].state = acs_state_t(n);
       a << ACSInfo[i].waitValue;
     }
   a.Read((byte *)ACMapVars, sizeof(ACMapVars));
@@ -1653,65 +1641,79 @@ int Map::Unserialize(LArchive &a)
 
 int PlayerInfo::Serialize(LArchive &a)
 {
-  int i;
+  unsigned i;
+  a << number << team << name;
+  a << client_hash;
 
-  a << number << team;
-  a << name;
-  a << ptype << color << skin;
   a << int(playerstate);
+  a << spectator << map_completed;
+
   a << requestmap << entrypoint;
 
-  a << score;
-  a << kills << items << secrets << time;
+  // cmd can be ignored
 
-  for (i=0; i<NUMWEAPONS; i++)
-    a << weaponpref[i];
-
-  a << originalweaponswitch << autoaim << spectator;
-
+  // scoring
   a << (i = Frags.size());
   map<int, int>::iterator t;
   for (t = Frags.begin(); t != Frags.end(); t++)
     {
-      int m = (*t).first;
-      int n = (*t).second;
+      int m = t->first;
+      int n = t->second;
       a << m << n;
     }
+  a << score << kills << items << secrets << time;
 
+  // messages are lost
+  a << messagefilter;
+
+  // preferences
+  for (i=0; i<NUMWEAPONS; i++)
+    a << weaponpref[i];
+  a << originalweaponswitch << autoaim;
+
+  a << ptype << color << skin;
+
+  // current feedback is lost
+
+  // mp is handled through the pawn
   // players are serialized after maps, so pawn may already be stored
   Thinker::Serialize(pawn, a); 
+  Thinker::Serialize(pov, a); 
 
   return 0;
 }
 
 int PlayerInfo::Unserialize(LArchive &a)
 {
-  int t1, t2, i, n;
-  a << number << team;
-  game.Players[number] = this; // small hack, for pawn unserialization
+  int i, n;
+  a << number << team << name;
+  a << client_hash; // so we can recognize the clients after loading
 
-  a << name;
-  a << ptype << color << skin;
-  a << int(playerstate);
+  a << n; playerstate = playerstate_t(n);
+  a << spectator << map_completed;
+
   a << requestmap << entrypoint;
 
-  a << score;
-  a << kills << items << secrets << time;
-
-  for (i=0; i<NUMWEAPONS; i++)
-    a << weaponpref[i];
-
-  a << originalweaponswitch << autoaim << spectator;
-
-  Frags.clear();
   a << n;
   for (i=0; i<n; i++)
     {
+      int t1, t2;
       a << t1 << t2;
       Frags.insert(pair<int, int>(t1, t2));
     }
+  a << score << kills << items << secrets << time;
 
-  pawn = (PlayerPawn *)Thinker::Unserialize(a);
+  a << messagefilter;
+
+  // preferences
+  for (i=0; i<NUMWEAPONS; i++)
+    a << weaponpref[i];
+  a << originalweaponswitch << autoaim;
+
+  a << ptype << color << skin;
+
+  pawn = static_cast<PlayerPawn*>(Thinker::Unserialize(a));
+  pov = static_cast<PlayerPawn*>(Thinker::Unserialize(a));
   if (pawn)
     {
       mp = pawn->mp;
@@ -1762,6 +1764,7 @@ int MapCluster::Unserialize(LArchive &a)
   return 0;
 }
 
+
 int MapInfo::Serialize(LArchive &a)
 {
   int temp;
@@ -1809,10 +1812,11 @@ int MapInfo::Serialize(LArchive &a)
   return 0;
 }
 
+
 int MapInfo::Unserialize(LArchive &a)
 {
   int temp;
-  a << int(state);
+  a << temp; state = mapstate_e(temp);
 
   a << lumpname << nicename << savename;
   a << cluster << mapnumber;
@@ -1874,7 +1878,7 @@ int GameInfo::Serialize(LArchive &a)
   // gameaction is always ga_nothing here
 
   // treat all enums as ints
-  a << int(demoversion);
+  a << demoversion;
   a << int(mode);
   a << int(state);
   a << int(skill);
@@ -1886,42 +1890,46 @@ int GameInfo::Serialize(LArchive &a)
   a << maxplayers;
 
   a.Marker(MARK_GROUP);
+
   // mapinfo (and maps)
   a << (n = mapinfo.size());
   mapinfo_iter_t k;
   for (k = mapinfo.begin(); k != mapinfo.end(); k++)
-    (*k).second->Serialize(a);
+    k->second->Serialize(a);
 
   a.Marker(MARK_GROUP);
+
   // clustermap
   a << (n = clustermap.size());
   cluster_iter_t l;
   for (l = clustermap.begin(); l != clustermap.end(); l++)
-    (*l).second->Serialize(a);
+    l->second->Serialize(a);
+
+  a << currentcluster->number;
 
   a.Marker(MARK_GROUP);
+
   // teams
   a << (n = teams.size());
   for (i = 0; i < n; i++)
     teams[i]->Serialize(a);
 
   a.Marker(MARK_GROUP);
+
   // players 
   a << (n = Players.size());
   player_iter_t j;
   for (j = Players.begin(); j != Players.end(); j++)
-    (*j).second->Serialize(a);
-
+    j->second->Serialize(a);
 
   a.Marker(MARK_GROUP);
-  a << currentcluster->number;
 
   // global script data
   a.Write((byte *)WorldVars, sizeof(WorldVars));
   acsstore_iter_t t;
   a << (n = ACS_store.size());
   for (t = ACS_store.begin(); t != ACS_store.end(); t++) 
-    a.Write((byte *)&(*t).second, sizeof(acsstore_t));
+    a.Write((byte *)&t->second, sizeof(acsstore_t));
 
   // TODO FS hub_script, global_script...
 
@@ -1947,16 +1955,48 @@ int GameInfo::Unserialize(LArchive &a)
 {
   int i, n;
   // treat all enums as ints
-  a << int(demoversion);
-  a << int(mode);
-  a << int(state);
-  a << int(skill);
+  a << demoversion;
+  a << n; mode = gamemode_t(n);
+  a << n; state = gamestate_t(n);
+  a << n; skill = skill_t(n);
 
   // flags
   a << netgame << multiplayer << modified << paused << inventory;
 
   a << maxteams;
   a << maxplayers;
+
+  if (!a.Marker(MARK_GROUP))
+    return -1;
+
+  // mapinfo (and maps)
+  a << n;
+  for (i = 0; i < n; i++)
+    {
+      MapInfo *m = new MapInfo;
+      if (m->Unserialize(a))
+	return -2;
+      mapinfo[m->mapnumber] = m;
+    }
+
+  if (!a.Marker(MARK_GROUP))
+    return -1;
+
+  // clustermap
+  a << n;
+  for (i = 0; i < n; i++)
+    {
+      MapCluster *c = new MapCluster;
+      if (c->Unserialize(a))
+	return -3;
+      clustermap[c->number] = c;
+    }
+
+  a << n;
+  currentcluster = clustermap[n];
+
+  if (!a.Marker(MARK_GROUP))
+    return -1;
 
   // teams
   a << n;
@@ -1965,50 +2005,24 @@ int GameInfo::Unserialize(LArchive &a)
     {
       teams[i] = new TeamInfo;
       if (teams[i]->Unserialize(a))
-	return -1;
+	return -4;
     }
 
   if (!a.Marker(MARK_GROUP))
     return -1;
+
   // players 
   a << n;
   for (i = 0; i < n; i++)
     {
       PlayerInfo *p = new PlayerInfo;
       if (p->Unserialize(a))
-	return -2;
-      // small hack: since PlayerInfo is not a member of the Thinker class hierarchy,
-      // (un)serialization is a bit complex... TODO? all classes with pointers into one big hierarchy?
+	return -5;
+      Players[p->number] = p;
     }
 
   if (!a.Marker(MARK_GROUP))
     return -1;
-  // mapinfo (and maps)
-  a << n;
-  for (i = 0; i < n; i++)
-    {
-      MapInfo *m = new MapInfo;
-      if (m->Unserialize(a))
-	return -3;
-      mapinfo[m->mapnumber] = m;
-    }
-
-  if (!a.Marker(MARK_GROUP))
-    return -1;
-  // clustermap
-  a << n;
-  for (i = 0; i < n; i++)
-    {
-      MapCluster *c = new MapCluster;
-      if (c->Unserialize(a))
-	return -4;
-      clustermap[c->number] = c;
-    }
-
-  if (!a.Marker(MARK_GROUP))
-    return -1;
-  a << n;
-  currentcluster = clustermap[n];
 
   // global script data
   a.Read((byte *)WorldVars, sizeof(WorldVars));
@@ -2032,7 +2046,7 @@ int GameInfo::Unserialize(LArchive &a)
 
 void GameInfo::LoadGame(int slot)
 {
-  CONS_Printf("Loading game...\n");
+  CONS_Printf("Loading a game...\n");
   char  savename[255];
   byte *savebuffer;
 
@@ -2041,7 +2055,7 @@ void GameInfo::LoadGame(int slot)
   int length = FIL_ReadFile(savename, &savebuffer);
   if (!length)
     {
-      CONS_Printf("Couldn't open save file %s", savename);
+      CONS_Printf("Couldn't open save file %s\n", savename);
       return;
     }
 
@@ -2061,15 +2075,21 @@ void GameInfo::LoadGame(int slot)
   // dearchive all the modifications
   if (Unserialize(a))
     {
-      CONS_Printf("Savegame file corrupted!\n\n");
+      CONS_Printf("\3Savegame file corrupted!\n\n");
       SV_Reset();
       return;
     }
 
   action = ga_nothing;
   state = GS_LEVEL;
+
+  if (netgame)
+    net->SV_Open(true); // let the remote players in
+
   paused = false;
 
+  PlayerInfo *p = Players.begin()->second;
+  Consoleplayer.push_back(p);
   // TODO set up local "consoleplayer" stuff... have other playerinfos waiting for clients to rejoin
   //  if (consoleplayer && consoleplayer->pawn)    hud.ST_Start(consoleplayer->pawn);
 
@@ -2081,6 +2101,7 @@ void GameInfo::LoadGame(int slot)
   R_FillBackScreen();  // draw the pattern into the back screen
   */
   con.Toggle(true);
+  CONS_Printf("...done.\n");
 }
 
 
@@ -2088,6 +2109,8 @@ void GameInfo::SaveGame(int savegameslot, char *description)
 {
   if (action != ga_nothing)
     return; // not while changing state
+
+  CONS_Printf("Saving the game...\n");
 
   LArchive a;
   a.Create(description); // create a new save archive
@@ -2104,6 +2127,6 @@ void GameInfo::SaveGame(int savegameslot, char *description)
 
   Z_Free(buffer);
 
-  CONS_Printf(text[TXT_GGSAVED]);
+  CONS_Printf("...done.\n");
   //R_FillBackScreen();  // draw the pattern into the back screen
 }

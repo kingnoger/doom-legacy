@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2004/11/04 21:12:51  smite-meister
+// save/load fixed
+//
 // Revision 1.19  2004/10/27 17:37:06  smite-meister
 // netcode update
 //
@@ -208,8 +211,8 @@ void ticcmd_t::Clear()
 {
   buttons = 0;
   item = 0;
-  forward = 0;
-  side = 0;
+  forward = side = 0;
+  yaw = pitch = 0;
 }
 
 
@@ -252,9 +255,8 @@ void ticcmd_t::Build(int lpnum, int realtics)
 
   // initialization
   //memcpy(this, I_BaseTiccmd(), sizeof(ticcmd_t)); // FIXME dangerous
-  buttons = 0;
-  forward = side = 0;
-  yaw = pitch = 0;
+  Clear();
+
   if (p)
     {
       yaw   = p->angle >> 16;

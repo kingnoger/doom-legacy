@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.28  2004/11/04 21:12:52  smite-meister
+// save/load fixed
+//
 // Revision 1.27  2004/10/14 19:35:30  smite-meister
 // automap, bbox_t
 //
@@ -93,7 +96,6 @@
 #include "p_enemy.h"
 
 #include "r_render.h"
-#include "r_main.h"
 #include "r_sky.h"
 #include "r_splats.h"
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.25  2004/11/04 21:12:55  smite-meister
+// save/load fixed
+//
 // Revision 1.24  2004/10/27 17:37:11  smite-meister
 // netcode update
 //
@@ -163,12 +166,10 @@
 // Revision 1.1.1.1  2000/02/22 20:32:33  hurdler
 // Initial import into CVS (v1.29 pr3)
 //
-//
-// DESCRIPTION:
-//      Rendering main loop and setup functions,
-//       utility functions (BSP, geometry, trigonometry).
-//      See tables.c, too.
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Rendering main loop and setup, utility functions (BSP, geometry, trigonometry).
 
 #include "doomdef.h"
 #include "doomdata.h"
@@ -423,137 +424,13 @@ int R_PointOnSegSide(fixed_t x, fixed_t y, seg_t *line)
 }
 
 
-//
-// R_PointToAngle
-// To get a global angle from cartesian coordinates,
-//  the coordinates are flipped until they are in
-//  the first octant of the coordinate system, then
-//  the y (<=x) is scaled and divided by x to get a
-//  tangent (slope) value which is looked up in the
-//  tantoangle[] table.
-
-//
-angle_t R_PointToAngle2(fixed_t x2, fixed_t y2, fixed_t x1, fixed_t y1)
-{
-    x1 -= x2;
-    y1 -= y2;
-
-    if ( (!x1) && (!y1) )
-        return 0;
-
-    if (x1>= 0)
-    {
-        // x >=0
-        if (y1>= 0)
-        {
-            // y>= 0
-
-            if (x1>y1)
-            {
-                // octant 0
-                return tantoangle[ SlopeDiv(y1,x1)];
-            }
-            else
-            {
-                // octant 1
-                return ANG90-1-tantoangle[ SlopeDiv(x1,y1)];
-            }
-        }
-        else
-        {
-            // y<0
-            y1 = -y1;
-
-            if (x1>y1)
-            {
-                // octant 8
-                return -tantoangle[SlopeDiv(y1,x1)];
-            }
-            else
-            {
-                // octant 7
-                return ANG270+tantoangle[ SlopeDiv(x1,y1)];
-            }
-        }
-    }
-    else
-    {
-        // x<0
-        x1 = -x1;
-
-        if (y1>= 0)
-        {
-            // y>= 0
-            if (x1>y1)
-            {
-                // octant 3
-                return ANG180-1-tantoangle[ SlopeDiv(y1,x1)];
-            }
-            else
-            {
-                // octant 2
-                return ANG90+ tantoangle[ SlopeDiv(x1,y1)];
-            }
-        }
-        else
-        {
-            // y<0
-            y1 = -y1;
-
-            if (x1>y1)
-            {
-                // octant 4
-                return ANG180+tantoangle[ SlopeDiv(y1,x1)];
-            }
-            else
-            {
-                 // octant 5
-                return ANG270-1-tantoangle[ SlopeDiv(x1,y1)];
-            }
-        }
-    }
-    return 0;
-}
-
 
 angle_t Rend::R_PointToAngle(fixed_t x, fixed_t y)
 {
-  return R_PointToAngle2 (viewx, viewy, x, y);
+  return R_PointToAngle2(viewx, viewy, x, y);
 }
 
 
-fixed_t R_PointToDist2(fixed_t x2, fixed_t y2, fixed_t x1, fixed_t y1)
-{
-    int         angle;
-    fixed_t     dx;
-    fixed_t     dy;
-    fixed_t     dist;
-
-    dx = abs(x1 - x2);
-    dy = abs(y1 - y2);
-
-    if (dy>dx)
-    {
-        fixed_t     temp;
-
-        temp = dx;
-        dx = dy;
-        dy = temp;
-    }
-    if(dy==0)
-       return dx;
-
-    angle = (tantoangle[ FixedDiv(dy,dx)>>DBITS ]+ANG90) >> ANGLETOFINESHIFT;
-
-    // use as cosine
-    dist = FixedDiv (dx, finesine[angle] );
-
-    return dist;
-}
-
-
-//SoM: 3/27/2000: Little extra utility. Works in the same way as
-//R_PointToAngle2
 fixed_t Rend::R_PointToDist(fixed_t x, fixed_t y)
 {
   return R_PointToDist2(viewx, viewy, x, y);
@@ -569,7 +446,7 @@ fixed_t Rend::R_PointToDist(fixed_t x, fixed_t y)
 // rw_distance must be calculated first.
 //
 //added:02-02-98:note: THIS IS USED ONLY FOR WALLS!
-fixed_t Rend::R_ScaleFromGlobalAngle (angle_t visangle)
+fixed_t Rend::R_ScaleFromGlobalAngle(angle_t visangle)
 {
     // UNUSED
 #if 0
@@ -581,9 +458,9 @@ fixed_t Rend::R_ScaleFromGlobalAngle (angle_t visangle)
     fixed_t             cosv;
 
     sinv = finesine[(visangle-rw_normalangle)>>ANGLETOFINESHIFT];
-    dist = FixedDiv (rw_distance, sinv);
+    dist = FixedDiv(rw_distance, sinv);
     cosv = finecosine[(viewangle-visangle)>>ANGLETOFINESHIFT];
-    z = abs(FixedMul (dist, cosv));
+    z = abs(FixedMul(dist, cosv));
     scale = FixedDiv(projection, z);
     return scale;
 
@@ -610,7 +487,7 @@ fixed_t Rend::R_ScaleFromGlobalAngle (angle_t visangle)
 
     if (den > num>>16)
     {
-        scale = FixedDiv (num, den);
+        scale = FixedDiv(num, den);
 
         if (scale > 64*FRACUNIT)
             scale = 64*FRACUNIT;
@@ -643,8 +520,8 @@ void R_InitTextureMapping()
     //
     // Calc focallength
     //  so FIELDOFVIEW angles covers SCREENWIDTH.
-    focallength = FixedDiv (centerxfrac,
-                            finetangent[FINEANGLES/4+/*cv_fov.value*/ FIELDOFVIEW/2] );
+    focallength = FixedDiv(centerxfrac,
+			   finetangent[FINEANGLES/4+/*cv_fov.value*/ FIELDOFVIEW/2] );
 
     for (i=0 ; i<FINEANGLES/2 ; i++)
     {
@@ -679,7 +556,7 @@ void R_InitTextureMapping()
     // Take out the fencepost cases from viewangletox.
     for (i=0 ; i<FINEANGLES/2 ; i++)
     {
-        t = FixedMul (finetangent[i], focallength);
+        t = FixedMul(finetangent[i], focallength);
         t = centerx - t;
 
         if (viewangletox[i] == -1)
@@ -700,7 +577,7 @@ void R_InitTextureMapping()
 //
 #define DISTMAP         2
 
-void R_InitLightTables (void)
+void R_InitLightTables()
 {
     int         i;
     int         j;
@@ -717,7 +594,7 @@ void R_InitLightTables (void)
         {
             //added:02-02-98:use BASEVIDWIDTH, vid.width is not set already,
             // and it seems it needs to be calculated only once.
-            scale = FixedDiv ((BASEVIDWIDTH/2*FRACUNIT), (j+1)<<LIGHTZSHIFT);
+            scale = FixedDiv((BASEVIDWIDTH/2*FRACUNIT), (j+1)<<LIGHTZSHIFT);
             scale >>= LIGHTSCALESHIFT;
             level = startmap - scale/DISTMAP;
 
@@ -848,14 +725,14 @@ void R_ExecuteSetViewSize()
       //added:10-02-98:(i-centery) became (i-centery*2) and centery*2=viewheight
       fixed_t dy = ((i-viewheight*2)<<FRACBITS)+FRACUNIT/2;
       dy = abs(dy);
-      yslopetab[i] = FixedDiv (aspectx*FRACUNIT, dy);
+      yslopetab[i] = FixedDiv(aspectx*FRACUNIT, dy);
     }
     }
 
   for (i=0 ; i<viewwidth ; i++)
     {
       fixed_t cosadj = abs(finecosine[xtoviewangle[i]>>ANGLETOFINESHIFT]);
-      distscale[i] = FixedDiv (FRACUNIT,cosadj);
+      distscale[i] = FixedDiv(FRACUNIT,cosadj);
     }
 
   // Calculate the light levels to use
@@ -1004,6 +881,7 @@ void R_ServerInit()
   tc.Clear();
   tc.SetDefaultItem("DEF_TEX");
   tc.ReadTextures();
+
   //tc.Inventory();
 
   // set the default items for sprite and model caches
@@ -1199,7 +1077,7 @@ void Rend::R_SetupFrame(PlayerInfo *player)
 
 #define CACHEW 32      // bytes in cache line
 #define CACHELINES 32  // cache lines to use
-void R_RotateBuffere (void)
+void R_RotateBuffere()
 {
     byte    bh,bw;
 //    int     modulo;

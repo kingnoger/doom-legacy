@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.10  2004/11/04 21:12:52  smite-meister
+// save/load fixed
+//
 // Revision 1.9  2004/10/27 17:37:06  smite-meister
 // netcode update
 //
@@ -44,12 +47,14 @@
 
 #include <math.h>
 
-#include "p_camera.h"
-#include "g_map.h"
 #include "command.h"
 #include "cvars.h"
+
+#include "g_map.h"
+#include "p_camera.h"
+#include "r_defs.h"
+
 #include "tables.h"
-#include "r_main.h"
 
 
 consvar_t cv_chasecam   = {"chasecam","0",0,CV_OnOff};

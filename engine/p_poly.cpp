@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2004/11/04 21:12:52  smite-meister
+// save/load fixed
+//
 // Revision 1.15  2004/10/14 19:35:30  smite-meister
 // automap, bbox_t
 //
@@ -69,7 +72,6 @@
 #include "p_maputl.h"
 #include "r_poly.h"
 #include "r_defs.h"
-#include "r_main.h"
 #include "m_bbox.h"
 #include "tables.h"
 #include "sounds.h"

@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.28  2004/11/04 21:12:52  smite-meister
+// save/load fixed
+//
 // Revision 1.27  2004/10/27 17:37:06  smite-meister
 // netcode update
 //
@@ -111,6 +114,8 @@ PlayerInfo::PlayerInfo(const string & n)
   name = n;
 
   connection = NULL;
+  client_hash = 0;
+
   playerstate = PST_NEEDMAP;
   spectator = false;
   map_completed = false;

@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.19  2004/11/04 21:12:54  smite-meister
+// save/load fixed
+//
 // Revision 1.18  2004/10/27 17:37:09  smite-meister
 // netcode update
 //
@@ -89,6 +92,7 @@ public:
   string name;     ///< name of the player
 
   class LConnection *connection; ///< network connection
+  unsigned client_hash;          ///< hash of the client network address
 
   playerstate_t playerstate;
   bool spectator;  ///< ghost spectator in a map?

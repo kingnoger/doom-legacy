@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.25  2004/11/04 21:12:53  smite-meister
+// save/load fixed
+//
 // Revision 1.24  2004/10/27 17:37:07  smite-meister
 // netcode update
 //
@@ -90,12 +93,13 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief PlayerPawn class: Movement, morphing, artifacts
+/// \brief Morphing, artifacts, inventory responder.
 
 
 #include "doomdef.h"
 #include "doomdata.h"
 #include "command.h"
+#include "cvars.h"
 #include "d_event.h"
 
 #include "g_game.h"
@@ -109,7 +113,6 @@
 #include "p_enemy.h"
 #include "p_maputl.h"
 #include "r_sprite.h"
-#include "r_main.h"
 
 #include "sounds.h"
 #include "m_random.h"
@@ -117,125 +120,6 @@
 #include "dstrings.h"
 
 #include "hardware/hw3sound.h"
-
-
-//
-// Movement.
-//
-
-
-bool PlayerPawn::Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent)
-{
-  bool ret = Actor::Teleport(nx, ny, nangle, silent);
-
-  // don't move for a bit
-  if (!powers[pw_weaponlevel2])
-    reactiontime = 18;
-    
-  // FIXME code below is useless, right?
-  // Adjust player's view, in case there has been a height change
-  
-  // Save the current deltaviewheight, used in stepping
-  //  fixed_t deltaviewheight = player->deltaviewheight;
-  // Clear deltaviewheight, since we don't want any changes
-  //  player->deltaviewheight = 0;
-  // Set player's view according to the newly set parameters
-  //  CalcHeight(player);
-  // Reset the delta to have the same dynamics as before
-  // player->deltaviewheight = deltaviewheight;
-
-  return ret;
-}
-
-
-
-
-void PlayerPawn::Move()
-{
-  ticcmd_t *cmd = &player->cmd;
-
-  angle = cmd->yaw << 16;
-  aiming = cmd->pitch << 16;
-
-  fixed_t movepushforward = 0, movepushside = 0;
-
-  //CONS_Printf("p = (%d, %d), v = %f / tic\n", px, py, sqrt(px*px+py*py)/FRACUNIT);
-
-  float mf = GetMoveFactor();
-
-  // limit speed = push/(1-friction) => multiplier = 2*(1-friction) = 0.1875
-  float magic = 0.1875 * FRACUNIT * speed * mf;
-
-  if (cmd->forward)
-    {
-      //CONS_Printf("::m %d, %f, magic = %f\n", cmd->forwardmove, mf, magic);
-      movepushforward = int(magic * cmd->forward/100);
-      Thrust(angle, movepushforward);
-    }
-
-  if (cmd->side)
-    {
-      movepushside = int(magic * cmd->side/100);
-      Thrust(angle-ANG90, movepushside);
-    }
-
-  // mouselook swim when waist underwater
-  eflags &= ~MFE_SWIMMING;
-  if (eflags & MFE_UNDERWATER)
-    {
-      fixed_t a;
-      // swim up/down full move when forward full speed
-      a = FixedMul(movepushforward*50, finesine[aiming >> ANGLETOFINESHIFT] >>5 );
-      
-      if ( a != 0 )
-	{
-	  eflags |= MFE_SWIMMING;
-	  pz += a;
-	}
-    }
-
-  bool onground = (z <= floorz) || (eflags & (MFE_ONMOBJ | MFE_FLY)) || (cheats & CF_FLYAROUND);
-
-  // jumping
-  if (cmd->buttons & ticcmd_t::BT_JUMP)
-    {
-      if (eflags & MFE_FLY)
-	fly_zspeed = 10;
-      else if (eflags & MFE_UNDERWATER)
-	//TODO: goub gloub when push up in water
-	pz = JUMPSPEED/2;
-      else if (onground && !jumpdown) // can't jump while in air, can't jump while jumping
-	{
-	  pz = JUMPSPEED;
-	  if (!(cheats & CF_FLYAROUND))
-	    {
-	      S_StartScreamSound(this, sfx_jump);
-	      // keep jumping ok if FLY mode.
-	      jumpdown = true;
-	    }
-	}
-    }
-  else
-    jumpdown = false;
-
-  if (cmd->forward || cmd->side)
-    {
-      // set the running state if nothing more important is going on
-      int anim = pres->GetAnim();
-      if (anim == presentation_t::Idle)
-	pres->SetAnim(presentation_t::Run);
-    }
-
-  if (eflags & MFE_FLY)
-    {
-      if (cmd->buttons & ticcmd_t::BT_FLYDOWN)
-	fly_zspeed = -10;
-
-      pz = fly_zspeed*FRACUNIT;
-      if (fly_zspeed)
-	fly_zspeed /= 2;
-    }
-}
 
 
 
@@ -388,6 +272,55 @@ bool PlayerPawn::UndoMorph()
 
 extern consvar_t cv_deathmatch;
 
+void P_AutoUseHealth(PlayerPawn *p, int saveHealth)
+{
+  int i, n = p->inventory.size();
+  int count;
+  int normalSlot;
+  int superSlot;
+  int normalCount = 0;
+  int superCount = 0;
+
+  for (i = 0; i < n; i++)
+    {
+      if (p->inventory[i].type == arti_health)
+        {
+	  normalSlot = i;
+	  normalCount = p->inventory[i].count;
+        }
+      else if (p->inventory[i].type == arti_superhealth)
+        {
+	  superSlot = i;
+	  superCount = p->inventory[i].count;
+        }
+    }
+
+  if (game.skill == sk_baby && normalCount*25 >= saveHealth)
+    { // Use quartz flasks
+      count = (saveHealth+24)/25;
+      for (i = 0; i < count; i++)
+	p->UseArtifact(arti_health);
+    }
+  else if(superCount*100 >= saveHealth)
+    { // Use mystic urns
+      count = (saveHealth+99)/100;
+      for (i = 0; i < count; i++)
+	p->UseArtifact(arti_superhealth);
+    }
+  else if (game.skill == sk_baby && superCount*100 + normalCount*25 >= saveHealth)
+    { // Use mystic urns and quartz flasks
+      count = (saveHealth+24)/25;
+      for (i = 0; i < count; i++)
+	p->UseArtifact(arti_health);
+
+      saveHealth -= count*25;
+      count = (saveHealth+99)/100;
+      for (i = 0; i < count; i++)
+	p->UseArtifact(arti_superhealth);
+    }
+}
+
+
 static void P_TeleportToPlayerStarts(Actor *v, int n, int ep)
 {
   Map *m = v->mp;
@@ -433,8 +366,27 @@ static bool P_TeleportToDeathmatchStarts(Actor *v)
 }
 
 
+
 //============================================================
 // Chaos Device, teleports the player back to a playerstart
+
+bool P_AutoUseChaosDevice(PlayerPawn *p)
+{
+  int i, n = p->inventory.size();
+    
+  for (i = 0; i < n; i++)
+    {
+      if (p->inventory[i].type == arti_teleport)
+        {
+	  p->UseArtifact(arti_teleport);
+	  p->health = (p->health + 1) / 2;
+	  return true;
+        }
+    }
+  return false;
+}
+
+
 
 void P_ArtiTele(PlayerPawn *p)
 {

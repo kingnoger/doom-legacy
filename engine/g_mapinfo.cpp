@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.21  2004/11/04 21:12:52  smite-meister
+// save/load fixed
+//
 // Revision 1.20  2004/10/17 02:00:16  smite-meister
 // mingw fixes
 //
@@ -624,6 +627,10 @@ int GameInfo::Read_MAPINFO(int lump)
 	    }
 	  else
 	    clustermap[n] = cl = new MapCluster(n);
+
+	  if (sscanf(p.Pointer(), "\"%60[^\"]\"", line) == 1)
+	    cl->clustername = line;
+	  
 	}
       else switch (parsestate)
 	{

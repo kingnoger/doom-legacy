@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/11/04 21:12:54  smite-meister
+// save/load fixed
+//
 // Revision 1.3  2004/08/15 18:08:29  smite-meister
 // palette-to-palette colormaps etc.
 //
@@ -92,8 +95,8 @@ const angle_t ANGLE_60  = ANG180 / 3;
 // The +1 size is to handle the case when x==y without additional checking.
 extern  angle_t     tantoangle[SLOPERANGE+1];
 
-// Utility function, called by R_PointToAngle.
-int SlopeDiv(unsigned num, unsigned  den);
 
+angle_t R_PointToAngle2(fixed_t x2, fixed_t y2, fixed_t x1, fixed_t y1);
+fixed_t R_PointToDist2(fixed_t x2, fixed_t y2, fixed_t x1, fixed_t y1);
 
 #endif

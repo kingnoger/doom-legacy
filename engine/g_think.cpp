@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2003 by DooM Legacy Team.
+// Copyright (C) 2002-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/11/04 21:12:52  smite-meister
+// save/load fixed
+//
 // Revision 1.9  2004/04/25 16:26:49  smite-meister
 // Doxygen
 //
@@ -32,12 +35,10 @@
 // Revision 1.5  2003/11/12 11:07:19  smite-meister
 // Serialization done. Map progression.
 //
-//
-//
-// DESCRIPTION:
-//   TypeInfo and Thinker class implementation
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief TypeInfo and Thinker class implementation
 
 #include "g_think.h"
 #include "m_archive.h"
@@ -121,9 +122,9 @@ Thinker *Thinker::Unserialize(LArchive &a)
   unsigned id;
   a << id;
 
-  Thinker *p = NULL;
-  if (a.GetPtr(id, (void *)p))
-    return p; // already unserialized, just return the appropriate pointer
+  void *v = NULL;
+  if (a.GetPtr(id, v))
+    return static_cast<Thinker*>(v); // already unserialized, just return the appropriate pointer
 
   // not unserialized yet, so let's do it now:
   unsigned type;
@@ -133,7 +134,7 @@ Thinker *Thinker::Unserialize(LArchive &a)
     {
       return NULL; // TODO: How to handle errors? using exceptions?
     }
-  p = t->factory();
+  Thinker *p = t->factory();
   a.SetPtr(id, p); // order is important: consider the case a -> b -> a, where -> is a pointer
 
   p->mp = a.active_map; // a small kludge, some Marshal functions need to have a valid Map*

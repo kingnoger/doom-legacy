@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2004/11/04 21:12:55  smite-meister
+// save/load fixed
+//
 // Revision 1.15  2004/10/31 22:22:13  smite-meister
 // Hasta la vista, pic_t!
 //
@@ -735,27 +738,34 @@ void font_t::DrawString(int x, int y, const char *str, int flags)
       flags |= V_MAP;
     }
 
-  int dupx, dupy, scrwidth;
+  int dupx, dupy;
 
-  // TODO
-  //if (flags & V_SSIZE) {
-      // scale later
-      dupx = dupy = 1;
-      scrwidth = BASEVIDWIDTH;
-      /*
-    }
-  else
+  // ei: kaikki sellaisenaaan
+  // loc: kerrotaan cx, cy alussa, poistetaan flagi drawlta
+  // siz: dup, leveys+cx, flagi jätetään drawlle
+  // molemmat: cx, cy alussa, ei loc-flagia drawlle, muuten kuin yllä
+
+  if (flags & V_SSIZE)
     {
       dupx = vid.dupx;
       dupy = vid.dupy;
-      scrwidth = vid.width;
     }
-      */
+  else
+    {
+      dupx = dupy = 1;
+    }
 
+  if (flags & V_SLOC)
+    {
+      x *= vid.dupx;
+      y *= vid.dupy;
+      flags &= ~V_SLOC; // not passed on to Texture::Draw
+    }
+    
   // cursor coordinates
   int cx = x;
-  int cy = y;
-  int rowheight = font[0]->height + 1;
+  int cy = y + vid.scaledofs / vid.width;
+  int rowheight = (font[0]->height + 1) * dupy;
 
   while (1)
     {
@@ -767,7 +777,7 @@ void font_t::DrawString(int x, int y, const char *str, int flags)
         {
           cx = x;
           //cy += 12*dupy;
-	  cy += rowheight*dupy;
+	  cy += rowheight;
           continue;
         }
 
@@ -781,7 +791,7 @@ void font_t::DrawString(int x, int y, const char *str, int flags)
       Texture *t = font[c - start];
 
       int w = t->width * dupx;
-      if (cx + w > scrwidth)
+      if (cx + w > vid.width)
         break;
 
       t->Draw(cx, cy, flags);
