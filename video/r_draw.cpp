@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C++ -*- 
+// Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
 // $Id$
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/07/25 20:16:43  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.7  2004/03/28 15:16:15  smite-meister
 // Texture cache.
 //
@@ -126,7 +129,7 @@
 
 
 #ifdef HWRENDER
-#include "hardware/hw_main.h"
+#include "hardware/hwr_render.h"
 #endif
 
 // ==========================================================================
@@ -300,7 +303,7 @@ void R_InitTranslationTables()
     // translate just the 16 green colors
     for (i=0 ; i<256 ; i++)
     {
-        if ((i >= 0x70 && i <= 0x7f && game.mode != gm_heretic) || 
+        if ((i >= 0x70 && i <= 0x7f && game.mode != gm_heretic) ||
             (i >=  225 && i <=  240 && game.mode == gm_heretic))
         {
             if( game.mode == gm_heretic )
@@ -322,23 +325,23 @@ void R_InitTranslationTables()
                 translationtables [i      ] = 0x60 + (i&0xf);
                 translationtables [i+  256] = 0x40 + (i&0xf);
                 translationtables [i+2*256] = 0x20 + (i&0xf);
-                
+
                 // added 9-2-98
                 translationtables [i+3*256] = 0x58 + (i&0xf); // light gray
                 translationtables [i+4*256] = 0x38 + (i&0xf); // light brown
                 translationtables [i+5*256] = 0xb0 + (i&0xf); // light red
                 translationtables [i+6*256] = 0xc0 + (i&0xf); // light blue
-                
+
                 if ((i&0xf) <9)
                     translationtables [i+7*256] = 0xc7 + (i&0xf);   // dark blue
                 else
                     translationtables [i+7*256] = 0xf0-9 + (i&0xf);
-                
+
                 if ((i&0xf) <8)
                     translationtables [i+8*256] = 0xe0 + (i&0xf);   // yellow
                 else
                     translationtables [i+8*256] = 0xa0-8 + (i&0xf);
-                
+
                 translationtables [i+9*256] = 0x80 + (i&0xf);     // beige
             }
 
@@ -399,7 +402,7 @@ void R_InitViewBuffer(int width, int height)
         ylookup[i] = ylookup1[i] = vid.buffer + (i+viewwindowy)*vid.width*bytesperpixel;
                      ylookup2[i] = vid.buffer + (i+(vid.height>>1))*vid.width*bytesperpixel; // for splitscreen
     }
-        
+
 
 #ifdef HORIZONTALDRAW
     //Fab 17-06-98
@@ -442,8 +445,8 @@ void R_InitViewBorder()
 void R_FillBackScreen()
 {
   int  x, y;
-  int  step, boff; 
-    
+  int  step, boff;
+
   //faB: quickfix, don't cache lumps in both modes
   if (rendermode!=render_soft)
     return;
@@ -462,7 +465,7 @@ void R_FillBackScreen()
   //added:08-01-98:dont draw the borders when viewwidth is full vid.width.
   if (scaledviewwidth == vid.width)
     return;
-    
+
   if (game.mode >= gm_heretic)
     {
       step = 16;
@@ -519,11 +522,11 @@ void R_DrawViewBorder()
     int         side;
     int         ofs;
 
-#ifdef HWRENDER // not win32 only 19990829 by Kin
+#ifdef HWRENDER
     if (rendermode != render_soft)
     {
-        HWR_DrawViewBorder (0);
-        return;
+      HWR.DrawViewBorder();
+      return;
     }
 #endif
 

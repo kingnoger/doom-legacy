@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:25  hurdler
-// Initial revision
+// Revision 1.2  2004/07/25 20:18:47  hurdler
+// Remove old hardware renderer and add part of the new one
+//
+// Revision 1.1.1.1  2002/11/16 14:18:25  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.4  2002/08/19 18:06:42  vberghol
 // renderer somewhat fixed
@@ -68,6 +71,7 @@
 #pragma interface
 #endif
 
+#include "r_defs.h"
 
 extern seg_t*           curline;
 extern side_t*          sidedef;

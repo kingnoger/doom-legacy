@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C++ -*- 
+// Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
 // $Id$
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/07/25 20:17:05  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.7  2004/03/28 15:16:15  smite-meister
 // Texture cache.
 //
@@ -53,8 +56,10 @@
 #include "m_argv.h"
 #include "i_video.h"
 
+#include "command.h"
+
 #ifdef HWRENDER
-#include "hardware/hw_drv.h" // for hardware memory stats
+#include "hardware/hwr_render.h"
 #endif
 
 using namespace std;
@@ -98,7 +103,7 @@ struct memblock_t
 
 #ifdef ZDEBUG
   char     *ownerfile;
-  int       ownerline; 
+  int       ownerline;
 #endif
 };
 
@@ -154,14 +159,14 @@ void Z_Init()
 
 #ifndef MEMDEBUG
   ULONG free, total;
-  int mb_alloc = memzone_t::mb_increment; 
+  int mb_alloc = memzone_t::mb_increment;
 
   if (M_CheckParm("-mb"))
     {
       if (M_IsNextParm())
-	mb_alloc = atoi(M_GetNextParm());
+        mb_alloc = atoi(M_GetNextParm());
       else
-	I_Error("usage : -mb <number of megabytes for the heap>");
+        I_Error("usage : -mb <number of megabytes for the heap>");
     }
   else
     {
@@ -170,12 +175,12 @@ void Z_Init()
       CONS_Printf("System memory %d MB free %d MB\n", total, free);
       // we assume that system uses a lot of memory for disk cache
       if (free < 6)
-	free = total / 2;
+        free = total / 2;
 
       if (mb_alloc < free)
-	mb_alloc = free;
+        mb_alloc = free;
       if (mb_alloc > 20)
-	mb_alloc = 20; // min 6 MB max 20 MB
+        mb_alloc = 20; // min 6 MB max 20 MB
     }
 
   memzone_t *newzone = memzone_t::NewZone(mb_alloc << 20);
@@ -270,25 +275,25 @@ void Z_Free(void *ptr)
   for (other = mainzone->blocklist.next; other->next != &mainzone->blocklist; other = other->next)
     {
       if ((other != block) && (other->user > (void **)0x100) &&
-	  (other->user >= (void **)block) &&
-	  (other->user <= (void **)((byte *)block) + block->size))
-	{
-	  //I_Error("Z_Free: Pointer in zone\n");
-	  I_Error("Z_Free: Pointer %s:%d in zone at %s:%i",other->ownerfile,other->ownerline,file,line);
-	}
+          (other->user >= (void **)block) &&
+          (other->user <= (void **)((byte *)block) + block->size))
+        {
+          //I_Error("Z_Free: Pointer in zone\n");
+          I_Error("Z_Free: Pointer %s:%d in zone at %s:%i",other->ownerfile,other->ownerline,file,line);
+        }
     }
 #endif
 
   // Find the correct block in which to do the free'ing.
-  for (unsigned int i=0; i < zones.size(); i++) 
+  for (unsigned int i=0; i < zones.size(); i++)
     if (ptr >= zones[i] && ptr <= zones[i] + zones[i]->size)
       {
-	zones[i]->Free(ptr);
-	return;
+        zones[i]->Free(ptr);
+        return;
       }
   I_Error("Attempt to free zone memory outside the allocated area.\n");
 }
- 
+
 void memzone_t::Free(void* ptr)
 {
   memblock_t *block = (memblock_t *)((byte *)ptr - sizeof(memblock_t));
@@ -305,11 +310,11 @@ void memzone_t::Free(void* ptr)
     {
       // smaller values are not pointers
       // Note: OS-dependend?
-      
+
       // clear the user's pointer
       *block->user = NULL;
     }
-  
+
   // mark as free
   block->user = NULL;
   block->tag = 0;
@@ -322,13 +327,13 @@ void memzone_t::Free(void* ptr)
       other->size += block->size;
       other->next = block->next;
       other->next->prev = other;
-      
+
       if (block == base)
-	base = other;
+        base = other;
 
       block = other;
     }
-  
+
   other = block->next;
   if (!other->user)
     {
@@ -336,9 +341,9 @@ void memzone_t::Free(void* ptr)
       block->size += other->size;
       block->next = other->next;
       block->next->prev = block;
-      
+
       if (other == base)
-	base = block;
+        base = block;
     }
 }
 
@@ -367,17 +372,17 @@ void *Z_MallocAlign(int size, int tag, void **user, int alignbits)
   if (user)
     *user = temp;
   return temp;
-#endif    
+#endif
 
   void *allocation;
   for (unsigned int i=0; i < zones.size(); i++)
     {
       allocation = zones[i]->Malloc(size, tag, user, alignbits);
       if (allocation != NULL)
-	{
-	  //memset(allocation, 0, size); // FIXME TEST. Crashes if bad return value.
-	  return allocation;
-	}
+        {
+          //memset(allocation, 0, size); // FIXME TEST. Crashes if bad return value.
+          return allocation;
+        }
     }
 
   // No free block was found. Allocate a new zone from the system and
@@ -426,32 +431,32 @@ void* memzone_t::Malloc(int size, int tag, void **user, int alignbits)
   do {
     if (rover == end)
       {
-	// There was not enough memory. Return NULL to signal
-	// wrapper function to search next block or allocate more
-	// memory.
-	return NULL;
+        // There was not enough memory. Return NULL to signal
+        // wrapper function to search next block or allocate more
+        // memory.
+        return NULL;
       }
 
     if (rover->user)
       {
-	if (rover->tag < PU_PURGELEVEL)
-	  {
-	    // hit a block that can't be purged,
-	    //  so move base past it
-	    base = rover = rover->next;
-	  }
-	else
-	  {
-	    // free the rover block (adding the size to base)
-	    // TODO: block are freed even though is is not yet certain that they _will_ be reused
-	    //  (it migh be that the purged area is still too small). Perhaps check first, purge later?
+        if (rover->tag < PU_PURGELEVEL)
+          {
+            // hit a block that can't be purged,
+            //  so move base past it
+            base = rover = rover->next;
+          }
+        else
+          {
+            // free the rover block (adding the size to base)
+            // TODO: block are freed even though is is not yet certain that they _will_ be reused
+            //  (it migh be that the purged area is still too small). Perhaps check first, purge later?
 
-	    // the rover can be the base block
-	    base = base->prev;
-	    Z_Free ((byte *)rover+sizeof(memblock_t));
-	    base = base->next;
-	    rover = base->next;
-	  }
+            // the rover can be the base block
+            base = base->prev;
+            Z_Free ((byte *)rover+sizeof(memblock_t));
+            base = base->next;
+            rover = base->next;
+          }
       }
     else
       rover = rover->next;
@@ -467,23 +472,23 @@ void* memzone_t::Malloc(int size, int tag, void **user, int alignbits)
 
       if (sizediff > MINFRAGMENT)
         {
-	  newbase->prev = base;
-	  newbase->next = base->next;
-	  newbase->next->prev = newbase;
+          newbase->prev = base;
+          newbase->next = base->next;
+          newbase->next->prev = newbase;
 
-	  newbase->size = base->size - sizediff;
-	  base->next = newbase;
-	  base->size = sizediff;
+          newbase->size = base->size - sizediff;
+          base->next = newbase;
+          base->size = sizediff;
         }
       else
         {
-	  // adjust size of previous block if adjacent (not cycling)
-	  if (base->prev < base)
-	    base->prev->size += sizediff;
-	  base->prev->next = newbase;
-	  base->next->prev = newbase;
-	  base->size -= sizediff;
-	  memcpy(newbase, base, sizeof(memblock_t));
+          // adjust size of previous block if adjacent (not cycling)
+          if (base->prev < base)
+            base->prev->size += sizediff;
+          base->prev->next = newbase;
+          base->next->prev = newbase;
+          base->size -= sizediff;
+          memcpy(newbase, base, sizeof(memblock_t));
         }
       base = newbase;
     }
@@ -518,7 +523,7 @@ void* memzone_t::Malloc(int size, int tag, void **user, int alignbits)
   else
     {
       if (tag >= PU_PURGELEVEL)
-	I_Error("Z_Malloc: an owner is required for purgable blocks");
+        I_Error("Z_Malloc: an owner is required for purgable blocks");
 
       // mark as in use, but unowned
       base->user = (void **)2;
@@ -566,10 +571,10 @@ void memzone_t::FreeTags(int lowtag, int hightag)
 
       // free block?
       if (!block->user)
-	continue;
+        continue;
 
       if (block->tag >= lowtag && block->tag <= hightag)
-	Free((byte *)block + sizeof(memblock_t));
+        Free((byte *)block + sizeof(memblock_t));
     }
 }
 
@@ -603,33 +608,33 @@ void memzone_t::DumpHeap(int lowtag, int hightag)
   for (block = blocklist.next; ; block = block->next)
     {
       if ((block->tag < lowtag || block->tag > hightag) &&
-	  (block->next != &blocklist))
-	continue;
+          (block->next != &blocklist))
+        continue;
 
       CONS_Printf("block:%p    size:%7i    user:%p    tag:%3i prev:%p next:%p\n",
-		  block, block->size, block->user, block->tag, block->prev, block->next);
+                  block, block->size, block->user, block->tag, block->prev, block->next);
 
       if (block->next->prev != block)
-	CONS_Printf("ERROR: next block doesn't have a proper back link\n");
+        CONS_Printf("ERROR: next block doesn't have a proper back link\n");
 
       if ((block->user > (void **)0x100) &&
-	  (*(block->user) != (byte *)block + sizeof(memblock_t)))
-	CONS_Printf("ERROR: block doesn't have a proper user\n");
+          (*(block->user) != (byte *)block + sizeof(memblock_t)))
+        CONS_Printf("ERROR: block doesn't have a proper user\n");
 
       if (block->next == &blocklist)
-	break; // all blocks have been hit
+        break; // all blocks have been hit
 
       n++;
 
       if ((byte *)block + block->size != (byte *)block->next)
-	CONS_Printf("ERROR: block size does not touch the next block\n");
+        CONS_Printf("ERROR: block size does not touch the next block\n");
 
       if (!block->user && !block->next->user)
-	CONS_Printf("ERROR: two consecutive free blocks\n");
+        CONS_Printf("ERROR: two consecutive free blocks\n");
     }
 
   CONS_Printf("\nTotal : %d blocks\n"
-	      "========================================================\n\n", n);
+              "========================================================\n\n", n);
 }
 
 //
@@ -659,29 +664,29 @@ void memzone_t::FileDumpHeap(FILE *f)
     {
       i++;
       fprintf (f,"block:%p size:%7i user:%7x tag:%3i prev:%p next:%p id:%7i\n",
-	       block, block->size, (int)block->user, block->tag, block->prev, block->next, block->id);
+               block, block->size, (int)block->user, block->tag, block->prev, block->next, block->id);
 
       if (block->next == &blocklist)
         {
-	  // all blocks have been hit
-	  break;
+          // all blocks have been hit
+          break;
         }
 
-      if ((block->user > (void **)0x100) && 
-	   ((int)(*(block->user))!=((int)block)+(int)sizeof(memblock_t)))
-	fprintf (f,"ERROR: block don't have a proper user\n");
+      if ((block->user > (void **)0x100) &&
+           ((int)(*(block->user))!=((int)block)+(int)sizeof(memblock_t)))
+        fprintf (f,"ERROR: block don't have a proper user\n");
 
       if ( (byte *)block + block->size != (byte *)block->next)
-	fprintf (f,"ERROR: block size does not touch the next block\n");
+        fprintf (f,"ERROR: block size does not touch the next block\n");
 
       if ( block->next->prev != block)
-	fprintf (f,"ERROR: next block doesn't have proper back link\n");
+        fprintf (f,"ERROR: next block doesn't have proper back link\n");
 
       if (!block->user && !block->next->user)
-	fprintf (f,"ERROR: two consecutive free blocks\n");
+        fprintf (f,"ERROR: two consecutive free blocks\n");
     }
   fprintf (f,"Total : %d blocks\n"
-	   "===============================================================================\n\n",i);
+           "===============================================================================\n\n",i);
 }
 
 
@@ -704,20 +709,20 @@ void memzone_t::CheckHeap(int i)
   for (memblock_t *block = blocklist.next; ; block = block->next)
     {
       if ((block->user > (void **)0x100) &&
-	  (*(block->user) != (byte *)block + sizeof(memblock_t)))
-	I_Error("Z_CheckHeap: block don't have a proper user %d\n", i);
+          (*(block->user) != (byte *)block + sizeof(memblock_t)))
+        I_Error("Z_CheckHeap: block don't have a proper user %d\n", i);
 
       if (block->next->prev != block)
-	I_Error("Z_CheckHeap: next block doesn't have proper back link %d\n", i);
+        I_Error("Z_CheckHeap: next block doesn't have proper back link %d\n", i);
 
       if (block->next == &blocklist)
-	break;
+        break;
 
       if ((byte *)block + block->size != (byte *)block->next)
-	I_Error("Z_CheckHeap: block size does not touch the next block %d\n", i);
+        I_Error("Z_CheckHeap: block size does not touch the next block %d\n", i);
 
       if (!block->user && !block->next->user)
-	I_Error("Z_CheckHeap: two consecutive free blocks %d\n", i);
+        I_Error("Z_CheckHeap: two consecutive free blocks %d\n", i);
     }
 }
 
@@ -768,7 +773,7 @@ void Z_FreeMemory(int *realfree,int *cachemem,int *usedmem,int *largestfreeblock
       *cachemem += tmpcache;
       *usedmem += tmpused;
       if (tmplargest > *largestfreeblock)
-	*largestfreeblock = tmplargest;
+        *largestfreeblock = tmplargest;
     }
 }
 
@@ -786,25 +791,25 @@ void memzone_t::FreeMemory(int *realfree, int *cachemem, int *usedmem, int *larg
     {
       if (block->user == NULL)
         {
-	  // free memory
-	  *realfree += block->size;
-	  freeblock += block->size;
+          // free memory
+          *realfree += block->size;
+          freeblock += block->size;
         }
       else if (block->tag >= PU_PURGELEVEL)
-	{
-	  // purgable memory (cache)
-	  *cachemem += block->size;
-	  freeblock += block->size;
-	}
+        {
+          // purgable memory (cache)
+          *cachemem += block->size;
+          freeblock += block->size;
+        }
       else
-	{
-	  // used block
-	  *usedmem += block->size;
+        {
+          // used block
+          *usedmem += block->size;
 
-	  if (freeblock > *largestfreeblock)
-	    *largestfreeblock = freeblock;
-	  freeblock = 0;
-	}
+          if (freeblock > *largestfreeblock)
+            *largestfreeblock = freeblock;
+          freeblock = 0;
+        }
     }
 }
 
@@ -832,7 +837,7 @@ int memzone_t::TagUsage(int tagnum)
   for (block = blocklist.next; block != &blocklist; block = block->next)
     {
       if (block->user != NULL && block->tag == tagnum)
-	bytes += block->size;
+        bytes += block->size;
     }
 
   return bytes;
@@ -858,12 +863,13 @@ void Command_Meminfo_f()
   CONS_Printf("largest free block : %7d kB\n", largefreeblock>>10);
 
 #ifdef HWRENDER
+  // FIXME: Hurdler: this is probably not accurate with the new renderer
   if (rendermode != render_soft)
     {
       CONS_Printf("Patch info headers : %7d kB\n", Z_TagUsage(PU_HWRPATCHINFO)>>10);
       CONS_Printf("HW Texture cache   : %7d kB\n", Z_TagUsage(PU_HWRCACHE)>>10);
       CONS_Printf("Plane polygon      : %7d kB\n", Z_TagUsage(PU_HWRPLANE)>>10);
-      CONS_Printf("HW Texture used    : %7d kB\n", HWD.pfnGetTextureUsed()>>10);
+      CONS_Printf("HW Texture used    : %7d kB\n", HWR.GetTextureUsed()>>10);
     }
 #endif
 

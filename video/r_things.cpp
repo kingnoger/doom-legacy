@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2004/07/25 20:16:43  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.16  2004/07/05 16:53:45  smite-meister
 // Netcode replaced
 //
@@ -188,7 +191,7 @@ void spritepres_t::SetFrame(const state_t *st)
   // FIXME for now the name of SPR_NONE is "NONE", fix it when we have the default sprite
 
   // some sprites change name during animation (!!!)
-  char *name = sprnames[st->sprite]; 
+  char *name = sprnames[st->sprite];
 
   if (spr->iname != *reinterpret_cast<int *>(name))
     {
@@ -228,7 +231,7 @@ void spritepres_t::SetAnim(int seq)
     case Melee:
       st = &states[info->meleestate];
       if (st != &states[S_NULL])
-	break;
+        break;
       // if no melee anim, fallthrough to shoot anim
 
     case Shoot:
@@ -258,7 +261,7 @@ void spritepres_t::SetAnim(int seq)
 
 bool spritepres_t::Update(int advance)
 {
-  // TODO replace "tics elapsed since last update" with "nowtic"... 
+  // TODO replace "tics elapsed since last update" with "nowtic"...
   // the idea is to keep the count inside the presentation, not outside
   advance += lastupdate; // how many tics to advance, lastupdate is the remainder from last update
 
@@ -324,7 +327,7 @@ static int maxframe;
 
 static void R_InstallSpriteLump(const char *name, int frame, int rot, bool flip)
 {
-  // uses sprtemp array, maxframe 
+  // uses sprtemp array, maxframe
   if (frame >= 29 || rot > 8)
     I_Error("R_InstallSpriteLump: Bad frame characters in lump %s", name);
 
@@ -336,6 +339,7 @@ static void R_InstallSpriteLump(const char *name, int frame, int rot, bool flip)
 #ifdef HWRENDER
   //BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
   // TODO what is this?
+  //  -> Hurdler: this is because of the "monster feet under the ground" bug (see if we cannot fix that properly)
   //if (rendermode != render_soft && t->topoffset > 0 && t->topoffset < t->height)
     // perfect is patch.height but sometime it is too high
     //t->topoffset = min(t->topoffset+4, t->height);
@@ -345,18 +349,18 @@ static void R_InstallSpriteLump(const char *name, int frame, int rot, bool flip)
     {
       // the lump should be used for all rotations
       if (sprtemp[frame].rotate == 0 && devparm)
-	CONS_Printf ("R_InitSprites: Sprite %s frame %c has "
-		     "multiple rot=0 lump\n", name, 'A'+frame);
+        CONS_Printf ("R_InitSprites: Sprite %s frame %c has "
+                     "multiple rot=0 lump\n", name, 'A'+frame);
 
       if (sprtemp[frame].rotate == 1 && devparm)
-	CONS_Printf ("R_InitSprites: Sprite %s frame %c has rotations "
-		     "and a rot=0 lump\n", name, 'A'+frame);
+        CONS_Printf ("R_InitSprites: Sprite %s frame %c has rotations "
+                     "and a rot=0 lump\n", name, 'A'+frame);
 
       sprtemp[frame].rotate = 0;
       for (int r = 0; r < 8; r++)
         {
-	  sprtemp[frame].tex[r] = t;
-	  sprtemp[frame].flip[r] = flip;
+          sprtemp[frame].tex[r] = t;
+          sprtemp[frame].flip[r] = flip;
         }
     }
   else
@@ -411,21 +415,21 @@ cacheitem_t *spritecache_t::Load(const char *p)
 
       int start = fc.FindNumForNameFile("S_START", i, 0);
       if (start == -1)
-	start = fc.FindNumForNameFile("SS_START", i, 0); //deutex compatib.
+        start = fc.FindNumForNameFile("SS_START", i, 0); //deutex compatib.
 
       if (start == -1)
-	start = 0;      // search frames from start of wad (lumpnum low word is 0)
+        start = 0;      // search frames from start of wad (lumpnum low word is 0)
       else
-	start++;   // just after S_START
+        start++;   // just after S_START
 
       start &= 0xFFFF;    // 0 based in waddir
 
       int end = fc.FindNumForNameFile("S_END", i, 0);
       if (end == -1)
-	end = fc.FindNumForNameFile("SS_END", i, 0);     //deutex compatib.
+        end = fc.FindNumForNameFile("SS_END", i, 0);     //deutex compatib.
 
       if (end == -1)
-	continue; // no S_END, no sprites accepted
+        continue; // no S_END, no sprites accepted
       end &= 0xFFFF;
 
       const char *fullname;
@@ -433,29 +437,29 @@ cacheitem_t *spritecache_t::Load(const char *p)
       // scan the lumps, filling in the frames for whatever is found
       l = fc.FindPartialName(intname, i, start, &fullname);
       while (l != -1 && l < end)
-	{
-	  int lump = (i << 16) + l;
-	  int frame = fullname[4] - 'A';
-	  int rotation = fullname[5] - '0';
+        {
+          int lump = (i << 16) + l;
+          int frame = fullname[4] - 'A';
+          int rotation = fullname[5] - '0';
 
-	  // skip NULL sprites from very old dmadds pwads
-	  if (fc.LumpLength(lump) <= 8)
-	    continue;
+          // skip NULL sprites from very old dmadds pwads
+          if (fc.LumpLength(lump) <= 8)
+            continue;
 
-	  const char *name = fc.FindNameForNum(lump);
+          const char *name = fc.FindNameForNum(lump);
 
-	  R_InstallSpriteLump(name, frame, rotation, false);
-	  if (fullname[6])
-	    {
-	      frame = fullname[6] - 'A';
-	      rotation = fullname[7] - '0';
-	      R_InstallSpriteLump(name, frame, rotation, true);
-	    }
+          R_InstallSpriteLump(name, frame, rotation, false);
+          if (fullname[6])
+            {
+              frame = fullname[6] - 'A';
+              rotation = fullname[7] - '0';
+              R_InstallSpriteLump(name, frame, rotation, true);
+            }
 
-	  l = fc.FindPartialName(intname, i, l+1, &fullname);
-	}
+          l = fc.FindPartialName(intname, i, l+1, &fullname);
+        }
     }
-  
+
   // if no frames found for this sprite
   if (maxframe == -1)
     return NULL;
@@ -467,22 +471,22 @@ cacheitem_t *spritecache_t::Load(const char *p)
     switch (sprtemp[i].rotate)
       {
       case -1:
-	// no rotations were found for that frame at all
-	I_Error("No patches found for sprite %s frame %c", p, i+'A');
-	break;
-	  
+        // no rotations were found for that frame at all
+        I_Error("No patches found for sprite %s frame %c", p, i+'A');
+        break;
+
       case 0:
-	// only the first rotation is needed
-	break;
+        // only the first rotation is needed
+        break;
 
       case 1:
-	// must have all 8 frames
-	for (l = 0; l < 8; l++)
-	  // we test the patch lump, or the id lump whatever
-	  // if it was not loaded the two are -1
-	  if (sprtemp[i].tex[l] == (Texture *)(-1))
-	    I_Error("Sprite %s frame %c is missing rotations", p, i+'A');
-	break;
+        // must have all 8 frames
+        for (l = 0; l < 8; l++)
+          // we test the patch lump, or the id lump whatever
+          // if it was not loaded the two are -1
+          if (sprtemp[i].tex[l] == (Texture *)(-1))
+            I_Error("Sprite %s frame %c is missing rotations", p, i+'A');
+        break;
       }
 
   sprite_t *t = new sprite_t;
@@ -531,7 +535,7 @@ static void R_AddSpriteDefs (char** namelist, int wadnum)
   if (end == -1)
     {
       if (devparm)
-	CONS_Printf ("no sprites in pwad %d\n", wadnum);
+        CONS_Printf ("no sprites in pwad %d\n", wadnum);
       return;
       //I_Error ("R_AddSpriteDefs: S_END, or SS_END missing for sprites "
       //         "in pwad %d\n",wadnum);
@@ -545,13 +549,13 @@ static void R_AddSpriteDefs (char** namelist, int wadnum)
   for (i=0 ; i<numsprites ; i++)
     {
       spritename = namelist[i];
-      
+
       if (R_AddSingleSpriteDef (spritename, &sprites[i], wadnum, start, end) )
         {
-	  // if a new sprite was added (not just replaced)
-	  addsprites++;
-	  if (devparm)
-	    CONS_Printf ("sprite %s set in pwad %d\n", namelist[i], wadnum);//Fab
+          // if a new sprite was added (not just replaced)
+          addsprites++;
+          if (devparm)
+            CONS_Printf ("sprite %s set in pwad %d\n", namelist[i], wadnum);//Fab
         }
     }
 
@@ -650,7 +654,7 @@ void R_DrawMaskedColumn(column_t* column)
         // calculate unclipped screen coordinates
         //  for post
         topscreen = sprtopscreen + spryscale*column->topdelta;
-        bottomscreen = sprbotscreen == MAXINT ? topscreen + spryscale*column->length : 
+        bottomscreen = sprbotscreen == MAXINT ? topscreen + spryscale*column->length :
                                                 sprbotscreen + spryscale*column->length;
 
         dc_yl = (topscreen+FRACUNIT-1)>>FRACBITS;
@@ -677,18 +681,18 @@ void R_DrawMaskedColumn(column_t* column)
 
             // Drawn by either R_DrawColumn
             //  or (SHADOW) R_DrawFuzzColumn.
-	    // FIXME a quick fix
-	    if (!ylookup[dc_yl] && colfunc==R_DrawColumn_8)
-	      {
-		static int first = 1;
-		if (first)
-		  {
-		    CONS_Printf("WARNING: avoiding a crash in %s %d\n", __FILE__, __LINE__);
-		    first = 0;
-		  }
-	      }
-	    else
-	      colfunc();
+            // FIXME a quick fix
+            if (!ylookup[dc_yl] && colfunc==R_DrawColumn_8)
+              {
+                static int first = 1;
+                if (first)
+                  {
+                    CONS_Printf("WARNING: avoiding a crash in %s %d\n", __FILE__, __LINE__);
+                    first = 0;
+                  }
+              }
+            else
+              colfunc();
         }
         column = (column_t *)(  (byte *)column + column->length + 4);
     }
@@ -755,7 +759,7 @@ static void R_DrawVisSprite(vissprite_t *vis, int  x1, int x2)
       texturecolumn = frac>>FRACBITS;
 #ifdef RANGECHECK
       if (texturecolumn < 0 || texturecolumn >= t->width)
-	I_Error ("R_DrawSpriteRange: bad texturecolumn");
+        I_Error ("R_DrawSpriteRange: bad texturecolumn");
 #endif
       column_t *column = (column_t *)t->GetColumn(texturecolumn);
       R_DrawMaskedColumn(column);
@@ -791,7 +795,7 @@ void Rend::R_SplitSprite(vissprite_t* sprite, Actor* thing)
             continue;
         if(cutfrac > vid.height)
             return;
-        
+
         // Found a split! Make a new sprite, copy the old sprite to it, and
     // adjust the heights.
     newsprite = R_NewVisSprite ();
@@ -809,7 +813,7 @@ void Rend::R_SplitSprite(vissprite_t* sprite, Actor* thing)
                 sprite->pz = newsprite->pzt = sector->lightlist[i].height;
         else
         {
-                newsprite->pz = newsprite->gz; 
+                newsprite->pz = newsprite->gz;
                 newsprite->pzt = newsprite->gzt;
         }
 
@@ -885,40 +889,40 @@ void Rend::R_AddSprites(sector_t* sec, int lightlevel)
   if (!sec->numlights)
     {
       if (sec->heightsec == -1)
-	lightlevel = sec->lightlevel;
+        lightlevel = sec->lightlevel;
 
       int lightnum = (lightlevel >> LIGHTSEGSHIFT)+extralight;
 
       if (lightnum < 0)
-	spritelights = scalelight[0];
+        spritelights = scalelight[0];
       else if (lightnum >= LIGHTLEVELS)
-	spritelights = scalelight[LIGHTLEVELS-1];
+        spritelights = scalelight[LIGHTLEVELS-1];
       else
-	spritelights = scalelight[lightnum];
+        spritelights = scalelight[lightnum];
     }
 
   // Handle all things in sector.
   for (Actor *thing = sec->thinglist; thing; thing = thing->snext)
     if (!(thing->flags2 & MF2_DONTDRAW))
       {
-	// transform the origin point
-	fixed_t  tr_x = thing->x - viewx;
-	fixed_t  tr_y = thing->y - viewy;
+        // transform the origin point
+        fixed_t  tr_x = thing->x - viewx;
+        fixed_t  tr_y = thing->y - viewy;
 
-	proj_tz = FixedMul(tr_x,viewcos) + FixedMul(tr_y,viewsin);
+        proj_tz = FixedMul(tr_x,viewcos) + FixedMul(tr_y,viewsin);
 
-	// thing is behind view plane?
-	if (proj_tz < MINZ)
-	  continue;
+        // thing is behind view plane?
+        if (proj_tz < MINZ)
+          continue;
 
-	proj_tx = FixedMul(tr_x,viewsin) - FixedMul(tr_y,viewcos);
+        proj_tx = FixedMul(tr_x,viewsin) - FixedMul(tr_y,viewcos);
 
-	// too far off the side?
-	if (abs(proj_tx) > (proj_tz << 2))
-	  continue;
+        // too far off the side?
+        if (abs(proj_tx) > (proj_tz << 2))
+          continue;
 
-	thing->pres->Project(thing);
-	//R_ProjectSprite(thing);
+        thing->pres->Project(thing);
+        //R_ProjectSprite(thing);
       }
 }
 
@@ -947,13 +951,13 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
 #ifdef RANGECHECK
   if ( (unsigned)psp->state->sprite >= numsprites)
     I_Error ("R_ProjectSprite: invalid sprite number %i ",
-	     psp->state->sprite);
+             psp->state->sprite);
 #endif
   sprite_t *sprdef = sprites.Get(sprnames[psp->state->sprite]);
 #ifdef RANGECHECK
   if ( (psp->state->frame & FF_FRAMEMASK)  >= sprdef->numframes)
     I_Error ("R_ProjectSprite: invalid sprite frame %i : %i for %s",
-	     psp->state->sprite, psp->state->frame, sprnames[psp->state->sprite]);
+             psp->state->sprite, psp->state->frame, sprnames[psp->state->sprite]);
 #endif
   spriteframe_t *sprframe = &sprdef->spriteframes[ psp->state->frame & FF_FRAMEMASK ];
 
@@ -993,7 +997,7 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
     vis->texturemid = 120 << FRACBITS;
   else
     vis->texturemid = BASEYCENTER << FRACBITS;
-  
+
   vis->texturemid += FRACUNIT/2 - psp->sy + (t->topoffset << FRACBITS);
 
   if (game.mode >= gm_heretic)
@@ -1030,10 +1034,10 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
       // in Doom2, it used to switch between invis/opaque the last seconds
       // now it switch between invis/less invis the last seconds
       if (viewplayer->powers[pw_invisibility] > 4*TICRATE
-	  || viewplayer->powers[pw_invisibility] & 8)
-	vis->transmap = ((tr_transhi-1)<<FF_TRANSSHIFT) + transtables;
+          || viewplayer->powers[pw_invisibility] & 8)
+        vis->transmap = ((tr_transhi-1)<<FF_TRANSSHIFT) + transtables;
       else
-	vis->transmap = ((tr_transmed-1)<<FF_TRANSSHIFT) + transtables;
+        vis->transmap = ((tr_transmed-1)<<FF_TRANSSHIFT) + transtables;
     }
   else if (fixedcolormap)
     {
@@ -1059,11 +1063,11 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
       lightnum = (*viewplayer->subsector->sector->lightlist[light].lightlevel  >> LIGHTSEGSHIFT)+extralight;
 
       if (lightnum < 0)
-	spritelights = scalelight[0];
+        spritelights = scalelight[0];
       else if (lightnum >= LIGHTLEVELS)
-	spritelights = scalelight[LIGHTLEVELS-1];
+        spritelights = scalelight[LIGHTLEVELS-1];
       else
-	spritelights = scalelight[lightnum];
+        spritelights = scalelight[lightnum];
 
       vis->colormap = spritelights[MAXLIGHTSCALE-1];
     }
@@ -1624,7 +1628,7 @@ void Rend::R_DrawSprite (vissprite_t* spr)
           clipbot[x] = h;
       }
     }
-    
+
     // all clipping has been performed, so draw the sprite
 
     // check for unclipped columns
@@ -1782,9 +1786,9 @@ void SetPlayerSkin(int playernum, char *skinname)
         // search in the skin list
         if (stricmp(skins[i].name,skinname)==0)
         {
-	  
+
             // change the face graphics
-	  // FIXME this should be done in HUD, not here.
+          // FIXME this should be done in HUD, not here.
             if (playernum == hud.sbpawn->player->number &&
             // for save time test it there is a real change
                 strcmp (skins[players[playernum].skin].faceprefix, skins[i].faceprefix) )
@@ -1830,11 +1834,11 @@ int W_CheckForSkinMarkerInPwad (int wadid, int startlump)
     {
       int i = fc.FindPartialName(iname, wadid, startlump, &fullname);
       while (i != -1)
-	{
-	  if (fullname[4] == 'I' && fullname[5] == 'N')
-	    return ((wadid<<16)+i);	    
-	  
-	  i = fc.FindPartialName(iname, wadid, i+1, &fullname);
+        {
+          if (fullname[4] == 'I' && fullname[5] == 'N')
+            return ((wadid<<16)+i);
+
+          i = fc.FindPartialName(iname, wadid, i+1, &fullname);
         }
     }
   return -1; // not found
@@ -1865,7 +1869,7 @@ void R_AddSkins (int wadnum)
     // search for all skin markers in pwad
     //
 
-    
+
       // FIXME the skin system is now commented out, fix it!
 
     lastlump = 0;
@@ -1896,20 +1900,20 @@ void R_AddSkins (int wadnum)
         token = strtok (buf2, "\r\n= ");
         while (token)
         {
-	  if(token[0]=='/' && token[1]=='/') // skip comments
+          if(token[0]=='/' && token[1]=='/') // skip comments
             {
-	      token = strtok (NULL, "\r\n"); // skip end of line
-	      goto next_token;               // find the real next token
+              token = strtok (NULL, "\r\n"); // skip end of line
+              goto next_token;               // find the real next token
             }
 
-	  value = strtok (NULL, "\r\n= ");
-	  //            CONS_Printf("token = %s, value = %s",token,value);
-	  //            CONS_Error("ga");
+          value = strtok (NULL, "\r\n= ");
+          //            CONS_Printf("token = %s, value = %s",token,value);
+          //            CONS_Error("ga");
 
-	  if (!value)
-	    I_Error ("R_AddSkins: syntax error in S_SKIN lump# %d in WAD %d\n", lumpnum&0xFFFF, wadnum);
+          if (!value)
+            I_Error ("R_AddSkins: syntax error in S_SKIN lump# %d in WAD %d\n", lumpnum&0xFFFF, wadnum);
 
-	  if (!stricmp(token,"name"))
+          if (!stricmp(token,"name"))
             {
                 // the skin name must uniquely identify a single skin
                 // I'm lazy so if name is already used I leave the 'skin x'
@@ -1950,7 +1954,7 @@ void R_AddSkins (int wadnum)
                     }
                 }
                 if(!found)
-		  I_Error("R_AddSkins: Unknown keyword '%s' in S_SKIN lump# %d (WAD %i)\n",token,lumpnum&0xFFFF, wadnum);
+                  I_Error("R_AddSkins: Unknown keyword '%s' in S_SKIN lump# %d (WAD %i)\n",token,lumpnum&0xFFFF, wadnum);
             }
 next_token:
             token = strtok (NULL,"\r\n= ");

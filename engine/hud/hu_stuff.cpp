@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C++ -*- 
+// Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
 // $Id$
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2004/07/25 20:19:21  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.16  2004/07/13 20:23:36  smite-meister
 // Mod system basics
 //
@@ -95,15 +98,11 @@
 #include "am_map.h"
 #include "d_main.h"
 
-
 #ifdef HWRENDER
-# include "hardware/hw_main.h"
+#include "hardware/hwr_render.h"
 #endif
 
-
 HUD hud;
-
-
 
 void ShowMessage_OnChange()
 {
@@ -183,7 +182,7 @@ void HUD::Startup()
   cv_crosshair.Reg();
   cv_crosshair2.Reg();
   cv_showmessages.Reg();
-  cv_showmessages2.Reg();  
+  cv_showmessages2.Reg();
   cv_stbaroverlay.Reg();
 
   // first initialization
@@ -281,11 +280,11 @@ bool HUD::Responder(event_t *ev)
     {
       // enter chat mode
       if (ev->data1 == gamecontrol[gc_talkkey][0]
-	  || ev->data1 == gamecontrol[gc_talkkey][1])
+          || ev->data1 == gamecontrol[gc_talkkey][1])
         {
-	  eatkey = chat_on = true;
-	  w_chat[0] = 0;
-	  HU_queueChatChar(HU_BROADCAST);
+          eatkey = chat_on = true;
+          w_chat[0] = 0;
+          HU_queueChatChar(HU_BROADCAST);
         }
     }
   else
@@ -294,48 +293,48 @@ bool HUD::Responder(event_t *ev)
 
       // use console translations for chat
       if (shiftdown)
-	c = shiftxform[c];
+        c = shiftxform[c];
       else if (con_keymap != la_english)
-	c = KeyTranslation(c);
+        c = KeyTranslation(c);
 
       // send a macro
       if (altdown)
         {
-	  c = c - '0';
-	  if (c > 9)
-	    return false;
+          c = c - '0';
+          if (c > 9)
+            return false;
 
-	  char *macromessage = chat_macros[c]->str;
+          char *macromessage = chat_macros[c]->str;
 
-	  // kill last message with a '\n'
-	  HU_queueChatChar(KEY_ENTER); // DEBUG!!!
+          // kill last message with a '\n'
+          HU_queueChatChar(KEY_ENTER); // DEBUG!!!
 
-	  // send the macro message
-	  while (*macromessage)
-	    HU_queueChatChar(*macromessage++);
-	  HU_queueChatChar(KEY_ENTER);
+          // send the macro message
+          while (*macromessage)
+            HU_queueChatChar(*macromessage++);
+          HU_queueChatChar(KEY_ENTER);
 
-	  // leave chat mode and notify that it was sent
-	  chat_on = false;
-	  eatkey = true;
+          // leave chat mode and notify that it was sent
+          chat_on = false;
+          eatkey = true;
         }
       else
         {
-	  eatkey = HU_keyInChatString(w_chat,c);
-	  if (eatkey)
+          eatkey = HU_keyInChatString(w_chat,c);
+          if (eatkey)
             {
-	      // static unsigned char buf[20]; // DEBUG
-	      HU_queueChatChar(c);
-	      
-	      // sprintf(buf, "KEY: %d => %d", ev->data1, c);
-	      //      plr->message = buf;
+              // static unsigned char buf[20]; // DEBUG
+              HU_queueChatChar(c);
+
+              // sprintf(buf, "KEY: %d => %d", ev->data1, c);
+              //      plr->message = buf;
             }
-	  if (c == KEY_ENTER)
+          if (c == KEY_ENTER)
             {
-	      chat_on = false;
+              chat_on = false;
             }
-	  else if (c == KEY_ESCAPE)
-	    chat_on = false;
+          else if (c == KEY_ESCAPE)
+            chat_on = false;
         }
     }
 
@@ -347,17 +346,17 @@ bool HUD::Responder(event_t *ev)
     {
       // Filter automap on/off : activates the statusbar while automap is active
       if( (ev->data1 & 0xffff0000) == AM_MSGHEADER )
-	{
-	  switch(ev->data1)
-	    {
-	    case AM_MSGENTERED:
-	      st_refresh = true;        // force refresh of status bar
-	      break;
-	      
-	    case AM_MSGEXITED:
-	      break;
-	    }
-	}
+        {
+          switch(ev->data1)
+            {
+            case AM_MSGENTERED:
+              st_refresh = true;        // force refresh of status bar
+              break;
+
+            case AM_MSGEXITED:
+              break;
+            }
+        }
     }
   return false;
 }
@@ -380,9 +379,9 @@ bool HU_keyInChatString(char *s, char ch)
       l = strlen(s);
       if (l<HU_MAXMSGLEN-1)
         {
-	  s[l++]=ch;
-	  s[l]=0;
-	  return true;
+          s[l++]=ch;
+          s[l]=0;
+          return true;
         }
       return false;
     }
@@ -390,9 +389,9 @@ bool HU_keyInChatString(char *s, char ch)
     {
       l = strlen(s);
       if (l)
-	s[--l]=0;
+        s[--l]=0;
       else
-	return false;
+        return false;
     }
   else if (ch != KEY_ENTER)
     return false; // did not eat key
@@ -423,7 +422,7 @@ void HUD::Ticker()
   /*
   if ((game.mode == gm_heretic) && (gametic & 1))
     ChainWiggle = M_Random()&1;
-  */  
+  */
 
   st_randomnumber = M_Random();
 
@@ -439,7 +438,7 @@ void HUD::Ticker()
       // TODO message priorities: a message blocks lower-priority messages for n seconds
 
       if (cv_showmessages.value || m.second >= 1)
-	CONS_Printf("%s\n", m.first.c_str());
+        CONS_Printf("%s\n", m.first.c_str());
 
       pl->messages.pop_front();
     }
@@ -449,25 +448,25 @@ void HUD::Ticker()
     {
       pl = consoleplayer2;
       while (!pl->messages.empty())
-	{
-	  pair<string, int> &m = pl->messages.front();
-	  // TODO message priorities: a message blocks lower-priority messages for n seconds
+        {
+          pair<string, int> &m = pl->messages.front();
+          // TODO message priorities: a message blocks lower-priority messages for n seconds
 
-	  if (cv_showmessages2.value || m.second >= 1)
-	    CONS_Printf("\4%s\n", m.first.c_str());
+          if (cv_showmessages2.value || m.second >= 1)
+            CONS_Printf("\4%s\n", m.first.c_str());
 
-	  pl->messages.pop_front();
-	}
+          pl->messages.pop_front();
+        }
     }
 
   // deathmatch rankings overlay if press key or while in death view
   if (cv_deathmatch.value)
     {
       if (gamekeydown[gamecontrol[gc_scores][0]] ||
-	  gamekeydown[gamecontrol[gc_scores][1]] )
-	drawscore = !chat_on;
+          gamekeydown[gamecontrol[gc_scores][1]] )
+        drawscore = !chat_on;
       else
-	drawscore = (pl->playerstate == PST_DEAD); // dead players see the frag roster
+        drawscore = (pl->playerstate == PST_DEAD); // dead players see the frag roster
     }
   else
     drawscore = false;
@@ -557,8 +556,8 @@ static void HU_DrawChat()
       c++;
       if (c>=(vid.width>>3))
         {
-	  c = 0;
-	  y+=8;
+          c = 0;
+          y+=8;
         }
     }
 
@@ -860,9 +859,16 @@ void HU_Erase()
     if (automap.active || viewwindowx==0)   // hud msgs don't need to be cleared
         return;
 
-    // software mode copies view border pattern & beveled edges from the backbuffer
-    if (rendermode==render_soft)
+#ifdef HWRENDER
+    if (rendermode!=render_soft)
     {
+        // refresh just what is needed from the view borders
+        HWR.DrawViewBorder();
+        con_hudupdate = secondframe;
+    }
+    else
+#endif
+    { // software mode copies view border pattern & beveled edges from the backbuffer
         topline = 0;
         for (y=topline,yoffset=y*vid.width; y<bottomline ; y++,yoffset+=vid.width)
         {
@@ -877,13 +883,6 @@ void HU_Erase()
         }
         con_hudupdate = false;      // if it was set..
     }
-#ifdef HWRENDER 
-    else {
-        // refresh just what is needed from the view borders
-        HWR_DrawViewBorder (secondframelines);
-        con_hudupdate = secondframe;
-    }
-#endif
 }
 
 
@@ -903,63 +902,63 @@ int HU_CreateTeamFragTbl(fragsort_t *fragtab,int dmtotals[],int fragtbl[MAXPLAYE
     {
       if (playeringame[i])
         {
-	  if(cv_teamplay.value==1)
-	    team=players[i].skincolor;
-	  else
-	    team=players[i].skin;
+          if(cv_teamplay.value==1)
+            team=players[i].skincolor;
+          else
+            team=players[i].skin;
 
-	  for(j=0;j<scorelines;j++)
-	    if (fragtab[j].num == team)
-	      { // found there team
-		if(fragtbl)
-		  {
-		    for(k=0;k<MAXPLAYERS;k++)
-		      if(playeringame[k])
-			{
-			  if(cv_teamplay.value==1)
-			    fragtbl[team][players[k].skincolor] +=
-			      players[i].frags[k];
-			  else
-			    fragtbl[team][players[k].skin] +=
-			      players[i].frags[k];
-			}
-		  }
+          for(j=0;j<scorelines;j++)
+            if (fragtab[j].num == team)
+              { // found there team
+                if(fragtbl)
+                  {
+                    for(k=0;k<MAXPLAYERS;k++)
+                      if(playeringame[k])
+                        {
+                          if(cv_teamplay.value==1)
+                            fragtbl[team][players[k].skincolor] +=
+                              players[i].frags[k];
+                          else
+                            fragtbl[team][players[k].skin] +=
+                              players[i].frags[k];
+                        }
+                  }
 
-		fragtab[j].count += ST_PlayerFrags(i);
-		if(dmtotals)
-		  dmtotals[team]=fragtab[j].count;
-		break;
-	      }
-	  if (j==scorelines)
+                fragtab[j].count += ST_PlayerFrags(i);
+                if(dmtotals)
+                  dmtotals[team]=fragtab[j].count;
+                break;
+              }
+          if (j==scorelines)
             {   // team not found add it
 
-	      if(fragtbl)
-		for(k=0;k<MAXPLAYERS;k++)
-		  fragtbl[team][k] = 0;
+              if(fragtbl)
+                for(k=0;k<MAXPLAYERS;k++)
+                  fragtbl[team][k] = 0;
 
-	      fragtab[scorelines].count = ST_PlayerFrags(i);
-	      fragtab[scorelines].num   = team;
-	      fragtab[scorelines].color = players[i].skincolor;
-	      fragtab[scorelines].name  = team_names[team];
+              fragtab[scorelines].count = ST_PlayerFrags(i);
+              fragtab[scorelines].num   = team;
+              fragtab[scorelines].color = players[i].skincolor;
+              fragtab[scorelines].name  = team_names[team];
 
-	      if(fragtbl)
+              if(fragtbl)
                 {
-		  for(k=0;k<MAXPLAYERS;k++)
-		    if(playeringame[k])
-		      {
-			if(cv_teamplay.value==1)
-			  fragtbl[team][players[k].skincolor] +=
-			    players[i].frags[k];
-			else
-			  fragtbl[team][players[k].skin] +=
-			    players[i].frags[k];
-		      }
+                  for(k=0;k<MAXPLAYERS;k++)
+                    if(playeringame[k])
+                      {
+                        if(cv_teamplay.value==1)
+                          fragtbl[team][players[k].skincolor] +=
+                            players[i].frags[k];
+                        else
+                          fragtbl[team][players[k].skin] +=
+                            players[i].frags[k];
+                      }
                 }
 
-	      if(dmtotals)
-		dmtotals[team]=fragtab[scorelines].count;
+              if(dmtotals)
+                dmtotals[team]=fragtab[scorelines].count;
 
-	      scorelines++;
+              scorelines++;
             }
         }
     }
@@ -985,7 +984,7 @@ void HU_drawDeathmatchRankings()
   //  name is displayed white, when playback demo, you quicly see who's the
   //  view.
   PlayerInfo *whiteplayer = (game.state == GameInfo::GS_DEMOPLAYBACK) ? displayplayer : consoleplayer;
-  
+
   if (scorelines>9)
     scorelines = 9; //dont draw past bottom of screen, show the best only
 
@@ -1005,9 +1004,11 @@ void HU_drawDeathmatchRankings()
 
 // draw the Crosshair, at the exact center of the view.
 
+#if 0 //FIXME: Hurdler, must be replaced by something compatible with the new renderer
 #ifdef HWRENDER
 extern float gr_basewindowcentery;
 extern float gr_viewheight;
+#endif
 #endif
 
 void HU_drawCrosshair()
@@ -1018,10 +1019,12 @@ void HU_drawCrosshair()
   if (!i)
     return;
 
+#if 0 //FIXME: Hurdler, must be replaced by something compatible with the new renderer
 #ifdef HWRENDER
-  if (rendermode != render_soft) 
+  if (rendermode != render_soft)
     y = int(gr_basewindowcentery);
   else
+#endif
 #endif
     y = viewwindowy+(viewheight>>1);
 
@@ -1029,12 +1032,14 @@ void HU_drawCrosshair()
 
   if (cv_splitscreen.value)
     {
+#if 0 //FIXME: Hurdler, must be replaced by something compatible with the new renderer
 #ifdef HWRENDER
       if ( rendermode != render_soft )
-	y += int(gr_viewheight);
+        y += int(gr_viewheight);
       else
 #endif
-	y += viewheight;
+#endif
+        y += viewheight;
 
       crosshair[i-1]->Draw(vid.width >> 1, y, V_TL | V_SSIZE);
     }
@@ -1102,7 +1107,7 @@ void Command_Chatmacro_f()
   if (COM_Argc()<2)
     {
       CONS_Printf("chatmacro <0-9> : view chatmacro\n"
-		  "chatmacro <0-9> \"chat message\" : change chatmacro\n");
+                  "chatmacro <0-9> \"chat message\" : change chatmacro\n");
       return;
     }
 

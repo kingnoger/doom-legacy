@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C++ -*- 
+// Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
 // $Id$
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/07/25 20:18:47  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.3  2004/07/14 16:13:13  smite-meister
 // cleanup, commands
 //
@@ -174,7 +177,7 @@ extern consvar_t cv_precachesound;
 // client renderer
 extern consvar_t cv_viewheight;
 extern consvar_t cv_chasecam;
-extern consvar_t cv_cam_dist;  
+extern consvar_t cv_cam_dist;
 extern consvar_t cv_cam_height;
 extern consvar_t cv_cam_speed;
 
@@ -218,6 +221,7 @@ extern consvar_t cv_grgammagreen;
 extern consvar_t cv_grgammablue;
 extern consvar_t cv_grfiltermode;
 extern consvar_t cv_grcorrecttricks;
-extern consvar_t cv_grnewrenderer;
+extern consvar_t cv_grnearclippingplane;
+extern consvar_t cv_grfarclippingplane;
 
 #endif

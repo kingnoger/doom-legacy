@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.40  2004/07/25 20:19:21  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.39  2004/07/05 16:53:25  smite-meister
 // Netcode replaced
 //
@@ -175,12 +178,9 @@
 #include "hu_stuff.h"
 #include "console.h"
 
-
 #ifdef HWRENDER
-# include "i_video.h"            //rendermode
-# include "hardware/hw_main.h"
-# include "hardware/hw_light.h"
-# include "hardware/hwr_render.h"
+#include "i_video.h"            //rendermode
+#include "hardware/hwr_render.h"
 #endif
 
 
@@ -224,8 +224,8 @@ float P_SegLength(seg_t *seg)
   double dx, dy;
 
   // make a vector (start at origin)
-  dx = (seg->v2->x - seg->v1->x)*crapmul;
-  dy = (seg->v2->y - seg->v1->y)*crapmul;
+  dx = (seg->v2->x - seg->v1->x)*fixedtofloat;
+  dy = (seg->v2->y - seg->v1->y)*fixedtofloat;
 
   return sqrt(dx*dx+dy*dy)*FRACUNIT;
 }
@@ -245,7 +245,8 @@ void Map::LoadSegs(int lump)
       li->v1 = &vertexes[SHORT(ml->v1)];
       li->v2 = &vertexes[SHORT(ml->v2)];
 
-#ifdef HWRENDER // not win32 only 19990829 by Kin
+#if 0 //FIXME: Hurdler: put it back when new renderer is OK
+#ifdef HWRENDER
       // used for the hardware render
       if (rendermode != render_soft)
         {
@@ -254,17 +255,18 @@ void Map::LoadSegs(int lump)
           li->lightmaps = NULL; // list of static lightmap for this seg
         }
 #endif
+#endif
 
       li->angle = (SHORT(ml->angle))<<16;
       li->offset = (SHORT(ml->offset))<<16;
       int linedef = SHORT(ml->linedef);
       line_t *ldef = &lines[linedef];
       li->linedef = ldef;
-      int side = SHORT(ml->side);
-      li->sidedef = &sides[ldef->sidenum[side]];
-      li->frontsector = sides[ldef->sidenum[side]].sector;
+      li->side = SHORT(ml->side);
+      li->sidedef = &sides[ldef->sidenum[li->side]];
+      li->frontsector = sides[ldef->sidenum[li->side]].sector;
       if (ldef-> flags & ML_TWOSIDED)
-        li->backsector = sides[ldef->sidenum[side^1]].sector;
+        li->backsector = sides[ldef->sidenum[li->side^1]].sector;
       else
         li->backsector = 0;
 
@@ -937,7 +939,7 @@ void Map::LoadSideDefs2(int lump)
             }
           else
             {
-              //Hurdler: for now, full support of toptexture only
+              //TODO: Hurdler: for now, full support of toptexture only
               if(ttex[0] == '#')// || btex[0] == '#')
                 {
                   char *col = ttex;
@@ -1295,23 +1297,10 @@ bool Map::Setup(tic_t start, bool spawnthings)
   // fix renderer to this map
   R.SetMap(this);
 
-#ifdef HWRENDER // not win32 only 19990829 by Kin
+#ifdef HWRENDER
   if (rendermode != render_soft)
     {
-      if (cv_grnewrenderer.value)
-        {
-          HWR.Setup(numnodes);
-        }
-      else
-        {
-          // BP: reset light between levels (we draw preview frame lights on current frame)
-          HWR_ResetLights();
-          // Correct missing sidedefs & deep water trick
-          R.HWR_CorrectSWTricks();
-          //CONS_Printf("\n xxx seg(%d) v1 = %d, line(%d) v1 = %d\n", 1578, segs[1578].v1 - vertexes, segs[1578].linedef - lines, segs[1578].linedef->v1 - vertexes);
-          R.HWR_CreatePlanePolygons(numnodes-1); // FIXME BUG this messes up the polyobjs
-          //CONS_Printf(" xxx seg(%d) v1 = %d, line(%d) v1 = %d\n", 1578, segs[1578].v1 - vertexes, segs[1578].linedef - lines, segs[1578].linedef->v1 - vertexes);
-        }
+      HWR.Setup(numnodes);
     }
 #endif
 
@@ -1335,19 +1324,6 @@ bool Map::Setup(tic_t start, bool spawnthings)
 
   SpawnLineSpecials(); // spawn Thinkers created by linedefs (also does some mandatory initializations!)
   InitLightning(); // Hexen lightning effect
-
-
-  // preload graphics
-#ifdef HWRENDER
-  if (rendermode != render_soft)
-    {
-      if (!cv_grnewrenderer.value)
-        {
-          HWR_PrepLevelCache();
-          R.HWR_CreateStaticLightmaps(numnodes-1);
-        }
-    }
-#endif
 
   if (precache)
     PrecacheMap();

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/07/25 20:18:16  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.2  2004/07/23 22:18:43  hurdler
 // respect indent style and temporary (static, unoptimized and not correct) support for wall/floor/ceiling so I can actually work on texture support
 //
@@ -74,7 +77,7 @@ private:
   std::vector<Geometry *> geometries;
   std::vector<State *> states;
 
-  void AddWall(seg_t *line, fixed_t floor, fixed_t ceiling);
+  void AddWall(seg_t *line, seg_t *prev_line, seg_t *next_line, fixed_t floor, fixed_t ceiling);
 
 public:
   Subsector(int num, Poly *poly);

@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.17  2004/07/25 20:19:22  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.16  2004/07/05 16:53:28  smite-meister
 // Netcode replaced
 //
@@ -506,10 +509,10 @@ void SF_PlayerName()
     {
       pl = current_script->player;
       if (pl)
-	t_return.value.s = pl->name.c_str();
+        t_return.value.s = pl->name.c_str();
       else
         {
-          script_error("script not started by player\n"); 
+          script_error("script not started by player\n");
         }
       return;
     }
@@ -534,7 +537,7 @@ void SF_PlayerObj()
     {
       pl = current_script->player;
       if (pl) //plnum = pl - players;
-	t_return.value.mobj = pl->pawn;
+        t_return.value.mobj = pl->pawn;
       else
         {
           script_error("script not started by player\n");
@@ -589,10 +592,10 @@ void SF_PlayerKeys()
     {
       Actor *a = t_argv[0].value.mobj;
       if (!a->IsOf(PlayerPawn::_type))
-	{
-	  script_error("mobj not a player!\n");
-	  return;
-	}
+        {
+          script_error("mobj not a player!\n");
+          return;
+        }
       p = (PlayerPawn *)a;
     }
   else
@@ -600,14 +603,14 @@ void SF_PlayerKeys()
       playernum = intvalue(t_argv[0]);
       PlayerInfo *pi = current_map->FindPlayer(playernum);
       if (!pi)
-	{
-	  script_error("player %i not in game\n", playernum);
-	  return;
-	}
+        {
+          script_error("player %i not in game\n", playernum);
+          return;
+        }
       p = pi->pawn;
     }
   keynum = intvalue(t_argv[1]);
-    
+
   if(keynum > 5)
     {
       script_error("keynum out of range! %s\n", keynum);
@@ -620,9 +623,9 @@ void SF_PlayerKeys()
     {
       givetake = intvalue(t_argv[2]);
       if (givetake)
-	p->keycards |= (1 << keynum);
+        p->keycards |= (1 << keynum);
       else
-	p->keycards &= ~(1 << keynum);
+        p->keycards &= ~(1 << keynum);
       t_return.value.i = 0;
       return;
     }
@@ -649,10 +652,10 @@ void SF_PlayerAmmo()
     {
       Actor *a = t_argv[0].value.mobj;
       if (!a->IsOf(PlayerPawn::_type))
-	{
-	  script_error("mobj not a player!\n");
-	  return;
-	}
+        {
+          script_error("mobj not a player!\n");
+          return;
+        }
       p = (PlayerPawn *)a;
     }
   else
@@ -660,10 +663,10 @@ void SF_PlayerAmmo()
       playernum = intvalue(t_argv[0]);
       PlayerInfo *pi = current_map->FindPlayer(playernum);
       if (!pi)
-	{
-	  script_error("player %i not in game\n", playernum);
-	  return;
-	}
+        {
+          script_error("player %i not in game\n", playernum);
+          return;
+        }
       p = pi->pawn;
     }
 
@@ -704,10 +707,10 @@ void SF_MaxPlayerAmmo()
     {
       Actor *a = t_argv[0].value.mobj;
       if (!a->IsOf(PlayerPawn::_type))
-	{
-	  script_error("mobj not a player!\n");
-	  return;
-	}
+        {
+          script_error("mobj not a player!\n");
+          return;
+        }
       p = (PlayerPawn *)a;
     }
   else
@@ -715,10 +718,10 @@ void SF_MaxPlayerAmmo()
       playernum = intvalue(t_argv[0]);
       PlayerInfo *pi = current_map->FindPlayer(playernum);
       if (!pi)
-	{
-	  script_error("player %i not in game\n", playernum);
-	  return;
-	}
+        {
+          script_error("player %i not in game\n", playernum);
+          return;
+        }
       p = pi->pawn;
     }
 
@@ -760,7 +763,7 @@ void SF_Player()
   if (mo)
     {
       if (mo->IsOf(PlayerPawn::_type))
-	t_return.value.i = ((PlayerPawn *)mo)->player->number - 1;
+        t_return.value.i = ((PlayerPawn *)mo)->player->number - 1;
     }
   else
     t_return.value.i = -1;
@@ -1584,9 +1587,9 @@ void SF_FloorHeight()
       // set all sectors with tag
       while ((i = current_map->FindSectorFromTag(tagnum, i)) >= 0)
         {
-	  s = &current_map->sectors[i];
+          s = &current_map->sectors[i];
           if (current_map->T_MovePlane(s, fixedvalue(t_argv[1]) - s->floorheight, fixedvalue(t_argv[1]),
-				       crush, 0) == res_crushed)
+                                       crush, 0) == res_crushed)
             returnval = 0;
         }
     }
@@ -1654,9 +1657,9 @@ void SF_CeilingHeight()
       // set all sectors with tag
       while ((i = current_map->FindSectorFromTag(tagnum, i)) >= 0)
         {
-	  s = &current_map->sectors[i];
+          s = &current_map->sectors[i];
           if (current_map->T_MovePlane(s, fixedvalue(t_argv[1]) - s->ceilingheight, fixedvalue(t_argv[1]),
-				       crush, 1) == res_crushed)
+                                       crush, 1) == res_crushed)
             returnval = 0;
         }
     }
@@ -1724,7 +1727,7 @@ void SF_LightLevel()
 
       // set all sectors with tag
       while ((i = current_map->FindSectorFromTag(tagnum, i)) >= 0)
-	current_map->sectors[i].lightlevel = ll;
+        current_map->sectors[i].lightlevel = ll;
     }
 
   // return lightlevel
@@ -1774,7 +1777,7 @@ void SF_FloorTexture()
 
       // set all sectors with tag
       while ((i = current_map->FindSectorFromTag(tagnum, i)) >= 0)
-	current_map->sectors[i].floorpic = picnum;
+        current_map->sectors[i].floorpic = picnum;
     }
 
   t_return.type = svt_string;
@@ -1807,7 +1810,7 @@ void SF_SectorColormap()
       // set all sectors with tag
       while ((i = current_map->FindSectorFromTag(tagnum, i)) >= 0)
         {
-	  sector_t *p = &current_map->sectors[i];
+          sector_t *p = &current_map->sectors[i];
           if (mapnum == -1)
             {
               p->midmap = 0;
@@ -1852,7 +1855,7 @@ void SF_CeilingTexture()
 
       // set all sectors with tag
       while ((i = current_map->FindSectorFromTag(tagnum, i)) >= 0)
-	current_map->sectors[i].ceilingpic = picnum;
+        current_map->sectors[i].ceilingpic = picnum;
     }
 
   t_return.type = svt_string;
@@ -2288,7 +2291,7 @@ void SF_Pow()
   n1 = fixedvalue(t_argv[0]);
   n2 = fixedvalue(t_argv[1]);
   t_return.type = svt_fixed;
-  t_return.value.f = double2fixed(pow(FIXED_TO_FLOAT(n1), FIXED_TO_FLOAT(n2)));   
+  t_return.value.f = double2fixed(pow(FIXED_TO_FLOAT(n1), FIXED_TO_FLOAT(n2)));
 }
 
 
@@ -2360,6 +2363,7 @@ void SF_SetHUPicDisplay()
 
 // Hurdler: I'm enjoying FS capability :)
 
+#if 0 //FIXME: Hurdler, must be uncommented once the new dynamic light code is OK
 #ifdef HWRENDER
 extern light_t lspr[];
 
@@ -2368,7 +2372,7 @@ int String2Hex(const char *s)
 #define HEX2INT(x) (x >= '0' && x <= '9' ? x - '0' : x >= 'a' && x <= 'f' ? x - 'a' + 10 : x >= 'A' && x <= 'F' ? x - 'A' + 10 : 0)
     return (HEX2INT(s[0]) <<  4) + (HEX2INT(s[1]) <<  0) +
            (HEX2INT(s[2]) << 12) + (HEX2INT(s[3]) <<  8) +
-           (HEX2INT(s[4]) << 20) + (HEX2INT(s[5]) << 16) + 
+           (HEX2INT(s[4]) << 20) + (HEX2INT(s[5]) << 16) +
            (HEX2INT(s[6]) << 28) + (HEX2INT(s[7]) << 24);
 #undef HEX2INT
 }
@@ -2395,22 +2399,22 @@ void SF_SetCorona()
         case 0: lspr[num].type = ival; break;
         case 1: lspr[num].light_xoffset = fval; break;
         case 2: lspr[num].light_yoffset = fval; break;
-        case 3: 
+        case 3:
             if (t_argv[2].type == svt_string)
                 lspr[num].corona_color = String2Hex(t_argv[2].value.s);
             else
                 memcpy(&lspr[num].corona_color, &ival, sizeof(int));
             break;
         case 4: lspr[num].corona_radius = fval; break;
-        case 5: 
+        case 5:
             if (t_argv[2].type == svt_string)
                 lspr[num].dynamic_color = String2Hex(t_argv[2].value.s);
             else
                 memcpy(&lspr[num].dynamic_color, &ival, sizeof(int));
             break;
-        case 6: 
-            lspr[num].dynamic_radius = fval; 
-            lspr[num].dynamic_sqrradius = sqrt(lspr[num].dynamic_radius); 
+        case 6:
+            lspr[num].dynamic_radius = fval;
+            lspr[num].dynamic_sqrradius = sqrt(lspr[num].dynamic_radius);
             break;
         default: CONS_Printf("Error in setcorona\n"); break;
         }
@@ -2431,10 +2435,11 @@ void SF_SetCorona()
         else
             memcpy(&lspr[num].dynamic_color, &t_argv[6].value.i, sizeof(int));
         lspr[num].dynamic_radius = t_argv[7].value.f;
-        lspr[num].dynamic_sqrradius = sqrt(lspr[num].dynamic_radius); 
+        lspr[num].dynamic_sqrradius = sqrt(lspr[num].dynamic_radius);
     }
 }
 #endif
+#endif // if 0
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -2588,7 +2593,9 @@ void init_functions()
   new_function("setpicvisible", SF_SetHUPicDisplay);
 
   // Hurdler's stuff :)
+#if 0 //FIXME: Hurdler, must be uncommented once the new dynamic light code is OK
 #ifdef HWRENDER
   new_function("setcorona", SF_SetCorona);
+#endif
 #endif
 }

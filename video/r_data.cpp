@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2004/07/25 20:16:43  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.19  2004/07/07 17:27:20  smite-meister
 // bugfixes
 //
@@ -330,7 +333,7 @@ byte *PatchTexture::Generate()
 
       // necessary endianness conversion
       for (int i=0; i < width; i++)
-	p->columnofs[i] = LONG(p->columnofs[i]);
+        p->columnofs[i] = LONG(p->columnofs[i]);
     }
 
   return data;
@@ -421,15 +424,15 @@ static void R_DrawColumnInCache(column_t *patch, byte *cache, int originy, int c
 
       if (position < 0)
         {
-	  count += position;
-	  position = 0;
+          count += position;
+          position = 0;
         }
 
       if (position + count > cacheheight)
-	count = cacheheight - position;
+        count = cacheheight - position;
 
       if (count > 0)
-	memcpy(cache + position, source, count);
+        memcpy(cache + position, source, count);
 
       patch = (column_t *)((byte *)patch + patch->length + 4);
     }
@@ -468,7 +471,7 @@ byte *DoomTexture::Generate()
       texdata = data;
 
       for (i=0; i<width; i++)
-	columnofs[i] += 3; // point directly to the data
+        columnofs[i] += 3; // point directly to the data
     }
   else
     {
@@ -478,7 +481,7 @@ byte *DoomTexture::Generate()
       //CONS_Printf ("R_GenTex MULTI  %.8s size: %d\n",name,blocksize);
 
       Z_Malloc(blocksize, PU_TEXTURE, (void **)&data);
-    
+
       // columns lookup table
       columnofs = (unsigned *)data;
       // texture data after the lookup table
@@ -486,28 +489,28 @@ byte *DoomTexture::Generate()
 
       // Composite the columns together.
       for (i=0, tp = patches; i<patchcount; i++, tp++)
-	{
-	  p = (patch_t *)fc.CacheLumpNum(tp->patch, PU_CACHE);
-	  int x1 = tp->originx;
-	  int x2 = x1 + SHORT(p->width);
+        {
+          p = (patch_t *)fc.CacheLumpNum(tp->patch, PU_CACHE);
+          int x1 = tp->originx;
+          int x2 = x1 + SHORT(p->width);
 
-	  int x = x1;
-	  if (x < 0)
+          int x = x1;
+          if (x < 0)
             x = 0;
 
-	  if (x2 > width)
+          if (x2 > width)
             x2 = width;
 
-	  for ( ; x < x2; x++)
-	    {
-	      column_t *patchcol = (column_t *)((byte *)p + LONG(p->columnofs[x-x1]));
+          for ( ; x < x2; x++)
+            {
+              column_t *patchcol = (column_t *)((byte *)p + LONG(p->columnofs[x-x1]));
 
-	      // generate column offset lookup
-	      columnofs[x] = (width*sizeof(unsigned)) + (x * height);
+              // generate column offset lookup
+              columnofs[x] = (width*sizeof(unsigned)) + (x * height);
 
-	      R_DrawColumnInCache(patchcol, data + columnofs[x], tp->originy, height);
-	    }
-	}
+              R_DrawColumnInCache(patchcol, data + columnofs[x], tp->originy, height);
+            }
+        }
     }
 
   texturememory += blocksize;
@@ -724,7 +727,7 @@ int texturecache_t::ReadTextures()
       strncpy(name, name_p + i*8, 8);
       patchlookup[i] = fc.FindNumForName(name);
       if (patchlookup[i] < 0)
-	CONS_Printf("patch '%s' (%d) not found!\n", name, i);
+        CONS_Printf("patch '%s' (%d) not found!\n", name, i);
     }
   Z_Free(pnames);
 
@@ -768,17 +771,17 @@ int texturecache_t::ReadTextures()
 
       if (i == numtextures1)
         {
-	  // Start looking in second texture file.
-	  maptex = maptex2;
-	  maxoff = maxoff2;
-	  directory = maptex+1;
+          // Start looking in second texture file.
+          maptex = maptex2;
+          maxoff = maxoff2;
+          directory = maptex+1;
         }
 
       // offset to the current texture in TEXTURESn lump
       int offset = LONG(*directory);
 
       if (offset > maxoff)
-	I_Error("R_LoadTextures: bad texture directory");
+        I_Error("R_LoadTextures: bad texture directory");
 
       // maptexture describes texture name, size, and
       // used patches in z order from bottom to top
@@ -789,14 +792,14 @@ int texturecache_t::ReadTextures()
       DoomTexture::texpatch_t *p = tex->patches;
 
       for (int j=0 ; j < tex->patchcount ; j++, mp++, p++)
-	{
-	  p->originx = SHORT(mp->originx);
-	  p->originy = SHORT(mp->originy);
-	  p->patch = patchlookup[SHORT(mp->patch)];
-	  if (p->patch == -1)
-	    I_Error("R_InitTextures: Missing patch %d in texture %.8s (%d)\n",
-		    SHORT(mp->patch), mtex->name, i);
-	}
+        {
+          p->originx = SHORT(mp->originx);
+          p->originy = SHORT(mp->originy);
+          p->patch = patchlookup[SHORT(mp->patch)];
+          if (p->patch == -1)
+            I_Error("R_InitTextures: Missing patch %d in texture %.8s (%d)\n",
+                    SHORT(mp->patch), mtex->name, i);
+        }
 
       Insert(tex);
     }
@@ -831,9 +834,9 @@ int R_CheckNumForNameList(const char *name, lumplist_t *ll, int listsize)
     {
       int lump = fc.FindNumForNameFile(name, ll[i].wadfile, ll[i].firstlump);
       if ((lump & 0xffff) > (ll[i].firstlump + ll[i].numlumps) || lump == -1)
-	continue;
+        continue;
       else
-	return lump;
+        return lump;
     }
   return -1;
 }
@@ -855,15 +858,15 @@ void R_InitExtraColormaps()
     {
       int startnum = fc.FindNumForNameFile("C_START", cfile, clump);
       if (startnum == -1)
-	continue;
+        continue;
 
       int endnum = fc.FindNumForNameFile("C_END", cfile, clump);
 
       if (endnum == -1)
-	I_Error("R_InitColormaps: C_START without C_END\n");
+        I_Error("R_InitColormaps: C_START without C_END\n");
 
       if ((startnum >> 16) != (endnum >> 16))
-	I_Error("R_InitColormaps: C_START and C_END in different wad files!\n");
+        I_Error("R_InitColormaps: C_START and C_END in different wad files!\n");
 
       colormaplumps = (lumplist_t *)realloc(colormaplumps, sizeof(lumplist_t) * (numcolormaplumps + 1));
       colormaplumps[numcolormaplumps].wadfile = startnum >> 16;
@@ -1024,7 +1027,7 @@ int R_ColormapNumForName(const char *name)
 // This is a more GL friendly way of doing colormaps: Specify colormap
 // data in a special linedef's texture areas and use that to generate
 // custom colormaps at runtime. NOTE: For GL mode, we only need to color
-// data and not the colormap data. 
+// data and not the colormap data.
 double  deltas[256][3], cmap[256][3];
 
 unsigned char  NearestColor(unsigned char r, unsigned char g, unsigned char b);
@@ -1053,9 +1056,9 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
       // Create a rough approximation of the color (a 16 bit color)
       maskcolor = ((cb) >> 3) + (((cg) >> 2) << 5) + (((cr) >> 3) << 11);
       if (p1[7] >= 'a' && p1[7] <= 'z')
-	maskamt = (p1[7] - 'a');
+        maskamt = (p1[7] - 'a');
       else if (p1[7] >= 'A' && p1[7] <= 'Z')
-	maskamt = (p1[7] - 'A');
+        maskamt = (p1[7] - 'A');
 
       maskamt /= (double)24;
 
@@ -1082,9 +1085,9 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
       fadestart = NUMFROMCHAR(p2[3]) + (NUMFROMCHAR(p2[2]) * 10);
       fadeend = NUMFROMCHAR(p2[5]) + (NUMFROMCHAR(p2[4]) * 10);
       if (fadestart > 32 || fadestart < 0)
-	fadestart = 0;
+        fadestart = 0;
       if (fadeend > 33 || fadeend < 1)
-	fadeend = 33;
+        fadeend = 33;
       fadedist = fadeend - fadestart;
       fog = NUMFROMCHAR(p2[1]) ? 1 : 0;
     }
@@ -1126,6 +1129,7 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
   num_extra_colormaps++;
 
 #ifdef HWRENDER
+  // TODO: Hurdler: see why we need to have a separate code here
   if(rendermode == render_soft)
 #endif
   {
@@ -1135,7 +1139,6 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
       g = vid.palette[i].s.green;
       b = vid.palette[i].s.blue;
       cbrightness = sqrt((r*r) + (g*g) + (b*b));
-
 
       cmap[i][0] = (cbrightness * cmaskr) + (r * othermask);
       if(cmap[i][0] > 255.0)
@@ -1167,6 +1170,7 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
 
 #define ABS2(x) (x) < 0 ? -(x) : (x)
 #ifdef HWRENDER
+  // TODO: Hurdler: see why we need to have a separate code here
   if(rendermode == render_soft)
 #endif
   {
@@ -1179,10 +1183,10 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
       {
         *colormap_p = NearestColor(RoundUp(cmap[i][0]), RoundUp(cmap[i][1]), RoundUp(cmap[i][2]));
         colormap_p++;
-  
+
         if((unsigned int)p < fadestart)
           continue;
-  
+
         if(ABS2(cmap[i][0] - cdestr) > ABS2(deltas[i][0]))
           cmap[i][0] -= deltas[i][0];
         else
@@ -1220,13 +1224,13 @@ byte NearestColor(byte r, byte g, byte b)
       int distortion = dr*dr + dg*dg + db*db;
 
       if (distortion < bestdistortion)
-	{
-	  if (!distortion)
-	    return i;
+        {
+          if (!distortion)
+            return i;
 
-	  bestdistortion = distortion;
-	  bestcolor = i;
-	}
+          bestdistortion = distortion;
+          bestcolor = i;
+        }
     }
 
   return bestcolor;
@@ -1299,7 +1303,7 @@ void R_Init8to16()
 // Must be called after W_Init.
 //
 void R_InitData()
-{  
+{
   //fab highcolor
   if (vid.BytesPerPixel == 2)
     {
@@ -1398,7 +1402,7 @@ void Map::PrecacheMap()
     for (th = thinkercap.next ; th != &thinkercap ; th=th->next)
     {
       if (th->Type() == Thinker::tt_dactor)
-	spritepresent[((DActor *)th)->sprite] = 1;
+        spritepresent[((DActor *)th)->sprite] = 1;
     }
 
     spriteframe_t*      sf;

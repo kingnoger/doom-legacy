@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C++ -*- 
+// Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
 // $Id$
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2004/07/25 20:19:21  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.14  2004/07/13 20:23:36  smite-meister
 // Mod system basics
 //
@@ -58,7 +61,7 @@
 // Older update
 //
 //
-// DESCRIPTION:  
+// DESCRIPTION:
 //      the automap code
 //
 //-----------------------------------------------------------------------------
@@ -96,11 +99,9 @@
 #include "i_video.h"
 #include "tables.h"
 
-
 #ifdef HWRENDER
-# include "hardware/hw_main.h"
+#include "hardware/hwr_render.h"
 #endif
-
 
 
 // TODO the automap needs a complete rewrite when the renderer is done.
@@ -428,14 +429,14 @@ void AM_findMinMaxBoundaries(const Map *m)
   for (i=0; i < m->numvertexes;i++)
     {
       if (m->vertexes[i].x < min_x)
-	min_x = m->vertexes[i].x;
+        min_x = m->vertexes[i].x;
       else if (m->vertexes[i].x > max_x)
-	max_x = m->vertexes[i].x;
+        max_x = m->vertexes[i].x;
 
       if (m->vertexes[i].y < min_y)
-	min_y = m->vertexes[i].y;
+        min_y = m->vertexes[i].y;
       else if (m->vertexes[i].y > max_y)
-	max_y = m->vertexes[i].y;
+        max_y = m->vertexes[i].y;
     }
 
   max_w = max_x - min_x;
@@ -515,7 +516,7 @@ void AutoMap::InitVariables()
       REDRANGE   = 1;
       BLUES      = (256-4*16+8);
       BLUERANGE  = 1;
-      GREENS     = 224; 
+      GREENS     = 224;
       GREENRANGE = 1;
       GRAYS      = (5*8);
       GRAYSRANGE = 1;
@@ -528,7 +529,7 @@ void AutoMap::InitVariables()
 
       BLUEKEYCOLOR = 197;
       YELLOWKEYCOLOR = 144;
-      REDKEYCOLOR = 220; // green 
+      REDKEYCOLOR = 220; // green
     }
   else
     {
@@ -569,9 +570,9 @@ void AutoMap::unloadPics()
   if (rendermode == render_soft)
     {
       for (i=0;i<10;i++)
-	Z_ChangeTag(marknums[i], PU_CACHE);
+        Z_ChangeTag(marknums[i], PU_CACHE);
       if (mapback)
-	Z_ChangeTag(mapback, PU_CACHE);
+        Z_ChangeTag(mapback, PU_CACHE);
     }
 }
 
@@ -615,12 +616,12 @@ void AutoMap::Resize()
   f_w = vid.width;
   f_h = vid.height - hud.stbarheight;
 
-  if (rendermode == render_soft)
-    AM_drawFline = AM_drawFline_soft;
 #ifdef HWRENDER
+  if (rendermode != render_soft)
+    AM_drawFline = (AMDRAWFLINEFUNC) HWRend::DrawAMline;
   else
-    AM_drawFline = (AMDRAWFLINEFUNC) HWR_drawAMline;
 #endif
+    AM_drawFline = AM_drawFline_soft;
 
   AM_findMinMaxBoundaries(mp);
   scale_mtof = FixedDiv(min_scale_mtof, (int) (0.7*FRACUNIT));
@@ -729,13 +730,13 @@ bool AutoMap::Responder(event_t *ev)
     {
       if (ev->type == ev_keydown && ev->data1 == AM_STARTKEY)
         {
-	  //faB: prevent alt-tab in win32 version to activate automap just before minimizing the app
-	  //     doesn't do any harm to the DOS version
-	  if (!gamekeydown[KEY_ALT])
+          //faB: prevent alt-tab in win32 version to activate automap just before minimizing the app
+          //     doesn't do any harm to the DOS version
+          if (!gamekeydown[KEY_ALT])
             {
-	      if (displayplayer->pawn)
-		Open(displayplayer->pawn);
-	      rc = true;
+              if (displayplayer->pawn)
+                Open(displayplayer->pawn);
+              rc = true;
             }
         }
     }
@@ -744,65 +745,65 @@ bool AutoMap::Responder(event_t *ev)
       rc = true;
       switch(ev->data1)
         {
-	case AM_PANRIGHTKEY: // pan right
-	  if (!followplayer) m_paninc.x = FTOM(F_PANINC);
-	  else rc = false;
-	  break;
-	case AM_PANLEFTKEY: // pan left
-	  if (!followplayer) m_paninc.x = -FTOM(F_PANINC);
-	  else rc = false;
-	  break;
-	case AM_PANUPKEY: // pan up
-	  if (!followplayer) m_paninc.y = FTOM(F_PANINC);
-	  else rc = false;
-	  break;
-	case AM_PANDOWNKEY: // pan down
-	  if (!followplayer) m_paninc.y = -FTOM(F_PANINC);
-	  else rc = false;
-	  break;
-	case AM_ZOOMOUTKEY: // zoom out
-	  mtof_zoommul = M_ZOOMOUT;
-	  ftom_zoommul = M_ZOOMIN;
-	  break;
-	case AM_ZOOMINKEY: // zoom in
-	  mtof_zoommul = M_ZOOMIN;
-	  ftom_zoommul = M_ZOOMOUT;
-	  break;
-	case AM_ENDKEY:
-	  Close();
-	  break;
-	case AM_GOBIGKEY:
-	  bigstate = !bigstate;
-	  if (bigstate)
+        case AM_PANRIGHTKEY: // pan right
+          if (!followplayer) m_paninc.x = FTOM(F_PANINC);
+          else rc = false;
+          break;
+        case AM_PANLEFTKEY: // pan left
+          if (!followplayer) m_paninc.x = -FTOM(F_PANINC);
+          else rc = false;
+          break;
+        case AM_PANUPKEY: // pan up
+          if (!followplayer) m_paninc.y = FTOM(F_PANINC);
+          else rc = false;
+          break;
+        case AM_PANDOWNKEY: // pan down
+          if (!followplayer) m_paninc.y = -FTOM(F_PANINC);
+          else rc = false;
+          break;
+        case AM_ZOOMOUTKEY: // zoom out
+          mtof_zoommul = M_ZOOMOUT;
+          ftom_zoommul = M_ZOOMIN;
+          break;
+        case AM_ZOOMINKEY: // zoom in
+          mtof_zoommul = M_ZOOMIN;
+          ftom_zoommul = M_ZOOMOUT;
+          break;
+        case AM_ENDKEY:
+          Close();
+          break;
+        case AM_GOBIGKEY:
+          bigstate = !bigstate;
+          if (bigstate)
             {
-	      AM_saveScaleAndLoc();
-	      AM_minOutWindowScale();
+              AM_saveScaleAndLoc();
+              AM_minOutWindowScale();
             }
-	  else restoreScaleAndLoc();
-	  break;
+          else restoreScaleAndLoc();
+          break;
 
-	  // messages are given to consoleplayer, because he's pressing the keys
-	case AM_FOLLOWKEY:
-	  followplayer = !followplayer;
-	  f_oldloc.x = MAXINT;
-	  consoleplayer->SetMessage(followplayer ? AMSTR_FOLLOWON : AMSTR_FOLLOWOFF);
-	  break;
-	case AM_GRIDKEY:
-	  grid = !grid;
-	  consoleplayer->SetMessage(grid ? AMSTR_GRIDON : AMSTR_GRIDOFF);
-	  break;
-	case AM_MARKKEY:
-	  sprintf(buffer, "%s %d", AMSTR_MARKEDSPOT, markpointnum);
-	  consoleplayer->SetMessage(buffer);
-	  addMark();
-	  break;
-	case AM_CLEARMARKKEY:
-	  clearMarks();
-	  consoleplayer->SetMessage(AMSTR_MARKSCLEARED);
-	  break;
-	default:
-	  cheatstate=0;
-	  rc = false;
+          // messages are given to consoleplayer, because he's pressing the keys
+        case AM_FOLLOWKEY:
+          followplayer = !followplayer;
+          f_oldloc.x = MAXINT;
+          consoleplayer->SetMessage(followplayer ? AMSTR_FOLLOWON : AMSTR_FOLLOWOFF);
+          break;
+        case AM_GRIDKEY:
+          grid = !grid;
+          consoleplayer->SetMessage(grid ? AMSTR_GRIDON : AMSTR_GRIDOFF);
+          break;
+        case AM_MARKKEY:
+          sprintf(buffer, "%s %d", AMSTR_MARKEDSPOT, markpointnum);
+          consoleplayer->SetMessage(buffer);
+          addMark();
+          break;
+        case AM_CLEARMARKKEY:
+          clearMarks();
+          consoleplayer->SetMessage(AMSTR_MARKSCLEARED);
+          break;
+        default:
+          cheatstate=0;
+          rc = false;
         }
     }
 
@@ -811,23 +812,23 @@ bool AutoMap::Responder(event_t *ev)
       rc = false;
       switch (ev->data1)
         {
-	case AM_PANRIGHTKEY:
-	  if (!followplayer) m_paninc.x = 0;
-	  break;
-	case AM_PANLEFTKEY:
-	  if (!followplayer) m_paninc.x = 0;
-	  break;
-	case AM_PANUPKEY:
-	  if (!followplayer) m_paninc.y = 0;
-	  break;
-	case AM_PANDOWNKEY:
-	  if (!followplayer) m_paninc.y = 0;
-	  break;
-	case AM_ZOOMOUTKEY:
-	case AM_ZOOMINKEY:
-	  mtof_zoommul = FRACUNIT;
-	  ftom_zoommul = FRACUNIT;
-	  break;
+        case AM_PANRIGHTKEY:
+          if (!followplayer) m_paninc.x = 0;
+          break;
+        case AM_PANLEFTKEY:
+          if (!followplayer) m_paninc.x = 0;
+          break;
+        case AM_PANUPKEY:
+          if (!followplayer) m_paninc.y = 0;
+          break;
+        case AM_PANDOWNKEY:
+          if (!followplayer) m_paninc.y = 0;
+          break;
+        case AM_ZOOMOUTKEY:
+        case AM_ZOOMINKEY:
+          mtof_zoommul = FRACUNIT;
+          ftom_zoommul = FRACUNIT;
+          break;
         }
     }
 
@@ -928,10 +929,10 @@ void AutoMap::Ticker()
 // Clear automap frame buffer.
 void AutoMap::clearFB(int color)
 {
-#ifdef HWRENDER 
+#ifdef HWRENDER
   if (rendermode != render_soft)
     {
-      HWR_clearAutomap();
+      HWR.ClearAutomap();
       return;
     }
 #endif
@@ -943,58 +944,58 @@ void AutoMap::clearFB(int color)
   else
     {
       int i,y;
-      int dmapx; 
-      int dmapy; 
+      int dmapx;
+      int dmapy;
       static int mapxstart;
       static int mapystart;
       byte *dest = vid.screens[0],*src;
 #define MAPLUMPHEIGHT (vid.height - hud.stbarheight)
-        
+
       if(followplayer)
         {
-	  static vertex_t oldplr;
+          static vertex_t oldplr;
 
-	  dmapx = (MTOF(mpawn->x)-MTOF(oldplr.x)); //fixed point
-	  dmapy = (MTOF(oldplr.y)-MTOF(mpawn->y));
-            
-	  oldplr.x = mpawn->x;
-	  oldplr.y = mpawn->y;
-	  mapxstart += dmapx>>1;
-	  mapystart += dmapy>>1;
-            
-	  while(mapxstart >= 320)
-	    mapxstart -= 320;
-	  while(mapxstart < 0)
-	    mapxstart += 320;
-	  while(mapystart >= MAPLUMPHEIGHT)
-	    mapystart -= MAPLUMPHEIGHT;
-	  while(mapystart < 0)
-	    mapystart += MAPLUMPHEIGHT;
+          dmapx = (MTOF(mpawn->x)-MTOF(oldplr.x)); //fixed point
+          dmapy = (MTOF(oldplr.y)-MTOF(mpawn->y));
+
+          oldplr.x = mpawn->x;
+          oldplr.y = mpawn->y;
+          mapxstart += dmapx>>1;
+          mapystart += dmapy>>1;
+
+          while(mapxstart >= 320)
+            mapxstart -= 320;
+          while(mapxstart < 0)
+            mapxstart += 320;
+          while(mapystart >= MAPLUMPHEIGHT)
+            mapystart -= MAPLUMPHEIGHT;
+          while(mapystart < 0)
+            mapystart += MAPLUMPHEIGHT;
         }
       else
         {
-	  mapxstart += (MTOF(m_paninc.x)>>1);
-	  mapystart -= (MTOF(m_paninc.y)>>1);
-	  if( mapxstart >= 320 )
-	    mapxstart -= 320;
-	  if( mapxstart < 0 )
-	    mapxstart += 320;
-	  if( mapystart >= MAPLUMPHEIGHT )
-	    mapystart -= MAPLUMPHEIGHT;
-	  if( mapystart < 0 )
-	    mapystart += MAPLUMPHEIGHT;
+          mapxstart += (MTOF(m_paninc.x)>>1);
+          mapystart -= (MTOF(m_paninc.y)>>1);
+          if( mapxstart >= 320 )
+            mapxstart -= 320;
+          if( mapxstart < 0 )
+            mapxstart += 320;
+          if( mapystart >= MAPLUMPHEIGHT )
+            mapystart -= MAPLUMPHEIGHT;
+          if( mapystart < 0 )
+            mapystart += MAPLUMPHEIGHT;
         }
-        
+
       //blit the automap background to the screen.
       for (y=0 ; y<f_h ; y++)
         {
-	  src = mapback + mapxstart + (y+mapystart)*320;
-	  for (i=0 ; i<320*vid.dupx ; i++)
+          src = mapback + mapxstart + (y+mapystart)*320;
+          for (i=0 ; i<320*vid.dupx ; i++)
             {
-	      while( src>mapback+320*MAPLUMPHEIGHT ) src-=320*MAPLUMPHEIGHT;
-	      *dest++ = *src++;
+              while( src>mapback+320*MAPLUMPHEIGHT ) src-=320*MAPLUMPHEIGHT;
+              *dest++ = *src++;
             }
-	  dest += vid.width-vid.dupx*320;
+          dest += vid.width-vid.dupx*320;
         }
     }
 }
@@ -1078,53 +1079,53 @@ static bool AM_clipMline(mline_t* ml, fline_t* fl)
       // may be partially inside box
       // find an outside point
       if (outcode1)
-	outside = outcode1;
+        outside = outcode1;
       else
-	outside = outcode2;
+        outside = outcode2;
 
       // clip to each side
       if (outside & TOP)
         {
-	  dy = fl->a.y - fl->b.y;
-	  dx = fl->b.x - fl->a.x;
-	  tmp.x = fl->a.x + (dx*(fl->a.y))/dy;
-	  tmp.y = 0;
+          dy = fl->a.y - fl->b.y;
+          dx = fl->b.x - fl->a.x;
+          tmp.x = fl->a.x + (dx*(fl->a.y))/dy;
+          tmp.y = 0;
         }
       else if (outside & BOTTOM)
         {
-	  dy = fl->a.y - fl->b.y;
-	  dx = fl->b.x - fl->a.x;
-	  tmp.x = fl->a.x + (dx*(fl->a.y-f_h))/dy;
-	  tmp.y = f_h-1;
+          dy = fl->a.y - fl->b.y;
+          dx = fl->b.x - fl->a.x;
+          tmp.x = fl->a.x + (dx*(fl->a.y-f_h))/dy;
+          tmp.y = f_h-1;
         }
       else if (outside & RIGHT)
         {
-	  dy = fl->b.y - fl->a.y;
-	  dx = fl->b.x - fl->a.x;
-	  tmp.y = fl->a.y + (dy*(f_w-1 - fl->a.x))/dx;
-	  tmp.x = f_w-1;
+          dy = fl->b.y - fl->a.y;
+          dx = fl->b.x - fl->a.x;
+          tmp.y = fl->a.y + (dy*(f_w-1 - fl->a.x))/dx;
+          tmp.x = f_w-1;
         }
       else if (outside & LEFT)
         {
-	  dy = fl->b.y - fl->a.y;
-	  dx = fl->b.x - fl->a.x;
-	  tmp.y = fl->a.y + (dy*(-fl->a.x))/dx;
-	  tmp.x = 0;
+          dy = fl->b.y - fl->a.y;
+          dx = fl->b.x - fl->a.x;
+          tmp.y = fl->a.y + (dy*(-fl->a.x))/dx;
+          tmp.x = 0;
         }
 
       if (outside == outcode1)
         {
-	  fl->a = tmp;
-	  DOOUTCODE(outcode1, fl->a.x, fl->a.y);
+          fl->a = tmp;
+          DOOUTCODE(outcode1, fl->a.x, fl->a.y);
         }
       else
         {
-	  fl->b = tmp;
-	  DOOUTCODE(outcode2, fl->b.x, fl->b.y);
+          fl->b = tmp;
+          DOOUTCODE(outcode2, fl->b.x, fl->b.y);
         }
 
       if (outcode1 & outcode2)
-	return false; // trivially outside
+        return false; // trivially outside
     }
 
   return true;
@@ -1153,9 +1154,9 @@ static void AM_drawFline_soft(fline_t* fl, int color)
 
   // For debugging only
   if (      fl->a.x < 0 || fl->a.x >= f_w
-	    || fl->a.y < 0 || fl->a.y >= f_h
-	    || fl->b.x < 0 || fl->b.x >= f_w
-	    || fl->b.y < 0 || fl->b.y >= f_h)
+            || fl->a.y < 0 || fl->a.y >= f_h
+            || fl->b.x < 0 || fl->b.x >= f_w
+            || fl->b.y < 0 || fl->b.y >= f_h)
     {
       CONS_Printf("line clipping problem %d \r", fuck++);
       return;
@@ -1180,15 +1181,15 @@ static void AM_drawFline_soft(fline_t* fl, int color)
       d = ay - ax/2;
       while (1)
         {
-	  PUTDOT(x,y,color);
-	  if (x == fl->b.x) return;
-	  if (d>=0)
+          PUTDOT(x,y,color);
+          if (x == fl->b.x) return;
+          if (d>=0)
             {
-	      y += sy;
-	      d -= ax;
+              y += sy;
+              d -= ax;
             }
-	  x += sx;
-	  d += ay;
+          x += sx;
+          d += ay;
         }
     }
   else
@@ -1196,15 +1197,15 @@ static void AM_drawFline_soft(fline_t* fl, int color)
       d = ax - ay/2;
       while (1)
         {
-	  PUTDOT(x, y, color);
-	  if (y == fl->b.y) return;
-	  if (d >= 0)
+          PUTDOT(x, y, color);
+          if (y == fl->b.y) return;
+          if (d >= 0)
             {
-	      x += sx;
-	      d -= ay;
+              x += sx;
+              d -= ay;
             }
-	  y += sy;
-	  d += ax;
+          y += sy;
+          d += ax;
         }
     }
 }
@@ -1255,7 +1256,7 @@ void AutoMap::drawGrid(int color)
     start += (MAPBLOCKUNITS<<FRACBITS)
       - ((start - mp->bmaporgy)%(MAPBLOCKUNITS<<FRACBITS));
   end = m_y + m_h;
-  
+
   // draw horizontal gridlines
   ml.a.x = m_x;
   ml.b.x = m_x + m_w;
@@ -1283,54 +1284,54 @@ void AutoMap::drawWalls()
       l.b.y = mp->lines[i].v2->y;
       if (am_cheating || (mp->lines[i].flags & ML_MAPPED))
         {
-	  if ((mp->lines[i].flags & ML_DONTDRAW) && !am_cheating)
-	    continue;
-	  if (!mp->lines[i].backsector)
+          if ((mp->lines[i].flags & ML_DONTDRAW) && !am_cheating)
+            continue;
+          if (!mp->lines[i].backsector)
             {
-	      AM_drawMline(&l, WALLCOLORS+lightlev);
+              AM_drawMline(&l, WALLCOLORS+lightlev);
             }
-	  else
+          else
             {
-	      switch (mp->lines[i].special) {
-	      case 39 :
-		// teleporters
-		AM_drawMline(&l, WALLCOLORS+WALLRANGE/2);
-		break;
-	      case 26:
-	      case 32:
-		AM_drawMline(&l, BLUEKEYCOLOR);
-		break;
-	      case 27:
-	      case 34:
-		AM_drawMline(&l, YELLOWKEYCOLOR);
-		break;
-	      case 28:
-	      case 33:
-		AM_drawMline(&l, REDKEYCOLOR); // green for heretic
-		break;
-	      default :
-		if (mp->lines[i].flags & ML_SECRET) // secret door
-		  {
-		    if (am_cheating) AM_drawMline(&l, SECRETWALLCOLORS + lightlev);
-		    else AM_drawMline(&l, WALLCOLORS+lightlev);
-		  }
-		else if (mp->lines[i].backsector->floorheight
-			 != mp->lines[i].frontsector->floorheight) {
-		  AM_drawMline(&l, FDWALLCOLORS + lightlev); // floor level change
-		}
-		else if (mp->lines[i].backsector->ceilingheight
-			 != mp->lines[i].frontsector->ceilingheight) {
-		  AM_drawMline(&l, CDWALLCOLORS+lightlev); // ceiling level change
-		}
-		else if (am_cheating) {
-		  AM_drawMline(&l, TSWALLCOLORS+lightlev);
-		}
-	      }
+              switch (mp->lines[i].special) {
+              case 39 :
+                // teleporters
+                AM_drawMline(&l, WALLCOLORS+WALLRANGE/2);
+                break;
+              case 26:
+              case 32:
+                AM_drawMline(&l, BLUEKEYCOLOR);
+                break;
+              case 27:
+              case 34:
+                AM_drawMline(&l, YELLOWKEYCOLOR);
+                break;
+              case 28:
+              case 33:
+                AM_drawMline(&l, REDKEYCOLOR); // green for heretic
+                break;
+              default :
+                if (mp->lines[i].flags & ML_SECRET) // secret door
+                  {
+                    if (am_cheating) AM_drawMline(&l, SECRETWALLCOLORS + lightlev);
+                    else AM_drawMline(&l, WALLCOLORS+lightlev);
+                  }
+                else if (mp->lines[i].backsector->floorheight
+                         != mp->lines[i].frontsector->floorheight) {
+                  AM_drawMline(&l, FDWALLCOLORS + lightlev); // floor level change
+                }
+                else if (mp->lines[i].backsector->ceilingheight
+                         != mp->lines[i].frontsector->ceilingheight) {
+                  AM_drawMline(&l, CDWALLCOLORS+lightlev); // ceiling level change
+                }
+                else if (am_cheating) {
+                  AM_drawMline(&l, TSWALLCOLORS+lightlev);
+                }
+              }
             }
         }
       else if (mpawn->powers[pw_allmap])
         {
-	  if (!(mp->lines[i].flags & ML_DONTDRAW)) AM_drawMline(&l, GRAYS+3);
+          if (!(mp->lines[i].flags & ML_DONTDRAW)) AM_drawMline(&l, GRAYS+3);
         }
     }
 }
@@ -1357,12 +1358,12 @@ void AM_rotate(fixed_t *x, fixed_t *y, angle_t a)
 
 
 static void AM_drawLineCharacter(mline_t*    lineguy,
-				 int         lineguylines,
-				 fixed_t     scale,
-				 angle_t     angle,
-				 int         color,
-				 fixed_t     x,
-				 fixed_t     y)
+                                 int         lineguylines,
+                                 fixed_t     scale,
+                                 angle_t     angle,
+                                 int         color,
+                                 fixed_t     x,
+                                 fixed_t     y)
 {
   int         i;
   mline_t     l;
@@ -1374,12 +1375,12 @@ static void AM_drawLineCharacter(mline_t*    lineguy,
 
       if (scale)
         {
-	  l.a.x = FixedMul(scale, l.a.x);
-	  l.a.y = FixedMul(scale, l.a.y);
+          l.a.x = FixedMul(scale, l.a.x);
+          l.a.y = FixedMul(scale, l.a.y);
         }
 
       if (angle)
-	AM_rotate(&l.a.x, &l.a.y, angle);
+        AM_rotate(&l.a.x, &l.a.y, angle);
 
       l.a.x += x;
       l.a.y += y;
@@ -1389,12 +1390,12 @@ static void AM_drawLineCharacter(mline_t*    lineguy,
 
       if (scale)
         {
-	  l.b.x = FixedMul(scale, l.b.x);
-	  l.b.y = FixedMul(scale, l.b.y);
+          l.b.x = FixedMul(scale, l.b.x);
+          l.b.y = FixedMul(scale, l.b.y);
         }
 
       if (angle)
-	AM_rotate(&l.b.x, &l.b.y, angle);
+        AM_rotate(&l.b.x, &l.b.y, angle);
 
       l.b.x += x;
       l.b.y += y;
@@ -1413,31 +1414,31 @@ void AutoMap::drawPlayers()
     {
       PlayerPawn *p = mp->players[i]->pawn;
       if (p == NULL)
-	continue;
+        continue;
 
       if (p == mpawn)
-	{
-	  if (am_cheating)
-	    AM_drawLineCharacter(cheat_player_arrow, NUMCHEATPLYRLINES, 0,
-				 p->angle, DWHITE, p->x, p->y);
-	  else
-	    AM_drawLineCharacter(player_arrow, NUMPLYRLINES, 0,
-				 p->angle, DWHITE, p->x, p->y);
-	}
+        {
+          if (am_cheating)
+            AM_drawLineCharacter(cheat_player_arrow, NUMCHEATPLYRLINES, 0,
+                                 p->angle, DWHITE, p->x, p->y);
+          else
+            AM_drawLineCharacter(player_arrow, NUMPLYRLINES, 0,
+                                 p->angle, DWHITE, p->x, p->y);
+        }
       else
-	{
-	  int color;
+        {
+          int color;
 
-	  if (p->powers[pw_invisibility])
-	    color = 246; // *close* to black
-	  else if (p->pres->color == 0)
-	    color = GREENS;
-	  else
-	    color = *(translationtables + ((p->pres->color-1)<<8) +GREENS+8);
+          if (p->powers[pw_invisibility])
+            color = 246; // *close* to black
+          else if (p->pres->color == 0)
+            color = GREENS;
+          else
+            color = *(translationtables + ((p->pres->color-1)<<8) +GREENS+8);
 
-	  AM_drawLineCharacter(player_arrow, NUMPLYRLINES, 0, p->angle,
-			       color, p->x, p->y);
-	}
+          AM_drawLineCharacter(player_arrow, NUMPLYRLINES, 0, p->angle,
+                               color, p->x, p->y);
+        }
     }
 }
 
@@ -1454,15 +1455,15 @@ void AutoMap::drawThings(int colors, int colorrange)
       t = mp->sectors[i].thinglist;
       while (t)
         {
-	  AM_drawLineCharacter(thintriangle_guy, NUMTHINTRIANGLEGUYLINES,
-			       16<<FRACBITS, t->angle, colors+lightlev, t->x, t->y);
-	  t = t->snext;
+          AM_drawLineCharacter(thintriangle_guy, NUMTHINTRIANGLEGUYLINES,
+                               16<<FRACBITS, t->angle, colors+lightlev, t->x, t->y);
+          t = t->snext;
         }
     }
 }
 
 // was AM_drawMarks
-void AutoMap::drawMarks() 
+void AutoMap::drawMarks()
 {
   int i, fx, fy, w, h;
 
@@ -1470,14 +1471,14 @@ void AutoMap::drawMarks()
     {
       if (markpoints[i].x != -1)
         {
-	  //      w = SHORT(marknums[i]->width);
-	  //      h = SHORT(marknums[i]->height);
-	  w = 5; // because something's wrong with the wad, i guess
-	  h = 6; // because something's wrong with the wad, i guess
-	  fx = CXMTOF(markpoints[i].x);
-	  fy = CYMTOF(markpoints[i].y);
-	  if (fx >= f_x && fx <= f_w - w && fy >= f_y && fy <= f_h - h)
-	    marknums[i]->Draw(fx, fy, FB);
+          //      w = SHORT(marknums[i]->width);
+          //      h = SHORT(marknums[i]->height);
+          w = 5; // because something's wrong with the wad, i guess
+          h = 6; // because something's wrong with the wad, i guess
+          fx = CXMTOF(markpoints[i].x);
+          fy = CYMTOF(markpoints[i].y);
+          if (fx >= f_x && fx <= f_w - w && fy >= f_y && fy <= f_h - h)
+            marknums[i]->Draw(fx, fy, FB);
         }
     }
 }
@@ -1489,7 +1490,7 @@ void AM_drawCrosshair(int color)
       // BP: should be putpixel here
       return;
     }
-    
+
   if (vid.BytesPerPixel == 1)
     fb[(f_w*(f_h+1))/2] = color; // single point for now
   else

@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C++ -*- 
+// Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
 // $Id$
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2004/07/25 20:17:05  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.14  2004/07/11 14:32:01  smite-meister
 // Consvars updated, bugfixes
 //
@@ -82,36 +85,25 @@
 #include "d_main.h"
 #include "w_wad.h"
 
-
-#ifdef HWRENDER
-# include "hardware/hw_main.h"
-#endif
-
-
 const char CON_PROMPTCHAR = '>';
 const int  CON_BUFFERSIZE = 16384;
 
 Console con;
 
-
 //language_t con_language = la_english; /// TODO Language for game output strings
 int con_keymap   = la_english; /// Keyboard layout
-
 
 // communication with HUD
 int  con_clearlines; // top screen lines to refresh when view reduced
 bool con_hudupdate;  // when messages scroll, we need a backgrnd refresh
-
 
 int  con_clipviewtop;// clip value for planes & sprites, so that the
                      // part of the view covered by the console is not
                      // drawn when not needed, this must be -1 when
                      // console is off
 
-
 //bool  con_forcepic=true;  // at startup toggle console transulcency when
                              // first off
-
 
 
 //======================================================================
@@ -255,12 +247,12 @@ static void CON_SetupColormaps()
 
       if (game.mode == gm_heretic)
         {
-	  greenmap[k] = 209 + (byte)((float)j*15/(3*255));   //remaps to greens(209-224)
-	  graymap[k]  =       (byte)((float)j*35/(3*255));   //remaps to grays(0-35)           
-	  whitemap[k] = 145 + (byte)((float)j*15/(3*255));   //remaps to reds(145-168)
+          greenmap[k] = 209 + (byte)((float)j*15/(3*255));   //remaps to greens(209-224)
+          graymap[k]  =       (byte)((float)j*35/(3*255));   //remaps to grays(0-35)
+          whitemap[k] = 145 + (byte)((float)j*15/(3*255));   //remaps to reds(145-168)
         }
       else
-	greenmap[k] = 127 - (j>>6);
+        greenmap[k] = 127 - (j>>6);
     }
 
   //
@@ -273,14 +265,14 @@ static void CON_SetupColormaps()
     {
       for (i=0; i<256; i++)
         {
-	  whitemap[i] = i;        //remap each color to itself...
-	  graymap[i]  = i;
+          whitemap[i] = i;        //remap each color to itself...
+          graymap[i]  = i;
         }
 
       for (i=168;i<192;i++)
         {
-	  whitemap[i] = i-88;     //remaps reds(168-192) to whites(80-104)
-	  graymap[i]  = i-80;      //remaps reds(168-192) to gray(88-...)
+          whitemap[i] = i-88;     //remaps reds(168-192) to whites(80-104)
+          graymap[i]  = i-80;      //remaps reds(168-192) to gray(88-...)
         }
       whitemap[45] = 190-88; // the color[45]=color[190] !
       graymap [45] = 190-80;
@@ -366,13 +358,13 @@ void Command_Bind_f()
       CONS_Printf("\2bind table :\n");
       na = 0;
       for (key=0; key<NUMINPUTS; key++)
-	if (bindtable[key])
-	  {
-	    CONS_Printf("%s : \"%s\"\n", G_KeynumToString(key), bindtable[key]);
-	    na = 1;
-	  }
+        if (bindtable[key])
+          {
+            CONS_Printf("%s : \"%s\"\n", G_KeynumToString(key), bindtable[key]);
+            na = 1;
+          }
       if (!na)
-	CONS_Printf("Empty\n");
+        CONS_Printf("Empty\n");
       return;
     }
 
@@ -485,20 +477,20 @@ void Console::Toggle(bool forceoff)
       active = false;
 
       if (forceoff)
-	{
-	  // close it NOW!
-	  con_height = 0;
-	  con_clipviewtop = -1;       //remove console clipping of view
-	}
+        {
+          // close it NOW!
+          con_height = 0;
+          con_clipviewtop = -1;       //remove console clipping of view
+        }
     }
   else
     {
       // toggle console on
       con_destheight = (cons_height.value * vid.height)/100;
       if (con_destheight < 20)
-	con_destheight = 20;
+        con_destheight = 20;
       else if (con_destheight > vid.height - hud.stbarheight)
-	con_destheight = vid.height-hud.stbarheight;
+        con_destheight = vid.height-hud.stbarheight;
 
       con_destheight &= ~0x3;      // multiple of text row height
       active = true;
@@ -539,7 +531,7 @@ void Console::RecalcSize()
   int old_cols  = con_cols;
   int old_lines = con_lines;
   int old_cy    = con_cy;
- 
+
   char tmp_buffer[CON_BUFFERSIZE];
   memcpy(tmp_buffer, con_buffer, CON_BUFFERSIZE);
 
@@ -564,17 +556,17 @@ void Console::RecalcSize()
   for (int i = old_cy+1; i < old_cy+old_lines; i++)
     {
       if (tmp_buffer[(i % old_lines) * old_cols])
-	{
-	  char temp[1000]; // a line, this should be enough
+        {
+          char temp[1000]; // a line, this should be enough
 
-	  memcpy(temp, &tmp_buffer[(i % old_lines)*old_cols], old_cols);
-	  int j = old_cols - 1;
-	  while (temp[j] == ' ' && j)
-	    j--;
-	  temp[j+1] = '\n';
-	  temp[j+2] = '\0';
-	  Print(temp);
-	}
+          memcpy(temp, &tmp_buffer[(i % old_lines)*old_cols], old_cols);
+          int j = old_cols - 1;
+          while (temp[j] == ' ' && j)
+            j--;
+          temp[j+1] = '\n';
+          temp[j+2] = '\0';
+          Print(temp);
+        }
     }
 }
 
@@ -593,7 +585,7 @@ void Console::ClearHUD()
 void Console::Ticker()
 {
   extern int viewwindowy;
-    
+
   // cursor blinking
   con_tick++;
   con_tick &= 7;
@@ -603,17 +595,17 @@ void Console::Ticker()
     {
       // up/down move to dest
       if (con_height < con_destheight)
-	{
-	  con_height += cons_speed.value;
-	  if (con_height > con_destheight)
-	    con_height = con_destheight;
-	}
+        {
+          con_height += cons_speed.value;
+          if (con_height > con_destheight)
+            con_height = con_destheight;
+        }
       else if (con_height > con_destheight)
-	{
-	  con_height -= cons_speed.value;
-	  if (con_height < con_destheight)
-	    con_height = con_destheight;
-	}
+        {
+          con_height -= cons_speed.value;
+          if (con_height < con_destheight)
+            con_height = con_destheight;
+        }
     }
 
   // clip the view, so that the part under the console is not drawn
@@ -621,18 +613,18 @@ void Console::Ticker()
   if (cons_backpic.value)   // clip only when using an opaque background
     {
       if (con_height > 0)
-	con_clipviewtop = con_height - viewwindowy - 1 - 10;
+        con_clipviewtop = con_height - viewwindowy - 1 - 10;
 //NOTE: BIG HACK::SUBTRACT 10, SO THAT WATER DON'T COPY LINES OF THE CONSOLE
 //      WINDOW!!! (draw some more lines behind the bottom of the console)
       if (con_clipviewtop < 0)
-	con_clipviewtop = -1;   //maybe not necessary, provided it's <0
+        con_clipviewtop = -1;   //maybe not necessary, provided it's <0
     }
 
   // make overlay messages disappear after a while
   for (int i=0; i<con_hudlines; i++)
     {
       if (--(con_hudtime[i]) < 0)
-	con_hudtime[i] = 0;
+        con_hudtime[i] = 0;
     }
 }
 
@@ -642,7 +634,7 @@ void Console::Ticker()
 bool Console::Responder(event_t *ev)
 {
   if (chat_on)
-    return false; 
+    return false;
 
   // let go keyup events, don't eat them
   if (ev->type != ev_keydown)
@@ -663,9 +655,9 @@ bool Console::Responder(event_t *ev)
     {
       if (key < NUMINPUTS && bindtable[key])
         {
-	  COM_BufAddText(bindtable[key]);
-	  COM_BufAddText("\n");
-	  return true;
+          COM_BufAddText(bindtable[key]);
+          COM_BufAddText("\n");
+          return true;
         }
       return false;
     }
@@ -696,61 +688,61 @@ bool Console::Responder(event_t *ev)
       // remember typing for several completions (…-la-4dos)
       if (inputlines[input_cy][input_cx-1] != ' ')
         {
-	  if (strlen (inputlines[input_cy]+1)<80)
-	    strcpy (completion, inputlines[input_cy]+1);
-	  else
-	    completion[0] = 0;
+          if (strlen (inputlines[input_cy]+1)<80)
+            strcpy (completion, inputlines[input_cy]+1);
+          else
+            completion[0] = 0;
 
-	  comskips = varskips = 0;
+          comskips = varskips = 0;
         }
       else
         {
-	  if (shiftdown)
+          if (shiftdown)
             {
-	      if (comskips<0)
+              if (comskips<0)
                 {
-		  if (--varskips<0)
-		    comskips = -(comskips+2);
+                  if (--varskips<0)
+                    comskips = -(comskips+2);
                 }
-	      else
+              else
                 if (comskips>0)
-		  comskips--;
+                  comskips--;
             }
-	  else
+          else
             {
-	      if (comskips<0)
-		varskips++;
-	      else
-		comskips++;
+              if (comskips<0)
+                varskips++;
+              else
+                comskips++;
             }
         }
 
       const char *cmd;
       if (comskips>=0)
         {
-	  cmd = COM_CompleteCommand(completion, comskips);
-	  if (!cmd)
-	    // dirty:make sure if comskips is zero, to have a neg value
-	    comskips = -(comskips+1);
+          cmd = COM_CompleteCommand(completion, comskips);
+          if (!cmd)
+            // dirty:make sure if comskips is zero, to have a neg value
+            comskips = -(comskips+1);
         }
       if (comskips<0)
-	cmd = consvar_t::CompleteVar(completion, varskips);
+        cmd = consvar_t::CompleteVar(completion, varskips);
 
       if (cmd)
         {
-	  memset(inputlines[input_cy]+1,0,CON_MAXPROMPTCHARS-1);
-	  strcpy (inputlines[input_cy]+1, cmd);
-	  input_cx = strlen(cmd)+1;
-	  inputlines[input_cy][input_cx] = ' ';
-	  input_cx++;
-	  inputlines[input_cy][input_cx] = 0;
+          memset(inputlines[input_cy]+1,0,CON_MAXPROMPTCHARS-1);
+          strcpy (inputlines[input_cy]+1, cmd);
+          input_cx = strlen(cmd)+1;
+          inputlines[input_cy][input_cx] = ' ';
+          input_cx++;
+          inputlines[input_cy][input_cx] = 0;
         }
       else
         {
-	  if (comskips>0)
-	    comskips--;
-	  else if (varskips>0)
-	    varskips--;
+          if (comskips>0)
+            comskips--;
+          else if (varskips>0)
+            varskips--;
         }
 
       return true;
@@ -760,15 +752,15 @@ bool Console::Responder(event_t *ev)
   if (key == KEY_PGUP)
     {
       if (con_scrollup < con_lines - ((con_height - 16) >> 3))
-	con_scrollup += 5;
+        con_scrollup += 5;
       return true;
     }
   else if (key == KEY_PGDN)
     {
       if (con_scrollup >= 5)
-	con_scrollup -= 5;
+        con_scrollup -= 5;
       else
-	con_scrollup = 0;
+        con_scrollup = 0;
       return true;
     }
 
@@ -789,7 +781,7 @@ bool Console::Responder(event_t *ev)
   if (key == KEY_ENTER)
     {
       if (input_cx < 2)
-	return true;
+        return true;
 
       // push the command
       COM_BufAddText(inputlines[input_cy]+1);
@@ -812,8 +804,8 @@ bool Console::Responder(event_t *ev)
     {
       if (input_cx > 1)
         {
-	  input_cx--;
-	  inputlines[input_cy][input_cx] = 0;
+          input_cx--;
+          inputlines[input_cy][input_cx] = 0;
         }
       return true;
     }
@@ -823,15 +815,15 @@ bool Console::Responder(event_t *ev)
     {
       // copy one of the previous inputlines to the current
       do
-	{
-	  input_hist = (input_hist - 1) & 31;   // cycle back
-	}
+        {
+          input_hist = (input_hist - 1) & 31;   // cycle back
+        }
       while (input_hist != input_cy && !inputlines[input_hist][1]);
 
       // stop at the last history input line, which is the
       // current line + 1 because we cycle through the 32 input lines
       if (input_hist == input_cy)
-	input_hist = (input_cy + 1) & 31;
+        input_hist = (input_cy + 1) & 31;
 
       memcpy(inputlines[input_cy], inputlines[input_hist], CON_MAXPROMPTCHARS);
       input_cx = strlen(inputlines[input_cy]);
@@ -843,11 +835,11 @@ bool Console::Responder(event_t *ev)
   if (key == KEY_DOWNARROW)
     {
       if (input_hist == input_cy)
-	return true;
+        return true;
 
       do
-	{
-	  input_hist = (input_hist + 1) & 31;
+        {
+          input_hist = (input_hist + 1) & 31;
         }
       while (input_hist != input_cy && !inputlines[input_hist][1]);
 
@@ -856,13 +848,13 @@ bool Console::Responder(event_t *ev)
       // back to current line
       if (input_hist == input_cy)
         {
-	  inputlines[input_cy][0] = CON_PROMPTCHAR;
-	  input_cx = 1;
+          inputlines[input_cy][0] = CON_PROMPTCHAR;
+          input_cx = 1;
         }
       else
         {
-	  strcpy(inputlines[input_cy],inputlines[input_hist]);
-	  input_cx = strlen(inputlines[input_cy]);
+          strcpy(inputlines[input_cy],inputlines[input_hist]);
+          input_cx = strlen(inputlines[input_cy]);
         }
       return true;
     }
@@ -873,12 +865,12 @@ bool Console::Responder(event_t *ev)
       // allow people to use keypad in console (good for typing IP addresses) - Calum
       char keypad_translation[] =
       {
-	'7','8','9','-',
-	'4','5','6','+',
-	'1','2','3',
-	'0','.'
+        '7','8','9','-',
+        '4','5','6','+',
+        '1','2','3',
+        '0','.'
       };
-        
+
       key = keypad_translation[key - KEY_KEYPAD7];
     }
   else if (key == KEY_KPADSLASH)
@@ -886,7 +878,7 @@ bool Console::Responder(event_t *ev)
   else if (shiftdown)
     key = shiftxform[key];
   else if (con_keymap != la_english)
-    key = KeyTranslation(key);   
+    key = KeyTranslation(key);
 
   // enter a char into the command prompt
   if (key < 32 || key > 127)
@@ -897,7 +889,7 @@ bool Console::Responder(event_t *ev)
     {
       // make sure letters are lowercase for commands & cvars
       if (key >= 'A' && key <= 'Z')
-	key = key + 'a' - 'A';
+        key = key + 'a' - 'A';
 
       inputlines[input_cy][input_cx] = key;
       inputlines[input_cy][input_cx+1] = 0;
@@ -938,14 +930,14 @@ void Console::Print(char *msg)
   if (*msg < 5)
     {
       if (*msg=='\2')  // set white color
-	mask = 128;
+        mask = 128;
       else if (*msg=='\3')
-	{
+        {
           mask = 128;                         // white text + sound
-	  S_StartAmbSound(sfx_message);
-	}
+          S_StartAmbSound(sfx_message);
+        }
       else if (*msg == '\4') //Splitscreen: This message is for the second player
-	p = 2;
+        p = 2;
     }
 
   while (*msg)
@@ -953,48 +945,48 @@ void Console::Print(char *msg)
       // skip non-printable characters and white spaces
       while (*msg && *msg <= ' ')
         {
-	  // carriage return
-	  if (*msg == '\r')
+          // carriage return
+          if (*msg == '\r')
             {
-	      con_cy--;
-	      Linefeed(p);
+              con_cy--;
+              Linefeed(p);
             }
-	  else if (*msg == '\n')
-	    Linefeed(p);
-	  else if (*msg == ' ')
+          else if (*msg == '\n')
+            Linefeed(p);
+          else if (*msg == ' ')
             {
-	      con_line[con_cx++] = ' ';
-	      if (con_cx >= con_cols)
-		Linefeed(p);
+              con_line[con_cx++] = ' ';
+              if (con_cx >= con_cols)
+                Linefeed(p);
             }
-	  else if (*msg == '\t')
+          else if (*msg == '\t')
             {
-	      //adds tab spaces for nice layout in console                
-	      do {
-		con_line[con_cx++] = ' ';
-	      } while (con_cx % 4 != 0);
-                
-	      if (con_cx >= con_cols)
-		Linefeed(p);
+              //adds tab spaces for nice layout in console
+              do {
+                con_line[con_cx++] = ' ';
+              } while (con_cx % 4 != 0);
+
+              if (con_cx >= con_cols)
+                Linefeed(p);
             }
-	  msg++;
+          msg++;
         }
 
       if (*msg == 0)
-	return;
+        return;
 
       int l;
       // printable character
       for (l=0; l<con_cols && msg[l] > ' '; l++)
-	;
+        ;
 
       // word wrap
       if (con_cx + l > con_cols)
-	Linefeed(p);
+        Linefeed(p);
 
       // a word at a time
       for ( ; l>0; l--)
-	con_line[con_cx++] = *(msg++) | mask;
+        con_line[con_cx++] = *(msg++) | mask;
     }
 }
 
@@ -1071,26 +1063,29 @@ void Console::DrawHudlines()
   for (int i = con_cy - con_hudlines + 1; i <= con_cy; i++)
     {
       if (i < 0)
-	continue;
+        continue;
       if (con_hudtime[i%con_hudlines] == 0)
-	continue;
+        continue;
 
       char *p = &con_buffer[(i%con_lines)*con_cols];
 
       for (int x=0; x<con_cols; x++)
-	{
+        {
+#if 0 //FIXME: Hurdler, must be replaced by something compatible with the new renderer
 #ifdef HWRENDER
-	  extern float gr_viewheight;	 
-	  if (con_lineowner[i%con_hudlines] == 2)
-	    V_DrawCharacter(x<<3, int(y2+gr_viewheight), p[x]);
-	  else
+          // TODO: Hurdler: see why we need to have a separate code here
+          extern float gr_viewheight;
+          if (con_lineowner[i%con_hudlines] == 2)
+            V_DrawCharacter(x<<3, int(y2+gr_viewheight), p[x]);
+          else
 #endif
-	    V_DrawCharacter(x<<3, y, p[x]);
-	}
+#endif
+            V_DrawCharacter(x<<3, y, p[x]);
+        }
       if (con_lineowner[i%con_hudlines] == 2)
-	y2 += 8;
+        y2 += 8;
       else
-	y += 8;
+        y += 8;
     }
 
   // top screen lines that might need clearing when view is reduced
@@ -1136,12 +1131,12 @@ void Console::DrawConsole()
   for (y = con_height-20; y >= 0; y -= 8, i--)
     {
       if (i < 0)
-	i = 0;
+        i = 0;
 
       char *p = &con_buffer[(i % con_lines) * con_cols];
 
       for (x = 0; x < con_cols; x++)
-	V_DrawCharacter((x+1) << 3, y, p[x]);
+        V_DrawCharacter((x+1) << 3, y, p[x]);
     }
 
 
@@ -1151,17 +1146,17 @@ void Console::DrawConsole()
       // input line scrolls left if it gets too long
       char *p = inputlines[input_cy];
       if (input_cx >= con_cols)
-	p += input_cx - con_cols + 1;
+        p += input_cx - con_cols + 1;
 
       int y = con_height - 12;
 
       for (x=0; x<con_cols; x++)
-	V_DrawCharacter((x+1)<<3, y, p[x]);
+        V_DrawCharacter((x+1)<<3, y, p[x]);
 
       // draw the blinking cursor
       int x = (input_cx>=con_cols) ? con_cols - 1 : input_cx;
       if (con_tick < 4)
-	V_DrawCharacter((x+1) << 3, y, 0x80 | '_');
+        V_DrawCharacter((x+1) << 3, y, 0x80 | '_');
     }
 }
 

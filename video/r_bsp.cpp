@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:44  hurdler
-// Initial revision
+// Revision 1.2  2004/07/25 20:16:43  hurdler
+// Remove old hardware renderer and add part of the new one
+//
+// Revision 1.1.1.1  2002/11/16 14:18:44  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.6  2002/09/05 14:12:19  vberghol
 // network code partly bypassed
@@ -629,7 +632,7 @@ void Rend::R_AddLine (seg_t*  line)
     backsector = R.R_FakeFlat(backsector, &tempsec, NULL, NULL, true);
 
     doorclosed = 0; //SoM: 3/25/2000
-    
+
     // Closed door.
     if (backsector->ceilingheight <= frontsector->floorheight
         || backsector->floorheight >= frontsector->ceilingheight)
@@ -836,7 +839,7 @@ void Command_Water_f (void)
       CONS_Printf("dev_water [height] : set water level (development test)");
 
       if (consoleplayer->pawn)
-	dev_waterheight = consoleplayer->pawn->z + (16<<16) + 1;
+        dev_waterheight = consoleplayer->pawn->z + (16<<16) + 1;
 
       return;
     }
@@ -870,7 +873,6 @@ void Rend::R_Subsector(int num)
     if (num>=numsubsectors)
         return;
 
-    sscount++;
     sub = &subsectors[num];
     frontsector = sub->sector;
     count = sub->numlines;

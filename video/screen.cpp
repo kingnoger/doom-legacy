@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/07/25 20:16:43  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.11  2004/07/11 14:32:02  smite-meister
 // Consvars updated, bugfixes
 //
@@ -70,7 +73,9 @@
 #include "r_data.h"
 #include "r_local.h"
 #include "d_main.h"
-#include "hardware/hw_glob.h"
+#ifdef HWRENDER
+#include "hardware/hwr_render.h"
+#endif
 
 #include "w_wad.h"
 #include "z_zone.h"
@@ -548,7 +553,9 @@ void Video::SetPalette(int palettenum)
 
 #ifdef HWRENDER
   if (rendermode != render_soft)
-    HWR_SetPalette(&palette[palettenum*256]);
+  {
+    HWR.SetPalette(&palette[palettenum*256]);
+  }
   else
 #endif
     I_SetPalette(&palette[palettenum*256]);
@@ -562,7 +569,9 @@ void Video::SetPaletteLump(const char *pal)
   LoadPalette(pal);
 #ifdef HWRENDER
   if (rendermode != render_soft)
-    HWR_SetPalette(palette);
+  {
+    HWR.SetPalette(palette);
+  }
   else
 #endif
     I_SetPalette(palette);

@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C++ -*- 
+// Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
 // $Id$
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/07/25 20:17:50  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.12  2004/07/13 20:23:38  smite-meister
 // Mod system basics
 //
@@ -76,7 +79,6 @@
 #include "m_argv.h"
 
 #include "m_dll.h"
-#include "hardware/r_opengl/r_opengl.h"
 #include "sdl/ogl_sdl.h"
 
 void I_UngrabMouse();
@@ -102,12 +104,12 @@ static char vidModeName[33][32]; // allow 33 different modes
 
 
 // maximum number of windowed modes (see windowedModes[][])
-#define MAXWINMODES (6) 
+#define MAXWINMODES (6)
 
 //Hudler: 16/10/99: added for OpenGL gamma correction
 RGBA_t  gamma_correction = {0x7F7F7F7F};
 
-extern consvar_t cv_fullscreen; // for fullscreen support 
+extern consvar_t cv_fullscreen; // for fullscreen support
 
 rendermode_t    rendermode = render_soft;
 
@@ -142,8 +144,8 @@ void I_StartFrame()
     {
       if (SDL_MUSTLOCK(vidSurface))
         {
-	  if (SDL_LockSurface(vidSurface) < 0)
-	    return;
+          if (SDL_LockSurface(vidSurface) < 0)
+            return;
         }
     }
 
@@ -159,7 +161,7 @@ void I_OsPolling()
     return;
 
   I_GetEvent();
-    
+
   return;
 }
 
@@ -180,20 +182,20 @@ void I_FinishUpdate()
   if (rendermode == render_soft)
     {
       if (vid.screens[0] != vid.direct)
-	{
-	  memcpy(vid.direct, vid.screens[0], vid.height*vid.rowbytes);
-	  //vid.screens[0] = vid.direct; //FIXME: we MUST render directly into the surface
-	}
+        {
+          memcpy(vid.direct, vid.screens[0], vid.height*vid.rowbytes);
+          //vid.screens[0] = vid.direct; //FIXME: we MUST render directly into the surface
+        }
       //SDL_Flip(vidSurface);
       SDL_UpdateRect(vidSurface, 0, 0, 0, 0);
       if (SDL_MUSTLOCK(vidSurface))
-	SDL_UnlockSurface(vidSurface);
+        SDL_UnlockSurface(vidSurface);
     }
   else
     OglSdlFinishUpdate(false);
-    
+
   I_GetEvent();
-    
+
   return;
 }
 
@@ -205,7 +207,7 @@ void I_ReadScreen(byte* scr)
 {
   if (rendermode != render_soft)
     I_Error ("I_ReadScreen: called while in non-software mode");
-    
+
   memcpy (scr, vid.screens[0], vid.height*vid.rowbytes);
 }
 
@@ -228,34 +230,34 @@ void I_SetPalette(RGBA_t* palette)
 
 
 // return number of fullscreen or windowed modes
-int I_NumVideoModes() 
+int I_NumVideoModes()
 {
-  if (cv_fullscreen.value) 
+  if (cv_fullscreen.value)
     return numVidModes - firstEntry;
   else
     return MAXWINMODES;
 }
 
-char *I_GetVideoModeName(int modeNum) 
+char *I_GetVideoModeName(int modeNum)
 {
   if (cv_fullscreen.value)
     {
       modeNum += firstEntry;
       if (modeNum >= numVidModes)
-	return NULL;
-        
+        return NULL;
+
       sprintf(&vidModeName[modeNum][0], "%dx%d",
-	      modeList[modeNum]->w,
-	      modeList[modeNum]->h);
+              modeList[modeNum]->w,
+              modeList[modeNum]->h);
     }
   else
     { // windowed modes
       if (modeNum > MAXWINMODES)
-	return NULL;
-        
+        return NULL;
+
       sprintf(&vidModeName[modeNum][0], "win %dx%d",
-	      windowedModes[modeNum][0],
-	      windowedModes[modeNum][1]);
+              windowedModes[modeNum][0],
+              windowedModes[modeNum][1]);
     }
   return &vidModeName[modeNum][0];
 }
@@ -264,38 +266,38 @@ int I_GetVideoModeForSize(int w, int h)
 {
   int matchMode = -1;
   int i;
-  
+
   if (cv_fullscreen.value)
     {
       for (i = firstEntry; i<numVidModes; i++)
-	{
-	  if (modeList[i]->w == w && modeList[i]->h == h)
-	    {
-	      matchMode = i;
-	      break;
-	    }
-	}
+        {
+          if (modeList[i]->w == w && modeList[i]->h == h)
+            {
+              matchMode = i;
+              break;
+            }
+        }
 
       if (matchMode == -1) // use smallest mode
-	matchMode = numVidModes-1;
+        matchMode = numVidModes-1;
 
       matchMode -= firstEntry;
     }
   else
     {
       for(i = 0; i<MAXWINMODES; i++)
-	{
-	  if (windowedModes[i][0] == w && windowedModes[i][1] == h)
-	    {
-	      matchMode = i;
-	      break;
-	    }
-	}
+        {
+          if (windowedModes[i][0] == w && windowedModes[i][1] == h)
+            {
+              matchMode = i;
+              break;
+            }
+        }
 
       if (matchMode == -1) // use smallest mode
-	  matchMode = MAXWINMODES-1;
+          matchMode = MAXWINMODES-1;
     }
-  
+
   return matchMode;
 }
 
@@ -303,23 +305,23 @@ int I_GetVideoModeForSize(int w, int h)
 void I_PrepareVideoModeList()
 {
   int i;
-    
+
   if (cv_fullscreen.value) // only fullscreen needs preparation
     {
-      if(numVidModes != -1) 
+      if(numVidModes != -1)
         {
-	  for(i=0; i<numVidModes; i++)
+          for(i=0; i<numVidModes; i++)
             {
-	      if(modeList[i]->w <= MAXVIDWIDTH &&
-		 modeList[i]->h <= MAXVIDHEIGHT)
+              if(modeList[i]->w <= MAXVIDWIDTH &&
+                 modeList[i]->h <= MAXVIDHEIGHT)
                 {
-		  firstEntry = i;
-		  break;
+                  firstEntry = i;
+                  break;
                 }
             }
         }
     }
-    
+
   allow_fullscreen = true;
   return;
 }
@@ -335,7 +337,7 @@ int I_SetVideoMode(int modeNum)
   // doesn't give a valid pixels pointer. Odd.
   if (cv_fullscreen.value)
     {
-      modeNum += firstEntry;        
+      modeNum += firstEntry;
       vid.width = modeList[modeNum]->w;
       vid.height = modeList[modeNum]->h;
       flags = surfaceFlags | SDL_FULLSCREEN;
@@ -349,7 +351,7 @@ int I_SetVideoMode(int modeNum)
       flags = surfaceFlags;
 
       CONS_Printf("I_SetVideoMode: windowed %d x %d (%d bpp)\n", vid.width, vid.height, vid.BitsPerPixel);
-        
+
       // Window title
       SDL_WM_SetCaption("Legacy", "Legacy");
     }
@@ -357,13 +359,13 @@ int I_SetVideoMode(int modeNum)
   if (rendermode == render_soft)
     {
       SDL_FreeSurface(vidSurface);
-	
+
       vidSurface = SDL_SetVideoMode(vid.width, vid.height, vid.BitsPerPixel, flags);
       if (vidSurface == NULL)
-	I_Error("Could not set vidmode\n");
-	              
+        I_Error("Could not set vidmode\n");
+
       if (vidSurface->pixels == NULL)
-	I_Error("Didn't get a valid pixels pointer (SDL). Exiting.\n");
+        I_Error("Didn't get a valid pixels pointer (SDL). Exiting.\n");
 
       vid.direct = (byte *)vidSurface->pixels;
       // VB: FIXME this stops execution at the latest
@@ -371,10 +373,10 @@ int I_SetVideoMode(int modeNum)
     }
   else
     {
-      if (!OglSdlSurface(vid.width, vid.height, cv_fullscreen.value))
-	I_Error("Could not set vidmode\n");
+      if (!OglSdlSurface())
+        I_Error("Could not set vidmode\n");
     }
-    
+
   I_StartupMouse();
 
   return 1;
@@ -385,7 +387,7 @@ bool I_StartupGraphics()
   if (graphics_started)
     return true;
 
-  // Get video info for screen resolutions  
+  // Get video info for screen resolutions
   vidInfo = SDL_GetVideoInfo();
   // now we _could_ do all kinds of cool tests to determine which
   // video modes are available, but...
@@ -405,9 +407,9 @@ bool I_StartupGraphics()
 
   while (modeList[numVidModes])
     numVidModes++;
-    
+
   CONS_Printf("Found %d video modes\n", numVidModes);
-  
+
   //for(k=0; modeList[k]; ++k)
   //  CONS_Printf("  %d x %d\n", modeList[k]->w, modeList[k]->h);
 
@@ -423,18 +425,19 @@ bool I_StartupGraphics()
   // default resolution
   vid.width = BASEVIDWIDTH;
   vid.height = BASEVIDHEIGHT;
-  
-  if (M_CheckParm("-opengl")) 
+
+  if (M_CheckParm("-opengl"))
     {
       rendermode = render_opengl;
 
+#if 0  //FIXME: Hurdler: for now we do not use that anymore (but it should probably be back some day
 #ifdef DYNAMIC_LINKAGE
       // dynamic linkage
       OGL_renderer.Open("r_opengl.dll");
 
       if (OGL_renderer.api_version != R_OPENGL_INTERFACE_VERSION)
-	I_Error("r_opengl.dll interface version does not match with Legacy.exe!\n"
-		"You must use the r_opengl.dll that came in the same distribution as your Legacy.exe.");
+        I_Error("r_opengl.dll interface version does not match with Legacy.exe!\n"
+                "You must use the r_opengl.dll that came in the same distribution as your Legacy.exe.");
 
       hw_renderer_export_t *temp = (hw_renderer_export_t *)OGL_renderer.GetSymbol("r_export");
       memcpy(&HWD, temp, sizeof(hw_renderer_export_t));
@@ -443,33 +446,34 @@ bool I_StartupGraphics()
       // static linkage
       memcpy(&HWD, &r_export, sizeof(hw_renderer_export_t));
 #endif
+#endif
 
       vid.width = 640; // hack to make voodoo cards work in 640x480
       vid.height = 480;
 
-      if (!OglSdlSurface(vid.width, vid.height, cv_fullscreen.value))
-	rendermode = render_soft;
+      if (!OglSdlSurface())
+        rendermode = render_soft;
     }
-    
+
   if (rendermode == render_soft)
     {
       // not fullscreen
       CONS_Printf("I_StartupGraphics: windowed %d x %d x %d bpp\n", vid.width, vid.height, vid.BitsPerPixel);
       vidSurface = SDL_SetVideoMode(vid.width, vid.height, vid.BitsPerPixel, surfaceFlags);
-      
+
       if (vidSurface == NULL)
         {
-	  CONS_Printf("Could not set vidmode\n");
-	  return false;
+          CONS_Printf("Could not set vidmode\n");
+          return false;
         }
       vid.direct = (byte *)vidSurface->pixels;
     }
-    
+
   SDL_ShowCursor(SDL_DISABLE);
   I_UngrabMouse();
-  
+
   graphics_started = true;
-    
+
   return true;
 }
 
@@ -489,8 +493,8 @@ void I_ShutdownGraphics()
 
 #ifdef DYNAMIC_LINKAGE
       if (ogl_handle)
-	CloseDLL(ogl_handle);
+        CloseDLL(ogl_handle);
 #endif
     }
-  SDL_Quit(); 
+  SDL_Quit();
 }

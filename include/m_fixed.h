@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C++ -*- 
+// Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
 // $Id$
@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:24  hurdler
-// Initial revision
+// Revision 1.2  2004/07/25 20:18:47  hurdler
+// Remove old hardware renderer and add part of the new one
+//
+// Revision 1.1.1.1  2002/11/16 14:18:24  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.3  2002/07/01 21:00:49  jpakkane
 // Fixed cr+lf to UNIX form.
@@ -70,7 +73,7 @@
 #define FRACBITS                16
 #define FRACUNIT                (1<<FRACBITS)
 typedef int fixed_t;
-#define FIXED_TO_FLOAT(x) (((float)(x)) / 65536.0)
+#define FIXED_TO_FLOAT(x) (((float)(x)) / 65536.0f)
 
 //
 // Declare those functions:

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.31  2004/07/25 20:19:19  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.30  2004/07/14 16:13:13  smite-meister
 // cleanup, commands
 //
@@ -151,8 +154,7 @@
 
 #include "i_video.h" // rendermode! fix!
 #ifdef HWRENDER
-# include "hardware/hw_main.h"
-# include "hardware/hwr_render.h"
+#include "hardware/hwr_render.h"
 #endif
 
 
@@ -229,26 +231,26 @@ void GameInfo::AdvanceIntro()
     case 0:
       pagename = "TITLEPIC";
       switch (mode)
-	{
-	case gm_hexen:
-	  pagetic = 280;
-	  pagename = "TITLE";
-	  S.StartMusic("HEXEN", true);
-	  break;
-	case gm_heretic:
-	  pagetic = 210+140;
-	  pagename = "TITLE";
-	  S_StartMusic(mus_htitl);
-	  break;
-	case gm_doom2:
-	  pagetic = TICRATE * 11;
-	  S_StartMusic(mus_dm2ttl);
-	  break;
-	default:
-	  pagetic = 170;
-	  S_StartMusic(mus_intro);
-	  break;
-	}
+        {
+        case gm_hexen:
+          pagetic = 280;
+          pagename = "TITLE";
+          S.StartMusic("HEXEN", true);
+          break;
+        case gm_heretic:
+          pagetic = 210+140;
+          pagename = "TITLE";
+          S_StartMusic(mus_htitl);
+          break;
+        case gm_doom2:
+          pagetic = TICRATE * 11;
+          S_StartMusic(mus_dm2ttl);
+          break;
+        default:
+          pagetic = 170;
+          S_StartMusic(mus_intro);
+          break;
+        }
       break;
     case 1:
       //G_DeferedPlayDemo("DEMO1");
@@ -265,26 +267,26 @@ void GameInfo::AdvanceIntro()
     case 4:
       pagetic = 200;
       switch (mode)
-	{
-	case gm_doom2:
-	  pagetic = TICRATE * 11;
-	  pagename = "TITLEPIC";
-	  S_StartMusic(mus_dm2ttl);
-	  break;
-	case gm_heretic:
-	  if (fc.FindNumForName("E2M1") == -1)
-	    pagename = "ORDER";
-	  else
-	    pagename = "CREDIT";
-	  break;
-	case gm_hexen:
-	  pagename = "CREDIT";
-	  break;
-	case gm_udoom:
-	  pagename = "CREDIT";
-	  break;
-	default:
-	  pagename = "HELP2";
+        {
+        case gm_doom2:
+          pagetic = TICRATE * 11;
+          pagename = "TITLEPIC";
+          S_StartMusic(mus_dm2ttl);
+          break;
+        case gm_heretic:
+          if (fc.FindNumForName("E2M1") == -1)
+            pagename = "ORDER";
+          else
+            pagename = "CREDIT";
+          break;
+        case gm_hexen:
+          pagename = "CREDIT";
+          break;
+        case gm_udoom:
+          pagename = "CREDIT";
+          break;
+        default:
+          pagename = "HELP2";
         }
       break;
     case 5:
@@ -312,9 +314,9 @@ void D_PageDrawer(char *lumpname)
     {
       if ((vid.width>BASEVIDWIDTH) || (vid.height>BASEVIDHEIGHT) )
         {
-	  for (int y=0; y<vid.height; y += scr_borderpatch->height)
-	    for (int x=0; x<vid.width; x += scr_borderpatch->width)
-	      scr_borderpatch->Draw(x,y,0);
+          for (int y=0; y<vid.height; y += scr_borderpatch->height)
+            for (int x=0; x<vid.width; x += scr_borderpatch->width)
+              scr_borderpatch->Draw(x,y,0);
         }
     }
 
@@ -392,41 +394,41 @@ void GameInfo::Display()
     {
     case GS_LEVEL:
       if (game.tic)
-	{
-	  HU_Erase();
-	  if (screenwipe || rendermode != render_soft)
-	    redrawsbar = true;
-	}
+        {
+          HU_Erase();
+          if (screenwipe || rendermode != render_soft)
+            redrawsbar = true;
+        }
 
       // see if the border needs to be initially drawn
       if (oldgamestate != GS_LEVEL)
-	R_FillBackScreen();    // draw the pattern into the back screen
+        R_FillBackScreen();    // draw the pattern into the back screen
 
       // draw either automap or game
       if (automap.active)
-	automap.Drawer();
+        automap.Drawer();
       else
-	{
-	  // see if the border needs to be updated to the screen
-	  if (scaledviewwidth != vid.width)
-	    {
-	      // the menu may draw over parts out of the view window,
-	      // which are refreshed only when needed
-	      if (Menu::active)
-		borderdrawcount = 3;
-	  
-	      if (borderdrawcount)
-		{
-		  R_DrawViewBorder(); // erase old menu stuff
-		  borderdrawcount--;
-		}
-	    }
-	  Drawer();
-	}
+        {
+          // see if the border needs to be updated to the screen
+          if (scaledviewwidth != vid.width)
+            {
+              // the menu may draw over parts out of the view window,
+              // which are refreshed only when needed
+              if (Menu::active)
+                borderdrawcount = 3;
+
+              if (borderdrawcount)
+                {
+                  R_DrawViewBorder(); // erase old menu stuff
+                  borderdrawcount--;
+                }
+            }
+          Drawer();
+        }
 
       hud.Draw(redrawsbar); // draw hud on top anyway
       break;
-      
+
     case GS_INTERMISSION:
       wi.Drawer();
       break;
@@ -444,7 +446,7 @@ void GameInfo::Display()
     }
 
   // change gamma if needed
-  if (state != oldgamestate && state != GS_LEVEL) 
+  if (state != oldgamestate && state != GS_LEVEL)
     vid.SetPalette(0);
 
   oldgamestate = state;
@@ -455,9 +457,9 @@ void GameInfo::Display()
     {
       int y;
       if (automap.active)
-	y = 4;
+        y = 4;
       else
-	y = viewwindowy + 4;
+        y = viewwindowy + 4;
       Texture *tex = tc.GetPtr("M_PAUSE");
       tex->Draw(viewwindowx+(BASEVIDWIDTH - tex->width)/2, y, V_SCALE);
     }
@@ -473,11 +475,11 @@ void GameInfo::Display()
     {
       if (cv_netstat.value)
         {
-	  /*
-	  char s[50];
-	  sprintf(s,"get %d b/s",getbps);
-	  V_DrawString(BASEVIDWIDTH-V_StringWidth(s),165-40, V_WHITEMAP, s);
-	  */
+          /*
+          char s[50];
+          sprintf(s,"get %d b/s",getbps);
+          V_DrawString(BASEVIDWIDTH-V_StringWidth(s),165-40, V_WHITEMAP, s);
+          */
         }
 
       //I_BeginProfile();
@@ -488,7 +490,7 @@ void GameInfo::Display()
     {
       // wipe update
       if (!cv_screenslink.value)
-	return;
+        return;
 
       wipe_EndScreen(0, 0, vid.width, vid.height); // "after"
 
@@ -496,25 +498,25 @@ void GameInfo::Display()
       tic_t wipestart = I_GetTics() - 1;
       tic_t wipe_end  = wipestart + 2*TICRATE; // init a timeout
       do
-	{
-	  tic_t nowtime, tics;
+        {
+          tic_t nowtime, tics;
 
-	  do
-	    {
-	      I_Sleep(1);
-	      nowtime = I_GetTics();
-	      tics = nowtime - wipestart;
-	      // wait until time has passed
-	    }
-	  while (!tics);
-	  wipestart = nowtime;
-	  done = wipe_ScreenWipe(0, 0, vid.width, vid.height, tics);
-	  I_OsPolling();
-	  I_UpdateNoBlit();
-	  Menu::Drawer();            // menu is drawn even on top of wipes
-	  I_FinishUpdate();      // page flip or blit buffer
+          do
+            {
+              I_Sleep(1);
+              nowtime = I_GetTics();
+              tics = nowtime - wipestart;
+              // wait until time has passed
+            }
+          while (!tics);
+          wipestart = nowtime;
+          done = wipe_ScreenWipe(0, 0, vid.width, vid.height, tics);
+          I_OsPolling();
+          I_UpdateNoBlit();
+          Menu::Drawer();            // menu is drawn even on top of wipes
+          I_FinishUpdate();      // page flip or blit buffer
 
-	}
+        }
       while (!done && I_GetTics() < wipe_end);
     }
 }
@@ -534,10 +536,7 @@ void GameInfo::Drawer()
 #ifdef HWRENDER
       if (rendermode != render_soft)
         {
-          if (cv_grnewrenderer.value)
-            HWR.RenderPlayerView(0, displayplayer);
-          else
-            R.HWR_RenderPlayerView(0, displayplayer);
+          HWR.RenderPlayerView(0, displayplayer);
         }
       else //if (rendermode == render_soft)
 #endif
@@ -552,10 +551,7 @@ void GameInfo::Drawer()
 #ifdef HWRENDER
       if (rendermode != render_soft)
         {
-          if (cv_grnewrenderer.value)
-            HWR.RenderPlayerView(1, displayplayer2);
-          else
-            R.HWR_RenderPlayerView(1, displayplayer2);
+          HWR.RenderPlayerView(1, displayplayer2);
         }
       else
 #endif
@@ -759,11 +755,11 @@ PlayerInfo *GameInfo::AddPlayer(PlayerInfo *p)
   if (pnum <= 0)
     {
       for (int j = 1; j <= maxplayers; j++)
-	if (Players.count(j) == 0)
-	  {
-	    pnum = j;
-	    break;
-	  }
+        if (Players.count(j) == 0)
+          {
+            pnum = j;
+            break;
+          }
     }
 
   // pnum is valid and free!
@@ -821,10 +817,10 @@ void GameInfo::ClearPlayers()
       p = (*i).second;
       // remove avatar of player
       if (p->pawn)
-	{
-	  p->pawn->player = NULL;
-	  p->pawn->Remove();
-	}
+        {
+          p->pawn->player = NULL;
+          p->pawn->Remove();
+        }
       delete p;
     }
 

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/07/25 20:16:08  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.2  2004/07/23 22:18:42  hurdler
 // respect indent style and temporary (static, unoptimized and not correct) support for wall/floor/ceiling so I can actually work on texture support
 //
@@ -840,6 +843,7 @@ void HWBsp::AdjustSegs()
               lseg->v2 = (vertex_t *)p; //Hurdler: geez, what a hack!
             }
 
+#if 0  //FIXME: Hurdler put it back if it's necessary with the new renderer
           // recompute length
           float x = ((PolyVertex *)lseg->v2)->x-((PolyVertex *)lseg->v1)->x+0.5*fixedtofloat;
           float y = ((PolyVertex *)lseg->v2)->y-((PolyVertex *)lseg->v1)->y+0.5*fixedtofloat;
@@ -847,6 +851,7 @@ void HWBsp::AdjustSegs()
           // BP: debug see this kind of segs
           //if (nearv2>NEARDIST*NEARDIST || nearv1>NEARDIST*NEARDIST)
           //    lseg->length=1;
+#endif
         }
     }
 }
@@ -859,7 +864,7 @@ void HWBsp::AdjustSegs()
 Subsector::Subsector(int num, Poly *poly)
 {
   int count;
-  seg_t *line;
+  seg_t *line, *prev_line, *next_line;
 
   if (num < R.numsubsectors)
     {
@@ -867,6 +872,8 @@ Subsector::Subsector(int num, Poly *poly)
       sub = &R.subsectors[num]; // subsector
       count = sub->numlines; // how many linedefs
       line = &R.segs[sub->firstline]; // first line seg
+      prev_line = line + count - 1;   // last line seg
+      next_line = line + 1;
     }
   else
     {
@@ -987,7 +994,7 @@ Subsector::Subsector(int num, Poly *poly)
     }
 
   // -= WALLS =-
-  if (line)
+  if (line)  // FIXME: this probably doesn't work with 3D-floors yet
     {
       while (count--)
         {
@@ -995,27 +1002,41 @@ Subsector::Subsector(int num, Poly *poly)
             {
               if ((locFloorHeight < line->backsector->floorheight) && (locCeilingHeight > line->backsector->floorheight))
                 {
-                  AddWall(line, locFloorHeight, line->backsector->floorheight);
+                  AddWall(line, prev_line, next_line, locFloorHeight, line->backsector->floorheight); // bottom
                 }
               if ((locCeilingHeight > line->backsector->ceilingheight) && (locFloorHeight < line->backsector->ceilingheight))
                 {
-                  AddWall(line, line->backsector->ceilingheight, locCeilingHeight);
+                  AddWall(line, prev_line, next_line, line->backsector->ceilingheight, locCeilingHeight);  // top
                 }
             }
           else
             {
-              AddWall(line, locFloorHeight, locCeilingHeight);
+              AddWall(line, prev_line, next_line, locFloorHeight, locCeilingHeight); // plain wall
             }
           line++;
+          if (count > 1)
+            next_line++;
+          else
+            next_line = &R.segs[sub->firstline];
+          prev_line++;
         }
     }
 }
 
-void Subsector::AddWall(seg_t *line, fixed_t floor, fixed_t ceiling)
+void Subsector::AddWall(seg_t *line, seg_t *prev_line, seg_t *next_line, fixed_t floor, fixed_t ceiling)
 {
   Geometry *geometry = new Geometry();
   State *state = new State();
   state->SetColor((rand() % 256) / 255.0f, (rand() % 256) / 255.0f, (rand() % 256) / 255.0f, 1.0f);
+
+  // TODO: prev_line and next_line are here to solve T-Intersection problem
+  //       but it's not that easy. In fact, the wall at the right (resp. left) side can
+  //       be prev_line (resp. next_line) itself, or the left (resp. right) side of the
+  //       backsector of prev_line (resp. next_line). It all depends if the wall at the
+  //       left (resp. right) side is in the same subsector or not). And then it might
+  //       depend if there are top or bottom wall on the left (resp. right side). This
+  //       is thus a bit tricky. The wall on the left (resp. right side) is from another
+  //       subsector if prev_line->backsector (resp. next_line->backsector) is not null.
 
   GLuint *primitive_length = new GLuint(4);
   GLuint *primitive_type = new GLuint(GL_TRIANGLE_FAN);
@@ -1079,11 +1100,22 @@ Subsector::~Subsector()
 // TO Finish
 void Subsector::Render()
 {
+/*
+  sector_t tempsec;
+  int floorlightlevel, ceilinglightlevel;
+  frontsector = R.R_FakeFlat(sub->sector, &tempsec, &floorlightlevel, &ceilinglightlevel, false);
+  if (frontsector->moved)
+    {
+      frontsector->moved = false;
+      CONS_Printf("This sector has moved, we have to do some computation\n");
+    }
+*/
   unsigned int n = geometries.size();
   for (unsigned i = 0; i < n; i++)
     {
       // TODO: push that on a stack, then render by avoiding render state and render back to front
       //       for translucent polygons and front to back for opaque one.
+      // TODO: move geometry if necessary (polyobj, ...) by looking at the sub member
       states[i]->Apply();
       geometries[i]->Draw();
     }

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/07/25 20:18:47  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.5  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
 //
@@ -125,11 +128,7 @@ extern fixed_t          rw_distance;
 extern angle_t          rw_normalangle;
 
 
-
 // angle to line origin
 extern int              rw_angle1;
-
-// Segs count?
-extern int              sscount;
 
 #endif

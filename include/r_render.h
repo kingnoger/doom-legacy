@@ -8,6 +8,9 @@
 // Renderer is a friend class of Map
 //
 // $Log$
+// Revision 1.6  2004/07/25 20:18:47  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.5  2004/05/01 23:29:19  hurdler
 // add dummy new renderer
 //
@@ -27,7 +30,6 @@
 #define r_render_h 1
 
 #include "m_fixed.h"
-#include "hardware/hw_defs.h"
 
 class PlayerInfo;
 class PlayerPawn;
@@ -53,6 +55,9 @@ struct extracolormap_t;
 
 class Rend
 {
+  friend class HWRend;       // FIXME: this is temporary. Later, HWRend should probably inherit from Rend
+  friend class HWBsp;        // FIXME: this is temporary.
+  friend class Subsector;    // FIXME: this is temporary.
   friend class spritepres_t; // this is a HACK too, for software renderer
 private:
   const class Map *m; // currently rendered Map
@@ -152,43 +157,6 @@ public:
   void R_DrawSprite (vissprite_t* spr);
 
   // hardware renderer
-  // hw_main.cpp
-  void transform(float *cx, float *cy, float *cz);
-
-  void HWR_AddLine(seg_t *line);
-  void HWR_DrawPlayerSprites();
-  bool HWR_CheckBBox(fixed_t *bspcoord);
-  void HWR_DrawSkyBackground(PlayerPawn *player);
-  //void HWR_ProjectSprite(Actor *thing);
-  void HWR_AddSprites(sector_t *sec);
-  float HWR_ClipViewSegment(int x, polyvertex_t* v1, polyvertex_t* v2);
-  void HWR_ClipPassWallSegment(int first, int last);
-  void HWR_ClipSolidWallSegment(int first, int last);
-  void HWR_Render3DWater();
-
-  void HWR_SubsecPoly(int num, poly_t* poly);
-  void WalkBSPNode (int bspnum, poly_t* poly, unsigned short* leafnode, fixed_t *bbox);
-
-  void AdjustSegs();
-  void SearchSegInBSP(int bspnum,polyvertex_t *p,poly_t *poly);
-  int  SolveTProblem();
-  void HWR_CreatePlanePolygons(int bspnum);
-
-  void HWR_CheckSubsector(int num, fixed_t *bbox);
-  void HWR_ComputeLightMapsInBSPNode(int bspnum, fixed_t *bbox);
-  void HWR_CreateStaticLightmaps(int bspnum);
-
-  void HWR_RenderPlane(extrasubsector_t *xsub, fixed_t fixedheight,
-               FBITFIELD PolyFlags, int lightlevel);
-  void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, int texnum,
-               FSurfaceInfo *Surf, int cutflag);
-  void HWR_StoreWallRange(int startfrac, int endfrac);
-  void HWR_Subsector(int num);
-  void HWR_RenderBSPNode(int bspnum);
-  void HWR_DrawSprite(gr_vissprite_t *spr);
-  void HWR_DrawPSprite(pspdef_t *psp, int lightlevel);
-  void HWR_RenderPlayerView(int viewnumber, PlayerInfo *player);
-
   void releaseLineChains();
   void generateStacklist(sector_t *thisSector);
   void freeStacklists();

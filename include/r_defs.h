@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/07/25 20:18:47  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.7  2004/03/28 15:16:14  smite-meister
 // Texture cache.
 //
@@ -338,7 +341,7 @@ struct sector_t
   short    floorpic, ceilingpic;
   short    lightlevel;
   short    special, tag;
-  int     nexttag, firsttag; //SoM: 3/6/2000: by killough: improves searches for tags.
+  int      nexttag, firsttag; //SoM: 3/6/2000: by killough: improves searches for tags.
 
   short     soundtraversed; // 0 = untraversed, 1,2 = sndlines -1
   class Actor* soundtarget; // thing that made a sound (or null)
@@ -358,19 +361,19 @@ struct sector_t
   class Thinker *floordata; // make thinkers on
   Thinker *ceilingdata;  // floors, ceilings, lighting,
   Thinker *lightingdata; // independent of one another
-  
+
   // lockout machinery for stairbuilding
   int stairlock;   // -2 on first locked -1 after thinker done 0 normally
   int prevsec;     // -1 or number of sector for previous step
   int nextsec;     // -1 or number of next step sector
-  
+
   // floor and ceiling texture offsets
   fixed_t   floor_xoffs,   floor_yoffs;
   fixed_t ceiling_xoffs, ceiling_yoffs;
 
   int heightsec;    // other sector, or -1 if no other sector
   int altheightsec; // Use old boom model? 1 for no 0 for yes.
-  
+
   int floorlightsec, ceilinglightsec;
   int teamstartsec;
 
@@ -381,10 +384,10 @@ struct sector_t
   float friction, movefactor;  // friction belongs here, not in Actor
 
   int bottommap, midmap, topmap; // dynamic colormaps
-  
+
   // list of mobjs that are at least partially in the sector
   // thinglist is a subset of touching_thinglist
-  struct msecnode_t *touching_thinglist;               // phares 3/14/98  
+  struct msecnode_t *touching_thinglist;               // phares 3/14/98
   //SoM: 3/6/2000: end stuff...
 
   int       linecount;
@@ -396,22 +399,22 @@ struct sector_t
   int                        numattached;
   lightlist_t*               lightlist;
   int                        numlights;
-  bool                    moved;
+  bool                       moved;
 
   int                        validsort; //if == validsort allready been sorted
-  bool                    added;
+  bool                       added;
 
   // SoM: 4/3/2000: per-sector colormaps!
   extracolormap_t*           extra_colormap;
 
   // ----- for special tricks with HW renderer -----
-  bool                    pseudoSector;
-  bool                    virtualFloor;
+  bool                       pseudoSector;
+  bool                       virtualFloor;
   fixed_t                    virtualFloorheight;
-  bool                    virtualCeiling;
+  bool                       virtualCeiling;
   fixed_t                    virtualCeilingheight;
-  linechain_t               *sectorLines;
-  sector_t           **stackList;
+  linechain_t                *sectorLines;
+  sector_t                   **stackList;
   double                     lineoutLength;
   // ----- end special tricks -----
 };
@@ -498,9 +501,9 @@ struct line_t
 
   // wallsplat_t list
   void*       splats;
-    
+
   //SoM: 3/6/2000
-  int tranlump;          // translucency filter, -1 == none 
+  int tranlump;          // translucency filter, -1 == none
   // (Will have to fix to use with Legacy's Translucency?)
   int firsttag,nexttag;  // improves searches for tags.
 
@@ -592,6 +595,8 @@ struct seg_t
   vertex_t*   v1;
   vertex_t*   v2;
 
+  int         side;
+
   fixed_t     offset;
 
   angle_t     angle;
@@ -606,10 +611,10 @@ struct seg_t
   sector_t*   backsector;
 
   // lenght of the seg : used by the hardware renderer
-  float       length;
+  //float       length;
 
   //Hurdler: 04/12/2000: added for static lightmap
-  lightmap_t  *lightmaps;
+  //lightmap_t  *lightmaps;
 
   // SoM: Why slow things down by calculating lightlists for every
   // thick side.
@@ -663,7 +668,7 @@ struct drawseg_t
 
   // 0=none, 1=bottom, 2=top, 3=both
   int                 silhouette;
-  
+
   // do not clip sprites above this
   fixed_t             bsilheight;
 
@@ -713,8 +718,8 @@ struct vissprite_t
   fixed_t             gzt;
 
   // Physical bottom / top for sorting with 3D floors.
-  fixed_t				pz;
-  fixed_t				pzt;
+  fixed_t                               pz;
+  fixed_t                               pzt;
 
   // horizontal position of x1
   fixed_t             startfrac;

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/07/25 20:17:50  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.3  2004/05/02 21:15:56  hurdler
 // add dummy new renderer (bis)
 //
@@ -39,17 +42,17 @@
 # include <SDL/SDL.h>
 #endif
 
+#include "screen.h"
 #include "v_video.h"
-#include "hardware/hw_drv.h"
-#include "hardware/hw_main.h"
 #include "hardware/hwr_render.h"
 #include "command.h"
+#include "cvars.h"
 
 static SDL_Surface *vidSurface = NULL; //use the one from i_video_sdl.c instead?
 
 void HWR_Startup();
 
-bool OglSdlSurface(int w, int h, int isFullscreen)
+bool OglSdlSurface()
 {
   Uint32 surfaceFlags;
 
@@ -63,34 +66,25 @@ bool OglSdlSurface(int w, int h, int isFullscreen)
 #endif
     }
 
-  if (isFullscreen)
+  if (cv_fullscreen.value)
     surfaceFlags = SDL_OPENGL|SDL_FULLSCREEN;
   else
     surfaceFlags = SDL_OPENGL;
 
-  // We want at least 1 bit R, G, and B,
-  // and at least 16 bpp. Why 1 bit? May be more?
+  // We want at least 1 bit (???) for R, G, and B, and at least 16 bits for depth buffer.
   SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 1);
   SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 1);
   SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 1);
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
 
-  int cbpp = SDL_VideoModeOK(w, h, 16, surfaceFlags);
+  int cbpp = SDL_VideoModeOK(vid.width, vid.height, vid.BitsPerPixel, surfaceFlags);
   if (cbpp < 16)
     return false;
-  if ((vidSurface = SDL_SetVideoMode(w, h, cbpp, surfaceFlags)) == NULL)
+  if ((vidSurface = SDL_SetVideoMode(vid.width, vid.height, cbpp, surfaceFlags)) == NULL)
     return false;
 
-  if (cv_grnewrenderer.value)
-    {
-      HWR.Startup(w, h, cbpp);
-    }
-  else
-    {
-      HWD.pfnInitVidMode(w, h, cbpp);
-
-      HWR_Startup();
-    }
+  CONS_Printf("HWRend::Startup(): %dx%d %d bits\n", vid.width, vid.height, cbpp);
+  HWR.Startup();
 
   return true;
 }
@@ -107,6 +101,11 @@ void OglSdlShutdown()
       SDL_FreeSurface(vidSurface);
       vidSurface = NULL;
     }
+}
+
+void OglSdlSetGamma(float r, float g, float b)
+{
+  SDL_SetGamma(r, g, b);
 }
 
 /*

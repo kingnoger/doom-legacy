@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C++ -*- 
+// Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
 // $Id$
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/07/25 20:18:47  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.2  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
 //

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/07/25 20:18:16  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.2  2004/05/02 21:15:56  hurdler
 // add dummy new renderer (bis)
 //
@@ -28,7 +31,15 @@
 #ifndef hwr_render_h
 #define hwr_render_h 1
 
+#define GL_GLEXT_PROTOTYPES
+#include <GL/gl.h>
+#include <GL/glu.h>
+
 #include "../r_render.h"
+
+class HWBsp;
+
+extern const float fixedtofloat;
 
 /**
   \brief Handles the new hardware rendering code.
@@ -37,16 +48,60 @@
 */
 class HWRend
 {
+private:
+
+  GLfloat model_matrix[16];
+  GLfloat projection_matrix[16];
+  GLint   viewport[4];
+
+  HWBsp *bsp;
+
 public:
+  HWRend();
+  ~HWRend();
+
   /// Do all the rendering depending on the player state.
   /// That means player view and player sprites but not the console and the menu.
   void RenderPlayerView(int viewnumber, PlayerInfo *player);
+
+  /// Get the size of memory allocated for texture (in bytes).
+  int GetTextureUsed();
+
+  /// add all hardware related commands.
+  void AddCommands();
+
+  /// Clear the automap
+  void ClearAutomap();
+
+  /// Grab the frame buffer and write it to a file
+  bool Screenshot(char *lbmname);
+
+  /// Change doom palette
+  void SetPalette(RGBA_t *palette);
+
+  /// Fade part of the screen buffer, so that the menu and the console is more readable
+  void FadeScreenMenuBack(unsigned long color, int height);
+
+  /// Fills a box of pixels with a single color, NOTE: scaled to screen size
+  void DrawFill(int x, int y, int w, int h, int color);
+
+  /// Fills a box of pixels using a flat texture as a pattern
+  void DrawFill(int x, int y, int w, int h, class Texture *t);
+
+  /// Draw the border of the screen.
+  void DrawViewBorder();
+
+  /// Change the size of the player view
+  void SetViewSize(int blocks);
 
   /// Prepare hardware related structures for the current map.
   void Setup(int bspnum);
 
   /// Intialize OpenGL (windows, states,...).
-  void Startup(int width, int height, int bpp);
+  void Startup();
+
+  /// Draw a line of the automap (it's a callback)
+  static void DrawAMline(struct fline_t* fl, int color);
 };
 
 extern HWRend HWR;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2004/07/25 20:16:43  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.17  2004/07/11 14:32:02  smite-meister
 // Consvars updated, bugfixes
 //
@@ -174,8 +177,7 @@
 #include "d_main.h"
 
 #ifdef HWRENDER
-# include "hardware/hw_main.h"
-# include "hardware/hwr_render.h"
+#include "hardware/hwr_render.h"
 #endif
 
 
@@ -223,11 +225,8 @@ fixed_t                 projectiony;
 
 // just for profiling purposes
 int                     framecount;
-
-int                     sscount;
 int                     linecount;
 int                     loopcount;
-
 
 fixed_t                 viewcos;
 fixed_t                 viewsin;
@@ -873,11 +872,6 @@ void R_ExecuteSetViewSize()
 
   R_InitTextureMapping();
 
-#ifdef HWRENDER
-  if (rendermode != render_soft)
-    HWR_InitTextureMapping();
-#endif
-
   // psprite scales
   centerypsp = viewheight/2;  //added:06-02-98:psprite pos for freelook
 
@@ -937,9 +931,9 @@ void R_ExecuteSetViewSize()
 
   //faB: continue to do the software setviewsize as long as we use
   //     the reference software view
-#ifdef HWRENDER // not win32 only 19990829 by Kin
+#ifdef HWRENDER
   if (rendermode!=render_soft)
-    HWR_SetViewSize(cv_viewsize.value);
+    HWR.SetViewSize(cv_viewsize.value);
 #endif
 
   hud.ST_Recalc();
@@ -1189,7 +1183,7 @@ void Rend::R_SetupFrame(PlayerInfo *player)
 #endif
     if (camera.chase)
       {
-	// use outside cam view
+        // use outside cam view
         viewactor = &camera;
 
         viewz = viewactor->z + (viewactor->height>>1);
@@ -1199,7 +1193,7 @@ void Rend::R_SetupFrame(PlayerInfo *player)
       }
     else
       {
-	// use the player's eyes view
+        // use the player's eyes view
         viewactor = player->pawn;
         viewz = player->viewz;
 
@@ -1219,8 +1213,6 @@ void Rend::R_SetupFrame(PlayerInfo *player)
   viewsin = finesine[viewangle>>ANGLETOFINESHIFT];
   viewcos = finecosine[viewangle>>ANGLETOFINESHIFT];
 
-  sscount = 0;
-
   if (fixedcolormap_setup)
     {
       fixedcolormap = colormaps + fixedcolormap_setup*256*sizeof(lighttable_t);
@@ -1228,7 +1220,7 @@ void Rend::R_SetupFrame(PlayerInfo *player)
       walllights = scalelightfixed;
 
       for (i=0 ; i<MAXLIGHTSCALE ; i++)
-    scalelightfixed[i] = fixedcolormap;
+        scalelightfixed[i] = fixedcolormap;
     }
   else
     fixedcolormap = 0;
@@ -1244,9 +1236,9 @@ void Rend::R_SetupFrame(PlayerInfo *player)
       aimingangle = G_ClipAimingPitch(aimingangle);
 
       if(!cv_splitscreen.value)
-	dy = AIMINGTODY(aimingangle)* viewheight/BASEVIDHEIGHT ;
+        dy = AIMINGTODY(aimingangle)* viewheight/BASEVIDHEIGHT ;
       else
-	dy = AIMINGTODY(aimingangle)* viewheight*2/BASEVIDHEIGHT ;
+        dy = AIMINGTODY(aimingangle)* viewheight*2/BASEVIDHEIGHT ;
 
       yslope = &yslopetab[(3*viewheight/2) - dy];
     }

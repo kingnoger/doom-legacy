@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/07/25 20:18:47  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.2  2003/06/01 18:56:30  smite-meister
 // zlib compression, partial polyobj fix
 //
@@ -40,14 +43,14 @@ struct polyobj_t
 {
   int numsegs;
   struct seg_t **segs;
-  mappoint_t startSpot; 
+  mappoint_t startSpot;
   struct vertex_t *originalPts; // used as the base for the rotations
-  vertex_t *prevPts; 		// use to restore the old point values
+  vertex_t *prevPts;            // use to restore the old point values
   angle_t angle;
-  int tag;			// reference tag assigned in HereticEd
+  int tag;                      // reference tag assigned in HereticEd
   int bbox[4];
   int validcount;
-  bool crush; 			// should the polyobj attempt to crush mobjs?
+  bool crush;                   // should the polyobj attempt to crush mobjs?
   unsigned seqType;
   //fixed_t size; // polyobj size (area of POLY_AREAUNIT == size of FRACUNIT)
   class polyobject_t *specialdata; // pointer to a thinker, if the poly is moving

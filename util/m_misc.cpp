@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/07/25 20:17:05  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.8  2004/07/13 20:23:39  smite-meister
 // Mod system basics
 //
@@ -60,7 +63,7 @@
 #include "z_zone.h"
 
 #ifdef HWRENDER
-# include "hardware/hw_main.h"
+#include "hardware/hwr_render.h"
 #endif
 
 
@@ -132,7 +135,7 @@ void FIL_DefaultExtension(char *path, char *extension)
   while (*src != '/' && src != path)
     {
       if (*src == '.')
-	return;                 // it has an extension
+        return;                 // it has an extension
       src--;
     }
 
@@ -157,7 +160,7 @@ void FIL_ExtractFileBase(char *path, char *dest)
   while (*src && *src != '.')
     {
       if (++length == 9)
-	I_Error("Filename base of %s >8 chars",path);
+        I_Error("Filename base of %s >8 chars",path);
 
       *dest++ = toupper((int)*src++);
     }
@@ -440,32 +443,34 @@ void M_ScreenShot()
   char        lbmname[MAX_CONFIGNAME];
   bool     ret = false;
 
-#ifdef HWRENDER 
+#ifdef HWRENDER
   if (rendermode!=render_soft)
-    ret = HWR_Screenshot(lbmname);
+  {
+    ret = HWR.Screenshot(lbmname);
+  }
   else
 #endif
     {
       // munge planar buffer to linear
       linear = vid.screens[2];
       I_ReadScreen(linear);
-        
+
       // find a file name to save it to
       strcpy(lbmname,"DOOM000.pcx");
-        
+
       for (i=0 ; i<=999 ; i++)
         {
-	  lbmname[4] = i/100 + '0';
-	  lbmname[5] = i/10  + '0';
-	  lbmname[6] = i%10  + '0';
-	  if (access(lbmname,0) == -1)
-	    break;      // file doesn't exist
+          lbmname[4] = i/100 + '0';
+          lbmname[5] = i/10  + '0';
+          lbmname[6] = i%10  + '0';
+          if (access(lbmname,0) == -1)
+            break;      // file doesn't exist
         }
       if (i<1000)
         {
-	  // save the pcx file
-	  ret = WritePCXfile(lbmname, linear, vid.width, vid.height,
-			     (byte *)fc.CacheLumpName("PLAYPAL",PU_CACHE));
+          // save the pcx file
+          ret = WritePCXfile(lbmname, linear, vid.width, vid.height,
+                             (byte *)fc.CacheLumpName("PLAYPAL",PU_CACHE));
         }
     }
 

@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C++ -*- 
+// Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
 // $Id$
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2004/07/25 20:19:21  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.18  2004/07/05 16:53:27  smite-meister
 // Netcode replaced
 //
@@ -105,9 +108,10 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+#include "console.h"
+
 #ifdef HWRENDER
-# include "hardware/hw_drv.h"
-# include "hardware/hw_main.h"
+#include "hardware/hwr_states.h"
 #endif
 
 // buffer for drawing status bar
@@ -123,9 +127,9 @@ int fgbuffer = FG;
 #define RADIATIONPAL            13
 // new Hexen palettes
 #define STARTPOISONPALS 13
-#define NUMPOISONPALS	8
-#define STARTICEPAL	21
-#define STARTHOLYPAL	22
+#define NUMPOISONPALS   8
+#define STARTICEPAL     21
+#define STARTHOLYPAL    22
 #define STARTSCOURGEPAL 25
 
 
@@ -274,7 +278,7 @@ static const char DHAmmoPics[NUMAMMO + 1][10] =
   {"INAMRAM"}, // skullrod
   {"INAMPNX"}, // phoenix rod
   {"INAMLOB"}, // mace
-  {"MANABRT1"}, // mana 1 
+  {"MANABRT1"}, // mana 1
   {"MANABRT2"}, // mana 2
   {"BLACKSQ"}  // no ammopic
 };
@@ -388,30 +392,30 @@ static void ST_SetClassData(int num, int cls)
   if (game.mode == gm_hexen)
     {
       /*
-	PatchWEAPONSLOT = fc.CacheLumpNum(fc.GetNumForName("WPSLOT0") + cls, PU_STATIC);
-	PatchWEAPONFULL = fc.CacheLumpNum(fc.GetNumForName("WPFULL0") + cls, PU_STATIC);
-	PatchPIECE1	= fc.CacheLumpNum(fc.GetNumForName("WPIECEF1") + cls, PU_STATIC);
-	PatchPIECE2	= fc.CacheLumpNum(fc.GetNumForName("WPIECEF2") + cls, PU_STATIC);
-	PatchPIECE3	= fc.CacheLumpNum(fc.GetNumForName("WPIECEF3") + cls, PU_STATIC);
+        PatchWEAPONSLOT = fc.CacheLumpNum(fc.GetNumForName("WPSLOT0") + cls, PU_STATIC);
+        PatchWEAPONFULL = fc.CacheLumpNum(fc.GetNumForName("WPFULL0") + cls, PU_STATIC);
+        PatchPIECE1     = fc.CacheLumpNum(fc.GetNumForName("WPIECEF1") + cls, PU_STATIC);
+        PatchPIECE2     = fc.CacheLumpNum(fc.GetNumForName("WPIECEF2") + cls, PU_STATIC);
+        PatchPIECE3     = fc.CacheLumpNum(fc.GetNumForName("WPIECEF3") + cls, PU_STATIC);
       */
 
       Patch_ChainSlider[1] = tc.GetPtrNum(fc.GetNumForName("CHAIN") + cls);
 
       int base = fc.GetNumForName("LIFEGEM");
       if (!game.multiplayer)
-	// single player game uses red life gem
-	Patch_ChainSlider[2] = tc.GetPtrNum(base + 4*cls + 1);
+        // single player game uses red life gem
+        Patch_ChainSlider[2] = tc.GetPtrNum(base + 4*cls + 1);
       else
-	Patch_ChainSlider[2] = tc.GetPtrNum(base + 4*cls + num % 4);
+        Patch_ChainSlider[2] = tc.GetPtrNum(base + 4*cls + num % 4);
     }
   else
     {
       // heretic
       if (!game.multiplayer)
-	// single player game uses red life gem
-	Patch_ChainSlider[2] = tc.GetPtr("LIFEGEM2");
+        // single player game uses red life gem
+        Patch_ChainSlider[2] = tc.GetPtr("LIFEGEM2");
       else
-	Patch_ChainSlider[2] = tc.GetPtrNum(fc.GetNumForName("LIFEGEM0") + num % 4);  
+        Patch_ChainSlider[2] = tc.GetPtrNum(fc.GetNumForName("LIFEGEM0") + num % 4);
     }
 }
 
@@ -443,9 +447,9 @@ void ST_LoadHexenData()
 
   sbohealth = tc.GetPtr("PTN2A0");  //SBOHEALT
   sbofrags  = tc.GetPtr("ARTISKLL");  //SBOFRAGS
-  sboarmor  = tc.GetPtr("ARM1A0");  //SBOARMOR  
+  sboarmor  = tc.GetPtr("ARM1A0");  //SBOARMOR
 
-  Patch_InvBar[0] = tc.GetPtr("INVBAR"); 
+  Patch_InvBar[0] = tc.GetPtr("INVBAR");
   Patch_InvBar[1] = tc.GetPtr("ARTIBOX");
   Patch_InvBar[2] = tc.GetPtr("SELECTBO");
   Patch_InvBar[3] = tc.GetPtr("INVGEML1");
@@ -471,12 +475,12 @@ void ST_LoadHexenData()
   for (i=0; i<NUMCARDS; i++)
     PatchKeys[i] = tc.GetPtrNum(startLump+i);
 
-  //	PatchCHAINBACK = tc.GetPtr("CHAINBACK");
+  //    PatchCHAINBACK = tc.GetPtr("CHAINBACK");
   startLump = fc.GetNumForName("IN0");
   for (i = 0; i < 10; i++)
     PatchINum[i] = tc.GetPtrNum(startLump+i);
   PatchINum[10] = tc.GetPtr("NEGNUM");
-	
+
   // BNum
   startLump = fc.GetNumForName("FONTB16");
   for (i = 0; i < 10; i++)
@@ -534,14 +538,14 @@ void ST_LoadHereticData()
   PatchARMCLEAR  = tc.GetPtr("ARMCLEAR");
 
   // inventory bar pics
-  Patch_InvBar[0] = tc.GetPtr("INVBAR"); 
+  Patch_InvBar[0] = tc.GetPtr("INVBAR");
   Patch_InvBar[1] = tc.GetPtr("ARTIBOX");
   Patch_InvBar[2] = tc.GetPtr("SELECTBO");
   Patch_InvBar[3] = tc.GetPtr("INVGEML1");
   Patch_InvBar[4] = tc.GetPtr("INVGEML2");
   Patch_InvBar[5] = tc.GetPtr("INVGEMR1");
   Patch_InvBar[6] = tc.GetPtr("INVGEMR2");
-  Patch_InvBar[7] = tc.GetPtr("BLACKSQ"); // useful? 
+  Patch_InvBar[7] = tc.GetPtr("BLACKSQ"); // useful?
 
   // artifact use flash
   startLump = fc.GetNumForName("USEARTIA");
@@ -560,7 +564,7 @@ void ST_LoadHereticData()
 
   sbohealth = tc.GetPtr("PTN2A0");  //SBOHEALT
   sbofrags  = tc.GetPtr("FACEB1");  //SBOFRAGS
-  sboarmor  = tc.GetPtr("SHLDA0");  //SBOARMOR  
+  sboarmor  = tc.GetPtr("SHLDA0");  //SBOARMOR
 
   // keys
   PatchKeys[0] = PatchKeys[3] = tc.GetPtr("BKEYICON");
@@ -621,7 +625,7 @@ void ST_LoadDoomData()
     }
 
   PatchBNum[10] = tc.GetPtr("STTMINUS");
-  PatchSNum[10] = PatchSNum[0]; // no minus available 
+  PatchSNum[10] = PatchSNum[0]; // no minus available
 
   // percent signs.
   tallpercent = tc.GetPtr("STTPRCNT");
@@ -660,7 +664,7 @@ void ST_LoadDoomData()
 
   sbohealth = tc.GetPtr("STIMA0");  //SBOHEALT
   sbofrags  = tc.GetPtr("M_SKULL1");  //SBOFRAGS
-  sboarmor  = tc.GetPtr("ARM1A0");  //SBOARMOR  
+  sboarmor  = tc.GetPtr("ARM1A0");  //SBOARMOR
 }
 
 
@@ -685,8 +689,8 @@ void ST_loadFaceGraphics (char *facestr)
     {
       for (j=0;j<ST_NUMSTRAIGHTFACES;j++)
         {
-	  sprintf(namebuf, "ST%d%d", i, j);
-	  PatchFaces[facenum++] = tc.GetPtr(namelump);
+          sprintf(namebuf, "ST%d%d", i, j);
+          PatchFaces[facenum++] = tc.GetPtr(namelump);
         }
       sprintf(namebuf, "TR%d0", i);        // turn right
       PatchFaces[facenum++] = tc.GetPtr(namelump);
@@ -728,23 +732,23 @@ void ST_unloadData()
       // unload the numbers, tall and short
       for (i=0;i<10;i++)
         {
-	  Z_ChangeTag(PatchBNum[i], PU_CACHE);
-	  Z_ChangeTag(PatchSNum[i], PU_CACHE);
+          Z_ChangeTag(PatchBNum[i], PU_CACHE);
+          Z_ChangeTag(PatchSNum[i], PU_CACHE);
         }
       // unload tall percent
       Z_ChangeTag(tallpercent, PU_CACHE);
-        
+
       // unload arms background
       Z_ChangeTag(PatchArmsBack, PU_CACHE);
-        
+
       // unload gray #'s
       for (i=0;i<6;i++)
-	Z_ChangeTag(PatchArms[i][0], PU_CACHE);
-        
+        Z_ChangeTag(PatchArms[i][0], PU_CACHE);
+
       // unload the key cards
       for (i=0;i<NUMCARDS;i++)
-	Z_ChangeTag(PatchKeys[i], PU_CACHE);
-        
+        Z_ChangeTag(PatchKeys[i], PU_CACHE);
+
       Z_ChangeTag(PatchSTATBAR, PU_CACHE);
     }
 
@@ -761,8 +765,8 @@ void ST_unloadFaceGraphics()
   if (rendermode == render_soft)
     {
       for (i=0;i<ST_NUMFACES;i++)
-	Z_ChangeTag(PatchFaces[i], PU_CACHE);
-        
+        Z_ChangeTag(PatchFaces[i], PU_CACHE);
+
       // face background
       Z_ChangeTag(PatchFaceBack, PU_CACHE);
     }
@@ -804,9 +808,9 @@ void HUD::ST_RefreshBackground()
 
       // draw the faceback for the statusbarplayer
       if (st_pawncolor == 0)
-	current_colormap = colormaps;
+        current_colormap = colormaps;
       else
-	current_colormap = translationtables - 256 + (st_pawncolor << 8);
+        current_colormap = translationtables - 256 + (st_pawncolor << 8);
 
       PatchFaceBack->Draw(st_x+143, st_y, flags | V_MAP);
     }
@@ -857,9 +861,9 @@ void HUD::ST_updateFaceWidget()
       // dead
       if (!sbpawn->health)
         {
-	  priority = 9;
-	  st_faceindex = ST_DEADFACE;
-	  st_facecount = 1;
+          priority = 9;
+          st_faceindex = ST_DEADFACE;
+          st_facecount = 1;
         }
     }
 
@@ -867,23 +871,23 @@ void HUD::ST_updateFaceWidget()
     {
       if (bonuscount)
         {
-	  // picking up bonus
-	  doevilgrin = false;
+          // picking up bonus
+          doevilgrin = false;
 
-	  for (i=0;i<NUMWEAPONS;i++)
+          for (i=0;i<NUMWEAPONS;i++)
             {
-	      if (st_oldweaponsowned[i] != sbpawn->weaponowned[i])
+              if (st_oldweaponsowned[i] != sbpawn->weaponowned[i])
                 {
-		  doevilgrin = true;
-		  st_oldweaponsowned[i] = sbpawn->weaponowned[i];
+                  doevilgrin = true;
+                  st_oldweaponsowned[i] = sbpawn->weaponowned[i];
                 }
             }
-	  if (doevilgrin)
+          if (doevilgrin)
             {
-	      // evil grin if just picked up weapon
-	      priority = 8;
-	      st_facecount = ST_EVILGRINCOUNT;
-	      st_faceindex = ST_calcPainOffset() + ST_EVILGRINOFFSET;
+              // evil grin if just picked up weapon
+              priority = 8;
+              st_facecount = ST_EVILGRINCOUNT;
+              st_faceindex = ST_calcPainOffset() + ST_EVILGRINOFFSET;
             }
         }
 
@@ -893,51 +897,51 @@ void HUD::ST_updateFaceWidget()
     {
       if (damagecount && sbpawn->attacker && sbpawn->attacker != sbpawn)
         {
-	  // being attacked
-	  priority = 7;
+          // being attacked
+          priority = 7;
 
-	  if (sbpawn->health - st_oldhealth > ST_MUCHPAIN)
+          if (sbpawn->health - st_oldhealth > ST_MUCHPAIN)
             {
-	      st_facecount = ST_TURNCOUNT;
-	      st_faceindex = ST_calcPainOffset() + ST_OUCHOFFSET;
+              st_facecount = ST_TURNCOUNT;
+              st_faceindex = ST_calcPainOffset() + ST_OUCHOFFSET;
             }
-	  else
+          else
             {
-	      badguyangle = R_PointToAngle2(sbpawn->x, sbpawn->y,
-					    sbpawn->attacker->x,
-					    sbpawn->attacker->y);
+              badguyangle = R_PointToAngle2(sbpawn->x, sbpawn->y,
+                                            sbpawn->attacker->x,
+                                            sbpawn->attacker->y);
 
-	      if (badguyangle > sbpawn->angle)
+              if (badguyangle > sbpawn->angle)
                 {
-		  // whether right or left
-		  diffang = badguyangle - sbpawn->angle;
-		  i = diffang > ANG180;
+                  // whether right or left
+                  diffang = badguyangle - sbpawn->angle;
+                  i = diffang > ANG180;
                 }
-	      else
+              else
                 {
-		  // whether left or right
-		  diffang = sbpawn->angle - badguyangle;
-		  i = diffang <= ANG180;
+                  // whether left or right
+                  diffang = sbpawn->angle - badguyangle;
+                  i = diffang <= ANG180;
                 } // confusing, aint it?
 
 
-	      st_facecount = ST_TURNCOUNT;
-	      st_faceindex = ST_calcPainOffset();
+              st_facecount = ST_TURNCOUNT;
+              st_faceindex = ST_calcPainOffset();
 
-	      if (diffang < ANG45)
+              if (diffang < ANG45)
                 {
-		  // head-on
-		  st_faceindex += ST_RAMPAGEOFFSET;
+                  // head-on
+                  st_faceindex += ST_RAMPAGEOFFSET;
                 }
-	      else if (i)
+              else if (i)
                 {
-		  // turn face right
-		  st_faceindex += ST_TURNOFFSET;
+                  // turn face right
+                  st_faceindex += ST_TURNOFFSET;
                 }
-	      else
+              else
                 {
-		  // turn face left
-		  st_faceindex += ST_TURNOFFSET+1;
+                  // turn face left
+                  st_faceindex += ST_TURNOFFSET+1;
                 }
             }
         }
@@ -948,17 +952,17 @@ void HUD::ST_updateFaceWidget()
       // getting hurt because of your own damn stupidity
       if (damagecount)
         {
-	  if (sbpawn->health - st_oldhealth > ST_MUCHPAIN)
+          if (sbpawn->health - st_oldhealth > ST_MUCHPAIN)
             {
-	      priority = 7;
-	      st_facecount = ST_TURNCOUNT;
-	      st_faceindex = ST_calcPainOffset() + ST_OUCHOFFSET;
+              priority = 7;
+              st_facecount = ST_TURNCOUNT;
+              st_faceindex = ST_calcPainOffset() + ST_OUCHOFFSET;
             }
-	  else
+          else
             {
-	      priority = 6;
-	      st_facecount = ST_TURNCOUNT;
-	      st_faceindex = ST_calcPainOffset() + ST_RAMPAGEOFFSET;
+              priority = 6;
+              st_facecount = ST_TURNCOUNT;
+              st_faceindex = ST_calcPainOffset() + ST_RAMPAGEOFFSET;
             }
 
         }
@@ -970,18 +974,18 @@ void HUD::ST_updateFaceWidget()
       // rapid firing
       if (sbpawn->attackdown)
         {
-	  if (lastattackdown==-1)
-	    lastattackdown = ST_RAMPAGEDELAY;
-	  else if (!--lastattackdown)
+          if (lastattackdown==-1)
+            lastattackdown = ST_RAMPAGEDELAY;
+          else if (!--lastattackdown)
             {
-	      priority = 5;
-	      st_faceindex = ST_calcPainOffset() + ST_RAMPAGEOFFSET;
-	      st_facecount = 1;
-	      lastattackdown = 1;
+              priority = 5;
+              st_faceindex = ST_calcPainOffset() + ST_RAMPAGEOFFSET;
+              st_facecount = 1;
+              lastattackdown = 1;
             }
         }
       else
-	lastattackdown = -1;
+        lastattackdown = -1;
 
     }
 
@@ -989,12 +993,12 @@ void HUD::ST_updateFaceWidget()
     {
       // invulnerability
       if ((sbpawn->cheats & CF_GODMODE)
-	  || sbpawn->powers[pw_invulnerability])
+          || sbpawn->powers[pw_invulnerability])
         {
-	  priority = 4;
+          priority = 4;
 
-	  st_faceindex = ST_GODFACE;
-	  st_facecount = 1;
+          st_faceindex = ST_GODFACE;
+          st_facecount = 1;
 
         }
 
@@ -1058,23 +1062,23 @@ void HUD::UpdateWidgets()
   if (game.mode == gm_heretic || game.mode == gm_hexen)
     {
       if (sbpawn->invTics)
-	invopen = true;
+        invopen = true;
       else
-	invopen = false;
+        invopen = false;
 
       mainbaron = statusbaron && !invopen;
 
       // inventory
       if (itemuse > 0)
-	itemuse--;
+        itemuse--;
 
       int n = sbpawn->inventory.size();
       int left = sbpawn->invSlot - st_curpos; // how many slots are there left of the first visible slot?
       for (i=0; i<7; i++)
-	if (i+left < n && sbpawn->inventory[left+i].type != arti_none)
-	  st_invslots[i] = sbpawn->inventory[left+i];
-	else
-	  st_invslots[i] = inventory_t(arti_none, 0);
+        if (i+left < n && sbpawn->inventory[left+i].type != arti_none)
+          st_invslots[i] = sbpawn->inventory[left+i];
+        else
+          st_invslots[i] = inventory_t(arti_none, 0);
 
       st_invslots[7].type = (left > 0) ? 1 : 0; // hack
       st_invslots[7].count = (n - left > 7) ? 1 : 0;
@@ -1082,35 +1086,35 @@ void HUD::UpdateWidgets()
       int frame = (game.tic/3) & 15;
       // flight icon
       if (sbpawn->powers[pw_flight] > BLINKTHRESHOLD || (sbpawn->powers[pw_flight] & 16))
-	st_flight = frame;
-	  // TODO stop the spinning when not in air?
-	  // if (sbpawn->flags2 & MF2_FLY)
+        st_flight = frame;
+          // TODO stop the spinning when not in air?
+          // if (sbpawn->flags2 & MF2_FLY)
       else
-	st_flight = -1;
+        st_flight = -1;
 
       // book icon
       if ((sbpawn->powers[pw_weaponlevel2] > BLINKTHRESHOLD || (sbpawn->powers[pw_weaponlevel2] & 16)) && !sbpawn->morphTics)
-	st_book = frame;
+        st_book = frame;
       else
-	st_book = -1;
+        st_book = -1;
 
       // speed icon
       if (sbpawn->powers[pw_speed] > BLINKTHRESHOLD || (sbpawn->powers[pw_speed] & 16))
-	st_speed = frame;
+        st_speed = frame;
       else
-	st_speed = -1;
+        st_speed = -1;
 
       // defense icon
       if (sbpawn->powers[pw_invulnerability] > BLINKTHRESHOLD || (sbpawn->powers[pw_invulnerability] & 16))
-	st_defense = frame;
+        st_defense = frame;
       else
-	st_defense = -1;
+        st_defense = -1;
 
       // minotaur icon
       if (sbpawn->powers[pw_minotaur] > BLINKTHRESHOLD || (sbpawn->powers[pw_minotaur] & 16))
-	st_minotaur = frame;
+        st_minotaur = frame;
       else
-	st_minotaur = -1;
+        st_minotaur = -1;
 
       st_mana1 = sbpawn->ammo[am_mana1];
       st_mana2 = sbpawn->ammo[am_mana2];
@@ -1121,10 +1125,10 @@ void HUD::UpdateWidgets()
     {
       // doom
       for (i=0; i<NUMAMMO; i++)
-	{
-	  st_ammo[i] = sbpawn->ammo[i];
-	  st_maxammo[i] = sbpawn->maxammo[i];
-	}
+        {
+          st_ammo[i] = sbpawn->ammo[i];
+          st_maxammo[i] = sbpawn->maxammo[i];
+        }
 
       // refresh everything if this is him coming back to life
       ST_updateFaceWidget(); // updates st_oldweaponsowned
@@ -1167,16 +1171,16 @@ void HUD::PaletteFlash()
     {
       palette = (poisoncount + 7) >> 3;
       if (palette >= NUMPOISONPALS)
-	palette = NUMPOISONPALS-1;
+        palette = NUMPOISONPALS-1;
 
       palette += STARTPOISONPALS;
-    }  
+    }
   else if (dcount)
     {
       palette = (dcount + 7) >> 3;
 
       if (palette >= NUMREDPALS)
-	palette = NUMREDPALS-1;
+        palette = NUMREDPALS-1;
 
       palette += STARTREDPALS;
     }
@@ -1185,7 +1189,7 @@ void HUD::PaletteFlash()
       palette = (bonuscount+7)>>3;
 
       if (palette >= NUMBONUSPALS)
-	palette = NUMBONUSPALS-1;
+        palette = NUMBONUSPALS-1;
 
       palette += STARTBONUSPALS;
     }
@@ -1205,39 +1209,33 @@ void HUD::PaletteFlash()
       st_palette = palette;
 
 #ifdef HWRENDER
-      if ((rendermode == render_opengl) || (rendermode == render_d3d))
-        
-        //faB - NOW DO ONLY IN SOFTWARE MODE, LETS FIX THIS FOR GOOD OR NEVER
-        //      idea : use a true color gradient from frame to frame, because we
-        //             are in true color in HW3D, we can have smoother palette change
-        //             than the palettes defined in the wad
-
+      if (rendermode != render_soft)
         {
-	  switch (palette)
-	    {
-	    case 0x00: HWD.pfnSetSpecialState(HWD_SET_PALETTECOLOR, 0x0); break;  // pas de changement
-	    case 0x01: HWD.pfnSetSpecialState(HWD_SET_PALETTECOLOR, 0xff373797); break; // red
-	    case 0x02: HWD.pfnSetSpecialState(HWD_SET_PALETTECOLOR, 0xff373797); break; // red
-	    case 0x03: HWD.pfnSetSpecialState(HWD_SET_PALETTECOLOR, 0xff3030a7); break; // red
-	    case 0x04: HWD.pfnSetSpecialState(HWD_SET_PALETTECOLOR, 0xff2727b7); break; // red
-	    case 0x05: HWD.pfnSetSpecialState(HWD_SET_PALETTECOLOR, 0xff2020c7); break; // red
-	    case 0x06: HWD.pfnSetSpecialState(HWD_SET_PALETTECOLOR, 0xff1717d7); break; // red
-	    case 0x07: HWD.pfnSetSpecialState(HWD_SET_PALETTECOLOR, 0xff1010e7); break; // red
-	    case 0x08: HWD.pfnSetSpecialState(HWD_SET_PALETTECOLOR, 0xff0707f7); break; // red
-	    case 0x09: HWD.pfnSetSpecialState(HWD_SET_PALETTECOLOR, 0xffff6060); break; // blue
-	    case 0x0a: HWD.pfnSetSpecialState(HWD_SET_PALETTECOLOR, 0xff70a090); break; // light green
-	    case 0x0b: HWD.pfnSetSpecialState(HWD_SET_PALETTECOLOR, 0xff67b097); break; // light green
-	    case 0x0c: HWD.pfnSetSpecialState(HWD_SET_PALETTECOLOR, 0xff60c0a0); break; // light green
-	    case 0x0d: HWD.pfnSetSpecialState(HWD_SET_PALETTECOLOR, 0xff60ff60); break; // green
-	    case 0x0e: HWD.pfnSetSpecialState(HWD_SET_PALETTECOLOR, 0xffff6060); break; // blue
-	    case 0x0f: HWD.pfnSetSpecialState(HWD_SET_PALETTECOLOR, 0xffff6060); break; // blue
+          switch (palette)
+            {
+            case 0x00: State::SetGlobalColor(0.0f, 0.0f, 0.0f, 0.0f, State::NONE); break;  // pas de changement
+            case 0x01: State::SetGlobalColor(0.59f, 0.21f, 0.21f, 1.0f); break; // red
+            case 0x02: State::SetGlobalColor(0.59f, 0.21f, 0.21f, 1.0f); break; // red
+            case 0x03: State::SetGlobalColor(0.65f, 0.18f, 0.18f, 1.0f); break; // red
+            case 0x04: State::SetGlobalColor(0.71f, 0.15f, 0.15f, 1.0f); break; // red
+            case 0x05: State::SetGlobalColor(0.78f, 0.12f, 0.12f, 1.0f); break; // red
+            case 0x06: State::SetGlobalColor(0.84f, 0.09f, 0.09f, 1.0f); break; // red
+            case 0x07: State::SetGlobalColor(0.90f, 0.06f, 0.06f, 1.0f); break; // red
+            case 0x08: State::SetGlobalColor(0.97f, 0.03f, 0.03f, 1.0f); break; // red
+            case 0x09: State::SetGlobalColor(0.37f, 0.37f, 1.00f, 1.0f); break; // blue
+            case 0x0a: State::SetGlobalColor(0.56f, 0.62f, 0.44f, 1.0f); break; // light green
+            case 0x0b: State::SetGlobalColor(0.59f, 0.69f, 0.40f, 1.0f); break; // light green
+            case 0x0c: State::SetGlobalColor(0.62f, 0.75f, 0.37f, 1.0f); break; // light green
+            case 0x0d: State::SetGlobalColor(0.37f, 1.00f, 0.37f, 1.0f); break; // green
+            case 0x0e: State::SetGlobalColor(0.37f, 0.37f, 1.00f, 1.0f); break; // blue
+            case 0x0f: State::SetGlobalColor(0.37f, 0.37f, 1.00f, 1.0f); break; // blue
             }
         }
       else
 #endif
         {
-	  if (!cv_splitscreen.value || !palette)
-	    vid.SetPalette(palette);
+          if (!cv_splitscreen.value || !palette)
+            vid.SetPalette(palette);
         }
     }
 }
@@ -1253,7 +1251,7 @@ void HUD::ST_DrawOverlay()
 
 void HUD::ST_DrawWidgets(bool r)
 {
-  int i;  
+  int i;
   for (i = widgets.size()-1; i>=0; i--)
     widgets[i]->Update(r);
 }
@@ -1266,18 +1264,19 @@ void HUD::ST_Recalc()
       fgbuffer = FG | V_SLOC; // scale patch by default
       //st_scalex = vid.dupx;
       //st_scaley = vid.dupy;
-        
+
 #ifdef HWRENDER
+      // TODO: Hurdler: see why we need to have a separate code here
       if (rendermode != render_soft)
         {
-	  st_x = 0;
-	  st_y = BASEVIDHEIGHT - int(stbarheight/vid.fdupy);
+          st_x = 0;
+          st_y = BASEVIDHEIGHT - int(stbarheight/vid.fdupy);
         }
       else
 #endif
         {
-	  st_x = ((vid.width-ST_WIDTH*vid.dupx)>>1)/vid.dupx;
-	  st_y = (vid.height - stbarheight)/vid.dupy; 
+          st_x = ((vid.width-ST_WIDTH*vid.dupx)>>1)/vid.dupx;
+          st_y = (vid.height - stbarheight)/vid.dupy;
         }
     }
   else
@@ -1345,7 +1344,7 @@ void HUD::CreateHexenWidgets()
 
   // inventory system
   h = new HudInventory(st_x+38, st_y, &statusbaron, &invopen, &itemuse, st_invslots, &st_curpos,
-		       false, PatchSNum, PatchARTI, Patch_InvBar);
+                       false, PatchSNum, PatchARTI, Patch_InvBar);
   widgets.push_back(h);
 
   // TODO Weapon Pieces
@@ -1378,7 +1377,7 @@ void HUD::CreateHereticWidgets()
 
   // inventory system
   h = new HudInventory(st_x+34, st_y, &statusbaron, &invopen, &itemuse, st_invslots, &st_curpos,
-		       false, PatchSNum, PatchARTI, Patch_InvBar);
+                       false, PatchSNum, PatchARTI, Patch_InvBar);
   widgets.push_back(h);
 
   // mainbar (closed inventory shown)
@@ -1470,7 +1469,7 @@ void HUD::CreateDoomWidgets()
       // these are shown
       const int wsel[] = {wp_pistol, wp_shotgun, wp_chaingun, wp_missile, wp_plasma, wp_bfg};
       h = new HudBinIcon(st_x+111+(i%3)*12, st_y+4+(i/3)*10, &st_armson,
-			 &st_oldweaponsowned[wsel[i]], PatchArms[i][0], PatchArms[i][1]);
+                         &st_oldweaponsowned[wsel[i]], PatchArms[i][0], PatchArms[i][1]);
       widgets.push_back(h);
     }
 
@@ -1481,7 +1480,7 @@ void HUD::CreateDoomWidgets()
   // Key icon positions.
   const int ST_KEYY[3] = {3, 13, 23};
   for (i=0; i<6; i++)
-    {  
+    {
       h = new HudMultIcon(st_x+239+(i/3)*10, st_y + ST_KEYY[i%3], &statusbaron, &st_keyboxes[i], PatchKeys);
       widgets.push_back(h);
     }
@@ -1530,24 +1529,24 @@ void HUD::ST_Drawer(bool refresh)
       // after ST_Start(), screen refresh needed, or vid mode change
       if (refresh || st_refresh)
         {
-	  // draw status bar background to off-screen buff
-	  ST_RefreshBackground();
+          // draw status bar background to off-screen buff
+          ST_RefreshBackground();
 
-	  // and refresh all widgets
-	  ST_DrawWidgets(true);
+          // and refresh all widgets
+          ST_DrawWidgets(true);
 
-	  st_refresh = false;
-	}
+          st_refresh = false;
+        }
       else
-	// Otherwise, update as little as possible
-	ST_DrawWidgets(false);
+        // Otherwise, update as little as possible
+        ST_DrawWidgets(false);
     }
   else
     {
       if (!drawscore || cv_splitscreen.value)
-	{
-	  ST_DrawOverlay();
-	}
+        {
+          ST_DrawOverlay();
+        }
     }
 }
 
@@ -1598,7 +1597,7 @@ void HUD::ST_Start(PlayerPawn *p)
       st_maxhealth = p->maxhealth / 2;
 
       for (i=0;i<NUMWEAPONS;i++)
-	st_oldweaponsowned[i] = sbpawn->weaponowned[i];
+        st_oldweaponsowned[i] = sbpawn->weaponowned[i];
     }
 
   st_active = true;
@@ -1612,7 +1611,7 @@ void HUD::ST_Start(PlayerPawn *p)
 
 /*
 static inline int SCY( int y)
-{ 
+{
     //31/10/99: fixed by Hurdler so it _works_ also in hardware mode
     // do not scale to resolution for hardware accelerated
     // because these modes always scale by default
@@ -1649,90 +1648,90 @@ void HUD::CreateOverlayWidgets()
   for (c = *cmds++; c; c = *cmds++)
     {
       if (c >= 'A' && c <= 'Z')
-	c = c + 'a' - 'A';
+        c = c + 'a' - 'A';
 
       switch (c)
-	{
-	case 'i': // inventory
-	  h = new HudInventory(st_x+34, st_y+9, &overlayon, &invopen, &itemuse, st_invslots, &st_curpos,
-			       true, PatchSNum, PatchARTI, Patch_InvBar);
-	  overlay.push_back(h);
-	  break;
+        {
+        case 'i': // inventory
+          h = new HudInventory(st_x+34, st_y+9, &overlayon, &invopen, &itemuse, st_invslots, &st_curpos,
+                               true, PatchSNum, PatchARTI, Patch_InvBar);
+          overlay.push_back(h);
+          break;
 
-	case 'h': // draw health
-	  //ST_drawOverlayNum(SCX(50), SCY(198)-(16*vid.dupy), PatchBNum,NULL);
-	  //DrBNumber(CPawn->health, 5, st_y+22);
-	  h = new HudNumber(50, 198-16, &overlayon, 3, &st_health, PatchBNum);
-	  overlay.push_back(h);
-	  h = new HudBinIcon(62, 198, &overlayon, &st_true, NULL, sbohealth);
-	  overlay.push_back(h);
-	  break;
+        case 'h': // draw health
+          //ST_drawOverlayNum(SCX(50), SCY(198)-(16*vid.dupy), PatchBNum,NULL);
+          //DrBNumber(CPawn->health, 5, st_y+22);
+          h = new HudNumber(50, 198-16, &overlayon, 3, &st_health, PatchBNum);
+          overlay.push_back(h);
+          h = new HudBinIcon(62, 198, &overlayon, &st_true, NULL, sbohealth);
+          overlay.push_back(h);
+          break;
 
-	case 'f': // draw frags
-	  //ST_drawOverlayNum(SCX(300), SCY(2), st_fragscount, PatchBNum,NULL);
-	  //DrINumber(temp, 45, st_y+27);	  
-	  h = new HudNumber(300, 2, &overlayon, 3, &st_fragscount, PatchBNum);
-	  overlay.push_back(h);
-	  h = new HudBinIcon(302, 2, &overlayon, &st_true, NULL, sbofrags);
-	  overlay.push_back(h);
-	  break;
+        case 'f': // draw frags
+          //ST_drawOverlayNum(SCX(300), SCY(2), st_fragscount, PatchBNum,NULL);
+          //DrINumber(temp, 45, st_y+27);
+          h = new HudNumber(300, 2, &overlayon, 3, &st_fragscount, PatchBNum);
+          overlay.push_back(h);
+          h = new HudBinIcon(302, 2, &overlayon, &st_true, NULL, sbofrags);
+          overlay.push_back(h);
+          break;
 
-	case 'a': // draw ammo
-	  //ST_drawOverlayNum(SCX(234), SCY(198)-(16*vid.dupy), sbpawn->ammo[sbpawn->weaponinfo[sbpawn->readyweapon].ammo], PatchBNum,NULL);
-	  h = new HudNumber(198, 198-16, &overlayon, 3, &st_readywp_ammo, PatchBNum);
-	  overlay.push_back(h);
-	  h = new HudMultIcon(210, 196, &overlayon, &st_atype, PatchAmmoPic);
-	  overlay.push_back(h);	  
-	  break;
+        case 'a': // draw ammo
+          //ST_drawOverlayNum(SCX(234), SCY(198)-(16*vid.dupy), sbpawn->ammo[sbpawn->weaponinfo[sbpawn->readyweapon].ammo], PatchBNum,NULL);
+          h = new HudNumber(198, 198-16, &overlayon, 3, &st_readywp_ammo, PatchBNum);
+          overlay.push_back(h);
+          h = new HudMultIcon(210, 196, &overlayon, &st_atype, PatchAmmoPic);
+          overlay.push_back(h);
+          break;
 
-	case 'k': // draw keys
-	  for (i=0; i<6; i++)
-	    {
-	      //V_DrawScaledPatch(SCX(318)-(c++)*(ST_KEY0WIDTH*vid.dupx), SCY(198)-((16+8)*vid.dupy), FG | V_NOSCALESTART, PatchKeys[i]);
-	      h = new HudMultIcon(308-(i/3)*10, 198-8-(i%3)*10, &overlayon, &st_keyboxes[i], PatchKeys);
-	      overlay.push_back(h);
-	    }
-	  break;
+        case 'k': // draw keys
+          for (i=0; i<6; i++)
+            {
+              //V_DrawScaledPatch(SCX(318)-(c++)*(ST_KEY0WIDTH*vid.dupx), SCY(198)-((16+8)*vid.dupy), FG | V_NOSCALESTART, PatchKeys[i]);
+              h = new HudMultIcon(308-(i/3)*10, 198-8-(i%3)*10, &overlayon, &st_keyboxes[i], PatchKeys);
+              overlay.push_back(h);
+            }
+          break;
 
          case 'm': // draw armor
            //ST_drawOverlayNum(SCX(300), SCY(198)-(16*vid.dupy), sbpawn->armorpoints, PatchBNum,NULL);
-	   h = new HudNumber(264, 198-16, &overlayon, 3, &st_armor, PatchBNum);
-	   overlay.push_back(h);
-	   h = new HudBinIcon(280, 198, &overlayon, &st_true, NULL, sboarmor);
-	   overlay.push_back(h);
+           h = new HudNumber(264, 198-16, &overlayon, 3, &st_armor, PatchBNum);
+           overlay.push_back(h);
+           h = new HudBinIcon(280, 198, &overlayon, &st_true, NULL, sboarmor);
+           overlay.push_back(h);
            break;
 
-	default:
-	  break;
-	   /*
-	     //TODO
-	case 'e': // number of monster killed 
-	  if ((!cv_deathmatch.value) && (!cv_splitscreen.value))
-	    {
-	      char buf[16];
-	      sprintf(buf, "%d/%d", 0, 0); // FIXME! should be sbpawn.kills, map.kills
-	      V_DrawString(SCX(318-V_StringWidth(buf)), SCY(1), V_NOSCALESTART, buf);
+        default:
+          break;
+           /*
+             //TODO
+        case 'e': // number of monster killed
+          if ((!cv_deathmatch.value) && (!cv_splitscreen.value))
+            {
+              char buf[16];
+              sprintf(buf, "%d/%d", 0, 0); // FIXME! should be sbpawn.kills, map.kills
+              V_DrawString(SCX(318-V_StringWidth(buf)), SCY(1), V_NOSCALESTART, buf);
 
-	    }
-	  break;
+            }
+          break;
 
-	case 's': // number of secrets found
-	  if ((!cv_deathmatch.value) && (!cv_splitscreen.value))
-	    {
-	      char buf[16];
-	      sprintf(buf, "%d/%d", 0, 0); // FIXME! should be sbpawn., map.secrets
-	      V_DrawString(SCX(318-V_StringWidth(buf)), SCY(11), V_NOSCALESTART, buf);
-	    }
-	  break;
-	  case 'r': // current frame rate
-	  {
-	  char buf[8];
-	  int framerate = 35;
-	  sprintf(buf, "%d FPS", framerate);
-	  V_DrawString(SCX(2), SCY(4), V_NOSCALESTART, buf);
-	  }
-	  break;
-	  */
-	}
+        case 's': // number of secrets found
+          if ((!cv_deathmatch.value) && (!cv_splitscreen.value))
+            {
+              char buf[16];
+              sprintf(buf, "%d/%d", 0, 0); // FIXME! should be sbpawn., map.secrets
+              V_DrawString(SCX(318-V_StringWidth(buf)), SCY(11), V_NOSCALESTART, buf);
+            }
+          break;
+          case 'r': // current frame rate
+          {
+          char buf[8];
+          int framerate = 35;
+          sprintf(buf, "%d FPS", framerate);
+          V_DrawString(SCX(2), SCY(4), V_NOSCALESTART, buf);
+          }
+          break;
+          */
+        }
     }
 }

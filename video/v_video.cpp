@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C++ -*- 
+// Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
 // $Id$
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/07/25 20:16:43  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.6  2004/04/01 09:16:16  smite-meister
 // Texture system bugfixes
 //
@@ -135,6 +138,7 @@
 #include "hu_stuff.h"
 #include "r_draw.h"
 #include "console.h"
+#include "command.h"
 #include "screen.h"
 
 #include "i_video.h"
@@ -142,10 +146,8 @@
 #include "z_zone.h"
 
 #ifdef HWRENDER
-# include "hardware/hw_glob.h"
-# include "hardware/hw_main.h"
+#include "hardware/hwr_render.h"
 #endif
-
 
 
 byte *current_colormap; // for applying colormaps to Drawn Textures
@@ -155,8 +157,8 @@ byte *current_colormap; // for applying colormaps to Drawn Textures
 // V_CopyRect
 //
 void V_CopyRect(int srcx, int srcy, int srcscrn,
-		int width, int height,
-		int destx, int desty, int destscrn)
+                int width, int height,
+                int destx, int desty, int destscrn)
 {
   // WARNING don't mix
   if ((srcscrn & V_SLOC) || (destscrn & V_SLOC))
@@ -181,16 +183,16 @@ void V_CopyRect(int srcx, int srcy, int srcscrn,
       || desty+height>vid.height
       || (unsigned)srcscrn>4
       || (unsigned)destscrn>4)
-    I_Error ("Bad V_CopyRect %d %d %d %d %d %d %d %d", srcx, srcy, 
-	     srcscrn, width, height, destx, desty, destscrn);
+    I_Error ("Bad V_CopyRect %d %d %d %d %d %d %d %d", srcx, srcy,
+             srcscrn, width, height, destx, desty, destscrn);
 #endif
 
 
 #ifdef DEBUG
   CONS_Printf("V_CopyRect: vidwidth %d screen[%d]=%x to screen[%d]=%x\n",
-	      vid.width,srcscrn,vid.screens[srcscrn],destscrn,vid.screens[destscrn]);
+              vid.width,srcscrn,vid.screens[srcscrn],destscrn,vid.screens[destscrn]);
   CONS_Printf("..........: srcx %d srcy %d width %d height %d destx %d desty %d\n",
-	      srcx,srcy,width,height,destx,desty);
+              srcx,srcy,width,height,destx,desty);
 #endif
 
   byte *src = vid.screens[srcscrn]+vid.width*srcy+srcx;
@@ -212,8 +214,8 @@ void V_CopyRect(int srcx, int srcy, int srcscrn,
 // srcPitch, destPitch : width of source and destination bitmaps
 // --------------------------------------------------------------------------
 void VID_BlitLinearScreen(byte* srcptr, byte* destptr,
-			  int width, int height,
-			  int srcrowbytes, int destrowbytes)
+                          int width, int height,
+                          int srcrowbytes, int destrowbytes)
 {
   if (srcrowbytes==destrowbytes)
     memcpy(destptr, srcptr, srcrowbytes * height);
@@ -221,10 +223,10 @@ void VID_BlitLinearScreen(byte* srcptr, byte* destptr,
     {
       while (height--)
         {
-	  memcpy(destptr, srcptr, width);
+          memcpy(destptr, srcptr, width);
 
-	  destptr += destrowbytes;
-	  srcptr += srcrowbytes;
+          destptr += destrowbytes;
+          srcptr += srcrowbytes;
         }
     }
 }
@@ -285,10 +287,10 @@ void PatchTexture::Draw(int x, int y, int scrn = 0)
       destend = desttop + width*vid.dupx;
 
       if (flags & V_FLIPX)
-	{
-	  colfrac = -colfrac;
-	  col = (width << FRACBITS) + colfrac;
-	}
+        {
+          colfrac = -colfrac;
+          col = (width << FRACBITS) + colfrac;
+        }
     }
   else
     {
@@ -296,10 +298,10 @@ void PatchTexture::Draw(int x, int y, int scrn = 0)
       destend = desttop + width;
 
       if (flags & V_FLIPX)
-	{
-	  colfrac = -1;
-	  col = width - 1;
-	}
+        {
+          colfrac = -1;
+          col = width - 1;
+        }
     }
 
   patch_t *p = (patch_t *)Generate();
@@ -307,62 +309,62 @@ void PatchTexture::Draw(int x, int y, int scrn = 0)
   if (flags & V_SSIZE)
     for ( ; desttop < destend; col += colfrac, desttop++)
       {
-	column_t *column = (column_t *)(data + LONG(p->columnofs[col >> FRACBITS]));
+        column_t *column = (column_t *)(data + LONG(p->columnofs[col >> FRACBITS]));
 
-	// step through the posts in a column
-	while (column->topdelta != 0xff)
-	  {
-	    byte *source = (byte *)column + 3;
-	    byte *dest   = desttop + column->topdelta*vid.dupy*vid.width;
-	    int count  = column->length*vid.dupy;
+        // step through the posts in a column
+        while (column->topdelta != 0xff)
+          {
+            byte *source = (byte *)column + 3;
+            byte *dest   = desttop + column->topdelta*vid.dupy*vid.width;
+            int count  = column->length*vid.dupy;
 
-	    int row = 0;
-	    while (count--)
-	      {
-		byte pixel = source[row >> FRACBITS];
+            int row = 0;
+            while (count--)
+              {
+                byte pixel = source[row >> FRACBITS];
 
-		// the compiler is supposed to optimize the ifs out of the loop
-		if (flags & V_MAP)
-		  pixel = current_colormap[pixel];
+                // the compiler is supposed to optimize the ifs out of the loop
+                if (flags & V_MAP)
+                  pixel = current_colormap[pixel];
 
-		if (flags & V_TL)
-		  pixel = transtables[(pixel << 8) + *dest];
+                if (flags & V_TL)
+                  pixel = transtables[(pixel << 8) + *dest];
 
-		*dest = pixel;
-		dest += vid.width;
-		row += rowfrac;
-	      }
-	    column = (column_t *)((byte *)column + column->length + 4);
-	  }
+                *dest = pixel;
+                dest += vid.width;
+                row += rowfrac;
+              }
+            column = (column_t *)((byte *)column + column->length + 4);
+          }
       }
   else // unscaled, perhaps a bit faster?
     for ( ; desttop < destend; col += colfrac, desttop++)
       {
-	column_t *column = (column_t *)(data + LONG(p->columnofs[col]));
+        column_t *column = (column_t *)(data + LONG(p->columnofs[col]));
 
-	// step through the posts in a column
-	while (column->topdelta != 0xff)
-	  {
-	    byte *source = (byte *)column + 3;
-	    byte *dest = desttop + column->topdelta*vid.width;
-	    int count = column->length;
+        // step through the posts in a column
+        while (column->topdelta != 0xff)
+          {
+            byte *source = (byte *)column + 3;
+            byte *dest = desttop + column->topdelta*vid.width;
+            int count = column->length;
 
-	    while (count--)
-	      {
-		byte pixel = *source++;
+            while (count--)
+              {
+                byte pixel = *source++;
 
-		// the compiler is supposed to optimize the ifs out of the loop
-		if (flags & V_MAP)
-		  pixel = current_colormap[pixel];
+                // the compiler is supposed to optimize the ifs out of the loop
+                if (flags & V_MAP)
+                  pixel = current_colormap[pixel];
 
-		if (flags & V_TL)
-		  pixel = transtables[(pixel << 8) + *dest];
+                if (flags & V_TL)
+                  pixel = transtables[(pixel << 8) + *dest];
 
-		*dest = pixel;
-		dest += vid.width;
-	      }
-	    column = (column_t *)((byte *)column + column->length + 4);
-	  }
+                *dest = pixel;
+                dest += vid.width;
+              }
+            column = (column_t *)((byte *)column + column->length + 4);
+          }
       }
 }
 
@@ -407,16 +409,16 @@ void LumpTexture::Draw(int x, int y, int scrn = 0)
   // TODO crap
   for (int i=0; i<height; i++)
     {
-      for (int dupy = vid.dupy; dupy; dupy--)        
-	{
-	  byte *src = base;
-	  for (int j=0; j<width; j++)
-	    {
-	      for (int dupx = vid.dupx; dupx; dupx--)
-		*dest++ = *src;
-	      src++;
-	    }
-	  dest += vid.width - vid.dupx*width;
+      for (int dupy = vid.dupy; dupy; dupy--)
+        {
+          byte *src = base;
+          for (int j=0; j<width; j++)
+            {
+              for (int dupx = vid.dupx; dupx; dupx--)
+                *dest++ = *src;
+              src++;
+            }
+          dest += vid.width - vid.dupx*width;
         }
       base += width;
     }
@@ -485,7 +487,7 @@ void V_DrawFill(int x, int y, int w, int h, int c)
 #ifdef HWRENDER
   if (rendermode!=render_soft)
     {
-      HWR_DrawFill(x, y, w, h, c);
+      HWR.DrawFill(x, y, w, h, c);
       return;
     }
 #endif
@@ -511,7 +513,7 @@ void V_DrawFlatFill(int x, int y, int w, int h, Texture *t)
 #ifdef HWRENDER
   if (rendermode != render_soft)
     {
-      HWR_DrawFlatFill(x,y,w,h,t);
+      HWR.DrawFill(x, y, w, h, t);
       return;
     }
 #endif
@@ -535,8 +537,8 @@ void V_DrawFlatFill(int x, int y, int w, int h, Texture *t)
       byte *src = flat + (((yfrac >> FRACBITS) % height) * width);
       for (int u=0; u<w; u++)
         {
-	  dest[u] = src[(xfrac >> FRACBITS) % width];
-	  xfrac += dx;
+          dest[u] = src[(xfrac >> FRACBITS) % width];
+          xfrac += dx;
         }
       yfrac += dy;
     }
@@ -553,7 +555,7 @@ void V_DrawFadeScreen()
 #ifdef HWRENDER
   if (rendermode != render_soft)
     {
-      HWR_FadeScreenMenuBack(0x01010160, 0);  //faB: hack, 0 means full height :o
+      HWR.FadeScreenMenuBack(0x01010160, 0);  //faB: hack, 0 means full height :o
       return;
     }
 #endif
@@ -568,12 +570,12 @@ void V_DrawFadeScreen()
       int *buf = (int *)(vid.screens[0] + vid.width*y);
       for (int x=0 ; x<w ; x++)
         {
-	  int quad = buf[x];
-	  p1 = fadetable[quad&255];
-	  p2 = fadetable[(quad>>8)&255];
-	  p3 = fadetable[(quad>>16)&255];
-	  p4 = fadetable[quad>>24];
-	  buf[x] = (p4<<24) | (p3<<16) | (p2<<8) | p1;
+          int quad = buf[x];
+          p1 = fadetable[quad&255];
+          p2 = fadetable[(quad>>8)&255];
+          p3 = fadetable[(quad>>16)&255];
+          p4 = fadetable[quad>>24];
+          buf[x] = (p4<<24) | (p3<<16) | (p2<<8) | p1;
         }
     }
 
@@ -608,7 +610,7 @@ void V_DrawFadeConsBack(int x1, int y1, int x2, int y2)
 #ifdef HWRENDER
   if (rendermode!=render_soft)
     {
-      HWR_FadeScreenMenuBack(0x00500000, y2);  
+      HWR.FadeScreenMenuBack(0x00500000, y2);
       return;
     }
 #endif
@@ -619,15 +621,15 @@ void V_DrawFadeConsBack(int x1, int y1, int x2, int y2)
       x2 >>=2;
       for (y=y1 ; y<y2 ; y++)
         {
-	  buf = (int *)(vid.screens[0] + vid.width*y);
-	  for (x=x1 ; x<x2 ; x++)
+          buf = (int *)(vid.screens[0] + vid.width*y);
+          for (x=x1 ; x<x2 ; x++)
             {
-	      quad = buf[x];
-	      p1 = greenmap[quad&255];
-	      p2 = greenmap[(quad>>8)&255];
-	      p3 = greenmap[(quad>>16)&255];
-	      p4 = greenmap[quad>>24];
-	      buf[x] = (p4<<24) | (p3<<16) | (p2<<8) | p1;
+              quad = buf[x];
+              p1 = greenmap[quad&255];
+              p2 = greenmap[(quad>>8)&255];
+              p3 = greenmap[(quad>>16)&255];
+              p4 = greenmap[quad>>24];
+              buf[x] = (p4<<24) | (p3<<16) | (p2<<8) | p1;
             }
         }
     }
@@ -636,9 +638,9 @@ void V_DrawFadeConsBack(int x1, int y1, int x2, int y2)
       w = x2-x1;
       for (y=y1 ; y<y2 ; y++)
         {
-	  wput = (short*)(vid.screens[0] + vid.width*y) + x1;
-	  for (x=0 ; x<w ; x++)
-	    *wput++ = ((*wput&0x7bde) + (15<<5)) >>1;
+          wput = (short*)(vid.screens[0] + vid.width*y) + x1;
+          for (x=0 ; x<w ; x++)
+            *wput++ = ((*wput&0x7bde) + (15<<5)) >>1;
         }
     }
 }
@@ -709,27 +711,27 @@ void V_DrawString(int x, int y, int option, const char *str)
     {
       int c = *str++;
       if (!c)
-	break;
+        break;
 
       if (c == '\n')
         {
-	  cx = x;
-	  cy += 12*dupy;
-	  continue;
+          cx = x;
+          cy += 12*dupy;
+          continue;
         }
 
       c = toupper(c) - HU_FONTSTART;
       if (c < 0 || c >= HU_FONTSIZE)
         {
-	  cx += 4*dupx;
-	  continue;
+          cx += 4*dupx;
+          continue;
         }
 
       Texture *t = hud.font[c];
 
       int w = t->width * dupx;
       if (cx + w > scrwidth)
-	break;
+        break;
 
       t->Draw(cx, cy, option | V_SCALE);
 
@@ -749,9 +751,9 @@ int V_StringWidth(const char *str)
     {
       int c = toupper(str[i]) - HU_FONTSTART;
       if (c < 0 || c >= HU_FONTSIZE)
-	w += 4;
+        w += 4;
       else
-	w += hud.font[c]->width;
+        w += hud.font[c]->width;
     }
 
   return w;
@@ -774,16 +776,16 @@ int FontBBaseLump;
 void V_DrawTextB(const char *text, int x, int y)
 {
   char c;
-    
+
   while((c = *text++) != 0)
     {
       if (c < 33)
-	x += 8;
+        x += 8;
       else
         {
-	  Texture *t = tc.GetPtrNum(FontBBaseLump + toupper(c) - 33);
-	  t->Draw(x, y, V_SCALE);
-	  x += t->width - 1;
+          Texture *t = tc.GetPtrNum(FontBBaseLump + toupper(c) - 33);
+          t->Draw(x, y, V_SCALE);
+          x += t->width - 1;
         }
     }
 }
@@ -793,16 +795,16 @@ void V_DrawTextBGray(char *text, int x, int y)
 {
   char c;
   current_colormap = graymap;
-    
+
   while((c = *text++) != 0)
     {
       if (c < 33)
-	x += 8;
+        x += 8;
       else
         {
-	  Texture *t = tc.GetPtrNum(FontBBaseLump + toupper(c) - 33);
-	  t->Draw(x, y, V_SCALE | V_MAP);
-	  x += t->width - 1;
+          Texture *t = tc.GetPtrNum(FontBBaseLump + toupper(c) - 33);
+          t->Draw(x, y, V_SCALE | V_MAP);
+          x += t->width - 1;
         }
     }
 }
@@ -817,11 +819,11 @@ int V_TextBWidth(const char *text)
   while((c = *text++) != 0)
     {
       if (c < 33)
-	width += 5;
+        width += 5;
       else
         {
-	  Texture *t = tc.GetPtrNum(FontBBaseLump + toupper(c) - 33);
-	  width += t->width - 1;
+          Texture *t = tc.GetPtrNum(FontBBaseLump + toupper(c) - 33);
+          width += t->width - 1;
         }
     }
   return width;
@@ -850,6 +852,7 @@ void R_DrawSpanNoWrap();   //tmap.S
 //added:12-02-98:
 #ifdef TILTVIEW
 #ifdef HWRENDER
+// TODO: Hurdler: see why we can't do it in software mode (it seems this only works for now with the DOS version)
 void V_DrawTiltView (byte *viewbuffer)  // don't touch direct video I'll find something..
 {}
 #else
@@ -927,7 +930,8 @@ void V_DrawTiltView (byte *viewbuffer)
 //
 //added:05-04-98:
 
-#ifdef HWRENDER // not win32 only 19990829 by Kin
+#ifdef HWRENDER
+// TODO: Hurdler: see why we can't do it in software mode (it seems this only works for now with the DOS version)
 void V_DrawPerspView (byte *viewbuffer, int aiming)
 {}
 #else

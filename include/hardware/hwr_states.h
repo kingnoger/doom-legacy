@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/07/25 20:18:16  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.2  2004/06/27 10:50:35  hurdler
 // new renderer things which will not break everyting else
 //
@@ -34,7 +37,7 @@
 #include <GL/glu.h>
 
 // undef CG_SHADER if you don't want to compile Legacy with Cg
-#define CG_SHADER
+//#define CG_SHADER
 #ifdef CG_SHADER
 #include <Cg/cg.h>
 #include <Cg/cgGL.h>

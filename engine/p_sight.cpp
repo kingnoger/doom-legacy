@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C++ -*- 
+// Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
 // $Id$
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/07/25 20:19:21  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.4  2004/03/28 15:16:13  smite-meister
 // Texture cache.
 //
@@ -72,10 +75,10 @@ static int P_DivlineSide(fixed_t x, fixed_t y, divline_t* node)
   if (!node->dx)
     {
       if (x==node->x)
-	return 2;
+        return 2;
 
       if (x <= node->x)
-	return node->dy > 0;
+        return node->dy > 0;
 
       return node->dy < 0;
     }
@@ -83,10 +86,10 @@ static int P_DivlineSide(fixed_t x, fixed_t y, divline_t* node)
   if (!node->dy)
     {
       if (x==node->y)
-	return 2;
+        return 2;
 
       if (y <= node->y)
-	return node->dx < 0;
+        return node->dx < 0;
 
       return node->dx > 0;
     }
@@ -157,8 +160,8 @@ bool Map::CrossSubsector(int num)
 #ifdef RANGECHECK
   if (num>=numsubsectors)
     I_Error ("P_CrossSubsector: ss %i with numss = %i",
-	     num,
-	     numsubsectors);
+             num,
+             numsubsectors);
 #endif
 
   sub = &subsectors[num];
@@ -173,7 +176,7 @@ bool Map::CrossSubsector(int num)
 
       // allready checked other side?
       if (line->validcount == validcount)
-	continue;
+        continue;
 
       line->validcount = validcount;
 
@@ -184,7 +187,7 @@ bool Map::CrossSubsector(int num)
 
       // line isn't crossed?
       if (s1 == s2)
-	continue;
+        continue;
 
       divl.x = v1->x;
       divl.y = v1->y;
@@ -195,12 +198,12 @@ bool Map::CrossSubsector(int num)
 
       // line isn't crossed?
       if (s1 == s2)
-	continue;
+        continue;
 
       // stop because it is not two sided anyway
       // might do this after updating validcount?
       if ( !(line->flags & ML_TWOSIDED) )
-	return false;
+        return false;
 
       // crosses a two sided line
       front = seg->frontsector;
@@ -208,44 +211,44 @@ bool Map::CrossSubsector(int num)
 
       // no wall to block sight with?
       if (front->floorheight == back->floorheight
-	  && front->ceilingheight == back->ceilingheight)
-	continue;
+          && front->ceilingheight == back->ceilingheight)
+        continue;
 
       // possible occluder
       // because of ceiling height differences
       if (front->ceilingheight < back->ceilingheight)
-	opentop = front->ceilingheight;
+        opentop = front->ceilingheight;
       else
-	opentop = back->ceilingheight;
+        opentop = back->ceilingheight;
 
       // because of ceiling height differences
       if (front->floorheight > back->floorheight)
-	openbottom = front->floorheight;
+        openbottom = front->floorheight;
       else
-	openbottom = back->floorheight;
+        openbottom = back->floorheight;
 
       // quick test for totally closed doors
       if (openbottom >= opentop)
-	return false;               // stop
+        return false;               // stop
 
       frac = P_InterceptVector2 (&strace, &divl);
 
       if (front->floorheight != back->floorheight)
         {
-	  slope = FixedDiv (openbottom - sightzstart , frac);
-	  if (slope > bottomslope)
-	    bottomslope = slope;
+          slope = FixedDiv (openbottom - sightzstart , frac);
+          if (slope > bottomslope)
+            bottomslope = slope;
         }
 
       if (front->ceilingheight != back->ceilingheight)
         {
-	  slope = FixedDiv (opentop - sightzstart , frac);
-	  if (slope < topslope)
-	    topslope = slope;
+          slope = FixedDiv (opentop - sightzstart , frac);
+          if (slope < topslope)
+            topslope = slope;
         }
 
       if (topslope <= bottomslope)
-	return false;               // stop
+        return false;               // stop
     }
   // passed the subsector ok
   return true;
@@ -257,6 +260,7 @@ bool Map::CrossSubsector(int num)
 // was P_CrossBSPNode
 // Returns true
 //  if strace crosses the given node successfully.
+// TODO: Hurdler: I think it's not used anymore
 //
 bool Map::CrossBSPNode(int bspnum)
 {
@@ -266,9 +270,9 @@ bool Map::CrossBSPNode(int bspnum)
   if (bspnum & NF_SUBSECTOR)
     {
       if (bspnum == -1)
-	return CrossSubsector (0);
+        return CrossSubsector (0);
       else
-	return CrossSubsector (bspnum&(~NF_SUBSECTOR));
+        return CrossSubsector (bspnum&(~NF_SUBSECTOR));
     }
 
   bsp = &nodes[bspnum];
@@ -324,14 +328,14 @@ bool Map::CheckSight(Actor *t1, Actor *t2)
       {
       //
       // check precisely
-      //              
+      //
       sightzstart = t1->z + t1->height - (t1->height>>2);
       topslope = (t2->z+t2->height) - sightzstart;
       bottomslope = (t2->z) - sightzstart;
-        
+
       return P_SightPathTraverse ( t1->x, t1->y, t2->x, t2->y );
       }
-  */    
+  */
   // An unobstructed LOS is possible.
   // Now look from eyes of t1 to any part of t2.
   sightcounts[1]++;

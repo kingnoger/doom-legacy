@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C++ -*- 
+// Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
 // $Id$
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/07/25 20:17:26  hurdler
+// Remove old hardware renderer and add part of the new one
+//
 // Revision 1.4  2004/07/11 14:32:01  smite-meister
 // Consvars updated, bugfixes
 //
@@ -54,7 +57,7 @@
 #include "s_sound.h"
 #include "sounds.h"
 #include "r_main.h"
-#include "hardware/hw_main.h"
+#include "hardware/hwr_render.h"
 #include "m_misc.h"
 #include "w_wad.h"
 
@@ -114,7 +117,7 @@ void SplitScreen_OnChange()
 
   if (cv_splitscreen.value)
     {
-      displayplayer2 = consoleplayer2 = game.AddPlayer(new PlayerInfo(localplayer2));    
+      displayplayer2 = consoleplayer2 = game.AddPlayer(new PlayerInfo(localplayer2));
     }
   else
     {
@@ -209,7 +212,7 @@ void CL_Init()
   cv_mousesensy.Reg();
 
   cv_autorun2.Reg();
-  cv_automlook2.Reg();  
+  cv_automlook2.Reg();
   cv_usemouse2.Reg();
   cv_invertmouse2.Reg();
   cv_mousemove2.Reg();
@@ -217,7 +220,7 @@ void CL_Init()
   cv_mousesensy2.Reg();
 
   // WARNING : the order is important when initing mouse2, we need the mouse2port
-  cv_mouse2port.Reg(); 
+  cv_mouse2port.Reg();
 #ifdef LMOUSE2
   cv_mouse2opt.Reg();
 #endif
@@ -256,10 +259,11 @@ void CL_Init()
   cv_bloodtime.Reg();
   cv_psprites.Reg();
 
-  //added by Hurdler
-#ifdef HWRENDER // not win32 only 19990829 by Kin
+#ifdef HWRENDER
   if (rendermode != render_soft)
-    HWR_AddCommands();
+  {
+    HWR.AddCommands();
+  }
 #endif
 }
 
@@ -449,9 +453,9 @@ void CL_RemovePlayer(int playernum)
       playerpernode[node]--;
       if( playerpernode[node]<=0 )
         {
-	  nodeingame[playernode[playernum]] = false;
-	  Net_CloseConnection(playernode[playernum]);
-	  ResetNode(node);
+          nodeingame[playernode[playernum]] = false;
+          Net_CloseConnection(playernode[playernum]);
+          ResetNode(node);
         }
     }
 
