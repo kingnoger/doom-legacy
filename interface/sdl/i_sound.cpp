@@ -16,6 +16,9 @@
 // for more details.
 //
 // $Log$
+// Revision 1.7  2003/04/23 21:02:00  hurdler
+// no more linking warning
+//
 // Revision 1.6  2003/04/14 08:58:31  smite-meister
 // Hexen maps load.
 //
@@ -589,7 +592,7 @@ void I_StopSong(int handle)
   Mix_FadeOutMusic(500);
 }
 
-static const char *MIDI_tmpfilename;
+static char *MIDI_tmpfilename;
 
 void I_UnRegisterSong(int handle)
 {
@@ -615,8 +618,8 @@ int I_RegisterSong(void* data, int len)
     return 0;
 
   // FIXME clumsy temp file. Is there a way to do this directly in memory?
-  MIDI_tmpfilename = tmpnam(NULL); // create an unused name
-  midfile = fopen(MIDI_tmpfilename, "wb");
+  MIDI_tmpfilename = strdup("removemeXXXXXX");
+  midfile = fdopen(mkstemp(MIDI_tmpfilename), "wb");
   if (midfile == NULL)
     {
       CONS_Printf("Couldn't create a tmpfile for music!\n");
