@@ -1,0 +1,294 @@
+; MAPINFO file: original Doom map ordering
+; Doom Legacy Team 2003-2004
+
+;------------------------------------------
+; Episode 1
+
+clusterdef 1 "Knee-deep in the Dead"
+interpic WIMAP0
+intermusic D_INTER
+finale 1
+music D_VICTOR
+flat FLOOR4_8
+exittext "Once you beat the big badasses and\nclean out the moon base you're supposed\nto win, aren't you? Aren't you? Where's\nyour fat reward and ticket home? What\nthe hell is this? It's not supposed to\nend this way!\n\nIt stinks like rotten meat, but looks\nlike the lost Deimos base.  Looks like\nyou're stuck on The Shores of Hell.\nThe only way out is through.\n\nTo continue the DOOM experience, play\nThe Shores of Hell and its amazing\nsequel, Inferno!\n"
+
+defaultmap
+cluster 1
+sky1 SKY1 0
+
+map E1M1 "E1M1: Hangar"
+levelnum 1
+nextlevel 2
+par 30
+music D_E1M1
+
+map E1M2 "E1M2: Nuclear Plant"
+levelnum 2
+nextlevel 3
+par 75
+music D_E1M2
+
+map E1M3 "E1M3: Toxin Refinery"
+levelnum 3
+nextlevel 4 9
+par 120
+music D_E1M3
+
+map E1M4 "E1M4: Command Control"
+levelnum 4
+nextlevel 5
+par 90
+music D_E1M4
+
+map E1M5 "E1M5: Phobos Lab"
+levelnum 5
+nextlevel 6
+par 165
+music D_E1M5
+
+map E1M6 "E1M6: Central Processing"
+levelnum 6
+nextlevel 7
+par 180
+music D_E1M6
+
+map E1M7 "E1M7: Computer Station"
+levelnum 7
+nextlevel 8
+par 180
+music D_E1M7
+
+map E1M8 "E1M8: Phobos Anomaly"
+levelnum 8
+nextlevel -1
+par 30
+music D_E1M8
+; Barons of Hell
+bossdeath 1
+
+map E1M9 "E1M9: Military Base"
+levelnum 9
+nextlevel 4
+par 165
+music D_E1M9
+
+
+
+;------------------------------------------
+; Episode 2
+
+clusterdef 2 "The Shores of Hell"
+interpic WIMAP1
+intermusic D_INTER
+finale 2
+music D_VICTOR
+flat SFLR6_1
+exittext "You've done it! The hideous cyber-\ndemon lord that ruled the lost Deimos\nmoon base has been slain and you\nare triumphant! But ... where are\nyou? You clamber to the edge of the\nmoon and look down to see the awful\ntruth.\n\nDeimos floats above Hell itself!\nYou've never heard of anyone escaping\nfrom Hell, but you'll make the bastards\nsorry they ever heard of you! Quickly,\nyou rappel down to  the surface of\nHell.\n\nNow, it's on to the final chapter of\nDOOM! -- Inferno."
+
+defaultmap
+cluster 2
+sky1 SKY2 0
+
+map E2M1 "E2M1: Deimos Anomaly"
+levelnum 11
+nextlevel 12
+par 90
+music D_E2M1
+
+map E2M2 "E2M2: Containment Area"
+levelnum 12
+nextlevel 13
+par 90
+music D_E2M2
+
+map E2M3 "E2M3: Refinery"
+levelnum 13
+nextlevel 14
+par 90
+music D_E2M3
+
+map E2M4 "E2M4: Deimos Lab"
+levelnum 14
+nextlevel 15
+par 120
+music D_E2M4
+
+map E2M5 "E2M5: Command Center"
+levelnum 15
+nextlevel 16 19
+par 90
+music D_E2M5
+
+map E2M6 "E2M6: Halls of the Damned"
+levelnum 16
+nextlevel 17
+par 360
+music D_E2M6
+
+map E2M7 "E2M7: Spawning Vats"
+levelnum 17
+nextlevel 18
+par 240
+music D_E2M7
+
+map E2M8 "E2M8: Tower of Babel"
+levelnum 18
+nextlevel -1
+par 30
+music D_E2M8
+; Cyberdemon
+bossdeath 2
+
+map E2M9 "E2M9: Fortress of Mystery"
+levelnum 19
+nextlevel 16
+par 170
+music D_E2M9
+
+
+
+;------------------------------------------
+; Episode 3
+
+clusterdef 3 "Inferno"
+interpic WIMAP2
+intermusic D_INTER
+finale 3
+music D_VICTOR
+flat MFLR8_4
+exittext "The loathsome spiderdemon that\nmasterminded the invasion of the moon\nbases and caused so much death has had\nits ass kicked for all time.\n\nA hidden doorway opens and you enter.\nYou've proven too tough for Hell to\ncontain, and now Hell at last plays\nfair -- for you emerge from the door\nto see the green fields of Earth!\nHome at last.\n\nYou wonder what's been happening on\nEarth while you were battling evil\nunleashed. It's good that no Hell-\nspawn could have come through that\ndoor with you ..."
+
+defaultmap
+cluster 3
+sky1 SKY3 0
+
+map E3M1 "E3M1: Hell Keep"
+levelnum 21
+nextlevel 22
+par 90
+music D_E3M1
+
+map E3M2 "E3M2: Slough of Despair"
+levelnum 22
+nextlevel 23
+par 45
+music D_E3M2
+
+map E3M3 "E3M3: Pandemonium"
+levelnum 23
+nextlevel 24
+par 90
+music D_E3M3
+
+map E3M4 "E3M4: House of Pain"
+levelnum 24
+nextlevel 25
+par 150
+music D_E3M4
+
+map E3M5 "E3M5: Unholy Cathedral"
+levelnum 25
+nextlevel 26
+par 90
+music D_E3M5
+
+map E3M6 "E3M6: Mt. Erebus"
+levelnum 26
+nextlevel 27 29
+par 90
+music D_E3M6
+
+map E3M7 "E3M7: Limbo"
+levelnum 27
+nextlevel 28
+par 165
+music D_E3M7
+
+map E3M8 "E3M8: Dis"
+levelnum 28
+nextlevel -1
+par 30
+music D_E3M8
+; Spider Mastermind
+bossdeath 8
+
+map E3M9 "E3M9: Warrens"
+levelnum 29
+nextlevel 27
+par 135
+music D_E3M9
+
+
+
+;------------------------------------------
+; Episode 4
+
+clusterdef 4 "Thy Flesh Consumed"
+interpic WIMAP0
+intermusic D_INTER
+finale 4
+music D_VICTOR
+flat MFLR8_3
+exittext "The spider mastermind must have sent forth\nits legions of hellspawn before your\nfinal confrontation with that terrible\nbeast from Hell.  But you stepped forward\nand brought forth eternal damnation and\nsuffering upon the horde as a true hero\nwould in the face of something so evil.\n\nBesides, someone was gonna pay for what\nhappened to Daisy, your pet rabbit.\n\nBut now, you see spread before you more\npotential pain and gibbitude as a nation\nof demons run amok among our cities.\n\nNext stop, Hell on Earth!"
+
+defaultmap
+cluster 4
+sky1 SKY4 0
+
+map E4M1 "E4M1: Hell Beneath"
+levelnum 31
+nextlevel 32
+par 0
+music D_E3M4
+
+map E4M2 "E4M2: Perfect Hatred"
+levelnum 32
+nextlevel 33 39
+par 0
+music D_E3M2
+
+map E4M3 "E4M3: Sever The Wicked"
+levelnum 33
+nextlevel 34
+par 0
+music D_E3M3
+
+map E4M4 "E4M4: Unruly Evil"
+levelnum 34
+nextlevel 35
+par 0
+music D_E1M5
+
+map E4M5 "E4M5: They Will Repent"
+levelnum 35
+nextlevel 36
+par 0
+music D_E2M7
+
+map E4M6 "E4M6: Against Thee Wickedly"
+levelnum 36
+nextlevel 37
+par 0
+music D_E2M4
+; Cyberdemon
+bossdeath 4
+
+map E4M7 "E4M7: And Hell Followed"
+levelnum 37
+nextlevel 38
+par 0
+music D_E2M6
+
+map E4M8 "E4M8: Unto The Cruel"
+levelnum 38
+nextlevel -1
+par 0
+music D_E2M5
+; Spider Mastermind
+bossdeath 16
+
+map E4M9 "E4M9: Fear"
+levelnum 39
+nextlevel 33
+par 0
+music D_E1M9
