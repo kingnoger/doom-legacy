@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.12  2003/04/08 09:46:05  smite-meister
+// Bugfixes
+//
 // Revision 1.11  2003/04/04 00:01:54  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -1116,6 +1119,9 @@ DActor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
     z -= FOOTCLIPSIZE;
 
   DActor *th = mp->SpawnDActor(x, y, mz, type);
+
+  if (type == MT_PLASMA)
+    CONS_Printf("plasma shot!\n");
 
   if (th->info->seesound)
     S_StartSound(th, th->info->seesound);

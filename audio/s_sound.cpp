@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/04/08 09:46:04  smite-meister
+// Bugfixes
+//
 // Revision 1.8  2003/03/15 20:07:12  smite-meister
 // Initial Hexen compatibility!
 //
@@ -236,6 +239,8 @@ static float S_ObservedVolume(Actor *listener, soundsource_t *source)
   fixed_t dist = adx + ady - ((adx < ady ? adx : ady)>>1);
   dist = dist + adz - ((dist < adz ? dist : adz)>>1);
 
+  dist >>= FRACBITS;
+
   if (dist > S_CLIPPING_DIST)
     return 0.0f;
 
@@ -284,10 +289,11 @@ static int S_AdjustChannel(Actor *l, channel3D_t *c)
 
       if (stereoreverse.value)
 	sep = (~sep) & 255;
-      //CONS_Printf("stereo %d reverse %d\n", sep, stereoreverse.value);
 #ifdef SURROUND
     }
 #endif
+
+  c->osep = sep;
 
   // TODO Doppler effect (approximate)
   /*
@@ -717,6 +723,7 @@ void SoundSystem::Start3DSound(const char *name, soundsource_t *source, int volu
   c->si = (sounditem_t *)sc.Cache(name);
 
   I_StartSound(c);
+  CONS_Printf("3D sound started, %d, %f\n", c->ovol, v1);
 }
 
 
@@ -1078,7 +1085,6 @@ void S_StartSound(mappoint_t *m, int sfx_id)
 #endif
 
   sfxinfo_t *sfx = &S_sfx[sfx_id];
-
 
 #ifdef HW3SOUND
   if (hws_mode != HWS_DEFAULT_MODE)

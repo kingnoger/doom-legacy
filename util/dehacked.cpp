@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/04/08 09:46:07  smite-meister
+// Bugfixes
+//
 // Revision 1.6  2003/03/23 14:24:14  smite-meister
 // Polyobjects, MD3 models
 //
@@ -508,7 +511,7 @@ extern int god_health;
 extern int initial_health;
 extern int initial_bullets;
 //extern int max_health; // VB: removed due to the new class system...
-extern int max_armor;
+extern int MaxArmor[5];
 extern int green_armor_class;
 extern int blue_armor_class;
 extern int maxsoul;
@@ -538,7 +541,7 @@ static void readmisc(MYFILE *f)
       {
 	//if(!strcmp(word2,"Health"))          max_health=value;
 	//else
-	   if(!strcmp(word2,"Armor"))      max_armor=value;
+	   if(!strcmp(word2,"Armor"))      MaxArmor[0]=value;
          else if(!strcmp(word2,"Soulsphere")) maxsoul=value;
       }
       else if(!strcmp(word,"Green"))         green_armor_class=value;

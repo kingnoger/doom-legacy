@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/04/08 09:46:06  smite-meister
+// Bugfixes
+//
 // Revision 1.8  2003/03/15 20:07:16  smite-meister
 // Initial Hexen compatibility!
 //
@@ -1637,10 +1640,10 @@ void PlayerPawn::UseLines()
 //
 Actor *bombowner;
 Actor *bomb;
-int     bombdamage;
-fixed_t bombdistance;
-int     bombdtype;
-bool    bomb_damage_owner;
+int    bombdamage;
+int    bombdistance;
+int    bombdtype;
+bool   bomb_damage_owner;
 
 //
 // PIT_RadiusAttack
@@ -1670,12 +1673,12 @@ static bool PIT_RadiusAttack(Actor *thing)
   //added:22-02-98: now checks also z dist for rockets exploding
   //                above yer head...
   dz = abs(thing->z+(thing->height>>1) - bomb->z);
-  dist = dist > dz ? dist : dz;
+  int d = (dist > dz ? dist : dz) >> FRACBITS;
 
-  if (dist < 0)
-    dist = 0;
+  if (d < 0)
+    d = 0;
 
-  if (dist >= bombdistance)
+  if (d >= bombdistance)
     return true;    // out of range
 
   // geometry blocks the blast?
@@ -1686,15 +1689,15 @@ static bool PIT_RadiusAttack(Actor *thing)
 
   if (thing->mp->CheckSight(thing, bomb))
     {
-      int damage = (bombdamage * (bombdistance - dist)/bombdistance) + 1;
+      int damage = (bombdamage * (bombdistance - d)/bombdistance) + 1;
 
       // Hexen: if(thing->player) damage >>= 2;
 
       int apx = 0, apy = 0;
       if (dist)
         {
-	  apx = (thing->x - bomb->x)/dist;
-	  apy = (thing->y - bomb->y)/dist;
+	  apx = (thing->x - bomb->x)/d;
+	  apy = (thing->y - bomb->y)/d;
         }
       // must be in direct path
       if (thing->Damage(bomb, bombowner, damage, bombdtype) && !(thing->flags & MF_NOBLOOD))
@@ -1719,11 +1722,11 @@ void Actor::RadiusAttack(Actor *culprit, int damage, int distance, int dtype, bo
   int         yh;
 
   if (distance < 0)
-    bombdistance = damage << FRACBITS;
+    bombdistance = damage;
   else
-    bombdistance = distance << FRACBITS;
+    bombdistance = distance;
 
-  fixed_t dist = bombdistance + MAXRADIUS << FRACBITS;
+  fixed_t dist = (bombdistance + MAXRADIUS) << FRACBITS;
   yh = (y + dist - mp->bmaporgy)>>MAPBLOCKSHIFT;
   yl = (y - dist - mp->bmaporgy)>>MAPBLOCKSHIFT;
   xh = (x + dist - mp->bmaporgx)>>MAPBLOCKSHIFT;

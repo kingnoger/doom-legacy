@@ -16,61 +16,75 @@
 $Id$
 <h1>Doom Legacy TODO list</h1>
 
-<h3>Ideas</h3>
+In order of decreasing importance:
 
 <ul>
-<li>L2 caches (base L2cache class is done!)
+<li>Finish Hexen support. HUD, ANIMDEFS, SNDSEQ, TID system, intermission/finale,
+ linedef/trigger system, polyobj renderer, extra physics, special pickups.
+
+<li>Doom/Heretic linedef conversion to Hexen linedefs
+
+<li>L2 caches
  <ul>
  <li>cache data in machine native byte order, so that it only needs to be
   changed once. patches for example.
  <li>cache graphics/sound only when needed, ie. when a thing is
-  Spawned, cache it's sprite etc.
+  Spawned, cache it's sprite & sounds etc.
  <li>Texture/patch/flat -L2 cache that treats them all in the same way,
   using a Texture class, reference counting, SDL_surface?
  <li>Run the cache system in a separate thread;)
  </ul>
 
-<li>a real class Camera : public Actor that could include chasecams,
-  fixed cameras, target-following cams, IR cams etc.
-
 <li>a Texture class (static, animating, fractal, multitexturing...)
 
-<li>legacy.wad (former doom3.wad) contents:
+<li>New legacy.wad contents:
  <ul>
  <li>version string
  <li>a complete font (for console and menu)
  <li>title pictures, consback pictures
  <li>simple menu graphics
+ <li>HUD overlay graphics
  <li>FS definition
  <li>a standard replacement texture, sound, music, sprite and model
- <li>overlay graphics, menu graphics
+ <li>translation maps for Doom/Boom/Heretic linedefs
  <li>a small "informational" map in case someone decides to use it as
     an iwad
  </ul>
 
-<li>Game modifications using dll's. Standard interface. CTF, Doom
+<li>Finish the OGG/MP3 music support
+
+<li>Fix the OpenGL T&amp;L system
+
+<li>Finish the MD3 renderer
+
+<li>Serialization system (save/load)
+
+<li>zlib compression to savegames
+
+<li>support for PAK, PK3(== zip) file formats, virtual file system for
+ unpacked resources
+
+<li>General team system, teamstarts etc.
+
+<li>Game modifications using DLLs. Standard interface. CTF, Doom
   Fortress...
+
+<li>AIPlayer-based bot system, bots implemented as DLLs.
+
+<li>WAV sounds support
 
 <li>Turn the Menu into a widget-based browser, including a levelgraph
   editor etc. Maybe replace the launcher altogether?
 
 <li>a 3D skeleton-animated model class
 
-<li>support for PAK, PK3(== zip) file formats
-
 <li>turn Console into a modern iostream-based class that can print
   strings etc. ( console &lt;&lt; "Hello world!" &lt;&lt; endl; )
-
-<li>finish the Serialization system
 
 <li>turn basic data types (mainly fixed_t) into classes with
   overloaded operators.
 
 <li>A 3D vector template class? vect&lt;float&gt; p;?
-
-<li>Advanced fault-resistant network code (like quake2, Unreal...)
-
-<li>Some über-cool chasecam crosshair to make chasecam usable
 
 <li>Other pawntypes besides Marine and Heretic
  <ul>
@@ -78,6 +92,14 @@ $Id$
 claw or shoot fireballs)
  <li>Viewheight depending on pawn height
  </ul>
+
+<li>class Camera : public Actor could include chasecams,
+  fixed cameras, target-following cams, IR cams etc.,
+  some über-cool chasecam crosshair to make chasecam usable
+
+<li>Advanced fault-resistant network code (like quake2, Unreal...)
+
+<li>Sprite skin support, skin sounds
 
 </ul>
 

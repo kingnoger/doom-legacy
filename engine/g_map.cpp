@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.13  2003/04/08 09:46:05  smite-meister
+// Bugfixes
+//
 // Revision 1.12  2003/04/04 00:01:53  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -418,7 +421,7 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
   // the player may have his old pawn from the previous level
   if (!pi->pawn)
     {
-      const float AutoArmorSave[] = { 0.15, 0.10, 0.05, 0.0 };
+      const float AutoArmorSave[] = { 0.0, 0.15, 0.10, 0.05, 0.0 };
 
       p = new PlayerPawn(nx, ny, nz, allowed_pawns[pi->pawntype]);
       p->player = pi;

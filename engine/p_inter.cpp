@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2003/04/08 09:46:05  smite-meister
+// Bugfixes
+//
 // Revision 1.12  2003/04/04 00:01:56  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -1107,17 +1110,18 @@ bool PlayerPawn::GiveWeapon(weapontype_t wt, bool dropped)
 
 int green_armor_class, blue_armor_class, soul_health, mega_health;
 
-#define NUMCLASSES 4
+#define NUMCLASSES 5
 
 static int ArmorIncrement[NUMCLASSES][NUMARMOR] =
 {
-  { 25, 20, 15, 5 },
-  { 10, 25, 5, 20 },
-  { 5, 15, 10, 25 },
-  { 0, 0, 0, 0 }
+  { 0, 0, 0, 0, 0 },
+  { 0, 25, 20, 15, 5 },
+  { 0, 10, 25, 5, 20 },
+  { 0, 5, 15, 10, 25 },
+  { 0, 0, 0, 0, 0 }
 };
 
-static int ArmorMax[NUMCLASSES] = { 100, 90, 80, 5 };
+int MaxArmor[NUMCLASSES] = { 200, 100, 90, 80, 5 };
 
 //
 // was P_GiveArmor
@@ -1144,13 +1148,14 @@ bool PlayerPawn::GiveArmor(armortype_t type, float factor, int points)
     {
       // negative factor means bonus to current armor
       int i, total = int(100 * toughness);
-      for (i = armor_armor; i < NUMARMOR; i++)
+      for (i = 0; i < NUMARMOR; i++)
 	total += armorpoints[i];
 
-      if (total >= ArmorMax[pclass])
+      if (total >= MaxArmor[pclass])
 	return false;
 
-      armorfactor[type] = 3.0;
+      if (armorfactor[type] < -factor)
+	armorfactor[type] = -factor;
       armorpoints[type] += points;
     }
 
@@ -1174,7 +1179,6 @@ bool PlayerPawn::GiveCard(card_t ct)
 
 
 // Boris stuff : dehacked patches hack
-int max_armor=200;
 int maxsoul=200;
 
 
@@ -1368,11 +1372,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       break;
 
     case MT_ARMORBONUS:  // spirit armor
-      armorpoints[armor_field]++;          // can go over 100%
-      if (armorpoints[armor_field] > max_armor)
-	armorpoints[armor_field] = max_armor;
-      if (armorfactor[0] == 0)
-	armorfactor[0] = 0.333f;
+      GiveArmor(armor_field, -0.333f, 1);
       if (cv_showmessages.value==1)
 	player->message = GOTARMBONUS;
       break;

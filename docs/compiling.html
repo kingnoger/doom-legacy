@@ -21,25 +21,36 @@ $Id$
 You need to do the following stuff:
 <ul>
 <li>Get GCC 3.2, the Gnu Compiler Collection. Linux systems most likely
-have it installed. For Windows32, download and install MinGW 2.0 and
-MSYS.
+have it installed. <br />
+For Windows32, download and install MinGW 2.0 (a GCC port) and MSYS
+(BASH shell and utilities).
+
 <li>Download and install SDL 1.2.5 development libraries, which include
-the runtime library (dll).
-<p />
-The Windows binary version can be installed by decompressing
-the file i386-mingw32msvc.tar.gz to a temporary directory and then
-copying the 'include' and 'lib' directories to your MinGW directory.
-You also need to copy the file 'SDL.dll' to your windows/SYSTEM
+the runtime library (dll). <br />
+Windows binary version installation:
+<ul>
+<li>Decompress the file i386-mingw32msvc.tar.gz to a temporary
+ directory
+<li>Copy the 'include' and 'lib' directories to your MinGW directory
+<li>Copy the file 'SDL.dll' (runtime library) to your windows/SYSTEM
 directory.
+</ul>
+
 <li>Download and install SDL_mixer-1.2.3 development libraries, using
-the same procedure as above.
-<p />
-Windows32 users, note that 'SDL_mixer.h' needs to go to
+the same procedure as above. <br />
+Windows users, note that 'SDL_mixer.h' needs to go to
 the 'MinGW/include/SDL' directory, not just 'MinGW/include'!
+
 <li>Download the doomlegacy_c++ branch from the CVS.
-<li>Win32: Start the MSYS shell. Go to the doomlegacy_c++ directory
-and say 'make' to build the debugging version or 'make OPT=1' to build
-the optimized version.
+
+<li>Win32: Start the MSYS shell. Go to the doomlegacy_c++ directory.
+<ul>
+<li>Say 'mkdir objs' to create the object file directory
+<li>Say 'make depend' to create the dependency files
+<li>Say 'make OPT=1' or just 'make' to build the executable. <br />
+ Omitting the 'OPT=1' parameter adds debugging symbols to the executable.
+</ul>
+
 </ul>
 
 </body>

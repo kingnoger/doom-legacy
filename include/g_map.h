@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.10  2003/04/08 09:46:06  smite-meister
+// Bugfixes
+//
 // Revision 1.9  2003/04/04 00:01:57  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -303,8 +306,9 @@ public:
 
   void AddFakeFloor(sector_t* sec, sector_t* sec2, line_t* master, int flags);
 
+  bool ActivateLine(line_t *line, Actor *thing, int side, int activationType);
   bool ExecuteLineSpecial(int special, byte *args, line_t *line, int side, Actor *mo);
-  void CrossSpecialLine(int linenum, int side, Actor *thing);
+
   void ActivateCrossedLine(line_t *line, int side, Actor *thing);
   void ShootSpecialLine(Actor *thing, line_t *line);
   void UpdateSpecials();
