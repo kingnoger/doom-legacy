@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/06/10 22:39:58  smite-meister
+// Bugfixes
+//
 // Revision 1.7  2003/05/11 21:23:51  smite-meister
 // Hexen fixes
 //
@@ -1501,7 +1504,7 @@ void AutoMap::Drawer()
   // mapname
   {
     int y;
-    const char *mapname = mp->info->name.c_str();
+    const char *mapname = mp->info->nicename.c_str();
     y = vid.height - hud.stbarheight - 1;
     V_DrawString(20, y - V_StringHeight(mapname), V_NOSCALESTART, mapname);
   }

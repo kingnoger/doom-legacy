@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.18  2003/06/10 22:40:00  smite-meister
+// Bugfixes
+//
 // Revision 1.17  2003/06/08 16:19:21  smite-meister
 // Hexen lights.
 //
@@ -93,7 +96,7 @@ public:
   string filename, mapname; // name of the map file, map lump
   int lumpnum;              // lumpnum of the separator beginning the map
 
-  class MapInfo *info;
+  class MapInfo_t *info;    // see p_info.h
 
   tic_t starttic, maptic;   // number of tics the map has played
   int   kills, items, secrets;  // map totals

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2003/06/10 22:39:56  smite-meister
+// Bugfixes
+//
 // Revision 1.13  2003/05/30 13:34:45  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -91,26 +94,26 @@
 
 extern int boomsupport;
 
-fixed_t   tmbbox[4];
+// TODO add z parameter to ALL movement/clipping functions (you can always use ONFLOORZ as a default)
+
 Actor    *tmthing;
 int       tmflags;
 fixed_t   tmx, tmy;
 
-
 // If "floatok" true, move would be ok
 // if within "tmfloorz - tmceilingz".
-bool      floatok;
+bool     floatok;
 
-fixed_t   tmfloorz;
+fixed_t  tmfloorz;
+fixed_t  tmceilingz;
+fixed_t  tmdropoffz;
 
 // keep track of special lines as they are hit,
 // but don't process them until the move is proven valid
-line_t **spechit;                //SoM: 3/15/2000: Limit removal
+line_t **spechit;
 int      numspechit;
 
 
-fixed_t  tmceilingz;
-fixed_t  tmdropoffz;
 
 Actor *tmfloorthing;   // the thing corresponding to tmfloorz
                                 // or NULL if tmfloorz is from a sector
@@ -135,6 +138,8 @@ static msecnode_t *sector_list = NULL;
 //===========================================
 //        COMMON UTILITY FUNCTIONS
 //===========================================
+
+fixed_t   tmbbox[4];
 
 // set temp location and boundingbox
 static void P_SetBox(fixed_t x, fixed_t y, fixed_t r)
@@ -223,6 +228,158 @@ void P_ThrustSpike(Actor *actor)
       mp->BlockThingsIterator(bx,by,PIT_ThrustStompThing);
 }
 
+
+//===========================================
+// Actor position checking and setting
+//===========================================
+
+//
+// Unlinks a thing from block map and sectors.
+// On each position change, BLOCKMAP and other
+// lookups maintaining lists ot things inside
+// these structures need to be updated.
+//
+void Actor::UnsetPosition()
+{
+  //extern msecnode_t *sector_list;
+  int blockx, blocky;
+
+  if (! (flags & MF_NOSECTOR))
+    {
+      // inert things don't need to be in blockmap?
+      // unlink from subsector
+      if (snext)
+	snext->sprev = sprev;
+
+      if (sprev)
+	sprev->snext = snext;
+      else
+	subsector->sector->thinglist = snext;
+#ifdef PARANOIA
+      sprev = NULL;
+      snext = NULL;
+#endif
+      //SoM: 4/7/2000
+      //
+      // Save the sector list pointed to by touching_sectorlist.
+      // In P_SetThingPosition, we'll keep any nodes that represent
+      // sectors the Thing still touches. We'll add new ones then, and
+      // delete any nodes for sectors the Thing has vacated. Then we'll
+      // put it back into touching_sectorlist. It's done this way to
+      // avoid a lot of deleting/creating for nodes, when most of the
+      // time you just get back what you deleted anyway.
+      //
+      // If this Thing is being removed entirely, then the calling
+      // routine will clear out the nodes in sector_list.
+
+      // smite-meister: This is because normally this function is used in a unset/set sequence.
+      // the subsequent set requires that sector_list is preserved...
+    }
+
+  if (! (flags & MF_NOBLOCKMAP))
+    {
+      // inert things don't need to be in blockmap
+      // unlink from block map
+      if (bnext)
+	bnext->bprev = bprev;
+
+      if (bprev)
+	bprev->bnext = bnext;
+      else
+        {
+	  blockx = (x - mp->bmaporgx)>>MAPBLOCKSHIFT;
+	  blocky = (y - mp->bmaporgy)>>MAPBLOCKSHIFT;
+
+	  if (blockx>=0 && blockx < mp->bmapwidth && blocky>=0 && blocky < mp->bmapheight)
+	    mp->blocklinks[blocky * mp->bmapwidth + blockx] = bnext;
+        }
+    }
+}
+
+
+//
+// Links a thing into both a block and a subsector
+// based on it's x y. Sets subsector properly.
+// Does NOT check whether it actually fits there.
+//
+void Actor::SetPosition()
+{
+  // NOTE that tmfloorz and tmceilingz must be set (using CheckPosition() or something)
+  floorz = tmfloorz;
+  ceilingz = tmceilingz;
+
+  // link into subsector
+  subsector_t *ss = mp->R_PointInSubsector(x,y);
+  subsector = ss;
+
+  if (!(flags & MF_NOSECTOR))
+    {
+      // invisible things don't go into the sector links
+      sector_t *sec = ss->sector;
+#ifdef PARANOIA
+      if (sprev != NULL || snext != NULL)
+	I_Error("Actor::SetPosition: thing at (%d, %d) is already linked", x, y);
+#endif
+
+      sprev = NULL;
+      snext = sec->thinglist;
+
+      if (sec->thinglist)
+	sec->thinglist->sprev = this;
+
+      sec->thinglist = this;
+
+      //SoM: 4/6/2000
+      //
+      // If sector_list isn't NULL, it has a collection of sector
+      // nodes that were just removed from this Thing.
+
+      // Collect the sectors the object will live in by looking at
+      // the existing sector_list and adding new nodes and deleting
+      // obsolete ones.
+
+        // When a node is deleted, its sector links (the links starting
+        // at sector_t->touching_thinglist) are broken. When a node is
+        // added, new sector links are created.
+
+      mp->CreateSecNodeList(this,x,y);
+    }
+
+  int blockx, blocky;
+  Actor **link;
+
+  // link into blockmap
+  if (! (flags & MF_NOBLOCKMAP))
+    {
+      // inert things don't need to be in blockmap
+      blockx = (x - mp->bmaporgx)>>MAPBLOCKSHIFT;
+      blocky = (y - mp->bmaporgy)>>MAPBLOCKSHIFT;
+
+      if (blockx>=0
+	  && blockx < mp->bmapwidth
+	  && blocky>=0
+	  && blocky < mp->bmapheight)
+        {
+	  link = &mp->blocklinks[blocky * mp->bmapwidth + blockx];
+	  bprev = NULL;
+	  bnext = *link;
+	  if (*link)
+	    (*link)->bprev = this;
+
+	  *link = this;
+        }
+      else
+        {
+	  // thing is off the map
+	  bnext = bprev = NULL;
+        }
+    }
+}
+
+
+
+
+
 //
 // was P_TeleportMove
 //
@@ -238,6 +395,8 @@ bool Actor::TeleportMove(fixed_t nx, fixed_t ny)
 
   subsector_t *newsubsec = mp->R_PointInSubsector(nx,ny);
   ceilingline = NULL;
+
+  // FIXME do a checkposition first
 
   // The base floor/ceiling is from the subsector
   // that contains the point.
@@ -902,9 +1061,10 @@ void Map::SlideMove(Actor *mo)
 }
 
 
-//
+//===========================================
 // Attack functions
-//
+//===========================================
+
 Actor *linetarget;     // who got hit (or NULL)
 Actor *shootthing;
 
@@ -923,9 +1083,6 @@ fixed_t         aimslope;
 mobjtype_t PuffType = MT_PUFF;
 Actor *PuffSpawned;
 
-// ---------------------------------------
-// was P_SpawnPuff
-// 
 void Map::SpawnPuff(fixed_t x, fixed_t y, fixed_t z)
 {
   z += P_SignedRandom()<<10;
@@ -967,7 +1124,6 @@ void Map::SpawnPuff(fixed_t x, fixed_t y, fixed_t z)
     }
   PuffSpawned = puff;
 }
-
 
 //
 // PTR_AimTraverse

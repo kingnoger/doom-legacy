@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/06/10 22:40:01  smite-meister
+// Bugfixes
+//
 // Revision 1.3  2003/03/15 20:07:21  smite-meister
 // Initial Hexen compatibility!
 //
@@ -102,7 +105,6 @@ private:
   bool acceleratestage;
 
   // level graph pointers that contain intermission data
-  const LevelNode *firstlevel;
   const LevelNode *level;
   const LevelNode *nextlevel;
 
@@ -171,7 +173,7 @@ public:
   static int s_count; // counting sound
 
   // starts the intermission
-  void Start(const LevelNode *l, const LevelNode *f);
+  void Start(const LevelNode *l);
 
   // the intermission is ended when the server says so
   void End();

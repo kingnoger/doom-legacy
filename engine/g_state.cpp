@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2003/06/10 22:39:55  smite-meister
+// Bugfixes
+//
 // Revision 1.15  2003/05/11 21:23:50  smite-meister
 // Hexen fixes
 //
@@ -474,7 +477,7 @@ void GameInfo::Ticker()
       default : I_Error("game.action = %d\n", action);
       }
 
-  CONS_Printf("======== GI::Ticker, tic %d, st %d\n", gametic, state);
+  //CONS_Printf("======== GI::Ticker, tic %d, st %d\n", gametic, state);
 
   // manage players
   player_iter_t i;
@@ -571,12 +574,13 @@ void GameInfo::Ticker()
 }
 
 // starts a new local game
-bool GameInfo::DeferredNewGame(skill_t sk, LevelNode *node, bool splitscreen)
+bool GameInfo::DeferredNewGame(skill_t sk, bool splitscreen)
 {
-  // if (n == NULL) do_something....
+  if (levelgraph.empty())
+    return false;
+
   // FIXME first we should check if we have all the WAD resources n requires
   // if (not enough resources) return false;
-  firstlevel = node;
 
   Downgrade(VERSION);
   paused = false;
@@ -606,13 +610,21 @@ bool GameInfo::DeferredNewGame(skill_t sk, LevelNode *node, bool splitscreen)
   return true;
 }
 
+void S_Read_SNDINFO(int lump);
+
 // starts or restarts the game. firstlevel must be set.
 bool GameInfo::StartGame()
 {
-  if (firstlevel == NULL)
+  if (levelgraph.empty())
     return false;
 
-  SetupLevel(firstlevel, skill, true);
+  // read the lumps _after_ MAPINFO but not separately for each map
+  S_Read_SNDINFO(fc.FindNumForName("SNDINFO"));
+  //S_Read_SNDSEQ(fc.FindNumForName("SNDSEQ"));
+
+  map<int, LevelNode *>::iterator t = levelgraph.begin();
+
+  SetupLevel((*t).second, skill, true);
   return true;
 }
 
@@ -659,30 +671,38 @@ void GameInfo::SetupLevel(LevelNode *n, skill_t sk, bool resetplayers)
       CV_SetValue(&cv_fastmonsters,1);
     }
 
-  if (fc.FindNumForName(n->maplump.c_str()) == -1)
-    {
-      // FIXME! this entire block
-      //has the name got a dot (.) in it?
-      if (!FIL_CheckExtension(n->maplump.c_str()))
-	// append .wad to the name
-	;
-
-      // try to load the file
-      if (true)
-	CONS_Printf("\2Map '%s' not found\n"
-		    "(use .wad extension for external maps)\n", n->maplump.c_str());
-      Command_ExitGame_f();
-      return;
-    }
-
   skill = sk;
 
   // this should be CL_Reset or something...
   //playerdeadview = false;
 
-  Map *m = new Map(n->maplump);
-  m->level = n;
-  maps.push_back(m); // just one map for now
+  for (i = 0; i < n->contents.size(); i++)
+    {
+      const char *temp = n->contents[i]->lumpname.c_str();
+      if (fc.FindNumForName(temp) == -1)
+	{
+	  // FIXME! this entire block
+	  //has the name got a dot (.) in it?
+	  if (!FIL_CheckExtension(temp))
+	    // append .wad to the name
+	    ;
+
+	  // try to load the file
+	  if (true)
+	    CONS_Printf("\2Map '%s' not found\n"
+			"(use .wad extension for external maps)\n", temp);
+	  Command_ExitGame_f();
+	  return;
+	}
+    }
+
+  for (i = 0; i < n->contents.size(); i++)
+    {
+      Map *m = new Map(n->contents[i]->lumpname);
+      m->level = n;
+      m->info = n->contents[i];
+      maps.push_back(m);
+    }
 
   StartLevel(false, resetplayers);
 }
@@ -834,7 +854,7 @@ void GameInfo::EndLevel()
 
   state = GS_INTERMISSION;
 
-  wi.Start(currentlevel, firstlevel);
+  wi.Start(currentlevel);
 }
 
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/06/10 22:39:57  smite-meister
+// Bugfixes
+//
 // Revision 1.7  2003/06/08 16:19:21  smite-meister
 // Hexen lights.
 //
@@ -1160,6 +1163,7 @@ void Map::SpawnPolyobj(int index, int tag, bool crush)
 	  PolySegCount = 1;
 	  PolyStartX = segs[i].v1->x;
 	  PolyStartY = segs[i].v1->y;
+      CONS_Printf(" xxx seg(%d) v1 = %d, line(%d) v1 = %d\n", i, segs[i].v1 - vertexes, segs[i].linedef - lines, segs[i].linedef->v1 - vertexes);
 	  IterFindPolySegs(segs[i].v2->x, segs[i].v2->y, NULL);
 
 	  polyobjs[index].numsegs = PolySegCount;
@@ -1169,7 +1173,7 @@ void Map::SpawnPolyobj(int index, int tag, bool crush)
 	  polyobjs[index].crush = crush;
 	  polyobjs[index].tag = tag;
 	  polyobjs[index].seqType = segs[i].linedef->args[2];
-	  CONS_Printf("--- seg1 x1 = %d\n", segs[i].v1->x >> FRACBITS);
+	  CONS_Printf("--- %d\n", PolySegCount);
 	  /*
 	    // not necessary
 	  if (polyobjs[index].seqType >= SEQTYPE_NUMSEQ)

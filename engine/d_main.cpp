@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2003/06/10 22:39:53  smite-meister
+// Bugfixes
+//
 // Revision 1.18  2003/05/30 13:34:42  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -1594,12 +1597,12 @@ void D_DoomMain()
     {
       if (server && !M_CheckParm("+map"))
 	{
-	  LevelNode *lnp = G_CreateClassicMapList(startepisode);
+	  game.Create_Classic_levelgraph(startepisode);
 	  //COM_BufAddText (va("map \"%s\"\n", G_BuildMapName(startepisode, startmap)));
 	  // FIXME this function nukes most of the game parameters that may have
 	  // been set using cmdline args. Perhaps most cmdline args should be removed?
 	  // one can always use console-args (like legacy.exe +echo "sdfad")
-	  game.DeferredNewGame(sk, lnp, false);
+	  game.DeferredNewGame(sk, false);
 	}
     }
   else

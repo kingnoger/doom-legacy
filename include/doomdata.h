@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/06/10 22:39:59  smite-meister
+// Bugfixes
+//
 // Revision 1.6  2003/04/19 17:38:47  smite-meister
 // SNDSEQ support, tools, linedef system...
 //
@@ -53,7 +56,7 @@
 // Some global defines, that configure the game.
 #include "doomdef.h"
 
-
+// TODO: in GCC, use struct X {} __attribute__ ((packed)); to ensure no padding
 
 //
 // Map level types.
@@ -83,8 +86,7 @@ enum
 // A single Vertex.
 struct mapvertex_t
 {
-  short         x;
-  short         y;
+  short  x, y;
 };
 
 
@@ -105,7 +107,7 @@ struct mapsidedef_t
 
 // A LineDef, as used for editing, and as input
 // to the BSP builder.
-struct maplinedef_t
+struct doom_maplinedef_t
 {
   short v1, v2;
   short flags;
@@ -127,10 +129,11 @@ struct hex_maplinedef_t
 
 
 //
-// LineDef attributes.
+// LineDef flags
 //
 
-enum {
+enum
+{
   // Solid, is an obstacle.
   ML_BLOCKING = 0x0001,
 
@@ -220,12 +223,11 @@ struct mapsubsector_t
 // using partition lines selected by BSP builder.
 struct mapseg_t
 {
-  short         v1;
-  short         v2;
-  short         angle;          
-  short         linedef;
-  short         side;
-  short         offset;
+  short  v1, v2;
+  short  angle;          
+  short  linedef;
+  short  side;
+  short  offset;
 };
 
 
@@ -239,10 +241,8 @@ struct mapseg_t
 struct mapnode_t
 {
   // Partition line from (x,y) to x+dx,y+dy)
-  short         x;
-  short         y;
-  short         dx;
-  short         dy;
+  short  x, y;
+  short  dx, dy;
 
   // Bounding box for each child,
   // clip against view frustum.
@@ -293,7 +293,8 @@ struct mapthing_t
 };
 
 // mapthing_t flags
-enum {
+enum
+{
   // original Doom flags
   MTF_EASY   = 0x0001,      // at which skill is it present?
   MTF_NORMAL = 0x0002,
@@ -314,9 +315,6 @@ enum {
   MTF_GCOOP    = 0x0200,   // appears in coop games
   MTF_GDEATHMATCH = 0x0400 // appears in dm games
 };
-
-
-extern char *Color_Names[MAXSKINCOLORS];
 
 
 #endif

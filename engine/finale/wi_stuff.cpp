@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/06/10 22:39:58  smite-meister
+// Bugfixes
+//
 // Revision 1.8  2003/05/11 21:23:51  smite-meister
 // Hexen fixes
 //
@@ -780,9 +783,12 @@ void Intermission::DrawYAH()
     mapspots = HereticMapSpots;
 
   // this REQUIRES that the levelnodes are in an array.
+  /*
+    // TODO put the intermission splats back sometime
   for (i = 0; i < 9; i++)
     if (firstlevel[i].done)
       V_DrawScaledPatch(mapspots[ep][i].x, mapspots[ep][i].y, 0, splat);
+  */
 
   //  if(!(bcount&16) || state == ShowNextLoc) // strange Heretic thingy
   // draw flashing ptr
@@ -1873,11 +1879,10 @@ void Intermission::Ticker()
     }
 }
 
-void Intermission::Start(const LevelNode *l, const LevelNode *f)
+void Intermission::Start(const LevelNode *l)
 {  
   level = l;
   nextlevel = l->exitused;
-  firstlevel = f;
   episode = l->episode;
 
   last = level->number; //level - firstlevel; // number of level just completed

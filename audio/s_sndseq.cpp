@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/06/10 22:39:52  smite-meister
+// Bugfixes
+//
 // Revision 1.4  2003/06/08 16:19:21  smite-meister
 // Hexen lights.
 //
@@ -475,7 +478,7 @@ static int P_GetInt(char **ptr)
 // reads the SNDINFO lump
 void Map::S_Read_SNDSEQ(int lump)
 {
-  if (lump == -1)
+  if (lump < 0)
     return;
 
   CONS_Printf("Reading SNDSEQ...\n");

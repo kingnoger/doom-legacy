@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2003/06/10 22:39:57  smite-meister
+// Bugfixes
+//
 // Revision 1.22  2003/06/08 16:19:21  smite-meister
 // Hexen lights.
 //
@@ -192,22 +195,14 @@ float P_SegLength (seg_t* seg)
 //
 void Map::LoadSegs(int lump)
 {
-  byte*               data;
-  int                 i;
-  mapseg_t*           ml;
-  seg_t*              li;
-  line_t*             ldef;
-  int                 linedef;
-  int                 side;
+  numsegs = fc.LumpLength(lump) / sizeof(mapseg_t);
+  segs = (seg_t *)Z_Malloc(numsegs*sizeof(seg_t), PU_LEVEL, NULL);
+  memset(segs, 0, numsegs*sizeof(seg_t));
+  byte *data = (byte *)fc.CacheLumpNum(lump, PU_STATIC);
 
-  numsegs = fc.LumpLength (lump) / sizeof(mapseg_t);
-  segs = (seg_t *)Z_Malloc (numsegs*sizeof(seg_t),PU_LEVEL,0);
-  memset (segs, 0, numsegs*sizeof(seg_t));
-  data = (byte *)fc.CacheLumpNum (lump,PU_STATIC);
-
-  ml = (mapseg_t *)data;
-  li = segs;
-  for (i=0 ; i<numsegs ; i++, li++, ml++)
+  mapseg_t *ml = (mapseg_t *)data;
+  seg_t    *li = segs;
+  for (int i = 0; i < numsegs; i++, li++, ml++)
     {
       li->v1 = &vertexes[SHORT(ml->v1)];
       li->v2 = &vertexes[SHORT(ml->v2)];
@@ -224,10 +219,10 @@ void Map::LoadSegs(int lump)
 
       li->angle = (SHORT(ml->angle))<<16;
       li->offset = (SHORT(ml->offset))<<16;
-      linedef = SHORT(ml->linedef);
-      ldef = &lines[linedef];
+      int linedef = SHORT(ml->linedef);
+      line_t *ldef = &lines[linedef];
       li->linedef = ldef;
-      side = SHORT(ml->side);
+      int side = SHORT(ml->side);
       li->sidedef = &sides[ldef->sidenum[side]];
       li->frontsector = sides[ldef->sidenum[side]].sector;
       if (ldef-> flags & ML_TWOSIDED)
@@ -239,7 +234,7 @@ void Map::LoadSegs(int lump)
       li->rlights = NULL;
     }
 
-  Z_Free (data);
+  Z_Free(data);
 }
 
 
@@ -765,10 +760,9 @@ void Map::LoadThings(int lump)
 	  continue;
 	}
 
-
       // spawn here
       t->type = mobjtype_t(n);
-      CONS_Printf("Spawning ednum %d\n", ednum);
+      //CONS_Printf("Spawning ednum %d\n", ednum);
       SpawnMapThing(t);
     }
 
@@ -789,7 +783,7 @@ void Map::LoadLineDefs(int lump)
   if (hexen_format)
     numlines = fc.LumpLength(lump)/sizeof(hex_maplinedef_t);
   else
-    numlines = fc.LumpLength(lump)/sizeof(maplinedef_t);
+    numlines = fc.LumpLength(lump)/sizeof(doom_maplinedef_t);
 
   CONS_Printf("lines: %d, ", numlines);
 
@@ -797,7 +791,7 @@ void Map::LoadLineDefs(int lump)
   memset(lines, 0, numlines*sizeof(line_t));
   byte *data = (byte *)fc.CacheLumpNum(lump, PU_STATIC);
 
-  maplinedef_t *mld = (maplinedef_t *)data;
+  doom_maplinedef_t *mld = (doom_maplinedef_t *)data;
   hex_maplinedef_t *hld = (hex_maplinedef_t *)data;
 
   line_t *ld = lines;
@@ -1226,8 +1220,7 @@ void Map::GroupLines()
     }
 
   // build line tables for each sector
-  // FIXME! sizeof(something) into Z_malloc (sizeof(line_t *))
-  linebuffer = (line_t **)Z_Malloc (total*4, PU_LEVEL, 0);
+  linebuffer = (line_t **)Z_Malloc(total*sizeof(line_t *), PU_LEVEL, NULL);
   sector = sectors;
   for (i=0 ; i<numsectors ; i++, sector++)
     {
@@ -1311,9 +1304,8 @@ static char *levellumps[] =
   }
 */
 
-// was P_SetupLevelSky
-// Setup sky texture to use for the level, actually moved the code
-// from G_DoLoadLevel() which had nothing to do there.
+
+// Setup sky texture to use for the level
 //
 // - in future, each level may use a different sky.
 // - No, in future we can use a skybox!
@@ -1322,16 +1314,14 @@ void Map::SetupSky()
 {
   // where does the sky texture come from?
   // 1. MapInfo skyname
-  // 2. LevelNode skyname (mimics original Doom behavior)
+  // 2. MAPINFO lump skyname
   // 3. if everything else fails, use "SKY1" and hope for the best
 
   // original DOOM determined the sky texture to be used
   // depending on the current episode, and the game version.
 
-  if (!info->skylump.empty())
-    skytexture = R_TextureNumForName(info->skylump.c_str());
-  else if (!level->skylump.empty()) 
-    skytexture = R_TextureNumForName(level->skylump.c_str());
+  if (!info->sky1.empty())
+    skytexture = R_TextureNumForName(info->sky1.c_str());
   else
     skytexture = R_TextureNumForName("SKY1");
 
@@ -1341,15 +1331,13 @@ void Map::SetupSky()
 
 
 extern int numtextures;
-//char       *maplumpname;
-//int        lastloadedmaplumpnum; // for comparative savegame
+
 
 void P_Initsecnode();
-void S_Read_SNDINFO(int lump);
-//
-// was P_SetupLevel
+
 //
 // (re)loads the map from an already opened wad
+//
 bool Map::Setup(tic_t start)
 {
   extern  bool precache;
@@ -1405,7 +1393,6 @@ bool Map::Setup(tic_t start)
   T_ClearScripts();
 #endif
 
-  info = new MapInfo;
   levelscript->data = info->Load(lumpnum); // load map separator lump info (map properties, FS...)
 
   // is the map in Hexen format?
@@ -1414,14 +1401,12 @@ bool Map::Setup(tic_t start)
     {
       CONS_Printf("Map in Hexen format!\n");
       hexen_format = true;
-      S_Read_SNDINFO(fc.GetNumForName("SNDINFO"));
-      //S_Read_SNDSEQ(fc.GetNumForName("SNDSEQ"));
     }
   else
     {
       hexen_format = false;
       // TODO cumulative SNDSEQ reading? First-to-last order.
-      S_Read_SNDSEQ(fc.FindNumForNamePwad("SNDSEQ", 0, 0)); // Doom and Heretic sequences in legacy.wad
+      //S_Read_SNDSEQ(fc.FindNumForNamePwad("SNDSEQ", 0, 0)); // Doom and Heretic sequences in legacy.wad
     }
 
 #ifdef FRAGGLESCRIPT
@@ -1429,12 +1414,10 @@ bool Map::Setup(tic_t start)
   script_camera_on = false;
 #endif
 
-  // If the map defines its music in MapInfo, use it.
-  // Otherwise use given LevelNode data.
+  // If the map defines its music in MapInfo_t, use it.
+  CONS_Printf("--->  %s\n", info->musiclump.c_str());
   if (!info->musiclump.empty())
     S.StartMusic(info->musiclump.c_str());
-  else if (!level->musiclump.empty())
-    S.StartMusic(level->musiclump.c_str());
 
   //faB: now part of level loading since in future each level may have
   //     its own anim texture sequences, switches etc.
@@ -1448,7 +1431,6 @@ bool Map::Setup(tic_t start)
   // note: most of this ordering is important
   LoadBlockMap (lumpnum+ML_BLOCKMAP);
   LoadVertexes (lumpnum+ML_VERTEXES);
-
   LoadSectors1 (lumpnum+ML_SECTORS);
   LoadSideDefs (lumpnum+ML_SIDEDEFS);
   LoadLineDefs (lumpnum+ML_LINEDEFS);
@@ -1458,11 +1440,12 @@ bool Map::Setup(tic_t start)
   if (!hexen_format)
     ConvertLineDefs(); // Doom => Hexen
 
-  LoadSubsectors (lumpnum+ML_SSECTORS);
-  LoadNodes (lumpnum+ML_NODES);
+  LoadSubsectors(lumpnum+ML_SSECTORS);
+  LoadNodes(lumpnum+ML_NODES);
   LoadSegs (lumpnum+ML_SEGS);
-  LoadSectors2 (lumpnum+ML_SECTORS);
-  rejectmatrix = (byte *)fc.CacheLumpNum (lumpnum+ML_REJECT,PU_LEVEL);
+  LoadSectors2(lumpnum+ML_SECTORS);
+  rejectmatrix = (byte *)fc.CacheLumpNum(lumpnum+ML_REJECT,PU_LEVEL);
+
   GroupLines();
 
   // fix renderer to this map
@@ -1475,7 +1458,9 @@ bool Map::Setup(tic_t start)
       HWR_ResetLights();
       // Correct missing sidedefs & deep water trick
       R.HWR_CorrectSWTricks();
-      R.HWR_CreatePlanePolygons (numnodes-1);
+      CONS_Printf("\n xxx seg(%d) v1 = %d, line(%d) v1 = %d\n", 1578, segs[1578].v1 - vertexes, segs[1578].linedef - lines, segs[1578].linedef->v1 - vertexes);
+      R.HWR_CreatePlanePolygons(numnodes-1);
+      CONS_Printf(" xxx seg(%d) v1 = %d, line(%d) v1 = %d\n", 1578, segs[1578].v1 - vertexes, segs[1578].linedef - lines, segs[1578].linedef->v1 - vertexes);
     }
 #endif
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2003/06/10 22:39:53  smite-meister
+// Bugfixes
+//
 // Revision 1.17  2003/06/01 18:56:29  smite-meister
 // zlib compression, partial polyobj fix
 //
@@ -319,16 +322,12 @@ DActor::DActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
   state = &states[info->spawnstate];
   tics = state->tics;
 
-  // FIXME color testing
-  static byte cc = 0;
-  cc++;
-
   /*
   if (t == MT_SHOTGUY)
     pres = new modelpres_t("models/sarge/");
   else
   */
-    pres = new spritepres_t(sprnames[state->sprite], state->frame, cc % 11);
+    pres = new spritepres_t(sprnames[state->sprite], state->frame, 0);
 }
 
 

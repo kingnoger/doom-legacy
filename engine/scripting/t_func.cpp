@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.8  2003/06/10 22:39:58  smite-meister
+// Bugfixes
+//
 // Revision 1.7  2003/06/08 16:19:21  smite-meister
 // Hexen lights.
 //
@@ -1875,7 +1878,7 @@ void SF_StartSkill()
 
   skill = skill_t(intvalue(t_argv[0]) - 1);
 
-  game.DeferredNewGame(skill, NULL, false); // FIXME broken for now
+  game.DeferredNewGame(skill, false);
 }
 
 

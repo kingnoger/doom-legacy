@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/06/10 22:39:53  smite-meister
+// Bugfixes
+//
 // Revision 1.10  2003/04/26 12:01:12  smite-meister
 // Bugfixes. Hexen maps work again.
 //
@@ -62,6 +65,7 @@
 #include "sounds.h"
 #include "z_zone.h"
 #include "w_wad.h"
+#include "p_info.h" // mapinfo
 
 
 // Doom/Heretic music names corresponding to musicenum_t
@@ -790,6 +794,9 @@ sfxinfo_t S_sfx[NUMSFX] =
 // parses the Hexen SNDINFO lump
 void S_Read_SNDINFO(int lump)
 {
+  if (lump < 0)
+    return;
+
   int i, j, n;
 
   int length = fc.LumpLength(lump);
@@ -818,7 +825,12 @@ void S_Read_SNDINFO(int lump)
 		      {
 			i = sscanf(s, "%*40s %d %16s", &j, lname);
 			if (i == 2  && j >= 1 && j <= 99)
-			  ;// FIXME store map music
+			  {
+			    // store the map music
+			    map<int, MapInfo_t *>::iterator t = mapinfo.find(j);
+			    if (t != mapinfo.end())
+			      (*t).second->musiclump = lname;
+			  }
 		      }
 		    // $ARCHIVEPATH ignored
 		  }

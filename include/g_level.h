@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/06/10 22:39:59  smite-meister
+// Bugfixes
+//
 // Revision 1.5  2003/05/11 21:23:52  smite-meister
 // Hexen fixes
 //
@@ -61,28 +64,25 @@ class LevelNode
   friend class Map;
 
 public:
-  static int numnodes; // to make deleting easier
+  unsigned  number;     // unique level number
+  unsigned  cluster;    // level cluster (for finales, hubs etc. See p_info.h)
+  string    levelname;  // nice long name
 
-  int number;       // unique level number
-  int cluster;      // level cluster (for finales, hubs etc. See p_info.h)
-  string levelname; // nice long name
-  
+  unsigned entrypoint;  // the requested entry point in this level (Hexen)  
   map<int, LevelNode *> exit;  // remapping of exit numbers
   LevelNode *exitused;  // exit used when the map was last exited
-  unsigned entrypoint;  // the requested entry point in this level (Hexen)
 
-  bool done; // has it been finished yet?
-  string maplump; // will be a vector of map lumpnames
+  bool done;            // has it been finished yet?
+
+  vector<class MapInfo_t *> contents; // the maps which make up this level
 
 public:
   int kills, items, secrets;  // level totals
   int time, partime; // the time it took to complete level, partime (in s)
 
   // old Doom relics, deprecated
-  // Scripting is a better solution for user-made levels.
+  // Scripting is a better solution for new levels.
   int BossDeathKey; // What will boss deaths accomplish?
-  string skylump;
-  string musiclump;
 
   // intermission data for the level.
   int episode; // Episode. Only used to decide which intermission to show.
@@ -90,26 +90,12 @@ public:
   //intermission music lumpname?
 
 public:
-  LevelNode()
-    {
-      number = -1;
-      cluster = 0;
-      done = false;
-      exitused = NULL;
-      entrypoint = 0;
-    };
-
-  /*
-  LevelNode(const char *lname, const char *mname, LevelNode *ex = NULL, LevelNode *se = NULL)
-    {
-      levelname = lname;
-      maplump = mname;
-      done = false;
-      exitused = NULL;
-      exit[0] = ex;
-      exit[1] = se;
-    };
-  */
+  LevelNode();
+  LevelNode(class MapInfo_t *info);
 };
+
+
+LevelNode *G_Create_classic_(int episode);
+LevelNode *G_Create_MAPINFO_levelgraph(int lump);
 
 #endif

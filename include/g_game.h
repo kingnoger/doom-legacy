@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/06/10 22:39:59  smite-meister
+// Bugfixes
+//
 // Revision 1.4  2003/05/11 21:23:52  smite-meister
 // Hexen fixes
 //
@@ -173,9 +176,8 @@ protected:
 
   vector<class TeamInfo *> teams;
 
-  class LevelNode *firstlevel;   // first LevelNode
-  LevelNode *currentlevel; // in which levelNode are we in the game
-  // one levelnode can include several maps to be opened a once
+  map<int, class LevelNode *> levelgraph;
+  LevelNode *currentlevel; // in which LevelNode are we in the game
 
   vector<class Map *> maps; // active map (level) info
   // several maps can be active at once!
@@ -212,8 +214,12 @@ public:
   bool CheckScoreLimit();
 
   // ----- level-related stuff -----
+  // in g_level.cpp
+  int Create_MAPINFO_levelgraph(int lump);
+  int Create_Classic_levelgraph(int episode);
+
   // in g_state.cpp
-  bool DeferredNewGame(skill_t sk, LevelNode *n, bool splitscreen);
+  bool DeferredNewGame(skill_t sk, bool splitscreen);
   bool StartGame();
   void SetupLevel(LevelNode *n, skill_t skill, bool resetplayers);
   void StartLevel(bool restart, bool resetplayers);

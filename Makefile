@@ -118,6 +118,7 @@ export objdir = objs
 
 export engine_objects = \
 	$(objdir)/g_state.o \
+	$(objdir)/g_level.o \
 	$(objdir)/p_spec.o \
 	$(objdir)/p_floor.o \
 	$(objdir)/p_plats.o \

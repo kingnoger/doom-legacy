@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.20  2003/06/10 22:39:54  smite-meister
+// Bugfixes
+//
 // Revision 1.19  2003/05/30 13:34:43  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -101,8 +104,6 @@ Map::Map(const string & mname)
 // destructor
 Map::~Map()
 {
-  if (info)
-    delete info;
   // not much is needed because most memory is freed
   // in Z_FreeTags before a new level is started.
 }
@@ -115,10 +116,9 @@ Map::~Map()
 
 void Map::SpawnActor(Actor *p)
 {
-  // AddThinker sets Map *mp
-  AddThinker(p);
-  // set subsector and/or block links
-  p->SetPosition();
+  AddThinker(p);     // AddThinker sets Map *mp
+  p->CheckPosition(p->x, p->y); // TEST, sets tmfloorz, tmceilingz
+  p->SetPosition();  // set subsector and/or block links
 }
 
 void Map::DetachActor(Actor *p)
@@ -173,7 +173,6 @@ void Map::SpawnSplash(Actor *mo, fixed_t z)
     th->SetState(S_SPLASH3);
   */
 }
-
 
 
 // ---------------------------------------
@@ -352,7 +351,7 @@ DActor *Map::SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
   AddThinker(p);
 
   //CONS_Printf("Spawn, type: %d\n", t);
-
+  p->CheckPosition(nx, ny); // TEST, sets tmfloorz, tmceilingz
   // set subsector and/or block links
   p->SetPosition();
 
@@ -462,7 +461,7 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
 
   AddThinker(p); // AddThinker sets Map *mp
   // set subsector and/or block links
-
+  p->CheckPosition(p->x, p->y); // TEST, sets tmfloorz, tmceilingz
   p->SetPosition();
 
   // Boris stuff

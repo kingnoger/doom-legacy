@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/06/10 22:39:57  smite-meister
+// Bugfixes
+//
 // Revision 1.5  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -406,158 +409,6 @@ void P_LineOpening (line_t *linedef)
  no_thing:
 
   openrange = opentop - openbottom;
-}
-
-
-//
-// THING POSITION SETTING
-//
-
-//
-// was P_UnsetThingPosition
-// Unlinks a thing from block map and sectors.
-// On each position change, BLOCKMAP and other
-// lookups maintaining lists ot things inside
-// these structures need to be updated.
-//
-void Actor::UnsetPosition()
-{
-  //extern msecnode_t *sector_list;
-  int blockx, blocky;
-
-  if (! (flags & MF_NOSECTOR))
-    {
-      // inert things don't need to be in blockmap?
-      // unlink from subsector
-      if (snext)
-	snext->sprev = sprev;
-
-      if (sprev)
-	sprev->snext = snext;
-      else
-	subsector->sector->thinglist = snext;
-#ifdef PARANOIA
-      sprev = NULL;
-      snext = NULL;
-#endif
-      //SoM: 4/7/2000
-      //
-      // Save the sector list pointed to by touching_sectorlist.
-      // In P_SetThingPosition, we'll keep any nodes that represent
-      // sectors the Thing still touches. We'll add new ones then, and
-      // delete any nodes for sectors the Thing has vacated. Then we'll
-      // put it back into touching_sectorlist. It's done this way to
-      // avoid a lot of deleting/creating for nodes, when most of the
-      // time you just get back what you deleted anyway.
-      //
-      // If this Thing is being removed entirely, then the calling
-      // routine will clear out the nodes in sector_list.
-
-      // smite-meister: This is because normally this function is used in a unset/set sequence.
-      // the subsequent set requires that sector_list is preserved...
-
-      // TEST t8: sector_list does not have to be moved anywhere from the Actor!
-    }
-
-  if (! (flags & MF_NOBLOCKMAP))
-    {
-      // inert things don't need to be in blockmap
-      // unlink from block map
-      if (bnext)
-	bnext->bprev = bprev;
-
-      if (bprev)
-	bprev->bnext = bnext;
-      else
-        {
-	  blockx = (x - mp->bmaporgx)>>MAPBLOCKSHIFT;
-	  blocky = (y - mp->bmaporgy)>>MAPBLOCKSHIFT;
-
-	  if (blockx>=0 && blockx < mp->bmapwidth && blocky>=0 && blocky < mp->bmapheight)
-	    mp->blocklinks[blocky * mp->bmapwidth + blockx] = bnext;
-        }
-    }
-}
-
-
-//
-// was P_SetThingPosition
-// Links a thing into both a block and a subsector
-// based on it's x y.
-// Sets subsector properly
-//
-void Actor::SetPosition()
-{
-  // link into subsector
-  subsector_t *ss = mp->R_PointInSubsector(x,y);
-  subsector = ss;
-
-  // FIXME check that these two lines here are okay, I moved them here without testing;)
-  floorz = ss->sector->floorheight;
-  ceilingz = ss->sector->ceilingheight;
-
-  if (!(flags & MF_NOSECTOR))
-    {
-      // invisible things don't go into the sector links
-      sector_t *sec = ss->sector;
-#ifdef PARANOIA
-      if (sprev != NULL || snext != NULL)
-	I_Error("Actor::SetPosition: thing at (%d, %d) is already linked", x, y);
-#endif
-
-      sprev = NULL;
-      snext = sec->thinglist;
-
-      if (sec->thinglist)
-	sec->thinglist->sprev = this;
-
-      sec->thinglist = this;
-
-      //SoM: 4/6/2000
-      //
-      // If sector_list isn't NULL, it has a collection of sector
-      // nodes that were just removed from this Thing.
-
-      // Collect the sectors the object will live in by looking at
-      // the existing sector_list and adding new nodes and deleting
-      // obsolete ones.
-
-        // When a node is deleted, its sector links (the links starting
-        // at sector_t->touching_thinglist) are broken. When a node is
-        // added, new sector links are created.
-
-      mp->CreateSecNodeList(this,x,y);
-    }
-
-  int blockx, blocky;
-  Actor **link;
-
-  // link into blockmap
-  if (! (flags & MF_NOBLOCKMAP))
-    {
-      // inert things don't need to be in blockmap
-      blockx = (x - mp->bmaporgx)>>MAPBLOCKSHIFT;
-      blocky = (y - mp->bmaporgy)>>MAPBLOCKSHIFT;
-
-      if (blockx>=0
-	  && blockx < mp->bmapwidth
-	  && blocky>=0
-	  && blocky < mp->bmapheight)
-        {
-	  link = &mp->blocklinks[blocky * mp->bmapwidth + blockx];
-	  bprev = NULL;
-	  bnext = *link;
-	  if (*link)
-	    (*link)->bprev = this;
-
-	  *link = this;
-        }
-      else
-        {
-	  // thing is off the map
-	  bnext = bprev = NULL;
-        }
-    }
 }
 
 
