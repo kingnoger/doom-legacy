@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2003/04/20 17:02:01  smite-meister
+// Damn
+//
 // Revision 1.15  2003/04/20 16:45:50  smite-meister
 // partial SNDSEQ fix
 //
@@ -1383,7 +1386,7 @@ bool Map::Setup(tic_t start)
   else
     {
       hexen_format = false;
-      S_Read_SNDSEQ(fc.FindNumForName("LSNDSEQ")); // Doom and Heretic sequences in legacy.wad
+      S_Read_SNDSEQ(fc.FindNumForNamePwad("SNDSEQ", 0, 0)); // Doom and Heretic sequences in legacy.wad
     }
 
 
