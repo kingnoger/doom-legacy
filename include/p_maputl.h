@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/10/17 02:01:39  smite-meister
+// bots!
+//
 // Revision 1.5  2004/10/14 19:35:50  smite-meister
 // automap, bbox_t
 //
@@ -46,8 +49,8 @@
 // P_MAP
 
 // variables used by movement functions to communicate
-extern bool     floatok;
-extern fixed_t  tmfloorz;
+extern bool    floatok;
+extern fixed_t tmfloorz, tmceilingz;
 extern class Actor *linetarget;     // who got hit (or NULL)
 
 

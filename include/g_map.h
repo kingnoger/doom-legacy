@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.38  2004/10/17 02:01:39  smite-meister
+// bots!
+//
 // Revision 1.37  2004/10/14 19:35:50  smite-meister
 // automap, bbox_t
 //
@@ -264,6 +267,10 @@ public:
   int Flashcount;         // ongoing flash?
   int *LightningLightLevels; // storage for original light levels
 
+
+  //-----------------------------------
+  class BotNodes *botnodes; // TEST
+
   //------------------------------------
   // TODO: from this line on it's badly designed stuff to be fixed someday
   vector<mapthing_t *> braintargets; // DoomII demonbrain spawnbox targets
@@ -354,6 +361,7 @@ public:
   bool CrossSubsector(int num);
   bool CrossBSPNode(int bspnum);
   bool CheckSight(Actor *t1, Actor *t2);
+  bool CheckSight2(Actor *t1, Actor *t2, fixed_t nx, fixed_t ny, fixed_t nz);
 
   // in p_maputl.cpp
   bool BlockLinesIterator(int x, int y, line_iterator_t func);
