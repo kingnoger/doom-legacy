@@ -37,8 +37,9 @@ $Id$
 <li>legacy.wad (former doom3.wad) contents:
  <ul>
  <li>version string
- <li>a complete font
+ <li>a complete font (for console and menu)
  <li>title pictures, consback pictures
+ <li>simple menu graphics
  <li>FS definition
  <li>a standard replacement texture, sound, music, sprite and model
  <li>overlay graphics, menu graphics
@@ -54,9 +55,11 @@ $Id$
 
 <li>a 2D sprite class
 
-<li>a 3D skeleton-animated model class, Quake III MD3?
+<li>a 3D model class, Quake III MD3?
 
-<li>support for WAD2 file format? PAK?
+<li>a 3D skeleton-animated model class
+
+<li>support for WAD2, WAD3, PAK, PK3(== zip) file formats
 
 <li>class DActor : public Actor, for former Doom/Heretic mobj_t's. Clean
   up Actor class so it becomes more general and useful for inheritance
