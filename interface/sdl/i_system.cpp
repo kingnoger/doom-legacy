@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.25  2004/12/08 16:58:10  segabor
+// Small Mac related fixes
+//
 // Revision 1.24  2004/11/19 16:51:06  smite-meister
 // cleanup
 //
@@ -114,6 +117,13 @@
 #  include <sys/param.h>
 #  include <sys/mount.h>
 # endif
+#endif
+
+#ifdef __APPLE__
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/param.h>
+#include <sys/mount.h>
 #endif
 
 #ifdef LMOUSE2
@@ -765,11 +775,15 @@ char *I_GetWadPath()
   // get the current directory (possible problem on NT with "." as current dir)
   if (getcwd(temp, 255))
     {
-#ifdef __MACOS__
+#warning FIX it Later!
+
+	  /*
+#if defined (__MACOS__) || defined(__APPLE__)
       // cwd is always "/" when app is dbl-clicked
       if (!strcmp(temp, "/"))
 	return I_GetWadDir();
 #endif
+	   */
 
       return temp;
     }
@@ -841,7 +855,7 @@ Uint32 I_GetFreeMem(Uint32 *total)
 
 void I_GetDiskFreeSpace(long long *freespace)
 {
-#ifdef LINUX
+#if defined (LINUX) || defined (__MACOS__) || defined(__APPLE__)
   struct statfs stfs;
   if (statfs(".",&stfs)==-1)
     {
