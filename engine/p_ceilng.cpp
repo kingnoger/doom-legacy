@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/12/13 23:51:03  smite-meister
+// Hexen update
+//
 // Revision 1.8  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -69,10 +72,10 @@ int ceiling_t::ceilmovesound = 0;
 
 // constructor
 ceiling_t::ceiling_t(int ty, sector_t *sec, fixed_t usp, fixed_t dsp, int cru, fixed_t height)
+  : sectoreffect_t(sec)
 {
   // normal ceilings and crushers could be two different classes, but...
   type = ty;
-  sector = sec;
   tag = sec->tag;
   upspeed = usp;
   oldspeed = downspeed = dsp;
@@ -147,7 +150,7 @@ void ceiling_t::Think()
       break;
     case 1:
       // UP
-      res = mp->T_MovePlane(sector, upspeed, topheight, false, 1, direction);
+      res = mp->T_MovePlane(sector, upspeed, topheight, false, 1);
 
       if (!(mp->maptic % (8*NEWTICRATERATIO)))
         {
@@ -183,7 +186,7 @@ void ceiling_t::Think()
 
     case -1:
       // DOWN
-      res = mp->T_MovePlane(sector, downspeed, bottomheight, crush,1,direction);
+      res = mp->T_MovePlane(sector, -downspeed, bottomheight, crush, 1);
 
       if (!(mp->maptic % (8*NEWTICRATERATIO)))
         {

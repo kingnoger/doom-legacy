@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.11  2003/12/13 23:51:03  smite-meister
+// Hexen update
+//
 // Revision 1.10  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -1564,8 +1567,8 @@ void SF_FloorHeight()
       while ((i = current_map->FindSectorFromTag(tagnum, i)) >= 0)
         {
 	  s = &current_map->sectors[i];
-          if (current_map->T_MovePlane(s, abs(fixedvalue(t_argv[1]) - s->floorheight), fixedvalue(t_argv[1]),
-	     crush, 0, fixedvalue(t_argv[1]) > s->floorheight ? 1 : -1) == res_crushed)
+          if (current_map->T_MovePlane(s, fixedvalue(t_argv[1]) - s->floorheight, fixedvalue(t_argv[1]),
+				       crush, 0) == res_crushed)
             returnval = 0;
         }
     }
@@ -1635,8 +1638,8 @@ void SF_CeilingHeight()
       while ((i = current_map->FindSectorFromTag(tagnum, i)) >= 0)
         {
 	  s = &current_map->sectors[i];
-          if (current_map->T_MovePlane(s, abs(fixedvalue(t_argv[1]) - s->ceilingheight),
-	   fixedvalue(t_argv[1]), crush, 1, fixedvalue(t_argv[1]) > s->ceilingheight ? 1 : -1) == res_crushed)
+          if (current_map->T_MovePlane(s, fixedvalue(t_argv[1]) - s->ceilingheight, fixedvalue(t_argv[1]),
+				       crush, 1) == res_crushed)
             returnval = 0;
         }
     }

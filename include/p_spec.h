@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2003/12/13 23:51:03  smite-meister
+// Hexen update
+//
 // Revision 1.16  2003/11/30 00:09:48  smite-meister
 // bugfixes
 //
@@ -163,6 +166,69 @@ enum sectorspecial_t
 };
 
 
+
+// the result of a plane movement
+enum planeresult_e
+{
+  res_ok = 0,
+  res_crushed,
+  res_pastdest
+};
+
+enum special_e
+{
+  floor_special,
+  ceiling_special,
+  lighting_special,
+};
+
+bool P_SectorActive(special_e t, sector_t *s);
+
+enum change_e
+{
+  trigChangeOnly,
+  numChangeOnly,
+};
+
+
+//======================================
+//  Timed buttons
+//======================================
+
+void P_InitSwitchList();
+
+class button_t : public Thinker
+{
+  friend class Map;
+  DECLARE_CLASS(button_t);
+public:
+  enum button_e
+  {
+    none = 0,
+    top,
+    middle,
+    bottom
+  };
+
+private:
+  line_t *line;
+  mappoint_t *soundorg;
+  int     texture;
+  int     timer;
+  byte where; // button_e
+
+public:
+  static int buttonsound;
+
+  button_t(line_t *l, button_e w, int tex, int time);
+  
+  virtual void Think();
+};
+
+// 1 second, in ticks.
+#define BUTTONTIME      35
+
+
 //======================================
 //   Polyobjects
 //======================================
@@ -240,17 +306,30 @@ enum
   PO_SPAWNCRUSH_TYPE
 };
 
+//========================================================
+//  Sector effects: base class for most moving geometry
+//========================================================
+
+class sectoreffect_t : public Thinker
+{
+  friend class Map;
+  DECLARE_CLASS(sectoreffect_t);
+
+protected:
+  sector_t *sector;
+  sectoreffect_t(sector_t *s);
+};
 
 //======================================
 //   Sector light effects
 //======================================
 
-class lightfx_t : public Thinker
+class lightfx_t : public sectoreffect_t
 {
   friend class Map;
   DECLARE_CLASS(lightfx_t);
+
 protected:
-  sector_t *sec;
   short     type;
   short     count;
   short     maxlight, minlight;
@@ -288,12 +367,12 @@ public:
 #define SLOWDARK     35
 
 
-class phasedlight_t: public Thinker
+class phasedlight_t: public sectoreffect_t
 {
   friend class Map;
   DECLARE_CLASS(phasedlight_t);
+
 protected:
-  sector_t *sec;
   short base;
   short index;
 
@@ -305,77 +384,10 @@ public:
 
 
 //======================================
-// P_SWITCH
+//  Platforms/Lifts (complex moving floors)
 //======================================
 
-void P_InitSwitchList();
-
-class button_t : public Thinker
-{
-  friend class Map;
-  DECLARE_CLASS(button_t);
-public:
-  enum button_e
-  {
-    none = 0,
-    top,
-    middle,
-    bottom
-  };
-
-private:
-  line_t *line;
-  mappoint_t *soundorg;
-  int     texture;
-  int     timer;
-  byte where; // button_e
-
-public:
-  static int buttonsound;
-
-  button_t(line_t *l, button_e w, int tex, int time);
-  
-  virtual void Think();
-};
-
-// 1 second, in ticks.
-#define BUTTONTIME      35
-
-
-
-// SoM: 3/4/2000: Misc Boom stuff for thinkers that can share sectors, and some other stuff
-
-// the result of a plane movement
-enum planeresult_e
-{
-  res_ok = 0,
-  res_crushed,
-  res_pastdest
-};
-
-enum special_e
-{
-  floor_special,
-  ceiling_special,
-  lighting_special,
-};
-
-
-bool P_SectorActive(special_e t, sector_t *s);
-
-
-enum change_e
-{
-  trigChangeOnly,
-  numChangeOnly,
-};
-
-
-//======================================
-//    Platforms (Lifts)
-//======================================
-
-class plat_t : public Thinker
+class plat_t : public sectoreffect_t
 {
   friend class Map;
   DECLARE_CLASS(plat_t);
@@ -408,7 +420,6 @@ public:
 
 private:
   int       type;
-  sector_t *sector;
   fixed_t   speed;
   fixed_t   low, high;
   int       wait, count;
@@ -429,11 +440,11 @@ public:
 
 
 //======================================
-//   Doors
+//  Doors (complex moving ceilings)
 //======================================
 
 // vertical door
-class vdoor_t : public Thinker
+class vdoor_t : public sectoreffect_t
 {
   friend class Map;
   DECLARE_CLASS(vdoor_t);
@@ -453,7 +464,6 @@ public:
 private:
   byte      type;
   char      direction; // 1 = up, 0 = waiting at top, -1 = down, 2 = initial delay
-  sector_t *sector;
   fixed_t   topheight;
   fixed_t   speed;
   int       topwait;   // tics to wait at the top
@@ -479,10 +489,10 @@ public:
 
 
 //======================================
-//  Ceilings and crushers
+//  Moving ceilings (also crushers)
 //======================================
 
-class ceiling_t : public Thinker
+class ceiling_t : public sectoreffect_t
 {
   friend class Map;
   DECLARE_CLASS(ceiling_t);
@@ -510,7 +520,6 @@ public:
 
 private:
   int       type;
-  sector_t *sector;
   int       crush;
 
   // ceiling changers
@@ -541,9 +550,8 @@ public:
 
 
 //======================================
-//  Floors
+//  Moving floors (also stairs, donuts)
 //======================================
-
 
 enum stair_e
 {
@@ -553,7 +561,7 @@ enum stair_e
 };
 
 
-class floor_t : public Thinker
+class floor_t : public sectoreffect_t
 {
   friend class Map;
   DECLARE_CLASS(floor_t);
@@ -580,17 +588,15 @@ public:
 
 private:
   int       type;
-  sector_t *sector;
   int       crush;
 
   // floor changers
   int       newspecial;
   short     texture;
 
-  fixed_t   speed;
+  fixed_t   speed; // sign denotes direction
 
 public:
-  char      direction;
   fixed_t   destheight;
 
 public:
@@ -600,7 +606,11 @@ public:
 };
 
 
-class elevator_t : public Thinker
+//======================================
+//  Moving floor and ceiling (elevators, pillars)
+//======================================
+
+class elevator_t : public sectoreffect_t
 {
   friend class Map;
   DECLARE_CLASS(elevator_t);
@@ -609,19 +619,20 @@ public:
   {
     Up = 0,
     Down,
-    Current
+    Current,
+    RelHeight,
+    OpenPillar,
+    ClosePillar
   };
 
 private:
-  int type;
-  sector_t *sector;
-  int direction;
-  fixed_t floordestheight;
-  fixed_t ceilingdestheight;
-  fixed_t speed;
+  int     type;
+  int     crush;
+  fixed_t floordest, ceilingdest;
+  fixed_t floorspeed, ceilingspeed;
 
 public:
-  elevator_t(int type, sector_t *s, fixed_t speed, fixed_t height);
+  elevator_t(int type, sector_t *s, fixed_t speed, fixed_t height_f, fixed_t height_c, int crush);
   
   virtual void Think();
 };

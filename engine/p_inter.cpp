@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2003/12/13 23:51:03  smite-meister
+// Hexen update
+//
 // Revision 1.22  2003/12/03 10:49:50  smite-meister
 // Save/load bugfix, text strings updated
 //
@@ -825,10 +828,13 @@ void Actor::Die(Actor *inflictor, Actor *source)
 }
 
 
-bool P_CheckSpecialDeath(DActor *m, Actor *inflictor);
+bool P_CheckSpecialDeath(DActor *m, int dtype);
 
 void DActor::Die(Actor *inflictor, Actor *source)
 {
+  if (!inflictor)
+    inflictor = source;
+
   Actor::Die(inflictor, source);
 
   if (flags & MF_CORPSE)
@@ -853,8 +859,18 @@ void DActor::Die(Actor *inflictor, Actor *source)
   if ((type == MT_BARREL || type == MT_POD) && source)
     owner = source;
 
-  if (P_CheckSpecialDeath(this, inflictor))
-    return;
+  // TODO mobjinfo.damage, upper 16 bits could hold damage type, remove MF2_FIREDAMAGE et al.
+  if (inflictor)
+    {
+      int dtype = 0;
+      if (inflictor->flags2 & MF2_FIREDAMAGE)
+	dtype |= dt_heat;
+      if (inflictor->flags2 & MF2_ICEDAMAGE)
+	dtype |= dt_cold;
+
+      if (P_CheckSpecialDeath(this, dtype))
+	return;
+    }
 
   if (((game.mode != gm_heretic && health < -info->spawnhealth)
        ||(game.mode == gm_heretic && health < -(info->spawnhealth>>1)))

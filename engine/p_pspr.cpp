@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2003/12/13 23:51:03  smite-meister
+// Hexen update
+//
 // Revision 1.12  2003/12/03 10:49:50  smite-meister
 // Save/load bugfix, text strings updated
 //
@@ -897,6 +900,25 @@ void A_FireShotgun2(PlayerPawn *p, pspdef_t *psp)
       angle = p->angle + (P_SignedRandom() << 19);
       p->LineAttack(angle, MISSILERANGE, slope, damage);
     }
+}
+
+
+void A_OpenShotgun2(PlayerPawn *p, pspdef_t *psp)
+{
+  S_StartAttackSound(p, sfx_dbopn);
+}
+
+
+void A_LoadShotgun2(PlayerPawn *p, pspdef_t *psp)
+{
+  S_StartAttackSound(p, sfx_dbload);
+}
+
+
+void A_CloseShotgun2(PlayerPawn *p, pspdef_t *psp)
+{
+  S_StartAttackSound(p, sfx_dbcls);
+  A_ReFire(p, psp);
 }
 
 

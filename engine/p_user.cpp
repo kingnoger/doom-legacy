@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2003/12/13 23:51:03  smite-meister
+// Hexen update
+//
 // Revision 1.15  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -82,13 +85,12 @@
 #include "command.h"
 #include "p_camera.h"
 
-#include "d_event.h"
-
 #include "r_sprite.h"
 #include "s_sound.h"
 #include "sounds.h"
 #include "m_random.h"
 #include "tables.h"
+#include "dstrings.h"
 
 #include "hardware/hw3sound.h"
 
@@ -417,41 +419,38 @@ bool P_UseArtifact(PlayerPawn *p, artitype_t arti)
       break;
 
     case arti_poisonbag:
-      /* FIXME flechettes
       ang = p->angle >> ANGLETOFINESHIFT;
       if (p->pclass == PCLASS_CLERIC)
 	{
-	  mo = P_SpawnMobj(p->x+16*finecosine[angle], p->y+24*finesine[angle],
-			   player->mo->z - p->floorclip+8*FRACUNIT, MT_POISONBAG);
-	  if (mo)
-	    mo->owner = p;
+	  mo = p->mp->SpawnDActor(p->x + 16*finecosine[ang], p->y + 24*finesine[ang],
+				  p->z - p->floorclip + 8*FRACUNIT, MT_POISONBAG);
 	}
       else if (p->pclass == PCLASS_MAGE)
 	{
-	  mo = P_SpawnMobj(p->x+16*finecosine[angle],
-			   p->y+24*finesine[angle], player->mo->z-
-			   p->floorclip+8*FRACUNIT, MT_FIREBOMB);
-	  if (mo)
-	    mo->owner = p;
+	  mo = p->mp->SpawnDActor(p->x + 16*finecosine[ang], p->y + 24*finesine[ang],
+				  p->z - p->floorclip + 8*FRACUNIT, MT_FIREBOMB);
 	}			
-      else // PCLASS_FIGHTER, obviously (also pig, not so obviously)
+      else // others
 	{
-	  mo = P_SpawnMobj(p->x, p->y, p->z - p->floorclip+35*FRACUNIT, MT_THROWINGBOMB);
+	  mo = p->mp->SpawnDActor(p->x, p->y, p->z - p->floorclip + 35*FRACUNIT, MT_THROWINGBOMB);
 	  if (mo)
 	    {
-	      mo->angle = p->angle+(((P_Random()&7)-4)<<24);
-	      mo->pz = 4*FRACUNIT+((player->lookdir)<<(FRACBITS-4));
-	      mo->z += player->lookdir<<(FRACBITS-4);
-	      P_ThrustMobj(mo, mo->angle, mo->info->speed);
-	      mo->px += p->px>>1;
-	      mo->py += p->py>>1;
+	      float sp = mo->info->speed;
+	      mo->angle = p->angle + (((P_Random() & 7)-4) << 24);
+	      ang = mo->angle >> ANGLETOFINESHIFT;
+	      mo->Thrust(mo->angle, int(sp * finecosine[ang]));
+	      mo->pz = 4*FRACUNIT + int(sp * finesine[ang]);
+	      mo->px += p->px >> 1;
+	      mo->py += p->py >> 1;
 	      mo->owner = p;
-	      mo->tics -= P_Random()&3;
-	      P_CheckMissileSpawn(mo);											
-	    } 
+	      mo->tics -= P_Random() & 3;
+	      mo->CheckMissileSpawn();
+	    }
 	}
+      if (mo)
+	mo->owner = p;
       break;
-      */
+      
     case arti_teleportother:
       //P_ArtiTeleportOther(p);
       break;
@@ -489,16 +488,13 @@ bool P_UseArtifact(PlayerPawn *p, artitype_t arti)
     case arti_puzzgear2:
     case arti_puzzgear3:
     case arti_puzzgear4:
-      /*
-	TODO puzzle items
       if (p->UsePuzzleItem(arti - arti_firstpuzzitem))
 	return true;
       else
 	{
-	  P_SetYellowMessage(player, TXT_USEPUZZLEFAILED, false);
+	  p->player->SetMessage(text[TXT_USEPUZZLEFAILED], false);
 	  return false;
 	}
-      */
       break;
 
     default:

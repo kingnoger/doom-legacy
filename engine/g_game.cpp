@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2003/12/13 23:51:03  smite-meister
+// Hexen update
+//
 // Revision 1.17  2003/12/09 01:02:00  smite-meister
 // Hexen mapchange works, keycodes fixed
 //
@@ -261,62 +264,17 @@ short G_ClipAimingPitch(int *aiming)
 }
 
 
-// for change this table change also nextweapon func in g_game and P_PlayerThink
-//static char extraweapons[8] = {wp_chainsaw, -1, wp_supershotgun, -1, -1, -1, -1, -1};
-/*
-static byte nextweaponorder[NUMWEAPONS] = {wp_fist, wp_chainsaw, wp_pistol,
-					   wp_shotgun, wp_supershotgun, wp_chaingun,
-					   wp_missile, wp_plasma, wp_bfg};
-*/
-// Half-Life style weapon groups
-static byte nextweaponorder[NUMWEAPONS] =
+static byte NextWeapon(PlayerPawn *p, int step)
 {
-  wp_fist, wp_staff, wp_chainsaw, wp_gauntlets,
-  wp_pistol, wp_goldwand,
-  wp_shotgun, wp_supershotgun, wp_crossbow,
-  wp_chaingun, wp_blaster,
-  wp_missile, wp_phoenixrod,
-  wp_plasma, wp_skullrod,
-  wp_bfg, wp_mace,
-  wp_beak
-};
-
-static byte NextWeapon(PlayerPawn *player, int step)
-{
-  int    i;
-
-  for (i=0; i<NUMWEAPONS; i++)
-    if (player->readyweapon == nextweaponorder[i])
-      {
-	i = (i+NUMWEAPONS+step)%NUMWEAPONS;
-	break;
-      }
-
-  for (;nextweaponorder[i]!=player->readyweapon; i=(i+NUMWEAPONS+step)%NUMWEAPONS)
+  // Kludge. TODO when netcode is redone, fix me.
+  int w = p->readyweapon;
+  do
     {
-      byte w = nextweaponorder[i];
-        
-      // skip super shotgun for non-Doom2
-      if (game.mode != gm_doom2 && w == wp_supershotgun)
-	continue;
+      w = (w + step) % NUMWEAPONS;
+      if (p->weaponowned[w] && p->ammo[p->weaponinfo[w].ammo] >= p->weaponinfo[w].ammopershoot)
+	return BT_CHANGE | (weapondata[w].group << BT_WEAPONSHIFT);
+    } while (w != p->readyweapon);
 
-      // skip plasma-bfg in sharware
-      if (game.mode==gm_doom1s && (w==wp_plasma || w==wp_bfg))
-	continue;
-
-      if (player->weaponowned[w] &&
-	  player->ammo[player->weaponinfo[w].ammo] >= player->weaponinfo[w].ammopershoot)
-        {
-	  /*
-	  if(w==wp_chainsaw)
-	    return (BT_CHANGE | BT_EXTRAWEAPON | (wp_fist<<BT_WEAPONSHIFT));
-	  if(w==wp_supershotgun)
-	    return (BT_CHANGE | BT_EXTRAWEAPON | (wp_shotgun<<BT_WEAPONSHIFT));
-	  */
-	  //return (BT_CHANGE | (w<<BT_WEAPONSHIFT));
-	  return BT_CHANGE | (weapondata[w].group << BT_WEAPONSHIFT);
-        }
-    }
   return 0;
 }
 
@@ -373,7 +331,7 @@ void G_BuildTiccmd(ticcmd_t* cmd, bool primary, int realtics)
       if (consoleplayer2)
 	p = consoleplayer2->pawn;
     }
-  // FIXME no pawn nor player should be needed here. Fix doom network protocol! (BT_EXTRAWEAPON! agh!)
+  // FIXME no pawn nor player should be needed here. Fix doom network protocol!
 
   base = I_BaseTiccmd();             // empty, or external driver
   memcpy(cmd, base, sizeof(*cmd));
@@ -491,13 +449,8 @@ void G_BuildTiccmd(ticcmd_t* cmd, bool primary, int realtics)
   else for (i=gc_weapon1; i<=gc_weapon8; i++)
     if (gamekeydown[gc[i][0]] || gamekeydown[gc[i][1]])
       {
-	cmd->buttons |= BT_CHANGE; //| BT_EXTRAWEAPON; // extra by default
+	cmd->buttons |= BT_CHANGE;
 	cmd->buttons |= (i-gc_weapon1)<<BT_WEAPONSHIFT; // 8 keys = three bits
-	// already have extraweapon in hand switch to the normal one
-	/*
-	if (p->readyweapon == extraweapons[i-gc_weapon1])
-	  cmd->buttons &= ~BT_EXTRAWEAPON;
-	*/
 	break;
       }
 

@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.23  2003/12/13 23:51:03  smite-meister
+// Hexen update
+//
 // Revision 1.22  2003/12/03 10:49:49  smite-meister
 // Save/load bugfix, text strings updated
 //
@@ -89,8 +92,6 @@
 
 int green_armor_class, blue_armor_class, soul_health, mega_health;
 
-#define NUMCLASSES 5
-
 static int ArmorIncrement[NUMCLASSES][NUMARMOR] =
 {
   { 0, 0, 0, 0, 0 },
@@ -164,6 +165,7 @@ Pawn::Pawn()
   maxhealth = 0;
   speed = 0;
   pinfo = NULL;
+  attackphase = 0;
   attacker = NULL;
 }
 
@@ -173,6 +175,7 @@ PlayerPawn::PlayerPawn()
   player = NULL;
   weaponinfo = NULL;
   maxammo = NULL;
+  pclass = 0;
 }
 
 // Pawn methods
@@ -729,7 +732,7 @@ void PlayerPawn::ZMovement()
 	  // after hitting the ground (hard),
 	  // and utter appropriate sound.
 	  player->deltaviewheight = oldpz>>3;
-	  S_StartSound(this, sfx_oof);
+	  S_StartSound(this, sfx_ouch); // sfx_oof...
 	}
     }
 
@@ -801,9 +804,6 @@ void PlayerPawn::Reset()
 bool P_UseArtifact(PlayerPawn *player, artitype_t arti);
 
 //----------------------------------------------------------------------------
-// was partly P_PlayerNextArtifact
-// was partly P_PlayerRemoveArtifact
-// was P_PlayerUseArtifact
 
 void PlayerPawn::UseArtifact(artitype_t arti)
 {
@@ -2002,7 +2002,7 @@ bool PlayerPawn::GiveArtifact(artitype_t arti, DActor *from)
     {
       j = TXT_ARTIINVULNERABILITY - 1 + arti;
       if (from->type == MT_XARTIINVULNERABILITY)
-	j = TXT_XARTIINVULNERABILITY;
+	j = TXT_XARTIINVULNERABILITY; // TODO make it a different item
       player->SetMessage(text[TXT_ARTIINVULNERABILITY - 1 + arti], false);
       SetDormantArtifact(from);
       p_sound = Actor::s_artipickup;

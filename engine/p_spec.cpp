@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2003/12/13 23:51:03  smite-meister
+// Hexen update
+//
 // Revision 1.18  2003/12/06 23:57:47  smite-meister
 // save-related bugfixes
 //
@@ -351,41 +354,45 @@ void P_SetupLevelFlatAnims()
 }
 
 
+//========================================================
+//  Sector effects: base class for most moving geometry
+//========================================================
+
+IMPLEMENT_CLASS(sectoreffect_t, "Sector effect");
+sectoreffect_t::sectoreffect_t() {}
+
+sectoreffect_t::sectoreffect_t(sector_t *s)
+{
+  sector = s;
+}
+
 //
 // UTILITIES
 //
 
-
-//
-// was getSide
 // Will return a side_t*
 //  given the number of the current sector,
 //  the line number, and the side (0/1) that you want.
-//
+
 side_t *Map::getSide(int sec, int line, int side)
 {
   return &sides[ (sectors[sec].lines[line])->sidenum[side] ];
 }
 
 
-//
-// was getSector
 // Will return a sector_t*
 //  given the number of the current sector,
 //  the line number and the side (0/1) that you want.
-//
+
 sector_t *Map::getSector(int sec, int line, int side)
 {
   return sides[ (sectors[sec].lines[line])->sidenum[side] ].sector;
 }
 
 
-//
-// was twoSided
 // Given the sector number and the line number,
 //  it will tell you whether the line is two-sided or not.
-//
-//SoM: 3/7/2000: Use the boom method
+
 int Map::twoSided(int sec, int line)
 {
   return boomsupport ?
@@ -395,12 +402,9 @@ int Map::twoSided(int sec, int line)
 }
 
 
-//
-// getNextSector()
 // Return sector_t * of sector next to current.
 // NULL if not two-sided line
-//
-//SoM: 3/7/2000: Use boom method.
+
 sector_t *getNextSector(line_t *line, sector_t *sec)
 {
   if (!boomsupport)
@@ -420,12 +424,8 @@ sector_t *getNextSector(line_t *line, sector_t *sec)
 }
 
 
-
-
-//
-// P_FindLowestFloorSurrounding()
 // FIND LOWEST FLOOR HEIGHT IN SURROUNDING SECTORS
-//
+
 fixed_t P_FindLowestFloorSurrounding(sector_t* sec)
 {
   int                 i;
@@ -448,12 +448,8 @@ fixed_t P_FindLowestFloorSurrounding(sector_t* sec)
 }
 
 
-
-
-//
-// P_FindHighestFloorSurrounding()
 // FIND HIGHEST FLOOR HEIGHT IN SURROUNDING SECTORS
-//
+
 fixed_t P_FindHighestFloorSurrounding(sector_t *sec)
 {
   int                 i;
@@ -481,13 +477,9 @@ fixed_t P_FindHighestFloorSurrounding(sector_t *sec)
 }
 
 
-
-//
-// P_FindNextHighestFloor
 // FIND NEXT HIGHEST FLOOR IN SURROUNDING SECTORS
-// SoM: 3/7/2000: Use Lee Killough's version insted.
 // Rewritten by Lee Killough to avoid fixed array and to be faster
-//
+
 fixed_t P_FindNextHighestFloor(sector_t *sec, int currentheight)
 {
   sector_t *other;
@@ -513,14 +505,11 @@ fixed_t P_FindNextHighestFloor(sector_t *sec, int currentheight)
 // SoM: Start new Boom functions
 ////////////////////////////////////////////////////
 
-// P_FindNextLowestFloor()
-//
 // Passed a sector and a floor height, returns the fixed point value
 // of the largest floor height in a surrounding sector smaller than
 // the floor height passed. If no such height exists the floorheight
 // passed is returned.
-//
-//
+
 fixed_t P_FindNextLowestFloor(sector_t *sec, int currentheight)
 {
   sector_t *other;
@@ -542,15 +531,11 @@ fixed_t P_FindNextLowestFloor(sector_t *sec, int currentheight)
 }
 
 
-//
-// P_FindNextLowestCeiling()
-//
 // Passed a sector and a ceiling height, returns the fixed point value
 // of the largest ceiling height in a surrounding sector smaller than
 // the ceiling height passed. If no such height exists the ceiling height
 // passed is returned.
-//
-//
+
 fixed_t P_FindNextLowestCeiling(sector_t *sec, int currentheight)
 {
   sector_t *other;
@@ -572,15 +557,12 @@ fixed_t P_FindNextLowestCeiling(sector_t *sec, int currentheight)
 }
 
 
-//
-// P_FindNextHighestCeiling()
-//
+
 // Passed a sector and a ceiling height, returns the fixed point value
 // of the smallest ceiling height in a surrounding sector larger than
 // the ceiling height passed. If no such height exists the ceiling height
 // passed is returned.
-//
-//
+
 fixed_t P_FindNextHighestCeiling(sector_t *sec, int currentheight)
 {
   sector_t *other;
@@ -1204,13 +1186,13 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
     case 28: // Floor Raise and Crush
       success = EV_DoFloor(tag, line, floor_t::Ceiling, SPEED(args[1]), args[2], -HEIGHT(8));
       break;
-      /*
     case 29: // Build Pillar (no crushing)
-      success = EV_BuildPillar(line, args, false);
+      success = EV_DoElevator(tag, elevator_t::ClosePillar, SPEED(args[1]), HEIGHT(args[2]), 0, 0);
       break;
     case 30: // Open Pillar
-      success = EV_OpenPillar(line, args);
+      success = EV_DoElevator(tag, elevator_t::OpenPillar, SPEED(args[1]), HEIGHT(args[2]), HEIGHT(args[3]), 0);
       break;
+      /*
     case 31: // Stairs Build Down Sync
       success = EV_BuildStairs(line, args, -1, STAIRS_SYNC);
       break;
@@ -1372,16 +1354,16 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
     case 93: // Poly Move Times 8 Override
       success = EV_MovePoly(args, true, true);
       break;
-      /*
-    case 94: // Build Pillar Crush 
-      success = EV_BuildPillar(line, args, true);
+    case 94: // Build Pillar Crush
+      success = EV_DoElevator(tag, elevator_t::ClosePillar, SPEED(args[1]), HEIGHT(args[2]), 0, args[3]);
       break;
     case 95: // Lower Floor and Ceiling
-      success = EV_DoFloorAndCeiling(line, args, false);
+      success = EV_DoElevator(tag, elevator_t::RelHeight, SPEED(args[1]), -HEIGHT(args[2]));
       break;
     case 96: // Raise Floor and Ceiling
-      success = EV_DoFloorAndCeiling(line, args, true);
+      success = EV_DoElevator(tag, elevator_t::RelHeight, SPEED(args[1]), HEIGHT(args[2]));
       break;
+      /*
     case 109: // Force Lightning
       success = true;
       P_ForceLightning();

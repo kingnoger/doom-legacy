@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.16  2003/12/13 23:51:03  smite-meister
+// Hexen update
+//
 // Revision 1.15  2003/11/12 11:07:27  smite-meister
 // Serialization done. Map progression.
 //
@@ -83,6 +86,15 @@ enum cheat_t
   CF_FLYAROUND   = 8,  // Fly using jump key
 };
 
+enum pclass_t
+{
+  PCLASS_NONE = 0,
+  PCLASS_FIGHTER,
+  PCLASS_CLERIC,
+  PCLASS_MAGE,
+  PCLASS_PIG,
+  NUMCLASSES
+};
 
 // TODO testing, this is a hack...
 struct pawn_info_t
@@ -232,6 +244,7 @@ public:
 
   // in p_map.cpp
   void UseLines();
+  bool UsePuzzleItem(int type);
 
   // in p_inter.cpp
   bool GiveAmmo(ammotype_t at, int count);

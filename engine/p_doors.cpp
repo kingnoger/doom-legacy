@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2003/12/13 23:51:03  smite-meister
+// Hexen update
+//
 // Revision 1.11  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -91,9 +94,9 @@ vdoor_t::vdoor_t() {}
 
 // constructor
 vdoor_t::vdoor_t(byte t, sector_t *s, fixed_t sp, int delay)
+  : sectoreffect_t(s)
 {
   type = t;
-  sector = s;
   speed = sp;
   topwait = delay;
   boomlighttag = 0;
@@ -198,7 +201,7 @@ void vdoor_t::Think()
 
     case -1:
       // DOWN
-      res = mp->T_MovePlane(sector, speed, sector->floorheight, false, 1, -1);
+      res = mp->T_MovePlane(sector, -speed, sector->floorheight, false, 1);
       if (res == res_pastdest)
         {
 	  switch (type & TMASK)
@@ -237,7 +240,7 @@ void vdoor_t::Think()
 
     case 1:
       // UP
-      res = mp->T_MovePlane(sector, speed, topheight, false, 1, 1);
+      res = mp->T_MovePlane(sector, speed, topheight, false, 1);
 
       if (res == res_pastdest)
         {

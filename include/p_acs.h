@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/12/13 23:51:03  smite-meister
+// Hexen update
+//
 // Revision 1.3  2003/11/30 00:09:48  smite-meister
 // bugfixes
 //
@@ -65,7 +68,6 @@ public:
   acs_t(int num, int infoindex, int *ip);
 
   virtual void Think();
-  // TODO new and delete for hub/global scripts (not PU_LEVSPEC)
 };
 
 

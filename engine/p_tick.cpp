@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/12/13 23:51:03  smite-meister
+// Hexen update
+//
 // Revision 1.9  2003/12/07 00:16:34  smite-meister
 // hah.
 //
@@ -72,6 +75,8 @@ void Map::InitThinkers()
 // Adds a new Thinker at the end of the list.
 void Map::AddThinker(Thinker *t)
 {
+  if (!t)
+    return;
   t->mp = this;
   thinkercap.prev->next = t;
   t->next = &thinkercap;

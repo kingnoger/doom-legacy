@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2003/12/13 23:51:03  smite-meister
+// Hexen update
+//
 // Revision 1.14  2003/12/03 10:49:49  smite-meister
 // Save/load bugfix, text strings updated
 //
@@ -176,13 +179,12 @@ void FastMonster_OnChange()
 	states[i].tics >>= 1;
       fast=true;
     }
-  else
-    if(!cv_fastmonsters.value && fast)
-      {
-        for (i=S_SARG_RUN1 ; i<=S_SARG_PAIN2 ; i++)
-	  states[i].tics <<= 1;
-        fast=false;
-      }
+  else if(!cv_fastmonsters.value && fast)
+    {
+      for (i=S_SARG_RUN1 ; i<=S_SARG_PAIN2 ; i++)
+	states[i].tics <<= 1;
+      fast=false;
+    }
 
   for(i = 0; MonsterMissileInfo[i].type != -1; i++)
     {
@@ -193,12 +195,12 @@ void FastMonster_OnChange()
 
 
 
-bool P_CheckSpecialDeath(DActor *m, Actor *inflictor)
+bool P_CheckSpecialDeath(DActor *m, int dtype)
 {
   bool ret = false;
       
   // Check for flame death
-  if (inflictor->flags2 & MF2_FIREDAMAGE)
+  if (dtype & dt_heat)
     {
       ret = true;
       switch (m->type)
@@ -224,15 +226,15 @@ bool P_CheckSpecialDeath(DActor *m, Actor *inflictor)
 	  ret = false;
 	  break;
 	}
+
+      if (ret)
+	return true;
     }
 
-  if (ret)
-    return true;
-
-  if (inflictor->flags2 & MF2_ICEDAMAGE)
+  if (dtype & dt_cold)
     {
       ret = true;
-      //flags |= MF_ICECORPSE;
+      //flags |= MF_ICECORPSE; // TODO
       switch (m->type)
 	{
 	case MT_BISHOP:
@@ -1521,7 +1523,7 @@ void A_VileTarget(DActor *actor)
 
   DActor *fire = actor->mp->SpawnDActor(actor->target->x,
     actor->target->x, actor->target->z, MT_FIRE);
-  actor->special1 = int(fire); // tricky.
+  actor->owner = fire; // TODO slight misuse of owner!
   fire->owner = actor;
   fire->target = actor->target;
   A_Fire(fire);
@@ -1542,7 +1544,7 @@ void A_VileAttack(DActor *actor)
 
   A_FaceTarget(actor);
 
-  if (!actor->mp->CheckSight(actor, actor->target) )
+  if (!actor->mp->CheckSight(actor, actor->target))
     return;
 
   S_StartSound (actor, sfx_barexp);
@@ -1551,7 +1553,7 @@ void A_VileAttack(DActor *actor)
 
   an = actor->angle >> ANGLETOFINESHIFT;
 
-  Actor *fire = (Actor *)actor->special1;
+  Actor *fire = actor->owner; // TODO misuse of owner...
 
   if (!fire)
     return;
@@ -1931,24 +1933,6 @@ void A_BabyMetal(DActor *mo)
 {
   S_StartSound (mo, sfx_bspwlk);
   A_Chase (mo);
-}
-
-void A_OpenShotgun2(PlayerPawn *p, pspdef_t *psp)
-{
-  S_StartAttackSound(p, sfx_dbopn);
-}
-
-void A_LoadShotgun2(PlayerPawn *p, pspdef_t *psp)
-{
-  S_StartAttackSound(p, sfx_dbload);
-}
-
-void A_ReFire(PlayerPawn *p, pspdef_t *psp);
-
-void A_CloseShotgun2(PlayerPawn *p, pspdef_t *psp)
-{
-  S_StartAttackSound(p, sfx_dbcls);
-  A_ReFire(p, psp);
 }
 
 void A_BrainAwake(DActor *mo)

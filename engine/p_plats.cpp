@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/12/13 23:51:03  smite-meister
+// Hexen update
+//
 // Revision 1.9  2003/11/30 00:09:45  smite-meister
 // bugfixes
 //
@@ -67,9 +70,9 @@ plat_t::plat_t() {}
 
 // constructor
 plat_t::plat_t(int ty, sector_t *sec, int t, fixed_t sp, int wt, fixed_t height)
+  : sectoreffect_t(sec)
 {
   type = ty;
-  sector = sec;
   tag = t;
   speed = sp;
   wait = wt;
@@ -181,7 +184,7 @@ void plat_t::Think()
   switch (status)
     {
     case up:
-      res = mp->T_MovePlane(sector, speed, high, crush, 0, 1);
+      res = mp->T_MovePlane(sector, speed, high, crush, 0);
 
       // TODO sequences...
       /*
@@ -227,7 +230,7 @@ void plat_t::Think()
       break;
 
     case down:
-      res = mp->T_MovePlane(sector,speed,low,false,0,-1);
+      res = mp->T_MovePlane(sector,-speed,low,false,0);
 
       if (res == res_pastdest)
         {

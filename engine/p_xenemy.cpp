@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/12/13 23:51:03  smite-meister
+// Hexen update
+//
 // Revision 1.9  2003/12/09 01:02:01  smite-meister
 // Hexen mapchange works, keycodes fixed
 //
@@ -864,7 +867,7 @@ void A_SerpentChase(DActor *actor)
       actor->threshold--;
     }
 
-  if (game.skill == sk_nightmare)
+  if (cv_fastmonsters.value)
     { // Monsters move faster in nightmare mode
       actor->tics -= actor->tics/2;
       if(actor->tics < 3)
@@ -903,10 +906,10 @@ void A_SerpentChase(DActor *actor)
   //
   // don't attack twice in a row
   //
-  if(actor->eflags & MFE_JUSTATTACKED)
+  if (actor->eflags & MFE_JUSTATTACKED)
     {
       actor->eflags &= ~MFE_JUSTATTACKED;
-      if (game.skill != sk_nightmare)
+      if (!cv_fastmonsters.value)
 	actor->P_NewChaseDir();
       return;
     }
@@ -1065,7 +1068,7 @@ void A_SerpentWalk(DActor *actor)
       actor->threshold--;
     }
 
-  if(game.skill == sk_nightmare)
+  if (cv_fastmonsters.value)
     { // Monsters move faster in nightmare mode
       actor->tics -= actor->tics/2;
       if(actor->tics < 3)
@@ -1104,10 +1107,10 @@ void A_SerpentWalk(DActor *actor)
   //
   // don't attack twice in a row
   //
-  if(actor->eflags & MFE_JUSTATTACKED)
+  if (actor->eflags & MFE_JUSTATTACKED)
     {
       actor->eflags &= ~MFE_JUSTATTACKED;
-      if (game.skill != sk_nightmare)
+      if (!cv_fastmonsters.value)
 	actor->P_NewChaseDir();
       return;
     }
@@ -1645,15 +1648,16 @@ void A_BishopPainBlur(DActor *actor)
 }
 
 //============================================================================
-//
-// DragonSeek
+// Dragon variables
+//   owner    TODO misuse. Used to denote the next pathnode.
+//   target   normal usage
 //
 //============================================================================
 
 static void DragonSeek(DActor *actor, angle_t thresh, angle_t turnMax)
 {
   int i;
-  Actor *t = (Actor *)actor->special1; // FIXME
+  Actor *t = actor->owner;
   if (!t)
     return;
 
@@ -1740,7 +1744,7 @@ static void DragonSeek(DActor *actor, angle_t thresh, angle_t turnMax)
 	  if (bestArg != -1)
 	    {
 	      search = -1;
-	      actor->special1 = (int)actor->mp->FindFromTIDmap(t->args[bestArg], &search);
+	      actor->owner = actor->mp->FindFromTIDmap(t->args[bestArg], &search);
 	    }
 	}
       else
@@ -1750,7 +1754,7 @@ static void DragonSeek(DActor *actor, angle_t thresh, angle_t turnMax)
 	      i = (P_Random()>>2)%5;
 	    } while(!t->args[i]);
 	  search = -1;
-	  actor->special1 = (int)actor->mp->FindFromTIDmap(t->args[i], &search);
+	  actor->owner = actor->mp->FindFromTIDmap(t->args[i], &search);
 	}
     }
 }
@@ -1763,16 +1767,17 @@ static void DragonSeek(DActor *actor, angle_t thresh, angle_t turnMax)
 
 void A_DragonInitFlight(DActor *actor)
 {
+  // sets guidance to first tid identical to dragon's, removes dragon from tidmap.
   int search = -1;
   do
     { // find the first tid identical to the dragon's tid
-      actor->special1 = (int)actor->mp->FindFromTIDmap(actor->tid, &search);
+      actor->owner = actor->mp->FindFromTIDmap(actor->tid, &search);
       if (search == -1)
 	{
 	  actor->SetState(actor->info->spawnstate);
 	  return;
 	}
-    } while(actor->special1 == (int)actor);
+    } while (actor->owner == actor);
   actor->mp->RemoveFromTIDmap(actor);
 }
 
@@ -1853,7 +1858,7 @@ void A_DragonFX2(DActor *actor)
       if (mo)
 	{
 	  mo->tics = delay + (P_Random()&3)*i*2;
-	  mo->owner = actor->owner;
+	  mo->owner = actor; // was actor->owner;
 	  mo->target = actor->target;
 	}
     } 
@@ -1868,7 +1873,7 @@ void A_DragonFX2(DActor *actor)
 void A_DragonPain(DActor *actor)
 {
   A_Pain(actor);
-  if (!actor->special1) //!!! FIXME dragon using pointers
+  if (!actor->owner)
     { // no destination spot yet
       actor->SetState(S_DRAGON_INIT);
     }
@@ -3399,7 +3404,7 @@ void A_FastChase(DActor *actor)
       actor->threshold--;
     }
 
-  if(game.skill == sk_nightmare)
+  if (cv_fastmonsters.value)
     { // Monsters move faster in nightmare mode
       actor->tics -= actor->tics/2;
       if(actor->tics < 3)
@@ -3438,10 +3443,10 @@ void A_FastChase(DActor *actor)
   //
   // don't attack twice in a row
   //
-  if(actor->eflags & MFE_JUSTATTACKED)
+  if (actor->eflags & MFE_JUSTATTACKED)
     {
       actor->eflags &= ~MFE_JUSTATTACKED;
-      if (game.skill != sk_nightmare)
+      if (!cv_fastmonsters.value)
 	actor->P_NewChaseDir();
       return;
     }
@@ -3481,7 +3486,7 @@ void A_FastChase(DActor *actor)
   //
   if (actor->info->missilestate)
     {
-      if (game.skill < sk_nightmare && actor->movecount)
+      if (!cv_fastmonsters.value && actor->movecount)
 	goto nomissile;
       if (!actor->CheckMissileRange())
 	goto nomissile;

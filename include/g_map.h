@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.24  2003/12/13 23:51:03  smite-meister
+// Hexen update
+//
 // Revision 1.23  2003/12/06 23:57:47  smite-meister
 // save-related bugfixes
 //
@@ -426,8 +429,8 @@ public:
   int EV_DoChange(line_t *line, int changetype);
   int EV_BuildStairs(int tag, int type, fixed_t speed, fixed_t stepsize, int crush);
   int EV_DoDonut(int tag);
-  int EV_DoElevator(int tag, int type, fixed_t speed, fixed_t height);
-  int T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, int crush, int floorOrCeiling, int direction);
+  int EV_DoElevator(int tag, int type, fixed_t speed, fixed_t height_f, fixed_t height_c = 0, int crush = 0);
+  int T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, int crush, int floorOrCeiling);
 
   // in s_sndseq.cpp
   void S_Read_SNDSEQ(int lump);

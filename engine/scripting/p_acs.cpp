@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2003/12/13 23:51:03  smite-meister
+// Hexen update
+//
 // Revision 1.11  2003/11/30 00:09:47  smite-meister
 // bugfixes
 //
@@ -365,7 +368,7 @@ void Map::LoadACScripts(int lump)
   for (i = 0, info = ACSInfo; i < ACScriptCount; i++, info++)
     {
       info->number = *buffer++;
-      info->address = (int *)((byte *)ActionCodeBase+*buffer++);
+      info->address = (int *)(ActionCodeBase+*buffer++);
       info->argCount = *buffer++;
       if (info->number >= OPEN_SCRIPTS_BASE)
 	{ // Auto-activate

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/12/13 23:51:03  smite-meister
+// Hexen update
+//
 // Revision 1.6  2003/11/13 00:33:02  smite-meister
 // Static initialization order fiasco fixed
 //
@@ -52,8 +55,8 @@ TypeInfo::TypeInfo(const char *n, thinker_factory_t f)
 {
   static map<unsigned, TypeInfo*>& id_ref = TypeInfo::id_map();
 
-  unsigned id = id_ref.size() + 1; // get the next available id (zero is reserved)
-  id_ref[id] = this;  // store the mapping
+  type_id = id_ref.size() + 1; // get the next available id (zero is reserved for NULL)
+  id_ref[type_id] = this;  // store the mapping
   name = n;
   factory = f;
 }
@@ -118,7 +121,9 @@ Thinker *Thinker::Unserialize(LArchive &a)
   a << type;
   TypeInfo *t = TypeInfo::Find(type);
   if (!t)
-    return NULL; // TODO: How to handle errors? using exceptions?
+    {
+      return NULL; // TODO: How to handle errors? using exceptions?
+    }
   p = t->factory();
   p->mp = a.active_map; // a small kludge, some Marshal functions need to have a valid Map*
   p->Marshal(a);

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/12/13 23:51:03  smite-meister
+// Hexen update
+//
 // Revision 1.5  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -55,8 +58,8 @@ IMPLEMENT_CLASS(lightfx_t, "Light FX");
 lightfx_t::lightfx_t() {}
 
 lightfx_t::lightfx_t(sector_t *s, lightfx_e t, short maxl, short minl, short maxt, short mint)
+  : sectoreffect_t(s)
 {
-  sec = s;
   type = t;
   count = 0;
   maxlight = maxl;
@@ -85,23 +88,23 @@ void lightfx_t::Think()
 	// formerly "lightlevel", the only effect that ends by itself
 	bool finish = false;
 	currentlight += rate;
-	sec->lightlevel = currentlight >> 6;
+	sector->lightlevel = currentlight >> 6;
 
 	if (rate >= 0)
 	  {
-	    if (sec->lightlevel >= maxlight)
+	    if (sector->lightlevel >= maxlight)
 	      finish = true;
 	  }
 	else
 	  {
-	    if (sec->lightlevel <= maxlight)
+	    if (sector->lightlevel <= maxlight)
 	      finish = true;
 	  }
 
 	if (finish)
 	  {
-	    sec->lightlevel = maxlight;  // set to dest lightlevel
-	    sec->lightingdata = NULL;    // clear lightingdata
+	    sector->lightlevel = maxlight;  // set to dest lightlevel
+	    sector->lightingdata = NULL;    // clear lightingdata
 	    mp->RemoveThinker(this);     // remove thinker       
 	  }
       }
@@ -109,50 +112,50 @@ void lightfx_t::Think()
 
     case Glow:
       currentlight += rate;
-      sec->lightlevel = currentlight >> 6;
+      sector->lightlevel = currentlight >> 6;
       if (rate > 0)
 	{
-	  if (sec->lightlevel > maxlight)
+	  if (sector->lightlevel > maxlight)
 	    {
-	      sec->lightlevel = 2*maxlight - sec->lightlevel;
-	      currentlight = sec->lightlevel << 6;
+	      sector->lightlevel = 2*maxlight - sector->lightlevel;
+	      currentlight = sector->lightlevel << 6;
 	      rate = -rate; // reverse direction
 	    }
 	}
       else
 	{
-	  if (sec->lightlevel < minlight)
+	  if (sector->lightlevel < minlight)
 	    {
-	      sec->lightlevel = 2*minlight - sec->lightlevel;
-	      currentlight = sec->lightlevel << 6;
+	      sector->lightlevel = 2*minlight - sector->lightlevel;
+	      currentlight = sector->lightlevel << 6;
 	      rate = -rate; // reverse direction
 	    }
 	}
       break;
 
     case Strobe:
-      if (sec->lightlevel == maxlight)
+      if (sector->lightlevel == maxlight)
 	{
-	  sec->lightlevel = minlight;
+	  sector->lightlevel = minlight;
 	  count = mintime;
 	}
       else
 	{
-	  sec->lightlevel = maxlight;
+	  sector->lightlevel = maxlight;
 	  count = maxtime;
 	}
       break;
 
     case Flicker:
       // formerly "lightflash"
-      if (sec->lightlevel == maxlight)
+      if (sector->lightlevel == maxlight)
 	{
-	  sec->lightlevel = minlight;
+	  sector->lightlevel = minlight;
 	  count = (P_Random() % mintime) + 1;
 	}
       else
 	{
-	  sec->lightlevel = maxlight;
+	  sector->lightlevel = maxlight;
 	  count = (P_Random() % maxtime) + 1;
 	}
       break;
@@ -160,9 +163,9 @@ void lightfx_t::Think()
     case FireFlicker:
       i = (P_Random()&3) * 16;
       if (maxlight - i < minlight)
-	sec->lightlevel = minlight;
+	sector->lightlevel = minlight;
       else
-	sec->lightlevel = maxlight - i;
+	sector->lightlevel = maxlight - i;
 
       count = maxtime;
       break;
@@ -409,13 +412,13 @@ phasedlight_t::phasedlight_t() {}
 void phasedlight_t::Think()
 {
   index = (index + 1) & 63;
-  sec->lightlevel = base + PhaseTable[index];
+  sector->lightlevel = base + PhaseTable[index];
 }
 
 
 phasedlight_t::phasedlight_t(sector_t *s, int b, int ind)
+  : sectoreffect_t(s)
 {
-  sec = s;
   s->lightingdata = this;
 
   if (ind == -1)

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/12/13 23:51:03  smite-meister
+// Hexen update
+//
 // Revision 1.9  2003/11/30 00:09:43  smite-meister
 // bugfixes
 //
@@ -47,7 +50,7 @@
 //
 //
 // DESCRIPTION:
-//      Floor animation: raising stairs.
+//   Floor movement: floors, stairbuilders, donuts. Elevators, pillars.
 //
 //-----------------------------------------------------------------------------
 
@@ -64,29 +67,24 @@
 
 #include "g_map.h"
 
+
 // ==========================================================================
 //                              FLOORS
 // ==========================================================================
 
-// was T_MovePlane
 // Move a plane (floor or ceiling) and check for crushing
-//
-//SoM: I had to copy the entire function from Boom because it was causing errors.
-int Map::T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest,
-		     int crush, int floorOrCeiling, int direction)
+int Map::T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, int crush, int floorOrCeiling)
 {
-  bool     flag;
   fixed_t  lastpos;     
-  fixed_t  destheight; //jff 02/04/98 used to keep floors/ceilings
-  // from moving thru each other
+  fixed_t  destheight; //jff 02/04/98 used to keep floors/ceilings from moving thru each other
 
   switch (floorOrCeiling)
     {
-    case 0:
-      // Moving a floor
-      switch(direction)
+    case 0: // Moving a floor
+      lastpos = sector->floorheight;
+      if (speed < 0)
 	{
-        case -1:
+	  // floor going down
           //SoM: 3/20/2000: Make splash when platform floor hits water
           if(boomsupport && sector->heightsec != -1 && sector->altheightsec == 1)
 	    {
@@ -94,36 +92,31 @@ int Map::T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest,
 		 && sector->floorheight > sectors[sector->heightsec].floorheight)
 		S_StartSound(&sector->soundorg, sfx_gloop);
 	    }
-          // Moving a floor down
-          if (sector->floorheight - speed < dest)
+
+          if (sector->floorheight + speed < dest)
 	    {
-	      lastpos = sector->floorheight;
 	      sector->floorheight = dest;
-	      flag = CheckSector(sector,crush);
-	      if (flag == true && sector->numattached)                   
+	      if (CheckSector(sector, crush) && sector->numattached)                   
 		{
-		  sector->floorheight =lastpos;
-		  CheckSector(sector,crush);
+		  sector->floorheight = lastpos;
+		  CheckSector(sector, crush);
 		}
 	      return res_pastdest;
 	    }
           else
 	    {
-	      lastpos = sector->floorheight;
-	      sector->floorheight -= speed;
-	      flag = CheckSector(sector,crush);
-	      if(flag == true && sector->numattached)
+	      sector->floorheight += speed;
+	      if (CheckSector(sector, crush) && sector->numattached)
 		{
 		  sector->floorheight = lastpos;
 		  CheckSector(sector, crush);
 		  return res_crushed;
 		}
 	    }
-          break;
-                                                
-        case 1:
-          // Moving a floor up
-          // keep floor from moving thru ceilings
+	}
+      else
+	{
+	  // floor going up
           //SoM: 3/20/2000: Make splash when platform floor hits water
           if(boomsupport && sector->heightsec != -1 && sector->altheightsec == 1)
 	    {
@@ -131,27 +124,25 @@ int Map::T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest,
 		 && sector->floorheight < sectors[sector->heightsec].floorheight)
 		S_StartSound(&sector->soundorg, sfx_gloop);
 	    }
-          destheight = (!boomsupport || dest<sector->ceilingheight)?
+          // keep floor from moving thru ceilings
+          destheight = (!boomsupport || dest < sector->ceilingheight)?
 	    dest : sector->ceilingheight;
+
           if (sector->floorheight + speed > destheight)
 	    {
-	      lastpos = sector->floorheight;
 	      sector->floorheight = destheight;
-	      flag = CheckSector(sector,crush);
-	      if (flag == true)
+	      if (CheckSector(sector, crush))
 		{
 		  sector->floorheight = lastpos;
-		  CheckSector(sector,crush);
+		  CheckSector(sector, crush);
 		}
 	      return res_pastdest;
 	    }
           else
 	    {
 	      // crushing is possible
-	      lastpos = sector->floorheight;
 	      sector->floorheight += speed;
-	      flag = CheckSector(sector,crush);
-	      if (flag == true)
+	      if (CheckSector(sector, crush))
 		{
 		  if (!boomsupport)
 		    {
@@ -159,19 +150,18 @@ int Map::T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest,
 			return res_crushed;
 		    }
 		  sector->floorheight = lastpos;
-		  CheckSector(sector,crush);
+		  CheckSector(sector, crush);
 		  return res_crushed;
 		}
 	    }
-          break;
 	}
       break;
                                                                         
-    case 1:
-      // moving a ceiling
-      switch(direction)
+    case 1: // moving a ceiling
+      lastpos = sector->ceilingheight;
+      if (speed < 0)
 	{
-        case -1:
+	  // ceiling going down
           if(boomsupport && sector->heightsec != -1 && sector->altheightsec == 1)
 	    {
 	      if((sector->ceilingheight - speed) < sectors[sector->heightsec].floorheight
@@ -182,72 +172,64 @@ int Map::T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest,
           // keep ceiling from moving thru floors
           destheight = (!boomsupport || dest>sector->floorheight)?
 	    dest : sector->floorheight;
-          if (sector->ceilingheight - speed < destheight)
-	    {
-	      lastpos = sector->ceilingheight;
-	      sector->ceilingheight = destheight;
-	      flag = CheckSector(sector,crush);
 
-	      if (flag == true)
+	  lastpos = sector->ceilingheight;
+          if (sector->ceilingheight + speed < destheight)
+	    {
+	      sector->ceilingheight = destheight;
+	      if (CheckSector(sector, crush))
 		{
 		  sector->ceilingheight = lastpos;
-		  CheckSector(sector,crush);
+		  CheckSector(sector, crush);
 		}
 	      return res_pastdest;
 	    }
           else
 	    {
 	      // crushing is possible
-	      lastpos = sector->ceilingheight;
-	      sector->ceilingheight -= speed;
-	      flag = CheckSector(sector,crush);
-
-	      if (flag == true)
+	      sector->ceilingheight += speed;
+	      if (CheckSector(sector, crush))
 		{
 		  if (crush == true)
 		    return res_crushed;
 		  sector->ceilingheight = lastpos;
-		  CheckSector(sector,crush);
+		  CheckSector(sector, crush);
 		  return res_crushed;
 		}
 	    }
-          break;
-                                                
-        case 1:
+	}
+      else
+	{
+          // ceiling going up
           if(boomsupport && sector->heightsec != -1 && sector->altheightsec == 1)
 	    {
 	      if((sector->ceilingheight + speed) > sectors[sector->heightsec].floorheight
 		 && sector->ceilingheight < sectors[sector->heightsec].floorheight)
 		S_StartSound(&sector->soundorg, sfx_gloop);
 	    }
-          // moving a ceiling up
           if (sector->ceilingheight + speed > dest)
 	    {
-	      lastpos = sector->ceilingheight;
 	      sector->ceilingheight = dest;
-	      flag = CheckSector(sector,crush);
-	      if (flag == true && sector->numattached)
+	      if (CheckSector(sector, crush) && sector->numattached)
 		{
 		  sector->ceilingheight = lastpos;
-		  CheckSector(sector,crush);
+		  CheckSector(sector, crush);
 		}
 	      return res_pastdest;
 	    }
           else
 	    {
-	      lastpos = sector->ceilingheight;
 	      sector->ceilingheight += speed;
-	      flag = CheckSector(sector,crush);
-	      if (flag == true && sector->numattached)
+	      if (CheckSector(sector, crush) && sector->numattached)
 		{
 		  sector->ceilingheight = lastpos;
-		  CheckSector(sector,crush);
+		  CheckSector(sector, crush);
 		  return res_crushed;
 		}
 	    }
-          break;
 	}
       break;
+
     }
   return res_ok;
 }
@@ -260,48 +242,48 @@ floor_t::floor_t() {}
 
 // constructor
 floor_t::floor_t(int ty, sector_t *sec, fixed_t sp, int cru, fixed_t height)
+  : sectoreffect_t(sec)
 {
   type = ty;
-  sector = sec;
   crush = cru;
-  speed = sp;
+  speed = sp; // default: up
   sec->floordata = this;
 
   switch (ty & TMASK)
     {
     case RelHeight:
       destheight = sec->floorheight + height;
-      direction = (height > 0) ? 1 : -1;
+      if (height < 0)
+	speed = -speed;
       break;
 
     case AbsHeight:
       destheight = height;
-      direction = (sec->floorheight <= height) ? 1 : -1;
+      if (sec->floorheight > height)
+	speed = -speed;
       break;
 
     case Ceiling:
       destheight = sec->ceilingheight + height;
-      direction = 1;
       break;
 
     case LnF:
       destheight = P_FindLowestFloorSurrounding(sec) + height;
-      direction = -1;
+      speed = -speed;
       break;
 
     case UpNnF:
       destheight = P_FindNextHighestFloor(sec, sec->floorheight) + height;
-      direction = 1;
       break;
 
     case DownNnF:
       destheight = P_FindNextLowestFloor(sec, sec->floorheight) + height;
-      direction = -1;
+      speed = -speed;
       break;
 
     case HnF:
       destheight = P_FindHighestFloorSurrounding(sec) + height;
-      direction = -1; // TODO up/down?
+      speed = -speed; // TODO up/down?
       break;
 
     case LnC:
@@ -309,14 +291,13 @@ floor_t::floor_t(int ty, sector_t *sec, fixed_t sp, int cru, fixed_t height)
       if (destheight > sec->ceilingheight)
 	destheight = sec->ceilingheight;
       destheight += height;
-      direction = 1; // TODO up/down?
+      // TODO up/down?
       break;
 
     case SLT:
       destheight = sector->floorheight + mp->FindShortestLowerAround(sec) + height;
       if (boomsupport && destheight > (32000 << FRACBITS))
 	destheight = 32000 << FRACBITS; //jff 3/13/98 do not allow height overflow
-      direction = 1;
       break;
 
     default:
@@ -328,12 +309,11 @@ floor_t::floor_t(int ty, sector_t *sec, fixed_t sp, int cru, fixed_t height)
 }
 
 
-// was T_MoveFloor
 // MOVE A FLOOR TO IT'S DESTINATION (UP OR DOWN)
-//
+
 void floor_t::Think()
 {
-  int res = mp->T_MovePlane(sector, speed, destheight, crush, 0, direction);
+  int res = mp->T_MovePlane(sector, speed, destheight, crush, 0);
 
   if (!(mp->maptic % (8*NEWTICRATERATIO)))
     S_StartSound(&sector->soundorg, ceiling_t::ceilmovesound);
@@ -559,16 +539,12 @@ int Map::EV_BuildStairs(int tag, int type, fixed_t speed, fixed_t stepsize, int 
 }
 
 
-//SoM: 3/6/2000: boom donut function
-//
-// was EV_DoDonut()
-//
 // Handle donut function: lower pillar, raise surrounding pool, both to height,
 // texture and type of the sector surrounding the pool.
 //
 // Passed the linedef that triggered the donut
 // Returns whether a thinker was created
-//
+
 int Map::EV_DoDonut(int tag)
 {
   int       i;
@@ -626,102 +602,159 @@ int Map::EV_DoDonut(int tag)
 }
 
 
-//==============================
+//=========================================================================
+// Boom Elevators, Hexen Pillars
+//=========================================================================
 
 IMPLEMENT_CLASS(elevator_t, "Elevator");
 elevator_t::elevator_t() {}
 
 // constructor
-elevator_t::elevator_t(int ty, sector_t *sec, fixed_t sp, fixed_t height)
+elevator_t::elevator_t(int ty, sector_t *sec, fixed_t sp, fixed_t height_f, fixed_t height_c, int cr)
+  : sectoreffect_t(sec)
 {
   type = ty;
-  sector = sec;
-  speed = sp;
+  crush = cr;
   sec->floordata = this;
   sec->ceilingdata = this;
 
   // set up the fields according to the type of elevator action
   switch (ty)
     {
+      // (only OpenPillar uses height_c)
+      // relative displacement
+    case RelHeight:
+      if (height_f < 0)
+	sp = -sp;
+      floordest = sec->floorheight + height_f;
+      ceilingdest = sec->ceilingheight + height_f;
+      break;
+
       // elevator down to next floor
     case Down:
-      direction = -1;
-      floordestheight =
-	P_FindNextLowestFloor(sec,sec->floorheight);
-      ceilingdestheight =
-	floordestheight + sec->ceilingheight - sec->floorheight;
+      sp = -sp;
+      floordest = P_FindNextLowestFloor(sec, sec->floorheight) + height_f;
+      ceilingdest = floordest + sec->ceilingheight - sec->floorheight;
       break;
 
       // elevator up to next floor
     case Up:
-      direction = 1;
-      floordestheight =
-	P_FindNextHighestFloor(sec,sec->floorheight);
-      ceilingdestheight =
-	floordestheight + sec->ceilingheight - sec->floorheight;
+      floordest = P_FindNextHighestFloor(sec, sec->floorheight) + height_f;
+      ceilingdest = floordest + sec->ceilingheight - sec->floorheight;
       break;
 
       // elevator to floor height of activating switch's front sector
     case Current:
-      floordestheight = height;
-      ceilingdestheight =
-	floordestheight + sec->ceilingheight - sec->floorheight;
-      direction =
-	floordestheight > sec->floorheight ?  1 : -1;
+      floordest = height_f;
+      ceilingdest = floordest + sec->ceilingheight - sec->floorheight;
+      if (floordest < sec->floorheight)
+	sp = -sp;
       break;
 
+    case ClosePillar:
+      if (!height_f)
+	floordest = sec->floorheight + (sec->ceilingheight - sec->floorheight) / 2;
+      else
+	floordest = sec->floorheight + height_f;
+      ceilingdest = floordest;
+
+      if (floordest - sec->floorheight >= sec->ceilingheight - ceilingdest)
+	{
+	  floorspeed = sp;
+	  ceilingspeed = -FixedMul(sec->ceilingheight - ceilingdest, FixedDiv(sp, floordest - sec->floorheight));
+	}
+      else
+	{
+	  floorspeed = FixedMul(floordest - sec->floorheight, FixedDiv(sp, sec->ceilingheight - ceilingdest));
+	  ceilingspeed = -sp;
+	}
+
+      // SN_StartSequence((mobj_t *)&sec->soundorg, SEQ_PLATFORM+sec->seqType); // TODO
+      return;
+
+    case OpenPillar:
+      if (!height_f)
+	floordest = P_FindLowestFloorSurrounding(sec);
+      else
+	floordest = sec->floorheight - height_f;
+
+      if (!height_c)
+	ceilingdest = P_FindHighestCeilingSurrounding(sec);
+      else
+	ceilingdest = sec->ceilingheight + height_c;
+
+      if (sec->floorheight - floordest >= ceilingdest - sec->ceilingheight)
+	{
+	  floorspeed = -sp;
+	  ceilingspeed = FixedMul(sec->ceilingheight - ceilingdest, FixedDiv(sp, floordest - sec->floorheight));
+	}
+      else
+	{
+	  floorspeed = -FixedMul(floordest - sec->floorheight, FixedDiv(sp, sec->ceilingheight - ceilingdest));
+	  ceilingspeed = sp;
+	}
+
+      //SN_StartSequence((mobj_t *)&sector->soundorg, SEQ_PLATFORM+sec->seqType);
+      return;
+
     default:
+      I_Error("Unknown elevator type %d!\n", ty);
       break;
     }
+
+  floorspeed = ceilingspeed = sp;
 }
 
 
 // Move an elevator to it's destination (up or down)
-// Called once per tick for each moving floor.
 //
 // SoM: 3/6/2000: The function moves the plane differently based on direction, so if it's 
 // traveling really fast, the floor and ceiling won't hit each other and stop the lift.
 void elevator_t::Think()
 {
-  int res;
+  int res1, res2;
+  res1 = res2 = res_crushed;
 
-  if (direction < 0) // moving down
+  if (ceilingspeed < 0)
     {
-      res = mp->T_MovePlane(sector, speed, ceilingdestheight, 0, 1, direction); // move floor
-      if (res == res_ok || res == res_pastdest)
-	mp->T_MovePlane(sector, speed, floordestheight, 0, 0, direction); // move ceiling
+      // down/closing: first move floor, then ceiling
+      res1 = mp->T_MovePlane(sector, floorspeed, floordest, crush, 0);
+      if (res1 == res_ok || res1 == res_pastdest)
+	res2 = mp->T_MovePlane(sector, ceilingspeed, ceilingdest, crush, 1);
     }
-  else // up
+  else
     {
-      res = mp->T_MovePlane(sector,speed,floordestheight,0,0,direction); // move ceiling
-      if (res == res_ok || res == res_pastdest)
-	mp->T_MovePlane(sector, speed, ceilingdestheight, 0, 1, direction); // move floor
+      // up/opening: first move ceiling, then floor
+      res1 = mp->T_MovePlane(sector, ceilingspeed, ceilingdest, crush, 1);
+      if (res1 == res_ok || res1 == res_pastdest)
+	res2 = mp->T_MovePlane(sector, floorspeed, floordest, crush, 0);
     }
 
-  // make floor move sound
-  if (!(mp->maptic % (8*NEWTICRATERATIO)))
-    S_StartSound(&sector->soundorg, sfx_stnmov);
-    
-  if (res == res_pastdest) // if destination height acheived
+  if (res1 == res_pastdest && res2 == res_pastdest) // if destination height acheived
     {
       sector->floordata = NULL;
       sector->ceilingdata = NULL;
-      mp->RemoveThinker(this);  // unlink and free
+      mp->RemoveThinker(this);
+
+      mp->TagFinished(sector->tag);
 
       // make floor stop sound
       S_StartSound(&sector->soundorg, sfx_pstop);
+      //SN_StopSequence((mobj_t *)&sector->soundorg); // TODO
+      return;
     }
+
+  // make floor move sound
+  //if (!(mp->maptic % (8*NEWTICRATERATIO)))  S_StartSound(&sector->soundorg, sfx_stnmov);
 }
 
 
-// SoM: Boom elevator support.
-// Handle elevator linedef types, moving floor and ceiling in parallel
-
-int Map::EV_DoElevator(int tag, int type, fixed_t speed, fixed_t height)
+int Map::EV_DoElevator(int tag, int type, fixed_t speed, fixed_t height_f, fixed_t height_c, int crush)
 {
   int secnum = -1;
   int rtn = 0;
-  // act on all sectors with the same tag as the triggering linedef
+
+  // act on all sectors with the correct tag
   while ((secnum = FindSectorFromTag(tag, secnum)) >= 0)
     {
       sector_t *sec = &sectors[secnum];
@@ -729,11 +762,20 @@ int Map::EV_DoElevator(int tag, int type, fixed_t speed, fixed_t height)
       // If either floor or ceiling is already activated, skip it
       if (sec->floordata || sec->ceilingdata)
 	continue;
-      
+
+      if (type == elevator_t::ClosePillar)
+	if (sec->floorheight == sec->ceilingheight)
+	  continue; // pillar is already closed
+
+      if (type == elevator_t::OpenPillar)
+	if (sec->floorheight != sec->ceilingheight)
+	  continue;  // pillar isn't closed
+
       // create and initialize new elevator thinker
-      elevator_t *elevator = new elevator_t(type, sec, speed, height);
+      elevator_t *elevator = new elevator_t(type, sec, speed, height_f, height_c, crush);
       AddThinker(elevator);
       rtn++;
     }
+
   return rtn;
 }

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2003/12/13 23:51:03  smite-meister
+// Hexen update
+//
 // Revision 1.16  2003/11/27 11:28:25  smite-meister
 // Doom/Heretic startup bug fixed
 //
@@ -1666,8 +1669,6 @@ fixed_t Actor::AimLineAttack(angle_t ang, fixed_t distance)
 }
 
 
-//
-// was P_LineAttack
 // If damage == 0, it is just a test trace
 // that will leave linetarget set.
 //
@@ -1675,6 +1676,7 @@ fixed_t Actor::AimLineAttack(angle_t ang, fixed_t distance)
 // 'distance' is the max distance for the projectile
 // 'damage' is obvious, dtype is the damage type.
 // global variable 'linetarget' will point to the Actor who got hit.
+
 void Actor::LineAttack(angle_t yaw, fixed_t distance, fixed_t pitch, int damage, int dtype)
 {
   fixed_t     x2;
@@ -1715,10 +1717,11 @@ void Actor::LineAttack(angle_t yaw, fixed_t distance, fixed_t pitch, int damage,
 		   PTR_ShootTraverse);
 }
 
-//
-// USE LINES
-//
-PlayerPawn *usething;
+//==========================================================================
+//  USE LINES
+//==========================================================================
+
+static PlayerPawn *usething;
 
 static bool PTR_UseTraverse(intercept_t *in)
 {
@@ -1726,7 +1729,7 @@ static bool PTR_UseTraverse(intercept_t *in)
   line_t *line = in->d.line;
   if (!line->special)
     {
-      P_LineOpening (line);
+      P_LineOpening(line);
       // TEST: use through a hole only if you can reach it
       if (openrange <= 0 || opentop < usething->z || openbottom > usething->z + usething->height)
         {
@@ -1759,13 +1762,12 @@ static bool PTR_UseTraverse(intercept_t *in)
 
   if (act == SPAC_USE)
     usething->mp->ActivateLine(line, usething, side, SPAC_USE);
-  //usething->mp->UseSpecialLine(usething, in->d.line, 0);
+
   return false;
 }
 
 
 //
-// was P_UseLines
 // Looks for special lines in front of the player to activate.
 //
 void PlayerPawn::UseLines()
@@ -1785,9 +1787,102 @@ void PlayerPawn::UseLines()
 }
 
 
+//==========================================================================
+//  Puzzle item usage
+//==========================================================================
+
+static PlayerPawn *PuzzleItemUser;
+static int  PuzzleItemType;
+static bool PuzzleActivated;
+
+static bool PTR_PuzzleItemTraverse(intercept_t *in)
+{
+  const int USE_PUZZLE_ITEM_SPECIAL = 129;
+
+  if (in->isaline)
+    { // Check line
+      line_t *line = in->d.line;
+      if (line->special != USE_PUZZLE_ITEM_SPECIAL)
+	{
+	  P_LineOpening(line);
+	  if (openrange <= 0)
+	    {
+	      if (PuzzleItemUser->player)
+		{
+		  int sound;
+		  switch (PuzzleItemUser->pclass)
+		    {
+		    case PCLASS_FIGHTER:
+		      sound = SFX_PUZZLE_FAIL_FIGHTER;
+		      break;
+		    case PCLASS_CLERIC:
+		      sound = SFX_PUZZLE_FAIL_CLERIC;
+		      break;
+		    case PCLASS_MAGE:
+		      sound = SFX_PUZZLE_FAIL_MAGE;
+		      break;
+		    default:
+		      sound = SFX_PUZZLE_FAIL_FIGHTER;
+		      break;
+		    }
+		  S_StartSound(PuzzleItemUser, sound);
+		}
+	      return false; // can't use through a wall
+	    }
+	  return true; // Continue searching
+	}
+
+      if (P_PointOnLineSide(PuzzleItemUser->x, PuzzleItemUser->y, line) == 1)
+	return false; // Don't use back sides
+
+      if (PuzzleItemType != line->args[0])
+	return false; // Item type doesn't match
+
+      PuzzleItemUser->mp->StartACS(line->args[1], &line->args[2], PuzzleItemUser, line, 0);
+      line->special = 0;
+      PuzzleActivated = true;
+      return false; // Stop searching
+    }
+
+  // Check thing
+  Actor *p = in->d.thing;
+  if (p->special != USE_PUZZLE_ITEM_SPECIAL)
+    return true; // Wrong special
+
+  if (PuzzleItemType != p->args[0])
+    return true; // Item type doesn't match
+
+  PuzzleItemUser->mp->StartACS(p->args[1], &p->args[2], PuzzleItemUser, NULL, 0);
+  p->special = 0;
+  PuzzleActivated = true;
+  return false; // Stop searching
+}
+
 //
+// Returns true if the puzzle item was used on a line or a thing.
+//
+bool PlayerPawn::UsePuzzleItem(int type)
+{
+  fixed_t x1, y1, x2, y2;
+
+  PuzzleItemUser = this;
+  PuzzleItemType = type;
+  PuzzleActivated = false;
+
+  int angle = angle >> ANGLETOFINESHIFT;
+  x1 = x;
+  y1 = y;
+  x2 = x1 + (USERANGE>>FRACBITS)*finecosine[angle];
+  y2 = y1 + (USERANGE>>FRACBITS)*finesine[angle];
+  mp->PathTraverse(x1, y1, x2, y2, PT_ADDLINES|PT_ADDTHINGS, PTR_PuzzleItemTraverse);
+
+  return PuzzleActivated;
+}
+
+
+//==========================================================================
 // RADIUS ATTACK
-//
+//==========================================================================
 Actor *bombowner;
 Actor *bomb;
 int    bombdamage;

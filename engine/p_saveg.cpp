@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2003/12/13 23:51:03  smite-meister
+// Hexen update
+//
 // Revision 1.16  2003/12/09 01:02:00  smite-meister
 // Hexen mapchange works, keycodes fixed
 //
@@ -136,49 +139,101 @@ enum consistency_marker_t
 //==============================================
 // Marshalling functions for various Thinkers
 //==============================================
-// FIXME all the marshalling funcs have to be able to handle NULL in pointer fields!
 
 int acs_t::Marshal(LArchive &a)
 {
-  // TODO
+  int temp;
+  if (a.IsStoring())
+    {
+      a << (temp = ((byte *)ip - mp->ActionCodeBase)); // byte offset
+      a << (temp = line ? (line - mp->lines) : -1);
+      Thinker::Serialize(activator, a);
+      a.Write((byte *)stak, sizeof(stak));
+      a.Write((byte *)vars, sizeof(vars));
+    }
+  else
+    {
+      a << temp;
+      ip = (int *)(mp->ActionCodeBase + temp);
+      a << temp;
+      if (temp == -1)
+	line = NULL;
+      else
+	line = mp->lines + temp;
+      activator = (Actor *)Thinker::Unserialize(a);
+      a.Read((byte *)stak, sizeof(stak));
+      a.Read((byte *)vars, sizeof(vars));
+    }
+
+  a << side << number << infoIndex << delayCount << stackPtr;
+  return 0;
+}
+
+int sectoreffect_t::Marshal(LArchive &a)
+{
+  int temp;
+  if (a.IsStoring())
+    {
+      if (!sector)
+	I_Error("Sectoreffect with no sector!\n");
+      a << (temp = sector - mp->sectors);
+    }
+  else
+    {
+      a << temp;
+      if (temp >= mp->numsectors)
+	I_Error("Invalid sector for a Sectoreffect!\n");
+      sector = mp->sectors + temp;
+    }
+
+  return 0;
+}
+
+int lightfx_t::Marshal(LArchive &a)
+{
+  sectoreffect_t::Marshal(a);
+  if (!a.IsStoring())
+    sector->lightingdata = this;
+
+  a << type << count << maxlight << minlight << maxtime << mintime;
+  return 0;
+}
+
+int phasedlight_t::Marshal(LArchive &a)
+{
+  sectoreffect_t::Marshal(a);
+  if (!a.IsStoring())
+    sector->lightingdata = this;
+
+  a << base << index;
   return 0;
 }
 
 int floor_t::Marshal(LArchive &a)
 {
-  int temp = sector - mp->sectors;
-  a << temp;
+  sectoreffect_t::Marshal(a);
   if (!a.IsStoring())
-    {
-      sector = mp->sectors + temp;
-      sector->floordata = this;
-    }
+    sector->floordata = this;
 
-  a << type << crush << newspecial << texture << speed << direction << destheight;
+  a << type << crush << newspecial << texture << speed << destheight;
   return 0;
 }
 
 int elevator_t::Marshal(LArchive &a)
 {
-  int temp = sector - mp->sectors;
-  a << temp;
+  sectoreffect_t::Marshal(a);
   if (!a.IsStoring())
-    {
-      sector = mp->sectors + temp;
-      sector->floordata = sector->ceilingdata = this;
-    }
+    sector->floordata = sector->ceilingdata = this;
 
-  a << type << direction << floordestheight << ceilingdestheight << speed;
+  a << type << crush << floordest << ceilingdest << floorspeed << ceilingspeed;
   return 0;
 }
 
 int plat_t::Marshal(LArchive &a)
 {
-  int temp = sector - mp->sectors;
-  a << temp;
+  sectoreffect_t::Marshal(a);
   if (!a.IsStoring())
     {
-      sector = mp->sectors + temp;
       sector->floordata = this;
       mp->AddActivePlat(this);
     }
@@ -191,11 +246,9 @@ int plat_t::Marshal(LArchive &a)
 
 int ceiling_t::Marshal(LArchive &a)
 {
-  int temp = sector - mp->sectors;
-  a << temp;
+  sectoreffect_t::Marshal(a);
   if (!a.IsStoring())
     {
-      sector = mp->sectors + temp;
       sector->ceilingdata = this;
       mp->AddActiveCeiling(this);
     }
@@ -208,13 +261,9 @@ int ceiling_t::Marshal(LArchive &a)
 
 int vdoor_t::Marshal(LArchive &a)
 {
-  int temp = sector - mp->sectors;
-  a << temp;
+  sectoreffect_t::Marshal(a);
   if (!a.IsStoring())
-    {
-      sector = mp->sectors + temp;
-      sector->ceilingdata = this;
-    }
+    sector->ceilingdata = this;
 
   a << type << direction << topheight << speed << topwait << topcount << boomlighttag;
   return 0;
@@ -222,43 +271,22 @@ int vdoor_t::Marshal(LArchive &a)
 
 int button_t::Marshal(LArchive &a)
 {
-  int l;
-
+  int temp;
   if (a.IsStoring())
     {
-      l = line - mp->lines;
-      a << l;
+      a << (temp = line ? (line - mp->lines) : -1);
     }
   else
     {
-      a << l;
-      line = mp->lines + l;
+      a << temp;
+      if (temp == -1)
+	line = NULL;
+      else
+	line = mp->lines + temp;
       soundorg = &line->frontsector->soundorg;
     }
 
   a << texture << timer << where;
-  return 0;
-}
-
-int lightfx_t::Marshal(LArchive &a)
-{
-  int temp = sec - mp->sectors;
-  a << temp;
-  if (!a.IsStoring())
-    sec = mp->sectors + temp;
-
-  a << type << count << maxlight << minlight << maxtime << mintime;
-  return 0;
-}
-
-int phasedlight_t::Marshal(LArchive &a)
-{
-  int temp = sec - mp->sectors;
-  a << temp;
-  if (!a.IsStoring())
-    sec = mp->sectors + temp;
-
-  a << base << index;
   return 0;
 }
 
@@ -267,10 +295,19 @@ int scroll_t::Marshal(LArchive &a)
   a << type << affectee << vx << vy;
   a << last_height << accel << vdx << vdy;
 
-  int temp = control - mp->sectors;
-  a << temp;
-  if (!a.IsStoring())
-    control = mp->sectors + temp;
+  int temp;
+  if (a.IsStoring())
+    {
+      a << (temp = control ? (control - mp->sectors) : -1);
+    }
+  else
+    {
+      a << temp;
+      if (temp == -1)
+	control = NULL;
+      else
+	control = mp->sectors + temp;
+    }
   return 0;
 }
 
@@ -476,11 +513,6 @@ int DActor::Marshal(LArchive &a)
       if (diff & MD_FLAGS2) a << flags2;
       if (diff & MD_EFLAGS) a << eflags;
 
-      // FIXME some Hexen DActors use the specialX fields to store pointers.
-      // This WILL cause segfaults if they are not handled correctly.
-      // See SV_SAVE.C in Hexen source. The correct solution is to use the real
-      // pointer variables owner and target whenever possible. In some cases though,
-      // you need more than two such variables... add some to DActor?
       if (diff & MD_SPECIAL1) a << special1;
       if (diff & MD_SPECIAL2) a << special2;
       if (diff & MD_TID)      a << tid;
@@ -1762,7 +1794,7 @@ int GameInfo::Serialize(LArchive &a)
 
 int GameInfo::Unserialize(LArchive &a)
 {
-  // FIXME all the containers should be emptied and old contents deleted somewhere
+  // FIXME all the containers should be emptied and old contents deleted somewhere. SV_Reset?
   // ClearTeams();
   ClearPlayers();
   Clear_mapinfo_clusterdef();
@@ -1862,7 +1894,7 @@ char savegamename[256];
 
 void GameInfo::LoadGame(int slot)
 {
-  CONS_Printf("loading game...\n");
+  CONS_Printf("Loading game...\n");
   char  savename[255];
   byte *savebuffer;
 
@@ -1875,12 +1907,9 @@ void GameInfo::LoadGame(int slot)
       return;
     }
 
-  CONS_Printf("opened file\n");
   LArchive a;
   if (!a.Open(savebuffer, length))
     return;
-
-  CONS_Printf("uncompressed\n");
 
   Z_Free(savebuffer); // the compressed buffer is no longer needed
 
@@ -1929,7 +1958,6 @@ void GameInfo::SaveGame(int savegameslot, char *description)
   LArchive a;
   a.Create(description); // create a new save archive
   Serialize(a);          // store the game state into it
-  CONS_Printf("save done!!\n");
 
   byte *buffer;
   unsigned length = a.Compress(&buffer, 0);  // take out the compressed data
@@ -1937,7 +1965,7 @@ void GameInfo::SaveGame(int savegameslot, char *description)
   char filename[256];
   sprintf(filename, savegamename, savegameslot);
 
-  CONS_Printf("Simulated savegame: %d bytes\n", length);
+  CONS_Printf("Savegame: %d bytes\n", length);
   FIL_WriteFile(filename, buffer, length);
 
   Z_Free(buffer);

@@ -117,10 +117,12 @@ int Map::EV_DoGenFloor(line_t *line)
       floor = new floor_t(floor_t::RelHeight, sec, speed, Crsh ? 10 : 0, 0);
       AddThinker(floor);
 
-      floor->direction = Dirn? 1 : -1;
+      if (!Dirn)
+	floor->speed = -floor->speed;
       floor->texture = sec->floorpic;
       floor->newspecial = sec->special;
 
+      int direction = Dirn ? 1 : -1;
       // set the destination height
       switch(Targ)
 	{
@@ -143,7 +145,7 @@ int Map::EV_DoGenFloor(line_t *line)
 	  break;
 	case FbyST:
 	  floor->destheight = (floor->sector->floorheight>>FRACBITS) +
-	    floor->direction * (FindShortestLowerAround(sec)>>FRACBITS);
+	    direction * (FindShortestLowerAround(sec)>>FRACBITS);
 	  if (floor->destheight>32000)
 	    floor->destheight=32000;
 	  if (floor->destheight<-32000)
@@ -152,11 +154,11 @@ int Map::EV_DoGenFloor(line_t *line)
 	  break;
 	case Fby24:
 	  floor->destheight = floor->sector->floorheight +
-	    floor->direction * 24*FRACUNIT;
+	    direction * 24*FRACUNIT;
 	  break;
 	case Fby32:
 	  floor->destheight = floor->sector->floorheight +
-	    floor->direction * 32*FRACUNIT;
+	    direction * 32*FRACUNIT;
 	  break;
 	default:
 	  break;
@@ -629,8 +631,10 @@ int Map::EV_DoGenStairs(line_t *line)
 	  stairsize = 24*FRACUNIT;
 	  break;
 	}
+      if (!Dirn)
+	stairsize = -stairsize;
 
-      fixed_t height = sec->floorheight + (Dirn ? 1 : -1) * stairsize;
+      fixed_t height = sec->floorheight + stairsize;
 
       // new floor thinker
       rtn++;
@@ -671,7 +675,7 @@ int Map::EV_DoGenStairs(line_t *line)
 	      if (P_SectorActive(floor_special,tsec) || tsec->stairlock)
 		continue;
 
-	      height += floor->direction * stairsize;
+	      height += stairsize;
 
 	      // link the stair chain in both directions
 	      // lock the stair sector until building complete
