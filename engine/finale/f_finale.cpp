@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2004/01/05 11:48:08  smite-meister
+// 7 bugfixes
+//
 // Revision 1.14  2004/01/03 10:52:31  jussip
 // Added missing include.
 //
@@ -59,6 +62,7 @@
 #include "sounds.h"
 #include "s_sound.h"
 
+#include "i_video.h"
 #include "v_video.h"
 #include "w_wad.h"
 #include "z_zone.h"

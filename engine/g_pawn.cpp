@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.27  2004/01/05 11:48:08  smite-meister
+// 7 bugfixes
+//
 // Revision 1.26  2004/01/02 14:25:01  smite-meister
 // cleanup
 //
@@ -180,10 +183,10 @@ Pawn::Pawn()
 PlayerPawn::PlayerPawn()
   : Pawn()
 {
+  // This constructor is only used when Unserializing. All the rest is initialized there.
   player = NULL;
   weaponinfo = NULL;
   maxammo = NULL;
-  pclass = 0;
   invTics = 0;
 }
 

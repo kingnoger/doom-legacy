@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.32  2004/01/05 11:48:08  smite-meister
+// 7 bugfixes
+//
 // Revision 1.31  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -1388,6 +1391,7 @@ bool Map::Setup(tic_t start, bool spawnthings)
   T_ClearScripts();
 #endif
 
+  // NOTE Hexen map separators are not empty!!! They contain a version string "version 2.3\0"
   levelscript->data = info->Read(lumpnum); // load map separator lump info (map properties, FS...)
 
   // is the map in Hexen format?

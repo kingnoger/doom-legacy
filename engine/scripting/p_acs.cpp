@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/01/05 11:48:08  smite-meister
+// 7 bugfixes
+//
 // Revision 1.13  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -84,11 +87,50 @@
 #include "z_zone.h"
 
 
-IMPLEMENT_CLASS(acs_t, "AC script");
-acs_t::acs_t() {}
+//=================================
+//  global ACS stuff
+//=================================
+
+int WorldVars[MAX_ACS_WORLD_VARS];
+multimap<int, acsstore_t> ACS_store;
 
 
-// static stuff
+void P_ACSInitNewGame()
+{
+  memset(WorldVars, 0, sizeof(WorldVars));
+  ACS_store.clear();
+}
+
+
+bool P_AddToACSStore(int tmap, int number, byte *args)
+{
+  multimap<int, acsstore_t>::iterator i, j;
+  i = ACS_store.lower_bound(tmap);
+  j = ACS_store.upper_bound(tmap);
+  while (i != j)
+    {
+      if ((*i).second.script == number)
+	return false; // no duplicates
+      i++;
+    }
+
+  acsstore_t temp;
+  temp.tmap = tmap;
+  temp.script = number;
+  temp.args[0] = args[0];
+  temp.args[1] = args[1];
+  temp.args[2] = args[2];
+  temp.args[3] = 0;
+
+  ACS_store.insert(pair<const int, acsstore_t>(tmap, temp));
+  return true;
+}
+
+
+
+//=================================
+//  static stuff and prototypes
+//=================================
 
 #define SCRIPT_CONTINUE 0
 #define SCRIPT_STOP 1
@@ -104,6 +146,15 @@ acs_t::acs_t() {}
 #define S_DROP ACScript->stackPtr--
 #define S_POP ACScript->stak[--ACScript->stackPtr]
 #define S_PUSH(x) ACScript->stak[ACScript->stackPtr++] = x
+
+
+static acs_t *ACScript; // script being interpreted
+static Map   *ACMap;    // where it runs (shorthand)
+static int   *PCodePtr;
+static byte   SpecArgs[8];
+static char   PrintBuffer[PRINT_BUFFER_SIZE];
+static acs_t *NewScript; // was a new script just started by Map::StartACS ? TODO should be a return value...
+
 
 
 static void Push(int value);
@@ -217,19 +268,6 @@ static int CmdEndPrintBold();
 static void ThingCount(int type, int tid);
 
 
-// global ACS stuff
-int WorldVars[MAX_ACS_WORLD_VARS];
-multimap<int, acsstore_t> ACS_store;
-
-
-static acs_t *ACScript; // script being interpreted
-static Map   *ACMap;    // where it runs (shorthand)
-static int   *PCodePtr;
-static byte   SpecArgs[8];
-static char   PrintBuffer[PRINT_BUFFER_SIZE];
-static acs_t *NewScript; // was a new script just started by Map::StartACS ?
-
-
 // pcode-to-function table
 static int (*PCodeCmds[])() =
 {
@@ -338,12 +376,38 @@ static int (*PCodeCmds[])() =
 };
 
 
-//==========================================================================
-//
-// was P_LoadACScripts
-//
-//==========================================================================
 
+//=================================================
+// Console command for running ACS scripts
+//=================================================
+
+void Command_RunACS_f()
+{
+  if (COM_Argc() < 2)
+    {
+      CONS_Printf("Usage: run-acs <script>\n");
+      return;
+    }
+
+  if (!consoleplayer || !consoleplayer->pawn)
+    return;
+  
+  byte args[5] = {0,0,0,0,0};
+  int num = atoi(COM_Argv(1));
+  int i, n = COM_Argc() - 2;
+  for (i=0; i<n; i++)
+    args[i] = atoi(COM_Argv(i+2));
+
+  // line_t* is always NULL...
+  consoleplayer->mp->StartACS(num, args, consoleplayer->pawn, NULL, 0);
+}
+
+
+//=================================================
+//  Map class methods
+//=================================================
+
+// Initialization, called during Map setup.
 void Map::LoadACScripts(int lump)
 {
   if (hexen_format == false)
@@ -392,12 +456,8 @@ void Map::LoadACScripts(int lump)
   memset(ACMapVars, 0, sizeof(ACMapVars));
 }
 
-//==========================================================================
-//
-// StartOpenACS
-//
-//==========================================================================
 
+// Scripts that always start immediately at level load.
 void Map::StartOpenACS(int number, int infoIndex, int *address)
 {
   CONS_Printf("Starting an opening ACS (script %d)\n", number);
@@ -409,15 +469,9 @@ void Map::StartOpenACS(int number, int infoIndex, int *address)
   AddThinker(script);
 }
 
-//==========================================================================
-//
-// was P_CheckACSStore
-//
-// Scans the ACS store and executes all scripts belonging to the current
-// map.
-//
-//==========================================================================
 
+// Scans the ACS store and executes all scripts belonging to the current map.
+// Called at Map setup.
 void Map::CheckACSStore()
 {
   int m = info->mapnumber;
@@ -437,56 +491,21 @@ void Map::CheckACSStore()
   ACS_store.erase(j, k);
 }
 
-//==========================================================================
-//
-// AddToACSStore
-//
-//==========================================================================
 
-bool P_AddToACSStore(int tmap, int number, byte *args)
-{
-  multimap<int, acsstore_t>::iterator i, j;
-  i = ACS_store.lower_bound(tmap);
-  j = ACS_store.upper_bound(tmap);
-  while (i != j)
-    {
-      if ((*i).second.script == number)
-	return false; // no duplicates
-      i++;
-    }
-
-  acsstore_t temp;
-  temp.tmap = tmap;
-  temp.script = number;
-  temp.args[0] = args[0];
-  temp.args[1] = args[1];
-  temp.args[2] = args[2];
-  temp.args[3] = 0;
-
-  ACS_store.insert(pair<const int, acsstore_t>(tmap, temp));
-
-  return true;
-}
-
-
-//==========================================================================
-//
-// was P_StartACS
-//
-//==========================================================================
-
+// Starts a new script running.
 bool Map::StartACS(int number, byte *args, Actor *activator, line_t *line, int side)
 {
-  int i;
-  CONS_Printf("Starting ACS script %d\n", number);
-
   NewScript = NULL;
 
   int infoIndex = GetACSIndex(number);
   if (infoIndex == -1)
     { // Script not found
-      I_Error("Map::StartACS: Unknown script number %d\n", number);
+      CONS_Printf("Map::StartACS: Unknown script number %d\n", number);
+      return false;
     }
+
+  CONS_Printf("Starting ACS script %d\n", number);
+
   acs_state_t *statePtr = &ACSInfo[infoIndex].state;
   if (*statePtr == ACS_suspended)
     { // Resume a suspended script
@@ -502,7 +521,7 @@ bool Map::StartACS(int number, byte *args, Actor *activator, line_t *line, int s
   script->line = line;
   script->side = side;
 
-  for (i = 0; i < ACSInfo[infoIndex].argCount; i++)
+  for (int i = 0; i < ACSInfo[infoIndex].argCount; i++)
     script->vars[i] = args[i];
 
   *statePtr = ACS_running;
@@ -512,12 +531,7 @@ bool Map::StartACS(int number, byte *args, Actor *activator, line_t *line, int s
 }
 
 
-//==========================================================================
-//
-// was P_TerminateACS
-//
-//==========================================================================
-
+// Stops a running script
 bool Map::TerminateACS(int number)
 {
   int infoIndex = GetACSIndex(number);
@@ -533,12 +547,8 @@ bool Map::TerminateACS(int number)
   return true;
 }
 
-//==========================================================================
-//
-// was P_SuspendACS
-//
-//==========================================================================
 
+// Pauses a running script
 bool Map::SuspendACS(int number)
 {
   int infoIndex = GetACSIndex(number);
@@ -555,13 +565,73 @@ bool Map::SuspendACS(int number)
   return true;
 }
 
-//==========================================================================
 
-void P_ACSInitNewGame()
+// Unpauses scripts that are waiting for a particular sector tag to finish
+void Map::TagFinished(int tag)
 {
-  memset(WorldVars, 0, sizeof(WorldVars));
-  ACS_store.clear();
+  if (TagBusy(tag) == true)
+    return;
+
+  for (int i = 0; i < ACScriptCount; i++)
+    if (ACSInfo[i].state == ACS_waitfortag && ACSInfo[i].waitValue == tag)
+      ACSInfo[i].state = ACS_running;
 }
+
+
+// Unpauses scripts that are waiting for a particular polyobj to finish
+void Map::PolyobjFinished(int po)
+{
+  if (PO_Busy(po) == true)
+    return;
+
+  for (int i = 0; i < ACScriptCount; i++)
+    if(ACSInfo[i].state == ACS_waitforpoly && ACSInfo[i].waitValue == po)
+      ACSInfo[i].state = ACS_running;
+}
+
+
+// Unpauses scripts that are waiting for a particular script to finish
+void Map::ScriptFinished(int number)
+{
+  for (int i = 0; i < ACScriptCount; i++)
+    if (ACSInfo[i].state == ACS_waitforscript && ACSInfo[i].waitValue == number)
+      ACSInfo[i].state = ACS_running;
+}
+
+
+// Checks if the sector(s) with a given tag are still active
+bool Map::TagBusy(int tag)
+{
+  int sectorIndex = -1;
+  while ((sectorIndex = FindSectorFromTag(tag, sectorIndex)) >= 0)
+    {
+      if (sectors[sectorIndex].floordata ||
+	  sectors[sectorIndex].ceilingdata ||
+	  sectors[sectorIndex].lightingdata)
+	return true;
+    }
+  return false;
+}
+
+
+// Returns the index of a script number.
+// Returns -1 if the script number is not found.
+int Map::GetACSIndex(int number)
+{
+  for (int i = 0; i < ACScriptCount; i++)
+    if (ACSInfo[i].number == number)
+      return i;
+
+  return -1;
+}
+
+
+//=================================================
+//  Thinker class for running AC scripts
+//=================================================
+
+IMPLEMENT_CLASS(acs_t, "AC script");
+acs_t::acs_t() {}
 
 
 acs_t::acs_t(int num, int ii, int *addr)
@@ -579,11 +649,6 @@ acs_t::acs_t(int num, int ii, int *addr)
   memset(vars, 0, sizeof(vars));
 }
 
-//==========================================================================
-//
-// was T_InterpretACS
-//
-//==========================================================================
 
 void acs_t::Think()
 {
@@ -625,87 +690,11 @@ void acs_t::Think()
     }
 }
 
-//==========================================================================
-//
-// was P_TagFinished
-//
-//==========================================================================
 
-void Map::TagFinished(int tag)
-{
-  if (TagBusy(tag) == true)
-    return;
+//=================================================
+//  The ACS interpreter functions
+//=================================================
 
-  for (int i = 0; i < ACScriptCount; i++)
-    if (ACSInfo[i].state == ACS_waitfortag && ACSInfo[i].waitValue == tag)
-      ACSInfo[i].state = ACS_running;
-}
-
-//==========================================================================
-//
-// was P_PolyobjFinished
-//
-//==========================================================================
-
-void Map::PolyobjFinished(int po)
-{
-  if (PO_Busy(po) == true)
-    return;
-
-  for (int i = 0; i < ACScriptCount; i++)
-    if(ACSInfo[i].state == ACS_waitforpoly && ACSInfo[i].waitValue == po)
-      ACSInfo[i].state = ACS_running;
-}
-
-//==========================================================================
-//
-// ScriptFinished
-//
-//==========================================================================
-
-void Map::ScriptFinished(int number)
-{
-  for (int i = 0; i < ACScriptCount; i++)
-    if (ACSInfo[i].state == ACS_waitforscript && ACSInfo[i].waitValue == number)
-      ACSInfo[i].state = ACS_running;
-}
-
-//==========================================================================
-//
-// TagBusy
-//
-//==========================================================================
-
-bool Map::TagBusy(int tag)
-{
-  int sectorIndex = -1;
-  while ((sectorIndex = FindSectorFromTag(tag, sectorIndex)) >= 0)
-    {
-      if (sectors[sectorIndex].floordata ||
-	  sectors[sectorIndex].ceilingdata ||
-	  sectors[sectorIndex].lightingdata)
-	return true;
-    }
-  return false;
-}
-
-//==========================================================================
-//
-// GetACSIndex
-//
-// Returns the index of a script number.  Returns -1 if the script number
-// is not found.
-//
-//==========================================================================
-
-int Map::GetACSIndex(int number)
-{
-  for (int i = 0; i < ACScriptCount; i++)
-    if (ACSInfo[i].number == number)
-      return i;
-
-  return -1;
-}
 
 //==========================================================================
 //

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2004/01/05 11:48:08  smite-meister
+// 7 bugfixes
+//
 // Revision 1.14  2004/01/02 14:25:01  smite-meister
 // cleanup
 //
@@ -488,12 +491,6 @@ void PlayerPawn::DropWeapon()
 //
 void A_WeaponReady(PlayerPawn *p, pspdef_t *psp)
 {
-  if (p->morphTics)
-    { // Change to the chicken beak
-      p->ActivateMorphWeapon();
-      return;
-    }
-
   // get out of attack state
   int anim = p->pres->GetAnim();
   if (anim == presentation_t::Shoot || anim == presentation_t::Melee)

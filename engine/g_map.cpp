@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.32  2004/01/05 11:48:08  smite-meister
+// 7 bugfixes
+//
 // Revision 1.31  2004/01/02 14:25:01  smite-meister
 // cleanup
 //
@@ -147,6 +150,7 @@ Map::Map(MapInfo *i)
   levelscript = NULL;
   runningscripts = NULL;
 
+  ACScriptCount = 0;
   ACSInfo = NULL;
   ActionCodeBase = NULL;
   ACStrings = NULL;

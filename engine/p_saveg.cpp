@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2004/01/05 11:48:08  smite-meister
+// 7 bugfixes
+//
 // Revision 1.21  2004/01/02 14:21:21  smite-meister
 // save bugfix
 //
@@ -475,7 +478,8 @@ int Actor::Marshal(LArchive &a)
 
       if (mp)
 	{
-	  mp->mapthings[temp].mobj = this;
+	  if (spawnpoint)
+	    spawnpoint->mobj = this;
 	  CheckPosition(x, y);
 	  SetPosition();
 	}
@@ -850,7 +854,10 @@ int PlayerPawn::Marshal(LArchive &a)
       a << n; //player->number;
       player = game.FindPlayer(n);
       if (player)
-	player->mp = mp;
+	{
+	  player->mp = mp;
+	  player->pawn = this;
+	}
 
       a << invSlot;
       a << n;
@@ -1893,7 +1900,7 @@ int GameInfo::Unserialize(LArchive &a)
   // ClearTeams();
   ClearPlayers();
   Clear_mapinfo_clusterdef();
-  ACS_store.clear();
+  P_ACSInitNewGame();
   Z_FreeTags(PU_LEVEL, MAXINT);
 
   int i, n;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2004/01/05 11:48:08  smite-meister
+// 7 bugfixes
+//
 // Revision 1.20  2004/01/02 14:22:58  smite-meister
 // items work
 //
@@ -617,9 +620,9 @@ void GameInfo::Drawer()
 {
   // draw the view directly
   //CONS_Printf("GI::Draw: %p, %p\n", displayplayer,displayplayer2);
-  if (displayplayer && displayplayer->pawn && displayplayer->pawn->mp)
+  if (displayplayer && displayplayer->pawn && displayplayer->mp)
     {
-      R.SetMap(displayplayer->pawn->mp);
+      R.SetMap(displayplayer->mp);
 #ifdef HWRENDER 
       if (rendermode != render_soft)
 	R.HWR_RenderPlayerView(0, displayplayer);
@@ -629,9 +632,9 @@ void GameInfo::Drawer()
     }
 
   // added 16-6-98: render the second screen
-  if (displayplayer2 && displayplayer2->pawn && displayplayer2->pawn->mp)
+  if (displayplayer2 && displayplayer2->pawn && displayplayer2->mp)
     {
-      R.SetMap(displayplayer2->pawn->mp);
+      R.SetMap(displayplayer2->mp);
 #ifdef HWRENDER 
       if (rendermode != render_soft)
 	R.HWR_RenderPlayerView(1, displayplayer2);

@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.8  2004/01/05 11:48:08  smite-meister
+// 7 bugfixes
+//
 // Revision 1.7  2003/12/06 23:57:47  smite-meister
 // save-related bugfixes
 //
@@ -79,7 +82,7 @@
 //
 //                     global_script
 //                  /                 \.
-//           hubscript                 thingscript
+//           hub_script               thingscript
 //          /         \                  /     \.
 //    levelscript    [levelscript]    ... scripts ...
 //     /      \          /      \.
@@ -91,7 +94,7 @@
 
 // the thing script
 //script_t thingscript;
-
+// TODO a rewrite would be useful...
 
 Actor *t_trigger;
 
@@ -229,8 +232,11 @@ void Map::T_PreprocessScripts()
   levelscript->player = NULL;  // FIXME who is superplayer?
   levelscript->trigger = NULL; // superplayer->pawn;
 
-  preprocess(levelscript);
-  run_script(levelscript);
+  if (levelscript->data)
+    {
+      preprocess(levelscript);
+      run_script(levelscript);
+    }
 
   // load and run the thing script
   T_LoadThingScript();

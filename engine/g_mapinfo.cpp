@@ -22,6 +22,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.12  2004/01/05 11:48:08  smite-meister
+// 7 bugfixes
+//
 // Revision 1.11  2004/01/02 14:25:01  smite-meister
 // cleanup
 //
@@ -413,62 +416,61 @@ static parsercmd_t MAPINFO_MAP_commands[] =
 char *MapInfo::Read(int lump)
 {
   Parser p;
-
-  if (!p.Open(lump))
-    return NULL;
-
-  CONS_Printf("Reading MapInfo...\n");
-
-  enum {PS_CLEAR, PS_MAPFORMAT, PS_SCRIPT, PS_INTERTEXT, PS_LEVELINFO} parsestate = PS_CLEAR;
-
   string scriptblock;
-  char line[40];
 
-  p.RemoveComments('/'); // TODO can we also remove other types of comments?
-  while (p.NewLine())
+  if (p.Open(lump))
     {
-      if (parsestate != PS_SCRIPT) // not for scripts
-	p.LineReplaceChars('=', ' ');
-      // unprintable chars to whitespace?
+      CONS_Printf("Reading MapInfo...\n");
 
-      if (p.Peek() == '[')  // a new section seperator
+      enum {PS_CLEAR, PS_MAPFORMAT, PS_SCRIPT, PS_INTERTEXT, PS_LEVELINFO} parsestate = PS_CLEAR;
+      char line[40];
+
+      p.RemoveComments('/'); // TODO can we also remove other types of comments?
+      while (p.NewLine())
 	{
-	  p.GetStringN(line, 12);
-	  if (!strncasecmp(line, "[level info]", 12))
-	    parsestate = PS_LEVELINFO;
-	  else if (!strncasecmp(line, "[scripts]", 9))
+	  if (parsestate != PS_SCRIPT) // not for scripts
+	    p.LineReplaceChars('=', ' ');
+	  // unprintable chars to whitespace?
+
+	  if (p.Peek() == '[')  // a new section seperator
 	    {
-	      parsestate = PS_SCRIPT;
-	      scripts++; // has scripts
+	      p.GetStringN(line, 12);
+	      if (!strncasecmp(line, "[level info]", 12))
+		parsestate = PS_LEVELINFO;
+	      else if (!strncasecmp(line, "[scripts]", 9))
+		{
+		  parsestate = PS_SCRIPT;
+		  scripts++; // has scripts
+		}
+	      else if(!strncasecmp(line, "[intertext]", 11))
+		parsestate = PS_INTERTEXT;
+	      else if(!strncasecmp(line, "[map format]", 12))
+		parsestate = PS_MAPFORMAT;
 	    }
-	  else if(!strncasecmp(line, "[intertext]", 11))
-	    parsestate = PS_INTERTEXT;
-	  else if(!strncasecmp(line, "[map format]", 12))
-	    parsestate = PS_MAPFORMAT;
-	}
-      else switch (parsestate)
-	{
-	case PS_LEVELINFO:
-	  p.ParseCmd(MapInfo_commands, (char *)this);
-	  break;
+	  else switch (parsestate)
+	    {
+	    case PS_LEVELINFO:
+	      p.ParseCmd(MapInfo_commands, (char *)this);
+	      break;
 
-	case PS_SCRIPT:
+	    case PS_SCRIPT:
 #ifdef FRAGGLESCRIPT
-	  scriptblock += p.Pointer(); // add the new (NUL-terminated!) line to the current data
+	      scriptblock += p.Pointer(); // add the new (NUL-terminated!) line to the current data
 #endif
-	  break;
+	      break;
 
-	case PS_INTERTEXT:
-	  //intertext += '\n';
-	  //intertext += s;
-	  break;
+	    case PS_INTERTEXT:
+	      //intertext += '\n';
+	      //intertext += s;
+	      break;
 
-	case PS_MAPFORMAT:
-	  p.ParseCmd(MapFormat_commands, (char *)this);
-	  break;
+	    case PS_MAPFORMAT:
+	      p.ParseCmd(MapFormat_commands, (char *)this);
+	      break;
 
-	case PS_CLEAR:
-	  break;
+	    case PS_CLEAR:
+	      break;
+	    }
 	}
     }
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.27  2004/01/05 11:48:08  smite-meister
+// 7 bugfixes
+//
 // Revision 1.26  2004/01/02 14:21:21  smite-meister
 // save bugfix
 //
@@ -291,7 +294,13 @@ void Actor::Detach()
 {
   void P_DelSeclist(msecnode_t *p);
 
-  UnsetPosition();
+  if (tid)
+    {
+      mp->RemoveFromTIDmap(this);
+      tid = 0;
+    }
+
+  UnsetPosition(); // blockmap and sector links
 
   if (touching_sectorlist)
     {
@@ -299,6 +308,7 @@ void Actor::Detach()
       touching_sectorlist = NULL;
     }
   spawnpoint = NULL;
+  owner = target = NULL;
 
   eflags |= MFE_REMOVE; // so that pointers to it will be NULLed
 
@@ -320,7 +330,7 @@ void Actor::Remove()
 
   if (mp == NULL)
     {
-      // in transit between maps/levels
+      // should not happen
       delete this;
       return;
     }
