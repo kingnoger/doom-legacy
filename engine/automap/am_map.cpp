@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/04/24 20:30:22  hurdler
+// Remove lots of compiling warnings
+//
 // Revision 1.5  2003/04/19 17:38:47  smite-meister
 // SNDSEQ support, tools, linedef system...
 //
@@ -215,9 +218,9 @@ mline_t triangle_guy[] = {
 
 #define R (FRACUNIT)
 mline_t thintriangle_guy[] = {
-  { { -.5*R, -.7*R }, { R, 0 } },
-  { { R, 0 }, { -.5*R, .7*R } },
-  { { -.5*R, .7*R }, { -.5*R, -.7*R } }
+  { { (fixed_t)-.5*R, (fixed_t)-.7*R }, { (fixed_t)    R, (fixed_t)    0 } },
+  { { (fixed_t)    R, (fixed_t)    0 }, { (fixed_t)-.5*R, (fixed_t) .7*R } },
+  { { (fixed_t)-.5*R, (fixed_t) .7*R }, { (fixed_t)-.5*R, (fixed_t)-.7*R } }
 };
 #undef R
 #define NUMTHINTRIANGLEGUYLINES (sizeof(thintriangle_guy)/sizeof(mline_t))
@@ -271,7 +274,7 @@ static fixed_t old_m_x, old_m_y;
 static mpoint_t f_oldloc;
 
 // used by MTOF to scale from map-to-frame-buffer coords
-static fixed_t scale_mtof = INITSCALEMTOF;
+static fixed_t scale_mtof = (fixed_t)INITSCALEMTOF;
 // used by FTOM to scale from frame-buffer-to-map coords (=1/scale_mtof)
 static fixed_t scale_ftom;
 
@@ -285,7 +288,8 @@ static byte REDKEYCOLOR;
 // Calculates the slope and slope according to the x-axis of a line
 // segment in map coordinates (with the upright y-axis n' all) so
 // that it can be used with the brain-dead drawing stuff.
-
+/*
+TODO
 static void AM_getIslope(mline_t *ml, islope_t *is)
 {
   int dx, dy;
@@ -298,6 +302,7 @@ static void AM_getIslope(mline_t *ml, islope_t *is)
   else is->slp = FixedDiv(dy, dx);
 
 }
+*/
 
 AutoMap::AutoMap()
 {

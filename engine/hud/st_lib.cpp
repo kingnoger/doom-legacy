@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/04/24 20:30:23  hurdler
+// Remove lots of compiling warnings
+//
 // Revision 1.5  2003/02/23 22:49:31  smite-meister
 // FS is back! L2 cache works.
 //
@@ -231,7 +234,8 @@ void HudSlider::Update(bool force)
   if (oldval != cval || force) Draw();
 }
 
-
+/*
+TODO
 static void ShadeLine(int x, int y, int height, int shade)
 {
   byte *dest;
@@ -245,6 +249,7 @@ static void ShadeLine(int x, int y, int height, int shade)
       dest += vid.width;
     }
 }
+*/
 
 /*
 static void ShadeChain(int x, int y)

@@ -21,7 +21,7 @@ DEBUGFLAGS =
 OPTFLAGS = -O
 else
 DEBUGFLAGS = -g 
-OPTFLAGS =
+OPTFLAGS = -O0
 endif
 
 # Dynamic or static linkage? I like static.

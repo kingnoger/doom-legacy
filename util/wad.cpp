@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C++ -*- 
+// Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
@@ -66,7 +66,11 @@ WadFile::WadFile()
 // WadFile destructor. Closes the open file.
 WadFile::~WadFile()
 {
-  fclose(stream);
+  if (stream)
+  {
+    fclose(stream);
+    //stream = NULL; no need
+  }
   // TODO: free cache memory, invalidate cache
 }
 
@@ -113,11 +117,13 @@ Wad::Wad()
 
 Wad::~Wad()
 {
+  /* Hurdler: this is done in the parent destructor
   if (stream)
     {
       fclose(stream);
       stream = NULL;
     }
+  */
   // TODO free hwrcache
   Z_Free(directory);
 }

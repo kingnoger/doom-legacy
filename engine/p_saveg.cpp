@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/04/24 20:30:16  hurdler
+// Remove lots of compiling warnings
+//
 // Revision 1.4  2003/04/04 00:01:56  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -862,6 +865,8 @@ void Map::ArchiveThinkers(LArchive & arc)
 // relink to this, the savegame contain the old position in the pointer
 // field copyed in the info field temporarely, but finaly we just search
 // for to old postion and relink to
+#if 0
+TODO
 static Actor *FindNewPosition(void *oldposition)
 {
   /*
@@ -879,6 +884,7 @@ static Actor *FindNewPosition(void *oldposition)
   */
   return NULL;
 }
+#endif
 
 //
 // was P_UnArchiveThinkers

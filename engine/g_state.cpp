@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2003/04/24 20:30:02  hurdler
+// Remove lots of compiling warnings
+//
 // Revision 1.12  2003/04/04 00:01:54  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -308,7 +311,7 @@ PlayerInfo *GameInfo::AddPlayer(int pnum, PlayerInfo *in)
     }
   */
 
-  if (pnum >= present.size())
+  if (pnum >= (int)present.size())
     present.resize(maxplayers);
   else if (pnum >= 0 && present[pnum])
   // pnum already taken
@@ -426,7 +429,7 @@ void D_PageTicker();
 //
 void GameInfo::Ticker()
 {
-  extern ticcmd_t netcmds[32][32];
+  //extern ticcmd_t netcmds[32][32]; TODO
   extern bool dedicated;
 
   // level is physically exited -> ExitLevel(int exit)
@@ -491,7 +494,7 @@ void GameInfo::Ticker()
     }
 
 
-  int buf = gametic % BACKUPTICS;
+  //int buf = gametic % BACKUPTICS; TODO
   ticcmd_t *cmd;
 
   int i, n = players.size();

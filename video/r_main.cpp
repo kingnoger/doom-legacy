@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/04/24 20:30:36  hurdler
+// Remove lots of compiling warnings
+//
 // Revision 1.8  2003/04/19 17:38:48  smite-meister
 // SNDSEQ support, tools, linedef system...
 //
@@ -818,7 +821,7 @@ void R_ExecuteSetViewSize()
     }
     
   if (cv_scalestatusbar.value || cv_viewsize.value > 10)
-    hud.stbarheight *= (rendermode==render_soft) ? vid.dupy : vid.fdupy;
+    hud.stbarheight = (int)(hud.stbarheight * (rendermode==render_soft) ? vid.dupy : vid.fdupy);
 
   //added 01-01-98: full screen view, without statusbar
   if (cv_viewsize.value > 10)

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/04/24 20:30:27  hurdler
+// Remove lots of compiling warnings
+//
 // Revision 1.6  2003/02/08 21:43:50  smite-meister
 // New Memzone system. Choose your pawntype! Cyberdemon OK.
 //
@@ -331,6 +334,8 @@ void I_GetEvent()
     }
 }
 
+/*
+TODO
 static void doGrabMouse()
 {
   if(SDL_WM_GrabInput(SDL_GRAB_QUERY) == SDL_GRAB_OFF)
@@ -338,6 +343,7 @@ static void doGrabMouse()
     SDL_WM_GrabInput(SDL_GRAB_ON);
   }
 }
+*/
 
 static void doUngrabMouse()
 {

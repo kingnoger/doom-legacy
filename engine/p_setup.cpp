@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2003/04/24 20:30:17  hurdler
+// Remove lots of compiling warnings
+//
 // Revision 1.16  2003/04/20 17:02:01  smite-meister
 // Damn
 //
@@ -634,7 +637,7 @@ void Map::LoadThings(int lump)
 	  if (ednum > 4000)
 	    ednum -= 4001 - 5;
 	  // save spots for respawning in network games
-	  if (playerstarts.size() < ednum)
+	  if ((int)playerstarts.size() < ednum)
 	    playerstarts.resize(ednum);
 	  playerstarts[ednum - 1] = t;
 	  t->type = 0; // t->type is used as a timer
@@ -717,7 +720,7 @@ void Map::LoadThings(int lump)
 	    {
 	      ednum = 5 + ednum - 9100;
 
-	      if (playerstarts.size() < ednum)
+	      if ((int)playerstarts.size() < ednum)
 		playerstarts.resize(ednum);
 	      playerstarts[ednum - 1] = t;
 	      t->type = 0;
@@ -1239,7 +1242,8 @@ void Map::GroupLines()
 
 }
 
-
+/*
+TODO
 static char *levellumps[] =
 {
   "label",        // ML_LABEL,    A separator, name, ExMx or MAPxx
@@ -1255,7 +1259,7 @@ static char *levellumps[] =
   "BLOCKMAP",     // ML_BLOCKMAP  LUT, motion clipping, walls/grid element
   "BEHAVIOR" // ACS scripts
 };
-
+*/
 
 //
 // P_CheckLevel

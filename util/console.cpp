@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/04/24 20:30:33  hurdler
+// Remove lots of compiling warnings
+//
 // Revision 1.5  2003/01/25 21:33:06  smite-meister
 // Now compiles with MinGW 2.0 / GCC 3.2.
 // Builder can choose between dynamic and static linkage.
@@ -350,9 +353,9 @@ static void CON_SetupBackColormap (void)
 
         if( game.mode == gm_heretic )
         {
-            greenmap[k] = 209 + (float)j*15/(3*255);   //remaps to greens(209-224)
-            graymap[k]  =       (float)j*35/(3*255);   //remaps to grays(0-35)           
-            whitemap[k] = 145 + (float)j*15/(3*255);   //remaps to reds(145-168)
+            greenmap[k] = 209 + (byte)((float)j*15/(3*255));   //remaps to greens(209-224)
+            graymap[k]  =       (byte)((float)j*35/(3*255));   //remaps to grays(0-35)           
+            whitemap[k] = 145 + (byte)((float)j*15/(3*255));   //remaps to reds(145-168)
         }
         else
             greenmap[k] = 127 - (j>>6);
@@ -1165,7 +1168,7 @@ static void CON_DrawHudlines (void)
 #ifdef HWRENDER
 	  extern float gr_viewheight;	 
 	  if (con_lineowner[i%con_hudlines] == 2)
-	    V_DrawCharacter ( x<<3, y2+gr_viewheight, p[x] |V_NOSCALEPATCH|V_NOSCALESTART);
+	    V_DrawCharacter ( x<<3, (int)(y2+gr_viewheight), p[x] |V_NOSCALEPATCH|V_NOSCALESTART);
 	  else
 #endif
 	    V_DrawCharacter ( x<<3, y, p[x] |V_NOSCALEPATCH|V_NOSCALESTART);
@@ -1249,7 +1252,7 @@ static void CON_DrawConsole (void)
     {
 #ifdef HWRENDER // not win32 only 19990829 by Kin
         if (rendermode!=render_soft)
-            V_DrawScalePic (0, con_curlines-200*vid.fdupy, 0, fc.GetNumForName ("CONSBACK") );
+            V_DrawScalePic (0, (int)(con_curlines-200*vid.fdupy), 0, fc.GetNumForName ("CONSBACK") );
         else
 #endif
             CON_DrawBackpic (con_backpic,0,vid.width);   // picture as background

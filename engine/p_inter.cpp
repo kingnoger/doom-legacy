@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2003/04/24 20:30:08  hurdler
+// Remove lots of compiling warnings
+//
 // Revision 1.13  2003/04/08 09:46:05  smite-meister
 // Bugfixes
 //
@@ -2291,7 +2294,7 @@ bool PlayerPawn::Morph()
   //chicken->player = player;
   //chicken->health = MAXCHICKENHEALTH;
   //player->mo = chicken;
-  armorpoints[0] = armorfactor[0] = 0;
+  armorfactor[0] = armorpoints[0] = 0;
   powers[pw_invisibility] = 0;
   powers[pw_weaponlevel2] = 0;
   weaponinfo = wpnlev1info;

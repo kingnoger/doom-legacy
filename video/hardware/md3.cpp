@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/04/24 20:30:44  hurdler
+// Remove lots of compiling warnings
+//
 // Revision 1.2  2003/04/05 12:20:00  smite-meister
 // Makefiles fixed
 //
@@ -277,7 +280,7 @@ bool MD3_t::Load(const char *filename)
       fseek(file, base + meshes[i].header.ofsVertices, SEEK_SET);
       fread(meshes[i].vertices, sizeof(MD3_vertex), n * m, file);
 
-      meshes[i].texture = -1;
+      meshes[i].texture = 0;
       base = base + meshes[i].header.ofsEND;
     }
 
@@ -357,7 +360,7 @@ void MD3_t::DrawInterpolated(MD3_animstate *st)
       MD3_vertex *cv = &mesh->vertices[st->frame * mesh->header.numVertices];
       MD3_vertex *nv = &mesh->vertices[st->nextframe * mesh->header.numVertices];
 
-      if (mesh->texture != -1)
+      if (mesh->texture != 0)
 	glBindTexture(GL_TEXTURE_2D, mesh->texture);
 
       int i, j, k, n = mesh->header.numTriangles;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/04/24 20:30:21  hurdler
+// Remove lots of compiling warnings
+//
 // Revision 1.8  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -151,7 +154,7 @@ void F_Ticker()
 	    finalecount += TEXTWAIT; 
 	}
 
-      if (finalecount > strlen(finaletext)*TEXTSPEED + TEXTWAIT)
+      if (finalecount > (int)strlen(finaletext)*TEXTSPEED + TEXTWAIT)
 	{
 	  if (endgame)
 	    { // skip to next stage

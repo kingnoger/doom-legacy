@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/04/24 20:30:15  hurdler
+// Remove lots of compiling warnings
+//
 // Revision 1.2  2003/04/19 17:38:47  smite-meister
 // SNDSEQ support, tools, linedef system...
 //
@@ -168,7 +171,7 @@ bool Map::EV_RotatePoly(line_t *line, byte *args, int direction, bool overRide)
   SN_StartSequence(&poly->startSpot, SEQ_DOOR + poly->seqType);
 	
   int mirror;
-  while (mirror = GetPolyobjMirror(polynum))
+  while ((mirror = GetPolyobjMirror(polynum)))
     {
       poly = GetPolyobj(mirror);
       if (poly && poly->specialdata && !overRide)
@@ -181,7 +184,7 @@ bool Map::EV_RotatePoly(line_t *line, byte *args, int direction, bool overRide)
       AddThinker(p);
       poly->specialdata = p;
 
-      if (poly = GetPolyobj(polynum))
+      if ((poly = GetPolyobj(polynum)))
 	poly->specialdata = p;
       else
 	I_Error("EV_RotatePoly:  Invalid polyobj num: %d\n", polynum);
@@ -263,7 +266,7 @@ bool Map::EV_MovePoly(line_t *line, byte *args, bool timesEight, bool overRide)
   polyobj_t *poly;
 
   int polynum = args[0];
-  if (poly = GetPolyobj(polynum))
+  if ((poly = GetPolyobj(polynum)))
     {
       if(poly->specialdata && !overRide)
 	{ // poly is already moving
@@ -279,7 +282,7 @@ bool Map::EV_MovePoly(line_t *line, byte *args, bool timesEight, bool overRide)
   poly->specialdata = p;
   SN_StartSequence(&poly->startSpot, SEQ_DOOR + poly->seqType);
 
-  while(mirror = GetPolyobjMirror(polynum))
+  while ((mirror = GetPolyobjMirror(polynum)))
     {
       poly = GetPolyobj(mirror);
       if(poly && poly->specialdata && !overRide)
@@ -476,7 +479,7 @@ bool Map::EV_OpenPolyDoor(line_t *line, byte *args, podoortype_e type)
 
 
   polynum = args[0];
-  if (poly = GetPolyobj(polynum))
+  if ((poly = GetPolyobj(polynum)))
     {
       if(poly->specialdata)
 	{ // poly is already moving
@@ -495,7 +498,7 @@ bool Map::EV_OpenPolyDoor(line_t *line, byte *args, podoortype_e type)
   if (type)
     SN_StartSequence(&poly->startSpot, SEQ_DOOR + poly->seqType);
 
-  while (mirror = GetPolyobjMirror(polynum))
+  while ((mirror = GetPolyobjMirror(polynum)))
     {
       poly = GetPolyobj(mirror);
       if (poly && poly->specialdata)

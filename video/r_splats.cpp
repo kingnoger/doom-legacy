@@ -17,8 +17,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:48  hurdler
-// Initial revision
+// Revision 1.2  2003/04/24 20:30:37  hurdler
+// Remove lots of compiling warnings
+//
+// Revision 1.1.1.1  2002/11/16 14:18:48  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.4  2002/08/19 18:06:48  vberghol
 // renderer somewhat fixed
@@ -217,7 +220,7 @@ void Rend::R_AddWallSplat(line_t  *wallline,
 
     
     // offset needed by draw code for texture mapping
-    linelength = P_SegLength((seg_t*)wallline);
+    linelength = (fixed_t)P_SegLength((seg_t*)wallline);
     splat->offset = FixedMul(wallfrac, linelength) - (patch->width<<(FRACBITS-1));
     //CONS_Printf("offset splat %d\n",splat->offset);
     fracsplat = FixedDiv( ((patch->width<<FRACBITS)>>1) , linelength );

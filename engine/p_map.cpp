@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/04/24 20:30:12  hurdler
+// Remove lots of compiling warnings
+//
 // Revision 1.9  2003/04/08 09:46:06  smite-meister
 // Bugfixes
 //
@@ -97,7 +100,6 @@ line_t **spechit;                //SoM: 3/15/2000: Limit removal
 int      numspechit;
 
 
-
 fixed_t  tmceilingz;
 fixed_t  tmdropoffz;
 
@@ -123,11 +125,13 @@ Actor *BlockingMobj; //thing that blocked position (NULL if not
 static msecnode_t *sector_list = NULL;
 
 //SoM: 3/15/2000
+/*
+TODO
 static int pe_x; // Pain Elemental position for Lost Soul checks
 static int pe_y; // Pain Elemental position for Lost Soul checks
 static int ls_x; // Lost Soul position for Lost Soul checks
 static int ls_y; // Lost Soul position for Lost Soul checks
-
+*/
 
 
 // set temp location and boundingbox
@@ -364,6 +368,8 @@ static bool PIT_CheckThing(Actor *thing)
 // intersection of the trajectory and the line, but that takes
 // longer and probably really isn't worth the effort.
 //
+/*
+TODO
 static bool PIT_CrossLine (line_t *ld)
 {
   if (!(ld->flags & ML_TWOSIDED) ||
@@ -376,7 +382,7 @@ static bool PIT_CrossLine (line_t *ld)
         return false;  // line blocks trajectory
   return true; // line doesn't block trajectory
 }
-
+*/
 
 
 //

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2003/04/24 20:29:58  hurdler
+// Remove lots of compiling warnings
+//
 // Revision 1.12  2003/04/20 17:35:38  smite-meister
 // Hexen volume fix
 //
@@ -881,7 +884,7 @@ void SoundSystem::UpdateSounds()
   if (musicvolume != cv_musicvolume.value)
     SetMusicVolume(cv_musicvolume.value);
 
-  if (channels.size() != cv_numChannels.value)
+  if ((int)channels.size() != cv_numChannels.value)
     {
 #ifdef HW3SOUND
       if (hws_mode != HWS_DEFAULT_MODE)

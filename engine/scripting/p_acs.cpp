@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/04/24 20:30:26  hurdler
+// Remove lots of compiling warnings
+//
 // Revision 1.5  2003/04/20 17:35:38  smite-meister
 // Hexen volume fix
 //
@@ -456,9 +459,9 @@ void Map::StartOpenACS(int number, int infoIndex, int *address)
 
 void P_CheckACSStore()
 {
+  /* 
+  FIXME
   acsstore_t *store;
-
-  /* FIXME
   for(store = ACSStore; store->map != 0; store++)
     {
       if(store->map == gamemap)
@@ -527,7 +530,8 @@ bool Map::StartACS(int number, byte *args, Actor *activator, line_t *line, int s
 // AddToACSStore
 //
 //==========================================================================
-
+/*
+TODO
 static bool AddToACSStore(int map, int number, byte *args)
 {
   int i;
@@ -561,6 +565,7 @@ static bool AddToACSStore(int map, int number, byte *args)
   *((int *)ACSStore[index].args) = *((int *)args);
   return true;
 }
+*/
 
 
 //==========================================================================

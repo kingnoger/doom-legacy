@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/04/24 20:29:57  hurdler
+// Remove lots of compiling warnings
+//
 // Revision 1.2  2003/04/20 16:45:49  smite-meister
 // partial SNDSEQ fix
 //
@@ -605,7 +608,7 @@ void Map::S_Read_SNDSEQ(int lump)
 			    CONS_Printf("neverseen\n");
 			    *tempseq = temp; // copy the fields
 
-			    for (n=0; n < script.size(); n++)
+			    for (n=0; n < (int)script.size(); n++)
 			      tempseq->seq[n] = script[n];
 
 			    if (SoundSeqs.count(temp.number)) // already there

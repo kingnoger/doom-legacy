@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/04/24 20:30:19  hurdler
+// Remove lots of compiling warnings
+//
 // Revision 1.8  2003/04/19 17:38:47  smite-meister
 // SNDSEQ support, tools, linedef system...
 //
@@ -173,7 +176,7 @@ extern int ticruned,ticmiss;
 //
 void PlayerPawn::Move()
 {
-  extern int variable_friction;
+  //extern int variable_friction; TODO
 
   ticcmd_t *cmd = &player->cmd;
 

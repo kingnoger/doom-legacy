@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/04/24 20:30:34  hurdler
+// Remove lots of compiling warnings
+//
 // Revision 1.9  2003/04/04 00:01:58  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -941,9 +944,9 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
   #define HEX2INT(x) (x >= '0' && x <= '9' ? x - '0' : x >= 'a' && x <= 'f' ? x - 'a' + 10 : x >= 'A' && x <= 'F' ? x - 'A' + 10 : 0)
   if(p1[0] == '#')
   {
-    cr = cmaskr = ((HEX2INT(p1[1]) * 16) + HEX2INT(p1[2]));
-    cg = cmaskg = ((HEX2INT(p1[3]) * 16) + HEX2INT(p1[4]));
-    cb = cmaskb = ((HEX2INT(p1[5]) * 16) + HEX2INT(p1[6]));
+    cmaskr = cr = ((HEX2INT(p1[1]) * 16) + HEX2INT(p1[2]));
+    cmaskg = cg = ((HEX2INT(p1[3]) * 16) + HEX2INT(p1[4]));
+    cmaskb = cb = ((HEX2INT(p1[5]) * 16) + HEX2INT(p1[6]));
     // Create a rough approximation of the color (a 16 bit color)
     maskcolor = ((cb) >> 3) + (((cg) >> 2) << 5) + (((cr) >> 3) << 11);
     if(p1[7] >= 'a' && p1[7] <= 'z')
@@ -1279,14 +1282,9 @@ int P_PrecacheLevelFlats();
 void Map::PrecacheMap()
 {
     char*               texturepresent;
-    char*               spritepresent;
-
+    //char*               spritepresent; TODO
     int                 i;
-    int                 j;
-    int                 k;
-    int                 lump;
-
-
+    //int                 lump; TODO
 
     //int numgenerated;  //faB:debug
 
