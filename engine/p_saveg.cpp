@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2004/01/02 14:21:21  smite-meister
+// save bugfix
+//
 // Revision 1.20  2003/12/23 18:06:06  smite-meister
 // Hexen stairbuilders. Moving geometry done!
 //
@@ -451,7 +454,8 @@ int Actor::Marshal(LArchive &a)
   for (int i=0; i<5; i++)
     a << args[i];
 
-  a << reactiontime << floorclip; 
+  a << reactiontime << floorclip;
+  a << team;
 
   if (a.IsStoring())
     {
@@ -464,13 +468,17 @@ int Actor::Marshal(LArchive &a)
     {
       a << temp;
       spawnpoint = (temp == -1) ? NULL : &mp->mapthings[temp];
-      mp->mapthings[temp].mobj = this;
+
       owner  = (Actor *)Thinker::Unserialize(a);
       target = (Actor *)Thinker::Unserialize(a);
       pres = presentation_t::Unserialize(a);
 
-      CheckPosition(x, y);
-      SetPosition();
+      if (mp)
+	{
+	  mp->mapthings[temp].mobj = this;
+	  CheckPosition(x, y);
+	  SetPosition();
+	}
     }
 
   return 0;
@@ -488,7 +496,6 @@ int DActor::Marshal(LArchive &a)
     MD_XY         = 0x000004,
     MD_Z          = 0x000008,
     MD_MOM        = 0x000010,
-
     MD_MASS       = 0x000020,
     MD_RADIUS     = 0x000040,
     MD_HEIGHT     = 0x000080,
@@ -498,20 +505,23 @@ int DActor::Marshal(LArchive &a)
     MD_FLAGS2     = 0x000400,
     MD_EFLAGS     = 0x000800,
 
-    MD_SPECIAL1   = 0x001000,
-    MD_SPECIAL2   = 0x002000,
-    MD_TID        = 0x004000,
-    MD_SPECIAL    = 0x008000,
+    MD_TID        = 0x001000,
+    MD_SPECIAL    = 0x002000,
+    MD_RTIME      = 0x004000,
+    MD_FLOORCLIP  = 0x008000,
+    MD_TEAM       = 0x010000,
 
-    MD_RTIME      = 0x010000,
     MD_STATE      = 0x020000,
     MD_TICS       = 0x040000,
     MD_MOVEDIR    = 0x080000,
     MD_MOVECOUNT  = 0x100000,
     MD_THRESHOLD  = 0x200000,
     MD_LASTLOOK   = 0x400000,
-    MD_TARGET     = 0x800000,
-    MD_OWNER     = 0x1000000,
+    MD_SPECIAL1   = 0x800000,
+    MD_SPECIAL2  = 0x1000000,
+
+    MD_TARGET    = 0x2000000,
+    MD_OWNER     = 0x4000000,
   };
 
   short stemp;
@@ -542,8 +552,8 @@ int DActor::Marshal(LArchive &a)
 	}
 
       // not the default but the most probable
-      if (z != floorz)                   diff |= MD_Z;
-      if (px != 0 || py != 0 || pz != 0) diff |= MD_MOM;
+      if (z != floorz)                 diff |= MD_Z;
+      if (px || py || pz)              diff |= MD_MOM;
       if (mass   != info->mass)        diff |= MD_MASS;
       if (radius != info->radius)      diff |= MD_RADIUS;
       if (height != info->height)      diff |= MD_HEIGHT;
@@ -552,23 +562,24 @@ int DActor::Marshal(LArchive &a)
       if (flags2 != info->flags2)      diff |= MD_FLAGS2;
       if (eflags)                      diff |= MD_EFLAGS;
  
-      if (special1)  diff |= MD_SPECIAL1;
-      if (special2)  diff |= MD_SPECIAL2;
       if (tid)       diff |= MD_TID;
       if (special)   diff |= MD_SPECIAL;
-
       if (reactiontime != info->reactiontime) diff |= MD_RTIME;
+      if (floorclip) diff |= MD_FLOORCLIP;
+      if (team) diff |= MD_TEAM;
+
       if (state-states != info->spawnstate)   diff |= MD_STATE;
       if (tics         != state->tics)        diff |= MD_TICS;
-
 
       if (movedir)        diff |= MD_MOVEDIR;
       if (movecount)      diff |= MD_MOVECOUNT;
       if (threshold)      diff |= MD_THRESHOLD;
       if (lastlook != -1) diff |= MD_LASTLOOK;
+      if (special1)  diff |= MD_SPECIAL1;
+      if (special2)  diff |= MD_SPECIAL2;
 
-      if (owner)   diff |= MD_TARGET;
-      if (target)  diff |= MD_OWNER;
+      if (owner)   diff |= MD_OWNER;
+      if (target)  diff |= MD_TARGET;
 
       a << diff;
 
@@ -582,7 +593,6 @@ int DActor::Marshal(LArchive &a)
       if (diff & MD_XY)   a << x << y << angle;
       if (diff & MD_Z)    a << z;
       if (diff & MD_MOM)  a << px << py << pz;
-
       if (diff & MD_MASS)   a << mass;
       if (diff & MD_RADIUS) a << radius;
       if (diff & MD_HEIGHT) a << height;
@@ -592,27 +602,30 @@ int DActor::Marshal(LArchive &a)
       if (diff & MD_FLAGS2) a << flags2;
       if (diff & MD_EFLAGS) a << eflags;
 
-      if (diff & MD_SPECIAL1) a << special1;
-      if (diff & MD_SPECIAL2) a << special2;
-      if (diff & MD_TID)      a << tid;
+      if (diff & MD_TID)    a << tid;
       if (diff & MD_SPECIAL)
 	{
 	  a << special;
 	  for (i=0; i<5; i++)
 	    a << args[i];
 	}
+      if (diff & MD_RTIME)     a << reactiontime;
+      if (diff & MD_FLOORCLIP) a << floorclip;
+      if (diff & MD_TEAM)      a << team;
 
-      if (diff & MD_RTIME) a << reactiontime;
       if (diff & MD_STATE)
 	{
 	  stemp = short(state - states);
 	  a << stemp;
 	}
       if (diff & MD_TICS)      a << tics;
+
       if (diff & MD_MOVEDIR)   a << movedir;
       if (diff & MD_MOVECOUNT) a << movecount;
       if (diff & MD_THRESHOLD) a << threshold;
       if (diff & MD_LASTLOOK)  a << lastlook;
+      if (diff & MD_SPECIAL1)  a << special1;
+      if (diff & MD_SPECIAL2)  a << special2;
 
       if (diff & MD_OWNER)  Thinker::Serialize(owner, a);
       if (diff & MD_TARGET) Thinker::Serialize(target, a);
@@ -674,8 +687,6 @@ int DActor::Marshal(LArchive &a)
       if (diff & MD_FLAGS2) a << flags2;
       if (diff & MD_EFLAGS) a << eflags;
 
-      if (diff & MD_SPECIAL1) a << special1; // what about the pointers in these?
-      if (diff & MD_SPECIAL2) a << special2;
       if (diff & MD_TID)      a << tid;
       if (diff & MD_SPECIAL)
 	{
@@ -683,14 +694,15 @@ int DActor::Marshal(LArchive &a)
 	  for (i=0; i<5; i++)
 	    a << args[i];
 	}
+      if (diff & MD_RTIME)     a << reactiontime;
+      if (diff & MD_FLOORCLIP) a << floorclip;
+      if (diff & MD_TEAM)      a << team;
 
-      if (diff & MD_RTIME) a << reactiontime;
       if (diff & MD_STATE)
 	{
 	  a << stemp;
 	  state = &states[stemp];
 	}
-      
       if (diff & MD_TICS)
 	a << tics;
       else
@@ -700,13 +712,18 @@ int DActor::Marshal(LArchive &a)
       if (diff & MD_MOVECOUNT) a << movecount;
       if (diff & MD_THRESHOLD) a << threshold;
       if (diff & MD_LASTLOOK)  a << lastlook;
+      if (diff & MD_SPECIAL1)  a << special1;
+      if (diff & MD_SPECIAL2)  a << special2;
 
       if (diff & MD_OWNER)  owner  = (Actor *)Thinker::Unserialize(a);
       if (diff & MD_TARGET) target = (Actor *)Thinker::Unserialize(a);
 
       // set sprev, snext, bprev, bnext, subsector
-      CheckPosition(x, y); // TEST, sets tmfloorz, tmceilingz
-      SetPosition();
+      if (mp)
+	{
+	  CheckPosition(x, y); // TEST, sets tmfloorz, tmceilingz
+	  SetPosition();
+	}
 
       if (!(diff & MD_Z))
 	z = floorz;
@@ -746,12 +763,12 @@ int Pawn::Marshal(LArchive & a)
   return 0;
 }
 
+
 int PlayerPawn::Marshal(LArchive &a)
 {
   Pawn::Marshal(a);
 
   int i, n, diff;
-  int temp;
 
   enum player_diff
   {
@@ -772,11 +789,12 @@ int PlayerPawn::Marshal(LArchive &a)
     {
       for (i=0; i<NUMPSPRITES; i++)
 	{
-	  a << (temp = psprites[i].state ? (psprites[i].state - weaponstates) : -1);
+	  a << (n = psprites[i].state ? (psprites[i].state - weaponstates) : -1);
 	  a << psprites[i].tics << psprites[i].sx << psprites[i].sy;
 	}
 
-      a << player->number;
+      // store the player number (if there is one)
+      a << (n = player ? player->number : -1);
 
       // inventory is closed.
       a << invSlot;
@@ -823,15 +841,16 @@ int PlayerPawn::Marshal(LArchive &a)
       // loading
       for (i=0; i<NUMPSPRITES; i++)
 	{
-	  a << temp;	  
-	  psprites[i].state = (temp == -1) ? NULL : &weaponstates[temp];
+	  a << n;	  
+	  psprites[i].state = (n == -1) ? NULL : &weaponstates[n];
 	  a << psprites[i].tics << psprites[i].sx << psprites[i].sy;
 	}
 
+      // NOTE that this is a bit unsecure...
       a << n; //player->number;
       player = game.FindPlayer(n);
-      player->pawn = this;
-      player->mp = mp;
+      if (player)
+	player->mp = mp;
 
       a << invSlot;
       a << n;
@@ -1606,16 +1625,19 @@ int PlayerInfo::Serialize(LArchive &a)
       a << m << n;
     }
 
-  // the pawn is serialized by the map it is in, not here. See PlayerPawn::Marshal()
-  // TODO what if the Pawn is not in any Map but is carried by the PlayerInfo?
+  // in this state only may the Player be carrying a pawn which does not belong to any map.
+  if (playerstate == PST_WAITFORMAP)
+    Thinker::Serialize(pawn, a); 
+
   return 0;
 }
 
 int PlayerInfo::Unserialize(LArchive &a)
 {
   int t1, t2, i, n;
-
   a << number << team;
+  game.Players[number] = this; // small hack, for pawn unserialization
+
   a << name;
   a << ptype << color << skin;
   a << int(playerstate);
@@ -1637,7 +1659,9 @@ int PlayerInfo::Unserialize(LArchive &a)
       Frags.insert(pair<int, int>(t1, t2));
     }
 
-  // the pawn is unserialized by the map it is in, not here. See PlayerPawn::Marshal()
+  if (playerstate == PST_WAITFORMAP)
+    pawn = (PlayerPawn *)Thinker::Unserialize(a);
+
   return 0;
 }
 
@@ -1776,13 +1800,13 @@ int MapInfo::Unserialize(LArchive &a)
 
 int TeamInfo::Serialize(LArchive &a)
 {
-  a << name << color << score;
+  a << name << color << score << resources;
   return 0;
 }
 
 int TeamInfo::Unserialize(LArchive &a)
 {
-  a << name << color << score;
+  a << name << color << score << resources;
   return 0;
 }
 
@@ -1905,7 +1929,8 @@ int GameInfo::Unserialize(LArchive &a)
       PlayerInfo *p = new PlayerInfo;
       if (p->Unserialize(a))
 	return -2;
-      Players[p->number] = p;
+      // small hack: since PlayerInfo is not a member of the Thinker class hierarchy,
+      // (un)serialization is a bit complex... TODO? all classes with pointers into one big hierarchy?
     }
 
   if (!a.Marker(MARK_GROUP))
@@ -2031,7 +2056,7 @@ void GameInfo::SaveGame(int savegameslot, char *description)
   Serialize(a);          // store the game state into it
 
   byte *buffer;
-  unsigned length = a.Compress(&buffer, 0);  // take out the compressed data
+  unsigned length = a.Compress(&buffer, 1);  // take out the compressed data
 
   char filename[256];
   sprintf(filename, savegamename, savegameslot);

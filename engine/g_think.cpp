@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/01/02 14:21:21  smite-meister
+// save bugfix
+//
 // Revision 1.7  2003/12/13 23:51:03  smite-meister
 // Hexen update
 //
@@ -125,9 +128,10 @@ Thinker *Thinker::Unserialize(LArchive &a)
       return NULL; // TODO: How to handle errors? using exceptions?
     }
   p = t->factory();
+  a.SetPtr(id, p); // order is important: consider the case a -> b -> a, where -> is a pointer
+
   p->mp = a.active_map; // a small kludge, some Marshal functions need to have a valid Map*
   p->Marshal(a);
-  a.SetPtr(id, p);
   return p;
 }
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.26  2004/01/02 14:21:21  smite-meister
+// save bugfix
+//
 // Revision 1.25  2003/12/31 18:32:49  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -118,12 +121,11 @@
 
 #include "p_setup.h"    //levelflats to test if mobj in water sector
 #include "r_main.h"
-
 #include "r_sprite.h"
-
 #include "r_things.h"
-#include "s_sound.h"
+
 #include "sounds.h"
+#include "s_sound.h"
 
 #include "m_random.h"
 #include "d_clisrv.h"
@@ -183,6 +185,7 @@ Actor::Actor()
 
   reactiontime = 0;
   floorclip = 0;
+  team = 0;
 }
 
 DActor::DActor()
@@ -223,7 +226,7 @@ Actor::Actor(fixed_t nx, fixed_t ny, fixed_t nz)
   angle = aiming = 0;
   px = py = pz = 0;
 
-  // some attributes left uninitialized here
+  // NOTE some attributes left uninitialized here!
   flags = flags2 = eflags = 0;
 
   special = tid = 0;
@@ -233,6 +236,7 @@ Actor::Actor(fixed_t nx, fixed_t ny, fixed_t nz)
 
   reactiontime = 0;
   floorclip = 0;
+  team = 0;
 }
 
 
@@ -249,12 +253,9 @@ DActor::DActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
 
   flags  = info->flags;
   flags2 = info->flags2;
-  eflags = 0;
 
   if (game.skill != sk_nightmare)
     reactiontime = info->reactiontime;
-  else
-    reactiontime = 0;
 
   movedir = movecount = threshold = 0;
   lastlook = -1;
@@ -297,6 +298,7 @@ void Actor::Detach()
       P_DelSeclist(touching_sectorlist);
       touching_sectorlist = NULL;
     }
+  spawnpoint = NULL;
 
   eflags |= MFE_REMOVE; // so that pointers to it will be NULLed
 

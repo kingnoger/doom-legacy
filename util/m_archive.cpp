@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.4  2004/01/02 14:19:39  smite-meister
+// save bugfix
+//
 // Revision 1.3  2003/12/09 01:02:02  smite-meister
 // Hexen mapchange works, keycodes fixed
 //
@@ -76,6 +79,7 @@ LArchive::LArchive()
 {
   storing = false;
   m_buf = m_buf_end = m_pos = NULL;
+  active_map = NULL;
 }
 
 
