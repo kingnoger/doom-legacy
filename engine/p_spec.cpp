@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2003/12/23 18:06:06  smite-meister
+// Hexen stairbuilders. Moving geometry done!
+//
 // Revision 1.21  2003/12/21 12:29:09  smite-meister
 // bugfixes
 //
@@ -124,240 +127,10 @@
 #include "z_zone.h"
 
 
-
 //SoM: Enable Boom features?
 int boomsupport = 1;
 int variable_friction = 1;
 int allow_pushers = 1;
-
-
-
-//SoM: 3/7/2000
-void P_FindAnimatedFlat (int i);
-
-
-//
-// Animating textures and planes
-// There is another anim_t used in wi_stuff, unrelated.
-//
-struct anim_t
-{
-  char        istexture; // bool doesn't work, this can also take the value -1 !
-  int         picnum;
-  int         basepic;
-  int         numpics;
-  int         speed;
-};
-
-
-//
-//      source animation definition
-//
-#pragma pack(1) //Hurdler: 04/04/2000: I think pragma is more portable
-struct animdef_t
-{
-  char        istexture;      // if false, it is a flat, -1 is a terminator
-  char        endname[9];
-  char        startname[9];
-  int         speed;
-};
-#pragma pack()
-
-
-//SoM: 3/7/2000: New sturcture without limits.
-// FIXME each map must have its own!
-static anim_t*   lastanim;
-static anim_t*   anims;
-static size_t    maxanims;
-
-//
-// P_InitPicAnims
-//
-
-// Floor/ceiling animation sequences,
-//  defined by first and last frame,
-//  i.e. the flat (64x64 tile) name to
-//  be used.
-// The full animation sequence is given
-//  using all the flats between the start
-//  and end entry, in the order found in
-//  the WAD file.
-//
-animdef_t harddefs[] =
-{
-  // DOOM II flat animations.
-  {false,     "NUKAGE3",      "NUKAGE1",      8},
-  {false,     "FWATER4",      "FWATER1",      8},
-  {false,     "SWATER4",      "SWATER1",      8},
-  {false,     "LAVA4",        "LAVA1",        8},
-  {false,     "BLOOD3",       "BLOOD1",       8},
-
-  {false,     "RROCK08",      "RROCK05",      8},
-  {false,     "SLIME04",      "SLIME01",      8},
-  {false,     "SLIME08",      "SLIME05",      8},
-  {false,     "SLIME12",      "SLIME09",      8},
-
-    // animated textures
-  {true,      "BLODGR4",      "BLODGR1",      8},
-  {true,      "SLADRIP3",     "SLADRIP1",     8},
-
-  {true,      "BLODRIP4",     "BLODRIP1",     8},
-  {true,      "FIREWALL",     "FIREWALA",     8},
-  {true,      "GSTFONT3",     "GSTFONT1",     8},
-  {true,      "FIRELAVA",     "FIRELAV3",     8},
-  {true,      "FIREMAG3",     "FIREMAG1",     8},
-  {true,      "FIREBLU2",     "FIREBLU1",     8},
-  {true,      "ROCKRED3",     "ROCKRED1",     8},
-
-  {true,      "BFALL4",       "BFALL1",       8},
-  {true,      "SFALL4",       "SFALL1",       8},
-  {true,      "WFALL4",       "WFALL1",       8},
-  {true,      "DBRAIN4",      "DBRAIN1",      8},
-
-  // heretic 
-  {false,     "FLTWAWA3",     "FLTWAWA1",     8}, // Water
-  {false,     "FLTSLUD3",     "FLTSLUD1",     8}, // Sludge
-  {false,     "FLTTELE4",     "FLTTELE1",     6}, // Teleport
-  {false,     "FLTFLWW3",     "FLTFLWW1",     9}, // River - West
-  {false,     "FLTLAVA4",     "FLTLAVA1",     8}, // Lava
-  {false,     "FLATHUH4",     "FLATHUH1",     8}, // Super Lava
-  {true,      "LAVAFL3",      "LAVAFL1",      6}, // Texture: Lavaflow
-  {true,      "WATRWAL3",     "WATRWAL1",     4}, // Texture: Waterfall
-
-  {-1}
-};
-
-animdef_t nulldefs[] = {
-  {-1}
-};
-
-//
-//      Animating line specials
-//
-
-//
-// Init animated textures
-// - now called at level loading P_SetupLevel()
-//
-
-static animdef_t *animdefs;
-
-//SoM: 3/7/2000: Use new boom method of reading lump from wad file.
-void P_InitPicAnims ()
-{
-  //  Init animation
-  int         i;
-
-
-
-  if (fc.FindNumForName("ANIMATED") != -1)
-    animdefs = (animdef_t *)fc.CacheLumpName("ANIMATED", PU_STATIC);
-  if (game.mode == gm_hexen)
-    animdefs = nulldefs; // TODO hexen ANIMDEFS lump...
-  else
-    animdefs = harddefs;
-
-  // count anims
-  maxanims = 0;
-  for (i = 0; animdefs[i].istexture != -1; i++);
-  maxanims = i;
-
-  lastanim = anims = (anim_t *)malloc(sizeof(anim_t) * (maxanims + 1));
-
-  for (i = 0; animdefs[i].istexture != -1; i++)
-    {
-      if (animdefs[i].istexture)
-	{
-	  // different episode ?
-	  if (R_CheckTextureNumForName(animdefs[i].startname) == -1)
-	    continue;
-
-	  lastanim->picnum = R_TextureNumForName(animdefs[i].endname);
-	  lastanim->basepic = R_TextureNumForName(animdefs[i].startname);
-	}
-      else
-	{
-	  if ((fc.FindNumForName(animdefs[i].startname)) == -1)
-	    continue;
-
-	  lastanim->picnum = R_FlatNumForName(animdefs[i].endname);
-	  lastanim->basepic = R_FlatNumForName(animdefs[i].startname);
-	}
-
-      lastanim->istexture = animdefs[i].istexture;
-      lastanim->numpics = lastanim->picnum - lastanim->basepic + 1;
-
-      if (lastanim->numpics < 2)
-        I_Error ("P_InitPicAnims: bad cycle from %s to %s",
-		 animdefs[i].startname, animdefs[i].endname);
-
-      lastanim->speed = LONG(animdefs[i].speed) * NEWTICRATERATIO;
-      lastanim++;
-    }
-  lastanim->istexture = -1;
-
-  // FIXME animdefs is used even after this!
-  if (animdefs != harddefs && animdefs != nulldefs)
-    Z_ChangeTag (animdefs,PU_CACHE);
-}
-
-//  Check for flats in levelflats, that are part
-//  of a flat anim sequence, if so, set them up for animation
-//
-//SoM: 3/16/2000: Changed parameter from pointer to "anims" entry number
-void P_FindAnimatedFlat(int animnum)
-{
-  int            i;
-  int            startflatnum,endflatnum;
-  levelflat_t*   foundflats = levelflats;
-
-  startflatnum = anims[animnum].basepic;
-  endflatnum   = anims[animnum].picnum;
-
-  // note: high word of lumpnum is the wad number
-  if ( (startflatnum>>16) != (endflatnum>>16) )
-    I_Error ("AnimatedFlat start %s not in same wad as end %s\n",
-	     animdefs[animnum].startname, animdefs[animnum].endname);
-
-  //
-  // now search through the levelflats if this anim flat sequence is used
-  //
-  for (i = 0; i<numlevelflats; i++, foundflats++)
-    {
-      // is that levelflat from the flat anim sequence ?
-      if (foundflats->lumpnum >= startflatnum &&
-	  foundflats->lumpnum <= endflatnum)
-        {
-	  foundflats->baselumpnum = startflatnum;
-	  foundflats->animseq = foundflats->lumpnum - startflatnum;
-	  foundflats->numpics = endflatnum - startflatnum + 1;
-	  foundflats->speed = anims[animnum].speed;
-
-	  if (devparm)
-	    CONS_Printf("animflat: %#03d name:%.8s animseq:%d numpics:%d speed:%d\n",
-			i, foundflats->name, foundflats->animseq,
-			foundflats->numpics,foundflats->speed);
-        }
-    }
-}
-
-
-//
-//  Called by P_LoadSectors
-//
-void P_SetupLevelFlatAnims()
-{
-  int    i;
-
-  // the original game flat anim sequences
-  for (i=0; anims[i].istexture != -1; i++)
-    {
-      if (!anims[i].istexture)
-        {
-	  P_FindAnimatedFlat(i);
-        }
-    }
-}
 
 
 //========================================================
@@ -372,9 +145,10 @@ sectoreffect_t::sectoreffect_t(sector_t *s)
   sector = s;
 }
 
-//
+
+//========================================================
 // UTILITIES
-//
+//========================================================
 
 // Will return a side_t*
 //  given the number of the current sector,
@@ -655,10 +429,6 @@ fixed_t P_FindHighestCeilingSurrounding(sector_t* sec)
 }
 
 
-
-//
-// was P_FindShortestTextureAround()
-//
 // Passed a sector number, returns the shortest lower texture on a
 // linedef bounding the sector.
 //
@@ -819,7 +589,7 @@ int Map::FindSectorFromTag(int tag, int start)
   return start;
 }
 
-// was P_FindLineFromLineTag
+
 //SoM: 3/7/2000: More boom specific stuff...
 // killough 4/16/98: Same thing, only for linedefs
 /*
@@ -850,7 +620,6 @@ line_t *Map::FindLineFromTag(int tag, int *start)
 }
 
 
-// was P_InitTagLists
 //SoM: 3/7/2000: Oh joy!
 // Hash the sector tags across the sectors and linedefs.
 void Map::InitTagLists()
@@ -905,15 +674,11 @@ int P_FindMinSurroundingLight(sector_t* sector, int max)
 }
 
 
-//
-// P_SectorActive()
-//
 // Passed a linedef special class (floor, ceiling, lighting) and a sector
 // returns whether the sector is already busy with a linedef special of the
 // same class. If old demo compatibility true, all linedef special classes
 // are the same.
-//
-//
+
 bool P_SectorActive(special_e t, sector_t *sec)
 {
   if (!boomsupport)
@@ -932,6 +697,8 @@ bool P_SectorActive(special_e t, sector_t *sec)
 
   return true;
 }
+
+
 
 
 //============================================================================
@@ -1181,14 +948,12 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
     case 25: // Floor Raise to Nearest
       success = EV_DoFloor(tag, line, floor_t::UpNnF, SPEED(args[1]), 0, 0);
       break;
-      /*
     case 26: // Stairs Build Down Normal
-      success = EV_BuildStairs(line, args, -1, STAIRS_NORMAL);
+      success = EV_BuildHexenStairs(tag, stair_t::Normal, -SPEED(args[1]), -HEIGHT(args[2]), args[4], args[3]);
       break;
     case 27: // Build Stairs Up Normal
-      success = EV_BuildStairs(line, args, 1, STAIRS_NORMAL);
+      success = EV_BuildHexenStairs(tag, stair_t::Normal, SPEED(args[1]), HEIGHT(args[2]), args[4], args[3]);
       break;
-      */
     case 28: // Floor Raise and Crush
       success = EV_DoFloor(tag, line, floor_t::Ceiling, SPEED(args[1]), args[2], -HEIGHT(8));
       break;
@@ -1198,14 +963,12 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
     case 30: // Open Pillar
       success = EV_DoElevator(tag, elevator_t::OpenPillar, SPEED(args[1]), HEIGHT(args[2]), HEIGHT(args[3]), 0);
       break;
-      /*
     case 31: // Stairs Build Down Sync
-      success = EV_BuildStairs(line, args, -1, STAIRS_SYNC);
+      success = EV_BuildHexenStairs(tag, stair_t::Sync, -SPEED(args[1]), -HEIGHT(args[2]), args[3], 0);
       break;
     case 32: // Build Stairs Up Sync
-      success = EV_BuildStairs(line, args, 1, STAIRS_SYNC);
+      success = EV_BuildHexenStairs(tag, stair_t::Sync, SPEED(args[1]), HEIGHT(args[2]), args[3], 0);
       break;
-      */
     case 35: // Raise Floor by Value Times 8
       success = EV_DoFloor(tag, line, floor_t::RelHeight, SPEED(args[1]), 0, 8*HEIGHT(args[2]));
       break;
@@ -1396,10 +1159,10 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
     case 116: // Light Strobe
       success = EV_SpawnLight(tag, lightfx_t::Strobe, args[1], args[2], args[3], args[4]);
       break;
-      /*
     case 120: // Quake Tremor
-      success = A_LocalQuake(args, mo);
+      success = EV_LocalQuake(args);
       break;
+      /*
     case 129: // UsePuzzleItem. Not needed, see P_UseArtifact()
       success = EV_LineSearchForPuzzleItem(line, args, mo);
       break;
@@ -1487,28 +1250,27 @@ int Map::EV_SectorSoundChange(int tag, int seq)
 }
 
 
-
+// temporary HACKS, FIXME
+void P_SetupLevelFlatAnims() {}
+void P_InitPicAnims() {}
 //
 // Animate textures etc.
 //
 void Map::UpdateSpecials()
 {
-  anim_t*     anim;
-  int         i;
-  int         pic; //SoM: 3/8/2000
-
-  levelflat_t *foundflats;        // for flat animation
+  int i;
 
   //  LEVEL TIMER
   if (cv_timelimit.value && maptic > unsigned(cv_timelimit.value))
     ExitMap(NULL, 0);
 
+  /* FIXME for now the texture/flat animations are disabled
   //  ANIMATE TEXTURES
-  for (anim = anims ; anim < lastanim ; anim++)
+  for (anim_t *anim = anims; anim < lastanim; anim++)
     {
       for (i=anim->basepic ; i<anim->basepic+anim->numpics ; i++)
 	{
-	  pic = anim->basepic + ( (maptic/anim->speed + i)%anim->numpics );
+	  int pic = anim->basepic + ( (maptic/anim->speed + i)%anim->numpics );
 	  if (anim->istexture)
 	    texturetranslation[i] = pic;
 	}
@@ -1519,7 +1281,7 @@ void Map::UpdateSpecials()
   //Fab:FIXME: do not check the non-animate flat.. link the animated ones?
   // note: its faster than the original anywaysince it animates only
   //    flats used in the level, and there's usually very few of them
-  foundflats = levelflats;
+  levelflat_t *foundflats = levelflats;
   for (i = 0; i<numlevelflats; i++,foundflats++)
     {
       if (foundflats->speed) // it is an animated flat
@@ -1529,6 +1291,7 @@ void Map::UpdateSpecials()
 	    ( (maptic/foundflats->speed + foundflats->animseq) % foundflats->numpics);
 	}
     }
+  */
 }
 
 
@@ -1869,7 +1632,6 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
 }
 
 //
-// was P_SpawnSpecials
 // After the map has been loaded, scan for linedefs
 //  that spawn thinkers or confer properties
 //
@@ -1880,24 +1642,28 @@ void Map::SpawnLineSpecials()
   RemoveAllActiveCeilings();
   RemoveAllActivePlats();
 
+  // First set the Hexen line tags.
+  for (i = 0; i < numlines; i++)
+    if (lines[i].special == 121)
+      {
+	// Hexen: Line_SetIdentification
+	lines[i].tag = lines[i].args[0];
+	lines[i].special = 0;
+      }
+
+  InitTagLists();   //Create xref tables for tags
+
+  // Then spawn the stuff that use the line/sector tags.
   SpawnScrollers(); //Add generalized scrollers
   SpawnFriction();  //New friction model using linedefs
   SpawnPushers();   //New pusher model using linedefs
 
   //  Init line EFFECTs
-  for (i = 0;i < numlines; i++)
+  for (i = 0; i < numlines; i++)
     {
       switch (lines[i].special)
         {
           int s, sec;
-	  // Hexen specials
-	case 121: // Line_SetIdentification
-	  lines[i].tag = lines[i].args[0];
-	  lines[i].special = 0;
-	  break;
-
-
-
           // support for drawn heights coming from different sector
 	case 242:
 	  sec = sides[*lines[i].sidenum].sector-sectors;
@@ -2018,17 +1784,12 @@ void Map::SpawnLineSpecials()
             }
         }
     }
-
-  InitTagLists();   //Create xref tables for tags
 }
 
 
-
-
-
-/*
-  SoM: 3/8/2000: General scrolling functions.
-*/
+//==========================================================================
+//  Scrollers
+//==========================================================================
 
 IMPLEMENT_CLASS(scroll_t, "Scroller");
 scroll_t::scroll_t() {}
@@ -2046,8 +1807,6 @@ scroll_t::scroll_t() {}
 // control the direction of the sector's scrolling, which is usually what is
 // desired.
 //
-// Process the active scrollers.
-// was T_Scroll
 
 void scroll_t::Think()
 {
@@ -2184,7 +1943,7 @@ static scroll_t *Add_WallScroller(fixed_t dx, fixed_t dy, const line_t *l,
 // (This is so scrolling floors and objects on them can move at same speed.)
 #define CARRYFACTOR ((fixed_t)(FRACUNIT*.09375))
 
-// was P_SpawnScroller
+
 // Initialize the scrollers
 void Map::SpawnScrollers()
 {
@@ -2255,16 +2014,16 @@ void Map::SpawnScrollers()
 
 	  // Hexen
 	case 100: // Scroll_Texture_Left
-          AddThinker(new scroll_t(scroll_t::sc_side, -HEIGHT(l->args[0]), 0, NULL, l->sidenum[0], false));
+          AddThinker(new scroll_t(scroll_t::sc_side, -l->args[0] << 10, 0, NULL, l->sidenum[0], false));
 	  break;
 	case 101: // Scroll_Texture_Right
-          AddThinker(new scroll_t(scroll_t::sc_side, HEIGHT(l->args[0]), 0, NULL, l->sidenum[0], false));
+          AddThinker(new scroll_t(scroll_t::sc_side, l->args[0] << 10, 0, NULL, l->sidenum[0], false));
 	  break;
 	case 102: // Scroll_Texture_Up
-          AddThinker(new scroll_t(scroll_t::sc_side, HEIGHT(l->args[0]), 0, NULL, l->sidenum[0], false));
+          AddThinker(new scroll_t(scroll_t::sc_side, 0, l->args[0] << 10, NULL, l->sidenum[0], false));
 	  break;
 	case 103: // Scroll_Texture_Down
-          AddThinker(new scroll_t(scroll_t::sc_side, -HEIGHT(l->args[0]), 0, NULL, l->sidenum[0], false));
+          AddThinker(new scroll_t(scroll_t::sc_side, 0, -l->args[0] << 10, NULL, l->sidenum[0], false));
 	  break;
 
 	default:
@@ -2277,8 +2036,10 @@ void Map::SpawnScrollers()
 }
 
 
-//=========================================
-//   Friction
+
+//==========================================================================
+//  Friction
+//==========================================================================
 
 IMPLEMENT_CLASS(friction_t, "Friction");
 friction_t::friction_t() {}
@@ -2401,10 +2162,9 @@ void Map::SpawnFriction()
 }
 
 
-
-
-//=========================================
-//   Pushers
+//==========================================================================
+//  Pushers
+//==========================================================================
 
 IMPLEMENT_CLASS(pusher_t, "Pusher");
 pusher_t::pusher_t() {}

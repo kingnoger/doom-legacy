@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2003/12/23 18:06:06  smite-meister
+// Hexen stairbuilders. Moving geometry done!
+//
 // Revision 1.19  2003/12/21 12:29:09  smite-meister
 // bugfixes
 //
@@ -224,6 +227,16 @@ int floor_t::Marshal(LArchive &a)
     sector->floordata = this;
 
   a << type << crush << newspecial << texture << speed << destheight;
+  return 0;
+}
+
+int stair_t::Marshal(LArchive &a)
+{
+  sectoreffect_t::Marshal(a);
+  if (!a.IsStoring())
+    sector->floordata = this;
+
+  a << state << resetcount << wait << stepdelay << speed << destheight << originalheight << delayheight << stepdelta;
   return 0;
 }
 

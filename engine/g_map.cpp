@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.29  2003/12/23 18:06:06  smite-meister
+// Hexen stairbuilders. Moving geometry done!
+//
 // Revision 1.28  2003/12/21 12:29:09  smite-meister
 // bugfixes
 //
@@ -415,10 +418,12 @@ DActor *Map::SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
   DActor *p = new DActor(nx, ny, nz, t);
   AddThinker(p);
 
-  //CONS_Printf("Spawn, type: %d\n", t);
-  p->CheckPosition(nx, ny); // TEST, sets tmfloorz, tmceilingz
+  //p->CheckPosition(nx, ny); // TEST, sets tmfloorz, tmceilingz. Wrong, since owner is not yet set => collides
   // set subsector and/or block links
   p->SetPosition();
+
+  p->floorz = p->subsector->sector->floorheight;
+  p->ceilingz = p->subsector->sector->ceilingheight;
 
   if (nz == ONFLOORZ)
     {
@@ -479,9 +484,6 @@ DActor *Map::SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
 
   return p;
 }
-
-
-extern byte weapontobutton[NUMWEAPONS];
 
 
 void SV_SpawnPlayer(int playernum, int x, int y, angle_t angle);

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/12/23 18:06:06  smite-meister
+// Hexen stairbuilders. Moving geometry done!
+//
 // Revision 1.7  2003/12/03 10:49:49  smite-meister
 // Save/load bugfix, text strings updated
 //
@@ -1023,30 +1026,26 @@ void A_CheckThrowBomb(DActor *actor)
 //
 //===========================================================================
 
-bool A_LocalQuake(byte *args, Actor *actor)
+bool Map::EV_LocalQuake(byte *args)
 {
-  Actor *focus, *target;
-  int lastfound = 0;
+  int lastfound = -1; // FIXME was 0, but shouldn't it be -1?
   bool success = false;
 
   // Find all quake foci
-  do
+  Actor *target;
+  while ((target = FindFromTIDmap(args[4], &lastfound)) != NULL)
     {
-      target = actor->mp->FindFromTIDmap(args[4], &lastfound);
-      if (target)
+      Actor *focus = SpawnDActor(target->x, target->y, target->z, MT_QUAKE_FOCUS);
+      if (focus)
 	{
-	  focus = target->mp->SpawnDActor(target->x, target->y, target->z, MT_QUAKE_FOCUS);
-	  if (focus)
-	    {
-	      focus->args[0] = args[0];
-	      focus->args[1] = args[1]>>1;	// decremented every 2 tics
-	      focus->args[2] = args[2];
-	      focus->args[3] = args[3];
-	      focus->args[4] = args[4];
-	      success = true;
-	    }
+	  focus->args[0] = args[0];
+	  focus->args[1] = args[1]>>1;	// decremented every 2 tics
+	  focus->args[2] = args[2];
+	  focus->args[3] = args[3];
+	  focus->args[4] = args[4];
+	  success = true;
 	}
-    } while (target != NULL);
+    }
 
   return success;
 }
@@ -1061,20 +1060,19 @@ bool A_LocalQuake(byte *args, Actor *actor)
 
 void A_Quake(DActor *actor)
 {
-  angle_t an;
-  Actor *victim;
   int richters = actor->args[0];
   int i;
-  fixed_t dist;
 
   int n = actor->mp->players.size();
   if (actor->args[1]-- > 0)
     {
       for (i=0; i < n; i++)
 	{
-	  victim = actor->mp->players[i]->pawn;
-	  dist = P_AproxDistance(actor->x - victim->x,
-				 actor->y - victim->y) >> (FRACBITS+6);
+	  Actor *victim = actor->mp->players[i]->pawn;
+	  if (!victim)
+	    continue;
+
+	  fixed_t dist = P_AproxDistance(actor->x - victim->x, actor->y - victim->y) >> (FRACBITS+6);
 	  // Tested in tile units (64 pixels)
 	  if (dist < actor->args[3])		// In tremor radius
 	    {
@@ -1088,7 +1086,7 @@ void A_Quake(DActor *actor)
 		  victim->Damage(NULL, NULL, HITDICE(1));
 		}
 				// Thrust player around
-	      an = victim->angle + ANGLE_1*P_Random();
+	      angle_t an = victim->angle + ANGLE_1*P_Random();
 	      victim->Thrust(an, richters<<(FRACBITS-1));
 	    }
 	}

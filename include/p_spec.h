@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2003/12/23 18:06:06  smite-meister
+// Hexen stairbuilders. Moving geometry done!
+//
 // Revision 1.18  2003/12/18 11:57:31  smite-meister
 // fixes / new bugs revealed
 //
@@ -604,6 +607,42 @@ public:
 
 public:
   floor_t(int type, sector_t *sec, fixed_t speed, int crush, fixed_t height);
+  
+  virtual void Think();
+};
+
+
+//======================================
+//  Stairbuilders
+//======================================
+
+class stair_t : public sectoreffect_t
+{
+  friend class Map;
+  DECLARE_CLASS(stair_t);
+public:
+  enum stair_e
+  {
+    // types
+    Normal = 0,
+    Sync,
+    // internal states
+    Moving = 0,
+    Waiting,
+    Done
+  };
+
+private:
+  char state;
+  int resetcount; // ticks until reset, if 0, no reset
+  int wait, stepdelay;
+
+  fixed_t speed;
+  fixed_t destheight, originalheight;
+  fixed_t delayheight, stepdelta;
+
+public:
+  stair_t(int ty, sector_t *sec, fixed_t h, fixed_t sp, int rcount, int sdelay);
   
   virtual void Think();
 };

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.25  2003/12/23 18:06:06  smite-meister
+// Hexen stairbuilders. Moving geometry done!
+//
 // Revision 1.24  2003/12/18 11:57:31  smite-meister
 // fixes / new bugs revealed
 //
@@ -576,8 +579,6 @@ void GameInfo::Ticker()
 	break;
       default : I_Error("game.action = %d\n", action);
       }
-
-  //CONS_Printf("======== GI::Ticker, tic %d, st %d\n", gametic, state);
 
 
   // read/write demo

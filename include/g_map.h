@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.26  2003/12/23 18:06:06  smite-meister
+// Hexen stairbuilders. Moving geometry done!
+//
 // Revision 1.25  2003/12/18 11:57:31  smite-meister
 // fixes / new bugs revealed
 //
@@ -383,6 +386,9 @@ public:
   // some event functions that fit nowhere else
   int  EV_SectorSoundChange(int tag, int seq);
 
+  // in a_action.cpp
+  bool EV_LocalQuake(byte *args);
+
   // in p_switch.cpp
   void ChangeSwitchTexture(line_t *line, int useAgain);
 
@@ -431,6 +437,7 @@ public:
   int EV_DoFloor(int tag, line_t *line, int type, fixed_t speed, int crush, fixed_t height);
   int EV_DoChange(line_t *line, int changetype);
   int EV_BuildStairs(int tag, int type, fixed_t speed, fixed_t stepsize, int crush);
+  int EV_BuildHexenStairs(int tag, int type, fixed_t speed, fixed_t stepdelta, int resetdelay, int stepdelay = 0);
   int EV_DoDonut(int tag);
   int EV_DoElevator(int tag, int type, fixed_t speed, fixed_t height_f, fixed_t height_c = 0, int crush = 0);
   int EV_DoFloorWaggle(int tag, fixed_t amp, angle_t freq, angle_t offset, int wait);

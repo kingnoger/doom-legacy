@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2003/12/23 18:06:06  smite-meister
+// Hexen stairbuilders. Moving geometry done!
+//
 // Revision 1.11  2003/12/18 11:57:31  smite-meister
 // fixes / new bugs revealed
 //
@@ -70,10 +73,6 @@
 
 #include "g_map.h"
 
-
-// ==========================================================================
-//                              FLOORS
-// ==========================================================================
 
 // Move a plane (floor or ceiling) and check for crushing
 int Map::T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, int crush, int floorOrCeiling)
@@ -238,7 +237,9 @@ int Map::T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, int crush, i
 }
 
 
-//=================================
+//==========================================================================
+//  floor_t: Moving floors
+//==========================================================================
 
 IMPLEMENT_CLASS(floor_t, "Floor");
 floor_t::floor_t() {}
@@ -312,8 +313,6 @@ floor_t::floor_t(int ty, sector_t *sec, fixed_t sp, int cru, fixed_t height)
 }
 
 
-// MOVE A FLOOR TO IT'S DESTINATION (UP OR DOWN)
-
 void floor_t::Think()
 {
   int res = mp->T_MovePlane(sector, speed, destheight, crush, 0);
@@ -367,8 +366,10 @@ void floor_t::Think()
 }
 
 
+//==========================================================================
+// Basic moving floors
+//==========================================================================
 
-// HANDLE FLOOR TYPES
 int Map::EV_DoFloor(int tag, line_t *line, int type, fixed_t speed, int crush, fixed_t height)
 {
   int  secnum = -1;
@@ -422,14 +423,12 @@ int Map::EV_DoFloor(int tag, line_t *line, int type, fixed_t speed, int crush, f
 }
 
 
-// SoM: 3/6/2000: Function for chaning just the floor texture and type.
-//
 // Handle pure change types. These change floor texture and sector type
 // by trigger or numeric model without moving the floor (no Thinker needed)
 //
 // The linedef causing the change and the type of change is passed
 // Returns true if any sector changes
-//
+
 int Map::EV_DoChange(line_t *line, int changetype)
 {
   int secnum = -1;
@@ -464,8 +463,9 @@ int Map::EV_DoChange(line_t *line, int changetype)
   return rtn;
 }
 
-
-// BUILD A STAIRCASE!
+//==========================================================================
+// Stairbuilders, Doom and Hexen styles
+//==========================================================================
 
 int Map::EV_BuildStairs(int tag, int type, fixed_t speed, fixed_t stepsize, int crush)
 {
@@ -542,6 +542,203 @@ int Map::EV_BuildStairs(int tag, int type, fixed_t speed, fixed_t stepsize, int 
 }
 
 
+
+//==========================================================================
+//  stair_t: Stairbuilder steps
+//==========================================================================
+
+IMPLEMENT_CLASS(stair_t, "Stairbuilder");
+stair_t::stair_t() {}
+
+static fixed_t StartHeight, StepDelta; // small hacks...
+
+stair_t::stair_t(int ty, sector_t *sec, fixed_t h, fixed_t sp, int rcount, int sdelay)
+  : sectoreffect_t(sec)
+{
+  sec->floordata = this;
+
+  state = Moving;
+  resetcount = rcount;
+  destheight = h;
+  originalheight = sec->floorheight;
+
+  wait = 0;
+  stepdelay = 0;
+  delayheight = 0;
+  stepdelta = 0;
+
+  switch (ty)
+    {
+    case Normal:
+      speed = sp;
+      if (sdelay)
+	{
+	  stepdelay = sdelay;
+	  delayheight = sec->floorheight + StepDelta;
+	  stepdelta = StepDelta;
+	}
+      break;
+
+    case Sync:
+      speed = FixedMul(sp, FixedDiv(h - StartHeight, StepDelta));
+      break;
+
+    default:
+      break;
+    }
+
+  //SN_StartSequence((mobj_t *)&sec->soundorg, SEQ_PLATFORM + sec->seqType);
+}
+
+
+// TODO this could be used to do the Boom stairs as well (and to remove stairlocks etc. from sector_t)
+void stair_t::Think()
+{
+  if (resetcount)
+    if (!--resetcount)
+      {
+	destheight = originalheight;
+	speed = -speed;
+	state = Moving;
+	stepdelay = 0; // no more delays on the way back
+	//SN_StartSequence((mobj_t *)&sec->soundorg, SEQ_PLATFORM + sec->seqType);
+      }
+
+  int res;
+
+  switch (state)
+    {
+    case Waiting:
+      if (!--wait)
+	state = Moving;
+      return;
+
+    case Moving:
+      res = mp->T_MovePlane(sector, speed, destheight, 0, 0);
+
+      if (res == res_pastdest)
+	{
+	  //SN_StopSequence((mobj_t *)&sector->soundorg);
+	  if (resetcount)
+	    {
+	      state = Done;
+	      return; // now just wait for the reset
+	    }
+
+	  sector->floordata = NULL;
+
+	  mp->TagFinished(sector->tag);
+	  mp->RemoveThinker(this);
+	  return;
+	}
+
+      if (stepdelay)
+	if ((speed >= 0 && sector->floorheight >= delayheight) || (speed < 0 && sector->floorheight <= delayheight))
+	  {
+	    state = Waiting;
+	    wait = stepdelay;
+	    delayheight += stepdelta;
+	  }
+      break;
+
+    case Done:
+      break;
+    }
+}
+
+// helper struct for spawning stairbuilders
+struct step_t
+{
+  sector_t *sector;
+  char      phase; // 0 or 1
+  fixed_t   height;
+};
+
+int Map::EV_BuildHexenStairs(int tag, int type, fixed_t speed, fixed_t stepdelta, int resetdelay, int stepdelay)
+{
+  deque<step_t> stairqueue;
+  step_t s;
+
+  int ret = 0;
+  int Texture = 0;
+
+  // type STAIRS_PHASED is not implemented (nor was it in original Hexen)
+  StepDelta = stepdelta;
+
+  int secnum = -1;
+  while ((secnum = FindSectorFromTag(tag, secnum)) >= 0)
+    {
+      sector_t *sec = &sectors[secnum];
+
+      // TODO wrong, if there are several tagged sectors with different heights/textures... was like this in Hexen.
+      Texture = sec->floorpic;
+      StartHeight = sec->floorheight;
+
+      if (sec->floordata)
+	continue;
+
+      s.sector = sec;
+      s.phase = 0;
+      s.height = sec->floorheight;
+      stairqueue.push_back(s);
+
+      sec->special = 0;
+    }
+
+  extern int validcount;
+  validcount++;
+
+  while (!stairqueue.empty())
+    {
+      s = stairqueue.front();
+      stairqueue.pop_front();
+      sector_t *sec = s.sector;
+      char phase = s.phase;
+
+      s.height += stepdelta;
+
+      stair_t *stair = new stair_t(type, sec, s.height, speed, resetdelay, stepdelay);
+      AddThinker(stair);
+      ret++;
+
+      // Find the next step (alternating phase!)
+      for (int i = 0; i < sec->linecount; i++)
+	{
+	  if (!(sec->lines[i]->flags & ML_TWOSIDED))
+	    continue;
+
+	  sector_t *tsec = sec->lines[i]->frontsector;
+	  if ((tsec->special == phase + SS_Stairs_Special1) && !tsec->floordata
+	      && tsec->floorpic == Texture && tsec->validcount != validcount)
+	    {
+	      s.sector = tsec;
+	      s.phase = phase^1;
+	      // s.height is OK
+	      stairqueue.push_back(s);
+
+	      tsec->validcount = validcount;
+	      //tsec->special = 0;
+	    }
+	  tsec = sec->lines[i]->backsector;
+	  if ((tsec->special == phase + SS_Stairs_Special1) && !tsec->floordata
+	      && tsec->floorpic == Texture && tsec->validcount != validcount)
+	    {
+	      s.sector = tsec;
+	      s.phase = phase^1;
+	      // s.height is OK
+	      stairqueue.push_back(s);
+
+	      tsec->validcount = validcount;
+	      //tsec->special = 0;
+	    }
+	}
+    }
+
+  return ret;
+}
+
+
+// ==========================================================================
 // Handle donut function: lower pillar, raise surrounding pool, both to height,
 // texture and type of the sector surrounding the pool.
 //
