@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/01/18 20:17:41  smite-meister
+// HUD fixed, levelchange crash fixed.
+//
 // Revision 1.5  2003/01/12 12:56:40  smite-meister
 // Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
 //
@@ -106,7 +109,7 @@ line_t *blockingline;
 
 
 //SoM: 3/15/2000
-msecnode_t *sector_list = NULL;
+static msecnode_t *sector_list = NULL;
 
 //SoM: 3/15/2000
 static int pe_x; // Pain Elemental position for Lost Soul checks
@@ -2051,14 +2054,15 @@ void Map::CreateSecNodeList(Actor *thing, fixed_t x, fixed_t y)
   int yh;
   int bx;
   int by;
-  msecnode_t *node;
 
   // First, clear out the existing m_thing fields. As each node is
   // added or verified as needed, m_thing will be set properly. When
   // finished, delete all nodes where m_thing is still NULL. These
   // represent the sectors the Thing has vacated.
 
-  node = sector_list;
+  msecnode_t *node = sector_list = thing->touching_sectorlist;
+  // t8 node = sector_list;
+  
   while (node)
     {
       node->m_thing = NULL;
@@ -2100,6 +2104,9 @@ void Map::CreateSecNodeList(Actor *thing, fixed_t x, fixed_t y)
       else
 	node = node->m_tnext;
     }
+
+  thing->touching_sectorlist = sector_list;   // t8
+  sector_list = NULL;
 }
 
 // heretic code

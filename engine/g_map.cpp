@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2002 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.6  2003/01/18 20:17:41  smite-meister
+// HUD fixed, levelchange crash fixed.
+//
 // Revision 1.5  2003/01/12 12:56:40  smite-meister
 // Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
 //
@@ -14,6 +17,7 @@
 //
 // DESCRIPTION:
 //   Map class implementation
+//-----------------------------------------------------------------------------
 
 #include "doomdata.h"
 #include "g_map.h"
@@ -72,8 +76,26 @@ void Map::SpawnActor(Actor *p)
 
 void Map::DetachActor(Actor *p)
 {
+  extern msecnode_t *sector_list;
+  void P_DelSeclist(msecnode_t *p);
+
   p->UnsetPosition();
-  DetachThinker(p);
+
+  //SoM: 4/7/2000: Remove touching_sectorlist from mobj.
+  /* t8
+  if (sector_list)
+    {
+      P_DelSeclist(sector_list);
+      sector_list = NULL;
+    }
+  */
+  if (p->touching_sectorlist)
+    {
+      P_DelSeclist(p->touching_sectorlist);
+      p->touching_sectorlist = NULL;
+    }
+
+ DetachThinker(p);
 }
 
 
@@ -683,6 +705,12 @@ void Map::RebornPlayer(PlayerInfo *p)
   // first dissociate the corpse
   if (p->pawn)
     {
+      if (p == displayplayer)
+	{
+	  // shutdown the status bar
+	  hud.ST_Stop();
+	}
+
       p->pawn->player = NULL;
       p->pawn->flags2 &= ~MF2_DONTDRAW;
 

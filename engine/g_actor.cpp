@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/01/18 20:17:41  smite-meister
+// HUD fixed, levelchange crash fixed.
+//
 // Revision 1.4  2003/01/12 12:56:40  smite-meister
 // Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
 //
@@ -297,10 +300,18 @@ void Actor::Remove()
   UnsetPosition();
 
   //SoM: 4/7/2000: Remove touching_sectorlist from mobj.
+  /* t8
   if (sector_list)
     {
       P_DelSeclist(sector_list);
       sector_list = NULL;
+    }
+  */
+
+  if (touching_sectorlist)
+    {
+      P_DelSeclist(touching_sectorlist);
+      touching_sectorlist = NULL;
     }
 
   // stop any playing sound

@@ -18,47 +18,14 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/01/18 20:17:41  smite-meister
+// HUD fixed, levelchange crash fixed.
+//
 // Revision 1.2  2002/12/03 10:23:46  smite-meister
 // Video system overhaul
 //
 // Revision 1.1.1.1  2002/11/16 14:18:27  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.11  2002/09/08 14:38:09  vberghol
-// Now it works! Sorta.
-//
-// Revision 1.10  2002/09/05 14:12:18  vberghol
-// network code partly bypassed
-//
-// Revision 1.9  2002/08/24 11:57:28  vberghol
-// d_main.cpp is better
-//
-// Revision 1.8  2002/08/23 19:37:37  jpakkane
-// Fix Linux compilation error with virtual functions.
-//
-// Revision 1.7  2002/08/21 16:58:36  vberghol
-// Version 1.41 Experimental compiles and links!
-//
-// Revision 1.6  2002/08/19 18:06:44  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.5  2002/08/02 20:14:53  vberghol
-// p_enemy.cpp done!
-//
-// Revision 1.4  2002/07/01 21:00:56  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:01:59  vberghol
-// HUD alkaa olla kunnossa
-//
-// Revision 1.3  2001/01/25 22:15:44  bpereira
-// added heretic support
-//
-// Revision 1.2  2000/02/27 00:42:11  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //
 // DESCRIPTION:
@@ -70,7 +37,7 @@
 #define st_lib_h 1
 
 struct patch_t;
-class PlayerPawn; // temporary!!!FIXME
+struct inventory_t;
 
 //
 // Background and foreground screen numbers
@@ -246,36 +213,36 @@ public:
   void Update(bool force);
 };
 
-// inventory
+// inventory == a set of 7 multicons plus a little extra
 
 class HudInventory : public HudWidget
 {
 private:
   const bool *open; // show expanded inventory or just one slot?
-  int  *itemuse; // counter for the flash...
+  const int  *itemuse; // counter for the item use anim
+  const inventory_t *slots;
+  const int  *selected; // selected slot number 0-6
   bool overlay;  // overlaid or normal?
-  int nslots;    // visible slots
   patch_t **n;     // small numbers 0-9
   patch_t **items; // item pictures
   patch_t **p;     // array of patches
-  const PlayerPawn *pawn; // temp trick
 
   void Draw();
   void DrawNumber(int x, int y, int val);
 
 public:
-  HudInventory(int x, int y, const bool *on, const bool *op, int *iu, bool over, int ns,
-	       patch_t **nn, patch_t **ni, patch_t **np, const PlayerPawn *npa)
+  HudInventory(int x, int y, const bool *on, const bool *op, const int *iu, const inventory_t *vals,
+	       const int *sel, bool over, patch_t **nn, patch_t **ni, patch_t **np)
     : HudWidget(x, y, on)
   {
     open = op;
     itemuse = iu;
+    slots = vals;
+    selected = sel;
     overlay = over;
-    nslots = ns;
     n = nn;
     items = ni;
     p = np;
-    pawn = npa;
   }
   void Update(bool force);
 };

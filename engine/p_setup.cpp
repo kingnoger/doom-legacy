@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/01/18 20:17:41  smite-meister
+// HUD fixed, levelchange crash fixed.
+//
 // Revision 1.4  2003/01/12 12:56:40  smite-meister
 // Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
 //
@@ -625,6 +628,7 @@ void Map::LoadThings(int lump)
   mapthing_t *mt = mapthings;
 
   // FIXME test extra golem!
+  /*
   mt->x = 128;
   mt->y = 1150;
   mt->angle = 0;
@@ -632,6 +636,7 @@ void Map::LoadThings(int lump)
   mt->flags = 0;
   mt->mobj = NULL;
   SpawnMapThing(mt);
+  */
 
   int i, n, low, high, ednum;
   for (i=0 ; i<nummapthings ; i++, mt++)

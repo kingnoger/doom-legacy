@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2002 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.6  2003/01/18 20:17:41  smite-meister
+// HUD fixed, levelchange crash fixed.
+//
 // Revision 1.5  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -95,7 +98,6 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
   invSlot = 0;
   inventory.resize(2, inventory_t(3,2)); // at least 1 empty slot
   //inventory.push_back(inventory_t(4,2)); // FIXME testing
-  //inventory.push_back(inventory_t(3,3));
   flags |= (MF_NOTMONSTER | MF_PICKUP | MF_SHOOTABLE | MF_DROPOFF);
   flags &= ~MF_COUNTKILL;
   // the playerpawn is not a monster. MT_PLAYER might be.
@@ -663,14 +665,18 @@ bool P_UseArtifact(PlayerPawn *player, artitype_t arti);
 
 void PlayerPawn::UseArtifact(artitype_t arti)
 {
+  extern int st_curpos;
   int n;
   vector<inventory_t>::iterator i;
 
+  CONS_Printf("USING arti %d\n", arti);
   for(i = inventory.begin(); i < inventory.end(); i++) 
     if (i->type == arti)
       { // Found match - try to use
+	CONS_Printf("USING 2\n");
 	if (P_UseArtifact(this, arti))
 	  { // Artifact was used - remove it from inventory
+	    CONS_Printf("USING 3\n");
 	    if (--(i->count) == 0)
 	      {
 		if (inventory.size() > 1)
@@ -694,7 +700,7 @@ void PlayerPawn::UseArtifact(artitype_t arti)
 		|| this == displayplayer2->pawn)
 	      {
 		S_StartSound(this, sfx_artiuse);
-		hud.invuse = 4;
+		hud.itemuse = 4;
 	      }
 	  }
 	else

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/01/18 20:17:41  smite-meister
+// HUD fixed, levelchange crash fixed.
+//
 // Revision 1.6  2003/01/12 12:56:40  smite-meister
 // Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
 //
@@ -383,6 +386,9 @@ void GameInfo::RemovePlayer(vector<PlayerInfo *>::iterator it)
       p->pawn->Remove();
     }
 
+  if (p == displayplayer)
+    hud.ST_Stop();
+
   // FIXME make sure that global PI pointers are still OK
   if (consoleplayer == p) consoleplayer = NULL;
   if (consoleplayer2 == p) consoleplayer2 = NULL;
@@ -569,7 +575,6 @@ void GameInfo::Ticker()
       // do nothing
       break;
     }
-  CONS_Printf("======== GI::Ticker done\n");
 }
 
 // starts a new local game
@@ -636,8 +641,6 @@ void GameInfo::NewLevel(skill_t sk, LevelNode *n, bool resetplayer)
     delete maps[i];
   maps.clear();
 
-  if (players[0]->pawn)
-    CONS_Printf("- NL 2: pawn->health = %d\n", players[0]->pawn->health);
   //added:27-02-98: disable selected features for compatibility with
   //                older demos, plus reset new features as default
   if (!Downgrade(demoversion))
@@ -716,8 +719,6 @@ void GameInfo::StartLevel(bool re, bool resetplayer)
     players[i]->Reset(resetplayer, cv_deathmatch.value ? false : true);
 
   Z_FreeTags(PU_LEVEL, PU_PURGELEVEL-1); // destroys pawns if they are not Detached
-
-  if (players[0]->pawn) CONS_Printf("- SL 3: pawn->health = %d\n", players[0]->pawn->health);
 
   // set switch texture names/numbers (bad design..)
   P_InitSwitchList();
@@ -816,19 +817,20 @@ void GameInfo::LevelCompleted()
   // action is ga_completed
   action = ga_nothing;
 
+  hud.ST_Stop();
+
   // save or forfeit pawns
   // player has a pawn if he is alive or dead, but not if he is in respawnqueue
   n = players.size();
   for (i=0 ; i<n ; i++)
     if (players[i]->playerstate == PST_LIVE) 
       {     
-	CONS_Printf("- LC: pawn->health = %d\n", players[i]->pawn->health);
 	//if (players[i]->pawn)
 	players[i]->pawn->FinishLevel(); // take away cards and stuff, save the pawn
-	CONS_Printf("- LC: pawn->health = %d\n", players[i]->pawn->health);
       }
     else
       players[i]->pawn = NULL; // let the pawn be destroyed with the map
+
   // TODO here we have a problem with hubs: if a player is dead when the hub is exited,
   // his corpse is never placed in bodyqueue and thus never flushed out...
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/01/18 20:17:41  smite-meister
+// HUD fixed, levelchange crash fixed.
+//
 // Revision 1.6  2003/01/12 12:56:41  smite-meister
 // Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
 //
@@ -132,7 +135,7 @@ int fgbuffer = FG;
 static patch_t *sbohealth;
 static patch_t *sbofrags;
 static patch_t *sboarmor;
-static patch_t *PatchAmmoPic[7];
+static patch_t *PatchAmmoPic[NUMAMMO + 1];
 
 //==================================
 // Doom status bar graphics
@@ -159,16 +162,20 @@ static patch_t *PatchFaceBack; // face background
 static patch_t *PatchKeys[NUMCARDS]; // 3 key-cards, 3 skulls
 static patch_t *PatchSTATBAR;
 
-// just for overlay
-static const char DoomAmmoPic[7][10] =
+// ammo type pics (patch_t's)
+static const char DHAmmoPics[NUMAMMO + 1][10] =
 {
-  {"CLIPA0"}, // no ammopic for fists
-  {"CLIPA0"},  // pistol
-  {"SHELA0"},  // shotgun
-  {"CLIPA0"},  // chaingun
-  {"ROCKA0"},  // rocket lauch
+  {"CLIPA0"},  // 0, bullets
+  {"SHELA0"},  // shells
   {"CELLA0"},  // plasma
-  {"CELLA0"}   // BFG
+  {"ROCKA0"},  // rockets
+  {"INAMGLD"}, // gold wand
+  {"INAMBOW"}, // crossbow
+  {"INAMBST"}, // blaster
+  {"INAMRAM"}, // skullrod
+  {"INAMPNX"}, // phoenix rod
+  {"INAMLOB"}, // mace
+  {"BLACKSQ"}  // no ammopic
 };
 
 
@@ -200,17 +207,6 @@ int spinflylump;
 patch_t *PatchFlight[16];
 patch_t *PatchBook[16];
 
-// small ammopics
-static const char HereticAmmoPic[7][10] =
-{
-  {"BLACKSQ"}, // no ammopic for fists
-  {"INAMGLD"},
-  {"INAMBOW"},
-  {"INAMBST"},
-  {"INAMRAM"},
-  {"INAMPNX"},
-  {"INAMLOB"}
-};
 
 void ST_LoadHereticData()
 {
@@ -265,8 +261,11 @@ void ST_LoadHereticData()
   for (i=0; i < 11; i++) PatchARTI[i] = fc.CachePatchName(patcharti[i], PU_STATIC);
 
   // ammo pics
-  for (i=0; i < 7; i++)
-    PatchAmmoPic[i] = fc.CachePatchName(HereticAmmoPic[i], PU_STATIC);
+  for (i=0; i < am_heretic; i++)
+    PatchAmmoPic[i] = NULL;
+
+  for (i=am_heretic; i <= NUMAMMO; i++)
+    PatchAmmoPic[i] = fc.CachePatchName(DHAmmoPics[i], PU_STATIC);
 
   sbohealth = fc.CachePatchName("PTN2A0", PU_STATIC);  //SBOHEALT
   sbofrags  = fc.CachePatchName("FACEB1", PU_STATIC);  //SBOFRAGS
@@ -369,8 +368,11 @@ void ST_LoadDoomData()
   ST_loadFaceGraphics("STF");
 
   // ammo pics
-  for (i=0; i < 7; i++)
-    PatchAmmoPic[i] = fc.CachePatchName(DoomAmmoPic[i], PU_STATIC);
+  for (i=0; i < am_heretic; i++)
+    PatchAmmoPic[i] = fc.CachePatchName(DHAmmoPics[i], PU_STATIC);
+
+  for (i=am_heretic; i <= NUMAMMO; i++)
+    PatchAmmoPic[i] = NULL;
 
   sbohealth = fc.CachePatchName("STIMA0", PU_STATIC);  //SBOHEALT
   sbofrags  = fc.CachePatchName("M_SKULL1", PU_STATIC);  //SBOFRAGS
@@ -542,11 +544,16 @@ static bool st_fragson;  // deathmatch && st_statusbaron
 static bool st_godmode;
 
 static int  st_health;
+static int  st_maxhealth;
 static int  st_oldhealth; // to get appopriately pained face
 
 static int  st_armor;
 static int  st_readywp;
+static int  st_atype;
 static int  st_readywp_ammo;
+
+static int st_ammo[NUMAMMO];
+static int st_maxammo[NUMAMMO];
 
 static int  st_faceindex = 0; // current marine face
 
@@ -560,8 +567,11 @@ static int  st_fragscount;
 static int  st_flight = -1;
 static int  st_book = -1;
 
+static inventory_t st_invslots[7+1]; // visible inventory slots (+ one hack slot)
+int st_curpos = 0; // active inv. slot (0-6)
+
 // used for evil grin
-static bool  oldweaponsowned[NUMWEAPONS];
+static bool st_oldweaponsowned[NUMWEAPONS];
 
 
 #define BLINKTHRESHOLD  (4*32)
@@ -569,15 +579,16 @@ static bool  oldweaponsowned[NUMWEAPONS];
 
 static int ST_calcPainOffset()
 {
-  int         health;
   static int  lastcalc;
   static int  oldhealth = -1;
 
-  health = (st_health > 100) ? 100 : st_health;
+  int health = (st_health > st_maxhealth) ? st_maxhealth : st_health;
+  if (health < 0)
+    health = 0;
 
   if (health != oldhealth)
     {
-      lastcalc = ST_FACESTRIDE * (((100 - health) * ST_NUMPAINFACES) / 101);
+      lastcalc = ST_FACESTRIDE * (((st_maxhealth - health) * ST_NUMPAINFACES) / (st_maxhealth+1));
       oldhealth = health;
     }
   return lastcalc;
@@ -621,10 +632,10 @@ void HUD::ST_updateFaceWidget()
 
 	  for (i=0;i<NUMWEAPONS;i++)
             {
-	      if (oldweaponsowned[i] != sbpawn->weaponowned[i])
+	      if (st_oldweaponsowned[i] != sbpawn->weaponowned[i])
                 {
 		  doevilgrin = true;
-		  oldweaponsowned[i] = sbpawn->weaponowned[i];
+		  st_oldweaponsowned[i] = sbpawn->weaponowned[i];
                 }
             }
 	  if (doevilgrin)
@@ -652,8 +663,7 @@ void HUD::ST_updateFaceWidget()
             }
 	  else
             {
-	      badguyangle = R_PointToAngle2(sbpawn->x,
-					    sbpawn->y,
+	      badguyangle = R_PointToAngle2(sbpawn->x, sbpawn->y,
 					    sbpawn->attacker->x,
 					    sbpawn->attacker->y);
 
@@ -765,27 +775,21 @@ void HUD::ST_updateFaceWidget()
 // was ST_updateWidgets
 void HUD::UpdateWidgets()
 {
-  // TODO: either update _all_ widget source variables here, so that we
-  // may lose sbpawn anytime, or call functions that use sbpawn only here.
-
-  const int largeammo = 1994; // means "n/a"
-  int i;
+  // sbpawn should basically only be used in this function and in functions that are
+  // only called from this function. However...
+  // also using sbpawn: ST_RefreshBackground, PaletteFlash
 
   // if sbpawn == NULL, don't update. ST_Stop sets it to NULL.
   if (!st_active || sbpawn == NULL)
     return;
 
+  const int largeammo = 1994; // means "n/a"
+  int i;
+
   statusbaron = (cv_viewsize.value < 11) || automap.active;
 
   // status bar overlay at viewsize 11
   overlayon = (cv_viewsize.value == 11);
-
-  if (sbpawn->invTics)
-    invopen = true;
-  else
-    invopen = false;
-
-  mainbaron = statusbaron && !invopen;
 
   // when pawn is detached from player, no more update
   if (sbpawn->player)
@@ -799,6 +803,13 @@ void HUD::UpdateWidgets()
 
   if (game.mode == gm_heretic)
     {
+      if (sbpawn->invTics)
+	invopen = true;
+      else
+	invopen = false;
+
+      mainbaron = statusbaron && !invopen;
+
       // Heretic flight icon
       if (sbpawn->powers[pw_flight] > BLINKTHRESHOLD || (sbpawn->powers[pw_flight] & 16))
 	{
@@ -817,26 +828,52 @@ void HUD::UpdateWidgets()
 	}
       else
 	st_book = -1;
+
+      // inventory
+      if (itemuse > 0)
+	itemuse--;
+
+      int n = sbpawn->inventory.size();
+      int left = sbpawn->invSlot - st_curpos; // how many slots are there left of the first visible slot?
+      for (i=0; i<7; i++)
+	if (i+left < n && sbpawn->inventory[left+i].type != arti_none)
+	  st_invslots[i] = sbpawn->inventory[left+i];
+	else
+	  st_invslots[i] = inventory_t(arti_none, 0);
+
+      st_invslots[7].type = (left > 0) ? 1 : 0; // hack
+      st_invslots[7].count = (n - left > 7) ? 1 : 0;
+    }
+  else
+    {
+      // doom
+      for (i=0; i<NUMAMMO; i++)
+	{
+	  st_ammo[i] = sbpawn->ammo[i];
+	  st_maxammo[i] = sbpawn->maxammo[i];
+	}
     }
 
   st_health = sbpawn->health;
   st_armor = sbpawn->armorpoints;
   st_readywp = sbpawn->readyweapon;
 
-  ammotype_t atype = sbpawn->weaponinfo[sbpawn->readyweapon].ammo;
-  if (atype == am_noammo)
+  st_atype = sbpawn->weaponinfo[sbpawn->readyweapon].ammo;
+  if (st_atype == am_noammo)
     st_readywp_ammo = largeammo;    
   else
-    st_readywp_ammo = sbpawn->ammo[atype];
+    st_readywp_ammo = sbpawn->ammo[st_atype];
 
   // update keycard multiple widgets
   for (i=0;i<6;i++)
     st_keyboxes[i] = (sbpawn->cards & (1<<i)) ? i : -1;
 
   // refresh everything if this is him coming back to life
-  ST_updateFaceWidget();
-
-  st_oldhealth = st_health;
+  if (game.mode != gm_heretic)
+    {
+      ST_updateFaceWidget(); // updates st_oldweaponsowned
+      st_oldhealth = st_health;
+    }
 }
 
 // was ST_doPaletteStuff
@@ -883,12 +920,6 @@ void HUD::PaletteFlash()
     palette = RADIATIONPAL; // not relevant in heretic
   else
     palette = 0;
-
-
-  //added:28-02-98:quick hack underwater palette
-  /*if (sbpawn &&
-    (sbpawn->z + (cv_viewheight.value<<FRACBITS) < sbpawn->waterz))
-    palette = RADIATIONPAL;*/
 
   if (palette != st_palette)
     {
@@ -981,8 +1012,7 @@ void HUD::ST_Recalc()
 
   // TODO not good. When should the widgets be created?
   // and renew the widgets
-  if (sbpawn)
-    ST_CreateWidgets();
+  ST_CreateWidgets();
 }
 
 
@@ -1010,8 +1040,8 @@ void HUD::CreateHereticWidgets()
   widgets.push_back(h);
 
   // inventory system
-  h = new HudInventory(st_x+34, st_y+9-9, &statusbaron, &invopen, &invuse, false, 7,
-		       PatchSmNum, PatchARTI, Patch_InvBar, sbpawn);
+  h = new HudInventory(st_x+34, st_y, &statusbaron, &invopen, &itemuse, st_invslots, &st_curpos,
+		       false, PatchSmNum, PatchARTI, Patch_InvBar);
   widgets.push_back(h);
 
   // mainbar (closed inventory shown)
@@ -1035,7 +1065,7 @@ void HUD::CreateHereticWidgets()
   widgets.push_back(h);
 
   // ammo type icon
-  h = new HudMultIcon(st_x + 111, st_y + 14, &mainbaron, &st_readywp, PatchAmmoPic);
+  h = new HudMultIcon(st_x + 111, st_y + 14, &mainbaron, &st_atype, PatchAmmoPic);
   widgets.push_back(h);
 
   // armor
@@ -1076,10 +1106,10 @@ void HUD::CreateDoomWidgets()
   const int ST_AMMOY[4] = {5, 11, 23, 17};
   for (i=0; i<4; i++)
     {
-      h = new HudNumber(st_x+288, st_y + ST_AMMOY[i], &statusbaron, 3, &sbpawn->ammo[i], shortnum);
+      h = new HudNumber(st_x+288, st_y + ST_AMMOY[i], &statusbaron, 3, &st_ammo[i], shortnum);
       widgets.push_back(h);
 
-      h = new HudNumber(st_x+314, st_y + ST_AMMOY[i], &statusbaron, 3, &sbpawn->maxammo[i], shortnum);
+      h = new HudNumber(st_x+314, st_y + ST_AMMOY[i], &statusbaron, 3, &st_maxammo[i], shortnum);
       widgets.push_back(h);
     }
 
@@ -1101,7 +1131,7 @@ void HUD::CreateDoomWidgets()
   for (i=0; i<6; i++)
     {
       h = new HudBinIcon(st_x+111+(i%3)*12, st_y+4+(i/3)*10, &st_armson,
-			 &sbpawn->weaponowned[i+1], PatchArms[i][0], PatchArms[i][1]);
+			 &st_oldweaponsowned[i+1], PatchArms[i][0], PatchArms[i][1]);
       widgets.push_back(h);
     }
 
@@ -1160,18 +1190,12 @@ void HUD::ST_Drawer(bool refresh)
       // after ST_Start(), screen refresh needed, or vid mode change
       if (refresh || st_refresh)
         {
-	  /*
-	  if (st_recalc)  //recalc widget coords after vid mode change
-            {
-	      ST_CreateWidgets();
-	      st_recalc = false;
-            }
-	  */
-
 	  // draw status bar background to off-screen buff
 	  ST_RefreshBackground();
+
 	  // and refresh all widgets
 	  ST_DrawWidgets(true);
+
 	  st_refresh = false;
 	}
       else
@@ -1212,24 +1236,23 @@ void HUD::ST_Start(PlayerPawn *p)
 {
   int i;
 
-  sbpawn = p;
+  CONS_Printf("HUD::ST_Start");
 
   if (st_active)
     ST_Stop();
 
-  ST_CreateWidgets();
+  sbpawn = p;
 
-  CONS_Printf("HUD::ST_Start, widgets_size = %d, overlay_size = %d\n", widgets.size(), overlay.size());
-  
   st_palette = -1;
 
   if (game.mode != gm_heretic)
     {
       st_faceindex = 0;
       st_oldhealth = -1;
+      st_maxhealth = p->maxhealth / 2;
 
       for (i=0;i<NUMWEAPONS;i++)
-	oldweaponsowned[i] = sbpawn->weaponowned[i];
+	st_oldweaponsowned[i] = sbpawn->weaponowned[i];
     }
 
   st_active = true;
@@ -1288,9 +1311,6 @@ void HUD::CreateOverlayWidgets()
 
   HudWidget *h;
 
-  if (sbpawn == NULL)
-    return;
-
   for (i = overlay.size()-1; i>=0; i--)
     delete overlay[i];
   overlay.clear();
@@ -1313,8 +1333,8 @@ void HUD::CreateOverlayWidgets()
       switch (c)
 	{
 	case 'i': // inventory
-	  h = new HudInventory(st_x+34, st_y+9, &overlayon, &invopen, &invuse, true, 7,
-			       snum, PatchARTI, Patch_InvBar, sbpawn);
+	  h = new HudInventory(st_x+34, st_y+9, &overlayon, &invopen, &itemuse, st_invslots, &st_curpos,
+			       true, snum, PatchARTI, Patch_InvBar);
 	  overlay.push_back(h);
 	  break;
 
@@ -1340,7 +1360,7 @@ void HUD::CreateOverlayWidgets()
 	  //ST_drawOverlayNum(SCX(234), SCY(198)-(16*vid.dupy), sbpawn->ammo[sbpawn->weaponinfo[sbpawn->readyweapon].ammo], tallnum,NULL);
 	  h = new HudNumber(198, 198-16, &overlayon, 3, &st_readywp_ammo, lnum);
 	  overlay.push_back(h);
-	  h = new HudMultIcon(210, 196, &overlayon, &st_readywp, PatchAmmoPic);
+	  h = new HudMultIcon(210, 196, &overlayon, &st_atype, PatchAmmoPic);
 	  overlay.push_back(h);	  
 	  break;
 

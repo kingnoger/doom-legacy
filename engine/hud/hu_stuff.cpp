@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/01/18 20:17:41  smite-meister
+// HUD fixed, levelchange crash fixed.
+//
 // Revision 1.5  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -737,7 +740,6 @@ extern consvar_t cv_chasecam;
 //
 void HUD::Draw(bool redrawsbar)
 {
-  CONS_Printf("HUD::Draw\n");
   // draw chat string plus cursor
   if (chat_on)
     HU_DrawChat();
@@ -752,6 +754,7 @@ void HUD::Draw(bool redrawsbar)
 
   HU_DrawTip();
   HU_DrawFSPics();
+
   ST_Drawer(redrawsbar);
 }
 

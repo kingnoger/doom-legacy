@@ -18,50 +18,14 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/01/18 20:17:41  smite-meister
+// HUD fixed, levelchange crash fixed.
+//
 // Revision 1.3  2002/12/16 22:12:13  smite-meister
 // Actor/DActor separation done!
 //
 // Revision 1.2  2002/12/03 10:20:08  smite-meister
 // HUD rationalized
-//
-// Revision 1.10  2002/09/25 15:17:38  vberghol
-// Intermission fixed?
-//
-// Revision 1.8  2002/09/05 14:12:16  vberghol
-// network code partly bypassed
-//
-// Revision 1.7  2002/08/24 11:57:27  vberghol
-// d_main.cpp is better
-//
-// Revision 1.6  2002/08/19 18:06:40  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.5  2002/08/02 20:14:51  vberghol
-// p_enemy.cpp done!
-//
-// Revision 1.4  2002/07/01 21:00:38  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:01:55  vberghol
-// HUD alkaa olla kunnossa
-//
-// Revision 1.6  2001/02/24 13:35:21  bpereira
-// no message
-//
-// Revision 1.5  2001/01/25 22:15:44  bpereira
-// added heretic support
-//
-// Revision 1.4  2000/10/04 16:19:24  hurdler
-// Change all those "3dfx names" to more appropriate names
-//
-// Revision 1.3  2000/09/28 20:57:18  bpereira
-// no message
-//
-// Revision 1.2  2000/02/27 00:42:11  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //
 // DESCRIPTION:
@@ -172,7 +136,7 @@ void HudMultIcon::Update(bool force)
 
 void HudMultIcon::Draw()
 {
-  if ((oldinum != -1) && !hud.overlayon && rendermode == render_soft)
+  if ((oldinum != -1) && !hud.overlayon && rendermode == render_soft && p[oldinum])
     {
       int w, h;
       int dx, dy;
@@ -190,7 +154,7 @@ void HudMultIcon::Draw()
       V_CopyRect(dx, dy, BG, w, h, dx, dy, fgbuffer);
     }
   int i = *inum;
-  if (i >= 0)
+  if (i >= 0 && p[i])
     V_DrawScaledPatch(x, y, fgbuffer, p[i]);
   // FIXME! *inum might go beyond allowed limits!
   oldinum = i;
@@ -341,46 +305,46 @@ void HudInventory::DrawNumber(int x, int y, int val)
    
 void HudInventory::Draw()
 {
-  extern int gametic; //temp!
-  int i, s;
-  // st_curpos (selectbox) refers to the same logical slot as invSlot
-  // (st_curpos is the selected slot in the visible part of inventory (0-6))
+  extern int gametic; // blink
+  int i;
+  // selected (selectbox) refers to the same logical slot as invSlot
+  // (it is the selected slot in the visible part of inventory (0-6))
 
   // x = st_x + 34, y = st_y + 1
   // two guiding bools: *open and overlay
   // patch order in p: inv_background, artibox (also items[0]), selectbox,
   // 4 inv_gems, blacksq, 5 artiflash frames
 
+  int sel = *selected;
+
   if (*open == true)
     {
-      // open inv.
-      s = pawn->invSlot - pawn->st_curpos;
-
+      // open inventory
       // background (7 slots) (not for overlay!)
-      // FIXME! draw this somewhere else!
       if (!overlay)
 	V_DrawScaledPatch(x, y+1, fgbuffer, p[0]);
 
-      // stuff
+      // draw stuff
       for(i = 0; i < 7; i++)
 	{
 	  if (overlay)
 	    V_DrawTranslucentPatch(x+16+i*31, y+1, V_SCALESTART|0, p[1]);
-	  //V_DrawScaledPatch(x+16+i*31, y+1, 0, W_CachePatchName("ARTIBOX", PU_CACHE)); 
-	  if (pawn->inventory.size() > s+i && pawn->inventory[s+i].type > arti_none)
+	  //V_DrawScaledPatch(x+16+i*31, y+1, 0, W_CachePatchName("ARTIBOX", PU_CACHE));
+	  if (slots[i].type != arti_none)
 	    {
-	      V_DrawScaledPatch(x+16+i*31, y+1, fgbuffer, items[pawn->inventory[s+i].type]);
-	      DrawNumber(x+35+i*31, y+23, pawn->inventory[s+i].count);
+	      V_DrawScaledPatch(x+16+i*31, y+1, fgbuffer, items[slots[i].type]);
+	      DrawNumber(x+35+i*31, y+23, slots[i].count);
 	    }
 	}
 
       // select box
-      V_DrawScaledPatch(x+16+pawn->st_curpos*31, y+30, fgbuffer, p[2]);
-      // blinking arrowheads
-      if (s != 0)
+      V_DrawScaledPatch(x+16 + sel*31, y+30, fgbuffer, p[2]);
+
+      // blinking arrowheads (using a hack slot. this is so embarassing.)
+      if (slots[7].type)
 	V_DrawScaledPatch(x+4, y, fgbuffer, !(gametic&4) ? p[3] : p[4]);
 
-      if (pawn->inventory.size() - s > 7)
+      if (slots[7].count)
 	V_DrawScaledPatch(x+235, y, fgbuffer, !(gametic&4) ? p[5] : p[6]);
     }
   else
@@ -390,22 +354,17 @@ void HudInventory::Draw()
 	{
 	  V_DrawScaledPatch(x, y, fgbuffer, p[7]);
 	  V_DrawScaledPatch(x, y, fgbuffer, p[8 + (*itemuse) - 1]);
-	  *itemuse = *itemuse - 1;
-	  //oldarti = -1; // so that the correct artifact fills in after the flash
 	}
-      else //if (oldarti != pawn->invSlot || oldartiCount != pawn->inventory[pawn->invSlot].count)
+      else
 	{
-	  s = pawn->invSlot;
 	  if (overlay)
 	    V_DrawTranslucentPatch(x+100, y, V_SCALESTART|0, p[1]);
 	  //V_DrawScaledPatch(st_x+180, st_y+3, fgbuffer, p[7]);
-	  if (pawn->inventory.size() > s && pawn->inventory[s].type > arti_none)
+	  if (slots[sel].type != arti_none)
 	    {
-	      V_DrawScaledPatch(x+145, y, fgbuffer, items[pawn->inventory[s].type]);
-	      DrawNumber(x+145+19, y+22, pawn->inventory[s].count);
+	      V_DrawScaledPatch(x+145, y, fgbuffer, items[slots[sel].type]);
+	      DrawNumber(x+145+19, y+22, slots[sel].count);
 	    }
-	  //oldarti = pawn->invSlot;
-	  //oldartiCount = pawn->inventory[pawn->invSlot].count;
 	}
     }
 }

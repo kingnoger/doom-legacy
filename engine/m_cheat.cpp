@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Portions Copyright (C) 1998-2002 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/01/18 20:17:41  smite-meister
+// HUD fixed, levelchange crash fixed.
+//
 // Revision 1.5  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -831,15 +834,14 @@ static void CheatWeaponsFunc(PlayerPawn *p, const byte *arg)
       // give backpack
       if (!p->backpack)
 	{
-	  //for (i = 0; i < NUMAMMO; i++) p->maxammo[i] *= 2;
 	  p->maxammo = maxammo2;
 	  p->backpack = true;
 	}
 
-      for (i = wp_heretic; i < wp_gauntlets; i++)
+      for (i = wp_heretic; i <= wp_gauntlets; i++)
 	p->weaponowned[i] = true;
 
-      // FIXME shareware == 0 always (it is not a variable!)
+      // FIXME shareware == true always (it is not a variable!)
       // (we do not have "heretic shareware" gametype)(yet?)
       // also elsewhere in this file
       if (shareware)

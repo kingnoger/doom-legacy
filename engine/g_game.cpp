@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/01/18 20:17:41  smite-meister
+// HUD fixed, levelchange crash fixed.
+//
 // Revision 1.4  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -660,61 +663,57 @@ void GameInfo::Drawer()
 
 // was G_InventoryResponder
 //
-bool PlayerPawn::InventoryResponder(bool primary, event_t *ev)
+bool PlayerInfo::InventoryResponder(int (*gc)[2], event_t *ev)
 {
+  //gc is a pointer to array[num_gamecontrols][2]
+  extern int st_curpos; // TODO: what about splitscreenplayer??
+
   if (!game.inventory)
     return false;
 
-  int (*gc)[2]; //pointer to array[num_gamecontrols][2]
-  if (primary)
-    gc = gamecontrol;
-  else
-    gc = gamecontrol2;
-
-  int n = inventory.size();
+  if (!pawn)
+    return false;
 
   switch (ev->type)
     {
     case ev_keydown :
       if (ev->data1 == gc[gc_invprev][0] || ev->data1 == gc[gc_invprev][1])
 	{
-	  if (invTics)
+	  if (pawn->invTics)
 	    {
-	      if (--invSlot < 0)
-		invSlot = 0;
+	      if (--(pawn->invSlot) < 0)
+		pawn->invSlot = 0;
 	      else if (--st_curpos < 0)
 		st_curpos = 0;
 	    }
-	  invTics = 5*TICRATE;
+	  pawn->invTics = 5*TICRATE;
 	  return true;
 	}
       else if (ev->data1 == gc[gc_invnext][0] || ev->data1 == gc[gc_invnext][1])
 	{
-	  if (invTics)
+	  int n = pawn->inventory.size();
+
+	  if (pawn->invTics)
 	    {
-	      if (++invSlot >= n)
-		invSlot = n-1;
-	      //invSlot--;
-	      //if (invSlot < 0)
-	      //  invSlot = 0;
+	      if (++(pawn->invSlot) >= n)
+		pawn->invSlot = n-1;
 	      else if (++st_curpos > 6)
 		st_curpos = 6;
 	    }
-	  invTics = 5*TICRATE;
+	  pawn->invTics = 5*TICRATE;
 	  return true;
 	}
       else if (ev->data1 == gc[gc_invuse ][0] || ev->data1 == gc[gc_invuse ][1])
 	{
-	  if (invTics)
-	    invTics = 0;
-	  else if (inventory[invSlot].count > 0)
+	  if (pawn->invTics)
+	    pawn->invTics = 0;
+	  else if (pawn->inventory[pawn->invSlot].count > 0)
 	    {
-	      CONS_Printf("PP:IR  USE %d\n", inventory[invSlot].type);
-	      //if (p == &consoleplayer)
-	      if (primary)
-		SendNetXCmd(XD_USEARTEFACT, &inventory[invSlot].type, 1);
+	      CONS_Printf("PP:IR  USE %d\n", pawn->inventory[pawn->invSlot].type);
+	      if (1) // FIXME send playernum in the message...
+		SendNetXCmd(XD_USEARTEFACT, &pawn->inventory[pawn->invSlot].type, 1);
 	      else
-		SendNetXCmd2(XD_USEARTEFACT, &inventory[invSlot].type, 1);
+		SendNetXCmd2(XD_USEARTEFACT, &pawn->inventory[pawn->invSlot].type, 1);
 	    }
 	  return true;
 	}
@@ -792,15 +791,12 @@ bool GameInfo::Responder(event_t* ev)
 	return true;        // HUD ate the event
       if (automap.Responder(ev))
 	return true;        // automap ate it
-      // FIXME player->pawn may be NULL during level,
-      // make InventoryResponder a PlayerInfo method instead.
-      // there, remember to check if pawn==NULL
-      if (consoleplayer->pawn->InventoryResponder(true, ev))
+
+      if (consoleplayer->InventoryResponder(gamecontrol, ev))
 	return true;
       CONS_Printf("G:Resp 3\n");
-      if (cv_splitscreen.value && consoleplayer2->pawn->InventoryResponder(false, ev))
+      if (cv_splitscreen.value && consoleplayer2->InventoryResponder(gamecontrol2, ev))
 	return true;
-      //added:07-02-98: map the event (key/mouse/joy) to a gamecontrol
       break;
 
     case GS_INTERMISSION:

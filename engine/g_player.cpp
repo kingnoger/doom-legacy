@@ -1,3 +1,18 @@
+// Emacs style mode select   -*- C++ -*- 
+//-----------------------------------------------------------------------------
+//  $Id$
+//
+// Copyright (C) 2002-2003 by DooM Legacy Team.
+//
+// $Log$
+// Revision 1.4  2003/01/18 20:17:41  smite-meister
+// HUD fixed, levelchange crash fixed.
+//
+//
+//
+// DESCRIPTION:
+//   PlayerInfo class implementation
+//-----------------------------------------------------------------------------
 
 #include "doomdef.h"
 #include "g_player.h"

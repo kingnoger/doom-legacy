@@ -16,6 +16,11 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
+// $Log$
+// Revision 1.2  2003/01/18 20:17:41  smite-meister
+// HUD fixed, levelchange crash fixed.
+//
+//
 //
 // DESCRIPTION:
 //    PlayerInfo class definition. It describes one human player.
@@ -33,6 +38,7 @@
 
 class PlayerPawn;
 typedef unsigned angle_t;
+struct event_t;
 
 //
 // Player states.
@@ -106,6 +112,9 @@ public:
   void Reset(bool resetpawn, bool resetfrags);
 
   void CheckFragLimit();
+
+  // in g_game.cpp
+  bool InventoryResponder(int (*gc)[2], event_t *ev);
 };
 
 

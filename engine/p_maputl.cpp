@@ -18,89 +18,14 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/01/18 20:17:41  smite-meister
+// HUD fixed, levelchange crash fixed.
+//
 // Revision 1.2  2002/12/16 22:11:53  smite-meister
 // Actor/DActor separation done!
 //
 // Revision 1.1.1.1  2002/11/16 14:18:01  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.15  2002/09/06 17:18:33  vberghol
-// added most of the changes up to RC2
-//
-// Revision 1.14  2002/09/05 14:12:14  vberghol
-// network code partly bypassed
-//
-// Revision 1.12  2002/08/19 18:30:13  vberghol
-// just netcode to go!
-//
-// Revision 1.11  2002/08/17 21:21:50  vberghol
-// Only scripting to be fixed in engine!
-//
-// Revision 1.10  2002/08/14 17:07:19  vberghol
-// p_map.cpp done... 3 to go
-//
-// Revision 1.9  2002/08/13 19:47:42  vberghol
-// p_inter.cpp done
-//
-// Revision 1.8  2002/08/11 17:16:50  vberghol
-// ...
-//
-// Revision 1.7  2002/08/08 18:36:25  vberghol
-// p_spec.cpp fixed
-//
-// Revision 1.6  2002/08/08 12:01:28  vberghol
-// pian engine on valmis!
-//
-// Revision 1.5  2002/07/26 19:23:05  vberghol
-// a little something
-//
-// Revision 1.4  2002/07/23 19:21:42  vberghol
-// fixed up to p_enemy.cpp
-//
-// Revision 1.3  2002/07/01 21:00:19  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:15  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.13  2001/08/28 20:19:55  hurdler
-// bad news
-//
-// Revision 1.12  2001/08/06 23:57:09  stroggonmeth
-// Removed portal code, improved 3D floors in hardware mode.
-//
-// Revision 1.11  2001/03/13 22:14:19  stroggonmeth
-// Long time no commit. 3D floors, FraggleScript, portals, ect.
-//
-// Revision 1.10  2001/01/25 22:15:43  bpereira
-// added heretic support
-//
-// Revision 1.9  2000/11/02 19:49:35  bpereira
-// no message
-//
-// Revision 1.8  2000/11/02 17:50:08  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.7  2000/08/31 14:30:55  bpereira
-// no message
-//
-// Revision 1.6  2000/08/11 19:10:13  metzgermeister
-// *** empty log message ***
-//
-// Revision 1.5  2000/04/15 22:12:57  stroggonmeth
-// Minor bug fixes
-//
-// Revision 1.4  2000/04/08 17:29:25  stroggonmeth
-// no message
-//
-// Revision 1.3  2000/04/04 00:32:47  stroggonmeth
-// Initial Boom compatability plus few misc changes all around.
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //
 // DESCRIPTION:
@@ -495,7 +420,7 @@ void P_LineOpening (line_t *linedef)
 //
 void Actor::UnsetPosition()
 {
-  extern msecnode_t *sector_list;
+  //extern msecnode_t *sector_list;
   int blockx, blocky;
 
   if (! (flags & MF_NOSECTOR))
@@ -526,8 +451,12 @@ void Actor::UnsetPosition()
       // If this Thing is being removed entirely, then the calling
       // routine will clear out the nodes in sector_list.
 
-      sector_list = touching_sectorlist;
-      touching_sectorlist = NULL; //to be restored by P_SetThingPosition
+      // smite-meister: This is because normally this function is used in a unset/set sequence.
+      // the subsequent set requires that sector_list is preserved...
+      // TEST t8: sector_list does not have to be moved anywhere from the Actor!
+
+      // t8 sector_list = touching_sectorlist;
+      // t8 touching_sectorlist = NULL; //to be restored by SetPosition
     }
 
   if (! (flags & MF_NOBLOCKMAP))
@@ -562,7 +491,9 @@ void Actor::UnsetPosition()
 //
 void Actor::SetPosition()
 {
-  extern msecnode_t *sector_list;
+  //extern msecnode_t *sector_list;
+
+  CONS_Printf("acty = %d\n", Type());
 
   // link into subsector
   subsector_t *ss = mp->R_PointInSubsector(x,y);
@@ -603,8 +534,8 @@ void Actor::SetPosition()
         // added, new sector links are created.
 
       mp->CreateSecNodeList(this,x,y);
-      touching_sectorlist = sector_list; // Attach to Thing's Actor
-      sector_list = NULL; // clear for next time
+      // t8 touching_sectorlist = sector_list; // Attach to Thing's Actor
+      // t8 sector_list = NULL; // clear for next time
     }
 
   int blockx, blocky;

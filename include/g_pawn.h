@@ -16,6 +16,11 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
+// $Log$
+// Revision 1.5  2003/01/18 20:17:41  smite-meister
+// HUD fixed, levelchange crash fixed.
+//
+//
 //
 // DESCRIPTION:
 //    Pawn class. A Pawn is an Actor that has either AI or human control.
@@ -43,24 +48,6 @@ class PlayerInfo;
 class Map;
 struct line_t;
 struct sector_t;
-struct event_t;
-
-struct inventory_t
-{
-  byte type;
-  byte count;
-
-  inventory_t()
-  {
-    type = count = 0;
-  }
-
-  inventory_t(byte t, byte c)
-  {
-    type = t;
-    count = c;
-  }
-};
 
 //
 // Player internal flags, for cheats and debug. Must fit into an int.
@@ -123,9 +110,8 @@ public:
   // inventory
   int invTics; // when >0 show inventory in hud
   vector<inventory_t> inventory;
-  //int inventorySlotNum; // number of full inventory slots (inventory.size())
   int invSlot;   // active inventory slot is inventory[invSlot]
-  int st_curpos; // position of inventory scroll (move to hud module?)
+  //int st_curpos; // position of inventory scroll (move to hud module?)
 
   // Power ups. invinc and invis are tic counters.
   int powers[NUMPOWERS];
@@ -213,9 +199,6 @@ public:
   void ProcessSpecialSector(sector_t *sector, bool instantdamage);
   void PlayerOnSpecial3DFloor();
   void PlayerInSpecialSector();
-
-  // in g_game.cpp
-  bool InventoryResponder(bool primary, event_t *ev);
 
   // in p_user.cpp
   virtual bool Teleport(fixed_t nx, fixed_t ny, angle_t nangle);

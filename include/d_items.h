@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/01/18 20:17:41  smite-meister
+// HUD fixed, levelchange crash fixed.
+//
 // Revision 1.2  2002/12/23 23:19:37  smite-meister
 // Weapon groups, MAPINFO parser, WAD2+WAD3 support added!
 //
@@ -122,6 +125,24 @@ typedef enum
   NUMARTIFACTS
 } artitype_t;
 
+// playerpawn inventory
+struct inventory_t
+{
+  byte type;
+  byte count;
+
+  inventory_t()
+  {
+    type = count = 0;
+  }
+
+  inventory_t(byte t, byte c)
+  {
+    type = t;
+    count = c;
+  }
+};
+
 #define NUMINVENTORYSLOTS  14
 #define MAXARTECONT        16 
 
@@ -212,7 +233,7 @@ typedef enum
   am_mace,
 
   NUMAMMO,
-  am_noammo   // Unlimited for chainsaw / fist.
+  am_noammo = NUMAMMO   // Unlimited for chainsaw / fist.
 
 } ammotype_t;
 
@@ -229,6 +250,7 @@ struct weaponinfo_t
   statenum_t holdatkstate;
   statenum_t flashstate;
 };
+
 
 extern int weapongroup[NUMWEAPONS];
 extern weapontype_t wgroups[8][4];
