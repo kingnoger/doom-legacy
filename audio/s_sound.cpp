@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.33  2005/03/19 13:51:28  smite-meister
+// sound samplerate fix
+//
 // Revision 1.32  2004/12/09 06:25:08  segabor
 // endianness fix; disabled music playing on Mac (actually it is not working); see FIXME note
 //
@@ -218,15 +221,16 @@ cacheitem_t *soundcache_t::Load(const char *p)
   int size = fc.LumpLength(lump);
 
   doomsfx_t *ds = (doomsfx_t *)t->data;
-  // TODO: endianness conversion (currently not needed)
+  // endianness conversion
   ds->magic	= SHORT(ds->magic);
   ds->rate	= SHORT(ds->rate);
   ds->samples	= SHORT(ds->samples);
   ds->zero	= SHORT(ds->zero);
-  
+
   //CONS_Printf(" Sound '%s', s = %d\n", p, ds->samples);
   //CONS_Printf("m = %d, r = %d, s = %d, z = %d, length = %d\n", ds->magic, ds->rate, ds->samples, ds->zero, size);
 
+  t->rate = ds->rate; // the only piece of header info we use
   t->length = size - 8;  // 8 byte header
   t->sdata = &ds->data;
 

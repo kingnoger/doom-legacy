@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,23 +17,20 @@
 //
 //
 // $Log$
+// Revision 1.15  2005/03/19 13:51:29  smite-meister
+// sound samplerate fix
+//
 // Revision 1.14  2004/11/09 20:38:52  smite-meister
 // added packing to I/O structs
 //
 // Revision 1.13  2004/09/03 16:28:51  smite-meister
 // bugfixes and ZDoom linedef types
 //
-// Revision 1.12  2004/08/12 18:30:30  smite-meister
-// cleaned startup
-//
 // Revision 1.11  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
 //
 // Revision 1.10  2004/03/28 15:16:14  smite-meister
 // Texture cache.
-//
-// Revision 1.9  2004/01/02 14:25:02  smite-meister
-// cleanup
 //
 // Revision 1.8  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
@@ -43,9 +40,6 @@
 //
 // Revision 1.6  2003/04/14 08:58:31  smite-meister
 // Hexen maps load.
-//
-// Revision 1.5  2003/04/05 12:20:00  smite-meister
-// Makefiles fixed
 //
 // Revision 1.4  2003/03/08 16:07:16  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
@@ -75,74 +69,79 @@
 
 using namespace std;
 
-//
-// A playing piece of music
-//
+
+/// \brief A playing piece of music
 struct musicinfo_t
 {
-  char  name[9];   // up to 8-character lumpname
-  int   lumpnum;   // lump number of music
-  int   length;    // lump length in bytes
-  void* data;      // music data
-  int   handle;    // music handle once registered
+  char  name[9];   ///< up to 8-character lumpname
+  int   lumpnum;   ///< lump number of music
+  int   length;    ///< lump length in bytes
+  void *data;      ///< music data
+  int   handle;    ///< music handle once registered
 };
 
 
-#define S_TAGLEN 32 // change with care
 
-// describes an abstract sound effect
+/// \brief A sound effect definition, generated from the SNDINFO lump.
 class sfxinfo_t
 {
 public:
-  char  tag[S_TAGLEN + 1]; // SNDINFO tag (+ \0)
-  int   number;       // internal sound number
-  char  lumpname[9];  // up to 8-character name (+ \0)
-  byte  multiplicity; // how many instances of the sound can be heard simultaneously. 0 means not limited.
-  byte  priority;     // bigger is better
-  byte  pitch;        // 128 means unchanged, 64 pitch units = 1 octave
+#define S_TAGLEN 32 // change with care
+  char  tag[S_TAGLEN + 1]; ///< SNDINFO tag (+ \0)
+  int   number;       ///< internal sound number
+  char  lumpname[9];  ///< up to 8-character name (+ \0)
+  byte  multiplicity; ///< how many instances of the sound can be heard simultaneously. 0 means not limited.
+  byte  priority;     ///< bigger is better
+  byte  pitch;        ///< 128 means unchanged, 64 pitch units = 1 octave
 
 public:
   sfxinfo_t(const char *t, int n);
 };
 
 
-// sound sequence definition
+
+/// \brief A sound sequence definition, generated from the SNDSEQ lump.
 struct sndseq_t
 {
   int    number;
   int    stopsound;
   string name;
-  vector<int> data; // the sequence script
+  vector<int> data; ///< the sequence script
 
 public:
   void clear();
 };
 
 
-// for sound cache
+
+/// \brief Sound cache item, 
 class sounditem_t : public cacheitem_t
 {
   friend class soundcache_t;
 protected:
-  int   lumpnum; // lump number of data
+  int   lumpnum; ///< lump number of data
 
 public:
   sounditem_t(const char *name);
   virtual ~sounditem_t();
 
-  void *data;    // unconverted data
-  int   length;  // in bytes
-  void *sdata;   // raw converted sound data
+  unsigned  rate;   ///< sample rate in Hz
+  void     *data;   ///< unconverted data
+  int       length; ///< length in bytes
+  void     *sdata;  ///< raw converted sound data (for now assumed always to be U8 depth)
 };
 
 
-// defines a 3D sound source. We can't just use an Actor* because of
-// sounds originating from mappoint_t's. A bit clumsy but works.
+
+/// \brief A 3D sound source.
+///
+/// We can't just use an Actor* because of
+/// sounds originating from mappoint_t's. A bit clumsy but works.
 struct soundsource_t
 {
   fixed_t x, y, z;
   fixed_t vx, vy, vz;
-  bool     isactor; // is origin an Actor (or a mappoint_t)?
+  bool     isactor; ///< is origin an Actor (or a mappoint_t)?
   union
   { // the sound origin
     struct mappoint_t *mpt;
@@ -154,7 +153,7 @@ public:
 };
 
 
-// normal "static" mono(stereo) sound channel
+/// \brief Normal "static" mono(stereo) sound channel.
 struct channel_t
 {
   int volume;
@@ -164,16 +163,17 @@ struct channel_t
   // observed variables
   int ovol;
   int opitch;
-  int osep; // left/right x^2 separation. 128 is front, 0 is totally left, 256 is totally right
+  int osep; ///< left/right x^2 separation. 128 is front, 0 is totally left, 256 is totally right
 
   class sounditem_t *si;
 
   bool playing;
-  soundsource_t source;  // origin of sound (or NULL)
+  soundsource_t source;  ///< origin of sound (or NULL)
 
 public:
   int Adjust(Actor *listener);
 };
+
 
 
 /// \brief Sound and music subsystem
@@ -186,15 +186,14 @@ class SoundSystem
 private:
   // sound
   int soundvolume;
-  vector<channel_t> channels;   // the set of channels available
+  vector<channel_t> channels; ///< the set of channels available
 
   // music
-  int  musicvolume;  
-  bool mus_paused; // whether music is paused
-  musicinfo_t *mus_playing;   // music currently being played
+  int  musicvolume;
+  bool mus_paused;            ///< whether music is paused
+  musicinfo_t *mus_playing;   ///< music currently being played
 
-  // gametic when to do cleanup
-  unsigned nextcleanup;
+  unsigned nextcleanup;       ///< gametic when to do cleanup
 
   // these are only used internally, user can change them using consvars
   void SetSoundVolume(int volume);
@@ -206,13 +205,14 @@ private:
 public:
   SoundSystem();
 
-  void Startup(); // initialization when game starts
+  /// initialization when game starts
+  void Startup(); 
 
-  // --------- sound
+  // --------- sound ---------
 
-  // normal mono/stereo sound
+  /// normal mono/stereo sound
   int StartAmbSound(sfxinfo_t *s, float volume = 1.0, int separation = 128);
-  // positional 3D sound
+  /// positional 3D sound
   int Start3DSound(sfxinfo_t *s, soundsource_t *source, float volume = 1.0);
 
   void Stop3DSounds();
@@ -221,18 +221,17 @@ public:
   void StopChannel(unsigned cnum);
   bool ChannelPlaying(unsigned cnum);
 
-  // --------- music
+  // --------- music ---------
   void PauseMusic();
   void ResumeMusic();
 
-  // caches music lump "name", starts playing it
+  /// caches music lump "name", starts playing it.
   bool StartMusic(const char *name, bool looping = false);
-
-  // Stops the music fer sure.
+  /// Stops the music fer sure.
   void StopMusic();
 
 
-  // Updates music & sounds
+  /// Updates music & sounds.
   void UpdateSounds();
 };
 

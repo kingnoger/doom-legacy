@@ -16,6 +16,9 @@
 // for more details.
 //
 // $Log$
+// Revision 1.24  2005/03/19 13:51:30  smite-meister
+// sound samplerate fix
+//
 // Revision 1.23  2005/03/16 21:16:08  smite-meister
 // menu cleanup, bugfixes
 //
@@ -127,18 +130,19 @@
 
 
 #define MIDBUFFERSIZE   128*1024
-#define SAMPLERATE      11025   // Hz
+#define SAMPLERATE      22050 //11025   // Hz
 
 class chan_t
 {
 public:
-  channel_t *ch; // the corresponding SoundSystem channel
+  // the corresponding SoundSystem channel
+  channel_t *ch;
 
   // The channel data pointers, start and end.
   Uint8* data;
   Uint8* end;
 
-  // pitch
+  // pitch and samplerate fused together
   Uint32 step;          // The channel step amount...
   Uint32 stepremainder; // ... and a 0.16 bit remainder of last step.
 
@@ -156,9 +160,9 @@ static vector<chan_t> channels;
 
 const int samplecount = 512; // requested audio buffer size (about 46 ms at 11 kHz)
 
-// Pitch to stepping lookup. 64 pitch units = 1 octave
+// Pitch to stepping lookup in 16.16 fixed point. 64 pitch units = 1 octave
 //  0 = 0.25x, 128 = 1x, 256 = 4x
-static int steptable[256];
+static Uint32 steptable[256];
 
 // Volume lookups.
 static int vol_lookup[128*256];
@@ -189,7 +193,7 @@ static void I_SetChannels()
 
   // This table provides step widths for pitch parameters.
   for (i = 0; i < 256; i++)
-    steptable[i] = (int)(pow(2.0, ((i-128)/64.0))*65536.0);
+    steptable[i] = int(pow(2.0, ((i-128)/64.0))*65536.0);
 
   // Generates volume lookup tables
   //  which also turn the U8 samples
@@ -230,7 +234,8 @@ void I_SetSfxVolume(int volume)
 // used to (re)calculate channel params
 void chan_t::CalculateParams()
 {
-  step = steptable[ch->opitch];
+  // how fast should the sound sample be played?
+  step = int(steptable[ch->opitch] * (double(ch->si->rate) / SAMPLERATE));
 
   // x^2 separation, that is, orientation/stereo.
   //  range is: 0 (left) - 255 (right)
@@ -259,7 +264,6 @@ void chan_t::CalculateParams()
 }
 
 //----------------------------------------------
-// I_StartSound
 // This function adds a sound to the
 //  list of currently active sounds,
 //  which is maintained as a given number

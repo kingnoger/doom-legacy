@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.24  2005/03/19 13:51:29  smite-meister
+// sound samplerate fix
+//
 // Revision 1.23  2004/11/19 16:51:04  smite-meister
 // cleanup
 //
@@ -659,7 +662,7 @@ void Intermission::UpdateAnimatedBack()
 
             case ANIM_LEVEL:
               // gawd-awful hack for level anims
-              if (!(state == StatCount && i == 7) && next == a->data1)
+              if (!(state == StatCount && i == 7) && (next % 10) == a->data1)
                 {
                   a->ctr++;
                   if (a->ctr == a->nanims)
@@ -703,7 +706,7 @@ void Intermission::DrawYAH()
 
   // draw flashing ptr
   if (pointeron) // draw the destination 'X'
-    yah[0]->Draw(mapspots[ep][next].x, mapspots[ep][next].y, FB);
+    yah[0]->Draw(mapspots[ep][next % 10].x, mapspots[ep][next % 10].y, FB);
 }
 
 
@@ -1230,10 +1233,10 @@ void Intermission::LoadData()
               }
 
           // level name patches
-	  sprintf(name, "WILV%d%d", episode-1, last);
+	  sprintf(name, "WILV%d%d", episode-1, last % 10);
 	  lastname_tex = tc.GetPtr(name);
 
-	  sprintf(name, "WILV%d%d", episode-1, next);
+	  sprintf(name, "WILV%d%d", episode-1, next % 10);
 	  nextname_tex = tc.GetPtr(name);
 
 	  yah[0] = tc.GetPtr("WIURH0");

@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2005/03/19 13:51:30  smite-meister
+// sound samplerate fix
+//
 // Revision 1.21  2004/11/19 16:51:06  smite-meister
 // cleanup
 //
@@ -267,9 +270,6 @@ static void CON_SetupColormaps()
   //
   //  setup the white and gray text colormap
   //
-  // this one doesn't need to be aligned, unless you convert the
-  // V_DrawMappedPatch() into optimised asm.
-
   if (game.mode != gm_heretic)
     {
       for (i=0; i<256; i++)
@@ -1100,7 +1100,7 @@ void Console::DrawConsole()
   con_hudupdate = true;           // always refresh while console is on
 
   // draw console background
-  int x, y = int(con_height - 200*vid.fdupy);
+  int x, y = con_height - vid.height;
   if (cons_backpic.value)
     con_backpic->Draw(0, y, V_SSIZE);
   else
@@ -1110,7 +1110,7 @@ void Console::DrawConsole()
       con_lborder->Draw(0, y, V_SSIZE);
       con_rborder->Draw(x, y, V_SSIZE);
 
-      V_DrawFadeConsBack(w,0,x,con_height); // translucent background
+      V_DrawFadeConsBack(w, 0, x, con_height); // translucent background
     }
 
   // draw console text lines from bottom to top

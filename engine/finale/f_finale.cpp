@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.26  2005/03/19 13:51:29  smite-meister
+// sound samplerate fix
+//
 // Revision 1.25  2004/11/19 16:51:04  smite-meister
 // cleanup
 //
@@ -506,7 +509,6 @@ void F_CastDrawer(int dummy)
 
 void F_BunnyScroll()
 {
-  int         scrolled;
   char        name[10];
   int         stage;
   static int  laststage;
@@ -516,7 +518,7 @@ void F_BunnyScroll()
 
   //V_MarkRect (0, 0, vid.width, vid.height);
 
-  scrolled = 320 - (finalecount-230)/2;
+  int scrolled = 320 - (finalecount-230)/2;
   if (scrolled > 320)
     scrolled = 320;
   if (scrolled < 0)
@@ -532,10 +534,10 @@ void F_BunnyScroll()
         }
   */
 
-  if (scrolled > 0)
-    p2->Draw(320-scrolled,0, V_SCALE);
-  if (scrolled < 320)
-    p1->Draw(-scrolled,0, V_SCALE);
+  // FIXME WRONG, draws outside the frame buffer...
+  p1->Draw(-scrolled, 0, V_SCALE);
+  p2->Draw(320-scrolled, 0, V_SCALE);
+
 
   if (finalecount < 1130)
     return;

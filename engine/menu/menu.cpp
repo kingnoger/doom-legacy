@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2005/03/19 13:51:29  smite-meister
+// sound samplerate fix
+//
 // Revision 1.1  2005/03/16 21:16:07  smite-meister
 // menu cleanup, bugfixes
 //
@@ -1763,7 +1766,7 @@ static bool M_QuitSetupPlayerMenu()
 
 static menuitem_t SetupPlayer_MI[] =
 {
-  {IT_TEXTBOX, NULL, "Your name",  {&cv_menu_playername}, 0},
+  {IT_TEXTBOX | IT_DY, NULL, "Your name",  {&cv_menu_playername}, 8},
   {IT_CVAR,    NULL, "Your color", {&cv_playercolor}, 0},
   // FIXME
   //{IT_ARROWS | IT_STRING, NULL, "Your skin" , {(consvar_t *)M_HandleSetupPlayerSkin}, 32},
@@ -1791,7 +1794,7 @@ enum setupplayer_e
 };
 
 
-Menu  SetupPlayerDef("M_MULTI", "Multiplayer", &MultiPlayerDef, ITEMS(SetupPlayer_MI), 90, 40,
+Menu  SetupPlayerDef("M_MULTI", "Multiplayer", &MultiPlayerDef, ITEMS(SetupPlayer_MI), 20, 30,
 		     0, &Menu::DrawSetupPlayer, M_QuitSetupPlayerMenu);
 
 
@@ -1871,23 +1874,19 @@ void M_SwitchSplitscreen()
 #define PLBOXH    9
 void Menu::DrawSetupPlayer()
 {
-  // TODO it would be easier to draw menus if menuitems had an optional x coord as well...
-  // use generic drawer for cursor, items and title
-  DrawMenu();
-
   // TODO team selection, draw a team symbol...
 
   // draw name string
-  M_DrawTextBox(x+90,y-8,MAXPLAYERNAME,1);
-  hud_font->DrawString(x+98, y, setupm_player->name.c_str());
+  //M_DrawTextBox(x+90,y-8,MAXPLAYERNAME,1);
+  //hud_font->DrawString(x+98, y, setupm_player->name.c_str());
 
   // draw text cursor for name
-  if (itemOn == 0 && AnimCount < 4)   //blink cursor
-    hud_font->DrawCharacter(x+98+hud_font->StringWidth(setupm_player->name.c_str()),y,'_' | 0x80, V_SCALE);
+  //if (itemOn == 0 && AnimCount < 4)   //blink cursor
+  //  hud_font->DrawCharacter(x+98+hud_font->StringWidth(setupm_player->name.c_str()),y,'_' | 0x80, V_SCALE);
 
   // draw box around guy
-  M_DrawTextBox(4, y+24, PLBOXW, PLBOXH);
-  M_DrawTextBox(236, y+24, PLBOXW, PLBOXH);
+  M_DrawTextBox(4, y+44, PLBOXW, PLBOXH);
+  M_DrawTextBox(236, y+44, PLBOXW, PLBOXH);
 
   // draw skin string
   // TODO draw pawntype name? draw pawntype stats like Hexen?
@@ -1914,8 +1913,12 @@ void Menu::DrawSetupPlayer()
     current_colormap = (byte *)translationtables - 256 + (color << 8);
 
   // draw player sprites
-  sprframe->tex[0]->Draw(12 +(PLBOXW*8/2),y+24+(PLBOXH*8), V_SCALE | V_MAP);
-  sprframe->tex[2]->Draw(244+(PLBOXW*8/2),y+24+(PLBOXH*8), V_SCALE | V_MAP);
+  sprframe->tex[0]->Draw(12 +(PLBOXW*8/2),y+44+(PLBOXH*8), V_SCALE | V_MAP);
+  sprframe->tex[2]->Draw(244+(PLBOXW*8/2),y+44+(PLBOXH*8), V_SCALE | V_MAP);
+
+  // TODO it would be easier to draw menus if menuitems had an optional x coord as well...
+  // use generic drawer for cursor, items and title
+  DrawMenu();
 }
 
 
@@ -2336,7 +2339,7 @@ static menuitem_t MouseOptions_MI[]=
   //#endif
 };
 
-Menu  MouseOptionsDef("M_OPTTTL", "OPTIONS", &OptionsDef, ITEMS(MouseOptions_MI), 60, 40);
+Menu  MouseOptionsDef("M_OPTTTL", "OPTIONS", &OptionsDef, ITEMS(MouseOptions_MI), 50, 40);
 
 
 //===========================================================================
@@ -2754,7 +2757,7 @@ bool Menu::Responder(event_t *ev)
       return true;
     }
 
-  // F-keys, esc
+  // F-keys etc. (these cannot be used as controls!)
   if (!active)
     {
       switch (ch)
@@ -2825,6 +2828,20 @@ bool Menu::Responder(event_t *ev)
         case KEY_ESCAPE:        // Open the main menu
           Open();
 	  break;
+
+        case KEY_PAUSE:
+          COM_BufAddText("pause\n");
+          return true;
+
+        case '-':     // Screen size down
+          cv_viewsize.Set(cv_viewsize.value - 1);
+          S_StartLocalAmbSound(sfx_menu_adjust);
+          return true;
+
+        case '+':    // Screen size up
+          cv_viewsize.Set(cv_viewsize.value + 1);
+          S_StartLocalAmbSound(sfx_menu_adjust);
+          return true;
 
 	default: // not a recognized keydown event
 	  return false;
