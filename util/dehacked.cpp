@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2005/03/22 16:59:31  smite-meister
+// dehacked fix
+//
 // Revision 1.15  2004/12/31 16:19:41  smite-meister
 // alpha fixes
 //
@@ -428,10 +431,7 @@ static int StateMap(int num)
     }
 
   if (num == 0)
-    {
-      DEH.error("You must not modify frame 0.\n");
-      return S_TNT1; // FIXME temp
-    }
+    return 0;
 
   if (num <= 89)
     return -num;
@@ -562,7 +562,7 @@ void dehacked_t::Read_Thing(int num)
 	  if (!strcasecmp(word,"frame"))
 	    {
 	      value = StateMap(value);
-	      if (value <= 0)
+	      if (value < 0)
 		{
 		  error("Thing %d : Weapon states must not be used with Things!\n", num);
 		  continue;
@@ -580,7 +580,7 @@ void dehacked_t::Read_Thing(int num)
       else
 	{
 	  value = StateMap(value);
-	  if (value <= 0)
+	  if (value < 0)
 	    {
 	      error("Thing %d : Weapon states must not be used with Things!\n", num);
 	      continue;
@@ -611,8 +611,12 @@ Codep = 111 // Legacy addition
 void dehacked_t::Read_Frame(int num)
 {
   int s = StateMap(num);
-  if (!s)
-    return;
+
+  if (s == 0)
+    {
+      DEH.error("You must not modify frame 0.\n");
+      return;
+    }
 
   while (p.NewLine(false))
     {
@@ -730,7 +734,7 @@ void dehacked_t::Read_Text(int len1, int len2)
       return;
     }
   
-  if (p.GetStringN(s, len1 + len2) != len1 + len2)
+  if (p.ReadChars(s, len1 + len2) != len1 + len2)
     {
       error("Read failed\n");
       return;
@@ -771,7 +775,9 @@ void dehacked_t::Read_Text(int len1, int len2)
       int temp = strlen(text[i]);
       if (temp == len1 && !strncmp(text[i], s, len1))
 	{
-	  if (temp < len2)  // increase size of the text
+	  // FIXME odd. If I remove this comment, DEH crashes with a segfault.
+	  // can't you write to static tables??
+	  //if (temp < len2)  // increase size of the text
 	    {
 	      text[i] = (char *)malloc(len2 + 1);
 	      if (!text[i])
@@ -865,7 +871,7 @@ void dehacked_t::Read_Weapon(int num)
       else
 	{
 	  value = -StateMap(value);
-	  if (value <= 0)
+	  if (value < 0)
 	    {
 	      error("Weapon %d : Thing states must not be used with weapons!\n", num);
 	      continue;
@@ -1168,6 +1174,8 @@ bool dehacked_t::LoadDehackedLump(const char *buf, int len)
   if (!p.Open(buf, len))
     return false;
 
+  p.DeleteChars('\r'); // annoying cr's.
+
   num_errors = 0;
 
   // original values
@@ -1186,7 +1194,7 @@ bool dehacked_t::LoadDehackedLump(const char *buf, int len)
   for (i=0; i<NUMSPRITES; i++)
     savesprnames[i] = sprnames[i];
 
-  p.RemoveComments('#');
+  p.RemoveComments('#', true);
   while (p.NewLine())
     {
       char *word1, *word2;
@@ -1282,7 +1290,6 @@ bool dehacked_t::LoadDehackedLump(const char *buf, int len)
 	      break;
 
 	    case DEH_Doom:
-	      p.NewLine();
 	      i = FindValue();
 	      if (i != 19)
 		error("Warning : Patch from a different Doom version (%d), only version 1.9 is supported\n", i);

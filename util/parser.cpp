@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2003-2004 by DooM Legacy Team.
+// Copyright (C) 2003-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2005/03/22 16:59:32  smite-meister
+// dehacked fix
+//
 // Revision 1.6  2004/12/31 16:19:41  smite-meister
 // alpha fixes
 //
@@ -67,7 +70,7 @@ Parser::~Parser()
 }
 
 
-// opens a text lump for parsing
+// opens a text lump for parsing, removes '\r' chars
 int Parser::Open(int lump)
 {
   if (lump < 0)
@@ -86,7 +89,7 @@ int Parser::Open(int lump)
   me = ms + length; // past-the-end pointer
   s = e = ms;
 
-  RemoveCRs();
+  RemoveCRs(); // NOTE this is for convenience and usually OK.
   return length;
 }
 
@@ -106,8 +109,22 @@ int Parser::Open(const char *buf, int len)
   me = ms + length; // past-the-end pointer
   s = e = ms;
 
-  RemoveCRs();
   return length;
+}
+
+
+// Removes all chars 'c' from the buffer and compactifies it.
+void Parser::DeleteChars(char c)
+{
+  char *q = ms;
+  for (char *p = ms; p < me; p++)
+    if (*p != c)
+      *q++ = *p;
+
+  // and then fix the new limits
+  me = q;
+  length = me - ms;
+  ms[length] = '\0'; // to make searching easy
 }
 
 
@@ -125,8 +142,21 @@ void Parser::Clear()
 // Replace all comments after 's' with whitespace.
 // anything between the symbol // or ; and the next newline is a comment.
 // TODO right now there is no way to escape these symbols!
-void Parser::RemoveComments(char c)
+void Parser::RemoveComments(char c, bool linestart)
 {
+  if (linestart)
+    {
+      // only interpret it as a comment if it is in the beginning of a line
+      // (for DeHackEd and the stupid ID # thing!)
+      for (char *p = s; p < me; p++)
+	{
+	  if (p[0] == '\n' && p[1] == c)
+	    for (p++ ; p < me && *p != '\n'; p++)
+	      *p = ' ';
+	}   
+      return;
+    }
+
   if (c == '/')
     for (char *p = s; p+1 < me; p++)
       {
@@ -155,6 +185,20 @@ int Parser::ReplaceChars(char from, char to)
 	ret++;
       }
   return ret;
+}
+
+
+
+// Reads at most n chars starting from the next line. Updates e.
+// Returns the number of chars actually read.
+int Parser::ReadChars(char *to, int n)
+{
+  int i;
+  for (i = 0; e < me && i < n; e++, i++)
+    to[i] = *e;
+
+  to[i] = '\0';
+  return i; 
 }
 
 
@@ -255,7 +299,7 @@ int Parser::GetString(char *to, int n)
 }
 
 
-// Tries to read exactly 'n' characters from current location on.
+// Reads at most 'n' chars from current location on, but does not go to the next line.
 // NOTE that 'to' must have space for the terminating NUL char.
 int Parser::GetStringN(char *to, int n)
 {
@@ -266,6 +310,7 @@ int Parser::GetStringN(char *to, int n)
   to[i] = '\0';
   return i;
 }
+
 
 // Gets one char, ignoring starting whitespace.
 bool Parser::GetChar(char *to)

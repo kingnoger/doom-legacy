@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2003-2004 by DooM Legacy Team.
+// Copyright (C) 2003-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2005/03/22 16:58:57  smite-meister
+// dehacked fix
+//
 // Revision 1.7  2004/12/19 23:37:59  smite-meister
 // oops
 //
@@ -86,10 +89,14 @@ public:
   int  Open(const char *buf, int len);
   void Clear();
 
-  void RemoveComments(char c);
+  void RemoveComments(char c, bool linestart = false);
   int  ReplaceChars(char from, char to);
   inline int RemoveCRs() { return ReplaceChars('\r', ' '); };
 
+  void DeleteChars(char c);
+  int  ReadChars(char *to, int n);
+
+  // line-oriented methods
   bool NewLine(bool pass_ws = true);
   void PassWS();
   int  LineReplaceChars(char from, char to);
