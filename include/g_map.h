@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C++ -*- 
+// Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
 // $Id$
@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.32  2004/08/29 13:50:07  hurdler
+// minor update
+//
 // Revision 1.31  2004/08/12 18:30:29  smite-meister
 // cleaned startup
 //
@@ -228,7 +231,7 @@ public:
 
   int                nummapthings;
   struct mapthing_t *mapthings;
-  
+
   // Thinkers in the map
   // Both the head and tail of the thinker list.
   Thinker thinkercap;
@@ -454,7 +457,7 @@ public:
   int  EV_DoDoor(int tag, line_t* line, Actor *mo, byte type, fixed_t speed, int delay);
   void SpawnDoorCloseIn30(sector_t* sec);
   void SpawnDoorRaiseIn5Mins(sector_t* sec);
-  
+
   // in p_floor.cpp
   int EV_DoFloor(int tag, line_t *line, int type, fixed_t speed, int crush, fixed_t height);
   int EV_DoChange(line_t *line, int changetype);
@@ -476,7 +479,6 @@ public:
   void PrecacheMap();
   subsector_t *R_PointInSubsector(fixed_t x, fixed_t y);
   subsector_t* R_IsPointInSubsector(fixed_t x, fixed_t y);
-  void HWR_SearchLightsInMobjs();
 
   // in p_poly.cpp
   void InitPolyobjs();

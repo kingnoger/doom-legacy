@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/08/29 13:50:22  hurdler
+// minor update
+//
 // Revision 1.4  2004/07/25 20:17:50  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -49,8 +52,6 @@
 #include "cvars.h"
 
 static SDL_Surface *vidSurface = NULL; //use the one from i_video_sdl.c instead?
-
-void HWR_Startup();
 
 bool OglSdlSurface()
 {

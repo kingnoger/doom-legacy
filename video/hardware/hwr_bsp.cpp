@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/08/29 13:50:23  hurdler
+// minor update
+//
 // Revision 1.3  2004/07/25 20:16:08  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -926,12 +929,12 @@ Subsector::Subsector(int num, Poly *poly)
 
   // We have now all the info we need to create the different arrays (colors, texcoords and vertices)
 
+  State *state = new State();
+  state->SetColor((rand() % 256) / 255.0f, (rand() % 256) / 255.0f, (rand() % 256) / 255.0f, 1.0f);
   if (poly->numpts > 2)
     {
       // -= FLOOR =-
       Geometry *geometry = new Geometry();
-      State *state = new State();
-      state->SetColor((rand() % 256) / 255.0f, (rand() % 256) / 255.0f, (rand() % 256) / 255.0f, 1.0f);
 
       GLuint *primitive_length = new GLuint(poly->numpts);
       GLuint *primitive_type = new GLuint(GL_TRIANGLE_FAN);
@@ -960,8 +963,6 @@ Subsector::Subsector(int num, Poly *poly)
 
       // -= CEILING =-
       geometry = new Geometry();
-      state = new State();
-      state->SetColor((rand() % 256) / 255.0f, (rand() % 256) / 255.0f, (rand() % 256) / 255.0f, 1.0f);
 
       primitive_length = new GLuint(poly->numpts);
       primitive_type = new GLuint(GL_TRIANGLE_FAN);

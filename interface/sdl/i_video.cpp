@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2004/08/29 13:50:08  hurdler
+// minor update
+//
 // Revision 1.14  2004/08/18 14:35:21  smite-meister
 // PNG support!
 //
@@ -106,7 +109,7 @@ static char vidModeName[33][32]; // allow 33 different modes
 
 
 // maximum number of windowed modes (see windowedModes[][])
-#define MAXWINMODES (6)
+#define MAXWINMODES (8)
 
 //Hudler: 16/10/99: added for OpenGL gamma correction
 RGBA_t  gamma_correction = {0x7F7F7F7F};
@@ -128,7 +131,9 @@ static int firstEntry = 0;
 // windowed video modes from which to choose from.
 static int windowedModes[MAXWINMODES][2] =
 {
-  {MAXVIDWIDTH /*1024*/, MAXVIDHEIGHT/*768*/},
+  {MAXVIDWIDTH /*1600*/, MAXVIDHEIGHT/*1200*/},
+  {1280, 1024},
+  {1024, 768},
   {800, 600},
   {640, 480},
   {512, 384},

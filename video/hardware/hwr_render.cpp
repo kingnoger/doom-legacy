@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/08/29 13:50:23  hurdler
+// minor update
+//
 // Revision 1.5  2004/08/19 19:42:42  smite-meister
 // bugfixes
 //
@@ -58,6 +61,8 @@
 #include "r_sprite.h"
 #include "g_actor.h"
 #include "r_data.h"
+#include "r_main.h"
+#include "r_draw.h"
 
 void show_stackframe();
 
@@ -237,12 +242,69 @@ void HWRend::RenderPlayerView(int viewnumber, PlayerInfo *player)
       bsp->Render(R.numnodes - 1);     // right view
       R.viewangle += ANG90;
     }
+  SetTransform(0);
 }
 
 void HWRend::DrawViewBorder()
 {
-  show_stackframe();
-  //R.HWR_DrawViewBorder();
+  int x, y;
+  int top, side;
+  int baseviewwidth, baseviewheight;
+  int basewindowx, basewindowy;
+
+  int clearlines = BASEVIDHEIGHT; //refresh all
+
+  // calc view size based on original game resolution
+  baseviewwidth  = (int)(viewwidth/vid.fdupx);
+  baseviewheight = (int)(viewheight/vid.fdupy);
+  top  = (int)(viewwindowy/vid.fdupy);
+  side = (int)(viewwindowx/vid.fdupx);
+
+  // top
+  DrawFill(0, 0, BASEVIDWIDTH, (top<clearlines ? top : clearlines), window_background);
+  // left
+  if (top<clearlines)
+    DrawFill(0, top, side, (clearlines-top < baseviewheight ? clearlines-top : baseviewheight), window_background);
+  // right
+  if (top<clearlines)
+    DrawFill(side + baseviewwidth, top, side, (clearlines-top < baseviewheight ? clearlines-top : baseviewheight), window_background);
+  // bottom
+  if (top+baseviewheight<clearlines)
+    DrawFill(0, top+baseviewheight, BASEVIDWIDTH, BASEVIDHEIGHT, window_background);
+
+  // draw the view borders
+  basewindowx = (BASEVIDWIDTH - baseviewwidth)>>1;
+  if (baseviewwidth==BASEVIDWIDTH)
+    basewindowy = 0;
+  else
+    basewindowy = top;
+
+  // top edge
+  if (clearlines > basewindowy-8)
+    for (x=0 ; x<baseviewwidth; x+=8)
+      window_border[BRDR_T]->HWR_Draw(basewindowx+x,basewindowy-8,0);
+  // bottom edge
+  if (clearlines > basewindowy+baseviewheight)
+    for (x=0 ; x<baseviewwidth ; x+=8)
+      window_border[BRDR_B]->HWR_Draw(basewindowx+x,basewindowy+baseviewheight,0);
+  // left edge
+  if (clearlines > basewindowy)
+    for (y=0 ; y<baseviewheight && (basewindowy+y < clearlines); y+=8)
+      window_border[BRDR_L]->HWR_Draw(basewindowx-8,basewindowy+y,0);
+  // right edge
+  if (clearlines > basewindowy)
+    for (y=0 ; y<baseviewheight && (basewindowy+y < clearlines); y+=8)
+      window_border[BRDR_R]->HWR_Draw(basewindowx+baseviewwidth,basewindowy+y,0);
+
+  // Draw beveled corners.
+  if (clearlines > basewindowy-8)
+    window_border[BRDR_TL]->HWR_Draw(basewindowx-8,basewindowy-8,0);
+  if (clearlines > basewindowy-8)
+    window_border[BRDR_TR]->HWR_Draw(basewindowx+baseviewwidth, basewindowy-8,0);
+  if (clearlines > basewindowy+baseviewheight)
+    window_border[BRDR_BL]->HWR_Draw(basewindowx-8, basewindowy+baseviewheight,0);
+  if (clearlines > basewindowy+baseviewheight)
+    window_border[BRDR_BR]->HWR_Draw(basewindowx+baseviewwidth, basewindowy+baseviewheight,0);
 }
 
 int HWRend::GetTextureUsed()
@@ -364,7 +426,7 @@ void HWRend::Startup()
 #endif
 
   // Now, init structures
-  CONS_Printf ("HWR_Startup()\n");
+  CONS_Printf ("HWRend::Startup()\n");
   static bool startupdone = false;
   if (startupdone == false)
     {
@@ -600,7 +662,29 @@ void PatchTexture::HWR_Prepare()
 }
 void PatchTexture::HWR_Draw(int x, int y, int flags)
 {
-  //CONS_Printf("PatchTexture::HWR_Draw: Not yet implemented\n");
+  static Geometry *geo = 0;
+  static State *state = 0;
+  //V_SLOC     =  0x10000,   // scale starting location
+  //V_SSIZE    =  0x20000,   // scale size
+  //V_SCALE = V_SLOC | V_SSIZE,
+  float scale = (flags & V_SSIZE) ? 1.0f : 320.0f/(float)cv_scr_width.value;
+  float fx = (flags & V_SLOC) ? scale * (x - 160.f) / 160.0f : -1 + scale * x / 160.0f;
+  float fy = (flags & V_SLOC) ? scale * (y - 100.f) / 100.0f : -1 + scale * y / 100.0f;
+  float fw = scale * width / 160.0f;
+  float fh = scale * height / 100.0f;
+  if (!geo)
+  {
+    geo = new Geometry();
+    geo->CreateTexturedRectangle(false, fx, -fy, fx+fw, -fy-fh, 1.0f);
+    state = new State();
+    state->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+  }
+  else
+  {
+    geo->CreateTexturedRectangle(true, fx, -fy, fx+fw, -fy-fh, 1.0f);
+  }
+  state->Apply();
+  geo->Draw();
 }
 void LumpTexture::HWR_Prepare()
 {
