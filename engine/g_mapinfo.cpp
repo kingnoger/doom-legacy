@@ -22,6 +22,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.2  2003/11/23 00:41:55  smite-meister
+// bugfixes
+//
 // Revision 1.1  2003/11/12 11:07:17  smite-meister
 // Serialization done. Map progression.
 //
@@ -113,7 +116,8 @@ MapInfo::MapInfo()
   me = NULL;
   nicename = "Unnamed Map";
 
-  cluster = mapnumber = 0;
+  mapnumber = 0;
+  cluster = 100; // this is so that maps with no cluster are placed in a cluster of their own
   scripts = 0;
   partime = 0;
   gravity = 1.0f;
@@ -169,6 +173,8 @@ void MapInfo::Ticker(bool hub)
 bool MapInfo::Activate()
 {
   const char *temp;
+
+  CONS_Printf("Activating map %d\n", mapnumber);
 
   switch (state)
     {
@@ -815,8 +821,13 @@ int GameInfo::Read_MAPINFO(int lump)
 		    // cluster definition block begins (ZDoom)
 		    parsestate = PS_CLUSTERDEF;
 		    i = sscanf(s, "%*30s %d", &j);
-		    cl = clustermap[j]; // either update the existing cluster or create a new one
-		    cl->number = j;
+		    if (clustermap.count(j))
+		      {
+			CONS_Printf("MAPINFO: Cluster number %d defined more than once!\n", j);
+			cl = clustermap[j]; // already there, update the existing cluster
+		      }
+		    else
+		      clustermap[j] = cl = new MapCluster(j);
 		  }
 		else switch (parsestate)
 		  {
@@ -851,6 +862,7 @@ int GameInfo::Read_MAPINFO(int lump)
     {
       info = tempinfo[i];
       j = info->mapnumber;
+
       if (mapinfo.count(j)) // already there
 	{
 	  CONS_Printf("MAPINFO: Map number %d found more than once!\n", j);
@@ -858,6 +870,25 @@ int GameInfo::Read_MAPINFO(int lump)
 	}
 
       mapinfo[j] = info;
+    }
+
+  // finally generate the missing clusters and fill them all with maps
+  mapinfo_iter_t t;
+  for (t = mapinfo.begin(); t != mapinfo.end(); t++)
+    {
+      info = (*t).second;
+      n = info->cluster;
+      if (!clustermap.count(n))
+	{
+	  CONS_Printf("new cluster %d (map %d)\n", n, info->mapnumber);
+	  // create the cluster
+	  cl = clustermap[n] = new MapCluster(n);
+	  cl->hub = cl->keepstuff = true; // for original Hexen
+	}
+      else
+	cl = clustermap[n];
+
+      cl->maps.push_back(info);
     }
 
   return mapinfo.size();
@@ -894,7 +925,7 @@ void P_Info_AddCommands()
 void GameInfo::Clear_mapinfo_clusterdef()
 {
   // delete old mapinfo and clusterdef
-  map<int, MapInfo *>::iterator s;
+  mapinfo_iter_t s;
   for (s = mapinfo.begin(); s != mapinfo.end(); s++)
     delete (*s).second;
   mapinfo.clear(); 

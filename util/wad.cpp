@@ -266,12 +266,17 @@ int Wad::FindNumForName(const char *name, int startlump)
   // make the name into two integers for easy compares
   strncpy(s, name, 8);
 
-  /*
   // in case the name was 8 chars long
   s[8] = 0;
   // case insensitive TODO make it case sensitive if possible
   strupr(s);
-  */
+
+  // FIXME doom.wad and doom2.wad PNAMES lumps have exactly ONE (1!) patch
+  // entry with a lowcase name: w94_1. Of course the actual lump is
+  // named W94_1, so it won't be found if we have case sensitive search! damn!
+  // heretic.wad and hexen.wad have no such problems.
+  // The right way to fix this is either to fix the WADs (yeah, right!) or handle
+  // this special case in the texture loading routine.
 
   waddir_t *p = directory + startlump;
 

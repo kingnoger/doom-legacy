@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/11/23 00:41:55  smite-meister
+// bugfixes
+//
 // Revision 1.9  2003/11/12 11:07:26  smite-meister
 // Serialization done. Map progression.
 //
@@ -388,6 +391,7 @@ void Map::LoadACScripts(int lump)
 
 void Map::StartOpenACS(int number, int infoIndex, int *address)
 {
+  CONS_Printf("Starting an opening ACS (script %d)\n", number);
   acs_t *script = new acs_t(number, infoIndex, address);
 
   // World objects are allotted 1 second for initialization
@@ -434,6 +438,7 @@ void P_CheckACSStore()
 bool Map::StartACS(int number, byte *args, Actor *activator, line_t *line, int side)
 {
   int i;
+  CONS_Printf("Starting ACS script %d\n", number);
 
   NewScript = NULL;
   /*

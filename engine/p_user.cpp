@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2003/11/23 00:41:55  smite-meister
+// bugfixes
+//
 // Revision 1.14  2003/11/12 11:07:23  smite-meister
 // Serialization done. Map progression.
 //
@@ -487,6 +490,7 @@ bool P_UseArtifact(PlayerPawn *p, artitype_t arti)
     case arti_puzzgear3:
     case arti_puzzgear4:
       /*
+	TODO puzzle items
       if (p->UsePuzzleItem(arti - arti_firstpuzzitem))
 	return true;
       else

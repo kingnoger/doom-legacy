@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2003/11/23 00:41:55  smite-meister
+// bugfixes
+//
 // Revision 1.14  2003/11/12 11:07:27  smite-meister
 // Serialization done. Map progression.
 //
@@ -453,12 +456,12 @@ private:
   int       topwait;   // tics to wait at the top
   int       topcount;   // when it reaches 0, start going down
 
-  line_t *line;   // the line that triggered the door (needed for Boom)
+  short     boomlighttag; // for Boom push-door light effect
 
 public:
   static int s_close, s_bclose, s_open, s_bopen; // sounds
 
-  vdoor_t(byte type, sector_t *sec, fixed_t speed, int delay, line_t *line);
+  vdoor_t(byte type, sector_t *sec, fixed_t speed, int delay);
   
   virtual void Think();
   void MakeSound(bool open) const;

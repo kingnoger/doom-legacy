@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/11/23 00:41:55  smite-meister
+// bugfixes
+//
 // Revision 1.9  2003/11/12 11:07:23  smite-meister
 // Serialization done. Map progression.
 //
@@ -179,22 +182,15 @@ int ceiling_t::Marshal(LArchive &a)
 
 int vdoor_t::Marshal(LArchive &a)
 {
-  int s, l;
-  if (a.IsStoring())
+  int temp = sector - mp->sectors;
+  a << temp;
+  if (!a.IsStoring())
     {
-      s = sector - mp->sectors;
-      l = line - mp->lines;
-      a << s << l;
-    }
-  else
-    {
-      a << s << l;
-      sector = mp->sectors + s;
-      line = mp->lines + l;
+      sector = mp->sectors + temp;
       sector->ceilingdata = this;
     }
 
-  a << type << direction << topheight << speed << topwait << topcount;
+  a << type << direction << topheight << speed << topwait << topcount << boomlighttag;
   return 0;
 }
 

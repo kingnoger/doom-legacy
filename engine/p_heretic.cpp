@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2003/11/23 00:41:55  smite-meister
+// bugfixes
+//
 // Revision 1.14  2003/11/12 11:07:21  smite-meister
 // Serialization done. Map progression.
 //
@@ -357,11 +360,9 @@ void HereticPatchEngine()
 
   // instead of this, make a default skin (marine, heretic)
   // with appropriate sounds.
-  strcpy(S_sfx[sfx_oof].lumpname, "plroof");
+  strcpy(S_sfx[sfx_oof].lumpname, "PLROOF");
   S_sfx[sfx_oof].priority    = 32;
 
-  text[PD_BLUEK_NUM]   = "YOU NEED A BLUE KEY TO OPEN THIS DOOR";
-  text[PD_YELLOWK_NUM] = "YOU NEED A YELLOW KEY TO OPEN THIS DOOR";
   text[PD_REDK_NUM]    = "YOU NEED A GREEN KEY TO OPEN THIS DOOR";
 
   text[GOTARMOR_NUM] = "SILVER SHIELD";

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/11/23 00:41:55  smite-meister
+// bugfixes
+//
 // Revision 1.7  2003/11/12 11:07:21  smite-meister
 // Serialization done. Map progression.
 //
@@ -1331,19 +1334,25 @@ void A_HScream(DActor *actor)
 //
 //---------------------------------------------------------------------------
 
-void P_DropItem(Actor *source, mobjtype_t type, int special, int chance)
+void P_DropItem(Actor *source, mobjtype_t type, int special, int chance, bool onfloor = false)
 {
-  DActor *mo;
+  if (P_Random() > chance)
+    return;
 
-  if(P_Random() > chance)
+  fixed_t z = source->z;
+
+  if (!onfloor)
+    z += source->height >> 1;
+
+  DActor *mo = source->mp->SpawnDActor(source->x, source->y, z, type);
+
+  if (!onfloor)
     {
-      return;
+      mo->px = P_SignedRandom()<<8;
+      mo->py = P_SignedRandom()<<8;
+      mo->pz = FRACUNIT*5+(P_Random()<<10);
     }
-  mo = source->mp->SpawnDActor(source->x, source->y,
-		   source->z+(source->height>>1), type);
-  mo->px = P_SignedRandom()<<8;
-  mo->py = P_SignedRandom()<<8;
-  mo->pz = FRACUNIT*5+(P_Random()<<10);
+
   mo->flags |= MF_DROPPED;
   mo->health = special;
 }
@@ -1358,8 +1367,9 @@ void A_NoBlocking(DActor *actor)
 {
   A_Fall(actor);
   // Check for monsters dropping things
-  switch(actor->type)
+  switch (actor->type)
     {
+      // Heretic
     case MT_MUMMY:
     case MT_MUMMYLEADER:
     case MT_MUMMYGHOST:
@@ -1391,8 +1401,21 @@ void A_NoBlocking(DActor *actor)
       P_DropItem(actor, MT_ARTISUPERHEAL, 0, 51);
       P_DropItem(actor, MT_AMPHRDWIMPY, 10, 84);
       break;
-    default:
+
+      // Doom
+    case MT_WOLFSS:
+    case MT_POSSESSED:
+      P_DropItem(actor, MT_CLIP, 1, 255, true);
       break;
+    case MT_SHOTGUY:
+      P_DropItem(actor, MT_SHOTGUN, 1, 255, true);
+      break;
+    case MT_CHAINGUY:
+      P_DropItem(actor, MT_CHAINGUN, 1, 255, true);
+      break;
+
+    default:
+      return;
     }
 }
 

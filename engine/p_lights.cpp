@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/11/23 00:41:55  smite-meister
+// bugfixes
+//
 // Revision 1.4  2003/11/12 11:07:22  smite-meister
 // Serialization done. Map progression.
 //
@@ -319,6 +322,9 @@ int Map::EV_SpawnLight(int tag, int type, short maxl, short minl, short maxt, sh
   lightfx_t *lfx;
   int rtn = 0;
   fixed_t speed;
+
+  if (!tag)
+    return false;
 
   for (int i = -1; (i = FindSectorFromTag(tag, i)) >= 0; )
     {

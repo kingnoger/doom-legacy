@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/11/23 00:41:55  smite-meister
+// bugfixes
+//
 // Revision 1.7  2003/11/12 11:07:19  smite-meister
 // Serialization done. Map progression.
 //
@@ -243,6 +246,9 @@ int Map::EV_DoCeiling(int tag, int type, fixed_t uspeed, fixed_t dspeed, int cru
 
   int secnum = -1;
   int rtn = 0;
+
+  if (!tag)
+    return false;
 
   //  Reactivate in-stasis ceilings...for certain types.
   // This restarts a crusher after it has been stopped

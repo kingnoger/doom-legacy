@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.24  2003/11/23 00:41:55  smite-meister
+// bugfixes
+//
 // Revision 1.23  2003/11/12 11:07:17  smite-meister
 // Serialization done. Map progression.
 //
@@ -929,7 +932,6 @@ void Map::BossDeath(const DActor *mo)
 
   Thinker *th;
   DActor   *a;
-  line_t   junk;
   const state_t *finalst = P_FinalState(mo->info->deathstate);
 
   // scan the remaining thinkers to see
@@ -957,8 +959,7 @@ void Map::BossDeath(const DActor *mo)
   switch (mo->type)
     {
     case MT_BRUISER:
-      junk.tag = 666;
-      EV_DoFloor(&junk, floor_t::LnF, FLOORSPEED, 0, 0);
+      EV_DoFloor(666, NULL, floor_t::LnF, FLOORSPEED, 0, 0);
       return;
 
     case MT_CYBORG:
@@ -967,8 +968,7 @@ void Map::BossDeath(const DActor *mo)
       else
 	{
 	  // used in ult. Doom, map 6
-	  junk.tag = 666;
-	  EV_DoDoor(&junk, NULL, vdoor_t::Open | vdoor_t::Blazing, 4*VDOORSPEED, VDOORWAIT);
+	  EV_DoDoor(666, NULL, NULL, vdoor_t::Open | vdoor_t::Blazing, 4*VDOORSPEED, VDOORWAIT);
 	  return;
 	}
 
@@ -978,24 +978,20 @@ void Map::BossDeath(const DActor *mo)
       else
 	{
 	  // ult. Doom, map 8
-	  junk.tag = 666;
-	  EV_DoFloor (&junk, floor_t::LnF, FLOORSPEED, 0, 0);
+	  EV_DoFloor (666, NULL, floor_t::LnF, FLOORSPEED, 0, 0);
 	  return;
 	}
 
     case MT_FATSO:
-      junk.tag = 666;
-      EV_DoFloor(&junk, floor_t::LnF, FLOORSPEED, 0, 0);
+      EV_DoFloor(666, NULL, floor_t::LnF, FLOORSPEED, 0, 0);
       return;
 
     case MT_BABY:
-      junk.tag = 667;
-      EV_DoFloor(&junk,  floor_t::SLT, FLOORSPEED, 0, 0);
+      EV_DoFloor(667, NULL,  floor_t::SLT, FLOORSPEED, 0, 0);
       return;
 
     case MT_KEEN:
-      junk.tag = 666;
-      EV_DoDoor(&junk, NULL, vdoor_t::Open,VDOORSPEED, VDOORWAIT);
+      EV_DoDoor(666, NULL, NULL, vdoor_t::Open,VDOORSPEED, VDOORWAIT);
       return;
 
     case MT_BOSSBRAIN:
@@ -1010,8 +1006,7 @@ void Map::BossDeath(const DActor *mo)
       // Kill any remaining monsters
       Massacre();
     nomassacre:
-      junk.tag = 666;
-      EV_DoFloor(&junk, floor_t::LnF, FLOORSPEED, 0, 0);
+      EV_DoFloor(666, NULL, floor_t::LnF, FLOORSPEED, 0, 0);
       return;
 
     default:

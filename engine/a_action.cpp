@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/11/23 00:41:54  smite-meister
+// bugfixes
+//
 // Revision 1.5  2003/11/12 11:07:15  smite-meister
 // Serialization done. Map progression.
 //
@@ -1346,7 +1349,6 @@ void A_SoAExplode(DActor *actor)
 void A_BellReset1(DActor *actor)
 {
   actor->flags |= MF_NOGRAVITY;
-  actor->height <<= 2;	
 }
 
 //===========================================================================
@@ -1358,7 +1360,6 @@ void A_BellReset1(DActor *actor)
 void A_BellReset2(DActor *actor)
 {
   actor->flags |= MF_SHOOTABLE;
-  actor->flags &= ~MF_CORPSE;
   actor->health = 5;
 }
 

@@ -139,14 +139,14 @@ int FileCache::AddFile(const char *fname)
     }
 
   VFile *vf = NULL;
-  int l = name.size();
+  int l = strlen(fname);
 
-  if (!stricmp(&name[l - 4], ".deh")) // FIXME name is a std:string
+  if (!stricmp(&fname[l - 4], ".deh"))
     {
       // detect dehacked file with the "deh" extension
       vf = new Wad(name);
     }
-  else if (name[l-1] == '/')
+  else if (fname[l-1] == '/')
     {
       // directory
       vf = new VDir();

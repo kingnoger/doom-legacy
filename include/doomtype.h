@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/11/23 00:41:55  smite-meister
+// bugfixes
+//
 // Revision 1.3  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -82,10 +85,6 @@ typedef unsigned short USHORT;
 #endif
 
 #ifdef __APPLE_CC__                //skip all boolean/Boolean crap
-# define true 1
-# define false 0
-# define min(x,y) ( ((x)<(y)) ? (x) : (y) )
-# define max(x,y) ( ((x)>(y)) ? (x) : (y) )
 # define lstrlen(x) strlen(x)
 
 # define stricmp strcmp

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.26  2003/11/23 00:41:55  smite-meister
+// bugfixes
+//
 // Revision 1.25  2003/11/12 11:07:23  smite-meister
 // Serialization done. Map progression.
 //
@@ -1439,7 +1442,7 @@ bool Map::Setup(tic_t start, bool spawnthings)
   LoadLineDefs2();
 
   if (!hexen_format)
-    ConvertLineDefs(); // Doom => Hexen
+    ConvertLineDefs(); // Doom => Hexen TODO why not spawn linedef thinkers first?
 
   LoadSubsectors(lumpnum+ML_SSECTORS);
   LoadNodes(lumpnum+ML_NODES);
@@ -1535,9 +1538,9 @@ void Map::ConvertLineDefs()
 	    ld->args[j] = p->args[j];
 	  trig = p->trigger;
 
-	  if (ld->args[0] == 255)
+	  //if (ld->args[0] == 255) ;
 	    //ld->args[0] = ld->tag; // nope, a byte is not enough
-	    ld->args[0] = 0; // now ExecuteLineSpecial() uses 'tag'
+	    //ld->args[0] = 0; // now ExecuteLineSpecial() uses 'tag'
 
 	  // time to put the flags back
 	  ld->flags |= (trig & 0x0f) << (ML_SPAC_SHIFT-1); // activation and repeat

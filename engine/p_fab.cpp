@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/11/23 00:41:55  smite-meister
+// bugfixes
+//
 // Revision 1.4  2003/03/15 20:07:15  smite-meister
 // Initial Hexen compatibility!
 //
@@ -80,6 +83,16 @@
 void Translucency_OnChange();
 
 consvar_t cv_translucency  = {"translucency" ,"1",CV_CALL|CV_SAVE,CV_OnOff, Translucency_OnChange};
+
+
+// action function for running FS
+// FIXME add this to a state in the states table so that DeHackEd can access it!
+void A_RunFS(DActor *actor)
+{
+  int script = actor->tics;
+  actor->tics = 0; // takes no time
+  actor->mp->T_RunScript(script, actor);
+}
 
 //
 // Action routine, for the ROCKET thing.

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2003/11/23 00:41:55  smite-meister
+// bugfixes
+//
 // Revision 1.17  2003/11/12 11:07:19  smite-meister
 // Serialization done. Map progression.
 //
@@ -492,16 +495,17 @@ void GameInfo::Ticker()
 	  p = (*t).second;
 	  if (p->playerstate == PST_WAITFORMAP)
 	    {
-	      // assign the player to a map
-	      m = FindMapInfo(p->requestmap);
-
-	      if (m == NULL)
+	      if (p->requestmap < 0)
 		{
-		  // game ends
-		  currentcluster->Finish(0, 0);
+		  // TODO game ends!
 		  //action = ga_intermission;
 		  break;
 		}
+	      
+	      // assign the player to a map
+	      m = FindMapInfo(p->requestmap);
+	      if (m == NULL)
+		m = currentcluster->maps[0];
 
 	      if (currentcluster->number != m->cluster)
 		{
@@ -596,8 +600,11 @@ void GameInfo::Ticker()
 // starts a new local game
 bool GameInfo::DeferredNewGame(skill_t sk, bool splitscreen)
 {
+  CONS_Printf("Deferred:Starting a new game\n");
   if (clustermap.empty())
     return false;
+
+  CONS_Printf("Deferred: really\n");
 
   // read these lumps _after_ MAPINFO but not separately for each map
   Read_SNDINFO(fc.FindNumForName("SNDINFO"));
@@ -640,10 +647,13 @@ bool GameInfo::DeferredNewGame(skill_t sk, bool splitscreen)
 // starts or restarts the game.
 bool GameInfo::StartGame()
 {
+  CONS_Printf("Starting a new game, any time now\n");
   void P_InitSwitchList();
 
   if (clustermap.empty())
     return false;
+
+  CONS_Printf("Starting a new game, %d clusters\n", clustermap.size());
 
   cluster_iter_t t = clustermap.begin();
   MapCluster *m = (*t).second; 

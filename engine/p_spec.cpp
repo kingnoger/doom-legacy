@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2003/11/23 00:41:55  smite-meister
+// bugfixes
+//
 // Revision 1.15  2003/11/12 11:07:23  smite-meister
 // Serialization done. Map progression.
 //
@@ -102,6 +105,7 @@
 
 #include "w_wad.h"
 #include "z_zone.h"
+
 
 
 //SoM: Enable Boom features?
@@ -694,13 +698,9 @@ fixed_t Map::FindShortestLowerAround(sector_t *sec)
 
 
 
-//
-// was P_FindShortestUpperAround()
-//
 // Passed a sector number, returns the shortest upper texture on a
 // linedef bounding the sector.
-//
-//
+
 fixed_t Map::FindShortestUpperAround(sector_t *sec)
 {
   int minsize = MAXINT;
@@ -732,18 +732,12 @@ fixed_t Map::FindShortestUpperAround(sector_t *sec)
 
 
 
-//SoM: 3/7/2000
-//
-// was P_FindModelFloorSector()
-//
 // Passed a floor height and a sector number, return a pointer to a
 // a sector with that floor height across the lowest numbered two sided
 // line surrounding the sector.
 //
 // Note: If no sector at that height bounds the sector passed, return NULL
-//
-//
-//sector_t *P_FindModelFloorSector(fixed_t floordestheight,int secnum)
+
 sector_t *Map::FindModelFloorSector(fixed_t floordestheight, sector_t *sec)
 {
   int i, secnum;
@@ -772,17 +766,12 @@ sector_t *Map::FindModelFloorSector(fixed_t floordestheight, sector_t *sec)
 
 
 
-//SoM: 3/7/2000: Last one...
-//
-// was P_FindModelCeilingSector()
-//
 // Passed a ceiling height and a sector number, return a pointer to a
 // a sector with that ceiling height across the lowest numbered two sided
 // line surrounding the sector.
 //
 // Note: If no sector at that height bounds the sector passed, return NULL
-//
-//
+
 sector_t *Map::FindModelCeilingSector(fixed_t ceildestheight, sector_t *sec)
 {
   int i, secnum;
@@ -811,9 +800,7 @@ sector_t *Map::FindModelCeilingSector(fixed_t ceildestheight, sector_t *sec)
 
 
 
-// was P_FindSectorFromLineTag
 // RETURN NEXT SECTOR # THAT LINE TAG REFERS TO
-//
 //SoM: 3/7/2000: Killough wrote this to improve the process.
 int Map::FindSectorFromLineTag(line_t *line, int start)
 {
@@ -826,8 +813,6 @@ int Map::FindSectorFromLineTag(line_t *line, int start)
 
 
 
-//
-// was P_FindSectorFromTag
 // Used by FraggleScript
 int Map::FindSectorFromTag(int tag, int start)
 {
@@ -949,134 +934,6 @@ bool P_SectorActive(special_e t, sector_t *sec)
       return sec->lightingdata;
     }
 
-  return true;
-}
-
-
-//SoM: 3/7/2000
-//
-// P_CheckTag()
-//
-// Passed a line, returns true if the tag is non-zero or the line special
-// allows no tag without harm. If compatibility, all linedef specials are
-// allowed to have zero tag.
-//
-// Note: Only line specials activated by walkover, pushing, or shooting are
-//       checked by this routine.
-//
-//
-int P_CheckTag(line_t *line)
-{
-  if (!boomsupport)
-    return 1;
-
-  if (line->tag)
-    return 1;
-
-  switch(line->special)
-    {
-    case 1:                 // Manual door specials
-    case 26:
-    case 27:
-    case 28:
-    case 31:
-    case 32:
-    case 33:
-    case 34:
-    case 117:
-    case 118:
-
-    case 139:               // Lighting specials
-    case 170:
-    case 79:
-    case 35:
-    case 138:
-    case 171:
-    case 81:
-    case 13:
-    case 192:
-    case 169:
-    case 80:
-    case 12:
-    case 194:
-    case 173:
-    case 157:
-    case 104:
-    case 193:
-    case 172:
-    case 156:
-    case 17:
-
-    case 195:               // Thing teleporters
-    case 174:
-    case 97:
-    case 39:
-    case 126:
-    case 125:
-    case 210:
-    case 209:
-    case 208:
-    case 207:
-
-    case 11:                // Exits
-    case 52:
-    case 197:
-    case 51:
-    case 124:
-    case 198:
-
-    case 48:                // Scrolling walls
-    case 85:
-      // FraggleScript types!
-    case 272:   // WR
-    case 273:
-    case 274:   // W1
-    case 275:
-    case 276:   // SR
-    case 277:   // S1
-    case 278:   // GR
-    case 279:   // G1
-      return 1;   // zero tag allowed
-
-    case 105: if( game.mode == gm_heretic )
-      return 1;
-
-    default:
-      break;
-    }
-  return 0;       // zero tag not allowed
-}
-
-
-
-static bool P_CheckKeys(Actor *mo, int lock)
-{
-  PlayerPawn *p = (mo->Type() == Thinker::tt_ppawn) ? (PlayerPawn *)mo : NULL;
-
-  if (!p)
-    return false;
-
-  if (!lock)
-    return true;
-
-  if (lock > NUMKEYS)
-    return false;
-
-  if (!(p->keycards & (1 << (lock-1))))
-    {
-      if (lock >= it_bluecard) // skulls and cards are equivalent
-	if (p->keycards & (1 << (lock+2)))
-	  return true;
-      // FIXME complain properly
-      /*
-      p->player->SetMessage(PD_BLUEO);
-      p->player->SetMessage(PD_REDO);
-      p->player->SetMessage(PD_YELLOWO);
-      */
-      S_StartScreamSound(p, sfx_oof); //SoM: 3/6/200: killough's idea
-      //S_StartSound(mo, SFX_DOOR_LOCKED);
-      return false; // no ticket!
-    }
   return true;
 }
 
@@ -1241,6 +1098,9 @@ bool Map::ActivateLine(line_t *line, Actor *thing, int side, int atype)
   return true;
 }
 
+
+bool P_CheckKeys(Actor *mo, int lock);
+
 // 
 // P_ExecuteLineSpecial
 // Hexen linedefs
@@ -1256,20 +1116,16 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
   bool success = false;
   int lock;
 
-  // quite a good kludge
-  // line->tag and args[0] are not always same (scripts!)  
-  int temptag = -1;
+  // callers: ACS, thing death, thing pickup, line activation
+
+  // line->tag == line->args[0] and args[0] are not always same (scripts!)  FIXME which one should we use?
+  // we always have args, but line may be NULL
+
   int tag = args[0];
-  if (line)
+  if (line && tag == 255)
     {
-      if (tag)
-	{
-	  temptag = line->tag;
-	  line->tag = tag; // TODO this would not be necessary if some EV_ functions
-	  // took line and tag as separate parameters
-	}
-      else
-	tag = line->tag;
+      // special case to handle converted Doom/Heretic linedefs
+      tag = line->tag;
     }
   
   //CONS_Printf("ExeSpecial (%d), tag %d (%d)\n", special, line->tag, args[0]);
@@ -1298,35 +1154,35 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       success = EV_OpenPolyDoor(args, polydoor_t::pd_slide);
       break;
     case 10: // Door Close
-      success = EV_DoDoor(line, mo, vdoor_t::Close, SPEED(args[1]), TICS(args[2]));
+      success = EV_DoDoor(tag, line, mo, vdoor_t::Close, SPEED(args[1]), TICS(args[2]));
       break;
     case 11: // Door Open
-      success = EV_DoDoor(line, mo, vdoor_t::Open, SPEED(args[1]), TICS(args[2]));
+      success = EV_DoDoor(tag, line, mo, vdoor_t::Open, SPEED(args[1]), TICS(args[2]));
       break;
     case 12: // Door Raise
-      success = EV_DoDoor(line, mo, vdoor_t::OwC, SPEED(args[1]), TICS(args[2]));
+      success = EV_DoDoor(tag, line, mo, vdoor_t::OwC, SPEED(args[1]), TICS(args[2]));
       break;
     case 13: // Door Locked_Raise
       if (P_CheckKeys(mo, args[3]))
-	success = EV_DoDoor(line, mo, vdoor_t::OwC, SPEED(args[1]), TICS(args[2]));
+	success = EV_DoDoor(tag, line, mo, vdoor_t::OwC, SPEED(args[1]), TICS(args[2]));
       break;
     case 20: // Floor Lower by Value
-      success = EV_DoFloor(line, floor_t::RelHeight, SPEED(args[1]), 0, -HEIGHT(args[2]));
+      success = EV_DoFloor(tag, line, floor_t::RelHeight, SPEED(args[1]), 0, -HEIGHT(args[2]));
       break;
     case 21: // Floor Lower to Lowest
-      success = EV_DoFloor(line, floor_t::LnF, SPEED(args[1]), 0, 0);
+      success = EV_DoFloor(tag, line, floor_t::LnF, SPEED(args[1]), 0, 0);
       break;
     case 22: // Floor Lower to Nearest
-      success = EV_DoFloor(line, floor_t::DownNnF, SPEED(args[1]), 0, 0);
+      success = EV_DoFloor(tag, line, floor_t::DownNnF, SPEED(args[1]), 0, 0);
       break;
     case 23: // Floor Raise by Value
-      success = EV_DoFloor(line, floor_t::RelHeight, SPEED(args[1]), 0, HEIGHT(args[2]));
+      success = EV_DoFloor(tag, line, floor_t::RelHeight, SPEED(args[1]), 0, HEIGHT(args[2]));
       break;
     case 24: // Floor Raise to Highest
-      success = EV_DoFloor(line, floor_t::HnF, SPEED(args[1]), 0, 0);
+      success = EV_DoFloor(tag, line, floor_t::HnF, SPEED(args[1]), 0, 0);
       break;
     case 25: // Floor Raise to Nearest
-      success = EV_DoFloor(line, floor_t::UpNnF, SPEED(args[1]), 0, 0);
+      success = EV_DoFloor(tag, line, floor_t::UpNnF, SPEED(args[1]), 0, 0);
       break;
       /*
     case 26: // Stairs Build Down Normal
@@ -1337,7 +1193,7 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       break;
       */
     case 28: // Floor Raise and Crush
-      success = EV_DoFloor(line, floor_t::Ceiling, SPEED(args[1]), args[2], -HEIGHT(8));
+      success = EV_DoFloor(tag, line, floor_t::Ceiling, SPEED(args[1]), args[2], -HEIGHT(8));
       break;
       /*
     case 29: // Build Pillar (no crushing)
@@ -1354,10 +1210,10 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       break;
       */
     case 35: // Raise Floor by Value Times 8
-      success = EV_DoFloor(line, floor_t::RelHeight, SPEED(args[1]), 0, 8*HEIGHT(args[2]));
+      success = EV_DoFloor(tag, line, floor_t::RelHeight, SPEED(args[1]), 0, 8*HEIGHT(args[2]));
       break;
     case 36: // Lower Floor by Value Times 8
-      success = EV_DoFloor(line, floor_t::RelHeight, SPEED(args[1]), 0, -8*HEIGHT(args[2]));
+      success = EV_DoFloor(tag, line, floor_t::RelHeight, SPEED(args[1]), 0, -8*HEIGHT(args[2]));
       break;
     case 40: // Ceiling Lower by Value
       success = EV_DoCeiling(tag, ceiling_t::RelHeight, SPEED(args[1]), 0, 0, -HEIGHT(args[2]));
@@ -1383,31 +1239,31 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       break;
       */
     case 60: // Plat Perpetual Raise
-      success = EV_DoPlat(line, plat_t::LHF, SPEED(args[1]), TICS(args[2]), 0);
+      success = EV_DoPlat(tag, line, plat_t::LHF, SPEED(args[1]), TICS(args[2]), 0);
       break;
     case 61: // Plat Stop
       EV_StopPlat(tag);
       break;
     case 62: // Plat Down-Wait-Up-Stay
-      success = EV_DoPlat(line, plat_t::LnF, SPEED(args[1]), TICS(args[2]), 0);
+      success = EV_DoPlat(tag, line, plat_t::LnF, SPEED(args[1]), TICS(args[2]), 0);
       break;
     case 63: // Plat Down-by-Value*8-Wait-Up-Stay
-      success = EV_DoPlat(line, plat_t::RelHeight, SPEED(args[1]), TICS(args[2]), -8*HEIGHT(args[3]));
+      success = EV_DoPlat(tag, line, plat_t::RelHeight, SPEED(args[1]), TICS(args[2]), -8*HEIGHT(args[3]));
       break;
     case 64: // Plat Up-Wait-Down-Stay
-      success = EV_DoPlat(line, plat_t::NHnF, SPEED(args[1]), TICS(args[2]), 0);
+      success = EV_DoPlat(tag, line, plat_t::NHnF, SPEED(args[1]), TICS(args[2]), 0);
       break;
     case 65: // Plat Up-by-Value*8-Wait-Down-Stay
-      success = EV_DoPlat(line, plat_t::RelHeight, SPEED(args[1]), TICS(args[2]), 8*HEIGHT(args[3]));
+      success = EV_DoPlat(tag, line, plat_t::RelHeight, SPEED(args[1]), TICS(args[2]), 8*HEIGHT(args[3]));
       break;
     case 66: // Floor Lower Instant * 8
-      success = EV_DoFloor(line, floor_t::RelHeight, SPEED(16000), 0, -8*HEIGHT(args[2]));
+      success = EV_DoFloor(tag, line, floor_t::RelHeight, SPEED(16000), 0, -8*HEIGHT(args[2]));
       break;
     case 67: // Floor Raise Instant * 8
-      success = EV_DoFloor(line, floor_t::RelHeight, SPEED(16000), 0, 8*HEIGHT(args[2]));
+      success = EV_DoFloor(tag, line, floor_t::RelHeight, SPEED(16000), 0, 8*HEIGHT(args[2]));
       break;
     case 68: // Floor Move to Value * 8
-      success = EV_DoFloor(line, floor_t::AbsHeight, SPEED(args[1]), 0,
+      success = EV_DoFloor(tag, line, floor_t::AbsHeight, SPEED(args[1]), 0,
 			   (args[3] ? -1 : 1) * 8 * HEIGHT(args[2]));
       break;
     case 69: // Ceiling Move to Value * 8
@@ -1417,12 +1273,12 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
     case 70: // Teleport
       if (!side)
 	// Only teleport when crossing the front side of a line
-	success = EV_Teleport(line, mo, false);
+	success = EV_Teleport(tag, line, mo, false);
       break;
     case 71: // Teleport, no fog (silent)
       if (!side)
 	// Only teleport when crossing the front side of a line
-	success = EV_Teleport(line, mo, true);
+	success = EV_Teleport(tag, line, mo, true);
       break;
     case 72: // Thrust Mobj
       if(!side) // Only thrust on side 0
@@ -1488,6 +1344,12 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
 	  args[4] = lock;
 	}
       break;
+    case 85: // TEST new linedeftype FS_Execute
+#ifdef FRAGGLESCRIPT
+      success = T_RunScript(tag, mo);
+#endif
+      break;
+
     case 90: // Poly Rotate Left Override
       success = EV_RotatePoly(args, 1, true);
       break;
@@ -1516,31 +1378,31 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       break;
       */
     case 110: // Light Raise by Value
-      success = EV_SpawnLight(line->tag, lightfx_t::RelChange, args[1]);
+      success = EV_SpawnLight(tag, lightfx_t::RelChange, args[1]);
       break;
     case 111: // Light Lower by Value
-      success = EV_SpawnLight(line->tag, lightfx_t::RelChange, -args[1]);
+      success = EV_SpawnLight(tag, lightfx_t::RelChange, -args[1]);
       break;
     case 112: // Light Change to Value
-      success = EV_SpawnLight(line->tag, lightfx_t::AbsChange, args[1]);
+      success = EV_SpawnLight(tag, lightfx_t::AbsChange, args[1]);
       break;
     case 113: // Light Fade
-      success = EV_SpawnLight(line->tag, lightfx_t::Fade, args[1], 0, args[2]);
+      success = EV_SpawnLight(tag, lightfx_t::Fade, args[1], 0, args[2]);
       break;
     case 114: // Light Glow
-      success = EV_SpawnLight(line->tag, lightfx_t::Glow, args[1], args[2], args[3]);
+      success = EV_SpawnLight(tag, lightfx_t::Glow, args[1], args[2], args[3]);
       break;
     case 115: // Light Flicker
-      success = EV_SpawnLight(line->tag, lightfx_t::Flicker, args[1], args[2], 32, 8);
+      success = EV_SpawnLight(tag, lightfx_t::Flicker, args[1], args[2], 32, 8);
       break;
     case 116: // Light Strobe
-      success = EV_SpawnLight(line->tag, lightfx_t::Strobe, args[1], args[2], args[3], args[4]);
+      success = EV_SpawnLight(tag, lightfx_t::Strobe, args[1], args[2], args[3], args[4]);
       break;
       /*
     case 120: // Quake Tremor
       success = A_LocalQuake(args, mo);
       break;
-    case 129: // UsePuzzleItem
+    case 129: // UsePuzzleItem. Not needed, see P_UseArtifact()
       success = EV_LineSearchForPuzzleItem(line, args, mo);
       break;
       */
@@ -1585,13 +1447,16 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       // 103: Scroll_Texture_Down
       // 121: Line_SetIdentification
 
+    case 200: // TODO ZDoom Generic_Floor
+    case 201: // TODO ZDoom Generic_Ceiling
+      //success = EV_DoCeiling(tag, type, SPEED(args[1]), SPEED(args[1]), crush, HEIGHT(args[2]));
+      break;
+      // TODO other ZDoom Generic types
+
       // Inert Line specials
     default:
       break;
     }
-
-  if (temptag != -1)
-    line->tag = temptag;
 
   return success;
 }
@@ -1612,1086 +1477,6 @@ int Map::EV_SectorSoundChange(int tag, int seq)
   return rtn;
 }
 
-
-//
-// was P_CrossSpecialLine - TRIGGER
-// Called every time a thing origin is about
-//  to cross a line with a non 0 special.
-//
-// was P_ActivateCrossedLine
-/*
-void Map::ActivateCrossedLine(line_t *line, int side, Actor *thing)
-{
-  int  ok;
-
-  //SoM: 4/26/2000: ALLTRIGGER should allow monsters to use generalized types too!
-  bool forceuse = (line->flags & ML_ALLTRIGGER) && !(thing->flags & MF_NOSPLASH);
-
-  // is thing a PlayerPawn?
-  bool p = (thing->Type() == Thinker::tt_ppawn);
-
-  //  Triggers that other things can activate
-  if (!p && game.mode != gm_heretic)
-    {
-      // Things that should NOT trigger specials...
-      if (thing->flags & MF_NOTRIGGER)
-	return;
-    }
-
-  //int res;
-
-  //SoM: 3/7/2000: Check for generalized line types/
-  if (boomsupport)
-    {
-      // pointer to line function is NULL by default, set non-null if
-      // line special is walkover generalized linedef type
-      int (Map::*linefunc)(line_t *line) = NULL;
-  
-      // check each range of generalized linedefs
-      if ((unsigned)line->special >= GenFloorBase)
-	{
-	  if (!p)
-	    if (((line->special & FloorChange) || !(line->special & FloorModel)) && !forceuse)
-	      return;     // FloorModel is "Allow Monsters" if FloorChange is 0
-	  if (!line->tag)
-	    return;
-	  linefunc = &Map::EV_DoGenFloor;
-	}
-      else if ((unsigned)line->special >= GenCeilingBase)
-	{
-	  if (!p)
-	    if (((line->special & CeilingChange) || !(line->special & CeilingModel)) && !forceuse)
-	      return;     // CeilingModel is "Allow Monsters" if CeilingChange is 0
-	  if (!line->tag)
-	    return;
-	  linefunc = &Map::EV_DoGenCeiling;
-	}
-      else if ((unsigned)line->special >= GenDoorBase)
-	{
-	  if (!p)
-	    {
-	      if (!(line->special & DoorMonster) && !forceuse)
-		return;                    // monsters disallowed from this door
-	      if (line->flags & ML_SECRET) // they can't open secret doors either
-		return;
-	    }
-	  if (!line->tag)
-	    return;
-	  linefunc = &Map::EV_DoGenDoor;
-	}
-      else if ((unsigned)line->special >= GenLockedBase)
-	{
-	  if (!p)
-	    return;                     // monsters disallowed from unlocking doors
-	  if (((line->special&TriggerType)==WalkOnce) || ((line->special&TriggerType)==WalkMany))
-	    {
-	      if (! ((PlayerPawn *)thing)->CanUnlockGenDoor(line))
-		return;
-	    }
-	  else
-	    return;
-	  linefunc = &Map::EV_DoGenLockedDoor;
-	}
-      else if ((unsigned)line->special >= GenLiftBase)
-	{
-	  if (!p)
-	    if (!(line->special & LiftMonster) && !forceuse)
-	      return; // monsters disallowed
-	  if (!line->tag)
-	    return;
-	  linefunc = &Map::EV_DoGenLift;
-	}
-      else if ((unsigned)line->special >= GenStairsBase)
-	{
-	  if (!p)
-	    if (!(line->special & StairMonster) && !forceuse)
-	      return; // monsters disallowed
-	  if (!line->tag)
-	    return;
-	  linefunc = &Map::EV_DoGenStairs;
-	}
-      else if ((unsigned)line->special >= GenCrusherBase)
-	{
-	  if (!p)
-	    if (!(line->special & StairMonster) && !forceuse)
-	      return; // monsters disallowed
-	  if (!line->tag)
-	    return;
-	  linefunc = &Map::EV_DoGenCrusher;
-	}
-  
-      if (linefunc) // if it was a valid generalized type
-        switch((line->special & TriggerType) >> TriggerTypeShift)
-	  {
-          case WalkOnce:
-            if ((this->*linefunc)(line))
-              line->special = 0;    // clear special if a walk once type
-            return;
-          case WalkMany:
-            (this->*linefunc)(line);
-            return;
-          default:                  // if not a walk type, do nothing here
-            return;
-	  }
-    }
-
-
-  if (!p)
-    {
-      ok = 0;
-      if ( game.mode == gm_heretic && (line->special == 4 || line->special==39 || line->special == 97) )
-	ok = 1;
-      else
-        switch(line->special)
-	  {
-          case 39:      // TELEPORT TRIGGER
-          case 97:      // TELEPORT RETRIGGER
-          case 125:     // TELEPORT MONSTERONLY TRIGGER
-          case 126:     // TELEPORT MONSTERONLY RETRIGGER
-          case 4:       // RAISE DOOR
-          case 10:      // PLAT DOWN-WAIT-UP-STAY TRIGGER
-          case 88:      // PLAT DOWN-WAIT-UP-STAY RETRIGGER
-            ok = 1;
-            break; 
-	    // SoM: 3/4/2000: Add boom compatibility for extra monster usable
-	    // linedef types.
-          case 208:     //SoM: Silent thing teleporters
-          case 207:
-          case 243:     //Silent line to line teleporter
-          case 244:     //Same as above but trigger once.
-          case 262:     //Same as 243 but reversed
-          case 263:     //Same as 244 but reversed
-          case 264:     //Monster only, silent, trigger once, reversed
-          case 265:     //Same as 264 but repeatable
-          case 266:     //Monster only, silent, trigger once
-          case 267:     //Same as 266 bot repeatable
-          case 268:     //Monster only, silent, trigger once, set pos to thing
-          case 269:     //Monster only, silent, repeatable, set pos to thing
-            if(boomsupport)
-              ok = 1;
-            break;
-	  }
-      //SoM: Anything can trigger this line!
-      if(line->flags & ML_ALLTRIGGER)
-	ok = 1;
-
-      if (!ok)
-	return;
-    }
-
-  if (!P_CheckTag(line) && boomsupport)
-    return;
-
-  // Note: could use some const's here.
-  switch (line->special)
-    {
-      // TRIGGERS.
-      // All from here to RETRIGGERS.
-    case 2:
-      // Open Door
-      if(EV_DoDoor(line,vdoor_t::Open,VDOORSPEED) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 3:
-      // Close Door
-      if(EV_DoDoor(line,vdoor_t::Close,VDOORSPEED) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 4:
-      // Raise Door
-      if(EV_DoDoor(line,vdoor_t::OwC,VDOORSPEED) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 5:
-      // Raise Floor
-      if(EV_DoFloor(line,raiseFloor) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 6:
-      // Fast Ceiling Crush & Raise
-      if(EV_DoCeiling(line,fastCrushAndRaise) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 8:
-      // Build Stairs
-      if(EV_BuildStairs(line, stair_e(game.mode == gm_heretic ? 8*FRACUNIT : build8)) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 10:
-      // PlatDownWaitUp
-      if(EV_DoPlat(line,downWaitUpStay,0) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 12:
-      // Light Turn On - brightest near
-      if(EV_LightTurnOn(line,0) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 13:
-      // Light Turn On 255
-      if(EV_LightTurnOn(line,255) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 16:
-      // Close Door 30
-      if(EV_DoDoor(line,vdoor_t::CwO,VDOORSPEED, 30*35) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 17:
-      // Start Light Strobing
-      if(EV_StartLightStrobing(line) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 19:
-      // Lower Floor
-      if(EV_DoFloor(line,lowerFloor) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 22:
-      // Raise floor to nearest height and change texture
-      if(EV_DoPlat(line,raiseToNearestAndChange,0) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 25:
-      // Ceiling Crush and Raise
-      if(EV_DoCeiling(line,crushAndRaise) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 30:
-      // Raise floor to shortest texture height
-      //  on either side of lines.
-      if(EV_DoFloor(line,raiseToTexture) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 35:
-      // Lights Very Dark
-      if(EV_LightTurnOn(line,35) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 36:
-      // Lower Floor (TURBO)
-      if(EV_DoFloor(line,turboLower) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 37:
-      // LowerAndChange
-      if(EV_DoFloor(line,lowerAndChange) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 38:
-      // Lower Floor To Lowest
-      if(EV_DoFloor( line, lowerFloorToLowest ) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 39:
-      // TELEPORT!
-      if(EV_Teleport( line, side, thing ) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 40:
-      // RaiseCeilingLowerFloor
-      if(EV_DoCeiling( line, raiseToHighest ) || EV_DoFloor( line, lowerFloorToLowest ) ||
-	 !boomsupport)
-	line->special = 0;
-      break;
-
-    case 44:
-      // Ceiling Crush
-      if(EV_DoCeiling( line, lowerAndCrush ) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 52:
-      // EXIT!
-      if( cv_allowexitlevel.value )
-        {
-	  ExitMap(0);
-	  line->special = 0;  // heretic have right
-        }
-      break;
-
-    case 53:
-      // Perpetual Platform Raise
-      if(EV_DoPlat(line,perpetualRaise,0) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 54:
-      // Platform Stop
-      if(EV_StopPlat(line) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 56:
-      // Raise Floor Crush
-      if(EV_DoFloor(line,raiseFloorCrush) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 57:
-      // Ceiling Crush Stop
-      if(EV_CeilingCrushStop(line) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 58:
-      // Raise Floor 24
-      if(EV_DoFloor(line,raiseFloor24) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 59:
-      // Raise Floor 24 And Change
-      if(EV_DoFloor(line,raiseFloor24AndChange) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 104:
-      // Turn lights off in sector(tag)
-      if(EV_TurnTagLightsOff(line) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 108:
-      // Blazing Door Raise (faster than TURBO!)
-      if(EV_DoDoor (line,vdoor_t::OwC | vdoor_t::blazing,4*VDOORSPEED) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 109:
-      // Blazing Door Open (faster than TURBO!)
-      if(EV_DoDoor (line,vdoor_t::Open | vdoor_t::blazing,4*VDOORSPEED) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 100:
-      if( game.mode == gm_heretic )
-	EV_DoDoor (line, vdoor_t::OwC, VDOORSPEED * 3);
-      else
-        {
-          // Build Stairs Turbo 16
-          if(EV_BuildStairs(line,turbo16) || !boomsupport)
-            line->special = 0;
-        }
-      break;
-
-    case 110:
-      // Blazing Door Close (faster than TURBO!)
-      if(EV_DoDoor (line,vdoor_t::Close | vdoor_t::blazing,4*VDOORSPEED) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 119:
-      // Raise floor to nearest surr. floor
-      if(EV_DoFloor(line,raiseFloorToNearest) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 121:
-      // Blazing PlatDownWaitUpStay
-      if(EV_DoPlat(line,blazeDWUS,0) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 124:
-      // Secret EXIT
-      if( cv_allowexitlevel.value )
-	ExitMap(100);
-      break;
-
-    case 125:
-      // TELEPORT MonsterONLY
-      if (!p)
-        {
-	  if(EV_Teleport( line, side, thing ) || !boomsupport)
-	    line->special = 0;
-        }
-      break;
-
-    case 130:
-      // Raise Floor Turbo
-      if(EV_DoFloor(line,raiseFloorTurbo) || !boomsupport)
-	line->special = 0;
-      break;
-
-    case 141:
-      // Silent Ceiling Crush & Raise
-      if(EV_DoCeiling(line,silentCrushAndRaise) || !boomsupport)
-	line->special = 0;
-      break;
-
-      //SoM: FraggleScript
-    case 273: //(1sided)
-      if(side) break;
-
-    case 272: //(2sided)
-#ifdef FRAGGLESCRIPT
-      t_trigger = thing;
-      T_RunScript(line->tag);
-#endif
-      break;
-
-      // once-only triggers
-    case 275: //(1sided)
-      if(side) break;
-
-    case 274: //(2sided)
-#ifdef FRAGGLESCRIPT
-      t_trigger = thing;
-      T_RunScript(line->tag);
-#endif
-      line->special = 0;        // clear trigger
-      break;
-
-
-      // RETRIGGERS.  All from here till end.
-    case 72:
-      // Ceiling Crush
-      EV_DoCeiling( line, lowerAndCrush );
-      break;
-
-    case 73:
-      // Ceiling Crush and Raise
-      EV_DoCeiling(line,crushAndRaise);
-      break;
-
-    case 74:
-      // Ceiling Crush Stop
-      EV_CeilingCrushStop(line);
-      break;
-
-    case 75:
-      // Close Door
-      EV_DoDoor(line,vdoor_t::Close,VDOORSPEED);
-      break;
-
-    case 76:
-      // Close Door 30
-      EV_DoDoor(line,vdoor_t::CwO,VDOORSPEED, 30*35);
-      break;
-
-    case 77:
-      // Fast Ceiling Crush & Raise
-      EV_DoCeiling(line,fastCrushAndRaise);
-      break;
-
-    case 79:
-      // Lights Very Dark
-      EV_LightTurnOn(line,35);
-      break;
-
-    case 80:
-      // Light Turn On - brightest near
-      EV_LightTurnOn(line,0);
-      break;
-
-    case 81:
-      // Light Turn On 255
-      EV_LightTurnOn(line,255);
-      break;
-
-    case 82:
-      // Lower Floor To Lowest
-      EV_DoFloor( line, lowerFloorToLowest );
-      break;
-
-    case 83:
-      // Lower Floor
-      EV_DoFloor(line,lowerFloor);
-      break;
-
-    case 84:
-      // LowerAndChange
-      EV_DoFloor(line,lowerAndChange);
-      break;
-
-    case 86:
-      // Open Door
-      EV_DoDoor(line,vdoor_t::Open,VDOORSPEED);
-      break;
-
-    case 87:
-      // Perpetual Platform Raise
-      EV_DoPlat(line,perpetualRaise,0);
-      break;
-
-    case 88:
-      // PlatDownWaitUp
-      EV_DoPlat(line,downWaitUpStay,0);
-      break;
-
-    case 89:
-      // Platform Stop
-      EV_StopPlat(line);
-      break;
-
-    case 90:
-      // Raise Door
-      EV_DoDoor(line,vdoor_t::OwC,VDOORSPEED);
-      break;
-
-    case 91:
-      // Raise Floor
-      EV_DoFloor(line,raiseFloor);
-      break;
-
-    case 92:
-      // Raise Floor 24
-      EV_DoFloor(line,raiseFloor24);
-      break;
-
-    case 93:
-      // Raise Floor 24 And Change
-      EV_DoFloor(line,raiseFloor24AndChange);
-      break;
-
-    case 94:
-      // Raise Floor Crush
-      EV_DoFloor(line,raiseFloorCrush);
-      break;
-
-    case 95:
-      // Raise floor to nearest height
-      // and change texture.
-      EV_DoPlat(line,raiseToNearestAndChange,0);
-      break;
-
-    case 96:
-      // Raise floor to shortest texture height
-      // on either side of lines.
-      EV_DoFloor(line,raiseToTexture);
-      break;
-
-    case 97:
-      // TELEPORT!
-      EV_Teleport( line, side, thing );
-      break;
-
-    case 98:
-      // Lower Floor (TURBO)
-      EV_DoFloor(line,turboLower);
-      break;
-
-    case 105:
-      if( game.mode == gm_heretic )
-        {
-	  if( cv_allowexitlevel.value )
-            {
-	      ExitMap(100);
-	      line->special = 0;
-            }
-        }
-      else
-	// Blazing Door Raise (faster than TURBO!)
-	EV_DoDoor (line,vdoor_t::OwC | vdoor_t::blazing,4*VDOORSPEED);
-      break;
-
-    case 106:
-      if( game.mode == gm_heretic )
-        {
-          if(EV_BuildStairs (line, stair_e(16 * FRACUNIT)) || !boomsupport)
-	    line->special = 0;
-        }
-      else
-	// Blazing Door Open (faster than TURBO!)
-	EV_DoDoor (line,vdoor_t::Open | vdoor_t::blazing,4*VDOORSPEED);
-      break;
-
-    case 107:
-      if( game.mode != gm_heretic ) // used for a switch !
-	// Blazing Door Close (faster than TURBO!)
-	EV_DoDoor (line,vdoor_t::Close | vdoor_t::blazing,4*VDOORSPEED);
-      break;
-
-    case 120:
-      // Blazing PlatDownWaitUpStay.
-      EV_DoPlat(line,blazeDWUS,0);
-      break;
-
-    case 126:
-      // TELEPORT MonsterONLY.
-      if (!p)
-	EV_Teleport( line, side, thing );
-      break;
-
-    case 128:
-      // Raise To Nearest Floor
-      EV_DoFloor(line,raiseFloorToNearest);
-      break;
-
-    case 129:
-      // Raise Floor Turbo
-      EV_DoFloor(line,raiseFloorTurbo);
-      break;
-
-      // SoM:3/4/2000: Extended Boom W* triggers.
-    default:
-      if(boomsupport) {
-	switch(line->special) {
-	  //SoM: 3/4/2000:Boom Walk once triggers.
-	  //SoM: 3/4/2000:Yes this is "copied" code! I just cleaned it up. Did you think I was going to retype all this?!
-	case 142:
-	  // Raise Floor 512
-	  if (EV_DoFloor(line,raiseFloor512))
-	    line->special = 0;
-	  break;
-  
-	case 143:
-	  // Raise Floor 24 and change
-	  if (EV_DoPlat(line,raiseAndChange,24))
-	    line->special = 0;
-	  break;
-
-	case 144:
-	  // Raise Floor 32 and change
-	  if (EV_DoPlat(line,raiseAndChange,32))
-	    line->special = 0;
-	  break;
-
-	case 145:
-	  // Lower Ceiling to Floor
-	  if (EV_DoCeiling( line, lowerToFloor ))
-	    line->special = 0;
-	  break;
-
-	case 146:
-	  // Lower Pillar, Raise Donut
-	  if (EV_DoDonut(line))
-	    line->special = 0;
-	  break;
-
-	case 199:
-	  // Lower ceiling to lowest surrounding ceiling
-	  if (EV_DoCeiling(line,lowerToLowest))
-	    line->special = 0;
-	  break;
-
-	case 200:
-	  // Lower ceiling to highest surrounding floor
-	  if (EV_DoCeiling(line,lowerToMaxFloor))
-	    line->special = 0;
-	  break;
-
-	case 207:
-	  // W1 silent teleporter (normal kind)
-	  if (EV_SilentTeleport(line, side, thing))
-	    line->special = 0;
-	  break;
-
-	case 153: 
-	  // Texture/Type Change Only (Trig)
-	  if (EV_DoChange(line,trigChangeOnly))
-	    line->special = 0;
-	  break;
-  
-	case 239: 
-	  // Texture/Type Change Only (Numeric)
-	  if (EV_DoChange(line,numChangeOnly))
-	    line->special = 0;
-	  break;
- 
-	case 219:
-	  // Lower floor to next lower neighbor
-	  if (EV_DoFloor(line,lowerFloorToNearest))
-	    line->special = 0;
-	  break;
-
-	case 227:
-	  // Raise elevator next floor
-	  if (EV_DoElevator(line,elevateUp))
-	    line->special = 0;
-	  break;
-
-	case 231:
-	  // Lower elevator next floor
-	  if (EV_DoElevator(line,elevateDown))
-	    line->special = 0;
-	  break;
-
-	case 235:
-	  // Elevator to current floor
-	  if (EV_DoElevator(line,elevateCurrent))
-	    line->special = 0;
-	  break;
-
-	case 243: 
-	  // W1 silent teleporter (linedef-linedef kind)
-	  if (EV_SilentLineTeleport(line, side, thing, false))
-	    line->special = 0;
-	  break;
-
-	case 262: 
-	  if (EV_SilentLineTeleport(line, side, thing, true))
-	    line->special = 0;
-	  break;
- 
-	case 264: 
-	  if (!p &&
-              EV_SilentLineTeleport(line, side, thing, true))
-	    line->special = 0;
-	  break;
-
-	case 266: 
-	  if (!p &&
-	      EV_SilentLineTeleport(line, side, thing, false))
-	    line->special = 0;
-	  break;
-
-	case 268: 
-	  if (!p && EV_SilentTeleport(line, side, thing))
-	    line->special = 0;
-	  break;
-
-	  // Extended walk many retriggerable
- 
-	  //Boom added lots of linedefs to fill in the gaps in trigger types
-
-	case 147:
-	  // Raise Floor 512
-	  EV_DoFloor(line,raiseFloor512);
-	  break;
-
-	case 148:
-	  // Raise Floor 24 and Change
-	  EV_DoPlat(line,raiseAndChange,24);
-	  break;
-
-	case 149:
-	  // Raise Floor 32 and Change
-	  EV_DoPlat(line,raiseAndChange,32);
-	  break;
-
-	case 150:
-	  // Start slow silent crusher
-	  EV_DoCeiling(line,silentCrushAndRaise);
-	  break;
-
-	case 151:
-	  // RaiseCeilingLowerFloor
-	  EV_DoCeiling( line, raiseToHighest );
-	  EV_DoFloor( line, lowerFloorToLowest );
-	  break;
-
-	case 152:
-	  // Lower Ceiling to Floor
-	  EV_DoCeiling( line, lowerToFloor );
-	  break;
-
-	case 256:
-	  // Build stairs, step 8
-	  EV_BuildStairs(line,build8);
-	  break;
-
-	case 257:
-	  // Build stairs, step 16
-	  EV_BuildStairs(line,turbo16);
-	  break;
-
-	case 155:
-	  // Lower Pillar, Raise Donut
-	  EV_DoDonut(line);
-	  break;
-
-	case 156:
-	  // Start lights strobing
-	  EV_StartLightStrobing(line);
-	  break;
-
-	case 157:
-	  // Lights to dimmest near
-	  EV_TurnTagLightsOff(line);
-	  break;
-
-	case 201:
-	  // Lower ceiling to lowest surrounding ceiling
-	  EV_DoCeiling(line,lowerToLowest);
-	  break;
-
-	case 202:
-	  // Lower ceiling to highest surrounding floor
-	  EV_DoCeiling(line,lowerToMaxFloor);
-	  break;
-
-	case 208:
-	  // WR silent teleporter (normal kind)
-	  EV_SilentTeleport(line, side, thing);
-	  break;
-
-	case 212:
-	  // Toggle floor between C and F instantly
-	  EV_DoPlat(line,toggleUpDn,0);
-	  break;
-
-	case 154:
-	  // Texture/Type Change Only (Trigger)
-	  EV_DoChange(line,trigChangeOnly);
-	  break;
-
-	case 240: 
-	  // Texture/Type Change Only (Numeric)
-	  EV_DoChange(line,numChangeOnly);
-	  break;
-
-	case 220:
-	  // Lower floor to next lower neighbor
-	  EV_DoFloor(line,lowerFloorToNearest);
-	  break;
-
-	case 228:
-	  // Raise elevator next floor
-	  EV_DoElevator(line,elevateUp);
-	  break;
-
-	case 232:
-	  // Lower elevator next floor
-	  EV_DoElevator(line,elevateDown);
-	  break;
-
-	case 236:
-	  // Elevator to current floor
-	  EV_DoElevator(line,elevateCurrent);
-	  break;
-
-	case 244: 
-	  // WR silent teleporter (linedef-linedef kind)
-	  EV_SilentLineTeleport(line, side, thing, false);
-	  break;
-
-	case 263: 
-	  //Silent line-line reversed
-	  EV_SilentLineTeleport(line, side, thing, true);
-	  break;
-
-	case 265: 
-	  //Monster-only silent line-line reversed
-	  if (!p)
-	    EV_SilentLineTeleport(line, side, thing, true);
-	  break;
-
-	case 267: 
-	  //Monster-only silent line-line
-	  if (!p)
-	    EV_SilentLineTeleport(line, side, thing, false);
-	  break;
-
-	case 269: 
-	  //Monster-only silent
-	  if (!p)
-	    EV_SilentTeleport(line, side, thing);
-	  break;
-	}
-      }
-    }
-}
-*/
-
-
-//
-// was P_ShootSpecialLine - IMPACT SPECIALS
-// Called when a thing shoots a special line.
-//
-/*
-void Map::ShootSpecialLine(Actor *thing, line_t *line)
-{
-  int ok;
-
-  // is thing a PlayerPawn?
-  bool p = (thing->Type() == Thinker::tt_ppawn);
-
-  //SoM: 3/7/2000: Another General type check
-  if (boomsupport)
-    {
-      // pointer to line function is NULL by default, set non-null if
-      // line special is gun triggered generalized linedef type
-      int (Map::*linefunc)(line_t *line) = NULL;
-
-      // check each range of generalized linedefs
-      if ((unsigned)line->special >= GenFloorBase)
-	{
-	  if (!p)
-	    if ((line->special & FloorChange) || !(line->special & FloorModel))
-	      return;   // FloorModel is "Allow Monsters" if FloorChange is 0
-	  if (!line->tag) //jff 2/27/98 all gun generalized types require tag
-	    return;
-
-	  linefunc = &Map::EV_DoGenFloor;
-	}
-      else if ((unsigned)line->special >= GenCeilingBase)
-	{
-	  if (!p)
-	    if ((line->special & CeilingChange) || !(line->special & CeilingModel))
-	      return;   // CeilingModel is "Allow Monsters" if CeilingChange is 0
-	  if (!line->tag) //jff 2/27/98 all gun generalized types require tag
-	    return;
-	  linefunc = &Map::EV_DoGenCeiling;
-	}
-      else if ((unsigned)line->special >= GenDoorBase)
-	{
-	  if (!p)
-	    {
-	      if (!(line->special & DoorMonster))
-		return;   // monsters disallowed from this door
-	      if (line->flags & ML_SECRET) // they can't open secret doors either
-		return;
-	    }
-	  if (!line->tag) //jff 3/2/98 all gun generalized types require tag
-	    return;
-	  linefunc = &Map::EV_DoGenDoor;
-	}
-      else if ((unsigned)line->special >= GenLockedBase)
-	{
-	  if (!p)
-	    return;   // monsters disallowed from unlocking doors
-	  if (((line->special&TriggerType)==GunOnce) || ((line->special&TriggerType)==GunMany))
-	    { //jff 4/1/98 check for being a gun type before reporting door type
-	      if (!((PlayerPawn *)thing)->CanUnlockGenDoor(line))
-		return;
-	    }
-	  else
-	    return;
-	  if (!line->tag) //jff 2/27/98 all gun generalized types require tag
-	    return;
-
-	  linefunc = &Map::EV_DoGenLockedDoor;
-	}
-      else if ((unsigned)line->special >= GenLiftBase)
-	{
-	  if (!p)
-	    if (!(line->special & LiftMonster))
-	      return; // monsters disallowed
-	  linefunc = &Map::EV_DoGenLift;
-	}
-      else if ((unsigned)line->special >= GenStairsBase)
-	{
-	  if (!p)
-	    if (!(line->special & StairMonster))
-	      return; // monsters disallowed
-	  if (!line->tag) //jff 2/27/98 all gun generalized types require tag
-	    return;
-	  linefunc = &Map::EV_DoGenStairs;
-	}
-      else if ((unsigned)line->special >= GenCrusherBase)
-	{
-	  if (!p)
-	    if (!(line->special & StairMonster))
-	      return; // monsters disallowed
-	  if (!line->tag) //jff 2/27/98 all gun generalized types require tag
-	    return;
-	  linefunc = &Map::EV_DoGenCrusher;
-	}
-
-      if (linefunc)
-        switch((line->special & TriggerType) >> TriggerTypeShift)
-	  {
-          case GunOnce:
-            if ((this->*linefunc)(line))
-              ChangeSwitchTexture(line,0);
-            return;
-          case GunMany:
-            if ((this->*linefunc)(line))
-              ChangeSwitchTexture(line,1);
-            return;
-          default:  // if not a gun type, do nothing here
-            return;
-	  }
-    }
-
-
-  //  Impacts that other things can activate.
-  if (!p)
-    {
-      ok = 0;
-      switch(line->special)
-        {
-	case 46:
-	  // OPEN DOOR IMPACT
-	  ok = 1;
-	  break;
-        }
-      if (!ok)
-	return;
-    }
-
-  if(!P_CheckTag(line))
-    return;
-
-  switch(line->special)
-    {
-    case 24:
-      // RAISE FLOOR
-      if(EV_DoFloor(line,raiseFloor) || !boomsupport)
-	ChangeSwitchTexture(line,0);
-      break;
-
-    case 46:
-      // OPEN DOOR
-      if(EV_DoDoor(line,vdoor_t::Open,VDOORSPEED) || !boomsupport)
-	ChangeSwitchTexture(line,1);
-      break;
-
-    case 47:
-      // RAISE FLOOR NEAR AND CHANGE
-      if(EV_DoPlat(line,raiseToNearestAndChange,0) || !boomsupport)
-	ChangeSwitchTexture(line,0);
-      break;
-
-      //SoM: FraggleScript
-    case 278:
-    case 279:
-#ifdef FRAGGLESCRIPT
-      t_trigger = thing;
-      T_RunScript(line->tag);
-#endif
-      if(line->special == 279) line->special = 0;       // clear if G1
-      break;
-
-    default:
-      if (boomsupport)
-	switch (line->special)
-          {
-	  case 197:
-	    // Exit to next level
-	    if( cv_allowexitlevel.value )
-              {
-		ChangeSwitchTexture(line,0);
-		ExitMap(0);
-              }
-	    break;
-
-	  case 198:
-	    // Exit to secret level
-	    if( cv_allowexitlevel.value )
-              {
-		ChangeSwitchTexture(line,0);
-		ExitMap(100);
-              }
-	    break;
-	    //jff end addition of new gun linedefs
-          }
-      break;
-    }
-}
-*/
 
 
 //
@@ -3205,7 +1990,7 @@ void Map::SpawnSpecials()
 
 	  // Instant lower for floor SSNTails 06-13-2002
 	case 290:
-	  EV_DoFloor(&lines[i], floor_t::LnF, MAXINT/2, 0, 0);
+	  EV_DoFloor(lines[i].tag, &lines[i], floor_t::LnF, MAXINT/2, 0, 0);
 	  break;
 	  
 	  // Instant raise for ceilings SSNTails 06-13-2002

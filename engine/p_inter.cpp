@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2003/11/23 00:41:55  smite-meister
+// bugfixes
+//
 // Revision 1.19  2003/11/12 11:07:22  smite-meister
 // Serialization done. Map progression.
 //
@@ -107,7 +110,6 @@
 #include "hu_stuff.h" // HUD
 
 #define BONUSADD        6
-
 
 consvar_t cv_fragsweaponfalling = {"fragsweaponfalling"   ,"0",CV_SAVE,CV_OnOff};
 
@@ -764,23 +766,20 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 
 
 
-// was P_KillMobj
-//
-// source is the killer
 
+// inflictor is the bullet, source is the one who pulled the trigger ;)
 void Actor::Die(Actor *inflictor, Actor *source)
 {
   extern consvar_t cv_solidcorpse;
 
-  eflags &= ~(MFE_INFLOAT|MFE_SKULLFLY);
+  // switch physics to inanimate object mode
+  eflags &= ~(MFE_INFLOAT | MFE_SKULLFLY | MFE_SWIMMING);
 
   // dead target is no more shootable
   if (!cv_solidcorpse.value)
-    {
-      flags &= ~(MF_SHOOTABLE | MF_SOLID);
-    }
+    flags &= ~MF_SHOOTABLE;
 
-  // scream a corpse :)
+  // cream a corpse :)
   if (flags & MF_CORPSE)
     {
       flags &= ~(MF_SOLID | MF_SHOOTABLE);
@@ -789,7 +788,21 @@ void Actor::Die(Actor *inflictor, Actor *source)
       return;
     }
 
-  // if killed by a player
+  // thing death actions
+  if (special) // formerly also demanded MF_COUNTKILL, but why?
+    {
+      /*
+	if (type == MT_SORCBOSS) // FIXME
+	{
+	  int dummyargs = 0;
+	  mp->StartACS(target->special, (byte *)&dummyargs, this, NULL, 0);
+	}
+	else
+      */
+      mp->ExecuteLineSpecial(special, args, NULL, 0, this);
+    }
+
+  // if a player killed a monster, update kills
   if (flags & MF_COUNTKILL)
     {
       if (source && source->Type() == Thinker::tt_ppawn)
@@ -807,6 +820,8 @@ void Actor::Die(Actor *inflictor, Actor *source)
     }
 }
 
+
+bool P_CheckSpecialDeath(DActor *m, Actor *inflictor);
 
 void DActor::Die(Actor *inflictor, Actor *source)
 {
@@ -834,6 +849,9 @@ void DActor::Die(Actor *inflictor, Actor *source)
   if ((type == MT_BARREL || type == MT_POD) && source)
     owner = source;
 
+  if (P_CheckSpecialDeath(this, inflictor))
+    return;
+
   if (((game.mode != gm_heretic && health < -info->spawnhealth)
        ||(game.mode == gm_heretic && health < -(info->spawnhealth>>1)))
       && info->xdeathstate)
@@ -842,37 +860,12 @@ void DActor::Die(Actor *inflictor, Actor *source)
     }
   else
     SetState(info->deathstate);
+  // Normally, A_Fall or A_NoBlocking follow the deathstate and make the thing a nonsolid corpse
 
   tics -= P_Random()&3;
 
   if (tics < 1)
     tics = 1;
-
-  mobjtype_t item;
-  // Drop stuff.
-  // This determines the kind of object spawned
-  // during the death frame of a thing.
-  switch (type)
-    {
-    case MT_WOLFSS:
-    case MT_POSSESSED:
-      item = MT_CLIP;
-      break;
-
-    case MT_SHOTGUY:
-      item = MT_SHOTGUN;
-      break;
-
-    case MT_CHAINGUY:
-      item = MT_CHAINGUN;
-      break;
-
-    default:
-      return;
-    }
-
-  DActor *mo = mp->SpawnDActor(x, y, floorz, item);
-  mo->flags |= MF_DROPPED;    // special versions of items
 }
 
 
@@ -935,6 +928,10 @@ void PlayerPawn::Die(Actor *inflictor, Actor *source)
       // recenter view for next live...
       localaiming2 = 0;
     }
+
+  // TODO Player flame and ice death
+  // SetState(S_PLAY_FDTH1);
+  //S_StartSound(this, sfx_hedat1); // Burn sound
 }
 
 
@@ -2376,7 +2373,7 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 
       //added:22-02-98: force feedback ??? electro-shock???
       if (player == consoleplayer)
-	I_Tactile (40,10,40+min(damage, 100)*2);
+	I_Tactile (40,10,40 + min(damage, 100) * 2);
     }
 
   attacker = source;
@@ -2384,25 +2381,6 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
   bool ret = Actor::Damage(inflictor, source, damage, dtype);
 
   return ret;
-
-  /* TODO
-     if (health <= 0 && inflictor && !morphTics)
-    { // Check for flame death
-      if ((inflictor->flags2 & MF2_FIREDAMAGE) ||
-	  ((inflictor->type == MT_PHOENIXFX1)
-	   && (health > -50) && (damage > 25)))
-	{
-	  flags2 |= MF2_FIREDAMAGE;
-	}
-    }
-
-     if(flags2&MF2_FIREDAMAGE)
-     { // Player flame death
-     SetState(S_PLAY_FDTH1);
-     //S_StartSound(this, sfx_hedat1); // Burn sound
-     return;
-     }
-  */  
 }
 
 

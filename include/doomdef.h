@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/11/23 00:41:55  smite-meister
+// bugfixes
+//
 // Revision 1.3  2003/05/30 13:34:48  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -34,11 +37,6 @@
 
 #ifndef doomdef_h
 #define doomdef_h 1
-
-#ifndef __WIN32__
-# define min(x,y) ( ((x)<(y)) ? (x) : (y) )
-# define max(x,y) ( ((x)>(y)) ? (x) : (y) )
-#endif
 
 #ifdef __WIN32__
 # define ASMCALL __cdecl

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/11/23 00:41:55  smite-meister
+// bugfixes
+//
 // Revision 1.10  2003/06/20 20:56:07  smite-meister
 // Presentation system tweaked
 //
@@ -139,9 +142,7 @@ bool Actor::Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent)
 //                            TELEPORTATION
 // =========================================================================
 
-// was EV_Teleport
-// was EV_SilentTeleport
-bool Map::EV_Teleport(line_t *line, Actor *thing, bool silent)
+bool Map::EV_Teleport(int tag, line_t *line, Actor *thing, bool silent)
 {
   if (!line)
     return false;
@@ -154,12 +155,12 @@ bool Map::EV_Teleport(line_t *line, Actor *thing, bool silent)
 
   Actor *m;
 
-  // first check TID
-  int i = TIDmap.count(line->tag);
+  // first check TID (Hexen system)
+  int i = TIDmap.count(tag);
   if (i > 0)
     {
       i = (P_Random() % i) - 1;
-      m = FindFromTIDmap(line->tag, &i);
+      m = FindFromTIDmap(tag, &i);
       if (!m)
 	I_Error("Can't find teleport mapspot\n");
 
@@ -167,7 +168,7 @@ bool Map::EV_Teleport(line_t *line, Actor *thing, bool silent)
     }
 
   // otherwise use Boom system
-  for (i = -1; (i = FindSectorFromLineTag(line, i)) >= 0;)
+  for (i = -1; (i = FindSectorFromTag(tag, i)) >= 0;)
     for (m = sectors[i].thinglist; m != NULL; m = m->snext)
       {
 	if (m->Type() != Thinker::tt_dactor)

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2003/11/23 00:41:55  smite-meister
+// bugfixes
+//
 // Revision 1.11  2003/06/29 17:33:59  smite-meister
 // VFile system, PAK support, Hexen bugfixes
 //
@@ -519,170 +522,163 @@ void R_FlushTextureCache (void)
 // R_InitTextures
 // Initializes the texture list with the textures from the world map.
 //
-void R_LoadTextures (void)
+void R_LoadTextures()
 {
-    maptexture_t*       mtexture;
-    texture_t*          texture;
-    mappatch_t*         mpatch;
-    texpatch_t*         patch;
-    char*               pnames;
+  int i, num;
 
-    int                 i;
-    int                 j;
+  char  name[9];
 
-    int*                maptex;
-    int*                maptex2;
-    int*                maptex1;
+  // free previous memory before numtextures change
+  if (numtextures>0)
+    for (i=0; i<numtextures; i++)
+      {
+	if (textures[i])
+	  Z_Free (textures[i]);
+	if (texturecache[i])
+	  Z_Free (texturecache[i]);
+      }
 
-    char                name[9];
-    char*               name_p;
+  // Load the patch names from pnames.lmp.
+  name[8] = 0;
+  num = fc.GetNumForName("PNAMES");
+  char *pnames = (char *)fc.CacheLumpNum(num, PU_STATIC);
+  int nummappatches = LONG( *((int *)pnames) );
+  CONS_Printf("PNAMES: lump %d:%d, %d patches\n", num >> 16, num & 0xffff, nummappatches);
 
-    int*                patchlookup;
+  char *name_p = pnames + 4;
+  //patchlookup = (int *)alloca(nummappatches*sizeof(*patchlookup));
+  int *patchlookup = (int *)Z_Malloc(nummappatches*sizeof(*patchlookup), PU_STATIC, 0);
+  // patchlookup: from patchnumber to lumpnumber
 
-    int                 nummappatches;
-    int                 offset;
-    int                 maxoff;
-    int                 maxoff2;
-    int                 numtextures1;
-    int                 numtextures2;
+  for (i=0 ; i<nummappatches ; i++)
+    {
+      strncpy(name, name_p+i*8, 8);
+      patchlookup[i] = fc.FindNumForName(name);
+      if (patchlookup[i] < 0)
+	CONS_Printf("patch '%s' (%d) not found!\n", name, i);
+    }
+  Z_Free(pnames);
 
-    int*                directory;
+  // Load the map texture definitions from textures.lmp.
+  // The data is contained in one or two lumps,
+  //  TEXTURE1 for shareware, plus TEXTURE2 for commercial.
+  int  *maptex, *maptex1, *maptex2;
+
+  num = fc.GetNumForName("TEXTURE1");
+  maptex = maptex1 = (int *)fc.CacheLumpNum(num, PU_STATIC);
+  int numtextures1 = LONG(*maptex);
+  int maxoff = fc.LumpLength(num);
+  CONS_Printf("TEXTURE1: lump %d:%d, %d textures, maxoff %d\n", num >> 16, num & 0xffff, numtextures1, maxoff);
+  int *directory = maptex+1;
+
+  int numtextures2, maxoff2;
+  if (fc.FindNumForName ("TEXTURE2") != -1)
+    {
+      num = fc.GetNumForName("TEXTURE2");
+      maptex2 = (int *)fc.CacheLumpNum(num, PU_STATIC);
+      numtextures2 = LONG(*maptex2);
+      maxoff2 = fc.LumpLength(num);
+      CONS_Printf("TEXTURE2: lump %d:%d, %d textures, maxoff %d\n", num >> 16, num & 0xffff, numtextures2, maxoff2);
+    }
+  else
+    {
+      maptex2 = NULL;
+      numtextures2 = 0;
+      maxoff2 = 0;
+    }
+  numtextures = numtextures1 + numtextures2;
+
+  //faB : there is actually 5 buffers allocated in one for convenience
+  if (textures)
+    Z_Free (textures);
+
+  textures         = (texture_t **)Z_Malloc (numtextures*4*5, PU_STATIC, 0);
+
+  texturecolumnofs = (unsigned int **)((int*)textures + numtextures);
+  texturecache     = (byte **)((int*)textures + numtextures*2);
+  texturewidthmask = (int *)((int*)textures + numtextures*3);
+  textureheight    = (fixed_t *)((int*)textures + numtextures*4);
 
 
-    // free previous memory before numtextures change
+  for (i=0 ; i<numtextures ; i++, directory++)
+    {
+      maptexture_t*       mtexture;
+      texture_t*          texture;
+      mappatch_t*         mpatch;
+      texpatch_t*         patch;
 
-    if (numtextures>0)
-        for (i=0; i<numtextures; i++)
+      //only during game startup
+      //if (!(i&63))
+      //    CONS_Printf (".");
+
+      if (i == numtextures1)
         {
-            if (textures[i])
-                Z_Free (textures[i]);
-            if (texturecache[i])
-                Z_Free (texturecache[i]);
+	  // Start looking in second texture file.
+	  maptex = maptex2;
+	  maxoff = maxoff2;
+	  directory = maptex+1;
         }
 
-    // Load the patch names from pnames.lmp.
-    name[8] = 0;
-    pnames = (char *)fc.CacheLumpName ("PNAMES", PU_STATIC);
-    nummappatches = LONG ( *((int *)pnames) );
-    name_p = pnames+4;
-    //patchlookup = (int *)alloca(nummappatches*sizeof(*patchlookup));
-    patchlookup = (int *)Z_Malloc(nummappatches*sizeof(*patchlookup), PU_STATIC, 0);
+      // offset to the current texture in TEXTURESn lump
+      int offset = LONG(*directory);
 
-    for (i=0 ; i<nummappatches ; i++)
-    {
-        strncpy (name,name_p+i*8, 8);
-        patchlookup[i] = fc.FindNumForName (name);
-    }
-    Z_Free (pnames);
+      if (offset > maxoff)
+	I_Error("R_LoadTextures: bad texture directory");
 
-    // Load the map texture definitions from textures.lmp.
-    // The data is contained in one or two lumps,
-    //  TEXTURE1 for shareware, plus TEXTURE2 for commercial.
-    maptex = maptex1 = (int *)fc.CacheLumpName ("TEXTURE1", PU_STATIC);
-    numtextures1 = LONG(*maptex);
-    maxoff = fc.LumpLength (fc.GetNumForName ("TEXTURE1"));
-    directory = maptex+1;
+      // maptexture describes texture name, size, and
+      // used patches in z order from bottom to top
+      mtexture = (maptexture_t *) ( (byte *)maptex + offset);
 
-    if (fc.FindNumForName ("TEXTURE2") != -1)
-    {
-        maptex2 = (int *)fc.CacheLumpName ("TEXTURE2", PU_STATIC);
-        numtextures2 = LONG(*maptex2);
-        maxoff2 = fc.LumpLength (fc.GetNumForName ("TEXTURE2"));
-    }
-    else
-    {
-        maptex2 = NULL;
-        numtextures2 = 0;
-        maxoff2 = 0;
-    }
-    numtextures = numtextures1 + numtextures2;
+      texture = textures[i] = (texture_t *)Z_Malloc(sizeof(texture_t)
+	+ sizeof(texpatch_t)*(SHORT(mtexture->patchcount)-1), PU_STATIC, 0);
 
+      texture->width  = SHORT(mtexture->width);
+      texture->height = SHORT(mtexture->height);
+      texture->patchcount = SHORT(mtexture->patchcount);
+      memcpy(texture->name, mtexture->name, sizeof(texture->name));
 
-    //faB : there is actually 5 buffers allocated in one for convenience
-    if (textures)
-        Z_Free (textures);
+      mpatch = &mtexture->patches[0];
+      patch = &texture->patches[0];
 
-    textures         = (texture_t **)Z_Malloc (numtextures*4*5, PU_STATIC, 0);
-
-    texturecolumnofs = (unsigned int **)((int*)textures + numtextures);
-    texturecache     = (byte **)((int*)textures + numtextures*2);
-    texturewidthmask = (int *)((int*)textures + numtextures*3);
-    textureheight    = (fixed_t *)((int*)textures + numtextures*4);
-
-    for (i=0 ; i<numtextures ; i++, directory++)
-    {
-        //only during game startup
-        //if (!(i&63))
-        //    CONS_Printf (".");
-
-        if (i == numtextures1)
+      int j;
+      for (j=0 ; j<texture->patchcount ; j++, mpatch++, patch++)
         {
-            // Start looking in second texture file.
-            maptex = maptex2;
-            maxoff = maxoff2;
-            directory = maptex+1;
-        }
-
-        // offset to the current texture in TEXTURESn lump
-        offset = LONG(*directory);
-
-        if (offset > maxoff)
-            I_Error ("R_LoadTextures: bad texture directory");
-
-        // maptexture describes texture name, size, and
-        // used patches in z order from bottom to top
-        mtexture = (maptexture_t *) ( (byte *)maptex + offset);
-
-        texture = textures[i] = (texture_t *)Z_Malloc (sizeof(texture_t)
-	  + sizeof(texpatch_t)*(SHORT(mtexture->patchcount)-1), PU_STATIC, 0);
-
-        texture->width  = SHORT(mtexture->width);
-        texture->height = SHORT(mtexture->height);
-        texture->patchcount = SHORT(mtexture->patchcount);
-
-        memcpy (texture->name, mtexture->name, sizeof(texture->name));
-        mpatch = &mtexture->patches[0];
-        patch = &texture->patches[0];
-
-        for (j=0 ; j<texture->patchcount ; j++, mpatch++, patch++)
-        {
-            patch->originx = SHORT(mpatch->originx);
-            patch->originy = SHORT(mpatch->originy);
-            patch->patch = patchlookup[SHORT(mpatch->patch)];
-            if (patch->patch == -1)
+	  patch->originx = SHORT(mpatch->originx);
+	  patch->originy = SHORT(mpatch->originy);
+	  patch->patch = patchlookup[SHORT(mpatch->patch)];
+	  if (patch->patch == -1)
             {
-                I_Error ("R_InitTextures: Missing patch in texture %s",
-                         texture->name);
+	      I_Error("R_InitTextures: Missing patch %d in texture %s (%d)\n",
+		      SHORT(mpatch->patch), texture->name, i);
             }
         }
 
-        j = 1;
-        while (j*2 <= texture->width)
-            j<<=1;
+      j = 1;
+      while (j*2 <= texture->width)
+	j<<=1;
 
-        texturewidthmask[i] = j-1;
-        textureheight[i] = texture->height<<FRACBITS;
+      texturewidthmask[i] = j-1;
+      textureheight[i] = texture->height<<FRACBITS;
     }
-    Z_Free(patchlookup);
+  Z_Free(patchlookup);
 
-    Z_Free (maptex1);
-    if (maptex2)
-        Z_Free (maptex2);
+  Z_Free (maptex1);
+  if (maptex2)
+    Z_Free (maptex2);
 
+  //added:01-04-98: this takes 90% of texture loading time..
+  // Precalculate whatever possible.
+  for (i=0 ; i<numtextures ; i++)
+    texturecache[i] = NULL;
 
-    //added:01-04-98: this takes 90% of texture loading time..
-    // Precalculate whatever possible.
-    for (i=0 ; i<numtextures ; i++)
-        texturecache[i] = NULL;
+  // Create translation table for global animation.
+  if (texturetranslation)
+    Z_Free(texturetranslation);
 
-    // Create translation table for global animation.
-    if (texturetranslation)
-        Z_Free (texturetranslation);
+  texturetranslation = (int *)Z_Malloc((numtextures+1)*4, PU_STATIC, 0);
 
-    texturetranslation = (int *)Z_Malloc((numtextures+1)*4, PU_STATIC, 0);
-
-    for (i=0 ; i<numtextures ; i++)
-        texturetranslation[i] = i;
+  for (i=0 ; i<numtextures ; i++)
+    texturetranslation[i] = i;
 }
 
 

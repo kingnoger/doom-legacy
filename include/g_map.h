@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.21  2003/11/23 00:41:55  smite-meister
+// bugfixes
+//
 // Revision 1.20  2003/11/12 11:07:26  smite-meister
 // Serialization done. Map progression.
 //
@@ -334,7 +337,7 @@ public:
   void RepositionMace(DActor *mo);
 
   // in p_telept.cpp
-  bool EV_Teleport(line_t *line, Actor *thing, bool silent = false);
+  bool EV_Teleport(int tag, line_t *line, Actor *thing, bool silent = false);
   bool EV_SilentLineTeleport(line_t *line, int side, Actor *thing, bool reverse);
 
   // in p_spec.cpp
@@ -393,7 +396,7 @@ public:
   void ActivateInStasisPlat(int tag);
   void RemoveActivePlat(plat_t* plat);
   void RemoveAllActivePlats();
-  int  EV_DoPlat(line_t *line, int type, fixed_t speed, int wait, fixed_t height);
+  int  EV_DoPlat(int tag, line_t *line, int type, fixed_t speed, int wait, fixed_t height);
   int  EV_StopPlat(int tag);
 
   // in p_ceiling.cpp
@@ -407,12 +410,12 @@ public:
   // in p_doors.cpp
   void EV_OpenDoor(int sectag, int speed, int wait_time);
   void EV_CloseDoor(int sectag, int speed);
-  int  EV_DoDoor(line_t* line, Actor *mo, byte type, fixed_t speed, int delay);
+  int  EV_DoDoor(int tag, line_t* line, Actor *mo, byte type, fixed_t speed, int delay);
   void SpawnDoorCloseIn30(sector_t* sec);
   void SpawnDoorRaiseIn5Mins(sector_t* sec);
   
   // in p_floor.cpp
-  int EV_DoFloor(line_t *line, int type, fixed_t speed, int crush, fixed_t height);
+  int EV_DoFloor(int tag, line_t *line, int type, fixed_t speed, int crush, fixed_t height);
   int EV_DoChange(line_t *line, int changetype);
   int EV_BuildStairs(int tag, int type, fixed_t speed, fixed_t stepsize, int crush);
   int EV_DoDonut(int tag);
@@ -479,7 +482,7 @@ public:
   // FS scripting
   void T_ClearScripts();
   void T_PreprocessScripts();
-  void T_RunScript(int n);
+  bool T_RunScript(int n, Actor *trig);
   void T_DelayedScripts();
   void T_AddRunningScript(runningscript_t *s);
   runningscript_t *T_SaveCurrentScript();

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/11/23 00:41:55  smite-meister
+// bugfixes
+//
 // Revision 1.7  2003/11/12 11:07:22  smite-meister
 // Serialization done. Map progression.
 //
@@ -271,10 +274,8 @@ void plat_t::Think()
 
 
 
-//
-// was EV_DoPlat
-//
-int Map::EV_DoPlat(line_t *line, int type, fixed_t speed, int wait, fixed_t height)
+// moving platforms (lifts)
+int Map::EV_DoPlat(int tag, line_t *line, int type, fixed_t speed, int wait, fixed_t height)
 {
   int  secnum = -1;
   int  rtn = 0;
@@ -282,11 +283,11 @@ int Map::EV_DoPlat(line_t *line, int type, fixed_t speed, int wait, fixed_t heig
   //  Activate all <type> plats that are in_stasis
   if (type & plat_t::Perpetual)
     {
-      ActivateInStasisPlat(line->tag);
+      ActivateInStasisPlat(tag);
       rtn++;
     }
 
-  while ((secnum = FindSectorFromLineTag(line,secnum)) >= 0)
+  while ((secnum = FindSectorFromTag(tag, secnum)) >= 0)
     {
       sector_t *sec = &sectors[secnum];
 
@@ -295,7 +296,7 @@ int Map::EV_DoPlat(line_t *line, int type, fixed_t speed, int wait, fixed_t heig
 
       // Find lowest & highest floors around sector
       rtn++;
-      plat_t *plat = new plat_t(type, sec, line->tag, speed, wait, height);
+      plat_t *plat = new plat_t(type, sec, tag, speed, wait, height);
       AddThinker(plat);
 
       if (type & plat_t::SetTexture)

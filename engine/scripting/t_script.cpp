@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.5  2003/11/23 00:41:55  smite-meister
+// bugfixes
+//
 // Revision 1.4  2003/11/12 11:07:26  smite-meister
 // Serialization done. Map progression.
 //
@@ -227,18 +230,20 @@ void Map::T_PreprocessScripts()
 
 
 
-void Map::T_RunScript(int n)
+bool Map::T_RunScript(int n, Actor *trig)
 {
   if (n < 0 || n >= MAXSCRIPTS)
-    return;
+    return false;
 
   // use the level's child script script n
   script_t *script = levelscript->children[n];
-  if(!script) return;
+  if (!script)
+    return false;
  
-  script->trigger = t_trigger;    // save trigger in script
+  script->trigger = t_trigger = trig;    // save trigger in script
   
   run_script(script);
+  return true;
 }
 
 
@@ -310,9 +315,8 @@ void COM_T_RunScript_f()
       CONS_Printf("script not defined\n");
       return;
     }
-  t_trigger = consoleplayer->pawn;
-  
-  current_map->T_RunScript(sn);
+
+  current_map->T_RunScript(sn, consoleplayer->pawn);
 }
 
 

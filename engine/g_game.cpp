@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2003/11/23 00:41:54  smite-meister
+// bugfixes
+//
 // Revision 1.14  2003/11/12 11:07:17  smite-meister
 // Serialization done. Map progression.
 //
@@ -86,7 +89,6 @@
 
 #include "p_setup.h"
 #include "p_saveg.h"
-#include "p_tick.h"
 
 #include "i_system.h"
 #include "m_random.h"

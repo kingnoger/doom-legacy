@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2003/11/23 00:41:55  smite-meister
+// bugfixes
+//
 // Revision 1.11  2003/11/12 11:07:20  smite-meister
 // Serialization done. Map progression.
 //
@@ -181,6 +184,98 @@ void FastMonster_OnChange()
 	= MonsterMissileInfo[i].speed[cv_fastmonsters.value];
     }
 }
+
+
+
+bool P_CheckSpecialDeath(DActor *m, Actor *inflictor)
+{
+  bool ret = false;
+      
+  // Check for flame death
+  if (inflictor->flags2 & MF2_FIREDAMAGE)
+    {
+      ret = true;
+      switch (m->type)
+	{
+	case MT_FIGHTER_BOSS:
+	  S_StartSound(m, SFX_PLAYER_FIGHTER_BURN_DEATH);
+	  m->SetState(S_PLAY_F_FDTH1);
+	  break;
+	case MT_CLERIC_BOSS:
+	  S_StartSound(m, SFX_PLAYER_CLERIC_BURN_DEATH);
+	  m->SetState(S_PLAY_C_FDTH1);
+	  break;
+	case MT_MAGE_BOSS:
+	  S_StartSound(m, SFX_PLAYER_MAGE_BURN_DEATH);
+	  m->SetState(S_PLAY_M_FDTH1);
+	  break;
+	case MT_TREEDESTRUCTIBLE:
+	  m->SetState(S_ZTREEDES_X1);
+	  m->height = 24*FRACUNIT;
+	  S_StartSound(m, SFX_TREE_EXPLODE);
+	  break;
+	default:
+	  ret = false;
+	  break;
+	}
+    }
+
+  if (ret)
+    return true;
+
+  if (inflictor->flags2 & MF2_ICEDAMAGE)
+    {
+      ret = true;
+      //flags |= MF_ICECORPSE;
+      switch (m->type)
+	{
+	case MT_BISHOP:
+	  m->SetState(S_BISHOP_ICE);
+	  break;		
+	case MT_CENTAUR:
+	case MT_CENTAURLEADER:
+	  m->SetState(S_CENTAUR_ICE);
+	  break;		
+	case MT_DEMON:
+	case MT_DEMON2:
+	  m->SetState(S_DEMON_ICE);
+	  break;		
+	case MT_SERPENT:
+	case MT_SERPENTLEADER:
+	  m->SetState(S_SERPENT_ICE);
+	  break;		
+	case MT_WRAITH:
+	case MT_WRAITHB:
+	  m->SetState(S_WRAITH_ICE);
+	  break;
+	case MT_ETTIN:
+	  m->SetState(S_ETTIN_ICE1);
+	  break;
+	case MT_FIREDEMON:
+	  m->SetState(S_FIRED_ICE1);
+	  break;
+	case MT_FIGHTER_BOSS:
+	  m->SetState(S_FIGHTER_ICE);
+	  break;
+	case MT_CLERIC_BOSS:
+	  m->SetState(S_CLERIC_ICE);
+	  break;
+	case MT_MAGE_BOSS:
+	  m->SetState(S_MAGE_ICE);
+	  break;
+	case MT_PIG:
+	  m->SetState(S_PIG_ICE);
+	  break;
+	default:
+	  //flags &= ~MF_ICECORPSE;
+	  ret = false;
+	  break;
+	}
+    }
+
+  return ret;
+}
+
 
 //
 // ENEMY THINKING
@@ -930,7 +1025,6 @@ void A_Fall(DActor *actor)
   actor->height >>= 2;
   actor->radius -= (actor->radius>>4);      //for solid corpses
   actor->health = actor->info->spawnhealth>>1;
-
   // So change this if corpse objects
   // are meant to be obstacles.
 }
@@ -2037,4 +2131,3 @@ void A_PlayerScream(DActor *mo)
     }
   S_StartScreamSound(mo, sound);
 }
-

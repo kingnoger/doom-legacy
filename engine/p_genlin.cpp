@@ -799,11 +799,10 @@ int Map::EV_DoGenCrusher(line_t *line)
 //
 int Map::EV_DoGenLockedDoor(line_t *line)
 {
-  int   secnum,rtn;
+  int   secnum;
   sector_t* sec;
   vdoor_t* door;
-  bool manual;
-  unsigned  value = (unsigned)line->special - GenLockedBase;
+  unsigned  value = unsigned(line->special) - GenLockedBase;
 
   // parse the bit fields in the line's special type
 
@@ -811,10 +810,10 @@ int Map::EV_DoGenLockedDoor(line_t *line)
   int Sped = (value & LockedSpeed) >> LockedSpeedShift;
   int Trig = (value & TriggerType) >> TriggerTypeShift;
 
-  rtn = 0;
+  int rtn = 0;
 
   // check if a manual trigger, if so do just the sector on the backside
-  manual = false;
+  bool manual = false;
   if (Trig==PushOnce || Trig==PushMany)
     {
       if (!(sec = line->backsector))
@@ -843,7 +842,7 @@ int Map::EV_DoGenLockedDoor(line_t *line)
   
       // new door thinker
       rtn = 1;
-      door = new vdoor_t(vdoor_t::OwC, sec, 0, VDOORWAIT, line);
+      door = new vdoor_t(vdoor_t::OwC, sec, 0, VDOORWAIT);
       AddThinker(door);
 
       door->topheight = P_FindLowestCeilingSurrounding(sec);
@@ -879,7 +878,10 @@ int Map::EV_DoGenLockedDoor(line_t *line)
 		   door->speed >= VDOORSPEED*4 ? sfx_bdopn : sfx_doropn);
 
       if (manual)
-	return rtn;
+	{
+	  door->boomlighttag = line->tag;
+	  return rtn;
+	}
     }
   return rtn;
 }
@@ -894,11 +896,10 @@ int Map::EV_DoGenLockedDoor(line_t *line)
 //
 int Map::EV_DoGenDoor(line_t *line)
 {
-  int   secnum,rtn;
+  int   secnum;
   sector_t* sec;
-  bool   manual;
   vdoor_t* door;
-  unsigned  value = (unsigned)line->special - GenDoorBase;
+  unsigned  value = unsigned(line->special) - GenDoorBase;
 
   // parse the bit fields in the line's special type
 
@@ -907,10 +908,10 @@ int Map::EV_DoGenDoor(line_t *line)
   int Sped = (value & DoorSpeed) >> DoorSpeedShift;
   int Trig = (value & TriggerType) >> TriggerTypeShift;
 
-  rtn = 0;
+  int rtn = 0;
 
   // check if a manual trigger, if so do just the sector on the backside
-  manual = false;
+  bool manual = false;
   if (Trig==PushOnce || Trig==PushMany)
     {
       if (!(sec = line->backsector))
@@ -940,7 +941,7 @@ int Map::EV_DoGenDoor(line_t *line)
   
       // new door thinker
       rtn = 1;
-      door = new vdoor_t(vdoor_t::Delayed, sec, 0, VDOORWAIT, line);
+      door = new vdoor_t(vdoor_t::Delayed, sec, 0, VDOORWAIT);
       AddThinker(door);
 
       // setup delay for door remaining open/closed
@@ -1020,7 +1021,10 @@ int Map::EV_DoGenDoor(line_t *line)
 	door->type |= vdoor_t::Blazing;
 
       if (manual)
-	return rtn;
+	{
+	  door->boomlighttag = line->tag;
+	  return rtn;
+	}
     }
   return rtn;
 }

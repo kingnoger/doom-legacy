@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.10  2003/11/23 00:41:55  smite-meister
+// bugfixes
+//
 // Revision 1.9  2003/11/12 11:07:26  smite-meister
 // Serialization done. Map progression.
 //
@@ -897,7 +900,7 @@ void SF_Teleport()
     }
 
   if(mo)
-    current_map->EV_Teleport(&line, mo);
+    current_map->EV_Teleport(line.tag, &line, mo);
 }
 
 
@@ -924,7 +927,7 @@ void SF_SilentTeleport()
     }
 
   if(mo)
-    current_map->EV_Teleport(&line, mo, true);
+    current_map->EV_Teleport(line.tag, &line, mo, true);
 }
 
 
@@ -1996,7 +1999,7 @@ void SF_LineTrigger()
   //current_map->UseSpecialLine(t_trigger, &junk, 0);    // Try using it
   //current_map->ActivateCrossedLine(&junk, 0, t_trigger);   // Try crossing it
 
-  // TODO this function does not yet work as expected, because the special type needs to be translated.
+  // FIXME this function does not yet work as expected, because the special type needs to be translated to a Hexen special
   current_map->ActivateLine(&junk, t_trigger, 0, SPAC_USE);
   current_map->ActivateLine(&junk, t_trigger, 0, SPAC_CROSS);
 }

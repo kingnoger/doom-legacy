@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2003/11/23 00:41:54  smite-meister
+// bugfixes
+//
 // Revision 1.20  2003/11/12 11:07:16  smite-meister
 // Serialization done. Map progression.
 //
@@ -1086,8 +1089,6 @@ int Actor::HitFloor()
 //SoM: 4/7/2000: Boom code...
 bool DActor::SetState(statenum_t ns, bool call)
 {
-  state_t *st;
-    
   //remember states seen, to detect cycles:    
   static statenum_t seenstate_tab[NUMSTATES]; // fast transition table
   static int recursion;                       // detects recursion
@@ -1110,17 +1111,17 @@ bool DActor::SetState(statenum_t ns, bool call)
 	break;                 // killough 4/9/98
       }
         
-    state = st = &states[ns];
-    tics = st->tics;
+    state = &states[ns];
+    tics = state->tics;
     
     // Modified handling.
     // Call action functions when the state is set
-    if (call == true && st->action)
-      st->action(this);
+    if (call == true && state->action)
+      state->action(this);
         
-    seenstate[ns] = statenum_t(1 + st->nextstate);   // killough 4/9/98
+    seenstate[ns] = statenum_t(1 + state->nextstate);   // killough 4/9/98
         
-    ns = st->nextstate;
+    ns = state->nextstate;
   } while (!tics && !seenstate[ns]);   // killough 4/9/98
 
   pres->SetFrame(state); // set the sprite frame (if pres is not a sprite, do nothing)

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/11/23 00:41:55  smite-meister
+// bugfixes
+//
 // Revision 1.2  2003/02/08 21:43:50  smite-meister
 // New Memzone system. Choose your pawntype! Cyberdemon OK.
 //
@@ -69,8 +72,8 @@
 //
 //
 // DESCRIPTION:
+//   System interface. Everything that does not fit into the other i_ files.
 //
-// VB: added MyFunc typedef
 //-----------------------------------------------------------------------------
 
 
@@ -437,7 +440,6 @@ void I_StartupMouse2 () {
 }
 
 byte     mb_used = 6+2; // 2 more for caching sound
-static int quiting=0; /* prevent recursive I_Quit() */
 
 //
 // I_Tactile
@@ -481,7 +483,6 @@ void I_Init ()
 {
   I_StartupSound();
   I_InitMusic();
-  quiting = 0;
 }
 
 //
@@ -489,9 +490,11 @@ void I_Init ()
 //
 void I_Quit()
 {
-  /* prevent recursive I_Quit() */
-  if(quiting) return;
-  quiting = 1;
+  static bool quitting = false; // prevent recursive I_Quit()
+
+  if (quitting) return;
+  quitting = true;
+
   //added:16-02-98: when recording a demo, should exit using 'q' key,
   //        but sometimes we forget and use 'F10'.. so save here too.
   if (demorecording)
@@ -537,31 +540,40 @@ byte* I_AllocLow(int length)
 //
 extern bool demorecording;
 
-void I_Error (char *error, ...)
+void I_Error(char *error, ...)
 {
-    va_list     argptr;
+  va_list     argptr;
+  static bool recursive = false;
 
-    // Message first.
-    va_start (argptr,error);
-    fprintf (stderr, "Error: ");
-    vfprintf (stderr, error, argptr);
-    fprintf (stderr, "\n");
-    va_end (argptr);
+  if (recursive)
+    {
+      fprintf(stderr, "Error: I_Error called recursively!\n");
+      return;
+    }
 
-    fflush(stderr);
+  recursive = true;
 
-    // Shutdown. Here might be other errors.
-    if (demorecording)
-      game.CheckDemoStatus();
+  // Message first.
+  va_start(argptr,error);
+  fprintf(stderr, "Error: ");
+  vfprintf(stderr, error, argptr);
+  fprintf(stderr, "\n");
+  va_end(argptr);
 
-    D_QuitNetGame ();
-    I_ShutdownMusic();
-    I_ShutdownSound();
-    I_ShutdownGraphics();
-    // shutdown everything else which was registered
-    I_ShutdownSystem();
+  fflush(stderr);
 
-    exit(-1);
+  // Shutdown. Here might be other errors.
+  if (demorecording)
+    game.CheckDemoStatus();
+
+  D_QuitNetGame ();
+  I_ShutdownMusic();
+  I_ShutdownSound();
+  I_ShutdownGraphics();
+  // shutdown everything else which was registered
+  I_ShutdownSystem();
+
+  exit(-1);
 }
 #define MAX_QUIT_FUNCS     16
 typedef void (*quitfuncptr)();

@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.20  2003/11/23 00:41:55  smite-meister
+// bugfixes
+//
 // Revision 1.19  2003/11/12 11:07:18  smite-meister
 // Serialization done. Map progression.
 //
@@ -65,7 +68,7 @@
 #include "dstrings.h"
 
 #include "p_camera.h" // camera
-#include "p_spec.h" // boom stuff
+#include "p_spec.h"
 
 #include "s_sound.h"
 #include "sounds.h"
@@ -1131,6 +1134,47 @@ DActor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
   th->pz = int(th->info->speed * slope);
 
   return (th->CheckMissileSpawn()) ? th : NULL;
+}
+
+
+
+
+// checks if the player has the correct key for 'lock'
+bool P_CheckKeys(Actor *mo, int lock)
+{
+  PlayerPawn *p = (mo->Type() == Thinker::tt_ppawn) ? (PlayerPawn *)mo : NULL;
+
+  if (!p)
+    return false;
+
+  if (!lock)
+    return true;
+
+  if (lock > NUMKEYS)
+    return false;
+
+  if (!(p->keycards & (1 << (lock-1))))
+    {
+      if (lock >= it_bluecard) // skulls and cards are equivalent
+	if (p->keycards & (1 << (lock+2)))
+	  return true;
+
+      static char buf[80];
+      if (lock <= 11)
+	{
+	  sprintf(buf, "You need the %s\n",  text[TXT_KEY_STEEL + lock - 1]);
+	  p->player->message = buf;
+	  S_StartSound(mo, SFX_DOOR_LOCKED);
+	}
+      else
+	{
+	  p->player->message = text[PD_BLUEK_NUM + lock - 12];
+	  S_StartScreamSound(p, sfx_oof);
+	}
+
+      return false; // no ticket!
+    }
+  return true;
 }
 
 

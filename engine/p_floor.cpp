@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/11/23 00:41:55  smite-meister
+// bugfixes
+//
 // Revision 1.7  2003/11/12 11:07:20  smite-meister
 // Serialization done. Map progression.
 //
@@ -379,16 +382,16 @@ void floor_t::Think()
 
 
 
-
-// was EV_DoFloor
 // HANDLE FLOOR TYPES
-//
-int Map::EV_DoFloor(line_t *line, int type, fixed_t speed, int crush, fixed_t height)
+int Map::EV_DoFloor(int tag, line_t *line, int type, fixed_t speed, int crush, fixed_t height)
 {
   int  secnum = -1;
   int  rtn = 0;
 
-  while ((secnum = FindSectorFromLineTag(line, secnum)) >= 0)
+  if (!tag)
+    return false;
+
+  while ((secnum = FindSectorFromTag(tag, secnum)) >= 0)
     {
       sector_t  *sec = &sectors[secnum];
         
