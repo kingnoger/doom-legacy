@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2003/12/14 00:20:02  smite-meister
+// quick bugfix
+//
 // Revision 1.13  2003/12/03 10:49:49  smite-meister
 // Save/load bugfix, text strings updated
 //
@@ -216,7 +219,7 @@ int god_health=100;
 
 void Command_CheatNoClip_f()
 {
-  if (game.multiplayer)
+  if (game.multiplayer || !consoleplayer)
     return;
 
   PlayerPawn *p = consoleplayer->pawn;
@@ -232,7 +235,7 @@ void Command_CheatNoClip_f()
 
 void Command_CheatGod_f()
 {
-  if (game.multiplayer)
+  if (game.multiplayer || !consoleplayer)
     return;
 
   PlayerPawn *p = consoleplayer->pawn;
@@ -250,11 +253,10 @@ void Command_CheatGod_f()
 
 void Command_CheatGimme_f()
 {
-  // TODO! "gimme eat" gives a little health and lots of "honor" in Doom Fortress :D
   char*     s;
   int       i,j;
 
-  if (game.multiplayer)
+  if (game.multiplayer || !consoleplayer)
     return;
 
   if (COM_Argc()<2)
@@ -634,7 +636,7 @@ bool cht_Responder (event_t* ev)
   if (ev->type != ev_keydown)
     return false;
 
-  if (game.netgame || game.skill == sk_nightmare)
+  if (game.netgame || game.skill == sk_nightmare || !consoleplayer)
     { // Can't cheat in a net-game, or in nightmare mode
       return false;
     }

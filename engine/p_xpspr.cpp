@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/12/14 00:20:02  smite-meister
+// quick bugfix
+//
 // Revision 1.5  2003/11/30 00:09:47  smite-meister
 // bugfixes
 //
@@ -1738,8 +1741,8 @@ void A_ShedShard(DActor *actor)
       mo = actor->SpawnMissileAngle(MT_SHARDFX1, m_angle);
       if (mo)
 	{
-	  mo->px = (20 + 2*spermcount) * finecosine[m_angle];
-	  mo->py = (20 + 2*spermcount) * finesine[m_angle];
+	  mo->px = (20 + 2*spermcount) * finecosine[m_angle >> ANGLETOFINESHIFT];
+	  mo->py = (20 + 2*spermcount) * finesine[m_angle >> ANGLETOFINESHIFT];
 	  mo->special1 = SHARDSPAWN_LEFT;
 	  mo->special2 = spermcount;
 	  mo->pz = actor->pz;
@@ -1753,8 +1756,8 @@ void A_ShedShard(DActor *actor)
       mo = actor->SpawnMissileAngle(MT_SHARDFX1, m_angle);
       if (mo)
 	{
-	  mo->px = (20 + 2*spermcount) * finecosine[m_angle];
-	  mo->py = (20 + 2*spermcount) * finesine[m_angle];
+	  mo->px = (20 + 2*spermcount) * finecosine[m_angle >> ANGLETOFINESHIFT];
+	  mo->py = (20 + 2*spermcount) * finesine[m_angle >> ANGLETOFINESHIFT];
 	  mo->special1 = SHARDSPAWN_RIGHT;
 	  mo->special2 = spermcount;
 	  mo->pz = actor->pz;
@@ -1768,8 +1771,8 @@ void A_ShedShard(DActor *actor)
       mo = actor->SpawnMissileAngle(MT_SHARDFX1, m_angle);
       if (mo)
 	{
-	  mo->px = (15 + 2*spermcount) * finecosine[m_angle];
-	  mo->py = (15 + 2*spermcount) * finesine[m_angle];
+	  mo->px = (15 + 2*spermcount) * finecosine[m_angle >> ANGLETOFINESHIFT];
+	  mo->py = (15 + 2*spermcount) * finesine[m_angle >> ANGLETOFINESHIFT];
 	  mo->pz = actor->pz;
 	  mo->z += 8*FRACUNIT;
 	  if (spermcount & 1)			// Every other reproduction
@@ -1787,8 +1790,8 @@ void A_ShedShard(DActor *actor)
       mo = actor->SpawnMissileAngle(MT_SHARDFX1, m_angle);
       if (mo)
 	{
-	  mo->px = (15 + 2*spermcount) * finecosine[m_angle];
-	  mo->py = (15 + 2*spermcount) * finesine[m_angle];
+	  mo->px = (15 + 2*spermcount) * finecosine[m_angle >> ANGLETOFINESHIFT];
+	  mo->py = (15 + 2*spermcount) * finesine[m_angle >> ANGLETOFINESHIFT];
 	  mo->pz = actor->pz;
 	  mo->z -= 4*FRACUNIT;
 	  if (spermcount & 1)			// Every other reproduction
