@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.28  2005/04/01 11:06:49  segabor
+// Disabled EndTxt on Mac OS X
+//
 // Revision 1.27  2005/03/21 17:44:18  smite-meister
 // fixes
 //
@@ -694,7 +697,10 @@ void I_Quit()
   I_ShutdownGraphics();
   I_ShutdownSystem();
   printf("\r");
+#ifndef __APPLE__
+  // on Mac OS X it's pointless
   ShowEndTxt();
+#endif
   exit(0);
 }
 
