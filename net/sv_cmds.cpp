@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2005/03/24 16:58:22  smite-meister
+// upgrade to OpenTNL 1.5
+//
 // Revision 1.13  2005/01/25 18:29:16  smite-meister
 // preparing for alpha
 //
@@ -340,8 +343,6 @@ static void PauseMsg(bool on, int pnum)
 }
 
 
-
-
 /// pauses or unpauses the game
 void GameInfo::Pause(bool on, int playernum)
 {
@@ -375,7 +376,8 @@ void GameInfo::Pause(bool on, int playernum)
 }
 
 
-LCONNECTION_RPC(rpcPause, (bool on, U8 playernum), RPCGuaranteedOrdered, RPCDirAny, 0)
+LCONNECTION_RPC(rpcPause, (bool on, U8 playernum), (on, playernum),
+		RPCGuaranteedOrdered, RPCDirAny, 0)
 {
   if (isConnectionToServer())
     {
@@ -389,7 +391,6 @@ LCONNECTION_RPC(rpcPause, (bool on, U8 playernum), RPCGuaranteedOrdered, RPCDirA
       game.Pause(on, player[0]->number);
     }
 }
-
 
 
 // quit the game immediately

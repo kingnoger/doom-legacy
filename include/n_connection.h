@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2005/03/24 16:59:17  smite-meister
+// upgrade to OpenTNL 1.5
+//
 // Revision 1.9  2004/11/28 18:02:23  smite-meister
 // RPCs finally work!
 //
@@ -119,23 +122,23 @@ Shooting and artifact use should be guaranteed...
   */
 
   /// client updates his player info (or asks the server to add a new local player?)
-  //TNL_DECLARE_RPC(rpcUpdatePlayerInfo_c2s, (U8 pnum, const char *name, U8 color, U8 team));
+  //TNL_DECLARE_RPC(rpcUpdatePlayerInfo_c2s, (U8 pnum, StringPtr name, U8 color, U8 team));
 
   TNL_DECLARE_RPC(rpcTest, (U8 num));
 
 
 
   /// Transmits chat messages between client and server.
-  TNL_DECLARE_RPC(rpcChat, (S8 from, S8 to, const char *msg));
+  TNL_DECLARE_RPC(rpcChat, (S8 from, S8 to, StringPtr msg));
 
   /// server prints a message on client's console/HUD
-  TNL_DECLARE_RPC(rpcMessage_s2c, (S32 pnum, const char *msg, S8 priority, S8 type));
+  TNL_DECLARE_RPC(rpcMessage_s2c, (S32 pnum, StringPtr msg, S8 priority, S8 type));
 
   /// Pauses/unpauses the game, or, when used by a client, requests this from the server.
   TNL_DECLARE_RPC(rpcPause, (bool on, U8 playernum));
 
   /// When the server changes a netvar during the game, this rpc notifies the clients.
-  TNL_DECLARE_RPC(rpcSendNetVar, (U16 netid, const char *str));
+  TNL_DECLARE_RPC(rpcSendNetVar, (U16 netid, StringPtr str));
 
   /// server starts a positional sound on the client
   //TNL_DECLARE_RPC(rpcStartSound_s2c, (origin, sfx_id, volume));
@@ -162,8 +165,8 @@ Shooting and artifact use should be guaranteed...
   TNL_DECLARE_NETCONNECTION(LConnection);
 
   /// A little shorthand for implementing RPCs
-#define LCONNECTION_RPC(rpc_name, args, guarantee, direction, version) \
-TNL_IMPLEMENT_RPC(LConnection, rpc_name, args, NetClassGroupGameMask, guarantee, direction, version)
+#define LCONNECTION_RPC(rpc_name, args, call_args, guarantee, direction, version) \
+TNL_IMPLEMENT_RPC(LConnection, rpc_name, args, call_args, NetClassGroupGameMask, guarantee, direction, version)
 };
 
 

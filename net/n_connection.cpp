@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2005/03/24 16:58:21  smite-meister
+// upgrade to OpenTNL 1.5
+//
 // Revision 1.10  2004/11/28 18:02:23  smite-meister
 // RPCs finally work!
 //
@@ -335,7 +338,7 @@ void LConnection::onEndGhosting()
 //            Remote Procedure Calls
 //========================================================
 
-LCONNECTION_RPC(rpcTest, (U8 num), RPCGuaranteedOrdered, RPCDirClientToServer, 0)
+LCONNECTION_RPC(rpcTest, (U8 num), (num), RPCGuaranteedOrdered, RPCDirClientToServer, 0)
 {
   CONS_Printf("client sent this: %d\n", num);
 };
@@ -349,15 +352,16 @@ void LNetInterface::SendNetVar(U16 netid, const char *str)
     client_con[i]->rpcSendNetVar(netid, str);
 }
 
-LCONNECTION_RPC(rpcSendNetVar, (U16 netid, const char *str), RPCGuaranteed, RPCDirServerToClient, 0)
+LCONNECTION_RPC(rpcSendNetVar, (U16 netid, StringPtr s), (netid, s),
+		RPCGuaranteed, RPCDirServerToClient, 0)
 {
-  consvar_t::GotNetVar(netid, str);
+  consvar_t::GotNetVar(netid, s);
 }
 
 
 
 // to: 0 means everyone, positive numbers are players, negative numbers are teams
-LCONNECTION_RPC(rpcChat, (S8 from, S8 to, const char *msg), 
+LCONNECTION_RPC(rpcChat, (S8 from, S8 to, StringPtr msg), (from, to, msg),
 		RPCGuaranteedOrdered, RPCDirAny, 0)
 {
   PlayerInfo *p = game.FindPlayer(from);
@@ -366,9 +370,9 @@ LCONNECTION_RPC(rpcChat, (S8 from, S8 to, const char *msg),
     {
       // client
       if (p)
-	CONS_Printf("%s: %s\n", p->name.c_str(), msg);
+	CONS_Printf("%s: %s\n", p->name.c_str(), msg.getString());
       else
-	CONS_Printf("Unknown player %d: %s\n", from, msg);
+	CONS_Printf("Unknown player %d: %s\n", from, msg.getString());
     }
   else
     {
@@ -387,7 +391,7 @@ LCONNECTION_RPC(rpcChat, (S8 from, S8 to, const char *msg),
 
 
 
-LCONNECTION_RPC(rpcMessage_s2c, (S32 pnum, const char *msg, S8 priority, S8 type), 
+LCONNECTION_RPC(rpcMessage_s2c, (S32 pnum, StringPtr msg, S8 priority, S8 type), (pnum, msg, priority, type),
 		RPCGuaranteedOrdered, RPCDirServerToClient, 0)
 {
   int n = Consoleplayer.size();
@@ -402,21 +406,21 @@ LCONNECTION_RPC(rpcMessage_s2c, (S32 pnum, const char *msg, S8 priority, S8 type
 }
 
 
-LCONNECTION_RPC(rpcStartIntermission_s2c, (), 
+LCONNECTION_RPC(rpcStartIntermission_s2c, (), (),
 		RPCGuaranteedOrdered, RPCDirServerToClient, 0)
 {
   //wi.StartIntermission();
 }
 
 
-LCONNECTION_RPC(rpcIntermissionDone_c2s, (), 
+LCONNECTION_RPC(rpcIntermissionDone_c2s, (), (),
 		RPCGuaranteedOrdered, RPCDirClientToServer, 0)
 {
   //player[0]->playerstate = PST_NEEDMAP; 
 }
 
 
-LCONNECTION_RPC(rpcRequestPOVchange_c2s, (S32 pnum), 
+LCONNECTION_RPC(rpcRequestPOVchange_c2s, (S32 pnum), (pnum),
 		  RPCGuaranteedOrdered, RPCDirClientToServer, 0)
 {
   // spy mode
