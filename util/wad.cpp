@@ -215,6 +215,13 @@ void Wad::ListDir()
 // FindNumForName
 // Searches the wadfile for lump named 'name', returns the lump number
 // if not found, returns -1
+#if 0
+/* Hurdler: FIXME:
+ this function doesn't work (and it seems normal since name8 is not fully
+ initialized (only the "strlen(name)" first bytes are initialized), and
+ it's probably the same with p->name). I wonder how that thing was working
+ with the C version (just because we were lucky ?)
+*/
 int Wad::FindNumForName(const char *name, int startlump)
 {
   union {
@@ -241,11 +248,26 @@ int Wad::FindNumForName(const char *name, int startlump)
 
   for (j = startlump; j < header.numentries; j++, p++)
     if (*(int *)p->name == v1 && *(int *)&p->name[4] == v2)
-      return j; 
+      return j;
 
   // not found
   return -1;
 }
+#else
+int Wad::FindNumForName(const char *name, int startlump)
+{
+  waddir_t *p = directory + startlump;
+
+  for (int j = startlump; j < header.numentries; j++, p++)
+  {
+    if (!strncasecmp(p->name, name, 8)) // TODO: might not be as fast as the original function
+      return j;
+  }
+
+  // not found
+  return -1;
+}
+#endif
 
 
 // -----------------------------------------------------
