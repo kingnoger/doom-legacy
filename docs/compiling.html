@@ -7,27 +7,80 @@
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
 <meta name="description" content="New, even better Doom Legacy" />
 <meta name="keywords" lang="en" content="doom, legacy, fps, heretic, hexen" />
-<link rel="stylesheet" href="http://www.w3.org/StyleSheets/Core/Midnight" type="text/css" />
-<title>Compiling Doom Legacy C++</title>
+<link rel="stylesheet" href="legacy.css" type="text/css" />
+<title>Compiling Doom Legacy</title>
 </head>
 
-<body text="#70f070" bgcolor="#000000" link="#f0f070" vlink="#f04040" alink="#7070f0">
+<!-- $Id$ -->
+<body>
 
-$Id$
-<h1>How to compile Doom Legacy C++</h1>
+<h1>How to compile Doom Legacy</h1>
 
 <h2>Compiling the SDL version</h2>
 
-You need to do the following stuff:
-<ul>
-<li>Get GCC 3.2, the Gnu Compiler Collection. Linux systems most likely
-have it installed. <br />
-For Windows32, download and install MinGW 2.0 (a GCC port) and MSYS
-(BASH shell and utilities).
+<p>In order to compile Doom Legacy SDL you'll need to have several
+libraries installed on your system.<br />
+Make sure you install the "developer" packages of the
+libraries, which include both the runtime libraries (DLLs) and
+the stuff required during compilation (header files and import libraries).</p>
 
-<li>Download and install SDL 1.2.5 development libraries, which include
-the runtime library (dll). <br />
-Windows binary version installation:
+<p>
+<table>
+<tr><th>Library</th><th>version</th><th>Description</th></tr>
+<tr><td><a href="http://www.libsdl.org/">SDL</a></td> <td>1.2.5</td>
+ <td>Simple DirectMedia Layer. A multiplatform multimedia library.</td></tr>
+<tr><td><a href="http://www.libsdl.org/projects/SDL_mixer/">SDL_mixer</a></td> <td>1.2.3</td>
+ <td>A multichannel mixer library based on SDL.</td></tr>
+<tr><td><a href="http://www.zlib.org/">zlib</a></td> <td>1.1.4</td>
+ <td>A free compression library.</td></tr>
+<tr><td><a href="http://www.opentnl.org/">OpenTNL</a></td> <td>1.4.0</td>
+ <td>A free game networking library based on the Torque Network Library.<br />
+ The OpenTNL distribution contains <b>libtomcrypt</b>, which provides strong encryption.</td></tr>
+</table>
+</p>
+
+<p>
+You might also find the following programs useful:
+<ul>
+<li>GCC 3.2, the Gnu Compiler Collection which, among other things, is
+a C/C++ compiler.<br />
+Linux systems most likely already have it installed.<br />
+Windows users should install <a href="http://www.mingw.org/">MinGW 2.0</a>, a
+GCC port, and <a href="http://www.mingw.org/msys.shtml">MSYS</a>, a
+collection of POSIX utilities for Win32.</li>
+
+<li><a href="http://www.doxygen.org/">Doxygen</a>, an automatic
+source documentation system.</li>
+</ul>
+</p>
+
+<p>
+Finally, download the Doom Legacy
+<a href="http://sourceforge.net/projects/doomlegacy/">source</a>.
+You can either get the source package or, for the latest code
+snapshot, checkout the <b>doomlegacy_c++</b> branch from the CVS.
+</p>
+
+
+<h3>Compilation and linking</h3>
+
+<p>
+<ol>
+<li>Open a shell window. Go to the doomlegacy_c++ directory.</li>
+<li>Say 'make depend' to create the dependency files.</li>
+<li>Say 'make OPT=1' or just 'make' to build the executable.<br />
+ Omitting the 'OPT=1' parameter adds debugging symbols to the
+ executable.</li>
+<li>Say 'make docs' to generate the Doxygen documentation.</li>
+</ol>
+</p>
+
+
+<hr />
+
+<h2>Miscellaneous hints</h2>
+
+SDL 1.2.5 Windows binary version installation:
 <ul>
 <li>Decompress the file i386-mingw32msvc.tar.gz to a temporary
  directory
@@ -35,23 +88,7 @@ Windows binary version installation:
 <li>Copy the file 'SDL.dll' (runtime library) to your windows/SYSTEM
 directory.
 </ul>
-
-<li>Download and install SDL_mixer-1.2.3 development libraries, using
-the same procedure as above. <br />
-Windows users, note that 'SDL_mixer.h' needs to go to
-the 'MinGW/include/SDL' directory, not just 'MinGW/include'!
-
-<li>Download the doomlegacy_c++ branch from the CVS.
-
-<li>Win32: Start the MSYS shell. Go to the doomlegacy_c++ directory.
-<ul>
-<li>Say 'mkdir objs' to create the object file directory
-<li>Say 'make depend' to create the dependency files
-<li>Say 'make OPT=1' or just 'make' to build the executable. <br />
- Omitting the 'OPT=1' parameter adds debugging symbols to the executable.
-</ul>
-
-</ul>
+</p>
 
 </body>
 </html>
