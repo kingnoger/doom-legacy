@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/12/07 00:16:34  smite-meister
+// hah.
+//
 // Revision 1.8  2003/12/06 23:57:47  smite-meister
 // save-related bugfixes
 //
@@ -107,9 +110,10 @@ void Map::RemoveThinker(Thinker *t)
 
 void Map::RunThinkers()
 {
-  Thinker *t; 
-  for (t = thinkercap.next; t != &thinkercap; t = t->next)
+  Thinker *t, *next; 
+  for (t = thinkercap.next; t != &thinkercap; t = next)
     {
+      next = t->next; // if t is removed while it thinks, its next pointer will no longer be valid.
       //if (t->mp == NULL) I_Error("Thinker::mp == NULL! Cannot be!\n");
       t->Think();
     }
