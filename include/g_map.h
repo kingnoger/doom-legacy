@@ -15,6 +15,7 @@ using namespace std;
 
 class MapInfo;
 class LevelNode;
+class DActor;
 class Pawn;
 class PlayerPawn;
 class PlayerInfo;
@@ -187,18 +188,18 @@ public:
   bool CoopRespawn(PlayerInfo *p);
   bool CheckRespawnSpot(PlayerInfo *p, mapthing_t *mthing);
 
-  void BossDeath(const Actor *mo);
+  void BossDeath(const DActor *mo);
   void Massacre();
   void ExitMap(int exit);
 
   void RespawnSpecials();
   void RespawnWeapons();
 
-  Actor *SpawnActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t);
+  DActor *SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t);
   void SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing);
   void SpawnMapThing(mapthing_t *mthing);
   void SpawnSplash(Actor *mo, fixed_t z);
-  Actor *SpawnBlood(fixed_t x, fixed_t y, fixed_t z, int damage);
+  DActor *SpawnBlood(fixed_t x, fixed_t y, fixed_t z, int damage);
   void SpawnBloodSplats(fixed_t x, fixed_t y, fixed_t z, int damage, fixed_t px, fixed_t py);
   void SpawnPuff(fixed_t nx, fixed_t ny, fixed_t nz);
   void SpawnSmoke(fixed_t x, fixed_t y, fixed_t z);
@@ -238,7 +239,7 @@ public:
 
   // in p_hpspr.cpp
   void PlaceWeapons();
-  void RepositionMace(Actor *mo);
+  void RepositionMace(DActor *mo);
 
   // in p_telept.cpp
   bool EV_Teleport(line_t *line, int side, Actor *thing);
@@ -270,7 +271,7 @@ public:
   void SpawnScrollers();
   void SpawnFriction();
   void SpawnPushers();
-  Actor *GetPushThing(int s);
+  DActor *GetPushThing(int s);
 
   // in p_switch.cpp
   void ChangeSwitchTexture(line_t *line, int useAgain);

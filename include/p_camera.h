@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:29  hurdler
-// Initial revision
+// Revision 1.2  2002/12/16 22:04:59  smite-meister
+// Actor / DActor separation done!
+//
+// Revision 1.1.1.1  2002/11/16 14:18:29  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.4  2002/08/19 18:06:41  vberghol
 // renderer somewhat fixed
@@ -63,11 +66,11 @@
 #define p_camera_h
 
 #include "m_fixed.h"
+#include "g_actor.h"
 
 struct consvar_t;
-class Actor;
 
-class camera_t
+class Camera : public Actor
 {
 private:
 
@@ -76,18 +79,15 @@ private:
   angle_t  startangle;
 
 public:
-  angle_t  aiming; // why?
-  int      fixedcolormap;
-
-  Actor *cam;
-  bool   chase;
+  int  fixedcolormap;
+  bool chase;
 
   void ClearCamera();
   void ResetCamera(Actor *p);
   void MoveChaseCamera(Actor *p);
 };
 
-extern camera_t camera;
+extern Camera camera;
 
 extern consvar_t cv_cam_dist;  
 extern consvar_t cv_cam_height;

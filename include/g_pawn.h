@@ -80,7 +80,7 @@ typedef enum
   //added:28-02-98: NOT REALLY A CHEAT
   // Allow player avatar to walk in-air
   //  if trying to get over a small wall (hack for playability)
-  CF_JUMPOVER         = 16
+  //CF_JUMPOVER         = 16
 
 } cheat_t;
 
@@ -88,17 +88,22 @@ class Pawn : public Actor
 {
 private:
 
+
 public:
+  int maxhealth;
+
   // Who did damage (NULL for floors/ceilings).
   Actor *attacker;
 
 public:
-  Pawn(fixed_t x, fixed_t y, fixed_t z, mobjtype_t t) : Actor(x, y, z, t) {};
+  Pawn(fixed_t x, fixed_t y, fixed_t z, mobjtype_t t);
 
   virtual void Think();
   virtual thinkertype_e Type() {return tt_pawn;}; // "name-tag" function
   virtual bool Morph();
-  virtual bool Damage(Actor *inflictor, Actor *source, int damage);
+  virtual bool Damage(Actor *inflictor, Actor *source, int damage, int dtype = dt_normal);
+
+  bool GiveBody(int num);
 };
 
 
@@ -110,14 +115,10 @@ private:
 public:
   PlayerInfo *player; // controlling player
 
-  int flyheight; // what about Actor::z ?
-
   int skin;
   int color; // may be defined by team membership. See PlayerInfo class.
 
   int morphTics;   // player is in a morphed state if > 0
-
-  int flags2; // heretic stuff
 
   // inventory
   int invTics; // when >0 show inventory in hud
@@ -167,6 +168,7 @@ public:
   int fixedcolormap;
 
   // heretic crap, remove...
+  int flyheight; // z for smoothing the z motion
   int chickenPeck;
   int flamecount;
   Actor *rain1;   // active rain maker 1
@@ -186,6 +188,7 @@ public:
 
   virtual void Think();
   void DeathThink();
+  virtual bool Touch(Actor *a); // PPawn touches another Actor
 
   virtual bool Morph();
   void MorphThink();
@@ -195,18 +198,17 @@ public:
 
   void UseArtifact(artitype_t arti);
   bool GivePower(int /*powertype_t*/ power);
-  bool GiveBody(int num);
 
-  void CalcHeight(); // update bobbing view height
+  void CalcHeight(bool onground); // update bobbing view height
   void MovePsprites();
 
   //#define P_SpawnPlayerMissile(s,t) P_SPMAngle(s,t,s->angle)
-  inline Actor *SpawnPlayerMissile(mobjtype_t type)
+  inline DActor *SpawnPlayerMissile(mobjtype_t type)
   {
     return SPMAngle(type, angle);
   }
 
-  Actor *SPMAngle(mobjtype_t type, angle_t ang);
+  DActor *SPMAngle(mobjtype_t type, angle_t ang);
 
   bool CanUnlockGenDoor(line_t *line);
   void ProcessSpecialSector(sector_t *sector, bool instantdamage);
@@ -230,10 +232,10 @@ public:
   bool GiveWeapon(weapontype_t wt, bool dropped);
   bool GiveArmor(int at);
   bool GiveCard(card_t ct);
-  void TouchSpecialThing(Actor *special);
-  virtual void Kill(Actor *inflictor, Actor *source);
+  void TouchSpecialThing(DActor *special);
+  virtual void Die(Actor *inflictor, Actor *source);
 
-  virtual bool Damage(Actor *inflictor, Actor *source, int damage);
+  virtual bool Damage(Actor *inflictor, Actor *source, int damage, int dtype = dt_normal);
   bool GiveArtifact(artitype_t arti, Actor *from);
 
   // in p_pspr.cpp

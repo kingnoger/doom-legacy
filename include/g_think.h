@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Portions Copyright (C) 1998-2002 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,44 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:28  hurdler
-// Initial revision
+// Revision 1.2  2002/12/16 22:04:55  smite-meister
+// Actor / DActor separation done!
 //
-// Revision 1.6  2002/08/13 19:47:45  vberghol
-// p_inter.cpp done
-//
-// Revision 1.5  2002/08/11 17:16:51  vberghol
-// ...
-//
-// Revision 1.4  2002/08/08 12:01:32  vberghol
-// pian engine on valmis!
-//
-// Revision 1.3  2002/07/26 19:23:06  vberghol
-// a little something
-//
-// Revision 1.2  2002/07/23 19:21:45  vberghol
-// fixed up to p_enemy.cpp
-//
-// Revision 1.1  2002/07/18 19:16:40  vberghol
-// renamed a few files
-//
-// Revision 1.6  2002/07/14 19:10:33  vberghol
-// Illumination!
-//
-// Revision 1.5  2002/07/12 19:21:40  vberghol
-// hop
-//
-// Revision 1.4  2002/07/01 21:00:44  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:01:56  vberghol
-// HUD alkaa olla kunnossa
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
+// Revision 1.1.1.1  2002/11/16 14:18:28  hurdler
+// Initial C++ version of Doom Legacy
 //
 //
 // DESCRIPTION:
@@ -68,12 +35,6 @@
 #define g_think_h 1
 
 #include <stddef.h>
-
-//#ifdef __GNUG__
-//#pragma interface
-//#endif
-
-// VB: general comments about thinkers
 
 // Thinkers are used to implement all dynamic properties of a Doom map,
 // eg. monsters, moving doors etc.
@@ -121,13 +82,8 @@
 
 // discrepancies towards a new-class -style mobj creation: P_BlasterMobjThinker (mobj_t)
 
-//
-// Experimental stuff.
-// To compile this as "ANSI C with classes"
-//  we will need to handle the various
-//  action functions cleanly.
-//
 
+// Experimental stuff.
 typedef void (*actionf_v)(void);
 typedef void (*actionf_p1)(void*);
 typedef void (*actionf_p2)(void*, void*);
@@ -139,10 +95,6 @@ union actionf_t
   actionf_p2    acp2;
 };
 
-// Historically, "think_t" is yet another
-//  function pointer to a routine to handle
-//  an actor.
-//typedef actionf_t  think_t;
 
 class Map;
 class LArchive;
@@ -158,12 +110,14 @@ public:
   Map *mp; // the map where the thinker is situated
 
   // a way to tell the actual class of a Thinker descendant
-  enum thinkertype_e {
-    tt_none  = 0,
-    tt_thinker = 1,
-    tt_actor = 2,
-    tt_pawn  = 3,
-    tt_ppawn = 4
+  enum thinkertype_e
+  {
+    tt_none = 0,
+    tt_thinker,
+    tt_actor,
+    tt_pawn,
+    tt_ppawn,
+    tt_dactor
   };
   virtual thinkertype_e Type() {return tt_thinker;}; // "name-tag" function
 
@@ -176,8 +130,6 @@ public:
 
   // what it actually does;)
   virtual void Think() {}
-  //think_t    function;
-  //actionf_t  function;
 
   // memory management
   void *operator new (size_t size);

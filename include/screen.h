@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/16 22:05:08  smite-meister
+// Actor / DActor separation done!
+//
 // Revision 1.2  2002/12/03 10:23:46  smite-meister
 // Video system overhaul
 //
@@ -116,7 +119,7 @@ public:
   int   baseratio;       // SoM: Used to get the correct value for lighting walls
 
   int   setmodeneeded; // video mode change needed if > 0 // (the mode number to set + 1)
-  bool  recalc;        // TODO not really necessary, remove...
+  //bool  recalc;        // TODO not really necessary, remove...
 
   RGBA_t *palette;  // local copy of the palette for V_GetColor()
 
@@ -125,6 +128,9 @@ private:
   void Recalc();
 
 public:
+  // constructor
+  Video();
+
   // Starts up video hardware, loads palette, registers consvars
   void Startup();
 

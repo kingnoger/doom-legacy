@@ -41,6 +41,7 @@ public:
   int time, partime; // the time it took to complete level, partime (in s)
 
   // old Doom relics
+  int number; // MAP01 == 0, E3M2 == 1 etc.
   string skyname;
   string musicname;
 
@@ -50,19 +51,21 @@ public:
   string finaletext, finaleflat; // if finaletext is not empty, show finale after level
   // entertext? finale/intermission music lumpnames?
 
-  LevelNode() {
-    done = false;
-    exittype = -1;
-  };
+  LevelNode()
+    {
+      done = false;
+      exittype = -1;
+    };
 
-  LevelNode(const char *lname, const char *mname, LevelNode *e = NULL, LevelNode *se = NULL) {
-    levelname = lname;
-    mapname = mname;
-    done = false;
-    exittype = -1;
-    exit.push_back(e);
-    exit.push_back(se);
-  };
+  LevelNode(const char *lname, const char *mname, LevelNode *e = NULL, LevelNode *se = NULL)
+    {
+      levelname = lname;
+      mapname = mname;
+      done = false;
+      exittype = -1;
+      exit.push_back(e);
+      exit.push_back(se);
+    };
   
 };
 

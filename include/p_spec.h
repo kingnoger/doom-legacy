@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:26  hurdler
-// Initial revision
+// Revision 1.2  2002/12/16 22:05:04  smite-meister
+// Actor / DActor separation done!
+//
+// Revision 1.1.1.1  2002/11/16 14:18:26  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.17  2002/09/20 22:41:34  vberghol
 // Sound system rewritten! And it workscvs update
@@ -120,6 +123,7 @@
 using namespace std;
 
 class Actor;
+class DActor;
 class PlayerPawn;
 
 extern int boomsupport;
@@ -1017,7 +1021,7 @@ class pusher_t : public Thinker
   friend class Map;
 private:
   pusher_e type;
-  Actor *source;      // Point source if point pusher
+  DActor *source;     // Point source if point pusher
   int x_mag, y_mag;   // X, Y Strength
   int magnitude;      // Vector strength for point pusher
   int radius;         // Effective radius for point pusher
@@ -1025,7 +1029,7 @@ private:
   int affectee;       // Number of affected sector
 
 public:
-  pusher_t(pusher_e t, int x_m, int y_m, Actor *src, int aff);
+  pusher_t(pusher_e t, int x_m, int y_m, DActor *src, int aff);
   virtual void Think();
 
   friend bool PIT_PushThing(Actor *thing);

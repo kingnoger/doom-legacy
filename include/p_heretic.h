@@ -17,8 +17,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:25  hurdler
-// Initial revision
+// Revision 1.2  2002/12/16 22:05:02  smite-meister
+// Actor / DActor separation done!
+//
+// Revision 1.1.1.1  2002/11/16 14:18:25  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.4  2002/08/06 13:14:28  vberghol
 // ...
@@ -35,8 +38,12 @@
 //
 //
 // DESCRIPTION:
-//
+//     Misc. routines from Heretic
 //-----------------------------------------------------------------------------
 
+class Actor;
+
+void P_MinotaurSlam(Actor *source, Actor *target);
+bool P_TouchWhirlwind(Actor *target);
 void DoomPatchEngine();
 void HereticPatchEngine();

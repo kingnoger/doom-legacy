@@ -16,16 +16,16 @@
 #define FLOATSPEED      (FRACUNIT*4)
 
 class Actor;
+class DActor;
 class PlayerPawn;
 
 void   P_NoiseAlert(Actor *target, Actor *emitter);
-void   A_FaceTarget(Actor *actor);
-void   A_Chase(Actor *actor);
-void   A_Fall(Actor *actor);
-void   A_Look(Actor *actor);
-void   A_Pain(Actor *actor);
 void   P_BulletSlope(PlayerPawn *p);
-//Actor *P_SpawnMissile(Actor *source, Actor *dest, mobjtype_t type);
 
+void   A_FaceTarget(DActor *actor);
+void   A_Chase(DActor *actor);
+void   A_Fall(DActor *actor);
+void   A_Look(DActor *actor);
+void   A_Pain(DActor *actor);
 
 #endif

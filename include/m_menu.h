@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:24  hurdler
-// Initial revision
+// Revision 1.2  2002/12/16 22:04:58  smite-meister
+// Actor / DActor separation done!
+//
+// Revision 1.1.1.1  2002/11/16 14:18:24  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.6  2002/09/20 22:41:34  vberghol
 // Sound system rewritten! And it workscvs update
@@ -250,11 +253,11 @@ public:
   // eats events
   static bool Responder(event_t *ev);
 
-  // initializes the menu system
-  static void Init();
+  // starts up the menu system
+  static void Startup();
 
   // resets the menu system according to current game.mode
-  static void Reset();
+  static void Init();
 
   // draws the menus directly into the screen buffer.
   static void Drawer();

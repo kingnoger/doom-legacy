@@ -20,8 +20,11 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:28  hurdler
-// Initial revision
+// Revision 1.2  2002/12/16 22:05:17  smite-meister
+// Actor / DActor separation done!
+//
+// Revision 1.1.1.1  2002/11/16 14:18:28  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.4  2002/07/23 19:21:46  vberghol
 // fixed up to p_enemy.cpp
@@ -45,7 +48,7 @@
 #include "t_parse.h"
 #include "p_camera.h"
 
-extern camera_t script_camera;
+extern Camera script_camera;
 extern bool  script_camera_on;
 
 void init_functions();
