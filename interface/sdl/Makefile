@@ -14,7 +14,8 @@ all	: $(sdl_objects)
 
 
 depend	:
-	$(CC) -MM $(CFLAGS) *.cpp > sdl.dep
+	$(CC) -MM $(CFLAGS) *.cpp | sed -e 's/^\([^ ]\)/$$(objdir)\/\1/' > sdl.dep
+
 
 # implied rules
 

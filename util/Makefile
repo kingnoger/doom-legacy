@@ -13,7 +13,8 @@ objdir := ../$(objdir)
 all	: $(util_objects)
 
 depend	:
-	$(CC) -MM $(CFLAGS) *.cpp > util.dep
+	$(CC) -MM $(CFLAGS) *.cpp | sed -e 's/^\([^ ]\)/$$(objdir)\/\1/' > util.dep
+
 
 # implied rules
 

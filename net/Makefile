@@ -14,7 +14,8 @@ all	: $(net_objects)
 
 
 depend	:
-	$(CC) -MM $(CFLAGS) *.cpp > net.dep
+	$(CC) -MM $(CFLAGS) *.cpp | sed -e 's/^\([^ ]\)/$$(objdir)\/\1/' > net.dep
+
 
 # implied rules
 

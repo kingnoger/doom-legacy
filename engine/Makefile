@@ -12,19 +12,12 @@ objdir := ../$(objdir)
 
 all	: $(engine_objects)
 
+
 depend	:
-	$(CC) -MM $(CFLAGS) *.cpp > engine.dep
-	$(CC) -MM $(CFLAGS) animation/*.cpp >> engine.dep
-	$(CC) -MM $(CFLAGS) automap/*.cpp >> engine.dep
-	$(CC) -MM $(CFLAGS) hud/*.cpp >> engine.dep
-	$(CC) -MM $(CFLAGS) menu/*.cpp >> engine.dep
-	$(CC) -MM $(CFLAGS) scripting/*.cpp >> engine.dep
+	$(CC) -MM $(CFLAGS) *.cpp animation/*.cpp automap/*.cpp hud/*.cpp menu/*.cpp scripting/*.cpp | sed -e 's/^\([^ ]\)/$$(objdir)\/\1/' > engine.dep
 
 
 # implied rules, one for each subdirectory. sad but true.
-
-#$(objdir)/%.o	: %.c
-#	$(CC) -c $(CFLAGS) $< -o $@
 
 $(objdir)/%.o	: %.cpp
 	$(CC) -c $(CFLAGS) $< -o $@

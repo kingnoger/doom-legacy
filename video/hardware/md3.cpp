@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2003/04/05 12:20:00  smite-meister
+// Makefiles fixed
+//
 // Revision 1.1  2003/03/23 14:24:14  smite-meister
 // Polyobjects, MD3 models
 //
@@ -569,6 +572,12 @@ modelpres_t::modelpres_t(const char *name, int col, const char *skin)
   extern tic_t gametic;
 
   lastupdate = gametic;
+}
+
+
+modelpres_t::~modelpres_t()
+{
+  mdl->Release();
 }
 
 

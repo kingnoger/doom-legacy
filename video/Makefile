@@ -13,8 +13,11 @@ objdir := ../$(objdir)
 all	: $(video_objects)
 
 depend	:
-	$(CC) -MM $(CFLAGS) *.cpp > video.dep
-	$(CC) -MM $(CFLAGS) hardware/*.cpp >> video.dep
+	$(CC) -MM $(CFLAGS) *.cpp hardware/*.cpp hardware/r_opengl/*.cpp | sed -e 's/^\([^ ]\)/$$(objdir)\/\1/' > video.dep
+
+r_opengl: $(objdir)/r_opengl.o
+
+
 
 # implied rules
 
@@ -22,6 +25,9 @@ $(objdir)/%.o	: %.cpp
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(objdir)/%.o	: hardware/%.cpp
+	$(CC) -c $(CFLAGS) $< -o $@
+
+$(objdir)/%.o	: hardware/r_opengl/%.cpp
 	$(CC) -c $(CFLAGS) $< -o $@
 
 

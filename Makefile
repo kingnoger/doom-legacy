@@ -78,8 +78,9 @@ export rm
 # C++ compiler (usually g++)
 export CC = g++
 
-# Defines. This is what they mean:
-# Automatic defines: Automatically defined by the compiler in the corresponding environment. No need to define.
+# Defines.
+#
+# Automatic defines: Automatically defined by the compiler in the corresponding environment.
 # __WIN32__, __WIN32, _WIN32, WIN32 : defined in Win32 environment
 # __DJGPP__ : defined by DJGPP
 # _MACOS_ : ???
@@ -93,7 +94,7 @@ export CC = g++
 # Multimedia interface: use ONLY _one_ of the following:
 # SDL : we are compiling the SDL version of Legacy (use SDL for multimedia interface, SDL_mixer for music)
 # WIN32_DIRECTX : we are compiling the Win32 native version of Legacy. Use DirectX for multimedia interface
-# LINUX_X : Linux "native" with X11 video etc.
+# LINUX_X11 : Linux "native" with X11 video etc.
 # VID_X11 : X11 / glX hardware rendering, use with LINUX_X
 #
 # Miscellaneous options: use as many as you like
@@ -102,11 +103,6 @@ export CC = g++
 # HW3SOUND : compile with hardware 3D sound included. Currently only for DirectX.
 # DEBUG : renderer and hud debugging messages?
 #
-# Removed, no longer relevant:
-# NDEBUG : remove assertations
-# POLL_POINTER : Something to do with linux_x version?
-# DIRECTFULLSCREEN : allow change into fullscreen mode through console????
-# PURESDL : ??? 
 # hmm. In Win98, -DUSEASM causes execution to stop (ASM_PatchRowBytes())
 
 defines := $(platform) $(interface) $(linkage) -DHWRENDER
@@ -268,17 +264,23 @@ objects = $(engine_objects) $(util_objects) $(audio_objects) $(video_objects) \
 
 all	: $(exename)
 
-.PHONY	: clean depend engine util audio video net sdl
+.PHONY	: clean depend engine util audio video net sdl r_opengl
 
 clean	:
 	$(rm) $(objects)
 
 depend:
-	$(MAKE) -C video depend
+	touch engine/engine.dep
 	$(MAKE) -C engine depend
-	$(MAKE) -C util depend
+	touch video/video.dep
+	$(MAKE) -C video depend
+	touch audio/audio.dep
 	$(MAKE) -C audio depend
+	touch util/util.dep
+	$(MAKE) -C util depend
+	touch net/net.dep
 	$(MAKE) -C net depend
+	touch interface/sdl/sdl.dep
 	$(MAKE) -C interface/sdl depend
 
 engine	:
@@ -299,6 +301,8 @@ net	:
 sdl	:
 	$(MAKE) -C interface/sdl
 
+r_opengl:
+	$(MAKE) -C video r_opengl
 
 # explicit rules
 
@@ -308,16 +312,14 @@ $(exename) : engine util audio video net sdl
 	$(LD) $(LDFLAGS) $(objects) $(LIBS) -o $@
 
 # OpenGL renderer
-r_opengl.dll: $(objdir)/r_opengl.o
-	$(LD) -shared $(LDFLAGS) $< $(OPENGLLIBS) -o $@
+r_opengl.dll: r_opengl
+	$(LD) -shared $(LDFLAGS) $(objdir)/r_opengl.o $(OPENGLLIBS) -o $@
 else
 # all in one
-$(exename) : engine util audio video net sdl $(objdir)/r_opengl.o
+$(exename) : engine util audio video net sdl r_opengl
 	$(LD) $(LDFLAGS) $(objects) $(objdir)/r_opengl.o $(LIBS) $(OPENGLLIBS) -o $@
 endif
 
-$(objdir)/r_opengl.o : video/hardware/r_opengl/r_opengl.cpp include/hardware/r_opengl/r_opengl.h
-	$(CC) -c $(CFLAGS) $< -o $@
 
 # this isn't used now
 $(objdir)/tmap.o : assembler/tmap.nas

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2003/04/05 12:20:00  smite-meister
+// Makefiles fixed
+//
 // Revision 1.13  2003/04/04 00:01:52  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -1390,9 +1393,7 @@ void D_DoomMain()
   // loads and executes config file
   M_FirstLoadConfig(); // WARNING : this does a "COM_BufExecute()"
 
-  //#if defined(LINUX_X) || defined(SDL)
   I_PrepareVideoModeList(); // Regenerate Modelist according to cv_fullscreen
-  //#endif
 
   // set user default mode or mode set at cmdline
   SCR_CheckDefaultMode ();

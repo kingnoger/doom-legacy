@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/04/05 12:20:00  smite-meister
+// Makefiles fixed
+//
 // Revision 1.4  2003/03/08 16:07:16  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -69,7 +72,7 @@ extern consvar_t cv_numChannels;
  extern consvar_t musserver_arg;
 #endif
 
-#ifdef LINUX_X
+#ifdef LINUX_X11
 extern consvar_t cv_jigglecdvol;
 #endif
 */
