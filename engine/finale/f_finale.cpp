@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2004/02/07 21:58:08  hurdler
+// fix compiling issue
+//
 // Revision 1.16  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
@@ -69,6 +72,7 @@
 #include "v_video.h"
 #include "w_wad.h"
 #include "z_zone.h"
+#include "i_video.h"
 
 
 
@@ -599,7 +603,6 @@ static void F_DrawPatchCol(int x, patch_t *patch, int col)
       column = (column_t *)(  (byte *)column + column->length + 4 );
     }
 }
-
 
 //
 // F_BunnyScroll
