@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/11/19 16:51:06  smite-meister
+// cleanup
+//
 // Revision 1.10  2004/11/09 20:38:53  smite-meister
 // added packing to I/O structs
 //
@@ -414,6 +417,7 @@ void LNetInterface::SV_Open(bool wait)
 
   //if (cv_internetserver.value) RegisterServer(0, 0);
 }
+
 
 /*
 void LNetInterface::SV_Close()

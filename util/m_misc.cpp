@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/11/19 16:51:06  smite-meister
+// cleanup
+//
 // Revision 1.13  2004/11/13 22:39:00  smite-meister
 // intermission works
 //
@@ -63,9 +66,11 @@
 #include <sys/stat.h>
 
 #include "doomdef.h"
+#include "command.h"
+
 #include "m_misc.h"
 #include "m_argv.h"
-#include "command.h"
+#include "m_swap.h"
 
 #include "g_input.h"
 #include "screen.h"

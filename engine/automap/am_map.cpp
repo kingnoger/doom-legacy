@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2004/11/19 16:51:05  smite-meister
+// cleanup
+//
 // Revision 1.21  2004/11/09 20:38:51  smite-meister
 // added packing to I/O structs
 //
@@ -775,9 +778,6 @@ void AM_changeWindowScale()
 // Updates on Game Tick
 void AutoMap::Ticker()
 {
-  if (dedicated)
-    return;
-
   if (!active)
     return;
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2004/11/19 16:51:06  smite-meister
+// cleanup
+//
 // Revision 1.16  2004/11/13 22:38:59  smite-meister
 // intermission works
 //
@@ -107,26 +110,6 @@ class GameInfo
   friend class LConnection;
   friend class GameType;
 
-private:
-  /// delayed game state changes
-  enum gameaction_t
-  {
-    ga_nothing,
-    ga_intermission,
-    ga_nextlevel,
-    //HeXen
-    /*
-    ga_initnew,
-    ga_newgame,
-    ga_loadgame,
-    ga_savegame,
-    ga_leavemap,
-    ga_singlereborn
-    */
-  };
-
-  gameaction_t  action; ///< delayed state changes
-
 public:
   /// current state of the game
   enum gamestate_t
@@ -147,13 +130,14 @@ public:
   // demo. At each change to the game play, demoversion is compared to
   // the game version, if it's older, the changes are not done, and the older
   // code is used for compatibility.
-
   unsigned demoversion;
 
   gamemode_t    mode;   ///< Which game? Doom? Heretic? Hexen?
   skill_t       skill;  ///< skill level
 
   bool server;      ///< are we the game authority?
+  bool dedicated;   ///< if so, do we allow local players?
+
   bool netgame;     ///< only true in a netgame (nonlocal players possible)
   bool multiplayer; ///< only true if >1 players. netgame => multiplayer but not (multiplayer => netgame)
   bool modified;    ///< an external modification-dll is in use
@@ -161,9 +145,10 @@ public:
 
   bool inventory;   ///< PlayerPawns have an inventory
 
-
-  // Demo sequences
-  int pagetic;    ///< how many tics left until demo is changed?
+  // Intro sequences
+  int   pagetic;    ///< how many tics left until demo is changed?
+  int   demosequence;
+  char *pagename;
 
   unsigned time;  ///< how long (in ms) has the game been running?
   unsigned tic;   ///< how many times has the game been ticked?   
@@ -214,18 +199,14 @@ public:
   void ReadResourceLumps();
   bool Playing();
   void SV_Reset();
-  bool SV_SpawnServer();
+  bool SV_SpawnServer(int mapinfo_lump);
   void CL_Reset();
   void TryRunTics(tic_t realtics);
 
-
   int  Serialize(class LArchive &a);
   int  Unserialize(LArchive &a);
-
   void LoadGame(int slot);
   void SaveGame(int slot, char* description);
-
-  bool Downgrade(int version);
 
   int  GetFrags(struct fragsort_t **fs, int type);
   bool CheckScoreLimit();
@@ -237,9 +218,8 @@ public:
   MapInfo *FindMapInfo(int number);
   MapInfo *FindMapInfo(const char *name);
 
-
   // in g_state.cpp
-  void Ticker(); // ticks the game forward in time
+  void Ticker(); ///< ticks the game forward in time
   bool StartGame(skill_t skill, int cluster = 1);
   void StartIntermission();
   void EndIntermission();
@@ -247,6 +227,7 @@ public:
   void EndFinale();
 
   // in g_demo.cpp
+  bool Downgrade(int version);
   void BeginRecording();
   void PlayDemo(char *defdemoname);
   void ReadDemoTiccmd(struct ticcmd_t* cmd, int playernum);
@@ -255,27 +236,7 @@ public:
   bool CheckDemoStatus();
 };
 
+
 extern GameInfo game;
-
-// for dedicated server
-extern bool dedicated;
-
-// miscellaneous stuff, doesn't really belong here
-extern bool       devparm; // development mode (-devparm)
-
-
-// ======================================
-// DEMO playback/recording related stuff.
-// ======================================
-
-
-// demoplaying back and demo recording
-extern  bool demorecording;
-extern  bool timingdemo;       
-
-// Quit after playing a demo from cmdline.
-extern  bool singledemo;
-
-
 
 #endif

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.39  2004/11/19 16:51:04  smite-meister
+// cleanup
+//
 // Revision 1.38  2004/11/13 22:38:42  smite-meister
 // intermission works
 //
@@ -275,16 +278,7 @@ void GameInfo::Ticker()
 {
   tic++;
 
-  // do things to change the game state
-  while (action != ga_nothing)
-    switch (action)
-      {
-      default : I_Error("game.action = %d\n", action);
-      }
-
-
   // TODO read/write demo ticcmd's here
-
 
   // do main actions
   switch (state)
@@ -305,8 +299,11 @@ void GameInfo::Ticker()
 	  currentcluster->Finish(-1);
 	}
 
-      hud.Ticker();
-      automap.Ticker();
+      if (!dedicated)
+	{
+	  hud.Ticker();
+	  automap.Ticker();
+	}
       break;
 
     case GS_INTERMISSION:
@@ -430,7 +427,6 @@ bool GameInfo::StartGame(skill_t sk, int cluster)
   force_wipe = true;
 
   state = GS_LEVEL;
-  action = ga_nothing;
 
   player_iter_t i;
   for (i = Players.begin(); i != Players.end(); i++)

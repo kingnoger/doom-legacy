@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/11/19 16:51:04  smite-meister
+// cleanup
+//
 // Revision 1.4  2004/11/09 20:38:50  smite-meister
 // added packing to I/O structs
 //
@@ -782,10 +785,8 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       switch (args[0])
 	{
 	case LEGACY_FS:
-#ifdef FRAGGLESCRIPT
 	  if (side == 0 || args[1] == 0) // 1-sided?
 	    success = FS_RunScript(tag, mo);
-#endif
 	  break;
 
 	default:

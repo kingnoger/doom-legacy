@@ -382,7 +382,6 @@ void GameInfo::PlayDemo(char *defdemoname)
 
 // read demo header
 
-  action = ga_nothing;
   demoversion = *demo_p++;
   if (demoversion < 109)
     {
@@ -390,7 +389,6 @@ void GameInfo::PlayDemo(char *defdemoname)
       demoversion = VERSION;
       Z_Free (demobuffer);
 no_demo:
-      action = ga_nothing;
       return;
     }
 

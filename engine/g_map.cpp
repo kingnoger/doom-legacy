@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.50  2004/11/19 16:51:04  smite-meister
+// cleanup
+//
 // Revision 1.49  2004/11/18 20:30:07  smite-meister
 // tnt, plutonia
 //
@@ -217,6 +220,11 @@ Map::~Map()
 
   // Some things may well be left undeleted, because their memory will be freed
   // during the next cluster change using Z_FreeTags...
+
+  // clear the splats from deleted map
+  R_ClearLevelSplats(); // FIXME find a better way
+  // Make sure all sounds are stopped before Z_FreeTags.
+  //S.Stop3DSounds();
 }
 
 
@@ -814,6 +822,8 @@ void Map::RebornPlayer(PlayerInfo *p)
       QueueBody(p->pawn);
       p->pawn = NULL;
     }
+
+  p->pov = NULL;
 
   // spawn a teleport fog
   /*

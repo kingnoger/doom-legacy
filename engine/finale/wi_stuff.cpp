@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2004/11/19 16:51:04  smite-meister
+// cleanup
+//
 // Revision 1.22  2004/11/18 20:30:12  smite-meister
 // tnt, plutonia
 //
@@ -695,7 +698,7 @@ void Intermission::DrawYAH()
 
   // not QUITE correct, but...
   int n = last % 10;
-  for (int i = 0; i < n; i++)
+  for (int i = 0; i <= n; i++)
     splat->Draw(mapspots[ep][i].x, mapspots[ep][i].y, FB);
 
   // draw flashing ptr

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2004/11/19 16:51:06  smite-meister
+// cleanup
+//
 // Revision 1.20  2004/10/27 17:37:11  smite-meister
 // netcode update
 //
@@ -467,9 +470,9 @@ void Console::Init()
 // Toggle console on and off
 void Console::Toggle(bool forceoff)
 {
-  if (dedicated)
+  if (game.dedicated)
     {
-      CONS_Printf("Some idiot tried to close the console\n");
+      I_Error("Some idiot tried to close the console\n");
       return; // dedicated server cannot close console!
     }
 

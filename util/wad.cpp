@@ -22,12 +22,13 @@
 #include <stdio.h>
 #include <sys/stat.h>
 
-#include "wad.h"
-
 #include "doomdef.h"
+
+#include "m_swap.h"
 #include "parser.h"
 #include "dehacked.h"
-#include "i_system.h"
+
+#include "wad.h"
 #include "z_zone.h"
 
 

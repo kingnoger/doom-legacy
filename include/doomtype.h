@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/11/19 16:51:06  smite-meister
+// cleanup
+//
 // Revision 1.5  2004/08/18 14:35:20  smite-meister
 // PNG support!
 //
@@ -46,6 +49,9 @@
 
 #ifdef __WIN32__
 # include <windows.h>
+# define ASMCALL __cdecl
+#else
+# define ASMCALL
 #endif
 
 #ifdef __APPLE_CC__
@@ -63,6 +69,10 @@
 #elseif defined(__WATCOMC__)
 # define strncasecmp             strnicmp
 # define strcasecmp              strcmpi
+#endif
+
+#if defined(LINUX)
+# define O_BINARY 0
 #endif
 
 

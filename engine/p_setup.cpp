@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.51  2004/11/19 16:51:04  smite-meister
+// cleanup
+//
 // Revision 1.50  2004/11/18 20:30:11  smite-meister
 // tnt, plutonia
 //
@@ -60,9 +63,6 @@
 // Revision 1.31  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
-// Revision 1.29  2003/12/18 11:57:31  smite-meister
-// fixes / new bugs revealed
-//
 // Revision 1.28  2003/12/03 10:49:50  smite-meister
 // Save/load bugfix, text strings updated
 //
@@ -83,15 +83,6 @@
 //
 // Revision 1.19  2003/04/26 19:03:26  hurdler
 // Being able to load an heretic map without sndseq (until it's officially put in legacy.wad)
-//
-// Revision 1.18  2003/04/26 12:01:13  smite-meister
-// Bugfixes. Hexen maps work again.
-//
-// Revision 1.17  2003/04/24 20:30:17  hurdler
-// Remove lots of compiling warnings
-//
-// Revision 1.16  2003/04/20 17:02:01  smite-meister
-// Damn
 //
 // Revision 1.15  2003/04/20 16:45:50  smite-meister
 // partial SNDSEQ fix
@@ -161,8 +152,9 @@
 #include "g_level.h"
 
 #include "p_setup.h"
-#include "m_bbox.h"
 #include "p_spec.h"
+#include "m_bbox.h"
+#include "m_swap.h"
 
 #include "i_sound.h" //for I_PlayCD()..
 #include "r_sky.h"
@@ -1125,24 +1117,16 @@ bool Map::Setup(tic_t start, bool spawnthings)
   extern  bool precache;
 
   CONS_Printf("Map::Setup: %s\n", lumpname.c_str());
-
-  if (!dedicated)
-    {
-      con.Drawer();     // let the user know what we are going to do
-      I_FinishUpdate(); // page flip or blit buffer
-    }
+  con.Drawer();     // let the user know what we are going to do
+  I_FinishUpdate(); // page flip or blit buffer
 
   maptic = 0;
   starttic = start;
   kills = items = secrets = 0;
 
+  // internal game map
+  lumpnum = fc.GetNumForName(lumpname.c_str());
 
-  // FIXME client stuff, move elsewhere!
-  // Make sure all sounds are stopped before Z_FreeTags.
-  S.Stop3DSounds();
-
-  // clear the splats from previous map
-  R_ClearLevelSplats();
 
   // textures are needed first
   //    R_LoadTextures ();
@@ -1150,16 +1134,9 @@ bool Map::Setup(tic_t start, bool spawnthings)
   R_ClearColormaps();
 
 
-
   InitThinkers();
 
-  // internal game map
-  lumpnum = fc.GetNumForName(lumpname.c_str());
-
-#ifdef FRAGGLESCRIPT
   FS_ClearScripts();
-#endif
-
   // NOTE Hexen map separators are not empty!!! They contain a version string "version 2.3\0"
   levelscript->data = info->Read(lumpnum); // load map separator lump info (map properties, FS...)
 
@@ -1238,9 +1215,7 @@ bool Map::Setup(tic_t start, bool spawnthings)
   if (hexen_format)
     LoadACScripts(lumpnum + LUMP_BEHAVIOR);
 
-#ifdef FRAGGLESCRIPT
   FS_PreprocessScripts();        // preprocess FraggleScript scripts (needs already added players)
-#endif
 
   InitLightning(); // Hexen lightning effect
 

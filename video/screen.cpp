@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2004/11/19 16:51:07  smite-meister
+// cleanup
+//
 // Revision 1.16  2004/09/23 23:21:20  smite-meister
 // HUD updated
 //
@@ -284,10 +287,9 @@ void ASMCALL ASM_PatchRowBytes(int rowbytes);
 int  I_SetVideoMode(int modenum);
 
 
-// was SCR_SetMode
 void Video::SetMode()
 {
-  if (dedicated)
+  if (game.dedicated)
     return;
 
   if (!setmodeneeded)
@@ -316,7 +318,7 @@ void Video::SetMode()
     }
   else if (BytesPerPixel > 1)
     {
-      CONS_Printf ("using highcolor mode\n");
+      CONS_Printf("using highcolor mode\n");
 
       colfunc = basecolfunc = R_DrawColumn_16;
 
@@ -330,7 +332,7 @@ void Video::SetMode()
       skydrawerfunc[1] = R_DrawSkyColumn_16;
     }
   else
-    I_Error ("unknown bytes per pixel mode %d\n", BytesPerPixel);
+    I_Error("unknown bytes per pixel mode %d\n", BytesPerPixel);
 
   setmodeneeded = 0;
 
@@ -342,7 +344,7 @@ void R_Init8to16();
 // Starts and initializes the video subsystem
 void Video::Startup()
 {
-  if (dedicated)
+  if (game.dedicated)
     return;
 
   I_StartupGraphics();
@@ -373,9 +375,6 @@ void Video::Startup()
 // Called after the video mode has changed
 void Video::Recalc()
 {
-  if (dedicated)
-    return;
-
   rowbytes = width * BytesPerPixel;
 
 #ifdef USEASM
@@ -457,18 +456,11 @@ void Video::Recalc()
 
 void SCR_CheckDefaultMode()
 {
-  int p;
-  int scr_forcex;     // resolution asked from the cmd-line
-  int scr_forcey;
-
-  if (dedicated)
-    return;
-
   // 0 means not set at the cmd-line
-  scr_forcex = 0;
-  scr_forcey = 0;
+  int scr_forcex = 0;
+  int scr_forcey = 0;
 
-  p = M_CheckParm("-width");
+  int p = M_CheckParm("-width");
   if (p && p < myargc-1)
     scr_forcex = atoi(myargv[p+1]);
 

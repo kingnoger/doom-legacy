@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.23  2004/11/19 16:51:04  smite-meister
+// cleanup
+//
 // Revision 1.22  2004/11/13 22:38:42  smite-meister
 // intermission works
 //
@@ -485,9 +488,7 @@ char *MapInfo::Read(int lump)
 	      break;
 
 	    case PS_SCRIPT:
-#ifdef FRAGGLESCRIPT
 	      scriptblock += p.Pointer(); // add the new (NUL-terminated!) line to the current data
-#endif
 	      break;
 
 	    case PS_INTERTEXT:

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.39  2004/11/19 16:51:04  smite-meister
+// cleanup
+//
 // Revision 1.38  2004/11/09 20:38:50  smite-meister
 // added packing to I/O structs
 //
@@ -186,7 +189,6 @@ GameInfo::GameInfo()
   demoversion = VERSION;
   mode = gm_none;
   state = GS_NULL;
-  action = ga_nothing;
   skill = sk_medium;
   maxplayers = 32;
   maxteams = 4;
@@ -215,22 +217,45 @@ GameInfo::~GameInfo()
 //  INTRO LOOP
 //================
 
-static int   demosequence;
-static char *pagename = "TITLEPIC";
-
 /// starts the intro sequence
 void GameInfo::StartIntro()
 {
-  extern int demosequence;
-  action = ga_nothing;
   state = GS_INTRO;
 
   demosequence = -1;
-  paused = false;
   pagetic = 0;
+  paused = false;
   con.Toggle(true);
 }
 
+
+/// draws a fullscreen picture ("page"), fills the borders with a background
+/// pattern (a flat) if the page doesn't fill all the screen.
+void D_PageDrawer(char *lumpname)
+{
+  // software mode which uses generally lower resolutions doesn't look
+  // good when the pic is scaled, so it fills space aorund with a pattern,
+  // and the pic is only scaled to integer multiples (x2, x3...)
+  if (rendermode == render_soft)
+    {
+      if ((vid.width>BASEVIDWIDTH) || (vid.height>BASEVIDHEIGHT) )
+        {
+          for (int y=0; y<vid.height; y += window_background->height)
+            for (int x=0; x<vid.width; x += window_background->width)
+              window_background->Draw(x,y,0);
+        }
+    }
+
+
+  Texture *t = tc.GetPtr(lumpname);
+  t->Draw(0, 0, V_SCALE);
+
+  if (game.mode >= gm_heretic && game.demosequence == 0 && game.pagetic <= 140)
+    {
+      t = tc.GetPtr("ADVISOR");
+      t->Draw(4, 160, V_SCALE);
+    }
+}
 
 
 /// This cycles through the demo sequences.
@@ -317,34 +342,6 @@ void GameInfo::AdvanceIntro()
 }
 
 
-
-/// draws a fullscreen picture ("page"), fills the borders with a background
-/// pattern (a flat) if the page doesn't fill all the screen.
-void D_PageDrawer(char *lumpname)
-{
-  // software mode which uses generally lower resolutions doesn't look
-  // good when the pic is scaled, so it fills space aorund with a pattern,
-  // and the pic is only scaled to integer multiples (x2, x3...)
-  if (rendermode == render_soft)
-    {
-      if ((vid.width>BASEVIDWIDTH) || (vid.height>BASEVIDHEIGHT) )
-        {
-          for (int y=0; y<vid.height; y += window_background->height)
-            for (int x=0; x<vid.width; x += window_background->width)
-              window_background->Draw(x,y,0);
-        }
-    }
-
-
-  Texture *t = tc.GetPtr(lumpname);
-  t->Draw(0, 0, V_SCALE);
-
-  if (game.mode >= gm_heretic && demosequence == 0 && game.pagetic <= 140)
-    {
-      t = tc.GetPtr("ADVISOR");
-      t->Draw(4, 160, V_SCALE);
-    }
-}
 
 
 
@@ -540,10 +537,12 @@ void GameInfo::Drawer()
   // draw the player views
 
   int n = Consoleplayer.size();
+  n = min(n, cv_splitscreen.value+1);
+
   for (int i = 0; i < n; i++)
     {
       PlayerInfo *p = Consoleplayer[i];
-      if (p->pov && p->mp && p->playerstate != PST_RESPAWN)
+      if (p->pov && p->mp)
 	R.R_RenderPlayerView(i, p);
     }
 
@@ -565,17 +564,6 @@ bool GameInfo::Responder(event_t* ev)
       return true;
     }
 
-  // any other key pops up menu if in demos
-  if (state == GS_DEMOPLAYBACK && action == ga_nothing && !singledemo)
-    {
-      if (ev->type == ev_keydown)
-        {
-          Menu::Open();
-          return true;
-        }
-      return false;
-    }
-
   switch (state)
     {
     case GS_LEVEL:
@@ -595,6 +583,15 @@ bool GameInfo::Responder(event_t* ev)
     case GS_FINALE:
       if (F_Responder(ev))
         return true;        // finale ate the event
+      break;
+
+    case GS_DEMOPLAYBACK:  // any other key pops up menu if in demos
+      if (ev->type == ev_keydown) // TODO rewrite "global keys" part
+	{
+	  Menu::Open();
+	  return true;
+	}
+      return false;
       break;
 
     default:

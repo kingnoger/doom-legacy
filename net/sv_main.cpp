@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2004/11/19 16:51:06  smite-meister
+// cleanup
+//
 // Revision 1.17  2004/11/13 22:38:59  smite-meister
 // intermission works
 //
@@ -190,8 +193,6 @@ Have polymorphed class GameType which creates these into GameInfo containers
 #include "r_data.h"
 #include "sounds.h"
 
-#include "hud.h"
-
 #include "w_wad.h"
 #include "z_zone.h"
 
@@ -200,8 +201,6 @@ using namespace TNL;
 
 
 #define DEFAULT_PORT 5029;
-
-extern bool dedicated;
 
 
 //========================================================================
@@ -424,8 +423,9 @@ void GameInfo::SV_Reset()
 }
 
 
-/// initializes and opens the server (but does not set up the game!)
-bool GameInfo::SV_SpawnServer()
+/// Initializes and opens the server.
+/// Sets up the game if given a valid MAPINFO lump.
+bool GameInfo::SV_SpawnServer(int mapinfo_lump)
 {
   if (Playing())
     {
@@ -433,27 +433,25 @@ bool GameInfo::SV_SpawnServer()
       return false;
     }
 
-  bool local = !netgame; // temp HACK
   SV_Reset();
   CONS_Printf("Starting server...\n");
 
-  if (!dedicated)
+  if (mapinfo_lump >= 0)
     {
-      // add local players
-      Consoleplayer.push_back(AddPlayer(new PlayerInfo(localplayer)));
-      if (cv_splitscreen.value)
-	Consoleplayer.push_back(AddPlayer(new PlayerInfo(localplayer2)));
+      if (Read_MAPINFO(mapinfo_lump) <= 0)
+	{
+	  CONS_Printf("Bad MAPINFO lump.\n");
+	  return false;
+	}
 
-      hud.ST_Start(Consoleplayer[0]);
+      if (netgame)
+	{
+	  net->SV_Open();
+	  multiplayer = true;
+	}
     }
 
-  if (!local)
-    {
-      net->SV_Open();
-      netgame = true;
-      multiplayer = true;
-    }
-
+  ReadResourceLumps(); // SNDINFO etc.
   return true;
 }
 
@@ -524,7 +522,7 @@ void InitNetwork()
 
 
   // parse network game options,
-  if (M_CheckParm("-server") || dedicated)
+  if (M_CheckParm("-server") || game.dedicated)
     {
       game.netgame = true;
 
@@ -691,12 +689,10 @@ void SV_Init()
   COM_AddCommand("map", Command_Map_f);
 
   COM_AddCommand("runacs", Command_RunACS_f);
-#ifdef FRAGGLESCRIPT
   FS_Init();
   COM_AddCommand("fs_dumpscript", COM_FS_DumpScript_f);
   COM_AddCommand("fs_runscript",  COM_FS_RunScript_f);
   COM_AddCommand("fs_running",    COM_FS_Running_f);
-#endif
 
   // bots
   COM_AddCommand("addbot", Command_AddBot_f);

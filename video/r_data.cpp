@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.36  2004/11/19 16:51:07  smite-meister
+// cleanup
+//
 // Revision 1.35  2004/11/09 20:38:53  smite-meister
 // added packing to I/O structs
 //
@@ -115,89 +118,6 @@
 // Revision 1.2  2002/12/03 10:07:13  smite-meister
 // Video unit overhaul begins
 //
-// Revision 1.27  2001/12/27 22:50:25  hurdler
-// fix a colormap bug, add scrolling floor/ceiling in hw mode
-//
-// Revision 1.26  2001/08/13 22:53:40  stroggonmeth
-// Small commit
-//
-// Revision 1.25  2001/03/21 18:24:39  stroggonmeth
-// Misc changes and fixes. Code cleanup
-//
-// Revision 1.24  2001/03/19 18:52:01  hurdler
-// lil fix
-//
-// Revision 1.23  2001/03/13 22:14:20  stroggonmeth
-// Long time no commit. 3D floors, FraggleScript, portals, ect.
-//
-// Revision 1.22  2000/11/04 16:23:43  bpereira
-// no message
-//
-// Revision 1.21  2000/11/02 17:50:09  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.20  2000/10/04 16:19:23  hurdler
-// Change all those "3dfx names" to more appropriate names
-//
-// Revision 1.19  2000/09/28 20:57:17  bpereira
-// no message
-//
-// Revision 1.18  2000/08/11 12:25:23  hurdler
-// latest changes for v1.30
-//
-// Revision 1.17  2000/07/01 09:23:49  bpereira
-// no message
-//
-// Revision 1.16  2000/05/03 23:51:01  stroggonmeth
-// A few, quick, changes.
-//
-// Revision 1.15  2000/04/23 16:19:52  bpereira
-// no message
-//
-// Revision 1.14  2000/04/18 17:39:39  stroggonmeth
-// Bug fixes and performance tuning.
-//
-// Revision 1.13  2000/04/18 12:54:58  hurdler
-// software mode bug fixed
-//
-// Revision 1.12  2000/04/16 18:38:07  bpereira
-// no message
-//
-// Revision 1.11  2000/04/15 22:12:58  stroggonmeth
-// Minor bug fixes
-//
-// Revision 1.10  2000/04/13 23:47:47  stroggonmeth
-// See logs
-//
-// Revision 1.9  2000/04/08 17:45:11  hurdler
-// fix some boom stuffs
-//
-// Revision 1.8  2000/04/08 17:29:25  stroggonmeth
-// no message
-//
-// Revision 1.7  2000/04/08 11:27:29  hurdler
-// fix some boom stuffs
-//
-// Revision 1.6  2000/04/07 01:39:53  stroggonmeth
-// Fixed crashing bug in Linux.
-// Made W_ColormapNumForName search in the other direction to find newer colormaps.
-//
-// Revision 1.5  2000/04/06 21:06:19  stroggonmeth
-// Optimized extra_colormap code...
-// Added #ifdefs for older water code.
-//
-// Revision 1.4  2000/04/06 20:40:22  hurdler
-// Mostly remove warnings under windows
-//
-// Revision 1.3  2000/04/04 00:32:47  stroggonmeth
-// Initial Boom compatability plus few misc changes all around.
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
-//
 //-----------------------------------------------------------------------------
 
 /// \file
@@ -219,6 +139,7 @@
 #include "r_data.h"
 #include "r_main.h"
 #include "r_draw.h"
+#include "m_swap.h"
 #include "v_video.h"
 
 #include "w_wad.h"

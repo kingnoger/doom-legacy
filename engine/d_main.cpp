@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.36  2004/11/19 16:51:04  smite-meister
+// cleanup
+//
 // Revision 1.35  2004/11/18 20:30:06  smite-meister
 // tnt, plutonia
 //
@@ -200,7 +203,6 @@ const char VERSIONSTRING[] = "prealpha2";
 
 
 
-bool dedicated  = false;
 bool devparm    = false; // started game with -devparm
 bool singletics = false; // timedemo
 
@@ -279,7 +281,7 @@ void D_ProcessEvents()
     {
       event_t *ev = &events[eventtail];
 
-      if (dedicated)
+      if (game.dedicated)
 	con.Responder(ev); // dedicated server only has a console interface
       else
 	{
@@ -332,7 +334,7 @@ void D_DoomLoop()
       // run tickers, advance game state
       game.TryRunTics(elapsed);
 
-      if (!dedicated)
+      if (!game.dedicated)
 	{
 	  if (singletics || game.tic > rendertic)
 	    {
@@ -662,11 +664,11 @@ void D_DoomMain()
   extern bool nomusic, nosound;
 
   // we need to check for dedicated before initialization of some subsystems
-  dedicated = M_CheckParm("-dedicated");
+  game.dedicated = M_CheckParm("-dedicated");
 
   // keep error messages until the final flush(stderr)
   //if (setvbuf(stderr,NULL,_IOFBF,1000)) CONS_Printf("setvbuf didnt work\n");
-  if (!dedicated)
+  if (!game.dedicated)
     {
       if (freopen("stdout.txt", "w", stdout) == NULL) CONS_Printf("freopen didnt work\n");
       if (freopen("stderr.txt", "w", stderr) == NULL) CONS_Printf("freopen didnt work\n");
@@ -762,7 +764,7 @@ void D_DoomMain()
   SV_Init();
 
   // Client init
-  if (!dedicated) 
+  if (!game.dedicated) 
     CL_Init();
 
   switch (game.mode)
@@ -782,7 +784,7 @@ void D_DoomMain()
   // loads and executes config file
   M_FirstLoadConfig(); // WARNING : this does a "COM_BufExecute()"
 
-  if (!dedicated)
+  if (!game.dedicated)
     {
       // FIXME replace these with cv_fullscreen_onchange or something...
       I_PrepareVideoModeList(); // Regenerate Modelist according to cv_fullscreen

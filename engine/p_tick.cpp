@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/11/19 16:51:04  smite-meister
+// cleanup
+//
 // Revision 1.12  2004/08/12 18:30:25  smite-meister
 // cleaned startup
 //
@@ -165,10 +168,7 @@ void Map::Ticker()
   maptic++;
 
   //CONS_Printf("FS..");
-#ifdef FRAGGLESCRIPT
-  // SoM: Update FraggleScript...
   FS_DelayedScripts();
-#endif
 
   //CONS_Printf("tick done\n");
 }

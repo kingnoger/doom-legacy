@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2004/11/19 16:51:04  smite-meister
+// cleanup
+//
 // Revision 1.18  2004/11/09 20:38:50  smite-meister
 // added packing to I/O structs
 //
@@ -65,6 +68,7 @@
 #include "g_map.h"
 
 #include "p_spec.h"
+#include "m_swap.h"
 
 #include "r_data.h"
 #include "sounds.h"

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/11/19 16:51:06  smite-meister
+// cleanup
+//
 // Revision 1.12  2004/11/04 21:12:54  smite-meister
 // save/load fixed
 //
@@ -155,7 +158,7 @@ void SplitScreen_OnChange()
   //displayplayer2 = game.FindPlayer(1);
 }
 
-consvar_t cv_splitscreen = {"splitscreen","0",CV_CALL,CV_OnOff,SplitScreen_OnChange};
+consvar_t cv_splitscreen = {"splitscreen", "0", CV_CALL, CV_OnOff, SplitScreen_OnChange};
 
 
 

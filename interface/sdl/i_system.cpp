@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.24  2004/11/19 16:51:06  smite-meister
+// cleanup
+//
 // Revision 1.23  2004/10/27 17:37:10  smite-meister
 // netcode update
 //
@@ -665,10 +668,6 @@ void I_Quit()
   if (quitting) return;
   quitting = true;
 
-  //added:16-02-98: when recording a demo, should exit using 'q' key,
-  //        but sometimes we forget and use 'F10'.. so save here too.
-  if (demorecording)
-    game.CheckDemoStatus();
   game.SV_Reset();
   I_ShutdownSound();
   I_ShutdownCD();
@@ -683,11 +682,9 @@ void I_Quit()
 }
 
 
-extern bool demorecording;
 
 void I_Error(char *error, ...)
 {
-  va_list     argptr;
   static bool recursive = false;
 
   if (recursive)
@@ -699,18 +696,15 @@ void I_Error(char *error, ...)
   recursive = true;
 
   // Message first.
+  va_list argptr;
   va_start(argptr,error);
   fprintf(stderr, "Error: ");
   vfprintf(stderr, error, argptr);
   fprintf(stderr, "\n");
   va_end(argptr);
-
   fflush(stderr);
 
   // Shutdown. Here might be other errors.
-  if (demorecording)
-    game.CheckDemoStatus();
-
   //game.net->QuitNetGame();
 
   I_ShutdownSound();

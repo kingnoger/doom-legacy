@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.27  2004/11/19 16:51:05  smite-meister
+// cleanup
+//
 // Revision 1.26  2004/11/18 20:30:13  smite-meister
 // tnt, plutonia
 //
@@ -350,9 +353,6 @@ bool HUD::Responder(event_t *ev)
 
 void HUD::Ticker()
 {
-  if (dedicated)
-    return;
-
   hu_tick++;
   hu_tick &= 7; // currently only to blink chat input cursor
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.25  2004/11/19 16:51:04  smite-meister
+// cleanup
+//
 // Revision 1.24  2004/10/27 17:37:07  smite-meister
 // netcode update
 //
@@ -37,7 +40,6 @@
 
 #include "dstrings.h"
 #include "d_event.h"
-#include "d_main.h"
 #include "g_game.h"
 #include "g_level.h"
 #include "hud.h"
@@ -481,6 +483,7 @@ void F_CastPrint(char* text)
 }
 
 
+void D_PageDrawer(char *lumpname);
 
 void F_CastDrawer(int dummy)
 {

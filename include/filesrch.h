@@ -1,8 +1,6 @@
 #ifndef filesrch_h
 #define filesrch_h 1
 
-//#include "doomdef.h"
-#include "d_netfil.h"
 
 #define MAXSEARCHDEPTH 20
 

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/11/19 16:51:07  smite-meister
+// cleanup
+//
 // Revision 1.10  2004/10/31 22:22:13  smite-meister
 // Hasta la vista, pic_t!
 //
@@ -63,6 +66,7 @@
 #include "g_actor.h"
 #include "g_map.h"
 #include "g_game.h"
+#include "m_swap.h"
 #include "z_zone.h"
 #include "hardware/md3.h"
 

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/11/19 16:51:04  smite-meister
+// cleanup
+//
 // Revision 1.11  2004/10/14 19:35:30  smite-meister
 // automap, bbox_t
 //
@@ -62,6 +65,7 @@
 #include "r_data.h"
 #include "r_defs.h" // for floortypes
 
+#include "m_swap.h"
 #include "m_random.h"
 #include "w_wad.h"
 #include "z_zone.h"

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.27  2004/11/19 16:51:07  smite-meister
+// cleanup
+//
 // Revision 1.26  2004/11/09 20:38:53  smite-meister
 // added packing to I/O structs
 //
@@ -1007,7 +1010,6 @@ void Rend::R_SetupFrame(PlayerInfo *player)
 
   extralight = player->pawn->extralight;
 
-#ifdef FRAGGLESCRIPT
   if (script_camera_on)
     {
       viewactor = script_camera;
@@ -1018,7 +1020,6 @@ void Rend::R_SetupFrame(PlayerInfo *player)
       fixedcolormap_setup = script_camera->fixedcolormap;
     }
   else
-#endif
     {
       // use the player's eyes view
       viewactor = player->pawn;
@@ -1217,11 +1218,7 @@ void Rend::R_RenderPlayerView(int viewport, PlayerInfo *player)
 
   // draw the psprites on top of everything
   //  but does not draw on side views
-  if (!viewangleoffset && cv_psprites.value
-#ifdef FRAGGLESCRIPT
-      && !script_camera_on
-#endif
-      )
+  if (!viewangleoffset && cv_psprites.value && !script_camera_on)
     R_DrawPlayerSprites();
 
   // Check for new console commands.

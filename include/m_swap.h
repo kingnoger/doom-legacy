@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,53 +18,28 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:24  hurdler
-// Initial revision
+// Revision 1.2  2004/11/19 16:51:06  smite-meister
+// cleanup
 //
-// Revision 1.3  2002/07/01 21:00:50  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:26  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.4  2001/04/17 22:26:07  calumr
-// Initial Mac add
-//
-// Revision 1.3  2001/02/24 13:35:20  bpereira
-// no message
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
-//
-//
-// DESCRIPTION:
-//      Endianess handling, swapping 16bit and 32bit.
+// Revision 1.1.1.1  2002/11/16 14:18:24  hurdler
+// Initial C++ version of Doom Legacy
 //
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Endianess handling, byte order in 16 bit and 32 bit numbers.
 
-#ifndef __M_SWAP__
-#define __M_SWAP__
+#ifndef m_swap_h
+#define m_swap_h 1
 
+// WAD files are always little endian.
 
-#ifdef __GNUG__
-#pragma interface
-#endif
-
-
-// Endianess handling.
-// WAD files are stored little endian.
 #ifdef __BIG_ENDIAN__
-
-#define SHORT(x) ((short)( \
+# define SHORT(x) ((short)( \
 (((unsigned short)(x) & (unsigned short)0x00ffU) << 8) \
 | \
 (((unsigned short)(x) & (unsigned short)0xff00U) >> 8) )) \
-
-#define LONG(x) ((int)( \
+# define LONG(x) ((int)( \
 (((unsigned int)(x) & (unsigned int)0x000000ffUL) << 24) \
 | \
 (((unsigned int)(x) & (unsigned int)0x0000ff00UL) <<  8) \
@@ -72,14 +47,10 @@
 (((unsigned int)(x) & (unsigned int)0x00ff0000UL) >>  8) \
 | \
 (((unsigned int)(x) & (unsigned int)0xff000000UL) >> 24) ))
-
 #else
-#define SHORT(x)	(x)
-#define LONG(x)		(x)
+# define SHORT(x) (x)
+# define LONG(x)  (x)
 #endif
-
-
-
 
 
 #endif

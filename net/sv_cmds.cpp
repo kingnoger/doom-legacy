@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/11/19 16:51:06  smite-meister
+// cleanup
+//
 // Revision 1.10  2004/11/09 20:38:53  smite-meister
 // added packing to I/O structs
 //
@@ -69,7 +72,7 @@
 #include "g_pawn.h"
 
 #include "w_wad.h"
-
+#include "hud.h"
 #include "i_system.h"
 
 
@@ -365,7 +368,7 @@ void Command_Reset_f()
 {
   game.SV_Reset();
 
-  if (!dedicated)
+  if (!game.dedicated)
     game.StartIntro();
 }
 
@@ -520,15 +523,18 @@ void Command_NewGame_f()
 	}
     }
 
-  game.SV_SpawnServer();
-  int lump = fc.FindNumForName(COM_Argv(1));
-  if (game.Read_MAPINFO(lump) <= 0)
+  game.SV_SpawnServer(fc.FindNumForName(COM_Argv(1)));
+
+  if (!game.dedicated)
     {
-      CONS_Printf("Bad MAPINFO lump.\n");
-      return;
+      // add local players
+      Consoleplayer.push_back(game.AddPlayer(new PlayerInfo(localplayer)));
+      if (cv_splitscreen.value)
+	Consoleplayer.push_back(game.AddPlayer(new PlayerInfo(localplayer2)));
+
+      hud.ST_Start(Consoleplayer[0]);
     }
 
-  game.ReadResourceLumps(); // SNDINFO etc.
   game.StartGame(skill_t(sk), epi);
 }
 

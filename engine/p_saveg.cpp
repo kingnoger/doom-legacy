@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.38  2004/11/19 16:51:04  smite-meister
+// cleanup
+//
 // Revision 1.37  2004/11/13 22:38:43  smite-meister
 // intermission works
 //
@@ -133,6 +136,7 @@
 #include "t_parse.h"
 #include "m_random.h"
 #include "m_misc.h"
+#include "m_swap.h"
 #include "m_menu.h"
 
 #include "w_wad.h"
@@ -1209,8 +1213,7 @@ int Map::Serialize(LArchive &a)
     }
   a.Write((byte *)ACMapVars, sizeof(ACMapVars));
 
-#ifdef FRAGGLESCRIPT
-  // levelscript contains the map global variables (everything else can be loaded from the WAD)
+  // FS: levelscript contains the map global variables (everything else can be loaded from the WAD)
 
   // count number of variables
   n = 0;
@@ -1285,7 +1288,6 @@ int Map::Serialize(LArchive &a)
     }
 
   // TODO Archive the script camera.
-#endif // FRAGGLESCRIPT
 
   //----------------------------------------------
   // Thinkers (including map objects aka Actors)
@@ -1483,8 +1485,7 @@ int Map::Unserialize(LArchive &a)
     }
   a.Read((byte *)ACMapVars, sizeof(ACMapVars));
 
-#ifdef FRAGGLESCRIPT
-  // restore levelscript
+  // FS: restore levelscript
   // free all the variables in the current levelscript first
   
   for (i=0; i<VARIABLESLOTS; i++)
@@ -1563,7 +1564,6 @@ int Map::Unserialize(LArchive &a)
     }
 
   // TODO Unarchive the script camera
-#endif // FRAGGLESCRIPT
 
   //----------------------------------------------
   // Thinkers
@@ -1850,8 +1850,6 @@ int GameInfo::Serialize(LArchive &a)
 {
   int i, n;
 
-  // gameaction is always ga_nothing here
-
   // treat all enums as ints
   a << demoversion;
   a << int(mode);
@@ -2058,7 +2056,7 @@ void GameInfo::LoadGame(int slot)
   Z_Free(savebuffer); // the compressed buffer is no longer needed
 
   Downgrade(VERSION); // reset the game version
-  SV_Reset();
+  SV_SpawnServer(-1);
 
   // dearchive all the modifications
   if (Unserialize(a))
@@ -2068,7 +2066,6 @@ void GameInfo::LoadGame(int slot)
       return;
     }
 
-  action = ga_nothing;
   state = GS_LEVEL;
 
   if (netgame)
@@ -2093,9 +2090,6 @@ void GameInfo::LoadGame(int slot)
 
 void GameInfo::SaveGame(int savegameslot, char *description)
 {
-  if (action != ga_nothing)
-    return; // not while changing state
-
   CONS_Printf("Saving the game...\n");
 
   LArchive a;

@@ -6,7 +6,6 @@
 #include <string.h>
 
 #include "filesrch.h"
-#include "d_netfil.h"
 
 //
 // filesearch:

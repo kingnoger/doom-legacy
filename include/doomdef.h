@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/11/19 16:51:06  smite-meister
+// cleanup
+//
 // Revision 1.7  2004/09/03 16:28:51  smite-meister
 // bugfixes and ZDoom linedef types
 //
@@ -46,60 +49,34 @@
 #ifndef doomdef_h
 #define doomdef_h 1
 
-#include "m_swap.h"
-
-#ifdef __WIN32__
-# define ASMCALL __cdecl
-#else
-# define ASMCALL
-#endif
-
-#if defined(LINUX)
-# define O_BINARY 0
-#endif
-
-
-// version control
+/// version control
 extern const int  VERSION;
 extern const char VERSIONSTRING[];
 
 
 //#define RANGECHECK              // Uncheck this to compile debugging code
 #define PARANOIA                // do some test that never happens but maybe
-#define LOGMESSAGES             // write message in log.txt (win32 only for the moment)
-
-#define NEWLIGHT                // compute lighting with bsp (in construction)
 //#define OLDWATER                // SoM: Allow old legacy water.
-#define FRAGGLESCRIPT
-
-// =========================================================================
-
 
 #define MAXPLAYERNAME           21
 #define MAXSKINCOLORS           11
 #define SAVESTRINGSIZE          24
 
-// State updates, number of tics / second.
-// NOTE: used to setup the timer rate, see I_StartupTimer().
+/// Frame rate, number of game tics / second.
 #define OLDTICRATE       35
 #define NEWTICRATERATIO   1  // try 4 for 140 fps :)
 #define TICRATE         (OLDTICRATE*NEWTICRATERATIO) 
 
 
+/// development mode (-devparm)
+extern bool devparm;
 
-// commonly used routines - moved here for include convenience
 
-// i_system.h
-void I_Error(char *error, ...);
-
-// console.h
-void CONS_Printf(char *fmt, ...);
-
-// m_misc.h
+/// commonly used routines - moved here for include convenience
+void  I_Error(char *error, ...);
+void  CONS_Printf(char *fmt, ...);
 char *va(char *format, ...);
-char *Z_StrDup (const char *in);
-
-// i_system.c, replace getchar() once the keyboard has been appropriated
-int I_GetKey();
+char *Z_StrDup(const char *in);
+int   I_GetKey();
 
 #endif

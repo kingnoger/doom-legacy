@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.30  2004/11/19 16:51:03  smite-meister
+// cleanup
+//
 // Revision 1.29  2004/11/09 20:38:49  smite-meister
 // added packing to I/O structs
 //
@@ -501,7 +504,7 @@ static musicinfo_t mu = {"\0", 0, 0, NULL, 0};
 // returns true if succesful
 bool SoundSystem::StartMusic(const char *name, bool loop)
 {
-  if (dedicated || nomusic)
+  if (game.dedicated || nomusic)
     return false;
 
   if (mus_playing && !strcmp(mus_playing->name, name))
@@ -822,9 +825,6 @@ void SoundSystem::StopChannel(unsigned cnum)
 // Updates music & sounds, called once a gametic
 void SoundSystem::UpdateSounds()
 {
-  if (dedicated)
-    return;
-    
   // check if relevant consvars have been changed
   if (soundvolume != cv_soundvolume.value)
     SetSoundVolume(cv_soundvolume.value);
