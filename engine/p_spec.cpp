@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.33  2004/09/03 17:28:06  smite-meister
+// bugfixes
+//
 // Revision 1.32  2004/09/03 16:28:50  smite-meister
 // bugfixes and ZDoom linedef types
 //
@@ -761,6 +764,8 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
       return 0;
     }
 
+  CONS_Printf("sec %d: %d  => ", sec-sectors, sp);
+
   if (sp == DOOM_Secret)
     {
       secrets++;
@@ -1013,6 +1018,7 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
     temp -= 20;
     }
   */
+  CONS_Printf("%d\n", sp);
 
   sec->special = sp;
   return sp;

@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.36  2004/09/03 17:28:05  smite-meister
+// bugfixes
+//
 // Revision 1.35  2004/09/03 16:28:49  smite-meister
 // bugfixes and ZDoom linedef types
 //
@@ -1180,8 +1183,6 @@ void PlayerPawn::ProcessSpecialSector(sector_t *sector, bool instantdamage)
 }
 
 
-//
-// was P_PlayerOnSpecial3DFloor
 // Checks to see if a player is standing on or is inside a 3D floor (water)
 // and applies any speicials..
 void PlayerPawn::PlayerOnSpecial3DFloor()
@@ -1237,24 +1238,24 @@ void PlayerPawn::PlayerInSpecialSector()
   sector_t *sec = subsector->sector;
 
   //Fab: keep track of what sector type the player's currently in
-  special = sec->special;
+  specialsector = sec->special;
 
 #ifdef OLDWATER
   //Fab: VERY NASTY hack for water QUICK TEST !!!!!!!!!!!!!!!!!!!!!!!
   if (sec->tag < 0)
     {
-      special = 888;    // no particular value
+      specialsector = 888;    // no particular value
       return;
     }
   else if (levelflats[sec->floorpic].iswater)
     // old water (flat texture)
     {
-      special = 887;
+      specialsector = 887;
       return;
     }
 #endif
 
-  if (!special)     // nothing special, exit
+  if (!specialsector)     // nothing special, exit
     return;
 
   // Falling, not all the way down yet?
@@ -1267,7 +1268,7 @@ void PlayerPawn::PlayerInSpecialSector()
   else if (z != sec->floorheight)
     return;
 
-  int temp = special & SS_DAMAGEMASK >> 5;
+  int temp = specialsector & SS_DAMAGEMASK;
   bool instantdamage = false;
 
   if (temp == SS_damage_32)

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.33  2004/09/03 17:28:06  smite-meister
+// bugfixes
+//
 // Revision 1.32  2004/08/19 19:42:40  smite-meister
 // bugfixes
 //
@@ -134,6 +137,7 @@
 #include "g_actor.h"
 #include "g_pawn.h"
 
+#include "p_spec.h"
 #include "p_enemy.h"
 #include "p_heretic.h"
 #include "sounds.h"
@@ -910,17 +914,19 @@ void PlayerPawn::Die(Actor *inflictor, Actor *source)
   if (!source)
     {
       // environment kills
-      int w = specialsector;      //see p_spec.c
-      char *str;
+      int w = specialsector;
+      char *str = text[TXT_DEATHMSG_SPECUNKNOW];
 
-      if (w == 5)
-	str = text[TXT_DEATHMSG_HELLSLIME];
-      else if (w == 7)
-	str = text[TXT_DEATHMSG_NUKE];
-      else if (w == 16 || w == 4)
-	str = text[TXT_DEATHMSG_SUPHELLSLIME];
-      else
-	str = text[TXT_DEATHMSG_SPECUNKNOW];
+      if (w & SS_DAMAGEMASK)
+	{
+	  sector_t *sec = subsector->sector;
+	  if (sec->damage <= 5)
+	    str = text[TXT_DEATHMSG_NUKE];
+	  else if (sec->damage <= 10)
+	    str = text[TXT_DEATHMSG_HELLSLIME];
+	  else
+	    str = text[TXT_DEATHMSG_SUPHELLSLIME];
+	}
 
       if (player == consoleplayer || player == consoleplayer2)
 	CONS_Printf(str, player->name.c_str());
@@ -946,6 +952,23 @@ void PlayerPawn::Die(Actor *inflictor, Actor *source)
       if (automap.active)
 	automap.Close();
     }
+
+
+  // (since A_Fall is not called for PlayerPawns)
+  // actor is on ground, it can be walked over
+  if (!cv_solidcorpse.value)
+    flags &= ~MF_SOLID;
+  else
+    {
+      height >>= 2;
+      radius -= (radius >> 4);
+      health = maxhealth >> 1;
+    }
+
+  flags |= MF_CORPSE|MF_DROPOFF;
+
+  // So change this if corpse objects
+  // are meant to be obstacles.
 
   // TODO Player flame and ice death
   // SetState(S_PLAY_FDTH1);
