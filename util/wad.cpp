@@ -149,16 +149,18 @@ bool Wad::Load(const char *fname, FILE *str, int num)
       p->size   = LONG(p->size);
       // TEST padding of lumpnames
       int j;
+      bool warn = false;
       for (j=0; j<8; j++)
 	if (p->name[j] == 0)
 	  {
 	    for (j++; j<8; j++)
 	      if (p->name[j] != 0)
 		{
-		  CONS_Printf("Warning: Lumpname %s not padded with zeros!\n", p->name);
 		  p->name[j] = 0; // fix it
-		  break;
+		  warn = true;
 		}
+	    if (warn)
+	      CONS_Printf("Warning: Lumpname %s not padded with zeros!\n", p->name);
 	    break;
 	  }
     }
