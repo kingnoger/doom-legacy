@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2002 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/03/15 20:07:20  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.6  2003/03/08 16:07:14  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -132,55 +135,48 @@ class PlayerPawn;
 
 typedef enum
 {
-  MF_SPECIAL          = 0x0001, // Call P_SpecialThing when touched
-  MF_SOLID            = 0x0002, // Blocks
-  MF_SHOOTABLE        = 0x0004, // Can be hit
-  MF_NOSECTOR         = 0x0008, // Don't link to sector (invisible but touchable)
-  MF_NOBLOCKMAP       = 0x0010, // Don't link to blockmap (inert but displayable)
+  // physical properties
+  MF_NOSECTOR         = 0x0001, // Don't link to sector (invisible but touchable)
+  MF_NOBLOCKMAP       = 0x0002, // Don't link to blockmap (inert but displayable)
+  MF_SOLID            = 0x0004, // Blocks
+  MF_SHOOTABLE        = 0x0008, // Can be hit
+  MF_NOCLIPLINE       = 0x0010, // Does not clip against lines (walls)
+  MF_NOCLIPTHING      = 0x0020, // Not blocked by other Actors. (chasecam, for example)
+  // game mechanics
+  MF_NOGRAVITY        = 0x0040, // Does not feel gravity
+  MF_FLOAT            = 0x0080, // Active floater, can move freely in air (cacodemons etc.)
+  MF_NOTRIGGER        = 0x0100, // Can not trigger linedefs (mainly missiles, chasecam)
+  MF_DROPOFF          = 0x0200, // This allows jumps from high places.
+  // appearance
+  MF_SHADOW           = 0x0400, // Partial invisibility (spectre). Makes targeting harder.
+  MF_ALTSHADOW        = 0x0800, // Alternate fuzziness
+  MF_NOBLOOD          = 0x1000, // Don't bleed when shot (use puff) (furniture)
+  MF_NOSPLASH         = 0x2000, // Does not cause a splash when hitting water
+  // spawning
+  MF_SPAWNCEILING     = 0x4000, // Spawned hanging from the ceiling
+  MF_NOTDMATCH        = 0x8000, // Not spawned in DM (keycards etc.)
+  MF_COUNTKILL       = 0x10000, // On kill, count this enemy object towards intermission kill total. Happy gathering.
+  MF_COUNTITEM       = 0x20000, // On picking up, count this item object towards intermission item total.
+  MF_NORESPAWN       = 0x40000, // Will not respawn after being picked up. Pretty similar to MF_DROPPED?
+  // classification
+  MF_MISSILE         = 0x80000, // Player missiles as well as fireballs. Don't hit same species, explode on block.
+  MF_PICKUP         = 0x100000, // Can/will pick up items. (players)
+  MF_SPECIAL        = 0x200000, // Call TouchSpecialThing when touched
+  MF_NOTMONSTER     = 0x400000, // *Not affected by ML_BLOCKMONSTERS lines (PlayerPawns etc.)
+  // misc (usually set just once)
+  MF_CORPSE         = 0x800000, // *Acts like a corpse, falls down stairs etc.
+  MF_DROPPED       = 0x1000000, // *Dropped by a monster
+  MF_AMBUSH        = 0x2000000, // *Not to be activated by sound, deaf monster.
 
-  MF_AMBUSH           = 0x0020, // Not to be activated by sound, deaf monster.
-  MF_JUSTHIT          = 0x0040, // Will try to attack right back.
-  MF_JUSTATTACKED     = 0x0080, // Will take at least one step before attacking.
-
-  MF_SPAWNCEILING     = 0x0100, // Spawned hanging from the ceiling
-  MF_NOGRAVITY        = 0x0200, // Does not feel gravity
-  MF_DROPOFF          = 0x0400, // This allows jumps from high places.
-
-  MF_PICKUP           = 0x0800, // Can/will pick up items. (players)
-  MF_NOCLIP           = 0x1000, // Does not clip against anything
-  //MF_SLIDE            = 0x2000,   // Player: keep info about sliding along walls. (unused)
-  MF_FLOAT            = 0x4000, // Active floater, can move freely in air (cacodemons etc.)
-  MF_TELEPORT         = 0x8000, // Don't cross lines or check heights in teleport move. (unused?)
-  MF_MISSILE          = 0x10000, // Player missiles as well as fireballs of various kinds.
-  // Don't hit same species, explode on block.
-
-  MF_DROPPED          = 0x20000, // Dropped by a monster
-  MF_SHADOW           = 0x40000, // Partial invisibility (spectre). Makes targeting harder.
-  MF_NOBLOOD          = 0x80000, // Don't bleed when shot (use puff) (furniture)
-  MF_CORPSE           = 0x100000, // Acts like a corpse, falls down stairs etc.
-  MF_INFLOAT          = 0x200000, // Floating move in progress, don't auto float to target's height.
-
-  MF_COUNTKILL        = 0x400000, // On kill, count this enemy object towards intermission kill total. Happy gathering.
-  MF_COUNTITEM        = 0x800000, // On picking up, count this item object towards intermission item total.
-  MF_SKULLFLY         = 0x01000000, // A charging skull. Special physics apply.
-
-  MF_NOTDMATCH        = 0x02000000, // Not spawned in DM (keycards etc.)
-
-  MF_NOTMONSTER       = 0x04000000, // Not affected by ML_BLOCKMONSTERS lines (PlayerPawns etc.)
-  MF_NORESPAWN        = 0x08000000, // Will not respawn after being picked up. Pretty similar to MF_DROPPED?
-  MF_NOSPLASH         = 0x10000000, // Does not cause a splash when hitting water
-  MF_NOTRIGGER        = 0x20000000, // Can not trigger linedefs (mainly missiles, chasecam)
-
-  MF_NOCLIPTHING      = 0x40000000,  // Not blocked by other Actors. (chasecam, for example)
-  //TODO change MF_NOCLIP to MF_NOCLIPLINE, update info.cpp, PIT functions...
-
-  MF_FLOORHUGGER      = 0x80000000 // Can not leave the floor
-
+  //MF_SLIDE           // Player: keep info about sliding along walls. (unused)
+  //MF_FLOORHUGGER     // Can not leave the floor (unused)
 } mobjflag_t;
 
 // More semi-permanent flags. Mostly came with Heretic.
 
 typedef enum {
+  // Note: the Hexen flag MF2_BLASTED is not implemented. It is used to show that the thing is
+  // being thrown by a blast wave...
   MF2_LOGRAV         =     0x00000001,      // alternate gravity setting
   MF2_WINDTHRUST     =     0x00000002,      // gets pushed around by the wind specials
   MF2_FLOORBOUNCE    =     0x00000004,      // bounces off the floor
@@ -202,32 +198,40 @@ typedef enum {
   MF2_TELESTOMP      =     0x00040000,      // mobj can stomp another
   MF2_FLOATBOB       =     0x00080000,      // use float bobbing z movement
   MF2_DONTDRAW       =     0x00100000,      // don't generate a vissprite
-        
+  MF2_IMPACT	     =     0x00200000,      // an MF_MISSILE mobj can activate SPAC_IMPACT
+  MF2_PUSHWALL	     =     0x00400000,      // mobj can push walls
+  MF2_MCROSS		 = 0x00800000,	    // can activate monster cross lines
+  MF2_PCROSS		 = 0x01000000,	    // can activate projectile cross lines
+  MF2_CANTLEAVEFLOORPIC  = 0x02000000,	    // stay within a certain floor type
+  MF2_NONSHOOTABLE	 = 0x04000000,      // mobj is totally non-shootable, but still considered solid
+  MF2_INVULNERABLE	 = 0x08000000,	    // mobj is invulnerable
+  MF2_DORMANT		 = 0x10000000,	    // thing is dormant
+  MF2_ICEDAMAGE		 = 0x20000000,	    // does ice damage
+  MF2_SEEKERMISSILE	 = 0x40000000,	    // is a seeker (for reflection)
+  MF2_REFLECTIVE	 = 0x80000000
 } mobjflag2_t;
 
-// Legacy-specific extra flags. They describe the transient state of the Actor.
+// Extra flags. They describe the transient state of the Actor.
 
 typedef enum
 {
-  // The mobj stands on solid floor (not on another mobj or in air)
-  MF_ONGROUND          = 1,
-
-  // The mobj just hit the floor while falling, this is cleared on next frame
+  // location
+  MFE_ONGROUND      = 0x0001,  // The mobj stands on solid floor (not on another mobj or in air)
+  MFE_JUSTHITFLOOR  = 0x0002,  // just hit the floor while falling, cleared on next frame
   // (instant damage in lava/slime sectors to prevent jump cheat..)
-  MF_JUSTHITFLOOR      = 2,
+  MFE_TOUCHWATER    = 0x0004,  // touches water.
+  MFE_UNDERWATER    = 0x0008,  // waist below water surface (swimming is possible)
+  // active physics mode
+  MFE_SWIMMING      = 0x0010,  // swimming physics used (different gravity)
+  MFE_INFLOAT       = 0x0020,  // Floating move in progress, don't auto float to target's height.
+  MFE_SKULLFLY      = 0x0040,  // A charging skull.
+  // combat
+  MFE_JUSTHIT       = 0x0080,  // Got hit, will try to attack right back.
+  MFE_JUSTATTACKED  = 0x0100,  // Will take at least one step before attacking again.
 
-  // The mobj stands in a sector with water, and touches the surface
-  // this bit is set once and for all at the start of mobjthinker
-  MF_TOUCHWATER        = 4,
-
-  // The mobj stands in a sector with water, and his waist is BELOW the water surface
-  // (for player, allows swimming up/down)
-  MF_UNDERWATER        = 8,
-  // Set by P_MovePlayer() to disable gravity add in P_MobjThinker() ( for gameplay )
-  MF_SWIMMING          = 16,
-  // used for client prediction code, player can't be blocked in z by walls
+  MFE_TELEPORT      = 0x1000, // *Don't cross lines or check heights in teleport move. (unused?)
+  //MFE_NOZCHECKING ,  // used for client prediction code, player can't be blocked in z by walls
   // it is set temporarely when player follow the spirit
-  MF_NOZCHECKING       = 32,
 } mobjeflag_t;
 
 
@@ -269,7 +273,7 @@ public:
   mapthing_t *spawnpoint;
 
 public:
-  // Info for drawing: position.
+  // position.
   fixed_t x, y, z;
 
   // was: angle_t angle, aiming, (nothing)
@@ -278,7 +282,7 @@ public:
   angle_t  aiming; // up-down, updated with cmd->aiming.
 
   // Momentums, used to update position. Actually velocities.
-  fixed_t px, py, pz; // was momx...
+  fixed_t px, py, pz;
 
   // For movement checking.
   fixed_t mass;
@@ -288,12 +292,17 @@ public:
   int  health;
 
   int  flags;
-  int  eflags; //added:28-02-98: extra flags see above
-  int  flags2; // heretic stuff
+  int  flags2;
+  int  eflags;
 
+  // general storage, can hold pointers, ints etc. 
   int  special1;
   int  special2;
 
+  // Hexen fields
+  short	tid;     // thing identifier
+  byte	special; // special type
+  byte	args[5]; // special arguments
 
   // new: owner of this Actor. For example, for missiles this is the shooter.
   Actor *owner;
@@ -302,10 +311,6 @@ public:
   // also the target for missiles.
   Actor *target;
 
-  // Former meaning: Thing being chased/attacked for tracers.
-  // Now: owned Actor.
-  Actor *tracer;
-
   // Reaction time: if non 0, don't attack yet.
   // Used by player to freeze a bit after teleporting.
   int  reactiontime;
@@ -313,6 +318,8 @@ public:
   //SoM: Friction.
   float friction; 
   float movefactor;
+
+  fixed_t floorclip; // cut this amount from legs (deep water illusion) (Hexen)
 
 public:
   virtual thinkertype_e Type() {return tt_actor;}; // "name-tag" function
@@ -360,8 +367,8 @@ public:
   fixed_t AimLineAttack(angle_t ang, fixed_t distance);
   void    LineAttack(angle_t ang, fixed_t distance, fixed_t slope,
 		     int damage, int dtype = dt_normal);
-  void    RadiusAttack(Actor *culprit, int damage, int dtype = dt_normal);
-
+  void  RadiusAttack(Actor *culprit, int damage, int distance = -1,
+		     int dtype = dt_normal, bool downer = true);
   // in p_maputl.cpp
   void SetPosition();
   void UnsetPosition();
@@ -416,15 +423,17 @@ public:
   void   ExplodeMissile();
   void   FloorBounceMissile();
 
-  DActor *SpawnMissileAngle(mobjtype_t type, angle_t angle, fixed_t momz);
+  DActor *SpawnMissileAngle(mobjtype_t type, angle_t angle, fixed_t vz = 0);
 
   // in p_enemy.cpp
   bool CheckMeleeRange();
+  bool CheckMissileRange();
   bool LookForPlayers(bool allaround);
   bool LookForMonsters();
 
   // in p_hpspr.cpp
   void BlasterMissileThink();
+  void XBlasterMissileThink();
 
   // in p_henemy.cpp
   void DSparilTeleport();

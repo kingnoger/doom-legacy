@@ -113,20 +113,19 @@ bool GameInfo::Downgrade(int version)
   // smoke trails for skull head attack since v1.25
   if (version<125)
     {
-      states[S_ROCKET].action.acv = NULL;
+      states[S_ROCKET].action = NULL;
       
-      states[S_SKULL_ATK3].action.acv = NULL;
-      states[S_SKULL_ATK4].action.acv = NULL;
+      states[S_SKULL_ATK3].action = NULL;
+      states[S_SKULL_ATK4].action = NULL;
     }
   else
     {
       //activate rocket trails by default
-      //        states[S_ROCKET].action.acv     = A_SmokeTrailer;
-      states[S_ROCKET].action.acp1     = (void (*)(void *))A_SmokeTrailer;
+      states[S_ROCKET].action     = A_SmokeTrailer;
       
       // smoke trails behind the skull heads
-      states[S_SKULL_ATK3].action.acp1 = (void (*)(void *))A_SmokeTrailer;
-      states[S_SKULL_ATK4].action.acp1 = (void (*)(void *))A_SmokeTrailer;
+      states[S_SKULL_ATK3].action = A_SmokeTrailer;
+      states[S_SKULL_ATK4].action = A_SmokeTrailer;
     }
 
 
@@ -134,7 +133,7 @@ bool GameInfo::Downgrade(int version)
     {
     case 109:
       // disable rocket trails
-      states[S_ROCKET].action.acv = NULL; //NULL like in Doom2 v1.9
+      states[S_ROCKET].action = NULL; //NULL like in Doom2 v1.9
       
       // Boris : for older demos, initalise the new skincolor value
       //         also disable the new preferred weapons order.
@@ -465,7 +464,7 @@ no_demo:
   //displayplayer == consoleplayer
   int j = *demo_p++;
   players.clear();
-  PlayerInfo *pl; 
+  //PlayerInfo *pl; 
 
   //added:11-01-98:
   //  support old v1.9 demos with ONLY 4 PLAYERS ! Man! what a shame!!!

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/03/15 20:07:21  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.4  2003/02/16 16:54:52  smite-meister
 // L2 sound cache done
 //
@@ -28,36 +31,6 @@
 //
 // Revision 1.1.1.1  2002/11/16 14:18:38  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.11  2002/09/20 22:41:36  vberghol
-// Sound system rewritten! And it workscvs update
-//
-// Revision 1.10  2002/08/27 11:51:49  vberghol
-// Menu rewritten
-//
-// Revision 1.9  2002/08/21 16:58:38  vberghol
-// Version 1.41 Experimental compiles and links!
-//
-// Revision 1.8  2002/08/20 13:57:01  vberghol
-// sdfgsd
-//
-// Revision 1.7  2002/08/19 18:06:46  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.6  2002/08/11 17:16:52  vberghol
-// ...
-//
-// Revision 1.5  2002/07/18 19:16:42  vberghol
-// renamed a few files
-//
-// Revision 1.4  2002/07/12 19:21:41  vberghol
-// hop
-//
-// Revision 1.3  2002/07/01 21:01:07  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:36  vberghol
-// Version 133 Experimental!
 //
 // Revision 1.13  2001/07/16 22:35:40  bpereira
 // - fixed crash of e3m8 in heretic
@@ -340,7 +313,7 @@ static void readsound(MYFILE* f,int num,char *savesfxnames[])
 	    else value=(value+8)/8;
 
 	    if(value>=-1 && value < NUMSFX-1)
-	      S_sfx[num].name=savesfxnames[value+1];
+	      S_sfx[num].lumpname=savesfxnames[value+1];
 	    else
 	      deh_error("Sound %d : offset out of bound\n",num);
 	  }
@@ -375,8 +348,8 @@ static void readtext(MYFILE* f,int len1,int len2,char *savesfxname[],char *saves
     for(i=0;i<NUMSFX;i++)
       if(!strncmp(savesfxname[i],s,len1))
       {
-        strncpy(S_sfx[i].name,&(s[len1]),len2);
-        S_sfx[i].name[len2]='\0';
+        strncpy(S_sfx[i].lumpname,&(s[len1]),len2);
+        S_sfx[i].lumpname[len2]='\0';
         return;
       }
     // sprite table
@@ -480,12 +453,12 @@ static void readweapon(MYFILE *f,int num)
       word=strtok(s," ");
 
            if(!strcmp(word,"Ammo"))       wpnlev1info[num].ammo      =(ammotype_t)value;
-      else if(!strcmp(word,"Deselect"))   wpnlev1info[num].upstate   =(statenum_t)value;
-      else if(!strcmp(word,"Select"))     wpnlev1info[num].downstate =(statenum_t)value;
-      else if(!strcmp(word,"Bobbing"))    wpnlev1info[num].readystate=(statenum_t)value;
+      else if(!strcmp(word,"Deselect"))   wpnlev1info[num].upstate   =(weaponstatenum_t)value;
+      else if(!strcmp(word,"Select"))     wpnlev1info[num].downstate =(weaponstatenum_t)value;
+      else if(!strcmp(word,"Bobbing"))    wpnlev1info[num].readystate=(weaponstatenum_t)value;
       else if(!strcmp(word,"Shooting"))   wpnlev1info[num].atkstate  =
-					    wpnlev1info[num].holdatkstate = (statenum_t)value;
-      else if(!strcmp(word,"Firing"))     wpnlev1info[num].flashstate=(statenum_t)value;
+					    wpnlev1info[num].holdatkstate = (weaponstatenum_t)value;
+      else if(!strcmp(word,"Firing"))     wpnlev1info[num].flashstate=(weaponstatenum_t)value;
       else deh_error("Weapon %d : unknow word '%s'\n",num,word);
     }
   } while(s[0]!='\n' && !myfeof(f));
@@ -694,7 +667,7 @@ void DEH_LoadDehackedFile(MYFILE* f)
   char       *word,*word2;
   int        i;
   // do a copy of this for cross references probleme
-  actionf_t  saveactions[NUMSTATES];
+  actionf_p1  saveactions[NUMSTATES];
   char       *savesprnames[NUMSPRITES];
   char       *savesfxnames[NUMSFX];
 
@@ -705,7 +678,7 @@ void DEH_LoadDehackedFile(MYFILE* f)
   for(i=0;i<NUMSPRITES;i++)
       savesprnames[i]=sprnames[i];
   for(i=0;i<NUMSFX;i++)
-      savesfxnames[i]=S_sfx[i].name;
+      savesfxnames[i]=S_sfx[i].lumpname;
 
   // it don't test the version of doom
   // and version of dehacked file

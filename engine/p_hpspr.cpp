@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/03/15 20:07:16  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.4  2003/03/08 16:07:07  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -66,11 +69,9 @@
 
 #define FLAME_THROWER_TICS      (10*TICRATE)
 
-extern  consvar_t  cv_deathmatch;
-
+extern consvar_t  cv_deathmatch;
+extern mobjtype_t PuffType;
 extern fixed_t bulletslope; // this suck so badly.
-
-mobjtype_t PuffType;
 
 
 //---------------------------------------------------------------------------
@@ -134,36 +135,31 @@ void Map::PlaceWeapons()
   SpawnDActor(nx, ny, ONFLOORZ, MT_WMACE);
 }
 
-//---------------------------------------------------------------------------
-//
-// was P_ActivateBeak
-//
-//---------------------------------------------------------------------------
 
-void PlayerPawn::ActivateBeak()
+
+void PlayerPawn::ActivateMorphWeapon()
 {
   pendingweapon = wp_nochange;
-  readyweapon = wp_beak;
   psprites[ps_weapon].sy = WEAPONTOP;
-  SetPsprite(ps_weapon, S_BEAKREADY);
+
+  if (game.mode == gm_hexen)
+    {
+      readyweapon = wp_snout;
+      SetPsprite(ps_weapon, S_SNOUTREADY);
+    }
+  else
+    {
+      readyweapon = wp_beak;
+      SetPsprite(ps_weapon, S_BEAKREADY);
+    }
 }
 
-//---------------------------------------------------------------------------
-//
-// PROC P_PostChickenWeapon
-//
-//---------------------------------------------------------------------------
-
-void P_PostChickenWeapon(PlayerPawn *p, weapontype_t weapon)
+void PlayerPawn::PostMorphWeapon(weapontype_t weapon)
 {
-  if (weapon == wp_beak)
-    { // Should never happen
-      weapon = wp_staff;
-    }
-  p->pendingweapon = wp_nochange;
-  p->readyweapon = weapon;
-  p->psprites[ps_weapon].sy = WEAPONBOTTOM;
-  p->SetPsprite(ps_weapon, statenum_t(wpnlev1info[weapon].upstate));
+  pendingweapon = wp_nochange;
+  readyweapon = weapon;
+  psprites[ps_weapon].sy = WEAPONBOTTOM;
+  SetPsprite(ps_weapon, weaponinfo[weapon].upstate);
 }
 
 //---------------------------------------------------------------------------
@@ -220,8 +216,7 @@ void A_BeakReady(PlayerPawn *p, pspdef_t *psp)
 void A_BeakRaise(PlayerPawn *p, pspdef_t *psp)
 {
   psp->sy = WEAPONTOP;
-  p->SetPsprite(ps_weapon,
-	       statenum_t(wpnlev1info[p->readyweapon].readystate));
+  p->SetPsprite(ps_weapon, wpnlev1info[p->readyweapon].readystate);
 }
 
 //****************************************************************************
@@ -245,7 +240,7 @@ void A_BeakAttackPL1(PlayerPawn *p, pspdef_t *psp)
   damage = 1+(P_Random()&3);
   angle = p->angle;
   slope = p->AimLineAttack(angle, MELEERANGE);
-  //      PuffType = MT_BEAKPUFF;
+  PuffType = MT_BEAKPUFF;
   p->LineAttack(angle, MELEERANGE, slope, damage);
   if(linetarget)
     {
@@ -449,8 +444,13 @@ void A_FireBlasterPL2(PlayerPawn *p, pspdef_t *psp)
 {
   p->ammo[am_blaster] -= cv_deathmatch.value ? USE_BLSR_AMMO_1 : USE_BLSR_AMMO_2;
 
-  p->SpawnPlayerMissile(MT_BLASTERFX1);
-  //if (mo) mo->thinker.function.acp1 = (actionf_p1)P_BlasterMobjThinker;
+  DActor *m = p->SpawnPlayerMissile(MT_BLASTERFX1);
+  if (m)
+    { // Ultra-fast ripper spawning missile
+      m->x += (m->px>>3)-(m->px>>1);
+      m->y += (m->py>>3)-(m->py>>1);
+      m->z += (m->pz>>3)-(m->pz>>1);
+    }
 
   S_StartSound(p, sfx_blssht);
 }
@@ -1273,5 +1273,5 @@ void A_GauntletAttack(PlayerPawn *p, pspdef_t *psp)
       else
 	p->angle += ANG90/20;
     }
-  p->flags |= MF_JUSTATTACKED;
+  p->eflags |= MFE_JUSTATTACKED;
 }

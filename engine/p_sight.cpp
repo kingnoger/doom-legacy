@@ -18,35 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:03  hurdler
-// Initial revision
+// Revision 1.2  2003/03/15 20:07:17  smite-meister
+// Initial Hexen compatibility!
 //
-// Revision 1.6  2002/08/11 17:16:50  vberghol
-// ...
-//
-// Revision 1.5  2002/08/06 13:14:24  vberghol
-// ...
-//
-// Revision 1.4  2002/07/23 19:21:43  vberghol
-// fixed up to p_enemy.cpp
-//
-// Revision 1.3  2002/07/01 21:00:21  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:16  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.4  2001/06/10 21:16:01  bpereira
-// no message
-//
-// Revision 1.3  2001/01/25 22:15:44  bpereira
-// added heretic support
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
+// Revision 1.1.1.1  2002/11/16 14:18:03  hurdler
+// Initial C++ version of Doom Legacy
 //
 //
 // DESCRIPTION:
@@ -319,20 +295,14 @@ bool Map::CrossBSPNode(int bspnum)
 //
 bool Map::CheckSight(Actor *t1, Actor *t2)
 {
-  int         s1;
-  int         s2;
-  int         pnum;
-  int         bytenum;
-  int         bitnum;
-
   // First check for trivial rejection.
 
   // Determine subsector entries in REJECT table.
-  s1 = (t1->subsector->sector - sectors);
-  s2 = (t2->subsector->sector - sectors);
-  pnum = s1*numsectors + s2;
-  bytenum = pnum>>3;
-  bitnum = 1 << (pnum&7);
+  int s1 = (t1->subsector->sector - sectors);
+  int s2 = (t2->subsector->sector - sectors);
+  int pnum = s1*numsectors + s2;
+  int bytenum = pnum>>3;
+  int bitnum = 1 << (pnum&7);
 
   // Check in REJECT table.
   if (rejectmatrix[bytenum]&bitnum)

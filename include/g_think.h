@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/03/15 20:07:21  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.3  2002/12/23 23:19:37  smite-meister
 // Weapon groups, MAPINFO parser, WAD2+WAD3 support added!
 //
@@ -84,19 +87,6 @@
 // pusher_t: T_Pusher
 
 // discrepancies towards a new-class -style mobj creation: P_BlasterMobjThinker (mobj_t)
-
-
-// Experimental stuff.
-typedef void (*actionf_v)(void);
-typedef void (*actionf_p1)(void*);
-typedef void (*actionf_p2)(void*, void*);
-
-union actionf_t
-{
-  actionf_v     acv;
-  actionf_p1    acp1;
-  actionf_p2    acp2;
-};
 
 
 class Map;

@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.7  2003/03/15 20:07:20  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.6  2003/02/23 22:49:31  smite-meister
 // FS is back! L2 cache works.
 //
@@ -57,6 +60,7 @@ typedef bool (*traverser_t) (intercept_t *in);
 struct script_t;
 struct runningscript_t;
 
+struct acsInfo_t;
 
 // new class for maps
 // note! a map doesn't need to know where it fits in the larger game! so no last, next pointers
@@ -69,6 +73,8 @@ public:
   string filename, mapname; // name of the map file, map lump
   int lumpnum;              // lumpnum of the separator beginning the map
   MapInfo *info;
+
+  bool hexen_format;
 
   // geometry  
   int             numvertexes;
@@ -95,8 +101,15 @@ public:
   int             nummapthings;
   mapthing_t*     mapthings;
 
-  // the mother of all scripts (in the map)
+  // the mother of all FS scripts (in the map)
   script_t *levelscript;
+
+  // ACS script data
+  int   ACScriptCount;
+  byte *ActionCodeBase;
+  acsInfo_t *ACSInfo;
+  int ACStringCount;
+  char **ACStrings;
 
 
   // BLOCKMAP
@@ -164,7 +177,7 @@ public:
   // Both the head and tail of the thinker list.
   Thinker thinkercap;
 
-  // currently active scripts
+  // currently active FS scripts
   runningscript_t *runningscripts; // linked list
 
   // currently active dynamic geometry elements, based on BOOM code
@@ -211,7 +224,7 @@ public:
   bool CheckRespawnSpot(PlayerInfo *p, mapthing_t *mthing);
 
   void BossDeath(const DActor *mo);
-  void Massacre();
+  int  Massacre();
   void ExitMap(int exit);
 
   void RespawnSpecials();
@@ -247,6 +260,7 @@ public:
   void LoadSideDefs(int lump);
   void LoadSideDefs2(int lump);
   void LoadBlockMap(int lump);
+  void LoadACScripts(int lump);
   void GroupLines();
   void SetupSky();
 
@@ -286,6 +300,7 @@ public:
 
   void AddFakeFloor(sector_t* sec, sector_t* sec2, line_t* master, int flags);
 
+  bool ExecuteLineSpecial(int special, byte *args, line_t *line, int side, Actor *mo);
   void CrossSpecialLine(int linenum, int side, Actor *thing);
   void ActivateCrossedLine(line_t *line, int side, Actor *thing);
   void ShootSpecialLine(Actor *thing, line_t *line);
@@ -365,7 +380,21 @@ public:
   subsector_t* R_IsPointInSubsector(fixed_t x, fixed_t y);
   void HWR_SearchLightsInMobjs();
 
-  // scripting
+  // ACS scripting
+  void StartOpenACS(int number, int infoIndex, int *address);
+  bool StartACS(int number, byte *args, Actor *activator, line_t *line, int side);
+  bool StartLockedACS(line_t *line, byte *args, PlayerPawn *p, int side);
+  bool TerminateACS(int number);
+  bool SuspendACS(int number);
+
+  int GetACSIndex(int number);
+
+  void TagFinished(int tag);
+  bool TagBusy(int tag);
+  void PolyobjFinished(int po);
+  void ScriptFinished(int number);
+
+  // FS scripting
   void T_ClearScripts();
   void T_PreprocessScripts();
   void T_RunScript(int n);

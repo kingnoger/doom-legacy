@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/03/15 20:07:15  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.3  2003/03/08 16:07:06  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -187,7 +190,7 @@ void A_ImpMsAttack(DActor *actor)
       return;
     }
   dest = actor->target;
-  actor->flags |= MF_SKULLFLY;
+  actor->eflags |= MFE_SKULLFLY;
   S_StartSound(actor, actor->info->attacksound);
   A_FaceTarget(actor);
   an = actor->angle >> ANGLETOFINESHIFT;
@@ -285,7 +288,7 @@ void A_ImpXDeath2(DActor *actor)
 //
 // was P_UpdateChicken
 //
-// Returns true if the chicken morphs.
+// Returns true if the monster morphs back.
 //
 //----------------------------------------------------------------------------
 
@@ -298,6 +301,17 @@ bool DActor::UpdateMorph(int tics)
 
   // undo the morph
   mobjtype_t moType = mobjtype_t(special2);
+ 
+  switch (moType)
+    {
+    case MT_WRAITHB:	   // These must remain morphed
+    case MT_SERPENT:
+    case MT_SERPENTLEADER:
+    case MT_MINOTAUR:
+      return false;
+    default:
+      break;
+    }
 
   DActor *mo = mp->SpawnDActor(x, y, z, moType);
   
@@ -308,7 +322,7 @@ bool DActor::UpdateMorph(int tics)
       return false;
     }
 
-  // fits! remove the chicken
+  // fits! remove the morph
   SetState(S_FREETARGMOBJ);
 
   DActor *fog = mp->SpawnDActor(x, y, z+TELEFOGHEIGHT, MT_TFOG);
@@ -316,6 +330,10 @@ bool DActor::UpdateMorph(int tics)
 
   mo->angle = angle;
   mo->target = target;
+  //memcpy(mo->args, args, 5);
+  //P_InsertMobjIntoTIDList(mo, oldMonster.tid);
+  // mo->tid = tid;
+  // mo->special = special;
 
   return true;
 }
@@ -822,7 +840,7 @@ void A_MinotaurDecide(DActor *actor)
     { // Charge attack
       // Don't call the state function right away
       actor->SetState(S_MNTR_ATK4_1, false);
-      actor->flags |= MF_SKULLFLY;
+      actor->eflags |= MFE_SKULLFLY;
       A_FaceTarget(actor);
       angle = actor->angle>>ANGLETOFINESHIFT;
       actor->px = FixedMul(MNTR_CHARGE_SPEED, finecosine[angle]);
@@ -862,7 +880,7 @@ void A_MinotaurCharge(DActor *actor)
     }
   else
     {
-      actor->flags &= ~MF_SKULLFLY;
+      actor->eflags &= ~MFE_SKULLFLY;
       actor->SetState(actor->info->seestate);
     }
 }
@@ -1256,7 +1274,7 @@ void A_WizAtk3(DActor *actor)
 
 //----------------------------------------------------------------------------
 //
-// PROC A_Scream
+// PROC A_HScream
 //
 //----------------------------------------------------------------------------
 
@@ -1465,31 +1483,6 @@ void A_HBossDeath(DActor *actor)
 
 //----------------------------------------------------------------------------
 //
-// PROC A_ESound
-//
-//----------------------------------------------------------------------------
-
-void A_ESound(DActor *mo)
-{
-  int sound;
-
-  switch(mo->type)
-    {
-    case MT_SOUNDWATERFALL:
-      sound = sfx_waterfl;
-      break;
-    case MT_SOUNDWIND:
-      sound = sfx_wind;
-      break;
-    default:
-      sound = sfx_None;
-      break;
-    }
-  S_StartSound(mo, sound);
-}
-
-//----------------------------------------------------------------------------
-//
 // PROC A_SpawnTeleGlitter
 //
 //----------------------------------------------------------------------------
@@ -1648,32 +1641,40 @@ void A_VolcBallImpact(DActor *ball)
 
 //----------------------------------------------------------------------------
 //
-// PROC A_SkullPop
+// A_SkullPop
 //
 //----------------------------------------------------------------------------
-/*
+
 void A_SkullPop(DActor *actor)
 {
-  player_t *player;
+  if (actor->Type() != Thinker::tt_ppawn)
+    return;
 
-  actor->flags &= ~MF_SOLID;
-  DActor *mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z+48*FRACUNIT,
-			  MT_BLOODYSKULL);
-  //mo->target = actor;
+  PlayerPawn *p = (PlayerPawn *)actor;
+
+  p->flags &= ~MF_SOLID;
+  DActor *mo = p->mp->SpawnDActor(p->x, p->y, p->z+48*FRACUNIT, MT_BLOODYSKULL);
+
+  mo->owner = p;
   mo->px = P_SignedRandom()<<9;
   mo->py = P_SignedRandom()<<9;
   mo->pz = FRACUNIT*2+(P_Random()<<6);
+
   // Attach player mobj to bloody skull
-  player = actor->player;
-  actor->player = NULL;
+  // Nope.
+  /*
+  player_t *player = p->player;
+  p->player = NULL;
+  p->special1 = player->class;
   mo->player = player;
-  mo->health = actor->health;
-  mo->angle = actor->angle;
+  mo->health = p->health;
+  mo->angle = p->angle;
   player->mo = mo;
   player->aiming = 0;
   player->damagecount = 32;
+  */
 }
-*/
+
 //----------------------------------------------------------------------------
 //
 // PROC A_CheckSkullFloor
@@ -1685,6 +1686,7 @@ void A_CheckSkullFloor(DActor *actor)
   if(actor->z <= actor->floorz)
     {
       actor->SetState(S_BLOODYSKULLX1);
+      //S_StartSound(actor, SFX_DRIP);
     }
 }
 
@@ -1726,10 +1728,12 @@ void A_FreeTargMobj(DActor *mo)
 {
   mo->px = mo->py = mo->pz = 0;
   mo->z = mo->ceilingz+4*FRACUNIT;
-  mo->flags &= ~(MF_SHOOTABLE|MF_FLOAT|MF_SKULLFLY|MF_SOLID);
+  mo->flags &= ~(MF_SHOOTABLE|MF_FLOAT|MF_SOLID|MF_COUNTKILL);
   mo->flags |= MF_CORPSE|MF_DROPOFF|MF_NOGRAVITY;
   mo->flags2 &= ~(MF2_PASSMOBJ|MF2_LOGRAV);
-  //mo->player = NULL;
+  mo->flags2 |= MF2_DONTDRAW;
+  mo->eflags &= ~MFE_SKULLFLY;
+  //mo->health = -1000;
 }
 
 //----------------------------------------------------------------------------
@@ -1738,9 +1742,10 @@ void A_FreeTargMobj(DActor *mo)
 //
 //----------------------------------------------------------------------------
 
-void A_AddPlayerCorpse(Actor *actor)
+void A_AddPlayerCorpse(DActor *actor)
 {
   // unused function, see Map::RebornPlayer
+  /*
   Map *m = actor->mp;
 
   if (m->bodyqueue.size() >= BODYQUESIZE)
@@ -1750,6 +1755,7 @@ void A_AddPlayerCorpse(Actor *actor)
       m->bodyqueue.pop_front();
     }
   m->bodyqueue.push_back(actor);
+  */
 }
 
 //----------------------------------------------------------------------------

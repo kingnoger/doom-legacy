@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Portions Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,26 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:27  hurdler
-// Initial revision
+// Revision 1.2  2003/03/15 20:07:21  smite-meister
+// Initial Hexen compatibility!
 //
-// Revision 1.8  2002/09/05 14:12:17  vberghol
-// network code partly bypassed
-//
-// Revision 1.7  2002/08/21 16:58:35  vberghol
-// Version 1.41 Experimental compiles and links!
-//
-// Revision 1.6  2002/08/19 18:06:42  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.5  2002/08/08 12:01:32  vberghol
-// pian engine on valmis!
-//
-// Revision 1.4  2002/07/01 21:00:54  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:01:58  vberghol
-// HUD alkaa olla kunnossa
+// Revision 1.1.1.1  2002/11/16 14:18:27  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.6  2001/03/13 22:14:20  stroggonmeth
 // Long time no commit. 3D floors, FraggleScript, portals, ect.
@@ -59,7 +44,7 @@
 //
 //
 // DESCRIPTION:
-//      System specific interface stuff.
+//
 //
 //-----------------------------------------------------------------------------
 
@@ -143,19 +128,8 @@ int R_PointOnSide(fixed_t x, fixed_t y, node_t* node);
 
 int R_PointOnSegSide(fixed_t x, fixed_t y, seg_t* line);
 
-//angle_t R_PointToAngle(fixed_t x, fixed_t y);
-
 angle_t R_PointToAngle2(fixed_t x2, fixed_t y2, fixed_t x1, fixed_t y1);
-
-//fixed_t R_PointToDist(fixed_t x, fixed_t y);
-
-//SoM: 3/27/2000
 fixed_t R_PointToDist2(fixed_t x2, fixed_t y2, fixed_t x1, fixed_t y1);
-
-//fixed_t R_ScaleFromGlobalAngle (angle_t visangle);
-
-//subsector_t *R_PointInSubsector(fixed_t x, fixed_t y);
-//subsector_t *R_IsPointInSubsector (fixed_t x, fixed_t y);
 
 void R_AddPointToBox(int x, int y, fixed_t* box);
 
@@ -177,20 +151,16 @@ extern consvar_t cv_scalestatusbar;
 
 
 // Called by startup code.
-void R_Init (void);
-
+void R_Init();
 
 // just sets setsizeneeded true
 extern bool setsizeneeded;
-void   R_SetViewSize (void);
+void   R_SetViewSize();
 
 // do it (sometimes explicitly called)
-void   R_ExecuteSetViewSize (void);
-
-//void R_SetupFrame (PlayerInfo *player);
-// Called by G_Drawer.
-//void R_RenderPlayerView (PlayerInfo *player);
+void   R_ExecuteSetViewSize();
 
 // add commands related to engine, at game startup
-void   R_RegisterEngineStuff (void);
+void   R_RegisterEngineStuff();
+
 #endif

@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.9  2003/03/15 20:07:20  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.8  2003/03/08 16:07:15  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -121,9 +124,6 @@ public:
 
 class PlayerPawn : public Pawn
 {
-private:
-  const char *message; // message to player
-
 public:
   PlayerInfo *player; // controlling player
 
@@ -161,7 +161,7 @@ public:
   byte armortype;   // Armor type is 0-2.
   int  armorpoints;
 
-  byte cards; // bit field see declration of card_t
+  int cards; // bit field see declration of card_t
 
   const weaponinfo_t *weaponinfo; // can be changed when use level2 weapons (heretic)
 
@@ -231,7 +231,6 @@ public:
   void UseLines();
 
   // in p_inter.cpp
-  void SetMessage(const char *msg, bool ultmsg = true);
   bool GiveAmmo(ammotype_t at, int count);
   bool GiveWeapon(weapontype_t wt, bool dropped);
   bool GiveArmor(int at);
@@ -247,14 +246,15 @@ public:
   // in p_pspr.cpp
   void UseFavoriteWeapon();
   void SetupPsprites();
-  void SetPsprite(int position, statenum_t stnum);
+  void SetPsprite(int position, weaponstatenum_t stnum, bool call = true);
   void DropWeapon();
   void FireWeapon();
   bool CheckAmmo();
   void BringUpWeapon();
 
   // in p_hpspr.cpp
-  void ActivateBeak();
+  void ActivateMorphWeapon();
+  void PostMorphWeapon(weapontype_t weapon);
 
   // in p_heretic.cpp
   void HerePlayerInSpecialSector();

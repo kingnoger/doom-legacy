@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by Raven Software, Corp.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/03/15 20:07:16  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.6  2003/03/08 16:07:07  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -38,6 +41,7 @@
 //
 //
 // DESCRIPTION:
+//   Heretic/Hexen specific extra game routines, gametype patching
 //
 //-----------------------------------------------------------------------------
 
@@ -57,7 +61,7 @@
 #include "m_random.h"
 #include "dstrings.h"
 #include "p_heretic.h"
-
+#include "wi_stuff.h"
 
 //---------------------------------------------------------------------------
 // P_MinotaurSlam
@@ -112,26 +116,6 @@ bool P_TouchWhirlwind(Actor *target)
   return false;
 }
 
-//---------------------------------------------------------------------------
-//
-// PROC A_ContMobjSound
-//
-//---------------------------------------------------------------------------
-
-void A_ContMobjSound(DActor *actor)
-{
-  switch(actor->type)
-    {
-    case MT_KNIGHTAXE:
-      S_StartSound(actor, sfx_kgtatk);
-      break;
-    case MT_MUMMYFX1:
-      S_StartSound(actor, sfx_mumhed);
-      break;
-    default:
-      break;
-    }
-}
 
 //----------------------------------------------------------------------------
 //
@@ -184,8 +168,7 @@ int P_FaceMobj(Actor *source, Actor *target, angle_t *delta)
 //
 // was P_SeekerMissile
 //
-// The missile target field must be Actor *owner.  Returns true if
-// target was tracked, false if not.
+// Returns true if target was tracked, false if not.
 //
 //----------------------------------------------------------------------------
 
@@ -253,14 +236,21 @@ DActor *DActor::SpawnMissileAngle(mobjtype_t t, angle_t angle, fixed_t momz)
       mz = z+40*FRACUNIT;
       break;
     case MT_MNTRFX2: // Minotaur floor fire missile
-      mz = ONFLOORZ;
+      mz = ONFLOORZ; // +floorclip; 
       break;
     case MT_SRCRFX1: // Sorcerer Demon fireball
       mz = z+48*FRACUNIT;
       break;
+    case MT_ICEGUY_FX2: // Secondary Projectiles of the Ice Guy
+      mz = z+3*FRACUNIT;
+      break;
+    case MT_MSTAFF_FX2:
+      mz = z+40*FRACUNIT;
+      break;
     default:
       mz = z+32*FRACUNIT;
       break;
+
     }
   if (flags2 & MF2_FEETARECLIPPED)
     mz -= FOOTCLIPSIZE;
@@ -279,20 +269,9 @@ DActor *DActor::SpawnMissileAngle(mobjtype_t t, angle_t angle, fixed_t momz)
 }
 
 
-extern byte cheat_mus_seq[];
-extern byte cheat_choppers_seq[];
-extern byte cheat_god_seq[];
-extern byte cheat_ammo_seq[];
-extern byte cheat_ammonokey_seq[];
-extern byte cheat_noclip_seq[];
-extern byte cheat_commercial_noclip_seq[];
-extern byte cheat_powerup_seq[7][10];
-extern byte cheat_clev_seq[];
-extern byte cheat_mypos_seq[];
-extern byte cheat_amap_seq[];
-
 void DoomPatchEngine()
 {
+  Intermission::s_count = sfx_pistol;
   ceiling_t::ceilmovesound = sfx_stnmov;
   vldoor_t::doorclosesound = sfx_dorcls;
   button_t::buttonsound = sfx_swtchn;
@@ -301,29 +280,23 @@ void DoomPatchEngine()
 
 void HereticPatchEngine()
 {
+  Intermission::s_count = sfx_keyup;
   ceiling_t::ceilmovesound = sfx_dormov;
   vldoor_t::doorclosesound = sfx_doropn;
-  button_t::buttonsound = sfx_swtchn;
+  button_t::buttonsound = sfx_switch;
   game.inventory = true;
 
   // FIXME rationalize here. Above, good. Below, bad.
 
-  // we can put such thinks in a dehacked lump, maybe for later
-  S_sfx[sfx_oof].name        = "plroof";
+  // instead of this, make a default skin (marine, heretic)
+  // with appropriate sounds.
+  S_sfx[sfx_oof].lumpname    = "plroof";
   S_sfx[sfx_oof].priority    = 32;
+
+
   text[PD_BLUEK_NUM]   = "YOU NEED A BLUE KEY TO OPEN THIS DOOR";
   text[PD_YELLOWK_NUM] = "YOU NEED A YELLOW KEY TO OPEN THIS DOOR";
   text[PD_REDK_NUM]    = "YOU NEED A GREEN KEY TO OPEN THIS DOOR";
-  S_sfx[sfx_swtchn].name     = "switch";
-  S_sfx[sfx_swtchn].priority = 40;
-  S_sfx[sfx_swtchx].name     = "switch";
-  S_sfx[sfx_swtchx].priority = 40;
-  S_sfx[sfx_telept].priority = 50;
-  S_sfx[sfx_sawup].name     = "gntact";  // gauntlets
-  S_sfx[sfx_sawup].priority = 32;
-
-  mobjinfo[MT_TFOG].spawnstate = S_HTFOG1;
-  sprnames[SPR_BLUD] = "BLOD";
 
   text[GOTARMOR_NUM] = "SILVER SHIELD";
   text[GOTMEGA_NUM ] = "ENCHANTED SHIELD";
@@ -333,243 +306,24 @@ void HereticPatchEngine()
   text[GOTYELWCARD_NUM] = "YELLOW KEY";
   text[GOTREDCARD_NUM ] = "GREEN KEY";
 
-  S_sfx[sfx_pistol].name = "keyup";  // for the menu
+  S_sfx[sfx_swtchn].lumpname = "switch";
+  S_sfx[sfx_swtchn].priority = 40;
+  S_sfx[sfx_swtchx].lumpname = "switch";
+  S_sfx[sfx_swtchx].priority = 40;
+  S_sfx[sfx_telept].priority = 50;
 
-  S_sfx[sfx_tink].name = "chat";
+
+  // console alert
+  S_sfx[sfx_tink].lumpname = "chat";
   S_sfx[sfx_tink].priority = 100;
-  S_sfx[sfx_itmbk].name = "respawn";
+  // item respawns
+  S_sfx[sfx_itmbk].lumpname = "respawn";
   S_sfx[sfx_itmbk].priority = 10;
 
-  // conflicting number for doomednum
-  // so desable doom mobjs and enabled heretic's one
-
-  // no longer necessary, info.cpp fixed
-  /*
-  mobjinfo[MT_SHOTGUY].doomednum = -1;
-  mobjinfo[MT_MINOTAUR].doomednum = 9;
-
-  mobjinfo[MT_VILE].doomednum = -1;
-  mobjinfo[MT_HKNIGHT].doomednum = 64;
-
-  mobjinfo[MT_CHAINGUY].doomednum = -1;
-  mobjinfo[MT_KNIGHTGHOST].doomednum = 65;
-
-  mobjinfo[MT_UNDEAD].doomednum = -1;
-  mobjinfo[MT_IMP].doomednum = 66;
-
-  mobjinfo[MT_KNIGHT].doomednum = -1;
-  mobjinfo[MT_MUMMYGHOST].doomednum = 69;
-
-  mobjinfo[MT_SPIDER].doomednum = -1;
-  mobjinfo[MT_SORCERER1].doomednum = 7;
-
-  mobjinfo[MT_BABY].doomednum = -1;
-  mobjinfo[MT_MUMMY].doomednum = 68;
-
-  mobjinfo[MT_CYBORG].doomednum = -1;
-  mobjinfo[MT_AMMACEHEFTY].doomednum = 16;
-
-  mobjinfo[MT_WOLFSS].doomednum = -1;
-  mobjinfo[MT_ARTIINVULNERABILITY].doomednum = 84;
-
-  mobjinfo[MT_BOSSTARGET].doomednum = -1;
-  mobjinfo[MT_HMISC12].doomednum = 87;
-
-  mobjinfo[MT_BARREL].doomednum = -1;
-  mobjinfo[MT_POD].doomednum = 2035;
-
-  mobjinfo[MT_MISC4].doomednum = -1;
-  mobjinfo[MT_IMPLEADER].doomednum = 5;
-
-  mobjinfo[MT_MISC5].doomednum = -1;
-  mobjinfo[MT_AMMACEWIMPY].doomednum = 13;
-
-  mobjinfo[MT_MISC6].doomednum = -1;
-  mobjinfo[MT_HHEAD].doomednum = 6;
-
-  mobjinfo[MT_MISC7].doomednum = -1;
-  mobjinfo[MT_STALACTITESMALL].doomednum = 39;
-
-  mobjinfo[MT_MISC8].doomednum = -1;
-  mobjinfo[MT_STALAGMITELARGE].doomednum = 38;
-
-  mobjinfo[MT_MISC9].doomednum = -1;
-  mobjinfo[MT_STALACTITELARGE].doomednum = 40;
-
-  mobjinfo[MT_MEGA].doomednum = -1;
-  mobjinfo[MT_ARTIFLY].doomednum = 83;
-
-  mobjinfo[MT_MISC21].doomednum = -1;
-  mobjinfo[MT_SKULLHANG70].doomednum = 17;
-
-  mobjinfo[MT_MISC24].doomednum = -1;
-  mobjinfo[MT_HMISC1].doomednum = 8;
-
-  mobjinfo[MT_CHAINGUN].doomednum = -1;
-  mobjinfo[MT_WMACE].doomednum = 2002;
-
-  mobjinfo[MT_SHAINSAW].doomednum = -1;
-  mobjinfo[MT_HMISC13].doomednum = 2005;
-
-  mobjinfo[MT_ROCKETLAUNCH].doomednum = -1;
-  mobjinfo[MT_WPHOENIXROD].doomednum = 2003;
-
-  mobjinfo[MT_PLASMAGUN].doomednum = -1;
-  mobjinfo[MT_WSKULLROD].doomednum = 2004;
-
-  mobjinfo[MT_SHOTGUN].doomednum = -1;
-  mobjinfo[MT_HMISC15].doomednum = 2001;
-
-  mobjinfo[MT_SUPERSHOTGUN].doomednum = -1;
-  mobjinfo[MT_HMISC3].doomednum = 82;
-
-  mobjinfo[MT_MISC29].doomednum = -1;
-  mobjinfo[MT_ITEMSHIELD1].doomednum = 85;
-
-  mobjinfo[MT_MISC30].doomednum = -1;
-  mobjinfo[MT_ARTITOMEOFPOWER].doomednum = 86;
-
-  mobjinfo[MT_MISC32].doomednum = -1;
-  mobjinfo[MT_ARTIEGG].doomednum = 30;
-
-  mobjinfo[MT_MISC33].doomednum = -1;
-  mobjinfo[MT_ITEMSHIELD2].doomednum = 31;
-
-  mobjinfo[MT_MISC34].doomednum = -1;
-  mobjinfo[MT_ARTISUPERHEAL].doomednum = 32;
-
-  mobjinfo[MT_MISC35].doomednum = -1;
-  mobjinfo[MT_HMISC4].doomednum = 33;
-
-  mobjinfo[MT_MISC36].doomednum = -1;
-  mobjinfo[MT_STALAGMITESMALL].doomednum = 37;
-
-  mobjinfo[MT_MISC37].doomednum = -1;
-  mobjinfo[MT_ARTITELEPORT].doomednum = 36;
-
-  mobjinfo[MT_MISC38].doomednum = -1;
-  mobjinfo[MT_SOUNDWATERFALL].doomednum = 41;
-
-  mobjinfo[MT_MISC39].doomednum = -1;
-  mobjinfo[MT_SOUNDWIND].doomednum = 42;
-
-  mobjinfo[MT_MISC40].doomednum = -1;
-  mobjinfo[MT_PODGENERATOR].doomednum = 43;
-
-  mobjinfo[MT_MISC41].doomednum = -1;
-  mobjinfo[MT_HBARREL].doomednum = 44;
-
-  mobjinfo[MT_MISC42].doomednum = -1;
-  mobjinfo[MT_MUMMYLEADER].doomednum = 45;
-
-  mobjinfo[MT_MISC43].doomednum = -1;
-  mobjinfo[MT_MUMMYLEADERGHOST].doomednum = 46;
-
-  mobjinfo[MT_MISC44].doomednum = -1;
-  mobjinfo[MT_AMBLSRHEFTY].doomednum = 55;
-
-  mobjinfo[MT_MISC45].doomednum = -1;
-  // heretic use it for monster spawn
-
-  mobjinfo[MT_MISC47].doomednum = -1;
-  mobjinfo[MT_HMISC7].doomednum = 47;
-
-  mobjinfo[MT_MISC48].doomednum = -1;
-  mobjinfo[MT_HMISC8].doomednum = 48;
-
-  mobjinfo[MT_MISC49].doomednum = -1;
-  mobjinfo[MT_HMISC5].doomednum = 34;
-
-  mobjinfo[MT_MISC50].doomednum = -1;
-  mobjinfo[MT_HMISC2].doomednum = 35;
-
-  mobjinfo[MT_MISC51].doomednum = -1;
-  mobjinfo[MT_HMISC9].doomednum = 49;
-
-  mobjinfo[MT_MISC52].doomednum = -1;
-  mobjinfo[MT_HMISC10].doomednum = 50;
-
-  mobjinfo[MT_MISC53].doomednum = -1;
-  mobjinfo[MT_HMISC11].doomednum = 51;
-
-  mobjinfo[MT_MISC54].doomednum = -1;
-  mobjinfo[MT_TELEGLITGEN2].doomednum = 52;
-
-  mobjinfo[MT_MISC55].doomednum = -1;
-  mobjinfo[MT_HMISC14].doomednum = 53;
-
-  mobjinfo[MT_MISC61].doomednum = -1;
-  mobjinfo[MT_AMPHRDWIMPY].doomednum = 22;
-
-  mobjinfo[MT_MISC62].doomednum = -1;
-  mobjinfo[MT_WIZARD].doomednum = 15;
-
-  mobjinfo[MT_MISC63].doomednum = -1;
-  mobjinfo[MT_AMCBOWWIMPY].doomednum = 18;
-
-  mobjinfo[MT_MISC64].doomednum = -1;
-  mobjinfo[MT_AMSKRDHEFTY].doomednum = 21;
-
-  mobjinfo[MT_MISC65].doomednum = -1;
-  mobjinfo[MT_AMPHRDHEFTY].doomednum = 23;
-
-  mobjinfo[MT_MISC66].doomednum = -1;
-  mobjinfo[MT_AMSKRDWIMPY].doomednum = 20;
-
-  mobjinfo[MT_MISC67].doomednum = -1;
-  mobjinfo[MT_AMCBOWHEFTY].doomednum = 19;
-
-  mobjinfo[MT_MISC68].doomednum = -1;
-  mobjinfo[MT_AMGWNDWIMPY].doomednum = 10;
-
-  mobjinfo[MT_MISC69].doomednum = -1;
-  mobjinfo[MT_AMGWNDHEFTY].doomednum = 12;
-
-  mobjinfo[MT_MISC70].doomednum = -1;
-  mobjinfo[MT_CHANDELIER].doomednum = 28;
-
-  mobjinfo[MT_MISC71].doomednum = -1;
-  mobjinfo[MT_SKULLHANG60].doomednum = 24;
-
-  mobjinfo[MT_MISC72].doomednum = -1;
-  mobjinfo[MT_SERPTORCH].doomednum = 27;
-
-  mobjinfo[MT_MISC73].doomednum = -1;
-  mobjinfo[MT_SMALLPILLAR].doomednum = 29;
-
-  mobjinfo[MT_MISC74].doomednum = -1;
-  mobjinfo[MT_SKULLHANG45].doomednum = 25;
-
-  mobjinfo[MT_MISC75].doomednum = -1;
-  mobjinfo[MT_SKULLHANG35].doomednum = 26;
-
-  mobjinfo[MT_MISC76].doomednum = -1;
-  mobjinfo[MT_AMBLSRWIMPY].doomednum = 54;
-
-  mobjinfo[MT_MISC77].doomednum = -1;
-  mobjinfo[MT_BEAST].doomednum = 70;
-
-  mobjinfo[MT_MISC78].doomednum = -1;
-  mobjinfo[MT_AKYY].doomednum = 73;
-
-  mobjinfo[MT_MISC79].doomednum = -1;
-  mobjinfo[MT_TELEGLITGEN].doomednum = 74;
-
-  mobjinfo[MT_MISC80].doomednum = -1;
-  mobjinfo[MT_ARTIINVISIBILITY].doomednum = 75;
-
-  mobjinfo[MT_MISC81].doomednum = -1;
-  mobjinfo[MT_HMISC6].doomednum = 76;
-
-  mobjinfo[MT_MISC84].doomednum = -1;
-  mobjinfo[MT_BKYY].doomednum = 79;
-
-  mobjinfo[MT_MISC85].doomednum = -1;
-  mobjinfo[MT_CKEY].doomednum = 80;
-
-  mobjinfo[MT_MISC86].doomednum = -1;
-  mobjinfo[MT_HMISC0].doomednum = 81;
-  */
+  // teleport fog
+  mobjinfo[MT_TFOG].spawnstate = S_HTFOG1;
+  // guess
+  sprnames[SPR_BLUD] = "BLOD";
 }
 
 static DActor *LavaInflictor;

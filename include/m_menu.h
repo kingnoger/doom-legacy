@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,38 +18,14 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/03/15 20:07:21  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.2  2002/12/16 22:04:58  smite-meister
 // Actor / DActor separation done!
 //
 // Revision 1.1.1.1  2002/11/16 14:18:24  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.6  2002/09/20 22:41:34  vberghol
-// Sound system rewritten! And it workscvs update
-//
-// Revision 1.5  2002/08/31 11:40:19  vberghol
-// menu and map loading bugfixes
-//
-// Revision 1.4  2002/08/27 11:51:48  vberghol
-// Menu rewritten
-//
-// Revision 1.3  2002/07/01 21:00:49  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:25  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.4  2000/10/08 13:30:01  bpereira
-// no message
-//
-// Revision 1.3  2000/04/07 23:11:17  metzgermeister
-// added mouse move
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //
 // DESCRIPTION:
@@ -199,15 +175,6 @@ private:
   static int     menufontbase;
   static patch_t **smallfont;
 
-  // sounds
-  static sfxinfo_t *s_oof;    // 'ah!'
-  static sfxinfo_t *s_rumble; // short piece of static
-  static sfxinfo_t *s_klunk;  // klunk
-  static sfxinfo_t *s_swon;   // flip a switch
-  static sfxinfo_t *s_swoff;  // blocked switch
-  static sfxinfo_t *s_choose; // pistol shot...
-
-
   static short AnimCount;  // skull animation counter
   static short whichSkull; // which skull to draw
   static int   SkullBaseLump;
@@ -234,6 +201,14 @@ private:
   quitfunc_t   quitroutine; // called before quit a menu return true if we can
 
 public:
+  // sounds
+  static int s_fail;   // disappointment
+  static int s_adjust; // a slider moves or a consvar is changed
+  static int s_move;   // move up/down in a menu
+  static int s_choose; // a choice is made
+  static int s_open;   // start something
+  static int s_close;  // exit or end something
+
 
   static bool active; // menu is currently open
 

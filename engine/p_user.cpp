@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/03/15 20:07:17  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.5  2003/03/08 16:07:09  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -191,13 +194,12 @@ void PlayerPawn::Move()
 
   // limit speed = push/(1-friction) => magic multiplier = 2*(1-friction) = 0.1875
   float magic = 0.1875 * FRACUNIT * speed * mf;
-  CONS_Printf("speed = %f, m = %f\n", speed, magic);
 
   if (cmd->forwardmove)
     {
       movepushforward = int(magic * cmd->forwardmove/100);
       
-      if (eflags & MF_UNDERWATER)
+      if (eflags & MFE_UNDERWATER)
 	{
 	  // half forward speed when waist under water
 	  // a little better grip if feet touch the ground
@@ -219,7 +221,7 @@ void PlayerPawn::Move()
   if (cmd->sidemove)
     {
       movepushside = int(magic * cmd->sidemove/100);
-      if (eflags & MF_UNDERWATER)
+      if (eflags & MFE_UNDERWATER)
 	{
 	  if (!onground)
 	    movepushside >>= 1;
@@ -234,8 +236,8 @@ void PlayerPawn::Move()
     }
 
   // mouselook swim when waist underwater
-  eflags &= ~MF_SWIMMING;
-  if (eflags & MF_UNDERWATER)
+  eflags &= ~MFE_SWIMMING;
+  if (eflags & MFE_UNDERWATER)
     {
       fixed_t a;
       // swim up/down full move when forward full speed
@@ -243,7 +245,7 @@ void PlayerPawn::Move()
       
       if ( a != 0 )
 	{
-	  eflags |= MF_SWIMMING;
+	  eflags |= MFE_SWIMMING;
 	  pz += a;
 	}
     }
@@ -253,7 +255,7 @@ void PlayerPawn::Move()
     {
       if (flags2 & MF2_FLY)
 	flyheight = 10;
-      else if (eflags & MF_UNDERWATER)
+      else if (eflags & MFE_UNDERWATER)
 	//TODO: goub gloub when push up in water
 	pz = JUMPGRAVITY/2;
       else if (onground && !jumpdown) 
@@ -396,7 +398,7 @@ void P_ProcessCmdSpirit (player_t* player,ticcmd_t *cmd)
     {
       movepushforward = cmd->forwardmove * movefactor;
         
-      if (player->spirit->eflags & MF_UNDERWATER)
+      if (player->spirit->eflags & MFE_UNDERWATER)
         {
 	  // half forward speed when waist under water
 	  // a little better grip if feets touch the ground
@@ -418,7 +420,7 @@ void P_ProcessCmdSpirit (player_t* player,ticcmd_t *cmd)
   if (cmd->sidemove)
     {
       movepushside = cmd->sidemove * movefactor;
-      if (player->spirit->eflags & MF_UNDERWATER)
+      if (player->spirit->eflags & MFE_UNDERWATER)
         {
 	  if (!onground)
 	    movepushside >>= 1;
@@ -433,15 +435,15 @@ void P_ProcessCmdSpirit (player_t* player,ticcmd_t *cmd)
     }
     
   // mouselook swim when waist underwater
-  player->spirit->eflags &= ~MF_SWIMMING;
-  if (player->spirit->eflags & MF_UNDERWATER)
+  player->spirit->eflags &= ~MFE_SWIMMING;
+  if (player->spirit->eflags & MFE_UNDERWATER)
     {
       fixed_t a;
       // swim up/down full move when forward full speed
       a = FixedMul( movepushforward*50, finesine[ (cmd->aiming>>(ANGLETOFINESHIFT-16)) ] >>5 );
         
       if ( a != 0 ) {
-	player->spirit->eflags |= MF_SWIMMING;
+	player->spirit->eflags |= MFE_SWIMMING;
 	player->spirit->pz += a;
       }
     }
@@ -451,7 +453,7 @@ void P_ProcessCmdSpirit (player_t* player,ticcmd_t *cmd)
     {
       // can't jump while in air, can't jump while jumping
       if (!(player->jumpdown & 2) &&
-	  (onground || (player->spirit->eflags & MF_UNDERWATER)) )
+	  (onground || (player->spirit->eflags & MFE_UNDERWATER)) )
         {
 	  if (onground)
 	    player->spirit->pz = JUMPGRAVITY;
@@ -460,7 +462,7 @@ void P_ProcessCmdSpirit (player_t* player,ticcmd_t *cmd)
 
 	  //TODO: goub gloub when push up in water
             
-	  if ( !(player->cheats & CF_FLYAROUND) && onground && !(player->spirit->eflags & MF_UNDERWATER))
+	  if ( !(player->cheats & CF_FLYAROUND) && onground && !(player->spirit->eflags & MFE_UNDERWATER))
             {
 	      S_StartScreamSound(player->spirit, sfx_jump);
 

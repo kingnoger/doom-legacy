@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/03/15 20:07:21  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.2  2003/03/08 16:07:16  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -296,10 +299,11 @@ struct r_lightlist_t
 
 typedef enum {
   FLOOR_SOLID,
-  FLOOR_WATER,  
-  FLOOR_LAVA,   
-  FLOOR_SLUDGE, 
   FLOOR_ICE,
+  FLOOR_LIQUID,
+  FLOOR_WATER,
+  FLOOR_LAVA,
+  FLOOR_SLUDGE
 } floortype_t;
 
 // ----- for special tricks with HW renderer -----
@@ -462,10 +466,15 @@ struct line_t
   fixed_t     dx;
   fixed_t     dy;
 
-    // Animation related.
   short       flags;
   short       special;
   short       tag;
+  // hexen args
+  byte arg1;
+  byte arg2;
+  byte arg3;
+  byte arg4;
+  byte arg5;
 
   // Visual appearance: SideDefs.
   //  sidenum[1] will be -1 if one sided

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/03/15 20:07:22  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.5  2003/03/08 16:07:20  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -1285,7 +1288,7 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
 #ifdef PARANOIA
     //Fab:debug
     if (sprframe==NULL)
-        I_Error("sprframes NULL for state %d\n", psp->state - states);
+        I_Error("sprframes NULL for state %d\n", psp->state - weaponstates);
 #endif
 
     //Fab: see the notes in R_ProjectSprite about lumpid,lumppat

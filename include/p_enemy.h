@@ -1,6 +1,32 @@
-// $Id$
-// Doom and Heretic monsters
+// Emacs style mode select   -*- C++ -*- 
+//-----------------------------------------------------------------------------
 //
+// $Id$
+//
+// Copyright (C) 1998-2003 by DooM Legacy Team.
+//
+// This program is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public License
+// as published by the Free Software Foundation; either version 2
+// of the License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+//
+// $Log$
+// Revision 1.3  2003/03/15 20:07:21  smite-meister
+// Initial Hexen compatibility!
+//
+//
+//
+// DESCRIPTION:
+//   Common function prototypes for monster AI
+//
+//-----------------------------------------------------------------------------
+
 
 #ifndef p_enemy_h
 #define p_enemy_h 1
@@ -19,8 +45,25 @@ class Actor;
 class DActor;
 class PlayerPawn;
 
+typedef enum
+{
+  DI_EAST,
+  DI_NORTHEAST,
+  DI_NORTH,
+  DI_NORTHWEST,
+  DI_WEST,
+  DI_SOUTHWEST,
+  DI_SOUTH,
+  DI_SOUTHEAST,
+  DI_NODIR,
+  NUMDIRS
+
+} dirtype_t;
+
 void   P_NoiseAlert(Actor *target, Actor *emitter);
 void   P_BulletSlope(PlayerPawn *p);
+bool   P_Move(DActor *actor);
+void   P_NewChaseDir(DActor *actor);
 
 void   A_FaceTarget(DActor *actor);
 void   A_Chase(DActor *actor);

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/03/15 20:07:15  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.3  2002/12/16 22:11:29  smite-meister
 // Actor/DActor separation done!
 //
@@ -84,7 +87,7 @@ consvar_t cv_translucency  = {"translucency" ,"1",CV_CALL|CV_SAVE,CV_OnOff, Tran
 // The action pointer of the S_ROCKET state must point here to take effect.
 // This routine is based on the Revenant Fireball Tracer code A_Tracer()
 //
-void A_SmokeTrailer (Actor *actor)
+void A_SmokeTrailer(DActor *actor)
 {
   if (gametic % (4 * NEWTICRATERATIO))
     return;

@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.4  2003/03/15 20:07:21  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.3  2003/01/25 21:33:06  smite-meister
 // Now compiles with MinGW 2.0 / GCC 3.2.
 // Builder can choose between dynamic and static linkage.
@@ -99,7 +102,7 @@ public:
   int kills, items, secrets, time;
 
   // Hint messages.
-  char *message;
+  const char *message;
 
   // added by Boris : preferred weapons order stuff
   char  favoriteweapon[NUMWEAPONS];
@@ -118,6 +121,8 @@ public:
   void Reset(bool resetpawn, bool resetfrags);
 
   void CheckFragLimit();
+
+  void SetMessage(const char *msg, bool ultmsg = true);
 
   // in g_game.cpp
   bool InventoryResponder(int (*gc)[2], event_t *ev);

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/03/15 20:07:16  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.7  2003/02/23 22:49:30  smite-meister
 // FS is back! L2 cache works.
 //
@@ -67,9 +70,9 @@
 #include "s_sound.h"
 #include "sounds.h"
 
-#include "r_splats.h"   //faB: testing
+#include "r_splats.h"
 
-#include "z_zone.h" //SoM: 3/15/2000
+#include "z_zone.h"
 
 
 fixed_t   tmbbox[4];
@@ -110,6 +113,8 @@ line_t *ceilingline;
 // that is, for any line which is 'solid'
 line_t *blockingline;
 
+Actor *BlockingMobj; //thing that blocked position (NULL if not
+// blocked, or blocked by a line)
 
 //SoM: 3/15/2000
 static msecnode_t *sector_list = NULL;
@@ -122,8 +127,21 @@ static int ls_y; // Lost Soul position for Lost Soul checks
 
 
 
+// set temp location and boundingbox
+void P_SetBox(fixed_t x, fixed_t y, fixed_t r)
+{
+  tmx = x;
+  tmy = y;
+
+  tmbbox[BOXTOP]    = y + r;
+  tmbbox[BOXBOTTOM] = y - r;
+  tmbbox[BOXRIGHT]  = x + r;
+  tmbbox[BOXLEFT]   = x - r;
+}
+
+
 //
-// TELEPORT MOVE
+// Iterator functions
 //
 
 //
@@ -149,7 +167,7 @@ static bool PIT_StompThing(Actor *thing)
   //  return false;
 
   // Not allowed to stomp things
-  if (game.mode == gm_heretic && !(tmthing->flags2 & MF2_TELESTOMP))
+  if (!(tmthing->flags2 & MF2_TELESTOMP))
     return false;
 
   thing->Damage(tmthing, tmthing, 10000, dt_telefrag | dt_always);
@@ -157,20 +175,46 @@ static bool PIT_StompThing(Actor *thing)
   return true;
 }
 
-
-// experiment
-
-void P_SetBox(fixed_t x, fixed_t y, fixed_t r)
+static bool PIT_ThrustStompThing(Actor *thing)
 {
-  tmx = x;
-  tmy = y;
+  if (!(thing->flags & MF_SHOOTABLE))
+    return true;
 
-  tmbbox[BOXTOP]    = y + r;
-  tmbbox[BOXBOTTOM] = y - r;
-  tmbbox[BOXRIGHT]  = x + r;
-  tmbbox[BOXLEFT]   = x - r;
+  fixed_t blockdist = thing->radius + tmthing->radius;
+  if (abs(thing->x - tmthing->x) >= blockdist || 
+      abs(thing->y - tmthing->y) >= blockdist ||
+      (thing->z > tmthing->z + tmthing->height))
+    return true;   // didn't hit it
+
+  if (thing == tmthing)
+    return true;   // don't clip against self
+
+  thing->Damage(tmthing, tmthing, 10001, dt_crushing);
+  tmthing->args[1] = 1;	// Mark thrust thing as bloody
+
+  return true;
 }
 
+
+void P_ThrustSpike(Actor *actor)
+{
+  int xl,xh,yl,yh,bx,by;
+
+  tmthing = actor;
+  Map *mp = actor->mp;
+
+  P_SetBox(actor->x, actor->y, actor->radius);
+
+  xl = (tmbbox[BOXLEFT] - mp->bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
+  xh = (tmbbox[BOXRIGHT] - mp->bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
+  yl = (tmbbox[BOXBOTTOM] - mp->bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
+  yh = (tmbbox[BOXTOP] - mp->bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
+
+  // stomp on any things contacted
+  for (bx=xl ; bx<=xh ; bx++)
+    for (by=yl ; by<=yh ; by++)
+      mp->BlockThingsIterator(bx,by,PIT_ThrustStompThing);
+}
 
 //
 // was P_TeleportMove
@@ -273,7 +317,7 @@ static bool PIT_CheckThing(Actor *thing)
       // didn't hit it
       return true;
     }
-
+  BlockingMobj = thing;
 
   // heretic stuffs
   if ((tmthing->flags2 & MF2_PASSMOBJ) && !(thing->flags & MF_SPECIAL))
@@ -447,7 +491,7 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 #ifdef CLIENTPREDICTION2
   if (!(flags & MF_NOCLIP) && !(eflags & MF_NOZCHECKING))
 #else
-    if (!(flags & MF_NOCLIP))
+    if (!(flags & MF_NOCLIPLINE))
 #endif
       {
 	fixed_t maxstep = MAXSTEPMOVE;
@@ -459,7 +503,7 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 
 	floatok = true;
 
-	if (!(flags & MF_TELEPORT)
+	if (!(eflags & MFE_TELEPORT)
 	    && (tmceilingz < z + height) && !(flags2 & MF2_FLY))
 	  {
 	    CheckMissileImpact();
@@ -480,10 +524,10 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 	  }
 
         // jump out of water
-        if ((eflags & (MF_UNDERWATER|MF_TOUCHWATER))==(MF_UNDERWATER|MF_TOUCHWATER))
+        if ((eflags & (MFE_UNDERWATER|MFE_TOUCHWATER)) == (MFE_UNDERWATER|MFE_TOUCHWATER))
 	  maxstep = 37*FRACUNIT;
 
-        if (!(flags & MF_TELEPORT) 
+        if (!(eflags & MFE_TELEPORT) 
 	    // The Minotaur floor fire (MT_MNTRFX2) can step up any amount
 	    // FIXME && type != MT_MNTRFX2
 	    && (tmfloorz - z > maxstep))
@@ -513,9 +557,9 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 
   //added:28-02-98:
   if (tmfloorthing)
-    eflags &= ~MF_ONGROUND;  //not on real floor
+    eflags &= ~MFE_ONGROUND;  //not on real floor
   else
-    eflags |= MF_ONGROUND;
+    eflags |= MFE_ONGROUND;
 
   SetPosition();
 
@@ -526,7 +570,7 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
     flags2 &= ~MF2_FEETARECLIPPED;
 
   // if any special lines were hit, do the effect
-  if (!(flags & (MF_TELEPORT|MF_NOCLIP|MF_NOTRIGGER)))
+  if (!(flags & (MF_NOCLIPLINE|MF_NOTRIGGER) || eflags & MFE_TELEPORT))
     {
       while (numspechit--)
         {
@@ -582,11 +626,11 @@ bool P_ThingHeightClip (Actor *thing)
 	if (thing->z+thing->height > tmceilingz)
 	  thing->z = thing->ceilingz - thing->height;
 
-      //thing->eflags &= ~MF_ONGROUND;
+      //thing->eflags &= ~MFE_ONGROUND;
     }
 
   //debug : be sure it falls to the floor
-  thing->eflags &= ~MF_ONGROUND;
+  thing->eflags &= ~MFE_ONGROUND;
 
   //added:28-02-98:
   // test sector bouding top & bottom, not things
@@ -857,50 +901,52 @@ fixed_t         attackrange;
 fixed_t         aimslope;
 
 
+mobjtype_t PuffType = MT_PUFF;
+Actor *PuffSpawned;
 
 // ---------------------------------------
 // was P_SpawnPuff
 // 
 void Map::SpawnPuff(fixed_t x, fixed_t y, fixed_t z)
 {
-  DActor *puff;
-  extern mobjtype_t PuffType;
-
   z += P_SignedRandom()<<10;
 
-  if (game.mode == gm_heretic)
+  if (!(game.mode == gm_heretic || game.mode == gm_hexen))
+    PuffType = MT_PUFF;
+
+  DActor *puff = SpawnDActor(x, y, z, PuffType);
+
+  if (linetarget && puff->info->seesound)
+    // Hit thing sound
+    S_StartSound(puff, puff->info->seesound);
+  else if (puff->info->attacksound)
+    S_StartSound(puff, puff->info->attacksound);
+
+  switch (PuffType)
     {
-      puff = SpawnDActor(x, y, z, PuffType);
-      if(puff->info->attacksound)
-        {
-	  S_StartSound(puff, puff->info->attacksound);
-        }
-      switch(PuffType)
-        {
-	case MT_BEAKPUFF:
-	case MT_STAFFPUFF:
-	  puff->pz = FRACUNIT;
-	  break;
-	case MT_GAUNTLETPUFF1:
-	case MT_GAUNTLETPUFF2:
-	  puff->pz = int(.8*FRACUNIT);
-	default:
-	  break;
-        }
-    }
-  else
-    {        
-      puff = SpawnDActor(x,y,z, MT_PUFF);
-      puff->pz = FRACUNIT;
+    case MT_PUFF:
       puff->tics -= P_Random()&3;
-        
       if (puff->tics < 1)
 	puff->tics = 1;
         
       // don't make punches spark on the wall
       if (attackrange == MELEERANGE)
 	puff->SetState(S_PUFF3);
+      // fallthru
+    case MT_PUNCHPUFF:
+    case MT_BEAKPUFF:
+    case MT_STAFFPUFF:
+      puff->pz = FRACUNIT;
+      break;
+    case MT_HAMMERPUFF:
+    case MT_GAUNTLETPUFF1:
+    case MT_GAUNTLETPUFF2:
+      puff->pz = int(.8*FRACUNIT);
+      break;
+    default:
+      break;
     }
+  PuffSpawned = puff;
 }
 
 
@@ -1591,28 +1637,29 @@ void PlayerPawn::UseLines()
 //
 Actor *bombowner;
 Actor *bomb;
-int    bombdamage;
-int    bombdtype;
-
+int     bombdamage;
+fixed_t bombdistance;
+int     bombdtype;
+bool    bomb_damage_owner;
 
 //
 // PIT_RadiusAttack
 // "bombowner" is the creature
 // that caused the explosion at "bomb".
 //
-static bool PIT_RadiusAttack (Actor *thing)
+static bool PIT_RadiusAttack(Actor *thing)
 {
-  fixed_t     dx;
-  fixed_t     dy;
-  fixed_t     dz;
-  fixed_t     dist;
+  fixed_t  dx, dy, dz;
+  fixed_t  dist;
 
   if (!(thing->flags & MF_SHOOTABLE))
     return true;
 
-  // Bosses take no damage from concussion.
-  if (thing->flags2 & MF2_BOSS)
+  if (!bomb_damage_owner && thing == bombowner)
     return true;
+
+  // Bosses take no damage from concussion.
+  // if (thing->flags2 & MF2_BOSS) return true;
 
   dx = abs(thing->x - bomb->x);
   dy = abs(thing->y - bomb->y);
@@ -1625,24 +1672,25 @@ static bool PIT_RadiusAttack (Actor *thing)
   dz = abs(thing->z+(thing->height>>1) - bomb->z);
   dist = dist > dz ? dist : dz;
 
-  dist >>= FRACBITS;
-
   if (dist < 0)
     dist = 0;
 
-  if (dist >= bombdamage)
+  if (dist >= bombdistance)
     return true;    // out of range
 
+  // geometry blocks the blast?
   if (thing->floorz > bomb->z && bomb->ceilingz < thing->z)
     return true;
-
   if (thing->ceilingz < bomb->z && bomb->floorz > thing->z)
     return true;
 
   if (thing->mp->CheckSight(thing, bomb))
     {
-      int  damage=bombdamage - dist;
-      int  apx=0, apy=0;
+      int damage = (bombdamage * (bombdistance - dist)/bombdistance) + 1;
+
+      // Hexen: if(thing->player) damage >>= 2;
+
+      int apx = 0, apy = 0;
       if (dist)
         {
 	  apx = (thing->x - bomb->x)/dist;
@@ -1661,7 +1709,7 @@ static bool PIT_RadiusAttack (Actor *thing)
 // was P_RadiusAttack
 // Culprit is the creature that caused the explosion.
 //
-void Actor::RadiusAttack(Actor *culprit, int damage, int dtype)
+void Actor::RadiusAttack(Actor *culprit, int damage, int distance, int dtype, bool downer)
 {
   int nx, ny;
 
@@ -1670,23 +1718,22 @@ void Actor::RadiusAttack(Actor *culprit, int damage, int dtype)
   int         yl;
   int         yh;
 
-  fixed_t     dist;
+  if (distance < 0)
+    bombdistance = damage << FRACBITS;
+  else
+    bombdistance = distance << FRACBITS;
 
-  dist = (damage+MAXRADIUS)<<FRACBITS;
+  fixed_t dist = bombdistance + MAXRADIUS << FRACBITS;
   yh = (y + dist - mp->bmaporgy)>>MAPBLOCKSHIFT;
   yl = (y - dist - mp->bmaporgy)>>MAPBLOCKSHIFT;
   xh = (x + dist - mp->bmaporgx)>>MAPBLOCKSHIFT;
   xl = (x - dist - mp->bmaporgx)>>MAPBLOCKSHIFT;
-  bomb = this;
 
-  /*
-  if (type == MT_POD && owner)
-    bombowner = owner;
-  else
-  */
+  bomb = this;
   bombowner = culprit;
   bombdamage = damage;
   bombdtype = dtype;
+  bomb_damage_owner = downer;
 
   for (ny=yl ; ny<=yh ; ny++)
     for (nx=xl ; nx<=xh ; nx++)
@@ -2171,7 +2218,7 @@ void Actor::FakeZMovement()
   fixed_t nz = z + pz;
   if ((flags & MF_FLOAT) && target)
     {       // float down towards target if too close
-      if (!(flags&MF_SKULLFLY) && !(flags&MF_INFLOAT))
+      if (!(eflags & (MFE_SKULLFLY | MFE_INFLOAT)))
 	{
 	  int dist = P_AproxDistance(x - target->x, y - target->y);
 	  int delta = target->z + (height>>1) - nz;
@@ -2200,7 +2247,7 @@ void Actor::FakeZMovement()
 	{
 	  npz = 0;
 	}
-      if (flags & MF_SKULLFLY)
+      if (eflags & MFE_SKULLFLY)
 	{ // The skull slammed into something
 	  npz = -npz;
 	}
@@ -2231,7 +2278,7 @@ void Actor::FakeZMovement()
       if (npz > 0)
 	npz = 0;
       nz = ceilingz - height;
-      if (flags & MF_SKULLFLY)
+      if (eflags & MFE_SKULLFLY)
 	{       // the skull slammed into something
 	  npz = -npz;
 	}
@@ -2270,7 +2317,7 @@ Actor *Actor::CheckOnmobj()
   validcount++;
   numspechit = 0;
     
-  if (tmflags & MF_NOCLIP)
+  if (tmflags & MF_NOCLIPTHING)
     return NULL;
     
   //
@@ -2378,9 +2425,6 @@ bool Actor::CheckPosition(fixed_t nx, fixed_t ny)
   validcount++;
   numspechit = 0;
 
-  if (tmflags & MF_NOCLIP)
-    return true;
-
   // Check things first, possibly picking things up.
   // The bounding box is extended by MAXRADIUS
   // because Actors are grouped into mapblocks
@@ -2393,26 +2437,33 @@ bool Actor::CheckPosition(fixed_t nx, fixed_t ny)
 
   if (!(flags & MF_NOCLIPTHING))
     {
+      // check things
       xl = (tmbbox[BOXLEFT] - bmox - MAXRADIUS)>>MAPBLOCKSHIFT;
       xh = (tmbbox[BOXRIGHT] - bmox + MAXRADIUS)>>MAPBLOCKSHIFT;
       yl = (tmbbox[BOXBOTTOM] - bmoy - MAXRADIUS)>>MAPBLOCKSHIFT;
       yh = (tmbbox[BOXTOP] - bmoy + MAXRADIUS)>>MAPBLOCKSHIFT;
-        
+
+      BlockingMobj = NULL;        
       for (bx=xl ; bx<=xh ; bx++)
 	for (by=yl ; by<=yh ; by++)
 	  if (!mp->BlockThingsIterator(bx,by,PIT_CheckThing))
 	    return false;
     }
-  // check lines
-  xl = (tmbbox[BOXLEFT] - bmox)>>MAPBLOCKSHIFT;
-  xh = (tmbbox[BOXRIGHT] - bmox)>>MAPBLOCKSHIFT;
-  yl = (tmbbox[BOXBOTTOM] - bmoy)>>MAPBLOCKSHIFT;
-  yh = (tmbbox[BOXTOP] - bmoy)>>MAPBLOCKSHIFT;
 
-  for (bx=xl ; bx<=xh ; bx++)
-    for (by=yl ; by<=yh ; by++)
-      if (!mp->BlockLinesIterator(bx,by,PIT_CheckLine))
-	return false;
+  if (!(flags & MF_NOCLIPLINE))
+    {
+      // check lines
+      BlockingMobj = NULL;
+
+      xl = (tmbbox[BOXLEFT] - bmox)>>MAPBLOCKSHIFT;
+      xh = (tmbbox[BOXRIGHT] - bmox)>>MAPBLOCKSHIFT;
+      yl = (tmbbox[BOXBOTTOM] - bmoy)>>MAPBLOCKSHIFT;
+      yh = (tmbbox[BOXTOP] - bmoy)>>MAPBLOCKSHIFT;
+      for (bx=xl ; bx<=xh ; bx++)
+	for (by=yl ; by<=yh ; by++)
+	  if (!mp->BlockLinesIterator(bx,by,PIT_CheckLine))
+	    return false;
+    }
 
   return true;
 }

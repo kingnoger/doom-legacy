@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.9  2003/03/15 20:07:14  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.8  2003/03/08 16:07:00  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -102,6 +105,8 @@ PlayerInfo::PlayerInfo(const string & n)
   pawntype = 0;
   color = 0;
 
+  message = NULL;
+
   playerstate = PST_WAITFORMAP;
   frags.resize(game.maxplayers);  
 };
@@ -126,6 +131,26 @@ void PlayerInfo::CheckFragLimit()
 	game.ExitLevel(0);
     }
 }
+
+
+//--------------------------------------------------------------------------
+// was P_SetMessage
+
+
+bool ultimatemsg;
+
+void PlayerInfo::SetMessage(const char *msg, bool ultmsg)
+{
+  if ((ultimatemsg || !cv_showmessages.value) && !ultmsg)
+    return;
+    
+  message = msg;
+  //player->messageTics = MESSAGETICS;
+  //BorderTopRefresh = true;
+  if (ultmsg)
+    ultimatemsg = true;
+}
+
 
 // Reset players between levels
 void PlayerInfo::Reset(bool resetpawn, bool resetfrags)

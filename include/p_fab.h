@@ -17,8 +17,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:25  hurdler
-// Initial revision
+// Revision 1.2  2003/03/15 20:07:21  smite-meister
+// Initial Hexen compatibility!
+//
+// Revision 1.1.1.1  2002/11/16 14:18:25  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.4  2002/08/06 13:14:28  vberghol
 // ...
@@ -51,10 +54,10 @@
 extern consvar_t cv_solidcorpse;        //p_enemy
 extern consvar_t cv_bloodtime;
 
-class Actor;
+class DActor;
 
 // spawn smoke trails behind rockets and skull head attacks
-void A_SmokeTrailer (Actor* actor);
+void A_SmokeTrailer(DActor* actor);
 
 // hack the states table to set Doom Legacy's default translucency on sprites
 void P_SetTranslucencies (void);

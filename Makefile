@@ -120,6 +120,12 @@ LD     	= $(CC)
 export objdir = objs
 
 export engine_objects = \
+	$(objdir)/p_acs.o \
+	$(objdir)/a_action.o \
+	$(objdir)/p_xpspr.o \
+	$(objdir)/p_xenemy.o \
+	$(objdir)/info.o \
+	$(objdir)/info_m.o \
 	$(objdir)/t_oper.o \
 	$(objdir)/t_parse.o \
 	$(objdir)/t_prepro.o \
@@ -174,8 +180,7 @@ export engine_objects = \
 	$(objdir)/p_inter.o \
 	$(objdir)/p_fab.o \
 	$(objdir)/d_items.o \
-	$(objdir)/dstrings.o \
-	$(objdir)/info.o
+	$(objdir)/dstrings.o
 
 
 export util_objects = \

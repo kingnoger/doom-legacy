@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/03/15 20:07:13  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.8  2003/03/08 16:06:59  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -91,25 +94,8 @@ consvar_t cv_respawnmonsters = {"respawnmonsters","0",CV_NETVAR,CV_OnOff};
 consvar_t cv_respawnmonsterstime = {"respawnmonsterstime","12",CV_NETVAR,CV_Unsigned};
 
 
-static const fixed_t FloatBobOffsets[64] =
-{
-  0, 51389, 102283, 152192,
-  200636, 247147, 291278, 332604,
-  370727, 405280, 435929, 462380,
-  484378, 501712, 514213, 521763,
-  524287, 521763, 514213, 501712,
-  484378, 462380, 435929, 405280,
-  370727, 332604, 291278, 247147,
-  200636, 152192, 102283, 51389,
-  -1, -51390, -102284, -152193,
-  -200637, -247148, -291279, -332605,
-  -370728, -405281, -435930, -462381,
-  -484380, -501713, -514215, -521764,
-  -524288, -521764, -514214, -501713,
-  -484379, -462381, -435930, -405280,
-  -370728, -332605, -291279, -247148,
-  -200637, -152193, -102284, -51389
-};
+extern fixed_t FloatBobOffsets[64];
+
 
 int Actor::Serialize(LArchive & a)
 { 
@@ -360,6 +346,12 @@ void DActor::Think()
       return;
     }
 
+  if (type == MT_MWAND_MISSILE || type == MT_CFLAME_MISSILE)
+    {
+      XBlasterMissileThink();
+      return;
+    }
+
   /*
     - is it a ppawn
     - checkwater
@@ -370,11 +362,12 @@ void DActor::Think()
     - nightmare respawn
    */
   int oldflags = flags;
+  int oldeflags = eflags;
   
   Actor::Think();
 
   // must have hit something
-  if ((oldflags & MF_SKULLFLY) && !(flags & MF_SKULLFLY))
+  if ((oldeflags & MFE_SKULLFLY) && !(eflags & MFE_SKULLFLY))
     SetState(game.mode == gm_heretic ? info->seestate : info->spawnstate);
   
   // must have exploded
@@ -382,7 +375,7 @@ void DActor::Think()
     ExplodeMissile();
 
   // missiles hitting the floor
-  if ((flags & MF_MISSILE) && (eflags & MF_JUSTHITFLOOR))
+  if ((flags & MF_MISSILE) && (eflags & MFE_JUSTHITFLOOR))
     {
       if (flags2 & MF2_FLOORBOUNCE)
 	{
@@ -391,14 +384,14 @@ void DActor::Think()
       else if (type == MT_MNTRFX2)
 	{ // Minotaur floor fire can go up steps
 	}
-      else if (!(flags & MF_NOCLIP))
+      else if (!(flags & MF_NOCLIPLINE))
 	{
 	  ExplodeMissile();
 	}
     }
 
   // crashing to ground
-  if (info->crashstate && (flags & MF_CORPSE) && (eflags & MF_JUSTHITFLOOR))
+  if (info->crashstate && (flags & MF_CORPSE) && (eflags & MFE_JUSTHITFLOOR))
     {
       SetState(info->crashstate);
       flags &= ~MF_CORPSE;
@@ -452,22 +445,22 @@ void Actor::Think()
   // XY movement
   if (px || py)
     XYMovement();
-  else if (flags & MF_SKULLFLY)
+  else if (eflags & MFE_SKULLFLY)
     {
       // the skull slammed into something
-      flags &= ~MF_SKULLFLY;
+      eflags &= ~MFE_SKULLFLY;
       pz = 0;
     }
 
   // Z movement
-  eflags &= ~MF_JUSTHITFLOOR;
+  eflags &= ~MFE_JUSTHITFLOOR;
 
   if (flags2 & MF2_FLOATBOB)
     {
       // Floating item bobbing motion (maybe move to DActor::Think ?)
       z = floorz + FloatBobOffsets[(health++) & 63];
     }
-  else if (!(eflags & MF_ONGROUND) || (z != floorz) || pz)
+  else if (!(eflags & MFE_ONGROUND) || (z != floorz) || pz)
     {
       // time to fall...
       if (flags2 & MF2_PASSMOBJ)
@@ -507,13 +500,6 @@ void Actor::Think()
       else
 	ZMovement();
     }
-
-  // SoM: Floorhuggers stay on the floor allways...
-  // BP: tested here but never set ?!
-  if (flags & MF_FLOORHUGGER)
-    {
-      z = floorz;
-    }
 }
 
 
@@ -533,7 +519,7 @@ float Actor::GetMoveFactor()
   // Actor::XYFriction, the friction factors are applied as you coast and slow down.
 
   if (boomsupport && variable_friction &&
-      !(flags & (MF_NOGRAVITY | MF_NOCLIP)))
+      !(flags & (MF_NOGRAVITY | MF_NOCLIPLINE)))
     {
       float frict = friction;
 
@@ -705,7 +691,7 @@ void Actor::XYMovement()
   // Friction.
 
   // no friction for missiles ever
-  if (flags & (MF_MISSILE | MF_SKULLFLY))
+  if (flags & MF_MISSILE || eflags & MFE_SKULLFLY)
     return;
 
   XYFriction(oldx, oldy);
@@ -725,7 +711,7 @@ void Actor::XYMovement()
 void Actor::XYFriction(fixed_t oldx, fixed_t oldy)
 {
   // slow down in water, not too much for playability issues
-  if (eflags & MF_UNDERWATER)
+  if (eflags & MFE_UNDERWATER)
     {
       px = FixedMul (px, FRICTION_UNDERWATER);
       py = FixedMul (py, FRICTION_UNDERWATER);
@@ -803,8 +789,8 @@ void Actor::ZMovement()
   if ((flags & MF_FLOAT) && target)
     {
       // float down towards target if too close
-      if (!(flags & MF_SKULLFLY)
-	  && !(flags & MF_INFLOAT))
+      if (!(eflags & MFE_SKULLFLY)
+	  && !(eflags & MFE_INFLOAT))
         {
 	  dist = P_AproxDistance(x - target->x, y - target->y);
 	  delta = (target->z + (height>>1)) - z;
@@ -831,7 +817,7 @@ void Actor::ZMovement()
       if (flags & MF_MISSILE)
         {
 	  z = floorz;
-	  eflags |= MF_JUSTHITFLOOR;
+	  eflags |= MFE_JUSTHITFLOOR;
 	  return;
 	}
         
@@ -839,12 +825,12 @@ void Actor::ZMovement()
       if (z - pz > floorz)
 	{
 	  HitFloor();
-	  eflags |= MF_JUSTHITFLOOR;
+	  eflags |= MFE_JUSTHITFLOOR;
 	}
 
       z = floorz;
 
-      if (flags & MF_SKULLFLY)
+      if (eflags & MFE_SKULLFLY)
         {
 	  // the skull slammed into something
 	  pz = -pz;
@@ -865,9 +851,9 @@ void Actor::ZMovement()
       fixed_t gravityadd = -cv_gravity.value/NEWTICRATERATIO;
 
       // if waist under water, slow down the fall
-      if (eflags & MF_UNDERWATER)
+      if (eflags & MFE_UNDERWATER)
 	{
-	  if (eflags & MF_SWIMMING)
+	  if (eflags & MFE_SWIMMING)
 	    gravityadd = 0;     // gameplay: no gravity while swimming
 	  else
 	    gravityadd >>= 2;
@@ -885,7 +871,7 @@ void Actor::ZMovement()
 
       // hit the ceiling
       if (pz > 0)
-	if (flags & MF_SKULLFLY)
+	if (eflags & MFE_SKULLFLY)
 	  {       // the skull slammed into something
 	    pz = -pz;
 	  }
@@ -902,17 +888,17 @@ void Actor::ZMovement()
 	      return;
             }
 
-	  eflags |= MF_JUSTHITFLOOR; // with missiles works also with ceiling hits
+	  eflags |= MFE_JUSTHITFLOOR; // with missiles works also with ceiling hits
 	  return;
         }
     }
 
   // no z friction for missiles and skulls
-  if (flags & (MF_MISSILE | MF_SKULLFLY))
+  if (flags & MF_MISSILE || eflags & MFE_SKULLFLY)
     return;
 
   // z friction in water
-  if ((eflags & MF_TOUCHWATER) || (eflags & MF_UNDERWATER)) 
+  if ((eflags & MFE_TOUCHWATER) || (eflags & MFE_UNDERWATER)) 
     {
       pz = FixedMul(pz, FRICTION_UNDERWATER);
     }
@@ -936,7 +922,7 @@ void Actor::Thrust(angle_t angle, fixed_t move)
 
 //-------------------------------------------------
 // was P_MobjCheckWater
-// check for water in the sector, set MF_TOUCHWATER and MF_UNDERWATER
+// check for water in the sector, set MFE_TOUCHWATER and MFE_UNDERWATER
 // called by Actor::Think()
 void Actor::CheckWater()
 {
@@ -958,20 +944,20 @@ void Actor::CheckWater()
 	fz = sector->floorheight + (FRACUNIT/4); // water texture
 
       if (z <= fz && z+height > fz)
-	eflags |= MF_TOUCHWATER;
+	eflags |= MFE_TOUCHWATER;
       else
-	eflags &= ~MF_TOUCHWATER;
+	eflags &= ~MFE_TOUCHWATER;
 
       if (z+(height>>1) <= fz)
-	eflags |= MF_UNDERWATER;
+	eflags |= MFE_UNDERWATER;
       else
-	eflags &= ~MF_UNDERWATER;
+	eflags &= ~MFE_UNDERWATER;
     }
   else if (sector->ffloors)
     {
       ffloor_t*  rover;
 
-      eflags &= ~(MF_UNDERWATER|MF_TOUCHWATER);
+      eflags &= ~(MFE_UNDERWATER|MFE_TOUCHWATER);
 
       for (rover = sector->ffloors; rover; rover = rover->next)
 	{
@@ -981,29 +967,29 @@ void Actor::CheckWater()
 	    continue;
 
 	  if (z + height > *rover->topheight)
-            eflags |= MF_TOUCHWATER;
+            eflags |= MFE_TOUCHWATER;
 	  else
-            eflags &= ~MF_TOUCHWATER;
+            eflags &= ~MFE_TOUCHWATER;
 
 	  if (z + (height >> 1) < *rover->topheight)
-            eflags |= MF_UNDERWATER;
+            eflags |= MFE_UNDERWATER;
 	  else
-            eflags &= ~MF_UNDERWATER;
+            eflags &= ~MFE_UNDERWATER;
 
-	  if (!(oldeflags & (MF_TOUCHWATER|MF_UNDERWATER))
-	      && (eflags & (MF_TOUCHWATER|MF_UNDERWATER))) // && game.mode != gm_heretic
+	  if (!(oldeflags & (MFE_TOUCHWATER|MFE_UNDERWATER))
+	      && (eflags & (MFE_TOUCHWATER|MFE_UNDERWATER))) // && game.mode != gm_heretic
             mp->SpawnSplash(this, *rover->topheight);
 	}
       return;
     }
   else
-    eflags &= ~(MF_UNDERWATER|MF_TOUCHWATER);
+    eflags &= ~(MFE_UNDERWATER|MFE_TOUCHWATER);
 
   /*
-    if( (eflags ^ oldeflags) & MF_TOUCHWATER)
-    CONS_Printf("touchewater %d\n",eflags & MF_TOUCHWATER ? 1 : 0);
-    if( (eflags ^ oldeflags) & MF_UNDERWATER)
-    CONS_Printf("underwater %d\n",eflags & MF_UNDERWATER ? 1 : 0);
+    if( (eflags ^ oldeflags) & MFE_TOUCHWATER)
+    CONS_Printf("touchewater %d\n",eflags & MFE_TOUCHWATER ? 1 : 0);
+    if( (eflags ^ oldeflags) & MFE_UNDERWATER)
+    CONS_Printf("underwater %d\n",eflags & MFE_UNDERWATER ? 1 : 0);
   */
 }
 
@@ -1108,8 +1094,8 @@ bool DActor::SetState(statenum_t ns, bool call)
     
     // Modified handling.
     // Call action functions when the state is set
-    if (call == true && st->action.acp1)
-      st->action.acp1(this);
+    if (call == true && st->action)
+      st->action(this);
         
     seenstate[ns] = statenum_t(1 + st->nextstate);   // killough 4/9/98
         
@@ -1202,6 +1188,7 @@ void DActor::NightmareRespawn()
 //---------------------------------------------
 // was P_SpawnMissile
 //
+
 DActor *DActor::SpawnMissile(Actor *dest, mobjtype_t type)
 {
   fixed_t  mz;
@@ -1244,7 +1231,7 @@ DActor *DActor::SpawnMissile(Actor *dest, mobjtype_t type)
   // fuzzy player
   if (dest->flags & MF_SHADOW)
     {
-      if( game.mode == gm_heretic )
+      if (game.mode == gm_heretic || game.mode == gm_hexen)
 	an += P_SignedRandom()<<21; 
       else
 	an += P_SignedRandom()<<20;

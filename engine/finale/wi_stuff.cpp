@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/03/15 20:07:19  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.6  2003/02/23 22:49:31  smite-meister
 // FS is back! L2 cache works.
 //
@@ -118,6 +121,8 @@
 // in sec
 #define DM_WAIT                 20
 
+
+int Intermission::s_count = 0;
 
 //treat all games in a unified way
 
@@ -1077,7 +1082,7 @@ static void WI_updateStats()
       cnt_kills[0] += 2;
 
       if (!(bcount&3))
-	S_StartAmbSound(sfx_pistol);
+	S_StartAmbSound(s_count);
 
       if (cnt_kills[0] >= (plrs[me].kills * 100) / level->kills)
         {
@@ -1091,7 +1096,7 @@ static void WI_updateStats()
       cnt_items[0] += 2;
 
       if (!(bcount&3))
-	S_StartAmbSound(sfx_pistol);
+	S_StartAmbSound(s_count);
 
       if (cnt_items[0] >= (plrs[me].items * 100) / level->items)
         {
@@ -1105,7 +1110,7 @@ static void WI_updateStats()
       cnt_secret[0] += 2;
 
       if (!(bcount&3))
-	S_StartAmbSound(sfx_pistol);
+	S_StartAmbSound(s_count);
 
       if (cnt_secret[0] >= (plrs[me].secrets * 100) / level->secrets)
         {
@@ -1118,7 +1123,7 @@ static void WI_updateStats()
   else if (sp_state == 8)
     {
       if (!(bcount&3))
-	S_StartAmbSound(sfx_pistol);
+	S_StartAmbSound(s_count);
 
       cnt_time += 3;
 
@@ -1194,7 +1199,7 @@ void Intermission::UpdateCoopStats()
     {
       // count kills
       if (!(bcount&3))
-	S_StartAmbSound(sfx_pistol);
+	S_StartAmbSound(s_count);
 
       for (i=0 ; i<n ; i++)
         {
@@ -1218,7 +1223,7 @@ void Intermission::UpdateCoopStats()
     {
       // count items
       if (!(bcount&3))
-	S_StartAmbSound(sfx_pistol);
+	S_StartAmbSound(s_count);
 
       for (i=0 ; i<n ; i++)
         {
@@ -1240,7 +1245,7 @@ void Intermission::UpdateCoopStats()
     {
       // count secrets
       if (!(bcount&3))
-	S_StartAmbSound(sfx_pistol);
+	S_StartAmbSound(s_count);
 
       for (i=0 ; i<n ; i++)
         {
@@ -1264,7 +1269,7 @@ void Intermission::UpdateCoopStats()
     {
       // count frags
       if (!(bcount&3))
-	S_StartAmbSound(sfx_pistol);
+	S_StartAmbSound(s_count);
 
       for (i=0 ; i<n ; i++)
         {
@@ -1289,7 +1294,7 @@ void Intermission::UpdateCoopStats()
     {
       // count time and partime
       if (!(bcount&3))
-	S_StartAmbSound(sfx_pistol);
+	S_StartAmbSound(s_count);
 
       cnt_time += 3;
 

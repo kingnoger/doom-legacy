@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/03/15 20:07:21  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.2  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -165,6 +168,7 @@ private:
 
   void DrawYAH();
 public:
+  static int s_count; // counting sound
 
   // starts the intermission
   void Start(const LevelNode *l, const LevelNode *f);

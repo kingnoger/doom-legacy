@@ -1,6 +1,9 @@
 // $Id$
 //
 // $Log$
+// Revision 1.5  2003/03/15 20:07:15  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.4  2003/01/12 12:56:40  smite-meister
 // Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
 //
@@ -107,7 +110,7 @@ void Camera::Think()
   float f1, f2;
   f1 = FIXED_TO_FLOAT(viewpointx - x);
   f2 = FIXED_TO_FLOAT(viewpointy - y);
-  dist = sqrt(f1*f1+f2*f2)*FRACUNIT;
+  dist = int(sqrt(f1*f1+f2*f2)*FRACUNIT);
   ang = R_PointToAngle2(0, z, dist, target->z + (target->height>>1)
 			+ finesine[(target->aiming>>ANGLETOFINESHIFT) & FINEMASK] * 64);
 

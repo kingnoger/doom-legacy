@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/03/15 20:07:17  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.9  2003/03/08 16:07:08  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -609,7 +612,7 @@ void Map::LoadNodes(int lump)
 //
 void Map::LoadThings(int lump)
 {
-  if (game.mode == gm_hexen)
+  if (hexen_format)
     nummapthings = fc.LumpLength(lump)/sizeof(hex_mapthing_t);
   else
     nummapthings = fc.LumpLength(lump)/sizeof(doom_mapthing_t);
@@ -648,14 +651,15 @@ void Map::LoadThings(int lump)
   int i, n, low, high, ednum;
   for (i=0 ; i<nummapthings ; i++, t++)
     {
-      if (game.mode == gm_hexen)
+      if (hexen_format)
 	{
+	  // TODO add TID
 	  t->x = SHORT(ht->x);
 	  t->y = SHORT(ht->y);
-	  t->angle = SHORT(ht->angle);
-	  ednum    = SHORT(ht->type);
-	  t->flags = SHORT(ht->flags);
-	  // TODO rest
+	  //t->height = SHORT(ht->height);
+	  t->angle  = SHORT(ht->angle);
+	  ednum     = SHORT(ht->type);
+	  t->flags  = SHORT(ht->flags);
 	  ht++;
 	}
       else
@@ -779,14 +783,11 @@ void Map::LoadThings(int lump)
 //
 void Map::LoadLineDefs(int lump)
 {
-
   int                 i;
 
+  vertex_t *v1, *v2;
 
-  vertex_t*           v1;
-  vertex_t*           v2;
-
-  if (game.mode == gm_hexen)
+  if (hexen_format)
     numlines = fc.LumpLength(lump)/sizeof(hex_maplinedef_t);
   else
     numlines = fc.LumpLength(lump)/sizeof(maplinedef_t);
@@ -802,20 +803,19 @@ void Map::LoadLineDefs(int lump)
 
   for (i=0 ; i<numlines ; i++, ld++)
     {
-      if (game.mode == gm_hexen)
+      if (hexen_format)
 	{
 	  ld->flags = SHORT(hld->flags);
 
 	  // New line special info ...
 	  ld->special = hld->special;
-	  /*
-	    // TODO add
+
 	  ld->arg1 = hld->arg1;
 	  ld->arg2 = hld->arg2;
 	  ld->arg3 = hld->arg3;
 	  ld->arg4 = hld->arg4;
 	  ld->arg5 = hld->arg5;
-	  */
+
 	  v1 = ld->v1 = &vertexes[SHORT(hld->v1)];
 	  v2 = ld->v2 = &vertexes[SHORT(hld->v2)];
 
@@ -1417,6 +1417,12 @@ bool Map::Setup(tic_t start)
   info = new MapInfo;
   levelscript->data = info->Load(lumpnum); // load map separator lump info (map properties, FS...)
 
+  // is the map in Hexen format?
+  if (!strncmp(fc.FindNameForNum(lumpnum + ML_BEHAVIOR), "BEHAVIOR", 8))
+    hexen_format = true;
+  else
+    hexen_format = false;
+
 #ifdef FRAGGLESCRIPT
   T_PreprocessScripts();        // preprocess FraggleScript scripts (needs already added players)
   script_camera_on = false;
@@ -1471,7 +1477,9 @@ bool Map::Setup(tic_t start)
   InitAmbientSound();
   LoadThings (lumpnum+ML_THINGS);
   PlaceWeapons(); // Heretic mace
-  // LoadACScripts(lumpnum+ML_BEHAVIOR); // ACS object code
+
+  // polyobjs here
+  LoadACScripts(lumpnum+ML_BEHAVIOR);
 
   // set up world state
   SpawnSpecials();

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/03/15 20:07:17  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.3  2003/03/08 16:07:09  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -336,6 +339,7 @@ void Map::ChangeSwitchTexture(line_t *line, int useAgain)
 
   if (loc != button_none)
     {
+      // FIXME sounds/gametype, see HereticPatchEngine
       int sound = sfx_swtchn;
 
       // EXIT SWITCH?

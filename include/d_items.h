@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/03/15 20:07:20  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.5  2003/03/08 16:07:13  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -84,14 +87,26 @@
 //
 typedef enum
 {
-  it_bluecard   =    1,
-  it_yellowcard =    2,
-  it_redcard    =    4,
-  it_blueskull  =    8,
-  it_yellowskull= 0x10,
-  it_redskull   = 0x20,
-  it_allkeys    = 0x3f,
-  NUMCARDS      = 6
+  // Doom and Heretic keys are merged
+  it_bluecard   = 0x0001,
+  it_yellowcard = 0x0002,
+  it_redcard    = 0x0004,
+  it_blueskull  = 0x0008,
+  it_yellowskull= 0x0010,
+  it_redskull   = 0x0020,
+  // Hexen
+  it_key_1 = 0x0040,
+  it_key_2 = 0x0080,
+  it_key_3 = 0x0100,
+  it_key_4 = 0x0200,
+  it_key_5 = 0x0400,
+  it_key_6 = 0x0800,
+  it_key_7 = 0x1000,
+  it_key_8 = 0x2000,
+  it_key_9 = 0x4000,
+  it_key_A = 0x8000,
+  it_key_B = 0x10000,
+  it_allkeys = 0x1ffff,
 } card_t;
 
 typedef enum
@@ -136,22 +151,30 @@ typedef enum
   // heretic
   pw_weaponlevel2,
   pw_flight,
+  
+  // hexen
+  pw_shield,
+  pw_health2,
+  pw_speed,
+  pw_minotaur,
 
   NUMPOWERS
-
 } powertype_t;
 
 //
 // Power up durations,
-//  how many seconds till expiration,
-//  assuming TICRATE is 35 ticks/second.
+//  how many seconds till expiration
 //
 typedef enum
 {
   INVULNTICS  = (30*TICRATE),
   INVISTICS   = (60*TICRATE),
   INFRATICS   = (120*TICRATE),
-  IRONTICS    = (60*TICRATE)
+  IRONTICS    = (60*TICRATE),
+  WPNLEV2TICS = (40*TICRATE),
+  FLIGHTTICS  = (60*TICRATE),
+  MAULATORTICS = (25*TICRATE),
+  SPEEDTICS   = (45*TICRATE)
 } powerduration_t;
 
 
@@ -160,7 +183,8 @@ typedef enum
 //  user has not changed weapon.
 typedef enum
 {
-  wp_doom,
+  wp_nochange = -1, // No pending weapon change.
+  wp_doom = 0,
   wp_fist = wp_doom,
   wp_pistol,
   wp_shotgun,
@@ -183,18 +207,31 @@ typedef enum
   wp_gauntlets,
   wp_beak,
 
-  NUMWEAPONS,
+  wp_hexen,
+  wp_fpunch = wp_hexen,
+  wp_cmace,
+  wp_mwand,
+  wp_timons_axe,
+  wp_serpent_staff,
+  wp_cone_of_shards,
+  wp_hammer_of_retribution,
+  wp_firestorm,
+  wp_arc_of_death,
+  wp_quietus,
+  wp_wraithverge,
+  wp_bloodscourge,
+  wp_snout,
 
-  // No pending weapon change.
-  wp_nochange,
-  wp_barrel // barrel explosion
+  NUMWEAPONS,
+  wp_barrel    // barrel explosion
 } weapontype_t;
 
 
 // Ammunition types defined.
 typedef enum
 {
-  am_doom,
+  am_noammo = -1, // Unlimited
+  am_doom = 0,
   am_clip = am_doom, // Pistol / chaingun ammo.
   am_shell,   // Shotgun / double barreled shotgun.
   am_cell,    // Plasma rifle, BFG.
@@ -209,9 +246,13 @@ typedef enum
   am_phoenixrod,
   am_mace,
 
-  NUMAMMO,
-  am_noammo = NUMAMMO   // Unlimited for chainsaw / fist.
+  // Hexen
+  am_hexen,
+  am_mana1 = am_hexen,
+  am_mana2,
 
+  NUMAMMO,
+  am_manaboth  // both mana types
 } ammotype_t;
 
 
@@ -220,12 +261,12 @@ struct weaponinfo_t
 {
   ammotype_t ammo;
   int        ammopershoot;
-  statenum_t upstate;
-  statenum_t downstate;
-  statenum_t readystate;
-  statenum_t atkstate;
-  statenum_t holdatkstate;
-  statenum_t flashstate;
+  weaponstatenum_t upstate;
+  weaponstatenum_t downstate;
+  weaponstatenum_t readystate;
+  weaponstatenum_t atkstate;
+  weaponstatenum_t holdatkstate;
+  weaponstatenum_t flashstate;
 };
 
 // "static" weapon info
@@ -236,7 +277,7 @@ struct weapondata_t
 };
 
 extern weapondata_t weapondata[NUMWEAPONS];
-extern weapontype_t wgroups[8][4];
+extern weapontype_t wgroups[8][7];
 
 //extern weaponinfo_t doomweaponinfo[NUMWEAPONS];
 extern weaponinfo_t wpnlev1info[NUMWEAPONS];

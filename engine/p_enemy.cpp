@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/03/15 20:07:15  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.7  2003/03/08 16:07:06  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -81,7 +84,7 @@
 #include "g_map.h"
 #include "g_actor.h"
 #include "g_pawn.h"
-#include "g_player.h" // remove...
+#include "g_player.h"
 
 #include "r_main.h"
 #include "r_state.h"
@@ -94,27 +97,11 @@
 
 
 
-void FastMonster_OnChange(void);
+void FastMonster_OnChange();
 
 // enable the solid corpses option : still not finished
 consvar_t cv_solidcorpse = {"solidcorpse","0",CV_NETVAR | CV_SAVE,CV_OnOff};
 consvar_t cv_fastmonsters = {"fastmonsters","0",CV_NETVAR | CV_CALL,CV_OnOff,FastMonster_OnChange};
-
-
-typedef enum
-{
-  DI_EAST,
-  DI_NORTHEAST,
-  DI_NORTH,
-  DI_NORTHWEST,
-  DI_WEST,
-  DI_SOUTHWEST,
-  DI_SOUTH,
-  DI_SOUTHEAST,
-  DI_NODIR,
-  NUMDIRS
-
-} dirtype_t;
 
 
 //
@@ -132,7 +119,7 @@ static dirtype_t diags[] =
 };
 
 
-void FastMonster_OnChange(void)
+void FastMonster_OnChange()
 {
   static bool fast=false;
   static const struct {
@@ -291,42 +278,38 @@ bool DActor::CheckMeleeRange()
 }
 
 //
-// P_CheckMissileRange
+// was P_CheckMissileRange
 //
-static bool P_CheckMissileRange(DActor *actor)
+bool DActor::CheckMissileRange()
 {
-  fixed_t     dist;
-
-  if (!actor->mp->CheckSight(actor, actor->target) )
+  if (!mp->CheckSight(this, target))
     return false;
 
-  if ( actor->flags & MF_JUSTHIT )
+  if (eflags & MFE_JUSTHIT)
     {
-      // the target just hit the enemy,
-      // so fight back!
-      actor->flags &= ~MF_JUSTHIT;
+      // the target just hit the enemy, so fight back!
+      eflags &= ~MFE_JUSTHIT;
       return true;
     }
 
-  if (actor->reactiontime)
+  if (reactiontime)
     return false;   // do not attack yet
 
+  Actor *t = target;
+
   // OPTIMIZE: get this from a global checksight
-  dist = P_AproxDistance ( actor->x-actor->target->x,
-			   actor->y-actor->target->y) - 64*FRACUNIT;
+  int dist = (P_AproxDistance(x - t->x, y - t->y) >> 16) - 64;
 
-  if (!actor->info->meleestate)
-    dist -= 128*FRACUNIT;   // no melee attack, so fire more
+  if (!info->meleestate)
+    dist -= 128;   // no melee attack, so fire more
 
-  dist >>= 16;
-
-  if (actor->type == MT_VILE)
+  if (type == MT_VILE)
     {
       if (dist > 14*64)
 	return false;       // too far away
     }
 
-  if (actor->type == MT_UNDEAD)
+  if (type == MT_UNDEAD)
     {
       if (dist < 196)
 	return false;       // close for fist attack
@@ -334,10 +317,10 @@ static bool P_CheckMissileRange(DActor *actor)
     }
 
 
-  if (actor->type == MT_CYBORG
-      || actor->type == MT_SPIDER
-      || actor->type == MT_SKULL
-      || actor->type == MT_IMP) // heretic monster
+  if (type == MT_CYBORG
+      || type == MT_SPIDER
+      || type == MT_SKULL
+      || type == MT_IMP) // heretic monster
     {
       dist >>= 1;
     }
@@ -345,7 +328,7 @@ static bool P_CheckMissileRange(DActor *actor)
   if (dist > 200)
     dist = 200;
 
-  if (actor->type == MT_CYBORG && dist > 160)
+  if (type == MT_CYBORG && dist > 160)
     dist = 160;
 
   if (P_Random () < dist)
@@ -363,7 +346,7 @@ static bool P_CheckMissileRange(DActor *actor)
 static const fixed_t xspeed[8] = {FRACUNIT,47000,0,-47000,-FRACUNIT,-47000,0,47000};
 static const fixed_t yspeed[8] = {0,47000,FRACUNIT,47000,0,-47000,-FRACUNIT,-47000};
 
-static bool P_Move(DActor *actor)
+bool P_Move(DActor *actor)
 {
   // movement function communication variables
   extern int  numspechit;
@@ -378,6 +361,8 @@ static bool P_Move(DActor *actor)
 
   if (actor->movedir == DI_NODIR)
     return false;
+
+  //if (actor->flags2 & MF2_BLASTED) return true;
 
 #ifdef PARANOIA
   if ((unsigned)actor->movedir >= 8)
@@ -398,7 +383,7 @@ static bool P_Move(DActor *actor)
 	  else
 	    actor->z -= FLOATSPEED;
 
-	  actor->flags |= MF_INFLOAT;
+	  actor->eflags |= MFE_INFLOAT;
 	  return true;
         }
 
@@ -409,11 +394,13 @@ static bool P_Move(DActor *actor)
       good = false;
       while (numspechit--)
         {
-	  //ld = actor->mp->lines + spechit[numspechit];
 	  ld = spechit[numspechit];
 	  // if the special is not a door
 	  // that can be opened,
 	  // return false
+
+	  // if (P_ActivateLine(ld, actor, 0, SPAC_USE))
+	  // Old version before use/cross/impact specials were combined
 	  if (actor->mp->UseSpecialLine(actor, ld, 0))
 	    good = true;
         }
@@ -421,7 +408,7 @@ static bool P_Move(DActor *actor)
     }
   else
     {
-      actor->flags &= ~MF_INFLOAT;
+      actor->eflags &= ~MFE_INFLOAT;
     }
 
 
@@ -458,45 +445,37 @@ static bool P_TryWalk(DActor *actor)
 
 
 
-
-static void P_NewChaseDir(DActor *actor)
+void P_NewChaseDir(DActor *actor)
 {
-  fixed_t     deltax;
-  fixed_t     deltay;
-
-  dirtype_t   d[3];
-
-  int         tdir;
-  dirtype_t   olddir;
-
-  dirtype_t   turnaround;
+  fixed_t   deltax, deltay;
+  dirtype_t d[3];
+  dirtype_t turnaround;
 
   if (!actor->target)
-    I_Error ("P_NewChaseDir: called with no target");
+    I_Error("P_NewChaseDir: called with no target");
 
-  olddir = dirtype_t(actor->movedir);
-  turnaround=opposite[olddir];
+  int olddir = actor->movedir;
+  turnaround = opposite[olddir];
 
   deltax = actor->target->x - actor->x;
   deltay = actor->target->y - actor->y;
 
-  if (deltax>10*FRACUNIT)
+  if (deltax > 10*FRACUNIT)
     d[1]= DI_EAST;
-  else if (deltax<-10*FRACUNIT)
+  else if (deltax < -10*FRACUNIT)
     d[1]= DI_WEST;
   else
     d[1]= DI_NODIR;
 
-  if (deltay<-10*FRACUNIT)
+  if (deltay < -10*FRACUNIT)
     d[2]= DI_SOUTH;
-  else if (deltay>10*FRACUNIT)
+  else if (deltay > 10*FRACUNIT)
     d[2]= DI_NORTH;
   else
     d[2]= DI_NODIR;
 
   // try direct route
-  if (   d[1] != DI_NODIR
-	 && d[2] != DI_NODIR)
+  if (d[1] != DI_NODIR && d[2] != DI_NODIR)
     {
       actor->movedir = diags[((deltay<0)<<1)+(deltax>0)];
       if (actor->movedir != turnaround && P_TryWalk(actor))
@@ -504,20 +483,19 @@ static void P_NewChaseDir(DActor *actor)
     }
 
   // try other directions
-  if (P_Random() > 200
-      ||  abs(deltay)>abs(deltax))
+  if (P_Random() > 200 || abs(deltay) > abs(deltax))
     {
-      tdir=d[1];
-      d[1]=d[2];
-      d[2]=dirtype_t(tdir);
+      dirtype_t temp = d[1];
+      d[1] = d[2];
+      d[2] = temp;
     }
 
-  if (d[1]==turnaround)
-    d[1]=DI_NODIR;
-  if (d[2]==turnaround)
-    d[2]=DI_NODIR;
+  if (d[1] == turnaround)
+    d[1] = DI_NODIR;
+  if (d[2] == turnaround)
+    d[2] = DI_NODIR;
 
-  if (d[1]!=DI_NODIR)
+  if (d[1] != DI_NODIR)
     {
       actor->movedir = d[1];
       if (P_TryWalk(actor))
@@ -527,10 +505,9 @@ static void P_NewChaseDir(DActor *actor)
         }
     }
 
-  if (d[2]!=DI_NODIR)
+  if (d[2] != DI_NODIR)
     {
-      actor->movedir =d[2];
-
+      actor->movedir = d[2];
       if (P_TryWalk(actor))
 	return;
     }
@@ -539,39 +516,36 @@ static void P_NewChaseDir(DActor *actor)
   // so pick another direction.
   if (olddir!=DI_NODIR)
     {
-      actor->movedir =olddir;
+      actor->movedir = olddir;
 
       if (P_TryWalk(actor))
 	return;
     }
 
+  int tdir;
   // randomly determine direction of search
   if (P_Random()&1)
     {
-      for ( tdir=DI_EAST;
-	    tdir<=DI_SOUTHEAST;
-	    tdir++ )
+      for (tdir = DI_EAST; tdir <= DI_SOUTHEAST; tdir++)
         {
-	  if (tdir!=turnaround)
+	  if (tdir != turnaround)
             {
-	      actor->movedir =tdir;
+	      actor->movedir = tdir;
 
-	      if ( P_TryWalk(actor) )
+	      if (P_TryWalk(actor))
 		return;
             }
         }
     }
   else
     {
-      for ( tdir=DI_SOUTHEAST;
-	    tdir >= DI_EAST;
-	    tdir-- )
+      for (tdir = DI_SOUTHEAST; tdir >= DI_EAST; tdir--)
         {
-	  if (tdir!=turnaround)
+	  if (tdir != turnaround)
             {
-	      actor->movedir =tdir;
+	      actor->movedir = tdir;
 
-	      if ( P_TryWalk(actor) )
+	      if (P_TryWalk(actor))
 		return;
             }
         }
@@ -579,8 +553,8 @@ static void P_NewChaseDir(DActor *actor)
 
   if (turnaround !=  DI_NODIR)
     {
-      actor->movedir =turnaround;
-      if ( P_TryWalk(actor) )
+      actor->movedir = turnaround;
+      if (P_TryWalk(actor))
 	return;
     }
 
@@ -594,6 +568,8 @@ static void P_NewChaseDir(DActor *actor)
 // If allaround is false, only look 180 degrees in front.
 // Returns true if a player is targeted.
 //
+// TODO: make this LookForEnemies, looking for every Actor who does not belong to the same team!
+// Armies of monsters fighting against each other!
 bool DActor::LookForPlayers(bool allaround)
 {
   PlayerPawn *p;
@@ -630,6 +606,9 @@ bool DActor::LookForPlayers(bool allaround)
       if (!mp->CheckSight(this, p))
 	continue;           // out of sight
 
+      if (p == owner)
+	continue; // Don't target master
+
       if (!allaround)
         {
 	  an = R_PointToAngle2(x, y, p->x, p->y) - angle;
@@ -643,7 +622,7 @@ bool DActor::LookForPlayers(bool allaround)
             }
         }
 
-      if (game.mode == gm_heretic && p->flags & MF_SHADOW)
+      if (p->flags & MF_SHADOW)
         { // Player is invisible
 	  if ((P_AproxDistance(p->x - x, p->y - y) > 2*MELEERANGE)
 	      && P_AproxDistance(p->px, p->py) < 5*FRACUNIT)
@@ -706,6 +685,11 @@ bool DActor::LookForMonsters()
 	{ // Out of sight
 	  continue;
 	}
+
+      // Hexen
+      if (mo->owner == owner)
+        continue;
+
       // Found a target monster
       target = mo;
       return true;
@@ -713,9 +697,11 @@ bool DActor::LookForMonsters()
   return false;
 }
 */
-//
-// ACTION ROUTINES
-//
+
+
+//=========================================
+//  COMMON ACTION ROUTINES
+//=========================================
 
 //
 // A_Look
@@ -767,9 +753,7 @@ void A_Look(DActor *actor)
 	  break;
         }
 
-      if (actor->type==MT_SPIDER
-	  || actor->type == MT_CYBORG
-	  || (actor->flags2 & MF2_BOSS))
+      if (actor->flags2 & MF2_BOSS)
         {
 	  // full volume
 	  S_StartAmbSound(sound);
@@ -797,9 +781,9 @@ void A_Chase(DActor *actor)
   // modify target threshold
   if (actor->threshold)
     {
-      if (game.mode != gm_heretic && (!actor->target
-				   || actor->target->health <= 0
-				   || (actor->target->flags & MF_CORPSE)))
+      // FIXME is the heretic (and hexen) special behavior necessary?
+      if (game.mode != gm_heretic &&
+	  (!actor->target || actor->target->health <= 0 || (actor->target->flags & MF_CORPSE)))
         {
 	  actor->threshold = 0;
         }
@@ -807,7 +791,8 @@ void A_Chase(DActor *actor)
 	actor->threshold--;
     }
 
-  if (game.mode == gm_heretic  && cv_fastmonsters.value)
+  if (cv_fastmonsters.value &&
+      (game.mode == gm_heretic || game.mode == gm_hexen))
     { // Monsters move faster in nightmare mode
       actor->tics -= actor->tics/2;
       if (actor->tics < 3)
@@ -837,9 +822,9 @@ void A_Chase(DActor *actor)
     }
 
   // do not attack twice in a row
-  if (actor->flags & MF_JUSTATTACKED)
+  if (actor->eflags & MFE_JUSTATTACKED)
     {
-      actor->flags &= ~MF_JUSTATTACKED;
+      actor->eflags &= ~MFE_JUSTATTACKED;
       if (!cv_fastmonsters.value)
 	P_NewChaseDir(actor);
       return;
@@ -859,19 +844,16 @@ void A_Chase(DActor *actor)
   if (actor->info->missilestate)
     {
       if (!cv_fastmonsters.value && actor->movecount)
-        {
-	  goto nomissile;
-        }
+	goto nomissile;
 
-      if (!P_CheckMissileRange (actor))
+      if (!actor->CheckMissileRange())
 	goto nomissile;
 
       actor->SetState(actor->info->missilestate);
-      actor->flags |= MF_JUSTATTACKED;
+      actor->eflags |= MFE_JUSTATTACKED;
       return;
     }
 
-  // ?
  nomissile:
   // possibly choose another target
   if (game.multiplayer && !actor->threshold
@@ -882,20 +864,17 @@ void A_Chase(DActor *actor)
     }
 
   // chase towards player
-  if (--actor->movecount<0
-      || !P_Move (actor))
-    {
-      P_NewChaseDir (actor);
-    }
+  if (--actor->movecount < 0 || !P_Move(actor))
+    P_NewChaseDir (actor);
 
   // make active sound
-  if (actor->info->activesound
-      && P_Random () < 3)
+  if (actor->info->activesound && P_Random () < 3)
     {
-      if(actor->type == MT_WIZARD && P_Random() < 128)
+      if ((actor->type == MT_WIZARD || actor->type == MT_BISHOP)&& P_Random() < 128)
 	S_StartScreamSound(actor, actor->info->seesound);
-      else if(actor->type == MT_SORCERER2)
+      else if(actor->flags2 & MF2_BOSS)
 	S_StartAmbSound(actor->info->activesound);
+      //FIXME else if (actor->type == MT_PIG) S_StartScreamSound(actor, SFX_PIG_ACTIVE1+(P_Random()&1));
       else
 	S_StartScreamSound(actor, actor->info->activesound);
     }
@@ -920,6 +899,38 @@ void A_FaceTarget(DActor *actor)
     actor->angle += P_SignedRandom()<<21;
 }
 
+//
+// A_Pain
+//
+void A_Pain(DActor *actor)
+{
+  if (actor->info->painsound)
+    S_StartScreamSound(actor, actor->info->painsound);
+}
+
+//
+//  A dying thing falls to the ground (monster deaths)
+//
+void A_Fall(DActor *actor)
+{
+  // actor is on ground, it can be walked over
+  if (!cv_solidcorpse.value)
+    actor->flags &= ~MF_SOLID;
+
+  actor->flags   |= MF_CORPSE|MF_DROPOFF;
+  actor->height >>= 2;
+  actor->radius -= (actor->radius>>4);      //for solid corpses
+  actor->health = actor->info->spawnhealth>>1;
+
+  // So change this if corpse objects
+  // are meant to be obstacles.
+}
+
+
+
+//=========================================
+//  DOOM ACTION ROUTINES
+//=========================================
 
 //
 // A_PosAttack
@@ -1409,7 +1420,7 @@ void A_VileTarget(DActor *actor)
 
   DActor *fire = actor->mp->SpawnDActor(actor->target->x,
     actor->target->x, actor->target->z, MT_FIRE);
-  actor->tracer = fire; // TODO tracer field should be removed. Owner? not good.
+  actor->special1 = int(fire); // tricky.
   fire->owner = actor;
   fire->target = actor->target;
   A_Fire(fire);
@@ -1439,7 +1450,7 @@ void A_VileAttack(DActor *actor)
 
   an = actor->angle >> ANGLETOFINESHIFT;
 
-  Actor *fire = actor->tracer;
+  Actor *fire = (Actor *)actor->special1;
 
   if (!fire)
     return;
@@ -1551,7 +1562,7 @@ void A_SkullAttack(DActor *actor)
     return;
 
   dest = actor->target;
-  actor->flags |= MF_SKULLFLY;
+  actor->eflags |= MFE_SKULLFLY;
   S_StartScreamSound(actor, actor->info->attacksound);
   A_FaceTarget (actor);
   an = actor->angle >> ANGLETOFINESHIFT;
@@ -1695,41 +1706,21 @@ void A_XScream(DActor *actor)
   S_StartScreamSound(actor, sfx_slop);
 }
 
-void A_Pain(DActor *actor)
-{
-  if (actor->info->painsound)
-    S_StartScreamSound(actor, actor->info->painsound);
-}
-
-
-//
-//  A dying thing falls to the ground (monster deaths)
-//
-void A_Fall(DActor *actor)
-{
-  // actor is on ground, it can be walked over
-  if (!cv_solidcorpse.value)
-    actor->flags &= ~MF_SOLID;
-
-  actor->flags   |= MF_CORPSE|MF_DROPOFF;
-  actor->height >>= 2;
-  actor->radius -= (actor->radius>>4);      //for solid corpses
-  actor->health = actor->info->spawnhealth>>1;
-
-  // So change this if corpse objects
-  // are meant to be obstacles.
-}
-
 
 //
 // A_Explode
 //
 void A_Explode(DActor *actor)
 {
-  int damage = 128;
+  int  damage = 128;
+  int  distance = 128;
+  bool damageSelf = true;
 
-  switch(actor->type)
+  switch (actor->type)
     {
+    case MT_SOR2FX1: // D'Sparil missile
+      damage = 80 + (P_Random() & 31);
+      break;
     case MT_FIREBOMB: // Time Bombs
       actor->z += 32*FRACUNIT;
       actor->flags &= ~MF_SHADOW;
@@ -1737,15 +1728,68 @@ void A_Explode(DActor *actor)
     case MT_MNTRFX2: // Minotaur floor fire
       damage = 24;
       break;
-    case MT_SOR2FX1: // D'Sparil missile
-      damage = 80+(P_Random()&31);
+    case MT_BISHOP: // Bishop radius death
+      damage = 25+(P_Random()&15);
+      break;
+    case MT_HAMMER_MISSILE: // Fighter Hammer
+      damage = 128;
+      damageSelf = false;
+      break;
+    case MT_FSWORD_MISSILE: // Fighter Runesword
+      damage = 64;
+      damageSelf = false;
+      break;
+    case MT_CIRCLEFLAME: // Cleric Flame secondary flames
+      damage = 20;
+      damageSelf = false;
+      break;
+    case MT_SORCBALL1: 	// Sorcerer balls
+    case MT_SORCBALL2:
+    case MT_SORCBALL3:
+      distance = 255;
+      damage = 255;
+      actor->args[0] = 1;		// don't play bounce
+      break;
+    case MT_SORCFX1: 	// Sorcerer spell 1
+      damage = 30;
+      break;
+    case MT_SORCFX4: 	// Sorcerer spell 4
+      damage = 20;
+      break;
+    case MT_TREEDESTRUCTIBLE:
+      damage = 10;
+      break;
+    case MT_DRAGON_FX2:
+      damage = 80;
+      damageSelf = false;
+      break;
+    case MT_MSTAFF_FX:
+      damage = 64;
+      distance = 192;
+      damageSelf = false;
+      break;
+    case MT_MSTAFF_FX2:
+      damage = 80;
+      distance = 192;
+      damageSelf = false;
+      break;
+    case MT_POISONCLOUD:
+      damage = 4;
+      distance = 40;
+      break;
+    case MT_ZXMAS_TREE:
+    case MT_ZSHRUB2:
+      damage = 30;
+      distance = 64;
       break;
     default:
       break;
     }
 
-  actor->RadiusAttack(actor->owner, damage);
-  actor->HitFloor();
+  actor->RadiusAttack(actor->owner, damage, distance, dt_normal, damageSelf);
+
+  if (actor->z <= actor->floorz + (distance<<FRACBITS) && actor->type != MT_POISONCLOUD)
+    actor->HitFloor();
 }
 
 //

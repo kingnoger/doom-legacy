@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/03/15 20:07:16  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.6  2003/02/16 16:54:51  smite-meister
 // L2 sound cache done
 //
@@ -35,66 +38,6 @@
 //
 // Revision 1.1.1.1  2002/11/16 14:18:02  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.11  2002/09/20 22:41:32  vberghol
-// Sound system rewritten! And it workscvs update
-//
-// Revision 1.10  2002/08/25 18:21:59  vberghol
-// little fixes
-//
-// Revision 1.9  2002/08/20 13:56:59  vberghol
-// sdfgsd
-//
-// Revision 1.8  2002/08/17 21:21:51  vberghol
-// Only scripting to be fixed in engine!
-//
-// Revision 1.7  2002/08/11 17:16:50  vberghol
-// ...
-//
-// Revision 1.6  2002/08/08 12:01:28  vberghol
-// pian engine on valmis!
-//
-// Revision 1.5  2002/07/23 19:21:42  vberghol
-// fixed up to p_enemy.cpp
-//
-// Revision 1.4  2002/07/10 19:57:01  vberghol
-// g_pawn.cpp tehty
-//
-// Revision 1.3  2002/07/01 21:00:20  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:15  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.10  2001/08/02 19:15:59  bpereira
-// fix player reset in secret level of doom2
-//
-// Revision 1.9  2001/06/10 21:16:01  bpereira
-// no message
-//
-// Revision 1.8  2001/05/27 13:42:48  bpereira
-// no message
-//
-// Revision 1.7  2001/04/04 20:24:21  judgecutor
-// Added support for the 3D Sound
-//
-// Revision 1.6  2001/01/25 22:15:43  bpereira
-// added heretic support
-//
-// Revision 1.5  2000/10/21 08:43:30  bpereira
-// no message
-//
-// Revision 1.4  2000/10/01 10:18:18  bpereira
-// no message
-//
-// Revision 1.3  2000/08/31 14:30:56  bpereira
-// no message
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //
 // DESCRIPTION:
@@ -190,10 +133,10 @@ void PlayerPawn::SetupPsprites()
 //
 // was P_SetPsprite
 //
-void PlayerPawn::SetPsprite(int position, statenum_t stnum)
+void PlayerPawn::SetPsprite(int position, weaponstatenum_t stnum, bool call)
 {
-  state_t  *state;
-  pspdef_t *psp = &psprites[position];;
+  weaponstate_t  *state;
+  pspdef_t *psp = &psprites[position];
 
   do
     {
@@ -204,33 +147,29 @@ void PlayerPawn::SetPsprite(int position, statenum_t stnum)
 	  break;
         }
 #ifdef PARANOIA
-      if(stnum>=NUMSTATES)
+      if(stnum>=NUMWEAPONSTATES)
 	I_Error("P_SetPsprite : state %d unknown\n",stnum);
 #endif
-      state = &states[stnum];
+      state = &weaponstates[stnum];
       psp->state = state;
       psp->tics = state->tics;        // could be 0
-      /* UNUSED
-	 if (state->misc1)
-	 {
-	 // coordinate set
-	 psp->sx = state->misc1 << FRACBITS;
-	 psp->sy = state->misc2 << FRACBITS;
-	 }
-      */
-      // Call action routine.
-      // Modified handling.
-      if (state->action.acp2)
-        {
-	  state->action.acp2(this, psp);
-	  if (!psp->state)
+      if(state->misc1)
+	{ // Set coordinates.
+	  psp->sx = state->misc1<<FRACBITS;
+	}
+      if(state->misc2)
+	{
+	  psp->sy = state->misc2<<FRACBITS;
+	}
+      if (state->action && call)
+	{
+	  // Call action routine.
+	  state->action(this, psp);
+	  if(!psp->state)
 	    break;
-        }
-
+	}
       stnum = psp->state->nextstate;
-
-    } while (!psp->tics);
-  // an initial state of 0 could cycle through
+    } while(!psp->tics); // An initial state of 0 could cycle through.
 }
 
 
@@ -302,23 +241,34 @@ void PlayerPawn::MovePsprites()
 //
 void PlayerPawn::BringUpWeapon()
 {
-  statenum_t  newstate;
-
   if (pendingweapon == wp_nochange)
     pendingweapon = readyweapon;
 
-  if (pendingweapon == wp_chainsaw)
-    S_StartAttackSound(this, sfx_sawup);
-
 #ifdef PARANOIA
-  if(pendingweapon>=NUMWEAPONS)
+  if (pendingweapon >= NUMWEAPONS )
     {
       I_Error("P_BringUpWeapon : pendingweapon %d\n",pendingweapon);
     }
 #endif
-    
-  newstate = weaponinfo[pendingweapon].upstate;
 
+  weaponstatenum_t newstate = weaponinfo[pendingweapon].upstate;
+
+  switch (pendingweapon)
+    {
+    case wp_chainsaw:
+      S_StartAttackSound(this, sfx_sawup);
+      break;
+    case wp_gauntlets:
+      S_StartAttackSound(this, sfx_gntact);
+      break;
+    case wp_timons_axe:
+      if (ammo[am_mana1])
+	newstate = S_FAXEUP_G;
+      break;
+    default:
+      break;
+    }
+    
   pendingweapon = wp_nochange;
   psprites[ps_weapon].sy = WEAPONBOTTOM;
 
@@ -335,20 +285,35 @@ bool PlayerPawn::CheckAmmo()
   ammotype_t at = weaponinfo[readyweapon].ammo;
 
   // Minimal amount for one shot varies.
-  int count = weaponinfo[readyweapon].ammopershoot;
+  int i, count = weaponinfo[readyweapon].ammopershoot;
 
   // Some do not need ammunition anyway.
   // Return if current ammunition sufficient.
   if (at == am_noammo || ammo[at] >= count)
     return true;
 
+  if (at == am_manaboth)
+    if (ammo[am_mana1] >= count && ammo[am_mana2] >= count)
+      return true;
+
   // Out of ammo, pick a weapon to change to.
   // Preferences are set here.
   // added by Boris : preferred weapons order
   if (!player->originalweaponswitch)
     UseFavoriteWeapon();
-  else // eof Boris
-    if (game.mode == gm_heretic)
+  else
+    if (game.mode == gm_hexen)
+      for (i = wp_arc_of_death; i >= wp_hexen; i--)
+	{
+	  at = weaponinfo[i].ammo;
+	  count = weaponinfo[i].ammopershoot;
+	  if (weaponowned[i] && ammo[at] >= count)
+	    {
+	      pendingweapon = weapontype_t(i);
+	      break;
+	    }
+	}
+    else if (game.mode == gm_heretic)
       do
         {
 	  if(weaponowned[wp_skullrod]
@@ -453,15 +418,20 @@ bool PlayerPawn::CheckAmmo()
 //
 void PlayerPawn::FireWeapon()
 {
-  statenum_t  newstate;
+  weaponstatenum_t  newstate;
 
   if (!CheckAmmo())
     return;
 
-  if (game.mode == gm_heretic)
+  // FIXME go to shooting state
+  //SetState(weaponstatenum_t(info->missilestate + 1));
+  //  P_SetMobjState(player->mo, PStateAttack[player->class]); // S_PLAY_ATK1);
+  //SetState(info->missilestate); // refire? +1 or not?
+
+  if (readyweapon == wp_timons_axe && ammo[am_mana1] > 0)
+    newstate = S_FAXEATK_G1;
+  else
     {
-      // FIXME go to shooting state
-      //SetState(statenum_t(info->missilestate + 1));
       newstate = refire ? weaponinfo[readyweapon].holdatkstate
 	: weaponinfo[readyweapon].atkstate;
 
@@ -469,12 +439,7 @@ void PlayerPawn::FireWeapon()
       if (readyweapon == wp_gauntlets && !refire)
 	S_StartSound(this, sfx_gntuse);
     }
-  else
-    {
-      // FIXME go to shooting state
-      //SetState(info->missilestate);
-      newstate = weaponinfo[readyweapon].atkstate;
-    }
+
   SetPsprite(ps_weapon, newstate);
   P_NoiseAlert(this, this);
 }
@@ -502,7 +467,7 @@ void A_WeaponReady(PlayerPawn *p, pspdef_t *psp)
 {
   if (p->morphTics)
     { // Change to the chicken beak
-      p->ActivateBeak();
+      p->ActivateMorphWeapon();
       return;
     }
 
@@ -516,13 +481,13 @@ void A_WeaponReady(PlayerPawn *p, pspdef_t *psp)
   */
 
   if (p->readyweapon == wp_chainsaw
-      && psp->state == &states[S_SAW])
+      && psp->state == &weaponstates[S_SAW])
     {
       S_StartAttackSound(p, sfx_sawidl);
     }
   // Check for staff PL2 active sound
   if((p->readyweapon == wp_staff)
-     && (psp->state == &states[S_STAFFREADY2_1])
+     && (psp->state == &weaponstates[S_STAFFREADY2_1])
      && P_Random() < 128)
     {
       S_StartAttackSound(p, sfx_stfcrk);
@@ -539,20 +504,16 @@ void A_WeaponReady(PlayerPawn *p, pspdef_t *psp)
     }
 
   // check for fire
-  //  the missile launcher and bfg do not auto fire
+  //  the missile launcher and bfg do not auto fire. why not?
   if (p->player->cmd.buttons & BT_ATTACK)
     {
-      if ( !p->attackdown
-	   || (p->readyweapon != wp_missile
-	       && (p->readyweapon != wp_bfg || game.mode == gm_heretic)) )
-        {
-	  p->attackdown = true;
-	  p->FireWeapon();
-	  return;
-        }
+      p->attackdown = true;
+      p->FireWeapon();
+      return;
     }
   else
     p->attackdown = false;
+
 #ifndef CLIENTPREDICTION2    
   {
     int         angle;
@@ -568,7 +529,7 @@ void A_WeaponReady(PlayerPawn *p, pspdef_t *psp)
 // client prediction stuff
 void A_TicWeapon(PlayerPawn *p, pspdef_t *psp)
 {
-  if (psp->state->action.acp2 == A_WeaponReady &&
+  if (psp->state->action == A_WeaponReady &&
       psp->tics == psp->state->tics)
     {
       int         ang;
@@ -653,7 +614,7 @@ void A_Lower(PlayerPawn *p, pspdef_t *psp)
   if (!p->health)
     {
       // Player is dead, so keep the weapon off screen.
-      p->SetPsprite(ps_weapon, S_NULL);
+      p->SetPsprite(ps_weapon, S_WNULL);
       return;
     }
 
@@ -677,7 +638,10 @@ void A_Raise(PlayerPawn *p, pspdef_t *psp)
 
   // The weapon has been raised all the way,
   //  so change to the ready state.
-  p->SetPsprite(ps_weapon, p->weaponinfo[p->readyweapon].readystate);
+  if (p->readyweapon == wp_timons_axe && p->ammo[am_mana1])
+    p->SetPsprite(ps_weapon, S_FAXEREADY_G);
+  else
+    p->SetPsprite(ps_weapon, p->weaponinfo[p->readyweapon].readystate);
 }
 
 
@@ -687,7 +651,7 @@ void A_Raise(PlayerPawn *p, pspdef_t *psp)
 //
 void A_GunFlash(PlayerPawn *p, pspdef_t *psp)
 {
-  //p->SetState(statenum_t(p->info->missilestate + 1));
+  //p->SetState(weaponstatenum_t(p->info->missilestate + 1));
   p->SetPsprite(ps_flash, p->weaponinfo[p->readyweapon].flashstate);
 }
 
@@ -775,7 +739,7 @@ void A_Saw(PlayerPawn *p, pspdef_t *psp)
       else
 	p->angle += ANG90/20;
     }
-  p->flags |= MF_JUSTATTACKED;
+  p->eflags |= MFE_JUSTATTACKED;
 }
 
 
@@ -807,7 +771,7 @@ void A_FirePlasma(PlayerPawn *p, pspdef_t *psp)
 {
   p->ammo[p->weaponinfo[p->readyweapon].ammo] -= p->weaponinfo[p->readyweapon].ammopershoot;
 
-  p->SetPsprite(ps_flash, statenum_t(p->weaponinfo[p->readyweapon].flashstate
+  p->SetPsprite(ps_flash, weaponstatenum_t(p->weaponinfo[p->readyweapon].flashstate
 				     + (P_Random() & 1)));
   p->SpawnPlayerMissile(MT_PLASMA);
 }
@@ -882,7 +846,7 @@ void A_FirePistol(PlayerPawn *p, pspdef_t *psp)
 {
   S_StartAttackSound(p, sfx_pistol);
 
-  //p->SetState(statenum_t(p->info->missilestate + 1));
+  //p->SetState(weaponstatenum_t(p->info->missilestate + 1));
   p->ammo[p->weaponinfo[p->readyweapon].ammo]--;
 
   p->SetPsprite(ps_flash, p->weaponinfo[p->readyweapon].flashstate);
@@ -900,7 +864,7 @@ void A_FireShotgun(PlayerPawn *p, pspdef_t *psp)
   int         i;
 
   S_StartAttackSound(p, sfx_shotgn);
-  //p->SetState(statenum_t(p->info->missilestate + 1));
+  //p->SetState(weaponstatenum_t(p->info->missilestate + 1));
 
   p->ammo[p->weaponinfo[p->readyweapon].ammo]--;
   p->SetPsprite(ps_flash, p->weaponinfo[p->readyweapon].flashstate);
@@ -922,7 +886,7 @@ void A_FireShotgun2(PlayerPawn *p, pspdef_t *psp)
   int         damage;
 
   S_StartAttackSound(p, sfx_dshtgn);
-  //p->SetState(statenum_t(p->info->missilestate + 1));
+  //p->SetState(weaponstatenum_t(p->info->missilestate + 1));
 
   p->ammo[p->weaponinfo[p->readyweapon].ammo]-=2;
 
@@ -945,16 +909,16 @@ void A_FireShotgun2(PlayerPawn *p, pspdef_t *psp)
 //
 void A_FireCGun(PlayerPawn *p, pspdef_t *psp)
 {
-  S_StartAttackSound(p, sfx_pistol);
+  S_StartAttackSound(p, sfx_chgun);
 
   if (!p->ammo[p->weaponinfo[p->readyweapon].ammo])
     return;
 
-  //p->SetState(statenum_t(p->info->missilestate + 1));
+  //p->SetState(weaponstatenum_t(p->info->missilestate + 1));
   p->ammo[p->weaponinfo[p->readyweapon].ammo]--;
 
-  p->SetPsprite(ps_flash, statenum_t(p->weaponinfo[p->readyweapon].flashstate
-				     + psp->state - &states[S_CHAIN1]));
+  p->SetPsprite(ps_flash, weaponstatenum_t(p->weaponinfo[p->readyweapon].flashstate
+				     + psp->state - &weaponstates[S_CHAIN1]));
   P_BulletSlope (p);
   P_GunShot (p, !p->refire);
 }

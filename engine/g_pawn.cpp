@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2002 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.9  2003/03/15 20:07:14  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.8  2003/03/08 16:07:00  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -58,7 +61,6 @@ int PlayerPawn::Serialize(LArchive & a)
 }
 
 void P_UpdateBeak(PlayerPawn *p, pspdef_t *psp);
-void P_PostChickenWeapon(PlayerPawn *player, weapontype_t weapon);
 
 // added 2-2-98 for hacking with dehacked patch
 int initial_health=100; //MAXHEALTH;
@@ -91,7 +93,6 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, const pawn_info_t *t)
   // note! here Map *mp is not yet set! This means you can't call functions such as
   // SetPosition that have something to do with a map.
   refire = 0;
-  message = NULL;
   morphTics = 0;
   flamecount = 0;
   flyheight = 0;
@@ -165,12 +166,12 @@ void PlayerPawn::Think()
 
   // Turn on required cheats
   if (cheats & CF_NOCLIP)
-    flags |= MF_NOCLIP;
+    flags |= (MF_NOCLIPLINE|MF_NOCLIPTHING);
   else
-    flags &= ~MF_NOCLIP;
+    flags &= ~(MF_NOCLIPLINE|MF_NOCLIPTHING);
 
   // chain saw run forward
-  if (flags & MF_JUSTATTACKED)
+  if (eflags & MFE_JUSTATTACKED)
     {
 // added : now angle turn is a absolute value not relative
 #ifndef ABSOLUTEANGLE
@@ -178,7 +179,7 @@ void PlayerPawn::Think()
 #endif
       cmd->forwardmove = 0xc800/512;
       cmd->sidemove = 0;
-      flags &= ~MF_JUSTATTACKED;
+      eflags &= ~MFE_JUSTATTACKED;
     }
 
   //if (player->playerstate == PST_REBORN) I_Error("player %d is in PST_REBORN\n"); // debugging...
@@ -232,7 +233,7 @@ void PlayerPawn::Think()
 	    waterz = - (subsector->sector->tag << FRACBITS);
 
 	  // half in the water
-	  if (eflags & MF_TOUCHWATER)
+	  if (eflags & MFE_TOUCHWATER)
             {
 	      if (z <= floorz) // onground
                 {
@@ -363,8 +364,8 @@ void PlayerPawn::Think()
 	  weaponinfo = wpnlev1info;
 	  // end of weaponlevel2 power
 	  if (readyweapon == wp_phoenixrod
-	      && (psprites[ps_weapon].state != &states[S_PHOENIXREADY])
-	      && (psprites[ps_weapon].state != &states[S_PHOENIXUP]))
+	      && (psprites[ps_weapon].state != &weaponstates[S_PHOENIXREADY])
+	      && (psprites[ps_weapon].state != &weaponstates[S_PHOENIXUP]))
 	    {
 	      SetPsprite(ps_weapon, S_PHOENIXREADY);
 	      ammo[am_phoenixrod] -= USE_PHRD_AMMO_2;
@@ -735,10 +736,6 @@ void PlayerPawn::UseArtifact(artitype_t arti)
       }
 }
 
-#define WPNLEV2TICS     (40*TICRATE)
-#define FLIGHTTICS      (60*TICRATE)
-
-
 
 
 // was P_GivePower
@@ -865,7 +862,7 @@ bool PlayerPawn::UndoMorph()
   DActor *fog = mp->SpawnDActor(x+20*finecosine[ang], y+20*finesine[ang],
 				z+TELEFOGHEIGHT, MT_TFOG);
   S_StartSound(fog, sfx_telept);
-  P_PostChickenWeapon(this, weapontype_t(special1));
+  PostMorphWeapon(weapontype_t(special1));
 
   /*
   Actor *mo, *pmo;
@@ -1036,7 +1033,6 @@ DActor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
   extern consvar_t cv_allowautoaim;
   extern Actor *linetarget;
 
-  fixed_t  mx, my, mz;
   fixed_t  slope = 0;
 
   if (player->autoaim && cv_allowautoaim.value)
@@ -1067,13 +1063,11 @@ DActor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
       slope = AIMINGTOSLOPE(aiming);
     }
 
-  mx = x;
-  my = y;
-  mz = z + 4*8*FRACUNIT;
+  fixed_t mz = z + 4*8*FRACUNIT;
   if (flags2 & MF2_FEETARECLIPPED)
     z -= FOOTCLIPSIZE;
 
-  DActor *th = mp->SpawnDActor(mx, my, mz, type);
+  DActor *th = mp->SpawnDActor(x, y, mz, type);
 
   if (th->info->seesound)
     S_StartSound(th, th->info->seesound);
@@ -1089,19 +1083,7 @@ DActor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
 
   th->pz = int(th->info->speed * slope);
 
-  if (th->type == MT_BLASTERFX1)
-    { // Ultra-fast ripper spawning missile
-      th->x += (th->px>>3)-(th->px>>1);
-      th->y += (th->py>>3)-(th->py>>1);
-      th->z += (th->pz>>3)-(th->pz>>1);
-    }
-
-  slope = th->CheckMissileSpawn();
-
-  if( game.demoversion<131 )
-    return th;
-  else
-    return slope ? th : NULL;
+  return (th->CheckMissileSpawn()) ? th : NULL;
 }
 
 
@@ -1133,7 +1115,7 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
 	  !(cards & it_yellowcard) &&
 	  !(cards & it_yellowskull))
 	{
-	  message = PD_ANY;
+	  player->message = PD_ANY;
 	  ok = false;
 	}
       break;
@@ -1144,7 +1126,7 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
 	 (!skulliscard || !(cards & it_redskull))
 	 )
 	{
-	  message = skulliscard? PD_REDK : PD_REDC;
+	  player->message = skulliscard? PD_REDK : PD_REDC;
 	  ok = false;
 	}
       break;
@@ -1155,7 +1137,7 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
 	 (!skulliscard || !(cards & it_blueskull))
 	 )
 	{
-	  message = skulliscard? PD_BLUEK : PD_BLUEC;
+	  player->message = skulliscard? PD_BLUEK : PD_BLUEC;
 	  ok = false;
 	}
       break;
@@ -1166,7 +1148,7 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
 	 (!skulliscard || !(cards & it_yellowskull))
 	 )
 	{
-	  message = skulliscard? PD_YELLOWK : PD_YELLOWC;
+	  player->message = skulliscard? PD_YELLOWK : PD_YELLOWC;
 	  ok = false;
 	}
       break;
@@ -1177,7 +1159,7 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
 	 (!skulliscard || !(cards & it_redcard))
 	 )
 	{
-	  message = skulliscard? PD_REDK : PD_REDS;
+	  player->message = skulliscard? PD_REDK : PD_REDS;
 	  ok = false;
 	}
       break;
@@ -1188,7 +1170,7 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
 	 (!skulliscard || !(cards & it_bluecard))
 	 )
 	{
-	  message = skulliscard? PD_BLUEK : PD_BLUES;
+	  player->message = skulliscard? PD_BLUEK : PD_BLUES;
 	  ok = false;
 	}
       break;
@@ -1199,7 +1181,7 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
 	 (!skulliscard || !(cards & it_yellowcard))
 	 )
 	{
-	  message = skulliscard? PD_YELLOWK : PD_YELLOWS;
+	  player->message = skulliscard? PD_YELLOWK : PD_YELLOWS;
 	  ok = false;
 	}
       break;
@@ -1217,7 +1199,7 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
 	  )
 	 )
 	{
-	  message = PD_ALL6;
+	  player->message = PD_ALL6;
 	  ok = false;
 	}
       if
@@ -1233,7 +1215,7 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
 	  )
 	 )
 	{
-	  message = PD_ALL3;
+	  player->message = PD_ALL3;
 	  ok = false;
 	}
       break;
@@ -1379,7 +1361,7 @@ void PlayerPawn::PlayerOnSpecial3DFloor()
 	    continue;
 
 	  if (game.demoversion >= 125 &&
-	      (eflags & MF_JUSTHITFLOOR) &&
+	      (eflags & MFE_JUSTHITFLOOR) &&
 	      sec->heightsec == -1 && (mp->maptic % (2*NEWTICRATERATIO))) //SoM: penalize jumping less.
 	    instantdamage = true;
 	  else
@@ -1450,7 +1432,7 @@ void PlayerPawn::PlayerInSpecialSector()
     return;
 
   //Fab: jumping in lava/slime does instant damage (no jump cheat)
-  if ((eflags & MF_JUSTHITFLOOR) &&
+  if ((eflags & MFE_JUSTHITFLOOR) &&
       (sec->heightsec == -1) && (mp->maptic % (2*NEWTICRATERATIO))) //SoM: penalize jumping less.
     instantdamage = true;
   else

@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.10  2003/03/15 20:07:14  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.9  2003/03/08 16:07:00  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -325,7 +328,7 @@ DActor *Map::SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
       // "no place for spawned thing"...
 
       //added:28-02-98: defaults onground
-      p->eflags |= MF_ONGROUND;
+      p->eflags |= MFE_ONGROUND;
 
       //added:28-02-98: dirty hack : dont stack monsters coz it blocks
       //                moving floors and anyway whats the use of it?
@@ -345,7 +348,7 @@ DActor *Map::SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
 	z = tmfloorz;
 	// thing not on solid ground
 	if (tmfloorthing)
-	eflags &= ~MF_ONGROUND;
+	eflags &= ~MFE_ONGROUND;
 
 	//if (type == MT_BARREL)
 	//   fprintf(stderr,"barrel at z %d floor %d ceiling %d\n",z,floorz,ceilingz);
@@ -428,7 +431,7 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
   if (!pi->originalweaponswitch)
     p->UseFavoriteWeapon();
 
-  p->eflags |= MF_ONGROUND;
+  p->eflags |= MFE_ONGROUND;
   p->z = p->floorz;
 
   //SoM:
@@ -751,10 +754,11 @@ void Map::AddPlayer(PlayerInfo *p)
 // was P_Massacre
 // Kills all monsters. Except skulls.
 
-void Map::Massacre()
+int Map::Massacre()
 {
   Actor   *mo;
   Thinker *th;
+  int count = 0;
 
   for (th = thinkercap.next; th != &thinkercap; th = th->next)
     {
@@ -765,8 +769,14 @@ void Map::Massacre()
 	
       mo = (Actor *)th;
       if ((mo->flags & MF_COUNTKILL) && (mo->health > 0))
-	mo->Damage(NULL, NULL, 10000, dt_always);
+	{
+	  mo->flags2 &= ~(MF2_NONSHOOTABLE + MF2_INVULNERABLE);
+	  mo->flags |= MF_SHOOTABLE;
+	  mo->Damage(NULL, NULL, 10000, dt_always);
+	  count++;
+	}
     }
+  return count;
 }
 
 

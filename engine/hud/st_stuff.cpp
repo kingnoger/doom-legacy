@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/03/15 20:07:19  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.8  2003/03/08 16:07:11  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -167,6 +170,7 @@ static patch_t *PatchArmsBack; // arms background
 static patch_t *PatchFaces[ST_NUMFACES]; // marine face patches
 static patch_t *PatchFaceBack; // face background
 
+#define NUMCARDS 6
 static patch_t *PatchKeys[NUMCARDS]; // 3 key-cards, 3 skulls
 static patch_t *PatchSTATBAR;
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/03/15 20:07:15  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.2  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -106,14 +109,16 @@
 #include "doomdef.h"
 
 #include "p_spec.h"
+
+#include "g_game.h"
+#include "g_pawn.h"
 #include "g_map.h"
+#include "g_player.h"
 
 #include "dstrings.h"
 #include "s_sound.h"
 #include "sounds.h"
 #include "z_zone.h"
-#include "g_game.h"
-#include "g_pawn.h"
 
 
 #include "hardware/hw3sound.h"
@@ -424,7 +429,7 @@ int Map::EV_DoLockedDoor(line_t *line, vldoor_e type, PlayerPawn *p, fixed_t spe
       case 133:
         if (!(p->cards & it_bluecard) && !(p->cards & it_blueskull))
         {
-            p->SetMessage(PD_BLUEO);
+            p->player->SetMessage(PD_BLUEO);
             S_StartScreamSound(p, sfx_oof); //SoM: 3/6/200: killough's idea
             return 0;
         }
@@ -434,7 +439,7 @@ int Map::EV_DoLockedDoor(line_t *line, vldoor_e type, PlayerPawn *p, fixed_t spe
       case 135:
         if (!(p->cards & it_redcard) && !(p->cards & it_redskull))
         {
-            p->SetMessage(PD_REDO);
+            p->player->SetMessage(PD_REDO);
             S_StartScreamSound(p, sfx_oof); //SoM: 3/6/200: killough's idea
             return 0;
         }
@@ -445,7 +450,7 @@ int Map::EV_DoLockedDoor(line_t *line, vldoor_e type, PlayerPawn *p, fixed_t spe
         if (!(p->cards & it_yellowcard) &&
             !(p->cards & it_yellowskull))
         {
-            p->SetMessage(PD_YELLOWO);
+            p->player->SetMessage(PD_YELLOWO);
             S_StartScreamSound(p, sfx_oof); //SoM: 3/6/200: killough's idea
             return 0;
         }
@@ -587,7 +592,7 @@ int Map::EV_VerticalDoor(line_t* line, Actor *m)
 	return 0;
       if (!(p->cards & it_bluecard) && !(p->cards & it_blueskull))
         {
-	  p->SetMessage(PD_BLUEK);
+	  p->player->SetMessage(PD_BLUEK);
 	  S_StartScreamSound(p, sfx_oof); //SoM: 3/6/2000: Killough's idea
 	  return 0;
         }
@@ -601,7 +606,7 @@ int Map::EV_VerticalDoor(line_t* line, Actor *m)
       if (!(p->cards & it_yellowcard) &&
 	  !(p->cards & it_yellowskull))
         {
-	  p->SetMessage(PD_YELLOWK);
+	  p->player->SetMessage(PD_YELLOWK);
 	  S_StartScreamSound(p, sfx_oof); //SoM: 3/6/2000: Killough's idea
 	  return 0;
         }
@@ -614,7 +619,7 @@ int Map::EV_VerticalDoor(line_t* line, Actor *m)
 
       if (!(p->cards & it_redcard) && !(p->cards & it_redskull))
         {
-	  p->SetMessage(PD_REDK);
+	  p->player->SetMessage(PD_REDK);
 	  S_StartScreamSound(p, sfx_oof); //SoM: 3/6/2000: Killough's idea
 	  return 0;
         }

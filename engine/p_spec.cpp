@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/03/15 20:07:17  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.4  2003/03/08 16:07:09  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -29,144 +32,6 @@
 //
 // Revision 1.1.1.1  2002/11/16 14:18:09  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.18  2002/09/17 14:26:26  vberghol
-// switch bug fixed
-//
-// Revision 1.17  2002/09/06 17:18:33  vberghol
-// added most of the changes up to RC2
-//
-// Revision 1.16  2002/09/05 14:12:15  vberghol
-// network code partly bypassed
-//
-// Revision 1.13  2002/08/21 16:58:34  vberghol
-// Version 1.41 Experimental compiles and links!
-//
-// Revision 1.12  2002/08/17 21:21:52  vberghol
-// Only scripting to be fixed in engine!
-//
-// Revision 1.11  2002/08/16 20:49:25  vberghol
-// engine ALMOST done!
-//
-// Revision 1.10  2002/08/14 17:07:19  vberghol
-// p_map.cpp done... 3 to go
-//
-// Revision 1.9  2002/08/08 18:36:25  vberghol
-// p_spec.cpp fixed
-//
-// Revision 1.8  2002/08/08 12:01:28  vberghol
-// pian engine on valmis!
-//
-// Revision 1.7  2002/08/06 13:14:24  vberghol
-// ...
-//
-// Revision 1.6  2002/07/23 19:21:43  vberghol
-// fixed up to p_enemy.cpp
-//
-// Revision 1.5  2002/07/12 19:21:39  vberghol
-// hop
-//
-// Revision 1.4  2002/07/10 19:57:01  vberghol
-// g_pawn.cpp tehty
-//
-// Revision 1.3  2002/07/01 21:00:21  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:16  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.31  2001/08/19 20:41:04  hurdler
-// small changes
-//
-// Revision 1.30  2001/08/13 22:53:40  stroggonmeth
-// Small commit
-//
-// Revision 1.29  2001/08/11 15:18:02  hurdler
-// Add sector colormap in hw mode (first attempt)
-//
-// Revision 1.28  2001/08/06 23:57:09  stroggonmeth
-// Removed portal code, improved 3D floors in hardware mode.
-//
-// Revision 1.27  2001/06/16 08:07:55  bpereira
-// no message
-//
-// Revision 1.26  2001/05/27 13:42:48  bpereira
-// no message
-//
-// Revision 1.25  2001/05/03 18:23:30  crashrl
-// corrected wrong comment concerning teamstartsec
-//
-// Revision 1.24  2001/04/04 20:24:21  judgecutor
-// Added support for the 3D Sound
-//
-// Revision 1.23  2001/03/21 18:24:38  stroggonmeth
-// Misc changes and fixes. Code cleanup
-//
-// Revision 1.22  2001/03/13 22:14:19  stroggonmeth
-// Long time no commit. 3D floors, FraggleScript, portals, ect.
-//
-// Revision 1.21  2001/02/24 13:35:20  bpereira
-// no message
-//
-// Revision 1.20  2001/01/25 22:15:44  bpereira
-// added heretic support
-//
-// Revision 1.19  2000/11/21 21:13:17  stroggonmeth
-// Optimised 3D floors and fixed crashing bug in high resolutions.
-//
-// Revision 1.18  2000/11/11 13:59:45  bpereira
-// no message
-//
-// Revision 1.17  2000/11/04 16:23:43  bpereira
-// no message
-//
-// Revision 1.16  2000/11/02 17:50:08  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.15  2000/10/21 08:43:30  bpereira
-// no message
-//
-// Revision 1.14  2000/10/07 20:36:13  crashrl
-// Added deathmatch team-start-sectors via sector/line-tag and linedef-type 1000-1031
-//
-// Revision 1.13  2000/05/23 15:22:34  stroggonmeth
-// Not much. A graphic bug fixed.
-//
-// Revision 1.12  2000/05/03 23:51:00  stroggonmeth
-// A few, quick, changes.
-//
-// Revision 1.11  2000/04/16 18:38:07  bpereira
-// no message
-//
-// Revision 1.10  2000/04/15 22:12:57  stroggonmeth
-// Minor bug fixes
-//
-// Revision 1.9  2000/04/13 23:47:47  stroggonmeth
-// See logs
-//
-// Revision 1.8  2000/04/11 19:07:24  stroggonmeth
-// Finished my logs, fixed a crashing bug.
-//
-// Revision 1.7  2000/04/08 17:29:25  stroggonmeth
-// no message
-//
-// Revision 1.6  2000/04/08 11:27:29  hurdler
-// fix some boom stuffs
-//
-// Revision 1.5  2000/04/06 20:54:28  hurdler
-// Mostly remove warnings under windows
-//
-// Revision 1.4  2000/04/04 19:28:43  stroggonmeth
-// Global colormaps working. Added a new linedef type 272.
-//
-// Revision 1.3  2000/04/04 00:32:47  stroggonmeth
-// Initial Boom compatability plus few misc changes all around.
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //
 // DESCRIPTION:
@@ -1156,11 +1021,376 @@ bool P_WasSecret(sector_t *sec)
 }
 
 
+//============================================================================
 //
 // EVENTS
 // Events are operations triggered by using, crossing,
 // or shooting special lines, or by timed thinkers.
 //
+//============================================================================
+
+
+// 
+// P_ExecuteLineSpecial
+// Hexen linedefs
+//
+bool Map::ExecuteLineSpecial(int special, byte *args, line_t *line, int side, Actor *mo)
+{
+  bool buttonSuccess = false;
+  /* FIXME
+  switch (special)
+    {
+    case 1: // Poly Start Line
+      break;
+    case 2: // Poly Rotate Left
+      buttonSuccess = EV_RotatePoly(line, args, 1, false);
+      break;
+    case 3: // Poly Rotate Right
+      buttonSuccess = EV_RotatePoly(line, args, -1, false);
+      break;
+    case 4: // Poly Move
+      buttonSuccess = EV_MovePoly(line, args, false, false);
+      break;
+    case 5: // Poly Explicit Line:  Only used in initialization
+      break;
+    case 6: // Poly Move Times 8
+      buttonSuccess = EV_MovePoly(line, args, true, false);
+      break;
+    case 7: // Poly Door Swing
+      buttonSuccess = EV_OpenPolyDoor(line, args, PODOOR_SWING);
+      break;
+    case 8: // Poly Door Slide
+      buttonSuccess = EV_OpenPolyDoor(line, args, PODOOR_SLIDE);
+      break;
+    case 10: // Door Close
+      buttonSuccess = EV_DoDoor(line, args, DREV_CLOSE);
+      break;
+    case 11: // Door Open
+      if(!args[0])
+	{
+	  buttonSuccess = EV_VerticalDoor(line, mo);
+	}
+      else
+	{
+	  buttonSuccess = EV_DoDoor(line, args, DREV_OPEN);
+	}
+      break;
+    case 12: // Door Raise
+      if(!args[0])
+	{
+	  buttonSuccess = EV_VerticalDoor(line, mo);
+	}
+      else
+	{
+	  buttonSuccess = EV_DoDoor(line, args, DREV_NORMAL);
+	}
+      break;
+    case 13: // Door Locked_Raise
+      if(CheckedLockedDoor(mo, args[3]))
+	{
+	  if(!args[0])
+	    {
+	      buttonSuccess = EV_VerticalDoor(line, mo);
+	    }
+	  else
+	    {
+	      buttonSuccess = EV_DoDoor(line, args, DREV_NORMAL);
+	    }
+	}
+      break;
+    case 20: // Floor Lower by Value
+      buttonSuccess = EV_DoFloor(line, args, FLEV_LOWERFLOORBYVALUE);
+      break;
+    case 21: // Floor Lower to Lowest
+      buttonSuccess = EV_DoFloor(line, args, FLEV_LOWERFLOORTOLOWEST);
+      break;
+    case 22: // Floor Lower to Nearest
+      buttonSuccess = EV_DoFloor(line, args, FLEV_LOWERFLOOR);
+      break;
+    case 23: // Floor Raise by Value
+      buttonSuccess = EV_DoFloor(line, args, FLEV_RAISEFLOORBYVALUE);
+      break;
+    case 24: // Floor Raise to Highest
+      buttonSuccess = EV_DoFloor(line, args, FLEV_RAISEFLOOR);
+      break;
+    case 25: // Floor Raise to Nearest
+      buttonSuccess = EV_DoFloor(line, args, FLEV_RAISEFLOORTONEAREST);
+      break;
+    case 26: // Stairs Build Down Normal
+      buttonSuccess = EV_BuildStairs(line, args, -1, STAIRS_NORMAL);
+      break;
+    case 27: // Build Stairs Up Normal
+      buttonSuccess = EV_BuildStairs(line, args, 1, STAIRS_NORMAL);
+      break;
+    case 28: // Floor Raise and Crush
+      buttonSuccess = EV_DoFloor(line, args, FLEV_RAISEFLOORCRUSH);
+      break;
+    case 29: // Build Pillar (no crushing)
+      buttonSuccess = EV_BuildPillar(line, args, false);
+      break;
+    case 30: // Open Pillar
+      buttonSuccess = EV_OpenPillar(line, args);
+      break;
+    case 31: // Stairs Build Down Sync
+      buttonSuccess = EV_BuildStairs(line, args, -1, STAIRS_SYNC);
+      break;
+    case 32: // Build Stairs Up Sync
+      buttonSuccess = EV_BuildStairs(line, args, 1, STAIRS_SYNC);
+      break;
+    case 35: // Raise Floor by Value Times 8
+      buttonSuccess = EV_DoFloor(line, args, FLEV_RAISEBYVALUETIMES8);
+      break;
+    case 36: // Lower Floor by Value Times 8
+      buttonSuccess = EV_DoFloor(line, args, FLEV_LOWERBYVALUETIMES8);
+      break;
+    case 40: // Ceiling Lower by Value
+      buttonSuccess = EV_DoCeiling(line, args, CLEV_LOWERBYVALUE);
+      break;
+    case 41: // Ceiling Raise by Value
+      buttonSuccess = EV_DoCeiling(line, args, CLEV_RAISEBYVALUE);
+      break;
+    case 42: // Ceiling Crush and Raise
+      buttonSuccess = EV_DoCeiling(line, args, CLEV_CRUSHANDRAISE);
+      break;
+    case 43: // Ceiling Lower and Crush
+      buttonSuccess = EV_DoCeiling(line, args, CLEV_LOWERANDCRUSH);
+      break;
+    case 44: // Ceiling Crush Stop
+      buttonSuccess = EV_CeilingCrushStop(line, args);
+      break;
+    case 45: // Ceiling Crush Raise and Stay
+      buttonSuccess = EV_DoCeiling(line, args, CLEV_CRUSHRAISEANDSTAY);
+      break;
+    case 46: // Floor Crush Stop
+      buttonSuccess = EV_FloorCrushStop(line, args);
+      break;
+    case 60: // Plat Perpetual Raise
+      buttonSuccess = EV_DoPlat(line, args, PLAT_PERPETUALRAISE, 0);
+      break;
+    case 61: // Plat Stop
+      EV_StopPlat(line, args);
+      break;
+    case 62: // Plat Down-Wait-Up-Stay
+      buttonSuccess = EV_DoPlat(line, args, PLAT_DOWNWAITUPSTAY, 0);
+      break;
+    case 63: // Plat Down-by-Value*8-Wait-Up-Stay
+      buttonSuccess = EV_DoPlat(line, args, PLAT_DOWNBYVALUEWAITUPSTAY,
+				0);
+      break;
+    case 64: // Plat Up-Wait-Down-Stay
+      buttonSuccess = EV_DoPlat(line, args, PLAT_UPWAITDOWNSTAY, 0);
+      break;
+    case 65: // Plat Up-by-Value*8-Wait-Down-Stay
+      buttonSuccess = EV_DoPlat(line, args, PLAT_UPBYVALUEWAITDOWNSTAY, 0);
+      break;
+    case 66: // Floor Lower Instant * 8
+      buttonSuccess = EV_DoFloor(line, args, FLEV_LOWERTIMES8INSTANT);
+      break;
+    case 67: // Floor Raise Instant * 8
+      buttonSuccess = EV_DoFloor(line, args, FLEV_RAISETIMES8INSTANT);
+      break;
+    case 68: // Floor Move to Value * 8
+      buttonSuccess = EV_DoFloor(line, args, FLEV_MOVETOVALUETIMES8);
+      break;
+    case 69: // Ceiling Move to Value * 8
+      buttonSuccess = EV_DoCeiling(line, args, CLEV_MOVETOVALUETIMES8);
+      break;
+    case 70: // Teleport
+      if(side == 0)
+	{ // Only teleport when crossing the front side of a line
+	  buttonSuccess = EV_Teleport(args[0], mo, true);
+	}
+      break;
+    case 71: // Teleport, no fog
+      if(side == 0)
+	{ // Only teleport when crossing the front side of a line
+	  buttonSuccess = EV_Teleport(args[0], mo, false);
+	}
+      break;
+    case 72: // Thrust Mobj
+      if(!side) // Only thrust on side 0
+	{
+	  mo->Thrust(args[0]*(ANGLE_90/64), args[1]<<FRACBITS);
+	  buttonSuccess = 1;
+	}
+      break;
+    case 73: // Damage Mobj
+      if(args[0])
+	{
+	  mo->Damage(NULL, NULL, args[0]);
+	}
+      else
+	{ // If arg1 is zero, then guarantee a kill
+	  mo->Damage(NULL, NULL, 10000, dt_always);
+	}
+      buttonSuccess = 1;
+      break;
+    case 74: // Teleport_NewMap
+      if(side == 0)
+	{ // Only teleport when crossing the front side of a line
+	  if(!(mo && mo->player && mo->player->playerstate
+	       == PST_DEAD)) // Players must be alive to teleport
+	    {
+	      G_Completed(args[0], args[1]);
+	      buttonSuccess = true;
+	    }
+	}
+      break;
+    case 75: // Teleport_EndGame
+      if(side == 0)
+	{ // Only teleport when crossing the front side of a line
+	  if(!(mo && mo->player && mo->player->playerstate
+	       == PST_DEAD)) // Players must be alive to teleport
+	    {
+	      buttonSuccess = true;
+	      if(deathmatch)
+		{ // Winning in deathmatch just goes back to map 1
+		  G_Completed(1, 0);
+		}
+	      else
+		{ // Passing -1, -1 to G_Completed() starts the Finale
+		  G_Completed(-1, -1);
+		}
+	    }
+	}
+      break;
+    case 80: // ACS_Execute
+      buttonSuccess =
+	StartACS(args[0], args[1], &args[2], mo, line, side);
+      break;
+    case 81: // ACS_Suspend
+      buttonSuccess = SuspendACS(args[0], args[1]);
+      break;
+    case 82: // ACS_Terminate
+      buttonSuccess = TerminateACS(args[0], args[1]);
+      break;
+    case 83: // ACS_LockedExecute
+      if (mo->Type() == Thinker::tt_ppawn)
+        {
+	PlayerPawn *p = (PlayerPawn *p)mo;
+	if (p->player)
+	  {
+	    int lock = args[4];
+	    if (lock)
+	      {
+		if (!(p->cards & (1 << (lock-1))))
+		  {
+		    extern char *TextKeyMessages[11];
+		    char LockedBuffer[80];
+		    sprintf(LockedBuffer, "YOU NEED THE %s\n", TextKeyMessages[lock-1]);
+		    p->SetMessage(LockedBuffer, true);
+		    S_StartSound(p, SFX_DOOR_LOCKED);
+		    return false;
+		  }
+	      }
+	    args[4] = 0;
+	    // StartACS(newArgs[0], newArgs[1], &newArgs[2], p, line, side);
+	    // FIXME check the args[1] map number to see if it is this map
+	    // if not, do not start script but store it
+	    StartACS(args[0], &args[2], p, line, side);
+	    args[4] = lock;
+	  }
+	}
+      break;
+    case 90: // Poly Rotate Left Override
+      buttonSuccess = EV_RotatePoly(line, args, 1, true);
+      break;
+    case 91: // Poly Rotate Right Override
+      buttonSuccess = EV_RotatePoly(line, args, -1, true);
+      break;
+    case 92: // Poly Move Override
+      buttonSuccess = EV_MovePoly(line, args, false, true);
+      break;
+    case 93: // Poly Move Times 8 Override
+      buttonSuccess = EV_MovePoly(line, args, true, true);
+      break;
+    case 94: // Build Pillar Crush 
+      buttonSuccess = EV_BuildPillar(line, args, true);
+      break;
+    case 95: // Lower Floor and Ceiling
+      buttonSuccess = EV_DoFloorAndCeiling(line, args, false);
+      break;
+    case 96: // Raise Floor and Ceiling
+      buttonSuccess = EV_DoFloorAndCeiling(line, args, true);
+      break;
+    case 109: // Force Lightning
+      buttonSuccess = true;
+      P_ForceLightning();
+      break;
+    case 110: // Light Raise by Value
+      buttonSuccess = EV_SpawnLight(line, args, LITE_RAISEBYVALUE);
+      break; 
+    case 111: // Light Lower by Value
+      buttonSuccess = EV_SpawnLight(line, args, LITE_LOWERBYVALUE);
+      break; 
+    case 112: // Light Change to Value
+      buttonSuccess = EV_SpawnLight(line, args, LITE_CHANGETOVALUE);
+      break; 
+    case 113: // Light Fade
+      buttonSuccess = EV_SpawnLight(line, args, LITE_FADE);
+      break; 
+    case 114: // Light Glow
+      buttonSuccess = EV_SpawnLight(line, args, LITE_GLOW);
+      break; 
+    case 115: // Light Flicker
+      buttonSuccess = EV_SpawnLight(line, args, LITE_FLICKER);
+      break; 
+    case 116: // Light Strobe
+      buttonSuccess = EV_SpawnLight(line, args, LITE_STROBE);
+      break; 
+    case 120: // Quake Tremor
+      buttonSuccess = A_LocalQuake(args, mo);
+      break;
+    case 129: // UsePuzzleItem
+      buttonSuccess = EV_LineSearchForPuzzleItem(line, args, mo);
+      break;
+    case 130: // Thing_Activate
+      buttonSuccess = EV_ThingActivate(args[0]);
+      break;
+    case 131: // Thing_Deactivate
+      buttonSuccess = EV_ThingDeactivate(args[0]);
+      break;
+    case 132: // Thing_Remove
+      buttonSuccess = EV_ThingRemove(args[0]);
+      break;
+    case 133: // Thing_Destroy
+      buttonSuccess = EV_ThingDestroy(args[0]);
+      break;
+    case 134: // Thing_Projectile
+      buttonSuccess = EV_ThingProjectile(args, 0);
+      break;
+    case 135: // Thing_Spawn
+      buttonSuccess = EV_ThingSpawn(args, 1);
+      break;
+    case 136: // Thing_ProjectileGravity
+      buttonSuccess = EV_ThingProjectile(args, 1);
+      break;
+    case 137: // Thing_SpawnNoFog
+      buttonSuccess = EV_ThingSpawn(args, 0);
+      break;
+    case 138: // Floor_Waggle
+      buttonSuccess = EV_StartFloorWaggle(args[0], args[1],
+					  args[2], args[3], args[4]);
+      break;
+    case 140: // Sector_SoundChange
+      buttonSuccess = EV_SectorSoundChange(args);
+      break;
+
+      // Line specials only processed during level initialization
+      // 100: Scroll_Texture_Left
+      // 101: Scroll_Texture_Right
+      // 102: Scroll_Texture_Up
+      // 103: Scroll_Texture_Down
+      // 121: Line_SetIdentification
+
+      // Inert Line specials
+    default:
+      break;
+    }
+  */
+  return buttonSuccess;
+}
+
 
 //
 // was P_CrossSpecialLine - TRIGGER
@@ -2702,7 +2932,7 @@ void scroll_t::Think()
         mp->sectors[sec->heightsec].floorheight : MININT;
 
       for (node = sec->touching_thinglist; node; node = node->m_snext)
-        if (!((thing = node->m_thing)->flags & MF_NOCLIP) &&
+        if (!((thing = node->m_thing)->flags & MF_NOCLIPLINE) &&
             (!(thing->flags & MF_NOGRAVITY || thing->z > height) ||
              thing->z < waterheight))
           {
@@ -2911,7 +3141,7 @@ void friction_t::Think()
       thing = node->m_thing;
       // FIXME friction ought to apply to monsters as well
       if (thing->Type() == Thinker::tt_ppawn &&
-	  !(thing->flags & (MF_NOGRAVITY | MF_NOCLIP)) &&
+	  !(thing->flags & (MF_NOGRAVITY | MF_NOCLIPLINE)) &&
 	  thing->z <= sec->floorheight)
 	{
 	  if ((thing->friction == normal_friction) ||
@@ -3012,7 +3242,7 @@ static pusher_t *tmpusher; // pusher structure for blockmap searches
 
 bool PIT_PushThing(Actor* thing)
 {
-  if (thing->Type() == Thinker::tt_ppawn && !(thing->flags & (MF_NOGRAVITY | MF_NOCLIP)))
+  if (thing->Type() == Thinker::tt_ppawn && !(thing->flags & (MF_NOGRAVITY | MF_NOCLIPLINE)))
     {
       angle_t pushangle;
       int dist;
@@ -3113,7 +3343,7 @@ void pusher_t::Think()
   for ( ; node ; node = node->m_snext)
     {
       thing = node->m_thing;
-      if (thing->flags & (MF_NOGRAVITY | MF_NOCLIP))
+      if (thing->flags & (MF_NOGRAVITY | MF_NOCLIPLINE))
 	continue;
 
       // not a player? FIXME wind should also affect monsters....

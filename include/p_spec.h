@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/03/15 20:07:21  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.4  2003/03/08 16:07:15  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -161,6 +164,66 @@ fixed_t P_FindNextHighestCeiling(sector_t *sec, int currentheight);
 int P_FindMinSurroundingLight(sector_t *sector, int     max);
 
 int P_CheckTag(line_t *line);
+
+
+
+//======================================
+//   Polyobjects
+//======================================
+
+
+class polyevent_t : public Thinker
+{
+  friend class Map;
+  
+  int polyobj;
+  int speed;
+  unsigned int dist;
+  int angle;
+  fixed_t xs, ys;
+
+public:
+  polyevent_t();
+  virtual void Think();
+};
+
+
+typedef enum
+{
+  PODOOR_NONE,
+  PODOOR_SLIDE,
+  PODOOR_SWING,
+} podoortype_e;
+
+class polydoor_t : public Thinker
+{
+  friend class Map;
+
+  int polyobj;
+  int speed;
+  int dist;
+  int totalDist;
+  int direction;
+  fixed_t xs, ys;
+  int tics;
+  int waitTics;
+  podoortype_e type;
+  bool close;
+
+public:
+  polydoor_t();
+  virtual void Think();
+};
+
+enum
+{
+  PO_ANCHOR_TYPE = 3000,
+  PO_SPAWN_TYPE,
+  PO_SPAWNCRUSH_TYPE
+};
+
+#define PO_LINE_START 1 // polyobj line start special
+#define PO_LINE_EXPLICIT 5
 
 
 //

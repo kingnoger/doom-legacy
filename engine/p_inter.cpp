@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/03/15 20:07:16  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.9  2003/03/08 16:07:08  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -279,13 +282,13 @@ bool DActor::Touch(Actor *p)
   int damage;
 
   // check for skulls slamming into things
-  if (flags & MF_SKULLFLY)
+  if (eflags & MFE_SKULLFLY)
     {
       damage = ((P_Random()%8)+1) * info->damage;
 
       p->Damage(this, this, damage);
 
-      flags &= ~MF_SKULLFLY;
+      eflags &= ~MFE_SKULLFLY;
       px = py = pz = 0;
 
       SetState(game.mode == gm_heretic ? info->seestate : info->spawnstate);
@@ -475,7 +478,7 @@ bool Actor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
     return false;
 
   // old recoil code
-  if (inflictor && !(flags & MF_NOCLIP) && (dtype & dt_oldrecoil)
+  if (inflictor && !(flags & MF_NOCLIPTHING) && (dtype & dt_oldrecoil)
       && !(inflictor->flags2 & MF2_NODMGTHRUST))      
     {
       fixed_t apx, apy, apz = 0;
@@ -560,7 +563,7 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
   if (health <= 0)
     return false;
 
-  if (flags & MF_SKULLFLY)
+  if (eflags & MFE_SKULLFLY)
     {
       // Minotaur is invulnerable during charge attack
       if (type == MT_MINOTAUR)
@@ -580,7 +583,7 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
         case MT_WHIRLWIND:
 	  return P_TouchWhirlwind(this);
         case MT_MINOTAUR:
-	  if (inflictor->flags & MF_SKULLFLY)
+	  if (inflictor->eflags & MFE_SKULLFLY)
             { // Slam only when in charge mode
 	      P_MinotaurSlam(inflictor, this);
 	      return true;
@@ -628,7 +631,7 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 
   // Some close combat weapons should not
   // inflict thrust and push the victim out of reach
-  if (inflictor && !(flags & MF_NOCLIP) && (dtype & dt_oldrecoil)
+  if (inflictor && !(flags & MF_NOCLIPTHING) && (dtype & dt_oldrecoil)
       && !(inflictor->flags2 & MF2_NODMGTHRUST))      
     {
       fixed_t            apx, apy, apz = 0;//SoM: 3/28/2000
@@ -705,9 +708,9 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
     }
 
   if ((P_Random () < info->painchance)
-       && !(flags & (MF_SKULLFLY|MF_CORPSE)) )
+      && !(eflags & MFE_SKULLFLY || flags & MF_CORPSE))
     {
-      flags |= MF_JUSTHIT;    // fight back!
+      eflags |= MFE_JUSTHIT;    // fight back!
       SetState(info->painstate);
     }
 
@@ -753,7 +756,7 @@ void Actor::Die(Actor *inflictor, Actor *source)
 {
   extern consvar_t cv_solidcorpse;
 
-  flags &= ~(MF_FLOAT|MF_SKULLFLY);
+  eflags &= ~(MFE_INFLOAT|MFE_SKULLFLY);
 
   // dead target is no more shootable
   if (!cv_solidcorpse.value)
@@ -911,24 +914,6 @@ void PlayerPawn::Die(Actor *inflictor, Actor *source)
     }
 }
 
-
-//--------------------------------------------------------------------------
-// was P_SetMessage
-// this function is crap, FIXME sometime....
-
-bool ultimatemsg;
-
-void PlayerPawn::SetMessage(const char *msg, bool ultmsg)
-{
-  if ((ultimatemsg || !cv_showmessages.value) && !ultmsg)
-    return;
-    
-  message = msg;
-  //player->messageTics = MESSAGETICS;
-  //BorderTopRefresh = true;
-  if (ultmsg)
-    ultimatemsg = true;
-}
 
 //
 // GET STUFF
@@ -1278,30 +1263,6 @@ void A_RestoreSpecialThing2(DActor *thing)
 }
 
 
-//----------------------------------------------------------------------------
-//
-// PROC A_HideThing
-//
-//----------------------------------------------------------------------------
-
-void A_HideThing(DActor *actor)
-{
-  //P_UnsetThingPosition(actor);
-  actor->flags2 |= MF2_DONTDRAW;
-}
-
-//----------------------------------------------------------------------------
-//
-// PROC A_UnHideThing
-//
-//----------------------------------------------------------------------------
-
-void A_UnHideThing(DActor *actor)
-{
-  //P_SetThingPosition(actor);
-  actor->flags2 &= ~MF2_DONTDRAW;
-}
-
 
 //
 // was P_TouchSpecialThing
@@ -1344,14 +1305,14 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
     case SPR_ARM1:
       if (!GiveArmor(green_armor_class))
 	return;
-      message = GOTARMOR;
+      player->message = GOTARMOR;
       break;
 
     case SPR_SHD2: // Item_Shield2
     case SPR_ARM2:
       if (!GiveArmor(blue_armor_class))
 	return;
-      message = GOTMEGA;
+      player->message = GOTMEGA;
       break;
 
       // bonus items
@@ -1360,7 +1321,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       if (health > 2*maxhealth)
 	health = 2*maxhealth;
       if (cv_showmessages.value==1)
-	message = GOTHTHBONUS;
+	player->message = GOTHTHBONUS;
       break;
 
     case SPR_BON2:
@@ -1370,21 +1331,21 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       if (!armortype)
 	armortype = 1;
       if (cv_showmessages.value==1)
-	message = GOTARMBONUS;
+	player->message = GOTARMBONUS;
       break;
 
     case SPR_SOUL:
       health += soul_health;
       if (health > maxsoul)
 	health = maxsoul;
-      message = GOTSUPER;
+      player->message = GOTSUPER;
       sound = sfx_getpow;
       break;
 
     case SPR_MEGA:
       health = mega_health;
       GiveArmor(2);
-      message = GOTMSPHERE;
+      player->message = GOTMSPHERE;
       sound = sfx_getpow;
       break;
 
@@ -1394,7 +1355,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
     case SPR_BKEY:
       if( GiveCard (it_bluecard) )
         {
-	  message = GOTBLUECARD;
+	  player->message = GOTBLUECARD;
 	  if( game.mode == gm_heretic ) sound = sfx_keyup;
         }
       if (!game.multiplayer)
@@ -1405,7 +1366,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
     case SPR_YKEY:
       if( GiveCard (it_yellowcard) )
         {
-	  message = GOTYELWCARD;
+	  player->message = GOTYELWCARD;
 	  if( game.mode == gm_heretic ) sound = sfx_keyup;
         }
       if (!game.multiplayer)
@@ -1416,7 +1377,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
     case SPR_RKEY:
       if (GiveCard (it_redcard))
         {
-	  message = GOTREDCARD;
+	  player->message = GOTREDCARD;
 	  if( game.mode == gm_heretic ) sound = sfx_keyup;
         }
       if (!game.multiplayer)
@@ -1426,7 +1387,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
     case SPR_BSKU:
       if (GiveCard (it_blueskull))
         {
-	  message = GOTBLUESKUL;
+	  player->message = GOTBLUESKUL;
 	  if( game.mode == gm_heretic ) sound = sfx_keyup;
         }
       if (!game.multiplayer)
@@ -1436,7 +1397,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
     case SPR_YSKU:
       if (GiveCard (it_yellowskull))
         {
-	  message = GOTYELWSKUL;
+	  player->message = GOTYELWSKUL;
 	  if( game.mode == gm_heretic ) sound = sfx_keyup;
         }
       if (!game.multiplayer)
@@ -1446,7 +1407,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
     case SPR_RSKU:
       if (GiveCard (it_redskull))
         {
-	  message = GOTREDSKULL;
+	  player->message = GOTREDSKULL;
 	  if( game.mode == gm_heretic ) sound = sfx_keyup;
         }
       if (!game.multiplayer)
@@ -1459,7 +1420,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       if (!GiveBody (10))
 	return;
       if(cv_showmessages.value==1)
-	message = GOTSTIM;
+	player->message = GOTSTIM;
       break;
 
     case SPR_MEDI:
@@ -1468,9 +1429,9 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       if(cv_showmessages.value==1)
         {
 	  if (health < 25)
-	    message = GOTMEDINEED;
+	    player->message = GOTMEDINEED;
 	  else
-	    message = GOTMEDIKIT;
+	    player->message = GOTMEDIKIT;
         }
       break;
 
@@ -1479,7 +1440,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       if(GiveArtifact(arti_health, special))
 	{
 	  if( cv_showmessages.value==1 )
-	    SetMessage(TXT_ARTIHEALTH, false);
+	    player->SetMessage(TXT_ARTIHEALTH, false);
               
 	  P_SetDormantArtifact(special);
 	}
@@ -1487,63 +1448,63 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
     case SPR_SOAR: // Arti_Fly
       if(GiveArtifact(arti_fly, special))
 	{
-	  SetMessage(TXT_ARTIFLY, false);
+	  player->SetMessage(TXT_ARTIFLY, false);
 	  P_SetDormantArtifact(special);
 	}
       return;
     case SPR_INVU: // Arti_Invulnerability
       if(GiveArtifact(arti_invulnerability, special))
 	{
-	  SetMessage(TXT_ARTIINVULNERABILITY, false);
+	  player->SetMessage(TXT_ARTIINVULNERABILITY, false);
 	  P_SetDormantArtifact(special);
 	}
       return;
     case SPR_PWBK: // Arti_TomeOfPower
       if(GiveArtifact(arti_tomeofpower, special))
 	{
-	  SetMessage(TXT_ARTITOMEOFPOWER, false);
+	  player->SetMessage(TXT_ARTITOMEOFPOWER, false);
 	  P_SetDormantArtifact(special);
 	}
       return;
     case SPR_INVS: // Arti_Invisibility
       if(GiveArtifact(arti_invisibility, special))
 	{
-	  SetMessage(TXT_ARTIINVISIBILITY, false);
+	  player->SetMessage(TXT_ARTIINVISIBILITY, false);
 	  P_SetDormantArtifact(special);
 	}
       return;
     case SPR_EGGC: // Arti_Egg
       if(GiveArtifact(arti_egg, special))
 	{
-	  SetMessage(TXT_ARTIEGG, false);
+	  player->SetMessage(TXT_ARTIEGG, false);
 	  P_SetDormantArtifact(special);
 	}
       return;
     case SPR_SPHL: // Arti_SuperHealth
       if(GiveArtifact(arti_superhealth, special))
 	{
-	  SetMessage(TXT_ARTISUPERHEALTH, false);
+	  player->SetMessage(TXT_ARTISUPERHEALTH, false);
 	  P_SetDormantArtifact(special);
 	}
       return;
     case SPR_TRCH: // Arti_Torch
       if(GiveArtifact(arti_torch, special))
 	{
-	  SetMessage(TXT_ARTITORCH, false);
+	  player->SetMessage(TXT_ARTITORCH, false);
 	  P_SetDormantArtifact(special);
 	}
       return;
     case SPR_FBMB: // Arti_FireBomb
       if(GiveArtifact(arti_firebomb, special))
 	{
-	  SetMessage(TXT_ARTIFIREBOMB, false);
+	  player->SetMessage(TXT_ARTIFIREBOMB, false);
 	  P_SetDormantArtifact(special);
 	}
       return;
     case SPR_ATLP: // Arti_Teleport
       if(GiveArtifact(arti_teleport, special))
 	{
-	  SetMessage(TXT_ARTITELEPORT, false);
+	  player->SetMessage(TXT_ARTITELEPORT, false);
 	  P_SetDormantArtifact(special);
 	}
       return;
@@ -1552,14 +1513,14 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
     case SPR_PINV:
       if (!GivePower (pw_invulnerability))
 	return;
-      message = GOTINVUL;
+      player->message = GOTINVUL;
       sound = sfx_getpow;
       break;
 
     case SPR_PSTR:
       if (!GivePower (pw_strength))
 	return;
-      message = GOTBERSERK;
+      player->message = GOTBERSERK;
       if (readyweapon != wp_fist)
 	pendingweapon = wp_fist;
       sound = sfx_getpow;
@@ -1568,14 +1529,14 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
     case SPR_PINS:
       if (!GivePower (pw_invisibility))
 	return;
-      message = GOTINVIS;
+      player->message = GOTINVIS;
       sound = sfx_getpow;
       break;
 
     case SPR_SUIT:
       if (!GivePower (pw_ironfeet))
 	return;
-      message = GOTSUIT;
+      player->message = GOTSUIT;
       sound = sfx_getpow;
       break;
 
@@ -1583,7 +1544,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
     case SPR_PMAP:
       if (!GivePower (pw_allmap))
 	return;
-      message = GOTMAP;
+      player->message = GOTMAP;
       if( game.mode != gm_heretic )
 	sound = sfx_getpow;
       break;
@@ -1591,7 +1552,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
     case SPR_PVIS:
       if (!GivePower (pw_infrared))
 	return;
-      message = GOTVISOR;
+      player->message = GOTVISOR;
       sound = sfx_getpow;
       break;
 
@@ -1602,7 +1563,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	  return;
 	}
       if( cv_showmessages.value==1 )
-	SetMessage(TXT_AMMOGOLDWAND1, false);
+	player->SetMessage(TXT_AMMOGOLDWAND1, false);
       break;
     case SPR_AMG2: // Ammo_GoldWandHefty
       if(!GiveAmmo(am_goldwand, special->health))
@@ -1610,7 +1571,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	  return;
 	}
       if( cv_showmessages.value==1 )
-	SetMessage(TXT_AMMOGOLDWAND2, false);
+	player->SetMessage(TXT_AMMOGOLDWAND2, false);
       break;
     case SPR_AMM1: // Ammo_MaceWimpy
       if(!GiveAmmo(am_mace, special->health))
@@ -1618,7 +1579,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	  return;
 	}
       if( cv_showmessages.value==1 )
-	SetMessage(TXT_AMMOMACE1, false);
+	player->SetMessage(TXT_AMMOMACE1, false);
       break;
     case SPR_AMM2: // Ammo_MaceHefty
       if(!GiveAmmo(am_mace, special->health))
@@ -1626,7 +1587,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	  return;
 	}
       if( cv_showmessages.value==1 )
-	SetMessage(TXT_AMMOMACE2, false);
+	player->SetMessage(TXT_AMMOMACE2, false);
       break;
     case SPR_AMC1: // Ammo_CrossbowWimpy
       if(!GiveAmmo(am_crossbow, special->health))
@@ -1634,7 +1595,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	  return;
 	}
       if( cv_showmessages.value==1 )
-	SetMessage(TXT_AMMOCROSSBOW1, false);
+	player->SetMessage(TXT_AMMOCROSSBOW1, false);
       break;
     case SPR_AMC2: // Ammo_CrossbowHefty
       if(!GiveAmmo(am_crossbow, special->health))
@@ -1642,7 +1603,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	  return;
 	}
       if( cv_showmessages.value==1 )
-	SetMessage(TXT_AMMOCROSSBOW2, false);
+	player->SetMessage(TXT_AMMOCROSSBOW2, false);
       break;
     case SPR_AMB1: // Ammo_BlasterWimpy
       if(!GiveAmmo(am_blaster, special->health))
@@ -1650,7 +1611,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	  return;
 	}
       if( cv_showmessages.value==1 )
-	SetMessage(TXT_AMMOBLASTER1, false);
+	player->SetMessage(TXT_AMMOBLASTER1, false);
       break;
     case SPR_AMB2: // Ammo_BlasterHefty
       if(!GiveAmmo(am_blaster, special->health))
@@ -1658,7 +1619,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	  return;
 	}
       if( cv_showmessages.value==1 )
-	SetMessage(TXT_AMMOBLASTER2, false);
+	player->SetMessage(TXT_AMMOBLASTER2, false);
       break;
     case SPR_AMS1: // Ammo_SkullRodWimpy
       if(!GiveAmmo(am_skullrod, special->health))
@@ -1666,7 +1627,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	  return;
 	}
       if( cv_showmessages.value==1 )
-	SetMessage(TXT_AMMOSKULLROD1, false);
+	player->SetMessage(TXT_AMMOSKULLROD1, false);
       break;
     case SPR_AMS2: // Ammo_SkullRodHefty
       if(!GiveAmmo(am_skullrod, special->health))
@@ -1674,7 +1635,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	  return;
 	}
       if( cv_showmessages.value==1 )
-	SetMessage(TXT_AMMOSKULLROD2, false);
+	player->SetMessage(TXT_AMMOSKULLROD2, false);
       break;
     case SPR_AMP1: // Ammo_PhoenixRodWimpy
       if(!GiveAmmo(am_phoenixrod, special->health))
@@ -1682,7 +1643,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	  return;
 	}
       if( cv_showmessages.value==1 )
-	SetMessage(TXT_AMMOPHOENIXROD1, false);
+	player->SetMessage(TXT_AMMOPHOENIXROD1, false);
       break;
     case SPR_AMP2: // Ammo_PhoenixRodHefty
       if(!GiveAmmo(am_phoenixrod, special->health))
@@ -1690,7 +1651,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	  return;
 	}
       if( cv_showmessages.value==1 )
-	SetMessage(TXT_AMMOPHOENIXROD2, false);
+	player->SetMessage(TXT_AMMOPHOENIXROD2, false);
       break;
 
       // ammo
@@ -1706,56 +1667,56 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	    return;
         }
       if(cv_showmessages.value==1)
-	message = GOTCLIP;
+	player->message = GOTCLIP;
       break;
 
     case SPR_AMMO:
       if (!GiveAmmo (am_clip,5*clipammo[am_clip]))
 	return;
       if(cv_showmessages.value==1)
-	message = GOTCLIPBOX;
+	player->message = GOTCLIPBOX;
       break;
 
     case SPR_ROCK:
       if (!GiveAmmo (am_misl,clipammo[am_misl]))
 	return;
       if(cv_showmessages.value==1)
-	message = GOTROCKET;
+	player->message = GOTROCKET;
       break;
 
     case SPR_BROK:
       if (!GiveAmmo (am_misl,5*clipammo[am_misl]))
 	return;
       if(cv_showmessages.value==1)
-	message = GOTROCKBOX;
+	player->message = GOTROCKBOX;
       break;
 
     case SPR_CELL:
       if (!GiveAmmo (am_cell,clipammo[am_cell]))
 	return;
       if(cv_showmessages.value==1)
-	message = GOTCELL;
+	player->message = GOTCELL;
       break;
 
     case SPR_CELP:
       if (!GiveAmmo (am_cell,5*clipammo[am_cell]))
 	return;
       if(cv_showmessages.value==1)
-	message = GOTCELLBOX;
+	player->message = GOTCELLBOX;
       break;
 
     case SPR_SHEL:
       if (!GiveAmmo (am_shell,clipammo[am_shell]))
 	return;
       if(cv_showmessages.value==1)
-	message = GOTSHELLS;
+	player->message = GOTSHELLS;
       break;
 
     case SPR_SBOX:
       if (!GiveAmmo (am_shell,5*clipammo[am_shell]))
 	return;
       if(cv_showmessages.value==1)
-	message = GOTSHELLBOX;
+	player->message = GOTSHELLBOX;
       break;
 
     case SPR_BPAK:
@@ -1766,7 +1727,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
         }
       for (i=0 ; i<am_heretic ; i++)
 	GiveAmmo (ammotype_t(i), clipammo[i]);
-      message = GOTBACKPACK;
+      player->message = GOTBACKPACK;
       break;
 
     case SPR_BAGH: // Item_BagOfHolding
@@ -1780,56 +1741,56 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       GiveAmmo(am_crossbow, AMMO_CBOW_WIMPY);
       GiveAmmo(am_skullrod, AMMO_SKRD_WIMPY);
       GiveAmmo(am_phoenixrod, AMMO_PHRD_WIMPY);
-      SetMessage(TXT_ITEMBAGOFHOLDING, false);
+      player->SetMessage(TXT_ITEMBAGOFHOLDING, false);
       break;
 
         // weapons
     case SPR_BFUG:
       if (!GiveWeapon (wp_bfg, false) )
 	return;
-      message = GOTBFG9000;
+      player->message = GOTBFG9000;
       sound = sfx_wpnup;
       break;
 
     case SPR_MGUN:
       if (!GiveWeapon (wp_chaingun, special->flags & MF_DROPPED) )
 	return;
-      message = GOTCHAINGUN;
+      player->message = GOTCHAINGUN;
       sound = sfx_wpnup;
       break;
 
     case SPR_CSAW:
       if (!GiveWeapon (wp_chainsaw, false) )
 	return;
-      message = GOTCHAINSAW;
+      player->message = GOTCHAINSAW;
       sound = sfx_wpnup;
       break;
 
     case SPR_LAUN:
       if (!GiveWeapon (wp_missile, false) )
 	return;
-      message = GOTLAUNCHER;
+      player->message = GOTLAUNCHER;
       sound = sfx_wpnup;
       break;
 
     case SPR_PLAS:
       if (!GiveWeapon (wp_plasma, false) )
 	return;
-      message = GOTPLASMA;
+      player->message = GOTPLASMA;
       sound = sfx_wpnup;
       break;
 
     case SPR_SHOT:
       if (!GiveWeapon (wp_shotgun, special->flags&MF_DROPPED ) )
 	return;
-      message = GOTSHOTGUN;
+      player->message = GOTSHOTGUN;
       sound = sfx_wpnup;
       break;
 
     case SPR_SGN2:
       if (!GiveWeapon (wp_supershotgun, special->flags&MF_DROPPED ) )
 	return;
-      message = GOTSHOTGUN2;
+      player->message = GOTSHOTGUN2;
       sound = sfx_wpnup;
       break;
 
@@ -1839,7 +1800,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	{
 	  return;
 	}
-      SetMessage(TXT_WPNMACE, false);
+      player->SetMessage(TXT_WPNMACE, false);
       sound = sfx_hwpnup;
       break;
     case SPR_WBOW: // Weapon_Crossbow
@@ -1847,7 +1808,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	{
 	  return;
 	}
-      SetMessage(TXT_WPNCROSSBOW, false);
+      player->SetMessage(TXT_WPNCROSSBOW, false);
       sound = sfx_hwpnup;
       break;
     case SPR_WBLS: // Weapon_Blaster
@@ -1855,7 +1816,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	{
 	  return;
 	}
-      SetMessage(TXT_WPNBLASTER, false);
+      player->SetMessage(TXT_WPNBLASTER, false);
       sound = sfx_hwpnup;
       break;
     case SPR_WSKL: // Weapon_SkullRod
@@ -1863,7 +1824,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	{
 	  return;
 	}
-      SetMessage(TXT_WPNSKULLROD, false);
+      player->SetMessage(TXT_WPNSKULLROD, false);
       sound = sfx_hwpnup;
       break;
     case SPR_WPHX: // Weapon_PhoenixRod
@@ -1871,7 +1832,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	{
 	  return;
 	}
-      SetMessage(TXT_WPNPHOENIXROD, false);
+      player->SetMessage(TXT_WPNPHOENIXROD, false);
       sound = sfx_hwpnup;
       break;
     case SPR_WGNT: // Weapon_Gauntlets
@@ -1879,7 +1840,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	{
 	  return;
 	}
-      SetMessage(TXT_WPNGAUNTLETS, false);
+      player->SetMessage(TXT_WPNGAUNTLETS, false);
       sound = sfx_hwpnup;
       break;
 
@@ -2279,7 +2240,7 @@ bool PlayerPawn::Morph()
       //chicken->flags2 |= MF2_FLY;
     }
   morphTics = CHICKENTICS;
-  ActivateBeak();
+  ActivateMorphWeapon();
   return true;
 }
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/03/15 20:07:12  smite-meister
+// Initial Hexen compatibility!
+//
 // Revision 1.7  2003/03/08 16:06:58  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -337,9 +340,8 @@ void SoundSystem::Startup()
 
       for (int i=1 ; i<NUMSFX ; i++)
         {
-	  // NOTE: linked sounds use the link's data at StartSound time
-	  if (S_sfx[i].name && !S_sfx[i].link)
-	    sc.Cache(S_sfx[i].name); // one extra reference => never released
+	  if (S_sfx[i].lumpname)
+	    sc.Cache(S_sfx[i].lumpname); // one extra reference => never released
         }
       CONS_Printf(" pre-cached all sound data\n");
     }
@@ -1034,21 +1036,12 @@ void S_StartAmbSound(int sfx_id, int volume)
   sfxinfo_t *sfx = &S_sfx[sfx_id];
 
   // Initialize sound parameters
-  int pitch;
-  if (sfx->link)
-    {
-      pitch = sfx->pitch;
-      volume += sfx->volume;
-    }
-  else
-    pitch = NORM_PITCH;
+  int pitch = NORM_PITCH;
 
   if (volume < 1)
     return;
 
-  const char *name = sfx->name;
-  if (sfx->link)
-    name = sfx->link->name;
+  const char *name = sfx->lumpname;
 
   S.StartAmbSound(name, volume, NORM_SEP, pitch, sfx->priority);
 }
@@ -1056,26 +1049,15 @@ void S_StartAmbSound(int sfx_id, int volume)
 // wrapper
 static void S_Start3DSound(sfxinfo_t *sfx, soundsource_t *source)
 {
-  int pitch, volume = 255;
-
   // Initialize sound parameters
-  if (sfx->link)
-    {
-      pitch = sfx->pitch;
-      volume += sfx->volume;
 
-      if (volume < 1)
-        return;
-    }
-  else
-    pitch = NORM_PITCH;
+  int volume = 255;
+  int pitch = NORM_PITCH;
 
-  const char *name = sfx->name;
-  // just one layer of links is accepted
-  if (sfx->link)
-    name = sfx->link->name;
+  const char *name = sfx->lumpname;
 
   // NOTE: sfx->singularity is completely ignored!
+  // Hexen max. channelnum is sort of incorporated into singularity (and thus ignored too...)
   S.Start3DSound(name, source, volume, pitch, sfx->priority);
 }
 
