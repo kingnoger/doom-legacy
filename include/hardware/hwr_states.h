@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/07/25 20:51:38  hurdler
+// oops
+//
 // Revision 1.3  2004/07/25 20:18:16  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -192,7 +195,9 @@ private:
     static GLenum last_cull_face_mode;
     static Fog *last_fog;
     static TextureModifier *last_texture_modifier[MAX_TEXTURE_UNITS];
+#ifdef CG_SHADER
     static Shader *last_shader;
+#endif
     static State *last_state;
 
     // default state
@@ -224,8 +229,10 @@ public:
     void SetFog(Fog *fog);
     /// Change the texture modifier (TexGen, TexEnv and TexParameter) of a texture (it depends on the texture unit)
     void SetTextureModifier(int tex_unit, TextureModifier *texture_modifier);
+#ifdef CG_SHADER
     /// Change the shader (vertex and/or fragment program) associated to this state
     void SetShader(Shader *shader);
+#endif
     /// Force this state as the new OpenGL states
     void Apply();
     /// Apply the default OpenGL states

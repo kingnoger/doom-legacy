@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/07/25 20:54:55  hurdler
+// oops
+//
 // Revision 1.3  2004/07/23 22:18:42  hurdler
 // respect indent style and temporary (static, unoptimized and not correct) support for wall/floor/ceiling so I can actually work on texture support
 //
@@ -37,7 +40,9 @@
 // Basic states
 TextureModifier TextureModifier::tm;
 Fog Fog::fog;
+#ifdef CG_SHADER
 Shader *Shader::shader = 0;  // must be a pointer for the reason explained in the constructor
+#endif
 State State::state;
 
 //-----------------------------------------------------------------------------
@@ -282,7 +287,9 @@ GLenum State::last_shade_model = GL_SMOOTH;
 GLenum State::last_cull_face_mode = GL_FALSE;
 Fog *State::last_fog = 0;
 TextureModifier *State::last_texture_modifier[MAX_TEXTURE_UNITS] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+#ifdef CG_SHADER
 Shader *State::last_shader = 0;
+#endif
 State *State::last_state = 0;
 
 GLfloat State::global_color[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -297,8 +304,10 @@ State::State():
   alpha_ref(0.0f),
   shade_model(GL_SMOOTH),
   cull_face_mode(GL_FALSE),
-  fog(0),
-  shader(0)
+  fog(0)
+#ifdef CG_SHADER
+  ,shader(0)
+#endif
 {
   memset(color, 0, sizeof(color));
   memset(texture_modifier, 0, sizeof(texture_modifier));
@@ -355,11 +364,13 @@ void State::SetTextureModifier(int tex_unit, TextureModifier *texture_modifier)
   this->texture_modifier[tex_unit] = texture_modifier;
 }
 
+#ifdef CG_SHADER
 void State::SetShader(Shader *shader)
 {
   last_state = 0;
   this->shader = shader;
 }
+#endif
 
 void State::Apply()
 {
@@ -482,6 +493,7 @@ void State::Apply()
           }
       }
     }
+#ifdef CG_SHADER
   if (shader != last_shader)
     {
       last_shader = shader;
@@ -494,6 +506,7 @@ void State::Apply()
           Shader::ApplyBasic();
         }
     }
+#endif
 }
 
 void State::ApplyBasic()
