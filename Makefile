@@ -92,21 +92,16 @@ export CC = g++
 # Platform: use _exactly_ one of the following:
 # LINUX : Linux platform
 # __WIN32__ : Win32 platform (automatic, no need to define)
-# PC_DOS : DJGPP version of Legacy for MS-DOS.
 #
 # Multimedia interface: use ONLY _one_ of the following:
-# SDL : we are compiling the SDL version of Legacy (use SDL for multimedia interface, SDL_mixer for music)
-# WIN32_DIRECTX : we are compiling the Win32 native version of Legacy. Use DirectX for multimedia interface
-# LINUX_X11 : Linux "native" with X11 video etc.
-# VID_X11 : X11 / glX hardware rendering, use with LINUX_X
+# SDL : compile the SDL version of Legacy (use SDL for multimedia interface, SDL_mixer for music)
+# WIN32_DIRECTX : compile the Win32 native version of Legacy. Use DirectX for multimedia interface
 #
 # Miscellaneous options: use as many as you like
 # USEASM : use assembler routines where possible
 # HWRENDER : compile with hardware renderer included
 # HW3SOUND : compile with hardware 3D sound included. Currently only for DirectX.
-# DEBUG : renderer and hud debugging messages?
-#
-# hmm. In Win98, -DUSEASM causes execution to stop (ASM_PatchRowBytes())
+
 
 defines := $(platform) $(interface) $(linkage) -DHWRENDER
 export CF := $(DEBUGFLAGS) $(OPTFLAGS) -Wall $(EXTRAFLAGS) $(defines) #-ansi
@@ -262,13 +257,14 @@ export sdl_objects = \
 #	$(objdir)/filesrch.o \
 
 
-asm_objects = $(objdir)/tmap.o
-# not used at the moment
 
 
 objects = $(engine_objects) $(util_objects) $(audio_objects) $(video_objects) \
 	$(net_objects) $(sdl_objects)
-# $(asm_objects)
+
+
+
+# explicit rules
 
 all	: mkdirobjs $(exename)
 
@@ -301,6 +297,9 @@ dep	: depend
 docs	: Doxyfile
 	doxygen
 
+wad	: tools
+	$(MAKE) -C wad
+
 engine	:
 	$(MAKE) -C engine
 
@@ -322,7 +321,6 @@ sdl	:
 tools	:
 	$(MAKE) -C tools
 
-# explicit rules
 
 ifdef DYNAMIC
 # main program
@@ -333,12 +331,3 @@ else
 $(exename) : engine util audio video net sdl
 	$(LD) $(LDFLAGS) $(objects) $(LIBS) $(OPENGLLIBS) -rdynamic -o $@
 endif
-
-
-# this isn't used now
-$(objdir)/tmap.o : assembler/tmap.nas
-	$(NASM) -o $@ -f $(nasmformat) $<
-
-# this may be useless
-$(objdir)/vid_copy.o: assembler/vid_copy.s
-	sentinel_nonsense_name $(CC) $(OPTS) $(SFLAGS) -x assembler-with-cpp -c $< -o $@
