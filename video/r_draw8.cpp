@@ -17,8 +17,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:46  hurdler
-// Initial revision
+// Revision 1.2  2004/08/02 20:54:48  jussip
+// Minor compilation fix.
+//
+// Revision 1.1.1.1  2002/11/16 14:18:46  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.4  2002/08/19 18:06:47  vberghol
 // renderer somewhat fixed
@@ -710,7 +713,8 @@ void R_DrawSpan_8 (void)
     {
         // Lookup pixel from flat texture tile,
         //  re-index using light/colormap.
-        *dest++ = ds_colormap[ds_source[((yfrac>>(16-6))&(0x3f<<6)) | (xfrac>>16)]];
+        *dest = ds_colormap[ds_source[((yfrac>>(16-6))&(0x3f<<6)) | (xfrac>>16)]];
+	dest++;
 
         // Next step in u,v.
         xfrac += ds_xstep;
@@ -782,7 +786,8 @@ void R_DrawSpan_8 (void)
       xtemp = position>>26;
       spot = xtemp | ytemp;
       position += step;
-      *dest++ = colormap[source[spot]];
+      *dest = colormap[source[spot]];
+      dest++;
       count--;
     } 
 }
@@ -855,7 +860,8 @@ void R_DrawTranslucentSpan_8 (void)
       xtemp = position>>26;
       spot = xtemp | ytemp;
       position += step;
-      *dest++ = colormap[*(transmap + (source[spot] << 8) + (*dest))];
+      *dest = colormap[*(transmap + (source[spot] << 8) + (*dest))];
+      dest++;
       //count--;
     } 
 }
@@ -888,8 +894,10 @@ void R_DrawFogSpan_8 (void)
       count -= 4;
     } 
 
-  while (count--)
-      *dest++ = colormap[*dest];
+  while (count--) {
+      *dest = colormap[*dest];
+      dest++;
+  }
 }
 
 

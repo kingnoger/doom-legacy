@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/08/02 20:49:58  jussip
+// Minor compilation fix.
+//
 // Revision 1.7  2004/07/25 20:16:43  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -588,7 +591,8 @@ void V_DrawFadeScreen()
             wput = (short*) (vid.screens[0] + vid.width*y);
             for (x=0 ; x<w ; x++)
             {
-                *wput++ = (*wput>>1) & 0x3def;
+                *wput = (*wput>>1) & 0x3def;
+                wput++;
             }
         }
     }
@@ -639,8 +643,10 @@ void V_DrawFadeConsBack(int x1, int y1, int x2, int y2)
       for (y=y1 ; y<y2 ; y++)
         {
           wput = (short*)(vid.screens[0] + vid.width*y) + x1;
-          for (x=0 ; x<w ; x++)
-            *wput++ = ((*wput&0x7bde) + (15<<5)) >>1;
+          for (x=0 ; x<w ; x++) {
+            *wput = ((*wput&0x7bde) + (15<<5)) >>1;
+	    wput++;
+	  }
         }
     }
 }
