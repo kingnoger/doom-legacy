@@ -17,8 +17,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:38  hurdler
-// Initial revision
+// Revision 1.2  2002/12/16 22:19:37  smite-meister
+// HUD fix
+//
+// Revision 1.1.1.1  2002/11/16 14:18:38  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.11  2002/09/20 22:41:36  vberghol
 // Sound system rewritten! And it workscvs update
@@ -524,7 +527,7 @@ extern int idkfa_armor_class;
 extern int god_health;
 extern int initial_health;
 extern int initial_bullets;
-extern int max_health;
+//extern int max_health; // VB: removed due to the new class system...
 extern int max_armor;
 extern int green_armor_class;
 extern int blue_armor_class;
@@ -553,8 +556,9 @@ static void readmisc(MYFILE *f)
       }
       else if(!strcmp(word,"Max"))
       {
-         if(!strcmp(word2,"Health"))          max_health=value;
-         else if(!strcmp(word2,"Armor"))      max_armor=value;
+	//if(!strcmp(word2,"Health"))          max_health=value;
+	//else
+	   if(!strcmp(word2,"Armor"))      max_armor=value;
          else if(!strcmp(word2,"Soulsphere")) maxsoul=value;
       }
       else if(!strcmp(word,"Green"))         green_armor_class=value;

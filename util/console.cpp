@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/16 22:19:36  smite-meister
+// HUD fix
+//
 // Revision 1.2  2002/12/03 10:26:39  smite-meister
 // ...
 //
@@ -1303,7 +1306,7 @@ void CON_Drawer (void)
         CON_RecalcSize ();
 
     //Fab: bighack: patch 'I' letter leftoffset so it centers
-    hu_font['I'-HU_FONTSTART]->leftoffset = -2;
+    hud.font['I'-HU_FONTSTART]->leftoffset = -2;
 
     if (con_curlines>0)
         CON_DrawConsole ();
@@ -1311,5 +1314,5 @@ void CON_Drawer (void)
     if (game.state == GS_LEVEL)
         CON_DrawHudlines ();
 
-    hu_font['I'-HU_FONTSTART]->leftoffset = 0;
+    hud.font['I'-HU_FONTSTART]->leftoffset = 0;
 }
