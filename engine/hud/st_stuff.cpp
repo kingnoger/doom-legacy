@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2004/09/15 19:23:59  smite-meister
+// bugfixes
+//
 // Revision 1.20  2004/09/03 16:28:50  smite-meister
 // bugfixes and ZDoom linedef types
 //
@@ -784,7 +787,7 @@ void HUD::ST_RefreshBackground()
 {
   extern byte *translationtables;
   extern byte *current_colormap;
-  int flags = (fgbuffer & 0xffff0000) | BG | V_SCALE;
+  int flags = (fgbuffer & V_FLAGMASK) | BG;
 
   if (game.mode == gm_hexen)
     {

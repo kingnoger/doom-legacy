@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/09/15 19:23:59  smite-meister
+// bugfixes
+//
 // Revision 1.8  2004/09/06 19:58:02  smite-meister
 // Doom linedefs done!
 //
@@ -193,6 +196,7 @@ public:
   AnimatedTexture(const char *p, int n);
   ~AnimatedTexture();
 
+  virtual bool Masked() { return Update()->Masked(); };
   virtual byte *GetColumn(int col) { return Update()->GetColumn(col); }
   virtual column_t *GetMaskedColumn(int col) { return Update()->GetMaskedColumn(col); }
   virtual byte *GetData() { return Update()->GetData(); }

@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.42  2004/09/15 19:23:59  smite-meister
+// bugfixes
+//
 // Revision 1.41  2004/09/13 20:43:29  smite-meister
 // interface cleanup, sp map reset fixed
 //
@@ -1093,7 +1096,7 @@ void Map::BossDeath(const DActor *mo)
   switch (mo->type)
     {
     case MT_BRUISER:
-      EV_DoFloor(666, NULL, floor_t::LnF, FLOORSPEED, 0, 0);
+      EV_DoFloor(666, NULL, floor_t::LnF, -FLOORSPEED, 0, 0);
       return;
 
     case MT_CYBORG:
@@ -1112,12 +1115,12 @@ void Map::BossDeath(const DActor *mo)
       else
 	{
 	  // ult. Doom, map 8
-	  EV_DoFloor (666, NULL, floor_t::LnF, FLOORSPEED, 0, 0);
+	  EV_DoFloor(666, NULL, floor_t::LnF, -FLOORSPEED, 0, 0);
 	  return;
 	}
 
     case MT_FATSO:
-      EV_DoFloor(666, NULL, floor_t::LnF, FLOORSPEED, 0, 0);
+      EV_DoFloor(666, NULL, floor_t::LnF, -FLOORSPEED, 0, 0);
       return;
 
     case MT_BABY:
@@ -1125,7 +1128,7 @@ void Map::BossDeath(const DActor *mo)
       return;
 
     case MT_KEEN:
-      EV_DoDoor(666, NULL, NULL, vdoor_t::Open,VDOORSPEED, VDOORWAIT);
+      EV_DoDoor(666, NULL, NULL, vdoor_t::Open, VDOORSPEED, VDOORWAIT);
       return;
 
     case MT_BOSSBRAIN:
@@ -1140,7 +1143,7 @@ void Map::BossDeath(const DActor *mo)
       // Kill any remaining monsters
       Massacre();
     nomassacre:
-      EV_DoFloor(666, NULL, floor_t::LnF, FLOORSPEED, 0, 0);
+      EV_DoFloor(666, NULL, floor_t::LnF, -FLOORSPEED, 0, 0);
       return;
 
     default:
