@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/12/08 16:49:04  segabor
+// Missing devparm reference added
+//
 // Revision 1.10  2004/11/28 18:02:24  smite-meister
 // RPCs finally work!
 //
@@ -75,6 +78,7 @@
 #include "g_game.h"
 #include "g_player.h"
 
+extern bool devparm;			//in d_main.cpp
 
 // =========================================================================
 //                      VARIABLE SIZE BUFFERS

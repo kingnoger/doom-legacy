@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/12/08 16:49:05  segabor
+// Missing devparm reference added
+//
 // Revision 1.12  2004/11/18 20:30:14  smite-meister
 // tnt, plutonia
 //
@@ -113,6 +116,7 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+extern bool devparm;			//in d_main.cpp
 
 dehacked_t DEH; // one global instance
 

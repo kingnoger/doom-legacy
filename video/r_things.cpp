@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.26  2004/12/08 16:52:45  segabor
+// Missing devparm reference added
+//
 // Revision 1.25  2004/11/09 20:38:53  smite-meister
 // added packing to I/O structs
 //
@@ -103,6 +106,7 @@
 
 #include "i_video.h"            //rendermode
 
+extern bool devparm;			//in d_main.cpp
 
 #define MINZ                  (FRACUNIT*4)
 #define BASEYCENTER           (BASEVIDHEIGHT/2)

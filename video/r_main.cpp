@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.28  2004/12/08 16:53:10  segabor
+// Missing devparm reference added
+//
 // Revision 1.27  2004/11/19 16:51:07  smite-meister
 // cleanup
 //
@@ -228,6 +231,7 @@ long long mytotal = 0;
 // Fineangles in the SCREENWIDTH wide window.
 #define FIELDOFVIEW             2048
 
+extern bool devparm;			//in d_main.cpp
 
 
 int                     viewangleoffset;
