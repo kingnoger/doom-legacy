@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2004/04/17 12:53:42  hurdler
+// now compile with gcc 3.3.3 under Linux
+//
 // Revision 1.15  2004/04/01 09:16:16  smite-meister
 // Texture system bugfixes
 //
@@ -275,7 +278,7 @@ byte *LumpTexture::Generate()
   if (!data)
     {
       int len = fc.LumpLength(lump);
-      Z_Malloc(len, PU_TEXTURE, &(void *)data);
+      Z_Malloc(len, PU_TEXTURE, (void **)(&data));
 
       // to avoid unnecessary memcpy
       fc.ReadLump(lump, data);
@@ -321,7 +324,7 @@ byte *PatchTexture::Generate()
   if (!data)
     {
       int len = fc.LumpLength(lump);
-      patch_t *p = (patch_t *)Z_Malloc(len, PU_TEXTURE, &(void *)data);
+      patch_t *p = (patch_t *)Z_Malloc(len, PU_TEXTURE, (void **)&data);
 
       // to avoid unnecessary memcpy
       fc.ReadLump(lump, data);
@@ -450,7 +453,7 @@ byte *DoomTexture::Generate()
       blocksize = fc.LumpLength(tp->patch);
       //CONS_Printf ("R_GenTex SINGLE %.8s size: %d\n",name,blocksize);
 
-      Z_Malloc(blocksize, PU_TEXTURE, &(void *)data); // change tag at end of function
+      Z_Malloc(blocksize, PU_TEXTURE, (void **)&data); // change tag at end of function
       fc.ReadLump(tp->patch, data);
 
       // use the patch's column lookup
@@ -467,7 +470,7 @@ byte *DoomTexture::Generate()
       blocksize = (width * sizeof(unsigned)) + (width * height);
       //CONS_Printf ("R_GenTex MULTI  %.8s size: %d\n",name,blocksize);
 
-      Z_Malloc(blocksize, PU_TEXTURE, &(void *)data);
+      Z_Malloc(blocksize, PU_TEXTURE, (void **)&data);
     
       // columns lookup table
       columnofs = (unsigned *)data;
