@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.11  2003/12/21 12:29:09  smite-meister
+// bugfixes
+//
 // Revision 1.10  2003/12/18 11:57:31  smite-meister
 // fixes / new bugs revealed
 //
@@ -106,7 +109,8 @@ void MapCluster::Finish()
   for (int i=0; i<n; i++)
     maps[i]->Close();
 
-  Z_FreeTags(PU_LEVEL, PU_PURGELEVEL-1); // destroys pawns if they are not Detached
+  // Z_FreeTags(PU_LEVEL, PU_PURGELEVEL-1); // destroys pawns if they are not Detached
+  // P_Initsecnode();  // re-initialize sector node list (the old nodes were just freed)
 }
 
 

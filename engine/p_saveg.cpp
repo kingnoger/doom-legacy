@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2003/12/21 12:29:09  smite-meister
+// bugfixes
+//
 // Revision 1.18  2003/12/18 11:57:31  smite-meister
 // fixes / new bugs revealed
 //
@@ -162,12 +165,9 @@ int acs_t::Marshal(LArchive &a)
   else
     {
       a << temp;
-      ip = (int *)(mp->ActionCodeBase + temp);
+      ip = (int *)(&mp->ActionCodeBase[temp]);
       a << temp;
-      if (temp == -1)
-	line = NULL;
-      else
-	line = mp->lines + temp;
+      line = (temp == -1) ? NULL : &mp->lines[temp];
       activator = (Actor *)Thinker::Unserialize(a);
       a.Read((byte *)stak, sizeof(stak));
       a.Read((byte *)vars, sizeof(vars));
@@ -191,7 +191,7 @@ int sectoreffect_t::Marshal(LArchive &a)
       a << temp;
       if (temp >= mp->numsectors)
 	I_Error("Invalid sector for a Sectoreffect!\n");
-      sector = mp->sectors + temp;
+      sector = &mp->sectors[temp];
     }
 
   return 0;
@@ -297,10 +297,7 @@ int button_t::Marshal(LArchive &a)
   else
     {
       a << temp;
-      if (temp == -1)
-	line = NULL;
-      else
-	line = mp->lines + temp;
+      line = (temp == -1) ? NULL : &mp->lines[temp];
       soundorg = &line->frontsector->soundorg;
     }
 
@@ -321,10 +318,7 @@ int scroll_t::Marshal(LArchive &a)
   else
     {
       a << temp;
-      if (temp == -1)
-	control = NULL;
-      else
-	control = mp->sectors + temp;
+      control = (temp == -1) ? NULL : &mp->sectors[temp];
     }
   return 0;
 }
@@ -364,24 +358,24 @@ int polydoor_t::Marshal(LArchive &a)
 int presentation_t::Serialize(presentation_t *p, LArchive &a)
 {
   // much simpler than the Thinker serialization.
-  short stemp;
+  int temp;
   CONS_Printf("serializing a presentation\n");
   if (p)
     p->Marshal(a); // handles the type id as well.
   else
-    a << (stemp = 0);
+    a << (temp = 0);
   return 0;
 }
 
 presentation_t *presentation_t::Unserialize(LArchive &a)
 {
   presentation_t *p;
-  short stemp;
-  a << stemp; // read the type id
-  CONS_Printf("unserializing a presentation, %d\n", stemp);
-  if (stemp == 0)
+  int temp;
+  a << temp; // read the type id
+  CONS_Printf("unserializing a presentation, %d\n", temp);
+  if (temp == 0)
     return NULL;
-  else if (stemp == 1)      
+  else if (temp == 1)      
     p = new spritepres_t(NULL, NULL, 0);
   else
     p = new modelpres_t(NULL);
@@ -393,11 +387,10 @@ presentation_t *presentation_t::Unserialize(LArchive &a)
 
 int spritepres_t::Marshal(LArchive &a)
 {
-  short stemp;
   int temp;
   if (a.IsStoring())
     {
-      a << (stemp = 1); // type id
+      a << (temp = 1); // type id
       a << (temp = (info - mobjinfo));
       a << (temp = (state - states));
     }
@@ -415,10 +408,10 @@ int spritepres_t::Marshal(LArchive &a)
 
 int modelpres_t::Marshal(LArchive &a)
 {
-  short stemp;
+  int temp;
   if (a.IsStoring())
     {
-      a << (stemp = 2); // type id
+      a << (temp = 2); // type id
       // TODO store the model name
     }
   else
@@ -432,7 +425,7 @@ int modelpres_t::Marshal(LArchive &a)
 
 int Actor::Marshal(LArchive &a)
 {
-  short stemp;
+  int temp;
   a << x << y << z;
   a << angle << aiming;
   a << px << py << pz;
@@ -449,36 +442,22 @@ int Actor::Marshal(LArchive &a)
 
   if (a.IsStoring())
     {
-      if (mp)
-	stemp = short(spawnpoint - mp->mapthings);
-      else
-	stemp = 0;
-      a << stemp;
-
+      a << (temp = spawnpoint ? (spawnpoint - mp->mapthings) : -1);
       Thinker::Serialize(owner, a);
       Thinker::Serialize(target, a);
-
       presentation_t::Serialize(pres, a);
     }
   else
     {
-      a << stemp;
-      if (mp)
-	{
-	  spawnpoint = mp->mapthings + stemp;
-	  mp->mapthings[stemp].mobj = this;
-	}
-
+      a << temp;
+      spawnpoint = (temp == -1) ? NULL : &mp->mapthings[temp];
+      mp->mapthings[temp].mobj = this;
       owner  = (Actor *)Thinker::Unserialize(a);
       target = (Actor *)Thinker::Unserialize(a);
-
       pres = presentation_t::Unserialize(a);
 
-      if (mp)
-	{
-	  CheckPosition(x, y);
-	  SetPosition();
-	}
+      CheckPosition(x, y);
+      SetPosition();
     }
 
   return 0;
@@ -737,10 +716,19 @@ int Pawn::Marshal(LArchive & a)
   a << attackphase;
 
   extern pawn_info_t pawndata[];
-  int temp = pinfo - pawndata;
-  a << temp;
-  if (!a.IsStoring())
-    pinfo = pawndata + temp;
+  int temp;
+
+  if (a.IsStoring())
+    {
+      a << (temp = pinfo ? (pinfo - pawndata) : -1);
+      Thinker::Serialize(attacker, a);
+    }
+  else
+    {
+      a << temp;
+      pinfo = (temp == -1) ? NULL : &pawndata[temp];
+      attacker = (Actor *)Thinker::Unserialize(a);
+    }
 
   return 0;
 }
@@ -750,12 +738,12 @@ int PlayerPawn::Marshal(LArchive &a)
   Pawn::Marshal(a);
 
   int i, n, diff;
-  short stemp;
+  int temp;
 
   enum player_diff
   {
     PD_POWERS       = 0x0001,
-    PD_PMASK        = 0x0FFF,
+    PD_PMASK        = 0x0FFF, // 12 powers now in total
 
     PD_REFIRE      = 0x01000,
     PD_MORPHTICS   = 0x02000,
@@ -771,12 +759,7 @@ int PlayerPawn::Marshal(LArchive &a)
     {
       for (i=0; i<NUMPSPRITES; i++)
 	{
-	  if (psprites[i].state)
-	    stemp = psprites[i].state - weaponstates + 1;
-	  else
-	    stemp = 0;
-
-	  a << stemp;
+	  a << (temp = psprites[i].state ? (psprites[i].state - weaponstates) : -1);
 	  a << psprites[i].tics << psprites[i].sx << psprites[i].sy;
 	}
 
@@ -784,15 +767,14 @@ int PlayerPawn::Marshal(LArchive &a)
 
       // inventory is closed.
       a << invSlot;
-      n = inventory.size();
-      a << n;
+      a << (n = inventory.size());
       for (i=0; i<n; i++)
 	a << inventory[i].type << inventory[i].count;
 
       diff = 0;
       for (i=0; i<NUMWEAPONS; i++)
 	if (weaponowned[i])
-	  diff |= 1 << i;
+	  diff |= (1 << i);
       a << diff; // we have already 32 weapon types. whew!
 
       // cheats vanish in saves;)
@@ -828,10 +810,8 @@ int PlayerPawn::Marshal(LArchive &a)
       // loading
       for (i=0; i<NUMPSPRITES; i++)
 	{
-	  a << stemp;	  
-	  if (stemp)
-	    psprites[i].state = &weaponstates[stemp - 1];
-
+	  a << temp;	  
+	  psprites[i].state = (temp == -1) ? NULL : &weaponstates[temp];
 	  a << psprites[i].tics << psprites[i].sx << psprites[i].sy;
 	}
 
@@ -864,19 +844,13 @@ int PlayerPawn::Marshal(LArchive &a)
       usedown      = diff & PD_USEDWN;
       jumpdown     = diff & PD_JMPDWN;
 
-      if (powers[pw_weaponlevel2])
-	weaponinfo = wpnlev2info;
-      else
-	weaponinfo = wpnlev1info;
-
-      if (backpack)
-	maxammo = maxammo2;
-      else
-	maxammo = maxammo1;
+      weaponinfo = (powers[pw_weaponlevel2] ? wpnlev2info : wpnlev1info);
+      maxammo = (backpack ? maxammo2 : maxammo1);
     }
 
   // non-coded stuff (just read/write the numbers)
   a << pclass;
+  a << cheats;
   a << keycards;
   a << int(pendingweapon) << int(readyweapon);
 
@@ -887,6 +861,8 @@ int PlayerPawn::Marshal(LArchive &a)
 
   for (i=0; i<NUMARMOR; i++)
     a << armorfactor[i] << armorpoints[i];
+
+  a << specialsector << extralight << fixedcolormap << flyheight;
 
   return 0;
 }
@@ -1618,6 +1594,7 @@ int PlayerInfo::Serialize(LArchive &a)
     }
 
   // the pawn is serialized by the map it is in, not here. See PlayerPawn::Marshal()
+  // TODO what if the Pawn is not in any Map but is carried by the PlayerInfo?
   return 0;
 }
 
@@ -1856,18 +1833,10 @@ int GameInfo::Serialize(LArchive &a)
   // TODO FS hub_script, global_script...
 
   // misc shit
-  if (consoleplayer)
-    a << consoleplayer->number;
-  else
-    a << (n = -1);
+  a << (n = consoleplayer ? consoleplayer->number : -1);
+  a << (n = consoleplayer2 ? consoleplayer2->number : -1);
 
-  if (consoleplayer2)
-    a << consoleplayer2->number;
-  else
-    a << (n = -1);
-
-  n = P_GetRandIndex();
-  a << n;
+  a << (n = P_GetRandIndex());
 
   //CV_SaveNetVars((char**)&save_p);
   //CV_LoadNetVars((char**)&save_p);

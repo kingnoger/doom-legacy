@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2003/12/21 12:29:09  smite-meister
+// bugfixes
+//
 // Revision 1.20  2003/12/18 11:57:31  smite-meister
 // fixes / new bugs revealed
 //
@@ -1120,7 +1123,7 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       tag = line->tag;
     }
   
-  CONS_Printf("ExeSpecial (%d), tag %d (%d)\n", special, line->tag, args[0]);
+  CONS_Printf("ExeSpecial (%d), tag %d (%d)\n", special, tag, args[0]);
   switch (special)
     {
     case 0: // NOP
@@ -1449,7 +1452,10 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       success = EV_DoElevator(tag, elevator_t::Up, SPEED(args[1]), 0);
       break;
     case 246: // ZDoom Elevator_MoveToFloor
-      success = EV_DoElevator(tag, elevator_t::Current, SPEED(args[1]), line->frontsector->floorheight);
+      if (line)
+	success = EV_DoElevator(tag, elevator_t::Current, SPEED(args[1]), line->frontsector->floorheight);
+      else
+	success = false;
       break;
     case 247: // ZDoom Elevator_LowerToNearest
       success = EV_DoElevator(tag, elevator_t::Down, SPEED(args[1]), 0);
@@ -2211,6 +2217,8 @@ void Map::SpawnScrollers()
 	  control = sides[*l->sidenum].sector;
 	}
 
+      bool clear = true; // should the special be cleared?
+
       switch (special)
         {
         case 250:   // scroll effect ceiling
@@ -2247,21 +2255,24 @@ void Map::SpawnScrollers()
 
 	  // Hexen
 	case 100: // Scroll_Texture_Left
-          AddThinker(new scroll_t(scroll_t::sc_side, -l->args[0], 0, NULL, l->sidenum[0], false));
+          AddThinker(new scroll_t(scroll_t::sc_side, -HEIGHT(l->args[0]), 0, NULL, l->sidenum[0], false));
 	  break;
 	case 101: // Scroll_Texture_Right
-          AddThinker(new scroll_t(scroll_t::sc_side, l->args[0], 0, NULL, l->sidenum[0], false));
+          AddThinker(new scroll_t(scroll_t::sc_side, HEIGHT(l->args[0]), 0, NULL, l->sidenum[0], false));
 	  break;
 	case 102: // Scroll_Texture_Up
-          AddThinker(new scroll_t(scroll_t::sc_side, l->args[0], 0, NULL, l->sidenum[0], false));
+          AddThinker(new scroll_t(scroll_t::sc_side, HEIGHT(l->args[0]), 0, NULL, l->sidenum[0], false));
 	  break;
 	case 103: // Scroll_Texture_Down
-          AddThinker(new scroll_t(scroll_t::sc_side, -l->args[0], 0, NULL, l->sidenum[0], false));
+          AddThinker(new scroll_t(scroll_t::sc_side, -HEIGHT(l->args[0]), 0, NULL, l->sidenum[0], false));
 	  break;
 
 	default:
-	  break;
+	  clear = false;
         }
+
+      if (clear)
+	l->special = 0;
     }
 }
 
@@ -2384,6 +2395,8 @@ void Map::SpawnFriction()
 	    sectors[s].friction   = friction;
 	    sectors[s].movefactor = movefactor;
 	  }
+
+	l->special = 0;
       }
 }
 
@@ -2615,25 +2628,34 @@ void Map::SpawnPushers()
   line_t *l = lines;
   register int s;
 
-  for (i = 0 ; i < numlines ; i++,l++)
-    switch (l->special)
-      {
-      case 224: // wind
-	for (s = -1; (s = FindSectorFromLineTag(l,s)) >= 0 ; )	  
-	  AddThinker(new pusher_t(pusher_t::p_wind, l->dx, l->dy, NULL, s));
-	break;
-      case 225: // current
-	for (s = -1; (s = FindSectorFromLineTag(l,s)) >= 0 ; )
-	  AddThinker(new pusher_t(pusher_t::p_current, l->dx, l->dy, NULL, s));
-	break;
-      case 226: // push/pull
-	for (s = -1; (s = FindSectorFromLineTag(l,s)) >= 0 ; )
-	  {
-	    // TODO don't spawn push mapthings at all?
-	    DActor* thing = GetPushThing(s);
-	    if (thing) // No MT_P* means no effect
-	      AddThinker(new pusher_t(pusher_t::p_push, l->dx, l->dy, thing, s));
-	  }
-	break;
-      }
+  for (i = 0; i < numlines; i++, l++)
+    {
+      bool clear = true;
+      switch (l->special)
+	{
+	case 224: // wind
+	  for (s = -1; (s = FindSectorFromLineTag(l,s)) >= 0 ; )	  
+	    AddThinker(new pusher_t(pusher_t::p_wind, l->dx, l->dy, NULL, s));
+	  break;
+	case 225: // current
+	  for (s = -1; (s = FindSectorFromLineTag(l,s)) >= 0 ; )
+	    AddThinker(new pusher_t(pusher_t::p_current, l->dx, l->dy, NULL, s));
+	  break;
+	case 226: // push/pull
+	  for (s = -1; (s = FindSectorFromLineTag(l,s)) >= 0 ; )
+	    {
+	      // TODO don't spawn push mapthings at all?
+	      DActor* thing = GetPushThing(s);
+	      if (thing) // No MT_P* means no effect
+		AddThinker(new pusher_t(pusher_t::p_push, l->dx, l->dy, thing, s));
+	    }
+	  break;
+
+	default:
+	  clear = false;
+	}
+
+      if (clear)
+	l->special = 0;
+    }
 }

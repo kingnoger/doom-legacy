@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.24  2003/12/21 12:29:09  smite-meister
+// bugfixes
+//
 // Revision 1.23  2003/12/13 23:51:03  smite-meister
 // Hexen update
 //
@@ -176,6 +179,7 @@ PlayerPawn::PlayerPawn()
   weaponinfo = NULL;
   maxammo = NULL;
   pclass = 0;
+  invTics = 0;
 }
 
 // Pawn methods

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.30  2003/12/21 12:29:09  smite-meister
+// bugfixes
+//
 // Revision 1.29  2003/12/18 11:57:31  smite-meister
 // fixes / new bugs revealed
 //
@@ -1355,9 +1358,6 @@ bool Map::Setup(tic_t start, bool spawnthings)
 
   CON_Drawer();  // let the user know what we are going to do
   I_FinishUpdate();              // page flip or blit buffer
-
-  //Initialize sector node list.
-  P_Initsecnode(); // FIXME no good when multiple maps are running, free the nodes...
 
   // Make sure all sounds are stopped before Z_FreeTags.
   S.Stop3DSounds();

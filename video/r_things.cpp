@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2003/12/21 12:29:09  smite-meister
+// bugfixes
+//
 // Revision 1.12  2003/12/18 11:57:31  smite-meister
 // fixes / new bugs revealed
 //
@@ -158,8 +161,10 @@ spritepres_t::spritepres_t(const char *name, const mobjinfo_t *inf, int col)
 
   flags = 0;
   lastupdate = -1;
-  state = &states[S_NULL]; // SetFrame or SetAnim fixes this
-  //SetFrame(&states[info->spawnstate]); // corresponds to Idle animation
+  if (info)
+    SetFrame(&states[info->spawnstate]); // corresponds to Idle animation
+  else
+    state = &states[S_NULL]; // SetFrame or SetAnim fixes this
 }
 
 

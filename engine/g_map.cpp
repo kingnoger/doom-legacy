@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.28  2003/12/21 12:29:09  smite-meister
+// bugfixes
+//
 // Revision 1.27  2003/12/18 11:57:31  smite-meister
 // fixes / new bugs revealed
 //
@@ -115,14 +118,33 @@ consvar_t cv_itemrespawn    ={"respawnitem"    , "0",CV_NETVAR,CV_OnOff};
 Map::Map(MapInfo *i)
 {
   info = i;
-
-  //level = i->level;
   lumpname = i->lumpname;
+  hexen_format = false;
+
+  vertexes = NULL;
+  segs = NULL;
+  sectors = NULL;
+  subsectors = NULL;
+  nodes = NULL;
+  lines = NULL;
+  sides = NULL;
+  polyobjs = NULL;
+  PolyBlockMap = NULL;
+  linebuffer = NULL;
+
+  blockmap = blockmaplump = NULL;
+  blocklinks = NULL;
+  rejectmatrix = NULL;
 
   levelscript = NULL;
   runningscripts = NULL;
 
-  hexen_format = false;
+  ACSInfo = NULL;
+  ActionCodeBase = NULL;
+  ACStrings = NULL;
+
+  mapthings = NULL;
+
   ActiveAmbientSeq = NULL;
 
   force_pointercheck = false;

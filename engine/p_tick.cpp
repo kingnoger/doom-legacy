@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/12/21 12:29:09  smite-meister
+// bugfixes
+//
 // Revision 1.10  2003/12/13 23:51:03  smite-meister
 // Hexen update
 //
@@ -88,7 +91,7 @@ void Map::AddThinker(Thinker *t)
 // Removes a Thinker from the Map without deleting it
 void Map::DetachThinker(Thinker *t)
 {
-  t->mp = NULL;
+  //t->mp = NULL; // NO! a PlayerPawn often exits the Map while still Thinking! We need this still!
   t->next->prev = t->prev;
   t->prev->next = t->next;
   t->prev = t->next = NULL;

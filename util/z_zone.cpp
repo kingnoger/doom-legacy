@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/12/21 12:29:09  smite-meister
+// bugfixes
+//
 // Revision 1.5  2003/04/04 00:01:58  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -241,6 +244,11 @@ void Z_Free(void *ptr)
   // this function is somewhat redundant.
   // We could do without if we stored the proper memzone_t* into each block header
   // and made memzone_t::Free again Z_Free
+  if (ptr == NULL)
+    {
+      CONS_Printf("Z_Free: NULL given!\n");
+      return;
+    }
 
 #ifdef MEMDEBUG
   memblock_t *block = (memblock_t *)((byte *)ptr - sizeof(memblock_t));
