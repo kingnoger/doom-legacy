@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/11/13 00:32:41  smite-meister
+// Static initialization order fiasco fixed
+//
 // Revision 1.7  2003/11/12 11:07:27  smite-meister
 // Serialization done. Map progression.
 //
@@ -112,7 +115,7 @@ class TypeInfo
 {
 private:
   typedef Thinker* (*thinker_factory_t)();
-  static map<unsigned, TypeInfo*> IDmap; // mapping from ID numbers to TypeInfo instances
+  static map<unsigned, TypeInfo*>& id_map(); // mapping from ID numbers to TypeInfo instances
 
 public:
   unsigned           type_id; // class/type ID number

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/11/13 00:33:02  smite-meister
+// Static initialization order fiasco fixed
+//
 // Revision 1.5  2003/11/12 11:07:19  smite-meister
 // Serialization done. Map progression.
 //
@@ -32,13 +35,25 @@
 #include "z_zone.h"
 
 
-map<unsigned, TypeInfo*> TypeInfo::IDmap; // filled during static initialization
+map<unsigned, TypeInfo*>& TypeInfo::id_map()
+{
+  // This is to overcome the "static initialization order fiasco" :/
+  // We MUST make sure that id_map is constructed before it is used during
+  // the construction of the TypeInfo instances, so a normal static
+  // member object is not enough.
+
+  // When this function is first executed, the map is constructed.
+  static map<unsigned, TypeInfo*> *temp = new map<unsigned, TypeInfo*>;
+  return *temp;
+} 
 
 
 TypeInfo::TypeInfo(const char *n, thinker_factory_t f)
 {
-  unsigned id = IDmap.size() + 1; // get the next available id (zero is reserved)
-  IDmap[id] = this;  // store the mapping
+  static map<unsigned, TypeInfo*>& id_ref = TypeInfo::id_map();
+
+  unsigned id = id_ref.size() + 1; // get the next available id (zero is reserved)
+  id_ref[id] = this;  // store the mapping
   name = n;
   factory = f;
 }
@@ -46,10 +61,11 @@ TypeInfo::TypeInfo(const char *n, thinker_factory_t f)
 
 TypeInfo *TypeInfo::Find(unsigned c)
 {
+  static map<unsigned, TypeInfo*>& id_ref = TypeInfo::id_map();
   map<unsigned, TypeInfo*>::iterator i;
 
-  i = IDmap.find(c);
-  if (i == IDmap.end())
+  i = id_ref.find(c);
+  if (i == id_ref.end())
     return NULL; // not found
   return (*i).second;
 }
