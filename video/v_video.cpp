@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.5  2004/03/28 15:16:15  smite-meister
-// Texture cache.
+// Revision 1.6  2004/04/01 09:16:16  smite-meister
+// Texture system bugfixes
 //
 // Revision 1.4  2004/01/10 16:03:00  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
@@ -402,21 +402,23 @@ void LumpTexture::Draw(int x, int y, int scrn = 0)
   //  mheight = (vid.height - y) / vid.dupy - 1;
   // TODO WARNING no x clipping (not needed for the moment)
 
-  byte *src = Generate();
+  byte *base = Generate();
 
   // TODO crap
   for (int i=0; i<height; i++)
     {
       for (int dupy = vid.dupy; dupy; dupy--)        
-        {
+	{
+	  byte *src = base;
 	  for (int j=0; j<width; j++)
-            {
+	    {
 	      for (int dupx = vid.dupx; dupx; dupx--)
 		*dest++ = *src;
 	      src++;
-            }
+	    }
 	  dest += vid.width - vid.dupx*width;
         }
+      base += width;
     }
 }
 

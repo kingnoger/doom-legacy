@@ -17,8 +17,8 @@
 //
 //
 // $Log$
-// Revision 1.10  2004/03/28 15:16:14  smite-meister
-// Texture cache.
+// Revision 1.11  2004/04/01 09:16:16  smite-meister
+// Texture system bugfixes
 //
 // Revision 1.9  2003/12/18 11:57:31  smite-meister
 // fixes / new bugs revealed
@@ -150,6 +150,7 @@ class sprite_t : public cacheitem_t
   friend class spritepres_t;
   //protected: // FIXME R_DrawPSprite() wants to use spriteframes directly.
 public:
+  sprite_t();
   virtual ~sprite_t();
 
   int  iname; // sprite name (4 chars) as an int
@@ -311,7 +312,7 @@ typedef enum {
 struct skin_t
 {
   char        name[SKINNAMESIZE+1];   // short descriptive name of the skin
-  sprite_t    spritedef;
+  sprite_t   *spritedef;
   char        faceprefix[4];          // 3 chars+'\0', default is "STF"
 
   // specific sounds per skin

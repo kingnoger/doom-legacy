@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.2  2004/03/28 15:16:15  smite-meister
-// Texture cache.
+// Revision 1.3  2004/04/01 09:16:16  smite-meister
+// Texture system bugfixes
 //
 // Revision 1.1.1.1  2002/11/16 14:18:47  hurdler
 // Initial C++ version of Doom Legacy
@@ -1457,16 +1457,16 @@ void Rend::R_RenderSegLoop()
 //
 void Rend::R_StoreWallRange(int start, int stop)
 {
-    fixed_t             hyp;
-    fixed_t             sineval;
-    angle_t             distangle, offsetangle;
-    fixed_t             vtop;
-    int                 lightnum;
-    int                 i;
+  fixed_t             hyp;
+  fixed_t             sineval;
+  angle_t             distangle, offsetangle;
+  fixed_t             vtop;
+  int                 lightnum;
+  int                 i;
 
     //SoM: 3/26/2000: Use Boom limit removal and see if it works better.
     //SoM: Boom code:
-    if (ds_p == drawsegs+maxdrawsegs)
+  if (ds_p == drawsegs+maxdrawsegs)
     {
       unsigned pos = ds_p - drawsegs;
       unsigned pos2 = firstnewseg - drawsegs;
@@ -1483,84 +1483,84 @@ void Rend::R_StoreWallRange(int start, int stop)
 
     
 #ifdef RANGECHECK
-    if (start >=viewwidth || start > stop)
-        I_Error ("Bad R_RenderWallRange: %i to %i", start , stop);
+  if (start >=viewwidth || start > stop)
+    I_Error ("Bad R_RenderWallRange: %i to %i", start , stop);
 #endif
     
-    sidedef = curline->sidedef;
-    linedef = curline->linedef;
+  sidedef = curline->sidedef;
+  linedef = curline->linedef;
     
-    // mark the segment as visible for auto map
-    linedef->flags |= ML_MAPPED;
+  // mark the segment as visible for auto map
+  linedef->flags |= ML_MAPPED;
     
-    // calculate rw_distance for scale calculation
-    rw_normalangle = curline->angle + ANG90;
-    offsetangle = abs(int(rw_normalangle)-rw_angle1);
+  // calculate rw_distance for scale calculation
+  rw_normalangle = curline->angle + ANG90;
+  offsetangle = abs(int(rw_normalangle)-rw_angle1);
     
-    if (offsetangle > ANG90)
-        offsetangle = ANG90;
+  if (offsetangle > ANG90)
+    offsetangle = ANG90;
     
-    distangle = ANG90 - offsetangle;
-    hyp = R_PointToDist (curline->v1->x, curline->v1->y);
-    sineval = finesine[distangle>>ANGLETOFINESHIFT];
-    rw_distance = FixedMul (hyp, sineval);
+  distangle = ANG90 - offsetangle;
+  hyp = R_PointToDist (curline->v1->x, curline->v1->y);
+  sineval = finesine[distangle>>ANGLETOFINESHIFT];
+  rw_distance = FixedMul (hyp, sineval);
     
     
-    ds_p->x1 = rw_x = start;
-    ds_p->x2 = stop;
-    ds_p->curline = curline;
-    rw_stopx = stop+1;
+  ds_p->x1 = rw_x = start;
+  ds_p->x2 = stop;
+  ds_p->curline = curline;
+  rw_stopx = stop+1;
 
-    //SoM: Code to remove limits on openings.
-    {
-      extern short *openings;
-      extern size_t maxopenings;
-      size_t pos = lastopening - openings;
-      size_t need = (rw_stopx - start)*4 + pos;
-      if (need > maxopenings)
-        {
-          drawseg_t *ds;  //needed for fix from *cough* zdoom *cough*
-          short *oldopenings = openings;
-          short *oldlast = lastopening;
+  //SoM: Code to remove limits on openings.
+  {
+    extern short *openings;
+    extern size_t maxopenings;
+    size_t pos = lastopening - openings;
+    size_t need = (rw_stopx - start)*4 + pos;
+    if (need > maxopenings)
+      {
+	drawseg_t *ds;  //needed for fix from *cough* zdoom *cough*
+	short *oldopenings = openings;
+	short *oldlast = lastopening;
 
-          do
-            maxopenings = maxopenings ? maxopenings*2 : 16384;
-          while (need > maxopenings);
-          openings = (short int *)realloc(openings, maxopenings * sizeof(*openings));
-          lastopening = openings + pos;
+	do
+	  maxopenings = maxopenings ? maxopenings*2 : 16384;
+	while (need > maxopenings);
+	openings = (short int *)realloc(openings, maxopenings * sizeof(*openings));
+	lastopening = openings + pos;
 
         // borrowed fix from *cough* zdoom *cough*
         // [RH] We also need to adjust the openings pointers that
         //    were already stored in drawsegs.
         for (ds = drawsegs; ds < ds_p; ds++)
           {
-  #define ADJUST(p) if (ds->p + ds->x1 >= oldopenings && ds->p + ds->x1 <= oldlast)\
+#define ADJUST(p) if (ds->p + ds->x1 >= oldopenings && ds->p + ds->x1 <= oldlast)\
                         ds->p = ds->p - oldopenings + openings;
             ADJUST (maskedtexturecol);
             ADJUST (sprtopclip);
             ADJUST (sprbottomclip);
             ADJUST (thicksidecol);
           }
-  #undef ADJUST
-        }
-    }  // end of code to remove limits on openings
+#undef ADJUST
+      }
+  }  // end of code to remove limits on openings
 
 
     
-    // calculate scale at both ends and step
-    ds_p->scale1 = rw_scale =
-        R_ScaleFromGlobalAngle (viewangle + xtoviewangle[start]);
+  // calculate scale at both ends and step
+  ds_p->scale1 = rw_scale =
+    R_ScaleFromGlobalAngle (viewangle + xtoviewangle[start]);
 
-    if (stop > start)
+  if (stop > start)
     {
-        ds_p->scale2 = R_ScaleFromGlobalAngle (viewangle + xtoviewangle[stop]);
-        ds_p->scalestep = rw_scalestep = (ds_p->scale2 - rw_scale) / (stop-start);
+      ds_p->scale2 = R_ScaleFromGlobalAngle (viewangle + xtoviewangle[stop]);
+      ds_p->scalestep = rw_scalestep = (ds_p->scale2 - rw_scale) / (stop-start);
     }
-    else
+  else
     {
-        // UNUSED: try to fix the stretched line bug
+      // UNUSED: try to fix the stretched line bug
 #if 0
-        if (rw_distance < FRACUNIT/2)
+      if (rw_distance < FRACUNIT/2)
         {
             fixed_t         trx,try;
             fixed_t         gxt,gyt;
@@ -1573,267 +1573,267 @@ void Rend::R_StoreWallRange(int start, int stop)
             ds_p->scale1 = FixedDiv(projection, gxt-gyt)<<detailshift;
         }
 #endif
-        ds_p->scale2 = ds_p->scale1;
+      ds_p->scale2 = ds_p->scale1;
     }
     
-    // calculate texture boundaries
-    //  and decide if floor / ceiling marks are needed
-    worldtop = frontsector->ceilingheight - viewz;
-    worldbottom = frontsector->floorheight - viewz;
+  // calculate texture boundaries
+  //  and decide if floor / ceiling marks are needed
+  worldtop = frontsector->ceilingheight - viewz;
+  worldbottom = frontsector->floorheight - viewz;
 
 #ifdef OLDWATER
-    //added:18-02-98:WATER!
-    if (waterplane)
+  //added:18-02-98:WATER!
+  if (waterplane)
     {
-        waterz = waterplane->height - viewz;
-        if (waterplane->height >= frontsector->ceilingheight)
-            I_Error("eau plus haut que plafond");
+      waterz = waterplane->height - viewz;
+      if (waterplane->height >= frontsector->ceilingheight)
+	I_Error("eau plus haut que plafond");
     }
 #endif
 
-    midtexture = toptexture = bottomtexture = 0;
-    maskedtexture = false;
+  midtexture = toptexture = bottomtexture = 0;
+  maskedtexture = false;
 
-    ds_p->maskedtexturecol = NULL;
-    ds_p->numthicksides = numthicksides = 0;
-    ds_p->thicksidecol = NULL;
+  ds_p->maskedtexturecol = NULL;
+  ds_p->numthicksides = numthicksides = 0;
+  ds_p->thicksidecol = NULL;
 
-    for(i = 0; i < MAXFFLOORS; i++)
+  for(i = 0; i < MAXFFLOORS; i++)
     {
       ffloor[i].mark = false;
       ds_p->thicksides[i] = NULL;
     }
 
-    if(numffloors)
+  if(numffloors)
     {
       for(i = 0; i < numffloors; i++)
         ffloor[i].f_pos = ffloor[i].height - viewz;
     }
 
-    if (!backsector)
+  if (!backsector)
     {
-        // single sided line
+      // single sided line
       midtexture = sidedef->midtexture;
       // a single sided line is terminal, so it must mark ends
       markfloor = markceiling = true;
 
-
 #ifdef OLDWATER
-        //added:18-02-98:WATER! onesided marque toujours l'eau si ya dlo
-        if (waterplane)
-            markwater = true;
-        else
-            markwater = false;
+      //added:18-02-98:WATER! onesided marque toujours l'eau si ya dlo
+      if (waterplane)
+	markwater = true;
+      else
+	markwater = false;
 #endif
-        
-        if (linedef->flags & ML_DONTPEGBOTTOM)
-        {
-	  vtop = frontsector->floorheight + (R_GetTexture(sidedef->midtexture)->height << FRACBITS);
-            // bottom of texture at bottom
-            rw_midtexturemid = vtop - viewz;
-        }
-        else
-        {
-            // top of texture at top
-            rw_midtexturemid = worldtop;
-        }
-        rw_midtexturemid += sidedef->rowoffset;
 
-        ds_p->silhouette = SIL_BOTH;
-        ds_p->sprtopclip = screenheightarray;
-        ds_p->sprbottomclip = negonearray;
-        ds_p->bsilheight = MAXINT;
-        ds_p->tsilheight = MININT;
+      if (linedef->flags & ML_DONTPEGBOTTOM && midtexture) // FIXME correct?
+        {
+	  vtop = frontsector->floorheight + (R_GetTexture(midtexture)->height << FRACBITS);
+	  // bottom of texture at bottom
+	  rw_midtexturemid = vtop - viewz;
+        }
+      else
+        {
+	  // top of texture at top
+	  rw_midtexturemid = worldtop;
+        }
+      rw_midtexturemid += sidedef->rowoffset;
+
+      ds_p->silhouette = SIL_BOTH;
+      ds_p->sprtopclip = screenheightarray;
+      ds_p->sprbottomclip = negonearray;
+      ds_p->bsilheight = MAXINT;
+      ds_p->tsilheight = MININT;
     }
-    else
+  else
     {
-        // two sided line
-        ds_p->sprtopclip = ds_p->sprbottomclip = NULL;
-        ds_p->silhouette = 0;
+      // two sided line
+      ds_p->sprtopclip = ds_p->sprbottomclip = NULL;
+      ds_p->silhouette = 0;
         
-        if (frontsector->floorheight > backsector->floorheight)
+      if (frontsector->floorheight > backsector->floorheight)
         {
-            ds_p->silhouette = SIL_BOTTOM;
-            ds_p->bsilheight = frontsector->floorheight;
+	  ds_p->silhouette = SIL_BOTTOM;
+	  ds_p->bsilheight = frontsector->floorheight;
         }
-        else if (backsector->floorheight > viewz)
+      else if (backsector->floorheight > viewz)
         {
-            ds_p->silhouette = SIL_BOTTOM;
-            ds_p->bsilheight = MAXINT;
-            // ds_p->sprbottomclip = negonearray;
-        }
-        
-        if (frontsector->ceilingheight < backsector->ceilingheight)
-        {
-            ds_p->silhouette |= SIL_TOP;
-            ds_p->tsilheight = frontsector->ceilingheight;
-        }
-        else if (backsector->ceilingheight < viewz)
-        {
-            ds_p->silhouette |= SIL_TOP;
-            ds_p->tsilheight = MININT;
-            // ds_p->sprtopclip = screenheightarray;
+	  ds_p->silhouette = SIL_BOTTOM;
+	  ds_p->bsilheight = MAXINT;
+	  // ds_p->sprbottomclip = negonearray;
         }
         
-        if (backsector->ceilingheight <= frontsector->floorheight)
+      if (frontsector->ceilingheight < backsector->ceilingheight)
         {
-            ds_p->sprbottomclip = negonearray;
-            ds_p->bsilheight = MAXINT;
-            ds_p->silhouette |= SIL_BOTTOM;
+	  ds_p->silhouette |= SIL_TOP;
+	  ds_p->tsilheight = frontsector->ceilingheight;
+        }
+      else if (backsector->ceilingheight < viewz)
+        {
+	  ds_p->silhouette |= SIL_TOP;
+	  ds_p->tsilheight = MININT;
+	  // ds_p->sprtopclip = screenheightarray;
         }
         
-        if (backsector->floorheight >= frontsector->ceilingheight)
+      if (backsector->ceilingheight <= frontsector->floorheight)
         {
-            ds_p->sprtopclip = screenheightarray;
-            ds_p->tsilheight = MININT;
-            ds_p->silhouette |= SIL_TOP;
+	  ds_p->sprbottomclip = negonearray;
+	  ds_p->bsilheight = MAXINT;
+	  ds_p->silhouette |= SIL_BOTTOM;
+        }
+        
+      if (backsector->floorheight >= frontsector->ceilingheight)
+        {
+	  ds_p->sprtopclip = screenheightarray;
+	  ds_p->tsilheight = MININT;
+	  ds_p->silhouette |= SIL_TOP;
         }
 
-        //SoM: 3/25/2000: This code fixes an automap bug that didn't check
-        // frontsector->ceiling and backsector->floor to see if a door was closed.
-        // Without the following code, sprites get displayed behind closed doors.
-        {
-          extern int doorclosed;    // killough 1/17/98, 2/8/98, 4/7/98
-          if (doorclosed || backsector->ceilingheight<=frontsector->floorheight)
-            {
-              ds_p->sprbottomclip = negonearray;
-              ds_p->bsilheight = MAXINT;
-              ds_p->silhouette |= SIL_BOTTOM;
-            }
-          if (doorclosed || backsector->floorheight>=frontsector->ceilingheight)
-            {                   // killough 1/17/98, 2/8/98
-              ds_p->sprtopclip = screenheightarray;
-              ds_p->tsilheight = MININT;
-              ds_p->silhouette |= SIL_TOP;
-            }
-        }
+      //SoM: 3/25/2000: This code fixes an automap bug that didn't check
+      // frontsector->ceiling and backsector->floor to see if a door was closed.
+      // Without the following code, sprites get displayed behind closed doors.
+      {
+	extern int doorclosed;    // killough 1/17/98, 2/8/98, 4/7/98
+	if (doorclosed || backsector->ceilingheight<=frontsector->floorheight)
+	  {
+	    ds_p->sprbottomclip = negonearray;
+	    ds_p->bsilheight = MAXINT;
+	    ds_p->silhouette |= SIL_BOTTOM;
+	  }
+	if (doorclosed || backsector->floorheight>=frontsector->ceilingheight)
+	  {                   // killough 1/17/98, 2/8/98
+	    ds_p->sprtopclip = screenheightarray;
+	    ds_p->tsilheight = MININT;
+	    ds_p->silhouette |= SIL_TOP;
+	  }
+      }
 
-        worldhigh = backsector->ceilingheight - viewz;
-        worldlow = backsector->floorheight - viewz;
+      worldhigh = backsector->ceilingheight - viewz;
+      worldlow = backsector->floorheight - viewz;
         
-        // hack to allow height changes in outdoor areas
-        if (frontsector->ceilingpic == skyflatnum
-            && backsector->ceilingpic == skyflatnum)
+      // hack to allow height changes in outdoor areas
+      if (frontsector->ceilingpic == skyflatnum
+	  && backsector->ceilingpic == skyflatnum)
         {
-            worldtop = worldhigh;
+	  worldtop = worldhigh;
         }
         
         
-        if (worldlow != worldbottom
-            || backsector->floorpic != frontsector->floorpic
-            || backsector->lightlevel != frontsector->lightlevel
-            //SoM: 3/22/2000: Check floor x and y offsets.
-            || backsector->floor_xoffs != frontsector->floor_xoffs
-            || backsector->floor_yoffs != frontsector->floor_yoffs
-            //SoM: 3/22/2000: Prevents bleeding.
-            || frontsector->heightsec != -1
-            || backsector->floorlightsec != frontsector->floorlightsec
-            //SoM: 4/3/2000: Check for colormaps
-            || frontsector->extra_colormap != backsector->extra_colormap
-            || (frontsector->ffloors != backsector->ffloors && frontsector->tag != backsector->tag))
+      if (worldlow != worldbottom
+	  || backsector->floorpic != frontsector->floorpic
+	  || backsector->lightlevel != frontsector->lightlevel
+	  //SoM: 3/22/2000: Check floor x and y offsets.
+	  || backsector->floor_xoffs != frontsector->floor_xoffs
+	  || backsector->floor_yoffs != frontsector->floor_yoffs
+	  //SoM: 3/22/2000: Prevents bleeding.
+	  || frontsector->heightsec != -1
+	  || backsector->floorlightsec != frontsector->floorlightsec
+	  //SoM: 4/3/2000: Check for colormaps
+	  || frontsector->extra_colormap != backsector->extra_colormap
+	  || (frontsector->ffloors != backsector->ffloors && frontsector->tag != backsector->tag))
         {
-            markfloor = true;
+	  markfloor = true;
         }
-        else
+      else
         {
-            // same plane on both sides
-            markfloor = false;
-        }
-        
-        
-        if (worldhigh != worldtop
-            || backsector->ceilingpic != frontsector->ceilingpic
-            || backsector->lightlevel != frontsector->lightlevel
-            //SoM: 3/22/2000: Check floor x and y offsets.
-            || backsector->ceiling_xoffs != frontsector->ceiling_xoffs
-            || backsector->ceiling_yoffs != frontsector->ceiling_yoffs
-            //SoM: 3/22/2000: Prevents bleeding.
-            || (frontsector->heightsec != -1 &&
-                frontsector->ceilingpic != skyflatnum)
-            || backsector->floorlightsec != frontsector->floorlightsec
-            //SoM: 4/3/2000: Check for colormaps
-            || frontsector->extra_colormap != backsector->extra_colormap
-            || (frontsector->ffloors != backsector->ffloors && frontsector->tag != backsector->tag))
-        {
-            markceiling = true;
-        }
-        else
-        {
-            // same plane on both sides
-            markceiling = false;
+	  // same plane on both sides
+	  markfloor = false;
         }
         
-        if (backsector->ceilingheight <= frontsector->floorheight
-            || backsector->floorheight >= frontsector->ceilingheight)
+        
+      if (worldhigh != worldtop
+	  || backsector->ceilingpic != frontsector->ceilingpic
+	  || backsector->lightlevel != frontsector->lightlevel
+	  //SoM: 3/22/2000: Check floor x and y offsets.
+	  || backsector->ceiling_xoffs != frontsector->ceiling_xoffs
+	  || backsector->ceiling_yoffs != frontsector->ceiling_yoffs
+	  //SoM: 3/22/2000: Prevents bleeding.
+	  || (frontsector->heightsec != -1 &&
+	      frontsector->ceilingpic != skyflatnum)
+	  || backsector->floorlightsec != frontsector->floorlightsec
+	  //SoM: 4/3/2000: Check for colormaps
+	  || frontsector->extra_colormap != backsector->extra_colormap
+	  || (frontsector->ffloors != backsector->ffloors && frontsector->tag != backsector->tag))
         {
-            // closed door
-            markceiling = markfloor = true;
+	  markceiling = true;
+        }
+      else
+        {
+	  // same plane on both sides
+	  markceiling = false;
+        }
+        
+      if (backsector->ceilingheight <= frontsector->floorheight
+	  || backsector->floorheight >= frontsector->ceilingheight)
+        {
+	  // closed door
+	  markceiling = markfloor = true;
         }
         
 #ifdef OLDWATER
-        //added:18-02-98: WATER! jamais mark si l'eau ne touche pas
-        //                d'upper et de bottom
-        // (on s'en fout des differences de hauteur de plafond et
-        //  de sol, tant que ca n'interrompt pas la surface de l'eau)
-        markwater = false;
+      //added:18-02-98: WATER! jamais mark si l'eau ne touche pas
+      //                d'upper et de bottom
+      // (on s'en fout des differences de hauteur de plafond et
+      //  de sol, tant que ca n'interrompt pas la surface de l'eau)
+      markwater = false;
 #endif
 
 
-        // check TOP TEXTURE
-        if (worldhigh < worldtop)
+      // check TOP TEXTURE
+      if (worldhigh < worldtop)
         {
 #ifdef OLDWATER
-            //added:18-02-98:WATER! toptexture, check si ca touche watersurf
-            if (waterplane &&
-                waterz > worldhigh &&
-                waterz < worldtop)
-                markwater = true;
+	  //added:18-02-98:WATER! toptexture, check si ca touche watersurf
+	  if (waterplane &&
+	      waterz > worldhigh &&
+	      waterz < worldtop)
+	    markwater = true;
 #endif
             
-            // top texture
-            toptexture = sidedef->toptexture;
-            if (linedef->flags & ML_DONTPEGTOP)
+	  // top texture
+	  toptexture = sidedef->toptexture;
+	  if (linedef->flags & ML_DONTPEGTOP || !toptexture) // FIXME correct?
             {
-                // top of texture at top
-                rw_toptexturemid = worldtop;
+	      // top of texture at top
+	      rw_toptexturemid = worldtop;
             }
-            else
+	  else
             {
-	      vtop = backsector->ceilingheight + (R_GetTexture(sidedef->toptexture)->height << FRACBITS);
-                
-                // bottom of texture
-                rw_toptexturemid = vtop - viewz;
+	      vtop = backsector->ceilingheight + (R_GetTexture(toptexture)->height << FRACBITS);
+	      
+	      // bottom of texture
+	      rw_toptexturemid = vtop - viewz;
             }
         }
-        // check BOTTOM TEXTURE
-        if (worldlow > worldbottom)     //seulement si VISIBLE!!!
+
+      // check BOTTOM TEXTURE
+      if (worldlow > worldbottom)     //seulement si VISIBLE!!!
         {
 #ifdef OLDWATER
-            //added:18-02-98:WATER! bottomtexture, check si ca touche watersurf
-            if (waterplane &&
-                waterz < worldlow &&
-                waterz > worldbottom)
-                markwater = true;
+	  //added:18-02-98:WATER! bottomtexture, check si ca touche watersurf
+	  if (waterplane &&
+	      waterz < worldlow &&
+	      waterz > worldbottom)
+	    markwater = true;
 #endif
 
-            // bottom texture
-            bottomtexture = sidedef->bottomtexture;
+	  // bottom texture
+	  bottomtexture = sidedef->bottomtexture;
             
-            if (linedef->flags & ML_DONTPEGBOTTOM )
+	  if (linedef->flags & ML_DONTPEGBOTTOM )
             {
-                // bottom of texture at bottom
-                // top of texture at top
-                rw_bottomtexturemid = worldtop;
+	      // bottom of texture at bottom
+	      // top of texture at top
+	      rw_bottomtexturemid = worldtop;
             }
-            else    // top of texture at top
-                rw_bottomtexturemid = worldlow;
+	  else    // top of texture at top
+	    rw_bottomtexturemid = worldlow;
         }
         
-        rw_toptexturemid += sidedef->rowoffset;
-        rw_bottomtexturemid += sidedef->rowoffset;
+      rw_toptexturemid += sidedef->rowoffset;
+      rw_bottomtexturemid += sidedef->rowoffset;
 
-        // allocate space for masked texture tables
-        if (frontsector && backsector && frontsector->tag != backsector->tag && (backsector->ffloors || frontsector->ffloors))
+      // allocate space for masked texture tables
+      if (frontsector && backsector && frontsector->tag != backsector->tag && (backsector->ffloors || frontsector->ffloors))
         {
           ffloor_t* rover;
           ffloor_t* r2;

@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.35  2004/03/28 15:16:13  smite-meister
-// Texture cache.
+// Revision 1.36  2004/04/01 09:16:16  smite-meister
+// Texture system bugfixes
 //
 // Revision 1.34  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
@@ -1342,9 +1342,11 @@ void Map::ConvertLineDefs()
   // we use a pregenerated binary lookup table in legacy.wad
 
   int lump;
+  /*
   if (game.mode == gm_heretic)
     lump = fc.GetNumForName("XHERETIC"); // TODO Heretic table...
   else
+  */
     lump = fc.GetNumForName("XDOOM");
 
   xtable_t *p, *xt = (xtable_t *)fc.CacheLumpNum(lump, PU_CACHE);

@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.14  2004/03/28 15:16:15  smite-meister
-// Texture cache.
+// Revision 1.15  2004/04/01 09:16:16  smite-meister
+// Texture system bugfixes
 //
 // Revision 1.13  2004/01/10 16:03:00  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
@@ -189,17 +189,37 @@ int             flatmemory;
 int             spritememory;
 int             texturememory;
 
+
 //faB: highcolor stuff
 short    color8to16[256];       //remap color index to highcolor rgb value
 short*   hicolormaps;           // test a 32k colormap remaps high -> high
 
-// Two ways to add textures to cache:
-// Insert(Texture*) inserts a finished texture to cache (anims, doomtextures).
-// Get("name") returns the handle of an existing texture, or tries Loading it if nonexistant.
+
+//
+// MAPTEXTURE_T CACHING
+// When a texture is first needed,
+//  it counts the number of composite columns
+//  required in the texture and allocates space
+//  for a column directory and any new columns.
+// The directory will simply point inside other patches
+//  if there is only one patch in a given column,
+//  but any columns with multiple patches
+//  will have new column_ts generated.
+//
+
+
+
+// two ways to add textures to cache:
+// Cache("name") (->Load("name"))creates a texture from a lump (flats...)
+// Insert(Texture*) inserts a finished texture to cache (anims, doomtextures)
+// Get("name") returns the handle of an existing texture, or tries Loading it if nonexistant
+
+//static vector<AnimatedTexture *> dynamic_textures;
 
 //==================================================================
 //  Textures
 //==================================================================
+
 
 Texture::Texture(const char *n)
 {
@@ -213,11 +233,13 @@ Texture::Texture(const char *n)
   id = 0;
 }
 
+
 Texture::~Texture()
 {
   if (data)
     Z_Free(data);
 }
+
 
 void *Texture::operator new(size_t size)
 {
@@ -581,13 +603,24 @@ Texture *texturecache_t::GetPtrNum(int n)
 
 void texturecache_t::Insert(Texture *t)
 {
-  if (c_map.count(t->name))
-    I_Error("Tried to insert the same Texture into cache twice!\n");
-
   t->id = c_map.size() + 1; // First texture gets the id 1
   texture_ids[t->id] = t;
+
+  c_iter_t i = c_map.find(t->name);
+  if (i != c_map.end())
+    {
+      Texture *old = (Texture *)(*i).second;
+      CONS_Printf("Texture %s replaced!\n", old->name);
+      // A Texture of that name is already there, so the old Texture
+      // needs to be renamed and reinserted to the map.
+      // Happens when generating animated textures.
+      old->name[0] = '!';
+      c_map.insert(c_map_t::value_type(old->name, old));
+    }
+
   c_map.insert(c_map_t::value_type(t->name, t));
 }
+
 
 
 cacheitem_t *texturecache_t::Load(const char *name)
@@ -608,9 +641,32 @@ cacheitem_t *texturecache_t::Load(const char *name)
   int size = fc.LumpLength(lump);
 
   // first check possible magic numbers!
-  if (data[2] == 0 && data[6] == 0 && data[7] == 0)
+  // then try some common sizes for raw picture lumps
+  if (size == 64*64)
+    {
+      // Flat is 64*64 bytes of raw paletted picture data in one lump
+      t = new LumpTexture(name, lump, 64, 64);
+    }
+  else if (size == 128*64)
+    {
+      // TODO Some Hexen flats are different! Why?
+      t = new LumpTexture(name, lump, 64, 64);
+    }
+  else if (size == 320*200)
+    {
+      // Heretic/Hexen fullscreen picture
+      t = new LumpTexture(name, lump, 320, 200);
+    }
+  else if (size == 4)
+    {
+      // God-damn-it! Heretic "F_SKY1" tries to be funny!
+      t = new LumpTexture(name, lump, 2, 2);
+    }
+  else if (data[2] == 0 && data[6] == 0 && data[7] == 0)
     {
       // likely a pic_t
+      // TODO pic_t has an inadequate magic number.
+      // pic_t's should be replaced with a better format
       LumpTexture *tt = new LumpTexture(name, lump, 0, 0);
 
       pic_t *p = (pic_t *)data;
@@ -620,17 +676,6 @@ cacheitem_t *texturecache_t::Load(const char *name)
       tt->mode = p->mode;
       tt->type = LumpTexture::Pic;
       t = tt;
-    }
-  // then try some common sizes for raw picture lumps
-  else if (size == 64*64)
-    {
-      // Flat is 64*64 bytes of raw paletted picture data in one lump
-      t = new LumpTexture(name, lump, 64, 64);
-    }
-  else if (size == 320*200)
-    {
-      // Heretic/Hexen fullscreen picture
-      t = new LumpTexture(name, lump, 320, 200);
     }
   else
     {
@@ -642,6 +687,7 @@ cacheitem_t *texturecache_t::Load(const char *name)
   texture_ids[t->id] = t;
   return t;
 }
+
 
 
 //

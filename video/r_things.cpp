@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.14  2004/03/28 15:16:15  smite-meister
-// Texture cache.
+// Revision 1.15  2004/04/01 09:16:16  smite-meister
+// Texture system bugfixes
 //
 // Revision 1.13  2003/12/21 12:29:09  smite-meister
 // bugfixes
@@ -294,16 +294,23 @@ spriteframe_t *spritepres_t::GetFrame()
 spritecache_t sprites(PU_SPRITE);
 
 
+sprite_t::sprite_t()
+{
+  iname = numframes = 0;
+  spriteframes = NULL;
+}
+
 sprite_t::~sprite_t()
 {
   /*
-  for (int i = 0; i < t->numframes; i++)
+  for (int i = 0; i < numframes; i++)
     {
-      spriteframe_t *frame = &t->spriteframes[i];
-      // TODO release textures of each frame...
+      spriteframe_t *frame = &spriteframes[i];
+      // TODO release the textures of each frame...
     }
   */
-  Z_Free(spriteframes);
+  if (spriteframes)
+    Z_Free(spriteframes);
 }
 
 

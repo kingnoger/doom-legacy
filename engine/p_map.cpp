@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2004/04/01 09:16:16  smite-meister
+// Texture system bugfixes
+//
 // Revision 1.21  2004/01/11 17:19:14  smite-meister
 // bugfixes
 //
@@ -575,23 +578,39 @@ static bool PIT_CheckLine(line_t *ld)
   // 10-12-99 BP: moved this line to out of the if so upper and 
   //              lower texture can be hit by a splat
   blockingline = ld;
-  if (!ld->backsector)
+
+  bool stopped = false;
+  bool push = true;
+
+  if (!ld->backsector) // one-sided line
     {
       if ((tmthing->flags & MF_MISSILE) && ld->special)
         spechit.push_back(ld);
 
-      return false;           // one sided line
+      stopped = true;
+    }
+  else if (!(tmthing->flags & MF_MISSILE))
+    {
+      // missile and Camera can cross uncrossable lines with a backsector
+
+      if (ld->flags & ML_BLOCKING)
+	stopped = true; // block everything
+      else if ((ld->flags & ML_BLOCKMONSTERS) && !(tmthing->flags & MF_NOTMONSTER))
+	{
+	  stopped = true; // block monsters only
+	  push = false;
+	}
     }
 
-  // missile and Camera can cross uncrossable lines with a backsector
-  if (!(tmthing->flags & MF_MISSILE))
+  if (stopped)
     {
-      if (ld->flags & ML_BLOCKING)
-	return false;       // explicitly blocking everything
+      // take damage from impact
+      if (tmthing->eflags & MFE_BLASTED)
+	tmthing->Damage(NULL, NULL, tmthing->mass >> 5);
 
-      if (!(tmthing->flags & MF_NOTMONSTER) &&
-	  ld->flags & ML_BLOCKMONSTERS)
-	return false;       // block monsters only
+      if (push)
+	CheckForPushSpecial(ld, 0, tmthing);
+      return false;
     }
 
   // set openrange, opentop, openbottom
@@ -620,10 +639,9 @@ static bool PIT_CheckLine(line_t *ld)
 
 
 
-//==================================================
-// CheckMissileImpact
+//
 // Checks if a shootable linedef should be triggered
-
+//
 void Actor::CheckMissileImpact()
 {
   int n = spechit.size();
@@ -631,17 +649,15 @@ void Actor::CheckMissileImpact()
     return;
 
   // monsters don't shoot triggers
-  //if (owner->Type() != Thinker::tt_ppawn)
   if (!(owner->flags & MF_NOTMONSTER))
     return;
 
   for (int i = n - 1; i >= 0; i--)
     mp->ActivateLine(spechit[i], owner, 0, SPAC_IMPACT);
-  //mp->ShootSpecialLine(owner, spechit[i]);
 }
 
+
 //
-// was P_TryMove
 // Attempt to move to a new position,
 // crossing special lines unless MF_TELEPORT is set.
 //
@@ -2579,7 +2595,6 @@ Actor *Actor::CheckOnmobj()
 // =========================================================================
 
 //
-// was P_CheckPosition
 // This is purely informative, nothing is modified
 // (except things picked up).
 //

@@ -17,8 +17,8 @@
 //
 //
 // $Log$
-// Revision 1.1  2004/03/28 15:16:13  smite-meister
-// Texture cache.
+// Revision 1.2  2004/04/01 09:16:16  smite-meister
+// Texture system bugfixes
 //
 //
 //
@@ -324,84 +324,109 @@ int P_Read_ANIMDEFS(int lump)
   vector<AnimatedTexture::framedef_t> frames;
 
   p.RemoveComments(';');
+  enum p_state_e {PS_NONE, PS_FLAT, PS_TEX};
+  p_state_e state = PS_NONE;
+  int base;
   while (p.NewLine())
     {
       // texture/flat <name>
       // pic <n> tics <t>
       // pic <n> rand <min> <max>
+      char *word, *name;
 
-      int base;
-      char *name = p.GetToken(" ");
-
-      if (!strcasecmp(name, "flat") || !strcasecmp(name, "texture"))
+      if (state != PS_NONE)
 	{
-	  name = p.GetToken(" ");
-	  base = tc.Get(name);
-	}
-      else
-	{
-	  CONS_Printf("Unknown command: '%s'", name);
-	  continue;
-	}
-
-      if (base < 0)
-	continue;
-
-      frames.clear();
-
-      // read in the frames
-      while (p.NewLine(false))
-	{
-	  char *word = p.GetToken(" ");
-	  if (word && !strcasecmp(word, "pic"))
+	  // in record
+	  char temp = p.Peek();
+	  if (temp != 'p' && temp != 'P')
 	    {
-	      if (frames.size() >= MAX_FRAME_DEFS)
-		I_Error("Too many FrameDefs.");
+	      // record just ended
+	      state = PS_NONE;
 
-	      AnimatedTexture::framedef_t fd;
+	      n = frames.size();
+	      if (n < 2)
+		I_Error("AnimDef has framecount < 2.");
 
-	      fd.tx = R_GetTexture(base + p.GetInt() - 1);
+	      // create the animation (it has the same name as its
+	      // 1st frame, which is thus overwritten from tc map)
+	      // This is problem if several animations share the frame!
+	      AnimatedTexture *t = new AnimatedTexture(name, n);
+	      tc.Insert(t);
+	      count++;
 
-	      word = p.GetToken(" ");
-	      if (!strcasecmp(word, "tics"))
-		fd.tics = p.GetInt();
-	      else if (!strcasecmp(word, "rand"))
-		{
-		  n = p.GetInt();          // min
-		  i = p.GetInt() - n + 1;  // range
-		  fd.tics = (n << 16) + (i << 8);
-		}
-	      else
-		{
-		  if (word)
-		    CONS_Printf("Unknown modifier: '%s'\n", word);
-		  else
-		    CONS_Printf("Missing modifier!\n");
-		  fd.tics = 35;
-		}
+	      for (i=0; i<n; i++)
+		t->frames[i] = frames[i];
 
-	      frames.push_back(fd);
+	      frames.clear();
 	    }
 	  else
-	    break; // end of animdef
+	    {
+	      // read in the frames
+	      word = p.GetToken(" ");
+	      if (word && !strcasecmp(word, "pic"))
+		{
+		  if (frames.size() >= MAX_FRAME_DEFS)
+		    I_Error("Too many FrameDefs.");
+
+		  AnimatedTexture::framedef_t fd;
+
+		  n = base + p.GetInt() - 1;
+		  if (state == PS_FLAT)
+		    fd.tx = tc.GetPtrNum(n);
+		  else
+		    fd.tx = R_GetTexture(n);
+
+		  word = p.GetToken(" ");
+		  if (!strcasecmp(word, "tics"))
+		    fd.tics = p.GetInt();
+		  else if (!strcasecmp(word, "rand"))
+		    {
+		      n = p.GetInt();          // min
+		      i = p.GetInt() - n + 1;  // range
+		      fd.tics = (n << 16) + (i << 8);
+		    }
+		  else
+		    {
+		      if (word)
+			CONS_Printf("Unknown modifier: '%s'\n", word);
+		      else
+			CONS_Printf("Missing modifier!\n");
+		      fd.tics = 35;
+		    }
+
+		  frames.push_back(fd);
+		}
+	      else
+		state = PS_NONE; // end of animdef
+
+	      continue; // next line
+	    }
 	}
 
-      n = frames.size();
-      if (n < 2)
-	I_Error("AnimDef has framecount < 2.");
-
-      // create the animation
-      AnimatedTexture *t = new AnimatedTexture(name, n);
-      tc.Insert(t);
-      count++;
-
-      for (i=0; i<n; i++)
-	t->frames[i] = frames[i];
+      // no active records
+      word = p.GetToken(" ");
+      name = p.GetToken(" ");
+      if (!strcasecmp(word, "flat"))
+	{
+	  // means a LumpTexture
+	  base = fc.FindNumForName(name); // lump number
+	  if (base >= 0)
+	    state = PS_FLAT;
+	}
+      else if (!strcasecmp(word, "texture"))
+	{
+	  base = tc.Get(strupr(name)); // texture number
+	  if (base > 0)
+	    state = PS_TEX;
+	}
+      else
+	CONS_Printf("Unknown command: '%s'", word);
     }
+
 
   if (count >= MAX_ANIM_DEFS)
     I_Error("Too many AnimDefs.");
 
   CONS_Printf("... done. %d animations.\n", count);
-  return count;
+  return n;
 }
