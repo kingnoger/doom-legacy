@@ -267,7 +267,10 @@ objects = $(engine_objects) $(util_objects) $(audio_objects) $(video_objects) \
 	$(net_objects) $(sdl_objects)
 # $(asm_objects)
 
-all	: $(exename)
+all	: mkdirobjs $(exename)
+
+mkdirobjs:
+	mkdir -p objs
 
 .PHONY	: clean depend engine util audio video net sdl r_opengl tools
 
@@ -289,6 +292,8 @@ depend:
 	$(MAKE) -C interface/sdl depend
 	touch tools/tools.dep
 	$(MAKE) -C tools depend
+
+dep	: depend
 
 engine	:
 	$(MAKE) -C engine
