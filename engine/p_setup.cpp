@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.47  2004/09/24 21:19:59  jussip
+// Joystick axis unbinding.
+//
 // Revision 1.46  2004/09/23 23:21:17  smite-meister
 // HUD updated
 //
@@ -1173,7 +1176,7 @@ bool Map::Setup(tic_t start, bool spawnthings)
 
   // If the map defines its music in MapInfo_t, use it.
   if (!info->musiclump.empty())
-    S.StartMusic(info->musiclump.c_str());
+    S.StartMusic(info->musiclump.c_str(),  true);
   // I_PlayCD(info->mapnumber, true);  // FIXME cd music
 
 

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/09/24 21:19:59  jussip
+// Joystick axis unbinding.
+//
 // Revision 1.12  2004/09/23 23:21:19  smite-meister
 // HUD updated
 //
@@ -559,6 +562,7 @@ void Command_Clear_f();
 void Command_Keymap_f();
 void Command_Bind_f();
 void Command_BindJoyaxis_f();
+void Command_UnbindJoyaxis_f();
 
 void Command_SaveConfig_f();
 void Command_LoadConfig_f();
@@ -641,6 +645,7 @@ void SV_Init()
   COM_AddCommand("keymap", Command_Keymap_f);
   COM_AddCommand("bind", Command_Bind_f);
   COM_AddCommand("bindjoyaxis", Command_BindJoyaxis_f);
+  COM_AddCommand("unbindjoyaxis", Command_UnbindJoyaxis_f);
 
   // config file management  
   COM_AddCommand("saveconfig", Command_SaveConfig_f);

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2004/09/24 21:19:59  jussip
+// Joystick axis unbinding.
+//
 // Revision 1.17  2004/09/24 11:33:59  smite-meister
 // fix
 //
@@ -992,7 +995,7 @@ void Command_BindJoyaxis_f()
 
   if(na == 1) { // Print bindings.
     if(joybindings.size() == 0) {
-      CONS_Printf("No joy axis bindings.\n");
+      CONS_Printf("No joystick axis bindings defined.\n");
       return;
     }
     CONS_Printf("Current axis bindings.\n");
@@ -1038,10 +1041,55 @@ void Command_BindJoyaxis_f()
     joybinding_t j2 = joybindings[i];
     if(j2.joynum == j.joynum && j2.axisnum == j.axisnum) {
       joybindings[i] = j;
-      CONS_Printf("Joystick binding overwritten.\n");
+      CONS_Printf("Joystick binding modified.\n");
       return;
     }
   }
   joybindings.push_back(j);
   CONS_Printf("Joystick binding added.\n");
+}
+
+//! Unbind the specified joystick axises.
+/*! Takes zero to two parameters. The first one is the joystick number
+  and the second is the axis number. If either is not specified, all
+  values are assumed to match. When called without parameters, all
+  bindings are removed.
+*/
+
+void Command_UnbindJoyaxis_f() {
+  int joynum  = -1;
+  int axisnum = -1;
+  int na = COM_Argc();
+  vector<joybinding_t> newbind;
+
+  if(joybindings.size() == 0) {
+    CONS_Printf("No bindings to unset.\n");
+    return;
+  }
+
+  if(na > 3) {
+    CONS_Printf("unbindjoyaxis [joynum] [axisnum]\n");
+    return;
+  }
+
+  // Does the user specify axis or joy number?
+  if(na > 2)
+    axisnum = atoi(COM_Argv(2));
+  if(na > 1)
+    joynum = atoi(COM_Argv(1));
+
+  for(unsigned int i=0; i<joybindings.size(); i++) {
+    joybinding_t j = joybindings[i];
+    if((joynum == -1 || joynum == j.joynum) &&
+       (axisnum == -1 || axisnum == j.axisnum))
+      continue; // We have a binding to prune.
+    newbind.push_back(j);
+  }
+
+  // We have the new bindings.
+  if(newbind.size() == joybindings.size()) {
+    CONS_Printf("No bindings matched the parameters.\n");
+    return;
+  }
+  joybindings = newbind;
 }
