@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/08/18 14:35:20  smite-meister
+// PNG support!
+//
 // Revision 1.9  2004/08/12 18:30:23  smite-meister
 // cleaned startup
 //
@@ -782,7 +785,7 @@ int G_KeyStringtoNum(char *keystr)
     return keystr[0];
 
   for (j=0;j<NUMKEYNAMES;j++)
-    if (stricmp(keynames[j].name,keystr)==0)
+    if (strcasecmp(keynames[j].name,keystr)==0)
       return keynames[j].keynum;
 
   if(strlen(keystr)>3)
@@ -887,27 +890,26 @@ void G_CheckDoubleUsage(int keynum)
 
 void setcontrol(int (*gc)[2],int na)
 {
-  int numctrl;
-  char *namectrl;
-  int keynum;
+  int i;
+  char *namectrl = COM_Argv(1);
 
-  namectrl=COM_Argv(1);
-  for(numctrl=0;numctrl<num_gamecontrols
-	&& stricmp(namectrl,gamecontrolname[numctrl])
-	;numctrl++);
-  if(numctrl==num_gamecontrols)
+  for (i = 0; i < num_gamecontrols && strcasecmp(namectrl, gamecontrolname[i]); i++)
+    ;
+
+  if (i == num_gamecontrols)
     {
       CONS_Printf("Control '%s' unknown\n",namectrl);
       return;
     }
-  keynum=G_KeyStringtoNum(COM_Argv(2));
-  G_CheckDoubleUsage(keynum);
-  gc[numctrl][0]=keynum;
 
-  if(na==4)
-    gc[numctrl][1]=G_KeyStringtoNum(COM_Argv(3));
+  int keynum = G_KeyStringtoNum(COM_Argv(2));
+  G_CheckDoubleUsage(keynum);
+  gc[i][0] = keynum;
+
+  if (na == 4)
+    gc[i][1] = G_KeyStringtoNum(COM_Argv(3));
   else
-    gc[numctrl][1]=0;
+    gc[i][1] = 0;
 }
 
 void Command_Setcontrol_f()

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.31  2004/08/18 14:35:20  smite-meister
+// PNG support!
+//
 // Revision 1.30  2004/08/12 18:30:23  smite-meister
 // cleaned startup
 //
@@ -418,27 +421,27 @@ static void D_IdentifyVersion()
       s = FIL_StripPath(s);
       
       // try to find implied gamemode
-      if (!stricmp(plutoniawad, s))
+      if (!strcasecmp(plutoniawad, s))
 	{
 	  game.mode = gm_doom2;
 	  mission = gmi_plut;
 	}
-      else if (!stricmp(tntwad, s))
+      else if (!strcasecmp(tntwad, s))
 	{
 	  game.mode = gm_doom2;
 	  mission = gmi_tnt;
 	}
-      else if (!stricmp(hereticwad, s) || !stricmp(heretic1wad, s))
+      else if (!strcasecmp(hereticwad, s) || !strcasecmp(heretic1wad, s))
 	game.mode = gm_heretic;
-      else if (!stricmp(hexenwad, s))
+      else if (!strcasecmp(hexenwad, s))
 	game.mode = gm_hexen;
-      else if (!stricmp(doom2wad, s))
+      else if (!strcasecmp(doom2wad, s))
 	game.mode = gm_doom2;
-      else if (!stricmp(doomuwad, s))
+      else if (!strcasecmp(doomuwad, s))
 	game.mode = gm_udoom;
-      else if (!stricmp(doomwad, s))
+      else if (!strcasecmp(doomwad, s))
 	game.mode = D_GetDoomType(s);
-      else if (!stricmp(doom1wad, s))
+      else if (!strcasecmp(doom1wad, s))
 	game.mode = gm_doom1s;
       else
 	game.mode = gm_doom2;

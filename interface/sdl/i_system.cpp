@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/08/18 14:35:21  smite-meister
+// PNG support!
+//
 // Revision 1.11  2004/08/12 18:30:31  smite-meister
 // cleaned startup
 //
@@ -892,8 +895,8 @@ void I_GetDiskFreeSpace(long long *freespace)
   }
   else
     {
-      ULONG SectorsPerCluster, BytesPerSector, NumberOfFreeClusters;
-      ULONG TotalNumberOfClusters;
+      Uint32 SectorsPerCluster, BytesPerSector, NumberOfFreeClusters;
+      Uint32 TotalNumberOfClusters;
       GetDiskFreeSpace(NULL, &SectorsPerCluster, &BytesPerSector,
 		       &NumberOfFreeClusters, &TotalNumberOfClusters);
       *freespace = BytesPerSector*SectorsPerCluster*NumberOfFreeClusters;
@@ -930,7 +933,7 @@ char *I_GetUserName()
   static char username[MAXPLAYERNAME];
   char  *p;
   int   ret;
-  ULONG i=MAXPLAYERNAME;
+  Uint32 i=MAXPLAYERNAME;
 
   ret = GetUserName(username,&i);
   if(!ret)
@@ -974,7 +977,7 @@ char *I_GetWadPath()
     {
 #ifdef __MACOS__
       // cwd is always "/" when app is dbl-clicked
-      if (!stricmp(temp, "/"))
+      if (!strcmp(temp, "/"))
 	return I_GetWadDir();
 #endif
 
@@ -991,13 +994,13 @@ char *I_GetWadPath()
 #endif
 
 // quick fix for compil
-ULONG I_GetFreeMem(ULONG *total)
+Uint32 I_GetFreeMem(Uint32 *total)
 {
 #ifdef LINUX
   char buf[1024];    
   char *memTag;
-  ULONG freeKBytes;
-  ULONG totalKBytes;
+  Uint32 freeKBytes;
+  Uint32 totalKBytes;
   int n;
   int meminfo_fd = -1;
 

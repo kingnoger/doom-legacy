@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.4  2004/08/18 14:35:20  smite-meister
+// PNG support!
+//
 // Revision 1.3  2004/04/25 16:26:51  smite-meister
 // Doxygen
 //
@@ -125,20 +128,19 @@ public:
   int Read(byte *dest, size_t length);
   int Write(const byte *source, size_t length);
 
-  // TODO here we should use data types that have _always_ a fixed size (Uint16 etc.)
-  LArchive &operator<<(byte &c); ///< 8 bits
-  LArchive &operator<<(unsigned short &c); ///< 16 bits
-  LArchive &operator<<(unsigned int &c);   ///< 32 bits
+  LArchive &operator<<(byte &c);    ///< 8 bits
+  LArchive &operator<<(Uint16 &c);  ///< 16 bits
+  LArchive &operator<<(Uint32 &c);  ///< 32 bits
 
-  inline LArchive &operator<<(int &c) { return operator<<(reinterpret_cast<unsigned int &>(c)); }
-  inline LArchive &operator<<(long int &c) { return operator<<(reinterpret_cast<unsigned int &>(c)); }
-  inline LArchive &operator<<(float &c) { return operator<<(reinterpret_cast<unsigned int &>(c)); }
-  inline LArchive &operator<<(short &c) { return operator<<(reinterpret_cast<unsigned short &>(c)); }
+  inline LArchive &operator<<(int &c) { return operator<<(reinterpret_cast<Uint32 &>(c)); }
+  inline LArchive &operator<<(long int &c) { return operator<<(reinterpret_cast<Uint32 &>(c)); }
+  inline LArchive &operator<<(float &c) { return operator<<(reinterpret_cast<Uint32 &>(c)); }
+  inline LArchive &operator<<(short &c) { return operator<<(reinterpret_cast<Uint16 &>(c)); }
 
   inline LArchive &operator<<(char &c) { return operator<<(reinterpret_cast<byte &>(c)); }
   inline LArchive &operator<<(bool &c) { return operator<<(reinterpret_cast<byte &>(c)); }
 
-  inline LArchive &operator<<(tic_t &t) { return operator<<(reinterpret_cast<unsigned int &>(t)); }
+  //inline LArchive &operator<<(tic_t &t) { return operator<<(reinterpret_cast<Uint32 &>(t)); }
 
   /*
   LArchive &operator << (double c);

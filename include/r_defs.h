@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/08/18 14:35:20  smite-meister
+// PNG support!
+//
 // Revision 1.8  2004/07/25 20:18:47  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -567,15 +570,15 @@ struct msecnode_t
 //                     that's why it's moved here
 struct light_t
 {
-  USHORT  type;           // light,... (cfr #define in hwr_light.c)
+  Uint16  type;           // light,... (cfr #define in hwr_light.c)
 
   float   light_xoffset;
   float   light_yoffset;  // y offset to adjust corona's height
 
-  ULONG   corona_color;   // color of the light for static lighting
+  Uint32  corona_color;   // color of the light for static lighting
   float   corona_radius;  // radius of the coronas
 
-  ULONG   dynamic_color;  // color of the light for dynamic lighting
+  Uint32  dynamic_color;  // color of the light for dynamic lighting
   float   dynamic_radius; // radius of the light ball
   float   dynamic_sqrradius; // radius^2 of the light ball
 };

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/08/18 14:35:23  smite-meister
+// PNG support!
+//
 // Revision 1.8  2004/07/25 20:17:05  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -158,7 +161,7 @@ void Z_Init()
   CONS_Printf("Z_Init: Init zone memory allocation daemon.\n");
 
 #ifndef MEMDEBUG
-  ULONG free, total;
+  Uint32 free, total;
   int mb_alloc = memzone_t::mb_increment;
 
   if (M_CheckParm("-mb"))
@@ -405,9 +408,9 @@ void *Z_MallocAlign(int size, int tag, void **user, int alignbits)
 // pointer to the memory. Returns NULL on failure.
 void* memzone_t::Malloc(int size, int tag, void **user, int alignbits)
 {
-  ULONG alignmask = (1 << alignbits) - 1;
+  Uint32 alignmask = (1 << alignbits) - 1;
 
-# define ALIGN(a) (((ULONG)(a)+alignmask) & ~alignmask)
+# define ALIGN(a) (((Uint32)(a)+alignmask) & ~alignmask)
 
   size = (size + 3) & ~3; // align size to next multiple of 4
   size += sizeof(memblock_t); // account for size of block header
@@ -461,8 +464,8 @@ void* memzone_t::Malloc(int size, int tag, void **user, int alignbits)
     else
       rover = rover->next;
 
-    basedata = ALIGN((ULONG)base + sizeof(memblock_t));
-  } while (base->user || (ULONG)base + base->size < basedata + size - sizeof(memblock_t));
+    basedata = ALIGN((Uint32)base + sizeof(memblock_t));
+  } while (base->user || (Uint32)base + base->size < basedata + size - sizeof(memblock_t));
 
   // aligning can leave free space in current block so make it really free
   if (alignbits)
@@ -849,7 +852,7 @@ int memzone_t::TagUsage(int tagnum)
 void Command_Meminfo_f()
 {
   int   free, cache, used, largefreeblock;
-  ULONG freebytes, totalbytes;
+  Uint32 freebytes, totalbytes;
 
   Z_CheckHeap(-1);
   Z_FreeMemory(&free, &cache, &used, &largefreeblock);

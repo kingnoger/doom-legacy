@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/08/18 14:35:21  smite-meister
+// PNG support!
+//
 // Revision 1.13  2004/07/25 20:17:50  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -54,11 +57,10 @@
 // Revision 1.2  2002/12/03 10:24:47  smite-meister
 // Video system overhaul
 //
-//
-// DESCRIPTION:
-//   SDL video interface
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief SDL video interface
 
 #include <stdlib.h>
 #include <string.h>
@@ -220,9 +222,9 @@ void I_SetPalette(RGBA_t* palette)
 {
   for (int i=0; i<256; i++)
     {
-      localPalette[i].r = palette[i].s.red;
-      localPalette[i].g = palette[i].s.green;
-      localPalette[i].b = palette[i].s.blue;
+      localPalette[i].r = palette[i].red;
+      localPalette[i].g = palette[i].green;
+      localPalette[i].b = palette[i].blue;
     }
 
   SDL_SetColors(vidSurface, localPalette, 0, 256);

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/08/18 14:35:20  smite-meister
+// PNG support!
+//
 // Revision 1.10  2004/08/15 18:08:29  smite-meister
 // palette-to-palette colormaps etc.
 //
@@ -158,7 +161,7 @@ public:
 
 
 /// \brief Row-major Textures which reside in a single lump.
-/// flat, raw, pic_t, png, jpeg...
+/// raw (flat, fullscreen pic), pic_t, png, jpeg...
 
 class LumpTexture : public Texture
 {
@@ -167,6 +170,7 @@ public:
   {
     Raw = 0,
     Pic,
+    PNG,
   };
 
   int    lump;
@@ -187,6 +191,23 @@ public:
   virtual void HWR_Draw(int x, int y, int flags);
   virtual void DrawFill(int x, int y, int w, int h);
 };
+
+
+
+
+/// \brief Class for PNG Textures
+class PNGTexture : public LumpTexture
+{
+protected:
+  byte *ReadData(bool read_image);
+
+  virtual byte *Generate();   ///< returns row-major data
+  virtual void HWR_Prepare();
+
+public:
+  PNGTexture(const char *name, int lump);
+};
+
 
 
 
@@ -310,6 +331,8 @@ public:
 
 extern texturecache_t tc;
 
+
+byte NearestColor(byte r, byte g, byte b);
 
 // initializes the part of the renderer that even a dedicated server needs
 void R_ServerInit();

@@ -16,6 +16,9 @@
 // for more details.
 //
 // $Log$
+// Revision 1.18  2004/08/18 14:35:21  smite-meister
+// PNG support!
+//
 // Revision 1.17  2004/07/13 20:23:38  smite-meister
 // Mod system basics
 //
@@ -634,7 +637,7 @@ int I_RegisterSong(void* data, int len)
   if (memcmp(data,"MUS",3) == 0)
     {
       int err;
-      ULONG midlength;
+      Uint32 midlength;
       // convert mus to mid with a wonderful function
       // thanks to S.Bacquet for the source of qmus2mid
       // convert mus to mid and load it in memory

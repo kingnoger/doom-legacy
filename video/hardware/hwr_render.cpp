@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/08/18 14:35:23  smite-meister
+// PNG support!
+//
 // Revision 1.3  2004/07/25 20:16:08  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -607,6 +610,10 @@ void LumpTexture::HWR_Prepare()
 void LumpTexture::HWR_Draw(int x, int y, int flags)
 {
   //CONS_Printf("LumpTexture::HWR_Draw: Not yet implemented\n");
+}
+void PNGTexture::HWR_Prepare()
+{
+  //CONS_Printf("PNGTexture::HWR_Prepare: Not yet implemented\n");
 }
 bool spritepres_t::Draw(const Actor *p)
 {

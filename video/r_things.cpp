@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2004/08/18 14:35:23  smite-meister
+// PNG support!
+//
 // Revision 1.19  2004/08/13 18:25:11  smite-meister
 // sw renderer fix
 //
@@ -1775,7 +1778,7 @@ int R_SkinAvailable (char* name)
 
     for (i=0;i<numskins;i++)
     {
-        if (stricmp(skins[i].name,name)==0)
+        if (strcasecmp(skins[i].name,name)==0)
             return i;
     }
     return 0;
@@ -1791,7 +1794,7 @@ void SetPlayerSkin(int playernum, char *skinname)
     for (i=0;i<numskins;i++)
     {
         // search in the skin list
-        if (stricmp(skins[i].name,skinname)==0)
+        if (strcasecmp(skins[i].name,skinname)==0)
         {
 
             // change the face graphics
@@ -1920,7 +1923,7 @@ void R_AddSkins (int wadnum)
           if (!value)
             I_Error ("R_AddSkins: syntax error in S_SKIN lump# %d in WAD %d\n", lumpnum&0xFFFF, wadnum);
 
-          if (!stricmp(token,"name"))
+          if (!strcasecmp(token,"name"))
             {
                 // the skin name must uniquely identify a single skin
                 // I'm lazy so if name is already used I leave the 'skin x'
@@ -1932,14 +1935,14 @@ void R_AddSkins (int wadnum)
                 }
             }
             else
-            if (!stricmp(token,"face"))
+            if (!strcasecmp(token,"face"))
             {
                 strncpy (skins[numskins].faceprefix, value, 3);
                 skins[numskins].faceprefix[3] = 0;
                 strupr (skins[numskins].faceprefix);
             }
             else
-            if (!stricmp(token,"sprite"))
+            if (!strcasecmp(token,"sprite"))
             {
                 sprname = value;
                 strupr(sprname);
@@ -1953,7 +1956,7 @@ void R_AddSkins (int wadnum)
                     if (!S_sfx[i].name)
                       continue;
                     if (S_sfx[i].skinsound!=-1 &&
-                        !stricmp(S_sfx[i].name, token+2) )
+                        !strcasecmp(S_sfx[i].name, token+2) )
                     {
                         skins[numskins].soundsid[S_sfx[i].skinsound]=
                             S_AddSoundFx(value+2,S_sfx[i].singularity);

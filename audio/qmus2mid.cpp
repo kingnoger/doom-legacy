@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:17:47  hurdler
-// Initial revision
+// Revision 1.2  2004/08/18 14:35:20  smite-meister
+// PNG support!
+//
+// Revision 1.1.1.1  2002/11/16 14:17:47  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.3  2002/07/01 20:59:47  jpakkane
 // Fixed cr+lf to UNIX form.
@@ -42,12 +45,10 @@
 // Revision 1.2  2000/02/26 00:28:42  hurdler
 // Mostly bug fix (see borislog.txt 23-2-2000, 24-2-2000)
 //
-//
-// DESCRIPTION:
-//      convert Doom MUS data to a MIDI music data
-//      used by both DOS/WIN32
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Converts Doom MUS data to MIDI music data
 
 #ifndef __OS2__
 
@@ -67,7 +68,7 @@
 // MUS events
 #define MUS_EV_SCOREEND     6
 
-ULONG  TRACKBUFFERSIZE = 65536UL;  /* 64 Ko */
+Uint32  TRACKBUFFERSIZE = 65536UL;  /* 64 Ko */
 struct Track track[16];
 
 static unsigned char MUS2MIDcontrol[15] =
@@ -113,7 +114,7 @@ static void FreeTracks ( void )
 
 static void TWriteByte (byte MIDItrack, char bbyte)
 {
-    ULONG pos;
+    Uint32 pos;
 
     pos = track[MIDItrack].current;
     if (pos < TRACKBUFFERSIZE )
@@ -125,9 +126,9 @@ static void TWriteByte (byte MIDItrack, char bbyte)
 }
 
 
-static void TWriteVarLen (byte tracknum, ULONG value)
+static void TWriteVarLen (byte tracknum, Uint32 value)
 {
-    ULONG buffer;
+    Uint32 buffer;
 
     buffer = value & 0x7f;
     while( (value >>= 7) )
@@ -146,7 +147,7 @@ static void TWriteVarLen (byte tracknum, ULONG value)
     }
 }
 
-static int WriteMIDheader( USHORT ntrks, USHORT division, byte **file )
+static int WriteMIDheader( Uint16 ntrks, Uint16 division, byte **file )
 {
     fwritemem( MIDIMAGIC , 10, 1,file );
     fwriteshort( ntrks, file);
@@ -158,11 +159,11 @@ static int WriteMIDheader( USHORT ntrks, USHORT division, byte **file )
 
 static void WriteTrack (int tracknum, byte **file)
 {
-    USHORT size;
+    Uint16 size;
     size_t quot, rem;
 
     /* Do we risk overflow here ? */
-    size = (USHORT)track[tracknum].current + 4;
+    size = (Uint16)track[tracknum].current + 4;
     fwritemem( "MTrk", 4, 1, file );
     if (!tracknum )
         size += 33;
@@ -183,7 +184,7 @@ static void WriteTrack (int tracknum, byte **file)
 
 static void WriteFirstTrack (byte **file)
 {
-    USHORT size;
+    Uint16 size;
 
     size = 43;
     fwritemem( "MTrk", 4, 1, file );
@@ -196,9 +197,9 @@ static void WriteFirstTrack (byte **file)
     fwritemem( TRACKMAGIC6, 4, 1, file );
 }
 
-static ULONG ReadTime( byte **file )
+static Uint32 ReadTime( byte **file )
 {
-    ULONG time = 0;
+    Uint32 time = 0;
     int   bbyte;
 
     do
@@ -238,12 +239,12 @@ static void MidiEvent(byte NewEvent)
 
 int qmus2mid(byte *mus, 
 	     byte *mid,     // buffers in memory
-	     USHORT division, 
+	     Uint16 division, 
 	     int BufferSize, 
 	     int nocomp,
 	     int length, 
 	     int midbuffersize,
-	     unsigned long* midilength)    //faB: returns midi file length in here
+	     Uint32 *midilength)    //faB: returns midi file length in here
 {
     byte*    file_mus;
     byte*    file_mid;     // pointer in memory
@@ -251,10 +252,10 @@ int qmus2mid(byte *mus,
     static   MUSheader* MUSh;
     byte     MIDIchannel;
     byte     et;
-    USHORT   TrackCnt=0;
+    Uint16   TrackCnt=0;
     int      i, event, data;
-    ULONG    DeltaTime;
-    ULONG    TotalTime=0;
+    Uint32    DeltaTime;
+    Uint32    TotalTime=0;
 
     byte     MIDIchan2track[16];
     char     MUS2MIDchannel[16];
@@ -286,7 +287,7 @@ int qmus2mid(byte *mus,
     }
 
     if (BufferSize)
-        TRACKBUFFERSIZE = ((ULONG) BufferSize) << 10;
+        TRACKBUFFERSIZE = ((Uint32) BufferSize) << 10;
 
     event = *(file_mus++);
     et    = event_type (event);

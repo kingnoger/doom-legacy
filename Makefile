@@ -220,6 +220,7 @@ export audio_objects = \
 
 export video_objects = \
 	$(objdir)/md3.o \
+	$(objdir)/png.o \
 	$(objdir)/screen.o \
 	$(objdir)/v_video.o \
 	$(objdir)/r_render.o \

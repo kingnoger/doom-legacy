@@ -29,8 +29,6 @@
 #endif
 
 #include "doomdef.h"
-#include "d_netfil.h" // nameonly()
-#include "byteptr.h"
 
 #include "vfile.h" // VFile class
 #include "wad.h"
@@ -141,12 +139,12 @@ int FileCache::AddFile(const char *fname)
   VFile *vf = NULL;
   int l = strlen(fname);
 
-  if (!stricmp(&fname[l - 4], ".deh"))
+  if (!strcasecmp(&fname[l - 4], ".deh"))
     {
       // detect dehacked file with the "deh" extension
       vf = new Wad(name, "DEHACKED");
     }
-  else if (!stricmp(&fname[l - 4], ".lmp"))
+  else if (!strcasecmp(&fname[l - 4], ".lmp"))
     {
       // a single lump file
       char lumpname[9];

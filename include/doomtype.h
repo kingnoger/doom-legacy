@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/08/18 14:35:20  smite-meister
+// PNG support!
+//
 // Revision 1.4  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -30,86 +33,74 @@
 // Revision 1.1.1.1  2002/11/16 14:18:22  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//      doom games standard types
-//      Simple basic typedefs, isolated here to make it easier
-//      separating modules.
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Basic typedefs and platform-dependent #defines
 
 #ifndef doomtype_h
 #define doomtype_h 1
+
+
+// Standard library differences
 
 #ifdef __WIN32__
 # include <windows.h>
 #endif
 
-#if !defined(_OS2EMX_H) && !defined(__WIN32__) 
-typedef unsigned long ULONG;
-typedef unsigned short USHORT;
-#endif
-
-#ifdef __WIN32__
-# define INT64  __int64
-#else
-# define INT64  long long
-#endif
-
 #ifdef __APPLE_CC__
 # define __MACOS__
 # define DEBUG_LOG
-#endif
-
-#if defined(__MSC__) || defined(__OS2__)
-// Microsoft VisualC++
-# define strncasecmp             strnicmp
-# define strcasecmp              stricmp
-# define inline                  __inline
-#else
-# ifdef __WATCOMC__
-#  include <dos.h>
-#  include <sys\types.h>
-#  include <direct.h>
-#  include <malloc.h>
-#  define strncasecmp             strnicmp
-#  define strcasecmp              strcmpi
-# endif
-#endif
-
-
-#if defined(LINUX) // standard library differences
-# define stricmp(x,y) strcasecmp(x,y)
-# define strnicmp(x,y,n) strncasecmp(x,y,n)
-# define lstrlen(x) strlen(x)
-#endif
-
-#ifdef __APPLE_CC__                //skip all boolean/Boolean crap
-# define lstrlen(x) strlen(x)
-
-# define stricmp strcmp
-# define strnicmp strncmp
-
 # ifndef O_BINARY
 #  define O_BINARY 0
 # endif
-#endif //__MACOS__
+#endif
+
+#if defined(__MSC__) || defined(__OS2__)   // Microsoft VisualC++
+# define strncasecmp             strnicmp
+# define strcasecmp              stricmp
+# define inline                  __inline
+#elseif defined(__WATCOMC__)
+# define strncasecmp             strnicmp
+# define strcasecmp              strcmpi
+#endif
 
 
-typedef unsigned char byte;
-typedef ULONG tic_t;
-typedef unsigned int angle_t;
+// Basic typedefs.
+// Throughout the code, we assume that int = 32 bits, short = 16 bits
+
+#ifdef __WIN32__
+typedef __int64 INT64;
+#else
+typedef long long INT64;
+#endif
+
+typedef unsigned char  byte;
+typedef unsigned int   Uint32;
+typedef unsigned short Uint16;
+
+typedef unsigned int   tic_t;
+typedef unsigned int   angle_t;
+
+
+struct RGB_t
+{
+  byte r, g, b;
+};
+
 
 union RGBA_t
 {
-  ULONG rgba;
-  struct {
+  unsigned int rgba;
+  struct
+  {
     byte  red;
     byte  green;
     byte  blue;
     byte  alpha;
-  } s;
+  };
 };
+
 
 
 // Predefined with some OS.

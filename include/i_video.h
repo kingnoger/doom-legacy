@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/08/18 14:35:20  smite-meister
+// PNG support!
+//
 // Revision 1.2  2002/12/03 10:23:46  smite-meister
 // Video system overhaul
 //
@@ -45,11 +48,10 @@
 // Revision 1.1.1.1  2000/02/22 20:32:33  hurdler
 // Initial import into CVS (v1.29 pr3)
 //
-//
-// DESCRIPTION:
-//      System specific interface stuff.
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Video system interface
 
 
 #ifndef i_video_h

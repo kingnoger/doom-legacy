@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.24  2004/08/16 20:54:18  smite-meister
-// bugfix
+// Revision 1.25  2004/08/18 14:35:23  smite-meister
+// PNG support!
 //
 // Revision 1.23  2004/08/15 18:08:30  smite-meister
 // palette-to-palette colormaps etc.
@@ -174,7 +174,7 @@
 /// \brief Texture generation and caching. Colormap loading.
 
 #include <math.h>
-//#include <png.h>
+#include <png.h>
 
 #include "doomdef.h"
 #include "command.h"
@@ -225,24 +225,20 @@ short*   hicolormaps;           // test a 32k colormap remaps high -> high
 //  Utilities
 //==================================================================
 
-struct RGB_t
-{
-  byte r, g, b;
-};
 
 // given an RGB triplet, returns the index of the nearest color in
 // the current "zero"-palette using a quadratic distance measure.
 // Thanks to quake2 source!
-static byte NearestColor(byte r, byte g, byte b)
+byte NearestColor(byte r, byte g, byte b)
 {
   int bestdistortion = 256 * 256 * 4;
   int bestcolor = 0;
 
   for (int i = 0; i < 256; i++)
     {
-      int dr = r - vid.palette[i].s.red;
-      int dg = g - vid.palette[i].s.green;
-      int db = b - vid.palette[i].s.blue;
+      int dr = r - vid.palette[i].red;
+      int dg = g - vid.palette[i].green;
+      int db = b - vid.palette[i].blue;
       int distortion = dr*dr + dg*dg + db*db;
 
       if (distortion < bestdistortion)
@@ -803,12 +799,12 @@ cacheitem_t *texturecache_t::Load(const char *name)
   int size = fc.LumpLength(lump);
 
   // first check possible magic numbers!
-  /*  if (!png_sig_cmp(data, 0, sizeof(data)))
+  if (!png_sig_cmp(data, 0, sizeof(data)))
     {
       // it's a PNG
-      I_Error("PNG support is on its way...\n");
+      t = new PNGTexture(name, lump);
     } // then try some common sizes for raw picture lumps
-    else */if (size == 64*64)
+  else if (size == 64*64)
     {
       // Flat is 64*64 bytes of raw paletted picture data in one lump
       t = new LumpTexture(name, lump, 64, 64);
@@ -1300,9 +1296,9 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
   {
     for(i = 0; i < 256; i++)
     {
-      r = vid.palette[i].s.red;
-      g = vid.palette[i].s.green;
-      b = vid.palette[i].s.blue;
+      r = vid.palette[i].red;
+      g = vid.palette[i].green;
+      b = vid.palette[i].blue;
       cbrightness = sqrt((r*r) + (g*g) + (b*b));
 
       cmap[i][0] = (cbrightness * cmaskr) + (r * othermask);

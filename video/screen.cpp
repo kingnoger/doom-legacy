@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2004/08/18 14:35:23  smite-meister
+// PNG support!
+//
 // Revision 1.14  2004/08/16 20:54:18  smite-meister
 // bugfix
 //
@@ -525,13 +528,13 @@ void Video::LoadPalette(const char *lumpname)
   byte* pal = (byte *)fc.CacheLumpNum(i, PU_CACHE);
   for(i=0; i<palsize; i++)
     {
-      palette[i].s.red   = usegamma[*pal++];
-      palette[i].s.green = usegamma[*pal++];
-      palette[i].s.blue  = usegamma[*pal++];
+      palette[i].red   = usegamma[*pal++];
+      palette[i].green = usegamma[*pal++];
+      palette[i].blue  = usegamma[*pal++];
       //        if ((i&0xff) == HWR_PATCHES_CHROMAKEY_COLORINDEX)
       //            palette[i].s.alpha = 0;
       //        else
-      palette[i].s.alpha = 0xff;
+      palette[i].alpha = 0xff;
     }
 }
 

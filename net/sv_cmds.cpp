@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/08/18 14:35:22  smite-meister
+// PNG support!
+//
 // Revision 1.6  2004/08/06 18:54:39  smite-meister
 // netcode update
 //
@@ -363,7 +366,7 @@ void Command_Connect_f()
 
   CONS_Printf("connecting...\n");
 
-  if (!stricmp(COM_Argv(1),"any"))
+  if (!strcasecmp(COM_Argv(1), "any"))
     game.net->CL_StartPinging(true);
   else
     game.net->CL_Connect(Address(COM_Argv(1)));

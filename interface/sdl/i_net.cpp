@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:31  hurdler
-// Initial revision
+// Revision 1.2  2004/08/18 14:35:21  smite-meister
+// PNG support!
+//
+// Revision 1.1.1.1  2002/11/16 14:18:31  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.3  2002/07/01 21:01:03  jpakkane
 // Fixed cr+lf to UNIX form.
@@ -46,7 +49,6 @@
 
 #include "i_system.h"
 #include "d_event.h"
-#include "d_net.h"
 #include "m_argv.h"
 
 //#include "doomstat.h"

@@ -18,14 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:25  hurdler
-// Initial revision
+// Revision 1.2  2004/08/18 14:35:20  smite-meister
+// PNG support!
 //
-// Revision 1.3  2002/07/01 21:00:53  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:27  vberghol
-// Version 133 Experimental!
+// Revision 1.1.1.1  2002/11/16 14:18:25  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.4  2000/09/10 10:46:15  metzgermeister
 // merged with SDL version
@@ -43,12 +40,10 @@
 // Revision 1.2  2000/02/26 00:28:42  hurdler
 // Mostly bug fix (see borislog.txt 23-2-2000, 24-2-2000)
 //
-//
-// DESCRIPTION:
-//
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief MUS to MIDI conversion
 
 #if !defined(QMUS2MID_H)
 #define QMUS2MID_H
@@ -75,19 +70,19 @@
 #define TRACKMAGIC6  "\000\377\057\000"
 
 
-struct MUSheader_s
+struct MUSheader
 {
-    char          ID[4];            // identifier "MUS" 0x1A
-    USHORT        scoreLength;      // length of score in bytes
-    USHORT        scoreStart;       // absolute file pos of the score
-    USHORT        channels;         // count of primary channels
-    USHORT        sec_channels;      // count of secondary channels
-    USHORT        instrCnt;
-    USHORT        dummy;
-    // variable-length part starts here
-    USHORT        instruments[0];
+  char          ID[4];            // identifier "MUS" 0x1A
+  Uint16        scoreLength;      // length of score in bytes
+  Uint16        scoreStart;       // absolute file pos of the score
+  Uint16        channels;         // count of primary channels
+  Uint16        sec_channels;      // count of secondary channels
+  Uint16        instrCnt;
+  Uint16        dummy;
+  // variable-length part starts here
+  Uint16        instruments[0];
 };
-typedef struct MUSheader_s MUSheader;
+
 
 struct Track
 {
@@ -99,8 +94,8 @@ struct Track
 };
 
 int qmus2mid (byte  *mus, byte *mid,     // buffers in memory
-              USHORT division, int BufferSize, int nocomp,
+              Uint16 division, int BufferSize, int nocomp,
               int    length, int midbuffersize,
-              unsigned long* midilength);    //faB: returns midi file length in here
+              Uint32 *midilength);    //faB: returns midi file length in here
 
 #endif

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/08/18 14:35:22  smite-meister
+// PNG support!
+//
 // Revision 1.6  2004/08/06 18:54:39  smite-meister
 // netcode update
 //
@@ -314,7 +317,7 @@ void Got_NameAndcolor(char **cp,int playernum)
   const char *oldname = p->name.c_str();
   char newname[50];
   // name
-  if (stricmp(oldname, *cp))
+  if (strcasecmp(oldname, *cp))
     CONS_Printf("%s renamed to %s\n", oldname, *cp);
   READSTRING(*cp, newname);
   p->name = newname;

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/08/18 14:35:22  smite-meister
+// PNG support!
+//
 // Revision 1.7  2004/07/13 20:23:39  smite-meister
 // Mod system basics
 //
@@ -60,8 +63,6 @@
 
 #include "m_misc.h"
 #include "m_fixed.h"
-#include "byteptr.h"
-#include "p_saveg.h"
 #include "g_game.h"
 
 
@@ -745,10 +746,10 @@ static void COM_Help_f()
           CONS_Printf("\n");
           if( cvar->PossibleValue )
             {
-              if(stricmp(cvar->PossibleValue[0].strvalue,"MIN")==0)
+              if(strcmp(cvar->PossibleValue[0].strvalue,"MIN")==0)
                 {
                   for(i=1;cvar->PossibleValue[i].strvalue!=NULL;i++)
-                    if(!stricmp(cvar->PossibleValue[i].strvalue,"MAX"))
+                    if(!strcmp(cvar->PossibleValue[i].strvalue,"MAX"))
                       break;
                   CONS_Printf("  range from %d to %d\n",cvar->PossibleValue[0].value,cvar->PossibleValue[i].value);
                 }
@@ -882,12 +883,12 @@ void consvar_t::Setvalue(const char *s)
       char *tail;
       int v = strtol(s, &tail, 0);
 
-      if (!stricmp(PossibleValue[0].strvalue,"MIN"))
+      if (!strcmp(PossibleValue[0].strvalue,"MIN"))
         {
 	  // bounded cvar
           // search for maximum
           for (i=1; PossibleValue[i].strvalue; i++)
-            if (!stricmp(PossibleValue[i].strvalue,"MAX"))
+            if (!strcmp(PossibleValue[i].strvalue,"MAX"))
               break;
 #ifdef PARANOIA
           if (!PossibleValue[i].strvalue)
@@ -907,7 +908,7 @@ void consvar_t::Setvalue(const char *s)
 	    {
 	      // no succesful number conversion, so it's a string
 	      for (i=0; PossibleValue[i].strvalue; i++)
-		if (!stricmp(PossibleValue[i].strvalue, s))
+		if (!strcasecmp(PossibleValue[i].strvalue, s))
 		  break;
 	    }
 	  else
@@ -1093,7 +1094,7 @@ void consvar_t::Set(char *s)
     I_Error("CV_Set : %s no string set ?!\n",name);
 #endif
 
-  if (!stricmp(str, s))
+  if (!strcmp(str, s))
     return; // no changes
 
   if (flags & CV_NOTINNET && game.netgame)
