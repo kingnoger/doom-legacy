@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.27  2004/10/31 22:23:59  smite-meister
+// default sound
+//
 // Revision 1.26  2004/10/27 17:37:05  smite-meister
 // netcode update
 //
@@ -394,7 +397,7 @@ void SoundSystem::Startup()
     I_InitCD();
 
   ResetChannels(16);
-  sc.SetDefaultItem("DEFSOUND"); // default sound
+  sc.SetDefaultItem("DEF_SND"); // default sound
 
   nextcleanup = game.tic + 35*100;
 }
