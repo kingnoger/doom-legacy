@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2004/01/10 16:02:59  smite-meister
+// Cleanup and Hexen gameplay -related bugfixes
+//
 // Revision 1.15  2004/01/05 11:48:08  smite-meister
 // 7 bugfixes
 //
@@ -45,7 +48,7 @@
 //
 //-----------------------------------------------------------------------------
 
-
+#include <ctype.h>
 
 #include "dstrings.h"
 #include "d_main.h"

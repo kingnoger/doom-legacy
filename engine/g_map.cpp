@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.34  2004/01/10 16:02:59  smite-meister
+// Cleanup and Hexen gameplay -related bugfixes
+//
 // Revision 1.33  2004/01/06 14:37:45  smite-meister
 // six bugfixes, cleanup
 //
@@ -99,6 +102,7 @@
 // DESCRIPTION:
 //   Map class implementation
 //-----------------------------------------------------------------------------
+
 
 #include "doomdata.h"
 #include "g_map.h"
@@ -512,7 +516,7 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
   nz = ONFLOORZ;
 
   PlayerPawn *p;
-  CONS_Printf("SpawnPlayer: pawn == %p\n", pi->pawn);
+  CONS_Printf("SpawnPlayer\n");
 
   // the player may have his old pawn from the previous level
   if (!pi->pawn)
@@ -521,7 +525,6 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
       p->player = pi;
       p->team = pi->team;
       pi->pawn  = p;
-      CONS_Printf("-- new pawn, health == %d\n", p->health);
     }
   else
     {
@@ -530,7 +533,6 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
       p->y = ny;
       p->z = nz;
       p->px = p->py = p->pz = 0;
-      CONS_Printf("--- old pawn, health == %d\n", p->health);
     }
 
   AddThinker(p); // AddThinker sets Map *mp
@@ -1354,18 +1356,19 @@ Actor *Map::FindFromTIDmap(int tid, int *pos)
 //  Map-related commands
 //==========================================================================
 
+extern bool server;
+
 //  Warp to a new map.
 //  Called either from map <mapname> console command, or idclev cheat.
 void Command_Map_f ()
 {
-  if (COM_Argc()<2 || COM_Argc()>7)
+  if (COM_Argc() < 2 || COM_Argc() > 3)
     {
       //CONS_Printf ("map <mapname[.wad]> [-skill <1..5>] [-monsters <0/1>] [-noresetplayers]: warp to map\n");
-      CONS_Printf ("map n: warp to map number n, entrypoint 0\n");
+      CONS_Printf ("map <mapnumber> [<entrypoint>]: warp to map.\n");
       return;
     }
 
-  extern bool server;
   if (!server)
     {
       CONS_Printf ("Only the server can change the map\n");
@@ -1396,23 +1399,6 @@ void Command_Map_f ()
 	  return;
         }
     }
-
-  if((i=COM_CheckParm("-skill"))!=0)
-    buf[0]=atoi(COM_Argv(i+1))-1;
-  else
-    buf[0]=game.skill;
-
-  if((i=COM_CheckParm("-monsters"))!=0)
-    buf[1]=(atoi(COM_Argv(i+1))==0);
-  else
-    buf[1]=(game.nomonsters!=0);
-
-  // use only one bit
-  if(buf[1])
-    buf[1]=1;
-
-  if(COM_CheckParm("-noresetplayers"))
-    buf[1]|=2;
   */
 
   // FIXME AWFUL HACK since netcode is disabled, the map is changed right here
@@ -1443,4 +1429,76 @@ void Command_Map_f ()
   //if (SV_SpawnServer()) buf[1]&=~2;
 
   //SendNetXCmd(XD_MAP,buf,2+strlen(MAPNAME)+1);
+}
+
+
+// helper function for Command_Kill_f
+static void Kill_pawn(Actor *v, Actor *k)
+{
+  if (v && v->health > 0)
+    {
+      v->flags |= MF_SHOOTABLE;
+      v->flags2 &= ~(MF2_NONSHOOTABLE | MF2_INVULNERABLE);
+      v->Damage(k, k, 10000, dt_always);
+    }
+}
+
+// Kills just about anything
+void Command_Kill_f()
+{
+  if (!consoleplayer)
+    return;
+
+  if (COM_Argc() < 2)
+    {
+      CONS_Printf ("Usage: kill [me] | [<playernum>] | [monsters]\n");
+      // TODO extend usage: kill playername, kill team
+      return;
+    }
+
+  if (!server)
+    {
+      // client players can only commit suicide
+      if (COM_Argc() > 2 || strcmp(COM_Argv(1), "me"))
+	CONS_Printf("Only the server can kill others using console!\n");
+      else
+	Kill_pawn(consoleplayer->pawn, consoleplayer->pawn);
+
+      return;
+    }
+
+  int n;
+  for (int i=1; i<COM_Argc(); i++)
+    {
+      char *s = COM_Argv(i);
+      Actor *m = NULL;
+
+      if (!strcmp(s, "me"))
+	{
+	  // suicide
+	  m = consoleplayer->pawn;
+	}
+      else if (s[0] >= '0' && s[0] <= '9')
+	{
+	  // another player by number
+	  char *tail;
+	  n = strtol(s, &tail, 0);
+	  PlayerInfo *p = game.FindPlayer(n);
+	  if (!p)
+	    {
+	      CONS_Printf("Player %d is not in the game.\n", n);
+	      continue;
+	    }
+	  m = p->pawn;
+	}
+      else if (*s == 'm')
+	{
+	  // monsters
+	  n = consoleplayer->mp->Massacre();
+	  CONS_Printf("%d monsters killed.\n", n);
+	  continue;
+	}
+
+      Kill_pawn(m, consoleplayer->pawn); // server does the killing
+    }
 }

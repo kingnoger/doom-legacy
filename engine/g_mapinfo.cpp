@@ -4,7 +4,7 @@
 // $Id$
 //
 // Portions Copyright(C) 2000 Simon Howard
-// Copyright (C) 2002-2003 by Doom Legacy Team
+// Copyright (C) 2002-2004 by Doom Legacy Team
 // Thanks to Randy Heit for ZDoom ideas
 //
 // This program is free software; you can redistribute it and/or modify
@@ -22,6 +22,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.13  2004/01/10 16:02:59  smite-meister
+// Cleanup and Hexen gameplay -related bugfixes
+//
 // Revision 1.12  2004/01/05 11:48:08  smite-meister
 // 7 bugfixes
 //
@@ -68,10 +71,7 @@
 //-----------------------------------------------------------------------------
 
 #include <stdio.h>
-
-#ifdef LINUX
-# include <unistd.h>
-#endif
+#include <unistd.h>
 
 #include "doomdef.h"
 #include "command.h"
@@ -79,9 +79,6 @@
 
 #include "g_mapinfo.h"
 #include "g_level.h"
-
-//#include "dstrings.h"
-//#include "sounds.h"
 
 #include "g_game.h"
 #include "g_map.h"
@@ -180,15 +177,7 @@ bool MapInfo::Activate(PlayerInfo *p)
       temp = lumpname.c_str();
       if (fc.FindNumForName(temp) == -1)
 	{
-	  // FIXME! this entire block
-	  //has the name got a dot (.) in it?
-	  //if (!FIL_CheckExtension(temp))
-	    // append .wad to the name
-	    // try to load the file
-	    
-
-	  CONS_Printf("\2Map '%s' not found\n"
-		      "(use .wad extension for external maps)\n", temp);
+	  CONS_Printf("\2Map '%s' not found!\n", temp);
 	  return false;
 	}
 
@@ -202,6 +191,7 @@ bool MapInfo::Activate(PlayerInfo *p)
 	  I_Error("Error during map setup.\n");
 	  return false;
 	}
+      break;
 
     case MAP_RUNNING:
     case MAP_FINISHED:
@@ -216,6 +206,7 @@ bool MapInfo::Activate(PlayerInfo *p)
 	return false;
     }
 
+  me->CheckACSStore(); // execute waiting scripts
   if (p)
     me->AddPlayer(p);
   return true;

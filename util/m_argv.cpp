@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/01/10 16:03:00  smite-meister
+// Cleanup and Hexen gameplay -related bugfixes
+//
 // Revision 1.2  2003/11/23 19:07:42  smite-meister
 // New startup order
 //
@@ -31,6 +34,7 @@
 //-----------------------------------------------------------------------------
 
 
+#include <stdlib.h>
 #include <string.h>
 
 #include "doomdef.h"

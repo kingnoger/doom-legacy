@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/01/10 16:02:59  smite-meister
+// Cleanup and Hexen gameplay -related bugfixes
+//
 // Revision 1.4  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -38,38 +41,29 @@
 #ifndef doomdef_h
 #define doomdef_h 1
 
+#include "m_swap.h"
+
 #ifdef __WIN32__
 # define ASMCALL __cdecl
 #else
 # define ASMCALL
 #endif
 
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include <math.h>
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <ctype.h>
-
-#if defined(WIN32) || defined(__DJGPP__) 
-# include <io.h>
+#if defined(LINUX)
+# define O_BINARY 0
+char *strupr(char *n); 
+char *strlwr(char *n); // in parser.cpp
 #endif
 
-#ifdef PC_DOS
-# include <conio.h>
-#endif
 
-// Uncheck this to compile debugging code
-//#define RANGECHECK
+// version control
+extern const int  VERSION;
+extern const char VERSIONSTRING[];
+
+
+//#define RANGECHECK              // Uncheck this to compile debugging code
 #define PARANOIA                // do some test that never happens but maybe
-
 #define LOGMESSAGES             // write message in log.txt (win32 only for the moment)
-#define VERSION        141      // Game version
-#define VERSIONSTRING  " Experimental"
 
 // some tests, enable or desable it if it run or not
 //#define HORIZONTALDRAW        // abandoned : too slow
@@ -86,7 +80,6 @@
 
 #define MAXPLAYERNAME           21
 #define MAXSKINCOLORS           11
-
 #define SAVESTRINGSIZE          24
 
 // State updates, number of tics / second.
@@ -95,18 +88,6 @@
 #define NEWTICRATERATIO   1  // try 4 for 140 fps :)
 #define TICRATE         (OLDTICRATE*NEWTICRATERATIO) 
 
-
-#ifdef LINUX // Name of local directory for config files and savegames
-# define DEFAULTDIR ".legacy"
-#else
-# define DEFAULTDIR "legacy"
-#endif
-
-#if defined(LINUX)
-# define O_BINARY 0
-char *strupr(char *n); 
-char *strlwr(char *n); // from dosstr.c
-#endif
 
 
 // commonly used routines - moved here for include convenience
@@ -117,15 +98,9 @@ void I_Error(char *error, ...);
 // console.h
 void CONS_Printf(char *fmt, ...);
 
-#include "m_swap.h"
-
 // m_misc.h
 char *va(char *format, ...);
 char *Z_StrDup (const char *in);
-
-// =======================
-// Misc stuff for later...
-// =======================
 
 // i_system.c, replace getchar() once the keyboard has been appropriated
 int I_GetKey();

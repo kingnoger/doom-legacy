@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/01/10 16:02:59  smite-meister
+// Cleanup and Hexen gameplay -related bugfixes
+//
 // Revision 1.7  2003/11/12 11:07:22  smite-meister
 // Serialization done. Map progression.
 //
@@ -426,7 +429,6 @@ void P_LineOpening (line_t *linedef)
 
 
 //
-// was P_BlockLinesIterator
 // The validcount flags are used to avoid checking lines
 // that are marked in multiple mapblocks,
 // so increment validcount before the first call
@@ -501,9 +503,7 @@ bool Map::BlockLinesIterator(int x, int y, bool (*func)(line_t*))
 }
 
 
-//
-// was P_BlockThingsIterator
-//
+// Same as previous, but iterates through things
 bool Map::BlockThingsIterator(int x, int y, bool(*func)(Actor*))
 {
   Actor *mobj;
@@ -521,6 +521,19 @@ bool Map::BlockThingsIterator(int x, int y, bool(*func)(Actor*))
   return true;
 }
 
+
+// Iterates through all the Thinkers in the Map, calling 'func' for each.
+bool Map::IterateThinkers(bool (*func)(Thinker*))
+{
+  Thinker *t, *n;
+  for (t = thinkercap.next; t != &thinkercap; t = n)
+    {
+      n = t->next; // if t is removed while it thinks, its 'next' pointer will no longer be valid.
+      if (!func(t))
+	return false;
+    }
+  return true;
+}
 
 
 //

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright(C) 2000 Simon Howard
-// Copyright(C) 2001-2003 Doom Legacy Team
+// Copyright(C) 2001-2004 Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.13  2004/01/10 16:02:59  smite-meister
+// Cleanup and Hexen gameplay -related bugfixes
+//
 // Revision 1.12  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -74,6 +77,7 @@
 //---------------------------------------------------------------------------
 
 #include <stdio.h>
+#include <math.h>
 
 #include "doomtype.h"
 #include "doomdata.h"

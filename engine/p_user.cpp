@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2004/01/10 16:02:59  smite-meister
+// Cleanup and Hexen gameplay -related bugfixes
+//
 // Revision 1.18  2004/01/02 14:25:01  smite-meister
 // cleanup
 //
@@ -91,6 +94,7 @@
 #include "command.h"
 #include "p_camera.h"
 
+#include "p_maputl.h"
 #include "r_sprite.h"
 #include "sounds.h"
 #include "m_random.h"
@@ -325,65 +329,70 @@ void P_ArtiTele(PlayerPawn *p)
 
 
 // Mystic Ambit Incantation, class specific effect for everyone in radius
-bool P_HealRadius(Actor *p)
+
+// if only C++ had functions inside functions!
+static Actor *caster;
+static bool   given;
+
+static bool IT_HealRadius(Thinker *th)
 {
+  if (th->Type() != Thinker::tt_ppawn)
+    return true;
+	
+  PlayerPawn *t = (PlayerPawn *)th;
+  if (t->health <= 0)
+    return true;
+		
+  fixed_t dist = P_AproxDistance(caster->x - t->x, caster->y - t->y);
   const fixed_t HEAL_RADIUS_DIST = 255*FRACUNIT;
 
-  bool given = false;
+  if (dist > HEAL_RADIUS_DIST)
+    return true;
+
   int amount;
-  /*
-    // TODO thinker iteration!
-  Thinker *th;
-  Thinker &thinkercap = p->mp->thinkercap;
-  for (th = thinkercap.next; th != &thinkercap; th = th->next)
+  switch (t->pclass)
     {
-      if (th->Type() != Thinker::tt_ppawn)
-	continue;
-	
-      PlayerPawn *t = (PlayerPawn *)th;
-      if (t->health <= 0)
-	continue;
-		
-      fixed_t dist = P_AproxDistance(p->x - t->x, p->y - t->y);
-      if (dist > HEAL_RADIUS_DIST)
-	continue;
-
-      switch (t->pclass)
+    case PCLASS_FIGHTER: // armor boost
+      if (t->GiveArmor(armor_armor, -3, 1)  || t->GiveArmor(armor_shield, -3, 1) ||
+	  t->GiveArmor(armor_helmet, -3, 1) || t->GiveArmor(armor_amulet, -3, 1))
 	{
-	case PCLASS_FIGHTER: // armor boost
-	  if (t->GiveArmor(armor_armor, -3, 1)  || t->GiveArmor(armor_shield, -3, 1) ||
-	      t->GiveArmor(armor_helmet, -3, 1) || t->GiveArmor(armor_amulet, -3, 1))
-	    {
-	      given = true;
-	      S_StartSound(t, SFX_MYSTICINCANT);
-	    }
-	  break;
-
-	case PCLASS_CLERIC: // heal
-	  if (t->GiveBody(50 + P_Random() % 50))
-	    {
-	      given = true;
-	      S_StartSound(t, SFX_MYSTICINCANT);
-	    }
-	  break;
-
-	case PCLASS_MAGE: // mana boost
-	  amount = 50 + (P_Random()%50);
-	  if (t->GiveAmmo(am_mana1, amount) || t->GiveAmmo(am_mana2, amount))
-	    {
-	      given = true;
-	      S_StartSound(t, SFX_MYSTICINCANT);
-	    }
-	  break;
-
-	default:
-	  break;
+	  given = true;
+	  S_StartSound(t, SFX_MYSTICINCANT);
 	}
+      break;
+
+    case PCLASS_CLERIC: // heal
+      if (t->GiveBody(50 + P_Random() % 50))
+	{
+	  given = true;
+	  S_StartSound(t, SFX_MYSTICINCANT);
+	}
+	  break;
+
+    case PCLASS_MAGE: // mana boost
+      amount = 50 + (P_Random()%50);
+      if (t->GiveAmmo(am_mana1, amount) || t->GiveAmmo(am_mana2, amount))
+	{
+	  given = true;
+	  S_StartSound(t, SFX_MYSTICINCANT);
+	}
+      break;
+
+    default:
+      break;
     }
-  */
-  return given;
+
+  return true;
 }
 
+
+bool P_HealRadius(Actor *p)
+{
+  given = false;
+  caster = p;
+  p->mp->IterateThinkers(IT_HealRadius);
+  return given;
+}
 
 
 

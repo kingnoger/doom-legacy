@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2004/01/10 16:02:59  smite-meister
+// Cleanup and Hexen gameplay -related bugfixes
+//
 // Revision 1.16  2004/01/02 14:25:01  smite-meister
 // cleanup
 //
@@ -255,17 +258,6 @@ void Command_CheatGod_f()
     }
   else
     CONS_Printf ("%s\n", STSTR_DQDOFF);
-}
-
-void Command_Kill_f()
-{
-  extern bool server;
-  // TODO add usage: kill playername, kill playernum, kill me, kill monsters
-  if (server && consoleplayer)
-    {
-      int n = consoleplayer->mp->Massacre();
-      CONS_Printf("%d monsters killed.\n", n);
-    }
 }
 
 void Command_CheatGimme_f()

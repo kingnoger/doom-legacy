@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/01/10 16:03:00  smite-meister
+// Cleanup and Hexen gameplay -related bugfixes
+//
 // Revision 1.9  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -51,6 +54,7 @@
 //
 //-----------------------------------------------------------------------------
 
+#include <stdarg.h>
 
 #include "doomdef.h"
 #include "d_debug.h" // DEBFILE

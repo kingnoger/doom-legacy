@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.24  2004/01/10 16:02:59  smite-meister
+// Cleanup and Hexen gameplay -related bugfixes
+//
 // Revision 1.23  2004/01/06 14:37:45  smite-meister
 // six bugfixes, cleanup
 //
@@ -112,6 +115,7 @@
 #include "g_pawn.h"
 
 #include "p_spec.h"
+#include "r_poly.h"
 #include "p_setup.h" // FIXME levelflats...
 
 #include "p_acs.h"
@@ -150,6 +154,7 @@ enum consistency_marker_t
   // consistency markers in the savegame
   MARK_GROUP  = 0x71717171,
   MARK_MAP    = 0x8ae51d73,
+  MARK_POLYOBJ = 0x3c3c3c3c,
   MARK_SCRIPT = 0x37c4fe01,
   MARK_THINK  = 0x1c02fa39,
   MARK_MISC   = 0xabababab,
@@ -1132,7 +1137,12 @@ int Map::Serialize(LArchive &a)
   CONS_Printf("%d/%d sectors, %d/%d lines saved\n", statsec, numsectors, statline, numlines);
 
   //----------------------------------------------
-  // TODO polyobjs
+  // polyobjs
+  a.Marker(MARK_POLYOBJ);
+
+  for (i = 0; i < NumPolyobjs; i++)
+    a << polyobjs[i].tag << polyobjs[i].angle
+      << polyobjs[i].startSpot.x << polyobjs[i].startSpot.y;
 
   //----------------------------------------------
   // scripts
@@ -1422,12 +1432,28 @@ int Map::Unserialize(LArchive &a)
     }
 
   //----------------------------------------------
-  // TODO polyobjs
+  if (!a.Marker(MARK_POLYOBJ))
+    return -2;
+
+  for (i = 0; i < NumPolyobjs; i++)
+    {
+      a << n;
+      if (n != polyobjs[i].tag)
+	I_Error("Invalid polyobj tag!\n");
+
+      angle_t ang;
+      a << ang;
+      PO_RotatePolyobj(polyobjs[i].tag, ang);
+      fixed_t x, y;
+      a << x << y;
+      PO_MovePolyobj(polyobjs[i].tag, x - polyobjs[i].startSpot.x,
+		     y - polyobjs[i].startSpot.y);
+    }
 
   //----------------------------------------------
   // scripts
   if (!a.Marker(MARK_SCRIPT))
-    return -2;
+    return -3;
 
   for (i = 0; i < ACScriptCount; i++)
     {
@@ -1558,7 +1584,7 @@ int Map::Unserialize(LArchive &a)
   //----------------------------------------------
   // Thinkers
   if (!a.Marker(MARK_THINK))
-    return -2;
+    return -4;
 
   a << n;
   for (i=0; i<n; i++)
@@ -1568,7 +1594,7 @@ int Map::Unserialize(LArchive &a)
     }
 
   if (!a.Marker(MARK_MISC))
-    return -2;
+    return -5;
   //----------------------------------------------
   // respawnqueue
   a << n;

@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.4  2004/01/10 16:02:59  smite-meister
+// Cleanup and Hexen gameplay -related bugfixes
+//
 // Revision 1.3  2004/01/02 14:25:02  smite-meister
 // cleanup
 //
@@ -42,8 +45,8 @@
 //
 //----------------------------------------------------------------------------
 
-#include <stdio.h>
 #include <stdarg.h>
+#include <string.h>
 
 #include "doomdef.h"
 #include "doomtype.h"

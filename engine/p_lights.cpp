@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/01/10 16:02:59  smite-meister
+// Cleanup and Hexen gameplay -related bugfixes
+//
 // Revision 1.8  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -182,9 +185,7 @@ void lightfx_t::Think()
 }
 
 
-//
-// was P_SpawnStrobeFlash
-//
+
 void Map::SpawnStrobeLight(sector_t *sec, short brighttime, short darktime, bool inSync)
 {
   short minlight = P_FindMinSurroundingLight(sec, sec->lightlevel);
@@ -388,9 +389,7 @@ int Map::EV_SpawnLight(int tag, int type, short maxl, short minl, short maxt, sh
 
 
 //==========================================================================
-//
-// Phased lights (Hexen)
-//
+//                         Phased lights (Hexen)
 //==========================================================================
 
 static int PhaseTable[64] =
@@ -427,71 +426,59 @@ phasedlight_t::phasedlight_t(Map *m, sector_t *s, int b, int ind)
 
   base = b & 255;
   s->lightlevel = base + PhaseTable[index];
-  CONS_Printf("new phasedlight\n");
 }
 
 
-//
-// was P_SpawnLightSequence
-//
+// Spawns a sequence of phased lights following the sector types 3 and 4
 void Map::SpawnPhasedLightSequence(sector_t *sector, int indexStep)
 {
-  CONS_Printf("phasedlight sequence...\n");
   int i;
 
   sector_t *sec = sector;
-  sector_t *nextSec;
-  sector_t *tempSec;
+  sector_t *temp, *next;
 
-  int count = 1;
-  int seqSpecial = SS_LightSequence_1; // look for LightSequence_1 first
-  do
+  deque<sector_t*> run;
+
+  int phase = 0; // look for LightSequence_1 first
+
+  // TODO for now this is limited to one non-branching sequence
+  // that does not touch other sequences
+
+  // first count the sequence lenght to determine indexDelta
+  while (sec && !sec->lightingdata)
     {
-      nextSec = NULL;
-      sec->special = SS_LightSequence_Start; // make sure that the search doesn't back up.
+      run.push_back(sec);
+      sec->special = 0; // make sure that the search doesn't back up.
+
+      next = NULL;
       for (i = 0; i < sec->linecount; i++)
 	{
-	  tempSec = getNextSector(sec->lines[i], sec);
-	  if (!tempSec)
+	  temp = getNextSector(sec->lines[i], sec);
+	  if (!temp)
 	    continue;
 
-	  CONS_Printf("--spec = %d\n", tempSec->special);
-
-	  if (tempSec->special == seqSpecial)
+	  if (temp->special == phase + SS_LightSequence_1)
 	    {
-	      if (seqSpecial == SS_LightSequence_1)
-		seqSpecial = SS_LightSequence_2;
-	      else
-		seqSpecial = SS_LightSequence_1;
-
-	      nextSec = tempSec;
-	      count++;
-	      CONS_Printf("continues...%d\n", count);
+	      phase = phase^1; // phase alternates
+	      next = temp;
+	      break; // early out
 	    }
 	}
-      sec = nextSec;
-    } while(sec);
-  
-  sec = sector;
+      sec = next;
+    }
+
   fixed_t index = 0;
-  fixed_t indexDelta = FixedDiv(64*FRACUNIT, count * indexStep * FRACUNIT);
+  fixed_t indexDelta = FixedDiv(64*FRACUNIT, run.size() * indexStep * FRACUNIT);
   int base = sector->lightlevel;
-  do
+
+  while (!run.empty())
     {
-      nextSec = NULL;
+      sec = run.front();
+      run.pop_front();
+
       if (sec->lightlevel)
 	base = sec->lightlevel;
       new phasedlight_t(this, sec, base, index >> FRACBITS);
       index += indexDelta;
-      for (i = 0; i < sec->linecount; i++)
-	{
-	  tempSec = getNextSector(sec->lines[i], sec);
-	  if (!tempSec)
-	    continue;
-
-	  if (tempSec->special == SS_LightSequence_Start)
-	    nextSec = tempSec;
-	}
-      sec = nextSec;
-    } while(sec);
+    }
 }

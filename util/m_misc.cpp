@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/01/10 16:03:00  smite-meister
+// Cleanup and Hexen gameplay -related bugfixes
+//
 // Revision 1.4  2003/12/09 01:02:02  smite-meister
 // Hexen mapchange works, keycodes fixed
 //
@@ -36,13 +39,12 @@
 //
 //-----------------------------------------------------------------------------
 
-
-#ifndef __WIN32__
-# include <unistd.h>
-#endif
+#include <ctype.h>
+#include <stdarg.h>
 #include <fcntl.h>
+#include <unistd.h>
+#include <sys/stat.h>
 
-#include "doomdef.h"
 #include "m_misc.h"
 #include "m_argv.h"
 #include "command.h"
@@ -269,6 +271,9 @@ void M_FirstLoadConfig(void)
     // (do not write back the config if it crash before)
     gameconfig_loaded = true;
 }
+
+
+void G_SaveKeySetting(FILE *f);
 
 //  Save all game config here
 //

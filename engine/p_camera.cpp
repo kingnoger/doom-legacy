@@ -1,6 +1,24 @@
+// Emacs style mode select   -*- C++ -*- 
+//-----------------------------------------------------------------------------
+//
 // $Id$
 //
+// Copyright (C) 2003-2004 by DooM Legacy Team.
+//
+// This program is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public License
+// as published by the Free Software Foundation; either version 2
+// of the License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
 // $Log$
+// Revision 1.7  2004/01/10 16:02:59  smite-meister
+// Cleanup and Hexen gameplay -related bugfixes
+//
 // Revision 1.6  2003/11/12 11:07:19  smite-meister
 // Serialization done. Map progression.
 //
@@ -14,9 +32,12 @@
 // Weapon groups, MAPINFO parser added!
 //
 //
-// chasecam (and maybe other cameras) class implementation
+// DESCRIPTION:
+//   Chasecam class implementation
+//-----------------------------------------------------------------------------
 
-#include "doomdef.h"
+#include <math.h>
+
 #include "p_camera.h"
 #include "g_map.h"
 #include "command.h"

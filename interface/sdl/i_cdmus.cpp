@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/01/10 16:02:59  smite-meister
+// Cleanup and Hexen gameplay -related bugfixes
+//
 // Revision 1.2  2003/03/08 16:07:17  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -30,6 +33,7 @@
 
 
 #include <stdlib.h>
+#include <string.h>
 
 #ifdef FREEBSD
 # include <SDL.h>

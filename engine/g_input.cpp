@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/01/10 16:02:59  smite-meister
+// Cleanup and Hexen gameplay -related bugfixes
+//
 // Revision 1.5  2003/12/09 01:02:00  smite-meister
 // Hexen mapchange works, keycodes fixed
 //
@@ -39,6 +42,9 @@
 //      maps inputs to game controls (forward,use,open...)
 //
 //-----------------------------------------------------------------------------
+
+#include <stdlib.h>
+#include <string.h>
 
 #include "doomdef.h"
 #include "command.h"

@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.3  2004/01/10 16:02:59  smite-meister
+// Cleanup and Hexen gameplay -related bugfixes
+//
 // Revision 1.2  2003/02/23 22:49:31  smite-meister
 // FS is back! L2 cache works.
 //
@@ -38,7 +41,7 @@
 //
 //----------------------------------------------------------------------------
 
-#include <stdio.h>
+#include <string.h>
 
 #include "doomdef.h"
 #include "command.h"

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2004/01/10 16:02:59  smite-meister
+// Cleanup and Hexen gameplay -related bugfixes
+//
 // Revision 1.14  2004/01/05 11:48:08  smite-meister
 // 7 bugfixes
 //
@@ -1224,62 +1227,58 @@ static int CmdThingCountDirect()
   return SCRIPT_CONTINUE;
 }
 
+
+static mobjtype_t moType;
+static int thingCount;
+static bool IT_TypeCount(Thinker *th)
+{
+  if (th->Type() == Thinker::tt_dactor)
+    {
+      DActor *m = (DActor *)th;
+
+      if (m->type == moType)
+	{
+	  if (m->flags & MF_COUNTKILL && m->flags & MF_CORPSE)
+	    return true; // Don't count dead monsters
+	  thingCount++;
+	}
+    }
+  return true;
+}
+
+
 static void ThingCount(int type, int tid)
 {
-  int count;
-  int searcher;
-  Actor *mobj;
-  mobjtype_t moType;
-
-  if(!(type+tid))
-    { // Nothing to count
-      return;
-    }
+  if (!(type + tid))
+    return; // Nothing to count TODO messes stack up, need to Push something
 
   extern mobjtype_t TranslateThingType[];
-
   moType = TranslateThingType[type];
-  count = 0;
-  searcher = -1;
+  thingCount = 0;
+
+  CONS_Printf("looking for tid %d, type %d...", tid, type);
+  int searcher = -1;
   if (tid)
-    { // Count TID things
+    {
+      // Count TID things
+      Actor *mobj;
       while ((mobj = ACMap->FindFromTIDmap(tid, &searcher)) != NULL)
 	{
 	  if (type == 0)	    
-	    count++; // Just count TIDs
+	    thingCount++; // Just count TIDs
 	  else if (mobj->Type() == Thinker::tt_dactor && moType == ((DActor *)mobj)->type)
 	    {
-	      if (mobj->flags & MF_COUNTKILL && mobj->health <= 0)
+	      if (mobj->flags & MF_COUNTKILL && mobj->flags & MF_CORPSE)
 		continue; // Don't count dead monsters
-	      count++;
+	      thingCount++;
 	    }
 	}
     }
-  /* FIXME add thinker iterator function
   else
-    { // Count only types
-      for (think = thinkercap.next; think != &thinkercap;
-	  think = think->next)
-	{
-	  if(think->function != P_MobjThinker)
-	    { // Not a mobj thinker
-	      continue;
-	    }
-	  mobj = (Actor *)think;
-	  if(mobj->type != moType)
-	    { // Doesn't match
-	      continue;
-	    }
-	  if(mobj->flags&MF_COUNTKILL && mobj->health <= 0)
-	    { // Don't count dead monsters
-	      continue;
-	    }
-	  count++;
-	}
-    }
-  */
+    ACMap->IterateThinkers(IT_TypeCount); // Count only types
 
-  Push(count);
+  CONS_Printf("found %d objects.\n", thingCount);
+  Push(thingCount);
 }
 
 static int CmdTagWait()

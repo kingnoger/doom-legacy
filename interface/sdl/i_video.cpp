@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/01/10 16:03:00  smite-meister
+// Cleanup and Hexen gameplay -related bugfixes
+//
 // Revision 1.9  2003/12/09 01:02:02  smite-meister
 // Hexen mapchange works, keycodes fixed
 //
@@ -49,6 +52,7 @@
 //-----------------------------------------------------------------------------
 
 #include <stdlib.h>
+#include <string.h>
 
 #ifdef FREEBSD
 # include <SDL.h>
@@ -216,11 +220,7 @@ void I_ReadScreen(byte* scr)
 //
 void I_SetPalette(RGBA_t* palette)
 {
-  int i;
-
-  CONS_Printf("I_SetPalette\n");
-
-  for(i=0; i<256; i++)
+  for (int i=0; i<256; i++)
     {
       localPalette[i].r = palette[i].s.red;
       localPalette[i].g = palette[i].s.green;

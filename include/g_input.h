@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/01/10 16:02:59  smite-meister
+// Cleanup and Hexen gameplay -related bugfixes
+//
 // Revision 1.2  2003/12/09 01:02:01  smite-meister
 // Hexen mapchange works, keycodes fixed
 //
@@ -123,7 +126,6 @@ void  G_ClearControlKeys (int (*setupcontrols)[2], int control);
 void  Command_Setcontrol_f();
 void  Command_Setcontrol2_f();
 void  G_Controldefault();
-void  G_SaveKeySetting(FILE *f);
 void  G_CheckDoubleUsage(int keynum);
 
 

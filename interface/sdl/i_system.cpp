@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/01/10 16:03:00  smite-meister
+// Cleanup and Hexen gameplay -related bugfixes
+//
 // Revision 1.5  2003/12/09 01:02:02  smite-meister
 // Hexen mapchange works, keycodes fixed
 //
@@ -42,6 +45,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/01/10 16:03:00  smite-meister
+// Cleanup and Hexen gameplay -related bugfixes
+//
 // Revision 1.12  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -51,24 +54,6 @@
 //
 // Revision 1.2  2002/12/03 10:07:13  smite-meister
 // Video unit overhaul begins
-//
-// Revision 1.8  2002/08/21 16:58:39  vberghol
-// Version 1.41 Experimental compiles and links!
-//
-// Revision 1.7  2002/08/19 18:06:46  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.6  2002/08/11 17:16:53  vberghol
-// ...
-//
-// Revision 1.5  2002/08/08 12:01:33  vberghol
-// pian engine on valmis!
-//
-// Revision 1.4  2002/07/01 21:01:10  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:02:00  vberghol
-// HUD alkaa olla kunnossa
 //
 // Revision 1.27  2001/12/27 22:50:25  hurdler
 // fix a colormap bug, add scrolling floor/ceiling in hw mode
@@ -160,9 +145,7 @@
 //
 //-----------------------------------------------------------------------------
 
-#ifdef __WIN32__
-# include <malloc.h>
-#endif
+#include <math.h>
 
 #include "doomdef.h"
 #include "g_game.h"

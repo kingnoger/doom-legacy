@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 2002-2003 by DooM Legacy Team.
+// Copyright (C) 2002-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -20,12 +20,12 @@
 //
 //-----------------------------------------------------------------------------
 
-
 #include <stdio.h>
+#include <sys/stat.h>
 
-#include "doomdef.h"
 #include "wad.h"
 
+#include "doomdef.h"
 #include "dehacked.h"
 #include "i_system.h"
 #include "z_zone.h"

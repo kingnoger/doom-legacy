@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/01/10 16:03:00  smite-meister
+// Cleanup and Hexen gameplay -related bugfixes
+//
 // Revision 1.8  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -87,8 +90,10 @@
 //
 //-----------------------------------------------------------------------------
 
+#include <stdarg.h>
 
 #include "doomdef.h"
+#include "dehacked.h"
 
 #include "command.h"
 #include "console.h"
@@ -103,11 +108,9 @@
 #include "dstrings.h"
 #include "m_argv.h"
 
-//SoM: 4/4/2000: DEHACKED LUMPS
 #include "z_zone.h"
 #include "w_wad.h"
 
-#include "dehacked.h"
 
 bool deh_loaded = false;
 

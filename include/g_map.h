@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.28  2004/01/10 16:02:59  smite-meister
+// Cleanup and Hexen gameplay -related bugfixes
+//
 // Revision 1.27  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -345,7 +348,8 @@ public:
 
   // in p_maputl.cpp
   bool BlockLinesIterator(int x, int y, bool (*func)(line_t*));
-  bool BlockThingsIterator(int x, int y, bool(*func)(Actor*));
+  bool BlockThingsIterator(int x, int y, bool (*func)(Actor*));
+  bool IterateThinkers(bool (*func)(Thinker*));
   bool PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags, traverser_t trav);
   Actor *RoughBlockSearch(Actor *center, Actor *master, int distance, int flags);
   Actor *RoughBlockCheck(Actor *center, Actor *master, int index, int flags);

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,29 +18,14 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/01/10 16:03:00  smite-meister
+// Cleanup and Hexen gameplay -related bugfixes
+//
 // Revision 1.3  2002/12/16 22:22:05  smite-meister
 // Actor/DActor separation
 //
 // Revision 1.2  2002/12/03 10:07:13  smite-meister
 // Video unit overhaul begins
-//
-// Revision 1.8  2002/09/25 15:17:44  vberghol
-// Intermission fixed?
-//
-// Revision 1.7  2002/08/30 11:45:41  vberghol
-// players system modified
-//
-// Revision 1.6  2002/08/21 16:58:40  vberghol
-// Version 1.41 Experimental compiles and links!
-//
-// Revision 1.5  2002/08/19 18:06:49  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.4  2002/07/01 21:01:13  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:02:00  vberghol
-// HUD alkaa olla kunnossa
 //
 // Revision 1.29  2001/12/15 18:41:35  hurdler
 // small commit, mainly splitscreen fix
@@ -135,6 +120,8 @@
 //      Functions to blit a block to the screen.
 //
 //-----------------------------------------------------------------------------
+
+#include <ctype.h>
 
 #include "doomdef.h"
 #include "r_local.h"

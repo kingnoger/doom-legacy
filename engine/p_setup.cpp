@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.34  2004/01/10 16:02:59  smite-meister
+// Cleanup and Hexen gameplay -related bugfixes
+//
 // Revision 1.33  2004/01/06 14:37:45  smite-meister
 // six bugfixes, cleanup
 //
@@ -126,6 +129,8 @@
 //
 //-----------------------------------------------------------------------------
 
+#include <math.h>
+
 #include "doomdef.h"
 #include "doomdata.h"
 
@@ -166,14 +171,10 @@
 #include "hardware/hw_light.h"
 #endif
 
-//
-// was P_LoadVertexes
-//
+
 void Map::LoadVertexes(int lump)
 {
-
-  int                 i;
-
+  int i;
 
   // Determine number of lumps:
   //  total lump length / vertex record length.
@@ -219,9 +220,6 @@ float P_SegLength (seg_t* seg)
 }
 
 
-//
-// was P_LoadSegs
-//
 void Map::LoadSegs(int lump)
 {
   numsegs = fc.LumpLength(lump) / sizeof(mapseg_t);
@@ -267,25 +265,17 @@ void Map::LoadSegs(int lump)
 }
 
 
-//
-// was P_LoadSubsectors
-//
 void Map::LoadSubsectors(int lump)
 {
-  byte*               data;
-  int                 i;
-  mapsubsector_t*     ms;
-  subsector_t*        ss;
-
   numsubsectors = fc.LumpLength (lump) / sizeof(mapsubsector_t);
-  subsectors = (subsector_t *)Z_Malloc(numsubsectors*sizeof(subsector_t),PU_LEVEL,0);
-  data = (byte *)fc.CacheLumpNum (lump,PU_STATIC);
+  subsectors = (subsector_t *)Z_Malloc(numsubsectors*sizeof(subsector_t), PU_LEVEL, 0);
+  byte *data = (byte *)fc.CacheLumpNum(lump, PU_STATIC);
 
-  ms = (mapsubsector_t *)data;
+  mapsubsector_t *ms = (mapsubsector_t *)data;
   memset (subsectors,0, numsubsectors*sizeof(subsector_t));
-  ss = subsectors;
+  subsector_t *ss = subsectors;
 
-  for (i=0 ; i<numsubsectors ; i++, ss++, ms++)
+  for (int i=0; i<numsubsectors; i++, ss++, ms++)
     {
       ss->numlines = SHORT(ms->numsegs);
       ss->firstline = SHORT(ms->firstseg);
@@ -295,10 +285,6 @@ void Map::LoadSubsectors(int lump)
 }
 
 
-
-//
-// P_LoadSectors
-//
 
 //
 // levelflats
@@ -409,7 +395,7 @@ void Map::LoadSectors1(int lump)
   memset(sectors, 0, numsectors*sizeof(sector_t));
 }
 
-// was P_LoadSectors
+
 void Map::LoadSectors2(int lump)
 {
   int i;
@@ -495,7 +481,7 @@ void Map::LoadSectors2(int lump)
       ss->friction = normal_friction;
       ss->movefactor = 1.0f;
       ss->gravity = 1.0f;
-      SpawnSectorSpecial(SHORT(ms->special), ss);
+      ss->special = SHORT(ms->special);
     }
 
   Z_Free (data);
@@ -520,9 +506,6 @@ void Map::LoadSectors2(int lump)
 }
 
 
-//
-// was P_LoadNodes
-//
 void Map::LoadNodes(int lump)
 {
   byte*       data;
@@ -556,9 +539,7 @@ void Map::LoadNodes(int lump)
   Z_Free (data);
 }
 
-//
-// was P_LoadThings
-//
+
 void Map::LoadThings(int lump)
 {
   TIDmap.clear();
@@ -792,10 +773,6 @@ void Map::LoadThings(int lump)
 }
 
 
-//
-// was P_LoadLineDefs
-// Also counts secret lines for intermissions.
-//
 void Map::LoadLineDefs(int lump)
 {
   int i, j;
@@ -901,8 +878,6 @@ void Map::LoadLineDefs(int lump)
 }
 
 
-// was P_LoadLineDefs2
-
 void Map::LoadLineDefs2()
 {
   int i;
@@ -922,10 +897,8 @@ void Map::LoadLineDefs2()
 }
 
 
-//
-// P_LoadSideDefs
-//
-/*void P_LoadSideDefs (int lump)
+/*
+void P_LoadSideDefs (int lump)
   {
   byte*               data;
   int                 i;
@@ -951,9 +924,9 @@ void Map::LoadLineDefs2()
   }
 
   Z_Free (data);
-  }*/
+  }
+*/
 
-// was P_LoadSideDefs
 
 void Map::LoadSideDefs(int lump)
 {
@@ -962,9 +935,7 @@ void Map::LoadSideDefs(int lump)
   memset(sides, 0, numsides*sizeof(side_t));
 }
 
-// SoM: 3/22/2000: Delay loading texture names until after loaded linedefs.
 
-// was P_LoadSideDefs2
 void Map::LoadSideDefs2(int lump)
 {
   byte *data = (byte *)fc.CacheLumpNum(lump,PU_STATIC);
@@ -1167,11 +1138,6 @@ void Map::LoadSideDefs2(int lump)
 }
 
 
-
-
-//
-// was P_LoadBlockMap
-//
 void Map::LoadBlockMap(int lump)
 {
   int         i;
@@ -1197,7 +1163,6 @@ void Map::LoadBlockMap(int lump)
   PolyBlockMap = (polyblock_t **)Z_Malloc(bmapwidth*bmapheight*sizeof(polyblock_t *), PU_LEVEL, 0);
   memset(PolyBlockMap, 0, bmapwidth*bmapheight*sizeof(polyblock_t *));
 }
-
 
 
 //
@@ -1438,10 +1403,12 @@ bool Map::Setup(tic_t start, bool spawnthings)
   LoadSubsectors(lumpnum+ML_SSECTORS);
   LoadNodes(lumpnum+ML_NODES);
   LoadSegs (lumpnum+ML_SEGS);
-  LoadSectors2(lumpnum+ML_SECTORS); // also spawns the sector special Thinkers
+  LoadSectors2(lumpnum+ML_SECTORS);
   rejectmatrix = (byte *)fc.CacheLumpNum(lumpnum+ML_REJECT,PU_LEVEL);
-
   GroupLines();
+
+  for (int i=0; i<numsectors; i++)
+    SpawnSectorSpecial(sectors[i].special, &sectors[i]);
 
   // fix renderer to this map
   R.SetMap(this);
@@ -1479,10 +1446,6 @@ bool Map::Setup(tic_t start, bool spawnthings)
 
   SpawnLineSpecials(); // spawn Thinkers created by linedefs (also does some mandatory initializations!)
 
-  CheckACSStore(); // execute waiting scripts
-
-  // build subsector connect matrix
-  //  UNUSED P_ConnectSubsectors ();
 
   // preload graphics
 #ifdef HWRENDER
