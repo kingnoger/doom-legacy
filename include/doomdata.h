@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/04/19 17:38:47  smite-meister
+// SNDSEQ support, tools, linedef system...
+//
 // Revision 1.5  2003/04/14 08:58:30  smite-meister
 // Hexen maps load.
 //
@@ -174,13 +177,17 @@ enum {
   ML_SPAC_SHIFT	= 10,    // Hexen: Special activation, 3 bit field
   ML_SPAC_MASK	= 0x1c00,
 
-  // Special activation types
+  // Special activation types (3 bits)
   SPAC_CROSS  =	0,	// when player crosses line
   SPAC_USE    = 1,	// when player uses line
   SPAC_MCROSS =	2,	// when monster crosses line
   SPAC_IMPACT =	3,	// when projectile hits line
   SPAC_PUSH   =	4,	// when player/monster pushes line
-  SPAC_PCROSS =	5	// when projectile crosses line
+  SPAC_PCROSS =	5,	// when projectile crosses line
+  // new types
+  SPAC_PASSUSE = 6,  // Converted Boom ML_PASSUSE
+
+  ML_MONSTERS_CAN_ACTIVATE = 0x2000,
 };
 
 #define GET_SPAC(flags) (((flags) & ML_SPAC_MASK) >> ML_SPAC_SHIFT)

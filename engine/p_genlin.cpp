@@ -853,7 +853,7 @@ int Map::EV_DoGenLockedDoor(line_t *line)
 {
   int   secnum,rtn;
   sector_t* sec;
-  vldoor_t* door;
+  vdoor_t* door;
   bool manual;
   unsigned  value = (unsigned)line->special - GenLockedBase;
 
@@ -895,31 +895,30 @@ int Map::EV_DoGenLockedDoor(line_t *line)
   
       // new door thinker
       rtn = 1;
-      door = new vldoor_t(genRaise, sec, 0, VDOORWAIT, line);
+      door = new vdoor_t(vdoor_t::OwC, sec, 0, VDOORWAIT, line);
       AddThinker(door);
 
       door->topheight = P_FindLowestCeilingSurrounding(sec);
       door->topheight -= 4*FRACUNIT;
       door->direction = 1;
 
+      door->type = Kind? vdoor_t::Open : vdoor_t::OwC;
       // setup speed of door motion
       switch(Sped)
 	{
 	default:
 	case SpeedSlow:
-	  door->type = Kind? genOpen : genRaise;
 	  door->speed = VDOORSPEED;
 	  break;
 	case SpeedNormal:
-	  door->type = Kind? genOpen : genRaise;
 	  door->speed = VDOORSPEED*2;
 	  break;
 	case SpeedFast:
-	  door->type = Kind? genBlazeOpen : genBlazeRaise;
+	  door->type |= vdoor_t::blazing;
 	  door->speed = VDOORSPEED*4;
 	  break;
 	case SpeedTurbo:
-	  door->type = Kind? genBlazeOpen : genBlazeRaise;
+	  door->type |= vdoor_t::blazing;
 	  door->speed = VDOORSPEED*8;
 
 	  break;
@@ -950,7 +949,7 @@ int Map::EV_DoGenDoor(line_t *line)
   int   secnum,rtn;
   sector_t* sec;
   bool   manual;
-  vldoor_t* door;
+  vdoor_t* door;
   unsigned  value = (unsigned)line->special - GenDoorBase;
 
   // parse the bit fields in the line's special type
@@ -993,7 +992,7 @@ int Map::EV_DoGenDoor(line_t *line)
   
       // new door thinker
       rtn = 1;
-      door = new vldoor_t(genRaise, sec, 0, VDOORWAIT, line);
+      door = new vdoor_t(vdoor_t::delayed, sec, 0, VDOORWAIT, line);
       AddThinker(door);
 
       // setup delay for door remaining open/closed
@@ -1042,7 +1041,7 @@ int Map::EV_DoGenDoor(line_t *line)
 	  door->topheight -= 4*FRACUNIT;
 	  if (door->topheight != sec->ceilingheight)
 	    S_StartSound(&door->sector->soundorg,sfx_bdopn);
-	  door->type = Sped>=SpeedFast? genBlazeRaise : genRaise;
+	  door->type = vdoor_t::OwC;
 	  break;
 	case ODoor:
 	  door->direction = 1;
@@ -1050,24 +1049,28 @@ int Map::EV_DoGenDoor(line_t *line)
 	  door->topheight -= 4*FRACUNIT;
 	  if (door->topheight != sec->ceilingheight)
 	    S_StartSound(&door->sector->soundorg,sfx_bdopn);
-	  door->type = Sped>=SpeedFast? genBlazeOpen : genOpen;
+	  door->type = vdoor_t::Open;
 	  break;
 	case CdODoor:
 	  door->topheight = sec->ceilingheight;
 	  door->direction = -1;
 	  S_StartSound(&door->sector->soundorg,sfx_dorcls);
-	  door->type = Sped>=SpeedFast? genBlazeCdO : genCdO;
+	  door->type = vdoor_t::CwO;
 	  break;
 	case CDoor:
 	  door->topheight = P_FindLowestCeilingSurrounding(sec);
 	  door->topheight -= 4*FRACUNIT;
 	  door->direction = -1;
 	  S_StartSound(&door->sector->soundorg,sfx_dorcls);
-	  door->type = Sped>=SpeedFast? genBlazeClose : genClose;
+	  door->type = vdoor_t::Close;
 	  break;
 	default:
 	  break;
 	}
+
+      if (Sped >= SpeedFast)
+	door->type |= vdoor_t::blazing;
+
       if (manual)
 	return rtn;
     }

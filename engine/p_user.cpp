@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/04/19 17:38:47  smite-meister
+// SNDSEQ support, tools, linedef system...
+//
 // Revision 1.7  2003/04/14 08:58:28  smite-meister
 // Hexen maps load.
 //
@@ -195,6 +198,7 @@ void PlayerPawn::Move()
 
   if (cmd->forwardmove)
     {
+      CONS_Printf("::m %d, %f\n", cmd->forwardmove, mf);
       movepushforward = int(magic * cmd->forwardmove/100);
       Thrust(angle, movepushforward);
     }

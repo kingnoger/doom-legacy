@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/04/19 17:38:47  smite-meister
+// SNDSEQ support, tools, linedef system...
+//
 // Revision 1.8  2003/04/04 00:01:57  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -233,8 +236,8 @@ char ForeignTranslation(unsigned char ch)
 HUD::HUD()
 {
   st_x = 0;
-  st_y = BASEVIDHEIGHT - ST_HEIGHT;
-  stbarheight = ST_HEIGHT;
+  st_y = BASEVIDHEIGHT - ST_HEIGHT_DOOM;
+  stbarheight = ST_HEIGHT_DOOM;
   st_palette = 0;
   st_active = false;
   sbpawn = NULL;

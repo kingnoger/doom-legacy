@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.3  2003/04/19 17:38:47  smite-meister
+// SNDSEQ support, tools, linedef system...
+//
 // Revision 1.2  2003/02/23 22:49:31  smite-meister
 // FS is back! L2 cache works.
 //
@@ -1469,11 +1472,8 @@ void SF_StartSound()
     return;
 
   soundsource_t s;
-  s.x = mo->x;
-  s.y = mo->y;
-  s.z = mo->z;
-  s.mpoint = NULL;
-  s.origin = mo;
+  s.isactor = true;
+  s.act = mo;
 
   S.Start3DSound(t_argv[1].value.s, &s);
 }
@@ -1501,11 +1501,9 @@ void SF_StartSectorSound()
   {
     mappoint_t *p = &current_map->sectors[secnum].soundorg;
     soundsource_t s;
-    s.x = p->x;
-    s.y = p->y;
-    s.z = p->z;
-    s.mpoint = p;
-    s.origin = NULL;
+    s.isactor = false;
+    s.mpt = p;
+
     S.Start3DSound(t_argv[1].value.s, &s);
   }
 }

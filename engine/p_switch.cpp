@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/04/19 17:38:47  smite-meister
+// SNDSEQ support, tools, linedef system...
+//
 // Revision 1.5  2003/04/04 00:01:57  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -585,7 +588,7 @@ bool Map::UseSpecialLine(Actor *thing, line_t *line, int side)
 
     case 29:
       // Raise Door
-      if (EV_DoDoor(line,normalDoor,VDOORSPEED))
+      if (EV_DoDoor(line,vdoor_t::OwC,VDOORSPEED))
 	ChangeSwitchTexture(line,0);
       break;
 
@@ -609,7 +612,7 @@ bool Map::UseSpecialLine(Actor *thing, line_t *line, int side)
 
     case 50:
       // Close Door
-      if (EV_DoDoor(line,doorclose,VDOORSPEED))
+      if (EV_DoDoor(line,vdoor_t::Close,VDOORSPEED))
 	ChangeSwitchTexture(line,0);
       break;
 
@@ -642,25 +645,25 @@ bool Map::UseSpecialLine(Actor *thing, line_t *line, int side)
 
     case 103:
       // Open Door
-      if (EV_DoDoor(line,dooropen,VDOORSPEED))
+      if (EV_DoDoor(line,vdoor_t::Open,VDOORSPEED))
 	ChangeSwitchTexture(line,0);
       break;
 
     case 111:
       // Blazing Door Raise (faster than TURBO!)
-      if (EV_DoDoor (line,blazeRaise,4*VDOORSPEED))
+      if (EV_DoDoor (line,vdoor_t::OwC | vdoor_t::blazing,4*VDOORSPEED))
 	ChangeSwitchTexture(line,0);
       break;
 
     case 112:
       // Blazing Door Open (faster than TURBO!)
-      if (EV_DoDoor (line,blazeOpen,4*VDOORSPEED))
+      if (EV_DoDoor (line,vdoor_t::Open | vdoor_t::blazing,4*VDOORSPEED))
 	ChangeSwitchTexture(line,0);
       break;
 
     case 113:
       // Blazing Door Close (faster than TURBO!)
-      if (EV_DoDoor (line,blazeClose,4*VDOORSPEED))
+      if (EV_DoDoor (line,vdoor_t::Close | vdoor_t::blazing,4*VDOORSPEED))
 	ChangeSwitchTexture(line,0);
       break;
 
@@ -688,7 +691,7 @@ bool Map::UseSpecialLine(Actor *thing, line_t *line, int side)
       // BlzOpenDoor RED
     case 137:
       // BlzOpenDoor YELLOW
-      if (EV_DoLockedDoor (line,blazeOpen, (PlayerPawn *)thing,4*VDOORSPEED))
+      if (EV_DoLockedDoor (line, (PlayerPawn *)thing, vdoor_t::Open | vdoor_t::blazing,4*VDOORSPEED))
 	ChangeSwitchTexture(line,0);
       break;
 
@@ -826,7 +829,7 @@ bool Map::UseSpecialLine(Actor *thing, line_t *line, int side)
 
 	  case 175:
 	    // Close Door, Open in 30 secs
-	    if (EV_DoDoor(line,close30ThenOpen,VDOORSPEED))
+	    if (EV_DoDoor(line,vdoor_t::CwO,VDOORSPEED, 30*35))
 	      ChangeSwitchTexture(line,0);
 	    break;
 
@@ -1013,7 +1016,7 @@ bool Map::UseSpecialLine(Actor *thing, line_t *line, int side)
 
 	  case 196:
 	    // Close Door, Open in 30 secs
-	    if (EV_DoDoor(line,close30ThenOpen,VDOORSPEED))
+	    if (EV_DoDoor(line,vdoor_t::CwO,VDOORSPEED, 30*35))
 	      ChangeSwitchTexture(line,1);
 	    break;
 
@@ -1086,7 +1089,7 @@ bool Map::UseSpecialLine(Actor *thing, line_t *line, int side)
       // BUTTONS
     case 42:
       // Close Door
-      if (EV_DoDoor(line,doorclose,VDOORSPEED))
+      if (EV_DoDoor(line,vdoor_t::Close,VDOORSPEED))
 	ChangeSwitchTexture(line,1);
       break;
 
@@ -1110,7 +1113,7 @@ bool Map::UseSpecialLine(Actor *thing, line_t *line, int side)
 
     case 61:
       // Open Door
-      if (EV_DoDoor(line,dooropen,VDOORSPEED))
+      if (EV_DoDoor(line,vdoor_t::Open,VDOORSPEED))
 	ChangeSwitchTexture(line,1);
       break;
 
@@ -1122,7 +1125,7 @@ bool Map::UseSpecialLine(Actor *thing, line_t *line, int side)
 
     case 63:
       // Raise Door
-      if (EV_DoDoor(line,normalDoor,VDOORSPEED))
+      if (EV_DoDoor(line,vdoor_t::OwC,VDOORSPEED))
 	ChangeSwitchTexture(line,1);
       break;
 
@@ -1170,19 +1173,19 @@ bool Map::UseSpecialLine(Actor *thing, line_t *line, int side)
 
     case 114:
       // Blazing Door Raise (faster than TURBO!)
-      if (EV_DoDoor (line,blazeRaise,4*VDOORSPEED))
+      if (EV_DoDoor (line,vdoor_t::OwC | vdoor_t::blazing,4*VDOORSPEED))
 	ChangeSwitchTexture(line,1);
       break;
 
     case 115:
       // Blazing Door Open (faster than TURBO!)
-      if (EV_DoDoor (line,blazeOpen,4*VDOORSPEED))
+      if (EV_DoDoor (line,vdoor_t::Open | vdoor_t::blazing,4*VDOORSPEED))
 	ChangeSwitchTexture(line,1);
       break;
 
     case 116:
       // Blazing Door Close (faster than TURBO!)
-      if (EV_DoDoor (line,blazeClose,4*VDOORSPEED))
+      if (EV_DoDoor (line,vdoor_t::Close | vdoor_t::blazing,4*VDOORSPEED))
 	ChangeSwitchTexture(line,1);
       break;
 
@@ -1206,7 +1209,7 @@ bool Map::UseSpecialLine(Actor *thing, line_t *line, int side)
       // BlzOpenDoor RED
     case 136:
       // BlzOpenDoor YELLOW
-      if (EV_DoLockedDoor(line,blazeOpen,(PlayerPawn *)thing,4*VDOORSPEED))
+      if (EV_DoLockedDoor(line, (PlayerPawn *)thing, vdoor_t::Open | vdoor_t::blazing,4*VDOORSPEED))
 	ChangeSwitchTexture(line,1);
       break;
 

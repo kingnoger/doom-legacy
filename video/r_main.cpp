@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/04/19 17:38:48  smite-meister
+// SNDSEQ support, tools, linedef system...
+//
 // Revision 1.7  2003/03/23 14:24:14  smite-meister
 // Polyobjects, MD3 models
 //
@@ -801,7 +804,18 @@ void R_ExecuteSetViewSize()
     CV_SetValue(&cv_viewsize, 6);
 #endif
 
-  hud.stbarheight = (game.mode == gm_heretic) ? SBARHEIGHT : ST_HEIGHT; 
+  switch (game.mode)
+    {
+    case gm_hexen:
+      hud.stbarheight = ST_HEIGHT_HEXEN;
+      break;
+    case gm_heretic:
+      hud.stbarheight = ST_HEIGHT_HERETIC;
+      break;
+    default:
+      hud.stbarheight = ST_HEIGHT_DOOM;
+      break;
+    }
     
   if (cv_scalestatusbar.value || cv_viewsize.value > 10)
     hud.stbarheight *= (rendermode==render_soft) ? vid.dupy : vid.fdupy;

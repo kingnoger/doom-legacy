@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2003/04/19 17:38:47  smite-meister
+// SNDSEQ support, tools, linedef system...
+//
 // Revision 1.11  2003/04/14 08:58:28  smite-meister
 // Hexen maps load.
 //
@@ -690,7 +693,7 @@ void HUD::ST_RefreshBackground()
 
   if (game.mode == gm_hexen)
     {
-      V_DrawScaledPatch(st_x, 134, flags, PatchH2BAR);
+      V_DrawScaledPatch(st_x, st_y-1, flags, PatchH2BAR); // y = 134
     }
   else if (game.mode == gm_heretic)
     {
@@ -1100,7 +1103,7 @@ void HUD::UpdateWidgets()
 
   // update keycard multiple widgets
   for (i=0;i<6;i++)
-    st_keyboxes[i] = (sbpawn->cards & (1<<i)) ? i : -1;
+    st_keyboxes[i] = (sbpawn->cards & (1 << (i + 11))) ? i : -1;
 }
 
 // was ST_doPaletteStuff
@@ -1272,33 +1275,33 @@ void HUD::CreateHexenWidgets()
   // H2TOP ?
 
   // health slider
-  h = new HudSlider(st_x, st_y+35, &statusbaron, &st_health, 0, 100, Patch_ChainSlider);
+  h = new HudSlider(st_x, st_y+50, &statusbaron, &st_health, 0, 100, Patch_ChainSlider);
   widgets.push_back(h);
 
   // mainbar (closed inventory shown)
   // frags / health
   if (cv_deathmatch.value)
     //V_DrawPatch(38, 162, PatchKILLS);
-    h = new HudNumber(st_x+40, 176, &mainbaron, 3, &st_fragscount, PatchINum);
+    h = new HudNumber(st_x+50, st_y+42, &mainbaron, 3, &st_fragscount, PatchINum);
   else
     // TODO: use red numbers if health is low
-    h = new HudNumber(st_x+40, 176, &mainbaron, 3, &st_health, PatchINum);
+    h = new HudNumber(st_x+50, st_y+42, &mainbaron, 3, &st_health, PatchINum);
   widgets.push_back(h);
 
   // mana
-  h = new HudNumber(st_x + 79, 181, &mainbaron, 3, &st_mana1, PatchSNum);
+  h = new HudNumber(st_x+89, st_y+47, &mainbaron, 3, &st_mana1, PatchSNum);
   widgets.push_back(h);
-  h = new HudBinIcon(st_x+77, 164, &mainbaron, &st_mana1icon, PatchMana1[0], PatchMana1[1]);
+  h = new HudBinIcon(st_x+77, st_y+30, &mainbaron, &st_mana1icon, PatchMana1[0], PatchMana1[1]);
   widgets.push_back(h);
 
-  h = new HudNumber(st_x + 111, 181, &mainbaron, 3, &st_mana2, PatchSNum);
+  h = new HudNumber(st_x + 121, st_y+47, &mainbaron, 3, &st_mana2, PatchSNum);
   widgets.push_back(h);
-  h = new HudBinIcon(st_x+110, 164, &mainbaron, &st_mana2icon, PatchMana2[0], PatchMana2[1]);
+  h = new HudBinIcon(st_x+110, st_y+30, &mainbaron, &st_mana2icon, PatchMana2[0], PatchMana2[1]);
   widgets.push_back(h);
   // TODO mana vials (new widget type?)
 
   // armor
-  h = new HudNumber(st_x+250, 176, &mainbaron, 3, &st_armor, PatchINum);
+  h = new HudNumber(st_x+260, st_y+42, &mainbaron, 3, &st_armor, PatchINum);
   widgets.push_back(h);
 
 

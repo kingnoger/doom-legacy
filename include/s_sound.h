@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/04/19 17:38:47  smite-meister
+// SNDSEQ support, tools, linedef system...
+//
 // Revision 1.6  2003/04/14 08:58:31  smite-meister
 // Hexen maps load.
 //
@@ -119,9 +122,17 @@ struct musicinfo_t
 // sounds originating from mappoint_t's. A bit clumsy but works.
 struct soundsource_t
 {
-  fixed_t     x, y, z;
-  mappoint_t *mpoint; // either this
-  Actor      *origin; // or this must be NULL
+  fixed_t x, y, z;
+  fixed_t vx, vy, vz;
+  bool     isactor; // is origin an Actor (or a mappoint_t)?
+  union
+  { // the sound origin
+    mappoint_t *mpt;
+    Actor      *act;
+  };
+
+public:
+  void Update();
 };
 
 
@@ -153,13 +164,19 @@ struct channel_t
   sounditem_t *si;
 
   bool playing;
+  soundsource_t source;  // origin of sound (or NULL)
+
+public:
+  int Adjust(Actor *listener);
 };
 
+/*
 // 3D sound channel
 struct channel3D_t : public channel_t
 {
   soundsource_t source;  // origin of sound
 };
+*/
 
 class SoundSystem
 {
@@ -168,7 +185,7 @@ private:
 
   // the set of channels available
   vector<channel_t>   channels; // static stereo or mono sounds
-  vector<channel3D_t> channel3Ds; // dynamic 3D positional sounds
+  //vector<channel3D_t> channel3Ds; // dynamic 3D positional sounds
 
   int soundvolume;
 
@@ -183,13 +200,10 @@ private:
   // these are only used internally, user can change them using consvars
   void SetSoundVolume(int volume);
   void SetMusicVolume(int volume);
-  void ResetChannels(int stereo, int dynamic);
+  void ResetChannels(int num);
 
   int   GetChannel(int pri);
-  int Get3DChannel(int pri);
-
-  void StopChannel(int cnum);
-  void Stop3DChannel(int cnum);
+  //int Get3DChannel(int pri);
 
 public:
   SoundSystem();
@@ -199,12 +213,16 @@ public:
   // --------- sound
 
   // normal mono/stereo sound
-  void StartAmbSound(const char *name, int volume = 255, int separation = 128, int pitch = 128, int pri = 64);
+  int StartAmbSound(const char *name, float volume = 1.0, int separation = 128, int pitch = 128, int pri = 64);
   // positional 3D sound
-  void Start3DSound(const char *name, soundsource_t *source, int volume = 255, int pitch = 128, int pri = 64);
+  int Start3DSound(const char *name, soundsource_t *source, float volume = 1.0, int pitch = 128, int pri = 64);
 
   void Stop3DSounds();
   void Stop3DSound(void *origin);
+
+  void StopChannel(unsigned cnum);
+  //void Stop3DChannel(int cnum);
+  bool ChannelPlaying(unsigned cnum);
 
   // --------- music
   void PauseMusic();
@@ -228,9 +246,9 @@ int S_GetSoundID(const char *tag);
 // wrappers
 // Start sound for thing at <origin>
 //  using <sound_id> from sounds.h
-void S_StartAmbSound(int sfx_id, int volume = 255);
-void S_StartSound(mappoint_t *origin, int sfx_id, int volume = 255);
-void S_StartSound(Actor *origin, int sfx_id, int volume = 255);
+int S_StartAmbSound(int sfx_id, float volume = 1.0);
+int S_StartSound(mappoint_t *origin, int sfx_id, float volume = 1.0);
+int S_StartSound(Actor *origin, int sfx_id, float volume = 1.0);
 
 // for old Doom/Heretic musics. See sounds.h.
 bool S_StartMusic(int music_id, bool looping = false);

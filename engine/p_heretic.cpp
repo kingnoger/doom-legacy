@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/04/19 17:38:47  smite-meister
+// SNDSEQ support, tools, linedef system...
+//
 // Revision 1.10  2003/04/14 08:58:26  smite-meister
 // Hexen maps load.
 //
@@ -284,11 +287,18 @@ void DoomPatchEngine()
 {
   Intermission::s_count = sfx_pistol;
   ceiling_t::ceilmovesound = sfx_stnmov;
-  vldoor_t::doorclosesound = sfx_dorcls;
+
+  vdoor_t::s_open = sfx_doropn;
+  vdoor_t::s_bopen = sfx_bdopn;
+  vdoor_t::s_close = sfx_dorcls;
+  vdoor_t::s_bclose = sfx_bdcls;
+
   button_t::buttonsound = sfx_swtchn;
   game.inventory = false;
 
   item_pickup_sound = sfx_itemup;
+
+  sprnames[SPR_BLUD] = "BLUD";
 }
 
 void HexenPatchEngine()
@@ -296,7 +306,8 @@ void HexenPatchEngine()
   // FIXME sounds
   Intermission::s_count = SFX_SWITCH1;
   ceiling_t::ceilmovesound = SFX_SWITCH1;
-  vldoor_t::doorclosesound = SFX_SWITCH1;
+  vdoor_t::s_open = vdoor_t::s_bopen = SFX_SWITCH1;
+  vdoor_t::s_close = vdoor_t::s_bclose = SFX_SWITCH1;
   button_t::buttonsound = SFX_SWITCH1;
   game.inventory = true;
 
@@ -310,7 +321,10 @@ void HereticPatchEngine()
 {
   Intermission::s_count = sfx_keyup;
   ceiling_t::ceilmovesound = sfx_dormov;
-  vldoor_t::doorclosesound = sfx_doropn;
+  // these sounds don't really work, startsound and stopsound would be better. TODO sequences...
+  vdoor_t::s_open = vdoor_t::s_bopen = sfx_hdoropn;
+  vdoor_t::s_close = vdoor_t::s_bclose = sfx_hdorcls;
+
   button_t::buttonsound = sfx_switch;
   game.inventory = true;
 

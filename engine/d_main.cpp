@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2003/04/19 17:38:46  smite-meister
+// SNDSEQ support, tools, linedef system...
+//
 // Revision 1.14  2003/04/05 12:20:00  smite-meister
 // Makefiles fixed
 //
@@ -583,13 +586,13 @@ void D_Display()
 	  char s[50];
 	  Net_GetNetStat();
 	  sprintf(s,"get %d b/s",getbps);
-	  V_DrawString(BASEVIDWIDTH-V_StringWidth (s),BASEVIDHEIGHT-ST_HEIGHT-40, V_WHITEMAP, s);
+	  V_DrawString(BASEVIDWIDTH-V_StringWidth (s),165-40, V_WHITEMAP, s);
 	  sprintf(s,"send %d b/s",sendbps);
-	  V_DrawString(BASEVIDWIDTH-V_StringWidth (s),BASEVIDHEIGHT-ST_HEIGHT-30, V_WHITEMAP, s);
+	  V_DrawString(BASEVIDWIDTH-V_StringWidth (s),165-30, V_WHITEMAP, s);
 	  sprintf(s,"GameMiss %.2f%%",gamelostpercent);
-	  V_DrawString(BASEVIDWIDTH-V_StringWidth (s),BASEVIDHEIGHT-ST_HEIGHT-20, V_WHITEMAP, s);
+	  V_DrawString(BASEVIDWIDTH-V_StringWidth (s),165-20, V_WHITEMAP, s);
 	  sprintf(s,"SysMiss %.2f%%",lostpercent);
-	  V_DrawString(BASEVIDWIDTH-V_StringWidth (s),BASEVIDHEIGHT-ST_HEIGHT-10, V_WHITEMAP, s);
+	  V_DrawString(BASEVIDWIDTH-V_StringWidth (s),165-10, V_WHITEMAP, s);
         }
 
 #ifdef TILTVIEW

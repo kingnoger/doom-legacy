@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2003/04/19 17:38:47  smite-meister
+// SNDSEQ support, tools, linedef system...
+//
 // Revision 1.13  2003/04/14 08:58:27  smite-meister
 // Hexen maps load.
 //
@@ -663,9 +666,9 @@ void Map::LoadThings(int lump)
 	  high = MT_HERETIC_END;
 
 	  // Ambient sound sequences
-	  if (ednum >= 1200 && ednum < 1300)
+	  if (ednum >= 1200 && ednum < 1210)
 	    {
-	      AddAmbientSfx(ednum - 1200);
+	      AmbientSeqs.push_back(SoundSeqs[ednum - 1200]);
 	      continue;
 	    }
 
@@ -792,8 +795,7 @@ void Map::LoadLineDefs(int lump)
 	  ld->flags = SHORT(mld->flags);
 	  ld->special = SHORT(mld->special);
 	  ld->tag = SHORT(mld->tag);
-	  for (j=0; j<5; j++)
-	    ld->args[j] = 0;
+	  //for (j=0; j<5; j++) ld->args[j] = 0;
 
 	  v1 = ld->v1 = &vertexes[SHORT(mld->v1)];
 	  v2 = ld->v2 = &vertexes[SHORT(mld->v2)];
@@ -1372,6 +1374,7 @@ bool Map::Setup(tic_t start)
     {
       hexen_format = true;
       S_Read_SNDINFO(fc.GetNumForName("SNDINFO"));
+      S_Read_SNDSEQ(fc.GetNumForName("SNDSEQ"));
     }
   else
     hexen_format = false;
@@ -1408,6 +1411,10 @@ bool Map::Setup(tic_t start)
   LoadLineDefs (lumpnum+ML_LINEDEFS);
   LoadSideDefs2(lumpnum+ML_SIDEDEFS);
   LoadLineDefs2();
+  /*
+  if (!hexen_format)
+    ConvertLineDefs(); // Doom => Hexen
+  */
   LoadSubsectors (lumpnum+ML_SSECTORS);
   LoadNodes (lumpnum+ML_NODES);
   LoadSegs (lumpnum+ML_SEGS);
@@ -1429,7 +1436,7 @@ bool Map::Setup(tic_t start)
     }
 #endif
 
-  InitAmbientSound();
+  //InitAmbientSound();
   LoadThings(lumpnum + ML_THINGS);
   PlaceWeapons(); // Heretic mace
 
@@ -1456,4 +1463,53 @@ bool Map::Setup(tic_t start)
 
   //CONS_Printf("%d vertexs %d segs %d subsector\n",numvertexes,numsegs,numsubsectors);
   return true;
+}
+
+
+// does the Doom => Hexen linedef type conversion
+void Map::ConvertLineDefs()
+{
+  // we use a pregenerated binary lookup table in legacy.wad
+
+  int lump;
+  if (game.mode == gm_heretic)
+    lump = fc.GetNumForName("XHERETIC"); // TODO Heretic table...
+  else
+    lump = fc.GetNumForName("XDOOM");
+
+  xtable_t *p, *xt = (xtable_t *)fc.CacheLumpNum(lump, PU_CACHE);
+  int n = fc.LumpLength(lump) / sizeof(xtable_t);
+
+  int i, j, trig;
+  line_t *ld = lines;
+  for (i=0; i<numlines; i++, ld++)
+    {
+      if (ld->special < n)
+	{
+	  bool passuse = ld->flags & ML_PASSUSE;
+	  bool alltrigger = ld->flags & ML_ALLTRIGGER;
+	  ld->flags &= 0x1ff; // only basic Doom flags are kept
+	  
+	  p = &xt[ld->special];
+	  ld->special = p->type;
+	  for (j=0; j<5; j++)
+	    ld->args[j] = p->args[j];
+	  trig = p->trigger;
+
+	  if (ld->args[0] == 255)
+	    ld->args[0] = ld->tag; // or we could just use 'tag' in the EV functions?
+
+	  // time to put the flags back
+	  ld->flags |= (trig & 0x0f) << (ML_SPAC_SHIFT-1); // activation and repeat
+	  
+	  if (passuse && (GET_SPAC(ld->flags) == SPAC_USE))
+	    {
+	      ld->flags &= ~ML_SPAC_MASK;
+	      ld->flags |= SPAC_PASSUSE << ML_SPAC_SHIFT;
+	    }
+
+	  if (trig & T_ALLOWMONSTER || alltrigger)
+	    ld->flags |= ML_MONSTERS_CAN_ACTIVATE;
+	}
+    }
 }

@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.12  2003/04/19 17:38:47  smite-meister
+// SNDSEQ support, tools, linedef system...
+//
 // Revision 1.11  2003/04/14 08:58:30  smite-meister
 // Hexen maps load.
 //
@@ -54,6 +57,7 @@
 #include <list>
 #include <map>
 
+#include "doomdef.h"
 #include "doomtype.h"
 #include "g_think.h"
 #include "m_fixed.h"
@@ -198,6 +202,13 @@ public:
 #define MAX_DM_STARTS 32
   vector<mapthing_t *> dmstarts;
 
+  //------------ Sound sequences ------------
+
+  vector<struct sndseq_t*>  SoundSeqs;
+  list<class ActiveSndSeq*> ActiveSeqs;
+  vector<sndseq_t*>         AmbientSeqs;
+  ActiveSndSeq             *ActiveAmbientSeq;
+
   //------------------------------------
   // TODO: from this line on it's badly designed stuff to be fixed someday
   int BossDeathKey;  // bit flags to see which bosses end the map when killed.
@@ -207,10 +218,6 @@ public:
 
   vector<mapthing_t *> BossSpots;
   vector<mapthing_t *> MaceSpots;
-
-  vector<int *> AmbientSounds;
-  int* AmbSfxPtr;
-  int  AmbSfxTics;
 
 public:
   // constructor and destructor
@@ -276,6 +283,7 @@ public:
   void LoadThings(int lump);
   void LoadLineDefs(int lump);
   void LoadLineDefs2();
+  void ConvertLineDefs();
   void LoadSideDefs(int lump);
   void LoadSideDefs2(int lump);
   void LoadBlockMap(int lump);
@@ -320,7 +328,7 @@ public:
   void AddFakeFloor(sector_t* sec, sector_t* sec2, line_t* master, int flags);
 
   bool ActivateLine(line_t *line, Actor *thing, int side, int activationType);
-  bool ExecuteLineSpecial(int special, byte *args, line_t *line, int side, Actor *mo);
+  bool ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int side, Actor *mo);
 
   void ActivateCrossedLine(line_t *line, int side, Actor *thing);
   void ShootSpecialLine(Actor *thing, line_t *line);
@@ -375,8 +383,10 @@ public:
   // in p_doors.cpp
   void EV_OpenDoor(int sectag, int speed, int wait_time);
   void EV_CloseDoor(int sectag, int speed);
-  int  EV_DoDoor(line_t* line, vldoor_e type, fixed_t speed);
-  int  EV_DoLockedDoor(line_t* line, vldoor_e type, PlayerPawn *p, fixed_t speed);
+  //int  EV_DoDoor(line_t *line, byte *args, vldoor_e type);
+  int  EV_DoDoor(line_t* line, byte type, fixed_t speed = VDOORSPEED, int delay = VDOORWAIT);
+  int  EV_DoLockedDoor(line_t* line, PlayerPawn *p, byte type, byte lock,
+		       fixed_t speed = VDOORSPEED, int delay = VDOORWAIT);
   int  EV_VerticalDoor(line_t* line, Actor *p);
   void SpawnDoorCloseIn30 (sector_t* sec);
   void SpawnDoorRaiseIn5Mins(sector_t* sec);
@@ -390,10 +400,13 @@ public:
   result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest,
 		       bool crush, int floorOrCeiling, int direction);
 
-  // in s_amb.cpp
-  void InitAmbientSound();
-  void AddAmbientSfx(int sequence);
-  void AmbientSound();
+  // in s_sndseq.cpp
+  void S_Read_SNDSEQ(int lump);
+  bool SN_StartSequence(mappoint_t *m, unsigned seq);
+  bool SN_StartSequence(Actor *a, unsigned seq);
+  bool SN_StartSequenceName(Actor *m, const char *name);
+  bool SN_StopSequence(void *origin);
+  void UpdateSoundSequences();
 
   // elsewhere, usually former R_* functions
   void PrecacheMap();
@@ -448,24 +461,5 @@ protected:
 };
 
 
-/*
-struct mapdata_t
-{
-    int             numvertexes;
-    vertex_t*       vertexes;
-    int             numsegs;
-    seg_t*          segs;
-    int             numsectors;
-    sector_t*       sectors;
-    int             numsubsectors;
-    subsector_t*    subsectors;
-    int             numnodes;
-    node_t*         nodes;
-    int             numlines;
-    line_t*         lines;
-    int             numsides;
-    side_t*         sides;
-};
-*/
 
 #endif

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/04/19 17:38:46  smite-meister
+// SNDSEQ support, tools, linedef system...
+//
 // Revision 1.2  2003/04/04 00:01:53  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -871,11 +874,6 @@ char *text[NUMTEXT] = {
   "DOOM Shareware Startup",
 
   // Hexen strings
-  "MESH ARMOR",
-  "FALCON SHIELD",
-  "PLATINUM HELMET",
-  "AMULET OF WARDING",
-  /*
   "BLUE MANA",
   "GREEN MANA",
   "COMBINED MANA",
@@ -893,7 +891,7 @@ char *text[NUMTEXT] = {
   "SWAMP KEY",
   "CASTLE KEY",
 
-// Artifacts
+  // Artifacts
   "ICON OF THE DEFENDER",
   "QUARTZ FLASK",
   "MYSTIC URN",
@@ -951,5 +949,4 @@ char *text[NUMTEXT] = {
   "SEGMENT OF QUIETUS",
   "SEGMENT OF WRAITHVERGE",
   "SEGMENT OF BLOODSCOURGE"
-*/
 };

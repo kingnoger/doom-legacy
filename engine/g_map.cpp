@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.15  2003/04/19 17:38:46  smite-meister
+// SNDSEQ support, tools, linedef system...
+//
 // Revision 1.14  2003/04/14 08:58:25  smite-meister
 // Hexen maps load.
 //
@@ -77,6 +80,8 @@ Map::Map(const string & mname)
   info = NULL;
   levelscript = NULL;
   runningscripts = NULL;
+
+  ActiveAmbientSeq = NULL;
 };
 
 // destructor
@@ -439,6 +444,7 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
       p->x = nx;
       p->y = ny;
       p->z = nz;
+      p->px = p->py = p->pz = 0;
       CONS_Printf("--- old pawn, health == %d\n", p->health);
     }
 
@@ -883,70 +889,6 @@ void Map::BossDeath(const DActor *mo)
     // wrong boss type for this level
     return;
  
-  /*
-    if (game.mode == commercial)
-    {
-    if (gamemap != 7 && gamemap!=32)
-    return;
-
-    if ((mo->type != MT_FATSO)
-    && (mo->type != MT_BABY)
-    && (mo->type != MT_KEEN))
-    return;
-    } else {
-    switch(gameepisode)
-    {
-    case 1:
-    if (gamemap != 8)
-    return;
-
-    if (mo->type != MT_BRUISER)
-    return;
-    break;
-
-    case 2:
-    if (gamemap != 8)
-    return;
-
-    if (mo->type != MT_CYBORG)
-    return;
-    break;
-
-    case 3:
-    if (gamemap != 8)
-    return;
-
-    if (mo->type != MT_SPIDER)
-    return;
-
-    break;
-
-    case 4:
-    switch(gamemap)
-    {
-    case 6:
-    if (mo->type != MT_CYBORG)
-    return;
-    break;
-
-    case 8:
-    if (mo->type != MT_SPIDER)
-    return;
-    break;
-
-    default:
-    return;
-    break;
-    }
-    break;
-
-    default:
-    if (gamemap != 8)
-    return;
-    break;
-    }
-    }
-  */
   int      i, n = players.size();
 
   // make sure there is a player alive for victory
@@ -1001,7 +943,7 @@ void Map::BossDeath(const DActor *mo)
 	{
 	  // used in ult. Doom, map 6
 	  junk.tag = 666;
-	  EV_DoDoor (&junk, blazeOpen,4*VDOORSPEED);
+	  EV_DoDoor (&junk, vdoor_t::Open | vdoor_t::blazing,4*VDOORSPEED);
 	  return;
 	}
 
@@ -1028,7 +970,7 @@ void Map::BossDeath(const DActor *mo)
 
     case MT_KEEN:
       junk.tag = 666;
-      EV_DoDoor(&junk,dooropen,VDOORSPEED);
+      EV_DoDoor(&junk,vdoor_t::Open,VDOORSPEED);
       return;
 
     case MT_BOSSBRAIN:
@@ -1052,61 +994,8 @@ void Map::BossDeath(const DActor *mo)
       return;
     }
 
-  if (cv_allowexitlevel.value) ExitMap(0);
-
-  /*
-    if (game.mode == commercial)
-    {
-    if (gamemap == 7)
-    {
-    if (mo->type == MT_FATSO)
-    {
-    junk.tag = 666;
-    EV_DoFloor(&junk,lowerFloorToLowest);
-    return;
-    }
-
-    if (mo->type == MT_BABY)
-    {
-    junk.tag = 667;
-    EV_DoFloor(&junk,raiseToTexture);
-    return;
-    }
-    }
-    else if(mo->type == MT_KEEN)
-    {
-    junk.tag = 666;
-    EV_DoDoor(&junk,dooropen,VDOORSPEED);
-    return;
-    }
-    } else {
-    switch(gameepisode)
-    {
-    case 1:
-    junk.tag = 666;
-    EV_DoFloor (&junk, lowerFloorToLowest);
-    return;
-    break;
-
-    case 4:
-    switch(gamemap)
-    {
-    case 6:
-    junk.tag = 666;
-    EV_DoDoor (&junk, blazeOpen,4*VDOORSPEED);
-    return;
-    break;
-
-    case 8:
-    junk.tag = 666;
-    EV_DoFloor (&junk, lowerFloorToLowest);
-    return;
-    break;
-    }
-    }
-    }
-  */
-
+  if (cv_allowexitlevel.value)
+    ExitMap(0);
 }
 
 //

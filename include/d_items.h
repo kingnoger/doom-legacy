@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/04/19 17:38:47  smite-meister
+// SNDSEQ support, tools, linedef system...
+//
 // Revision 1.7  2003/04/04 00:01:57  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -90,25 +93,28 @@
 //
 typedef enum
 {
-  // Doom and Heretic keys are merged
-  it_bluecard   = 0x0001,
-  it_yellowcard = 0x0002,
-  it_redcard    = 0x0004,
-  it_blueskull  = 0x0008,
-  it_yellowskull= 0x0010,
-  it_redskull   = 0x0020,
   // Hexen
-  it_key_1 = 0x0040,
-  it_key_2 = 0x0080,
-  it_key_3 = 0x0100,
-  it_key_4 = 0x0200,
-  it_key_5 = 0x0400,
-  it_key_6 = 0x0800,
-  it_key_7 = 0x1000,
-  it_key_8 = 0x2000,
-  it_key_9 = 0x4000,
-  it_key_A = 0x8000,
-  it_key_B = 0x10000,
+  it_key_1 = 0x0001,
+  it_key_2 = 0x0002,
+  it_key_3 = 0x0004,
+  it_key_4 = 0x0008,
+  it_key_5 = 0x0010,
+  it_key_6 = 0x0020,
+  it_key_7 = 0x0040,
+  it_key_8 = 0x0080,
+  it_key_9 = 0x0100,
+  it_key_A = 0x0200,
+  it_key_B = 0x0400,
+
+  // Doom and Heretic keys are merged
+  it_bluecard   = 0x0800,
+  it_yellowcard = 0x1000,
+  it_redcard    = 0x2000,
+  it_blueskull  = 0x4000,
+  it_yellowskull= 0x8000,
+  it_redskull   = 0x10000,
+
+  NUMKEYS = 17,
   it_allkeys = 0x1ffff,
 } card_t;
 

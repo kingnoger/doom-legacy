@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2003/04/19 17:38:47  smite-meister
+// SNDSEQ support, tools, linedef system...
+//
 // Revision 1.1  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -40,6 +43,7 @@
 #include "r_main.h"
 #include "m_bbox.h"
 #include "tables.h"
+#include "s_sndseq.h"
 #include "z_zone.h"
 
 #define PO_MAXPOLYSEGS 64
@@ -57,7 +61,7 @@ struct polyobj_t
   int bbox[4];
   int validcount;
   bool crush; 			// should the polyobj attempt to crush mobjs?
-  int seqType;
+  unsigned seqType;
   //fixed_t size; // polyobj size (area of POLY_AREAUNIT == size of FRACUNIT)
   polyobject_t *specialdata; // pointer a thinker, if the poly is moving
 };
@@ -74,12 +78,6 @@ struct polyblock_t
 static void ThrustMobj(Actor *mobj, seg_t *seg, polyobj_t *po);
 static void UpdateSegBBox(seg_t *seg);
 static void RotatePt(int an, fixed_t *x, fixed_t *y, fixed_t startSpotX, fixed_t startSpotY);
-
-// FIXME add sound sequences
-#define SEQ_DOOR_STONE 1
-#define SEQTYPE_NUMSEQ 10000
-static void SN_StartSequence(mappoint_t *p, int sequence) {}
-static void SN_StopSequence(mappoint_t *p) {}
 
 
 //==========================================================================
@@ -131,7 +129,7 @@ void polyobject_t::Think()
 	    {
 	      poly->specialdata = NULL;
 	    }
-	  SN_StopSequence(&poly->startSpot);
+	  mp->SN_StopSequence(&poly->startSpot);
 	  mp->PolyobjFinished(poly->tag);
 	  mp->RemoveThinker(this);
 	}
@@ -167,7 +165,7 @@ bool Map::EV_RotatePoly(line_t *line, byte *args, int direction, bool overRide)
   AddThinker(p);
   poly->specialdata = p;
 
-  SN_StartSequence(&poly->startSpot, SEQ_DOOR_STONE + poly->seqType);
+  SN_StartSequence(&poly->startSpot, SEQ_DOOR + poly->seqType);
 	
   int mirror;
   while (mirror = GetPolyobjMirror(polynum))
@@ -189,7 +187,7 @@ bool Map::EV_RotatePoly(line_t *line, byte *args, int direction, bool overRide)
 	I_Error("EV_RotatePoly:  Invalid polyobj num: %d\n", polynum);
 
       polynum = mirror;
-      SN_StartSequence(&poly->startSpot, SEQ_DOOR_STONE + poly->seqType);
+      SN_StartSequence(&poly->startSpot, SEQ_DOOR + poly->seqType);
     }
   return true;
 }
@@ -239,7 +237,7 @@ void polymove_t::Think()
 	    {
 	      poly->specialdata = NULL;
 	    }
-	  SN_StopSequence(&poly->startSpot);
+	  mp->SN_StopSequence(&poly->startSpot);
 	  mp->PolyobjFinished(poly->tag);
 	  mp->RemoveThinker(this);
 	}
@@ -279,7 +277,7 @@ bool Map::EV_MovePoly(line_t *line, byte *args, bool timesEight, bool overRide)
   polymove_t *p = new polymove_t(polynum, args, timesEight, mirrored);
   AddThinker(p);
   poly->specialdata = p;
-  SN_StartSequence(&poly->startSpot, SEQ_DOOR_STONE+poly->seqType);
+  SN_StartSequence(&poly->startSpot, SEQ_DOOR + poly->seqType);
 
   while(mirror = GetPolyobjMirror(polynum))
     {
@@ -295,7 +293,7 @@ bool Map::EV_MovePoly(line_t *line, byte *args, bool timesEight, bool overRide)
       poly->specialdata = p;
 
       polynum = mirror;
-      SN_StartSequence(&poly->startSpot, SEQ_DOOR_STONE+poly->seqType);
+      SN_StartSequence(&poly->startSpot, SEQ_DOOR + poly->seqType);
     }
   return true;
 }
@@ -318,8 +316,7 @@ void polydoor_t::Think()
       if(!--tics)
 	{
 	  poly = mp->GetPolyobj(polyobj);
-	  SN_StartSequence(&poly->startSpot, SEQ_DOOR_STONE+
-			   poly->seqType);
+	  mp->SN_StartSequence(&poly->startSpot, SEQ_DOOR + poly->seqType);
 	}
       return;
     }
@@ -333,7 +330,7 @@ void polydoor_t::Think()
 	  if(dist <= 0)
 	    {
 	      poly = mp->GetPolyobj(polyobj);
-	      SN_StopSequence(&poly->startSpot);
+	      mp->SN_StopSequence(&poly->startSpot);
 	      if(!close)
 		{
 		  dist = totalDist;
@@ -369,8 +366,7 @@ void polydoor_t::Think()
 	      xs = -xs;
 	      ys = -ys;
 	      close = false;
-	      SN_StartSequence(&poly->startSpot,
-			       SEQ_DOOR_STONE+poly->seqType);
+	      mp->SN_StartSequence(&poly->startSpot, SEQ_DOOR + poly->seqType);
 	    }
 	}
       break;
@@ -386,7 +382,7 @@ void polydoor_t::Think()
 	  if(dist <= 0)
 	    {
 	      poly = mp->GetPolyobj(polyobj);
-	      SN_StopSequence(&poly->startSpot);
+	      mp->SN_StopSequence(&poly->startSpot);
 	      if(!close)
 		{
 		  dist = totalDist;
@@ -417,8 +413,7 @@ void polydoor_t::Think()
 	      dist = totalDist-dist;
 	      speed = -speed;
 	      close = false;
-	      SN_StartSequence(&poly->startSpot,
-			       SEQ_DOOR_STONE+poly->seqType);
+	      mp->SN_StartSequence(&poly->startSpot, SEQ_DOOR + poly->seqType);
 	    }
 	}			
       break;
@@ -498,7 +493,7 @@ bool Map::EV_OpenPolyDoor(line_t *line, byte *args, podoortype_e type)
   poly->specialdata = pd;
 
   if (type)
-    SN_StartSequence(&poly->startSpot, SEQ_DOOR_STONE + poly->seqType);
+    SN_StartSequence(&poly->startSpot, SEQ_DOOR + poly->seqType);
 
   while (mirror = GetPolyobjMirror(polynum))
     {
@@ -513,7 +508,7 @@ bool Map::EV_OpenPolyDoor(line_t *line, byte *args, podoortype_e type)
       poly->specialdata = pd;
 
       if (type)
-        SN_StartSequence(&poly->startSpot, SEQ_DOOR_STONE + poly->seqType);
+        SN_StartSequence(&poly->startSpot, SEQ_DOOR + poly->seqType);
 
       polynum = mirror;
     }
@@ -1173,8 +1168,11 @@ void Map::SpawnPolyobj(int index, int tag, bool crush)
 	  polyobjs[index].tag = tag;
 	  polyobjs[index].seqType = segs[i].linedef->args[2];
 
-	  if (polyobjs[index].seqType < 0 || polyobjs[index].seqType >= SEQTYPE_NUMSEQ)
+	  /*
+	    // not necessary
+	  if (polyobjs[index].seqType >= SEQTYPE_NUMSEQ)
 	    polyobjs[index].seqType = 0;
+	  */
 
 	  break;
 	}

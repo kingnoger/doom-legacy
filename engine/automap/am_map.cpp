@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/04/19 17:38:47  smite-meister
+// SNDSEQ support, tools, linedef system...
+//
 // Revision 1.4  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -912,7 +915,7 @@ void AutoMap::clearFB(int color)
       static int mapxstart;
       static int mapystart;
       byte *dest = vid.screens[0],*src;
-#define MAPLUMPHEIGHT (200-SBARHEIGHT)
+#define MAPLUMPHEIGHT (vid.height - hud.stbarheight)
         
       if(followplayer)
         {
@@ -1491,8 +1494,8 @@ void AutoMap::Drawer()
   {
     int y;
     const char *mapname = mp->info->name.c_str();
-    y = BASEVIDHEIGHT-(game.mode == gm_heretic ? SBARHEIGHT : ST_HEIGHT)-1;
-    V_DrawString(20, y - V_StringHeight(mapname), 0, mapname);
+    y = vid.height - hud.stbarheight - 1;
+    V_DrawString(20, y - V_StringHeight(mapname), V_NOSCALESTART, mapname);
   }
 
   CONS_Printf("AM::Drawer n\n");

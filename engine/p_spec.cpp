@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/04/19 17:38:47  smite-meister
+// SNDSEQ support, tools, linedef system...
+//
 // Revision 1.8  2003/04/14 08:58:27  smite-meister
 // Hexen maps load.
 //
@@ -254,7 +257,7 @@ void P_InitPicAnims ()
   lastanim->istexture = -1;
 
   // FIXME animdefs is used even after this!
-  if(animdefs != harddefs)
+  if (animdefs != harddefs && animdefs != nulldefs)
     Z_ChangeTag (animdefs,PU_CACHE);
 }
 
@@ -1043,34 +1046,161 @@ bool P_WasSecret(sector_t *sec)
 //
 //============================================================================
 
-// New Hexen functions. We'll probably keep the three current activation functions
-// for Boom generalized linedef support, this is just for reference
+// New Hexen functions.
 // was P_ActivateLine
-bool Map::ActivateLine(line_t *line, Actor *thing, int side, int activationType)
+bool Map::ActivateLine(line_t *line, Actor *thing, int side, int atype)
 {
+  // Things that should NOT trigger specials...
+  if (thing->flags & MF_NOTRIGGER)
+    return false;
+
+  // Err...
+  // Use the back sides of VERY SPECIAL lines...
   /*
-  int activation = GET_SPAC(line->flags);
-  if (activation != activationType)
+  if (use && side)
+    return false;
+  */
+
+  unsigned spec = unsigned(line->special);
+  bool p = (thing->Type() == Thinker::tt_ppawn);
+  bool forceuse = false; // FIXME move alltrigger flag (line->flags & ML_ALLTRIGGER) && !(thing->flags & MF_NOSPLASH);
+
+  // Boom generalized types first
+  if (boomsupport && spec >= GenCrusherBase)
+    {
+      // consistency check
+      switch (spec & 6) // bits 1 and 2 of the trigger field ("once")
+	{
+	case WalkOnce:
+	  if (!(atype == SPAC_CROSS || atype == SPAC_MCROSS || atype == SPAC_PCROSS))
+	    return false;
+	  break;
+
+	case SwitchOnce:
+	  if (atype != SPAC_USE)
+	    return false;
+	  break;
+
+	case GunOnce:
+	  if (atype != SPAC_IMPACT)
+	    return false;
+	  break;
+
+	case PushOnce: // like opening a door, means using it
+	  if (atype != SPAC_USE) // yeah. SPAC_USE, not SPAC_PUSH.
+	    return false;
+	  break;
+
+	default:
+	  I_Error("Boom generalized type logic breakdown!\n");
+	}
+
+      // pointer to line function is NULL by default, set non-null if
+      // line special is walkover generalized linedef type
+      int (Map::*linefunc)(line_t *line) = NULL;
+  
+      // check each range of generalized linedefs
+      if (spec >= GenFloorBase)
+	{
+	  if (!p && ((spec & FloorChange) || !(spec & FloorModel)) && !forceuse)
+	    return false;   // FloorModel is "Allow Monsters" if FloorChange is 0
+	  linefunc = &Map::EV_DoGenFloor;
+	}
+      else if (spec >= GenCeilingBase)
+	{
+	  if (!p && ((spec & CeilingChange) || !(spec & CeilingModel)) && !forceuse)
+	    return false;   // CeilingModel is "Allow Monsters" if CeilingChange is 0
+	  linefunc = &Map::EV_DoGenCeiling;
+	}
+      else if (spec >= GenDoorBase)
+	{
+	  if (!p && ((!(spec & DoorMonster) && !forceuse) || (line->flags & ML_SECRET)))
+	    // monsters disallowed from this door
+	    // they can't open secret doors either
+	    return false;
+	  linefunc = &Map::EV_DoGenDoor;
+	}
+      else if (spec >= GenLockedBase)
+	{
+	  if (!p || !((PlayerPawn *)thing)->CanUnlockGenDoor(line))
+	    return false;  // monsters disallowed from unlocking doors, players need key
+	  linefunc = &Map::EV_DoGenLockedDoor;
+	}
+      else if (spec >= GenLiftBase)
+	{
+	  if (!p && !(spec & LiftMonster) && !forceuse)
+	    return false; // monsters disallowed
+	  linefunc = &Map::EV_DoGenLift;
+	}
+      else if (spec >= GenStairsBase)
+	{
+	  if (!p && !(spec & StairMonster) && !forceuse)
+	    return false; // monsters disallowed
+	  linefunc = &Map::EV_DoGenStairs;
+	}
+      else // if (spec >= GenCrusherBase)
+	{
+	  if (!p && !(spec & CrusherMonster) && !forceuse)
+	    return false; // monsters disallowed
+	  linefunc = &Map::EV_DoGenCrusher;
+	}
+
+      if (!linefunc)
+	return false; // should not happen
+  
+      if (!line->tag)
+	if ((spec & 6) != 6) // "door" types can be used without a tag
+	  return false;
+
+      switch ((spec & TriggerType) >> TriggerTypeShift)
+	{
+	case WalkOnce:
+	case PushOnce:
+	  if ((this->*linefunc)(line))
+	    line->special = 0;  // clear special
+	  return true;
+
+	case WalkMany:
+	case PushMany:
+	  (this->*linefunc)(line);
+	  return true;
+
+	case SwitchOnce:
+	case GunOnce:
+	  if ((this->*linefunc)(line))
+	    ChangeSwitchTexture(line, 0);
+	  return true;
+
+	case SwitchMany:
+	case GunMany:
+	  if ((this->*linefunc)(line))
+	    ChangeSwitchTexture(line, 1);
+	  return true;
+
+	default:
+	  return false;
+	}
+    }
+  // Boom generalized types done
+
+  int act = GET_SPAC(line->flags);
+  if (act != atype)
     return false;
 
   // monsters can only activate the MCROSS activation type, but never open secret doors
-  bool p = (thing->Type() == Thinker::tt_ppawn);
   if (!p && !(thing->flags & MF_MISSILE))
-    if (activation != SPAC_MCROSS || line->flags & ML_SECRET)
+    if (act != SPAC_MCROSS || line->flags & ML_SECRET)
       return false;
 
   bool repeat = line->flags & ML_REPEAT_SPECIAL;
-  bool success = false;
-
-  success = ExecuteLineSpecial(line->special, line->args, line, side, thing);
+  bool success = ExecuteLineSpecial(spec, line->args, line, side, thing);
 
   if (!repeat && success)
     line->special = 0;    // clear the special on non-retriggerable lines
 
-  if ((activation == SPAC_USE || activation == SPAC_IMPACT) && success)
+  if ((act == SPAC_USE || act == SPAC_IMPACT) && success)
     ChangeSwitchTexture(line, repeat); // FIXME the function
 
-  */
   return true;
 }
 
@@ -1078,10 +1208,11 @@ bool Map::ActivateLine(line_t *line, Actor *thing, int side, int activationType)
 // P_ExecuteLineSpecial
 // Hexen linedefs
 //
-bool Map::ExecuteLineSpecial(int special, byte *args, line_t *line, int side, Actor *mo)
+bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int side, Actor *mo)
 {
   bool success = false;
-  /* FIXME
+
+  /*
   switch (special)
     {
     case 1: // Poly Start Line
@@ -1626,19 +1757,19 @@ void Map::ActivateCrossedLine(line_t *line, int side, Actor *thing)
       // All from here to RETRIGGERS.
     case 2:
       // Open Door
-      if(EV_DoDoor(line,dooropen,VDOORSPEED) || !boomsupport)
+      if(EV_DoDoor(line,vdoor_t::Open,VDOORSPEED) || !boomsupport)
 	line->special = 0;
       break;
 
     case 3:
       // Close Door
-      if(EV_DoDoor(line,doorclose,VDOORSPEED) || !boomsupport)
+      if(EV_DoDoor(line,vdoor_t::Close,VDOORSPEED) || !boomsupport)
 	line->special = 0;
       break;
 
     case 4:
       // Raise Door
-      if(EV_DoDoor(line,normalDoor,VDOORSPEED) || !boomsupport)
+      if(EV_DoDoor(line,vdoor_t::OwC,VDOORSPEED) || !boomsupport)
 	line->special = 0;
       break;
 
@@ -1680,7 +1811,7 @@ void Map::ActivateCrossedLine(line_t *line, int side, Actor *thing)
 
     case 16:
       // Close Door 30
-      if(EV_DoDoor(line,close30ThenOpen,VDOORSPEED) || !boomsupport)
+      if(EV_DoDoor(line,vdoor_t::CwO,VDOORSPEED, 30*35) || !boomsupport)
 	line->special = 0;
       break;
 
@@ -1811,19 +1942,19 @@ void Map::ActivateCrossedLine(line_t *line, int side, Actor *thing)
 
     case 108:
       // Blazing Door Raise (faster than TURBO!)
-      if(EV_DoDoor (line,blazeRaise,4*VDOORSPEED) || !boomsupport)
+      if(EV_DoDoor (line,vdoor_t::OwC | vdoor_t::blazing,4*VDOORSPEED) || !boomsupport)
 	line->special = 0;
       break;
 
     case 109:
       // Blazing Door Open (faster than TURBO!)
-      if(EV_DoDoor (line,blazeOpen,4*VDOORSPEED) || !boomsupport)
+      if(EV_DoDoor (line,vdoor_t::Open | vdoor_t::blazing,4*VDOORSPEED) || !boomsupport)
 	line->special = 0;
       break;
 
     case 100:
       if( game.mode == gm_heretic )
-	EV_DoDoor (line, normalDoor, VDOORSPEED * 3);
+	EV_DoDoor (line, vdoor_t::OwC, VDOORSPEED * 3);
       else
         {
           // Build Stairs Turbo 16
@@ -1834,7 +1965,7 @@ void Map::ActivateCrossedLine(line_t *line, int side, Actor *thing)
 
     case 110:
       // Blazing Door Close (faster than TURBO!)
-      if(EV_DoDoor (line,blazeClose,4*VDOORSPEED) || !boomsupport)
+      if(EV_DoDoor (line,vdoor_t::Close | vdoor_t::blazing,4*VDOORSPEED) || !boomsupport)
 	line->special = 0;
       break;
 
@@ -1919,12 +2050,12 @@ void Map::ActivateCrossedLine(line_t *line, int side, Actor *thing)
 
     case 75:
       // Close Door
-      EV_DoDoor(line,doorclose,VDOORSPEED);
+      EV_DoDoor(line,vdoor_t::Close,VDOORSPEED);
       break;
 
     case 76:
       // Close Door 30
-      EV_DoDoor(line,close30ThenOpen,VDOORSPEED);
+      EV_DoDoor(line,vdoor_t::CwO,VDOORSPEED, 30*35);
       break;
 
     case 77:
@@ -1964,7 +2095,7 @@ void Map::ActivateCrossedLine(line_t *line, int side, Actor *thing)
 
     case 86:
       // Open Door
-      EV_DoDoor(line,dooropen,VDOORSPEED);
+      EV_DoDoor(line,vdoor_t::Open,VDOORSPEED);
       break;
 
     case 87:
@@ -1984,7 +2115,7 @@ void Map::ActivateCrossedLine(line_t *line, int side, Actor *thing)
 
     case 90:
       // Raise Door
-      EV_DoDoor(line,normalDoor,VDOORSPEED);
+      EV_DoDoor(line,vdoor_t::OwC,VDOORSPEED);
       break;
 
     case 91:
@@ -2040,7 +2171,7 @@ void Map::ActivateCrossedLine(line_t *line, int side, Actor *thing)
         }
       else
 	// Blazing Door Raise (faster than TURBO!)
-	EV_DoDoor (line,blazeRaise,4*VDOORSPEED);
+	EV_DoDoor (line,vdoor_t::OwC | vdoor_t::blazing,4*VDOORSPEED);
       break;
 
     case 106:
@@ -2051,13 +2182,13 @@ void Map::ActivateCrossedLine(line_t *line, int side, Actor *thing)
         }
       else
 	// Blazing Door Open (faster than TURBO!)
-	EV_DoDoor (line,blazeOpen,4*VDOORSPEED);
+	EV_DoDoor (line,vdoor_t::Open | vdoor_t::blazing,4*VDOORSPEED);
       break;
 
     case 107:
       if( game.mode != gm_heretic ) // used for a switch !
 	// Blazing Door Close (faster than TURBO!)
-	EV_DoDoor (line,blazeClose,4*VDOORSPEED);
+	EV_DoDoor (line,vdoor_t::Close | vdoor_t::blazing,4*VDOORSPEED);
       break;
 
     case 120:
@@ -2481,7 +2612,7 @@ void Map::ShootSpecialLine(Actor *thing, line_t *line)
 
     case 46:
       // OPEN DOOR
-      if(EV_DoDoor(line,dooropen,VDOORSPEED) || !boomsupport)
+      if(EV_DoDoor(line,vdoor_t::Open,VDOORSPEED) || !boomsupport)
 	ChangeSwitchTexture(line,1);
       break;
 

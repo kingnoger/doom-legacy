@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/04/19 17:38:46  smite-meister
+// SNDSEQ support, tools, linedef system...
+//
 // Revision 1.10  2003/04/14 08:58:22  smite-meister
 // Hexen maps load.
 //
@@ -222,6 +225,26 @@ void soundcache_t::Free(cacheitem_t *r)
 
 
 
+void soundsource_t::Update()
+{
+  if (isactor)
+    {
+      x = act->x;
+      y = act->y;
+      z = act->z;
+      vx = act->px;
+      vy = act->py;
+      vz = act->pz;
+    }
+  else
+    {
+      x = mpt->x;
+      y = mpt->y;
+      z = mpt->z;
+    }
+}
+
+
 // returns a value in the range [0.0, 1.0]
 static float S_ObservedVolume(Actor *listener, soundsource_t *source)
 {
@@ -229,7 +252,7 @@ static float S_ObservedVolume(Actor *listener, soundsource_t *source)
     return 0;
 
   // special case, same source and listener, absolute volume
-  if (source->origin == listener)
+  if (source->act == listener)
     return 1.0f;
 
   // calculate the distance to sound origin
@@ -258,19 +281,22 @@ static float S_ObservedVolume(Actor *listener, soundsource_t *source)
 
 // Changes stereo-separation and pitch variables for a channel.
 // Otherwise, modifies parameters and returns sound volume.
-static int S_AdjustChannel(Actor *l, channel3D_t *c)
+int channel_t::Adjust(Actor *l)
 {
   if (!l)
     return 0;
 
-  soundsource_t &s = c->source;
+  if (!source.act)
+    return 0; // just in case
 
   // special case, same source and listener, absolute volume
-  if (s.origin == l)
-    return c->volume;
+  if (source.act == l)
+    return volume;
+
+  source.Update();
 
   // angle of source to listener
-  angle_t angle = R_PointToAngle2(l->x, l->y, s.x, s.y);
+  angle_t angle = R_PointToAngle2(l->x, l->y, source.x, source.y);
 
   if (angle > l->angle)
     angle -= l->angle;
@@ -296,8 +322,9 @@ static int S_AdjustChannel(Actor *l, channel3D_t *c)
     }
 #endif
 
-  c->osep = sep;
+  osep = sep;
 
+  opitch = pitch;
   // TODO Doppler effect (approximate)
   /*
   if (s.origin)
@@ -310,10 +337,10 @@ static int S_AdjustChannel(Actor *l, channel3D_t *c)
       float v_os = sqrt(dx*dx + dy*dy + dz*dz);
       float cos_th = 
       //  We need a vector class.
-      c->opitch = ...;
+      opitch = ...;
     }
   */
-  return c->ovol;
+  return ovol;
 }
 
 
@@ -337,7 +364,7 @@ void SoundSystem::Startup()
   I_StartupSound();
   I_InitMusic();
 
-  ResetChannels(8, 16);
+  ResetChannels(16);
 
   sc.SetDefaultItem("DSGLOOP"); // default sound
 
@@ -528,20 +555,20 @@ void SoundSystem::StopMusic()
 
 //--------------------------------------------
 // change number of sound channels
-void SoundSystem::ResetChannels(int stat, int dyn)
+void SoundSystem::ResetChannels(int tot)
 {
   int i, n = channels.size();
-  for (i=stat; i<n; i++)
+  for (i=tot; i<n; i++)
     StopChannel(i);
 
-  channels.resize(stat);
+  channels.resize(tot);
 
-  for (i=n; i<stat; i++)
+  for (i=n; i<tot; i++)
     {
       channels[i].si = NULL;
       channels[i].playing = false;
     }
-
+  /*
   n = channel3Ds.size();
   for (i=dyn; i<n; i++)
     Stop3DChannel(i);
@@ -553,6 +580,7 @@ void SoundSystem::ResetChannels(int stat, int dyn)
       channel3Ds[i].si = NULL;
       channel3Ds[i].playing = false;
     }
+  */
 }
 
 //--------------------------------------------
@@ -600,6 +628,7 @@ int SoundSystem::GetChannel(int pri)
 // was S_getChannel
 // Tries to make a 3D channel available.
 // If none available, returns -1.  Otherwise channel #.
+/*
 int SoundSystem::Get3DChannel(int pri)
 {
   // channel number to use
@@ -638,23 +667,35 @@ int SoundSystem::Get3DChannel(int pri)
   // i it is.
   return i;
 }
+*/
+//--------------------------------------------
+
+bool SoundSystem::ChannelPlaying(unsigned cnum)
+{
+  if (cnum >= channels.size())
+    return false;
+
+  return channels[cnum].playing;
+}
 
 //--------------------------------------------
 // Starts a normal mono(stereo) sound
-void SoundSystem::StartAmbSound(const char *name, int volume, int separation, int pitch, int pri)
+int SoundSystem::StartAmbSound(const char *name, float volume, int separation, int pitch, int pri)
 {
   if (nosound)
-    return;
+    return -1;
 
   // try to find a channel
   int i = GetChannel(pri);
   if (i == -1)
-    return;
+    return -1;
 
   channel_t *c = &channels[i];
+  c->source.isactor = false;
+  c->source.act = NULL;
 
   // copy source data
-  c->ovol= c->volume = volume;
+  c->ovol= c->volume = int(volume*255);
   c->opitch = c->pitch = pitch;
   c->osep = separation;
   c->priority = pri;
@@ -662,19 +703,21 @@ void SoundSystem::StartAmbSound(const char *name, int volume, int separation, in
   c->si = (sounditem_t *)sc.Cache(name);
 
   I_StartSound(c);
+  return i;
 }
 
 //--------------------------------------------
 // was S_StartSoundAtVolume
-void SoundSystem::Start3DSound(const char *name, soundsource_t *source, int volume, int pitch, int pri)
+int SoundSystem::Start3DSound(const char *name, soundsource_t *source, float volume, int pitch, int pri)
 {
   if (nosound)
-    return;
+    return -1;
 
   Actor *listener = NULL;
   if (displayplayer)
     listener = displayplayer->pawn;
 
+  source->Update();
   float v1 = S_ObservedVolume(listener, source);
   if (cv_splitscreen.value && displayplayer2)
     {
@@ -687,20 +730,17 @@ void SoundSystem::Start3DSound(const char *name, soundsource_t *source, int volu
     }
 
   if (v1 <= 0.0f)
-    return;
+    return -1;
 
   // kill old sound if any (max. one sound per source)
-  if (source->mpoint == NULL)
-    Stop3DSound(source->origin);
-  else
-    Stop3DSound(source->mpoint);
+  Stop3DSound(source->act); // pointers are just pointers
 
   // try to find a channel
-  int i = Get3DChannel(pri);
+  int i = GetChannel(pri);
   if (i == -1)
-    return;
+    return -1;
 
-  channel3D_t *c = &channel3Ds[i];
+  channel_t *c = &channels[i];
 
   // 64 pitch units = 1 octave
   pitch += 16 - (rand() & 31);
@@ -711,22 +751,21 @@ void SoundSystem::Start3DSound(const char *name, soundsource_t *source, int volu
     pitch = 255;
 
   // copy source data
-  c->volume = volume;
+  c->volume = int(volume*255);
   c->pitch = pitch;
   c->priority = pri;
   c->source = *source;
 
-  c->ovol = int(volume * v1);
-  c->opitch = pitch;
-  c->osep = 128;
+  c->ovol = int(volume * 255 * v1);
 
-  // Check sound parameters, attenuation and stereo effects.
-  S_AdjustChannel(listener, c);
+  // Check pitch and separation
+  c->Adjust(listener);
 
   c->si = (sounditem_t *)sc.Cache(name);
 
   I_StartSound(c);
   CONS_Printf("3D sound started, %d, %f\n", c->ovol, v1);
+  return i;
 }
 
 
@@ -746,11 +785,11 @@ void SoundSystem::Stop3DSounds()
 
   // kill all playing sounds at start of level
   //  (trust me - a good idea)
-  int cnum, n = channel3Ds.size();
+  int cnum, n = channels.size();
 
   for (cnum = 0; cnum < n; cnum++)
-    if (channel3Ds[cnum].si)
-      Stop3DChannel(cnum);
+    if (channels[cnum].source.act && channels[cnum].si)
+      StopChannel(cnum);
 }
 
 //--------------------------------------------
@@ -770,12 +809,12 @@ void SoundSystem::Stop3DSound(void *origin)
     }
 #endif
 
-  int cnum, n = channel3Ds.size();
+  int cnum, n = channels.size();
   for (cnum=0; cnum<n; cnum++)
     {
-      if (channel3Ds[cnum].si && channel3Ds[cnum].source.origin == origin)
+      if (channels[cnum].si && channels[cnum].source.act == origin)
 	{
-	  Stop3DChannel(cnum);
+	  StopChannel(cnum);
 	  break; // what about several sounds from one origin?
 	}
     }
@@ -783,8 +822,10 @@ void SoundSystem::Stop3DSound(void *origin)
 
 //--------------------------------------------
 // was S_StopChannel
-void SoundSystem::StopChannel(int cnum)
+void SoundSystem::StopChannel(unsigned cnum)
 {
+  if (cnum >= channels.size())
+    return;
 
   channel_t *c = &channels[cnum];
 
@@ -800,6 +841,7 @@ void SoundSystem::StopChannel(int cnum)
 }
 
 //--------------------------------------------
+/*
 void SoundSystem::Stop3DChannel(int cnum)
 {
 
@@ -815,7 +857,7 @@ void SoundSystem::Stop3DChannel(int cnum)
     }
   c->playing = false;
 }
-
+*/
 //--------------------------------------------
 // was S_UpdateSounds
 // Updates music & sounds, called once a gametic
@@ -830,13 +872,13 @@ void SoundSystem::UpdateSounds()
   if (musicvolume != cv_musicvolume.value)
     SetMusicVolume(cv_musicvolume.value);
 
-  if (channel3Ds.size() != cv_numChannels.value)
+  if (channels.size() != cv_numChannels.value)
     {
 #ifdef HW3SOUND
       if (hws_mode != HWS_DEFAULT_MODE)
 	HW3S_SetSourcesNum();
 #endif
-      S.ResetChannels(8, cv_numChannels.value);
+      S.ResetChannels(cv_numChannels.value);
     }
 
 #ifdef HW3SOUND
@@ -862,15 +904,6 @@ void SoundSystem::UpdateSounds()
       nextcleanup = gametic + 35*500;
     }
 
-  // static sound channels
-  int cnum, n = channels.size();
-
-  for (cnum = 0; cnum < n; cnum++)
-    {
-      channel_t *c = &channels[cnum];
-      if (!c->playing)
-        StopChannel(cnum);
-    }
 
   // 3D sound channels
   Actor *listener1 = NULL, *listener2 = NULL;
@@ -880,18 +913,21 @@ void SoundSystem::UpdateSounds()
   if (cv_splitscreen.value && displayplayer2)
     listener2 = displayplayer2->pawn;
 
-  if (!listener1 && !listener2)
-    return;
-
+  bool heard = listener1 || listener2;
   Actor *listener;
 
-  n = channel3Ds.size();
+  // static sound channels
+  int cnum, n = channels.size();
+
   for (cnum = 0; cnum < n; cnum++)
     {
-      channel3D_t *c = &channel3Ds[cnum];
+      channel_t *c = &channels[cnum];
 
       if (c->playing)
 	{
+	  if (!c->source.act || !heard)
+	    continue;
+
 	  // check non-local sounds for distance clipping
 	  //  or modify their params
 	  float v1 = S_ObservedVolume(listener1, &c->source);
@@ -905,16 +941,16 @@ void SoundSystem::UpdateSounds()
 	    listener = listener1;
             
 	  if (v1 <= 0.0)
-	    Stop3DChannel(cnum);
+	    StopChannel(cnum);
 	  else
 	    {
 	      c->ovol = int(c->volume * v1);
-	      S_AdjustChannel(listener, c);
+	      c->Adjust(listener);
 	    }
 	}
       else
 	// if channel is allocated but sound has stopped, free it
-	Stop3DChannel(cnum);
+	StopChannel(cnum);
     }
 }
 
@@ -963,48 +999,6 @@ void S_RegisterSoundStuff()
 
 
 
-/*
-//  Retrieve the lump number of sfx
-//
-int S_GetSfxLumpNum(sfxinfo_t *sfx)
-{
-  int sfxlump = fc.FindNumForName(sfx->name);
-  if (sfxlump > 0)
-    return sfxlump;
-  else
-    return fc.FindNumForName("dsouch");
-  // TODO pick a better replacement sound
-}
-*/
-
-
-/*
-// SoM: Searches through the channels and checks for origin or id.
-// returns 0 of not found, returns 1 if found.
-// if id == -1, the don't check it...
-int S_SoundPlaying(void *origin, int id)
-{
-  int         cnum;
-
-#ifdef HW3SOUND
-  if (hws_mode != HWS_DEFAULT_MODE)
-    {
-      return HW3S_SoundPlaying(origin, id);
-    }
-#endif
-
-  for (cnum=0 ; cnum<cv_numChannels.value ; cnum++)
-    {
-      if (origin &&  channels[cnum].origin ==  origin)
-	return 1;
-      if (id != -1 && channels[cnum].sfxinfo - S_sfx == id)
-	return 1;
-    }
-  return 0;
-}
-*/
-
-
 //=========================================================
 // wrappers for original hardwired sounds (in S_sfx array)
 
@@ -1024,66 +1018,64 @@ bool S_StartMusic(int m_id, bool loop)
 
 
 // wrapper
-void S_StartAmbSound(int sfx_id, int volume)
+int S_StartAmbSound(int sfx_id, float volume)
 {
-#ifdef HW3SOUND
-  if (hws_mode != HWS_DEFAULT_MODE)
-    {
-      volume += 30;
-      if (volume > 255)
-	volume = 255;
-      HW3S_StartSoundTypeAtVolume(NULL, sfx_id, CT_AMBIENT, volume);
-      return;
-    }
-#endif
-
 #ifdef PARANOIA
   // check for bogus sound #
   if (sfx_id < 1 || sfx_id >= NUMSFX)
     I_Error("Bad sfx number: %d\n", sfx_id);
 #endif
+
+#ifdef HW3SOUND
+  if (hws_mode != HWS_DEFAULT_MODE)
+    {
+      volume += 0.1;
+      if (volume > 1)
+	volume = 1;
+      HW3S_StartSoundTypeAtVolume(NULL, sfx_id, CT_AMBIENT, volume);
+      return -1;
+    }
+#endif
+
+  if (volume < 0.0)
+    return -1;
 
   sfxinfo_t *sfx = &S_sfx[sfx_id];
 
   // Initialize sound parameters
   int pitch = NORM_PITCH;
 
-  if (volume < 1)
-    return;
-
   const char *name = sfx->lumpname;
 
-  S.StartAmbSound(name, volume, NORM_SEP, pitch, sfx->priority);
+  return S.StartAmbSound(name, volume, NORM_SEP, pitch, sfx->priority);
 }
 
-// wrapper
-static void S_Start3DSound(sfxinfo_t *sfx, soundsource_t *source, int vol = 255)
+// (unnecessary) wrapper
+/*
+static void S_Start3DSound(sfxinfo_t *sfx, soundsource_t *source, float vol = 1.0)
 {
   // Initialize sound parameters
   int pitch = NORM_PITCH;
 
   const char *name = sfx->lumpname;
 
-  // NOTE: sfx->singularity is completely ignored!
-  // Hexen max. channelnum is sort of incorporated into singularity (and thus ignored too...)
+  // TODO: multiplicity is completely ignored!
   S.Start3DSound(name, source, vol, pitch, sfx->priority);
 }
+*/
 
 // wrapper
-void S_StartSound(mappoint_t *m, int sfx_id, int vol)
+int S_StartSound(mappoint_t *m, int sfx_id, float vol)
 {
-  soundsource_t s;
-  s.x = m->x;
-  s.y = m->y;
-  s.z = m->z;
-  s.mpoint = m;
-  s.origin = NULL;
-
 #ifdef PARANOIA
   // check for bogus sound #
   if (sfx_id < 1 || sfx_id >= NUMSFX)
     I_Error("Bad sfx number: %d\n", sfx_id);
 #endif
+
+  soundsource_t s;
+  s.isactor = false;
+  s.mpt = m;
 
   sfxinfo_t *sfx = &S_sfx[sfx_id];
 
@@ -1092,24 +1084,22 @@ void S_StartSound(mappoint_t *m, int sfx_id, int vol)
     HW3S_StartSound(NULL, sfx_id);
   else
 #endif
-    S_Start3DSound(sfx, &s, vol);
+
+  return S.Start3DSound(sfx->lumpname, &s, vol, NORM_PITCH, sfx->priority);
 }
 
 // wrapper
-void S_StartSound(Actor *orig, int sfx_id, int vol)
+int S_StartSound(Actor *a, int sfx_id, float vol)
 {
-  soundsource_t s;
-  s.x = orig->x;
-  s.y = orig->y;
-  s.z = orig->z;
-  s.mpoint = NULL;
-  s.origin = orig;
-
 #ifdef PARANOIA
   // check for bogus sound #
   if (sfx_id < 1 || sfx_id >= NUMSFX)
     I_Error("Bad sfx number: %d\n", sfx_id);
 #endif
+
+  soundsource_t s;
+  s.isactor = true;
+  s.act = a;
 
   sfxinfo_t *sfx = &S_sfx[sfx_id];
 
@@ -1124,8 +1114,9 @@ void S_StartSound(Actor *orig, int sfx_id, int vol)
 
 #ifdef HW3SOUND
   if (hws_mode != HWS_DEFAULT_MODE)
-    HW3S_StartSound(orig, sfx_id);
+    HW3S_StartSound(a, sfx_id);
   else
 #endif
-    S_Start3DSound(sfx, &s, vol);
+
+  return S.Start3DSound(sfx->lumpname, &s, vol, NORM_PITCH, sfx->priority);
 }

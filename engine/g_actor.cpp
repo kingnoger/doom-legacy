@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2003/04/19 17:38:46  smite-meister
+// SNDSEQ support, tools, linedef system...
+//
 // Revision 1.12  2003/04/14 08:58:24  smite-meister
 // Hexen maps load.
 //
@@ -624,7 +627,7 @@ void Actor::XYMovement()
   fixed_t xmove = px;
   fixed_t ymove = py;
 
-  // CONS_Printf("v = %f / tic\n", sqrt(px*px+py*py)/FRACUNIT);
+  CONS_Printf("p = (%d, %d), v = %f / tic\n", px, py, sqrt(px*px+py*py)/FRACUNIT);
 
   //reducing bobbing/momentum on ice
   fixed_t oldx = x;

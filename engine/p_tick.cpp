@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/04/19 17:38:47  smite-meister
+// SNDSEQ support, tools, linedef system...
+//
 // Revision 1.4  2003/04/04 00:01:57  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -141,8 +144,8 @@ void Map::Ticker()
   //CONS_Printf("respawnspecials..");
   RespawnSpecials();
 
-  //CONS_Printf("ambients..");
-  AmbientSound();
+  //CONS_Printf("sound sequences..");
+  UpdateSoundSequences();
 
   // for par times etc.
   maptic++;

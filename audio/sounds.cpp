@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/04/19 17:38:46  smite-meister
+// SNDSEQ support, tools, linedef system...
+//
 // Revision 1.7  2003/04/14 08:58:23  smite-meister
 // Hexen maps load.
 //
@@ -382,7 +385,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   { NULL, "mumsit", 0, 20}, //"-mumact" &S_sfx[sfx_mumsit], -1, -1},
   { NULL, "mumpai",  0, 32},
   { NULL, "mumhed",  0, 32},
-  { NULL, "bstsit",  0, 32},
+  { "beast/sight", "bstsit",  0, 32},
   { NULL, "bstatk",  0, 32},
 
   { NULL, "bstdth",  0, 80},
@@ -490,18 +493,18 @@ sfxinfo_t S_sfx[NUMSFX] =
 
   // Monophonic sounds
   { NULL, "wind"   , 0, 16},
-  { NULL, "amb1"   , 0,  1},
-  { NULL, "amb2"   , 0,  1},
-  { NULL, "amb3"   , 0,  1},
-  { NULL, "amb4"   , 0,  1},
-  { NULL, "amb5"   , 0,  1},
-  { NULL, "amb6"   , 0,  1},
+  { "ambient/scream", "amb1"   , 0,  1},
+  { "ambient/squish", "amb2"   , 0,  1},
+  { "ambient/drops1", "amb3"   , 0,  1},
+  { "ambient/step1",  "amb4"   , 0,  1},
+  { "ambient/heartbeat", "amb5"   , 0,  1},
+  { "ambient/bells",  "amb6"   , 0,  1},
 
-  { NULL, "amb7"   , 0,  1},
-  { NULL, "amb8"   , 0,  1},
-  { NULL, "amb9"   , 0,  1},
-  { NULL, "amb10"  , 0,  1},
-  { NULL, "amb11"  , 0,  1},
+  { "ambient/drops2", "amb7"   , 0,  1},
+  { "ambient/magic",  "amb8"   , 0,  1},
+  { "ambient/laugh1", "amb9"   , 0,  1},
+  { "ambient/laugh2", "amb10"  , 0,  1},
+  { "ambient/step2",  "amb11"  , 0,  1},
 
 
   // Hexen
@@ -856,5 +859,6 @@ int S_GetSoundID(const char *tag)
     if (!strcmp(S_sfx[i].tagname, tag))
       return i;
 
+  CONS_Printf("S_GetSoundID: Tag '%s' not found.\n", tag);
   return 0;
 }

@@ -37,7 +37,7 @@ endif
 ifdef LINUX
 
 # file removal utility
- rm = rm -f
+ RM = rm -f
 # assembler
  NASM = nasm
  nasmformat = elf - DLINUX # hmmm... a define here...
@@ -55,7 +55,7 @@ ifdef LINUX
 else # assume WIN32 is defined
 
 # file removal utility
- rm = rm
+ RM = rm
 # assembler
  NASM 	= nasmw.exe
  nasmformat = win32
@@ -73,7 +73,8 @@ else # assume WIN32 is defined
 endif
 # ----------- platform specific part ends
 
-export rm
+export RM
+export LDFLAGS
 
 # C++ compiler (usually g++)
 export CC = g++
@@ -111,11 +112,13 @@ INCLUDES = -Iinclude
 CFLAGS = $(CF) $(INCLUDES)
 
 # linker
-LD     	= $(CC)
+export LD = $(CC)
 
 export objdir = objs
 
 export engine_objects = \
+	$(objdir)/p_doors.o \
+	$(objdir)/p_spec.o \
 	$(objdir)/p_poly.o \
 	$(objdir)/p_acs.o \
 	$(objdir)/a_action.o \
@@ -152,13 +155,11 @@ export engine_objects = \
 	$(objdir)/m_cheat.o \
 	$(objdir)/p_genlin.o \
 	$(objdir)/p_ceilng.o \
-	$(objdir)/p_doors.o \
 	$(objdir)/p_floor.o \
 	$(objdir)/p_lights.o \
 	$(objdir)/p_plats.o \
 	$(objdir)/p_telept.o \
 	$(objdir)/p_switch.o \
-	$(objdir)/p_spec.o \
 	$(objdir)/p_enemy.o \
 	$(objdir)/p_henemy.o \
 	$(objdir)/p_heretic.o \
@@ -200,10 +201,11 @@ export util_objects = \
 
 export audio_objects = \
 	$(objdir)/qmus2mid.o \
-	$(objdir)/s_amb.o \
 	$(objdir)/s_sound.o \
+	$(objdir)/s_sndseq.o \
 	$(objdir)/sounds.o
 
+#	$(objdir)/s_amb.o \
 #	$(objdir)/hw3sound.o \
 
 
@@ -264,10 +266,10 @@ objects = $(engine_objects) $(util_objects) $(audio_objects) $(video_objects) \
 
 all	: $(exename)
 
-.PHONY	: clean depend engine util audio video net sdl r_opengl
+.PHONY	: clean depend engine util audio video net sdl r_opengl tools
 
 clean	:
-	$(rm) $(objects)
+	$(RM) $(objects)
 
 depend:
 	touch engine/engine.dep
@@ -282,6 +284,8 @@ depend:
 	$(MAKE) -C net depend
 	touch interface/sdl/sdl.dep
 	$(MAKE) -C interface/sdl depend
+	touch tools/tools.dep
+	$(MAKE) -C tools depend
 
 engine	:
 	$(MAKE) -C engine
@@ -303,6 +307,9 @@ sdl	:
 
 r_opengl:
 	$(MAKE) -C video r_opengl
+
+tools	:
+	$(MAKE) -C tools
 
 # explicit rules
 

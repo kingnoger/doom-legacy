@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,41 +18,14 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/04/19 17:38:47  smite-meister
+// SNDSEQ support, tools, linedef system...
+//
 // Revision 1.2  2003/04/14 08:58:30  smite-meister
 // Hexen maps load.
 //
 // Revision 1.1.1.1  2002/11/16 14:18:25  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.8  2002/08/20 13:57:01  vberghol
-// sdfgsd
-//
-// Revision 1.7  2002/08/13 19:47:46  vberghol
-// p_inter.cpp done
-//
-// Revision 1.6  2002/08/08 18:36:26  vberghol
-// p_spec.cpp fixed
-//
-// Revision 1.5  2002/07/26 19:23:06  vberghol
-// a little something
-//
-// Revision 1.4  2002/07/01 21:00:53  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:01:58  vberghol
-// HUD alkaa olla kunnossa
-//
-// Revision 1.4  2001/01/25 22:15:43  bpereira
-// added heretic support
-//
-// Revision 1.3  2000/11/02 17:50:08  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //
 // DESCRIPTION:
@@ -66,7 +39,40 @@
 
 struct mapthing_t;
 
-extern int        lastloadedmaplumpnum; // for comparative savegame
+extern int lastloadedmaplumpnum; // for comparative savegame
+
+
+typedef unsigned char byte;
+
+// linedef conversion lookup table entry
+struct xtable_t
+{
+  byte type;
+  byte args[5];
+  byte trigger;
+};
+
+// used in linedef conversion table
+enum trigger_e
+{
+  T_REPEAT = 0x01, // bit 0
+
+  T_AMASK  = 0x0e, // bits 1--3
+  T_ASHIFT = 1,
+
+  T_CROSS  = 0, // W
+  T_USE    = 1,	// P, S
+  T_MCROSS = 2,	// when monster crosses line
+  T_IMPACT = 3,	// G
+  T_PUSH   = 4,	// when player/monster pushes line
+  T_PCROSS = 5, // when projectile crosses line
+
+  T_ALLOWMONSTER = 0x10, // bit 4
+
+  //T_TAG_1 = 0x20 // bit 5
+};
+
+
 //
 // MAP used flats lookup table
 //

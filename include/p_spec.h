@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/04/19 17:38:47  smite-meister
+// SNDSEQ support, tools, linedef system...
+//
 // Revision 1.8  2003/04/14 08:58:30  smite-meister
 // Hexen maps load.
 //
@@ -408,52 +411,62 @@ public:
 //
 // P_DOORS
 //
-typedef enum
-{
-  normalDoor,
-  close30ThenOpen,
-  doorclose,
-  dooropen,
-  raiseIn5Mins,
-  blazeRaise,
-  blazeOpen,
-  blazeClose,
-
-  //SoM: 3/4/2000: General door types...
-  genRaise,
-  genBlazeRaise,
-  genOpen,
-  genBlazeOpen,
-  genClose,
-  genBlazeClose,
-  genCdO,
-  genBlazeCdO,
-} vldoor_e;
 
 
-
-class vldoor_t : public Thinker
+class vdoor_t : public Thinker
 {
   friend class Map;
+public:
+  enum vdoor_e
+  {
+    // 2 bits, type of door
+    OwC,
+    Open,
+    CwO,
+    Close,
+    tmask   = 0x3,
+    blazing = 0x4,
+    delayed = 0x8 // initial delay (topcount)
+
+    /*
+    normalDoor,
+    close30ThenOpen,
+    doorclose,
+    dooropen,
+    raiseIn5Mins,
+    blazeRaise,
+    blazeOpen,
+    blazeClose,
+
+    //SoM: 3/4/2000: General door types...
+    genRaise,
+    genBlazeRaise,
+    genOpen,
+    genBlazeOpen,
+    genClose,
+    genBlazeClose,
+    genCdO,
+    genBlazeCdO,
+    */
+  };
+
 private:
-  vldoor_e    type;
+  byte      type;
+  char      direction; // 1 = up, 0 = waiting at top, -1 = down, 2 = initial delay
   sector_t *sector;
-  fixed_t     topheight;
-  fixed_t     speed;
-  int   direction; // 1 = up, 0 = waiting at top, -1 = down
-  int   topwait;   // tics to wait at the top
+  fixed_t   topheight;
+  fixed_t   speed;
+  int       topwait;   // tics to wait at the top
+  int       topcount;   // when it reaches 0, start going down
 
-  // (keep in case a door going down is reset)
-  // when it reaches 0, start going down
-  int   topcountdown;
-
-  line_t *line;   // the line that triggered the door.
+  line_t *line;   // the line that triggered the door (needed for Boom)
 
 public:
-  static int doorclosesound;
+  static int s_close, s_bclose, s_open, s_bopen; // sounds
 
-  vldoor_t(vldoor_e ty, sector_t *sec, fixed_t sp, int delay, line_t *li);
+  vdoor_t(byte type, sector_t *sec, fixed_t speed, int delay, line_t *line);
   virtual void Think();
+  void MakeSound(bool open) const;
 };
 
 
@@ -728,12 +741,12 @@ public:
 #define ELEVATORSPEED (FRACUNIT*4/NEWTICRATERATIO) //SoM: 3/6/2000
 #define FLOORSPEED    (FRACUNIT/NEWTICRATERATIO)
 
-typedef enum
+enum result_e
 {
   ok,
   crushed,
   pastdest
-} result_e;
+};
 
 
 //

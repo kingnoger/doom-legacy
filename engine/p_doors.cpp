@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/04/19 17:38:47  smite-meister
+// SNDSEQ support, tools, linedef system...
+//
 // Revision 1.5  2003/04/14 08:58:26  smite-meister
 // Hexen maps load.
 //
@@ -63,57 +66,48 @@
 //                            VERTICAL DOORS
 // =========================================================================
 
-int vldoor_t::doorclosesound = 0;
+int vdoor_t::s_open = 0;
+int vdoor_t::s_bopen = 0;
+int vdoor_t::s_close = 0;
+int vdoor_t::s_bclose = 0;
 
 
 // constructor
-vldoor_t::vldoor_t(vldoor_e ty, sector_t *s, fixed_t sp, int delay, line_t *li)
+vdoor_t::vdoor_t(byte t, sector_t *s, fixed_t sp, int delay, line_t *li)
 {
-  type = ty;
+  type = t;
   sector = s;
   speed = sp;
   topwait = delay;
   line = li;
   s->ceilingdata = this;
 
-  switch(type)
+  if (type & delayed)
     {
-    case blazeClose:
-      topheight = P_FindLowestCeilingSurrounding(s);
-      topheight -= 4*FRACUNIT;
+      direction = 2;
+      return;
+    }
+
+  switch (type & tmask)
+    {
+    case Close:
       direction = -1;
-      S_StartSound(&s->soundorg,sfx_bdcls);
+      topheight = P_FindLowestCeilingSurrounding(s) - 4*FRACUNIT;
+      MakeSound(false);
       break;
 
-    case doorclose:
-      topheight = P_FindLowestCeilingSurrounding(s);
-      topheight -= 4*FRACUNIT;
+    case CwO:
       direction = -1;
-      S_StartSound(&s->soundorg, doorclosesound);
+      topheight = s->ceilingheight; // why different?
+      MakeSound(false);
       break;
 
-    case close30ThenOpen:
-      topheight = s->ceilingheight;
-      direction = -1;
-      S_StartSound(&s->soundorg, doorclosesound);
-      break;
-
-    case blazeRaise:
-    case blazeOpen:
+    case Open:
+    case OwC:
       direction = 1;
-      topheight = P_FindLowestCeilingSurrounding(s);
-      topheight -= 4*FRACUNIT;
+      topheight = P_FindLowestCeilingSurrounding(s) - 4*FRACUNIT;
       if (topheight != s->ceilingheight)
-	S_StartSound(&s->soundorg,sfx_bdopn);
-      break;
-
-    case normalDoor:
-    case dooropen:
-      direction = 1;
-      topheight = P_FindLowestCeilingSurrounding(s);
-      topheight -= 4*FRACUNIT;
-      if (topheight != s->ceilingheight)
-	S_StartSound(&s->soundorg,sfx_doropn);
+	MakeSound(true);
       break;
 
     default:
@@ -125,43 +119,26 @@ vldoor_t::vldoor_t(vldoor_e ty, sector_t *s, fixed_t sp, int delay, line_t *li)
 //
 // was T_VerticalDoor
 //
-void vldoor_t::Think()
+void vdoor_t::Think()
 {
   result_e    res;
 
-  switch(direction)
+  switch (direction)
     {
     case 0:
       // WAITING
-      if (!--topcountdown)
+      if (!--topcount)
         {
-	  switch(type)
+	  switch (type & tmask)
             {
-	    case blazeRaise:
-	    case genBlazeRaise: //SoM: 3/6/2000
+	    case OwC:
 	      direction = -1; // time to go back down
-	      S_StartSound(&sector->soundorg,
-			   sfx_bdcls);
+	      MakeSound(false);
 	      break;
 
-	    case normalDoor:
-	    case genRaise:   //SoM: 3/6/2000
-	      direction = -1; // time to go back down
-	      S_StartSound(&sector->soundorg,
-			   doorclosesound);
-	      break;
-
-	    case close30ThenOpen:
-	    case genCdO:      //SoM: 3/6/2000
+	    case CwO:
 	      direction = 1;
-	      S_StartSound(&sector->soundorg,
-			   sfx_doropn);
-	      break;
-
-              //SoM: 3/6/2000
-	    case genBlazeCdO:
-	      direction = 1;  // time to go back up
-	      S_StartSound(&sector->soundorg,sfx_bdopn);
+	      MakeSound(true);
 	      break;
 
 	    default:
@@ -172,15 +149,28 @@ void vldoor_t::Think()
 
     case 2:
       //  INITIAL WAIT
-      if (!--topcountdown)
+      if (!--topcount)
         {
-	  switch(type)
-            {
-	    case raiseIn5Mins:
+	  switch (type & tmask)
+	    {
+	    case Close:
+	      direction = -1;
+	      topheight = P_FindLowestCeilingSurrounding(sector) - 4*FRACUNIT;
+	      MakeSound(false);
+	      break;
+
+	    case CwO:
+	      direction = -1;
+	      topheight = sector->ceilingheight; // why different?
+	      MakeSound(false);
+	      break;
+
+	    case Open:
+	    case OwC:
 	      direction = 1;
-	      type = normalDoor;
-	      S_StartSound(&sector->soundorg,
-			   sfx_doropn);
+	      topheight = P_FindLowestCeilingSurrounding(sector) - 4*FRACUNIT;
+	      if (topheight != sector->ceilingheight)
+		MakeSound(true);
 	      break;
 
 	    default:
@@ -191,42 +181,22 @@ void vldoor_t::Think()
 
     case -1:
       // DOWN
-      res = mp->T_MovePlane(sector, speed, sector->floorheight, false,1,direction);
+      res = mp->T_MovePlane(sector, speed, sector->floorheight, false, 1, -1);
       if (res == pastdest)
         {
-	  switch(type)
+	  switch (type & tmask)
             {
-	    case blazeRaise:
-	    case blazeClose:
-	    case genBlazeRaise:
-	    case genBlazeClose:
+	    case OwC:
+	    case Close:
 	      sector->ceilingdata = NULL;  // SoM: 3/6/2000
 	      mp->RemoveThinker(this);  // unlink and free
-	      if(boomsupport) //SoM: Removes the double closing sound of doors.
-		S_StartSound(&sector->soundorg, sfx_bdcls);
+	      if (boomsupport) //SoM: Removes the double closing sound of doors.
+		MakeSound(false);
 	      break;
 
-	    case normalDoor:
-	    case doorclose:
-	    case genRaise:
-	    case genClose:
-	      sector->ceilingdata = NULL; //SoM: 3/6/2000
-	      mp->RemoveThinker(this);  // unlink and free
-	      if (game.mode == gm_heretic)
-		S_StartSound (& sector->soundorg, sfx_dorcls);
-
-	      break;
-
-	    case close30ThenOpen:
+	    case CwO:
 	      direction = 0;
-	      topcountdown = 35*30;
-	      break;
-
-              //SoM: 3/6/2000: General door stuff
-	    case genCdO:
-	    case genBlazeCdO:
-	      direction = 0;
-	      topcountdown = topwait; 
+	      topcount = topwait;
 	      break;
 
 	    default:
@@ -235,8 +205,7 @@ void vldoor_t::Think()
 	  //SoM: 3/6/2000: Code to turn lighting off in tagged sectors.
 	  if (boomsupport && line && line->tag)
             {
-              if (line->special > GenLockedBase &&
-                  (line->special&6)==6)
+              if (line->special > GenLockedBase && (line->special & 6) == 6)
                 mp->EV_TurnTagLightsOff(line);
               else switch (line->special)
                 {
@@ -254,81 +223,104 @@ void vldoor_t::Think()
         }
       else if (res == crushed)
         {
-	  switch(type)
+	  if ((type & tmask) != Close)
             {
-	    case genClose: //SoM: 3/6/2000
-	    case genBlazeClose: //SoM: 3/6/2000
-	    case blazeClose:
-	    case doorclose:           // DO NOT GO BACK UP!
-	      break;
-
-	    default:
 	      direction = 1;
-	      S_StartSound(&sector->soundorg,
-			   sfx_doropn);
-	      break;
-            }
+	      MakeSound(true);
+	    }
         }
       break;
 
     case 1:
       // UP
-      res = mp->T_MovePlane(sector, speed, topheight, false,1,direction);
+      res = mp->T_MovePlane(sector, speed, topheight, false, 1, 1);
 
-        if (res == pastdest)
+      if (res == pastdest)
         {
-            switch(type)
+	  switch(type & tmask)
             {
-              case blazeRaise:
-              case normalDoor:
-              case genRaise:     //SoM: 3/6/2000
-              case genBlazeRaise://SoM: 3/6/2000
-                direction = 0; // wait at top
-                topcountdown = topwait;
-                break;
+	    case OwC:
+	      direction = 0; // wait at top
+	      topcount = topwait;
+	      break;
 
-              case close30ThenOpen:
-              case blazeOpen:
-              case dooropen:
-              case genBlazeOpen:
-              case genOpen:
-              case genCdO:
-              case genBlazeCdO:
-                sector->ceilingdata = NULL;
-                mp->RemoveThinker(this);  // unlink and free
-                if( game.mode == gm_heretic )
-                    S.Stop3DSound(&sector->soundorg);
+	    case Open:
+	    case CwO:
+	      sector->ceilingdata = NULL;
+	      mp->RemoveThinker(this);  // unlink and free
+	      // if (game.mode == gm_heretic) S.Stop3DSound(&sector->soundorg);
+	      break;
 
-                break;
-
-              default:
-                break;
+	    default:
+	      break;
             }
-            //SoM: 3/6/2000: turn lighting on in tagged sectors of manual doors
-            if (boomsupport && line && line->tag)
+	  //SoM: 3/6/2000: turn lighting on in tagged sectors of manual doors
+	  if (boomsupport && line && line->tag)
             {
-              if (line->special > GenLockedBase &&
-                  (line->special&6)==6)     //jff 3/9/98 all manual doors
+              if (line->special > GenLockedBase && (line->special&6)==6)     //jff 3/9/98 all manual doors
                 mp->EV_LightTurnOn(line,0);
               else
                 switch (line->special)
                 {
-                  case 1: case 31:
-                  case 26:
-                  case 27: case 28:
-                  case 32: case 33:
-                  case 34: case 117:
-                  case 118:
-                    mp->EV_LightTurnOn(line,0);
-                  default:
-                    break;
+		case 1: case 31:
+		case 26:
+		case 27: case 28:
+		case 32: case 33:
+		case 34: case 117:
+		case 118:
+		  mp->EV_LightTurnOn(line,0);
+		default:
+		  break;
                 }
             }
         }
-        break;
+      break;
     }
 }
 
+
+void vdoor_t::MakeSound(bool open) const
+{
+  // TODO sound sequences (makes more sense in Heretic too...)
+  if (open)
+    {
+      if (type & blazing)
+	S_StartSound(&sector->soundorg, s_bopen);
+      else
+	S_StartSound(&sector->soundorg, s_open);
+    }
+  else
+    {
+      if (type & blazing)
+	S_StartSound(&sector->soundorg, s_bclose);
+      else
+	S_StartSound(&sector->soundorg, s_close);
+    }
+}
+
+
+static bool P_CheckKeys(PlayerPawn *p, byte lock)
+{
+  if (lock > NUMKEYS)
+    return false;
+
+  if (!lock)
+    return true;
+
+  if (!(p->cards & (1 << (lock-1))))
+    {
+      if (lock >= it_bluecard) // skulls and cards are equivalent
+	if (p->cards & (1 << (lock+2)))
+	  return true;
+      // FIXME complain properly
+      p->player->SetMessage(PD_BLUEO);
+      p->player->SetMessage(PD_REDO);
+      p->player->SetMessage(PD_YELLOWO);
+      S_StartScreamSound(p, sfx_oof); //SoM: 3/6/200: killough's idea
+      return false; // no ticket
+    }
+  return true;
+}
 
 //
 // was EV_DoLockedDoor
@@ -336,14 +328,15 @@ void vldoor_t::Think()
 //
 // SoM: Removed the player checks at every different color door (checking to make sure 'p' is 
 // not NULL) because you only need to do that once.
-int Map::EV_DoLockedDoor(line_t *line, vldoor_e type, PlayerPawn *p, fixed_t speed)
+int Map::EV_DoLockedDoor(line_t *line, PlayerPawn *p, byte type, byte lock, fixed_t speed, int delay)
 {
-  // PlayerPawn  *p;
+  if (!p)
+    return 0;
 
-  //p = thing->player;
+  if (!P_CheckKeys(p, lock))
+    return 0;
 
-  if (!p) return 0;
-
+  /*
   switch(line->special)
     {
       case 99:  // Blue Lock
@@ -377,21 +370,20 @@ int Map::EV_DoLockedDoor(line_t *line, vldoor_e type, PlayerPawn *p, fixed_t spe
         }
         break;
     }
-
-    return EV_DoDoor(line,type,speed);
+  */
+  return EV_DoDoor(line,type,speed, delay);
 }
 
 
 //  was EV_DoDoor()
 
-int Map::EV_DoDoor(line_t *line, vldoor_e type, fixed_t speed)
+int Map::EV_DoDoor(line_t *line, byte type, fixed_t speed, int delay)
 {
-  int         secnum,rtn;
-  sector_t*   sec;
-  vldoor_t*   door;
+  sector_t*  sec;
+  vdoor_t*   door;
 
-  secnum = -1;
-  rtn = 0;
+  int secnum = -1;
+  bool rtn = 0;
 
   while ((secnum = FindSectorFromLineTag(line,secnum)) >= 0)
     {
@@ -400,11 +392,11 @@ int Map::EV_DoDoor(line_t *line, vldoor_e type, fixed_t speed)
 	continue;
 
       // new door thinker
-
-      rtn = 1;
-      door = new vldoor_t(type, sec, speed, VDOORWAIT, line);
+      rtn++;
+      door = new vdoor_t(type, sec, speed, delay, line);
       AddThinker(door);
     }
+
   return rtn;
 }
 
@@ -414,9 +406,9 @@ int Map::EV_DoDoor(line_t *line, vldoor_e type, fixed_t speed)
 
 void Map::EV_OpenDoor(int sectag, int speed, int wait_time)
 {
-  vldoor_e door_type;
+  byte door_type;
   int secnum = -1;
-  vldoor_t *door;
+  vdoor_t *door;
 
   if (speed < 1) speed = 1;
   
@@ -425,16 +417,16 @@ void Map::EV_OpenDoor(int sectag, int speed, int wait_time)
   if (wait_time)               // door closes afterward
     {
       if(speed >= 4)              // blazing ?
-        door_type = blazeRaise;
+        door_type = vdoor_t::OwC | vdoor_t::blazing;
       else
-        door_type = normalDoor;
+        door_type = vdoor_t::OwC;
     }
   else
     {
       if(speed >= 4)              // blazing ?
-        door_type = blazeOpen;
+        door_type = vdoor_t::Open | vdoor_t::blazing;
       else
-        door_type = dooropen;
+        door_type = vdoor_t::Open;
     }
 
   // open door in all the sectors with the specified tag
@@ -447,7 +439,7 @@ void Map::EV_OpenDoor(int sectag, int speed, int wait_time)
         continue;
 
       // new door thinker
-      door = new vldoor_t(door_type, sec, VDOORSPEED*speed, wait_time, NULL);
+      door = new vdoor_t(door_type, sec, VDOORSPEED*speed, wait_time, NULL);
       AddThinker(door);
     }
 }
@@ -458,18 +450,18 @@ void Map::EV_OpenDoor(int sectag, int speed, int wait_time)
 // Used by FraggleScript
 void Map::EV_CloseDoor(int sectag, int speed)
 {
-  vldoor_e door_type;
+  byte door_type;
   int secnum = -1;
-  vldoor_t *door;
+  vdoor_t *door;
 
   if(speed < 1) speed = 1;
   
   // find out door type first
 
   if(speed >= 4)              // blazing ?
-    door_type = blazeClose;
+    door_type = vdoor_t::Close | vdoor_t::blazing;
   else
-    door_type = doorclose;
+    door_type = vdoor_t::Close;
   
   // open door in all the sectors with the specified tag
 
@@ -481,7 +473,7 @@ void Map::EV_CloseDoor(int sectag, int speed)
         continue;
 
       // new door thinker
-      door = new vldoor_t(door_type, sec, VDOORSPEED*speed, 0, NULL);
+      door = new vdoor_t(door_type, sec, VDOORSPEED*speed, 0, NULL);
       AddThinker(door);
     }  
 }
@@ -498,7 +490,7 @@ int Map::EV_VerticalDoor(line_t* line, Actor *m)
   PlayerPawn *p = (m->Type() == Thinker::tt_ppawn) ? (PlayerPawn *)m : NULL;
   int         secnum;
   sector_t*   sec;
-  vldoor_t*   door;
+  vdoor_t*   door;
 //    int         side; //SoM: 3/6/2000
 
 //    side = 0;   // only front sides can be used
@@ -560,7 +552,7 @@ int Map::EV_VerticalDoor(line_t* line, Actor *m)
 
   if (sec->ceilingdata) //SoM: 3/6/2000
     {
-      door = (vldoor_t *)sec->ceilingdata; //SoM: 3/6/2000
+      door = (vdoor_t *)sec->ceilingdata; //SoM: 3/6/2000
       switch(line->special)
         {
 	case  1: // ONLY FOR "RAISE" DOORS, NOT "OPEN"s
@@ -600,7 +592,7 @@ int Map::EV_VerticalDoor(line_t* line, Actor *m)
     }
 
   int speed = VDOORSPEED;
-  vldoor_e type = normalDoor;
+  byte type = vdoor_t::OwC;
 
   switch(line->special)
     {
@@ -608,23 +600,23 @@ int Map::EV_VerticalDoor(line_t* line, Actor *m)
     case 26:
     case 27:
     case 28:
-      type = normalDoor;
+      type = vdoor_t::OwC;
       break;
 
     case 31:
     case 32:
     case 33:
     case 34:
-      type = dooropen;
+      type = vdoor_t::Open;
       line->special = 0;
       break;
 
     case 117: // blazing door raise
-      type = blazeRaise;
+      type = vdoor_t::OwC | vdoor_t::blazing;
       speed = VDOORSPEED*4;
       break;
     case 118: // blazing door open
-      type = blazeOpen;
+      type = vdoor_t::Open | vdoor_t::blazing;
       line->special = 0;
       speed = VDOORSPEED*4;
       break;
@@ -632,7 +624,7 @@ int Map::EV_VerticalDoor(line_t* line, Actor *m)
   // new door thinker
   // FIXME, you get some extra sounds here. the entire door/switch system should be reorganized.
   // you should just set the type right and let constructor take care of the rest.
-  door = new vldoor_t(type, sec, speed, VDOORWAIT, line);
+  door = new vdoor_t(type, sec, speed, VDOORWAIT, line);
   AddThinker(door);
 
   return 1;
@@ -642,15 +634,13 @@ int Map::EV_VerticalDoor(line_t* line, Actor *m)
 // was P_SpawnDoorCloseIn30
 // Spawn a door that closes after 30 seconds
 //
-void Map::SpawnDoorCloseIn30 (sector_t* sec)
+void Map::SpawnDoorCloseIn30(sector_t* sec)
 {
-  vldoor_t *door = new vldoor_t(normalDoor, sec, VDOORSPEED, VDOORWAIT, NULL);
+  vdoor_t *door = new vdoor_t(vdoor_t::Close | vdoor_t::delayed, sec, VDOORSPEED, VDOORWAIT, NULL);
+  door->topcount = 30 * 35;
   AddThinker(door);
 
   sec->special = 0;
-
-  door->direction = 0;
-  door->topcountdown = 30 * 35;
 }
 
 // P_SpawnDoorRaiseIn5Mins
@@ -658,13 +648,11 @@ void Map::SpawnDoorCloseIn30 (sector_t* sec)
 //
 void Map::SpawnDoorRaiseIn5Mins(sector_t *sec)
 {
-  vldoor_t *door = new vldoor_t(raiseIn5Mins, sec, VDOORSPEED, VDOORWAIT, NULL);
+  vdoor_t *door = new vdoor_t(vdoor_t::Open | vdoor_t::delayed, sec, VDOORSPEED, VDOORWAIT, NULL);
+  door->topcount = 5 * 60 * 35;
   AddThinker(door);
 
   sec->special = 0;
-
-  door->direction = 2;
-  door->topcountdown = 5 * 60 * 35;
 }
 
 
