@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2003 by DooM Legacy Team.
+// Copyright (C) 2003-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/12/19 23:43:20  smite-meister
+// more BEX support
+//
 // Revision 1.4  2004/10/14 19:35:51  smite-meister
 // automap, bbox_t
 //
@@ -29,12 +32,10 @@
 // Revision 1.1  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
-//
-//
-// DESCRIPTION:  
-//   Simple parsing functions for plaintext script lumps
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Simple parsing functions for plaintext script lumps.
 
 #include <string.h>
 #include <ctype.h>
@@ -104,6 +105,17 @@ int Parser::Open(const char *buf, int len)
 
   RemoveCRs();
   return length;
+}
+
+
+// Clears the parser
+void Parser::Clear()
+{
+  if (ms)
+    Z_Free(ms);
+
+  length = 0;
+  ms = me = s = e = NULL;
 }
 
 
@@ -204,9 +216,9 @@ char *Parser::GetToken(const char *delim)
     {
       int i;
       for (i=0; i<n; i++)
-	if (*s != delim[i])
+	if (*s == delim[i])
 	  break;
-      if (i < n)
+      if (i >= n)
 	break;
     }
 

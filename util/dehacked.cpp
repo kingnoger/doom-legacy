@@ -17,14 +17,14 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/12/19 23:43:20  smite-meister
+// more BEX support
+//
 // Revision 1.13  2004/12/08 16:49:05  segabor
 // Missing devparm reference added
 //
 // Revision 1.12  2004/11/18 20:30:14  smite-meister
 // tnt, plutonia
-//
-// Revision 1.11  2004/09/24 11:34:00  smite-meister
-// fix
 //
 // Revision 1.10  2004/03/28 15:16:15  smite-meister
 // Texture cache.
@@ -34,9 +34,6 @@
 //
 // Revision 1.8  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
-//
-// Revision 1.7  2003/04/08 09:46:07  smite-meister
-// Bugfixes
 //
 // Revision 1.6  2003/03/23 14:24:14  smite-meister
 // Polyobjects, MD3 models
@@ -49,9 +46,6 @@
 //
 // Revision 1.3  2002/12/23 23:20:57  smite-meister
 // WAD2+WAD3 support added!
-//
-// Revision 1.2  2002/12/16 22:19:37  smite-meister
-// HUD fix
 //
 // Revision 1.1.1.1  2002/11/16 14:18:38  hurdler
 // Initial C++ version of Doom Legacy
@@ -81,17 +75,8 @@
 // Revision 1.6  2000/11/02 17:50:06  stroggonmeth
 // Big 3Dfloors & FraggleScript commit!!
 //
-// Revision 1.5  2000/08/31 14:30:55  bpereira
-// no message
-//
-// Revision 1.4  2000/04/16 18:38:07  bpereira
-// no message
-//
 // Revision 1.3  2000/04/05 15:47:46  stroggonmeth
 // Added hack for Dehacked lumps. Transparent sprites are now affected by colormaps.
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
 //
 // Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
 // Initial import into CVS (v1.29 pr3)
@@ -102,21 +87,24 @@
 /// \brief DeHackEd and BEX support
 
 #include <stdarg.h>
+#include <ctype.h>
 
 #include "dehacked.h"
 #include "parser.h"
 
 #include "g_game.h"
+#include "g_actor.h"
 
-#include "d_items.h"
-#include "sounds.h"
-#include "info.h"
 #include "dstrings.h"
+#include "d_items.h"
+#include "info.h"
+#include "sounds.h"
 
 #include "w_wad.h"
 #include "z_zone.h"
 
-extern bool devparm;			//in d_main.cpp
+#include "a_functions.h" // action function prototypes
+
 
 dehacked_t DEH; // one global instance
 
@@ -125,21 +113,24 @@ static actionf_p1 *d_actions;
 static actionf_p2 *w_actions;
 
 
-struct d_mnemonic_t
+//========================================================================
+//     BEX mnemonics
+//========================================================================
+
+// [CODEPTR] mnemonics
+struct dactor_mnemonic_t
 {
   char       *name;
   actionf_p1  ptr;
 };
 
-struct w_mnemonic_t
+struct weapon_mnemonic_t
 {
   char       *name;
   actionf_p2  ptr;
 };
 
-#include "a_functions.h" // prototypes
-
-w_mnemonic_t BEX_Weapon_mnemonics[] = 
+weapon_mnemonic_t BEX_WeaponMnemonics[] = 
 {
 #define WEAPON(x) {#x, A_ ## x},
 #define DACTOR(x)
@@ -148,7 +139,7 @@ w_mnemonic_t BEX_Weapon_mnemonics[] =
   {NULL, NULL}
 };
 
-d_mnemonic_t BEX_DActor_mnemonics[] = 
+dactor_mnemonic_t BEX_DActorMnemonics[] = 
 {
 #define WEAPON(x)
 #define DACTOR(x) {#x, A_ ## x},
@@ -157,7 +148,178 @@ d_mnemonic_t BEX_DActor_mnemonics[] =
   {NULL, NULL}
 };
 
+// THING bit flag mnemonics
+struct flag_mnemonic_t
+{
+  char *name;
+  int original;
+  int flag;
+};
 
+flag_mnemonic_t BEX_FlagMnemonics[32] =
+{
+  {"SPECIAL",         0x0001, MF_SPECIAL},   // Call TouchSpecialThing when touched.
+  {"SOLID",           0x0002, MF_SOLID},     // Blocks
+  {"SHOOTABLE",       0x0004, MF_SHOOTABLE}, // Can be hit
+  {"NOSECTOR",        0x0008, MF_NOSECTOR},  // Don't link to sector (invisible but touchable)
+  {"NOBLOCKMAP",      0x0010, MF_NOBLOCKMAP},// Don't link to blockmap (inert but visible)
+  {"AMBUSH",          0x0020, MF_AMBUSH},    // Not to be activated by sound, deaf monster.
+  {"JUSTHIT",         0x0040, 0}, // almost useless
+  {"JUSTATTACKED",    0x0080, 0}, // even more useless
+  {"SPAWNCEILING",    0x0100, MF_SPAWNCEILING}, // Spawned hanging from the ceiling
+  {"NOGRAVITY",       0x0200, MF_NOGRAVITY}, // Does not feel gravity
+  {"DROPOFF",         0x0400, MF_DROPOFF},   // Can jump/drop from high places
+  {"PICKUP",          0x0800, MF_PICKUP},    // Can/will pick up items. (players) // useless?
+  {"NOCLIP",          0x1000, MF_NOCLIPLINE | MF_NOCLIPTHING}, // Does not clip against lines or Actors.
+  {"SLIDE",           0x2000, 0}, // slides along walls, TODO could be useful
+  {"FLOAT",           0x4000, MF_FLOAT},     // Active floater, can move freely in air (cacodemons etc.)
+  {"TELEPORT",        0x8000, 0}, // completely unused
+  {"MISSILE",     0x00010000, MF_MISSILE},   // Missile. Don't hit same species, explode on block.
+  {"DROPPED",     0x00020000, MF_DROPPED},   // Dropped by a monster
+  {"SHADOW",      0x00040000, MF_SHADOW},    // Partial invisibility (spectre). Makes targeting harder.
+  {"NOBLOOD",     0x00080000, MF_NOBLOOD},   // Does not bleed when shot (furniture)
+  {"CORPSE",      0x00100000, MF_CORPSE},    // Acts like a corpse, falls down stairs etc.
+  {"INFLOAT",     0x00200000, 0}, // almost useless
+  {"COUNTKILL",   0x00400000, MF_COUNTKILL}, // On kill, count towards intermission kill total.
+  {"COUNTITEM",   0x00800000, MF_COUNTITEM}, // On pickup, count towards intermission item total.
+  {"SKULLFLY",    0x01000000, 0}, // useless?
+  {"NOTDMATCH",   0x02000000, MF_NOTDMATCH}, // Not spawned in DM (keycards etc.)
+  {"TRANSLATION", 0x04000000, 0},
+  {"UNUSED1",     0x08000000, 0},
+  {"UNUSED2",     0x10000000, 0},
+  {"UNUSED3",     0x20000000, 0},
+  {"UNUSED4",     0x40000000, 0},
+  {"TRANSLUCENT", 0x80000000, 0}
+};
+
+// FIXME NOTE these mnemonics are NOT final!
+flag_mnemonic_t BEX_Flag2Mnemonics[32] =
+{
+  // physical properties
+  {"LOGRAV",       0x0001, MF2_LOGRAV},    // Experiences only 1/8 gravity
+  {"WINDTHRUST",   0x0002, MF2_WINDTHRUST},    // Is affected by wind
+  {"FLOORBOUNCE",  0x0004, MF2_FLOORBOUNCE},    // Bounces off the floor
+  {"SLIDE",        0x0008, MF2_SLIDE},    // Slides against walls
+  {"PUSHABLE",     0x0010, MF2_PUSHABLE},    // Can be pushed by other moving actors
+  {"CANNOTPUSH",   0x0020, MF2_CANNOTPUSH},    // Cannot push other pushable actors
+  // game mechanics
+  {"FLOATBOB",     0x0040, MF2_FLOATBOB},    // Bobs up and down in the air (item)
+  {"THRUGHOST",    0x0080, MF2_THRUGHOST},    // Will pass through ghosts (missile)
+  {"RIP",          0x0100, MF2_RIP},    // Rips through solid targets (missile)
+  {"PASSMOBJ",     0x0200, MF2_PASSMOBJ},    // Can move over/under other Actors 
+  {"NOTELEPORT",   0x0400, MF2_NOTELEPORT},    // Does not teleport
+  {"NONSHOOTABLE", 0x0800, MF2_NONSHOOTABLE},    // Transparent to MF_MISSILEs
+  {"INVULNERABLE", 0x1000, MF2_INVULNERABLE},    // Does not take damage
+  {"DORMANT",      0x2000, MF2_DORMANT},    // Cannot be damaged, is not noticed by seekers
+  {"CANTLEAVEFLOORPIC", 0x4000, MF2_CANTLEAVEFLOORPIC},    // Stays within a certain floor texture
+  {"BOSS",         0x8000, MF2_BOSS},    // Is a major boss, not as easy to kill
+  {"SEEKER",       0x00010000, MF2_SEEKERMISSILE},    // Is a seeker (for reflection)
+  {"REFLECTIVE",   0x00020000, MF2_REFLECTIVE},    // Reflects missiles
+  // rendering
+  {"FOOTCLIP",     0x00040000, MF2_FOOTCLIP},    // Feet may be be clipped
+  {"DONTDRAW",     0x00080000, MF2_DONTDRAW},    // Invisible (does not generate a vissprite)
+  // giving hurt
+  {"FIREDAMAGE",   0x00100000, MF2_FIREDAMAGE},    // Does fire damage
+  {"ICEDAMAGE",    0x00200000, MF2_ICEDAMAGE},    // Does ice damage
+  {"NODMGTHRUST",  0x00400000, MF2_NODMGTHRUST},    // Does not thrust target when damaging        
+  {"TELESTOMP",    0x00800000, MF2_TELESTOMP},    // Can telefrag another Actor
+  {"UNUSED1",      0x01000000, 0}, // unused
+  {"UNUSED1",      0x02000000, 0}, // unused
+  {"UNUSED1",      0x04000000, 0}, // unused
+  {"UNUSED1",      0x08000000, 0}, // unused
+  // activation
+  {"IMPACT",       0x10000000, MF2_IMPACT},    // Can activate SPAC_IMPACT
+  {"PUSHWALL",     0x20000000, MF2_PUSHWALL},    // Can activate SPAC_PUSH
+  {"MCROSS",       0x40000000, MF2_MCROSS},    // Can activate SPAC_MCROSS
+  {"PCROSS",       0x80000000, MF2_PCROSS},    // Can activate SPAC_PCROSS
+};
+
+
+struct string_mnemonic_t
+{
+  char *name;
+  int   num;
+};
+
+#define BEX_STR(x) {#x, TXT_ ## x},
+string_mnemonic_t BEX_StringMnemonics[] =
+{
+  BEX_STR(GOTARMOR)
+  BEX_STR(GOTMEGA)
+  BEX_STR(GOTHTHBONUS)
+  BEX_STR(GOTARMBONUS)
+  BEX_STR(GOTSTIM)
+  BEX_STR(GOTMEDINEED)
+  BEX_STR(GOTMEDIKIT)
+  BEX_STR(GOTSUPER)
+  BEX_STR(GOTINVUL)
+  BEX_STR(GOTBERSERK)
+  BEX_STR(GOTINVIS)
+  BEX_STR(GOTSUIT)
+  BEX_STR(GOTMAP)
+  BEX_STR(GOTVISOR)
+  BEX_STR(GOTMSPHERE)
+  BEX_STR(GOTCLIP)
+  BEX_STR(GOTCLIPBOX)
+  BEX_STR(GOTROCKET)
+  BEX_STR(GOTROCKBOX)
+  BEX_STR(GOTCELL)
+  BEX_STR(GOTCELLBOX)
+  BEX_STR(GOTSHELLS)
+  BEX_STR(GOTSHELLBOX)
+  BEX_STR(GOTBACKPACK)
+  BEX_STR(GOTBFG9000)
+  BEX_STR(GOTCHAINGUN)
+  BEX_STR(GOTCHAINSAW)
+  BEX_STR(GOTLAUNCHER)
+  BEX_STR(GOTPLASMA)
+  BEX_STR(GOTSHOTGUN)
+  BEX_STR(GOTSHOTGUN2)
+  BEX_STR(PD_BLUEO)
+  BEX_STR(PD_YELLOWO)
+  BEX_STR(PD_REDO)
+  BEX_STR(PD_BLUEK)
+  BEX_STR(PD_YELLOWK)
+  BEX_STR(PD_REDK)
+
+  BEX_STR(CC_ZOMBIE)
+  BEX_STR(CC_SHOTGUN)
+  BEX_STR(CC_HEAVY)
+  BEX_STR(CC_IMP)
+  BEX_STR(CC_DEMON)
+  BEX_STR(CC_LOST)
+  BEX_STR(CC_CACO)
+  BEX_STR(CC_HELL)
+  BEX_STR(CC_BARON)
+  BEX_STR(CC_ARACH)
+  BEX_STR(CC_PAIN)
+  BEX_STR(CC_REVEN)
+  BEX_STR(CC_MANCU)
+  BEX_STR(CC_ARCH)
+  BEX_STR(CC_SPIDER)
+  BEX_STR(CC_CYBER)
+  BEX_STR(CC_HERO)
+
+  // Boom messages.
+  BEX_STR(PD_BLUEC)
+  BEX_STR(PD_YELLOWC)
+  BEX_STR(PD_REDC)
+  BEX_STR(PD_BLUES)
+  BEX_STR(PD_YELLOWS)
+  BEX_STR(PD_REDS)
+  BEX_STR(PD_ANY)
+  BEX_STR(PD_ALL3)
+  BEX_STR(PD_ALL6)
+
+  {NULL, -1}
+};
+#undef BEX_STR
+
+
+
+//========================================================================
+//  The DeHackEd class
+//========================================================================
 
 dehacked_t::dehacked_t()
 {
@@ -187,33 +349,75 @@ void dehacked_t::error(char *first, ...)
 {
   va_list argptr;
 
-  if (devparm)
-    {
-      char buf[1000];
+  char buf[1000];
 
-      va_start(argptr, first);
-      vsprintf(buf, first, argptr);
-      va_end(argptr);
+  va_start(argptr, first);
+  vsprintf(buf, first, argptr);
+  va_end(argptr);
 
-      CONS_Printf("%s\n",buf);
-    }
-
+  CONS_Printf("%s\n", buf);
   num_errors++;
 }
 
 
 // a small hack for retrieving values following a '=' sign
-static int SearchValue(Parser &p)
+int dehacked_t::FindValue()
 {
   int value;
   char *temp = p.Pointer(); // save the current location
   p.GoToNext("=");
   if (!p.MustGetInt(&value))
     {
-      DEH.error("No value found\n");
+      error("No value found\n");
       value = 0;
     }
   p.SetPointer(temp); // and go back
+  return value;
+}
+
+
+int dehacked_t::ReadFlags(flag_mnemonic_t *mnemonics)
+{
+  int i, value = 0;
+  char *word = p.GetToken("= \t\r");
+
+  if (word && isdigit(word[0]))
+    {
+      // old-style numeric entry, just do the conversion
+      int temp = atoi(word);
+      for (i=0; i<32; i++)
+	if (temp & mnemonics[i].original)
+	  value |= mnemonics[i].flag;
+
+      return value;
+    }
+
+  // must be a BEX mnemonic, in which case no numeric entries are allowed
+  while (word)
+    {
+      if (isdigit(word[0]))
+	{
+	  error("You may not combine BEX bit mnemonics with numbers.\n");
+	  return value;
+	}
+
+      for (i=0; i<32; i++)
+	if (!strcasecmp(word, mnemonics[i].name))
+	  {
+	    value |= mnemonics[i].flag;
+	    CONS_Printf("flag value 0x%08lX, %s\n", mnemonics[i].flag, word);
+	    break;
+	  }
+
+      if (i >= 32)
+	{
+	  error("Unknown bit mnemonic '%s'\n", word);
+	  break;
+	}
+		
+      word = p.GetToken("+| \t\r"); // next token
+    }
+
   return value;
 }
 
@@ -229,13 +433,13 @@ static int StateMap(int num)
   if (num < 0 || num > 975) // FIXME upper limit
     {
       DEH.error("Frame %d doesn't exist!\n", num);
-      return 0;
+      return S_TNT1; // FIXME temp
     }
 
   if (num == 0)
     {
       DEH.error("You must not modify frame 0.\n");
-      return 0;
+      return S_TNT1; // FIXME temp
     }
 
   if (num <= 89)
@@ -245,9 +449,52 @@ static int StateMap(int num)
 }
 
 
-// ========================================================================
+// Utility for setting codepointers / action functions.
+// Accepts both numeric and BEX mnemonic references.
+static void SetAction(int to, const char *mnemonic)
+{
+  to = StateMap(to);
+
+  if (mnemonic[0] >= '0' && mnemonic[0] <= '9' )
+    {
+      int from = StateMap(strtol(mnemonic, NULL, 0));
+      if (to > 0)
+	if (from > 0)
+	  states[to].action = d_actions[from];
+	else
+	  DEH.error("Tried to use a weapon codepointer in a thing frame!\n");
+      else
+	if (from < 0)
+	  weaponstates[-to].action = w_actions[-from];
+	else
+	  DEH.error("Tried to use a thing codepointer in a weapon frame!\n");
+
+      return;
+    }
+
+  if (to > 0)
+    {
+      dactor_mnemonic_t *m;
+      for (m = BEX_DActorMnemonics; m->name && strcasecmp(mnemonic, m->name); m++);
+      if (!m->name)
+	DEH.error("[CODEPTR]: Unknown mnemonic '%s'\n", mnemonic);
+      states[to].action = m->ptr;
+    }
+  else
+    {
+      weapon_mnemonic_t *w;
+      for (w = BEX_WeaponMnemonics; w->name && strcasecmp(mnemonic, w->name); w++);
+      if (!w->name)
+	DEH.error("[CODEPTR]: Unknown mnemonic '%s'\n", mnemonic);
+      weaponstates[-to].action = w->ptr;
+    }
+}
+
+
+
+//========================================================================
 // Load a dehacked file format 6. I (BP) don't know other format
-// ========================================================================
+//========================================================================
 
 /*
   Thing sample:
@@ -277,17 +524,14 @@ Bits = 3232              MF_SOLID|MF_SHOOTABLE|MF_DROPOFF|MF_PICKUP|MF_NOTDMATCH
 Respawn frame = 32       S_NULL          // raisestate
 */
 
-static void Read_Thing(Parser &p, int num)
+void dehacked_t::Read_Thing(int num)
 {
   num--; // begin at 0 not 1;
   if (num >= NUMMOBJTYPES || num < 0)
     {
-      DEH.error("Thing %d doesn't exist\n", num);
+      error("Thing %d doesn't exist\n", num);
       return;
     }
-
-  char *word;
-  int value;
 
   while (p.NewLine(false))
     {
@@ -295,10 +539,21 @@ static void Read_Thing(Parser &p, int num)
       if (!p.LineLen())
 	break; // a whitespace-only line ends the record
 
-      value = SearchValue(p);
+      char *word = p.GetToken(" "); // get first word
+
+      // special handling for mnemonics
+      if (!strcasecmp(word, "Bits"))
+	{
+	  mobjinfo[num].flags = ReadFlags(BEX_FlagMnemonics); continue;
+	}
+      else if (!strcasecmp(word,"Bits2"))
+	{
+	  mobjinfo[num].flags2 = ReadFlags(BEX_Flag2Mnemonics); continue;
+	}
+
+      int value = FindValue();
 
       // set the value in appropriate field
-      word = p.GetToken(" ");
       if (!strcasecmp(word, "ID"))            mobjinfo[num].doomednum    = value;
       else if (!strcasecmp(word,"Hit"))       mobjinfo[num].spawnhealth  = value;
       else if (!strcasecmp(word,"Alert"))     mobjinfo[num].seesound     = value;
@@ -318,7 +573,7 @@ static void Read_Thing(Parser &p, int num)
 	      value = StateMap(value);
 	      if (value <= 0)
 		{
-		  DEH.error("Thing %d : Weapon states must not be used with Things!\n", num);
+		  error("Thing %d : Weapon states must not be used with Things!\n", num);
 		  continue;
 		}
 	      mobjinfo[num].deathstate  = statenum_t(value);
@@ -331,14 +586,12 @@ static void Read_Thing(Parser &p, int num)
       else if (!strcasecmp(word,"Mass"))      mobjinfo[num].mass        = value;
       else if (!strcasecmp(word,"Missile"))   mobjinfo[num].damage      = value;
       else if (!strcasecmp(word,"Action"))    mobjinfo[num].activesound = value;
-      else if (!strcasecmp(word,"Bits"))      mobjinfo[num].flags       = value;
-      else if (!strcasecmp(word,"Bits2"))     mobjinfo[num].flags2      = value;
       else
 	{
 	  value = StateMap(value);
 	  if (value <= 0)
 	    {
-	      DEH.error("Thing %d : Weapon states must not be used with Things!\n", num);
+	      error("Thing %d : Weapon states must not be used with Things!\n", num);
 	      continue;
 	    }
 
@@ -349,74 +602,8 @@ static void Read_Thing(Parser &p, int num)
 	  else if (!strcasecmp(word,"Far"))       mobjinfo[num].missilestate = statenum_t(value);
 	  else if (!strcasecmp(word,"Exploding")) mobjinfo[num].xdeathstate  = statenum_t(value);
 	  else if (!strcasecmp(word,"Respawn"))   mobjinfo[num].raisestate   = statenum_t(value);
-	  else DEH.error("Thing %d : Unknown field '%s'\n", num, word);
+	  else error("Thing %d : Unknown field '%s'\n", num, word);
 	}
-    }
-}
-
-
-
-// Utility for setting codepointers / action functions.
-// Accepts both numeric and BEX mnemonic references.
-static void SetAction(int to, const char *mnemonic)
-{
-  to = StateMap(to);
-
-  if (mnemonic[0] >= '0' && mnemonic[0] <= '9' )
-    {
-      int from = StateMap(strtol(mnemonic, NULL, 0));
-      if (to > 0)
-	if (from > 0)
-	  states[to].action = d_actions[from];
-	else
-	  DEH.error("Tried to use a weapon codepointer in a thing frame!\n");
-      else
-	if (from < 0)
-	  weaponstates[-to].action = w_actions[-from];
-	else
-	  DEH.error("Tried to use a thing codepointer in a weapon frame!\n");
-
-      return;
-    }
-
-  if (to > 0)
-    {
-      d_mnemonic_t *m;
-      for (m = BEX_DActor_mnemonics; m->name && strcasecmp(mnemonic, m->name); m++);
-      if (!m->name)
-	DEH.error("[CODEPTR]: Unknown mnemonic '%s'\n", mnemonic);
-      states[to].action = m->ptr;
-    }
-  else
-    {
-      w_mnemonic_t *w;
-      for (w = BEX_Weapon_mnemonics; w->name && strcasecmp(mnemonic, w->name); w++);
-      if (!w->name)
-	DEH.error("[CODEPTR]: Unknown mnemonic '%s'\n", mnemonic);
-      weaponstates[-to].action = w->ptr;
-    }
-}
-
-
-// parses the [CODEPTR] item
-static void Read_CODEPTR(Parser &p)
-{
-  while (p.NewLine(false))
-    {
-      p.PassWS();
-      if (!p.LineLen())
-	break; // a whitespace-only line ends the record
-
-      char *word = p.GetToken(" ");
-      if (strcasecmp(word, "Frame"))
-	{
-	  DEH.error("[CODEPTR]: Unknown command '%s'\n", word);
-	  continue;
-	}
-
-      int s = p.GetInt();
-      word = p.GetToken(" =");
-      SetAction(s, word);
     }
 }
 
@@ -430,7 +617,7 @@ Next frame = 200
 Codep = 111 // Legacy addition
 */
 
-static void Read_Frame(Parser &p, int num)
+void dehacked_t::Read_Frame(int num)
 {
   int s = StateMap(num);
   if (!s)
@@ -442,7 +629,7 @@ static void Read_Frame(Parser &p, int num)
       if (!p.LineLen())
 	break; // a whitespace-only line ends the record
 
-      int value = SearchValue(p);
+      int value = FindValue();
 
       // set the value in appropriate field
       char *word = p.GetToken(" ");
@@ -463,7 +650,7 @@ static void Read_Frame(Parser &p, int num)
 	      word = p.GetToken(" =");
 	      SetAction(s, word);
 	    }
-	  else DEH.error("Frame %d : Unknown field '%s'\n", num, word);
+	  else error("Frame %d : Unknown field '%s'\n", num, word);
 	}
       else
 	{
@@ -481,27 +668,36 @@ static void Read_Frame(Parser &p, int num)
 	      word = p.GetToken(" =");
 	      SetAction(s, word);
 	    }
-	  else DEH.error("Weaponframe %d : Unknown field '%s'\n", num, word);
+	  else error("Weaponframe %d : Unknown field '%s'\n", num, word);
 	}
     }
 }
 
 
-static void Read_Sound(Parser &p, int num)
+// deprecated
+void dehacked_t::Read_Sound(int num)
 {
-  char *word;
-  int value;
+  error("Sound command currently unsupported\n");
+  return;
 
+  if (num >= NUMSFX || num < 0)
+    {
+      error("Sound %d doesn't exist\n");
+      return;
+    }
+  
   while (p.NewLine(false))
     {
+      // TODO dehacked sound commands
+      /*
+
       p.PassWS();
       if (!p.LineLen())
 	break; // a whitespace-only line ends the record
 
-      value = SearchValue(p);
-      word = p.GetToken(" ");
-      // TODO dehacked sound commands
-      /*
+      int value = FindValue();
+      char *word = p.GetToken(" ");
+
 	if (!strcasecmp(word,"Offset"))
 	  {
 	    value -= 150360;
@@ -514,21 +710,21 @@ static void Read_Sound(Parser &p, int num)
 	    if (value>=-1 && value < NUMSFX-1)
 	      strcpy(S_sfx[num].lumpname, savesfxnames[value+1]);
 	    else
-	      DEH.error("Sound %d : offset out of bound\n",num);
+	      error("Sound %d : offset out of bound\n",num);
 	  }
 	else if (!strcasecmp(word,"Zero/One"))
 	  S_sfx[num].multiplicity = value;
 	else if (!strcasecmp(word,"Value"))
 	  S_sfx[num].priority   =value;
 	else
-	  DEH.error("Sound %d : unknown word '%s'\n",num,word);
+	  error("Sound %d : unknown word '%s'\n",num,word);
       */
     }
 }
 
 
 // this part of dehacked really sucks, but it still partly supported
-static void Read_Text(Parser &p, int len1, int len2)
+void dehacked_t::Read_Text(int len1, int len2)
 {
   char s[2001];
   int i;
@@ -539,13 +735,13 @@ static void Read_Text(Parser &p, int len1, int len2)
   // yes, "text" can change some tables like music, sound and sprite names
   if (len1+len2 > 2000)
     {
-      DEH.error("Text too long\n");
+      error("Text too long\n");
       return;
     }
   
   if (p.GetStringN(s, len1 + len2) != len1 + len2)
     {
-      DEH.error("Read failed\n");
+      error("Read failed\n");
       return;
     }
 
@@ -582,7 +778,7 @@ static void Read_Text(Parser &p, int len1, int len2)
   for (i=0; i<NUMTEXT; i++)
     {
       int temp = strlen(text[i]);
-      if (!strncmp(text[i], s, len1) && temp == len1)
+      if (temp == len1 && !strncmp(text[i], s, len1))
 	{
 	  if (temp < len2)  // increase size of the text
 	    {
@@ -642,8 +838,9 @@ static void Read_Text(Parser &p, int len1, int len2)
   */
 
   s[len1] = '\0';
-  DEH.error("Text not changed :%s\n", s);
+  error("Text not changed :%s\n", s);
 }
+
 
 /*
   Weapon sample:
@@ -654,15 +851,21 @@ Bobbing frame = 13
 Shooting frame = 17
 Firing frame = 10
 */
-static void Read_Weapon(Parser &p, int num)
+void dehacked_t::Read_Weapon(int num)
 {
+  if (num >= NUMWEAPONS || num < 0)
+    {
+      error("Weapon %d doesn't exist\n", num);
+      return;
+    }
+
   while (p.NewLine(false))
     {
       p.PassWS();
       if (!p.LineLen())
 	break; // a whitespace-only line ends the record
 
-      int value = SearchValue(p);
+      int value = FindValue();
       char *word = p.GetToken(" ");
 
       if (!strcasecmp(word,"Ammo"))
@@ -672,7 +875,7 @@ static void Read_Weapon(Parser &p, int num)
 	  value = -StateMap(value);
 	  if (value <= 0)
 	    {
-	      DEH.error("Weapon %d : Thing states must not be used with weapons!\n", num);
+	      error("Weapon %d : Thing states must not be used with weapons!\n", num);
 	      continue;
 	    }
 
@@ -682,18 +885,25 @@ static void Read_Weapon(Parser &p, int num)
 	  else if (!strcasecmp(word,"Shooting"))
 	    wpnlev1info[num].atkstate = wpnlev1info[num].holdatkstate        = weaponstatenum_t(value);
 	  else if (!strcasecmp(word,"Firing"))   wpnlev1info[num].flashstate = weaponstatenum_t(value);
-	  else DEH.error("Weapon %d : unknown word '%s'\n", num, word);
+	  else error("Weapon %d : unknown word '%s'\n", num, word);
 	}
     }
 }
+
 
 /*
   Ammo sample:
 Max ammo = 400
 Per ammo = 40
 */
-static void Read_Ammo(Parser &p, int num)
+void dehacked_t::Read_Ammo(int num)
 {
+  if (num >= NUMAMMO || num < 0)
+    {
+      error("Ammo %d doesn't exist\n", num);
+      return;
+    }
+
   // support only Doom ammo with this command
   const mobjtype_t clips[4][4] =
   {
@@ -709,7 +919,7 @@ static void Read_Ammo(Parser &p, int num)
       if (!p.LineLen())
 	break; // a whitespace-only line ends the record
 
-      int value = SearchValue(p);
+      int value = FindValue();
       char *word = p.GetToken(" ");
 
       if (!strcasecmp(word,"Max"))
@@ -722,17 +932,17 @@ static void Read_Ammo(Parser &p, int num)
       else if (!strcasecmp(word,"Perweapon"))
 	{
 	  mobjinfo[clips[2][num]].spawnhealth = value;
-	  if (clips[3][num] > 0)
+	  if (clips[3][num] > MT_NONE)
 	    mobjinfo[clips[3][num]].spawnhealth = value;
 	}
       else
-	DEH.error("Ammo %d : unknown word '%s'\n", num, word);
+	error("Ammo %d : unknown word '%s'\n", num, word);
     }
 }
 
 
 // miscellaneous one-liners
-void dehacked_t::Read_Misc(Parser &p)
+void dehacked_t::Read_Misc()
 {
   extern int MaxArmor[];
 
@@ -745,7 +955,7 @@ void dehacked_t::Read_Misc(Parser &p)
       if (!p.LineLen())
 	break; // a whitespace-only line ends the record
 
-      value = SearchValue(p);
+      value = FindValue();
       word1 = p.GetToken(" ");
       word2 = p.GetToken(" ");
 
@@ -822,11 +1032,10 @@ static void change_cheat_code(byte *old, byte *n)
   return;
 }
 
-static void Read_Cheat(Parser &p)
-{
-  char *word;
-  byte *value;
 
+// deprecated
+void dehacked_t::Read_Cheat()
+{
   while (p.NewLine(false))
     {
       p.PassWS();
@@ -835,9 +1044,9 @@ static void Read_Cheat(Parser &p)
 
       // FIXME how does this work?
       p.GetToken("=");
-      value = (byte *)p.GetToken(" \n"); // skip the space
+      byte *value = (byte *)p.GetToken(" \n"); // skip the space
       p.GetToken(" \n");         // finish the string
-      word = p.GetToken(" ");
+      char *word = p.GetToken(" ");
 
       if (!strcasecmp(word,"Change"))        change_cheat_code(cheat_mus_seq,value);
       else if (!strcasecmp(word,"Chainsaw")) change_cheat_code(cheat_choppers_seq,value);
@@ -869,9 +1078,58 @@ static void Read_Cheat(Parser &p)
       else if (!strcasecmp(word,"Level"))         change_cheat_code(cheat_clev_seq,value);
       else if (!strcasecmp(word,"Player"))        change_cheat_code(cheat_mypos_seq,value);
       else if (!strcasecmp(word,"Map"))           change_cheat_code(cheat_amap_seq,value);
-      else DEH.error("Cheat : unknown word '%s'\n",word);
+      else error("Cheat : unknown word '%s'\n",word);
     }
 }
+
+
+// Parses the BEX [CODEPTR] section
+void dehacked_t::Read_CODEPTR()
+{
+  while (p.NewLine(false))
+    {
+      p.PassWS();
+      if (!p.LineLen())
+	break; // a whitespace-only line ends the record
+
+      char *word = p.GetToken(" ");
+      if (strcasecmp(word, "Frame"))
+	{
+	  error("[CODEPTR]: Unknown command '%s'\n", word);
+	  continue;
+	}
+
+      int s = p.GetInt();
+      word = p.GetToken(" =");
+      SetAction(s, word);
+    }
+}
+
+
+// Parses the BEX [STRINGS] section
+void dehacked_t::Read_STRINGS()
+{
+  while (p.NewLine(false))
+    {
+      p.PassWS();
+      if (!p.LineLen())
+	break; // a whitespace-only line ends the record
+
+      char *word = p.GetToken(" ");
+      string_mnemonic_t *m;
+      for (m = BEX_StringMnemonics; m->name && strcasecmp(word, m->name); m++);
+      if (!m->name)
+	{	  
+	  error("[STRINGS]: Unknown mnemonic '%s'\n", word);
+	  continue;
+	}
+
+      // FIXME backslash-continued lines...
+      p.GetToken("=");
+      text[m->num] = Z_StrDup(p.Pointer());
+    }
+}
+
 
 
 // dehacked command parser
@@ -906,9 +1164,6 @@ static const char *DEH_cmds[DEH_NUM + 1] =
 // (there is special trick for converting .deh files into WAD lumps)
 bool dehacked_t::LoadDehackedLump(const char *buf, int len)
 {
-  Parser p;
-  int i;
-
   if (!p.Open(buf, len))
     return false;
 
@@ -918,6 +1173,8 @@ bool dehacked_t::LoadDehackedLump(const char *buf, int len)
   d_actions = (actionf_p1 *)Z_Malloc(NUMSTATES * sizeof(actionf_p1), PU_STATIC, NULL);
   w_actions = (actionf_p2 *)Z_Malloc(NUMWEAPONSTATES * sizeof(actionf_p2), PU_STATIC, NULL);
   savesprnames = (char **)Z_Malloc(NUMSPRITES * sizeof(char *), PU_STATIC, NULL);
+
+  int i;
 
   // save original values
   for (i=0; i<NUMSTATES; i++)
@@ -947,15 +1204,16 @@ bool dehacked_t::LoadDehackedLump(const char *buf, int len)
 	  switch (P_MatchString(word1, DEH_cmds))
 	    {
 	    case DEH_Thing:
-	      Read_Thing(p, i);
+	      Read_Thing(i);
 	      break;
 
 	    case DEH_Frame:
-	      Read_Frame(p, i);
+	      Read_Frame(i);
 	      break;
 
 	    case DEH_Pointer:
 	      /*
+		Syntax:
 		pointer uuu (frame xxx)
 		codep frame = yyy
 	      */
@@ -976,10 +1234,7 @@ bool dehacked_t::LoadDehackedLump(const char *buf, int len)
 	      break;
 
 	    case DEH_Sound:
-	      if (i < NUMSFX && i >= 0)
-		Read_Sound(p, i);
-	      else
-		error("Sound %d doesn't exist\n");
+	      Read_Sound(i);
 	      break;
 
 	    case DEH_Sprite:
@@ -988,7 +1243,7 @@ bool dehacked_t::LoadDehackedLump(const char *buf, int len)
 		  if (p.NewLine())
 		    {
 		      int k;
-		      k = (SearchValue(p) - 151328) / 8;
+		      k = (FindValue() - 151328) / 8;
 		      if (k >= 0 && k < NUMSPRITES)
 			sprnames[i] = savesprnames[k];
 		      else
@@ -1003,37 +1258,31 @@ bool dehacked_t::LoadDehackedLump(const char *buf, int len)
 	      if ((word1 = p.GetToken(" ")))
 		{
 		  int j = atoi(word1);
-		  Read_Text(p, i, j);
+		  Read_Text(i, j);
 		}
 	      else
 		error("Text : missing second number\n");
 	      break;
 
 	    case DEH_Weapon:
-	      if (i < NUMWEAPONS && i >= 0)
-		Read_Weapon(p, i);
-	      else
-		error("Weapon %d doesn't exist\n", i);
+	      Read_Weapon(i);
 	      break;
 
 	    case DEH_Ammo:
-	      if (i < NUMAMMO && i >= 0)
-		Read_Ammo(p, i);
-	      else
-		error("Ammo %d doesn't exist\n", i);
+	      Read_Ammo(i);
 	      break;
 
 	    case DEH_Misc:
-	      Read_Misc(p);
+	      Read_Misc();
 	      break;
 
 	    case DEH_Cheat:
-	      Read_Cheat(p);
+	      Read_Cheat();
 	      break;
 
 	    case DEH_Doom:
 	      p.NewLine();
-	      i = SearchValue(p);
+	      i = FindValue();
 	      if (i != 19)
 		error("Warning : Patch from a different Doom version (%d), only version 1.9 is supported\n", i);
 	      break;
@@ -1043,20 +1292,21 @@ bool dehacked_t::LoadDehackedLump(const char *buf, int len)
 	      if (word1 && !strcasecmp(word1, "format"))
 		{
 		  p.NewLine();
-		  if (SearchValue(p) != 6)
+		  if (FindValue() != 6)
 		    error("Warning : Patch format not supported");
 		}
 	      break;
 
 	      // BEX stuff
 	    case DEH_CODEPTR:
-	      Read_CODEPTR(p);
+	      Read_CODEPTR();
 	      break;
 	    case DEH_PARS:
-	      // TODO support PARS
+	      // TODO support PARS?
+	      error("BEX [PARS] block currently unsupported.\n");
 	      break;
 	    case DEH_STRINGS:
-	      // TODO support STRINGS
+	      Read_STRINGS();
 	      break;
 	    default:
 	      error("Unknown command : %s\n", word1);
@@ -1074,5 +1324,7 @@ bool dehacked_t::LoadDehackedLump(const char *buf, int len)
     }
 
   loaded = true;
+  p.Clear();
+
   return true;
 }
