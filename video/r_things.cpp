@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2004/08/19 19:42:42  smite-meister
+// bugfixes
+//
 // Revision 1.20  2004/08/18 14:35:23  smite-meister
 // PNG support!
 //
@@ -75,11 +78,10 @@
 // Revision 1.1.1.1  2002/11/16 14:18:49  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//      Refresh of things, i.e. objects represented by sprites.
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Software renderer: Sprite rendering
 
 #include "doomdef.h"
 #include "command.h"
@@ -91,9 +93,12 @@
 #include "g_pawn.h"
 
 #include "r_render.h"
-#include "r_local.h"
+#include "r_main.h"
+#include "r_bsp.h"
 #include "r_state.h"
+#include "r_plane.h"
 #include "r_sprite.h"
+#include "r_draw.h"
 #include "v_video.h"
 
 #include "p_pspr.h"
@@ -159,6 +164,113 @@ short           screenheightarray[MAXVIDWIDTH];
 
 
 
+//=============================================================
+//                     VisSprites
+//=============================================================
+
+
+/// A vissprite_t represents a sprite object that will be drawn during a refresh.
+/// I.e. a mapthing that is (at least) partly visible.
+struct vissprite_t
+{
+  enum spritecut_e
+  {
+    SC_NONE = 0,
+    SC_TOP = 1,
+    SC_BOTTOM = 2
+  };
+
+  // Doubly linked list.
+  vissprite_t* prev;
+  vissprite_t* next;
+
+  int                 x1;
+  int                 x2;
+
+  // for line side calculation
+  fixed_t             gx;
+  fixed_t             gy;
+
+  // global bottom / top for silhouette clipping
+  fixed_t             gz;
+  fixed_t             gzt;
+
+  // Physical bottom / top for sorting with 3D floors.
+  fixed_t                               pz;
+  fixed_t                               pzt;
+
+  // horizontal position of x1
+  fixed_t             startfrac;
+
+  fixed_t             scale;
+
+  // negative if flipped
+  fixed_t             xiscale;
+
+  fixed_t             texturemid;
+  class Texture      *tex;
+
+  /// colormap used for lightlevel changes
+  lighttable_t   *lightmap;
+
+  /// colormap used for color translation
+  byte           *translationmap;
+
+  /// which translucency table to use?
+  byte           *transmap;
+
+  // SoM: 3/6/2000: height sector for underwater/fake ceiling support
+  int                 heightsec;
+
+  //SoM: 4/3/2000: Global colormaps!
+  extracolormap_t*    extra_colormap;
+  fixed_t             xscale;
+
+  //SoM: Precalculated top and bottom screen coords for the sprite.
+  fixed_t             thingheight; //The actual height of the thing (for 3D floors)
+  sector_t*           sector; //The sector containing the thing.
+  fixed_t             sz;
+  fixed_t             szt;
+
+  int                 cut;  //0 for none, bit 1 for top, bit 2 for bottom
+
+public:
+  vissprite_t *SplitSprite(Actor *thing, fixed_t cutfrac, lightlist_t *ll);
+  void DrawVisSprite();
+};
+
+
+#define MAXVISSPRITES   256
+static vissprite_t  vissprites[MAXVISSPRITES];
+static vissprite_t *vissprite_p;
+static vissprite_t  overflowsprite;
+
+static vissprite_t* R_NewVisSprite()
+{
+  if (vissprite_p == &vissprites[MAXVISSPRITES])
+    return &overflowsprite;
+
+  vissprite_p++;
+  return vissprite_p-1;
+}
+
+
+// Called at frame start.
+void R_ClearSprites()
+{
+  vissprite_p = vissprites;
+}
+
+
+
+
+
+
+//=================================================================
+//                     presentation_t 
+//=================================================================
+
+
 void *presentation_t::operator new(size_t size)
 {
   return Z_Malloc(size, PU_LEVSPEC, NULL); // same tag as with thinkers
@@ -195,6 +307,8 @@ spritepres_t::~spritepres_t()
 }
 
 
+/// This function does all the necessary frame changes for DActors and other state machines
+/// (but what about 3d models, which have no frames???)
 void spritepres_t::SetFrame(const state_t *st)
 {
   // FIXME for now the name of SPR_NONE is "NONE", fix it when we have the default sprite
@@ -209,11 +323,12 @@ void spritepres_t::SetFrame(const state_t *st)
     }
 
   state = st;
-  flags = st->frame & FF_FRAMEMASK; // TODO the low 16 bits are wasted, but so what
-  lastupdate = -1; // hack TODO lastupdate should be set to nowtic
+  flags = st->frame & ~TFF_FRAMEMASK; // the low 15 bits are wasted, but so what
+  lastupdate = -1; // hack, since it will be Updated on this same tic TODO lastupdate should be set to nowtic
 }
 
 
+/// This is needed for PlayerPawns.
 void spritepres_t::SetAnim(int seq)
 {
   const state_t *st;
@@ -296,8 +411,236 @@ bool spritepres_t::Update(int advance)
 
 spriteframe_t *spritepres_t::GetFrame()
 {
-  return &spr->spriteframes[state->frame && FF_FRAMEMASK];
+  return &spr->spriteframes[state->frame && TFF_FRAMEMASK];
 }
+
+
+
+// sprite rendering hacks
+fixed_t proj_tz, proj_tx;
+
+
+/// this does the actual work of drawing the sprite in the SW renderer
+void spritepres_t::Project(Actor *p)
+{
+  Update(1); // FIXME not here
+
+  int frame = state->frame & TFF_FRAMEMASK;
+
+  if (frame >= spr->numframes)
+    I_Error("spritepres_t::Project: invalid sprite frame %d (%d)\n", frame, spr->numframes);
+
+  spriteframe_t *sprframe = &spr->spriteframes[frame];
+
+  unsigned  rot;
+  bool      flip;
+  Texture  *t;
+
+  // decide which patch to use for sprite relative to player
+  if (sprframe->rotate)
+    {
+      // choose a different rotation based on player view
+      angle_t ang = R.R_PointToAngle(p->x, p->y); // uses viewx,viewy
+      rot = (ang - p->angle + unsigned(ANG45/2) * 9) >> 29;
+
+      t = sprframe->tex[rot];
+      flip = sprframe->flip[rot];
+    }
+  else
+    {
+      // use single rotation for all views
+      rot = 0;
+      t = sprframe->tex[0];
+      flip = sprframe->flip[0];
+    }
+
+#ifdef HWRENDER
+  // hardware renderer part
+  if (rendermode != render_soft)
+    {
+      return;
+    }
+#endif
+
+  // software renderer part
+  // aspect ratio stuff :
+  fixed_t  xscale = FixedDiv(projection, proj_tz);
+  fixed_t  yscale = FixedDiv(projectiony, proj_tz); //added:02-02-98:aaargll..if I were a math-guy!!!
+
+  // calculate edges of the shape
+  proj_tx -= (t->leftoffset << FRACBITS);
+  int x1 = (centerxfrac + FixedMul(proj_tx, xscale)) >>FRACBITS;
+
+  // off the right side?
+  if (x1 > viewwidth)
+    return;
+
+  proj_tx += t->width << FRACBITS;
+  int x2 = ((centerxfrac + FixedMul(proj_tx, xscale)) >>FRACBITS) - 1;
+
+  // off the left side
+  if (x2 < 0)
+    return;
+
+  //SoM: 3/17/2000: Disreguard sprites that are out of view..
+  fixed_t gzt = p->z + (t->topoffset << FRACBITS);
+  int light = 0;
+
+  sector_t *sec = p->subsector->sector;
+
+  if (sec->numlights)
+    {
+      int lightnum;
+      light = R_GetPlaneLight(sec, gzt, false);
+      if (sec->lightlist[light].caster && sec->lightlist[light].caster->flags & FF_FOG)
+        lightnum = (*sec->lightlist[light].lightlevel  >> LIGHTSEGSHIFT);
+      else
+        lightnum = (*sec->lightlist[light].lightlevel  >> LIGHTSEGSHIFT)+extralight;
+
+      if (lightnum < 0)
+          spritelights = scalelight[0];
+      else if (lightnum >= LIGHTLEVELS)
+          spritelights = scalelight[LIGHTLEVELS-1];
+      else
+          spritelights = scalelight[lightnum];
+    }
+
+  int heightsec = sec->heightsec;
+
+  if (heightsec != -1)   // only clip things which are in special sectors
+    {
+      int phs = R.viewplayer->subsector->sector->heightsec;
+      if (phs != -1 && R.viewz < R.sectors[phs].floorheight ?
+          p->z >= R.sectors[heightsec].floorheight :
+          gzt < R.sectors[heightsec].floorheight)
+        return;
+      if (phs != -1 && R.viewz > R.sectors[phs].ceilingheight ?
+          gzt < R.sectors[heightsec].ceilingheight &&
+          R.viewz >= R.sectors[heightsec].ceilingheight :
+          p->z >= R.sectors[heightsec].ceilingheight)
+        return;
+    }
+
+  // store information in a vissprite
+  vissprite_t *vis = R_NewVisSprite();
+  vis->heightsec = heightsec; //SoM: 3/17/2000
+
+  //vis->mobjflags = p->flags;
+
+  vis->scale = yscale;           //<<detailshift;
+  vis->gx = p->x;
+  vis->gy = p->y;
+  vis->gz = gzt - (t->height << FRACBITS);
+  vis->gzt = gzt;
+  vis->thingheight = p->height;
+  vis->pz = p->z;
+  vis->pzt = vis->pz + vis->thingheight;
+  vis->texturemid = vis->gzt - R.viewz;
+  // foot clipping
+  if (p->z <= sec->floorheight)
+    vis->texturemid -= p->floorclip;
+
+  vis->x1 = x1 < 0 ? 0 : x1;
+  vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
+  vis->xscale = xscale; //SoM: 4/17/2000
+  vis->sector = sec;
+  vis->szt = (centeryfrac - FixedMul(vis->gzt - R.viewz, yscale)) >> FRACBITS;
+  vis->sz = (centeryfrac - FixedMul(vis->gz - R.viewz, yscale)) >> FRACBITS;
+  vis->cut = false;
+  if (sec->numlights)
+    vis->extra_colormap = sec->lightlist[light].extra_colormap;
+  else
+    vis->extra_colormap = sec->extra_colormap;
+
+  fixed_t iscale = FixedDiv (FRACUNIT, xscale);
+
+  if (flip)
+    {
+      vis->startfrac = (t->width << FRACBITS) - 1;
+      vis->xiscale = -iscale;
+    }
+  else
+    {
+      vis->startfrac = 0;
+      vis->xiscale = iscale;
+    }
+
+  if (vis->x1 > x1)
+    vis->startfrac += vis->xiscale*(vis->x1-x1);
+
+  //Fab: lumppat is the lump number of the patch to use, this is different
+  //     than lumpid for sprites-in-pwad : the graphics are patched
+  vis->tex = sprframe->tex[rot];
+
+
+  // determine the lightlevel & special effects
+
+  vis->transmap = NULL;
+
+  // specific translucency
+  if (flags & TFF_SMOKESHADE)
+    vis->transmap = VIS_SMOKESHADE; // not really a transmap ... see R_DrawVisSprite
+  else
+    {
+      if (flags & TFF_TRANSMASK)
+        vis->transmap = transtables + (((flags & TFF_TRANSMASK) >> TFF_TRANSSHIFT) << tr_shift) - tr_size;
+      else if (p->flags & MF_SHADOW)
+        // actually only the player should use this (temporary invisibility)
+        // because now the translucency is set through TFF_TRANSMASK
+        vis->transmap = transtables + ((tr_transhi-1) << tr_shift);
+
+      if (fixedcolormap)
+        {
+          // fixed map : all the screen has the same colormap
+          //  eg: negative effect of invulnerability
+          vis->lightmap = fixedcolormap;
+        }
+      else if ((flags & (TFF_FULLBRIGHT | TFF_TRANSMASK) || p->flags & MF_SHADOW) &&
+	       (!vis->extra_colormap || !vis->extra_colormap->fog))
+        {
+          // full bright : goggles
+          vis->lightmap = colormaps;
+        }
+      else
+        {
+          // diminished light
+          int index = xscale>>(LIGHTSCALESHIFT-detailshift);
+
+          if (index >= MAXLIGHTSCALE)
+            index = MAXLIGHTSCALE-1;
+
+          vis->lightmap = spritelights[index];
+        }
+    }
+
+  // color translation
+  if (color)
+    vis->translationmap = translationtables + ((color - 1) << 8);
+  else
+    vis->translationmap = NULL;
+
+  // split the vissprite into several if necessary
+  for (int i = 1; i < sec->numlights; i++)
+    {
+      if (sec->lightlist[i].height >= vis->gzt || !(sec->lightlist[i].caster->flags & FF_CUTSPRITES))
+	continue;
+      if (sec->lightlist[i].height <= vis->gz)
+	return;
+
+      fixed_t cutfrac = (centeryfrac - FixedMul(sec->lightlist[i].height - R.viewz, vis->scale)) >> FRACBITS;
+      if (cutfrac < 0)
+	continue;
+      if (cutfrac > vid.height)
+	return;
+
+      // Found a split! Make a new sprite, copy the old sprite to it, and
+      // adjust the heights.
+      vis = vis->SplitSprite(p, cutfrac, &sec->lightlist[i]);
+    }
+
+}
+
+
 
 // ==========================================================================
 //
@@ -577,8 +920,6 @@ static void R_AddSpriteDefs (char** namelist, int wadnum)
 //
 // GAME FUNCTIONS
 //
-static vissprite_t  vissprites[MAXVISSPRITES];
-static vissprite_t *vissprite_p;
 
 static void R_InitSkins();
 //
@@ -610,32 +951,6 @@ void R_InitSprites(char** namelist)
 
 
 //
-// R_ClearSprites
-// Called at frame start.
-//
-void R_ClearSprites()
-{
-  vissprite_p = vissprites;
-}
-
-
-//
-// R_NewVisSprite
-//
-static vissprite_t     overflowsprite;
-
-vissprite_t* R_NewVisSprite()
-{
-  if (vissprite_p == &vissprites[MAXVISSPRITES])
-    return &overflowsprite;
-
-  vissprite_p++;
-  return vissprite_p-1;
-}
-
-
-
-//
 // R_DrawMaskedColumn
 // Used for sprites and masked mid textures.
 // Masked means: partly transparent, i.e. stored
@@ -652,125 +967,118 @@ fixed_t         windowbottom;
 
 void R_DrawMaskedColumn(column_t* column)
 {
-    int         topscreen;
-    int         bottomscreen;
-    fixed_t     basetexturemid;
+  fixed_t basetexturemid = dc_texturemid;
 
-    basetexturemid = dc_texturemid;
-
-    for ( ; column->topdelta != 0xff ; )
+  for ( ; column->topdelta != 0xff ; )
     {
-        // calculate unclipped screen coordinates
-        //  for post
-        topscreen = sprtopscreen + spryscale*column->topdelta;
-        bottomscreen = sprbotscreen == MAXINT ? topscreen + spryscale*column->length :
-                                                sprbotscreen + spryscale*column->length;
+      // calculate unclipped screen coordinates
+      //  for post
+      int topscreen = sprtopscreen + spryscale*column->topdelta;
+      int bottomscreen = sprbotscreen == MAXINT ? topscreen + spryscale*column->length :
+	sprbotscreen + spryscale*column->length;
 
-        dc_yl = (topscreen+FRACUNIT-1)>>FRACBITS;
-        dc_yh = (bottomscreen-1)>>FRACBITS;
+      dc_yl = (topscreen+FRACUNIT-1)>>FRACBITS;
+      dc_yh = (bottomscreen-1)>>FRACBITS;
 
-        if(windowtop != MAXINT && windowbottom != MAXINT)
+      if (windowtop != MAXINT && windowbottom != MAXINT)
         {
-          if(windowtop > topscreen)
+          if (windowtop > topscreen)
             dc_yl = (windowtop + FRACUNIT - 1) >> FRACBITS;
-          if(windowbottom < bottomscreen)
+          if (windowbottom < bottomscreen)
             dc_yh = (windowbottom - 1) >> FRACBITS;
         }
 
-        if (dc_yh >= mfloorclip[dc_x])
-            dc_yh = mfloorclip[dc_x]-1;
-        if (dc_yl <= mceilingclip[dc_x])
-            dc_yl = mceilingclip[dc_x]+1;
+      if (dc_yh >= mfloorclip[dc_x])
+	dc_yh = mfloorclip[dc_x]-1;
+      if (dc_yl <= mceilingclip[dc_x])
+	dc_yl = mceilingclip[dc_x]+1;
 
-        if (dc_yl <= dc_yh && dc_yl < vid.height && dc_yh > 0)
+      if (dc_yl <= dc_yh && dc_yl < vid.height && dc_yh > 0)
         {
-            dc_source = (byte *)column + 3;
-            dc_texturemid = basetexturemid - (column->topdelta<<FRACBITS);
-            // dc_source = (byte *)column + 3 - column->topdelta;
+	  dc_source = column->data;
+	  dc_texturemid = basetexturemid - (column->topdelta << FRACBITS);
+	  // dc_source = column->data - column->topdelta;
 
-            // Drawn by either R_DrawColumn
-            //  or (SHADOW) R_DrawFuzzColumn.
-            // FIXME a quick fix
-            if (!ylookup[dc_yl] && colfunc==R_DrawColumn_8)
-              {
-                static int first = 1;
-                if (first)
-                  {
-                    CONS_Printf("WARNING: avoiding a crash in %s %d\n", __FILE__, __LINE__);
-                    first = 0;
-                  }
-              }
-            else
-              colfunc();
+	  // Drawn by either R_DrawColumn
+	  //  or (SHADOW) R_DrawFuzzColumn.
+	  // FIXME a quick fix
+	  if (!ylookup[dc_yl] && colfunc==R_DrawColumn_8)
+	    {
+	      static int first = 1;
+	      if (first)
+		{
+		  CONS_Printf("WARNING: avoiding a crash in %s %d\n", __FILE__, __LINE__);
+		  first = 0;
+		}
+	    }
+	  else
+	    colfunc();
         }
-        column = (column_t *)(  (byte *)column + column->length + 4);
+
+      column = (column_t *)&column->data[column->length + 1];
     }
 
-    dc_texturemid = basetexturemid;
+  dc_texturemid = basetexturemid;
 }
 
 
 
-//
-// R_DrawVisSprite
 //  mfloorclip and mceilingclip should also be set.
-//
-static void R_DrawVisSprite(vissprite_t *vis, int  x1, int x2)
+void vissprite_t::DrawVisSprite()
 {
-  int                 texturecolumn;
-  fixed_t             frac;
+  dc_colormap = lightmap;
 
-  Texture *t = vis->tex;
-
-  dc_colormap = vis->colormap;
-
-  if (vis->transmap == VIS_SMOKESHADE)
+  if (transmap == VIS_SMOKESHADE)
     // shadecolfunc uses 'colormaps'
     colfunc = shadecolfunc;
-  else if (vis->transmap)
+  else if (transmap)
     {
       colfunc = fuzzcolfunc;
-      dc_transmap = vis->transmap;    //Fab:29-04-98: translucency table
+      dc_transmap = transmap;    //Fab:29-04-98: translucency table
     }
-  /*
-    FIXME color translation
-  else if ()
+
+  if (translationmap)
     {
       // translate green skin to another color
       colfunc = transcolfunc;
-      dc_translation = vis->colormap;
-    }
-  */
+      /*
+	// Support for translated and translucent sprites. SSNTails 11-11-2002
+      if (transmap)
+        colfunc = transtransfunc; // TODO
+      */
 
-  if(vis->extra_colormap && !fixedcolormap)
+      dc_translation = translationmap;
+    }
+
+  if (extra_colormap && !fixedcolormap)
     {
       if(!dc_colormap)
-        dc_colormap = vis->extra_colormap->colormap;
+        dc_colormap = extra_colormap->colormap;
       else
-        dc_colormap = &vis->extra_colormap->colormap[dc_colormap - colormaps];
+        dc_colormap = &extra_colormap->colormap[dc_colormap - colormaps];
     }
-  if(!dc_colormap)
+
+  if (!dc_colormap)
     dc_colormap = colormaps;
 
-  //dc_iscale = abs(vis->xiscale)>>detailshift;  ???
-  dc_iscale = FixedDiv (FRACUNIT, vis->scale);
-  dc_texturemid = vis->texturemid;
+  //dc_iscale = abs(xiscale)>>detailshift;  ???
+  dc_iscale = FixedDiv (FRACUNIT, scale);
+  dc_texturemid = texturemid;
   dc_texheight = 0;
 
-  frac = vis->startfrac;
-  spryscale = vis->scale;
+  fixed_t frac = startfrac;
+  spryscale = scale;
   sprtopscreen = centeryfrac - FixedMul(dc_texturemid,spryscale);
   windowtop = windowbottom = sprbotscreen = MAXINT;
 
-
-  for (dc_x=vis->x1 ; dc_x<=vis->x2 ; dc_x++, frac += vis->xiscale)
+  for (dc_x = x1; dc_x <= x2; dc_x++, frac += xiscale)
     {
-      texturecolumn = frac>>FRACBITS;
+      int texturecolumn = frac >> FRACBITS;
 #ifdef RANGECHECK
       if (texturecolumn < 0 || texturecolumn >= t->width)
         I_Error ("R_DrawSpriteRange: bad texturecolumn");
 #endif
-      column_t *column = t->GetMaskedColumn(texturecolumn);
+      column_t *column = tex->GetMaskedColumn(texturecolumn);
       R_DrawMaskedColumn(column);
     }
   // TODO unmasked drawer...
@@ -780,102 +1088,79 @@ static void R_DrawVisSprite(vissprite_t *vis, int  x1, int x2)
 
 
 
-
-//
-// was R_SplitSprite
-// runs through a sector's lightlist and
-void Rend::R_SplitSprite(vissprite_t* sprite, Actor* thing)
+// splits the vissprite into two  (different light conditions on different parts of the sprite!)
+vissprite_t *vissprite_t::SplitSprite(Actor *thing, fixed_t cutfrac, lightlist_t *ll)
 {
-  int           i, lightnum, index;
-  fixed_t               cutfrac;
-  sector_t*     sector;
-  vissprite_t*  newsprite;
+  vissprite_t *newsprite = R_NewVisSprite();
+  memcpy(newsprite, this, sizeof(vissprite_t));
 
-  sector = sprite->sector;
+  cut |= vissprite_t::SC_BOTTOM;
+  gz = ll->height;
 
-  for(i = 1; i < sector->numlights; i++)
-  {
-    if(sector->lightlist[i].height >= sprite->gzt || !(sector->lightlist[i].caster->flags & FF_CUTSPRITES))
-      continue;
-    if(sector->lightlist[i].height <= sprite->gz)
-      return;
+  newsprite->gzt = gz;
 
-    cutfrac = (centeryfrac - FixedMul(sector->lightlist[i].height - viewz, sprite->scale)) >> FRACBITS;
-        if(cutfrac < 0)
-            continue;
-        if(cutfrac > vid.height)
-            return;
+  sz = cutfrac;
+  newsprite->szt = sz - 1;
 
-        // Found a split! Make a new sprite, copy the old sprite to it, and
-    // adjust the heights.
-    newsprite = R_NewVisSprite ();
-    memcpy(newsprite, sprite, sizeof(vissprite_t));
-
-    sprite->cut |= SC_BOTTOM;
-    sprite->gz = sector->lightlist[i].height;
-
-    newsprite->gzt = sprite->gz;
-
-    sprite->sz = cutfrac;
-    newsprite->szt = sprite->sz - 1;
-
-        if(sector->lightlist[i].height < sprite->pzt && sector->lightlist[i].height > sprite->pz)
-                sprite->pz = newsprite->pzt = sector->lightlist[i].height;
-        else
-        {
-                newsprite->pz = newsprite->gz;
-                newsprite->pzt = newsprite->gzt;
-        }
-
-    newsprite->cut |= SC_TOP;
-    if(!(sector->lightlist[i].caster->flags & FF_NOSHADE))
+  if (ll->height < pzt && ll->height > pz)
+    pz = newsprite->pzt = ll->height;
+  else
     {
-      if(sector->lightlist[i].caster->flags & FF_FOG)
-        lightnum = (*sector->lightlist[i].lightlevel >> LIGHTSEGSHIFT);
+      newsprite->pz = newsprite->gz;
+      newsprite->pzt = newsprite->gzt;
+    }
+
+  newsprite->cut |= vissprite_t::SC_TOP;
+  if (!(ll->caster->flags & FF_NOSHADE))
+    {
+      int lightnum;
+
+      if (ll->caster->flags & FF_FOG)
+	lightnum = (*ll->lightlevel >> LIGHTSEGSHIFT);
       else
-        lightnum = (*sector->lightlist[i].lightlevel >> LIGHTSEGSHIFT) + extralight;
+	lightnum = (*ll->lightlevel >> LIGHTSEGSHIFT) + extralight;
 
       if (lightnum < 0)
-          spritelights = scalelight[0];
+	spritelights = scalelight[0];
       else if (lightnum >= LIGHTLEVELS)
-          spritelights = scalelight[LIGHTLEVELS-1];
+	spritelights = scalelight[LIGHTLEVELS-1];
       else
-          spritelights = scalelight[lightnum];
+	spritelights = scalelight[lightnum];
 
-      newsprite->extra_colormap = sector->lightlist[i].extra_colormap;
+      newsprite->extra_colormap = ll->extra_colormap;
 
-      if (thing->pres->flags & FF_SMOKESHADE)
-        ;
+      // TODO ??? FIXME
+      if (thing->pres->flags & TFF_SMOKESHADE)
+	;
       else
-      {
-/*        if (thing->frame & FF_TRANSMASK)
-          ;
-        else if (thing->flags & MF_SHADOW)
-          ;*/
+	{
+	  /*
+	    if (thing->frame & TFF_TRANSMASK)
+	    ;
+	    else if (thing->flags & MF_SHADOW)
+	    ;
+	  */
 
-        if (fixedcolormap )
-          ;
-        else if ((thing->pres->flags & (FF_FULLBRIGHT|FF_TRANSMASK) || thing->flags & MF_SHADOW) && (!newsprite->extra_colormap || !newsprite->extra_colormap->fog))
-          ;
-        else
-        {
-          index = sprite->xscale>>(LIGHTSCALESHIFT-detailshift);
+	  if (fixedcolormap)
+	    ;
+	  else if ((thing->pres->flags & (TFF_FULLBRIGHT | TFF_TRANSMASK) || thing->flags & MF_SHADOW)
+		   && (!newsprite->extra_colormap || !newsprite->extra_colormap->fog))
+	    ;
+	  else
+	    {
+	      int index = xscale>>(LIGHTSCALESHIFT-detailshift);
 
-          if (index >= MAXLIGHTSCALE)
-            index = MAXLIGHTSCALE-1;
-          newsprite->colormap = spritelights[index];
-        }
-      }
+	      if (index >= MAXLIGHTSCALE)
+		index = MAXLIGHTSCALE-1;
+	      newsprite->lightmap = spritelights[index];
+	    }
+	}
     }
-    sprite = newsprite;
-  }
+  return newsprite;
 }
 
 
 
-
-// hacks
-fixed_t proj_tz, proj_tx;
 
 //
 // R_AddSprites
@@ -932,7 +1217,6 @@ void Rend::R_AddSprites(sector_t* sec, int lightlevel)
           continue;
 
         thing->pres->Project(thing);
-        //R_ProjectSprite(thing);
       }
 }
 
@@ -958,22 +1242,12 @@ const int PSpriteSY[NUMWEAPONS] =
 void Rend::R_DrawPSprite(pspdef_t *psp)
 {
   // decide which patch to use
-#ifdef RANGECHECK
-  if ( (unsigned)psp->state->sprite >= numsprites)
-    I_Error ("R_ProjectSprite: invalid sprite number %i ",
-             psp->state->sprite);
-#endif
+
   sprite_t *sprdef = sprites.Get(sprnames[psp->state->sprite]);
-#ifdef RANGECHECK
-  if ( (psp->state->frame & FF_FRAMEMASK)  >= sprdef->numframes)
-    I_Error ("R_ProjectSprite: invalid sprite frame %i : %i for %s",
-             psp->state->sprite, psp->state->frame, sprnames[psp->state->sprite]);
-#endif
-  spriteframe_t *sprframe = &sprdef->spriteframes[ psp->state->frame & FF_FRAMEMASK ];
+  spriteframe_t *sprframe = &sprdef->spriteframes[psp->state->frame & TFF_FRAMEMASK];
 
 #ifdef PARANOIA
-  //Fab:debug
-  if (sprframe==NULL)
+  if (!sprframe)
     I_Error("sprframes NULL for state %d\n", psp->state - weaponstates);
 #endif
 
@@ -982,7 +1256,7 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
   // calculate edges of the shape
 
   //added:08-01-98:replaced mul by shift
-  fixed_t tx = psp->sx-((BASEVIDWIDTH/2)<<FRACBITS); //*FRACUNITS);
+  fixed_t tx = psp->sx-((BASEVIDWIDTH/2)<<FRACBITS); // *FRACUNITS);
 
   //added:02-02-98:spriteoffset should be abs coords for psprites, based on
   //               320x200
@@ -1010,9 +1284,11 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
 
   vis->texturemid += FRACUNIT/2 - psp->sy + (t->topoffset << FRACBITS);
 
+  /*
   if (game.mode >= gm_heretic)
     if (viewheight == vid.height || (!cv_scalestatusbar.value && vid.dupy>1))
       vis->texturemid -= PSpriteSY[viewplayer->readyweapon];
+  */
 
   //vis->texturemid += FRACUNIT/2;
 
@@ -1034,35 +1310,36 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
   if (vis->x1 > x1)
     vis->startfrac += vis->xiscale*(vis->x1-x1);
 
-  //Fab: see above for more about lumpid,lumppat
   vis->tex = t;
   vis->transmap = NULL;
+  vis->translationmap = NULL;
+
   if (viewplayer->flags & MF_SHADOW)      // invisibility effect
     {
-      vis->colormap = NULL;   // use translucency
+      vis->lightmap = NULL;   // use translucency
 
       // in Doom2, it used to switch between invis/opaque the last seconds
       // now it switch between invis/less invis the last seconds
       if (viewplayer->powers[pw_invisibility] > 4*TICRATE
           || viewplayer->powers[pw_invisibility] & 8)
-        vis->transmap = ((tr_transhi-1)<<FF_TRANSSHIFT) + transtables;
+        vis->transmap = ((tr_transhi-1) << tr_shift) + transtables;
       else
-        vis->transmap = ((tr_transmed-1)<<FF_TRANSSHIFT) + transtables;
+        vis->transmap = ((tr_transmed-1) << tr_shift) + transtables;
     }
   else if (fixedcolormap)
     {
       // fixed color
-      vis->colormap = fixedcolormap;
+      vis->lightmap = fixedcolormap;
     }
-  else if (psp->state->frame & FF_FULLBRIGHT)
+  else if (psp->state->frame & TFF_FULLBRIGHT)
     {
       // full bright
-      vis->colormap = colormaps;
+      vis->lightmap = colormaps;
     }
   else
     {
       // local light
-      vis->colormap = spritelights[MAXLIGHTSCALE-1];
+      vis->lightmap = spritelights[MAXLIGHTSCALE-1];
     }
 
   if(viewplayer->subsector->sector->numlights)
@@ -1079,12 +1356,12 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
       else
         spritelights = scalelight[lightnum];
 
-      vis->colormap = spritelights[MAXLIGHTSCALE-1];
+      vis->lightmap = spritelights[MAXLIGHTSCALE-1];
     }
   else
     vis->extra_colormap = viewplayer->subsector->sector->extra_colormap;
 
-  R_DrawVisSprite (vis, vis->x1, vis->x2);
+  vis->DrawVisSprite();
 }
 
 
@@ -1604,7 +1881,7 @@ void Rend::R_DrawSprite (vissprite_t* spr)
             }
         }
     }
-    if(spr->cut & SC_TOP && spr->cut & SC_BOTTOM)
+    if(spr->cut & vissprite_t::SC_TOP && spr->cut & vissprite_t::SC_BOTTOM)
     {
       fixed_t   h;
       for(x = spr->x1; x <= spr->x2; x++)
@@ -1618,7 +1895,7 @@ void Rend::R_DrawSprite (vissprite_t* spr)
           clipbot[x] = h;
       }
     }
-    else if(spr->cut & SC_TOP)
+    else if(spr->cut & vissprite_t::SC_TOP)
     {
       fixed_t   h;
       for(x = spr->x1; x <= spr->x2; x++)
@@ -1628,7 +1905,7 @@ void Rend::R_DrawSprite (vissprite_t* spr)
           cliptop[x] = h;
       }
     }
-    else if(spr->cut & SC_BOTTOM)
+    else if(spr->cut & vissprite_t::SC_BOTTOM)
     {
       fixed_t   h;
       for(x = spr->x1; x <= spr->x2; x++)
@@ -1654,7 +1931,7 @@ void Rend::R_DrawSprite (vissprite_t* spr)
 
     mfloorclip = clipbot;
     mceilingclip = cliptop;
-    R_DrawVisSprite (spr, spr->x1, spr->x2);
+    spr->DrawVisSprite();
 }
 
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.32  2004/08/19 19:42:40  smite-meister
+// bugfixes
+//
 // Revision 1.31  2004/08/12 18:30:23  smite-meister
 // cleaned startup
 //
@@ -794,10 +797,6 @@ void Actor::Die(Actor *inflictor, Actor *source)
   // switch physics to inanimate object mode
   eflags &= ~(MFE_INFLOAT | MFE_SKULLFLY | MFE_SWIMMING);
 
-  // dead target is no more shootable
-  if (!cv_solidcorpse.value)
-    flags &= ~MF_SHOOTABLE;
-
   // cream a corpse :)
   if (flags & MF_CORPSE)
     {
@@ -806,6 +805,10 @@ void Actor::Die(Actor *inflictor, Actor *source)
       radius = 0;
       return;
     }
+
+  // dead target is no more shootable
+  if (!cv_solidcorpse.value)
+    flags &= ~MF_SHOOTABLE;
 
   // thing death actions
   if (special) // formerly also demanded MF_COUNTKILL (MT_ZBELL!)
@@ -846,6 +849,7 @@ void DActor::Die(Actor *inflictor, Actor *source)
 	  SetState(S_GIBS);
 	  S_StartSound(this, sfx_gib); // lets have a neat 'crunch' sound!
 	}
+      Actor::Die(inflictor, source);      
       return;
     }
 

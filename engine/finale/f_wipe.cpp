@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/08/19 19:42:41  smite-meister
+// bugfixes
+//
 // Revision 1.4  2004/03/28 15:16:13  smite-meister
 // Texture cache.
 //
@@ -159,9 +162,9 @@ bool wipe_doColorXForm(int width, int height, int ticks)
 	{
 	  if (*w != *e)
 	    {
-	      if ((newval = transtables[(*e << 8) + *w + ((tr_transmor-1) << FF_TRANSSHIFT)]) == *w)
-		if ((newval = transtables[(*e << 8) + *w + ((tr_transmed-1) << FF_TRANSSHIFT)]) == *w)
-		  if ((newval = transtables[(*w << 8) + *e + ((tr_transmor-1) << FF_TRANSSHIFT)]) == *w)
+	      if ((newval = transtables[(*e << 8) + *w + ((tr_transmor-1) << tr_shift)]) == *w)
+		if ((newval = transtables[(*e << 8) + *w + ((tr_transmed-1) << tr_shift)]) == *w)
+		  if ((newval = transtables[(*w << 8) + *e + ((tr_transmor-1) << tr_shift)]) == *w)
 		    newval = *e;
 	      *w = newval;
 	      changed = true;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/08/19 19:42:42  smite-meister
+// bugfixes
+//
 // Revision 1.6  2004/08/13 18:25:11  smite-meister
 // sw renderer fix
 //
@@ -361,7 +364,7 @@ void Rend::R_DrawWallSplats()
                     colfunc = basecolfunc;
                 else
                 {
-                    dc_transmap = ((tr_transmed-1)<<FF_TRANSSHIFT) + transtables;
+		  dc_transmap = ((tr_transmed-1) << tr_shift) + transtables;
                     colfunc = fuzzcolfunc;
                 }
     
@@ -496,7 +499,7 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
   ldef = curline->linedef;
   if (ldef->special>=284 && ldef->special<=288)
     {
-      dc_transmap = ((ldef->special-284)<<FF_TRANSSHIFT) + transtables;
+      dc_transmap = transtables + ((ldef->special - 284) << tr_shift);
       colfunc = fuzzcolfunc;
     }
   else if (ldef->special==260)

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.43  2004/08/19 19:42:41  smite-meister
+// bugfixes
+//
 // Revision 1.42  2004/08/15 18:08:28  smite-meister
 // palette-to-palette colormaps etc.
 //
@@ -169,8 +172,6 @@
 #include "r_render.h"
 #include "r_data.h"
 #include "r_state.h"
-
-#include "r_things.h"
 #include "r_sky.h"
 
 #include "s_sound.h"

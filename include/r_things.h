@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/08/19 19:42:42  smite-meister
+// bugfixes
+//
 // Revision 1.4  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
 //
@@ -72,8 +75,6 @@
 #define r_things_h 1
 
 #include "screen.h"
-
-#define MAXVISSPRITES   256
 
 // Constant arrays used for psprite clipping
 //  and initializing clipping.

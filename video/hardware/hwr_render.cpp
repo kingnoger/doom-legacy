@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/08/19 19:42:42  smite-meister
+// bugfixes
+//
 // Revision 1.4  2004/08/18 14:35:23  smite-meister
 // PNG support!
 //
@@ -586,10 +589,6 @@ static void CV_filtermode_ONChange()
 void modelpres_t::Project(Actor *p)
 {
   //CONS_Printf("modelpres_t::Project: Not yet implemented\n");
-}
-void spritepres_t::Project(Actor *p)
-{
-  //CONS_Printf("spritepres_t::Project: Not yet implemented\n");
 }
 void DoomTexture::HWR_Prepare()
 {

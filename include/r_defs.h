@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/08/19 19:42:42  smite-meister
+// bugfixes
+//
 // Revision 1.9  2004/08/18 14:35:20  smite-meister
 // PNG support!
 //
@@ -144,12 +147,10 @@
 // Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
 // Initial import into CVS (v1.29 pr3)
 //
-//
-// DESCRIPTION:
-//      Refresh/rendering module, shared data struct definitions.
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Software rendering module, shared data struct definitions.
 
 #ifndef r_defs_h
 #define r_defs_h 1
@@ -228,9 +229,9 @@ struct mappoint_t
   fixed_t x, y, z;
 };
 
-//SoM: 3/23/2000: Store fake planes in a resizalbe array insted of just by
-//heightsec. Allows for multiple fake planes.
-typedef enum
+
+/// \brief "Fake floor" types
+enum ffloortype_e
 {
   FF_EXISTS            = 0x1,    //MAKE SURE IT'S VALID
   FF_SOLID             = 0x2,    //Does it clip things?
@@ -251,9 +252,14 @@ typedef enum
   FF_ALLSIDES          = 0x4000, //Render inside and outside sides?
   FF_INVERTSIDES       = 0x8000, //Only render inside sides?
   FF_DOUBLESHADOW      = 0x10000,//Make two lightlist entries to reset light?
-} ffloortype_e;
+};
 
 
+
+//SoM: 3/23/2000: Store fake planes in a resizalbe array insted of just by
+//heightsec. Allows for multiple fake planes.
+
+/// \brief Fake floor, better known as 3D floor:)
 struct ffloor_t
 {
   fixed_t          *topheight;
@@ -693,112 +699,22 @@ struct drawseg_t
 };
 
 
-typedef enum
-{
-  SC_NONE = 0,
-  SC_TOP = 1,
-  SC_BOTTOM = 2
-} spritecut_e;
 
-// A vissprite_t is a thing
-//  that will be drawn during a refresh.
-// I.e. a sprite object that is partly visible.
-struct vissprite_t
-{
-  // Doubly linked list.
-  vissprite_t* prev;
-  vissprite_t* next;
-
-  int                 x1;
-  int                 x2;
-
-  // for line side calculation
-  fixed_t             gx;
-  fixed_t             gy;
-
-  // global bottom / top for silhouette clipping
-  fixed_t             gz;
-  fixed_t             gzt;
-
-  // Physical bottom / top for sorting with 3D floors.
-  fixed_t                               pz;
-  fixed_t                               pzt;
-
-  // horizontal position of x1
-  fixed_t             startfrac;
-
-  fixed_t             scale;
-
-  // negative if flipped
-  fixed_t             xiscale;
-
-  fixed_t             texturemid;
-  class Texture      *tex;
-
-  // for color translation and shadow draw,
-  //  maxbright frames as well
-  lighttable_t*       colormap;
-
-  //Fab:29-04-98: for MF_SHADOW sprites, which translucency table to use
-  byte*               transmap;
-
-  // SoM: 3/6/2000: height sector for underwater/fake ceiling support
-  int                 heightsec;
-
-  //SoM: 4/3/2000: Global colormaps!
-  extracolormap_t*    extra_colormap;
-  fixed_t             xscale;
-
-  //SoM: Precalculated top and bottom screen coords for the sprite.
-  fixed_t             thingheight; //The actual height of the thing (for 3D floors)
-  sector_t*           sector; //The sector containing the thing.
-  fixed_t             sz;
-  fixed_t             szt;
-
-  int                 cut;  //0 for none, bit 1 for top, bit 2 for bottom
-};
-
-//
-// Frame flags:
-// handles maximum brightness (torches, muzzle flare, light sources)
-//
-
-// faB: I noticed they didn't use the 32 bits of the frame field,
-//      so now we use the upper 16 bits for new effects.
-
-#define FF_FRAMEMASK    0x7fff  // only the frame number
-#define FF_FULLBRIGHT   0x8000  // frame always appear full bright (fixedcolormap)
-
-// faB:
-//  MF_SHADOW is no more used to activate translucency (or the old fuzzy)
-//  The frame field allows to set translucency per frame, instead of per sprite.
-//  Now, (frame & FF_TRANSMASK) is the translucency table number, if 0
-//  it is not translucent.
-
-// Note:
-//  MF_SHADOW still affects the targeting for monsters (they miss more)
-
-#define FF_TRANSMASK   0x70000  // 0 = no trans(opaque), 1-7 = transl. table
-#define FF_TRANSSHIFT       16
-
-// faB: new 'alpha' shade effect, for smoke..
-
-#define FF_SMOKESHADE  0x80000  // sprite is an alpha channel
-
-// translucency tables
 
 // TODO: add another asm routine which use the fg and bg indexes in the
 //       inverse order so the 20-80 becomes 80-20 translucency, no need
 //       for other tables (thus 1090,2080,5050,8020,9010, and fire special)
 
-typedef enum
+/// \brief Translucency tables
+enum transnum_t
 {
-  tr_transmed=1,   //sprite 50 backg 50  most shots
-  tr_transmor=2,   //       20       80  puffs
-  tr_transhi =3,   //       10       90  blur effect
-  tr_transfir=4,   // 50 50 but brighter for fireballs, shots..
-  tr_transfx1=5    // 50 50 brighter some colors, else opaque for torches
-} transnum_t;
-
+  tr_transmed = 1,    //sprite 50 backg 50  most shots
+  tr_transmor = 2,    //       20       80  puffs
+  tr_transhi  = 3,    //       10       90  blur effect
+  tr_transfir = 4,    // 50 50 but brighter for fireballs, shots..
+  tr_transfx1 = 5,    // 50 50 brighter some colors, else opaque for torches
+  tr_size     = 0x10000,  // one transtable is 256*256 bytes in size
+  tr_shift    = 16    // 2^16 == tr_size
+};
 
 #endif

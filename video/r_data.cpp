@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.26  2004/08/19 19:42:42  smite-meister
+// bugfixes
+//
 // Revision 1.25  2004/08/18 14:35:23  smite-meister
 // PNG support!
 //
@@ -761,13 +764,13 @@ Texture *texturecache_t::GetPtrNum(int n)
 
 void texturecache_t::Insert(Texture *t)
 {
-  t->id = c_map.size(); // First texture gets the id 1, 'cos zero maps to NULL
+  t->id = texture_ids.size(); // First texture gets the id 1, 'cos zero maps to NULL
   texture_ids[t->id] = t;
 
   c_iter_t i = c_map.find(t->name);
   if (i != c_map.end())
     {
-      Texture *old = (Texture *)(*i).second;
+      Texture *old = (Texture *)i->second;
       CONS_Printf("Texture %s replaced!\n", old->name);
       // A Texture of that name is already there, so the old Texture
       // needs to be renamed and reinserted to the map.
@@ -846,7 +849,7 @@ cacheitem_t *texturecache_t::Load(const char *name)
       t = new PatchTexture(name, lump);
     }
 
-  t->id = c_map.size(); // unique id (used instead of pointers)
+  t->id = texture_ids.size(); // unique id (used instead of pointers)
   texture_ids[t->id] = t;
   return t;
 }

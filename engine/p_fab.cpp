@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/08/19 19:42:40  smite-meister
+// bugfixes
+//
 // Revision 1.10  2004/08/12 18:30:23  smite-meister
 // cleaned startup
 //
@@ -61,7 +64,7 @@
 #include "g_actor.h"
 #include "g_pawn.h"
 #include "info.h"
-#include "r_state.h"
+#include "r_defs.h"
 #include "p_fab.h"
 #include "p_pspr.h"
 #include "m_random.h"
@@ -134,13 +137,13 @@ static bool resettrans = false;
 //
 void R_SetTrans(statenum_t state1, statenum_t state2, transnum_t transmap)
 {
-  state_t*   state = &states[state1];
+  state_t *state = &states[state1];
   int s1 = state1;
   int s2 = state2;
   do {
-    state->frame &= ~FF_TRANSMASK;
-    if(!resettrans)
-      state->frame |= (transmap<<FF_TRANSSHIFT);
+    state->frame &= ~TFF_TRANSMASK;
+    if (!resettrans)
+      state->frame |= (transmap << TFF_TRANSSHIFT);
     state++;
   } while (s1++ < s2);
 }

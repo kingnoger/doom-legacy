@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.31  2004/08/19 19:42:40  smite-meister
+// bugfixes
+//
 // Revision 1.30  2004/07/05 16:53:24  smite-meister
 // Netcode replaced
 //
@@ -132,7 +135,6 @@
 
 #include "r_main.h"
 #include "r_sprite.h"
-#include "r_things.h"
 
 #include "sounds.h"
 #include "s_sound.h"

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,44 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.21  2004/08/13 18:25:10  smite-meister
-// sw renderer fix
-//
-// Revision 1.20  2004/08/12 18:30:26  smite-meister
-// cleaned startup
-//
-// Revision 1.19  2004/05/02 21:15:56  hurdler
-// add dummy new renderer (bis)
-//
-// Revision 1.18  2004/03/28 15:16:13  smite-meister
-// Texture cache.
-//
-// Revision 1.17  2004/02/07 21:58:08  hurdler
-// fix compiling issue
-//
-// Revision 1.16  2004/01/10 16:02:59  smite-meister
-// Cleanup and Hexen gameplay -related bugfixes
-//
-// Revision 1.15  2004/01/05 11:48:08  smite-meister
-// 7 bugfixes
-//
-// Revision 1.14  2004/01/03 10:52:31  jussip
-// Added missing include.
-//
-// Revision 1.13  2004/01/02 14:25:02  smite-meister
-// cleanup
-//
-// Revision 1.12  2003/12/03 10:49:50  smite-meister
-// Save/load bugfix, text strings updated
-//
-// Revision 1.11  2003/11/12 11:07:25  smite-meister
-// Serialization done. Map progression.
-//
-// Revision 1.10  2003/05/11 21:23:51  smite-meister
-// Hexen fixes
-//
-// Revision 1.9  2003/04/24 20:30:21  hurdler
-// Remove lots of compiling warnings
+// Revision 1.22  2004/08/19 19:42:41  smite-meister
+// bugfixes
 //
 //-----------------------------------------------------------------------------
 
@@ -564,7 +528,7 @@ void F_CastDrawer(int dummy)
 
   // draw the current frame in the middle of the screen
   sprite_t *sprdef = sprites.Get(sprnames[caststate->sprite]);
-  spriteframe_t *sprframe = &sprdef->spriteframes[ caststate->frame & FF_FRAMEMASK];
+  spriteframe_t *sprframe = &sprdef->spriteframes[ caststate->frame & TFF_FRAMEMASK];
   Texture *t = sprframe->tex[0];
   bool flip = sprframe->flip[0];
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/08/19 19:42:42  smite-meister
+// bugfixes
+//
 // Revision 1.5  2004/08/15 18:08:30  smite-meister
 // palette-to-palette colormaps etc.
 //
@@ -899,7 +902,7 @@ void Rend::R_DrawSinglePlane(visplane_t* pl, bool handlesource)
     if(pl->ffloor->flags & FF_TRANSLUCENT)
     {
       spanfunc = R_DrawTranslucentSpan_8;
-      ds_transmap = ((2)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+      ds_transmap = transtables + (1 << tr_shift);
       if(pl->extra_colormap && pl->extra_colormap->fog)
         light = (pl->lightlevel >> LIGHTSEGSHIFT);
       else
