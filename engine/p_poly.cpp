@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/01/06 14:37:45  smite-meister
+// six bugfixes, cleanup
+//
 // Revision 1.12  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -104,12 +107,12 @@ polyobject_t::polyobject_t(int num, byte *args, int dir)
       if (args[2] == 255)
 	dist = -1;
       else
-	dist = args[2]*(ANGLE_90/64); // Angle
+	dist = args[2]*(ANG90/64); // Angle
     }
   else
     dist = ANGLE_MAX-1;
 
-  speed = (args[1]*dir*(ANGLE_90/64))>>3;
+  speed = (args[1]*dir*(ANG90/64))>>3;
 }
 
 int polyobject_t::PushForce() { return speed >> 8; }
@@ -211,9 +214,9 @@ polymove_t::polymove_t(int num, byte *args, bool timesEight, bool mirror)
 
   speed = args[1]*(FRACUNIT/8);
 
-  angle_t an = args[2]*(ANGLE_90/64);
+  angle_t an = args[2]*(ANG90/64);
   if (mirror)
-    an += ANGLE_180; // reverse the angle
+    an += ANG180; // reverse the angle
 
   angle = an >> ANGLETOFINESHIFT;
   xs = FixedMul(speed, finecosine[angle]);
@@ -441,9 +444,9 @@ polydoor_t::polydoor_t(int num, int t, byte *args, bool mirror)
       speed = args[1]*(FRACUNIT/8);
       dist = totalDist = args[3]*FRACUNIT;
 
-      an = args[2]*(ANGLE_90/64);
+      an = args[2]*(ANG90/64);
       if (mirror)
-	an += ANGLE_180;
+	an += ANG180;
 
       direction = an >> ANGLETOFINESHIFT;
       xs = FixedMul(speed, finecosine[direction]);
@@ -453,8 +456,8 @@ polydoor_t::polydoor_t(int num, int t, byte *args, bool mirror)
     {
       waitTics = args[3];
       direction = mirror ? -1 : 1; // ADD:  PODOOR_SWINGL, PODOOR_SWINGR
-      speed = (args[1] * direction * (ANGLE_90/64))>>3;
-      dist = totalDist = args[2]*(ANGLE_90/64);
+      speed = (args[1] * direction * (ANG90/64))>>3;
+      dist = totalDist = args[2]*(ANG90/64);
     }
   else
     {
@@ -571,7 +574,7 @@ static void ThrustMobj(Actor *mobj, seg_t *seg, polyobj_t *po)
   if (!(mobj->flags & MF_SHOOTABLE))
     return;
 
-  int thrustAngle = (seg->angle-ANGLE_90)>>ANGLETOFINESHIFT;
+  int thrustAngle = (seg->angle-ANG90)>>ANGLETOFINESHIFT;
 
   polyobject_t *pe = po->specialdata;
   if (pe)

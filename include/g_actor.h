@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2004/01/06 14:37:45  smite-meister
+// six bugfixes, cleanup
+//
 // Revision 1.17  2004/01/02 14:25:02  smite-meister
 // cleanup
 //
@@ -334,7 +337,7 @@ public:
   virtual ~Actor();
 
   void Remove();  // delayed destruction
-  void Detach();  // detaches the Actor from the Map
+  virtual void Detach();  // detaches the Actor from the Map
 
   virtual void Think();
   virtual void CheckPointers();

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.33  2004/01/06 14:37:45  smite-meister
+// six bugfixes, cleanup
+//
 // Revision 1.32  2004/01/05 11:48:08  smite-meister
 // 7 bugfixes
 //
@@ -754,10 +757,10 @@ void Map::LoadThings(int lump)
 	      continue;
 	    }
 
-	  if(ednum >= 1400 && ednum < 1410)
+	  // sector sound sequences
+	  if (ednum >= 1400 && ednum < 1410)
 	    {
-	      // FIXME soundseqs
-	      //R_PointInSubsector(t->x << FRACBITS, t->y << FRACBITS)->sector->seqType = ednum - 1400;
+	      R_PointInSubsector(t->x << FRACBITS, t->y << FRACBITS)->sector->seqType = ednum - 1400;
 	      t->type = 0;
 	      continue;
 	    }

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2004/01/06 14:37:45  smite-meister
+// six bugfixes, cleanup
+//
 // Revision 1.19  2004/01/02 14:25:01  smite-meister
 // cleanup
 //
@@ -173,7 +176,7 @@ int P_FaceMobj(Actor *source, Actor *target, angle_t *delta)
   if(angle2 > angle1)
     {
       diff = angle2-angle1;
-      if(diff > ANGLE_180)
+      if(diff > ANG180)
 	{
 	  *delta = ANGLE_MAX-diff;
 	  return(0);
@@ -187,7 +190,7 @@ int P_FaceMobj(Actor *source, Actor *target, angle_t *delta)
   else
     {
       diff = angle1-angle2;
-      if(diff > ANGLE_180)
+      if(diff > ANG180)
 	{
 	  *delta = ANGLE_MAX-diff;
 	  return(1);

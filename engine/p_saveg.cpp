@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2004/01/06 14:37:45  smite-meister
+// six bugfixes, cleanup
+//
 // Revision 1.22  2004/01/05 11:48:08  smite-meister
 // 7 bugfixes
 //
@@ -536,17 +539,15 @@ int DActor::Marshal(LArchive &a)
   if (a.IsStoring())
     {
       // find the differences
-      if (spawnpoint && (info->doomednum != -1))
+      if (spawnpoint)
 	{
-	  // FIXME why the doomednum check?
 	  diff = MD_SPAWNPOINT;
     
-	  if ((x != spawnpoint->x << FRACBITS) ||
-	      (y != spawnpoint->y << FRACBITS) ||
+	  if ((x != spawnpoint->x << FRACBITS) || (y != spawnpoint->y << FRACBITS) ||
 	      (angle != unsigned(ANG45 * (spawnpoint->angle/45))))
 	    diff |= MD_XY;
 
-	  if (info->doomednum != spawnpoint->type)
+	  if (type != spawnpoint->type)
 	    diff |= MD_TYPE;
 	}
       else
@@ -781,7 +782,6 @@ int PlayerPawn::Marshal(LArchive &a)
 
     PD_REFIRE      = 0x01000,
     PD_MORPHTICS   = 0x02000,
-    PD_FLYHEIGHT   = 0x04000,
 
     PD_BACKPACK   = 0x020000,
     PD_ATTACKDWN  = 0x040000,
@@ -812,8 +812,6 @@ int PlayerPawn::Marshal(LArchive &a)
 	  diff |= (1 << i);
       a << diff; // we have already 32 weapon types. whew!
 
-      // cheats vanish in saves;)
-
       diff = 0;
       for (i=0; i<NUMPOWERS; i++)
 	if (powers[i])
@@ -821,7 +819,6 @@ int PlayerPawn::Marshal(LArchive &a)
 
       if (refire)      diff |= PD_REFIRE;
       if (morphTics)   diff |= PD_MORPHTICS;
-      if (flyheight)   diff |= PD_FLYHEIGHT;
 
       // booleans
       if (backpack)   diff |= PD_BACKPACK;
@@ -837,8 +834,6 @@ int PlayerPawn::Marshal(LArchive &a)
 
       if (diff & PD_REFIRE) a << refire;
       if (diff & PD_MORPHTICS) a << morphTics;
-      if (diff & PD_FLYHEIGHT) a << flyheight;
-      // specialsector ???
     }
   else
     {
@@ -876,7 +871,6 @@ int PlayerPawn::Marshal(LArchive &a)
 
       if (diff & PD_REFIRE) a << refire;
       if (diff & PD_MORPHTICS) a << morphTics;
-      if (diff & PD_FLYHEIGHT) a << flyheight;
 
       backpack     = diff & PD_BACKPACK;
       attackdown   = diff & PD_ATTACKDWN;
@@ -933,6 +927,7 @@ enum mapdiff_e
     SD_STAIRLOCK = 0x10,
     SD_PREVSEC   = 0x20,
     SD_NEXTSEC   = 0x40,
+    SD_SEQTYPE   = 0x80,
 
     // line- and sidedefs
     // diff
@@ -1003,7 +998,7 @@ int Map::Serialize(LArchive &a)
       if (ss->stairlock < 0)      diff2 |= SD_STAIRLOCK;
       if (ss->nextsec != -1)      diff2 |= SD_NEXTSEC;
       if (ss->prevsec != -1)      diff2 |= SD_PREVSEC;
-      // TODO seqtype
+      if (ss->seqType)          diff2 |= SD_SEQTYPE;
 
       if (diff2)
 	diff |= SD_DIFF2;
@@ -1036,6 +1031,7 @@ int Map::Serialize(LArchive &a)
 	  if (diff2 & SD_STAIRLOCK) a << ss->stairlock;
 	  if (diff2 & SD_NEXTSEC)   a << ss->nextsec;
 	  if (diff2 & SD_PREVSEC)   a << ss->prevsec;
+	  if (diff2 & SD_SEQTYPE)   a << ss->seqType;
         }
     }
   a << (temp = MARK_END);
@@ -1391,6 +1387,8 @@ int Map::Unserialize(LArchive &a)
       else sectors[i].nextsec = -1;
       if (diff2 & SD_PREVSEC)   a << sectors[i].prevsec;
       else sectors[i].prevsec = -1;
+
+      if (diff2 & SD_SEQTYPE)   a << sectors[i].seqType;
     }
 
   while (1)
@@ -1667,7 +1665,10 @@ int PlayerInfo::Unserialize(LArchive &a)
     }
 
   if (playerstate == PST_WAITFORMAP)
-    pawn = (PlayerPawn *)Thinker::Unserialize(a);
+    {
+      a.active_map = NULL; // so that it will not be "spawned"
+      pawn = (PlayerPawn *)Thinker::Unserialize(a);
+    }
 
   return 0;
 }

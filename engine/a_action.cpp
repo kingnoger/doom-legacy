@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/01/06 14:37:45  smite-meister
+// six bugfixes, cleanup
+//
 // Revision 1.10  2004/01/02 14:25:01  smite-meister
 // cleanup
 //
@@ -290,7 +293,7 @@ mobjtype_t TranslateThingType[] =
 // This is used on angle differences
 angle_t abs(angle_t a)
 {
-  if (a <= ANGLE_180)
+  if (a <= ANG180)
     return a;
   else
     return -a; // effectively 2pi - a since it wraps
@@ -395,7 +398,7 @@ void A_PotteryCheck(DActor *actor)
     {
       pmo = consoleplayer->pawn;
       if (actor->mp->CheckSight(actor, pmo)
-	  && (abs(R_PointToAngle2(pmo->x, pmo->y, actor->x, actor->y)-pmo->angle) <= ANGLE_45))
+	  && (abs(R_PointToAngle2(pmo->x, pmo->y, actor->x, actor->y)-pmo->angle) <= ANG45))
 	{ // Previous state (pottery bit waiting state)
 	  actor->SetState(statenum_t(actor->state - &states[0] - 1));
 	}
@@ -411,7 +414,7 @@ void A_PotteryCheck(DActor *actor)
 	{
 	  pmo = actor->mp->players[i]->pawn;
 	  if (actor->mp->CheckSight(actor, pmo) &&
-	      (abs(R_PointToAngle2(pmo->x, pmo->y, actor->x, actor->y)-pmo->angle) <= ANGLE_45))
+	      (abs(R_PointToAngle2(pmo->x, pmo->y, actor->x, actor->y)-pmo->angle) <= ANG45))
 	    { // Previous state (pottery bit waiting state)
 	      actor->SetState(statenum_t(actor->state - &states[0] - 1));
 	      return;

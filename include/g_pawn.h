@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.18  2004/01/06 14:37:45  smite-meister
+// six bugfixes, cleanup
+//
 // Revision 1.17  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -132,6 +135,7 @@ public:
 public:
   Pawn(fixed_t x, fixed_t y, fixed_t z, int type);
 
+  virtual void Detach();
   virtual void Think();
   virtual void CheckPointers();
 

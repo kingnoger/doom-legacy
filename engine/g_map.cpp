@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.33  2004/01/06 14:37:45  smite-meister
+// six bugfixes, cleanup
+//
 // Revision 1.32  2004/01/05 11:48:08  smite-meister
 // 7 bugfixes
 //
@@ -770,7 +773,7 @@ bool Map::CoopRespawn(PlayerInfo *p)
 }
 
 
-// was G_DoReborn
+// tries to respawn the players waiting in respawnqueue
 int Map::RespawnPlayers()
 {
   // Let's try to empty the respawnqueue!
@@ -805,10 +808,24 @@ int Map::RespawnPlayers()
 	respawnqueue.pop_front();
 	count++;
       }
+    else if (p->time++ > 10)
+      {
+	multimap<int, mapthing_t *>::iterator s, t;
+	s = playerstarts.begin();
+	t = playerstarts.end();
+	for ( ; s != t; s++)
+	  {
+	    mapthing_t *m = (*s).second;
+	    CONS_Printf("start pl %d, ep %d\n", (*s).first, m->args[0]);
+	  }
+	I_Error("Could not respawn player %d to entrypoint %d\n", p->number, p->entrypoint);
+      }
+
   } while (ok && !respawnqueue.empty());
 
   return count;
 }
+
 
 // called when a dead player pushes USE
 void Map::RebornPlayer(PlayerInfo *p)
@@ -839,11 +856,13 @@ void Map::RebornPlayer(PlayerInfo *p)
   //  S_StartSound(mo, sfx_telept);  // don't start sound on first frame
 
   if (!game.multiplayer)
-    ; // FIXME Z_FreeTags (PU_LEVEL, MAXINT); Setup();
+    ; // FIXME restart level / load hubsave
 
   respawnqueue.push_back(p);
+  p->time = 0; // respawn delay counter
   p->playerstate = PST_RESPAWN;
 }
+
 
 // Adds a player to a Map. The player is immediately queued for respawn.
 void Map::AddPlayer(PlayerInfo *p)
@@ -852,6 +871,7 @@ void Map::AddPlayer(PlayerInfo *p)
   players.push_back(p);
   respawnqueue.push_back(p);
   p->mp = this;
+  p->time = 0; // respawn delay counter
   p->playerstate = PST_RESPAWN;
   p->requestmap = 0;
   // TODO if (p->spectator) spawn PST_SPECTATOR
@@ -909,12 +929,7 @@ void Map::QueueBody(Actor *p)
 }
 
 
-
-
-//----------------------------------------------------------------------------
-// was P_Massacre
 // Kills all monsters. Except skulls.
-
 int Map::Massacre()
 {
   Actor   *mo;
@@ -1101,9 +1116,8 @@ void Map::BossDeath(const DActor *mo)
   ExitMap(NULL, 0); // to the next level
 }
 
-//
-// was P_RespawnSpecials
-//
+
+// try respawning items from the itemrespawnqueue
 void Map::RespawnSpecials()
 {
   // nothing left to respawn?
@@ -1407,6 +1421,7 @@ void Command_Map_f ()
 
   // TODO what if we are given a lumpname instead of a mapnum?
   int mapnum = atoi(COM_Argv(1));
+  int ept = atoi(COM_Argv(2));
 
   CONS_Printf("Warping to map %d...\n", mapnum);
   extern bool precache;
@@ -1416,7 +1431,8 @@ void Command_Map_f ()
   if (consoleplayer->mp)
     consoleplayer->mp->info->state = MAP_FINISHED;
   consoleplayer->requestmap = mapnum;
-  consoleplayer->ExitLevel(mapnum, 0);
+  consoleplayer->entrypoint = ept;
+  consoleplayer->ExitLevel(mapnum, ept);
 
   if (demoplayback && !timingdemo)
     precache = true;

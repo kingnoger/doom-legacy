@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.28  2004/01/06 14:37:45  smite-meister
+// six bugfixes, cleanup
+//
 // Revision 1.27  2004/01/02 14:25:01  smite-meister
 // cleanup
 //
@@ -168,7 +171,7 @@ GameInfo::GameInfo()
 //destructor
 GameInfo::~GameInfo()
 {
-  ClearPlayers();
+  //ClearPlayers();
 };
 
 
@@ -507,67 +510,6 @@ void GameInfo::Ticker()
       //currentcluster->Finish(currentmap->nextlevel, 0);
     }
 
-  if (state == GS_LEVEL)
-    {
-      // manage players
-      for (t = Players.begin(); t != Players.end(); )
-	{
-	  p = (*t).second;
-	  t++; // because "old t" may be invalidated
-	  if (p->playerstate == PST_REMOVE)
-	    {
-	      // the player is removed from the game (invalidates "old t")
-	      p->ExitLevel(0, 0);
-	      RemovePlayer(p->number);
-	    }
-	}
-
-      for (t = Players.begin(); t != Players.end(); t++)
-	{
-	  p = (*t).second;
-	  if (p->playerstate == PST_WAITFORMAP)
-	    {
-	      CONS_Printf("Map request..");
-	      if (p->requestmap < 0)
-		{
-		  // TODO game ends!
-		  //action = ga_intermission;
-		  break;
-		}
-	      
-	      // assign the player to a map
-	      m = FindMapInfo(p->requestmap);
-	      if (!m)
-		m = *currentcluster->maps.begin();
-
-	      if (currentcluster->number != m->cluster)
-		{
-		  // cluster change, _everyone_ follows p! (even if they already have destinations set!)
-		  // TODO this is a bit convoluted, but should work.
-		  for (player_iter_t s = Players.begin(); s != Players.end(); s++)
-		    {
-		      PlayerInfo *r = (*s).second;
-		      r->requestmap = p->requestmap;
-		      r->entrypoint = p->entrypoint;
-		      r->Reset(true, true); // everything goes.
-		    }
-		  currentcluster->Finish();
-		  currentcluster = FindCluster(m->cluster);
-
-		  //action = ga_intermission;
-		  break; // this is important!
-		}
-
-	      CONS_Printf("activating %d...", m->mapnumber);
-	      p->Reset(!currentcluster->keepstuff, true);
-
-	      // normal individual mapchange
-	      if (!m->Activate(p))
-		I_Error("Darn!\n");
-	    }
-	}
-    }
-
 
   // do things to change the game state
   while (action != ga_nothing)
@@ -632,6 +574,68 @@ void GameInfo::Ticker()
     default:
       // do nothing
       break;
+    }
+
+
+  if (state == GS_LEVEL)
+    {
+      // manage players
+      for (t = Players.begin(); t != Players.end(); )
+	{
+	  p = (*t).second;
+	  t++; // because "old t" may be invalidated
+	  if (p->playerstate == PST_REMOVE)
+	    {
+	      // the player is removed from the game (invalidates "old t")
+	      p->ExitLevel(0, 0);
+	      RemovePlayer(p->number);
+	    }
+	}
+
+      for (t = Players.begin(); t != Players.end(); t++)
+	{
+	  p = (*t).second;
+	  if (p->playerstate == PST_WAITFORMAP)
+	    {
+	      CONS_Printf("Map request..");
+	      if (p->requestmap < 0)
+		{
+		  // TODO game ends!
+		  //action = ga_intermission;
+		  break;
+		}
+	      
+	      // assign the player to a map
+	      m = FindMapInfo(p->requestmap);
+	      if (!m)
+		m = *currentcluster->maps.begin();
+
+	      if (currentcluster->number != m->cluster)
+		{
+		  // cluster change, _everyone_ follows p! (even if they already have destinations set!)
+		  // TODO this is a bit convoluted, but should work.
+		  for (player_iter_t s = Players.begin(); s != Players.end(); s++)
+		    {
+		      PlayerInfo *r = (*s).second;
+		      r->requestmap = p->requestmap;
+		      r->entrypoint = p->entrypoint;
+		      r->Reset(true, true); // everything goes.
+		    }
+		  currentcluster->Finish();
+		  currentcluster = FindCluster(m->cluster);
+
+		  //action = ga_intermission;
+		  //break; // this is important!
+		}
+
+	      CONS_Printf("activating %d...", m->mapnumber);
+	      p->Reset(!currentcluster->keepstuff, true);
+
+	      // normal individual mapchange
+	      if (!m->Activate(p))
+		I_Error("Darn!\n");
+	    }
+	}
     }
 }
 

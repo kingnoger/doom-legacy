@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/01/06 14:37:45  smite-meister
+// six bugfixes, cleanup
+//
 // Revision 1.10  2004/01/02 14:25:01  smite-meister
 // cleanup
 //
@@ -702,7 +705,7 @@ void A_DeathBallImpact(DActor *ball)
 		  newAngle = true;
 		  break;
 		}
-	      angle += ANGLE_45/2;
+	      angle += ANG45/2;
 	    }
 	}
       if(newAngle)

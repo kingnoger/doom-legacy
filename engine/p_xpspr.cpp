@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/01/06 14:37:45  smite-meister
+// six bugfixes, cleanup
+//
 // Revision 1.8  2004/01/02 14:25:02  smite-meister
 // cleanup
 //
@@ -235,15 +238,15 @@ void A_FSwordAttack(PlayerPawn *player, pspdef_t *psp)
 
   angle_t an = player->angle;
   DActor *m;
-  m = player->SPMAngle(MT_FSWORD_MISSILE, an + ANG45/4);
-  m->z -= 10*FRACUNIT;
-  m = player->SPMAngle(MT_FSWORD_MISSILE, an+ANG45/8);
-  m->z -= 5*FRACUNIT;
+  if ((m = player->SPMAngle(MT_FSWORD_MISSILE, an + ANG45/4)))
+    m->z -= 10*FRACUNIT;
+  if ((m = player->SPMAngle(MT_FSWORD_MISSILE, an+ANG45/8)))
+    m->z -= 5*FRACUNIT;
   player->SPMAngle(MT_FSWORD_MISSILE, an);
-  m = player->SPMAngle(MT_FSWORD_MISSILE, an-ANG45/8);
-  m->z += 5*FRACUNIT;
-  m = player->SPMAngle(MT_FSWORD_MISSILE, an-ANG45/4);
-  m->z += 10*FRACUNIT;
+  if ((m = player->SPMAngle(MT_FSWORD_MISSILE, an-ANG45/8)))
+    m->z += 5*FRACUNIT;
+  if ((m = player->SPMAngle(MT_FSWORD_MISSILE, an-ANG45/4)))
+    m->z += 10*FRACUNIT;
   S_StartSound(player, SFX_FIGHTER_SWORD_FIRE);
 }
 
@@ -1332,7 +1335,7 @@ void A_CHolyAttack2(DActor *actor)
 	  break;
 	}
       mo->z = actor->z;
-      mo->angle = actor->angle+(ANGLE_45+ANGLE_45/2)-ANGLE_45*j;
+      mo->angle = actor->angle + (ANG45 + ANG45/2) - ANG45*j;
       mo->Thrust(mo->angle, int(mo->info->speed * FRACUNIT));
       mo->owner = actor->owner;
       mo->args[0] = 10; // initial turn value

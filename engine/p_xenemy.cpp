@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/01/06 14:37:45  smite-meister
+// six bugfixes, cleanup
+//
 // Revision 1.12  2004/01/02 14:25:02  smite-meister
 // cleanup
 //
@@ -1657,7 +1660,7 @@ static void DragonSeek(DActor *actor, angle_t thresh, angle_t turnMax)
     { // attack the destination mobj if it's attackable
       Actor *oldTarget;
 	
-      if (abs(actor->angle - R_PointToAngle2(actor->x, actor->y, t->x, t->y)) < ANGLE_45/2)
+      if (abs(actor->angle - R_PointToAngle2(actor->x, actor->y, t->x, t->y)) < ANG45/2)
 	{
 	  oldTarget = actor->target;
 	  actor->target = t;
@@ -1757,7 +1760,7 @@ void A_DragonFlight(DActor *actor)
 	}
 
       angle_t an = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
-      if (abs(actor->angle - an) < ANGLE_45/2 && actor->CheckMeleeRange())
+      if (abs(actor->angle - an) < ANG45/2 && actor->CheckMeleeRange())
 	{
 	  actor->target->Damage(actor, actor, HITDICE(8));
 	  S_StartSound(actor, SFX_DRAGON_ATTACK);
@@ -2440,9 +2443,9 @@ void A_FiredChase(DActor *actor)
 	    {
 	      ang = R_PointToAngle2(actor->x, actor->y, t->x, t->y);
 	      if (P_Random()<128)
-		ang += ANGLE_90;
+		ang += ANG90;
 	      else
-		ang -= ANGLE_90;
+		ang -= ANG90;
 	      ang>>=ANGLETOFINESHIFT;
 	      actor->px = FixedMul(8*FRACUNIT, finecosine[ang]);
 	      actor->py = FixedMul(8*FRACUNIT, finesine[ang]);
@@ -3014,8 +3017,8 @@ void A_CastSorcererSpell(DActor *actor)
       if (mo) mo->owner = parent;
       break;
     case MT_SORCBALL3:				// Reinforcements
-      ang1 = actor->angle - ANGLE_45;
-      ang2 = actor->angle + ANGLE_45;
+      ang1 = actor->angle - ANG45;
+      ang2 = actor->angle + ANG45;
       if(actor->health < (actor->info->spawnhealth/3))
 	{	// Spawn 2 at a time
 	  mo = parent->SpawnMissileAngle(MT_SORCFX3, ang1, 4*FRACUNIT);
@@ -3435,9 +3438,9 @@ void A_FastChase(DActor *actor)
 	      ang = R_PointToAngle2(actor->x, actor->y,
 				    target->x, target->y);
 	      if (P_Random()<128)
-		ang += ANGLE_90;
+		ang += ANG90;
 	      else
-		ang -= ANGLE_90;
+		ang -= ANG90;
 	      ang>>=ANGLETOFINESHIFT;
 	      actor->px = FixedMul(13*FRACUNIT, finecosine[ang]);
 	      actor->py = FixedMul(13*FRACUNIT, finesine[ang]);
@@ -3887,7 +3890,7 @@ void A_KoraxCommand(DActor *actor)
   S_StartSound(actor, SFX_KORAX_COMMAND);
 
   // Shoot stream of lightning to ceiling
-  ang = (actor->angle - ANGLE_90) >> ANGLETOFINESHIFT;
+  ang = (actor->angle - ANG90) >> ANGLETOFINESHIFT;
   x=actor->x + FixedMul(KORAX_COMMAND_OFFSET,finecosine[ang]);
   y=actor->y + FixedMul(KORAX_COMMAND_OFFSET,finesine[ang]);
   z=actor->z + KORAX_COMMAND_HEIGHT;

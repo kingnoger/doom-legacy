@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2004/01/06 14:37:45  smite-meister
+// six bugfixes, cleanup
+//
 // Revision 1.17  2004/01/02 14:25:01  smite-meister
 // cleanup
 //
@@ -679,7 +682,6 @@ void DActor::P_NewChaseDir()
 // Armies of monsters fighting against each other!
 bool DActor::LookForPlayers(bool allaround)
 {
-  PlayerPawn *p;
   angle_t     an;
   fixed_t     dist;
 
@@ -705,7 +707,11 @@ bool DActor::LookForPlayers(bool allaround)
       if (c >= 2)
 	return false;
 
-      p = mp->players[lastlook]->pawn;
+      PlayerInfo *k = mp->players[lastlook];
+      if (!(k->playerstate == PST_ALIVE || k->playerstate == PST_DONE) || !k->pawn)
+	continue;
+
+      PlayerPawn *p = k->pawn;
 
       if (p->health <= 0)
 	continue;           // dead

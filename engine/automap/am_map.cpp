@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/01/06 14:37:45  smite-meister
+// six bugfixes, cleanup
+//
 // Revision 1.10  2003/12/18 11:57:31  smite-meister
 // fixes / new bugs revealed
 //
@@ -86,6 +89,10 @@
 #ifdef HWRENDER
 # include "hardware/hw_main.h"
 #endif
+
+
+
+// TODO the automap needs a complete rewrite when the renderer is done.
 
 // the only AutoMap instance in the game
 AutoMap automap;
@@ -878,9 +885,7 @@ void AutoMap::updateLightLev()
 }
 
 
-// was AM_Ticker
 // Updates on Game Tick
-//
 void AutoMap::Ticker()
 {
   if (dedicated)
@@ -908,9 +913,8 @@ void AutoMap::Ticker()
 }
 
 
-// was AM_clearFB
+
 // Clear automap frame buffer.
-//
 void AutoMap::clearFB(int color)
 {
 #ifdef HWRENDER 
@@ -1486,7 +1490,7 @@ void AM_drawCrosshair(int color)
     *( (short *)fb + (f_w*(f_h+1))/2) = color;
 }
 
-// was AM_Drawer
+
 // draws the Automap for Pawn p, usually p == displayplayer->pawn.
 void AutoMap::Drawer()
 {

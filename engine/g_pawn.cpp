@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.28  2004/01/06 14:37:45  smite-meister
+// six bugfixes, cleanup
+//
 // Revision 1.27  2004/01/05 11:48:08  smite-meister
 // 7 bugfixes
 //
@@ -165,6 +168,9 @@ pawn_info_t pawndata[] =
 };
 
 
+//=====================================
+//  Pawn and PlayerPawn classes
+//=====================================
 
 IMPLEMENT_CLASS(Pawn, "Pawn");
 IMPLEMENT_CLASS(PlayerPawn, "PlayerPawn");
@@ -183,16 +189,30 @@ Pawn::Pawn()
 PlayerPawn::PlayerPawn()
   : Pawn()
 {
-  // This constructor is only used when Unserializing. All the rest is initialized there.
+  // NOTE! This constructor is only used when Unserializing, so not everything is initialized!
   player = NULL;
   weaponinfo = NULL;
   maxammo = NULL;
-  invTics = 0;
+
+  for (int i=0; i<NUMPOWERS; i++)
+    powers[i] = 0;
+
+  cheats = refire = 0;
+  invTics = morphTics = 0;
 }
 
+
+//=====================================
 // Pawn methods
+//=====================================
 
 void Pawn::Think() {}
+
+void Pawn::Detach()
+{
+  attacker = NULL;
+  Actor::Detach();
+} 
 
 void Pawn::CheckPointers()
 {
@@ -206,12 +226,10 @@ void Pawn::CheckPointers()
     attacker = NULL;
 }
 
-
 bool Pawn::Morph() { return false; }
+
 bool Pawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 { return false; }
-
-// PlayerPawn methods
 
 // added 2-2-98 for hacking with dehacked patch
 int initial_health=100; //MAXHEALTH;
@@ -243,6 +261,10 @@ Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, int type)
   pres = new spritepres_t(sprnames[state->sprite], info, 0);
 }
 
+
+//=====================================
+// PlayerPawn methods
+//=====================================
 
 PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, int type)
   : Pawn(nx, ny, nz, type)
@@ -324,7 +346,6 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, int type)
 
 
 //--------------------------------------------------------
-// was P_PlayerThink
 
 #define BLINKTHRESHOLD  (4*32) // for powers
 
@@ -579,10 +600,9 @@ void PlayerPawn::Think()
 
 
 //--------------------------------------------------------
-// was P_DeathThink
 // Fall on your face when dying.
 // Decrease POV height to floor height.
-//
+
 #define ANG5    (ANG90/18)
 
 void PlayerPawn::DeathThink()
@@ -634,8 +654,6 @@ void PlayerPawn::DeathThink()
 
 
 //----------------------------------------------
-// was P_ChickenPlayerThink
-//
 
 void PlayerPawn::MorphThink()
 {
