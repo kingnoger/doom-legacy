@@ -4,6 +4,9 @@
 // $Id$
 //
 // $Log$
+// Revision 1.2  2002/12/16 22:07:59  smite-meister
+// cr/lf fix
+//
 // Revision 1.1  2002/12/16 22:06:24  smite-meister
 // Added damage system
 //
