@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2004/05/02 21:15:56  hurdler
+// add dummy new renderer (bis)
+//
 // Revision 1.1  2004/05/01 23:29:19  hurdler
 // add dummy new renderer
 //
@@ -33,6 +36,7 @@
 // to be removed once the new renderer is working
 #include "hardware/hw_light.h"
 #include "hardware/hw_main.h"
+#include "hardware/hw_drv.h"
 
 consvar_t cv_grnewrenderer = {"gr_newrenderer", "Off", CV_SAVE, CV_OnOff };
 
@@ -52,4 +56,11 @@ void HWRend::Setup(int bspnum)
   //CONS_Printf(" xxx seg(%d) v1 = %d, line(%d) v1 = %d\n", 1578, segs[1578].v1 - vertexes, segs[1578].linedef - lines, segs[1578].linedef->v1 - vertexes);
   HWR_PrepLevelCache();
   R.HWR_CreateStaticLightmaps(bspnum-1);
+}
+
+void HWRend::Startup(int width, int height, int bpp)
+{
+  HWD.pfnInitVidMode(width, height, bpp);
+
+  HWR_Startup();
 }

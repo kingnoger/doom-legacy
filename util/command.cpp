@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C++ -*- 
+// Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
 // $Id$
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/05/02 21:15:56  hurdler
+// add dummy new renderer (bis)
+//
 // Revision 1.3  2004/03/28 15:16:14  smite-meister
 // Texture cache.
 //
@@ -174,12 +177,12 @@ void COM_BufExecute()
       quotes = 0;
       for (i=0 ; i< com_text.cursize ; i++)
         {
-	  if (text[i] == '"')
-	    quotes++;
-	  if ( !(quotes&1) &&  text[i] == ';')
-	    break;  // don't break if inside a quoted string
-	  if (text[i] == '\n' || text[i] == '\r')
-	    break;
+          if (text[i] == '"')
+            quotes++;
+          if ( !(quotes&1) &&  text[i] == ';')
+            break;  // don't break if inside a quoted string
+          if (text[i] == '\n' || text[i] == '\r')
+            break;
         }
 
       memcpy (line, text, i);
@@ -191,13 +194,13 @@ void COM_BufExecute()
       // at the beginning, in place of the actual, so it doesn't
       // overflow
       if (i == com_text.cursize)
-	// the last command was just flushed
-	com_text.cursize = 0;
+        // the last command was just flushed
+        com_text.cursize = 0;
       else
         {
-	  i++;
-	  com_text.cursize -= i;
-	  memcpy (text, text+i, com_text.cursize);
+          i++;
+          com_text.cursize -= i;
+          memcpy (text, text+i, com_text.cursize);
         }
 
       // execute the command line
@@ -206,8 +209,8 @@ void COM_BufExecute()
       // delay following commands if a wait was encountered
       if (com_wait)
         {
-	  com_wait--;
-	  break;
+          com_wait--;
+          break;
         }
     }
 }
@@ -285,7 +288,7 @@ int COM_CheckParm(char *check)
   for (int i = 1; i < com_argc; i++)
     {
       if (!strcasecmp(check, com_argv[i]))
-	return i;
+        return i;
     }
   return 0;
 }
@@ -310,30 +313,30 @@ static void COM_TokenizeString(char *text)
     {
       // skip whitespace up to a /n
       while (*text && *text <= ' ' && *text != '\n')
-	text++;
+        text++;
 
       if (*text == '\n')
         {   // a newline means end of command in buffer,
-	  // thus end of this command's args too
-	  text++;
-	  break;
+          // thus end of this command's args too
+          text++;
+          break;
         }
 
       if (!*text)
-	return;
+        return;
 
       if (com_argc == 1)
-	com_args = text;
+        com_args = text;
 
       text = COM_Parse (text);
       if (!text)
-	return;
+        return;
 
       if (com_argc < MAX_ARGS)
         {
-	  com_argv[com_argc] = (char *)ZZ_Alloc (strlen(com_token)+1);
-	  strcpy (com_argv[com_argc], com_token);
-	  com_argc++;
+          com_argv[com_argc] = (char *)ZZ_Alloc (strlen(com_token)+1);
+          strcpy (com_argv[com_argc], com_token);
+          com_argc++;
         }
     }
 }
@@ -357,8 +360,8 @@ void COM_AddCommand(char *name, com_func_t func)
     {
       if (!strcmp (name, cmd->name))
         {
-	  CONS_Printf ("Command %s already exists\n", name);
-	  return;
+          CONS_Printf ("Command %s already exists\n", name);
+          return;
         }
     }
 
@@ -379,7 +382,7 @@ static bool COM_Exists(char *com_name)
   for (cmd=com_commands ; cmd ; cmd=cmd->next)
     {
       if (!strcmp (com_name,cmd->name))
-	return true;
+        return true;
     }
 
   return false;
@@ -401,7 +404,7 @@ char *COM_CompleteCommand(char *partial, int skips)
   for (cmd=com_commands ; cmd ; cmd=cmd->next)
     if (!strncmp (partial,cmd->name, len))
       if (!skips--)
-	return cmd->name;
+        return cmd->name;
 
   return NULL;
 }
@@ -427,8 +430,8 @@ static void COM_ExecuteString(char *text)
     {
       if (!strcmp(com_argv[0],cmd->name))
         {
-	  cmd->function();
-	  return;
+          cmd->function();
+          return;
         }
     }
 
@@ -437,13 +440,13 @@ static void COM_ExecuteString(char *text)
     {
       if (!strcmp (com_argv[0], a->name))
         {
-	  COM_BufInsertText (a->value);
-	  return;
+          COM_BufInsertText (a->value);
+          return;
         }
     }
 
   // check cvars
-  // Hurdler: added at Ebola's request ;) 
+  // Hurdler: added at Ebola's request ;)
   // (don't flood the console in software mode with bad gr_xxx command)
   if (!CV_Command() && con_destlines)
     {
@@ -485,7 +488,7 @@ static void COM_Alias_f()
     {
       strcat(cmd, COM_Argv(i));
       if (i != c)
-	strcat(cmd, " ");
+        strcat(cmd, " ");
     }
   strcat (cmd, "\n");
 
@@ -516,8 +519,10 @@ static void COM_Exec_f()
     }
 
   // load file
-
-  int length = FIL_ReadFile (COM_Argv(1), &buf);
+#if 0
+  int length =
+#endif
+  FIL_ReadFile (COM_Argv(1), &buf);
   //CONS_Printf ("debug file length : %d\n",length);
 
   if (!buf)
@@ -558,39 +563,39 @@ static void COM_Help_f()
       cvar = CV_FindVar(COM_Argv(1));
       if( cvar )
         {
-	  CONS_Printf("Variable %s:\n",cvar->name);
-	  CONS_Printf("  flags :");
-	  if( cvar->flags & CV_SAVE )
-	    CONS_Printf("AUTOSAVE ");
-	  if( cvar->flags & CV_FLOAT )
-	    CONS_Printf("FLOAT ");
-	  if( cvar->flags & CV_NETVAR )
-	    CONS_Printf("NETVAR ");
-	  if( cvar->flags & CV_CALL )
-	    CONS_Printf("ACTION ");
-	  CONS_Printf("\n");
-	  if( cvar->PossibleValue )
+          CONS_Printf("Variable %s:\n",cvar->name);
+          CONS_Printf("  flags :");
+          if( cvar->flags & CV_SAVE )
+            CONS_Printf("AUTOSAVE ");
+          if( cvar->flags & CV_FLOAT )
+            CONS_Printf("FLOAT ");
+          if( cvar->flags & CV_NETVAR )
+            CONS_Printf("NETVAR ");
+          if( cvar->flags & CV_CALL )
+            CONS_Printf("ACTION ");
+          CONS_Printf("\n");
+          if( cvar->PossibleValue )
             {
-	      if(stricmp(cvar->PossibleValue[0].strvalue,"MIN")==0)
+              if(stricmp(cvar->PossibleValue[0].strvalue,"MIN")==0)
                 {
-		  for(i=1;cvar->PossibleValue[i].strvalue!=NULL;i++)
-		    if(!stricmp(cvar->PossibleValue[i].strvalue,"MAX"))
-		      break;
-		  CONS_Printf("  range from %d to %d\n",cvar->PossibleValue[0].value,cvar->PossibleValue[i].value);
+                  for(i=1;cvar->PossibleValue[i].strvalue!=NULL;i++)
+                    if(!stricmp(cvar->PossibleValue[i].strvalue,"MAX"))
+                      break;
+                  CONS_Printf("  range from %d to %d\n",cvar->PossibleValue[0].value,cvar->PossibleValue[i].value);
                 }
-	      else
+              else
                 {
-		  CONS_Printf("  possible value :\n",cvar->name);
-		  while(cvar->PossibleValue[i].strvalue)
+                  CONS_Printf("  possible value :\n",cvar->name);
+                  while(cvar->PossibleValue[i].strvalue)
                     {
-		      CONS_Printf("    %-2d : %s\n",cvar->PossibleValue[i].value,cvar->PossibleValue[i].strvalue);
-		      i++;
+                      CONS_Printf("    %-2d : %s\n",cvar->PossibleValue[i].value,cvar->PossibleValue[i].strvalue);
+                      i++;
                     }
                 }
             }
         }
       else
-	CONS_Printf("No Help for this command/variable\n");
+        CONS_Printf("No Help for this command/variable\n");
     }
   else
     {
@@ -598,22 +603,22 @@ static void COM_Help_f()
       CONS_Printf("\2Commands\n");
       for (cmd=com_commands ; cmd ; cmd=cmd->next)
         {
-	  CONS_Printf("%s ",cmd->name);
-	  i++;
+          CONS_Printf("%s ",cmd->name);
+          i++;
         }
-    
+
       // varibale
       CONS_Printf("\2\nVariable\n");
       for (cvar=consvar_vars; cvar; cvar = cvar->next)
         {
-	  CONS_Printf("%s ",cvar->name);
-	  i++;
+          CONS_Printf("%s ",cvar->name);
+          i++;
         }
-    
+
       CONS_Printf("\2\nread console.txt for more or type help <command or variable>\n");
-    
+
       if( devparm )
-	CONS_Printf("\2Total : %d\n",i);
+        CONS_Printf("\2Total : %d\n",i);
     }
 }
 
@@ -624,7 +629,7 @@ static void COM_Toggle_f()
   if(COM_Argc()!=2 && COM_Argc()!=3)
     {
       CONS_Printf("Toggle <cvar_name> [-1]\n"
-		  "Toggle the value of a cvar\n");
+                  "Toggle the value of a cvar\n");
       return;
     }
   cvar = CV_FindVar (COM_Argv(1));
@@ -678,10 +683,10 @@ void *VS_GetSpace (vsbuf_t *buf, int length)
   if (buf->cursize + length > buf->maxsize)
     {
       if (!buf->allowoverflow)
-	I_Error ("overflow 111");
+        I_Error ("overflow 111");
 
       if (length > buf->maxsize)
-	I_Error ("overflow l%i 112", length);
+        I_Error ("overflow l%i 112", length);
 
       buf->overflowed = true;
       CONS_Printf ("VS buffer overflow");
@@ -790,52 +795,52 @@ static void Setvalue(consvar_t *var, char *valstr)
 
       if (!stricmp(var->PossibleValue[0].strvalue,"MIN"))
         {   // bounded cvar
-	  int i;
-	  // search for maximum
-	  for (i=1; var->PossibleValue[i].strvalue != NULL; i++)
-	    if (!stricmp(var->PossibleValue[i].strvalue,"MAX"))
-	      break;
+          int i;
+          // search for maximum
+          for (i=1; var->PossibleValue[i].strvalue != NULL; i++)
+            if (!stricmp(var->PossibleValue[i].strvalue,"MAX"))
+              break;
 #ifdef PARANOIA
-	  if(var->PossibleValue[i].strvalue==NULL)
-	    I_Error("Bounded cvar \"%s\" without Maximum !",var->name);
+          if(var->PossibleValue[i].strvalue==NULL)
+            I_Error("Bounded cvar \"%s\" without Maximum !",var->name);
 #endif
-	  if (v < var->PossibleValue[0].value)
+          if (v < var->PossibleValue[0].value)
             {
-	      v = var->PossibleValue[0].value;
-	      sprintf(valstr,"%d",v);
+              v = var->PossibleValue[0].value;
+              sprintf(valstr,"%d",v);
             }
-	  if(v > var->PossibleValue[i].value)
+          if(v > var->PossibleValue[i].value)
             {
-	      v = var->PossibleValue[i].value;
-	      sprintf(valstr,"%d",v);
-	    }
+              v = var->PossibleValue[i].value;
+              sprintf(valstr,"%d",v);
+            }
         }
       else
         {
-	  // waw spaghetti programming ! :)
-	  int i;
+          // waw spaghetti programming ! :)
+          int i;
 
-	  // check first strings
-	  for(i=0;var->PossibleValue[i].strvalue!=NULL;i++)
-	    if(!stricmp(var->PossibleValue[i].strvalue,valstr))
-	      goto found;
-	  if(!v)
-	    if(strcmp(valstr,"0")!=0) // !=0 if valstr!="0"
-	      goto error;
-	  // check int now
-	  for(i=0;var->PossibleValue[i].strvalue!=NULL;i++)
-	    if(v==var->PossibleValue[i].value)
-	      goto found;
+          // check first strings
+          for(i=0;var->PossibleValue[i].strvalue!=NULL;i++)
+            if(!stricmp(var->PossibleValue[i].strvalue,valstr))
+              goto found;
+          if(!v)
+            if(strcmp(valstr,"0")!=0) // !=0 if valstr!="0"
+              goto error;
+          // check int now
+          for(i=0;var->PossibleValue[i].strvalue!=NULL;i++)
+            if(v==var->PossibleValue[i].value)
+              goto found;
 
-	error:      // not found
-	  CONS_Printf("\"%s\" is not a possible value for \"%s\"\n", valstr, var->name);
-	  if (var->defaultvalue == valstr)
-	    I_Error("Variable %s default value \"%s\" is not a possible value\n",var->name,var->defaultvalue);
-	  return;
-	found:
-	  var->value = var->PossibleValue[i].value;
-	  var->str=var->PossibleValue[i].strvalue;
-	  goto finish;
+        error:      // not found
+          CONS_Printf("\"%s\" is not a possible value for \"%s\"\n", valstr, var->name);
+          if (var->defaultvalue == valstr)
+            I_Error("Variable %s default value \"%s\" is not a possible value\n",var->name,var->defaultvalue);
+          return;
+        found:
+          var->value = var->PossibleValue[i].value;
+          var->str=var->PossibleValue[i].strvalue;
+          goto finish;
         }
     }
 
@@ -891,7 +896,7 @@ void CV_RegisterVar(consvar_t *variable)
     {
       variable->netid = CV_ComputeNetid (variable->name);
       if (CV_FindNetVar(variable->netid))
-	I_Error("Variable %s has same netid\n",variable->name);
+        I_Error("Variable %s has same netid\n",variable->name);
     }
 
   // link the variable in
@@ -953,7 +958,7 @@ char *CV_CompleteVar (char *partial, int skips)
   for (cvar=consvar_vars ; cvar ; cvar=cvar->next)
     if (!strncmp (partial,cvar->name, len))
       if (!skips--)
-	return cvar->name;
+        return cvar->name;
 
   return NULL;
 }
@@ -987,15 +992,15 @@ void CV_SaveNetVars(char **p)
   consvar_t  *cvar;
   byte *q = (byte *)*p;
 
-  // we must send all cvar because on the other side maybe 
+  // we must send all cvar because on the other side maybe
   // it have a cvar modified and here not (same for true savegame)
   for (cvar=consvar_vars; cvar; cvar = cvar->next)
     if (cvar->flags & CV_NETVAR)
       {
-	WRITESHORT(q,cvar->netid);
-	WRITESTRING(q,cvar->str);
+        WRITESHORT(q,cvar->netid);
+        WRITESTRING(q,cvar->str);
       }
-  *p = (char *)q; 
+  *p = (char *)q;
 }
 
 // get implicit parameter save_p
@@ -1040,8 +1045,8 @@ void CV_Set(consvar_t *var, char *value)
       byte *p;
       if (!server)
         {
-	  CONS_Printf("Only the server can change this variable\n");
-	  return;
+          CONS_Printf("Only the server can change this variable\n");
+          return;
         }
       p = (byte *)buf;
       WRITEUSHORT(p, var->netid);
@@ -1077,36 +1082,36 @@ void CV_AddValue(consvar_t *var, int increment)
 #define MIN 0
 
       if( strcmp(var->PossibleValue[MIN].strvalue,"MIN")==0 )
-	{
-	  int max;
-	  // seach the next to last
-	  for(max=0;var->PossibleValue[max+1].strvalue!=NULL;max++)
+        {
+          int max;
+          // seach the next to last
+          for(max=0;var->PossibleValue[max+1].strvalue!=NULL;max++)
             ;
-                
-	  if( newvalue<var->PossibleValue[MIN].value )
-	    newvalue+=var->PossibleValue[max].value-var->PossibleValue[MIN].value+1;   // add the max+1
-	  newvalue=var->PossibleValue[MIN].value +
-	    (newvalue-var->PossibleValue[MIN].value) %
-	    (var->PossibleValue[max].value -
-	     var->PossibleValue[MIN].value+1);
 
-	  CV_SetValue(var,newvalue);
+          if( newvalue<var->PossibleValue[MIN].value )
+            newvalue+=var->PossibleValue[max].value-var->PossibleValue[MIN].value+1;   // add the max+1
+          newvalue=var->PossibleValue[MIN].value +
+            (newvalue-var->PossibleValue[MIN].value) %
+            (var->PossibleValue[max].value -
+             var->PossibleValue[MIN].value+1);
+
+          CV_SetValue(var,newvalue);
         }
       else
         {
-	  int max,currentindice=-1,newindice;
+          int max,currentindice=-1,newindice;
 
-	  // this code do not support more than same value for differant PossibleValue
-	  for(max=0;var->PossibleValue[max].strvalue!=NULL;max++)
-	    if( var->PossibleValue[max].value==var->value )
-	      currentindice=max;
-	  max--;
+          // this code do not support more than same value for differant PossibleValue
+          for(max=0;var->PossibleValue[max].strvalue!=NULL;max++)
+            if( var->PossibleValue[max].value==var->value )
+              currentindice=max;
+          max--;
 #ifdef PARANOIA
-	  if( currentindice==-1 )
-	    I_Error("CV_AddValue : current value %d not found in possible value\n",var->value);
+          if( currentindice==-1 )
+            I_Error("CV_AddValue : current value %d not found in possible value\n",var->value);
 #endif
-	  newindice=(currentindice+increment+max+1) % (max+1);
-	  CV_Set(var,var->PossibleValue[newindice].strvalue);
+          newindice=(currentindice+increment+max+1) % (max+1);
+          CV_Set(var,var->PossibleValue[newindice].strvalue);
         }
     }
   else
@@ -1172,7 +1177,7 @@ static char *COM_Parse(char *data)
   while ( (c = *data) <= ' ')
     {
       if (c == 0)
-	return NULL;            // end of file;
+        return NULL;            // end of file;
       data++;
     }
 
@@ -1180,7 +1185,7 @@ static char *COM_Parse(char *data)
   if (c=='/' && data[1] == '/')
     {
       while (*data && *data != '\n')
-	data++;
+        data++;
       goto skipwhite;
     }
 
@@ -1191,14 +1196,14 @@ static char *COM_Parse(char *data)
       data++;
       while (1)
         {
-	  c = *data++;
-	  if (c=='\"' || !c)
+          c = *data++;
+          if (c=='\"' || !c)
             {
-	      com_token[len] = 0;
-	      return data;
+              com_token[len] = 0;
+              return data;
             }
-	  com_token[len] = c;
-	  len++;
+          com_token[len] = c;
+          len++;
         }
     }
 
@@ -1219,7 +1224,7 @@ static char *COM_Parse(char *data)
       len++;
       c = *data;
       if (c=='{' || c=='}'|| c==')'|| c=='(' || c=='\'' || c==':')
-	break;
+        break;
     } while (c>32);
 
   com_token[len] = 0;

@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C++ -*- 
+// Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
 // $Id$
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2004/05/02 21:15:56  hurdler
+// add dummy new renderer (bis)
+//
 // Revision 1.18  2004/03/28 15:16:13  smite-meister
 // Texture cache.
 //
@@ -230,23 +233,23 @@ void F_Ticker()
   if (finalecount > finalewait)
     {
       if (endgame)
-	{
-	  // skip to next stage
-	  finalestage++;
-	  finalecount = 0;
-	  finalewait = finalestage->wait;
-	  if (finalewait == -1)
-	    game.EndFinale(); // FIXME rather reset the game, give main screen
-	  else if (finalestage->init)
-	    (finalestage->init)(finalestage->stage);
+        {
+          // skip to next stage
+          finalestage++;
+          finalecount = 0;
+          finalewait = finalestage->wait;
+          if (finalewait == -1)
+            game.EndFinale(); // FIXME rather reset the game, give main screen
+          else if (finalestage->init)
+            (finalestage->init)(finalestage->stage);
 
-	  force_wipe = true;
-	}
+          force_wipe = true;
+        }
       else
-	{ // return to game
-	  game.EndFinale();
-	  finalecount = MININT;    // wait until map is lunched
-	}
+        { // return to game
+          game.EndFinale();
+          finalecount = MININT;    // wait until map is lunched
+        }
     }
 }
 
@@ -258,11 +261,11 @@ void F_TextTicker()
     {
       keypressed = false;
       if (finalecount < finalewait - TEXTWAIT)
-	// force text to be written 
-	finalecount = finalewait - TEXTWAIT;
+        // force text to be written
+        finalecount = finalewait - TEXTWAIT;
       else
-	// skip waiting time
-	finalecount += TEXTWAIT; 
+        // skip waiting time
+        finalecount += TEXTWAIT;
     }
 }
 
@@ -314,24 +317,24 @@ void F_TextWrite(int sx, int sy)
     {
       int c = *ch++;
       if (!c)
-	break;
+        break;
       if (c == '\n')
         {
-	  cx = sx;
-	  cy += 10; //game.raven ? 9 : 11;
-	  continue;
+          cx = sx;
+          cy += 10; //game.raven ? 9 : 11;
+          continue;
         }
 
       c = toupper(c) - HU_FONTSTART;
       if (c < 0 || c> HU_FONTSIZE)
         {
-	  cx += 4;
-	  continue;
+          cx += 4;
+          continue;
         }
 
       int w = hud.font[c]->width;
       if (cx+w > vid.width)
-	break;
+        break;
       hud.font[c]->Draw(cx, cy, V_SCALE);
       cx += w;
     }
@@ -421,9 +424,9 @@ void F_CastTicker()
       castnum++;
       castdeath = false;
       if (castorder[castnum].name == NULL)
-	castnum = 0;
+        castnum = 0;
       if (mobjinfo[castorder[castnum].type].seesound)
-	S_StartAmbSound(mobjinfo[castorder[castnum].type].seesound);
+        S_StartAmbSound(mobjinfo[castorder[castnum].type].seesound);
       caststate = &states[mobjinfo[castorder[castnum].type].seestate];
       castframes = 0;
     }
@@ -431,7 +434,7 @@ void F_CastTicker()
     {
       // just advance to next state in animation
       if (caststate == &states[S_PLAY_ATK1])
-	goto stopattack;    // Oh, gross hack!
+        goto stopattack;    // Oh, gross hack!
       st = caststate->nextstate;
       caststate = &states[st];
       castframes++;
@@ -439,37 +442,37 @@ void F_CastTicker()
       // sound hacks....
       switch (st)
         {
-	case S_PLAY_ATK1:     sfx = sfx_dshtgn; break;
-	case S_POSS_ATK2:     sfx = sfx_pistol; break;
-	case S_SPOS_ATK2:     sfx = sfx_shotgn; break;
-	case S_VILE_ATK2:     sfx = sfx_vilatk; break;
-	case S_SKEL_FIST2:    sfx = sfx_skeswg; break;
-	case S_SKEL_FIST4:    sfx = sfx_skepch; break;
-	case S_SKEL_MISS2:    sfx = sfx_skeatk; break;
-	case S_FATT_ATK8:
-	case S_FATT_ATK5:
-	case S_FATT_ATK2:     sfx = sfx_firsht; break;
-	case S_CPOS_ATK2:
-	case S_CPOS_ATK3:
-	case S_CPOS_ATK4:     sfx = sfx_shotgn; break;
-	case S_TROO_ATK3:     sfx = sfx_claw; break;
-	case S_SARG_ATK2:     sfx = sfx_sgtatk; break;
-	case S_BOSS_ATK2:
-	case S_BOS2_ATK2:
-	case S_HEAD_ATK2:     sfx = sfx_firsht; break;
-	case S_SKULL_ATK2:    sfx = sfx_sklatk; break;
-	case S_SPID_ATK2:
-	case S_SPID_ATK3:     sfx = sfx_shotgn; break;
-	case S_BSPI_ATK2:     sfx = sfx_plasma; break;
-	case S_CYBER_ATK2:
-	case S_CYBER_ATK4:
-	case S_CYBER_ATK6:    sfx = sfx_rlaunc; break;
-	case S_PAIN_ATK3:     sfx = sfx_sklatk; break;
-	default: sfx = 0; break;
+        case S_PLAY_ATK1:     sfx = sfx_dshtgn; break;
+        case S_POSS_ATK2:     sfx = sfx_pistol; break;
+        case S_SPOS_ATK2:     sfx = sfx_shotgn; break;
+        case S_VILE_ATK2:     sfx = sfx_vilatk; break;
+        case S_SKEL_FIST2:    sfx = sfx_skeswg; break;
+        case S_SKEL_FIST4:    sfx = sfx_skepch; break;
+        case S_SKEL_MISS2:    sfx = sfx_skeatk; break;
+        case S_FATT_ATK8:
+        case S_FATT_ATK5:
+        case S_FATT_ATK2:     sfx = sfx_firsht; break;
+        case S_CPOS_ATK2:
+        case S_CPOS_ATK3:
+        case S_CPOS_ATK4:     sfx = sfx_shotgn; break;
+        case S_TROO_ATK3:     sfx = sfx_claw; break;
+        case S_SARG_ATK2:     sfx = sfx_sgtatk; break;
+        case S_BOSS_ATK2:
+        case S_BOS2_ATK2:
+        case S_HEAD_ATK2:     sfx = sfx_firsht; break;
+        case S_SKULL_ATK2:    sfx = sfx_sklatk; break;
+        case S_SPID_ATK2:
+        case S_SPID_ATK3:     sfx = sfx_shotgn; break;
+        case S_BSPI_ATK2:     sfx = sfx_plasma; break;
+        case S_CYBER_ATK2:
+        case S_CYBER_ATK4:
+        case S_CYBER_ATK6:    sfx = sfx_rlaunc; break;
+        case S_PAIN_ATK3:     sfx = sfx_sklatk; break;
+        default: sfx = 0; break;
         }
 
       if (sfx)
-	S_StartAmbSound(sfx);
+        S_StartAmbSound(sfx);
     }
 
   if (castframes == 12)
@@ -477,30 +480,30 @@ void F_CastTicker()
       // go into attack frame
       castattacking = true;
       if (castonmelee)
-	caststate=&states[mobjinfo[castorder[castnum].type].meleestate];
+        caststate=&states[mobjinfo[castorder[castnum].type].meleestate];
       else
-	caststate=&states[mobjinfo[castorder[castnum].type].missilestate];
+        caststate=&states[mobjinfo[castorder[castnum].type].missilestate];
       castonmelee ^= 1;
       if (caststate == &states[S_NULL])
         {
-	  if (castonmelee)
-	    caststate=
-	      &states[mobjinfo[castorder[castnum].type].meleestate];
-	  else
-	    caststate=
-	      &states[mobjinfo[castorder[castnum].type].missilestate];
+          if (castonmelee)
+            caststate=
+              &states[mobjinfo[castorder[castnum].type].meleestate];
+          else
+            caststate=
+              &states[mobjinfo[castorder[castnum].type].missilestate];
         }
     }
 
   if (castattacking)
     {
       if (castframes == 24
-	  ||  caststate == &states[mobjinfo[castorder[castnum].type].seestate] )
+          ||  caststate == &states[mobjinfo[castorder[castnum].type].seestate] )
         {
-	stopattack:
-	  castattacking = false;
-	  castframes = 0;
-	  caststate = &states[mobjinfo[castorder[castnum].type].seestate];
+        stopattack:
+          castattacking = false;
+          castframes = 0;
+          caststate = &states[mobjinfo[castorder[castnum].type].seestate];
         }
     }
 
@@ -567,14 +570,14 @@ void F_CastDrawer(int dummy)
 //
 static void F_DrawPatchCol(int x, Texture *patch, int col)
 {
+#warning FIXME end scroller
+#if 0
   column_t*   column;
   byte*       source;
   byte*       dest;
   byte*       desttop;
   int         count;
 
-  // FIXME end scroller
-  /*
   column = (column_t *)((byte *)patch + LONG(patch->columnofs[col]));
   desttop = vid.screens[0]+x*vid.dupx;
 
@@ -587,21 +590,21 @@ static void F_DrawPatchCol(int x, Texture *patch, int col)
 
       while (count--)
         {
-	  int dupycount=vid.dupy;
+          int dupycount=vid.dupy;
 
-	  while(dupycount--)
+          while(dupycount--)
             {
-	      int dupxcount=vid.dupx;
-	      while(dupxcount--)
-		*dest++ = *source;
+              int dupxcount=vid.dupx;
+              while(dupxcount--)
+                *dest++ = *source;
 
-	      dest += (vid.width-vid.dupx);
+              dest += (vid.width-vid.dupx);
             }
-	  source++;
+          source++;
         }
       column = (column_t *)(  (byte *)column + column->length + 4 );
     }
-  */
+#endif
 }
 
 //
@@ -630,18 +633,18 @@ void F_BunnyScroll()
     {
       for ( x=0 ; x<320 ; x++)
         {
-	  if (x+scrolled < 320)
-	    F_DrawPatchCol (x, p1, x+scrolled);
-	  else
-	    F_DrawPatchCol (x, p2, x+scrolled - 320);
+          if (x+scrolled < 320)
+            F_DrawPatchCol (x, p1, x+scrolled);
+          else
+            F_DrawPatchCol (x, p2, x+scrolled - 320);
         }
     }
   else
     {
       if( scrolled>0 )
-	p2->Draw(320-scrolled,0, V_SCALE);
+        p2->Draw(320-scrolled,0, V_SCALE);
       if( scrolled<320 )
-	p1->Draw(-scrolled,0, V_SCALE);
+        p1->Draw(-scrolled,0, V_SCALE);
     }
 
   if (finalecount < 1130)
@@ -680,9 +683,9 @@ void F_DoomDrawer(int dummy)
     {
     case 1:
       if (game.mode == gm_doom1s)
-	tc.GetPtr("HELP2")->Draw(0,0,V_SCALE); // ordering info
+        tc.GetPtr("HELP2")->Draw(0,0,V_SCALE); // ordering info
       else
-	tc.GetPtr("CREDIT")->Draw(0,0, V_SCALE); // id credits
+        tc.GetPtr("CREDIT")->Draw(0,0, V_SCALE); // id credits
       break;
     case 2:
       tc.GetPtr("VICTORY2")->Draw(0,0, V_SCALE); // deimos over hell
@@ -748,9 +751,9 @@ void F_HereticDrawer(int dummy)
     {
     case 1:
       if (fc.FindNumForName("E2M1") == -1)
-	tc.GetPtr("ORDER")->Draw(0, 0, V_SCALE);
+        tc.GetPtr("ORDER")->Draw(0, 0, V_SCALE);
       else
-	tc.GetPtr("CREDIT")->Draw(0, 0, V_SCALE);
+        tc.GetPtr("CREDIT")->Draw(0, 0, V_SCALE);
       break;
     case 2:
       F_DrawUnderwater();
@@ -803,7 +806,7 @@ void F_HexenStart(int stage)
       F_TextInit(0);
       finalestage->stage = 135;
       break;
-      
+
     }
 }
 
@@ -817,8 +820,8 @@ void F_HexenDrawer(int stage)
     {
       int i = 0; // playerclass...
       if (game.multiplayer)
-	tc.GetPtr("CHESSALL")->Draw(20,0,V_SCALE);
+        tc.GetPtr("CHESSALL")->Draw(20,0,V_SCALE);
       else
-	tc.GetPtrNum(base + i)->Draw(60,0,V_SCALE);
+        tc.GetPtrNum(base + i)->Draw(60,0,V_SCALE);
     }
 }

@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C++ -*- 
+// Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
 //
@@ -109,7 +109,7 @@ bool GameInfo::Downgrade(int version)
   if (version<125)
     {
       states[S_ROCKET].action = NULL;
-      
+
       states[S_SKULL_ATK3].action = NULL;
       states[S_SKULL_ATK4].action = NULL;
     }
@@ -117,26 +117,26 @@ bool GameInfo::Downgrade(int version)
     {
       //activate rocket trails by default
       states[S_ROCKET].action     = A_SmokeTrailer;
-      
+
       // smoke trails behind the skull heads
       states[S_SKULL_ATK3].action = A_SmokeTrailer;
       states[S_SKULL_ATK4].action = A_SmokeTrailer;
     }
 
   //SoM: 3/17/2000: Demo compatability
-  if(version < 129) 
+  if(version < 129)
     {
       boomsupport = 0;
       allow_pushers = 0;
       variable_friction = 0;
     }
-  else 
+  else
     {
       boomsupport = 1;
       allow_pushers = 1;
       variable_friction = 1;
     }
-  
+
   // always true now, might be false in the future, if couldn't
   // go backward and disable all the features...
   demoversion = version;
@@ -168,7 +168,7 @@ void G_DoneLevelLoad()
 vector<ticcmd_t> oldcmd;
 
 // was G_ReadDemoTiccmd
-// 
+//
 
 void GameInfo::ReadDemoTiccmd(ticcmd_t* cmd, int playernum)
 {
@@ -191,33 +191,33 @@ void GameInfo::ReadDemoTiccmd(ticcmd_t* cmd, int playernum)
   else
     {
       char ziptic=*demo_p++;
-      
+
       if(ziptic & ZT_FWD)
-	oldcmd[playernum].forwardmove = READCHAR(demo_p);
+        oldcmd[playernum].forwardmove = READCHAR(demo_p);
       if(ziptic & ZT_SIDE)
-	oldcmd[playernum].sidemove = READCHAR(demo_p);
+        oldcmd[playernum].sidemove = READCHAR(demo_p);
       if(ziptic & ZT_ANGLE)
         {
-	  if(demoversion<125)
-	    oldcmd[playernum].angleturn = (*demo_p++)<<8;
-	  else
-	    oldcmd[playernum].angleturn = READSHORT(demo_p);
+          if(demoversion<125)
+            oldcmd[playernum].angleturn = (*demo_p++)<<8;
+          else
+            oldcmd[playernum].angleturn = READSHORT(demo_p);
         }
       if(ziptic & ZT_BUTTONS)
-	oldcmd[playernum].buttons = *demo_p++;
+        oldcmd[playernum].buttons = *demo_p++;
       if(ziptic & ZT_AIMING)
         {
-	  if(demoversion<128)
-	    oldcmd[playernum].aiming = READCHAR(demo_p);
-	  else
-	    oldcmd[playernum].aiming = READSHORT(demo_p);
+          if(demoversion<128)
+            oldcmd[playernum].aiming = READCHAR(demo_p);
+          else
+            oldcmd[playernum].aiming = READSHORT(demo_p);
         }
       if(ziptic & ZT_CHAT)
-	demo_p++;
+        demo_p++;
       if(ziptic & ZT_EXTRADATA)
-	ReadLmpExtraData(&demo_p,playernum);
+        ReadLmpExtraData(&demo_p,playernum);
       else
-	ReadLmpExtraData(0,playernum);
+        ReadLmpExtraData(0,playernum);
 
       memcpy(cmd,&(oldcmd[playernum]),sizeof(ticcmd_t));
     }
@@ -334,9 +334,9 @@ void GameInfo::BeginRecording()
   for (int i=0 ; i<32 ; i++)
     {
       if (i < n)
-	*demo_p++ = 1;
+        *demo_p++ = 1;
       else
-	*demo_p++ = 0;
+        *demo_p++ = 0;
     }
 
   //memset(oldcmd, 0, sizeof(oldcmd));
@@ -362,8 +362,8 @@ void G_DeferedPlayDemo (char* name)
 //
 void GameInfo::PlayDemo(char *defdemoname)
 {
-  // FIXME debug aid
-  return;
+#warning FIXME debug aid
+#if 0
 
   //  skill_t skill;
   int i, n, episode, level;
@@ -376,8 +376,8 @@ void GameInfo::PlayDemo(char *defdemoname)
       FIL_DefaultExtension(defdemoname,".lmp");
       if (!FIL_ReadFile(defdemoname, &demobuffer))
         {
-	  CONS_Printf ("\2ERROR: couldn't open file '%s'.\n", defdemoname);
-	  goto no_demo;
+          CONS_Printf ("\2ERROR: couldn't open file '%s'.\n", defdemoname);
+          goto no_demo;
         }
       demo_p = demobuffer;
     }
@@ -406,6 +406,7 @@ no_demo:
   Players.clear();
 
   demoplayback = true;
+#endif
 }
 
 //
@@ -467,9 +468,9 @@ bool GameInfo::CheckDemoStatus()
       f1 = time;
       f2 = framecount*TICRATE;
       CONS_Printf ("timed %i gametics in %i realtics\n%f seconds, %f avg fps\n",
-		   gametic, time, f1/TICRATE, f2/f1);
+                   gametic, time, f1/TICRATE, f2/f1);
       if( restorecv_vidwait != cv_vidwait.value )
-	CV_SetValue(&cv_vidwait, restorecv_vidwait);
+        CV_SetValue(&cv_vidwait, restorecv_vidwait);
 
       pagetic = 0;
       return true;
@@ -478,7 +479,7 @@ bool GameInfo::CheckDemoStatus()
   if (demoplayback)
     {
       if (singledemo)
-	I_Quit ();
+        I_Quit ();
       StopDemo();
       pagetic = 0;
       return true;

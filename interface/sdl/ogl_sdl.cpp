@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/05/02 21:15:56  hurdler
+// add dummy new renderer (bis)
+//
 // Revision 1.2  2003/01/25 21:33:06  smite-meister
 // Now compiles with MinGW 2.0 / GCC 3.2.
 // Builder can choose between dynamic and static linkage.
@@ -38,6 +41,9 @@
 
 #include "v_video.h"
 #include "hardware/hw_drv.h"
+#include "hardware/hw_main.h"
+#include "hardware/hwr_render.h"
+#include "command.h"
 
 static SDL_Surface *vidSurface = NULL; //use the one from i_video_sdl.c instead?
 
@@ -75,9 +81,16 @@ bool OglSdlSurface(int w, int h, int isFullscreen)
   if ((vidSurface = SDL_SetVideoMode(w, h, cbpp, surfaceFlags)) == NULL)
     return false;
 
-  HWD.pfnInitVidMode(w, h, cbpp);
+  if (cv_grnewrenderer.value)
+    {
+      HWR.Startup(w, h, cbpp);
+    }
+  else
+    {
+      HWD.pfnInitVidMode(w, h, cbpp);
 
-  HWR_Startup();
+      HWR_Startup();
+    }
 
   return true;
 }
