@@ -113,7 +113,11 @@ Wad::Wad()
 
 Wad::~Wad()
 {
-  fclose(stream);
+  if (stream)
+    {
+      fclose(stream);
+      stream = NULL;
+    }
   // TODO free hwrcache
   Z_Free(directory);
 }

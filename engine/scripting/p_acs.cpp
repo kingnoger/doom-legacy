@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/04/20 17:35:38  smite-meister
+// Hexen volume fix
+//
 // Revision 1.4  2003/04/14 08:58:29  smite-meister
 // Hexen maps load.
 //
@@ -1707,7 +1710,7 @@ static int CmdSectorSound()
     }
   volume = Pop();
 
-  S_StartSound(orig, S_GetSoundID(ACMap->ACStrings[Pop()]), volume);
+  S_StartSound(orig, S_GetSoundID(ACMap->ACStrings[Pop()]), volume/127.0);
   return SCRIPT_CONTINUE;
 }
 
@@ -1722,7 +1725,7 @@ static int CmdThingSound()
 
   while((mobj = ACMap->FindFromTIDmap(tid, &searcher)) != NULL)
     {
-      S_StartSound(mobj, sound, volume);
+      S_StartSound(mobj, sound, volume/127.0);
     }
 
   return SCRIPT_CONTINUE;
@@ -1731,7 +1734,7 @@ static int CmdThingSound()
 static int CmdAmbientSound()
 {
   int volume = Pop();
-  S_StartAmbSound(S_GetSoundID(ACMap->ACStrings[Pop()]), volume);
+  S_StartAmbSound(S_GetSoundID(ACMap->ACStrings[Pop()]), volume/127.0);
   return SCRIPT_CONTINUE;
 }
 
@@ -1743,7 +1746,7 @@ static int CmdSoundSequence()
     {
       orig = &ACScript->line->frontsector->soundorg;
     }
-  //FIXME SN_StartSequenceName(mobj, ACMap->ACStrings[Pop()]);
+  // FIXME ACMap->SN_StartSequenceName(orig, ACMap->ACStrings[Pop()]);
   return SCRIPT_CONTINUE;
 }
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2003/04/20 17:35:38  smite-meister
+// Hexen volume fix
+//
 // Revision 1.11  2003/04/19 17:38:46  smite-meister
 // SNDSEQ support, tools, linedef system...
 //
@@ -690,6 +693,9 @@ int SoundSystem::StartAmbSound(const char *name, float volume, int separation, i
   if (i == -1)
     return -1;
 
+  if (volume > 1 || volume < 0)
+    volume = 1;
+
   channel_t *c = &channels[i];
   c->source.isactor = false;
   c->source.act = NULL;
@@ -749,6 +755,9 @@ int SoundSystem::Start3DSound(const char *name, soundsource_t *source, float vol
     pitch = 0;
   if (pitch > 255)
     pitch = 255;
+
+  if (volume > 1 || volume < 0)
+    volume = 1;
 
   // copy source data
   c->volume = int(volume*255);
