@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C++ -*- 
+// Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
 // $Id$
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/06/27 13:15:31  hurdler
+// minor things
+//
 // Revision 1.8  2004/03/28 15:16:15  smite-meister
 // Texture cache.
 //
@@ -113,7 +116,7 @@ CV_PossibleValue_t scr_depth_cons_t[]={{8,"8 bits"}, {16,"16 bits"}, {24,"24 bit
 //added:03-02-98: default screen mode, as loaded/saved in config
 consvar_t   cv_scr_width  = {"scr_width",  "320", CV_SAVE, CV_Unsigned};
 consvar_t   cv_scr_height = {"scr_height", "200", CV_SAVE, CV_Unsigned};
-consvar_t   cv_scr_depth =  {"scr_depth",  "8 bits",   CV_SAVE, scr_depth_cons_t};
+consvar_t   cv_scr_depth =  {"scr_depth",  "16 bits",   CV_SAVE, scr_depth_cons_t};
 consvar_t   cv_fullscreen = {"fullscreen", "Yes", CV_SAVE | CV_CALL, CV_YesNo, CV_Fullscreen_OnChange};
 
 // Are invisible things translucent or fuzzy?
@@ -269,7 +272,7 @@ void Video::SetMode()
 {
   if (dedicated)
     return;
-    
+
   if (!setmodeneeded)
     return;   //should never happen
 
@@ -348,9 +351,9 @@ void Video::Startup()
       break;
     case gm_heretic:
       if (fc.FindNumForName("e2m1") == -1)
-	scr_borderpatch = tc.GetPtr("FLOOR04");
+        scr_borderpatch = tc.GetPtr("FLOOR04");
       else
-	scr_borderpatch = tc.GetPtr("FLAT513");
+        scr_borderpatch = tc.GetPtr("FLAT513");
       break;
     case gm_hexen:
       scr_borderpatch = tc.GetPtr("F_022");
@@ -376,7 +379,7 @@ void Video::Recalc()
   // patch the asm code depending on vid buffer rowbytes
   ASM_PatchRowBytes(rowbytes);
 #endif
-    
+
   // scale 1,2,3 times in x and y the patches for the
   // menus and overlays... calculated once and for all
   // used by routines in v_video.c
@@ -385,7 +388,7 @@ void Video::Recalc()
     fdupy = (float)height / BASEVIDHEIGHT;
     dupx = (int)fdupx;
     dupy = (int)fdupy;
-    baseratio = FixedDiv(height << FRACBITS, BASEVIDHEIGHT << FRACBITS);
+    //baseratio = FixedDiv(height << FRACBITS, BASEVIDHEIGHT << FRACBITS); //Hurdler: not used anymore
   }
 
   // calculate centering offset for the scaled menu
@@ -402,13 +405,13 @@ void Video::Recalc()
       buffer = NULL;
       // be sure to cause a NULL read/write error so we detect it, in case of..
       for (i=0 ; i<NUMSCREENS ; i++)
-	screens[i] = NULL;
+        screens[i] = NULL;
     }
   else
 #endif
     {
       if (buffer)
-	free(buffer);
+        free(buffer);
 
       int screensize = width * height * BytesPerPixel;
       buffer = (byte *)malloc(screensize * NUMSCREENS);
@@ -457,7 +460,7 @@ void SCR_CheckDefaultMode()
 
   if (dedicated)
     return;
-    
+
   // 0 means not set at the cmd-line
   scr_forcex = 0;
   scr_forcey = 0;
@@ -479,7 +482,7 @@ void SCR_CheckDefaultMode()
   else
     {
       CONS_Printf("Default resolution: %d x %d (%d bpp)\n", cv_scr_width.value,
-		  cv_scr_height.value, cv_scr_depth.value);
+                  cv_scr_height.value, cv_scr_depth.value);
       // see note above
       vid.setmodeneeded = I_GetVideoModeForSize(cv_scr_width.value, cv_scr_height.value) + 1;
     }
@@ -516,7 +519,7 @@ void Video::LoadPalette(const char *lumpname)
     Z_Free(palette);
 
   palette = (RGBA_t *)Z_Malloc(sizeof(RGBA_t)*palsize, PU_STATIC, NULL);
-    
+
   byte* pal = (byte *)fc.CacheLumpNum(i, PU_CACHE);
   for(i=0; i<palsize; i++)
     {
