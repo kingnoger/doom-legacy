@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.36  2004/11/09 20:38:50  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.35  2004/11/04 21:12:51  smite-meister
 // save/load fixed
 //
@@ -99,7 +102,6 @@
 #include "g_actor.h"
 
 #include "doomdef.h"
-#include "doomdata.h"
 #include "command.h"
 #include "cvars.h"
 

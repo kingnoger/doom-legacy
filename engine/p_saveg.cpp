@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.36  2004/11/09 20:38:50  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.35  2004/11/04 21:12:52  smite-meister
 // save/load fixed
 //
@@ -1054,7 +1057,7 @@ int Map::Serialize(LArchive &a)
 
   byte diff, diff2;
 
-  mapsector_t *ms = (mapsector_t *)fc.CacheLumpNum(lumpnum + ML_SECTORS, PU_CACHE);
+  mapsector_t *ms = (mapsector_t *)fc.CacheLumpNum(lumpnum + LUMP_SECTORS, PU_CACHE);
   sector_t    *ss = sectors;
 
   for (i = 0; i<numsectors ; i++, ss++, ms++)
@@ -1119,9 +1122,9 @@ int Map::Serialize(LArchive &a)
     }
   a << (temp = MARK_END);
 
-  doom_maplinedef_t *mld = (doom_maplinedef_t *)fc.CacheLumpNum(lumpnum + ML_LINEDEFS, PU_CACHE);
+  doom_maplinedef_t *mld = (doom_maplinedef_t *)fc.CacheLumpNum(lumpnum + LUMP_LINEDEFS, PU_CACHE);
   hex_maplinedef_t *hld = (hex_maplinedef_t *)mld;
-  mapsidedef_t *msd = (mapsidedef_t *)fc.CacheLumpNum(lumpnum + ML_SIDEDEFS, PU_CACHE);
+  mapsidedef_t *msd = (mapsidedef_t *)fc.CacheLumpNum(lumpnum + LUMP_SIDEDEFS, PU_CACHE);
   line_t *li = lines;
   side_t *si;
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2004/11/09 20:38:50  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.16  2004/09/03 16:28:49  smite-meister
 // bugfixes and ZDoom linedef types
 //
@@ -73,22 +76,20 @@
 
 
 #include "doomdef.h"
-#include "doomdata.h"
 
 #include "p_spec.h"
+#include "r_defs.h"
 
 #include "g_game.h"
 #include "g_pawn.h"
 #include "g_map.h"
 
-#include "dstrings.h"
 #include "sounds.h"
-#include "z_zone.h"
 
 
-// =========================================================================
-//                            VERTICAL DOORS
-// =========================================================================
+//=========================================================================
+//                           VERTICAL DOORS
+//=========================================================================
 
 IMPLEMENT_CLASS(vdoor_t, sectoreffect_t);
 vdoor_t::vdoor_t() {}

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/11/09 20:38:50  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.3  2004/10/27 17:37:06  smite-meister
 // netcode update
 //
@@ -33,8 +36,6 @@
 
 #include "command.h"
 #include "cvars.h"
-
-#include "doomdata.h"
 
 #include "g_map.h"
 #include "g_mapinfo.h"

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/11/09 20:38:50  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.6  2004/11/04 21:12:52  smite-meister
 // save/load fixed
 //
@@ -42,7 +45,7 @@
 /// \brief LineOfSight/Visibility checks, uses REJECT and BSP
 
 #include "doomdef.h"
-#include "doomdata.h"
+
 #include "g_actor.h"
 #include "g_map.h"
 #include "p_maputl.h"

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,44 +18,29 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:38  hurdler
-// Initial revision
+// Revision 1.2  2004/11/09 20:38:53  smite-meister
+// added packing to I/O structs
 //
-// Revision 1.3  2002/07/01 21:01:08  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:37  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.5  2001/06/10 21:16:01  bpereira
-// no message
-//
-// Revision 1.4  2001/03/30 17:12:50  bpereira
-// no message
-//
-// Revision 1.3  2001/01/25 22:15:42  bpereira
-// added heretic support
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
-//
-//
-// DESCRIPTION:
-//      Random number LUT.
+// Revision 1.1.1.1  2002/11/16 14:18:38  hurdler
+// Initial C++ version of Doom Legacy
 //
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Random number LUT.
+///
+/// Original Doom required this to keep network games synchronized.
 
 #include "doomdef.h"
 #include "doomtype.h"
 #include "m_random.h"
+
 //
 // M_Random
 // Returns a 0-255 number
 //
-byte rndtable[256] = {
+byte rndtable[256] =
+{
     0,   8, 109, 220, 222, 241, 149, 107,  75, 248, 254, 140,  16,  66 ,
     74,  21, 211,  47,  80, 242, 154,  27, 205, 128, 161,  89,  77,  36 ,
     95, 110,  85,  48, 212, 140, 211, 249,  22,  79, 200,  50,  28, 188 ,
@@ -83,29 +68,29 @@ static byte     prndindex = 0;
 #ifndef DEBUGRANDOM
 
 // P_Random is used throughout all the p_xxx game code.
-byte P_Random ()
+byte P_Random()
 {
-    return rndtable[++prndindex];
+  return rndtable[++prndindex];
 }
 
 // lot of code used P_Random()-P_Random() since C don't define 
 // evaluation order it is compiler depenent so this allow network play 
 // between different compilers
-int P_SignedRandom ()
+int P_SignedRandom()
 {
-    int r = P_Random();
-    return r-P_Random();
+  int r = P_Random();
+  return r-P_Random();
 }
 
 #else
 
-byte P_Random2 (char *a,int b)
+byte P_Random2(char *a,int b)
 {
     CONS_Printf("P_Random at : %sp %d\n",a,b);
     return rndtable[++prndindex];
 }
 
-int P_SignedRandom2 (char *a,int b)
+int P_SignedRandom2(char *a,int b)
 {
     int r;
     CONS_Printf("P_SignedRandom at : %sp %d\n",a,b);
@@ -115,24 +100,24 @@ int P_SignedRandom2 (char *a,int b)
 
 #endif
 
-byte M_Random (void)
+byte M_Random()
 {
-    return rndtable[++rndindex];
+  return rndtable[++rndindex];
 }
 
-void M_ClearRandom (void)
+void M_ClearRandom()
 {
-    rndindex = prndindex = 0;
+  rndindex = prndindex = 0;
 }
 
 // for savegame and join in game
-byte P_GetRandIndex(void)
+byte P_GetRandIndex()
 {
-    return prndindex;
+  return prndindex;
 }
 
 // load game
 void P_SetRandIndex(byte rindex)
 {
-    prndindex = rindex;
+  prndindex = rindex;
 }

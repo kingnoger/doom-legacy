@@ -20,10 +20,12 @@
 /// \file
 /// \brief Re-implementation of some original Doom "features"
 
-#include "doomdata.h"
 #include "p_hacks.h"
+
 #include "g_player.h"
 #include "g_map.h"
+
+#include "r_defs.h"
 #include "r_sprite.h"
 
 

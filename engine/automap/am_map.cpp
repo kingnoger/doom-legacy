@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2004/11/09 20:38:51  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.20  2004/10/31 22:30:53  smite-meister
 // cleanup
 //
@@ -65,7 +68,6 @@
 #include "am_map.h"
 
 #include "doomdef.h"
-#include "doomdata.h"
 #include "d_event.h"
 
 #include "g_game.h"

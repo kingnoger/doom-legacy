@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2004/11/09 20:38:51  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.19  2004/10/27 17:37:07  smite-meister
 // netcode update
 //
@@ -52,13 +55,14 @@
 #include "g_player.h"
 
 #include "m_random.h"
-#include "r_state.h" // colormap etc.
+#include "r_main.h" // colormap etc.
 #include "r_data.h"
 
 #include "sounds.h"
 #include "s_sound.h"
 #include "i_video.h"
 #include "v_video.h"
+#include "screen.h"
 
 #include "w_wad.h"
 #include "z_zone.h"

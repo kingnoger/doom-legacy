@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.26  2004/11/09 20:38:50  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.25  2004/11/04 21:12:53  smite-meister
 // save/load fixed
 //
@@ -36,17 +39,8 @@
 // Revision 1.19  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
-// Revision 1.18  2004/01/02 14:25:01  smite-meister
-// cleanup
-//
 // Revision 1.17  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
-//
-// Revision 1.16  2003/12/13 23:51:03  smite-meister
-// Hexen update
-//
-// Revision 1.15  2003/11/23 00:41:55  smite-meister
-// bugfixes
 //
 // Revision 1.14  2003/11/12 11:07:23  smite-meister
 // Serialization done. Map progression.
@@ -56,12 +50,6 @@
 //
 // Revision 1.12  2003/05/30 13:34:47  smite-meister
 // Cleanup, HUD improved, serialization
-//
-// Revision 1.11  2003/05/11 21:23:51  smite-meister
-// Hexen fixes
-//
-// Revision 1.10  2003/04/26 12:01:13  smite-meister
-// Bugfixes. Hexen maps work again.
 //
 // Revision 1.9  2003/04/24 20:30:19  hurdler
 // Remove lots of compiling warnings
@@ -97,7 +85,6 @@
 
 
 #include "doomdef.h"
-#include "doomdata.h"
 #include "command.h"
 #include "cvars.h"
 #include "d_event.h"
@@ -113,6 +100,7 @@
 #include "p_enemy.h"
 #include "p_maputl.h"
 #include "r_sprite.h"
+#include "r_defs.h"
 
 #include "sounds.h"
 #include "m_random.h"

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/11/09 20:38:53  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.4  2004/10/27 17:37:11  smite-meister
 // netcode update
 //
@@ -103,7 +106,6 @@
 /// \brief BSP traversal, handling of LineSegs for rendering.
 
 #include "doomdef.h"
-#include "doomdata.h"
 
 #include "g_game.h"
 #include "g_map.h"

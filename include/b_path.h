@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2004/11/09 20:38:51  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.1  2004/10/17 01:57:05  smite-meister
 // bots!
 //
@@ -25,7 +28,7 @@
 //
 // Revision 1.2  2002/09/27 16:40:08  tonyd
 // First commit of acbot
-
+//
 //-----------------------------------------------------------------------------
 
 /// \file
@@ -99,7 +102,7 @@ class BotNodes
 #define BOTNODEGRIDSHIFT (FRACBITS + 5)
 #define BOTNODEGRIDSIZE  (1 << BOTNODEGRIDSHIFT)  // 32*FRACUNIT
 
-  Map *mp;
+  class Map *mp;
 
   // node grid
   fixed_t xOrigin, yOrigin;
@@ -113,13 +116,13 @@ public:
 
   void BuildNodes(SearchNode_t *node);
 
-  bool DirectlyReachable(Actor *a, fixed_t x, fixed_t y, fixed_t destx, fixed_t desty);
+  bool DirectlyReachable(class Actor *a, fixed_t x, fixed_t y, fixed_t destx, fixed_t desty);
 
   SearchNode_t *FindClosestNode(fixed_t x, fixed_t y);
   SearchNode_t *GetClosestReachableNode(fixed_t x, fixed_t y);
   SearchNode_t *GetNodeAt(fixed_t x, fixed_t y);
 
-  bool FindPath(list<SearchNode_t *> &path, SearchNode_t *start, SearchNode_t *dest);
+  bool FindPath(std::list<SearchNode_t *> &path, SearchNode_t *start, SearchNode_t *dest);
 
   // nodes lie at the middle of their grid cell
   // map coordinates into grid coordinates

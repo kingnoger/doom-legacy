@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/11/09 20:38:53  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.9  2004/11/04 21:12:54  smite-meister
 // save/load fixed
 //
@@ -31,9 +34,6 @@
 //
 // Revision 1.5  2004/07/09 19:43:40  smite-meister
 // Netcode fixes
-//
-// Revision 1.4  2004/07/07 17:27:20  smite-meister
-// bugfixes
 //
 // Revision 1.3  2004/07/05 16:53:30  smite-meister
 // Netcode replaced
@@ -454,8 +454,6 @@ void LNetInterface::Update()
 {
   nowtime = I_GetTime();
 
-  checkIncomingPackets();
-
   switch (netstate)
     {
     case CL_PingingServers:
@@ -466,7 +464,7 @@ void LNetInterface::Update()
       break;
 
     case CL_Connecting:
-      if (server_con)
+      if (server_con && !(nowtime & 0x1ff))
 	CONS_Printf("%s\n", ConnectionState[server_con->getConnectionState()]);
       break;
 
@@ -479,7 +477,7 @@ void LNetInterface::Update()
 
   //if( cv_internetserver.value ) SendHeartbeatMasterServer();
 
-
+  checkIncomingPackets();
   processConnections();
 
   // file transfers

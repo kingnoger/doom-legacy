@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/11/09 20:38:52  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.4  2004/08/15 18:08:29  smite-meister
 // palette-to-palette colormaps etc.
 //
@@ -48,11 +51,10 @@
 // Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
 // Initial import into CVS (v1.29 pr3)
 //
-//
-// DESCRIPTION:
-//
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Software renderer state variables. Lights.
 
 
 #ifndef r_main_h
@@ -92,11 +94,104 @@ extern int              loopcount;
 
 extern int      framecount;
 
-//
+
+
+//==========================================
+//               Lights
+//==========================================
+
+
+// This could be wider for >8 bit display.
+// Indeed, true color support is posibble
+//  precalculating 24bpp lightmap/colormap LUT.
+//  from darkening PLAYPAL to all black.
+// Could even use more than 32 levels.
+typedef byte lighttable_t;
+
+
+// SoM: ExtraColormap type. Use for extra_colormaps from now on.
+struct extracolormap_t
+{
+  unsigned short  maskcolor;
+  unsigned short  fadecolor;
+  double          maskamt;
+  unsigned short  fadestart, fadeend;
+  int             fog;
+
+  //Hurdler: rgba is used in hw mode for coloured sector lighting
+  int             rgba; // similar to maskcolor in sw mode
+
+  lighttable_t*   colormap;
+};
+
+
+//Hurdler: 04/12/2000: for now, only used in hardware mode
+//                     maybe later for software as well?
+//                     that's why it's moved here
+struct light_t
+{
+  Uint16  type;           // light,... (cfr #define in hwr_light.c)
+
+  float   light_xoffset;
+  float   light_yoffset;  // y offset to adjust corona's height
+
+  Uint32  corona_color;   // color of the light for static lighting
+  float   corona_radius;  // radius of the coronas
+
+  Uint32  dynamic_color;  // color of the light for dynamic lighting
+  float   dynamic_radius; // radius of the light ball
+  float   dynamic_sqrradius; // radius^2 of the light ball
+};
+
+struct lightmap_t
+{
+  float       s[2], t[2];
+  light_t    *light;
+  lightmap_t *next;
+};
+
+
+/// \brief Information for shadows casted by 3D floors.
+///
+/// This information is contained inside the sector_t and is used as the base
+/// information for casted shadows.
+struct lightlist_t
+{
+  fixed_t           height;
+  short            *lightlevel;
+  extracolormap_t  *extra_colormap;
+  struct ffloor_t  *caster;
+};
+
+
+/// Used for rendering walls with shadows cast on them.
+struct r_lightlist_t
+{
+  fixed_t           height;
+  fixed_t           heightstep;
+  fixed_t           botheight;
+  fixed_t           botheightstep;
+  short             lightlevel;
+  extracolormap_t  *extra_colormap;
+  lighttable_t     *rcolormap;
+  int               flags;
+};
+
+
+
+
+extern lighttable_t *colormaps;
+
+//SoM: 3/30/2000: Boom colormaps.
+//SoM: 4/7/2000: Had to put a limit on colormaps :(
+#define                 MAXCOLORMAPS 30
+extern int                 num_extra_colormaps;
+extern extracolormap_t     extra_colormaps[MAXCOLORMAPS];
+
+
 // Lighting LUT.
 // Used for z-depth cuing per column/row,
 //  and other lighting effects (sector ambient, flash).
-//
 
 // Lighting constants.
 // Now why not 32 levels here?
@@ -118,6 +213,10 @@ extern lighttable_t*    fixedcolormap;
 // Number of diminishing brightness levels.
 // There a 0-31, i.e. 32 LUT in the COLORMAP lump.
 #define NUMCOLORMAPS            32
+
+
+
+
 
 
 // Blocky/low detail mode.

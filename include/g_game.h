@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2004/11/09 20:38:52  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.14  2004/09/23 23:21:19  smite-meister
 // HUD updated
 //
@@ -57,8 +60,7 @@
 #include <map>
 #include <string>
 
-#include "doomdef.h"
-#include "doomdata.h"
+#include "doomtype.h"
 
 using namespace std;
 

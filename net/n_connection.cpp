@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/11/09 20:38:52  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.8  2004/11/04 21:12:54  smite-meister
 // save/load fixed
 //
@@ -85,7 +88,7 @@ LConnection::LConnection()
 {
   //setIsAdaptive();
   //setTranslatesStrings();
-  setFixedRateParameters(50, 50, 2000, 2000); // packet rates, sizes (send and receive)
+  //setFixedRateParameters(50, 50, 2000, 2000); // packet rates, sizes (send and receive)
 }
 
 
@@ -254,7 +257,7 @@ void LConnection::onConnectionEstablished()
       n->netstate = LNetInterface::CL_Connected;
       CONS_Printf("Connected to server at %s.\n", getNetAddressString());
 
-      //rpcSay(0, 0, "hello world!\n");
+      rpcTest(7467);
     }
   else
     {
@@ -324,6 +327,34 @@ void LConnection::onStartGhosting()
 //========================================================
 //            Remote Procedure Calls
 //========================================================
+
+TNL_IMPLEMENT_RPC(LConnection, rpcTest, (U8 num), 
+		  NetClassGroupGameMask, RPCGuaranteedOrdered, RPCDirClientToServer, 0)
+{
+  CONS_Printf("client sent this: %d\n", num);
+};
+
+
+// to: 0 means everyone, positive numbers are players, negative numbers are teams
+TNL_IMPLEMENT_RPC(LConnection, rpcSay, (S8 from, S8 to, const char *msg), 
+		  NetClassGroupGameMask, RPCGuaranteedOrdered, RPCDirAny, 0)
+{
+  if (isConnectionToServer())
+    {
+      // client
+      CONS_Printf("%s: %s\n", game.Players[from]->name.c_str(), msg);
+    }
+  else
+    {
+      from = player[0]->number;
+
+      CONS_Printf("message!\n");
+      CONS_Printf("\3%s: %s\n", game.Players[from]->name.c_str(), msg);
+      game.net->SayCmd(player[0]->number, to, msg);
+    }
+};
+
+
 
 
 TNL_IMPLEMENT_RPC(LConnection, rpcMessage_s2c, (S32 pnum, const char *msg, S8 priority, S8 type), 

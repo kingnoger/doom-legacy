@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/11/09 20:38:52  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.12  2004/10/14 19:35:50  smite-meister
 // automap, bbox_t
 //
@@ -47,12 +50,6 @@
 //
 // Revision 1.1.1.1  2002/11/16 14:18:27  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.32  2001/08/19 20:41:04  hurdler
-// small changes
-//
-// Revision 1.31  2001/08/13 22:53:40  stroggonmeth
-// Small commit
 //
 // Revision 1.30  2001/08/12 17:57:15  hurdler
 // Beter support of sector coloured lighting in hw mode
@@ -150,72 +147,21 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Software rendering module, shared data struct definitions.
+/// \brief Runtime structs for map data.
 
 #ifndef r_defs_h
 #define r_defs_h 1
 
-
-// Some more or less basic data types
-// we depend on.
+// Some more or less basic data types we depend on.
 #include "m_fixed.h"
 #include "m_bbox.h"
-#include "screen.h"     //added:26-01-98:MAXVIDWIDTH, MAXVIDHEIGHT
 
 
-// Silhouette, needed for clipping Segs (mainly)
-// and sprites representing things.
-enum
-{
-  SIL_NONE   = 0,
-  SIL_BOTTOM = 1,
-  SIL_TOP    = 2,
-  SIL_BOTH   = 3
-};
-
-//faB: was upped to 512, but still people come with levels that break the
-//     limits, so had to do an ugly re-alloc to get rid of the overflow.
-//#define MAXDRAWSEGS             256        // see r_segs.c for more
-
-// SoM: Moved this here...
-// This could be wider for >8 bit display.
-// Indeed, true color support is posibble
-//  precalculating 24bpp lightmap/colormap LUT.
-//  from darkening PLAYPAL to all black.
-// Could even use more than 32 levels.
-typedef byte    lighttable_t;
-
-
-// SoM: ExtraColormap type. Use for extra_colormaps from now on.
-struct extracolormap_t
-{
-  unsigned short  maskcolor;
-  unsigned short  fadecolor;
-  double          maskamt;
-  unsigned short  fadestart, fadeend;
-  int             fog;
-
-  //Hurdler: rgba is used in hw mode for coloured sector lighting
-  int             rgba; // similar to maskcolor in sw mode
-
-  lighttable_t*   colormap;
-};
-
-//
-// INTERNAL MAP TYPES
-//  used by play and refresh
-//
-
-//
-// Your plain vanilla vertex.
-// Note: transformed values not buffered locally,
-//  like some DOOM-alikes ("wt", "WebView") did.
-//
+/// Your plain vanilla vertex.
 struct vertex_t
 {
   fixed_t  x, y;
 };
-
 
 
 // Each sector has a mappoint_t in its center
@@ -231,7 +177,7 @@ struct mappoint_t
 };
 
 
-/// \brief "Fake floor" types
+/// "Fake floor" types
 enum ffloortype_e
 {
   FF_EXISTS            = 0x1,    //MAKE SURE IT'S VALID
@@ -256,11 +202,10 @@ enum ffloortype_e
 };
 
 
-
-//SoM: 3/23/2000: Store fake planes in a resizalbe array insted of just by
-//heightsec. Allows for multiple fake planes.
-
 /// \brief Fake floor, better known as 3D floor:)
+///
+/// Store fake planes in a resizable array insted of just by
+/// heightsec. Allows for multiple fake planes.
 struct ffloor_t
 {
   fixed_t          *topheight;
@@ -291,45 +236,9 @@ struct ffloor_t
 };
 
 
-// SoM: This struct holds information for shadows casted by 3D floors.
-// This information is contained inside the sector_t and is used as the base
-// information for casted shadows.
-struct lightlist_t
-{
-  fixed_t                 height;
-  short                   *lightlevel;
-  extracolormap_t*        extra_colormap;
-  ffloor_t*               caster;
-};
 
 
-// SoM: This struct is used for rendering walls with shadows casted on them...
-struct r_lightlist_t
-{
-  fixed_t                 height;
-  fixed_t                 heightstep;
-  fixed_t                 botheight;
-  fixed_t                 botheightstep;
-  short                   lightlevel;
-  extracolormap_t*        extra_colormap;
-  lighttable_t*           rcolormap;
-  int                     flags;
-};
-
-
-// ----- for special tricks with HW renderer -----
-
-//
-// For creating a chain with the lines around a sector
-//
-struct  linechain_t
-{
-  line_t        *line;
-  linechain_t   *next;
-};
-// ----- end special tricks -----
-
-
+/// Sector floor properties
 enum floortype_t
 {
   FLOOR_SOLID,
@@ -340,11 +249,7 @@ enum floortype_t
   FLOOR_SLUDGE
 };
 
-//
-// The SECTORS record, at runtime.
-// Stores things/mobjs.
-//
-
+/// The runtime sector struct.
 struct sector_t
 {
   fixed_t  floorheight, ceilingheight;
@@ -354,7 +259,7 @@ struct sector_t
   int      nexttag, firsttag; //SoM: 3/6/2000: by killough: improves searches for tags.
 
   short     soundtraversed; // 0 = untraversed, 1,2 = sndlines -1
-  class Actor* soundtarget; // thing that made a sound (or null)
+  class Actor *soundtarget; // thing that made a sound (or null)
 
   short      seqType;   // sector sound sequence
   mappoint_t soundorg;  // origin for any sounds played by the sector
@@ -364,7 +269,7 @@ struct sector_t
   int    blockbox[4]; // mapblock bounding box for height changes
 
   int     validcount; // if == validcount, already checked
-  Actor*  thinglist;  // list of mobjs in sector
+  Actor  *thinglist;  // list of mobjs in sector
 
   //SoM: 3/6/2000: Start boom extra stuff
   // Thinker for reversable actions
@@ -404,10 +309,10 @@ struct sector_t
   line_t**  lines;  // [linecount] size
 
   //SoM: 2/23/2000: Improved fake floor hack
-  ffloor_t*                  ffloors;
-  int                        *attached;
+  ffloor_t                  *ffloors;
+  int                       *attached;
   int                        numattached;
-  lightlist_t*               lightlist;
+  struct lightlist_t        *lightlist;
   int                        numlights;
   bool                       moved;
 
@@ -415,7 +320,7 @@ struct sector_t
   bool                       added;
 
   // SoM: 4/3/2000: per-sector colormaps!
-  extracolormap_t*           extra_colormap;
+  struct extracolormap_t    *extra_colormap;
 
   // ----- for special tricks with HW renderer -----
   bool                       pseudoSector;
@@ -423,18 +328,15 @@ struct sector_t
   fixed_t                    virtualFloorheight;
   bool                       virtualCeiling;
   fixed_t                    virtualCeilingheight;
-  linechain_t                *sectorLines;
-  sector_t                   **stackList;
+  struct linechain_t        *sectorLines;
+  sector_t                 **stackList;
   double                     lineoutLength;
   // ----- end special tricks -----
 };
 
 
 
-//
-// The SideDef.
-//
-
+/// SideDef.
 struct side_t
 {
   // add this to the calculated texture column
@@ -458,19 +360,88 @@ struct side_t
 
 
 
-//
-// Move clipping aid for LineDefs.
-//
-typedef enum
+/// Move clipping aid for LineDefs.
+enum slopetype_t
 {
   ST_HORIZONTAL,
   ST_VERTICAL,
   ST_POSITIVE,
   ST_NEGATIVE
-} slopetype_t;
+};
 
 
+/// LineDef flags
+enum line_flags_e
+{
+  /// Solid, is an obstacle.
+  ML_BLOCKING = 0x0001,
 
+  /// Blocks monsters only.
+  ML_BLOCKMONSTERS = 0x0002,
+
+  /// Backside will not be present at all if not twosided.
+  ML_TWOSIDED = 0x0004,
+
+  // If a texture is pegged, the texture will have
+  // the end exposed to air held constant at the
+  // top or bottom of the texture (stairs or pulled
+  // down things) and will move with a height change
+  // of one of the neighbor sectors.
+  // Unpegged textures allways have the first row of
+  // the texture at the top pixel of the line for both
+  // top and bottom textures (use next to windows).
+
+  /// upper texture unpegged
+  ML_DONTPEGTOP = 0x0008,
+
+  /// lower texture unpegged
+  ML_DONTPEGBOTTOM = 0x0010,
+
+  /// In AutoMap: don't map as two sided: IT'S A SECRET!
+  ML_SECRET = 0x0020,
+
+  /// Sound rendering: don't let sound cross two of these.
+  ML_SOUNDBLOCK = 0x0040,
+
+  /// Don't draw on the automap at all.
+  ML_DONTDRAW = 0x0080,
+
+  /// Set if already seen, thus drawn in automap.
+  ML_MAPPED = 0x0100,
+
+  /// Boom: "player use" can extend through the line
+  ML_PASSUSE = 0x0200,
+  /// Hexen: special is repeatable
+  ML_REPEAT_SPECIAL = 0x0200,
+
+  /// Anything can trigger the line.
+  ML_ALLTRIGGER = 0x0400,
+
+  /// Hexen: Special activation, 3 bit field
+  ML_SPAC_MASK	= 0x1c00,
+  ML_SPAC_SHIFT	= 10,
+
+  // Hexen: Special activation types (3 bits)
+  SPAC_CROSS  =	0,	///< when player crosses line
+  SPAC_USE    = 1,	///< when player uses line
+  SPAC_MCROSS =	2,	///< when monster crosses line
+  SPAC_IMPACT =	3,	///< when projectile hits line
+  SPAC_PUSH   =	4,	///< when player/monster pushes line
+  SPAC_PCROSS =	5,	///< when projectile crosses line
+  // new types
+  SPAC_PASSUSE = 6,     ///< Converted Boom ML_PASSUSE
+
+  /// internal: converted Alltrigger
+  ML_MONSTERS_CAN_ACTIVATE = 0x2000,
+
+  /// internal: Boom generalized linedef
+  ML_BOOM_GENERALIZED = 0x4000,
+};
+
+#define GET_SPAC(flags) (((flags) & ML_SPAC_MASK) >> ML_SPAC_SHIFT)
+
+
+/// LineDef.
 struct line_t
 {
   // Vertices, from v1 to v2.
@@ -520,21 +491,18 @@ struct line_t
 
 
 
-
-//
-// A SubSector.
-// References a Sector.
-// Basically, this is a list of LineSegs,
-//  indicating the visible walls that define
-//  (all or some) sides of a convex BSP leaf.
-//
+/// \brief SubSector.
+///
+/// References a Sector.
+/// Basically, this is a list of LineSegs,
+///  indicating the visible walls that define
+///  (all or some) sides of a convex BSP leaf.
 struct subsector_t
 {
   sector_t*   sector;
   short       numlines;
   short       firstline;
-  // floorsplat_t list
-  void*       splats;
+  void*       splats;  // floorsplat_t list
   //Hurdler: added for optimized mlook in hw mode
   int         validcount;
 
@@ -542,62 +510,33 @@ struct subsector_t
 };
 
 
-// SoM: 3/6/200
-//
-// Sector list node showing all sectors an object appears in.
-//
-// There are two threads that flow through these nodes. The first thread
-// starts at touching_thinglist in a sector_t and flows through the m_snext
-// links to find all mobjs that are entirely or partially in the sector.
-// The second thread starts at touching_sectorlist in an Actor and flows
-// through the m_tnext links to find all sectors a thing touches. This is
-// useful when applying friction or push effects to sectors. These effects
-// can be done as thinkers that act upon all objects touching their sectors.
-// As an mobj moves through the world, these nodes are created and
-// destroyed, with the links changed appropriately.
-//
-// For the links, NULL means top or end of list.
-
+/// Sector list node showing all sectors an object appears in.
+///
+/// There are two threads that flow through these nodes. The first thread
+/// starts at touching_thinglist in a sector_t and flows through the m_snext
+/// links to find all mobjs that are entirely or partially in the sector.
+/// The second thread starts at touching_sectorlist in an Actor and flows
+/// through the m_tnext links to find all sectors a thing touches. This is
+/// useful when applying friction or push effects to sectors. These effects
+/// can be done as thinkers that act upon all objects touching their sectors.
+/// As an mobj moves through the world, these nodes are created and
+/// destroyed, with the links changed appropriately.
+///
+/// For the links, NULL means top or end of list.
 struct msecnode_t
 {
-  sector_t    *m_sector; // a sector containing this object
-  Actor       *m_thing;  // this object
-  msecnode_t  *m_tprev;  // prev msecnode_t for this thing
-  msecnode_t  *m_tnext;  // next msecnode_t for this thing
-  msecnode_t  *m_sprev;  // prev msecnode_t for this sector
-  msecnode_t  *m_snext;  // next msecnode_t for this sector
-  bool visited; // killough 4/4/98, 4/7/98: used in search algorithms
+  sector_t    *m_sector; ///< a sector containing this object
+  Actor       *m_thing;  ///< this object
+  msecnode_t  *m_tprev;  ///< prev msecnode_t for this thing
+  msecnode_t  *m_tnext;  ///< next msecnode_t for this thing
+  msecnode_t  *m_sprev;  ///< prev msecnode_t for this sector
+  msecnode_t  *m_snext;  ///< next msecnode_t for this sector
+  bool visited; ///< used in search algorithms
 };
 
 
-//Hurdler: 04/12/2000: for now, only used in hardware mode
-//                     maybe later for software as well?
-//                     that's why it's moved here
-struct light_t
-{
-  Uint16  type;           // light,... (cfr #define in hwr_light.c)
 
-  float   light_xoffset;
-  float   light_yoffset;  // y offset to adjust corona's height
-
-  Uint32  corona_color;   // color of the light for static lighting
-  float   corona_radius;  // radius of the coronas
-
-  Uint32  dynamic_color;  // color of the light for dynamic lighting
-  float   dynamic_radius; // radius of the light ball
-  float   dynamic_sqrradius; // radius^2 of the light ball
-};
-
-struct lightmap_t
-{
-  float       s[2], t[2];
-  light_t    *light;
-  lightmap_t *next;
-};
-
-//
-// The LineSeg.
-//
+/// LineSeg.
 struct seg_t
 {
   vertex_t*   v1;
@@ -624,96 +563,67 @@ struct seg_t
   //Hurdler: 04/12/2000: added for static lightmap
   //lightmap_t  *lightmaps;
 
-  // SoM: Why slow things down by calculating lightlists for every
-  // thick side.
-  int               numlights;
-  r_lightlist_t*    rlights;
+  // SoM: Why slow things down by calculating lightlists for every thick side.
+  int         numlights;
+  struct r_lightlist_t *rlights;
 };
 
 
 
-//
-// BSP node.
-//
+/// BSP node
 struct node_t
 {
-  // Partition line.
-  fixed_t     x;
-  fixed_t     y;
-  fixed_t     dx;
-  fixed_t     dy;
+  /// Partition line.
+  fixed_t  x, y;
+  fixed_t  dx, dy;
 
-  // Bounding box for each child.
-  bbox_t     bbox[2];
+  /// Bounding box for each child.
+  bbox_t   bbox[2];
 
-  // If NF_SUBSECTOR its a subsector.
+#define NF_SUBSECTOR    0x8000 ///< Indicates a BSP leaf == subsector.
   unsigned short children[2];
 };
 
 
 
 
-//
-// OTHER TYPES
-//
-
-
-
-
-#ifndef MAXFFLOORS
-#define MAXFFLOORS    40
-#endif
-
-struct drawseg_t
+/// Legacy runtime mapthing
+struct mapthing_t
 {
-  seg_t*              curline;
-  int                 x1;
-  int                 x2;
+  short tid;
+  short x, y, z;
+  short angle;
+  short type;
+  short flags;
+  byte special;
+  byte args[5];
 
-  fixed_t             scale1;
-  fixed_t             scale2;
-  fixed_t             scalestep;
-
-  // 0=none, 1=bottom, 2=top, 3=both
-  int                 silhouette;
-
-  // do not clip sprites above this
-  fixed_t             bsilheight;
-
-  // do not clip sprites below this
-  fixed_t             tsilheight;
-
-  // Pointers to lists for sprite clipping,
-  //  all three adjusted so [x1] is first value.
-  short*              sprtopclip;
-  short*              sprbottomclip;
-  short*              maskedtexturecol;
-
-  struct visplane_t*  ffloorplanes[MAXFFLOORS];
-  int                 numffloorplanes;
-  ffloor_t*    thicksides[MAXFFLOORS];
-  short*              thicksidecol;
-  int                 numthicksides;
-  fixed_t             frontscale[MAXVIDWIDTH];
+  class Actor *mobj;
 };
 
-
-
-
-// TODO: add another asm routine which use the fg and bg indexes in the
-//       inverse order so the 20-80 becomes 80-20 translucency, no need
-//       for other tables (thus 1090,2080,5050,8020,9010, and fire special)
-
-/// \brief Translucency tables
-enum transnum_t
+/// mapthing_t flags
+enum mapthing_flags_e
 {
-  tr_transmed = 1,    //sprite 50 backg 50  most shots
-  tr_transmor = 2,    //       20       80  puffs
-  tr_transhi  = 3,    //       10       90  blur effect
-  tr_transfir = 4,    // 50 50 but brighter for fireballs, shots..
-  tr_transfx1 = 5,    // 50 50 brighter some colors, else opaque for torches
-  tr_size     = 0x10000,  // one transtable is 256*256 bytes in size
-  tr_shift    = 16    // 2^16 == tr_size
+  // original Doom flags
+  MTF_EASY   = 0x0001,      ///< at which skill is it present?
+  MTF_NORMAL = 0x0002,
+  MTF_HARD   = 0x0004,
+  MTF_AMBUSH = 0x0008,      ///< deaf monster/does not react to sound
+  MTF_MULTIPLAYER = 0x0010, ///< only appears in multiplayer
+
+  // BOOM extras
+  MTF_NOT_IN_DM   = 0x0020, ///< does not appear in deathmatch
+  MTF_NOT_IN_COOP = 0x0040, ///< does not appear in coop
+
+  // Hexen extras
+  MTF_DORMANT  = 0x0010,   ///< dormant until activated     
+  MTF_FIGHTER  = 0x0020,   ///< appears for fighter
+  MTF_CLERIC   = 0x0040,   ///< appears for cleric
+  MTF_MAGE     = 0x0080,   ///< appears for mage
+  MTF_GSINGLE  = 0x0100,   ///< appears in single player games
+  MTF_GCOOP    = 0x0200,   ///< appears in coop games
+  MTF_GDEATHMATCH = 0x0400 ///< appears in dm games
 };
+
 
 #endif

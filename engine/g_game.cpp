@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.38  2004/11/09 20:38:50  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.37  2004/10/27 17:37:06  smite-meister
 // netcode update
 //
@@ -709,6 +712,7 @@ PlayerInfo *GameInfo::AddPlayer(PlayerInfo *p)
   // pnum is valid and free!
   p->number = pnum;
   Players[pnum] = p;
+  multiplayer = (Players.size() > 1);
 
   return p;
 }

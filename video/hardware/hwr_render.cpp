@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/11/09 20:38:54  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.8  2004/09/24 11:34:01  smite-meister
 // fix
 //
@@ -51,7 +54,6 @@
 #include <SDL/SDL.h>
 
 #include "doomdef.h"
-#include "doomdata.h"
 #include "command.h"
 #include "cvars.h"
 

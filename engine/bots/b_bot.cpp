@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/11/09 20:38:51  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.2  2004/10/27 17:37:08  smite-meister
 // netcode update
 //
@@ -79,6 +82,15 @@ static char *botnames[] =
 
 const int NUMBOTNAMES = sizeof(botnames)/sizeof(char *);
 
+
+/*
+ katsotaan bots-hakemiston dll:t
+ avataan ne, luetaan nimet taulukkoon (jos versio ok)
+ addbot <nimi> xxx yyy ... : etsit‰‰n <nimi> taulukosta,
+   ladataan dll uudestaan jos syyt‰, vaihdetaan interfacet,
+   luodaan botti:  dll->interf->CreateBot(...).
+   dll osaa hakea loput parametrit komentopuskurilta (xxx, yyy ...)
+ */
 
 
 // add bots to game

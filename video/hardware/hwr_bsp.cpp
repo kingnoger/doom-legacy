@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/11/09 20:38:54  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.6  2004/10/31 22:22:13  smite-meister
 // Hasta la vista, pic_t!
 //
@@ -35,12 +38,14 @@
 // Revision 1.1  2004/07/21 16:05:27  hurdler
 // early implementation of the new HWBsp class and of the Subsector class
 //
-//
-//
-// DESCRIPTION:
-//      Contains the converted Doom map to GL friendly format
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Contains the Doom map converted to GL friendly format
+
+#include <math.h>
+
+#include "doomdef.h"
 
 #include "hardware/hwr_bsp.h"
 #include "hardware/hwr_render.h"
@@ -49,11 +54,10 @@
 #include "cvars.h"
 #include "m_bbox.h"
 #include "r_render.h"
-#include "doomdata.h"
 #include "r_main.h"
 #include "r_bsp.h"
 #include "i_video.h"
-#include <math.h>
+
 
 HWBsp::HWBsp(int size, int bspnum) :
   num_planepolys(size)

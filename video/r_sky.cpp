@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/11/09 20:38:53  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.3  2004/08/15 18:08:30  smite-meister
 // palette-to-palette colormaps etc.
 //
@@ -64,6 +67,7 @@
 #include "doomdef.h"
 #include "r_sky.h"
 #include "r_local.h"
+#include "r_segs.h"
 #include "w_wad.h"
 #include "z_zone.h"
 

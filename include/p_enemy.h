@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/11/09 20:38:52  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.5  2003/12/03 10:49:50  smite-meister
 // Save/load bugfix, text strings updated
 //
@@ -26,30 +29,26 @@
 // Revision 1.3  2003/03/15 20:07:21  smite-meister
 // Initial Hexen compatibility!
 //
-//
-//
-// DESCRIPTION:
-//   Common function prototypes for monster AI
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Common function prototypes for monster AI
 
 #ifndef p_enemy_h
 #define p_enemy_h 1
 
 #include "m_fixed.h"
-#include "info.h" // mobjtype_t
+
 
 #define HITDICE(a) ((1+(P_Random() & 7))*(a))
 
-#define USERANGE        (64*FRACUNIT)
 #define MELEERANGE      (64*FRACUNIT)
 #define AIMRANGE        (16*64*FRACUNIT)
 #define MISSILERANGE    (32*64*FRACUNIT)
 
 #define FLOATSPEED      (FRACUNIT*4)
 
-typedef enum
+enum dirtype_t
 {
   DI_EAST,
   DI_NORTHEAST,
@@ -61,8 +60,7 @@ typedef enum
   DI_SOUTHEAST,
   DI_NODIR,
   NUMDIRS
-
-} dirtype_t;
+};
 
 void    P_NoiseAlert(class Actor *target, Actor *emitter);
 fixed_t P_BulletSlope(class PlayerPawn *p);

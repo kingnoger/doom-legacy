@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.13  2004/11/09 20:38:52  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.12  2004/10/27 17:37:09  smite-meister
 // netcode update
 //
@@ -63,7 +66,6 @@
 /// \brief Delayed scripts, running scripts, console cmds etc.
 /// The interface between FraggleScript and the rest of the game.
 
-#include "doomdata.h"
 #include "command.h"
 #include "g_game.h"
 #include "g_map.h"

@@ -24,9 +24,10 @@
 ///  Floors, Ceilings, Doors, Locked Doors, Lifts, Stairs, Crushers
 
 #include "doomdef.h"
+
 #include "g_game.h"
 #include "g_map.h"
-#include "r_data.h"
+
 #include "p_spec.h" // geometry-related thinker classes
 #include "m_random.h"
 

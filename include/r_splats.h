@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/11/09 20:38:52  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.2  2004/03/28 15:16:14  smite-meister
 // Texture cache.
 //
@@ -58,6 +61,7 @@
 #define r_splats_h 1
 
 #include "r_defs.h"
+#include "r_data.h"
 
 #define WALLSPLATS      // comment this out to compile without splat effects
 //#define FLOORSPLATS

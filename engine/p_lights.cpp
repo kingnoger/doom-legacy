@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/11/09 20:38:50  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.11  2004/09/03 16:28:50  smite-meister
 // bugfixes and ZDoom linedef types
 //
@@ -30,14 +33,8 @@
 // Revision 1.8  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
-// Revision 1.7  2003/12/18 11:57:31  smite-meister
-// fixes / new bugs revealed
-//
 // Revision 1.6  2003/12/13 23:51:03  smite-meister
 // Hexen update
-//
-// Revision 1.5  2003/11/23 00:41:55  smite-meister
-// bugfixes
 //
 // Revision 1.4  2003/11/12 11:07:22  smite-meister
 // Serialization done. Map progression.
@@ -51,23 +48,22 @@
 // Revision 1.1.1.1  2002/11/16 14:17:59  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//      Handle sector based lighting effects.
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Sector based lighting effects.
 
 #include "doomdef.h"
-#include "p_spec.h"
-#include "r_defs.h"
+
 #include "g_map.h"
+
+#include "p_spec.h"
 #include "m_random.h"
 
 
-// =========================================================================
-//                           Sector light effects
-// =========================================================================
+//=========================================================================
+//                          Sector light effects
+//=========================================================================
 
 IMPLEMENT_CLASS(lightfx_t, sectoreffect_t);
 lightfx_t::lightfx_t() {}

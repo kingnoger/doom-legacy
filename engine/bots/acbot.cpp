@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/11/09 20:38:51  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.2  2004/10/27 17:37:08  smite-meister
 // netcode update
 //
@@ -35,29 +38,25 @@
 /// \brief ACBot implementation
 
 #include <math.h>
+#include <stdlib.h>
 
-#include "doomdef.h"
-#include "doomdata.h"
 #include "command.h"
 #include "cvars.h"
 
+#include "d_ticcmd.h"
+#include "b_path.h"
 #include "acbot.h"
+
 #include "g_game.h"
 #include "g_map.h"
 #include "g_pawn.h"
 
-#include "b_path.h"
 #include "d_items.h"
-#include "d_ticcmd.h"
-
-#include "p_enemy.h"
 #include "p_maputl.h"
-#include "m_random.h"
 #include "r_defs.h"
-#include "r_main.h"
 
 #include "tables.h"
-#include "z_zone.h"
+//#include "m_dll.h"
 
 #ifndef M_PI
 # define M_PI 3.14159265358979323846 // matches value in gcc v2 math.h
@@ -65,7 +64,12 @@
 
 #define ANG5 (ANG90/18)
 
-extern Actor* tmthing;
+
+/*
+// TODO eliminate dependence on various externs, convert into a DLL plugin
+DATAEXPORT dll_info_t dll_info = {0, 1, "Doom Legacy ACBot plugin"};
+*/
+
 
 static fixed_t botforwardmove[2] = {50, 100};
 static fixed_t botsidemove[2]    = {48, 80};
@@ -723,7 +727,7 @@ void ACBot::ChangeWeapon()
 
       if (sum > 0)
 	{
-	  int r = (P_Random() * sum) / 255;
+	  int r = (std::rand() * sum) / RAND_MAX;
 
 	  for (i=0; i<NUMWEAPONS; i++)
 	    if (weapon_usable[i] && r < ai_weapon_data[i].value)
@@ -741,7 +745,7 @@ void ACBot::ChangeWeapon()
 	i = wp_fist;
 
       cmd.buttons |= (i + 1) << ticcmd_t::WEAPONSHIFT;
-      weaponchangetimer = (P_Random() << 7) + 10000; // how long until I next change my weapon
+      weaponchangetimer = (std::rand() << 11) / RAND_MAX + 1000; // how long until I next change my weapon
     }
   else
     weaponchangetimer--;
@@ -838,19 +842,21 @@ void ACBot::AimWeapon()
 
       cmd.pitch = int(atan((nz - pawn->z + (dest->height - pawn->height)/2) / double(dist)) * (ANG180 / M_PI)) >> FRACBITS;
 
+      int spread = (rand() - rand())*ANG45 / RAND_MAX; // was P_SignedRandom()<<21;
+
       if (P_AproxDistance(dest->px, dest->py) > 8*FRACUNIT) //enemy is moving reasonably fast, so not perfectly acurate
 	{
 	  if (dest->flags & MF_SHADOW)
-	    angle += P_SignedRandom()<<23;
+	    angle += spread << 2;
 	  else if (!m_speed)
-	    angle += P_SignedRandom()<<22;
+	    angle += spread << 1;
 	}
       else
 	{
 	  if (dest->flags & MF_SHADOW)
-	    angle += P_SignedRandom()<<22;
+	    angle += spread << 1;
 	  else if (!m_speed)
-	    angle += P_SignedRandom()<<21;
+	    angle += spread;
 	}
 
 
@@ -1106,7 +1112,6 @@ void ACBot::GetInput(int lpnum, int elapsed)
       fixed_t nx = pawn->x + pawn->px + cpx;
       fixed_t ny = pawn->y + pawn->py + cpy;
 
-      extern vector<line_t *> spechit;
       bool blocked = !pawn->CheckPosition(nx, ny) ||
 	tmfloorz - pawn->z > 24*FRACUNIT ||
 	tmceilingz - tmfloorz < pawn->height;
@@ -1119,7 +1124,9 @@ void ACBot::GetInput(int lpnum, int elapsed)
 
       if (blocked)
 	{
-	  if (++blockedcount > 20 && (P_AproxDistance(pawn->px, pawn->py) < 4*FRACUNIT || (tmthing && (tmthing->flags & MF_SOLID))))
+	  if (++blockedcount > 20 &&
+	      (P_AproxDistance(pawn->px, pawn->py) < 4*FRACUNIT ||
+	       (BlockingMobj && (BlockingMobj->flags & MF_SOLID))))
 	    avoidtimer = 20;
 
 	  if (tmfloorz - pawn->z > 24*FRACUNIT &&
@@ -1146,7 +1153,7 @@ void ACBot::GetInput(int lpnum, int elapsed)
       else
 	{
 	  straferight = !straferight;
-	  strafetimer = P_Random()/3;
+	  strafetimer = (std::rand()*85) / RAND_MAX;
 	}
     }
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2004/11/09 20:38:52  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.19  2004/10/27 17:37:09  smite-meister
 // netcode update
 //
@@ -72,14 +75,10 @@
 // Revision 1.1  2003/03/15 20:07:20  smite-meister
 // Initial Hexen compatibility!
 //
-//
-//
-// DESCRIPTION:
-//   AC Script interpreter
-//
 //-----------------------------------------------------------------------------
 
-#include "doomdata.h"
+/// \file
+/// \brief AC Script interpreter.
 
 #include "g_actor.h"
 #include "g_pawn.h"

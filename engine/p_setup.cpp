@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.49  2004/11/09 20:38:50  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.48  2004/10/14 19:35:30  smite-meister
 // automap, bbox_t
 //
@@ -163,7 +166,7 @@
 
 #include "r_render.h"
 #include "r_data.h"
-#include "r_state.h"
+#include "r_main.h"
 #include "r_sky.h"
 
 #include "s_sound.h"
@@ -1049,18 +1052,18 @@ void Map::GroupLines()
 TODO
 static char *levellumps[] =
 {
-  "label",        // ML_LABEL,    A separator, name, ExMx or MAPxx
-  "THINGS",       // ML_THINGS,   Monsters, items..
-  "LINEDEFS",     // ML_LINEDEFS, LineDefs, from editing
-  "SIDEDEFS",     // ML_SIDEDEFS, SideDefs, from editing
-  "VERTEXES",     // ML_VERTEXES, Vertices, edited and BSP splits generated
-  "SEGS",         // ML_SEGS,     LineSegs, from LineDefs split by BSP
-  "SSECTORS",     // ML_SSECTORS, SubSectors, list of LineSegs
-  "NODES",        // ML_NODES,    BSP nodes
-  "SECTORS",      // ML_SECTORS,  Sectors, from editing
-  "REJECT",       // ML_REJECT,   LUT, sector-sector visibility
-  "BLOCKMAP",     // ML_BLOCKMAP  LUT, motion clipping, walls/grid element
-  "BEHAVIOR" // ACS scripts
+  "label",        // LUMP_LABEL,    A separator, name, ExMx or MAPxx
+  "THINGS",       // LUMP_THINGS,   Monsters, items..
+  "LINEDEFS",     // LUMP_LINEDEFS, LineDefs, from editing
+  "SIDEDEFS",     // LUMP_SIDEDEFS, SideDefs, from editing
+  "VERTEXES",     // LUMP_VERTEXES, Vertices, edited and BSP splits generated
+  "SEGS",         // LUMP_SEGS,     LineSegs, from LineDefs split by BSP
+  "SSECTORS",     // LUMP_SSECTORS, SubSectors, list of LineSegs
+  "NODES",        // LUMP_NODES,    BSP nodes
+  "SECTORS",      // LUMP_SECTORS,  Sectors, from editing
+  "REJECT",       // LUMP_REJECT,   LUT, sector-sector visibility
+  "BLOCKMAP",     // LUMP_BLOCKMAP  LUT, motion clipping, walls/grid element
+  "BEHAVIOR"      // LUMP_BEHAVIOR, ACS scripts
 };
 */
 
@@ -1073,7 +1076,7 @@ static char *levellumps[] =
   int  i;
   int  file, lump;
 
-  for(i=ML_THINGS; i<=ML_BLOCKMAP; i++)
+  for(i=LUMP_THINGS; i<=LUMP_BLOCKMAP; i++)
   {
   file = lumpnum >> 16;
   lump = (lumpnum & 0xffff) + i;
@@ -1158,7 +1161,7 @@ bool Map::Setup(tic_t start, bool spawnthings)
   levelscript->data = info->Read(lumpnum); // load map separator lump info (map properties, FS...)
 
   // is the map in Hexen format?
-  const char *acslumpname = fc.FindNameForNum(lumpnum + ML_BEHAVIOR);
+  const char *acslumpname = fc.FindNameForNum(lumpnum + LUMP_BEHAVIOR);
   if (acslumpname && !strncmp(acslumpname, "BEHAVIOR", 8))
     {
       CONS_Printf("Map in Hexen format!\n");
@@ -1180,23 +1183,23 @@ bool Map::Setup(tic_t start, bool spawnthings)
   SetupSky();
 
   // note: most of this ordering is important
-  LoadBlockMap (lumpnum+ML_BLOCKMAP);
-  LoadVertexes (lumpnum+ML_VERTEXES);
-  LoadSectors1 (lumpnum+ML_SECTORS);
-  LoadSideDefs (lumpnum+ML_SIDEDEFS);
-  LoadLineDefs (lumpnum+ML_LINEDEFS);
+  LoadBlockMap (lumpnum+LUMP_BLOCKMAP);
+  LoadVertexes (lumpnum+LUMP_VERTEXES);
+  LoadSectors1 (lumpnum+LUMP_SECTORS);
+  LoadSideDefs (lumpnum+LUMP_SIDEDEFS);
+  LoadLineDefs (lumpnum+LUMP_LINEDEFS);
 
   if (!hexen_format)
     ConvertLineDefs(); // Doom => Hexen conversion
 
-  LoadSideDefs2(lumpnum+ML_SIDEDEFS); // also processes some linedef specials
+  LoadSideDefs2(lumpnum+LUMP_SIDEDEFS); // also processes some linedef specials
   LoadLineDefs2();
 
-  LoadSubsectors(lumpnum+ML_SSECTORS);
-  LoadNodes(lumpnum+ML_NODES);
-  LoadSegs (lumpnum+ML_SEGS);
-  LoadSectors2(lumpnum+ML_SECTORS);
-  rejectmatrix = (byte *)fc.CacheLumpNum(lumpnum+ML_REJECT,PU_LEVEL);
+  LoadSubsectors(lumpnum+LUMP_SSECTORS);
+  LoadNodes(lumpnum+LUMP_NODES);
+  LoadSegs (lumpnum+LUMP_SEGS);
+  LoadSectors2(lumpnum+LUMP_SECTORS);
+  rejectmatrix = (byte *)fc.CacheLumpNum(lumpnum+LUMP_REJECT,PU_LEVEL);
   GroupLines();
 
   for (int i=0; i<numsectors; i++)
@@ -1212,7 +1215,7 @@ bool Map::Setup(tic_t start, bool spawnthings)
     }
 #endif
 
-  LoadThings(lumpnum + ML_THINGS);
+  LoadThings(lumpnum + LUMP_THINGS);
 
   if (hexen_format)
     InitPolyobjs(); // create the polyobjs, clear their mapthings
@@ -1230,7 +1233,7 @@ bool Map::Setup(tic_t start, bool spawnthings)
   SpawnLineSpecials(); // spawn Thinkers created by linedefs (also does some mandatory initializations!)
 
   if (hexen_format)
-    LoadACScripts(lumpnum + ML_BEHAVIOR);
+    LoadACScripts(lumpnum + LUMP_BEHAVIOR);
 
 #ifdef FRAGGLESCRIPT
   FS_PreprocessScripts();        // preprocess FraggleScript scripts (needs already added players)

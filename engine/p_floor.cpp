@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2004/11/09 20:38:50  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.16  2004/09/06 19:58:03  smite-meister
 // Doom linedefs done!
 //
@@ -72,14 +75,14 @@
 /// \brief Floor movement: floors, stairbuilders, donuts. Elevators, pillars.
 
 #include "doomdef.h"
-#include "doomdata.h"
 
-#include "p_spec.h"
-#include "r_state.h"
-#include "sounds.h"
-#include "z_zone.h"
 #include "g_game.h"
 #include "g_map.h"
+
+#include "p_spec.h"
+#include "sounds.h"
+#include "tables.h"
+
 
 // temp solution, copy certain sector properties. TODO "sector property" struct...
 void P_CopySectorProperties(sector_t *sec, sector_t *model)

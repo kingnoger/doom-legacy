@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/11/09 20:38:50  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.13  2004/11/04 21:12:52  smite-meister
 // save/load fixed
 //
@@ -54,7 +57,7 @@
 /// \brief Heretic weapon action functions
 
 #include "doomdef.h"
-#include "doomdata.h"
+
 #include "g_game.h"
 #include "g_actor.h"
 #include "g_pawn.h"

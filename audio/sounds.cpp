@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2004/11/09 20:38:49  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.17  2004/10/27 17:37:05  smite-meister
 // netcode update
 //
@@ -70,24 +73,23 @@
 // Revision 1.1.1.1  2002/11/16 14:17:48  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//   High-level audio interface, SNDINFO parser
-//
-// Note: the tables were originally created by a sound utility at Id,
-//       kept as a sample, DOOM2 sounds.
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief High-level audio interface, SNDINFO parser.
+///
+/// Note: the tables were originally created by a sound utility at Id,
+///  kept as a sample, DOOM2 sounds.
+
+#include "doomdef.h"
+
+#include "g_game.h"
+#include "g_mapinfo.h"
 
 #include "parser.h"
 #include "functors.h"
 #include "sounds.h"
 #include "s_sound.h"
-#include "g_game.h"
-#include "g_mapinfo.h"
-
-#include "z_zone.h"
-#include "w_wad.h"
 
 
 // Doom/Heretic music names corresponding to musicenum_t

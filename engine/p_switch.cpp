@@ -18,26 +18,14 @@
 //
 //
 // $Log$
-// Revision 1.17  2004/11/04 21:12:53  smite-meister
-// save/load fixed
-//
-// Revision 1.16  2004/08/29 20:48:48  smite-meister
-// bugfixes. wow.
-//
-// Revision 1.15  2004/08/12 18:30:25  smite-meister
-// cleaned startup
+// Revision 1.18  2004/11/09 20:38:50  smite-meister
+// added packing to I/O structs
 //
 // Revision 1.14  2004/04/25 16:26:50  smite-meister
 // Doxygen
 //
-// Revision 1.12  2004/01/02 14:25:01  smite-meister
-// cleanup
-//
 // Revision 1.11  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
-//
-// Revision 1.10  2003/11/23 00:41:55  smite-meister
-// bugfixes
 //
 // Revision 1.9  2003/11/12 11:07:23  smite-meister
 // Serialization done. Map progression.
@@ -73,17 +61,13 @@
 
 #include <vector>
 
-#include "doomdef.h"
-#include "doomdata.h"
 #include "g_game.h"
-#include "g_actor.h"
-#include "g_pawn.h"
 #include "g_map.h"
 
 #include "p_spec.h"
-#include "sounds.h"
-#include "r_data.h"
 
+#include "r_data.h"
+#include "sounds.h"
 #include "w_wad.h"
 #include "z_zone.h"
 

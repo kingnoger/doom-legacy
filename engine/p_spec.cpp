@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.37  2004/11/09 20:38:50  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.36  2004/11/04 21:12:52  smite-meister
 // save/load fixed
 //
@@ -107,6 +110,7 @@
 #include "p_spec.h"
 #include "p_maputl.h"
 #include "r_data.h"
+#include "r_main.h" // extra colormaps
 
 #include "m_bbox.h" // bounding boxes
 #include "m_random.h"

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/11/09 20:38:50  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.13  2004/10/27 17:37:06  smite-meister
 // netcode update
 //
@@ -57,18 +60,18 @@
 // Revision 1.1.1.1  2002/11/16 14:17:57  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//   Like p_enemy.cpp but for Heretic
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Like p_enemy.cpp but for Heretic enemies
+
 #include "doomdef.h"
-#include "doomdata.h"
+
 #include "g_actor.h"
 #include "g_map.h"
 #include "g_pawn.h"
 #include "g_player.h"
+
 #include "p_enemy.h"
 #include "p_maputl.h"
 #include "r_defs.h"
@@ -77,8 +80,6 @@
 #include "m_fixed.h"
 #include "tables.h"
 
-// here was P_InitMonsters
-// here was P_AddBossSpot
 
 
 //=========================================
@@ -313,14 +314,8 @@ void A_ImpXDeath2(DActor *actor)
     }
 }
 
-//----------------------------------------------------------------------------
-//
-// was P_UpdateChicken
-//
-// Returns true if the monster morphs back.
-//
-//----------------------------------------------------------------------------
 
+// Returns true if the monster morphs back.
 #define TELEFOGHEIGHT (32*FRACUNIT)
 bool DActor::UpdateMorph(int tics)
 {
@@ -632,11 +627,7 @@ void A_SorcererRise(DActor *actor)
   mo->target = actor->target;
 }
 
-//----------------------------------------------------------------------------
-//
-// was P_DSparilTeleport
-//
-//----------------------------------------------------------------------------
+
 
 void DActor::DSparilTeleport()
 {

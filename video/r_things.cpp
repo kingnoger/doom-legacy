@@ -18,26 +18,17 @@
 //
 //
 // $Log$
+// Revision 1.25  2004/11/09 20:38:53  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.24  2004/10/27 17:37:11  smite-meister
 // netcode update
 //
 // Revision 1.23  2004/09/03 16:28:52  smite-meister
 // bugfixes and ZDoom linedef types
 //
-// Revision 1.22  2004/08/29 20:48:50  smite-meister
-// bugfixes. wow.
-//
-// Revision 1.21  2004/08/19 19:42:42  smite-meister
-// bugfixes
-//
 // Revision 1.20  2004/08/18 14:35:23  smite-meister
 // PNG support!
-//
-// Revision 1.19  2004/08/13 18:25:11  smite-meister
-// sw renderer fix
-//
-// Revision 1.18  2004/08/12 18:30:33  smite-meister
-// cleaned startup
 //
 // Revision 1.17  2004/07/25 20:16:43  hurdler
 // Remove old hardware renderer and add part of the new one
@@ -48,20 +39,11 @@
 // Revision 1.15  2004/04/01 09:16:16  smite-meister
 // Texture system bugfixes
 //
-// Revision 1.13  2003/12/21 12:29:09  smite-meister
-// bugfixes
-//
-// Revision 1.12  2003/12/18 11:57:31  smite-meister
-// fixes / new bugs revealed
-//
 // Revision 1.11  2003/06/29 17:33:59  smite-meister
 // VFile system, PAK support, Hexen bugfixes
 //
 // Revision 1.10  2003/06/20 20:56:08  smite-meister
 // Presentation system tweaked
-//
-// Revision 1.9  2003/05/11 21:23:53  smite-meister
-// Hexen fixes
 //
 // Revision 1.8  2003/04/04 00:01:58  smite-meister
 // bugfixes, Hexen HUD
@@ -108,6 +90,7 @@
 #include "r_plane.h"
 #include "r_sprite.h"
 #include "r_draw.h"
+#include "r_data.h"
 #include "v_video.h"
 
 #include "p_pspr.h"

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/11/09 20:38:50  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.11  2004/08/19 19:42:40  smite-meister
 // bugfixes
 //
@@ -47,13 +50,12 @@
 // Revision 1.2  2002/12/03 10:11:39  smite-meister
 // Blindness and missile clipping bugs fixed
 //
-//
-// DESCRIPTION:
-//      some new action routines, separated from the original doom
-//      sources, so that you can include it or remove it easy.
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief New action functions.
+///
+/// Separated from the other code, so that you can include it or remove it easily.
 
 #include "doomdef.h"
 #include "command.h"
@@ -63,12 +65,12 @@
 #include "g_map.h"
 #include "g_actor.h"
 #include "g_pawn.h"
+
 #include "info.h"
-#include "r_defs.h"
 #include "p_fab.h"
 #include "p_pspr.h"
 #include "m_random.h"
-
+#include "r_draw.h"
 
 // action function for running FS
 void A_StartFS(DActor *actor)
@@ -135,7 +137,7 @@ void A_SmokeTrailer(DActor *actor)
 static bool resettrans = false;
 //  Set the translucency map for each frame state of mobj
 //
-void R_SetTrans(statenum_t state1, statenum_t state2, transnum_t transmap)
+static void R_SetTrans(statenum_t state1, statenum_t state2, transnum_t transmap)
 {
   state_t *state = &states[state1];
   int s1 = state1;

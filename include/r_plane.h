@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:26  hurdler
-// Initial revision
+// Revision 1.2  2004/11/09 20:38:52  smite-meister
+// added packing to I/O structs
+//
+// Revision 1.1.1.1  2002/11/16 14:18:26  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.6  2002/09/05 14:12:17  vberghol
 // network code partly bypassed
@@ -68,7 +71,7 @@
 #define r_plane_h 1
 
 #include "screen.h"     //needs MAXVIDWIDTH/MAXVIDHEIGHT
-#include "r_data.h"
+#include "r_segs.h"
 
 //
 // Now what is a visplane, anyway?

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.26  2004/11/09 20:38:53  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.25  2004/11/04 21:12:55  smite-meister
 // save/load fixed
 //
@@ -172,7 +175,7 @@
 /// \brief Rendering main loop and setup, utility functions (BSP, geometry, trigonometry).
 
 #include "doomdef.h"
-#include "doomdata.h"
+
 #include "command.h"
 #include "cvars.h"
 

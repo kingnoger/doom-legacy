@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/11/09 20:38:52  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.6  2004/07/25 20:18:47  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -69,35 +72,21 @@
 // Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
 // Initial import into CVS (v1.29 pr3)
 //
-//
-// DESCRIPTION:
-//      Refresh/render internal state variables (global).
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Software renderer internal state variables.
 
 #ifndef r_state_h
 #define r_state_h 1
 
-// Need data structure definitions.
-
-#include "r_defs.h"
+#include "screen.h"
 #include "tables.h"
 
 //
 // Refresh internal data structures,
 //  for rendering.
 //
-
-extern lighttable_t*    colormaps;
-
-//SoM: 3/30/2000: Boom colormaps.
-//SoM: 4/7/2000: Had to put a limit on colormaps :(
-#define                 MAXCOLORMAPS 30
-
-
-extern int                 num_extra_colormaps;
-extern extracolormap_t     extra_colormaps[MAXCOLORMAPS];
 
 extern int              viewwidth;
 extern int              scaledviewwidth;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.35  2004/11/09 20:38:53  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.34  2004/11/04 21:12:55  smite-meister
 // save/load fixed
 //
@@ -214,8 +217,8 @@
 
 #include "i_video.h"
 #include "r_data.h"
+#include "r_main.h"
 #include "r_draw.h"
-#include "r_state.h"
 #include "v_video.h"
 
 #include "w_wad.h"
@@ -493,7 +496,7 @@ struct mappatch_t
   short       patch;
   short       stepdir;  // always 1
   short       colormap; // always 0
-};
+} __attribute__((packed));
 
 
 // Texture definition struct in the WAD file.
@@ -509,7 +512,7 @@ struct maptexture_t
   void      **columndirectory; // unused, always zero
   short       patchcount;
   mappatch_t  patches[1];
-};
+} __attribute__((packed));
 
 
 DoomTexture::DoomTexture(const maptexture_t *mtex)

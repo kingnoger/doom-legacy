@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/11/09 20:38:50  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.13  2004/09/06 19:58:03  smite-meister
 // Doom linedefs done!
 //
@@ -29,12 +32,6 @@
 //
 // Revision 1.10  2003/12/13 23:51:03  smite-meister
 // Hexen update
-//
-// Revision 1.9  2003/11/30 00:09:45  smite-meister
-// bugfixes
-//
-// Revision 1.8  2003/11/23 00:41:55  smite-meister
-// bugfixes
 //
 // Revision 1.7  2003/11/12 11:07:22  smite-meister
 // Serialization done. Map progression.
@@ -63,12 +60,14 @@
 /// \brief Plats (i.e. elevator platforms) code, raising/lowering.
 
 #include "doomdef.h"
-#include "p_spec.h" // class definitions
-#include "sounds.h"
-#include "z_zone.h"
-#include "m_random.h"
+
 #include "g_game.h"
 #include "g_map.h"
+
+#include "p_spec.h" // class definitions
+
+#include "m_random.h"
+#include "sounds.h"
 
 
 IMPLEMENT_CLASS(plat_t, sectoreffect_t);

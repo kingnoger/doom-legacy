@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.22  2004/11/09 20:38:52  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.21  2004/09/23 23:21:19  smite-meister
 // HUD updated
 //
@@ -97,7 +100,6 @@
 #include <math.h>
 
 #include "doomtype.h"
-#include "doomdata.h"
 #include "command.h"
 #include "cvars.h"
 

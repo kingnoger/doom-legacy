@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/11/09 20:38:53  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.8  2004/08/29 20:48:50  smite-meister
 // bugfixes. wow.
 //
@@ -134,7 +137,7 @@
 //-----------------------------------------------------------------------------
 
 #include "doomdef.h"
-#include "doomdata.h"
+
 #include "command.h"
 #include "cvars.h"
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2004/11/09 20:38:53  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.16  2004/11/04 21:12:55  smite-meister
 // save/load fixed
 //
@@ -155,18 +158,17 @@
 #include <ctype.h>
 
 #include "doomdef.h"
-
-#include "r_data.h"
-#include "r_state.h"
-
-#include "v_video.h"
-#include "r_draw.h"
 #include "console.h"
 #include "command.h"
+
+#include "r_data.h"
+#include "r_main.h"
+#include "r_draw.h"
+
+#include "v_video.h"
 #include "screen.h"
 
 #include "i_video.h"
-#include "w_wad.h"
 #include "z_zone.h"
 
 #ifdef HWRENDER

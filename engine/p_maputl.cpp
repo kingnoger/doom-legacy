@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/11/09 20:38:50  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.12  2004/11/04 21:12:52  smite-meister
 // save/load fixed
 //
@@ -63,9 +66,9 @@
 
 #include "m_bbox.h"
 #include "r_poly.h"
-#include "r_state.h"
 #include "p_maputl.h"
 
+#include "tables.h"
 #include "z_zone.h"
 
 

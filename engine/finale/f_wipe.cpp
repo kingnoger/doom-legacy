@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/11/09 20:38:51  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.6  2004/09/23 23:21:17  smite-meister
 // HUD updated
 //
@@ -48,7 +51,7 @@
 #include "f_wipe.h"
 #include "i_video.h"
 #include "v_video.h"
-#include "r_defs.h" // tr_transxxx
+#include "r_draw.h" // tr_transxxx
 #include "screen.h"
 #include "z_zone.h"
 

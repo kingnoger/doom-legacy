@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/11/09 20:38:53  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.9  2004/10/27 17:37:10  smite-meister
 // netcode update
 //
@@ -264,30 +267,6 @@ void LNetInterface::SayCmd(int from, int to, const char *msg)
 	  }
       }
 }
-
-
-// to: 0 means everyone, positive numbers are players, negative numbers are teams
-TNL_IMPLEMENT_RPC(LConnection, rpcSay, (S8 from, S8 to, const char *msg), 
-		  NetClassGroupGameMask, RPCGuaranteedOrdered, RPCDirAny, 0)
-{
-  if (isConnectionToServer())
-    {
-      // client
-      CONS_Printf("%s: %s\n", game.Players[from]->name.c_str(), msg);
-    }
-  else
-    {
-      from = player[0]->number;
-
-      CONS_Printf("message!\n");
-      CONS_Printf("\3%s: %s\n", game.Players[from]->name.c_str(), msg);
-      game.net->SayCmd(player[0]->number, to, msg);
-    }
-};
-
-
-
-
 
 
 

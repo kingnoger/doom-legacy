@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.47  2004/11/09 20:38:50  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.46  2004/11/04 21:12:51  smite-meister
 // save/load fixed
 //
@@ -87,7 +90,6 @@
 /// \file
 /// \brief Map class implementation
 
-#include "doomdata.h"
 #include "g_map.h"
 #include "g_mapinfo.h"
 #include "g_game.h"

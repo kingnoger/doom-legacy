@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/11/09 20:38:52  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.7  2004/11/04 21:12:54  smite-meister
 // save/load fixed
 //
@@ -46,7 +49,11 @@
 #ifndef p_maputl_h
 #define p_maputl_h 1
 
+#include <vector>
 #include "m_fixed.h"
+
+
+#define USERANGE (64*FRACUNIT)
 
 
 extern int validcount;
@@ -55,7 +62,11 @@ extern int validcount;
 // variables used by movement functions to communicate
 extern bool    floatok;
 extern fixed_t tmfloorz, tmceilingz;
-extern class Actor *linetarget;     // who got hit (or NULL)
+extern class Actor *linetarget;
+
+extern std::vector<struct line_t *> spechit;
+
+extern Actor *BlockingMobj;
 
 
 // P_MAPUTL
@@ -76,7 +87,7 @@ struct intercept_t
   union
   {
     Actor  *thing;
-    struct line_t *line;
+    line_t *line;
   };
 };
 

@@ -18,17 +18,14 @@
 //
 //
 // $Log$
+// Revision 1.24  2004/11/09 20:38:52  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.23  2004/10/27 17:37:08  smite-meister
 // netcode update
 //
-// Revision 1.22  2004/10/17 02:00:49  smite-meister
-// mingw fixes
-//
 // Revision 1.21  2004/10/14 19:35:46  smite-meister
 // automap, bbox_t
-//
-// Revision 1.20  2004/09/24 11:34:00  smite-meister
-// fix
 //
 // Revision 1.19  2004/09/23 23:21:18  smite-meister
 // HUD updated
@@ -53,9 +50,6 @@
 //
 // Revision 1.11  2003/11/23 19:07:41  smite-meister
 // New startup order
-//
-// Revision 1.10  2003/05/11 21:23:51  smite-meister
-// Hexen fixes
 //
 // Revision 1.9  2003/04/19 17:38:47  smite-meister
 // SNDSEQ support, tools, linedef system...
@@ -105,18 +99,17 @@
 #include "g_input.h"
 
 #include "m_random.h"
-#include "i_video.h"
-
-// Data.
-#include "dstrings.h"
-#include "r_local.h"
-
 #include "keys.h"
+
+#include "r_data.h"
+#include "r_draw.h"
+#include "r_main.h"
+#include "i_video.h"
 #include "v_video.h"
+#include "screen.h"
 
+#include "dstrings.h"
 #include "w_wad.h"
-#include "z_zone.h"
-
 
 #include "am_map.h"
 #include "d_main.h"

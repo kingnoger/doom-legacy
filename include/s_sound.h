@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/11/09 20:38:52  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.13  2004/09/03 16:28:51  smite-meister
 // bugfixes and ZDoom linedef types
 //
@@ -82,20 +85,6 @@ struct musicinfo_t
   int   length;    // lump length in bytes
   void* data;      // music data
   int   handle;    // music handle once registered
-};
-
-
-// struct for Doom native sound format:
-// first a 8-byte header composed of 4 unsigned (16-bit) short integers (LE/BE ?),
-// then the data (8-bit 11 kHz mono sound)
-// max # of samples = 65535 = about 6 seconds of sound
-struct doomsfx_t
-{
-  unsigned short magic; // always 3
-  unsigned short rate;  // always 11025
-  unsigned short samples; // number of 1-byte samples
-  unsigned short zero; // always 0
-  byte data[0]; // actual data begins here
 };
 
 

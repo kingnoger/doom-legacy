@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.25  2004/11/09 20:38:50  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.24  2004/11/04 21:12:52  smite-meister
 // save/load fixed
 //
@@ -474,25 +477,18 @@ static const fixed_t yspeed[8] = {0,47000,FRACUNIT,47000,0,-47000,-FRACUNIT,-470
 
 bool DActor::P_Move()
 {
-  // movement function communication variables
-  extern vector<line_t *> spechit;
-
-  fixed_t tryx, tryy;
-
   if (eflags & MFE_BLASTED)
     return true;
   if (movedir == DI_NODIR)
     return false;
-
-  //if (flags2 & MF2_BLASTED) return true;
 
 #ifdef PARANOIA
   if (unsigned(movedir) >= 8)
     I_Error ("Weird movedir!");
 #endif
 
-  tryx = x + fixed_t(info->speed * xspeed[movedir]);
-  tryy = y + fixed_t(info->speed * yspeed[movedir]);
+  fixed_t tryx = x + fixed_t(info->speed * xspeed[movedir]);
+  fixed_t tryy = y + fixed_t(info->speed * yspeed[movedir]);
 
   if (!TryMove(tryx, tryy, false))
     {

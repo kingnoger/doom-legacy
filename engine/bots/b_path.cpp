@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/11/09 20:38:51  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.2  2004/10/27 17:37:08  smite-meister
 // netcode update
 //
@@ -41,9 +44,7 @@
 #include "g_actor.h"
 #include "g_pawn.h"
 
-#include "r_state.h"
-#include "r_main.h"
-
+#include "r_defs.h"
 #include "p_maputl.h"
 #include "m_bbox.h"
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/11/09 20:38:50  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.13  2004/09/06 19:58:03  smite-meister
 // Doom linedefs done!
 //
@@ -63,11 +66,12 @@
 /// \brief Ceiling movement (lowering, crushing, raising)
 
 #include "doomdef.h"
+
 #include "g_game.h"
-#include "g_map.h" // Map class
+#include "g_map.h"
+
 #include "p_spec.h"
 #include "sounds.h"
-#include "z_zone.h"
 
 
 void P_CopySectorProperties(sector_t *sec, sector_t *model);

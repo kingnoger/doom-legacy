@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/11/09 20:38:52  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.7  2004/10/27 17:37:09  smite-meister
 // netcode update
 //
@@ -61,13 +64,9 @@ class LConnection : public GhostConnection
   typedef GhostConnection Parent;
 
 public:
-  /// Makes this a valid connection class to the TNL network system.
-  TNL_DECLARE_NETCONNECTION(LConnection);
-
-public:
   std::vector<class PlayerInfo *> player; ///< players beyond this connection
 
-
+public:
   LConnection();
 
   /// client sends info to server and requests a connection
@@ -106,6 +105,8 @@ public:
   /// client updates his player info (or asks the server to add a new local player?)
   //TNL_DECLARE_RPC(rpcUpdatePlayerInfo_c2s, (U8 pnum, const char *name, U8 color, U8 team));
 
+  TNL_DECLARE_RPC(rpcTest, (U8 num));
+
   /// transmits chat messages between client and server
   TNL_DECLARE_RPC(rpcSay, (S8 from, S8 to, const char *msg));
 
@@ -130,6 +131,11 @@ public:
   // TODO how to make a client stop a sound? pseudorandom sound netIDs?
   //TNL_DECLARE_RPC(rpcStartAmbSound_s2c, (U8 pnum));
   //TNL_DECLARE_RPC(rpcStart3DSound_s2c, (U8 pnum));
+
+
+
+  /// Makes this a valid connection class to the TNL network system.
+  TNL_DECLARE_NETCONNECTION(LConnection);
 };
 
 

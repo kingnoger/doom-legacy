@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/11/09 20:38:54  smite-meister
+// added packing to I/O structs
+//
 // Revision 1.6  2004/09/23 23:21:20  smite-meister
 // HUD updated
 //
@@ -110,6 +113,15 @@
 #ifndef M_PI
 # define M_PI 3.14159265358979323846 // matches value in gcc v2 math.h
 #endif
+
+
+/// For creating a chain with the lines around a sector
+struct  linechain_t
+{
+  line_t        *line;
+  linechain_t   *next;
+};
+
 
 //
 // add a line to a sectors list of lines
