@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,57 +18,46 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:24  hurdler
-// Initial revision
+// Revision 1.2  2004/10/11 11:13:42  smite-meister
+// map utils
 //
-// Revision 1.4  2002/08/30 11:45:40  vberghol
-// players system modified
+// Revision 1.1.1.1  2002/11/16 14:18:24  hurdler
+// Initial C++ version of Doom Legacy
 //
-// Revision 1.3  2002/07/01 21:00:49  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:25  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.3  2000/04/23 16:19:52  bpereira
-// no message
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
-//
-//
-// DESCRIPTION:
-//    bounding boxes.
-//    
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Bounding boxes
 
-#ifndef __M_BBOX__
-#define __M_BBOX__
+#ifndef m_bbox_h
+#define m_bbox_h 1
 
 #include "m_fixed.h"
 
-// TODO: make bounding box a class
-// Bounding box coordinate storage.
+
+/// Bounding box coordinate order.
 enum
 {
   BOXTOP,
   BOXBOTTOM,
   BOXLEFT,
   BOXRIGHT
-};      // bbox coordinates
+};
 
 
-// Bounding box functions.
-void M_ClearBox(fixed_t *box);
+/// \brief A rectangular axis-aligned bounding box
+class bbox_t
+{
+public:
+  fixed_t box[4];
 
-void M_AddToBox(fixed_t *box, fixed_t x, fixed_t y);
-bool M_PointInBox(fixed_t *box, fixed_t x, fixed_t y);
+  void Clear();
+  void Add(fixed_t x, fixed_t y);
+  void Set(fixed_t x, fixed_t y, fixed_t r);
 
-bool M_CircleTouchBox(fixed_t *box, fixed_t circlex, fixed_t circley, fixed_t circleradius) ;
-
+  bool PointInBox(fixed_t x, fixed_t y);
+  bool CircleTouchBox(fixed_t x, fixed_t y, fixed_t radius);
+  int  BoxOnLineSide(struct line_t *ld);
+};
 
 #endif

@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.36  2004/10/11 11:13:42  smite-meister
+// map utils
+//
 // Revision 1.35  2004/09/06 19:58:03  smite-meister
 // Doom linedefs done!
 //
@@ -102,9 +105,10 @@
 
 using namespace std;
 
-
-typedef bool (*traverser_t) (struct intercept_t *in);
-
+typedef bool (*traverser_t)(struct intercept_t *in);
+typedef bool (*line_iterator_t)(struct line_t *l);
+typedef bool (*thing_iterator_t)(class Actor *a);
+typedef bool (*thinker_iterator_t)(Thinker *t);
 
 /// \brief A single game map and all that's in it.
 ///
@@ -128,7 +132,7 @@ public:
   bool hexen_format;
 
   //------------ Geometry ------------
-
+  fixed_t root_bbox[4];
   int              numvertexes;
   struct vertex_t* vertexes;
 
@@ -317,7 +321,7 @@ public:
   Actor *FindFromTIDmap(int tid, int *pos);
 
   // in p_map.cpp
-  void CreateSecNodeList(Actor *thing, fixed_t x, fixed_t y);
+  bool RadiusLinesCheck(fixed_t x, fixed_t y, fixed_t radius, line_iterator_t func);
   bool CheckSector(sector_t* sector, int crunch);
   bool ChangeSector(sector_t *sector, int crunch);
   void SlideMove(Actor* mo);
@@ -348,12 +352,13 @@ public:
   bool CheckSight(Actor *t1, Actor *t2);
 
   // in p_maputl.cpp
-  bool BlockLinesIterator(int x, int y, bool (*func)(line_t*));
-  bool BlockThingsIterator(int x, int y, bool (*func)(Actor*));
-  bool IterateThinkers(bool (*func)(Thinker*));
+  bool BlockLinesIterator(int x, int y, line_iterator_t func);
+  bool BlockThingsIterator(int x, int y, thing_iterator_t func);
+  bool IterateThinkers(thinker_iterator_t func);
   bool PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags, traverser_t trav);
   Actor *RoughBlockSearch(Actor *center, Actor *master, int distance, int flags);
   Actor *RoughBlockCheck(Actor *center, Actor *master, int index, int flags);
+  void CreateSecNodeList(Actor *thing, fixed_t x, fixed_t y);
 
   // in p_hpspr.cpp
   void PlaceWeapons();

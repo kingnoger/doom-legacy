@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/10/11 11:13:42  smite-meister
+// map utils
+//
 // Revision 1.3  2004/09/13 20:43:31  smite-meister
 // interface cleanup, sp map reset fixed
 //
@@ -44,17 +47,15 @@ extern bool     floatok;
 extern fixed_t  tmfloorz;
 extern class Actor *linetarget;     // who got hit (or NULL)
 
-void P_DelSeclist(struct msecnode_t *p);
-
 
 // P_MAPUTL
 
+void P_DelSeclist(struct msecnode_t *p);
+
 struct divline_t 
 {
-  fixed_t     x;
-  fixed_t     y;
-  fixed_t     dx;
-  fixed_t     dy;
+  fixed_t   x, y;
+  fixed_t dx, dy;
 };
 
 struct intercept_t
@@ -73,7 +74,6 @@ struct intercept_t
 
 fixed_t P_AproxDistance(fixed_t dx, fixed_t dy);
 int     P_PointOnLineSide(fixed_t x, fixed_t y, line_t* line);
-int     P_BoxOnLineSide(fixed_t* tmbox, line_t* ld);
 int     P_PointOnDivlineSide (fixed_t x, fixed_t y, divline_t* line);
 void    P_MakeDivline(line_t* li, divline_t* dl);
 fixed_t P_InterceptVector(divline_t* v2, divline_t* v1);
@@ -84,14 +84,14 @@ extern fixed_t          openbottom;
 extern fixed_t          openrange;
 extern fixed_t          lowfloor;
 
-void    P_LineOpening (line_t* linedef);
+void    P_LineOpening(line_t* linedef);
 
 
 #define PT_ADDLINES     1
 #define PT_ADDTHINGS    2
 #define PT_EARLYOUT     4
 
-extern divline_t    trace;
-extern fixed_t      tmbbox[4];
+extern divline_t trace;
+extern class bbox_t tmb;
 
 #endif

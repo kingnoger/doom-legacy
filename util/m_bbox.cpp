@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,27 +18,16 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:38  hurdler
-// Initial revision
+// Revision 1.2  2004/10/11 11:14:51  smite-meister
+// map utils
 //
-// Revision 1.3  2002/07/01 21:01:08  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:36  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.3  2000/04/23 16:19:52  bpereira
-// no message
-//
-// Revision 1.2  2000/02/26 00:28:42  hurdler
-// Mostly bug fix (see borislog.txt 23-2-2000, 24-2-2000)
-//
-//
-// DESCRIPTION:
-//      bounding boxes
+// Revision 1.1.1.1  2002/11/16 14:18:38  hurdler
+// Initial C++ version of Doom Legacy
 //
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Bounding boxes
 
 #include "doomtype.h"
 #include "m_bbox.h"
@@ -51,40 +40,52 @@
 #endif
 
 
-void M_ClearBox (fixed_t *box)
+void bbox_t::Clear()
 {
-    box[BOXTOP] = box[BOXRIGHT] = MININT;
-    box[BOXBOTTOM] = box[BOXLEFT] = MAXINT;
+  box[BOXTOP] = box[BOXRIGHT] = MININT;
+  box[BOXBOTTOM] = box[BOXLEFT] = MAXINT;
 }
 
-void M_AddToBox ( fixed_t*      box,
-                  fixed_t       x,
-                  fixed_t       y )
+void bbox_t::Add(fixed_t x, fixed_t y)
 {
-    if (x<box[BOXLEFT  ])   box[BOXLEFT  ] = x;
-    if (x>box[BOXRIGHT ])   box[BOXRIGHT ] = x;
+  if (x<box[BOXLEFT  ])   box[BOXLEFT  ] = x;
+  if (x>box[BOXRIGHT ])   box[BOXRIGHT ] = x;
 
-    if (y<box[BOXBOTTOM])   box[BOXBOTTOM] = y;
-    if (y>box[BOXTOP   ])   box[BOXTOP   ] = y;
+  if (y<box[BOXBOTTOM])   box[BOXBOTTOM] = y;
+  if (y>box[BOXTOP   ])   box[BOXTOP   ] = y;
 }
 
-bool M_PointInBox ( fixed_t*      box,
-                       fixed_t       x,
-                       fixed_t       y )
+bool bbox_t::PointInBox(fixed_t x, fixed_t y)
 {
-    if (x<box[BOXLEFT]  ) return false;
-    if (x>box[BOXRIGHT] ) return false;
-    if (y<box[BOXBOTTOM]) return false;
-    if (y>box[BOXTOP]   ) return false;
-    
-    return true;
+  if (x<box[BOXLEFT]  ) return false;
+  if (x>box[BOXRIGHT] ) return false;
+  if (y<box[BOXBOTTOM]) return false;
+  if (y>box[BOXTOP]   ) return false;
+
+  return true;
 }
 
-bool M_CircleTouchBox(fixed_t* box, fixed_t circlex, fixed_t circley, fixed_t circleradius)
+bool bbox_t::CircleTouchBox(fixed_t x, fixed_t y, fixed_t radius)
 {
-    if( box[BOXLEFT  ]-circleradius > circlex ) return false;
-    if( box[BOXRIGHT ]+circleradius < circlex ) return false;
-    if( box[BOXBOTTOM]-circleradius > circley ) return false;
-    if( box[BOXTOP   ]+circleradius < circley ) return false;
-    return true;
+  if (box[BOXLEFT  ]-radius > x) return false;
+  if (box[BOXRIGHT ]+radius < x) return false;
+  if (box[BOXBOTTOM]-radius > y) return false;
+  if (box[BOXTOP   ]+radius < y) return false;
+
+  return true;
+}
+
+
+// set temp location and boundingbox
+void bbox_t::Set(fixed_t x, fixed_t y, fixed_t r)
+{
+  // HACK
+  extern fixed_t tmx, tmy;
+  tmx = x;
+  tmy = y;
+
+  box[BOXTOP]    = y + r;
+  box[BOXBOTTOM] = y - r;
+  box[BOXRIGHT]  = x + r;
+  box[BOXLEFT]   = x - r;
 }
