@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2005/03/24 17:00:39  smite-meister
+// alpha fixes
+//
 // Revision 1.4  2004/11/18 20:30:13  smite-meister
 // tnt, plutonia
 //
@@ -273,10 +276,24 @@ static ai_item_t item_ai[] =
   {MT_WGAUNTLETS,   3, F_WEAPON, wp_gauntlets},
   {MT_WCROSSBOW,    6, F_WEAPON, wp_crossbow},
   {MT_WBLASTER,     6, F_WEAPON, wp_blaster},
-  {MT_WSKULLROD,    7, F_WEAPON, wp_skullrod},
   {MT_WPHOENIXROD,  7, F_WEAPON, wp_phoenixrod},
+  {MT_WSKULLROD,    7, F_WEAPON, wp_skullrod},
   {MT_WMACE,        7, F_WEAPON, wp_mace},
-  {MT_MW_CONE,      6, F_WEAPON, wp_cone_of_shards}, // TODO rest
+  {MT_FW_AXE,       6, F_WEAPON, wp_timons_axe},
+  {MT_CW_SERPSTAFF, 6, F_WEAPON, wp_serpent_staff},
+  {MT_MW_CONE,      6, F_WEAPON, wp_cone_of_shards},
+  {MT_FW_HAMMER,    7, F_WEAPON, wp_hammer_of_retribution},
+  {MT_CW_FLAME,     7, F_WEAPON, wp_firestorm},
+  {MT_MW_LIGHTNING, 7, F_WEAPON, wp_arc_of_death},
+  {MT_FW_SWORD1,    8, F_WEAPON, wp_quietus},
+  {MT_FW_SWORD2,    8, F_WEAPON, wp_quietus},
+  {MT_FW_SWORD3,    8, F_WEAPON, wp_quietus},
+  {MT_CW_HOLY1,     8, F_WEAPON, wp_wraithverge},
+  {MT_CW_HOLY2,     8, F_WEAPON, wp_wraithverge},
+  {MT_CW_HOLY3,     8, F_WEAPON, wp_wraithverge},
+  {MT_MW_STAFF1,    8, F_WEAPON, wp_bloodscourge},
+  {MT_MW_STAFF2,    8, F_WEAPON, wp_bloodscourge},
+  {MT_MW_STAFF3,    8, F_WEAPON, wp_bloodscourge},
 
   // ammo (if dry on this type and have a weapon for it and using an inferior weapon, x, otherwise if room to take it, x-3
   {MT_CLIP,       6,   F_AMMO, am_clip},
@@ -324,6 +341,10 @@ static ai_item_t item_ai[] =
   {MT_ARMORBONUS,  1, F_ARMOR, MAXARMOR},
   {MT_ITEMSHIELD2, 8, F_ARMOR, MAXARMOR},
   {MT_ITEMSHIELD1, 5, F_ARMOR, MAXARMOR/2},
+  {MT_ARMOR_1,     5, F_ARMOR, 15}, // roughly
+  {MT_ARMOR_2,     6, F_ARMOR, 15},
+  {MT_ARMOR_3,     5, F_ARMOR, 15},
+  {MT_ARMOR_4,     6, F_ARMOR, 15},
 
   // keys (take it if you don't already have it)
   {MT_BLUECARD,    5, F_KEY, it_bluecard},
@@ -335,6 +356,17 @@ static ai_item_t item_ai[] =
   {MT_BKEY,        5, F_KEY, it_bluecard},
   {MT_CKEY,        5, F_KEY, it_yellowcard},
   {MT_AKEY,        5, F_KEY, it_redcard},
+  {MT_KEY1,        5, F_KEY, it_key_1},
+  {MT_KEY2,        5, F_KEY, it_key_2},
+  {MT_KEY3,        5, F_KEY, it_key_3},
+  {MT_KEY4,        5, F_KEY, it_key_4},
+  {MT_KEY5,        5, F_KEY, it_key_5},
+  {MT_KEY6,        5, F_KEY, it_key_6},
+  {MT_KEY7,        5, F_KEY, it_key_7},
+  {MT_KEY8,        5, F_KEY, it_key_8},
+  {MT_KEY9,        5, F_KEY, it_key_9},
+  {MT_KEYA,        5, F_KEY, it_key_A},
+  {MT_KEYB,        5, F_KEY, it_key_B},
 
   // doom powerups, take if you need or are selfish
   {MT_INV, 10, F_POWERUP, pw_invulnerability},
@@ -343,6 +375,7 @@ static ai_item_t item_ai[] =
   {MT_ARTIINVISIBILITY,     9, F_POWERUP, pw_invisibility},
   {MT_RADSUIT, 5, F_POWERUP, pw_ironfeet},
 
+  // TODO inventory items (acbot must also be made to use them!)
 
   {MT_NONE}
 };

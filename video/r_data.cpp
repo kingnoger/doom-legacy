@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.44  2005/03/24 17:00:40  smite-meister
+// alpha fixes
+//
 // Revision 1.43  2005/01/25 18:29:17  smite-meister
 // preparing for alpha
 //
@@ -794,8 +797,8 @@ cacheitem_t *texturecache_t::Load(const char *name)
   else if (data[2] == 0 && data[6] == 0 && data[7] == 0)
     {
       // likely a pic_t (the magic number is inadequate)
-      I_Error("A pic_t image '%s' was found, but this format is no longer supported.\n", name); // root 'em out!
-      return NULL;
+      CONS_Printf("A pic_t image '%s' was found, but this format is no longer supported.\n", name); // root 'em out!
+      return default_item;
     }
   else
     {
