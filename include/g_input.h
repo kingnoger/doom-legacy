@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/09/20 22:42:49  jussip
+// Joystick axis binding works. New joystick code ready for use.
+//
 // Revision 1.5  2004/07/11 14:32:01  smite-meister
 // Consvars updated, bugfixes
 //
@@ -80,6 +83,26 @@ enum gamecontrols_e
   gc_invuse,
   gc_flydown,     // flyup is jump !
   num_gamecontrols
+};
+
+//! All possible actions joystick axes can be bound to.
+
+enum joyactions_e {
+  ja_pitch,  //!< Set up/down looking angle.
+  ja_move,   //!< Moving front and back.
+  ja_turn,   //!< Turn left or right.
+  ja_strafe, //!< Strafing.
+  num_joyactions
+};
+
+//! Contains the mappings from joystick axises to game actions.
+
+struct joybinding {
+  int playnum;         //!< What player is controlled.
+  int joynum;          //!< Which joystick to use.
+  int axisnum;         //!< Which axis is the important one.
+  joyactions_e action; //!< What should be done.
+  int scale;           //!< A scaling factor. Set negative to flip axis.
 };
 
 // current state of the keys : true if pushed

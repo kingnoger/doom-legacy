@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2004/09/20 22:42:48  jussip
+// Joystick axis binding works. New joystick code ready for use.
+//
 // Revision 1.14  2004/09/13 20:43:29  smite-meister
 // interface cleanup, sp map reset fixed
 //
@@ -86,6 +89,8 @@
 #include<SDL/SDL.h>
 
 extern vector<SDL_Joystick*> joysticks;
+extern vector<joybinding> joybindings;
+
 
 #define MAXMOUSESENSITIVITY 40 // sensitivity steps
 
@@ -190,7 +195,7 @@ static byte NextWeapon(PlayerPawn *p, int step)
 
 
 
-// Builds a ticcmd from all of the available inputs
+//! Builds a ticcmd from all of the available inputs
 
 void ticcmd_t::Build(bool primary, int realtics)
 {
@@ -409,6 +414,24 @@ void ticcmd_t::Build(bool primary, int realtics)
 
       mouse2x = mouse2y = 0;
     }
+
+  // Finally the joystick.
+  for(i=0; i<(int)joybindings.size(); i++) {
+    joybinding j = joybindings[i];
+    int value;
+
+    // FIXME add check for console player number.
+    value = (int) SDL_JoystickGetAxis(joysticks[j.joynum], j.axisnum);
+    value /= j.scale;
+
+    switch(j.action) {
+    case ja_pitch  : pitch = value; break;
+    case ja_move   : forward += value; break;
+    case ja_turn   : yaw += value; break;
+    case ja_strafe : side += value; break;
+    case num_joyactions : break;
+    }
+  }
 
   if (forward > MAXPLMOVE)
     forward = MAXPLMOVE;
@@ -880,6 +903,19 @@ void G_SaveKeySetting(FILE *f)
       else
 	fprintf(f,"\n");
     }
+}
+
+//! Writes the axis binding commands to the config file.
+
+void G_SaveJoyAxisBindings(FILE *f) {
+  unsigned int i;
+  joybinding j;
+  for(i=0; i<joybindings.size(); i++) {
+    j = joybindings[i];
+    // Are quotes necessary? I just copied this from above.
+    fprintf(f, "bindjoyaxis \"%d\" \"%d\" \"%d\" \"%d\" \"%d\"\n",
+	    j.playnum, j.joynum, j.axisnum, int(j.action), j.scale);
+  }
 }
 
 void G_CheckDoubleUsage(int keynum)

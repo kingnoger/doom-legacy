@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2004/09/20 22:42:50  jussip
+// Joystick axis binding works. New joystick code ready for use.
+//
 // Revision 1.16  2004/08/12 18:30:33  smite-meister
 // cleaned startup
 //
@@ -85,8 +88,13 @@
 #include "i_system.h"
 #include "w_wad.h"
 
+#include"SDL/SDL.h" // For joystick code.
+
 const char CON_PROMPTCHAR = '>';
 const int  CON_BUFFERSIZE = 16384;
+
+extern vector<SDL_Joystick*> joysticks;
+extern vector<joybinding> joybindings;
 
 Console con;
 
@@ -385,7 +393,67 @@ void Command_Bind_f()
     bindtable[key] = Z_StrDup(COM_Argv(2));
 }
 
+//! Magically converts a console command to a joystick axis binding.
 
+void Command_BindJoyaxis_f() {
+  joybinding j;
+  unsigned int i;
+
+  int na = COM_Argc();
+
+  if(na == 1) { // Print bindings.
+    if(joybindings.size() == 0) {
+      CONS_Printf("No joy axis bindings.\n");
+      return;
+    }
+    CONS_Printf("Current axis bindings.\n");
+    for(unsigned int i=0; i<joybindings.size(); i++) {
+      j = joybindings[i];
+      CONS_Printf("%d %d %d %d %d\n", j.playnum, j.joynum, j.axisnum,
+		  (int)j.action, j.scale);
+    }
+    return;
+  }
+
+  if(na != 6) {
+    CONS_Printf("bindjoyaxis [playnum] [joynum] [axisnum] [action] [scale]\n");
+    return;
+  }
+
+  j.playnum = atoi(COM_Argv(1));
+  j.joynum  = atoi(COM_Argv(2));
+  j.axisnum = atoi(COM_Argv(3));
+  j.action  = joyactions_e(atoi(COM_Argv(4)));
+  j.scale   = atoi(COM_Argv(5));
+
+  // Check the validity of the binding.
+  if(j.joynum < 0 || j.joynum >= (int)joysticks.size()) {
+    CONS_Printf("Attemting to bind non-existant joystick %d.\n", j.joynum);
+    return;
+  }
+  if(j.axisnum < 0 || j.axisnum >= SDL_JoystickNumAxes(joysticks[j.joynum])) {
+    CONS_Printf("Attemting to bind non-existant axis %d.\n", j.axisnum);
+    return;
+  }
+  if(j.action < 0 || j.action >= num_joyactions) {
+    CONS_Printf("Attemting to bind non-existant action %d.\n", int(j.action));
+    return;
+  }
+  if(j.scale == 0)
+    j.scale = 1; // Protect against div by zero.
+
+  // Overwrite existing binding, if any. Otherwise just append.
+  for(i=0; i<joybindings.size(); i++) {
+    joybinding j2 = joybindings[i];
+    if(j2.joynum == j.joynum && j2.axisnum == j.axisnum) {
+      joybindings[i] = j;
+      CONS_Printf("Joystick binding overwritten.\n");
+      return;
+    }
+  }
+  joybindings.push_back(j);
+  CONS_Printf("Joystick binding added.\n");
+}
 
 //======================================================================
 //   Console class implementation

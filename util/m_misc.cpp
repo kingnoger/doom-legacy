@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/09/20 22:42:50  jussip
+// Joystick axis binding works. New joystick code ready for use.
+//
 // Revision 1.10  2004/08/12 18:30:33  smite-meister
 // cleaned startup
 //
@@ -283,6 +286,7 @@ void M_FirstLoadConfig()
 
 
 void G_SaveKeySetting(FILE *f);
+void G_SaveJoyAxisBindings(FILE *f);
 
 //  Save all game config here
 //
@@ -325,6 +329,7 @@ void M_SaveConfig(char *filename)
 
     consvar_t::SaveVariables(f);
     G_SaveKeySetting(f);
+    G_SaveJoyAxisBindings(f);
 
     fclose(f);
 }
