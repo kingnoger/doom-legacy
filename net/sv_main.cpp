@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2004/11/28 18:17:10  smite-meister
+// load bugfix
+//
 // Revision 1.19  2004/11/28 18:02:23  smite-meister
 // RPCs finally work!
 //
@@ -405,23 +408,25 @@ void GameInfo::SV_Reset()
 /// If given a negative lump number, does not read any MAPINFO (for loading games).
 bool GameInfo::SV_SpawnServer(int mapinfo_lump)
 {
-  if (Playing())
-    {
-      I_Error("tried to spawn server while playing\n");
-      return false;
-    }
-
-  SV_Reset();
-  CONS_Printf("Starting server...\n");
-
   if (mapinfo_lump >= 0)
     {
+      if (Playing())
+	{
+	  I_Error("Tried to spawn a server while playing.\n");
+	  return false;
+	}
+
+      SV_Reset();
+      CONS_Printf("Starting a server...\n");
+
       if (Read_MAPINFO(mapinfo_lump) <= 0)
 	{
 	  CONS_Printf("Bad MAPINFO lump.\n");
 	  return false;
 	}
     }
+  else
+    SV_Reset(); // just loading a game
 
   ReadResourceLumps(); // SNDINFO etc.
   return true;
