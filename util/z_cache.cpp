@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2003 by DooM Legacy Team.
+// Copyright (C) 2003-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/03/28 15:16:15  smite-meister
+// Texture cache.
+//
 // Revision 1.5  2003/06/29 17:33:59  smite-meister
 // VFile system, PAK support, Hexen bugfixes
 //
@@ -33,12 +36,12 @@
 // L2 cache added
 //
 //
-//
 // DESCRIPTION:
 //   Abstract second-level cache system with reference counting
 //
 //---------------------------------------------------------------------
 
+#include "doomdef.h"
 #include "w_wad.h"
 #include "z_cache.h"
 
@@ -48,15 +51,21 @@ cacheitem_t::cacheitem_t()
   refcount = 0;
 }
 
+
+cacheitem_t::~cacheitem_t() {}
+
+
 void *cacheitem_t::operator new(size_t size)
 {
   return Z_Malloc(size, PU_STATIC, NULL);
 }
 
+
 void cacheitem_t::operator delete(void *mem)
 {
   Z_Free(mem);
 }
+
 
 bool cacheitem_t::Release()
 {
@@ -78,23 +87,18 @@ L2cache_t::L2cache_t(memtag_t tag)
   default_item = NULL;
 }
 
+
 // cache destructor
 // just to shut up compiler, since entire caches are probably never destroyed
 L2cache_t::~L2cache_t()
 {
-  /*
-  if (default_item)
-    {
-      Free(default_item);
-      delete default_item;
-    }
-  // should empty the map too and Free() + delete its items
-  */
+  // should empty the map and delete the items
 }
+
 
 // Has to be separate from constructor. Static class instances are constructed when
 // program starts, and at that time we do not yet have a working FileCache.
-void L2cache_t::SetDefaultItem(const char *p)
+void L2cache_t::SetDefaultItem(const char *name)
 {
   if (default_item)
     {
@@ -103,30 +107,28 @@ void L2cache_t::SetDefaultItem(const char *p)
       default_item->refcount--; // take away the extra reference
     }
 
-  cacheitem_t *t = Load(p, NULL);
+  cacheitem_t *t = Load(name);
   if (!t)
-    I_Error("L2cache: New default_item '%s' not found!\n", p);
+    I_Error("L2cache: New default_item '%s' not found!\n", name);
 
   // it is also inserted into the map as a normal item
-  c_map.insert(c_map_t::value_type(p, t));
+  c_map.insert(c_map_t::value_type(name, t));
   t->refcount++; // one extra reference so that it is never freed
 
-  default_name = p;
+  default_name = name;
   default_item = t;  
 }
 
 
-// Pure virtual, renew. This is a simple implementation.
+// Pure virtual, renew. This is a sample implementation.
 /*
-void cacheitem_t *L2cache_t::Load(const char *p, cacheitem_t *r)
+  void cacheitem_t *L2cache_t::Load(const char *p)
 {
   int lump = fc.FindNumForName(p, false);
   if (lump == -1)
     return NULL;
 
-  derived_cacheitem_t *t = (derived_cacheitem_t *)r;
-  if (t == NULL)
-    t = new derived_cacheitem_t;
+  derived_cacheitem_t *t = new derived_cacheitem_t;
 
   t->lumpnum = lump;
   t->data = fc.CacheLumpNum(lump, tagtype);
@@ -135,50 +137,42 @@ void cacheitem_t *L2cache_t::Load(const char *p, cacheitem_t *r)
 }
 */
 
-// Pure virtual, renew. This is a simple implementation.
-/*
-void L2cache_t::Free(cacheitem_t *r)
-{
-  derived_cacheitem_t *t = (derived_cacheitem_t *)r;
-  if (t->data)
-    Z_ChangeTag(t->data, PU_CACHE)
-}
-*/
 
-// Checks if p is already in cache. If so, increments refcount and returns it.
-// If not, tries to cache and convert p. If succesful, returns it.
+// Checks if item is already in cache. If so, increments refcount and returns it.
+// If not, tries to cache and convert it. If succesful, returns the item.
 // If not, returns the defaultitem.
-cacheitem_t *L2cache_t::Cache(const char *p)
+cacheitem_t *L2cache_t::Cache(const char *name)
 {
-  // data used through a L2 cache must not be used anywhere else (z_free and z_changetag will cause problems)
+  // data used through a L2 cache must not be used anywhere
+  // else, because z_free and z_changetag will cause problems
 
   cacheitem_t *t;
   c_iter_t i;
 
-  if (p == NULL)
+  if (name == NULL)
     t = default_item;
   else
     { 
-      i = c_map.find(p);
+      i = c_map.find(name);
 
       if (i == c_map.end())
 	{
-	  //CONS_Printf("--- cache miss, %s, %p\n", p, p);
+	  //CONS_Printf("--- cache miss, %s, %p\n", name, name);
 	  // not found
-	  t = Load(p, NULL);
+	  t = Load(name);
 	  if (t)
-	    c_map.insert(c_map_t::value_type(p, t));
+	    c_map.insert(c_map_t::value_type(name, t));
 	  else
 	    {
 	      // TEST some nonexistant items are asked again and again.
 	      // what if I just bind them to the defaultitem for good?
 	      t = default_item;
-	      c_map.insert(c_map_t::value_type(p, t));
+	      c_map.insert(c_map_t::value_type(name, t));
 	    }
 	}
       else
 	{
-	  //CONS_Printf("+++ cache hit, %s, %p\n", p, p);
+	  //CONS_Printf("+++ cache hit, %s, %p\n", name, name);
 	  // found
 	  t = (*i).second;
 	}
@@ -190,16 +184,17 @@ cacheitem_t *L2cache_t::Cache(const char *p)
   return t;
 }
 
+
+// lists the contents of the cache
 void L2cache_t::Inventory()
 {
-  c_iter_t i;
   cacheitem_t *t = default_item;
 
   if (t)
     CONS_Printf("Defitem %s, rc = %d, use = %d\n",
 		default_name, t->refcount, t->usefulness);
  
-  for (i = c_map.begin(); i != c_map.end(); i++)
+  for (c_iter_t i = c_map.begin(); i != c_map.end(); i++)
     {
       const char *name = (*i).first;
       t = (*i).second;
@@ -223,7 +218,6 @@ int L2cache_t::Cleanup()
 	  c_map.erase(j); // erase it from the hash_map
 	  // Once an iterator is erased, it becomes invalid
 	  // and cannot be incremented! Therefore we have both i and j.
-	  Free(t); // free the data
 	  delete t; // delete the cacheitem itself
 	  k++;
 	}
@@ -235,19 +229,19 @@ int L2cache_t::Cleanup()
 // Recaches and converts every item in cache using their names.
 void L2cache_t::Flush()
 {
+  // TODO does not work very cleanly, needs redesigning
+
   Cleanup(); // remove unused items
 
-  cacheitem_t *t, *s;
   // default item is also stored in the map with the others
   // recache the items preserving refcounts
-  c_iter_t i;
-  for (i = c_map.begin(); i != c_map.end(); i++)
+
+  for (c_iter_t i = c_map.begin(); i != c_map.end(); )
     {
       const char *name = (*i).first;
-      t = (*i).second;
+      cacheitem_t *t = (*i).second;
 
-      Free(t);
-      s = Load(name, t);
+      cacheitem_t *s = Load(name);
       if (s == NULL)
 	{
 	  // not found
@@ -258,5 +252,10 @@ void L2cache_t::Flush()
 	  // (*i).second = default_item;? what about refcount?
 	  I_Error("L2cache: Unable to recache item '%s'\n", name);
 	}
+
+      c_iter_t j = i++;
+      c_map.erase(j);
+      c_map.insert(c_map_t::value_type(name, s));
+      delete t;
     }
 }

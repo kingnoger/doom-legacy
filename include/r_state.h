@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
 // Revision 1.3  2003/03/23 14:24:14  smite-meister
 // Polyobjects, MD3 models
 //
@@ -75,26 +78,10 @@
 #include "r_defs.h"
 #include "tables.h"
 
-
-#ifdef __GNUG__
-#pragma interface
-#endif
-
-class PlayerPawn;
-
 //
 // Refresh internal data structures,
 //  for rendering.
 //
-
-// needed for texture pegging
-extern fixed_t*         textureheight;
-
-// needed for pre rendering (fracs)
-extern fixed_t*         spritewidth;
-extern fixed_t*         spriteoffset;
-extern fixed_t*         spritetopoffset;
-extern fixed_t*         spriteheight;
 
 extern lighttable_t*    colormaps;
 
@@ -112,10 +99,6 @@ extern int              viewheight;
 
 extern int              firstflat;
 extern int              firstwaterflat; //added:18-02-98:WATER!
-
-// for global animation
-extern int*             flattranslation;
-extern int*             texturetranslation;
 
 
 //

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.25  2004/03/28 15:16:13  smite-meister
+// Texture cache.
+//
 // Revision 1.24  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
@@ -116,7 +119,6 @@
 
 #include "p_spec.h"
 #include "r_poly.h"
-#include "p_setup.h" // FIXME levelflats...
 
 #include "p_acs.h"
 #include "r_data.h"
@@ -900,7 +902,7 @@ int PlayerPawn::Marshal(LArchive &a)
   for (i=0; i<NUMARMOR; i++)
     a << armorfactor[i] << armorpoints[i];
 
-  a << specialsector << extralight << fixedcolormap << flyheight;
+  a << specialsector << extralight << fixedcolormap << fly_zspeed;
 
   return 0;
 }
@@ -986,10 +988,9 @@ int Map::Serialize(LArchive &a)
       if (ss->ceilingheight != SHORT(ms->ceilingheight)<<FRACBITS)
 	diff |= SD_CEILHT;
 
-      // P_AddLevelFlat should not add but just return the number
-      if (ss->floorpic != P_AddLevelFlat(ms->floorpic,levelflats))
+      if (ss->floorpic != tc.Get(ms->floorpic))
 	diff |= SD_FLOORPIC;
-      if (ss->ceilingpic != P_AddLevelFlat(ms->ceilingpic,levelflats))
+      if (ss->ceilingpic != tc.Get(ms->ceilingpic))
 	diff |= SD_CEILPIC;
 
       if (ss->lightlevel != SHORT(ms->lightlevel)) diff |= SD_LIGHT;
@@ -1021,9 +1022,9 @@ int Map::Serialize(LArchive &a)
 	  if (diff & SD_CEILHT)  a << ss->ceilingheight;
 
 	  if (diff & SD_FLOORPIC)
-	    a.Write((byte *)levelflats[ss->floorpic].name, 8);
+	    a.Write((byte *)R_GetTexture(ss->floorpic)->name, 8);
 	  if (diff & SD_CEILPIC)
-	    a.Write((byte *)levelflats[ss->ceilingpic].name, 8);
+	    a.Write((byte *)R_GetTexture(ss->ceilingpic)->name, 8);
 
 	  if (diff & SD_LIGHT)    a << ss->lightlevel;
 	  if (diff & SD_SPECIAL)  a << ss->special;
@@ -1078,15 +1079,16 @@ int Map::Serialize(LArchive &a)
 	  si = &sides[li->sidenum[0]];
 	  if (si->textureoffset != SHORT(msd[li->sidenum[0]].textureoffset)<<FRACBITS)
 	    diff |= LD_S1TEXOFF;
+	  // FIXME tc returning -1 for colormaps
 	  //SoM: 4/1/2000: Some textures are colormaps. Don't worry about invalid textures.
-	  if (R_CheckTextureNumForName(msd[li->sidenum[0]].toptexture) != -1)
-	    if (si->toptexture != R_TextureNumForName(msd[li->sidenum[0]].toptexture))
+	  if (tc.Get(msd[li->sidenum[0]].toptexture, false) != -1)
+	    if (si->toptexture != tc.Get(msd[li->sidenum[0]].toptexture))
 	      diff |= LD_S1TOPTEX;
-	  if (R_CheckTextureNumForName(msd[li->sidenum[0]].bottomtexture) != -1)
-	    if (si->bottomtexture != R_TextureNumForName(msd[li->sidenum[0]].bottomtexture))
+	  if (tc.Get(msd[li->sidenum[0]].bottomtexture, false) != -1)
+	    if (si->bottomtexture != tc.Get(msd[li->sidenum[0]].bottomtexture))
 	      diff |= LD_S1BOTTEX;
-	  if (R_CheckTextureNumForName(msd[li->sidenum[0]].midtexture) != -1)
-	    if (si->midtexture != R_TextureNumForName(msd[li->sidenum[0]].midtexture))
+	  if (tc.Get(msd[li->sidenum[0]].midtexture, false) != -1)
+	    if (si->midtexture != tc.Get(msd[li->sidenum[0]].midtexture))
 	      diff |= LD_S1MIDTEX;
         }
       if (li->sidenum[1] != -1)
@@ -1094,14 +1096,14 @@ int Map::Serialize(LArchive &a)
 	  si = &sides[li->sidenum[1]];
 	  if (si->textureoffset != SHORT(msd[li->sidenum[1]].textureoffset)<<FRACBITS)
 	    diff2 |= LD_S2TEXOFF;
-	  if (R_CheckTextureNumForName(msd[li->sidenum[1]].toptexture) != -1)
-	    if (si->toptexture != R_TextureNumForName(msd[li->sidenum[1]].toptexture))
+	  if (tc.Get(msd[li->sidenum[1]].toptexture, false) != -1)
+	    if (si->toptexture != tc.Get(msd[li->sidenum[1]].toptexture))
 	      diff2 |= LD_S2TOPTEX;
-	  if (R_CheckTextureNumForName(msd[li->sidenum[1]].bottomtexture) != -1)
-	    if (si->bottomtexture != R_TextureNumForName(msd[li->sidenum[1]].bottomtexture))
+	  if (tc.Get(msd[li->sidenum[1]].bottomtexture, false) != -1)
+	    if (si->bottomtexture != tc.Get(msd[li->sidenum[1]].bottomtexture))
 	      diff2 |= LD_S2BOTTEX;
-	  if (R_CheckTextureNumForName(msd[li->sidenum[1]].midtexture) != -1)
-	    if (si->midtexture != R_TextureNumForName(msd[li->sidenum[1]].midtexture))
+	  if (tc.Get(msd[li->sidenum[1]].midtexture, false) != -1)
+	    if (si->midtexture != tc.Get(msd[li->sidenum[1]].midtexture))
 	      diff2 |= LD_S2MIDTEX;
 	  if (diff2)
 	    diff |= LD_DIFF2;
@@ -1375,12 +1377,12 @@ int Map::Unserialize(LArchive &a)
       if (diff & SD_FLOORPIC)
         {
 	  a.Read((byte *)picname, 8);
-	  sectors[i].floorpic = P_AddLevelFlat(picname, levelflats);
+	  sectors[i].floorpic = tc.Get(picname);
         }
       if (diff & SD_CEILPIC)
         {
 	  a.Read((byte *)picname, 8);
-	  sectors[i].ceilingpic = P_AddLevelFlat(picname, levelflats);
+	  sectors[i].ceilingpic = tc.Get(picname);
         }
       if (diff & SD_LIGHT)    a << sectors[i].lightlevel;
       if (diff & SD_SPECIAL)  a << sectors[i].special;
@@ -1855,8 +1857,7 @@ int GameInfo::Serialize(LArchive &a)
   // treat all enums as ints
   a << int(demoversion);
   a << int(mode);
-  a << int(mission);
-  a << int(state) << int(wipestate);
+  a << int(state);
   a << int(skill);
 
   // flags
@@ -1934,8 +1935,7 @@ int GameInfo::Unserialize(LArchive &a)
   // treat all enums as ints
   a << int(demoversion);
   a << int(mode);
-  a << int(mission);
-  a << int(state) << int(wipestate);
+  a << int(state);
   a << int(skill);
 
   // flags

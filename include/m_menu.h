@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
 // Revision 1.5  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -116,8 +119,7 @@ struct menuitem_t
   char  *patch;
   char  *text;  // used when FONTBxx lump is found
 
-  //void      *itemaction;
- itemaction_t itemaction;
+  itemaction_t itemaction;
 
   // hotkey in menu
   // or y of the item 
@@ -169,7 +171,7 @@ private:
   // video and audio resources
   // FIXME make a real font system, fix v_video.cpp (text output)
   static int     menufontbase;
-  static struct patch_t **smallfont;
+  static class Texture **smallfont;
 
   static short AnimCount;  // skull animation counter
   static short whichSkull; // which skull to draw

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2004/03/28 15:16:13  smite-meister
+// Texture cache.
+//
 // Revision 1.17  2004/02/07 21:58:08  hurdler
 // fix compiling issue
 //
@@ -61,6 +64,7 @@
 
 #include "i_video.h"
 
+#include "r_data.h"
 #include "r_state.h" // sprites array
 #include "r_sprite.h"
 #include "info.h"
@@ -75,6 +79,7 @@
 #include "i_video.h"
 
 
+extern bool force_wipe;
 
 void  F_TextInit(int dummy);
 void  F_TextTicker();
@@ -147,7 +152,7 @@ static bool endgame;
 static int  gameepisode;
 static const char *finaleflat;
 static const char *finaletext;
-static int finalepic = -1;
+static Texture *finalepic = NULL;
 
 static bool keypressed = false;
 
@@ -235,7 +240,7 @@ void F_Ticker()
 	  else if (finalestage->init)
 	    (finalestage->init)(finalestage->stage);
 
-	  game.wipestate = GS_WIPE; // force a wipe
+	  force_wipe = true;
 	}
       else
 	{ // return to game
@@ -294,10 +299,10 @@ void F_TextWrite(int sx, int sy)
   int cy = sy;
 
   // erase the entire screen to a tiled background (or raw picture)
-  if (finalepic > 0)
-    V_DrawRawScreen(0, 0, finalepic, 320, 200);
+  if (finalepic)
+    finalepic->Draw(0, 0, V_SCALE);
   else
-    V_DrawFlatFill(0,0,vid.width,vid.height,fc.GetNumForName(finaleflat));
+    V_DrawFlatFill(0,0,vid.width,vid.height,tc.GetPtr(finaleflat));
 
   // draw some of the text onto the screen
   ch = finaletext;
@@ -327,7 +332,7 @@ void F_TextWrite(int sx, int sy)
       int w = hud.font[c]->width;
       if (cx+w > vid.width)
 	break;
-      V_DrawScaledPatch(cx, cy, 0, hud.font[c]);
+      hud.font[c]->Draw(cx, cy, V_SCALE);
       cx += w;
     }
 
@@ -387,7 +392,7 @@ void F_StartCast(int dummy)
   for(i=0;i<17;i++)
     castorder[i].name = text[TXT_CC_ZOMBIE + i];
 
-  game.wipestate = GS_WIPE;         // force a screen wipe
+  force_wipe = true;
   castnum = 0;
   caststate = &states[mobjinfo[castorder[castnum].type].seestate];
   casttics = caststate->tics;
@@ -541,34 +546,26 @@ void F_CastPrint (char* text)
 //
 void F_CastDrawer(int dummy)
 {
-  sprite_t*        sprdef;
-  spriteframe_t*      sprframe;
-  int                 lump;
-  bool             flip;
-  patch_t*            patch;
-
   // erase the entire screen to a background
-  //V_DrawPatch (0,0,0, fc.CachePatchName ("BOSSBACK", PU_CACHE));
+  //V_DrawPatch (0,0,0, tc.GetPtr ("BOSSBACK", PU_CACHE));
   D_PageDrawer("BOSSBACK");
 
   F_CastPrint(castorder[castnum].name);
 
   // draw the current frame in the middle of the screen
-  sprdef = sprites.Get(sprnames[caststate->sprite]);
-  sprframe = &sprdef->spriteframes[ caststate->frame & FF_FRAMEMASK];
-  lump = sprframe->lumppat[0];      //Fab: see R_InitSprites for more
-  flip = (bool)sprframe->flip[0];
+  sprite_t *sprdef = sprites.Get(sprnames[caststate->sprite]);
+  spriteframe_t *sprframe = &sprdef->spriteframes[ caststate->frame & FF_FRAMEMASK];
+  Texture *t = sprframe->tex[0];
+  bool flip = sprframe->flip[0];
 
-  patch = fc.CachePatchNum (lump, PU_CACHE);
-
-  V_DrawScaledPatch (BASEVIDWIDTH>>1,170,flip ? V_FLIPPEDPATCH : 0,patch);
+  t->Draw(BASEVIDWIDTH>>1,170,(flip ? V_FLIPX : 0) | V_SCALE);
 }
 
 
 //
 // F_DrawPatchCol, used in BunnyScroll
 //
-static void F_DrawPatchCol(int x, patch_t *patch, int col)
+static void F_DrawPatchCol(int x, Texture *patch, int col)
 {
   column_t*   column;
   byte*       source;
@@ -576,6 +573,8 @@ static void F_DrawPatchCol(int x, patch_t *patch, int col)
   byte*       desttop;
   int         count;
 
+  // FIXME end scroller
+  /*
   column = (column_t *)((byte *)patch + LONG(patch->columnofs[col]));
   desttop = vid.screens[0]+x*vid.dupx;
 
@@ -602,6 +601,7 @@ static void F_DrawPatchCol(int x, patch_t *patch, int col)
         }
       column = (column_t *)(  (byte *)column + column->length + 4 );
     }
+  */
 }
 
 //
@@ -611,14 +611,12 @@ void F_BunnyScroll()
 {
   int         scrolled;
   int         x;
-  patch_t*    p1;
-  patch_t*    p2;
   char        name[10];
   int         stage;
   static int  laststage;
 
-  p1 = fc.CachePatchName ("PFUB2", PU_LEVEL);
-  p2 = fc.CachePatchName ("PFUB1", PU_LEVEL);
+  Texture *p1 = tc.GetPtr("PFUB2");
+  Texture *p2 = tc.GetPtr("PFUB1");
 
   //V_MarkRect (0, 0, vid.width, vid.height);
 
@@ -641,17 +639,16 @@ void F_BunnyScroll()
   else
     {
       if( scrolled>0 )
-	V_DrawScaledPatch(320-scrolled,0, 0, p2 );
+	p2->Draw(320-scrolled,0, V_SCALE);
       if( scrolled<320 )
-	V_DrawScaledPatch(-scrolled,0, 0, p1 );
+	p1->Draw(-scrolled,0, V_SCALE);
     }
 
   if (finalecount < 1130)
     return;
   if (finalecount < 1180)
     {
-      V_DrawScaledPatch ((320-13*8)/2,
-			 (200-8*8)/2,0, fc.CachePatchName ("END0",PU_CACHE));
+      tc.GetPtr("END0")->Draw((320-13*8)/2, (200-8*8)/2, V_SCALE);
       laststage = 0;
       return;
     }
@@ -666,7 +663,7 @@ void F_BunnyScroll()
     }
 
   sprintf (name,"END%i",stage);
-  V_DrawScaledPatch ((320-13*8)/2, (200-8*8)/2,0, fc.CachePatchName (name,PU_CACHE));
+  tc.GetPtr(name)->Draw((320-13*8)/2, (200-8*8)/2, V_SCALE);
 }
 
 
@@ -683,18 +680,18 @@ void F_DoomDrawer(int dummy)
     {
     case 1:
       if (game.mode == gm_doom1s)
-	V_DrawScaledPatch(0,0,0, fc.CachePatchName("HELP2", PU_CACHE)); // ordering info
+	tc.GetPtr("HELP2")->Draw(0,0,V_SCALE); // ordering info
       else
-	V_DrawScaledPatch(0,0,0, fc.CachePatchName("CREDIT", PU_CACHE)); // id credits
+	tc.GetPtr("CREDIT")->Draw(0,0, V_SCALE); // id credits
       break;
     case 2:
-      V_DrawScaledPatch(0,0,0, fc.CachePatchName("VICTORY2", PU_CACHE)); // deimos over hell
+      tc.GetPtr("VICTORY2")->Draw(0,0, V_SCALE); // deimos over hell
       break;
     case 3:
       F_BunnyScroll();
       break;
     case 4:
-      V_DrawScaledPatch(0,0,0, fc.CachePatchName("ENDPIC",PU_CACHE));
+      tc.GetPtr("ENDPIC")->Draw(0,0,V_SCALE);
       break;
     }
 }
@@ -710,18 +707,15 @@ void F_DoomDrawer(int dummy)
 
 void F_DemonScroll()
 {
-    
-  int scrolled;
-
-  scrolled = (finalecount-70)/3;
+  int scrolled = (finalecount-70)/3;
   if (scrolled > 200)
     scrolled = 200;
   if (scrolled < 0)
     scrolled = 0;
 
-  V_DrawRawScreen(0, scrolled*vid.dupy, fc.FindNumForName("FINAL1"),320,200);
-  if( scrolled>0 )
-    V_DrawRawScreen(0, (scrolled-200)*vid.dupy, fc.FindNumForName("FINAL2"),320,200);
+  tc.GetPtr("FINAL1")->Draw(0, scrolled*vid.dupy, V_SCALE);
+  if (scrolled>0)
+    tc.GetPtr("FINAL2")->Draw(0, (scrolled-200)*vid.dupy, V_SCALE);
 }
 
 
@@ -743,7 +737,7 @@ void F_DrawUnderwater()
       underwawa = true;
       vid.SetPaletteLump("E2PAL");
     }
-  V_DrawRawScreen(0, 0, fc.FindNumForName("E2END"),320,200);
+  tc.GetPtr("E2END")->Draw(0, 0, V_SCALE);
 }
 
 
@@ -754,9 +748,9 @@ void F_HereticDrawer(int dummy)
     {
     case 1:
       if (fc.FindNumForName("E2M1") == -1)
-	V_DrawRawScreen(0, 0, fc.GetNumForName("ORDER"), 320, 200);
+	tc.GetPtr("ORDER")->Draw(0, 0, V_SCALE);
       else
-	V_DrawRawScreen(0, 0, fc.GetNumForName("CREDIT"), 320, 200);
+	tc.GetPtr("CREDIT")->Draw(0, 0, V_SCALE);
       break;
     case 2:
       F_DrawUnderwater();
@@ -766,7 +760,7 @@ void F_HereticDrawer(int dummy)
       break;
     case 4: // Just show credits screen for extended episodes
     case 5:
-      V_DrawRawScreen(0, 0, fc.GetNumForName("CREDIT"), 320, 200);
+      tc.GetPtr("CREDIT")->Draw(0, 0, V_SCALE);
       break;
     }
 }
@@ -776,7 +770,7 @@ void F_HexenStart(int stage)
   switch (stage)
     {
     case 0:
-      finalepic = fc.GetNumForName("FINALE1");
+      finalepic = tc.GetPtr("FINALE1");
       S.StartMusic("HALL", false);
       break;
 
@@ -790,7 +784,7 @@ void F_HexenStart(int stage)
       //finaletext = "win2msg",
       F_TextInit(0);
       finalestage->stage = 5;
-      finalepic = fc.GetNumForName("FINALE2");
+      finalepic = tc.GetPtr("FINALE2");
       S.StartMusic("ORB", false);
       break;
 
@@ -800,7 +794,7 @@ void F_HexenStart(int stage)
 
     case 4:
       // TODO fade in
-      finalepic = fc.GetNumForName("FINALE3");
+      finalepic = tc.GetPtr("FINALE3");
       S.StartMusic("CHESS", true);
       break;
 
@@ -815,18 +809,16 @@ void F_HexenStart(int stage)
 
 void F_HexenDrawer(int stage)
 {
-  V_DrawRawScreen(0, 0, finalepic, 320, 200);
+  finalepic->Draw(0, 0, V_SCALE);
 
+  int base = fc.GetNumForName("CHESSC");
   // Chess pic, draw the correct character graphic
   if (stage == 4 || stage == 5)
     {
       int i = 0; // playerclass...
       if (game.multiplayer)
-	V_DrawScaledPatch(20,0,0, fc.CachePatchName("CHESSALL", PU_CACHE));
-      //V_DrawPatch(20, 0, fc.CacheLumpName("CHESSALL", PU_CACHE));
+	tc.GetPtr("CHESSALL")->Draw(20,0,V_SCALE);
       else
-	V_DrawScaledPatch(60,0,0, fc.CachePatchNum(fc.GetNumForName("CHESSC")+i, PU_CACHE));
-      //V_DrawPatch(60, 0, fc.CacheLumpNum(fc.GetNumForName("CHESSC")+i, PU_CACHE));
-      
+	tc.GetPtrNum(base + i)->Draw(60,0,V_SCALE);
     }
 }

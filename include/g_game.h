@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
 // Revision 1.7  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -58,17 +61,6 @@
 
 using namespace std;
 
-
-// languages
-enum language_t
-{
-  la_english,
-  la_french,
-  la_german,
-  la_unknown
-};
-
-
 // skill levels
 enum skill_t
 {
@@ -79,9 +71,8 @@ enum skill_t
   sk_nightmare
 };
 
-// Game mode handling - identify IWAD version,
-//  handle IWAD dependent animations etc.
-// change mode to a bitfield? We might be playing doom AND heretic (crossover game)?
+
+// Game mode. For game-specific rules, IWAD dependent animations etc.
 enum gamemode_t
 {
   gm_none,
@@ -94,27 +85,17 @@ enum gamemode_t
 };
 
 
-// Mission packs - might be useful for TC stuff? NOT! This is a RELIC! Do NOT use!
-enum gamemission_t
-{
-  gmi_none,
-  gmi_doom2,  // DOOM 2, default
-  gmi_tnt,    // TNT Evilution mission pack
-  gmi_plut    // Plutonia Experiment pack
-};
-
 // the current state of the game
 enum gamestate_t
 {
-  GS_WIPE = -1,     // game never assumes this state, used to force a wipe
   GS_NULL = 0,                // at begin
+  GS_WAITINGPLAYERS,          // waiting players in a net game
   GS_LEVEL,                   // we are playing
   GS_INTERMISSION,            // gazing at the intermission screen
   GS_FINALE,                  // game final animation
   GS_DEMOSCREEN,              // looking at a demo
-  //legacy
-  GS_DEDICATEDSERVER,         // added 27-4-98 : new state for dedicated server
-  GS_WAITINGPLAYERS           // added 3-9-98 : waiting player in net game
+
+  GS_DEDICATEDSERVER,         // new state for dedicated server
 };
 
 
@@ -160,10 +141,9 @@ public:
 
   unsigned demoversion;
 
-  gamemode_t    mode;       // which game are we playing?
-  gamemission_t mission;    // for specialized "mission pack" iwads. Deprecated.
-  gamestate_t   state, wipestate;
-  skill_t       skill;      // skill level
+  gamemode_t    mode;   // which game are we playing?
+  gamestate_t   state;  // gamestate
+  skill_t       skill;  // skill level
 
   bool netgame;     // only true in a netgame (nonlocal players possible)
   bool multiplayer; // Only true if >1 player. netgame => multiplayer but not (multiplayer=>netgame)
@@ -213,7 +193,7 @@ public:
   void Ticker(); // ticks the game forward in time
 
   // ----- player-related stuff -----
-  PlayerInfo *AddPlayer(int pnum, PlayerInfo *in = NULL); // tries to add a player to the game
+  PlayerInfo *AddPlayer(PlayerInfo *p); // tries to add a player to the game
   bool RemovePlayer(int number);  // erases player from game
   void ClearPlayers();            // erases all players
   PlayerInfo *FindPlayer(int number); // returns player 'number' if he is in the game, otherwise NULL
@@ -254,7 +234,6 @@ extern GameInfo game;
 
 // miscellaneous stuff, doesn't really belong here
 extern bool       devparm; // development mode (-devparm)
-extern language_t language;
 
 
 // ======================================

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/03/28 15:16:12  smite-meister
+// Texture cache.
+//
 // Revision 1.6  2003/12/03 10:49:49  smite-meister
 // Save/load bugfix, text strings updated
 //
@@ -45,8 +48,7 @@
 #include "dstrings.h"
 
 char *text[NUMTEXT] =
-{   
-  //BP: here is special dehacked handling, include centring and version
+{
   "DOOM 2: Hell on Earth",
   "The Ultimate DOOM Startup",
   "DOOM Registered Startup",

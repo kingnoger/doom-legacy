@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,59 +17,18 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
 // Revision 1.2  2003/11/23 19:07:42  smite-meister
 // New startup order
 //
 // Revision 1.1.1.1  2002/11/16 14:18:37  hurdler
 // Initial C++ version of Doom Legacy
 //
-// Revision 1.5  2002/08/31 11:40:19  vberghol
-// menu and map loading bugfixes
-//
-// Revision 1.4  2002/07/12 19:21:41  vberghol
-// hop
-//
-// Revision 1.3  2002/07/01 21:01:06  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:36  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.12  2001/12/27 22:50:25  hurdler
-// fix a colormap bug, add scrolling floor/ceiling in hw mode
-//
-// Revision 1.11  2001/02/24 13:35:19  bpereira
-// no message
-//
-// Revision 1.10  2001/01/25 22:15:41  bpereira
-// added heretic support
-//
-// Revision 1.9  2000/11/11 13:59:45  bpereira
-// no message
-//
-// Revision 1.8  2000/11/02 19:49:35  bpereira
-// no message
-//
-// Revision 1.7  2000/10/08 13:29:59  bpereira
-// no message
-//
-// Revision 1.6  2000/09/28 20:57:14  bpereira
-// no message
-//
-// Revision 1.5  2000/08/31 14:30:54  bpereira
-// no message
-//
-// Revision 1.4  2000/08/03 17:57:41  bpereira
-// no message
-//
-// Revision 1.3  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.2  2000/02/26 00:28:42  hurdler
-// Mostly bug fix (see borislog.txt 23-2-2000, 24-2-2000)
-//
 //
 // DESCRIPTION:
+//   Command buffer:
 //      parse and execute commands from console input/scripts/
 //      and remote server.
 //
@@ -279,6 +238,8 @@ void Got_NetVar(char **p,int playernum);
 //  Initialise command buffer and add basic commands
 void COM_Init()
 {
+  CONS_Printf("COM_Init: Init the command buffer\n");
+
   // allocate command buffer
   VS_Alloc (&com_text, COM_BUF_SIZE);
 

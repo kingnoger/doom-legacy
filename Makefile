@@ -139,6 +139,7 @@ export engine_objects = \
 	$(objdir)/p_genlin.o \
 	$(objdir)/p_things.o \
 	$(objdir)/p_lights.o \
+	$(objdir)/p_anim.o \
 	$(objdir)/p_switch.o \
 	$(objdir)/p_poly.o \
 	$(objdir)/p_acs.o \

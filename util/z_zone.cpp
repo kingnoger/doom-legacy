@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/03/28 15:16:15  smite-meister
+// Texture cache.
+//
 // Revision 1.6  2003/12/21 12:29:09  smite-meister
 // bugfixes
 //
@@ -47,7 +50,6 @@
 #include "doomdef.h"
 #include "z_zone.h"
 #include "i_system.h"
-#include "command.h"
 #include "m_argv.h"
 #include "i_video.h"
 
@@ -59,8 +61,6 @@ using namespace std;
 
 // Use malloc instead of zone memory to detect leaks. This way we always get a SIGSEGV.
 #define MEMDEBUG 1
-
-void Command_Meminfo_f();
 
 // =========================================================================
 //                        ZONE MEMORY ALLOCATION
@@ -150,6 +150,8 @@ int memzone_t::mb_increment = 6; // This value is a guesstimate.
 //
 void Z_Init()
 {
+  CONS_Printf("Z_Init: Init zone memory allocation daemon.\n");
+
 #ifndef MEMDEBUG
   ULONG free, total;
   int mb_alloc = memzone_t::mb_increment; 
@@ -178,8 +180,6 @@ void Z_Init()
 
   memzone_t *newzone = memzone_t::NewZone(mb_alloc << 20);
   zones.push_back(newzone);
-
-  COM_AddCommand("meminfo", Command_Meminfo_f);
 #endif
 }
 
@@ -246,7 +246,8 @@ void Z_Free(void *ptr)
   // and made memzone_t::Free again Z_Free
   if (ptr == NULL)
     {
-      CONS_Printf("Z_Free: NULL given!\n");
+      //CONS_Printf("Z_Free: NULL given!\n");
+      I_Error("Z_Free: NULL given!\n");
       return;
     }
 

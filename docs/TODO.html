@@ -19,25 +19,12 @@ $Id$
 In order of decreasing importance:
 
 <ul>
-<li>Finish Hexen support. ANIMDEFS, intermission, polyobj
-renderer, extra physics, weapon pieces.
+<li>Finish Hexen support. Intermission, polyobj renderer, extra
+physics, push-linedefs.
 
 <li>Default parameters to FS functions
 
 <li>Fix the OpenGL T&amp;L system
-
-<li>L2 caches
- <ul>
- <li>cache data in machine native byte order, so that it only needs to be
-  changed once. patches for example.
- <li>cache graphics/sound only when needed, ie. when a thing is
-  Spawned, cache it's sprite & sounds etc.
- <li>Texture/patch/flat -L2 cache that treats them all in the same way,
-  using a Texture class, reference counting, SDL_surface?
- <li>Run the cache system in a separate thread;)
- </ul>
-
-<li>a Texture class (static, animating, fractal, multitexturing...)
 
 <li>New legacy.wad contents:
  <ul>
@@ -66,8 +53,6 @@ renderer, extra physics, weapon pieces.
   Fortress...
 
 <li>More FS functions, better FS documentation, FS arrays
-
-<li>A state/codepointer that runs FS/ACS
 
 <li>AIPlayer-based bot system, bots implemented as DLLs.
 
@@ -102,6 +87,8 @@ claw or shoot fireballs)
 <li>Enable cheating (for server only) in multiplayer games
 
 <li>Sprite skin support, skin sounds
+
+<li>Run the cache system in a separate thread;)
 
 </ul>
 

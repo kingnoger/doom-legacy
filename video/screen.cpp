@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/03/28 15:16:15  smite-meister
+// Texture cache.
+//
 // Revision 1.7  2003/11/23 19:07:42  smite-meister
 // New startup order
 //
@@ -45,8 +48,9 @@
 #include "doomdef.h"
 
 #include "screen.h"
-#include "g_game.h"
+#include "v_video.h"
 
+#include "g_game.h"
 #include "console.h"
 #include "command.h"
 #include "am_map.h"
@@ -54,6 +58,7 @@
 
 #include "m_argv.h"
 #include "i_video.h"
+#include "r_data.h"
 #include "r_local.h"
 #include "d_main.h"
 #include "hardware/hw_glob.h"
@@ -69,10 +74,7 @@ extern bool allow_fullscreen;
 // ------------------
 Video vid;
 
-
-// holds lumpnum of flat used to fill space around the viewwindow
-int   scr_borderpatchnum;
-byte* scr_borderpatch; // flat used to fill the reduced view borders
+Texture *scr_borderpatch; // flat used to fill the space around the viewwindow
 
 
 // --------------------------------------------
@@ -342,27 +344,26 @@ void Video::Startup()
     {
     case gm_doom2:
       // DOOM II border patch, original was GRNROCK
-      scr_borderpatchnum = fc.GetNumForName ("GRNROCK");
+      scr_borderpatch = tc.GetPtr("GRNROCK");
       break;
     case gm_heretic:
       if (fc.FindNumForName("e2m1") == -1)
-	scr_borderpatchnum = fc.GetNumForName ("FLOOR04");
+	scr_borderpatch = tc.GetPtr("FLOOR04");
       else
-	scr_borderpatchnum = fc.GetNumForName ("FLAT513");
+	scr_borderpatch = tc.GetPtr("FLAT513");
       break;
     case gm_hexen:
-      scr_borderpatchnum = fc.GetNumForName ("F_022");
+      scr_borderpatch = tc.GetPtr("F_022");
       break;
     default:
       // DOOM border patch.
       // FIXME! should be default patch in legacy.wad
-      scr_borderpatchnum = fc.GetNumForName ("FLOOR7_2");
+      scr_borderpatch = tc.GetPtr("FLOOR7_2");
     }
-  scr_borderpatch = (byte *)fc.CacheLumpNum(scr_borderpatchnum, PU_STATIC);
 }
 
 
-// was SCR_Recalc, V_Init
+
 // Called after the video mode has changed
 void Video::Recalc()
 {
@@ -388,7 +389,7 @@ void Video::Recalc()
   }
 
   // calculate centering offset for the scaled menu
-  scaledofs = 0;  //see v_video.c
+  scaledofs = 0;
   centerofs = (((height%BASEVIDHEIGHT)/2) * width) +
     (width%BASEVIDWIDTH)/2;
 
@@ -490,9 +491,9 @@ void SCR_CheckDefaultMode()
 void SCR_SetDefaultMode()
 {
   // remember the default screen size
-  CV_SetValue (&cv_scr_width,  vid.width);
-  CV_SetValue (&cv_scr_height, vid.height);
-  CV_SetValue (&cv_scr_depth,  vid.BytesPerPixel*8);
+  CV_SetValue(&cv_scr_width,  vid.width);
+  CV_SetValue(&cv_scr_height, vid.height);
+  CV_SetValue(&cv_scr_depth,  vid.BytesPerPixel*8);
   // CV_SetValue (&cv_fullscreen, !vid.u.windowed); metzgermeister: unnecessary?
 }
 
@@ -529,7 +530,7 @@ void Video::LoadPalette(const char *lumpname)
     }
 }
 
-// was V_SetPalette
+
 // Set the current palette to use for palettized graphics
 // (that is, most if not all of Doom's original graphics)
 void Video::SetPalette(int palettenum)
@@ -543,16 +544,13 @@ void Video::SetPalette(int palettenum)
 #ifdef HWRENDER
   if (rendermode != render_soft)
     HWR_SetPalette(&palette[palettenum*256]);
-  //#ifdef LINUX
-  else // Hurdler: is it only necessary under win32 for startup ?
-    // BP: yes
-    //#endif
+  else
 #endif
     I_SetPalette(&palette[palettenum*256]);
 }
 
 
-// was V_SetPaletteLump
+
 // equivalent to LoadPalette(pal); SetPalette(0);
 void Video::SetPaletteLump(const char *pal)
 {
@@ -560,10 +558,7 @@ void Video::SetPaletteLump(const char *pal)
 #ifdef HWRENDER
   if (rendermode != render_soft)
     HWR_SetPalette(palette);
-  //#ifdef LINUX
-  else // Hurdler: is it only necessary under win32 for startup ?
-    // BP: yes
-    //#endif
+  else
 #endif
     I_SetPalette(palette);
 }

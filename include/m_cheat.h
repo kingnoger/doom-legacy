@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:24  hurdler
-// Initial revision
+// Revision 1.2  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
+// Revision 1.1.1.1  2002/11/16 14:18:24  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.5  2002/08/27 11:51:48  vberghol
 // Menu rewritten
@@ -58,11 +61,5 @@
 
 // no need to scramble cheat sequences, since anyone can read the source...
 //#define SCRAMBLE(a) ((((a)&1)<<7) + (((a)&2)<<5) + ((a)&4) + (((a)&8)<<1) + (((a)&16)>>1) + ((a)&32) + (((a)&64)>>5) + (((a)&128)>>7))
-
-void cht_Init();
-
-void Command_CheatNoClip_f (void);
-void Command_CheatGod_f (void);
-void Command_CheatGimme_f (void);
 
 #endif

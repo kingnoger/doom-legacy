@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2004/03/28 15:16:12  smite-meister
+// Texture cache.
+//
 // Revision 1.20  2004/01/02 14:25:01  smite-meister
 // cleanup
 //
@@ -163,15 +166,24 @@ bool  nomusic = false, nosound = false;
 SoundSystem S;
 
 
+
 //===========================================================
 //  Sound cache
 //===========================================================
 
+sounditem_t::~sounditem_t()
+{
+  if (data)
+    Z_ChangeTag(data, PU_CACHE);
+}
+
+
+
 class soundcache_t : public L2cache_t
 {
 protected:
-  virtual cacheitem_t *Load(const char *p, cacheitem_t *t = NULL);
-  virtual void Free(cacheitem_t *t);
+  cacheitem_t *Load(const char *p);
+
 public:
   soundcache_t(memtag_t tag);
   inline sounditem_t *Get(const char *p) { return (sounditem_t *)Cache(p); };
@@ -188,15 +200,13 @@ soundcache_t::soundcache_t(memtag_t tag)
 
 // We assume that the sound is in Doom sound format (for now).
 // TODO: Make it recognize other formats as well! WAV for example
-cacheitem_t *soundcache_t::Load(const char *p, cacheitem_t *r)
+cacheitem_t *soundcache_t::Load(const char *p)
 {
   int lump = fc.FindNumForName(p, false);
   if (lump == -1)
     return NULL;
 
-  sounditem_t *t = (sounditem_t *)r;
-  if (t == NULL)
-    t = new sounditem_t;
+  sounditem_t *t = new sounditem_t;
 
   t->lumpnum = lump;
   t->data = fc.CacheLumpNum(lump, tagtype);
@@ -214,13 +224,6 @@ cacheitem_t *soundcache_t::Load(const char *p, cacheitem_t *r)
   return t;
 }
 
-
-void soundcache_t::Free(cacheitem_t *r)
-{
-  sounditem_t *t = (sounditem_t *)r;
-  if (t->data)
-    Z_ChangeTag(t->data, PU_CACHE);
-}
 
 
 //===========================================================

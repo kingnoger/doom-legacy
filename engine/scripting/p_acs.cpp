@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
 // Revision 1.15  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
@@ -156,8 +159,7 @@ static Map   *ACMap;    // where it runs (shorthand)
 static int   *PCodePtr;
 static byte   SpecArgs[8];
 static char   PrintBuffer[PRINT_BUFFER_SIZE];
-static acs_t *NewScript; // was a new script just started by Map::StartACS ? TODO should be a return value...
-
+static acs_t *NewScript;
 
 
 static void Push(int value);
@@ -485,6 +487,7 @@ void Map::CheckACSStore()
   while (i != k)
     {
       acsstore_t &s = (*i).second;
+      NewScript = NULL;
       StartACS(s.script, s.args, NULL, NULL, 0);
       if (NewScript)
 	NewScript->delayCount = 35;
@@ -498,8 +501,6 @@ void Map::CheckACSStore()
 // Starts a new script running.
 bool Map::StartACS(int number, byte *args, Actor *activator, line_t *line, int side)
 {
-  NewScript = NULL;
-
   int infoIndex = GetACSIndex(number);
   if (infoIndex == -1)
     { // Script not found
@@ -511,9 +512,10 @@ bool Map::StartACS(int number, byte *args, Actor *activator, line_t *line, int s
 
   acs_state_t *statePtr = &ACSInfo[infoIndex].state;
   if (*statePtr == ACS_suspended)
-    { // Resume a suspended script
+    {
+      // Resume a suspended script
       *statePtr = ACS_running;
-      return true;
+      return true; // FIXME problem?
     }
   if (*statePtr != ACS_inactive)
     return false; // Script is already executing
@@ -1311,65 +1313,45 @@ static int CmdPolyWaitDirect()
 
 static int CmdChangeFloor()
 {
-  int tag;
-  int flat;
-  int sectorIndex;
-
-  flat = R_FlatNumForName(ACMap->ACStrings[Pop()]);
-  tag = Pop();
-  sectorIndex = -1;
+  int flat = tc.Get(ACMap->ACStrings[Pop()]);
+  int tag = Pop();
+  int sectorIndex = -1;
   while((sectorIndex = ACMap->FindSectorFromTag(tag, sectorIndex)) >= 0)
-    {
-      ACMap->sectors[sectorIndex].floorpic = flat;
-    }
+    ACMap->sectors[sectorIndex].floorpic = flat;
+
   return SCRIPT_CONTINUE;
 }
 
 static int CmdChangeFloorDirect()
 {
-  int tag;
-  int flat;
-  int sectorIndex;
-
-  tag = *PCodePtr++;
-  flat = R_FlatNumForName(ACMap->ACStrings[*PCodePtr++]);
-  sectorIndex = -1;
+  int tag = *PCodePtr++;
+  int flat = tc.Get(ACMap->ACStrings[*PCodePtr++]);
+  int sectorIndex = -1;
   while((sectorIndex = ACMap->FindSectorFromTag(tag, sectorIndex)) >= 0)
-    {
-      ACMap->sectors[sectorIndex].floorpic = flat;
-    }
+    ACMap->sectors[sectorIndex].floorpic = flat;
+
   return SCRIPT_CONTINUE;
 }
 
 static int CmdChangeCeiling()
 {
-  int tag;
-  int flat;
-  int sectorIndex;
-
-  flat = R_FlatNumForName(ACMap->ACStrings[Pop()]);
-  tag = Pop();
-  sectorIndex = -1;
+  int flat = tc.Get(ACMap->ACStrings[Pop()]);
+  int tag = Pop();
+  int sectorIndex = -1;
   while((sectorIndex = ACMap->FindSectorFromTag(tag, sectorIndex)) >= 0)
-    {
-      ACMap->sectors[sectorIndex].ceilingpic = flat;
-    }
+    ACMap->sectors[sectorIndex].ceilingpic = flat;
+
   return SCRIPT_CONTINUE;
 }
 
 static int CmdChangeCeilingDirect()
 {
-  int tag;
-  int flat;
-  int sectorIndex;
-
-  tag = *PCodePtr++;
-  flat = R_FlatNumForName(ACMap->ACStrings[*PCodePtr++]);
-  sectorIndex = -1;
+  int tag = *PCodePtr++;
+  int flat = tc.Get(ACMap->ACStrings[*PCodePtr++]);
+  int sectorIndex = -1;
   while((sectorIndex = ACMap->FindSectorFromTag(tag, sectorIndex)) >= 0)
-    {
-      ACMap->sectors[sectorIndex].ceilingpic = flat;
-    }
+    ACMap->sectors[sectorIndex].ceilingpic = flat;
+
   return SCRIPT_CONTINUE;
 }
 
@@ -1647,18 +1629,13 @@ static int CmdSoundSequence()
 static int CmdSetLineTexture()
 {
   line_t *line;
-  int lineTag;
-  int side;
-  int position;
-  int texture;
-  int s;
 
-  texture = R_TextureNumForName(ACMap->ACStrings[Pop()]);
-  position = Pop();
-  side = Pop();
-  lineTag = Pop();
+  int texture = tc.Get(ACMap->ACStrings[Pop()]);
+  int position = Pop();
+  int side = Pop();
+  int lineTag = Pop();
 
-  for (s = -1; (line = ACMap->FindLineFromTag(lineTag, &s)) != NULL; )
+  for (int s = -1; (line = ACMap->FindLineFromTag(lineTag, &s)) != NULL; )
     {
       if (position == TEXTURE_MIDDLE)
 	{

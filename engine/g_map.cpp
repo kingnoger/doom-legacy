@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.35  2004/03/28 15:16:12  smite-meister
+// Texture cache.
+//
 // Revision 1.34  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
@@ -182,20 +185,26 @@ Map::~Map()
   Z_Free(sides);
   Z_Free(linebuffer);
 
-  Z_Free(polyobjs);
-
   Z_Free(blockmaplump);
-  Z_Free(blocklinks);
-  Z_Free(PolyBlockMap);
-  // FIXME there is a lot of PU_LEVEL polyblockmap stuff that is not yet freed
+
+  if (polyobjs)
+    {
+      Z_Free(polyobjs);
+      Z_Free(blocklinks);
+      Z_Free(PolyBlockMap);
+      // FIXME there is a lot of PU_LEVEL polyblockmap stuff that is not yet freed
+    }
 
   Z_Free(rejectmatrix);
 
   // FIXME free FS stuff
   T_ClearRunningScripts();
 
-  Z_Free(ACSInfo);
-  Z_Free(ActionCodeBase);
+  if (ACSInfo)
+    {
+      Z_Free(ACSInfo);
+      Z_Free(ActionCodeBase);
+    }
 
   Z_Free(mapthings);
 

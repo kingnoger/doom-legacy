@@ -443,7 +443,7 @@ void GameInfo::StopDemo()
 
   Downgrade(VERSION);
 
-  state = wipestate = GS_NULL;
+  state = GS_NULL;
   SV_StopServer();
   //    SV_StartServer();
   SV_ResetServer();

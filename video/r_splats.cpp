@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/03/28 15:16:15  smite-meister
+// Texture cache.
+//
 // Revision 1.2  2003/04/24 20:30:37  hurdler
 // Remove lots of compiling warnings
 //
@@ -180,7 +183,6 @@ void Rend::R_AddWallSplat(line_t  *wallline,
     fixed_t         fracsplat;
     wallsplat_t*    splat;
     wallsplat_t*    p_splat;
-    patch_t*        patch;
     fixed_t         linelength;
     sector_t        *backsector=NULL;
 
@@ -192,7 +194,7 @@ void Rend::R_AddWallSplat(line_t  *wallline,
         return;
 
     // set the splat
-    splat->patch = fc.GetNumForName (patchname);
+    Texture *t = splat->tex = tc.GetPtr(patchname);
     sectorside^=1;
     if( wallline->sidenum[sectorside]!=-1 )
     {
@@ -215,15 +217,12 @@ void Rend::R_AddWallSplat(line_t  *wallline,
     splat->top = top;
     splat->flags = flags;
 
-    // bad.. but will be needed for drawing anyway..
-    patch = fc.CachePatchNum (splat->patch, PU_CACHE);
-
     
     // offset needed by draw code for texture mapping
     linelength = (fixed_t)P_SegLength((seg_t*)wallline);
-    splat->offset = FixedMul(wallfrac, linelength) - (patch->width<<(FRACBITS-1));
+    splat->offset = FixedMul(wallfrac, linelength) - (t->width << (FRACBITS-1));
     //CONS_Printf("offset splat %d\n",splat->offset);
-    fracsplat = FixedDiv( ((patch->width<<FRACBITS)>>1) , linelength );
+    fracsplat = FixedDiv( ((t->width<<FRACBITS)>>1) , linelength );
     
     wallfrac -= fracsplat;
     if( wallfrac>linelength )

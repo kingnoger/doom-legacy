@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2004/03/28 15:16:15  smite-meister
+// Texture cache.
+//
 // Revision 1.1  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -78,6 +81,26 @@ int Parser::Open(int lump)
 }
 
 
+// prepares a buffer for parsing
+int Parser::Open(const char *buf, int len)
+{
+  if (len <= 0)
+    return 0;
+
+  length = len;
+
+  ms = (char *)Z_Malloc(length + 1, PU_STATIC, NULL);
+  memcpy(ms, buf, length);
+  ms[length] = '\0'; // to make searching easy
+
+  me = ms + length; // past-the-end pointer
+  s = e = ms;
+
+  RemoveCRs();
+  return length;
+}
+
+
 // Replace all comments after 's' with whitespace.
 // anything between the symbol // or ; and the next newline is a comment.
 // TODO right now there is no way to escape these symbols!
@@ -100,30 +123,29 @@ void Parser::RemoveComments(char c)
 }
 
 
-// replaces \r chars with spaces
-int Parser::RemoveCRs()
+// replace 'from' chars with 'to' chars
+int Parser::ReplaceChars(char from, char to)
 {
   int ret = 0;
-
   for (char *p = ms; p < me; p++)
-    if (*p == '\r')
+    if (*p == from)
       {
-	*p = ' ';
+	*p = to;
 	ret++;
       }
-
   return ret;
 }
 
 
-// NOTE you must use this before using the other Parser methods.
-// Seeks the next non-whitespace row ending with a newline.
+// NOTE you must use this before using the line-oriented Parser methods.
+// Seeks the next row ending with a newline.
 // Returns false if the lump ends.
-bool Parser::NewLine()
+bool Parser::NewLine(bool pass_ws)
 {
   // end passes any whitespace
-  while (e < me && isspace(*e))
-    e++;
+  if (pass_ws)
+    while (e < me && isspace(*e))
+      e++;
 
   s = e; // this is where the next line starts
 
@@ -147,6 +169,47 @@ void Parser::PassWS()
 {
   while (s < me && isspace(*s))
     s++;
+}
+
+
+// replace 'from' chars with 'to' chars on current line
+int Parser::LineReplaceChars(char from, char to)
+{
+  int ret = 0;
+  for (char *p = s; *p; p++)
+    if (*p == from)
+      {
+	*p = to;
+	ret++;
+      }
+  return ret;
+}
+
+
+// Tokenizer. Advances s.
+char *Parser::GetToken(const char *delim)
+{
+  // Damnation! If strtok_r() only was part of ISO C!
+  //return strtok_r(s, delim, &s);
+
+  // pass initial delimiters
+  int n = strlen(delim);
+  for (; s < me && *s; s++)
+    {
+      int i;
+      for (i=0; i<n; i++)
+	if (*s != delim[i])
+	  break;
+      if (i < n)
+	break;
+    }
+
+  if (s == me || *s == '\0')
+    return NULL;
+
+  char *temp = strtok(s, delim);
+  s += strlen(temp) + 1;
+  return temp;
 }
 
 
@@ -229,23 +292,12 @@ bool Parser::MustGetInt(int *to)
 // Jumps to the char following the next instance of 'str' in the lump
 void Parser::GoToNext(const char *str)
 {
-  s = e;
-  // now the rest of the lump should follow s, ending with a NUL char
   // find the first occurrence of str
-  char *res = strstr(s, str);
+  char *res = strstr(e, str);
   if (res)
     s = e = res + strlen(str); // after the label
   else
     CONS_Printf("Parser: Label '%s' not found.\n", str);
-}
-
-
-// replace 'from' chars with 'to' chars on current line
-void Parser::LineReplaceChars(char from, char to)
-{
-  for (char *p = s; *p; p++)
-    if (*p == from)
-      *p = to;
 }
 
 

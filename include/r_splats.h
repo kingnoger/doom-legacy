@@ -17,8 +17,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:27  hurdler
-// Initial revision
+// Revision 1.2  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
+// Revision 1.1.1.1  2002/11/16 14:18:27  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.5  2002/08/19 18:06:43  vberghol
 // renderer somewhat fixed
@@ -77,8 +80,8 @@
 // WALL SPLATS are patches drawn on top of wall segs
 struct wallsplat_t
 {
-  int         patch;      // lump id.
-  vertex_t    v1;         // vertices along the linedef
+  class Texture *tex;  // texture
+  vertex_t    v1;      // vertices along the linedef
   vertex_t    v2;
   fixed_t     top;
   fixed_t     offset;     // offset in columns<<FRACBITS from start of linedef to start of splat
@@ -93,7 +96,7 @@ struct wallsplat_t
 // FLOOR SPLATS are pic_t (raw horizontally stored) drawn on top of the floor or ceiling
 struct floorsplat_t
 {
-  int           pic;        // a pic_t lump id
+  Texture *tex; // texture
   int           flags;
   vertex_t      verts[4];   // (x,y) as viewn from above on map
   fixed_t       z;          //     z (height) is constant for all the floorsplat

@@ -17,8 +17,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:22  hurdler
-// Initial revision
+// Revision 1.2  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
+// Revision 1.1.1.1  2002/11/16 14:18:22  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.3  2002/07/01 21:00:44  jpakkane
 // Fixed cr+lf to UNIX form.
@@ -43,20 +46,43 @@
 //
 //
 // DESCRIPTION:
-//
+//   DeHackEd support
 //
 //-----------------------------------------------------------------------------
 
+#ifndef dehacked_h
+#define dehacked_h 1
 
-// the code was first write for a file
-// converted to use memory with this functions
-typedef struct {
-    char *data;
-    char *curpos;
-    int size;
-} MYFILE;
+class dehacked_t
+{
+private:
+  int  num_errors;
+  void Read_Misc(class Parser &p);
 
-void DEH_LoadDehackedFile(MYFILE *f);
-//void DEH_LoadDehackedLump(int lump);
+public:
+  bool loaded;
 
-extern bool deh_loaded;
+  dehacked_t();
+  bool LoadDehackedLump(const char *buf, int len);
+  void error(char *first, ...);
+
+  int idfa_armor;
+  int idfa_armor_class;
+  int idkfa_armor;
+  int idkfa_armor_class;
+  int god_health;
+
+  int initial_health;
+  int initial_bullets;
+  int max_health;
+  int maxsoul;
+
+  int green_armor_class;
+  int blue_armor_class;
+  int soul_health;
+  int mega_health;
+};
+
+extern dehacked_t DEH;
+
+#endif

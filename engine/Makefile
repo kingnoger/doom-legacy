@@ -14,7 +14,7 @@ all	: $(engine_objects)
 
 
 depend	:
-	$(CC) -MM $(CFLAGS) *.cpp animation/*.cpp automap/*.cpp hud/*.cpp menu/*.cpp scripting/*.cpp | sed -e 's/^\([^ ]\)/$$(objdir)\/\1/' > engine.dep
+	$(CC) -MM $(CFLAGS) *.cpp animation/*.cpp automap/*.cpp bots/*.cpp hud/*.cpp menu/*.cpp scripting/*.cpp | sed -e 's/^\([^ ]\)/$$(objdir)\/\1/' > engine.dep
 
 
 # implied rules, one for each subdirectory. sad but true.
@@ -26,6 +26,9 @@ $(objdir)/%.o	: animation/%.cpp
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(objdir)/%.o	: automap/%.cpp
+	$(CC) -c $(CFLAGS) $< -o $@
+
+$(objdir)/%.o	: bots/%.cpp
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(objdir)/%.o	: hud/%.cpp

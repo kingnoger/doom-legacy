@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2004/03/28 15:16:13  smite-meister
+// Texture cache.
+//
 // Revision 1.18  2004/01/06 14:37:45  smite-meister
 // six bugfixes, cleanup
 //
@@ -473,6 +476,8 @@ bool DActor::P_Move()
 
   fixed_t tryx, tryy;
 
+  if (eflags & MFE_BLASTED)
+    return true;
   if (movedir == DI_NODIR)
     return false;
 

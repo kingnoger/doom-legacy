@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/03/28 15:16:15  smite-meister
+// Texture cache.
+//
 // Revision 1.6  2003/11/23 19:07:42  smite-meister
 // New startup order
 //
@@ -415,7 +418,7 @@ void R_InitViewBuffer(int width, int height)
 //
 // Store the lumpnumber of the viewborder patches.
 //
-int viewborderlump[8];
+Texture *viewbordertex[8];
 void R_InitViewBorder()
 {
   const char *Doom_borders[] = {"BRDR_T", "BRDR_B", "BRDR_L", "BRDR_R", "BRDR_TL", "BRDR_TR", "BRDR_BL", "BRDR_BR"};
@@ -427,7 +430,7 @@ void R_InitViewBorder()
     bname = Raven_borders;
 
   for (int i=0; i<8; i++)
-    viewborderlump[i] = fc.GetNumForName(bname[i]);
+    viewbordertex[i] = tc.GetPtr(bname[i]);
 }
 
 
@@ -438,88 +441,56 @@ void R_InitViewBorder()
 //
 void R_FillBackScreen()
 {
-    byte*       src;
-    byte*       dest;
-    int         x;
-    int         y;
-    patch_t*    patch;
-    int         step,boff; 
+  int  x, y;
+  int  step, boff; 
     
-    //faB: quickfix, don't cache lumps in both modes
-    if (rendermode!=render_soft)
-        return;
+  //faB: quickfix, don't cache lumps in both modes
+  if (rendermode!=render_soft)
+    return;
 
-     //added:08-01-98:draw pattern around the status bar too (when hires),
-    //                so return only when in full-screen without status bar.
-    if ((scaledviewwidth == vid.width)&&(viewheight==vid.height))
-        return;
+  //added:08-01-98:draw pattern around the status bar too (when hires),
+  //                so return only when in full-screen without status bar.
+  if ((scaledviewwidth == vid.width)&&(viewheight==vid.height))
+    return;
 
-    src  = scr_borderpatch;
-    dest = vid.screens[1];
+  Texture *t = scr_borderpatch;
 
-    for (y=0 ; y<vid.height ; y++)
-    {
-        for (x=0 ; x<vid.width/64 ; x++)
-        {
-            memcpy (dest, src+((y&63)<<6), 64);
-            dest += 64;
-        }
+  for (y=0; y<vid.height; y += t->height)
+    for (x=0; x<vid.width; x += t->width)
+      t->Draw(x, y, 1);
 
-        if (vid.width&63)
-        {
-            memcpy (dest, src+((y&63)<<6), vid.width&63);
-            dest += (vid.width&63);
-        }
-    }
-
-    //added:08-01-98:dont draw the borders when viewwidth is full vid.width.
-    if (scaledviewwidth == vid.width)
-       return;
+  //added:08-01-98:dont draw the borders when viewwidth is full vid.width.
+  if (scaledviewwidth == vid.width)
+    return;
     
-    if( game.mode == gm_heretic )
+  if (game.mode >= gm_heretic)
     {
-        step = 16;
-        boff = 4; // borderoffset
+      step = 16;
+      boff = 4; // borderoffset
     }
-    else
+  else
     {
-        step = 8;
-        boff = 8;
+      step = 8;
+      boff = 8;
     }
 
-    patch = (patch_t *)fc.CacheLumpNum (viewborderlump[BRDR_T],PU_CACHE);
-    for (x=0 ; x<scaledviewwidth ; x+=step)
-        V_DrawPatch (viewwindowx+x,viewwindowy-boff,1,patch);
-    patch = (patch_t *)fc.CacheLumpNum (viewborderlump[BRDR_B],PU_CACHE);
-    for (x=0 ; x<scaledviewwidth ; x+=step)
-        V_DrawPatch (viewwindowx+x,viewwindowy+viewheight,1,patch);
-    patch = (patch_t *)fc.CacheLumpNum (viewborderlump[BRDR_L],PU_CACHE);
-    for (y=0 ; y<viewheight ; y+=step)
-        V_DrawPatch (viewwindowx-boff,viewwindowy+y,1,patch);
-    patch = (patch_t *)fc.CacheLumpNum (viewborderlump[BRDR_R],PU_CACHE);
-    for (y=0 ; y<viewheight ; y+=step)
-        V_DrawPatch (viewwindowx+scaledviewwidth,viewwindowy+y,1,patch);
+  for (x=0 ; x<scaledviewwidth ; x+=step)
+    viewbordertex[BRDR_T]->Draw(viewwindowx+x, viewwindowy-boff, 1);
 
-    // Draw beveled corners.
-    V_DrawPatch (viewwindowx-boff,
-                 viewwindowy-boff,
-                 1,
-                 (patch_t *)fc.CacheLumpNum (viewborderlump[BRDR_TL],PU_CACHE));
+  for (x=0 ; x<scaledviewwidth ; x+=step)
+    viewbordertex[BRDR_B]->Draw(viewwindowx+x, viewwindowy+viewheight, 1);
 
-    V_DrawPatch (viewwindowx+scaledviewwidth,
-                 viewwindowy-boff,
-                 1,
-                 (patch_t *)fc.CacheLumpNum (viewborderlump[BRDR_TR],PU_CACHE));
+  for (y=0 ; y<viewheight ; y+=step)
+    viewbordertex[BRDR_L]->Draw(viewwindowx-boff, viewwindowy+y, 1);
 
-    V_DrawPatch (viewwindowx-boff,
-                 viewwindowy+viewheight,
-                 1,
-                 (patch_t *)fc.CacheLumpNum (viewborderlump[BRDR_BL],PU_CACHE));
+  for (y=0 ; y<viewheight ; y+=step)
+    viewbordertex[BRDR_R]->Draw(viewwindowx+scaledviewwidth, viewwindowy+y, 1);
 
-    V_DrawPatch (viewwindowx+scaledviewwidth,
-                 viewwindowy+viewheight,
-                 1,
-                 (patch_t *)fc.CacheLumpNum (viewborderlump[BRDR_BR],PU_CACHE));
+  // Draw beveled corners.
+  viewbordertex[BRDR_TL]->Draw(viewwindowx-boff, viewwindowy-boff, 1);
+  viewbordertex[BRDR_TR]->Draw(viewwindowx+scaledviewwidth, viewwindowy-boff, 1);
+  viewbordertex[BRDR_BL]->Draw(viewwindowx-boff, viewwindowy+viewheight, 1);
+  viewbordertex[BRDR_BR]->Draw(viewwindowx+scaledviewwidth, viewwindowy+viewheight, 1);
 }
 
 

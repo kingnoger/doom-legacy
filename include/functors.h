@@ -37,4 +37,24 @@ struct less_cstring
   { return strcmp(s1, s2) < 0; }
 };
 
+
+
+struct equal_cstring8
+{
+  bool operator()(const char* s1, const char* s2) const
+  { return strncmp(s1, s2, 8) == 0; }
+};
+
+struct hash_cstring8
+{
+  size_t operator()(const char* s) const
+  {
+    unsigned long h = 0; 
+    for (int i=0; s[i] && i < 8; ++i)
+      h = 5*h + s[i];
+  
+    return size_t(h);
+  }
+};
+
 #endif

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/03/28 15:16:15  smite-meister
+// Texture cache.
+//
 // Revision 1.4  2004/01/10 16:03:00  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
@@ -124,7 +127,8 @@
 #include <ctype.h>
 
 #include "doomdef.h"
-#include "r_local.h"
+
+#include "r_data.h"
 #include "r_state.h"
 
 #include "v_video.h"
@@ -138,34 +142,14 @@
 #include "z_zone.h"
 
 #ifdef HWRENDER
-#include "hardware/hw_glob.h"
-#include "hardware/hw_main.h"
+# include "hardware/hw_glob.h"
+# include "hardware/hw_main.h"
 #endif
 
 
-//added:18-02-98: this is an offset added to the destination address,
-//                for all SCALED graphics. When the menu is displayed,
-//                it is TEMPORARILY set to vid.centerofs, the rest of
-//                the time it should be zero.
-//                The menu is scaled, a round multiple of the original
-//                pixels to keep the graphics clean, then it is centered
-//                a little, but excepeted the menu, scaled graphics don't
-//                have to be centered. Set by m_menu.c, and SCR_Recalc()
-int     scaledofs;
 
+byte *current_colormap; // for applying colormaps to Drawn Textures
 
-// V_MarkRect : this used to refresh only the parts of the screen
-//              that were modified since the last screen update
-//              it is useless today
-//
-/*
-int dirtybox[4];
-void V_MarkRect(int x, int y, int width, int height)
-{
-  M_AddToBox (dirtybox, x, y);
-  M_AddToBox (dirtybox, x+width-1, y+height-1);
-}
-*/
 
 //
 // V_CopyRect
@@ -174,100 +158,108 @@ void V_CopyRect(int srcx, int srcy, int srcscrn,
 		int width, int height,
 		int destx, int desty, int destscrn)
 {
-    // WARNING don't mix
-    if ((srcscrn & V_SCALESTART) || (destscrn & V_SCALESTART))
+  // WARNING don't mix
+  if ((srcscrn & V_SLOC) || (destscrn & V_SLOC))
     {
-        srcx*=vid.dupx;
-        srcy*=vid.dupy;
-        width*=vid.dupx;
-        height*=vid.dupy;
-        destx*=vid.dupx;
-        desty*=vid.dupy;
+      srcx*=vid.dupx;
+      srcy*=vid.dupy;
+      width*=vid.dupx;
+      height*=vid.dupy;
+      destx*=vid.dupx;
+      desty*=vid.dupy;
     }
-    srcscrn&=0xffff;
-    destscrn&=0xffff;
+  srcscrn &= 0xffff;
+  destscrn &= 0xffff;
 
 #ifdef RANGECHECK
-    if (srcx<0
-        ||srcx+width >vid.width
-        || srcy<0
-        || srcy+height>vid.height
-        ||destx<0||destx+width >vid.width
-        || desty<0
-        || desty+height>vid.height
-        || (unsigned)srcscrn>4
-        || (unsigned)destscrn>4)
-    {
-        I_Error ("Bad V_CopyRect %d %d %d %d %d %d %d %d", srcx, srcy, 
-                  srcscrn, width, height, destx, desty, destscrn);
-    }
+  if (srcx<0
+      ||srcx+width >vid.width
+      || srcy<0
+      || srcy+height>vid.height
+      ||destx<0||destx+width >vid.width
+      || desty<0
+      || desty+height>vid.height
+      || (unsigned)srcscrn>4
+      || (unsigned)destscrn>4)
+    I_Error ("Bad V_CopyRect %d %d %d %d %d %d %d %d", srcx, srcy, 
+	     srcscrn, width, height, destx, desty, destscrn);
 #endif
-    //V_MarkRect (destx, desty, width, height);
+
 
 #ifdef DEBUG
-    CONS_Printf("V_CopyRect: vidwidth %d screen[%d]=%x to screen[%d]=%x\n",
-             vid.width,srcscrn,vid.screens[srcscrn],destscrn,vid.screens[destscrn]);
-    CONS_Printf("..........: srcx %d srcy %d width %d height %d destx %d desty %d\n",
-            srcx,srcy,width,height,destx,desty);
+  CONS_Printf("V_CopyRect: vidwidth %d screen[%d]=%x to screen[%d]=%x\n",
+	      vid.width,srcscrn,vid.screens[srcscrn],destscrn,vid.screens[destscrn]);
+  CONS_Printf("..........: srcx %d srcy %d width %d height %d destx %d desty %d\n",
+	      srcx,srcy,width,height,destx,desty);
 #endif
 
-    byte *src = vid.screens[srcscrn]+vid.width*srcy+srcx;
-    byte *dest = vid.screens[destscrn]+vid.width*desty+destx;
+  byte *src = vid.screens[srcscrn]+vid.width*srcy+srcx;
+  byte *dest = vid.screens[destscrn]+vid.width*desty+destx;
 
-    for (; height>0 ; height--)
+  for (; height>0 ; height--)
     {
-        memcpy (dest, src, width);
-        src += vid.width;
-        dest += vid.width;
+      memcpy (dest, src, width);
+      src += vid.width;
+      dest += vid.width;
     }
 }
+
+
 
 #if !defined(USEASM) || defined(WIN32)
 // --------------------------------------------------------------------------
 // Copy a rectangular area from one bitmap to another (8bpp)
 // srcPitch, destPitch : width of source and destination bitmaps
 // --------------------------------------------------------------------------
-void VID_BlitLinearScreen (byte* srcptr, byte* destptr,
-                           int width, int height,
-                           int srcrowbytes, int destrowbytes)
+void VID_BlitLinearScreen(byte* srcptr, byte* destptr,
+			  int width, int height,
+			  int srcrowbytes, int destrowbytes)
 {
-    if (srcrowbytes==destrowbytes)
-      memcpy (destptr, srcptr, srcrowbytes * height);
-    else
+  if (srcrowbytes==destrowbytes)
+    memcpy(destptr, srcptr, srcrowbytes * height);
+  else
     {
-        while (height--)
+      while (height--)
         {
-            memcpy (destptr, srcptr, width);
+	  memcpy(destptr, srcptr, width);
 
-            destptr += destrowbytes;
-            srcptr += srcrowbytes;
+	  destptr += destrowbytes;
+	  srcptr += srcrowbytes;
         }
     }
 }
 #endif
 
 
+
+//======================================================================
+
 //
 // V_DrawPatch
-// Masks a column based masked pic to the screen. NO SCALING!!!
+// V_DrawScaledPatch: like V_DrawPatch, but scaled 2,3,4 times the original size and position
+// V_DrawMappedPatch: like V_DrawScaledPatch, but with a colormap.
+// V_DrawTranslucentPatch: like scaled, but also translucent
 //
-void V_DrawPatch(int x, int y, int scrn, patch_t *patch)
+void PatchTexture::Draw(int x, int y, int scrn = 0)
 {
-  // draw an hardware converted patch
+  int flags = scrn & V_FLAGMASK;
+  scrn &= V_SCREENMASK;
+
 #ifdef HWRENDER
+  // draw an hardware converted patch
   if (rendermode != render_soft)
     {
-      HWR_DrawPatch ((GlidePatch_t*)patch, x, y, V_NOSCALESTART|V_NOSCALEPATCH);
+      HWR_Draw(x, y, flags);
       return;
     }
 #endif
 
-  y -= SHORT(patch->topoffset);
-  x -= SHORT(patch->leftoffset);
+  x -= leftoffset; // TODO offset*dup
+  y -= topoffset;
+
+
 #ifdef RANGECHECK
-  if (x<0 || x+SHORT(patch->width) > vid.width || 
-      y<0 || y+SHORT(patch->height) > vid.height
-      || (unsigned)scrn>4)
+  if (x<0 || x + width > vid.width || y<0 || y + height > vid.height || scrn > 4)
     {
       fprintf(stderr, "Patch at %d,%d exceeds LFB\n", x,y);
       // No I_Error abort - what is up with TNT.WAD?
@@ -276,274 +268,160 @@ void V_DrawPatch(int x, int y, int scrn, patch_t *patch)
     }
 #endif
 
-  //if (!scrn) V_MarkRect (x, y, SHORT(patch->width), SHORT(patch->height));
+  // scaling
+  byte *desttop = vid.screens[scrn];
+  if (flags & V_SLOC)
+    desttop += y*vid.dupy*vid.width + x*vid.dupx + vid.scaledofs;
+  else
+    desttop += y*vid.width + x;
 
-  int col = 0;
-  int         count;
-  column_t*   column;
-  byte*       dest;
-  byte*       source;
-
-  byte *desttop = vid.screens[scrn]+y*vid.width+x;
-
-  int w = SHORT(patch->width);
-
-  for (; col<w ; x++, col++, desttop++)
+  byte *destend;
+  fixed_t rowfrac, colfrac;
+  fixed_t col = 0;
+  if (flags & V_SSIZE)
     {
-      column = (column_t *)((byte *)patch + LONG(patch->columnofs[col]));
+      colfrac = FixedDiv(FRACUNIT, vid.dupx<<FRACBITS);
+      rowfrac = FixedDiv(FRACUNIT, vid.dupy<<FRACBITS);
+      destend = desttop + width*vid.dupx;
 
-      // step through the posts in a column
-      while (column->topdelta != 0xff)
-        {
-	  source = (byte *)column + 3;
-	  dest = desttop + column->topdelta*vid.width;
-	  count = column->length;
-
-	  while (count--)
-            {
-	      *dest = *source++;
-	      dest += vid.width;
-            }
-	  column = (column_t *)((byte *)column + column->length + 4);
-        }
+      if (flags & V_FLIPX)
+	{
+	  colfrac = -colfrac;
+	  col = (width << FRACBITS) + colfrac;
+	}
     }
-}
-
-
-
-//
-// V_DrawScaledPatch
-//   like V_DrawPatch, but scaled 2,3,4 times the original size and position
-//   this is used for menu and title screens, with high resolutions
-//
-//added:05-02-98:
-// default params : scale patch and scale start
-void V_DrawScaledPatch(int x, int y, int scrn, patch_t *patch) // hacked flags in scrn...
-{
-    int         count;
-    int         col;
-    column_t*   column;
-    byte*       desttop;
-    byte*       dest;
-    byte*       source;
-
-    int         dupx,dupy;
-    int         ofs;
-    int         colfrac,rowfrac;
-    byte*       destend;
-
-    // draw an hardware converted patch
-#ifdef HWRENDER
-    if (rendermode != render_soft) 
+  else
     {
-        HWR_DrawPatch ((GlidePatch_t*)patch, x, y, scrn);
-        return;
-    }
-#endif
+      colfrac = rowfrac = 1;
+      destend = desttop + width;
 
-    if ((scrn & V_NOSCALEPATCH))
-        dupx = dupy = 1;
-    else
-    {
-        dupx = vid.dupx;
-        dupy = vid.dupy;
-    }
-        
-    y -= SHORT(patch->topoffset);
-    x -= SHORT(patch->leftoffset);
-
-    colfrac  = FixedDiv (FRACUNIT, dupx<<FRACBITS);
-    rowfrac  = FixedDiv (FRACUNIT, dupy<<FRACBITS);
-
-    desttop = vid.screens[scrn&0xFF];
-    if (scrn&V_NOSCALESTART)
-        desttop += (y*vid.width) + x;
-    else
-        desttop += (y*dupy*vid.width) + (x*dupx) + scaledofs;
-    destend = desttop + SHORT(patch->width) * dupx;
-
-    if (scrn & V_FLIPPEDPATCH)
-    {
-        colfrac = -colfrac;
-        col=(SHORT(patch->width)<<FRACBITS)+colfrac;
-    }
-    else
-        col = 0;
-
-    for (; desttop<destend ; col+=colfrac, desttop++)
-    {
-        column = (column_t *)((byte *)patch + LONG(patch->columnofs[col>>FRACBITS]));
-
-        while (column->topdelta != 0xff)
-        {
-            source = (byte *)column + 3;
-            dest   = desttop + column->topdelta*dupy*vid.width;
-            count  = column->length*dupy;
-
-            ofs = 0;
-            while (count--)
-            {
-                *dest = source[ofs>>FRACBITS];
-                dest += vid.width;
-                ofs += rowfrac;
-            }
-
-            column = (column_t *)((byte *)column + column->length + 4);
-        }
-    }
-}
-
-
-//
-//  V_DrawMappedPatch : like V_DrawScaledPatch, but with a colormap.
-//
-//
-//added:05-02-98:
-void V_DrawMappedPatch(int x, int y, int scrn, patch_t *patch, byte *colormap)
-{
-    int         count;
-    int         col;
-    column_t*   column;
-    byte*       desttop;
-    byte*       dest;
-    byte*       source;
-    int         w;
-
-    int         dupx,dupy;
-    int         ofs;
-    int         colfrac,rowfrac;
-
-    // draw an hardware converted patch
-#ifdef HWRENDER
-    if (rendermode != render_soft) 
-    {
-        HWR_DrawMappedPatch ((GlidePatch_t*)patch, x, y, scrn, colormap);
-        return;
-    }
-#endif
-
-    if ((scrn & V_NOSCALEPATCH))
-        dupx = dupy = 1;
-    else
-    {
-        dupx = vid.dupx;
-        dupy = vid.dupy;
-    }
-    y -= SHORT(patch->topoffset);
-    x -= SHORT(patch->leftoffset);
-
-    if (scrn & V_NOSCALESTART)
-        desttop = vid.screens[scrn&0xffff] + (y*vid.width) + x;
-    else
-        desttop = vid.screens[scrn&0xffff] + (y*vid.dupy*vid.width) + (x*vid.dupx) + scaledofs;
-
-    scrn &= 0xffff;
-
-    //if (!scrn) V_MarkRect (x, y, SHORT(patch->width)*dupx, SHORT(patch->height)*dupy);
-
-    col = 0;
-    colfrac  = FixedDiv (FRACUNIT, dupx<<FRACBITS);
-    rowfrac  = FixedDiv (FRACUNIT, dupy<<FRACBITS);
-
-    w = SHORT(patch->width)<<FRACBITS;
-
-    for (; col<w ; col+=colfrac, desttop++)
-    {
-        column = (column_t *)((byte *)patch + LONG(patch->columnofs[col>>FRACBITS]));
-
-        while (column->topdelta != 0xff)
-        {
-            source = (byte *)column + 3;
-            dest   = desttop + column->topdelta*dupy*vid.width;
-            count  = column->length*dupy;
-
-            ofs = 0;
-            while (count--)
-            {
-                *dest = *(colormap + source[ofs>>FRACBITS]);
-                dest += vid.width;
-                ofs += rowfrac;
-            }
-
-            column = (column_t *)((byte *)column + column->length + 4);
-        }
+      if (flags & V_FLIPX)
+	{
+	  colfrac = -1;
+	  col = width - 1;
+	}
     }
 
-}
+  patch_t *p = (patch_t *)Generate();
 
-
-
-//added:16-02-98: now used for crosshair
-//
-//  This draws a patch over a background with translucency...SCALED
-//  SCALE THE STARTING COORDS!!
-//
-void V_DrawTranslucentPatch (int x, int y, int scrn, patch_t *patch) // hacked flag in scrn
-{
-    int         count;
-    int         col;
-    column_t*   column;
-    byte*       desttop;
-    byte*       dest;
-    byte*       source;
-    int         w;
-
-    int         dupx,dupy;
-    int         ofs;
-    int         colfrac,rowfrac;
-
-    // draw an hardware converted patch
-#ifdef HWRENDER
-    if (rendermode != render_soft) 
+  if (flags & V_SSIZE)
+    for ( ; desttop < destend; col += colfrac, desttop++)
       {
-        HWR_DrawPatch ((GlidePatch_t*)patch, x, y, scrn);
-        return;
+	column_t *column = (column_t *)(data + LONG(p->columnofs[col >> FRACBITS]));
+
+	// step through the posts in a column
+	while (column->topdelta != 0xff)
+	  {
+	    byte *source = (byte *)column + 3;
+	    byte *dest   = desttop + column->topdelta*vid.dupy*vid.width;
+	    int count  = column->length*vid.dupy;
+
+	    int row = 0;
+	    while (count--)
+	      {
+		byte pixel = source[row >> FRACBITS];
+
+		// the compiler is supposed to optimize the ifs out of the loop
+		if (flags & V_MAP)
+		  pixel = current_colormap[pixel];
+
+		if (flags & V_TL)
+		  pixel = transtables[(pixel << 8) + *dest];
+
+		*dest = pixel;
+		dest += vid.width;
+		row += rowfrac;
+	      }
+	    column = (column_t *)((byte *)column + column->length + 4);
+	  }
       }
+  else // unscaled, perhaps a bit faster?
+    for ( ; desttop < destend; col += colfrac, desttop++)
+      {
+	column_t *column = (column_t *)(data + LONG(p->columnofs[col]));
+
+	// step through the posts in a column
+	while (column->topdelta != 0xff)
+	  {
+	    byte *source = (byte *)column + 3;
+	    byte *dest = desttop + column->topdelta*vid.width;
+	    int count = column->length;
+
+	    while (count--)
+	      {
+		byte pixel = *source++;
+
+		// the compiler is supposed to optimize the ifs out of the loop
+		if (flags & V_MAP)
+		  pixel = current_colormap[pixel];
+
+		if (flags & V_TL)
+		  pixel = transtables[(pixel << 8) + *dest];
+
+		*dest = pixel;
+		dest += vid.width;
+	      }
+	    column = (column_t *)((byte *)column + column->length + 4);
+	  }
+      }
+}
+
+
+//======================================================================
+
+//
+// V_DrawRawScreen
+// V_DrawScalePic: CURRENTLY USED FOR StatusBarOverlay, scale pic but not starting coords
+// V_BlitScalePic
+// Always scaled in software...
+//
+
+void LumpTexture::Draw(int x, int y, int scrn = 0)
+{
+  int flags = scrn & V_FLAGMASK;
+  scrn &= V_SCREENMASK;
+
+#ifdef HWRENDER
+  if (rendermode != render_soft)
+    {
+      HWR_Draw(x, y, flags);
+      return;
+    }
 #endif
 
-    dupx = vid.dupx;
-    dupy = vid.dupy;
-
-    y -= SHORT(patch->topoffset)*dupy;
-    x -= SHORT(patch->leftoffset)*dupx;
-
-    // if (!(scrn&0xffff)) V_MarkRect (x, y, SHORT(patch->width)*dupx, SHORT(patch->height)*dupy);
-
-    col = 0;
-    colfrac  = FixedDiv (FRACUNIT, dupx<<FRACBITS);
-    rowfrac  = FixedDiv (FRACUNIT, dupy<<FRACBITS);
-
-    desttop = vid.screens[scrn&0xffff];
-    if (scrn&V_NOSCALESTART)
-        desttop += (y*vid.width) + x;        
-    else
-        desttop += (y*dupy*vid.width) + (x*dupx) + scaledofs;
-
-    w = SHORT(patch->width)<<FRACBITS;
-
-    for (; col<w ; col+=colfrac, desttop++)
+  if (mode != PALETTE)
     {
-        column = (column_t *)((byte *)patch + LONG(patch->columnofs[col>>FRACBITS]));
+      CONS_Printf("pic mode %d not supported in Software\n", mode);
+      return;
+    }
 
-        while (column->topdelta != 0xff)
+  byte *dest = vid.screens[scrn] + max(0, y*vid.width) + max(0, x);
+
+  // y clipping to the screen
+  //  if (y + height*vid.dupy >= vid.height)
+  //  mheight = (vid.height - y) / vid.dupy - 1;
+  // TODO WARNING no x clipping (not needed for the moment)
+
+  byte *src = Generate();
+
+  // TODO crap
+  for (int i=0; i<height; i++)
+    {
+      for (int dupy = vid.dupy; dupy; dupy--)        
         {
-            source = (byte *)column + 3;
-            dest   = desttop + column->topdelta*dupy*vid.width;
-            count  = column->length*dupy;
-
-            ofs = 0;
-            while (count--)
+	  for (int j=0; j<width; j++)
             {
-                *dest = *(transtables + ((source[ofs>>FRACBITS]<<8)&0xFF00) + (*dest&0xFF));
-                dest += vid.width;
-                ofs += rowfrac;
+	      for (int dupx = vid.dupx; dupx; dupx--)
+		*dest++ = *src;
+	      src++;
             }
-
-            column = (column_t *)((byte *)column + column->length + 4);
+	  dest += vid.width - vid.dupx*width;
         }
     }
 }
 
+
+//======================================================================
 
 //
 // V_DrawBlock
@@ -551,29 +429,19 @@ void V_DrawTranslucentPatch (int x, int y, int scrn, patch_t *patch) // hacked f
 //
 void V_DrawBlock(int x, int y, int scrn, int width, int height, byte* src)
 {
-  byte*       dest;
-
 #ifdef RANGECHECK
-    if (x<0
-        ||x+width >vid.width
-        || y<0
-        || y+height>vid.height
-        || (unsigned)scrn>4)
-    {
-        I_Error ("Bad V_DrawBlock");
-    }
+  if (x<0 ||x+width >vid.width || y<0 || y+height>vid.height || scrn > 4)
+    I_Error ("Bad V_DrawBlock");
 #endif
 
-    //V_MarkRect (x, y, width, height);
+  byte *dest = vid.screens[scrn] + y*vid.width + x;
 
-    dest = vid.screens[scrn] + y*vid.width + x;
-
-    while (height--)
+  while (height--)
     {
-        memcpy (dest, src, width);
+      memcpy(dest, src, width);
 
-        src += width;
-        dest += vid.width;
+      src += width;
+      dest += vid.width;
     }
 }
 
@@ -583,140 +451,51 @@ void V_DrawBlock(int x, int y, int scrn, int width, int height, byte* src)
 // V_GetBlock
 // Gets a linear block of pixels from the view buffer.
 //
-void V_GetBlock (int x, int y, int scrn, int width, int height, byte *dest)
+void V_GetBlock(int x, int y, int scrn, int width, int height, byte *dest)
 {
-  byte *src;
-
   if (rendermode!=render_soft)
     I_Error ("V_GetBlock: called in non-software mode");
 
-
 #ifdef RANGECHECK
-    if (x<0
-        ||x+width >vid.width
-        || y<0
-        || y+height>vid.height
-        || (unsigned)scrn>4)
-    {
-        I_Error ("Bad V_GetBlock");
-    }
+  if (x<0 ||x+width >vid.width || y<0 || y+height>vid.height || scrn > 4)
+    I_Error ("Bad V_GetBlock");
 #endif
 
-    src = vid.screens[scrn] + y*vid.width+x;
+  byte *src = vid.screens[scrn] + y*vid.width+x;
 
-    while (height--)
+  while (height--)
     {
-        memcpy (dest, src, width);
-        src += vid.width;
-        dest += width;
-    }
-}
-
-static void V_BlitScalePic(int x1, int y1, int scrn, pic_t *pic);
-//  FIXME Draw a linear pic, scaled, TOTALLY CRAP CODE!!! OPTIMISE AND ASM!!
-//  CURRENTLY USED FOR StatusBarOverlay, scale pic but not starting coords
-//
-void V_DrawScalePic (int x1, int y1, int scrn, int lumpnum)
-{
-#ifdef HWRENDER
-    if (rendermode!=render_soft)
-    {
-        HWR_DrawPic(x1, y1, lumpnum);
-        return;
-    }
-#endif
-
-    V_BlitScalePic(x1, y1, scrn, (pic_t *)fc.CacheLumpNum(lumpnum,PU_CACHE));
-}
-
-static void V_BlitScalePic(int x1, int y1, int scrn, pic_t *pic)
-{
-    int         dupx,dupy;
-    int         x,y;
-    byte        *src, *dest;
-    int         width,height;
-
-    width = SHORT(pic->width);
-    height= SHORT(pic->height);
-    scrn&=0xffff;
-
-    if (pic->mode != 0)
-    {
-        CONS_Printf("pic mode %d not supported in Software\n",pic->mode);
-        return;
-    }
-
-    dest = vid.screens[scrn] + max(0,y1*vid.width) + max(0,x1);
-    // y cliping to the screen
-    if (y1+height*vid.dupy>=vid.width)
-        height = (vid.width-y1)/vid.dupy-1;
-    // WARNING no x clipping (not needed for the moment)
-
-    for (y=max(0,-y1/vid.dupy) ; y<height ; y++)
-    {
-        for(dupy=vid.dupy;dupy;dupy--)        
-        {
-            src = pic->data + y*width;
-            for (x=0 ; x<width ; x++)
-            {
-                for(dupx=vid.dupx;dupx;dupx--)
-                    *dest++ = *src;
-                src++;
-            }
-            dest += vid.width-vid.dupx*width;
-        }
+      memcpy(dest, src, width);
+      src += vid.width;
+      dest += width;
     }
 }
 
 
-void V_DrawRawScreen(int x1, int y1, int lumpnum, int width, int height)
-{
-#ifdef HWRENDER
-    if (rendermode!=render_soft)
-    {
-        // save size somewhere and mark lump as a raw pic !
-        GlidePatch_t *grpatch = fc.GetHWRNum(lumpnum);
-        grpatch->width = width;
-        grpatch->height = height;
-        grpatch->mipmap.flags |= TF_RAWASPIC;
-        HWR_DrawPic(x1, y1, lumpnum);
-        return;
-    }
-#endif
-
-    V_BlitScalePic(x1, y1, 0, fc.CacheRawAsPic(lumpnum, width, height, PU_CACHE));
-}
 
 
 //
 //  Fills a box of pixels with a single color, NOTE: scaled to screen size
 //
 //added:05-02-98:
-void V_DrawFill (int x, int y, int w, int h, int c)
+void V_DrawFill(int x, int y, int w, int h, int c)
 {
-    byte      *dest;
-    int       u, v;
-    int       dupx,dupy;
-
 #ifdef HWRENDER
-    if (rendermode!=render_soft)
+  if (rendermode!=render_soft)
     {
-        HWR_DrawFill(x, y, w, h, c);
-        return;
+      HWR_DrawFill(x, y, w, h, c);
+      return;
     }
 #endif
 
-    dupx = vid.dupx;
-    dupy = vid.dupy;
+  byte *dest = vid.screens[0] + y*vid.dupy*vid.width + x*vid.dupx + vid.scaledofs;
 
-    dest = vid.screens[0] + y*dupy*vid.width + x*dupx + scaledofs;
+  w *= vid.dupx;
+  h *= vid.dupy;
 
-    w *= dupx;
-    h *= dupy;
-
-    for (v=0 ; v<h ; v++, dest += vid.width)
-        for (u=0 ; u<w ; u++)
-            dest[u] = c;
+  for (int v=0 ; v<h ; v++, dest += vid.width)
+    for (int u=0 ; u<w ; u++)
+      dest[u] = c;
 }
 
 
@@ -725,48 +504,39 @@ void V_DrawFill (int x, int y, int w, int h, int c)
 //  Fills a box of pixels using a flat texture as a pattern,
 //  scaled to screen size.
 //
-//added:06-02-98:
-void V_DrawFlatFill (int x, int y, int w, int h, int flatnum)
+void V_DrawFlatFill(int x, int y, int w, int h, Texture *t)
 {
-    byte      *dest;
-    int       u, v;
-    int       dupx,dupy;
-    fixed_t   dx,dy,xfrac,yfrac;
-    byte      *src;
-    byte      *flat;
-
 #ifdef HWRENDER
-    if (rendermode != render_soft)
+  if (rendermode != render_soft)
     {
-        HWR_DrawFlatFill(x,y,w,h,flatnum);
-        return;
+      HWR_DrawFlatFill(x,y,w,h,t);
+      return;
     }
 #endif
 
-    flat = (byte *)fc.CacheLumpNum (flatnum, PU_CACHE);
+  byte *flat = t->Generate();
+  byte *dest = vid.screens[0] + y*vid.dupy*vid.width + x*vid.dupx + vid.scaledofs;
 
-    dupx = vid.dupx;
-    dupy = vid.dupy;
+  w *= vid.dupx;
+  h *= vid.dupy;
 
-    dest = vid.screens[0] + y*dupy*vid.width + x*dupx + scaledofs;
+  int height = t->height;
+  int width = t->width;
 
-    w *= dupx;
-    h *= dupy;
+  fixed_t dx = FixedDiv(FRACUNIT, vid.dupx<<FRACBITS);
+  fixed_t dy = FixedDiv(FRACUNIT, vid.dupy<<FRACBITS);
 
-    dx = FixedDiv(FRACUNIT,dupx<<FRACBITS);
-    dy = FixedDiv(FRACUNIT,dupy<<FRACBITS);
-
-    yfrac = 0;
-    for (v=0; v<h ; v++, dest += vid.width)
+  fixed_t yfrac = 0;
+  for (int v=0; v<h; v++, dest += vid.width)
     {
-        xfrac = 0;
-        src = flat + (((yfrac>>FRACBITS)&63)<<6);
-        for (u=0 ; u<w ; u++)
+      fixed_t xfrac = 0;
+      byte *src = flat + (((yfrac >> FRACBITS) % height) * width);
+      for (int u=0; u<w; u++)
         {
-            dest[u] = src[(xfrac>>FRACBITS)&63];
-            xfrac += dx;
+	  dest[u] = src[(xfrac >> FRACBITS) % width];
+	  xfrac += dx;
         }
-        yfrac += dy;
+      yfrac += dy;
     }
 }
 
@@ -776,34 +546,32 @@ void V_DrawFlatFill (int x, int y, int w, int h, int flatnum)
 //  Fade all the screen buffer, so that the menu is more readable,
 //  especially now that we use the small hufont in the menus...
 //
-void V_DrawFadeScreen ()
+void V_DrawFadeScreen()
 {
-    int         x,y,w;
-    int         *buf;
-    unsigned    quad;
-    byte        p1, p2, p3, p4;
-    byte*       fadetable = (byte *) colormaps + 16*256;
-    //short*    wput;
-
-#ifdef HWRENDER // not win32 only 19990829 by Kin
-    if (rendermode!=render_soft) {
-        HWR_FadeScreenMenuBack (0x01010160, 0);  //faB: hack, 0 means full height :o
-        return;
+#ifdef HWRENDER
+  if (rendermode != render_soft)
+    {
+      HWR_FadeScreenMenuBack(0x01010160, 0);  //faB: hack, 0 means full height :o
+      return;
     }
 #endif
 
-    w = vid.width>>2;
-    for (y=0 ; y<vid.height ; y++)
+  int w = vid.width>>2;
+
+  byte  p1, p2, p3, p4;
+  byte *fadetable = (byte *)colormaps + 16*256;
+
+  for (int y=0 ; y<vid.height ; y++)
     {
-        buf = (int *)(vid.screens[0] + vid.width*y);
-        for (x=0 ; x<w ; x++)
+      int *buf = (int *)(vid.screens[0] + vid.width*y);
+      for (int x=0 ; x<w ; x++)
         {
-            quad = buf[x];
-            p1 = fadetable[quad&255];
-            p2 = fadetable[(quad>>8)&255];
-            p3 = fadetable[(quad>>16)&255];
-            p4 = fadetable[quad>>24];
-            buf[x] = (p4<<24) | (p3<<16) | (p2<<8) | p1;
+	  int quad = buf[x];
+	  p1 = fadetable[quad&255];
+	  p2 = fadetable[(quad>>8)&255];
+	  p3 = fadetable[(quad>>16)&255];
+	  p4 = fadetable[quad>>24];
+	  buf[x] = (p4<<24) | (p3<<16) | (p2<<8) | p1;
         }
     }
 
@@ -827,80 +595,77 @@ void V_DrawFadeScreen ()
 // Simple translucence with one color, coords are resolution dependent
 //
 //added:20-03-98: console test
-void V_DrawFadeConsBack (int x1, int y1, int x2, int y2)
+void V_DrawFadeConsBack(int x1, int y1, int x2, int y2)
 {
-    int         x,y,w;
-    int         *buf;
-    unsigned    quad;
-    byte        p1, p2, p3, p4;
-    short*      wput;
+  int         x,y,w;
+  int         *buf;
+  unsigned    quad;
+  byte        p1, p2, p3, p4;
+  short*      wput;
 
-#ifdef HWRENDER // not win32 only 19990829 by Kin
-    if (rendermode!=render_soft) {
-        HWR_FadeScreenMenuBack (0x00500000, y2);  
-        return;
+#ifdef HWRENDER
+  if (rendermode!=render_soft)
+    {
+      HWR_FadeScreenMenuBack(0x00500000, y2);  
+      return;
     }
 #endif
 
-    if (vid.BytesPerPixel == 1)
+  if (vid.BytesPerPixel == 1)
     {
-        x1 >>=2;
-        x2 >>=2;
-        for (y=y1 ; y<y2 ; y++)
+      x1 >>=2;
+      x2 >>=2;
+      for (y=y1 ; y<y2 ; y++)
         {
-            buf = (int *)(vid.screens[0] + vid.width*y);
-            for (x=x1 ; x<x2 ; x++)
+	  buf = (int *)(vid.screens[0] + vid.width*y);
+	  for (x=x1 ; x<x2 ; x++)
             {
-                quad = buf[x];
-                p1 = greenmap[quad&255];
-                p2 = greenmap[(quad>>8)&255];
-                p3 = greenmap[(quad>>16)&255];
-                p4 = greenmap[quad>>24];
-                buf[x] = (p4<<24) | (p3<<16) | (p2<<8) | p1;
+	      quad = buf[x];
+	      p1 = greenmap[quad&255];
+	      p2 = greenmap[(quad>>8)&255];
+	      p3 = greenmap[(quad>>16)&255];
+	      p4 = greenmap[quad>>24];
+	      buf[x] = (p4<<24) | (p3<<16) | (p2<<8) | p1;
             }
         }
     }
-    else
+  else
     {
-        w = x2-x1;
-        for (y=y1 ; y<y2 ; y++)
+      w = x2-x1;
+      for (y=y1 ; y<y2 ; y++)
         {
-            wput = (short*)(vid.screens[0] + vid.width*y) + x1;
-            for (x=0 ; x<w ; x++)
-            {
-                *wput++ = ((*wput&0x7bde) + (15<<5)) >>1;
-            }
+	  wput = (short*)(vid.screens[0] + vid.width*y) + x1;
+	  for (x=0 ; x<w ; x++)
+	    *wput++ = ((*wput&0x7bde) + (15<<5)) >>1;
         }
     }
 }
 
 
+//
 // Writes a single character (draw WHITE if bit 7 set)
 //
-//added:20-03-98:
-void V_DrawCharacter (int x, int y, int c)
+void V_DrawCharacter(int x, int y, int c)
 {
-    int         w;
-    int         flags;
-    bool     white;
+  bool white = c & 0x80;
+  int flags = c & V_FLAGMASK;
+  c &= 0x7F;
 
-    white = c & 0x80;
-    flags = c & 0xffff0000;
-    c &= 0x7f;
+  c = toupper(c) - HU_FONTSTART;
+  if (c < 0 || c >= HU_FONTSIZE)
+    return;
 
-    c = toupper(c) - HU_FONTSTART;
-    if (c < 0 || c>= HU_FONTSIZE)
-        return;
+  Texture *t = hud.font[c];
+  if (x + t->width > vid.width)
+    return;
 
-    w = (hud.font[c]->width);
-    if (x+w > vid.width)
-        return;
+  if (white)
+    {
+      flags |= V_MAP;
+      current_colormap = whitemap;
+    }
 
-    if (white)
-        // draw with colormap, WITHOUT scale
-        V_DrawMappedPatch(x, y, 0|flags, hud.font[c], whitemap);
-    else
-        V_DrawScaledPatch(x, y, 0|flags, hud.font[c]);
+  t->Draw(x, y, flags);
 }
 
 
@@ -909,74 +674,82 @@ void V_DrawCharacter (int x, int y, int c)
 //  Write a string using the hu_font
 //  NOTE: the text is centered for screens larger than the base width
 //
-//added:05-02-98:
-void V_DrawString (int x, int y, int option, const char *str)
+void V_DrawString(int x, int y, int option, const char *str)
 {
-    int         w;
-    const char* ch;
-    int         c;
-    int         cx;
-    int         cy;
-    int         dupx,dupy,scrwidth = BASEVIDWIDTH;
-
-    ch = str;
-    cx = x;
-    cy = y;
-    if (option & V_NOSCALESTART)
+  if (option & V_WHITEMAP)
     {
-        dupx = vid.dupx;
-        dupy = vid.dupy;
-        scrwidth = vid.width;
+      current_colormap = whitemap;
+      option |= V_MAP;
     }
-    else
-        dupx = dupy = 1;
 
-    while(1)
+  int dupx, dupy, scrwidth;
+
+  // TODO
+  //if (option & V_SSIZE) {
+      // scale later
+      dupx = dupy = 1;
+      scrwidth = BASEVIDWIDTH;
+      /*
+    }
+  else
     {
-        c = *ch++;
-        if (!c)
-            break;
-        if (c == '\n')
+      dupx = vid.dupx;
+      dupy = vid.dupy;
+      scrwidth = vid.width;
+    }
+      */
+
+  // cursor coordinates
+  int cx = x;
+  int cy = y;
+
+  while (1)
+    {
+      int c = *str++;
+      if (!c)
+	break;
+
+      if (c == '\n')
         {
-            cx = x;
-            cy += 12*dupy;
-            continue;
+	  cx = x;
+	  cy += 12*dupy;
+	  continue;
         }
 
-        c = toupper(c) - HU_FONTSTART;
-        if (c < 0 || c>= HU_FONTSIZE)
+      c = toupper(c) - HU_FONTSTART;
+      if (c < 0 || c >= HU_FONTSIZE)
         {
-            cx += 4*dupx;
-            continue;
+	  cx += 4*dupx;
+	  continue;
         }
 
-        w = (hud.font[c]->width)*dupx;
-        if (cx+w > scrwidth)
-            break;
-        if (option & V_WHITEMAP)
-            V_DrawMappedPatch(cx, cy, option, hud.font[c], whitemap);
-        else
-            V_DrawScaledPatch(cx, cy, option, hud.font[c]);
-        cx+=w;
+      Texture *t = hud.font[c];
+
+      int w = t->width * dupx;
+      if (cx + w > scrwidth)
+	break;
+
+      t->Draw(cx, cy, option | V_SCALE);
+
+      cx += w;
     }
 }
+
 
 //
 // Find string width from hu_font chars
 //
 int V_StringWidth(const char *str)
 {
-  int             i;
-  int             w = 0;
-  int             c;
+  int w = 0;
 
-  for (i = 0;i < (int)strlen(str);i++)
+  for (int i = 0; str[i]; i++)
     {
-      c = toupper(str[i]) - HU_FONTSTART;
+      int c = toupper(str[i]) - HU_FONTSTART;
       if (c < 0 || c >= HU_FONTSIZE)
 	w += 4;
       else
-	w +=  (hud.font[c]->width);
+	w += hud.font[c]->width;
     }
 
   return w;
@@ -985,96 +758,78 @@ int V_StringWidth(const char *str)
 //
 // Find string height from hu_font chars
 //
-int V_StringHeight (const char *str)
+int V_StringHeight(const char *str)
 {
-  return (hud.font[0]->height);
+  return hud.font[0]->height;
 }
 
 
 //---------------------------------------------------------------------------
-//
-// PROC MN_DrTextB
-//
-// Draw text using font B.
-//
-//---------------------------------------------------------------------------
+
 int FontBBaseLump;
 
+// Draw text using font B.
 void V_DrawTextB(const char *text, int x, int y)
 {
-    char c;
-    patch_t *p;
+  char c;
     
-    while((c = *text++) != 0)
+  while((c = *text++) != 0)
     {
-        if (c < 33)
+      if (c < 33)
+	x += 8;
+      else
         {
-            x += 8;
-        }
-        else
-        {
-            p = fc.CachePatchNum(FontBBaseLump+toupper(c)-33, PU_CACHE);
-            V_DrawScaledPatch(x, y, 0, p);
-            x += p->width-1;
+	  Texture *t = tc.GetPtrNum(FontBBaseLump + toupper(c) - 33);
+	  t->Draw(x, y, V_SCALE);
+	  x += t->width - 1;
         }
     }
 }
+
 
 void V_DrawTextBGray(char *text, int x, int y)
 {
-    char c;
-    patch_t *p;
+  char c;
+  current_colormap = graymap;
     
-    while((c = *text++) != 0)
+  while((c = *text++) != 0)
     {
-        if (c < 33)
+      if (c < 33)
+	x += 8;
+      else
         {
-            x += 8;
-        }
-        else
-        {
-            p = fc.CachePatchNum(FontBBaseLump+toupper(c)-33, PU_CACHE);
-            V_DrawMappedPatch(x, y, 0, p, graymap);
-            x += p->width-1;
+	  Texture *t = tc.GetPtrNum(FontBBaseLump + toupper(c) - 33);
+	  t->Draw(x, y, V_SCALE | V_MAP);
+	  x += t->width - 1;
         }
     }
 }
 
 
-//---------------------------------------------------------------------------
-//
-// FUNC MN_TextBWidth
-//
-// Returns the pixel width of a string using font B.
-//
-//---------------------------------------------------------------------------
 
+// Returns the pixel width of a string using font B.
 int V_TextBWidth(const char *text)
 {
-    char c;
-    int width;
-    patch_t *p;
-    
-    width = 0;
-    while((c = *text++) != 0)
+  char c;
+  int width = 0;
+  while((c = *text++) != 0)
     {
-        if (c < 33)
+      if (c < 33)
+	width += 5;
+      else
         {
-            width += 5;
-        }
-        else
-        {
-            p = fc.CachePatchNum(FontBBaseLump+toupper(c)-33, PU_CACHE);
-            width += p->width-1;
+	  Texture *t = tc.GetPtrNum(FontBBaseLump + toupper(c) - 33);
+	  width += t->width - 1;
         }
     }
-    return(width);
+  return width;
 }
 
 int V_TextBHeight(const char *text)
 {
-    return 16;
+  return 16;
 }
+
 
 //
 //

@@ -16,7 +16,7 @@
 //
 //
 // DESCRIPTION:
-// Wad, Wad3 and Pak classes: datafile I/O
+//   Wad, Wad3 and Pak classes: datafile I/O
 //
 //-----------------------------------------------------------------------------
 
@@ -105,8 +105,9 @@ static bool TestPadding(char *name, int len)
 }
 
 
-//===========================================================================
-// Wad class implementation
+//=============================
+//  Wad class implementation
+//=============================
 
 // constructor
 Wad::Wad()
@@ -119,10 +120,11 @@ Wad::~Wad()
   Z_Free(directory);
 }
 
-// trick constructor for DEH files (does the "opening" also)
-Wad::Wad(string &fname)
+
+// trick constructor for .lmp and .deh files
+Wad::Wad(string &fname, const char *lumpname)
 {
-  // this code emulates a wadfile with one lump name "DEHACKED" 
+  // this code emulates a wadfile with one lump
   // at position 0 and size of the whole file
   // this allows deh files to be treated like wad files,
   // copied by network and loaded at the console
@@ -144,17 +146,18 @@ Wad::Wad(string &fname)
   struct stat bufstat;
   fstat(fileno(stream), &bufstat);
   size = directory->size = bufstat.st_size;
-  strncpy(directory->name, "DEHACKED", 8);
+  strncpy(directory->name, lumpname, 8);
+
+  cache = (lumpcache_t *)Z_Malloc(numitems * sizeof(lumpcache_t), PU_STATIC, NULL);
+  memset(cache, 0, numitems * sizeof(lumpcache_t));
 
   LoadDehackedLumps();
 }
 
+
 // -----------------------------------------------------
 // Loads a WAD file, sets up the directory and cache.
 // Returns false in case of problem
-
-// FIXME! unfortunately hwrcache needs to know the file's index in the FileCache vector.
-int file_num;
 
 bool Wad::Open(const char *fname)
 {
@@ -179,35 +182,14 @@ bool Wad::Open(const char *fname)
   waddir_t *p = directory = (waddir_t *)Z_Malloc(numitems * sizeof(waddir_t), PU_STATIC, NULL); 
   fread(directory, sizeof(waddir_t), numitems, stream);  
 
-  int i;
   // endianness conversion for directory
-  for (i = 0; i < numitems; i++, p++)
+  for (int i = 0; i < numitems; i++, p++)
     {
       p->offset = LONG(p->offset);
       p->size   = LONG(p->size);
       TestPadding(p->name, 8);
     }
-    
-#ifdef HWRENDER
-  //faB: now allocates GlidePatch info structures STATIC from the start,
-  //     because these were causing a lot of fragmentation of the heap,
-  //     considering they are never freed.
-  int length = numitems * sizeof(GlidePatch_t);
-  hwrcache = (GlidePatch_t*)Z_Malloc(length, PU_HWRPATCHINFO, NULL);    //never freed
-  // set mipmap.downloaded to false
-  memset(hwrcache, 0, length);
-  for (i=0; i<numitems; i++)
-    {
-      //store the software patch lump number for each GlidePatch
-      hwrcache[i].patchlump = (file_num << 16) + i;
-    }
-#endif
 
-  /*
-  char buf[5];
-  strncpy(buf, h.magic, 4);
-  buf[4] = '\0';
-  */
   h.numentries = 0; // what a great hack!
 
   CONS_Printf("Added %s file %s (%i lumps)\n", h.magic, filename.c_str(), numitems);
@@ -316,36 +298,25 @@ void Wad::LoadDehackedLumps()
 {
   // just the lump number, nothing else
   int clump = 0;
-    
+
   while (1)
     { 
       clump = FindNumForName("DEHACKED", clump);
       if (clump == -1)
 	break;
       CONS_Printf("Loading DEHACKED lump %d from %s\n", clump, filename.c_str());
-      //DEH_LoadDehackedLump(clump);
-      {
-	MYFILE f;
-	waddir_t *l = directory + clump;
-	f.size = l->size;
-	f.data = (char*)Z_Malloc(f.size + 1, PU_STATIC, 0);
-	fseek(stream, l->offset, SEEK_SET);
-	fread(f.data, f.size, 1, stream);
 
-	f.curpos = f.data;
-	f.data[f.size] = 0;
-
-	DEH_LoadDehackedFile(&f);
-	Z_Free(f.data);
-      }
+      DEH.LoadDehackedLump((char *)CacheItem(clump, PU_CACHE), GetItemSize(clump));
       clump++;
     }
 }
 
 
-//===========================================================================
-// Wad3 class implementation
 
+
+//==============================
+//  Wad3 class implementation
+//==============================
 
 // constructor
 Wad3::Wad3()
@@ -473,9 +444,10 @@ int Wad3::FindNumForName(const char *name, int startlump)
 }
 
 
-//===========================================================================
-// Pak class implementation
 
+//=============================
+//  Pak class implementation
+//=============================
 
 // constructor
 Pak::Pak()
@@ -567,164 +539,3 @@ int Pak::ReadItemHeader(int item, void *dest, int size)
 
   return fread(dest, 1, size, stream);
 }
-
-
-
-
-// --------------------------------------------------------------------------
-// W_Profile
-// --------------------------------------------------------------------------
-//
-/*     --------------------- UNUSED ------------------------
-int             info[2500][10];
-int             profilecount;
-
-void W_Profile(void)
-{
-    int         i;
-    memblock_t* block;
-    void*       ptr;
-    char        ch;
-    FILE*       f;
-    int         j;
-    char        name[9];
-
-
-    for (i=0 ; i<numlumps ; i++)
-    {
-        ptr = lumpcache[i];
-        if (!ptr)
-        {
-            ch = ' ';
-            continue;
-        }
-        else
-        {
-            block = (memblock_t *) ( (byte *)ptr - sizeof(memblock_t));
-            if (block->tag < PU_PURGELEVEL)
-                ch = 'S';
-            else
-                ch = 'P';
-        }
-        info[i][profilecount] = ch;
-    }
-    profilecount++;
-
-    f = fopen ("waddump.txt","w");
-    name[8] = 0;
-
-    for (i=0 ; i<numlumps ; i++)
-    {
-        memcpy (name,lumpinfo[i].name,8);
-
-        for (j=0 ; j<8 ; j++)
-            if (!name[j])
-                break;
-
-        for ( ; j<8 ; j++)
-            name[j] = ' ';
-
-        fprintf (f,"%s ",name);
-
-        for (j=0 ; j<profilecount ; j++)
-            fprintf (f,"    %c",info[i][j]);
-
-        fprintf (f,"\n");
-    }
-    fclose (f);
-}
-*/
-
-// --------------------------------------------------------------------------
-// W_AddFile : the old code kept for reference
-// --------------------------------------------------------------------------
-/*
-int W_AddFile (char *filename)
-{
-    wadinfo_t           header;
-    lumpinfo_t*         lump_p;
-    unsigned            i;
-    int                 handle;
-    int                 length;
-    int                 startlump;
-    filelump_t*         fileinfo;
-    filelump_t          singleinfo;
-    int                 storehandle;
-
-    // open the file and add to directory
-
-    // handle reload indicator.
-    if (filename[0] == '~')
-    {
-        filename++;
-        reloadname = filename;
-        reloadlump = numlumps;
-    }
-
-    if ( (handle = open (filename,O_RDONLY | O_BINARY)) == -1)
-    {
-        CONS_Printf (" couldn't open %s\n",filename);
-        return 0;
-    }
-
-    CONS_Printf (" adding %s\n",filename);
-    startlump = numlumps;
-
-    if (stricmp (filename+strlen(filename)-3, "wad") )
-    {
-        // single lump file
-        fileinfo = &singleinfo;
-        singleinfo.filepos = 0;
-        singleinfo.size = LONG(filelen(handle));
-        FIL_ExtractFileBase (filename, singleinfo.name);
-        numlumps++;
-    }
-    else
-    {
-        // WAD file
-        read (handle, &header, sizeof(header));
-        if (strncmp(header.identification,"IWAD",4))
-        {
-            // Homebrew levels?
-            if (strncmp(header.identification,"PWAD",4))
-            {
-                I_Error ("Wad file %s doesn't have IWAD "
-                         "or PWAD id\n", filename);
-            }
-
-            // ???modifiedgame = true;
-        }
-        header.numlumps = LONG(header.numlumps);
-        header.infotableofs = LONG(header.infotableofs);
-        length = header.numlumps*sizeof(filelump_t);
-        fileinfo = alloca (length);
-        lseek (handle, header.infotableofs, SEEK_SET);
-        read (handle, fileinfo, length);
-        numlumps += header.numlumps;
-    }
-
-
-    // Fill in lumpinfo
-    lumpinfo = realloc (lumpinfo, numlumps*sizeof(lumpinfo_t));
-
-    if (!lumpinfo)
-        I_Error ("Couldn't realloc lumpinfo");
-
-    lump_p = &lumpinfo[startlump];
-
-    storehandle = reloadname ? -1 : handle;
-
-    for (i=startlump ; i<numlumps ; i++,lump_p++, fileinfo++)
-    {
-        lump_p->handle = storehandle;
-        lump_p->position = LONG(fileinfo->filepos);
-        lump_p->size = LONG(fileinfo->size);
-        strncpy (lump_p->name, fileinfo->name, 8);
-    }
-
-    if (reloadname)
-        close (handle);
-
-    return 1;
-}
-*/

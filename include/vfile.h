@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2003 by DooM Legacy Team.
+// Copyright (C) 2003-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -30,21 +30,16 @@
 
 #include "functors.h"
 
+
 using namespace std;
 
 
 typedef void* lumpcache_t;
 
-// TODO temporary
-#ifdef HWRENDER
-# include "hardware/hw_data.h"
-#else
-typedef void GlidePatch_t;
-#endif
-
 
 //======================================
-// ABC for all VFiles
+//  ABC for all VFiles
+//======================================
 
 class VFile
 {
@@ -58,8 +53,6 @@ protected:
 
   nmap_t       imap;  // mapping from item names to item numbers
   lumpcache_t *cache; // from item numbers to item data (L1 cache)
-
-  GlidePatch_t *hwrcache; // patches are cached in renderer's native format TODO remove
 
 public:
 
@@ -91,8 +84,10 @@ public:
 };
 
 
+
 //======================================
-// class for physical directories
+//  class for physical directories
+//======================================
 
 #define MAX_VDIR_ITEM_NAME 64
 
@@ -101,6 +96,7 @@ struct vdiritem_t
   int  size;  // item size in bytes
   char name[MAX_VDIR_ITEM_NAME];  // item name c-string ('\0'-terminated)
 };
+
 
 class VDir : public VFile
 {
@@ -127,8 +123,10 @@ public:
 };
 
 
-//======================================
-// ABC for physical files (not directories!)
+
+//=============================================
+//  ABC for physical files (not directories!)
+//=============================================
 
 class VDataFile : public VFile
 {

@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.14  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
 // Revision 1.13  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
@@ -110,7 +113,6 @@
 #include "z_zone.h"
 
 #include "p_camera.h"
-#include "p_setup.h"
 
 #include "i_video.h"
 
@@ -1753,14 +1755,13 @@ void SF_FadeLight()
 
 void SF_FloorTexture()
 {
-  int tagnum, secnum;
   if (!t_argc)
     { script_error("insufficient arguments to function\n"); return; }
 
-  tagnum = intvalue(t_argv[0]);
+  int tagnum = intvalue(t_argv[0]);
 
   // argv is sector tag
-  secnum = current_map->FindSectorFromTag(tagnum, -1);
+  int secnum = current_map->FindSectorFromTag(tagnum, -1);
 
   if(secnum < 0)
     { script_error("sector not found with tagnum %i\n", tagnum); return;}
@@ -1770,7 +1771,7 @@ void SF_FloorTexture()
   if(t_argc > 1)
     {
       int i = -1;
-      int picnum = R_FlatNumForName(t_argv[1].value.s);
+      int picnum = tc.Get(t_argv[1].value.s);
 
       // set all sectors with tag
       while ((i = current_map->FindSectorFromTag(tagnum, i)) >= 0)
@@ -1778,7 +1779,7 @@ void SF_FloorTexture()
     }
 
   t_return.type = svt_string;
-  t_return.value.s = P_FlatNameForNum(s->floorpic);
+  t_return.value.s = Z_Strdup(R_GetTexture(s->floorpic)->name, PU_STATIC, 0);
 }
 
 
@@ -1848,7 +1849,7 @@ void SF_CeilingTexture()
   if (t_argc > 1)
     {
       int i = -1;
-      int picnum = R_FlatNumForName(t_argv[1].value.s);
+      int picnum = tc.Get(t_argv[1].value.s);
 
       // set all sectors with tag
       while ((i = current_map->FindSectorFromTag(tagnum, i)) >= 0)
@@ -1856,7 +1857,7 @@ void SF_CeilingTexture()
     }
 
   t_return.type = svt_string;
-  t_return.value.s = P_FlatNameForNum(s->ceilingpic);
+  t_return.value.s = Z_Strdup(R_GetTexture(s->ceilingpic)->name, PU_STATIC, 0);
 }
 
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/03/28 15:16:15  smite-meister
+// Texture cache.
+//
 // Revision 1.13  2003/11/23 19:07:42  smite-meister
 // New startup order
 //
@@ -1061,9 +1064,6 @@ void R_Init()
   //TestAnims();
 
   //added:24-01-98: screensize independent
-  if(devparm)
-    CONS_Printf ("\nR_InitData");
-  R_InitData();
 
     if(devparm)
         CONS_Printf ("\nR_InitPointToAngle");

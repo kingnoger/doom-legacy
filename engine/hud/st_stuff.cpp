@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2004/03/28 15:16:13  smite-meister
+// Texture cache.
+//
 // Revision 1.16  2004/01/02 14:25:02  smite-meister
 // cleanup
 //
@@ -83,8 +86,9 @@
 #include "d_netcmd.h"
 
 #include "screen.h"
-#include "r_state.h"
 #include "r_main.h"
+#include "r_state.h"
+#include "r_data.h"
 
 #include "m_random.h"
 
@@ -221,10 +225,10 @@ static int st_mana1, st_mana2;
 //  Legacy status bar overlay
 //
 
-static patch_t *sbohealth;
-static patch_t *sbofrags;
-static patch_t *sboarmor;
-static patch_t *PatchAmmoPic[NUMAMMO + 1];
+static Texture *sbohealth;
+static Texture *sbofrags;
+static Texture *sboarmor;
+static Texture *PatchAmmoPic[NUMAMMO + 1];
 
 //==================================
 // Doom status bar graphics
@@ -235,24 +239,24 @@ static patch_t *PatchAmmoPic[NUMAMMO + 1];
 // "WINUM0", large, red, minus is base-2, '%' is base-1
 
 // "STTNUM0", large, red, minus is base-1, '%' is base+10
-static patch_t *PatchBNum[11]; // 0-9, big numbers, STTMINUS
-static patch_t *tallpercent; // big % sign
+static Texture *PatchBNum[11]; // 0-9, big numbers, STTMINUS
+static Texture *tallpercent; // big % sign
 
 // "STYSNUM0", small, yellow, no minus
-static patch_t *PatchSNum[11];
+static Texture *PatchSNum[11];
 
 // "STGNUM0", small, dark gray, no minus
-static patch_t *PatchArms[6][2]; // weapon ownership patches
+static Texture *PatchArms[6][2]; // weapon ownership patches
 
-static patch_t *PatchArmsBack; // arms background
-static patch_t *PatchFaces[ST_NUMFACES]; // marine face patches
-static patch_t *PatchFaceBack; // face background
+static Texture *PatchArmsBack; // arms background
+static Texture *PatchFaces[ST_NUMFACES]; // marine face patches
+static Texture *PatchFaceBack; // face background
 
 #define NUMCARDS 6
-static patch_t *PatchKeys[NUMCARDS]; // 3 key-cards, 3 skulls
-static patch_t *PatchSTATBAR;
+static Texture *PatchKeys[NUMCARDS]; // 3 key-cards, 3 skulls
+static Texture *PatchSTATBAR;
 
-// ammo type pics (patch_t's)
+// ammo type pics (Texture's)
 static const char DHAmmoPics[NUMAMMO + 1][10] =
 {
   {"CLIPA0"},  // 0, bullets
@@ -275,19 +279,19 @@ static const char DHAmmoPics[NUMAMMO + 1][10] =
 // Heretic status bar graphics
 //
 
-static patch_t *PatchGod[2];
-static patch_t *PatchBARBACK;
-static patch_t *PatchLTFCTOP;
-static patch_t *PatchRTFCTOP;
-static patch_t *PatchARMCLEAR;
+static Texture *PatchGod[2];
+static Texture *PatchBARBACK;
+static Texture *PatchLTFCTOP;
+static Texture *PatchRTFCTOP;
+static Texture *PatchARMCLEAR;
 
-static patch_t *Patch_InvBar[13];
-static patch_t *PatchARTI[NUMARTIFACTS];
-static patch_t *Patch_ChainSlider[5];
+static Texture *Patch_InvBar[13];
+static Texture *PatchARTI[NUMARTIFACTS];
+static Texture *Patch_ChainSlider[5];
 
 // Heretic numbers:
 // SMALLIN0, small yellow number
-static patch_t *PatchINum[11];  // IN0, big yellow number
+static Texture *PatchINum[11];  // IN0, big yellow number
 // FONTB16, big green numbers (of a font)
 // FONTA16, medium silver numbers (of a font)
 
@@ -307,17 +311,17 @@ int SpinSpeedLump;
 int SpinDefenseLump;
 int SpinMinotaurLump;
 
-patch_t *PatchFlight[16];
-patch_t *PatchBook[16];
-patch_t *PatchSpeed[16];
-patch_t *PatchDefense[16];
-patch_t *PatchMinotaur[16];
+Texture *PatchFlight[16];
+Texture *PatchBook[16];
+Texture *PatchSpeed[16];
+Texture *PatchDefense[16];
+Texture *PatchMinotaur[16];
 
 // Hexen extras
-static patch_t *PatchH2BAR;
-static patch_t *PatchMana1[2];
-static patch_t *PatchMana2[2];
-static patch_t *PatchKILLS;
+static Texture *PatchH2BAR;
+static Texture *PatchMana1[2];
+static Texture *PatchMana2[2];
+static Texture *PatchKILLS;
 
 static const char ArtiPatchName[][10] =
 {
@@ -360,6 +364,16 @@ static const char ArtiPatchName[][10] =
   {"ARTIGER2"},   // arti_puzzgear2
   {"ARTIGER3"},   // arti_puzzgear3
   {"ARTIGER4"},   // arti_puzzgear4
+
+  {"WFR1A0"},     // weapon pieces
+  {"WFR2A0"},
+  {"WFR3A0"},
+  {"WCH1A0"},
+  {"WCH2A0"},
+  {"WCH3A0"},
+  {"WMS1A0"},
+  {"WMS2A0"},
+  {"WMS3A0"}
 };
 
 
@@ -376,23 +390,23 @@ static void ST_SetClassData(int num, int cls)
 	PatchPIECE3	= fc.CacheLumpNum(fc.GetNumForName("WPIECEF3") + cls, PU_STATIC);
       */
 
-      Patch_ChainSlider[1] = fc.CachePatchNum(fc.GetNumForName("CHAIN") + cls, PU_STATIC);
+      Patch_ChainSlider[1] = tc.GetPtrNum(fc.GetNumForName("CHAIN") + cls);
 
       int base = fc.GetNumForName("LIFEGEM");
       if (!game.multiplayer)
 	// single player game uses red life gem
-	Patch_ChainSlider[2] = fc.CachePatchNum(base + 4*cls + 1, PU_STATIC);
+	Patch_ChainSlider[2] = tc.GetPtrNum(base + 4*cls + 1);
       else
-	Patch_ChainSlider[2] = fc.CachePatchNum(base + 4*cls + num % 4, PU_STATIC);
+	Patch_ChainSlider[2] = tc.GetPtrNum(base + 4*cls + num % 4);
     }
   else
     {
       // heretic
       if (!game.multiplayer)
 	// single player game uses red life gem
-	Patch_ChainSlider[2] = fc.CachePatchName("LIFEGEM2", PU_STATIC);
+	Patch_ChainSlider[2] = tc.GetPtr("LIFEGEM2");
       else
-	Patch_ChainSlider[2] = fc.CachePatchNum(fc.GetNumForName("LIFEGEM0") + num % 4, PU_STATIC);  
+	Patch_ChainSlider[2] = tc.GetPtrNum(fc.GetNumForName("LIFEGEM0") + num % 4);  
     }
 }
 
@@ -402,72 +416,72 @@ void ST_LoadHexenData()
   int i;
   int startLump;
 
-  PatchH2BAR = fc.CachePatchName("H2BAR", PU_STATIC);
-  //PatchH2TOP = fc.CachePatchName("H2TOP", PU_STATIC);
+  PatchH2BAR = tc.GetPtr("H2BAR");
+  //PatchH2TOP = tc.GetPtr("H2TOP");
 
-  PatchSTATBAR = fc.CachePatchName("STATBAR", PU_STATIC);
-  //PatchKEYBAR = fc.CachePatchName("KEYBAR", PU_STATIC);
+  PatchSTATBAR = tc.GetPtr("STATBAR");
+  //PatchKEYBAR = tc.GetPtr("KEYBAR");
 
-  //PatchARTICLEAR = fc.CachePatchName("ARTICLS", PU_STATIC);
-  PatchARMCLEAR = fc.CachePatchName("ARMCLS", PU_STATIC);
-  //PatchMANACLEAR = fc.CachePatchName("MANACLS", PU_STATIC);
+  //PatchARTICLEAR = tc.GetPtr("ARTICLS");
+  PatchARMCLEAR = tc.GetPtr("ARMCLS");
+  //PatchMANACLEAR = tc.GetPtr("MANACLS");
   /*
-    PatchMANAVIAL1 = fc.CachePatchName("MANAVL1", PU_STATIC);
-    PatchMANAVIAL2 = fc.CachePatchName("MANAVL2", PU_STATIC);
-    PatchMANAVIALDIM1 = fc.CachePatchName("MANAVL1D", PU_STATIC);
-    PatchMANAVIALDIM2 = fc.CachePatchName("MANAVL2D", PU_STATIC);
+    PatchMANAVIAL1 = tc.GetPtr("MANAVL1");
+    PatchMANAVIAL2 = tc.GetPtr("MANAVL2");
+    PatchMANAVIALDIM1 = tc.GetPtr("MANAVL1D");
+    PatchMANAVIALDIM2 = tc.GetPtr("MANAVL2D");
   */
-  PatchMana1[0] = fc.CachePatchName("MANADIM1", PU_STATIC);
-  PatchMana1[1] = fc.CachePatchName("MANABRT1", PU_STATIC);
-  PatchMana2[0] = fc.CachePatchName("MANADIM2", PU_STATIC);
-  PatchMana2[1] = fc.CachePatchName("MANABRT2", PU_STATIC);
+  PatchMana1[0] = tc.GetPtr("MANADIM1");
+  PatchMana1[1] = tc.GetPtr("MANABRT1");
+  PatchMana2[0] = tc.GetPtr("MANADIM2");
+  PatchMana2[1] = tc.GetPtr("MANABRT2");
 
-  sbohealth = fc.CachePatchName("PTN2A0", PU_STATIC);  //SBOHEALT
-  sbofrags  = fc.CachePatchName("ARTISKLL", PU_STATIC);  //SBOFRAGS
-  sboarmor  = fc.CachePatchName("ARM1A0", PU_STATIC);  //SBOARMOR  
+  sbohealth = tc.GetPtr("PTN2A0");  //SBOHEALT
+  sbofrags  = tc.GetPtr("ARTISKLL");  //SBOFRAGS
+  sboarmor  = tc.GetPtr("ARM1A0");  //SBOARMOR  
 
-  Patch_InvBar[0] = fc.CachePatchName("INVBAR", PU_STATIC); 
-  Patch_InvBar[1] = fc.CachePatchName("ARTIBOX", PU_STATIC);
-  Patch_InvBar[2] = fc.CachePatchName("SELECTBO", PU_STATIC);
-  Patch_InvBar[3] = fc.CachePatchName("INVGEML1", PU_STATIC);
-  Patch_InvBar[4] = fc.CachePatchName("INVGEML2", PU_STATIC);
-  Patch_InvBar[5] = fc.CachePatchName("INVGEMR1", PU_STATIC);
-  Patch_InvBar[6] = fc.CachePatchName("INVGEMR2", PU_STATIC);
-  Patch_InvBar[7] = fc.CachePatchName("BLACKSQ", PU_STATIC);
+  Patch_InvBar[0] = tc.GetPtr("INVBAR"); 
+  Patch_InvBar[1] = tc.GetPtr("ARTIBOX");
+  Patch_InvBar[2] = tc.GetPtr("SELECTBO");
+  Patch_InvBar[3] = tc.GetPtr("INVGEML1");
+  Patch_InvBar[4] = tc.GetPtr("INVGEML2");
+  Patch_InvBar[5] = tc.GetPtr("INVGEMR1");
+  Patch_InvBar[6] = tc.GetPtr("INVGEMR2");
+  Patch_InvBar[7] = tc.GetPtr("BLACKSQ");
 
   // artifact inventory pics
   for (i=0; i <= NUMARTIFACTS; i++)
-    PatchARTI[i] = fc.CachePatchName(ArtiPatchName[i], PU_STATIC);
+    PatchARTI[i] = tc.GetPtr(ArtiPatchName[i]);
 
   // artifact use flash
   startLump = fc.GetNumForName("USEARTIA");
-  for (i=0; i<5; i++) Patch_InvBar[i+8] = fc.CachePatchNum(startLump + i, PU_STATIC);
+  for (i=0; i<5; i++) Patch_InvBar[i+8] = tc.GetPtrNum(startLump + i);
 
   // ammo pics
   for (i=0; i < NUMAMMO; i++)
-    PatchAmmoPic[i] = fc.CachePatchName(DHAmmoPics[i], PU_STATIC);
+    PatchAmmoPic[i] = tc.GetPtr(DHAmmoPics[i]);
 
   // keys TODO rest
   startLump = fc.GetNumForName("KEYSLOT1");
   for (i=0; i<NUMCARDS; i++)
-    PatchKeys[i] = fc.CachePatchNum(startLump+i, PU_STATIC);
+    PatchKeys[i] = tc.GetPtrNum(startLump+i);
 
-  //	PatchCHAINBACK = fc.CachePatchName("CHAINBACK", PU_STATIC);
+  //	PatchCHAINBACK = tc.GetPtr("CHAINBACK");
   startLump = fc.GetNumForName("IN0");
   for (i = 0; i < 10; i++)
-    PatchINum[i] = fc.CachePatchNum(startLump+i, PU_STATIC);
-  PatchINum[10] = fc.CachePatchName("NEGNUM", PU_STATIC);
+    PatchINum[i] = tc.GetPtrNum(startLump+i);
+  PatchINum[10] = tc.GetPtr("NEGNUM");
 	
   // BNum
   startLump = fc.GetNumForName("FONTB16");
   for (i = 0; i < 10; i++)
-    PatchBNum[i] = fc.CachePatchNum(startLump+i, PU_STATIC);
-  PatchBNum[10] = fc.CachePatchNum(startLump-3, PU_STATIC); //("FONTB13")
+    PatchBNum[i] = tc.GetPtrNum(startLump+i);
+  PatchBNum[10] = tc.GetPtrNum(startLump-3); //("FONTB13")
 
   //SNum
   startLump = fc.GetNumForName("SMALLIN0");
   for (i = 0; i < 10; i++)
-    PatchSNum[i] = fc.CachePatchNum(startLump+i, PU_STATIC);
+    PatchSNum[i] = tc.GetPtrNum(startLump+i);
   // no minus
 
   playpalette = fc.GetNumForName("PLAYPAL");
@@ -479,18 +493,18 @@ void ST_LoadHexenData()
 
   for (i=0; i<16; i++)
     {
-      PatchFlight[i] = fc.CachePatchNum(SpinFlyLump + i, PU_STATIC);
-      PatchSpeed[i] = fc.CachePatchNum(SpinSpeedLump + i, PU_STATIC);
-      PatchDefense[i] = fc.CachePatchNum(SpinDefenseLump + i, PU_STATIC);
-      PatchMinotaur[i] = fc.CachePatchNum(SpinMinotaurLump + i, PU_STATIC);
+      PatchFlight[i] = tc.GetPtrNum(SpinFlyLump + i);
+      PatchSpeed[i] = tc.GetPtrNum(SpinSpeedLump + i);
+      PatchDefense[i] = tc.GetPtrNum(SpinDefenseLump + i);
+      PatchMinotaur[i] = tc.GetPtrNum(SpinMinotaurLump + i);
     }
 
-  PatchKILLS = fc.CachePatchName("KILLS", PU_STATIC);
+  PatchKILLS = tc.GetPtr("KILLS");
 
   // health chain slider
-  Patch_ChainSlider[0] = fc.CachePatchName("CHAINBACK", PU_STATIC);
-  Patch_ChainSlider[3] = fc.CachePatchName("LFEDGE", PU_STATIC);
-  Patch_ChainSlider[4] = fc.CachePatchName("RTEDGE", PU_STATIC);
+  Patch_ChainSlider[0] = tc.GetPtr("CHAINBACK");
+  Patch_ChainSlider[3] = tc.GetPtr("LFEDGE");
+  Patch_ChainSlider[4] = tc.GetPtr("RTEDGE");
   ST_SetClassData(0, 0);
 }
 
@@ -500,78 +514,78 @@ void ST_LoadHereticData()
   int startLump;
 
   // gargoyle eyes
-  PatchGod[0] = fc.CachePatchName("GOD1", PU_STATIC);
-  PatchGod[1] = fc.CachePatchName("GOD2", PU_STATIC);
+  PatchGod[0] = tc.GetPtr("GOD1");
+  PatchGod[1] = tc.GetPtr("GOD2");
 
-  PatchBARBACK = fc.CachePatchName("BARBACK", PU_STATIC);
+  PatchBARBACK = tc.GetPtr("BARBACK");
 
   if (cv_deathmatch.value)
-    PatchSTATBAR = fc.CachePatchName("STATBAR", PU_STATIC);
+    PatchSTATBAR = tc.GetPtr("STATBAR");
   else
-    PatchSTATBAR = fc.CachePatchName("LIFEBAR", PU_STATIC);
+    PatchSTATBAR = tc.GetPtr("LIFEBAR");
 
-  PatchLTFCTOP = fc.CachePatchName("LTFCTOP", PU_STATIC);
-  PatchRTFCTOP = fc.CachePatchName("RTFCTOP", PU_STATIC);
-  PatchARMCLEAR  = fc.CachePatchName("ARMCLEAR", PU_STATIC);
+  PatchLTFCTOP = tc.GetPtr("LTFCTOP");
+  PatchRTFCTOP = tc.GetPtr("RTFCTOP");
+  PatchARMCLEAR  = tc.GetPtr("ARMCLEAR");
 
   // inventory bar pics
-  Patch_InvBar[0] = fc.CachePatchName("INVBAR", PU_STATIC); 
-  Patch_InvBar[1] = fc.CachePatchName("ARTIBOX", PU_STATIC);
-  Patch_InvBar[2] = fc.CachePatchName("SELECTBO", PU_STATIC);
-  Patch_InvBar[3] = fc.CachePatchName("INVGEML1", PU_STATIC);
-  Patch_InvBar[4] = fc.CachePatchName("INVGEML2", PU_STATIC);
-  Patch_InvBar[5] = fc.CachePatchName("INVGEMR1", PU_STATIC);
-  Patch_InvBar[6] = fc.CachePatchName("INVGEMR2", PU_STATIC);
-  Patch_InvBar[7] = fc.CachePatchName("BLACKSQ", PU_STATIC); // useful? 
+  Patch_InvBar[0] = tc.GetPtr("INVBAR"); 
+  Patch_InvBar[1] = tc.GetPtr("ARTIBOX");
+  Patch_InvBar[2] = tc.GetPtr("SELECTBO");
+  Patch_InvBar[3] = tc.GetPtr("INVGEML1");
+  Patch_InvBar[4] = tc.GetPtr("INVGEML2");
+  Patch_InvBar[5] = tc.GetPtr("INVGEMR1");
+  Patch_InvBar[6] = tc.GetPtr("INVGEMR2");
+  Patch_InvBar[7] = tc.GetPtr("BLACKSQ"); // useful? 
 
   // artifact use flash
   startLump = fc.GetNumForName("USEARTIA");
-  for (i=0; i<5; i++) Patch_InvBar[i+8] = fc.CachePatchNum(startLump + i, PU_STATIC);
+  for (i=0; i<5; i++) Patch_InvBar[i+8] = tc.GetPtrNum(startLump + i);
 
   // artifact inventory pics
   for (i=0; i <= NUMARTIFACTS; i++)
-    PatchARTI[i] = fc.CachePatchName(ArtiPatchName[i], PU_STATIC);
+    PatchARTI[i] = tc.GetPtr(ArtiPatchName[i]);
 
   // ammo pics
   //  for (i=0; i < am_heretic; i++)
   //  PatchAmmoPic[i] = NULL;
   //for (i=am_heretic; i <= NUMAMMO; i++)
   for (i = 0; i < NUMAMMO; i++)
-    PatchAmmoPic[i] = fc.CachePatchName(DHAmmoPics[i], PU_STATIC);
+    PatchAmmoPic[i] = tc.GetPtr(DHAmmoPics[i]);
 
-  sbohealth = fc.CachePatchName("PTN2A0", PU_STATIC);  //SBOHEALT
-  sbofrags  = fc.CachePatchName("FACEB1", PU_STATIC);  //SBOFRAGS
-  sboarmor  = fc.CachePatchName("SHLDA0", PU_STATIC);  //SBOARMOR  
+  sbohealth = tc.GetPtr("PTN2A0");  //SBOHEALT
+  sbofrags  = tc.GetPtr("FACEB1");  //SBOFRAGS
+  sboarmor  = tc.GetPtr("SHLDA0");  //SBOARMOR  
 
   // keys
-  PatchKeys[0] = PatchKeys[3] = fc.CachePatchName("BKEYICON", PU_STATIC);
-  PatchKeys[1] = PatchKeys[4] = fc.CachePatchName("YKEYICON", PU_STATIC);
-  PatchKeys[2] = PatchKeys[5] = fc.CachePatchName("GKEYICON", PU_STATIC);
+  PatchKeys[0] = PatchKeys[3] = tc.GetPtr("BKEYICON");
+  PatchKeys[1] = PatchKeys[4] = tc.GetPtr("YKEYICON");
+  PatchKeys[2] = PatchKeys[5] = tc.GetPtr("GKEYICON");
 
   // health chain slider
-  Patch_ChainSlider[0] = fc.CachePatchName("CHAINBACK", PU_STATIC);
-  Patch_ChainSlider[1] = fc.CachePatchName("CHAIN", PU_STATIC);
-  Patch_ChainSlider[3] = fc.CachePatchName("LTFACE", PU_STATIC);
-  Patch_ChainSlider[4] = fc.CachePatchName("RTFACE", PU_STATIC);
+  Patch_ChainSlider[0] = tc.GetPtr("CHAINBACK");
+  Patch_ChainSlider[1] = tc.GetPtr("CHAIN");
+  Patch_ChainSlider[3] = tc.GetPtr("LTFACE");
+  Patch_ChainSlider[4] = tc.GetPtr("RTFACE");
   ST_SetClassData(0, 0);
 
   // INum
   startLump = fc.GetNumForName("IN0");
   for (i = 0; i < 10; i++)
-    PatchINum[i] = fc.CachePatchNum(startLump+i, PU_STATIC);
-  PatchINum[10] = fc.CachePatchName("NEGNUM", PU_STATIC);
+    PatchINum[i] = tc.GetPtrNum(startLump+i);
+  PatchINum[10] = tc.GetPtr("NEGNUM");
   // and "LAME"...
 
   // BNum
   startLump = fc.GetNumForName("FONTB16");
   for (i = 0; i < 10; i++)
-    PatchBNum[i] = fc.CachePatchNum(startLump+i, PU_STATIC);
-  PatchBNum[10] = fc.CachePatchNum(startLump-3, PU_STATIC); //("FONTB13")
+    PatchBNum[i] = tc.GetPtrNum(startLump+i);
+  PatchBNum[10] = tc.GetPtrNum(startLump-3); //("FONTB13")
 
   //SNum
   startLump = fc.GetNumForName("SMALLIN0");
   for (i = 0; i < 10; i++)
-    PatchSNum[i] = fc.CachePatchNum(startLump+i, PU_STATIC);
+    PatchSNum[i] = tc.GetPtrNum(startLump+i);
   // no minus
 
   playpalette = fc.GetNumForName("PLAYPAL");
@@ -580,8 +594,8 @@ void ST_LoadHereticData()
 
   for (i=0; i<16; i++)
     {
-      PatchFlight[i] = fc.CachePatchNum(SpinFlyLump + i, PU_STATIC);
-      PatchBook[i] = fc.CachePatchNum(SpinBookLump + i, PU_STATIC);
+      PatchFlight[i] = tc.GetPtrNum(SpinFlyLump + i);
+      PatchBook[i] = tc.GetPtrNum(SpinBookLump + i);
     }
 }
 
@@ -595,27 +609,27 @@ void ST_LoadDoomData()
   for (i=0; i<10; i++)
     {
       sprintf(namebuf, "STTNUM%d", i);
-      PatchBNum[i] = fc.CachePatchName(namebuf, PU_STATIC);
+      PatchBNum[i] = tc.GetPtr(namebuf);
 
       sprintf(namebuf, "STYSNUM%d", i);
-      PatchSNum[i] = fc.CachePatchName(namebuf, PU_STATIC);
+      PatchSNum[i] = tc.GetPtr(namebuf);
     }
 
-  PatchBNum[10] = fc.CachePatchName("STTMINUS", PU_STATIC);
+  PatchBNum[10] = tc.GetPtr("STTMINUS");
   PatchSNum[10] = PatchSNum[0]; // no minus available 
 
   // percent signs.
-  tallpercent = fc.CachePatchName("STTPRCNT", PU_STATIC);
+  tallpercent = tc.GetPtr("STTPRCNT");
 
   // key cards
   for (i=0;i<NUMCARDS;i++)
     {
       sprintf(namebuf, "STKEYS%d", i);
-      PatchKeys[i] = fc.CachePatchName(namebuf, PU_STATIC);
+      PatchKeys[i] = tc.GetPtr(namebuf);
     }
 
   // arms background box
-  PatchArmsBack = fc.CachePatchName("STARMS", PU_STATIC);
+  PatchArmsBack = tc.GetPtr("STARMS");
 
   // arms ownership widgets
   for (i=0;i<6;i++)
@@ -623,25 +637,25 @@ void ST_LoadDoomData()
       sprintf(namebuf, "STGNUM%d", i+2);
 
       // gray #
-      PatchArms[i][0] = fc.CachePatchName(namebuf, PU_STATIC);
+      PatchArms[i][0] = tc.GetPtr(namebuf);
 
       // yellow #
       PatchArms[i][1] = PatchSNum[i+2];
     }
 
   // status bar background bits
-  PatchSTATBAR = fc.CachePatchName("STBAR", PU_STATIC);
+  PatchSTATBAR = tc.GetPtr("STBAR");
 
   // the original Doom uses 'STF' as base name for all face graphics
   ST_loadFaceGraphics("STF");
 
   // ammo pics
   for (i = 0; i < NUMAMMO; i++)
-    PatchAmmoPic[i] = fc.CachePatchName(DHAmmoPics[i], PU_STATIC);
+    PatchAmmoPic[i] = tc.GetPtr(DHAmmoPics[i]);
 
-  sbohealth = fc.CachePatchName("STIMA0", PU_STATIC);  //SBOHEALT
-  sbofrags  = fc.CachePatchName("M_SKULL1", PU_STATIC);  //SBOFRAGS
-  sboarmor  = fc.CachePatchName("ARM1A0", PU_STATIC);  //SBOARMOR  
+  sbohealth = tc.GetPtr("STIMA0");  //SBOHEALT
+  sbofrags  = tc.GetPtr("M_SKULL1");  //SBOFRAGS
+  sboarmor  = tc.GetPtr("ARM1A0");  //SBOARMOR  
 }
 
 
@@ -667,23 +681,23 @@ void ST_loadFaceGraphics (char *facestr)
       for (j=0;j<ST_NUMSTRAIGHTFACES;j++)
         {
 	  sprintf(namebuf, "ST%d%d", i, j);
-	  PatchFaces[facenum++] = fc.CachePatchName(namelump, PU_STATIC);
+	  PatchFaces[facenum++] = tc.GetPtr(namelump);
         }
       sprintf(namebuf, "TR%d0", i);        // turn right
-      PatchFaces[facenum++] = fc.CachePatchName(namelump, PU_STATIC);
+      PatchFaces[facenum++] = tc.GetPtr(namelump);
       sprintf(namebuf, "TL%d0", i);        // turn left
-      PatchFaces[facenum++] = fc.CachePatchName(namelump, PU_STATIC);
+      PatchFaces[facenum++] = tc.GetPtr(namelump);
       sprintf(namebuf, "OUCH%d", i);       // ouch!
-      PatchFaces[facenum++] = fc.CachePatchName(namelump, PU_STATIC);
+      PatchFaces[facenum++] = tc.GetPtr(namelump);
       sprintf(namebuf, "EVL%d", i);        // evil grin ;)
-      PatchFaces[facenum++] = fc.CachePatchName(namelump, PU_STATIC);
+      PatchFaces[facenum++] = tc.GetPtr(namelump);
       sprintf(namebuf, "KILL%d", i);       // pissed off
-      PatchFaces[facenum++] = fc.CachePatchName(namelump, PU_STATIC);
+      PatchFaces[facenum++] = tc.GetPtr(namelump);
     }
   strcpy (namebuf, "GOD0");
-  PatchFaces[facenum++] = fc.CachePatchName(namelump, PU_STATIC);
+  PatchFaces[facenum++] = tc.GetPtr(namelump);
   strcpy (namebuf, "DEAD0");
-  PatchFaces[facenum++] = fc.CachePatchName(namelump, PU_STATIC);
+  PatchFaces[facenum++] = tc.GetPtr(namelump);
 
   // face backgrounds for different player colors
   //added:08-02-98: uses only STFB0, which is remapped to the right
@@ -693,9 +707,9 @@ void ST_loadFaceGraphics (char *facestr)
   strcpy (namebuf, "B0");
   i = fc.FindNumForName(namelump);
   if (i != -1)
-    PatchFaceBack = fc.CachePatchNum(i, PU_STATIC);
+    PatchFaceBack = tc.GetPtrNum(i);
   else
-    PatchFaceBack = fc.CachePatchName("STFB0", PU_STATIC);
+    PatchFaceBack = tc.GetPtr("STFB0");
 
 }
 
@@ -757,39 +771,39 @@ void ST_unloadFaceGraphics()
 void HUD::ST_RefreshBackground()
 {
   extern byte *translationtables;
-  byte*       colormap;
-  int flags = (fgbuffer & 0xffff0000) | BG;
+  extern byte *current_colormap;
+  int flags = (fgbuffer & 0xffff0000) | BG | V_SCALE;
 
   if (game.mode == gm_hexen)
     {
-      V_DrawScaledPatch(st_x, st_y-1, flags, PatchH2BAR); // y = 134
+      PatchH2BAR->Draw(st_x, st_y-1, flags); // y = 134
     }
   else if (game.mode == gm_heretic)
     {
-      V_DrawScaledPatch(st_x, st_y, flags, PatchBARBACK);
-      V_DrawScaledPatch(st_x+34, st_y+2, flags, PatchSTATBAR);
+      PatchBARBACK->Draw(st_x, st_y, flags);
+      PatchSTATBAR->Draw(st_x+34, st_y+2, flags);
       //V_DrawScaledPatch(st_x+34, st_y+2, flags, PatchINVBAR);
       // background:
-      V_DrawScaledPatch(st_x, st_y-10, flags, PatchLTFCTOP);
-      V_DrawScaledPatch(st_x+290, st_y-10, flags, PatchRTFCTOP);
+      PatchLTFCTOP->Draw(st_x, st_y-10, flags);
+      PatchRTFCTOP->Draw(st_x+290, st_y-10, flags);
       //main
-      V_DrawScaledPatch(st_x+57, st_y+13, flags, PatchARMCLEAR);
+      PatchARMCLEAR->Draw(st_x+57, st_y+13, flags);
       //V_DrawScaledPatch(st_x+108, st_y+3, flags, PatchBLACKSQ);
-      V_DrawScaledPatch(st_x+224, st_y+13, flags, PatchARMCLEAR);
+      PatchARMCLEAR->Draw(st_x+224, st_y+13, flags);
     }
   else
     {
       // software mode copies patch to BG buffer,
       // hardware modes directly draw the statusbar to the screen
-      V_DrawScaledPatch(st_x, st_y, flags, PatchSTATBAR);
+      PatchSTATBAR->Draw(st_x, st_y, flags);
 
       // draw the faceback for the statusbarplayer
       if (st_pawncolor == 0)
-	colormap = colormaps;
+	current_colormap = colormaps;
       else
-	colormap = translationtables - 256 + (st_pawncolor << 8);
+	current_colormap = translationtables - 256 + (st_pawncolor << 8);
 
-      V_DrawMappedPatch(st_x+143, st_y, flags, PatchFaceBack, colormap);
+      PatchFaceBack->Draw(st_x+143, st_y, flags | V_MAP);
     }
 
   // copy the statusbar buffer to the screen
@@ -1244,7 +1258,7 @@ void HUD::ST_Recalc()
 {
   if (cv_scalestatusbar.value || cv_viewsize.value > 10)
     {
-      fgbuffer = FG | V_SCALESTART; // scale patch by default
+      fgbuffer = FG | V_SLOC; // scale patch by default
       //st_scalex = vid.dupx;
       //st_scaley = vid.dupy;
         
@@ -1265,7 +1279,7 @@ void HUD::ST_Recalc()
     {
       //st_scalex = st_scaley = 1;
 
-      fgbuffer = FG | V_NOSCALEPATCH | V_NOSCALESTART;
+      fgbuffer = FG;
       st_y = vid.height - stbarheight;
       st_x = (vid.width-ST_WIDTH)>>1;
     }

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/03/28 15:16:15  smite-meister
+// Texture cache.
+//
 // Revision 1.10  2004/01/10 16:03:00  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
@@ -57,6 +60,7 @@
 #include <stdarg.h>
 
 #include "doomdef.h"
+#include "dstrings.h"
 #include "d_debug.h" // DEBFILE
 #include "command.h"
 #include "console.h"
@@ -64,7 +68,7 @@
 #include "g_input.h"
 #include "hu_stuff.h"
 #include "keys.h"
-#include "r_defs.h"
+#include "r_data.h"
 #include "sounds.h"
 
 #include "v_video.h"
@@ -82,6 +86,9 @@ void     I_LoadingScreen ( LPCSTR msg );
 #ifdef HWRENDER
 # include "hardware/hw_main.h"
 #endif
+
+language_t   language = la_english;            // Language.
+
 
 bool  con_started=false;  // console has been initialised
 bool  con_startup=false;  // true at game startup, screen need refreshing
@@ -1068,13 +1075,13 @@ static void CON_DrawInput (void)
     y = con_curlines - 12;
 
     for(x=0; x<con_width; x++)
-        V_DrawCharacter( (x+1)<<3, y, p[x] |V_NOSCALEPATCH|V_NOSCALESTART);
+      V_DrawCharacter((x+1)<<3, y, p[x]);
 
     // draw the blinking cursor
     //
     x = (input_cx>=con_width) ? con_width - 1 : input_cx;
     if (con_tick<4)
-        V_DrawCharacter( (x+1)<<3, y, 0x80 | '_' |V_NOSCALEPATCH|V_NOSCALESTART);
+      V_DrawCharacter( (x+1)<<3, y, 0x80 | '_');
 }
 
 
@@ -1107,10 +1114,10 @@ static void CON_DrawHudlines (void)
 #ifdef HWRENDER
 	  extern float gr_viewheight;	 
 	  if (con_lineowner[i%con_hudlines] == 2)
-	    V_DrawCharacter ( x<<3, (int)(y2+gr_viewheight), p[x] |V_NOSCALEPATCH|V_NOSCALESTART);
+	    V_DrawCharacter(x<<3, int(y2+gr_viewheight), p[x]);
 	  else
 #endif
-	    V_DrawCharacter ( x<<3, y, p[x] |V_NOSCALEPATCH|V_NOSCALESTART);
+	    V_DrawCharacter(x<<3, y, p[x]);
 	}
       if (con_lineowner[i%con_hudlines] == 2)
 	y2 += 8;
@@ -1191,10 +1198,10 @@ static void CON_DrawConsole (void)
     {
 #ifdef HWRENDER // not win32 only 19990829 by Kin
         if (rendermode!=render_soft)
-            V_DrawScalePic (0, (int)(con_curlines-200*vid.fdupy), 0, fc.GetNumForName ("CONSBACK") );
+	  tc.GetPtr("CONSBACK")->Draw(0, int(con_curlines-200*vid.fdupy), V_SCALE);
         else
 #endif
-            CON_DrawBackpic (con_backpic,0,vid.width);   // picture as background
+	  CON_DrawBackpic(con_backpic,0,vid.width);   // picture as background
     }
     else
     {
@@ -1232,7 +1239,7 @@ static void CON_DrawConsole (void)
         p = &con_buffer[(i%con_totallines)*con_width];
 
         for (x=0;x<con_width;x++)
-            V_DrawCharacter( (x+1)<<3, y, p[x] |V_NOSCALEPATCH|V_NOSCALESTART);
+	  V_DrawCharacter((x+1)<<3, y, p[x]);
     }
 
 
@@ -1245,22 +1252,21 @@ static void CON_DrawConsole (void)
 
 //  Console refresh drawer, call each frame
 //
-void CON_Drawer (void)
+void CON_Drawer()
 {
-    if (!con_started)
-        return;
+  if (!con_started)
+    return;
 
-    if (con_recalc)
-        CON_RecalcSize ();
+  if (con_recalc)
+    CON_RecalcSize();
 
-    //Fab: bighack: patch 'I' letter leftoffset so it centers
-    hud.font['I'-HU_FONTSTART]->leftoffset = -2;
+  //Fab: bighack: patch 'I' letter leftoffset so it centers
+  //hud.font['I'-HU_FONTSTART]->leftoffset = -2;
 
-    if (con_curlines>0)
-        CON_DrawConsole ();
-    else
-    if (game.state == GS_LEVEL)
-        CON_DrawHudlines ();
+  if (con_curlines>0)
+    CON_DrawConsole();
+  else if (game.state == GS_LEVEL)
+    CON_DrawHudlines();
 
-    hud.font['I'-HU_FONTSTART]->leftoffset = 0;
+  //hud.font['I'-HU_FONTSTART]->leftoffset = 0;
 }

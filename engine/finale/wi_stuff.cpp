@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/03/28 15:16:13  smite-meister
+// Texture cache.
+//
 // Revision 1.12  2004/01/02 14:25:02  smite-meister
 // cleanup
 //
@@ -73,6 +76,7 @@
 #include "w_wad.h"
 
 #include "r_state.h" // colormap etc.
+#include "r_data.h"
 #include "d_netcmd.h" // cvars
 
 #include "sounds.h"
@@ -87,7 +91,7 @@
 // Loads of by-pixel layout and placement, offsets etc.
 //
 
-
+// FIXME remove most SHORT()'s
 //
 // Different vetween registered DOOM (1994) and
 //  Ultimate DOOM - Final edition (retail, 1995?).
@@ -200,7 +204,7 @@ struct anim_t
   int         data2;
 
   // actual graphics for frames of animations
-  patch_t*    p[3];
+  Texture*    p[3];
 
   // following must be initialized to zero before use!
 
@@ -363,7 +367,7 @@ static anim_t *anims[NUMEPISODES] =
 //
 // Locally used stuff.
 //
-#define FB 0
+#define FB V_SCALE
 
 // States for single-player
 #define SP_KILLS                0
@@ -387,59 +391,59 @@ Intermission wi;
 //
 
 // background (map of levels).
-//static patch_t*       bg;
+//static Texture*       bg;
 //static char             bgname[9];
 
 // You Are Here graphic
-static patch_t*         yah[2];
+static Texture*         yah[2];
 
 // splat
-static patch_t*         splat;
+static Texture*         splat;
 
 // %, : graphics
-static patch_t*         percent;
-static patch_t*         colon;
+static Texture*         percent;
+static Texture*         colon;
 
 // 0-9 graphic
-static patch_t*         num[10];
+static Texture*         num[10];
 
 // minus sign
-static patch_t*         wiminus;
+static Texture*         wiminus;
 
 // "Finished!" graphics
-static patch_t*         finished;
+static Texture*         finished;
 
 // "Entering" graphic
-static patch_t*         entering;
+static Texture*         entering;
 
 // "secret"
-static patch_t*         sp_secret;
+static Texture*         sp_secret;
 
 // "Kills", "Scrt", "Items", "Frags"
-static patch_t*         kills;
-static patch_t*         secret;
-static patch_t*         items;
-static patch_t*         frags;
+static Texture*         kills;
+static Texture*         secret;
+static Texture*         items;
+static Texture*         frags;
 
 // Time sucks.
-static patch_t*         timePatch;
-static patch_t*         par;
-static patch_t*         sucks;
+static Texture*         timePatch;
+static Texture*         par;
+static Texture*         sucks;
 
 // "killers", "victims"
-static patch_t*         killers;
-static patch_t*         victims;
+static Texture*         killers;
+static Texture*         victims;
 
 // "Total", your face, your dead face
-static patch_t*         ptotal;
-static patch_t*         star;
-static patch_t*         bstar;
+static Texture*         ptotal;
+static Texture*         star;
+static Texture*         bstar;
 
 //added:08-02-98: use STPB0 for all players, but translate the colors
-static patch_t*         stpb;
+static Texture*         stpb;
 
 // Name graphics of each level (centered)
-static patch_t**        lnames;
+static Texture**        lnames;
 
 //
 // CODE
@@ -464,8 +468,10 @@ static void WI_drawAnimatedBack(int ep)
     {
       a = &anims[ep-1][i];
 
+      //V_DrawScaledPatch(\([^,]+\),\([^,]+\),\([^,]+\),\([^,;]+\));$
+      // \4->Draw(\1,\2,\3);
       if (a->ctr >= 0)
-	V_DrawScaledPatch(a->loc.x, a->loc.y, FB, a->p[a->ctr]);
+	a->p[a->ctr]->Draw(a->loc.x, a->loc.y, FB);
     }
 }
 
@@ -485,12 +491,10 @@ static void WI_drawLF(const char *name, int last)
   else
     {
       // no font, use levelname patches instead
-      V_DrawScaledPatch ((BASEVIDWIDTH - (lnames[last]->width))/2,
-			 y, FB, lnames[last]);
+      lnames[last]->Draw((BASEVIDWIDTH - (lnames[last]->width))/2, y, FB);
       y += (5*(lnames[last]->height))/4;
       // draw "Finished!"
-      V_DrawScaledPatch ((BASEVIDWIDTH - (finished->width))/2,
-			 y, FB, finished);
+      finished->Draw((BASEVIDWIDTH - (finished->width))/2,y, FB);
     }
 }
 
@@ -508,18 +512,18 @@ static void WI_drawEL(const char *nextname, int next)
     }
   else
     {
-      V_DrawScaledPatch((BASEVIDWIDTH - (entering->width))/2, y, FB, entering);
+      entering->Draw((BASEVIDWIDTH - (entering->width))/2, y, FB);
 
       // draw level
       y += (5*SHORT(lnames[next]->height))/4;
 
-      V_DrawScaledPatch((BASEVIDWIDTH - (lnames[next]->width))/2, y, FB, lnames[next]);
+      lnames[next]->Draw((BASEVIDWIDTH - (lnames[next]->width))/2, y, FB);
     }
 }
 
 // this function only exists to choose between two different doom1 YAH patches!
 /*
-static void WI_drawOnLnode(int n, patch_t *c[])
+static void WI_drawOnLnode(int n, Texture *c[])
 {
   int         i;
   int         left;
@@ -554,7 +558,7 @@ static void WI_drawOnLnode(int n, patch_t *c[])
     } while (!fits && i!=2);
 
   if (fits && i<2)
-    V_DrawScaledPatch(lnodes->x, lnodes->y, FB, c[i]);
+    c[i]->Draw(lnodes->x, lnodes->y, FB);
   else
     // DEBUG
     CONS_Printf("Could not place patch on level %d\n", n+1);
@@ -608,13 +612,13 @@ static int WI_drawNum(int x, int y, int n, int digits)
   while (digits--)
     {
       x -= fontwidth;
-      V_DrawScaledPatch(x, y, FB, num[ n % 10 ]);
+      num[ n % 10 ]->Draw(x, y, FB);
       n /= 10;
     }
 
   // draw a minus sign if necessary
   if (neg)
-    V_DrawScaledPatch(x-=8, y, FB, wiminus);
+    wiminus->Draw(x-=8, y, FB);
 
   return x;
 }
@@ -624,7 +628,7 @@ static void WI_drawPercent(int x, int y, int p)
   if (p < 0)
     return;
 
-  V_DrawScaledPatch(x, y, FB, percent);
+  percent->Draw(x, y, FB);
   WI_drawNum(x, y, p, -1);
 }
 
@@ -653,14 +657,14 @@ static void WI_drawTime(int x, int y, int t)
 
 	  // draw
 	  if (div==60 || t / div)
-	    V_DrawScaledPatch(x, y, FB, colon);
+	    colon->Draw(x, y, FB);
 
         } while (t / div);
     }
   else
     {
       // "sucks"
-      V_DrawScaledPatch(x - SHORT(sucks->width), y, FB, sucks);
+      sucks->Draw(x - SHORT(sucks->width), y, FB);
     }
 }
 
@@ -690,14 +694,14 @@ bool Intermission::Responder(event_t* ev)
 void Intermission::SlamBackground()
 {
   if (game.mode == gm_heretic && state == StatCount)
-    V_DrawFlatFill(0, 0, vid.width/vid.dupx, vid.height/vid.dupy, fc.FindNumForName("FLOOR16"));
+    V_DrawFlatFill(0, 0, vid.width/vid.dupx, vid.height/vid.dupy, tc.GetPtr("FLOOR16"));
   else if (rendermode == render_soft) 
     {
       memcpy(vid.screens[0], vid.screens[1], vid.width * vid.height);
       //V_MarkRect (0, 0, vid.width, vid.height);
     }
   else 
-    V_DrawScaledPatch(0, 0, 1+V_NOSCALESTART, fc.CachePatchName(interpic, PU_CACHE));
+    tc.GetPtr(interpic)->Draw(0, 0, 1 | V_SSIZE);
 }
 
 
@@ -796,13 +800,13 @@ void Intermission::DrawYAH()
     // TODO put the intermission splats back sometime
   for (i = 0; i < 9; i++)
     if (firstlevel[i].done)
-      V_DrawScaledPatch(mapspots[ep][i].x, mapspots[ep][i].y, 0, splat);
+       splat->Draw(mapspots[ep][i].x, mapspots[ep][i].y, 0);
   */
 
   //  if(!(bcount&16) || state == ShowNextLoc) // strange Heretic thingy
   // draw flashing ptr
   if (pointeron) // draw the destination 'X' 
-    V_DrawScaledPatch(mapspots[ep][next].x, mapspots[ep][next].y, 0, yah[0]);
+    yah[0]->Draw(mapspots[ep][next].x, mapspots[ep][next].y, 0);
 }
 
 
@@ -967,13 +971,10 @@ static void WI_ddrawDeathmatchStats()
     WI_drawLF();
 
     // draw stat titles (top line)
-    V_DrawScaledPatch(DM_TOTALSX-SHORT(total->width)/2,
-                DM_MATRIXY-WI_SPACINGY+10,
-                FB,
-                total);
+    total->Draw(DM_TOTALSX-SHORT(total->width)/2,DM_MATRIXY-WI_SPACINGY+10,FB);
 
-    V_DrawScaledPatch(DM_KILLERSX, DM_KILLERSY, FB, killers);
-    V_DrawScaledPatch(DM_VICTIMSX, DM_VICTIMSY, FB, victims);
+     killers->Draw(DM_KILLERSX, DM_KILLERSY, FB);
+     victims->Draw(DM_VICTIMSX, DM_VICTIMSY, FB);
 
     // draw P?
     x = DM_MATRIXX + DM_SPACINGX;
@@ -1005,15 +1006,9 @@ static void WI_ddrawDeathmatchStats()
 
             if (i == me)
             {
-                V_DrawScaledPatch(x-SHORT(stpb->width)/2,
-                            DM_MATRIXY - WI_SPACINGY,
-                            FB,
-                            bstar);
+	     bstar->Draw(x-SHORT(stpb->width)/2, DM_MATRIXY - WI_SPACINGY, FB);
 
-                V_DrawScaledPatch(DM_MATRIXX-SHORT(stpb->width)/2,
-                            y,
-                            FB,
-                            star);
+	     star->Draw(DM_MATRIXX-SHORT(stpb->width)/2, y, FB);
             }
         }
         else
@@ -1383,9 +1378,9 @@ void Intermission::DrawCoopStats()
 	}
       else
 	{
-	  V_DrawScaledPatch(SP_STATSX, SP_STATSY, FB, kills);
-	  V_DrawScaledPatch(SP_STATSX, SP_STATSY+lh, FB, items);
-	  V_DrawScaledPatch(SP_STATSX, SP_STATSY+2*lh, FB, sp_secret);
+	  kills->Draw(SP_STATSX, SP_STATSY, FB);
+	  items->Draw(SP_STATSX, SP_STATSY+lh, FB);
+	  sp_secret->Draw(SP_STATSX, SP_STATSY+2*lh, FB);
 	}
       WI_drawPercent(BASEVIDWIDTH - SP_STATSX, SP_STATSY, cnt[0].kills);
       WI_drawPercent(BASEVIDWIDTH - SP_STATSX, SP_STATSY+lh, cnt[0].items);
@@ -1409,17 +1404,17 @@ void Intermission::DrawCoopStats()
 	}
       else
 	{
-	  V_DrawScaledPatch(NG_STATSX+NG_SPACINGX-SHORT(kills->width), NG_STATSY, FB, kills);
-	  V_DrawScaledPatch(NG_STATSX+2*NG_SPACINGX-SHORT(items->width), NG_STATSY, FB, items);
-	  V_DrawScaledPatch(NG_STATSX+3*NG_SPACINGX-SHORT(secret->width), NG_STATSY, FB, secret);
+	  kills->Draw(NG_STATSX+NG_SPACINGX-SHORT(kills->width), NG_STATSY, FB);
+	  items->Draw(NG_STATSX+2*NG_SPACINGX-SHORT(items->width), NG_STATSY, FB);
+	  secret->Draw(NG_STATSX+3*NG_SPACINGX-SHORT(secret->width), NG_STATSY, FB);
 	  if (dofrags)
-	    V_DrawScaledPatch(NG_STATSX+4*NG_SPACINGX-SHORT(frags->width), NG_STATSY, FB, frags);
+	    frags->Draw(NG_STATSX+4*NG_SPACINGX-SHORT(frags->width), NG_STATSY, FB);
 
 	  y = NG_STATSY + SHORT(kills->height);
 	}
       // draw stats
       extern byte *translationtables;
-      byte* colormap;
+      extern byte *current_colormap;
       int i, n = plrs.size();
       int pwidth = SHORT(percent->width);
 
@@ -1431,15 +1426,15 @@ void Intermission::DrawCoopStats()
 
 	  x = NG_STATSX - (i & 1) ? 10 : 0;
 	  if (color == 0)
-	    colormap = colormaps; //no translation table for green guy
+	    current_colormap = colormaps; //no translation table for green guy
 	  else
-	    colormap = (byte *) translationtables - 256 + (color << 8);
+	    current_colormap = (byte *)translationtables - 256 + (color << 8);
 
-	  V_DrawMappedPatch(x-SHORT(stpb->width), y, FB, stpb, colormap);
+	  stpb->Draw(x - stpb->width, y, FB | V_MAP);
 
 	  // TODO splitscreen
 	  if (plrs[i]->number == consoleplayer->number)
-	    V_DrawScaledPatch(x-SHORT(stpb->width), y, FB, star);
+	    star->Draw(x-SHORT(stpb->width), y, FB);
 
 	  // draw stats
 	  x = NG_STATSX + NG_SPACINGX;
@@ -1462,9 +1457,9 @@ void Intermission::DrawCoopStats()
     }
   else
     {
-      V_DrawScaledPatch(SP_TIMEX, SP_TIMEY, FB, timePatch);
+      timePatch->Draw(SP_TIMEX, SP_TIMEY, FB);
       //if (episode < 4 && game.mode!=gm_heretic)
-      V_DrawScaledPatch(BASEVIDWIDTH/2 + SP_TIMEX, SP_TIMEY, FB, par);
+      par->Draw(BASEVIDWIDTH/2 + SP_TIMEX, SP_TIMEY, FB);
     }
   WI_drawTime(BASEVIDWIDTH/2 - SP_TIMEX, SP_TIMEY, cnt_time);
   // if (episode < 4 && game.mode!=gm_heretic)
@@ -1530,7 +1525,7 @@ void Intermission::LoadData()
       // clear backbuffer from status bar stuff and borders
       memset(vid.screens[1], 0, vid.width*vid.height*vid.BytesPerPixel); 
       // background stored in backbuffer        
-      V_DrawScaledPatch(0, 0, 1, fc.CachePatchName(interpic, PU_CACHE));
+      tc.GetPtr(interpic)->Draw(0, 0, 1 | V_SCALE);
     }
 
   // UNUSED unsigned char *pic = vid.screens[1];
@@ -1552,11 +1547,11 @@ void Intermission::LoadData()
     case gm_doom2:
       // NUMCMAPS = 32;
       // level name patches
-      lnames = (patch_t **) Z_Malloc(sizeof(patch_t*) * NUMCMAPS, PU_STATIC, 0);
+      lnames = (Texture **) Z_Malloc(sizeof(Texture*) * NUMCMAPS, PU_STATIC, 0);
       for (i=0 ; i<NUMCMAPS ; i++)
 	{
 	  sprintf(name, "CWILV%2.2d", i);
-	  lnames[i] = fc.CachePatchName(name, PU_STATIC);
+	  lnames[i] = tc.GetPtr(name);
 	}
       break;
     case gm_doom1s:
@@ -1583,32 +1578,32 @@ void Intermission::LoadData()
 		      {
 			// animations
 			sprintf(name, "WIA%d%.2d%.2d", episode-1, j, i);
-			a->p[i] = fc.CachePatchName(name, PU_STATIC);
+			a->p[i] = tc.GetPtr(name);
 		      }
 		  }
 	      }
 
 	  // level name patches
-	  lnames = (patch_t **) Z_Malloc(sizeof(patch_t*) * NUMMAPS, PU_STATIC, 0);
+	  lnames = (Texture **) Z_Malloc(sizeof(Texture*) * NUMMAPS, PU_STATIC, 0);
 	  for (i=0 ; i<NUMMAPS ; i++)
 	    {
 	      sprintf(name, "WILV%d%d", episode-1, i);
-	      lnames[i] = fc.CachePatchName(name, PU_STATIC);
+	      lnames[i] = tc.GetPtr(name);
 	    }
 	}
 
       // fallthru
     case gm_heretic:
       // you are here
-      //yah[0] = fc.CachePatchName(game.mode == gm_heretic ? "IN_YAH" : "WIURH0", PU_STATIC);
-      yah[0] = fc.CachePatchName(pname[PN_YAH], PU_STATIC);
+      //yah[0] = tc.GetPtr(game.mode == gm_heretic ? "IN_YAH" : "WIURH0");
+      yah[0] = tc.GetPtr(pname[PN_YAH]);
 
       // you are here (alt.)
-      yah[1] = fc.CachePatchName("WIURH1", PU_STATIC);
+      yah[1] = tc.GetPtr("WIURH1");
 
       // splat
-      //splat = fc.CachePatchName(game.mode == gm_heretic ? "IN_X" : "WISPLAT", PU_STATIC);
-      splat = fc.CachePatchName(pname[PN_SPLAT], PU_STATIC);
+      //splat = tc.GetPtr(game.mode == gm_heretic ? "IN_X" : "WISPLAT");
+      splat = tc.GetPtr(pname[PN_SPLAT]);
       break;
     default:
       break;
@@ -1616,7 +1611,7 @@ void Intermission::LoadData()
 
   // TODO! these could use the new Hud widgets! the font is then cached just once!
   // More hacks on minus sign.
-  wiminus = fc.CachePatchName(game.mode == gm_heretic ? "FONTB13" : "WIMINUS", PU_STATIC);
+  wiminus = tc.GetPtr(game.mode == gm_heretic ? "FONTB13" : "WIMINUS");
 
   for (i=0;i<10;i++)
     {
@@ -1625,69 +1620,69 @@ void Intermission::LoadData()
 	sprintf(name, "FONTB%d", 16+i);
       else
 	sprintf(name, "WINUM%d", i);
-      num[i] = fc.CachePatchName(name, PU_STATIC);
+      num[i] = tc.GetPtr(name);
     }
 
   // percent sign
-  percent = fc.CachePatchName(game.mode == gm_heretic ? "FONTB05" : "WIPCNT", PU_STATIC);
+  percent = tc.GetPtr(game.mode == gm_heretic ? "FONTB05" : "WIPCNT");
 
   if (game.mode != gm_heretic)
     {
       // "finished"
-      finished = fc.CachePatchName("WIF", PU_STATIC);
+      finished = tc.GetPtr("WIF");
         
       // "entering"
-      entering = fc.CachePatchName("WIENTER", PU_STATIC);
+      entering = tc.GetPtr("WIENTER");
         
       // "kills"
-      kills = fc.CachePatchName("WIOSTK", PU_STATIC);
+      kills = tc.GetPtr("WIOSTK");
         
       // "scrt"
-      secret = fc.CachePatchName("WIOSTS", PU_STATIC);
+      secret = tc.GetPtr("WIOSTS");
         
       // "secret"
-      sp_secret = fc.CachePatchName("WISCRT2", PU_STATIC);
+      sp_secret = tc.GetPtr("WISCRT2");
         
       // "items"
-      items = fc.CachePatchName("WIOSTI", PU_STATIC);
+      items = tc.GetPtr("WIOSTI");
         
       // "frgs"
-      frags = fc.CachePatchName("WIFRGS", PU_STATIC);
+      frags = tc.GetPtr("WIFRGS");
         
       // "time"
-      timePatch = fc.CachePatchName("WITIME", PU_STATIC);
+      timePatch = tc.GetPtr("WITIME");
         
       // "sucks"
-      sucks = fc.CachePatchName("WISUCKS", PU_STATIC);
+      sucks = tc.GetPtr("WISUCKS");
         
       // "par"
-      par = fc.CachePatchName("WIPAR", PU_STATIC);
+      par = tc.GetPtr("WIPAR");
 
       // "killers" (vertical)
-      killers = fc.CachePatchName("WIKILRS", PU_STATIC);
+      killers = tc.GetPtr("WIKILRS");
         
       // "victims" (horiz)
-      victims = fc.CachePatchName("WIVCTMS", PU_STATIC);
+      victims = tc.GetPtr("WIVCTMS");
         
       // "total"
-      ptotal = fc.CachePatchName("WIMSTT", PU_STATIC);
+      ptotal = tc.GetPtr("WIMSTT");
     }
     
   // ":"
-  colon = fc.CachePatchName(game.mode == gm_heretic ? "FONTB26" : "WICOLON", PU_STATIC);
+  colon = tc.GetPtr(game.mode == gm_heretic ? "FONTB26" : "WICOLON");
 
   // your face
-  star = fc.CachePatchName("STFST01", PU_STATIC);
+  star = tc.GetPtr("STFST01");
 
   // dead face
-  bstar = fc.CachePatchName("STFDEAD0", PU_STATIC);
+  bstar = tc.GetPtr("STFDEAD0");
 
 
   //added:08-02-98: now uses a single STPB0 which is remapped to the
   //                player translation table. Whatever new colors we add
   //                since we'll have to define a translation table for
   //                it, we'll have the right colors here automatically.
-  stpb = fc.CachePatchName("STPB0", PU_STATIC);
+  stpb = tc.GetPtr("STPB0");
 }
 
 // was WI_unloadData

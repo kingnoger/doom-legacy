@@ -2,9 +2,12 @@
 //-----------------------------------------------------------------------------
 //  $Id$
 //
-// Copyright (C) 2002-2003 by DooM Legacy Team.
+// Copyright (C) 2002-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.20  2004/03/28 15:16:12  smite-meister
+// Texture cache.
+//
 // Revision 1.19  2003/12/18 11:57:31  smite-meister
 // fixes / new bugs revealed
 //
@@ -67,6 +70,7 @@
 #include "g_actor.h"
 #include "g_pawn.h"
 #include "d_netcmd.h" // consvars
+#include "tables.h"
 
 // global data
 
@@ -80,6 +84,10 @@ PlayerInfo *consoleplayer = NULL;   // player taking events
 PlayerInfo *consoleplayer2 = NULL;   // secondary player taking events
 PlayerInfo *displayplayer = NULL;   // view being displayed
 PlayerInfo *displayplayer2 = NULL;  // secondary view (splitscreen)
+
+
+CV_PossibleValue_t viewheight_cons_t[]={{16,"MIN"},{56,"MAX"},{0,NULL}};
+consvar_t cv_viewheight = {"viewheight", "41",0,viewheight_cons_t,NULL};
 
 
 PlayerInfo::PlayerInfo(const string & n)
@@ -98,7 +106,7 @@ PlayerInfo::PlayerInfo(const string & n)
 
   requestmap = entrypoint = 0;
 
-  viewz = viewheight = deltaviewheight = bob = 0;
+  viewz = viewheight = deltaviewheight = bob_amplitude = 0;
   message = NULL;
 
   for (int i = 0; i<NUMWEAPONS; i++)
@@ -196,4 +204,76 @@ void PlayerInfo::Reset(bool rpawn, bool rfrags)
     }
 
   return;
+}
+
+
+
+//
+// Calculate the walking / running height adjustment
+//
+void PlayerInfo::CalcViewHeight(bool onground)
+{
+  // 16 pixels of bob
+#define MAXBOB  0x100000
+
+  // Regular movement bobbing
+  // (needs to be calculated for gun swing even if not on ground)
+  // OPTIMIZE: tablify angle
+  // Note: a LUT allows for effects like a ramp with low health.
+
+  if ((pawn->flags2 & MF2_FLY) && !onground)
+    bob_amplitude = FRACUNIT/2;
+  else
+    {
+      bob_amplitude = ((FixedMul(pawn->px,pawn->px) + FixedMul(pawn->py,pawn->py))*NEWTICRATERATIO) >> 2;
+
+      if (bob_amplitude > MAXBOB)
+	bob_amplitude = MAXBOB;
+    }
+
+  fixed_t eyes = (pawn->height * cv_viewheight.value) / 56; // default eye view height
+
+  if ((pawn->cheats & CF_NOMOMENTUM) || !onground)
+    {
+      viewheight = eyes;
+      viewz = pawn->z + eyes;
+    }
+  else
+    {
+      int phase = (FINEANGLES/20*gametic/NEWTICRATERATIO) & FINEMASK;
+      fixed_t bob = FixedMul(bob_amplitude/2, finesine[phase]);
+
+      if (playerstate == PST_ALIVE)
+	{
+	  viewheight += deltaviewheight;
+	  
+	  if (viewheight > eyes)
+	    {
+	      viewheight = eyes;
+	      deltaviewheight = 0;
+	    }
+
+	  if (viewheight < eyes/2)
+	    {
+	      viewheight = eyes/2;
+	      if (deltaviewheight <= 0)
+		deltaviewheight = 1;
+	    }
+
+	  if (deltaviewheight)
+	    {
+	      deltaviewheight += FRACUNIT/4;
+	      if (!deltaviewheight)
+		deltaviewheight = 1;
+	    }
+	}
+
+      viewz = pawn->z + viewheight + bob - pawn->floorclip;
+
+      if (viewz < pawn->floorz + 4*FRACUNIT)
+	viewz = pawn->floorz + 4*FRACUNIT;
+    }
+
+  if (viewz > pawn->ceilingz - 4*FRACUNIT)
+    viewz = pawn->ceilingz - 4*FRACUNIT;
 }

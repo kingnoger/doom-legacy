@@ -49,7 +49,7 @@ public:
   Wad();
   virtual ~Wad();
 
-  Wad(string &fname); // special constructor for DEH file emulation
+  Wad(string &fname, const char *lumpname); // special constructor for single lump files
 
   // open a new wadfile
   virtual bool Open(const char *fname);

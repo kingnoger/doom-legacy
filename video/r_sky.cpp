@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,17 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:47  hurdler
-// Initial revision
+// Revision 1.2  2004/03/28 15:16:15  smite-meister
+// Texture cache.
 //
-// Revision 1.4  2002/08/19 18:06:48  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.3  2002/07/01 21:01:12  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:39  vberghol
-// Version 133 Experimental!
+// Revision 1.1.1.1  2002/11/16 14:18:47  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.8  2001/08/06 23:57:09  stroggonmeth
 // Removed portal code, improved 3D floors in hardware mode.
@@ -80,20 +74,24 @@
 //
 // sky mapping
 //
-int                     skyflatnum;
-int                     skytexture;
-int                     skytexturemid;
+int          skyflatnum;
+Texture     *skytexture;
+int          skytexturemid;
 
-fixed_t                 skyscale;
-int                     skymode=0;  // old (0), new (1) (quick fix!)
+fixed_t      skyscale;
+int          skymode=0;  // old (0), new (1) (quick fix!)
 
 //
 // R_InitSkyMap called at startup, once.
 //
-void R_InitSkyMap (void)
+void R_InitSkyMap()
 {
     // set at P_LoadSectors
     //skyflatnum = R_FlatNumForName ( SKYFLATNAME );
+
+  // Update sky column offsets
+  //Sky1ColumnOffset += Sky1ScrollDelta;
+  //Sky2ColumnOffset += Sky2ScrollDelta;
 }
 
 
@@ -104,23 +102,20 @@ void R_InitSkyMap (void)
 //  NOTE: skycolfunc should be set at R_ExecuteSetViewSize ()
 //        I dont bother because we don't use low detail no more
 //
-void R_SetupSkyDraw (void)
+void R_SetupSkyDraw()
 {
-    texpatch_t*  patches;
-    patch_t      wpatch;
-    int          count;
-    int          height;
-    int          i;
+  int          height;
+  int          i;
 
+  // parse the patches composing sky texture for the tallest one
+  // patches are usually RSKY1,RSKY2... and unique
 
-    // parse the patches composing sky texture for the tallest one
-    // patches are usually RSKY1,RSKY2... and unique
+  // note: the TEXTURES lump doesn't have the taller size of Legacy
+  //       skies, but the patches it use will give the right size
 
-    // note: the TEXTURES lump doesn't have the taller size of Legacy
-    //       skies, but the patches it use will give the right size
-
-    count   = textures[skytexture]->patchcount;
-    patches = &textures[skytexture]->patches[0];
+  /*
+  int count = skytexture->patchcount;
+  patches = skytexture->patches;
     for (height=0,i=0;i<count;i++,patches++)
     {
         fc.ReadLumpHeader (patches->patch, &wpatch, sizeof(patch_t));
@@ -128,19 +123,20 @@ void R_SetupSkyDraw (void)
         if (wpatch.height>height)
             height = wpatch.height;
     }
+  */
 
-    // DIRTY : should set the routine depending on colormode in screen.c
-    if (height>128)
+  // DIRTY : should set the routine depending on colormode in screen.c
+  if (skytexture->height > 128)
     {
-        // horizon line on 256x240 freelook textures of Legacy or heretic
-        skytexturemid = 200<<FRACBITS;
-        skymode = 1;
+      // horizon line on 256x240 freelook textures of Legacy or heretic
+      skytexturemid = 200<<FRACBITS;
+      skymode = 1;
     }
-    else
+  else
     {
-        // the horizon line in a 256x128 sky texture
-        skytexturemid = 100<<FRACBITS;
-        skymode = 0;
+      // the horizon line in a 256x128 sky texture
+      skytexturemid = 100<<FRACBITS;
+      skymode = 0;
     }
 
     // get the right drawer, it was set by screen.c, depending on the
@@ -152,18 +148,18 @@ void R_SetupSkyDraw (void)
 
 
 // set the correct scale for the sky at setviewsize
-void R_SetSkyScale (void)
+void R_SetSkyScale()
 {
-    //fix this quick mess
-    if (skytexturemid>100<<FRACBITS)
+  //fix this quick mess
+  if (skytexturemid>100<<FRACBITS)
     {
-        // normal aspect ratio corrected scale
-        skyscale = FixedDiv (FRACUNIT, pspriteyscale);
+      // normal aspect ratio corrected scale
+      skyscale = FixedDiv (FRACUNIT, pspriteyscale);
     }
-    else
+  else
     {
-        // double the texture vertically, bleeergh!!
-        skyscale = FixedDiv (FRACUNIT, pspriteyscale)>>1;
+      // double the texture vertically, bleeergh!!
+      skyscale = FixedDiv (FRACUNIT, pspriteyscale)>>1;
     }
 }
 

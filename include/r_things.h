@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
 // Revision 1.2  2003/03/08 16:07:16  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -65,13 +68,6 @@
 #ifndef r_things_h
 #define r_things_h 1
 
-struct post_t;
-typedef post_t column_t;
-
-// number of sprite lumps for spritewidth,offset,topoffset lookup tables
-// Fab: this is a hack : should allocate the lookup tables per sprite
-#define     MAXSPRITELUMPS     4096
-
 #define MAXVISSPRITES   256
 
 // Constant arrays used for psprite clipping
@@ -94,6 +90,7 @@ extern fixed_t          pspriteyscale;  //added:02-02-98:for aspect ratio
 
 extern const int PSpriteSY[];
 
+typedef struct post_t column_t;
 void R_DrawMaskedColumn(column_t* column);
 
 void R_SortVisSprites();

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
 // Revision 1.1  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -66,18 +69,23 @@ public:
   ~Parser();
 
   int  Open(int lump);
-  int  RemoveCRs();
-  void RemoveComments(char c);
+  int  Open(const char *buf, int len);
 
-  bool NewLine();
+  void RemoveComments(char c);
+  int  ReplaceChars(char from, char to);
+  inline int RemoveCRs() { return ReplaceChars('\r', ' '); };
+
+  bool NewLine(bool pass_ws = true);
   void PassWS();
-  void LineReplaceChars(char from, char to);
+  int  LineReplaceChars(char from, char to);
+  char *GetToken(const char *delim);
   int  GetString(char *to, int n);
   int  GetStringN(char *to, int n);
   bool GetChar(char *to);
   int  GetInt();
   bool MustGetInt(int *to);
 
+  inline int   LineLen() { return e - s - 1; }; // remaining length of the current line (without the \n)
   inline char  Peek() { return *s; };
   inline int   Location() { return s - ms; };
   inline char *Pointer() { return s; }; // dangerous but useful

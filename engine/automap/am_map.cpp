@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/03/28 15:16:13  smite-meister
+// Texture cache.
+//
 // Revision 1.11  2004/01/06 14:37:45  smite-meister
 // six bugfixes, cleanup
 //
@@ -66,14 +69,16 @@
 #include "g_map.h"
 #include "g_mapinfo.h"
 
-#include "m_cheat.h"
-#include "v_video.h"
 #include "hu_stuff.h"
 #include "dstrings.h"
 #include "keys.h"
-#include "r_draw.h"
-#include "r_main.h"
+
+#include "r_data.h"
+#include "r_defs.h"
 #include "r_sprite.h"
+#include "r_draw.h"
+#include "v_video.h"
+
 #include "d_main.h"
 
 #include "p_maputl.h"
@@ -541,7 +546,7 @@ void AutoMap::loadPics()
   for (i=0;i<10;i++)
     {
       sprintf(namebuf, "AMMNUM%d", i);
-      marknums[i] = fc.CachePatchName(namebuf, PU_STATIC);
+      marknums[i] = tc.GetPtr(namebuf);
     }
   if (fc.FindNumForName("AUTOPAGE") >= 0)
     mapback = (byte *)fc.CacheLumpName("AUTOPAGE", PU_STATIC);
@@ -1471,7 +1476,7 @@ void AutoMap::drawMarks()
 	  fx = CXMTOF(markpoints[i].x);
 	  fy = CYMTOF(markpoints[i].y);
 	  if (fx >= f_x && fx <= f_w - w && fy >= f_y && fy <= f_h - h)
-	    V_DrawPatch(fx, fy, FB, marknums[i]);
+	    marknums[i]->Draw(fx, fy, FB);
         }
     }
 }
@@ -1517,7 +1522,7 @@ void AutoMap::Drawer()
     int y;
     const char *mapname = mp->info->nicename.c_str();
     y = vid.height - hud.stbarheight - 1;
-    V_DrawString(20, y - V_StringHeight(mapname), V_NOSCALESTART, mapname);
+    V_DrawString(20, y - V_StringHeight(mapname), V_SSIZE, mapname);
   }
 
   //CONS_Printf("AM::Drawer n\n");

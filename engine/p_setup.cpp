@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.35  2004/03/28 15:16:13  smite-meister
+// Texture cache.
+//
 // Revision 1.34  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
@@ -135,6 +138,7 @@
 #include "doomdata.h"
 
 #include "g_game.h"
+#include "g_pawn.h"
 #include "g_map.h"
 #include "g_mapinfo.h"
 #include "g_level.h"
@@ -166,9 +170,9 @@
 
 
 #ifdef HWRENDER
-#include "i_video.h"            //rendermode
-#include "hardware/hw_main.h"
-#include "hardware/hw_light.h"
+# include "i_video.h"            //rendermode
+# include "hardware/hw_main.h"
+# include "hardware/hw_light.h"
 #endif
 
 
@@ -206,11 +210,10 @@ void Map::LoadVertexes(int lump)
 //
 // Computes the line length in frac units, the glide render needs this
 //
-#define crapmul (1.0f / 65536.0f)
-
-float P_SegLength (seg_t* seg)
+float P_SegLength(seg_t *seg)
 {
-  double      dx,dy;
+  //const double crapmul = 1.0 / 65536.0;
+  double dx, dy;
 
   // make a vector (start at origin)
   dx = (seg->v2->x - seg->v1->x)*crapmul;
@@ -265,6 +268,7 @@ void Map::LoadSegs(int lump)
 }
 
 
+
 void Map::LoadSubsectors(int lump)
 {
   numsubsectors = fc.LumpLength (lump) / sizeof(mapsubsector_t);
@@ -286,107 +290,6 @@ void Map::LoadSubsectors(int lump)
 
 
 
-//
-// levelflats
-//
-#define MAXLEVELFLATS   256
-
-int                     numlevelflats;
-levelflat_t*            levelflats;
-
-//SoM: Other files want this info.
-int P_PrecacheLevelFlats()
-{
-  int flatmemory = 0;
-  int i;
-  int lump;
-
-  //SoM: 4/18/2000: New flat code to make use of levelflats.
-  for(i = 0; i < numlevelflats; i++)
-    {
-      lump = levelflats[i].lumpnum;
-      if(devparm)
-	flatmemory += fc.LumpLength(lump);
-      R_GetFlat (lump);
-    }
-  return flatmemory;
-}
-
-
-
-
-int P_FlatNumForName(char *flatname)
-{
-  return P_AddLevelFlat(flatname, levelflats);
-}
-
-
-
-// help function for P_LoadSectors, find a flat in the active wad files,
-// allocate an id for it, and set the levelflat (to speedup search)
-//
-int P_AddLevelFlat (char* flatname, levelflat_t* levelflat)
-{
-  union {
-    char    s[9];
-    int     x[2];
-  } name8;
-
-  int         i;
-  int         v1,v2;
-
-  strncpy (name8.s,flatname,8);   // make it two ints for fast compares
-  name8.s[8] = 0;                 // in case the name was a fill 8 chars
-  strupr (name8.s);               // case insensitive
-  v1 = name8.x[0];
-  v2 = name8.x[1];
-
-  //
-  //  first scan through the already found flats
-  //
-  for (i=0; i<numlevelflats; i++,levelflat++)
-    {
-      if ( *(int *)levelflat->name == v1
-	   && *(int *)&levelflat->name[4] == v2)
-        {
-	  break;
-        }
-    }
-
-  // that flat was already found in the level, return the id
-  if (i==numlevelflats)
-    {
-      // store the name
-      *((int*)levelflat->name) = v1;
-      *((int*)&levelflat->name[4]) = v2;
-
-      // store the flat lump number
-      levelflat->lumpnum = R_FlatNumForName (flatname);
-
-      if (devparm)
-	CONS_Printf ("flat %#03d: %s\n", numlevelflats, name8.s);
-
-      numlevelflats++;
-
-      if (numlevelflats>=MAXLEVELFLATS)
-	I_Error("P_LoadSectors: too many flats in level\n");
-    }
-
-  // level flat id
-  return i;
-}
-
-
-// SoM: Do I really need to comment this?
-char *P_FlatNameForNum(int num)
-{
-  if(num < 0 || num > numlevelflats)
-    I_Error("P_FlatNameForNum: Invalid flatnum\n");
-
-  return Z_Strdup(va("%.8s", levelflats[num].name), PU_STATIC, 0);
-}
-
-
 void Map::LoadSectors1(int lump)
 {
   // allocate and zero the sectors
@@ -396,21 +299,12 @@ void Map::LoadSectors1(int lump)
 }
 
 
+floortype_t P_GetFloorType(const char *pic);
+
 void Map::LoadSectors2(int lump)
 {
   int i;
-
   byte *data = (byte *)fc.CacheLumpNum(lump, PU_STATIC);
-
-  // FIXME here a real texture class should be used (with possible animation etc.)
-  //Fab:FIXME: allocate for whatever number of flats
-  //           512 different flats per level should be plenty
-  levelflat_t *foundflats = (levelflat_t *)Z_Malloc(sizeof(levelflat_t) * MAXLEVELFLATS, PU_STATIC, 0);
-  if (!foundflats)
-    I_Error("P_LoadSectors: no mem\n");
-  memset(foundflats, 0, sizeof(levelflat_t) * MAXLEVELFLATS);
-
-  numlevelflats = 0;
 
   mapsector_t *ms = (mapsector_t *)data;
   sector_t *ss = sectors;
@@ -419,26 +313,10 @@ void Map::LoadSectors2(int lump)
       ss->floorheight = SHORT(ms->floorheight)<<FRACBITS;
       ss->ceilingheight = SHORT(ms->ceilingheight)<<FRACBITS;
 
-      //
-      //  flats
-      //
-      if( strnicmp(ms->floorpic,"FWATER",6)==0 || 
-	  strnicmp(ms->floorpic,"FLTWAWA1",8)==0 ||
-	  strnicmp(ms->floorpic,"FLTFLWW1",8)==0 )
-	ss->floortype = FLOOR_WATER;
-      else
-        if( strnicmp(ms->floorpic,"FLTLAVA1",8)==0 ||
-            strnicmp(ms->floorpic,"FLATHUH1",8)==0 )
-	  ss->floortype = FLOOR_LAVA;
-        else
-	  if( strnicmp(ms->floorpic,"FLTSLUD1",8)==0 )
-            ss->floortype = FLOOR_SLUDGE;
-	  else
-            ss->floortype = FLOOR_SOLID;
+      ss->floortype = P_GetFloorType(ms->floorpic);
 
-      // TODO cache flats here
-      ss->floorpic = P_AddLevelFlat (ms->floorpic,foundflats);
-      ss->ceilingpic = P_AddLevelFlat (ms->ceilingpic,foundflats);
+      ss->floorpic = tc.Get(ms->floorpic);
+      ss->ceilingpic = tc.Get(ms->ceilingpic);
 
       ss->lightlevel = SHORT(ms->lightlevel);
 
@@ -490,20 +368,12 @@ void Map::LoadSectors2(int lump)
   //CONS_Printf ("%d flats found\n", numlevelflats);
 
   // set the sky flat num
-  // FIXME we need a completely new flat/texture cache.
   if (game.mode == gm_hexen)
-    skyflatnum = P_AddLevelFlat ("F_SKY",foundflats);
+    skyflatnum = tc.Get("F_SKY");
   else
-    skyflatnum = P_AddLevelFlat ("F_SKY1",foundflats);
-
-  // copy table for global usage
-  levelflats = (levelflat_t *)Z_Malloc (numlevelflats*sizeof(levelflat_t),PU_LEVEL,0);
-  memcpy (levelflats, foundflats, numlevelflats*sizeof(levelflat_t));
-  Z_Free(foundflats);
-
-  // search for animated flats and set up
-  P_SetupLevelFlatAnims();
+    skyflatnum = tc.Get("F_SKY1");
 }
+
 
 
 void Map::LoadNodes(int lump)
@@ -540,6 +410,7 @@ void Map::LoadNodes(int lump)
 }
 
 
+
 void Map::LoadThings(int lump)
 {
   TIDmap.clear();
@@ -559,9 +430,11 @@ void Map::LoadThings(int lump)
 
   mapthing_t *t = mapthings;
 
-  int ffail = 0;
-  int fskill = 0;
-  int fmode = -1; // all bits on
+  // flag checks
+  int ffail  = 0;
+  int fskill;
+  int fmode  = -1; // all bits on
+  int fclass = -1;
   extern consvar_t cv_deathmatch;
 
   // check skill
@@ -581,7 +454,27 @@ void Map::LoadThings(int lump)
 	fmode = MTF_GDEATHMATCH;
       else
 	fmode = MTF_GCOOP;
-      // TODO the class flags are ignored. If there are _any_ clerics in the game, MTF_CLERIC stuff should be spawned etc.
+
+      // If there are _any_ clerics in the game, MTF_CLERIC stuff should be spawned etc.
+      fclass = (MTF_FIGHTER | MTF_CLERIC | MTF_MAGE); // 0;
+      /*
+      for (player_iter_t k = game.Players.begin(); k != game.Players.end(); k++)
+	switch ((*k)->pclass)
+	  {
+	  case PCLASS_FIGHTER:
+	    fclass |= MTF_FIGHTER;
+	    break;
+	  case PCLASS_CLERIC:
+	    fclass |= MTF_CLERIC;
+	    break;
+	  case PCLASS_MAGE:
+	    fclass |= MTF_MAGE;
+	    break;
+	  default:
+	    fclass |= (MTF_FIGHTER | MTF_CLERIC | MTF_MAGE);
+	    break;
+	  }
+      */
     }
   else
     {
@@ -749,7 +642,7 @@ void Map::LoadThings(int lump)
 
       // Spawning flags don't apply to playerstarts, teleport exits or polyobjs! Why, pray, is that?
       // wrong flags?
-      if ((t->flags & ffail) || !(t->flags & fskill) || !(t->flags & fmode))
+      if ((t->flags & ffail) || !(t->flags & fskill) || !(t->flags & fmode) || !(t->flags & fclass))
 	{
 	  t->type = 0;
 	  continue;
@@ -943,101 +836,92 @@ void Map::LoadSideDefs2(int lump)
   int  num;
   int  mapnum;
 
+  // Texture names should be NUL-terminated.
+  // Also, they should be uppercase (e.g. Doom E1M2)
+  char ttex[9]; ttex[8] = '\0';
+  char mtex[9]; mtex[8] = '\0';
+  char btex[9]; btex[8] = '\0';
+
   for (i=0; i<numsides; i++)
     {
-      register mapsidedef_t *msd = (mapsidedef_t *) data + i;
-      register side_t *sd = sides + i;
-      register sector_t *sec;
+      mapsidedef_t *msd = (mapsidedef_t *) data + i;
+      side_t *sd = sides + i;
+      sector_t *sec;
 
       sd->textureoffset = SHORT(msd->textureoffset)<<FRACBITS;
       sd->rowoffset = SHORT(msd->rowoffset)<<FRACBITS;
 
+      strncpy(ttex, msd->toptexture, 8); strupr(ttex);
+      strncpy(mtex, msd->midtexture, 8); strupr(mtex);
+      strncpy(btex, msd->bottomtexture, 8); strupr(btex);
+
       // refined to allow colormaps to work as wall
       // textures if invalid as colormaps but valid as textures.
+
+      // FIXME these linedeftypes do not work as expected
 
       sd->sector = sec = &sectors[SHORT(msd->sector)];
       switch (sd->special)
         {
-        case 242:                       // variable colormap via 242 linedef
-        case 280:                       //SoM: 3/22/2000: New water type.
+        case 242:  // BOOM: fake ceiling/floor, variable colormaps
+        case 280:  // Legacy: swimmable water, colormaps
 #ifdef HWRENDER
           if(rendermode == render_soft)
 	    {
 #endif
-	      num = R_CheckTextureNumForName(msd->toptexture);
+	      num = tc.Get(ttex, false);
 
 	      if(num == -1)
 		{
-		  sec->topmap = mapnum = R_ColormapNumForName(msd->toptexture);
+		  sec->topmap = mapnum = R_ColormapNumForName(ttex);
 		  sd->toptexture = 0;
 		}
 	      else
 		sd->toptexture = num;
 
-	      num = R_CheckTextureNumForName(msd->midtexture);
+	      num = tc.Get(mtex, false);
 	      if(num == -1)
 		{
-		  sec->midmap = mapnum = R_ColormapNumForName(msd->midtexture);
+		  sec->midmap = mapnum = R_ColormapNumForName(mtex);
 		  sd->midtexture = 0;
 		}
 	      else
 		sd->midtexture = num;
 
-	      num = R_CheckTextureNumForName(msd->bottomtexture);
+	      num = tc.Get(btex, false);
 	      if(num == -1)
 		{
-		  sec->bottommap = mapnum = R_ColormapNumForName(msd->bottomtexture);
+		  sec->bottommap = mapnum = R_ColormapNumForName(btex);
 		  sd->bottomtexture = 0;
 		}
 	      else
 		sd->bottomtexture = num;
-	      break;
 #ifdef HWRENDER
 	    }
           else
 	    {
-	      if((num = R_CheckTextureNumForName(msd->toptexture)) == -1)
-		sd->toptexture = 0;
-	      else
-		sd->toptexture = num;
-
-	      if((num = R_CheckTextureNumForName(msd->midtexture)) == -1)
-		sd->midtexture = 0;
-	      else
-		sd->midtexture = num;
-
-	      if((num = R_CheckTextureNumForName(msd->bottomtexture)) == -1)
-		sd->bottomtexture = 0;
-	      else
-		sd->bottomtexture = num;
-
-	      break;
+	      sd->toptexture = tc.Get(ttex);
+	      sd->midtexture = tc.Get(mtex);
+	      sd->bottomtexture = tc.Get(btex);
 	    }
 #endif
-        case 282:                       //SoM: 4/4/2000: Just colormap transfer
+	  break;
+
+        case 282: // Legacy: set colormap
 #ifdef HWRENDER
           if(rendermode == render_soft)
 	    {
 #endif
-	      if(msd->toptexture[0] == '#' || msd->bottomtexture[0] == '#')
+	      if(ttex[0] == '#' || btex[0] == '#')
 		{
-		  sec->midmap = R_CreateColormap(msd->toptexture, msd->midtexture, msd->bottomtexture);
+		  sec->midmap = R_CreateColormap(ttex, mtex, btex);
 		  sd->toptexture = sd->bottomtexture = 0;
 		}
 	      else
 		{
-		  if((num = R_CheckTextureNumForName(msd->toptexture)) == -1)
-		    sd->toptexture = 0;
-		  else
-		    sd->toptexture = num;
-		  if((num = R_CheckTextureNumForName(msd->midtexture)) == -1)
-		    sd->midtexture = 0;
-		  else
-		    sd->midtexture = num;
-		  if((num = R_CheckTextureNumForName(msd->bottomtexture)) == -1)
-		    sd->bottomtexture = 0;
-		  else
-		    sd->bottomtexture = num;
+		  sd->toptexture = tc.Get(ttex);
+		  sd->midtexture = tc.Get(mtex);
+		  sd->bottomtexture = tc.Get(btex);
 		}
 
 #ifdef HWRENDER
@@ -1045,11 +929,11 @@ void Map::LoadSideDefs2(int lump)
           else
 	    {
 	      //Hurdler: for now, full support of toptexture only
-	      if(msd->toptexture[0] == '#')// || msd->bottomtexture[0] == '#')
+	      if(ttex[0] == '#')// || btex[0] == '#')
 		{
-		  char *col = msd->toptexture;
+		  char *col = ttex;
 
-		  sec->midmap = R_CreateColormap(msd->toptexture, msd->midtexture, msd->bottomtexture);
+		  sec->midmap = R_CreateColormap(ttex, mtex, btex);
 		  sd->toptexture = sd->bottomtexture = 0;
 # define HEX2INT(x) (x >= '0' && x <= '9' ? x - '0' : x >= 'a' && x <= 'f' ? x - 'a' + 10 : x >= 'A' && x <= 'F' ? x - 'A' + 10 : 0)
 # define ALPHA2INT(x) (x >= 'a' && x <= 'z' ? x - 'a' : x >= 'A' && x <= 'Z' ? x - 'A' : 0)
@@ -1064,39 +948,28 @@ void Map::LoadSideDefs2(int lump)
 		}
 	      else
 		{
-		  if((num = R_CheckTextureNumForName(msd->toptexture)) == -1)
-		    sd->toptexture = 0;
-		  else
-		    sd->toptexture = num;
-
-		  if((num = R_CheckTextureNumForName(msd->midtexture)) == -1)
-		    sd->midtexture = 0;
-		  else
-		    sd->midtexture = num;
-		  
-		  if((num = R_CheckTextureNumForName(msd->bottomtexture)) == -1)
-		    sd->bottomtexture = 0;
-		  else
-		    sd->bottomtexture = num;
+		  sd->toptexture = tc.Get(ttex);
+		  sd->midtexture = tc.Get(mtex);
+		  sd->bottomtexture = tc.Get(btex);
 		}
 	      break;
 	    }
 #endif
 
-        case 260:
-          num = R_CheckTextureNumForName(msd->midtexture);
+        case 260: // BOOM: make texture transparent
+          num = tc.Get(mtex, false);
           if(num == -1)
             sd->midtexture = 1;
           else
             sd->midtexture = num;
 
-          num = R_CheckTextureNumForName(msd->toptexture);
+          num = tc.Get(ttex, false);
           if(num == -1)
             sd->toptexture = 1;
           else
             sd->toptexture = num;
 
-          num = R_CheckTextureNumForName(msd->bottomtexture);
+          num = tc.Get(btex, false);
           if(num == -1)
             sd->bottomtexture = 1;
           else
@@ -1104,33 +977,33 @@ void Map::LoadSideDefs2(int lump)
           break;
 
 	  /*        case 260: // killough 4/11/98: apply translucency to 2s normal texture
-		    sd->midtexture = strncasecmp("TRANMAP", msd->midtexture, 8) ?
-		    (sd->special = fc.CheckNumForName(msd->midtexture)) < 0 ||
+		    sd->midtexture = strncasecmp("TRANMAP", mtex, 8) ?
+		    (sd->special = fc.CheckNumForName(mtex)) < 0 ||
 		    fc.LumpLength(sd->special) != 65536 ?
-		    sd->special=0, R_TextureNumForName(msd->midtexture) :
+		    sd->special=0, R_TextureNumForName(mtex) :
 		    (sd->special++, 0) : (sd->special=0);
-		    sd->toptexture = R_TextureNumForName(msd->toptexture);
-		    sd->bottomtexture = R_TextureNumForName(msd->bottomtexture);
+		    sd->toptexture = R_TextureNumForName(ttex);
+		    sd->bottomtexture = R_TextureNumForName(btex);
 		    break;*/ //This code is replaced.. I need to fix this though
 
 
 	  //Hurdler: added for alpha value with translucent 3D-floors/water
         case 300:
         case 301:
-	  if(msd->toptexture[0] == '#')
+	  if(ttex[0] == '#')
             {
-	      char *col = msd->toptexture;
+	      char *col = ttex;
 	      sd->toptexture = sd->bottomtexture = ((col[1]-'0')*100+(col[2]-'0')*10+col[3]-'0')+1;
             }
 	  else
 	    sd->toptexture = sd->bottomtexture = 0;
-	  sd->midtexture = R_TextureNumForName(msd->midtexture);
+	  sd->midtexture = tc.Get(mtex);
 	  break;
 
-        default:                        // normal cases
-          sd->midtexture = R_TextureNumForName(msd->midtexture);
-          sd->toptexture = R_TextureNumForName(msd->toptexture);
-          sd->bottomtexture = R_TextureNumForName(msd->bottomtexture);
+        default: // normal cases
+          sd->midtexture = tc.Get(mtex);
+          sd->toptexture = tc.Get(ttex);
+          sd->bottomtexture = tc.Get(btex);
           break;
         }
     }
@@ -1299,16 +1172,14 @@ void Map::SetupSky()
   // depending on the current episode, and the game version.
 
   if (!info->sky1.empty())
-    skytexture = R_TextureNumForName(info->sky1.c_str());
+    skytexture = tc.GetPtr(info->sky1.c_str());
   else
-    skytexture = R_TextureNumForName("SKY1");
+    skytexture = tc.GetPtr("SKY1");
 
   // scale up the old skies, if needed
   R_SetupSkyDraw();
 }
 
-
-extern int numtextures;
 
 
 void P_Initsecnode();
@@ -1385,7 +1256,6 @@ bool Map::Setup(tic_t start, bool spawnthings)
 
   //faB: now part of level loading since in future each level may have
   //     its own anim texture sequences, switches etc.
-  P_InitPicAnims();
   SetupSky();
 
   // note: most of this ordering is important
@@ -1445,13 +1315,14 @@ bool Map::Setup(tic_t start, bool spawnthings)
     LoadACScripts(lumpnum + ML_BEHAVIOR);
 
   SpawnLineSpecials(); // spawn Thinkers created by linedefs (also does some mandatory initializations!)
+  InitLightning(); // Hexen lightning effect
 
 
   // preload graphics
 #ifdef HWRENDER
   if (rendermode != render_soft)
     {
-      HWR_PrepLevelCache (numtextures);
+      HWR_PrepLevelCache();
       R.HWR_CreateStaticLightmaps(numnodes-1);
     }
 #endif
@@ -1462,6 +1333,7 @@ bool Map::Setup(tic_t start, bool spawnthings)
   //CONS_Printf("%d vertexs %d segs %d subsector\n",numvertexes,numsegs,numsubsectors);
   return true;
 }
+
 
 
 // does the Doom => Hexen linedef type conversion

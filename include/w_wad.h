@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2003 by DooM Legacy Team.
+// Copyright (C) 2002-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -28,18 +28,17 @@
 #include <vector>
 #include <string>
 
-#ifdef HWRENDER
-# include "hardware/hw_data.h"
-#else
-typedef void GlidePatch_t;
-#endif
-
-#include "v_video.h" // patch_t, pic_t
+#include "doomtype.h"
 
 using namespace std;
 
+#define MAX_WADPATH   128
+#define MAX_WADFILES  32       // maximum of wad files used at the same time
+                               // (there is a max of simultaneous open files
+                               // anyway, and this should be plenty)
 
-// ========================================================================
+
+//=========================================================================
 // class FileCache
 // A class for holding open VFiles and giving out information about them
 // This class also handles game dependent operations concerning wad files
@@ -53,11 +52,9 @@ private:
 public:
   ~FileCache();
 
-  // set file path
-  void SetPath(const char *p);
+  void SetPath(const char *p);    // set file path
 
-  // opens a new vfile, returns -1 on error
-  int  AddFile(const char *filename);
+  int  AddFile(const char *filename);  // opens a new vfile, returns -1 on error
   // returns true if everything is OK, false if at least one file was missing
   bool InitMultipleFiles(const char *const*filenames);
 
@@ -77,38 +74,22 @@ public:
   int FindPartialName(int iname, unsigned filenum, int startlump, const char **fullname);
 
   // reading and caching lumps
-  inline int ReadLump(int lump, void *dest) { return ReadLumpHeader(lump, dest, 0); };
   int ReadLumpHeader(int lump, void *dest, int size);
-  void *CacheLumpName(const char* name, int tag);
   void *CacheLumpNum(int lump, int tag);
 
-  // caching graphics
-  patch_t *CachePatchName(const char* name, int tag);
-#ifdef HWRENDER
-  patch_t *CachePatchNum(int lump, int tag);
-#else
-# define CachePatchNum(lump, tag)  (patch_t*)CacheLumpNum((lump), (tag))
-#endif
-  pic_t *CacheRawAsPic(int lump, int width, int height, int tag);
-  GlidePatch_t *GetHWRNum(int lump);
+  inline int ReadLump(int lump, void *dest)
+  {
+    return ReadLumpHeader(lump, dest, 0);
+  };
 
-  // other stuff
-  //int Replace(unsigned int wadnum, char **firstmapname);
-  void FreeTextureCache();
+  inline void *CacheLumpName(const char* name, int tag)
+  {
+    return CacheLumpNum(GetNumForName(name), tag);
+  };
 };
 
+
 extern FileCache fc;
-
-//#define WADFILENUM(lump)       (lump>>16)   // wad file number in upper word
-//#define LUMPNUM(lump)          (lump&0xffff)    // lump number in lower word
-
-
-bool P_AddWadFile (char* wadfilename,char **firstmapname);
-
-#define MAX_WADPATH   128
-#define MAX_WADFILES  32       // maximum of wad files used at the same time
-                               // (there is a max of simultaneous open files
-                               // anyway, and this should be plenty)
 
 
 #endif

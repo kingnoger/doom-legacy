@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.29  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
 // Revision 1.28  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
@@ -229,7 +232,7 @@ public:
   deque<mapthing_t *> itemrespawnqueue;
   deque<tic_t>        itemrespawntime; // this could be combined to the previous, but...
 
-#define BODYQUESIZE 32
+  static const unsigned BODYQUESIZE = 32;
   deque<Actor *> bodyqueue;
 
   multimap<short, Actor *> TIDmap; // Thing ID, for grouping things
@@ -246,7 +249,7 @@ public:
   deque<PlayerInfo *>  respawnqueue;  // for players queuing to be respawned
 
   multimap<int, mapthing_t *> playerstarts; // playerstart args[0] has the location code
-#define MAX_DM_STARTS 32
+  static const unsigned MAX_DM_STARTS = 32;
   vector<mapthing_t *> dmstarts;
 
   //------------ Sound sequences ------------
@@ -254,6 +257,12 @@ public:
   list<class ActiveSndSeq*> ActiveSeqs;
   vector<int>   AmbientSeqs;
   ActiveSndSeq *ActiveAmbientSeq;
+
+  //------------ Misc. ambiance -------------
+
+  int NextLightningFlash; // tics until next flash
+  int Flashcount;         // ongoing flash?
+  int *LightningLightLevels; // storage for original light levels
 
   //------------------------------------
   // TODO: from this line on it's badly designed stuff to be fixed someday
@@ -490,6 +499,11 @@ public:
   bool EV_ThingDeactivate(int tid);
   bool EV_ThingRemove(int tid);
   bool EV_ThingDestroy(int tid);
+
+  // p_anim.cpp
+  void InitLightning();
+  void ForceLightning();
+  void LightningFlash();
 
   // ACS scripting
   void CheckACSStore();

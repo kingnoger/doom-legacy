@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.25  2004/03/28 15:16:13  smite-meister
+// Texture cache.
+//
 // Revision 1.24  2004/01/02 14:25:01  smite-meister
 // cleanup
 //
@@ -92,11 +95,11 @@
 //
 //
 // DESCRIPTION:
-//      Implements special effects:
-//      Texture animation, height or lighting changes
-//       according to adjacent sectors, respective
-//       utility functions, etc.
-//      Line Tag handling. Line and Sector triggers.
+//   Map geometry utility functions
+//   Line tag hashing
+//   Linedef specials
+//   Sector specials
+//   Scrollers, friction, pushers
 //
 //-----------------------------------------------------------------------------
 
@@ -112,15 +115,14 @@
 #include "d_netcmd.h"
 
 #include "p_spec.h"
-#include "p_setup.h"    //levelflats for flat animation
 #include "p_maputl.h"
 
 #include "m_bbox.h" // bounding boxes
 #include "m_random.h"
 
 #include "r_data.h"
-#include "r_state.h"
-#include "r_main.h"   //Two extra includes.
+#include "r_main.h"
+#include "r_sky.h"
 
 #include "sounds.h"
 #include "t_script.h"
@@ -130,6 +132,7 @@
 
 #include "w_wad.h"
 #include "z_zone.h"
+#include "tables.h"
 
 
 //SoM: Enable Boom features?
@@ -443,29 +446,26 @@ fixed_t P_FindHighestCeilingSurrounding(sector_t* sec)
 fixed_t Map::FindShortestLowerAround(sector_t *sec)
 {
   int minsize = MAXINT;
-  side_t*     side;
-  int i;
   int secnum = sec - sectors;
-  //sector_t *sec = &sectors[secnum];
 
   if (boomsupport)
-    minsize = 32000<<FRACBITS;
+    minsize = 32000;
 
-  for (i = 0; i < sec->linecount; i++)
+  for (int i = 0; i < sec->linecount; i++)
     {
       if (twoSided(secnum, i))
 	{
-	  side = getSide(secnum,i,0);
+	  side_t *side = getSide(secnum,i,0);
 	  if (side->bottomtexture > 0)
-	    if (textureheight[side->bottomtexture] < minsize)
-	      minsize = textureheight[side->bottomtexture];
+	    if (R_GetTexture(side->bottomtexture)->height < minsize)
+	      minsize = R_GetTexture(side->bottomtexture)->height;
 	  side = getSide(secnum,i,1);
 	  if (side->bottomtexture > 0)
-	    if (textureheight[side->bottomtexture] < minsize)
-	      minsize = textureheight[side->bottomtexture];
+	    if (R_GetTexture(side->bottomtexture)->height < minsize)
+	      minsize = R_GetTexture(side->bottomtexture)->height;
 	}
     }
-  return minsize;
+  return minsize << FRACBITS;
 }
 
 
@@ -476,29 +476,26 @@ fixed_t Map::FindShortestLowerAround(sector_t *sec)
 fixed_t Map::FindShortestUpperAround(sector_t *sec)
 {
   int minsize = MAXINT;
-  side_t*     side;
-  int i;
   int secnum = sec - sectors;
-  //sector_t *sec = &sectors[secnum];
 
   if (boomsupport)
-    minsize = 32000<<FRACBITS;
+    minsize = 32000;
 
-  for (i = 0; i < sec->linecount; i++)
+  for (int i = 0; i < sec->linecount; i++)
     {
       if (twoSided(secnum, i))
 	{
-	  side = getSide(secnum,i,0);
+	  side_t *side = getSide(secnum,i,0);
 	  if (side->toptexture > 0)
-	    if (textureheight[side->toptexture] < minsize)
-	      minsize = textureheight[side->toptexture];
+	    if (R_GetTexture(side->toptexture)->height < minsize)
+	      minsize = R_GetTexture(side->toptexture)->height;
 	  side = getSide(secnum,i,1);
 	  if (side->toptexture > 0)
-	    if (textureheight[side->toptexture] < minsize)
-	      minsize = textureheight[side->toptexture];
+	    if (R_GetTexture(side->toptexture)->height < minsize)
+	      minsize = R_GetTexture(side->toptexture)->height;
 	}
     }
-  return minsize;
+  return minsize << FRACBITS;
 }
 
 
@@ -1138,12 +1135,10 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
     case 96: // Raise Floor and Ceiling
       success = EV_DoElevator(tag, elevator_t::RelHeight, SPEED(args[1]), HEIGHT(args[2]));
       break;
-      /*
     case 109: // Force Lightning
       success = true;
-      P_ForceLightning();
+      ForceLightning();
       break;
-      */
     case 110: // Light Raise by Value
       success = EV_SpawnLight(tag, lightfx_t::RelChange, args[1]);
       break;
@@ -1256,9 +1251,6 @@ int Map::EV_SectorSoundChange(int tag, int seq)
 }
 
 
-// temporary HACKS, FIXME
-void P_SetupLevelFlatAnims() {}
-void P_InitPicAnims() {}
 //
 // Animate textures etc.
 //
@@ -1268,34 +1260,7 @@ void Map::UpdateSpecials()
   if (cv_timelimit.value && maptic > unsigned(cv_timelimit.value))
     ExitMap(NULL, 0);
 
-  /* FIXME for now the texture/flat animations are disabled
-  //  ANIMATE TEXTURES
-  for (anim_t *anim = anims; anim < lastanim; anim++)
-    {
-      for (i=anim->basepic ; i<anim->basepic+anim->numpics ; i++)
-	{
-	  int pic = anim->basepic + ( (maptic/anim->speed + i)%anim->numpics );
-	  if (anim->istexture)
-	    texturetranslation[i] = pic;
-	}
-    }
-
-
-  //  ANIMATE FLATS
-  //Fab:FIXME: do not check the non-animate flat.. link the animated ones?
-  // note: its faster than the original anywaysince it animates only
-  //    flats used in the level, and there's usually very few of them
-  levelflat_t *foundflats = levelflats;
-  for (i = 0; i<numlevelflats; i++,foundflats++)
-    {
-      if (foundflats->speed) // it is an animated flat
-	{
-	  // update the levelflat lump number
-	  foundflats->lumpnum = foundflats->baselumpnum +
-	    ( (maptic/foundflats->speed + foundflats->animseq) % foundflats->numpics);
-	}
-    }
-  */
+  LightningFlash();
 }
 
 
@@ -1786,6 +1751,153 @@ void Map::SpawnLineSpecials()
         }
     }
 }
+
+
+
+//========================================================
+//  Hexen lightning effect
+//========================================================
+
+void Map::InitLightning()
+{
+  Flashcount = 0;
+
+  if (!info->lightning)
+    return;
+
+  int count = 0;
+  for (int i = 0; i < numsectors; i++)
+    {
+      if(sectors[i].ceilingpic == skyflatnum
+	 || sectors[i].special == SS_light_IndoorLightning1
+	 || sectors[i].special == SS_light_IndoorLightning2)
+	count++;
+    }
+
+  if (!count)
+    {
+      info->lightning = false; // no way to see the flashes
+      return;
+    }
+
+  LightningLightLevels = (int *)Z_Malloc(count * sizeof(int), PU_LEVEL, NULL);
+  NextLightningFlash = ((P_Random() & 15) + 5) * 35; // don't flash at level start
+}
+
+
+
+void Map::ForceLightning()
+{
+  NextLightningFlash = 0;
+}
+
+
+
+void Map::LightningFlash()
+{
+  int i;
+  sector_t *s;
+  int *lite;
+
+  if (!info->lightning)
+    return;
+
+  NextLightningFlash--;
+
+  if (Flashcount--)
+    {
+      if (Flashcount)
+	{
+	  // still flashing
+	  lite = LightningLightLevels;
+	  s = sectors;
+	  for (i = 0; i < numsectors; i++, s++)
+	    {
+	      if (s->ceilingpic == skyflatnum 
+		  || s->special == SS_light_IndoorLightning1
+		  || s->special == SS_light_IndoorLightning2)
+		{
+		  if (*lite < s->lightlevel - 4)
+		    s->lightlevel -= 4;
+
+		  lite++;
+		}
+	    }
+	}					
+      else
+	{
+	  // flash ends
+	  lite = LightningLightLevels;
+	  s = sectors;
+	  for (i = 0; i < numsectors; i++, s++)
+	    {
+	      if(s->ceilingpic == skyflatnum
+		 || s->special == SS_light_IndoorLightning1
+		 || s->special == SS_light_IndoorLightning2)
+		{
+		  s->lightlevel = *lite;
+		  lite++;
+		}
+	    }
+	  skytexture = tc.GetPtr(info->sky1.c_str()); // set alternate sky
+	}
+      return;
+    }
+
+
+  if (NextLightningFlash > 0)
+    return;
+
+  // new flash
+  Flashcount = (P_Random() & 7) + 8;
+  int flashlight = 200 + (P_Random() & 31);
+  s = sectors;
+  lite = LightningLightLevels;
+
+  for (i = 0; i < numsectors; i++, s++)
+    {
+      if (s->ceilingpic == skyflatnum
+	  || s->special == SS_light_IndoorLightning1
+	  || s->special == SS_light_IndoorLightning2)
+	{
+	  *lite = s->lightlevel;
+	  if (s->special == SS_light_IndoorLightning1)
+	    { 
+	      s->lightlevel += 64;
+	      if (s->lightlevel > flashlight)
+		s->lightlevel = flashlight;
+	    }
+	  else if (s->special == SS_light_IndoorLightning2)
+	    {
+	      s->lightlevel += 32;
+	      if (s->lightlevel > flashlight)
+		s->lightlevel = flashlight;
+	    }
+	  else
+	    s->lightlevel = flashlight;
+
+	  if (s->lightlevel < *lite)
+	    s->lightlevel = *lite;
+
+	  lite++;
+	}
+    }
+
+  skytexture = tc.GetPtr(info->sky2.c_str()); // set alternate sky
+  S_StartAmbSound(SFX_THUNDER_CRASH);
+
+  // Calculate the next lighting flash
+  if (P_Random() < 50)
+    NextLightningFlash = (P_Random()&15) + 16; // Immediate Quick flash
+  else
+    {
+      if (P_Random() < 128 && !(maptic & 32))
+	NextLightningFlash = ((P_Random()&7) + 2) * 35;
+      else
+	NextLightningFlash = ((P_Random()&15) + 5) * 35;
+    }
+}
+
 
 
 //==========================================================================

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
 // Revision 1.3  2004/01/06 14:37:45  smite-meister
 // six bugfixes, cleanup
 //
@@ -68,7 +71,7 @@ private:
   const class Map *mp;     // currently seen Map
   const class PlayerPawn *mpawn; // the pawn represented by an arrow
 
-  struct patch_t *marknums[10];            // numbers used for marking by the automap
+  class Texture *marknums[10]; // numbers used for marking by the automap
 
   static const int AM_NUMMARKPOINTS = 10;
   mpoint_t markpoints[AM_NUMMARKPOINTS];   // where the points are

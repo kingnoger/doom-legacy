@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/03/28 15:16:13  smite-meister
+// Texture cache.
+//
 // Revision 1.12  2004/01/02 14:25:01  smite-meister
 // cleanup
 //
@@ -170,15 +173,13 @@ switchdef_t HexenSwitchList[] =
 };
 
 
-// this must not be changed, since it is used to interpret the Boom SWITCHES lump
-#pragma pack(1)
+// template for the Boom SWITCHES lump
 struct switches_t
 {
   char   name1[9];
   char   name2[9];
   short  episode;
 };
-#pragma pack()
 
 
 struct switchlist_t
@@ -236,11 +237,11 @@ void P_InitSwitchList()
 	  if (n > nameset)
 	    continue;
 
-	  temp.tex = R_TextureNumForName(ss[i].name1);
+	  temp.tex = tc.Get(ss[i].name1);
 	  temp.sound = button_t::buttonsound; // default
 	  switchlist.push_back(temp);
 
-	  temp.tex = R_TextureNumForName(ss[i].name2);
+	  temp.tex = tc.Get(ss[i].name2);
 	  temp.sound = button_t::buttonsound; // default
 	  switchlist.push_back(temp);
 	}
@@ -253,11 +254,11 @@ void P_InitSwitchList()
       if (sd[i].episode > nameset)
 	continue;
 
-      temp.tex = R_TextureNumForName(sd[i].name1);
+      temp.tex = tc.Get(sd[i].name1);
       temp.sound = sd[i].sound;
       switchlist.push_back(temp);
 
-      temp.tex = R_TextureNumForName(sd[i].name2);
+      temp.tex = tc.Get(sd[i].name2);
       temp.sound = sd[i].sound; // could have different on/off sounds
       switchlist.push_back(temp);
     }

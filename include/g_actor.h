@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
 // Revision 1.18  2004/01/06 14:37:45  smite-meister
 // six bugfixes, cleanup
 //
@@ -167,7 +170,7 @@ enum mobjflag_t
 {
   // physical properties
   MF_NOSECTOR         = 0x0001, // Don't link to sector (invisible but touchable)
-  MF_NOBLOCKMAP       = 0x0002, // Don't link to blockmap (inert but displayable)
+  MF_NOBLOCKMAP       = 0x0002, // Don't link to blockmap (inert but visible)
   MF_SOLID            = 0x0004, // Blocks
   MF_SHOOTABLE        = 0x0008, // Can be hit
   MF_NOCLIPLINE       = 0x0010, // Does not clip against lines (walls)
@@ -232,7 +235,7 @@ enum mobjflag2_t
   MF2_DORMANT		 = 0x10000000,	    // thing is dormant
   MF2_ICEDAMAGE		 = 0x20000000,	    // does ice damage
   MF2_SEEKERMISSILE	 = 0x40000000,	    // is a seeker (for reflection)
-  MF2_REFLECTIVE	 = 0x80000000
+  MF2_REFLECTIVE	 = 0x80000000       // reflects missiles
 };
 
 // Extra flags. They describe the transient state of the Actor.
@@ -266,22 +269,15 @@ class Actor : public Thinker
 {
   DECLARE_CLASS(Actor);
 public:
-  // graphic presentation
-  class presentation_t *pres;
+  class presentation_t *pres;  // graphic presentation
 
-  // sector links
-  Actor *snext;
-  Actor *sprev;
-
-  // Blockmap links
-  Actor *bnext;
-  Actor *bprev;
+  Actor *sprev, *snext;  // sector links
+  Actor *bprev, *bnext;  // blockmap links
 
   struct subsector_t *subsector; // location
 
   // The closest interval over all contacted Sectors (or Things).
-  fixed_t floorz;
-  fixed_t ceilingz;
+  fixed_t floorz, ceilingz;
 
   // If == validcount, already checked.
   //int     validcount;
@@ -314,13 +310,12 @@ public:
   int  flags2;
   int  eflags;
 
-
   // Hexen fields
   short	tid;     // thing identifier
   byte	special; // special type
   byte	args[5]; // special arguments
 
-  Actor *owner; // Owner of this Actor. For example, for missiles this is the shooter.
+  Actor *owner;   // Owner of this Actor. For example, for missiles this is the shooter.
   Actor *target;  // Thing being chased/attacked (or NULL), also the target for missiles.
 
   int reactiontime; // time (in tics) before the thing can attack or move again
@@ -357,7 +352,7 @@ public:
   virtual bool Touch(Actor *a); // Actor touches another Actor
   virtual void Die(Actor *inflictor, Actor *source);
   virtual void Killed(class PlayerPawn *victim, Actor *inflictor);
-  virtual bool Morph();
+  virtual bool Morph(mobjtype_t form);
   virtual bool Damage(Actor *inflictor, Actor *source, int damage, int dtype = dt_normal);
 
   // in p_telept.cpp
@@ -404,9 +399,7 @@ public:
   int  threshold;  // If >0, the target will be chased no matter what (even if shot)
   int  lastlook;   // Player number last looked for.
 
-  // general storage, can hold pointers, ints etc. Like asking for bugs;)
-  int  special1;
-  int  special2;
+  int  special1, special2; // general storage, type dependant
 
 public:
   virtual thinkertype_e Type() {return tt_dactor;}; // "name-tag" function
@@ -422,7 +415,7 @@ public:
   virtual bool Touch(Actor *a);
   virtual void Die(Actor *inflictor, Actor *source);
   virtual void Killed(PlayerPawn *victim, Actor *inflictor);
-  virtual bool Morph();
+  virtual bool Morph(mobjtype_t form);
   virtual bool Damage(Actor *inflictor, Actor *source, int damage, int dtype = dt_normal);
 
   bool SetState(statenum_t ns, bool call = true);

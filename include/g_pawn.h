@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.19  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
 // Revision 1.18  2004/01/06 14:37:45  smite-meister
 // six bugfixes, cleanup
 //
@@ -79,6 +82,7 @@
 
 using namespace std;
 
+#define JUMPSPEED (6*FRACUNIT/NEWTICRATERATIO)
 
 
 //
@@ -140,7 +144,7 @@ public:
   virtual void CheckPointers();
 
   virtual thinkertype_e Type() {return tt_pawn;}; // "name-tag" function
-  virtual bool Morph();
+  virtual bool Morph(mobjtype_t form);
   virtual bool Damage(Actor *inflictor, Actor *source, int damage, int dtype = dt_normal);
 
   bool GiveBody(int num);
@@ -202,9 +206,7 @@ public:
   //  can be set to REDCOLORMAP for pain, etc.
   int fixedcolormap;
 
-  // TODO heretic crap, remove...
-  int flyheight; //  for smoothing the z motion
-
+  int fly_zspeed; //  for smoothing the z motion while flying
 
 public:
   virtual thinkertype_e Type() {return tt_ppawn;}; // "name-tag" function
@@ -227,15 +229,9 @@ public:
   void UseArtifact(artitype_t arti);
   bool GivePower(int /*powertype_t*/ power);
 
-  void CalcHeight(bool onground); // update bobbing view height
   void MovePsprites();
 
-  //#define P_SpawnPlayerMissile(s,t) P_SPMAngle(s,t,s->angle)
-  inline DActor *SpawnPlayerMissile(mobjtype_t type)
-  {
-    return SPMAngle(type, angle);
-  }
-
+  inline DActor *SpawnPlayerMissile(mobjtype_t type) { return SPMAngle(type, angle); }
   DActor *SPMAngle(mobjtype_t type, angle_t ang);
 
   bool CanUnlockGenDoor(struct line_t *line);
@@ -262,7 +258,7 @@ public:
   virtual bool Touch(Actor *a); // PPawn touches another Actor
   virtual void Die(Actor *inflictor, Actor *source);
   virtual void Killed(PlayerPawn *victim, Actor *inflictor);
-  virtual bool Morph();
+  virtual bool Morph(mobjtype_t form);
   virtual bool Damage(Actor *inflictor, Actor *source, int damage, int dtype = dt_normal);
 
   // in p_pspr.cpp

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/03/28 15:16:15  smite-meister
+// Texture cache.
+//
 // Revision 1.5  2004/01/10 16:03:00  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
@@ -26,9 +29,6 @@
 //
 // Revision 1.3  2003/04/04 00:01:58  smite-meister
 // bugfixes, Hexen HUD
-//
-// Revision 1.2  2002/12/03 10:26:38  smite-meister
-// ...
 //
 //
 // DESCRIPTION:
@@ -45,6 +45,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
+#include "doomdef.h"
 #include "m_misc.h"
 #include "m_argv.h"
 #include "command.h"
@@ -192,7 +193,7 @@ bool         gameconfig_loaded = false;      // true once config.cfg loaded
                                                 //  AND executed
 
 
-void Command_SaveConfig_f (void)
+void Command_SaveConfig_f()
 {
     char tmpstr[MAX_CONFIGNAME];
 
@@ -202,13 +203,13 @@ void Command_SaveConfig_f (void)
         return;
     }
     strcpy(tmpstr,COM_Argv(1));
-    FIL_DefaultExtension (tmpstr,".cfg");
+    FIL_DefaultExtension(tmpstr,".cfg");
 
     M_SaveConfig(tmpstr);
     CONS_Printf("config saved as %s\n",configfile);
 }
 
-void Command_LoadConfig_f (void)
+void Command_LoadConfig_f()
 {
     if (COM_Argc()!=2)
     {
@@ -217,20 +218,20 @@ void Command_LoadConfig_f (void)
     }
 
     strcpy(configfile,COM_Argv(1));
-    FIL_DefaultExtension (configfile,".cfg");
+    FIL_DefaultExtension(configfile,".cfg");
 /*  for create, don't check
 
-    if ( access (tmpstr,F_OK) )
+    if ( access(tmpstr,F_OK) )
     {
         CONS_Printf("Error reading file %s (not exist ?)\n",tmpstr);
         return;
     }
 */
-    COM_BufInsertText (va("exec \"%s\"\n",configfile));
+    COM_BufInsertText(va("exec \"%s\"\n",configfile));
 
 }
 
-void Command_ChangeConfig_f (void)
+void Command_ChangeConfig_f()
 {
     if (COM_Argc()!=2)
     {
@@ -238,25 +239,25 @@ void Command_ChangeConfig_f (void)
         return;
     }
 
-    COM_BufAddText (va("saveconfig \"%s\"\n",configfile));
-    COM_BufAddText (va("loadconfig \"%s\"\n",COM_Argv(1)));
+    COM_BufAddText(va("saveconfig \"%s\"\n",configfile));
+    COM_BufAddText(va("loadconfig \"%s\"\n",COM_Argv(1)));
 }
 
 //
 // Load the default config file
 //
-void M_FirstLoadConfig(void)
+void M_FirstLoadConfig()
 {
     int p;
 
     //  configfile is initialised by d_main when sherching for the wad ?!
 
     // check for a custom config file
-    p = M_CheckParm ("-config");
+    p = M_CheckParm("-config");
     if (p && p<myargc-1)
     {
-        strcpy (configfile, myargv[p+1]);
-        CONS_Printf ("config file: %s\n",configfile);
+        strcpy(configfile, myargv[p+1]);
+        CONS_Printf("config file: %s\n",configfile);
     }
 
     // load default control
@@ -264,8 +265,8 @@ void M_FirstLoadConfig(void)
 
     // load config, make sure those commands doesnt require the screen..
     CONS_Printf("\n");
-    COM_BufInsertText (va("exec \"%s\"\n",configfile));
-    COM_BufExecute ();       // make sure initial settings are done
+    COM_BufInsertText(va("exec \"%s\"\n",configfile));
+    COM_BufExecute();       // make sure initial settings are done
 
     // make sure I_Quit() will write back the correct config
     // (do not write back the config if it crash before)
@@ -277,7 +278,7 @@ void G_SaveKeySetting(FILE *f);
 
 //  Save all game config here
 //
-void M_SaveConfig (char *filename)
+void M_SaveConfig(char *filename)
 {
     FILE    *f;
 
@@ -289,35 +290,35 @@ void M_SaveConfig (char *filename)
     // can change the file name
     if(filename)
     {
-        f = fopen (filename, "w");
+        f = fopen(filename, "w");
         // change it only if valide
         if(f)
             strcpy(configfile,filename);
         else
         {
-            CONS_Printf ("Couldn't save game config file %s\n",filename);
+            CONS_Printf("Couldn't save game config file %s\n",filename);
             return;
         }
     }
     else
     {
-        f = fopen (configfile, "w");
+        f = fopen(configfile, "w");
         if (!f)
         {
-            CONS_Printf ("Couldn't save game config file %s\n",configfile);
+            CONS_Printf("Couldn't save game config file %s\n",configfile);
             return;
         }
     }
 
     // header message
-    fprintf (f, "// Doom Legacy configuration file.\n");
+    fprintf(f, "// Doom Legacy configuration file.\n");
 
     //FIXME: save key aliases if ever implemented..
 
-    CV_SaveVariables (f);
+    CV_SaveVariables(f);
     G_SaveKeySetting(f);
 
-    fclose (f);
+    fclose(f);
 }
 
 
@@ -327,8 +328,7 @@ void M_SaveConfig (char *filename)
 // ==========================================================================
 
 
-
-typedef struct
+struct pcx_t
 {
     char                manufacturer;
     char                version;
@@ -352,13 +352,13 @@ typedef struct
 
     char                filler[58];
     unsigned char       data;           // unbounded
-} pcx_t;
+};
 
 
 //
 // WritePCXfile
 //
-bool WritePCXfile ( char*         filename,
+bool WritePCXfile( char*         filename,
                     byte*         data,
                     int           width,
                     int           height,
@@ -381,11 +381,11 @@ bool WritePCXfile ( char*         filename,
     pcx->ymax = SHORT(height-1);
     pcx->hres = SHORT(width);
     pcx->vres = SHORT(height);
-    memset (pcx->palette,0,sizeof(pcx->palette));
+    memset(pcx->palette,0,sizeof(pcx->palette));
     pcx->color_planes = 1;              // chunky image
     pcx->bytes_per_line = SHORT(width);
     pcx->palette_type = SHORT(1);       // not a grey scale
-    memset (pcx->filler,0,sizeof(pcx->filler));
+    memset(pcx->filler,0,sizeof(pcx->filler));
 
 
     // pack the image
@@ -409,9 +409,9 @@ bool WritePCXfile ( char*         filename,
 
     // write output file
     length = pack - (byte *)pcx;
-    i = FIL_WriteFile (filename, pcx, length);
+    i = FIL_WriteFile(filename, pcx, length);
 
-    Z_Free (pcx);
+    Z_Free(pcx);
     return i;
 }
 
@@ -428,13 +428,13 @@ void M_ScreenShot()
 
 #ifdef HWRENDER 
   if (rendermode!=render_soft)
-    ret = HWR_Screenshot (lbmname);
+    ret = HWR_Screenshot(lbmname);
   else
 #endif
     {
       // munge planar buffer to linear
       linear = vid.screens[2];
-      I_ReadScreen (linear);
+      I_ReadScreen(linear);
         
       // find a file name to save it to
       strcpy(lbmname,"DOOM000.pcx");
@@ -451,7 +451,7 @@ void M_ScreenShot()
         {
 	  // save the pcx file
 	  ret = WritePCXfile(lbmname, linear, vid.width, vid.height,
-			     (byte *)fc.CacheLumpName ("PLAYPAL",PU_CACHE));
+			     (byte *)fc.CacheLumpName("PLAYPAL",PU_CACHE));
         }
     }
 
@@ -474,9 +474,9 @@ char *va(char *format, ...)
   va_list      argptr;
   static char  string[1024];
 
-  va_start (argptr, format);
-  vsprintf (string, format,argptr);
-  va_end (argptr);
+  va_start(argptr, format);
+  vsprintf(string, format,argptr);
+  va_end(argptr);
 
   return string;
 }
@@ -488,7 +488,7 @@ char *va(char *format, ...)
 char *Z_StrDup(const char *in)
 {
   char *out = (char *)ZZ_Alloc(strlen(in)+1);
-  strcpy (out, in);
+  strcpy(out, in);
   return out;
 }
 

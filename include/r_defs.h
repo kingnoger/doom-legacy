@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
 // Revision 1.6  2003/06/20 20:56:08  smite-meister
 // Presentation system tweaked
 //
@@ -722,7 +725,7 @@ struct vissprite_t
   fixed_t             xiscale;
 
   fixed_t             texturemid;
-  int                 patch;
+  class Texture      *tex;
 
   // for color translation and shadow draw,
   //  maxbright frames as well

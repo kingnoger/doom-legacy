@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/03/28 15:16:13  smite-meister
+// Texture cache.
+//
 // Revision 1.7  2003/11/27 11:28:25  smite-meister
 // Doom/Heretic startup bug fixed
 //
@@ -47,6 +50,7 @@
 #include "g_game.h"
 #include "g_map.h"
 #include "g_actor.h"
+#include "g_pawn.h"
 #include "info.h"
 #include "r_state.h"
 #include "p_fab.h"
@@ -55,23 +59,50 @@
 
 void Translucency_OnChange();
 
-consvar_t cv_translucency  = {"translucency" ,"1",CV_CALL|CV_SAVE,CV_OnOff, Translucency_OnChange};
+consvar_t cv_translucency  = {"translucency","1",CV_CALL|CV_SAVE,CV_OnOff, Translucency_OnChange};
 
 
 // action function for running FS
-// FIXME add this to a state in the states table so that DeHackEd can access it!
-void A_RunFS(DActor *actor)
+void A_StartFS(DActor *actor)
 {
   int script = actor->tics;
   actor->tics = 0; // takes no time
   actor->mp->T_RunScript(script, actor);
 }
 
-// TODO weapon action function for running FS
-// FIXME add to the weaponstates table
+
+// weapon action function for running FS
+void A_StartWeaponFS(PlayerPawn *p, pspdef_t *psp)
+{
+  int script = psp->tics;
+  psp->tics = 0; // takes no time
+  p->mp->T_RunScript(script, p);
+}
 
 
-//
+// action function for running ACS
+void A_StartACS(DActor *actor)
+{
+  int script = actor->tics;
+  byte args[5] = {0,0,0,0,0}; // TODO take args from sprite and frame fields
+
+  actor->tics = 0; // takes no time
+  actor->mp->StartACS(script, args, actor, NULL, 0);
+}
+
+
+// weapon action function for running ACS
+void A_StartWeaponACS(PlayerPawn *p, pspdef_t *psp)
+{
+  int script = psp->tics;
+  byte args[5] = {0,0,0,0,0};
+
+  psp->tics = 0; // takes no time
+  p->mp->StartACS(script, args, p, NULL, 0);
+}
+
+
+
 // Action routine, for the ROCKET thing.
 // This one adds trails of smoke to the rocket.
 // The action pointer of the S_ROCKET state must point here to take effect.
@@ -93,7 +124,7 @@ void A_SmokeTrailer(DActor *actor)
 }
 
 
-static bool resettrans=false;
+static bool resettrans = false;
 //  Set the translucency map for each frame state of mobj
 //
 void R_SetTrans(statenum_t state1, statenum_t state2, transnum_t transmap)

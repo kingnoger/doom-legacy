@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.27  2004/03/28 15:16:13  smite-meister
+// Texture cache.
+//
 // Revision 1.26  2004/01/02 14:25:01  smite-meister
 // cleanup
 //
@@ -129,12 +132,7 @@
 
 consvar_t cv_fragsweaponfalling = {"fragsweaponfalling"   ,"0",CV_SAVE,CV_OnOff};
 
-// added 4-2-98 (Boris) for dehacked patch
-// (i don't like that but do you see another solution ?)
-//int max_health = 100;
 
-
-// was P_DeathMessages
 // Actor::Killed is called when PlayerPawn dies.
 // It returns the proper death message and updates the score.
 void Actor::Killed(PlayerPawn *victim, Actor *inflictor)
@@ -620,7 +618,7 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
       switch (inf->type)
         {
         case MT_EGGFX:
-	  Morph();
+	  Morph(MT_CHICKEN);
 	  return false; // Always return
         case MT_WHIRLWIND:
 	  return P_TouchWhirlwind(this);
@@ -1615,45 +1613,19 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
     player->message = text[TXT_WEAPON_C3];
       break;
 
-      // TODO Fourth Weapon Pieces
-      /*
-    case SPR_WFR1:
-      TryPickupWeaponPiece(player, PCLASS_FIGHTER, WPIECE1,
-			   special);
-      return;
-		case SPR_WFR2:
-			TryPickupWeaponPiece(player, PCLASS_FIGHTER, WPIECE2,
-				special);
-			return;
-		case SPR_WFR3:
-			TryPickupWeaponPiece(player, PCLASS_FIGHTER, WPIECE3,
-				special);
-			return;
-		case SPR_WCH1:
-			TryPickupWeaponPiece(player, PCLASS_CLERIC, WPIECE1,
-				special);
-			return;
-		case SPR_WCH2:
-			TryPickupWeaponPiece(player, PCLASS_CLERIC, WPIECE2,
-				special);
-			return;
-		case SPR_WCH3:
-			TryPickupWeaponPiece(player, PCLASS_CLERIC, WPIECE3,
-				special);
-			return;
-		case SPR_WMS1:
-			TryPickupWeaponPiece(player, PCLASS_MAGE, WPIECE1,
-				special);
-			return;
-		case SPR_WMS2:
-			TryPickupWeaponPiece(player, PCLASS_MAGE, WPIECE2,
-				special);
-			return;
-		case SPR_WMS3:
-			TryPickupWeaponPiece(player, PCLASS_MAGE, WPIECE3,
-				special);
-			return;
-      */
+      // Fourth Weapon Pieces
+    case MT_FW_SWORD1:
+    case MT_FW_SWORD2:
+    case MT_FW_SWORD3:
+    case MT_CW_HOLY1:
+    case MT_CW_HOLY2:
+    case MT_CW_HOLY3:
+    case MT_MW_STAFF1:
+    case MT_MW_STAFF2:
+    case MT_MW_STAFF3:
+      if (!GiveArtifact(artitype_t(arti_fsword1 + stype - MT_FW_SWORD1), special))
+	return;
+      break;
 
     default:
       // SoM: New gettable things with FraggleScript!
@@ -1792,94 +1764,3 @@ void P_UnlinkFloorThing(Actor*   mobj)
 }
 #endif
 */
-
-
-
-
-//---------------------------------------------------------------------------
-// was P_ChickenMorphPlayer
-// Returns true if the player gets turned into a chicken.
-
-#define CHICKENTICS     (40*TICRATE)
-
-bool PlayerPawn::Morph()
-{
-  // TODO morph should take a mobjtype_t parameter into which to morph
-  if (morphTics)
-    {
-      if ((morphTics < CHICKENTICS-TICRATE)
-	  && !powers[pw_weaponlevel2])
-        { // Make a super chicken
-	  GivePower(pw_weaponlevel2);
-        }
-      return false;
-    }
-
-  if (powers[pw_invulnerability])
-    return false; // Immune when invulnerable
-
-  // store x,y,z, angle, flags2
-  //SetState(S_FREETARGMOBJ);
-
-  DActor *fog = mp->SpawnDActor(x, y, z+TELEFOGHEIGHT, MT_TFOG);
-  S_StartSound(fog, sfx_teleport);
-
-  // FIXME again this Morph/FREETARGMOBJ problem...
-  // set chicken attributes here, change appearance.
-  // DActor *chicken = mp->SpawnDActor(x, y, z, MT_CHICPLAYER);
-  //chicken->special1 = readyweapon;
-  //chicken->angle = angle;
-  //chicken->player = player;
-  //chicken->health = MAXCHICKENHEALTH;
-  //player->mo = chicken;
-  armorfactor[0] = armorpoints[0] = 0;
-  powers[pw_invisibility] = 0;
-  powers[pw_weaponlevel2] = 0;
-  weaponinfo = wpnlev1info;
-  if (flags2 & MF2_FLY)
-    {
-      //chicken->flags2 |= MF2_FLY;
-    }
-  morphTics = CHICKENTICS;
-  ActivateMorphWeapon();
-  return true;
-}
-
-//---------------------------------------------------------------------------
-// was P_ChickenMorph
-
-bool Actor::Morph()
-{
-  return false;
-}
-
-bool DActor::Morph()
-{
-  switch (type)
-    {
-    case MT_POD:
-    case MT_CHICKEN:
-    case MT_HHEAD:
-    case MT_MINOTAUR:
-    case MT_SORCERER1:
-    case MT_SORCERER2:
-      return false;
-    default:
-      break;
-    }
-
-  // turn the original into a harmless invisible thingy
-  SetState(S_FREETARGMOBJ);
-
-  DActor *fog = mp->SpawnDActor(x, y, z + TELEFOGHEIGHT, MT_TFOG);
-  S_StartSound(fog, sfx_teleport);
-
-  // make the chicken
-  DActor *chicken = mp->SpawnDActor(x, y, z, MT_CHICKEN);
-  chicken->special2 = type;
-  chicken->special1 = CHICKENTICS+P_Random();
-  chicken->flags |= (flags & MF_SHADOW);
-  chicken->target = target;
-  chicken->angle = angle;
-  return true;
-}

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
 // Revision 1.3  2003/12/03 10:49:50  smite-meister
 // Save/load bugfix, text strings updated
 //
@@ -44,14 +47,22 @@
 extern char* endmsg[];
 
 
+// languages
+enum language_t
+{
+  la_english,
+  la_french,
+  la_german,
+  la_unknown
+};
+
 // All important printed strings.
 // Language selection (message strings).
 extern char *text[];
 
 enum text_enum
 {
-  SPECIALDEHACKED,
-  TXT_DOOM2TITLE = SPECIALDEHACKED,
+  TXT_DOOM2TITLE,
   TXT_DOOMUTITLE,
   TXT_DOOMTITLE,
   TXT_DOOM1TITLE,

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2004/03/28 15:16:13  smite-meister
+// Texture cache.
+//
 // Revision 1.15  2004/01/05 11:48:08  smite-meister
 // 7 bugfixes
 //
@@ -532,9 +535,9 @@ void A_WeaponReady(PlayerPawn *p, pspdef_t *psp)
 
   // bob the weapon based on movement speed
   int angle = (128*p->mp->maptic / NEWTICRATERATIO) & FINEMASK;
-  psp->sx = FRACUNIT + FixedMul (p->player->bob, finecosine[angle]);
+  psp->sx = FRACUNIT + FixedMul(p->player->bob_amplitude, finecosine[angle]);
   angle &= FINEANGLES/2-1;
-  psp->sy = WEAPONTOP + FixedMul (p->player->bob, finesine[angle]);
+  psp->sy = WEAPONTOP + FixedMul(p->player->bob_amplitude, finesine[angle]);
 }
 
 
@@ -550,9 +553,9 @@ void A_TicWeapon(PlayerPawn *p, pspdef_t *psp)
 
       // bob the weapon based on movement speed
       ang = (128*localgametic/NEWTICRATERATIO)&FINEMASK;
-      psp->sx = FRACUNIT + FixedMul(p->player->bob, finecosine[ang]);
+      psp->sx = FRACUNIT + FixedMul(p->player->bob_amplitude, finecosine[ang]);
       ang &= FINEANGLES/2-1;
-      psp->sy = WEAPONTOP + FixedMul(p->player->bob, finesine[ang]);
+      psp->sy = WEAPONTOP + FixedMul(p->player->bob_amplitude, finesine[ang]);
     }
 }
 

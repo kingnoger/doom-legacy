@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/03/28 15:16:15  smite-meister
+// Texture cache.
+//
 // Revision 1.5  2003/12/18 11:57:31  smite-meister
 // fixes / new bugs revealed
 //
@@ -78,13 +81,11 @@ modelcache_t::modelcache_t(memtag_t tag)
   : L2cache_t(tag)
 {}
 
-cacheitem_t *modelcache_t::Load(const char *p, cacheitem_t *r)
+cacheitem_t *modelcache_t::Load(const char *p)
 {
   // TODO maybe check the existence of the model first?
 
-  MD3_player *t = (MD3_player *)r;
-  if (t == NULL)
-    t = new MD3_player;
+  MD3_player *t = new MD3_player;
 
   // TODO only default skin can now be used
   bool result = t->Load(p, "default"); // +tagtype
@@ -97,10 +98,6 @@ cacheitem_t *modelcache_t::Load(const char *p, cacheitem_t *r)
   return t;
 }
 
-void modelcache_t::Free(cacheitem_t *r)
-{
-  // TODO free model data
-}
 
 
 //====================================================
@@ -207,6 +204,7 @@ static int LoadTexture(const char *filename)
 //======================================================
 // MD3 class implementation
 //======================================================
+
 
 // given a *.md3 file name, loads the model to memory
 bool MD3_t::Load(const char *filename)
@@ -474,6 +472,12 @@ MD3_animstate *MD3_t::DrawRecursive(MD3_animstate *st)
 //===============================================================
 // MD3_player class implementation
 //===============================================================
+
+MD3_player::~MD3_player()
+{
+  // TODO free model data
+}
+
 
 // loads a player model to memory
 // path should end in a slash

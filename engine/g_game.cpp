@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2004/03/28 15:16:12  smite-meister
+// Texture cache.
+//
 // Revision 1.22  2004/01/06 14:37:45  smite-meister
 // six bugfixes, cleanup
 //
@@ -108,7 +111,6 @@
 
 #include "d_clisrv.h"
 
-#include "p_setup.h"
 #include "p_saveg.h"
 
 #include "i_system.h"
@@ -592,14 +594,11 @@ void G_BuildTiccmd(ticcmd_t* cmd, bool primary, int realtics)
   }
 #endif
 
- if (game.mode == gm_heretic)
-   {
-     if (gamekeydown[gc[gc_flydown][0]] ||
-	 gamekeydown[gc[gc_flydown][1]])
-       cmd->angleturn |= BT_FLYDOWN;
-     else
-       cmd->angleturn &= ~BT_FLYDOWN;
-   }
+  if (gamekeydown[gc[gc_flydown][0]] ||
+      gamekeydown[gc[gc_flydown][1]])
+    cmd->angleturn |= BT_FLYDOWN;
+  else
+    cmd->angleturn &= ~BT_FLYDOWN;
 }
 
 

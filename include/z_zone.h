@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
 // Revision 1.6  2003/12/18 11:57:31  smite-meister
 // fixes / new bugs revealed
 //
@@ -65,6 +68,7 @@ enum memtag_t
   PU_HWRPATCHCOLMIPMAP = 6,   // Hardware GlideMipmap_t struct colromap variation of patch
   PU_SPRITE,
   PU_MODEL,
+  PU_TEXTURE,
 
   // Tags >= PU_LEVEL are made purgable when a level is exited
   PU_LEVEL    = 50,   // static until level is exited

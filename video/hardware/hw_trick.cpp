@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/03/28 15:16:15  smite-meister
+// Texture cache.
+//
 // Revision 1.2  2003/05/11 21:23:53  smite-meister
 // Hexen fixes
 //
@@ -104,6 +107,7 @@
 
 #include "doomdef.h"
 
+#include "command.h"
 #include "g_game.h"
 #include "r_render.h"
 #include "hardware/hw_defs.h"
@@ -983,7 +987,7 @@ void Rend::HWR_CorrectSWTricks()
 		    if(sdr->bottomtexture == 0)
 		    {
 			if(sdr->midtexture == 0)
-			    sdr->bottomtexture = R_TextureNumForName("STONE2");
+			    sdr->bottomtexture = tc.Get("STONE2");
 			else
 			    sdr->bottomtexture = sdr->midtexture;
 		    }
@@ -994,7 +998,7 @@ void Rend::HWR_CorrectSWTricks()
 		    if(sdl->bottomtexture == 0)
 		    {
 			if(sdl->midtexture == 0)
-			    sdl->bottomtexture = R_TextureNumForName("STONE2");
+			    sdl->bottomtexture = tc.Get("STONE2");
 			else
 			    sdl->bottomtexture = sdl->midtexture;
 		    }
@@ -1009,7 +1013,7 @@ void Rend::HWR_CorrectSWTricks()
 		    if(sdr->toptexture == 0)
 		    {
 			if(sdr->midtexture == 0)
-			    sdr->toptexture = R_TextureNumForName("STONE2");
+			    sdr->toptexture = tc.Get("STONE2");
 			else
 			    sdr->toptexture = sdr->midtexture;
 		    }
@@ -1020,7 +1024,7 @@ void Rend::HWR_CorrectSWTricks()
 		    if(sdl->toptexture == 0)
 		    {
 		    if(sdl->midtexture == 0)
-			sdl->toptexture = R_TextureNumForName("STONE2");
+			sdl->toptexture = tc.Get("STONE2");
 		    else
 			sdl->toptexture = sdl->midtexture;
 		    

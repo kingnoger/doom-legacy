@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
 // Revision 1.10  2003/05/30 13:34:48  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -180,6 +183,17 @@ enum artitype_t
   arti_puzzgear2,
   arti_puzzgear3,
   arti_puzzgear4,
+
+  // weapon pieces
+  arti_fsword1,
+  arti_fsword2,
+  arti_fsword3,
+  arti_choly1,
+  arti_choly2,
+  arti_choly3,
+  arti_mstaff1,
+  arti_mstaff2,
+  arti_mstaff3,
 
   NUMARTIFACTS
 };

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/03/28 15:16:13  smite-meister
+// Texture cache.
+//
 // Revision 1.11  2003/11/23 19:07:41  smite-meister
 // New startup order
 //
@@ -93,6 +96,8 @@
 # include "hardware/hw_main.h"
 #endif
 
+extern language_t language;
+
 
 HUD hud;
 
@@ -118,9 +123,9 @@ static char             hu_tick;
 consvar_t*   chat_macros[10];
 
 //added:16-02-98: crosshair 0=off, 1=cross, 2=angle, 3=point
-static patch_t* crosshair[HU_CROSSHAIRS]; // precached crosshair graphics
+static Texture* crosshair[HU_CROSSHAIRS]; // precached crosshair graphics
 
-static patch_t* PatchRankings;
+static Texture* PatchRankings;
 
 // -------
 // protos.
@@ -296,18 +301,18 @@ void HUD::Init()
 
   // NOTE! Heretic FONTAxx ends with FONTA59, HU_FONTSIZE and STCFNxx are longer!
   for (i=0; i <= endlump-startlump; i++) // endlump - startlump < HU_FONTSIZE
-    font[i] = fc.CachePatchNum(i + startlump, PU_STATIC);
+    font[i] = tc.GetPtrNum(i + startlump);
   // fill the rest with the first character
   for ( ; i < HU_FONTSIZE; i++)
-    font[i] = fc.CachePatchNum(startlump, PU_STATIC);
+    font[i] = tc.GetPtrNum(startlump);
 
   //----------- cache all legacy.wad stuff here
 
   startlump = fc.GetNumForName("CROSHAI1");
   for (i=0; i<HU_CROSSHAIRS; i++)
-    crosshair[i] = fc.CachePatchNum(startlump + i, PU_STATIC);
+    crosshair[i] = tc.GetPtrNum(startlump + i);
 
-  PatchRankings = fc.CachePatchName("RANKINGS", PU_STATIC);
+  PatchRankings = tc.GetPtr("RANKINGS");
 
   //----------- legacy.wad stuff ends
 
@@ -720,27 +725,24 @@ extern int     con_keymap;
 //
 static void HU_DrawChat()
 {
-    int  i,c,y;
-
-    c=0;
-    i=0;
-    y=HU_INPUTY;
-    while (w_chat[i])
+  int c = 0;
+  int i = 0;
+  int y = HU_INPUTY;
+  while (w_chat[i])
     {
-        //Hurdler: isn't it better like that?
-        V_DrawCharacter( HU_INPUTX + (c<<3), y, w_chat[i++] | 0x80 |V_NOSCALEPATCH|V_NOSCALESTART);
+      //Hurdler: isn't it better like that?
+      V_DrawCharacter(HU_INPUTX + (c<<3), y, w_chat[i++] | 0x80);
 
-        c++;
-        if (c>=(vid.width>>3))
+      c++;
+      if (c>=(vid.width>>3))
         {
-            c = 0;
-            y+=8;
+	  c = 0;
+	  y+=8;
         }
-
     }
 
-    if (hu_tick<4)
-        V_DrawCharacter( HU_INPUTX + (c<<3), y, '_' | 0x80 |V_NOSCALEPATCH|V_NOSCALESTART);
+  if (hu_tick<4)
+    V_DrawCharacter(HU_INPUTX + (c<<3), y, '_' | 0x80);
 }
 
 
@@ -877,7 +879,7 @@ typedef struct
   int       lumpnum;
   int       xpos;
   int       ypos;
-  patch_t   *data;
+  Texture   *data;
   bool   draw;
 } fspic_t;
 
@@ -989,12 +991,12 @@ void HU_DrawFSPics()
       continue;
 
     if(!piclist[i].data)
-      piclist[i].data = (patch_t *) fc.CachePatchNum(piclist[i].lumpnum, PU_STATIC);
+      piclist[i].data = tc.GetPtrNum(piclist[i].lumpnum);
 
     if((piclist[i].xpos + piclist[i].data->width) < 0 || (piclist[i].ypos + piclist[i].data->height) < 0)
       continue;
 
-    V_DrawScaledPatch(piclist[i].xpos, piclist[i].ypos, 0, piclist[i].data);
+    piclist[i].data->Draw(piclist[i].xpos, piclist[i].ypos, V_SCALE);
   }
 }
 
@@ -1155,7 +1157,7 @@ void HU_drawDeathmatchRankings()
   int          scorelines;
 
   // draw the ranking title panel
-  V_DrawScaledPatch((BASEVIDWIDTH - PatchRankings->width)/2, 5, 0, PatchRankings);
+  PatchRankings->Draw((BASEVIDWIDTH - PatchRankings->width)/2, 5, V_SCALE);
 
   scorelines = game.GetFrags(&fragtab, 0);
 
@@ -1203,10 +1205,7 @@ void HU_drawCrosshair()
 #endif
     y = viewwindowy+(viewheight>>1);
 
-  /*	if (cv_crosshairscale.value)
-	V_DrawTranslucentPatch (vid.width>>1, y, 0, crosshair[i-1]);
-	else*/
-  V_DrawTranslucentPatch(vid.width >> 1, y, V_NOSCALESTART, crosshair[i-1]);
+  crosshair[i-1]->Draw(vid.width >> 1, y, V_TL | V_SSIZE);
 
   if (cv_splitscreen.value)
     {
@@ -1217,10 +1216,7 @@ void HU_drawCrosshair()
 #endif
 	y += viewheight;
 
-      /*	 if (cv_crosshairscale.value)
-		  V_DrawTranslucentPatch (vid.width>>1, y, 0, crosshair[i-1]);
-		  else*/
-      V_DrawTranslucentPatch(vid.width >> 1, y, V_NOSCALESTART, crosshair[i-1]);
+      crosshair[i-1]->Draw(vid.width >> 1, y, V_TL | V_SSIZE);
     }
 }
 

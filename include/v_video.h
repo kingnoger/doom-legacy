@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
 // Revision 1.2  2002/12/03 10:23:46  smite-meister
 // Video system overhaul
 //
@@ -77,37 +80,22 @@
 #include "doomdef.h"
 #include "doomtype.h"
 
-struct consvar_t;
-
-//
-// VIDEO
-//
-
-//added:18-02-98:centering offset for the scaled graphics,
-//               this is normally temporarily changed by m_menu.c only.
-//               The rest of the time it should be zero.
-extern  int     scaledofs;
-
-// Screen 0 is the screen updated by I_Update screen.
-// Screen 1 is an extra buffer.
-
-extern  int     dirtybox[4];
-
 
 // patch_t, the strange Doom graphics format.
-// A patch holds one or more columns. A column is a vertical run of pixels.
+// A patch holds one or more columns,
+// which consist of posts separated by holes.
+// A post is a vertical run of pixels.
 // Patches are used for sprites and all masked pictures,
 // and we compose textures from the TEXTURE1/2 lists
 // of patches.
-//
-//WARNING: this structure is cloned in GlidePatch_t
+
 struct patch_t
 {
   short               width;          // bounding box size
   short               height;
   short               leftoffset;     // pixels to the left of origin
   short               topoffset;      // pixels below the origin
-  int                 columnofs[8];   // only [width] used
+  int                 columnofs[0];   // only [width] used
   // the [0] is &columnofs[width]
 };
 
@@ -122,20 +110,22 @@ struct post_t
 typedef post_t column_t;
 
 
+//======================================================================
 
-// pic_t, another Doom graphics format.
+// pic_t, another graphics format native to Legacy
 // a pic is an unmasked block of pixels, stored in horizontal way
-
-typedef enum {
-  PALETTE         = 0,  // 1 byte is the index in the doom palette (as usual)
-  INTENSITY       = 1,  // 1 byte intensity
-  INTENSITY_ALPHA = 2,  // 2 byte : alpha then intensity
-  RGB24           = 3,  // 24 bit rgb
-  RGBA32          = 4,  // 32 bit rgba
-} pic_mode_t;
 
 struct pic_t
 {
+  enum pic_mode_t
+  {
+    PALETTE         = 0,  // 1 byte is the index in the doom palette (as usual)
+    INTENSITY       = 1,  // 1 byte intensity
+    INTENSITY_ALPHA = 2,  // 2 byte : alpha then intensity
+    RGB24           = 3,  // 24 bit rgb
+    RGBA32          = 4,  // 32 bit rgba
+  };
+
   short  width;
   byte   zero;   // set to 0 allow autodetection of pic_t 
                    // mode instead of patch or raw
@@ -146,72 +136,38 @@ struct pic_t
 };
 
 
+
+
+void VID_BlitLinearScreen(byte *srcptr, byte *destptr, int width,
+			  int height, int srcrowbytes, int destrowbytes);
+
 void V_CopyRect(int srcx,  int srcy,  int srcscrn,
 		int width, int height,
 		int destx, int desty, int destscrn);
 
-//added:03-02-98:like V_DrawPatch, + using a colormap.
-void V_DrawMappedPatch(int x, int y, int scrn, patch_t *patch, byte *colormap);
-
-//added:05-02-98:V_DrawPatch scaled 2,3,4 times size and position.
-
-// flags hacked in scrn (not supported by all functions (see src))
-enum {
-  V_NOSCALESTART = 0x010000,   // dont scale x,y, start coords
-  V_SCALESTART   = 0x020000,   // scale x,y, start coords
-  V_SCALEPATCH   = 0x040000,   // scale patch
-  V_NOSCALEPATCH = 0x080000,   // don't scale patch
-  V_WHITEMAP     = 0x100000,   // draw white (for v_drawstring)
-  V_FLIPPEDPATCH = 0x200000   // flipped in y 
-};
-
-// default params : scale patch and scale start
-void V_DrawScaledPatch(int x, int y, int scrn, patch_t* patch); // scrn has flags in
-
-//added:05-02-98:kiktest : this draws a patch using translucency
-void V_DrawTransPatch(int x, int y, int scrn, patch_t* patch);
-
-//added:16-02-98: like V_DrawScaledPatch, plus translucency
-void V_DrawTranslucentPatch(int x, int y, int scrn, patch_t* patch);
-
-
-void V_DrawPatch(int x, int y, int scrn, patch_t* patch);
-
 
 // Draw a linear block of pixels into the view buffer.
 void V_DrawBlock(int x, int y, int scrn, int width, int height, byte* src);
-
 // Reads a linear block of pixels into the view buffer.
 void V_GetBlock( int x, int y, int scrn, int width, int height, byte* dest);
-
-// draw a pic_t, SCALED
-void V_DrawScalePic( int x1, int y1, int scrn, int lumpnum /*pic_t* pic */);
-
-void V_DrawRawScreen(int x, int y, int lumpnum, int width, int height);
-
-void V_MarkRect(int x, int y, int width, int height);
 
 
 //added:05-02-98: fill a box with a single color
 void V_DrawFill(int x, int y, int w, int h, int c);
-//added:06-02-98: fill a box with a flat as a pattern
-void V_DrawFlatFill(int x, int y, int w, int h, int flatnum);
+//added:06-02-98: fill a box with tiled pattern
+void V_DrawFlatFill(int x, int y, int w, int h, class Texture *t);
 
 //added:10-02-98: fade down the screen buffer before drawing the menu over
-void V_DrawFadeScreen(void);
-
+void V_DrawFadeScreen();
 //added:20-03-98: test console
 void V_DrawFadeConsBack(int x1, int y1, int x2, int y2);
 
 //added:20-03-98: draw a single character
 void V_DrawCharacter(int x, int y, int c);
-
 //added:05-02-98: draw a string using the hu_font
 void V_DrawString(int x, int y, int option, const char *str);
-
 // Find string width from hu_font chars
 int V_StringWidth(const char* str);
-
 // Find string height from hu_font chars
 int V_StringHeight(const char* str);
 
@@ -227,8 +183,5 @@ void V_DrawTiltView(byte *viewbuffer);
 
 //added:05-04-98: test persp. correction !!
 void V_DrawPerspView(byte *viewbuffer, int aiming);
-
-void VID_BlitLinearScreen(byte *srcptr, byte *destptr, int width,
-                           int height, int srcrowbytes, int destrowbytes);
 
 #endif

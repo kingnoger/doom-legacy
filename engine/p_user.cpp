@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2004/03/28 15:16:13  smite-meister
+// Texture cache.
+//
 // Revision 1.19  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
@@ -78,8 +81,7 @@
 //
 // DESCRIPTION:
 //   part of PlayerPawn class implementation
-//      Bobbing POV/weapon, movement.
-//      Pending weapon.
+//   Artifacts and their effects
 //
 //-----------------------------------------------------------------------------
 
@@ -94,8 +96,11 @@
 #include "command.h"
 #include "p_camera.h"
 
+#include "p_enemy.h"
 #include "p_maputl.h"
 #include "r_sprite.h"
+#include "r_main.h"
+
 #include "sounds.h"
 #include "m_random.h"
 #include "tables.h"
@@ -143,7 +148,6 @@ bool PlayerPawn::Teleport(fixed_t nx, fixed_t ny, angle_t nangle)
 
 
 //
-// was P_Thrust
 // Moves the given origin along a given angle.
 //
 void PlayerPawn::Thrust(angle_t angle, fixed_t move)
@@ -157,15 +161,9 @@ void PlayerPawn::Thrust(angle_t angle, fixed_t move)
 
 extern int ticruned,ticmiss;
 
-#define JUMPGRAVITY     (6*FRACUNIT/NEWTICRATERATIO)
 
-//
-// was P_MovePlayer
-//
 void PlayerPawn::Move()
 {
-  //extern int variable_friction; TODO
-
   ticcmd_t *cmd = &player->cmd;
 
 #ifndef ABSOLUTEANGLE
@@ -219,18 +217,17 @@ void PlayerPawn::Move()
 
   bool onground = (z <= floorz) || (flags2 & (MF2_ONMOBJ | MF2_FLY)) || (cheats & CF_FLYAROUND);
 
-  //added:22-02-98: jumping
+  // jumping
   if (cmd->buttons & BT_JUMP)
     {
       if (flags2 & MF2_FLY)
-	flyheight = 10;
+	fly_zspeed = 10;
       else if (eflags & MFE_UNDERWATER)
 	//TODO: goub gloub when push up in water
-	pz = JUMPGRAVITY/2;
-      else if (onground && !jumpdown) 
-	// can't jump while in air, can't jump while jumping
+	pz = JUMPSPEED/2;
+      else if (onground && !jumpdown) // can't jump while in air, can't jump while jumping
 	{
-	  pz = JUMPGRAVITY;
+	  pz = JUMPSPEED;
 	  if (!(cheats & CF_FLYAROUND))
 	    {
 	      S_StartScreamSound(this, sfx_jump);
@@ -250,41 +247,158 @@ void PlayerPawn::Move()
 	pres->SetAnim(presentation_t::Run);
     }
 
-  if (game.mode == gm_heretic && (cmd->angleturn & BT_FLYDOWN))
-    {
-      flyheight = -10;
-    }
-  /* HERETODO
-     fly = cmd->lookfly>>4;
-     if(fly > 7)
-     fly -= 16;
-     if(fly && player->powers[pw_flight])
-     {
-     if(fly != TOCENTER)
-     {
-     player->flyheight = fly*2;
-     if(!(flags2&MF2_FLY))
-     {
-     flags2 |= MF2_FLY;
-     flags |= MF_NOGRAVITY;
-     }
-     }
-     else
-     {
-     flags2 &= ~MF2_FLY;
-     flags &= ~MF_NOGRAVITY;
-     }
-     }
-     else if(fly > 0)
-     {
-     P_PlayerUseArtifact(player, arti_fly);
-     }*/
   if (flags2 & MF2_FLY)
     {
-      pz = flyheight*FRACUNIT;
-      if (flyheight)
-	flyheight /= 2;
+      if (cmd->angleturn & BT_FLYDOWN)
+	fly_zspeed = -10;
+
+      pz = fly_zspeed*FRACUNIT;
+      if (fly_zspeed)
+	fly_zspeed /= 2;
     }
+}
+
+
+
+//============================================================
+//  Morphing
+//============================================================
+
+const int MORPHTICS = 40*TICRATE;
+
+bool Actor::Morph(mobjtype_t form)
+{
+  return false;
+}
+
+bool DActor::Morph(mobjtype_t form)
+{
+  if (!(flags & MF_COUNTKILL))
+    return false;
+  if (flags2 & MF2_BOSS)
+    return false;
+
+  switch (type)
+    {
+    case MT_POD:
+    case MT_CHICKEN:
+    case MT_HHEAD:
+    case MT_PIG:
+    case MT_FIGHTER_BOSS:
+    case MT_CLERIC_BOSS:
+    case MT_MAGE_BOSS:
+      return false;
+
+    default:
+      break;
+    }
+
+  // remove the old monster
+  int oldtid = tid;
+  Remove(); // zeroes tid
+
+  DActor *fog = mp->SpawnDActor(x, y, z + TELEFOGHEIGHT, MT_TFOG);
+  S_StartSound(fog, sfx_teleport);
+
+  // create the morphed monster
+  DActor *monster = mp->SpawnDActor(x, y, z, form);
+  monster->special2 = type;
+  monster->special1 = MORPHTICS + P_Random();
+  monster->flags |= (flags & MF_SHADOW);
+  monster->owner = owner;
+  monster->target = target;
+  monster->angle = angle;
+
+  monster->tid = oldtid;
+  mp->InsertIntoTIDmap(monster, oldtid);
+
+  monster->special = special;
+  memcpy(monster->args, args, 5);
+
+  return true;
+}
+
+
+bool Pawn::Morph(mobjtype_t form) { return false; }
+
+
+bool PlayerPawn::Morph(mobjtype_t form)
+{
+  if (morphTics)
+    {
+      if ((morphTics < MORPHTICS-TICRATE) && !powers[pw_weaponlevel2])
+	GivePower(pw_weaponlevel2); // Make a super beast
+      return false;
+    }
+
+  if (powers[pw_invulnerability])
+    return false; // Immune when invulnerable
+
+  DActor *fog = mp->SpawnDActor(x, y, z+TELEFOGHEIGHT, MT_TFOG);
+  S_StartSound(fog, sfx_teleport);
+
+  const mobjinfo_t *i = &mobjinfo[form];
+
+  //MT_PIGPLAYER, MT_CHICPLAYER
+  morphTics = MORPHTICS;
+
+  //const int MAXMORPHHEALTH = 30;
+  health = maxhealth = i->spawnhealth;
+  speed  = i->speed;
+  radius = i->radius;
+  height = i->height;
+  mass   = i->mass;
+
+  attackphase = readyweapon; // store current weapon
+  armorfactor[0] = armorpoints[0] = 0;
+  powers[pw_invisibility] = 0;
+  powers[pw_weaponlevel2] = 0;
+  weaponinfo = wpnlev1info;
+
+  pclass = PCLASS_PIG;
+  ActivateMorphWeapon();
+  return true;
+}
+
+
+bool PlayerPawn::UndoMorph()
+{
+  // store the current values
+  fixed_t r = radius;
+  fixed_t h = height;
+
+  const mobjinfo_t *i = &mobjinfo[pinfo->mt];
+
+  radius = i->radius;
+  height = i->height;
+
+  if (TestLocation() == false)
+    {
+      // Didn't fit, continue morph
+      morphTics = 2*35;
+      radius = r;
+      height = h;
+      // some sound to indicate unsuccesful morph?
+      return false;
+    }
+
+  morphTics = 0;
+
+  health = maxhealth = i->spawnhealth;
+  speed  = i->speed;
+  mass = i->mass;
+
+  reactiontime = 18;
+  powers[pw_weaponlevel2] = 0;
+  weaponinfo = wpnlev1info;
+
+  angle_t ang = angle >> ANGLETOFINESHIFT;
+  DActor *fog = mp->SpawnDActor(x+20*finecosine[ang], y+20*finesine[ang],
+				z+TELEFOGHEIGHT, MT_TFOG);
+  S_StartSound(fog, sfx_teleport);
+  PostMorphWeapon(weapontype_t(attackphase));
+
+  return true;
 }
 
 
@@ -293,44 +407,102 @@ void PlayerPawn::Move()
 //  Artifacts
 //============================================================
 
-// Chaos Device, teleports the player back to a playerstart
-void P_ArtiTele(PlayerPawn *p)
-{
-  extern  consvar_t  cv_deathmatch;
-  int n;
-  mapthing_t *m = NULL;
+extern consvar_t cv_deathmatch;
 
-  if (cv_deathmatch.value)
+static void P_TeleportToPlayerStarts(Actor *v, int n, int ep)
+{
+  Map *m = v->mp;
+  mapthing_t *mt = NULL;
+  multimap<int, mapthing_t *>::iterator s, t;
+
+  if (n)
     {
-      n = p->mp->dmstarts.size();
-      n = P_Random() % n;
-      m = p->mp->dmstarts[n];
+      s = m->playerstarts.lower_bound(n);
+      t = m->playerstarts.upper_bound(n);
     }
   else
     {
-      multimap<int, mapthing_t *>::iterator s, t;
-      n = p->player->number;
-      s = p->mp->playerstarts.lower_bound(n);
-      t = p->mp->playerstarts.upper_bound(n);
-      for ( ; s != t; s++)
-	{
-	  m = (*s).second;
-	  if (m->args[0] == p->player->entrypoint)
-	    break;
-	}
-
-      if (s == t)
-	m = (*p->mp->playerstarts.begin()).second;
+      // TODO teleport to random ep 0 start, not first
+      s = m->playerstarts.begin();
+      t = m->playerstarts.end();
     }
 
-  p->Teleport(m->x << FRACBITS, m->y << FRACBITS, ANG45 * (m->angle / 45));
+  for ( ; s != t; s++)
+    {
+      mt = (*s).second;
+      if (mt->args[0] == ep)
+	break;
+    }
+
+  // if nothing suitable is found, just pick any start
+  if (s == t)
+    mt = (*m->playerstarts.begin()).second;
+
+  v->Teleport(mt->x << FRACBITS, mt->y << FRACBITS, ANG45 * (mt->angle / 45));
+}
+
+
+static bool P_TeleportToDeathmatchStarts(Actor *v)
+{
+  int n = v->mp->dmstarts.size();
+  if (n == 0)
+    return false;
+
+  n = P_Random() % n;
+  mapthing_t *m = v->mp->dmstarts[n];
+  return v->Teleport(m->x << FRACBITS, m->y << FRACBITS, ANG45 * (m->angle / 45));
+}
+
+
+//============================================================
+// Chaos Device, teleports the player back to a playerstart
+
+void P_ArtiTele(PlayerPawn *p)
+{
+  if (!cv_deathmatch.value || !P_TeleportToDeathmatchStarts(p))
+    P_TeleportToPlayerStarts(p, p->player->number, p->player->entrypoint);
+
+  if (p->morphTics)
+    p->UndoMorph(); // Teleporting away will undo any morph effects (pig)
+
   S_StartAmbSound(sfx_weaponup); // Full volume laugh
 }
 
 
-// Mystic Ambit Incantation, class specific effect for everyone in radius
+//============================================================
+// Banishment Device
 
+void P_TeleportOther(Actor *v)
+{
+  Map *m = v->mp;
+
+  if (v->flags & MF_NOTMONSTER)
+    {
+      if (!cv_deathmatch.value || !P_TeleportToDeathmatchStarts(v))
+	P_TeleportToPlayerStarts(v, 0, 0);
+    }
+  else
+    {
+      // For death actions, teleporting is as good as killing
+      // TODO possible bug: see A_SorcDeath
+      if (v->flags & MF_COUNTKILL && v->special)
+	{
+	  m->RemoveFromTIDmap(v);
+	  m->ExecuteLineSpecial(v->special, v->args, NULL, 0, v);
+	  v->special = 0;
+	}
+
+      // Send all monsters to deathmatch spots
+      if (!P_TeleportToDeathmatchStarts(v))
+	P_TeleportToPlayerStarts(v, 0, 0);
+    }
+}
+
+
+//============================================================
+// Mystic Ambit Incantation, class specific effect for everyone in radius
 // if only C++ had functions inside functions!
+
 static Actor *caster;
 static bool   given;
 
@@ -395,14 +567,140 @@ bool P_HealRadius(Actor *p)
 }
 
 
+//============================================================
+// Disc of Repulsion
+
+static const fixed_t BLAST_SPEED = 20*FRACUNIT;
+static const fixed_t BLAST_FULLSTRENGTH = 255;
+
+static void P_BlastMobj(Actor *source, Actor *victim, fixed_t strength)
+{
+  angle_t angle = R_PointToAngle2(source->x, source->y, victim->x, victim->y);
+  angle_t ang = (angle + ANG180) >> ANGLETOFINESHIFT;
+  angle >>= ANGLETOFINESHIFT;
+
+  if (strength < BLAST_FULLSTRENGTH)
+    {
+      victim->px = FixedMul(strength, finecosine[angle]);
+      victim->py = FixedMul(strength, finesine[angle]);
+    }
+  else // full strength blast from artifact
+    {
+      if (victim->flags & MF_MISSILE)
+	{
+	  // guided missiles change owner!
+	  if (victim->target == source)
+	    {
+	      victim->target = victim->owner;
+	      victim->owner = source;
+	    }
+	}
+
+      victim->px = FixedMul(BLAST_SPEED, finecosine[angle]);
+      victim->py = FixedMul(BLAST_SPEED, finesine[angle]);
+
+      // Spawn blast puff
+      fixed_t x, y, z;
+      x = victim->x + FixedMul(victim->radius+FRACUNIT, finecosine[ang]);
+      y = victim->y + FixedMul(victim->radius+FRACUNIT, finesine[ang]);
+      z = victim->z - victim->floorclip + (victim->height>>1);
+
+      DActor *m = victim->mp->SpawnDActor(x, y, z, MT_BLASTEFFECT);
+      if (m)
+	{
+	  m->px = victim->px;
+	  m->py = victim->py;
+	}
+
+      if (victim->flags & MF_MISSILE)
+	{
+	  victim->pz = 8*FRACUNIT;
+	  m->pz = victim->pz;
+	}
+      else
+	victim->pz = (1000 / victim->mass) << FRACBITS;
+    }
+
+
+  victim->flags2 |= MF2_SLIDE;
+  victim->eflags |= MFE_BLASTED;
+}
+
+
+static bool IT_BlastRadius(Thinker *th)
+{
+  // TODO: descendant_of(tt_actor)...
+  Actor *a = NULL;
+
+  if (th->Type() == Thinker::tt_dactor)
+    {
+      DActor *m = (DActor *)th;
+
+      // must be missile, monster, corpse or poisoncloud
+      // must not be boss or dormant
+      if (!(m->type == MT_POISONCLOUD || (m->flags & MF_CORPSE) ||
+	    (m->flags & MF_COUNTKILL) || (m->flags & MF_MISSILE))
+	  || (m->flags2 & MF2_DORMANT) || (m->flags2 & MF2_BOSS))
+	return true;
+
+      switch (m->type)
+	{
+	case MT_SORCBALL1: // don't blast sorcerer balls
+	case MT_SORCBALL2:
+	case MT_SORCBALL3:
+	  return true;
+
+	default:
+	  break;
+	}
+
+      if (m->type == MT_WRAITHB && (m->flags2 & MF2_DONTDRAW))
+	return true; // no underground wraiths
+
+      if (m->type == MT_SPLASHBASE || m->type == MT_SPLASH)
+	return true;
+
+      if (m->type == MT_SERPENT || m->type == MT_SERPENTLEADER)
+	return true; // no swimmers
+
+      a = m;
+    }
+  else if (th->Type() == Thinker::tt_ppawn)
+    a = (Actor *)th;
+  else
+    return true;
+
+  // dactors and playerpawns are blasted
+  fixed_t dist = P_AproxDistance(caster->x - a->x, caster->y - a->y);
+  if (dist > 255*FRACUNIT)
+    return true; // Out of range
+
+  P_BlastMobj(caster, a, BLAST_FULLSTRENGTH);
+  return true;
+}
+
+
+// Blast all mobj things away
+static void P_BlastRadius(PlayerPawn *p)
+{
+  S_StartSound(p, SFX_ARTIFACT_BLAST);
+  P_NoiseAlert(p, p);
+  caster = p;
+  p->mp->IterateThinkers(IT_BlastRadius);
+}
+
+
+//============================================================
+//  Activating an artifact
 
 bool P_UseArtifact(PlayerPawn *p, artitype_t arti)
 {
   DActor *mo;
   angle_t ang;
   int count;
+  vector<inventory_t>::iterator t;
 
-  switch(arti)
+  switch (arti)
     {
     case arti_invulnerability:
       return p->GivePower(pw_invulnerability);
@@ -486,7 +784,7 @@ bool P_UseArtifact(PlayerPawn *p, artitype_t arti)
       break;
 
     case arti_blastradius:
-      //P_BlastRadius(p);
+      P_BlastRadius(p);
       break;
 
     case arti_poisonbag:
@@ -523,7 +821,9 @@ bool P_UseArtifact(PlayerPawn *p, artitype_t arti)
       break;
       
     case arti_teleportother:
-      //P_ArtiTeleportOther(p);
+      mo = p->SpawnPlayerMissile(MT_TELOTHER_FX1);
+      if (mo)
+	mo->owner = p;
       break;
 
     case arti_speed:
@@ -566,6 +866,41 @@ bool P_UseArtifact(PlayerPawn *p, artitype_t arti)
 	  p->player->SetMessage(text[TXT_USEPUZZLEFAILED], false);
 	  return false;
 	}
+      break;
+
+    case arti_fsword1:
+    case arti_fsword2:
+    case arti_fsword3:
+    case arti_choly1:
+    case arti_choly2:
+    case arti_choly3:
+    case arti_mstaff1:
+    case arti_mstaff2:
+    case arti_mstaff3:
+      {
+	// first check which pieces we have
+	count = 0;
+	for (t = p->inventory.begin(); t < p->inventory.end(); t++)
+	  if (t->type >= arti_fsword1)
+	    count |= (1 << (t->type - arti_fsword1));
+
+	int wp = (arti - arti_fsword1) / 3; // 0, 1 or 2
+	int mask = 7 << (3 * wp); // hack...
+
+	// have we enough pieces to assemble a weapon?
+	if ((count & mask) == mask)
+	  {
+	    p->weaponowned[wp + wp_quietus] = true;
+	    p->pendingweapon = weapontype_t(wp + wp_quietus);
+	    p->player->SetMessage(text[TXT_WEAPON_F4 + 3*wp], false);
+	    S_StartAmbSound(SFX_WEAPON_BUILD); // warn all players!
+	  }
+	else
+	  {
+	    p->player->SetMessage("you don't yet have all the pieces", false);
+	    return false;
+	  }
+      }
       break;
 
     default:

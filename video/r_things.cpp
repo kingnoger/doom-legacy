@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/03/28 15:16:15  smite-meister
+// Texture cache.
+//
 // Revision 1.13  2003/12/21 12:29:09  smite-meister
 // bugfixes
 //
@@ -75,6 +78,7 @@
 #include "r_local.h"
 #include "r_state.h"
 #include "r_sprite.h"
+#include "v_video.h"
 
 #include "p_pspr.h"
 
@@ -89,6 +93,7 @@
 
 #define MINZ                  (FRACUNIT*4)
 #define BASEYCENTER           (BASEVIDHEIGHT/2)
+#define min(x,y) ( ((x)<(y)) ? (x) : (y) )
 
 // put this in transmap of visprite to draw a shade
 // ahaha, the pointer cannot be changed but its target can!
@@ -289,35 +294,57 @@ spriteframe_t *spritepres_t::GetFrame()
 spritecache_t sprites(PU_SPRITE);
 
 
+sprite_t::~sprite_t()
+{
+  /*
+  for (int i = 0; i < t->numframes; i++)
+    {
+      spriteframe_t *frame = &t->spriteframes[i];
+      // TODO release textures of each frame...
+    }
+  */
+  Z_Free(spriteframes);
+}
+
+
 // used when building a sprite from lumps
 static spriteframe_t sprtemp[29];
 static int maxframe;
 
-static void R_InstallSpriteLump(int lumpnum, int lumpid, int frame, int rot, bool flip)
+static void R_InstallSpriteLump(const char *name, int frame, int rot, bool flip)
 {
   // uses sprtemp array, maxframe 
   if (frame >= 29 || rot > 8)
-    I_Error("R_InstallSpriteLump: Bad frame characters in lump %i", lumpnum);
+    I_Error("R_InstallSpriteLump: Bad frame characters in lump %s", name);
 
   if (frame > maxframe)
     maxframe = frame;
+
+  Texture *t = tc.GetPtr(name);
+
+#ifdef HWRENDER
+  //BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
+  // TODO what is this?
+  //if (rendermode != render_soft && t->topoffset > 0 && t->topoffset < t->height)
+    // perfect is patch.height but sometime it is too high
+    //t->topoffset = min(t->topoffset+4, t->height);
+#endif
 
   if (rot == 0)
     {
       // the lump should be used for all rotations
       if (sprtemp[frame].rotate == 0 && devparm)
-	CONS_Printf ("R_InitSprites: Sprite %d frame %c has "
-		     "multiple rot=0 lump\n", lumpnum, 'A'+frame);
+	CONS_Printf ("R_InitSprites: Sprite %s frame %c has "
+		     "multiple rot=0 lump\n", name, 'A'+frame);
 
       if (sprtemp[frame].rotate == 1 && devparm)
-	CONS_Printf ("R_InitSprites: Sprite %d frame %c has rotations "
-		     "and a rot=0 lump\n", lumpnum, 'A'+frame);
+	CONS_Printf ("R_InitSprites: Sprite %s frame %c has rotations "
+		     "and a rot=0 lump\n", name, 'A'+frame);
 
       sprtemp[frame].rotate = 0;
       for (int r = 0; r < 8; r++)
         {
-	  sprtemp[frame].lumppat[r] = lumpnum;
-	  sprtemp[frame].lumpid[r]  = lumpid;
+	  sprtemp[frame].tex[r] = t;
 	  sprtemp[frame].flip[r] = flip;
         }
     }
@@ -325,21 +352,20 @@ static void R_InstallSpriteLump(int lumpnum, int lumpid, int frame, int rot, boo
     {
       // the lump is only used for one rotation
       if (sprtemp[frame].rotate == 0 && devparm)
-        CONS_Printf ("R_InitSprites: Sprite %d frame %c has rotations "
-                     "and a rot=0 lump\n", lumpnum, 'A'+frame);
+        CONS_Printf ("R_InitSprites: Sprite %s frame %c has rotations "
+                     "and a rot=0 lump\n", name, 'A'+frame);
 
       sprtemp[frame].rotate = 1;
       rot--; // make 0 based
 
-      if (sprtemp[frame].lumpid[rot] != -1 && devparm)
-        CONS_Printf ("R_InitSprites: Sprite %d : %c : %c "
+      if (sprtemp[frame].tex[rot] != (Texture *)(-1) && devparm)
+        CONS_Printf ("R_InitSprites: Sprite %s : %c : %c "
                      "has two lumps mapped to it\n",
-                     lumpnum, 'A'+frame, '1'+rot);
+                     name, 'A'+frame, '1'+rot);
 
       // lumppat & lumpid are the same for original Doom, but different
       // when using sprites in pwad : the lumppat points the new graphics
-      sprtemp[frame].lumppat[rot] = lumpnum;
-      sprtemp[frame].lumpid[rot] = lumpid;
+      sprtemp[frame].tex[rot] = t;
       sprtemp[frame].flip[rot] = flip;
     }
 }
@@ -352,9 +378,11 @@ spritecache_t::spritecache_t(memtag_t tag)
 
 
 // We assume that the sprite is in Doom sprite format
-cacheitem_t *spritecache_t::Load(const char *p, cacheitem_t *r)
+cacheitem_t *spritecache_t::Load(const char *p)
 {
-  // etsi joka tiedostosta S_START, sen jälkeen p-alkuisia lumppeja. lisää ne spriteen.
+  // seeks a S_START lump in each file, adds any
+  // consequental lumps starting with p to the sprite
+
   int i, l;
   int intname = *(int *)p;
 
@@ -389,7 +417,6 @@ cacheitem_t *spritecache_t::Load(const char *p, cacheitem_t *r)
 	continue; // no S_END, no sprites accepted
       end &= 0xFFFF;
 
-      patch_t patch;
       const char *fullname;
 
       // scan the lumps, filling in the frames for whatever is found
@@ -404,34 +431,15 @@ cacheitem_t *spritecache_t::Load(const char *p, cacheitem_t *r)
 	  if (fc.LumpLength(lump) <= 8)
 	    continue;
 
-	  // store sprite info in lookup tables
-	  //FIXME:numspritelumps do not duplicate sprite replacements
-	  fc.ReadLumpHeader(lump, &patch, sizeof(patch_t));
-	  spritewidth[numspritelumps] = SHORT(patch.width)<<FRACBITS;
-	  spriteoffset[numspritelumps] = SHORT(patch.leftoffset)<<FRACBITS;
-	  spritetopoffset[numspritelumps] = SHORT(patch.topoffset)<<FRACBITS;
-	  spriteheight[numspritelumps] = SHORT(patch.height)<<FRACBITS;
+	  const char *name = fc.FindNameForNum(lump);
 
-#ifdef HWRENDER
-# define min(x,y) ( ((x)<(y)) ? (x) : (y) )
-	  //BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
-	  if (rendermode != render_soft && SHORT(patch.topoffset) > 0 // not for psprite
-	      && SHORT(patch.topoffset) < SHORT(patch.height))
-	    // perfect is patch.height but sometime it is too high
-	    spritetopoffset[numspritelumps] = min(SHORT(patch.topoffset)+4,SHORT(patch.height)) << FRACBITS;            
-#endif
-
-	  R_InstallSpriteLump((i << 16) + l, numspritelumps, frame, rotation, false);
-
+	  R_InstallSpriteLump(name, frame, rotation, false);
 	  if (fullname[6])
 	    {
 	      frame = fullname[6] - 'A';
 	      rotation = fullname[7] - '0';
-	      R_InstallSpriteLump(lump, numspritelumps, frame, rotation, true);
+	      R_InstallSpriteLump(name, frame, rotation, true);
 	    }
-
-	  if (++numspritelumps>=MAXSPRITELUMPS)
-	    I_Error("R_AddSingleSpriteDef: too much sprite replacements (numspritelumps)\n");
 
 	  l = fc.FindPartialName(intname, i, l+1, &fullname);
 	}
@@ -461,14 +469,12 @@ cacheitem_t *spritecache_t::Load(const char *p, cacheitem_t *r)
 	for (l = 0; l < 8; l++)
 	  // we test the patch lump, or the id lump whatever
 	  // if it was not loaded the two are -1
-	  if (sprtemp[i].lumppat[l] == -1)
+	  if (sprtemp[i].tex[l] == (Texture *)(-1))
 	    I_Error("Sprite %s frame %c is missing rotations", p, i+'A');
 	break;
       }
 
-  sprite_t *t = (sprite_t *)r;
-  if (t == NULL)
-    t = new sprite_t;
+  sprite_t *t = new sprite_t;
 
   // allocate this sprite's frames
   t->iname = intname;
@@ -481,20 +487,6 @@ cacheitem_t *spritecache_t::Load(const char *p, cacheitem_t *r)
   return t;
 }
 
-
-void spritecache_t::Free(cacheitem_t *r)
-{
-  sprite_t *t = (sprite_t *)r;
-  /*
-  int i;
-  for (i = 0; i < t->numframes; i++)
-    {
-      spriteframe_t *frame = &t->spriteframes[i];
-      // TODO release textures of each frame...
-    }
-  */
-  Z_Free(t->spriteframes);
-}
 
 
 /*
@@ -634,7 +626,7 @@ fixed_t         sprbotscreen;
 fixed_t         windowtop;
 fixed_t         windowbottom;
 
-void R_DrawMaskedColumn (column_t* column)
+void R_DrawMaskedColumn(column_t* column)
 {
     int         topscreen;
     int         bottomscreen;
@@ -701,16 +693,13 @@ void R_DrawMaskedColumn (column_t* column)
 //
 static void R_DrawVisSprite(vissprite_t *vis, int  x1, int x2)
 {
-  column_t*           column;
   int                 texturecolumn;
   fixed_t             frac;
-  patch_t*            patch;
 
-
-  //Fab:R_InitSprites now sets a wad lump number
-  patch = (patch_t *)fc.CacheLumpNum (vis->patch, PU_CACHE);
+  Texture *t = vis->tex;
 
   dc_colormap = vis->colormap;
+
   if (vis->transmap == VIS_SMOKESHADE)
     // shadecolfunc uses 'colormaps'
     colfunc = shadecolfunc;
@@ -736,32 +725,32 @@ static void R_DrawVisSprite(vissprite_t *vis, int  x1, int x2)
       else
         dc_colormap = &vis->extra_colormap->colormap[dc_colormap - colormaps];
     }
-    if(!dc_colormap)
-      dc_colormap = colormaps;
+  if(!dc_colormap)
+    dc_colormap = colormaps;
 
-    //dc_iscale = abs(vis->xiscale)>>detailshift;  ???
-    dc_iscale = FixedDiv (FRACUNIT, vis->scale);
-    dc_texturemid = vis->texturemid;
-    dc_texheight = 0;
+  //dc_iscale = abs(vis->xiscale)>>detailshift;  ???
+  dc_iscale = FixedDiv (FRACUNIT, vis->scale);
+  dc_texturemid = vis->texturemid;
+  dc_texheight = 0;
 
-    frac = vis->startfrac;
-    spryscale = vis->scale;
-    sprtopscreen = centeryfrac - FixedMul(dc_texturemid,spryscale);
-    windowtop = windowbottom = sprbotscreen = MAXINT;
+  frac = vis->startfrac;
+  spryscale = vis->scale;
+  sprtopscreen = centeryfrac - FixedMul(dc_texturemid,spryscale);
+  windowtop = windowbottom = sprbotscreen = MAXINT;
 
-    for (dc_x=vis->x1 ; dc_x<=vis->x2 ; dc_x++, frac += vis->xiscale)
+
+  for (dc_x=vis->x1 ; dc_x<=vis->x2 ; dc_x++, frac += vis->xiscale)
     {
-        texturecolumn = frac>>FRACBITS;
+      texturecolumn = frac>>FRACBITS;
 #ifdef RANGECHECK
-        if (texturecolumn < 0 || texturecolumn >= SHORT(patch->width))
-            I_Error ("R_DrawSpriteRange: bad texturecolumn");
+      if (texturecolumn < 0 || texturecolumn >= t->width)
+	I_Error ("R_DrawSpriteRange: bad texturecolumn");
 #endif
-        column = (column_t *) ((byte *)patch +
-                               LONG(patch->columnofs[texturecolumn]));
-        R_DrawMaskedColumn (column);
+      column_t *column = (column_t *)t->GetColumn(texturecolumn);
+      R_DrawMaskedColumn(column);
     }
 
-    colfunc = basecolfunc;
+  colfunc = basecolfunc;
 }
 
 
@@ -943,123 +932,115 @@ const int PSpriteSY[NUMWEAPONS] =
 //
 void Rend::R_DrawPSprite(pspdef_t *psp)
 {
-    fixed_t             tx;
-    int                 x1;
-    int                 x2;
-    spriteframe_t*      sprframe;
-    int                 lump;
-    bool             flip;
-    vissprite_t*        vis;
-    vissprite_t         avis;
-
-    // decide which patch to use
+  // decide which patch to use
 #ifdef RANGECHECK
-    if ( (unsigned)psp->state->sprite >= numsprites)
-        I_Error ("R_ProjectSprite: invalid sprite number %i ",
-                 psp->state->sprite);
+  if ( (unsigned)psp->state->sprite >= numsprites)
+    I_Error ("R_ProjectSprite: invalid sprite number %i ",
+	     psp->state->sprite);
 #endif
-    sprite_t *sprdef = sprites.Get(sprnames[psp->state->sprite]);
+  sprite_t *sprdef = sprites.Get(sprnames[psp->state->sprite]);
 #ifdef RANGECHECK
-    if ( (psp->state->frame & FF_FRAMEMASK)  >= sprdef->numframes)
-        I_Error ("R_ProjectSprite: invalid sprite frame %i : %i for %s",
-                 psp->state->sprite, psp->state->frame, sprnames[psp->state->sprite]);
+  if ( (psp->state->frame & FF_FRAMEMASK)  >= sprdef->numframes)
+    I_Error ("R_ProjectSprite: invalid sprite frame %i : %i for %s",
+	     psp->state->sprite, psp->state->frame, sprnames[psp->state->sprite]);
 #endif
-    sprframe = &sprdef->spriteframes[ psp->state->frame & FF_FRAMEMASK ];
+  spriteframe_t *sprframe = &sprdef->spriteframes[ psp->state->frame & FF_FRAMEMASK ];
 
 #ifdef PARANOIA
-    //Fab:debug
-    if (sprframe==NULL)
-        I_Error("sprframes NULL for state %d\n", psp->state - weaponstates);
+  //Fab:debug
+  if (sprframe==NULL)
+    I_Error("sprframes NULL for state %d\n", psp->state - weaponstates);
 #endif
 
-    //Fab: see the notes in R_ProjectSprite about lumpid,lumppat
-    lump = sprframe->lumpid[0];
-    flip = sprframe->flip[0];
+  Texture *t = sprframe->tex[0];
 
-    // calculate edges of the shape
+  // calculate edges of the shape
 
-    //added:08-01-98:replaced mul by shift
-    tx = psp->sx-((BASEVIDWIDTH/2)<<FRACBITS); //*FRACUNITS);
+  //added:08-01-98:replaced mul by shift
+  fixed_t tx = psp->sx-((BASEVIDWIDTH/2)<<FRACBITS); //*FRACUNITS);
 
-    //added:02-02-98:spriteoffset should be abs coords for psprites, based on
-    //               320x200
-    tx -= spriteoffset[lump];
-    x1 = (centerxfrac + FixedMul (tx,pspritescale) ) >>FRACBITS;
+  //added:02-02-98:spriteoffset should be abs coords for psprites, based on
+  //               320x200
+  tx -= (t->leftoffset << FRACBITS);
+  int x1 = (centerxfrac + FixedMul (tx,pspritescale) ) >>FRACBITS;
 
-    // off the right side
-    if (x1 > viewwidth)
-        return;
+  // off the right side
+  if (x1 > viewwidth)
+    return;
 
-    tx +=  spritewidth[lump];
-    x2 = ((centerxfrac + FixedMul (tx, pspritescale) ) >>FRACBITS) - 1;
+  tx += (t->width << FRACBITS);
+  int x2 = ((centerxfrac + FixedMul (tx, pspritescale) ) >>FRACBITS) - 1;
 
-    // off the left side
-    if (x2 < 0)
-        return;
+  // off the left side
+  if (x2 < 0)
+    return;
 
-    // store information in a vissprite
-    vis = &avis;
-    if(cv_splitscreen.value)
-        vis->texturemid = (120<<(FRACBITS))+FRACUNIT/2-(psp->sy-spritetopoffset[lump]);
-    else
-        vis->texturemid = (BASEYCENTER<<FRACBITS)+FRACUNIT/2-(psp->sy-spritetopoffset[lump]);
+  // store information in a vissprite
+  vissprite_t avis;
+  vissprite_t *vis = &avis;
+  if (cv_splitscreen.value)
+    vis->texturemid = 120 << FRACBITS;
+  else
+    vis->texturemid = BASEYCENTER << FRACBITS;
+  
+  vis->texturemid += FRACUNIT/2 - psp->sy + (t->topoffset << FRACBITS);
 
-    if (game.mode >= gm_heretic)
-      if (viewheight == vid.height || (!cv_scalestatusbar.value && vid.dupy>1))
-	vis->texturemid -= PSpriteSY[viewplayer->readyweapon];
+  if (game.mode >= gm_heretic)
+    if (viewheight == vid.height || (!cv_scalestatusbar.value && vid.dupy>1))
+      vis->texturemid -= PSpriteSY[viewplayer->readyweapon];
 
-    //vis->texturemid += FRACUNIT/2;
+  //vis->texturemid += FRACUNIT/2;
 
-    vis->x1 = x1 < 0 ? 0 : x1;
-    vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
-    vis->scale = pspriteyscale;  //<<detailshift;
+  vis->x1 = x1 < 0 ? 0 : x1;
+  vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
+  vis->scale = pspriteyscale;  //<<detailshift;
 
-    if (flip)
+  if (sprframe->flip[0])
     {
-        vis->xiscale = -pspriteiscale;
-        vis->startfrac = spritewidth[lump]-1;
+      vis->xiscale = -pspriteiscale;
+      vis->startfrac = (t->width << FRACBITS) - 1;
     }
-    else
+  else
     {
-        vis->xiscale = pspriteiscale;
-        vis->startfrac = 0;
-    }
-
-    if (vis->x1 > x1)
-        vis->startfrac += vis->xiscale*(vis->x1-x1);
-
-    //Fab: see above for more about lumpid,lumppat
-    vis->patch = sprframe->lumppat[0];
-    vis->transmap = NULL;
-    if (viewplayer->flags & MF_SHADOW)      // invisibility effect
-    {
-        vis->colormap = NULL;   // use translucency
-
-        // in Doom2, it used to switch between invis/opaque the last seconds
-        // now it switch between invis/less invis the last seconds
-        if (viewplayer->powers[pw_invisibility] > 4*TICRATE
-            || viewplayer->powers[pw_invisibility] & 8)
-            vis->transmap = ((tr_transhi-1)<<FF_TRANSSHIFT) + transtables;
-        else
-            vis->transmap = ((tr_transmed-1)<<FF_TRANSSHIFT) + transtables;
-    }
-    else if (fixedcolormap)
-    {
-        // fixed color
-        vis->colormap = fixedcolormap;
-    }
-    else if (psp->state->frame & FF_FULLBRIGHT)
-    {
-        // full bright
-        vis->colormap = colormaps;
-    }
-    else
-    {
-        // local light
-        vis->colormap = spritelights[MAXLIGHTSCALE-1];
+      vis->xiscale = pspriteiscale;
+      vis->startfrac = 0;
     }
 
-    if(viewplayer->subsector->sector->numlights)
+  if (vis->x1 > x1)
+    vis->startfrac += vis->xiscale*(vis->x1-x1);
+
+  //Fab: see above for more about lumpid,lumppat
+  vis->tex = t;
+  vis->transmap = NULL;
+  if (viewplayer->flags & MF_SHADOW)      // invisibility effect
+    {
+      vis->colormap = NULL;   // use translucency
+
+      // in Doom2, it used to switch between invis/opaque the last seconds
+      // now it switch between invis/less invis the last seconds
+      if (viewplayer->powers[pw_invisibility] > 4*TICRATE
+	  || viewplayer->powers[pw_invisibility] & 8)
+	vis->transmap = ((tr_transhi-1)<<FF_TRANSSHIFT) + transtables;
+      else
+	vis->transmap = ((tr_transmed-1)<<FF_TRANSSHIFT) + transtables;
+    }
+  else if (fixedcolormap)
+    {
+      // fixed color
+      vis->colormap = fixedcolormap;
+    }
+  else if (psp->state->frame & FF_FULLBRIGHT)
+    {
+      // full bright
+      vis->colormap = colormaps;
+    }
+  else
+    {
+      // local light
+      vis->colormap = spritelights[MAXLIGHTSCALE-1];
+    }
+
+  if(viewplayer->subsector->sector->numlights)
     {
       int lightnum;
       int light = R_GetPlaneLight(viewplayer->subsector->sector, viewplayer->z + (41 << FRACBITS), false);
@@ -1067,18 +1048,18 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
       lightnum = (*viewplayer->subsector->sector->lightlist[light].lightlevel  >> LIGHTSEGSHIFT)+extralight;
 
       if (lightnum < 0)
-          spritelights = scalelight[0];
+	spritelights = scalelight[0];
       else if (lightnum >= LIGHTLEVELS)
-          spritelights = scalelight[LIGHTLEVELS-1];
+	spritelights = scalelight[LIGHTLEVELS-1];
       else
-          spritelights = scalelight[lightnum];
+	spritelights = scalelight[lightnum];
 
       vis->colormap = spritelights[MAXLIGHTSCALE-1];
     }
-    else
-      vis->extra_colormap = viewplayer->subsector->sector->extra_colormap;
+  else
+    vis->extra_colormap = viewplayer->subsector->sector->extra_colormap;
 
-    R_DrawVisSprite (vis, vis->x1, vis->x2);
+  R_DrawVisSprite (vis, vis->x1, vis->x2);
 }
 
 

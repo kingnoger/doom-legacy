@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:46  hurdler
-// Initial revision
+// Revision 1.2  2004/03/28 15:16:15  smite-meister
+// Texture cache.
+//
+// Revision 1.1.1.1  2002/11/16 14:18:46  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.5  2002/09/05 14:12:19  vberghol
 // network code partly bypassed
@@ -108,7 +111,6 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
-#include "p_setup.h"    // levelflats
 
 planefunction_t         floorfunc;
 planefunction_t         ceilingfunc;
@@ -754,8 +756,6 @@ static int wateranim;
 #endif //Oldwater
 
 
-byte* R_GetFlat (int  flatnum);
-
 void Rend::R_DrawPlanes()
 {
     visplane_t*         pl;
@@ -812,7 +812,7 @@ void Rend::R_DrawPlanes()
 #endif
             dc_colormap = colormaps;
             dc_texturemid = skytexturemid;
-            dc_texheight = textureheight[skytexture] >> FRACBITS;
+            dc_texheight = skytexture->height;
             for (x=pl->minx ; x <= pl->maxx ; x++)
             {
                 dc_yl = pl->top[x];
@@ -822,8 +822,8 @@ void Rend::R_DrawPlanes()
                 {
                     angle = (viewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
                     dc_x = x;
-                    dc_source = R_GetColumn(skytexture, angle);
-                    skycolfunc ();
+                    dc_source = skytexture->GetColumn(angle);
+                    skycolfunc();
                 }
             }
 // centery = cy;
@@ -935,8 +935,8 @@ void Rend::R_DrawSinglePlane(visplane_t* pl, bool handlesource)
 
   currentplane = pl;
 
-  if(handlesource)
-    ds_source = (byte *) R_GetFlat (levelflats[pl->picnum].lumpnum);
+  if (handlesource)
+    ds_source = (byte *)R_GetTexture(pl->picnum)->Generate(); // FIXME
 
   xoffs = pl->xoffs;
   yoffs = pl->yoffs;

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.12  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
 // Revision 1.11  2003/12/18 11:57:31  smite-meister
 // fixes / new bugs revealed
 //
@@ -51,7 +54,8 @@
 //
 //
 // DESCRIPTION:
-//    PlayerInfo class definition. It describes one human player.
+//   PlayerInfo class definition. It describes one client-side player,
+//   either human or AI.
 //
 //-----------------------------------------------------------------------------
 
@@ -103,13 +107,6 @@ public:
   int requestmap; // the map which we wish to enter
   int entrypoint; // which spawning point to use
 
-  // Determine POV,
-  //  including viewpoint bobbing during movement.
-  fixed_t  viewz;   // Focal origin above r.z
-  fixed_t  viewheight;  // Base height above floor for viewz.
-  fixed_t  deltaviewheight;  // Bob/squat speed.
-  fixed_t  bob;  // bounded/scaled total momentum.
-
   // Frags, kills of other players. (type was USHORT)
   map<int, int> Frags; // player number -> frags
   int score; // game-type dependent scoring based on frags, updated in real time
@@ -127,6 +124,13 @@ public:
 
   class Map        *mp;   // the map with which the player is currently associated
   class PlayerPawn *pawn; // the thing that is being controlled by this player (marine, imp, whatever)
+  class Actor      *view; // the POV of the player. usually same as pawn, but can also be a chasecam etc...
+
+  // POV height and bobbing during movement.
+  fixed_t  viewz;           // absolute viewpoint z coordinate
+  fixed_t  viewheight;      // distance from feet to eyes
+  fixed_t  deltaviewheight; // bob/squat speed.
+  fixed_t  bob_amplitude;   // basically pawn speed squared, affects weapon movement
 
 public:
 
@@ -138,15 +142,17 @@ public:
   void Reset(bool resetpawn, bool resetfrags);  // resets the player (when starting a new level, for example)
 
   void SetMessage(const char *msg, bool ultmsg = true);
+  void CalcViewHeight(bool onground); // update bobbing view height
 
   // in g_game.cpp
   bool InventoryResponder(int (*gc)[2], struct event_t *ev);
 };
 
 
-// Player taking events, and displaying.
+// Locally controlled players
 extern  PlayerInfo *consoleplayer;
 extern  PlayerInfo *consoleplayer2;
+// Players whose view is rendered on screen
 extern  PlayerInfo *displayplayer;
 extern  PlayerInfo *displayplayer2; // for splitscreen
 

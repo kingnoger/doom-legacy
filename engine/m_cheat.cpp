@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2002 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2004/03/28 15:16:13  smite-meister
+// Texture cache.
+//
 // Revision 1.17  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
@@ -69,13 +72,14 @@
 //
 //
 // DESCRIPTION:
-//      Cheat sequence checking.
+//   Cheat sequences.
 //
 //-----------------------------------------------------------------------------
  
 
 #include "tables.h"
 #include "dstrings.h"
+#include "dehacked.h"
 
 #include "m_cheat.h"
 #include "g_game.h"
@@ -86,15 +90,194 @@
 #include "d_event.h"
 
 #include "am_map.h"
-//#include "hu_stuff.h"
 #include "i_sound.h" // for I_PlayCD()
 #include "sounds.h"
 #include "w_wad.h"
 
 
-// ==========================================================================
-//                             CHEAT Structures
-// ==========================================================================
+void cht_Init()
+{
+  // used to generate the cheat scrambling table
+}
+
+
+// console commands
+
+void Command_CheatNoClip_f()
+{
+  if (game.multiplayer || !consoleplayer)
+    return;
+
+  PlayerPawn *p = consoleplayer->pawn;
+  if (p == NULL) return;
+
+  p->cheats ^= CF_NOCLIP;
+
+  if (p->cheats & CF_NOCLIP)
+    CONS_Printf (STSTR_NCON);
+  else
+    CONS_Printf (STSTR_NCOFF);
+}
+
+void Command_CheatGod_f()
+{
+  if (game.multiplayer || !consoleplayer)
+    return;
+
+  PlayerPawn *p = consoleplayer->pawn;
+  if (p == NULL) return;
+
+  p->cheats ^= CF_GODMODE;
+  if (p->cheats & CF_GODMODE)
+    {
+      p->health = 100;
+      CONS_Printf ("%s\n", STSTR_DQDON);
+    }
+  else
+    CONS_Printf ("%s\n", STSTR_DQDOFF);
+}
+
+void Command_CheatGimme_f()
+{
+  char*     s;
+  int       i,j;
+
+  if (game.multiplayer || !consoleplayer)
+    return;
+
+  if (COM_Argc()<2)
+    {
+      CONS_Printf ("gimme [health] [ammo] [armor] ...\n");
+      return;
+    }
+
+  PlayerPawn* p = consoleplayer->pawn;
+  if (p == NULL) return;
+
+  for (i=1; i<COM_Argc(); i++) {
+    s = COM_Argv(i);
+
+    if (!strncmp(s,"health",6))
+      {
+	p->health = 100;
+	CONS_Printf("got health\n");
+      }
+    else if (!strncmp(s,"ammo",4))
+      {
+	for (j=0;j<NUMAMMO;j++)
+	  p->ammo[j] = p->maxammo[j];
+
+	CONS_Printf("got ammo\n");
+      }
+    else if (!strncmp(s,"armor",5))
+      {
+	p->armorpoints[0] = 200;
+	p->armorfactor[0] = 0.5;
+
+	CONS_Printf("got armor\n");
+      }
+    else if (!strncmp(s,"keys",4))
+      {
+	p->keycards = it_allkeys;
+
+	CONS_Printf("got keys\n");
+      }
+    else if (!strncmp(s,"weapons",7))
+      {
+	for (j=0;j<NUMWEAPONS;j++)
+	  p->weaponowned[j] = true;
+
+	for (j=0;j<NUMAMMO;j++)
+	  p->ammo[j] = p->maxammo[j];
+
+	CONS_Printf("got weapons\n");
+      }
+    else if (!strncmp(s,"chainsaw",8))
+      //
+      // WEAPONS
+      //
+      {
+	p->weaponowned[wp_chainsaw] = true;
+
+	CONS_Printf("got chainsaw\n");
+      }
+    else if (!strncmp(s,"shotgun",7))
+      {
+	p->weaponowned[wp_shotgun] = true;
+	p->ammo[am_shell] = p->maxammo[am_shell];
+
+	CONS_Printf("got shotgun\n");
+      }
+    else if (!strncmp(s,"supershotgun",12))
+      {
+	if (game.mode == gm_doom2) // only in Doom2
+	  {
+	    p->weaponowned[wp_supershotgun] = true;
+	    p->ammo[am_shell] = p->maxammo[am_shell];
+
+	    CONS_Printf("got super shotgun\n");
+	  }
+      }
+    else if (!strncmp(s,"rocket",6))
+      {
+	p->weaponowned[wp_missile] = true;
+	p->ammo[am_misl] = p->maxammo[am_misl];
+
+	CONS_Printf("got rocket launcher\n");
+      }
+    else if (!strncmp(s,"plasma",6))
+      {
+	p->weaponowned[wp_plasma] = true;
+	p->ammo[am_cell] = p->maxammo[am_cell];
+
+	CONS_Printf("got plasma\n");
+      }
+    else if (!strncmp(s,"bfg",3))
+      {
+	p->weaponowned[wp_bfg] = true;
+	p->ammo[am_cell] = p->maxammo[am_cell];
+
+	CONS_Printf("got bfg\n");
+      }
+    else if (!strncmp(s,"chaingun",8))
+      {
+	p->weaponowned[wp_chaingun] = true;
+	p->ammo[am_clip] = p->maxammo[am_clip];
+
+	CONS_Printf("got chaingun\n");
+      }
+    else if (!strncmp(s,"berserk",7))
+      //
+      // SPECIAL ITEMS
+      //
+      {
+	if (!p->powers[pw_strength])
+	  p->GivePower(pw_strength);
+	CONS_Printf("got berserk strength\n");
+      }
+    //22/08/99: added by Hurdler
+    else if (!strncmp(s,"map",3))
+      {
+	automap.am_cheating = 1;
+	CONS_Printf("got map\n");
+      }
+    //
+    else if (!strncmp(s,"fullmap",7))
+      {
+	automap.am_cheating = 2;
+	CONS_Printf("got map and things\n");
+      }
+    else
+      CONS_Printf ("can't give '%s' : unknown\n", s);
+  }
+}
+
+
+
+
+//==========================================================================
+//  Doom cheats
+//==========================================================================
 
 byte   cheat_mus_seq[] =
 {
@@ -201,293 +384,9 @@ byte cheat_amap_seq[] =
 };
 
 
-
-// ==========================================================================
-//                        CHEAT SEQUENCE PACKAGE
-// ==========================================================================
-
-//static byte    cheat_xlate_table[256];
-
-void cht_Init()
-{
-  //int i;
-  //for (i=0;i<256;i++) 
-  //  cheat_xlate_table[i] = SCRAMBLE(i);
-}
-
-// added 2-2-98 for compatibility with dehacked
-
-int idfa_armor=200;
-int idfa_armor_class=2;
-int idkfa_armor=200;
-int idkfa_armor_class=2;
-int god_health=100;
-
-
-// command that can be typed at the console !
-
-void Command_CheatNoClip_f()
-{
-  if (game.multiplayer || !consoleplayer)
-    return;
-
-  PlayerPawn *p = consoleplayer->pawn;
-  if (p == NULL) return;
-
-  p->cheats ^= CF_NOCLIP;
-
-  if (p->cheats & CF_NOCLIP)
-    CONS_Printf (STSTR_NCON);
-  else
-    CONS_Printf (STSTR_NCOFF);
-}
-
-void Command_CheatGod_f()
-{
-  if (game.multiplayer || !consoleplayer)
-    return;
-
-  PlayerPawn *p = consoleplayer->pawn;
-  if (p == NULL) return;
-
-  p->cheats ^= CF_GODMODE;
-  if (p->cheats & CF_GODMODE)
-    {
-      p->health = god_health;
-      CONS_Printf ("%s\n", STSTR_DQDON);
-    }
-  else
-    CONS_Printf ("%s\n", STSTR_DQDOFF);
-}
-
-void Command_CheatGimme_f()
-{
-  char*     s;
-  int       i,j;
-
-  if (game.multiplayer || !consoleplayer)
-    return;
-
-  if (COM_Argc()<2)
-    {
-      CONS_Printf ("gimme [health] [ammo] [armor] ...\n");
-      return;
-    }
-
-  PlayerPawn* p = consoleplayer->pawn;
-  if (p == NULL) return;
-
-  for (i=1; i<COM_Argc(); i++) {
-    s = COM_Argv(i);
-
-    if (!strncmp(s,"health",6))
-      {
-	p->health = god_health;
-	CONS_Printf("got health\n");
-      }
-    else if (!strncmp(s,"ammo",4))
-      {
-	for (j=0;j<NUMAMMO;j++)
-	  p->ammo[j] = p->maxammo[j];
-
-	CONS_Printf("got ammo\n");
-      }
-    else if (!strncmp(s,"armor",5))
-      {
-	p->armorpoints[0] = idfa_armor;
-	p->armorfactor[0] = 0.5;
-
-	CONS_Printf("got armor\n");
-      }
-    else if (!strncmp(s,"keys",4))
-      {
-	p->keycards = it_allkeys;
-
-	CONS_Printf("got keys\n");
-      }
-    else if (!strncmp(s,"weapons",7))
-      {
-	for (j=0;j<NUMWEAPONS;j++)
-	  p->weaponowned[j] = true;
-
-	for (j=0;j<NUMAMMO;j++)
-	  p->ammo[j] = p->maxammo[j];
-
-	CONS_Printf("got weapons\n");
-      }
-    else if (!strncmp(s,"chainsaw",8))
-      //
-      // WEAPONS
-      //
-      {
-	p->weaponowned[wp_chainsaw] = true;
-
-	CONS_Printf("got chainsaw\n");
-      }
-    else if (!strncmp(s,"shotgun",7))
-      {
-	p->weaponowned[wp_shotgun] = true;
-	p->ammo[am_shell] = p->maxammo[am_shell];
-
-	CONS_Printf("got shotgun\n");
-      }
-    else if (!strncmp(s,"supershotgun",12))
-      {
-	if (game.mode == gm_doom2) // only in Doom2
-	  {
-	    p->weaponowned[wp_supershotgun] = true;
-	    p->ammo[am_shell] = p->maxammo[am_shell];
-
-	    CONS_Printf("got super shotgun\n");
-	  }
-      }
-    else if (!strncmp(s,"rocket",6))
-      {
-	p->weaponowned[wp_missile] = true;
-	p->ammo[am_misl] = p->maxammo[am_misl];
-
-	CONS_Printf("got rocket launcher\n");
-      }
-    else if (!strncmp(s,"plasma",6))
-      {
-	p->weaponowned[wp_plasma] = true;
-	p->ammo[am_cell] = p->maxammo[am_cell];
-
-	CONS_Printf("got plasma\n");
-      }
-    else if (!strncmp(s,"bfg",3))
-      {
-	p->weaponowned[wp_bfg] = true;
-	p->ammo[am_cell] = p->maxammo[am_cell];
-
-	CONS_Printf("got bfg\n");
-      }
-    else if (!strncmp(s,"chaingun",8))
-      {
-	p->weaponowned[wp_chaingun] = true;
-	p->ammo[am_clip] = p->maxammo[am_clip];
-
-	CONS_Printf("got chaingun\n");
-      }
-    else if (!strncmp(s,"berserk",7))
-      //
-      // SPECIAL ITEMS
-      //
-      {
-	if (!p->powers[pw_strength])
-	  p->GivePower(pw_strength);
-	CONS_Printf("got berserk strength\n");
-      }
-    //22/08/99: added by Hurdler
-    else if (!strncmp(s,"map",3))
-      {
-	automap.am_cheating = 1;
-	CONS_Printf("got map\n");
-      }
-    //
-    else if (!strncmp(s,"fullmap",7))
-      {
-	automap.am_cheating = 2;
-	CONS_Printf("got map and things\n");
-      }
-    else
-      CONS_Printf ("can't give '%s' : unknown\n", s);
-  }
-}
-
-// a class for handling cheat sequences
-class TCheat
-{
-  typedef void (* fp)(PlayerPawn *p, const byte *arg);
-private:
-  fp func;
-  byte *seq;
-  byte *pos;
-  byte args[2];
-  byte currarg;
-
-public:
-
-  TCheat(fp f, byte *s);
-  bool AddKey(byte key, bool *eat);
-
-  friend bool cht_Responder(event_t* ev);
-};
-
-
-// constructor
-TCheat::TCheat(fp f, byte *s)
-{
-  func = f;
-  seq = pos = s;
-  args[0] = args[1] = 0;
-  currarg = 0;
-}
-
-// returns true if sequence is completed
-bool TCheat::AddKey(byte key, bool *eat)
-{
-  if(*pos == 0)
-    {
-      // read a parameter
-      *eat = true;
-      args[currarg++] = key;
-      pos++;
-    }
-  //else if (cheat_xlate_table[key] == *pos)
-  else if (key == *pos)
-    {
-      // correct key, go on
-      pos++;
-    }
-  else
-    {
-      // wrong key, reset sequence
-      pos = seq;
-      currarg = 0;
-    }
-
-  if(*pos == 0xff)
-    {
-      // sequence complete!
-      pos = seq;
-      currarg = 0;
-      return true;
-    }
-
-  return false;
-}
-
-
-//static bool CheatAddKey(Cheat_t *cheat, byte key, bool *eat);
-void CheatFlyFunc(PlayerPawn *p, const byte *arg);
-void CheatCDFunc(PlayerPawn *p, const byte *arg);
-void CheatMyPosFunc(PlayerPawn *p, const byte *arg);
-
-static void CheatAMFunc(PlayerPawn *p, const byte *arg);
-static void CheatMusFunc(PlayerPawn *p, const byte *arg);
-static void CheatChopFunc(PlayerPawn *p, const byte *arg);
-static void CheatPowerup1Func(PlayerPawn *p, const byte *arg);
-static void CheatPowerup2Func(PlayerPawn *p, const byte *arg);
-
-static void CheatGodFunc(PlayerPawn *p, const byte *arg);
-static void CheatNoClipFunc(PlayerPawn *p, const byte *arg);
-static void CheatWeaponsFunc(PlayerPawn *p, const byte *arg);
-static void CheatPowerFunc(PlayerPawn *p, const byte *arg);
-static void CheatHealthFunc(PlayerPawn *p, const byte *arg);
-static void CheatKeysFunc(PlayerPawn *p, const byte *arg);
-//static void CheatSoundFunc(PlayerPawn *p, const byte *arg);
-static void CheatTickerFunc(PlayerPawn *p, const byte *arg);
-static void CheatArtifact1Func(PlayerPawn *p, const byte *arg);
-static void CheatArtifact2Func(PlayerPawn *p, const byte *arg);
-static void CheatArtifact3Func(PlayerPawn *p, const byte *arg);
-static void CheatWarpFunc(PlayerPawn *p, const byte *arg);
-static void CheatChickenFunc(PlayerPawn *p, const byte *arg);
-static void CheatMassacreFunc(PlayerPawn *p, const byte *arg);
-static void CheatIDKFAFunc(PlayerPawn *p, const byte *arg);
-static void CheatIDDQDFunc(PlayerPawn *p, const byte *arg);
-
-
+//==========================================================================
+//  Heretic cheats
+//==========================================================================
 
 
 // Toggle god mode
@@ -524,12 +423,6 @@ static byte CheatHealthSeq[] =
 static byte CheatKeysSeq[] =
 {
   's', 'k', 'e', 'l', 0xff, 0
-};
-
-// Toggle ticker
-static byte CheatTickerSeq[] =
-{
-  't', 'i', 'c', 'k', 'e', 'r', 0xff, 0
 };
 
 // Get an artifact 1st stage (ask for type)
@@ -578,116 +471,6 @@ static byte CheatIDDQDSeq[] =
   'i', 'd', 'd', 'q', 'd', 0xff, 0
 };
 
-
-// Cheat lists _must_ be ended with a TCheat(NULL, ...) terminator for now
-
-// universal cheats which work in every game mode (begin with id...)
-static TCheat Basic_Cheats[] =
-{
-  TCheat(CheatFlyFunc, cheat_fly_around_seq),
-  TCheat(CheatCDFunc, cheat_cd_seq),
-  TCheat(CheatMyPosFunc, cheat_mypos_seq),
-  TCheat(NULL, NULL)
-};
-
-// original Doom cheats
-static TCheat Doom_Cheats[] =
-{
-  TCheat(CheatAMFunc, cheat_amap_seq),
-  TCheat(CheatMusFunc, cheat_mus_seq),
-  TCheat(CheatGodFunc, cheat_god_seq),
-  TCheat(CheatWeaponsFunc, cheat_ammonokey_seq),
-  TCheat(CheatChopFunc, cheat_choppers_seq),
-  TCheat(CheatIDKFAFunc, cheat_ammo_seq),
-  TCheat(CheatNoClipFunc, cheat_noclip_seq),
-  TCheat(CheatNoClipFunc, cheat_commercial_noclip_seq),
-  TCheat(CheatPowerup1Func, cheat_powerup_seq1),
-  TCheat(CheatPowerup2Func, cheat_powerup_seq2),
-  TCheat(CheatWarpFunc, cheat_clev_seq),
-  TCheat(NULL, NULL)
-};
-
-// original Heretic cheats
-static TCheat Heretic_Cheats[] =
-{
-  TCheat(CheatGodFunc, CheatGodSeq),
-  TCheat(CheatNoClipFunc, CheatNoClipSeq),
-  TCheat(CheatWeaponsFunc, CheatWeaponsSeq),
-  TCheat(CheatPowerFunc, CheatPowerSeq),
-  TCheat(CheatHealthFunc, CheatHealthSeq),
-  TCheat(CheatKeysFunc, CheatKeysSeq),
-//      TCheat(CheatSoundFunc, CheatSoundSeq, NULL, 0, 0, 0 },
-  TCheat(CheatTickerFunc, CheatTickerSeq),
-  TCheat(CheatArtifact1Func, CheatArtifact1Seq),
-  TCheat(CheatArtifact2Func, CheatArtifact2Seq),
-  TCheat(CheatArtifact3Func, CheatArtifact3Seq),
-  TCheat(CheatWarpFunc, CheatWarpSeq),
-  TCheat(CheatChickenFunc, CheatChickenSeq),
-  TCheat(CheatMassacreFunc, CheatMassacreSeq),
-  TCheat(CheatIDKFAFunc, CheatIDKFASeq),
-  TCheat(CheatIDDQDFunc, CheatIDDQDSeq),
-  TCheat(NULL, NULL) // Terminator
-};
-
-
-//--------------------------------------------------------------------------
-//
-// Returns true if it eats the event
-//
-//--------------------------------------------------------------------------
-
-bool cht_Responder (event_t* ev)
-{
-  int i;
-  bool eat = false;
-  TCheat *cheats = Doom_Cheats;
-
-  if (ev->type != ev_keydown)
-    return false;
-
-  if (game.netgame || game.skill == sk_nightmare || !consoleplayer)
-    { // Can't cheat in a net-game, or in nightmare mode
-      return false;
-    }
-
-  PlayerPawn *p = consoleplayer->pawn;
-
-  if (p == NULL || p->health <= 0)
-    { // Dead players can't cheat
-      return false;
-    }
-
-  byte key = ev->data1;
-
-  // what about splitscreen?
-
-  // universal cheats first
-  for (i = 0; Basic_Cheats[i].func != NULL; i++)
-    {
-      if (Basic_Cheats[i].AddKey(key, &eat))
-	{
-	  Basic_Cheats[i].func(p, Basic_Cheats[i].args);
-	}
-    }
-
-  // use heretic cheats instead?
-  if (game.mode == gm_heretic)
-    cheats = Heretic_Cheats;
-  else if (game.mode == gm_hexen)
-    return eat; // TODO no Hexen cheats yet
-
-  for (i = 0; cheats[i].func != NULL; i++)
-    {
-      if (cheats[i].AddKey(key, &eat))
-	{
-	  CONS_Printf("Cheating, %d\n", i);
-	  cheats[i].func(p, cheats[i].args);
-	  if (game.mode == gm_heretic)
-	    S_StartAmbSound(sfx_dorcls);
-	}
-    }
-  return eat;
-}
 
 
 //--------------------------------------------------------------------------
@@ -780,7 +563,7 @@ static void CheatGodFunc(PlayerPawn *p, const byte *arg)
   } else { // doom then
     if (p->cheats & CF_GODMODE)
       {
-	p->health = god_health;
+	p->health = DEH.god_health;
 	msg = STSTR_DQDON;
       }
     else
@@ -864,7 +647,7 @@ static void CheatWeaponsFunc(PlayerPawn *p, const byte *arg)
   char *msg;
   int i;
 
-  p->armorpoints[0] = idfa_armor;
+  p->armorpoints[0] = DEH.idfa_armor;
   p->armorfactor[0] = 0.5;
 
   if (game.mode == gm_heretic)
@@ -926,16 +709,7 @@ static void CheatPowerFunc(PlayerPawn *p, const byte *arg)
 
 static void CheatHealthFunc(PlayerPawn *p, const byte *arg)
 {
-#define MAXCHICKENHEALTH 30
-  /*
-  if(p->morphTics)
-    {
-      p->health = MAXCHICKENHEALTH;
-    }
-  else
-  */
-    p->health = p->maxhealth;
-
+  p->health = p->maxhealth;
   p->player->SetMessage(CHEAT_HEALTH, false);
 }
 
@@ -943,22 +717,6 @@ static void CheatKeysFunc(PlayerPawn *p, const byte *arg)
 {
   p->keycards |= it_allkeys;
   p->player->SetMessage(CHEAT_KEYS, false);
-}
-
-static void CheatTickerFunc(PlayerPawn *p, const byte *arg)
-{
-  // FIXME what is this?
-  /*
-  cv_ticrate.value = !cv_ticrate.value;
-  if(cv_ticrate.value)
-    {
-      p->player->SetMessage(CHEAT_TICKERON, false);
-    }
-  else
-    {
-      p->player->SetMessage(CHEAT_TICKEROFF, false);
-    }
-  */
 }
 
 static void CheatArtifact1Func(PlayerPawn *p, const byte *arg)
@@ -1061,7 +819,7 @@ static void CheatChickenFunc(PlayerPawn *p, const byte *arg)
 	  p->player->SetMessage(CHEAT_CHICKENOFF, false);
 	}
     }
-  else if (p->Morph())
+  else if (p->Morph(MT_CHICPLAYER))
     {
       p->player->SetMessage(CHEAT_CHICKENON, false);
     }
@@ -1093,7 +851,7 @@ static void CheatIDKFAFunc(PlayerPawn *p, const byte *arg)
   else
     {
       // doom, give stuff
-      p->armorpoints[0] = idkfa_armor;
+      p->armorpoints[0] = DEH.idkfa_armor;
       p->armorfactor[0] = 0.5;
 
       for (i = wp_doom; i < wp_heretic; i++)
@@ -1115,4 +873,174 @@ static void CheatIDDQDFunc(PlayerPawn *p, const byte *arg)
 {
   p->Damage(p, p, 10000, dt_always);
   p->player->SetMessage(CHEAT_IDDQD, true);
+}
+
+
+
+//==========================================================================
+//  Cheat lists (must be ended with a TCheat(NULL, ...) terminator)
+//==========================================================================
+
+// a class for handling cheat sequences
+class TCheat
+{
+  typedef void (* fp)(PlayerPawn *p, const byte *arg);
+private:
+  fp func;
+  byte *seq;
+  byte *pos;
+  byte args[2];
+  byte currarg;
+
+public:
+
+  TCheat(fp f, byte *s);
+  bool AddKey(byte key, bool *eat);
+
+  friend bool cht_Responder(event_t* ev);
+};
+
+
+// constructor
+TCheat::TCheat(fp f, byte *s)
+{
+  func = f;
+  seq = pos = s;
+  args[0] = args[1] = 0;
+  currarg = 0;
+}
+
+// returns true if sequence is completed
+bool TCheat::AddKey(byte key, bool *eat)
+{
+  if(*pos == 0)
+    {
+      // read a parameter
+      *eat = true;
+      args[currarg++] = key;
+      pos++;
+    }
+  //else if (cheat_xlate_table[key] == *pos)
+  else if (key == *pos)
+    {
+      // correct key, go on
+      pos++;
+    }
+  else
+    {
+      // wrong key, reset sequence
+      pos = seq;
+      currarg = 0;
+    }
+
+  if(*pos == 0xff)
+    {
+      // sequence complete!
+      pos = seq;
+      currarg = 0;
+      return true;
+    }
+
+  return false;
+}
+
+
+// universal cheats which work in every game mode (begin with id...)
+static TCheat Basic_Cheats[] =
+{
+  TCheat(CheatFlyFunc, cheat_fly_around_seq),
+  TCheat(CheatCDFunc, cheat_cd_seq),
+  TCheat(CheatMyPosFunc, cheat_mypos_seq),
+  TCheat(NULL, NULL)
+};
+
+// original Doom cheats
+static TCheat Doom_Cheats[] =
+{
+  TCheat(CheatAMFunc, cheat_amap_seq),
+  TCheat(CheatMusFunc, cheat_mus_seq),
+  TCheat(CheatGodFunc, cheat_god_seq),
+  TCheat(CheatWeaponsFunc, cheat_ammonokey_seq),
+  TCheat(CheatChopFunc, cheat_choppers_seq),
+  TCheat(CheatIDKFAFunc, cheat_ammo_seq),
+  TCheat(CheatNoClipFunc, cheat_noclip_seq),
+  TCheat(CheatNoClipFunc, cheat_commercial_noclip_seq),
+  TCheat(CheatPowerup1Func, cheat_powerup_seq1),
+  TCheat(CheatPowerup2Func, cheat_powerup_seq2),
+  TCheat(CheatWarpFunc, cheat_clev_seq),
+  TCheat(NULL, NULL)
+};
+
+// original Heretic cheats
+static TCheat Heretic_Cheats[] =
+{
+  TCheat(CheatGodFunc, CheatGodSeq),
+  TCheat(CheatNoClipFunc, CheatNoClipSeq),
+  TCheat(CheatWeaponsFunc, CheatWeaponsSeq),
+  TCheat(CheatPowerFunc, CheatPowerSeq),
+  TCheat(CheatHealthFunc, CheatHealthSeq),
+  TCheat(CheatKeysFunc, CheatKeysSeq),
+  TCheat(CheatArtifact1Func, CheatArtifact1Seq),
+  TCheat(CheatArtifact2Func, CheatArtifact2Seq),
+  TCheat(CheatArtifact3Func, CheatArtifact3Seq),
+  TCheat(CheatWarpFunc, CheatWarpSeq),
+  TCheat(CheatChickenFunc, CheatChickenSeq),
+  TCheat(CheatMassacreFunc, CheatMassacreSeq),
+  TCheat(CheatIDKFAFunc, CheatIDKFASeq),
+  TCheat(CheatIDDQDFunc, CheatIDDQDSeq),
+  TCheat(NULL, NULL) // Terminator
+};
+
+
+bool cht_Responder(event_t* ev)
+{
+  int i;
+  bool eat = false;
+  TCheat *cheats = Doom_Cheats;
+
+  if (ev->type != ev_keydown)
+    return false;
+
+  if (game.netgame || game.skill == sk_nightmare || !consoleplayer)
+    { // Can't cheat in a net-game, or in nightmare mode
+      return false;
+    }
+
+  PlayerPawn *p = consoleplayer->pawn;
+
+  if (p == NULL || p->health <= 0)
+    { // Dead players can't cheat
+      return false;
+    }
+
+  byte key = ev->data1;
+
+  // what about splitscreen?
+
+  // universal cheats first
+  for (i = 0; Basic_Cheats[i].func != NULL; i++)
+    {
+      if (Basic_Cheats[i].AddKey(key, &eat))
+	{
+	  Basic_Cheats[i].func(p, Basic_Cheats[i].args);
+	}
+    }
+
+  // use heretic cheats instead?
+  if (game.mode == gm_heretic)
+    cheats = Heretic_Cheats;
+  else if (game.mode == gm_hexen)
+    return eat; // TODO no Hexen cheats yet
+
+  for (i = 0; cheats[i].func != NULL; i++)
+    {
+      if (cheats[i].AddKey(key, &eat))
+	{
+	  CONS_Printf("Cheating, %d\n", i);
+	  cheats[i].func(p, cheats[i].args);
+	  if (game.mode == gm_heretic)
+	    S_StartAmbSound(sfx_dorcls);
+	}
+    }
+  return eat;
 }

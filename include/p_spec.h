@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
 // Revision 1.20  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -107,11 +110,6 @@ extern int boomsupport;
 //      Define values for map objects
 #define MO_TELEPORTMAN          14
 
-// at game start
-void    P_InitPicAnims ();
-// at map load (sectors)
-void    P_SetupLevelFlatAnims ();
-
 
 // geom. info, independent of Map
 sector_t *getNextSector(line_t *line, sector_t *sec);
@@ -169,8 +167,8 @@ enum sectorspecial_t
   SS_LightSequence_2 = 4,
   SS_Stairs_Special1 = 26,
   SS_Stairs_Special2 = 27,
-  SS_Light_IndoorLightning1 = 198,
-  SS_Light_IndoorLightning2 = 199,
+  SS_light_IndoorLightning1 = 198,
+  SS_light_IndoorLightning2 = 199,
   SS_Sky2 = 200
 };
 

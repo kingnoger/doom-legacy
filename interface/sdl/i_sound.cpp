@@ -16,6 +16,9 @@
 // for more details.
 //
 // $Log$
+// Revision 1.14  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
 // Revision 1.13  2004/01/02 14:25:02  smite-meister
 // cleanup
 //
@@ -594,26 +597,23 @@ void I_UnRegisterSong(int handle)
       Mix_FreeMusic(music[handle]);
       music[handle] = NULL;
     }
+
   if (MIDI_tmpfilename)
     {
       unlink(MIDI_tmpfilename);
-      free(MIDI_tmpfilename);
+      MIDI_tmpfilename = NULL;
     }
 }
 
 
 int I_RegisterSong(void* data, int len)
 {
-  int err;
-  ULONG midlength;
-  FILE *midfile;
-
   if (nomusic)
     return 0;
 
-       
-  MIDI_tmpfilename = tmpnam(NULL); // create an unused name
-  midfile = fopen(MIDI_tmpfilename, "wb");
+  MIDI_tmpfilename = "Legacy_music.tmp";
+
+  FILE *midfile = fopen(MIDI_tmpfilename, "wb");
   if (midfile == NULL)
     {
       CONS_Printf("Couldn't create a tmpfile for music!\n");
@@ -622,7 +622,9 @@ int I_RegisterSong(void* data, int len)
 
   if (memcmp(data,"MUS",3) == 0)
     {
-      // convert mus to mid with a wonderfull function
+      int err;
+      ULONG midlength;
+      // convert mus to mid with a wonderful function
       // thanks to S.Bacquet for the source of qmus2mid
       // convert mus to mid and load it in memory
       if ((err = qmus2mid((byte *)data, (byte *)musicbuffer, 89, 64, 0, len, MIDBUFFERSIZE, &midlength)) != 0)

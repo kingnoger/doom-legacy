@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,87 +17,9 @@
 //
 //
 // $Log$
-// Revision 1.28  2004/01/06 14:37:45  smite-meister
-// six bugfixes, cleanup
+// Revision 1.29  2004/03/28 15:16:12  smite-meister
+// Texture cache.
 //
-// Revision 1.27  2004/01/02 14:25:01  smite-meister
-// cleanup
-//
-// Revision 1.26  2003/12/31 18:32:49  smite-meister
-// Last commit of the year? Sound works.
-//
-// Revision 1.25  2003/12/23 18:06:06  smite-meister
-// Hexen stairbuilders. Moving geometry done!
-//
-// Revision 1.24  2003/12/18 11:57:31  smite-meister
-// fixes / new bugs revealed
-//
-// Revision 1.23  2003/12/09 01:02:00  smite-meister
-// Hexen mapchange works, keycodes fixed
-//
-// Revision 1.22  2003/12/06 23:57:47  smite-meister
-// save-related bugfixes
-//
-// Revision 1.21  2003/12/03 10:49:49  smite-meister
-// Save/load bugfix, text strings updated
-//
-// Revision 1.20  2003/11/30 00:09:43  smite-meister
-// bugfixes
-//
-// Revision 1.19  2003/11/27 11:28:25  smite-meister
-// Doom/Heretic startup bug fixed
-//
-// Revision 1.18  2003/11/23 00:41:55  smite-meister
-// bugfixes
-//
-// Revision 1.17  2003/11/12 11:07:19  smite-meister
-// Serialization done. Map progression.
-//
-// Revision 1.16  2003/06/10 22:39:55  smite-meister
-// Bugfixes
-//
-// Revision 1.15  2003/05/11 21:23:50  smite-meister
-// Hexen fixes
-//
-// Revision 1.14  2003/05/05 00:24:48  smite-meister
-// Hexen linedef system. Pickups.
-//
-// Revision 1.13  2003/04/24 20:30:02  hurdler
-// Remove lots of compiling warnings
-//
-// Revision 1.12  2003/04/04 00:01:54  smite-meister
-// bugfixes, Hexen HUD
-//
-// Revision 1.11  2003/03/08 16:07:02  smite-meister
-// Lots of stuff. Sprite cache. Movement+friction fix.
-//
-// Revision 1.10  2003/02/23 22:49:30  smite-meister
-// FS is back! L2 cache works.
-//
-// Revision 1.9  2003/02/08 21:43:50  smite-meister
-// New Memzone system. Choose your pawntype! Cyberdemon OK.
-//
-// Revision 1.8  2003/01/25 21:33:05  smite-meister
-// Now compiles with MinGW 2.0 / GCC 3.2.
-// Builder can choose between dynamic and static linkage.
-//
-// Revision 1.7  2003/01/18 20:17:41  smite-meister
-// HUD fixed, levelchange crash fixed.
-//
-// Revision 1.6  2003/01/12 12:56:40  smite-meister
-// Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
-//
-// Revision 1.5  2002/12/29 18:57:03  smite-meister
-// MAPINFO implemented, Actor deaths handled better
-//
-// Revision 1.4  2002/12/23 23:15:41  smite-meister
-// Weapon groups, MAPINFO parser added!
-//
-// Revision 1.3  2002/12/16 22:11:12  smite-meister
-// Actor/DActor separation done!
-//
-// Revision 1.2  2002/12/03 10:11:39  smite-meister
-// Blindness and missile clipping bugs fixed
 //
 //
 // DESCRIPTION:
@@ -114,7 +36,6 @@
 
 
 #include "g_input.h" // gamekeydown!
-#include "m_misc.h" // FIL_* file functions
 #include "dstrings.h"
 #include "m_random.h"
 #include "m_menu.h"
@@ -135,12 +56,6 @@
 #include "z_zone.h"
 
 
-// Here's for the german edition.
-// IF NO WOLF3D LEVELS, NO SECRET EXIT!
-
-
-language_t   language = la_english;            // Language.
-
 GameInfo game;
 
 // constructor
@@ -157,9 +72,7 @@ GameInfo::GameInfo()
 {
   demoversion = VERSION;
   mode = gm_none;
-  mission = gmi_doom2;
   state = GS_NULL;
-  wipestate = GS_DEMOSCREEN;
   action = ga_nothing;
   skill = sk_medium;
   maxplayers = 32;
@@ -219,6 +132,7 @@ void GameInfo::UpdateScore(PlayerInfo *killer, PlayerInfo *victim)
       killer->score--;
     }
 }
+
 
 int GameInfo::GetFrags(fragsort_t **fragtab, int type)
 {
@@ -383,22 +297,18 @@ int GameInfo::GetFrags(fragsort_t **fragtab, int type)
 }
 
 
-// Tries to add a player into the game. The new player gets the number pnum
-// if it is free, otherwise she gets the next free number.
-// An already constructed PI can be given in "in", if necessary.
+// Tries to add a player into the game.
 // Returns NULL if a new player cannot be added.
-
-PlayerInfo *GameInfo::AddPlayer(int pnum, PlayerInfo *p)
+PlayerInfo *GameInfo::AddPlayer(PlayerInfo *p)
 {
-  // a negative pnum just uses the first free slot
   int n = Players.size();
-
-  if (n >= maxplayers)
-    return NULL;  // no room in game
+  if (n >= maxplayers || !p)
+    return NULL;  // no room in game or no player given
 
   // TODO what if maxplayers has recently been set to a lower-than-n value?
   // when are the extra players kicked? cv_maxplayers action func?
 
+  int pnum = p->number;
   if (pnum > maxplayers)
     pnum = -1;  // pnum too high
 
@@ -418,10 +328,6 @@ PlayerInfo *GameInfo::AddPlayer(int pnum, PlayerInfo *p)
     }
 
   // pnum is valid and free!
-  // if a valid PI is given, use it. Otherwise, create a new PI.
-  if (p == NULL)
-    p = new PlayerInfo();
-
   p->number = pnum;
   Players[pnum] = p;
 
@@ -463,6 +369,7 @@ bool GameInfo::RemovePlayer(int num)
   Players.erase(i);
   return true;
 }
+
 
 // Removes all players from a game.
 void GameInfo::ClearPlayers()
@@ -639,6 +546,10 @@ void GameInfo::Ticker()
     }
 }
 
+
+int P_Read_ANIMATED(int lump);
+int P_Read_ANIMDEFS(int lump);
+
 // starts a new local game
 bool GameInfo::DeferredNewGame(skill_t sk, bool splitscreen)
 {
@@ -663,6 +574,10 @@ bool GameInfo::DeferredNewGame(skill_t sk, bool splitscreen)
 	S_PrecacheSounds();
     }
 
+  // texture and flat animations
+  if (P_Read_ANIMDEFS(fc.FindNumForName("ANIMDEFS")) < 0)
+    P_Read_ANIMATED(fc.FindNumForName("ANIMATED"));
+
   Downgrade(VERSION);
   paused = false;
   nomonsters = false;
@@ -682,10 +597,10 @@ bool GameInfo::DeferredNewGame(skill_t sk, bool splitscreen)
   ClearPlayers();
 
   // add local players
-  consoleplayer = AddPlayer(-1, new PlayerInfo(localplayer));
+  consoleplayer = AddPlayer(new PlayerInfo(localplayer));
 
   if (splitscreen)
-    consoleplayer2 = AddPlayer(-1, new PlayerInfo(localplayer2));
+    consoleplayer2 = AddPlayer(new PlayerInfo(localplayer2));
   
   COM_BufAddText (va("splitscreen %d;deathmatch 0;fastmonsters 0;"
 		     "respawnmonsters 0;timelimit 0;fraglimit 0\n",
@@ -740,8 +655,9 @@ bool GameInfo::StartGame()
   // FIXME make map restart option work, do not FreeTags and Setup,
   // instead just Reset the maps
 
-  if (wipestate == GS_LEVEL)
-    wipestate = GS_WIPE;  // force a wipe
+  extern bool force_wipe;
+  force_wipe = true;
+  //if (wipestate == GS_LEVEL) wipestate = GS_WIPE;  // force a wipe
 
   state = GS_LEVEL;
 

@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
 // Revision 1.9  2003/12/18 11:57:31  smite-meister
 // fixes / new bugs revealed
 //
@@ -120,7 +123,7 @@ enum MD3_animseq_e
 //  x indicating the rotation, x = 0, 1-7.
 // The sprite and frame specified by a thing_t
 //  is range checked at run time.
-// A sprite is a patch_t that is assumed to represent
+// A sprite is a set of Textures that represents
 //  a three dimensional object and may have multiple
 //  rotations pre drawn.
 // Horizontal flipping is used to save space,
@@ -131,15 +134,13 @@ enum MD3_animseq_e
 struct spriteframe_t
 {
   // If false use 0 for any position.
-  // Note: as eight entries are available,
+  // NOTE: as eight entries are available,
   //  we might as well insert the same name eight times.
   char   rotate;
 
-  // Lump to use for view angles 0-7.
-  int    lumppat[8];   // lump number 16:16 wad:lump
-  short  lumpid[8];    // id in the spriteoffset,spritewidth.. tables
-
-  bool   flip[8];   // Flip bit to use for view angles 0-7.
+  // Texture to use for view angles 0-7.
+  class Texture *tex[8];
+  bool          flip[8]; // Flip bit to use for view angles 0-7.
 };
 
 
@@ -149,6 +150,8 @@ class sprite_t : public cacheitem_t
   friend class spritepres_t;
   //protected: // FIXME R_DrawPSprite() wants to use spriteframes directly.
 public:
+  virtual ~sprite_t();
+
   int  iname; // sprite name (4 chars) as an int
   int            numframes;
   spriteframe_t *spriteframes;
@@ -158,8 +161,8 @@ public:
 class spritecache_t : public L2cache_t
 {
 protected:
-  virtual cacheitem_t *Load(const char *p, cacheitem_t *t = NULL);
-  virtual void Free(cacheitem_t *t);
+  cacheitem_t *Load(const char *p);
+
 public:
   spritecache_t(memtag_t tag);
 

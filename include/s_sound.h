@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
 // Revision 1.9  2004/01/02 14:25:02  smite-meister
 // cleanup
 //
@@ -143,6 +146,8 @@ protected:
   int   lumpnum; // lump number of data
 
 public:
+  virtual ~sounditem_t();
+
   void *data;    // unconverted data
   int   length;  // in bytes
   void *sdata;   // raw converted sound data

@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
 // Revision 1.4  2002/12/23 23:19:37  smite-meister
 // Weapon groups, MAPINFO parser, WAD2+WAD3 support added!
 //
@@ -80,12 +83,13 @@
 #ifndef screen_h
 #define screen_h 1
 
-// FIXME only for Win32 version, move to Win32 video interface!
-//HWND        WndParent;       // handle of the application's window
-
 #include "doomtype.h"
 
-#define NUMSCREENS    4
+
+#define NUMSCREENS 4
+
+// Screen 0 is the screen updated by I_Update screen.
+// Screen 1 is an extra buffer.
 
 // we try to re-allocate a minimum of buffers for stability of the memory,
 // so all the small-enough tables based on screen size, are allocated once
@@ -97,8 +101,9 @@
 #define BASEVIDWIDTH    320  //NEVER CHANGE THIS! this is the original
 #define BASEVIDHEIGHT   200  // resolution of the graphics.
 
-// global video state
-// was struct viddef_t
+
+// Class describing the global video state
+
 class Video
 {
 public:
@@ -114,11 +119,13 @@ public:
   byte  *direct;     // linear frame buffer, or vga base mem.
 
   bool windowed; // not fullscreen?
-  //int  numpages; // ...
 
   int   dupx, dupy;       // scale 1,2,3 value for menus & overlays
   float fdupx, fdupy;     // same as dupx,dupy but exact value when aspect ratio isn't 320/200
-  int   centerofs;       // centering for the scaled menu gfx
+
+  int   centerofs; // centering for the scaled menu gfx
+  int   scaledofs; // centering offset for the scaled graphics,
+
   int   baseratio;       // SoM: Used to get the correct value for lighting walls
 
   int   setmodeneeded; // video mode change needed if > 0 // (the mode number to set + 1)
@@ -148,6 +155,8 @@ public:
 };
 
 extern Video vid;
+
+
 
 // Check parms once at startup
 void SCR_CheckDefaultMode();
@@ -202,7 +211,7 @@ extern void (*skydrawerfunc[2])();
 // screen variables
 // ----------------
 
-extern byte*    scr_borderpatch;   // patch used to fill the view borders
+extern class Texture *scr_borderpatch;  // patch used to fill the view borders
 
 struct consvar_t;
 

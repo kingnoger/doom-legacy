@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.30  2004/03/28 15:16:12  smite-meister
+// Texture cache.
+//
 // Revision 1.29  2004/01/11 17:19:14  smite-meister
 // bugfixes
 //
@@ -106,8 +109,6 @@
 #include "r_sprite.h"
 #include "m_random.h"
 
-
-int green_armor_class, blue_armor_class, soul_health, mega_health;
 
 static int ArmorIncrement[NUMCLASSES][NUMARMOR] =
 {
@@ -229,14 +230,10 @@ void Pawn::CheckPointers()
     attacker = NULL;
 }
 
-bool Pawn::Morph() { return false; }
 
 bool Pawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 { return false; }
 
-// added 2-2-98 for hacking with dehacked patch
-int initial_health=100; //MAXHEALTH;
-int initial_bullets=50;
 
 // creates a pawn based on a Doom/Heretic mobj
 Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, int type)
@@ -343,8 +340,7 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, int type)
   specialsector = 0;
   extralight = fixedcolormap = 0;
 
-  // crap
-  flyheight = 0;
+  fly_zspeed = 0;
 }
 
 
@@ -357,8 +353,6 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, int type)
 
 void PlayerPawn::Think()
 {
-  int                 waterz;
-
   ticcmd_t* cmd = &player->cmd;
 
   // a corpse, for example. Thinks just like an actor.
@@ -387,8 +381,6 @@ void PlayerPawn::Think()
       eflags &= ~MFE_JUSTATTACKED;
     }
 
-  //if (player->playerstate == PST_REBORN) I_Error("player %d is in PST_REBORN\n"); // debugging...
-
   if (player->playerstate == PST_DEAD)
     {
       DeathThink();
@@ -412,7 +404,7 @@ void PlayerPawn::Think()
 
   //added:22-02-98: bob view only if looking by the marine's eyes
   if (!camera.chase)
-    CalcHeight(z <= floorz);
+    player->CalcViewHeight(z <= floorz);
 
   // check special sectors : damage & secrets
   PlayerInSpecialSector();
@@ -428,6 +420,7 @@ void PlayerPawn::Think()
 	  //
 	  // make sure we disturb the surface of water (we touch it)
 	  //
+	  int waterz;
 	  if (specialsector == 887)
 	    //FLAT TEXTURE 'FWATER'
 	    waterz = subsector->sector->floorheight + (FRACUNIT/4);
@@ -621,7 +614,7 @@ void PlayerPawn::DeathThink()
 
   player->deltaviewheight = 0;
 
-  CalcHeight(z <= floorz);
+  player->CalcViewHeight(z <= floorz);
 
   // watch my killer (if there is one)
   if (attacker != NULL && attacker != this)
@@ -890,146 +883,7 @@ void PlayerPawn::UseArtifact(artitype_t arti)
 }
 
 
-//----------------------------------------------------------------------------
-// was P_UndoPlayerChicken
-
-bool PlayerPawn::UndoMorph()
-{
-  // store the current values
-  fixed_t r = radius;
-  fixed_t h = height;
-
-  mobjinfo_t *i = &mobjinfo[pawndata[player->ptype].mt];
-
-  radius = i->radius;
-  height = i->height;
-
-  if (TestLocation() == false)
-    {
-      // Didn't fit, continue morph
-      morphTics = 2*35;
-      radius = r;
-      height = h;
-      // some sound to indicate unsuccesful morph?
-      return false;
-    }
-
-  morphTics = 0;
-
-  health = maxhealth = i->spawnhealth;
-  reactiontime = 18;
-  powers[pw_weaponlevel2] = 0;
-  weaponinfo = wpnlev1info;
-
-  angle_t ang = angle >> ANGLETOFINESHIFT;
-  DActor *fog = mp->SpawnDActor(x+20*finecosine[ang], y+20*finesine[ang],
-				z+TELEFOGHEIGHT, MT_TFOG);
-  S_StartSound(fog, sfx_teleport);
-  PostMorphWeapon(weapontype_t(attackphase));
-
-  /*
-  if(oldFlags2 & MF2_FLY)
-    {
-      mo->flags2 |= MF2_FLY;
-      mo->flags |= MF_NOGRAVITY;
-    }
-  */
-  return true;
-}
-
-
-
-
-
-
-// 16 pixels of bob
-#define MAXBOB  0x100000
-
 //
-// was P_CalcHeight
-// Calculate the walking / running height adjustment
-//
-void PlayerPawn::CalcHeight(bool onground)
-{
-  // Regular movement bobbing
-  // (needs to be calculated for gun swing
-  // even if not on ground)
-  // OPTIMIZE: tablify angle
-  // Note: a LUT allows for effects
-  //  like a ramp with low health.
-
-  PlayerInfo *pl = player;
-
-  if ((flags2 & MF2_FLY) && !onground)
-    pl->bob = FRACUNIT/2;
-  else
-    {
-      pl->bob = ((FixedMul(px,px) + FixedMul (py,py))*NEWTICRATERATIO) >> 2;
-
-      if (pl->bob > MAXBOB)
-	pl->bob = MAXBOB;
-    }
-
-  if ((cheats & CF_NOMOMENTUM) || z > floorz)
-    {
-      //added:15-02-98: it seems to be useless code!
-      //pl->viewz = p->mo->z + (cv_viewheight.value<<FRACBITS);
-
-      //if (p->viewz > p->mo->ceilingz-4*FRACUNIT)
-      //    p->viewz = p->mo->ceilingz-4*FRACUNIT;
-      pl->viewz = z + pl->viewheight;
-      return;
-    }
-
-  int ang = (FINEANGLES/20*gametic/NEWTICRATERATIO) & FINEMASK;
-  fixed_t bob = FixedMul(pl->bob/2, finesine[ang]);
-
-  // move viewheight
-  fixed_t viewheight = cv_viewheight.value << FRACBITS; // default eye view height
-
-  if (pl->playerstate == PST_ALIVE)
-    {
-      pl->viewheight += pl->deltaviewheight;
-
-      if (pl->viewheight > viewheight)
-        {
-	  pl->viewheight = viewheight;
-	  pl->deltaviewheight = 0;
-        }
-
-      if (pl->viewheight < viewheight/2)
-        {
-	  pl->viewheight = viewheight/2;
-	  if (pl->deltaviewheight <= 0)
-	    pl->deltaviewheight = 1;
-        }
-
-      if (pl->deltaviewheight)
-        {
-	  pl->deltaviewheight += FRACUNIT/4;
-	  if (!pl->deltaviewheight)
-	    pl->deltaviewheight = 1;
-        }
-    }   
-
-  if (morphTics)
-    pl->viewz = z + pl->viewheight-(20*FRACUNIT);
-  else
-    pl->viewz = z + pl->viewheight + bob;
-
-  if (pl->playerstate != PST_DEAD && z <= floorz)
-    pl->viewz -= floorclip;
-
-  if (pl->viewz > ceilingz-4*FRACUNIT)
-    pl->viewz = ceilingz-4*FRACUNIT;
-  if (pl->viewz < floorz+4*FRACUNIT)
-    pl->viewz = floorz+4*FRACUNIT;
-}
-
-
-
-//
-// was P_SpawnPlayerMissile
 // Tries to aim at a nearby monster
 //
 DActor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
@@ -1350,7 +1204,6 @@ void PlayerPawn::PlayerOnSpecial3DFloor()
 
 
 //
-// was P_PlayerInSpecialSector
 // Called every tic frame
 //  that the player origin is in a special sector
 //
@@ -1632,16 +1485,9 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 extern int  p_sound;  // pickupsound
 extern bool p_remove; // should the stuff be removed?
 
-// Boris stuff : dehacked patches hack
-int maxsoul=200;
-
 // Returns false if the health isn't needed at all
 bool Pawn::GiveBody(int num)
 {
-#define MAXCHICKENHEALTH 30
-
-  //if (morphTics) max = MAXCHICKENHEALTH; // FIXME maxhealth must be updated
-
   if (health >= maxhealth)
     return false;
 
@@ -1687,7 +1533,7 @@ bool PlayerPawn::GivePower(int power)
       flags2 |= MF2_FLY;
       flags |= MF_NOGRAVITY;
       if (z <= floorz)
-	flyheight = 10; // thrust the player in the air a bit
+	fly_zspeed = 10; // thrust the player in the air a bit
       break;
 
     case pw_infrared:
@@ -2003,23 +1849,14 @@ bool PlayerPawn::GiveArtifact(artitype_t arti, DActor *from)
   while (i < inventory.end() && i->type != arti)
     i++;
 
-  if (i == inventory.end())
-    // give one artifact
-    inventory.push_back(inventory_t(arti, 1));
-  else
+  if (i != inventory.end())
     {
       // player already has some of these
       if (i->count >= MAXARTECONT)
-	// Player already has 16 of this item
 	return false;
-      
-      i->count++; // one more
     }
 
-  p_remove = false;
-
-  if (from && (from->flags & MF_COUNTITEM))
-    player->items++;
+  p_remove = false;  // TODO we could just as well remove the artifacts (they will respawn in dm!)
 
   int j;
   if (arti < arti_firstpuzzitem)
@@ -2031,7 +1868,7 @@ bool PlayerPawn::GiveArtifact(artitype_t arti, DActor *from)
       SetDormantArtifact(from);
       p_sound = sfx_artiup;
     }
-  else
+  else if (arti < arti_fsword1)
     {
       // Puzzle item
       j = TXT_ARTIPUZZSKULL + arti - arti_firstpuzzitem;
@@ -2040,10 +1877,77 @@ bool PlayerPawn::GiveArtifact(artitype_t arti, DActor *from)
       player->SetMessage(text[j], true);
       SetDormantArtifact(from);
       /*
-      if (!game.multiplayer || deathmatch)
-        // Remove puzzle items if not cooperative netplay
-        P_RemoveMobj(artifact);
+	if (!game.multiplayer || cv_deathmatch.value)
+	p_remove = true; // TODO remove puzzle items if not cooperative netplay?
       */
+    }
+  else
+    {
+      // weapon piece
+      p_remove = true;
+      int  wclass = 1 + ((arti - arti_fsword1) / 3);
+
+      bool gave_mana = false;
+      bool gave_piece = false;
+      bool coop_multiplayer = (game.multiplayer && !cv_deathmatch.value);
+
+      if (pclass != wclass)
+	{
+	  // wrong class, but try to pick up for mana
+	  if (coop_multiplayer)
+	    return false; // you can't steal other players' weapons
+
+	  gave_mana = GiveAmmo(am_mana1, 20) || GiveAmmo(am_mana2, 20);
+	}
+      else 
+	{
+	  // right class
+	  gave_piece = (i == inventory.end()); // only pick up pieces you don't have
+
+	  if (coop_multiplayer)
+	    {
+	      if (!gave_piece)
+		return false;
+
+	      // TODO if you die, you lose all pieces gathered so far... leave them near the corpse?
+	      GiveAmmo(am_mana1, 20);
+	      GiveAmmo(am_mana2, 20);
+	      p_remove = false;
+	    }
+	  else
+	    {
+	      // dm or single player game
+	      gave_mana = GiveAmmo(am_mana1, 20) || GiveAmmo(am_mana2, 20);
+	    }
+	}
+
+      if (!gave_mana && !gave_piece)
+	return false;
+
+      // Picked up the weapon piece (or just the mana)
+      player->SetMessage(text[wclass - 1 + TXT_QUIETUS_PIECE], false);
+      p_sound = sfx_weaponup;
+
+      if (!gave_piece)
+	return true;
+    }
+
+  if (from && (from->flags & MF_COUNTITEM))
+    player->items++;
+
+  if (i == inventory.end())
+    {
+      // give one artifact
+      inventory.push_back(inventory_t(arti, 1));
+    }
+  else
+    {
+      // player already has some of these
+      if (i->count >= MAXARTECONT)
+	// Player already has 16 of this item
+	return false;
+      
+      i->count++; // one more
     }
 
   return true;

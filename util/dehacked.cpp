@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/03/28 15:16:15  smite-meister
+// Texture cache.
+//
 // Revision 1.9  2004/01/10 16:03:00  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
@@ -86,344 +89,528 @@
 //
 //
 // DESCRIPTION:
-//      Load dehacked file and change table and text from the exe
+//   DeHackEd and BEX support
 //
 //-----------------------------------------------------------------------------
 
 #include <stdarg.h>
 
-#include "doomdef.h"
 #include "dehacked.h"
-
-#include "command.h"
-#include "console.h"
+#include "parser.h"
 
 #include "g_game.h"
 
 #include "d_items.h"
 #include "sounds.h"
 #include "info.h"
-
-#include "m_cheat.h"
 #include "dstrings.h"
-#include "m_argv.h"
 
-#include "z_zone.h"
 #include "w_wad.h"
+#include "z_zone.h"
 
 
-bool deh_loaded = false;
+dehacked_t DEH; // one global instance
+
+static char   **savesprnames;
+static actionf_p1 *d_actions;
+static actionf_p2 *w_actions;
 
 
-#define MAXLINELEN  200
-
-#define myfeof( a )  (a->data+a->size<=a->curpos)
-
-char *myfgets(char *buf, int bufsize, MYFILE *f)
+struct d_mnemonic_t
 {
-    int i=0;
-    if( myfeof(f) )
-        return NULL;
-    // we need on byte for null terminated string
-    bufsize--;
-    while(i<bufsize && !myfeof(f) )
-    {
-        char c = *f->curpos++;
-        if( c!='\r' )
-            buf[i++]=c;
-        if( c=='\n' )
-            break;
-    }
-    buf[i] = '\0';
-    //CONS_Printf("fgets [0]=%d [1]=%d '%s'\n",buf[0],buf[1],buf);
+  char       *name;
+  actionf_p1  ptr;
+};
 
-    return buf;
+struct w_mnemonic_t
+{
+  char       *name;
+  actionf_p2  ptr;
+};
+
+#include "a_functions.h" // prototypes
+
+w_mnemonic_t BEX_Weapon_mnemonics[] = 
+{
+#define WEAPON(x) {#x, A_ ## x},
+#define DACTOR(x)
+#include "a_functions.h"
+  {"NULL", NULL},
+  {NULL, NULL}
+};
+
+d_mnemonic_t BEX_DActor_mnemonics[] = 
+{
+#define WEAPON(x)
+#define DACTOR(x) {#x, A_ ## x},
+#include "a_functions.h"
+  {"NULL", NULL},
+  {NULL, NULL}
+};
+
+
+
+dehacked_t::dehacked_t()
+{
+  loaded = false;
+  num_errors = 0;
+
+  // FIXME most of these are not really used
+  idfa_armor = 200;
+  idfa_armor_class = 2;
+  idkfa_armor = 200;
+  idkfa_armor_class = 2;
+  god_health = 100;
+
+  initial_health = 100;
+  initial_bullets = 50;
+  max_health = 200;
+  maxsoul = 200;
+
+  green_armor_class = 1;
+  blue_armor_class = 2;
+  soul_health = 200;
+  mega_health = 200;
 }
 
-size_t  myfread( char *buf, size_t size, size_t count, MYFILE *f )
+
+void dehacked_t::error(char *first, ...)
 {
-    size_t byteread = size-(f->curpos-f->data);
-    if( size*count < byteread )
-        byteread = size*count;
-    if( byteread>0 )
+  va_list argptr;
+
+  if (devparm)
     {
-        ULONG i;
-        for(i=0;i<byteread;i++)
-        {
-            char c=*f->curpos++;
-            if( c!='\r' )
-                buf[i]=c;
-            else
-                i--;
-        }
-    }
-    return byteread/size;
-}
+      char buf[1000];
 
-static int deh_num_error=0;
+      va_start(argptr, first);
+      vsprintf(buf, first, argptr);
+      va_end(argptr);
 
-static void deh_error(char *first, ...)
-{
-    va_list     argptr;
-
-    if (devparm)
-    {
-       char buf[1000];
-
-       va_start (argptr,first);
-       vsprintf (buf, first,argptr);
-       va_end (argptr);
-
-       CONS_Printf("%s\n",buf);
+      CONS_Printf("%s\n",buf);
     }
 
-    deh_num_error++;
+  num_errors++;
 }
 
-/* ======================================================================== */
-// Load a dehacked file format 6 I (BP) don't know other format
-/* ======================================================================== */
-/* a sample to see
-                   Thing 1 (Player)       {           // MT_PLAYER
-int doomednum;     ID # = 3232              -1,             // doomednum
-int spawnstate;    Initial frame = 32       S_PLAY,         // spawnstate
-int spawnhealth;   Hit points = 3232        100,            // spawnhealth
-int seestate;      First moving frame = 32  S_PLAY_RUN1,    // seestate
-int seesound;      Alert sound = 32         sfx_None,       // seesound
-int reactiontime;  Reaction time = 3232     0,              // reactiontime
-int attacksound;   Attack sound = 32        sfx_None,       // attacksound
-int painstate;     Injury frame = 32        S_PLAY_PAIN,    // painstate
-int painchance;    Pain chance = 3232       255,            // painchance
-int painsound;     Pain sound = 32          sfx_plpain,     // painsound
-int meleestate;    Close attack frame = 32  S_NULL,         // meleestate
-int missilestate;  Far attack frame = 32    S_PLAY_ATK1,    // missilestate
-int deathstate;    Death frame = 32         S_PLAY_DIE1,    // deathstate
-int xdeathstate;   Exploding frame = 32     S_PLAY_XDIE1,   // xdeathstate
-int deathsound;    Death sound = 32         sfx_pldeth,     // deathsound
-int speed;         Speed = 3232             0,              // speed
-int radius;        Width = 211812352        16*FRACUNIT,    // radius
-int height;        Height = 211812352       56*FRACUNIT,    // height
-int mass;          Mass = 3232              100,            // mass
-int damage;        Missile damage = 3232    0,              // damage
-int activesound;   Action sound = 32        sfx_None,       // activesound
-int flags;         Bits = 3232              MF_SOLID|MF_SHOOTABLE|MF_DROPOFF|MF_PICKUP|MF_NOTDMATCH,
-int raisestate;    Respawn frame = 32       S_NULL          // raisestate
-                                         }, */
 
-static int searchvalue(char *s)
+// a small hack for retrieving values following a '=' sign
+static int SearchValue(Parser &p)
 {
-  while(s[0]!='=' && s[0]!='\0') s++;
-  if (s[0]=='=')
-    return atoi(&s[1]);
+  int value;
+  char *temp = p.Pointer(); // save the current location
+  p.GoToNext("=");
+  if (!p.MustGetInt(&value))
+    {
+      DEH.error("No value found\n");
+      value = 0;
+    }
+  p.SetPointer(temp); // and go back
+  return value;
+}
+
+
+// state number remapping: weapon states get negated numbers
+static int StateMap(int num)
+{
+  // 0 null state
+  // 1-89 doom weapons
+  // 90-967 doom things
+  // 968-975 legacy additions (smoke and splash)
+
+  if (num < 0 || num > 975) // FIXME upper limit
+    {
+      DEH.error("Frame %d doesn't exist!\n", num);
+      return 0;
+    }
+
+  if (num == 0)
+    {
+      DEH.error("You must not modify frame 0.\n");
+      return 0;
+    }
+
+  if (num <= 89)
+    return -num;
   else
-  {
-    deh_error("No value found\n");
-    return 0;
-  }
+    return num - 89;
 }
 
-static void readthing(MYFILE *f,int num)
+
+// ========================================================================
+// Load a dehacked file format 6. I (BP) don't know other format
+// ========================================================================
+
+/*
+  Thing sample:
+Thing 1 (Player)
+ID # = 3232              -1,             // doomednum
+Initial frame = 32       S_PLAY,         // spawnstate
+Hit points = 3232        100,            // spawnhealth
+First moving frame = 32  S_PLAY_RUN1,    // seestate
+Alert sound = 32         sfx_None,       // seesound
+Reaction time = 3232     0,              // reactiontime
+Attack sound = 32        sfx_None,       // attacksound
+Injury frame = 32        S_PLAY_PAIN,    // painstate
+Pain chance = 3232       255,            // painchance
+Pain sound = 32          sfx_plpain,     // painsound
+Close attack frame = 32  S_NULL,         // meleestate
+Far attack frame = 32    S_PLAY_ATK1,    // missilestate
+Death frame = 32         S_PLAY_DIE1,    // deathstate
+Exploding frame = 32     S_PLAY_XDIE1,   // xdeathstate
+Death sound = 32         sfx_pldeth,     // deathsound
+Speed = 3232             0,              // speed
+Width = 211812352        16*FRACUNIT,    // radius
+Height = 211812352       56*FRACUNIT,    // height
+Mass = 3232              100,            // mass
+Missile damage = 3232    0,              // damage
+Action sound = 32        sfx_None,       // activesound
+Bits = 3232              MF_SOLID|MF_SHOOTABLE|MF_DROPOFF|MF_PICKUP|MF_NOTDMATCH,
+Respawn frame = 32       S_NULL          // raisestate
+*/
+
+static void Read_Thing(Parser &p, int num)
 {
-  char s[MAXLINELEN];
+  num--; // begin at 0 not 1;
+  if (num >= NUMMOBJTYPES || num < 0)
+    {
+      DEH.error("Thing %d doesn't exist\n", num);
+      return;
+    }
+
   char *word;
   int value;
 
-  do{
-    if(myfgets(s,sizeof(s),f)!=NULL)
+  while (p.NewLine(false))
     {
-      if(s[0]=='\n') break;
-      value=searchvalue(s);
-      // set the value in apropriet field
-      word=strtok(s," ");
-           if(!strcmp(word,"ID"))           mobjinfo[num].doomednum   =value;
-      else if(!strcmp(word,"Initial"))      mobjinfo[num].spawnstate  =(statenum_t)value;
-      else if(!strcmp(word,"Hit"))          mobjinfo[num].spawnhealth =value;
-      else if(!strcmp(word,"First"))        mobjinfo[num].seestate    =(statenum_t)value;
-      else if(!strcmp(word,"Alert"))        mobjinfo[num].seesound    =value;
-      else if(!strcmp(word,"Reaction"))     mobjinfo[num].reactiontime=value;
-      else if(!strcmp(word,"Attack"))       mobjinfo[num].attacksound =value;
-      else if(!strcmp(word,"Injury"))       mobjinfo[num].painstate   =(statenum_t)value;
-      else if(!strcmp(word,"Pain"))
-           {
-             word=strtok(NULL," ");
-             if(!strcmp(word,"chance"))     mobjinfo[num].painchance  =value;
-             else if(!strcmp(word,"sound")) mobjinfo[num].painsound   =value;
-           }
-      else if(!strcmp(word,"Close"))        mobjinfo[num].meleestate  =(statenum_t)value;
-      else if(!strcmp(word,"Far"))          mobjinfo[num].missilestate=(statenum_t)value;
-      else if(!strcmp(word,"Death"))
-           {
-             word=strtok(NULL," ");
-             if(!strcmp(word,"frame"))      mobjinfo[num].deathstate  =(statenum_t)value;
-             else if(!strcmp(word,"sound")) mobjinfo[num].deathsound  =value;
-           }
-      else if(!strcmp(word,"Exploding"))    mobjinfo[num].xdeathstate =(statenum_t)value;
-      else if(!strcmp(word,"Speed"))        mobjinfo[num].speed       =value;
-      else if(!strcmp(word,"Width"))        mobjinfo[num].radius      =value;
-      else if(!strcmp(word,"Height"))       mobjinfo[num].height      =value;
-      else if(!strcmp(word,"Mass"))         mobjinfo[num].mass        =value;
-      else if(!strcmp(word,"Missile"))      mobjinfo[num].damage      =value;
-      else if(!strcmp(word,"Action"))       mobjinfo[num].activesound =value;
-      else if(!strcmp(word,"Bits"))         mobjinfo[num].flags       =value;
-      else if(!strcmp(word,"Bits2"))        mobjinfo[num].flags2      =value;
-      else if(!strcmp(word,"Respawn"))      mobjinfo[num].raisestate  =(statenum_t)value;
-      else deh_error("Thing %d : unknow word '%s'\n",num,word);
+      p.PassWS();
+      if (!p.LineLen())
+	break; // a whitespace-only line ends the record
+
+      value = SearchValue(p);
+
+      // set the value in appropriate field
+      word = p.GetToken(" ");
+      if (!strcasecmp(word, "ID"))            mobjinfo[num].doomednum    = value;
+      else if (!strcasecmp(word,"Hit"))       mobjinfo[num].spawnhealth  = value;
+      else if (!strcasecmp(word,"Alert"))     mobjinfo[num].seesound     = value;
+      else if (!strcasecmp(word,"Reaction"))  mobjinfo[num].reactiontime = value;
+      else if (!strcasecmp(word,"Attack"))    mobjinfo[num].attacksound  = value;
+      else if (!strcasecmp(word,"Pain"))
+	{
+	  word = p.GetToken(" ");
+	  if (!strcasecmp(word,"chance"))     mobjinfo[num].painchance = value;
+	  else if (!strcasecmp(word,"sound")) mobjinfo[num].painsound  = value;
+	}
+      else if (!strcasecmp(word,"Death"))
+	{
+	  word = p.GetToken(" ");
+	  if (!strcasecmp(word,"frame"))
+	    {
+	      value = StateMap(value);
+	      if (value <= 0)
+		{
+		  DEH.error("Thing %d : Weapon states must not be used with Things!\n", num);
+		  continue;
+		}
+	      mobjinfo[num].deathstate  = statenum_t(value);
+	    }
+	  else if (!strcasecmp(word,"sound")) mobjinfo[num].deathsound  = value;
+	}
+      else if (!strcasecmp(word,"Speed"))     mobjinfo[num].speed       = value;
+      else if (!strcasecmp(word,"Width"))     mobjinfo[num].radius      = value;
+      else if (!strcasecmp(word,"Height"))    mobjinfo[num].height      = value;
+      else if (!strcasecmp(word,"Mass"))      mobjinfo[num].mass        = value;
+      else if (!strcasecmp(word,"Missile"))   mobjinfo[num].damage      = value;
+      else if (!strcasecmp(word,"Action"))    mobjinfo[num].activesound = value;
+      else if (!strcasecmp(word,"Bits"))      mobjinfo[num].flags       = value;
+      else if (!strcasecmp(word,"Bits2"))     mobjinfo[num].flags2      = value;
+      else
+	{
+	  value = StateMap(value);
+	  if (value <= 0)
+	    {
+	      DEH.error("Thing %d : Weapon states must not be used with Things!\n", num);
+	      continue;
+	    }
+
+	  if (!strcasecmp(word,"Initial"))        mobjinfo[num].spawnstate   = statenum_t(value);
+	  else if (!strcasecmp(word,"First"))     mobjinfo[num].seestate     = statenum_t(value);
+	  else if (!strcasecmp(word,"Injury"))    mobjinfo[num].painstate    = statenum_t(value);
+	  else if (!strcasecmp(word,"Close"))     mobjinfo[num].meleestate   = statenum_t(value);
+	  else if (!strcasecmp(word,"Far"))       mobjinfo[num].missilestate = statenum_t(value);
+	  else if (!strcasecmp(word,"Exploding")) mobjinfo[num].xdeathstate  = statenum_t(value);
+	  else if (!strcasecmp(word,"Respawn"))   mobjinfo[num].raisestate   = statenum_t(value);
+	  else DEH.error("Thing %d : Unknown field '%s'\n", num, word);
+	}
     }
-  } while(s[0]!='\n' && !myfeof(f)); //finish when the line is empty
 }
+
+
+
+// Utility for setting codepointers / action functions.
+// Accepts both numeric and BEX mnemonic references.
+static void SetAction(int to, const char *mnemonic)
+{
+  to = StateMap(to);
+
+  if (mnemonic[0] >= '0' && mnemonic[0] <= '9' )
+    {
+      int from = StateMap(strtol(mnemonic, NULL, 0));
+      if (to > 0)
+	if (from > 0)
+	  states[to].action = d_actions[from];
+	else
+	  DEH.error("Tried to use a weapon codepointer in a thing frame!\n");
+      else
+	if (from < 0)
+	  weaponstates[-to].action = w_actions[-from];
+	else
+	  DEH.error("Tried to use a thing codepointer in a weapon frame!\n");
+
+      return;
+    }
+
+  if (to > 0)
+    {
+      d_mnemonic_t *m;
+      for (m = BEX_DActor_mnemonics; m->name && strcasecmp(mnemonic, m->name); m++);
+      if (!m->name)
+	DEH.error("[CODEPTR]: Unknown mnemonic '%s'\n", mnemonic);
+      states[to].action = m->ptr;
+    }
+  else
+    {
+      w_mnemonic_t *w;
+      for (w = BEX_Weapon_mnemonics; w->name && strcasecmp(mnemonic, w->name); w++);
+      if (!w->name)
+	DEH.error("[CODEPTR]: Unknown mnemonic '%s'\n", mnemonic);
+      weaponstates[-to].action = w->ptr;
+    }
+}
+
+
+// parses the [CODEPTR] item
+static void Read_CODEPTR(Parser &p)
+{
+  while (p.NewLine(false))
+    {
+      p.PassWS();
+      if (!p.LineLen())
+	break; // a whitespace-only line ends the record
+
+      char *word = p.GetToken(" ");
+      if (strcasecmp(word, "Frame"))
+	{
+	  DEH.error("[CODEPTR]: Unknown command '%s'\n", word);
+	  continue;
+	}
+
+      int s = p.GetInt();
+      word = p.GetToken(" =");
+      SetAction(s, word);
+    }
+}
+
+
 /*
+  Frame sample:
 Sprite number = 10
 Sprite subnumber = 32968
 Duration = 200
 Next frame = 200
+Codep = 111 // Legacy addition
 */
-static void readframe(MYFILE* f,int num)
-{
-  char s[MAXLINELEN];
-  char *word1,*word2;
-  int value;
-  do{
-    if(myfgets(s,sizeof(s),f)!=NULL)
-    {
-      if(s[0]=='\n') break;
-      value=searchvalue(s);
-      // set the value in apropriet field
-      word1=strtok(s," ");
-      word2=strtok(NULL," ");
 
-      if(!strcmp(word1,"Sprite"))
-      {
-             if(!strcmp(word2,"number"))     states[num].sprite   =(spritenum_t)value;
-        else if(!strcmp(word2,"subnumber"))  states[num].frame    =value;
-      }
-      else if(!strcmp(word1,"Duration"))     states[num].tics     =value;
-      else if(!strcmp(word1,"Next"))         states[num].nextstate=(statenum_t)value;
-      else deh_error("Frame %d : unknow word '%s'\n",num,word1);
+static void Read_Frame(Parser &p, int num)
+{
+  int s = StateMap(num);
+  if (!s)
+    return;
+
+  while (p.NewLine(false))
+    {
+      p.PassWS();
+      if (!p.LineLen())
+	break; // a whitespace-only line ends the record
+
+      int value = SearchValue(p);
+
+      // set the value in appropriate field
+      char *word = p.GetToken(" ");
+
+      if (s > 0)
+	{
+	  state_t *state = &states[s];
+	  if (!strcasecmp(word,"Sprite"))
+	    {
+	      word = p.GetToken(" ");
+	      if (!strcasecmp(word,"number"))         state->sprite = spritenum_t(value);
+	      else if (!strcasecmp(word,"subnumber")) state->frame  = value;
+	    }
+	  else if (!strcasecmp(word,"Duration"))      state->tics      = value;
+	  else if (!strcasecmp(word,"Next"))          state->nextstate = statenum_t(value);
+	  else if (!strcasecmp(word,"Codep"))
+	    {
+	      word = p.GetToken(" =");
+	      SetAction(s, word);
+	    }
+	  else DEH.error("Frame %d : Unknown field '%s'\n", num, word);
+	}
+      else
+	{
+	  weaponstate_t *wstate = &weaponstates[-s];
+	  if (!strcasecmp(word,"Sprite"))
+	    {
+	      word = p.GetToken(" ");
+	      if (!strcasecmp(word,"number"))         wstate->sprite = spritenum_t(value);
+	      else if (!strcasecmp(word,"subnumber")) wstate->frame  = value;
+	    }
+	  else if (!strcasecmp(word,"Duration"))      wstate->tics      = value;
+	  else if (!strcasecmp(word,"Next"))          wstate->nextstate = weaponstatenum_t(value);
+	  else if (!strcasecmp(word,"Codep"))
+	    {
+	      word = p.GetToken(" =");
+	      SetAction(s, word);
+	    }
+	  else DEH.error("Weaponframe %d : Unknown field '%s'\n", num, word);
+	}
     }
-  } while(s[0]!='\n' && !myfeof(f));
 }
 
-static void readsound(MYFILE* f,int num,char *savesfxnames[])
+
+static void Read_Sound(Parser &p, int num)
 {
-  char s[MAXLINELEN];
   char *word;
   int value;
 
-  do {
-    if(myfgets(s,sizeof(s),f)!=NULL)
-      {
-	if(s[0]=='\n') break;
-	value=searchvalue(s);
-	word=strtok(s," ");
-	/*
-	if(!strcmp(word,"Offset"))
+  while (p.NewLine(false))
+    {
+      p.PassWS();
+      if (!p.LineLen())
+	break; // a whitespace-only line ends the record
+
+      value = SearchValue(p);
+      word = p.GetToken(" ");
+      // TODO dehacked sound commands
+      /*
+	if (!strcasecmp(word,"Offset"))
 	  {
 	    value -= 150360;
 	    if (value<=64)
 	      value/=8;
-	    else if(value<=260)
+	    else if (value<=260)
 	      value=(value+4)/8;
 	    else value=(value+8)/8;
 
-	    if(value>=-1 && value < NUMSFX-1)
+	    if (value>=-1 && value < NUMSFX-1)
 	      strcpy(S_sfx[num].lumpname, savesfxnames[value+1]);
 	    else
-	      deh_error("Sound %d : offset out of bound\n",num);
+	      DEH.error("Sound %d : offset out of bound\n",num);
 	  }
-	else if(!strcmp(word,"Zero/One"))
+	else if (!strcasecmp(word,"Zero/One"))
 	  S_sfx[num].multiplicity = value;
-	else if(!strcmp(word,"Value"))
+	else if (!strcasecmp(word,"Value"))
 	  S_sfx[num].priority   =value;
 	else
-	  deh_error("Sound %d : unknow word '%s'\n",num,word);
-	*/
-      }
-  } while(s[0]!='\n' && !myfeof(f));
+	  DEH.error("Sound %d : unknown word '%s'\n",num,word);
+      */
+    }
 }
 
-static void readtext(MYFILE* f,int len1,int len2,char *savesfxname[],char *savesprnames[])
+
+// this part of dehacked really sucks, but it still partly supported
+static void Read_Text(Parser &p, int len1, int len2)
 {
   char s[2001];
   int i;
 
+  // FIXME dehacked text
   // it is hard to change all the text in doom
   // here i implement only vital things
-  // yes text change somes tables like music, sound and sprite name
-  if(len1+len2 > 2000)
-  {
-    deh_error("Text too big\n");
-    return;
-  }
+  // yes, "text" can change some tables like music, sound and sprite names
+  if (len1+len2 > 2000)
+    {
+      DEH.error("Text too long\n");
+      return;
+    }
+  
+  if (p.GetStringN(s, len1 + len2) != len1 + len2)
+    {
+      DEH.error("Read failed\n");
+      return;
+    }
 
-  if(myfread(s,len1+len2,1,f))
-  {
-    s[len1+len2]='\0';
-    // sound table
-    /*
-    for(i=0;i<NUMSFX;i++)
-      if(!strncmp(savesfxname[i],s,len1))
+  // sound table
+  /*
+    for (i=0;i<NUMSFX;i++)
+      if (!strncmp(savesfxname[i],s,len1))
       {
         strncpy(S_sfx[i].lumpname,&(s[len1]),len2);
         S_sfx[i].lumpname[len2]='\0';
         return;
       }
-    */
-    // sprite table
-    for(i=0;i<NUMSPRITES;i++)
-      if(!strncmp(savesprnames[i],s,len1))
+
+  // sprite table
+  for (i=0; i<NUMSPRITES; i++)
+    if (!strncmp(savesprnames[i],s,len1))
       {
         strncpy(sprnames[i],&(s[len1]),len2);
         sprnames[i][len2]='\0';
         return;
       }
-    // music table
-    for(i=1;i<NUMMUSIC;i++)
-      if (MusicNames[i] && !strncmp(MusicNames[i], s, len1))
+  */
+
+  // music table
+  for (i=1; i<NUMMUSIC; i++)
+    if (MusicNames[i] && !strncmp(MusicNames[i], s, len1))
       {
         strncpy(MusicNames[i], &(s[len1]), len2);
         MusicNames[i][len2]='\0';
         return;
       }
-    // text table
-    for(i=0;i<SPECIALDEHACKED;i++)
-    {
-      if(!strncmp(text[i],s,len1) && strlen(text[i])==(unsigned)len1)
-      {
-        if(strlen(text[i])<(unsigned)len2)         // increase size of the text
-        {
-           text[i]=(char *)malloc(len2+1);
-           if(text[i]==NULL)
-               I_Error("ReadText : No More free Mem");
-        }
 
-        strncpy(text[i],s + len1,len2);
-        text[i][len2]='\0';
-        return;
-      }
+  // text table
+  for (i=0; i<NUMTEXT; i++)
+    {
+      int temp = strlen(text[i]);
+      if (!strncmp(text[i], s, len1) && temp == len1)
+	{
+	  if (temp < len2)  // increase size of the text
+	    {
+	      text[i] = (char *)malloc(len2 + 1);
+	      if (!text[i])
+		I_Error("Read_Text : Out of memory");
+	    }
+
+	  strncpy(text[i], s + len1, len2);
+	  text[i][len2] = '\0';
+	  return;
+	}
     }
 
-    // special text : text changed in Legacy but with dehacked support
-    for(i=SPECIALDEHACKED;i<NUMTEXT;i++)
+  // special text : text changed in Legacy but with dehacked support
+  // I don't think this is necessary...
+  /*
+  for (i=SPECIALDEHACKED; i<NUMTEXT; i++)
     {
-       int temp = strlen(text[i]);
+      int temp = strlen(text[i]);
 
-       if(len1>temp && strstr(s,text[i]))
+      if (len1 > temp && strstr(s, text[i]))
        {
-           char *t;
+	 // remove space for center the text
+	 char *t = &s[len1+len2-1];
 
-           // remove space for center the text
-           t=&s[len1+len2-1];
            while(t[0]==' ') { t[0]='\0'; t--; }
            // skip the space
            while(s[len1]==' ') len1++;
 
            // remove version string identifier
            t=strstr(&(s[len1]),"v%i.%i");
-           if(!t) {
+           if (!t) {
               t=strstr(&(s[len1]),"%i.%i");
-              if(!t) {
+              if (!t) {
                  t=strstr(&(s[len1]),"%i");
-                 if(!t) {
+                 if (!t) {
                       t=s+len1+strlen(&(s[len1]));
                  }
               }
@@ -431,11 +618,11 @@ static void readtext(MYFILE* f,int len1,int len2,char *savesfxname[],char *saves
            t[0]='\0';
            len2=strlen(&s[len1]);
 
-           if(strlen(text[i])<(unsigned)len2)         // incresse size of the text
+           if (strlen(text[i])<(unsigned)len2)         // incresse size of the text
            {
               text[i]=(char *)malloc(len2+1);
-              if(text[i]==NULL)
-                  I_Error("ReadText : No More free Mem");
+              if (text[i]==NULL)
+                  I_Error("Read_Text : No More free Mem");
            }
 
            strncpy(text[i],&(s[len1]),len2);
@@ -443,12 +630,14 @@ static void readtext(MYFILE* f,int len1,int len2,char *savesfxname[],char *saves
            return;
        }
     }
+  */
 
-    s[len1]='\0';
-    deh_error("Text not changed :%s\n",s);
-  }
+  s[len1] = '\0';
+  DEH.error("Text not changed :%s\n", s);
 }
+
 /*
+  Weapon sample:
 Ammo type = 2
 Deselect frame = 11
 Select frame = 12
@@ -456,407 +645,413 @@ Bobbing frame = 13
 Shooting frame = 17
 Firing frame = 10
 */
-static void readweapon(MYFILE *f,int num)
+static void Read_Weapon(Parser &p, int num)
 {
-  char s[MAXLINELEN];
-  char *word;
-  int value;
-  do{
-    if(myfgets(s,sizeof(s),f)!=NULL)
+  while (p.NewLine(false))
     {
-      if(s[0]=='\n') break;
-      value=searchvalue(s);
-      word=strtok(s," ");
+      p.PassWS();
+      if (!p.LineLen())
+	break; // a whitespace-only line ends the record
 
-           if(!strcmp(word,"Ammo"))       wpnlev1info[num].ammo      =(ammotype_t)value;
-      else if(!strcmp(word,"Deselect"))   wpnlev1info[num].upstate   =(weaponstatenum_t)value;
-      else if(!strcmp(word,"Select"))     wpnlev1info[num].downstate =(weaponstatenum_t)value;
-      else if(!strcmp(word,"Bobbing"))    wpnlev1info[num].readystate=(weaponstatenum_t)value;
-      else if(!strcmp(word,"Shooting"))   wpnlev1info[num].atkstate  =
-					    wpnlev1info[num].holdatkstate = (weaponstatenum_t)value;
-      else if(!strcmp(word,"Firing"))     wpnlev1info[num].flashstate=(weaponstatenum_t)value;
-      else deh_error("Weapon %d : unknow word '%s'\n",num,word);
+      int value = SearchValue(p);
+      char *word = p.GetToken(" ");
+
+      if (!strcasecmp(word,"Ammo"))
+	wpnlev1info[num].ammo = ammotype_t(value);
+      else
+	{
+	  value = -StateMap(value);
+	  if (value <= 0)
+	    {
+	      DEH.error("Weapon %d : Thing states must not be used with weapons!\n", num);
+	      continue;
+	    }
+
+	  if (!strcasecmp(word,"Deselect"))      wpnlev1info[num].upstate    = weaponstatenum_t(value);
+	  else if (!strcasecmp(word,"Select"))   wpnlev1info[num].downstate  = weaponstatenum_t(value);
+	  else if (!strcasecmp(word,"Bobbing"))  wpnlev1info[num].readystate = weaponstatenum_t(value);
+	  else if (!strcasecmp(word,"Shooting"))
+	    wpnlev1info[num].atkstate = wpnlev1info[num].holdatkstate        = weaponstatenum_t(value);
+	  else if (!strcasecmp(word,"Firing"))   wpnlev1info[num].flashstate = weaponstatenum_t(value);
+	  else DEH.error("Weapon %d : unknown word '%s'\n", num, word);
+	}
     }
-  } while(s[0]!='\n' && !myfeof(f));
 }
+
 /*
+  Ammo sample:
 Max ammo = 400
 Per ammo = 40
 */
-
-
-static void readammo(MYFILE *f,int num)
+static void Read_Ammo(Parser &p, int num)
 {
-  char s[MAXLINELEN];
   char *word;
   int value;
-  do {
-    if(myfgets(s,sizeof(s),f)!=NULL)
-      {
-	if(s[0]=='\n')
-	  break;
-	value=searchvalue(s);
-	word=strtok(s," ");
 
-	if(!strcmp(word,"Max"))
-	  maxammo1[num] = value;
-	else if(!strcmp(word,"Per"))
-	  {
-	    clipammo[num]=value;
-	    weapondata[num].getammo = 2*value; // only works for Doom
-	  }
-	else if(!strcmp(word,"Perweapon"))
-	  weapondata[num].getammo = 2*value; 
-	else
-	  deh_error("Ammo %d : unknow word '%s'\n",num,word);
-      }
-  } while(s[0]!='\n' && !myfeof(f));
-}
-// i don't like that but do you see a other way ?
-extern int idfa_armor;
-extern int idfa_armor_class;
-extern int idkfa_armor;
-extern int idkfa_armor_class;
-extern int god_health;
-extern int initial_health;
-extern int initial_bullets;
-//extern int max_health; // VB: removed due to the new class system...
-extern int MaxArmor[5];
-extern int green_armor_class;
-extern int blue_armor_class;
-extern int maxsoul;
-extern int soul_health;
-extern int mega_health;
-
-
-static void readmisc(MYFILE *f)
-{
-  char s[MAXLINELEN];
-  char *word,*word2;
-  int value;
-  do{
-    if(myfgets(s,sizeof(s),f)!=NULL)
+  while (p.NewLine(false))
     {
-      if(s[0]=='\n') break;
-      value=searchvalue(s);
-      word=strtok(s," ");
-      word2=strtok(NULL," ");
+      p.PassWS();
+      if (!p.LineLen())
+	break; // a whitespace-only line ends the record
 
-      if(!strcmp(word,"Initial"))
-      {
-         if(!strcmp(word2,"Health"))          initial_health=value;
-         else if(!strcmp(word2,"Bullets"))    initial_bullets=value;
-      }
-      else if(!strcmp(word,"Max"))
-      {
-	//if(!strcmp(word2,"Health"))          max_health=value;
-	//else
-	   if(!strcmp(word2,"Armor"))      MaxArmor[0]=value;
-         else if(!strcmp(word2,"Soulsphere")) maxsoul=value;
-      }
-      else if(!strcmp(word,"Green"))         green_armor_class=value;
-      else if(!strcmp(word,"Blue"))          blue_armor_class=value;
-      else if(!strcmp(word,"Soulsphere"))    soul_health=value;
-      else if(!strcmp(word,"Megasphere"))    mega_health=value;
-      else if(!strcmp(word,"God"))           god_health=value;
-      else if(!strcmp(word,"IDFA"))
-      {
-         word2=strtok(NULL," ");
-         if(!strcmp(word2,"="))               idfa_armor=value;
-         else if(!strcmp(word2,"Class"))      idfa_armor_class=value;
-      }
-      else if(!strcmp(word,"IDKFA"))
-      {
-         word2=strtok(NULL," ");
-         if(!strcmp(word2,"="))               idkfa_armor=value;
-         else if(!strcmp(word2,"Class"))      idkfa_armor_class=value;
-      }
-      else if(!strcmp(word,"BFG"))            wpnlev1info[wp_bfg].ammopershoot = value;
-      else if(!strcmp(word,"Monsters"))      {} // i don't found where is implemented
-      else deh_error("Misc : unknow word '%s'\n",word);
+      value = SearchValue(p);
+      word = p.GetToken(" ");
+
+      if (!strcasecmp(word,"Max"))
+	maxammo1[num] = value;
+      else if (!strcasecmp(word,"Per"))
+	{
+	  clipammo[num] = value;
+	  weapondata[num].getammo = 2*value; // only works for Doom
+	}
+      else if (!strcasecmp(word,"Perweapon"))
+	weapondata[num].getammo = 2*value; 
+      else
+	DEH.error("Ammo %d : unknown word '%s'\n", num, word);
     }
-  } while(s[0]!='\n' && !myfeof(f));
 }
 
-extern char cheat_mus_seq[];
-extern char cheat_choppers_seq[];
-extern char cheat_god_seq[];
-extern char cheat_ammo_seq[];
-extern char cheat_ammonokey_seq[];
-extern char cheat_noclip_seq[];
-extern char cheat_commercial_noclip_seq[];
-extern char cheat_powerup_seq[7][10];
-extern char cheat_clev_seq[];
-extern char cheat_mypos_seq[];
-extern char cheat_amap_seq[];
 
-static void change_cheat_code(char *cheatseq,char* newcheat)
+// miscellaneous one-liners
+void dehacked_t::Read_Misc(Parser &p)
 {
-  byte *i,*j;
+  extern int MaxArmor[];
 
-  // encript data
-  //for(i=(byte *)newcheat;i[0]!='\0';i++)
-  //    i[0]=SCRAMBLE(i[0]);
+  char *word1, *word2;
+  int value;
 
-  for(i=(byte *)cheatseq,j=(byte *)newcheat;j[0]!='\0' && j[0]!=0xff;i++,j++)
-      if(i[0]==1 || i[0]==0xff) // no more place in the cheat
+  while (p.NewLine(false))
+    {
+      p.PassWS();
+      if (!p.LineLen())
+	break; // a whitespace-only line ends the record
+
+      value = SearchValue(p);
+      word1 = p.GetToken(" ");
+      word2 = p.GetToken(" ");
+
+      if (!strcasecmp(word1,"Initial"))
+	{
+	  if (!strcasecmp(word2,"Health"))          initial_health = value;
+	  else if (!strcasecmp(word2,"Bullets"))    initial_bullets = value;
+	}
+      else if (!strcasecmp(word1,"Max"))
+	{
+	  if (!strcasecmp(word2,"Health"))          max_health = value;
+	  else if (!strcasecmp(word2,"Armor"))      MaxArmor[0] = value;
+	  else if (!strcasecmp(word2,"Soulsphere")) maxsoul = value;
+	}
+      else if (!strcasecmp(word1,"Green"))         green_armor_class = value;
+      else if (!strcasecmp(word1,"Blue"))          blue_armor_class = value;
+      else if (!strcasecmp(word1,"Soulsphere"))    soul_health = value;
+      else if (!strcasecmp(word1,"Megasphere"))    mega_health = value;
+      else if (!strcasecmp(word1,"God"))           god_health = value;
+      else if (!strcasecmp(word1,"IDFA"))
+	{
+	  word2 = p.GetToken(" ");
+	  if (!strcasecmp(word2,"="))               idfa_armor = value;
+	  else if (!strcasecmp(word2,"Class"))      idfa_armor_class = value;
+	}
+      else if (!strcasecmp(word1,"IDKFA"))
+	{
+	  word2 = p.GetToken(" ");
+	  if (!strcasecmp(word2,"="))               idkfa_armor = value;
+	  else if (!strcasecmp(word2,"Class"))      idkfa_armor_class = value;
+	}
+      else if (!strcasecmp(word1,"BFG"))            wpnlev1info[wp_bfg].ammopershoot = value;
+      else if (!strcasecmp(word1,"Monsters"))      {} // i don't found where is implemented
+      else error("Misc : unknown command '%s'\n", word1);
+    }
+}
+
+extern byte cheat_mus_seq[];
+extern byte cheat_choppers_seq[];
+extern byte cheat_god_seq[];
+extern byte cheat_ammo_seq[];
+extern byte cheat_ammonokey_seq[];
+extern byte cheat_noclip_seq[];
+extern byte cheat_commercial_noclip_seq[];
+extern byte cheat_powerup_seq[7][10];
+extern byte cheat_clev_seq[];
+extern byte cheat_mypos_seq[];
+extern byte cheat_amap_seq[];
+
+static void change_cheat_code(byte *old, byte *n)
+{
+  for ( ; *n && *n != 0xff; old++, n++)
+    if (*old == 1 || *old == 0xff) // no more place in the cheat
       {
-         deh_error("Cheat too long\n");
-         return;
+	DEH.error("Cheat too long\n");
+	return;
       }
-      else
-         i[0]=j[0];
+    else
+      *old = *n;
 
   // newcheatseq < oldcheat
-  j=i;
+  n = old;
   // search special cheat with 100
-  for(;i[0]!=0xff;i++)
-      if(i[0]==1)
+  for ( ; *n != 0xff; n++)
+    if (*n == 1)
       {
-         *j++=1;
-         *j++=0;
-         *j++=0;
-         break;
+	*old++ = 1;
+	*old++ = 0;
+	*old++ = 0;
+	break;
       }
-  *j=0xff;
+  *old = 0xff;
 
   return;
 }
 
-static void readcheat(MYFILE *f)
+static void Read_Cheat(Parser &p)
 {
-  char s[MAXLINELEN];
-  char *word,*word2;
-  char *value;
+  char *word;
+  byte *value;
 
-  do{
-    if(myfgets(s,sizeof(s),f)!=NULL)
+  while (p.NewLine(false))
     {
-      if(s[0]=='\n') break;
-      strtok(s,"=");
-      value=strtok(NULL," \n");         // skip the space
-      strtok(NULL," \n");              // finish the string
-      word=strtok(s," ");
+      p.PassWS();
+      if (!p.LineLen())
+	break; // a whitespace-only line ends the record
 
-      if(!strcmp(word     ,"Change"))        change_cheat_code(cheat_mus_seq,value);
-      else if(!strcmp(word,"Chainsaw"))      change_cheat_code(cheat_choppers_seq,value);
-      else if(!strcmp(word,"God"))           change_cheat_code(cheat_god_seq,value);
-      else if(!strcmp(word,"Ammo"))
-           {
-             word2=strtok(NULL," ");
+      // FIXME how does this work?
+      p.GetToken("=");
+      value = (byte *)p.GetToken(" \n"); // skip the space
+      p.GetToken(" \n");         // finish the string
+      word = p.GetToken(" ");
 
-             if(word2 && !strcmp(word2,"&")) change_cheat_code(cheat_ammo_seq,value);
-             else                            change_cheat_code(cheat_ammonokey_seq,value);
-           }
-      else if(!strcmp(word,"No"))
-           {
-             word2=strtok(NULL," ");
-             if(word2)
-                word2=strtok(NULL," ");
+      if (!strcasecmp(word,"Change"))        change_cheat_code(cheat_mus_seq,value);
+      else if (!strcasecmp(word,"Chainsaw")) change_cheat_code(cheat_choppers_seq,value);
+      else if (!strcasecmp(word,"God"))      change_cheat_code(cheat_god_seq,value);
+      else if (!strcasecmp(word,"Ammo"))
+	{
+	  word = p.GetToken(" ");
+	  if (word && !strcasecmp(word,"&")) change_cheat_code(cheat_ammo_seq,value);
+	  else                           change_cheat_code(cheat_ammonokey_seq,value);
+	}
+      else if (!strcasecmp(word,"No"))
+	{
+	  word = p.GetToken(" ");
+	  if (word)
+	    word = p.GetToken(" ");
 
-             if(word2 && !strcmp(word2,"1")) change_cheat_code(cheat_noclip_seq,value);
-             else                            change_cheat_code(cheat_commercial_noclip_seq,value);
-
-           }
-      /* //VB: FIXME! this could be replaced with a possibility to create new cheat codes (easy)
-      else if(!strcmp(word,"Invincibility")) change_cheat_code(cheat_powerup_seq[0],value);
-      else if(!strcmp(word,"Berserk"))       change_cheat_code(cheat_powerup_seq[1],value);
-      else if(!strcmp(word,"Invisibility"))  change_cheat_code(cheat_powerup_seq[2],value);
-      else if(!strcmp(word,"Radiation"))     change_cheat_code(cheat_powerup_seq[3],value);
-      else if(!strcmp(word,"Auto-map"))      change_cheat_code(cheat_powerup_seq[4],value);
-      else if(!strcmp(word,"Lite-Amp"))      change_cheat_code(cheat_powerup_seq[5],value);
-      else if(!strcmp(word,"BEHOLD"))        change_cheat_code(cheat_powerup_seq[6],value);
+	  if (word && !strcasecmp(word,"1")) change_cheat_code(cheat_noclip_seq,value);
+	  else                           change_cheat_code(cheat_commercial_noclip_seq,value);
+	}
+      /* // FIXME! this could be replaced with a possibility to create new cheat codes (easy)
+      else if (!strcasecmp(word,"Invincibility")) change_cheat_code(cheat_powerup_seq[0],value);
+      else if (!strcasecmp(word,"Berserk"))       change_cheat_code(cheat_powerup_seq[1],value);
+      else if (!strcasecmp(word,"Invisibility"))  change_cheat_code(cheat_powerup_seq[2],value);
+      else if (!strcasecmp(word,"Radiation"))     change_cheat_code(cheat_powerup_seq[3],value);
+      else if (!strcasecmp(word,"Auto-map"))      change_cheat_code(cheat_powerup_seq[4],value);
+      else if (!strcasecmp(word,"Lite-Amp"))      change_cheat_code(cheat_powerup_seq[5],value);
+      else if (!strcasecmp(word,"BEHOLD"))        change_cheat_code(cheat_powerup_seq[6],value);
       */
-      else if(!strcmp(word,"Level"))         change_cheat_code(cheat_clev_seq,value);
-      else if(!strcmp(word,"Player"))        change_cheat_code(cheat_mypos_seq,value);
-      else if(!strcmp(word,"Map"))           change_cheat_code(cheat_amap_seq,value);
-      else deh_error("Cheat : unknow word '%s'\n",word);
+      else if (!strcasecmp(word,"Level"))         change_cheat_code(cheat_clev_seq,value);
+      else if (!strcasecmp(word,"Player"))        change_cheat_code(cheat_mypos_seq,value);
+      else if (!strcasecmp(word,"Map"))           change_cheat_code(cheat_amap_seq,value);
+      else DEH.error("Cheat : unknown word '%s'\n",word);
     }
-  } while(s[0]!='\n' && !myfeof(f));
 }
 
 
-void DEH_LoadDehackedFile(MYFILE* f)
+// dehacked command parser
+enum DEH_cmd_t
 {
-  
-  char       s[1000];
-  char       *word,*word2;
-  int        i;
-  // do a copy of this for cross references probleme
-  actionf_p1  saveactions[NUMSTATES];
-  char       *savesprnames[NUMSPRITES];
-  char       *savesfxnames[NUMSFX];
+  DEH_Thing,
+  DEH_Frame,
+  DEH_Pointer,
+  DEH_Sound,
+  DEH_Sprite,
+  DEH_Text,
+  DEH_Weapon,
+  DEH_Ammo,
+  DEH_Misc,
+  DEH_Cheat,
+  DEH_Doom,
+  DEH_Patch,
+  DEH_CODEPTR,
+  DEH_PARS,
+  DEH_STRINGS,
+  DEH_NUM
+};
 
-  deh_num_error=0;
-  // save value for cross reference
-  for(i=0;i<NUMSTATES;i++)
-      saveactions[i]=states[i].action;
-  for(i=0;i<NUMSPRITES;i++)
-      savesprnames[i]=sprnames[i];
-  /*
-  for(i=0;i<NUMSFX;i++)
-      savesfxnames[i]=S_sfx[i].lumpname;
-  */
+static const char *DEH_cmds[DEH_NUM + 1] =
+{
+  "thing", "frame", "pointer", "sound", "sprite", "text", "weapon", "ammo", "misc", "cheat", "doom", "patch",
+  "[CODEPTR]", "[PARS]", "[STRINGS]", NULL
+};
 
-  // it don't test the version of doom
-  // and version of dehacked file
-  while(!myfeof(f))
-  {
-    myfgets(s,sizeof(s),f);
-    if(s[0]=='\n' || s[0]=='#')
-      continue;
-    word=strtok(s," ");
-    if(word!=NULL)
+
+// Parse a DeHackEd lump
+// (there is special trick for converting .deh files into WAD lumps)
+bool dehacked_t::LoadDehackedLump(const char *buf, int len)
+{
+  Parser p;
+  int i;
+
+  if (!p.Open(buf, len))
+    return false;
+
+  num_errors = 0;
+
+  // original values
+  d_actions = (actionf_p1 *)Z_Malloc(NUMSTATES * sizeof(actionf_p1), PU_STATIC, NULL);
+  w_actions = (actionf_p2 *)Z_Malloc(NUMWEAPONSTATES * sizeof(actionf_p2), PU_STATIC, NULL);
+  savesprnames = (char **)Z_Malloc(NUMSPRITES * sizeof(char *), PU_STATIC, NULL);
+
+  // save original values
+  for (i=0; i<NUMSTATES; i++)
+    d_actions[i] = states[i].action;
+  for (i=0; i<NUMWEAPONSTATES; i++)
+    w_actions[i] = weaponstates[i].action;
+
+  for (i=0; i<NUMSPRITES; i++)
+    savesprnames[i] = sprnames[i];
+
+  p.RemoveComments('#');
+  while (p.NewLine())
     {
-      if((word2=strtok(NULL," "))!=NULL)
-      {
-        i=atoi(word2);
+      char *word1, *word2;
 
-        if(!strcmp(word,"Thing"))
-        {
-          i--; // begin at 0 not 1;
-          if(i<NUMMOBJTYPES && i>=0)
-            readthing(f,i);
-          else
-            deh_error("Thing %d don't exist\n",i);
-        }
-        else if(!strcmp(word,"Frame"))
-             {
-               if(i<NUMSTATES && i>=0)
-                  readframe(f,i);
-               else
-                  deh_error("Frame %d don't exist\n",i);
-             }
-        else if(!strcmp(word,"Pointer"))
-             {
-               word=strtok(NULL," "); // get frame
-               if((word=strtok(NULL,")"))!=NULL)
-               {
-                 i=atoi(word);
-                 if(i<NUMSTATES && i>=0)
-                 {
-                   if(myfgets(s,sizeof(s),f)!=NULL)
-                     states[i].action=saveactions[searchvalue(s)];
-                 }
-                 else
-                    deh_error("Pointer : Frame %d don't exist\n",i);
-               }
-               else
-                   deh_error("pointer (Frame %d) : missing ')'\n",i);
-             }
-        else if(!strcmp(word,"Sound"))
-             {
-               if(i<NUMSFX && i>=0)
-                   readsound(f,i,savesfxnames);
-               else
-                   deh_error("Sound %d don't exist\n");
-             }
-        else if(!strcmp(word,"Sprite"))
-             {
-               if(i<NUMSPRITES && i>=0)
-               {
-                 if(myfgets(s,sizeof(s),f)!=NULL)
-                 {
-                   int k;
-                   k=(searchvalue(s)-151328)/8;
-                   if(k>=0 && k<NUMSPRITES)
-                       sprnames[i]=savesprnames[k];
-                   else
-                       deh_error("Sprite %i : offset out of bound\n",i);
-                 }
-               }
-               else
-                  deh_error("Sprite %d don't exist\n",i);
-             }
-        else if(!strcmp(word,"Text"))
-             {
-               int j;
+      if ((word1 = p.GetToken(" ")))
+	{
+	  word2 = p.GetToken(" ");
+	  if (word2)
+	    i = atoi(word2);
+	  else
+	    {
+	      i = 0;
+	      error("Warning: missing argument for '%s'\n", word1);
+	    }
 
-               if((word=strtok(NULL," "))!=NULL)
-               {
-                 j=atoi(word);
-                 readtext(f,i,j,savesfxnames,savesprnames);
-               }
-               else
-                   deh_error("Text : missing second number\n");
+	  switch (P_MatchString(word1, DEH_cmds))
+	    {
+	    case DEH_Thing:
+	      Read_Thing(p, i);
+	      break;
 
-             }
-        else if(!strcmp(word,"Weapon"))
-             {
-               if(i<NUMWEAPONS && i>=0)
-                   readweapon(f,i);
-               else
-                   deh_error("Weapon %d don't exist\n",i);
-             }
-        else if(!strcmp(word,"Ammo"))
-             {
-               if(i<NUMAMMO && i>=0)
-                   readammo(f,i);
-               else
-                   deh_error("Ammo %d don't exist\n",i);
-             }
-        else if(!strcmp(word,"Misc"))
-               readmisc(f);
-        else if(!strcmp(word,"Cheat"))
-               readcheat(f);
-        else if(!strcmp(word,"Doom"))
-             {
-               int ver = searchvalue(strtok(NULL,"\n"));
-               if( ver!=19)
-                  deh_error("Warning : patch from a different Doom version (%d), only version 1.9 is supported\n",ver);
-             }
-        else if(!strcmp(word,"Patch"))
-             {
-               word=strtok(NULL," ");
-               if(word && !strcmp(word,"format"))
-               {
-                  if(searchvalue(strtok(NULL,"\n"))!=6)
-                     deh_error("Warning : Patch format not supported");
-               }
-             }
-        //SoM: Support for Boom Extras (BEX)
-/*        else if(!strcmp(word, "[STRINGS]"))
-             {
-             }
-        else if(!strcmp(word, "[PARS]"))
-             {
-             }
-        else if(!strcmp(word, "[CODEPTR]"))
-             {
-             }*/
-        else deh_error("Unknow word : %s\n",word);
-      }
+	    case DEH_Frame:
+	      Read_Frame(p, i);
+	      break;
+
+	    case DEH_Pointer:
+	      /*
+		pointer uuu (frame xxx)
+		codep frame = yyy
+	      */
+	      p.GetToken(" "); // get rid of "(frame"
+	      if ((word1 = p.GetToken(")")))
+		{
+		  int s = atoi(word1);
+		  if (p.NewLine())
+		    {
+		      p.GetToken(" ");
+		      p.GetToken(" ");
+		      word2 = p.GetToken(" =");
+		      SetAction(s, word2);
+		    }
+		}
+	      else
+		error("Pointer %d : (Frame xxx) missing\n", i);
+	      break;
+
+	    case DEH_Sound:
+	      if (i < NUMSFX && i >= 0)
+		Read_Sound(p, i);
+	      else
+		error("Sound %d doesn't exist\n");
+	      break;
+
+	    case DEH_Sprite:
+	      if (i < NUMSPRITES && i >= 0)
+		{
+		  if (p.NewLine())
+		    {
+		      int k;
+		      k = (SearchValue(p) - 151328) / 8;
+		      if (k >= 0 && k < NUMSPRITES)
+			sprnames[i] = savesprnames[k];
+		      else
+			error("Sprite %i : offset out of bound\n", i);
+		    }
+		}
+	      else
+		error("Sprite %d doesn't exist\n", i);
+	      break;
+
+	    case DEH_Text:
+	      if ((word1 = p.GetToken(" ")))
+		{
+		  int j = atoi(word1);
+		  Read_Text(p, i, j);
+		}
+	      else
+		error("Text : missing second number\n");
+	      break;
+
+	    case DEH_Weapon:
+	      if (i < NUMWEAPONS && i >= 0)
+		Read_Weapon(p, i);
+	      else
+		error("Weapon %d doesn't exist\n", i);
+	      break;
+
+	    case DEH_Ammo:
+	      if (i < NUMAMMO && i >= 0)
+		Read_Ammo(p, i);
+	      else
+		error("Ammo %d doesn't exist\n", i);
+	      break;
+
+	    case DEH_Misc:
+	      Read_Misc(p);
+	      break;
+
+	    case DEH_Cheat:
+	      Read_Cheat(p);
+	      break;
+
+	    case DEH_Doom:
+	      p.NewLine();
+	      i = SearchValue(p);
+	      if (i != 19)
+		error("Warning : Patch from a different Doom version (%d), only version 1.9 is supported\n", i);
+	      break;
+
+	    case DEH_Patch:
+	      word1 = p.GetToken(" ");
+	      if (word1 && !strcasecmp(word1, "format"))
+		{
+		  p.NewLine();
+		  if (SearchValue(p) != 6)
+		    error("Warning : Patch format not supported");
+		}
+	      break;
+
+	      // BEX stuff
+	    case DEH_CODEPTR:
+	      Read_CODEPTR(p);
+	      break;
+	    case DEH_PARS:
+	      break;
+	    case DEH_STRINGS:
+	      break;
+	    default:
+	      error("Unknown command : %s\n", word1);
+	    }
+	}
       else
-          deh_error("missing argument for '%s'\n",word);
+        error("No word in this line:\n%s\n", p.GetToken("\0"));
     }
-    else
-        deh_error("No word in this line:\n%s\n",s);
 
-  } // end while
-  if (deh_num_error>0)
-  {
-      CONS_Printf("%d warning(s) in the dehacked file\n",deh_num_error);
+  if (num_errors > 0)
+    {
+      CONS_Printf("%d warning(s) in the dehacked file\n", num_errors);
       if (devparm)
-          getchar();
-  }
+	getchar();
+    }
 
-  deh_loaded = true;
+  loaded = true;
+  return true;
 }
-
-// read dehacked lump in a wad (there is special trick for for deh 
-// file that are converted to wad in w_wad.c)
-/*
-void DEH_LoadDehackedLump(int lump)
-{
-    MYFILE f;
-
-    f.size = W_LumpLength(lump);
-    f.data = Z_Malloc(f.size + 1, PU_STATIC, 0);
-    fc.ReadLump(lump, f.data);
-    f.curpos = f.data;
-    f.data[f.size] = 0;
-
-    DEH_LoadDehackedFile(&f);
-    Z_Free(f.data);
-}
-*/

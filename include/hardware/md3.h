@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
 // Revision 1.1  2003/03/23 14:24:14  smite-meister
 // Polyobjects, MD3 models
 //
@@ -32,6 +35,7 @@
 
 #include <string>
 #include "r_sprite.h"
+#include "z_cache.h"
 #include "m_fixed.h"
 
 using namespace std;
@@ -182,6 +186,7 @@ protected:
   MD3_t legs, torso, head;
 
 public:
+  virtual ~MD3_player();
 
   bool Load(const string & path, const string & skin);
   bool LoadAnim(const char *file);
@@ -191,8 +196,8 @@ public:
 class modelcache_t : public L2cache_t
 {
 protected:
-  virtual cacheitem_t *Load(const char *p, cacheitem_t *t = NULL);
-  virtual void Free(cacheitem_t *t);
+  cacheitem_t *Load(const char *p);
+
 public:
   modelcache_t(memtag_t tag);
   inline MD3_player *Get(const char *p) { return (MD3_player *)Cache(p); };

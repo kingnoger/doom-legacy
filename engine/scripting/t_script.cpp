@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.9  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
 // Revision 1.8  2004/01/05 11:48:08  smite-meister
 // 7 bugfixes
 //
@@ -69,7 +72,6 @@
 
 #include "r_state.h"
 #include "p_spec.h"
-#include "p_setup.h"
 #include "w_wad.h"
 #include "z_zone.h"
 

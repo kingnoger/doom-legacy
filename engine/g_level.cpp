@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.13  2004/03/28 15:16:12  smite-meister
+// Texture cache.
+//
 // Revision 1.12  2003/12/31 18:32:49  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -213,13 +216,14 @@ int GameInfo::Create_classic_game(int episode)
     {
     case gm_doom2:
       base2 = TXT_C1TEXT;
-      switch (game.mission)
+      extern int mission;
+      switch (mission)
 	{
-	case gmi_tnt:
+	case 1:
 	  base = TXT_THUSTR_1;
 	  base2 = TXT_T1TEXT;
 	  break;
-	case gmi_plut:
+	case 2:
 	  base = TXT_PHUSTR_1;
 	  break;
 	default:

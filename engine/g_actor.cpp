@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.28  2004/03/28 15:16:12  smite-meister
+// Texture cache.
+//
 // Revision 1.27  2004/01/05 11:48:08  smite-meister
 // 7 bugfixes
 //
@@ -122,7 +125,6 @@
 #include "p_spec.h"
 #include "p_maputl.h"
 
-#include "p_setup.h"    //levelflats to test if mobj in water sector
 #include "r_main.h"
 #include "r_sprite.h"
 #include "r_things.h"
@@ -136,10 +138,6 @@
 
 #define VIEWHEIGHT  41
 #define MAXMOVE     (30*FRACUNIT/NEWTICRATERATIO)
-
-CV_PossibleValue_t viewheight_cons_t[]={{16,"MIN"},{56,"MAX"},{0,NULL}};
-
-consvar_t cv_viewheight = {"viewheight", "41",0,viewheight_cons_t,NULL};
 
 consvar_t cv_gravity = {"gravity","1",CV_NETVAR|CV_FLOAT|CV_SHOWMODIF};
 consvar_t cv_splats  = {"splats","1",CV_SAVE,CV_OnOff};
@@ -507,7 +505,7 @@ void Actor::Think()
 	{
 	  // Reset to not blasted when momentums are gone
 	  eflags &= ~MFE_BLASTED;
-	  // if (!(flags & MF_ICECORPSE)) TODO ICECORPSE
+	  // if (!(flags & MF_ICECORPSE)) TODO ICECORPSE?
 	    flags2 &= ~MF2_SLIDE;
 	}
 

@@ -3,8 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
 // Revision 1.4  2003/11/12 11:07:27  smite-meister
 // Serialization done. Map progression.
 //
@@ -32,7 +34,7 @@
 //
 //
 // DESCRIPTION:
-//   Setup a game, startup stuff.
+//   Linedef conversion to Hexen system
 //
 //-----------------------------------------------------------------------------
 
@@ -40,9 +42,9 @@
 #ifndef p_setup_h
 #define p_setup_h 1
 
-struct mapthing_t;
 
 typedef unsigned char byte;
+
 
 // linedef conversion lookup table entry
 struct xtable_t
@@ -51,6 +53,7 @@ struct xtable_t
   byte args[5];
   byte trigger;
 };
+
 
 // used in linedef conversion table
 enum trigger_e
@@ -71,28 +74,6 @@ enum trigger_e
 
   //T_TAG_1 = 0x20 // bit 5
 };
-
-
-//
-// MAP used flats lookup table
-//
-struct levelflat_t
-{
-  char        name[8];        // resource name from wad
-  int         lumpnum;        // lump number of the flat
-
-  // for flat animation
-  int         baselumpnum;
-  int         animseq;        // start pos. in the anim sequence
-  int         numpics;
-  int         speed;
-};
-
-extern int             numlevelflats;
-extern levelflat_t*    levelflats;
-
-int P_AddLevelFlat (char* flatname, levelflat_t* levelflat);
-char *P_FlatNameForNum(int num);
 
 
 #endif

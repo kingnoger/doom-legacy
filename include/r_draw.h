@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/03/28 15:16:14  smite-meister
+// Texture cache.
+//
 // Revision 1.3  2003/05/11 21:23:52  smite-meister
 // Hexen fixes
 //
@@ -124,7 +127,7 @@ enum windowborder_e
   BRDR_BR
 };
 
-extern int viewborderlump[8];
+extern class Texture *viewbordertex[8];
 
 // ------------------------------------------------
 // r_draw.c COMMON ROUTINES FOR BOTH 8bpp and 16bpp
