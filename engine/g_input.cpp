@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/02/08 21:43:50  smite-meister
+// New Memzone system. Choose your pawntype! Cyberdemon OK.
+//
 // Revision 1.3  2003/01/25 21:33:05  smite-meister
 // Now compiles with MinGW 2.0 / GCC 3.2.
 // Builder can choose between dynamic and static linkage.
@@ -26,27 +29,6 @@
 //
 // Revision 1.1.1.1  2002/11/16 14:17:51  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.6  2002/09/06 17:18:32  vberghol
-// added most of the changes up to RC2
-//
-// Revision 1.5  2002/08/16 20:49:23  vberghol
-// engine ALMOST done!
-//
-// Revision 1.4  2002/07/01 21:00:14  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:01:53  vberghol
-// HUD alkaa olla kunnossa
-//
-// Revision 1.10  2001/03/30 17:12:49  bpereira
-// no message
-//
-// Revision 1.9  2001/02/24 13:35:19  bpereira
-// no message
-//
-// Revision 1.8  2001/02/10 12:27:13  bpereira
-// no message
 //
 // Revision 1.7  2001/01/25 22:15:42  bpereira
 // added heretic support

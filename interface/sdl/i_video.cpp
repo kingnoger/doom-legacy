@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/02/08 21:43:50  smite-meister
+// New Memzone system. Choose your pawntype! Cyberdemon OK.
+//
 // Revision 1.5  2003/01/25 21:33:06  smite-meister
 // Now compiles with MinGW 2.0 / GCC 3.2.
 // Builder can choose between dynamic and static linkage.
@@ -60,7 +63,7 @@
 #include "hardware/r_opengl/r_opengl.h"
 #include "sdl/ogl_sdl.h"
 
-#ifndef STATIC_LINKAGE
+#ifdef DYNAMIC_LINKAGE
 static dll_handle_t ogl_handle = NULL;
 static const dll_info_t *ogl_info = NULL;
 #endif
@@ -662,11 +665,8 @@ bool I_StartupGraphics()
     {
       rendermode = render_opengl;
 
-#ifdef STATIC_LINKAGE
-      // static linkage
-      memcpy(&HWD, &r_export, sizeof(hw_renderer_export_t));
-#else
-      // dynamic linkage      
+#ifdef DYNAMIC_LINKAGE
+      // dynamic linkage
       ogl_handle = OpenDLL("r_opengl.dll");
       if (!ogl_handle)
 	I_Error("Could not load r_opengl.dll!\n");
@@ -679,6 +679,9 @@ bool I_StartupGraphics()
       hw_renderer_export_t *temp = (hw_renderer_export_t *)GetSymbol(ogl_handle, "r_export");
       memcpy(&HWD, temp, sizeof(hw_renderer_export_t));
       CONS_Printf("%s loaded.\n", ogl_info->dll_name);
+#else
+      // static linkage
+      memcpy(&HWD, &r_export, sizeof(hw_renderer_export_t));
 #endif
 
       vid.width = 640; // hack to make voodoo cards work in 640x480
@@ -724,7 +727,7 @@ void I_ShutdownGraphics()
     {
       OglSdlShutdown();
 
-#ifndef STATIC_LINKAGE
+#ifdef DYNAMIC_LINKAGE
       if (ogl_handle)
 	CloseDLL(ogl_handle);
 #endif

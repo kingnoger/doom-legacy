@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:31  hurdler
-// Initial revision
+// Revision 1.2  2003/02/08 21:43:50  smite-meister
+// New Memzone system. Choose your pawntype! Cyberdemon OK.
+//
+// Revision 1.1.1.1  2002/11/16 14:18:31  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.4  2002/08/19 18:06:45  vberghol
 // renderer somewhat fixed
@@ -785,6 +788,7 @@ ULONG I_GetFreeMem(ULONG *total)
     return freeKBytes << 10;
     
 #else
+    *total = 16<<20;
     return 16<<20;
 #endif
 }

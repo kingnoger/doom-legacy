@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/02/08 21:43:50  smite-meister
+// New Memzone system. Choose your pawntype! Cyberdemon OK.
+//
 // Revision 1.5  2003/01/12 12:56:40  smite-meister
 // Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
 //
@@ -704,10 +707,9 @@ bool DActor::LookForPlayers(bool allaround)
 }
 
 // was P_LookForMonsters
-/* FIXME
 #define MONS_LOOK_RANGE (20*64*FRACUNIT)
 #define MONS_LOOK_LIMIT 64
-
+/*
 bool DActor::LookForMonsters()
 {
   Actor *mo;

@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.6  2003/02/08 21:43:50  smite-meister
+// New Memzone system. Choose your pawntype! Cyberdemon OK.
+//
 // Revision 1.5  2003/01/25 21:33:05  smite-meister
 // Now compiles with MinGW 2.0 / GCC 3.2.
 // Builder can choose between dynamic and static linkage.
@@ -38,6 +41,28 @@ PlayerInfo *consoleplayer2 = NULL;   // secondary player taking events
 PlayerInfo *displayplayer = NULL;   // view being displayed
 PlayerInfo *displayplayer2 = NULL;  // secondary view (splitscreen)
 
+// lists of mobjtypes that can be played by humans!
+mobjtype_t Doom_Pawns[] = {
+  MT_PLAYER, MT_POSSESSED, MT_SHOTGUY, MT_TROOP, MT_SERGEANT, MT_SHADOWS,
+  MT_SKULL, MT_HEAD, MT_BRUISER, MT_SPIDER, MT_CYBORG, mobjtype_t(-1)
+};
+
+mobjtype_t Doom2_Pawns[] = {
+  MT_PLAYER, MT_POSSESSED, MT_SHOTGUY, MT_CHAINGUY, MT_TROOP, MT_SERGEANT, MT_SHADOWS,
+  MT_SKULL, MT_HEAD, MT_KNIGHT, MT_BRUISER, MT_BABY, MT_PAIN, MT_UNDEAD, MT_FATSO,
+  MT_VILE, MT_SPIDER, MT_CYBORG, MT_WOLFSS, mobjtype_t(-1)
+};
+
+mobjtype_t Heretic_Pawns[] = {
+  MT_PLAYER, //FIXME to a real heretic
+  MT_CHICKEN,
+  MT_MUMMY, MT_MUMMYLEADER, MT_MUMMYGHOST, MT_MUMMYLEADERGHOST,
+  MT_BEAST, MT_SNAKE, MT_HHEAD, MT_CLINK, MT_WIZARD,
+  MT_IMP, MT_IMPLEADER, MT_HKNIGHT, MT_KNIGHTGHOST,
+  MT_SORCERER1, MT_SORCERER2, MT_MINOTAUR, mobjtype_t(-1)
+};
+
+vector<mobjtype_t> allowed_pawns; // FIXME temporary solution
 
 PlayerInfo::PlayerInfo(const string & n)
 {
@@ -47,7 +72,7 @@ PlayerInfo::PlayerInfo(const string & n)
   team = 0;
   playerstate = PST_WAITFORMAP;
   frags.resize(game.maxplayers);
-  pawntype = MT_CHAINGUY; //MT_PLAYER;
+  pawntype = MT_PLAYER;
 };
 
 
@@ -55,7 +80,7 @@ PlayerInfo::PlayerInfo(const string & n)
 // WARNING : check cv_fraglimit>0 before call this function !
 void PlayerInfo::CheckFragLimit()
 {
-  // FIXME only checks score, doesn't count it. score must therefore be
+  // only checks score, doesn't count it. score must therefore be
   // updated in real time
   if (cv_teamplay.value)
     {

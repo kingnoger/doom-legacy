@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/02/08 21:43:50  smite-meister
+// New Memzone system. Choose your pawntype! Cyberdemon OK.
+//
 // Revision 1.8  2003/01/25 21:33:05  smite-meister
 // Now compiles with MinGW 2.0 / GCC 3.2.
 // Builder can choose between dynamic and static linkage.
@@ -82,27 +85,13 @@ language_t   language = la_english;            // Language.
 
 GameInfo game;
 
-/*
-// this is useless now since we have team numbers for each player?
-bool GameInfo::SameTeam(int a, int b)
-{
-  extern consvar_t cv_teamplay;
-
-  switch (cv_teamplay.value)
-    {
-    case 0:
-      return false;
-    default:
-      return (players[a]->team == players[b]->team);
-    }
-}
-*/
 
 void GameInfo::UpdateScore(PlayerInfo *killer, PlayerInfo *victim)
 {
   killer->frags[victim->number]++;
   
   // scoring rule
+  /*
   if (cv_teamplay.value == 0)
     {
       if (killer != victim)
@@ -111,8 +100,14 @@ void GameInfo::UpdateScore(PlayerInfo *killer, PlayerInfo *victim)
 	killer->score--;
     }
   else
+  */
     {
-      if (killer->team != victim->team)
+      if (killer->team == 0)
+	if (killer != victim)
+	  killer->score++;
+	else
+	  killer->score--;
+      else if (killer->team != victim->team)
 	{
 	  teams[killer->team]->score++;
 	  killer->score++;
@@ -158,133 +153,132 @@ int GameInfo::GetFrags(fragsort_t **fragtab, int type)
 	  ft[i].name  = teams[i]->name.c_str();
 	}
 
-    // calculate teamfrags
-    int team1, team2;
-    for (i=0; i<n; i++)
-      {
-	team1 = players[i]->team;
+      // calculate teamfrags
+      int team1, team2;
+      for (i=0; i<n; i++)
+	{
+	  team1 = players[i]->team;
 
-	for (j=0; j<n; j++)
-	  {
-	    team2 = players[j]->team;
+	  for (j=0; j<n; j++)
+	    {
+	      team2 = players[j]->team;
 
-	    teamfrags[team1][team2] +=
-	      players[i]->frags[players[j]->number - 1];
-	  }
-      }
+	      teamfrags[team1][team2] +=
+		players[i]->frags[players[j]->number - 1];
+	    }
+	}
 
-    // type is a magic number telling which fragtable we want
-    switch (type)
-      {
-      case 0: // just normal frags
-	for (i=0; i<m; i++)
-	  ft[i].count = teams[i]->score;
-	break;
+      // type is a magic number telling which fragtable we want
+      switch (type)
+	{
+	case 0: // just normal frags
+	  for (i=0; i<m; i++)
+	    ft[i].count = teams[i]->score;
+	  break;
 
-      case 1: // buchholtz
-	for (i=0; i<m; i++)
-	  {
-	    ft[i].count = 0;
-	    for (j=0; j<m; j++)
-	      if (i != j)
-		ft[i].count += teamfrags[i][j] * teams[j]->score;
-	  }
-	break;
+	case 1: // buchholtz
+	  for (i=0; i<m; i++)
+	    {
+	      ft[i].count = 0;
+	      for (j=0; j<m; j++)
+		if (i != j)
+		  ft[i].count += teamfrags[i][j] * teams[j]->score;
+	    }
+	  break;
 
-      case 2: // individual
-	for (i=0; i<m; i++)
-	  {
-	    ft[i].count = 0;
-	    for (j=0; j<m; j++)
-	      if (i != j)
-		{
-		  if(teamfrags[i][j] > teamfrags[j][i])
-		    ft[i].count += 3;
-		  else if(teamfrags[i][j] == teamfrags[j][i])
-		    ft[i].count += 1;
-		}
-        }
-      break;
+	case 2: // individual
+	  for (i=0; i<m; i++)
+	    {
+	      ft[i].count = 0;
+	      for (j=0; j<m; j++)
+		if (i != j)
+		  {
+		    if(teamfrags[i][j] > teamfrags[j][i])
+		      ft[i].count += 3;
+		    else if(teamfrags[i][j] == teamfrags[j][i])
+		      ft[i].count += 1;
+		  }
+	    }
+	  break;
 
-      case 3: // deaths
-	for (i=0; i<m; i++)
-	  {
-	    ft[i].count = 0;
-	    for (j=0; j<m; j++)
-	      ft[i].count += teamfrags[j][i];
-	  }
-	break;
+	case 3: // deaths
+	  for (i=0; i<m; i++)
+	    {
+	      ft[i].count = 0;
+	      for (j=0; j<m; j++)
+		ft[i].count += teamfrags[j][i];
+	    }
+	  break;
       
-      default:
-	break;
-      }
-    delete [] teamfrags;
-    ret = m;
+	default:
+	  break;
+	}
+      delete [] teamfrags;
+      ret = m;
 
-  } else { // not teamgame
-    ft = new fragsort_t[n]; 
+    } else { // not teamgame
+      ft = new fragsort_t[n]; 
 
-    for (i=0; i<n; i++)
-      {
-	ft[i].num = players[i]->number;
-	ft[i].color = players[i]->pawn->color;
-	ft[i].name  = players[i]->name.c_str();
-      }
+      for (i=0; i<n; i++)
+	{
+	  ft[i].num = players[i]->number;
+	  ft[i].color = players[i]->pawn->color;
+	  ft[i].name  = players[i]->name.c_str();
+	}
 
+      // type is a magic number telling which fragtable we want
+      switch (type)
+	{
+	case 0: // just normal frags
+	  for (i=0; i<n; i++)
+	    ft[i].count = players[i]->score;
+	  break;
 
-    // type is a magic number telling which fragtable we want
-    switch (type)
-      {
-      case 0: // just normal frags
-	for (i=0; i<n; i++)
-	  ft[i].count = players[i]->score;
-	break;
+	case 1: // buchholtz
+	  for (i=0; i<n; i++)
+	    {
+	      ft[i].count = 0;
+	      for (j=0; j<n; j++)
+		if (i != j)
+		  {
+		    int k = players[j]->number - 1;
+		    ft[i].count += players[i]->frags[k]*(players[j]->score + players[j]->frags[k]);
+		    // FIXME is this formula correct?
+		  }
+	    }
+	  break;
 
-      case 1: // buchholtz
-	for (i=0; i<n; i++)
-	  {
-	    ft[i].count = 0;
-	    for (j=0; j<n; j++)
-	      if (i != j)
-		{
-		  int k = players[j]->number - 1;
-		  ft[i].count += players[i]->frags[k]*(players[j]->score + players[j]->frags[k]);
-		  // FIXME is this formula correct?
-		}
-	  }
-	break;
+	case 2: // individual
+	  for (i=0; i<n; i++)
+	    {
+	      ft[i].count = 0;
+	      for (j=0; j<n; j++)
+		if (i != j)
+		  {
+		    int k = players[i]->number - 1;
+		    int l = players[j]->number - 1;
+		    if(players[i]->frags[l] > players[j]->frags[k])
+		      ft[i].count += 3;
+		    else if(players[i]->frags[l] == players[j]->frags[k])
+		      ft[i].count += 1;
+		  }
+	    }
+	  break;
 
-      case 2: // individual
-	for (i=0; i<n; i++)
-	  {
-	    ft[i].count = 0;
-	    for (j=0; j<n; j++)
-	      if (i != j)
-		{
-		  int k = players[i]->number - 1;
-		  int l = players[j]->number - 1;
-		  if(players[i]->frags[l] > players[j]->frags[k])
-		    ft[i].count += 3;
-		  else if(players[i]->frags[l] == players[j]->frags[k])
-		    ft[i].count += 1;
-		}
-	  }
-	break;
-
-      case 3: // deaths
-	for (i=0; i<n; i++)
-	  {
-	    ft[i].count = 0;
-	    for (j=0; j<n; j++)
-	      ft[i].count += players[j]->frags[players[i]->number - 1];
-	  }
-	break;
+	case 3: // deaths
+	  for (i=0; i<n; i++)
+	    {
+	      ft[i].count = 0;
+	      for (j=0; j<n; j++)
+		ft[i].count += players[j]->frags[players[i]->number - 1];
+	    }
+	  break;
       
-      default:
-	break;
-      }
-    ret = n;
-  }
+	default:
+	  break;
+	}
+      ret = n;
+    }
 
   *fragtab = ft; 
   return ret;

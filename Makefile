@@ -27,9 +27,9 @@ endif
 # Dynamic or static linkage? I like static.
 
 ifdef DYNAMIC
-linkage =
+linkage = -DDYNAMIC_LINKAGE
 else
-linkage = -DSTATIC_LINKAGE
+linkage = 
 endif
 
 
@@ -291,12 +291,7 @@ sdl	:
 
 # explicit rules
 
-ifdef STATIC
-# all in one
-$(exename) : engine util audio video net sdl $(objdir)/r_opengl.o
-	$(LD) $(LDFLAGS) $(objects) $(objdir)/r_opengl.o $(LIBS) $(OPENGLLIBS) -o $@
-
-else
+ifdef DYNAMIC
 # main program
 $(exename) : engine util audio video net sdl
 	$(LD) $(LDFLAGS) $(objects) $(LIBS) -o $@
@@ -304,7 +299,10 @@ $(exename) : engine util audio video net sdl
 # OpenGL renderer
 r_opengl.dll: $(objdir)/r_opengl.o
 	$(LD) -shared $(LDFLAGS) $< $(OPENGLLIBS) -o $@
-
+else
+# all in one
+$(exename) : engine util audio video net sdl $(objdir)/r_opengl.o
+	$(LD) $(LDFLAGS) $(objects) $(objdir)/r_opengl.o $(LIBS) $(OPENGLLIBS) -o $@
 endif
 
 $(objdir)/r_opengl.o : video/hardware/r_opengl/r_opengl.cpp include/hardware/r_opengl/r_opengl.h

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/02/08 21:43:50  smite-meister
+// New Memzone system. Choose your pawntype! Cyberdemon OK.
+//
 // Revision 1.6  2003/01/25 21:33:05  smite-meister
 // Now compiles with MinGW 2.0 / GCC 3.2.
 // Builder can choose between dynamic and static linkage.
@@ -631,17 +634,6 @@ void Map::LoadThings(int lump)
     skillbit = 1 << (game.skill-1);
 
   mapthing_t *mt = mapthings;
-
-  // FIXME test extra golem!
-  /*
-  mt->x = 128;
-  mt->y = 1150;
-  mt->angle = 0;
-  mt->type = MT_MUMMY;
-  mt->flags = 0;
-  mt->mobj = NULL;
-  SpawnMapThing(mt);
-  */
 
   int i, n, low, high, ednum;
   for (i=0 ; i<nummapthings ; i++, mt++)

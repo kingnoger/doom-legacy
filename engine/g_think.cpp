@@ -20,7 +20,7 @@ int Thinker::Serialize(LArchive & a)
 
 void *Thinker::operator new (size_t size)
 {
-  return Z_Malloc(size, PU_LEVSPEC, 0);    
+  return Z_Malloc(size, PU_LEVSPEC, NULL);    
 }
 
 void Thinker::operator delete (void *mem)

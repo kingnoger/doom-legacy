@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/02/08 21:43:50  smite-meister
+// New Memzone system. Choose your pawntype! Cyberdemon OK.
+//
 // Revision 1.6  2003/01/25 21:33:05  smite-meister
 // Now compiles with MinGW 2.0 / GCC 3.2.
 // Builder can choose between dynamic and static linkage.
@@ -766,6 +769,8 @@ void Actor::Die(Actor *inflictor, Actor *source)
       S_StartSound (this, sfx_slop);
       return;
     }
+
+  // TODO FIXME start playing death anim. sequence
 
   // if killed by a player
   if (flags & MF_COUNTKILL)

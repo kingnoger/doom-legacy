@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Portions Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,44 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:23  hurdler
-// Initial revision
+// Revision 1.2  2003/02/08 21:43:50  smite-meister
+// New Memzone system. Choose your pawntype! Cyberdemon OK.
 //
-// Revision 1.5  2002/08/21 16:58:36  vberghol
-// Version 1.41 Experimental compiles and links!
-//
-// Revision 1.4  2002/07/01 21:00:58  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:01:59  vberghol
-// HUD alkaa olla kunnossa
-//
-// Revision 1.9  2001/03/13 22:14:20  stroggonmeth
-// Long time no commit. 3D floors, FraggleScript, portals, ect.
-//
-// Revision 1.8  2000/11/02 17:50:10  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.7  2000/10/08 13:30:01  bpereira
-// no message
-//
-// Revision 1.6  2000/10/04 16:19:24  hurdler
-// Change all those "3dfx names" to more appropriate names
-//
-// Revision 1.5  2000/10/02 18:25:46  bpereira
-// no message
-//
-// Revision 1.4  2000/07/01 09:23:49  bpereira
-// no message
-//
-// Revision 1.3  2000/04/30 10:30:10  bpereira
-// no message
-//
-// Revision 1.2  2000/02/27 00:42:11  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
+// Revision 1.1.1.1  2002/11/16 14:18:23  hurdler
+// Initial C++ version of Doom Legacy
 //
 //
 // DESCRIPTION:
@@ -66,17 +33,15 @@
 //
 //---------------------------------------------------------------------
 
-
-
-#ifndef __Z_ZONE__
-#define __Z_ZONE__
+#ifndef z_zone_h
+#define z_zone_h 1
 
 #include <stdio.h>
 
 //
 // ZONE MEMORY
 // PU - purge tags.
-// Tags < 100 are not overwritten until freed.
+// Tags < PU_PURGELEVEL are not overwritten until freed.
 #define PU_STATIC               1      // static entire execution time
 #define PU_SOUND                2      // static while playing
 #define PU_MUSIC                3      // static while playing
@@ -88,16 +53,13 @@
 #define PU_LEVEL               50      // static until level exited
 #define PU_LEVSPEC             51      // a special thinker in a level
 #define PU_HWRPLANE            52
-// Tags >= PU_PURGELEVEL are purgable whenever needed.
+// Tags >= PU_PURGELEVEL are automatically purgable whenever needed.
 #define PU_PURGELEVEL         100
 #define PU_CACHE              101
 #define PU_HWRCACHE           102      // 'second-level' cache for graphics
                                        // stored in hardware format and downloaded as needed
 
-//#define ZDEBUG
-
-
-void    Z_Init (void);
+void    Z_Init();
 void    Z_FreeTags (int lowtag, int hightag);
 void    Z_DumpHeap (int lowtag, int hightag);
 void    Z_FileDumpHeap (FILE *f);
@@ -106,8 +68,9 @@ void    Z_ChangeTag2 (void *ptr, int tag);
 
 // returns number of bytes allocated for one tag type
 int     Z_TagUsage (int tagnum);
-
 void    Z_FreeMemory (int *realfree,int *cachemem,int *usedmem,int *largefreeblock);
+
+//#define ZDEBUG
 
 #ifdef ZDEBUG
 #define Z_Free(p) Z_Free2(p,__FILE__,__LINE__)
@@ -121,36 +84,8 @@ void*   Z_MallocAlign(int size,int tag,void* user,int alignbits);
 #define Z_Malloc(s,t,p) Z_MallocAlign(s,t,p,0)
 #endif
 
+void Z_ChangeTag(void *ptr, int tag);
+
 char *Z_Strdup(const char *s, int tag, void **user);
-
-
-typedef struct memblock_s
-{
-    int                 size;   // including the header and possibly tiny fragments
-    void**              user;   // NULL if a free block
-    int                 tag;    // purgelevel
-    int                 id;     // should be ZONEID
-#ifdef ZDEBUG
-    char             *ownerfile;
-    int               ownerline; 
-#endif
-    struct memblock_s*  next;
-    struct memblock_s*  prev;
-} memblock_t;
-
-//
-// This is used to get the local FILE:LINE info from CPP
-// prior to really call the function in question.
-//
-#ifdef PARANOIA
-#define Z_ChangeTag(p,t) \
-{ \
-      if (( (memblock_t *)( (byte *)(p) - sizeof(memblock_t)))->id!=0x1d4a11) \
-          I_Error("Z_CT at "__FILE__":%i",__LINE__); \
-      Z_ChangeTag2(p,t); \
-};
-#else
-#define Z_ChangeTag(p,t)  Z_ChangeTag2(p,t)
-#endif
 
 #endif

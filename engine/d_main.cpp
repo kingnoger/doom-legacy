@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/02/08 21:43:50  smite-meister
+// New Memzone system. Choose your pawntype! Cyberdemon OK.
+//
 // Revision 1.7  2003/01/18 20:17:41  smite-meister
 // HUD fixed, levelchange crash fixed.
 //
@@ -865,9 +868,6 @@ void D_IdentifyVersion()
 
   // external Legacy data file
   D_AddFile("legacy.wad");
-
-  //D_AddFile("test.wad"); // FIXME testing
-  //D_AddFile("heretic.wad"); // FIXME testing
 
   // Specify the name of an IWAD file to use.
   // Internally the game makes no difference between IWADs and PWADs.
