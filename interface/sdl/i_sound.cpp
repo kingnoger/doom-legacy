@@ -16,6 +16,9 @@
 // for more details.
 //
 // $Log$
+// Revision 1.8  2003/04/23 21:12:02  hurdler
+// Do it again more properly
+//
 // Revision 1.7  2003/04/23 21:02:00  hurdler
 // no more linking warning
 //
@@ -592,7 +595,7 @@ void I_StopSong(int handle)
   Mix_FadeOutMusic(500);
 }
 
-static char *MIDI_tmpfilename;
+static char *MIDI_tmpfilename = NULL;
 
 void I_UnRegisterSong(int handle)
 {
@@ -604,7 +607,11 @@ void I_UnRegisterSong(int handle)
       Mix_FreeMusic(music[handle]);
       music[handle] = NULL;
     }
-  unlink(MIDI_tmpfilename);
+  if (MIDI_tmpfilename)
+    {
+      unlink(MIDI_tmpfilename);
+      free(MIDI_tmpfilename);
+    }
 }
 
 
