@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.9  2003/12/09 01:02:00  smite-meister
+// Hexen mapchange works, keycodes fixed
+//
 // Revision 1.8  2003/12/06 23:57:47  smite-meister
 // save-related bugfixes
 //
@@ -114,7 +117,7 @@ int GameInfo::Create_MAPINFO_game(int lump)
   if (lump < 0)
     return -1;
 
-  CONS_Printf("Reading MAPINFO lump... ");
+  CONS_Printf("Reading MAPINFO lump...\n");
 
   int num;
   int n = Read_MAPINFO(lump);
@@ -144,7 +147,7 @@ int GameInfo::Create_MAPINFO_game(int lump)
 	m->nextlevel = warptransmap[m->warpnext]->mapnumber;
     }
 
-  CONS_Printf(" ...done. %d maps.\n", n);
+  CONS_Printf("...done. %d maps.\n", n);
 
   return n;
 }

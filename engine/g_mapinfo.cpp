@@ -22,6 +22,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.8  2003/12/09 01:02:00  smite-meister
+// Hexen mapchange works, keycodes fixed
+//
 // Revision 1.7  2003/12/06 23:57:47  smite-meister
 // save-related bugfixes
 //
@@ -293,7 +296,7 @@ bool MapInfo::HubSave()
   if (!me)
     return false;
 
-  CONS_Printf("hubsave...\n");
+  CONS_Printf("Making a hubsave...");
 
   char fname[50];
   sprintf(fname, "Legacy_hubsave_%02d.sav", mapnumber);
@@ -306,14 +309,14 @@ bool MapInfo::HubSave()
   byte *buffer;
   unsigned length = a.Compress(&buffer, 0);
 
-  CONS_Printf("Simulated hubsave: %d bytes\n", length);
   FIL_WriteFile(savename.c_str(), buffer, length);
+  CONS_Printf("done. %d bytes written.\n", length);
   Z_Free(buffer);
-
-  state = MAP_SAVED;
 
   delete me;
   me = NULL;
+
+  state = MAP_SAVED;
   return true;
 }
 
@@ -324,25 +327,29 @@ bool MapInfo::HubLoad()
   if (state != MAP_SAVED)
     return false;
 
+  CONS_Printf("Loading a hubsave...");
+
   byte *buffer;
 
   int length = FIL_ReadFile(savename.c_str(), &buffer);
   if (!length)
     {
-      I_Error("Couldn't open hubsave file '%s'", savename.c_str());
+      I_Error("\nCouldn't open hubsave file '%s'", savename.c_str());
       return false;
     }
   
   LArchive a;
   if (!a.Open(buffer, length))
-    I_Error("Couldn't uncompress hubsave!\n");
+    I_Error("\nCouldn't uncompress hubsave!\n");
 
   Z_Free(buffer);
 
   // dearchive the map
   me = new Map(this);
   if (me->Unserialize(a))
-    I_Error("Hubsave corrupted!\n");
+    I_Error("\nHubsave corrupted!\n");
+
+  CONS_Printf("done.");
 
   state = MAP_RUNNING;
   return true;
@@ -413,7 +420,8 @@ static inline char *P_PassWhitespace(char *p)
 
 typedef enum
 {
-  P_ITEM_NONE = 0, // bool. true if it item exists.
+  P_ITEM_IGNORE = 0,
+  P_ITEM_BOOL, // bool. true if it item exists.
   P_ITEM_INT,
   P_ITEM_INT_INT, // two ints separated by whitespace
   P_ITEM_FLOAT,
@@ -452,7 +460,7 @@ static bool P_ParseCommand(const char *cmd, char *str, const parsercmd_t *comman
 
   switch (commands->type)
     {
-    case P_ITEM_NONE:
+    case P_ITEM_BOOL:
       *(bool *)(var+offs) = true;
       break;
 
@@ -580,7 +588,7 @@ static parsercmd_t MapInfo_commands[]=
     {P_ITEM_STR,    "defaultweapons",&info_weapons},
   */
   // {IVT_CONSOLECMD,"consolecmd",    NULL},
-  {P_ITEM_NONE, NULL, 0} // terminator
+  {P_ITEM_IGNORE, NULL, 0} // terminator
 };
 
 static parsercmd_t MapFormat_commands[]=
@@ -588,7 +596,7 @@ static parsercmd_t MapFormat_commands[]=
   {P_ITEM_INT_INT, "doom_things", MI_offset(doom_offs)},
   {P_ITEM_INT_INT, "heretic_things", MI_offset(heretic_offs)},
   {P_ITEM_INT_INT, "hexen_things", MI_offset(hexen_offs)},
-  {P_ITEM_NONE, NULL, 0} // terminator
+  {P_ITEM_IGNORE, NULL, 0} // terminator
 };
 
 static parsercmd_t MAPINFO_MAP_commands[] =
@@ -605,23 +613,22 @@ static parsercmd_t MAPINFO_MAP_commands[] =
   {P_ITEM_INT, "nextlevel", MI_offset(nextlevel)}, // always refer to levelnums
   {P_ITEM_INT, "secretlevel", MI_offset(secretlevel)},
 
-  {P_ITEM_NONE, "doublesky", MI_offset(doublesky)},
+  {P_ITEM_BOOL, "doublesky", MI_offset(doublesky)},
   {P_ITEM_STR16_FLOAT, "sky1", MI_offset(sky1)},
   {P_ITEM_STR16_FLOAT, "sky2", MI_offset(sky2)},
-  {P_ITEM_NONE, "lightning", MI_offset(lightning)},
+  {P_ITEM_BOOL, "lightning", MI_offset(lightning)},
   {P_ITEM_STR, "fadetable", MI_offset(fadetablelump)},
   {P_ITEM_INT, "cdtrack", MI_offset(cdtrack)},
   {P_ITEM_STR, "music", MI_offset(musiclump)},
   {P_ITEM_INT, "par", MI_offset(partime)},
-  /*
-  {P_ITEM_INT, "CD_START_TRACK", MI_offset()},
-  {P_ITEM_INT, "CD_END1_TRACK", MI_offset()},
-  {P_ITEM_INT, "CD_END2_TRACK", MI_offset()},
-  {P_ITEM_INT, "CD_END3_TRACK", MI_offset()},
-  {P_ITEM_INT, "CD_INTERMISSION_TRACK", MI_offset()},
-  {P_ITEM_INT, "CD_TITLE_TRACK", MI_offset()},
-  */
-  {P_ITEM_NONE, NULL, 0}
+
+  {P_ITEM_IGNORE, "cd_start_track", 0},
+  {P_ITEM_IGNORE, "cd_end1_track", 0},
+  {P_ITEM_IGNORE, "cd_end2_track", 0},
+  {P_ITEM_IGNORE, "cd_end3_track", 0},
+  {P_ITEM_IGNORE, "cd_intermission_track", 0},
+  {P_ITEM_IGNORE, "cd_title_track", 0},
+  {P_ITEM_IGNORE, NULL, 0}
 };
 #undef MI_offset
 
@@ -783,8 +790,8 @@ static parsercmd_t MAPINFO_CLUSTERDEF_commands[] =
   {P_ITEM_STR, "exittext", CD_offset(exittext)},
   {P_ITEM_STR, "music", CD_offset(finalemusic)},
   {P_ITEM_STR, "flat", CD_offset(finalepic)},
-  {P_ITEM_NONE, "hub", CD_offset(hub)},
-  {P_ITEM_NONE, NULL, 0}
+  {P_ITEM_BOOL, "hub", CD_offset(hub)},
+  {P_ITEM_IGNORE, NULL, 0}
 };
 #undef CD_offset
 

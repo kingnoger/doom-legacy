@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,35 +17,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:23  hurdler
-// Initial revision
+// Revision 1.2  2003/12/09 01:02:01  smite-meister
+// Hexen mapchange works, keycodes fixed
 //
-// Revision 1.5  2002/09/06 17:18:35  vberghol
-// added most of the changes up to RC2
-//
-// Revision 1.4  2002/08/16 20:49:27  vberghol
-// engine ALMOST done!
-//
-// Revision 1.3  2002/07/01 21:00:46  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:23  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.6  2001/04/17 22:26:07  calumr
-// Initial Mac add
-//
-// Revision 1.5  2001/02/24 13:35:20  bpereira
-// no message
-//
-// Revision 1.4  2001/01/25 22:15:42  bpereira
-// added heretic support
-//
-// Revision 1.3  2000/04/04 00:32:45  stroggonmeth
-// Initial Boom compatability plus few misc changes all around.
-//
-// Revision 1.2  2000/02/26 00:28:42  hurdler
-// Mostly bug fix (see borislog.txt 23-2-2000, 24-2-2000)
+// Revision 1.1.1.1  2002/11/16 14:18:23  hurdler
+// Initial C++ version of Doom Legacy
 //
 //
 // DESCRIPTION:
@@ -55,79 +31,53 @@
 //-----------------------------------------------------------------------------
 
 
-#ifndef __G_INPUT__
-#define __G_INPUT__
+#ifndef g_input_h
+#define g_input_h 1
 
-#include "d_event.h"
-//#include "keys.h"
-#include "command.h"
+#include "keys.h"
 
 #define MAXMOUSESENSITIVITY   40        // sensitivity steps
 
-// number of total 'button' inputs, include keyboard keys, plus virtual
-// keys (mousebuttons and joybuttons becomes keys)
-#define NUMKEYS         256
-
-#define MOUSEBUTTONS    8
-#define JOYBUTTONS      14  // 10 bases + 4 hat
-
-//
-// mouse and joystick buttons are handled as 'virtual' keys
-//
-typedef enum {
-    KEY_MOUSE1        = NUMKEYS,                  
-    KEY_JOY1          = KEY_MOUSE1+MOUSEBUTTONS,  
-    KEY_DBLMOUSE1     = KEY_JOY1+JOYBUTTONS,        // double clicks
-    KEY_DBLJOY1       = KEY_DBLMOUSE1+MOUSEBUTTONS,
-    KEY_2MOUSE1       = KEY_DBLJOY1+JOYBUTTONS,
-    KEY_DBL2MOUSE1    = KEY_2MOUSE1+MOUSEBUTTONS,
-    KEY_MOUSEWHEELUP  = KEY_DBL2MOUSE1+MOUSEBUTTONS,
-    KEY_MOUSEWHEELDOWN,
-    KEY_2MOUSEWHEELUP,
-    KEY_2MOUSEWHEELDOWN,
-    NUMINPUTS
-} key_input_e;
-
-typedef enum
+enum gamecontrols_e
 {
-    gc_null = 0,        //a key/button mapped to gc_null has no effect
-    gc_forward,
-    gc_backward,
-    gc_strafe,
-    gc_straferight,
-    gc_strafeleft,
-    gc_speed,
-    gc_turnleft,
-    gc_turnright,
-    gc_fire,
-    gc_use,
-    gc_lookup,
-    gc_lookdown,
-    gc_centerview,
-    gc_mouseaiming,     // mouse aiming is momentary (toggleable in the menu)
-    gc_weapon1,
-    gc_weapon2,
-    gc_weapon3,
-    gc_weapon4,
-    gc_weapon5,
-    gc_weapon6,
-    gc_weapon7,
-    gc_weapon8,
-    gc_talkkey,
-    gc_scores,
-    gc_jump,
-    gc_console,
-    gc_nextweapon,
-    gc_prevweapon,
-    gc_bestweapon,
-    gc_invnext,
-    gc_invprev,
-    gc_invuse,
-    gc_flydown,     // flyup is jump !
-    num_gamecontrols
-} gamecontrols_e;
+  gc_null = 0,        //a key/button mapped to gc_null has no effect
+  gc_forward,
+  gc_backward,
+  gc_strafe,
+  gc_straferight,
+  gc_strafeleft,
+  gc_speed,
+  gc_turnleft,
+  gc_turnright,
+  gc_fire,
+  gc_use,
+  gc_lookup,
+  gc_lookdown,
+  gc_centerview,
+  gc_mouseaiming,     // mouse aiming is momentary (toggleable in the menu)
+  gc_weapon1,
+  gc_weapon2,
+  gc_weapon3,
+  gc_weapon4,
+  gc_weapon5,
+  gc_weapon6,
+  gc_weapon7,
+  gc_weapon8,
+  gc_talkkey,
+  gc_scores,
+  gc_jump,
+  gc_console,
+  gc_nextweapon,
+  gc_prevweapon,
+  gc_bestweapon,
+  gc_invnext,
+  gc_invprev,
+  gc_invuse,
+  gc_flydown,     // flyup is jump !
+  num_gamecontrols
+};
 
-
+struct consvar_t;
 // mouse values are used once
 extern consvar_t       cv_mousesens;
 extern consvar_t       cv_mlooksens;
@@ -162,10 +112,10 @@ extern  int     gamecontrol2[num_gamecontrols][2];    // secondary splitscreen p
 // check a gamecontrol being active or not
 
 // remaps the input event to a game control.
-void  G_MapEventsToControls (event_t *ev);
+void  G_MapEventsToControls(struct event_t *ev);
 
 // returns the name of a key
-char* G_KeynumToString (int keynum);
+char* G_KeynumToString(int keynum);
 int   G_KeyStringtoNum(char *keystr);
 
 // detach any keys associated to the given game control

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/12/09 01:02:01  smite-meister
+// Hexen mapchange works, keycodes fixed
+//
 // Revision 1.8  2003/11/27 11:28:26  smite-meister
 // Doom/Heretic startup bug fixed
 //
@@ -1649,109 +1652,95 @@ void A_BishopPainBlur(DActor *actor)
 
 static void DragonSeek(DActor *actor, angle_t thresh, angle_t turnMax)
 {
-  int dir;
-  int dist;
-  angle_t delta;
-  angle_t angle;
-  Actor *target;
-  int search;
   int i;
-  int bestArg;
-  angle_t bestAngle;
-  angle_t angleToSpot, angleToTarget;
-  Actor *mo;
+  Actor *t = (Actor *)actor->special1; // FIXME
+  if (!t)
+    return;
 
-  target = (Actor *)actor->special1;
-  if(target == NULL)
-    {
-      return;
-    }
-  dir = P_FaceMobj(actor, target, &delta);
-  if(delta > thresh)
+  angle_t delta;
+  int dir = P_FaceMobj(actor, t, &delta);
+  if (delta > thresh)
     {
       delta >>= 1;
-      if(delta > turnMax)
-	{
-	  delta = turnMax;
-	}
+      if (delta > turnMax)
+	delta = turnMax;
     }
-  if(dir)
-    { // Turn clockwise
-      actor->angle += delta;
-    }
+
+  if (dir)
+    actor->angle += delta; // Turn clockwise
   else
-    { // Turn counter clockwise
-      actor->angle -= delta;
-    }
-  angle = actor->angle>>ANGLETOFINESHIFT;
-  actor->px = int(actor->info->speed * finecosine[angle]);
-  actor->py = int(actor->info->speed * finesine[angle]);
-  if(actor->z+actor->height < target->z 
-     || target->z+target->height < actor->z)
+    actor->angle -= delta; // Turn counter clockwise
+
+  angle_t an = actor->angle >> ANGLETOFINESHIFT;
+  actor->px = int(actor->info->speed * finecosine[an]);
+  actor->py = int(actor->info->speed * finesine[an]);
+
+  int dist;
+  if (actor->z + actor->height < t->z || t->z + t->height < actor->z)
     {
-      dist = P_AproxDistance(target->x-actor->x, target->y-actor->y);
+      dist = P_AproxDistance(t->x - actor->x, t->y - actor->y);
       dist = dist/int(actor->info->speed * FRACUNIT);
-      if(dist < 1)
-	{
-	  dist = 1;
-	}
-      actor->pz = (target->z-actor->z)/dist;
+      if (dist < 1)
+	dist = 1;
+
+      actor->pz = (t->z-actor->z)/dist;
     }
   else
     {
-      dist = P_AproxDistance(target->x-actor->x, target->y-actor->y);
+      dist = P_AproxDistance(t->x-actor->x, t->y-actor->y);
       dist = dist/int(actor->info->speed * FRACUNIT);
     }
-  if(target->flags&MF_SHOOTABLE && P_Random() < 64)
+
+  if (t->flags & MF_SHOOTABLE && P_Random() < 64)
     { // attack the destination mobj if it's attackable
       Actor *oldTarget;
 	
-      if (abs(actor->angle - R_PointToAngle2(actor->x, actor->y, target->x, target->y)) < ANGLE_45/2)
+      if (abs(actor->angle - R_PointToAngle2(actor->x, actor->y, t->x, t->y)) < ANGLE_45/2)
 	{
 	  oldTarget = actor->target;
-	  actor->target = target;
-	  if(actor->CheckMeleeRange())
+	  actor->target = t;
+	  if (actor->CheckMeleeRange())
 	    {
 	      actor->target->Damage(actor, actor, HITDICE(10));
 	      S_StartSound(actor, SFX_DRAGON_ATTACK);
 	    }
-	  else if(P_Random() < 128 && actor->CheckMissileRange())
+	  else if (P_Random() < 128 && actor->CheckMissileRange())
 	    {
-	      actor->SpawnMissile(target, MT_DRAGON_FX);						
+	      actor->SpawnMissile(t, MT_DRAGON_FX);						
 	      S_StartSound(actor, SFX_DRAGON_ATTACK);
 	    }
 	  actor->target = oldTarget;
 	}
     }
-  if(dist < 4)
+
+  int search;
+  if (dist < 4)
     { // Hit the target thing
-      if(actor->target && P_Random() < 200)
+      if (actor->target && P_Random() < 200)
 	{
-	  bestArg = -1;
-	  bestAngle = ANGLE_MAX;
-	  angleToTarget = R_PointToAngle2(actor->x, actor->y,
-					  actor->target->x, actor->target->y);
-	  for(i = 0; i < 5; i++)
+	  int bestArg = -1;
+	  angle_t bestAngle = ANGLE_MAX;
+	  angle_t angleToSpot;
+	  angle_t angleToTarget = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
+	  for (i = 0; i < 5; i++)
 	    {
-	      if(!target->args[i])
-		{
-		  continue;
-		}
+	      if (!t->args[i])
+		continue;
+
 	      search = -1;
 
-	      mo = actor->mp->FindFromTIDmap(target->args[i], &search);
-	      angleToSpot = R_PointToAngle2(actor->x, actor->y, 
-					    mo->x, mo->y);
-	      if(abs(angleToSpot-angleToTarget) < bestAngle)
+	      Actor *mo = actor->mp->FindFromTIDmap(t->args[i], &search);
+	      angleToSpot = R_PointToAngle2(actor->x, actor->y, mo->x, mo->y);
+	      if (abs(angleToSpot-angleToTarget) < bestAngle)
 		{
 		  bestAngle = abs(angleToSpot-angleToTarget);
 		  bestArg = i;
 		}
 	    }
-	  if(bestArg != -1)
+	  if (bestArg != -1)
 	    {
 	      search = -1;
-	      actor->special1 = (int)actor->mp->FindFromTIDmap(target->args[bestArg], &search);
+	      actor->special1 = (int)actor->mp->FindFromTIDmap(t->args[bestArg], &search);
 	    }
 	}
       else
@@ -1759,9 +1748,9 @@ static void DragonSeek(DActor *actor, angle_t thresh, angle_t turnMax)
 	  do
 	    {
 	      i = (P_Random()>>2)%5;
-	    } while(!target->args[i]);
+	    } while(!t->args[i]);
 	  search = -1;
-	  actor->special1 = (int)actor->mp->FindFromTIDmap(target->args[i], &search);
+	  actor->special1 = (int)actor->mp->FindFromTIDmap(t->args[i], &search);
 	}
     }
 }
@@ -1774,13 +1763,11 @@ static void DragonSeek(DActor *actor, angle_t thresh, angle_t turnMax)
 
 void A_DragonInitFlight(DActor *actor)
 {
-  int search;
-
-  search = -1;
+  int search = -1;
   do
     { // find the first tid identical to the dragon's tid
       actor->special1 = (int)actor->mp->FindFromTIDmap(actor->tid, &search);
-      if(search == -1)
+      if (search == -1)
 	{
 	  actor->SetState(actor->info->spawnstate);
 	  return;
@@ -1797,33 +1784,29 @@ void A_DragonInitFlight(DActor *actor)
 
 void A_DragonFlight(DActor *actor)
 {
-  angle_t angle;
-
   DragonSeek(actor, 4*ANGLE_1, 8*ANGLE_1);
-  if(actor->target)
+  if (actor->target)
     {
-      if(!(actor->target->flags&MF_SHOOTABLE))
+      if (!(actor->target->flags & MF_SHOOTABLE))
 	{ // target died
 	  actor->target = NULL;
 	  return;
 	}
-      angle = R_PointToAngle2(actor->x, actor->y, actor->target->x,
-			      actor->target->y);
-      if(abs(actor->angle-angle) < ANGLE_45/2 && actor->CheckMeleeRange())
+
+      angle_t an = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
+      if (abs(actor->angle - an) < ANGLE_45/2 && actor->CheckMeleeRange())
 	{
 	  actor->target->Damage(actor, actor, HITDICE(8));
 	  S_StartSound(actor, SFX_DRAGON_ATTACK);
 	}
-      else if(abs(actor->angle-angle) <= ANGLE_1*20)
+      else if(abs(actor->angle - an) <= ANGLE_1*20)
 	{
 	  actor->SetState(actor->info->missilestate);
 	  S_StartSound(actor, SFX_DRAGON_ATTACK);
 	}
     }
   else
-    {
-      actor->LookForPlayers(true);
-    }
+    actor->LookForPlayers(true);
 }
 
 //============================================================================
@@ -1835,14 +1818,10 @@ void A_DragonFlight(DActor *actor)
 void A_DragonFlap(DActor *actor)
 {
   A_DragonFlight(actor);
-  if(P_Random() < 240)
-    {
-      S_StartSound(actor, SFX_DRAGON_WINGFLAP);
-    }
+  if (P_Random() < 240)
+    S_StartSound(actor, SFX_DRAGON_WINGFLAP);
   else
-    {
-      S_StartSound(actor, actor->info->activesound);
-    }
+    S_StartSound(actor, actor->info->activesound);
 }
 
 //============================================================================
@@ -1853,9 +1832,7 @@ void A_DragonFlap(DActor *actor)
 
 void A_DragonAttack(DActor *actor)
 {
-  DActor *mo;
-
-  mo = actor->SpawnMissile(actor->target, MT_DRAGON_FX);						
+  actor->SpawnMissile(actor->target, MT_DRAGON_FX);						
 }
 
 //============================================================================
@@ -1866,19 +1843,17 @@ void A_DragonAttack(DActor *actor)
 
 void A_DragonFX2(DActor *actor)
 {
-  DActor *mo;
-  int i;
-  int delay;
+  int delay = 16 + (P_Random() >> 3);
 
-  delay = 16+(P_Random()>>3);
-  for(i = 1+(P_Random()&3); i; i--)
+  for (int i = 1 + (P_Random()&3); i; i--)
     {
-      mo = actor->mp->SpawnDActor(actor->x+((P_Random()-128)<<14), 
-		       actor->y+((P_Random()-128)<<14), actor->z+((P_Random()-128)<<12),
-		       MT_DRAGON_FX2);
-      if(mo)
+      DActor *mo = actor->mp->SpawnDActor(actor->x + ((P_Random()-128)<<14), 
+	actor->y + ((P_Random()-128)<<14), actor->z + ((P_Random()-128)<<12), MT_DRAGON_FX2);
+
+      if (mo)
 	{
-	  mo->tics = delay+(P_Random()&3)*i*2;
+	  mo->tics = delay + (P_Random()&3)*i*2;
+	  mo->owner = actor->owner;
 	  mo->target = actor->target;
 	}
     } 
@@ -1893,7 +1868,7 @@ void A_DragonFX2(DActor *actor)
 void A_DragonPain(DActor *actor)
 {
   A_Pain(actor);
-  if(!actor->special1)
+  if (!actor->special1) //!!! FIXME dragon using pointers
     { // no destination spot yet
       actor->SetState(S_DRAGON_INIT);
     }
@@ -1907,10 +1882,8 @@ void A_DragonPain(DActor *actor)
 
 void A_DragonCheckCrash(DActor *actor)
 {
-  if(actor->z <= actor->floorz)
-    {
-      actor->SetState(S_DRAGON_CRASH1);
-    }
+  if (actor->z <= actor->floorz)
+    actor->SetState(S_DRAGON_CRASH1);
 }
 
 //============================================================================

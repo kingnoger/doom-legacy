@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2003/12/09 01:02:00  smite-meister
+// Hexen mapchange works, keycodes fixed
+//
 // Revision 1.15  2003/12/06 23:57:47  smite-meister
 // save-related bugfixes
 //
@@ -1760,8 +1763,10 @@ int GameInfo::Serialize(LArchive &a)
 int GameInfo::Unserialize(LArchive &a)
 {
   // FIXME all the containers should be emptied and old contents deleted somewhere
+  // ClearTeams();
   ClearPlayers();
   Clear_mapinfo_clusterdef();
+  ACS_store.clear();
   Z_FreeTags(PU_LEVEL, MAXINT);
 
   int i, n;
@@ -1784,7 +1789,8 @@ int GameInfo::Unserialize(LArchive &a)
   for (i = 0; i < n; i++)
     {
       teams[i] = new TeamInfo;
-      teams[i]->Unserialize(a);
+      if (teams[i]->Unserialize(a))
+	return -1;
     }
 
   if (!a.Marker(MARK_GROUP))
@@ -1794,7 +1800,8 @@ int GameInfo::Unserialize(LArchive &a)
   for (i = 0; i < n; i++)
     {
       PlayerInfo *p = new PlayerInfo;
-      p->Unserialize(a);
+      if (p->Unserialize(a))
+	return -2;
       Players[p->number] = p;
     }
 
@@ -1805,7 +1812,8 @@ int GameInfo::Unserialize(LArchive &a)
   for (i = 0; i < n; i++)
     {
       MapInfo *m = new MapInfo;
-      m->Unserialize(a);
+      if (m->Unserialize(a))
+	return -3;
       mapinfo[m->mapnumber] = m;
     }
 
@@ -1816,7 +1824,8 @@ int GameInfo::Unserialize(LArchive &a)
   for (i = 0; i < n; i++)
     {
       MapCluster *c = new MapCluster;
-      c->Unserialize(a);
+      if (c->Unserialize(a))
+	return -4;
       clustermap[c->number] = c;
     }
 

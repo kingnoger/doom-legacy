@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2003/12/09 01:02:01  smite-meister
+// Hexen mapchange works, keycodes fixed
+//
 // Revision 1.14  2003/11/23 19:07:41  smite-meister
 // New startup order
 //
@@ -151,6 +154,63 @@ int fgbuffer = FG;
 #define ST_RAMPAGEDELAY         (2*TICRATE)
 
 #define ST_MUCHPAIN             20
+
+
+//=========================================
+// HUD widget control variables
+
+// palette flashes
+static int  st_berzerk;
+static bool st_radiation;
+
+// inside the HUD class:
+// statusbaron, mainbaron, invopen
+
+static const bool st_true = true;
+
+static bool st_notdeathmatch;
+static bool st_armson; // !deathmatch && st_statusbaron
+static bool st_fragson;  // deathmatch && st_statusbaron
+static bool st_godmode;
+
+static int  st_pawncolor;
+static int  st_health;
+static int  st_maxhealth;
+static int  st_oldhealth; // to get appopriately pained face
+
+static int  st_armor;
+static int  st_readywp;
+static int  st_atype;
+static int  st_readywp_ammo;
+
+static int st_ammo[NUMAMMO];
+static int st_maxammo[NUMAMMO];
+
+static int  st_faceindex = 0; // current marine face
+
+// holds key-type for each key box on bar
+static int  st_keyboxes[6];
+
+// number of frags so far in deathmatch
+static int  st_fragscount;
+
+// Heretic spinning icons
+static int  st_flight = -1;
+static int  st_book = -1;
+static int  st_speed = -1;
+static int  st_defense = -1;
+static int  st_minotaur = -1;
+
+static inventory_t st_invslots[7+1]; // visible inventory slots (+ one hack slot)
+int st_curpos = 0; // active inv. slot (0-6)
+
+// used for evil grin
+static bool st_oldweaponsowned[NUMWEAPONS];
+
+static bool st_mana1icon, st_mana2icon;
+static int st_mana1, st_mana2;
+
+#define BLINKTHRESHOLD  (4*32)
 
 
 
@@ -721,10 +781,10 @@ void HUD::ST_RefreshBackground()
       V_DrawScaledPatch(st_x, st_y, flags, PatchSTATBAR);
 
       // draw the faceback for the statusbarplayer
-      if (sbpawn->color==0)
+      if (st_pawncolor == 0)
 	colormap = colormaps;
       else
-	colormap = translationtables - 256 + (sbpawn->color<<8);
+	colormap = translationtables - 256 + (st_pawncolor << 8);
 
       V_DrawMappedPatch(st_x+143, st_y, flags, PatchFaceBack, colormap);
     }
@@ -733,59 +793,6 @@ void HUD::ST_RefreshBackground()
   if (rendermode == render_soft)
     V_CopyRect(0, vid.height-stbarheight, BG, vid.width, stbarheight, 0, vid.height-stbarheight, FG);
 }
-
-
-//=========================================
-// HUD widget control variables
-
-// inside the HUD class:
-// statusbaron, mainbaron, invopen
-
-static const bool st_true = true;
-
-static bool st_notdeathmatch;
-static bool st_armson; // !deathmatch && st_statusbaron
-static bool st_fragson;  // deathmatch && st_statusbaron
-
-static bool st_godmode;
-
-static int  st_health;
-static int  st_maxhealth;
-static int  st_oldhealth; // to get appopriately pained face
-
-static int  st_armor;
-static int  st_readywp;
-static int  st_atype;
-static int  st_readywp_ammo;
-
-static int st_ammo[NUMAMMO];
-static int st_maxammo[NUMAMMO];
-
-static int  st_faceindex = 0; // current marine face
-
-// holds key-type for each key box on bar
-static int  st_keyboxes[6];
-
-// number of frags so far in deathmatch
-static int  st_fragscount;
-
-// Heretic spinning icons
-static int  st_flight = -1;
-static int  st_book = -1;
-static int  st_speed = -1;
-static int  st_defense = -1;
-static int  st_minotaur = -1;
-
-static inventory_t st_invslots[7+1]; // visible inventory slots (+ one hack slot)
-int st_curpos = 0; // active inv. slot (0-6)
-
-// used for evil grin
-static bool st_oldweaponsowned[NUMWEAPONS];
-
-static bool st_mana1icon, st_mana2icon;
-static int st_mana1, st_mana2;
-
-#define BLINKTHRESHOLD  (4*32)
 
 
 static int ST_calcPainOffset()
@@ -983,16 +990,27 @@ void HUD::ST_updateFaceWidget()
 }
 
 
-// was ST_updateWidgets
 void HUD::UpdateWidgets()
 {
   // sbpawn should basically only be used in this function and in functions that are
-  // only called from this function. However...
-  // also using sbpawn: ST_RefreshBackground, PaletteFlash
+  // only called from this function.
 
   // if sbpawn == NULL, don't update. ST_Stop sets it to NULL.
   if (!st_active || sbpawn == NULL)
     return;
+
+  if (sbpawn->eflags & MFE_REMOVE) // TEST
+    {
+      sbpawn = NULL; // it will be deleted soon
+      return;
+    }
+
+  if (sbpawn->powers[pw_strength])
+    st_berzerk = 12 - (sbpawn->powers[pw_strength]>>6);  // slowly fade the berzerk out??? FIXME it's on/off!
+  else
+    st_berzerk = 0;
+
+  st_radiation = (sbpawn->powers[pw_ironfeet] > BLINKTHRESHOLD || sbpawn->powers[pw_ironfeet] & 8);
 
   const int largeammo = 1994; // means "n/a"
   int i;
@@ -1012,6 +1030,7 @@ void HUD::UpdateWidgets()
 
   st_godmode = (sbpawn->cheats & CF_GODMODE);
 
+  st_pawncolor = sbpawn->color;
   st_health = sbpawn->health;
 
   if (game.mode == gm_heretic || game.mode == gm_hexen)
@@ -1112,7 +1131,6 @@ void HUD::UpdateWidgets()
     st_keyboxes[i] = (sbpawn->keycards & (1 << (i + 11))) ? i : -1;
 }
 
-// was ST_doPaletteStuff
 // sets the new palette based upon current values of damagecount
 // and bonuscount
 void HUD::PaletteFlash()
@@ -1120,15 +1138,8 @@ void HUD::PaletteFlash()
   int palette;
   int dcount = damagecount;
 
-  // not relevant in heretic
-  if (sbpawn->powers[pw_strength])
-    {
-      // slowly fade the berzerk out
-      int bzc = 12 - (sbpawn->powers[pw_strength]>>6);
-
-      if (bzc > dcount)
-	dcount = bzc;
-    }
+  if (st_berzerk > dcount)
+    dcount = st_berzerk;
 
   if (poisoncount)
     {
@@ -1156,7 +1167,7 @@ void HUD::PaletteFlash()
 
       palette += STARTBONUSPALS;
     }
-  else if (sbpawn->powers[pw_ironfeet] > 4*32 || sbpawn->powers[pw_ironfeet] & 8)
+  else if (st_radiation)
     palette = RADIATIONPAL; // not relevant in heretic
   /*
   else if (sbpawn->flags2 & MF2_ICEDAMAGE)
@@ -1479,8 +1490,6 @@ void HUD::ST_Drawer(bool refresh)
 {
   if (!st_active)
     return;
-
-  // now we must have a valid sbpawn!
 
   // Do red-/gold-shifts from damage/items
   PaletteFlash(); //FIXME! why not in hardware?

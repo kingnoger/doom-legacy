@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2003/12/09 01:02:00  smite-meister
+// Hexen mapchange works, keycodes fixed
+//
 // Revision 1.16  2003/12/06 23:57:47  smite-meister
 // save-related bugfixes
 //
@@ -657,7 +660,7 @@ void GameInfo::Drawer()
 {
   // draw the view directly
   //CONS_Printf("GI::Draw: %p, %p\n", displayplayer,displayplayer2);
-  if (displayplayer && displayplayer->pawn)
+  if (displayplayer && displayplayer->pawn && displayplayer->pawn->mp)
     {
       R.SetMap(displayplayer->pawn->mp);
 #ifdef HWRENDER 
@@ -669,7 +672,7 @@ void GameInfo::Drawer()
     }
 
   // added 16-6-98: render the second screen
-  if (displayplayer2 && displayplayer2->pawn)
+  if (displayplayer2 && displayplayer2->pawn && displayplayer2->pawn->mp)
     {
       R.SetMap(displayplayer2->pawn->mp);
 #ifdef HWRENDER 

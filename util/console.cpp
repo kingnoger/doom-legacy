@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/12/09 01:02:02  smite-meister
+// Hexen mapchange works, keycodes fixed
+//
 // Revision 1.7  2003/05/05 00:24:50  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -39,78 +42,6 @@
 // Revision 1.1.1.1  2002/11/16 14:18:37  hurdler
 // Initial C++ version of Doom Legacy
 //
-// Revision 1.9  2002/09/25 15:17:43  vberghol
-// Intermission fixed?
-//
-// Revision 1.6  2002/09/06 17:18:36  vberghol
-// added most of the changes up to RC2
-//
-// Revision 1.5  2002/08/21 16:58:38  vberghol
-// Version 1.41 Experimental compiles and links!
-//
-// Revision 1.4  2002/07/15 20:52:42  vberghol
-// w_wad.cpp (FileCache class) finally fixed
-//
-// Revision 1.3  2002/07/01 21:01:07  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:36  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.18  2001/12/26 17:24:46  hurdler
-// Update Linux version
-//
-// Revision 1.17  2001/08/20 20:40:39  metzgermeister
-// *** empty log message ***
-//
-// Revision 1.16  2001/05/16 21:21:14  bpereira
-// no message
-//
-// Revision 1.15  2001/03/03 19:41:22  ydario
-// I_OutputMsg not implemented in OS/2
-//
-// Revision 1.14  2001/03/03 06:17:33  bpereira
-// no message
-//
-// Revision 1.13  2001/02/24 13:35:19  bpereira
-// no message
-//
-// Revision 1.12  2001/01/25 22:15:41  bpereira
-// added heretic support
-//
-// Revision 1.11  2000/11/12 09:48:15  bpereira
-// no message
-//
-// Revision 1.10  2000/11/02 17:50:06  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.9  2000/09/28 20:57:14  bpereira
-// no message
-//
-// Revision 1.8  2000/08/31 14:30:55  bpereira
-// no message
-//
-// Revision 1.7  2000/08/10 15:01:06  ydario
-// OS/2 port
-//
-// Revision 1.6  2000/08/03 17:57:41  bpereira
-// no message
-//
-// Revision 1.5  2000/04/24 15:10:56  hurdler
-// Support colormap for text
-//
-// Revision 1.4  2000/04/16 18:38:06  bpereira
-// no message
-//
-// Revision 1.3  2000/04/07 23:09:12  metzgermeister
-// fixed array boundary error
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:33  hurdler
-// Initial import into CVS (v1.29 pr3)
-//
 //
 // DESCRIPTION:
 //      console for Doom LEGACY
@@ -120,6 +51,7 @@
 
 #include "doomdef.h"
 #include "d_debug.h" // DEBFILE
+#include "command.h"
 #include "console.h"
 #include "g_game.h"
 #include "g_input.h"

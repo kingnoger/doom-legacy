@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/12/09 01:02:02  smite-meister
+// Hexen mapchange works, keycodes fixed
+//
 // Revision 1.3  2003/04/04 00:01:58  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -40,17 +43,16 @@
 #include <fcntl.h>
 
 #include "doomdef.h"
-#include "g_game.h"
 #include "m_misc.h"
-#include "hu_stuff.h"
-#include "screen.h"
-#include "z_zone.h"
-#include "g_input.h"
-#include "i_video.h"
-#include "d_main.h"
 #include "m_argv.h"
+#include "command.h"
+
+#include "g_input.h"
+#include "screen.h"
+#include "i_video.h"
 
 #include "w_wad.h"
+#include "z_zone.h"
 
 #ifdef HWRENDER
 # include "hardware/hw_main.h"
@@ -64,9 +66,6 @@
 //
 // FIL_WriteFile
 //
-//#ifndef O_BINARY
-//#define O_BINARY 0
-//#endif
 
 bool FIL_WriteFile(const char *name, void *source, int length)
 {
@@ -465,39 +464,37 @@ void M_ScreenShot()
 
 //  Temporary varargs CONS_Printf
 //
-char*   va(char *format, ...)
+char *va(char *format, ...)
 {
-    va_list      argptr;
-    static char  string[1024];
+  va_list      argptr;
+  static char  string[1024];
 
-    va_start (argptr, format);
-    vsprintf (string, format,argptr);
-    va_end (argptr);
+  va_start (argptr, format);
+  vsprintf (string, format,argptr);
+  va_end (argptr);
 
-    return string;
+  return string;
 }
 
 
 // creates a copy of a string, null-terminated
 // returns ptr to the new duplicate string
 //
-char *Z_StrDup (const char *in)
+char *Z_StrDup(const char *in)
 {
-    char    *out;
-
-    out = (char *)ZZ_Alloc (strlen(in)+1);
-    strcpy (out, in);
-    return out;
+  char *out = (char *)ZZ_Alloc(strlen(in)+1);
+  strcpy (out, in);
+  return out;
 }
 
 
 // s1=s2+s3+s1
 void strcatbf(char *s1,char *s2,char *s3)
 {
-    char tmp[1024];
+  char tmp[1024];
 
-    strcpy(tmp,s1);
-    strcpy(s1,s2);
-    strcat(s1,s3);
-    strcat(s1,tmp);
+  strcpy(tmp,s1);
+  strcpy(s1,s2);
+  strcat(s1,s3);
+  strcat(s1,tmp);
 }

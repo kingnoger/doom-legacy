@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.3  2003/12/09 01:02:02  smite-meister
+// Hexen mapchange works, keycodes fixed
+//
 // Revision 1.2  2003/12/06 23:57:47  smite-meister
 // save-related bugfixes
 //
@@ -79,7 +82,7 @@ LArchive::LArchive()
 LArchive::~LArchive()
 {
   if (m_buf)
-    Z_Free(m_buf);
+    Z_Free(m_buf); // only necessary if the archive is retrieving
 }
 
 
@@ -153,11 +156,13 @@ bool LArchive::Open(byte *buffer, size_t length)
 	case Z_BUF_ERROR:
 	  CONS_Printf("Out of memory while uncompressing savegame\n");
 	  Z_Free(m_buf);
+	  m_buf = NULL;
 	  return false;
 
 	case Z_DATA_ERROR:
 	  CONS_Printf("Savegame archive is corrupted\n");
 	  Z_Free(m_buf);
+	  m_buf = NULL;
 	  return false;
 
 	default:
@@ -180,15 +185,16 @@ int LArchive::Compress(byte **result, int method)
     I_Error("Tried to compress a read-only archive!\n");
 
   header.num_objects = LONG(pointermap.size());
-  // TODO if you only could get the vector data out as a char array...
   unsigned size = m_sbuf.size();
   header.uncompressed_size = LONG(size);
-  m_buf = m_pos = (byte *)Z_Malloc(size, PU_STATIC, NULL);
 
+  // TODO if you only could get the vector data out as a char array...
+  byte *uncomp, *comp, *p;
+  uncomp = p = (byte *)Z_Malloc(size, PU_STATIC, NULL);
   // translate the data
   vector<byte>::iterator i;
-  for (i = m_sbuf.begin(); i != m_sbuf.end(); i++, m_pos++)
-    *m_pos = *i;
+  for (i = m_sbuf.begin(); i != m_sbuf.end(); i++, p++)
+    *p = *i;
 
   unsigned long comp_size;
 
@@ -197,37 +203,38 @@ int LArchive::Compress(byte **result, int method)
       // no compression
       header.compression_method = 0;
       comp_size = size;
+      comp = uncomp;
     }
   else
     {
       header.compression_method = LONG(1);
       comp_size = unsigned(size * 1.01) + 1 + 12; // maximum possible compressed size
-      byte *comp = (byte *)Z_Malloc(comp_size, PU_STATIC, NULL);
+      comp = (byte *)Z_Malloc(comp_size, PU_STATIC, NULL);
 
-      switch (compress(comp, &comp_size, m_buf, size))
+      switch (compress(comp, &comp_size, uncomp, size))
 	{
 	case Z_MEM_ERROR:
 	case Z_BUF_ERROR:
 	  CONS_Printf("Out of memory while compressing savegame\n");
-	  Z_Free(m_buf);
+	  Z_Free(uncomp);
+	  Z_Free(comp);
 	  return -1;
 
 	default:
 	  CONS_Printf("Savegame compressed okay!\n");
 	}
 
-      Z_Free(m_buf); // free the uncompressed data
+      Z_Free(uncomp); // free the uncompressed data
       // (it still stays in the vector until this object is deleted)
-      m_buf = comp; // and replace it with the compressed data
     }
 
   // Now comp_size contains the actual size of the compressed data,
   // we should add in the header and "realloc" the comp buffer to this (smaller) size:
   *result = (byte *)Z_Malloc(sizeof(savegame_header_t) + comp_size, PU_STATIC, NULL);
   memcpy(*result, &header, sizeof(savegame_header_t));
-  memcpy(*result + sizeof(savegame_header_t), m_buf, comp_size);
+  memcpy(*result + sizeof(savegame_header_t), comp, comp_size);
 
-  Z_Free(m_buf); // free the temporary compressed buffer
+  Z_Free(comp); // free the temporary compressed buffer
 
   return (comp_size + sizeof(savegame_header_t));
 }

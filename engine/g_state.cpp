@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2003/12/09 01:02:00  smite-meister
+// Hexen mapchange works, keycodes fixed
+//
 // Revision 1.22  2003/12/06 23:57:47  smite-meister
 // save-related bugfixes
 //
@@ -593,7 +596,6 @@ void GameInfo::Ticker()
   switch (state)
     {
     case GS_LEVEL:
-
       if (!paused)
 	currentcluster->Ticker();
       hud.Ticker();
