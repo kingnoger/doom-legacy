@@ -269,7 +269,7 @@ all	: $(exename)
 .PHONY	: clean depend engine util audio video net sdl r_opengl tools
 
 clean	:
-	$(RM) $(objects)
+	$(RM) $(objects) $(objdir)/r_opengl.o
 
 depend:
 	touch engine/engine.dep
