@@ -7,13 +7,12 @@
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
 <meta name="description" content="New, even better Doom Legacy" />
 <meta name="keywords" lang="en" content="doom, legacy, fps, heretic, hexen" />
-<link rel="stylesheet" href="http://www.w3.org/StyleSheets/Core/Midnight" type="text/css" />
+<link rel="stylesheet" href="legacy.css" type="text/css" />
 <title>Doom Legacy features</title>
 </head>
 
-<body text="#70f070" bgcolor="#000000" link="#f0f070" vlink="#f04040" alink="#7070f0">
-
-$Id$
+<!-- $Id$ -->
+<body>
 
 <h1>Doom Legacy features</h1>
 
@@ -70,26 +69,8 @@ required, it can be enhanced with the following features:
 
 <h2>Editing</h2>
 
-<p />
-The Doom map format is bad. It is hard to expand and relies in many
-cases on properties hard-coded in the original Doom executable.
-Things were improved a bit by Hexen, which extended the Doom map
-format and added the MAPINFO lump, which can be used to create a
-custom map ordering within the WAD.
-
-<p />
-Legacy improved the map format further by introducing the
-<a href="#MapInfo">MapInfo</a> (or LevelInfo) lumps. They are stored
-in the map separator (mapname) lump, which is normally empty. Each map
-can have its own MapInfo.
-
-<p />
-The WAD datafile format itself is somewhat constricting, mainly due to
-the 8 character lumpnames and lack of internal directory structure.
-This has been remedied in the WAD2/WAD3, PAK and PK3 datafile formats.
-
 <ul>
- <li>MapInfo lumps
+ <li>LevelInfo lumps
  <li>Hexen/ZDoom-style MAPINFO support, with extensions
  <li>SNDINFO and SNDSEQ support, with extensions
  <li>ANIMDEFS support
@@ -115,26 +96,6 @@ This has been remedied in the WAD2/WAD3, PAK and PK3 datafile formats.
 </ul>
 
 
-<hr />
-
-<a name="MapInfo"><h1>MapInfo lump structure</h1></a>
-
-The MapInfo lump is plain ASCII text and consists of
-<i>blocks</i>. Each block begins with
-<pre>
-[this is a blockname]&lt;\n&gt;
-</pre>
-and ends when the next block begins, or when the lump ends.
-
-<p />
-The recognized blocknames are
-[map info] / [level info]
-
-[scripts]
-
-[intertext]
-
-<!-- [mapformat] -->
 
 </body>
 </html>

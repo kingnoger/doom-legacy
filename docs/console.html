@@ -23,29 +23,31 @@ in a hurry!
 
 <h2>Contents</h2>
 
-<ul>
-<li><a href="#1">[1] Console basics</a></li>
-<ul>
-<li><a href="#1-1">[1-1] Console usage</a></li>
-<li><a href="#1-2">[1-2] Console input</a></li>
-<li><a href="#1-3">[1-3] Commands and variables</a></li>
-<li><a href="#1-4">[1-4] Configuration files</a></li>
-<li><a href="#1-5">[1-5] Autoexec.cfg</a></li>
-<li><a href="#1-6">[1-6] Script files</a></li>
-</ul>
-<li><a href="#2">[2]Console commands and variables</a></li>
-<ul>
-<li><a href="#2-1">[2-1] Basic commands</a></li>
-<li><a href="#2-2">[2-2] Console setup</a></li>
-<li><a href="#2-3">[2-3] Player setup</a></li>
-<li><a href="#2-4">[2-4] Player controls</a></li>
-<li><a href="#2-5">[2-5] Game options</a></li>
-<li><a href="#2-6">[2-6] Game commands</a></li>
-<li><a href="#2-7">[2-7] Net options</a></li>
-<li><a href="#2-8">[2-8] Video options</a></li>
-<li><a href="#2-9">[2-9] Sound options</a></li>
-</ul>
-</ul>
+<ol>
+<li><a href="#1">Console basics</a>
+<ol>
+<li><a href="#1-1">Console usage</a></li>
+<li><a href="#1-2">Console input</a></li>
+<li><a href="#1-3">Commands and variables</a></li>
+<li><a href="#1-4">Configuration files</a></li>
+<li><a href="#1-5">Autoexec.cfg</a></li>
+<li><a href="#1-6">Script files</a></li>
+</ol>
+</li>
+<li><a href="#2">Console commands and variables</a>
+<ol>
+<li><a href="#2-1">Basic commands</a></li>
+<li><a href="#2-2">Console setup</a></li>
+<li><a href="#2-3">Player setup</a></li>
+<li><a href="#2-4">Player controls</a></li>
+<li><a href="#2-5">Game options</a></li>
+<li><a href="#2-6">Game commands</a></li>
+<li><a href="#2-7">Net options</a></li>
+<li><a href="#2-8">Video options</a></li>
+<li><a href="#2-9">Sound options</a></li>
+</ol>
+</li>
+</ol>
 
 <hr/>
 
@@ -60,12 +62,14 @@ and change the values of game variables.
 Since the first game console we know of was from Id Software's game Quake,
 we have been inspired by this console, and have tried to use the same
 functionality for the Quake-Doom fans.
+</p>
 
 <p>To open the console, press the <b>console key</b>. It is located just
 below ESC. You can set the console key at the Setup Controls
 menu.
 To exit the console, either press again the console key, or press
 <b>ESC</b>, which will bring up the menu, and shut the console.
+</p>
 
 <p>The console displays all messages from the game. You can go back in
 the messages with key <b>PAGE UP</b>, and go down with the key <b>PAGE
@@ -73,12 +77,14 @@ DOWN</b>. Press the key <b>HOME</b> to jump to the oldest message in the
 console text
 buffer, and key <b>END</b> to jump to the last output message (the most
 recent).
+</p>
 
 <p>The last lines of the console text buffer are displayed at the top
 of the screen, when the console is off. That is, you can see 5 lines
 of messages instead of only 1 in the original Doom. You can change
 the duration of display of the messages with the console variable
 <a href="#con_hudtime">con_hudtime</a>, see the commands section for more.
+</p>
 
 
 <h3><a name="1-2">Console input</a></h3>
@@ -88,12 +94,14 @@ Press <b>ENTER</b> to execute the command.
 For convenience, you have a history of the last 32 commands entered.
 Press <b>UP ARROW</b> to go back in the commands history, <b>DOWN ARROW</b> to
 go forward.
+</p>
 
 <p>Another very useful key is the <b>TAB</b> key: it completes a command
 or variable name that has not been fully entered.
 This is a very good way to see the existing commands: just
 enter any letter, then press <b>TAB</b> several times to see what commands
 are available.
+</p>
 
 <div class="example">
 The variables to customize the console itself usually start
@@ -104,6 +112,7 @@ will display the following console variables : 'con_height', 'con_speed',
 
 <p>You can also press <b>SHIFT-TAB</b>, which will complete the command line,
 but in reverse order.
+</p>
 
 
 <h3><a name="1-3">Commands and variables</a></h3>
@@ -111,9 +120,11 @@ but in reverse order.
 <p>Basically, a <b>command</b> does not have a value, and is not saved to the
 configuration file. A <b>variable</b> always has an associated value, for
 example the variable 'name' holds your name as a player.
+</p>
 
 <p>Entering a command without any parameters will usually tell you
 the command syntax.
+</p>
 
 <div class="example">
 map<br/>
@@ -122,6 +133,7 @@ Usage: map &lt;number|name&gt; [&lt;entrypoint&gt;]: warp players to a map.
 
 <p>Entering a variable name alone will tell you the current
 value of the variable.
+</p>
 
 <div class="example">
 name<br/>
@@ -132,6 +144,7 @@ name<br/>
 parameter. When the value has blanks in it, use double quotes
 around it.
 For example, to change your name to 'dj fab', type
+</p>
 
 <div class="example">
 name "dj fab"
@@ -139,6 +152,7 @@ name "dj fab"
 
 <p>Boolean variables (true/false, yes/no) use '0' to denote false.
 Any nonzero value means true.
+</p>
 
 
 <h3><a name="1-4">Configuration files</a></h3>
@@ -151,6 +165,7 @@ different configuration files.
 While the configuration files support any commands, and are executed
 like a script, you should not edit them, because they are always overwritten
 when the game exits.
+</p>
 
 
 <h3><a name="1-5">Autoexec.cfg</a></h3>
@@ -160,13 +175,16 @@ executed at the game startup, if it is found.
 You can edit autoexec.cfg to set the values of those variables
 that are not automatically saved to 'config.cfg'. You can also add
 commands that will be executed one after another, just like a script.
+</p>
 
 <p>Comments start with <b>//</b>.
 Each line of the autoexec.cfg file is like a line that you would have
 typed at the console. Here are some examples:
+</p>
 
 <p>This sample 'autoexec.cfg' will warp you to map 01 as soon as the
 game is loaded:
+</p>
 
 <div class="example"><pre>
 // start always with map1, without waiting at the menu
@@ -176,6 +194,7 @@ echo "welcome to map 01"   //useless comment
 
 <p>Another example, here we set the variables that are not saved to the
 config.cfg, because they are not considered 'standard' parameters:
+</p>
 
 <div class="example"><pre>
 // set my preferred weird game mode
@@ -190,6 +209,7 @@ echo "bigjim's weird mode active"
 variables like <a href="#bloodtime">bloodtime</a> that are not
 normally saved to config.cfg.
 Just look at config.cfg to know which variables are saved.
+</p>
 
 
 <h3><a name="1-6">Script files</a></h3>
@@ -198,17 +218,17 @@ Just look at config.cfg to know which variables are saved.
 contain commands and variables that are executed in sequence.
 You can create any number of script files, and execute them from the console
 using the <a href="#exec">exec</a> command.
+</p>
 
-<p>For example, to start a script named 'blood.cfg' just enter
+<p>For example, to start a script named 'blood.cfg' just enter</p>
+
 <div class="example">
 exec blood.cfg
 </div>
 
 
 
-
 <hr/>
-
 <h2><a name="2">Console commands and variables</a></h2>
 
 <p>This chapter describes all console commands and variables in Doom
@@ -216,6 +236,7 @@ Legacy.
 Many console variables are also available through the menu.
 You will need to use the console only if you want to customise the
 game more to your needs.
+</p>
 
 
 <h3><a name="2-1">Basic commands</a></h3>
@@ -223,6 +244,7 @@ game more to your needs.
 <p>Here are the basic commands for script execution. They have the same
 usage and functionality as in the game Quake.
 You can use a <b>semicolon</b> to separate several commands in the same line.
+</p>
 
 <table class="def">
 <tr><th>command</th><th>definition</th></tr>
@@ -264,7 +286,9 @@ If given a variable name, shows detailed info on that variable.
 <td>Without the 'value' parameter this toggles a variable, i.e. changes
 it to the next possible value.<br/>
 With the 'value' parameter it adds 'value' to the variable.
-<p>This command is very useful for use with <a href="#bind">bind</a>. Example:
+<p>This command is very useful for use with <a
+href="#bind">bind</a>. Example:
+</p>
 <div class="example">
 bind "&gt;" "toggle gr_fogdensity"<br/>
 bind "&lt;" "toggle gr_fogdensity -1"
@@ -307,6 +331,7 @@ default to qwerty.
 <h3><a name="2-2">Console setup</a></h3>
 
 <p>These variables control the look and feel of the console.
+</p>
 
 <table class="def">
 <tr><th>variable</th><th>type</th><th>definition</th></tr>
@@ -352,6 +377,7 @@ messages out of the console (HUD means heads-up display).
 preferences. The splitscreenplayer has similar variables, but with the
 number 2 appended to the variable name, e.g. 'color2 red' turns the
 splitscreenplayer's avatar red.
+</p>
 
 <table class="def">
 <tr><th>variable</th><th>type</th><th>definition</th></tr>
@@ -423,21 +449,26 @@ weapon, you will pickup the ammo as usual, without changing
 weapon.
 The numbers are priority values, for each of the weapons, in
 the following order:
+</p>
 
 <p>Fist, Chainsaw, Gun, Shotgun, Super Shotgun, Chaingun, Rocket launcher, Plasma, BFG.
+</p>
 
 <p>Thus 'weaponpref "021485763"' means that the super shotgun has
 the highest priority (8), while the fist is lowest priority (0).
 After the double shotgun, in decreasing priority you have the
 rocket launcher (7), plasma gun (6), chaingun (5), shotgun (4),
 BFG (3), chainsaw (2), gun  (1).
+</p>
 
 <p>Let's have another interesting example: 'weaponpref "333333333"'
+</p>
 
 <p>Since all weapons have the same priority in this last example,
 you will in fact NEVER change weapon automatically, because
 no weapon has a priority higher than any other one. You might
 consider this as the 'manual' weapon change.
+</p>
 </td></tr>
 
 <tr><td>crosshair &lt;0-3&gt;</td><td>int</td>
@@ -466,6 +497,7 @@ the 'picked up ammo', 'picked up health bonus', etc. messages.
 <p>These variables control the way the game handles the players' input.
 The splitscreenplayer has similar variables, but with the
 number 2 appended to the variable name.
+</p>
 
 <table class="def">
 <tr><th>variable</th><th>type</th><th>definition</th></tr>
@@ -480,13 +512,16 @@ EXCEPT when you push the 'run' key.
 <td>
 <p>You can use the 'freelook' (ability to look up and down) in two
 modes: permanent or temporary.
+</p>
 
 <p>Setting this variable to '1' will set the freelook permanent.
+</p>
 
 <p>When 'automlook' is '0', you will need to hold the 'freelook'
 key down while moving the mouse up and down. When releasing the key,
 the view will always re-center. This is useful if you keep
 firing rockets at your feet.
+</p>
 </td></tr>
 
 
@@ -525,7 +560,7 @@ Sets the mouse sensitivity in the Y direction.
 
 
 <p>These input variables are common to both local players.
-
+</p>
 
 <table class="def">
 <tr><th>variable</th><th>type</th><th>definition</th></tr>
@@ -571,16 +606,19 @@ game control (forward, fire, use etc.).
 The second keyname is optional. You can set it, and have
 two keys attached to one game control. eg: have 'ARROW UP'
 and 'MOUSE2' for 'forward'.
+</p>
 
 <p>When a key does not have a name, it uses a name of the
 form 'KEYxxx' where xxx is the key code.
 To learn the names of the keys, look for them at the Setup Controls menu.
+</p>
 
 <p>The control names are "forward","backward","strafe",
 "straferight","strafeleft","speed","turnleft","turnright",
 "fire","use","lookup","lookdown","centerview","mouseaiming",
 "weapon1","weapon2", ... "weapon8","talkkey","scores",
 "jump","console".
+</p>
 
 Example:
 <div class="example">
@@ -600,6 +638,7 @@ setcontrol forward "keypad 8" "up arrow"
 
 <p>Using these variables you can change may aspects of the game
 itself. For obvious reasons, in a netgame only the server can change them.
+</p>
 
 <table class="def">
 <tr><th>variable</th><th>type</th><th>definition</th></tr>
@@ -732,6 +771,7 @@ automatically when in Deathmatch 2
 
 <p>NOTE: it is considered cheating to allow respawning of items
  when in single player mode ! :)
+</p>
 </td></tr>
 
 
@@ -741,6 +781,7 @@ Set the respawn item time in seconds. The time between the moment
 you pick up the item, and the moment it reappears.
 
 <p>The default is 30 seconds, from the original Doom.
+</p>
 </td></tr>
 
 
@@ -756,6 +797,7 @@ the original Doom.
 Choose the time of respawn for the monsters, in seconds.
 
 <p>The default is 12, from the original Doom.
+</p>
 </td></tr>
 
 </table>

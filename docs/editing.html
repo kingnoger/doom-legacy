@@ -1,0 +1,961 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<meta name="description" content="New, even better Doom Legacy" />
+<meta name="keywords" lang="en" content="doom, legacy, fps, heretic, hexen" />
+<link rel="stylesheet" href="legacy.css" type="text/css" />
+<title>Doom Legacy Map Author's Reference</title>
+</head>
+
+<!-- $Id$ -->
+<body>
+
+<h1>Doom Legacy Map Author's Reference</h1>
+
+<h2>Contents</h2>
+
+<ol>
+<li><a href="#datafiles">Data file formats</a></li>
+<li><a href="#mapformats">Map formats</a></li>
+<li><a href="#MAPINFO">The MAPINFO lump</a></li>
+<li><a href="#levelinfo">LevelInfo lumps</a></li>
+<li><a href="#scripting">Scripting</a></li>
+<li><a href="#linedef">New linedef types</a></li>
+<li><a href="#3dfloors">3D floors and water</a></li>
+<li><a href="#graphics">Graphics</a></li>
+<li><a href="#sound">Sound</a></li>
+<li><a href="#music">Music</a></li>
+<li><a href="#dehacked">DeHackEd support</a></li>
+<li><a href="#legacy.wad">Legacy.wad contents</a></li>
+</ol>
+
+
+<hr />
+<h2><a name="datafiles">Data file formats</a></h2>
+
+<p>
+The WAD datafile format is somewhat constricting, mainly due to
+the 8 character lumpnames and the lack of internal directory structure
+or compression.
+These shortcomings have been remedied in the WAD2/WAD3 and PAK file formats.
+In Legacy, you can use any of these formats to hold your data.
+However, because the resource names in the Doom/Hexen map format are
+limited to 8 characters, this feature is only of limited use.
+</p>
+
+<p>
+You can also use normal directories to emulate data files.
+In this case, each file within the directory emulates a lump. This
+can be very useful while testing new textures, sounds etc.
+Since there is no universally defined ordering
+among the files in a directory, you cannot load maps (which consist of
+several lumps in a very specific order) from them.
+</p>
+
+
+<hr />
+<h2><a name="mapformats">Map formats</a></h2>
+
+<p>
+Legacy understands both Doom and Hexen map formats.
+If a map has a BEHAVIOR lump, it is assumed to be in Hexen format.
+You can freely mix the formats in a map WAD, i.e. have some of the maps
+in Doom format and others in Hexen format.
+</p>
+
+<p>
+Boom and Heretic maps basically follow the Doom map format, only some
+THING and LINEDEF numbers have new meanings. Legacy's default
+interpretation of the THING and LINEDEF numbers depends on the IWAD
+used.
+</p>
+
+<hr />
+<h2><a name="MAPINFO">The MAPINFO lump</a></h2>
+
+
+<p>
+MAPINFO is a special plaintext lump, introduced in Hexen, extended in
+ZDoom, that fixes many shortcomings of the map format and can be used
+<i>inter alia</i> to create custom map orderings within the WAD.
+MAPINFO may contain two types of entries:
+<b>map</b> and <b>cluster</b> definitions. Each of these consists of a
+number of commands, one command per line.
+The map definitions define properties of individual maps.
+The cluster definitions define properties of map clusters, which
+roughly correspond to Doom episodes or Hexen hubs.
+</p>
+
+<p>
+There is some overlap in the functionality of the MAPINFO lump and
+the <a href="#levelinfo">LevelInfo</a> lumps. We suggest that you use
+LevelInfo to handle all strictly map-dependant stuff, and MAPINFO for
+all things related to map ordering, finales and hubs.
+</p>
+
+<p>
+There should be only one MAPINFO lump per wad, containing entries for
+each map and cluster in the game.<br/>
+For examples of MAPINFO lumps, see the <b>MINFO_*</b> lumps
+in legacy.wad.
+</p>
+
+<table class="def">
+<tr><th>MAPINFO map command</th><th>effect</th></tr>
+
+<tr><td>defaultmap</td>
+<td>
+Starts the default map definition. The properties defined here are
+defaults for all maps following this definition.
+</td></tr>
+
+<tr><td>map &lt;lumpname&gt; &lt;nicename&gt;</td>
+<td>
+Starts a new map definition. Lumpname is the "separator" lump starting
+the map (MAP04, E3M1, MYOWNMAP etc.). Nicename is the full name of the map
+(e.g. "The Nuclear Plant").
+</td></tr>
+
+<tr><td>levelnum &lt;1-99&gt;</td>
+<td>
+Sets the number of the map, used among other things in the exit
+teleporters.
+</td></tr>
+
+<tr><td>cluster &lt;n&gt;</td>
+<td>
+Sets the cluster in which the map belongs.
+</td></tr>
+
+<tr><td>nextlevel &lt;n&gt;</td>
+<td>
+Sets the mapnumber where the normal Doom exits take the players from
+this map. A value of -1 means that the game ends here.
+This command is not necessary in Hexen maps, because the
+Hexen exit teleporters always carry the destination map number.
+</td></tr>
+
+<tr><td>secretlevel &lt;n&gt;</td>
+<td>
+Same as the previous one, but for Doom secret exits.
+</td></tr>
+
+<tr><td class="note" colspan="2">
+Commands below this row are <b>deprecated</b>. They are supported for
+Hexen compatibility, but should not be used in new maps.<br/>
+All their functionality is better implemented using either
+<a href="#scripting">scripting</a> or <a href="#levelinfo">LevelInfo</a> lumps.
+</td></tr>
+
+
+<tr><td>bossdeath &lt;code&gt;</td>
+<td>
+<b>Deprecated</b>. Implements the end-of-level boss death hacks of original Doom and
+Heretic. Scripting is a much better way to do this kind of stuff.
+</td></tr>
+
+<tr><td>par &lt;n&gt;</td>
+<td>
+Map partime in seconds.
+</td></tr>
+
+<tr><td>music &lt;lumpname&gt;</td>
+<td>
+Music to be played while in the map.
+</td></tr>
+
+<tr><td>sky1 &lt;texture&gt; &lt;scrollspeed&gt;</td>
+<td>
+Sets the primary sky properties in the map.
+</td></tr>
+
+<tr><td>sky2 &lt;texture&gt; &lt;scrollspeed&gt;</td>
+<td>
+Sets the secondary sky properties in the map.
+</td></tr>
+
+<tr><td>doublesky</td>
+<td>
+</td></tr>
+
+<tr><td>lightning</td>
+<td>
+</td></tr>
+
+
+
+<tr><th>MAPINFO cluster command</th><th>effect</th></tr>
+
+<tr><td>clusterdef &lt;n&gt; &lt;clustername&gt;</td>
+<td>
+Starts a new cluster definition. n is the number of the cluster and
+must be positive. clustername is the name of the hub/episode
+represented by the cluster, e.g. "Inferno".
+</td></tr>
+
+<tr><td>interpic &lt;lumpname&gt;</td>
+<td>
+Sets the intermission background picture for this cluster.
+</td></tr>
+
+<tr><td>intermusic &lt;lumpname&gt;</td>
+<td>
+Sets the intermission music for this cluster.
+</td></tr>
+
+<tr><td>finale &lt;1-3&gt;</td>
+<td>
+Which finale to show when the cluster is finished? Does not apply to
+Doom2 or Hexen.
+</td></tr>
+
+<tr><td>entertext &lt;text&gt;</td>
+<td>
+Message to be displayed when the cluster is first entered. "\n" is the
+newline character. 
+</td></tr>
+
+<tr><td>exittext &lt;text&gt;</td>
+<td>
+Message to be displayed when the cluster is exited.
+</td></tr>
+
+<tr><td>flat &lt;lumpname&gt;</td>
+<td>
+Background picture for the enter/exittext.
+</td></tr>
+
+<tr><td>music &lt;lumpname&gt;</td>
+<td>
+Music to be played during the enter/exittext.
+</td></tr>
+
+<tr><td>hub</td>
+<td>
+Makes this cluster a hub, meaning that the maps are saved when they
+are exited. If you later return to the map, you'll find it as you left
+it. Hubs cannot span several clusters, i.e., when you exit a
+cluster, all the hubsaves are deleted.
+</td></tr>
+
+
+
+</table>
+
+
+<hr />
+<h2><a name="levelinfo">LevelInfo lumps</a></h2>
+
+<p>The LevelInfo lumps are plain text files, stored
+in the map separator (mapname) lump, which is normally empty.
+Each map can have its own LevelInfo. The lump consists of
+one or more <b>blocks</b>. Each block begins with
+</p>
+<div class="example">
+[this is a blockname]&lt;\n&gt;
+</div>
+<p>
+and ends when the next block begins, or when the lump ends.
+The recognized blocknames are
+<b>[level info]</b>, <b>[scripts]</b> and <b>[intertext]</b>.
+</p>
+
+
+<h3>[level info]</h3>
+
+This block holds information concerning the entire map.
+It consists of commands, one per line. 
+
+<table class="def">
+<tr><th>[level info] command</th><th>effect</th></tr>
+
+<tr><td>name &lt;nicename&gt;</td>
+<td>
+Sets the full name of the map (e.g. "Mission Control"):
+</td></tr>
+
+<tr><td>version &lt;string&gt;</td>
+<td>
+Map version.
+</td></tr>
+
+<tr><td>author &lt;name&gt;</td>
+<td>
+Name of the map author.
+</td></tr>
+
+<tr><td>hint &lt;string&gt;</td>
+<td>
+An additional string, which can be a map description, hint,
+recommendation etc.
+</td></tr>
+
+<tr><td>partime &lt;n&gt;</td>
+<td>
+Map partime (in seconds).
+</td></tr>
+
+<tr><td>music &lt;lumpname&gt;</td>
+<td>
+Sets the music played in the map.
+</td></tr>
+
+<tr><td>gravity &lt;float&gt;</td>
+<td>
+Sets the acceleration of gravity in the map. Default is 1.0.
+</td></tr>
+
+
+<tr><td>doom_thingoffset &lt;min&gt; &lt;max&gt;</td>
+<td>
+Used to cram THINGs from different games into a single map by
+remapping the THING numbers.<br/>
+By default, THING numbers are interpreted according to the game mode,
+inferred from the IWAD.<br/>
+This command means that THING numbers between min and max should have
+min subtracted from them and then be interpreted as Doom THINGs.
+</td></tr>
+
+<tr><td>heretic_thingoffset &lt;min&gt; &lt;max&gt;</td>
+<td>
+Same as above, but for Heretic THINGs.
+</td></tr>
+
+<tr><td>hexen_thingoffset &lt;min&gt; &lt;max&gt;</td>
+<td>
+Guess...
+</td></tr>
+
+<tr><td>consolecmd &lt;expr&gt;</td>
+<td>
+<b>Deprecated</b>. Execute a <a href="console.html">console expression</a> after loading the map.
+</td></tr>
+</table>
+
+
+<h3>[scripts]</h3>
+
+This block contains the <a href="fs.html">FraggleScript</a> scripts of the map.
+
+<h3>[intertext]</h3>
+
+Contains the text to be shown after the map is exited. "\n" is the newline character.
+
+
+<hr />
+<h2><a name="scripting">Scripting</a></h2>
+
+<p>
+Legacy supports two scripting languages,
+<a href="fs.html">FraggleScript</a> and
+<a href="">ACS</a>.
+Both languages can be used in all types of maps,
+even simultaneously if needed.
+FraggleScript is stored in the <b>[scripts]</b>
+blocks of the <a name="levelinfo">LevelInfo</a> lumps, whereas ACS
+goes to the BEHAVIOR lumps. FS is an interpreted language and hence
+can be inserted into the wad as plaintext, whereas ACS must first be
+compiled into bytecode using <b>ACC</b>, the ACS compiler.
+</p>
+
+
+
+
+
+<hr />
+<h2><a name="linedef">New linedef types</a></h2>
+
+
+<h3>New linedef flags</h3>
+
+Alltrigger [0x400] (1024)<br/>
+This flag, when set, will allow all things to activate a W* line, with
+the exception of flying blood. :) This includes all generalized types
+that are W*.
+
+
+<h3>280</h3>
+
+This type works like Boom's 242 type but with major differences. 280's
+water is swimmable (using the Legacy swimming code), and it oporates
+more like water than 242 does.
+With 280, water is only shown if it is above the target sector's
+floor; otherwise, the regular floor is rendered. When water is
+rendered, the proporties for top of the water "plane" and the bottom,
+are boath taken from the controll sector's floor.
+The lightlevel of the water is controlled by the target sector's
+lightlevel unless the target sector has been also tagged to a
+"Transfer floor proporties" linedef, in which case, the water will
+have that lightlevel.
+280 also puts colormaps in the targeted sectors, based on the
+upper/lower/middle textures.
+NOTE: 280 will also create a fake ceiling if the controll ceiling is
+lower than the target ceiling (this is usually not desired).
+
+<h3>281</h3>
+This linedef puts a solid block inside all tagged sectors. The block
+will conform to the shape of the target sector(s) thus creating a 3D
+floor. The ceilingheight and ceiling texture are used for the top of
+this block, the floorheight/texture are used for the bottom, and the
+middletexture of the line is used for the texture along the sides. The
+lightlevel and colormap under the 3D floor is changed to the
+lightlevel and colormap of the control sector.
+
+<h3>282</h3>
+This type sets the colormap of all tagged sectors like described
+below, without changing the floor/ceiling or light values. This is
+nice for putting colored lighting in many different sectors of
+different floor/ceiling heights:
+
+<table>
+<tr><th>Texture</th><th>Value</th><th>Effect</th></tr>
+
+<tr><td>upper</td><td>#xxxxxxy</td>
+<td>xxxxxx = 6 hex chars giving the color value in RGB format of the colormap mask
+y = 1 alphanumeric char (a-z) denoting the amount of the colormap mask.</td></tr>
+
+<tr><td>middle</td><td>#abbcc(not yet supported in hardware mode)</td>
+<td>a = boolean value (0 or 1) denoting if this particular colormap should be treated like fog (i.e. equal application of colormap to all walls, etc.)
+bb = numerical value (0 through 32) of the colormap at which the fade begins
+cc = numerical value (1 through 33) of the colormap at which the destination color will be reached.</td></tr>
+
+<tr><td>lower</td><td>#xxxxxx(not yet supported in hardware mode)</td>
+<td>xxxxxx = 6 hex chars denoting the color the colormap will fade to.</td></tr>
+</table>
+
+
+<h3>283</h3>
+This type will render what is best discribed as a "sheet" over the linedef. This can be used to make a better fog effect by patching up the "holes" in fog sectors. Because you usually will not want this effect on boath sides of the line, this linedef will only effect sides with a middletexutre.
+
+<h3>289</h3>
+This type is just like 281 except it does not affect the light below it.
+
+
+<h3>Translucent linedefs:</h3>
+
+284 -- Brightens everything behind the line. Turns things kinda green though<br/>
+285 -- Less brightness with allot less green.<br/>
+286 -- Darkens a little with no green tint.<br/>
+287 -- Brightens but with no green tint.<br/>
+288 -- Selective translucency. Only certain colors are translucent.<br/>
+
+
+
+
+
+<hr />
+<h2><a name="3dfloors">3D floors and water</a></h2>
+
+The concept of true 3d in Doom Legacy.
+By Steven McGranahan.
+
+
+
+<h3>Chapter 1: The Beginning</h3>
+
+<p>
+Close to a year ago, the DosDoom team shocked the Doom community with an
+animated gif of a doom level with a real, true 3d bridge that the player
+could go under and over. Now, DosDoom has become EDGE and true 3D has become
+one of it's main features. The method EDGE uses for it's true 3D is a very
+simple and powerful one. It is capable of doing much more than just sector
+over sector, with EDGE's 3D, the level designer can create complex 3D structures
+and architecture.
+</p>
+<p>
+About 8 months ago, I began a series of experiments that were designed
+to simulate true 3D in my favorite Doom source port, Doom Legacy. These
+coding experiments eventually lead me to create invisible solid regions
+in a sector that objects could stand on top of and below. Then the DosDoom
+team released their source code and I downloaded it to try to copy the
+rendering code for 3D floors to complete the invisible ones I had made.
+Probably 4 attempts at this failed just miserably, and I gave up on rendering
+3D floors (I had also made several attempts to turn Legacy's translucent
+water into 3D floors, but without success).
+</p>
+<p>
+Legacy would not be able to render 3D floors until DosDoom became EDGE
+and the source was released. When the EDGE team released the code, I saw
+some of the pictures of things they had done with 3D floors and I knew
+that I had to try again. So I began to copy the code once again, and this
+time, was successful. Now, EDGE used GLBSP for rendering levels (even in
+software) which meant that the code it used to render them with the normal
+Doom BSP was outdated and very limited (only one 3D floor per sector, they
+did not effect lighting, and sprites were not sorted with 3D floors correctly)
+and thus it was up to me to bring this code up to date. This is what I
+have been doing that last 6 months.
+</p>
+<p>
+So far I have managed to increased the 3D floor plane limit and the 3D
+side limit to 20, I have made it possible for 3D floors to cast shadows
+on the surrounding walls, and floors, and I have made a much better sprite
+sorting system (although it is still flawed). In fact, about 80% of the
+3D floor code is now my code from scratch.
+</p>
+
+<h3>Chapter 2: The lowdown</h3>
+
+<p>
+So you want to know how things work, eh? Well, first I would like to state
+that 3D floors in Legacy are not perfect. They are plagued by bugs in the
+original Doom rendering system, and many visual bugs you may notice are
+not fixable unless I overhaul the rendering system (which is probably not
+going to happen). These bugs, however, are now very few and far between,
+and if you are careful, you can avoid most bugs.
+</p>
+<p>
+There are known speed issues. A 3D floor (as of 01/10/2001) will slowdown
+Legacy about as much as adding 3 sectors. That is to say, every 3D floor
+that is tagged to a sector so tagging a 3D floor to, say, 3 sectors, will
+slow down the game about as much as if you added 9 sectors to the map.
+I will explain in greater detail later on, what exactly causes the game
+slowdown and how to minimize it.
+</p>
+
+<h3>Chapter 3: Your first level with 3D floors</h3>
+
+<p>
+Ok, you want to put a 3D floor into your level? Ok. First, I want you to
+understand that I am not here to teach anyone how to use their editor of
+choice. You need to understand how to tag a line to a sector and how to
+set a linedef type.
+</p>
+<p>
+First, build a small, 5 sector level to match the image below (NOTE: These
+shots were taken using a now defunct level editor called DIE (R.I.P.) which
+is not available any more, which is ok because it never really got anywhere
+but WA is crashing for some really weird reason so I'm using DIE to take
+screen shots) heh.
+<img src="3dlvl1.png" height="301" width="329" alt="example"/>
+Note: I added the line lengths myself.
+</p>
+<p>
+Sectors A and B should have a floor height of 0, a ceiling height of 128,
+and a light level of 255. Sectors C, D, and E, should have a ceiling height
+of 128, a floor height of -64, a light level of 255 and make the floor
+texture something painful (like lava or nukage). Now, texture everything
+in and add a player to the left-hand sector and run the map. If you chose
+the same textures as me then it should look something like this:
+<img src="3dlvl2.png" height="200" width="320" alt="example"/>
+</p>
+<p>
+OK, so now we need a bridge across the lava. Now we could just raise the
+floor of sector C to accommodate our marine. However, this method of creating
+a bridge really sucks because it doesn't allow for passage UNDER the bridge,
+so we are going to create a 3D bridge to get us across.
+<img src="3dlvl3.png" height="255" width="257" alt="example"/>
+</p>
+<p>
+First, we need to make a control sector. This is a small, off map sector
+that will contain the textures and attributes we'll need to make a 3D structure.
+The size and shape of this sector does not matter. NOTE: I usually make
+my control sectors a triangle and "point" them at whatever they effect.
+It makes them easier to keep track of.
+</p>
+<p>
+Now set sector F's floor height to -8 and it's ceiling height to 0, and
+set both floor and ceiling textures to FLOOR4_8, and set F's light level
+to 176. Then, select one of the linedefs, set the line special to 281 (281
+is the linedef code for a solid, opaque, 3D floor) and tag it to sector
+C.
+</p>
+<p>
+Now sector F will be a "model" for a 3D floor in sector C. Sector F's floor
+will be the model for the "bottom" of the 3D floor, and it's height and
+texture will be used accordingly. The same applies for the ceiling of sector
+F, it's ceiling texture and height will be used. The texture for the sides
+of the 3D floor will be the middle texture of the linedef with the 281
+special, and finally, the light level of sector F will be the light of
+the shadow it casts.
+</p>
+<p>
+What's left? Nothing! Run j00r map!
+<img src="3dlvl4.png" height="200" width="320" alt="example"/>
+</p>
+
+<h3>Chapter 4: Linedef code summery</h3>
+281 - Creates a solid 3D floor in all tagged sectors.
+289 - Creates a solid 3D floor in all tagged sectors, does not cast a shadow.
+300 - Creates a solid translucent 3D floor in all tagged sectors.
+301 - Creates translucent 3D water in all tagged sectors.
+302 - Creates 3D fog (uses control sector's colormap) in all tagged sectors.
+303 - Creates a 3D light (at control sector's ceiling height) in all tagged sectors.
+304 - Creates a 3D light (same as 303 except the 3D light is reset at control sector's floor height)
+
+Expect detailed explanations of each linedef type soon...
+
+Linedefs 300 and 301 support an alpha value in hardware mode:
+uppertexture: [#000..#255] (#000 = transparent, #255 = opaque. If not defined, the default value is #127)
+
+
+<h3>Chapter 5: What causes slowdowns</h3>
+
+<p>
+Slowdowns are caused mainly by overdraw. Overdraw means that a
+pixel on the screen is drawn more than once. In the Doom renderer, overdraw 
+is avoided almost completely by using 2D clipping. However, this method would
+not be suitable for 3D floors so a new method had to be incorporated: sorting.
+</p>
+<p>
+Sorting takes all the sprites and 3D floors and arranges them so 
+that they will draw in the correct order. This method is not very time consuming
+and works well for ordering the scene. Most of the time, this method works 
+flawlessly. A few bugs remain here and there, but it's pretty solid.
+</p>
+<p>
+Slowdowns related to 3D floors is generally caused by all the extra
+scene components that Doom has to draw (i.e. 3D sides and all the extra 
+floor/ceiling planes), and because of this, slowdown is generally related 
+to two factors in your map: number of stacked 3D floors in a sector, and the number
+of subsectors in a sector.
+</p>
+<p>
+Controlling the number of subsectors a sector has is pretty much
+impossible, because different node builders will chose different partition lines
+to start building nodes with, which will lead to different subsector configurations.
+However, you can control the number of linedefs in a 3D floor. If you create
+a grate with a 3D floor, you will, in effect, create new subsectors. Keeping 3D objects
+simple will help reduce rendering times.
+</p>
+
+
+
+<hr />
+<h2><a name="graphics">Graphics</a></h2>
+
+<p>
+Any and all of the sprites, textures and flats in the IWAD can be replaced
+using PWADs. In addition to the patch and flat formats, you can also use
+the PNG and JPEG formats for the texture lumps.
+</p>
+
+<h3>Sprites</h3>
+
+<p>
+All the sprite replacement lumps should be between the S_START and
+S_END (or SS_START and SS_END) markers.
+The marker lumps are not always necessary, but will make the sprite
+loading faster.
+Even more importantly, they prevent nasty errors stemming from the
+fact that sprite lumps have a special naming convention in which the
+first four characters define the sprite.
+Without the markers, for example the PLAYPAL lump could be taken as a
+part of the PLAYxxxx sprite, which would cause some confusing error messages.
+</p>
+
+<h3>Models</h3>
+
+TODO
+
+<h3>Textures</h3>
+
+<p>
+TODO... explain scaling, hi-res textures, ANIMDEFS lump
+</p>
+
+<h3>Flats</h3>
+
+<p>
+Flats are basically single-lump textures, and this is how Legacy
+handles them. If a requested texture/flat name is not found in the TEXTUREx
+lumps, it is interpreted as a single-lump texture. There is no need to
+use the F_START and F_END markers, but you might want to use them
+nevertheless, for the benefit of other Doom source ports that still
+require them. You want your map to run on all source ports, don't you?
+Don't you? Well, you should.
+</p>
+
+
+
+
+<hr />
+<h2><a name="sound">Sound</a></h2>
+
+<h3>SNDINFO lump</h3>
+
+<p>
+SNDINFO is a plaintext lump which defines the sound effects in
+the game. Unlike normal WAD resources, SNDINFO lumps are
+handled in a cumulative, not overriding, fashion.
+The SNDINFO lump in <b>legacy.wad</b> defines the basic sound effect
+naming in Legacy. You can freely define new sound effects or change
+the existing ones by using your own SNDINFO lumps.
+</p>
+
+<p>
+Comments begin with a semicolon and end at the next newline.
+</p>
+
+<table class="def">
+<tr><th>SNDINFO command</th><th>effect</th></tr>
+
+<tr><td>&lt;sndname&gt; &lt;lumpname&gt;<br/>
+[m&lt;n&gt;] [r&lt;n&gt;] [p&lt;n&gt;]</td>
+<td>
+Assigns the sound in the lump &lt;lumpname&gt; to the logical sound
+name &lt;sndname&gt;.<br/>
+Optionally, you can also set the <b>m</b>ultiplicity,
+p<b>r</b>iority or the <b>p</b>itch of the effect.
+</td></tr>
+
+<tr><td>&lt;sndname&gt;  = &lt;alias&gt;</td>
+<td>
+Defines an alias for a logical sound name. This is mainly for
+Hexen compatibility, map authors shoud not need to use this.
+</td></tr>
+
+<tr><td>$multiplicity &lt;0-255&gt;</td>
+<td>
+Set the default multiplicity of the consequent sound effects.
+Zero means not limited.
+</td></tr>
+
+<tr><td>$priority &lt;0-255&gt;</td>
+<td>
+Set the default relative importance of the sound effects.
+</td></tr>
+
+<tr><td>$pitch &lt;-128 - +127&gt;</td>
+<td>
+Set the default pitch change for the sounds. 64 pitch units equal an octave.
+</td></tr>
+
+
+<tr><td>$ifdoom</td>
+<td>
+Starts a conditional block that is only executed when in Doom mode.
+</td></tr>
+
+
+<tr><td>$ifheretic</td>
+<td>
+Also these conditionals
+</td></tr>
+
+<tr><td>$ifhexen</td>
+<td>
+are available.
+</td></tr>
+
+<tr><td>$endif</td>
+<td>
+Ends a conditional block.
+</td></tr>
+
+</table>
+
+<h3>SNDSEQ lump</h3>
+
+<p>
+The SNDSEQ lump is used to define sequences of sound effects for
+doors, moving platforms, ambiance etc. You can think of them as very
+simple scripts. All the SNDSEQ commands refer to logical sound names,
+as defined in SNDINFO.
+Like SNDINFO, SNDSEQ lumps are read in a cumulative fashion.
+See the SNDSEQ lump in <b>legacy.wad</b> for an example.
+</p>
+
+<p>
+Again, semicolons start comments, which end at the next newline.
+</p>
+
+<table class="def">
+<tr><th>SNDSEQ command</th><th>effect</th></tr>
+
+<tr><td>:&lt;seqname&gt; &lt;number&gt;</td>
+<td>
+Starts a sound sequence definition. The beginning colon is
+essential. Each sequence must have an unique (positive) number.
+</td></tr>
+
+<tr><td>play &lt;sndname&gt;</td>
+<td>
+Starts playing the sound effect, moves immediately to the next command.
+</td></tr>
+
+<tr><td>delay &lt;ticks&gt;</td>
+<td>
+Waits a number of ticks before continuing the script.
+</td></tr>
+
+<tr><td>delayrand &lt;min&gt; &lt;max&gt;</td>
+<td>
+Waits a random number of ticks before continuing the script.
+</td></tr>
+
+<tr><td>playtime &lt;sndname&gt; &lt;ticks&gt;</td>
+<td>
+Like a play command followed by a delay command.
+</td></tr>
+
+<tr><td>playuntildone &lt;sndname&gt;</td>
+<td>
+Starts playing the sound, moves forward when it has finished.
+</td></tr>
+
+<tr><td>playrepeat &lt;sndname&gt;</td>
+<td>
+Starts playing the sound repeatedly. This effectively halts the script.
+</td></tr>
+
+<tr><td>volume &lt;0-100&gt;</td>
+<td>
+Sets the sound volume.
+</td></tr>
+
+<tr><td>volumerand &lt;min&gt; &lt;max&gt;</td>
+<td>
+Sets the sound volume randomly.
+</td></tr>
+
+<tr><td>chvol &lt;n&gt;</td>
+<td>
+Changes the sound volume by the relative amount n.
+</td></tr>
+
+<tr><td>stopsound &lt;sndname&gt;</td>
+<td>
+Defines the sound to be played when the sequence is stopped (e.g. the
+sound of a door slamming shut).
+</td></tr>
+
+<tr><td>end</td>
+<td>
+Ends the sound sequence definition.
+</td></tr>
+
+</table>
+
+<hr />
+<h2><a name="music">Music</a></h2>
+
+Legacy supports the MUS, MIDI, MP3 and Ogg Vorbis music formats, the last two
+through the SDL_mixer library. The music lump format is detected
+automagically. The names of the music lumps can be freely chosen.
+
+
+<hr />
+<h2><a name="dehacked">DeHackEd support</a></h2>
+
+Legacy supports most DeHackEd and BEX features.
+
+
+<hr />
+<h2><a name="legacy.wad">Legacy.wad contents</a></h2>
+
+<p>
+Naturally, you can also replace these resources using PWADs.
+</p>
+
+<table class="def">
+<tr><th>lump</th><th>contents</th></tr>
+
+<tr><td class="note" colspan="2">
+Graphics
+</td></tr>
+
+<tr><td>RANKINGS</td>
+<td>
+the graphic displayed at the top of the deathmatch
+rankings (while in a net-game).
+</td></tr>
+
+<tr><td>RSKY1<br/>RSKY2<br/>RSKY3</td>
+<td>
+The sky graphics are now 256x240, not 256x128.
+That's because of the freelook : you are able to look
+higher, thus seeing a part of the sky you couldn't see
+in the original Doom.
+
+Using a taller graphic is better than scaling up the
+original skies, it looks better. However for compatibility,
+Legacy scales up the SKY textures if it finds that they
+are the 'old' small size 256x128.
+
+The bottom 40 lines are under the horizon and not
+normally seen. The lines 100 to 199 are the ones
+you see while looking straight ahead. The top lines
+0-99 are the lines of sky you see when looking up.
+</td></tr>
+
+
+<tr><td>CONSBACK</td>
+<td>
+Console background picture, 320x200, when 'con_backpic' is true (the console
+variable) also used as the loading picture MUST BE 200 lines high, can
+be any width (default is 320)
+</td></tr>
+
+<tr><td>CBLEFT</td>
+<td>
+Console left border, used with translucent console
+background MUST BE 200 lines high, any width (default is 8)
+</td></tr>
+
+<tr><td>CBRIGHT</td>
+<td>
+Console rigth border, used with translucent console background MUST BE 200 lines high, any width (default is 8)
+</td></tr>
+
+<tr><td class="note" colspan="2">
+Status bar overlay icons
+</td></tr>
+
+<tr><td>SBOHEALT</td><td>health (default shows a red cross)</td></tr>
+<tr><td>SBOFRAGS</td><td>frags (default shows a skull)</td></tr>
+<tr><td>SBOARMOR</td><td>armor (default shows a green armor)</td></tr>
+<tr><td>SBOAMMO1</td><td>pistol ammo</td></tr>
+<tr><td>SBOAMMO2</td><td>shotgun ammo</td></tr>
+<tr><td>SBOAMMO3</td><td>chaingun ammo</td></tr>
+<tr><td>SBOAMMO4</td><td>rocket ammo</td></tr>
+<tr><td>SBOAMMO5</td><td>plasma ammo</td></tr>
+<tr><td>SBOAMMO6</td><td>bfg ammo</td></tr>
+<tr><td>SBOAMMO8</td><td>super shotgun ammo</td></tr>
+
+<tr><td class="note" colspan="2">
+Special MAPINFO lumps
+</td></tr>
+
+<tr><td>MINFO_D1</td>
+<td>
+MAPINFO lump containing the Doom1 map ordering.
+</td></tr>
+
+<tr><td>MINFO_D2</td>
+<td>
+MAPINFO lump containing the Doom2 map ordering.
+</td></tr>
+
+<tr><td>MINFO_H</td>
+<td>
+MAPINFO lump containing the Heretic map ordering.
+</td></tr>
+
+<tr><td class="note" colspan="2">
+Other plaintext lumps
+</td></tr>
+
+<tr><td>SNDINFO</td>
+<td>
+Basic sound effect definitions.
+</td></tr>
+
+<tr><td>SNDSEQ</td>
+<td>
+Basic sound sequence definitions.
+</td></tr>
+
+<tr><td></td>
+<td>
+</td></tr>
+
+</table>
+
+
+</body>
+</html>
+

@@ -18,77 +18,79 @@
 
 Branched off from version 1.40.
 
-<p>
 <h2>Main ideas behind the conversion:</h2>
 
 <ul>
 <li>Extendable:
  <ul>
- <li>Real C++ code, classes, encapsulation, inheritance, polymorphism.
- <li>Logical, easy to understand source file structure.
- <li>Well documented code, standard coding style.
+ <li>Real C++ code, classes, encapsulation, inheritance, polymorphism.</li>
+ <li>Logical, easy to understand source file structure.</li>
+ <li>Well documented code, standard coding style.</li>
  </ul>
+</li>
 
 <li>Easily portable:
  <ul>
- <li>Multimedia API always SDL 1.2.5+ if possible.
- <li>Graphics rendered using OpenGL 1.2 through SDL.
- <li>Audio maybe through OpenAL?
+ <li>Multimedia API always SDL 1.2.5+ if possible.</li>
+ <li>Graphics rendered using OpenGL 1.2 through SDL.</li>
+ <li>Audio maybe through OpenAL?</li>
  <li>Absolute minimum of platform-specific #ifdefs
-  (only used to sort out standard library differences).
+  (only used to sort out standard library differences).</li>
  </ul>
+</li>
 
 <li>Utilizes existing code:
  <ul>
- <li>Data structures constructed using STL 3.0.
+ <li>Data structures constructed using STL 3.0.</li>
  <li>Use existing, efficient, portable LGPL libraries whenever possible
- (libpng, zlib etc.).
+ (libpng, zlib etc.).</li>
  </ul>
+</li>
 </ul>
 
 <hr />
-
 <h2>Possible benefits of the new architecture:</h2>
 
 <ul>
 <li>Recruiting new coders is easier with an easy-to-understand source,
-  as is debugging
+  as is debugging</li>
 <li>New game modes to old games: <a href="ctf.html">Capture the
-  Flag</a>, <a href="doomfortress.html">Doom Fortress</a>...
+  Flag</a>, <a href="doomfortress.html">Doom Fortress</a>...</li>
 <li>Cross-over games: Heretic and Doom entities in the same level,
-  players playing Hellspawn instead of Marines...
+  players playing Hellspawn instead of Marines...</li>
 <li>Possibility to create different AI's for monsters (in addition to
-  the standard "cannon fodder" AI)
+  the standard "cannon fodder" AI)</li>
 <li>Extendable: New sector-based game types should be "relatively easy" to add
-  without kludges (Duke Nukem 3D, Hexen, Dark Forces etc.)
-<li>Bots
-<li>Mods using external dll:s?
+  without kludges (Duke Nukem 3D, Hexen, Dark Forces etc.)</li>
+<li>Bots</li>
+<li>Mods using external dll:s?</li>
 </ul>
 
 <hr />
-
 <h2>Coding conventions</h2>
 
 <ul>
-<li>Use Emacs-style indentation. Better yet, use Emacs to write your code.
+<li>Use Emacs-style indentation. Better yet, use Emacs to write your code.</li>
 <li>Fully document all files, classes, data members, methods and
-non-class functions using Doxygen syntax.
+non-class functions using Doxygen syntax.</li>
 <li>If you must commit something that is broken, leave a comment including
 the exact word <font color="#FF4000">FIXME</font> and a description of
 what should be fixed. For example,
-
-<font color="#FF4000"><pre>
+<div>
+<font color="#FF4000">
   // FIXME : here it crashes because int *p is sometimes NULL
-</pre></font>
-
-This keyword can be then grepped by other developers.
+</font>
+</div>
+This keyword can be then grepped by other developers.</li>
 
 <li>If something in your code isn't exactly broken, but you think it could
 be improved, you can use the word <font color="#FFA000">TODO</font> in the same way:
-
-<font color="#FFA000"><pre>
+<div>
+<font color="#FFA000">
   // TODO : replace the bubble sort with STL introsort
-</pre></font>
+</font>
+</div>
+</li>
 
 </ul>
 
@@ -99,16 +101,16 @@ be improved, you can use the word <font color="#FFA000">TODO</font> in the same 
 Basic Doom/Boom/Heretic/Hexen docs:
 
 <ul>
-<li>Matt Fell's <a href="http://www.gamers.org/dEngine/doom/spec/uds.1666.txt">Unofficial Doom specs v1.666</a>
-<li>Dr Sleep's <a href="http://www.hut.fi/u/vberghol/doom/hereticspec10.txt">Unofficial Heretic specs v1.0</a>
-<li>Ben Morris's <a href="http://www.hut.fi/u/vberghol/doom/hexenspec09.txt">Hexen specs v0.9</a>
-<li>Team TNT's <a href="boomref.html">Boom reference v1.3</a> 
+<li>Matt Fell's <a href="http://www.gamers.org/dEngine/doom/spec/uds.1666.txt">Unofficial Doom specs v1.666</a></li>
+<li>Dr Sleep's <a href="http://www.hut.fi/u/vberghol/doom/hereticspec10.txt">Unofficial Heretic specs v1.0</a></li>
+<li>Ben Morris's <a href="http://www.hut.fi/u/vberghol/doom/hexenspec09.txt">Hexen specs v0.9</a></li>
+<li>Team TNT's <a href="boomref.html">Boom reference v1.3</a></li>
 </ul>
 
 C++ guides:
 <ul>
-<li>A good <a href="http://www.cplusplus.com/">C++ tutorial</a> 
-<li>SGI's <a href="http://www.sgi.com/tech/stl/">STL documentation</a> 
+<li>A good <a href="http://www.cplusplus.com/">C++ tutorial</a></li>
+<li>SGI's <a href="http://www.sgi.com/tech/stl/">STL documentation</a></li>
 </ul>
 
 <hr />
@@ -118,17 +120,16 @@ C++ guides:
 
 <ul>
 <li><a href="http://www.mingw.org/">MinGW</a>, Minimalist GNU for
-Windows. Gnu Compiler Collection (GCC) for Win32. 
+Windows. Gnu Compiler Collection (GCC) for Win32.</li>
 <li><a href="http://www.mingw.org/msys.shtml">MSYS</a>, Minimal POSIX
 system for Win32. Needed to properly run Makefiles and configuration
 tools. Includes a real shell (BASH) and utilities like grep and sed
-(of utmost importance).
+(of utmost importance).</li>
 <li><a href="http://www.libsdl.org/">SDL</a>, Simple DirectMedia
-Layer. A multiplatform multimedia library.
+Layer. A multiplatform multimedia library.</li>
 <li><a href="http://www.libsdl.org/projects/SDL_mixer/">SDL_mixer</a>, a
-multichannel mixer library based on SDL.
-<li><a href="http://www.zlib.org/">zlib</a>, a free compression
-library.
+multichannel mixer library based on SDL.</li>
+<li><a href="http://www.zlib.org/">zlib</a>, a free compression library.</li>
 <li><a href="http://www.opentnl.org/">OpenTNL</a>, a free game
 networking library based on the Torque Network Library.</li>
 <li><a href="http://www.mesa3d.org/">Mesa 3D</a>, a free OpenGL
@@ -136,9 +137,9 @@ implementation.<br /> Note: Windows includes OpenGL runtime dll's, all you
 need are the header files and import libraries used when
 compiling and linking. OpenGL import libraries are included in MinGW standard
 distribution. If OpenGL headers aren't included in your MinGW
-distribution, just use Mesa headers. They work fine.
+distribution, just use Mesa headers. They work fine.</li>
 <li><a href="http://www.doxygen.org/">Doxygen</a>, an automatic
-source documentation system.
+source documentation system.</li>
 </ul>
 
 </body>

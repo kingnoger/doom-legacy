@@ -45,10 +45,16 @@ div.example
 }
 
 
+ol > li > ol
+{
+  list-style: lower-roman;
+}
+
+
 table.def
 {
   width: 90%;
-  margin: 0.5em 0;
+  margin: 0.5em 1em;
   padding: 0em;
   border-collapse: separate;
   border-spacing: 3px;
@@ -57,7 +63,7 @@ table.def
 
 table.def th
 {
-  background: #404000;
+  background: #303000;
   font-weight: bold;
   padding: 0.3em 1em;
   border: solid thin gray;
@@ -68,9 +74,18 @@ table.def th
 table.def td
 {
   vertical-align: top;
-  background: #103000;
+  background: #0A2000;
   padding: 0.3ex 1ex;
 }
+
+table.def td.note
+{
+  vertical-align: top;
+  background: #202000;
+  padding: 0.3ex 1ex;
+  text-align: center;
+}
+
 
 
 :link    { color: #80FF00; text-decoration: none; }

@@ -1,0 +1,393 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<meta name="description" content="New, even better Doom Legacy" />
+<meta name="keywords" lang="en" content="doom, legacy, fps, heretic, hexen" />
+<link rel="stylesheet" href="legacy.css" type="text/css" />
+<title>Doom Legacy Manual</title>
+</head>
+
+<!-- $Id$ -->
+<body>
+
+<h1>Doom Legacy Manual</h1>
+
+
+Original game &amp; sources by Id Software<br/>
+Heretic and Hexen by Raven Software<br/>
+Additions:
+<div>
+&copy; 1998 by: Fabrice Denis &amp; Boris Pereira<br/>
+&copy; 1999 by: Fabrice Denis, Boris Pereira &amp; Thierry Van Elsuwe<br/>
+&copy; 2000 by: Boris Pereira &amp; Thierry Van Elsuwe<br/>
+&copy; 2001-2004 by: Doom Legacy Team<br/>
+</div>
+
+<p>
+Special thanks to Steven McGranahan, Robert Bäuml and Bell Kin for
+their large contribution and to other Legacy Team members.
+</p>
+
+<p>
+Home page: <a href="http://legacy.newdoom.com/">http://legacy.newdoom.com/</a><br/>
+e-mail: legacy@newdoom.com
+</p>
+
+<h2>Contents</h2>
+
+<ol>
+<li><a href="#intro">Introduction</a></li>
+<li><a href="#basics">The basics</a>
+ <ol>
+ <li><a href="#install">Installation</a></li>
+ <li><a href="#launcher">Launcher</a></li>
+ <li><a href="#cmdline">Command-line options</a></li>
+ </ol>
+</li>
+<li><a href="#game">The game</a>
+ <ol>
+ <li><a href="#advanced">Advanced features</a></li>
+ </ol>
+</li>
+<li><a href="#editing">Editing</a>
+ <ol>
+ <li><a href="#legacyedit">Legacy editing features</a></li>
+ <li><a href="#ref">Standard references</a></li>
+ </ol>
+</li>
+<li><a href="#dev">Development</a></li>
+<li><a href="#thanks">Acknowledgments</a></li>
+</ol>
+
+Old stuff:
+<ul>
+<li><a href="faq.html">faq.html</a> Frequently Asked Questions answered</li>
+<li><a href="history.html">history.html</a> History of Doom Legacy</li>
+</ul>
+
+<hr/>
+<h2><a name="intro">Introduction</a></h2>
+
+Hello all Doom fans of the world, here is the latest release of
+Doom LEGACY project by Team Legacy.
+
+Well, if you are reading this you probably know by now that the
+gods at IdSoftware have released the sources of the greatest game
+on earth : Doom !!
+
+Of course a lot of projects have started around the sources since
+about January 1998, and Doom LEGACY is competing to be the best of
+the choices!
+
+We have always dreamed of Doom sources being released, and all the
+features that we'd like to add. Since Doom1 was out we are fans
+of deathmatching. Don't ask us why we like it more than Duke Nukem
+or other clones, we like the atmosphere of Doom and its like that!
+
+This new version of Doom is not commercial anymore, but you should
+have the original Doom data (either doom.wad, doom2.wad, tnt.wad or 
+plutonia.wad), that comes with the original Doom, Doom2, Final Doom,
+Ultimate Doom software.
+
+We hope that this new version brings you a lot of enjoyment,
+especially for the deathmatch fans out there.
+
+Have much fun!!
+
+<p>
+Doom Legacy can run Doom, Boom, Heretic and Hexen maps. For each game, you
+will need the corresponding IWAD file, which contains all graphics,
+sounds, music in the game.<br/>
+For example, if you want to play Doom II maps, you'll need the file "doom2.wad".
+</p>
+
+
+<h3>Need more info?</h3>
+
+If you have some questions or problems concerning Doom Legacy, please
+<b>first read this manual</b>.<br/>
+If you find no answer, try reading the <b>FAQ</b> on our
+<a href="http://legacy.newdoom.com/">website</a>.<br/>
+If still no luck, try asking your question on the Doom Legacy forum at
+<a href="http://forums.newdoom.com/">New Doom</a>.
+
+
+<hr/>
+<h2><a name="basics">The basics</a></h2>
+
+<h3><a name="install">Installation</a></h3>
+
+Installing Doom Legacy is extremely simple, just follow these steps:
+<ul>
+<li>Unpack the archive</li>
+<li>Start the Launcher</li>
+<li>Fill in required information about WAD locations and hardware options</li>
+<li>Launch the game!</li>
+</ul>
+
+<p>
+If you want, you can set the following environment variables to
+have additional control over Legacy behaviour. None of them are
+required.
+</p>
+
+<ul>
+<li>The environment variable <b>DOOMWADDIR</b> defines the path where
+the wad files are located. This way you can easily share you wad files
+with different programs. By default, Legacy looks for wad files in the
+current directory.
+</li>
+<li>The variable <b>USER</b>, containing your username, is used as the
+default value for your player name in multiplayer games.</li>
+<li>You home directory, defined by the variable <b>HOME</b>, will be
+the place where Legacy stores your config and savegame files. By
+default, they will be stored in the current directory.</li>
+</ul>
+
+
+<h3><a name="launcher">Launcher</a></h3>
+
+<p>
+The Launcher is a separate program, included in the Legacy
+distribution, which provides the easiest way to start a Doom Legacy game.
+Using it, you don't have to remember the command-line syntax.
+Just use the mouse to select the game options you want and the
+Launcher will start Legacy for you.
+</p>
+
+
+<h3><a name="cmdline">Command-line options</a></h3>
+
+<p>Here are the command-line options Legacy recognizes:</p>
+
+
+FIXME console commands cd, gr_stats, nodownload consvar
+FIXME video mode lists, window caption, cv_fullscreen..
+
+<table class="def">
+<tr><th colspan="2">General options</th></tr>
+
+<tr><th>option</th><th>description</th></tr>
+
+<tr>
+<td>+&lt;console_expr&gt;</td>
+<td>You can enter any number of <a href="console.html">console expressions</a> at the command line.<br/>
+They will be executed right after the configfile, but before autoexec.cfg.</td>
+</tr>
+
+<tr>
+<td>-iwad &lt;filename&gt;</td>
+<td>Set the main IWAD file to use. This determines the game mode.</td>
+</tr>
+
+<tr>
+<td>-file &lt;filename1&gt; [&lt;filename2&gt;...]</td>
+<td>Load one or more additional data files (wad, pak, lmp, deh...).<br/>
+You can also enter a directory name here by ending it with a slash /. 
+</td>
+</tr>
+
+<tr>
+<td>-home &lt;dirname&gt;</td>
+<td>Set your home directory location, where your configfiles and
+savegames are kept.</td>
+</tr>
+
+<tr>
+<td><a name="config">-config</a> &lt;filename&gt;</td>
+<td>Set the configfile to use. Default: config.cfg.</td>
+</tr>
+
+<tr>
+<td>-mb &lt;number&gt;</td>
+<td>Give the amount of heap memory in MB that Legacy should use.</td>
+</tr>
+
+<tr>
+<td>-opengl</td>
+<td>Start the game in OpenGL mode. Default: use the software renderer.</td>
+</tr>
+
+<tr>
+<td>-devparm</td>
+<td>"Development mode". Prints out some extra information mainly useful for
+developers.</td>
+</tr>
+
+<tr>
+<td>-noversioncheck</td>
+<td>Do not check that legacy.wad version matches the executable version.</td>
+</tr>
+
+<tr>
+<td>-skill &lt;1-5&gt;</td>
+<td>Select the skill level, start game immediately.</td>
+</tr>
+
+<tr>
+<td>-episode &lt;number&gt;</td>
+<td>Select the episode, start game immediately.</td>
+</tr>
+
+<tr><th colspan="2">Sound and music</th></tr>
+
+<tr><th>option</th><th>description</th></tr>
+
+<tr>
+<td>-nosound</td>
+<td>Disable sound effects</td>
+</tr>
+
+<tr>
+<td>-nomusic</td>
+<td>Disable music</td>
+</tr>
+
+<tr>
+<td>-nocd</td>
+<td>Disable CD music</td>
+</tr>
+
+<tr>
+<td>-precachesound</td>
+<td></td>
+</tr>
+
+<tr><th colspan="2">Networking</th></tr>
+
+<tr><th>option</th><th>description</th></tr>
+
+<tr>
+<td>-dedicated</td>
+<td>Spawn a dedicated server.</td>
+</tr>
+
+<tr>
+<td>-server</td>
+<td>Spawn a server.</td>
+</tr>
+
+<tr>
+<td>-connect [&lt;IP&gt; | &lt;address&gt;]</td>
+<td>Connect to a server at the specified address. If no address is
+given, search for servers in LAN.</td>
+</tr>
+
+<tr>
+<td>-port</td>
+<td>Set the UDP port to use.</td>
+</tr>
+
+<tr>
+<td>-ipx</td>
+<td>Use IPX network protocol instead of IP.</td>
+</tr>
+
+<tr>
+<td>-nodownload</td>
+<td>Do not download any files from servers.</td>
+</tr>
+
+</table>
+
+
+
+<hr/>
+<h2><a name="game">The Game</a></h2>
+
+TODO explain menus, controls, multiplayer stuff, splitscreen, bots.
+
+
+<h3><a name="advanced">Advanced features</a></h3>
+
+<p>
+Doom Legacy supports most of the cheats in the original
+games. Additionally, we have added the cheats <b>idfly</b>
+and <b>idcd</b>. With idfly, you can fly by pressing and holding the
+jump button. idcd allows you to quickly change the cd music track
+currently playing.
+</p>
+
+<ul>
+<li><a href="console.html">console.html</a> Console commands explained</li>
+<li><a href="skins.html">skins.html</a> Legacy skin specifications</li>
+</ul>
+
+
+
+<hr/>
+<h2><a name="editing">Editing</a></h2>
+
+<h3><a name="legacyedit">Legacy editing features</a></h3>
+
+<p>
+Powerful editing features have long been one of Legacy's strongest points.
+As of version 1.5, the Legacy game engine has been rewritten in
+C++. During the rewrite, loads of new features were added to the game.
+</p>
+
+
+<ul>
+<li><a href="features.html">features.html</a> Summary of Doom Legacy features</li>
+<li><a href="editing.html">editing.html</a> Legacy Map Author's reference manual</li>
+<li><a href="fs.html">fs.html</a> FraggleScript reference</li>
+<li><a href="">.html</a> Action Code Script</li>
+</ul>
+
+
+
+<h3><a name="ref">Standard references</a></h3>
+
+These documents are the current standard references to the inner
+workings of Doom, Boom, Heretic and Hexen.
+Although many of the limitations of the original games have been
+lifted and new features have been added, they are still very useful
+to a Legacy map editor.
+
+<ul>
+<li>Matt Fell's <a href="http://www.gamers.org/dEngine/doom/spec/uds.1666.txt">Unofficial Doom specs v1.666</a></li>
+<li>Team TNT's <a href="boomref.html">Boom reference v1.3</a></li>
+<li>Dr Sleep's <a href="http://www.hut.fi/u/vberghol/doom/hereticspec10.txt">Unofficial Heretic specs v1.0</a></li>
+<li>Ben Morris's <a href="http://www.hut.fi/u/vberghol/doom/hexenspec09.txt">Hexen specs v0.9</a></li>
+</ul>
+
+
+<hr/>
+<h2><a name="dev">Development</a></h2>
+
+Doom Legacy is free software, distributed under GPL, the GNU General Public License.
+The source can be found <a href="http://sourceforge.net/projects/doomlegacy/">here</a>.
+
+<ul>
+<li><a href="compiling.html">compiling.html</a> Compiling instructions</li>
+<li><a href="source.html">source.html</a> What you should know about the source</li>
+<li><a href="elements.html">elements.html</a> Game subsystem definitions and progress indicators</li>
+<li><a href="TODO.html">TODO.html</a> Todo list</li>
+<li><a href="BUGS.html">BUGS.html</a> Bugs list</li>
+</ul>
+
+
+Also, the source has been partially documented using <a href="html/index.html">Doxygen</a>.
+
+
+
+<hr/>
+<h2><a name="thanks">Acknowledgments</a></h2>
+
+<ul>
+<li>Thanks to Chi Hoang for DosDoom which got us started.</li>
+<li>Bell Kin for porting DooM Legacy to Linux.</li>
+<li>Stephane Dierickx for the two picture in laucher and the help screen of Legacy.</li>
+<li>Sebastien Bacquet for Qmus2mid.</li>
+<li>Simon Howard for FraggleScript</li>
+<li>To all of you who send us ideas and bug reports, thank you!</li>
+<li>To Id Software of course, for creating the greatest game of all
+times!</li>
+</ul>
+
+</body>
+</html>
