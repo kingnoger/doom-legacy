@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/08/15 18:08:29  smite-meister
+// palette-to-palette colormaps etc.
+//
 // Revision 1.3  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
 //
@@ -140,8 +143,7 @@ void R_AddPointToBox(int x, int y, fixed_t* box);
 // REFRESH - the actual rendering functions.
 //
 
-
-// Called by startup code.
+// initializes the client part of the renderer
 void R_Init();
 
 // just sets setsizeneeded true

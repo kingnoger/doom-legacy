@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.33  2004/08/15 18:08:28  smite-meister
+// palette-to-palette colormaps etc.
+//
 // Revision 1.32  2004/08/12 18:30:23  smite-meister
 // cleaned startup
 //
@@ -317,9 +320,9 @@ void D_PageDrawer(char *lumpname)
     {
       if ((vid.width>BASEVIDWIDTH) || (vid.height>BASEVIDHEIGHT) )
         {
-          for (int y=0; y<vid.height; y += scr_borderpatch->height)
-            for (int x=0; x<vid.width; x += scr_borderpatch->width)
-              scr_borderpatch->Draw(x,y,0);
+          for (int y=0; y<vid.height; y += window_background->height)
+            for (int x=0; x<vid.width; x += window_background->width)
+              window_background->Draw(x,y,0);
         }
     }
 

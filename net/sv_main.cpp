@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/08/15 18:08:29  smite-meister
+// palette-to-palette colormaps etc.
+//
 // Revision 1.8  2004/08/12 18:30:31  smite-meister
 // cleaned startup
 //
@@ -722,7 +725,7 @@ void SV_Init()
   HU_HackChatmacros();
 
 
-  R_InitData(); // must init texture cache now! Even server needs to know the widths etc of textures...
+  R_ServerInit(); // must init texture cache now! Even server needs to know the texture heights etc.
 
   InitNetwork();
 }

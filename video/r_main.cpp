@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2004/08/15 18:08:30  smite-meister
+// palette-to-palette colormaps etc.
+//
 // Revision 1.18  2004/07/25 20:16:43  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -542,28 +545,6 @@ fixed_t Rend::R_PointToDist(fixed_t x, fixed_t y)
 }
 
 
-//
-// R_InitPointToAngle
-//
-void R_InitPointToAngle (void)
-{
-    // UNUSED - now getting from tables.c
-#if 0
-    int i;
-    long        t;
-    float       f;
-//
-// slope (tangent) to angle lookup
-//
-    for (i=0 ; i<=SLOPERANGE ; i++)
-    {
-        f = atan( (float)i/SLOPERANGE )/(3.141592657*2);
-        t = 0xffffffff*f;
-        tantoangle[i] = t;
-    }
-#endif
-}
-
 
 //
 // R_ScaleFromGlobalAngle
@@ -628,40 +609,6 @@ fixed_t Rend::R_ScaleFromGlobalAngle (angle_t visangle)
 #endif
 }
 
-
-
-//
-// R_InitTables
-//
-void R_InitTables (void)
-{
-    // UNUSED: now getting from tables.c
-#if 0
-    int         i;
-    float       a;
-    float       fv;
-    int         t;
-
-    // viewangle tangent table
-    for (i=0 ; i<FINEANGLES/2 ; i++)
-    {
-        a = (i-FINEANGLES/4+0.5)*PI*2/FINEANGLES;
-        fv = FRACUNIT*tan (a);
-        t = fv;
-        finetangent[i] = t;
-    }
-
-    // finesine table
-    for (i=0 ; i<5*FINEANGLES/4 ; i++)
-    {
-        // OPTIMIZE: mirror...
-        a = (i+0.5)*PI*2/FINEANGLES;
-        t = FRACUNIT*sin (a);
-        finesine[i] = t;
-    }
-#endif
-
-}
 
 
 
@@ -794,8 +741,6 @@ void R_ExecuteSetViewSize()
 {
   int i, j;
 
-  setsizeneeded = false;
-
   // no reduced view in splitscreen mode
   if (cv_splitscreen.value && cv_viewsize.value < 11)
     cv_viewsize.Set(11);
@@ -804,6 +749,8 @@ void R_ExecuteSetViewSize()
   if ((rendermode != render_soft) && (cv_viewsize.value < 6))
     cv_viewsize.Set(6);
 #endif
+
+  setsizeneeded = false;
 
   switch (game.mode)
     {
@@ -1046,44 +993,70 @@ static void TestAnims()
 }
 
 
+
+
+/// Initializes the essential parts of the renderer
+/// (even a dedicated server needs these)
+void R_ServerInit()
+{
+  // server needs to know the texture names and dimensions
+  CONS_Printf("\nInitTextures...");
+  tc.Clear();
+  tc.SetDefaultItem("SMOKA0");
+  tc.ReadTextures();
+  //tc.Inventory();
+
+  // set the default items for sprite and model caches
+  CONS_Printf("\nInitSprites...\n");
+  R_InitSprites(sprnames);
+}
+
+
+void R_InitColormaps();
+void R_Init8to16();
+
+/// Initializes the client renderer.
+/// The server part has already been initialized in R_ServerInit.
 void R_Init()
 {
   //TestAnims();
 
-  //added:24-01-98: screensize independent
+  //fab highcolor maps
+  if (vid.BytesPerPixel == 2)
+    {
+      CONS_Printf("\nInitHighColor...");
+      R_Init8to16();
+    }
 
-    if(devparm)
-        CONS_Printf ("\nR_InitPointToAngle");
-    R_InitPointToAngle ();
+  // create palette conversion colormaps if necessary (palette must be set!)
+  if (devparm)
+    CONS_Printf("InitPaletteConversion...\n");
+  tc.InitPaletteConversion();
 
-    if(devparm)
-        CONS_Printf ("\nR_InitTables");
-    R_InitTables ();
+  // prepare the window border textures
+  R_InitViewBorder();
 
-    R_InitViewBorder ();
+  // setsizeneeded is set true, the viewport params will be recalculated before next rendering.
+  R_SetViewSize();
 
-    R_SetViewSize ();   // setsizeneeded is set true
+  // load lightlevel colormaps and Boom extra colormaps
+  if (devparm)
+    CONS_Printf("InitColormaps...\n");
+  R_InitColormaps();
 
-    if(devparm)
-        CONS_Printf ("\nR_InitPlanes");
-    R_InitPlanes ();
+  // initialize sw renderer lightlevel tables (colormaps...)
+  if (devparm)
+    CONS_Printf("InitLightTables...\n");
+  R_InitLightTables();
 
-    //added:02-02-98: this is now done by SCR_Recalc() at the first mode set
-    if(devparm)
-        CONS_Printf ("\nR_InitLightTables");
-    R_InitLightTables ();
+  // load playercolor translation colormaps AND translucency tables
+  if (devparm)
+    CONS_Printf("InitTranslationsTables...\n");
+  R_InitTranslationTables();
 
-    if(devparm)
-        CONS_Printf ("\nR_InitSkyMap");
-    R_InitSkyMap ();
+  R_InitDrawNodes();
 
-    if(devparm)
-        CONS_Printf ("\nR_InitTranslationsTables");
-    R_InitTranslationTables ();
-
-    R_InitDrawNodes();
-
-    framecount = 0;
+  framecount = 0;
 }
 
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/08/15 18:08:30  smite-meister
+// palette-to-palette colormaps etc.
+//
 // Revision 1.8  2004/07/25 20:16:43  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -273,15 +276,15 @@ void R_RecalcFuzzOffsets()
 //
 void R_InitTranslationTables()
 {
-    int         i,j;
+  int         i,j;
 
-    //added:11-01-98: load here the transparency lookup tables 'TINTTAB'
-    // NOTE: the TINTTAB resource MUST BE aligned on 64k for the asm optimised
-    //       (in other words, transtables pointer low word is 0)
-    transtables = (byte *)Z_MallocAlign (NUMTRANSTABLES*0x10000, PU_STATIC, 0, 16);
+  //added:11-01-98: load here the transparency lookup tables 'TINTTAB'
+  // NOTE: the TINTTAB resource MUST BE aligned on 64k for the asm optimised
+  //       (in other words, transtables pointer low word is 0)
+  transtables = (byte *)Z_MallocAlign (NUMTRANSTABLES*0x10000, PU_STATIC, 0, 16);
 
-    // load in translucency tables
-    if( game.mode == gm_heretic )
+  // load in translucency tables
+  if (game.mode >= gm_heretic)
     {
         fc.ReadLump( fc.GetNumForName("TINTTAB"), transtables );
         fc.ReadLump( fc.GetNumForName("TINTTAB"), transtables+0x10000 );
@@ -289,7 +292,7 @@ void R_InitTranslationTables()
         fc.ReadLump( fc.GetNumForName("TINTTAB"), transtables+0x30000 );
         fc.ReadLump( fc.GetNumForName("TINTTAB"), transtables+0x40000 );
     }
-    else
+  else
     {
         fc.ReadLump( fc.GetNumForName("TRANSMED"), transtables );
         fc.ReadLump( fc.GetNumForName("TRANSMOR"), transtables+0x10000 );
@@ -298,10 +301,14 @@ void R_InitTranslationTables()
         fc.ReadLump( fc.GetNumForName("TRANSFX1"), transtables+0x40000 );
     }
 
-    translationtables = (byte *)Z_MallocAlign (256*(MAXSKINCOLORS-1), PU_STATIC, 0, 8);
+  // player color translation
+  translationtables = (byte *)Z_MallocAlign (256*(MAXSKINCOLORS-1), PU_STATIC, 0, 8);
 
-    // translate just the 16 green colors
-    for (i=0 ; i<256 ; i++)
+  // TODO Hexen has different translation colormaps
+  // for each color AND each playerclass: TRANTBL[0-8]
+
+  // translate just the 16 green colors
+  for (i=0 ; i<256 ; i++)
     {
         if ((i >= 0x70 && i <= 0x7f && game.mode != gm_heretic) ||
             (i >=  225 && i <=  240 && game.mode == gm_heretic))
@@ -419,9 +426,11 @@ void R_InitViewBuffer(int width, int height)
 
 
 //
-// Store the lumpnumber of the viewborder patches.
+//  Window border and background textures
 //
-Texture *viewbordertex[8];
+Texture *window_border[8];
+Texture *window_background; // used to fill the space around the viewport
+
 void R_InitViewBorder()
 {
   const char *Doom_borders[] = {"BRDR_T", "BRDR_B", "BRDR_L", "BRDR_R", "BRDR_TL", "BRDR_TR", "BRDR_BL", "BRDR_BR"};
@@ -433,7 +442,29 @@ void R_InitViewBorder()
     bname = Raven_borders;
 
   for (int i=0; i<8; i++)
-    viewbordertex[i] = tc.GetPtr(bname[i]);
+    window_border[i] = tc.GetPtr(bname[i]);
+
+  // choose and cache the default bg texture
+  switch (game.mode)
+    {
+    case gm_doom2:
+      // DOOM II border patch, original was GRNROCK
+      window_background = tc.GetPtr("GRNROCK");
+      break;
+    case gm_heretic:
+      if (fc.FindNumForName("e2m1") == -1)
+        window_background = tc.GetPtr("FLOOR04");
+      else
+        window_background = tc.GetPtr("FLAT513");
+      break;
+    case gm_hexen:
+      window_background = tc.GetPtr("F_022");
+      break;
+    default:
+      // DOOM border patch.
+      // FIXME! should be default patch in legacy.wad
+      window_background = tc.GetPtr("FLOOR7_2");
+    }
 }
 
 
@@ -456,7 +487,7 @@ void R_FillBackScreen()
   if ((scaledviewwidth == vid.width)&&(viewheight==vid.height))
     return;
 
-  Texture *t = scr_borderpatch;
+  Texture *t = window_background;
 
   for (y=0; y<vid.height; y += t->height)
     for (x=0; x<vid.width; x += t->width)
@@ -478,22 +509,22 @@ void R_FillBackScreen()
     }
 
   for (x=0 ; x<scaledviewwidth ; x+=step)
-    viewbordertex[BRDR_T]->Draw(viewwindowx+x, viewwindowy-boff, 1);
+    window_border[BRDR_T]->Draw(viewwindowx+x, viewwindowy-boff, 1);
 
   for (x=0 ; x<scaledviewwidth ; x+=step)
-    viewbordertex[BRDR_B]->Draw(viewwindowx+x, viewwindowy+viewheight, 1);
+    window_border[BRDR_B]->Draw(viewwindowx+x, viewwindowy+viewheight, 1);
 
   for (y=0 ; y<viewheight ; y+=step)
-    viewbordertex[BRDR_L]->Draw(viewwindowx-boff, viewwindowy+y, 1);
+    window_border[BRDR_L]->Draw(viewwindowx-boff, viewwindowy+y, 1);
 
   for (y=0 ; y<viewheight ; y+=step)
-    viewbordertex[BRDR_R]->Draw(viewwindowx+scaledviewwidth, viewwindowy+y, 1);
+    window_border[BRDR_R]->Draw(viewwindowx+scaledviewwidth, viewwindowy+y, 1);
 
   // Draw beveled corners.
-  viewbordertex[BRDR_TL]->Draw(viewwindowx-boff, viewwindowy-boff, 1);
-  viewbordertex[BRDR_TR]->Draw(viewwindowx+scaledviewwidth, viewwindowy-boff, 1);
-  viewbordertex[BRDR_BL]->Draw(viewwindowx-boff, viewwindowy+viewheight, 1);
-  viewbordertex[BRDR_BR]->Draw(viewwindowx+scaledviewwidth, viewwindowy+viewheight, 1);
+  window_border[BRDR_TL]->Draw(viewwindowx-boff, viewwindowy-boff, 1);
+  window_border[BRDR_TR]->Draw(viewwindowx+scaledviewwidth, viewwindowy-boff, 1);
+  window_border[BRDR_BL]->Draw(viewwindowx-boff, viewwindowy+viewheight, 1);
+  window_border[BRDR_BR]->Draw(viewwindowx+scaledviewwidth, viewwindowy+viewheight, 1);
 }
 
 

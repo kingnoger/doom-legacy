@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/08/15 18:08:30  smite-meister
+// palette-to-palette colormaps etc.
+//
 // Revision 1.4  2004/08/13 18:25:11  smite-meister
 // sw renderer fix
 //
@@ -209,14 +212,6 @@ fixed_t                 cachedystep[MAXVIDHEIGHT];
 
 fixed_t   xoffs, yoffs;
 
-//
-// R_InitPlanes
-// Only at game startup.
-//
-void R_InitPlanes (void)
-{
-  // Doh!
-}
 
 
 //profile stuff ---------------------------------------------------------

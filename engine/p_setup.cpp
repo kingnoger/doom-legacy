@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.42  2004/08/15 18:08:28  smite-meister
+// palette-to-palette colormaps etc.
+//
 // Revision 1.41  2004/08/12 18:30:24  smite-meister
 // cleaned startup
 //
@@ -136,13 +139,13 @@
 // Revision 1.1.1.1  2002/11/16 14:18:11  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//   Part of Map class implementation.
-//   Loads the map lumps from the WAD, sets up the runtime structures,
-//   spawns static Thinkers and the initial Actors.
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Map loading and setup
+///
+/// Loads the map lumps from the WAD, sets up the runtime structures,
+/// spawns static Thinkers and the initial Actors.
 
 #include <math.h>
 
@@ -847,7 +850,6 @@ void Map::LoadSideDefs2(int lump)
   byte *data = (byte *)fc.CacheLumpNum(lump,PU_STATIC);
   int  i;
   int  num;
-  int  mapnum;
 
   // Texture names should be NUL-terminated.
   // Also, they should be uppercase (e.g. Doom E1M2)
@@ -871,7 +873,7 @@ void Map::LoadSideDefs2(int lump)
       // refined to allow colormaps to work as wall
       // textures if invalid as colormaps but valid as textures.
 
-      // FIXME these linedeftypes do not work as expected
+      // FIXME these linedeftypes do not work as expected (tags! you cannot use them yet!)
 
       sd->sector = sec = &sectors[SHORT(msd->sector)];
       switch (sd->special)
@@ -882,6 +884,7 @@ void Map::LoadSideDefs2(int lump)
           if(rendermode == render_soft)
             {
 #endif
+	      int  mapnum;
               num = tc.Get(ttex, false);
 
               if(num == -1)
@@ -1342,11 +1345,9 @@ void Map::ConvertLineDefs()
   // we use a pregenerated binary lookup table in legacy.wad
 
   int lump;
-  /*
   if (game.mode == gm_heretic)
-    lump = fc.GetNumForName("XHERETIC"); // TODO Heretic table...
+    lump = fc.GetNumForName("XHERETIC");
   else
-  */
     lump = fc.GetNumForName("XDOOM");
 
   xtable_t *p, *xt = (xtable_t *)fc.CacheLumpNum(lump, PU_CACHE);

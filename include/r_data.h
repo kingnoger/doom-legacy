@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/08/15 18:08:29  smite-meister
+// palette-to-palette colormaps etc.
+//
 // Revision 1.9  2004/08/13 18:25:11  smite-meister
 // sw renderer fix
 //
@@ -270,6 +273,9 @@ protected:
   /// mapping from Texture id's to pointers
   map<unsigned, Texture *> texture_ids;
 
+  /// sw renderer: colormaps for palette conversions (one for each resource file)
+  vector<byte *> palette_conversion;
+
 public:
   texturecache_t(memtag_t tag);
 
@@ -293,14 +299,20 @@ public:
 
   /// reads the PNAMES and TEXTUREn lumps, generates the corresponding Textures
   int ReadTextures();
+
+  /// creates the palette conversion colormaps
+  void InitPaletteConversion();
+
+  /// returns the pal. conversion colormap for the given file
+  inline byte *GetPalConv(int i) { return palette_conversion[i]; }
 };
 
 
 extern texturecache_t tc;
 
 
-// I/O, setting up the stuff.
-void R_InitData();
+// initializes the part of the renderer that even a dedicated server needs
+void R_ServerInit();
 
 // colormap management
 void R_ClearColormaps();

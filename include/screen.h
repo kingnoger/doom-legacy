@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/08/15 18:08:29  smite-meister
+// palette-to-palette colormaps etc.
+//
 // Revision 1.7  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
 //
@@ -147,14 +150,5 @@ extern void     (*basespanfunc)();
 
 // quick fix for tall/short skies, depending on bytesperpixel
 extern void (*skydrawerfunc[2])();
-
-
-// ----------------
-// screen variables
-// ----------------
-
-extern class Texture *scr_borderpatch;  // patch used to fill the view borders
-
-
 
 #endif

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/08/15 18:08:29  smite-meister
+// palette-to-palette colormaps etc.
+//
 // Revision 1.7  2004/03/28 15:16:14  smite-meister
 // Texture cache.
 //
@@ -39,40 +42,38 @@
 // Revision 1.1.1.1  2002/11/16 14:18:23  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//      Zone Memory Allocation, perhaps NeXT ObjectiveC inspired.
-//      Remark: this was the only stuff that, according
-//       to John Carmack, might have been useful for
-//       Quake.
-//
 //---------------------------------------------------------------------
+
+/// \file
+/// \brief Zone Memory Allocation
+///
+/// Perhaps NeXT ObjectiveC inspired.
+/// Remark: this was the only stuff that, according
+/// to John Carmack, might have been useful for Quake.
 
 #ifndef z_zone_h
 #define z_zone_h 1
 
 #include <stdio.h>
 
-//
-// ZONE MEMORY
-// PU - purge tags.
+/// \brief Zone Memory purge tags.
 enum memtag_t
 {
   // Tags < PU_PURGELEVEL are not overwritten until freed.
-  PU_STATIC = 1,      // static entire execution time
-  PU_SOUND  = 2,      // static while playing
-  PU_MUSIC  = 3,      // static while playing
-  PU_DAVE   = 4,      // anything else Dave wants static
+  PU_STATIC = 1,      ///< static entire execution time
+  PU_SOUND  = 2,      ///< sound effects
+  PU_MUSIC  = 3,      ///< music
+  PU_DAVE   = 4,      ///< anything else Dave wants static
 
-  PU_HWRPATCHINFO      = 5,   // Hardware GlidePatch_t struct for OpenGl/Glide texture cache
-  PU_HWRPATCHCOLMIPMAP = 6,   // Hardware GlideMipmap_t struct colromap variation of patch
-  PU_SPRITE,
-  PU_MODEL,
-  PU_TEXTURE,
+  PU_HWRPATCHINFO      = 5,   ///< Hardware GlidePatch_t struct for OpenGl/Glide texture cache
+  PU_HWRPATCHCOLMIPMAP = 6,   ///< Hardware GlideMipmap_t struct colromap variation of patch
+  PU_SPRITE,          ///< sprite structures
+  PU_MODEL,           ///< 3D models
+  PU_TEXTURE,         ///< 2D bitmaps (most graphics)
 
   // Tags >= PU_LEVEL are made purgable when a level is exited
-  PU_LEVEL    = 50,   // static until level is exited
-  PU_LEVSPEC  = 51,   // a special thinker in a level
+  PU_LEVEL    = 50,   ///< static until level is exited
+  PU_LEVSPEC  = 51,   ///< special thinkers in a level
   PU_HWRPLANE = 52,
 
   // Tags >= PU_PURGELEVEL are automatically purgable whenever needed.

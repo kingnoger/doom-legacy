@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,29 +18,34 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/08/15 18:08:29  smite-meister
+// palette-to-palette colormaps etc.
+//
 // Revision 1.2  2004/01/06 14:37:45  smite-meister
 // six bugfixes, cleanup
 //
 // Revision 1.1.1.1  2002/11/16 14:18:28  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//      Lookup tables.
-//      Do not try to look them up :-).
-//      In the order of appearance: 
-//
-//      int finetangent[4096]   - Tangens LUT.
-//       Should work with BAM fairly well (12 of 16bit,
-//      effectively, by shifting).
-//
-//      int finesine[10240]             - Sine lookup.
-//
-//      int tantoangle[2049]    - ArcTan LUT,
-//        maps tan(angle) to angle fast. Gotta search.
-//    
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Lookup tables.
+///
+/// fixed_t finetangent[FINEANGLES/2]   - tangens LUT
+///  Maps fineangle_t(alpha + pi/2) to fixed_t(tan(angle)).
+///  Should work with BAM fairly well (12 of 16bit, effectively, by shifting).
+///
+/// fixed_t finesine[FINEANGLES * 5/4] - sine/cosine LUT
+///  Maps fineangle_t(alpha) to fixed_t(sin(angle)).
+///  Remarkable thing is, how to use BAMs with this?
+///
+/// angle_t tantoangle[SLOPERANGE+1]   - arctan LUT
+///  Maps (tan(alpha) * SLOPERANGE) to angle_t(alpha).
+///
+///  finetangent[i] == FRACUNIT * tan((i - FINEANGLES/4 + 0.5) * (2*pi / FINEANGLES))
+///  finesine[i]    == FRACUNIT * sin((i + 0.5) * (2*pi / FINEANGLES))
+///  tantoangle[i]  == atan(i/SLOPERANGE) * (2^32 / (2*pi))
 
 #ifndef tables_h
 #define tables_h 1

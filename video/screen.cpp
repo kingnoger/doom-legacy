@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/08/15 18:08:30  smite-meister
+// palette-to-palette colormaps etc.
+//
 // Revision 1.12  2004/07/25 20:16:43  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -88,8 +91,6 @@ extern bool allow_fullscreen;
 // ------------------
 Video vid;
 
-Texture *scr_borderpatch; // flat used to fill the space around the viewwindow
-
 
 // --------------------------------------------
 // assembly or c drawer routines for software mode 8bpp/16bpp
@@ -136,7 +137,7 @@ consvar_t  cv_usegamma = {"gamma","0",CV_SAVE|CV_CALL,gamma_cons_t,CV_Usegamma_O
 
 // TODO calculate gammatable anew each time? more gamma levels?
 // gammatable[i][j] = round(255.0*pow((j+1)/256.0, 1.0-i*0.125));
-static byte gammatable[5][256] =
+byte gammatable[5][256] =
 {
     {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,
      17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,
@@ -348,28 +349,6 @@ void Video::Startup()
   buffer = NULL;
 
   Recalc();
-
-  // choose and cache the default border patch
-  switch (game.mode)
-    {
-    case gm_doom2:
-      // DOOM II border patch, original was GRNROCK
-      scr_borderpatch = tc.GetPtr("GRNROCK");
-      break;
-    case gm_heretic:
-      if (fc.FindNumForName("e2m1") == -1)
-        scr_borderpatch = tc.GetPtr("FLOOR04");
-      else
-        scr_borderpatch = tc.GetPtr("FLAT513");
-      break;
-    case gm_hexen:
-      scr_borderpatch = tc.GetPtr("F_022");
-      break;
-    default:
-      // DOOM border patch.
-      // FIXME! should be default patch in legacy.wad
-      scr_borderpatch = tc.GetPtr("FLOOR7_2");
-    }
 }
 
 

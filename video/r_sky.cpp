@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/08/15 18:08:30  smite-meister
+// palette-to-palette colormaps etc.
+//
 // Revision 1.2  2004/03/28 15:16:15  smite-meister
 // Texture cache.
 //
@@ -74,25 +77,15 @@
 //
 // sky mapping
 //
-int          skyflatnum;
+// the "sky flat" is not used in rendering, just to let the engine know
+// that a particular sector ceiling is in fact the sky.
+
+int          skyflatnum; 
 Texture     *skytexture;
 int          skytexturemid;
 
 fixed_t      skyscale;
 int          skymode=0;  // old (0), new (1) (quick fix!)
-
-//
-// R_InitSkyMap called at startup, once.
-//
-void R_InitSkyMap()
-{
-    // set at P_LoadSectors
-    //skyflatnum = R_FlatNumForName ( SKYFLATNAME );
-
-  // Update sky column offsets
-  //Sky1ColumnOffset += Sky1ScrollDelta;
-  //Sky2ColumnOffset += Sky2ScrollDelta;
-}
 
 
 //  Setup sky draw for old or new skies (new skies = freelook 256x240)

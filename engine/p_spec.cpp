@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.29  2004/08/15 18:08:28  smite-meister
+// palette-to-palette colormaps etc.
+//
 // Revision 1.28  2004/08/12 18:30:24  smite-meister
 // cleaned startup
 //
@@ -99,15 +102,16 @@
 // Revision 1.1.1.1  2002/11/16 14:18:09  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//   Map geometry utility functions
-//   Line tag hashing
-//   Linedef specials
-//   Sector specials
-//   Scrollers, friction, pushers
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief LineDef and Sector special actions
+///
+/// Map geometry utility functions
+/// Line tag hashing
+/// Linedef specials
+/// Sector specials
+/// Scrollers, friction, pushers
 
 #include "doomdef.h"
 #include "doomdata.h"
@@ -1636,14 +1640,14 @@ void Map::SpawnLineSpecials()
         {
           int s, sec;
           // support for drawn heights coming from different sector
-	case 242:
+	case 242: // Boom: fake floor and ceiling
 	  sec = sides[*lines[i].sidenum].sector-sectors;
 	  for (s = -1; (s = FindSectorFromLineTag(lines+i,s)) >= 0;)
 	    sectors[s].heightsec = sec;
 	  break;
 
           //SoM: 3/20/2000: support for drawn heights coming from different sector
-	case 280:
+	case 280: // Legacy: swimmable water with Boom 242-style colormaps
 	  sec = sides[*lines[i].sidenum].sector-sectors;
 	  for (s = -1; (s = FindSectorFromLineTag(lines+i,s)) >= 0;)
             {
@@ -1653,7 +1657,7 @@ void Map::SpawnLineSpecials()
 	  break;
 
           //SoM: 4/4/2000: HACK! Copy colormaps. Just plain colormaps.
-	case 282:
+	case 282: // Legacy: easy colormap/fog effect
 	  for(s = -1; (s = FindSectorFromLineTag(lines + i, s)) >= 0;)
             {
               sectors[s].midmap = lines[i].frontsector->midmap;
@@ -1661,34 +1665,31 @@ void Map::SpawnLineSpecials()
             }
 	  break;
 
-	case 281:
+	case 281: // Legacy: 3D floor
 	  sec = sides[*lines[i].sidenum].sector-sectors;
 	  for (s = -1; (s = FindSectorFromLineTag(lines+i,s)) >= 0;)
 	    AddFakeFloor(&sectors[s], &sectors[sec], lines+i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL);
 	  break;
 
-	case 289:
+	case 289: // Legacy: 3D floor without shadow
 	  sec = sides[*lines[i].sidenum].sector-sectors;
 	  for (s = -1; (s = FindSectorFromLineTag(lines+i,s)) >= 0;)
 	    AddFakeFloor(&sectors[s], &sectors[sec], lines+i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_NOSHADE|FF_CUTLEVEL);
 	  break;
 
-          // TL block
-	case 300:
+	case 300: // Legacy: translucent 3D floor
 	  sec = sides[*lines[i].sidenum].sector-sectors;
 	  for (s = -1; (s = FindSectorFromLineTag(lines+i,s)) >= 0;)
 	    AddFakeFloor(&sectors[s], &sectors[sec], lines+i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_NOSHADE|FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA);
 	  break;
 
-          // TL water
-	case 301:
+	case 301: // Legacy: translucent swimmable water
 	  sec = sides[*lines[i].sidenum].sector-sectors;
 	  for (s = -1; (s = FindSectorFromLineTag(lines+i,s)) >= 0;)
 	    AddFakeFloor(&sectors[s], &sectors[sec], lines+i, FF_EXISTS|FF_RENDERALL|FF_TRANSLUCENT|FF_SWIMMABLE|FF_BOTHPLANES|FF_ALLSIDES|FF_CUTEXTRA|FF_EXTRA|FF_DOUBLESHADOW|FF_CUTSPRITES);
 	  break;
 
-          // Fog
-	case 302:
+	case 302: // Legacy: 3D fog
 	  sec = sides[*lines[i].sidenum].sector-sectors;
 	  // SoM: Because it's fog, check for an extra colormap and set
 	  // the fog flag...

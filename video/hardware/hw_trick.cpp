@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2001 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/08/15 18:08:30  smite-meister
+// palette-to-palette colormaps etc.
+//
 // Revision 1.4  2004/07/25 20:16:08  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -28,21 +31,6 @@
 //
 // Revision 1.1.1.1  2002/11/16 14:18:56  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.6  2002/09/17 14:26:30  vberghol
-// switch bug fixed
-//
-// Revision 1.5  2002/08/21 16:58:41  vberghol
-// Version 1.41 Experimental compiles and links!
-//
-// Revision 1.4  2002/08/19 18:06:51  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.3  2002/07/01 21:01:15  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:41  vberghol
-// Version 133 Experimental!
 //
 // Revision 1.9  2001/12/26 17:24:47  hurdler
 // Update Linux version
@@ -75,36 +63,34 @@
 //   * SDL sound bug with swapped stereo channels fixed
 //   * separate hw_trick.c now for HW_correctSWTrick(.)
 //
-//
-//
-// DESCRIPTION:
-//      special trick routines to make some SW tricks look OK with
-//      HW rendering. This includes:
-//      - deepwatereffect (e.g. tnt/map02)
-//      - invisible staircase (e.g. eternal/map02)
-//      - floating ceilings (e.g. eternal/map03)
-//
-//      It is not guaranteed that it looks identical to the SW mode,
-//      but it looks in most of the cases far better than having
-//      holes in the architecture, HOM, etc.
-//
-//      It fixes as well missing textures, which are replaced by either
-//      a default texture or the midtexture.
-//
-//      words of notice:
-//      pseudosectors, as mentioned in this file, are sectors where both
-//      sidedefs point to the same sector. This expression is also used
-//      for sectors which are enclosed by another sector but have no
-//      correct sidedefs at all
-//
-//      if a vertex is inside a poly is determined by the angles between
-//      this vertex and all angles on the linedefs (imagine walking along
-//      a circle always facing a certain point inside/outside the circle;
-//      if inside, angle have taken all values [0..\pi), otherwise the
-//      range was < \pi/2
-//
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Trick routines to make some SW tricks look OK with HW rendering
+///
+/// This includes:
+/// - deepwatereffect (e.g. tnt/map02)
+/// - invisible staircase (e.g. eternal/map02)
+/// - floating ceilings (e.g. eternal/map03)
+///
+/// It is not guaranteed that it looks identical to the SW mode,
+/// but it looks in most of the cases far better than having
+/// holes in the architecture, HOM, etc.
+///
+/// It fixes as well missing textures, which are replaced by either
+/// a default texture or the midtexture.
+///
+/// words of notice:
+/// pseudosectors, as mentioned in this file, are sectors where both
+/// sidedefs point to the same sector. This expression is also used
+/// for sectors which are enclosed by another sector but have no
+/// correct sidedefs at all
+///
+/// if a vertex is inside a poly is determined by the angles between
+/// this vertex and all angles on the linedefs (imagine walking along
+/// a circle always facing a certain point inside/outside the circle;
+/// if inside, angle have taken all values [0..\pi), otherwise the
+/// range was < \pi/2
 
 #include <math.h>
 
@@ -116,6 +102,7 @@
 #include "r_local.h"
 #include "r_state.h"
 #include "i_system.h"
+
 
 //
 // add a line to a sectors list of lines

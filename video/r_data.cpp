@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2004/08/15 18:08:30  smite-meister
+// palette-to-palette colormaps etc.
+//
 // Revision 1.22  2004/08/13 18:25:11  smite-meister
 // sw renderer fix
 //
@@ -168,23 +171,25 @@
 /// \brief Texture generation and caching. Colormap loading.
 
 #include <math.h>
-#include <png.h>
+//#include <png.h>
 
 #include "doomdef.h"
+#include "command.h"
+#include "cvars.h"
+
 #include "g_game.h"
 #include "g_map.h"
 #include "g_actor.h"
 
-#include "info.h"
 #include "i_video.h"
-#include "r_local.h"
-#include "r_state.h"
-#include "r_sky.h"
 #include "r_data.h"
+#include "r_state.h"
 #include "v_video.h"
 
 #include "w_wad.h"
 #include "z_zone.h"
+
+extern byte gammatable[5][256];
 
 //
 // Graphics.
@@ -213,11 +218,91 @@ short    color8to16[256];       //remap color index to highcolor rgb value
 short*   hicolormaps;           // test a 32k colormap remaps high -> high
 
 
+//==================================================================
+//  Utilities
+//==================================================================
+
+struct RGB_t
+{
+  byte r, g, b;
+};
+
+// given an RGB triplet, returns the index of the nearest color in
+// the current "zero"-palette using a quadratic distance measure.
+// Thanks to quake2 source!
+static byte NearestColor(byte r, byte g, byte b)
+{
+  int bestdistortion = 256 * 256 * 4;
+  int bestcolor = 0;
+
+  for (int i = 0; i < 256; i++)
+    {
+      int dr = r - vid.palette[i].s.red;
+      int dg = g - vid.palette[i].s.green;
+      int db = b - vid.palette[i].s.blue;
+      int distortion = dr*dr + dg*dg + db*db;
+
+      if (distortion < bestdistortion)
+        {
+          if (!distortion)
+            return i;
+
+          bestdistortion = distortion;
+          bestcolor = i;
+        }
+    }
+
+  return bestcolor;
+}
+
+
+// create best possible colormap from one palette to another
+static byte *R_CreatePaletteConversionColormap(int wadnum)
+{
+  byte *usegamma = gammatable[cv_usegamma.value];
+
+  int i = fc.FindNumForNameFile("PLAYPAL", wadnum);
+  if (i == -1)
+    {
+      // no palette available
+      return NULL;
+    }
+
+  if (fc.LumpLength(i) < int(256 * sizeof(RGB_t)))
+    I_Error("Bad PLAYPAL lump in file %d!\n", wadnum);
+
+  byte *colormap = (byte *)Z_Malloc(256, PU_STATIC, NULL);
+  RGB_t* pal = (RGB_t *)fc.CacheLumpNum(i, PU_CACHE);
+
+  for (i=0; i<256; i++)
+    colormap[i] = NearestColor(usegamma[pal[i].r], usegamma[pal[i].g], usegamma[pal[i].b]);
+
+  return colormap;
+}
+
+
+// applies a given colormap to a patch_t
+static void R_ColormapPatch(patch_t *p, byte *colormap)
+{
+ for (int i=0; i<p->width; i++)
+   {
+     post_t *post = (post_t *)((byte *)p + p->columnofs[i]);
+
+     while (post->topdelta != 0xff)
+       {
+	 int count = post->length;
+	 for (int j=0; j<count; j++)
+	   post->data[j] = colormap[post->data[j]];
+
+	 post = (post_t *)&post->data[post->length + 1];
+       }
+   }
+}
+
 
 //==================================================================
 //  Textures
 //==================================================================
-
 
 Texture::Texture(const char *n)
 {
@@ -329,6 +414,11 @@ byte *PatchTexture::Generate()
       // necessary endianness conversion
       for (int i=0; i < width; i++)
         p->columnofs[i] = LONG(p->columnofs[i]);
+
+      // do a palette conversion if needed
+      byte *colormap = tc.GetPalConv(lump >> 16);
+      if (colormap)
+	R_ColormapPatch(p, colormap);
     }
 
   return data;
@@ -449,7 +539,6 @@ static void R_DrawColumnInCache(column_t *col, byte *cache, int originy, int cac
       col = (column_t *)&col->data[col->length + 1];
     }
 }
-
 
 
 // TODO better DoomTexture handling?
@@ -606,12 +695,28 @@ texturecache_t::texturecache_t(memtag_t tag)
 
 void texturecache_t::Clear()
 {
-  for (c_iter_t i = c_map.begin(); i != c_map.end(); i++)
-    delete (*i).second;
+  for (c_iter_t t = c_map.begin(); t != c_map.end(); t++)
+    delete t->second;
 
   c_map.clear();
   texture_ids.clear();
   texture_ids[0] = NULL; // "no texture" id
+}
+
+
+void texturecache_t::InitPaletteConversion()
+{
+  // create the palette conversion colormaps
+  unsigned i;
+  for (i=0; i<palette_conversion.size(); i++)
+    if (palette_conversion[i])
+      Z_Free(palette_conversion[i]);
+
+  unsigned n = fc.Size(); // number of resource files
+  palette_conversion.resize(n);
+
+  for (i=0; i<n; i++)
+    palette_conversion[i] = R_CreatePaletteConversionColormap(i);
 }
 
 
@@ -696,12 +801,12 @@ cacheitem_t *texturecache_t::Load(const char *name)
   int size = fc.LumpLength(lump);
 
   // first check possible magic numbers!
-  if (!png_sig_cmp(data, 0, sizeof(data)))
+  /*  if (!png_sig_cmp(data, 0, sizeof(data)))
     {
       // it's a PNG
       I_Error("PNG support is on its way...\n");
     } // then try some common sizes for raw picture lumps
-  else if (size == 64*64)
+    else */if (size == 64*64)
     {
       // Flat is 64*64 bytes of raw paletted picture data in one lump
       t = new LumpTexture(name, lump, 64, 64);
@@ -723,6 +828,7 @@ cacheitem_t *texturecache_t::Load(const char *name)
     }
   else if (data[2] == 0 && data[6] == 0 && data[7] == 0)
     {
+      CONS_Printf(" !!! pic_t '%s' found!\n", name); // root 'em out!
       // likely a pic_t
       // TODO pic_t has an inadequate magic number.
       // pic_t's should be replaced with a better format
@@ -860,7 +966,7 @@ int texturecache_t::ReadTextures()
 
 
 //==================================================================
-//  Utilities
+//  Colormaps
 //==================================================================
 
 
@@ -1014,6 +1120,7 @@ void R_InitColormaps()
     memset(extra_colormaps, 0, sizeof(extra_colormaps));
     R_InitExtraColormaps();
   }
+  // TODO Hexen maps can have custom lightmaps ("fadetable" MAPINFO command)... just a note.
 }
 
 
@@ -1066,6 +1173,20 @@ int R_ColormapNumForName(const char *name)
 
 
 
+// Rounds off floating numbers and checks for 0 - 255 bounds
+int RoundUp(double number)
+{
+  if (number >= 255.0)
+    return 255;
+  if (number <= 0)
+    return 0;
+
+  if (int(number) <= (number - 0.5))
+    return int(number) + 1;
+
+  return int(number);
+}
+
 // SoM:
 //
 // R_CreateColormap
@@ -1074,9 +1195,6 @@ int R_ColormapNumForName(const char *name)
 // custom colormaps at runtime. NOTE: For GL mode, we only need to color
 // data and not the colormap data.
 double  deltas[256][3], cmap[256][3];
-
-static unsigned char  NearestColor(unsigned char r, unsigned char g, unsigned char b);
-int            RoundUp(double number);
 
 int R_CreateColormap(char *p1, char *p2, char *p3)
 {
@@ -1255,48 +1373,6 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
 }
 
 
-// Thanks to quake2 source!
-static byte NearestColor(byte r, byte g, byte b)
-{
-  int bestdistortion = 256 * 256 * 4;
-  int bestcolor = 0;
-
-  for (int i = 0; i < 256; i++)
-    {
-      int dr = r - vid.palette[i].s.red;
-      int dg = g - vid.palette[i].s.green;
-      int db = b - vid.palette[i].s.blue;
-      int distortion = dr*dr + dg*dg + db*db;
-
-      if (distortion < bestdistortion)
-        {
-          if (!distortion)
-            return i;
-
-          bestdistortion = distortion;
-          bestcolor = i;
-        }
-    }
-
-  return bestcolor;
-}
-
-
-// Rounds off floating numbers and checks for 0 - 255 bounds
-int RoundUp(double number)
-{
-  if(number > 255.0)
-    return 255;
-  if(number < 0)
-    return 0;
-
-  if((int)number <= (number -0.5))
-    return (int)number + 1;
-
-  return (int)number;
-}
-
-
 
 
 const char *R_ColormapNameForNum(int num)
@@ -1340,36 +1416,6 @@ void R_Init8to16()
   for (i=0;i<16384;i++)
     hicolormaps[i] = i<<1;
 }
-
-
-//
-// Locates all the lumps
-//  that will be used by all views
-// Must be called after W_Init.
-//
-void R_InitData()
-{
-  //fab highcolor
-  if (vid.BytesPerPixel == 2)
-    {
-      CONS_Printf("\nInitHighColor...");
-      R_Init8to16();
-    }
-
-  CONS_Printf("\nInitTextures...");
-  tc.Clear();
-  tc.SetDefaultItem("SMOKA0");
-  tc.ReadTextures();
-  //tc.Inventory();
-
-  CONS_Printf("\nInitSprites...\n");
-  R_InitSprites(sprnames);
-
-  CONS_Printf("\nInitColormaps...\n");
-  R_InitColormaps();
-}
-
-
 
 
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/08/15 18:08:29  smite-meister
+// palette-to-palette colormaps etc.
+//
 // Revision 1.4  2004/03/28 15:16:14  smite-meister
 // Texture cache.
 //
@@ -114,7 +117,7 @@ extern byte*            ds_source;      // start of a 64*64 tile image
 extern byte*            ds_transmap;
 
 
-// viewborder patches lump numbers
+/// windowborder textures
 enum windowborder_e
 {
   BRDR_T = 0,
@@ -127,7 +130,9 @@ enum windowborder_e
   BRDR_BR
 };
 
-extern class Texture *viewbordertex[8];
+// textures for window borders and background
+extern class Texture *window_border[8];
+extern Texture *window_background;
 
 // ------------------------------------------------
 // r_draw.c COMMON ROUTINES FOR BOTH 8bpp and 16bpp

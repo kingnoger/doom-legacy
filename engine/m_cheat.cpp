@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2004/08/15 18:08:28  smite-meister
+// palette-to-palette colormaps etc.
+//
 // Revision 1.20  2004/08/12 18:30:23  smite-meister
 // cleaned startup
 //
@@ -76,12 +79,10 @@
 // Revision 1.2  2002/12/03 10:11:39  smite-meister
 // Blindness and missile clipping bugs fixed
 //
-//
-// DESCRIPTION:
-//   Cheat sequences.
-//
 //-----------------------------------------------------------------------------
- 
+
+/// \file
+/// \brief Cheat sequences.
 
 #include "tables.h"
 #include "dstrings.h"
@@ -101,12 +102,6 @@
 #include "i_sound.h" // for I_PlayCD()
 #include "sounds.h"
 #include "w_wad.h"
-
-
-void cht_Init()
-{
-  // used to generate the cheat scrambling table
-}
 
 
 // console commands
