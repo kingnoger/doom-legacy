@@ -17,8 +17,11 @@
 //
 //
 // $Log$
+// Revision 1.17  2004/12/09 06:13:37  segabor
+// An illegal character removed from source
+//
 // Revision 1.16  2004/12/08 16:56:16  segabor
-// Mac and SDL related fixes
+// Mac and SDL related fixes
 //
 // Revision 1.15  2004/08/29 13:50:08  hurdler
 // minor update
