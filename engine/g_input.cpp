@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/09/10 19:59:15  jussip
+// Joystick code almost ready for use.
+//
 // Revision 1.12  2004/09/09 22:04:38  jussip
 // New joy code a bit more finished. Button binding works.
 //
@@ -77,6 +80,10 @@
 #include "i_video.h"
 
 #include "tables.h"
+
+#include<SDL/SDL.h>
+
+extern vector<SDL_Joystick*> joysticks;
 
 #define MAXMOUSESENSITIVITY 40 // sensitivity steps
 
@@ -452,7 +459,6 @@ void ticcmd_t::Build(bool primary, int realtics)
     side = MAXPLMOVE;
   else if (side < -MAXPLMOVE)
     side = -MAXPLMOVE;
-
 
   pitch = G_ClipAimingPitch(pitch << 16) >> 16;
   //CONS_Printf("Move: %d, %d, %d\n", yaw, pitch, buttons);

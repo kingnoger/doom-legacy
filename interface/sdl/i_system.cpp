@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2004/09/10 19:59:15  jussip
+// Joystick code almost ready for use.
+//
 // Revision 1.16  2004/09/09 22:04:39  jussip
 // New joy code a bit more finished. Button binding works.
 //
@@ -115,6 +118,8 @@
 
 #include "sdl/endtxt.h"
 
+vector<SDL_Joystick*> joysticks;
+
 // FIXME is this necessary?
 JoyType_t Joystick;
 
@@ -129,7 +134,6 @@ static int lastmousey = 0;
 
 void I_StartupKeyboard () {}
 void I_StartupTimer    () {}
-
 
 
 //
@@ -603,13 +607,13 @@ void I_SysInit()
   I_StartupGraphics(); // we need a window for grabbing input!
 }
 
-// Initialize joysticks and print information.
+/// Initialize joysticks and print information.
 void I_JoystickInit() {
   int numjoysticks, i;
   SDL_Joystick *joy;
 
-  // Joystick subsystem has been initialized at the same time as
-  // video, because otherwise it won't work.
+  // Joystick subsystem was initialized at the same time as video,
+  // because otherwise it won't work. (don't know why, though ...)
 
   numjoysticks = SDL_NumJoysticks();
   CONS_Printf("%d joystick(s) found.\n", numjoysticks);
@@ -617,9 +621,9 @@ void I_JoystickInit() {
   // Start receiving joystick events.
   SDL_JoystickEventState(SDL_ENABLE);
 
-  // ADD: Put the SDL_Joystick pointers to a vector or something.
   for(i=0; i<numjoysticks; i++) {
     joy = SDL_JoystickOpen(i);
+    joysticks.push_back(joy);
     CONS_Printf("Properties of joystick %d:\n", i);
     CONS_Printf("    %s.\n", SDL_JoystickName(i));
     CONS_Printf("    %d axes.\n", SDL_JoystickNumAxes(joy));
@@ -633,15 +637,13 @@ void I_JoystickInit() {
 
 void I_ShutdownJoystick() {
   int i;
-  SDL_Joystick *joy;
 
   CONS_Printf("Shutting down joysticks.\n");
-  for(i=0; i< SDL_NumJoysticks(); i++) {
-    joy = SDL_JoystickOpen(i); // FIXME to use vector<joy*> or something.
+  for(i=0; i< (int)joysticks.size(); i++) {
     CONS_Printf("Closing joystick %s.\n", SDL_JoystickName(i));
-    SDL_JoystickClose(joy);
-    SDL_JoystickClose(joy); // Open/close refcounted, so subtract it twice.
+    SDL_JoystickClose(joysticks[i]);
   }
+  joysticks.clear();
   CONS_Printf("Joystick subsystem closed cleanly.\n");
 }
 
@@ -664,8 +666,8 @@ void I_Quit()
   I_ShutdownCD();
 
   M_SaveConfig(NULL);
-  I_ShutdownGraphics();
   I_ShutdownJoystick();
+  I_ShutdownGraphics();
   I_ShutdownSystem();
   printf("\r");
   ShowEndTxt();
