@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2004/01/02 14:22:58  smite-meister
+// items work
+//
 // Revision 1.19  2003/12/31 18:32:49  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -110,7 +113,6 @@
 #include "r_draw.h"
 #include "r_main.h"
 
-#include "s_sound.h"
 #include "sounds.h"
 
 #include "m_misc.h" // File handling
@@ -698,10 +700,14 @@ bool PlayerInfo::InventoryResponder(int (*gc)[2], event_t *ev)
 	    pawn->invTics = 0;
 	  else if (pawn->inventory[pawn->invSlot].count > 0)
 	    {
+	      // FIXME HACK bypassing netcode
+	      pawn->UseArtifact(artitype_t(pawn->inventory[pawn->invSlot].type));
+	      /*
 	      if (1) // FIXME send playernum in the message...
 		SendNetXCmd(XD_USEARTEFACT, &pawn->inventory[pawn->invSlot].type, 1);
 	      else
 		SendNetXCmd2(XD_USEARTEFACT, &pawn->inventory[pawn->invSlot].type, 1);
+	      */
 	    }
 	  return true;
 	}
