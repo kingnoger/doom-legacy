@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.31  2004/08/30 18:59:50  smite-meister
+// door bugfix
+//
 // Revision 1.30  2004/08/29 20:48:48  smite-meister
 // bugfixes. wow.
 //
@@ -1726,14 +1729,19 @@ void Map::SpawnLineSpecials()
 		  // Boom: 242 fake floor and ceiling
 		case 1:
 		  for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0;)
-		    sectors[s].heightsec = sec;
+		    {
+		      sectors[s].heightsec = sec;
+		    }
 		  break;
 
 		  // Boom: 260 transparent middle texture
 		case 2:
 		  {
-		    int temp = sides[*l->sidenum].special; // transmap number stored here 
-		    if (!tag || temp == -1)
+		    int temp = sides[*l->sidenum].special; // transmap number stored here
+		    if (temp == -1)
+		      temp = 0; // default, TRANMAP
+
+		    if (!tag)
 		      l->transmap = temp;
 		    else for (s = -1; (l2 = FindLineFromTag(tag, &s)); )
 		      l2->transmap = temp; // make tagged lines translucent too

@@ -950,8 +950,6 @@ int Map::EV_DoGenDoor(line_t *line)
 	  break;
 	}
 
-      type |= vdoor_t::Delayed;
-
       int wait;
       // setup delay for door remaining open/closed
       switch(Dely)

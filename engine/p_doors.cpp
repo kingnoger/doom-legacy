@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2004/08/30 18:59:50  smite-meister
+// door bugfix
+//
 // Revision 1.14  2004/04/25 16:26:49  smite-meister
 // Doxygen
 //
@@ -60,11 +63,10 @@
 // Revision 1.1.1.1  2002/11/16 14:17:54  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION: 
-//      Door animation code (opening/closing)
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Door animation code (opening/closing)
 
 
 #include "doomdef.h"
