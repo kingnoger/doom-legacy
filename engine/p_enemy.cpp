@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.26  2004/11/13 22:38:42  smite-meister
+// intermission works
+//
 // Revision 1.25  2004/11/09 20:38:50  smite-meister
 // added packing to I/O structs
 //
@@ -321,33 +324,28 @@ static Actor   *soundtarget;
 
 static void P_RecursiveSound(const Map *m, sector_t *sec, int soundblocks)
 {
-  int         i;
-  line_t *check;
-  sector_t *other;
-
   // wake up all monsters in this sector
-  if (sec->validcount == validcount
-      && sec->soundtraversed <= soundblocks+1)
-    {
-      return;         // already flooded
-    }
+  if (sec->validcount == validcount && sec->soundtraversed <= soundblocks+1)
+    return; // already flooded
 
   sec->validcount = validcount;
   sec->soundtraversed = soundblocks+1;
   sec->soundtarget = soundtarget;
 
-  for (i=0 ;i<sec->linecount ; i++)
+  for (int i=0; i < sec->linecount; i++)
     {
-      check = sec->lines[i];
-      if (! (check->flags & ML_TWOSIDED) )
+      line_t *check = sec->lines[i];
+      if (!(check->flags & ML_TWOSIDED))
 	continue;
 
-      P_LineOpening (check);
+      P_LineOpening(check);
 
       if (openrange <= 0)
 	continue;   // closed door
 
-      if ( m->sides[ check->sidenum[0] ].sector == sec)
+      sector_t *other;
+
+      if (m->sides[ check->sidenum[0] ].sector == sec)
 	other = m->sides[ check->sidenum[1] ].sector;
       else
 	other = m->sides[ check->sidenum[0] ].sector;
@@ -355,20 +353,17 @@ static void P_RecursiveSound(const Map *m, sector_t *sec, int soundblocks)
       if (check->flags & ML_SOUNDBLOCK)
         {
 	  if (!soundblocks)
-	    P_RecursiveSound (m, other, 1);
+	    P_RecursiveSound(m, other, 1);
         }
       else
-	P_RecursiveSound (m, other, soundblocks);
+	P_RecursiveSound(m, other, soundblocks);
     }
 }
 
 
 
-//
-// P_NoiseAlert
 // If a monster yells at a player,
 // it will alert other monsters to the player.
-//
 void P_NoiseAlert(Actor *target, Actor *emitter)
 {
   soundtarget = target;
@@ -379,9 +374,6 @@ void P_NoiseAlert(Actor *target, Actor *emitter)
 
 
 
-//
-// was P_CheckMeleeRange
-//
 bool DActor::CheckMeleeRange()
 {
   Actor *pl = target;

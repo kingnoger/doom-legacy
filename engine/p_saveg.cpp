@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.37  2004/11/13 22:38:43  smite-meister
+// intermission works
+//
 // Revision 1.36  2004/11/09 20:38:50  smite-meister
 // added packing to I/O structs
 //
@@ -35,9 +38,6 @@
 //
 // Revision 1.31  2004/09/03 16:28:50  smite-meister
 // bugfixes and ZDoom linedef types
-//
-// Revision 1.30  2004/08/12 18:30:24  smite-meister
-// cleaned startup
 //
 // Revision 1.29  2004/07/14 16:13:13  smite-meister
 // cleanup, commands
@@ -57,47 +57,20 @@
 // Revision 1.24  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
-// Revision 1.23  2004/01/06 14:37:45  smite-meister
-// six bugfixes, cleanup
-//
-// Revision 1.22  2004/01/05 11:48:08  smite-meister
-// 7 bugfixes
-//
-// Revision 1.21  2004/01/02 14:21:21  smite-meister
-// save bugfix
-//
 // Revision 1.20  2003/12/23 18:06:06  smite-meister
 // Hexen stairbuilders. Moving geometry done!
-//
-// Revision 1.19  2003/12/21 12:29:09  smite-meister
-// bugfixes
-//
-// Revision 1.18  2003/12/18 11:57:31  smite-meister
-// fixes / new bugs revealed
-//
-// Revision 1.17  2003/12/13 23:51:03  smite-meister
-// Hexen update
 //
 // Revision 1.16  2003/12/09 01:02:00  smite-meister
 // Hexen mapchange works, keycodes fixed
 //
-// Revision 1.15  2003/12/06 23:57:47  smite-meister
-// save-related bugfixes
-//
 // Revision 1.14  2003/12/03 10:49:50  smite-meister
 // Save/load bugfix, text strings updated
-//
-// Revision 1.13  2003/11/30 00:09:46  smite-meister
-// bugfixes
 //
 // Revision 1.12  2003/11/27 11:28:26  smite-meister
 // Doom/Heretic startup bug fixed
 //
 // Revision 1.11  2003/11/23 19:07:41  smite-meister
 // New startup order
-//
-// Revision 1.10  2003/11/23 00:41:55  smite-meister
-// bugfixes
 //
 // Revision 1.9  2003/11/12 11:07:23  smite-meister
 // Serialization done. Map progression.
@@ -166,7 +139,6 @@
 #include "z_zone.h"
 #include "tables.h"
 
-#include "am_map.h"
 #include "hud.h"
 
 // NOTE! The Map *mp is not saved for Thinkers in general, because it can be deduced
@@ -1936,9 +1908,14 @@ int GameInfo::Serialize(LArchive &a)
 
   // TODO FS hub_script, global_script...
 
+  a.Marker(MARK_GROUP);
+
   // misc shit
-  // TODO how to save Consoleplayer info?? and net info???
-  //a << (n = consoleplayer ? consoleplayer->number : -1);
+  a << (n = Consoleplayer.size());
+  for (i = 0; i < n; i++)
+    a << Consoleplayer[i]->number;
+
+  // TODO how to save net info???
 
   a << (n = P_GetRandIndex());
 
@@ -2037,6 +2014,18 @@ int GameInfo::Unserialize(LArchive &a)
       ACS_store.insert(pair<const int, acsstore_t>(temp.tmap, temp));
     }
 
+  if (!a.Marker(MARK_GROUP))
+    return -1;
+
+  // misc shit
+  a << n;
+  for (i = 0; i < n; i++)
+    {
+      int num;
+      a << num;
+      Consoleplayer.push_back(FindPlayer(num));
+    }
+
   // misc shit
 
   a << n;
@@ -2069,10 +2058,6 @@ void GameInfo::LoadGame(int slot)
   Z_Free(savebuffer); // the compressed buffer is no longer needed
 
   Downgrade(VERSION); // reset the game version
-
-  automap.Close();
-  hud.ST_Stop();
-
   SV_Reset();
 
   // dearchive all the modifications
@@ -2091,11 +2076,9 @@ void GameInfo::LoadGame(int slot)
 
   paused = false;
 
-  PlayerInfo *p = Players.begin()->second;
-  Consoleplayer.push_back(p);
-  // TODO set up local "consoleplayer" stuff... have other playerinfos waiting for clients to rejoin
-  //  if (consoleplayer && consoleplayer->pawn)    hud.ST_Start(consoleplayer->pawn);
-
+  // TODO have other playerinfos waiting for clients to rejoin
+  if (Consoleplayer.size())
+    hud.ST_Start(Consoleplayer[0]);
   // done
   /*
   if (setsizeneeded)

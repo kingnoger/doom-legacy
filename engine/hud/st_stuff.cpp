@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.27  2004/11/13 22:38:43  smite-meister
+// intermission works
+//
 // Revision 1.26  2004/11/04 21:12:53  smite-meister
 // save/load fixed
 //
@@ -195,6 +198,7 @@ int fgbuffer = FG;
 
 //=========================================
 // HUD widget control variables
+//=========================================
 
 // palette flashes
 static int  st_berzerk;
@@ -249,18 +253,19 @@ static int st_mana1, st_mana2;
 
 
 
-//==================================
+//=========================================
 //  Legacy status bar overlay
-//
+//=========================================
 
 static Texture *sbohealth;
 static Texture *sbofrags;
 static Texture *sboarmor;
 static Texture *PatchAmmoPic[NUMAMMO + 1];
 
-//==================================
+
+//=========================================
 // Doom status bar graphics
-//
+//=========================================
 
 // doom.wad number sets:
 // "AMMNUM0", small, thin, gray, no minus
@@ -304,9 +309,9 @@ static const char DHAmmoPics[NUMAMMO + 1][10] =
 };
 
 
-//==================================
+//=========================================
 // Heretic status bar graphics
-//
+//=========================================
 
 static Texture *PatchGod[2];
 static Texture *PatchBARBACK;
@@ -871,7 +876,7 @@ static int ST_calcPainOffset()
 // the precedence of expressions is:
 //  dead > evil grin > turned head > straight ahead
 //
-void HUD::ST_updateFaceWidget()
+void HUD::ST_updateFaceWidget(const PlayerPawn *st_pawn)
 {
   int         i;
   angle_t     badguyangle;
@@ -886,7 +891,7 @@ void HUD::ST_updateFaceWidget()
   if (priority < 10)
     {
       // dead
-      if (!sbpawn->health)
+      if (!st_pawn->health)
         {
           priority = 9;
           st_faceindex = ST_DEADFACE;
@@ -903,10 +908,10 @@ void HUD::ST_updateFaceWidget()
 
           for (i=0;i<NUMWEAPONS;i++)
             {
-              if (st_oldweaponsowned[i] != sbpawn->weaponowned[i])
+              if (st_oldweaponsowned[i] != st_pawn->weaponowned[i])
                 {
                   doevilgrin = true;
-                  st_oldweaponsowned[i] = sbpawn->weaponowned[i];
+                  st_oldweaponsowned[i] = st_pawn->weaponowned[i];
                 }
             }
           if (doevilgrin)
@@ -921,32 +926,32 @@ void HUD::ST_updateFaceWidget()
 
   if (priority < 8)
     {
-      if (damagecount && sbpawn->attacker && sbpawn->attacker != sbpawn)
+      if (damagecount && st_pawn->attacker && st_pawn->attacker != st_pawn)
         {
           // being attacked
           priority = 7;
 
-          if (sbpawn->health - st_oldhealth > ST_MUCHPAIN)
+          if (st_pawn->health - st_oldhealth > ST_MUCHPAIN)
             {
               st_facecount = ST_TURNCOUNT;
               st_faceindex = ST_calcPainOffset() + ST_OUCHOFFSET;
             }
           else
             {
-              badguyangle = R_PointToAngle2(sbpawn->x, sbpawn->y,
-                                            sbpawn->attacker->x,
-                                            sbpawn->attacker->y);
+              badguyangle = R_PointToAngle2(st_pawn->x, st_pawn->y,
+                                            st_pawn->attacker->x,
+                                            st_pawn->attacker->y);
 
-              if (badguyangle > sbpawn->angle)
+              if (badguyangle > st_pawn->angle)
                 {
                   // whether right or left
-                  diffang = badguyangle - sbpawn->angle;
+                  diffang = badguyangle - st_pawn->angle;
                   i = diffang > ANG180;
                 }
               else
                 {
                   // whether left or right
-                  diffang = sbpawn->angle - badguyangle;
+                  diffang = st_pawn->angle - badguyangle;
                   i = diffang <= ANG180;
                 } // confusing, aint it?
 
@@ -978,7 +983,7 @@ void HUD::ST_updateFaceWidget()
       // getting hurt because of your own damn stupidity
       if (damagecount)
         {
-          if (sbpawn->health - st_oldhealth > ST_MUCHPAIN)
+          if (st_pawn->health - st_oldhealth > ST_MUCHPAIN)
             {
               priority = 7;
               st_facecount = ST_TURNCOUNT;
@@ -996,7 +1001,7 @@ void HUD::ST_updateFaceWidget()
   if (priority < 6)
     {
       // rapid firing
-      if (sbpawn->attackdown)
+      if (st_pawn->attackdown)
         {
           if (lastattackdown==-1)
             lastattackdown = ST_RAMPAGEDELAY;
@@ -1015,8 +1020,8 @@ void HUD::ST_updateFaceWidget()
   if (priority < 5)
     {
       // invulnerability
-      if ((sbpawn->cheats & CF_GODMODE)
-          || sbpawn->powers[pw_invulnerability])
+      if ((st_pawn->cheats & CF_GODMODE)
+          || st_pawn->powers[pw_invulnerability])
         {
           priority = 4;
 
@@ -1039,25 +1044,24 @@ void HUD::ST_updateFaceWidget()
 
 void HUD::UpdateWidgets()
 {
-  // sbpawn should basically only be used in this function and in functions that are
-  // only called from this function.
-
-  // if sbpawn == NULL, don't update. ST_Stop sets it to NULL.
-  if (!st_active || sbpawn == NULL)
+  // if no target, don't update
+  if (!st_active || !st_player)
     return;
 
-  if (sbpawn->eflags & MFE_REMOVE) // TEST
+  PlayerPawn *st_pawn = st_player->pawn;
+
+  if (!st_pawn || st_pawn->eflags & MFE_REMOVE) // TEST
     {
-      sbpawn = NULL; // it will be deleted soon
+      // it will be deleted soon
       return;
     }
 
-  if (sbpawn->powers[pw_strength])
-    st_berzerk = 12 - (sbpawn->powers[pw_strength]>>6);  // slowly fade the berzerk out??? FIXME it's on/off!
+  if (st_pawn->powers[pw_strength])
+    st_berzerk = 12 - (st_pawn->powers[pw_strength]>>6);  // slowly fade the berzerk out??? FIXME it's on/off!
   else
     st_berzerk = 0;
 
-  st_radiation = (sbpawn->powers[pw_ironfeet] > BLINKTHRESHOLD || sbpawn->powers[pw_ironfeet] & 8);
+  st_radiation = (st_pawn->powers[pw_ironfeet] > BLINKTHRESHOLD || st_pawn->powers[pw_ironfeet] & 8);
 
   const int largeammo = 1994; // means "n/a"
   int i;
@@ -1072,19 +1076,19 @@ void HUD::UpdateWidgets()
     fgbuffer &= ~V_TL;
 
   // when pawn is detached from player, no more update
-  if (sbpawn->player)
-    st_fragscount = sbpawn->player->score;
+  if (st_pawn->player)
+    st_fragscount = st_pawn->player->score;
 
   st_notdeathmatch = !cv_deathmatch.value;
 
-  st_godmode = (sbpawn->cheats & CF_GODMODE);
+  st_godmode = (st_pawn->cheats & CF_GODMODE);
 
-  st_pawncolor = sbpawn->color;
-  st_health = sbpawn->health;
+  st_pawncolor = st_pawn->color;
+  st_health = st_pawn->health;
 
   if (game.mode == gm_heretic || game.mode == gm_hexen)
     {
-      if (sbpawn->invTics)
+      if (st_pawn->invTics)
         invopen = true;
       else
         invopen = false;
@@ -1095,11 +1099,11 @@ void HUD::UpdateWidgets()
       if (itemuse > 0)
         itemuse--;
 
-      int n = sbpawn->inventory.size();
-      int left = sbpawn->invSlot - st_curpos; // how many slots are there left of the first visible slot?
+      int n = st_pawn->inventory.size();
+      int left = st_pawn->invSlot - st_curpos; // how many slots are there left of the first visible slot?
       for (i=0; i<7; i++)
-        if (i+left < n && sbpawn->inventory[left+i].type != arti_none)
-          st_invslots[i] = sbpawn->inventory[left+i];
+        if (i+left < n && st_pawn->inventory[left+i].type != arti_none)
+          st_invslots[i] = st_pawn->inventory[left+i];
         else
           st_invslots[i] = inventory_t(arti_none, 0);
 
@@ -1108,39 +1112,39 @@ void HUD::UpdateWidgets()
 
       int frame = (game.tic/3) & 15;
       // flight icon
-      if (sbpawn->powers[pw_flight] > BLINKTHRESHOLD || (sbpawn->powers[pw_flight] & 16))
+      if (st_pawn->powers[pw_flight] > BLINKTHRESHOLD || (st_pawn->powers[pw_flight] & 16))
         st_flight = frame;
           // TODO stop the spinning when not in air?
-          // if (sbpawn->flags2 & MF2_FLY)
+          // if (st_pawn->flags2 & MF2_FLY)
       else
         st_flight = -1;
 
       // book icon
-      if ((sbpawn->powers[pw_weaponlevel2] > BLINKTHRESHOLD || (sbpawn->powers[pw_weaponlevel2] & 16)) && !sbpawn->morphTics)
+      if ((st_pawn->powers[pw_weaponlevel2] > BLINKTHRESHOLD || (st_pawn->powers[pw_weaponlevel2] & 16)) && !st_pawn->morphTics)
         st_book = frame;
       else
         st_book = -1;
 
       // speed icon
-      if (sbpawn->powers[pw_speed] > BLINKTHRESHOLD || (sbpawn->powers[pw_speed] & 16))
+      if (st_pawn->powers[pw_speed] > BLINKTHRESHOLD || (st_pawn->powers[pw_speed] & 16))
         st_speed = frame;
       else
         st_speed = -1;
 
       // defense icon
-      if (sbpawn->powers[pw_invulnerability] > BLINKTHRESHOLD || (sbpawn->powers[pw_invulnerability] & 16))
+      if (st_pawn->powers[pw_invulnerability] > BLINKTHRESHOLD || (st_pawn->powers[pw_invulnerability] & 16))
         st_defense = frame;
       else
         st_defense = -1;
 
       // minotaur icon
-      if (sbpawn->powers[pw_minotaur] > BLINKTHRESHOLD || (sbpawn->powers[pw_minotaur] & 16))
+      if (st_pawn->powers[pw_minotaur] > BLINKTHRESHOLD || (st_pawn->powers[pw_minotaur] & 16))
         st_minotaur = frame;
       else
         st_minotaur = -1;
 
-      st_mana1 = sbpawn->ammo[am_mana1];
-      st_mana2 = sbpawn->ammo[am_mana2];
+      st_mana1 = st_pawn->ammo[am_mana1];
+      st_mana2 = st_pawn->ammo[am_mana2];
       st_mana1icon = (st_mana1 > 0);
       st_mana2icon = (st_mana2 > 0);
     }
@@ -1149,35 +1153,35 @@ void HUD::UpdateWidgets()
       // doom
       for (i=0; i<NUMAMMO; i++)
         {
-          st_ammo[i] = sbpawn->ammo[i];
-          st_maxammo[i] = sbpawn->maxammo[i];
+          st_ammo[i] = st_pawn->ammo[i];
+          st_maxammo[i] = st_pawn->maxammo[i];
         }
 
       // refresh everything if this is him coming back to life
-      ST_updateFaceWidget(); // updates st_oldweaponsowned
+      ST_updateFaceWidget(st_pawn); // updates st_oldweaponsowned
       st_oldhealth = st_health;
     }
 
-  st_armor = int(100 * sbpawn->toughness);
+  st_armor = int(100 * st_pawn->toughness);
   for (i=0; i<NUMARMOR; i++)
-    st_armor += sbpawn->armorpoints[i];
+    st_armor += st_pawn->armorpoints[i];
 
   if (game.mode == gm_hexen)
     st_armor /= 5; // "AC"
 
-  st_readywp = sbpawn->readyweapon;
+  st_readywp = st_pawn->readyweapon;
 
-  st_atype = sbpawn->weaponinfo[sbpawn->readyweapon].ammo;
+  st_atype = st_pawn->weaponinfo[st_pawn->readyweapon].ammo;
   if (st_atype == am_noammo)
     st_readywp_ammo = largeammo;
   else if (st_atype == am_manaboth)
-    st_readywp_ammo = min(sbpawn->ammo[am_mana1], sbpawn->ammo[am_mana2]);
+    st_readywp_ammo = min(st_pawn->ammo[am_mana1], st_pawn->ammo[am_mana2]);
   else
-    st_readywp_ammo = sbpawn->ammo[st_atype];
+    st_readywp_ammo = st_pawn->ammo[st_atype];
 
   // update keycard multiple widgets
   for (i=0;i<6;i++)
-    st_keyboxes[i] = (sbpawn->keycards & (1 << (i + 11))) ? i : -1;
+    st_keyboxes[i] = (st_pawn->keycards & (1 << (i + 11))) ? i : -1;
 }
 
 // sets the new palette based upon current values of damagecount
@@ -1592,7 +1596,7 @@ void HUD::ST_Stop()
   if (!st_active)
     return;
 
-  sbpawn = NULL;
+  st_player = NULL;
   vid.SetPalette(0);
 
   st_active = false;
@@ -1604,7 +1608,7 @@ void HUD::ST_Stop()
 // another player than consoleplayer, for example, when you
 // change the view in a multiplayer demo with F12.
 
-void HUD::ST_Start(PlayerPawn *p)
+void HUD::ST_Start(PlayerInfo *p)
 {
   int i;
 
@@ -1613,13 +1617,13 @@ void HUD::ST_Start(PlayerPawn *p)
   if (st_active)
     ST_Stop();
 
-  sbpawn = p;
+  st_player = p;
 
   st_palette = -1;
 
   if (game.mode == gm_heretic || game.mode == gm_hexen)
     {
-      ST_SetClassData(p->pclass, p->player->number);
+      //ST_SetClassData(pawndata[p->ptype].pclass, p->number); TODO FIXME
     }
   else
     {
@@ -1627,10 +1631,10 @@ void HUD::ST_Start(PlayerPawn *p)
       // face initialization
       st_faceindex = 0;
       st_oldhealth = -1;
-      st_maxhealth = p->maxhealth / 2;
+      st_maxhealth = 100; //p->maxhealth / 2;
 
       for (i=0;i<NUMWEAPONS;i++)
-        st_oldweaponsowned[i] = sbpawn->weaponowned[i];
+        st_oldweaponsowned[i] = false; //sbpawn->weaponowned[i]; FIXME too
     }
 
   st_active = true;

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/11/13 22:38:59  smite-meister
+// intermission works
+//
 // Revision 1.2  2004/09/24 11:34:00  smite-meister
 // fix
 //
@@ -79,13 +82,12 @@ protected:
   vector<HudWidget *> mainbar; ///< the part of the status bar that is hidden by open inventory
   vector<HudWidget *> overlay; ///< HUD overlay
 
-  class PlayerPawn *sbpawn; ///< whose status is shown?
-  // or maybe even Pawn*? See what a demon feels when shot!
+  class PlayerInfo *st_player; ///< whose status is shown?
 
   void PaletteFlash();
 
   void UpdateWidgets();
-  void ST_updateFaceWidget();
+  void ST_updateFaceWidget(const class PlayerPawn *p);
 
   void ST_RefreshBackground();
 
@@ -131,7 +133,7 @@ public:
   void Draw(bool redrawsbar);
 
   void ST_Drawer(bool refresh);
-  void ST_Start(PlayerPawn *p);
+  void ST_Start(PlayerInfo *p);
   void ST_Stop();
 
   void ST_Recalc(); // recalculates the status bar coordinates

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.38  2004/11/13 22:38:42  smite-meister
+// intermission works
+//
 // Revision 1.37  2004/10/27 17:37:06  smite-meister
 // netcode update
 //
@@ -272,24 +275,10 @@ void GameInfo::Ticker()
 {
   tic++;
 
-  // check fraglimit cvar TODO how does this work? when are the scores (or teamscores) zeroed?
-  if (cv_fraglimit.value && CheckScoreLimit())
-    {
-      // go on to the next map
-      //currentmap->ExitMap(NULL, 0);
-      //currentcluster->Finish(currentmap->nextlevel, 0);
-    }
-
-
   // do things to change the game state
   while (action != ga_nothing)
     switch (action)
       {
-      case ga_intermission:
-	StartIntermission();
-	break;
-      case ga_nothing:
-	break;
       default : I_Error("game.action = %d\n", action);
       }
 
@@ -308,6 +297,14 @@ void GameInfo::Ticker()
     case GS_LEVEL:
       if (!paused)
 	currentcluster->Ticker();
+
+      // check fraglimit cvar TODO how does this work? when are the scores (or teamscores) zeroed?
+      if (cv_fraglimit.value && CheckScoreLimit())
+	{
+	  // go on to the next map
+	  currentcluster->Finish(-1);
+	}
+
       hud.Ticker();
       automap.Ticker();
       break;
@@ -456,19 +453,26 @@ bool GameInfo::StartGame(skill_t sk, int cluster)
 
 
 
-// start intermission
+// called as a result of the rpc
 void GameInfo::StartIntermission()
 {
-  action = ga_nothing;
-  // TODO separate server, client stuff in intermission
-
-  hud.ST_Stop();
-  automap.Close();
-
-  //state = GS_INTERMISSION;
-  //wi.Start(currentcluster, next);
+  state = GS_INTERMISSION;
 }
 
+
+// should send an rpc ending the intermission (or maybe we ghost PlayerInfos both ways?)
+void GameInfo::EndIntermission()
+{
+  state = GS_LEVEL;
+
+  int n = Consoleplayer.size();
+  for (int i = 0; i < n; i++)
+    {
+      PlayerInfo *p = Consoleplayer[i];
+      if (p->playerstate == PST_INTERMISSION)
+	p->playerstate = PST_NEEDMAP;
+    }
+}
 
 
 void GameInfo::StartFinale(MapCluster *next)
@@ -515,8 +519,5 @@ void GameInfo::StartFinale(MapCluster *next)
 
 void GameInfo::EndFinale()
 {
-  if (state == GS_FINALE)
-    state = GS_LEVEL;
-
-  action = ga_nothing;
+  state = GS_LEVEL;
 }

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.39  2004/11/13 22:38:42  smite-meister
+// intermission works
+//
 // Revision 1.38  2004/11/04 21:12:52  smite-meister
 // save/load fixed
 //
@@ -364,20 +367,16 @@ bool DActor::Touch(Actor *p)
 	return false;
 
       // Don't damage the same species as the originator.
-      /*
-      if (owner && (owner->type == p->type ||
-		    (owner->type == MT_KNIGHT  && p->type == MT_BRUISER)||
-		    (owner->type == MT_BRUISER && p->type == MT_KNIGHT)))
-        {
+      if (owner && owner->IsOf(DActor::_type) && p->IsOf(DActor::_type))
+	{
+	  DActor *ow = (DActor *)owner;
+	  DActor *t = (DActor *)p;
 
-	  if (p->type != MT_PLAYER)
-            {
-	      // Explode, but do no damage.
-	      // Let players missile other players.
-	      return true;
-            }
+	  if (ow->type == t->type ||
+	      (ow->type == MT_KNIGHT  && t->type == MT_BRUISER) ||
+	      (ow->type == MT_BRUISER && t->type == MT_KNIGHT)) // damn complicated!
+	    return true; // Explode, but do no damage.
         }
-      */
 
       if (!(p->flags & MF_SHOOTABLE))
         {

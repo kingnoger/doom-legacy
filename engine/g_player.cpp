@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.29  2004/11/13 22:38:42  smite-meister
+// intermission works
+//
 // Revision 1.28  2004/11/04 21:12:52  smite-meister
 // save/load fixed
 //
@@ -79,7 +82,7 @@
 
 #include "n_connection.h"
 
-#include "hud.h"
+#include "wi_stuff.h"
 #include "tables.h"
 
 
@@ -298,24 +301,33 @@ void PlayerInfo::ExitLevel(int nextmap, int ep)
       break;
 
     default:
-      // PST_NEEDMAP, PST_RESPAWN, PST_int, PST_wait, meaning the possible pawn is not connected to any Map
+      // PST_NEEDMAP, PST_RESPAWN, PST_INTERMISSION,
+      // meaning the possible pawn is not connected to any Map
       break;
+    }
+
+  if (playerstate != PST_REMOVE)  // you will still be removed!
+    {
+      MapInfo *info = game.FindMapInfo(nextmap); // do we need an intermission?
+
+      if (info) // TODO disable intermissions server option?
+	{
+	  if (connection)
+	    connection->rpcStartIntermission_s2c(); // nonlocal players need intermission data
+	  else
+	    {
+	      // for locals, the intermission is started
+	      wi.Start(mp, info);
+	      game.StartIntermission();
+	    }
+	  playerstate = PST_INTERMISSION; // rpc_end_intermission resets this
+	}
+      else
+	playerstate = PST_NEEDMAP;
     }
 
   if (mp)
     mp->RemovePlayer(this); // NOTE that this may invalidate iterators to Map::players!
-
-  if (playerstate == PST_REMOVE)  // you will still be removed!
-    return;
-
-  if (false) // TODO disable intermissions server option?
-    {
-      playerstate = PST_INTERMISSION;
-      if (connection)
-	connection->rpcStartIntermission_s2c(); // nonlocal players need intermission data
-    }
-  else
-    playerstate = PST_NEEDMAP;
 }
 
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.25  2004/11/13 22:38:43  smite-meister
+// intermission works
+//
 // Revision 1.24  2004/11/09 20:38:52  smite-meister
 // added packing to I/O structs
 //
@@ -180,7 +183,7 @@ HUD::HUD()
   stbarheight = ST_HEIGHT_DOOM;
   st_palette = 0;
   st_active = false;
-  sbpawn = NULL;
+  st_player = NULL;
 };
 
 
@@ -366,12 +369,14 @@ void HUD::Ticker()
       if (pl->palette >= 0)
 	{
 	  vid.SetPalette(pl->palette);
+	  pl->palette = -1;
 	  damagecount = bonuscount = 0;
 	}
       else
 	{
 	  damagecount += pl->damagecount;
 	  bonuscount += pl->bonuscount;
+	  pl->damagecount = pl->bonuscount = 0;
 	}
 
 

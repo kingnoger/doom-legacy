@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/11/13 22:38:59  smite-meister
+// intermission works
+//
 // Revision 1.6  2004/09/09 17:15:20  jussip
 // Cleared out old joystick crap in preparation for brand new code.
 //
@@ -77,7 +80,7 @@ extern consvar_t cv_exitmode;
 extern consvar_t cv_fraglimit;
 extern consvar_t cv_timelimit;
 
-extern consvar_t cv_allowjump;
+extern consvar_t cv_jumpspeed;
 extern consvar_t cv_allowrocketjump;
 extern consvar_t cv_allowautoaim;
 extern consvar_t cv_allowmlook;

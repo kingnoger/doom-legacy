@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2004/11/13 22:38:43  smite-meister
+// intermission works
+//
 // Revision 1.20  2004/11/09 20:38:51  smite-meister
 // added packing to I/O structs
 //
@@ -50,7 +53,9 @@
 #include "hud.h"
 
 #include "g_game.h"
+#include "g_level.h"
 #include "g_mapinfo.h"
+#include "g_map.h"
 #include "g_pawn.h"
 #include "g_player.h"
 
@@ -488,9 +493,9 @@ static void WI_drawLF(const char *name)
   // draw <LevelName>
   if (big_font)
     {
-      big_font->DrawString((BASEVIDWIDTH - big_font->StringWidth(name))/2, y,name);
+      big_font->DrawString((BASEVIDWIDTH - big_font->StringWidth(name))/2, y, name, FB);
       y += (5*big_font->StringHeight(name))/4;
-      big_font->DrawString((BASEVIDWIDTH - big_font->StringWidth("Finished"))/2, y, "Finished");
+      big_font->DrawString((BASEVIDWIDTH - big_font->StringWidth("Finished"))/2, y, "Finished", FB);
     }
   else
     {
@@ -511,9 +516,9 @@ static void WI_drawEL(const char *nextname)
   // draw "Entering"
   if (big_font)
     {
-      big_font->DrawString((BASEVIDWIDTH - big_font->StringWidth("Entering"))/2, y, "Entering");
+      big_font->DrawString((BASEVIDWIDTH - big_font->StringWidth("Entering"))/2, y, "Entering", FB);
       y += (5*big_font->StringHeight("Entering"))/4;
-      big_font->DrawString((BASEVIDWIDTH - big_font->StringWidth(nextname))/2, y,nextname);
+      big_font->DrawString((BASEVIDWIDTH - big_font->StringWidth(nextname))/2, y, nextname, FB);
     }
   else
     {
@@ -559,7 +564,13 @@ static void WI_drawTime(int x, int y, int t)
 
 
 //=============================================================
-// Intermission class methods
+//              Intermission class methods
+//=============================================================
+
+Intermission::Intermission()
+{
+  state = Inactive;
+}
 
 
 bool Intermission::Responder(event_t* ev)
@@ -679,7 +690,7 @@ void Intermission::DrawYAH()
   if (game.mode == gm_heretic)
     mapspots = HereticMapSpots;
 
-#warning TODO not quite correct
+  // not QUITE correct, but...
   int n = last % 10;
   for (int i = 0; i < n; i++)
     splat->Draw(mapspots[ep][i].x, mapspots[ep][i].y, FB);
@@ -871,7 +882,7 @@ void Intermission::InitCoopStats()
   for (i = 0, u = game.Players.begin(); u != game.Players.end(); i++, u++)
     {
       cnt[i].kills = cnt[i].items = cnt[i].secrets = cnt[i].frags = 0;
-      plrs[i] = (*u).second;
+      plrs[i] = u->second;
       dofrags = dofrags || (plrs[i]->score != 0);
     }
 }
@@ -881,11 +892,10 @@ void Intermission::InitCoopStats()
 
 void Intermission::UpdateCoopStats()
 {
-  bool finished = true;
-
+  int temp;
   int i, n = plrs.size();
 
-  if (acceleratestage && count_stage != 12)
+  if (acceleratestage && count_stage < 12)
     {
       acceleratestage = false;
 
@@ -903,7 +913,10 @@ void Intermission::UpdateCoopStats()
 
       S_StartLocalAmbSound(sfx_barexp);
       count_stage = 12;
+      return;
     }
+
+  bool finished = true;
 
   if (count_stage == 2)
     {
@@ -914,9 +927,10 @@ void Intermission::UpdateCoopStats()
       for (i=0 ; i<n ; i++)
         {
           cnt[i].kills += 2;
+	  temp = (plrs[i]->kills * 100) / total.kills;
 
-          if (cnt[i].kills >= (plrs[i]->kills * 100) / total.kills)
-            cnt[i].kills = (plrs[i]->kills * 100) / total.kills;
+          if (cnt[i].kills >= temp)
+            cnt[i].kills = temp;
           else
             finished = false;
         }
@@ -930,9 +944,10 @@ void Intermission::UpdateCoopStats()
       for (i=0 ; i<n ; i++)
         {
           cnt[i].items += 2;
+	  temp = (plrs[i]->items * 100) / total.items;
 
-          if (cnt[i].items >= (plrs[i]->items * 100) / total.items)
-            cnt[i].items = (plrs[i]->items * 100) / total.items;
+          if (cnt[i].items >= temp)
+            cnt[i].items = temp;
           else
             finished = false;
         }
@@ -946,9 +961,10 @@ void Intermission::UpdateCoopStats()
       for (i=0 ; i<n ; i++)
         {
           cnt[i].secrets += 2;
+	  temp = (plrs[i]->secrets * 100) / total.secrets;
 
-          if (cnt[i].secrets >= (plrs[i]->secrets * 100) / total.secrets)
-            cnt[i].secrets = (plrs[i]->secrets * 100) / total.secrets;
+          if (cnt[i].secrets >= temp)
+            cnt[i].secrets = temp;
           else
             finished = false;
         }
@@ -992,7 +1008,7 @@ void Intermission::UpdateCoopStats()
       else
 	finished = false;
     }
-  else if (count_stage == 12)
+  else if (count_stage >= 12)
     {
       // wait for a keypress
       if (acceleratestage)
@@ -1008,8 +1024,10 @@ void Intermission::UpdateCoopStats()
               count = SHOWNEXTLOCDELAY * TICRATE;
             }
         }
+      return;
     }
-  else if (count_stage & 1)
+
+  if (count_stage & 1)
     {
       // pause for a while between counts
       if (--count <= 0)
@@ -1017,8 +1035,8 @@ void Intermission::UpdateCoopStats()
           count_stage++;
           count = TICRATE;
         }
+      return;
     }
-
 
   if (finished)
     {
@@ -1053,9 +1071,9 @@ void Intermission::DrawCoopStats()
       if (big_font)
         {
           // use FontB if any
-          big_font->DrawString(SP_STATSX, SP_STATSY, "Kills");
-          big_font->DrawString(SP_STATSX, SP_STATSY+lh, "Items");
-          big_font->DrawString(SP_STATSX, SP_STATSY+2*lh, "Secrets");
+          big_font->DrawString(SP_STATSX, SP_STATSY, "Kills", FB);
+          big_font->DrawString(SP_STATSX, SP_STATSY+lh, "Items", FB);
+          big_font->DrawString(SP_STATSX, SP_STATSY+2*lh, "Secrets", FB);
         }
       else
         {
@@ -1075,11 +1093,11 @@ void Intermission::DrawCoopStats()
       if (big_font)
         {
           // use FontB if any
-          big_font->DrawString(NG_STATSX+  NG_SPACINGX-big_font->StringWidth("Kills"), NG_STATSY, "Kills");
-          big_font->DrawString(NG_STATSX+2*NG_SPACINGX-big_font->StringWidth("Items"), NG_STATSY, "Items");
-          big_font->DrawString(NG_STATSX+3*NG_SPACINGX-big_font->StringWidth("Scrt"), NG_STATSY, "Scrt");
+          big_font->DrawString(NG_STATSX+  NG_SPACINGX-big_font->StringWidth("Kills"), NG_STATSY, "Kills", FB);
+          big_font->DrawString(NG_STATSX+2*NG_SPACINGX-big_font->StringWidth("Items"), NG_STATSY, "Items", FB);
+          big_font->DrawString(NG_STATSX+3*NG_SPACINGX-big_font->StringWidth("Scrt"), NG_STATSY, "Scrt", FB);
           if (dofrags)
-            big_font->DrawString(NG_STATSX+4*NG_SPACINGX-big_font->StringWidth("Frgs"), NG_STATSY, "Frgs");
+            big_font->DrawString(NG_STATSX+4*NG_SPACINGX-big_font->StringWidth("Frgs"), NG_STATSY, "Frgs", FB);
 
           y = NG_STATSY + big_font->StringHeight("Kills");
         }
@@ -1133,8 +1151,8 @@ void Intermission::DrawCoopStats()
   // draw time and par
   if (big_font)
     {
-      big_font->DrawString(SP_TIMEX, SP_TIMEY, "Time");
-      big_font->DrawString(BASEVIDWIDTH/2 + SP_TIMEX, SP_TIMEY, "Par");
+      big_font->DrawString(SP_TIMEX, SP_TIMEY, "Time", FB);
+      big_font->DrawString(BASEVIDWIDTH/2 + SP_TIMEX, SP_TIMEY, "Par", FB);
     }
   else
     {
@@ -1206,10 +1224,10 @@ void Intermission::LoadData()
               }
 
           // level name patches
-	  sprintf(name, "WILV%d%d", episode-1, last-1);
+	  sprintf(name, "WILV%d%d", episode-1, last);
 	  lastname_tex = tc.GetPtr(name);
 
-	  sprintf(name, "WILV%d%d", episode-1, next-1);
+	  sprintf(name, "WILV%d%d", episode-1, next);
 	  nextname_tex = tc.GetPtr(name);
 
 	  yah[0] = tc.GetPtr("WIURH0");
@@ -1378,24 +1396,6 @@ void Intermission::UnloadData()
 }
 
 
-void Intermission::End()
-{
-  UnloadData();
-
-  if (cv_deathmatch.value)
-    {
-      for (int i=0; i<4; i++)
-        delete [] dm_score[i];
-    }
-  else
-    {
-      cnt.clear();
-      plrs.clear();
-    }
-
-  //game.EndIntermission();
-}
-
 
 // draws intermission screen
 void Intermission::Drawer()
@@ -1429,6 +1429,9 @@ void Intermission::Drawer()
       // draws which level you are entering..
       if (game.mode != gm_doom2 || next != 30) // stupid...
         WI_drawEL(nextlevelname);
+      break;
+
+    default:
       break;
     }
 }
@@ -1465,39 +1468,24 @@ void Intermission::Ticker()
       if (!--count)
         End();
       break;
+
+    default:
+      break;
     }
 }
 
 
-void Intermission::Start()
+
+// store data from the last completed map
+void Intermission::Start(const Map *m, const MapInfo *n)
 {
-#warning intermission disabled for now
-  s_count = sfx_menu_choose;
+  if (!n)
+    I_Error("Intermission: Nextmap does not exist!\n");
 
-  /*
-  last = l->mapnumber; // number of level just completed
-  next = n->mapnumber; // number of next level
+  if (state != Inactive)
+    return; // already running
 
-  partime = l->partime;
-  lastlevelname = l->nicename.c_str();
-  nextlevelname = n->nicename.c_str();
-  */
-
-  acceleratestage = false;
-  count = bcount = 0;
-  state = StatCount;
-
-  /*
-  MapCluster *m = game.FindCluster(l->cluster);
-
-  if (game.mode == gm_doom2 && game.mode == gm_hexen) 
-    episode = 0;
-  else
-    episode = m->episode;
-
-  interpic = m->interpic.c_str();
-
-  time = m->time;
+  time = m->maptic / 35;
 
   total.kills = m->kills;
   if (total.kills == 0)
@@ -1510,7 +1498,24 @@ void Intermission::Start()
   total.secrets = m->secrets;
   if (total.secrets == 0)
     total.secrets = 1;
-  */
+
+  last = m->info->mapnumber - 1; // number of level just completed, zero-based
+  partime = m->info->partime;
+  lastlevelname = m->info->nicename.c_str();
+
+  next = n->mapnumber - 1; // number of next level
+  nextlevelname = n->nicename.c_str();
+
+  MapCluster *cl = game.FindCluster(m->info->cluster);
+  episode = cl->episode;
+  interpic = cl->interpic.c_str();
+  intermusic = cl->intermusic.c_str();
+
+  acceleratestage = false;
+  count = bcount = 0;
+  state = StatCount;
+
+  s_count = sfx_menu_choose;
 
   LoadData();
 
@@ -1522,5 +1527,27 @@ void Intermission::Start()
   if (game.mode >= gm_doom1s && game.mode <= gm_udoom)
     InitAnimatedBack(episode);
 
-  //S.StartMusic(intermusic.c_str(), true);
+  S.StartMusic(intermusic, true);
+}
+
+
+
+void Intermission::End()
+{
+  UnloadData();
+
+  if (cv_deathmatch.value)
+    {
+      for (int i=0; i<4; i++)
+        delete [] dm_score[i];
+    }
+  else
+    {
+      cnt.clear();
+      plrs.clear();
+    }
+
+  state = Inactive;
+
+  game.EndIntermission();
 }

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.30  2004/11/13 22:38:43  smite-meister
+// intermission works
+//
 // Revision 1.29  2004/11/09 20:38:50  smite-meister
 // added packing to I/O structs
 //
@@ -560,8 +563,9 @@ static bool PIT_CrossLine (line_t *ld)
 */
 
 
-// Iterator for Actor->Line collision checking
-// Adjusts tmfloorz and tmceilingz as lines are contacted
+// Iterator for Actor->Line collision checking.
+// Adjusts tmfloorz and tmceilingz as lines are contacted.
+// Fills the spechit vector.
 static bool PIT_CheckLine(line_t *ld)
 {
   if (!tmb.BoxTouchBox(ld->bbox))
@@ -1946,8 +1950,8 @@ static bool PIT_RadiusAttack(Actor *thing)
       int apx = 0, apy = 0;
       if (dist)
         {
-	  apx = (thing->x - bomb->x)/d;
-	  apy = (thing->y - bomb->y)/d;
+	  apx = (thing->x - bomb->x) / (d+1);
+	  apy = (thing->y - bomb->y) / (d+1);
         }
       // must be in direct path
       if (thing->Damage(bomb, bombowner, damage, bombdtype) && !(thing->flags & MF_NOBLOOD))

@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.22  2004/11/13 22:38:42  smite-meister
+// intermission works
+//
 // Revision 1.21  2004/11/04 21:12:52  smite-meister
 // save/load fixed
 //
@@ -297,8 +300,8 @@ bool MapInfo::HubSave()
   EvictPlayers(-1);
   CONS_Printf("Making a hubsave...");
 
-  char fname[50];
-  sprintf(fname, "Legacy_hubsave_%02d.sav", mapnumber);
+  char fname[256];
+  sprintf(fname, hubsavename, mapnumber);
   savename = fname;
 
   LArchive a;

@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.48  2004/11/13 22:38:42  smite-meister
+// intermission works
+//
 // Revision 1.47  2004/11/09 20:38:50  smite-meister
 // added packing to I/O structs
 //
@@ -258,57 +261,38 @@ void Map::SpawnSplash(Actor *mo, fixed_t z)
 }
 
 
-// ---------------------------------------
-// Blood spawning
-// ---------------------------------------
+//---------------------------------------
+//   Blood spawning
+//---------------------------------------
 
 static Actor   *bloodthing;
-
 #ifdef WALLSPLATS
-static fixed_t  bloodspawnpointx, bloodspawnpointy;
+static fixed_t  blood_x, blood_y;
 
-bool PTR_BloodTraverse (intercept_t *in)
+static bool PTR_BloodTraverse(intercept_t *in)
 {
-  line_t *li;
-  divline_t   divl;
-  fixed_t     frac;
-
-  fixed_t     z;
-
   if (in->isaline)
     {
-      li = in->d.line;
+      line_t *li = in->d.line;
+      fixed_t z = bloodthing->z + (P_SignedRandom()<<(FRACBITS-3));
+      if (li->flags & ML_TWOSIDED)
+	{
+	  P_LineOpening(li);
 
-      z = bloodthing->z + (P_SignedRandom()<<(FRACBITS-3));
-      if ( !(li->flags & ML_TWOSIDED) )
-	goto hitline;
+	  // hit lower or upper texture?
+	  if ((li->frontsector->floorheight == li->backsector->floorheight || openbottom <= z) &&
+	      (li->frontsector->ceilingheight == li->backsector->ceilingheight || opentop >= z))
+	    return true; // nope
+	}
 
-      P_LineOpening (li);
+      divline_t divl;
+      P_MakeDivline(li, &divl);
 
-      // hit lower texture ?
-      if (li->frontsector->floorheight != li->backsector->floorheight)
-        {
-	  if( openbottom>z )
-	    goto hitline;
-        }
-
-      // hit upper texture ?
-      if (li->frontsector->ceilingheight != li->backsector->ceilingheight)
-        {
-	  if( opentop<z )
-	    goto hitline;
-        }
-
-      // else don't hit
-      return true;
-
-    hitline:
-      P_MakeDivline (li, &divl);
-      frac = P_InterceptVector (&divl, &trace);
-      if( game.mode == gm_heretic )
-	R_AddWallSplat (li, P_PointOnLineSide(bloodspawnpointx,bloodspawnpointy,li),"BLODC0", z, frac, SPLATDRAWMODE_TRANS);
+      fixed_t frac = P_InterceptVector(&divl, &trace);
+      if (game.mode >= gm_heretic)
+	R_AddWallSplat(li, P_PointOnLineSide(blood_x,blood_y,li),"BLODC0", z, frac, SPLATDRAWMODE_TRANS);
       else
-	R_AddWallSplat (li, P_PointOnLineSide(bloodspawnpointx,bloodspawnpointy,li),"BLUDC0", z, frac, SPLATDRAWMODE_TRANS);
+	R_AddWallSplat(li, P_PointOnLineSide(blood_x,blood_y,li),"BLUDC0", z, frac, SPLATDRAWMODE_TRANS);
       return false;
     }
 
@@ -316,6 +300,7 @@ bool PTR_BloodTraverse (intercept_t *in)
   return true;
 }
 #endif
+
 
 // the new SpawnBlood : this one first calls P_SpawnBlood for the usual blood sprites
 // then spawns blood splats around on walls
@@ -326,45 +311,43 @@ void Map::SpawnBloodSplats(fixed_t x, fixed_t y, fixed_t z, int damage, fixed_t 
 
 #ifdef WALLSPLATS
   fixed_t x2,y2;
-  angle_t angle, anglesplat;
-  int     distance;
-  angle_t anglemul=1;  
-  int     numsplats;
-  int     i;
+  angle_t angle;
+  angle_t anglemul = 1;
 
   // traverse all linedefs and mobjs from the blockmap containing t1,
   // to the blockmap containing the dest. point.
   // Call the function for each mobj/line on the way,
   // starting with the mobj/linedef at the shortest distance...
 
-  if(!px && !py)
+  if (!px && !py)
     {   
       // from inside
-      angle=0;
-      anglemul=2; 
+      angle = 0;
+      anglemul = 2; 
     }
   else
     {
       // get direction of damage
       x2 = x + px;
       y2 = y + py;
-      angle = R_PointToAngle2 (x,y,x2,y2);
+      angle = R_PointToAngle2(x, y, x2, y2);
     }
-  distance = damage * 6;
-  numsplats = damage / 3+1;
-  // BFG is funy without this check
+
+  int distance = damage * 6;
+  int numsplats = damage/3 + 1;
+
   if (numsplats > 20)
-    numsplats = 20;
+    numsplats = 20;  // BFG is funy without this check
 
   //CONS_Printf ("spawning %d bloodsplats at distance of %d\n", numsplats, distance);
   //CONS_Printf ("damage %d\n", damage);
-  bloodspawnpointx = x;
-  bloodspawnpointy = y;
-  //uses 'bloodthing' set by P_SpawnBlood()
-  for (i=0; i<numsplats; i++)
+  blood_x = x;
+  blood_y = y;
+
+  for (int i=0; i<numsplats; i++)
     {
       // find random angle between 0-180deg centered on damage angle
-      anglesplat = angle + (((P_Random() - 128) * FINEANGLES/512*anglemul)<<ANGLETOFINESHIFT);
+      angle_t anglesplat = angle + (((P_Random() - 128) * FINEANGLES/512*anglemul)<<ANGLETOFINESHIFT);
       x2 = x + distance*finecosine[anglesplat>>ANGLETOFINESHIFT];
       y2 = y + distance*finesine[anglesplat>>ANGLETOFINESHIFT];
       
@@ -378,18 +361,16 @@ void Map::SpawnBloodSplats(fixed_t x, fixed_t y, fixed_t z, int damage, fixed_t 
 #endif
 }
 
+
 // spawn a blood sprite with falling z movement, at location
 // the duration and first sprite frame depends on the damage level
 // the more damage, the longer is the sprite animation
 DActor *Map::SpawnBlood(fixed_t x, fixed_t y, fixed_t z, int damage)
 {
-  z += P_SignedRandom() << 10;
-  DActor *th = SpawnDActor(x,y,z, MT_BLOOD);
-  if (game.demoversion >= 128)
-    {
-      th->px  = P_SignedRandom()<<12; //faB:19jan99
-      th->py  = P_SignedRandom()<<12; //faB:19jan99
-    }
+  DActor *th = SpawnDActor(x, y, z+(P_SignedRandom() << 10), MT_BLOOD);
+
+  th->px = P_SignedRandom()<<12;
+  th->py = P_SignedRandom()<<12;
   th->pz = FRACUNIT*2;
   th->tics -= P_Random()&3;
 
@@ -403,6 +384,7 @@ DActor *Map::SpawnBlood(fixed_t x, fixed_t y, fixed_t z, int damage)
 
   return th;
 }
+
 
 
 // ---------------------------------------

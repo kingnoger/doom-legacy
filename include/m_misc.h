@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/11/13 22:38:59  smite-meister
+// intermission works
+//
 // Revision 1.4  2004/08/12 18:30:29  smite-meister
 // cleaned startup
 //
@@ -57,6 +60,7 @@ void M_ScreenShot();
 
 extern char configfile[128];
 extern char savegamename[256];
+extern char hubsavename[256];
 
 void Command_SaveConfig_f();
 void Command_LoadConfig_f();

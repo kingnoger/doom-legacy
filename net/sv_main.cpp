@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2004/11/13 22:38:59  smite-meister
+// intermission works
+//
 // Revision 1.16  2004/11/04 21:12:54  smite-meister
 // save/load fixed
 //
@@ -147,6 +150,19 @@ Shooting and artifact use should be guaranteed...
 
 
 
+    XD_NAMEANDCOLOR=1,
+    XD_WEAPONPREF,
+    XD_NETVAR,
+    XD_SAY,
+    XD_MAP,
+    XD_EXITLEVEL,
+    XD_LOADGAME,
+    XD_SAVEGAME,
+    XD_PAUSE,
+    XD_ADDPLAYER,
+    XD_USEARTEFACT,
+
+
 In future, do dll mods like this:
 polymorph Map, PlayerInfo? (and Actor descendants, of course)
 Have polymorphed class GameType which creates these into GameInfo containers
@@ -174,6 +190,8 @@ Have polymorphed class GameType which creates these into GameInfo containers
 #include "r_data.h"
 #include "sounds.h"
 
+#include "hud.h"
+
 #include "w_wad.h"
 #include "z_zone.h"
 
@@ -190,24 +208,24 @@ extern bool dedicated;
 //        Server consvars
 //========================================================================
 
-consvar_t cv_playdemospeed  = {"playdemospeed","0",0,CV_Unsigned};
+consvar_t cv_playdemospeed  = {"playdemospeed", "0", 0, CV_Unsigned};
 
 #define MS_PORT "28910"
-consvar_t cv_masterserver   = {"masterserver", "doomlegacy.dhs.org:"MS_PORT, CV_SAVE, NULL };
-consvar_t cv_netstat = {"netstat","0",0,CV_OnOff};
+consvar_t cv_masterserver   = {"masterserver", "doomlegacy.dhs.org:"MS_PORT, CV_SAVE, NULL};
+consvar_t cv_netstat = {"netstat", "0", 0, CV_OnOff};
 
 // server info
-consvar_t cv_internetserver  = {"publicserver", "No", CV_SAVE, CV_YesNo };
-consvar_t cv_servername      = {"servername", "DooM Legacy server", CV_SAVE, NULL };
-consvar_t cv_allownewplayers = {"allownewplayers","1",0,CV_OnOff};
-CV_PossibleValue_t maxplayers_cons_t[]={{1,"MIN"},{100,"MAX"},{0,NULL}};
-consvar_t cv_maxplayers     = {"maxplayers","32",CV_NETVAR,maxplayers_cons_t,NULL,32};
+consvar_t cv_internetserver  = {"publicserver", "No", CV_SAVE, CV_YesNo};
+consvar_t cv_servername      = {"servername", "DooM Legacy server", CV_SAVE, NULL};
+consvar_t cv_allownewplayers = {"allownewplayers", "1", 0, CV_OnOff};
+CV_PossibleValue_t maxplayers_cons_t[]={{1, "MIN"},{100, "MAX"},{0, NULL}};
+consvar_t cv_maxplayers     = {"maxplayers", "32", CV_NETVAR, maxplayers_cons_t, NULL};
 
 // game rules
-CV_PossibleValue_t teamplay_cons_t[]={{0,"Off"},{1,"Color"},{2,"Skin"},{3,NULL}};
-CV_PossibleValue_t deathmatch_cons_t[]={{0,"Coop"},{1,"1"},{2,"2"},{3,"3"},{0,NULL}};
-CV_PossibleValue_t fraglimit_cons_t[]={{0,"MIN"},{1000,"MAX"},{0,NULL}};
-CV_PossibleValue_t exitmode_cons_t[]={{0,"noexit"},{1,"first"},{2,"ind"},{3,"last"},{4,NULL}};
+CV_PossibleValue_t teamplay_cons_t[]={{0, "Off"},{1, "Color"},{2, "Skin"},{3, NULL}};
+CV_PossibleValue_t deathmatch_cons_t[]={{0, "Coop"},{1, "1"},{2, "2"},{3, "3"},{0, NULL}};
+CV_PossibleValue_t fraglimit_cons_t[]={{0, "MIN"},{1000, "MAX"},{0, NULL}};
+CV_PossibleValue_t exitmode_cons_t[]={{0, "noexit"},{1, "first"},{2, "ind"},{3, "last"},{4, NULL}};
 
 void TeamPlay_OnChange();
 void Deathmatch_OnChange();
@@ -215,30 +233,30 @@ void FragLimit_OnChange();
 void TimeLimit_OnChange();
 void FastMonster_OnChange();
 
-consvar_t cv_deathmatch = {"deathmatch","0",CV_NETVAR | CV_NOINIT | CV_CALL, deathmatch_cons_t, Deathmatch_OnChange};
-consvar_t cv_teamplay   = {"teamplay"  ,"0",CV_NETVAR | CV_CALL,teamplay_cons_t, TeamPlay_OnChange};
-consvar_t cv_teamdamage = {"teamdamage","0",CV_NETVAR,CV_OnOff};
-consvar_t cv_hiddenplayers = {"hiddenplayers","0",CV_NETVAR,CV_YesNo};
+consvar_t cv_deathmatch = {"deathmatch", "0", CV_NETVAR | CV_NOINIT | CV_CALL, deathmatch_cons_t, Deathmatch_OnChange};
+consvar_t cv_teamplay   = {"teamplay"  , "0", CV_NETVAR | CV_CALL, teamplay_cons_t, TeamPlay_OnChange};
+consvar_t cv_teamdamage = {"teamdamage", "0", CV_NETVAR, CV_OnOff};
+consvar_t cv_hiddenplayers = {"hiddenplayers", "0", CV_NETVAR, CV_YesNo};
 consvar_t cv_exitmode   = {"exitmode", "1", CV_NETVAR, exitmode_cons_t, NULL};
-consvar_t cv_fraglimit  = {"fraglimit" ,"0",CV_NETVAR | CV_CALL | CV_NOINIT,fraglimit_cons_t, FragLimit_OnChange};
-consvar_t cv_timelimit  = {"timelimit" ,"0",CV_NETVAR | CV_CALL | CV_NOINIT,CV_Unsigned, TimeLimit_OnChange};
+consvar_t cv_fraglimit  = {"fraglimit" , "0", CV_NETVAR | CV_CALL | CV_NOINIT,fraglimit_cons_t, FragLimit_OnChange};
+consvar_t cv_timelimit  = {"timelimit" , "0", CV_NETVAR | CV_CALL | CV_NOINIT, CV_Unsigned, TimeLimit_OnChange};
 
-consvar_t cv_allowjump       = {"allowjump","6",CV_NETVAR,CV_Unsigned};// Doom 6, Hexen 9/6
-consvar_t cv_allowrocketjump = {"allowrocketjump","0",CV_NETVAR,CV_YesNo};
-consvar_t cv_allowautoaim    = {"allowautoaim","1",CV_NETVAR,CV_YesNo};
-consvar_t cv_allowmlook      = {"allowfreelook","1",CV_NETVAR,CV_YesNo};
+consvar_t cv_jumpspeed       = {"jumpspeed", "6", CV_NETVAR | CV_FLOAT, CV_Unsigned};
+consvar_t cv_allowrocketjump = {"allowrocketjump", "0", CV_NETVAR, CV_YesNo};
+consvar_t cv_allowautoaim    = {"allowautoaim", "1", CV_NETVAR, CV_YesNo};
+consvar_t cv_allowmlook      = {"allowfreelook", "1", CV_NETVAR, CV_YesNo};
 
-consvar_t cv_itemrespawn     ={"respawnitem"    , "0",CV_NETVAR,CV_OnOff};
-consvar_t cv_itemrespawntime ={"respawnitemtime","30",CV_NETVAR,CV_Unsigned};
-consvar_t cv_respawnmonsters = {"respawnmonsters","0",CV_NETVAR,CV_OnOff};
-consvar_t cv_respawnmonsterstime = {"respawnmonsterstime","12",CV_NETVAR,CV_Unsigned};
-consvar_t cv_fragsweaponfalling  = {"fragsweaponfalling","0", CV_SAVE | CV_NETVAR, CV_OnOff};
+consvar_t cv_itemrespawn     ={"respawnitem"    , "0", CV_NETVAR, CV_OnOff};
+consvar_t cv_itemrespawntime ={"respawnitemtime", "30", CV_NETVAR, CV_Unsigned};
+consvar_t cv_respawnmonsters = {"respawnmonsters", "0", CV_NETVAR, CV_OnOff};
+consvar_t cv_respawnmonsterstime = {"respawnmonsterstime", "12", CV_NETVAR, CV_Unsigned};
+consvar_t cv_fragsweaponfalling  = {"fragsweaponfalling", "0", CV_SAVE | CV_NETVAR, CV_OnOff};
 
-consvar_t cv_gravity = {"gravity","1", CV_NETVAR | CV_FLOAT | CV_ANNOUNCE};
-consvar_t cv_nomonsters = {"nomonsters","0", CV_NETVAR, CV_OnOff};
-consvar_t cv_fastmonsters = {"fastmonsters","0", CV_NETVAR | CV_CALL,CV_OnOff,FastMonster_OnChange};
-consvar_t cv_solidcorpse  = {"solidcorpse","0", CV_NETVAR | CV_SAVE,CV_OnOff};
-consvar_t cv_voodoodolls  = {"voodoodolls","1",CV_NETVAR,CV_OnOff};
+consvar_t cv_gravity = {"gravity", "1", CV_NETVAR | CV_FLOAT | CV_ANNOUNCE};
+consvar_t cv_nomonsters = {"nomonsters", "0", CV_NETVAR, CV_OnOff};
+consvar_t cv_fastmonsters = {"fastmonsters", "0", CV_NETVAR | CV_CALL, CV_OnOff,FastMonster_OnChange};
+consvar_t cv_solidcorpse  = {"solidcorpse", "0", CV_NETVAR | CV_SAVE, CV_OnOff};
+consvar_t cv_voodoodolls  = {"voodoodolls", "1", CV_NETVAR, CV_OnOff};
 
 void TeamPlay_OnChange()
 {
@@ -425,6 +443,8 @@ bool GameInfo::SV_SpawnServer()
       Consoleplayer.push_back(AddPlayer(new PlayerInfo(localplayer)));
       if (cv_splitscreen.value)
 	Consoleplayer.push_back(AddPlayer(new PlayerInfo(localplayer2)));
+
+      hud.ST_Start(Consoleplayer[0]);
     }
 
   if (!local)
@@ -542,21 +562,6 @@ void InitNetwork()
 // ------
 // protos
 // ------
-
-/*
-void Got_NameAndcolor(char **cp,int playernum);
-void Got_WeaponPref  (char **cp,int playernum);
-void Got_Mapcmd      (char **cp,int playernum);
-void Got_ExitLevelcmd(char **cp,int playernum);
-void Got_Pause       (char **cp,int playernum);
-void Got_UseArtefact (char **cp,int playernum);
-void Got_KickCmd     (char **p, int playernum);
-void Got_AddPlayer   (char **p, int playernum);
-void Got_Saycmd      (char **p, int playernum);
-
-void Got_LoadGamecmd (char **cp,int playernum);
-void Got_SaveGamecmd (char **cp,int playernum);
-*/
 
 void Command_Listserv_f() {}
 
@@ -719,7 +724,7 @@ void SV_Init()
   cv_fraglimit.Reg();
   cv_timelimit.Reg();
 
-  cv_allowjump.Reg();
+  cv_jumpspeed.Reg();
   cv_allowrocketjump.Reg();
   cv_allowautoaim.Reg();
   cv_allowmlook.Reg();

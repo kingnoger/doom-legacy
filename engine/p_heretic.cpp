@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2004/11/13 22:38:42  smite-meister
+// intermission works
+//
 // Revision 1.22  2004/11/04 21:12:52  smite-meister
 // save/load fixed
 //
@@ -83,17 +86,15 @@
 /// \file
 /// \brief Heretic/Hexen specific extra game routines, gametype patching
 
-#include "doomdef.h"
+#include "command.h"
+#include "cvars.h"
+
 #include "g_game.h"
 #include "g_actor.h"
-#include "g_pawn.h"
 #include "g_map.h"
-#include "g_player.h"
 
-#include "p_spec.h"
 #include "p_enemy.h"
 #include "p_maputl.h"
-#include "p_heretic.h"
 
 #include "sounds.h"
 #include "m_random.h"
@@ -306,6 +307,7 @@ void P_InitLava()
 void DoomPatchEngine()
 {
   game.inventory = false;
+  cv_jumpspeed.Set("6.0");
 
   // hacks: teleport fog, blood, gibs
   mobjinfo[MT_TFOG].spawnstate = S_TFOG;
@@ -317,6 +319,7 @@ void DoomPatchEngine()
 void HereticPatchEngine()
 {
   game.inventory = true;
+  cv_jumpspeed.Set("6.0");
 
   // hacks
   mobjinfo[MT_TFOG].spawnstate = S_HTFOG1;
@@ -334,6 +337,7 @@ void HereticPatchEngine()
 void HexenPatchEngine()
 {
   game.inventory = true;
+  cv_jumpspeed.Set("9.0");
 
   // hacks
   mobjinfo[MT_TFOG].spawnstate = S_HTFOG1;

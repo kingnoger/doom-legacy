@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.43  2004/11/13 22:38:42  smite-meister
+// intermission works
+//
 // Revision 1.42  2004/11/04 21:12:52  smite-meister
 // save/load fixed
 //
@@ -161,52 +164,54 @@ int MaxArmor[NUMCLASSES] = { 200, 100, 90, 80, 5 };
 
 
 // lists of mobjtypes that can be played by humans!
+// TODO nproj should be replaced with a function pointer.
+// Somebody should then write these shooting functions...
 pawn_info_t pawndata[] = 
 {
-  {MT_PLAYER,   wp_pistol,  50, MT_NONE}, // 0
-  {MT_POSSESSED, wp_pistol,  20, MT_NONE},
-  {MT_SHOTGUY,  wp_shotgun,  8, MT_NONE},
-  {MT_TROOP,    wp_none, 0, MT_TROOPSHOT},
-  {MT_SERGEANT, wp_none, 0, MT_NONE},
-  {MT_SHADOWS,  wp_none, 0, MT_NONE},
-  {MT_SKULL,    wp_none, 0, MT_NONE},
-  {MT_HEAD,     wp_none, 0, MT_HEADSHOT},
-  {MT_BRUISER,  wp_none, 0, MT_BRUISERSHOT},
-  {MT_SPIDER,   wp_chaingun, 100, MT_NONE},
-  {MT_CYBORG,   wp_missile,  20,  MT_NONE}, //10
+  {MT_PLAYER,   PCLASS_NONE, wp_pistol,  50, MT_NONE}, // 0
+  {MT_POSSESSED, PCLASS_NONE, wp_pistol,  20, MT_NONE},
+  {MT_SHOTGUY,  PCLASS_NONE, wp_shotgun,  8, MT_NONE},
+  {MT_TROOP,    PCLASS_NONE, wp_none, 0, MT_TROOPSHOT},
+  {MT_SERGEANT, PCLASS_NONE, wp_none, 0, MT_NONE},
+  {MT_SHADOWS,  PCLASS_NONE, wp_none, 0, MT_NONE},
+  {MT_SKULL,    PCLASS_NONE, wp_none, 0, MT_NONE},
+  {MT_HEAD,     PCLASS_NONE, wp_none, 0, MT_HEADSHOT},
+  {MT_BRUISER,  PCLASS_NONE, wp_none, 0, MT_BRUISERSHOT},
+  {MT_SPIDER,   PCLASS_NONE, wp_chaingun, 100, MT_NONE},
+  {MT_CYBORG,   PCLASS_NONE, wp_missile,  20,  MT_NONE}, //10
 
-  {MT_WOLFSS,   wp_chaingun, 50, MT_NONE},
-  {MT_CHAINGUY, wp_chaingun, 50, MT_NONE},
-  {MT_KNIGHT,   wp_none, 0,  MT_BRUISERSHOT},
-  {MT_BABY,     wp_plasma,  50,  MT_ARACHPLAZ},
-  {MT_PAIN,     wp_none, 0,  MT_SKULL},
-  {MT_UNDEAD,   wp_none, 0,  MT_TRACER},
-  {MT_FATSO,    wp_none, 0,  MT_FATSHOT},
-  {MT_VILE,     wp_none, 0,  MT_FIRE}, // 18
+  {MT_WOLFSS,   PCLASS_NONE, wp_chaingun, 50, MT_NONE},
+  {MT_CHAINGUY, PCLASS_NONE, wp_chaingun, 50, MT_NONE},
+  {MT_KNIGHT,   PCLASS_NONE, wp_none, 0,  MT_BRUISERSHOT},
+  {MT_BABY,     PCLASS_NONE, wp_plasma,  50,  MT_ARACHPLAZ},
+  {MT_PAIN,     PCLASS_NONE, wp_none, 0,  MT_SKULL},
+  {MT_UNDEAD,   PCLASS_NONE, wp_none, 0,  MT_TRACER},
+  {MT_FATSO,    PCLASS_NONE, wp_none, 0,  MT_FATSHOT},
+  {MT_VILE,     PCLASS_NONE, wp_none, 0,  MT_FIRE}, // 18
 
-  {MT_HPLAYER,  wp_goldwand, 50, MT_NONE},
-  {MT_CHICKEN,  wp_beak,      0, MT_NONE},
-  {MT_MUMMY,    wp_none, 0, MT_NONE},
-  {MT_MUMMYLEADER, wp_none, 0, MT_MUMMYFX1},
-  {MT_MUMMYGHOST,  wp_none, 0, MT_NONE},
-  {MT_MUMMYLEADERGHOST, wp_none, 0, MT_MUMMYFX1},
-  {MT_BEAST,    wp_none, 0, MT_BEASTBALL},
-  {MT_SNAKE,    wp_none, 0, MT_SNAKEPRO_A},
-  {MT_HHEAD,    wp_none, 0, MT_HEADFX1},
-  {MT_CLINK,    wp_none, 0, MT_NONE},
-  {MT_WIZARD,   wp_none, 0, MT_WIZFX1},
-  {MT_IMP,      wp_none, 0, MT_NONE},
-  {MT_IMPLEADER,wp_none, 0, MT_IMPBALL},
-  {MT_HKNIGHT,  wp_none, 0, MT_KNIGHTAXE},
-  {MT_KNIGHTGHOST, wp_none, 0, MT_REDAXE},
-  {MT_SORCERER1, wp_none, 0, MT_SRCRFX1},
-  {MT_SORCERER2, wp_none, 0, MT_SOR2FX1},
-  {MT_MINOTAUR,  wp_none, 0, MT_MNTRFX1}, // 36
+  {MT_HPLAYER,  PCLASS_NONE, wp_goldwand, 50, MT_NONE},
+  {MT_CHICKEN,  PCLASS_NONE, wp_beak,      0, MT_NONE},
+  {MT_MUMMY,    PCLASS_NONE, wp_none, 0, MT_NONE},
+  {MT_MUMMYLEADER, PCLASS_NONE, wp_none, 0, MT_MUMMYFX1},
+  {MT_MUMMYGHOST,  PCLASS_NONE, wp_none, 0, MT_NONE},
+  {MT_MUMMYLEADERGHOST, PCLASS_NONE, wp_none, 0, MT_MUMMYFX1},
+  {MT_BEAST,    PCLASS_NONE, wp_none, 0, MT_BEASTBALL},
+  {MT_SNAKE,    PCLASS_NONE, wp_none, 0, MT_SNAKEPRO_A},
+  {MT_HHEAD,    PCLASS_NONE, wp_none, 0, MT_HEADFX1},
+  {MT_CLINK,    PCLASS_NONE, wp_none, 0, MT_NONE},
+  {MT_WIZARD,   PCLASS_NONE, wp_none, 0, MT_WIZFX1},
+  {MT_IMP,      PCLASS_NONE, wp_none, 0, MT_NONE},
+  {MT_IMPLEADER,PCLASS_NONE, wp_none, 0, MT_IMPBALL},
+  {MT_HKNIGHT,  PCLASS_NONE, wp_none, 0, MT_KNIGHTAXE},
+  {MT_KNIGHTGHOST, PCLASS_NONE, wp_none, 0, MT_REDAXE},
+  {MT_SORCERER1, PCLASS_NONE, wp_none, 0, MT_SRCRFX1},
+  {MT_SORCERER2, PCLASS_NONE, wp_none, 0, MT_SOR2FX1},
+  {MT_MINOTAUR,  PCLASS_NONE, wp_none, 0, MT_MNTRFX1}, // 36
 
-  {MT_PLAYER_FIGHTER, wp_fpunch, 0, MT_NONE},
-  {MT_PLAYER_CLERIC, wp_cmace, 0, MT_NONE},
-  {MT_PLAYER_MAGE, wp_mwand, 0, MT_NONE},
-  {MT_PIGPLAYER, wp_snout, 0, MT_NONE}
+  {MT_PLAYER_FIGHTER, PCLASS_FIGHTER, wp_fpunch, 0, MT_NONE},
+  {MT_PLAYER_CLERIC, PCLASS_CLERIC, wp_cmace, 0, MT_NONE},
+  {MT_PLAYER_MAGE, PCLASS_MAGE, wp_mwand, 0, MT_NONE},
+  {MT_PIGPLAYER, PCLASS_PIG, wp_snout, 0, MT_NONE}
 };
 
 
@@ -317,16 +322,11 @@ Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, int type)
 PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, int type)
   : Pawn(nx, ny, nz, type)
 {
-  const float AutoArmorSave[] = { 0.0, 0.15, 0.10, 0.05, 0.0 };
   // TODO fix this kludge when you feel like adding toughness to pawndata array...
-  if (type >= 37)
-    pclass = type - 36;
-  else
-    pclass = 0;
-
+  const float AutoArmorSave[] = { 0.0, 0.15, 0.10, 0.05, 0.0 };
+  pclass = pinfo->pclass;
   toughness = AutoArmorSave[pclass];
 
-  int i;
   // note! here Map *mp is not yet set! This means you can't call functions such as
   // SetPosition that have something to do with a map.
   flags |= (MF_NOTMONSTER | MF_PICKUP | MF_SHOOTABLE | MF_DROPOFF);
@@ -338,12 +338,14 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, int type)
   morphTics = 0;
 
   invSlot = invTics = 0;
-  inventory.resize(2, inventory_t(3,2)); // at least 1 empty slot
+  inventory.resize(1, inventory_t(arti_none,1)); // at least 1 empty slot
 
   usedown = attackdown = jumpdown = true;  // don't do anything immediately
   refire = 0;
 
   cheats = 0;
+
+  int i;
   for (i=0; i<NUMPOWERS; i++)
     powers[i] = 0;
 
@@ -756,9 +758,6 @@ void PlayerPawn::Move()
 
   bool onground = (z <= floorz) || (eflags & (MFE_ONMOBJ | MFE_FLY)) || (cheats & CF_FLYAROUND);
 
-#define JUMPSPEED (6*FRACUNIT/NEWTICRATERATIO)
-
-
   // jumping
   if (cmd->buttons & ticcmd_t::BT_JUMP)
     {
@@ -766,10 +765,10 @@ void PlayerPawn::Move()
 	fly_zspeed = 10;
       else if (eflags & MFE_UNDERWATER)
 	//TODO: goub gloub when push up in water
-	pz = cv_allowjump.value * FRACUNIT/2;
-      else if (onground && !jumpdown) // can't jump while in air, can't jump while jumping
+	pz = FRACUNIT/2;
+      else if (onground && !jumpdown && cv_jumpspeed.value) // can't jump while in air or while jumping
 	{
-	  pz = cv_allowjump.value * FRACUNIT;
+	  pz = cv_jumpspeed.value;
 	  if (!(cheats & CF_FLYAROUND))
 	    {
 	      S_StartScreamSound(this, sfx_jump);

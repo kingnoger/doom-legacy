@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2004/11/13 22:39:00  smite-meister
+// intermission works
+//
 // Revision 1.17  2004/11/09 20:38:53  smite-meister
 // added packing to I/O structs
 //
@@ -742,11 +745,6 @@ void font_t::DrawString(int x, int y, const char *str, int flags)
 
   int dupx, dupy;
 
-  // ei: kaikki sellaisenaaan
-  // loc: kerrotaan cx, cy alussa, poistetaan flagi drawlta
-  // siz: dup, leveys+cx, flagi jätetään drawlle
-  // molemmat: cx, cy alussa, ei loc-flagia drawlle, muuten kuin yllä
-
   if (flags & V_SSIZE)
     {
       dupx = vid.dupx;
@@ -767,7 +765,7 @@ void font_t::DrawString(int x, int y, const char *str, int flags)
   // cursor coordinates
   int cx = x;
   int cy = y + vid.scaledofs / vid.width;
-  int rowheight = (font[0]->height + 1) * dupy;
+  int rowheight = (height + 1) * dupy;
 
   while (1)
     {
@@ -778,7 +776,6 @@ void font_t::DrawString(int x, int y, const char *str, int flags)
       if (c == '\n')
         {
           cx = x;
-          //cy += 12*dupy;
 	  cy += rowheight;
           continue;
         }
@@ -849,7 +846,7 @@ int font_t::StringWidth(const char *str, int n)
 
 int font_t::StringHeight(const char *str)
 {
-  return font[0]->height;
+  return height;
 }
 
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.34  2004/11/13 22:38:42  smite-meister
+// intermission works
+//
 // Revision 1.33  2004/10/27 17:37:06  smite-meister
 // netcode update
 //
@@ -618,7 +621,6 @@ void D_SetPaths()
       legacyhome = string(userhome);
       legacyhome += DEFAULTDIR; // config files, saves here
       I_mkdir(legacyhome.c_str(), S_IRWXU);
-      legacyhome += '/';
     }
 
   // check for a custom config file
@@ -632,13 +634,14 @@ void D_SetPaths()
       // little hack to allow a different config file for opengl
       // may be a problem if opengl cannot really be started
       if (M_CheckParm("-opengl"))
-	sprintf(configfile, "%sgl"CONFIGFILENAME, legacyhome.c_str());
+	sprintf(configfile, "%s/gl"CONFIGFILENAME, legacyhome.c_str());
       else
-	sprintf(configfile, "%s"CONFIGFILENAME, legacyhome.c_str());
+	sprintf(configfile, "%s/"CONFIGFILENAME, legacyhome.c_str());
     }
 
-  // savegame name template
-  sprintf(savegamename, "%s%s", legacyhome.c_str(), SAVEGAMENAME);
+  // savegame name templates
+  sprintf(savegamename, "%s/%s", legacyhome.c_str(), "savegame_%d.sav");
+  sprintf(hubsavename, "%s/%s", legacyhome.c_str(), "hubsave_%02d.sav");
 }
 
 
@@ -719,9 +722,6 @@ void D_DoomMain()
     }
 
   //========================== start subsystem initializations ==========================
-  // order: memory, engine patching, L1 cache,
-  //  video, HUD, console (now consvars can be registered), read config file,
-  //  menu, renderer, sound, scripting.
 
   // zone memory management
   Z_Init(); 
@@ -734,7 +734,7 @@ void D_DoomMain()
   if (!M_CheckParm("-noversioncheck"))
     D_CheckWadVersion();
 
-  // the command buffer
+  // command buffer
   COM_Init();
 
   // system-specific stuff
@@ -744,22 +744,8 @@ void D_DoomMain()
   // Initialize the joystick subsystem.
   I_JoystickInit();
 
-  // TODO init keybindings and controls, init network stuff 
-
   // adapt tables to legacy needs
   P_PatchInfoTables();
-
-  switch (game.mode)
-    {
-    case gm_hexen:
-      HexenPatchEngine();
-      break;
-    case gm_heretic:
-      HereticPatchEngine();
-      break;
-    default:
-      DoomPatchEngine(); // TODO temporary solution, we must be able to switch game.mode anytime!
-    }
 
   nosound = M_CheckParm("-nosound");
   nomusic = M_CheckParm("-nomusic");
@@ -770,6 +756,18 @@ void D_DoomMain()
   // Client init
   if (!dedicated) 
     CL_Init();
+
+  switch (game.mode)
+    {
+    case gm_hexen:
+      HexenPatchEngine();
+      break;
+    case gm_heretic:
+      HereticPatchEngine();
+      break;
+    default:
+      DoomPatchEngine();
+    }
 
   // all consvars are now registered
   //------------------------------------- CONFIG.CFG

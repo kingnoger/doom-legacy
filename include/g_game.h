@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2004/11/13 22:38:59  smite-meister
+// intermission works
+//
 // Revision 1.15  2004/11/09 20:38:52  smite-meister
 // added packing to I/O structs
 //
@@ -239,6 +242,7 @@ public:
   void Ticker(); // ticks the game forward in time
   bool StartGame(skill_t skill, int cluster = 1);
   void StartIntermission();
+  void EndIntermission();
   void StartFinale(MapCluster *next);
   void EndFinale();
 

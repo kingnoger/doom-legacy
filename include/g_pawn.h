@@ -17,35 +17,20 @@
 // GNU General Public License for more details.
 //
 // $Log$
-// Revision 1.23  2004/11/04 21:12:54  smite-meister
-// save/load fixed
-//
-// Revision 1.22  2004/10/27 17:37:09  smite-meister
-// netcode update
-//
-// Revision 1.21  2004/07/05 16:53:29  smite-meister
-// Netcode replaced
+// Revision 1.24  2004/11/13 22:38:59  smite-meister
+// intermission works
 //
 // Revision 1.20  2004/04/25 16:26:51  smite-meister
 // Doxygen
 //
-// Revision 1.18  2004/01/06 14:37:45  smite-meister
-// six bugfixes, cleanup
-//
 // Revision 1.17  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
-//
-// Revision 1.16  2003/12/13 23:51:03  smite-meister
-// Hexen update
 //
 // Revision 1.15  2003/11/12 11:07:27  smite-meister
 // Serialization done. Map progression.
 //
 // Revision 1.14  2003/05/30 13:34:48  smite-meister
 // Cleanup, HUD improved, serialization
-//
-// Revision 1.13  2003/05/11 21:23:52  smite-meister
-// Hexen fixes
 //
 // Revision 1.12  2003/05/05 00:24:50  smite-meister
 // Hexen linedef system. Pickups.
@@ -108,15 +93,15 @@ enum pclass_t
   NUMCLASSES
 };
 
+
 // TODO testing, this is a hack...
 struct pawn_info_t
 {
-  mobjtype_t mt;
+  mobjtype_t   mt;
+  pclass_t     pclass;
   weapontype_t bweapon; // beginning weapon (besides fist/staff)
-  int bammo;            // ammo for bweapon
-  mobjtype_t nproj;     // natural projectile, if any
-  // TODO nproj should be replaced with a function pointer.
-  // Somebody should then write these shooting functions...
+  int          bammo;   // ammo for bweapon
+  mobjtype_t   nproj;   // natural projectile, if any
 };
 
 

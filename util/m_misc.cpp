@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/11/13 22:39:00  smite-meister
+// intermission works
+//
 // Revision 1.12  2004/10/27 17:37:11  smite-meister
 // netcode update
 //
@@ -211,6 +214,7 @@ char configfile[MAX_CONFIGNAME];
 
 
 char savegamename[256]; // path + name template
+char hubsavename[256];  // path + name template
 
 // ==========================================================================
 //                          CONFIGURATION

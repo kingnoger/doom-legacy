@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/11/13 22:38:59  smite-meister
+// intermission works
+//
 // Revision 1.7  2004/09/23 23:21:19  smite-meister
 // HUD updated
 //
@@ -90,6 +93,7 @@ private:
   /// States for the intermission
   enum WIstate_e
   {
+    Inactive,
     StatCount,
     ShowNextLoc,
     Wait
@@ -107,6 +111,7 @@ private:
   const char *interpic;
   const char *lastlevelname;
   const char *nextlevelname;
+  const char *intermusic;
 
   // level numbers for old Doom style graphic levelnames and YAH's
   int next, last; 
@@ -168,9 +173,10 @@ private:
   void InitWait();
 
 public:
+  Intermission();
 
   /// starts the intermission
-  void Start();
+  void Start(const class Map *m, const class MapInfo *n);
 
   /// the intermission is ended when the server says so
   void End();

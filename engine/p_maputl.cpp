@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/11/13 22:38:43  smite-meister
+// intermission works
+//
 // Revision 1.13  2004/11/09 20:38:50  smite-meister
 // added packing to I/O structs
 //
@@ -301,93 +304,6 @@ void P_LineOpening(line_t *linedef)
     I_Error("lindef without back");
 #endif
 
-  if(tmthing)
-    {
-      fixed_t        thingbot, thingtop;
-
-      thingbot = tmthing->z;
-      thingtop = thingbot + tmthing->height;
-
-      if (front->ceilingheight < back->ceilingheight)
-        opentop = front->ceilingheight;
-      else
-        opentop = back->ceilingheight;
-
-      if (front->floorheight > back->floorheight)
-	{
-	  openbottom = front->floorheight;
-	  lowfloor = back->floorheight;
-	}
-      else
-	{
-	  openbottom = back->floorheight;
-	  lowfloor = front->floorheight;
-	}
-
-      //SoM: 3/27/2000: Check for fake floors in the sector.
-      if(front->ffloors || back->ffloors)
-	{
-	  ffloor_t *rover;
-
-	  fixed_t    lowestceiling = opentop;
-	  fixed_t    highestfloor = openbottom;
-	  fixed_t    lowestfloor = lowfloor;
-	  fixed_t    delta1;
-	  fixed_t    delta2;
-
-	  if(!tmthing)
-	    goto no_thing;
-
-	  thingtop = tmthing->z + tmthing->height;
-
-	  // Check for frontsector's fake floors
-	  if(front->ffloors)
-	    for(rover = front->ffloors; rover; rover = rover->next)
-	      {
-		if(!(rover->flags & FF_SOLID)) continue;
-
-		delta1 = abs(tmthing->z - ((*rover->bottomheight + *rover->topheight) / 2));
-		delta2 = abs(thingtop - ((*rover->bottomheight + *rover->topheight) / 2));
-		if(*rover->bottomheight < lowestceiling && delta1 >= delta2)
-		  lowestceiling = *rover->bottomheight;
-
-		if(*rover->topheight > highestfloor && delta1 < delta2)
-		  highestfloor = *rover->topheight;
-		else if(*rover->topheight > lowestfloor && delta1 < delta2)
-		  lowestfloor = *rover->topheight;
-	      }
-
-	  // Check for backsectors fake floors
-	  if(back->ffloors)
-	    for(rover = back->ffloors; rover; rover = rover->next)
-	      {
-		if(!(rover->flags & FF_SOLID))
-		  continue;
-
-		delta1 = abs(tmthing->z - ((*rover->bottomheight + *rover->topheight) / 2));
-		delta2 = abs(thingtop - ((*rover->bottomheight + *rover->topheight) / 2));
-		if(*rover->bottomheight < lowestceiling && delta1 >= delta2)
-		  lowestceiling = *rover->bottomheight;
-
-		if(*rover->topheight > highestfloor && delta1 < delta2)
-		  highestfloor = *rover->topheight;
-		else if(*rover->topheight > lowestfloor && delta1 < delta2)
-		  lowestfloor = *rover->topheight;
-	      }
-
-	  if(highestfloor > openbottom)
-	    openbottom = highestfloor;
-
-	  if(lowestceiling < opentop)
-	    opentop = lowestceiling;
-
-	  if(lowestfloor > lowfloor)
-	    lowfloor = lowestfloor;
-	}
-      openrange = opentop - openbottom;
-      return;
-    }
-
   if (front->ceilingheight < back->ceilingheight)
     opentop = front->ceilingheight;
   else
@@ -404,7 +320,75 @@ void P_LineOpening(line_t *linedef)
       lowfloor = front->floorheight;
     }
 
- no_thing:
+  if (tmthing && (front->ffloors || back->ffloors))
+    {
+      //SoM: 3/27/2000: Check for fake floors in the sector.
+
+      fixed_t thingbot = tmthing->z;
+      fixed_t thingtop = thingbot + tmthing->height;
+
+      fixed_t lowestceiling = opentop;
+      fixed_t highestfloor = openbottom;
+      fixed_t highest_lowfloor = lowfloor;
+      fixed_t delta1, delta2;
+
+      // Check for frontsector's fake floors
+      if (front->ffloors)
+	for (ffloor_t *rover = front->ffloors; rover; rover = rover->next)
+	  {
+	    if (!(rover->flags & FF_SOLID))
+	      continue;
+
+	    delta1 = abs(thingbot - ((*rover->bottomheight + *rover->topheight) / 2));
+	    delta2 = abs(thingtop - ((*rover->bottomheight + *rover->topheight) / 2));
+	    
+	    if (delta1 >= delta2)
+	      {
+		if (*rover->bottomheight < lowestceiling)
+		  lowestceiling = *rover->bottomheight;
+	      }
+	    else
+	      {
+		if (*rover->topheight > highestfloor)
+		  highestfloor = *rover->topheight;
+		else if (*rover->topheight > highest_lowfloor)
+		  highest_lowfloor = *rover->topheight;
+	      }
+	  }
+
+      // Check for backsectors fake floors
+      if (back->ffloors)
+	for (ffloor_t *rover = back->ffloors; rover; rover = rover->next)
+	  {
+	    if (!(rover->flags & FF_SOLID))
+	      continue;
+
+	    delta1 = abs(thingbot - ((*rover->bottomheight + *rover->topheight) / 2));
+	    delta2 = abs(thingtop - ((*rover->bottomheight + *rover->topheight) / 2));
+	    
+	    if (delta1 >= delta2)
+	      {
+		if (*rover->bottomheight < lowestceiling)
+		  lowestceiling = *rover->bottomheight;
+	      }
+	    else
+	      {
+		if (*rover->topheight > highestfloor)
+		  highestfloor = *rover->topheight;
+		else if (*rover->topheight > highest_lowfloor)
+		  highest_lowfloor = *rover->topheight;
+	      }
+	  }
+
+      if (lowestceiling < opentop)
+	opentop = lowestceiling;
+
+      if (highestfloor > openbottom)
+	openbottom = highestfloor;
+
+      if (highest_lowfloor > lowfloor)
+	lowfloor = highest_lowfloor;
+    }
 
   openrange = opentop - openbottom;
 }

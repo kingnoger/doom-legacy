@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/11/13 22:38:59  smite-meister
+// intermission works
+//
 // Revision 1.6  2004/10/31 22:24:53  smite-meister
 // pic_t moves into history
 //
@@ -44,8 +47,6 @@
 #ifndef dstrings_h
 #define dstrings_h 1
 
-// Misc. other strings.
-#define SAVEGAMENAME "doomsav%d.dsg"
 
 // QuitDOOM messages
 #define NUM_QUITMESSAGES   15
