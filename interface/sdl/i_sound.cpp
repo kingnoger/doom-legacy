@@ -16,6 +16,9 @@
 // for more details.
 //
 // $Log$
+// Revision 1.10  2003/04/24 00:25:43  hurdler
+// Ok, since it doesn't work otherwise, add an ifdef
+//
 // Revision 1.9  2003/04/24 00:03:02  hurdler
 // Should fix compiling problem
 //
@@ -628,9 +631,15 @@ int I_RegisterSong(void* data, int len)
   if (nomusic)
     return 0;
 
+       
   // FIXME clumsy temp file. Is there a way to do this directly in memory?
+#ifdef __WIN32__
+  MIDI_tmpfilename = tmpnam(NULL); // create an unused name
+  midfile = fopen(MIDI_tmpfilename, "wb");
+#else
   MIDI_tmpfilename = strdup("removemeXXXXXX");
   midfile = fdopen(mkstemp(MIDI_tmpfilename), "wb");
+#endif
   if (midfile == NULL)
     {
       CONS_Printf("Couldn't create a tmpfile for music!\n");
