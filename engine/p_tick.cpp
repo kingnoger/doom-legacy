@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/06/01 18:56:30  smite-meister
+// zlib compression, partial polyobj fix
+//
 // Revision 1.5  2003/04/19 17:38:47  smite-meister
 // SNDSEQ support, tools, linedef system...
 //
@@ -75,7 +78,7 @@ void Map::AddThinker(Thinker *thinker)
 // removes a thinker from the Map without deleting it
 void Map::DetachThinker(Thinker *thinker)
 {
-  thinker->mp = NULL;
+  thinker->mp = reinterpret_cast<Map *>(-1); // NULL will not do, since it means "Removed, waiting for deletion"
   thinker->next->prev = thinker->prev;
   thinker->prev->next = thinker->next;
   thinker->prev = thinker->next = NULL;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/06/01 18:56:30  smite-meister
+// zlib compression, partial polyobj fix
+//
 // Revision 1.6  2003/05/30 13:34:46  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -44,28 +47,32 @@
 
 #include "doomdef.h"
 #include "doomdata.h"
-#include "command.h"
+#include "dstrings.h"
 
+#include "command.h"
+#include "console.h"
 
 #include "g_game.h"
-#include "g_actor.h"
 #include "g_map.h"
+#include "g_player.h"
+#include "g_actor.h"
+
 #include "g_save.h"
 
-#include "d_items.h"
-
+#include "d_netcmd.h"
+#include "am_map.h"
+#include "m_menu.h"
 #include "p_setup.h"
-#include "byteptr.h"
 #include "t_vari.h"
 #include "t_script.h"
 #include "m_random.h"
+#include "m_misc.h"
 
 #include "w_wad.h"
 #include "z_zone.h"
 
 extern  consvar_t  cv_deathmatch;
 
-byte *save_p;
 
 // Pads save_p to a 4-byte boundary
 //  so that the load/save works on SGI&Gecko.
@@ -78,37 +85,6 @@ byte *save_p;
 #endif
 
 
-// takes a snapshot of the entire game state and stores it in the archive
-int GameInfo::Serialize(LArchive &a)
-{
-  // make sure that gameaction is ga_nothing
-  /*
-  int i, j, n;
-
-  a << demoversion;
-  a << mode;
-  a << mission;
-  a << state << wipestate;
-  a << skill;
-
-
-  // and so on
-  a << (n = teams.size());
-  for (i = 0; i<n; i++)
-    {
-      a << teams[i]->name;
-      a << teams[i]->color;
-      a << teams[i]->score;
-    }
-  a << Players.size();
-
-  a << (n = maps.size());
-  for (i = 0; i<n; i++)
-    maps[i]->Serialize(a);
-
-  */
-  return 0;
-}
 
 
 
@@ -1944,7 +1920,7 @@ bool P_UnArchiveMisc()
 
 void P_SaveGame()
 {
-  CV_SaveNetVars((char**)&save_p);
+  //CV_SaveNetVars((char**)&save_p);
   P_ArchiveMisc();
   P_ArchivePlayers ();
   //P_ArchiveWorld ();
@@ -1952,12 +1928,12 @@ void P_SaveGame()
   P_ArchiveSpecials ();
   P_ArchiveScripts ();
     
-  *save_p++ = 0x1d;           // consistancy marker
+  //*save_p++ = 0x1d;           // consistancy marker
 }
 
 bool P_LoadGame()
 {
-  CV_LoadNetVars((char**)&save_p);
+  //CV_LoadNetVars((char**)&save_p);
   if( !P_UnArchiveMisc() )
     return false;
   P_UnArchivePlayers ();
@@ -1966,5 +1942,140 @@ bool P_LoadGame()
   P_UnArchiveSpecials ();
   P_UnArchiveScripts ();
 
-  return *save_p++ == 0x1d;
+  //return *save_p++ == 0x1d;
+  return false;
+}
+
+
+// takes a snapshot of the entire game state and stores it in the archive
+int GameInfo::Serialize(LArchive &a)
+{
+  // FIXME
+  // this is how it should go:
+  // Players are serialized next, with info about their current Map
+  // Each active (or in_stasis) Map is then serialized. Map::Serialize must _not_ re-serialize its players.
+  // Archive is closed.
+  // FIXME right now p_saveg.cpp is mostly commented out.
+
+  // check if required resource files are to be found / can be downloaded
+  // uncompress rest of the file if necessary
+  // read consvars
+  // read player info (netgame? authentication?)
+  // read levelgraph
+  // read map name(s), load them from wads?
+  // read global scripts
+  // read saved maps
+  multiplayer = (Players.size() > 1);
+  // FIXME! why can't this be saved as well?
+  //if (playeringame[1] && !netgame)
+  //  CV_SetValue(&cv_splitscreen,1);
+  displayplayer = consoleplayer;
+  displayplayer2 = consoleplayer2;
+
+
+
+  // make sure that gameaction is ga_nothing
+  /*
+  int i, j, n;
+
+  a << demoversion;
+  a << mode;
+  a << mission;
+  a << state << wipestate;
+  a << skill;
+
+
+  // and so on
+  a << (n = teams.size());
+  for (i = 0; i<n; i++)
+    {
+      a << teams[i]->name;
+      a << teams[i]->color;
+      a << teams[i]->score;
+    }
+  a << Players.size();
+
+  a << (n = maps.size());
+  for (i = 0; i<n; i++)
+    maps[i]->Serialize(a);
+
+  */
+  return 0;
+}
+
+
+
+char savegamename[256];
+
+void GameInfo::LoadGame(int slot)
+{
+  char  savename[255];
+  byte *savebuffer;
+
+  sprintf(savename, savegamename, slot);
+
+  int length = FIL_ReadFile(savename, &savebuffer);
+  if (!length)
+    {
+      CONS_Printf("Couldn't open save file %s", savename);
+      return;
+    }
+  
+  LArchive a;
+  if (!a.Open(savebuffer, length))
+    return;
+
+  Z_Free(savebuffer); // the compressed buffer is no longer needed
+
+  if (demoplayback)  // reset game engine
+    StopDemo();
+
+  Downgrade(VERSION); // reset the game version
+
+  automap.Close();
+
+  // dearchive all the modifications
+  if (!Serialize(a))
+    {
+      M_StartMessage ("Savegame file corrupted\n\nPress ESC\n", NULL, MM_NOTHING);
+      Command_ExitGame_f();
+      return;
+    }
+
+  action = ga_nothing;
+  state = GS_LEVEL;
+  paused = false;
+
+  // done
+  /*
+  if (setsizeneeded)
+    R_ExecuteSetViewSize();
+
+  R_FillBackScreen();  // draw the pattern into the back screen
+  */
+  CON_ToggleOff();
+}
+
+
+void GameInfo::SaveGame(int savegameslot, char *description)
+{
+  if (action != ga_nothing)
+    return; // not while changing state
+
+  LArchive a;
+  a.Create(description); // create a new save archive
+  Serialize(a);          // store the game state into it
+
+  byte *buffer;
+  unsigned length = a.Compress(&buffer);  // take out the compressed data
+
+  char filename[256];
+  sprintf(filename, savegamename, savegameslot);
+
+  FIL_WriteFile(filename, buffer, length);
+
+  Z_Free(buffer);
+
+  consoleplayer->message = text[GGSAVED_NUM];
+  //R_FillBackScreen();  // draw the pattern into the back screen
 }

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2003/06/01 18:56:29  smite-meister
+// zlib compression, partial polyobj fix
+//
 // Revision 1.16  2003/05/11 21:23:49  smite-meister
 // Hexen fixes
 //
@@ -242,6 +245,7 @@ Actor::Actor()
 {
   pres = NULL;
   snext = sprev = bnext = bprev = NULL;
+  subsector = NULL;
 }
 
 
@@ -259,21 +263,30 @@ Actor::Actor(fixed_t nx, fixed_t ny, fixed_t nz)
 {
   // note! here Map *mp is not yet set! This means you can't call functions such as
   // SetPosition that have something to do with a map.
+  pres = NULL;
   snext = sprev = bnext = bprev = NULL;
+  subsector = NULL;
+  floorz = ceilingz = 0;
+  touching_sectorlist = NULL;
+  spawnpoint = NULL;
+
   x = nx;
   y = ny;
   z = nz;
   angle = aiming = 0;
   px = py = pz = 0;
-  floorclip = 0;
 
-  spawnpoint = NULL;
-  touching_sectorlist = NULL;
+  // some attributes left uninitialized here
+  flags = flags2 = eflags = 0;
+
+  special1 = special2 = 0;
   special = tid = 0;
+  args[0] = args[1] = args[2] = args[3] = args[4] = 0;
+
   owner = target = NULL;
 
-  pres = NULL;
-  // TODO hexen fields initialization
+  reactiontime = 0;
+  floorclip = 0;
 }
 
 
@@ -328,8 +341,11 @@ void Actor::Remove()
   // lazy deallocation/destruction: memory freed next time it thinks.
 
   if (mp == NULL)
+    return; // already removed, waiting deletion
+
+  if (mp == reinterpret_cast<Map *>(-1))
     {
-      // no Map, must be in transit between maps/levels
+      // in transit between maps/levels
       delete this;
       return;
     }
@@ -1119,23 +1135,22 @@ bool DActor::SetState(statenum_t ns, bool call)
   statenum_t tempstate[NUMSTATES];            // for use with recursion
     
   if (recursion++)                            // if recursion detected,
-    memset(seenstate = tempstate,0,sizeof tempstate); // clear state table
+    memset(seenstate = tempstate, 0, sizeof(tempstate)); // clear state table
     
   do {
     if (ns == S_NULL)
       {
-	state = (state_t *)S_NULL;
+	state = &states[S_NULL];
 	Remove();
 	ret = false;
 	break;                 // killough 4/9/98
       }
         
-    st = &states[ns];
-    state = st;
+    state = st = &states[ns];
     tics = st->tics;
     if (pres->IsSprite())
       {
-	// kludge to fix those sprites that change name during animation (!!!)
+	// kludge to fix those sprites that change name during animation (!!!) TODO make a better fix
 	if (((spritepres_t *)pres)->spr->iname != *(int *)(sprnames[state->sprite]))
 	  {
 	    delete pres;

@@ -45,7 +45,7 @@ ifdef LINUX
  platform = -DLINUX
  interface = -DSDL
 # linker
- LIBS	= -L/usr/X11/lib -lSDLmain -lSDL -lSDL_mixer
+ LIBS	= -L/usr/X11/lib -lSDLmain -lSDL -lSDL_mixer -lz
  OPENGLLIBS = -lGL -lGLU
 # -lm -lpthread ???
  LDFLAGS = -Wall
@@ -64,7 +64,7 @@ else # assume WIN32 is defined
  interface = -DSDL
  EXTRAFLAGS = -mwindows
 # linker
- LIBS	= -lmingw32 -lSDLmain -lSDL SDL_mixer.lib -lwsock32
+ LIBS	= -lmingw32 -lSDLmain -lSDL SDL_mixer.lib -lz -lwsock32
  OPENGLLIBS = -lopengl32 -lglu32
  LDFLAGS = -Wall -mwindows
 # executable

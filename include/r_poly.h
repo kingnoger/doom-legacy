@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2003/06/01 18:56:30  smite-meister
+// zlib compression, partial polyobj fix
+//
 // Revision 1.1  2003/05/05 00:24:50  smite-meister
 // Hexen linedef system. Pickups.
 //

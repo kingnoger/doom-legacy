@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/06/01 18:56:30  smite-meister
+// zlib compression, partial polyobj fix
+//
 // Revision 1.5  2003/05/30 13:34:46  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -1315,8 +1318,10 @@ void Map::TranslateToStartSpot(int tag, int originX, int originY)
   avg.y /= po->numsegs;
   subsector_t *sub = R_PointInSubsector(avg.x<<FRACBITS, avg.y<<FRACBITS);
 
+  // FIXME errors in polyobj spawning
   if (sub->poly != NULL)
     I_Error("PO_TranslateToStartSpot:  Multiple polyobjs in a single subsector.\n");
+    //CONS_Printf("Multiple polyobjs (%d) in a single subsector %d\n", tag, sub-subsectors);
 
   sub->poly = po;
 }
@@ -1339,7 +1344,7 @@ void Map::InitPolyobjs()
   memset(polyobjs, 0, NumPolyobjs * sizeof(polyobj_t));
 
   int index = 0; // index polyobj number
-
+  CONS_Printf("%d Polyobjs\n", NumPolyobjs);
   // Find the startSpot points, and spawn each polyobj
   n = polyspawn.size();
   for (i=0; i<n; i++)
@@ -1350,6 +1355,7 @@ void Map::InitPolyobjs()
 	  polyobjs[index].startSpot.x = mt->x << FRACBITS;
 	  polyobjs[index].startSpot.y = mt->y << FRACBITS;
 	  SpawnPolyobj(index, mt->angle, (mt->type == PO_SPAWNCRUSH_TYPE));
+	  CONS_Printf("Polyobj %d: tag = %d\n", index, mt->angle);
 	  index++;
 	}
     }

@@ -3,8 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,8 +17,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:25  hurdler
-// Initial revision
+// Revision 1.2  2003/06/01 18:56:30  smite-meister
+// zlib compression, partial polyobj fix
+//
+// Revision 1.1.1.1  2002/11/16 14:18:25  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.3  2002/07/01 21:00:52  jpakkane
 // Fixed cr+lf to UNIX form.
@@ -48,20 +50,5 @@
 
 #ifndef __P_SAVEG__
 #define __P_SAVEG__
-
-
-#ifdef __GNUG__
-#pragma interface
-#endif
-
-
-// Persistent storage/archiving.
-// These are the load / save game routines.
-
-void    P_SaveGame (void);
-bool P_LoadGame (void);
-
-extern byte*            save_p; 
-
 
 #endif

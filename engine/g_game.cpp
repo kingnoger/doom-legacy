@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2003/06/01 18:56:29  smite-meister
+// zlib compression, partial polyobj fix
+//
 // Revision 1.12  2003/05/30 13:34:42  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -888,79 +891,6 @@ void G_LoadGame(int slot)
   COM_BufAddText(va("load %d\n",slot));
 }
 
-#define VERSIONSIZE             16
-
-// was G_DoLoadGame
-
-char savegamename[256];
-
-void GameInfo::LoadGame(int slot)
-{
-  int         length;
-  char        vcheck[VERSIONSIZE];
-  char        savename[255];
-
-  byte *savebuffer;
-
-  sprintf(savename, savegamename, slot);
-
-  length = FIL_ReadFile(savename, &savebuffer);
-  if (!length)
-    {
-      CONS_Printf ("Couldn't read file %s", savename);
-      return;
-    }
-
-  // skip the description field
-  save_p = savebuffer + SAVESTRINGSIZE;
-    
-  memset (vcheck,0,sizeof(vcheck));
-  sprintf (vcheck,"version %i",VERSION);
-  // VB: note conversion from byte to signed char
-  if (strcmp ((char *)save_p, vcheck))
-    {
-      M_StartMessage ("Save game from different version\n\nPress ESC\n",NULL,MM_NOTHING);
-      return;                         // bad version
-    }
-  save_p += VERSIONSIZE;
-
-  if(demoplayback)  // reset game engine
-    StopDemo();
-
-  //added:27-02-98: reset the game version
-  Downgrade(VERSION);
-
-  paused = false;
-  automap.Close();
-
-  // dearchive all the modifications
-  if (!P_LoadGame())
-    {
-      M_StartMessage ("savegame file corrupted\n\nPress ESC\n", NULL, MM_NOTHING);
-      Command_ExitGame_f();
-      Z_Free (savebuffer);
-      return;
-    }
-
-  action = ga_nothing;
-  state = GS_LEVEL;
-  displayplayer = consoleplayer;
-
-  // done
-  Z_Free(savebuffer);
-
-  multiplayer = (Players.size() > 1);
-  // FIXME! why can't this be saved as well?
-  //if (playeringame[1] && !netgame)
-  //  CV_SetValue(&cv_splitscreen,1);
-
-  if (setsizeneeded)
-    R_ExecuteSetViewSize ();
-
-  // draw the pattern into the back screen
-  R_FillBackScreen ();
-  CON_ToggleOff ();
-}
 
 //
 // G_SaveGame
@@ -973,77 +903,6 @@ void G_SaveGame(int slot, char *description)
     COM_BufAddText(va("save %d \"%s\"\n",slot,description));
 }
 
-// was G_DoSaveGame
-
-const int SAVEGAMESIZE = (128*1024);
-
-void GameInfo::SaveGame(int savegameslot, char *savedescription)
-{
-  if (action != ga_nothing)
-    return; // not while changing state
-
-  // loading:
-  // check magic & version
-  // check if required resource files are to be found / can be downloaded
-  // uncompress rest of the file if necessary
-  // read consvars
-  // read player info (netgame? authentication?)
-  // read levelgraph
-  // read map name(s), load them from wads?
-  // read global scripts
-  // read saved maps
-
-
-  // FIXME
-  // this is how it should go:
-  // Here we create an instance of an Archive class.
-  // GameInfo serializes itself into the Archive.
-  // Players are serialized next, with info about their current Map
-  // Each active (or in_stasis) Map is then serialized. Map::Serialize must _not_ re-serialize its players.
-  // Archive is closed.
-  // FIXME right now p_saveg.cpp is mostly commented out.
-
-  /*
-  LArchive *ar = new LArchive();
-
-  char        name2[VERSIONSIZE];
-  char        description[SAVESTRINGSIZE];
-  int         length;
-  char        name[256];
-
-  byte *savebuffer = (byte *)malloc(SAVEGAMESIZE);
-
-  sprintf(name, savegamename, savegameslot);
-
-  save_p = savebuffer = 
-  if(!save_p)
-    {
-      CONS_Printf ("No More free memory for savegame\n");
-      return;
-    }
-
-  strcpy(description,savedescription);
-  description[SAVESTRINGSIZE]=0;
-  WRITEMEM(save_p, description, SAVESTRINGSIZE);
-  memset (name2,0,sizeof(name2));
-  sprintf (name2,"version %i",VERSION);
-  WRITEMEM(save_p, name2, VERSIONSIZE);
-
-  P_SaveGame();
-
-  length = save_p - savebuffer;
-  if (length > SAVEGAMESIZE)
-    I_Error ("Savegame buffer overrun");
-  FIL_WriteFile (name, savebuffer, length);
-  free(savebuffer);
-
-  action = ga_nothing;
-
-  consoleplayer->message = GGSAVED;
-  */
-  // draw the pattern into the back screen
-  R_FillBackScreen ();
-}
 
 
 //
@@ -1069,7 +928,7 @@ void G_DeferedInitNew (skill_t skill, char* mapname, bool StartSplitScreenGame)
   COM_BufAddText (va("map \"%s\" -skill %d -monsters 1\n",mapname,skill+1));
 }
 
-// returns player 'number' if he is in the map, otherwise NULL
+// returns player number 'num' if he is in the game, otherwise NULL
 PlayerInfo *GameInfo::FindPlayer(int num)
 {
   map<int, PlayerInfo *>::iterator i = Players.find(num);

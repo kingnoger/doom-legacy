@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.14  2003/06/01 18:56:29  smite-meister
+// zlib compression, partial polyobj fix
+//
 // Revision 1.13  2003/05/30 13:34:43  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -114,17 +117,28 @@ pawn_info_t pawndata[] =
 
 PlayerInfo::PlayerInfo(const string & n)
 {
-  // TODO: finish initialization...
   name = n;
   number = 0;
   team = 0;
   pawntype = 0;
   pclass = 0;
   color = 0;
+  skin = 0;
 
+  time = 0;
+
+  memset(&cmd, 0, sizeof(ticcmd_t));
+
+  viewz = viewheight = deltaviewheight = bob = 0;
   message = NULL;
 
-  playerstate = PST_WAITFORMAP;
+  for (int i = 0; i<NUMWEAPONS; i++)
+    favoriteweapon[i] = 0;
+  originalweaponswitch = true;
+  autoaim = false;
+
+  pawn = NULL;
+  Reset(true, true);
 };
 
 

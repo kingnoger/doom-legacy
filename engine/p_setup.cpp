@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2003/06/01 18:56:30  smite-meister
+// zlib compression, partial polyobj fix
+//
 // Revision 1.20  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -621,10 +624,6 @@ void Map::LoadThings(int lump)
 	}
       t->mobj = NULL;
 
-      // wrong flags?
-      if ((t->flags & ffail) || !(t->flags & fskill) || !(t->flags & fmode))
-	continue;
-
       // convert editor number to mobjtype_t number right now
       if (!ednum)
 	continue; // Ignore type-0 things as NOPs
@@ -746,6 +745,11 @@ void Map::LoadThings(int lump)
 	      continue;
 	    }
 	}
+
+      // Spawning flags don't apply to playerstarts or polyobjs! Why, pray, is that?
+      // wrong flags?
+      if ((t->flags & ffail) || !(t->flags & fskill) || !(t->flags & fmode))
+	continue;
 
       for (n = low; n <= high; n++)
 	if (ednum == mobjinfo[n].doomednum)
