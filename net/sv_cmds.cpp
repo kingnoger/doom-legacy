@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2004/07/07 17:27:20  smite-meister
+// bugfixes
+//
 // Revision 1.1  2004/07/05 16:53:30  smite-meister
 // Netcode replaced
 //
@@ -301,12 +304,8 @@ void Command_Connect_f()
 
   CONS_Printf("connecting...\n");
 
-  game.server = false;
-  game.netgame = true;
-  game.multiplayer = true;
-        
   if (!stricmp(COM_Argv(1),"any"))
-    game.net->CL_StartPinging();
+    game.net->CL_StartPinging(true);
   else
     game.net->CL_Connect(Address(COM_Argv(1)));
 }

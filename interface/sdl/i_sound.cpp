@@ -16,6 +16,9 @@
 // for more details.
 //
 // $Log$
+// Revision 1.16  2004/07/07 17:27:20  smite-meister
+// bugfixes
+//
 // Revision 1.15  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
 //
@@ -558,11 +561,15 @@ void I_InitMusic()
 
 void I_PlaySong(int handle, int looping)
 {
+  CONS_Printf("here we are\n");
   if (nomusic)
     return;
 
+  CONS_Printf("and here\n");
+
   if (music[handle])
     {
+      CONS_Printf("urg\n");
       Mix_FadeInMusic(music[handle], looping ? -1 : 0, 500);
     }
 }

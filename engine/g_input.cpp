@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/07/07 17:27:19  smite-meister
+// bugfixes
+//
 // Revision 1.7  2004/07/05 16:53:24  smite-meister
 // Netcode replaced
 //
@@ -447,7 +450,7 @@ void ticcmd_t::Build(bool primary, int realtics)
 
 
   pitch = G_ClipAimingPitch(pitch << 16) >> 16;
-  CONS_Printf("Move: %d, %d, %d\n", yaw, pitch, buttons);
+  //CONS_Printf("Move: %d, %d, %d\n", yaw, pitch, buttons);
 }
 
 

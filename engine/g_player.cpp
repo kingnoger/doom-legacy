@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.22  2004/07/07 17:27:19  smite-meister
+// bugfixes
+//
 // Revision 1.21  2004/07/05 16:53:24  smite-meister
 // Netcode replaced
 //
@@ -336,16 +339,8 @@ bool PlayerInfo::InventoryResponder(int (*gc)[2], event_t *ev)
           if (pawn->invTics)
             pawn->invTics = 0;
           else if (pawn->inventory[pawn->invSlot].count > 0)
-            {
-              // FIXME HACK bypassing netcode
-              pawn->UseArtifact(artitype_t(pawn->inventory[pawn->invSlot].type));
-              /*
-              if (1) // FIXME send playernum in the message...
-                SendNetXCmd(XD_USEARTEFACT, &pawn->inventory[pawn->invSlot].type, 1);
-              else
-                SendNetXCmd2(XD_USEARTEFACT, &pawn->inventory[pawn->invSlot].type, 1);
-              */
-            }
+	    cmd.item = pawn->inventory[pawn->invSlot].type + 1;
+
           return true;
         }
       break;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2004/07/07 17:27:20  smite-meister
+// bugfixes
+//
 // Revision 1.18  2004/07/05 16:53:30  smite-meister
 // Netcode replaced
 //
@@ -225,6 +228,7 @@ Texture::Texture(const char *n)
   name[8] = '\0';
   width = height = 0;
   leftoffset = topoffset = 0;
+  xscale = yscale = FRACUNIT;
   data = NULL;
 
   // crap follows.
@@ -370,7 +374,8 @@ struct mappatch_t
 struct maptexture_t
 {
   char        name[8];
-  int         masked; // unused, always zero
+  short       flags;          // extension, used to be zero
+  byte        xscale, yscale; // extension, used to be zero
   short       width;
   short       height;
   void      **columndirectory; // unused, always zero
@@ -387,6 +392,8 @@ DoomTexture::DoomTexture(const maptexture_t *mtex)
 
   width  = SHORT(mtex->width);
   height = SHORT(mtex->height);
+  xscale = mtex->xscale ? mtex->xscale << (FRACBITS - 3) : 0;
+  yscale = mtex->yscale ? mtex->yscale << (FRACBITS - 3) : 0;
 
   int j = 1;
   while (j*2 <= width)
@@ -394,7 +401,12 @@ DoomTexture::DoomTexture(const maptexture_t *mtex)
   widthmask = j-1;
 }
 
-// TODO destructor
+
+DoomTexture::~DoomTexture()
+{
+  Z_Free(patches);
+}
+
 
 // Clip and draw a column from a patch into a cached post.
 static void R_DrawColumnInCache(column_t *patch, byte *cache, int originy, int cacheheight)

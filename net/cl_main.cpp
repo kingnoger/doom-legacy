@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/07/07 17:27:20  smite-meister
+// bugfixes
+//
 // Revision 1.2  2004/07/05 16:53:30  smite-meister
 // Netcode replaced
 //
@@ -348,45 +351,6 @@ void D_SendPlayerConfig()
 
 
 /*
-#define MAXSERVERNAME 32
-struct serverinfo_pak
-{
-    byte       version;
-    ULONG      subversion;
-    byte       numberofplayer;
-    byte       maxplayer;
-    byte       deathmatch;
-    tic_t      time;
-    float      load;        // unused for the moment
-    char       mapname[8];
-    char       servername[MAXSERVERNAME];
-    byte       fileneedednum;
-    byte       fileneeded[4096];   // is filled with writexxx (byteptr.h)
-};
-
-
-
-void SL_ClearServerList( int connectedserver )
-{
-    int i;
-    for( i=0; i<serverlistcount; i++ )
-        if( connectedserver != serverlist[i].node )
-        {
-            Net_CloseConnection(serverlist[i].node);
-            serverlist[i].node = 0;
-        }
-    serverlistcount = 0;
-}
-
-int SL_SearchServer( int node )
-{
-    int i;
-    for( i=0; i<serverlistcount; i++ )
-        if( serverlist[i].node == node )
-            return i;
-
-    return -1;
-}
 
 void SL_InsertServer( serverinfo_pak *info, int node)
 {

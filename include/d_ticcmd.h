@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/07/07 17:27:19  smite-meister
+// bugfixes
+//
 // Revision 1.4  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
 //
@@ -78,7 +81,8 @@ struct ticcmd_t
     WEAPONSHIFT = 4,
   };
 
-  short buttons;
+  short buttons; ///< buttons and weapon changes
+  char  item;    ///< if nonzero, using an inventory item
   char  forward; ///< "push" forward-backward
   char  side;    ///< "push" right-left
 

@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.33  2004/07/07 17:27:19  smite-meister
+// bugfixes
+//
 // Revision 1.32  2004/07/05 16:53:24  smite-meister
 // Netcode replaced
 //
@@ -491,6 +494,10 @@ void PlayerPawn::Think()
     }
   else
     usedown = false;
+
+  // artifacts
+  if (cmd->item)
+    UseArtifact(artitype_t(cmd->item - 1));
 
   // morph counter
   if (morphTics)

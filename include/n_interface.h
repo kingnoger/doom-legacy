@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/07/07 17:27:19  smite-meister
+// bugfixes
+//
 // Revision 1.3  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
 //
@@ -36,8 +39,10 @@
 #define n_interface_h 1
 
 #include <vector>
+#include <string>
 #include "tnl/tnlNetInterface.h"
 
+using namespace std;
 using namespace TNL;
 
 /// \brief TNL NetInterface class for Legacy
@@ -56,7 +61,6 @@ public:
   {
     NS_Unconnected,    ///< uninitialized or no network connections
     CL_PingingServers, ///< client looking for servers
-    CL_QueryingServer, ///< server detected, querying
     CL_Connecting,     ///< client trying to connect to a server
     CL_Connected,      ///< client connected to a server
     SV_Loading,        ///< server loading a map (clients should be loading it also)
@@ -71,9 +75,10 @@ public:
   /// local constants
   enum
   {
-    PingDelay = 2000,  ///< ms to wait between sending server pings
+    PingDelay  = 5000, ///< ms to wait between sending server pings
+    QueryDelay = 8000, ///< ms to wait between sending server queries
 
-    // Different types of info packets
+    /// Different types of info packets
     PT_ServerPing = FirstValidInfoPacketId,  ///< Client pinging for servers
     PT_PingResponse,   ///< Server answering a ping
     PT_ServerQuery,    ///< Client querying server info
@@ -82,9 +87,18 @@ public:
 
 
   /// server pinging
-  U32     lastpingtime;
-  Nonce   pingnonce;
-  Address ping_address; ///< Network address to ping in searching for a server. Specific host address or a LAN broadcast address.
+  U32     nextpingtime;
+  Nonce      pingnonce;
+  Address ping_address; ///< Host or a LAN broadcast address used in server search
+  bool     autoconnect;
+
+public:
+  vector<class serverinfo_t *> serverlist;
+
+  serverinfo_t *SL_FindServer(const Address &a);
+  serverinfo_t *SL_AddServer(const Address &a);
+  void SL_Clear();
+
 
   // active connections
   class MasterConnection *master_con;   ///< connection to master server
@@ -107,13 +121,13 @@ public:
   void SendPing(const Address &a, const Nonce &cn);
 
   /// Sends out a server query
-  void SendQuery(const Address &a, const Nonce &cn, U32 token);
+  void SendQuery(serverinfo_t *s);
 
   /// Checks for incoming packets, sends out packets if needed, processes connections.
   void Update();
 
   /// Starts searching for LAN servers
-  void CL_StartPinging();
+  void CL_StartPinging(bool connectany = false);
 
   /// Tries to connect to a server
   void CL_Connect(const Address &a);
@@ -134,6 +148,32 @@ public:
 };
 
 
+
+/// \brief Vital server properties visible to prospective clients
+///
+/// A client makes one of these for each server found during server search.
+class serverinfo_t
+{
+public:
+  Address         addr; ///< server address
+  Nonce             cn; ///< client nonce sent to server
+  U32            token; ///< id token the server returned
+  unsigned   nextquery; ///< when should the next server query be sent?
+
+
+  unsigned        ping;
+  string          name;
+  int          version; ///< server version
+  string versionstring;
+  int          players;
+  int       maxplayers;
+
+  int         gametype;
+
+
+  serverinfo_t(const Address &a);
+  void Draw(int x, int y);
+};
 
 
 #endif

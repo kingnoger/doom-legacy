@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/07/07 17:27:19  smite-meister
+// bugfixes
+//
 // Revision 1.6  2004/04/25 16:26:51  smite-meister
 // Doxygen
 //
@@ -42,6 +45,7 @@
 
 #include <map>
 #include "doomtype.h"
+#include "m_fixed.h"
 #include "z_cache.h"
 
 
@@ -87,6 +91,8 @@ public:
 
   short width, height;
   short leftoffset, topoffset;
+  fixed_t xscale, yscale;
+
   union
   {
     byte  *data;
@@ -95,7 +101,7 @@ public:
 
 public:
   Texture(const char *name);
-  ~Texture();
+  virtual ~Texture();
 
   void *operator new(size_t size);
   void  operator delete(void *mem);
@@ -186,6 +192,7 @@ public:
 
 public:
   DoomTexture(const struct maptexture_t *mtex);
+  virtual ~DoomTexture();
 
   virtual bool Masked() { return (patchcount == 1); };
 

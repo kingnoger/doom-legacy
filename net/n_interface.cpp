@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/07/07 17:27:20  smite-meister
+// bugfixes
+//
 // Revision 1.3  2004/07/05 16:53:30  smite-meister
 // Netcode replaced
 //
@@ -48,8 +51,17 @@
 #include "i_system.h"
 
 
-
 using namespace TNL;
+
+
+serverinfo_t::serverinfo_t(const Address &a)
+{
+  addr = a;
+  nextquery = 0;
+  version = 0;
+  players = maxplayers = 0;
+  gametype = 0;
+}
 
 
 
@@ -76,9 +88,11 @@ LNetInterface::LNetInterface(const Address &bind)
   server_con = NULL;
   netstate = NS_Unconnected;
 
-  lastpingtime = I_GetTime();
-
+  nextpingtime = 0;
+  autoconnect = false;
   nodownload = false;
+
+  setAllowsConnections(false);
 
   // Asymmetric cipher based on elliptic curves
   setPrivateKey(new AsymmetricKey(32));
@@ -93,11 +107,13 @@ void LNetInterface::SetPingAddress(const Address &a)
 }
 
 
-void LNetInterface::CL_StartPinging()
+void LNetInterface::CL_StartPinging(bool connectany)
 {
-  lastpingtime = I_GetTime() - PingDelay;
-  netstate = CL_PingingServers;
+  autoconnect = connectany;
+  nextpingtime = I_GetTime();
   pingnonce.getRandom();
+  SL_Clear();
+  netstate = CL_PingingServers;
 }
 
 
@@ -110,25 +126,28 @@ void LNetInterface::SendPing(const Address &a, const Nonce &cn)
 
   out.write(U8(PT_ServerPing));
   cn.write(&out);           // client nonce
+  out.write(VERSION);       // version information
   out.writeString(VERSIONSTRING);
   out.write(I_GetTime());  // this is used to calculate the ping value
 
   out.sendto(mSocket, a);
+  nextpingtime = I_GetTime() + PingDelay;
 }
 
 
 // send out server query
-void LNetInterface::SendQuery(const Address &a, const Nonce &cn, U32 token)
+void LNetInterface::SendQuery(serverinfo_t *s)
 {
-  CONS_Printf("Querying server %s...\n", a.toString());
+  CONS_Printf("Querying server %s...\n", s->addr.toString());
 
   PacketStream out;
 
   out.write(U8(PT_ServerQuery));
-  cn.write(&out);
-  out.write(token);
+  s->cn.write(&out);
+  out.write(s->token);
 
-  out.sendto(mSocket, a);
+  out.sendto(mSocket, s->addr);
+  s->nextquery = I_GetTime() + QueryDelay;
 }
 
 
@@ -150,12 +169,17 @@ void LNetInterface::handleInfoPacket(const Address &address, U8 packetType, BitS
 	  cn.read(stream);
 
 	  // check version TODO different versioning for protocol? no?
+	  int version;
+	  stream->read(&version);
+	  if (version != VERSION)
+	    {
+	      CONS_Printf("Wrong version (%d.%d)\n", version/100, version%100);
+	      break;
+	    }
 	  char temp[256];
 	  stream->readString(temp);
-	  if (strcmp(temp, VERSIONSTRING))
-	    break;
-
-	  CONS_Printf("version OK, '%s'\n", temp);
+	  //if (strcmp(temp, VERSIONSTRING)) break;
+	  CONS_Printf(" versionstring '%s'\n", temp);
 
 	  // local sending time
 	  unsigned time;
@@ -164,8 +188,8 @@ void LNetInterface::handleInfoPacket(const Address &address, U8 packetType, BitS
 	  // TODO should we answer back or ignore?
 
 	  // two-part server query protocol for defending agains DOS attacks ;)
-
-	  U32 token = computeClientIdentityToken(address, cn); // this client is now identified with this token
+	  U32 token = computeClientIdentityToken(address, cn);
+	  // this client is now identified with this token
 
 	  PacketStream out;
 	  out.write(U8(PT_PingResponse));
@@ -187,16 +211,22 @@ void LNetInterface::handleInfoPacket(const Address &address, U8 packetType, BitS
 	  if (cn != pingnonce)
 	    return; // wrong nonce. kind of marginal concern.
 
-	  U32 token; // our identity with this server
-	  stream->read(&token);
+	  if (SL_FindServer(address))
+	    return; // already known, no need to requery
+
+	  serverinfo_t *s = SL_AddServer(address);
+	  if (!s)
+	    return;
+
+	  s->cn = cn;
+	  stream->read(&s->token); // our identity with this server
 
 	  unsigned time;
 	  stream->read(&time);
-	  CONS_Printf("ping: %d ms\n", I_GetTime() - time);
+	  s->ping = I_GetTime() - time;
+	  CONS_Printf("ping: %d ms\n", s->ping);
 
-	  // TODO if no autoconnect, now we should add it to the server table...
-	  netstate = CL_QueryingServer;
-	  SendQuery(address, cn, token);
+	  SendQuery(s);
 	}
       break;
 
@@ -214,18 +244,17 @@ void LNetInterface::handleInfoPacket(const Address &address, U8 packetType, BitS
 
 	  if (token == computeClientIdentityToken(address, cn))
             {
-	      // was SV_SendServerInfo
-	      // was SV_SendServerConfig              
 	      PacketStream out;
 	      out.write(U8(PT_QueryResponse));
 	      cn.write(&out);
 
 	      out.writeString(cv_servername.str);
-	      out.writeString(VERSIONSTRING); // SUBVERSION?
+	      out.write(VERSION);
+	      out.writeString(VERSIONSTRING);
 	      out.write(game.Players.size());
 	      out.write(game.maxplayers);
 
-	      // server load, game type, current map, how long it has been running, how long to go...
+	      // TODO server load, game type, current map, how long it has been running, how long to go...
 	      // what WADs are needed, can they be downloaded from server...
 	      //CV_SaveNetVars((char**)&p); TODO
 	      
@@ -235,22 +264,32 @@ void LNetInterface::handleInfoPacket(const Address &address, U8 packetType, BitS
       break;
 
     case PT_QueryResponse:
-      if (netstate == CL_QueryingServer)
+      if (netstate == CL_PingingServers) //netstate == CL_QueryingServer
 	{
 	  CONS_Printf("Got query response from %s\n", address.toString());
 
+	  serverinfo_t *s = SL_FindServer(address);
+	  if (!s)
+	    return; // "Are you talking to me? You must be, 'cos there's nobody else here."
+
 	  Nonce cn;
 	  cn.read(stream);
+	  if (cn != s->cn)
+	    return; // wrong nonce. kind of marginal concern.
 
-	  char servername[256], serverversion[256];
-	  U32 players;
-	  stream->readString(servername);
-	  stream->readString(serverversion);
-	  stream->read(&players);
-	  stream->read(&game.maxplayers);
+	  char temp[256];
+	  stream->readString(temp);
+	  s->name = temp;
 
-	  // TODO if no autoconnect, now we should update the server table...	  
-	  CL_Connect(address);
+	  stream->read(&s->version);
+	  stream->readString(temp);
+	  s->versionstring = temp;
+
+	  stream->read(&s->players);
+	  stream->read(&s->maxplayers);
+
+	  if (autoconnect)
+	    CL_Connect(address); // this will stop the pinging
 	}
       break;
 
@@ -262,16 +301,60 @@ void LNetInterface::handleInfoPacket(const Address &address, U8 packetType, BitS
 
 
 
+
+
+serverinfo_t *LNetInterface::SL_FindServer(const Address &a)
+{
+  int n = serverlist.size();
+  for (int i = 0; i<n; i++)
+    if (serverlist[i]->addr == a)
+      return serverlist[i];
+  
+  return NULL;
+}
+
+
+serverinfo_t *LNetInterface::SL_AddServer(const Address &a)
+{
+  if (serverlist.size() >= 50)
+    return NULL; // no more room
+
+  serverinfo_t *s = new serverinfo_t(a);
+  serverlist.push_back(s);
+  return s;
+}
+
+
+void LNetInterface::SL_Clear()
+{
+  int n = serverlist.size();
+  for (int i = 0; i<n; i++)
+    delete serverlist[i];
+
+  serverlist.clear();
+}
+
+
+
+
+
+
+
+
+
 // client making a connection
 void LNetInterface::CL_Connect(const Address &a)
 {
-  LConnection *s = new LConnection();
-  server_con = s;
+  game.server = false;
+  game.netgame = true;
+  game.multiplayer = true;
+
+  server_con = new LConnection();
 
   // Set player info
 
-  //if (local) s->connectLocal(net, net);
-  s->connect(this, a);
+  // TODO if (local) s->connectLocal(net, net);
+  server_con->connect(this, a);
   netstate = CL_Connecting;
 }
 
@@ -294,6 +377,7 @@ void LNetInterface::SV_Open()
   setAllowsConnections(true);
   netstate = SV_WaitingClients;
 }
+
 
 
 class MasterConnection : public LConnection {};
@@ -331,12 +415,10 @@ void LNetInterface::Update()
   switch (netstate)
     {
     case CL_PingingServers:
-      if (lastpingtime + PingDelay < now)
-	{
-	  lastpingtime = now;
-	  pingnonce.getRandom();
-	  SendPing(ping_address, pingnonce);
-	}
+      if (nextpingtime <= now)
+	SendPing(ping_address, pingnonce);
+
+      // TODO send new server queries
       break;
 
     case CL_Connecting:
