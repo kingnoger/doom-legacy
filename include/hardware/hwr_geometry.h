@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2004/06/27 10:50:35  hurdler
+// new renderer things which will not break everyting else
+//
 // Revision 1.1  2004/06/02 21:05:55  hurdler
 // change the way polygons are managed (early implementation)
 //
@@ -85,10 +88,25 @@ public:
     void SetAttributes(GeometryAttributes attr, void *array);
     /// Set the indices array. If null, we will assume indices are 0, 1, 2, ...
     void SetIndices(GLushort *indices);
+    /// Create a basic textured rectangle
+    void CreateTexturedRectangle(bool overwrite = false, float x1 = 0.0f, float y1 = 0.0f, float x2 = 1.0f, float y2 = 1.0f, float z = 0.0f);
+    /// Change a vertex in the arrays
+    inline void SetTexturedVertex(int which, float x, float y, float z, float s, float t);
     /// Draw the Geometry
     void Draw();
     /// Disbale all arrays
     static void DisableArrays();
 };
+
+inline void Geometry::SetTexturedVertex(int which, float x, float y, float z, float s, float t)
+{
+    GLfloat *vertex = &vertex_array[which * 3];
+    vertex[0] = x;
+    vertex[1] = y;
+    vertex[2] = z;
+    GLfloat *tex_coords = &tex_coord_arrays[0][which * 2];
+    tex_coords[0] = s;
+    tex_coords[1] = t;
+}
 
 #endif

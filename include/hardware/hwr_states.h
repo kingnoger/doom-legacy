@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2004/06/27 10:50:35  hurdler
+// new renderer things which will not break everyting else
+//
 // Revision 1.1  2004/05/29 15:30:57  hurdler
 // change the way states are managed (early implementation)
 //
@@ -100,7 +103,7 @@ public:
     /// Destroy the Fog
     ~Fog();
     /// Change the fog color
-    void SetFogColor(GLfloat r, GLfloat g, GLfloat b, GLfloat a);
+    void SetFogColor(GLfloat r, GLfloat g, GLfloat b, GLfloat a = 1.0f);
     /// Change the fog mode
     void SetFogMode(GLint mode);
     /// Change the fog density
@@ -150,6 +153,15 @@ public:
 class State
 {
 public:
+    enum ColorModulation
+    {
+        NONE     = 0x0000,
+        MEDIUM   = 0x0001,
+        ADD      = 0x0002,
+        MULTIPLY = 0x0004,
+        INVERSE  = 0x0008,
+        ALPHA    = 0x0100
+    };
     static const int MAX_TEXTURE_UNITS = 8;
 
 private:
@@ -167,10 +179,7 @@ private:
     Shader *shader;
 #endif
 
-    static State state;
-
-public:
-
+    // saved states to avoid gl overhead
     static GLfloat last_color[4];
     static GLenum last_blend_func_src;
     static GLenum last_blend_func_dst;
@@ -181,13 +190,25 @@ public:
     static Fog *last_fog;
     static TextureModifier *last_texture_modifier[MAX_TEXTURE_UNITS];
     static Shader *last_shader;
+    static State *last_state;
+
+    // default state
+    static State state;
+
+    // global states (used for doom palette changes)
+    static GLfloat global_color[4];
+    static int global_modulation;
+    static GLenum global_blend_func_src;
+    static GLenum global_blend_func_dst;
+
+public:
 
     /// Create a graphics state based on OpenGL defaults
     State();
     /// Destroy this graphics state
     ~State();
     /// Set the global color
-    void SetColor(GLfloat r, GLfloat g, GLfloat b, GLfloat a);
+    void SetColor(GLfloat r, GLfloat g, GLfloat b, GLfloat a = 1.0f);
     /// Set the blend src and dst functions
     void SetBlendFunc(GLenum src, GLenum dst);
     /// Set the alpha func
@@ -206,6 +227,10 @@ public:
     void Apply();
     /// Apply the default OpenGL states
     static void ApplyBasic();
+    /// Set the global color for palette changes (this modulate the global color with the state's color)
+    static void SetGlobalColor(GLfloat r, GLfloat g, GLfloat b, GLfloat a = 1.0f, int modulation = MEDIUM);
+    /// Set the global blend src and dst functions for palette changes (inverse video) (this override the state's blend functions)
+    static void SetGlobalBlendFunc(GLenum src, GLenum dst);
 };
 
 #endif

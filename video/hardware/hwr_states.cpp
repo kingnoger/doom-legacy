@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2004/06/27 10:50:35  hurdler
+// new renderer things which will not break everyting else
+//
 // Revision 1.1  2004/05/29 15:30:58  hurdler
 // change the way states are managed (early implementation)
 //
@@ -277,6 +280,12 @@ GLenum State::last_cull_face_mode = GL_FALSE;
 Fog *State::last_fog = 0;
 TextureModifier *State::last_texture_modifier[MAX_TEXTURE_UNITS] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 Shader *State::last_shader = 0;
+State *State::last_state = 0;
+
+GLfloat State::global_color[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+int State::global_modulation = 0;
+GLenum State::global_blend_func_src = GL_ZERO;
+GLenum State::global_blend_func_dst = GL_ZERO;
 
 State::State():
     blend_func_src(GL_ONE),
@@ -298,6 +307,7 @@ State::~State()
 
 void State::SetColor(GLfloat r, GLfloat g, GLfloat b, GLfloat a)
 {
+    last_state = 0;
     color[0] = r;
     color[1] = g;
     color[2] = b;
@@ -306,56 +316,108 @@ void State::SetColor(GLfloat r, GLfloat g, GLfloat b, GLfloat a)
 
 void State::SetBlendFunc(GLenum src, GLenum dst)
 {
+    last_state = 0;
     blend_func_src = src;
     blend_func_dst = dst;
 }
 
 void State::SetAlphaFunc(GLenum func, GLclampf ref)
 {
+    last_state = 0;
     alpha_func = func;
     alpha_ref = ref;
 }
 
 void State::SetShadeModel(GLenum model)
 {
+    last_state = 0;
     shade_model = model;
 }
 
 void State::SetCullFace(GLenum mode)
 {
+    last_state = 0;
     cull_face_mode = mode;
 }
 
 void State::SetFog(Fog *fog)
 {
+    last_state = 0;
     this->fog = fog;
 }
 
 void State::SetTextureModifier(int tex_unit, TextureModifier *texture_modifier)
 {
+    last_state = 0;
     this->texture_modifier[tex_unit] = texture_modifier;
 }
 
 void State::SetShader(Shader *shader)
 {
+    last_state = 0;
     this->shader = shader;
 }
 
 void State::Apply()
 {
-    glColor4fv(color);
-    if ((blend_func_src != last_blend_func_src) || (blend_func_dst != last_blend_func_dst))
+    if (last_state == this)
     {
-        last_blend_func_src = blend_func_src;
-        last_blend_func_dst = blend_func_dst;
-        if ((blend_func_src != GL_ONE) || (blend_func_src != GL_ZERO))
+        return;
+    }
+    last_state = this;
+    if (global_modulation)
+    {
+        GLfloat modulated_color[4];
+        int modulation = global_modulation & 0xff;
+        if (modulation == MEDIUM)
         {
-            glEnable(GL_BLEND);
-            glBlendFunc(blend_func_src, blend_func_dst);
+            modulated_color[0] = (color[0] + global_color[0]) / 2.0f;
+            modulated_color[1] = (color[1] + global_color[1]) / 2.0f;
+            modulated_color[2] = (color[2] + global_color[2]) / 2.0f;
+            modulated_color[3] = (global_modulation & ALPHA) ? (color[3] + global_color[3]) / 2.0f : color[3];
         }
-        else
+        else if (modulation == MULTIPLY)
         {
-            glDisable(GL_BLEND);
+            modulated_color[0] = color[0] * global_color[0];
+            modulated_color[1] = color[1] * global_color[1];
+            modulated_color[2] = color[2] * global_color[2];
+            modulated_color[3] = (global_modulation & ALPHA) ? (color[3] * global_color[3]) : color[3];
+        }
+        else if (modulation == ADD)
+        {
+            modulated_color[0] = color[0] + global_color[0];
+            modulated_color[1] = color[1] + global_color[1];
+            modulated_color[2] = color[2] + global_color[2];
+            modulated_color[3] = (global_modulation & ALPHA) ? (color[3] + global_color[3]) : color[3];
+        }
+        else if (modulation == INVERSE)
+        {
+            modulated_color[0] = global_color[0] - color[0];
+            modulated_color[1] = global_color[1] - color[1];
+            modulated_color[2] = global_color[2] - color[2];
+            modulated_color[3] = (global_modulation & ALPHA) ? (global_color[3] - color[3]) : color[3];
+        }
+        glColor4fv(modulated_color);
+    }
+    else
+    {
+        glColor4fv(color);
+    }
+    if ((global_blend_func_src != GL_ZERO) && (global_blend_func_dst != GL_ZERO))
+    {
+        if ((blend_func_src != last_blend_func_src) || (blend_func_dst != last_blend_func_dst))
+        {
+            last_blend_func_src = blend_func_src;
+            last_blend_func_dst = blend_func_dst;
+            if ((blend_func_src != GL_ONE) || (blend_func_dst != GL_ZERO))
+            {
+                glEnable(GL_BLEND); // TODO: enable only if not already enabled
+                glBlendFunc(blend_func_src, blend_func_dst);
+            }
+            else
+            {
+                glDisable(GL_BLEND);
+            }
         }
     }
     if ((alpha_func != last_alpha_func) || (alpha_ref != last_alpha_ref))
@@ -364,7 +426,7 @@ void State::Apply()
         last_alpha_ref = alpha_ref;
         if (alpha_func != GL_ALWAYS)
         {
-            glEnable(GL_ALPHA_TEST);
+            glEnable(GL_ALPHA_TEST); // TODO: enable only if not already enabled
             glAlphaFunc(alpha_func, alpha_ref);
         }
         else
@@ -382,7 +444,7 @@ void State::Apply()
         last_cull_face_mode = cull_face_mode;
         if (cull_face_mode != GL_FALSE)
         {
-            glEnable(GL_CULL_FACE);
+            glEnable(GL_CULL_FACE); // TODO: enable only if not already enabled
             glCullFace(cull_face_mode);
         }
         else
@@ -434,4 +496,19 @@ void State::Apply()
 void State::ApplyBasic()
 {
     state.Apply();
+}
+
+void State::SetGlobalColor(GLfloat r, GLfloat g, GLfloat b, GLfloat a, int modulation)
+{
+    global_color[0] = r;
+    global_color[1] = g;
+    global_color[2] = b;
+    global_color[3] = a;
+    global_modulation = modulation;
+}
+
+void State::SetGlobalBlendFunc(GLenum src, GLenum dst)
+{
+    global_blend_func_src = src;
+    global_blend_func_dst = dst;
 }

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2004/06/27 10:50:35  hurdler
+// new renderer things which will not break everyting else
+//
 // Revision 1.1  2004/06/02 21:05:55  hurdler
 // change the way polygons are managed (early implementation)
 //
@@ -168,8 +171,31 @@ void Geometry::SetAttributes(GeometryAttributes attr, void *array)
 
 void Geometry::SetIndices(GLushort *indices)
 {
-    //delete [] indices;  // this is not safe (see destructor comment)
-    indices = indices;
+    //delete [] this->indices;  // this is not safe (see destructor comment)
+    this->indices = indices;
+}
+
+void Geometry::CreateTexturedRectangle(bool overwrite, float x1, float y1, float x2, float y2, float z)
+{
+    if (!overwrite)
+    {
+        // TODO: still the same: we must free or at least unref those arrays before allocating a new one
+        primitive_length = new int(4);
+        primitive_type = new int(GL_TRIANGLE_STRIP);
+        vertex_array = new GLfloat[3 * 4];
+        GLfloat *tex_coord_array = tex_coord_arrays[0] = new GLfloat[2 * 4];
+        indices = new GLushort[4];
+        num_primitives = 1;
+        tex_coord_array[0] = 0.0f; tex_coord_array[1] = 0.0f;
+        tex_coord_array[2] = 0.0f; tex_coord_array[3] = 1.0f;
+        tex_coord_array[4] = 1.0f; tex_coord_array[5] = 0.0f;
+        tex_coord_array[6] = 1.0f; tex_coord_array[7] = 1.0f;
+        indices[0] = 0; indices[1] = 1; indices[2] = 2; indices[3] = 3;
+    }
+    vertex_array[ 0] = x1; vertex_array[ 1] = y1; vertex_array[ 2] = z;
+    vertex_array[ 3] = x1; vertex_array[ 4] = y2; vertex_array[ 5] = z;
+    vertex_array[ 6] = x2; vertex_array[ 7] = y1; vertex_array[ 8] = z;
+    vertex_array[ 9] = x2; vertex_array[10] = y2; vertex_array[11] = z;
 }
 
 void Geometry::DisableArrays()
