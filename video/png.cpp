@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/12/08 16:39:44  segabor
+// Exclude malloc.h in MacOS X
+//
 // Revision 1.3  2004/10/31 22:22:13  smite-meister
 // Hasta la vista, pic_t!
 //
@@ -31,7 +34,9 @@
 /// \file
 /// \brief PNG Textures
 
+#ifndef __APPLE__
 #include <malloc.h>
+#endif
 #include <png.h>
 
 #include "doomdef.h"
