@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:38  hurdler
-// Initial revision
+// Revision 1.2  2002/12/03 10:26:38  smite-meister
+// ...
 //
 // Revision 1.4  2002/07/15 20:52:42  vberghol
 // w_wad.cpp (FileCache class) finally fixed
@@ -70,7 +70,6 @@
 #include "g_game.h"
 #include "m_misc.h"
 #include "hu_stuff.h"
-#include "v_video.h"
 #include "screen.h"
 #include "z_zone.h"
 #include "g_input.h"
@@ -471,7 +470,7 @@ void M_ScreenShot (void)
 #endif
     {
       // munge planar buffer to linear
-      linear = screens[2];
+      linear = vid.screens[2];
       I_ReadScreen (linear);
         
       // find a file name to save it to

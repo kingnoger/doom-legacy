@@ -17,8 +17,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:37  hurdler
-// Initial revision
+// Revision 1.2  2002/12/03 10:26:39  smite-meister
+// ...
+//
+// Revision 1.1.1.1  2002/11/16 14:18:37  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.9  2002/09/25 15:17:43  vberghol
 // Intermission fixed?
@@ -946,15 +949,15 @@ static void CON_Linefeed(int player2_message)
 //TODO: fix this mess!!
 void CON_Print (char *msg)
 {
-    int l;
-    int mask = 0;
-    int p2 = 0;
+  int l;
+  int mask = 0;
+  int p2 = 0;
 
-    //TODO: finish text colors
-    if (*msg<5)
+  //TODO: finish text colors
+  if (*msg<5)
     {
       if (*msg=='\2')  // set white color
-          mask = 128;
+	mask = 128;
       else if (*msg=='\3')
 	{
           mask = 128;                         // white text + sound
@@ -967,61 +970,54 @@ void CON_Print (char *msg)
 	p2 = 1;
     }
 
-    while (*msg)
+  while (*msg)
     {
-        // skip non-printable characters and white spaces
-        while (*msg && *msg<=' ')
+      // skip non-printable characters and white spaces
+      while (*msg && *msg<=' ')
         {
-
-            // carriage return
-            if (*msg=='\r')
+	  // carriage return
+	  if (*msg=='\r')
             {
-                con_cy--;
-                CON_Linefeed (p2);
+	      con_cy--;
+	      CON_Linefeed (p2);
             }
-            else
-            // linefeed
-            if (*msg=='\n')
-                CON_Linefeed (p2);
-            else
-            if (*msg==' ')
+	  else if (*msg=='\n')
+            // linefeed            
+	    CON_Linefeed (p2);
+	  else if (*msg==' ')
             {
-                con_line[con_cx++] = ' ';
-                if (con_cx>=con_width)
-                    CON_Linefeed(p2);
+	      con_line[con_cx++] = ' ';
+	      if (con_cx>=con_width)
+		CON_Linefeed(p2);
             }
-            else if (*msg=='\t')
+	  else if (*msg=='\t')
             {
-                //adds tab spaces for nice layout in console
+	      //adds tab spaces for nice layout in console                
+	      do {
+		con_line[con_cx++] = ' ';
+	      } while (con_cx%4 != 0);
                 
-                do
-                {
-                    con_line[con_cx++] = ' ';
-                } while (con_cx%4 != 0);
-                
-                if (con_cx>=con_width)
-                    CON_Linefeed(p2);
+	      if (con_cx>=con_width)
+		CON_Linefeed(p2);
             }
-            msg++;
+	  msg++;
         }
 
-        if (*msg==0)
-            return;
+      if (*msg==0)
+	return;
 
-        // printable character
-        for (l=0; l<con_width && msg[l]>' '; l++)
-            ;
+      // printable character
+      for (l=0; l<con_width && msg[l]>' '; l++)
+	;
 
-        // word wrap
-        if (con_cx+l>con_width)
-            CON_Linefeed (p2);
+      // word wrap
+      if (con_cx+l>con_width)
+	CON_Linefeed (p2);
 
-        // a word at a time
-        for ( ; l>0; l--)
-            con_line[con_cx++] = *(msg++) | mask;
-
+      // a word at a time
+      for ( ; l>0; l--)
+	con_line[con_cx++] = *(msg++) | mask;
     }
-
 }
 
 
