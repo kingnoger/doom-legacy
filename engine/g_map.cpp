@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.26  2003/12/06 23:57:47  smite-meister
+// save-related bugfixes
+//
 // Revision 1.25  2003/11/30 00:09:42  smite-meister
 // bugfixes
 //
@@ -144,6 +147,7 @@ Map::~Map()
   Z_Free(rejectmatrix);
 
   // FIXME free FS stuff
+  T_ClearRunningScripts();
 
   Z_Free(ACSInfo);
   Z_Free(ActionCodeBase);
@@ -830,6 +834,7 @@ bool Map::RemovePlayer(PlayerInfo *p)
   for (i = players.begin(); i != players.end(); i++)
     if (*i == p)
       {
+	p->mp = NULL;
 	players.erase(i);
 	return true;
       }
@@ -920,12 +925,10 @@ void Map::BossDeath(const DActor *mo)
   // Ways to end level:
   // Baron of Hell, Cyberdemon, Spider Mastermind,
   // Mancubus, Arachnotron, Keen, Brain
-  extern consvar_t cv_allowexitlevel;
 
   int key = info->BossDeathKey;
-  if (!cv_allowexitlevel.value || key == 0)
-    // no action taken
-    return;
+  if (key == 0)
+    return; // no action taken
 
   int b = 0;
 
@@ -1182,7 +1185,10 @@ void Map::RespawnWeapons()
 // called when someone activates an exit
 void Map::ExitMap(Actor *activator, int next, int ep)
 {
+  CONS_Printf("ExitMap => %d, %d\n", next, ep);
   extern consvar_t cv_exitmode;
+  if (!cv_exitmode.value)
+    return; // exit not allowed
 
   info->state = MAP_FINISHED;
 
@@ -1196,24 +1202,37 @@ void Map::ExitMap(Actor *activator, int next, int ep)
   PlayerInfo *quitter = (activator && activator->Type() == Thinker::tt_ppawn) ?
     ((PlayerPawn *)activator)->player : NULL;
 
-  if (!quitter || cv_exitmode.value == 1) 
-    {
-      // all players exit the map when someone activates an exit
-      int n = players.size();
-      for (int i = 0; i < n; i++)
-	players[i]->ExitLevel(next, ep); // save the pawn if needed
-      return;
-    }
+  int mode = cv_exitmode.value;
+  if (!quitter)
+    mode = 1; // timed exit etc., everyone leaves at once.
 
-  if (cv_exitmode.value == 0)
-    // players may exit one at a time, the new maps are launched immediately, the old map keeps running until it is empty
-    quitter->ExitLevel(next, ep);
-  else
+  switch (mode)
     {
-      // all players need to reach the exit, others have to wait for the last one
+    case 1: // first: all players exit the map when someone activates an exit
+      {
+	int n = players.size();
+	for (int i=0; i<n; i++)
+	  {
+	    players[i]->ExitLevel(next, ep); // save the pawn if needed
+	    players[i]->mp = NULL;
+	  }
+	players.clear();
+      }
+      break;
+
+    case 2: // ind: players may exit individually
+      // the new maps are launched immediately, the old map keeps running until it is empty.
+      quitter->ExitLevel(next, ep);
+      RemovePlayer(quitter);
+      break;
+
+    case 3: // last: all players need to reach the exit, others have to wait for the last one
       quitter->playerstate = PST_DONE;
       quitter->requestmap = next;
       quitter->entrypoint = ep;
+
+    default:
+      break;
     }
 }
 

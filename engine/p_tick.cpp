@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/12/06 23:57:47  smite-meister
+// save-related bugfixes
+//
 // Revision 1.7  2003/11/12 11:07:23  smite-meister
 // Serialization done. Map progression.
 //
@@ -104,24 +107,19 @@ void Map::RemoveThinker(Thinker *t)
 
 void Map::RunThinkers()
 {
-  Thinker *t = thinkercap.next;
-  while (t != &thinkercap)
+  Thinker *t; 
+  for (t = thinkercap.next; t != &thinkercap; t = t->next)
     {
       //if (t->mp == NULL) I_Error("Thinker::mp == NULL! Cannot be!\n");
       t->Think();
-      t = t->next;
     }
 
   int n = DeletionList.size();
   if (n == 0 && !force_pointercheck)
     return;
 
-  t = thinkercap.next;
-  while (t != &thinkercap)
-    {
-      t->CheckPointers();
-      t = t->next;
-    }
+  for (t = thinkercap.next; t != &thinkercap; t = t->next)
+    t->CheckPointers();
 
   force_pointercheck = false;
 
@@ -135,14 +133,11 @@ void Map::RunThinkers()
 // Ticks the map forward in time
 void Map::Ticker()
 {
+  //CONS_Printf("Tic begins..");
   int i = 0;
 
   if (!respawnqueue.empty())
     i = RespawnPlayers();
-
-  // players[i]->Think();
-  // now playerpawns are ticked with other Thinkers at RunThinkers.
-  // the Thinking order may have changed...
 
   //CONS_Printf("think..");
   RunThinkers();

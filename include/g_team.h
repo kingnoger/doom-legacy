@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.3  2003/12/06 23:57:47  smite-meister
+// save-related bugfixes
+//
 // Revision 1.2  2003/05/30 13:34:48  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -58,6 +61,10 @@ public:
   int color;
   int score;
   // team flag/symbol ?
+
+  TeamInfo();
+  int  Serialize(class LArchive &a);
+  int  Unserialize(LArchive &a);
 };
 
 #endif

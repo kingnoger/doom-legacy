@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2003/12/06 23:57:47  smite-meister
+// save-related bugfixes
+//
 // Revision 1.17  2003/11/30 00:09:47  smite-meister
 // bugfixes
 //
@@ -1304,7 +1307,7 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
     case 74: // Teleport_NewMap
       if (!side)
 	{ // Only teleport when crossing the front side of a line
-	  if (mo->health > 0 && !(mo->flags & MF_CORPSE) && cv_allowexitlevel.value)
+	  if (mo->health > 0 && !(mo->flags & MF_CORPSE))
 	    {
 	      // Activator must be alive
 	      ExitMap(mo, args[0], args[1]);
@@ -1315,7 +1318,7 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
     case 75: // Teleport_EndGame
       if (!side)
 	{ // Only teleport when crossing the front side of a line
-	  if (mo->health > 0 && !(mo->flags & MF_CORPSE) && cv_allowexitlevel.value)
+	  if (mo->health > 0 && !(mo->flags & MF_CORPSE))
 	    {
 	      if (cv_deathmatch.value)
 		ExitMap(mo, 1, 0);// Winning in deathmatch just goes back to map 1

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2003/12/06 23:57:47  smite-meister
+// save-related bugfixes
+//
 // Revision 1.15  2003/11/23 00:41:54  smite-meister
 // bugfixes
 //
@@ -885,42 +888,6 @@ bool GameInfo::Responder(event_t* ev)
   return false;
 }
 
-
-//
-// G_SaveGame
-// Called by the menu task.
-// Description is a 24 byte text string
-//
-void G_SaveGame(int slot, char *description)
-{
-  if (server)
-    COM_BufAddText(va("save %d \"%s\"\n",slot,description));
-}
-
-
-
-//
-//  Can be called by the startup code or the menu task,
-//  consoleplayer, displayplayer, playeringame[] should be set.
-//
-// Boris comment : single player start game
-void G_DeferedInitNew (skill_t skill, char* mapname, bool StartSplitScreenGame)
-{
-  game.Downgrade(VERSION);
-  game.paused = false;
-
-  if (demoplayback)
-    COM_BufAddText ("stopdemo\n");
-
-  // this leave the actual game if needed
-  SV_StartSinglePlayerServer();
-    
-  COM_BufAddText (va("splitscreen %d;deathmatch 0;fastmonsters 0;"
-		     "respawnmonsters 0;timelimit 0;fraglimit 0\n",
-		     StartSplitScreenGame));
-
-  COM_BufAddText (va("map \"%s\" -skill %d -monsters 1\n",mapname,skill+1));
-}
 
 // returns player number 'num' if he is in the game, otherwise NULL
 PlayerInfo *GameInfo::FindPlayer(int num)

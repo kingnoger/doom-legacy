@@ -22,6 +22,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.7  2003/12/06 23:57:47  smite-meister
+// save-related bugfixes
+//
 // Revision 1.6  2003/12/03 10:49:49  smite-meister
 // Save/load bugfix, text strings updated
 //
@@ -155,6 +158,13 @@ MapInfo::MapInfo()
 }
 
 
+// destructor
+MapInfo::~MapInfo()
+{
+  Close();
+}
+
+
 // ticks the map forward, 
 void MapInfo::Ticker(bool hub)
 {
@@ -175,7 +185,7 @@ void MapInfo::Ticker(bool hub)
 	  if (!players_remaining)
 	    {
 	      // TODO spectators have no destinations set, they should perhaps follow the last exiting player...
-	      KickPlayers(0, 0);
+	      KickPlayers(0, 0, false);
 
 	      if (hub)
 		HubSave();
@@ -226,15 +236,15 @@ bool MapInfo::Activate()
       break;
 
     case MAP_SAVED:
-      HubLoad();
-      break;
+      return HubLoad();
+
     }
   return true;
 }
 
 
-// throws out all the players
-int MapInfo::KickPlayers(int next, int ep, bool force)
+// throws out all the players, possibly resetting them also
+int MapInfo::KickPlayers(int next, int ep, bool reset)
 {
   if (next == 0)
     next = nextlevel; // zero means "normal exit"
@@ -245,7 +255,13 @@ int MapInfo::KickPlayers(int next, int ep, bool force)
   // kick out the players
   int i, n = me->players.size();
   for (i=0; i<n; i++)
-    me->players[i]->ExitLevel(next, ep, force);
+    {
+      me->players[i]->ExitLevel(next, ep, reset);
+      me->players[i]->mp = NULL;
+      if (reset)
+	me->players[i]->Reset(true, true);
+    }
+  me->players.clear();
 
   return n;
 }
@@ -277,6 +293,8 @@ bool MapInfo::HubSave()
   if (!me)
     return false;
 
+  CONS_Printf("hubsave...\n");
+
   char fname[50];
   sprintf(fname, "Legacy_hubsave_%02d.sav", mapnumber);
   savename = fname;
@@ -286,9 +304,9 @@ bool MapInfo::HubSave()
   me->Serialize(a);
 
   byte *buffer;
-  unsigned length = a.Compress(&buffer);
+  unsigned length = a.Compress(&buffer, 0);
 
-  //CONS_Printf("Simulated hubsave: %d bytes\n", length);
+  CONS_Printf("Simulated hubsave: %d bytes\n", length);
   FIL_WriteFile(savename.c_str(), buffer, length);
   Z_Free(buffer);
 
@@ -311,7 +329,7 @@ bool MapInfo::HubLoad()
   int length = FIL_ReadFile(savename.c_str(), &buffer);
   if (!length)
     {
-      I_Error("Couldn't open hubsave file %s", savename.c_str());
+      I_Error("Couldn't open hubsave file '%s'", savename.c_str());
       return false;
     }
   
@@ -323,7 +341,7 @@ bool MapInfo::HubLoad()
 
   // dearchive the map
   me = new Map(this);
-  if (!me->Unserialize(a))
+  if (me->Unserialize(a))
     I_Error("Hubsave corrupted!\n");
 
   state = MAP_RUNNING;
@@ -343,41 +361,37 @@ static bool IsNumeric(const char *p)
   return true;
 }
 
-void P_LowerCase(char *line)
+// converts 'line' to lower case
+static void P_LowerCase(char *line)
 {
-  char *temp;
-
-  for(temp=line; *temp; temp++)
-    *temp = tolower(*temp);
+  for ( ; *line; line++)
+    *line = tolower(*line);
 }
 
-void P_StripSpaces(char *line)
+// replaces tailing spaces with NUL chars
+static void P_StripSpaces(char *line)
 {
   char *temp = line+strlen(line)-1;
 
-  while(*temp == ' ')
+  while (*temp == ' ')
     {
       *temp = '\0';
       temp--;
     }
 }
 
-/*
-TODO
+// removes //-style comments from 'line'
 static void P_RemoveComments(char *line)
 {
-  char *temp = line;
-
-  while(*temp)
+  for ( ; *line; line++)
     {
-      if(*temp=='/' && *(temp+1)=='/')
+      if (line[0] == '/' && line[1] == '/')
         {
-          *temp = '\0'; return;
+          *line = '\0';
+	  return;
         }
-      temp++;
     }
 }
-*/
 
 // replace 'target' chars with spaces until '\0' is encountered
 static void P_RemoveChars(char *p, char target)
@@ -625,9 +639,8 @@ static string scriptblock;
 
 static void P_ParseScriptLine(char *line)
 {
-  // TODO? here we could strip comments etc...
-  // add the new line to the current data
-  scriptblock += line;
+  P_RemoveComments(line);
+  scriptblock += line;  // add the new line to the current data
 }
 
 

@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.3  2003/12/06 23:57:47  smite-meister
+// save-related bugfixes
+//
 // Revision 1.2  2003/11/30 00:09:47  smite-meister
 // bugfixes
 //
@@ -153,6 +156,7 @@ public:
 
 public:
   MapInfo();
+  ~MapInfo();
 
   void Ticker(bool hub);
   bool Activate();

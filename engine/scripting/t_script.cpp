@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.7  2003/12/06 23:57:47  smite-meister
+// save-related bugfixes
+//
 // Revision 1.6  2003/11/23 19:07:42  smite-meister
 // New startup order
 //
@@ -97,9 +100,9 @@ runningscript_t *freelist = NULL; // maintain a freelist for speed
 runningscript_t *new_runningscript()
 {
   // check the freelist
-  if(freelist)
+  if (freelist)
     {
-      runningscript_t *returnv=freelist;
+      runningscript_t *returnv = freelist;
       freelist = freelist->next;
       return returnv;
     }
@@ -128,6 +131,23 @@ void T_Init()
   init_functions();
 }
 
+
+// stop and free runningscripts
+void Map::T_ClearRunningScripts()
+{
+  runningscript_t *runscr, *next;
+  runscr = runningscripts;
+  
+  // free the whole chain
+  while (runscr)
+    {
+      next = runscr->next;
+      free_runningscript(runscr);
+      runscr = next;
+    }
+  runningscripts = NULL;
+}
+
 //
 // T_ClearScripts()
 //
@@ -139,21 +159,8 @@ void Map::T_ClearScripts()
   int i;
 
   current_map = this; // just in case
-  
-  // stop runningscripts
-  {
-    runningscript_t *runscr, *next;
-    runscr = runningscripts;
-  
-    // free the whole chain
-    while (runscr)
-      {
-	next = runscr->next;
-	free_runningscript(runscr);
-	runscr = next;
-      }
-    runningscripts = NULL;
-  }
+
+  T_ClearRunningScripts();
 
   if (!levelscript)
     levelscript = (script_t *)Z_Malloc(sizeof(script_t), PU_LEVEL, NULL);
@@ -423,6 +430,7 @@ void Map::T_AddRunningScript(runningscript_t *s)
   // hook into chain at start
   s->next = runningscripts;
   s->prev = NULL;
+  runningscripts = s;
   if (s->next)
     s->next->prev = s;
 }

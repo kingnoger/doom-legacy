@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.18  2003/12/06 23:57:47  smite-meister
+// save-related bugfixes
+//
 // Revision 1.17  2003/11/30 00:09:43  smite-meister
 // bugfixes
 //
@@ -74,7 +77,6 @@ PlayerInfo *consoleplayer = NULL;   // player taking events
 PlayerInfo *consoleplayer2 = NULL;   // secondary player taking events
 PlayerInfo *displayplayer = NULL;   // view being displayed
 PlayerInfo *displayplayer2 = NULL;  // secondary view (splitscreen)
-
 
 
 PlayerInfo::PlayerInfo(const string & n)
@@ -153,11 +155,10 @@ void PlayerInfo::ExitLevel(int nextmap, int ep, bool force)
       pawn = NULL;
 
     default:
+      // PST_WAITFORMAP, PST_RESPAWN, meaning there is no pawn
       break;
     }
 
-  mp->RemovePlayer(this);
-  mp = NULL;
   playerstate = PST_WAITFORMAP;
 }
 

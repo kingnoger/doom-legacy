@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.23  2003/12/06 23:57:47  smite-meister
+// save-related bugfixes
+//
 // Revision 1.22  2003/11/30 00:09:47  smite-meister
 // bugfixes
 //
@@ -104,8 +107,7 @@ class Map
 {
   friend class GameInfo;
 public:
-  //class LevelNode *level;   // the level in which this Map belongs
-  class MapInfo   *info;    // see g_mapinfo.h
+  class MapInfo *info; // see g_mapinfo.h
 
   string lumpname;   // map lump name
   int    lumpnum;    // lumpnum of the separator beginning the map
@@ -487,6 +489,7 @@ public:
 
   // FS scripting
   void T_ClearScripts();
+  void T_ClearRunningScripts();
   void T_PreprocessScripts();
   bool T_RunScript(int n, Actor *trig);
   void T_DelayedScripts();

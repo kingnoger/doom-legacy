@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.8  2003/12/06 23:57:47  smite-meister
+// save-related bugfixes
+//
 // Revision 1.7  2003/12/03 10:49:49  smite-meister
 // Save/load bugfix, text strings updated
 //
@@ -90,13 +93,13 @@ void MapCluster::Ticker()
 
 
 // called before moving on to a new cluster
-void MapCluster::Finish(int nextmap, int ep, bool force)
+void MapCluster::Finish(int nextmap, int ep)
 {
   CONS_Printf("Cluster %d finished!\n", number);
   int i, n = maps.size();
   for (i=0; i<n; i++)
     {
-      maps[i]->KickPlayers(nextmap, ep, force);
+      maps[i]->KickPlayers(nextmap, ep, true);
       maps[i]->Close();
     }
 

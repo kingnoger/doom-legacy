@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2003/12/06 23:57:47  smite-meister
+// save-related bugfixes
+//
 // Revision 1.21  2003/12/03 10:49:49  smite-meister
 // Save/load bugfix, text strings updated
 //
@@ -113,13 +116,24 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
-void S_Read_SNDINFO(int lump);
 
+// Here's for the german edition.
+// IF NO WOLF3D LEVELS, NO SECRET EXIT!
+
+void S_Read_SNDINFO(int lump);
 
 
 language_t   language = la_english;            // Language.
 
 GameInfo game;
+
+// constructor
+TeamInfo::TeamInfo()
+{
+  name = "Romero's Roughnecks";
+  color = 0;
+  score = 0;
+}
 
 
 // constructor
@@ -368,7 +382,7 @@ PlayerInfo *GameInfo::AddPlayer(int pnum, PlayerInfo *p)
     return NULL;  // no room in game
 
   // TODO what if maxplayers has recently been set to a lower-than-n value?
-  // when are the extra players kicked?
+  // when are the extra players kicked? cv_maxplayers action func?
 
   if (pnum > maxplayers)
     pnum = -1;  // pnum too high
@@ -461,10 +475,8 @@ void GameInfo::ClearPlayers()
 
 void F_Ticker();
 void D_PageTicker();
-//
-// was G_Ticker
-// Make ticcmd_ts for the players.
-//
+
+// ticks the game forward in time
 void GameInfo::Ticker()
 {
   extern bool dedicated;
@@ -475,11 +487,12 @@ void GameInfo::Ticker()
   // TODO fix the intermissions and finales. when should they appear in general?
   // perhaps they should be made client-only stuff, the server waits until the clients are ready to continue.
 
-  // check fraglimit cvar
+  // check fraglimit cvar TODO how does this work? when are the scores (or teamscores) zeroed?
   if (cv_fraglimit.value && CheckScoreLimit())
     {
       // go on to the next map
-      currentcluster->Finish(currentmap->nextlevel, 0);
+      //currentmap->ExitMap(NULL, 0);
+      //currentcluster->Finish(currentmap->nextlevel, 0);
     }
 
   if (state == GS_LEVEL)
@@ -492,7 +505,8 @@ void GameInfo::Ticker()
 	  if (p->playerstate == PST_REMOVE)
 	    {
 	      // the player is removed from the game (invalidates "old t")
-	      p->ExitLevel(0, 0);
+	      p->ExitLevel(0, 0, false);
+	      p->mp->RemovePlayer(p);
 	      RemovePlayer(p->number);
 	    }
 	}
@@ -502,6 +516,7 @@ void GameInfo::Ticker()
 	  p = (*t).second;
 	  if (p->playerstate == PST_WAITFORMAP)
 	    {
+	      CONS_Printf("Map request..");
 	      if (p->requestmap < 0)
 		{
 		  // TODO game ends!
@@ -517,13 +532,14 @@ void GameInfo::Ticker()
 	      if (currentcluster->number != m->cluster)
 		{
 		  // cluster change, everyone follows p!
-		  currentcluster->Finish(p->requestmap, p->entrypoint, true);
+		  currentcluster->Finish(p->requestmap, p->entrypoint);
 		  currentcluster = FindCluster(m->cluster);
-		  currentmap = *currentcluster->maps.begin();
-		  // TODO do p->Reset(true, true); for ALL players!
+
 		  //action = ga_intermission;
 		  break; // this is important!
 		}
+
+	      CONS_Printf("activating %d...", m->mapnumber);
 
 	      // normal individual mapchange
 	      if (!m->Activate())
@@ -666,8 +682,7 @@ bool GameInfo::StartGame()
 
   cluster_iter_t t = clustermap.begin();
   currentcluster = (*t).second; 
-  currentmap = *currentcluster->maps.begin();
-  // TODO delete the old clusters...?
+  //currentmap = *currentcluster->maps.begin();
 
   automap.Close();  // TODO client-only stuff...
 
@@ -747,16 +762,6 @@ bool GameInfo::StartGame()
   CON_ClearHUD();
   return true;
 }
-
-
-
-// Here's for the german edition.
-/*
-void G_SecretExitLevel (void)
-{
-  // IF NO WOLF3D LEVELS, NO SECRET EXIT!
-}
-*/
 
 
 // start intermission

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2003/12/06 23:57:47  smite-meister
+// save-related bugfixes
+//
 // Revision 1.16  2003/12/03 10:49:49  smite-meister
 // Save/load bugfix, text strings updated
 //
@@ -417,94 +420,3 @@ void P_InitLava()
   LavaInflictor->flags =  MF_NOBLOCKMAP | MF_NOGRAVITY;
   LavaInflictor->flags2 = MF2_FIREDAMAGE|MF2_NODMGTHRUST;
 }
-
-/*
-void PlayerPawn::HerePlayerInSpecialSector()
-{
-  static int pushTab[5] = {
-    2048*5,
-    2048*10,
-    2048*25,
-    2048*30,
-    2048*35
-  };
-    
-  sector_t *sector = subsector->sector;
-  // Player is not touching the floor
-  if (z != sector->floorheight)
-    return;
-    
-  switch (sector->special)
-    {
-    case 7: // Damage_Sludge
-      if(!(mp->maptic & 31))
-        {
-	  Damage(NULL, NULL, 4);
-        }
-      break;
-    case 5: // Damage_LavaWimpy
-      if(!(mp->maptic & 15))
-        {
-	  Damage(LavaInflictor, NULL, 5);
-	  HitFloor();
-        }
-      break;
-    case 16: // Damage_LavaHefty
-      if(!(mp->maptic & 15))
-        {
-	  Damage(LavaInflictor, NULL, 8);
-	  HitFloor();
-        }
-      break;
-    case 4: // Scroll_EastLavaDamage
-      Thrust(0, 2048*28);
-      if(!(mp->maptic & 15))
-        {
-	  Damage(LavaInflictor, NULL, 5);
-	  HitFloor();
-        }
-      break;
-    case 9: // SecretArea
-      player->secrets++;
-      sector->special = 0;
-      break;
-    case 11: // Exit_SuperDamage (DOOM E1M8 finale)
-	cheats &= ~CF_GODMODE;
-	if(!(mp->maptic &0x1f))
-	{
-	Damage(NULL, NULL, 20);
-	}
-	if(health <= 10)
-	{
-	G_ExitLevel();
-	}
-      break;
-        
-    case 25: case 26: case 27: case 28: case 29: // Scroll_North
-      Thrust(ANG90, pushTab[sector->special-25]);
-      break;
-    case 20: case 21: case 22: case 23: case 24: // Scroll_East
-      Thrust(0, pushTab[sector->special-20]);
-      break;
-    case 30: case 31: case 32: case 33: case 34: // Scroll_South
-      Thrust(ANG270, pushTab[sector->special-30]);
-      break;
-    case 35: case 36: case 37: case 38: case 39: // Scroll_West
-      Thrust(ANG180, pushTab[sector->special-35]);
-      break;
-        
-    case 40: case 41: case 42: case 43: case 44: case 45:
-    case 46: case 47: case 48: case 49: case 50: case 51:
-      // Wind specials are handled in (P_mobj):P_XYMovement
-      break;
-        
-    case 15: // Friction_Low
-      // Only used in (P_mobj):P_XYMovement and (P_user):P_Thrust
-      break;
-        
-    default:
-      CONS_Printf("P_PlayerInSpecialSector: "
-		  "unknown special %i\n", sector->special);
-    }
-}
-*/

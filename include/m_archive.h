@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.2  2003/12/06 23:57:47  smite-meister
+// save-related bugfixes
+//
 // Revision 1.1  2003/11/12 11:07:27  smite-meister
 // Serialization done. Map progression.
 //
@@ -82,6 +85,7 @@ struct savegame_header_t
   char version_string[8];
   char description[32];
   int  version;
+  int  compression_method;
   size_t   uncompressed_size;
   unsigned num_objects;
   // TODO: store a small screenshot to the savegame, display it in savegame menu...
@@ -109,10 +113,11 @@ public:
   ~LArchive();
 
   inline bool IsStoring() const {return storing;};
+  int Size() const;
 
   void Create(const char *descr);
   bool Open(byte *buffer, size_t length);
-  int  Compress(byte **result);
+  int  Compress(byte **result, int method);
 
   int Read(byte *dest, size_t length);
   int Write(const byte *source, size_t length);
@@ -123,6 +128,7 @@ public:
   LArchive &operator<<(unsigned int &c);   // 32 bits
 
   inline LArchive &operator<<(int &c) { return operator<<(reinterpret_cast<unsigned int &>(c)); }
+  inline LArchive &operator<<(long int &c) { return operator<<(reinterpret_cast<unsigned int &>(c)); }
   inline LArchive &operator<<(float &c) { return operator<<(reinterpret_cast<unsigned int &>(c)); }
   inline LArchive &operator<<(short &c) { return operator<<(reinterpret_cast<unsigned short &>(c)); }
 
@@ -138,6 +144,7 @@ public:
   */
 
   LArchive &operator<<(string &s);
+  LArchive &operator<<(char *&s); // Z_Mallocs the memory for the c-string when retrieving
 
   bool HasStored(void *p, unsigned &id);
   bool GetPtr(unsigned id, void *&p);

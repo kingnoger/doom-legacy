@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2003/12/06 23:57:47  smite-meister
+// save-related bugfixes
+//
 // Revision 1.14  2003/12/03 10:49:50  smite-meister
 // Save/load bugfix, text strings updated
 //
@@ -92,6 +95,7 @@
 #include "d_netcmd.h"
 #include "t_vari.h"
 #include "t_script.h"
+#include "t_parse.h"
 #include "m_random.h"
 #include "m_misc.h"
 #include "m_menu.h"
@@ -100,8 +104,12 @@
 #include "z_zone.h"
 #include "tables.h"
 
+#include "am_map.h"
+#include "hu_stuff.h"
+
 extern  consvar_t  cv_deathmatch;
 
+runningscript_t *new_runningscript();
 
 // Pads save_p to a 4-byte boundary
 //  so that the load/save works on SGI&Gecko.
@@ -111,9 +119,11 @@ extern  consvar_t  cv_deathmatch;
 enum consistency_marker_t
 {
   // consistency markers in the savegame
+  MARK_GROUP  = 0x71717171,
   MARK_MAP    = 0x8ae51d73,
   MARK_SCRIPT = 0x37c4fe01,
   MARK_THINK  = 0x1c02fa39,
+  MARK_MISC   = 0xabababab,
 
   // this special marker is used to denote the end of a collection of objects
   MARK_END = 0xffffffff,
@@ -787,7 +797,7 @@ enum mapdiff_e
     // diff
     LD_FLAG     = 0x01,
     LD_SPECIAL  = 0x02,
-    // LD_TAG      = 0x04,
+    LD_ARGS     = 0x04,
     LD_S1TEXOFF = 0x08,
     LD_S1TOPTEX = 0x10,
     LD_S1BOTTEX = 0x20,
@@ -801,14 +811,12 @@ enum mapdiff_e
     LD_S2MIDTEX = 0x08,
 };
 
-// was P_ArchiveWorld
-// was P_ArchiveThinkers
-// was P_ArchiveSpecials
+
 int Map::Serialize(LArchive &a)
 {
   unsigned temp;
   short stemp;
-  int i, n;
+  int i, j, n;
 
   a.Marker(MARK_MAP);
 
@@ -820,7 +828,7 @@ int Map::Serialize(LArchive &a)
   //----------------------------------------------
   // record the changes in static geometry (as compared to wad)
   // "reload" the map to check for differences
-  // FIXME helluvalot of unneeded stuff is saved because of linedef/sector special mappings...
+  // TODO helluvalot of unneeded stuff is saved because of linedef/sector special mappings...
   // Perhaps we should really fake-setup the comparison map... or perhaps we'll just live with it.
   int statsec = 0, statline = 0;
 
@@ -902,24 +910,24 @@ int Map::Serialize(LArchive &a)
     {
       diff = diff2 = 0;
 
-      // in deathmatch, you lose the automap when saving...
       if (hexen_format)
 	{
-	  if (((cv_deathmatch.value == 0) && (li->flags != SHORT(hld->flags))) ||
-	      ((cv_deathmatch.value != 0) && ((li->flags & ~ML_MAPPED) != SHORT(hld->flags))))
+	  if (li->flags != SHORT(hld->flags))
 	    diff |= LD_FLAG;
 	  if (li->special != SHORT(hld->special))
 	    diff |= LD_SPECIAL;
-	  // FIXME save args!
+	  for (j=0; j<5; j++)
+	    if (li->args[j] != hld->args[j])
+	      diff |= LD_ARGS;
 	  hld++;
 	}
       else
 	{
-	  if (((cv_deathmatch.value == 0) && (li->flags != SHORT(mld->flags))) ||
-	      ((cv_deathmatch.value != 0) && ((li->flags & ~ML_MAPPED) != SHORT(mld->flags))))
+	  if (li->flags != SHORT(mld->flags))
 	    diff |= LD_FLAG;
 	  if (li->special != SHORT(mld->special))
 	    diff |= LD_SPECIAL;
+	  // TODO save tag?
 	  mld++;
 	}
 
@@ -966,6 +974,9 @@ int Map::Serialize(LArchive &a)
 	  if (diff & LD_DIFF2  )  a << diff2;
 	  if (diff & LD_FLAG   )  a << li->flags;
 	  if (diff & LD_SPECIAL)  a << li->special;
+	  if (diff & LD_ARGS)
+	    for (j=0; j<5; j++)
+	      a << li->args[j];
 
 	  si = &sides[li->sidenum[0]];
 	  if (diff & LD_S1TEXOFF) a << si->textureoffset;
@@ -997,8 +1008,116 @@ int Map::Serialize(LArchive &a)
     }
   a.Write((byte *)ACMapVars, sizeof(ACMapVars));
 
-  // TODO FS
+#ifdef FRAGGLESCRIPT
+  // levelscript contains the map global variables (everything else can be loaded from the WAD)
 
+  // count number of variables
+  n = 0;
+  for (i=0; i<VARIABLESLOTS; i++)
+    {
+      svariable_t *sv = levelscript->variables[i];
+      while (sv && sv->type != svt_label)
+        {
+          n++;
+          sv = sv->next;
+        }
+    }
+  a << n;
+
+  // go thru hash chains, store each variable
+  for (i=0; i<VARIABLESLOTS; i++)
+    {
+      // go thru this hashchain
+      svariable_t *sv = levelscript->variables[i];
+      
+      // once we get to a label there can be no more actual
+      // variables in the list to store
+      while (sv && sv->type != svt_label)
+        {
+          a << sv->name;
+          a << sv->type;
+          switch (sv->type)
+            {
+            case svt_string:
+	      a << sv->value.s;
+	      break;
+            case svt_int:
+	      a << sv->value.i;
+	      break;
+            case svt_actor:
+              Thinker::Serialize(sv->value.mobj, a);
+	      break;
+            case svt_fixed:
+	      a << sv->value.fixed;
+	      break;
+            }
+          sv = sv->next;
+        }
+    }
+
+  //runningscripts (scripts currently suspended)
+  runningscript_t *rs;
+  
+  // count runningscripts
+  n = 0;
+  for (rs = runningscripts; rs; rs = rs->next)
+    n++;
+  a << n;
+  
+  // now archive them
+  for (rs = runningscripts; rs; rs = rs->next)
+    {
+      a << rs->script->scriptnum;
+      a << (n = (rs->savepoint - rs->script->data)); // offset
+      a << int(rs->wait_type);
+      a << rs->wait_data;
+
+      Thinker::Serialize(rs->trigger, a);
+  
+      // count number of variables
+      n = 0;
+      for (i=0; i<VARIABLESLOTS; i++)
+	{
+	  svariable_t *sv = rs->variables[i];
+	  while (sv && sv->type != svt_label)
+	    {
+	      n++;
+	      sv = sv->next;
+	    }
+	}
+      a << n;
+
+      // go thru hash chains, store each variable
+      for (i=0; i<VARIABLESLOTS; i++)
+	{
+	  svariable_t *sv = rs->variables[i];
+      
+	  while (sv && sv->type != svt_label)
+	    {
+	      a << sv->name;
+	      a << sv->type;
+	      switch (sv->type)
+		{
+		case svt_string:
+		  a << sv->value.s;
+		  break;
+		case svt_int:
+		  a << sv->value.i;
+		  break;
+		case svt_actor:
+		  Thinker::Serialize(sv->value.mobj, a);
+		  break;
+		case svt_fixed:
+		  a << sv->value.fixed;
+		  break;
+		}
+	      sv = sv->next;
+	    }
+	}
+    }
+
+  // TODO Archive the script camera.
+#endif // FRAGGLESCRIPT
 
   //----------------------------------------------
   // Thinkers (including map objects aka Actors)
@@ -1010,21 +1129,20 @@ int Map::Serialize(LArchive &a)
   //   First do a recursive iteration of the thinkers, ONLY to create the pointer->id map.
   //   Then iterate the map serializing each element in turn (first writing the ID, of course).
 
-  // only the stuff in the thinker ring is checked
   i = 0;
-  for (th = thinkercap.next ; th != &thinkercap ; th = th->next)
+  // only the stuff in the thinker ring is checked
+  for (th = thinkercap.next; th != &thinkercap; th = th->next)
     {
-      // what about the removables whose mp pointer is messed up? FIXME
-      //      if (th->mp == NULL)
-
+      th->CheckPointers(); // clear pointers to deleted items
       i++;
     }
+
   a << i; // store the number of thinkers in ring
 
-  for (th = thinkercap.next ; th != &thinkercap ; th = th->next)
+  for (th = thinkercap.next; th != &thinkercap; th = th->next)
     Thinker::Serialize(th, a);
 
-
+  a.Marker(MARK_MISC);
   //----------------------------------------------
   // respawnqueue
   n = itemrespawnqueue.size();
@@ -1057,9 +1175,6 @@ int Map::Serialize(LArchive &a)
 }
 
 
-// was P_UnArchiveWorld
-// was P_UnArchiveThinkers
-// was P_UnArchiveSpecials
 int Map::Unserialize(LArchive &a)
 {
   unsigned temp;
@@ -1095,9 +1210,10 @@ int Map::Unserialize(LArchive &a)
   // load changes in geometry
   while (1)
     {
-      a << i;
-      if (i == MARK_END)
+      a << temp;
+      if (temp == MARK_END)
 	break;
+      i = temp; // sector number
 
       a << diff;
       if (diff & SD_DIFF2)
@@ -1138,17 +1254,20 @@ int Map::Unserialize(LArchive &a)
 
   while (1)
     {
-      a << i;
-      if (i == MARK_END)
+      a << temp; // line number
+      if (temp == MARK_END)
 	break;
+      li = &lines[temp];
 
       a << diff;
-      li = &lines[i];
 
       if (diff & LD_DIFF2) a << diff2;
       else diff2 = 0;
       if (diff & LD_FLAG)    a << li->flags;
       if (diff & LD_SPECIAL) a << li->special;
+      if (diff & LD_ARGS)
+	for (i=0; i<5; i++)
+	  a << li->args[i];
 
       si = &sides[li->sidenum[0]];
       if (diff & LD_S1TEXOFF) a << si->textureoffset;
@@ -1178,6 +1297,125 @@ int Map::Unserialize(LArchive &a)
     }
   a.Read((byte *)ACMapVars, sizeof(ACMapVars));
 
+#ifdef FRAGGLESCRIPT
+  // restore levelscript
+  // free all the variables in the current levelscript first
+  
+  for (i=0; i<VARIABLESLOTS; i++)
+    {
+      svariable_t *sv = levelscript->variables[i];
+      
+      while (sv && sv->type != svt_label)
+        {
+          svariable_t *next = sv->next;
+          Z_Free(sv);
+          sv = next;
+        }
+      levelscript->variables[i] = sv;       // null or label
+    }
+
+  // now read the number of variables from the savegame file
+  a << n;
+  for (i=0; i<n; i++)
+    {
+      svariable_t *sv = (svariable_t*)Z_Malloc(sizeof(svariable_t), PU_LEVEL, 0);
+
+      a << sv->name;
+      Z_ChangeTag(sv->name, PU_LEVEL);
+      a << sv->type;      
+      switch (sv->type)
+        {
+        case svt_string:
+	  a << sv->value.s;
+	  Z_ChangeTag(sv->value.s, PU_LEVEL);
+	  break;
+        case svt_int:
+	  a << sv->value.i;
+	  break;
+        case svt_actor:
+	  sv->value.mobj = (Actor *)Thinker::Unserialize(a);
+	  break;
+        case svt_fixed:
+	  a << sv->value.fixed;
+	  break;
+        }
+      
+      // link in the new variable
+      int hashkey = variable_hash(sv->name);
+      sv->next = levelscript->variables[hashkey];
+      levelscript->variables[hashkey] = sv;
+    }
+
+  // restore runningscripts
+  // remove all runningscripts first: levelscript may have started them
+  T_ClearRunningScripts(); 
+
+  a << n;
+  for (i=0; i<n; i++)
+    {
+      // create a new runningscript
+      runningscript_t *rs = new_runningscript();
+  
+      int scriptnum;
+      a << scriptnum;
+    
+      // levelscript?
+      if (scriptnum == -1)
+	rs->script = levelscript;
+      else
+	rs->script = levelscript->children[scriptnum];
+
+      a << n; // read out offset from save
+      rs->savepoint = rs->script->data + n;
+      a << n;
+      rs->wait_type = wait_type_e(n);
+      a << rs->wait_data;
+      rs->trigger = (Actor *)Thinker::Unserialize(a);
+    
+      // read out the variables now (fun!)
+      // start with basic script slots/labels
+  
+      for (i=0; i<VARIABLESLOTS; i++)
+	rs->variables[i] = rs->script->variables[i];
+
+      // get number of variables
+      a << n;
+      for (i=0; i<n; i++)
+	{
+	  svariable_t *sv = (svariable_t*)Z_Malloc(sizeof(svariable_t), PU_LEVEL, 0);
+	  a << sv->name;
+	  Z_ChangeTag(sv->name, PU_LEVEL);
+	  a << sv->type;      
+	  switch (sv->type)
+	    {
+	    case svt_string:
+	      a << sv->value.s;
+	      Z_ChangeTag(sv->value.s, PU_LEVEL);
+	      break;
+	    case svt_int:
+	      a << sv->value.i;
+	      break;
+	    case svt_actor:
+	      sv->value.mobj = (Actor *)Thinker::Unserialize(a);
+	      break;
+	    case svt_fixed:
+	      a << sv->value.fixed;
+	      break;
+	    }
+
+	  // link in the new variable
+	  int hashkey = variable_hash(sv->name);
+	  sv->next = rs->variables[hashkey];
+	  rs->variables[hashkey] = sv;
+	}
+      
+      // hook into chain
+      T_AddRunningScript(rs);
+    }
+
+  // TODO Unarchive the script camera
+#endif // FRAGGLESCRIPT
+
   //----------------------------------------------
   // Thinkers
   if (!a.Marker(MARK_THINK))
@@ -1190,6 +1428,8 @@ int Map::Unserialize(LArchive &a)
       AddThinker(th);
     }
 
+  if (!a.Marker(MARK_MISC))
+    return -2;
   //----------------------------------------------
   // respawnqueue
   a << n;
@@ -1224,8 +1464,6 @@ int Map::Unserialize(LArchive &a)
 //  PlayerInfo serialization
 //==============================================
 
-// was P_ArchivePlayers
-// was P_UnArchivePlayers
 int PlayerInfo::Serialize(LArchive &a)
 {
   int i;
@@ -1287,524 +1525,6 @@ int PlayerInfo::Unserialize(LArchive &a)
   // the pawn is unserialized by the map it is in, not here
 
   return 0;
-}
-
-
-
-// SoM: Added FraggleScript stuff.
-// Save all the neccesary FraggleScript data.
-// we need to save the levelscript(all global
-// variables) and the runningscripts (scripts
-// currently suspended)
-
-/***************** save the levelscript *************/
-// make sure we remember all the global
-// variables.
-
-void P_ArchiveLevelScript()
-{
-  /*
-  short    *short_p;
-  int      num_variables = 0;
-  int      i;
-  
-  // all we really need to do is save the variables
-  // count the variables first
-  
-  // count number of variables
-  num_variables = 0;
-  for(i=0; i<VARIABLESLOTS; i++)
-    {
-      svariable_t *sv = levelscript.variables[i];
-      while(sv && sv->type != svt_label)
-        {
-          num_variables++;
-          sv = sv->next;
-        }
-    }
-  
-  //CheckSaveGame(sizeof(short));
-
-  short_p = (short *) save_p;
-  *short_p++ = num_variables;    // write num_variables
-  save_p = (byte *) short_p;      // restore save_p
-
-  // go thru hash chains, store each variable
-  for(i=0; i<VARIABLESLOTS; i++)
-    {
-      // go thru this hashchain
-      svariable_t *sv = levelscript.variables[i];
-      
-      // once we get to a label there can be no more actual
-      // variables in the list to store
-      while(sv && sv->type != svt_label)
-        {
-          
-          //CheckSaveGame(strlen(sv->name)+10); // 10 for type and safety
-          
-          // write svariable: name
-          
-          strcpy((char *)save_p, sv->name);
-          save_p += strlen(sv->name) + 1; // 1 extra for ending NULL
-                
-          // type
-          *save_p++ = sv->type;   // store type;
-          
-          switch(sv->type)        // store depending on type
-            {
-            case svt_string:
-              {
-                //CheckSaveGame(strlen(sv->value.s)+5); // 5 for safety
-                strcpy((char *)save_p, sv->value.s);
-                save_p += strlen(sv->value.s) + 1;
-                break;
-              }
-            case svt_int:
-              {
-                long *long_p;
-                
-                //CheckSaveGame(sizeof(long)); 
-                long_p = (long *) save_p;
-                *long_p++ = sv->value.i;
-                save_p = (byte *)long_p;
-                break;
-              }
-            case svt_mobj:
-              {
-                ULONG *long_p;
-                
-                //CheckSaveGame(sizeof(long)); 
-                long_p = (ULONG *) save_p;
-                *long_p++ = (ULONG)sv->value.mobj;
-                save_p = (byte *)long_p;
-                break;
-              }
-            case svt_fixed:
-              {
-                fixed_t *fixed_p;
-
-                fixed_p = (fixed_t *)save_p;
-                *fixed_p++ = sv->value.fixed;
-                save_p = (byte *)fixed_p;
-                break;
-              }
-            }
-          sv = sv->next;
-        }
-    }
-  */
-}
-
-
-
-void P_UnArchiveLevelScript()
-{
-  /*
-  short *short_p;
-  int i;
-  int num_variables;
-  
-  // free all the variables in the current levelscript first
-  
-  for(i=0; i<VARIABLESLOTS; i++)
-    {
-      svariable_t *sv = levelscript.variables[i];
-      
-      while(sv && sv->type != svt_label)
-        {
-          svariable_t *next = sv->next;
-          Z_Free(sv);
-          sv = next;
-        }
-      levelscript.variables[i] = sv;       // null or label
-    }
-
-  // now read the number of variables from the savegame file
-
-  short_p = (short *)save_p;
-  num_variables = *short_p++;
-  save_p = (byte *)short_p;
-  
-  for(i=0; i<num_variables; i++)
-    {
-      svariable_t *sv = (svariable_t*)Z_Malloc(sizeof(svariable_t), PU_LEVEL, 0);
-      int hashkey;
-      
-      // name
-      sv->name = Z_Strdup((char *)save_p, PU_LEVEL, 0);
-      save_p += strlen(sv->name) + 1;
-      
-      sv->type = *save_p++;
-      
-      switch(sv->type)        // read depending on type
-        {
-        case svt_string:
-          {
-            sv->value.s = Z_Strdup((char *)save_p, PU_LEVEL, 0);
-            save_p += strlen(sv->value.s) + 1;
-            break;
-          }
-        case svt_int:
-          {
-            long *long_p = (long *)save_p;
-            sv->value.i = *long_p++;
-            save_p = (byte *)long_p;
-            break;
-          }
-        case svt_mobj:
-          {
-            ULONG *long_p = (ULONG *) save_p;
-            sv->value.mobj = FindNewPosition((Actor *)long_p);
-            long_p++;
-            save_p = (byte *)long_p;
-            break;
-          }
-        case svt_fixed:
-          {
-            fixed_t  *fixed_p = (fixed_t *) save_p;
-            sv->value.fixed = *fixed_p++;
-            save_p = (byte *)fixed_p;
-            break;
-          }
-        default:
-          break;
-        }
-      
-      // link in the new variable
-      hashkey = variable_hash(sv->name);
-      sv->next = levelscript.variables[hashkey];
-      levelscript.variables[hashkey] = sv;
-    }
-  */
-}
-
-
-
-
-
-extern runningscript_t runningscripts;        // t_script.c
-runningscript_t *new_runningscript();         // t_script.c
-void clear_runningscripts();                  // t_script.c
-
-
-// save a given runningscript
-void P_ArchiveRunningScript(runningscript_t *rs)
-{
-  /*
-  int i;
-  int num_variables;
-
-
-  a << rs->script->scriptnum;      // save scriptnum
-  a << (rs->savepoint - rs->script->data); // offset
-  a << rs->wait_type;
-  a << rs->wait_data;
-  
-  // save pointer to trigger using prev
-  *((ULONG *)short_p)++ = (ULONG)rs->trigger;
-  
-  // count number of variables
-  num_variables = 0;
-  for(i=0; i<VARIABLESLOTS; i++)
-    {
-      svariable_t *sv = rs->variables[i];
-      while(sv && sv->type != svt_label)
-        {
-          num_variables++;
-          sv = sv->next;
-        }
-    }
-  *short_p++ = num_variables;
-
-  save_p = (byte *)short_p;
-  
-  // save num_variables
-  
-  // store variables
-  // go thru hash chains, store each variable
-  for(i=0; i<VARIABLESLOTS; i++)
-    {
-      // go thru this hashchain
-      svariable_t *sv = rs->variables[i];
-      
-      // once we get to a label there can be no more actual
-      // variables in the list to store
-      while(sv && sv->type != svt_label)
-        {
-	  // write svariable: name
-          
-          strcpy((char*)save_p, sv->name);
-          save_p += strlen(sv->name) + 1; // 1 extra for ending NULL
-                
-          // type
-          *save_p++ = sv->type;   // store type;
-          
-          switch(sv->type)        // store depending on type
-            {
-            case svt_string:
-              {
-                //CheckSaveGame(strlen(sv->value.s)+5); // 5 for safety
-                strcpy((char *)save_p, sv->value.s);
-                save_p += strlen(sv->value.s) + 1;
-                break;
-              }
-            case svt_int:
-              {
-                long *long_p;
-                
-                //CheckSaveGame(sizeof(long)+4); 
-                long_p = (long *) save_p;
-                *long_p++ = sv->value.i;
-                save_p = (byte *)long_p;
-                break;
-              }
-            case svt_mobj:
-              {
-                ULONG *long_p;
-                
-                //CheckSaveGame(sizeof(long)+4); 
-                long_p = (ULONG *) save_p;
-                *long_p++ = (ULONG)sv->value.mobj;
-                save_p = (byte *)long_p;
-                break;
-              }
-            case svt_fixed:
-              {
-                fixed_t *fixed_p;
-
-                fixed_p = (fixed_t *)save_p;
-                *fixed_p++ = sv->value.fixed;
-                save_p = (byte *)fixed_p;
-                break;
-              }
-	      // others do not appear in user scripts
-            
-            default:
-              break;
-            }
-          
-          sv = sv->next;
-        }
-    }
-  */
-}
-
-
-
-
-// get the next runningscript
-runningscript_t *P_UnArchiveRunningScript()
-{
-  /*
-  int i;
-  int scriptnum;
-  int num_variables;
-  runningscript_t *rs;
-
-  // create a new runningscript
-  rs = new_runningscript();
-  
-  {
-    short *short_p = (short*) save_p;
-    
-    scriptnum = *short_p++;        // get scriptnum
-    
-    // levelscript?
-
-    if(scriptnum == -1)
-      rs->script = &levelscript;
-    else
-      rs->script = levelscript.children[scriptnum];
-    
-    // read out offset from save
-    rs->savepoint = rs->script->data + (*short_p++);
-    rs->wait_type = wait_type_e(*short_p++);
-    rs->wait_data = *short_p++;
-    // read out trigger thing
-    rs->trigger = FindNewPosition((Actor *)(READULONG(short_p)));
-    
-    // get number of variables
-    num_variables = *short_p++;
-
-    save_p = (byte *)short_p;      // restore save_p
-  }
-  
-  // read out the variables now (fun!)
-  
-  // start with basic script slots/labels
-  
-  for(i=0; i<VARIABLESLOTS; i++)
-    rs->variables[i] = rs->script->variables[i];
-  
-  for(i=0; i<num_variables; i++)
-    {
-      svariable_t *sv = (svariable_t*)Z_Malloc(sizeof(svariable_t), PU_LEVEL, 0);
-      int hashkey;
-      
-      // name
-      sv->name = Z_Strdup((char *)save_p, PU_LEVEL, 0);
-      save_p += strlen(sv->name) + 1;
-      
-      sv->type = *save_p++;
-      
-      switch(sv->type)        // read depending on type
-        {
-        case svt_string:
-          {
-            sv->value.s = Z_Strdup((char *)save_p, PU_LEVEL, 0);
-            save_p += strlen(sv->value.s) + 1;
-            break;
-          }
-        case svt_int:
-          {
-            long *long_p = (long *) save_p;
-            sv->value.i = *long_p++;
-            save_p = (byte *)long_p;
-            break;
-          }
-        case svt_mobj:
-          {
-            ULONG *long_p = (ULONG *) save_p;
-            sv->value.mobj = FindNewPosition((Actor *)long_p);
-            save_p = (byte *)long_p;
-            break;
-          }
-        case svt_fixed:
-          {
-            fixed_t *fixed_p = (fixed_t *)save_p;
-            sv->value.fixed = *fixed_p++;
-            save_p = (byte *)fixed_p;
-            break;
-          }
-        default:
-          break;
-        }
-      
-      // link in the new variable
-      hashkey = variable_hash(sv->name);
-      sv->next = rs->variables[hashkey];
-      rs->variables[hashkey] = sv;
-    }
-  return rs;
-  */
-  return NULL; // remove this
-}
-
-
-
-
-// archive all runningscripts in chain
-void P_ArchiveRunningScripts()
-{
-  /*
-  long *long_p;
-  runningscript_t *rs;
-  int num_runningscripts = 0;
-  
-  // count runningscripts
-  for(rs = runningscripts.next; rs; rs = rs->next)
-    num_runningscripts++;
-  
-  //CheckSaveGame(sizeof(long));
-  
-  // store num_runningscripts
-  long_p = (long *) save_p;
-  *long_p++ = num_runningscripts;
-  save_p = (byte *) long_p;        
-  
-  // now archive them
-  rs = runningscripts.next;
-  while(rs)
-    {
-      P_ArchiveRunningScript(rs);
-      rs = rs->next;
-    }
-  
-  long_p = (long *) save_p;
-  */
-}
-
-
-
-
-
-// restore all runningscripts from save_p
-void P_UnArchiveRunningScripts()
-{
-  /*
-  runningscript_t *rs;
-  long *long_p;
-  int num_runningscripts;
-  int i;
-  
-  // remove all runningscripts first : may have been started
-  // by levelscript on level load
-  
-  clear_runningscripts(); 
-  
-  // get num_runningscripts
-  long_p = (long *) save_p;
-  num_runningscripts = *long_p++;
-  save_p = (byte *) long_p;        
-  
-  for(i=0; i<num_runningscripts; i++)
-    {
-      // get next runningscript
-      rs = P_UnArchiveRunningScript();
-      
-      // hook into chain
-      rs->next = runningscripts.next;
-      rs->prev = &runningscripts;
-      rs->prev->next = rs;
-      if(rs->next)
-        rs->next->prev = rs;
-    }
-  */
-}
-
-
-
-
-void P_ArchiveScripts()
-{
-#ifdef FRAGGLESCRIPT
-  /*
-  // save levelscript
-  P_ArchiveLevelScript();
-
-  // save runningscripts
-  P_ArchiveRunningScripts();
-
-  // Archive the script camera.
-  WRITELONG(save_p, (long)script_camera_on);
-  WRITEULONG(save_p, (ULONG)script_camera.mo);
-  WRITEANGLE(save_p, script_camera.aiming);
-  WRITEFIXED(save_p, script_camera.viewheight);
-  WRITEANGLE(save_p, script_camera.startangle);
-  */
-#endif
-}
-
-
-
-void P_UnArchiveScripts()
-{
-#ifdef FRAGGLESCRIPT
-  /*
-  // restore levelscript
-  P_UnArchiveLevelScript();
-
-  // restore runningscripts
-  P_UnArchiveRunningScripts();
-
-  // Unarchive the script camera
-  script_camera_on         = (bool)READLONG(save_p);
-  script_camera.mo         = FindNewPosition((Actor *)(READULONG(save_p)));
-  script_camera.aiming     = READANGLE(save_p);
-  script_camera.viewheight = READFIXED(save_p);
-  script_camera.startangle = READANGLE(save_p);
-  */
-#endif
 }
 
 
@@ -1917,7 +1637,6 @@ int MapInfo::Unserialize(LArchive &a)
   a << cdtrack << fadetablelump;
   a << BossDeathKey;
 
-  // TODO if it is MAP_SAVED, just copy the existing savegame here
   a << temp;
   if (temp == 2)
     {
@@ -1937,6 +1656,19 @@ int MapInfo::Unserialize(LArchive &a)
   else
     me = NULL;
 
+  return 0;
+}
+
+
+int TeamInfo::Serialize(LArchive &a)
+{
+  a << name << color << score;
+  return 0;
+}
+
+int TeamInfo::Unserialize(LArchive &a)
+{
+  a << name << color << score;
   return 0;
 }
 
@@ -1964,56 +1696,62 @@ int GameInfo::Serialize(LArchive &a)
   // teams
   a << (n = teams.size());
   for (i = 0; i < n; i++)
-    {
-      a << teams[i]->name;
-      a << teams[i]->color;
-      a << teams[i]->score;
-    }
+    teams[i]->Serialize(a);
 
+  a.Marker(MARK_GROUP);
   // players 
   a << (n = Players.size());
   player_iter_t j;
   for (j = Players.begin(); j != Players.end(); j++)
     (*j).second->Serialize(a);
 
+  a.Marker(MARK_GROUP);
   // mapinfo (and maps)
   a << (n = mapinfo.size());
   mapinfo_iter_t k;
   for (k = mapinfo.begin(); k != mapinfo.end(); k++)
     (*k).second->Serialize(a);
 
+  a.Marker(MARK_GROUP);
   // clustermap
   a << (n = clustermap.size());
   cluster_iter_t l;
   for (l = clustermap.begin(); l != clustermap.end(); l++)
     (*l).second->Serialize(a);
 
+  a.Marker(MARK_GROUP);
   a << currentcluster->number;
-  a << currentmap->mapnumber;
 
   // global script data
-  a.Marker(MARK_SCRIPT);
   a.Write((byte *)WorldVars, sizeof(WorldVars));
   acsstore_iter_t t;
   a << (n = ACS_store.size());
   for (t = ACS_store.begin(); t != ACS_store.end(); t++) 
     a.Write((byte *)&(*t).second, sizeof(acsstore_t));
 
+  // TODO FS hub_script, global_script...
+
   // misc shit
+  if (consoleplayer)
+    a << consoleplayer->number;
+  else
+    a << (n = -1);
+
+  if (consoleplayer2)
+    a << consoleplayer2->number;
+  else
+    a << (n = -1);
+
   n = P_GetRandIndex();
   a << n;
 
   //CV_SaveNetVars((char**)&save_p);
   //CV_LoadNetVars((char**)&save_p);
 
-  // client info
+  // TODO
+  // client info and other net stuff (player authentication?)
+  // consvars
   // check if required resource files are to be found / can be downloaded
-  // read consvars
-  // read player info (netgame? authentication?)
-  // read levelgraph
-  // read map name(s), load them from wads?
-  // read global scripts
-  // read saved maps
 
   return 0;
 }
@@ -2046,11 +1784,11 @@ int GameInfo::Unserialize(LArchive &a)
   for (i = 0; i < n; i++)
     {
       teams[i] = new TeamInfo;
-      a << teams[i]->name;
-      a << teams[i]->color;
-      a << teams[i]->score;
+      teams[i]->Unserialize(a);
     }
 
+  if (!a.Marker(MARK_GROUP))
+    return -1;
   // players 
   a << n;
   for (i = 0; i < n; i++)
@@ -2060,6 +1798,8 @@ int GameInfo::Unserialize(LArchive &a)
       Players[p->number] = p;
     }
 
+  if (!a.Marker(MARK_GROUP))
+    return -1;
   // mapinfo (and maps)
   a << n;
   for (i = 0; i < n; i++)
@@ -2069,6 +1809,8 @@ int GameInfo::Unserialize(LArchive &a)
       mapinfo[m->mapnumber] = m;
     }
 
+  if (!a.Marker(MARK_GROUP))
+    return -1;
   // clustermap
   a << n;
   for (i = 0; i < n; i++)
@@ -2078,14 +1820,12 @@ int GameInfo::Unserialize(LArchive &a)
       clustermap[c->number] = c;
     }
 
+  if (!a.Marker(MARK_GROUP))
+    return -1;
   a << n;
   currentcluster = clustermap[n];
-  a << n;
-  currentmap = mapinfo[n];
 
   // global script data
-  if (!a.Marker(MARK_SCRIPT))
-    return -1;
   a.Read((byte *)WorldVars, sizeof(WorldVars));
   a << n;
   for (i = 0; i < n; i++)
@@ -2096,6 +1836,11 @@ int GameInfo::Unserialize(LArchive &a)
     }
 
   // misc shit
+  a << n;
+  consoleplayer = FindPlayer(n);
+  a << n;
+  consoleplayer2 = FindPlayer(n);
+
   a << n;
   P_SetRandIndex(n);
 
@@ -2108,6 +1853,7 @@ char savegamename[256];
 
 void GameInfo::LoadGame(int slot)
 {
+  CONS_Printf("loading game...\n");
   char  savename[255];
   byte *savebuffer;
 
@@ -2119,10 +1865,13 @@ void GameInfo::LoadGame(int slot)
       CONS_Printf("Couldn't open save file %s", savename);
       return;
     }
-  
+
+  CONS_Printf("opened file\n");
   LArchive a;
   if (!a.Open(savebuffer, length))
     return;
+
+  CONS_Printf("uncompressed\n");
 
   Z_Free(savebuffer); // the compressed buffer is no longer needed
 
@@ -2131,15 +1880,19 @@ void GameInfo::LoadGame(int slot)
 
   Downgrade(VERSION); // reset the game version
 
-  //automap.Close();
+  automap.Close();
+  hud.ST_Stop();
 
   // dearchive all the modifications
-  if (!Unserialize(a))
+  if (Unserialize(a))
     {
       M_StartMessage ("Savegame file corrupted\n\nPress ESC\n", NULL, MM_NOTHING);
       Command_ExitGame_f();
       return;
     }
+
+  if (consoleplayer && consoleplayer->pawn)
+    hud.ST_Start(consoleplayer->pawn);
 
   action = ga_nothing;
   state = GS_LEVEL;
@@ -2167,14 +1920,15 @@ void GameInfo::SaveGame(int savegameslot, char *description)
   LArchive a;
   a.Create(description); // create a new save archive
   Serialize(a);          // store the game state into it
+  CONS_Printf("save done!!\n");
 
   byte *buffer;
-  unsigned length = a.Compress(&buffer);  // take out the compressed data
+  unsigned length = a.Compress(&buffer, 0);  // take out the compressed data
 
   char filename[256];
   sprintf(filename, savegamename, savegameslot);
 
-  //CONS_Printf("Simulated savegame: %d bytes\n", length);
+  CONS_Printf("Simulated savegame: %d bytes\n", length);
   FIL_WriteFile(filename, buffer, length);
 
   Z_Free(buffer);
