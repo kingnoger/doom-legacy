@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/10/31 22:24:53  smite-meister
+// pic_t moves into history
+//
 // Revision 1.7  2004/10/27 17:37:09  smite-meister
 // netcode update
 //
@@ -35,48 +38,6 @@
 //
 // Revision 1.2  2002/12/03 10:23:46  smite-meister
 // Video system overhaul
-//
-// Revision 1.6  2002/09/25 15:17:42  vberghol
-// Intermission fixed?
-//
-// Revision 1.5  2002/08/21 16:58:36  vberghol
-// Version 1.41 Experimental compiles and links!
-//
-// Revision 1.4  2002/07/01 21:00:58  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:01:59  vberghol
-// HUD alkaa olla kunnossa
-//
-// Revision 1.10  2001/05/16 21:21:15  bpereira
-// no message
-//
-// Revision 1.9  2001/04/17 22:26:07  calumr
-// Initial Mac add
-//
-// Revision 1.8  2001/04/01 17:35:07  bpereira
-// no message
-//
-// Revision 1.7  2001/02/24 13:35:21  bpereira
-// no message
-//
-// Revision 1.6  2001/01/25 22:15:44  bpereira
-// added heretic support
-//
-// Revision 1.5  2000/11/02 19:49:37  bpereira
-// no message
-//
-// Revision 1.4  2000/08/31 14:30:56  bpereira
-// no message
-//
-// Revision 1.3  2000/03/29 20:10:50  hurdler
-// your fix didn't work under windows, find another solution
-//
-// Revision 1.2  2000/02/27 00:42:11  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //-----------------------------------------------------------------------------
 
@@ -110,10 +71,9 @@ struct patch_t
 
 
 //======================================================================
-
-// pic_t, another graphics format native to Legacy
+// pic_t, another graphics format native to Legacy. Deprecated.
 // a pic is an unmasked block of pixels, stored in horizontal way
-
+/*
 struct pic_t
 {
   enum pic_mode_t
@@ -133,8 +93,8 @@ struct pic_t
   short  reserved1;  // set to 0
   byte   data[0];
 };
-
-
+*/
+//======================================================================
 
 /// flags for drawing Textures
 enum texture_draw_e

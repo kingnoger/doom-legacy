@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2004/10/31 22:24:53  smite-meister
+// pic_t moves into history
+//
 // Revision 1.15  2004/09/23 23:21:19  smite-meister
 // HUD updated
 //
@@ -26,23 +29,14 @@
 // Revision 1.13  2004/09/03 16:28:51  smite-meister
 // bugfixes and ZDoom linedef types
 //
-// Revision 1.12  2004/08/29 20:48:49  smite-meister
-// bugfixes. wow.
-//
 // Revision 1.11  2004/08/18 14:35:20  smite-meister
 // PNG support!
 //
 // Revision 1.10  2004/08/15 18:08:29  smite-meister
 // palette-to-palette colormaps etc.
 //
-// Revision 1.9  2004/08/13 18:25:11  smite-meister
-// sw renderer fix
-//
 // Revision 1.8  2004/08/12 18:30:29  smite-meister
 // cleaned startup
-//
-// Revision 1.7  2004/07/07 17:27:19  smite-meister
-// bugfixes
 //
 // Revision 1.6  2004/04/25 16:26:51  smite-meister
 // Doxygen
@@ -98,20 +92,9 @@ class Texture : public cacheitem_t
 {
   friend class texturecache_t;
 public:
-  enum tex_storage_t
-  {
-    PALETTE         = 0,  ///< 1 byte is the index in the doom palette (as usual)
-    INTENSITY       = 1,  ///< 1 byte intensity
-    INTENSITY_ALPHA = 2,  ///< 2 byte : alpha then intensity
-    RGB24           = 3,  ///< 24 bit rgb
-    RGBA32          = 4,  ///< 32 bit rgba
-  };
-
-  int    id;  // TODO temp solution, replace with pointers?
-  //char   name[9]; TEST
-
-  short width, height;
-  short leftoffset, topoffset;
+  int     id;  // TODO temp solution, replace with pointers?
+  short   width, height;
+  short   leftoffset, topoffset;
   fixed_t xscale, yscale;
 
   union
@@ -158,21 +141,11 @@ public:
 
 
 /// \brief Row-major Textures which reside in a single lump.
-/// raw (flat, fullscreen pic), pic_t, png, jpeg...
-
+/// raw (flat, fullscreen pic), png, jpeg...
 class LumpTexture : public Texture
 {
 public:
-  enum type_e
-  {
-    Raw = 0,
-    Pic,
-    PNG,
-  };
-
   int    lump;
-  byte   type;
-  byte   mode;
 
 protected:
   virtual byte *Generate();   ///< returns row-major data
@@ -326,8 +299,8 @@ public:
   /// creates the palette conversion colormaps
   void InitPaletteConversion();
 
-  /// returns the pal. conversion colormap for the given file
-  inline byte *GetPalConv(int i) { return palette_conversion[i]; }
+  /// returns the palette conversion colormap for the given file
+  inline byte *GetPaletteConv(int i) { return palette_conversion[i]; }
 };
 
 
