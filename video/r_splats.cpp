@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/12/19 23:54:08  smite-meister
+// small fixes
+//
 // Revision 1.4  2004/11/18 20:30:15  smite-meister
 // tnt, plutonia
 //
@@ -33,6 +36,8 @@
 
 /// \file
 /// \brief SW renderer: Decals, floor and wall splats
+
+#include <math.h>
 
 #include "doomdef.h"
 

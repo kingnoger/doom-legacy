@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.40  2004/12/19 23:54:08  smite-meister
+// small fixes
+//
 // Revision 1.39  2004/12/08 16:54:04  segabor
 // Endianness fix
 //
@@ -804,10 +807,9 @@ cacheitem_t *texturecache_t::Load(const char *name)
     }
   else if (data[2] == 0 && data[6] == 0 && data[7] == 0)
     {
-      I_Error(" !!! pic_t '%s' found!\n", name); // root 'em out!
-      // likely a pic_t
-      // TODO pic_t has an inadequate magic number.
-      // pic_t's should be replaced with a better format
+      // likely a pic_t (the magic number is inadequate)
+      I_Error("A pic_t image '%s' was found, but this format is no longer supported.\n", name); // root 'em out!
+      return NULL;
     }
   else
     {
