@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/04/14 08:58:31  smite-meister
+// Hexen maps load.
+//
 // Revision 1.5  2003/04/05 12:20:00  smite-meister
 // Makefiles fixed
 //
@@ -220,13 +223,14 @@ public:
 
 extern SoundSystem S;
 
+int S_GetSoundID(const char *tag);
 
 // wrappers
 // Start sound for thing at <origin>
 //  using <sound_id> from sounds.h
 void S_StartAmbSound(int sfx_id, int volume = 255);
-void S_StartSound(mappoint_t *origin, int sfx_id);
-void S_StartSound(Actor *origin, int sfx_id);
+void S_StartSound(mappoint_t *origin, int sfx_id, int volume = 255);
+void S_StartSound(Actor *origin, int sfx_id, int volume = 255);
 
 // for old Doom/Heretic musics. See sounds.h.
 bool S_StartMusic(int music_id, bool looping = false);

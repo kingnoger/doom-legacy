@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/04/14 08:58:28  smite-meister
+// Hexen maps load.
+//
 // Revision 1.10  2003/04/04 00:01:57  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -1418,8 +1421,10 @@ void HUD::CreateDoomWidgets()
   // weapons owned
   for (i=0; i<6; i++)
     {
+      // these are shown
+      const int wsel[] = {wp_pistol, wp_shotgun, wp_chaingun, wp_missile, wp_plasma, wp_bfg};
       h = new HudBinIcon(st_x+111+(i%3)*12, st_y+4+(i/3)*10, &st_armson,
-			 &st_oldweaponsowned[i+1], PatchArms[i][0], PatchArms[i][1]);
+			 &st_oldweaponsowned[wsel[i]], PatchArms[i][0], PatchArms[i][1]);
       widgets.push_back(h);
     }
 

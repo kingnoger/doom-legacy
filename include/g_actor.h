@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/04/14 08:58:30  smite-meister
+// Hexen maps load.
+//
 // Revision 1.8  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -314,10 +317,6 @@ public:
   // Reaction time: if non 0, don't attack yet.
   // Used by player to freeze a bit after teleporting.
   int  reactiontime;
-
-  //SoM: Friction.
-  float friction; 
-  float movefactor;
 
   fixed_t floorclip; // cut this amount from legs (deep water illusion) (Hexen)
 

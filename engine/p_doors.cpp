@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/04/14 08:58:26  smite-meister
+// Hexen maps load.
+//
 // Revision 1.4  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -653,7 +656,7 @@ void Map::SpawnDoorCloseIn30 (sector_t* sec)
 // P_SpawnDoorRaiseIn5Mins
 // Spawn a door that opens after 5 minutes
 //
-void Map::SpawnDoorRaiseIn5Mins(sector_t *sec, int secnum)
+void Map::SpawnDoorRaiseIn5Mins(sector_t *sec)
 {
   vldoor_t *door = new vldoor_t(raiseIn5Mins, sec, VDOORSPEED, VDOORWAIT, NULL);
   AddThinker(door);

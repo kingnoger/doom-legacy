@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.14  2003/04/14 08:58:25  smite-meister
+// Hexen maps load.
+//
 // Revision 1.13  2003/04/08 09:46:05  smite-meister
 // Bugfixes
 //
@@ -544,6 +547,17 @@ void Map::SpawnMapThing(mapthing_t *mt)
 
   DActor *p = SpawnDActor(nx,ny,nz, mobjtype_t(t));
   p->spawnpoint = mt;
+
+  p->tid = mt->tid;
+  p->special = mt->special;
+  p->args[0] = mt->args[0];
+  p->args[1] = mt->args[1];
+  p->args[2] = mt->args[2];
+  p->args[3] = mt->args[3];
+  p->args[4] = mt->args[4];
+
+  if (p->tid)
+    InsertIntoTIDmap(p, p->tid);
 
   // Seed random starting index for bobbing motion
   if(p->flags2 & MF2_FLOATBOB)
@@ -1223,4 +1237,63 @@ void Map::RespawnWeapons()
 void Map::ExitMap(int exit)
 {
   game.ExitLevel(exit);
+}
+
+
+//==========================================================================
+// TID system (Hexen)
+//==========================================================================
+
+
+void Map::InsertIntoTIDmap(Actor *p, int tid)
+{
+  if (TIDmap.size() >= 300)
+    I_Error("Map::InsertIntoTIDmap: MAX_TID_COUNT (%d) exceeded.", 300);
+
+  // TODO multiple inserts possible
+  TIDmap.insert(pair<const short, Actor*>(tid, p));
+}
+
+void Map::RemoveFromTIDmap(Actor *p)
+{
+  if (p->tid == 0)
+    return;
+
+  int tid = p->tid;
+  p->tid = 0;
+
+  multimap<short, Actor*>::iterator i, j;
+  i = TIDmap.lower_bound(tid);
+  if (i == TIDmap.end())
+    return; // not found
+
+  j = TIDmap.upper_bound(tid);
+
+  for ( ; i != j; ++i)
+    if ((*i).second == p)
+      {
+	TIDmap.erase(i);
+	return;
+      }
+}
+
+
+Actor *Map::FindFromTIDmap(int tid, int *pos)
+{
+  multimap<short, Actor*>::iterator i, j;
+  i = TIDmap.lower_bound(tid);
+  j = TIDmap.end();
+  if (i == j)
+    {
+      *pos = -1;
+      return NULL; // not found
+    }
+
+  int k;
+  ++(*pos);
+  for (k = 0; k < *pos; ++i, ++k)
+    if (i == j)
+      return NULL;
+
+  return (*i).second;
 }

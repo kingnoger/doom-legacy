@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2003/04/14 08:58:24  smite-meister
+// Hexen maps load.
+//
 // Revision 1.1  2003/03/15 20:07:13  smite-meister
 // Initial Hexen compatibility!
 //
@@ -1018,13 +1021,13 @@ void A_CheckThrowBomb(DActor *actor)
 bool A_LocalQuake(byte *args, Actor *actor)
 {
   Actor *focus, *target;
-  int lastfound=0;
+  int lastfound = 0;
   bool success = false;
 
   // Find all quake foci
   do
     {
-      target = NULL; // FIXME entire TID system. P_FindMobjFromTID(args[4], &lastfound);
+      target = actor->mp->FindFromTIDmap(args[4], &lastfound);
       if (target)
 	{
 	  focus = target->mp->SpawnDActor(target->x, target->y, target->z, MT_QUAKE_FOCUS);
@@ -1038,9 +1041,9 @@ bool A_LocalQuake(byte *args, Actor *actor)
 	      success = true;
 	    }
 	}
-    }while(target != NULL);
+    } while (target != NULL);
 
-  return(success);
+  return success;
 }
 
 

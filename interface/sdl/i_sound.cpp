@@ -16,6 +16,9 @@
 // for more details.
 //
 // $Log$
+// Revision 1.6  2003/04/14 08:58:31  smite-meister
+// Hexen maps load.
+//
 // Revision 1.5  2003/03/08 16:07:18  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -611,11 +614,12 @@ int I_RegisterSong(void* data, int len)
   if (nomusic)
     return 0;
 
+  // FIXME clumsy temp file. Is there a way to do this directly in memory?
   MIDI_tmpfilename = tmpnam(NULL); // create an unused name
   midfile = fopen(MIDI_tmpfilename, "wb");
   if (midfile == NULL)
     {
-      CONS_Printf("Couldn't write MIDI data to a tmpfile\n");
+      CONS_Printf("Couldn't create a tmpfile for music!\n");
       return 0;
     }
 
@@ -631,8 +635,8 @@ int I_RegisterSong(void* data, int len)
 	}
       fwrite(musicbuffer, 1, midlength, midfile);
     }
-  else if (memcmp(data,"MThd",4) == 0)
-    {     // support mid file in WAD !!!
+  else if (memcmp(data,"MThd",4) == 0 || memcmp(data, "Ogg", 3) == 0)
+    { // MIDI and Ogg Vorbis
       fwrite(data, 1, len, midfile);
     }
   else
@@ -649,7 +653,7 @@ int I_RegisterSong(void* data, int len)
     
   if (music[0] == NULL)
     {
-      CONS_Printf("Couldn't load MIDI from %s: %s\n", MIDI_tmpfilename, Mix_GetError());
+      CONS_Printf("Couldn't load music from tempfile %s: %s\n", MIDI_tmpfilename, Mix_GetError());
     }
   return 0;
 }

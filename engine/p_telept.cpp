@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/04/14 08:58:27  smite-meister
+// Hexen maps load.
+//
 // Revision 1.6  2003/04/04 00:01:57  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -155,13 +158,12 @@ bool Actor::Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent)
 
 bool Map::EV_Teleport(line_t *line, int side, Actor *thing)
 {
-  int         i;
-  Actor    *m;
+  int    i;
+  Actor *m;
 
   // don't teleport missiles
-  // TODO give all non-heretic missiles the MF2_NOTELEPORT flag....simpler
-  if (((thing->flags & MF_MISSILE) && game.mode != gm_heretic) 
-      || (thing->flags2 & MF2_NOTELEPORT))
+  // TODO give all Doom missiles the MF2_NOTELEPORT flag....simpler
+  if (thing->flags2 & MF2_NOTELEPORT)
     return false;
 
   // Don't teleport if hit back of line,

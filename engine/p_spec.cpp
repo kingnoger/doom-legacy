@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/04/14 08:58:27  smite-meister
+// Hexen maps load.
+//
 // Revision 1.7  2003/04/08 09:46:06  smite-meister
 // Bugfixes
 //
@@ -1019,30 +1022,18 @@ int P_CheckTag(line_t *line)
 
 
 
-//SoM: 3/7/2000: Is/WasSecret.
-//
-// P_IsSecret()
-//
-// Passed a sector, returns if the sector secret type is still active, i.e.
-// secret type is set and the secret has not yet been obtained.
-//
-bool P_IsSecret(sector_t *sec)
-{
-  return (sec->special==9 || (sec->special&SECRET_MASK));
-}
-
-
 //
 // P_WasSecret()
 //
 // Passed a sector, returns if the sector secret type is was active, i.e.
 // secret type was set and the secret has been obtained already.
 //
+/*
 bool P_WasSecret(sector_t *sec)
 {
   return (sec->oldspecial==9 || (sec->oldspecial&SECRET_MASK));
 }
-
+*/
 
 //============================================================================
 //
@@ -2666,6 +2657,251 @@ void P_AddFFloor(sector_t* sec, ffloor_t* ffloor)
 // SPECIAL SPAWNING
 //
 
+
+int Map::SpawnSectorSpecial(int sp, sector_t *sec)
+{
+  // internally we use modified "generalized Boom sector types"
+  if (sp == 0)
+    {
+      sec->special = 0;
+      return 0;
+    }
+
+  if (sp == 9)
+    {
+      secrets++;
+      sec->special = SS_secret;
+      return SS_secret;
+    }
+
+  const char HScrollDirs[4][2] = {{1,0}, {0,1}, {0,-1}, {-1,0}};
+  const char HScrollSpeeds[5] = { 5, 10, 25, 30, 35 };
+  const float d = 0.707;
+  const float XScrollDirs[8][2] = {{0,1}, {1,0}, {0,-1}, {-1,0}, {-d,d}, {d,d}, {d,-d}, {-d,-d}};
+
+  int temp;
+
+  if (hexen_format)
+    {
+      // Boom damage (and secret) bits cannot be interpreted 'cos they are used otherwise
+
+      temp = sp & 0xFF; // eight lowest bits
+      sp &= ~0xFF; // zero it
+
+      if (temp >= 40 && temp <= 51)
+	{
+	  // Hexen winds (just like Heretic?)
+	  temp -= 40; // zero base
+
+	  fixed_t dx = HScrollDirs[temp/3][0]*HScrollSpeeds[temp%3]*2048;
+	  fixed_t dy = HScrollDirs[temp/3][1]*HScrollSpeeds[temp%3]*2048;
+	  
+	  AddThinker(new scroll_t(scroll_t::sc_wind, dx, dy, NULL, sec - sectors, false));
+	}
+      else if (temp >= 201 && temp <= 224)
+	{
+	  // Hexen scrollers
+	  temp -= 201; // zero base
+
+	  fixed_t dx = int(XScrollDirs[temp/3][0]*HScrollSpeeds[temp%3]*2048);
+	  fixed_t dy = int(XScrollDirs[temp/3][1]*HScrollSpeeds[temp%3]*2048);
+	  
+	  AddThinker(new scroll_t(scroll_t::sc_carry_floor, dx, dy, NULL, sec - sectors, false));
+	}
+      else switch (temp)
+	{
+	  //TODO hexen lights etc.
+	case 1: // Phased light
+	  // Hardcoded base, use sector->lightlevel as the index
+	  //P_SpawnPhasedLight(sector, 80, -1);
+	  break;
+	case 2: // Phased light sequence start
+	  //P_SpawnLightSequence(sector, 1);
+	  break;
+
+	case 26: // Stairs_Special1
+	case 27: // Stairs_Special2
+	  // Used in (P_floor):ProcessStairSector
+	  break;
+
+	case 198: // Lightning Special
+	case 199: // Lightning Flash special
+	case 200: // Sky2
+	  // Used in (R_plane):R_Drawplanes
+	  break;
+	default:
+	  break;
+	}
+
+      sec->special = sp;
+      return sp;
+    }
+
+  if (sp & SS_secret)
+    secrets++;
+
+  if (game.mode == gm_heretic)
+    {
+      temp = sp & 0x3F; // six lowest bits
+      sp &= ~0x3F; // zero it
+
+      if (temp < 20)
+	switch (temp)
+	  {
+	  case 7:  // sludge
+	    sec->damage = 4;
+	    sec->damagetype = dt_corrosive;
+	    sp |= SS_damage_32;
+	    break;
+
+	  case 4:  // lava_scroll_east
+	    AddThinker(new scroll_t(scroll_t::sc_carry_floor, 2048*28, 0, NULL, sec - sectors, false));
+	    // fallthru
+	  case 5:  // lava_wimpy
+	    sec->damage = 5;
+	    sec->damagetype = dt_heat;
+	    sp |= SS_damage_16;
+	    break;
+
+	  case 16: // lava_hefty
+	    sec->damage = 8;
+	    sec->damagetype = dt_heat;
+	    sp |= SS_damage_16;
+	    break;
+
+	  case 15: // low friction
+	    sec->friction = 0.97266f;
+	    sec->movefactor = 0.25f;
+	    sp |= SS_friction;
+	    break;
+
+	  default:
+	    sp |= temp; // put it back, handle later
+	  }
+      else if (temp <= 39)
+	{
+	  // Heretic scrollers
+	  temp -= 20; // zero base
+
+	  fixed_t dx = HScrollDirs[temp/5][0]*HScrollSpeeds[temp%5]*2048;
+	  fixed_t dy = HScrollDirs[temp/5][1]*HScrollSpeeds[temp%5]*2048;
+
+	  // texture does not scroll, Actors do
+	  AddThinker(new scroll_t(scroll_t::sc_push, dx, dy, NULL, sec - sectors, false));
+	}
+      else if (temp <= 51)
+	{
+	  // Heretic winds
+	  temp -= 40; // zero base
+
+	  fixed_t dx = HScrollDirs[temp/3][0]*HScrollSpeeds[temp%3]*2048;
+	  fixed_t dy = HScrollDirs[temp/3][1]*HScrollSpeeds[temp%3]*2048;
+	  
+	  AddThinker(new scroll_t(scroll_t::sc_wind, dx, dy, NULL, sec - sectors, false));
+	}
+    }
+  else
+    {
+      const char BoomDamage[4] = {0, 5, 10, 20};
+      // in Heretic and Hexen, Boom damage bits cannot be used because of winds and scrollers
+      // Boom damage flags
+      temp = (sp & SS_DAMAGEMASK) >> 5;
+      sp &= ~SS_DAMAGEMASK; // zero it
+      if (temp)
+	{
+	  sp |= SS_damage_32;
+	  sec->damage = BoomDamage[temp];
+	  sec->damagetype = dt_radiation; // could as well choose randomly?      
+	}
+    }
+
+
+  // Doom / Boom
+
+  temp = sp & SS_LIGHTMASK;
+  sp &= ~SS_LIGHTMASK; // zeroed "light" bits
+  int dam = 0;
+
+  switch (temp)
+    {
+    case 7:  // nukage/slime
+      dam = 5;
+      break;
+
+    case 5:  // hellslime
+      dam = 10;
+      break;
+
+    case 4:  // strobe hurt
+      SpawnStrobeFlash(sec, FASTDARK, 0); // fallthru
+    case 16: // super hellslime
+      dam = 20;
+      break;
+
+    case 11: // level end hurt need special handling
+      dam = 20;
+      sp |= 11;
+      break;
+
+    case 10: // after 30 s, close door
+      SpawnDoorCloseIn30(sec);
+      break;
+
+    case 14: // after 5 min, open door
+      SpawnDoorRaiseIn5Mins(sec);
+      break;
+
+    case 1: // FLICKERING LIGHTS
+      SpawnLightFlash(sec);
+      break;
+
+    case 2: // STROBE FAST
+      SpawnStrobeFlash(sec,FASTDARK,0);
+      break;
+
+    case 3: // STROBE SLOW
+      SpawnStrobeFlash(sec,SLOWDARK,0);
+      break;
+
+    case 8: // GLOWING LIGHT
+      SpawnGlowingLight(sec);
+      break;
+
+    case 12: // SYNC STROBE SLOW
+      SpawnStrobeFlash(sec, SLOWDARK, 1);
+      break;
+
+    case 13: // SYNC STROBE FAST
+      SpawnStrobeFlash(sec, FASTDARK, 1);
+      break;
+
+    case 17:
+      SpawnFireFlicker(sec);
+      break;
+
+    default:
+      break;
+    }
+
+  if (dam)
+    {
+      sp |= SS_damage_32;
+      sec->damage = dam;
+      sec->damagetype = dt_radiation; // could as well choose randomly?
+    }
+
+  /*
+    // TODO support phased lighting with specials 21-24 ? (like ZDoom)
+    else if (temp < 40)
+    {
+    temp -= 20;
+    }
+  */
+
+  sec->special = sp;
+  return sp;
+}
+
 //
 // was P_SpawnSpecials
 // After the map has been loaded, scan for specials
@@ -2683,84 +2919,9 @@ void Map::SpawnSpecials()
     episode = 2;
   */
 
-  //  Init special SECTORs.
-  sector_t *sector = sectors;
-  for (i=0 ; i<numsectors ; i++, sector++)
-    {
-      if (!sector->special)
-	continue;
-
-      // Boom secret flag
-      if (sector->special & SECRET_MASK)
-	secrets++;
-
-      // Doom basic sector types (lowest 5 bits)
-      switch (sector->special & 31)
-        {
-	case 1:
-	  // FLICKERING LIGHTS
-	  SpawnLightFlash (sector);
-	  break;
-
-	case 2:
-	  // STROBE FAST
-	  SpawnStrobeFlash(sector,FASTDARK,0);
-	  break;
-
-	case 3:
-	  // STROBE SLOW
-	  SpawnStrobeFlash(sector,SLOWDARK,0);
-	  break;
-
-	case 4:
-	  if (game.raven)
-	    break;
-	  // STROBE FAST/DEATH SLIME
-	  SpawnStrobeFlash(sector,FASTDARK,0);
-	  sector->special |= 3<<DAMAGE_SHIFT; //SoM: 3/8/2000: put damage bits in
-	  break;
-
-	case 8:
-	  // GLOWING LIGHT
-	  SpawnGlowingLight(sector);
-	  break;
-
-	case 9:
-	  // SECRET SECTOR
-	  if (sector->special<32)
-	    secrets++;
-	  break;
-
-	case 10:
-	  // DOOR CLOSE IN 30 SECONDS
-	  SpawnDoorCloseIn30 (sector);
-	  break;
-
-	case 12:
-	  // SYNC STROBE SLOW
-	  SpawnStrobeFlash (sector, SLOWDARK, 1);
-	  break;
-
-	case 13:
-	  // SYNC STROBE FAST
-	  SpawnStrobeFlash (sector, FASTDARK, 1);
-	  break;
-
-	case 14:
-	  // DOOR RAISE IN 5 MINUTES
-	  SpawnDoorRaiseIn5Mins (sector, i);
-	  break;
-
-	case 17:
-	  SpawnFireFlicker(sector);
-	  break;
-        }
-    }
-
   //SoM: 3/8/2000: Boom level init functions
   RemoveAllActiveCeilings();
   RemoveAllActivePlats();
-  //for (i = 0;i < MAXBUTTONS;i++) memset(&buttonlist[i],0,sizeof(button_t));
 
   InitTagLists();   //Create xref tables for tags
   SpawnScrollers(); //Add generalized scrollers
@@ -2921,12 +3082,11 @@ void Map::SpawnSpecials()
 
 void scroll_t::Think()
 {
-  fixed_t tdx = dx, tdy = dy;
+  fixed_t tdx = vx, tdy = vy;
 
-  if (control != -1)
+  if (control)
     {   // compute scroll amounts based on a sector's height changes
-      fixed_t height = mp->sectors[control].floorheight +
-        mp->sectors[control].ceilingheight;
+      fixed_t height = control->floorheight + control->ceilingheight;
       fixed_t delta = height - last_height;
       last_height = height;
       tdx = FixedMul(tdx, delta);
@@ -2968,7 +3128,8 @@ void scroll_t::Think()
       sec->ceiling_yoffs += tdy;
       break;
 
-    case sc_carry:
+    case sc_carry_floor:
+    case sc_push:
 
       sec = mp->sectors + affectee;
       height = sec->floorheight;
@@ -2989,6 +3150,10 @@ void scroll_t::Think()
       break;
 
     case sc_carry_ceiling:       // to be added later
+      break;
+
+    case sc_wind:
+      // FIXME winds if (flags2 & MF2_WINDTHRUST);
       break;
     }
 }
@@ -3011,18 +3176,18 @@ void scroll_t::Think()
 // accel: non-zero if this is an accelerative effect
 //
 
-scroll_t::scroll_t(scroll_e t, fixed_t ndx, fixed_t ndy,
-		   int ctrl, int aff, int acc, const sector_t *csec)
+scroll_t::scroll_t(scroll_e t, fixed_t dx, fixed_t dy, sector_t *csec, int aff, bool acc)
 {
   type = t;
-  dx = ndx;
-  dy = ndy;
+  vx = dx;
+  vy = dy;
   accel = acc;
   vdx = vdy = 0;
-  control = ctrl;
+  control = csec;
   affectee = aff;
-  // FIXME we could just use csec instead of control...
-  if ((control) != -1) last_height = csec->floorheight + csec->ceilingheight;
+
+  if (control)
+    last_height = control->floorheight + control->ceilingheight;
 }
 
 // Adds wall scroller. Scroll amount is rotated with respect to wall's
@@ -3031,7 +3196,7 @@ scroll_t::scroll_t(scroll_e t, fixed_t ndx, fixed_t ndy,
 // the wall in a parallel direction is translated into horizontal motion.
 
 static scroll_t *Add_WallScroller(fixed_t dx, fixed_t dy, const line_t *l,
-				  int control, int accel, const sector_t *csec)
+				  sector_t *control, int accel)
 {
   fixed_t x = abs(l->dx), y = abs(l->dy), d;
   if (y > x)
@@ -3040,7 +3205,7 @@ static scroll_t *Add_WallScroller(fixed_t dx, fixed_t dy, const line_t *l,
                           >> ANGLETOFINESHIFT]);
   x = -FixedDiv(FixedMul(dy, l->dy) + FixedMul(dx, l->dx), d);
   y = -FixedDiv(FixedMul(dx, l->dy) - FixedMul(dy, l->dx), d);
-  return new scroll_t(sc_side, x, y, control, *l->sidenum, accel, csec);
+  return new scroll_t(scroll_t::sc_side, x, y, control, *l->sidenum, accel);
 }
 
 // Amount (dx,dy) vector linedef is shifted right to get scroll amount
@@ -3061,7 +3226,9 @@ void Map::SpawnScrollers()
     {
       fixed_t dx = l->dx >> SCROLL_SHIFT;  // direction and speed of scrolling
       fixed_t dy = l->dy >> SCROLL_SHIFT;
-      int control = -1, accel = 0;         // no control sector or acceleration
+      //int control = -1;
+      sector_t *control = NULL;
+      bool accel = false;   // no control sector or acceleration
       int special = l->special;
 
       // Types 245-249 are same as 250-254 except that the
@@ -3072,16 +3239,14 @@ void Map::SpawnScrollers()
       if (special >= 245 && special <= 249)         // displacement scrollers
         {
           special += 250-245;
-          control = sides[*l->sidenum].sector - sectors;
+          control = sides[*l->sidenum].sector;
         }
       else if (special >= 214 && special <= 218)       // accelerative scrollers
 	{
-	  accel = 1;
+	  accel = true;
 	  special += 250-214;
-	  control = sides[*l->sidenum].sector - sectors;
+	  control = sides[*l->sidenum].sector;
 	}
-      sector_t *csec = NULL;
-      if (control != -1) csec = &sectors[control];
 
       switch (special)
         {
@@ -3089,12 +3254,12 @@ void Map::SpawnScrollers()
 
         case 250:   // scroll effect ceiling
           for (s=-1; (s = FindSectorFromLineTag(l,s)) >= 0;)
-	    AddThinker(new scroll_t(sc_ceiling, -dx, dy, control, s, accel, csec));
+	    AddThinker(new scroll_t(scroll_t::sc_ceiling, -dx, dy, control, s, accel));
           break;
         case 251:   // scroll effect floor
         case 253:   // scroll and carry objects on floor
           for (s=-1; (s = FindSectorFromLineTag(l,s)) >= 0;)
-            AddThinker(new scroll_t(sc_floor, -dx, dy, control, s, accel, csec));
+            AddThinker(new scroll_t(scroll_t::sc_floor, -dx, dy, control, s, accel));
           if (special != 253)
             break;
 
@@ -3102,7 +3267,7 @@ void Map::SpawnScrollers()
           dx = FixedMul(dx,CARRYFACTOR);
           dy = FixedMul(dy,CARRYFACTOR);
           for (s=-1; (s = FindSectorFromLineTag(l,s)) >= 0;)
-	    AddThinker(new scroll_t(sc_carry, dx, dy, control, s, accel, csec));
+	    AddThinker(new scroll_t(scroll_t::sc_carry_floor, dx, dy, control, s, accel));
           break;
 
           // scroll wall according to linedef
@@ -3110,24 +3275,24 @@ void Map::SpawnScrollers()
         case 254:
           for (s=-1; (l2 = FindLineFromTag(l->tag, &s)) != NULL; )
             if (s != i)
-              AddThinker(Add_WallScroller(dx, dy, l2, control, accel, csec));
+              AddThinker(Add_WallScroller(dx, dy, l2, control, accel));
           break;
 
         case 255:
           s = lines[i].sidenum[0];
-          AddThinker(new scroll_t(sc_side, -sides[s].textureoffset,
-                       sides[s].rowoffset, -1, s, accel, NULL));
+          AddThinker(new scroll_t(scroll_t::sc_side, -sides[s].textureoffset,
+                       sides[s].rowoffset, NULL, s, accel));
           break;
 
         case 48:                  // scroll first side
-          AddThinker(new scroll_t(sc_side,  FRACUNIT, 0, -1, lines[i].sidenum[0], accel, NULL));
+          AddThinker(new scroll_t(scroll_t::sc_side,  FRACUNIT, 0, NULL, lines[i].sidenum[0], false));
           break;
 
         case 99: // heretic right scrolling
-          if(game.mode != gm_heretic)
+          if (game.mode != gm_heretic)
 	    break; // doom use it as bluekeydoor
         case 85:                  // jff 1/30/98 2-way scroll
-          AddThinker(new scroll_t(sc_side, -FRACUNIT, 0, -1, lines[i].sidenum[0], accel, NULL));
+          AddThinker(new scroll_t(scroll_t::sc_side, -FRACUNIT, 0, NULL, lines[i].sidenum[0], false));
           break;
 	default:
 	  break;
@@ -3139,9 +3304,6 @@ void Map::SpawnScrollers()
 
 /*
   SoM: 3/8/2000: Friction functions start.
-  Add_Friction,
-  T_Friction,
-  P_SpawnFriction
 */
 
 // constructor
@@ -3158,6 +3320,8 @@ friction_t::friction_t(float fri, float mf, int aff)
 //Function to apply friction to all the things in a sector.
 void friction_t::Think()
 {
+  // FIXME Do we even need a friction thinker?
+  /*
   if (!boomsupport || !variable_friction)
     return;
 
@@ -3166,7 +3330,7 @@ void friction_t::Think()
   // Be sure the special sector type is still turned on. If so, proceed.
   // Else, bail out; the sector type has been changed on us.
 
-  if (!(sec->special & FRICTION_MASK))
+  if (!(sec->special & SS_friction))
     return;
 
   // Assign the friction value to players on the floor, non-floating,
@@ -3198,6 +3362,7 @@ void friction_t::Think()
 	}
       node = node->m_snext;
     }
+  */
 }
 
 // was P_SpawnFriction
@@ -3245,7 +3410,11 @@ void Map::SpawnFriction()
 	  movefactor = 1.0/64;
 
 	for (s = -1; (s = FindSectorFromLineTag(l,s)) >= 0 ; )
-	  AddThinker(new friction_t(friction,movefactor,s));
+	  {
+	    //AddThinker(new friction_t(friction,movefactor,s));
+	    sectors[s].friction   = friction;
+	    sectors[s].movefactor = movefactor;
+	  }
       }
 }
 
@@ -3332,7 +3501,7 @@ void pusher_t::Think()
   // Be sure the special sector type is still turned on. If so, proceed.
   // Else, bail out; the sector type has been changed on us.
 
-  if (!(sec->special & PUSH_MASK))
+  if (!(sec->special & SS_wind))
     return;
 
   // For constant pushers (wind/current) there are 3 situations:
@@ -3489,11 +3658,11 @@ void Map::SpawnPushers()
       {
       case 224: // wind
 	for (s = -1; (s = FindSectorFromLineTag(l,s)) >= 0 ; )	  
-	  AddThinker(new pusher_t(p_wind, l->dx, l->dy, NULL, s));
+	  AddThinker(new pusher_t(pusher_t::p_wind, l->dx, l->dy, NULL, s));
 	break;
       case 225: // current
 	for (s = -1; (s = FindSectorFromLineTag(l,s)) >= 0 ; )
-	  AddThinker(new pusher_t(p_current, l->dx, l->dy, NULL, s));
+	  AddThinker(new pusher_t(pusher_t::p_current, l->dx, l->dy, NULL, s));
 	break;
       case 226: // push/pull
 	for (s = -1; (s = FindSectorFromLineTag(l,s)) >= 0 ; )
@@ -3501,7 +3670,7 @@ void Map::SpawnPushers()
 	    // TODO don't spawn push mapthings at all?
 	    DActor* thing = GetPushThing(s);
 	    if (thing) // No MT_P* means no effect
-	      AddThinker(new pusher_t(p_push, l->dx, l->dy, thing, s));
+	      AddThinker(new pusher_t(pusher_t::p_push, l->dx, l->dy, thing, s));
 	  }
 	break;
       }

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/04/14 08:58:30  smite-meister
+// Hexen maps load.
+//
 // Revision 1.7  2003/04/04 00:01:58  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -93,6 +96,49 @@ int P_FindMinSurroundingLight(sector_t *sector, int     max);
 
 int P_CheckTag(line_t *line);
 
+// sector special effects
+enum sectorspecial_t
+{
+  SS_none = 0,
+
+  // light effects (1-31) (bits 0-4)
+  SS_LIGHTMASK    = 0x001F, // 0-31
+
+  SS_light_flicker   = 1,
+  SS_light_blinkfast = 2,
+  SS_light_blinkslow = 3,
+  SS_light_glow      = 8,
+  SS_light_syncfast  = 12,
+  SS_light_syncslow  = 13,
+  SS_light_fireflicker = 17,
+
+  // damage frequency (bits 5-6)
+  SS_DAMAGEMASK   = 0x0060, // 32+64
+
+  SS_damage_16 = 0x0020, // every 16 tics
+  SS_damage_32 = 0x0040,
+  SS_damage_XX = 0x0060,
+
+  // other Boom stuff
+  SS_secret   = 0x0080,
+  SS_friction = 0x0100,
+  SS_wind     = 0x0200,
+
+  // bits 10-15 are free
+
+  // Hexen: TODO a real mess
+  /*
+  SS_Light_Phased = 1,
+  SS_LightSequenceStart = 2,
+  SS_LightSequenceSpecial1 = 3,
+  SS_LightSequenceSpecial2 = 4,
+  SS_Stairs_Special1 = 26,
+  SS_Stairs_Special2 = 27,
+  SS_Light_IndoorLightning1 = 198,
+  SS_Light_IndoorLightning2 = 199,
+  SS_Sky2 = 200,
+  */
+};
 
 
 //======================================
@@ -698,17 +744,6 @@ typedef enum
    I really don't want to read, understand and rewrite all the changes to the source and entire
    team made! Anyway, this is for the generalized linedef types. */
 
-//jff 3/14/98 add bits and shifts for generalized sector types
-
-#define DAMAGE_MASK     0x60
-#define DAMAGE_SHIFT    5
-#define SECRET_MASK     0x80
-#define SECRET_SHIFT    7
-#define FRICTION_MASK   0x100
-#define FRICTION_SHIFT  8
-#define PUSH_MASK       0x200
-#define PUSH_SHIFT      9
-
 //jff 02/04/98 Define masks, shifts, for fields in 
 // generalized linedef types
 
@@ -938,38 +973,44 @@ typedef enum
   AllKeys,
 } keykind_e;
 
-/* SoM: End generalized linedef code */
 
-typedef enum {
-  sc_side,
-  sc_floor,
-  sc_ceiling,
-  sc_carry,
-  sc_carry_ceiling,
-} scroll_e;
 
-// generalized scroller code
+//============================================
+// generalized scrollers
 class scroll_t : public Thinker
 {
   friend class Map;
-private:
-  scroll_e type;
-  fixed_t dx, dy;      // (dx,dy) scroll speeds
-  int affectee;        // Number of affected sidedef, sector, tag, or whatever
-  int control;         // Control sector (-1 if none) used to control scrolling
-  fixed_t last_height; // Last known height of control sector
-  fixed_t vdx, vdy;    // Accumulated velocity if accelerative
-  int accel;           // Whether it's accelerative
+
 public:
-  scroll_t(scroll_e t, fixed_t ndx, fixed_t ndy,
-	   int ctrl, int aff, int acc, const sector_t *csec);
+  enum scroll_e
+  {
+    sc_side,
+    sc_floor,
+    sc_ceiling,
+    sc_carry_floor,
+    sc_carry_ceiling,
+    sc_push, // no texture scroll, just Actor movement
+    sc_wind
+  };
+
+private:
+  scroll_e  type;
+  fixed_t   vx, vy;    // scroll speeds
+  int       affectee;  // Number of affected sidedef, sector, tag, or whatever
+  sector_t *control;   // Control sector (NULL if none) used to control scrolling
+  fixed_t   last_height; // Last known height of control sector
+  bool      accel;     // Whether it's accelerative
+  fixed_t   vdx, vdy;  // Accumulated velocity if accelerative
+
+public:
+
+  scroll_t(scroll_e type, fixed_t dx, fixed_t dy, sector_t *csec, int aff, bool acc);
   virtual void Think();
 };
 
 
-
+//============================================
 //SoM: 3/8/2000: added new model of friction for ice/sludge effects
-
 class friction_t : public Thinker
 {
   friend class Map;
@@ -984,20 +1025,23 @@ public:
 
 extern const float normal_friction;
 
+//============================================
 //SoM: 3/8/2000: Model for Pushers for push/pull effects
-
-typedef enum {
-  p_push,
-  p_pull,
-  p_wind,
-  p_current,
-  p_upcurrent,
-  p_downcurrent
-} pusher_e;
-
 class pusher_t : public Thinker
 {
   friend class Map;
+
+public:
+  enum pusher_e
+  {
+    p_push,
+    p_pull,
+    p_wind,
+    p_current,
+    p_upcurrent,
+    p_downcurrent
+  };
+
 private:
   pusher_e type;
   DActor *source;     // Point source if point pusher

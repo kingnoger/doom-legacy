@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2003/04/14 08:58:24  smite-meister
+// Hexen maps load.
+//
 // Revision 1.11  2003/04/04 00:01:53  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -248,9 +251,6 @@ Actor::Actor(fixed_t nx, fixed_t ny, fixed_t nz)
 
   owner = target = NULL;
 
-  friction = normal_friction;
-  movefactor = 1.0f;
-
   pres = NULL;
   // TODO hexen fields initialization
 }
@@ -319,6 +319,9 @@ void Actor::Remove()
       mp->itemrespawnqueue.push_back(spawnpoint);
       mp->itemrespawntime.push_back(mp->maptic);
     }
+
+  if (tid)
+    mp->RemoveFromTIDmap(this);
 
   // unlink from sector and block lists
   UnsetPosition();
@@ -535,33 +538,40 @@ const float normal_friction = 0.90625f; // 0xE800
 float Actor::GetMoveFactor()
 {
   extern int variable_friction;
+  float mf  = 1.0f;
 
-  float mf = 1.0f;
+  // less control if not onground.
+  bool onground = (z <= floorz) || (flags2 & (MF2_ONMOBJ | MF2_FLY));
 
-  // If the floor is icy or muddy, it's harder to get moving. This is where
-  // the different friction factors are applied to 'trying to move'. In
-  // Actor::XYFriction, the friction factors are applied as you coast and slow down.
-
-  if (boomsupport && variable_friction &&
-      !(flags & (MF_NOGRAVITY | MF_NOCLIPLINE)))
+  if (boomsupport && variable_friction && onground && !(flags & (MF_NOGRAVITY | MF_NOCLIPLINE)))
     {
-      float frict = friction;
-
-      if (frict == normal_friction)            // normal floor
-	;
-      else if (frict > normal_friction)        // ice
+      float frict = normal_friction;
+      msecnode_t *node = touching_sectorlist;
+      sector_t *sec;
+      while (node)
 	{
-          mf = movefactor;
-          movefactor = 1.0f;  // reset
+	  sec = node->m_sector;
+	  if ((sec->special & SS_friction) && (z <= sec->floorheight))
+	    if (frict == normal_friction || frict > sec->friction)
+	      {
+		frict = sec->friction;
+		mf = sec->movefactor;
+	      }
+	  node = node->m_tnext;
 	}
-      else                                      // sludge
+
+      // If the floor is icy or muddy, it's harder to get moving. This is where
+      // the different friction factors are applied to 'trying to move'. In
+      // Actor::XYFriction, the friction factors are applied as you coast and slow down.
+
+      if (frict < normal_friction) // sludge
 	{
           // phares 3/11/98: you start off slowly, then increase as
           // you get better footing
 #define MORE_FRICTION_MOMENTUM 15000       // mud factor based on momentum
 
           fixed_t momentum = P_AproxDistance(px,py);
-          mf = movefactor;
+
 	  if (momentum < MORE_FRICTION_MOMENTUM)
 	    mf *= 0.125;
           else if (momentum < MORE_FRICTION_MOMENTUM<<1)
@@ -569,9 +579,24 @@ float Actor::GetMoveFactor()
           else if (momentum < MORE_FRICTION_MOMENTUM<<2)
 	    mf *= 0.5;
 
-          movefactor = 1.0f;  // reset
 	}
     }
+
+  if (eflags & MFE_UNDERWATER)
+    {
+      // half forward speed when waist under water
+      // a little better grip if feet touch the ground
+      if (onground)
+	mf = 0.5 * (mf + 0.5);
+      else
+	mf = 0.5; // swimming
+    }
+  else if (!onground)
+    {
+      // allow very small movement while in air for playability
+      mf = 0.125;
+    }
+
   return mf;
 }
 
@@ -585,30 +610,6 @@ void Actor::XYMovement()
 {
   extern line_t *ceilingline;
   extern int skyflatnum;
-
-  //when up against walls
-  static int windTab[3] = {2048*5, 2048*10, 2048*25};
-
-  // stupid heretic wind
-  if (flags2 & MF2_WINDTHRUST)
-    {
-      int special = subsector->sector->special;
-      switch(special)
-        {
-        case 40: case 41: case 42: // Wind_East
-	  Thrust(0, windTab[special-40]);
-	  break;
-        case 43: case 44: case 45: // Wind_North
-	  Thrust(ANG90, windTab[special-43]);
-	  break;
-        case 46: case 47: case 48: // Wind_South
-	  Thrust(ANG270, windTab[special-46]);
-	  break;
-        case 49: case 50: case 51: // Wind_West
-	  Thrust(ANG180, windTab[special-49]);
-	  break;
-        }
-    }
 
   if (px > MAXMOVE)
     px = MAXMOVE;
@@ -728,7 +729,8 @@ void Actor::XYMovement()
 
 #define STOPSPEED            (0x1000/NEWTICRATERATIO)
 #define FRICTION_LOW          0xf900  // 0.973
-#define FRICTION_FLY          0xeb00
+const float friction_fly = 0.918f;
+#define FRICTION_FLY          0xeb00  // 0.918
 #define FRICTION              0xe800  // 0.90625
 #define FRICTION_UNDERWATER  (FRICTION*3/4)
 
@@ -749,8 +751,7 @@ void Actor::XYFriction(fixed_t oldx, fixed_t oldy)
   if (flags & MF_CORPSE)
     {
       // do not stop sliding if halfway off a step with some momentum
-      if (px > FRACUNIT/4 || px < -FRACUNIT/4
-	  || py > FRACUNIT/4 || py < -FRACUNIT/4)
+      if (px > FRACUNIT/4 || px < -FRACUNIT/4 || py > FRACUNIT/4 || py < -FRACUNIT/4)
         {
 	  if (floorz != subsector->sector->floorheight)
 	    return;
@@ -759,42 +760,41 @@ void Actor::XYFriction(fixed_t oldx, fixed_t oldy)
 
   if (px > -STOPSPEED && px < STOPSPEED && py > -STOPSPEED && py < STOPSPEED)
     {
-      px = 0;
-      py = 0;
+      px = py = 0;
+      return;
     }
+
+  sector_t *sec;
+  float fri = normal_friction;
+
+  if (flags & (MF_NOGRAVITY | MF_NOCLIPLINE))
+    //if (thing->Type() != Thinker::tt_ppawn)
+    ;
+  else if ((oldx == x) && (oldy == y)) // Did you go anywhere?
+    ;
+  else if ((flags2 & MF2_FLY) && (z > floorz) && !(flags2 & MF2_ONMOBJ))
+    fri = friction_fly;
   else
     {
-      if (game.mode == gm_heretic)
-        {
-	  if ((flags2 & MF2_FLY) && (z > floorz)
-	     && !(flags2 & MF2_ONMOBJ))
-            {
-	      px = FixedMul(px, FRICTION_FLY);
-	      py = FixedMul(py, FRICTION_FLY);
-            }
-	  else if (subsector->sector->special == 15) // Friction_Low
-            {
-	      px = FixedMul(px, FRICTION_LOW);
-	      py = FixedMul(py, FRICTION_LOW);
-            }
-	  else
-            {
-	      px = FixedMul(px, FRICTION);
-	      py = FixedMul(py, FRICTION);
-            }
-        }
-      else
+      msecnode_t *node = touching_sectorlist;
+      while (node)
 	{
-	  //SoM: 3/28/2000: Use boom friction.
-	  if ((oldx == x) && (oldy == y)) // Did you go anywhere?
-	    friction = normal_friction;
+	  sec = node->m_sector;
 
-	  px = int(px * friction);
-	  py = int(py * friction);
-
-	  friction = normal_friction;
+	  if ((sec->special & SS_friction) && (z <= sec->floorheight))
+	    if (fri == normal_friction || fri > sec->friction)
+	      {
+		fri = sec->friction;
+		//thing->movefactor = movefactor;
+	      }
+	  node = node->m_tnext;
 	}
     }
+
+  px = int(px * fri);
+  py = int(py * fri);
+
+  //friction = normal_friction;
 }
 
 
@@ -865,6 +865,7 @@ void Actor::ZMovement()
     }
   else if (flags2 & MF2_LOGRAV)
     {
+      // TODO sector gravity
       if (pz == 0)
 	pz = -(cv_gravity.value>>3)*2;
       else

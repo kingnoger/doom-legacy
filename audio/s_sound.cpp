@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/04/14 08:58:22  smite-meister
+// Hexen maps load.
+//
 // Revision 1.9  2003/04/08 09:46:04  smite-meister
 // Bugfixes
 //
@@ -1054,22 +1057,20 @@ void S_StartAmbSound(int sfx_id, int volume)
 }
 
 // wrapper
-static void S_Start3DSound(sfxinfo_t *sfx, soundsource_t *source)
+static void S_Start3DSound(sfxinfo_t *sfx, soundsource_t *source, int vol = 255)
 {
   // Initialize sound parameters
-
-  int volume = 255;
   int pitch = NORM_PITCH;
 
   const char *name = sfx->lumpname;
 
   // NOTE: sfx->singularity is completely ignored!
   // Hexen max. channelnum is sort of incorporated into singularity (and thus ignored too...)
-  S.Start3DSound(name, source, volume, pitch, sfx->priority);
+  S.Start3DSound(name, source, vol, pitch, sfx->priority);
 }
 
 // wrapper
-void S_StartSound(mappoint_t *m, int sfx_id)
+void S_StartSound(mappoint_t *m, int sfx_id, int vol)
 {
   soundsource_t s;
   s.x = m->x;
@@ -1091,11 +1092,11 @@ void S_StartSound(mappoint_t *m, int sfx_id)
     HW3S_StartSound(NULL, sfx_id);
   else
 #endif
-    S_Start3DSound(sfx, &s);
+    S_Start3DSound(sfx, &s, vol);
 }
 
 // wrapper
-void S_StartSound(Actor *orig, int sfx_id)
+void S_StartSound(Actor *orig, int sfx_id, int vol)
 {
   soundsource_t s;
   s.x = orig->x;
@@ -1126,5 +1127,5 @@ void S_StartSound(Actor *orig, int sfx_id)
     HW3S_StartSound(orig, sfx_id);
   else
 #endif
-    S_Start3DSound(sfx, &s);
+    S_Start3DSound(sfx, &s, vol);
 }

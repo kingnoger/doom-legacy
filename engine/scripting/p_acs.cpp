@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/04/14 08:58:29  smite-meister
+// Hexen maps load.
+//
 // Revision 1.3  2003/04/04 00:01:57  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -46,6 +49,8 @@
 #include "m_random.h"
 #include "r_defs.h"
 #include "r_data.h"
+#include "s_sound.h"
+
 #include "w_wad.h"
 #include "z_zone.h"
 
@@ -85,12 +90,14 @@ public:
   int number;
   int infoIndex;
   int delayCount;
-  int stak[ACS_STACK_DEPTH];
   int stackPtr;
+  int stak[ACS_STACK_DEPTH];
   int vars[MAX_ACS_SCRIPT_VARS];
   int *ip;
 
 public:
+  acs_t(int num, int infoindex, int *ip);
+
   virtual void Think();
   // TODO new and delete for hub/global scripts (not PU_LEVSPEC)
 };
@@ -427,15 +434,11 @@ void Map::LoadACScripts(int lump)
 
 void Map::StartOpenACS(int number, int infoIndex, int *address)
 {
-  acs_t *script = new acs_t;
-  memset(script, 0, sizeof(acs_t));
-  script->number = number;
+  acs_t *script = new acs_t(number, infoIndex, address);
 
   // World objects are allotted 1 second for initialization
   script->delayCount = 35;
 
-  script->infoIndex = infoIndex;
-  script->ip = address;
   AddThinker(script);
 }
 
@@ -452,7 +455,7 @@ void P_CheckACSStore()
 {
   acsstore_t *store;
 
-  /*
+  /* FIXME
   for(store = ACSStore; store->map != 0; store++)
     {
       if(store->map == gamemap)
@@ -500,14 +503,11 @@ bool Map::StartACS(int number, byte *args, Actor *activator, line_t *line, int s
     { // Script is already executing
       return false;
     }
-  acs_t *script = new acs_t;
-  memset(script, 0, sizeof(acs_t));
-  script->number = number;
-  script->infoIndex = infoIndex;
+  acs_t *script = new acs_t(number, infoIndex, ACSInfo[infoIndex].address);
+
   script->activator = activator;
   script->line = line;
   script->side = side;
-  script->ip = ACSInfo[infoIndex].address;
 
   for(i = 0; i < ACSInfo[infoIndex].argCount; i++)
     {
@@ -619,6 +619,22 @@ void P_ACSInitNewGame()
 {
   memset(WorldVars, 0, sizeof(WorldVars));
   memset(ACSStore, 0, sizeof(ACSStore));
+}
+
+
+acs_t::acs_t(int num, int ii, int *addr)
+{
+  number = num;
+  infoIndex = ii;
+  ip = addr;
+
+  activator = NULL;
+  line = NULL;
+  side = 0;
+  delayCount = 0;
+  stackPtr = 0;
+  memset(stak, 0, sizeof(stak));
+  memset(vars, 0, sizeof(vars));
 }
 
 //==========================================================================
@@ -1316,21 +1332,23 @@ static void ThingCount(int type, int tid)
     { // Nothing to count
       return;
     }
-  /* FIXME when TID system works
+
+  extern mobjtype_t TranslateThingType[];
+
   moType = TranslateThingType[type];
   count = 0;
   searcher = -1;
-  if(tid)
+  if (tid)
     { // Count TID things
-      while((mobj = P_FindMobjFromTID(tid, &searcher)) != NULL)
+      while ((mobj = ACMap->FindFromTIDmap(tid, &searcher)) != NULL)
 	{
-	  if(type == 0)
+	  if (type == 0)
 	    { // Just count TIDs
 	      count++;
 	    }
-	  else if(moType == mobj->type)
+	  else if (mobj->Type() == Thinker::tt_dactor && moType == ((DActor *)mobj)->type)
 	    {
-	      if(mobj->flags&MF_COUNTKILL && mobj->health <= 0)
+	      if (mobj->flags & MF_COUNTKILL && mobj->health <= 0)
 		{ // Don't count dead monsters
 		  continue;
 		}
@@ -1338,9 +1356,10 @@ static void ThingCount(int type, int tid)
 	    }
 	}
     }
+  /* FIXME add thinker iterator function
   else
     { // Count only types
-      for(think = thinkercap.next; think != &thinkercap;
+      for (think = thinkercap.next; think != &thinkercap;
 	  think = think->next)
 	{
 	  if(think->function != P_MobjThinker)
@@ -1359,9 +1378,9 @@ static void ThingCount(int type, int tid)
 	  count++;
 	}
     }
-  Push(count);
   */
-  Push(0); // temporary
+
+  Push(count);
 }
 
 static int CmdTagWait()
@@ -1688,38 +1707,31 @@ static int CmdSectorSound()
     }
   volume = Pop();
 
-  // FIXME the sound functions need to be fixed someday
-  //S_StartSound(orig, S_GetSoundID(ACMap->ACStrings[Pop()]), volume);
+  S_StartSound(orig, S_GetSoundID(ACMap->ACStrings[Pop()]), volume);
   return SCRIPT_CONTINUE;
 }
 
 static int CmdThingSound()
 {
-  int tid;
-  int sound;
-  int volume;
   Actor *mobj;
-  int searcher;
 
-  volume = Pop();
-  //sound = S_GetSoundID(ACMap->ACStrings[Pop()]);
-  tid = Pop();
-  searcher = -1;
-  /*
-  while((mobj = P_FindMobjFromTID(tid, &searcher)) != NULL)
+  int volume = Pop();
+  int sound = S_GetSoundID(ACMap->ACStrings[Pop()]);
+  int tid = Pop();
+  int searcher = -1;
+
+  while((mobj = ACMap->FindFromTIDmap(tid, &searcher)) != NULL)
     {
-      S_StartSoundAtVolume(mobj, sound, volume);
+      S_StartSound(mobj, sound, volume);
     }
-  */
+
   return SCRIPT_CONTINUE;
 }
 
 static int CmdAmbientSound()
 {
-  int volume;
-
-  volume = Pop();
-  //S_StartSoundAtVolume(NULL, S_GetSoundID(ACMap->ACStrings[Pop()]), volume);
+  int volume = Pop();
+  S_StartAmbSound(S_GetSoundID(ACMap->ACStrings[Pop()]), volume);
   return SCRIPT_CONTINUE;
 }
 
@@ -1731,7 +1743,7 @@ static int CmdSoundSequence()
     {
       orig = &ACScript->line->frontsector->soundorg;
     }
-  //SN_StartSequenceName(mobj, ACMap->ACStrings[Pop()]);
+  //FIXME SN_StartSequenceName(mobj, ACMap->ACStrings[Pop()]);
   return SCRIPT_CONTINUE;
 }
 

@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.11  2003/04/14 08:58:30  smite-meister
+// Hexen maps load.
+//
 // Revision 1.10  2003/04/08 09:46:06  smite-meister
 // Bugfixes
 //
@@ -49,13 +52,17 @@
 #include <deque>
 #include <string>
 #include <list>
+#include <map>
 
 #include "doomtype.h"
+#include "g_think.h"
+#include "m_fixed.h"
 #include "info.h" // mobjtype_t
 #include "p_spec.h"
 
 using namespace std;
 
+class Actor;
 class DActor;
 class Pawn;
 class PlayerPawn;
@@ -63,8 +70,6 @@ class PlayerInfo;
 
 struct intercept_t; 
 typedef bool (*traverser_t) (intercept_t *in);
-
-struct runningscript_t;
 
 
 // new class for maps
@@ -76,53 +81,42 @@ public:
   class LevelNode *level;   // the level in which this Map belongs
   string filename, mapname; // name of the map file, map lump
   int lumpnum;              // lumpnum of the separator beginning the map
+
   class MapInfo *info;
+
+  tic_t starttic, maptic;   // number of tics the map has played
+  int   kills, items, secrets;  // map totals
 
   bool hexen_format;
 
-  // geometry  
-  int             numvertexes;
-  vertex_t*       vertexes;
+  //------------ Geometry ------------
 
-  int             numsegs;
-  seg_t*          segs;
+  int              numvertexes;
+  struct vertex_t* vertexes;
 
-  int             numsectors;
-  sector_t*       sectors;
+  int              numsegs;
+  struct seg_t*    segs;
 
-  int             numsubsectors;
-  subsector_t*    subsectors;
+  int              numsectors;
+  struct sector_t *sectors;
+
+  int              numsubsectors;
+  struct subsector_t *subsectors;
 
   int             numnodes;
-  node_t*         nodes;
+  struct node_t*  nodes;
 
   int             numlines;
-  line_t*         lines;
+  struct line_t*  lines;
 
   int             numsides;
-  side_t*         sides;
+  struct side_t*  sides;
 
-  int                nummapthings;
-  struct mapthing_t *mapthings;
-
-  // polyobjects
   int               NumPolyobjs;
   struct polyobj_t* polyobjs;
   struct polyblock_t **PolyBlockMap;
 
-
-  // the mother of all FS scripts (in the map)
-  struct script_t *levelscript;
-
-  // ACS script data
-  int   ACScriptCount;
-  byte *ActionCodeBase;
-  struct acsInfo_t *ACSInfo;
-  int ACStringCount;
-  char **ACStrings;
-
-
-  // BLOCKMAP
+  //------------ BLOCKMAP ------------
   // Created from axis aligned bounding box of the map, a rectangular array of
   // blocks of size ...
   // Used to speed up collision detection by spatial subdivision in 2D.
@@ -146,10 +140,9 @@ public:
   fixed_t bmaporgx, bmaporgy;
 
   // for thing chains
-  Actor **blocklinks;
+  class Actor **blocklinks;
 
-
-  // REJECT
+  //------------ REJECT ------------
   // For fast sight rejection.
   // Speeds up enemy AI by skipping detailed
   //  LineOf Sight calculation.
@@ -158,37 +151,52 @@ public:
   //
   byte *rejectmatrix;
 
+  //------------ Scripting ------------
 
-  // other stuff
+  // the mother of all FS scripts (in the map)
+  struct script_t *levelscript;
 
-  tic_t starttic, maptic;  // number of tics the map has played
+  // currently active FS scripts
+  struct runningscript_t *runningscripts; // linked list
 
-  int kills, items, secrets;  // map totals
+  // ACS script data
+  int   ACScriptCount;
+  byte *ActionCodeBase;
+  struct acsInfo_t *ACSInfo;
+  int ACStringCount;
+  char **ACStrings;
 
-  vector<PlayerInfo *> players;
+  //------------ Mapthings and Thinkers ------------
 
-  vector<mapthing_t *> playerstarts;
-#define MAX_DM_STARTS 32
-  vector<mapthing_t *> dmstarts;
-
-  deque<PlayerInfo *> respawnqueue;  // for players queuing to be respawned
+  int                nummapthings;
+  struct mapthing_t *mapthings;
+  
+  // Thinkers in the map
+  // Both the head and tail of the thinker list.
+  Thinker thinkercap;
 
   deque<mapthing_t *> itemrespawnqueue;
   deque<tic_t>        itemrespawntime; // this could be combined to the previous, but...
 
 #define BODYQUESIZE 32
   deque<Actor *> bodyqueue;
-  
-  // Thinkers in the map
-  // Both the head and tail of the thinker list.
-  Thinker thinkercap;
 
-  // currently active FS scripts
-  runningscript_t *runningscripts; // linked list
+  multimap<short, Actor *> TIDmap; // Thing ID, for grouping things
+
+  //------------ Specialized Thinkers ------------
 
   // currently active dynamic geometry elements, based on BOOM code
-  list<ceiling_t *> activeceilings;
-  list<plat_t *>    activeplats;
+  list<class ceiling_t *> activeceilings;
+  list<class plat_t *>    activeplats;
+
+  //------------ Players ------------
+
+  vector<PlayerInfo *> players;
+  deque<PlayerInfo *>  respawnqueue;  // for players queuing to be respawned
+
+  vector<mapthing_t *> playerstarts;
+#define MAX_DM_STARTS 32
+  vector<mapthing_t *> dmstarts;
 
   //------------------------------------
   // TODO: from this line on it's badly designed stuff to be fixed someday
@@ -247,6 +255,10 @@ public:
   void SpawnPuff(fixed_t nx, fixed_t ny, fixed_t nz);
   void SpawnSmoke(fixed_t x, fixed_t y, fixed_t z);
 
+  void InsertIntoTIDmap(Actor *p, int tid);
+  void RemoveFromTIDmap(Actor *p);
+  Actor *FindFromTIDmap(int tid, int *pos);
+
   // in p_map.cpp
   void CreateSecNodeList(Actor *thing, fixed_t x, fixed_t y);
   bool CheckSector(sector_t* sector, bool crunch);
@@ -258,7 +270,8 @@ public:
   void LoadVertexes(int lump);
   void LoadSegs(int lump);
   void LoadSubsectors(int lump);
-  void LoadSectors(int lump);
+  void LoadSectors1(int lump);
+  void LoadSectors2(int lump);
   void LoadNodes(int lump);
   void LoadThings(int lump);
   void LoadLineDefs(int lump);
@@ -313,6 +326,7 @@ public:
   void ShootSpecialLine(Actor *thing, line_t *line);
   void UpdateSpecials();
 
+  int  SpawnSectorSpecial(int sp, sector_t *sec);
   void SpawnSpecials();
   void SpawnScrollers();
   void SpawnFriction();
@@ -365,7 +379,7 @@ public:
   int  EV_DoLockedDoor(line_t* line, vldoor_e type, PlayerPawn *p, fixed_t speed);
   int  EV_VerticalDoor(line_t* line, Actor *p);
   void SpawnDoorCloseIn30 (sector_t* sec);
-  void SpawnDoorRaiseIn5Mins(sector_t* sec, int secnum);
+  void SpawnDoorRaiseIn5Mins(sector_t* sec);
   
   // in p_floor.cpp
   int EV_DoFloor(line_t *line, floor_e floortype);

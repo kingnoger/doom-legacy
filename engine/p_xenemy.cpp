@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/04/14 08:58:28  smite-meister
+// Hexen maps load.
+//
 // Revision 1.2  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -1726,8 +1729,8 @@ static void DragonSeek(DActor *actor, angle_t thresh, angle_t turnMax)
 		  continue;
 		}
 	      search = -1;
-	      // FIXME all TID functions in this file
-	      mo = actor; //P_FindMobjFromTID(target->args[i], &search);
+
+	      mo = actor->mp->FindFromTIDmap(target->args[i], &search);
 	      angleToSpot = R_PointToAngle2(actor->x, actor->y, 
 					    mo->x, mo->y);
 	      if(abs(angleToSpot-angleToTarget) < bestAngle)
@@ -1739,7 +1742,7 @@ static void DragonSeek(DActor *actor, angle_t thresh, angle_t turnMax)
 	  if(bestArg != -1)
 	    {
 	      search = -1;
-	      //actor->special1 = (int)P_FindMobjFromTID(target->args[bestArg], &search);
+	      actor->special1 = (int)actor->mp->FindFromTIDmap(target->args[bestArg], &search);
 	    }
 	}
       else
@@ -1749,7 +1752,7 @@ static void DragonSeek(DActor *actor, angle_t thresh, angle_t turnMax)
 	      i = (P_Random()>>2)%5;
 	    } while(!target->args[i]);
 	  search = -1;
-	  //actor->special1 = (int)P_FindMobjFromTID(target->args[i], &search);
+	  actor->special1 = (int)actor->mp->FindFromTIDmap(target->args[i], &search);
 	}
     }
 }
@@ -1767,14 +1770,14 @@ void A_DragonInitFlight(DActor *actor)
   search = -1;
   do
     { // find the first tid identical to the dragon's tid
-      //actor->special1 = (int)P_FindMobjFromTID(actor->tid, &search);
+      actor->special1 = (int)actor->mp->FindFromTIDmap(actor->tid, &search);
       if(search == -1)
 	{
 	  actor->SetState(actor->info->spawnstate);
 	  return;
 	}
     } while(actor->special1 == (int)actor);
-  //P_RemoveMobjFromTIDList(actor);
+  actor->mp->RemoveFromTIDmap(actor);
 }
 
 //============================================================================
@@ -3714,7 +3717,7 @@ void A_FreezeDeathChunks(DActor *actor)
       mo->player->lookdir = 0;
     }
   */
-  // P_RemoveMobjFromTIDList(actor);
+  actor->mp->RemoveFromTIDmap(actor);
   actor->SetState(S_FREETARGMOBJ);
   actor->flags2 |= MF2_DONTDRAW;
 }
@@ -3754,7 +3757,7 @@ void KSpiritInit(DActor *spirit, DActor *korax);
 
 void A_KoraxChase(DActor *actor)
 {
-  DActor *spot;
+  Actor *spot;
   int lastfound;
   byte args[3]={0,0,0};
 
@@ -3762,7 +3765,7 @@ void A_KoraxChase(DActor *actor)
       (actor->health <= (actor->info->spawnhealth/2)))
     {
       lastfound = 0;
-      spot = NULL; //P_FindMobjFromTID(KORAX_FIRST_TELEPORT_TID, &lastfound);
+      spot = actor->mp->FindFromTIDmap(KORAX_FIRST_TELEPORT_TID, &lastfound);
       if (spot)
 	{
 	  actor->Teleport(spot->x, spot->y, spot->angle, false);
@@ -3790,7 +3793,7 @@ void A_KoraxChase(DActor *actor)
       if (P_Random()<10)
 	{
 	  lastfound = actor->special1;
-	  spot = NULL;//P_FindMobjFromTID(KORAX_TELEPORT_TID, &lastfound);
+	  spot = actor->mp->FindFromTIDmap(KORAX_TELEPORT_TID, &lastfound);
 	  actor->special1 = lastfound;
 	  if (spot)
 	    {

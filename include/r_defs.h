@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/04/14 08:58:31  smite-meister
+// Hexen maps load.
+//
 // Revision 1.4  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -380,6 +383,14 @@ struct sector_t
   
   int floorlightsec, ceilinglightsec;
   int teamstartsec;
+
+  // TEST
+  short damage, damagetype; // given according to damage bits in 'special'
+
+  float gravity;
+
+  // friction belongs here, not in Actor
+  float friction, movefactor;
 
   int bottommap, midmap, topmap; // dynamic colormaps
   

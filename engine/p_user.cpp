@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/04/14 08:58:28  smite-meister
+// Hexen maps load.
+//
 // Revision 1.6  2003/03/15 20:07:17  smite-meister
 // Initial Hexen compatibility!
 //
@@ -119,6 +122,7 @@ bool PlayerPawn::Teleport(fixed_t nx, fixed_t ny, angle_t nangle)
 void PlayerPawn::Thrust(angle_t angle, fixed_t move)
 {
   angle >>= ANGLETOFINESHIFT;
+  /*
   if (subsector->sector->special == 15
       && !(powers[pw_flight] && !(z <= floorz))) // Friction_Low
     {
@@ -126,6 +130,7 @@ void PlayerPawn::Thrust(angle_t angle, fixed_t move)
       py += FixedMul(move>>2, finesine[angle]);
     }
   else
+  */
     {
       px += FixedMul(move, finecosine[angle]);
       py += FixedMul(move, finesine[angle]);
@@ -181,16 +186,9 @@ void PlayerPawn::Move()
   if ((cmd->angleturn & TICCMD_RECEIVED) == 0)
     ticmiss++;
 
-  // Do not let the player control movement
-  //  if not onground.
-  bool onground = (z <= floorz) || (cheats & CF_FLYAROUND)
-    || (flags2 & (MF2_ONMOBJ|MF2_FLY));
-
   fixed_t movepushforward = 0, movepushside = 0;
 
-  float mf = 1.0f;
-  if (boomsupport && variable_friction)
-    mf = GetMoveFactor();
+  float mf = GetMoveFactor();
 
   // limit speed = push/(1-friction) => magic multiplier = 2*(1-friction) = 0.1875
   float magic = 0.1875 * FRACUNIT * speed * mf;
@@ -198,40 +196,12 @@ void PlayerPawn::Move()
   if (cmd->forwardmove)
     {
       movepushforward = int(magic * cmd->forwardmove/100);
-      
-      if (eflags & MFE_UNDERWATER)
-	{
-	  // half forward speed when waist under water
-	  // a little better grip if feet touch the ground
-	  if (!onground)
-	    movepushforward >>= 1;
-	  else
-	    movepushforward *= 3/4;
-	}
-      else
-	{
-	  // allow very small movement while in air for gameplay
-	  if (!onground)
-	    movepushforward >>= 3;
-	}
-
       Thrust(angle, movepushforward);
     }
 
   if (cmd->sidemove)
     {
       movepushside = int(magic * cmd->sidemove/100);
-      if (eflags & MFE_UNDERWATER)
-	{
-	  if (!onground)
-	    movepushside >>= 1;
-	  else
-	    movepushside *= 3/4;
-	}
-      else 
-	if (!onground)
-	  movepushside >>= 3;
-
       Thrust(angle-ANG90, movepushside);
     }
 
@@ -249,6 +219,8 @@ void PlayerPawn::Move()
 	  pz += a;
 	}
     }
+
+  bool onground = (z <= floorz) || (flags2 & (MF2_ONMOBJ | MF2_FLY)) || (cheats & CF_FLYAROUND);
 
   //added:22-02-98: jumping
   if (cmd->buttons & BT_JUMP)
@@ -324,6 +296,8 @@ void PlayerPawn::Move()
     }
 }
 
+#ifdef CLIENTPREDICTION2
+
 
 byte weapontobutton[NUMWEAPONS]={wp_fist    <<BT_WEAPONSHIFT,
                                  wp_pistol  <<BT_WEAPONSHIFT,
@@ -335,7 +309,6 @@ byte weapontobutton[NUMWEAPONS]={wp_fist    <<BT_WEAPONSHIFT,
 				 (wp_fist    <<BT_WEAPONSHIFT) | BT_EXTRAWEAPON,// wp_chainsaw
 				 (wp_shotgun <<BT_WEAPONSHIFT) | BT_EXTRAWEAPON};//wp_supershotgun
 
-#ifdef CLIENTPREDICTION2
 
 void CL_ResetSpiritPosition(Actor *mobj)
 {

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2003/04/14 08:58:27  smite-meister
+// Hexen maps load.
+//
 // Revision 1.12  2003/04/04 00:01:56  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -347,33 +350,33 @@ char *P_FlatNameForNum(int num)
 }
 
 
-// was P_LoadSectors
-
-void Map::LoadSectors(int lump)
+void Map::LoadSectors1(int lump)
 {
-  byte*               data;
-  int                 i;
-  mapsector_t*        ms;
-  sector_t*           ss;
+  // allocate and zero the sectors
+  numsectors = fc.LumpLength(lump) / sizeof(mapsector_t);
+  sectors = (sector_t *)Z_Malloc(numsectors*sizeof(sector_t), PU_LEVEL, 0);
+  memset(sectors, 0, numsectors*sizeof(sector_t));
+}
 
-  levelflat_t*        foundflats;
+// was P_LoadSectors
+void Map::LoadSectors2(int lump)
+{
+  int i;
 
-  numsectors = fc.LumpLength (lump) / sizeof(mapsector_t);
-  sectors = (sector_t *)Z_Malloc (numsectors*sizeof(sector_t),PU_LEVEL,0);
-  memset (sectors, 0, numsectors*sizeof(sector_t));
-  data = (byte *)fc.CacheLumpNum (lump,PU_STATIC);
+  byte *data = (byte *)fc.CacheLumpNum(lump, PU_STATIC);
 
+  // FIXME here a real texture class should be used (with possible animation etc.)
   //Fab:FIXME: allocate for whatever number of flats
   //           512 different flats per level should be plenty
-  foundflats = (levelflat_t *)Z_Malloc(sizeof(levelflat_t) * MAXLEVELFLATS, PU_STATIC, 0);
+  levelflat_t *foundflats = (levelflat_t *)Z_Malloc(sizeof(levelflat_t) * MAXLEVELFLATS, PU_STATIC, 0);
   if (!foundflats)
-    I_Error ("P_LoadSectors: no mem\n");
-  memset (foundflats, 0, sizeof(levelflat_t) * MAXLEVELFLATS);
+    I_Error("P_LoadSectors: no mem\n");
+  memset(foundflats, 0, sizeof(levelflat_t) * MAXLEVELFLATS);
 
   numlevelflats = 0;
 
-  ms = (mapsector_t *)data;
-  ss = sectors;
+  mapsector_t *ms = (mapsector_t *)data;
+  sector_t *ss = sectors;
   for (i=0 ; i<numsectors ; i++, ss++, ms++)
     {
       ss->floorheight = SHORT(ms->floorheight)<<FRACBITS;
@@ -401,7 +404,7 @@ void Map::LoadSectors(int lump)
       ss->ceilingpic = P_AddLevelFlat (ms->ceilingpic,foundflats);
 
       ss->lightlevel = SHORT(ms->lightlevel);
-      ss->special = SHORT(ms->special);
+
       ss->tag = SHORT(ms->tag);
 
       //added:31-03-98: quick hack to test water with DCK
@@ -436,7 +439,12 @@ void Map::LoadSectors(int lump)
       ss->stackList = NULL;
       ss->lineoutLength = -1.0;
       // ----- end special tricks -----
-        
+
+      // TEST
+      ss->friction = normal_friction;
+      ss->movefactor = 1.0f;
+      ss->gravity = 1.0f;
+      SpawnSectorSpecial(SHORT(ms->special), ss);
     }
 
   Z_Free (data);
@@ -502,6 +510,8 @@ void Map::LoadNodes(int lump)
 //
 void Map::LoadThings(int lump)
 {
+  TIDmap.clear();
+
   if (hexen_format)
     nummapthings = fc.LumpLength(lump)/sizeof(hex_mapthing_t);
   else
@@ -1176,7 +1186,7 @@ void Map::GroupLines()
     }
 
   // build line tables for each sector
-  // FIXME! sizeof(something) into Z_malloc
+  // FIXME! sizeof(something) into Z_malloc (sizeof(line_t *))
   linebuffer = (line_t **)Z_Malloc (total*4, PU_LEVEL, 0);
   sector = sectors;
   for (i=0 ; i<numsectors ; i++, sector++)
@@ -1222,7 +1232,6 @@ void Map::GroupLines()
 }
 
 
-// SoM: 6/27: Don't restrict maps to MAPxx/ExMx any more!
 static char *levellumps[] =
 {
   "label",        // ML_LABEL,    A separator, name, ExMx or MAPxx
@@ -1235,7 +1244,8 @@ static char *levellumps[] =
   "NODES",        // ML_NODES,    BSP nodes
   "SECTORS",      // ML_SECTORS,  Sectors, from editing
   "REJECT",       // ML_REJECT,   LUT, sector-sector visibility
-  "BLOCKMAP"      // ML_BLOCKMAP  LUT, motion clipping, walls/grid element
+  "BLOCKMAP",     // ML_BLOCKMAP  LUT, motion clipping, walls/grid element
+  "BEHAVIOR" // ACS scripts
 };
 
 
@@ -1392,7 +1402,7 @@ bool Map::Setup(tic_t start)
   // note: most of this ordering is important
   LoadBlockMap (lumpnum+ML_BLOCKMAP);
   LoadVertexes (lumpnum+ML_VERTEXES);
-  LoadSectors  (lumpnum+ML_SECTORS);
+  LoadSectors1 (lumpnum+ML_SECTORS);
   LoadSideDefs (lumpnum+ML_SIDEDEFS);
 
   LoadLineDefs (lumpnum+ML_LINEDEFS);
@@ -1401,6 +1411,7 @@ bool Map::Setup(tic_t start)
   LoadSubsectors (lumpnum+ML_SSECTORS);
   LoadNodes (lumpnum+ML_NODES);
   LoadSegs (lumpnum+ML_SEGS);
+  LoadSectors2 (lumpnum+ML_SECTORS);
   rejectmatrix = (byte *)fc.CacheLumpNum (lumpnum+ML_REJECT,PU_LEVEL);
   GroupLines();
 

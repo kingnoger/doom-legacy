@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/04/14 08:58:26  smite-meister
+// Hexen maps load.
+//
 // Revision 1.9  2003/04/04 00:01:56  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -299,6 +302,8 @@ void HexenPatchEngine()
 
   item_pickup_sound = SFX_PICKUP_ITEM;
 
+
+  sprnames[SPR_BLUD] = "BLOD";
 }
 
 void HereticPatchEngine()

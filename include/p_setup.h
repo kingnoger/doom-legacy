@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:25  hurdler
-// Initial revision
+// Revision 1.2  2003/04/14 08:58:30  smite-meister
+// Hexen maps load.
+//
+// Revision 1.1.1.1  2002/11/16 14:18:25  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.8  2002/08/20 13:57:01  vberghol
 // sdfgsd
@@ -85,7 +88,5 @@ extern levelflat_t*    levelflats;
 int P_AddLevelFlat (char* flatname, levelflat_t* levelflat);
 char *P_FlatNameForNum(int num);
 
-
-extern bool  newlevel;
 
 #endif

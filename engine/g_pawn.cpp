@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.13  2003/04/14 08:58:26  smite-meister
+// Hexen maps load.
+//
 // Revision 1.12  2003/04/08 09:46:05  smite-meister
 // Bugfixes
 //
@@ -1285,105 +1288,36 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
 // Function that actually applies the sector special to the player.
 void PlayerPawn::ProcessSpecialSector(sector_t *sector, bool instantdamage)
 {
-  if (sector->special < 32)
+  if (instantdamage && sector->damage)
     {
-      // Has hitten ground.
-      switch (sector->special)
+      if ((sector->special & SS_LIGHTMASK) == 11)
 	{
-        case 5:
-          // HELLSLIME DAMAGE
-          if (!powers[pw_ironfeet])
-	    if (instantdamage)
-              {
-		Damage(NULL, NULL, 10);
-
-		// spawn a puff of smoke
-		//CONS_Printf ("damage!\n"); //debug
-		mp->SpawnSmoke(x, y, z);
-              }
-          break;
-
-        case 7:
-          // NUKAGE DAMAGE
-          if (!powers[pw_ironfeet])
-	    if (instantdamage)
-	      Damage(NULL, NULL, 5);
-          break;
-
-        case 16:
-          // SUPER HELLSLIME DAMAGE
-        case 4:
-          // STROBE HURT
-          if (!powers[pw_ironfeet]
-              || (P_Random()<5) )
-	    {
-              if (instantdamage)
-		Damage(NULL, NULL, 20);
-	    }
-          break;
-
-        case 9:
-          // SECRET SECTOR
-          player->secrets++;
-          sector->special = 0;
-
-          //faB: useful only in single & coop.
-          if (!cv_deathmatch.value && this == displayplayer->pawn)
-	    CONS_Printf ("\2You found a secret area!\n");
-
-          break;
-
-        case 11:
           // EXIT SUPER DAMAGE! (for E1M8 finale)
-          cheats &= ~CF_GODMODE;
-
-          if (instantdamage)
-	    Damage(NULL, NULL, 20);
-
+	  cheats &= ~CF_GODMODE;
+	  Damage(NULL, NULL, 20);
           if ((health <= 10) && cv_allowexitlevel.value)
-	    mp->ExitMap(0);
-          break;
-
-        default:
-          //SoM: 3/8/2000: Just ignore.
-          //CONS_Printf ("P_PlayerInSpecialSector: unknown special %i",
-          //             sector->special);
-          break;
-	};
-    }
-  else //SoM: Extended sector types for secrets and damage
-    {
-      switch ((sector->special & DAMAGE_MASK) >> DAMAGE_SHIFT)
-	{
-	case 0: // no damage
-	  break;
-	case 1: // 2/5 damage per 31 ticks
-	  if (!powers[pw_ironfeet] && instantdamage)
-	    Damage(NULL, NULL, 5);
-	  break;
-	case 2: // 5/10 damage per 31 ticks
-	  if (!powers[pw_ironfeet] && instantdamage)
-	    Damage(NULL, NULL, 10);
-	  break;
-	case 3: // 10/20 damage per 31 ticks
-	  if ((!powers[pw_ironfeet]
-	       || P_Random()<5) && instantdamage)  // take damage even with suit
 	    {
-	      Damage(NULL, NULL, 20);
+	      mp->ExitMap(0);
+	      return;
 	    }
-	  break;
 	}
-      if (sector->special & SECRET_MASK)
-	{
-	  player->secrets++;
-	  sector->special &= ~SECRET_MASK;
+      else if (sector->damage < 20 && !powers[pw_ironfeet])
+	Damage(NULL, NULL, sector->damage, sector->damagetype);
+      else if (!powers[pw_ironfeet] || P_Random() < 5)
+	Damage(NULL, NULL, sector->damage, sector->damagetype);
+      
+      mp->SpawnSmoke(x, y, z);
+    }
 
-	  if (!cv_deathmatch.value && this == displayplayer->pawn)
-	    CONS_Printf ("\2You found a secret area!\n");
+  if (sector->special & SS_secret)
+    {
+      // SECRET SECTOR
+      player->secrets++;
+      sector->special &= ~SS_secret;
 
-	  if (sector->special < 32)
-	    sector->special=0;
-	}
+      if (!cv_deathmatch.value && this == displayplayer->pawn)
+	CONS_Printf ("\2You found a secret area!\n");
+      // TODO nice sound
     }
 }
 
@@ -1414,8 +1348,7 @@ void PlayerPawn::PlayerOnSpecial3DFloor()
 	  if (z != *rover->topheight)
 	    continue;
 
-	  if (game.demoversion >= 125 &&
-	      (eflags & MFE_JUSTHITFLOOR) &&
+	  if ((eflags & MFE_JUSTHITFLOOR) &&
 	      sec->heightsec == -1 && (mp->maptic % (2*NEWTICRATERATIO))) //SoM: penalize jumping less.
 	    instantdamage = true;
 	  else
@@ -1441,39 +1374,39 @@ void PlayerPawn::PlayerOnSpecial3DFloor()
 //
 void PlayerPawn::PlayerInSpecialSector()
 {
-  bool instantdamage = false;
-
   // SoM: Check 3D floors...
   PlayerOnSpecial3DFloor();
 
   sector_t *sec = subsector->sector;
 
   //Fab: keep track of what sector type the player's currently in
-  specialsector = sec->special;
+  special = sec->special;
 
 #ifdef OLDWATER
   //Fab: VERY NASTY hack for water QUICK TEST !!!!!!!!!!!!!!!!!!!!!!!
   if (sec->tag < 0)
     {
-      specialsector = 888;    // no particular value
+      special = 888;    // no particular value
       return;
     }
   else if (levelflats[sec->floorpic].iswater)
     // old water (flat texture)
     {
-      specialsector = 887;
+      special = 887;
       return;
     }
 #endif
 
-  if (!specialsector)     // nothing special, exit
+  if (!special)     // nothing special, exit
     return;
 
+  /*
   if (game.mode == gm_heretic)
     {
       HerePlayerInSpecialSector();
       return;
     }
+  */
 
   // Falling, not all the way down yet?
   //SoM: 3/17/2000: Damage if in slimey water!
@@ -1485,12 +1418,17 @@ void PlayerPawn::PlayerInSpecialSector()
   else if (z != sec->floorheight)
     return;
 
+  int temp = special & SS_DAMAGEMASK >> 5;
+  bool instantdamage = false;
+
+  if (temp == SS_damage_32)
+    instantdamage = !(mp->maptic & 31);
+  else if (temp == SS_damage_16)
+    instantdamage = !(mp->maptic & 15);
+    
   //Fab: jumping in lava/slime does instant damage (no jump cheat)
-  if ((eflags & MFE_JUSTHITFLOOR) &&
-      (sec->heightsec == -1) && (mp->maptic % (2*NEWTICRATERATIO))) //SoM: penalize jumping less.
+  if ((eflags & MFE_JUSTHITFLOOR) && (sec->heightsec == -1) && (mp->maptic & 2)) //SoM: penalize jumping less.
     instantdamage = true;
-  else
-    instantdamage = !(mp->maptic % (32*NEWTICRATERATIO));
 
   ProcessSpecialSector(sec, instantdamage);
 }
