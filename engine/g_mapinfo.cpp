@@ -22,6 +22,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.4  2003/11/23 19:54:10  hurdler
+// Remove warning and error at compile time
+//
 // Revision 1.3  2003/11/23 19:07:41  smite-meister
 // New startup order
 //
@@ -84,6 +87,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef LINUX
+#include <unistd.h>
+#endif
 
 #include "doomdef.h"
 #include "g_mapinfo.h"
@@ -511,8 +517,11 @@ static bool P_ParseCommand(const char *cmd, char *str, const parsercmd_t *comman
 // TODO decide the actual format of MapInfo lump...
 
 // one command set per block
-//#define MI_offset(field) (size_t(&MapInfo::field))
+#ifdef LINUX
+#define MI_offset(field) (size_t(&MapInfo::field))
+#else
 #define MI_offset(field) (size_t(&((MapInfo *)0)->field))
+#endif
 static parsercmd_t MapInfo_commands[]=
 {
   {P_ITEM_STR, "levelname",  MI_offset(nicename)},
@@ -728,8 +737,11 @@ char *MapInfo::Read(int lump)
 //==============================================
 // Hexen/ZDoom MAPINFO parser.
 
-
+#ifdef LINUX
+#define CD_offset(field) (size_t(&MapCluster::field))
+#else
 #define CD_offset(field) (size_t(&((MapCluster *)0)->field))
+#endif
 // ZDoom clusterdef commands
 static parsercmd_t MAPINFO_CLUSTERDEF_commands[] =
 {
