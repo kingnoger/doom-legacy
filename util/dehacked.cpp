@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2005/04/01 18:03:08  smite-meister
+// fix
+//
 // Revision 1.17  2005/04/01 14:47:46  smite-meister
 // dehacked works
 //
@@ -916,10 +919,10 @@ void dehacked_t::Read_Text(int len1, int len2)
   char s[2001];
   int i;
 
-  // FIXME dehacked text
-  // it is hard to change all the text in doom
-  // here i implement only vital things
-  // yes, "text" can change some tables like music, sound and sprite names
+  // dehacked text
+  // It is hard to change all the text in Doom.
+  // Here we implement only the vital, easy things.
+  // Yes, "text" can change some tables like music, sound and sprite names
   if (len1+len2 > 2000)
     {
       error("Text too long\n");
@@ -928,11 +931,11 @@ void dehacked_t::Read_Text(int len1, int len2)
   
   if (p.ReadChars(s, len1 + len2) != len1 + len2)
     {
-      error("Read failed\n");
+      error("Text reading failed\n");
       return;
     }
 
-  // sound table
+  // sound table (not supported anymore)
   /*
     for (i=0;i<NUMSFX;i++)
       if (!strncmp(savesfxname[i],s,len1))
@@ -941,16 +944,17 @@ void dehacked_t::Read_Text(int len1, int len2)
         S_sfx[i].lumpname[len2]='\0';
         return;
       }
+  */
 
-  // sprite table
+  // sprite table TODO we should enforce length 4 for the names...
   for (i=0; i<NUMSPRITES; i++)
-    if (!strncmp(savesprnames[i],s,len1))
+    if (!strncmp(savesprnames[i], s, len1))
       {
-        strncpy(sprnames[i],&(s[len1]),len2);
-        sprnames[i][len2]='\0';
+        strncpy(sprnames[i], &s[len1], len2);
+        sprnames[i][len2] = '\0';
         return;
       }
-  */
+
 
   // music table
   for (i=1; i<NUMMUSIC; i++)
@@ -981,50 +985,6 @@ void dehacked_t::Read_Text(int len1, int len2)
 	  return;
 	}
     }
-
-  // special text : text changed in Legacy but with dehacked support
-  // I don't think this is necessary...
-  /*
-  for (i=SPECIALDEHACKED; i<NUMTEXT; i++)
-    {
-      int temp = strlen(text[i]);
-
-      if (len1 > temp && strstr(s, text[i]))
-       {
-	 // remove space for center the text
-	 char *t = &s[len1+len2-1];
-
-           while(t[0]==' ') { t[0]='\0'; t--; }
-           // skip the space
-           while(s[len1]==' ') len1++;
-
-           // remove version string identifier
-           t=strstr(&(s[len1]),"v%i.%i");
-           if (!t) {
-              t=strstr(&(s[len1]),"%i.%i");
-              if (!t) {
-                 t=strstr(&(s[len1]),"%i");
-                 if (!t) {
-                      t=s+len1+strlen(&(s[len1]));
-                 }
-              }
-           }
-           t[0]='\0';
-           len2=strlen(&s[len1]);
-
-           if (strlen(text[i])<(unsigned)len2)         // incresse size of the text
-           {
-              text[i]=(char *)malloc(len2+1);
-              if (text[i]==NULL)
-                  I_Error("Read_Text : No More free Mem");
-           }
-
-           strncpy(text[i],&(s[len1]),len2);
-           text[i][len2]='\0';
-           return;
-       }
-    }
-  */
 
   s[len1] = '\0';
   error("Text not changed :%s\n", s);
@@ -1495,10 +1455,8 @@ bool dehacked_t::LoadDehackedLump(const char *buf, int len)
 	      break;
 
 	    case DEH_Patch:
-	      word1 = p.GetToken(" \t");
-	      if (word1 && !strcasecmp(word1, "format"))
+	      if (word2 && !strcasecmp(word2, "format"))
 		{
-		  p.NewLine();
 		  if (FindValue() != 6)
 		    error("Warning : Patch format not supported");
 		}

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2005/04/01 18:03:07  smite-meister
+// fix
+//
 // Revision 1.1  2005/04/01 14:47:46  smite-meister
 // dehacked works
 //
@@ -313,21 +316,21 @@ bool ExpandThingNum(int num)
 
   // t is zero-based
   if (t < NUM_DOOM_THINGS)
-    fprintf(out, "Thing %d", t);
+    fprintf(out, "Thing %d", t+1);
   else if ((t -= NUM_DOOM_THINGS) < NUM_LEGACY_THINGS)
-    fprintf(out, "Thing L%d", t);
+    fprintf(out, "Thing L%d", t+1);
   else if ((t -= NUM_LEGACY_THINGS) < t_gap1)
-    fprintf(out, "Thing H%d", t);
+    fprintf(out, "Thing H%d", t+1);
   else if ((t += 2) < t_gap2)
-    fprintf(out, "Thing H%d", t);
+    fprintf(out, "Thing H%d", t+1);
   else if ((t += 1) < t_gap3)
-    fprintf(out, "Thing H%d", t);
+    fprintf(out, "Thing H%d", t+1);
   else if ((t += 1) < NUM_HERETIC_THINGS)
-    fprintf(out, "Thing H%d", t);
+    fprintf(out, "Thing H%d", t+1);
   else
     {
       DEH.error("Thing %d doesn't exist!\n", num);
-      fprintf(out, "Thing -1", t);
+      fprintf(out, "Thing -1");
       return false;
     }
 
@@ -687,8 +690,10 @@ Bits = 3232              MF_SOLID|MF_SHOOTABLE|MF_DROPOFF|MF_PICKUP|MF_NOTDMATCH
 Respawn frame = 32       S_NULL          // raisestate
 */
 
-void dehacked_t::Read_Thing(int num)
+void dehacked_t::Read_Thing(const char *str)
 {
+  int num = atoi(str);
+
   ExpandThingNum(num);
   // preserve the comment
   fprintf(out, " %s\n", p.Pointer());
@@ -749,7 +754,7 @@ void dehacked_t::Read_Thing(int num)
 	  const char *s = ExpandStateNum(value);
 
 	  if (!strcasecmp(word,"Initial"))        fprintf(out, "Initial frame = %s\n", s);
-	  else if (!strcasecmp(word,"First"))     fprintf(out, "First frame = %s\n", s);
+	  else if (!strcasecmp(word,"First"))     fprintf(out, "First moving frame = %s\n", s);
 	  else if (!strcasecmp(word,"Injury"))    fprintf(out, "Injury frame = %s\n", s);
 	  else if (!strcasecmp(word,"Close"))     fprintf(out, "Close attack frame = %s\n", s);
 	  else if (!strcasecmp(word,"Far"))       fprintf(out, "Far attack frame = %s\n", s);
@@ -772,8 +777,10 @@ Next frame = 200
 Codep = 111 // Legacy addition
 */
 
-void dehacked_t::Read_Frame(int num)
+void dehacked_t::Read_Frame(const char *str)
 {
+  int num = atoi(str);
+
   fprintf(out, "Frame %s %s\n", ExpandStateNum(num), p.Pointer());
 
   while (p.NewLine(false))
@@ -1202,11 +1209,11 @@ bool dehacked_t::LoadDehackedLump(const char *buf, int len)
 	  switch (P_MatchString(word1, DEH_cmds))
 	    {
 	    case DEH_Thing:
-	      Read_Thing(i);
+	      Read_Thing(word2);
 	      break;
 
 	    case DEH_Frame:
-	      Read_Frame(i);
+	      Read_Frame(word2);
 	      break;
 
 	    case DEH_Pointer:
@@ -1225,7 +1232,7 @@ bool dehacked_t::LoadDehackedLump(const char *buf, int len)
 		      p.GetToken(" ");
 		      p.GetToken(" ");
 		      word2 = p.GetToken(" =");
-		      fprintf(out, "Codep frame = %s\n", word2);
+		      fprintf(out, "Codep frame = %s\n\n", word2);
 		    }
 		}
 	      else
@@ -1280,13 +1287,11 @@ bool dehacked_t::LoadDehackedLump(const char *buf, int len)
 	      break;
 
 	    case DEH_Patch:
-	      word1 = p.GetToken(" ");
-	      if (word1 && !strcasecmp(word1, "format"))
+	      if (word2 && !strcasecmp(word2, "format"))
 		{
-		  //p.NewLine();
 		  if ((i = FindValue()) != 6)
 		    error("Warning : Patch format not supported");
-		  fprintf(out, "Patch format = %d\n", i);
+		  fprintf(out, "Patch format = %d\n\n", i);
 		}
 	      break;
 
