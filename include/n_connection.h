@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/08/06 19:33:49  smite-meister
+// netcode
+//
 // Revision 1.4  2004/07/09 19:43:40  smite-meister
 // Netcode fixes
 //
@@ -89,12 +92,24 @@ public:
   /// from the local or remote hosts explicitly disconnecting, timing out or network error.
   void ConnectionTerminated(bool established);
 
+  /// called at the client when ghosting starts
+  virtual void onStartGhosting();
 
 
   //============ RPCs =============== 
 
   /// transmits chat messages between client and server
   TNL_DECLARE_RPC(rpcSay, (S8 from, S8 to, const char *msg));
+
+  /// server prints a message on client's console/HUD
+  TNL_DECLARE_RPC(rpcMessage_s2c, (S32 pnum, const char *msg, S8 priority));
+
+  /// server tells the client to start intermission
+  TNL_DECLARE_RPC(rpcStartIntermission_s2c, ());
+
+  /// client tells server that it has finished playing the intermission
+  TNL_DECLARE_RPC(rpcIntermissionDone_c2s, ());
+
 };
 
 
