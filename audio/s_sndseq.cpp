@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2003/04/20 16:45:49  smite-meister
+// partial SNDSEQ fix
+//
 // Revision 1.1  2003/04/19 17:38:46  smite-meister
 // SNDSEQ support, tools, linedef system...
 //
@@ -70,19 +73,19 @@ struct hexen_seq_t
 hexen_seq_t HexenSeqs[NUMSEQ] =
 {
   { "Platform", {0, 1, 3}}, // 'heavy' and 'creak' platforms are just platforms
-  { "PlatformMetal", {2, -1}}, 	
+  { "PlatformMetal", {2, -1, -1}},
   { "Silence", {4, 14, -1}},
   { "Lava",    {5, 15, -1}},
   { "Water",   {6, 16, -1}},
   { "Ice",     {7, 17, -1}},
   { "Earth",   {8, 18, -1}},
-  { "PlatformMetal2", {9, -1}},
-  { "DoorNormal", {10, -1}},
-  { "DoorHeavy",  {11, -1}},
-  { "DoorMetal",  {12, -1}},
-  { "DoorCreak",  {13, -1}},
-  { "DoorMetal2", {19, -1}},
-  { "Wind", {20, -1}}
+  { "PlatformMetal2", {9, -1, -1}},
+  { "DoorNormal", {10, -1, -1}},
+  { "DoorHeavy",  {11, -1, -1}},
+  { "DoorMetal",  {12, -1, -1}},
+  { "DoorCreak",  {13, -1, -1}},
+  { "DoorMetal2", {19, -1, -1}},
+  { "Wind", {20, -1, -1}}
 };
 
 // both an index to SOUNDSEQ_cmds and the actual token used in sequence
@@ -144,7 +147,8 @@ static const char *SOUNDSEQ_cmds[SSEQ_NUMCMDS + 1] =
 // static data
 struct sndseq_t
 {
-  char name[26];
+  int  number;
+  char name[28];
   int  stopsound;
   int  length; // instructions
   int  seq[0]; // data begins here
@@ -152,6 +156,7 @@ struct sndseq_t
 public:
   void clear()
   {
+    number  = 0;
     name[0] = '\0';
     stopsound = 0;
     length = 0;
@@ -237,23 +242,26 @@ void ActiveSndSeq::Stop()
 
 bool Map::SN_StartSequence(Actor *a, unsigned s)
 {
-  if (s >= SoundSeqs.size())
+  map<unsigned, struct sndseq_t*>::iterator i = SoundSeqs.find(s);
+
+  if (i == SoundSeqs.end())
     return false;
 
   SN_StopSequence(a); // Stop any previous sequence
-  ActiveSndSeq *temp = new ActiveSndSeq(SoundSeqs[s], a);
+  ActiveSndSeq *temp = new ActiveSndSeq((*i).second, a);
   ActiveSeqs.push_back(temp);
-
   return true;
 }
 
 bool Map::SN_StartSequence(mappoint_t *m, unsigned s)
 {
-  if (s >= SoundSeqs.size())
+  map<unsigned, struct sndseq_t*>::iterator i = SoundSeqs.find(s);
+
+  if (i == SoundSeqs.end())
     return false;
 
   SN_StopSequence(m); // Stop any previous sequence
-  ActiveSndSeq *temp = new ActiveSndSeq(SoundSeqs[s], m);
+  ActiveSndSeq *temp = new ActiveSndSeq((*i).second, m);
   ActiveSeqs.push_back(temp);
 
   return true;
@@ -262,13 +270,13 @@ bool Map::SN_StartSequence(mappoint_t *m, unsigned s)
 
 bool Map::SN_StartSequenceName(Actor *a, const char *name)
 {
-  int i, n = SoundSeqs.size();
+  map<unsigned, struct sndseq_t*>::iterator i;
 
-  for (i = 0; i < n; i++)
+  for (i = SoundSeqs.begin(); i != SoundSeqs.end(); i++)
     {
-      if (!strcmp(name, SoundSeqs[i]->name))
+      if (!strcmp(name, (*i).second->name))
 	{
-	  SN_StartSequence(a, i);
+	  SN_StartSequence(a, (*i).first);
 	  return true;
 	}
     }
@@ -456,9 +464,15 @@ static int P_GetInt(char **ptr)
 }
 
 
+
 // reads the SNDINFO lump
 void Map::S_Read_SNDSEQ(int lump)
 {
+  if (lump == -1)
+    return;
+
+  CONS_Printf("Reading SNDSEQ...\n");
+
   int length = fc.LumpLength(lump);
   char *ms = (char *)fc.CacheLumpNum(lump, PU_STATIC);
   char *me = ms + length; // past-the-end pointer
@@ -466,10 +480,10 @@ void Map::S_Read_SNDSEQ(int lump)
   char *s, *p;
   s = p = ms;
 
-  int seq = -1;
   vector<int> script;
   sndseq_t temp;
-  int i, n;
+  temp.number = -1;
+  int i, n, hseq = -1;;
 
   char line[45];
 
@@ -487,8 +501,8 @@ void Map::S_Read_SNDSEQ(int lump)
 		{
 		  if (line[0] == ':')
 		    {
-		      if (seq != -1)
-			CONS_Printf("SNDSEQ: Nested sequence in sequence %d.\n", seq);
+		      if (temp.number != -1)
+			CONS_Printf("SNDSEQ: Nested sequence in sequence %d.\n", temp.number);
 		      else
 			{
 			  // new sequence
@@ -498,7 +512,7 @@ void Map::S_Read_SNDSEQ(int lump)
 			  temp.name[25] = '\0'; // to be sure
 
 			  if (n >= 2)
-			    seq = P_GetInt(&s);
+			    temp.number = P_GetInt(&s);
 			  else
 			    {
 			      // old Hexen style kludge
@@ -508,17 +522,20 @@ void Map::S_Read_SNDSEQ(int lump)
 			      if (i == NUMSEQ)
 				{
 				  CONS_Printf("SNDSEQ: No sequence number given for '%s'.\n", line);
-				  seq = -2;
+				  temp.number = -2;
 				}
 			      else
-				seq = HexenSeqs[i].seq[0];
+				{
+				  temp.number = HexenSeqs[i].seq[0];
+				  hseq = i;
+				}
 			    }
 			}
 		    }
-		  else if (seq != -1)
+		  else if (temp.number != -1)
 		    switch (P_MatchString(line, SOUNDSEQ_cmds))
 		      {
-		      case SSEQ_PLAY:	
+		      case SSEQ_PLAY:
 			if (P_GetString(&s, line))
 			  {
 			    script.push_back(SSEQ_PLAY);
@@ -579,21 +596,37 @@ void Map::S_Read_SNDSEQ(int lump)
 
 		      case SSEQ_END:
 			script.push_back(SSEQ_END);
-			if (seq >= 0)
+			if (temp.number >= 0)
 			  {
 			    // create and store the sequence
 			    temp.length = script.size();
+			    CONS_Printf("crash\n");
 			    sndseq_t *tempseq = (sndseq_t *)Z_Malloc(sizeof(sndseq_t) + script.size(), PU_STATIC, NULL);
+			    CONS_Printf("neverseen\n");
 			    *tempseq = temp; // copy the fields
 
 			    for (n=0; n < script.size(); n++)
 			      tempseq->seq[n] = script[n];
 
-			    // TODO what if the same sequence is defined twice? memory leak!
-			    SoundSeqs.resize(seq+1);
-			    SoundSeqs[seq] = tempseq;			    
+			    if (SoundSeqs.count(temp.number)) // already there
+			      {
+				CONS_Printf("SNDSEQ: Sequence %d defined more than once!\n", temp.number);
+				Z_Free(SoundSeqs[temp.number]); // later one takes precedence
+			      }
+			    SoundSeqs[temp.number] = tempseq; // insert into the map
+
+			    if (hseq >= 0)
+			      { // other half of the Hexen kludge:
+				// some sequences need to be copied
+				for (n=1; n<3; n++)
+				  if (HexenSeqs[hseq].seq[n] != -1)
+				    SoundSeqs[HexenSeqs[hseq].seq[n]] = tempseq;
+
+				hseq = -1;
+			      }
 			  }
-			seq = -1;
+
+			temp.number = -1;
 			break;
 
 		      case SSEQ_VOLUMERAND:
@@ -619,4 +652,5 @@ void Map::S_Read_SNDSEQ(int lump)
     }
 
   Z_Free(ms);
+  CONS_Printf("done. %d sequences.\n", SoundSeqs.size());
 }

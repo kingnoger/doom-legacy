@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2003/04/20 16:45:50  smite-meister
+// partial SNDSEQ fix
+//
 // Revision 1.14  2003/04/19 17:38:47  smite-meister
 // SNDSEQ support, tools, linedef system...
 //
@@ -1370,14 +1373,18 @@ bool Map::Setup(tic_t start)
   levelscript->data = info->Load(lumpnum); // load map separator lump info (map properties, FS...)
 
   // is the map in Hexen format?
-  if (!strncmp(fc.FindNameForNum(lumpnum + ML_BEHAVIOR), "BEHAVIOR", 8))
+  if (fc.GetNumLumps(lumpnum >> 16) > (lumpnum + ML_BEHAVIOR) &&
+      !strncmp(fc.FindNameForNum(lumpnum + ML_BEHAVIOR), "BEHAVIOR", 8))
     {
       hexen_format = true;
       S_Read_SNDINFO(fc.GetNumForName("SNDINFO"));
       S_Read_SNDSEQ(fc.GetNumForName("SNDSEQ"));
     }
   else
-    hexen_format = false;
+    {
+      hexen_format = false;
+      S_Read_SNDSEQ(fc.FindNumForName("LSNDSEQ")); // Doom and Heretic sequences in legacy.wad
+    }
 
 
 #ifdef FRAGGLESCRIPT
@@ -1440,8 +1447,11 @@ bool Map::Setup(tic_t start)
   LoadThings(lumpnum + ML_THINGS);
   PlaceWeapons(); // Heretic mace
 
-  InitPolyobjs();
-  LoadACScripts(lumpnum+ML_BEHAVIOR);
+  if (hexen_format)
+    {
+      InitPolyobjs();
+      LoadACScripts(lumpnum+ML_BEHAVIOR);
+    }
 
   // set up world state
   SpawnSpecials();

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/04/20 16:45:50  smite-meister
+// partial SNDSEQ fix
+//
 // Revision 1.8  2003/04/19 17:38:46  smite-meister
 // SNDSEQ support, tools, linedef system...
 //
@@ -819,7 +822,7 @@ void S_Read_SNDINFO(int lump)
 		else
 		  {
 		    // must be a tagname => lumpname mapping
-		    for (i = sfx_Hexen; i < NUMSFX; i++)
+		    for (i = NUMSFX - 1; i >= 0; i--)
 		      if (!strcmp(S_sfx[i].tagname, tag))
 			{
 			  n = sscanf(s, "%*40s%16s", lname);
@@ -855,9 +858,13 @@ int S_GetSoundID(const char *tag)
 {
   int i;
 
-  for (i = sfx_Hexen; i < NUMSFX; i++)
-    if (!strcmp(S_sfx[i].tagname, tag))
-      return i;
+  for (i = NUMSFX - 1; i >= 0; i--)
+    {
+      if (!S_sfx[i].tagname)
+	continue; // FIXME temp hack, all should have tagnames too
+      if (!strcmp(S_sfx[i].tagname, tag))
+	return i;
+    }
 
   CONS_Printf("S_GetSoundID: Tag '%s' not found.\n", tag);
   return 0;

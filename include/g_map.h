@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.13  2003/04/20 16:45:50  smite-meister
+// partial SNDSEQ fix
+//
 // Revision 1.12  2003/04/19 17:38:47  smite-meister
 // SNDSEQ support, tools, linedef system...
 //
@@ -204,7 +207,7 @@ public:
 
   //------------ Sound sequences ------------
 
-  vector<struct sndseq_t*>  SoundSeqs;
+  map<unsigned, struct sndseq_t*> SoundSeqs;
   list<class ActiveSndSeq*> ActiveSeqs;
   vector<sndseq_t*>         AmbientSeqs;
   ActiveSndSeq             *ActiveAmbientSeq;
