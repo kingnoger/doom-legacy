@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2003/11/30 00:09:46  smite-meister
+// bugfixes
+//
 // Revision 1.12  2003/11/27 11:28:26  smite-meister
 // Doom/Heretic startup bug fixed
 //
@@ -1859,8 +1862,23 @@ int MapInfo::Serialize(LArchive &a)
   a << cdtrack << fadetablelump;
   a << BossDeathKey;
 
-  // TODO if it is MAP_SAVED, just copy the existing savegame here
-  if (me)
+  if (state == MAP_SAVED)
+    {
+      // utilize the existing hubsave file
+      a << (temp = 2);
+      byte *buffer;
+      int length = FIL_ReadFile(savename.c_str(), &buffer);
+      if (!length)
+	{
+	  I_Error("Couldn't read hubsave file %s", savename.c_str());
+	  return -1;
+	}
+
+      a << length;
+      a.Write(buffer, length);
+      Z_Free(buffer);
+    }
+  else if (me)
     {
       a << (temp = 1);
       me->Serialize(a);
@@ -1893,8 +1911,21 @@ int MapInfo::Unserialize(LArchive &a)
 
   // TODO if it is MAP_SAVED, just copy the existing savegame here
   a << temp;
-  if (temp)
-    me->Unserialize(a);
+  if (temp == 2)
+    {
+      // extract the hubsave file
+      int length;
+      a << length;
+      byte *buffer = (byte *)Z_Malloc(length, PU_STATIC, NULL);
+      a.Read(buffer, length);
+      FIL_WriteFile(savename.c_str(), buffer, length);
+      Z_Free(buffer);
+    }
+  else if (temp == 1)
+    {
+      me = new Map(this);
+      me->Unserialize(a);
+    }
   else
     me = NULL;
 
@@ -1955,7 +1986,10 @@ int GameInfo::Serialize(LArchive &a)
   // global script data
   a.Marker(MARK_SCRIPT);
   a.Write((byte *)WorldVars, sizeof(WorldVars));
-  a.Write((byte *)ACSStore, sizeof(ACSStore));
+  acsstore_iter_t t;
+  a << (n = ACS_store.size());
+  for (t = ACS_store.begin(); t != ACS_store.end(); t++) 
+    a.Write((byte *)&(*t).second, sizeof(acsstore_t));
 
   // misc shit
   n = P_GetRandIndex();
@@ -1981,7 +2015,7 @@ int GameInfo::Unserialize(LArchive &a)
 {
   // FIXME the containers should be emptied and old contents deleted somewhere
 
-  int i, n, temp;
+  int i, n;
   // treat all enums as ints
   a << int(demoversion);
   a << int(mode);
@@ -2033,16 +2067,22 @@ int GameInfo::Unserialize(LArchive &a)
       clustermap[c->number] = c;
     }
 
-  a << temp;
-  currentcluster = clustermap[temp];
-  a << temp;
-  currentmap = mapinfo[temp];
+  a << n;
+  currentcluster = clustermap[n];
+  a << n;
+  currentmap = mapinfo[n];
 
   // global script data
   if (!a.Marker(MARK_SCRIPT))
     return -1;
   a.Read((byte *)WorldVars, sizeof(WorldVars));
-  a.Read((byte *)ACSStore, sizeof(ACSStore));
+  a << n;
+  for (i = 0; i < n; i++)
+    {
+      acsstore_t temp;
+      a.Read((byte *)&temp, sizeof(acsstore_t));
+      ACS_store.insert(pair<const int, acsstore_t>(temp.tmap, temp));
+    }
 
   // misc shit
   a << n;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2003/11/30 00:09:47  smite-meister
+// bugfixes
+//
 // Revision 1.16  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -80,6 +83,7 @@
 #include "doomdata.h"
 
 #include "g_game.h"
+#include "g_mapinfo.h"
 #include "g_map.h"
 #include "g_actor.h"
 #include "g_pawn.h"
@@ -100,6 +104,7 @@
 #include "s_sound.h"
 #include "sounds.h"
 #include "t_script.h"
+#include "p_acs.h"
 
 #include "hardware/hw3sound.h"
 
@@ -946,8 +951,8 @@ bool P_SectorActive(special_e t, sector_t *sec)
 //
 //============================================================================
 
-// New Hexen functions.
-// was P_ActivateLine
+// New Hexen linedef system.
+
 bool Map::ActivateLine(line_t *line, Actor *thing, int side, int atype)
 {
   // Things that should NOT trigger specials...
@@ -1102,7 +1107,6 @@ bool Map::ActivateLine(line_t *line, Actor *thing, int side, int atype)
 bool P_CheckKeys(Actor *mo, int lock);
 
 // 
-// P_ExecuteLineSpecial
 // Hexen linedefs
 //
 #define SPEED(a)  (((a)*FRACUNIT)/8)
@@ -1131,6 +1135,8 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
   //CONS_Printf("ExeSpecial (%d), tag %d (%d)\n", special, line->tag, args[0]);
   switch (special)
     {
+    case 0: // NOP
+      break;
     case 1: // Poly Start Line
       break;
     case 2: // Poly Rotate Left
@@ -1321,15 +1327,15 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
 	}
       break;
     case 80: // ACS_Execute
-      // TODO FIXME: check that args[1] is current map, else store script
-      success = StartACS(args[0], &args[2], mo, line, side);
+      if (args[1] && args[1] != info->mapnumber)
+	success = P_AddToACSStore(args[1], args[0], &args[2]);
+      else
+	success = StartACS(args[0], &args[2], mo, line, side);
       break;
     case 81: // ACS_Suspend
-      //success = SuspendACS(args[0], args[1]);
       success = SuspendACS(args[0]);
       break;
     case 82: // ACS_Terminate
-      //success = TerminateACS(args[0], args[1]);
       success = TerminateACS(args[0]);
       break;
     case 83: // ACS_LockedExecute
@@ -1337,13 +1343,14 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       if (P_CheckKeys(mo, lock))
 	{
 	  args[4] = 0;
-	  // StartACS(newArgs[0], newArgs[1], &newArgs[2], p, line, side);
-	  // FIXME check the args[1] map number to see if it is this map
-	  // if not, do not start script but store it. same in 80.
-	  StartACS(args[0], &args[2], mo, line, side);
+	  if (args[1] && args[1] != info->mapnumber)
+	    success = P_AddToACSStore(args[1], args[0], &args[2]);
+	  else
+	    success = StartACS(args[0], &args[2], mo, line, side);
 	  args[4] = lock;
 	}
       break;
+
     case 85: // TEST new linedeftype FS_Execute
 #ifdef FRAGGLESCRIPT
       success = T_RunScript(tag, mo);
@@ -1453,8 +1460,19 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       break;
       // TODO other ZDoom Generic types
 
+    case 245: // ZDoom Elevator_RaiseToNearest
+      success = EV_DoElevator(tag, elevator_t::Up, SPEED(args[1]), 0);
+      break;
+    case 246: // ZDoom Elevator_MoveToFloor
+      success = EV_DoElevator(tag, elevator_t::Current, SPEED(args[1]), line->frontsector->floorheight);
+      break;
+    case 247: // ZDoom Elevator_LowerToNearest
+      success = EV_DoElevator(tag, elevator_t::Down, SPEED(args[1]), 0);
+      break;
+
       // Inert Line specials
     default:
+      CONS_Printf("Unhandled line special %d\n", special);
       break;
     }
 
@@ -1480,10 +1498,8 @@ int Map::EV_SectorSoundChange(int tag, int seq)
 
 
 //
-// was P_UpdateSpecials
-// Animate planes, scroll walls, etc.
+// Animate textures etc.
 //
-
 void Map::UpdateSpecials()
 {
   anim_t*     anim;
@@ -1493,7 +1509,7 @@ void Map::UpdateSpecials()
   levelflat_t *foundflats;        // for flat animation
 
   //  LEVEL TIMER
-  if (cv_timelimit.value && maptic > cv_timelimit.value)
+  if (cv_timelimit.value && maptic > unsigned(cv_timelimit.value))
     ExitMap(NULL, 0);
 
   //  ANIMATE TEXTURES
@@ -1522,18 +1538,13 @@ void Map::UpdateSpecials()
 	    ( (maptic/foundflats->speed + foundflats->animseq) % foundflats->numpics);
 	}
     }
-
-
-  // BUTTONS are now done in their respective Thinkers
 }
 
 
 
 //SoM: 3/23/2000: Adds a sectors floor and ceiling to a sector's ffloor list
-//void P_AddFakeFloor(sector_t* sec, sector_t* sec2, line_t* master, int flags);
 void P_AddFFloor(sector_t* sec, ffloor_t* ffloor);
 
-// was P_AddFakeFloor
 void Map::AddFakeFloor(sector_t* sec, sector_t* sec2, line_t* master, int flags)
 {
   //Add the floor
@@ -1602,10 +1613,6 @@ void P_AddFFloor(sector_t* sec, ffloor_t* ffloor)
 }
 
 
-
-//
-// SPECIAL SPAWNING
-//
 
 
 int Map::SpawnSectorSpecial(int sp, sector_t *sec)
@@ -1867,14 +1874,13 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
 
 //
 // was P_SpawnSpecials
-// After the map has been loaded, scan for specials
-//  that spawn thinkers
+// After the map has been loaded, scan for linedefs
+//  that spawn thinkers or confer properties
 //
-void Map::SpawnSpecials()
+void Map::SpawnLineSpecials()
 {
   int i;
 
-  //SoM: 3/8/2000: Boom level init functions
   RemoveAllActiveCeilings();
   RemoveAllActivePlats();
 
@@ -2089,6 +2095,7 @@ void scroll_t::Think()
 
     case sc_carry_floor:
     case sc_push:
+    case sc_wind:
 
       sec = mp->sectors + affectee;
       height = sec->floorheight;
@@ -2097,7 +2104,13 @@ void scroll_t::Think()
         mp->sectors[sec->heightsec].floorheight : MININT;
 
       for (node = sec->touching_thinglist; node; node = node->m_snext)
-        if (!((thing = node->m_thing)->flags & MF_NOCLIPLINE) &&
+	{
+	  thing = node->m_thing;
+
+	  if (type == sc_wind && !(thing->flags2 & MF2_WINDTHRUST))
+	    continue;
+
+	  if (!(thing->flags & MF_NOCLIPLINE) &&
             (!(thing->flags & MF_NOGRAVITY || thing->z > height) ||
              thing->z < waterheight))
           {
@@ -2106,20 +2119,14 @@ void scroll_t::Think()
             thing->px += tdx;
             thing->py += tdy;
           }
+	}
       break;
 
     case sc_carry_ceiling:       // to be added later
       break;
-
-    case sc_wind:
-      // FIXME winds if (flags2 & MF2_WINDTHRUST);
-      break;
     }
 }
 
-//
-// was Add_Scroller()
-//
 // Add a generalized scroller to the thinker list.
 //
 // type: the enumerated type of scrolling: floor, ceiling, floor carrier,
@@ -2133,7 +2140,6 @@ void scroll_t::Think()
 // affectee: the index of the affected object (sector or sidedef)
 //
 // accel: non-zero if this is an accelerative effect
-//
 
 scroll_t::scroll_t(scroll_e t, fixed_t dx, fixed_t dy, sector_t *csec, int aff, bool acc)
 {
@@ -2178,7 +2184,7 @@ static scroll_t *Add_WallScroller(fixed_t dx, fixed_t dy, const line_t *l,
 // Initialize the scrollers
 void Map::SpawnScrollers()
 {
-  int i;
+  int i, s;
   line_t *l = lines, *l2;
 
   for (i=0;i<numlines;i++,l++)
@@ -2209,12 +2215,11 @@ void Map::SpawnScrollers()
 
       switch (special)
         {
-          register int s;
-
         case 250:   // scroll effect ceiling
           for (s=-1; (s = FindSectorFromLineTag(l,s)) >= 0;)
 	    AddThinker(new scroll_t(scroll_t::sc_ceiling, -dx, dy, control, s, accel));
           break;
+
         case 251:   // scroll effect floor
         case 253:   // scroll and carry objects on floor
           for (s=-1; (s = FindSectorFromLineTag(l,s)) >= 0;)
@@ -2238,21 +2243,29 @@ void Map::SpawnScrollers()
           break;
 
         case 255:
-          s = lines[i].sidenum[0];
           AddThinker(new scroll_t(scroll_t::sc_side, -sides[s].textureoffset,
-                       sides[s].rowoffset, NULL, s, accel));
+                       sides[s].rowoffset, NULL, l->sidenum[0], accel));
           break;
 
-        case 48:                  // scroll first side
-          AddThinker(new scroll_t(scroll_t::sc_side,  FRACUNIT, 0, NULL, lines[i].sidenum[0], false));
-          break;
+	  // Hexen
+	case 100: // Scroll_Texture_Left
+          AddThinker(new scroll_t(scroll_t::sc_side, -l->args[0], 0, NULL, l->sidenum[0], false));
+	  break;
+	case 101: // Scroll_Texture_Right
+          AddThinker(new scroll_t(scroll_t::sc_side, l->args[0], 0, NULL, l->sidenum[0], false));
+	  break;
+	case 102: // Scroll_Texture_Up
+          AddThinker(new scroll_t(scroll_t::sc_side, l->args[0], 0, NULL, l->sidenum[0], false));
+	  break;
+	case 103: // Scroll_Texture_Down
+          AddThinker(new scroll_t(scroll_t::sc_side, -l->args[0], 0, NULL, l->sidenum[0], false));
+	  break;
 
-        case 99: // heretic right scrolling
-          if (game.mode != gm_heretic)
-	    break; // doom use it as bluekeydoor
-        case 85:                  // jff 1/30/98 2-way scroll
-          AddThinker(new scroll_t(scroll_t::sc_side, -FRACUNIT, 0, NULL, lines[i].sidenum[0], false));
-          break;
+	case 121: // Line_SetIdentification
+	  l->tag = l->args[0];
+	  l->special = 0;
+	  break;
+
 	default:
 	  break;
         }
@@ -2260,10 +2273,8 @@ void Map::SpawnScrollers()
 }
 
 
-
-/*
-  SoM: 3/8/2000: Friction functions start.
-*/
+//=========================================
+//   Friction
 
 IMPLEMENT_CLASS(friction_t, "Friction");
 friction_t::friction_t() {}
@@ -2282,7 +2293,6 @@ int friction_t::Marshal(LArchive & a)
   return 0;
 }
 
-// was T_Friction
 //Function to apply friction to all the things in a sector.
 void friction_t::Think()
 {
@@ -2331,7 +2341,7 @@ void friction_t::Think()
   */
 }
 
-// was P_SpawnFriction
+
 //Spawn all friction.
 void Map::SpawnFriction()
 {
@@ -2387,19 +2397,15 @@ void Map::SpawnFriction()
 
 
 
-
-/*
-  SoM: 3/8/2000: Push/Pull/Wind/Current functions.
-*/
+//=========================================
+//   Pushers
 
 IMPLEMENT_CLASS(pusher_t, "Pusher");
 pusher_t::pusher_t() {}
 
 #define PUSH_FACTOR 7
 
-// was Add_Pusher
 // constructor
-
 pusher_t::pusher_t(pusher_e t, int x_m, int y_m, DActor *src, int aff)
 {
   source = src;
@@ -2453,7 +2459,6 @@ bool PIT_PushThing(Actor* thing)
   return true;
 }
 
-// was T_Pusher 
 // looks for all objects that are inside the radius of
 // the effect.
 
@@ -2583,7 +2588,6 @@ void pusher_t::Think()
     }
 }
 
-// was P_GetPushThing
 // Get pusher object.
 DActor *Map::GetPushThing(int s)
 {
@@ -2611,7 +2615,6 @@ DActor *Map::GetPushThing(int s)
   return NULL;
 }
 
-// was P_SpawnPushers
 // Spawn pushers.
 void Map::SpawnPushers()
 {

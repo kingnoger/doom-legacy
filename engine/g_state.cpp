@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2003/11/30 00:09:43  smite-meister
+// bugfixes
+//
 // Revision 1.19  2003/11/27 11:28:25  smite-meister
 // Doom/Heretic startup bug fixed
 //
@@ -513,18 +516,19 @@ void GameInfo::Ticker()
 	      if (currentcluster->number != m->cluster)
 		{
 		  // cluster change, everyone follows p!
-		  currentcluster->Finish(p->requestmap, p->entrypoint);
+		  currentcluster->Finish(p->requestmap, p->entrypoint, true);
 		  currentcluster = FindCluster(m->cluster);
 		  currentmap = *currentcluster->maps.begin();
+		  // TODO do p->Reset(true, true); for ALL players!
 		  //action = ga_intermission;
-		  break;
+		  break; // this is important!
 		}
 
 	      // normal individual mapchange
 	      if (!m->Activate())
 		I_Error("Darn!\n");
 
-	      p->Reset(currentcluster->keepstuff, true);
+	      p->Reset(!currentcluster->keepstuff, true);
 	      m->me->AddPlayer(p);
 	    }
 	}
@@ -646,12 +650,13 @@ bool GameInfo::DeferredNewGame(skill_t sk, bool splitscreen)
 }
 
 
+void P_InitSwitchList();
+void P_ACSInitNewGame();
 
 // starts or restarts the game.
 bool GameInfo::StartGame()
 {
   CONS_Printf("Starting a new game, any time now\n");
-  void P_InitSwitchList();
 
   if (clustermap.empty() || mapinfo.empty())
     return false;
@@ -707,6 +712,7 @@ bool GameInfo::StartGame()
   // set switch texture names/numbers (TODO bad design, fix...)
   P_InitSwitchList();
 
+  P_ACSInitNewGame(); // clear the ACS world vars etc.
 
   //Fab:19-07-98:start cd music for this level (note: can be remapped)
   /*

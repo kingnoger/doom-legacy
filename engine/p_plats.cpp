@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/11/30 00:09:45  smite-meister
+// bugfixes
+//
 // Revision 1.8  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -279,6 +282,27 @@ int Map::EV_DoPlat(int tag, line_t *line, int type, fixed_t speed, int wait, fix
 {
   int  secnum = -1;
   int  rtn = 0;
+  sector_t *sec;
+  plat_t *plat;
+
+  if (!tag)
+    {
+      // tag == 0, plat is on the other side of the linedef
+      if (line->sidenum[1] == -1)
+	return 0;
+
+      sec = sides[line->sidenum[1]].sector;
+
+      if (sec->floordata)
+	return 0;
+
+      plat = new plat_t(type, sec, tag, speed, wait, height);
+      AddThinker(plat);
+      if (type & plat_t::SetTexture)
+	sec->floorpic = sides[line->sidenum[0]].sector->floorpic;
+      AddActivePlat(plat);
+      return 1;
+    }
 
   //  Activate all <type> plats that are in_stasis
   if (type & plat_t::Perpetual)
@@ -289,7 +313,7 @@ int Map::EV_DoPlat(int tag, line_t *line, int type, fixed_t speed, int wait, fix
 
   while ((secnum = FindSectorFromTag(tag, secnum)) >= 0)
     {
-      sector_t *sec = &sectors[secnum];
+      sec = &sectors[secnum];
 
       if (P_SectorActive(floor_special,sec)) //SoM: 3/7/2000: 
 	continue;

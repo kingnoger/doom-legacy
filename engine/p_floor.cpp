@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/11/30 00:09:43  smite-meister
+// bugfixes
+//
 // Revision 1.8  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -479,11 +482,8 @@ int Map::EV_DoChange(line_t *line, int changetype)
 }
 
 
-// was EV_BuildStairs
 // BUILD A STAIRCASE!
-//
 
-// SoM: 3/6/2000: Use the Boom version of this function.
 int Map::EV_BuildStairs(int tag, int type, fixed_t speed, fixed_t stepsize, int crush)
 {
   // TODO Hexen compatibility (a new stairbuilding method...)
@@ -632,11 +632,11 @@ IMPLEMENT_CLASS(elevator_t, "Elevator");
 elevator_t::elevator_t() {}
 
 // constructor
-elevator_t::elevator_t(int ty, sector_t *sec, line_t *line)
+elevator_t::elevator_t(int ty, sector_t *sec, fixed_t sp, fixed_t height)
 {
   type = ty;
   sector = sec;
-  speed = ELEVATORSPEED;
+  speed = sp;
   sec->floordata = this;
   sec->ceilingdata = this;
 
@@ -644,7 +644,7 @@ elevator_t::elevator_t(int ty, sector_t *sec, line_t *line)
   switch (ty)
     {
       // elevator down to next floor
-    case elevateDown:
+    case Down:
       direction = -1;
       floordestheight =
 	P_FindNextLowestFloor(sec,sec->floorheight);
@@ -653,7 +653,7 @@ elevator_t::elevator_t(int ty, sector_t *sec, line_t *line)
       break;
 
       // elevator up to next floor
-    case elevateUp:
+    case Up:
       direction = 1;
       floordestheight =
 	P_FindNextHighestFloor(sec,sec->floorheight);
@@ -662,8 +662,8 @@ elevator_t::elevator_t(int ty, sector_t *sec, line_t *line)
       break;
 
       // elevator to floor height of activating switch's front sector
-    case elevateCurrent:
-      floordestheight = line->frontsector->floorheight;
+    case Current:
+      floordestheight = height;
       ceilingdestheight =
 	floordestheight + sec->ceilingheight - sec->floorheight;
       direction =
@@ -676,16 +676,8 @@ elevator_t::elevator_t(int ty, sector_t *sec, line_t *line)
 }
 
 
-// SoM: 3/6/2000: Lots'o'copied code here.. Elevators.
-//
-// was T_MoveElevator()
-//
 // Move an elevator to it's destination (up or down)
 // Called once per tick for each moving floor.
-//
-// Passed an elevator_t structure that contains all pertinent info about the
-// move. See P_SPEC.H for fields.
-// No return.
 //
 // SoM: 3/6/2000: The function moves the plane differently based on direction, so if it's 
 // traveling really fast, the floor and ceiling won't hit each other and stop the lift.
@@ -693,19 +685,16 @@ void elevator_t::Think()
 {
   int res;
 
-  if (direction<0)      // moving down
+  if (direction < 0) // moving down
     {
-      //jff 4/7/98 reverse order of ceiling/floor
       res = mp->T_MovePlane(sector, speed, ceilingdestheight, 0, 1, direction); // move floor
-      if (res == res_ok || res == res_pastdest) // jff 4/7/98 don't move ceil if blocked
-	mp->T_MovePlane(sector, speed, floordestheight, 0, 0, direction);// move ceiling
+      if (res == res_ok || res == res_pastdest)
+	mp->T_MovePlane(sector, speed, floordestheight, 0, 0, direction); // move ceiling
     }
   else // up
     {
-      //jff 4/7/98 reverse order of ceiling/floor
       res = mp->T_MovePlane(sector,speed,floordestheight,0,0,direction); // move ceiling
-      // jff 4/7/98 don't move floor if blocked
-      if (res == res_ok || res == res_pastdest) 
+      if (res == res_ok || res == res_pastdest)
 	mp->T_MovePlane(sector, speed, ceilingdestheight, 0, 1, direction); // move floor
     }
 
@@ -713,10 +702,10 @@ void elevator_t::Think()
   if (!(mp->maptic % (8*NEWTICRATERATIO)))
     S_StartSound(&sector->soundorg, sfx_stnmov);
     
-  if (res == res_pastdest)            // if destination height acheived
+  if (res == res_pastdest) // if destination height acheived
     {
-      sector->floordata = NULL;     //jff 2/22/98
-      sector->ceilingdata = NULL;   //jff 2/22/98
+      sector->floordata = NULL;
+      sector->ceilingdata = NULL;
       mp->RemoveThinker(this);  // unlink and free
 
       // make floor stop sound
@@ -726,37 +715,25 @@ void elevator_t::Think()
 
 
 // SoM: Boom elevator support.
-//
-// was EV_DoElevator
-//
-// Handle elevator linedef types
-//
-// Passed the linedef that triggered the elevator and the elevator action
-//
-// jff 2/22/98 new type to move floor and ceiling in parallel
-//
-int Map::EV_DoElevator(line_t* line, int type)
-{
-  int                   secnum;
-  int                   rtn;
-  sector_t*             sec;
-  elevator_t*           elevator;
+// Handle elevator linedef types, moving floor and ceiling in parallel
 
-  secnum = -1;
-  rtn = 0;
+int Map::EV_DoElevator(int tag, int type, fixed_t speed, fixed_t height)
+{
+  int secnum = -1;
+  int rtn = 0;
   // act on all sectors with the same tag as the triggering linedef
-  while ((secnum = FindSectorFromLineTag(line,secnum)) >= 0)
+  while ((secnum = FindSectorFromTag(tag, secnum)) >= 0)
     {
-      sec = &sectors[secnum];
+      sector_t *sec = &sectors[secnum];
               
       // If either floor or ceiling is already activated, skip it
-      if (sec->floordata || sec->ceilingdata) //jff 2/22/98
+      if (sec->floordata || sec->ceilingdata)
 	continue;
       
       // create and initialize new elevator thinker
-      rtn = 1;
-      elevator = new elevator_t(type, sec, line);
+      elevator_t *elevator = new elevator_t(type, sec, speed, height);
       AddThinker(elevator);
+      rtn++;
     }
   return rtn;
 }

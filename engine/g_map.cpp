@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.25  2003/11/30 00:09:42  smite-meister
+// bugfixes
+//
 // Revision 1.24  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -118,11 +121,50 @@ Map::Map(MapInfo *i)
   force_pointercheck = false;
 };
 
+
 // destructor
 Map::~Map()
 {
-  // not much is needed because most memory is freed
-  // in Z_FreeTags before a new level is started.
+  Z_Free(vertexes);
+  Z_Free(segs);
+  Z_Free(subsectors);
+  Z_Free(sectors);
+  Z_Free(nodes);
+  Z_Free(lines);
+  Z_Free(sides);
+  Z_Free(linebuffer);
+
+  Z_Free(polyobjs);
+
+  Z_Free(blockmaplump);
+  Z_Free(blocklinks);
+  Z_Free(PolyBlockMap);
+  // FIXME there is a lot of PU_LEVEL polyblockmap stuff that is not yet freed
+
+  Z_Free(rejectmatrix);
+
+  // FIXME free FS stuff
+
+  Z_Free(ACSInfo);
+  Z_Free(ActionCodeBase);
+
+  Z_Free(mapthings);
+
+  Thinker *t, *next;
+  for (t = thinkercap.next; t != &thinkercap; t = next)
+    {
+      next = t->next;
+      delete t;
+    }
+
+  int n = DeletionList.size();
+  for (int i=0; i<n; i++)
+    delete DeletionList[i];
+
+  // TODO levelflats? anims? sound sequences?
+
+  // Some things may well be left undeleted, because their memory will be freed
+  // during the next cluster change using Z_FreeTags...
 }
 
 

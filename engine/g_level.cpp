@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.6  2003/11/30 00:09:42  smite-meister
+// bugfixes
+//
 // Revision 1.5  2003/11/27 11:28:25  smite-meister
 // Doom/Heretic startup bug fixed
 //
@@ -84,12 +87,15 @@ void MapCluster::Ticker()
 
 
 // called before moving on to a new cluster
-void MapCluster::Finish(int nextmap, int ep)
+void MapCluster::Finish(int nextmap, int ep, bool force)
 {
   CONS_Printf("Cluster %d finished!\n", number);
   int i, n = maps.size();
   for (i=0; i<n; i++)
-    maps[i]->Close(nextmap, ep);
+    {
+      maps[i]->KickPlayers(nextmap, ep, force);
+      maps[i]->Close();
+    }
 
   Z_FreeTags(PU_LEVEL, PU_PURGELEVEL-1); // destroys pawns if they are not Detached
 }

@@ -22,6 +22,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.5  2003/11/30 00:09:43  smite-meister
+// bugfixes
+//
 // Revision 1.4  2003/11/23 19:54:10  hurdler
 // Remove warning and error at compile time
 //
@@ -87,8 +90,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+
 #ifdef LINUX
-#include <unistd.h>
+# include <unistd.h>
 #endif
 
 #include "doomdef.h"
@@ -165,13 +169,15 @@ void MapInfo::Ticker(bool hub)
 		me->players[i]->playerstate != PST_SPECTATOR)
 	      players_remaining = true;
 
-	  // TODO spectators have no destinations set, they should perhaps follow the last exiting player...
 	  if (!players_remaining)
 	    {
+	      // TODO spectators have no destinations set, they should perhaps follow the last exiting player...
+	      KickPlayers(0, 0);
+
 	      if (hub)
-		HubSave(0, 0);
+		HubSave();
 	      else
-		Close(0, 0);
+		Close();
 	    }
 	}
     }
@@ -224,8 +230,26 @@ bool MapInfo::Activate()
 }
 
 
+// throws out all the players
+int MapInfo::KickPlayers(int next, int ep, bool force)
+{
+  if (next == 0)
+    next = nextlevel; // zero means "normal exit"
+
+  if (next == 100)
+    next = secretlevel; // 100 means "secret exit"
+
+  // kick out the players
+  int i, n = me->players.size();
+  for (i=0; i<n; i++)
+    me->players[i]->ExitLevel(next, ep, force);
+
+  return n;
+}
+
+
 // shuts the map down
-void MapInfo::Close(int next, int ep)
+void MapInfo::Close()
 {
   state = MAP_UNLOADED;
 
@@ -236,32 +260,19 @@ void MapInfo::Close(int next, int ep)
       savename.clear();
     }
 
-  if (me == NULL)
-    return;
-
-  if (next == 0)
-    next = nextlevel; // zero means "normal exit"
-
-  if (next == 100)
-    next = secretlevel; // 100 means "secret exit"
-
-  // kick out the players
-  int i, n = me->players.size();
-  for (i=0; i<n; i++)
-    me->players[i]->ExitLevel(next, ep);
-
-  delete me; // and then the map goes
-  me = NULL;
+  if (me)
+    {
+      delete me; // and then the map goes
+      me = NULL;
+    }
 }
 
 
 // for making hub saves
-bool MapInfo::HubSave(int next, int ep)
+bool MapInfo::HubSave()
 {
-  // kick out the players
-  int i, n = me->players.size();
-  for (i=0; i<n; i++)
-    me->players[i]->ExitLevel(next, ep);
+  if (!me)
+    return false;
 
   char fname[50];
   sprintf(fname, "Legacy_hubsave_%02d.sav", mapnumber);
@@ -269,15 +280,18 @@ bool MapInfo::HubSave(int next, int ep)
 
   LArchive a;
   a.Create("Hubsave");
-  Serialize(a);
+  me->Serialize(a);
 
   byte *buffer;
   unsigned length = a.Compress(&buffer);
 
   FIL_WriteFile(savename.c_str(), buffer, length);
-
   Z_Free(buffer);
+
   state = MAP_SAVED;
+
+  delete me;
+  me = NULL;
   return true;
 }
 
@@ -285,6 +299,9 @@ bool MapInfo::HubSave(int next, int ep)
 // well, loading the hub saves
 bool MapInfo::HubLoad()
 {
+  if (state != MAP_SAVED)
+    return false;
+
   byte *buffer;
 
   int length = FIL_ReadFile(savename.c_str(), &buffer);
@@ -301,7 +318,8 @@ bool MapInfo::HubLoad()
   Z_Free(buffer);
 
   // dearchive the map
-  if (!Unserialize(a))
+  me = new Map(this);
+  if (!me->Unserialize(a))
     I_Error("Hubsave corrupted!\n");
 
   state = MAP_RUNNING;
@@ -887,9 +905,8 @@ int GameInfo::Read_MAPINFO(int lump)
       mapinfo[j] = info;
     }
 
-  // finally generate the missing clusters and fill them all with maps
-  mapinfo_iter_t t;
-  for (t = mapinfo.begin(); t != mapinfo.end(); t++)
+  // generate the missing clusters and fill them all with maps
+  for (mapinfo_iter_t t = mapinfo.begin(); t != mapinfo.end(); t++)
     {
       info = (*t).second;
       n = info->cluster;
@@ -904,6 +921,18 @@ int GameInfo::Read_MAPINFO(int lump)
 	cl = clustermap[n];
 
       cl->maps.push_back(info);
+    }
+
+  // and then check that all clusters have at least one map
+  for (cluster_iter_t t = clustermap.begin(); t != clustermap.end(); t++)
+    {
+      cl = (*t).second;
+      if (cl->maps.empty())
+	{
+	  CONS_Printf("Cluster %d has no maps!\n", cl->number);
+	  clustermap.erase(t);
+	  delete cl;
+	}
     }
 
   return mapinfo.size();

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.27  2003/11/30 00:09:46  smite-meister
+// bugfixes
+//
 // Revision 1.26  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -1184,34 +1187,25 @@ void Map::LoadBlockMap(int lump)
 
 
 //
-// was P_GroupLines
 // Builds sector line lists and subsector sector numbers.
 // Finds block bounding boxes for sectors.
 //
 void Map::GroupLines()
 {
-  line_t**            linebuffer;
-  int                 i;
-  int                 j;
-  int                 total;
-  line_t*             li;
-  sector_t*           sector;
-  subsector_t*        ss;
-  seg_t*              seg;
+  int i, j;
   fixed_t             bbox[4];
-  int                 block;
 
   // look up sector number for each subsector
-  ss = subsectors;
+  subsector_t *ss = subsectors;
   for (i=0 ; i<numsubsectors ; i++, ss++)
     {
-      seg = &segs[ss->firstline];
+      seg_t *seg = &segs[ss->firstline];
       ss->sector = seg->sidedef->sector;
     }
 
   // count number of lines in each sector
-  li = lines;
-  total = 0;
+  line_t *li = lines;
+  int total = 0;
   for (i=0 ; i<numlines ; i++, li++)
     {
       total++;
@@ -1225,24 +1219,24 @@ void Map::GroupLines()
     }
 
   // build line tables for each sector
-  linebuffer = (line_t **)Z_Malloc(total*sizeof(line_t *), PU_LEVEL, NULL);
-  sector = sectors;
+  line_t **lb = linebuffer = (line_t **)Z_Malloc(total*sizeof(line_t *), PU_LEVEL, NULL);
+  sector_t *sector = sectors;
   for (i=0 ; i<numsectors ; i++, sector++)
     {
-      M_ClearBox (bbox);
-      sector->lines = linebuffer;
+      M_ClearBox(bbox);
+      sector->lines = lb;
       li = lines;
       for (j=0 ; j<numlines ; j++, li++)
         {
 	  if (li->frontsector == sector || li->backsector == sector)
             {
-	      *linebuffer++ = li;
-	      M_AddToBox (bbox, li->v1->x, li->v1->y);
-	      M_AddToBox (bbox, li->v2->x, li->v2->y);
+	      *lb++ = li;
+	      M_AddToBox(bbox, li->v1->x, li->v1->y);
+	      M_AddToBox(bbox, li->v2->x, li->v2->y);
             }
         }
-      if (linebuffer - sector->lines != sector->linecount)
-	I_Error ("P_GroupLines: miscounted");
+      if (lb - sector->lines != sector->linecount)
+	I_Error("Map::GroupLines: miscounted");
 
       // set the degenmobj_t to the middle of the bounding box
       sector->soundorg.x = (bbox[BOXRIGHT]+bbox[BOXLEFT])/2;
@@ -1250,7 +1244,7 @@ void Map::GroupLines()
       sector->soundorg.z = sector->floorheight-10;
 
       // adjust bounding box to map blocks
-      block = (bbox[BOXTOP]-bmaporgy+MAXRADIUS)>>MAPBLOCKSHIFT;
+      int block = (bbox[BOXTOP]-bmaporgy+MAXRADIUS)>>MAPBLOCKSHIFT;
       block = block >= bmapheight ? bmapheight-1 : block;
       sector->blockbox[BOXTOP]=block;
 
@@ -1428,21 +1422,17 @@ bool Map::Setup(tic_t start, bool spawnthings)
   P_InitPicAnims();
   SetupSky();
 
-  // SoM: WOO HOO!
-  // SoM: DOH!
-  //R_InitPortals ();
-
   // note: most of this ordering is important
   LoadBlockMap (lumpnum+ML_BLOCKMAP);
   LoadVertexes (lumpnum+ML_VERTEXES);
   LoadSectors1 (lumpnum+ML_SECTORS);
   LoadSideDefs (lumpnum+ML_SIDEDEFS);
   LoadLineDefs (lumpnum+ML_LINEDEFS);
-  LoadSideDefs2(lumpnum+ML_SIDEDEFS);
+  LoadSideDefs2(lumpnum+ML_SIDEDEFS); // also processes some linedef specials
   LoadLineDefs2();
 
   if (!hexen_format)
-    ConvertLineDefs(); // Doom => Hexen TODO why not spawn linedef thinkers first?
+    ConvertLineDefs(); // Doom => Hexen conversion
 
   LoadSubsectors(lumpnum+ML_SSECTORS);
   LoadNodes(lumpnum+ML_NODES);
@@ -1486,7 +1476,9 @@ bool Map::Setup(tic_t start, bool spawnthings)
   if (hexen_format)
     LoadACScripts(lumpnum + ML_BEHAVIOR);
 
-  SpawnSpecials(); // spawn Thinkers created by linedefs (also does some mandatory initializations!)
+  SpawnLineSpecials(); // spawn Thinkers created by linedefs (also does some mandatory initializations!)
+
+  CheckACSStore(); // execute waiting scripts
 
   // build subsector connect matrix
   //  UNUSED P_ConnectSubsectors ();
@@ -1533,14 +1525,14 @@ void Map::ConvertLineDefs()
 	  ld->flags &= 0x1ff; // only basic Doom flags are kept
 	  
 	  p = &xt[ld->special];
-	  ld->special = p->type;
+
+	  if (p->type)
+	    ld->special = p->type; // some specials are unaffected
+
 	  for (j=0; j<5; j++)
 	    ld->args[j] = p->args[j];
-	  trig = p->trigger;
 
-	  //if (ld->args[0] == 255) ;
-	    //ld->args[0] = ld->tag; // nope, a byte is not enough
-	    //ld->args[0] = 0; // now ExecuteLineSpecial() uses 'tag'
+	  trig = p->trigger;
 
 	  // time to put the flags back
 	  ld->flags |= (trig & 0x0f) << (ML_SPAC_SHIFT-1); // activation and repeat

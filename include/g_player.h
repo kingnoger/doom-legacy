@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.10  2003/11/30 00:09:47  smite-meister
+// bugfixes
+//
 // Revision 1.9  2003/11/12 11:07:27  smite-meister
 // Serialization done. Map progression.
 //
@@ -129,7 +132,7 @@ public:
   int Serialize(class LArchive &a);
   int Unserialize(LArchive &a);
   // resets the player (when starting a new level, for example)
-  void ExitLevel(int nextmap, int ep);
+  void ExitLevel(int nextmap, int ep, bool force = false);
   void Reset(bool resetpawn, bool resetfrags);
 
   void SetMessage(const char *msg, bool ultmsg = true);

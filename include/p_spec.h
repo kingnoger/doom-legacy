@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2003/11/30 00:09:48  smite-meister
+// bugfixes
+//
 // Revision 1.15  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -604,9 +607,9 @@ class elevator_t : public Thinker
 public:
   enum elevator_e
   {
-    elevateUp,
-    elevateDown,
-    elevateCurrent,
+    Up = 0,
+    Down,
+    Current
   };
 
 private:
@@ -618,7 +621,7 @@ private:
   fixed_t speed;
 
 public:
-  elevator_t(int ty, sector_t *s, line_t *l);
+  elevator_t(int type, sector_t *s, fixed_t speed, fixed_t height);
   
   virtual void Think();
 };

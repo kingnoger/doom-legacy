@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.21  2003/11/30 00:09:43  smite-meister
+// bugfixes
+//
 // Revision 1.20  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -1115,9 +1118,6 @@ DActor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
   fixed_t mz = z + 4*8*FRACUNIT - floorclip;
 
   DActor *th = mp->SpawnDActor(x, y, mz, type);
-
-  if (type == MT_PLASMA)
-    CONS_Printf("plasma shot!\n");
 
   if (th->info->seesound)
     S_StartSound(th, th->info->seesound);

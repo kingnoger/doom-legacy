@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.2  2003/11/30 00:09:47  smite-meister
+// bugfixes
+//
 // Revision 1.1  2003/11/12 11:07:27  smite-meister
 // Serialization done. Map progression.
 //
@@ -153,8 +156,9 @@ public:
 
   void Ticker(bool hub);
   bool Activate();
-  void Close(int n, int ep);
-  bool HubSave(int n, int ep);
+  int  KickPlayers(int n, int ep, bool force = false);
+  void Close();
+  bool HubSave();
   bool HubLoad();
 
   char *Read(int lumpnum);

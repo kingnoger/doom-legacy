@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.22  2003/11/30 00:09:47  smite-meister
+// bugfixes
+//
 // Revision 1.21  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -138,6 +141,8 @@ public:
   int               NumPolyobjs;
   struct polyobj_t* polyobjs;
   struct polyblock_t **PolyBlockMap;
+
+  line_t **linebuffer; // combining sectors and lines
 
   //------------ BLOCKMAP ------------
   // Created from axis aligned bounding box of the map, a rectangular array of
@@ -362,7 +367,7 @@ public:
   void UpdateSpecials();
 
   int  SpawnSectorSpecial(int sp, sector_t *sec);
-  void SpawnSpecials();
+  void SpawnLineSpecials();
   void SpawnScrollers();
   void SpawnFriction();
   void SpawnPushers();
@@ -419,7 +424,7 @@ public:
   int EV_DoChange(line_t *line, int changetype);
   int EV_BuildStairs(int tag, int type, fixed_t speed, fixed_t stepsize, int crush);
   int EV_DoDonut(int tag);
-  int EV_DoElevator(line_t* line, int type);
+  int EV_DoElevator(int tag, int type, fixed_t speed, fixed_t height);
   int T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, int crush, int floorOrCeiling, int direction);
 
   // in s_sndseq.cpp
@@ -466,6 +471,7 @@ public:
   bool EV_ThingDestroy(int tid);
 
   // ACS scripting
+  void CheckACSStore();
   void StartOpenACS(int number, int infoIndex, int *address);
   bool StartACS(int number, byte *args, Actor *activator, line_t *line, int side);
   bool StartLockedACS(line_t *line, byte *args, class PlayerPawn *p, int side);

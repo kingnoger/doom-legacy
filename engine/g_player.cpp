@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.17  2003/11/30 00:09:43  smite-meister
+// bugfixes
+//
 // Revision 1.16  2003/11/12 11:07:18  smite-meister
 // Serialization done. Map progression.
 //
@@ -121,9 +124,9 @@ void PlayerInfo::SetMessage(const char *msg, bool ultmsg)
 }
 
 
-void PlayerInfo::ExitLevel(int nextmap, int ep)
+void PlayerInfo::ExitLevel(int nextmap, int ep, bool force)
 {
-  if (!requestmap)
+  if (!requestmap || force)
     {
       requestmap = nextmap;
       entrypoint = ep;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/11/30 00:09:47  smite-meister
+// bugfixes
+//
 // Revision 1.4  2003/11/12 11:07:24  smite-meister
 // Serialization done. Map progression.
 //
@@ -403,53 +406,46 @@ void A_LightningReady(PlayerPawn *player, pspdef_t *psp)
 
 void A_LightningClip(DActor *actor)
 {
-  Actor *cMo;
-  Actor *target = NULL;
-  int zigZag;
+  Actor *t = NULL;
 
-  if(actor->type == MT_LIGHTNING_FLOOR)
+  if (actor->type == MT_LIGHTNING_FLOOR)
     {
       actor->z = actor->floorz;
-      target = actor->owner->target;
-    }
-  else if(actor->type == MT_LIGHTNING_CEILING)
-    {
-      actor->z = actor->ceilingz-actor->height;
-      target = actor->target;
-    }
-  if(actor->type == MT_LIGHTNING_FLOOR)
-    { // floor lightning zig-zags, and forces the ceiling lightning to mimic
-      cMo = actor->owner;
-      zigZag = P_Random();
-      if((zigZag > 128 && actor->special1 < 2) || actor->special1 < -2)
+      Actor *twin = actor->target;
+      //t = twin->realtarget;
+
+      // floor lightning zig-zags, and forces the ceiling lightning to mimic
+      int zigZag = P_Random();
+      if ((zigZag > 128 && actor->special1 < 2) || actor->special1 < -2)
 	{
 	  actor->Thrust(actor->angle+ANG90, ZAGSPEED);
-	  if(cMo)
-	    {
-	      cMo->Thrust(actor->angle+ANG90, ZAGSPEED);
-	    }
+	  if (twin)
+	    twin->Thrust(twin->angle+ANG90, ZAGSPEED);
+
 	  actor->special1++;
 	}
       else
 	{
 	  actor->Thrust(actor->angle-ANG90, ZAGSPEED);
-	  if(cMo)
-	    {
-	      cMo->Thrust(cMo->angle-ANG90, ZAGSPEED);
-	    }
+	  if (twin)
+	    twin->Thrust(twin->angle-ANG90, ZAGSPEED);
+
 	  actor->special1--;
 	}
     }
-  if(target)
+  else if (actor->type == MT_LIGHTNING_CEILING)
     {
-      if(target->health <= 0)
-	{
-	  actor->ExplodeMissile();
-	}
+      actor->z = actor->ceilingz - actor->height;
+      //t = actor->realtarget;
+    }
+
+  if (t)
+    {
+      if (t->health <= 0)
+	actor->ExplodeMissile();
       else
 	{
-	  actor->angle = R_PointToAngle2(actor->x, actor->y, target->x,
-					 target->y);
+	  actor->angle = R_PointToAngle2(actor->x, actor->y, t->x, t->y);
 	  actor->px = 0;
 	  actor->py = 0;
 	  actor->Thrust(actor->angle, int(0.5 * actor->info->speed * FRACUNIT));
@@ -465,42 +461,35 @@ void A_LightningClip(DActor *actor)
 
 void A_LightningZap(DActor *actor)
 {
-
   fixed_t deltaZ;
 
   A_LightningClip(actor);
 
   actor->health -= 8;
-  if(actor->health <= 0)
+  if (actor->health <= 0)
     {
       actor->SetState(actor->info->deathstate);
       return;
     }
-  if(actor->type == MT_LIGHTNING_FLOOR)
-    {
-      deltaZ = 10*FRACUNIT;
-    }
+
+  if (actor->type == MT_LIGHTNING_FLOOR)
+    deltaZ = 10*FRACUNIT;
   else
-    {
-      deltaZ = -10*FRACUNIT;
-    }
+    deltaZ = -10*FRACUNIT;
+
   DActor *mo = actor->mp->SpawnDActor(actor->x+((P_Random()-128)*actor->radius/256), 
 		   actor->y+((P_Random()-128)*actor->radius/256), 
 		   actor->z+deltaZ, MT_LIGHTNING_ZAP);
-  if(mo)
+  if (mo)
     {
-      mo->owner = actor;
+      mo->owner = actor->owner;
+      mo->target = actor;
       mo->px = actor->px;
       mo->py = actor->py;
-      mo->target = actor->target;
-      if(actor->type == MT_LIGHTNING_FLOOR)
-	{
-	  mo->pz = 20*FRACUNIT;
-	}
+      if (actor->type == MT_LIGHTNING_FLOOR)
+	mo->pz = 20*FRACUNIT;
       else 
-	{
-	  mo->pz = -20*FRACUNIT;
-	}
+	mo->pz = -20*FRACUNIT;
     }
 
   if (actor->type == MT_LIGHTNING_FLOOR && P_Random() < 160)
@@ -515,26 +504,27 @@ void A_LightningZap(DActor *actor)
 
 void A_MLightningAttack2(PlayerPawn *actor)
 {
-  DActor *fmo, *cmo;
+  // TODO I really have no idea how the lightning pair is supposed to work.
+  // Do they track some target, or just zigzag on? 
 
-  fmo = actor->SpawnPlayerMissile(MT_LIGHTNING_FLOOR);
-  cmo = actor->SpawnPlayerMissile(MT_LIGHTNING_CEILING);
-  if(fmo)
+  DActor *f = actor->SpawnPlayerMissile(MT_LIGHTNING_FLOOR);
+  DActor *c = actor->SpawnPlayerMissile(MT_LIGHTNING_CEILING);
+  if (f)
     {
-      fmo->z = ONFLOORZ;
-      fmo->pz = 0;
-      fmo->target = NULL;
-      fmo->owner = cmo; // special case, lightning pair
-      fmo->special1 = 0;
-      A_LightningZap(fmo);	
+      f->z = ONFLOORZ;
+      f->pz = 0;
+      f->target = c; // special case, a lightning pair
+      f->special1 = 0; // zigzag counter
+      A_LightningZap(f);	
     }
-  if(cmo)
+
+  if (c)
     {
-      cmo->z = ONCEILINGZ;
-      cmo->pz = 0;
-      cmo->target = NULL; // mobj that it will track
-      cmo->owner = fmo;
-      A_LightningZap(cmo);	
+      c->z = ONCEILINGZ;
+      c->pz = 0;
+      c->target = f; // special case, a lightning pair
+      //c->owner = ; // this could in principle be used to point to the real target... but what is it?
+      A_LightningZap(c);	
     }
   S_StartSound(actor, SFX_MAGE_LIGHTNING_FIRE);
 }
@@ -559,11 +549,11 @@ void A_MLightningAttack(PlayerPawn *player, pspdef_t *psp)
 
 void A_ZapMimic(DActor *actor)
 {
-  DActor *mo = (DActor *)actor->special2;
-  if(mo)
+  DActor *mo = (DActor *)actor->target;
+  if (mo)
     {
-      if(mo->state >= &states[mo->info->deathstate]
-	 || mo->state == &states[S_FREETARGMOBJ])
+      if (mo->state >= &states[mo->info->deathstate]
+	  || mo->state == &states[S_FREETARGMOBJ])
 	{
 	  actor->ExplodeMissile();
 	}
@@ -599,10 +589,10 @@ void A_LastZap(DActor *actor)
 
 void A_LightningRemove(DActor *actor)
 {
-  DActor *mo = (DActor *)actor->owner;
+  DActor *mo = (DActor *)actor->target;
   if (mo)
     {
-      mo->owner = NULL;
+      mo->target = NULL;
       mo->ExplodeMissile();
     }
 }

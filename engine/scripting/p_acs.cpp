@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/11/30 00:09:47  smite-meister
+// bugfixes
+//
 // Revision 1.10  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -59,6 +62,7 @@
 
 #include "g_actor.h"
 #include "g_pawn.h"
+#include "g_mapinfo.h"
 #include "g_map.h"
 #include "g_player.h"
 #include "g_game.h"
@@ -77,8 +81,6 @@
 IMPLEMENT_CLASS(acs_t, "AC script");
 acs_t::acs_t() {}
 
-void P_ACSInitNewGame();
-void P_CheckACSStore();
 
 // static stuff
 
@@ -211,7 +213,8 @@ static void ThingCount(int type, int tid);
 
 // global ACS stuff
 int WorldVars[MAX_ACS_WORLD_VARS];
-acsstore_t ACSStore[MAX_ACS_STORE+1]; // +1 for termination marker
+multimap<int, acsstore_t> ACS_store;
+
 
 static acs_t *ACScript; // script being interpreted
 static Map   *ACMap;    // where it runs (shorthand)
@@ -402,32 +405,63 @@ void Map::StartOpenACS(int number, int infoIndex, int *address)
 
 //==========================================================================
 //
-// P_CheckACSStore
+// was P_CheckACSStore
 //
 // Scans the ACS store and executes all scripts belonging to the current
 // map.
 //
 //==========================================================================
 
-void P_CheckACSStore()
+void Map::CheckACSStore()
 {
-  /* 
-  FIXME
-  acsstore_t *store;
-  for(store = ACSStore; store->map != 0; store++)
+  int m = info->mapnumber;
+
+  multimap<int, acsstore_t>::iterator i, j, k;
+  i = j = ACS_store.lower_bound(m);
+  k = ACS_store.upper_bound(m);
+  while (i != k)
     {
-      if(store->map == gamemap)
-	{
-	  P_StartACS(store->script, 0, store->args, NULL, NULL, 0);
-	  if(NewScript)
-	    {
-	      NewScript->delayCount = 35;
-	    }
-	  store->map = -1;
-	}
+      acsstore_t &s = (*i).second;
+      StartACS(s.script, s.args, NULL, NULL, 0);
+      if (NewScript)
+	NewScript->delayCount = 35;
+      i++;
     }
-  */
+
+  ACS_store.erase(j, k);
 }
+
+//==========================================================================
+//
+// AddToACSStore
+//
+//==========================================================================
+
+bool P_AddToACSStore(int tmap, int number, byte *args)
+{
+  multimap<int, acsstore_t>::iterator i, j;
+  i = ACS_store.lower_bound(tmap);
+  j = ACS_store.upper_bound(tmap);
+  while (i != j)
+    {
+      if ((*i).second.script == number)
+	return false; // no duplicates
+      i++;
+    }
+
+  acsstore_t temp;
+  temp.tmap = tmap;
+  temp.script = number;
+  temp.args[0] = args[0];
+  temp.args[1] = args[1];
+  temp.args[2] = args[2];
+  temp.args[3] = 0;
+
+  ACS_store.insert(pair<const int, acsstore_t>(tmap, temp));
+
+  return true;
+}
+
 
 //==========================================================================
 //
@@ -441,13 +475,7 @@ bool Map::StartACS(int number, byte *args, Actor *activator, line_t *line, int s
   CONS_Printf("Starting ACS script %d\n", number);
 
   NewScript = NULL;
-  /*
-    // FIXME TODO make a separate function for storing scripts ( removed map parameter )
-  if(map && map != gamemap)
-    { // Add to the script store
-      return AddToACSStore(map, number, args);
-    }
-  */
+
   int infoIndex = GetACSIndex(number);
   if (infoIndex == -1)
     { // Script not found
@@ -476,48 +504,6 @@ bool Map::StartACS(int number, byte *args, Actor *activator, line_t *line, int s
   NewScript = script;
   return true;
 }
-
-//==========================================================================
-//
-// AddToACSStore
-//
-//==========================================================================
-/*
-TODO
-static bool AddToACSStore(int map, int number, byte *args)
-{
-  int i;
-  int index;
-
-  index = -1;
-  for(i = 0; ACSStore[i].map != 0; i++)
-    {
-      if(ACSStore[i].script == number
-	 && ACSStore[i].map == map)
-	{ // Don't allow duplicates
-	  return false;
-	}
-      if(index == -1 && ACSStore[i].map == -1)
-	{ // Remember first empty slot
-	  index = i;
-	}
-    }
-  if(index == -1)
-    { // Append required
-      if(i == MAX_ACS_STORE)
-	{
-	  I_Error("AddToACSStore: MAX_ACS_STORE (%d) exceeded.",
-		  MAX_ACS_STORE);
-	}
-      index = i;
-      ACSStore[index+1].map = 0;
-    }
-  ACSStore[index].map = map;
-  ACSStore[index].script = number;
-  *((int *)ACSStore[index].args) = *((int *)args);
-  return true;
-}
-*/
 
 
 //==========================================================================
@@ -568,7 +554,7 @@ bool Map::SuspendACS(int number)
 void P_ACSInitNewGame()
 {
   memset(WorldVars, 0, sizeof(WorldVars));
-  memset(ACSStore, 0, sizeof(ACSStore));
+  ACS_store.clear();
 }
 
 

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2003/11/30 00:09:48  smite-meister
+// bugfixes
+//
 // Revision 1.1  2003/04/19 17:38:48  smite-meister
 // SNDSEQ support, tools, linedef system...
 //
@@ -39,7 +42,7 @@ int main(int argc, char *argv[])
 {
   if (argc != 2)
     {
-      printf("This programs converts a tab-delimited Doom => Hexen linedef\n"
+      printf("This program converts a tab-delimited Doom => Hexen linedef\n"
 	     "conversion table into a binary lump to be inserted into legacy.wad\n");
       printf("Usage: d2h conversiontable.txt\n");
       return -1;
@@ -126,7 +129,6 @@ int main(int argc, char *argv[])
 	      break;
 
 	    default:
-	      t.trigger |= 14;
 	      break;
 	    }
 	}

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/11/30 00:09:44  smite-meister
+// bugfixes
+//
 // Revision 1.8  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -1757,6 +1760,9 @@ void A_CheckBurnGone(DActor *actor)
 
 void A_FreeTargMobj(DActor *mo)
 {
+  // TODO since we now have a pointer tracking system for Actors, maybe we should
+  // delete the DActor here.
+
   mo->px = mo->py = mo->pz = 0;
   mo->z = mo->ceilingz+4*FRACUNIT;
   mo->flags &= ~(MF_SHOOTABLE|MF_FLOAT|MF_SOLID|MF_COUNTKILL);

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/11/30 00:09:48  smite-meister
+// bugfixes
+//
 // Revision 1.2  2003/11/12 11:14:52  smite-meister
 // cr/lf
 //
@@ -33,11 +36,15 @@
 #ifndef p_acs_h
 #define p_acs_h 1
 
+#include <map>
+
+
 #define MAX_ACS_SCRIPT_VARS 10
 #define MAX_ACS_WORLD_VARS 64
 #define ACS_STACK_DEPTH 32
-#define MAX_ACS_STORE 20
 
+void P_ACSInitNewGame();
+bool P_AddToACSStore(int tmap, int number, byte *args);
 
 class acs_t : public Thinker
 {
@@ -64,13 +71,15 @@ public:
 
 struct acsstore_t
 {
-  int map;	// Target map
+  int tmap;	// Target map
   int script;	// Script number on target map
   byte args[4];	// Padded to 4 for alignment
 };
 
 extern int WorldVars[MAX_ACS_WORLD_VARS];
-extern acsstore_t ACSStore[MAX_ACS_STORE+1];
+extern multimap<int, acsstore_t> ACS_store;
+
+typedef multimap<int, acsstore_t>::iterator acsstore_iter_t;
 
 
 enum acs_state_t
