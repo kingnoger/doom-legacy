@@ -139,23 +139,8 @@ public:
   vector<Actor *>      braintargets; // DoomII demonbrain spawnbox targets
   int braintargeton;
 
-  /*
-  struct BossSpot_t
-  {
-    fixed_t x;
-    fixed_t y;
-    angle_t angle;
-  };
-  */
 #define MAX_BOSS_SPOTS 8
   vector<mapthing_t *> BossSpots;
-  /*
-  struct MaceSpot_t
-  {
-    fixed_t x;
-    fixed_t y;
-  };
-  */
 #define MAX_MACE_SPOTS 8
   vector<mapthing_t *> MaceSpots;
 
@@ -195,6 +180,8 @@ public:
   void RespawnSpecials();
   void RespawnWeapons();
 
+  void SpawnActor(Actor *p);
+  void DetachActor(Actor *p);
   DActor *SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t);
   void SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing);
   void SpawnMapThing(mapthing_t *mthing);

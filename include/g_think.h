@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/23 23:19:37  smite-meister
+// Weapon groups, MAPINFO parser, WAD2+WAD3 support added!
+//
 // Revision 1.2  2002/12/16 22:04:55  smite-meister
 // Actor / DActor separation done!
 //
@@ -26,7 +29,7 @@
 //
 //
 // DESCRIPTION:
-//   Thinkers. Now you are in trouble.
+//   Thinkers. It starts.
 //
 //-----------------------------------------------------------------------------
 
@@ -117,7 +120,8 @@ public:
     tt_actor,
     tt_pawn,
     tt_ppawn,
-    tt_dactor
+    tt_dactor,
+    tt_other
   };
   virtual thinkertype_e Type() {return tt_thinker;}; // "name-tag" function
 

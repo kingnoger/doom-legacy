@@ -3,8 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 2002 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -40,38 +39,7 @@ typedef void GlidePatch_t;
 using namespace std;
 
 class WadFile;
-
-
-//typedef long lumpnum_t;           // 16:16 long (wad num: lump num)
-
-
-// header of a wad file
-struct wadinfo_t
-{
-  char       identification[4];   // should be "IWAD" or "PWAD"
-  int        numlumps;            // how many resources
-  int        infotableofs;        // the 'directory' of resources
-};
-
-
-// an entry of the wad directory. almost identical to lumpinfo_t.
-// Hooray to pink, gray and green.
-struct filelump_t
-{
-  int        filepos;             // file offset of the resource
-  int        size;                // size of the resource
-  char       name[8];             // name of the resource
-};
-
-
-// in memory : initted at game startup
-struct lumpinfo_t
-{
-  char        name[8];            // filelump_t name[]
-  int         position;           // filelump_t filepos
-  int         size;               // filelump_t size
-};
-
+struct waddir_t;
 
 //SoM: 4/13/2000: Store lists of lumps for F_START/F_END ect.
 struct lumplist_t
@@ -109,7 +77,7 @@ public:
   int LumpLength(int lump);
   const char *Name(int i);
   const byte *md5(int i);
-  lumpinfo_t *GetLumpinfo(int wadnum);
+  waddir_t *GetLumpinfo(int wadnum);
   unsigned int GetNumLumps(int wadnum);
   void WriteFileHeaders(byte *p);
 

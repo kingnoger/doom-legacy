@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2002/12/23 23:19:37  smite-meister
+// Weapon groups, MAPINFO parser, WAD2+WAD3 support added!
+//
 // Revision 1.3  2002/12/16 22:05:08  smite-meister
 // Actor / DActor separation done!
 //
@@ -68,8 +71,9 @@
 //
 // DESCRIPTION:
 //
-// Video system class. Takes care of remembering and changing of video modes,
-// scaling coefficients for original Doom bitmaps, software mode multiple buffering etc.
+// Video system class. Takes care of video modes,
+// scaling coefficients for original Doom bitmaps,
+// software mode multiple buffering etc.
 //-----------------------------------------------------------------------------
 
 
@@ -81,7 +85,6 @@
 
 #include "doomtype.h"
 
-// FIXME 4 or 5 ?
 #define NUMSCREENS    4
 
 // we try to re-allocate a minimum of buffers for stability of the memory,
@@ -107,11 +110,11 @@ public:
 
   // software mode only
   byte  *buffer;     // invisible screens buffer
-  byte  *screens[5]; // Each screen is [vid.width*vid.height];
+  byte  *screens[NUMSCREENS]; // Each screen is [vid.width*vid.height];
   byte  *direct;     // linear frame buffer, or vga base mem.
 
   bool windowed; // not fullscreen?
-  int  numpages; // ...
+  //int  numpages; // ...
 
   int   dupx, dupy;       // scale 1,2,3 value for menus & overlays
   float fdupx, fdupy;     // same as dupx,dupy but exact value when aspect ratio isn't 320/200
@@ -119,7 +122,6 @@ public:
   int   baseratio;       // SoM: Used to get the correct value for lighting walls
 
   int   setmodeneeded; // video mode change needed if > 0 // (the mode number to set + 1)
-  //bool  recalc;        // TODO not really necessary, remove...
 
   RGBA_t *palette;  // local copy of the palette for V_GetColor()
 

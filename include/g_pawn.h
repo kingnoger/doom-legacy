@@ -147,14 +147,15 @@ public:
   bool         weaponowned[NUMWEAPONS];
 
   int ammo[NUMAMMO];
-  int maxammo[NUMAMMO];
+  //int maxammo[NUMAMMO];
+  const int *maxammo;
 
   byte armortype;   // Armor type is 0-2.
   int  armorpoints;
 
   byte cards; // bit field see declration of card_t
 
-  weaponinfo_t    *weaponinfo; // can be changed when use level2 weapons (heretic)
+  const weaponinfo_t *weaponinfo; // can be changed when use level2 weapons (heretic)
 
   // Overlay view sprites (gun, etc).
   pspdef_t psprites[NUMPSPRITES];

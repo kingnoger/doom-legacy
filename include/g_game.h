@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:23  hurdler
-// Initial revision
+// Revision 1.2  2002/12/23 23:19:37  smite-meister
+// Weapon groups, MAPINFO parser, WAD2+WAD3 support added!
+//
+// Revision 1.1.1.1  2002/11/16 14:18:23  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.17  2002/08/31 11:40:19  vberghol
 // menu and map loading bugfixes
@@ -376,10 +379,6 @@ void G_LoadGame(int slot);
 
 // Called by M_Responder.
 void G_SaveGame(int slot, char* description);
-
-// in g_state.cpp
-
-LevelNode *G_CreateClassicMapList(int episode);
 
 void G_ReadDemoTiccmd(ticcmd_t* cmd,int playernum);
 void G_WriteDemoTiccmd(ticcmd_t* cmd,int playernum);

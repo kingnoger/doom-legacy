@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/23 23:19:37  smite-meister
+// Weapon groups, MAPINFO parser, WAD2+WAD3 support added!
+//
 // Revision 1.2  2002/12/16 22:04:48  smite-meister
 // Actor / DActor separation done!
 //
@@ -292,12 +295,6 @@ public:
   int  eflags; //added:28-02-98: extra flags see above
   int  flags2; // heretic stuff
 
-
-  //Fab:02-08-98
-  //void*               skin;      // this one overrides 'sprite' when
-                                   // non NULL (currently hack for player
-                                   // bodies so they 'remember' the skin)
-                                   //
                                    // secondary used when player die and
                                    // play the die sound problem is he is
                                    // already respawn and the corps play
@@ -321,10 +318,6 @@ public:
   // Reaction time: if non 0, don't attack yet.
   // Used by player to freeze a bit after teleporting.
   int  reactiontime;
-
-  // Additional info record for player avatars only.
-  // Only valid if type == MT_PLAYER
-  //PlayerInfo *player;
 
   //SoM: Friction.
   int friction;

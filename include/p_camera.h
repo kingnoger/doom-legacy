@@ -18,42 +18,14 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/23 23:19:37  smite-meister
+// Weapon groups, MAPINFO parser, WAD2+WAD3 support added!
+//
 // Revision 1.2  2002/12/16 22:04:59  smite-meister
 // Actor / DActor separation done!
 //
 // Revision 1.1.1.1  2002/11/16 14:18:29  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.4  2002/08/19 18:06:41  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.3  2002/08/13 19:47:45  vberghol
-// p_inter.cpp done
-//
-// Revision 1.2  2002/08/11 17:16:51  vberghol
-// ...
-//
-// Revision 1.1  2002/07/23 19:21:45  vberghol
-// fixed up to p_enemy.cpp
-//
-// Revision 1.7  2002/07/18 19:16:41  vberghol
-// renamed a few files
-//
-// Revision 1.6  2002/07/10 19:57:03  vberghol
-// g_pawn.cpp tehty
-//
-// Revision 1.5  2002/07/08 20:46:35  vberghol
-// More files compile!
-//
-// Revision 1.4  2002/07/04 18:02:27  vberghol
-// Pientä fiksausta, g_pawn.cpp uusi tiedosto
-//
-// Revision 1.3  2002/07/01 21:00:52  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:26  vberghol
-// Version 133 Experimental!
-//
 //
 //
 // DESCRIPTION:
@@ -82,9 +54,12 @@ public:
   int  fixedcolormap;
   bool chase;
 
+  Camera();
+
   void ClearCamera();
   void ResetCamera(Actor *p);
-  void MoveChaseCamera(Actor *p);
+
+  virtual void Think();
 };
 
 extern Camera camera;

@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:22  hurdler
-// Initial revision
+// Revision 1.2  2002/12/23 23:19:37  smite-meister
+// Weapon groups, MAPINFO parser, WAD2+WAD3 support added!
+//
+// Revision 1.1.1.1  2002/11/16 14:18:22  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.6  2002/08/16 20:49:26  vberghol
 // engine ALMOST done!
@@ -59,11 +62,6 @@
 #ifdef __GNUG__
 #pragma interface
 #endif
-
-
-// ==================================
-// Difficulty/skill settings/filters.
-// ==================================
 
 
 // heretic stuff
@@ -164,7 +162,8 @@ typedef enum
 //  user has not changed weapon.
 typedef enum
 {
-  wp_fist,
+  wp_doom,
+  wp_fist = wp_doom,
   wp_pistol,
   wp_shotgun,
   wp_chaingun,
@@ -175,7 +174,8 @@ typedef enum
   wp_supershotgun,
 
   // heretic stuff
-  wp_staff=wp_fist,
+  wp_heretic,
+  wp_staff = wp_heretic, //=wp_fist,
   wp_goldwand,
   wp_crossbow,
   wp_blaster,
@@ -196,13 +196,15 @@ typedef enum
 // Ammunition types defined.
 typedef enum
 {
-  am_clip,    // Pistol / chaingun ammo.
+  am_doom,
+  am_clip = am_doom, // Pistol / chaingun ammo.
   am_shell,   // Shotgun / double barreled shotgun.
   am_cell,    // Plasma rifle, BFG.
   am_misl,    // Missile launcher.
 
   // heretic stuff
-  am_goldwand = am_clip,
+  am_heretic,
+  am_goldwand = am_heretic, // = am_clip,
   am_crossbow,
   am_blaster,
   am_skullrod,
@@ -216,9 +218,8 @@ typedef enum
 
 
 // Weapon info: sprite frames, ammunition use.
-typedef struct
+struct weaponinfo_t
 {
-  // VB: replaced int states with statenum_t:s
   ammotype_t ammo;
   int        ammopershoot;
   statenum_t upstate;
@@ -227,15 +228,21 @@ typedef struct
   statenum_t atkstate;
   statenum_t holdatkstate;
   statenum_t flashstate;
+};
 
-} weaponinfo_t;
+extern int weapongroup[NUMWEAPONS];
+extern weapontype_t wgroups[8][4];
 
-extern weaponinfo_t doomweaponinfo[NUMWEAPONS];
+//extern weaponinfo_t doomweaponinfo[NUMWEAPONS];
 extern weaponinfo_t wpnlev1info[NUMWEAPONS];
 extern weaponinfo_t wpnlev2info[NUMWEAPONS];
 
 // LUT of ammunition limits for each kind.
 // This doubles with BackPack powerup item.
-extern  int             maxammo[NUMAMMO];
+extern int maxammo1[NUMAMMO];
+extern int maxammo2[NUMAMMO];
+
+extern int clipammo[NUMAMMO];
+extern int GetWeaponAmmo[NUMWEAPONS];
 
 #endif

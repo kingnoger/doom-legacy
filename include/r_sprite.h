@@ -1,12 +1,36 @@
-// $Id$
-// Sprite and sprite skin definitions
+// Emacs style mode select   -*- C++ -*- 
+//-----------------------------------------------------------------------------
 //
+// $Id$
+//
+// Copyright (C) 1998-2002 by DooM Legacy Team.
+//
+// This program is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public License
+// as published by the Free Software Foundation; either version 2
+// of the License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+//
+// $Log$
+// Revision 1.2  2002/12/23 23:19:37  smite-meister
+// Weapon groups, MAPINFO parser, WAD2+WAD3 support added!
+//
+//
+// DESCRIPTION:
+//   Sprite and sprite skin definitions
+//-----------------------------------------------------------------------------
 
 
 #ifndef r_sprite_h
 #define r_sprite_h 1
 
 #include "doomtype.h"
+
 
 // Doom sprites in wads are patches with a special naming convention
 //  so they can be recognized by R_InitSprites.
