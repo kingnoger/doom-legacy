@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2004/01/11 17:19:14  smite-meister
+// bugfixes
+//
 // Revision 1.20  2004/01/02 14:25:01  smite-meister
 // cleanup
 //
@@ -271,8 +274,7 @@ void Actor::UnsetPosition()
       else
 	subsector->sector->thinglist = snext;
 #ifdef PARANOIA
-      sprev = NULL;
-      snext = NULL;
+      sprev = snext = NULL;
 #endif
       //SoM: 4/7/2000
       //
@@ -308,6 +310,8 @@ void Actor::UnsetPosition()
 	  if (blockx>=0 && blockx < mp->bmapwidth && blocky>=0 && blocky < mp->bmapheight)
 	    mp->blocklinks[blocky * mp->bmapwidth + blockx] = bnext;
         }
+
+      bprev = bnext = NULL;
     }
 }
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/01/11 17:19:14  smite-meister
+// bugfixes
+//
 // Revision 1.11  2004/01/06 14:37:45  smite-meister
 // six bugfixes, cleanup
 //
@@ -504,10 +507,9 @@ void A_LeafSpawn(DActor *actor)
 
 void A_LeafThrust(DActor *actor)
 {
-  if(P_Random() > 96)
-    {
-      return;
-    }
+  if (P_Random() > 96)
+    return;
+
   actor->pz += (P_Random()<<9)+FRACUNIT;
 }
 
@@ -520,18 +522,16 @@ void A_LeafThrust(DActor *actor)
 void A_LeafCheck(DActor *actor)
 {
   actor->special1++;
-  if(actor->special1 >= 20)
+  if (actor->special1 >= 20 || actor->owner == NULL)
     {
       actor->SetState(S_NULL);
       return;
     }
-  if(P_Random() > 64)
+
+  if (P_Random() > 64)
     {
-      if(!actor->px && !actor->py)
-	{
-	  actor->Thrust(actor->owner->angle,
-		       (P_Random()<<9)+FRACUNIT);
-	}
+      if (!actor->px && !actor->py)
+	actor->Thrust(actor->owner->angle, (P_Random()<<9)+FRACUNIT);
       return;
     }
   actor->SetState(S_LEAF1_8);
@@ -586,7 +586,7 @@ void GenerateOrbitTable(void)
 
 // New bridge stuff
 //	Parent
-//		special1	true == removing from world
+//		special1	(no longer used) true == removing from world
 //
 //	Child
 //		owner		pointer to center mobj
@@ -594,12 +594,13 @@ void GenerateOrbitTable(void)
 
 void A_BridgeOrbit(DActor *actor)
 {
-  //  if (actor->owner->special1)
-  if (actor->owner->mp == NULL) // "to be removed -signal"
+  if (actor->owner == NULL)
     {
       actor->SetState(S_NULL);
+      return;
     }
-  actor->args[0]+=3;
+
+  actor->args[0] += 3;
   actor->x = actor->owner->x + orbitTableX[actor->args[0]];
   actor->y = actor->owner->y + orbitTableY[actor->args[0]];
   actor->z = actor->owner->z;

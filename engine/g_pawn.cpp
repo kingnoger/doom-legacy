@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.29  2004/01/11 17:19:14  smite-meister
+// bugfixes
+//
 // Revision 1.28  2004/01/06 14:37:45  smite-meister
 // six bugfixes, cleanup
 //
@@ -2031,7 +2034,7 @@ bool PlayerPawn::GiveArtifact(artitype_t arti, DActor *from)
   else
     {
       // Puzzle item
-      j = TXT_ARTIPUZZSKULL - 1 + arti;
+      j = TXT_ARTIPUZZSKULL + arti - arti_firstpuzzitem;
       if (arti >= arti_puzzgear1)
 	j = TXT_ARTIPUZZGEAR;
       player->SetMessage(text[j], true);
