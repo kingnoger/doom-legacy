@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2004/12/08 16:56:16  segabor
+// Mac and SDL related fixes
+//
 // Revision 1.15  2004/08/29 13:50:08  hurdler
 // minor update
 //
@@ -109,7 +112,12 @@ static char vidModeName[33][32]; // allow 33 different modes
 
 
 // maximum number of windowed modes (see windowedModes[][])
+#if !defined(__MACOS__) && !defined(__APPLE)
 #define MAXWINMODES (8)
+#else
+// [segabor]: Macs don't need such a small resolutions .. 
+#define MAXWINMODES (5)
+#endif
 
 //Hudler: 16/10/99: added for OpenGL gamma correction
 RGBA_t  gamma_correction = {0x7F7F7F7F};
@@ -136,9 +144,11 @@ static int windowedModes[MAXWINMODES][2] =
   {1024, 768},
   {800, 600},
   {640, 480},
+#if !defined(__MACOS__) && !defined(__APPLE)
   {512, 384},
   {400, 300},
   {320, 200}
+#endif
 };
 
 
@@ -425,8 +435,18 @@ bool I_StartupGraphics()
   // so lets force 8 bit (software mode only)
   // TODO why not use hicolor in sw mode too? it must work...
   // Set color depth; either 1=256pseudocolor or 2=hicolor
+#if defined(__APPLE__) || defined(__MACOS__)
+  vid.BytesPerPixel	= vidInfo->vfmt->BytesPerPixel;
+  vid.BitsPerPixel	= vidInfo->vfmt->BitsPerPixel;
+  if (!M_CheckParm("-opengl")) {
+	  // software mode
+	  vid.BytesPerPixel = 1;
+	  vid.BitsPerPixel = 8;
+  }
+#else
   vid.BytesPerPixel = 1;  //videoInfo->vfmt->BytesPerPixel
   vid.BitsPerPixel = 8;
+#endif
   //highcolor = (vid.bpp == 2) ? true:false;
 
   // default resolution
