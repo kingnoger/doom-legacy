@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/09/06 22:28:53  jussip
+// Beginnings of new joystick code.
+//
 // Revision 1.6  2004/08/18 14:35:20  smite-meister
 // PNG support!
 //
@@ -63,6 +66,10 @@ extern BOOL   bDX0300;
 
 // basic system initialization
 void I_SysInit();
+
+// Joystick init and cleanup.
+void I_JoystickInit();
+void I_ShutdownJoystick();
 
 // return free and total physical memory in the system
 Uint32 I_GetFreeMem(Uint32 *total);

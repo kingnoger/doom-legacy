@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.32  2004/09/06 22:28:53  jussip
+// Beginnings of new joystick code.
+//
 // Revision 1.31  2004/08/18 14:35:20  smite-meister
 // PNG support!
 //
@@ -734,6 +737,9 @@ void D_DoomMain()
   // system-specific stuff
   CONS_Printf("Sys_Init: Init system-specific stuff.\n");
   I_SysInit();
+
+  // Initialize the joystick subsystem.
+  I_JoystickInit();
 
   // TODO init keybindings and controls, init network stuff 
 

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/09/06 22:28:54  jussip
+// Beginnings of new joystick code.
+//
 // Revision 1.13  2004/08/29 20:48:49  smite-meister
 // bugfixes. wow.
 //
@@ -396,7 +399,7 @@ void I_Tactile(int on, int off, int total)
   on = off = total = 0;
 }
 
-
+// FIXME remove, obsoleted.
 void I_InitJoystick()
 {
 #ifdef LJOYSTICK
@@ -474,7 +477,8 @@ void I_GetJoyEvent()
     }
 }
 
-
+// FIXME remove this obsoleted Linux-only hack.
+#if 0
 void I_ShutdownJoystick()
 {
   if (joyfd != -1)
@@ -485,7 +489,7 @@ void I_ShutdownJoystick()
   joyaxes = 0;
   joystick_started = 0;
 }
-
+#endif
 
 int joy_open(char *fname)
 {
@@ -696,7 +700,7 @@ void I_Sleep(unsigned int ms)
 void I_SysInit()
 {
   // Initialize Audio as well, otherwise DirectX can not use audio
-  if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO) < 0)
+  if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_JOYSTICK) < 0)
     {
       CONS_Printf("Couldn't initialize SDL: %s\n", SDL_GetError());
       I_Quit();
@@ -709,6 +713,45 @@ void I_SysInit()
   SDL_WM_SetCaption(title, "Doom Legacy");
 
   I_StartupGraphics(); // we need a window for grabbing input!
+}
+
+// Initialize joysticks and print information.
+void I_JoystickInit() {
+  int numjoysticks, i;
+  SDL_Joystick *joy;
+
+  // Joystick subsystem has been initialized at the same time as
+  // video, because otherwise it won't work.
+
+  numjoysticks = SDL_NumJoysticks();
+  CONS_Printf("%d joystick(s) found.\n", numjoysticks);
+
+  // Add SDL_JoystickEventState(SDL_ENABLE) and other such stuff here.
+  for(i=0; i<numjoysticks; i++) {
+    joy = SDL_JoystickOpen(i);
+    CONS_Printf("Properties of joystick %d:\n", i);
+    CONS_Printf("    %s.\n", SDL_JoystickName(i));
+    CONS_Printf("    %d axes.\n", SDL_JoystickNumAxes(joy));
+    CONS_Printf("    %d buttons.\n", SDL_JoystickNumButtons(joy));
+    CONS_Printf("    %d hats.\n", SDL_JoystickNumHats(joy));
+    CONS_Printf("    %d trackballs.\n", SDL_JoystickNumBalls(joy));
+  }
+}
+
+// Close all joysticks.
+
+void I_ShutdownJoystick() {
+  int i;
+  SDL_Joystick *joy;
+
+  CONS_Printf("Shutting down joysticks.\n");
+  for(i=0; i< SDL_NumJoysticks(); i++) {
+    joy = SDL_JoystickOpen(i); // FIXME to use vector<joy*> or something.
+    CONS_Printf("Closing joystick %s.\n", SDL_JoystickName(i));
+    SDL_JoystickClose(joy);
+    SDL_JoystickClose(joy); // Open/close refcounted, so subtract it twice.
+  }
+  CONS_Printf("Joystick subsystem closed cleanly.\n");
 }
 
 //
@@ -731,6 +774,7 @@ void I_Quit()
 
   M_SaveConfig(NULL);
   I_ShutdownGraphics();
+  I_ShutdownJoystick();
   I_ShutdownSystem();
   printf("\r");
   ShowEndTxt();
@@ -795,6 +839,7 @@ void I_Error(char *error, ...)
 
   I_ShutdownSound();
   I_ShutdownGraphics();
+  I_ShutdownJoystick();
   // shutdown everything else which was registered
   I_ShutdownSystem();
 
