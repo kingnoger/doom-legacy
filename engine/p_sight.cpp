@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2005/03/22 17:02:19  smite-meister
+// fix
+//
 // Revision 1.7  2004/11/09 20:38:50  smite-meister
 // added packing to I/O structs
 //
@@ -64,16 +67,10 @@ static fixed_t   t2x, t2y;
 static int       sightcounts[2];
 
 
-//
-// P_DivlineSide
-// Returns side 0 (front), 1 (back), or 2 (on).
-//
+/// Returns side 0 (front), 1 (back), or 2 (on).
 static int P_DivlineSide(fixed_t x, fixed_t y, divline_t* node)
 {
-  fixed_t     dx;
-  fixed_t     dy;
-  fixed_t     left;
-  fixed_t     right;
+  fixed_t dx, dy, left, right;
 
   if (!node->dx)
     {
@@ -112,70 +109,41 @@ static int P_DivlineSide(fixed_t x, fixed_t y, divline_t* node)
 }
 
 
-//
-// P_InterceptVector2
 // Returns the fractional intercept point
 // along the first divline.
 // This is only called by the addthings and addlines traversers.
-//
-static fixed_t P_InterceptVector2( divline_t* v2, divline_t* v1 )
+static fixed_t P_InterceptVector2(divline_t *v2, divline_t *v1)
 {
-  fixed_t     frac;
-  fixed_t     num;
-  fixed_t     den;
-
-  den = FixedMul (v1->dy>>8,v2->dx) - FixedMul(v1->dx>>8,v2->dy);
+  fixed_t den = FixedMul (v1->dy>>8,v2->dx) - FixedMul(v1->dx>>8,v2->dy);
 
   if (den == 0)
     return 0;
   //  I_Error ("P_InterceptVector: parallel");
 
-  num = FixedMul ( (v1->x - v2->x)>>8 ,v1->dy) +
-    FixedMul ( (v2->y - v1->y)>>8 , v1->dx);
-  frac = FixedDiv (num , den);
+  fixed_t num = FixedMul((v1->x - v2->x) >> 8, v1->dy) + FixedMul((v2->y - v1->y) >> 8, v1->dx);
+  fixed_t frac = FixedDiv (num , den);
 
   return frac;
 }
 
-//
-// was P_CrossSubsector
-// Returns true
-//  if strace crosses the given subsector successfully.
-//
+
+// Returns true if strace crosses the given subsector successfully.
 bool Map::CrossSubsector(int num)
 {
-  seg_t*              seg;
-  line_t*             line;
-  int                 s1;
-  int                 s2;
-  int                 count;
-  subsector_t*        sub;
-  sector_t*           front;
-  sector_t*           back;
-  fixed_t             opentop;
-  fixed_t             openbottom;
-  divline_t           divl;
-  vertex_t*           v1;
-  vertex_t*           v2;
-  fixed_t             frac;
-  fixed_t             slope;
-
 #ifdef RANGECHECK
   if (num>=numsubsectors)
-    I_Error ("P_CrossSubsector: ss %i with numss = %i",
-             num,
-             numsubsectors);
+    I_Error ("P_CrossSubsector: ss %i with numss = %i", num, numsubsectors);
 #endif
 
-  sub = &subsectors[num];
+  subsector_t *sub = &subsectors[num];
 
   // check lines
-  count = sub->numlines;
-  seg = &segs[sub->firstline];
+  int count = sub->numlines;
+  seg_t *seg = &segs[sub->firstline];
 
   for ( ; count ; seg++, count--)
     {
-      line = seg->linedef;
+      line_t *line = seg->linedef;
 
       // allready checked other side?
       if (line->validcount == validcount)
@@ -183,21 +151,23 @@ bool Map::CrossSubsector(int num)
 
       line->validcount = validcount;
 
-      v1 = line->v1;
-      v2 = line->v2;
-      s1 = P_DivlineSide (v1->x,v1->y, &strace);
-      s2 = P_DivlineSide (v2->x, v2->y, &strace);
+      vertex_t *v1 = line->v1;
+      vertex_t *v2 = line->v2;
+      int s1 = P_DivlineSide(v1->x, v1->y, &strace);
+      int s2 = P_DivlineSide(v2->x, v2->y, &strace);
 
       // line isn't crossed?
       if (s1 == s2)
         continue;
 
+      divline_t divl;
+
       divl.x = v1->x;
       divl.y = v1->y;
       divl.dx = v2->x - v1->x;
       divl.dy = v2->y - v1->y;
-      s1 = P_DivlineSide (strace.x, strace.y, &divl);
-      s2 = P_DivlineSide (t2x, t2y, &divl);
+      s1 = P_DivlineSide(strace.x, strace.y, &divl);
+      s2 = P_DivlineSide(t2x, t2y, &divl);
 
       // line isn't crossed?
       if (s1 == s2)
@@ -209,13 +179,15 @@ bool Map::CrossSubsector(int num)
         return false;
 
       // crosses a two sided line
-      front = seg->frontsector;
-      back = seg->backsector;
+      sector_t *front = seg->frontsector;
+      sector_t *back = seg->backsector;
 
       // no wall to block sight with?
       if (front->floorheight == back->floorheight
           && front->ceilingheight == back->ceilingheight)
         continue;
+
+      fixed_t opentop, openbottom;
 
       // possible occluder
       // because of ceiling height differences
@@ -234,18 +206,18 @@ bool Map::CrossSubsector(int num)
       if (openbottom >= opentop)
         return false;               // stop
 
-      frac = P_InterceptVector2 (&strace, &divl);
+      fixed_t frac = P_InterceptVector2(&strace, &divl);      
 
       if (front->floorheight != back->floorheight)
         {
-          slope = FixedDiv (openbottom - sightzstart , frac);
+          fixed_t slope = FixedDiv(openbottom - sightzstart , frac);
           if (slope > bottomslope)
             bottomslope = slope;
         }
 
       if (front->ceilingheight != back->ceilingheight)
         {
-          slope = FixedDiv (opentop - sightzstart , frac);
+          fixed_t slope = FixedDiv (opentop - sightzstart , frac);
           if (slope < topslope)
             topslope = slope;
         }
@@ -259,38 +231,30 @@ bool Map::CrossSubsector(int num)
 
 
 
-//
-// was P_CrossBSPNode
-// Returns true
-//  if strace crosses the given node successfully.
-// TODO: Hurdler: I think it's not used anymore
-//
+// Returns true if strace crosses the given node successfully.
 bool Map::CrossBSPNode(int bspnum)
 {
-  node_t*     bsp;
-  int         side;
-
   if (bspnum & NF_SUBSECTOR)
     {
       if (bspnum == -1)
-        return CrossSubsector (0);
+        return CrossSubsector(0);
       else
-        return CrossSubsector (bspnum&(~NF_SUBSECTOR));
+        return CrossSubsector(bspnum & (~NF_SUBSECTOR));
     }
 
-  bsp = &nodes[bspnum];
+  node_t *bsp = &nodes[bspnum];
 
   // decide which side the start point is on
-  side = P_DivlineSide (strace.x, strace.y, (divline_t *)bsp);
+  int side = P_DivlineSide(strace.x, strace.y, (divline_t *)bsp);
   if (side == 2)
     side = 0;       // an "on" should cross both sides
 
   // cross the starting side
-  if (!CrossBSPNode (bsp->children[side]) )
+  if (!CrossBSPNode(bsp->children[side]))
     return false;
 
   // the partition plane is crossed here
-  if (side == P_DivlineSide (t2x, t2y,(divline_t *)bsp))
+  if (side == P_DivlineSide(t2x, t2y,(divline_t *)bsp))
     {
       // the line doesn't touch the other side
       return true;
@@ -301,14 +265,13 @@ bool Map::CrossBSPNode(int bspnum)
 }
 
 
-//
-// was P_CheckSight
-// Returns true
-//  if a straight line between t1 and t2 is unobstructed.
+// Returns true if a straight line between t1 and t2 is unobstructed.
 // Uses REJECT.
-//
 bool Map::CheckSight(Actor *t1, Actor *t2)
 {
+  if (!t1 || !t2)
+    return false;
+
   // First check for trivial rejection.
 
   // Determine subsector entries in REJECT table.
@@ -357,5 +320,5 @@ bool Map::CheckSight(Actor *t1, Actor *t2)
   strace.dy = t2->y - t1->y;
 
   // the head node is the last node output
-  return CrossBSPNode (numnodes-1);
+  return CrossBSPNode(numnodes-1);
 }
