@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/07/05 16:53:27  smite-meister
+// Netcode replaced
+//
 // Revision 1.12  2004/03/28 15:16:13  smite-meister
 // Texture cache.
 //
@@ -61,7 +64,8 @@
 
 #include "doomdef.h"
 #include "doomdata.h"
-#include "d_netcmd.h" // cv_deathmatch
+#include "command.h"
+#include "cvars.h"
 #include "g_game.h"
 #include "g_player.h"
 #include "g_input.h"

@@ -249,7 +249,7 @@ void FileCache::WriteFileHeaders(byte *p)
 	{
 	  WRITEULONG(p, size);
 	  strcpy(wadfilename, vfiles[i]->filename.c_str());
-	  nameonly(wadfilename);
+	  //nameonly(wadfilename);
 	  WRITESTRING(p, wadfilename);
 	  WRITEMEM(p, md5, 16);
 	}

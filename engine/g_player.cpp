@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.21  2004/07/05 16:53:24  smite-meister
+// Netcode replaced
+//
 // Revision 1.20  2004/03/28 15:16:12  smite-meister
 // Texture cache.
 //
@@ -56,20 +59,23 @@
 //
 // Revision 1.4  2003/01/18 20:17:41  smite-meister
 // HUD fixed, levelchange crash fixed.
-//
-//
-//
-// DESCRIPTION:
-//   PlayerInfo class implementation
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief PlayerInfo class implementation
+
 #include "doomdef.h"
+#include "command.h"
+#include "cvars.h"
+
 #include "g_player.h"
 #include "g_game.h"
 #include "g_map.h"
 #include "g_actor.h"
 #include "g_pawn.h"
-#include "d_netcmd.h" // consvars
+
+#include "g_input.h"
+#include "d_event.h"
 #include "tables.h"
 
 // global data
@@ -85,9 +91,12 @@ PlayerInfo *consoleplayer2 = NULL;   // secondary player taking events
 PlayerInfo *displayplayer = NULL;   // view being displayed
 PlayerInfo *displayplayer2 = NULL;  // secondary view (splitscreen)
 
-
-CV_PossibleValue_t viewheight_cons_t[]={{16,"MIN"},{56,"MAX"},{0,NULL}};
-consvar_t cv_viewheight = {"viewheight", "41",0,viewheight_cons_t,NULL};
+static char default_weaponpref[NUMWEAPONS] =
+{
+  1,4,5,6,8,7,3,9,2,  // Doom
+  1,4,5,7,8,3,9,6,0,  // Heretic
+  2,2,2,4,4,4,6,6,6,0,0,0,0 // Hexen
+};
 
 
 PlayerInfo::PlayerInfo(const string & n)
@@ -100,6 +109,7 @@ PlayerInfo::PlayerInfo(const string & n)
   color = 0;
   skin  = 0;
 
+  conn = NULL;
   spectator = false;
   playerstate = PST_WAITFORMAP;
   memset(&cmd, 0, sizeof(ticcmd_t));
@@ -110,11 +120,12 @@ PlayerInfo::PlayerInfo(const string & n)
   message = NULL;
 
   for (int i = 0; i<NUMWEAPONS; i++)
-    favoriteweapon[i] = 0;
+    weaponpref[i] = default_weaponpref[i];
   originalweaponswitch = true;
   autoaim = false;
 
   pawn = NULL;
+  pov = NULL;
   mp = NULL;
   time = 0;
   Reset(false, true);
@@ -240,7 +251,7 @@ void PlayerInfo::CalcViewHeight(bool onground)
     }
   else
     {
-      int phase = (FINEANGLES/20*gametic/NEWTICRATERATIO) & FINEMASK;
+      int phase = (FINEANGLES/20*game.tic/NEWTICRATERATIO) & FINEMASK;
       fixed_t bob = FixedMul(bob_amplitude/2, finesine[phase]);
 
       if (playerstate == PST_ALIVE)
@@ -276,4 +287,78 @@ void PlayerInfo::CalcViewHeight(bool onground)
 
   if (viewz > pawn->ceilingz - 4*FRACUNIT)
     viewz = pawn->ceilingz - 4*FRACUNIT;
+}
+
+
+
+bool PlayerInfo::InventoryResponder(int (*gc)[2], event_t *ev)
+{
+  //gc is a pointer to array[num_gamecontrols][2]
+  extern int st_curpos; // TODO: what about splitscreenplayer??
+
+  if (!game.inventory)
+    return false;
+
+  if (!pawn)
+    return false;
+
+  switch (ev->type)
+    {
+    case ev_keydown :
+      if (ev->data1 == gc[gc_invprev][0] || ev->data1 == gc[gc_invprev][1])
+        {
+          if (pawn->invTics)
+            {
+              if (--(pawn->invSlot) < 0)
+                pawn->invSlot = 0;
+              else if (--st_curpos < 0)
+                st_curpos = 0;
+            }
+          pawn->invTics = 5*TICRATE;
+          return true;
+        }
+      else if (ev->data1 == gc[gc_invnext][0] || ev->data1 == gc[gc_invnext][1])
+        {
+          int n = pawn->inventory.size();
+
+          if (pawn->invTics)
+            {
+              if (++(pawn->invSlot) >= n)
+                pawn->invSlot = n-1;
+              else if (++st_curpos > 6)
+                st_curpos = 6;
+            }
+          pawn->invTics = 5*TICRATE;
+          return true;
+        }
+      else if (ev->data1 == gc[gc_invuse ][0] || ev->data1 == gc[gc_invuse ][1])
+        {
+          if (pawn->invTics)
+            pawn->invTics = 0;
+          else if (pawn->inventory[pawn->invSlot].count > 0)
+            {
+              // FIXME HACK bypassing netcode
+              pawn->UseArtifact(artitype_t(pawn->inventory[pawn->invSlot].type));
+              /*
+              if (1) // FIXME send playernum in the message...
+                SendNetXCmd(XD_USEARTEFACT, &pawn->inventory[pawn->invSlot].type, 1);
+              else
+                SendNetXCmd2(XD_USEARTEFACT, &pawn->inventory[pawn->invSlot].type, 1);
+              */
+            }
+          return true;
+        }
+      break;
+
+    case ev_keyup:
+      if (ev->data1 == gc[gc_invuse ][0] || ev->data1 == gc[gc_invuse ][1] ||
+          ev->data1 == gc[gc_invprev][0] || ev->data1 == gc[gc_invprev][1] ||
+          ev->data1 == gc[gc_invnext][0] || ev->data1 == gc[gc_invnext][1])
+        return true;
+      break;
+
+    default:
+      break; // shut up compiler
+    }
+  return false;
 }

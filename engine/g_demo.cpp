@@ -23,16 +23,11 @@
 //
 //-----------------------------------------------------------------------------
 
-
-
 #include "doomdef.h"
 #include "d_ticcmd.h"
-#include "console.h"
+#include "command.h"
+#include "cvars.h"
 #include "g_actor.h"
-
-#include "d_clisrv.h"
-#include "d_netcmd.h"
-#include "d_main.h"
 
 #include "i_system.h"
 
@@ -43,7 +38,6 @@
 #include "g_map.h" // Map
 #include "g_level.h"
 
-//#include "p_info.h"
 #include "p_fab.h"
 #include "m_argv.h"
 #include "m_misc.h"
@@ -53,11 +47,10 @@
 
 #include "byteptr.h" // shouldn't be here
 
+#warning The demo system is completely inoperational.
 
 extern bool singletics;
-extern consvar_t cv_vidwait;
 
-//bool G_CheckDemoStatus(void);
 
 bool         timingdemo;             // if true, exit with report on completion
 tic_t        demostarttime;              // for comparative timing purposes
@@ -146,9 +139,9 @@ bool GameInfo::Downgrade(int version)
 
 void G_DoneLevelLoad()
 {
-  CONS_Printf("Load Level in %f sec\n",(float)(I_GetTime()-demostarttime)/TICRATE);
+  CONS_Printf("Load Level in %f sec\n",(float)(I_GetTics()-demostarttime)/TICRATE);
   framecount = 0;
-  demostarttime = I_GetTime ();
+  demostarttime = I_GetTics ();
 }
 
 //
@@ -180,45 +173,46 @@ void GameInfo::ReadDemoTiccmd(ticcmd_t* cmd, int playernum)
     }
   if(demoversion<112)
     {
-      cmd->forwardmove = READCHAR(demo_p);
-      cmd->sidemove = READCHAR(demo_p);
-      //cmd->angleturn = READBYTE(demo_p)<<8;
-      cmd->angleturn = (*demo_p++)<<8;
+      cmd->forward = READCHAR(demo_p);
+      cmd->side = READCHAR(demo_p);
+      //cmd->yaw = READBYTE(demo_p)<<8;
+      cmd->yaw = (*demo_p++)<<8;
       //cmd->buttons = READBYTE(demo_p);
       cmd->buttons = *demo_p++;
-      cmd->aiming = 0;
+      cmd->yaw = 0;
     }
   else
     {
       char ziptic=*demo_p++;
 
       if(ziptic & ZT_FWD)
-        oldcmd[playernum].forwardmove = READCHAR(demo_p);
+        oldcmd[playernum].forward = READCHAR(demo_p);
       if(ziptic & ZT_SIDE)
-        oldcmd[playernum].sidemove = READCHAR(demo_p);
+        oldcmd[playernum].side = READCHAR(demo_p);
       if(ziptic & ZT_ANGLE)
         {
           if(demoversion<125)
-            oldcmd[playernum].angleturn = (*demo_p++)<<8;
+            oldcmd[playernum].yaw = (*demo_p++)<<8;
           else
-            oldcmd[playernum].angleturn = READSHORT(demo_p);
+            oldcmd[playernum].yaw = READSHORT(demo_p);
         }
       if(ziptic & ZT_BUTTONS)
         oldcmd[playernum].buttons = *demo_p++;
       if(ziptic & ZT_AIMING)
         {
           if(demoversion<128)
-            oldcmd[playernum].aiming = READCHAR(demo_p);
+            oldcmd[playernum].yaw = READCHAR(demo_p);
           else
-            oldcmd[playernum].aiming = READSHORT(demo_p);
+            oldcmd[playernum].yaw = READSHORT(demo_p);
         }
       if(ziptic & ZT_CHAT)
         demo_p++;
+      /*
       if(ziptic & ZT_EXTRADATA)
         ReadLmpExtraData(&demo_p,playernum);
       else
         ReadLmpExtraData(0,playernum);
-
+      */
       memcpy(cmd,&(oldcmd[playernum]),sizeof(ticcmd_t));
     }
 }
@@ -233,25 +227,25 @@ void GameInfo::WriteDemoTiccmd(ticcmd_t* cmd, int playernum)
   ziptic_p=demo_p++;  // the ziptic
   // write at the end of this function
 
-  if(cmd->forwardmove != oldcmd[playernum].forwardmove)
+  if(cmd->forward != oldcmd[playernum].forward)
     {
-      *demo_p++ = cmd->forwardmove;
-      oldcmd[playernum].forwardmove = cmd->forwardmove;
+      *demo_p++ = cmd->forward;
+      oldcmd[playernum].forward = cmd->forward;
       ziptic|=ZT_FWD;
     }
 
-  if(cmd->sidemove != oldcmd[playernum].sidemove)
+  if(cmd->side != oldcmd[playernum].side)
     {
-      *demo_p++ = cmd->sidemove;
-      oldcmd[playernum].sidemove=cmd->sidemove;
+      *demo_p++ = cmd->side;
+      oldcmd[playernum].side=cmd->side;
       ziptic|=ZT_SIDE;
     }
 
-  if(cmd->angleturn != oldcmd[playernum].angleturn)
+  if(cmd->yaw != oldcmd[playernum].yaw)
     {
-      *(short *)demo_p = cmd->angleturn;
+      *(short *)demo_p = cmd->yaw;
       demo_p +=2;
-      oldcmd[playernum].angleturn=cmd->angleturn;
+      oldcmd[playernum].yaw=cmd->yaw;
       ziptic|=ZT_ANGLE;
     }
 
@@ -262,16 +256,18 @@ void GameInfo::WriteDemoTiccmd(ticcmd_t* cmd, int playernum)
       ziptic|=ZT_BUTTONS;
     }
 
-  if(cmd->aiming != oldcmd[playernum].aiming)
+  if(cmd->yaw != oldcmd[playernum].yaw)
     {
-      *(short *)demo_p = cmd->aiming;
+      *(short *)demo_p = cmd->yaw;
       demo_p+=2;
-      oldcmd[playernum].aiming=cmd->aiming;
+      oldcmd[playernum].yaw=cmd->yaw;
       ziptic|=ZT_AIMING;
     }
 
+  /*
   if (AddLmpExtradata(&demo_p, playernum))
     ziptic|=ZT_EXTRADATA;
+  */
 
   *ziptic_p=ziptic;
   //added:16-02-98: attention here for the ticcmd size!
@@ -413,25 +409,19 @@ no_demo:
 // G_TimeDemo
 //             NOTE: name is a full filename for external demos
 //
-static int restorecv_vidwait;
 
 void G_TimeDemo(char* name)
 {
-  extern bool nodrawers, noblit;
+  extern bool nodrawers;
   nodrawers = M_CheckParm ("-nodraw");
-  noblit = M_CheckParm ("-noblit");
-  restorecv_vidwait = cv_vidwait.value;
-  if( cv_vidwait.value )
-    CV_Set( &cv_vidwait, "0");
   timingdemo = true;
   singletics = true;
   framecount = 0;
-  demostarttime = I_GetTime ();
+  demostarttime = I_GetTics ();
   G_DeferedPlayDemo(name);
 }
 
 
-// was G_StopDemo
 // reset engine variable set for the demos
 // called from stopdemo command, map command, and g_checkdemoStatus.
 void GameInfo::StopDemo()
@@ -444,9 +434,9 @@ void GameInfo::StopDemo()
   Downgrade(VERSION);
 
   state = GS_NULL;
-  SV_StopServer();
+  //SV_StopServer();
   //    SV_StartServer();
-  SV_ResetServer();
+  //SV_ResetServer();
 }
 
 
@@ -461,16 +451,14 @@ bool GameInfo::CheckDemoStatus()
     {
       int time;
       float f1,f2;
-      time = I_GetTime () - demostarttime;
+      time = I_GetTics () - demostarttime;
       if(!time) return true;
       StopDemo ();
       timingdemo = false;
       f1 = time;
       f2 = framecount*TICRATE;
       CONS_Printf ("timed %i gametics in %i realtics\n%f seconds, %f avg fps\n",
-                   gametic, time, f1/TICRATE, f2/f1);
-      if( restorecv_vidwait != cv_vidwait.value )
-        CV_SetValue(&cv_vidwait, restorecv_vidwait);
+                   tic, time, f1/TICRATE, f2/f1);
 
       pagetic = 0;
       return true;

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/07/05 16:53:25  smite-meister
+// Netcode replaced
+//
 // Revision 1.3  2004/04/25 16:26:49  smite-meister
 // Doxygen
 //
@@ -33,14 +36,14 @@
 #include "doomdef.h"
 #include "parser.h"
 
+#include "g_game.h"
+
 #include "r_data.h"
 #include "r_defs.h" // for floortypes
 
 #include "m_random.h"
 #include "w_wad.h"
 #include "z_zone.h"
-
-extern tic_t gametic;
 
 
 /// template for the Boom ANIMATED lump entries
@@ -186,7 +189,7 @@ AnimatedTexture::AnimatedTexture(const char *p, int n)
   numframes = n;
   currentframe = 0;
   tics = 0;
-  lastupdate = gametic;
+  lastupdate = game.tic;
   
   frames = (framedef_t *)Z_Malloc(n*sizeof(framedef_t), PU_TEXTURE, NULL);
 }
@@ -201,7 +204,7 @@ AnimatedTexture::~AnimatedTexture()
 
 Texture *AnimatedTexture::Update()
 {
-  tic_t elapsed = gametic - lastupdate;
+  tic_t elapsed = game.tic - lastupdate;
   while (elapsed > 0)
     {
       if (tics <= elapsed)

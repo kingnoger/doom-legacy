@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
 // Revision 1.3  2003/11/23 19:07:42  smite-meister
 // New startup order
 //
@@ -57,21 +60,16 @@
 // Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
 // Initial import into CVS (v1.29 pr3)
 //
-//
-// DESCRIPTION:
-//      System specific interface stuff.
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief System specific interface stuff.
 
 #ifndef i_system_h
 #define i_system_h 1
 
 #include "d_ticcmd.h"
 
-#ifdef __GNUG__
-#pragma interface
-#endif
 
 // See Shutdown_xxx() routines.
 //extern byte graphics_started;
@@ -96,9 +94,15 @@ void I_SysInit();
 // return free and total physical memory in the system
 ULONG I_GetFreeMem(ULONG *total);
 
-// Called by D_DoomLoop,
-// returns current time in tics.
-tic_t I_GetTime ();
+
+/// returns current time in 1/TICRATE second tics
+tic_t I_GetTics();
+
+/// returns current time in ms
+unsigned int I_GetTime();
+
+/// sleeps for a given amount of ms (accurate to about 10 ms)
+void I_Sleep(unsigned int ms);
 
 
 void I_GetEvent ();

@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.3  2004/07/05 16:53:28  smite-meister
+// Netcode replaced
+//
 // Revision 1.2  2003/02/23 22:49:31  smite-meister
 // FS is back! L2 cache works.
 //
@@ -50,7 +53,6 @@
 #include <stdio.h>
 #include <string.h>
 #include "command.h"
-#include "d_debug.h" // debugfile
 #include "w_wad.h"
 #include "z_zone.h"
 
@@ -360,9 +362,6 @@ void dry_run_script()
 
 void preprocess(script_t *script)
 {
-  if(debugfile)
-    fprintf(debugfile,"  preprocess script %i\n", script->scriptnum);
-
   current_script = script;
   current_map = script->mp;
 
@@ -370,14 +369,8 @@ void preprocess(script_t *script)
   
   clear_script();
 
-  if(debugfile)
-    fprintf(debugfile, "    run thru script\n");
-  
   process_find_char(script->data, 0);  // fill in everything
-  
-  if(debugfile)
-    fprintf(debugfile, "    dry run script\n");
-  
+
   dry_run_script();
 }
 

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
 // Revision 1.3  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
@@ -44,6 +47,7 @@
 #include "doomtype.h"
 #include "i_sound.h"
 #include "command.h"
+#include "cvars.h"
 #include "m_argv.h"
 
 #define MAX_CD_TRACKS 256
@@ -59,10 +63,6 @@ static byte maxTrack;
 static byte cdRemap[MAX_CD_TRACKS];
 static int  cdvolume = -1;
 
-CV_PossibleValue_t cd_volume_cons_t[]={{0,"MIN"},{31,"MAX"},{0,NULL}};
-
-consvar_t cd_volume = {"cd_volume","31",CV_SAVE, cd_volume_cons_t};
-consvar_t cdUpdate  = {"cd_update","1",CV_SAVE};
 
 static SDL_CD *cdrom = NULL;
 static Uint32 lastchk = 0;

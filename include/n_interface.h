@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
 // Revision 1.2  2004/06/25 19:53:23  smite-meister
 // Netcode
 //
@@ -53,6 +56,7 @@ public:
   {
     NS_Unconnected,    ///< uninitialized or no network connections
     CL_PingingServers, ///< client looking for servers
+    CL_QueryingServer, ///< server detected, querying
     CL_Connecting,     ///< client trying to connect to a server
     CL_Connected,      ///< client connected to a server
     SV_Loading,        ///< server loading a map (clients should be loading it also)
@@ -67,7 +71,7 @@ public:
   /// local constants
   enum
   {
-    PingDelay = 1000,  ///< ms to wait between sending server pings
+    PingDelay = 2000,  ///< ms to wait between sending server pings
 
     // Different types of info packets
     PT_ServerPing = FirstValidInfoPacketId,  ///< Client pinging for servers

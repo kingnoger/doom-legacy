@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2004/07/05 16:53:45  smite-meister
+// Netcode replaced
+//
 // Revision 1.15  2004/04/01 09:16:16  smite-meister
 // Texture system bugfixes
 //
@@ -67,9 +70,10 @@
 //-----------------------------------------------------------------------------
 
 #include "doomdef.h"
-
-#include "console.h"
 #include "command.h"
+#include "cvars.h"
+#include "console.h"
+
 #include "g_game.h"
 #include "g_actor.h"
 #include "g_pawn.h"
@@ -1711,7 +1715,7 @@ void Sk_SetDefaultValue(skin_t *skin)
     // setup the 'marine' as default skin
     //
     memset (skin, 0, sizeof(skin_t));
-    strcpy (skin->name, DEFAULTSKIN);
+    strcpy (skin->name, "marine");
     strcpy (skin->faceprefix, "STF");
     /*
       // FIXME skin sounds must be stored with the skins, not in S_Sfx

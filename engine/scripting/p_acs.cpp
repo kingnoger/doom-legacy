@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2004/07/05 16:53:28  smite-meister
+// Netcode replaced
+//
 // Revision 1.17  2004/04/25 16:26:50  smite-meister
 // Doxygen
 //
@@ -1572,7 +1575,7 @@ static int CmdGameSkill()
 
 static int CmdTimer()
 {
-  Push(gametic);
+  Push(game.tic);
   return SCRIPT_CONTINUE;
 }
 

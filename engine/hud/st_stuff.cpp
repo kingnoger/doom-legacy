@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2004/07/05 16:53:27  smite-meister
+// Netcode replaced
+//
 // Revision 1.17  2004/03/28 15:16:13  smite-meister
 // Texture cache.
 //
@@ -75,6 +78,8 @@
 //-----------------------------------------------------------------------------
 
 #include "doomdef.h"
+#include "command.h"
+#include "cvars.h"
 
 #include "am_map.h"
 
@@ -83,7 +88,7 @@
 #include "g_player.h"
 #include "g_pawn.h"
 
-#include "d_netcmd.h"
+
 
 #include "screen.h"
 #include "r_main.h"
@@ -1074,7 +1079,7 @@ void HUD::UpdateWidgets()
       st_invslots[7].type = (left > 0) ? 1 : 0; // hack
       st_invslots[7].count = (n - left > 7) ? 1 : 0;
 
-      int frame = (gametic/3) & 15;
+      int frame = (game.tic/3) & 15;
       // flight icon
       if (sbpawn->powers[pw_flight] > BLINKTHRESHOLD || (sbpawn->powers[pw_flight] & 16))
 	st_flight = frame;
@@ -1604,13 +1609,6 @@ void HUD::ST_Start(PlayerPawn *p)
 // =========================================================================
 //                         STATUS BAR OVERLAY
 // =========================================================================
-
-void ST_CreateOverlay()
-{
-  hud.CreateOverlayWidgets();
-}
-
-consvar_t cv_stbaroverlay = {"overlay", "kahmf", CV_SAVE|CV_CALL, NULL, ST_CreateOverlay};
 
 /*
 static inline int SCY( int y)

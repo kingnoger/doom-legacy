@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.27  2004/07/05 16:53:25  smite-meister
+// Netcode replaced
+//
 // Revision 1.26  2004/04/25 16:26:49  smite-meister
 // Doxygen
 //
@@ -126,7 +129,6 @@
 #include "p_acs.h"
 #include "r_data.h"
 #include "r_sprite.h"
-#include "d_netcmd.h"
 #include "t_vari.h"
 #include "t_script.h"
 #include "t_parse.h"
@@ -145,7 +147,8 @@
 // from the context. However, some thinkers are not always associated with a Map.
 // Hence they must save the Map reference as well.
 
-extern  consvar_t  cv_deathmatch;
+void Command_Reset_f();
+
 
 runningscript_t *new_runningscript();
 
@@ -1648,7 +1651,7 @@ int PlayerInfo::Serialize(LArchive &a)
   a << kills << items << secrets << time;
 
   for (i=0; i<NUMWEAPONS; i++)
-    a << favoriteweapon[i];
+    a << weaponpref[i];
 
   a << originalweaponswitch << autoaim << spectator;
 
@@ -1683,7 +1686,7 @@ int PlayerInfo::Unserialize(LArchive &a)
   a << kills << items << secrets << time;
 
   for (i=0; i<NUMWEAPONS; i++)
-    a << favoriteweapon[i];
+    a << weaponpref[i];
 
   a << originalweaponswitch << autoaim << spectator;
 
@@ -2046,9 +2049,6 @@ void GameInfo::LoadGame(int slot)
 
   Z_Free(savebuffer); // the compressed buffer is no longer needed
 
-  if (demoplayback)  // reset game engine
-    StopDemo();
-
   Downgrade(VERSION); // reset the game version
 
   automap.Close();
@@ -2057,8 +2057,8 @@ void GameInfo::LoadGame(int slot)
   // dearchive all the modifications
   if (Unserialize(a))
     {
-      M_StartMessage ("Savegame file corrupted\n\nPress ESC\n", NULL, MM_NOTHING);
-      Command_ExitGame_f();
+      CONS_Printf("Savegame file corrupted!\n\n");
+      SV_Reset();
       return;
     }
 
@@ -2079,7 +2079,7 @@ void GameInfo::LoadGame(int slot)
 
   R_FillBackScreen();  // draw the pattern into the back screen
   */
-  CON_ToggleOff();
+  con.Toggle(true);
 }
 
 

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
 // Revision 1.11  2004/03/28 15:16:14  smite-meister
 // Texture cache.
 //
@@ -51,12 +54,10 @@
 // Revision 1.1.1.1  2002/11/16 14:18:22  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//      Items: key cards, artifacts, weapon, ammunition.
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Game items: keys, armor, artifacts, weapons, ammo.
 
 #ifndef d_items_h
 #define d_items_h 1
@@ -64,10 +65,6 @@
 #include "doomdef.h"
 #include "doomtype.h"
 #include "info.h"
-
-#ifdef __GNUG__
-#pragma interface
-#endif
 
 
 // heretic stuff
@@ -97,9 +94,7 @@
 #define USE_MACE_AMMO_1 1
 #define USE_MACE_AMMO_2 5
 
-//
-// Key cards.
-//
+/// Key types
 enum keycard_t
 {
   // Hexen
@@ -128,6 +123,7 @@ enum keycard_t
 };
 
 
+/// Armor locations
 enum armortype_t
 {
   armor_field, // old doom style armor
@@ -139,6 +135,7 @@ enum armortype_t
 };
 
 
+/// Inventory artifact types
 enum artitype_t
 {
   arti_none,
@@ -198,7 +195,8 @@ enum artitype_t
   NUMARTIFACTS
 };
 
-// playerpawn inventory
+
+/// PlayerPawn inventory entry
 struct inventory_t
 {
   byte type;
@@ -211,7 +209,8 @@ struct inventory_t
 #define NUMINVENTORYSLOTS  14
 #define MAXARTECONT        16 
 
-// Power ups
+
+/// Powerups
 enum powertype_t
 {
   pw_invulnerability,
@@ -234,10 +233,8 @@ enum powertype_t
   NUMPOWERS
 };
 
-//
-// Power up durations,
-//  how many seconds till expiration
-//
+
+/// Powerup durations,
 enum powerduration_t
 {
   INVULNTICS  = (30*TICRATE),
@@ -251,13 +248,13 @@ enum powerduration_t
 };
 
 
-// The defined weapons,
-//  including a marker indicating
-//  user has not changed weapon.
+
+/// Weapons
 enum weapontype_t
 {
-  wp_doom = 0,
-  wp_fist = wp_doom,
+  wp_none = -1,
+
+  wp_fist = 0, wp_doom = wp_fist,
   wp_chainsaw,
   wp_pistol,
   wp_shotgun,
@@ -267,9 +264,7 @@ enum weapontype_t
   wp_plasma,
   wp_bfg,
 
-  // heretic stuff
-  wp_heretic,
-  wp_staff = wp_heretic, //=wp_fist,
+  wp_staff, wp_heretic = wp_staff,
   wp_gauntlets,
   wp_goldwand,
   wp_crossbow,
@@ -279,8 +274,7 @@ enum weapontype_t
   wp_mace,
   wp_beak,
 
-  wp_hexen,
-  wp_fpunch = wp_hexen,
+  wp_fpunch, wp_hexen = wp_fpunch,
   wp_cmace,
   wp_mwand,
   wp_timons_axe,
@@ -295,22 +289,21 @@ enum weapontype_t
   wp_snout,
 
   NUMWEAPONS,
-  wp_nochange = NUMWEAPONS, // No pending weapon change.
   wp_barrel    // barrel explosion
 };
 
 
-// Ammunition types defined.
+/// Ammunition types
 enum ammotype_t
 {
-  am_noammo = -1, // Unlimited
-  am_doom = 0, am_clip = am_doom, // Pistol / chaingun ammo.
+  am_noammo = -1, // unlimited
+
+  am_clip = 0, am_doom = am_clip, // Pistol / chaingun ammo.
   am_shell,   // Shotgun / double barreled shotgun.
   am_cell,    // Plasma rifle, BFG.
   am_misl,    // Missile launcher.
 
-  // heretic stuff
-  am_heretic, am_goldwand = am_heretic,
+  am_goldwand, am_heretic = am_goldwand,
   am_crossbow,
   am_blaster,
   am_skullrod,
@@ -318,7 +311,7 @@ enum ammotype_t
   am_mace,
 
   // Hexen
-  am_hexen, am_mana1 = am_hexen,
+  am_mana1, am_hexen = am_mana1,
   am_mana2,
 
   NUMAMMO,
@@ -326,7 +319,7 @@ enum ammotype_t
 };
 
 
-// "volatile" weapon info (tome of power etc...): sprite frames, ammunition use.
+/// "volatile" weapon info (tome of power etc...)
 struct weaponinfo_t
 {
   ammotype_t ammo;
@@ -339,7 +332,8 @@ struct weaponinfo_t
   weaponstatenum_t flashstate;
 };
 
-// "static" weapon info
+
+/// "static" weapon info
 struct weapondata_t
 {
   int group;   // in which group it resides
@@ -347,7 +341,8 @@ struct weapondata_t
   int getammo; // how much ammo does a discarded weapon contain?
 };
 
-extern weapondata_t weapondata[NUMWEAPONS+1];
+
+extern weapondata_t weapondata[NUMWEAPONS];
 
 extern weaponinfo_t wpnlev1info[NUMWEAPONS];
 extern weaponinfo_t wpnlev2info[NUMWEAPONS];

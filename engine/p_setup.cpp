@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.39  2004/07/05 16:53:25  smite-meister
+// Netcode replaced
+//
 // Revision 1.38  2004/05/01 23:29:19  hurdler
 // add dummy new renderer
 //
@@ -139,6 +142,7 @@
 
 #include "doomdef.h"
 #include "doomdata.h"
+#include "command.h"
 
 #include "g_game.h"
 #include "g_pawn.h"
@@ -1198,12 +1202,15 @@ bool Map::Setup(tic_t start, bool spawnthings)
 
   CONS_Printf("Map::Setup: %s\n", lumpname.c_str());
 
+  if (!dedicated)
+    {
+      con.Drawer();     // let the user know what we are going to do
+      I_FinishUpdate(); // page flip or blit buffer
+    }
+
   maptic = 0;
   starttic = start;
   kills = items = secrets = 0;
-
-  CON_Drawer();  // let the user know what we are going to do
-  I_FinishUpdate();              // page flip or blit buffer
 
   // Make sure all sounds are stopped before Z_FreeTags.
   S.Stop3DSounds();

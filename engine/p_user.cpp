@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2004/07/05 16:53:26  smite-meister
+// Netcode replaced
+//
 // Revision 1.21  2004/04/25 16:26:50  smite-meister
 // Doxygen
 //
@@ -121,11 +124,6 @@ bool PlayerPawn::Teleport(fixed_t nx, fixed_t ny, angle_t nangle)
   // don't move for a bit
   if (!powers[pw_weaponlevel2])
     reactiontime = 18;
-  // added : absolute angle position
-  if (this == consoleplayer->pawn)
-    localangle = nangle;
-  if (this == displayplayer2->pawn)
-    localangle2 = nangle;
 
   // move chasecam at new player location
   if (camera.chase && displayplayer == player)
@@ -147,36 +145,14 @@ bool PlayerPawn::Teleport(fixed_t nx, fixed_t ny, angle_t nangle)
 }
 
 
-//
-// Moves the given origin along a given angle.
-//
-void PlayerPawn::Thrust(angle_t angle, fixed_t move)
-{
-  // now exactly like Actor::Thrust... remove?
-  angle >>= ANGLETOFINESHIFT;
-  px += FixedMul(move, finecosine[angle]);
-  py += FixedMul(move, finesine[angle]);
-}
-
-
-extern int ticruned,ticmiss;
 
 
 void PlayerPawn::Move()
 {
   ticcmd_t *cmd = &player->cmd;
 
-#ifndef ABSOLUTEANGLE
-  angle += (cmd->angleturn<<16);
-#else
-  angle = (cmd->angleturn<<16);
-#endif
-
-  aiming = cmd->aiming<<16;
-
-  ticruned++;
-  if ((cmd->angleturn & TICCMD_RECEIVED) == 0)
-    ticmiss++;
+  angle = cmd->yaw << 16;
+  aiming = cmd->pitch << 16;
 
   fixed_t movepushforward = 0, movepushside = 0;
 
@@ -184,19 +160,19 @@ void PlayerPawn::Move()
 
   float mf = GetMoveFactor();
 
-  // limit speed = push/(1-friction) => magic multiplier = 2*(1-friction) = 0.1875
+  // limit speed = push/(1-friction) => multiplier = 2*(1-friction) = 0.1875
   float magic = 0.1875 * FRACUNIT * speed * mf;
 
-  if (cmd->forwardmove)
+  if (cmd->forward)
     {
       //CONS_Printf("::m %d, %f, magic = %f\n", cmd->forwardmove, mf, magic);
-      movepushforward = int(magic * cmd->forwardmove/100);
+      movepushforward = int(magic * cmd->forward/100);
       Thrust(angle, movepushforward);
     }
 
-  if (cmd->sidemove)
+  if (cmd->side)
     {
-      movepushside = int(magic * cmd->sidemove/100);
+      movepushside = int(magic * cmd->side/100);
       Thrust(angle-ANG90, movepushside);
     }
 
@@ -218,7 +194,7 @@ void PlayerPawn::Move()
   bool onground = (z <= floorz) || (flags2 & (MF2_ONMOBJ | MF2_FLY)) || (cheats & CF_FLYAROUND);
 
   // jumping
-  if (cmd->buttons & BT_JUMP)
+  if (cmd->buttons & ticcmd_t::BT_JUMP)
     {
       if (flags2 & MF2_FLY)
 	fly_zspeed = 10;
@@ -239,7 +215,7 @@ void PlayerPawn::Move()
   else
     jumpdown = false;
 
-  if (cmd->forwardmove || cmd->sidemove)
+  if (cmd->forward || cmd->side)
     {
       // set the running state if nothing more important is going on
       int anim = pres->GetAnim();
@@ -249,7 +225,7 @@ void PlayerPawn::Move()
 
   if (flags2 & MF2_FLY)
     {
-      if (cmd->angleturn & BT_FLYDOWN)
+      if (cmd->buttons & ticcmd_t::BT_FLYDOWN)
 	fly_zspeed = -10;
 
       pz = fly_zspeed*FRACUNIT;

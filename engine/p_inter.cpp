@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.29  2004/07/05 16:53:25  smite-meister
+// Netcode replaced
+//
 // Revision 1.28  2004/04/25 16:26:49  smite-meister
 // Doxygen
 //
@@ -107,7 +110,9 @@
 //-----------------------------------------------------------------------------
 
 #include "doomdef.h"
-#include "d_netcmd.h" // cvars
+#include "command.h"
+#include "cvars.h"
+
 #include "am_map.h"
 #include "dstrings.h"
 #include "m_random.h"
@@ -129,8 +134,6 @@
 #include "hu_stuff.h" // HUD
 
 #define BONUSADD        6
-
-consvar_t cv_fragsweaponfalling = {"fragsweaponfalling"   ,"0",CV_SAVE,CV_OnOff};
 
 
 // Actor::Killed is called when PlayerPawn dies.
@@ -526,7 +529,6 @@ bool Actor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
     {
       fixed_t apx, apy, apz = 0;
       fixed_t thrust;  
-      extern consvar_t cv_allowrocketjump;
 
       angle_t ang = R_PointToAngle2(inflictor->x, inflictor->y, x, y);
 
@@ -675,7 +677,6 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
       && !(inflictor->flags2 & MF2_NODMGTHRUST))      
     {
       fixed_t            apx, apy, apz = 0;//SoM: 3/28/2000
-      extern consvar_t   cv_allowrocketjump;
 
       ang = R_PointToAngle2(inflictor->x, inflictor->y, x, y);
 
@@ -783,8 +784,6 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 // inflictor is the bullet, source is the one who pulled the trigger ;)
 void Actor::Die(Actor *inflictor, Actor *source)
 {
-  extern consvar_t cv_solidcorpse;
-
   // switch physics to inanimate object mode
   eflags &= ~(MFE_INFLOAT | MFE_SKULLFLY | MFE_SWIMMING);
 
@@ -929,20 +928,12 @@ void PlayerPawn::Die(Actor *inflictor, Actor *source)
 
   player->playerstate = PST_DEAD;
 
-  if (player == consoleplayer)
+  if (player == consoleplayer || player == consoleplayer2)
     {
       // don't die in auto map,
       // switch view prior to dying
       if (automap.active)
 	automap.Close();
-
-      // recenter view for next live...
-      localaiming = 0;
-    }
-  if (player == consoleplayer2)
-    {
-      // recenter view for next live...
-      localaiming2 = 0;
     }
 
   // TODO Player flame and ice death

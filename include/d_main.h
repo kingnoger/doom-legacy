@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
 // Revision 1.3  2004/04/25 16:26:50  smite-meister
 // Doxygen
 //
@@ -65,14 +68,6 @@
 
 #ifndef d_main_h
 #define d_main_h 1
-
-#include "doomtype.h"
-
-// make sure not to write back the config until it's been correctly loaded
-extern tic_t rendergametic;
-
-// for dedicated server
-extern bool dedicated;
 
 // the infinite loop of D_DoomLoop() called from win_main for windows version
 void D_DoomLoop();

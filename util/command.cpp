@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/07/05 16:53:30  smite-meister
+// Netcode replaced
+//
 // Revision 1.4  2004/05/02 21:15:56  hurdler
 // add dummy new renderer (bis)
 //
@@ -45,17 +48,112 @@
 
 
 #include "doomdef.h"
-#include "d_debug.h" // DEBFILE
 #include "command.h"
 #include "console.h"
 #include "z_zone.h"
-#include "d_clisrv.h"
-#include "d_netcmd.h"
+
 #include "m_misc.h"
 #include "m_fixed.h"
 #include "byteptr.h"
 #include "p_saveg.h"
 #include "g_game.h" // for devparm
+
+
+// =========================================================================
+//                      VARIABLE SIZE BUFFERS
+// =========================================================================
+
+/// \brief Variable size buffer
+struct vsbuf_t
+{
+  enum
+  {
+    VSBUFMINSIZE = 256
+  };
+
+  bool  allowoverflow;  // if false, do a I_Error
+  bool  overflowed;     // set to true if the buffer size failed
+  byte *data;
+  int   maxsize;
+  int   cursize;
+
+  void  VS_Alloc(int initsize);
+  void  VS_Free();
+  void  VS_Clear();
+  void *VS_GetSpace(int length);
+  void  VS_Write(void *data, int length);  ///<  Copy data at end of variable sized buffer
+  void  VS_Print(char *data); ///<  Print text in variable size buffer, like VS_Write + trailing 0
+};
+
+
+
+
+void vsbuf_t::VS_Alloc(int initsize)
+{
+  if (initsize < VSBUFMINSIZE)
+    initsize = VSBUFMINSIZE;
+  data = (byte *)Z_Malloc(initsize, PU_STATIC, NULL);
+  maxsize = initsize;
+  cursize = 0;
+
+  allowoverflow = false;
+  overflowed = false;
+}
+
+
+void vsbuf_t::VS_Free()
+{
+  //  Z_Free(data);
+  cursize = 0;
+}
+
+
+void vsbuf_t::VS_Clear()
+{
+  cursize = 0;
+}
+
+
+void *vsbuf_t::VS_GetSpace(int length)
+{
+  if (cursize + length > maxsize)
+    {
+      if (!allowoverflow)
+        I_Error("overflow 111");
+
+      if (length > maxsize)
+        I_Error("overflow l%i 112", length);
+
+      overflowed = true;
+      CONS_Printf("VS buffer overflow");
+      VS_Clear();
+    }
+
+  void *temp = data + cursize;
+  cursize += length;
+
+  return temp;
+}
+
+
+void vsbuf_t::VS_Write(void *newdata, int length)
+{
+  memcpy(VS_GetSpace(length), newdata, length);
+}
+
+
+void vsbuf_t::VS_Print(char *newdata)
+{
+  int len = strlen(newdata) + 1;
+
+  if (data[cursize - 1])
+    memcpy((byte *)VS_GetSpace(len), newdata, len); // no trailing 0
+  else
+    memcpy((byte *)VS_GetSpace(len - 1) - 1, newdata, len); // write over trailing 0
+}
+
+
+
 
 //========
 // protos.
@@ -118,7 +216,7 @@ void COM_BufAddText(char *text)
       CONS_Printf("Command buffer full!\n");
       return;
     }
-  VS_Write(&com_text, text, l);
+  com_text.VS_Write(text, l);
 }
 
 
@@ -136,7 +234,7 @@ void COM_BufInsertText(char *text)
     {
       temp = (char *)ZZ_Alloc(templen);
       memcpy(temp, com_text.data, templen);
-      VS_Clear(&com_text);
+      com_text.VS_Clear();
     }
   else
     temp = NULL;    // shut up compiler
@@ -147,7 +245,7 @@ void COM_BufInsertText(char *text)
   // add the copied off data
   if (templen)
     {
-      VS_Write(&com_text, temp, templen);
+      com_text.VS_Write(temp, templen);
       Z_Free(temp);
     }
 }
@@ -244,7 +342,7 @@ void COM_Init()
   CONS_Printf("COM_Init: Init the command buffer\n");
 
   // allocate command buffer
-  VS_Alloc (&com_text, COM_BUF_SIZE);
+  com_text.VS_Alloc(COM_BUF_SIZE);
 
   // add standard commands
   COM_AddCommand ("alias",COM_Alias_f);
@@ -253,7 +351,7 @@ void COM_Init()
   COM_AddCommand ("wait", COM_Wait_f);
   COM_AddCommand ("help", COM_Help_f);
   COM_AddCommand ("toggle", COM_Toggle_f);
-  RegisterNetXCmd(XD_NETVAR,Got_NetVar);
+  //RegisterNetXCmd(XD_NETVAR,Got_NetVar);
 }
 
 
@@ -448,9 +546,9 @@ static void COM_ExecuteString(char *text)
   // check cvars
   // Hurdler: added at Ebola's request ;)
   // (don't flood the console in software mode with bad gr_xxx command)
-  if (!CV_Command() && con_destlines)
+  if (!CV_Command())
     {
-      CONS_Printf ("Unknown command '%s'\n", COM_Argv(0));
+      CONS_Printf("Unknown command '%s'\n", COM_Argv(0));
     }
 }
 
@@ -647,78 +745,6 @@ static void COM_Toggle_f()
     CV_AddValue(cvar,+1);
 }
 
-// =========================================================================
-//                      VARIABLE SIZE BUFFERS
-// =========================================================================
-
-#define VSBUFMINSIZE   256
-
-void VS_Alloc (vsbuf_t *buf, int initsize)
-{
-  if (initsize < VSBUFMINSIZE)
-    initsize = VSBUFMINSIZE;
-  buf->data = (byte *)Z_Malloc (initsize, PU_STATIC, NULL);
-  buf->maxsize = initsize;
-  buf->cursize = 0;
-}
-
-
-void VS_Free (vsbuf_t *buf)
-{
-  //  Z_Free (buf->data);
-  buf->cursize = 0;
-}
-
-
-void VS_Clear (vsbuf_t *buf)
-{
-  buf->cursize = 0;
-}
-
-
-void *VS_GetSpace (vsbuf_t *buf, int length)
-{
-  void    *data;
-
-  if (buf->cursize + length > buf->maxsize)
-    {
-      if (!buf->allowoverflow)
-        I_Error ("overflow 111");
-
-      if (length > buf->maxsize)
-        I_Error ("overflow l%i 112", length);
-
-      buf->overflowed = true;
-      CONS_Printf ("VS buffer overflow");
-      VS_Clear (buf);
-    }
-
-  data = buf->data + buf->cursize;
-  buf->cursize += length;
-
-  return data;
-}
-
-
-//  Copy data at end of variable sized buffer
-//
-void VS_Write (vsbuf_t *buf, void *data, int length)
-{
-  memcpy (VS_GetSpace(buf,length),data,length);
-}
-
-
-//  Print text in variable size buffer, like VS_Write + trailing 0
-//
-void VS_Print (vsbuf_t *buf, char *data)
-{
-  int len = strlen(data)+1;
-
-  if (buf->data[buf->cursize-1])
-    memcpy ((byte *)VS_GetSpace(buf, len),data,len); // no trailing 0
-  else
-    memcpy ((byte *)VS_GetSpace(buf, len-1)-1,data,len); // write over trailing 0
-}
 
 // =========================================================================
 //
@@ -865,7 +891,7 @@ static void Setvalue(consvar_t *var, char *valstr)
       CONS_Printf("%s set to %s\n",var->name,var->str);
       var->flags &= ~CV_SHOWMODIFONETIME;
     }
-  DEBFILE(va("%s set to %s\n",var->name,var->str));
+
   var->flags |= CV_MODIFIED;
   // raise 'on change' code
   if (var->flags & CV_CALL)
@@ -1043,7 +1069,7 @@ void CV_Set(consvar_t *var, char *value)
       // send the value of the variable
       char buf[128];
       byte *p;
-      if (!server)
+      if (!game.server)
         {
           CONS_Printf("Only the server can change this variable\n");
           return;
@@ -1051,7 +1077,8 @@ void CV_Set(consvar_t *var, char *value)
       p = (byte *)buf;
       WRITEUSHORT(p, var->netid);
       WRITESTRING(p, value);
-      SendNetXCmd (XD_NETVAR, buf, (char *)p-buf);
+      // FIXME netvars
+      //SendNetXCmd (XD_NETVAR, buf, (char *)p-buf);
     }
   else if ((var->flags & CV_NOTINNET) && game.netgame)
     {

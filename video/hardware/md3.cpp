@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/07/05 16:53:45  smite-meister
+// Netcode replaced
+//
 // Revision 1.6  2004/03/28 15:16:15  smite-meister
 // Texture cache.
 //
@@ -50,6 +53,7 @@
 
 #include "g_actor.h"
 #include "g_map.h"
+#include "g_game.h"
 #include "z_zone.h"
 #include "hardware/md3.h"
 
@@ -582,9 +586,7 @@ modelpres_t::modelpres_t(const char *name, int col, const char *skin)
       st[i].interp = 0.0f;
     }
 
-  extern tic_t gametic;
-
-  lastupdate = gametic;
+  lastupdate = game.tic;
 }
 
 

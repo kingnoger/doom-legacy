@@ -22,6 +22,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.14  2004/07/05 16:53:24  smite-meister
+// Netcode replaced
+//
 // Revision 1.13  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
@@ -182,7 +185,7 @@ bool MapInfo::Activate(PlayerInfo *p)
 	}
 
       me = new Map(this);
-      if (me->Setup(gametic))
+      if (me->Setup(game.tic))
 	state = MAP_RUNNING;
       else
 	{
@@ -679,6 +682,9 @@ void GameInfo::Clear_mapinfo_clusterdef()
   for (t = clustermap.begin(); t != clustermap.end(); t++)
     delete (*t).second;
   clustermap.clear();
+
+  currentcluster = nextcluster = NULL;
+  currentmap = NULL;
 }
 
 
@@ -698,18 +704,4 @@ MapInfo *GameInfo::FindMapInfo(int c)
     return NULL;
 
   return (*i).second;
-}
-
-
-//==============================================
-// Console Commands
-
-void Command_MapInfo_f()
-{
-  if (!consoleplayer || !consoleplayer->mp)
-    return;
-
-  Map *m = consoleplayer->mp;
-  CONS_Printf("%s\n", m->info->nicename.c_str());
-  CONS_Printf("%s\n", m->info->author.c_str());
 }

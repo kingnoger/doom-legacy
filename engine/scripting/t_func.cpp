@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.16  2004/07/05 16:53:28  smite-meister
+// Netcode replaced
+//
 // Revision 1.15  2004/04/25 16:26:50  smite-meister
 // Doxygen
 //
@@ -85,6 +88,7 @@
 #include "doomtype.h"
 #include "doomdata.h"
 #include "command.h"
+#include "cvars.h"
 
 #include "g_actor.h"
 #include "g_pawn.h"
@@ -92,7 +96,6 @@
 #include "g_map.h"
 
 #include "d_main.h"
-#include "d_netcmd.h"
 #include "g_game.h"
 #include "hu_stuff.h"
 
@@ -123,7 +126,6 @@
 #include "t_vari.h"
 #include "t_func.h"
 
-//extern int firstcolormaplump, lastcolormaplump;      // r_data.c
 
 svalue_t evaluate_expression(int start, int stop);
 int find_operator(int start, int stop, char *value);
@@ -302,7 +304,7 @@ void SF_Beep()
 void SF_Clock()
 {
   t_return.type = svt_int;
-  t_return.value.i = (gametic*100)/35;
+  t_return.value.i = (game.tic*100)/35;
 }
 
     /**************** doom stuff ****************/
@@ -1269,7 +1271,6 @@ void SF_SetCamera()
 {
   Actor     *mo;
   angle_t    angle;
-  fixed_t    aiming;
 
   // FIXME all the camera functions, now that we have a real camera class
   if(t_argc < 1)
@@ -1291,9 +1292,7 @@ void SF_SetCamera()
 
   script_camera->angle = angle;
   script_camera->z = t_argc < 3 ? (mo->subsector->sector->floorheight + (41 << FRACBITS)) : fixedvalue(t_argv[2]);
-  aiming = t_argc < 4 ? 0 : fixedvalue(t_argv[3]);
-  script_camera->aiming = G_ClipAimingPitch(&aiming);
-  //G_ClipAimingPitch((int *)&script_camera->aiming);
+  script_camera->aiming = t_argc < 4 ? 0 : fixedvalue(t_argv[3]);
   script_camera_on = true;
 }
 
@@ -1893,17 +1892,15 @@ void SF_ChangeHubLevel()
 // for start map: start new game on a particular skill
 void SF_StartSkill()
 {
-  skill_t skill;
-
   if(t_argc < 1)
     { script_error("need skill level to start on\n"); return;}
 
   // -1: 1-5 is how we normally see skills
   // 0-4 is how doom sees them
 
-  skill = skill_t(intvalue(t_argv[0]) - 1);
+  game.skill = skill_t(intvalue(t_argv[0]) - 1);
 
-  game.DeferredNewGame(skill, false);
+  game.StartGame();
 }
 
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2004/07/05 16:53:23  smite-meister
+// Netcode replaced
+//
 // Revision 1.21  2004/03/28 15:16:12  smite-meister
 // Texture cache.
 //
@@ -88,35 +91,19 @@
 //
 //-----------------------------------------------------------------------------
 
-
-// FIXME!  _ALL_ musserv and sndserv stuff has to be moved away! This file has
-// nothing to do with the sound output device. Move to linux_x11 interface or whatever.
-/*
-#ifdef MUSSERV
-# include <sys/msg.h>
-struct musmsg {
-  long msg_type;
-  char msg_text[12];
-};
-extern int msg_id;
-#endif
-*/
-
 #include <stdlib.h> // rand
 
 #include "doomdef.h"
-
 #include "command.h"
+#include "cvars.h"
+
 #include "g_actor.h"
 #include "g_game.h"
 #include "g_pawn.h"
 #include "g_player.h"
 
 #include "m_argv.h"
-#include "m_random.h"
 #include "r_main.h"     //R_PointToAngle2() used to calc stereo sep.
-#include "r_things.h"     // for skins
-#include "d_main.h"
 
 #include "i_sound.h"
 #include "s_sound.h"
@@ -131,31 +118,16 @@ extern int msg_id;
 // 3D Sound Interface
 #include "hardware/hw3sound.h"
 
-// FIXME move to linux_x interface
-// commands for music and sound servers
-/*
-#ifdef MUSSERV
-consvar_t musserver_cmd = {"musserver_cmd","musserver",CV_SAVE};
-consvar_t musserver_arg = {"musserver_arg","-t 20 -f -u 0",CV_SAVE};
-#endif
-#ifdef SNDSERV
-consvar_t sndserver_cmd = {"sndserver_cmd","llsndserv",CV_SAVE};
-consvar_t sndserver_arg = {"sndserver_arg","-quiet",CV_SAVE};
-#endif
-
-#ifdef __MACOS__
-consvar_t  play_mode = {"play_mode","0",CV_SAVE,CV_Unsigned};
-#endif
-*/
 
 CV_PossibleValue_t soundvolume_cons_t[]={{0,"MIN"},{31,"MAX"},{0,NULL}};
+
 consvar_t cv_soundvolume = {"soundvolume","15",CV_SAVE,soundvolume_cons_t};
 consvar_t cv_musicvolume = {"musicvolume","15",CV_SAVE,soundvolume_cons_t};
+consvar_t cd_volume = {"cd_volume","31",CV_SAVE,soundvolume_cons_t};
 consvar_t cv_numChannels = {"snd_channels","16",CV_SAVE, CV_Unsigned};
-consvar_t cv_surround = {"surround", "0", CV_SAVE, CV_OnOff};
 consvar_t cv_stereoreverse = {"stereoreverse","0",CV_SAVE ,CV_OnOff};
+consvar_t cv_surround = {"surround", "0", CV_SAVE, CV_OnOff};
 consvar_t cv_precachesound = {"precachesound","0",CV_SAVE ,CV_OnOff};
-
 
 
 #define SURROUND_SEP            -128
@@ -386,47 +358,16 @@ SoundSystem::SoundSystem()
 // allocates channel buffer, sets S_sfx lookup.
 void SoundSystem::Startup()
 {
-  CV_RegisterVar(&cv_stereoreverse);
-  CV_RegisterVar(&cv_precachesound);
-  CV_RegisterVar(&cv_surround);
-
   CV_RegisterVar(&cv_soundvolume);
   CV_RegisterVar(&cv_musicvolume);
-  CV_RegisterVar(&cv_numChannels);
-
   CV_RegisterVar(&cd_volume);
-  //CV_RegisterVar(&cdUpdate);
+  CV_RegisterVar(&cv_numChannels);
+  CV_RegisterVar(&cv_stereoreverse);
+  CV_RegisterVar(&cv_surround);
+  CV_RegisterVar(&cv_precachesound);
 
   if (M_CheckParm("-precachesound"))
     CV_Set(&cv_precachesound, "1");
-
-#ifdef LINUX_X11
-  CV_RegisterVar(&cv_jigglecdvol);
-#endif
-#ifdef SNDSERV
-  CV_RegisterVar(&sndserver_cmd);
-  CV_RegisterVar(&sndserver_arg);
-#endif
-#ifdef MUSSERV
-  CV_RegisterVar(&musserver_cmd);
-  CV_RegisterVar(&musserver_arg);
-#endif
-#ifdef __MACOS__        //mp3 playlist stuff
-  {
-    int i;
-    for (i=0;i<PLAYLIST_LENGTH;i++)
-      {
-	user_songs[i].name = malloc(7);
-	sprintf(user_songs[i].name, "song%i%i",i/10,i%10);
-	user_songs[i].defaultvalue = malloc(1);
-	*user_songs[i].defaultvalue = 0;
-	user_songs[i].flags = CV_SAVE;
-	user_songs[i].PossibleValue = NULL;
-	CV_RegisterVar (&user_songs[i]);
-      }
-    CV_RegisterVar (&play_mode);
-  }
-#endif
 
   I_StartupSound();
   I_InitMusic();
@@ -434,7 +375,7 @@ void SoundSystem::Startup()
   ResetChannels(16);
   sc.SetDefaultItem("DSSPLASH"); // default sound
 
-  nextcleanup = gametic + 35*100;
+  nextcleanup = game.tic + 35*100;
 }
 
 
@@ -861,7 +802,7 @@ void SoundSystem::UpdateSounds()
 
   // Go through L2 cache,
   // clean up unused data.
-  if (gametic > nextcleanup)
+  if (game.tic > nextcleanup)
     {
       CONS_Printf("Sound cache cleanup...\n");
 
@@ -871,7 +812,7 @@ void SoundSystem::UpdateSounds()
       if (i > 0)
 	CONS_Printf ("Flushed %d sounds\n", i);
       //sc.Inventory();
-      nextcleanup = gametic + 35*500;
+      nextcleanup = game.tic + 35*500;
     }
 
 

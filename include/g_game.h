@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
 // Revision 1.9  2004/04/25 16:26:50  smite-meister
 // Doxygen
 //
@@ -95,7 +98,8 @@ class GameInfo
 {
   friend class Intermission;
   friend class PlayerInfo;
-  friend class NetCode; // kludge until netcode is rewritten
+  friend class LNetInterface;
+  friend class LConnection;
 
 private:
   /// delayed game state changes
@@ -121,14 +125,13 @@ public:
   /// current state of the game
   enum gamestate_t
     {
-      GS_NULL = 0,        ///< only used during game startup
-      GS_WAITINGPLAYERS,  ///< waiting for players
+      GS_NULL = 0,      ///< only used during game startup
+      GS_INTRO,         ///< no game running, playing intro loop
+      GS_WAIT,
       GS_LEVEL,           ///< we are playing
       GS_INTERMISSION,    ///< gazing at the intermission screen
       GS_FINALE,          ///< game final animation
-      GS_DEMOSCREEN,      ///< looking at a demo
-
-      GS_DEDICATEDSERVER, ///< new state for dedicated servers
+      GS_DEMOPLAYBACK     ///< watching a demo
     };
 
   gamestate_t   state;  ///< gamestate
@@ -144,18 +147,24 @@ public:
   gamemode_t    mode;   ///< which game are we playing?
   skill_t       skill;  ///< skill level
 
+  bool server;      ///< are we running a game locally?
   bool netgame;     ///< only true in a netgame (nonlocal players possible)
-  bool multiplayer; ///< Only true if >1 player. netgame => multiplayer but not (multiplayer=>netgame)
+  bool multiplayer; ///< only true if >1 players. netgame => multiplayer but not (multiplayer => netgame)
   bool modified;    ///< an external modification-dll is in use
   bool nomonsters;  ///< checkparm of -nomonsters
-  bool paused;      ///< Game Pause?
+  bool paused;      ///< is the game currently paused?
 
-  bool inventory;   ///< playerpawns have an inventory
+  bool inventory;   ///< PlayerPawns have an inventory
+
+  LNetInterface *net; ///< our network interface (contains th enetstate)
 
   // Demo sequences
   int pagetic; ///< how many tics left until demo is changed?
 
-protected:
+  unsigned time; ///< how long (in ms) has the game been running?
+  unsigned tic;  ///< how many times has the game been ticked?   
+
+public:
   int maxplayers; ///< max # of players allowed
   int maxteams;   ///< max # of teams
 
@@ -174,22 +183,45 @@ protected:
   MapCluster *nextcluster; // temp HACK
   MapInfo    *currentmap;     // this is used ONLY for time/scorelimit games
 
+
 public:
 
   GameInfo();
   ~GameInfo();
 
+
+
+  bool Playing();
+  void SV_Reset();
+  bool SV_SpawnServer();
+  void CL_Reset();
+
   void TryRunTics(tic_t realtics);
-  void DoAdvanceDemo();
+
   void Display();
 
   int  Serialize(class LArchive &a);
   int  Unserialize(LArchive &a);
 
+
   // in g_game.cpp
   void StartIntro();
+  void AdvanceIntro();
+
   void Drawer();
   bool Responder(struct event_t *ev);
+
+  /// returns the player if he is in the game, otherwise NULL
+  PlayerInfo *FindPlayer(int number);
+  PlayerInfo *FindPlayer(const char *name);
+
+  PlayerInfo *AddPlayer(PlayerInfo *p); ///< tries to add a player to the game
+  bool RemovePlayer(int number);        ///< erases player from game
+  void ClearPlayers();                  ///< erases all players
+
+
+
+
 
   void LoadGame(int slot);
   void SaveGame(int slot, char* description);
@@ -198,11 +230,8 @@ public:
 
   void Ticker(); // ticks the game forward in time
 
-  // ----- player-related stuff -----
-  PlayerInfo *AddPlayer(PlayerInfo *p); // tries to add a player to the game
-  bool RemovePlayer(int number);  // erases player from game
-  void ClearPlayers();            // erases all players
-  PlayerInfo *FindPlayer(int number); // returns player 'number' if he is in the game, otherwise NULL
+
+
 
   void UpdateScore(PlayerInfo *killer, PlayerInfo *victim);
   int  GetFrags(struct fragsort_t **fs, int type);
@@ -219,7 +248,7 @@ public:
   int Create_classic_game(int episode);
 
   // in g_state.cpp
-  bool DeferredNewGame(skill_t sk, bool splitscreen);
+  bool NewGame(skill_t sk);
   bool StartGame();
   void StartIntermission();
   void EndIntermission();
@@ -237,6 +266,8 @@ public:
 
 extern GameInfo game;
 
+// for dedicated server
+extern bool dedicated;
 
 // miscellaneous stuff, doesn't really belong here
 extern bool       devparm; // development mode (-devparm)
@@ -248,49 +279,12 @@ extern bool       devparm; // development mode (-devparm)
 
 
 // demoplaying back and demo recording
-extern  bool demoplayback;
 extern  bool demorecording;
-extern  bool   timingdemo;       
+extern  bool timingdemo;       
 
 // Quit after playing a demo from cmdline.
-extern  bool         singledemo;
-
-extern  tic_t           gametic;
+extern  bool singledemo;
 
 
-
-struct consvar_t;
-
-// used in game menu
-extern consvar_t  cv_crosshair;
-extern consvar_t  cv_autorun;
-extern consvar_t  cv_invertmouse;
-extern consvar_t  cv_alwaysfreelook;
-extern consvar_t  cv_mousemove;
-extern consvar_t  cv_showmessages;
-
-extern consvar_t cv_crosshair2;
-extern consvar_t cv_autorun2;
-extern consvar_t cv_invertmouse2;
-extern consvar_t cv_alwaysfreelook2;
-extern consvar_t cv_mousemove2;
-extern consvar_t cv_showmessages2;
-
-extern consvar_t cv_fastmonsters;
-//extern consvar_t  cv_crosshairscale;
-extern consvar_t cv_joystickfreelook;
-
-
-short G_ClipAimingPitch(int* aiming);
-
-extern angle_t localangle,localangle2;
-extern int     localaiming,localaiming2; // should be a angle_t but signed
-
-void G_BuildTiccmd(ticcmd_t* cmd, bool primary, int realtics);
-void G_ReadDemoTiccmd(ticcmd_t* cmd,int playernum);
-void G_WriteDemoTiccmd(ticcmd_t* cmd,int playernum);
-
-
-void G_DeferedPlayDemo(char* demo);
 
 #endif

@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
 // Revision 1.3  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
@@ -25,21 +28,16 @@
 //
 // Revision 1.1.1.1  2002/11/16 14:18:23  hurdler
 // Initial C++ version of Doom Legacy
-//
-//
-// DESCRIPTION:
-//      handle mouse/keyboard/joystick inputs,
-//      maps inputs to game controls (forward,use,open...)
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// Handles mouse/keyboard/joystick inputs,
+/// maps inputs to game controls (forward,use,open...)
 
 #ifndef g_input_h
 #define g_input_h 1
 
 #include "keys.h"
-
-#define MAXMOUSESENSITIVITY   40        // sensitivity steps
 
 enum gamecontrols_e
 {
@@ -80,30 +78,6 @@ enum gamecontrols_e
   num_gamecontrols
 };
 
-struct consvar_t;
-// mouse values are used once
-extern consvar_t       cv_mousesens;
-extern consvar_t       cv_mlooksens;
-extern consvar_t       cv_allowjump;
-extern consvar_t       cv_allowrocketjump;
-extern consvar_t       cv_allowautoaim;
-extern int             mousex;
-extern int             mousey;
-extern int             mlooky;  //mousey with mlookSensitivity
-extern int             mouse2x;
-extern int             mouse2y;
-extern int             mlook2y;
-
-extern int             dclicktime;
-extern int             dclickstate;
-extern int             dclicks;
-extern int             dclicktime2;
-extern int             dclickstate2;
-extern int             dclicks2;
-
-extern int             joyxmove;
-extern int             joyymove;
-
 // current state of the keys : true if pushed
 extern  byte    gamekeydown[NUMINPUTS];
 
@@ -122,7 +96,7 @@ char* G_KeynumToString(int keynum);
 int   G_KeyStringtoNum(char *keystr);
 
 // detach any keys associated to the given game control
-void  G_ClearControlKeys (int (*setupcontrols)[2], int control);
+void  G_ClearControlKeys(int (*setupcontrols)[2], int control);
 void  Command_Setcontrol_f();
 void  Command_Setcontrol2_f();
 void  G_Controldefault();

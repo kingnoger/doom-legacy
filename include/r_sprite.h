@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
 // Revision 1.11  2004/04/01 09:16:16  smite-meister
 // Texture system bugfixes
 //
@@ -43,12 +46,10 @@
 //
 // Revision 1.2  2002/12/23 23:19:37  smite-meister
 // Weapon groups, MAPINFO parser, WAD2+WAD3 support added!
-//
-//
-// DESCRIPTION:
-//   Sprite and sprite skin definitions
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Sprites and sprite skins
 
 #ifndef r_sprite_h
 #define r_sprite_h 1
@@ -117,19 +118,15 @@ enum MD3_animseq_e
 //           Sprites
 //================================
 
-// Doom sprites in wads are patches with a special naming convention
-//  so they can be recognized by R_InitSprites.
-// The base name is NNNNFx or NNNNFxFx, with
-//  x indicating the rotation, x = 0, 1-7.
-// The sprite and frame specified by a thing_t
-//  is range checked at run time.
-// A sprite is a set of Textures that represents
-//  a three dimensional object and may have multiple
-//  rotations pre drawn.
-// Horizontal flipping is used to save space,
-//  thus NNNNF2F5 defines a mirrored patch.
-// Some sprites will only have one picture used
-// for all views: NNNNF0
+/// \brief One frame of a sprite_t
+///
+/// A sprite is a set of Textures that represent
+/// a three dimensional object seen from different angles.
+/// Doom sprites in wads are patches with a special naming convention
+/// so they can be recognized by R_InitSprites.
+/// The base name is NNNNFx or NNNNFxFx, with x indicating the rotation, x = 0--7.
+/// Horizontal flipping is used to save space, thus NNNNF2F5 defines a mirrored patch.
+/// Some sprites only have one picture used for all directions: NNNNF0
 
 struct spriteframe_t
 {
@@ -144,6 +141,7 @@ struct spriteframe_t
 };
 
 
+/// \brief An animated collection of 2D frames
 class sprite_t : public cacheitem_t
 {
   friend class spritecache_t;
@@ -159,6 +157,7 @@ public:
 };
 
 
+/// \brief Cache for sprite_t's
 class spritecache_t : public L2cache_t
 {
 protected:
@@ -180,11 +179,12 @@ extern int numspritelumps;
 //        Presentations
 //================================
 
-// Idea: Game entities have a pointer to a graphic presentation.
-// The animation data is stored in the presentation object.
-// The actual implementation of the "graphic presentation" can be a sprite, md3 or anything.
+/// \brief Abstract base class for presentation objects
+///
+/// Idea: Game entities have a pointer to a graphic presentation.
+/// The animation data is stored in the presentation object.
+/// The actual implementation of the "graphic presentation" can be a sprite, md3 or anything.
 
-// abstract base class
 class presentation_t
 {
 protected:
@@ -193,17 +193,17 @@ public:
   enum animseq_e
   {
     // Legacy "animation sequences"
-    Idle = 0, // spawnstate
-    Run,      // seestate
-    Pain,     // painstate
-    Melee,    // meleestate (attack 1)
-    Shoot,    // missilestate (attack 2)
+    Idle = 0, ///< spawnstate
+    Run,      ///< seestate
+    Pain,     ///< painstate
+    Melee,    ///< meleestate (attack 1)
+    Shoot,    ///< missilestate (attack 2)
     
-    Death1,   // deathstate
-    Death2,   // xdeathstate (explode, die)
-    Death3,   // crashstate, one more way to die (heretic/hexen imps)
+    Death1,   ///< deathstate
+    Death2,   ///< xdeathstate (explode, die)
+    Death3,   ///< crashstate, one more way to die (heretic/hexen imps)
 
-    Raise,    // raisestate, being raised from death by an arch-vile
+    Raise,    ///< raisestate, being raised from death by an arch-vile
     Other
   };
 
@@ -232,8 +232,10 @@ public:
 };
 
 
-// Sprites can be animated in two ways, either using SetAnim or SetFrame.
-// Both use the states table.
+/// \brief Sprite presentation
+///
+/// Sprites can be animated in two ways, either using SetAnim or SetFrame.
+/// Both use the states table.
 class spritepres_t : public presentation_t
 {
 protected:
@@ -264,6 +266,7 @@ struct MD3_animstate
 };
 
 
+/// \brief 3D model presentation
 class modelpres_t : public presentation_t
 {
   class MD3_player *mdl;
@@ -291,7 +294,6 @@ public:
 // SKINS STUFF
 // -----------
 #define SKINNAMESIZE 16
-#define DEFAULTSKIN  "marine"   // name of the standard doom marine as skin
 #define MAXSKINS 10
 
 // 10 customisable sounds for Skins
@@ -319,12 +321,9 @@ struct skin_t
   short       soundsid[NUMSKINSOUNDS]; // sound # in S_sfx table
 };
 
-struct consvar_t;
 
 extern int       numskins;
 extern skin_t    skins[MAXSKINS+1];
-//extern CV_PossibleValue_t skin_cons_t[MAXSKINS+1];
-extern consvar_t cv_skin;
 
 //void    R_InitSkins (void);
 void    SetPlayerSkin(int playernum,char *skinname);

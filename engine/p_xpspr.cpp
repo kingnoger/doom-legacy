@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/07/05 16:53:26  smite-meister
+// Netcode replaced
+//
 // Revision 1.9  2004/01/06 14:37:45  smite-meister
 // six bugfixes, cleanup
 //
@@ -52,7 +55,7 @@
 //
 //-----------------------------------------------------------------------------
 
-
+#include "g_game.h"
 #include "g_actor.h"
 #include "g_pawn.h"
 #include "g_player.h"
@@ -76,7 +79,6 @@
 void A_UnHideThing(DActor *actor);
 int P_FaceMobj(Actor *source, Actor *target, angle_t *delta);
 
-extern tic_t gametic;
 extern fixed_t FloatBobOffsets[64];
 extern mobjtype_t PuffType;
 extern Actor *PuffSpawned;
@@ -1478,7 +1480,7 @@ static void CHolySeekerMissile(DActor *actor, angle_t thresh, angle_t turnMax)
   angle = actor->angle>>ANGLETOFINESHIFT;
   actor->px = int(actor->info->speed * finecosine[angle]);
   actor->py = int(actor->info->speed * finesine[angle]);
-  if (!(gametic & 15) 
+  if (!(game.tic & 15) 
      || actor->z > target->z+(target->height)
      || actor->z+actor->height < target->z)
     {
@@ -1559,7 +1561,7 @@ void A_CHolySeek(DActor *actor)
     {
       CHolySeekerMissile(actor, actor->args[0]*ANGLE_1,
 			 actor->args[0]*ANGLE_1*2);
-      if(!((gametic + 7) & 15))
+      if(!((game.tic + 7) & 15))
 	{
 	  actor->args[0] = 5+(P_Random()/20);
 	}

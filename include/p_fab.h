@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
 // Revision 1.3  2003/11/23 19:07:42  smite-meister
 // New startup order
 //
@@ -37,10 +40,6 @@
 #define __P_FAB__
 
 #include "doomtype.h"
-#include "command.h"
-
-extern consvar_t cv_solidcorpse;        //p_enemy
-extern consvar_t cv_bloodtime;
 
 // spawn smoke trails behind rockets and skull head attacks
 void A_SmokeTrailer(class DActor *actor);

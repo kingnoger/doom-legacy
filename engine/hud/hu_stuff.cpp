@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/07/05 16:53:27  smite-meister
+// Netcode replaced
+//
 // Revision 1.13  2004/04/25 16:26:50  smite-meister
 // Doxygen
 //
@@ -53,20 +56,15 @@
 //
 // Revision 1.1.1.1  2002/11/16 14:18:15  hurdler
 // Initial C++ version of Doom Legacy
-//
-//
-// DESCRIPTION:
-//      heads up displays, cleaned up (hasta la vista hu_lib)
-//      because a lot of code was unnecessary now
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Heads Up Displays, cleaned up (hasta la vista hu_lib)
 
 #include "doomdef.h"
+#include "command.h"
+#include "cvars.h"
 #include "hu_stuff.h"
-
-#include "d_netcmd.h" // say command
-#include "d_clisrv.h"
 
 #include "g_game.h"
 #include "g_player.h"
@@ -96,10 +94,33 @@
 # include "hardware/hw_main.h"
 #endif
 
-extern language_t language;
-
 
 HUD hud;
+
+
+
+void ShowMessage_OnChange()
+{
+  if (!cv_showmessages.value)
+    CONS_Printf("%s\n",MSGOFF);
+  else
+    CONS_Printf("%s\n",MSGON);
+}
+
+void ST_Overlay_OnChange()
+{
+  hud.CreateOverlayWidgets();
+}
+
+
+CV_PossibleValue_t crosshair_cons_t[]   ={{0,"Off"},{1,"Cross"},{2,"Angle"},{3,"Point"},{0,NULL}};
+consvar_t cv_crosshair        = {"crosshair"   ,"0",CV_SAVE,crosshair_cons_t};
+consvar_t cv_crosshair2       = {"crosshair2"  ,"0",CV_SAVE,crosshair_cons_t};
+consvar_t cv_stbaroverlay     = {"overlay", "kahmf", CV_SAVE|CV_CALL, NULL, ST_Overlay_OnChange};
+CV_PossibleValue_t showmessages_cons_t[]={{0,"Off"},{1,"On"},{2,"Not All"},{0,NULL}};
+consvar_t cv_showmessages     = {"showmessages","1",CV_SAVE | CV_CALL | CV_NOINIT,showmessages_cons_t,ShowMessage_OnChange};
+consvar_t cv_showmessages2    = {"showmessages2","1",CV_SAVE | CV_CALL | CV_NOINIT,showmessages_cons_t,ShowMessage_OnChange};
+
 
 
 // coords are scaled
@@ -136,111 +157,6 @@ static void HU_DrawTip();
 
 
 //======================================================================
-//                 KEYBOARD LAYOUTS FOR ENTERING TEXT
-//======================================================================
-
-char*     shiftxform;
-
-char french_shiftxform[] =
-{
-  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-  16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
-  ' ', '!', '"', '#', '$', '%', '&',
-  '"', // shift-'
-  '(', ')', '*', '+',
-  '?', // shift-,
-  '_', // shift--
-  '>', // shift-.
-  '?', // shift-/
-  '0', // shift-0
-  '1', // shift-1
-  '2', // shift-2
-  '3', // shift-3
-  '4', // shift-4
-  '5', // shift-5
-  '6', // shift-6
-  '7', // shift-7
-  '8', // shift-8
-  '9', // shift-9
-  '/',
-  '.', // shift-;
-  '<',
-  '+', // shift-=
-  '>', '?', '@',
-  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
-  'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-  '[', // shift-[
-  '!', // shift-backslash - OH MY GOD DOES WATCOM SUCK
-  ']', // shift-]
-  '"', '_',
-  '\'', // shift-`
-  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
-  'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-  '{', '|', '}', '~', 127
-};
-
-char english_shiftxform[] =
-{
-  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-  16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
-  ' ', '!', '"', '#', '$', '%', '&',
-  '"', // shift-'
-  '(', ')', '*', '+',
-  '<', // shift-,
-  '_', // shift--
-  '>', // shift-.
-  '?', // shift-/
-  ')', // shift-0
-  '!', // shift-1
-  '@', // shift-2
-  '#', // shift-3
-  '$', // shift-4
-  '%', // shift-5
-  '^', // shift-6
-  '&', // shift-7
-  '*', // shift-8
-  '(', // shift-9
-  ':',
-  ':', // shift-;
-  '<',
-  '+', // shift-=
-  '>', '?', '@',
-  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
-  'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-  '[', // shift-[
-  '!', // shift-backslash - OH MY GOD DOES WATCOM SUCK
-  ']', // shift-]
-  '"', '_',
-  '\'', // shift-`
-  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
-  'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-  '{', '|', '}', '~', 127
-};
-
-
-char frenchKeyMap[128]=
-{
-    0,
-    1,2,3,4,5,6,7,8,9,10,
-    11,12,13,14,15,16,17,18,19,20,
-    21,22,23,24,25,26,27,28,29,30,
-    31,
-    ' ','!','"','#','$','%','&','%','(',')','*','+',';','-',':','!',
-    '0','1','2','3','4','5','6','7','8','9',':','M','<','=','>','?',
-    '@','Q','B','C','D','E','F','G','H','I','J','K','L',',','N','O',
-    'P','A','R','S','T','U','V','Z','X','Y','W','^','\\','$','^','_',
-    '@','Q','B','C','D','E','F','G','H','I','J','K','L',',','N','O',
-    'P','A','R','S','T','U','V','Z','X','Y','W','^','\\','$','^',127
-};
-
-
-char ForeignTranslation(unsigned char ch)
-{
-  return (ch < 128) ? frenchKeyMap[ch] : ch;
-}
-
-
-//======================================================================
 //                          HEADS UP DISPLAY
 //======================================================================
 
@@ -257,14 +173,11 @@ HUD::HUD()
 
 void HUD::Startup()
 {
-  extern consvar_t cv_stbaroverlay;
-
-  // set shift translation table
-  if (language == la_french)
-    shiftxform = french_shiftxform;
-  else
-    shiftxform = english_shiftxform;
-
+  // client hud
+  CV_RegisterVar(&cv_crosshair);
+  CV_RegisterVar(&cv_crosshair2);
+  CV_RegisterVar(&cv_showmessages);
+  CV_RegisterVar(&cv_showmessages2);  
   CV_RegisterVar(&cv_stbaroverlay);
 
   // first initialization
@@ -351,24 +264,7 @@ bool HU_keyInChatString(char *s, char ch);
 //
 bool HUD::Responder(event_t *ev)
 {
-  static bool shiftdown = false;
-  static bool altdown   = false;
-
-  bool             eatkey = false;
-  char*               macromessage;
-  unsigned char       c;
-
-
-  if (ev->data1 == KEY_SHIFT)
-    {
-      shiftdown = (ev->type == ev_keydown);
-      return false;
-    }
-  else if (ev->data1 == KEY_ALT)
-    {
-        altdown = (ev->type == ev_keydown);
-        return false;
-    }
+  bool  eatkey = false;
 
   if (ev->type != ev_keydown)
     return false;
@@ -378,8 +274,8 @@ bool HUD::Responder(event_t *ev)
   if (!chat_on)
     {
       // enter chat mode
-      if (ev->data1==gamecontrol[gc_talkkey][0]
-	  || ev->data1==gamecontrol[gc_talkkey][1])
+      if (ev->data1 == gamecontrol[gc_talkkey][0]
+	  || ev->data1 == gamecontrol[gc_talkkey][1])
         {
 	  eatkey = chat_on = true;
 	  w_chat[0] = 0;
@@ -388,79 +284,76 @@ bool HUD::Responder(event_t *ev)
     }
   else
     {
-        c = ev->data1;
+      char c = ev->data1;
 
-        // use console translations
-        if (con_keymap == la_french)
-            c = ForeignTranslation(c);
-        if (shiftdown)
-            c = shiftxform[c];
+      // use console translations for chat
+      if (shiftdown)
+	c = shiftxform[c];
+      else if (con_keymap != la_english)
+	c = KeyTranslation(c);
 
-        // send a macro
-        if (altdown)
+      // send a macro
+      if (altdown)
         {
-            c = c - '0';
-            if (c > 9)
-                return false;
+	  c = c - '0';
+	  if (c > 9)
+	    return false;
 
-            macromessage = chat_macros[c]->str;
+	  char *macromessage = chat_macros[c]->str;
 
-            // kill last message with a '\n'
-            HU_queueChatChar(KEY_ENTER); // DEBUG!!!
+	  // kill last message with a '\n'
+	  HU_queueChatChar(KEY_ENTER); // DEBUG!!!
 
-            // send the macro message
-            while (*macromessage)
-                HU_queueChatChar(*macromessage++);
-            HU_queueChatChar(KEY_ENTER);
+	  // send the macro message
+	  while (*macromessage)
+	    HU_queueChatChar(*macromessage++);
+	  HU_queueChatChar(KEY_ENTER);
 
-            // leave chat mode and notify that it was sent
-            chat_on = false;
-            eatkey = true;
+	  // leave chat mode and notify that it was sent
+	  chat_on = false;
+	  eatkey = true;
         }
-        else
+      else
         {
-            if (language == la_french)
-                c = ForeignTranslation(c);
-            if (shiftdown || (c >= 'a' && c <= 'z'))
-                c = shiftxform[c];
-            eatkey = HU_keyInChatString(w_chat,c);
-            if (eatkey)
+	  eatkey = HU_keyInChatString(w_chat,c);
+	  if (eatkey)
             {
-                // static unsigned char buf[20]; // DEBUG
-                HU_queueChatChar(c);
-
-                // sprintf(buf, "KEY: %d => %d", ev->data1, c);
-                //      plr->message = buf;
+	      // static unsigned char buf[20]; // DEBUG
+	      HU_queueChatChar(c);
+	      
+	      // sprintf(buf, "KEY: %d => %d", ev->data1, c);
+	      //      plr->message = buf;
             }
-            if (c == KEY_ENTER)
+	  if (c == KEY_ENTER)
             {
-                chat_on = false;
+	      chat_on = false;
             }
-            else if (c == KEY_ESCAPE)
-                chat_on = false;
+	  else if (c == KEY_ESCAPE)
+	    chat_on = false;
         }
     }
 
-    if (eatkey) return true;
+  if (eatkey)
+    return true;
 
-    // ST_ part
-    if (ev->type == ev_keyup)
-      {
-	// Filter automap on/off : activates the statusbar while automap is active
-	if( (ev->data1 & 0xffff0000) == AM_MSGHEADER )
-	  {
-	    switch(ev->data1)
-	      {
-	      case AM_MSGENTERED:
-		st_refresh = true;        // force refresh of status bar
-		break;
-
-	      case AM_MSGEXITED:
-		break;
-	      }
-	  }
-      }
-    return false;
+  // ST_ part
+  if (ev->type == ev_keyup)
+    {
+      // Filter automap on/off : activates the statusbar while automap is active
+      if( (ev->data1 & 0xffff0000) == AM_MSGHEADER )
+	{
+	  switch(ev->data1)
+	    {
+	    case AM_MSGENTERED:
+	      st_refresh = true;        // force refresh of status bar
+	      break;
+	      
+	    case AM_MSGEXITED:
+	      break;
+	    }
+	}
+    }
+  return false;
 }
 
 
@@ -470,120 +363,35 @@ bool HUD::Responder(event_t *ev)
 //                            EXECUTION
 //======================================================================
 
-void Command_Say_f()
-{
-  char buf[255];
-  int i,j;
-
-  if ((j=COM_Argc()) < 2)
-    {
-      CONS_Printf ("say <message> : send a message\n");
-      return;
-    }
-
-  buf[0] = 0;
-  strcpy(&buf[1], COM_Argv(1));
-  for(i=2;i<j;i++)
-    {
-      strcat(&buf[1]," ");
-      strcat(&buf[1],COM_Argv(i));
-    }
-  SendNetXCmd(XD_SAY,buf,strlen(buf+1)+2); // +2 because 1 for buf[0] and the other for null terminated string
-}
-
-void Command_Sayto_f()
-{
-    char buf[255];
-    int i,j;
-
-    if((j=COM_Argc())<3)
-    {
-        CONS_Printf ("sayto <playername|playernum> <message> : send a message to a player\n");
-        return;
-    }
-
-    buf[0]=nametonum(COM_Argv(1));
-    if(buf[0]==-1)
-        return;
-    strcpy(&buf[1],COM_Argv(2));
-    for(i=3;i<j;i++)
-    {
-        strcat(&buf[1]," ");
-        strcat(&buf[1],COM_Argv(i));
-    }
-    SendNetXCmd(XD_SAY,buf,strlen(buf+1)+2);
-}
-
-void Command_Sayteam_f()
-{
-    char buf[255];
-    int i,j;
-
-    if((j=COM_Argc())<2)
-    {
-        CONS_Printf ("sayteam <message> : send a message to your team\n");
-        return;
-    }
-
-    buf[0]=-consoleplayer->team;
-    strcpy(&buf[1],COM_Argv(1));
-    for(i=2;i<j;i++)
-    {
-        strcat(&buf[1]," ");
-        strcat(&buf[1],COM_Argv(i));
-    }
-    SendNetXCmd(XD_SAY,buf,strlen(buf+1)+2); // +2 because 1 for buf[0] and the other for null terminated string
-}
-
-// netsyntax : to : byte  1->32  player 1 to 32
-//                        0      all
-//                       -1->-32 say team -numplayer of the sender
-
-void Got_Saycmd(char **p,int playernum)
-{
-  char to;
-  to=*(*p)++;
-
-  // FIXME make the message system handle better player number changes
-  if (to==0 || to == consoleplayer->number || consoleplayer->number == playernum
-     || (to < 0 && consoleplayer->team == -to) )
-    CONS_Printf("\3%s\n", *p);
-    //CONS_Printf("\3%s: %s\n", game.players[playernum]->name.c_str(), *p);
-
-  *p+=strlen(*p)+1;
-}
-
 //  Handles key input and string input
 //
 bool HU_keyInChatString(char *s, char ch)
 {
-    int         l;
+  int l;
 
-    if (ch >= ' ' && ch <= '_')
+  if (ch >= ' ' && ch <= '_')
     {
-        l = strlen(s);
-        if (l<HU_MAXMSGLEN-1)
+      l = strlen(s);
+      if (l<HU_MAXMSGLEN-1)
         {
-            s[l++]=ch;
-            s[l]=0;
-            return true;
+	  s[l++]=ch;
+	  s[l]=0;
+	  return true;
         }
-        return false;
+      return false;
     }
-    else
-        if (ch == KEY_BACKSPACE)
-        {
-            l = strlen(s);
-            if (l)
-                s[--l]=0;
-            else
-                return false;
-        }
-        else
-            if (ch != KEY_ENTER)
-                return false; // did not eat key
+  else if (ch == KEY_BACKSPACE)
+    {
+      l = strlen(s);
+      if (l)
+	s[--l]=0;
+      else
+	return false;
+    }
+  else if (ch != KEY_ENTER)
+    return false; // did not eat key
 
-    return true; // ate the key
+  return true; // ate the key
 }
 
 
@@ -712,9 +520,6 @@ void HU_queueChatChar(char c)
     }
 }
 
-extern int     con_keymap;
-
-
 
 
 //======================================================================
@@ -746,8 +551,7 @@ static void HU_DrawChat()
 }
 
 
-extern consvar_t cv_chasecam;
-// was HU_Drawer()
+//
 //  Heads up displays drawer, call each frame
 //
 void HUD::Draw(bool redrawsbar)
@@ -760,8 +564,8 @@ void HUD::Draw(bool redrawsbar)
   if (drawscore)
     HU_drawDeathmatchRankings();
 
-  // draw the crosshair, not when viewing demos nor with chasecam
-  if (!automap.active && cv_crosshair.value && !demoplayback && !cv_chasecam.value)
+  // draw the crosshair, not with chasecam
+  if (!automap.active && cv_crosshair.value && !cv_chasecam.value)
     HU_drawCrosshair ();
 
   HU_DrawTip();
@@ -1164,7 +968,7 @@ void HU_drawDeathmatchRankings()
   //Fab:25-04-98: when you play, you quickly see your frags because your
   //  name is displayed white, when playback demo, you quicly see who's the
   //  view.
-  PlayerInfo *whiteplayer = demoplayback ? displayplayer : consoleplayer;
+  PlayerInfo *whiteplayer = (game.state == GameInfo::GS_DEMOPLAYBACK) ? displayplayer : consoleplayer;
   
   if (scorelines>9)
     scorelines = 9; //dont draw past bottom of screen, show the best only
@@ -1245,35 +1049,33 @@ consvar_t cv_chatmacro0 = {"_chatmacro0", NULL, CV_SAVE,NULL};
 //
 void HU_HackChatmacros()
 {
-    int    i;
+  // this is either the original text, or dehacked ones
+  cv_chatmacro0.defaultvalue = HUSTR_CHATMACRO0;
+  cv_chatmacro1.defaultvalue = HUSTR_CHATMACRO1;
+  cv_chatmacro2.defaultvalue = HUSTR_CHATMACRO2;
+  cv_chatmacro3.defaultvalue = HUSTR_CHATMACRO3;
+  cv_chatmacro4.defaultvalue = HUSTR_CHATMACRO4;
+  cv_chatmacro5.defaultvalue = HUSTR_CHATMACRO5;
+  cv_chatmacro6.defaultvalue = HUSTR_CHATMACRO6;
+  cv_chatmacro7.defaultvalue = HUSTR_CHATMACRO7;
+  cv_chatmacro8.defaultvalue = HUSTR_CHATMACRO8;
+  cv_chatmacro9.defaultvalue = HUSTR_CHATMACRO9;
 
-    // this is either the original text, or dehacked ones
-    cv_chatmacro0.defaultvalue = HUSTR_CHATMACRO0;
-    cv_chatmacro1.defaultvalue = HUSTR_CHATMACRO1;
-    cv_chatmacro2.defaultvalue = HUSTR_CHATMACRO2;
-    cv_chatmacro3.defaultvalue = HUSTR_CHATMACRO3;
-    cv_chatmacro4.defaultvalue = HUSTR_CHATMACRO4;
-    cv_chatmacro5.defaultvalue = HUSTR_CHATMACRO5;
-    cv_chatmacro6.defaultvalue = HUSTR_CHATMACRO6;
-    cv_chatmacro7.defaultvalue = HUSTR_CHATMACRO7;
-    cv_chatmacro8.defaultvalue = HUSTR_CHATMACRO8;
-    cv_chatmacro9.defaultvalue = HUSTR_CHATMACRO9;
+  // link chatmacros to cvars
+  chat_macros[0] = &cv_chatmacro0;
+  chat_macros[1] = &cv_chatmacro1;
+  chat_macros[2] = &cv_chatmacro2;
+  chat_macros[3] = &cv_chatmacro3;
+  chat_macros[4] = &cv_chatmacro4;
+  chat_macros[5] = &cv_chatmacro5;
+  chat_macros[6] = &cv_chatmacro6;
+  chat_macros[7] = &cv_chatmacro7;
+  chat_macros[8] = &cv_chatmacro8;
+  chat_macros[9] = &cv_chatmacro9;
 
-    // link chatmacros to cvars
-    chat_macros[0] = &cv_chatmacro0;
-    chat_macros[1] = &cv_chatmacro1;
-    chat_macros[2] = &cv_chatmacro2;
-    chat_macros[3] = &cv_chatmacro3;
-    chat_macros[4] = &cv_chatmacro4;
-    chat_macros[5] = &cv_chatmacro5;
-    chat_macros[6] = &cv_chatmacro6;
-    chat_macros[7] = &cv_chatmacro7;
-    chat_macros[8] = &cv_chatmacro8;
-    chat_macros[9] = &cv_chatmacro9;
-
-    // register chatmacro vars ready for config.cfg
-    for (i=0;i<10;i++)
-       CV_RegisterVar (chat_macros[i]);
+  // register chatmacro vars ready for config.cfg
+  for (int i=0;i<10;i++)
+    CV_RegisterVar(chat_macros[i]);
 }
 
 
@@ -1281,23 +1083,21 @@ void HU_HackChatmacros()
 //
 void Command_Chatmacro_f()
 {
-  int    i;
-
   if (COM_Argc()<2)
     {
-      CONS_Printf ("chatmacro <0-9> : view chatmacro\n"
-		   "chatmacro <0-9> \"chat message\" : change chatmacro\n");
+      CONS_Printf("chatmacro <0-9> : view chatmacro\n"
+		  "chatmacro <0-9> \"chat message\" : change chatmacro\n");
       return;
     }
 
-  i = atoi(COM_Argv(1)) % 10;
+  int i = atoi(COM_Argv(1)) % 10;
 
-  if (COM_Argc()==2)
+  if (COM_Argc() == 2)
     {
       CONS_Printf("chatmacro %d is \"%s\"\n",i,chat_macros[i]->str);
       return;
     }
 
   // change a chatmacro
-  CV_Set (chat_macros[i], COM_Argv(2));
+  CV_Set(chat_macros[i], COM_Argv(2));
 }

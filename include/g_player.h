@@ -17,39 +17,11 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.14  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
 // Revision 1.13  2004/04/25 16:26:51  smite-meister
 // Doxygen
-//
-// Revision 1.11  2003/12/18 11:57:31  smite-meister
-// fixes / new bugs revealed
-//
-// Revision 1.10  2003/11/30 00:09:47  smite-meister
-// bugfixes
-//
-// Revision 1.9  2003/11/12 11:07:27  smite-meister
-// Serialization done. Map progression.
-//
-// Revision 1.8  2003/06/20 20:56:08  smite-meister
-// Presentation system tweaked
-//
-// Revision 1.7  2003/05/11 21:23:52  smite-meister
-// Hexen fixes
-//
-// Revision 1.6  2003/04/04 00:01:57  smite-meister
-// bugfixes, Hexen HUD
-//
-// Revision 1.5  2003/03/23 14:24:13  smite-meister
-// Polyobjects, MD3 models
-//
-// Revision 1.4  2003/03/15 20:07:21  smite-meister
-// Initial Hexen compatibility!
-//
-// Revision 1.3  2003/01/25 21:33:06  smite-meister
-// Now compiles with MinGW 2.0 / GCC 3.2.
-// Builder can choose between dynamic and static linkage.
-//
-// Revision 1.2  2003/01/18 20:17:41  smite-meister
-// HUD fixed, levelchange crash fixed.
 //
 //-----------------------------------------------------------------------------
 
@@ -83,9 +55,9 @@ enum playerstate_t
 };
 
 
-
-/// PlayerInfo describes one client-side player, either human or AI.
-/// It is created when a player joins the game, deleted when he leaves.
+/// \brief One client-side player, either human or AI.
+///
+/// Created when a player joins the game, deleted when he leaves.
 class PlayerInfo
 {
   friend class GameInfo;
@@ -99,6 +71,7 @@ public:
   int color; ///< skin color to be copied to each pawn
   int skin;  ///< skin to be copied to each pawn
 
+  class LConnection *conn; ///< network connection
   bool spectator;
   playerstate_t playerstate;
   ticcmd_t  cmd;
@@ -115,15 +88,15 @@ public:
   /// Hint messages.
   const char *message;
 
-  // added by Boris : preferred weapons order stuff
-  char  favoriteweapon[NUMWEAPONS];
+  // weapon preferences
+  char  weaponpref[NUMWEAPONS];
   bool  originalweaponswitch;
 
   bool autoaim; ///< using autoaim?
 
   class Map        *mp;   ///< the map with which the player is currently associated
   class PlayerPawn *pawn; ///< the thing that is being controlled by this player (marine, imp, whatever)
-  class Actor      *view; ///< the POV of the player. usually same as pawn, but can also be a chasecam etc...
+  class Actor      *pov;  ///< the POV of the player. usually same as pawn, but can also be a chasecam etc...
 
   // POV height and bobbing during movement.
   fixed_t  viewz;           ///< absolute viewpoint z coordinate

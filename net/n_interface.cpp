@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/07/05 16:53:30  smite-meister
+// Netcode replaced
+//
 // Revision 1.2  2004/06/25 19:54:09  smite-meister
 // Netcode
 //
@@ -45,7 +48,9 @@
 #include "i_system.h"
 
 
+
 using namespace TNL;
+
 
 
 static char *ConnectionState[] =
@@ -55,7 +60,7 @@ static char *ConnectionState[] =
   "Sending punch packets",       ///< The state of a pending arranged connection when both sides haven't heard from the other yet
   "Computing puzzle solution",   ///< We've received a challenge response, and are in the process of computing a solution to its puzzle.
   "Awaiting connect response",   ///< We've received a challenge response and sent a connect request.
-  "Connection timed out",        ///< The connection timed out during the connection process.
+  "Connect timeout",             ///< The connection timed out during the connection process.
   "Connection rejected",         ///< The connection was rejected.
   "Connected.",                  ///< We've accepted a connect request, or we've received a connect response accept.
   "Disconnected",                ///< The connection has been disconnected.
@@ -190,6 +195,7 @@ void LNetInterface::handleInfoPacket(const Address &address, U8 packetType, BitS
 	  CONS_Printf("ping: %d ms\n", I_GetTime() - time);
 
 	  // TODO if no autoconnect, now we should add it to the server table...
+	  netstate = CL_QueryingServer;
 	  SendQuery(address, cn, token);
 	}
       break;
@@ -229,9 +235,9 @@ void LNetInterface::handleInfoPacket(const Address &address, U8 packetType, BitS
       break;
 
     case PT_QueryResponse:
-      if (netstate == CL_PingingServers)
+      if (netstate == CL_QueryingServer)
 	{
-	  CONS_Printf("Got query response from %s", address.toString());
+	  CONS_Printf("Got query response from %s\n", address.toString());
 
 	  Nonce cn;
 	  cn.read(stream);
@@ -260,7 +266,7 @@ void LNetInterface::handleInfoPacket(const Address &address, U8 packetType, BitS
 void LNetInterface::CL_Connect(const Address &a)
 {
   LConnection *s = new LConnection();
-  server_con = s; // not yet!
+  server_con = s;
 
   // Set player info
 
@@ -274,10 +280,11 @@ void LNetInterface::CL_Connect(const Address &a)
 void LNetInterface::CL_Reset()
 {
   if (server_con)
-    disconnect(server_con, "Client quits.\n");
+    disconnect(server_con, NetConnection::ReasonSelfDisconnect, "Client quits.\n");
 
   netstate = NS_Unconnected;
 }
+
 
 
 
@@ -298,13 +305,13 @@ void LNetInterface::SV_Reset()
 
   vector<LConnection *>::iterator t = client_con.begin();
   for (; t != client_con.end(); t++)
-    disconnect(*t, "Server shutdown!\n");
+    disconnect(*t, NetConnection::ReasonSelfDisconnect, "Server shutdown!\n");
 
   client_con.clear();
 
 
   if (master_con)
-    disconnect(master_con, "Server shutdown.\n");
+    disconnect(master_con, NetConnection::ReasonSelfDisconnect, "Server shutdown.\n");
 
   master_con = NULL;
 
@@ -334,7 +341,7 @@ void LNetInterface::Update()
 
     case CL_Connecting:
       if (server_con)
-	CONS_Printf(ConnectionState[server_con->getConnectionState()]);
+	CONS_Printf("%s\n", ConnectionState[server_con->getConnectionState()]);
       break;
 
     default:
@@ -349,10 +356,7 @@ void LNetInterface::Update()
 
   processConnections();
 
-
-  /*
-  FiletxTicker();
-  */
+  // file transfers
 }
 
 

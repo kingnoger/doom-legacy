@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
 // Revision 1.6  2004/03/28 15:16:14  smite-meister
 // Texture cache.
 //
@@ -36,12 +39,10 @@
 // Revision 1.1.1.1  2002/11/16 14:18:24  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//   Menu widget stuff, episode selection and such.
-//    
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Menu widget definitions
 
 #ifndef m_menu_h
 #define m_menu_h 1
@@ -49,7 +50,7 @@
 #include "doomtype.h"
 
 
-// flags for items in the menu
+/// flags for the menu items
 enum menuflag_t
 {
   // Group 1, 4 bits: menuitem action (what we do when a key is pressed)
@@ -103,26 +104,22 @@ enum menuflag_t
 typedef void (*menufunc_t)(int choice);
 
 
-union itemaction_t
-{
-  struct consvar_t *cvar; // IT_CVAR
-  class Menu *submenu;   // IT_SUBMENU
-  menufunc_t  routine;  // IT_CALL, IT_KEYHANDLER, IT_ARROWS
-};
-
-
+/// \brief Describes a single menu item
 struct menuitem_t
 {
-  // show IT_xxx
-  short  flags;
+  short  flags; ///< bit flags
 
-  char  *patch;
-  char  *text;  // used when FONTBxx lump is found
+  char    *pic; ///< Texture name or NULL
+  char   *text; ///< plain text, used when we have a valid font (e.g. FONTBxx lumps)
 
-  itemaction_t itemaction;
+  union itemaction_t
+  {
+    struct consvar_t *cvar;    // IT_CVAR
+    class       Menu *submenu; // IT_SUBMENU
+    menufunc_t        routine; // IT_CALL, IT_KEYHANDLER, IT_ARROWS
+  } itemaction;
 
-  // hotkey in menu
-  // or y of the item 
+  /// hotkey in menu OR y offset of the item 
   byte alphaKey;
 };
 
@@ -135,11 +132,13 @@ enum menumessage_t
                     // and routine is void routine(event_t *) (ex: set control)
 };
 
-typedef bool (* eventhandler_t)(struct event_t *ev);
 
+/// \brief Message box used in the menu
 class MsgBox
 {
   friend class Menu;
+  typedef bool (* eventhandler_t)(struct event_t *ev);
+
 private:
   bool  active;
   int   x, y;
@@ -163,73 +162,73 @@ public:
 };
 
 
-
+/// \brief Game menu, may contain submenus
 class Menu
 {
   friend class MsgBox;
 private:
   // video and audio resources
   // FIXME make a real font system, fix v_video.cpp (text output)
-  static int     menufontbase;
+  static int   menufontbase;
   static class Texture **smallfont;
 
-  static short AnimCount;  // skull animation counter
-  static short whichSkull; // which skull to draw
+
+  static short AnimCount;  ///< skull animation counter
+  static short WhichSkull; ///< which skull to draw
   static int   SkullBaseLump;
+  static tic_t NowTic;     ///< Current time in tics
 
 
-  // currently active menu
-  static Menu  *currentMenu;
-  // menu item that is highlighted
-  static short  itemOn; 
+  static Menu  *currentMenu; ///< currently active menu
+  static short  itemOn;      ///< currently highlighted menu item
 
   typedef void (Menu::* drawfunc_t)();
   typedef bool (* quitfunc_t)();
 
 
 private:
-  Menu        *parent;      // previous menu
-  short        x, y;        // menu coords
-  const char  *titlepic;    // title patch name
-  const char  *title;       // title as string for display with bigfont if present
-  short        numitems;    // # of menu items
-  menuitem_t  *items;       // array of menu items
-  short        lastOn;      // last active item
-  drawfunc_t   drawroutine; // draw routine
-  quitfunc_t   quitroutine; // called before quit a menu return true if we can
+  Menu        *parent;      ///< previous menu
+  short        x, y;        ///< menu screen coords
+  const char  *titlepic;    ///< title Texture name
+  const char  *title;       ///< title as string for display with bigfont if present
+  short        numitems;    ///< # of menu items
+  menuitem_t  *items;       ///< array of menu items
+  short        lastOn;      ///< last active item
+  drawfunc_t   drawroutine; ///< draw routine
+  quitfunc_t   quitroutine; ///< called before quit a menu return true if we can
 
 public:
-  static bool active; // menu is currently open
+  static bool active; ///< menu is currently open
 
   Menu(const char *tp, const char *t, int ni, Menu *up,
        menuitem_t *it, drawfunc_t df, short mx, short my,
        short on = 0, quitfunc_t qf = NULL);
 
-  // opens the menu
+  /// opens the menu
   static void Open();
 
-  // closes the menu
+  /// closes the menu
   static void Close(bool callexitmenufunc);
 
-  // tics the menu (skull cursor) animation and video mode testing
+  /// tics the menu (skull cursor) animation and video mode testing
   static void Ticker();
 
-  // eats events
+  /// eats events
   static bool Responder(event_t *ev);
 
-  // starts up the menu system
+  /// starts up the menu system
   static void Startup();
 
-  // resets the menu system according to current game.mode
+  /// resets the menu system according to current game.mode
   static void Init();
 
-  // draws the menus directly into the screen buffer.
+  /// draws the menus directly into the screen buffer.
   static void Drawer();
 
-  // changes menu node
+  /// changes menu node
   static void SetupNextMenu(Menu *m);
 
-  // the actual drawing
+  /// the actual drawing
   void DrawMenuTitle();
   void DrawGenericMenu();
 
@@ -260,6 +259,7 @@ void M_SwitchSplitscreen();
 // Called by linux_x/i_video_xshm.c
 void M_QuitResponse(int ch);
 
-extern Menu menu; // main menu
+/// main menu
+extern Menu menu;
 
 #endif

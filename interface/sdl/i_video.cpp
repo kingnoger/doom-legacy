@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
 // Revision 1.10  2004/01/10 16:03:00  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
@@ -101,19 +104,10 @@ static char vidModeName[33][32]; // allow 33 different modes
 
 //Hudler: 16/10/99: added for OpenGL gamma correction
 RGBA_t  gamma_correction = {0x7F7F7F7F};
-extern consvar_t cv_grgammared;
-extern consvar_t cv_grgammagreen;
-extern consvar_t cv_grgammablue;
 
 extern consvar_t cv_fullscreen; // for fullscreen support 
 
-extern consvar_t cv_usemouse;
-
 rendermode_t    rendermode = render_soft;
-
-// synchronize page flipping with screen refresh
-// unused and for compatibility reason 
-consvar_t       cv_vidwait = {"vid_wait","1",CV_SAVE,CV_OnOff};
 
 bool graphics_started = false; // Is used in console.c and screen.c
 
@@ -194,7 +188,7 @@ void I_FinishUpdate()
 	SDL_UnlockSurface(vidSurface);
     }
   else
-    OglSdlFinishUpdate(cv_vidwait.value);
+    OglSdlFinishUpdate(false);
     
   I_GetEvent();
     
@@ -388,15 +382,6 @@ bool I_StartupGraphics()
 {
   if (graphics_started)
     return true;
-  
-  CV_RegisterVar(&cv_vidwait);
-  
-  // Initialize Audio as well, otherwise DirectX can not use audio
-  if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO) < 0)
-    {
-      CONS_Printf("Couldn't initialize SDL: %s\n", SDL_GetError());
-      return false;
-    }
 
   // Get video info for screen resolutions  
   vidInfo = SDL_GetVideoInfo();
@@ -436,9 +421,6 @@ bool I_StartupGraphics()
   // default resolution
   vid.width = BASEVIDWIDTH;
   vid.height = BASEVIDHEIGHT;
-
-  // Window title
-  SDL_WM_SetCaption("Legacy", "Legacy");
   
   if (M_CheckParm("-opengl")) 
     {

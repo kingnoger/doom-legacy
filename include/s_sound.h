@@ -3,8 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
 // Revision 1.10  2004/03/28 15:16:14  smite-meister
 // Texture cache.
 //
@@ -48,13 +50,10 @@
 //
 // Revision 1.1.1.1  2002/11/16 14:18:27  hurdler
 // Initial C++ version of Doom Legacy
-//
-//
-// DESCRIPTION:
-//      The not so system specific sound interface.
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief The not so system specific sound interface.
 
 #ifndef s_sound_h
 #define s_sound_h 1
@@ -66,19 +65,6 @@
 #include "z_cache.h"
 
 using namespace std;
-
-struct consvar_t;
-struct CV_PossibleValue_t;
-
-extern consvar_t cv_stereoreverse;
-extern consvar_t cv_precachesound;
-extern consvar_t cv_soundvolume;
-extern consvar_t cv_musicvolume;
-extern consvar_t cv_numChannels;
-extern consvar_t cd_volume;
-//extern consvar_t cv_cdUpdate;
-extern CV_PossibleValue_t soundvolume_cons_t[];
-
 
 //
 // A playing piece of music

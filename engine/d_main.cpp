@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.27  2004/07/05 16:53:24  smite-meister
+// Netcode replaced
+//
 // Revision 1.26  2004/04/25 16:26:48  smite-meister
 // Doxygen
 //
@@ -114,60 +117,47 @@
 // Revision 1.9  2000/04/04 00:32:45  stroggonmeth
 // Initial Boom compatability plus few misc changes all around.
 //
-//
-// DESCRIPTION:
-//      DOOM main program (D_DoomMain) and game loop (D_DoomLoop),
-//      plus functions to determine game mode (shareware, registered),
-//      parse command line parameters, configure game parameters,
-//      and call the startup functions.
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Startup and initialization (D_DoomMain),
+/// game loop (D_DoomLoop), event system.
+
 
 #include <unistd.h>
 #include <sys/stat.h>
 
+#include "command.h"
 #include "console.h"
-#include "d_clisrv.h"
+#include "cvars.h"
 
-#include "am_map.h"
-#include "d_net.h"
 #include "dstrings.h"
-
-#include "f_wipe.h"
-#include "f_finale.h"
+#include "info.h"
+#include "p_heretic.h"
 
 #include "g_game.h"
-#include "g_player.h"
-#include "g_pawn.h"
+#include "d_event.h"
 
-#include "hu_stuff.h"
-
-#include "i_sound.h"
 #include "i_system.h"
+#include "i_sound.h"
 #include "i_video.h"
+#include "screen.h"
 
 #include "m_argv.h"
 #include "m_menu.h"
 #include "m_misc.h" // configfile
 
-#include "r_local.h"
-
 #include "sounds.h"
 #include "s_sound.h"
-#include "t_script.h"
-#include "v_video.h"
 
-#include "wi_stuff.h"
 #include "w_wad.h"
-
 #include "z_zone.h"
-#include "d_main.h"
-#include "p_heretic.h"
+//#include "d_main.h"
 
 
-#ifdef HWRENDER
-# include "hardware/hw_main.h"   // 3D View Rendering
-#endif
+
+void SV_Init();
+void CL_Init();
 
 
 
@@ -186,12 +176,9 @@ const char VERSIONSTRING[] = "prealpha2";
 #define CONFIGFILENAME   "config.cfg"  
 
 
-bool dedicated;
-bool devparm;        // started game with -devparm
+bool dedicated  = false;
+bool devparm    = false; // started game with -devparm
 bool singletics = false; // timedemo
-
-bool nodrawers;    // for comparative timing purposes
-bool noblit;       // for comparative timing purposes
 
 
 
@@ -219,8 +206,9 @@ event_t  events[MAXEVENTS];
 int      eventhead;
 int      eventtail;
 
+bool shiftdown = false, altdown = false;
+
 //
-// D_PostEvent
 // Called by the I/O functions when input is detected
 //
 void D_PostEvent(const event_t* ev)
@@ -228,359 +216,33 @@ void D_PostEvent(const event_t* ev)
   events[eventhead] = *ev;
   eventhead = (++eventhead)&(MAXEVENTS-1);
 }
-// just for lock this function
-#ifdef PC_DOS
-void D_PostEvent_end() {};
-#endif
 
 
 //
-// D_ProcessEvents
 // Send all the events of the given timestamp down the responder chain
 //
 void D_ProcessEvents()
 {
-  event_t*    ev;
-
   for ( ; eventtail != eventhead ; eventtail = (++eventtail)&(MAXEVENTS-1) )
     {
-      ev = &events[eventtail];
-      // Menu input
-      if (Menu::Responder(ev))
-	continue;              // menu ate the event
-      // console input
-      if (CON_Responder(ev))
-	continue;              // ate the event
-      game.Responder(ev);
-    }
-}
+      event_t *ev = &events[eventtail];
 
-
-
-//================
-//  DEMO LOOP
-//================
-
-
-int   demosequence;
-static char *pagename = "TITLEPIC";
-
-
-/// This cycles through the demo sequences.
-void GameInfo::DoAdvanceDemo()
-{
-  if (mode == gm_udoom)
-    demosequence = (demosequence+1)%7;
-  else
-    demosequence = (demosequence+1)%6;
-
-  switch (demosequence)
-    {
-    case 0:
-      pagename = "TITLEPIC";
-      switch (mode)
-	{
-	case gm_hexen:
-	  pagetic = 280;
-	  pagename = "TITLE";
-	  S.StartMusic("HEXEN", true);
-	  break;
-	case gm_heretic:
-	  pagetic = 210+140;
-	  pagename = "TITLE";
-	  S_StartMusic(mus_htitl);
-	  break;
-	case gm_doom2:
-	  pagetic = TICRATE * 11;
-	  S_StartMusic(mus_dm2ttl);
-	  break;
-	default:
-	  pagetic = 170;
-	  S_StartMusic(mus_intro);
-	  break;
-	}
-      state = GS_DEMOSCREEN;
-      break;
-    case 1:
-      G_DeferedPlayDemo("DEMO1");
-      pagetic = 9999999;
-      break;
-    case 2:
-      pagetic = 200;
-      state = GS_DEMOSCREEN;
-      pagename = "CREDIT";
-      break;
-    case 3:
-      G_DeferedPlayDemo("DEMO2");
-      pagetic = 9999999;
-      break;
-    case 4:
-      state = GS_DEMOSCREEN;
-      pagetic = 200;
-      switch (mode)
-	{
-	case gm_doom2:
-	  pagetic = TICRATE * 11;
-	  pagename = "TITLEPIC";
-	  S_StartMusic(mus_dm2ttl);
-	  break;
-	case gm_heretic:
-	  if (fc.FindNumForName("E2M1") == -1)
-	    pagename = "ORDER";
-	  else
-	    pagename = "CREDIT";
-	  break;
-	case gm_hexen:
-	  pagename = "CREDIT";
-	  break;
-	case gm_udoom:
-	  pagename = "CREDIT";
-	  break;
-	default:
-	  pagename = "HELP2";
-        }
-      break;
-    case 5:
-      G_DeferedPlayDemo("DEMO3");
-      pagetic = 9999999;
-      break;
-      // THE DEFINITIVE DOOM Special Edition demo
-    case 6:
-      G_DeferedPlayDemo("DEMO4");
-      pagetic = 9999999;
-      break;
-    }
-}
-
-
-
-//
-// D_PageDrawer : draw a patch supposed to fill the screen,
-//                fill the borders with a background pattern (a flat)
-//                if the patch doesn't fit all the screen.
-//
-void D_PageDrawer(char *lumpname)
-{
-  // software mode which uses generally lower resolutions doesn't look
-  // good when the pic is scaled, so it fills space aorund with a pattern,
-  // and the pic is only scaled to integer multiples (x2, x3...)
-  if (rendermode==render_soft)
-    {
-      if ((vid.width>BASEVIDWIDTH) || (vid.height>BASEVIDHEIGHT) )
-        {
-	  for (int y=0; y<vid.height; y += scr_borderpatch->height)
-	    for (int x=0; x<vid.width; x += scr_borderpatch->width)
-	      scr_borderpatch->Draw(x,y,0);
-        }
-    }
-
-
-  Texture *t = tc.GetPtr(lumpname);
-  t->Draw(0, 0, V_SCALE);
-
-  if (game.mode >= gm_heretic && demosequence == 0 && game.pagetic <= 140)
-    {
-      t = tc.GetPtr("ADVISOR");
-      t->Draw(4, 160, V_SCALE);
-    }
-}
-
-
-
-//======================================================================
-// D_Display
-//  draw current display, possibly wiping it from the previous
-//======================================================================
-
-bool force_wipe = false;
-
-
-void GameInfo::Display()
-{
-  extern int scaledviewwidth;
-
-  static gamestate_t oldgamestate = GS_NULL;
-  static int borderdrawcount;
-
-  if (dedicated || nodrawers)
-    return;
-
-
-  // check for change of screen size (video mode)
-  if (vid.setmodeneeded)
-    vid.SetMode();  // change video mode, set setsizeneeded
-
-  // change the view size if needed
-  if (setsizeneeded)
-    {
-      R_ExecuteSetViewSize();
-      force_wipe = true;
-      borderdrawcount = 3;
-    }
-
-
-  bool screenwipe; // screen wipe in progress
-
-  // save the current screen if about to wipe
-  if (force_wipe && rendermode == render_soft)
-    {
-      CONS_Printf("wipe forced, state = %d\n", state);
-      force_wipe = false;
-      screenwipe = true;
-      wipe_StartScreen(0, 0, vid.width, vid.height);
-    }
-  else
-    screenwipe = false;
-
-  // draw buffered stuff to screen
-  // BP: Used only by linux GGI version
-  I_UpdateNoBlit();
-
-  bool redrawsbar = false;
-
-  // do buffered drawing
-  switch (state)
-    {
-    case GS_LEVEL:
-      if (gametic)
-	{
-	  HU_Erase();
-	  if (screenwipe
-#ifdef HWRENDER
-	      || rendermode != render_soft
-#endif
-	      )
-	    redrawsbar = true;
-	}
-
-      // see if the border needs to be initially drawn
-      if (oldgamestate != GS_LEVEL )
-	R_FillBackScreen();    // draw the pattern into the back screen
-
-      // draw either automap or game
-      if (automap.active)
-	automap.Drawer();
+      if (dedicated)
+	con.Responder(ev); // dedicated server only has a console interface
       else
 	{
-	  // see if the border needs to be updated to the screen
-	  if (scaledviewwidth != vid.width)
-	    {
-	      // the menu may draw over parts out of the view window,
-	      // which are refreshed only when needed
-	      if (Menu::active)
-		borderdrawcount = 3;
-	  
-	      if (borderdrawcount)
-		{
-		  R_DrawViewBorder(); // erase old menu stuff
-		  borderdrawcount--;
-		}
-	    }
-	  Drawer();
+	  // Menu input
+	  if (Menu::Responder(ev))
+	    continue;              // menu ate the event
+	  // console input
+	  if (con.Responder(ev))
+	    continue;              // ate the event
+	  game.Responder(ev);
 	}
-
-      hud.Draw(redrawsbar); // draw hud on top anyway
-      break;
-      
-    case GS_INTERMISSION:
-      wi.Drawer();
-      break;
-
-    case GS_FINALE:
-      F_Drawer();
-      break;
-
-    case GS_DEDICATEDSERVER:
-    case GS_DEMOSCREEN:
-      D_PageDrawer(pagename);
-    case GS_WAITINGPLAYERS:
-    case GS_NULL:
-    default:
-      break;
-    }
-
-  // change gamma if needed
-  if (state != oldgamestate && state != GS_LEVEL) 
-    vid.SetPalette(0);
-
-  oldgamestate = state;
-
-
-  // draw pause pic
-  if (paused && !Menu::active)
-    {
-      int y;
-      if (automap.active)
-	y = 4;
-      else
-	y = viewwindowy + 4;
-      Texture *tex = tc.GetPtr("M_PAUSE");
-      tex->Draw(viewwindowx+(BASEVIDWIDTH - tex->width)/2, y, V_SCALE);
-    }
-
-  //FIXME: draw either console or menu, not the two. Menu wins.
-  CON_Drawer();
-
-  Menu::Drawer(); // menu is drawn on top of everything else
-  NetUpdate();         // send out any new accumulation
-
-
-  // normal update
-  if (!screenwipe)
-    {
-      if (cv_netstat.value )
-        {
-	  char s[50];
-	  Net_GetNetStat();
-	  sprintf(s,"get %d b/s",getbps);
-	  V_DrawString(BASEVIDWIDTH-V_StringWidth(s),165-40, V_WHITEMAP, s);
-	  sprintf(s,"send %d b/s",sendbps);
-	  V_DrawString(BASEVIDWIDTH-V_StringWidth(s),165-30, V_WHITEMAP, s);
-	  sprintf(s,"GameMiss %.2f%%",gamelostpercent);
-	  V_DrawString(BASEVIDWIDTH-V_StringWidth(s),165-20, V_WHITEMAP, s);
-	  sprintf(s,"SysMiss %.2f%%",lostpercent);
-	  V_DrawString(BASEVIDWIDTH-V_StringWidth(s),165-10, V_WHITEMAP, s);
-        }
-
-      //I_BeginProfile();
-      I_FinishUpdate();              // page flip or blit buffer
-      //CONS_Printf("last frame update took %d\n", I_EndProfile());
-    }
-  else
-    {
-      // wipe update
-      extern consvar_t cv_screenslink;
-      if (!cv_screenslink.value)
-	return;
-
-      wipe_EndScreen(0, 0, vid.width, vid.height);
-
-      bool done;
-      tic_t wipestart = I_GetTime() - 1;
-      tic_t wipe_end  = wipestart + 2*TICRATE; // init a timeout
-      do
-	{
-	  tic_t nowtime, tics;
-
-	  do
-	    {
-	      //usleep(100); FIXME
-	      nowtime = I_GetTime();
-	      tics = nowtime - wipestart;
-	      // wait until time has passed
-	    }
-	  while (!tics);
-	  wipestart = nowtime;
-	  done = wipe_ScreenWipe(0, 0, vid.width, vid.height, tics);
-	  I_OsPolling();
-	  I_UpdateNoBlit();
-	  Menu::Drawer();            // menu is drawn even on top of wipes
-	  I_FinishUpdate();      // page flip or blit buffer
-
-	}
-      while (!done && I_GetTime() < wipe_end);
     }
 }
+
+
 
 
 
@@ -588,96 +250,70 @@ void GameInfo::Display()
 //   D_DoomLoop
 // =========================================================================
 
-tic_t rendergametic;
-
 
 void D_DoomLoop()
 {
-  // timekeeping for the game
-  tic_t oldtics, nowtics, elapsedtics, rendertimeout = 0;
-
-  if (demorecording)
-    game.BeginRecording();
-
   // user settings
   COM_BufAddText("exec autoexec.cfg\n");
 
   // end of loading screen: CONS_Printf() will no more call FinishUpdate()
-  con_startup = false;
+  con.refresh = false;
 
-  oldtics = I_GetTime();
+  // timekeeping for the game
+  tic_t rendertimeout = 0; // next time the screen MUST be updated
+  tic_t rendertic = 0;     // last rendered gametic
+  tic_t oldtics = I_GetTics(); // current time
 
-  // make sure to do a d_display to init mode _before_ load a level
-  vid.SetMode();  // change video mode if needed, recalculate...
+  vid.SetMode(); // change video mode if needed, recalculate...
 
-  while (1) // main game loop
+  // main game loop
+  while (1)
     {
-
-      // get real tics
-      nowtics = I_GetTime();
-      elapsedtics = nowtics - oldtics;
-      oldtics = nowtics;
+      // How much time has elapsed?
+      tic_t now = I_GetTics();
+      tic_t elapsed = now - oldtics;
+      oldtics = now;
         
-#ifdef SAVECPU_EXPERIMENTAL
-      if (elapsedtics == 0)
+      // give time to the OS
+      if (elapsed == 0)
 	{
-	  usleep(10000);
+	  I_Sleep(1);
 	  continue;
 	}
-#endif
-
-      // frame syncronous IO operations
-      // UNUSED for the moment (18/12/98)
-      // in SDL locks screen if necessary
-      I_StartFrame();
-
 
 #ifdef HW3SOUND
       HW3S_BeginFrameUpdate();
 #endif
 
-      // process tics (but maybe not if elapsedtics==0), run tickers, advance game state
-      game.TryRunTics(elapsedtics);
+      // run tickers, advance game state
+      game.TryRunTics(elapsed);
 
-      if (singletics || gametic > rendergametic)
-        {
-	  // render if gametics have passed since last rendering
-	  rendergametic = gametic;
-	  rendertimeout = nowtics+TICRATE/17;
-
-	  // move positional sounds, adjust volumes
-	  S.UpdateSounds();
-	  // Update display, next frame, with current state.
-	  game.Display();
-        }
-      else if (rendertimeout < nowtics )
+      if (!dedicated)
 	{
-	  // otherwise render if enough real time has elapsed since last rendering
-	  // in case the server hang or netsplit
-	  game.Display();
+	  if (singletics || game.tic > rendertic)
+	    {
+	      // render if gametics have passed since last rendering
+	      rendertic = game.tic;
+	      rendertimeout = now + TICRATE/17;
+
+	      // move positional sounds, adjust volumes
+	      S.UpdateSounds();
+	      // Update display, next frame, with current state.
+	      game.Display();
+	    }
+	  else if (rendertimeout < now)
+	    {
+	      // otherwise render if enough real time has elapsed since last rendering
+	      // in case the server hang or netsplit
+	      game.Display();
+	    }
 	}
 
-	// FIXME! Doesn't look good.
-#if !defined(WIN32_DIRECTX) && !defined(__OS2__) && !defined(SDL)
-        //
-        //Other implementations might need to update the sound here.
-        //
-#ifndef SNDSERV
-        // Sound mixing for the buffer is snychronous.
-        I_UpdateSound();
-#endif
-        // Synchronous sound output is explicitly called.
-#ifndef SNDINTR
-        // Update sound output.
-        I_SubmitSound();
-#endif
-
-#endif // WIN32_DIRECTX, SDL, other civilized systems
-        // check for media change, loop music..
-        I_UpdateCD();
+      // check for media change, loop music..
+      I_UpdateCD();
 
 #ifdef HW3SOUND
-        HW3S_EndFrameUpdate();
+      HW3S_EndFrameUpdate();
 #endif
     }
 }
@@ -736,11 +372,7 @@ static gamemode_t D_GetDoomType(const char *wadname)
 // identifies the iwad used
 void D_IdentifyVersion()
 {
- char  pathtemp[_MAX_PATH];
-  
-#ifdef LINUX_X11 // change to the directory where 'legacy.wad' is found
-  I_LocateWad();
-#endif
+  char  pathtemp[_MAX_PATH];
 
   char *waddir = getenv("DOOMWADDIR");
   if (!waddir)
@@ -963,9 +595,6 @@ void D_CheckWadVersion()
 
 extern char savegamename[256]; // temporary, FIXME
 
-void SV_Init();
-void CL_Init();
-
 //
 // D_DoomMain
 //
@@ -973,10 +602,16 @@ void D_DoomMain()
 {
   extern bool nomusic, nosound;
 
+  // we need to check for dedicated before initialization of some subsystems
+  dedicated = M_CheckParm("-dedicated");
+
   // keep error messages until the final flush(stderr)
   //if (setvbuf(stderr,NULL,_IOFBF,1000)) CONS_Printf("setvbuf didnt work\n");
-  if (freopen("stdout.txt", "w", stdout) == NULL) CONS_Printf("freopen didnt work\n");
-  if (freopen("stderr.txt", "w", stderr) == NULL) CONS_Printf("freopen didnt work\n");
+  if (!dedicated)
+    {
+      if (freopen("stdout.txt", "w", stdout) == NULL) CONS_Printf("freopen didnt work\n");
+      if (freopen("stderr.txt", "w", stderr) == NULL) CONS_Printf("freopen didnt work\n");
+    }
   
   // get parameters from a response file (eg: legacy @parms.txt)
   // adds parameters found within file to myargc, myargv.
@@ -1134,8 +769,6 @@ void D_DoomMain()
       DoomPatchEngine(); // TODO temporary solution, we must be able to switch game.mode anytime!
     }
 
-  // we need to check for dedicated before initialization of some subsystems
-  dedicated = M_CheckParm("-dedicated");
   nosound = M_CheckParm("-nosound");
   nomusic = M_CheckParm("-nomusic");
 
@@ -1196,10 +829,9 @@ void D_DoomMain()
   // ------------- starting the game ----------------
 
   bool autostart = false;
-  // init all NETWORK
-  CONS_Printf("D_CheckNetGame: Checking network game status.\n");
-  if (D_CheckNetGame())
-    autostart = true;
+  int startepisode = 1;
+  int startmap = 1;
+  skill_t sk = sk_medium;
 
   // check for a driver that wants intermission stats
   p = M_CheckParm("-statcopy");
@@ -1214,7 +846,6 @@ void D_DoomMain()
     }
 
   // get skill / episode / map from parms
-  skill_t sk = sk_medium;
 
   p = M_CheckParm("-skill");
   if (p && p < myargc-1)
@@ -1222,9 +853,6 @@ void D_DoomMain()
       sk = (skill_t)(myargv[p+1][0]-'1');
       autostart = true;
     }
-
-  int startepisode = 1;
-  int startmap = 1;
 
   p = M_CheckParm("-episode");
   if (p && p < myargc-1)
@@ -1298,7 +926,7 @@ void D_DoomMain()
       if ((p = M_CheckParm("-playdemo")))
         {
 	  singledemo = true;              // quit after one demo
-	  G_DeferedPlayDemo(tmp);
+	  //G_DeferedPlayDemo(tmp);
         }
       //else G_TimeDemo(tmp);
 	
@@ -1312,22 +940,15 @@ void D_DoomMain()
     {
       COM_BufAddText(va("load %d\n", atoi(myargv[p+1])));
     }
-  else if (dedicated && server)
+  else if (game.netgame || autostart)
     {
-      pagename = "TITLEPIC";
-      game.state = GameInfo::GS_DEDICATEDSERVER;
-    }
-  else if (autostart || game.netgame || M_CheckParm("+connect") || M_CheckParm("-connect"))
-    {
-      if (server && !M_CheckParm("+map"))
-	{
-	  game.Create_classic_game(startepisode);
-	  //COM_BufAddText (va("map \"%s\"\n", G_BuildMapName(startepisode, startmap)));
-	  // FIXME this function nukes most of the game parameters that may have
-	  // been set using cmdline args. Perhaps most cmdline args should be removed?
-	  // one can always use console-args (like legacy.exe +echo "sdfad")
-	  game.DeferredNewGame(sk, false);
-	}
+      // -server or -dedicated: start immediately.
+      if (game.mode == gm_hexen)
+	game.Create_MAPINFO_game(fc.FindNumForName("MAPINFO"));
+      else
+	game.Create_classic_game(startepisode);
+
+      game.NewGame(sk);
     }
   else
     game.StartIntro(); // start up intro loop 

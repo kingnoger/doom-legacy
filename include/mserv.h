@@ -17,8 +17,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:24  hurdler
-// Initial revision
+// Revision 1.2  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
+// Revision 1.1.1.1  2002/11/16 14:18:24  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.3  2002/07/01 21:00:50  jpakkane
 // Fixed cr+lf to UNIX form.
@@ -75,10 +78,6 @@ typedef struct
 
 
 // ================================ GLOBALS ===============================
-
-extern consvar_t cv_masterserver;
-extern consvar_t cv_servername;
-extern consvar_t cv_internetserver;
 
 char *GetMasterServerPort(void);
 char *GetMasterServerIP(void);

@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,48 +17,19 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:20  hurdler
-// Initial revision
+// Revision 1.2  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
 //
-// Revision 1.5  2002/08/02 20:14:51  vberghol
-// p_enemy.cpp done!
-//
-// Revision 1.4  2002/07/01 21:00:41  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:01:56  vberghol
-// HUD alkaa olla kunnossa
-//
-// Revision 1.7  2001/01/25 22:15:41  bpereira
-// added heretic support
-//
-// Revision 1.6  2000/11/11 13:59:45  bpereira
-// no message
-//
-// Revision 1.5  2000/10/08 13:29:59  bpereira
-// no message
-//
-// Revision 1.4  2000/08/31 14:30:55  bpereira
-// no message
-//
-// Revision 1.3  2000/04/16 18:38:06  bpereira
-// no message
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
-//
-//
-// DESCRIPTION:
-//
+// Revision 1.1.1.1  2002/11/16 14:18:20  hurdler
+// Initial C++ version of Doom Legacy
 //
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Command buffer
 
-#ifndef __COMMAND_H__
-#define __COMMAND_H__
+#ifndef command_h
+#define command_h 1
 
 #include <stdio.h>
 #include "doomtype.h"
@@ -67,52 +38,31 @@
 // Command buffer & command execution
 //===================================
 
-typedef void (*com_func_t) (void);
+typedef void (*com_func_t)();
 
-void    COM_AddCommand (char *name, com_func_t func);
+void    COM_AddCommand(char *name, com_func_t func);
 
-int     COM_Argc (void);
-char    *COM_Argv (int arg);   // if argv>argc, returns empty string
-char    *COM_Args (void);
-int     COM_CheckParm (char *check); // like M_CheckParm :)
+int     COM_Argc();
+char    *COM_Argv(int arg);   // if argv>argc, returns empty string
+char    *COM_Args();
+int     COM_CheckParm(char *check); // like M_CheckParm :)
 
 // match existing command or NULL
-char    *COM_CompleteCommand (char *partial, int skips);
+char    *COM_CompleteCommand(char *partial, int skips);
 
 // insert at queu (at end of other command)
-void    COM_BufAddText (char *text);
+void    COM_BufAddText(char *text);
 
 // insert in head (before other command)
-void    COM_BufInsertText (char *text);
+void    COM_BufInsertText(char *text);
 
 // Execute commands in buffer, flush them
-void    COM_BufExecute (void);
+void    COM_BufExecute();
 
 // setup command buffer, at game tartup
-void    COM_Init (void);
+void    COM_Init();
 
 
-// ======================
-// Variable sized buffers
-// ======================
-
-typedef struct vsbuf_s
-{
-    bool allowoverflow;  // if false, do a I_Error
-    bool overflowed;     // set to true if the buffer size failed
-    byte    *data;
-    int     maxsize;
-    int     cursize;
-} vsbuf_t;
-
-void VS_Alloc (vsbuf_t *buf, int initsize);
-void VS_Free  (vsbuf_t *buf);
-void VS_Clear (vsbuf_t *buf);
-void *VS_GetSpace (vsbuf_t *buf, int length);
-void VS_Write (vsbuf_t *buf, void *data, int length);
-void VS_Print (vsbuf_t *buf, char *data); // strcats onto the sizebuf
-
-// ======================
 
 
 //==================
@@ -157,7 +107,7 @@ struct consvar_t
   char    *defaultvalue;
   int     flags;             // flags see cvflags_t above
   CV_PossibleValue_t *PossibleValue;  // table of possible values
-  void    (*func) (void);    // called on change, if CV_CALL set
+  void    (*func)();    // called on change, if CV_CALL set
   int     value;             // for int and fixed_t
   char    *str;           // value in string
   unsigned short netid;      // used internaly : netid for send end receive
@@ -169,25 +119,25 @@ extern CV_PossibleValue_t CV_OnOff[];
 extern CV_PossibleValue_t CV_YesNo[];
 extern CV_PossibleValue_t CV_Unsigned[];
 // register a variable for use at the console
-void  CV_RegisterVar (consvar_t *variable);
+void  CV_RegisterVar(consvar_t *variable);
 
 // returns the name of the nearest console variable name found
-char *CV_CompleteVar (char *partial, int skips);
+char *CV_CompleteVar(char *partial, int skips);
 
 // equivalent to "<varname> <value>" typed at the console
-void  CV_Set (consvar_t *var, char *value);
+void  CV_Set(consvar_t *var, char *value);
 
 // expands value to a string and calls CV_Set
-void  CV_SetValue (consvar_t *var, int value);
+void  CV_SetValue(consvar_t *var, int value);
 
 // it a setvalue but with a modulo at the maximum
-void  CV_AddValue (consvar_t *var, int increment);
+void  CV_AddValue(consvar_t *var, int increment);
 
 // write all CV_SAVE variables to config file
-void  CV_SaveVariables (FILE *f);
+void  CV_SaveVariables(FILE *f);
 
 // load/save gamesate (load and save option and for network join in game)
 void CV_SaveNetVars( char **p );
 void CV_LoadNetVars( char **p );
 
-#endif // __COMMAND_H__
+#endif

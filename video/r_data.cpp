@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2004/07/05 16:53:30  smite-meister
+// Netcode replaced
+//
 // Revision 1.17  2004/04/25 16:26:51  smite-meister
 // Doxygen
 //
@@ -1296,7 +1299,7 @@ void R_InitData()
   tc.Clear();
   tc.SetDefaultItem("SMOKA0");
   tc.ReadTextures();
-  tc.Inventory();
+  //tc.Inventory();
 
   CONS_Printf("\nInitSprites...\n");
   R_InitSprites(sprnames);
@@ -1314,9 +1317,6 @@ void R_InitData()
 //
 void Map::PrecacheMap()
 {
-  if (demoplayback)
-    return;
-
   // Precache textures.
     //
     // no need to precache all software textures in 3D mode

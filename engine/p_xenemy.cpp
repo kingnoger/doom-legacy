@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2004/07/05 16:53:26  smite-meister
+// Netcode replaced
+//
 // Revision 1.14  2004/04/25 16:26:50  smite-meister
 // Doxygen
 //
@@ -76,6 +79,7 @@
 #include "p_maputl.h"
 
 #include "command.h"
+#include "cvars.h"
 #include "d_items.h"
 #include "m_random.h"
 
@@ -83,7 +87,6 @@
 #include "sounds.h"
 #include "tables.h"
 
-extern consvar_t  cv_deathmatch;
 extern fixed_t FloatBobOffsets[64];
 
 angle_t abs(angle_t a);
@@ -410,7 +413,7 @@ void A_MinotaurRoam(DActor *actor)
   actor->flags &= ~MF_SHADOW;			// In case pain caused him to 
   actor->flags &= ~MF_ALTSHADOW;		// skip his fade in.
 
-  if ((gametic - *starttime) >= MAULATORTICS)
+  if ((game.tic - *starttime) >= MAULATORTICS)
     {
       actor->Damage(NULL,NULL,10000);
       return;
@@ -522,7 +525,7 @@ void A_MinotaurChase(DActor *actor)
   actor->flags &= ~MF_SHADOW;			// In case pain caused him to 
   actor->flags &= ~MF_ALTSHADOW;		// skip his fade in.
 
-  if ((gametic - *starttime) >= MAULATORTICS)
+  if ((game.tic - *starttime) >= MAULATORTICS)
     {
       actor->Damage(NULL,NULL,10000);
       return;
@@ -4130,7 +4133,7 @@ void A_KSpiritSeeker(DActor *actor, angle_t thresh, angle_t turnMax)
   actor->px = int(actor->info->speed * finecosine[angle]);
   actor->py = int(actor->info->speed * finesine[angle]);
 
-  if(!(gametic & 15) 
+  if(!(game.tic & 15) 
      || actor->z > target->z+(target->info->height)
      || actor->z+actor->height < target->z)
     {

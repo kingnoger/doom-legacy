@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
 // Revision 1.4  2004/03/28 15:16:14  smite-meister
 // Texture cache.
 //
@@ -111,7 +114,6 @@ extern int              firstwaterflat; //added:18-02-98:WATER!
 //extern fixed_t          bspy;
 //extern angle_t          bspangle;
 
-extern consvar_t        cv_allowmlook;
 
 // ?
 extern angle_t          clipangle;

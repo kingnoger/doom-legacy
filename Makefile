@@ -1,5 +1,6 @@
-# Gnu Make makefile for Doom Legacy / SDL / GCC
-# Ville Bergholm 2002-2003
+# Gnu Make makefile for Doom Legacy
+# Copyright (C) 2002-2004 by DooM Legacy Team.
+#
 # This primary Makefile calls auxiliary Makefiles in subdirectories
 #
 # Use 'make OPT=1' to make optimized version, else you'll get debug info.
@@ -45,7 +46,7 @@ ifdef LINUX
  platform = -DLINUX
  interface = -DSDL
 # linker
- LIBS	= -L/usr/X11/lib -lSDLmain -lSDL -lSDL_mixer -lz
+ LIBS	= -L/usr/X11/lib -lSDLmain -lSDL -lSDL_mixer -lz -L. -ltnl -ltomcrypt
  OPENGLLIBS = -lGL -lGLU
 # -lm -lpthread ???
  LDFLAGS = -Wall
@@ -125,6 +126,7 @@ export engine_objects = \
 	$(objdir)/g_mapinfo.o \
 	$(objdir)/g_map.o \
 	$(objdir)/g_player.o \
+	$(objdir)/g_team.o \
 	$(objdir)/g_think.o \
 	$(objdir)/g_actor.o \
 	$(objdir)/g_pawn.o \
@@ -239,17 +241,14 @@ export video_objects = \
 	$(objdir)/hwr_render.o
 
 export net_objects = \
-	$(objdir)/d_client.o \
-	$(objdir)/d_server.o \
-	$(objdir)/d_net.o \
-	$(objdir)/d_netcmd.o \
-	$(objdir)/d_netfil.o \
-	$(objdir)/i_tcp.o \
-	$(objdir)/mserv.o
+	$(objdir)/n_interface.o \
+	$(objdir)/n_connection.o \
+	$(objdir)/sv_main.o \
+	$(objdir)/sv_cmds.o \
+	$(objdir)/cl_main.o
 
 export sdl_objects = \
 	$(objdir)/endtxt.o \
-	$(objdir)/filesrch.o \
 	$(objdir)/i_cdmus.o \
 	$(objdir)/i_main.o \
 	$(objdir)/i_net.o \
@@ -258,6 +257,7 @@ export sdl_objects = \
 	$(objdir)/i_video.o \
 	$(objdir)/ogl_sdl.o \
 	$(objdir)/searchp.o
+#	$(objdir)/filesrch.o \
 
 
 asm_objects = $(objdir)/tmap.o
@@ -295,6 +295,9 @@ depend:
 	$(MAKE) -C tools depend
 
 dep	: depend
+
+docs	: Doxyfile
+	doxygen
 
 engine	:
 	$(MAKE) -C engine

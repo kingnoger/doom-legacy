@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/07/05 16:53:24  smite-meister
+// Netcode replaced
+//
 // Revision 1.6  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
@@ -35,55 +38,418 @@
 //
 // Revision 1.1.1.1  2002/11/16 14:17:51  hurdler
 // Initial C++ version of Doom Legacy
-//
-//
-// DESCRIPTION:
-//      handle mouse/keyboard/joystick inputs,
-//      maps inputs to game controls (forward,use,open...)
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Handles keyboard/mouse/joystick inputs,
+/// maps inputs to game controls (forward, use, fire...).
 
 #include <stdlib.h>
 #include <string.h>
 
 #include "doomdef.h"
 #include "command.h"
+#include "cvars.h"
+
 #include "d_event.h"
 #include "g_input.h"
 
-CV_PossibleValue_t mousesens_cons_t[]={{1,"MIN"},{MAXMOUSESENSITIVITY,"MAXCURSOR"},{MAXINT,"MAX"},{0,NULL}};
+#include "g_player.h"
+#include "g_pawn.h"
+
+#include "i_system.h"
+#include "i_joy.h"
+#include "i_video.h"
+
+#include "tables.h"
+
+#define MAXMOUSESENSITIVITY 40 // sensitivity steps
+
 CV_PossibleValue_t onecontrolperkey_cons_t[]={{1,"One"},{2,"Several"},{0,NULL}};
+CV_PossibleValue_t usemouse_cons_t[]={{0,"Off"},{1,"On"},{2,"Force"},{0,NULL}};
+CV_PossibleValue_t mousesens_cons_t[]={{1,"MIN"},{MAXMOUSESENSITIVITY,"MAXCURSOR"},{MAXINT,"MAX"},{0,NULL}};
 
-// mouse values are used once
-consvar_t  cv_mousesens    = {"mousesens","10",CV_SAVE,mousesens_cons_t};
-consvar_t  cv_mlooksens    = {"mlooksens","10",CV_SAVE,mousesens_cons_t};
-consvar_t  cv_mousesens2   = {"mousesens2","10",CV_SAVE,mousesens_cons_t};
-consvar_t  cv_mlooksens2   = {"mlooksens2","10",CV_SAVE,mousesens_cons_t};
-consvar_t  cv_allowjump    = {"allowjump","1",CV_NETVAR,CV_YesNo};
-consvar_t  cv_allowautoaim = {"allowautoaim","1",CV_NETVAR,CV_YesNo};
 consvar_t  cv_controlperkey = {"controlperkey","1",CV_SAVE,onecontrolperkey_cons_t};
-//SoM: 3/28/2000: Working rocket jumping.
-consvar_t  cv_allowrocketjump = {"allowrocketjump","0",CV_NETVAR,CV_YesNo};
+
+consvar_t cv_autorun     = {"autorun","0",CV_SAVE,CV_OnOff};
+consvar_t cv_automlook   = {"automlook","0",CV_SAVE,CV_OnOff};
+consvar_t cv_usemouse    = {"use_mouse","1", CV_SAVE | CV_CALL,usemouse_cons_t,I_StartupMouse};
+consvar_t cv_invertmouse = {"invertmouse","0",CV_SAVE,CV_OnOff};
+consvar_t cv_mousemove   = {"mousemove","1",CV_SAVE,CV_OnOff};
+consvar_t cv_mousesensx  = {"mousesensx","10",CV_SAVE,mousesens_cons_t};
+consvar_t cv_mousesensy  = {"mousesensy","10",CV_SAVE,mousesens_cons_t};
+
+consvar_t cv_autorun2     = {"autorun2","0",CV_SAVE,CV_OnOff};
+consvar_t cv_automlook2   = {"automlook2","0",CV_SAVE,CV_OnOff};
+consvar_t cv_usemouse2    = {"use_mouse2","0", CV_SAVE | CV_CALL,usemouse_cons_t,I_StartupMouse2};
+consvar_t cv_invertmouse2 = {"invertmouse2","0",CV_SAVE,CV_OnOff};
+consvar_t cv_mousemove2   = {"mousemove2","1",CV_SAVE,CV_OnOff};
+consvar_t cv_mousesensx2  = {"mousesensx2","10",CV_SAVE,mousesens_cons_t};
+consvar_t cv_mousesensy2  = {"mousesensy2","10",CV_SAVE,mousesens_cons_t};
+
+#ifdef LMOUSE2
+ CV_PossibleValue_t mouse2port_cons_t[]={{0,"/dev/gpmdata"},{1,"/dev/ttyS0"},{2,"/dev/ttyS1"},{3,"/dev/ttyS2"},{4,"/dev/ttyS3"},{0,NULL}};
+ consvar_t cv_mouse2port  = {"mouse2port","/dev/gpmdata", CV_SAVE, mouse2port_cons_t };
+ consvar_t cv_mouse2opt = {"mouse2opt","0", CV_SAVE, NULL};
+#else
+ CV_PossibleValue_t mouse2port_cons_t[]={{1,"COM1"},{2,"COM2"},{3,"COM3"},{4,"COM4"},{0,NULL}};
+ consvar_t cv_mouse2port  = {"mouse2port","COM2", CV_SAVE, mouse2port_cons_t };
+#endif
 
 
-int             mousex;
-int             mousey;
-int             mlooky;         //like mousey but with a custom sensitivity
-                                //for mlook
-int             mouse2x;
-int             mouse2y;
-int             mlook2y;
+consvar_t cv_usejoystick = {"use_joystick", "0", CV_SAVE | CV_CALL, NULL, I_InitJoystick};
+consvar_t cv_joystickfreelook = {"joystickfreelook" ,"0",CV_SAVE,CV_OnOff};
 
-// joystick values are repeated
-int             joyxmove;
-int             joyymove;
+#ifdef LJOYSTICK
+ CV_PossibleValue_t joyport_cons_t[]={{1,"/dev/js0"},{2,"/dev/js1"},{3,"/dev/js2"},{4,"/dev/js3"},{0,NULL}};
+ extern void I_JoyScale();
+ consvar_t cv_joyport = {"joyport","/dev/js0", CV_SAVE, joyport_cons_t};
+ consvar_t cv_joyscale = {"joyscale","0",CV_SAVE | CV_CALL,NULL,I_JoyScale};
+#endif
 
-// current state of the keys : true if pushed
-byte    gamekeydown[NUMINPUTS];
 
-// two key codes (or virtual key) per game control
-int     gamecontrol[num_gamecontrols][2];
-int     gamecontrol2[num_gamecontrols][2];        // secondary splitscreen player
+//========================================================================
+
+static int mousex, mousey, mouse2x, mouse2y;
+static int joyxmove, joyymove;
+
+// current state of the keys : true if down
+byte gamekeydown[NUMINPUTS];
+
+// two key (or virtual key) codes per game control
+int  gamecontrol[num_gamecontrols][2];
+int  gamecontrol2[num_gamecontrols][2];
+
+
+//========================================================================
+
+static char forwardspeed[2] = {50, 100};
+static char sidespeed[2]    = {48, 80};
+
+#define MAXPLMOVE (forwardspeed[1])
+// Stored in a signed char, but min = -100, max = 100, mmmkay?
+// There is no more turbo cheat, you should modify the pawn's max speed instead
+
+// fixed_t MaxPlayerMove[NUMCLASSES] = { 60, 50, 45, 49 }; // implemented as pawn speeds in info_m.cpp
+// Otherwise OK, but fighter should also run sideways almost as fast as forward,
+// (59/60) instead of (80/100). Weird. Affects straferunning.
+
+static fixed_t angleturn[3] = {640, 1280, 320};  // + slow turn
+
+
+// clips the pitch angle to avoid ugly renderer effects
+angle_t G_ClipAimingPitch(angle_t pitch)
+{
+  int p = pitch;
+  int limitangle;
+
+  //note: the current software mode implementation doesn't have true perspective
+  if (rendermode == render_soft)
+    limitangle = 732<<ANGLETOFINESHIFT;
+  else
+    limitangle = ANG90 - 1;
+
+  if (p > limitangle)
+    pitch = limitangle;
+  else if (p < -limitangle)
+    pitch = -limitangle;
+  
+  return pitch;
+}
+
+
+static byte NextWeapon(PlayerPawn *p, int step)
+{
+  // Kludge. TODO when netcode is redone, fix me.
+  int w = p->readyweapon;
+  do
+    {
+      w = (w + step) % NUMWEAPONS;
+      if (p->weaponowned[w] && p->ammo[p->weaponinfo[w].ammo] >= p->weaponinfo[w].ammopershoot)
+        return w;
+    } while (w != p->readyweapon);
+
+  return 0;
+}
+
+
+
+// Builds a ticcmd from all of the available inputs
+
+void ticcmd_t::Build(bool primary, int realtics)
+{
+#define KB_LOOKSPEED    (1<<25)
+#define SLOWTURNTICS    (6*NEWTICRATERATIO)
+
+  int  i, j, k;
+  int (*gc)[2]; //pointer to array[num_gamecontrols][2]
+  PlayerPawn *p = NULL;
+
+  if (primary)
+    {
+      gc = gamecontrol;
+      i = cv_autorun.value;
+      j = cv_automlook.value;
+      k = 0;
+      if (consoleplayer)
+	p = consoleplayer->pawn;
+    }
+  else
+    {
+      gc = gamecontrol2;
+      i = cv_autorun2.value;
+      j = cv_automlook2.value;
+      k = 1;
+      if (consoleplayer2)
+        p = consoleplayer2->pawn;
+    }
+
+
+  int  speed = (gamekeydown[gc[gc_speed][0]] || gamekeydown[gc[gc_speed][1]]) ^ i;
+
+  bool strafe = gamekeydown[gc[gc_strafe][0]] || gamekeydown[gc[gc_strafe][1]];
+  bool turnright = gamekeydown[gc[gc_turnright][0]] || gamekeydown[gc[gc_turnright][1]];
+  bool turnleft  = gamekeydown[gc[gc_turnleft][0]] || gamekeydown[gc[gc_turnleft][1]];
+
+  bool mouseaiming = (gamekeydown[gc[gc_mouseaiming][0]]
+		      ||gamekeydown[gc[gc_mouseaiming][1]]) ^ j;
+
+  bool analogjoystickmove, gamepadjoystickmove;
+
+  if (primary) {
+    analogjoystickmove  = cv_usejoystick.value && !Joystick.bGamepadStyle && !cv_splitscreen.value;
+    gamepadjoystickmove = cv_usejoystick.value &&  Joystick.bGamepadStyle && !cv_splitscreen.value;
+  } else {
+    analogjoystickmove  = cv_usejoystick.value && !Joystick.bGamepadStyle;
+    gamepadjoystickmove = cv_usejoystick.value &&  Joystick.bGamepadStyle;
+  }
+
+  if (gamepadjoystickmove)
+    {
+      turnright = turnright || (joyxmove > 0);
+      turnleft  = turnleft  || (joyxmove < 0);
+    }
+
+
+  // initialization
+  //memcpy(this, I_BaseTiccmd(), sizeof(ticcmd_t)); // FIXME dangerous
+  buttons = 0;
+  forward = side = 0;
+  yaw = pitch = 0;
+  if (p)
+    {
+      yaw   = p->angle >> 16;
+      pitch = p->aiming >> 16;
+    }
+
+
+  // use two stage accelerative turning
+  // on the keyboard and joystick
+  static int turnheld[2]; // for accelerative turning
+
+  if (turnleft || turnright)
+    turnheld[k] += realtics;
+  else
+    turnheld[k] = 0;
+
+  int tspeed;
+  if (turnheld[k] < SLOWTURNTICS)
+    tspeed = 2;             // slow turn
+  else
+    tspeed = speed;
+
+  // let movement keys cancel each other out
+  if (strafe)
+    {
+      if (turnright)
+        side += sidespeed[speed];
+      if (turnleft)
+        side -= sidespeed[speed];
+
+      if (analogjoystickmove)
+        {
+          //faB: JOYAXISRANGE is supposed to be 1023 ( divide by 1024)
+          side += ( (joyxmove * sidespeed[1]) >> 10 );
+        }
+    }
+  else
+    {
+      if (turnright)
+        yaw -= angleturn[tspeed];
+      //else
+      if (turnleft)
+        yaw += angleturn[tspeed];
+      if (joyxmove && analogjoystickmove) {
+        //faB: JOYAXISRANGE should be 1023 ( divide by 1024)
+        yaw -= ( (joyxmove * angleturn[1]) >> 10 );        // ANALOG!
+        //CONS_Printf ("joyxmove %d  angleturn %d\n", joyxmove, yaw);
+      }
+    }
+
+  // forwards/backwards, strafing
+
+  if (gamekeydown[gc[gc_forward][0]] || gamekeydown[gc[gc_forward][1]] ||
+      (joyymove < 0 && gamepadjoystickmove && !cv_joystickfreelook.value))
+    {
+      forward += forwardspeed[speed];
+    }
+  if (gamekeydown[gc[gc_backward][0]] || gamekeydown[gc[gc_backward][1]] ||
+      (joyymove > 0 && gamepadjoystickmove && !cv_joystickfreelook.value))
+    {
+      forward -= forwardspeed[speed];
+    }
+
+  if (joyymove && analogjoystickmove && !cv_joystickfreelook.value)
+    forward -= ( (joyymove * forwardspeed[1]) >> 10 );
+
+  if (gamekeydown[gc[gc_straferight][0]] || gamekeydown[gc[gc_straferight][1]])
+    side += sidespeed[speed];
+  if (gamekeydown[gc[gc_strafeleft][0]] || gamekeydown[gc[gc_strafeleft][1]])
+    side -= sidespeed[speed];
+
+
+  // buttons
+
+  if (gamekeydown[gc[gc_fire][0]] || gamekeydown[gc[gc_fire][1]])
+    buttons |= BT_ATTACK;
+
+  if (gamekeydown[gc[gc_use][0]] || gamekeydown[gc[gc_use][1]])
+    buttons |= BT_USE;
+
+  if (gamekeydown[gc[gc_jump][0]] || gamekeydown[gc[gc_jump][1]])
+    buttons |= BT_JUMP;
+
+  if (gamekeydown[gc[gc_flydown][0]] || gamekeydown[gc[gc_flydown][1]])
+    buttons |= BT_FLYDOWN;
+
+  if (p == NULL)
+    return;
+
+  if (gamekeydown[gc[gc_nextweapon][0]] || gamekeydown[gc[gc_nextweapon][1]])
+    buttons |= (NextWeapon(p, 1) << WEAPONSHIFT);
+  else if (gamekeydown[gc[gc_prevweapon][0]] || gamekeydown[gc[gc_prevweapon][1]])
+    buttons |= (NextWeapon(p, -1) << WEAPONSHIFT);
+  else for (i = gc_weapon1; i <= gc_weapon8; i++)
+    if (gamekeydown[gc[i][0]] || gamekeydown[gc[i][1]])
+      {
+	buttons |= ((p->FindWeapon(i - gc_weapon1) + 1) << WEAPONSHIFT);
+        break;
+      }
+
+
+  static bool keyboard_look[2];      // true if lookup/down using keyboard
+
+  if (primary) {
+    // mouse look stuff (mouse look is not the same as mouse aim)
+    if (mouseaiming)
+      {
+        keyboard_look[0] = false;
+
+        // looking up/down
+        if (cv_invertmouse.value)
+          pitch -= mousey << 3;
+        else
+          pitch += mousey << 3;
+      }
+    if (cv_usejoystick.value && analogjoystickmove && cv_joystickfreelook.value)
+      pitch += joyymove<<16;
+
+    // spring back if not using keyboard neither mouselookin'
+    if (!keyboard_look && !cv_joystickfreelook.value && !mouseaiming)
+      pitch = 0;
+
+    if (gamekeydown[gc[gc_lookup][0]] || gamekeydown[gc[gc_lookup][1]])
+      {
+        pitch += KB_LOOKSPEED;
+        keyboard_look[0] = true;
+      }
+    else if (gamekeydown[gc[gc_lookdown][0]] || gamekeydown[gc[gc_lookdown][1]])
+      {
+        pitch -= KB_LOOKSPEED;
+        keyboard_look[0] = true;
+      }
+    else if (gamekeydown[gc[gc_centerview][0]] || gamekeydown[gc[gc_centerview][1]])
+      pitch = 0;
+
+    //26/02/2000: added by Hurdler: accept no mlook for network games
+    if (!cv_allowmlook.value)
+      pitch = 0;
+
+    if (!mouseaiming && cv_mousemove.value)
+      forward += mousey;
+
+    if (strafe)
+      side += mousex << 1;
+    else
+      yaw -= mousex << 3;
+
+    mousex = mousey = 0;
+
+  } else {
+
+    // mouse look stuff (mouse look is not the same as mouse aim)
+    if (mouseaiming)
+      {
+        keyboard_look[1] = false;
+
+        // looking up/down
+        if (cv_invertmouse2.value)
+          pitch -= mouse2y << 3;
+        else
+          pitch += mouse2y << 3;
+      }
+
+    if (analogjoystickmove && cv_joystickfreelook.value)
+      pitch += joyymove<<16;
+    // spring back if not using keyboard neither mouselookin'
+    if (!keyboard_look && !cv_joystickfreelook.value && !mouseaiming)
+      pitch = 0;
+
+    if (gamekeydown[gamecontrol2[gc_lookup][0]] ||
+        gamekeydown[gamecontrol2[gc_lookup][1]])
+      {
+        pitch += KB_LOOKSPEED;
+        keyboard_look[1] = true;
+      }
+    else if (gamekeydown[gamecontrol2[gc_lookdown][0]] ||
+             gamekeydown[gamecontrol2[gc_lookdown][1]])
+      {
+        pitch -= KB_LOOKSPEED;
+        keyboard_look[1] = true;
+      }
+    else if (gamekeydown[gamecontrol2[gc_centerview][0]] ||
+             gamekeydown[gamecontrol2[gc_centerview][1]])
+      pitch = 0;
+
+    //26/02/2000: added by Hurdler: accept no mlook for network games
+    if (!cv_allowmlook.value)
+      pitch = 0;
+
+    if (!mouseaiming && cv_mousemove2.value)
+      forward += mouse2y;
+
+    if (strafe)
+      side += mouse2x*2;
+    else
+      yaw -= mouse2x*8;
+
+    mouse2x = mouse2y = 0;
+  }
+
+  if (forward > MAXPLMOVE)
+    forward = MAXPLMOVE;
+  else if (forward < -MAXPLMOVE)
+    forward = -MAXPLMOVE;
+  if (side > MAXPLMOVE)
+    side = MAXPLMOVE;
+  else if (side < -MAXPLMOVE)
+    side = -MAXPLMOVE;
+
+
+  pitch = G_ClipAimingPitch(pitch << 16) >> 16;
+  CONS_Printf("Move: %d, %d, %d\n", yaw, pitch, buttons);
+}
+
 
 
 struct dclick_t
@@ -95,83 +461,10 @@ struct dclick_t
 static  dclick_t  mousedclicks[MOUSEBUTTONS];
 static  dclick_t  joydclicks[JOYBUTTONS];
 
-
-
-// protos
-static bool G_CheckDoubleClick(int state, dclick_t *dt);
-
-
-//
-//  Remaps the inputs to game controls.
-//  A game control can be triggered by one or more keys/buttons.
-//  Each key/mousebutton/joybutton triggers ONLY ONE game control.
-//
-void G_MapEventsToControls(event_t *ev)
-{
-  int    i,flag;
-
-  switch (ev->type)
-    {
-    case ev_keydown:
-      if (ev->data1 <NUMINPUTS)
-	gamekeydown[ev->data1] = 1;
-      break;
-
-    case ev_keyup:
-      if (ev->data1 <NUMINPUTS)
-	gamekeydown[ev->data1] = 0;
-      break;
-
-    case ev_mouse:           // buttons hare virtual keys
-      mousex = int(ev->data2*((cv_mousesens.value*cv_mousesens.value)/110.0f + 0.1));
-      mousey = int(ev->data3*((cv_mousesens.value*cv_mousesens.value)/110.0f + 0.1));
-
-      //added:10-02-98:
-      // for now I use the mlook sensitivity just for mlook,
-      // instead of having a general mouse y sensitivity.
-      mlooky = int(ev->data3*((cv_mlooksens.value*cv_mlooksens.value)/110.0f + 0.1));
-      break;
-
-    case ev_joystick:        // buttons are virtual keys
-      joyxmove = ev->data2;
-      joyymove = ev->data3;
-      break;
-
-    case ev_mouse2:           // buttons hare virtual keys
-      mouse2x = int(ev->data2*((cv_mousesens2.value*cv_mousesens2.value)/110.0f + 0.1));
-      mouse2y = int(ev->data3*((cv_mousesens2.value*cv_mousesens2.value)/110.0f + 0.1));
-
-      //added:10-02-98:
-      // for now I use the mlook sensitivity just for mlook,
-      // instead of having a general mouse y sensitivity.
-      mlook2y = int(ev->data3*((cv_mlooksens.value*cv_mlooksens.value)/110.0f + 0.1));
-      break;
-
-    default:
-      break;
-
-    }
-
-  // ALWAYS check for mouse & joystick double-clicks
-  // even if no mouse event
-  for (i=0;i<MOUSEBUTTONS;i++)
-    {
-      flag = G_CheckDoubleClick (gamekeydown[KEY_MOUSE1+i], &mousedclicks[i]);
-      gamekeydown[KEY_DBLMOUSE1+i] = flag;
-    }
-
-  for (i=0;i<JOYBUTTONS;i++)
-    {
-      flag = G_CheckDoubleClick (gamekeydown[KEY_JOY1+i], &joydclicks[i]);
-      gamekeydown[KEY_DBLJOY1+i] = flag;
-    }
-}
-
-
 //
 //  General double-click detection routine for any kind of input.
 //
-static bool G_CheckDoubleClick (int state, dclick_t *dt)
+static bool G_CheckDoubleClick(int state, dclick_t *dt)
 {
   if (state != dt->state && dt->time > 1 )
     {
@@ -198,6 +491,63 @@ static bool G_CheckDoubleClick (int state, dclick_t *dt)
   return false;
 }
 
+//
+//  Remaps the inputs to game controls.
+//  A game control can be triggered by one or more keys/buttons.
+//  Each key/mousebutton/joybutton triggers ONLY ONE game control.
+//
+void G_MapEventsToControls(event_t *ev)
+{
+  switch (ev->type)
+    {
+    case ev_keydown:
+      if (ev->data1 <NUMINPUTS)
+	gamekeydown[ev->data1] = 1;
+      break;
+
+    case ev_keyup:
+      if (ev->data1 <NUMINPUTS)
+	gamekeydown[ev->data1] = 0;
+      break;
+
+    case ev_mouse:           // buttons are virtual keys
+      mousex = int(ev->data2*((cv_mousesensx.value*cv_mousesensx.value)/110.0f + 0.1));
+      mousey = int(ev->data3*((cv_mousesensy.value*cv_mousesensy.value)/110.0f + 0.1));
+      break;
+
+    case ev_joystick:        // buttons are virtual keys
+      joyxmove = ev->data2;
+      joyymove = ev->data3;
+      break;
+
+    case ev_mouse2:           // buttons are virtual keys
+      mouse2x = int(ev->data2*((cv_mousesensx2.value*cv_mousesensx2.value)/110.0f + 0.1));
+      mouse2y = int(ev->data3*((cv_mousesensy2.value*cv_mousesensy2.value)/110.0f + 0.1));
+      break;
+
+    default:
+      break;
+
+    }
+
+  int i, flag;
+
+  // ALWAYS check for mouse & joystick double-clicks
+  // even if no mouse event
+  for (i=0;i<MOUSEBUTTONS;i++)
+    {
+      flag = G_CheckDoubleClick(gamekeydown[KEY_MOUSE1+i], &mousedclicks[i]);
+      gamekeydown[KEY_DBLMOUSE1+i] = flag;
+    }
+
+  for (i=0;i<JOYBUTTONS;i++)
+    {
+      flag = G_CheckDoubleClick(gamekeydown[KEY_JOY1+i], &joydclicks[i]);
+      gamekeydown[KEY_DBLJOY1+i] = flag;
+    }
+}
+
+
 
 struct keyname_t
 {
@@ -213,6 +563,7 @@ static keyname_t keynames[] =
   {KEY_TAB       ,"TAB"},
   {KEY_ESCAPE    ,"ESCAPE"},
   {KEY_BACKSPACE ,"BACKSPACE"},
+  {KEY_CONSOLE   ,"CONSOLE"},
 
   {KEY_NUMLOCK   ,"NUMLOCK"},
   {KEY_SCROLLLOCK,"SCROLLLOCK"},
@@ -397,7 +748,7 @@ char* G_KeynumToString(int keynum)
   int    j;
 
   // return a string with the ascii char if displayable
-  if (keynum>' ' && keynum<='z' && keynum!=KEY_CONSOLE)
+  if (keynum > ' ' && keynum <= 'z' && keynum != KEY_CONSOLE)
     {
       keynamestr[0] = keynum;
       keynamestr[1] = '\0';

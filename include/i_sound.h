@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
 // Revision 1.2  2003/02/16 16:54:52  smite-meister
 // L2 sound cache done
 //
@@ -35,8 +38,6 @@
 #define i_sound_h 1
 
 #include "doomdef.h"
-#include "command.h"
-
 
 // Init at program start...
 void I_StartupSound();
@@ -101,12 +102,6 @@ void I_StopSong(int handle);
 
 // See above (register), then think backwards
 void I_UnRegisterSong(int handle);
-
-#ifdef __MACOS__
-void MusicEvents ();        //needed to give quicktime some processor
-# define PLAYLIST_LENGTH 10
-extern consvar_t user_songs[PLAYLIST_LENGTH];
-#endif
 
 
 // i_cdmus.h : cd music interface

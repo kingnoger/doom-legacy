@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
 // Revision 1.4  2004/03/28 15:16:14  smite-meister
 // Texture cache.
 //
@@ -52,7 +55,6 @@ enum language_t
 {
   la_english,
   la_french,
-  la_german,
   la_unknown
 };
 

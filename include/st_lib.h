@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
 // Revision 1.4  2004/03/28 15:16:14  smite-meister
 // Texture cache.
 //
@@ -29,35 +32,30 @@
 //
 // Revision 1.1.1.1  2002/11/16 14:18:27  hurdler
 // Initial C++ version of Doom Legacy
-//
-//
-// DESCRIPTION:
-//      The status bar widget code.
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief HUD widgets
 
 #ifndef st_lib_h
 #define st_lib_h 1
 
-//
 // Background and foreground screen numbers
-//
 #define BG 1
 #define FG 0
 
 
-// widget classes
-//
-// number, percent, multicon, binicon, slider, inventory
-
-
+/// \brief ABC for HUD widgets
+///
+/// HUD widget classes currently include
+/// number, percent, multicon, binicon, slider and inventory widgets.
 class HudWidget
 {
 protected:
-  int       x, y; // screen coordinates
-  const bool *on; // pointer to boolean stating whether to update widget
+  int       x, y; ///< screen coordinates
+  const bool *on; ///< pointer to bool stating whether to update widget or not
 
-  virtual void Draw() = 0; // pure virtual drawing routine
+  virtual void Draw() = 0; ///< pure virtual drawing routine
 
 public:
   HudWidget(int nx, int ny, const bool *non)
@@ -67,7 +65,7 @@ public:
     on = non;
   };
 
-  // force: update even if no change
+  /// force: update even if no change
   virtual void Update(bool force)
   {
     if (*on == true) Draw();
@@ -75,25 +73,23 @@ public:
 };
 
 
-
-// Number widget
+/// \brief Number widget
+///
+/// Screen coordinates mark the upper right-hand corner of the number (right-justified).
+/// Note! 1994 is a magic number representing a non-number value!
 class HudNumber : public HudWidget
 {
 private:
-  // coordinates: upper right-hand corner of the number (right-justified)
-  // note! 1994 is a magic number representing a non-number value!
-
-  int  width;  // max # of digits in number
-  class Texture **n; // array of patches for numbers 0-9, n[10] is minus sign
-  int type;    // overlay, shadowed, translucent...
+  int  width;  ///< max # of digits in the number
+  int type;    ///< overlay, shadowed, translucent...
+  class Texture **n; ///< graphics for numbers 0-9, n[10] is the minus sign
 protected:
-  const int *num; // pointer to current value
-  int oldnum;     // last number value
+  const int *num; ///< pointer to current value
+  int oldnum;     ///< previous value
 
   void Draw();
 
 public:
-
   HudNumber(int x, int y, const bool *on, int nwidth, const int *nnum, Texture **pl)
     : HudWidget(x, y, on)
   {
@@ -115,11 +111,11 @@ public:
 };
 
 
-// Percentile widget
+/// Percentile widget
 class HudPercent : public HudNumber
 {
 private:
-  Texture *p; // percent sign graphic
+  Texture *p; ///< percent sign graphic
 
 public:
   HudPercent(int x, int y, const bool *on, const int *nnum, Texture** pl, Texture* percent)
@@ -132,13 +128,13 @@ public:
 };
 
 
-// Multiple Icon widget
+/// Multiple Icons widget
 class HudMultIcon : public HudWidget
 {
 private:
-  int     oldinum; // last icon number
-  const int *inum; // pointer to current icon number, -1 is a magic value meaning no icon is drawn
-  Texture     **p; // list of icons
+  int     oldinum; ///< previous icon number
+  const int *inum; ///< pointer to current icon number, -1 is a magic value meaning no icon is drawn
+  Texture     **p; ///< array of icons
 
   void Draw();
 
@@ -154,14 +150,14 @@ public:
 };
 
 
-// Binary Icon widget
+/// Binary Icon widget
 class HudBinIcon : public HudWidget
 {
 private:
   // center-justified location of icon
-  bool     oldval;  // last icon value
-  const bool *val;  // pointer to current icon status
-  Texture   *p[2];  // icon. If p[0] == NULL, draw background instead
+  bool     oldval;  ///< last icon value
+  const bool *val;  ///< pointer to current icon status
+  Texture   *p[2];  ///< The icons. If p[0] == NULL, draw background instead
 
   void Draw();
 
@@ -179,19 +175,18 @@ public:
 };
 
 
-// Horizontal "slow" slider (like Heretic health bar)
+/// Horizontal "slow" slider widget (Heretic health bar etc.)
 class HudSlider : public HudWidget
 {
 private:
-  int minval, maxval; // min and max values
-  int oldval, cval; // old, current shown value
-  const int* val;   // pointer to current value
-  Texture **p; // patches array. see Draw() implementation.
+  int minval, maxval; ///< min and max values
+  int   oldval, cval; ///< old and current values
+  const int     *val; ///< pointer to current value
+  Texture **p;        ///< Slider graphics. See the Draw() implementation.
 
   void Draw();
 
 public:
-
   HudSlider(int x, int y, const bool *on, const int *v, int mi, int ma, Texture **np)
     : HudWidget(x, y, on)
   {
@@ -206,18 +201,20 @@ public:
 };
 
 
-// inventory == a set of 7 multicons plus a little extra
+/// \brief Inventory widget
+///
+/// A set of 7 multicons plus a little extra.
 class HudInventory : public HudWidget
 {
 private:
-  const bool *open; // show expanded inventory or just one slot?
-  const int  *itemuse; // counter for the item use anim
+  const bool    *open; ///< show expanded inventory or just one slot?
+  const int  *itemuse; ///< counter for the item use animation
   const struct inventory_t *slots;
-  const int  *selected; // selected slot number 0-6
-  bool overlay;  // overlaid or normal?
-  Texture **n;     // small numbers 0-9
-  Texture **items; // item pictures
-  Texture **p;     // array of patches
+  const int *selected; ///< selected slot number 0-6
+  bool overlay;        ///< overlaid or normal?
+  Texture **n;     ///< small numbers 0-9
+  Texture **items; ///< item graphics
+  Texture **p;     ///< inventory graphics
 
   void Draw();
   void DrawNumber(int x, int y, int val);

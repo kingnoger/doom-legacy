@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
 // Revision 1.2  2004/06/25 19:53:23  smite-meister
 // Netcode
 //
@@ -66,25 +69,14 @@ public:
 
 
 
-  // FIXME the onXXX() methods are under change in TNL. Fix them when we decide which version to use...
+  /// Called when a pending connection is terminated
+  virtual void onConnectTerminated(TerminationReason r, const char *reason); 
 
-  /// Called when the attempt to connect to a remote host fails due to lack of response.
-  virtual void onConnectTimedOut();
+  /// Called when an established connection is terminated
+  virtual void onConnectionTerminated(TerminationReason r, const char *error); 
 
-  /// Called when the remote host rejects this connection.
-  virtual void onConnectionRejected(const char *reason);
-
-  /// called on both ends of a connection when the connection is established.  
-  virtual void onConnectionEstablished(bool isInitiator);
-
-  /// Called when this instance is unable to elicit a response from the remote host for the timeout period.
-  virtual void onTimedOut();  
-
-  /// Called when a connection receives a bogus packet or invalid data from the remote host
-  virtual void onConnectionError(const char *errorString);
-
-  /// Called when the remote host issues a disconnect packet to this instance.
-  virtual void onDisconnect(const char *reason);           
+  /// called on both ends of a connection when the connection is established.
+  virtual void onConnectionEstablished();
 
   /// called when a connection or connection attempt is terminated, whether
   /// from the local or remote hosts explicitly disconnecting, timing out or network error.

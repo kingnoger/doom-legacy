@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.27  2004/07/05 16:53:26  smite-meister
+// Netcode replaced
+//
 // Revision 1.26  2004/04/25 16:26:50  smite-meister
 // Doxygen
 //
@@ -105,14 +108,14 @@
 
 #include "doomdef.h"
 #include "doomdata.h"
+#include "command.h"
+#include "cvars.h"
 
 #include "g_game.h"
 #include "g_mapinfo.h"
 #include "g_map.h"
 #include "g_actor.h"
 #include "g_pawn.h"
-
-#include "d_netcmd.h"
 
 #include "p_spec.h"
 #include "p_maputl.h"

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/07/05 16:53:31  smite-meister
+// Netcode replaced
+//
 // Revision 1.4  2004/04/25 16:26:51  smite-meister
 // Doxygen
 //
@@ -123,6 +126,8 @@
 
 #include "doomdef.h"
 #include "doomdata.h"
+#include "command.h"
+#include "cvars.h"
 
 #include "r_render.h"
 #include "r_local.h"
@@ -132,7 +137,6 @@
 #include "r_splats.h"           //faB: testing
 #include "v_video.h" // patch_t
 
-#include "d_netcmd.h"
 #include "console.h" //Con_clipviewtop
 
 #include "w_wad.h"

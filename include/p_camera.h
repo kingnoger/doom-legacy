@@ -3,8 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 2002-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
 // Revision 1.4  2003/02/23 22:49:31  smite-meister
 // FS is back! L2 cache works.
 //
@@ -29,13 +31,10 @@
 //
 // Revision 1.1.1.1  2002/11/16 14:18:29  hurdler
 // Initial C++ version of Doom Legacy
-//
-//
-// DESCRIPTION:
-//    All kinds of cameras, chasecam.
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Chasecam
 
 #ifndef p_camera_h
 #define p_camera_h
@@ -43,8 +42,7 @@
 #include "m_fixed.h"
 #include "g_actor.h"
 
-struct consvar_t;
-
+/// \brief Chasecam, FS cameras.
 class Camera : public Actor
 {
 public:
@@ -67,11 +65,5 @@ public:
 
 extern Camera camera;
 
-extern consvar_t cv_cam_dist;  
-extern consvar_t cv_cam_height;
-extern consvar_t cv_cam_speed;
-
-// default viewheight is changeable at console
-extern consvar_t cv_viewheight;
 
 #endif

@@ -2,9 +2,12 @@
 //-----------------------------------------------------------------------------
 //  $Id$
 //
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.32  2004/07/05 16:53:24  smite-meister
+// Netcode replaced
+//
 // Revision 1.31  2004/04/25 16:26:48  smite-meister
 // Doxygen
 //
@@ -83,19 +86,22 @@
 // Revision 1.5  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
-//
-// DESCRIPTION:
-//   Pawn / PlayerPawn class implementation
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Pawn and PlayerPawn class implementations
+
 
 #include "g_pawn.h"
 #include "g_player.h"
 #include "g_game.h"
 #include "g_map.h"
 
+#include "command.h"
+#include "cvars.h"
+
+#include "d_ticcmd.h"
 #include "i_system.h"   //I_Tactile currently has no effect
-#include "d_netcmd.h" // consvars
 #include "dstrings.h"
 
 #include "p_camera.h" // camera
@@ -128,42 +134,42 @@ pawn_info_t pawndata[] =
   {MT_PLAYER,   wp_pistol,  50, MT_NONE}, // 0
   {MT_POSSESSED, wp_pistol,  20, MT_NONE},
   {MT_SHOTGUY,  wp_shotgun,  8, MT_NONE},
-  {MT_TROOP,    wp_nochange, 0, MT_TROOPSHOT},
-  {MT_SERGEANT, wp_nochange, 0, MT_NONE},
-  {MT_SHADOWS,  wp_nochange, 0, MT_NONE},
-  {MT_SKULL,    wp_nochange, 0, MT_NONE},
-  {MT_HEAD,     wp_nochange, 0, MT_HEADSHOT},
-  {MT_BRUISER,  wp_nochange, 0, MT_BRUISERSHOT},
+  {MT_TROOP,    wp_none, 0, MT_TROOPSHOT},
+  {MT_SERGEANT, wp_none, 0, MT_NONE},
+  {MT_SHADOWS,  wp_none, 0, MT_NONE},
+  {MT_SKULL,    wp_none, 0, MT_NONE},
+  {MT_HEAD,     wp_none, 0, MT_HEADSHOT},
+  {MT_BRUISER,  wp_none, 0, MT_BRUISERSHOT},
   {MT_SPIDER,   wp_chaingun, 100, MT_NONE},
   {MT_CYBORG,   wp_missile,  20,  MT_NONE}, //10
 
   {MT_WOLFSS,   wp_chaingun, 50, MT_NONE},
   {MT_CHAINGUY, wp_chaingun, 50, MT_NONE},
-  {MT_KNIGHT,   wp_nochange, 0,  MT_BRUISERSHOT},
+  {MT_KNIGHT,   wp_none, 0,  MT_BRUISERSHOT},
   {MT_BABY,     wp_plasma,  50,  MT_ARACHPLAZ},
-  {MT_PAIN,     wp_nochange, 0,  MT_SKULL},
-  {MT_UNDEAD,   wp_nochange, 0,  MT_TRACER},
-  {MT_FATSO,    wp_nochange, 0,  MT_FATSHOT},
-  {MT_VILE,     wp_nochange, 0,  MT_FIRE}, // 18
+  {MT_PAIN,     wp_none, 0,  MT_SKULL},
+  {MT_UNDEAD,   wp_none, 0,  MT_TRACER},
+  {MT_FATSO,    wp_none, 0,  MT_FATSHOT},
+  {MT_VILE,     wp_none, 0,  MT_FIRE}, // 18
 
   {MT_HPLAYER,  wp_goldwand, 50, MT_NONE},
   {MT_CHICKEN,  wp_beak,      0, MT_NONE},
-  {MT_MUMMY,    wp_nochange, 0, MT_NONE},
-  {MT_MUMMYLEADER, wp_nochange, 0, MT_MUMMYFX1},
-  {MT_MUMMYGHOST,  wp_nochange, 0, MT_NONE},
-  {MT_MUMMYLEADERGHOST, wp_nochange, 0, MT_MUMMYFX1},
-  {MT_BEAST,    wp_nochange, 0, MT_BEASTBALL},
-  {MT_SNAKE,    wp_nochange, 0, MT_SNAKEPRO_A},
-  {MT_HHEAD,    wp_nochange, 0, MT_HEADFX1},
-  {MT_CLINK,    wp_nochange, 0, MT_NONE},
-  {MT_WIZARD,   wp_nochange, 0, MT_WIZFX1},
-  {MT_IMP,      wp_nochange, 0, MT_NONE},
-  {MT_IMPLEADER,wp_nochange, 0, MT_IMPBALL},
-  {MT_HKNIGHT,  wp_nochange, 0, MT_KNIGHTAXE},
-  {MT_KNIGHTGHOST, wp_nochange, 0, MT_REDAXE},
-  {MT_SORCERER1, wp_nochange, 0, MT_SRCRFX1},
-  {MT_SORCERER2, wp_nochange, 0, MT_SOR2FX1},
-  {MT_MINOTAUR,  wp_nochange, 0, MT_MNTRFX1}, // 36
+  {MT_MUMMY,    wp_none, 0, MT_NONE},
+  {MT_MUMMYLEADER, wp_none, 0, MT_MUMMYFX1},
+  {MT_MUMMYGHOST,  wp_none, 0, MT_NONE},
+  {MT_MUMMYLEADERGHOST, wp_none, 0, MT_MUMMYFX1},
+  {MT_BEAST,    wp_none, 0, MT_BEASTBALL},
+  {MT_SNAKE,    wp_none, 0, MT_SNAKEPRO_A},
+  {MT_HHEAD,    wp_none, 0, MT_HEADFX1},
+  {MT_CLINK,    wp_none, 0, MT_NONE},
+  {MT_WIZARD,   wp_none, 0, MT_WIZFX1},
+  {MT_IMP,      wp_none, 0, MT_NONE},
+  {MT_IMPLEADER,wp_none, 0, MT_IMPBALL},
+  {MT_HKNIGHT,  wp_none, 0, MT_KNIGHTAXE},
+  {MT_KNIGHTGHOST, wp_none, 0, MT_REDAXE},
+  {MT_SORCERER1, wp_none, 0, MT_SRCRFX1},
+  {MT_SORCERER2, wp_none, 0, MT_SOR2FX1},
+  {MT_MINOTAUR,  wp_none, 0, MT_MNTRFX1}, // 36
 
   {MT_PLAYER_FIGHTER, wp_fpunch, 0, MT_NONE},
   {MT_PLAYER_CLERIC, wp_cmace, 0, MT_NONE},
@@ -239,6 +245,16 @@ bool Pawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, int type)
   : Actor(x, y, z)
 {
+  if (type < 0)
+    {
+      if (game.mode == gm_hexen)
+	type = 37;
+      else if (game.mode == gm_heretic)
+	type = 19;
+      else
+	type = 0;
+    }
+
   pinfo = &pawndata[type];
   const mobjinfo_t *info = &mobjinfo[pinfo->mt];
 
@@ -321,7 +337,7 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, int type)
   weapontype_t w = pinfo->bweapon;
   readyweapon = pendingweapon = w;
 
-  if (w != wp_nochange)
+  if (w != wp_none)
     {
       weaponowned[w] = true;
       ammotype_t a = wpnlev1info[w].ammo;
@@ -372,12 +388,8 @@ void PlayerPawn::Think()
   // chain saw run forward
   if (eflags & MFE_JUSTATTACKED)
     {
-// added : now angle turn is a absolute value not relative
-#ifndef ABSOLUTEANGLE
-      cmd->angleturn = 0;
-#endif
-      cmd->forwardmove = 0xc800/512;
-      cmd->sidemove = 0;
+      cmd->forward = 100;
+      cmd->side = 0;
       eflags &= ~MFE_JUSTATTACKED;
     }
 
@@ -415,7 +427,7 @@ void PlayerPawn::Think()
       if ((px > (2*FRACUNIT) || px < (-2*FRACUNIT) ||
 	   py > (2*FRACUNIT) || py < (-2*FRACUNIT) ||
 	   pz >  (2*FRACUNIT)) &&  // jump out of water
-	  !(gametic % (32 * NEWTICRATERATIO)))
+	  !(game.tic % (32 * NEWTICRATERATIO)))
         {
 	  //
 	  // make sure we disturb the surface of water (we touch it)
@@ -446,51 +458,30 @@ void PlayerPawn::Think()
         }
     }
 
+  int w;
+
   // Check for weapon change.
-  if (cmd->buttons & BT_CHANGE)
+  if ((w = (cmd->buttons & ticcmd_t::WEAPONMASK)))
     {
       // The actual changing of the weapon is done
       //  when the weapon psprite can do it
       //  (read: not in the middle of an attack).
-      int wg = (cmd->buttons & BT_WEAPONMASK) >> BT_WEAPONSHIFT;
-      weapontype_t newweapon;
 
-      CONS_Printf("wp change, %d\n", wg);
+      w = (w >> ticcmd_t::WEAPONSHIFT) - 1;
+      CONS_Printf("wp change, %d, %d\n", w, cmd->buttons);
+      if (w < NUMWEAPONS && weaponowned[w])
+	pendingweapon = weapontype_t(w);
 
-      if (wg == weapondata[readyweapon].group)
-	{
-	  newweapon = weapondata[readyweapon].next;
-	  while (newweapon != readyweapon)
-	    {
-	      if (newweapon == wp_nochange || weaponowned[newweapon])
-		{
-		  pendingweapon = newweapon;
-		  break;
-		}
-	      newweapon = weapondata[newweapon].next;
-	    }
-	}
-      else
-	{
-	  int i;
-	  for (i=0; i<NUMWEAPONS; i++)
-	    if (wg == weapondata[i].group && weaponowned[i])
-	      {
-		pendingweapon = weapontype_t(i);
-		break;
-	      }
-	}
-      
       CONS_Printf("pend %d\n", pendingweapon);
 
       // Do not go to plasma or BFG in shareware, even if cheated.
       if ((game.mode == gm_doom1s) &&
 	  (pendingweapon == wp_plasma || pendingweapon == wp_bfg))
-	pendingweapon = wp_nochange;
+	pendingweapon = wp_none;
     }
 
   // check for use
-  if (cmd->buttons & BT_USE)
+  if (cmd->buttons & ticcmd_t::BT_USE)
     {
       if (!usedown)
         {
@@ -639,11 +630,10 @@ void PlayerPawn::DeathThink()
       //if (dist)
       //  pitch = FixedMul ((160<<FRACBITS), FixedDiv (attacker->z + (attacker->height>>1), dist)) >>FRACBITS;
       //else pitch = 0;
-      int pitch = (attacker->z - z) >> 17;
-      aiming = G_ClipAimingPitch(&pitch);
+      aiming = (attacker->z - z) >> 17;
     }
-  
-  if (player->cmd.buttons & BT_USE)
+
+  if (player->cmd.buttons & ticcmd_t::BT_USE)
     mp->RebornPlayer(player);
 }
 
@@ -771,7 +761,7 @@ void PlayerPawn::XYFriction(fixed_t oldx, fixed_t oldy, bool oldfriction)
     return;
 
   if (px > -STOPSPEED && px < STOPSPEED && py > -STOPSPEED && py < STOPSPEED && 
-      (player->cmd.forwardmove == 0 && player->cmd.sidemove == 0 ))
+      (player->cmd.forward == 0 && player->cmd.side == 0 ))
     {
       // if in a walking frame, stop moving
       int anim = pres->GetAnim();
@@ -817,6 +807,29 @@ void PlayerPawn::Reset()
       readyweapon = weapontype_t(attackphase); // Restore weapon
       morphTics = 0;
     }
+}
+
+
+// returns the next owned weapon in group g
+weapontype_t PlayerPawn::FindWeapon(int g)
+{
+  if (readyweapon != wp_none && g == weapondata[readyweapon].group)
+    {
+      weapontype_t n = weapondata[readyweapon].next;
+      while (n != readyweapon)
+	{
+	  if (n == wp_none || weaponowned[n])
+	    return n;
+
+	  n = weapondata[n].next;
+	}
+    }
+  else
+    for (int i=0; i<NUMWEAPONS; i++)
+      if (g == weapondata[i].group && weaponowned[i])
+	return weapontype_t(i);
+
+  return wp_none;
 }
 
 
@@ -888,7 +901,6 @@ void PlayerPawn::UseArtifact(artitype_t arti)
 //
 DActor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
 {
-  extern consvar_t cv_allowautoaim;
   extern Actor *linetarget;
 
   fixed_t  slope = 0;
@@ -1711,7 +1723,7 @@ bool PlayerPawn::GiveWeapon(weapontype_t wt, bool dropped)
 
       // Boris hack preferred weapons order...
       if (player->originalweaponswitch
-	  || player->favoriteweapon[wt] > player->favoriteweapon[readyweapon])
+	  || player->weaponpref[wt] > player->weaponpref[readyweapon])
 	pendingweapon = wt;     // do like Doom2 original
 
       if (player == displayplayer || (cv_splitscreen.value && player == displayplayer2))
@@ -1738,7 +1750,7 @@ bool PlayerPawn::GiveWeapon(weapontype_t wt, bool dropped)
       gaveweapon = true;
       weaponowned[wt] = true;
       if (player->originalweaponswitch
-	  || player->favoriteweapon[wt] > player->favoriteweapon[readyweapon])
+	  || player->weaponpref[wt] > player->weaponpref[readyweapon])
 	pendingweapon = wt;    // Doom2 original stuff
     }
 

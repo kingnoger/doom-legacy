@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
 // Revision 1.5  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
@@ -32,11 +35,10 @@
 //
 // Revision 1.1.1.1  2002/11/16 14:18:23  hurdler
 // Initial C++ version of Doom Legacy
-//
-//
-// DESCRIPTION:
-//     Common defines, utility function prototypes
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Common defines and utility function prototypes.
 
 #ifndef doomdef_h
 #define doomdef_h 1
@@ -65,12 +67,6 @@ extern const char VERSIONSTRING[];
 #define PARANOIA                // do some test that never happens but maybe
 #define LOGMESSAGES             // write message in log.txt (win32 only for the moment)
 
-// some tests, enable or desable it if it run or not
-//#define HORIZONTALDRAW        // abandoned : too slow
-//#define TILTVIEW              // not finished
-//#define PERSPCORRECT          // not finished
-#define SPLITSCREEN             
-#define ABSOLUTEANGLE           // work fine, soon #ifdef and old code remove
 #define NEWLIGHT                // compute lighting with bsp (in construction)
 //#define OLDWATER                // SoM: Allow old legacy water.
 #define FRAGGLESCRIPT

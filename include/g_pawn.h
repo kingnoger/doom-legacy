@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.21  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
 // Revision 1.20  2004/04/25 16:26:51  smite-meister
 // Doxygen
 //
@@ -227,6 +230,8 @@ public:
   void UseArtifact(artitype_t arti);
   bool GivePower(int /*powertype_t*/ power);
 
+  weapontype_t FindWeapon(int g);
+
   void MovePsprites();
 
   inline DActor *SpawnPlayerMissile(mobjtype_t type) { return SPMAngle(type, angle); }
@@ -240,7 +245,6 @@ public:
   // in p_user.cpp
   virtual bool Teleport(fixed_t nx, fixed_t ny, angle_t nangle);
   void Move();
-  virtual void Thrust(angle_t angle, fixed_t move);
 
   // in p_map.cpp
   void UseLines();

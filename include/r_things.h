@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
 // Revision 1.3  2004/03/28 15:16:14  smite-meister
 // Texture cache.
 //
@@ -68,6 +71,8 @@
 #ifndef r_things_h
 #define r_things_h 1
 
+#include "screen.h"
+
 #define MAXVISSPRITES   256
 
 // Constant arrays used for psprite clipping
@@ -96,7 +101,7 @@ void R_DrawMaskedColumn(column_t* column);
 void R_SortVisSprites();
 
 //SoM: 6/5/2000: Light sprites correctly!
-void R_AddSprites(sector_t* sec, int lightlevel);
+void R_AddSprites(struct sector_t* sec, int lightlevel);
 void R_AddPSprites();
 //void R_DrawSprite(vissprite_t* spr);
 void R_InitSprites(char** namelist);
@@ -104,7 +109,7 @@ void R_ClearSprites();
 void R_DrawSprites();  //draw all vissprites
 //void R_DrawMasked();
 
-void R_ClipVisSprite(vissprite_t *vis, int xl, int xh);
+void R_ClipVisSprite(struct vissprite_t *vis, int xl, int xh);
 
 
 void R_InitDrawNodes();

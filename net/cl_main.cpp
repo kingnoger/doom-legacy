@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2004/07/05 16:53:30  smite-meister
+// Netcode replaced
+//
 // Revision 1.1  2004/06/25 19:50:59  smite-meister
 // Netcode
 //
@@ -35,6 +38,7 @@
 #include "n_interface.h"
 
 #include "g_game.h"
+#include "g_player.h"
 #include "g_input.h"
 
 #include "screen.h"
@@ -63,9 +67,9 @@ void SendNameAndColor2();
 
 
 
-// =========================================================================
-//                           CLIENT VARIABLES
-// =========================================================================
+//=========================================================================
+//        Client consvars
+//=========================================================================
 
 
 CV_PossibleValue_t Color_cons_t[] =
@@ -77,20 +81,20 @@ CV_PossibleValue_t Color_cons_t[] =
 #define DEFAULTSKIN "marine"   // name of the standard doom marine as skin
 
 // player info and preferences
-consvar_t cv_playername  = {"name"                ,NULL       ,CV_SAVE | CV_CALL | CV_NOINIT,NULL,SendNameAndColor};
-consvar_t cv_playercolor = {"color"               ,"0"        ,CV_SAVE | CV_CALL | CV_NOINIT,Color_cons_t,SendNameAndColor};
-consvar_t cv_skin        = {"skin"                ,DEFAULTSKIN,CV_SAVE | CV_CALL | CV_NOINIT,NULL,SendNameAndColor};
-consvar_t cv_autoaim     = {"autoaim"             ,"1"        ,CV_SAVE | CV_CALL | CV_NOINIT,CV_OnOff,SendWeaponPref};
+consvar_t cv_playername  = {"name"      ,"gi joe"   ,CV_SAVE | CV_CALL | CV_NOINIT,NULL,SendNameAndColor};
+consvar_t cv_playercolor = {"color"     ,"0"        ,CV_SAVE | CV_CALL | CV_NOINIT,Color_cons_t,SendNameAndColor};
+consvar_t cv_skin        = {"skin"      ,DEFAULTSKIN,CV_SAVE | CV_CALL | CV_NOINIT,NULL,SendNameAndColor};
+consvar_t cv_autoaim     = {"autoaim"   ,"1"        ,CV_SAVE | CV_CALL | CV_NOINIT,CV_OnOff,SendWeaponPref};
 consvar_t cv_originalweaponswitch = {"originalweaponswitch","0",CV_SAVE | CV_CALL | CV_NOINIT,CV_OnOff,SendWeaponPref};
-consvar_t cv_weaponpref  = {"weaponpref"          ,"014576328",CV_SAVE | CV_CALL | CV_NOINIT,NULL,SendWeaponPref};
+consvar_t cv_weaponpref  = {"weaponpref","014576328",CV_SAVE | CV_CALL | CV_NOINIT,NULL,SendWeaponPref};
 
 // secondary player for splitscreen mode
-consvar_t cv_playername2  = {"name2"               ,"big b"    ,CV_SAVE | CV_CALL | CV_NOINIT,NULL,SendNameAndColor2};
-consvar_t cv_playercolor2 = {"color2"              ,"1"        ,CV_SAVE | CV_CALL | CV_NOINIT,Color_cons_t,SendNameAndColor2};
-consvar_t cv_skin2        = {"skin2"               ,DEFAULTSKIN,CV_SAVE | CV_CALL | CV_NOINIT,NULL /*skin_cons_t*/,SendNameAndColor2};
-consvar_t cv_autoaim2     = {"autoaim2"             ,"1"        ,CV_SAVE | CV_CALL | CV_NOINIT,CV_OnOff,SendWeaponPref};
+consvar_t cv_playername2  = {"name2"    ,"big b"    ,CV_SAVE | CV_CALL | CV_NOINIT,NULL,SendNameAndColor2};
+consvar_t cv_playercolor2 = {"color2"   ,"1"        ,CV_SAVE | CV_CALL | CV_NOINIT,Color_cons_t,SendNameAndColor2};
+consvar_t cv_skin2        = {"skin2"    ,DEFAULTSKIN,CV_SAVE | CV_CALL | CV_NOINIT,NULL /*skin_cons_t*/,SendNameAndColor2};
+consvar_t cv_autoaim2     = {"autoaim2" ,"1"        ,CV_SAVE | CV_CALL | CV_NOINIT,CV_OnOff,SendWeaponPref};
 
-// added 16-6-98:splitscreen
+
 void SplitScreen_OnChange()
 {
   // recompute screen size
@@ -99,20 +103,20 @@ void SplitScreen_OnChange()
   // change the menu
   M_SwitchSplitscreen();
 
-  /*
-  if (!demoplayback)
-    {
-      if(cv_splitscreen.value)
-	CL_AddSplitscreenPlayer();
-      else
-	CL_RemoveSplitscreenPlayer();
+  if (game.state < GameInfo::GS_LEVEL)
+    return;
 
-      if (server && !game.netgame)
-	game.multiplayer = cv_splitscreen.value;
+  if (cv_splitscreen.value)
+    {
+      displayplayer2 = consoleplayer2 = game.AddPlayer(new PlayerInfo(localplayer2));    
     }
   else
-    displayplayer2 = game.FindPlayer(1);
-  */
+    {
+      consoleplayer2->playerstate = PST_REMOVE;
+    }
+
+  // TODO in a demo, just open another viewport...
+  //displayplayer2 = game.FindPlayer(1);
 }
 
 consvar_t cv_splitscreen = {"splitscreen","0",CV_CALL,CV_OnOff,SplitScreen_OnChange};
@@ -139,8 +143,7 @@ void CL_Init()
   hud.Startup();
 
   // startup console
-  CON_Init();
-  //-------------------------------------- CONSOLE is on
+  con.Init(); //-------------------------------------- CONSOLE is on
 
   // setup menu
   CONS_Printf("M_Init: Init menu.\n");
@@ -159,10 +162,8 @@ void CL_Init()
   S_Read_SNDSEQ(fc.FindNumForNameFile("SNDSEQ", 0));
 
 
-
   COM_AddCommand("setcontrol", Command_Setcontrol_f);
   COM_AddCommand("setcontrol2", Command_Setcontrol2_f);
-
   COM_AddCommand("screenshot",M_ScreenShot);
 
   // FIXME WATER HACK TEST UNTIL FULLY FINISHED
@@ -170,9 +171,9 @@ void CL_Init()
 
 
   // client info
-  cv_playername.defaultvalue = I_GetUserName();
-  if (cv_playername.defaultvalue == NULL)
-    cv_playername.defaultvalue = "gi joe";
+  char *temp = I_GetUserName();
+  if (temp)
+    cv_playername.defaultvalue = temp;
 
   CV_RegisterVar(&cv_playername);
   CV_RegisterVar(&cv_playercolor);
@@ -345,19 +346,6 @@ void D_SendPlayerConfig()
 
 
 
-//
-// NETWORKING
-//
-// gametic is the tic about to (or currently being) run
-// maketic is the tic that hasn't had control made for it yet
-// server:
-//   nettics is the tic for eatch node
-//   firstticstosend is the lowest value of nettics
-// client:
-//   neededtic is the tic needed by the client for run the game
-//   firstticstosend is used to optimize a condition
-// normally maketic>=gametic>0,
-
 
 /*
 #define MAXSERVERNAME 32
@@ -510,39 +498,13 @@ void CL_RemovePlayer(int playernum)
   while (playernode[doomcom->numplayers-1] == 255 && doomcom->numplayers>1) doomcom->numplayers--;
 }
 
-
-
-
-void CL_AddSplitscreenPlayer()
-{
-    if( cl_mode == cl_connected )
-        CL_SendJoin();
-}
-
-void CL_RemoveSplitscreenPlayer()
-{
-    char  buf[2];
-    
-    if( cl_mode != cl_connected )
-        return;
-
-    buf[0] = consoleplayer2->number - 1;
-    buf[1] = KICK_MSG_PLAYER_QUIT;
-    SendNetXCmd(XD_KICK,&buf,2);
-}
 */
 
 
 
-void GameInfo::CL_ResetClient()
+void GameInfo::CL_Reset()
 {
   CONS_Printf("Client reset\n");
 
   net->CL_Reset();
-
-  server = true;
-  netgame = false;
-  multiplayer = cv_splitscreen.value;
-
-  SV_ResetServer();
 }

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
 // Revision 1.3  2003/05/30 13:34:48  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -44,13 +47,10 @@
 //
 // Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
 // Initial import into CVS (v1.29 pr3)
-//
-//
-// DESCRIPTION:
-//     Player movement commands in one game tic
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief ticcmd_t definition
 
 #ifndef d_ticcmd_h
 #define d_ticcmd_h 1
@@ -58,56 +58,40 @@
 #include "m_fixed.h" // fixed_t
 #include "doomtype.h"
 
-#ifdef __GNUG__
-#pragma interface
-#endif
+/// \brief Player input.
+///
+/// Client input data gathered during a tick and sent
+/// to server for processing.
 
-
-//
-// Button/action code definitions.
-//
-
-//added:16-02-98: bit of value 64 doesnt seem to be used,
-//                now its used to jump
-
-enum buttoncode_t
-{
-  // Press "Fire".
-  BT_ATTACK           = 1,
-  // Use button, to open doors, activate switches.
-  BT_USE              = 2,
-
-  // Flag, weapon change pending.
-  // If true, the next 3 bits hold weapon num.
-  BT_CHANGE           = 4,
-  // The 3bit weapon mask and shift, convenience.
-  BT_WEAPONMASK       = (8+16+32),
-  BT_WEAPONSHIFT      = 3,
-
-  // Jump button.
-  BT_JUMP             = 64,
-  BT_EXTRAWEAPON      = 128
-};
-
-
-// The data sampled per tick (single player)
-// and transmitted to other peers (multiplayer).
-// Mainly movements/button commands per game tick,
-// plus a checksum for internal state consistency.
-
-// bits in angleturn
-#define TICCMD_RECEIVED 1      
-#define TICCMD_XY       2
-#define BT_FLYDOWN      4
 struct ticcmd_t
 {
-  char         forwardmove;    // *2048 for move
-  char         sidemove;       // *2048 for move
-  short        angleturn;      // <<16 for angle delta
-                                 // SAVED AS A BYTE into demos
-  signed short aiming;    //added:16-02-98:mouse aiming, see G_BuildTicCmd
-  byte         buttons;
-};
+  /// Button-type actions
+  enum buttoncode_t
+  {
+    BT_ATTACK   = 1, ///< Press "Fire".
+    BT_USE      = 2, ///< Use button, to open doors, activate switches.
+    BT_JUMP     = 4, ///< Jump or fly/swim up.
+    BT_FLYDOWN  = 8, ///< Fly/swim down.
 
+    // The weapon mask and shift, for convenience.
+    WEAPONMASK  = 0xFFF0,
+    WEAPONSHIFT = 4,
+  };
+
+  short buttons;
+  char  forward; ///< "push" forward-backward
+  char  side;    ///< "push" right-left
+
+  // rotation: << 16 for angle_t
+  short yaw;   ///< left-right   
+  short pitch; ///< up-down
+
+
+
+  ticcmd_t() : buttons(0), forward(0), side(0), yaw(0), pitch(0) {};
+
+  /// Fills the ticcmd_t with input data.
+  void Build(bool primary, int realtics);
+};
 
 #endif

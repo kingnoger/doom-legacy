@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/07/05 16:53:45  smite-meister
+// Netcode replaced
+//
 // Revision 1.9  2004/06/27 13:15:31  hurdler
 // minor things
 //
@@ -107,9 +110,6 @@ void (*skydrawerfunc[2]) ();
 void CV_Fuzzymode_OnChange();
 void CV_Fullscreen_OnChange();
 void CV_Usegamma_OnChange();
-
-// FIXME is this used in any way?
-consvar_t  cv_ticrate={"vid_ticrate","0",0,CV_OnOff,NULL};
 
 CV_PossibleValue_t scr_depth_cons_t[]={{8,"8 bits"}, {16,"16 bits"}, {24,"24 bits"}, {32,"32 bits"}, {0,NULL}};
 
@@ -331,7 +331,6 @@ void Video::Startup()
   modenum = 0; // not exactly true, but doesn't matter here.
   setmodeneeded = 0;
 
-  CV_RegisterVar(&cv_ticrate);
   // FIXME make a real font system!
   FontBBaseLump = fc.FindNumForName("FONTB_S")+1;
 
@@ -437,7 +436,7 @@ void Video::Recalc()
   // per screenblock is different now, since we've changed resolution.
   R_SetViewSize();
 
-  con_recalc = true;
+  con.recalc = true;
 
   hud.st_palette = -1;
 

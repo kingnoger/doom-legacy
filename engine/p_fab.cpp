@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/07/05 16:53:25  smite-meister
+// Netcode replaced
+//
 // Revision 1.8  2004/03/28 15:16:13  smite-meister
 // Texture cache.
 //
@@ -47,6 +50,9 @@
 
 
 #include "doomdef.h"
+#include "command.h"
+#include "cvars.h"
+
 #include "g_game.h"
 #include "g_map.h"
 #include "g_actor.h"
@@ -56,10 +62,6 @@
 #include "p_fab.h"
 #include "p_pspr.h"
 #include "m_random.h"
-
-void Translucency_OnChange();
-
-consvar_t cv_translucency  = {"translucency","1",CV_CALL|CV_SAVE,CV_OnOff, Translucency_OnChange};
 
 
 // action function for running FS
@@ -110,7 +112,7 @@ void A_StartWeaponACS(PlayerPawn *p, pspdef_t *psp)
 //
 void A_SmokeTrailer(DActor *actor)
 {
-  if (gametic % (4 * NEWTICRATERATIO))
+  if (game.tic % (4 * NEWTICRATERATIO))
     return;
 
   // add the smoke behind the rocket
@@ -248,11 +250,6 @@ void Translucency_OnChange()
 //                    FUNKY DEATHMATCH COMMANDS
 // =======================================================================
 
-void BloodTime_OnChange();
-
-CV_PossibleValue_t bloodtime_cons_t[]={{1,"MIN"},{3600,"MAX"},{0,NULL}};
-// how much tics to last for the last (third) frame of blood (S_BLOODx)
-consvar_t cv_bloodtime = {"bloodtime","20",CV_NETVAR|CV_CALL|CV_SAVE,bloodtime_cons_t,BloodTime_OnChange};
 
 // Called when var. 'bloodtime' is changed : set the blood states duration
 //

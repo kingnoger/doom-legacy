@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2004/07/05 16:53:30  smite-meister
+// Netcode replaced
+//
 // Revision 1.1  2004/06/25 19:50:59  smite-meister
 // Netcode
 //
@@ -97,6 +100,9 @@ XD:
  - kick
  - pause request / pause
 
+RPC's from server to client:
+ - startsound/stopsound/sequence/music
+ - HUD colormap and other effects?
 
 
 Player ticcmd contains both guaranteed_ordered and unguaranteed elements.
@@ -123,7 +129,6 @@ Shooting and artifact use should be guaranteed...
 #include "g_game.h"
 #include "g_player.h"
 #include "n_interface.h"
-#include "n_connection.h"
 
 #include "hu_stuff.h"
 #include "m_menu.h"
@@ -143,9 +148,9 @@ using namespace TNL;
 extern bool dedicated;
 
 
-//====================================
+//========================================================================
 //        Server consvars
-//====================================
+//========================================================================
 
 consvar_t cv_playdemospeed  = {"playdemospeed","0",0,CV_Unsigned};
 
@@ -271,193 +276,130 @@ void TimeLimit_OnChange()
 
 
 
+//========================================================================
+//    Main server code
+//========================================================================
 
 
-//=========================================================================
-
-TNL_IMPLEMENT_NETCONNECTION(LConnection, NetClassGroupGame, true);
-
-LConnection::LConnection()
+void GameInfo::TryRunTics(tic_t elapsed)
 {
-  //setIsAdaptive();
-  setFixedRateParameters(50, 50, 2000, 2000); // packet rates, sizes (send and receive)
-}
+  extern  bool singletics;
+
+  // local input
+  //ticcmd_t localcmd[2];
 
 
-
-
-void LConnection::writeConnectRequest(BitStream *stream)
-{
-   Parent::writeConnectRequest(stream);
-
-   stream->write(VERSION);
-   stream->writeString(VERSIONSTRING);
-   /*
-     TODO: send local player data
-     stream->writeString(playerName.getString());
-   */
-}
-
-
-bool LConnection::readConnectRequest(BitStream *stream, const char **errorString)
-{
-  if (!Parent::readConnectRequest(stream, errorString))
-    return false;
-
-  char temp[255];
-  *errorString = temp; // in case we need it
-
-  int version;
-  stream->read(&version);
-  stream->readString(temp);
-
-  if (version != VERSION || strcmp(temp, VERSIONSTRING))
+  // max time step
+  if (elapsed > TICRATE/7)
     {
-      sprintf(temp, "Different Legacy versions cannot play a net game! (Server version %d.%d%s)",
-	      VERSION/100, VERSION%100, VERSIONSTRING);
-      return false;
+      if (server)
+	elapsed = 1;
+      else
+	elapsed = TICRATE/7;
+    }
+  
+  if (singletics)
+    elapsed = 1;
+
+  if (elapsed >= 1)
+    COM_BufExecute(); // process command buffer
+
+  I_GetEvent();
+  D_ProcessEvents(); // read control events, feed them to responders
+
+
+  if (!dedicated)
+    {
+      Menu::Ticker();
+      con.Ticker();
+
+      // translate inputs (keyboard/mouse/joystick) into game controls
+      if (consoleplayer)
+	consoleplayer->cmd.Build(true, elapsed);
+      if (consoleplayer2)
+	consoleplayer2->cmd.Build(false, elapsed);
     }
 
-  if (game.Players.size() >= unsigned(cv_maxplayers.value))
-    {
-      sprintf(temp, "Maximum number of players reached (%d).", cv_maxplayers.value);
-      return false;
-    }
+  // get packets? (maybe connection is lost...)
 
-  if (!cv_allownewplayer.value)
-    {
-      sprintf(temp, "The server is not accepting new players at the moment.");
-      return false;
-    }
+  // queue ticcmds to server_con equipped with delta_t's (elapsed)
+  // try resending them a few times until we get confirmation of arrival from server
+
+  // run client simulation/server simulation
 
 
-  // TODO read playerdata,
+  net->Update();
 
-  return true; // server accepts
+  while (elapsed-- > 0)
+    Ticker();
 }
 
 
-void LConnection::writeConnectAccept(BitStream *stream)
-{
-  // TODO check that name is unique, send corrected info back etc.
 
-  //SV_SendServerConfig(node)
+
+/// is there a game running?
+bool GameInfo::Playing()
+{
+  return (state > GS_INTRO);
+  //return (net->netstate == LNetInterface::CL_Connected);
 }
 
 
-bool LConnection::readConnectAccept(BitStream *stream, const char **errorString)
+
+/// after this you are not Playing()
+void GameInfo::SV_Reset()
 {
-  // TEST
-  char temp[255];
-  *errorString = temp; // in case we need it
-  sprintf(temp, "up yours, server!\n");
+  net->SV_Reset(); // disconnect clients etc.
+
+  Clear_mapinfo_clusterdef();
+  ClearPlayers();
+  // clear teams?
+
+  Z_FreeTags(PU_LEVEL, MAXINT);
+
+  // reset gamestate?
+  state = GS_NULL;
+  server = true;
+  netgame = false;
+  multiplayer = cv_splitscreen.value;
+
+  CONS_Printf("-- Server reset --\n");
+}
+
+
+/// initializes and opens the server (but does not set up the game!)
+bool GameInfo::SV_SpawnServer()
+{
+  if (Playing())
+    I_Error("tried to spawn server while playing\n");
+  //  return false;
+
+  CONS_Printf("Starting server...\n");
+  SV_Reset();
+  //if (cv_internetserver.value) RegisterServer(0, 0);
+
+  net->SV_Open();
+
+  server = true;
+  netgame = true;
+  multiplayer = true;
 
   return true;
 }
 
 
 
-/// connection response functions
-
-void LConnection::onConnectTimedOut()
-{
-  CONS_Printf("connect attempt timed out.\n");
-  ConnectionTerminated(false);
-}
-
-
-void LConnection::onConnectionRejected(const char *reason)
-{
-  CONS_Printf("connection rejected.\n");
-  ConnectionTerminated(false);
-}
-
-
-void LConnection::onConnectionEstablished(bool isInitiator)
-{
-  // initiator becomes the "client", the other one "server"
-  Parent::onConnectionEstablished(isInitiator);
-
-  // To see how this program performs with 50% packet loss,
-  // Try uncommenting the next line :)
-  //setSimulatedNetParams(0.5, 0);
-   
-  if (isInitiator)
-    {
-      setGhostFrom(false);
-      setGhostTo(true);
-      CONS_Printf("%s - connected to server.\n", getNetAddressString());
-      LNetInterface *n = (LNetInterface *)getInterface();
-      n->server_con = this;
-      n->netstate = LNetInterface::CL_Connected;
-    }
-  else
-    {
-      // TODO: make scope object
-      ((LNetInterface *)getInterface())->client_con.push_back(this);
-
-      /*
-	Player *player = new Player;
-	myPlayer = player;
-	myPlayer->setInterface(getInterface());
-	myPlayer->addToGame(((TestNetInterface *) getInterface())->game);
-	setScopeObject(myPlayer);
-      */
-
-      setGhostFrom(true);
-      setGhostTo(false);
-      activateGhosting();
-      CONS_Printf("%s - client connected.\n", getNetAddressString());
-    }
-}
-
-
-void LConnection::onTimedOut()
-{
-  CONS_Printf("%s - connection to %s timed out.", getNetAddressString(), isConnectionToServer() ? "server" : "client" );
-  ConnectionTerminated(true);
-}
-
-
-void LConnection::onConnectionError(const char *error)
-{
-  CONS_Printf("connection error '%s'\n", error);
-  ConnectionTerminated(true);
-}
-
-
-void LConnection::onDisconnect(const char *reason)
-{
-  CONS_Printf("%s - %s disconnected.", getNetAddressString(), isConnectionToServer() ? "server" : "client" );
-  ConnectionTerminated(true);
-}
-
-
-void LConnection::ConnectionTerminated(bool established)
-{
-  if (isConnectionToServer())
-    {
-      ((LNetInterface *)getInterface())->CL_Reset();
-    }
-  else
-    {
-      if (established)
-	;// drop client, inform others
-    }
-}
 
 
 
 
 
-
-
-
+//=========================================================================
+//                           SERVER INIT
+//=========================================================================
 
 
 /// Sets up network interface
-// combination of D_CheckNetGame (called from doommain), I_InitTcpNetwork, D_ClientServerInit
-
 void InitNetwork()
 {
   CONS_Printf("Initializing network...");
@@ -491,6 +433,7 @@ void InitNetwork()
     }
   else if (M_CheckParm("-connect"))
     {
+      game.server = false;
       char server_hostname[255];
 
       if (M_IsNextParm())
@@ -512,144 +455,8 @@ void InitNetwork()
         }
     }
 
-
-  if (game.netgame)
-    game.multiplayer = true;
-
   CONS_Printf("done.\n");
 }
-
-
-
-
-
-
-//
-// TryRunTics
-//
-void GameInfo::TryRunTics(tic_t elapsed)
-{
-  extern  bool singletics;
-
-  // local input
-  ticcmd_t localcmds;
-  ticcmd_t localcmds2;
-
-
-  // max time step
-  if (elapsed > TICRATE/7)
-    {
-      if (server)
-	elapsed = 1;
-      else
-	elapsed = TICRATE/7;
-    }
-  
-  if (singletics)
-    elapsed = 1;
-
-  if (elapsed >= 1)
-    COM_BufExecute();
-
-  I_GetEvent();
-  D_ProcessEvents(); // read controls
-
-  Menu::Ticker();
-  CON_Ticker();
-
-  // translate inputs (keyboard/mouse/joystick) into game controls
-  localcmds.Build(true, elapsed);
-  if (cv_splitscreen.value)
-    localcmds2.Build(false, elapsed);
-
-  net->Update();
-
-  while (elapsed-- > 0)
-    Ticker();
-}
-
-
-
-
-// is there a game running
-bool GameInfo::Playing()
-{
-  return false;
-  //return (game.server || (game.net->netstate == LNetInterface::CL_Connected));
-}
-
-
-
-
-
-
-
-void GameInfo::SV_ResetServer()
-{
-  // disconnect clients etc.
-  net->SV_Reset();
-
-  Clear_mapinfo_clusterdef();
-  ClearPlayers();
-  // clear teams?
-
-  Z_FreeTags(PU_LEVEL, MAXINT);
-
-  // reset gamestate?
-  state = GS_NULL;
-  netgame = false;
-
-  CONS_Printf("Server reset\n");
-}
-
-
-bool GameInfo::SV_SpawnServer()
-{
-  if (!Playing())
-    {
-      CONS_Printf("Starting server...\n");
-      SV_ResetServer();
-      //if (cv_internetserver.value) RegisterServer(0, 0);
-
-      net->SV_Open();
-
-      server = true;
-      netgame = true;
-      multiplayer = true;
-
-      state = GS_LEVEL;
-      return true;
-    }
-
-  return false;
-}
-
-
-
-bool GameInfo::SV_SpawnLocalServer()
-{
-  if (!Playing())
-    {
-      CONS_Printf("Starting local server...\n");
-      SV_ResetServer();
-
-      server = true;
-      netgame = false;
-      multiplayer = cv_splitscreen.value;
-      return true;
-    }
-
-  return false;
-}
-
-
-
-
-
-
-
-
-
 
 
 // ------
@@ -673,6 +480,14 @@ void Got_SaveGamecmd (char **cp,int playernum);
 
 void Command_Listserv_f() {}
 
+void Command_Clear_f();
+void Command_Keymap_f();
+void Command_Bind_f();
+
+void Command_SaveConfig_f();
+void Command_LoadConfig_f();
+void Command_ChangeConfig_f();
+
 void Command_Version_f();
 void Command_GameInfo_f();
 void Command_MapInfo_f();
@@ -683,6 +498,7 @@ void Command_TeamFrags_f();
 void Command_Pause_f();
 void Command_Quit_f ();
 void Command_Connect_f();
+void Command_Disconnect_f();
 void Command_Kick_f();
 void Command_Kill_f();
 
@@ -691,7 +507,7 @@ void Command_Map_f();
 void Command_RestartLevel_f();
 void Command_ExitLevel_f();
 void Command_RestartGame_f();
-void Command_ExitGame_f();
+void Command_Reset_f();
 
 void Command_Save_f();
 void Command_Load_f();
@@ -715,12 +531,9 @@ void COM_T_DumpScript_f();
 void COM_T_RunScript_f();
 void COM_T_Running_f();
 
-
 void T_Init();
 
-// =========================================================================
-//                           SERVER INIT
-// =========================================================================
+
 
 /// This is needed by both servers and clients
 void SV_Init()
@@ -746,49 +559,61 @@ void SV_Init()
     "demos"
   */
 
+  // console
+  COM_AddCommand("cls", Command_Clear_f);
+  COM_AddCommand("keymap", Command_Keymap_f);
+  COM_AddCommand("bind", Command_Bind_f);
+
+  // config file management  
+  COM_AddCommand("saveconfig", Command_SaveConfig_f);
+  COM_AddCommand("loadconfig", Command_LoadConfig_f);
+  COM_AddCommand("changeconfig", Command_ChangeConfig_f);
+
   // informational commands
   COM_AddCommand("version", Command_Version_f);
   COM_AddCommand("gameinfo", Command_GameInfo_f);
   COM_AddCommand("mapinfo", Command_MapInfo_f);
   COM_AddCommand("players", Command_Players_f);
   COM_AddCommand("frags", Command_Frags_f);
-  COM_AddCommand("teamfrags", Command_TeamFrags_f);
-
-  // basic commands for controlling the game
-  COM_AddCommand("pause", Command_Pause_f);
-  COM_AddCommand("quit",  Command_Quit_f);
-  COM_AddCommand("connect", Command_Connect_f);
-  COM_AddCommand("kick", Command_Kick_f);
-  COM_AddCommand("kill", Command_Kill_f);
-
-  COM_AddCommand("addfile", Command_Addfile_f);
-  COM_AddCommand("map", Command_Map_f);
-  COM_AddCommand("restartlevel", Command_RestartLevel_f);
-  COM_AddCommand("exitlevel", Command_ExitLevel_f);
-  COM_AddCommand("restartgame", Command_RestartGame_f);
-  COM_AddCommand("exitgame", Command_ExitGame_f);
-
-  // bots
-  //COM_AddCommand("addbot", Command_AddBot_f);
-
-  // saving, demos
-  COM_AddCommand("save", Command_Save_f);
-  COM_AddCommand("load", Command_Load_f);
-  COM_AddCommand("playdemo", Command_Playdemo_f);
-  COM_AddCommand("timedemo", Command_Timedemo_f);
-  COM_AddCommand("stopdemo", Command_Stopdemo_f);
-
-  /*
-  COM_AddCommand("saveconfig", Command_SaveConfig_f);
-  COM_AddCommand("loadconfig", Command_LoadConfig_f);
-  COM_AddCommand("changeconfig", Command_ChangeConfig_f);
-  */
 
   // chat commands
   COM_AddCommand("say"    , Command_Say_f);
   COM_AddCommand("sayto"  , Command_Sayto_f);
   COM_AddCommand("sayteam", Command_Sayteam_f);
   COM_AddCommand("chatmacro", Command_Chatmacro_f); // hu_stuff.c
+
+  // basic commands for controlling the game
+  COM_AddCommand("pause", Command_Pause_f);
+  COM_AddCommand("quit",  Command_Quit_f);
+  COM_AddCommand("connect", Command_Connect_f);
+  COM_AddCommand("disconnect", Command_Disconnect_f);
+
+  // game management (server only)
+  COM_AddCommand("save", Command_Save_f);
+  COM_AddCommand("load", Command_Load_f);
+  COM_AddCommand("playdemo", Command_Playdemo_f);
+  COM_AddCommand("stopdemo", Command_Stopdemo_f);
+
+  COM_AddCommand("addfile", Command_Addfile_f);
+  COM_AddCommand("map", Command_Map_f);
+  COM_AddCommand("restartlevel", Command_RestartLevel_f);
+  COM_AddCommand("exitlevel", Command_ExitLevel_f);
+  COM_AddCommand("restartgame", Command_RestartGame_f);
+  COM_AddCommand("reset", Command_Reset_f);
+
+  COM_AddCommand("kick", Command_Kick_f);
+  COM_AddCommand("kill", Command_Kill_f);
+
+  COM_AddCommand("runacs", Command_RunACS_f);
+#ifdef FRAGGLESCRIPT
+  T_Init();
+  COM_AddCommand("t_dumpscript", COM_T_DumpScript_f);
+  COM_AddCommand("t_runscript",  COM_T_RunScript_f);
+  COM_AddCommand("t_running",    COM_T_Running_f);
+#endif
+
+  // bots
+  //COM_AddCommand("addbot", Command_AddBot_f);
 
   // cheat commands, I'm bored of deh patches renaming the idclev ! :-)
   COM_AddCommand("noclip", Command_CheatNoClip_f);
@@ -836,19 +661,8 @@ void SV_Init()
   // add chat macro consvars
   HU_HackChatmacros();
 
-  // scripting
-  COM_AddCommand("runacs", Command_RunACS_f);
-#ifdef FRAGGLESCRIPT
-  T_Init();
-  COM_AddCommand("t_dumpscript", COM_T_DumpScript_f);
-  COM_AddCommand("t_runscript",  COM_T_RunScript_f);
-  COM_AddCommand("t_running",    COM_T_Running_f);
-#endif
-
 
   R_InitData(); // must init texture cache now! Even server needs to know the widths etc of textures...
 
   InitNetwork();
 }
-
-

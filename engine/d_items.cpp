@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/07/05 16:53:24  smite-meister
+// Netcode replaced
+//
 // Revision 1.7  2003/05/30 13:34:41  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -46,13 +49,13 @@
 //-----------------------------------------------------------------------------
 
 
-
-// We are referring to sprite numbers.
 #include "info.h"
 #include "d_items.h"
 
-// "static" weapon data
-weapondata_t weapondata[NUMWEAPONS+1] =
+
+
+/// "static" weapon data
+weapondata_t weapondata[NUMWEAPONS] =
 {
   // Doom
   {0, wp_chainsaw, 0}, {0, wp_staff, 0}, {1, wp_goldwand, 20}, {2, wp_supershotgun, 8}, {2, wp_crossbow, 8},
@@ -63,10 +66,9 @@ weapondata_t weapondata[NUMWEAPONS+1] =
   // Hexen
   {0, wp_cmace, 0}, {0, wp_mwand, 0}, {0, wp_fist, 0}, {1, wp_serpent_staff, 25}, {1, wp_cone_of_shards, 25},
   {1, wp_pistol, 25}, {2, wp_firestorm, 25}, {2, wp_arc_of_death, 25}, {2, wp_shotgun, 25},
-  {3, wp_wraithverge, 25}, {3, wp_bloodscourge, 25}, {3, wp_chaingun, 25}, {7, wp_beak, 0},
-  // wp_nochange
-  {0, wp_fist, 0}
+  {3, wp_wraithverge, 25}, {3, wp_bloodscourge, 25}, {3, wp_chaingun, 25}, {7, wp_beak, 0}
 };
+
 
 int maxammo1[NUMAMMO] =
 {
@@ -75,12 +77,14 @@ int maxammo1[NUMAMMO] =
   200, 200 // Hexen
 };
 
+
 int maxammo2[NUMAMMO] =
 {
   400, 100, 600, 100, // Doom
   200, 100, 400, 400, 40, 300, // Heretic
   200, 200 // Hexen
 };
+
 
 // a weapon is found with two clip loads,
 // a big item has five clip loads

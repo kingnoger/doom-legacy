@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:42  hurdler
-// Initial revision
+// Revision 1.2  2004/07/05 16:53:30  smite-meister
+// Netcode replaced
+//
+// Revision 1.1.1.1  2002/11/16 14:18:42  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.3  2002/07/01 21:01:09  jpakkane
 // Fixed cr+lf to UNIX form.
@@ -111,7 +114,9 @@
 #endif
 
 
-int finetangent[4096] =
+fixed_t *finecosine = &finesine[FINEANGLES/4];
+
+fixed_t finetangent[4096] =
 {
     -170910304,-56965752,-34178904,-24413316,-18988036,-15535599,-13145455,-11392683,
     -10052327,-8994149,-8137527,-7429880,-6835455,-6329090,-5892567,-5512368,
@@ -628,7 +633,7 @@ int finetangent[4096] =
 };
 
 
-int finesine[10240] =
+fixed_t finesine[10240] =
 {
     25,75,125,175,226,276,326,376,
     427,477,527,578,628,678,728,779,

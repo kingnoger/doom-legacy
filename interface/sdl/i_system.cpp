@@ -3,8 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
 // Revision 1.6  2004/01/10 16:03:00  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
@@ -36,12 +38,10 @@
 // Revision 1.1.1.1  2002/11/16 14:18:31  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//   System interface. Everything that does not fit into the other i_ files.
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief SDL system interface. Everything that does not fit into the other i_ files.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -78,6 +78,9 @@
 #endif
 
 #include "doomdef.h"
+#include "command.h"
+#include "cvars.h"
+
 #include "d_event.h"
 #include "d_main.h"
 #include "m_misc.h"
@@ -88,9 +91,7 @@
 #include "i_joy.h"
 
 #include "screen.h"
-#include "d_net.h"
 #include "g_game.h"
-#include "d_clisrv.h"
 #include "keys.h"
 
 #include "sdl/endtxt.h"
@@ -115,6 +116,8 @@ static int lastmousey = 0;
 
 void I_StartupKeyboard () {}
 void I_StartupTimer    () {}
+
+
 
 //
 //  Translates the SDL key into Doom key
@@ -219,14 +222,21 @@ void I_GetEvent()
 #endif
 
   //SDL_PumpEvents(); //SDL_PollEvent calls this automatically
-    
-  while(SDL_PollEvent(&inputEvent))
+  int temp;
+
+  while (SDL_PollEvent(&inputEvent))
     {
-      switch(inputEvent.type)
+      switch (inputEvent.type)
         {
         case SDL_KEYDOWN:
 	  event.type = ev_keydown;
 	  event.data1 = xlatekey(inputEvent.key.keysym.sym);
+
+	  // TODO actually this belongs in D_PostEvent, but not until we have another interface...
+	  temp = inputEvent.key.keysym.mod; // modifier key status
+	  shiftdown = (temp && KMOD_SHIFT);
+	  altdown = (temp && KMOD_ALT);
+
 	  D_PostEvent(&event);
 	  break;
         case SDL_KEYUP:
@@ -235,7 +245,7 @@ void I_GetEvent()
 	  D_PostEvent(&event);
 	  break;
         case SDL_MOUSEMOTION:
-	  if(cv_usemouse.value)
+	  if (cv_usemouse.value)
             {
 	      // If the event is from warping the pointer back to middle
 	      // of the screen then ignore it.
@@ -637,32 +647,47 @@ ticcmd_t *I_BaseTiccmd()
   return &emptycmd;
 }
 
-//
-// I_GetTime
-// returns time in 1/TICRATE second tics
-//
-tic_t I_GetTime()
+
+/// returns time in 1/TICRATE second tics
+tic_t I_GetTics()
 {
-  Uint32        ticks;
-  static Uint32 basetime=0;
+  static Uint32 basetime = SDL_GetTicks(); // executed only on the first call
 
   // milliseconds since SDL initialization
-  ticks = SDL_GetTicks();
+  Uint32 ms = SDL_GetTicks();
   
-  if (basetime == 0) // first call
-    basetime = ticks;
-  
-  return (tic_t)(ticks - basetime)*TICRATE/1000;
+  return tic_t(ms - basetime)*TICRATE/1000;
 }
 
 
+/// returns time in ms
+unsigned int I_GetTime()
+{
+  // milliseconds since SDL initialization
+  return SDL_GetTicks();
+}
 
-//
-// I_Init
-//
+///
+void I_Sleep(unsigned int ms)
+{
+  SDL_Delay(ms);
+}
+
+
+/// initialize SDL
 void I_SysInit()
 {
-  I_StartupTimer(); // does nothing in SDL
+  // Initialize Audio as well, otherwise DirectX can not use audio
+  if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO) < 0)
+    {
+      CONS_Printf("Couldn't initialize SDL: %s\n", SDL_GetError());
+      I_Quit();
+    }
+
+  // Window title
+  SDL_WM_SetCaption("Doom Legacy", "Doom Legacy");
+
+  I_StartupGraphics(); // we need a window for grabbing input!
 }
 
 //
@@ -679,7 +704,7 @@ void I_Quit()
   //        but sometimes we forget and use 'F10'.. so save here too.
   if (demorecording)
     game.CheckDemoStatus();
-  D_QuitNetGame ();
+  //game.net->QuitNetGame();
   I_ShutdownMusic();
   I_ShutdownSound();
   I_ShutdownCD();
@@ -746,7 +771,8 @@ void I_Error(char *error, ...)
   if (demorecording)
     game.CheckDemoStatus();
 
-  D_QuitNetGame ();
+  //game.net->QuitNetGame();
+
   I_ShutdownMusic();
   I_ShutdownSound();
   I_ShutdownGraphics();

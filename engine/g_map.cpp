@@ -2,9 +2,12 @@
 //-----------------------------------------------------------------------------
 // $Id$
 //
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.37  2004/07/05 16:53:24  smite-meister
+// Netcode replaced
+//
 // Revision 1.36  2004/04/25 16:26:48  smite-meister
 // Doxygen
 //
@@ -100,12 +103,10 @@
 //
 // Revision 1.4  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
-//
-//
-// DESCRIPTION:
-//   Map class implementation
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Map class implementation
 
 #include "doomdata.h"
 #include "g_map.h"
@@ -117,7 +118,7 @@
 
 #include "p_spec.h"
 #include "command.h"
-#include "console.h"
+#include "cvars.h"
 
 #include "r_main.h"
 #include "hu_stuff.h"
@@ -127,11 +128,7 @@
 #include "z_zone.h"
 #include "tables.h"
 
-extern consvar_t cv_deathmatch;
 
-consvar_t cv_itemrespawntime={"respawnitemtime","30",CV_NETVAR,CV_Unsigned};
-consvar_t cv_itemrespawn    ={"respawnitem"    , "0",CV_NETVAR,CV_OnOff};
-// TODO combine these to cv_itemrespawn CV_Unsigned, zero means no respawn, otherwise it is the respawntime
 
 #define FLOATRANDZ      (MAXINT-1)
 
@@ -511,8 +508,6 @@ DActor *Map::SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
 }
 
 
-void SV_SpawnPlayer(int playernum, int x, int y, angle_t angle);
-
 // Called when a player is spawned on the level.
 // Most of the player structure stays unchanged
 //  between levels.
@@ -563,10 +558,6 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
   p->color = pi->color;
 
   p->angle = ANG45 * (mthing->angle/45);
-  if (pi == consoleplayer)
-    localangle = p->angle;
-  else if (pi == displayplayer2)
-    localangle2 = p->angle;
 
   pi->viewheight = cv_viewheight.value<<FRACBITS;
   pi->viewz = p->z + pi->viewheight;
@@ -586,11 +577,10 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
       hud.ST_Start(p);
     }
 
-  // FIXME what does it do?
-  SV_SpawnPlayer(pi->number, p->x, p->y, p->angle);
-
   if (camera.chase && displayplayer == pi)
     camera.ResetCamera(p);
+  pi->pov = p;
+
   CONS_Printf("spawn done\n");
 
   p->spawnpoint = mthing;
@@ -683,8 +673,6 @@ void Map::SpawnMapThing(mapthing_t *mt)
 //
 bool Map::CheckRespawnSpot(PlayerInfo *p, mapthing_t *mthing)
 {
-  extern consvar_t cv_teamplay;
-
   if (!p || !mthing)
     return false;
 
@@ -1247,7 +1235,7 @@ void Map::RespawnWeapons()
 void Map::ExitMap(Actor *activator, int next, int ep)
 {
   CONS_Printf("ExitMap => %d, %d\n", next, ep);
-  extern consvar_t cv_exitmode;
+
   if (!cv_exitmode.value)
     return; // exit not allowed
 
@@ -1354,156 +1342,4 @@ Actor *Map::FindFromTIDmap(int tid, int *pos)
       }
 
   return (*i).second;
-}
-
-
-//==========================================================================
-//  Map-related commands
-//==========================================================================
-
-extern bool server;
-
-//  Warp to a new map.
-//  Called either from map <mapname> console command, or idclev cheat.
-void Command_Map_f ()
-{
-  if (COM_Argc() < 2 || COM_Argc() > 3)
-    {
-      //CONS_Printf ("map <mapname[.wad]> [-skill <1..5>] [-monsters <0/1>] [-noresetplayers]: warp to map\n");
-      CONS_Printf ("map <mapnumber> [<entrypoint>]: warp to map.\n");
-      return;
-    }
-
-  if (!server)
-    {
-      CONS_Printf ("Only the server can change the map\n");
-      return;
-    }
-
-  /*
-  char buf[MAX_WADPATH+3];
-#define MAPNAME &buf[2]
-
-  strncpy(MAPNAME,COM_Argv(1),MAX_WADPATH);
-  if (FIL_CheckExtension(MAPNAME))
-    {
-      // here check if file exist !!!
-      if( !findfile(MAPNAME,NULL,false) )
-        {
-	  CONS_Printf("\2File %s' not found\n",MAPNAME);
-	  return;
-        }
-    }
-  else
-    {
-      // internal wad lump
-      if(fc.FindNumForName(MAPNAME)==-1)
-        {
-	  CONS_Printf("\2Internal game map '%s' not found\n"
-		      "(use .wad extension for external maps)\n",MAPNAME);
-	  return;
-        }
-    }
-  */
-
-  // FIXME AWFUL HACK since netcode is disabled, the map is changed right here
-  if (!consoleplayer)
-    return;
-
-  // TODO what if we are given a lumpname instead of a mapnum?
-  int mapnum = atoi(COM_Argv(1));
-  int ept = atoi(COM_Argv(2));
-
-  CONS_Printf("Warping to map %d...\n", mapnum);
-  extern bool precache;
-  if (demoplayback && !timingdemo)
-    precache = false;
-
-  if (consoleplayer->mp)
-    consoleplayer->mp->info->state = MapInfo::MAP_FINISHED;
-  consoleplayer->requestmap = mapnum;
-  consoleplayer->entrypoint = ept;
-  consoleplayer->ExitLevel(mapnum, ept);
-
-  if (demoplayback && !timingdemo)
-    precache = true;
-  CON_ToggleOff();
-
-  // spawn the server if needed
-  // reset players if there is a new one
-  //if (SV_SpawnServer()) buf[1]&=~2;
-
-  //SendNetXCmd(XD_MAP,buf,2+strlen(MAPNAME)+1);
-}
-
-
-// helper function for Command_Kill_f
-static void Kill_pawn(Actor *v, Actor *k)
-{
-  if (v && v->health > 0)
-    {
-      v->flags |= MF_SHOOTABLE;
-      v->flags2 &= ~(MF2_NONSHOOTABLE | MF2_INVULNERABLE);
-      v->Damage(k, k, 10000, dt_always);
-    }
-}
-
-// Kills just about anything
-void Command_Kill_f()
-{
-  if (!consoleplayer)
-    return;
-
-  if (COM_Argc() < 2)
-    {
-      CONS_Printf ("Usage: kill [me] | [<playernum>] | [monsters]\n");
-      // TODO extend usage: kill playername, kill team
-      return;
-    }
-
-  if (!server)
-    {
-      // client players can only commit suicide
-      if (COM_Argc() > 2 || strcmp(COM_Argv(1), "me"))
-	CONS_Printf("Only the server can kill others using console!\n");
-      else
-	Kill_pawn(consoleplayer->pawn, consoleplayer->pawn);
-
-      return;
-    }
-
-  int n;
-  for (int i=1; i<COM_Argc(); i++)
-    {
-      char *s = COM_Argv(i);
-      Actor *m = NULL;
-
-      if (!strcmp(s, "me"))
-	{
-	  // suicide
-	  m = consoleplayer->pawn;
-	}
-      else if (s[0] >= '0' && s[0] <= '9')
-	{
-	  // another player by number
-	  char *tail;
-	  n = strtol(s, &tail, 0);
-	  PlayerInfo *p = game.FindPlayer(n);
-	  if (!p)
-	    {
-	      CONS_Printf("Player %d is not in the game.\n", n);
-	      continue;
-	    }
-	  m = p->pawn;
-	}
-      else if (*s == 'm')
-	{
-	  // monsters
-	  n = consoleplayer->mp->Massacre();
-	  CONS_Printf("%d monsters killed.\n", n);
-	  continue;
-	}
-
-      Kill_pawn(m, consoleplayer->pawn); // server does the killing
-    }
 }

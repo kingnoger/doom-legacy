@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2004/07/05 16:53:25  smite-meister
+// Netcode replaced
+//
 // Revision 1.20  2004/04/25 16:26:49  smite-meister
 // Doxygen
 //
@@ -111,6 +114,7 @@
 #include "doomtype.h"
 #include "p_enemy.h"
 #include "command.h"
+#include "cvars.h"
 #include "p_spec.h"
 
 #include "g_game.h"
@@ -126,14 +130,6 @@
 #include "tables.h"
 
 #include "hardware/hw3sound.h"
-
-
-
-void FastMonster_OnChange();
-
-// enable the solid corpses option : still not finished
-consvar_t cv_solidcorpse = {"solidcorpse","0",CV_NETVAR | CV_SAVE,CV_OnOff};
-consvar_t cv_fastmonsters = {"fastmonsters","0",CV_NETVAR | CV_CALL,CV_OnOff,FastMonster_OnChange};
 
 
 //
@@ -1278,7 +1274,7 @@ void A_Tracer(DActor *actor)
 {
   Map *m = actor->mp;
 
-  if (gametic % (4 * NEWTICRATERATIO))
+  if (m->maptic % (4 * NEWTICRATERATIO))
     return;
 
   // spawn a puff of smoke behind the rocket

@@ -17,63 +17,145 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:20  hurdler
-// Initial revision
+// Revision 1.2  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
 //
-// Revision 1.3  2002/07/01 21:00:42  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:20  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
-//
-//
-// DESCRIPTION:
-//
+// Revision 1.1.1.1  2002/11/16 14:18:20  hurdler
+// Initial C++ version of Doom Legacy
 //
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Console interface
 
-//#include "d_event.h"
+#ifndef console_h
+#define console_h 1
+
 #include "doomtype.h"
 
-// for debugging shopuld be replaced by nothing later.. so debug is inactive
-#define LOG(x) CONS_Printf(x)
 
-void CON_Init (void);
+/// \brief Console
+///
+/// Console serves as an user interface to the command buffer.
+/// It gathers input, keeps track of command history and of course
+/// draws the messages on screen.
 
-//bool CON_Responder (event_t *ev);
+/// For dedicated server: input responder, command history
 
-// set true when screen size has changed, to adapt console
-extern bool con_recalc;
+/// For client: printing, Key bindings,
 
-extern bool con_startup;
+
+class Console
+{
+public:
+  bool refresh; ///< explicitly refresh screen after each CONS_Printf (game is not yet in display loop)
+  bool recalc;  ///< set true when screen size has changed. on next tick, console will conform
+
+protected:
+  bool graphic; ///< console can be drawn
+  bool active;  ///< console is active (accepting input)
+
+  int con_tick; // console ticker for anim or blinking prompt cursor
+
+
+  // console input
+#define  CON_MAXPROMPTCHARS 256
+  char inputlines[32][CON_MAXPROMPTCHARS]; // hold last 32 prompt lines for history
+  int  input_cx;       // position in current input line
+  int  input_cy;      // current input line number
+  int  input_hist;      // line number of history input line to restore
+
+
+  // console output
+  char *con_buffer; ///< wrapping buffer that stores formatted console output
+  char *con_line;   ///< pointer to current output line
+
+  int con_cols;     ///< console text buffer width in columns
+  int con_lines;    ///< console text buffer height in rows
+
+  int con_cx;       ///< cursor position in current line (column number)
+  int con_cy;       ///< cursor line number in con_buffer, wraps around using modulo
+  int con_scrollup; ///< how many rows of text to scroll up (pgup/pgdn)
+
+
+  // hud lines, used when console is closed
+#define  CON_MAXHUDLINES 5
+  int con_hudlines;                   ///< number of console heads up message lines
+  int con_lineowner[CON_MAXHUDLINES]; ///< In splitscreen, which player gets this line of text
+  int con_hudtime[CON_MAXHUDLINES];   ///< remaining time of display for hud msg lines
+
+  // graphics
+  class Texture *con_backpic; ///< console background picture, loaded static
+  Texture *con_lborder, *con_rborder; ///< console borders in translucent mode
+
+  int con_destheight; ///< destination height in pixels
+  int con_height;     ///< current console height in pixels
+
+
+protected:
+  /// called after vidmode has changed
+  void RecalcSize();
+
+  void DrawConsole();
+  void DrawHudlines();
+
+  void Print(char *msg);
+  void Linefeed(int player);
+
+public:
+  Console();
+  ~Console();
+
+  /// client init
+  void Init();
+
+  /// change console state (on/off)
+  void Toggle(bool forceoff = false);
+
+  /// clear the output buffer
+  void Clear();
+
+  /// clears HUD messages
+  void ClearHUD();
+
+  /// event responder
+  bool Responder(struct event_t *ev);
+
+  /// animation, message timers
+  void Ticker();
+
+  /// draws the console
+  void Drawer();
+
+  /// wrapper
+  friend void CONS_Printf(char *fmt, ...);
+};
+
+
+void CONS_Error(char *msg); // print out error msg, wait for keypress
+
+
+extern Console con;
+
+
+extern int con_keymap;
+
+// character input
+extern char *shiftxform; // SHIFT-keycode to ASCII mapping
+char KeyTranslation(unsigned char ch); // keycode to ASCII mapping
+
 
 // top clip value for view render: do not draw part of view hidden by console
-extern int     con_clipviewtop;
-
-// 0 means console if off, or moving out
-extern int     con_destlines;
-
-extern int     con_clearlines;  // lines of top of screen to refresh
+extern int  con_clipviewtop;
+extern int  con_clearlines;  // lines of top of screen to refresh
 extern bool con_hudupdate;   // hud messages have changed, need refresh
 
-extern int     con_keymap;      //0 english, 1 french
 
-extern byte*   whitemap;
-extern byte*   greenmap;
-extern byte*   graymap;
 
-void CON_ClearHUD (void);       // clear heads up messages
+// globally used colormaps
+extern byte *whitemap;
+extern byte *greenmap;
+extern byte *graymap;
 
-void CON_Ticker (void);
-void CON_Drawer (void);
-void CONS_Error (char *msg);       // print out error msg, and wait a key
 
-// force console to move out
-void CON_ToggleOff (void);
+#endif

@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:21  hurdler
-// Initial revision
+// Revision 1.2  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
+// Revision 1.1.1.1  2002/11/16 14:18:21  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.9  2002/09/08 14:38:08  vberghol
 // Now it works! Sorta.
@@ -51,24 +54,23 @@
 // Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
 // Initial import into CVS (v1.29 pr3)
 //
-//
-// DESCRIPTION: 
-//      event handling.
-//    
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Input event system
 
 #ifndef d_event_h
 #define d_event_h 1
 
 // Input event types.
-typedef enum
+enum evtype_t
 {
   ev_keydown,
   ev_keyup,
   ev_mouse,
   ev_joystick,
   ev_mouse2
-} evtype_t;
+};
 
 // Event structure.
 struct event_t
@@ -89,14 +91,11 @@ extern  event_t         events[MAXEVENTS];
 extern  int             eventhead;
 extern  int             eventtail;
 
-//extern  gameaction_t    gameaction;
 
-// Event responder prototypes. These functions eat up events.
+// current modifier key status
+extern bool shiftdown;
+extern bool altdown;
 
-// Called by main loop.
-
-// console
-bool CON_Responder (event_t *ev);
 
 // finale
 bool F_Responder (event_t* ev);

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/07/05 16:53:27  smite-meister
+// Netcode replaced
+//
 // Revision 1.7  2004/03/28 15:16:13  smite-meister
 // Texture cache.
 //
@@ -51,6 +54,7 @@
 
 #include "i_video.h"    //rendermode
 #include "g_pawn.h"
+#include "g_game.h"
 
 extern int fgbuffer; // in fact a HUD property, but...
 
@@ -316,7 +320,6 @@ void HudInventory::DrawNumber(int x, int y, int val)
    
 void HudInventory::Draw()
 {
-  extern int gametic; // blink
   int i;
   // selected (selectbox) refers to the same logical slot as invSlot
   // (it is the selected slot in the visible part of inventory (0-6))
@@ -353,10 +356,10 @@ void HudInventory::Draw()
 
       // blinking arrowheads (using a hack slot. this is so embarassing.)
       if (slots[7].type)
-	(!(gametic&4) ? p[3] : p[4])->Draw(x+4, y, fgbuffer | V_SCALE);
+	(!(game.tic&4) ? p[3] : p[4])->Draw(x+4, y, fgbuffer | V_SCALE);
 
       if (slots[7].count)
-	(!(gametic&4) ? p[5] : p[6])->Draw(x+235, y, fgbuffer | V_SCALE);
+	(!(game.tic&4) ? p[5] : p[6])->Draw(x+235, y, fgbuffer | V_SCALE);
     }
   else
     {

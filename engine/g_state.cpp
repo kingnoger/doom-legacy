@@ -17,14 +17,17 @@
 //
 //
 // $Log$
+// Revision 1.31  2004/07/05 16:53:24  smite-meister
+// Netcode replaced
+//
 // Revision 1.30  2004/04/25 16:26:49  smite-meister
 // Doxygen
-//
-//
-//
-// DESCRIPTION:
-//    Part of GameInfo class implementation. Methods related to game state changes.
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Part of GameInfo class implementation.
+/// Methods related to game state changes.
+
 
 #include "g_game.h"
 #include "g_player.h"
@@ -34,6 +37,9 @@
 #include "g_level.h"
 #include "g_pawn.h"
 
+#include "command.h"
+#include "console.h"
+#include "cvars.h"
 
 #include "g_input.h" // gamekeydown!
 #include "dstrings.h"
@@ -45,47 +51,20 @@
 #include "s_sound.h"
 
 #include "f_finale.h"
-#include "d_netcmd.h"
-#include "d_clisrv.h"
+#include "wi_stuff.h"
 #include "hu_stuff.h" // HUD
 #include "p_camera.h" // camera
-#include "wi_stuff.h"
-#include "console.h"
 
 #include "w_wad.h"
 #include "z_zone.h"
 
 
-GameInfo game;
+void F_Ticker();
+int P_Read_ANIMATED(int lump);
+int P_Read_ANIMDEFS(int lump);
+void P_InitSwitchList();
+void P_ACSInitNewGame();
 
-// constructor
-TeamInfo::TeamInfo()
-{
-  name = "Romero's Roughnecks";
-  color = 0;
-  score = 0;
-}
-
-
-// constructor
-GameInfo::GameInfo()
-{
-  demoversion = VERSION;
-  mode = gm_none;
-  state = GS_NULL;
-  action = ga_nothing;
-  skill = sk_medium;
-  maxplayers = 32;
-  maxteams = 4;
-  currentcluster = NULL;
-  currentmap = NULL;
-};
-
-//destructor
-GameInfo::~GameInfo()
-{
-  //ClearPlayers();
-};
 
 
 // WARNING : check cv_fraglimit>0 before call this function !
@@ -143,7 +122,6 @@ int GameInfo::GetFrags(fragsort_t **fragtab, int type)
 
   // scoring is done in PlayerPawn::Kill
 
-  extern consvar_t cv_teamplay;
   int i, j;
   int n = Players.size();
 
@@ -297,113 +275,15 @@ int GameInfo::GetFrags(fragsort_t **fragtab, int type)
 }
 
 
-// Tries to add a player into the game.
-// Returns NULL if a new player cannot be added.
-PlayerInfo *GameInfo::AddPlayer(PlayerInfo *p)
-{
-  int n = Players.size();
-  if (n >= maxplayers || !p)
-    return NULL;  // no room in game or no player given
-
-  // TODO what if maxplayers has recently been set to a lower-than-n value?
-  // when are the extra players kicked? cv_maxplayers action func?
-
-  int pnum = p->number;
-  if (pnum > maxplayers)
-    pnum = -1;  // pnum too high
-
-  // check if pnum is free
-  if (pnum > 0 && Players.count(pnum))
-    pnum = -1; // pnum already taken
-
-  // find first free player number, if necessary
-  if (pnum < 0)
-    {
-      for (int j = 1; j <= maxplayers; j++)
-	if (Players.count(j) == 0)
-	  {
-	    pnum = j;
-	    break;
-	  }
-    }
-
-  // pnum is valid and free!
-  p->number = pnum;
-  Players[pnum] = p;
-
-  return p;
-}
-
-
-// Removes a player from game.
-// This and ClearPlayers are the ONLY ways a player should be removed.
-bool GameInfo::RemovePlayer(int num)
-{
-  player_iter_t i = Players.find(num);
-
-  if (i == Players.end())
-    return false; // not found
-
-  PlayerInfo *p = (*i).second;
-
-  // remove avatar of player
-  if (p->pawn)
-    {
-      p->pawn->player = NULL;
-      p->pawn->Remove();
-    }
-
-  if (p == displayplayer)
-    hud.ST_Stop();
-
-  // make sure that global PI pointers are still OK
-  if (consoleplayer == p) consoleplayer = NULL;
-  if (consoleplayer2 == p) consoleplayer2 = NULL;
-
-  if (displayplayer == p) displayplayer = NULL;
-  if (displayplayer2 == p) displayplayer2 = NULL;
-
-  delete p;
-  // NOTE! because PI's are deleted, even local PI's must be dynamically
-  // allocated, using a copy constructor: new PlayerInfo(localplayer).
-  Players.erase(i);
-  return true;
-}
-
-
-// Removes all players from a game.
-void GameInfo::ClearPlayers()
-{
-  player_iter_t i;
-  PlayerInfo *p;
-
-  for (i = Players.begin(); i != Players.end(); i++)
-    {
-      p = (*i).second;
-      // remove avatar of player
-      if (p->pawn)
-	{
-	  p->pawn->player = NULL;
-	  p->pawn->Remove();
-	}
-      delete p;
-    }
-
-  Players.clear();
-  consoleplayer = consoleplayer2 = NULL;
-  displayplayer = displayplayer2 = NULL;
-  hud.ST_Stop();
-}
-
-void F_Ticker();
-
 // ticks the game forward in time
 void GameInfo::Ticker()
 {
-  extern bool dedicated;
   MapInfo *m;
   PlayerInfo *p;
   player_iter_t t;
+
+
+  tic++;
 
   // TODO fix the intermissions and finales. when should they appear in general?
   // perhaps they should be made client-only stuff, the server waits until the clients are ready to continue.
@@ -433,28 +313,17 @@ void GameInfo::Ticker()
       }
 
 
-  // read/write demo
-  if (!dedicated)
-    for (t = Players.begin(); t != Players.end(); t++)
-      {
-	ticcmd_t *cmd = &((*t).second)->cmd;
-	int j = (*t).first; // playernum
-	  
-	if (demoplayback)
-	  ReadDemoTiccmd(cmd, j);
-	else
-	  {
-	    // FIXME here the netcode is bypassed until it's fixed. See also G_BuildTiccmd()!
-	    //memcpy(cmd, &netcmds[buf][players[i]->number-1], sizeof(ticcmd_t));
-	  }
+  // TODO read/write demo ticcmd's here
 
-	if (demorecording)
-	  WriteDemoTiccmd(cmd, j);
-      }
 
   // do main actions
   switch (state)
     {
+    case GS_INTRO:
+      if (--pagetic <= 0)
+	AdvanceIntro();
+      break;
+
     case GS_LEVEL:
       if (!paused)
 	currentcluster->Ticker();
@@ -470,12 +339,6 @@ void GameInfo::Ticker()
       F_Ticker();
       break;
 
-    case GS_DEMOSCREEN:
-      --pagetic;
-      break;
-      
-    case GS_WAITINGPLAYERS:
-    case GS_DEDICATEDSERVER:
     case GS_NULL:
     default:
       // do nothing
@@ -534,7 +397,6 @@ void GameInfo::Ticker()
 		  //break; // this is important!
 		}
 
-	      CONS_Printf("activating %d...", m->mapnumber);
 	      p->Reset(!currentcluster->keepstuff, true);
 
 	      // normal individual mapchange
@@ -546,74 +408,78 @@ void GameInfo::Ticker()
 }
 
 
-int P_Read_ANIMATED(int lump);
-int P_Read_ANIMDEFS(int lump);
-
-// starts a new local game
-bool GameInfo::DeferredNewGame(skill_t sk, bool splitscreen)
+/// starts a new local game (assumes that we have done a SV_Reset()!)
+bool GameInfo::NewGame(skill_t sk)
 {
-  CONS_Printf("Deferred: Starting a new game\n");
   if (clustermap.empty())
     return false;
 
-  // read these lumps _after_ MAPINFO but not separately for each map
-  extern bool nosound;
-  if (!nosound)
-    {
-      //S_ClearSounds();
-      int n = fc.Size();
-      for (int i = 1; i < n; i++)
-	{
-	  // cumulative reading
-	  S_Read_SNDINFO(fc.FindNumForNameFile("SNDINFO", i));
-	  S_Read_SNDSEQ(fc.FindNumForNameFile("SNDSEQ", i));
-	}
+  CONS_Printf("Starting a game\n");
 
-      if (cv_precachesound.value)
-	S_PrecacheSounds();
+  if (!dedicated)
+    {
+      // add local players
+      consoleplayer = AddPlayer(new PlayerInfo(localplayer));
+      if (cv_splitscreen.value)
+	consoleplayer2 = AddPlayer(new PlayerInfo(localplayer2));
+
+
+      // read these lumps _after_ MAPINFO but not separately for each map
+      extern bool nosound;
+      if (!nosound)
+	{
+	  //S_ClearSounds();
+	  int n = fc.Size();
+	  for (int i = 1; i < n; i++)
+	    {
+	      // cumulative reading
+	      S_Read_SNDINFO(fc.FindNumForNameFile("SNDINFO", i));
+	      S_Read_SNDSEQ(fc.FindNumForNameFile("SNDSEQ", i));
+	    }
+
+	  if (cv_precachesound.value)
+	    S_PrecacheSounds();
+	}
     }
 
   // texture and flat animations
   if (P_Read_ANIMDEFS(fc.FindNumForName("ANIMDEFS")) < 0)
     P_Read_ANIMATED(fc.FindNumForName("ANIMATED"));
 
-  Downgrade(VERSION);
-  paused = false;
-  nomonsters = false;
+  // set switch texture names/numbers, read "SWITCHES" lump
+  P_InitSwitchList();
 
   if (sk > sk_nightmare)
     sk = sk_nightmare;
 
   skill = sk;
 
-  if (demoplayback)
-    COM_BufAddText ("stopdemo\n");
+  // set cvars
+  if (skill == sk_nightmare)
+    {
+      CV_SetValue(&cv_respawnmonsters, 1);
+      CV_SetValue(&cv_fastmonsters, 1);
+    }
+  else
+    {
+      CV_SetValue(&cv_respawnmonsters, 0);
+      CV_SetValue(&cv_fastmonsters, 0);
+    }
 
-  // this leaves the actual game if needed
-  SV_StartSinglePlayerServer();
+  CV_SetValue(&cv_deathmatch, 0);
+  CV_SetValue(&cv_timelimit, 0);
+  CV_SetValue(&cv_fraglimit, 0);
 
-  // delete old players
-  ClearPlayers();
+  paused = false;
 
-  // add local players
-  consoleplayer = AddPlayer(new PlayerInfo(localplayer));
+  StartGame();
 
-  if (splitscreen)
-    consoleplayer2 = AddPlayer(new PlayerInfo(localplayer2));
-  
-  COM_BufAddText (va("splitscreen %d;deathmatch 0;fastmonsters 0;"
-		     "respawnmonsters 0;timelimit 0;fraglimit 0\n",
-		     splitscreen));
-
-  COM_BufAddText("restartgame\n");
   return true;
 }
 
 
-void P_InitSwitchList();
-void P_ACSInitNewGame();
 
-// starts or restarts the game.
+/// starts or restarts the game.
 bool GameInfo::StartGame()
 {
   if (clustermap.empty() || mapinfo.empty())
@@ -622,52 +488,11 @@ bool GameInfo::StartGame()
   cluster_iter_t t = clustermap.begin();
   currentcluster = (*t).second; 
 
-  automap.Close();  // TODO client-only stuff...
-
-  //added:27-02-98: disable selected features for compatibility with
-  //                older demos, plus reset new features as default
-  if (!Downgrade(demoversion))
-    {
-      CONS_Printf("Cannot Downgrade engine.\n");
-      CL_Reset();
-      StartIntro();
-      return false;
-    }
-
   if (paused)
     {
       paused = false;
       S.ResumeMusic();
     }
-
-  M_ClearRandom();
-
-  if (server && skill == sk_nightmare)
-    {
-      CV_SetValue(&cv_respawnmonsters,1);
-      CV_SetValue(&cv_fastmonsters,1);
-    }
-
-  // this should be CL_Reset or something...
-  //playerdeadview = false;
-
-  // FIXME make map restart option work, do not FreeTags and Setup,
-  // instead just Reset the maps
-
-  extern bool force_wipe;
-  force_wipe = true;
-  //if (wipestate == GS_LEVEL) wipestate = GS_WIPE;  // force a wipe
-
-  state = GS_LEVEL;
-
-  player_iter_t i;
-  for (i = Players.begin(); i != Players.end(); i++)
-    (*i).second->Reset(true, true);
-
-  // set switch texture names/numbers (TODO bad design, fix...)
-  P_InitSwitchList();
-
-  P_ACSInitNewGame(); // clear the ACS world vars etc.
 
   //Fab:19-07-98:start cd music for this level (note: can be remapped)
   /*
@@ -678,29 +503,37 @@ bool GameInfo::StartGame()
     I_PlayCD ((episode-1)*9+map, true);  // Doom1, 9maps per episode
   */
 
-  //AM_LevelInit()
-  //BOT_InitLevelBots ();
 
-  // TODO client stuff!!!
-  displayplayer = consoleplayer;          // view the guy you are playing
-  if (cv_splitscreen.value)
-    displayplayer2 = consoleplayer2;
-  else
-    displayplayer2 = NULL;
+  extern bool force_wipe;
+  force_wipe = true;
 
+  state = GS_LEVEL;
   action = ga_nothing;
+
+  player_iter_t i;
+  for (i = Players.begin(); i != Players.end(); i++)
+    (*i).second->Reset(true, true);
+
+  M_ClearRandom();
+  P_ACSInitNewGame(); // clear the ACS world vars etc.
+
+  memset(gamekeydown, 0, sizeof(gamekeydown));  // clear cmd building stuff
+
+  // view the guy you are playing
+  displayplayer = consoleplayer;
+  displayplayer2 = consoleplayer2;
+
+  // clear hud messages remains (usually from game startup)
+  con.ClearHUD();
+  automap.Close();
 
 #ifdef PARANOIA
   Z_CheckHeap(-2);
 #endif
 
-  // clear cmd building stuff
-  memset(gamekeydown, 0, sizeof(gamekeydown));
-
-  // clear hud messages remains (usually from game startup)
-  CON_ClearHUD();
   return true;
 }
+
 
 
 // start intermission
@@ -734,7 +567,7 @@ void GameInfo::EndIntermission()
       if (nextcluster == NULL)
 	{
 	  // disconnect from network
-	  CL_Reset();
+	  //CL_Reset();
 	  state = GS_FINALE;
 	  F_StartFinale(currentcluster, false, true); // final piece of story is exittext
 	  return;
@@ -763,8 +596,8 @@ void GameInfo::EndIntermission()
     {
       // no finales in deathmatch
       // FIXME end game here, show final frags
-      if (nextcluster == NULL)
-	CL_Reset();
+      //if (nextcluster == NULL)
+	//CL_Reset();
     }
 
   action = ga_nextlevel;
@@ -776,7 +609,7 @@ void GameInfo::EndFinale()
     action = ga_nextlevel;
 }
 
-// was G_DoWorldDone
+
 // load next level
 
 void GameInfo::NextLevel()

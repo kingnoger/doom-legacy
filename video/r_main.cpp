@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2004/07/05 16:53:31  smite-meister
+// Netcode replaced
+//
 // Revision 1.15  2004/05/01 23:29:19  hurdler
 // add dummy new renderer
 //
@@ -145,6 +148,9 @@
 
 #include "doomdef.h"
 #include "doomdata.h"
+#include "command.h"
+#include "cvars.h"
+
 #include "g_game.h"
 #include "g_player.h"
 #include "g_actor.h"
@@ -156,7 +162,7 @@
 #include "r_render.h"
 #include "hu_stuff.h"
 #include "am_map.h"
-#include "d_clisrv.h"
+
 #include "r_local.h"
 #include "r_state.h"
 #include "i_video.h"
@@ -174,6 +180,8 @@ Rend R;
 #ifdef HWRENDER
 HWRend HWR;
 #endif
+
+angle_t G_ClipAimingPitch(angle_t pitch);
 
 
 //profile stuff ---------------------------------------------------------
@@ -221,8 +229,6 @@ int                     loopcount;
 fixed_t                 viewcos;
 fixed_t                 viewsin;
 
-//PlayerPawn *viewplayer;
-
 // 0 = high, 1 = low
 int                     detailshift;
 
@@ -243,16 +249,6 @@ int                     viewangletox[FINEANGLES/2];
 angle_t                 xtoviewangle[MAXVIDWIDTH+1];
 
 
-// UNUSED.
-// The finetangentgent[angle+FINEANGLES/4] table
-// holds the fixed_t tangent values for view angles,
-// ranging from MININT to 0 to MAXINT.
-// fixed_t              finetangent[FINEANGLES/2];
-
-// fixed_t              finesine[5*FINEANGLES/4];
-fixed_t*                finecosine = &finesine[FINEANGLES/4];
-
-
 lighttable_t*           scalelight[LIGHTLEVELS][MAXLIGHTSCALE];
 lighttable_t*           scalelightfixed[MAXLIGHTSCALE];
 lighttable_t*           zlight[LIGHTLEVELS][MAXLIGHTZ];
@@ -264,12 +260,10 @@ extracolormap_t         extra_colormaps[MAXCOLORMAPS];
 // bumped light from gun blasts
 int                     extralight;
 
-consvar_t cv_chasecam       = {"chasecam","0",0,CV_OnOff};
-consvar_t cv_allowmlook     = {"allowmlook","1",CV_NETVAR,CV_YesNo};
 
-consvar_t cv_psprites       = {"playersprites","1",0,CV_OnOff};
-consvar_t cv_perspcorr      = {"perspectivecrunch","0",0,CV_OnOff};
-consvar_t cv_tiltview       = {"tiltview","0",0,CV_OnOff};
+//===========================================
+//  client consvars
+//===========================================
 
 CV_PossibleValue_t viewsize_cons_t[]={{3,"MIN"},{12,"MAX"},{0,NULL}};
 CV_PossibleValue_t detaillevel_cons_t[]={{0,"High"},{1,"Low"},{0,NULL}};
@@ -277,34 +271,23 @@ CV_PossibleValue_t detaillevel_cons_t[]={{0,"High"},{1,"Low"},{0,NULL}};
 consvar_t cv_viewsize       = {"viewsize","10",CV_SAVE|CV_CALL,viewsize_cons_t,R_SetViewSize};      //3-12
 consvar_t cv_detaillevel    = {"detaillevel","0",CV_SAVE|CV_CALL,detaillevel_cons_t,R_SetViewSize}; // UNUSED
 consvar_t cv_scalestatusbar = {"scalestatusbar","0",CV_SAVE|CV_CALL,CV_YesNo,R_SetViewSize};
+// consvar_t cv_fov = {"fov","2048", CV_CALL | CV_NOINIT, NULL, R_ExecuteSetViewSize};
 
-// added 16-6-98:splitscreen
+void Translucency_OnChange();
+void BloodTime_OnChange();
+CV_PossibleValue_t bloodtime_cons_t[]={{1,"MIN"},{3600,"MAX"},{0,NULL}};
 
-void SplitScreen_OnChange();
+consvar_t cv_translucency  = {"translucency","1",CV_CALL|CV_SAVE,CV_OnOff, Translucency_OnChange};
+// how much tics to last for the last (third) frame of blood (S_BLOODx)
+consvar_t cv_splats    = {"splats","1",CV_SAVE,CV_OnOff};
+consvar_t cv_bloodtime = {"bloodtime","20",CV_CALL|CV_SAVE,bloodtime_cons_t,BloodTime_OnChange};
+consvar_t cv_psprites  = {"playersprites","1",0,CV_OnOff};
 
-consvar_t cv_splitscreen = {"splitscreen","0",CV_CALL ,CV_OnOff,SplitScreen_OnChange};
+CV_PossibleValue_t viewheight_cons_t[]={{16,"MIN"},{56,"MAX"},{0,NULL}};
+consvar_t cv_viewheight = {"viewheight", "41",0,viewheight_cons_t,NULL};
 
-void SplitScreen_OnChange()
-{
-  // recompute screen size
-  R_ExecuteSetViewSize();
 
-  // change the menu
-  M_SwitchSplitscreen();
-
-  if (!demoplayback)
-    {
-      if(cv_splitscreen.value)
-    CL_AddSplitscreenPlayer();
-      else
-    CL_RemoveSplitscreenPlayer();
-
-      if (server && !game.netgame)
-    game.multiplayer = cv_splitscreen.value;
-    }
-  else
-    displayplayer2 = game.FindPlayer(1);
-}
+//===========================================
 
 //
 // R_PointOnSide
@@ -678,7 +661,7 @@ void R_InitTables (void)
 
 }
 
-// consvar_t cv_fov = {"fov","2048", CV_CALL | CV_NOINIT, NULL, R_ExecuteSetViewSize};
+
 
 //
 // R_InitTextureMapping
@@ -1202,8 +1185,8 @@ void Rend::R_SetupFrame(PlayerInfo *player)
   else
 #endif
     if (camera.chase)
-      // use outside cam view
       {
+	// use outside cam view
         viewactor = &camera;
 
         viewz = viewactor->z + (viewactor->height>>1);
@@ -1212,28 +1195,14 @@ void Rend::R_SetupFrame(PlayerInfo *player)
         viewangle = viewactor->angle;
       }
     else
-    // use the player's eyes view
       {
-        viewz = player->viewz;
+	// use the player's eyes view
         viewactor = player->pawn;
+        viewz = player->viewz;
 
         fixedcolormap_setup = player->pawn->fixedcolormap;
-        aimingangle = player->pawn->aiming;
+        aimingangle = viewactor->aiming;
         viewangle = viewactor->angle+viewangleoffset;
-
-        if(!demoplayback && player->playerstate!=PST_DEAD && !drone)
-      {
-            if (player == consoleplayer)
-          {
-                viewangle = localangle; // WARNING : camera use this
-                aimingangle=localaiming;
-          }
-            else if (player == consoleplayer2)
-          {
-        viewangle = localangle2;
-        aimingangle=localaiming2;
-          }
-      }
       }
 
 #ifdef PARANOIA
@@ -1269,12 +1238,12 @@ void Rend::R_SetupFrame(PlayerInfo *player)
     {
       // clip it in the case we are looking a hardware 90° full aiming
       // (lmps, nework and use F12...)
-      G_ClipAimingPitch((int *)&aimingangle);
+      aimingangle = G_ClipAimingPitch(aimingangle);
 
       if(!cv_splitscreen.value)
-    dy = AIMINGTODY(aimingangle)* viewheight/BASEVIDHEIGHT ;
+	dy = AIMINGTODY(aimingangle)* viewheight/BASEVIDHEIGHT ;
       else
-    dy = AIMINGTODY(aimingangle)* viewheight*2/BASEVIDHEIGHT ;
+	dy = AIMINGTODY(aimingangle)* viewheight*2/BASEVIDHEIGHT ;
 
       yslope = &yslopetab[(3*viewheight/2) - dy];
     }
@@ -1357,7 +1326,7 @@ void Rend::R_RenderPlayerView(PlayerInfo *player)
 #endif
 
     // check for new console commands.
-    NetUpdate ();
+    //NetUpdate ();
 
     // The head node is the last node output.
 
@@ -1385,13 +1354,13 @@ void Rend::R_RenderPlayerView(PlayerInfo *player)
 #endif
 
     // Check for new console commands.
-    NetUpdate ();
+    //NetUpdate ();
 
     //R_DrawPortals ();
     R_DrawPlanes ();
 
     // Check for new console commands.
-    NetUpdate ();
+    //NetUpdate ();
 
 #ifdef FLOORSPLATS
     //faB(21jan): testing
@@ -1412,49 +1381,6 @@ void Rend::R_RenderPlayerView(PlayerInfo *player)
       R_DrawPlayerSprites ();
 
     // Check for new console commands.
-    NetUpdate ();
+    //NetUpdate ();
     player->pawn->flags &= ~MF_NOSECTOR; // don't show self (uninit) clientprediction code
-}
-
-
-// =========================================================================
-//                    ENGINE COMMANDS & VARS
-// =========================================================================
-
-void R_RegisterEngineStuff()
-{
-  // Enough for ded. server
-  if (dedicated)
-    return;
-
-  CV_RegisterVar (&cv_chasecam);
-  CV_RegisterVar (&cv_allowmlook);
-  CV_RegisterVar (&cv_cam_dist );
-  CV_RegisterVar (&cv_cam_height);
-  CV_RegisterVar (&cv_cam_speed );
-  CV_RegisterVar (&cv_viewsize);
-  CV_RegisterVar (&cv_psprites);
-  CV_RegisterVar (&cv_splitscreen);
-  // CV_RegisterVar (&cv_fov);
-
-  // Default viewheight is changeable,
-  // initialized to standard viewheight
-  CV_RegisterVar (&cv_viewheight);
-  CV_RegisterVar (&cv_scalestatusbar);
-
-  // unfinished, not for release
-#ifdef PERSPCORRECT
-  CV_RegisterVar (&cv_perspcorr);
-#endif
-
-  // unfinished, not for release
-#ifdef TILTVIEW
-  CV_RegisterVar (&cv_tiltview);
-#endif
-
-  //added by Hurdler
-#ifdef HWRENDER // not win32 only 19990829 by Kin
-  if (rendermode != render_soft)
-    HWR_AddCommands ();
-#endif
 }

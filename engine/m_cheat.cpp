@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2004/07/05 16:53:25  smite-meister
+// Netcode replaced
+//
 // Revision 1.18  2004/03/28 15:16:13  smite-meister
 // Texture cache.
 //
@@ -81,6 +84,8 @@
 #include "dstrings.h"
 #include "dehacked.h"
 
+#include "command.h"
+
 #include "m_cheat.h"
 #include "g_game.h"
 #include "g_map.h"
@@ -105,7 +110,7 @@ void cht_Init()
 
 void Command_CheatNoClip_f()
 {
-  if (game.multiplayer || !consoleplayer)
+  if (!game.server || !consoleplayer)
     return;
 
   PlayerPawn *p = consoleplayer->pawn;
@@ -121,7 +126,7 @@ void Command_CheatNoClip_f()
 
 void Command_CheatGod_f()
 {
-  if (game.multiplayer || !consoleplayer)
+  if (!game.server || !consoleplayer)
     return;
 
   PlayerPawn *p = consoleplayer->pawn;
@@ -142,7 +147,7 @@ void Command_CheatGimme_f()
   char*     s;
   int       i,j;
 
-  if (game.multiplayer || !consoleplayer)
+  if (!game.server || !consoleplayer)
     return;
 
   if (COM_Argc()<2)

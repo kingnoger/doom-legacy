@@ -40,9 +40,7 @@ typedef void* lumpcache_t;
 //  ABC for all VFiles
 //======================================
 
-/// Abstract base class for all persistent data sources
-/// like WADs, PAKs etc.
-
+/// \brief Abstract base class for all persistent data sources like WADs, PAKs etc.
 class VFile
 {
   friend class FileCache;

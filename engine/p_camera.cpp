@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.8  2004/07/05 16:53:25  smite-meister
+// Netcode replaced
+//
 // Revision 1.7  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
@@ -41,16 +44,18 @@
 #include "p_camera.h"
 #include "g_map.h"
 #include "command.h"
+#include "cvars.h"
 #include "tables.h"
 #include "r_main.h"
 
 Camera camera;
 
+consvar_t cv_chasecam   = {"chasecam","0",0,CV_OnOff};
 consvar_t cv_cam_dist   = {"cam_dist"  ,"128"  ,CV_FLOAT,NULL};
 consvar_t cv_cam_height = {"cam_height", "20"   ,CV_FLOAT,NULL};
 consvar_t cv_cam_speed  = {"cam_speed" ,  "0.25",CV_FLOAT,NULL};
 
-short G_ClipAimingPitch(int *aiming);
+
 
 Camera::Camera()
 {
@@ -138,7 +143,6 @@ void Camera::Think()
   ang = R_PointToAngle2(0, z, dist, target->z + (target->height>>1)
 			+ finesine[(target->aiming>>ANGLETOFINESHIFT) & FINEMASK] * 64);
 
-  G_ClipAimingPitch((int *)&ang);
   dist = aiming - ang;
   aiming -= (dist >> 3);
 

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2004/07/05 16:53:25  smite-meister
+// Netcode replaced
+//
 // Revision 1.16  2004/03/28 15:16:13  smite-meister
 // Texture cache.
 //
@@ -66,16 +69,16 @@
 // Revision 1.1.1.1  2002/11/16 14:18:02  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//      Weapon sprite animation, weapon objects.
-//      Action functions for weapons.
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Weapon sprite animation, weapon objects.
+/// Action functions for weapons.
+
 #include "doomdef.h"
+#include "command.h"
+#include "cvars.h"
 #include "d_event.h"
-#include "d_netcmd.h"
 
 #include "g_game.h"
 #include "g_map.h"
@@ -104,40 +107,37 @@
 // S_PLAY_ATK1 => info->missilestate
 // S_PLAY_ATK2 => info->missilestate+1
 
-// was VerifFavoritWeapon
-// added by Boris : preferred weapons order
+
+// changes to the best owned weapon for which the player has ammo
 void PlayerPawn::UseFavoriteWeapon()
 {
-  int i;
-
-  if (pendingweapon != wp_nochange)
-    return;
+  if (pendingweapon != wp_none)
+    return; // already changing weapon
 
   int priority = -1;
 
-  for (i=0; i<NUMWEAPONS; i++)
-    {
-      // skip super shotgun for non-Doom2
-      if (game.mode != gm_doom2 && i == wp_supershotgun)
-	continue;
-      // skip plasma-bfg in sharware
-      if (game.mode == gm_doom1s && (i==wp_plasma || i==wp_bfg))
-	continue;
+  for (int i=0; i<NUMWEAPONS; i++)
+    if (weaponowned[i] && player->weaponpref[i] > priority)
+      {
+	int c;
+	if (weaponinfo[i].ammo == am_manaboth) // damn!
+	  c = min(ammo[am_mana1], ammo[am_mana2]);
+	else
+	  c = ammo[weaponinfo[i].ammo];
 
-      if (weaponowned[i] && priority < player->favoriteweapon[i] &&
-	  ammo[weaponinfo[i].ammo] >= weaponinfo[i].ammopershoot )
-        {
-	  pendingweapon = weapontype_t(i);
-	  priority = player->favoriteweapon[i];
-        }
-    }
+	if (c >= weaponinfo[i].ammopershoot)
+	  {
+	    pendingweapon = weapontype_t(i);
+	    priority = player->weaponpref[i];
+	  }
+      }
 
   if (pendingweapon == readyweapon)
-    pendingweapon = wp_nochange;
+    pendingweapon = wp_none;
 }
 
+
 //
-// was P_SetupPsprites
 // Called at start of level for each player.
 //
 void PlayerPawn::SetupPsprites()
@@ -198,7 +198,6 @@ void PlayerPawn::SetPsprite(int position, weaponstatenum_t stnum, bool call)
 
 
 //
-// was P_MovePsprites
 // Called every tic by player thinking routine.
 //
 void PlayerPawn::MovePsprites()
@@ -265,9 +264,9 @@ void PlayerPawn::MovePsprites()
 //
 void PlayerPawn::BringUpWeapon()
 {
-  if (pendingweapon == wp_nochange)
+  if (pendingweapon == wp_none)
     {
-      if (readyweapon == wp_nochange)
+      if (readyweapon == wp_none)
 	return; // well, no weapon held
       else
 	pendingweapon = readyweapon;
@@ -298,18 +297,17 @@ void PlayerPawn::BringUpWeapon()
       break;
     }
     
-  pendingweapon = wp_nochange;
+  pendingweapon = wp_none;
   attackphase = 0;
   psprites[ps_weapon].sy = WEAPONBOTTOM;
 
   SetPsprite(ps_weapon, newstate);
 }
 
-//
-// was P_CheckAmmo
+
+
 // Returns true if there is enough ammo to shoot.
 // If not, selects the next weapon to use.
-//
 bool PlayerPawn::CheckAmmo()
 {
   ammotype_t at = weaponinfo[readyweapon].ammo;
@@ -317,124 +315,17 @@ bool PlayerPawn::CheckAmmo()
   // Minimal amount for one shot varies.
   int i, count = weaponinfo[readyweapon].ammopershoot;
 
+  if (at == am_manaboth)
+    if (ammo[am_mana1] >= count && ammo[am_mana2] >= count)
+      return true;
+
   // Some do not need ammunition anyway.
   // Return if current ammunition sufficient.
   if (at == am_noammo || ammo[at] >= count)
     return true;
 
-  if (at == am_manaboth)
-    if (ammo[am_mana1] >= count && ammo[am_mana2] >= count)
-      return true;
-
   // Out of ammo, pick a weapon to change to.
-  // Preferences are set here.
-  // added by Boris : preferred weapons order
-  if (!player->originalweaponswitch)
-    UseFavoriteWeapon();
-  else
-    if (game.mode == gm_hexen)
-      for (i = wp_arc_of_death; i >= wp_hexen; i--)
-	{
-	  at = weaponinfo[i].ammo;
-	  count = weaponinfo[i].ammopershoot;
-	  if (weaponowned[i] && ammo[at] >= count)
-	    {
-	      pendingweapon = weapontype_t(i);
-	      break;
-	    }
-	}
-    else if (game.mode == gm_heretic)
-      do
-        {
-	  if(weaponowned[wp_skullrod]
-	     && ammo[am_skullrod] > weaponinfo[wp_skullrod].ammopershoot)
-            {
-	      pendingweapon = wp_skullrod;
-            }
-	  else if(weaponowned[wp_blaster]
-		  && ammo[am_blaster] > weaponinfo[wp_blaster].ammopershoot)
-            {
-	      pendingweapon = wp_blaster;
-            }
-	  else if(weaponowned[wp_crossbow]
-		  && ammo[am_crossbow] > weaponinfo[wp_crossbow].ammopershoot)
-            {
-	      pendingweapon = wp_crossbow;
-            }
-	  else if(weaponowned[wp_mace]
-		  && ammo[am_mace] > weaponinfo[wp_mace].ammopershoot)
-            {
-	      pendingweapon = wp_mace;
-            }
-	  else if(ammo[am_goldwand] > weaponinfo[wp_goldwand].ammopershoot)
-            {
-	      pendingweapon = wp_goldwand;
-            }
-	  else if(weaponowned[wp_gauntlets])
-            {
-	      pendingweapon = wp_gauntlets;
-            }
-	  else if(weaponowned[wp_phoenixrod]
-		  && ammo[am_phoenixrod] > weaponinfo[wp_phoenixrod].ammopershoot)
-            {
-	      pendingweapon = wp_phoenixrod;
-            }
-	  else
-            {
-	      pendingweapon = wp_staff;
-            }
-        } while(pendingweapon == wp_nochange);
-    else
-      do
-        {
-	  if (weaponowned[wp_plasma]
-	      && ammo[am_cell]>=weaponinfo[wp_plasma].ammopershoot
-	      && (game.mode != gm_doom1s) )
-            {
-	      pendingweapon = wp_plasma;
-            }
-	  else if (weaponowned[wp_supershotgun]
-		   && ammo[am_shell]>=weaponinfo[wp_supershotgun].ammopershoot
-		   && (game.mode == gm_doom2) )
-            {
-	      pendingweapon = wp_supershotgun;
-            }
-	  else if (weaponowned[wp_chaingun]
-		   && ammo[am_clip]>=weaponinfo[wp_chaingun].ammopershoot)
-            {
-	      pendingweapon = wp_chaingun;
-            }
-	  else if (weaponowned[wp_shotgun]
-		   && ammo[am_shell]>=weaponinfo[wp_shotgun].ammopershoot)
-            {
-	      pendingweapon = wp_shotgun;
-            }
-	  else if (ammo[am_clip]>=weaponinfo[wp_pistol].ammopershoot)
-            {
-	      pendingweapon = wp_pistol;
-            }
-	  else if (weaponowned[wp_chainsaw])
-            {
-	      pendingweapon = wp_chainsaw;
-            }
-	  else if (weaponowned[wp_missile]
-		   && ammo[am_misl]>=weaponinfo[wp_missile].ammopershoot)
-            {
-	      pendingweapon = wp_missile;
-            }
-	  else if (weaponowned[wp_bfg]
-		   && ammo[am_cell]>=weaponinfo[wp_bfg].ammopershoot
-		   && (game.mode != gm_doom1s) )
-            {
-	      pendingweapon = wp_bfg;
-            }
-	  else
-            {
-	      // If everything fails.
-	      pendingweapon = wp_fist;
-            }
-            
-        } while (pendingweapon == wp_nochange);
+  UseFavoriteWeapon();
 
   // Now set appropriate weapon overlay.
   SetPsprite(ps_weapon, weaponinfo[readyweapon].downstate);
@@ -514,7 +405,7 @@ void A_WeaponReady(PlayerPawn *p, pspdef_t *psp)
 
   // check for change
   //  if player is dead, put the weapon away
-  if (p->pendingweapon != wp_nochange || !p->health)
+  if (p->pendingweapon != wp_none || !p->health)
     {
       // change weapon
       //  (pending weapon should allready be validated)
@@ -524,7 +415,7 @@ void A_WeaponReady(PlayerPawn *p, pspdef_t *psp)
 
   // check for fire
   //  the missile launcher and bfg do not auto fire. why not?
-  if (p->player->cmd.buttons & BT_ATTACK)
+  if (p->player->cmd.buttons & ticcmd_t::BT_ATTACK)
     {
       p->attackdown = true;
       p->FireWeapon();
@@ -570,8 +461,8 @@ void A_ReFire(PlayerPawn *p, pspdef_t *psp)
 
   // check for fire
   //  (if a weaponchange is pending, let it go through instead)
-  if ((p->player->cmd.buttons & BT_ATTACK)
-       && p->pendingweapon == wp_nochange
+  if ((p->player->cmd.buttons & ticcmd_t::BT_ATTACK)
+       && p->pendingweapon == wp_none
        && p->health)
     {
       p->refire++;

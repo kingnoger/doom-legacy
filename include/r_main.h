@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
 // Revision 1.2  2003/03/15 20:07:21  smite-meister
 // Initial Hexen compatibility!
 //
@@ -53,8 +56,6 @@
 #define r_main_h 1
 
 #include "r_defs.h"
-
-class PlayerInfo;
 
 extern  int     viewangleoffset;
 
@@ -138,16 +139,6 @@ void R_AddPointToBox(int x, int y, fixed_t* box);
 //
 // REFRESH - the actual rendering functions.
 //
-
-extern consvar_t cv_psprites;
-extern consvar_t cv_perspcorr;
-extern consvar_t cv_tiltview;
-extern consvar_t cv_splitscreen;
-extern consvar_t cv_viewsize;
-extern consvar_t cv_detaillevel;
-extern consvar_t cv_scalestatusbar;
-
-
 
 
 // Called by startup code.

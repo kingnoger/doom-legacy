@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2004/07/05 16:53:26  smite-meister
+// Netcode replaced
+//
 // Revision 1.14  2004/05/02 21:15:56  hurdler
 // add dummy new renderer (bis)
 //
@@ -66,6 +69,8 @@
 #include <vector>
 
 #include "doomdef.h"
+#include "command.h"
+#include "cvars.h"
 #include "wi_stuff.h"
 #include "d_event.h"
 
@@ -80,7 +85,6 @@
 
 #include "r_state.h" // colormap etc.
 #include "r_data.h"
-#include "d_netcmd.h" // cvars
 
 #include "sounds.h"
 #include "i_video.h"
@@ -928,10 +932,12 @@ void Intermission::DrawDMStats()
   //  name is displayed white, when playback demo, you quicly see who's the
   //  view.
   // TODO: splitscreen... another color?
+  bool demo = (game.state == GameInfo::GS_DEMOPLAYBACK);
+
   if (cv_teamplay.value)
-    white = demoplayback ? displayplayer->team : consoleplayer->team;
+    white = demo ? displayplayer->team : consoleplayer->team;
   else
-    white = demoplayback ? displayplayer->number : consoleplayer->number;
+    white = demo ? displayplayer->number : consoleplayer->number;
 
   // count frags for each present player
   WI_drawRanking("Frags", 5, RANKINGY, dm_score[0], nplayers, false, white);

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.30  2004/07/05 16:53:24  smite-meister
+// Netcode replaced
+//
 // Revision 1.29  2004/04/25 16:26:48  smite-meister
 // Doxygen
 //
@@ -114,6 +117,7 @@
 #include "doomdef.h"
 #include "doomdata.h"
 #include "command.h"
+#include "cvars.h"
 
 #include "g_game.h"
 #include "g_map.h"
@@ -140,14 +144,9 @@
 #define VIEWHEIGHT  41
 #define MAXMOVE     (30*FRACUNIT/NEWTICRATERATIO)
 
-consvar_t cv_gravity = {"gravity","1",CV_NETVAR|CV_FLOAT|CV_SHOWMODIF};
-consvar_t cv_splats  = {"splats","1",CV_SAVE,CV_OnOff};
-
-consvar_t cv_respawnmonsters = {"respawnmonsters","0",CV_NETVAR,CV_OnOff};
-consvar_t cv_respawnmonsterstime = {"respawnmonsterstime","12",CV_NETVAR,CV_Unsigned};
-
 
 extern fixed_t FloatBobOffsets[64];
+
 
 
 IMPLEMENT_CLASS(Actor, Thinker);
@@ -338,8 +337,6 @@ void Actor::Remove()
     return; // already marked for removal
 
   eflags |= MFE_REMOVE;
-
-  extern consvar_t cv_itemrespawn;
 
   if ((flags & MF_SPECIAL) && !(flags & MF_DROPPED) &&
       !(flags & MF_NORESPAWN) && cv_itemrespawn.value)
@@ -966,9 +963,7 @@ void Actor::ZMovement()
 
 
 //-------------------------------------------------
-//
-// was P_ThrustMobj
-//
+// Gives the actor a velocity impulse along a given angle.
 
 void Actor::Thrust(angle_t angle, fixed_t move)
 {
@@ -980,7 +975,6 @@ void Actor::Thrust(angle_t angle, fixed_t move)
 
 
 //-------------------------------------------------
-// was P_MobjCheckWater
 // check for water in the sector, set MFE_TOUCHWATER and MFE_UNDERWATER
 // called by Actor::Think()
 void Actor::CheckWater()
@@ -1114,11 +1108,8 @@ int Actor::HitFloor()
 
 
 //---------------------------------------
-// was P_SetMobjState
-// was P_SetMobjStateNF
 // Returns true if the mobj is still present.
-//
-//SoM: 4/7/2000: Boom code...
+
 bool DActor::SetState(statenum_t ns, bool call)
 {
   //remember states seen, to detect cycles:    
@@ -1191,8 +1182,7 @@ bool P_SetMobjStateNF(Actor *mobj, statenum_t state)
 
 
 //-------------------------------------------------
-// was P_NightmareRespawn
-//
+
 void DActor::NightmareRespawn()
 {
   fixed_t  nx, ny, nz;
@@ -1243,8 +1233,6 @@ void DActor::NightmareRespawn()
 
 
 //---------------------------------------------
-// was P_SpawnMissile
-//
 
 DActor *DActor::SpawnMissile(Actor *dest, mobjtype_t type)
 {
@@ -1312,10 +1300,9 @@ DActor *DActor::SpawnMissile(Actor *dest, mobjtype_t type)
 
 
 //---------------------------------------------
-// was P_CheckMissileSpawn
 // Moves the missile forward a bit
 //  and possibly explodes it right there.
-//
+
 bool DActor::CheckMissileSpawn()
 {
   if (game.mode != gm_heretic && game.mode != gm_hexen)
@@ -1342,9 +1329,6 @@ bool DActor::CheckMissileSpawn()
 
 
 //---------------------------------------------
-//
-// was P_ExplodeMissile
-//
 
 void DActor::ExplodeMissile()
 {
@@ -1373,9 +1357,6 @@ void DActor::ExplodeMissile()
 
 
 //----------------------------------------------
-//
-// was P_FloorBounceMissile
-//
 
 void DActor::FloorBounceMissile()
 {

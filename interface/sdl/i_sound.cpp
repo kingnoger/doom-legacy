@@ -16,6 +16,9 @@
 // for more details.
 //
 // $Log$
+// Revision 1.15  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
 // Revision 1.14  2004/03/28 15:16:14  smite-meister
 // Texture cache.
 //
@@ -79,6 +82,11 @@ rcsid[] = "$Id$";
 # include <SDL/SDL_mixer.h>
 #endif
 
+#include "doomdef.h"
+#include "doomtype.h"
+#include "command.h"
+#include "cvars.h"
+
 #include "hardware/hw3sound.h"
 #include "z_zone.h"
 
@@ -90,8 +98,6 @@ rcsid[] = "$Id$";
 #include "m_misc.h"
 #include "w_wad.h"
 
-#include "doomdef.h"
-#include "doomtype.h"
 #include "s_sound.h"
 #include "sounds.h"
 
@@ -99,7 +105,6 @@ rcsid[] = "$Id$";
 
 #include "qmus2mid.h"
 
-extern tic_t gametic;
 
 #define MIDBUFFERSIZE   128*1024
 #define SAMPLERATE      11025   // Hz

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/07/05 16:53:25  smite-meister
+// Netcode replaced
+//
 // Revision 1.11  2004/01/06 14:37:45  smite-meister
 // six bugfixes, cleanup
 //
@@ -133,7 +136,7 @@ void Map::PlaceWeapons()
 
 void PlayerPawn::ActivateMorphWeapon()
 {
-  pendingweapon = wp_nochange;
+  pendingweapon = wp_none;
   psprites[ps_weapon].sy = WEAPONTOP;
 
   if (game.mode == gm_hexen)
@@ -150,7 +153,7 @@ void PlayerPawn::ActivateMorphWeapon()
 
 void PlayerPawn::PostMorphWeapon(weapontype_t weapon)
 {
-  pendingweapon = wp_nochange;
+  pendingweapon = wp_none;
   readyweapon = weapon;
   psprites[ps_weapon].sy = WEAPONBOTTOM;
   SetPsprite(ps_weapon, weaponinfo[weapon].upstate);
@@ -165,7 +168,7 @@ void PlayerPawn::PostMorphWeapon(weapontype_t weapon)
 
 void A_BeakReady(PlayerPawn *p, pspdef_t *psp)
 {
-  if (p->player->cmd.buttons & BT_ATTACK)
+  if (p->player->cmd.buttons & ticcmd_t::BT_ATTACK)
     {
       // Chicken beak attack
       p->attackdown = true;

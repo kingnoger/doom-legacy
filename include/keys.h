@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/07/05 16:53:29  smite-meister
+// Netcode replaced
+//
 // Revision 1.2  2003/12/09 01:02:01  smite-meister
 // Hexen mapchange works, keycodes fixed
 //
@@ -51,11 +54,12 @@ enum key_input_e
   KEY_PAUSE      = 19,
   KEY_ESCAPE     = 27,
   KEY_SPACE      = 32,
-  // numbers
+
   KEY_MINUS      = 45,
+  // numbers
   KEY_EQUALS     = 61,
   KEY_CONSOLE    = 96,
-  // letters
+  // small letters
   KEY_DELETE     = 127, // ascii ends here
 
   // the rest are in arbitrary, almost-scancode-like order

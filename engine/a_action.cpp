@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/07/05 16:53:24  smite-meister
+// Netcode replaced
+//
 // Revision 1.13  2004/04/25 16:26:48  smite-meister
 // Doxygen
 //
@@ -836,7 +839,7 @@ void A_Summon(DActor *actor)
 	  return;
 	}
 
-      *((unsigned int *)mo->args) = gametic;
+      *((unsigned int *)mo->args) = game.tic;
       Actor *master = actor->owner;
       if (master->flags & MF_CORPSE)
 	mo->owner = NULL; // No master
