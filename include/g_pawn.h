@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.14  2003/05/30 13:34:48  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.13  2003/05/11 21:23:52  smite-meister
 // Hexen fixes
 //
@@ -64,37 +67,17 @@
 
 using namespace std;
 
-//  max Z move up or down without jumping
-//  above this, a heigth difference is considered as a 'dropoff'
-#define MAXSTEPMOVE (24*FRACUNIT)
-
-class LArchive;
-class PlayerInfo;
-class Map;
-struct line_t;
-struct sector_t;
 
 //
 // Player internal flags, for cheats and debug. Must fit into an int.
 //
-typedef enum
+enum cheat_t
 {
-  // No clipping, walk through barriers.
-  CF_NOCLIP           = 1,
-  // No damage, no health loss.
-  CF_GODMODE          = 2,
-  // Not really a cheat, just a debug aid.
-  CF_NOMOMENTUM       = 4,
-
-  //added:28-02-98: new cheats
-  CF_FLYAROUND        = 8,
-
-  //added:28-02-98: NOT REALLY A CHEAT
-  // Allow player avatar to walk in-air
-  //  if trying to get over a small wall (hack for playability)
-  //CF_JUMPOVER         = 16
-
-} cheat_t;
+  CF_NOCLIP      = 1,  // No clipping, walk through barriers.
+  CF_GODMODE     = 2,  // No damage, no health loss.
+  CF_NOMOMENTUM  = 4,  // Not really a cheat, just a debug aid.
+  CF_FLYAROUND   = 8,  // Fly using jump key
+};
 
 
 // TODO testing, this is a hack...
@@ -143,7 +126,7 @@ public:
   // Overlay view sprites (gun, etc).
   pspdef_t psprites[NUMPSPRITES];
 
-  PlayerInfo *player; // controlling player
+  class PlayerInfo *player; // controlling player
 
   byte pclass; // player class, a Hexen kludge
 
@@ -166,7 +149,7 @@ public:
   bool jumpdown;   // dont jump like a monkey!
   int refire;    // Refired shots are less accurate.
 
-  int  cards; // bit field see declration of card_t
+  int  keycards; // bit field, see the definition of keycard_t
   bool backpack;
 
   weapontype_t pendingweapon;   // Is wp_nochange if not changing.
@@ -204,7 +187,7 @@ public:
   PlayerPawn(fixed_t x, fixed_t y, fixed_t z, const pawn_info_t *t);
   virtual ~PlayerPawn();
 
-  virtual int  Serialize(LArchive & a);
+  virtual int  Serialize(class LArchive & a);
 
   virtual void XYMovement();
   virtual void ZMovement();
@@ -232,8 +215,8 @@ public:
 
   DActor *SPMAngle(mobjtype_t type, angle_t ang);
 
-  bool CanUnlockGenDoor(line_t *line);
-  void ProcessSpecialSector(sector_t *sector, bool instantdamage);
+  bool CanUnlockGenDoor(struct line_t *line);
+  void ProcessSpecialSector(struct sector_t *sector, bool instantdamage);
   void PlayerOnSpecial3DFloor();
   void PlayerInSpecialSector();
 
@@ -249,7 +232,7 @@ public:
   bool GiveAmmo(ammotype_t at, int count);
   bool GiveWeapon(weapontype_t wt, bool dropped);
   bool GiveArmor(armortype_t type, float factor, int points);
-  bool GiveKey(key_t k);
+  bool GiveKey(keycard_t k);
   bool GiveArtifact(artitype_t arti, DActor *from);
   void TouchSpecialThing(DActor *special);
   virtual bool Touch(Actor *a); // PPawn touches another Actor

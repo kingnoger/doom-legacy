@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2003/05/30 13:34:42  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.11  2003/05/11 21:23:49  smite-meister
 // Hexen fixes
 //
@@ -647,30 +650,21 @@ void GameInfo::Drawer()
   if (displayplayer && displayplayer->pawn)
     {
       R.SetMap(displayplayer->pawn->mp);
-#ifdef CLIENTPREDICTION2
-      displayplayer->pawn->flags2 |= MF2_DONTDRAW;
-#endif
 #ifdef HWRENDER 
       if (rendermode != render_soft)
 	R.HWR_RenderPlayerView(0, displayplayer);
       else //if (rendermode == render_soft)
 #endif
 	R.R_RenderPlayerView(displayplayer);
-#ifdef CLIENTPREDICTION2
-      displayplayer->pawn->flags2 &= ~MF2_DONTDRAW;
-#endif
     }
 
   // added 16-6-98: render the second screen
   if (displayplayer2 && displayplayer2->pawn)
     {
       R.SetMap(displayplayer2->pawn->mp);
-#ifdef CLIENTPREDICTION2
-      displayplayer2->pawn->flags2 |= MF2_DONTDRAW;
-#endif
 #ifdef HWRENDER 
-      if ( rendermode != render_soft)
-	R.HWR_RenderPlayerView (1, displayplayer2);
+      if (rendermode != render_soft)
+	R.HWR_RenderPlayerView(1, displayplayer2);
       else 
 #endif
 	{
@@ -683,9 +677,6 @@ void GameInfo::Drawer()
 	  viewwindowy = 0;
 	  memcpy(ylookup,ylookup1,viewheight*sizeof(ylookup[0]));
 	}
-#ifdef CLIENTPREDICTION2
-      displayplayer2->pawn->flags2 &=~MF2_DONTDRAW;
-#endif
     }
 
   //CONS_Printf("GI::Draw done\n");

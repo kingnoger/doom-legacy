@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.6  2003/05/30 13:34:47  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.5  2003/05/11 21:23:52  smite-meister
 // Hexen fixes
 //
@@ -590,14 +593,14 @@ void SF_PlayerKeys()
     {
       givetake = intvalue(t_argv[2]);
       if (givetake)
-	p->cards |= (1 << keynum);
+	p->keycards |= (1 << keynum);
       else
-	p->cards &= ~(1 << keynum);
+	p->keycards &= ~(1 << keynum);
       t_return.value.i = 0;
       return;
     }
 
-  t_return.value.i = p->cards & (1 << keynum);
+  t_return.value.i = p->keycards & (1 << keynum);
 }
 
 

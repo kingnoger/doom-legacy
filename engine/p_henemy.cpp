@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/05/30 13:34:45  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.5  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -1426,15 +1429,11 @@ void A_PodPain(DActor *actor)
 
 void A_RemovePod(DActor *actor)
 {
-  DActor *mo;
-
-  if(actor->special2)
+  if (actor->owner)
     {
-      mo = (DActor *)actor->special2;
-      if(mo->special1 > 0)
-	{
-	  mo->special1--;
-	}
+      Actor *mo = actor->owner;
+      if (mo->special1 > 0)
+	mo->special1--;
     }
 }
 
@@ -1467,7 +1466,7 @@ void A_MakePod(DActor *actor)
   mo->Thrust(P_Random()<<24, (fixed_t)(4.5*FRACUNIT));
   S_StartSound(mo, sfx_newpod);
   actor->special1++; // Increment generated pod count
-  mo->special2 = (int)actor; // Link the generator to the pod (nice code, Raven;)
+  mo->owner = actor; // Link the pod to the generator
   return;
 }
 

@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.19  2003/05/30 13:34:43  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.18  2003/05/11 21:23:49  smite-meister
 // Hexen fixes
 //
@@ -491,31 +494,13 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
 
   // give all cards in death match mode
   if (cv_deathmatch.value)
-    p->cards = it_allkeys;
+    p->keycards = it_allkeys;
 
   if (pi == consoleplayer)
     {
       // wake up the status bar
       hud.ST_Start(p);
     }
-
-#ifdef CLIENTPREDICTION2
-  if (game.demoversion > 132)
-    {
-      //added 1-6-98 : for movement prediction
-      if(p->spirit)
-	CL_ResetSpiritPosition(p);   // reset spirit possition
-      else
-	p->spirit = P_SpawnMobj (x,y,z, MT_SPIRIT);
-        
-      p->spirit->skin    = p->skin;
-      p->spirit->angle   = p->angle;
-      p->spirit->player  = p->player;
-      p->spirit->health  = p->health;
-      p->spirit->movedir = weapontobutton[p->readyweapon];
-      p->spirit->flags2 |= MF2_DONTDRAW;
-    }
-#endif
 
   // FIXME what does it do?
   SV_SpawnPlayer(pi->number, p->x, p->y, p->angle);

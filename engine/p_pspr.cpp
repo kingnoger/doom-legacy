@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/05/30 13:34:46  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.8  2003/04/04 00:01:56  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -522,17 +525,13 @@ void A_WeaponReady(PlayerPawn *p, pspdef_t *psp)
   else
     p->attackdown = false;
 
-#ifndef CLIENTPREDICTION2    
-  {
-    int         angle;
-    // bob the weapon based on movement speed
-    angle = (128*p->mp->maptic / NEWTICRATERATIO) & FINEMASK;
-    psp->sx = FRACUNIT + FixedMul (p->player->bob, finecosine[angle]);
-    angle &= FINEANGLES/2-1;
-    psp->sy = WEAPONTOP + FixedMul (p->player->bob, finesine[angle]);
-  }
-#endif
+  // bob the weapon based on movement speed
+  int angle = (128*p->mp->maptic / NEWTICRATERATIO) & FINEMASK;
+  psp->sx = FRACUNIT + FixedMul (p->player->bob, finecosine[angle]);
+  angle &= FINEANGLES/2-1;
+  psp->sy = WEAPONTOP + FixedMul (p->player->bob, finesine[angle]);
 }
+
 
 // client prediction stuff
 void A_TicWeapon(PlayerPawn *p, pspdef_t *psp)
@@ -542,11 +541,7 @@ void A_TicWeapon(PlayerPawn *p, pspdef_t *psp)
     {
       int         ang;
         
-#ifdef CLIENTPREDICTION2
-      extern  tic_t           localgametic;
-#else
 #define localgametic  p->mp->maptic
-#endif
 
       // bob the weapon based on movement speed
       ang = (128*localgametic/NEWTICRATERATIO)&FINEMASK;

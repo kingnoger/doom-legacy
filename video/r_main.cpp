@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/05/30 13:34:49  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.10  2003/05/11 21:23:53  smite-meister
 // Hexen fixes
 //
@@ -1100,17 +1103,8 @@ void Rend::R_SetupFrame(PlayerInfo *player)
     // use the player's eyes view
       {
         viewz = player->viewz;
-#ifdef CLIENTPREDICTION2
-        if( demoplayback || !player->spirit)
-	  {
-            viewactor = player->pawn;
-            CONS_Printf("\2No spirit\n");
-	  }
-        else
-	  viewactor = player->spirit;
-#else  
         viewactor = player->pawn;
-#endif
+
         fixedcolormap_setup = player->pawn->fixedcolormap;
         aimingangle = player->pawn->aiming;
         viewangle = viewactor->angle+viewangleoffset;

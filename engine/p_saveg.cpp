@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/05/30 13:34:46  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.5  2003/04/24 20:30:16  hurdler
 // Remove lots of compiling warnings
 //
@@ -73,6 +76,242 @@ byte *save_p;
 #else
 # define PADSAVEP()
 #endif
+
+
+// takes a snapshot of the entire game state and stores it in the archive
+int GameInfo::Serialize(LArchive &a)
+{
+  // make sure that gameaction is ga_nothing
+  /*
+  int i, j, n;
+
+  a << demoversion;
+  a << mode;
+  a << mission;
+  a << state << wipestate;
+  a << skill;
+
+
+  // and so on
+  a << (n = teams.size());
+  for (i = 0; i<n; i++)
+    {
+      a << teams[i]->name;
+      a << teams[i]->color;
+      a << teams[i]->score;
+    }
+  a << Players.size();
+
+  a << (n = maps.size());
+  for (i = 0; i<n; i++)
+    maps[i]->Serialize(a);
+
+  */
+  return 0;
+}
+
+
+
+int Map::Serialize(LArchive &a)
+{
+  // was P_ArchiveWorld
+
+  /*
+  enum sectorsave_e
+  {
+    // consistency markers
+    MARKER = 0xFFFF,
+
+    // diff
+    SD_FLOORHT  = 0x01,
+    SD_CEILHT   = 0x02,
+    SD_FLOORPIC = 0x04,
+    SD_CEILPIC  = 0x08,
+    SD_LIGHT    = 0x10,
+    SD_SPECIAL  = 0x20,
+    SD_TAG      = 0x40,
+    SD_DIFF2    = 0x80,
+
+    // diff2
+    SD_FXOFFS    = 0x01,
+    SD_FYOFFS    = 0x02,
+    SD_CXOFFS    = 0x04,
+    SD_CYOFFS    = 0x08,
+    SD_STAIRLOCK = 0x10,
+    SD_PREVSEC   = 0x20,
+    SD_NEXTSEC   = 0x40,
+  };
+
+  // normal variables
+
+
+  // changes in static geometry (compared to wad)
+  // "reload" the map just to see difference
+  int i;
+  int statsec = 0, statline = 0;
+
+  byte diff, diff2;
+
+  mapsector_t *ms = (mapsector_t *)fc.CacheLumpNum(lumpnum + ML_SECTORS, PU_CACHE);
+  sector_t    *ss = sectors;
+
+  for (i = 0; i<numsectors ; i++, ss++, ms++)
+    {
+      diff = diff2 = 0;
+      if (ss->floorheight != SHORT(ms->floorheight)<<FRACBITS)
+	diff |= SD_FLOORHT;
+      if (ss->ceilingheight != SHORT(ms->ceilingheight)<<FRACBITS)
+	diff |= SD_CEILHT;
+
+      // P_AddLevelFlat should not add but just return the number
+      if (ss->floorpic != P_AddLevelFlat(ms->floorpic,levelflats))
+	diff |= SD_FLOORPIC;
+      if (ss->ceilingpic != P_AddLevelFlat(ms->ceilingpic,levelflats))
+	diff |= SD_CEILPIC;
+
+      if (ss->lightlevel != SHORT(ms->lightlevel)) diff |= SD_LIGHT;
+      if (ss->special != SHORT(ms->special))       diff |= SD_SPECIAL;
+      if (ss->tag != SHORT(ms->tag))               diff |= SD_TAG;
+
+      if (ss->floor_xoffs != 0)   diff2 |= SD_FXOFFS;
+      if (ss->floor_yoffs != 0)   diff2 |= SD_FYOFFS;
+      if (ss->ceiling_xoffs != 0) diff2 |= SD_CXOFFS;
+      if (ss->ceiling_yoffs != 0) diff2 |= SD_CYOFFS;
+      if (ss->stairlock < 0)      diff2 |= SD_STAIRLOCK;
+      if (ss->nextsec != -1)      diff2 |= SD_NEXTSEC;
+      if (ss->prevsec != -1)      diff2 |= SD_PREVSEC;
+
+      if (diff2)
+	diff |= SD_DIFF2;
+
+      if (diff)
+        {
+	  statsec++;
+
+	  a << i;
+	  a << diff;
+
+	  if (diff & SD_DIFF2)
+	    a << diff2;
+	  if (diff & SD_FLOORHT) a << ss->floorheight;
+	  if (diff & SD_CEILHT)  a << ss->ceilingheight;
+
+	  if (diff & SD_FLOORPIC)
+	    a.write(levelflats[ss->floorpic].name, 8);
+	  if (diff & SD_CEILPIC)
+	    a.write(levelflats[ss->ceilingpic].name, 8);
+
+	  if (diff & SD_LIGHT)     WRITESHORT(put,(short)ss->lightlevel);
+	  if (diff & SD_SPECIAL)     WRITESHORT(put,(short)ss->special);
+
+	  if (diff2 & SD_FXOFFS)    WRITEFIXED(put,ss->floor_xoffs);
+	  if (diff2 & SD_FYOFFS)    WRITEFIXED(put,ss->floor_yoffs);
+	  if (diff2 & SD_CXOFFS)    WRITEFIXED(put,ss->ceiling_xoffs);
+	  if (diff2 & SD_CYOFFS)    WRITEFIXED(put,ss->ceiling_yoffs);
+	  if (diff2 & SD_STAIRLOCK)   WRITELONG (put,ss->stairlock);
+	  if (diff2 & SD_NEXTSEC)    WRITELONG (put,ss->nextsec);
+	  if (diff2 & SD_PREVSEC)    WRITELONG (put,ss->prevsec);
+        }
+    }
+  a << MARKER;
+
+  line_t*       li;
+  side_t*       si;
+
+
+  mapsidedef_t  *msd;
+  maplinedef_t  *mld;
+
+
+  mld = (maplinedef_t *)W_CacheLumpNum (lastloadedmaplumpnum+ML_LINEDEFS,PU_CACHE);
+  msd = (mapsidedef_t *)W_CacheLumpNum (lastloadedmaplumpnum+ML_SIDEDEFS,PU_CACHE);
+  li = lines;
+  // do lines
+  for (i=0 ; i<numlines ; i++,mld++,li++)
+    {
+      diff = diff2 = 0;
+
+      // we don't care of map in deathmatch !
+      if(((cv_deathmatch.value==0) && (li->flags != SHORT(mld->flags))) ||
+	 ((cv_deathmatch.value!=0) && ((li->flags & ~ML_MAPPED) != SHORT(mld->flags))))
+	diff |= LD_FLAG;
+      if(li->special != SHORT(mld->special))
+	diff |= LD_SPECIAL;
+
+      if (li->sidenum[0] != -1)
+        {
+	  si = &sides[li->sidenum[0]];
+	  if (si->textureoffset != SHORT(msd[li->sidenum[0]].textureoffset)<<FRACBITS)
+	    diff |= LD_S1TEXOFF;
+	  //SoM: 4/1/2000: Some textures are colormaps. Don't worry about invalid textures.
+	  if(R_CheckTextureNumForName(msd[li->sidenum[0]].toptexture) != -1)
+	    if (si->toptexture != R_TextureNumForName(msd[li->sidenum[0]].toptexture) )
+	      diff |= LD_S1TOPTEX;
+	  if(R_CheckTextureNumForName(msd[li->sidenum[0]].bottomtexture) != -1)
+	    if (si->bottomtexture != R_TextureNumForName(msd[li->sidenum[0]].bottomtexture) )
+	      diff |= LD_S1BOTTEX;
+	  if(R_CheckTextureNumForName(msd[li->sidenum[0]].midtexture) != -1)
+	    if (si->midtexture != R_TextureNumForName(msd[li->sidenum[0]].midtexture) )
+	      diff |= LD_S1MIDTEX;
+        }
+      if (li->sidenum[1] != -1)
+        {
+	  si = &sides[li->sidenum[1]];
+	  if (si->textureoffset != SHORT(msd[li->sidenum[1]].textureoffset)<<FRACBITS)
+	    diff2 |= LD_S2TEXOFF;
+	  if(R_CheckTextureNumForName(msd[li->sidenum[1]].toptexture) != -1)
+	    if (si->toptexture != R_TextureNumForName(msd[li->sidenum[1]].toptexture) )
+	      diff2 |= LD_S2TOPTEX;
+	  if(R_CheckTextureNumForName(msd[li->sidenum[1]].bottomtexture) != -1)
+	    if (si->bottomtexture != R_TextureNumForName(msd[li->sidenum[1]].bottomtexture) )
+	      diff2 |= LD_S2BOTTEX;
+	  if(R_CheckTextureNumForName(msd[li->sidenum[1]].midtexture) != -1)
+	    if (si->midtexture != R_TextureNumForName(msd[li->sidenum[1]].midtexture) )
+	      diff2 |= LD_S2MIDTEX;
+	  if(diff2)
+	    diff |= LD_DIFF2;
+
+        }
+
+      if(diff)
+        {
+	  statline++;
+	  WRITESHORT(put,(short)i);
+	  *put++ =diff;
+	  if (diff & LD_DIFF2    )     *put++ = diff2;
+	  if (diff & LD_FLAG     )     WRITESHORT(put,li->flags);
+	  if (diff & LD_SPECIAL  )     WRITESHORT(put,li->special);
+
+	  si = &sides[li->sidenum[0]];
+	  if (diff & LD_S1TEXOFF )     WRITEFIXED(put,si->textureoffset);
+	  if (diff & LD_S1TOPTEX )     WRITESHORT(put,si->toptexture);
+	  if (diff & LD_S1BOTTEX )     WRITESHORT(put,si->bottomtexture);
+	  if (diff & LD_S1MIDTEX )     WRITESHORT(put,si->midtexture);
+
+	  si = &sides[li->sidenum[1]];
+	  if (diff2 & LD_S2TEXOFF )    WRITEFIXED(put,si->textureoffset);
+	  if (diff2 & LD_S2TOPTEX )    WRITESHORT(put,si->toptexture);
+	  if (diff2 & LD_S2BOTTEX )    WRITESHORT(put,si->bottomtexture);
+	  if (diff2 & LD_S2MIDTEX )    WRITESHORT(put,si->midtexture);
+        }
+    }
+  WRITEUSHORT(put,0xffff);
+
+  //CONS_Printf("sector saved %d/%d, line saved %d/%d\n",statsec,numsectors,statline,numlines);
+  save_p = put;
+
+
+
+  // polyobjs
+  // thinkers
+  // scripts
+  // respawnqueue
+  // TIDmap
+  */
+  return 0;
+}
+
+
 
 
 typedef enum {
@@ -316,23 +555,6 @@ void P_UnArchivePlayers()
   */
 }
 
-#define SD_FLOORHT     0x01
-#define SD_CEILHT      0x02
-#define SD_FLOORPIC    0x04
-#define SD_CEILPIC     0x08
-#define SD_LIGHT       0x10
-#define SD_SPECIAL     0x20
-#define SD_DIFF2       0x40
-
-//SoM: 4/10/2000: Fix sector related savegame bugs
-// diff2 flags
-#define SD_FXOFFS     0x01
-#define SD_FYOFFS     0x02
-#define SD_CXOFFS     0x04
-#define SD_CYOFFS     0x08
-#define SD_STAIRLOCK  0x10
-#define SD_PREVSEC    0x20
-#define SD_NEXTSEC    0x40
 
 #define LD_FLAG     0x01
 #define LD_SPECIAL  0x02
@@ -350,169 +572,6 @@ void P_UnArchivePlayers()
 #define LD_S2MIDTEX 0x08
 
 
-//
-// P_ArchiveWorld
-//
-void P_ArchiveWorld (void)
-{
-  /*
-  int                 i;
-  int           statsec=0,statline=0;
-  line_t*       li;
-  side_t*       si;
-  byte*         put;
-
-  // reload the map just to see difference
-  mapsector_t   *ms;
-  mapsidedef_t  *msd;
-  maplinedef_t  *mld;
-  sector_t      *ss;
-  byte           diff;
-  byte           diff2;
-
-  ms = (mapsector_t *)W_CacheLumpNum (lastloadedmaplumpnum+ML_SECTORS,PU_CACHE);
-  ss = sectors;
-  put = save_p;
-
-  for (i=0 ; i<numsectors ; i++, ss++, ms++)
-    {
-      diff=0;diff2=0;
-      if (ss->floorheight != SHORT(ms->floorheight)<<FRACBITS)
-	diff |= SD_FLOORHT;
-      if (ss->ceilingheight != SHORT(ms->ceilingheight)<<FRACBITS)
-	diff |= SD_CEILHT;
-      //
-      //  flats
-      //
-      // P_AddLevelFlat should not add but just return the number
-      if (ss->floorpic != P_AddLevelFlat (ms->floorpic,levelflats))
-	diff |= SD_FLOORPIC;
-      if (ss->ceilingpic != P_AddLevelFlat (ms->ceilingpic,levelflats))
-	diff |= SD_CEILPIC;
-
-      if (ss->lightlevel != SHORT(ms->lightlevel))     diff |= SD_LIGHT;
-      if (ss->special != SHORT(ms->special))           diff |= SD_SPECIAL;
-
-      if (ss->floor_xoffs != 0)                        diff2 |= SD_FXOFFS;
-      if (ss->floor_yoffs != 0)                        diff2 |= SD_FYOFFS;
-      if (ss->ceiling_xoffs != 0)                      diff2 |= SD_CXOFFS;
-      if (ss->ceiling_yoffs != 0)                      diff2 |= SD_CYOFFS;
-      if (ss->stairlock < 0)                           diff2 |= SD_STAIRLOCK;
-      if (ss->nextsec != -1)                           diff2 |= SD_NEXTSEC;
-      if (ss->prevsec != -1)                           diff2 |= SD_PREVSEC;
-      if (diff2)                                       diff |= SD_DIFF2;
-
-      if(diff)
-        {
-	  statsec++;
-
-	  WRITESHORT(put,i);
-	  *put++ = diff;
-	  if( diff & SD_DIFF2   )     *put++ = diff2;
-	  if( diff & SD_FLOORHT )     WRITEFIXED(put,ss->floorheight);
-	  if( diff & SD_CEILHT  )     WRITEFIXED(put,ss->ceilingheight);
-	  if( diff & SD_FLOORPIC)
-            {
-	      memcpy(put,levelflats[ss->floorpic].name,8);
-	      put+=8;
-            }
-	  if( diff & SD_CEILPIC )
-            {
-	      memcpy(put,levelflats[ss->ceilingpic].name,8);
-	      put+=8;
-            }
-	  if( diff & SD_LIGHT   )     WRITESHORT(put,(short)ss->lightlevel);
-	  if( diff & SD_SPECIAL )     WRITESHORT(put,(short)ss->special);
-
-	  if( diff2 & SD_FXOFFS  )    WRITEFIXED(put,ss->floor_xoffs);
-	  if( diff2 & SD_FYOFFS  )    WRITEFIXED(put,ss->floor_yoffs);
-	  if( diff2 & SD_CXOFFS  )    WRITEFIXED(put,ss->ceiling_xoffs);
-	  if( diff2 & SD_CYOFFS  )    WRITEFIXED(put,ss->ceiling_yoffs);
-	  if( diff2 & SD_STAIRLOCK)   WRITELONG (put,ss->stairlock);
-	  if( diff2 & SD_NEXTSEC )    WRITELONG (put,ss->nextsec);
-	  if( diff2 & SD_PREVSEC )    WRITELONG (put,ss->prevsec);
-        }
-    }
-  *((unsigned short *)put)++=0xffff;
-
-  mld = (maplinedef_t *)W_CacheLumpNum (lastloadedmaplumpnum+ML_LINEDEFS,PU_CACHE);
-  msd = (mapsidedef_t *)W_CacheLumpNum (lastloadedmaplumpnum+ML_SIDEDEFS,PU_CACHE);
-  li = lines;
-  // do lines
-  for (i=0 ; i<numlines ; i++,mld++,li++)
-    {
-      diff=0;diff2=0;
-
-      // we don't care of map in deathmatch !
-      if(((cv_deathmatch.value==0) && (li->flags != SHORT(mld->flags))) ||
-	 ((cv_deathmatch.value!=0) && ((li->flags & ~ML_MAPPED) != SHORT(mld->flags))))
-	diff |= LD_FLAG;
-      if(li->special != SHORT(mld->special))
-	diff |= LD_SPECIAL;
-
-      if (li->sidenum[0] != -1)
-        {
-	  si = &sides[li->sidenum[0]];
-	  if (si->textureoffset != SHORT(msd[li->sidenum[0]].textureoffset)<<FRACBITS)
-	    diff |= LD_S1TEXOFF;
-	  //SoM: 4/1/2000: Some textures are colormaps. Don't worry about invalid textures.
-	  if(R_CheckTextureNumForName(msd[li->sidenum[0]].toptexture) != -1)
-	    if (si->toptexture != R_TextureNumForName(msd[li->sidenum[0]].toptexture) )
-	      diff |= LD_S1TOPTEX;
-	  if(R_CheckTextureNumForName(msd[li->sidenum[0]].bottomtexture) != -1)
-	    if (si->bottomtexture != R_TextureNumForName(msd[li->sidenum[0]].bottomtexture) )
-	      diff |= LD_S1BOTTEX;
-	  if(R_CheckTextureNumForName(msd[li->sidenum[0]].midtexture) != -1)
-	    if (si->midtexture != R_TextureNumForName(msd[li->sidenum[0]].midtexture) )
-	      diff |= LD_S1MIDTEX;
-        }
-      if (li->sidenum[1] != -1)
-        {
-	  si = &sides[li->sidenum[1]];
-	  if (si->textureoffset != SHORT(msd[li->sidenum[1]].textureoffset)<<FRACBITS)
-	    diff2 |= LD_S2TEXOFF;
-	  if(R_CheckTextureNumForName(msd[li->sidenum[1]].toptexture) != -1)
-	    if (si->toptexture != R_TextureNumForName(msd[li->sidenum[1]].toptexture) )
-	      diff2 |= LD_S2TOPTEX;
-	  if(R_CheckTextureNumForName(msd[li->sidenum[1]].bottomtexture) != -1)
-	    if (si->bottomtexture != R_TextureNumForName(msd[li->sidenum[1]].bottomtexture) )
-	      diff2 |= LD_S2BOTTEX;
-	  if(R_CheckTextureNumForName(msd[li->sidenum[1]].midtexture) != -1)
-	    if (si->midtexture != R_TextureNumForName(msd[li->sidenum[1]].midtexture) )
-	      diff2 |= LD_S2MIDTEX;
-	  if(diff2)
-	    diff |= LD_DIFF2;
-
-        }
-
-      if(diff)
-        {
-	  statline++;
-	  WRITESHORT(put,(short)i);
-	  *put++ =diff;
-	  if( diff & LD_DIFF2    )     *put++ = diff2;
-	  if( diff & LD_FLAG     )     WRITESHORT(put,li->flags);
-	  if( diff & LD_SPECIAL  )     WRITESHORT(put,li->special);
-
-	  si = &sides[li->sidenum[0]];
-	  if( diff & LD_S1TEXOFF )     WRITEFIXED(put,si->textureoffset);
-	  if( diff & LD_S1TOPTEX )     WRITESHORT(put,si->toptexture);
-	  if( diff & LD_S1BOTTEX )     WRITESHORT(put,si->bottomtexture);
-	  if( diff & LD_S1MIDTEX )     WRITESHORT(put,si->midtexture);
-
-	  si = &sides[li->sidenum[1]];
-	  if( diff2 & LD_S2TEXOFF )    WRITEFIXED(put,si->textureoffset);
-	  if( diff2 & LD_S2TOPTEX )    WRITESHORT(put,si->toptexture);
-	  if( diff2 & LD_S2BOTTEX )    WRITESHORT(put,si->bottomtexture);
-	  if( diff2 & LD_S2MIDTEX )    WRITESHORT(put,si->midtexture);
-        }
-    }
-  WRITEUSHORT(put,0xffff);
-
-  //CONS_Printf("sector saved %d/%d, line saved %d/%d\n",statsec,numsectors,statline,numlines);
-  save_p = put;
-  */
-}
 
 
 
@@ -1888,7 +1947,7 @@ void P_SaveGame()
   CV_SaveNetVars((char**)&save_p);
   P_ArchiveMisc();
   P_ArchivePlayers ();
-  P_ArchiveWorld ();
+  //P_ArchiveWorld ();
   //P_ArchiveThinkers ();
   P_ArchiveSpecials ();
   P_ArchiveScripts ();

@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.16  2003/05/30 13:34:43  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.15  2003/05/11 21:23:49  smite-meister
 // Hexen fixes
 //
@@ -145,7 +148,7 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, const pawn_info_t *t)
   for (i=0; i<NUMPOWERS; i++)
     powers[i] = 0;
 
-  cards = 0;
+  keycards = 0;
   backpack = false;
 
   weaponinfo = wpnlev1info;
@@ -257,10 +260,8 @@ void PlayerPawn::Think()
     Move();
 
   //added:22-02-98: bob view only if looking by the marine's eyes
-#ifndef CLIENTPREDICTION2
   if (!camera.chase)
     CalcHeight(z <= floorz);
-#endif
 
   // check special sectors : damage & secrets
   PlayerInSpecialSector();
@@ -443,43 +444,10 @@ void PlayerPawn::Think()
   else
     fixedcolormap = 0;
 
-  // this is where the "actor part" of the thinking begins
  actor_think:
-
-#ifdef CLIENTPREDICTION2
-  compiler_error_sentinel; // is clientprediction2 used at all
-  // move player mobj (not the spirit) to spirit position (sent by ticcmd)
-  if ((player->cmd.angleturn & (TICCMD_XY|TICCMD_RECEIVED) == TICCMD_XY|TICCMD_RECEIVED) && 
-      (player->playerstate == PST_LIVE))
-    {
-      int oldx = x, oldy = y;
-
-      if (oldx != player->cmd.x || oldy != player->cmd.y)
-        {
-	  eflags |= MF_NOZCHECKING;
-	  // cross special lines and pick up things
-	  if (!TryMove(player->cmd.x, player->cmd.y, true))
-            {
-	      // P_TryMove fail mean cannot change mobj position to requestied position
-	      // the mobj is blocked by something
-	      if (player == consoleplayer)
-                {
-		  // reset spirit possition
-		  CL_ResetSpiritPosition(mobj);
-
-		  //if(devparm)
-		  CONS_Printf("\2MissPrediction\n");
-                }
-            }
-	  eflags &= ~MF_NOZCHECKING;
-        }
-      XYFriction(oldx, oldy, false);
-    }
-  else
-#endif
-
-    // we call Actor::Think(), because a playerpawn is an actor too
-    Actor::Think();
+  // this is where the "actor part" of the thinking begins
+  // we call Actor::Think(), because a playerpawn is an actor too
+  Actor::Think();
 }
 
 
@@ -625,11 +593,7 @@ void PlayerPawn::XYMovement()
 void PlayerPawn::ZMovement()
 {
   // check for smooth step up
-#ifdef CLIENTPREDICTION2
-  if (player && z < floorz && type != MT_PLAYER)
-#else
-  if (player && (z < floorz)) //  && type != MT_SPIRIT)
-#endif
+  if (player && (z < floorz))
     {
       player->viewheight -= floorz - z;
 
@@ -714,7 +678,7 @@ void PlayerPawn::FinishLevel()
   memset(powers, 0, sizeof (powers));
 
   weaponinfo = wpnlev1info;    // cancel power weapons
-  cards = 0;
+  keycards = 0;
   flags &= ~MF_SHADOW;         // cancel invisibility
   extralight = 0;                  // cancel gun flashes
   fixedcolormap = 0;               // cancel ir gogles
@@ -1011,11 +975,6 @@ void PlayerPawn::CalcHeight(bool onground)
 
   PlayerInfo *pl = player;
 
-#ifdef CLIENTPREDICTION2
-  if( p->spirit )
-    mo = p->spirit;
-#endif
-
   if ((flags2 & MF2_FLY) && !onground)
     pl->bob = FRACUNIT/2;
   else
@@ -1160,19 +1119,19 @@ DActor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
 bool PlayerPawn::CanUnlockGenDoor(line_t *line)
 {
   // does this line special distinguish between skulls and keys?
-  int skulliscard = (line->special & LockedNKeys)>>LockedNKeysShift;
+  bool skulliscard = (line->special & LockedNKeys)>>LockedNKeysShift;
   bool ok = true;
 
   // determine for each case of lock type if player's keys are adequate
   switch ((line->special & LockedKey)>>LockedKeyShift)
     {
     case AnyKey_:
-      if (!(cards & it_redcard) &&
-	  !(cards & it_redskull) &&
-	  !(cards & it_bluecard) &&
-	  !(cards & it_blueskull) &&
-	  !(cards & it_yellowcard) &&
-	  !(cards & it_yellowskull))
+      if (!(keycards & it_redcard) &&
+	  !(keycards & it_redskull) &&
+	  !(keycards & it_bluecard) &&
+	  !(keycards & it_blueskull) &&
+	  !(keycards & it_yellowcard) &&
+	  !(keycards & it_yellowskull))
 	{
 	  player->message = PD_ANY;
 	  ok = false;
@@ -1181,8 +1140,8 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
     case RCard:
       if
 	(
-	 !(cards & it_redcard) &&
-	 (!skulliscard || !(cards & it_redskull))
+	 !(keycards & it_redcard) &&
+	 (!skulliscard || !(keycards & it_redskull))
 	 )
 	{
 	  player->message = skulliscard? PD_REDK : PD_REDC;
@@ -1192,8 +1151,8 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
     case BCard:
       if
 	(
-	 !(cards & it_bluecard) &&
-	 (!skulliscard || !(cards & it_blueskull))
+	 !(keycards & it_bluecard) &&
+	 (!skulliscard || !(keycards & it_blueskull))
 	 )
 	{
 	  player->message = skulliscard? PD_BLUEK : PD_BLUEC;
@@ -1203,8 +1162,8 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
     case YCard:
       if
 	(
-	 !(cards & it_yellowcard) &&
-	 (!skulliscard || !(cards & it_yellowskull))
+	 !(keycards & it_yellowcard) &&
+	 (!skulliscard || !(keycards & it_yellowskull))
 	 )
 	{
 	  player->message = skulliscard? PD_YELLOWK : PD_YELLOWC;
@@ -1214,8 +1173,8 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
     case RSkull:
       if
 	(
-	 !(cards & it_redskull) &&
-	 (!skulliscard || !(cards & it_redcard))
+	 !(keycards & it_redskull) &&
+	 (!skulliscard || !(keycards & it_redcard))
 	 )
 	{
 	  player->message = skulliscard? PD_REDK : PD_REDS;
@@ -1225,8 +1184,8 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
     case BSkull:
       if
 	(
-	 !(cards & it_blueskull) &&
-	 (!skulliscard || !(cards & it_bluecard))
+	 !(keycards & it_blueskull) &&
+	 (!skulliscard || !(keycards & it_bluecard))
 	 )
 	{
 	  player->message = skulliscard? PD_BLUEK : PD_BLUES;
@@ -1236,8 +1195,8 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
     case YSkull:
       if
 	(
-	 !(cards & it_yellowskull) &&
-	 (!skulliscard || !(cards & it_yellowcard))
+	 !(keycards & it_yellowskull) &&
+	 (!skulliscard || !(keycards & it_yellowcard))
 	 )
 	{
 	  player->message = skulliscard? PD_YELLOWK : PD_YELLOWS;
@@ -1249,12 +1208,12 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
 	(
 	 !skulliscard &&
 	 (
-          !(cards & it_redcard) ||
-          !(cards & it_redskull) ||
-          !(cards & it_bluecard) ||
-          !(cards & it_blueskull) ||
-          !(cards & it_yellowcard) ||
-          !(cards & it_yellowskull)
+          !(keycards & it_redcard) ||
+          !(keycards & it_redskull) ||
+          !(keycards & it_bluecard) ||
+          !(keycards & it_blueskull) ||
+          !(keycards & it_yellowcard) ||
+          !(keycards & it_yellowskull)
 	  )
 	 )
 	{
@@ -1265,12 +1224,12 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
 	(
 	 skulliscard &&
 	 (
-          (!(cards & it_redcard) &&
-	   !(cards & it_redskull)) ||
-          (!(cards & it_bluecard) &&
-	   !(cards & it_blueskull)) ||
-          (!(cards & it_yellowcard) &&
-	   !(cards & it_yellowskull))
+          (!(keycards & it_redcard) &&
+	   !(keycards & it_redskull)) ||
+          (!(keycards & it_bluecard) &&
+	   !(keycards & it_blueskull)) ||
+          (!(keycards & it_yellowcard) &&
+	   !(keycards & it_yellowskull))
 	  )
 	 )
 	{

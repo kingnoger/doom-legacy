@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/05/30 13:34:47  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.7  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -260,6 +263,13 @@ button_t::button_t(line_t *l, button_e w, int tex, int time)
   timer = time;
   soundorg = &line->frontsector->soundorg;
 }
+
+
+int button_t::Serialize(LArchive & a)
+{
+  return 0;
+}
+
 
 // timed switches
 void button_t::Think()

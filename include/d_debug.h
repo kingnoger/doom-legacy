@@ -73,13 +73,7 @@
 //  according to user inputs. Partly load from
 //  WAD, partly set at startup time.
 
-#ifdef CLIENTPREDICTION2
-extern  tic_t           localgametic;
-#else
 #define localgametic  cmap.leveltic
-#endif
-
-
 
 
 #ifdef __MACOS__

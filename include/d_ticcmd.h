@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/05/30 13:34:48  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.2  2003/05/11 21:23:52  smite-meister
 // Hexen fixes
 //
@@ -98,16 +101,12 @@ enum buttoncode_t
 #define BT_FLYDOWN      4
 struct ticcmd_t
 {
-#ifdef CLIENTPREDICTION2
-    fixed_t      x;
-    fixed_t      y;
-#endif
-    char         forwardmove;    // *2048 for move
-    char         sidemove;       // *2048 for move
-    short        angleturn;      // <<16 for angle delta
+  char         forwardmove;    // *2048 for move
+  char         sidemove;       // *2048 for move
+  short        angleturn;      // <<16 for angle delta
                                  // SAVED AS A BYTE into demos
-    signed short aiming;    //added:16-02-98:mouse aiming, see G_BuildTicCmd
-    byte         buttons;
+  signed short aiming;    //added:16-02-98:mouse aiming, see G_BuildTicCmd
+  byte         buttons;
 };
 
 

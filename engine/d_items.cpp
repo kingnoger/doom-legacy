@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/05/30 13:34:41  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.6  2003/04/04 00:01:52  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -84,7 +87,8 @@ int maxammo2[NUMAMMO] =
 int clipammo[NUMAMMO] =
 {
   10, 4, 20, 1,       // Doom
-  5, 2, 6, 10, 1, 10  // Heretic // used in deathmatch 1 & 3 mul by 5 (P_GiveWeapon)
+  5, 2, 6, 10, 1, 10,  // Heretic // used in deathmatch 1 & 3 mul by 5 (P_GiveWeapon)
+  15, 15 // Hexen
 };
 
 

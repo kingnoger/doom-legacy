@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/05/30 13:34:44  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.10  2003/04/04 00:01:56  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -281,7 +284,7 @@ void Command_CheatGimme_f()
       }
     else if (!strncmp(s,"keys",4))
       {
-	p->cards = it_allkeys;
+	p->keycards = it_allkeys;
 
 	CONS_Printf("got keys\n");
       }
@@ -916,7 +919,7 @@ static void CheatHealthFunc(PlayerPawn *p, const byte *arg)
 
 static void CheatKeysFunc(PlayerPawn *p, const byte *arg)
 {
-  p->cards |= it_allkeys;
+  p->keycards |= it_allkeys;
   p->player->SetMessage(TXT_CHEATKEYS, false);
 }
 
@@ -993,24 +996,25 @@ static void CheatArtifact3Func(PlayerPawn *p, const byte *arg)
 
 static void CheatWarpFunc(PlayerPawn *p, const byte *arg)
 {
-  int episode;
   int mapnum;
   char *msg;
 
   // "idclev" or "engage" change-level cheat
   char name[9];
 
-  if (game.mode == gm_doom2)
+  switch (game.mode)
     {
-      episode = 0;
+    case gm_doom2:
+    case gm_hexen:
       mapnum = (arg[0] - '0')*10 + arg[1] - '0';
       if (mapnum < 1 || mapnum > 99)
 	return;
       sprintf(name, "MAP%2d", mapnum);
-    }
-  else // doom1, heretic
-    {
-      episode = arg[0] - '0';
+      break;
+
+    default:
+      // doom1, heretic
+      int episode = arg[0] - '0';
       mapnum = arg[1] - '0';
       if (episode < 1 || episode > 9 || mapnum < 1 || mapnum > 9)
 	return;
@@ -1079,7 +1083,7 @@ static void CheatIDKFAFunc(PlayerPawn *p, const byte *arg)
       for (i=0;i<am_heretic;i++)
 	p->ammo[i] = p->maxammo[i];
 
-      p->cards = it_allkeys;
+      p->keycards = it_allkeys;
 
       p->player->SetMessage(STSTR_KFAADDED, false);
     }

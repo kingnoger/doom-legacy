@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2003/05/30 13:34:46  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.11  2003/05/11 21:23:51  smite-meister
 // Hexen fixes
 //
@@ -1049,10 +1052,10 @@ static bool P_CheckKeys(Actor *mo, int lock)
   if (lock > NUMKEYS)
     return false;
 
-  if (!(p->cards & (1 << (lock-1))))
+  if (!(p->keycards & (1 << (lock-1))))
     {
       if (lock >= it_bluecard) // skulls and cards are equivalent
-	if (p->cards & (1 << (lock+2)))
+	if (p->keycards & (1 << (lock+2)))
 	  return true;
       // FIXME complain properly
       /*
@@ -3205,6 +3208,11 @@ void Map::SpawnSpecials()
   SoM: 3/8/2000: General scrolling functions.
 */
 
+int scroll_t::Serialize(LArchive & a)
+{
+  return 0;
+}
+
 //
 // This function, with the help of r_plane.c and r_bsp.c, supports generalized
 // scrolling floors and walls, with optional mobj-carrying properties, e.g.
@@ -3456,6 +3464,10 @@ friction_t::friction_t(float fri, float mf, int aff)
   affectee = aff;
 }
 
+int friction_t::Serialize(LArchive & a)
+{
+  return 0;
+}
 
 // was T_Friction
 //Function to apply friction to all the things in a sector.
@@ -3626,7 +3638,10 @@ bool PIT_PushThing(Actor* thing)
   return true;
 }
 
-
+int pusher_t::Serialize(LArchive & a)
+{
+  return 0;
+}
 
 // was T_Pusher 
 // looks for all objects that are inside the radius of

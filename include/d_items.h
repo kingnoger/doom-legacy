@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/05/30 13:34:48  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.9  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -94,7 +97,7 @@
 //
 // Key cards.
 //
-typedef enum
+enum keycard_t
 {
   // Hexen
   it_key_1 = 0x0001,
@@ -119,7 +122,7 @@ typedef enum
 
   NUMKEYS = 17,
   it_allkeys = 0x1ffff,
-} key_t;
+};
 
 
 enum armortype_t
@@ -133,7 +136,7 @@ enum armortype_t
 };
 
 
-typedef enum
+enum artitype_t
 {
   arti_none,
   arti_invulnerability,
@@ -179,7 +182,7 @@ typedef enum
   arti_puzzgear4,
 
   NUMARTIFACTS
-} artitype_t;
+};
 
 // playerpawn inventory
 struct inventory_t
@@ -194,8 +197,8 @@ struct inventory_t
 #define NUMINVENTORYSLOTS  14
 #define MAXARTECONT        16 
 
-// Power up artifacts.
-typedef enum
+// Power ups
+enum powertype_t
 {
   pw_invulnerability,
   pw_strength,
@@ -215,13 +218,13 @@ typedef enum
   pw_minotaur,
 
   NUMPOWERS
-} powertype_t;
+};
 
 //
 // Power up durations,
 //  how many seconds till expiration
 //
-typedef enum
+enum powerduration_t
 {
   INVULNTICS  = (30*TICRATE),
   INVISTICS   = (60*TICRATE),
@@ -231,13 +234,13 @@ typedef enum
   FLIGHTTICS  = (60*TICRATE),
   MAULATORTICS = (25*TICRATE),
   SPEEDTICS   = (45*TICRATE)
-} powerduration_t;
+};
 
 
 // The defined weapons,
 //  including a marker indicating
 //  user has not changed weapon.
-typedef enum
+enum weapontype_t
 {
   wp_doom = 0,
   wp_fist = wp_doom,
@@ -280,22 +283,20 @@ typedef enum
   NUMWEAPONS,
   wp_nochange = NUMWEAPONS, // No pending weapon change.
   wp_barrel    // barrel explosion
-} weapontype_t;
+};
 
 
 // Ammunition types defined.
-typedef enum
+enum ammotype_t
 {
   am_noammo = -1, // Unlimited
-  am_doom = 0,
-  am_clip = am_doom, // Pistol / chaingun ammo.
+  am_doom = 0, am_clip = am_doom, // Pistol / chaingun ammo.
   am_shell,   // Shotgun / double barreled shotgun.
   am_cell,    // Plasma rifle, BFG.
   am_misl,    // Missile launcher.
 
   // heretic stuff
-  am_heretic,
-  am_goldwand = am_heretic, // = am_clip,
+  am_heretic, am_goldwand = am_heretic,
   am_crossbow,
   am_blaster,
   am_skullrod,
@@ -303,13 +304,12 @@ typedef enum
   am_mace,
 
   // Hexen
-  am_hexen,
-  am_mana1 = am_hexen,
+  am_hexen, am_mana1 = am_hexen,
   am_mana2,
 
   NUMAMMO,
   am_manaboth  // both mana types
-} ammotype_t;
+};
 
 
 // "volatile" weapon info (tome of power etc...): sprite frames, ammunition use.
@@ -335,7 +335,6 @@ struct weapondata_t
 
 extern weapondata_t weapondata[NUMWEAPONS+1];
 
-//extern weaponinfo_t doomweaponinfo[NUMWEAPONS];
 extern weaponinfo_t wpnlev1info[NUMWEAPONS];
 extern weaponinfo_t wpnlev2info[NUMWEAPONS];
 

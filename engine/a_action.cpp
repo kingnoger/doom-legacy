@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/05/30 13:34:41  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.3  2003/05/05 00:24:48  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -798,13 +801,10 @@ void A_ESound(DActor *mo)
 
 void A_Summon(DActor *actor)
 {
-  DActor *mo;
-  PlayerPawn *master;
-
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_XMINOTAUR);
+  DActor *mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_XMINOTAUR);
   if (mo)
     {
-      if(mo->TestLocation() == false || !actor->special1)
+      if (mo->TestLocation() == false || !actor->owner)
 	{ // Didn't fit - change back to artifact
 	  mo->SetState(S_NULL);
 	  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_SUMMONMAULATOR);
@@ -812,17 +812,15 @@ void A_Summon(DActor *actor)
 	  return;
 	}
 
-      //memcpy((void *)mo->args, &gametic, sizeof(gametic));
       *((unsigned int *)mo->args) = gametic;
-      master = (PlayerPawn *)actor->special1;
-      if (master->flags&MF_CORPSE)
-	{	// Master dead
-	  mo->special1 = 0;		// No master
-	}
+      Actor *master = actor->owner;
+      if (master->flags & MF_CORPSE)
+	mo->owner = NULL; // No master
       else
 	{
-	  mo->special1 = actor->special1;
-	  master->GivePower(pw_minotaur);
+	  mo->owner = master;
+	  if (master->Type() == Thinker::tt_ppawn)
+	    ((PlayerPawn *)master)->GivePower(pw_minotaur);
 	}
 
       // Make smoke puff
@@ -1239,7 +1237,7 @@ void P_SpawnDirt(DActor *actor, fixed_t radius)
 // Thrust floor stuff
 //
 // Thrust Spike Variables
-//		special1		pointer to dirt clump mobj
+//		target		pointer to dirt clump mobj
 //		special2		speed of raise
 //		args[0]		0 = lowered,  1 = raised
 //		args[1]		0 = normal,   1 = bloody
@@ -1252,19 +1250,17 @@ void A_ThrustInitUp(DActor *actor)
   actor->floorclip = 0;
   actor->flags = MF_SOLID;
   actor->flags2 = MF2_NOTELEPORT|MF2_FOOTCLIP;
-  actor->special1 = 0L;
+  actor->target = NULL;
 }
 
 void A_ThrustInitDn(DActor *actor)
 {
-  Actor *mo;
   actor->special2 = 5;		// Raise speed
   actor->args[0] = 0;		// Mark as down
   actor->floorclip = actor->info->height;
   actor->flags = 0;
   actor->flags2 = MF2_NOTELEPORT|MF2_FOOTCLIP|MF2_DONTDRAW;
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_DIRTCLUMP);
-  actor->special1 = (int)mo;
+  actor->target = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_DIRTCLUMP);
 }
 
 
@@ -1280,10 +1276,10 @@ void A_ThrustRaise(DActor *actor)
     }
 
   // Lose the dirt clump
-  if ((actor->floorclip < actor->height) && actor->special1)
+  if ((actor->floorclip < actor->height) && actor->target)
     {
-      ((DActor *)actor->special1)->Remove();
-      actor->special1 = 0;
+      actor->target->Remove();
+      actor->target = NULL;
     }
 
   // Spawn some dirt

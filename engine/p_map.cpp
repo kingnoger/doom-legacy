@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2003/05/30 13:34:45  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.12  2003/05/11 21:23:51  smite-meister
 // Hexen fixes
 //
@@ -314,12 +317,6 @@ static bool PIT_CheckThing(Actor *thing)
   if (!(thing->flags & (MF_SOLID|MF_SPECIAL|MF_SHOOTABLE)))
     return true;
 
-#ifdef CLIENTPREDICTION2
-  // mobj and spirit of a same player cannot colide
-  if (thing->player && (thing->player->spirit == tmthing || thing->player->mo == tmthing))
-    return true;
-#endif
-
   fixed_t blockdist = thing->radius + tmthing->radius;
 
   if (abs(thing->x - tmx) >= blockdist || abs(thing->y - tmy) >= blockdist)
@@ -489,6 +486,10 @@ void Actor::CheckMissileImpact()
 //
 bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 {
+  //  max Z move up or down without jumping
+  //  above this, a heigth difference is considered as a 'dropoff'
+  const fixed_t MAXSTEPMOVE = 24 * FRACUNIT;
+
   fixed_t oldx, oldy;
   int     side;
   int     oldside;
@@ -500,62 +501,60 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
       CheckMissileImpact();
       return false;       // solid wall or thing
     }
-#ifdef CLIENTPREDICTION2
-  if (!(flags & MF_NOCLIP) && !(eflags & MF_NOZCHECKING))
-#else
-    if (!(flags & MF_NOCLIPLINE))
-#endif
-      {
-	fixed_t maxstep = MAXSTEPMOVE;
-	if (tmceilingz - tmfloorz < height)
-	  {
-	    CheckMissileImpact();
-	    return false; // doesn't fit in z direction
-	  }
 
-	floatok = true;
-
-	if (!(eflags & MFE_TELEPORT)
-	    && (tmceilingz < z + height) && !(flags2 & MF2_FLY))
-	  {
-	    CheckMissileImpact();
-	    return false; // must lower itself to fit
-	  }
-	if (flags2 & MF2_FLY)
-	  {
-	    if (z + height > tmceilingz)
-	      {
-		pz = -8*FRACUNIT;
-		return false;
-	      }
-	    else if (z < tmfloorz && tmfloorz-tmdropoffz > 24*FRACUNIT)
-	      {
-		pz = 8*FRACUNIT;
-		return false;
-	      }
-	  }
-
-        // jump out of water
-        if ((eflags & (MFE_UNDERWATER|MFE_TOUCHWATER)) == (MFE_UNDERWATER|MFE_TOUCHWATER))
-	  maxstep = 37*FRACUNIT;
-
-        if (!(eflags & MFE_TELEPORT) 
-	    // The Minotaur floor fire (MT_MNTRFX2) can step up any amount
-	    // FIXME && type != MT_MNTRFX2
-	    && (tmfloorz - z > maxstep))
-	  {
-            CheckMissileImpact();
-            return false;       // too big a step up
-	  }
-
-        if ((flags & MF_MISSILE) && tmfloorz > z)
+  if (!(flags & MF_NOCLIPLINE))
+    {
+      fixed_t maxstep = MAXSTEPMOVE;
+      if (tmceilingz - tmfloorz < height)
+	{
 	  CheckMissileImpact();
+	  return false; // doesn't fit in z direction
+	}
 
-        if (!boomsupport || !allowdropoff)
-          if (!(flags & (MF_DROPOFF|MF_FLOAT)) && !tmfloorthing
-	      && tmfloorz - tmdropoffz > MAXSTEPMOVE)
-	    return false;       // don't stand over a dropoff
-      }
+      floatok = true;
+
+      if (!(eflags & MFE_TELEPORT)
+	  && (tmceilingz < z + height) && !(flags2 & MF2_FLY))
+	{
+	  CheckMissileImpact();
+	  return false; // must lower itself to fit
+	}
+
+      if (flags2 & MF2_FLY)
+	{
+	  if (z + height > tmceilingz)
+	    {
+	      pz = -8*FRACUNIT;
+	      return false;
+	    }
+	  else if (z < tmfloorz && tmfloorz-tmdropoffz > 24*FRACUNIT)
+	    {
+	      pz = 8*FRACUNIT;
+	      return false;
+	    }
+	}
+
+      // jump out of water
+      if ((eflags & (MFE_UNDERWATER|MFE_TOUCHWATER)) == (MFE_UNDERWATER|MFE_TOUCHWATER))
+	maxstep = 37*FRACUNIT;
+
+      if (!(eflags & MFE_TELEPORT) 
+	  // The Minotaur floor fire (MT_MNTRFX2) can step up any amount
+	  // FIXME && type != MT_MNTRFX2
+	  && (tmfloorz - z > maxstep))
+	{
+	  CheckMissileImpact();
+	  return false;       // too big a step up
+	}
+
+      if ((flags & MF_MISSILE) && tmfloorz > z)
+	CheckMissileImpact();
+
+      if (!boomsupport || !allowdropoff)
+	if (!(flags & (MF_DROPOFF|MF_FLOAT)) && !tmfloorthing
+	    && tmfloorz - tmdropoffz > MAXSTEPMOVE)
+	  return false;       // don't stand over a dropoff
+    }
 
   // the move is ok, so link the thing into its new position
   UnsetPosition();

@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.2  2003/05/30 13:34:48  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.1  2003/05/11 21:27:26  smite-meister
 // Team system
 //

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/05/30 13:34:49  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.5  2003/04/04 00:01:57  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -86,10 +89,6 @@
 #include <vector>
 
 
-class Map;
-class LArchive;
-
-
 // Dynamic map elements, stored in a doubly linked list.
 // Base class for most game objects.
 class Thinker
@@ -99,7 +98,6 @@ private:
   typedef std::map<Thinker *, int> IDmap_t;
   typedef std::vector<Thinker *> IDvec_t;
   typedef std::map<Thinker *, int>::iterator IDmap_iter_t;
-  static IDmap_t IDmap;
 
   Thinker  *prev;
   Thinker  *next;
@@ -124,8 +122,7 @@ public:
   virtual ~Thinker();
 
   // serialization (save/load)
-  virtual bool AddToIDmap();
-  virtual int Serialize(LArchive & a);
+  virtual int Serialize(class LArchive & a);
 
   // what it actually does;)
   virtual void Think() {}

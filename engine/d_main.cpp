@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2003/05/30 13:34:42  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.17  2003/05/11 21:23:49  smite-meister
 // Hexen fixes
 //
@@ -660,9 +663,7 @@ void D_Display()
 // =========================================================================
 
 tic_t rendergametic;
-bool  supdate; // some CLIENTPREDICTION2 stuff
 
-//#define SAVECPU_EXPERIMENTAL
 
 void D_DoomLoop()
 {
@@ -720,11 +721,8 @@ void D_DoomLoop()
 
       // process tics (but maybe not if elapsedtics==0), run tickers, advance game state
       TryRunTics (elapsedtics);
-#ifdef CLIENTPREDICTION2
-      if(singletics || supdate)
-#else
-      if(singletics || gametic > rendergametic)
-#endif
+
+      if (singletics || gametic > rendergametic)
         {
 	  // render if gametics have passed since last rendering
 	  rendergametic = gametic;
@@ -734,7 +732,6 @@ void D_DoomLoop()
 	  S.UpdateSounds();
 	  // Update display, next frame, with current state.
 	  D_Display ();
-	  supdate = false;
         }
       else if (rendertimeout < nowtics )
 	{

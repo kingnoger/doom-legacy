@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/05/30 13:34:45  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.4  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -306,6 +309,11 @@ floor_t::floor_t(int ty, sector_t *sec, fixed_t sp, int cru, fixed_t height)
     }
 
   //SN_StartSequence((mobj_t *)&sector->soundorg, SEQ_PLATFORM+floor->sector->seqType);
+}
+
+int floor_t::Serialize(LArchive & a)
+{
+  return 0;
 }
 
 
@@ -665,6 +673,10 @@ elevator_t::elevator_t(int ty, sector_t *sec, line_t *line)
     }
 }
 
+int elevator_t::Serialize(LArchive & a)
+{
+  return 0;
+}
 
 // SoM: 3/6/2000: Lots'o'copied code here.. Elevators.
 //

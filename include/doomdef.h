@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/05/30 13:34:48  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.2  2003/02/23 22:49:31  smite-meister
 // FS is back! L2 cache works.
 //
@@ -64,9 +67,7 @@
 
 // Uncheck this to compile debugging code
 //#define RANGECHECK
-#ifndef PARANOIA
-# define PARANOIA                // do some test that never happens but maybe
-#endif
+#define PARANOIA                // do some test that never happens but maybe
 
 #define LOGMESSAGES             // write message in log.txt (win32 only for the moment)
 #define VERSION        141      // Game version
@@ -78,7 +79,6 @@
 //#define PERSPCORRECT          // not finished
 #define SPLITSCREEN             
 #define ABSOLUTEANGLE           // work fine, soon #ifdef and old code remove
-//#define CLIENTPREDICTION2     // differant methode
 #define NEWLIGHT                // compute lighting with bsp (in construction)
 //#define OLDWATER                // SoM: Allow old legacy water.
 #define FRAGGLESCRIPT

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2003/05/30 13:34:48  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.11  2003/05/11 21:23:52  smite-meister
 // Hexen fixes
 //
@@ -64,8 +67,6 @@
 #include "m_fixed.h"  // Basics.
 #include "g_think.h"  // We need the Thinker stuff.
 #include "g_damage.h" // and damage types
-
-class PlayerPawn;
 
 // States are tied to finite states are
 //  tied to animation frames.
@@ -180,8 +181,6 @@ typedef enum
   MF_DROPPED       = 0x1000000, // *Dropped by a monster
   MF_AMBUSH        = 0x2000000, // *Not to be activated by sound, deaf monster.
 
-  //MF_SLIDE           // Player: keep info about sliding along walls. (unused)
-  //MF_FLOORHUGGER     // Can not leave the floor (unused)
 } mobjflag_t;
 
 // More semi-permanent flags. Mostly came with Heretic.
@@ -245,10 +244,6 @@ typedef enum
 } mobjeflag_t;
 
 
-struct subsector_t;
-struct mapthing_t;
-struct msecnode_t;
-class  LArchive;
 
 // Actor class. Basis class for all things.
 class Actor : public Thinker
@@ -265,7 +260,7 @@ public:
   Actor *bnext;
   Actor *bprev;
 
-  subsector_t *subsector; // location
+  struct subsector_t *subsector; // location
 
   // The closest interval over all contacted Sectors (or Things).
   fixed_t floorz;
@@ -274,17 +269,17 @@ public:
   // If == validcount, already checked.
   //int     validcount;
   // a linked list of sectors where this object appears
-  msecnode_t* touching_sectorlist;
+  struct msecnode_t* touching_sectorlist;
 
   // For nightmare and itemrespawn respawn.
-  mapthing_t *spawnpoint;
+  struct mapthing_t *spawnpoint;
 
 public:
   // position.
   fixed_t x, y, z;
 
   // was: angle_t angle, aiming, (nothing)
-  // will be angle_t roll, pitch, yaw;  //rotation around x, y and z axes 
+  // TODO will be angle_t roll, pitch, yaw; // Euler angles
   angle_t  angle;  // orientation left-right
   angle_t  aiming; // up-down, updated with cmd->aiming.
 
@@ -302,7 +297,7 @@ public:
   int  flags2;
   int  eflags;
 
-  // general storage, can hold pointers, ints etc. 
+  // general storage, can hold pointers, ints etc. Like asking for bugs;)
   int  special1;
   int  special2;
 
@@ -311,11 +306,10 @@ public:
   byte	special; // special type
   byte	args[5]; // special arguments
 
-  // new: owner of this Actor. For example, for missiles this is the shooter.
+  // Owner of this Actor. For example, for missiles this is the shooter.
   Actor *owner;
 
-  // Thing being chased/attacked (or NULL),
-  // also the target for missiles.
+  // Thing being chased/attacked (or NULL), also the target for missiles.
   Actor *target;
 
   // Reaction time: if non 0, don't attack yet.
@@ -336,7 +330,7 @@ public:
   Actor(fixed_t nx, fixed_t ny, fixed_t nz);
   void Remove();   // delayed destruction
 
-  virtual int Serialize(LArchive & a);
+  virtual int Serialize(class LArchive & a);
 
   virtual void Think();
 
@@ -354,7 +348,7 @@ public:
   // in p_inter.cpp
   virtual bool Touch(Actor *a); // Actor touches another Actor
   virtual void Die(Actor *inflictor, Actor *source);
-  virtual void Killed(PlayerPawn *victim, Actor *inflictor);
+  virtual void Killed(class PlayerPawn *victim, Actor *inflictor);
   virtual bool Morph();
   virtual bool Damage(Actor *inflictor, Actor *source, int damage, int dtype = dt_normal);
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/05/30 13:34:49  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.10  2003/05/05 00:24:50  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -163,6 +166,7 @@ protected:
 public:
   polyobject_t(int num);
   polyobject_t(int num, byte *args, int dir);
+  virtual int  Serialize(LArchive & a);
   virtual void Think();
   virtual int  PushForce();
 };
@@ -176,6 +180,7 @@ protected:
 
 public:
   polymove_t(int num, byte *args, bool timesEight, bool mirror);
+  virtual int  Serialize(LArchive & a);
   virtual void Think();
   virtual int  PushForce();
 };
@@ -203,6 +208,7 @@ protected:
 
 public:
   polydoor_t(int num, int type, byte *args, bool mirror);
+  virtual int  Serialize(LArchive & a);
   virtual void Think();
   virtual int  PushForce();
 };
@@ -325,6 +331,7 @@ public:
   static int buttonsound;
 
   button_t(line_t *l, button_e w, int tex, int time);
+  virtual int  Serialize(LArchive & a);
   virtual void Think();
 };
 
@@ -408,6 +415,7 @@ private:
 
 public:
   plat_t(int type, sector_t *sec, int tag, fixed_t speed, int wait, fixed_t height);
+  virtual int  Serialize(LArchive & a);
   virtual void Think();
 };
 
@@ -452,6 +460,7 @@ public:
   static int s_close, s_bclose, s_open, s_bopen; // sounds
 
   vdoor_t(byte type, sector_t *sec, fixed_t speed, int delay, line_t *line);
+  virtual int  Serialize(LArchive & a);
   virtual void Think();
   void MakeSound(bool open) const;
 };
@@ -516,6 +525,7 @@ public:
   static int ceilmovesound;
 
   ceiling_t(int ty, sector_t *sec, fixed_t usp, fixed_t dsp, int cru, fixed_t height);
+  virtual int  Serialize(LArchive & a);
   virtual void Think();
 };
 
@@ -578,6 +588,7 @@ public:
 
 public:
   floor_t(int type, sector_t *sec, fixed_t speed, int crush, fixed_t height);
+  virtual int  Serialize(LArchive & a);
   virtual void Think();
 };
 
@@ -603,6 +614,7 @@ private:
 
 public:
   elevator_t(int ty, sector_t *s, line_t *l);
+  virtual int  Serialize(LArchive & a);
   virtual void Think();
 };
 
@@ -880,6 +892,7 @@ private:
 public:
 
   scroll_t(scroll_e type, fixed_t dx, fixed_t dy, sector_t *csec, int aff, bool acc);
+  virtual int  Serialize(LArchive & a);
   virtual void Think();
 };
 
@@ -895,6 +908,7 @@ private:
   int   affectee;        // Number of affected sector
 public:
   friction_t(float fri, float mf, int aff);
+  virtual int  Serialize(LArchive & a);
   virtual void Think();
 };
 
@@ -928,6 +942,7 @@ private:
 
 public:
   pusher_t(pusher_e t, int x_m, int y_m, DActor *src, int aff);
+  virtual int  Serialize(LArchive & a);
   virtual void Think();
 
   friend bool PIT_PushThing(Actor *thing);

@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.13  2003/05/30 13:34:43  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.12  2003/05/11 21:23:50  smite-meister
 // Hexen fixes
 //
@@ -164,10 +167,6 @@ void PlayerInfo::Reset(bool resetpawn, bool resetfrags)
 	  pawn = NULL;
 	}
     }
-
-#ifdef CLIENTPREDICTION2
-      spirit = NULL;
-#endif
 
   // Initial height of PointOfView
   // will be set by player think.

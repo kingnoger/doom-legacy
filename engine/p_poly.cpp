@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/05/30 13:34:46  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.4  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -91,6 +94,11 @@ polyobject_t::polyobject_t(int num, byte *args, int dir)
 //
 //==========================================================================
 int polyobject_t::PushForce() { return speed >> 8; }
+
+int polyobject_t::Serialize(LArchive & a)
+{
+  return 0;
+}
 
 void polyobject_t::Think()
 {
@@ -202,6 +210,11 @@ polymove_t::polymove_t(int num, byte *args, bool timesEight, bool mirror)
 
 int polymove_t::PushForce() { return speed >> 3; }
 
+int polymove_t::Serialize(LArchive & a)
+{
+  return 0;
+}
+
 void polymove_t::Think()
 {
   int absSpeed;
@@ -286,6 +299,11 @@ bool Map::EV_MovePoly(line_t *line, byte *args, bool timesEight, bool overRide)
 //==========================================================================
 
 int polydoor_t::PushForce() { return speed >> 3; }
+
+int polydoor_t::Serialize(LArchive & a)
+{
+  return 0;
+}
 
 void polydoor_t::Think()
 {

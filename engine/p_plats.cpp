@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/05/30 13:34:46  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.4  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -148,6 +151,11 @@ plat_t::plat_t(int ty, sector_t *sec, int t, fixed_t sp, int wt, fixed_t height)
   //S_StartSound(&sec->soundorg,sfx_pstart);
 }
 
+
+int plat_t::Serialize(LArchive & a)
+{
+  return 0;
+}
 
 // was T_PlatRaise
 // Move a plat up and down

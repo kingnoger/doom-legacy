@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/05/30 13:34:47  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.5  2003/05/11 21:23:51  smite-meister
 // Hexen fixes
 //
@@ -469,7 +472,7 @@ void A_MinotaurLook(DActor *actor)
 	  if (dist > MINOTAUR_LOOK_DIST) continue;
 	  if ((mo == master) || (mo == actor)) continue;
 	  if ((mo->type == MT_XMINOTAUR) &&
-	      (mo->special1 == actor->special1)) continue;
+	  (mo->owner == actor->owner)) continue;
 	  actor->target = mo;
 	  break;			// Found mobj to attack
 	}
@@ -1425,10 +1428,9 @@ void A_CentaurDefend(DActor *actor)
 
 void A_BishopAttack(DActor *actor)
 {
-  if(!actor->target)
-    {
+  if (!actor->target)
       return;
-    }
+
   S_StartSound(actor, actor->info->attacksound);
   if(actor->CheckMeleeRange())
     {
@@ -1449,16 +1451,16 @@ void A_BishopAttack2(DActor *actor)
 {
   DActor *mo;
 
-  if(!actor->target || !actor->special1)
+  if (!actor->target || !actor->special1)
     {
       actor->special1 = 0;
       actor->SetState(S_BISHOP_WALK1);
       return;
     }
   mo = actor->SpawnMissile(actor->target, MT_BISH_FX);
-  if(mo)
+  if (mo)
     {
-      mo->special1 = (int)actor->target;
+      mo->target = actor->target;
       mo->special2 = 16; // High word == x/y, Low word == z
     }
   actor->special1--;
@@ -2825,7 +2827,7 @@ void A_SorcBallOrbit(DActor *actor)
   if (parent->health <= 0)
     actor->SetState(actor->info->painstate);
 
-  baseangle = (angle_t)parent->special1;
+  baseangle = parent->special1;
   switch(actor->type)
     {
     case MT_SORCBALL1:
@@ -3116,7 +3118,6 @@ void A_SorcOffense1(DActor *actor)
   mo = parent->SpawnMissileAngle(MT_SORCFX1, ang1, 0);
   if (mo)
     {
-      //mo->special1 = (int)parent->target;
       mo->target = parent->target;
       mo->args[4] = BOUNCE_TIME_UNIT;
       mo->args[3] = 15;				// Bounce time in seconds
@@ -3124,7 +3125,6 @@ void A_SorcOffense1(DActor *actor)
   mo = parent->SpawnMissileAngle(MT_SORCFX1, ang2, 0);
   if (mo)
     {
-      //mo->special1 = (int)parent->target;
       mo->target = parent->target;
       mo->args[4] = BOUNCE_TIME_UNIT;
       mo->args[3] = 15;				// Bounce time in seconds
@@ -3848,22 +3848,22 @@ void KSpiritInit(DActor *spirit, DActor *korax)
 
   spirit->health = KORAX_SPIRIT_LIFETIME;
 
-  spirit->special1 = (int)korax;				// Swarm around korax
+  // Swarm around korax
   spirit->special2 = 32+(P_Random()&7);		// Float bob index
   spirit->args[0] = 10; 						// initial turn value
   spirit->args[1] = 0; 						// initial look angle
 
   // Spawn a tail for spirit
   tail = spirit->mp->SpawnDActor(spirit->x, spirit->y, spirit->z, MT_HOLY_TAIL);
-  tail->special2 = (int)spirit; // parent
+  tail->owner = spirit; // parent
   for(i = 1; i < 3; i++)
     {
       next = spirit->mp->SpawnDActor(spirit->x, spirit->y, spirit->z, MT_HOLY_TAIL);
       next->SetState(statenum_t(next->info->spawnstate + 1));
-      tail->special1 = (int)next;
+      tail->target = next;
       tail = next;
     }
-  tail->special1 = 0; // last tail bit
+  tail->target = NULL; // last tail bit
 }
 
 void A_KoraxDecide(DActor *actor)
@@ -4146,15 +4146,13 @@ void A_KSpiritSeeker(DActor *actor, angle_t thresh, angle_t turnMax)
   int dir;
   angle_t delta;
   angle_t angle;
-  DActor *target;
   fixed_t newZ;
   fixed_t deltaZ;
 
-  target = (DActor *)actor->special1;
-  if(target == NULL)
-    {
-      return;
-    }
+  DActor *target = (DActor *)actor->owner;
+  if (target == NULL)
+    return;
+
   dir = P_FaceMobj(actor, target, &delta);
   if(delta > thresh)
     {
@@ -4214,7 +4212,7 @@ void A_KSpiritRoam(DActor *actor)
     }
   else
     {
-      if (actor->special1)
+      if (actor->owner)
 	{
 	  A_KSpiritSeeker(actor, actor->args[0]*ANGLE_1,
 			  actor->args[0]*ANGLE_1*2);

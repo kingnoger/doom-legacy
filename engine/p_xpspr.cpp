@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/05/30 13:34:47  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.2  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -414,16 +417,16 @@ void A_LightningClip(DActor *actor)
   if(actor->type == MT_LIGHTNING_FLOOR)
     {
       actor->z = actor->floorz;
-      target = (Actor *)((Actor *)actor->special2)->special1;
+      target = actor->owner->target;
     }
   else if(actor->type == MT_LIGHTNING_CEILING)
     {
       actor->z = actor->ceilingz-actor->height;
-      target = (Actor *)actor->special1;
+      target = actor->target;
     }
   if(actor->type == MT_LIGHTNING_FLOOR)
     { // floor lightning zig-zags, and forces the ceiling lightning to mimic
-      cMo = (Actor *)actor->special2;
+      cMo = actor->owner;
       zigZag = P_Random();
       if((zigZag > 128 && actor->special1 < 2) || actor->special1 < -2)
 	{
@@ -493,7 +496,7 @@ void A_LightningZap(DActor *actor)
 		   actor->z+deltaZ, MT_LIGHTNING_ZAP);
   if(mo)
     {
-      mo->special2 = (int)actor;
+      mo->owner = actor;
       mo->px = actor->px;
       mo->py = actor->py;
       mo->target = actor->target;
@@ -506,30 +509,9 @@ void A_LightningZap(DActor *actor)
 	  mo->pz = -20*FRACUNIT;
 	}
     }
-  /*
-    mo = actor->mp->SpawnDActor(actor->x+((P_Random()-128)*actor->radius/256), 
-    actor->y+((P_Random()-128)*actor->radius/256), 
-    actor->z+deltaZ, MT_LIGHTNING_ZAP);
-    if(mo)
-    {
-    mo->special2 = (int)actor;
-    mo->px = actor->px;
-    mo->py = actor->py;
-    mo->target = actor->target;
-    if(actor->type == MT_LIGHTNING_FLOOR)
-    {
-    mo->pz = 16*FRACUNIT;
-    }
-    else 
-    {
-    mo->pz = -16*FRACUNIT;
-    }
-    }
-  */
-  if(actor->type == MT_LIGHTNING_FLOOR && P_Random() < 160)
-    {
-      S_StartSound(actor, SFX_MAGE_LIGHTNING_CONTINUOUS);
-    }
+
+  if (actor->type == MT_LIGHTNING_FLOOR && P_Random() < 160)
+    S_StartSound(actor, SFX_MAGE_LIGHTNING_CONTINUOUS);
 }
 
 //============================================================================
@@ -548,16 +530,17 @@ void A_MLightningAttack2(PlayerPawn *actor)
     {
       fmo->z = ONFLOORZ;
       fmo->pz = 0;
+      fmo->target = NULL;
+      fmo->owner = cmo; // special case, lightning pair
       fmo->special1 = 0;
-      fmo->special2 = (int)cmo;
       A_LightningZap(fmo);	
     }
   if(cmo)
     {
       cmo->z = ONCEILINGZ;
       cmo->pz = 0;
-      cmo->special1 = 0;	// mobj that it will track
-      cmo->special2 = (int)fmo;
+      cmo->target = NULL; // mobj that it will track
+      cmo->owner = fmo;
       A_LightningZap(cmo);	
     }
   S_StartSound(actor, SFX_MAGE_LIGHTNING_FIRE);
@@ -623,10 +606,10 @@ void A_LastZap(DActor *actor)
 
 void A_LightningRemove(DActor *actor)
 {
-  DActor *mo = (DActor *)actor->special2;
+  DActor *mo = (DActor *)actor->owner;
   if (mo)
     {
-      mo->special2 = 0;
+      mo->owner = NULL;
       mo->ExplodeMissile();
     }
 }
@@ -641,7 +624,7 @@ void MStaffSpawn(PlayerPawn *pmo, angle_t angle)
 {
   Actor *mo = pmo->SPMAngle(MT_MSTAFF_FX2, angle);
   if (mo)
-    mo->special1 = int(pmo->mp->RoughBlockSearch(mo, pmo, 10, 2));
+    mo->target = pmo->mp->RoughBlockSearch(mo, pmo, 10, 2);
 }
 
 //============================================================================
@@ -738,9 +721,9 @@ void A_MStaffWeave(DActor *actor)
 
 void A_MStaffTrack(DActor *actor)
 {
-  if ((actor->special1 == 0) && (P_Random()<50))
+  if ((actor->target == NULL) && (P_Random()<50))
     {
-      actor->special1 = int(actor->mp->RoughBlockSearch(actor, actor->owner, 10, 2));
+      actor->target = actor->mp->RoughBlockSearch(actor, actor->owner, 10, 2);
     }
   actor->SeekerMissile(ANGLE_1*2, ANGLE_1*10);
 }
@@ -760,7 +743,7 @@ void MStaffSpawn2(DActor *actor, angle_t angle)
   if (mo)
     {
       mo->owner = actor;
-      mo->special1 = int(actor->mp->RoughBlockSearch(mo, actor, 10, 2));
+      mo->target = actor->mp->RoughBlockSearch(mo, actor, 10, 2);
     }
 }
 
@@ -1341,10 +1324,9 @@ void A_CHolyAttack2(DActor *actor)
   for(j = 0; j < 4; j++)
     {
       mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_HOLY_FX);
-      if(!mo)
-	{
-	  continue;
-	}
+      if (!mo)
+	continue;
+
       switch(j)
 	{ // float bob index
 	case 0:
@@ -1370,23 +1352,23 @@ void A_CHolyAttack2(DActor *actor)
 	{ // Ghosts last slightly less longer in DeathMatch
 	  mo->health = 85;
 	}
-      if(linetarget)
+      if (linetarget)
 	{
-	  mo->special1 = (int)linetarget;
+	  mo->target = linetarget;
 	  mo->flags |= MF_NOCLIPLINE|MF_NOCLIPTHING;
 	  mo->flags &= ~MF_MISSILE;
 	  mo->eflags |= MFE_SKULLFLY;
 	}
       tail = actor->mp->SpawnDActor(mo->x, mo->y, mo->z, MT_HOLY_TAIL);
-      tail->special2 = (int)mo; // parent
+      tail->owner = mo; // parent
       for(i = 1; i < 3; i++)
 	{
 	  next = actor->mp->SpawnDActor(mo->x, mo->y, mo->z, MT_HOLY_TAIL);
 	  next->SetState(statenum_t(next->info->spawnstate+1));
-	  tail->special1 = (int)next;
+	  tail->target = next; // tail pieces use target field to point to next piece
 	  tail = next;
 	}
-      tail->special1 = 0; // last tail bit
+      tail->target = NULL; // last tail bit
     }
 }
 
@@ -1446,7 +1428,7 @@ static void CHolyFindTarget(DActor *actor)
 
   if (target)
     {
-      actor->special1 = (int)target;
+      actor->target = target;
       actor->flags |= MF_NOCLIPLINE|MF_NOCLIPTHING;
       actor->eflags |= MFE_SKULLFLY;
       actor->flags &= ~MF_MISSILE;
@@ -1466,11 +1448,10 @@ static void CHolySeekerMissile(DActor *actor, angle_t thresh, angle_t turnMax)
   int dist;
   angle_t delta;
   angle_t angle;
-  Actor *target;
   fixed_t newZ;
   fixed_t deltaZ;
 
-  target = (Actor *)actor->special1;
+  Actor *target = actor->target;
   if(target == NULL)
     {
       return;
@@ -1478,7 +1459,7 @@ static void CHolySeekerMissile(DActor *actor, angle_t thresh, angle_t turnMax)
   if (!(target->flags & MF_SHOOTABLE) 
       || !(target->flags & (MF_COUNTKILL|MF_NOTMONSTER)))
     { // Target died/target isn't a player or creature
-      actor->special1 = 0;
+      actor->target = NULL;
       actor->flags &= ~(MF_NOCLIPLINE|MF_NOCLIPTHING);
       actor->eflags &= ~MFE_SKULLFLY;
       actor->flags |= MF_MISSILE;
@@ -1582,7 +1563,7 @@ void A_CHolySeek(DActor *actor)
       actor->tics -= P_Random()&3;
       return;
     }
-  if(actor->special1)
+  if (actor->target)
     {
       CHolySeekerMissile(actor, actor->args[0]*ANGLE_1,
 			 actor->args[0]*ANGLE_1*2);
@@ -1602,11 +1583,10 @@ void A_CHolySeek(DActor *actor)
 
 static void CHolyTailFollow(Actor *actor, fixed_t dist)
 {
-  Actor *child;
   int an;
   fixed_t oldDistance, newDistance;
 
-  child = (Actor *)actor->special1;
+  Actor *child = actor->target;
   if(child)
     {
       an = R_PointToAngle2(actor->x, actor->y, child->x, 
@@ -1644,13 +1624,12 @@ static void CHolyTailFollow(Actor *actor, fixed_t dist)
 //
 //============================================================================
 
-static void CHolyTailRemove(DActor *actor)
+static void CHolyTailRemove(Actor *actor)
 {
-  DActor *child = (DActor *)actor->special1;
-  if(child)
-    {
-      CHolyTailRemove(child);
-    }
+  Actor *child = actor->target;
+  if (child)
+    CHolyTailRemove(child);
+
   actor->Remove();
 }
 
@@ -1662,7 +1641,7 @@ static void CHolyTailRemove(DActor *actor)
 
 void A_CHolyTail(DActor *actor)
 {
-  DActor *parent = (DActor *)actor->special2;
+  DActor *parent = (DActor *)actor->owner;
 
   if(parent)
     {
@@ -1690,14 +1669,11 @@ void A_CHolyTail(DActor *actor)
 void A_CHolyCheckScream(DActor *actor)
 {
   A_CHolySeek(actor);
-  if(P_Random() < 20)
-    {
-      S_StartSound(actor, SFX_SPIRIT_ACTIVE);
-    }
-  if(!actor->special1)
-    {
-      CHolyFindTarget(actor);
-    }
+  if (P_Random() < 20)
+    S_StartSound(actor, SFX_SPIRIT_ACTIVE);
+
+  if (!actor->target)
+    CHolyFindTarget(actor);
 }
 
 //============================================================================

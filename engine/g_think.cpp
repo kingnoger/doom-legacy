@@ -12,7 +12,6 @@ Thinker::Thinker()
 Thinker::~Thinker()
 {}
 
-bool Thinker::AddToIDmap() { return true; }
 
 int Thinker::Serialize(LArchive & a)
 {

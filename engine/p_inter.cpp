@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2003/05/30 13:34:45  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.16  2003/05/11 21:23:51  smite-meister
 // Hexen fixes
 //
@@ -702,15 +705,6 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 	    apz = -apz;
 	}
       pz += apz;
-
-#ifdef CLIENTPREDICTION2
-      if (p && p->spirit)
-	{
-	  p->spirit->px += apx;
-	  p->spirit->py += apy;
-	  p->spirit->pz += apz;
-	}
-#endif  
     }
 
   
@@ -965,6 +959,12 @@ bool PlayerPawn::GiveAmmo(ammotype_t at, int count)
   if (at == am_noammo)
     return false;
 
+  if (at == am_manaboth)
+    {
+      bool ret = GiveAmmo(am_mana1, count) || GiveAmmo(am_mana2, count);
+      return ret;
+    }
+
   if (at < 0 || at >= NUMAMMO)
     {
       CONS_Printf ("\2P_GiveAmmo: bad type %i", at);
@@ -973,12 +973,7 @@ bool PlayerPawn::GiveAmmo(ammotype_t at, int count)
 
   if (ammo[at] >= maxammo[at])
     return false;
-/*
-  if (num)
-  num *= clipammo[at];
-  else
-  num = clipammo[at]/2;
-*/
+
   if (game.skill == sk_baby || game.skill == sk_nightmare)
     {
       if (game.mode == gm_heretic || game.mode == gm_hexen)
@@ -1181,12 +1176,12 @@ bool PlayerPawn::GiveArmor(armortype_t type, float factor, int points)
 //
 // P_GiveCard
 //
-bool PlayerPawn::GiveKey(key_t k)
+bool PlayerPawn::GiveKey(keycard_t k)
 {
-  if (cards & k)
+  if (keycards & k)
     return false;
 
-  cards |= k;
+  keycards |= k;
 
   int i, j = k;
   for (i = -1; j; i++)
@@ -1447,7 +1442,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
     case MT_KEY9:
     case MT_KEYA:
     case MT_KEYB:
-      if (!GiveKey(key_t(1 << (special->type - MT_KEY1))))
+      if (!GiveKey(keycard_t(1 << (special->type - MT_KEY1))))
 	return;
       if (game.multiplayer) // Only remove keys in single player game
 	p_remove = false;

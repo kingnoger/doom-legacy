@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.16  2003/05/30 13:34:48  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.15  2003/05/11 21:23:52  smite-meister
 // Hexen fixes
 //
@@ -227,6 +230,8 @@ public:
 
   // not yet implemented
   void Reset(); // resets the map to starting position. Lighter than Setup().
+
+  int  Serialize(class LArchive & a);
 
   // in p_tick.cpp
   void Ticker();

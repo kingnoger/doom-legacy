@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/05/30 13:34:44  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.4  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -115,6 +118,12 @@ ceiling_t::ceiling_t(int ty, sector_t *sec, fixed_t usp, fixed_t dsp, int cru, f
     default:
       break;
     }
+}
+
+
+int ceiling_t::Serialize(LArchive & a)
+{
+  return 0;
 }
 
 //

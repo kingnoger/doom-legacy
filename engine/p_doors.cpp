@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/05/30 13:34:45  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.7  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -119,6 +122,11 @@ vdoor_t::vdoor_t(byte t, sector_t *s, fixed_t sp, int delay, line_t *li)
     }
 }
 
+
+int vdoor_t::Serialize(LArchive & a)
+{
+  return 0;
+}
 
 //
 // was T_VerticalDoor

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2000 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2003/05/30 13:34:47  smite-meister
+// Cleanup, HUD improved, serialization
+//
 // Revision 1.11  2003/05/11 21:23:51  smite-meister
 // Hexen fixes
 //
@@ -100,13 +103,7 @@ bool PlayerPawn::Teleport(fixed_t nx, fixed_t ny, angle_t nangle)
     localangle = nangle;
   if (this == displayplayer2->pawn)
     localangle2 = nangle;
-#ifdef CLIENTPREDICTION2
-  if (this == consoleplayer->pawn)
-    {
-      consoleplayer->spirit->reactiontime = reactiontime;
-      CL_ResetSpiritPosition(this);
-    }
-#endif
+
   // move chasecam at new player location
   if (camera.chase && displayplayer == player)
     camera.ResetCamera(this);
@@ -133,44 +130,11 @@ bool PlayerPawn::Teleport(fixed_t nx, fixed_t ny, angle_t nangle)
 //
 void PlayerPawn::Thrust(angle_t angle, fixed_t move)
 {
+  // now exactly like Actor::Thrust... remove?
   angle >>= ANGLETOFINESHIFT;
-  /*
-  if (subsector->sector->special == 15
-      && !(powers[pw_flight] && !(z <= floorz))) // Friction_Low
-    {
-      px += FixedMul(move>>2, finecosine[angle]);
-      py += FixedMul(move>>2, finesine[angle]);
-    }
-  else
-  */
-    {
-      px += FixedMul(move, finecosine[angle]);
-      py += FixedMul(move, finesine[angle]);
-    }
+  px += FixedMul(move, finecosine[angle]);
+  py += FixedMul(move, finesine[angle]);
 }
-
-#ifdef CLIENTPREDICTION2
-//
-// P_ThrustSpirit
-// Moves the given origin along a given angle.
-//
-void P_ThrustSpirit(player_t *player, angle_t angle, fixed_t move)
-{
-  angle >>= ANGLETOFINESHIFT;
-  if(player->spirit->subsector->sector->special == 15
-     && !(player->powers[pw_flight] && !(player->spirit->z <= player->spirit->floorz))) // Friction_Low
-    {
-      player->spirit->px += FixedMul(move>>2, finecosine[angle]);
-      player->spirit->py += FixedMul(move>>2, finesine[angle]);
-    }
-  else
-    {
-      player->spirit->px += FixedMul(move, finecosine[angle]);
-      player->spirit->py += FixedMul(move, finesine[angle]);
-    }
-}
-#endif
-
 
 
 extern int ticruned,ticmiss;
@@ -311,191 +275,6 @@ void PlayerPawn::Move()
     }
 }
 
-#ifdef CLIENTPREDICTION2
-
-
-byte weapontobutton[NUMWEAPONS]={wp_fist    <<BT_WEAPONSHIFT,
-                                 wp_pistol  <<BT_WEAPONSHIFT,
-                                 wp_shotgun <<BT_WEAPONSHIFT,
-                                 wp_chaingun<<BT_WEAPONSHIFT,
-                                 wp_missile <<BT_WEAPONSHIFT,
-                                 wp_plasma  <<BT_WEAPONSHIFT,
-                                 wp_bfg     <<BT_WEAPONSHIFT,
-				 (wp_fist    <<BT_WEAPONSHIFT) | BT_EXTRAWEAPON,// wp_chainsaw
-				 (wp_shotgun <<BT_WEAPONSHIFT) | BT_EXTRAWEAPON};//wp_supershotgun
-
-
-void CL_ResetSpiritPosition(Actor *mobj)
-{
-  P_UnsetThingPosition(mobj->player->spirit);
-  mobj->player->spirit->x=mobj->x;
-  mobj->player->spirit->y=mobj->y;
-  mobj->player->spirit->z=mobj->z;
-  mobj->player->spirit->px=0;
-  mobj->player->spirit->py=0;
-  mobj->player->spirit->pz=0;
-  mobj->player->spirit->angle=mobj->angle;
-  P_SetThingPosition(mobj->player->spirit);
-}
-
-void P_ProcessCmdSpirit (player_t* player,ticcmd_t *cmd)
-{
-  fixed_t   movepushforward=0,movepushside=0;
-#ifdef PARANOIA
-  if(!player)
-    I_Error("P_MoveSpirit : player null");
-  if(!player->spirit)
-    I_Error("P_MoveSpirit : player->spirit null");
-  if(!cmd)
-    I_Error("P_MoveSpirit : cmd null");
-#endif
-
-  // don't move if dead
-  if( player->playerstate != PST_LIVE )
-    {
-      cmd->angleturn &= ~TICCMD_XY;
-      return;
-    }
-  onground = (player->spirit->z <= player->spirit->floorz) ||
-    (player->cheats & CF_FLYAROUND);
-
-  if (player->spirit->reactiontime)
-    {
-      player->spirit->reactiontime--;
-      return;
-    }
-
-  player->spirit->angle = cmd->angleturn<<16;
-  cmd->angleturn |= TICCMD_XY;
-  /*
-    // now weapon is allways send change is detected at receiver side
-    if(cmd->buttons & BT_CHANGE) 
-    {
-    player->spirit->movedir = cmd->buttons & (BT_WEAPONMASK | BT_EXTRAWEAPON);
-    cmd->buttons &=~BT_CHANGE;
-    }
-    else
-    {
-    if( player->pendingweapon!=wp_nochange )
-    player->spirit->movedir=weapontobutton[player->pendingweapon];
-    cmd->buttons&=~(BT_WEAPONMASK | BT_EXTRAWEAPON);
-    cmd->buttons|=player->spirit->movedir;
-    }
-  */
-  if (cmd->forwardmove)
-    {
-      movepushforward = cmd->forwardmove * movefactor;
-        
-      if (player->spirit->eflags & MFE_UNDERWATER)
-        {
-	  // half forward speed when waist under water
-	  // a little better grip if feets touch the ground
-	  if (!onground)
-	    movepushforward >>= 1;
-	  else
-	    movepushforward = movepushforward *3/4;
-        }
-      else
-        {
-	  // allow very small movement while in air for gameplay
-	  if (!onground)
-	    movepushforward >>= 3;
-        }
-        
-      P_ThrustSpirit (player->spirit, player->spirit->angle, movepushforward);
-    }
-    
-  if (cmd->sidemove)
-    {
-      movepushside = cmd->sidemove * movefactor;
-      if (player->spirit->eflags & MFE_UNDERWATER)
-        {
-	  if (!onground)
-	    movepushside >>= 1;
-	  else
-	    movepushside = movepushside *3/4;
-        }
-      else 
-	if (!onground)
-	  movepushside >>= 3;
-            
-      P_ThrustSpirit (player->spirit, player->spirit->angle-ANG90, movepushside);
-    }
-    
-  // mouselook swim when waist underwater
-  player->spirit->eflags &= ~MFE_SWIMMING;
-  if (player->spirit->eflags & MFE_UNDERWATER)
-    {
-      fixed_t a;
-      // swim up/down full move when forward full speed
-      a = FixedMul( movepushforward*50, finesine[ (cmd->aiming>>(ANGLETOFINESHIFT-16)) ] >>5 );
-        
-      if ( a != 0 ) {
-	player->spirit->eflags |= MFE_SWIMMING;
-	player->spirit->pz += a;
-      }
-    }
-
-  //added:22-02-98: jumping
-  if (cmd->buttons & BT_JUMP)
-    {
-      // can't jump while in air, can't jump while jumping
-      if (!(player->jumpdown & 2) &&
-	  (onground || (player->spirit->eflags & MFE_UNDERWATER)) )
-        {
-	  if (onground)
-	    player->spirit->pz = JUMPGRAVITY;
-	  else //water content
-	    player->spirit->pz = JUMPGRAVITY/2;
-
-	  //TODO: goub gloub when push up in water
-            
-	  if ( !(player->cheats & CF_FLYAROUND) && onground && !(player->spirit->eflags & MFE_UNDERWATER))
-            {
-	      S_StartScreamSound(player->spirit, sfx_jump);
-
-	      // keep jumping ok if FLY mode.
-	      player->jumpdown |= 2;
-            }
-        }
-    }
-  else
-    player->jumpdown &= ~2;
-
-}
-
-void P_MoveSpirit (player_t* p,ticcmd_t *cmd, int realtics)
-{
-  if( gamestate != GS_LEVEL )
-    return;
-  if(p->spirit)
-    {
-      extern bool supdate;
-      int    i;
-
-      p->spirit->flags|=MF_SOLID;
-      for(i=0;i<realtics;i++)
-        {
-	  P_ProcessCmdSpirit(p,cmd);
-	  P_MobjThinker(p->spirit);
-        }                 
-      p->spirit->flags&=~MF_SOLID;
-      P_CalcHeight (p);                 // z-bobing of player
-      A_TicWeapon(p, &p->psprites[0]);  // bobing of weapon
-      cmd->x=p->spirit->x;
-      cmd->y=p->spirit->y;
-      supdate=true;
-    }
-  else
-    if(p->mo)
-      {
-        cmd->x=p->mo->x;
-        cmd->y=p->mo->y;
-      }
-}
-
-#endif
-
 
 
 //----------------------------------------------------------------------------
@@ -617,7 +396,6 @@ bool P_UseArtifact(PlayerPawn *p, artitype_t arti)
       if (mo)
 	{
 	  mo->owner = p;
-	  mo->special1 = (int)p;
 	  mo->pz = 5*FRACUNIT;
 	}
       break;
