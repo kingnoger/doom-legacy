@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:28  hurdler
-// Initial revision
+// Revision 1.2  2002/12/03 10:23:46  smite-meister
+// Video system overhaul
 //
 // Revision 1.6  2002/09/25 15:17:42  vberghol
 // Intermission fixed?
@@ -65,7 +65,6 @@
 //
 //
 // DESCRIPTION:
-//      Gamma correction LUT.
 //      Functions to draw patches (by post) directly to screen.
 //      Functions to blit a block to the screen.
 //
@@ -92,13 +91,8 @@ extern  int     scaledofs;
 // Screen 0 is the screen updated by I_Update screen.
 // Screen 1 is an extra buffer.
 
-extern  byte*   screens[5];
-
 extern  int     dirtybox[4];
 
-extern  byte    gammatable[5][256];
-extern  consvar_t cv_ticrate;
-extern  consvar_t cv_usegamma;
 
 // patch_t, the strange Doom graphics format.
 // A patch holds one or more columns. A column is a vertical run of pixels.
@@ -150,19 +144,6 @@ struct pic_t
   short  reserved1;  // set to 0
   byte   data[0];
 };
-
-// Allocates buffer screens, call before R_Init.
-void V_Init();
-
-// Set the current RGB palette lookup to use for palettized graphics
-void V_SetPalette(int palettenum);
-
-void V_SetPaletteLump(char *pal);
-
-extern RGBA_t  *pLocalPalette;
-
-// Retrieve the ARGB value from a palette color index
-#define V_GetColor(color)  (pLocalPalette[color&0xFF])
 
 
 void V_CopyRect(int srcx,  int srcy,  int srcscrn,

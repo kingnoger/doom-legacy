@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:23  hurdler
-// Initial revision
+// Revision 1.2  2002/12/03 10:23:46  smite-meister
+// Video system overhaul
 //
 // Revision 1.4  2002/08/24 11:57:28  vberghol
 // d_main.cpp is better
@@ -61,21 +61,19 @@
 //-----------------------------------------------------------------------------
 
 
-#ifndef __I_SYSTEM__
-#define __I_SYSTEM__
+#ifndef i_system_h
+#define i_system_h 1
 
 #include "d_ticcmd.h"
-//#include "d_event.h"
 
 #ifdef __GNUG__
 #pragma interface
 #endif
 
 // See Shutdown_xxx() routines.
-extern byte graphics_started;
+//extern byte graphics_started;
 extern byte keyboard_started;
 extern byte sound_started;
-//extern byte music_installed;
 
 #ifdef PC_DOS
 /* flag for 'win-friendly' mode used by interface code */
@@ -90,17 +88,17 @@ extern BOOL   bDX0300;
 #endif
 
 // Called by DoomMain.
-void I_InitJoystick (void);
+void I_InitJoystick ();
 
 // return free and total physical memory in the system
 ULONG I_GetFreeMem(ULONG *total);
 
 // Called by D_DoomLoop,
 // returns current time in tics.
-tic_t I_GetTime (void);
+tic_t I_GetTime ();
 
 
-void I_GetEvent (void);
+void I_GetEvent ();
 
 
 //
@@ -111,7 +109,7 @@ void I_GetEvent (void);
 // are performed here (joystick reading).
 // Can call D_PostEvent.
 //
-void I_StartFrame (void);
+void I_StartFrame ();
 
 
 //
@@ -119,7 +117,7 @@ void I_StartFrame (void);
 // called before processing each tic in a frame.
 // Quick syncronous operations are performed here.
 // Can call D_PostEvent.
-void I_OsPolling (void);
+void I_OsPolling ();
 
 // Asynchronous interrupt functions should maintain private queues
 // that are read by the synchronous functions
@@ -129,11 +127,11 @@ void I_OsPolling (void);
 // or calls a loadable driver to build it.
 // This ticcmd will then be modified by the gameloop
 // for normal input.
-ticcmd_t* I_BaseTiccmd (void);
+ticcmd_t* I_BaseTiccmd ();
 
 
 // Called by M_Responder when quit is selected, return code 0.
-void I_Quit (void);
+void I_Quit ();
 
 void I_Error (char *error, ...);
 
@@ -148,27 +146,27 @@ void I_Tactile (int on, int off, int total);
 //                the return code 0 of I_Quit();
 void I_OutputMsg (char *error, ...);
 
-void I_StartupMouse (void);
-void I_StartupMouse2(void);
+void I_StartupMouse ();
+void I_StartupMouse2();
 
 // setup timer irq and user timer routine.
-void I_TimerISR (void);      //timer callback routine.
-void I_StartupTimer (void);
+void I_TimerISR ();      //timer callback routine.
+void I_StartupTimer ();
 
 /* list of functions to call at program cleanup */
 void I_AddExitFunc (void (*func)());
 void I_RemoveExitFunc (void (*func)());
 
 // Setup signal handler, plus stuff for trapping errors and cleanly exit.
-int  I_StartupSystem (void);
-void I_ShutdownSystem (void);
+int  I_StartupSystem ();
+void I_ShutdownSystem ();
 
 void I_GetDiskFreeSpace(INT64 *freespace);
-char *I_GetUserName(void);
+char *I_GetUserName();
 int  I_mkdir(const char *dirname, int unixright);
 
 #ifdef LINUX // locate a shared wad file
-void I_LocateWad(void);
+void I_LocateWad();
 #endif
 
 #endif

@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:27  hurdler
-// Initial revision
+// Revision 1.2  2002/12/03 10:23:46  smite-meister
+// Video system overhaul
+//
+// Revision 1.1.1.1  2002/11/16 14:18:27  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.11  2002/09/08 14:38:09  vberghol
 // Now it works! Sorta.
@@ -171,16 +174,14 @@ public:
 class HudMultIcon : public HudWidget
 {
 private:
-  // center-justified location of icons
-  // *inum == -1 is a magic value meaning no icon is drawn
   int oldinum; // last icon number
   const int *inum;   // pointer to current icon number
+  // *inum == -1 is a magic value meaning no icon is drawn
   patch_t **p; // list of icons
 
   void Draw();
 
 public:
-  //void STlib_initMultIcon(st_multicon_t* mi, int x, int y, patch_t** il, int* inum, bool* on);
   HudMultIcon(int x, int y, const bool *on, const int *ninum, patch_t **np) : HudWidget(x, y, on)
   {
     oldinum = -1;

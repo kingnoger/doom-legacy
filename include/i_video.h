@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:23  hurdler
-// Initial revision
+// Revision 1.2  2002/12/03 10:23:46  smite-meister
+// Video system overhaul
 //
 // Revision 1.3  2002/07/01 21:00:48  jpakkane
 // Fixed cr+lf to UNIX form.
@@ -62,44 +62,44 @@
 #endif
 
 typedef enum {
-    render_soft   = 1,
-    render_glide  = 2,
-    render_d3d    = 3,
-    render_opengl = 4, //Hurdler: the same for render_minigl
-    render_none   = 5  // for dedicated server
+  render_soft   = 1,
+  render_glide  = 2,
+  render_d3d    = 3,
+  render_opengl = 4, //Hurdler: the same for render_minigl
+  render_none   = 5  // for dedicated server
 } rendermode_t;
 
-extern rendermode_t    rendermode;
+extern rendermode_t rendermode;
 
 // use highcolor modes if true
-extern bool highcolor;
+//extern bool highcolor;
 
 
-void I_StartupGraphics (void);          //setup video mode
-void I_ShutdownGraphics(void);          //restore old video mode
+bool I_StartupGraphics();    //setup video mode
+void I_ShutdownGraphics();   //restore old video mode
 
 // Takes full 8 bit values.
 void I_SetPalette (RGBA_t* palette);
 
 #ifdef __MACOS__
-void macConfigureInput(void);
+void macConfigureInput();
 void VID_Pause(int pause);
 #endif
 
-int   I_NumVideoModes(void);
+int   I_NumVideoModes();
 char *I_GetVideoModeName(int modenum);
-void I_PrepareVideoModeList(void);
+void I_PrepareVideoModeList();
 
-void I_UpdateNoBlit (void);
-void I_FinishUpdate (void);
+void I_UpdateNoBlit();
+void I_FinishUpdate();
 
 // Wait for vertical retrace or pause a bit.
 void I_WaitVBL(int count);
 
-void I_ReadScreen (byte* scr);
+void I_ReadScreen(byte* scr);
 
-void I_BeginRead (void);
-void I_EndRead (void);
+void I_BeginRead();
+void I_EndRead();
 
 #ifdef __BIG_ENDIAN__
 # define UINT2RGBA(a) a

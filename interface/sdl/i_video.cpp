@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:32  hurdler
-// Initial revision
+// Revision 1.2  2002/12/03 10:24:47  smite-meister
+// Video system overhaul
 //
 // Revision 1.4  2002/08/24 11:57:28  vberghol
 // d_main.cpp is better
@@ -86,16 +86,13 @@
 
 #include "doomdef.h"
 
-//#include "doomstat.h"
 #include "i_video.h"
-//#include "i_system.h"
 #include "screen.h"
 #include "v_video.h"
 #include "keys.h"
 #include "m_argv.h"
 #include "m_menu.h"
 #include "d_main.h"
-//#include "s_sound.h"
 #include "g_input.h"
 
 
@@ -107,15 +104,17 @@
 
 
 // SDL vars
-static       SDL_Surface *vidSurface=NULL;
-static       SDL_Color    localPalette[256];
-static       SDL_Rect   **modeList=NULL;
-static       Uint8        BitsPerPixel;
+static const SDL_VideoInfo *vidInfo = NULL;
+static SDL_Rect     **modeList = NULL;
+static SDL_Surface   *vidSurface = NULL;
+static SDL_Color      localPalette[256];
+//static Uint8          BitsPerPixel;
+
 //const static Uint32       surfaceFlags = SDL_HWSURFACE|SDL_HWPALETTE|SDL_DOUBLEBUF;
 // FIXME : VB: since fullscreen HW surfaces wont't work, we'll use a SW surface.
 const static Uint32 surfaceFlags = SDL_SWSURFACE | SDL_HWPALETTE;
 
-static int numVidModes= 0;
+static int numVidModes = 0;
 static char vidModeName[33][32]; // allow 33 different modes
 
 
@@ -133,20 +132,20 @@ extern consvar_t cv_fullscreen; // for fullscreen support
 extern consvar_t cv_usemouse;
 
 rendermode_t    rendermode = render_soft;
-bool highcolor = false;
+//bool highcolor = false;
 
 // synchronize page flipping with screen refresh
-// unused and for compatibilityy reason 
+// unused and for compatibility reason 
 consvar_t       cv_vidwait = {"vid_wait","1",CV_SAVE,CV_OnOff};
 
-byte graphics_started = 0; // Is used in console.c and screen.c
+bool graphics_started = false; // Is used in console.c and screen.c
 
 // To disable fullscreen at startup; is set in I_PrepareVideoModeList
 bool allow_fullscreen = false;
 
 
 // first entry in the modelist which is not bigger than 1024x768
-static int firstEntry=0;
+static int firstEntry = 0;
 
 // windowed video modes from which to choose from.
 
@@ -434,18 +433,20 @@ void I_UpdateNoBlit()
 //
 void I_FinishUpdate()
 {
-  if (rendermode == render_soft) {
-    if (screens[0] != vid.direct) {
-      memcpy(vid.direct, screens[0], vid.width*vid.height*vid.bpp);
-      //screens[0] = vid.direct; //FIXME: we MUST render directly into the surface
+  if (rendermode == render_soft)
+    {
+      if (vid.screens[0] != vid.direct)
+	{
+	  memcpy(vid.direct, vid.screens[0], vid.height*vid.rowbytes);
+	  //vid.screens[0] = vid.direct; //FIXME: we MUST render directly into the surface
+	}
+      //SDL_Flip(vidSurface);
+      SDL_UpdateRect(vidSurface, 0, 0, 0, 0);
+      if (SDL_MUSTLOCK(vidSurface))
+	SDL_UnlockSurface(vidSurface);
     }
-    //SDL_Flip(vidSurface);
-    SDL_UpdateRect(vidSurface, 0, 0, 0, 0);
-    if (SDL_MUSTLOCK(vidSurface))
-      SDL_UnlockSurface(vidSurface);
-  } else {
+  else
     OglSdlFinishUpdate(cv_vidwait.value);
-  }
     
   I_GetEvent();
     
@@ -461,7 +462,7 @@ void I_ReadScreen(byte* scr)
   if (rendermode != render_soft)
     I_Error ("I_ReadScreen: called while in non-software mode");
     
-  memcpy (scr, screens[0], vid.width*vid.height*vid.bpp);
+  memcpy (scr, vid.screens[0], vid.height*vid.rowbytes);
 }
 
 
@@ -471,84 +472,89 @@ void I_ReadScreen(byte* scr)
 //
 void I_SetPalette(RGBA_t* palette)
 {
-    int i;
+  int i;
 
-    for(i=0; i<256; i++)
+  CONS_Printf("I_SetPalette\n");
+
+  for(i=0; i<256; i++)
     {
-        localPalette[i].r = palette[i].s.red;
-        localPalette[i].g = palette[i].s.green;
-        localPalette[i].b = palette[i].s.blue;
+      localPalette[i].r = palette[i].s.red;
+      localPalette[i].g = palette[i].s.green;
+      localPalette[i].b = palette[i].s.blue;
     }
-    
-    CONS_Printf("VB: I_SetPalette\n");
-    SDL_SetColors(vidSurface, localPalette, 0, 256);
 
-    return;
+  SDL_SetColors(vidSurface, localPalette, 0, 256);
 }
 
 
-// return number of fullscreen + X11 modes
+// return number of fullscreen or windowed modes
 int I_NumVideoModes() 
 {
-    if(cv_fullscreen.value) 
-        return numVidModes - firstEntry;
-    else
-        return MAXWINMODES;
+  if (cv_fullscreen.value) 
+    return numVidModes - firstEntry;
+  else
+    return MAXWINMODES;
 }
 
-char  *I_GetVideoModeName(int modeNum) 
+char *I_GetVideoModeName(int modeNum) 
 {
-    if(cv_fullscreen.value) { // fullscreen modes
-        modeNum += firstEntry;
-        if(modeNum >= numVidModes)
-            return NULL;
+  if (cv_fullscreen.value)
+    {
+      modeNum += firstEntry;
+      if (modeNum >= numVidModes)
+	return NULL;
         
-        sprintf(&vidModeName[modeNum][0], "%dx%d",
-                modeList[modeNum]->w,
-                modeList[modeNum]->h);
+      sprintf(&vidModeName[modeNum][0], "%dx%d",
+	      modeList[modeNum]->w,
+	      modeList[modeNum]->h);
     }
-    else { // windowed modes
-        if(modeNum > MAXWINMODES)
-            return NULL;
+  else
+    { // windowed modes
+      if (modeNum > MAXWINMODES)
+	return NULL;
         
-        sprintf(&vidModeName[modeNum][0], "win %dx%d",
-                windowedModes[modeNum][0],
-                windowedModes[modeNum][1]);
+      sprintf(&vidModeName[modeNum][0], "win %dx%d",
+	      windowedModes[modeNum][0],
+	      windowedModes[modeNum][1]);
     }
-    return &vidModeName[modeNum][0];
+  return &vidModeName[modeNum][0];
 }
 
-int I_GetVideoModeForSize(int w, int h) {
-  int matchMode, i;
+int I_GetVideoModeForSize(int w, int h)
+{
+  int matchMode = -1;
+  int i;
   
-  if(cv_fullscreen.value) {
-    matchMode=-1; 
-    
-    for(i=firstEntry; i<numVidModes; i++) {
-      if(modeList[i]->w == w && modeList[i]->h == h) {
-	matchMode = i;
-	break;
-      }
-    }
-    if(-1 == matchMode) // use smallest mode
-      {
+  if (cv_fullscreen.value)
+    {
+      for (i = firstEntry; i<numVidModes; i++)
+	{
+	  if (modeList[i]->w == w && modeList[i]->h == h)
+	    {
+	      matchMode = i;
+	      break;
+	    }
+	}
+
+      if (matchMode == -1) // use smallest mode
 	matchMode = numVidModes-1;
-      }
-    matchMode -= firstEntry;
-  } else {
-    matchMode=-1;
-      
-    for(i=0; i<MAXWINMODES; i++) {
-      if(windowedModes[i][0] == w && windowedModes[i][1] == h) {
-	matchMode = i;
-	break;
-      }
-    } 
-    if(-1 == matchMode) // use smallest mode
-      {
-	matchMode = MAXWINMODES-1;
-      }
-  }
+
+      matchMode -= firstEntry;
+    }
+  else
+    {
+      for(i = 0; i<MAXWINMODES; i++)
+	{
+	  if (windowedModes[i][0] == w && windowedModes[i][1] == h)
+	    {
+	      matchMode = i;
+	      break;
+	    }
+	}
+
+      if (matchMode == -1) // use smallest mode
+	  matchMode = MAXWINMODES-1;
+    }
   
   return matchMode;
 }
@@ -558,7 +564,7 @@ void I_PrepareVideoModeList()
 {
   int i;
     
-  if(cv_fullscreen.value) // only fullscreen needs preparation
+  if (cv_fullscreen.value) // only fullscreen needs preparation
     {
       if(numVidModes != -1) 
         {
@@ -578,145 +584,120 @@ void I_PrepareVideoModeList()
   return;
 }
 
-int I_SetVideoMode(int modeNum) {
-
+int I_SetVideoMode(int modeNum)
+{
   doUngrabMouse();
 
+  Uint32 flags;
+
+  vid.modenum = modeNum;
   // For some reason, under Win98 the combination SDL_HWSURFACE | SDL_FULLSCREEN
   // doesn't give a valid pixels pointer. Odd.
-  //    
-  if(cv_fullscreen.value) {
-    modeNum += firstEntry;
+  if (cv_fullscreen.value)
+    {
+      modeNum += firstEntry;        
+      vid.width = modeList[modeNum]->w;
+      vid.height = modeList[modeNum]->h;
+      flags = surfaceFlags | SDL_FULLSCREEN;
+
+      CONS_Printf ("I_SetVideoMode: fullscreen %d x %d (%d bpp)\n", vid.width, vid.height, vid.BitsPerPixel);
+    }
+  else
+    { // !cv_fullscreen.value
+      vid.width = windowedModes[modeNum][0];
+      vid.height = windowedModes[modeNum][1];
+      flags = surfaceFlags;
+
+      CONS_Printf("I_SetVideoMode: windowed %d x %d (%d bpp)\n", vid.width, vid.height, vid.BitsPerPixel);
         
-    vid.width = modeList[modeNum]->w;
-    vid.height = modeList[modeNum]->h;
-    vid.rowbytes = vid.width * vid.bpp;
-    vid.recalc = true;
+      // Window title
+      SDL_WM_SetCaption("Legacy", "Legacy");
+    }
 
-    CONS_Printf ("I_SetVideoMode: fullscreen %d x %d x %d bpp\n", vid.width, vid.height, BitsPerPixel);
-        
-    if(rendermode == render_soft)
-      {
-	SDL_FreeSurface(vidSurface);
-	free(vid.buffer);
-	
-	vidSurface = SDL_SetVideoMode(vid.width, vid.height, BitsPerPixel, surfaceFlags|SDL_FULLSCREEN);
-	if(vidSurface == NULL) I_Error("Could not set vidmode\n");
-	  
-            
-	vid.buffer = (byte *)malloc(vid.width * vid.height * vid.bpp * NUMSCREENS);
-	
-	vid.direct = (byte *)vidSurface->pixels; // FIXME
-	if(vidSurface->pixels == NULL) I_Error("Didn't get a valid pixels pointer (SDL). Exiting.\n");
+  vid.recalc = true;
 
-	// VB: FIXME this stops execution at the latest
-	*((Uint8 *)vidSurface->pixels) = 1;
-      } else // (render_soft == rendermode)
-        {
-	  if(!OglSdlSurface(vid.width, vid.height, cv_fullscreen.value))
-            {
-	      I_Error("Could not set vidmode\n");
-            }
-            
-        }
-    vid.modenum = modeNum-firstEntry;
-
-  } else { //(cv_fullscreen.value)
-
-    vid.width = windowedModes[modeNum][0];
-    vid.height = windowedModes[modeNum][1];
-    vid.rowbytes = vid.width * vid.bpp;
-    vid.recalc = true;
-
-    CONS_Printf("I_SetVideoMode: windowed %dx%dx%d\n", vid.width, vid.height, vid.bpp);
-        
-    // Window title
-    SDL_WM_SetCaption("Legacy", "Legacy");
-    
-    if(render_soft == rendermode)
-      {
-	SDL_FreeSurface(vidSurface);
-	free(vid.buffer);
+  if (rendermode == render_soft)
+    {
+      SDL_FreeSurface(vidSurface);
+      free(vid.buffer);
 	
-	vidSurface = SDL_SetVideoMode(vid.width, vid.height, BitsPerPixel, surfaceFlags);
-	
-	if(NULL == vidSurface)
-	  {
-	    I_Error("Could not set vidmode\n");
-	  }
-	
-	vid.buffer = (byte *)malloc(vid.width * vid.height * vid.bpp * NUMSCREENS);
-	vid.direct = (byte *)vidSurface->pixels; // FIXME
-      }
-    else //(render_soft == rendermode)
-      {
-	if(!OglSdlSurface(vid.width, vid.height, cv_fullscreen.value))
-	  {
-	    I_Error("Could not set vidmode\n");
-	  }
-      }
-    vid.modenum = modeNum;
-  }
+      vidSurface = SDL_SetVideoMode(vid.width, vid.height, vid.BitsPerPixel, flags);
+      if (vidSurface == NULL)
+	I_Error("Could not set vidmode\n");
+	              
+      if (vidSurface->pixels == NULL)
+	I_Error("Didn't get a valid pixels pointer (SDL). Exiting.\n");
+
+      vid.direct = (byte *)vidSurface->pixels;
+      // VB: FIXME this stops execution at the latest
+      *((Uint8 *)vidSurface->pixels) = 1;
+    }
+  else // !(render_soft == rendermode)
+    {
+      if (!OglSdlSurface(vid.width, vid.height, cv_fullscreen.value))
+	{
+	  I_Error("Could not set vidmode\n");
+	}
+    }
     
   I_StartupMouse();
 
   return 1;
 }
 
-void I_StartupGraphics()
+bool I_StartupGraphics()
 {
-  //int k;
-  if(graphics_started)
-    return;
+  if (graphics_started)
+    return true;
   
-  CV_RegisterVar (&cv_vidwait);
+  CV_RegisterVar(&cv_vidwait);
   
   // Initialize Audio as well, otherwise DirectX can not use audio
-  if(SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO) < 0)
+  if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO) < 0)
     {
       CONS_Printf("Couldn't initialize SDL: %s\n", SDL_GetError());
-      return; // VB: could return -1
+      return false;
     }
-  
-  // Get video info for screen resolutions
-  //videoInfo = SDL_GetVideoInfo();
-  // even if I set vid.bpp and highscreen properly it does seem to
-  // support only 8 bit  ...  strange
-  // so lets force 8 bit
-  BitsPerPixel = 8;
-    
-  // Set color depth; either 1=256pseudocolor or 2=hicolor
-  vid.bpp = 1 /*videoInfo->vfmt->BytesPerPixel*/;
-  highcolor = (vid.bpp == 2) ? true:false;
-    
+
+  // Get video info for screen resolutions  
+  vidInfo = SDL_GetVideoInfo();
+  // now we _could_ do all kinds of cool tests to determine which
+  // video modes are available, but...
+  // vidInfo->vfmt is the pixelformat of the "best" video mode available
+
+  CONS_Printf("Bpp = %d, bpp = %d\n", vidInfo->vfmt->BytesPerPixel, vidInfo->vfmt->BitsPerPixel);
+
+  // list all available video modes corresponding to the "best" pixelformat
   modeList = SDL_ListModes(NULL, SDL_FULLSCREEN | surfaceFlags);
 
+  numVidModes = 0;
   if (modeList == NULL)
     {
       CONS_Printf("No video modes present\n");
-      return;
+      return false;
     }
+
+  while (modeList[numVidModes])
+    numVidModes++;
     
-  numVidModes = 0;
-  if (modeList != NULL)
-    {
-      while (modeList[numVidModes] != NULL)
-	numVidModes++;
-    }
-  else
-    // should not happen with fullscreen modes
-    numVidModes = -1;
-    
-  CONS_Printf("Found %d Video Modes\n", numVidModes);
+  CONS_Printf("Found %d video modes\n", numVidModes);
   
   //for(k=0; modeList[k]; ++k)
   //  CONS_Printf("  %d x %d\n", modeList[k]->w, modeList[k]->h);
-  
-  // default size for startup
+
+  // even if I set vid.bpp and highscreen properly it does seem to
+  // support only 8 bit  ...  strange
+  // so lets force 8 bit (software mode only)
+  // TODO why not use hicolor in sw mode too? it must work...
+  // Set color depth; either 1=256pseudocolor or 2=hicolor
+  vid.BytesPerPixel = 1;  //videoInfo->vfmt->BytesPerPixel
+  vid.BitsPerPixel = 8;
+  //highcolor = (vid.bpp == 2) ? true:false;
+
+  vid.recalc = true;
+  // default resolution
   vid.width = BASEVIDWIDTH;
   vid.height = BASEVIDHEIGHT;
-  vid.rowbytes = vid.width * vid.bpp;
-  vid.recalc = true;
 
   // Window title
   SDL_WM_SetCaption("Legacy", "Legacy");
@@ -763,39 +744,35 @@ void I_StartupGraphics()
       
       // check gl renderer lib
       if (HWD.pfnGetRenderVersion() != VERSION)
-	{
-	  I_Error ("The version of the renderer doesn't match the version of the executable\nBe sure you have installed Doom Legacy properly.\n");
-	}
+	I_Error ("The version of the renderer doesn't match the version of the executable\nBe sure you have installed Doom Legacy properly.\n");
 
       vid.width = 640; // hack to make voodoo cards work in 640x480
       vid.height = 480;
 
-      if(!OglSdlSurface(vid.width, vid.height, cv_fullscreen.value))
+      if (!OglSdlSurface(vid.width, vid.height, cv_fullscreen.value))
 	rendermode = render_soft;
     }
     
   if (rendermode == render_soft)
-    {   
+    {
       // not fullscreen
-      CONS_Printf ("VB: I_StartupGraphics: windowed %d x %d x %d bpp\n", vid.width, vid.height, BitsPerPixel);
-      vidSurface = SDL_SetVideoMode(vid.width, vid.height, BitsPerPixel, surfaceFlags);
+      CONS_Printf("I_StartupGraphics: windowed %d x %d x %d bpp\n", vid.width, vid.height, vid.BitsPerPixel);
+      vidSurface = SDL_SetVideoMode(vid.width, vid.height, vid.BitsPerPixel, surfaceFlags);
       
-      if(vidSurface == NULL)
+      if (vidSurface == NULL)
         {
 	  CONS_Printf("Could not set vidmode\n");
-	  return;
+	  return false;
         }
-      vid.buffer = (byte *)malloc(vid.width * vid.height * vid.bpp * NUMSCREENS);
-      vid.direct = (byte *)vidSurface->pixels; // FIXME
-      // CONS_Printf("VB: I_StartupGraphics : pointers = %p, %p\n", vid.direct, vid.buffer);   
+      vid.direct = (byte *)vidSurface->pixels;
     }
     
   SDL_ShowCursor(SDL_DISABLE);
   doUngrabMouse();
   
-  graphics_started = 1;
+  graphics_started = true;
     
-  return;
+  return true;
 }
 
 void I_ShutdownGraphics()
@@ -804,18 +781,12 @@ void I_ShutdownGraphics()
   if (!graphics_started)
     return;
 
-  if(rendermode == render_soft)
+  if (rendermode == render_soft)
     {
       // vidSurface should be automatically freed
-      //       if(vidSurface != NULL)
-      //  {
-      //      SDL_FreeSurface(vidSurface);
-      //      vidSurface = NULL;
-      //  }
-    } else {
-      OglSdlShutdown();
     }
+  else
+    OglSdlShutdown();
     
   SDL_Quit(); 
-  
 }
