@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2005/01/04 18:32:44  smite-meister
+// better colormap handling
+//
 // Revision 1.14  2004/11/18 20:30:14  smite-meister
 // tnt, plutonia
 //
@@ -315,23 +318,22 @@ struct sector_t
 /// \brief SideDef
 struct side_t
 {
-  // add this to the calculated texture column
-  fixed_t     textureoffset;
+  /// add this to the calculated texture column
+  fixed_t textureoffset;
 
-  // add this to the calculated texture top
-  fixed_t     rowoffset;
+  /// add this to the calculated texture top
+  fixed_t rowoffset;
 
-  // Texture indices.
-  // We do not maintain names here.
-  short       toptexture;
-  short       bottomtexture;
-  short       midtexture;
+  /// Texture indices. We do not maintain names here.
+  short toptexture;
+  short bottomtexture;
+  short midtexture;
 
-  // Sector the SideDef is facing.
-  sector_t*   sector;
+  /// Sector the SideDef is facing.
+  sector_t *sector;
 
-  //SoM: 3/6/2000: This is the special of the linedef this side belongs to.
-  int special; // only used during map setup, but...
+  /// LineDef the SideDef belongs to.
+  line_t   *line;
 };
 
 
@@ -423,44 +425,42 @@ struct line_t
   /// Vertices, from v1 to v2.
   vertex_t *v1, *v2;
 
-  // Precalculated v2 - v1 for side checking.
+  /// Precalculated v2 - v1 for side checking.
   fixed_t   dx, dy;
 
-  short       flags;
-  short       special;
-  short       tag;
-  // hexen args
+  short flags;   ///< bit flags
+  short special; ///< linedef type or special action
+  short tag;
+  int firsttag, nexttag;  ///< hash system, improves searches for tags.
+
+  /// hexen args
   byte args[5];
 
-  // Visual appearance: SideDefs.
-  //  sidenum[1] will be -1 if one sided
-  short       sidenum[2];
+  /// Visual appearance: SideDefs. sidenum[1] will be -1 if one sided
+  short  sidenum[2];
 
   /// Neat. Another bounding box, for the extent of the LineDef.
-  bbox_t     bbox;
+  bbox_t bbox;
 
-  // To aid move clipping.
+  /// To aid move clipping.
   slopetype_t slopetype;
 
-  // Front and back sector.
+  /// Front and back sector.
   // Note: redundant? Can be retrieved from SideDefs.
-  sector_t*   frontsector;
-  sector_t*   backsector;
+  sector_t *frontsector;
+  sector_t *backsector;
 
-  // if == validcount, already checked
-  int         validcount;
+  /// if == global validcount, already checked
+  int validcount;
 
-  // Thinker for complex actions
-  Thinker  *thinker;
+  /// Thinker for complex actions
+  Thinker *thinker;
 
-  // wallsplat_t list
+  /// wallsplat_t list
   struct wallsplat_t *splats;
 
-  int transmap;          // translucency filter, -1 == none
-
-  int firsttag,nexttag;  // improves searches for tags.
-
-  int ecolormap;         // SoM: Used for 282 linedefs
+  int transmap;   ///< translucency filter, -1 == none
+  int ecolormap;  ///< SoM: Used for 282 linedefs
 };
 
 

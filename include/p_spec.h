@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,14 +18,14 @@
 //
 //
 // $Log$
+// Revision 1.27  2005/01/04 18:32:43  smite-meister
+// better colormap handling
+//
 // Revision 1.26  2004/09/06 19:58:03  smite-meister
 // Doom linedefs done!
 //
 // Revision 1.25  2004/09/03 16:28:51  smite-meister
 // bugfixes and ZDoom linedef types
-//
-// Revision 1.24  2004/08/29 20:48:49  smite-meister
-// bugfixes. wow.
 //
 // Revision 1.23  2004/08/12 18:30:29  smite-meister
 // cleaned startup
@@ -39,17 +39,8 @@
 // Revision 1.19  2003/12/23 18:06:06  smite-meister
 // Hexen stairbuilders. Moving geometry done!
 //
-// Revision 1.18  2003/12/18 11:57:31  smite-meister
-// fixes / new bugs revealed
-//
 // Revision 1.17  2003/12/13 23:51:03  smite-meister
 // Hexen update
-//
-// Revision 1.16  2003/11/30 00:09:48  smite-meister
-// bugfixes
-//
-// Revision 1.15  2003/11/23 00:41:55  smite-meister
-// bugfixes
 //
 // Revision 1.14  2003/11/12 11:07:27  smite-meister
 // Serialization done. Map progression.
@@ -121,7 +112,18 @@ enum linedefspecial_e
 {
   PO_LINE_START = 1,
   PO_LINE_EXPLICIT = 5,
-  LEGACY_EXT = 150, // Legacy extensions to Hexen linedef system are under this type
+
+  /// All Legacy extensions to Hexen linedef system are under this type.
+  LEGACY_EXT = 150,
+  /// subtypes, stored in args[0]
+  LEGACY_BOOM_SCROLLERS = 0,
+  LEGACY_BOOM_FRICTION  = 1,
+  LEGACY_BOOM_PUSHERS   = 2,
+  LEGACY_BOOM_RENDERER  = 3,
+  LEGACY_BOOM_EXOTIC    = 4,
+  LEGACY_FAKEFLOOR      = 10,
+  LEGACY_RENDERER       = 11,
+  LEGACY_MISC           = 13,
 };
 
 /// mapthing specials

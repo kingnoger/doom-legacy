@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.42  2005/01/04 18:32:45  smite-meister
+// better colormap handling
+//
 // Revision 1.41  2004/12/31 16:19:41  smite-meister
 // alpha fixes
 //
@@ -694,11 +697,15 @@ int texturecache_t::GetTextureOrColormap(const char *name, int &colmap, bool tra
 }
 
 
-Texture *texturecache_t::GetPtr(const char *name, bool substitute)
+static int tex_coercion;
+
+Texture *texturecache_t::GetPtr(const char *name, int coerce)
 {
   // "NoTexture" marker.
   if (name[0] == '-')
     return NULL;
+
+  tex_coercion = coerce;
 
   // Unfortunate but necessary.
   // Texture names should be NUL-terminated....
@@ -710,9 +717,6 @@ Texture *texturecache_t::GetPtr(const char *name, bool substitute)
   strupr(name8);
 
   Texture *t = (Texture *)Cache(name8);
-
-  if (!substitute && t == default_item)
-    return NULL;
 
   /*
   if (t == default_item)
@@ -774,9 +778,9 @@ cacheitem_t *texturecache_t::Load(const char *name)
       // it's a PNG
       t = new PNGTexture(name, lump);
     } // then try some common sizes for raw picture lumps
-  else if (size ==  64*64 || // normal flats
-           size ==  65*64 || // Damn you, Heretic animated flats!
-           size == 128*64)   // TODO Some Hexen flats are different! Why?
+  else if ((size ==  64*64 || // normal flats
+	    size ==  65*64 || // Damn you, Heretic animated flats!
+	    size == 128*64) && !tex_coercion)   // TODO Some Hexen flats (X_001-X_011) are larger! Why?
     {
       // Flat is 64*64 bytes of raw paletted picture data in one lump
       t = new LumpTexture(name, lump, 64, 64);
@@ -1081,32 +1085,35 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
   if (num_extra_colormaps == MAXCOLORMAPS)
     I_Error("R_CreateColormap: Too many colormaps!\n");
 
-  double cmaskr, cmaskg, cmaskb, cdestr, cdestg, cdestb;
-  double r, g, b;
-  double cbrightness;
-  double maskamt = 0, othermask = 0;
   int    i, p;
-  unsigned int  cr, cg, cb;
-  unsigned int  maskcolor, fadecolor;
-  unsigned int  fadestart = 0, fadeend = 33, fadedist = 33;
-  int fog = 0;
+  double cmaskr, cmaskg, cmaskb;
+  double maskamt = 0, othermask = 0;
+  unsigned int  cr, cg, cb, ca;
+  unsigned int  maskcolor;
+  int rgba;
+
+  //TODO: Hurdler: check this entire function
+  // for now, full support of toptexture only
 
 #define HEX2INT(x) (x >= '0' && x <= '9' ? x - '0' : \
 		    x >= 'a' && x <= 'f' ? x - 'a' + 10 : \
 		    x >= 'A' && x <= 'F' ? x - 'A' + 10 : 0)
+#define ALPHA2INT(x) (x >= 'a' && x <= 'z' ? x - 'a' : \
+		      x >= 'A' && x <= 'Z' ? x - 'A' : 0)
   if (p1[0] == '#')
     {
-      cmaskr = cr = ((HEX2INT(p1[1]) * 16) + HEX2INT(p1[2]));
-      cmaskg = cg = ((HEX2INT(p1[3]) * 16) + HEX2INT(p1[4]));
-      cmaskb = cb = ((HEX2INT(p1[5]) * 16) + HEX2INT(p1[6]));
-      // Create a rough approximation of the color (a 16 bit color)
-      maskcolor = ((cb) >> 3) + (((cg) >> 2) << 5) + (((cr) >> 3) << 11);
-      if (p1[7] >= 'a' && p1[7] <= 'z')
-        maskamt = (p1[7] - 'a');
-      else if (p1[7] >= 'A' && p1[7] <= 'Z')
-        maskamt = (p1[7] - 'A');
+      cmaskr = cr = ((HEX2INT(p1[1]) << 4) + HEX2INT(p1[2]));
+      cmaskg = cg = ((HEX2INT(p1[3]) << 4) + HEX2INT(p1[4]));
+      cmaskb = cb = ((HEX2INT(p1[5]) << 4) + HEX2INT(p1[6]));
+      maskamt = ca = ALPHA2INT(p1[7]);
 
-      maskamt /= (double)24;
+      // 24-bit color
+      rgba = cr + (cg << 8) + (cb << 16) + (ca << 24);
+
+      // Create a rough approximation of the color (a 16 bit color)
+      maskcolor = (cb >> 3) + ((cg >> 2) << 5) + ((cr >> 3) << 11);
+
+      maskamt /= 24.0;
 
       othermask = 1 - maskamt;
       maskamt /= 0xff;
@@ -1120,9 +1127,14 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
       cmaskg = 0xff;
       cmaskb = 0xff;
       maskamt = 0;
+      rgba = 0;
       maskcolor = ((0xff) >> 3) + (((0xff) >> 2) << 5) + (((0xff) >> 3) << 11);
     }
+#undef ALPHA2INT
 
+
+  unsigned int  fadestart = 0, fadeend = 33, fadedist = 33;
+  int fog = 0;
 
 #define NUMFROMCHAR(c)  (c >= '0' && c <= '9' ? c - '0' : 0)
   if (p2[0] == '#')
@@ -1140,11 +1152,13 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
 #undef NUMFROMCHAR
 
 
+  double cdestr, cdestg, cdestb;
+  unsigned int fadecolor;
   if (p3[0] == '#')
     {
-      cdestr = cr = ((HEX2INT(p3[1]) * 16) + HEX2INT(p3[2]));
-      cdestg = cg = ((HEX2INT(p3[3]) * 16) + HEX2INT(p3[4]));
-      cdestb = cb = ((HEX2INT(p3[5]) * 16) + HEX2INT(p3[6]));
+      cdestr = cr = ((HEX2INT(p3[1]) << 4) + HEX2INT(p3[2]));
+      cdestg = cg = ((HEX2INT(p3[3]) << 4) + HEX2INT(p3[4]));
+      cdestb = cb = ((HEX2INT(p3[5]) << 4) + HEX2INT(p3[6]));
       fadecolor = (((cb) >> 3) + (((cg) >> 2) << 5) + (((cr) >> 3) << 11));
     }
   else
@@ -1165,26 +1179,41 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
 	  maskamt == extra_colormaps[i].maskamt &&
 	  fadestart == extra_colormaps[i].fadestart &&
 	  fadeend == extra_colormaps[i].fadeend &&
-	  fog == extra_colormaps[i].fog)
+	  fog == extra_colormaps[i].fog &&
+	  rgba == extra_colormaps[i].rgba)
 	return i;
     }
 
   // nope, we have to create it now
-
   int n = num_extra_colormaps++;
-  double  deltas[256][3], cmap[256][3];
+
+  extra_colormaps[n].lump = -1;
+
+  // aligned on 8 bit for asm code
+  extra_colormaps[n].colormap = NULL;
+  extra_colormaps[n].maskcolor = maskcolor;
+  extra_colormaps[n].fadecolor = fadecolor;
+  extra_colormaps[n].maskamt = maskamt;
+  extra_colormaps[n].fadestart = fadestart;
+  extra_colormaps[n].fadeend = fadeend;
+  extra_colormaps[n].fog = fog;
+  extra_colormaps[n].rgba = rgba;
+
 
 #ifdef HWRENDER
   // TODO: Hurdler: see why we need to have a separate code here
   if (rendermode == render_soft)
 #endif
   {
-    for(i = 0; i < 256; i++)
+    double deltas[256][3], cmap[256][3];
+
+    for (i = 0; i < 256; i++)
     {
+      double r, g, b;
       r = vid.palette[i].red;
       g = vid.palette[i].green;
       b = vid.palette[i].blue;
-      cbrightness = sqrt((r*r) + (g*g) + (b*b));
+      double cbrightness = sqrt((r*r) + (g*g) + (b*b));
 
       cmap[i][0] = (cbrightness * cmaskr) + (r * othermask);
       if(cmap[i][0] > 255.0)
@@ -1201,25 +1230,7 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
         cmap[i][2] = 255.0;
       deltas[i][2] = (cmap[i][2] - cdestb) / (double)fadedist;
     }
-  }
 
-  extra_colormaps[n].lump = -1;
-
-  // aligned on 8 bit for asm code
-  extra_colormaps[n].colormap = NULL;
-  extra_colormaps[n].maskcolor = maskcolor;
-  extra_colormaps[n].fadecolor = fadecolor;
-  extra_colormaps[n].maskamt = maskamt;
-  extra_colormaps[n].fadestart = fadestart;
-  extra_colormaps[n].fadeend = fadeend;
-  extra_colormaps[n].fog = fog;
-
-#define ABS2(x) (x) < 0 ? -(x) : (x)
-#ifdef HWRENDER
-  // TODO: Hurdler: see why we need to have a separate code here
-  if (rendermode == render_soft)
-#endif
-  {
     char *colormap_p = (char *)Z_MallocAlign((256 * 34) + 1, PU_LEVEL, 0, 8);
     extra_colormaps[n].colormap = (lighttable_t *)colormap_p;
 
@@ -1232,6 +1243,8 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
 
         if((unsigned int)p < fadestart)
           continue;
+
+#define ABS2(x) (x) < 0 ? -(x) : (x)
 
         if(ABS2(cmap[i][0] - cdestr) > ABS2(deltas[i][0]))
           cmap[i][0] -= deltas[i][0];
@@ -1247,10 +1260,11 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
           cmap[i][2] -= deltas[i][2];
         else
           cmap[i][2] = cdestb;
+
+#undef ABS2
       }
     }
   }
-#undef ABS2
 
   return n;
 }

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2005/01/04 18:32:44  smite-meister
+// better colormap handling
+//
 // Revision 1.17  2004/12/08 10:16:03  segabor
 // "segabor: byte alignment fix"
 //
@@ -278,14 +281,23 @@ public:
   void Insert(class Texture *t);
 
   /// returns the id of an existing Texture, or tries Caching it if nonexistant
-  inline int Get(const char *p, bool substitute = true)
+  inline int Get(const char *p)
   {
-    Texture *t = GetPtr(p, substitute);
+    Texture *t = GetPtr(p);
+    return t ? t->id : 0;
+  };
+
+  inline int GetNoSubstitute(const char *p)
+  {
+    Texture *t = GetPtr(p);
+    if (t == default_item)
+      return 0;
+
     return t ? t->id : 0;
   };
 
   /// like Get, but returns a pointer
-  Texture *GetPtr(const char *p, bool substitute = true);
+  Texture *GetPtr(const char *p, int coerce = 0);
 
   /// like GetPtr, but takes a lump number instead of a name.
   Texture *GetPtrNum(int n);

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2005/01/04 18:32:41  smite-meister
+// better colormap handling
+//
 // Revision 1.13  2004/11/28 18:02:21  smite-meister
 // RPCs finally work!
 //
@@ -257,8 +260,8 @@ int P_Read_ANIMATED(int lump)
       int base, last;
       if (a->istexture)
 	{
-	  base = tc.Get(a->startname, false);
-	  last = tc.Get(a->endname, false);
+	  base = tc.GetNoSubstitute(a->startname);
+	  last = tc.GetNoSubstitute(a->endname);
 	}
       else
 	{
@@ -267,7 +270,7 @@ int P_Read_ANIMATED(int lump)
 	}
 
       int n = last - base + 1; // number of frames
-      if (n < 2 || n > MAX_FRAME_DEFS || base == -1 || last == -1)
+      if (n < 2 || n > MAX_FRAME_DEFS || base <= 0 || last <= 0)
 	{
 	  if (lump >= 0)
 	    CONS_Printf("ANIMATED: Bad cycle from %s to %s", a->startname, a->endname);

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.40  2005/01/04 18:32:41  smite-meister
+// better colormap handling
+//
 // Revision 1.39  2004/12/31 16:19:38  smite-meister
 // alpha fixes
 //
@@ -1137,32 +1140,28 @@ int Map::Serialize(LArchive &a)
 	  si = &sides[li->sidenum[0]];
 	  if (si->textureoffset != SHORT(msd[li->sidenum[0]].textureoffset)<<FRACBITS)
 	    diff |= LD_S1TEXOFF;
-	  // FIXME tc returning -1 for colormaps
-	  //SoM: 4/1/2000: Some textures are colormaps. Don't worry about invalid textures.
-	  if (tc.Get(msd[li->sidenum[0]].toptexture, false) != -1)
-	    if (si->toptexture != tc.Get(msd[li->sidenum[0]].toptexture))
-	      diff |= LD_S1TOPTEX;
-	  if (tc.Get(msd[li->sidenum[0]].bottomtexture, false) != -1)
-	    if (si->bottomtexture != tc.Get(msd[li->sidenum[0]].bottomtexture))
-	      diff |= LD_S1BOTTEX;
-	  if (tc.Get(msd[li->sidenum[0]].midtexture, false) != -1)
-	    if (si->midtexture != tc.Get(msd[li->sidenum[0]].midtexture))
-	      diff |= LD_S1MIDTEX;
+
+	  // do texture diffing by comparing names to be sure
+	  if (si->toptexture && strncmp(tc[si->toptexture]->GetName(), msd[li->sidenum[0]].toptexture, 8))
+	    diff |= LD_S1TOPTEX;
+	  if (si->bottomtexture && strncmp(tc[si->bottomtexture]->GetName(), msd[li->sidenum[0]].bottomtexture, 8))
+	    diff |= LD_S1BOTTEX;
+	  if (si->midtexture && strncmp(tc[si->midtexture]->GetName(), msd[li->sidenum[0]].midtexture, 8))
+	    diff |= LD_S1MIDTEX;
         }
       if (li->sidenum[1] != -1)
         {
 	  si = &sides[li->sidenum[1]];
 	  if (si->textureoffset != SHORT(msd[li->sidenum[1]].textureoffset)<<FRACBITS)
 	    diff2 |= LD_S2TEXOFF;
-	  if (tc.Get(msd[li->sidenum[1]].toptexture, false) != -1)
-	    if (si->toptexture != tc.Get(msd[li->sidenum[1]].toptexture))
-	      diff2 |= LD_S2TOPTEX;
-	  if (tc.Get(msd[li->sidenum[1]].bottomtexture, false) != -1)
-	    if (si->bottomtexture != tc.Get(msd[li->sidenum[1]].bottomtexture))
-	      diff2 |= LD_S2BOTTEX;
-	  if (tc.Get(msd[li->sidenum[1]].midtexture, false) != -1)
-	    if (si->midtexture != tc.Get(msd[li->sidenum[1]].midtexture))
-	      diff2 |= LD_S2MIDTEX;
+
+	  if (si->toptexture && strncmp(tc[si->toptexture]->GetName(), msd[li->sidenum[1]].toptexture, 8))
+	    diff2 |= LD_S2TOPTEX;
+	  if (si->bottomtexture && strncmp(tc[si->bottomtexture]->GetName(), msd[li->sidenum[1]].bottomtexture, 8))
+	    diff2 |= LD_S2BOTTEX;
+	  if (si->midtexture && strncmp(tc[si->midtexture]->GetName(), msd[li->sidenum[1]].midtexture, 8))
+	    diff2 |= LD_S2MIDTEX;
+
 	  if (diff2)
 	    diff |= LD_DIFF2;
         }

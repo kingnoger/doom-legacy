@@ -1,6 +1,5 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 
 <head>
@@ -265,8 +264,10 @@ The recognized blocknames are
 
 <h3>[level info]</h3>
 
+<p>
 This block holds information concerning the entire map.
-It consists of commands, one per line. 
+It consists of commands, one per line.
+</p>
 
 <table class="def">
 <tr><th>[level info] command</th><th>effect</th></tr>
@@ -337,12 +338,17 @@ Guess...
 
 <h3>[scripts]</h3>
 
-This block contains the <a href="fs.html">FraggleScript</a> scripts of the map.
+<p>
+This block contains the <a href="fs.html">FraggleScript</a> scripts of
+the map.
+</p>
 
 <h3>[intertext]</h3>
 
-Contains the text to be shown after the map is exited. "\n" is the newline character.
-
+<p>
+Contains the text to be shown after the map is exited. "\n" is the
+newline character.
+</p>
 
 <hr />
 <h2><a name="scripting">Scripting</a></h2>
@@ -367,7 +373,9 @@ compiled into bytecode using <b>ACC</b>, the ACS compiler.
 <hr />
 <h2><a name="linedef">New linedef types</a></h2>
 
+<p>
 TODO new things: 4001-4060 playerstarts in doom namespace
+</p>
 
 
 <h3>Visual effects</h3>
@@ -523,20 +531,21 @@ Double light effect?
 
 <h3>New linedef flags</h3>
 
-Alltrigger [0x400] (1024)<br/>
+<h4>Alltrigger [0x400] (1024)</h4>
+<p>
 This flag, when set, will allow all things to activate a W* line, with
 the exception of flying blood. :) This includes all generalized types
 that are W*.
-
+</p>
 
 
 <hr />
 <h2><a name="3dfloors">3D floors and water</a></h2>
 
+<p>
 The concept of true 3d in Doom Legacy.
 By Steven McGranahan.
-
-
+</p>
 
 <h3>Chapter 1: The Beginning</h3>
 
@@ -661,6 +670,7 @@ What's left? Nothing! Run j00r map!
 </p>
 
 <h3>Chapter 4: Linedef code summery</h3>
+<p>
 281 - Creates a solid 3D floor in all tagged sectors.
 289 - Creates a solid 3D floor in all tagged sectors, does not cast a shadow.
 300 - Creates a solid translucent 3D floor in all tagged sectors.
@@ -673,7 +683,7 @@ Expect detailed explanations of each linedef type soon...
 
 Linedefs 300 and 301 support an alpha value in hardware mode:
 uppertexture: [#000..#255] (#000 = transparent, #255 = opaque. If not defined, the default value is #127)
-
+</p>
 
 <h3>Chapter 5: What causes slowdowns</h3>
 
@@ -732,7 +742,9 @@ part of the PLAYxxxx sprite, which would cause some confusing error messages.
 
 <h3>Models</h3>
 
+<p>
 TODO
+</p>
 
 <h3>Textures</h3>
 
@@ -919,10 +931,11 @@ Ends the sound sequence definition.
 <hr />
 <h2><a name="music">Music</a></h2>
 
-Legacy supports the MUS, MIDI, MP3 and Ogg Vorbis music formats, the last two
-through the SDL_mixer library. The music lump format is detected
+<p>
+Legacy supports the MUS, MIDI, MP3 and Ogg Vorbis music formats, using
+the SDL_mixer library. The music lump format is detected
 automagically. The names of the music lumps can be freely chosen.
-
+</p>
 
 <hr />
 <h2><a name="dehacked">DeHackEd and BEX</a></h2>
@@ -1034,7 +1047,9 @@ determines the pickup's &quot;size&quot;, be it health, armor points
 or ammo.
 </p>
 
+<p>
 TODO examples (an example DEH file!)
+</p>
 
 <p>
 You can also create new types of pickups by combining DeHackEd with scripting...TODO
@@ -1049,8 +1064,10 @@ You can also create new types of pickups by combining DeHackEd with scripting...
 <tr><td>Missile damage</td><td>An integer amount</td><td>MISSILE, SKULLFLY</td></tr>
 </table>
 
+<p>
 TODO more howtos: creating a new weapon with scripting, new pickups,
 new monsters...
+</p>
 
 <hr />
 <h2><a name="legacy.wad">Legacy.wad contents</a></h2>

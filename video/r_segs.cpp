@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2005/01/04 18:32:46  smite-meister
+// better colormap handling
+//
 // Revision 1.11  2004/12/31 16:19:41  smite-meister
 // alpha fixes
 //
@@ -136,11 +139,12 @@
 // Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
 // Initial import into CVS (v1.29 pr3)
 //
-//
-// DESCRIPTION:
-//      All the clipping: columns, horizontal spans, sky columns.
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief
+/// All the clipping: columns, horizontal spans, sky columns.
+/// Rendering of vertical surfaces.
 
 #include "doomdef.h"
 
@@ -151,9 +155,10 @@
 #include "r_local.h"
 #include "r_state.h"
 #include "r_sky.h"
-
-#include "r_splats.h"           //faB: testing
+#include "r_splats.h"
 #include "v_video.h" // patch_t
+
+#include "p_spec.h" // linedef special types
 
 #include "console.h" //Con_clipviewtop
 
@@ -499,7 +504,7 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
       dc_transmap = transtables[ldef->transmap];
       colfunc = fuzzcolfunc;
     }
-  else if (ldef->special == 50 && ldef->args[0] == 11) // HACK fog sheet
+  else if (ldef->special == LEGACY_EXT && ldef->args[0] == LEGACY_RENDERER) // HACK fog sheet
     {
       colfunc = R_DrawFogColumn_8;
       windowtop = frontsector->ceilingheight;

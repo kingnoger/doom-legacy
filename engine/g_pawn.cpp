@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.48  2005/01/04 18:32:40  smite-meister
+// better colormap handling
+//
 // Revision 1.47  2004/12/31 16:19:37  smite-meister
 // alpha fixes
 //
@@ -869,7 +872,7 @@ bool PlayerPawn::Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent)
   bool ret = Actor::Teleport(nx, ny, nangle, silent);
 
   // don't move for a bit
-  if (!powers[pw_weaponlevel2])
+  if (!silent && !powers[pw_weaponlevel2])
     reactiontime = 18;
     
   // FIXME code below is useless, right?

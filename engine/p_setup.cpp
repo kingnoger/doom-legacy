@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.54  2005/01/04 18:32:41  smite-meister
+// better colormap handling
+//
 // Revision 1.53  2004/12/31 16:19:38  smite-meister
 // alpha fixes
 //
@@ -768,6 +771,12 @@ void Map::LoadLineDefs(int lump)
           ld->bbox.box[BOXTOP] = v1->y;
         }
 
+      // set line references to the sidedefs
+      if (ld->sidenum[0] != -1)
+        sides[ld->sidenum[0]].line = ld;
+      if (ld->sidenum[1] != -1)
+	sides[ld->sidenum[1]].line = ld;
+
       ld->transmap = -1; // no transmap by default
     }
 
@@ -857,31 +866,33 @@ void Map::LoadSideDefs2(int lump)
       sd->sector = sec = &sectors[SHORT(msd->sector)];
 
       // specials where texture names might be something else
-      if (sd->special)
-	switch (sd->special)
-	  {
-	  case 1:  // BOOM: 242 fake ceiling/floor, variable colormaps
-	  case 3:  // Legacy: swimmable water, colormaps
-	    sd->toptexture = tc.GetTextureOrColormap(ttex, sec->topmap);
-	    sd->midtexture = tc.GetTextureOrColormap(mtex, sec->midmap);
-	    sd->bottomtexture = tc.GetTextureOrColormap(btex, sec->bottommap);
-	    break;
-
-	  case 2: // BOOM: 260 make middle texture translucent
-	    sd->toptexture = tc.Get(ttex);
-	    sd->midtexture = tc.GetTextureOrColormap(mtex, sd->special, true); // can also be a transmap lumpname
-	    sd->bottomtexture = tc.Get(btex);
-	    break;
-
-	  case 4: // Legacy: create a colormap
-#ifdef HWRENDER
-	    if (rendermode == render_soft)
+      line_t *ld = sd->line;
+      if (ld && ld->special == LEGACY_EXT) // TODO shouldn't all sidedefs have a corresponding linedef?
+	{
+	  if (ld->args[0] == LEGACY_BOOM_EXOTIC)
+	    switch (ld->args[1])
 	      {
-#endif
-		if(ttex[0] == '#' || btex[0] == '#')
+	      case 1:  // BOOM: 242 fake ceiling/floor, variable colormaps
+	      case 3:  // Legacy: swimmable water, colormaps
+		sd->toptexture = tc.GetTextureOrColormap(ttex, sec->topmap);
+		sd->midtexture = tc.GetTextureOrColormap(mtex, sec->midmap);
+		sd->bottomtexture = tc.GetTextureOrColormap(btex, sec->bottommap);
+		break;
+
+	      case 2: // BOOM: 260 make middle texture translucent
+		sd->toptexture = tc.Get(ttex);
+		sd->midtexture = tc.GetTextureOrColormap(mtex, ld->transmap, true); // can also be a transmap lumpname
+		sd->bottomtexture = tc.Get(btex);
+		break;
+
+	      case 4: // Legacy: create a colormap
+		if (ttex[0] == '#' || btex[0] == '#')
 		  {
 		    sec->midmap = R_CreateColormap(ttex, mtex, btex);
 		    sd->toptexture = sd->bottomtexture = 0;
+		    
+		    if (rendermode != render_soft) // FIXME is this necessary?
+		      sec->extra_colormap = &extra_colormaps[sec->midmap];
 		  }
 		else
 		  {
@@ -889,58 +900,41 @@ void Map::LoadSideDefs2(int lump)
 		    sd->midtexture = tc.Get(mtex);
 		    sd->bottomtexture = tc.Get(btex);
 		  }
-#ifdef HWRENDER
+		break;
+
+	      default:
+		I_Error("Unknown linedef type extension (%d)\n.", ld->args[1]);
 	      }
-	    else
+	  else if (ld->args[0] == LEGACY_FAKEFLOOR)
+	    switch (ld->args[1])
 	      {
-		//TODO: Hurdler: for now, full support of toptexture only
-		if (ttex[0] == '#')// || btex[0] == '#')
-		  {
-		    char *col = ttex;
-
-		    sec->midmap = R_CreateColormap(ttex, mtex, btex);
-		    sd->toptexture = sd->bottomtexture = 0;
-# define HEX2INT(x) (x >= '0' && x <= '9' ? x - '0' : x >= 'a' && x <= 'f' ? x - 'a' + 10 : x >= 'A' && x <= 'F' ? x - 'A' + 10 : 0)
-# define ALPHA2INT(x) (x >= 'a' && x <= 'z' ? x - 'a' : x >= 'A' && x <= 'Z' ? x - 'A' : 0)
-		    sec->extra_colormap = &extra_colormaps[sec->midmap];
-		    sec->extra_colormap->rgba =
-		      (HEX2INT(col[1]) << 4) + (HEX2INT(col[2]) << 0) +
-		      (HEX2INT(col[3]) << 12) + (HEX2INT(col[4]) << 8) +
-		      (HEX2INT(col[5]) << 20) + (HEX2INT(col[6]) << 16) +
-		      (ALPHA2INT(col[7]) << 24);
-# undef ALPHA2INT
-# undef HEX2INT
-		  }
+		// Legacy: alpha value for translucent 3D-floors/water, TODO not good
+	      case 19:
+	      case 20:
+		if (ttex[0] == '#')
+		  sd->toptexture = sd->bottomtexture = ((ttex[1] - '0')*100 + (ttex[2] - '0')*10 + ttex[3] - '0') + 1;
 		else
-		  {
-		    sd->toptexture = tc.Get(ttex);
-		    sd->midtexture = tc.Get(mtex);
-		    sd->bottomtexture = tc.Get(btex);
-		  }
-	      }
-#endif
-	    break;
+		  sd->toptexture = sd->bottomtexture = 0;
+		sd->midtexture = tc.Get(mtex);
+		break;
 
-	    //Hurdler: added for alpha value with translucent 3D-floors/water
-	    // TODO FIXME is this correct??
-	  case 300:
-	  case 301:
-	    if (ttex[0] == '#')
-	      sd->toptexture = sd->bottomtexture = ((ttex[1] - '0')*100 + (ttex[2] - '0')*10 + ttex[3] - '0') + 1;
-	    else
-	      sd->toptexture = sd->bottomtexture = 0;
-	    sd->midtexture = tc.Get(mtex);
-	    break;
-	  }
+	      default:
+		goto normal;
+	      }
+	  else
+	    goto normal;
+	}
       else
 	{
-	  // normal linedefs
+	normal:
+	  // normal texture names
           sd->toptexture = tc.Get(ttex);
           sd->midtexture = tc.Get(mtex);
           sd->bottomtexture = tc.Get(btex);
         }
     }
-  Z_Free (data);
+
+  Z_Free(data);
 }
 
 
@@ -1284,9 +1278,5 @@ void Map::ConvertLineDefs()
       // put flags back
       if (alltrigger)
 	ld->flags |= ML_MONSTERS_CAN_ACTIVATE;
-
-      // HACK some linedefs use texture names as data fields
-      if (ld->special == LEGACY_EXT && ld->args[0] == 4 && ld->sidenum[0] != -1)
-	sides[ld->sidenum[0]].special = ld->args[1];
     }
 }

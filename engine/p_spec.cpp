@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.40  2005/01/04 18:32:41  smite-meister
+// better colormap handling
+//
 // Revision 1.39  2004/12/31 16:19:38  smite-meister
 // alpha fixes
 //
@@ -1098,16 +1101,6 @@ void Map::SpawnLineSpecials()
 
   InitTagLists(); // Create xref tables for tags
 
-  // subtypes
-  const int LEGACY_BOOM_SCROLLERS = 0;
-  const int LEGACY_BOOM_FRICTION  = 1;
-  const int LEGACY_BOOM_PUSHERS   = 2;
-  const int LEGACY_BOOM_RENDERER  = 3;
-  const int LEGACY_BOOM_EXOTIC    = 4;
-  const int LEGACY_FAKEFLOOR      = 10;
-  const int LEGACY_RENDERER  = 11;
-  const int LEGACY_MISC      = 13;
-
   //  Init line EFFECTs
   for (i = 0; i < numlines; i++)
     {
@@ -1177,14 +1170,18 @@ void Map::SpawnLineSpecials()
 		  // Boom: 260 transparent middle texture
 		case 2:
 		  {
-		    int temp = sides[*l->sidenum].special; // transmap number stored here
+		    int temp = l->transmap;
 		    if (temp == -1)
 		      temp = 0; // default, TRANMAP
 
-		    if (!tag)
+		    if (tag)
+		      {
+			l->transmap = -1;
+			for (s = -1; (l2 = FindLineFromTag(tag, &s)); )
+			  l2->transmap = temp; // make tagged lines translucent too
+		      }
+		    else
 		      l->transmap = temp;
-		    else for (s = -1; (l2 = FindLineFromTag(tag, &s)); )
-		      l2->transmap = temp; // make tagged lines translucent too
 		  }
 		  break;
 
