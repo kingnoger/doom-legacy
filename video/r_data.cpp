@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:45  hurdler
-// Initial revision
+// Revision 1.2  2002/12/03 10:07:13  smite-meister
+// Video unit overhaul begins
 //
 // Revision 1.8  2002/08/21 16:58:39  vberghol
 // Version 1.41 Experimental compiles and links!
@@ -1002,9 +1002,9 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
   {
     for(i = 0; i < 256; i++)
     {
-      r = pLocalPalette[i].s.red;
-      g = pLocalPalette[i].s.green;
-      b = pLocalPalette[i].s.blue;
+      r = vid.palette[i].s.red;
+      g = vid.palette[i].s.green;
+      b = vid.palette[i].s.blue;
       cbrightness = sqrt((r*r) + (g*g) + (b*b));
 
 
@@ -1087,9 +1087,9 @@ unsigned char NearestColor(unsigned char r, unsigned char g, unsigned char b) {
   int i;
 
   for(i = 0; i < 256; i++) {
-    dr = r - pLocalPalette[i].s.red;
-    dg = g - pLocalPalette[i].s.green;
-    db = b - pLocalPalette[i].s.blue;
+    dr = r - vid.palette[i].s.red;
+    dg = g - vid.palette[i].s.green;
+    db = b - vid.palette[i].s.blue;
     distortion = dr*dr + dg*dg + db*db;
     if(distortion < bestdistortion) {
 
@@ -1176,7 +1176,7 @@ void R_Init8to16 (void)
 void R_InitData (void)
 {  
     //fab highcolor
-    if (highcolor)
+    if (vid.BytesPerPixel == 2)
     {
         CONS_Printf ("\nInitHighColor...");
         R_Init8to16 ();

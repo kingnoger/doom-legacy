@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:45  hurdler
-// Initial revision
+// Revision 1.2  2002/12/03 10:07:13  smite-meister
+// Video unit overhaul begins
 //
 // Revision 1.8  2002/09/25 15:17:43  vberghol
 // Intermission fixed?
@@ -374,7 +374,7 @@ void R_InitTranslationTables (void)
 void R_InitViewBuffer(int width, int height)
 {
     int         i;
-    int         bytesperpixel = vid.bpp;
+    int         bytesperpixel = vid.BytesPerPixel;
 
     if (bytesperpixel<1 || bytesperpixel>4)
         I_Error ("R_InitViewBuffer : wrong bytesperpixel value %d\n",
@@ -410,7 +410,7 @@ void R_InitViewBuffer(int width, int height)
 
     // (the first column is the bottom line)
     for (i=0; i<width; i++)
-        yhlookup[i] = screens[2] + ((width-i-1) * bytesperpixel * height);
+        yhlookup[i] = vid.screens[2] + ((width-i-1) * bytesperpixel * height);
 
     for (i=0; i<height; i++)
         hcolumnofs[i] = i * bytesperpixel;
@@ -473,7 +473,7 @@ void R_FillBackScreen (void)
         return;
 
     src  = scr_borderpatch;
-    dest = screens[1];
+    dest = vid.screens[1];
 
     for (y=0 ; y<vid.height ; y++)
     {
@@ -551,7 +551,7 @@ void R_VideoErase (unsigned ofs, int count)
     //  is not optiomal, e.g. byte by byte on
     //  a 32bit CPU, as GNU GCC/Linux libc did
     //  at one point.
-    memcpy (screens[0]+ofs, screens[1]+ofs, count);
+    memcpy (vid.screens[0]+ofs, vid.screens[1]+ofs, count);
 }
 
 
@@ -616,7 +616,7 @@ void R_DrawViewBorder()
     side <<= 1;
 
     //added:05-02-98:simpler using our new VID_Blit routine
-    VID_BlitLinearScreen(screens[1]+ofs, screens[0]+ofs,
+    VID_BlitLinearScreen(vid.screens[1]+ofs, vid.screens[0]+ofs,
                          side, viewheight-1, vid.width, vid.width);
 
     // useless, old dirty rectangle stuff
