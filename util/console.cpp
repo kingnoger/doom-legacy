@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2005/03/21 17:44:20  smite-meister
+// fixes
+//
 // Revision 1.22  2005/03/19 13:51:30  smite-meister
 // sound samplerate fix
 //
@@ -651,7 +654,7 @@ bool Console::Responder(event_t *ev)
   int key = ev->data1;
 
   // check for console toggle key
-  if (key == gk_console)
+  if (key == commoncontrols[gk_console][0] || key == commoncontrols[gk_console][1])
     {
       Toggle();
       return true;

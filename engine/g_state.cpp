@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.40  2005/03/21 17:44:11  smite-meister
+// fixes
+//
 // Revision 1.39  2004/11/19 16:51:04  smite-meister
 // cleanup
 //
@@ -434,7 +437,7 @@ bool GameInfo::StartGame(skill_t sk, int cluster)
 
   P_ACSInitNewGame(); // clear the ACS world vars etc.
 
-  memset(gamekeydown, 0, sizeof(gamekeydown));  // clear cmd building stuff
+  G_ReleaseKeys();
 
   // clear hud messages remains (usually from game startup)
   con.ClearHUD();

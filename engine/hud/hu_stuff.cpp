@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.30  2005/03/21 17:44:13  smite-meister
+// fixes
+//
 // Revision 1.29  2005/03/16 21:16:06  smite-meister
 // menu cleanup, bugfixes
 //
@@ -430,7 +433,9 @@ void HUD::Ticker()
   // deathmatch rankings overlay if press key or while in death view
   if (cv_deathmatch.value)
     {
-      if (gamekeydown[gk_scores])
+      extern bool gamekeydown[NUMINPUTS];
+      if (gamekeydown[commoncontrols[gk_scores][0]] ||
+	  gamekeydown[commoncontrols[gk_scores][1]])
 	drawscore = !chat_on;
     }
   else

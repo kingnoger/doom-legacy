@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2005/03/21 17:44:19  smite-meister
+// fixes
+//
 // Revision 1.18  2005/03/16 21:16:09  smite-meister
 // menu cleanup, bugfixes
 //
@@ -501,6 +504,7 @@ bool I_StartupGraphics()
 
   SDL_ShowCursor(SDL_DISABLE);
   I_UngrabMouse();
+  //I_GrabMouse();
 
   graphics_started = true;
 

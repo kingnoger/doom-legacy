@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.32  2005/03/21 17:44:13  smite-meister
+// fixes
+//
 // Revision 1.31  2005/01/25 18:29:14  smite-meister
 // preparing for alpha
 //
@@ -1710,43 +1713,43 @@ void HUD::CreateOverlayWidgets()
           break;
 
         case 'h': // draw health
-          h = new HudNumber(70, 182, 3, &st_health, PatchBNum);
+          h = new HudNumber(st_x+70, st_y+14, 3, &st_health, PatchBNum);
           overlay.push_back(h);
-          h = new HudBinIcon(72, 182, &st_true, NULL, sbohealth);
+          h = new HudBinIcon(st_x+72, st_y+14, &st_true, NULL, sbohealth);
           overlay.push_back(h);
           break;
 
         case 'a': // draw ammo
-          h = new HudNumber(170, 182, 3, &st_readywp_ammo, PatchBNum);
+          h = new HudNumber(st_x+170, st_y+14, 3, &st_readywp_ammo, PatchBNum);
           overlay.push_back(h);
-          h = new HudMultIcon(172, 182, &st_atype, PatchAmmoPic);
+          h = new HudMultIcon(st_x+172, st_y+14, &st_atype, PatchAmmoPic);
           overlay.push_back(h);
           break;
 
 	case 'm': // draw armor
-	  h = new HudNumber(270, 182, 3, &st_armor, PatchBNum);
+	  h = new HudNumber(st_x+270, st_y+14, 3, &st_armor, PatchBNum);
 	  overlay.push_back(h);
-	  h = new HudBinIcon(272, 182, &st_true, NULL, sboarmor);
+	  h = new HudBinIcon(st_x+272, st_y+14, &st_true, NULL, sboarmor);
 	  overlay.push_back(h);
 	  break;
 
         case 'k': // draw keys
           for (int i=0; i<6; i++)
             {
-              h = new HudMultIcon(308-(i/3)*10, 190-(i%3)*10, &st_keyboxes[i+11], PatchKeys);
+              h = new HudMultIcon(st_x+308-(i/3)*10, st_y+22-(i%3)*10, &st_keyboxes[i+11], PatchKeys);
               overlay.push_back(h);
             }
           for (int i=0; i<11; i++)
             {
-              h = new HudMultIcon(4+(i/6)*296, 25+(i%6)*30, &st_keyboxes[i], PatchKeys);
+              h = new HudMultIcon(st_x+4+(i/6)*296, 25+(i%6)*30, &st_keyboxes[i], PatchKeys);
               overlay.push_back(h);
             }
           break;
 
         case 'f': // draw frags
-          h = new HudNumber(300, 2, 3, &st_fragscount, PatchBNum);
+          h = new HudNumber(st_x+300, 2, 3, &st_fragscount, PatchBNum);
           overlay.push_back(h);
-          h = new HudBinIcon(302, 2, &st_true, NULL, sbofrags);
+          h = new HudBinIcon(st_x+302, 2, &st_true, NULL, sbofrags);
           overlay.push_back(h);
           break;
 

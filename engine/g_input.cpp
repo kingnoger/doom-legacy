@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2005/03/21 17:44:10  smite-meister
+// fixes
+//
 // Revision 1.21  2005/03/16 21:16:05  smite-meister
 // menu cleanup, bugfixes
 //
@@ -28,9 +31,6 @@
 //
 // Revision 1.18  2004/09/24 21:19:59  jussip
 // Joystick axis unbinding.
-//
-// Revision 1.17  2004/09/24 11:33:59  smite-meister
-// fix
 //
 // Revision 1.16  2004/09/23 23:21:16  smite-meister
 // HUD updated
@@ -52,12 +52,6 @@
 //
 // Revision 1.10  2004/08/18 14:35:20  smite-meister
 // PNG support!
-//
-// Revision 1.9  2004/08/12 18:30:23  smite-meister
-// cleaned startup
-//
-// Revision 1.8  2004/07/07 17:27:19  smite-meister
-// bugfixes
 //
 // Revision 1.7  2004/07/05 16:53:24  smite-meister
 // Netcode replaced
@@ -150,12 +144,21 @@ consvar_t cv_mousesensy2  = {"mousesensy2","10",CV_SAVE,mousesens_cons_t};
 static int mousex, mousey, mouse2x, mouse2y;
 
 // current state of the keys : true if down
-byte gamekeydown[NUMINPUTS];
+bool gamekeydown[NUMINPUTS];
+
+// releases all game keys
+void G_ReleaseKeys()
+{
+  for (int i=0; i<NUMINPUTS; i++)
+    gamekeydown[i] = false;
+}
+
 
 // two key (or virtual key) codes per game control
 short gamecontrol[2][num_gamecontrols][2];
 
-short gk_console, gk_talk, gk_scores;
+// control keys common to all local players (talk, console etc)
+short commoncontrols[num_commoncontrols][2];
 
 //========================================================================
 
@@ -171,6 +174,8 @@ static char sidespeed[2]    = {48, 80};
 // (59/60) instead of (80/100). Weird. Affects straferunning.
 
 static fixed_t angleturn[3] = {640, 1280, 320};  // + slow turn
+
+//========================================================================
 
 
 // clips the pitch angle to avoid ugly renderer effects
@@ -200,7 +205,7 @@ static byte NextWeapon(PlayerPawn *p, int step)
   int w = p->readyweapon;
   do
     {
-      w = (w + step) % NUMWEAPONS;
+      w = (w + step + NUMWEAPONS) % NUMWEAPONS;
       if (p->weaponowned[w] && p->ammo[p->weaponinfo[w].ammo] >= p->weaponinfo[w].ammopershoot)
         return w;
     } while (w != p->readyweapon);
@@ -350,10 +355,11 @@ void ticcmd_t::Build(int lpnum, int realtics)
 
   if (p)
     {
+      // impulse-type controls
       if (gamekeydown[gc[gc_nextweapon][0]] || gamekeydown[gc[gc_nextweapon][1]])
-	buttons |= (NextWeapon(p, 1) << WEAPONSHIFT);
+	buttons |= ((NextWeapon(p, 1) + 1) << WEAPONSHIFT);
       else if (gamekeydown[gc[gc_prevweapon][0]] || gamekeydown[gc[gc_prevweapon][1]])
-	buttons |= (NextWeapon(p, -1) << WEAPONSHIFT);
+	buttons |= ((NextWeapon(p, -1) + 1) << WEAPONSHIFT);
       else for (i = gc_weapon1; i <= gc_weapon8; i++)
 	if (gamekeydown[gc[i][0]] || gamekeydown[gc[i][1]])
 	  {
@@ -454,6 +460,7 @@ void ticcmd_t::Build(int lpnum, int realtics)
 	}
     }
 
+
   if (forward > MAXPLMOVE)
     forward = MAXPLMOVE;
   else if (forward < -MAXPLMOVE)
@@ -469,6 +476,12 @@ void ticcmd_t::Build(int lpnum, int realtics)
   else
     pitch = G_ClipAimingPitch(pitch << 16) >> 16;
   //CONS_Printf("Move: %d, %d, %d\n", yaw, pitch, buttons);
+
+  // HACK finally, we must release some keys manually (see G_MapEventsToControls)
+  gamekeydown[KEY_MOUSEWHEELUP] = false;
+  gamekeydown[KEY_MOUSEWHEELDOWN] = false;
+  gamekeydown[KEY_2MOUSEWHEELUP] = false;
+  gamekeydown[KEY_2MOUSEWHEELDOWN] = false;
 }
 
 
@@ -529,13 +542,28 @@ bool G_MapEventsToControls(event_t *ev)
   switch (ev->type)
     {
     case ev_keydown:
-      if (ev->data1 <NUMINPUTS)
-	gamekeydown[ev->data1] = 1;
+      if (ev->data1 < NUMINPUTS)
+	gamekeydown[ev->data1] = true;
       break;
 
     case ev_keyup:
-      if (ev->data1 <NUMINPUTS)
-	gamekeydown[ev->data1] = 0;
+      if (ev->data1 < NUMINPUTS)
+	{
+	  switch (ev->data1)
+	    {
+	    case KEY_MOUSEWHEELUP:
+	    case KEY_MOUSEWHEELDOWN:
+	    case KEY_2MOUSEWHEELUP:
+	    case KEY_2MOUSEWHEELDOWN:
+	      // these can only be used for impulse controls,
+	      // since a keydown event is almost immediately followed by a keyup.
+	      break;
+
+	    default:
+	      gamekeydown[ev->data1] = false;
+	      break;
+	    }
+	}
       break;
 
     case ev_mouse:           // buttons are virtual keys
@@ -577,62 +605,62 @@ bool G_MapEventsToControls(event_t *ev)
 struct keyname_t
 {
   int  keynum;
-  char name[15];
+  char name[20];
 };
 
 static keyname_t keynames[] =
 {
-  {KEY_BACKSPACE, "BACKSPACE"},
-  {KEY_TAB,       "TAB"},
-  {KEY_ENTER,     "ENTER"},
-  {KEY_PAUSE,     "PAUSE"},
-  {KEY_ESCAPE,    "ESCAPE"},
-  {KEY_SPACE,     "SPACE"},
+  {KEY_BACKSPACE, "backspace"},
+  {KEY_TAB,       "tab"},
+  {KEY_ENTER,     "enter"},
+  {KEY_PAUSE,     "pause"},  // irrelevant, since this key cannot be remapped...
+  {KEY_ESCAPE,    "escape"}, // likewise
+  {KEY_SPACE,     "space"},
 
-  {KEY_CONSOLE,     "CONSOLE"},
+  {KEY_CONSOLE,    "console"},
 
-  {KEY_NUMLOCK,    "NUMLOCK"},
-  {KEY_CAPSLOCK,   "CAPS LOCK"},
-  {KEY_SCROLLLOCK, "SCROLLLOCK"},
-  {KEY_RSHIFT,     "RIGHT SHIFT"},
-  {KEY_LSHIFT,     "LEFT SHIFT"},
-  {KEY_RCTRL,      "RIGHT CTRL"},
-  {KEY_LCTRL,      "LEFT CTRL"},
-  {KEY_RALT,       "RIGHT ALT"},
-  {KEY_LALT,       "LEFT ALT"},
-  {KEY_LWIN, "LEFT WIN"},
-  {KEY_RWIN, "RIGHT WIN"},
+  {KEY_NUMLOCK,    "num lock"},
+  {KEY_CAPSLOCK,   "caps lock"},
+  {KEY_SCROLLLOCK, "scroll lock"},
+  {KEY_RSHIFT,     "right shift"},
+  {KEY_LSHIFT,     "left shift"},
+  {KEY_RCTRL,      "right ctrl"},
+  {KEY_LCTRL,      "left ctrl"},
+  {KEY_RALT,       "right alt"},
+  {KEY_LALT,       "left alt"},
+  {KEY_LWIN, "left win"},
+  {KEY_RWIN, "right win"},
   {KEY_MODE, "AltGr"},
-  {KEY_MENU, "MENU"},
+  {KEY_MENU, "menu"},
 
   // keypad keys
-  {KEY_KEYPAD0, "KEYPAD 0"},
-  {KEY_KEYPAD1, "KEYPAD 1"},
-  {KEY_KEYPAD2, "KEYPAD 2"},
-  {KEY_KEYPAD3, "KEYPAD 3"},
-  {KEY_KEYPAD4, "KEYPAD 4"},
-  {KEY_KEYPAD5, "KEYPAD 5"},
-  {KEY_KEYPAD6, "KEYPAD 6"},
-  {KEY_KEYPAD7, "KEYPAD 7"},
-  {KEY_KEYPAD8, "KEYPAD 8"},
-  {KEY_KEYPAD9, "KEYPAD 9"},
-  {KEY_KPADPERIOD,"KEYPAD ."},
-  {KEY_KPADSLASH, "KEYPAD /"},
-  {KEY_KPADMULT,  "KEYPAD *"},
-  {KEY_MINUSPAD,  "KEYPAD -"},
-  {KEY_PLUSPAD,   "KEYPAD +"},
+  {KEY_KEYPAD0, "keypad 0"},
+  {KEY_KEYPAD1, "keypad 1"},
+  {KEY_KEYPAD2, "keypad 2"},
+  {KEY_KEYPAD3, "keypad 3"},
+  {KEY_KEYPAD4, "keypad 4"},
+  {KEY_KEYPAD5, "keypad 5"},
+  {KEY_KEYPAD6, "keypad 6"},
+  {KEY_KEYPAD7, "keypad 7"},
+  {KEY_KEYPAD8, "keypad 8"},
+  {KEY_KEYPAD9, "keypad 9"},
+  {KEY_KPADPERIOD,"keypad ."},
+  {KEY_KPADSLASH, "keypad /"},
+  {KEY_KPADMULT,  "keypad *"},
+  {KEY_MINUSPAD,  "keypad -"},
+  {KEY_PLUSPAD,   "keypad +"},
 
   // extended keys (not keypad)
-  {KEY_UPARROW,   "UP ARROW"},
-  {KEY_DOWNARROW, "DOWN ARROW"},
-  {KEY_RIGHTARROW,"RIGHT ARROW"},
-  {KEY_LEFTARROW, "LEFT ARROW"},
-  {KEY_INS,       "INS"},
-  {KEY_DELETE,    "DEL"},
-  {KEY_HOME,      "HOME"},
-  {KEY_END,       "END"},
-  {KEY_PGUP,      "PGUP"},
-  {KEY_PGDN,      "PGDN"},
+  {KEY_UPARROW,   "up arrow"},
+  {KEY_DOWNARROW, "down arrow"},
+  {KEY_RIGHTARROW,"right arrow"},
+  {KEY_LEFTARROW, "left arrow"},
+  {KEY_INS,       "ins"},
+  {KEY_DELETE,    "del"},
+  {KEY_HOME,      "home"},
+  {KEY_END,       "end"},
+  {KEY_PGUP,      "pgup"},
+  {KEY_PGDN,      "pgdown"},
 
   // other keys
   {KEY_F1, "F1"},
@@ -649,39 +677,39 @@ static keyname_t keynames[] =
   {KEY_F12,"F12"},
 
   // virtual keys for mouse buttons and joystick buttons
-  {KEY_MOUSE1,  "MOUSE1"},
-  {KEY_MOUSE1+1,"MOUSE2"},
-  {KEY_MOUSE1+2,"MOUSE3"},
+  {KEY_MOUSE1,  "mouse 1"},
+  {KEY_MOUSE1+1,"mouse 2"},
+  {KEY_MOUSE1+2,"mouse 3"},
   {KEY_MOUSEWHEELUP, "mwheel up"},
   {KEY_MOUSEWHEELDOWN,"mwheel down"},
-  {KEY_MOUSE1+5,"MOUSE6"},
-  {KEY_MOUSE1+6,"MOUSE7"},
-  {KEY_MOUSE1+7,"MOUSE8"},
-  {KEY_2MOUSE1,  "SEC_MOUSE2"},    //BP: sorry my mouse handler swap button 1 and 2
-  {KEY_2MOUSE1+1,"SEC_MOUSE1"},
-  {KEY_2MOUSE1+2,"SEC_MOUSE3"},
-  {KEY_2MOUSEWHEELUP,"m2wheel up"},
-  {KEY_2MOUSEWHEELDOWN,"m2wheel down"},
-  {KEY_2MOUSE1+5,"SEC_MOUSE6"},
-  {KEY_2MOUSE1+6,"SEC_MOUSE7"},
-  {KEY_2MOUSE1+7,"SEC_MOUSE8"},
+  {KEY_MOUSE1+5,"mouse 6"},
+  {KEY_MOUSE1+6,"mouse 7"},
+  {KEY_MOUSE1+7,"mouse 8"},
+  {KEY_2MOUSE1,  "2nd mouse 2"},    //BP: sorry my mouse handler swap button 1 and 2
+  {KEY_2MOUSE1+1,"2nd mouse 1"},
+  {KEY_2MOUSE1+2,"2nd mouse 3"},
+  {KEY_2MOUSEWHEELUP,"2nd mwheel up"},
+  {KEY_2MOUSEWHEELDOWN,"2nd mwheel down"},
+  {KEY_2MOUSE1+5,"2nd mouse 6"},
+  {KEY_2MOUSE1+6,"2nd mouse 7"},
+  {KEY_2MOUSE1+7,"2nd mouse 8"},
 
-  {KEY_DBLMOUSE1,   "DBLMOUSE1"},
-  {KEY_DBLMOUSE1+1, "DBLMOUSE2"},
-  {KEY_DBLMOUSE1+2, "DBLMOUSE3"},
-  {KEY_DBLMOUSE1+3, "DBLMOUSE4"},
-  {KEY_DBLMOUSE1+4, "DBLMOUSE5"},
-  {KEY_DBLMOUSE1+5, "DBLMOUSE6"},
-  {KEY_DBLMOUSE1+6, "DBLMOUSE7"},
-  {KEY_DBLMOUSE1+7, "DBLMOUSE8"},
-  {KEY_DBL2MOUSE1,  "DBLSEC_MOUSE2"},  //BP: sorry my mouse handler swap button 1 and 2
-  {KEY_DBL2MOUSE1+1,"DBLSEC_MOUSE1"},
-  {KEY_DBL2MOUSE1+2,"DBLSEC_MOUSE3"},
-  {KEY_DBL2MOUSE1+3,"DBLSEC_MOUSE4"},
-  {KEY_DBL2MOUSE1+4,"DBLSEC_MOUSE5"},
-  {KEY_DBL2MOUSE1+5,"DBLSEC_MOUSE6"},
-  {KEY_DBL2MOUSE1+6,"DBLSEC_MOUSE7"},
-  {KEY_DBL2MOUSE1+7,"DBLSEC_MOUSE8"},
+  {KEY_DBLMOUSE1,   "mouse 1 d"},
+  {KEY_DBLMOUSE1+1, "mouse 2 d"},
+  {KEY_DBLMOUSE1+2, "mouse 3 d"},
+  {KEY_DBLMOUSE1+3, "mouse 4 d"},
+  {KEY_DBLMOUSE1+4, "mouse 5 d"},
+  {KEY_DBLMOUSE1+5, "mouse 6 d"},
+  {KEY_DBLMOUSE1+6, "mouse 7 d"},
+  {KEY_DBLMOUSE1+7, "mouse 8 d"},
+  {KEY_DBL2MOUSE1,  "2nd mouse 2 d"},  //BP: sorry my mouse handler swap button 1 and 2
+  {KEY_DBL2MOUSE1+1,"2nd mouse 1 d"},
+  {KEY_DBL2MOUSE1+2,"2nd mouse 3 d"},
+  {KEY_DBL2MOUSE1+3,"2nd mouse 4 d"},
+  {KEY_DBL2MOUSE1+4,"2nd mouse 5 d"},
+  {KEY_DBL2MOUSE1+5,"2nd mouse 6 d"},
+  {KEY_DBL2MOUSE1+6,"2nd mouse 7 d"},
+  {KEY_DBL2MOUSE1+7,"2nd mouse 8 d"},
 
   {KEY_JOY0BUT0, "Joy 0 btn 0"},
   {KEY_JOY0BUT1, "Joy 0 btn 1"},
@@ -763,12 +791,14 @@ char *gamecontrolname[num_gamecontrols] =
   "speed",
   "turnleft",
   "turnright",
-  "fire",
-  "use",
   "lookup",
   "lookdown",
   "centerview",
   "mouseaiming",
+  "fire",
+  "use",
+  "jump",
+  "flydown",
   "weapon1",
   "weapon2",
   "weapon3",
@@ -777,14 +807,12 @@ char *gamecontrolname[num_gamecontrols] =
   "weapon6",
   "weapon7",
   "weapon8",
-  "jump",
   "nextweapon",
   "prevweapon",
   "bestweapon",
   "inventorynext",
   "inventoryprev",
-  "inventoryuse",
-  "down"
+  "inventoryuse"
 };
 
 static const int NUMKEYNAMES = sizeof(keynames)/sizeof(keyname_t);
@@ -802,11 +830,9 @@ void  G_ClearControlKeys(short (*setup_gc)[2], int control)
 //  Returns the name of a key (or virtual key for mouse and joy)
 //  the input value being an keynum
 //
-char* G_KeynumToString(int keynum)
+char *G_KeynumToString(int keynum)
 {
   static char keynamestr[8];
-
-  int    j;
 
   // return a string with the ascii char if displayable
   if (keynum > ' ' && keynum <= 'z' && keynum != KEY_CONSOLE)
@@ -817,31 +843,29 @@ char* G_KeynumToString(int keynum)
     }
 
   // find a description for special keys
-  for (j=0;j<NUMKEYNAMES;j++)
-    if (keynames[j].keynum==keynum)
+  for (int j=0; j<NUMKEYNAMES; j++)
+    if (keynames[j].keynum == keynum)
       return keynames[j].name;
 
   // create a name for Unknown key
-  sprintf (keynamestr,"KEY%d",keynum);
+  sprintf(keynamestr, "key%d", keynum);
   return keynamestr;
 }
 
 
 int G_KeyStringtoNum(char *keystr)
 {
-  int j;
-
   //    strupr(keystr);
 
-  if(keystr[1]==0 && keystr[0]>' ' && keystr[0]<='z')
+  if (keystr[1] == '\0' && keystr[0] > ' ' && keystr[0] <= 'z')
     return keystr[0];
 
-  for (j=0;j<NUMKEYNAMES;j++)
-    if (strcasecmp(keynames[j].name,keystr)==0)
+  for (int j=0; j<NUMKEYNAMES; j++)
+    if (!strcasecmp(keynames[j].name, keystr))
       return keynames[j].keynum;
 
-  if(strlen(keystr)>3)
-    return atoi(&keystr[3]);
+  if (strlen(keystr) > 3 && !strncasecmp(keystr, "key", 3))
+    return atoi(&keystr[3]); // for unnamed keys (see G_KeynumToString)
 
   return 0;
 }
@@ -875,8 +899,8 @@ void G_Controldefault()
   gc[gc_weapon7    ][0]='7';
   gc[gc_weapon8    ][0]='8';
   gc[gc_jump       ][0]='/';
-  gc[gc_nextweapon ][1]=KEY_JOY0BUT4;
-  gc[gc_prevweapon ][1]=KEY_JOY0BUT5;
+  //gc[gc_nextweapon ][1]=KEY_JOY0BUT4;
+  //gc[gc_prevweapon ][1]=KEY_JOY0BUT5;
   gc[gc_invnext    ][0] = ']';
   gc[gc_invprev    ][0] = '[';
   gc[gc_invuse     ][0] = KEY_ENTER;
@@ -887,25 +911,26 @@ void G_Controldefault()
   //gc[gc_prevweapon ][0]='[';
 
   // common game keys
-  gk_talk    = 't';
-  gk_console = KEY_CONSOLE;
-  gk_scores  = 'f';
+  commoncontrols[gk_talk][0]    = 't';
+  commoncontrols[gk_console][0] = KEY_CONSOLE;
+  commoncontrols[gk_scores][0]  = 'f';
 }
 
 
 void G_SaveKeySetting(FILE *f)
 {
-  for (int j=0; j<2; j++)
-    for(int i=1; i<num_gamecontrols; i++)
-      {
-	fprintf(f,"setcontrol %d \"%s\" \"%s\"", j, gamecontrolname[i],
-		G_KeynumToString(gamecontrol[j][i][0]));
+  for (int j = 0; j < 2; j++)
+    for (int i = 1; i < num_gamecontrols; i++)
+      //if (gamecontrol[j][i][0])
+	{
+	  fprintf(f,"setcontrol %d \"%s\" \"%s\"", j, gamecontrolname[i],
+		  G_KeynumToString(gamecontrol[j][i][0]));
 
-	if (gamecontrol[j][i][1])
-	  fprintf(f," \"%s\"\n", G_KeynumToString(gamecontrol[j][i][1]));
-	else
-	  fprintf(f,"\n");
-      }
+	  if (gamecontrol[j][i][1])
+	    fprintf(f," \"%s\"\n", G_KeynumToString(gamecontrol[j][i][1]));
+	  else
+	    fprintf(f,"\n");
+	}
 }
 
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2005/03/21 17:44:17  smite-meister
+// fixes
+//
 // Revision 1.2  2005/03/19 13:51:29  smite-meister
 // sound samplerate fix
 //
@@ -194,6 +197,9 @@ extern Menu MainMenuDef, SinglePlayerDef, MultiPlayerDef, SetupPlayerDef,
 
 
 static void M_DrawTextBox(int x, int y, int columns, int lines);
+
+static short (*setup_gc)[2] = commoncontrols; // pointer to the gamecontrols of the player being edited
+static int controltochange;
 
 
 //===========================================================================
@@ -446,7 +452,8 @@ void MsgBox::Input(event_t *ev)
       break;
 
     default:
-      Close();
+      if (ev->type == ev_keydown)
+	Close();
     }
 }
 
@@ -779,13 +786,10 @@ void Menu::DrawTitle()
     {
       Texture *p = tc.GetPtr(titlepic);
 
-      //SoM: 4/7/2000: Old code was causing problems with large graphics.
-      //        int xtitle = (vid.width / 2) - (p->width / 2);
-      //        int ytitle = (y-p->height)/2;
-      int xtitle = 94;
-      int ytitle = 2;
-      //int xtitle = (BASEVIDWIDTH-p->width)/2;
-      //int ytitle = (y-p->height)/2;
+      //int xtitle = 94;
+      //int ytitle = 2;
+      int xtitle = (BASEVIDWIDTH - p->width)/2;
+      int ytitle = (y - p->height)/2;
 
       if (xtitle < 0) xtitle=0;
       if (ytitle < 0) ytitle=0;
@@ -887,6 +891,30 @@ void Menu::DrawMenu()
 	      hud_font->DrawString(BASEVIDWIDTH-x-hud_font->StringWidth(cv->str), dy, cv->str, V_WHITEMAP | V_SCALE);
 	      break;
 	    }
+	}
+      else if ((items[i].flags & IT_TYPE_MASK) == IT_CONTROL)
+	{
+	  // control setup: draw the current control keys to the right
+	  int keys[2];
+	  keys[0] = setup_gc[items[i].alphaKey][0];
+	  keys[1] = setup_gc[items[i].alphaKey][1];
+
+	  char tmp[50];
+	  tmp[0] = '\0';
+	  if (keys[0] == KEY_NULL && keys[1] == KEY_NULL)
+	    strcpy(tmp, "---");
+	  else
+	    {
+	      if (keys[0] != KEY_NULL)
+		strcat(tmp, G_KeynumToString(keys[0]));
+
+	      if (keys[0] != KEY_NULL && keys[1] != KEY_NULL)
+		strcat(tmp, " or ");
+
+	      if (keys[1] != KEY_NULL)
+		strcat(tmp, G_KeynumToString(keys[1]));
+	    }
+	  hud_font->DrawString(BASEVIDWIDTH-x-hud_font->StringWidth(tmp), dy, tmp, V_WHITEMAP | V_SCALE);
 	}
 
       dy += h;
@@ -1533,7 +1561,7 @@ void M_GameOption(int choice)
 }
 
 
-void M_SetupControlsMenu(int choice);
+static void M_SetupControlsMenu(int choice);
 
 
 // note: alphaKey member is the y offset
@@ -1546,7 +1574,13 @@ static menuitem_t Options_MI[] =
   {IT_CVAR, NULL, "Autoaim"         ,{&cv_autoaim}         ,0},
   {IT_CVAR, NULL, "Control per key" ,{&cv_controlperkey}   ,0},
 
-  {IT_LINK | IT_DY, NULL, "Server Options...",{(consvar_t *)&ServerOptionsDef}, 20},
+  {IT_NONE | IT_STRING | IT_DISABLED | IT_WHITE | IT_DY, NULL, "Shared controls:" ,{NULL}, 4},
+  {IT_CONTROLSTR, NULL, "Console"        , {NULL}, gk_console},
+  {IT_CONTROLSTR, NULL, "Talk key"       , {NULL}, gk_talk},
+  {IT_CONTROLSTR, NULL, "Rankings/Score",  {NULL}, gk_scores},
+
+
+  {IT_LINK | IT_DY, NULL, "Server Options...",{(consvar_t *)&ServerOptionsDef}, 4},
   {IT_CALL | IT_STRING | IT_WHITE, NULL, "Game Options..."  ,{(consvar_t *)M_GameOption}       ,0},
   {IT_LINK, NULL, "Sound Options..."  ,{(consvar_t *)&SoundDef}          ,0},
   {IT_LINK, NULL, "Video Options..." ,{(consvar_t *)&VideoOptionsDef}   ,0},
@@ -1554,7 +1588,7 @@ static menuitem_t Options_MI[] =
   {IT_CALL | IT_STRING | IT_WHITE, NULL, "Setup Controls...",{(consvar_t *)M_SetupControlsMenu},0}
 };
 
-Menu OptionsDef("M_OPTTTL", "OPTIONS", &MainMenuDef, ITEMS(Options_MI), 60, 40);
+Menu OptionsDef("M_OPTTTL", "OPTIONS", &MainMenuDef, ITEMS(Options_MI), 60, 30);
 
 
 
@@ -2364,6 +2398,38 @@ Menu  Mouse2OptionsDef("M_OPTTTL", "OPTIONS", &SetupPlayerDef, ITEMS(Mouse2Optio
 //                          CONTROLS MENU
 //===========================================================================
 
+/// returns the "control focus" to the shared controls
+static bool M_QuitControlsMenu()
+{
+  setup_gc = commoncontrols;
+  return true;
+}
+
+/// Start the controls menu, setting it up for either (local) player 1 or 2
+static void M_SetupControlsMenu(int choice)
+{
+  Menu::SetupNextMenu(&ControlDef);
+
+  if (setupcontrols_player2 && choice != 10)
+    // menuitem # 10 means that the call came from Options menu, which
+    // always sets player 1 controls. Hack.
+    setup_gc = gamecontrol[1]; // was called from secondary player's multiplayer setup menu
+  else
+    setup_gc = gamecontrol[0]; // was called from main Options (for console player, then)
+}
+
+/// Start the second controls menu, setting it up for either (local) player 1 or 2
+static void M_SetupControlsMenu2(int choice)
+{
+  Menu::SetupNextMenu(&ControlDef2);
+
+  if (setupcontrols_player2)
+    setup_gc = gamecontrol[1]; // was called from secondary player's multiplayer setup menu
+  else
+    setup_gc = gamecontrol[0]; // was called from main Options (for console player, then)
+}
+
+
 static menuitem_t Control_MI[]=
 {
   {IT_CONTROLSTR, NULL, "Fire"        , {NULL}, gc_fire       },
@@ -2381,15 +2447,13 @@ static menuitem_t Control_MI[]=
   {IT_CONTROLSTR, NULL, "Look Down"   , {NULL}, gc_lookdown   },
   {IT_CONTROLSTR, NULL, "Center View" , {NULL}, gc_centerview },
   {IT_CONTROLSTR, NULL, "Mouselook"   , {NULL}, gc_mouseaiming},
-  {IT_LINK | IT_DY, NULL, "next", {(consvar_t *)&ControlDef2}, 20}
+  {IT_CALL | IT_STRING | IT_WHITE | IT_DY, NULL, "next",{(consvar_t *)M_SetupControlsMenu2}, 20}
 };
 
-Menu  ControlDef("M_CONTRO", "Setup Controls", &OptionsDef, ITEMS(Control_MI), 50, 40,
-		 0, &Menu::DrawControl);
+Menu  ControlDef("M_CONTRO", "Setup Controls", &OptionsDef, ITEMS(Control_MI), 40, 40,
+		 0, &Menu::DrawControl, &M_QuitControlsMenu);
 
-//
-//  Controls page 1
-//
+
 static menuitem_t Control2_MI[]=
 {
   {IT_CONTROLSTR, NULL, "Fist/Chainsaw"  , {NULL}, gc_weapon1},
@@ -2407,34 +2471,12 @@ static menuitem_t Control2_MI[]=
   {IT_CONTROLSTR, NULL, "Inventory Right", {NULL}, gc_invnext},
   {IT_CONTROLSTR, NULL, "Inventory Use"  , {NULL}, gc_invuse },
   {IT_CONTROLSTR, NULL, "Fly down"       , {NULL}, gc_flydown},
-  {IT_LINK | IT_DY, NULL, "next", {(consvar_t *)&ControlDef}, 20}
+  {IT_CALL | IT_STRING | IT_WHITE | IT_DY, NULL, "next",{(consvar_t *)M_SetupControlsMenu}, 20}
 };
 
-// FIXME add these to another menu
-//  {IT_CONTROLSTR, NULL, "Talk key"       , {NULL}, gc_talkkey},
-//  {IT_CONTROLSTR, NULL, "Console"        , {NULL}, gc_console},
-//  {IT_CONTROLSTR, NULL, "Rankings/Score",  {NULL}, gc_scores },
 
-Menu  ControlDef2("M_CONTRO", "Setup Controls", &OptionsDef, ITEMS(Control2_MI), 50, 40,
-		  0, &Menu::DrawControl);
-
-
-static short (*setup_gc)[2];  // pointer to the gamecontrols of the player being edited
-static int controltochange;
-
-
-/// Start the controls menu, setting it up for either (local) player 1 or 2
-void M_SetupControlsMenu(int choice)
-{
-  if (setupcontrols_player2 && choice != 10)
-    // menuitem # 10 means that the call came from Options menu, which
-    // always sets player 1 controls. Hack.
-    setup_gc = gamecontrol[1]; // was called from secondary player's multiplayer setup menu
-  else
-    setup_gc = gamecontrol[0]; // was called from main Options (for console player, then)
-
-  Menu::SetupNextMenu(&ControlDef);
-}
+Menu  ControlDef2("M_CONTRO", "Setup Controls", &OptionsDef, ITEMS(Control2_MI), 40, 40,
+		  0, &Menu::DrawControl, &M_QuitControlsMenu);
 
 
 
@@ -2444,39 +2486,9 @@ void Menu::DrawControl()
   // draw title, strings and submenu
   DrawMenu();
 
-  M_CenterText(y-12, (setupcontrols_player2 ? "SET CONTROLS FOR SECONDARY PLAYER" :
-                                 "PRESS ENTER TO CHANGE, BACKSPACE TO CLEAR"));
-
-  for (int i=0; i < numitems; i++)
-    {
-      if ((items[i].flags & IT_TYPE_MASK) != IT_CONTROL)
-        continue;
-
-      int keys[2];
-
-      keys[0] = setup_gc[items[i].alphaKey][0];
-      keys[1] = setup_gc[items[i].alphaKey][1];
-
-      char tmp[50];
-      tmp[0] = '\0';
-      if (keys[0] == KEY_NULL && keys[1] == KEY_NULL)
-        {
-          strcpy(tmp, "---");
-        }
-      else
-        {
-          if (keys[0] != KEY_NULL)
-            strcat(tmp, G_KeynumToString(keys[0]));
-
-          if (keys[0] != KEY_NULL && keys[1] != KEY_NULL)
-            strcat(tmp, " or ");
-
-          if (keys[1] != KEY_NULL)
-            strcat(tmp, G_KeynumToString(keys[1]));
-
-        }
-      hud_font->DrawString(x+220-hud_font->StringWidth(tmp), y + i*8, tmp, V_WHITEMAP | V_SCALE);
-    }
+  M_CenterText(y-12, (setupcontrols_player2 ?
+		      "SET CONTROLS FOR SECONDARY PLAYER" :
+		      "ENTER TO CHANGE, BACKSPACE TO CLEAR"));
 }
 
 
@@ -2757,6 +2769,13 @@ bool Menu::Responder(event_t *ev)
       return true;
     }
 
+  // active message box swallows all input.
+  if (mbox.Active())
+    {
+      mbox.Input(ev);
+      return true;
+    }
+
   // F-keys etc. (these cannot be used as controls!)
   if (!active)
     {
@@ -2833,16 +2852,6 @@ bool Menu::Responder(event_t *ev)
           COM_BufAddText("pause\n");
           return true;
 
-        case '-':     // Screen size down
-          cv_viewsize.Set(cv_viewsize.value - 1);
-          S_StartLocalAmbSound(sfx_menu_adjust);
-          return true;
-
-        case '+':    // Screen size up
-          cv_viewsize.Set(cv_viewsize.value + 1);
-          S_StartLocalAmbSound(sfx_menu_adjust);
-          return true;
-
 	default: // not a recognized keydown event
 	  return false;
         }
@@ -2852,13 +2861,6 @@ bool Menu::Responder(event_t *ev)
     }
 
   // the menu is active!
-
-  // message box. TODO this is a halfway solution, fix...
-  if (mbox.Active())
-    {
-      mbox.Input(ev);
-      return true;
-    }
 
   // remap virtual keys (mouse & joystick buttons)
   switch (ch)

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.42  2005/03/21 17:44:08  smite-meister
+// fixes
+//
 // Revision 1.41  2005/03/19 13:51:29  smite-meister
 // sound samplerate fix
 //
@@ -580,13 +583,29 @@ bool GameInfo::Responder(event_t* ev)
   if (G_MapEventsToControls(ev))
     return true;
 
-
   switch (ev->type)
     {
     case ev_keyup:
       return false;   // always let key up events filter down
 
     case ev_keydown:
+      switch (ev->data1)
+	{
+        case '-':     // Screen size down
+          cv_viewsize.Set(cv_viewsize.value - 1);
+          S_StartLocalAmbSound(sfx_menu_adjust);
+          return true;
+
+        case '+':    // Screen size up
+          cv_viewsize.Set(cv_viewsize.value + 1);
+          S_StartLocalAmbSound(sfx_menu_adjust);
+          return true;
+
+	default:
+	  break;
+	}
+      return true;
+
     case ev_mouse:
       return true;    // eat events
 

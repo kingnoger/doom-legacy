@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.27  2005/03/21 17:44:18  smite-meister
+// fixes
+//
 // Revision 1.26  2005/01/25 18:29:16  smite-meister
 // preparing for alpha
 //
@@ -351,13 +354,14 @@ void I_StartupMouse()
   lastmousey = vid.height/2;
   // remove the mouse event by reading the queue
   SDL_PollEvent(&inputEvent);
-    
-#ifdef HAS_SDL_BEEN_FIXED // FIXME
+
+  /*    
   if (cv_usemouse.value) 
     I_GrabMouse();
   else
     I_UngrabMouse();
-#endif
+  */
+
   return;
 }
 

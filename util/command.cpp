@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2005/03/21 17:44:19  smite-meister
+// fixes
+//
 // Revision 1.13  2005/03/16 21:16:09  smite-meister
 // menu cleanup, bugfixes
 //
@@ -418,11 +421,13 @@ int COM_CheckParm(char *check)
 // breaks the string up into arg tokens.
 static void COM_TokenizeString(char *text)
 {
-  int     i;
-
   // clear the args from the last string
-  for (i=0 ; i<com_argc ; i++)
-    Z_Free (com_argv[i]);
+  for (int i=0 ; i<com_argc ; i++)
+    if (com_argv[i])
+      {
+	Z_Free(com_argv[i]);
+	com_argv[i] = NULL;
+      }
 
   com_argc = 0;
   com_args = NULL;
@@ -446,14 +451,14 @@ static void COM_TokenizeString(char *text)
       if (com_argc == 1)
         com_args = text;
 
-      text = COM_Parse (text);
+      text = COM_Parse(text);
       if (!text)
         return;
 
       if (com_argc < MAX_ARGS)
         {
-          com_argv[com_argc] = (char *)ZZ_Alloc (strlen(com_token)+1);
-          strcpy (com_argv[com_argc], com_token);
+          com_argv[com_argc] = (char *)ZZ_Alloc(strlen(com_token) + 1);
+          strcpy(com_argv[com_argc], com_token);
           com_argc++;
         }
     }
