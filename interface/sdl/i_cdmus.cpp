@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/07/11 14:32:01  smite-meister
+// Consvars updated, bugfixes
+//
 // Revision 1.4  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
 //
@@ -529,14 +532,14 @@ int I_SetVolumeCD (int volume)
     {
       if(volume > 0 && volume < 16)
 	{
-	  CV_SetValue(&cd_volume, 31);
+	  cd_volume.Set(31);
 	  cdvolume = 31;
 	  
 	  I_ResumeCD();
 	}
       else if(volume > 15 && volume < 31)
 	{
-	  CV_SetValue(&cd_volume, 0);
+	  cd_volume.Set(0);
 	  cdvolume = 0;
 	    
 	  I_PauseCD();

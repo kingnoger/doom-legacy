@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/07/11 14:32:01  smite-meister
+// Consvars updated, bugfixes
+//
 // Revision 1.13  2004/07/05 16:53:30  smite-meister
 // Netcode replaced
 //
@@ -454,10 +457,10 @@ void Console::Init()
   con_lborder  = tc.GetPtr("CBLEFT");
   con_rborder = tc.GetPtr("CBRIGHT");
 
-  CV_RegisterVar(&cons_msgtimeout);
-  CV_RegisterVar(&cons_speed);
-  CV_RegisterVar(&cons_height);
-  CV_RegisterVar(&cons_backpic);
+  cons_msgtimeout.Reg();
+  cons_speed.Reg();
+  cons_height.Reg();
+  cons_backpic.Reg();
 
   graphic = true;
 }
@@ -722,7 +725,7 @@ bool Console::Responder(event_t *ev)
             }
         }
 
-      char   *cmd;
+      const char *cmd;
       if (comskips>=0)
         {
 	  cmd = COM_CompleteCommand(completion, comskips);
@@ -731,7 +734,7 @@ bool Console::Responder(event_t *ev)
 	    comskips = -(comskips+1);
         }
       if (comskips<0)
-	cmd = CV_CompleteVar (completion, varskips);
+	cmd = consvar_t::CompleteVar(completion, varskips);
 
       if (cmd)
         {

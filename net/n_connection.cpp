@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/07/11 14:32:01  smite-meister
+// Consvars updated, bugfixes
+//
 // Revision 1.2  2004/07/09 19:43:40  smite-meister
 // Netcode fixes
 //
@@ -131,8 +134,18 @@ void LConnection::writeConnectAccept(BitStream *stream)
   Parent::writeConnectAccept(stream);  
   // TODO check that name is unique, send corrected info back, send pnum
 
-  //SV_SendServerConfig(node)
-  //CV_SaveNetVars();
+  // TODO SV_SendServerConfig(node)
+  /*
+    stream->writeString(cv_servername.str);
+    stream->write(VERSION);
+    stream->writeString(VERSIONSTRING);
+    stream->write(game.Players.size());
+    stream->write(game.maxplayers);
+  */
+  // TODO server load, game type, current map, how long it has been running, how long to go...
+  // what WADs are needed, can they be downloaded from server...
+
+  consvar_t::SaveNetVars(stream);
 }
 
 
@@ -142,10 +155,7 @@ bool LConnection::readConnectAccept(BitStream *stream, const char **errorString)
     return false;
 
   // TODO read serverconfig
-
-  // TEST
-  char temp[256];
-  *errorString = temp; // in case we need it
+  consvar_t::LoadNetVars(stream);
 
   return true;
 }

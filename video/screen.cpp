@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/07/11 14:32:02  smite-meister
+// Consvars updated, bugfixes
+//
 // Revision 1.10  2004/07/05 16:53:45  smite-meister
 // Netcode replaced
 //
@@ -493,9 +496,9 @@ void SCR_CheckDefaultMode()
 void SCR_SetDefaultMode()
 {
   // remember the default screen size
-  CV_SetValue(&cv_scr_width,  vid.width);
-  CV_SetValue(&cv_scr_height, vid.height);
-  CV_SetValue(&cv_scr_depth,  vid.BytesPerPixel*8);
+  cv_scr_width.Set(vid.width);
+  cv_scr_height.Set(vid.height);
+  cv_scr_depth.Set(vid.BytesPerPixel * 8);
   // CV_SetValue (&cv_fullscreen, !vid.u.windowed); metzgermeister: unnecessary?
 }
 

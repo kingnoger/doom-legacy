@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/07/11 14:32:01  smite-meister
+// Consvars updated, bugfixes
+//
 // Revision 1.5  2004/07/09 19:43:40  smite-meister
 // Netcode fixes
 //
@@ -31,7 +34,6 @@
 //
 // Revision 1.1  2004/06/18 08:15:30  smite-meister
 // New TNL netcode!
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -253,7 +255,6 @@ void LNetInterface::handleInfoPacket(const Address &address, U8 packetType, BitS
 
 	      // TODO server load, game type, current map, how long it has been running, how long to go...
 	      // what WADs are needed, can they be downloaded from server...
-	      //CV_SaveNetVars((char**)&p); TODO
 	      
 	      out.sendto(mSocket, address);
 	    }	  

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/07/11 14:32:01  smite-meister
+// Consvars updated, bugfixes
+//
 // Revision 1.4  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
 //
@@ -37,6 +40,7 @@
 #ifndef g_input_h
 #define g_input_h 1
 
+#include "doomtype.h"
 #include "keys.h"
 
 enum gamecontrols_e

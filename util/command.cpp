@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/07/11 14:32:01  smite-meister
+// Consvars updated, bugfixes
+//
 // Revision 1.5  2004/07/05 16:53:30  smite-meister
 // Netcode replaced
 //
@@ -32,20 +35,20 @@
 // Revision 1.1.1.1  2002/11/16 14:18:37  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//   Command buffer:
-//      parse and execute commands from console input/scripts/
-//      and remote server.
-//
-//      handles console variables, which is a simplified version
-//      of commands, each consvar can have a function called when
-//      it is modified.. thus it acts nearly as commands.
-//
-//      code shamelessly inspired by the QuakeC sources, thanks Id :)
-//
 //-----------------------------------------------------------------------------
 
+/// \file Command buffer and console variables
+///   
+/// Parse and execute commands from console input/scripts/
+/// and remote server.
+///
+/// Handles console variables, which are a simplified version
+/// of commands. Each consvar can have a function which is called
+/// when it is modified.
+///
+/// Code shamelessly inspired by the QuakeC sources, thanks Id :)
+
+#include "tnl/tnlBitStream.h"
 
 #include "doomdef.h"
 #include "command.h"
@@ -56,7 +59,7 @@
 #include "m_fixed.h"
 #include "byteptr.h"
 #include "p_saveg.h"
-#include "g_game.h" // for devparm
+#include "g_game.h"
 
 
 // =========================================================================
@@ -155,30 +158,26 @@ void vsbuf_t::VS_Print(char *newdata)
 
 
 
-//========
-// protos.
-//========
+//=========================================================================
+//                           COMMAND BUFFER
+//=========================================================================
+
 static bool COM_Exists (char *com_name);
-static void    COM_ExecuteString (char *text);
+static void COM_ExecuteString (char *text);
 
-static void    COM_Alias_f();
-static void    COM_Echo_f();
-static void    COM_Exec_f();
-static void    COM_Wait_f();
-static void    COM_Help_f();
-static void    COM_Toggle_f();
+static void COM_Alias_f();
+static void COM_Echo_f();
+static void COM_Exec_f();
+static void COM_Wait_f();
+static void COM_Help_f();
+static void COM_Toggle_f();
 
-static bool    CV_Command();
-static consvar_t *CV_FindVar(char *name);
-static char      *CV_StringValue(char *var_name);
-static consvar_t  *consvar_vars;       // list of registered console variables
+static char com_token[1024];
+static char *COM_Parse(char *data);
 
-static char    com_token[1024];
-static char    *COM_Parse(char *data);
-
-CV_PossibleValue_t CV_OnOff[] =     {{0,"Off"}, {1,"On"},    {0,NULL}};
-CV_PossibleValue_t CV_YesNo[] =     {{0,"No"} , {1,"Yes"},   {0,NULL}};
-CV_PossibleValue_t CV_Unsigned[]=   {{0,"MIN"}, {999999999,"MAX"}, {0,NULL}};
+CV_PossibleValue_t CV_OnOff[] =    {{0,"Off"}, {1,"On"},    {0,NULL}};
+CV_PossibleValue_t CV_YesNo[] =    {{0,"No"} , {1,"Yes"},   {0,NULL}};
+CV_PossibleValue_t CV_Unsigned[] = {{0,"MIN"}, {999999999,"MAX"}, {0,NULL}};
 
 #define COM_BUF_SIZE    8192   // command buffer size
 
@@ -196,10 +195,6 @@ struct cmdalias_t
 
 cmdalias_t  *com_alias; // aliases list
 
-
-// =========================================================================
-//                            COMMAND BUFFER
-// =========================================================================
 
 
 static vsbuf_t com_text;     // variable sized buffer
@@ -330,11 +325,10 @@ static  xcommand_t  *com_commands = NULL;     // current commands
 
 #define MAX_ARGS        80
 static int         com_argc;
-static char        *com_argv[MAX_ARGS];
-static char        *com_null_string = "";
-static char        *com_args = NULL;          // current command args or NULL
+static char       *com_argv[MAX_ARGS];
+static char       *com_null_string = "";
+static char       *com_args = NULL;          // current command args or NULL
 
-void Got_NetVar(char **p,int playernum);
 
 //  Initialise command buffer and add basic commands
 void COM_Init()
@@ -351,7 +345,6 @@ void COM_Init()
   COM_AddCommand ("wait", COM_Wait_f);
   COM_AddCommand ("help", COM_Help_f);
   COM_AddCommand ("toggle", COM_Toggle_f);
-  //RegisterNetXCmd(XD_NETVAR,Got_NetVar);
 }
 
 
@@ -447,7 +440,7 @@ void COM_AddCommand(char *name, com_func_t func)
   xcommand_t  *cmd;
 
   // fail if the command is a variable name
-  if (CV_StringValue(name)[0])
+  if (consvar_t::FindVar(name))
     {
       CONS_Printf ("%s is a variable name\n", name);
       return;
@@ -546,12 +539,87 @@ static void COM_ExecuteString(char *text)
   // check cvars
   // Hurdler: added at Ebola's request ;)
   // (don't flood the console in software mode with bad gr_xxx command)
-  if (!CV_Command())
+  if (!consvar_t::Command())
     {
       CONS_Printf("Unknown command '%s'\n", COM_Argv(0));
     }
 }
 
+
+
+//============================================================================
+//                            SCRIPT PARSE
+//============================================================================
+
+//  Parse a token out of a string, handles script files too
+//  returns the data pointer after the token
+static char *COM_Parse(char *data)
+{
+  if (!data)
+    return NULL;
+
+  int c;
+  int len = 0;
+  com_token[0] = 0;
+
+  // skip whitespace
+ skipwhite:
+  while ( (c = *data) <= ' ')
+    {
+      if (c == 0)
+        return NULL;            // end of file;
+      data++;
+    }
+
+  // skip // comments
+  if (c=='/' && data[1] == '/')
+    {
+      while (*data && *data != '\n')
+        data++;
+      goto skipwhite;
+    }
+
+
+  // handle quoted strings specially
+  if (c == '\"')
+    {
+      data++;
+      while (1)
+        {
+          c = *data++;
+          if (c=='\"' || !c)
+            {
+              com_token[len] = 0;
+              return data;
+            }
+          com_token[len] = c;
+          len++;
+        }
+    }
+
+  // parse single characters
+  if (c=='{' || c=='}'|| c==')'|| c=='(' || c=='\'' || c==':')
+    {
+      com_token[len] = c;
+      len++;
+      com_token[len] = 0;
+      return data+1;
+    }
+
+  // parse a regular word
+  do
+    {
+      com_token[len] = c;
+      data++;
+      len++;
+      c = *data;
+      if (c=='{' || c=='}'|| c==')'|| c=='(' || c=='\'' || c==':')
+        break;
+    } while (c>32);
+
+  com_token[len] = 0;
+  return data;
+}
 
 
 // =========================================================================
@@ -658,8 +726,8 @@ static void COM_Help_f()
 
   if(COM_Argc()>1)
     {
-      cvar = CV_FindVar(COM_Argv(1));
-      if( cvar )
+      cvar = consvar_t::FindVar(COM_Argv(1));
+      if (cvar)
         {
           CONS_Printf("Variable %s:\n",cvar->name);
           CONS_Printf("  flags :");
@@ -707,7 +775,7 @@ static void COM_Help_f()
 
       // varibale
       CONS_Printf("\2\nVariable\n");
-      for (cvar=consvar_vars; cvar; cvar = cvar->next)
+      for (cvar = consvar_t::cvar_list; cvar; cvar = cvar->next)
         {
           CONS_Printf("%s ",cvar->name);
           i++;
@@ -722,27 +790,25 @@ static void COM_Help_f()
 
 static void COM_Toggle_f()
 {
-  consvar_t  *cvar;
-
-  if(COM_Argc()!=2 && COM_Argc()!=3)
+  if (COM_Argc() != 2 && COM_Argc() != 3)
     {
       CONS_Printf("Toggle <cvar_name> [-1]\n"
                   "Toggle the value of a cvar\n");
       return;
     }
-  cvar = CV_FindVar (COM_Argv(1));
-  if(!cvar)
+  consvar_t *cvar = consvar_t::FindVar(COM_Argv(1));
+  if (!cvar)
     {
       CONS_Printf("%s is not a cvar\n",COM_Argv(1));
       return;
     }
 
   // netcvar don't change imediately
-  cvar->flags |= CV_SHOWMODIFONETIME;
-  if( COM_Argc()==3 )
-    CV_AddValue(cvar,atol(COM_Argv(2)));
+  cvar->flags |= CV_ANNOUNCE_ONCE;
+  if (COM_Argc() == 3)
+    cvar->AddValue(atol(COM_Argv(2)));
   else
-    CV_AddValue(cvar,+1);
+    cvar->AddValue(1);
 }
 
 
@@ -758,18 +824,14 @@ static void COM_Toggle_f()
 //
 // =========================================================================
 
-static char       *cv_null_string = "";
-
+consvar_t *consvar_t::cvar_list = NULL;
 
 //  Search if a variable has been registered
 //  returns true if given variable has been registered
-//
-static consvar_t *CV_FindVar(char *name)
+consvar_t *consvar_t::FindVar(char *name)
 {
-  consvar_t  *cvar;
-
-  for (cvar=consvar_vars; cvar; cvar = cvar->next)
-    if ( !strcmp(name,cvar->name) )
+  for (consvar_t *cvar = cvar_list; cvar; cvar = cvar->next)
+    if (!strcmp(name, cvar->name))
       return cvar;
 
   return NULL;
@@ -778,16 +840,13 @@ static consvar_t *CV_FindVar(char *name)
 
 //  Build a unique Net Variable identifier number, that is used
 //  in network packets instead of the fullname
-//
-unsigned short CV_ComputeNetid (char *s)
+unsigned short consvar_t::ComputeNetid(char *s)
 {
-  unsigned short ret;
   static int premiers[16] = {2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53};
-  int i;
 
-  ret=0;
-  i=0;
-  while(*s)
+  unsigned short ret = 0;
+  int i = 0;
+  while (*s)
     {
       ret += (*s)*premiers[i];
       s++;
@@ -798,13 +857,10 @@ unsigned short CV_ComputeNetid (char *s)
 
 
 //  Return the Net Variable, from it's identifier number
-//
-static consvar_t *CV_FindNetVar (unsigned short netid)
+consvar_t *consvar_t::FindNetVar(unsigned short netid)
 {
-  consvar_t  *cvar;
-
-  for (cvar=consvar_vars; cvar; cvar = cvar->next)
-    if (cvar->netid==netid)
+  for (consvar_t *cvar = cvar_list; cvar; cvar = cvar->next)
+    if (cvar->netid == netid)
       return cvar;
 
   return NULL;
@@ -813,176 +869,161 @@ static consvar_t *CV_FindNetVar (unsigned short netid)
 //
 // set value to the variable, no checking, only for internal use
 //
-static void Setvalue(consvar_t *var, char *valstr)
+void consvar_t::Setvalue(const char *s)
 {
-  if (var->PossibleValue)
-    {
-      int v = atoi(valstr);
+  int i;
+  char temp[100];
 
-      if (!stricmp(var->PossibleValue[0].strvalue,"MIN"))
-        {   // bounded cvar
-          int i;
+  if (PossibleValue)
+    {
+      char *tail;
+      int v = strtol(s, &tail, 0);
+
+      if (!stricmp(PossibleValue[0].strvalue,"MIN"))
+        {
+	  // bounded cvar
           // search for maximum
-          for (i=1; var->PossibleValue[i].strvalue != NULL; i++)
-            if (!stricmp(var->PossibleValue[i].strvalue,"MAX"))
+          for (i=1; PossibleValue[i].strvalue; i++)
+            if (!stricmp(PossibleValue[i].strvalue,"MAX"))
               break;
 #ifdef PARANOIA
-          if(var->PossibleValue[i].strvalue==NULL)
-            I_Error("Bounded cvar \"%s\" without Maximum !",var->name);
+          if (!PossibleValue[i].strvalue)
+            I_Error("Bounded cvar \"%s\" without Maximum !", name);
 #endif
-          if (v < var->PossibleValue[0].value)
-            {
-              v = var->PossibleValue[0].value;
-              sprintf(valstr,"%d",v);
-            }
-          if(v > var->PossibleValue[i].value)
-            {
-              v = var->PossibleValue[i].value;
-              sprintf(valstr,"%d",v);
-            }
+          if (v < PossibleValue[0].value)
+	    v = PossibleValue[0].value;
+          else if (v > PossibleValue[i].value)
+	    v = PossibleValue[i].value;
+
+	  sprintf(temp, "%d", v);
+	  s = temp;
         }
       else
         {
-          // waw spaghetti programming ! :)
-          int i;
+	  if (tail == s)
+	    {
+	      // no succesful number conversion, so it's a string
+	      for (i=0; PossibleValue[i].strvalue; i++)
+		if (!stricmp(PossibleValue[i].strvalue, s))
+		  break;
+	    }
+	  else
+	    {
+	      // int value then
+	      for (i=0; PossibleValue[i].strvalue; i++)
+		if (v == PossibleValue[i].value)
+		  break;
+	    }
 
-          // check first strings
-          for(i=0;var->PossibleValue[i].strvalue!=NULL;i++)
-            if(!stricmp(var->PossibleValue[i].strvalue,valstr))
-              goto found;
-          if(!v)
-            if(strcmp(valstr,"0")!=0) // !=0 if valstr!="0"
-              goto error;
-          // check int now
-          for(i=0;var->PossibleValue[i].strvalue!=NULL;i++)
-            if(v==var->PossibleValue[i].value)
-              goto found;
+	  if (!PossibleValue[i].strvalue)
+	    {
+	      CONS_Printf("\"%s\" is not a possible value for \"%s\"\n", s, name);
+	      if (defaultvalue == s)
+		I_Error("Variable %s default value \"%s\" is not a possible value\n", name, defaultvalue);
+	      return;
+	    }
 
-        error:      // not found
-          CONS_Printf("\"%s\" is not a possible value for \"%s\"\n", valstr, var->name);
-          if (var->defaultvalue == valstr)
-            I_Error("Variable %s default value \"%s\" is not a possible value\n",var->name,var->defaultvalue);
-          return;
-        found:
-          var->value = var->PossibleValue[i].value;
-          var->str=var->PossibleValue[i].strvalue;
-          goto finish;
+          value = PossibleValue[i].value;
+          str = PossibleValue[i].strvalue;
+          goto finish; // must not free str!
         }
     }
 
   // free the old value string
-  if (var->str)
-    Z_Free (var->str);
+  if (str)
+    Z_Free(str);
 
-  var->str = Z_StrDup(valstr);
+  str = Z_StrDup(s);
 
-  if (var->flags & CV_FLOAT)
-    {
-      double d;
-      d = atof (var->str);
-      var->value = (int)(d * FRACUNIT);
-    }
+  if (flags & CV_FLOAT)
+    value = int(atof(str) * FRACUNIT);
   else
-    var->value = atoi (var->str);
+    value = atoi(str);
 
  finish:
-  if( var->flags & CV_SHOWMODIFONETIME || var->flags & CV_SHOWMODIF)
+  if (flags & CV_ANNOUNCE_ONCE || flags & CV_ANNOUNCE)
     {
-      CONS_Printf("%s set to %s\n",var->name,var->str);
-      var->flags &= ~CV_SHOWMODIFONETIME;
+      CONS_Printf("%s set to %s\n", name, str);
+      flags &= ~CV_ANNOUNCE_ONCE;
     }
 
-  var->flags |= CV_MODIFIED;
+  flags |= CV_MODIFIED;
   // raise 'on change' code
-  if (var->flags & CV_CALL)
-    var->func();
+  if (flags & CV_CALL)
+    func();
 }
 
 
 //  Register a variable, that can be used later at the console
-//
-void CV_RegisterVar(consvar_t *variable)
+bool consvar_t::Reg()
 {
   // first check to see if it has already been defined
-  if (CV_FindVar(variable->name))
+  if (FindVar(name))
     {
-      CONS_Printf ("Variable %s is already defined\n", variable->name);
-      return;
+      CONS_Printf("Variable %s is already defined\n", name);
+      return false;
     }
 
   // check for overlap with a command
-  if (COM_Exists (variable->name))
+  if (COM_Exists(name))
     {
-      CONS_Printf ("%s is a command name\n", variable->name);
-      return;
+      CONS_Printf("%s is a command name\n", name);
+      return false;
     }
 
   // check net variables
-  if (variable->flags & CV_NETVAR)
+  if (flags & CV_NETVAR)
     {
-      variable->netid = CV_ComputeNetid (variable->name);
-      if (CV_FindNetVar(variable->netid))
-        I_Error("Variable %s has same netid\n",variable->name);
+      netid = ComputeNetid(name);
+      if (FindNetVar(netid))
+	{
+	  I_Error("Variable %s has same netid\n", name);
+	  return false;
+	}
     }
 
   // link the variable in
-  if( !(variable->flags & CV_HIDEN) )
+  if (!(flags & CV_HIDDEN))
     {
-      variable->next = consvar_vars;
-      consvar_vars = variable;
+      next = cvar_list;
+      cvar_list = this;
     }
-  variable->str = NULL;
 
-    // copy the value off, because future sets will Z_Free it
-    //variable->string = Z_StrDup (variable->string);
+  str = NULL;
 
 #ifdef PARANOIA
-  if ((variable->flags & CV_NOINIT) && !(variable->flags & CV_CALL))
-    I_Error("variable %s have CV_NOINIT without CV_CALL\n");
-  if ((variable->flags & CV_CALL) && !variable->func)
-    I_Error("variable %s have cv_call flags whitout func");
+  if ((flags & CV_NOINIT) && !(flags & CV_CALL))
+    I_Error("variable %s has CV_NOINIT without CV_CALL\n", name);
+  if ((flags & CV_CALL) && !func)
+    I_Error("variable %s has CV_CALL without func", name);
 #endif
-  if (variable->flags & CV_NOINIT)
-    variable->flags &=~CV_CALL;
 
-  Setvalue(variable,variable->defaultvalue);
+  if (flags & CV_NOINIT)
+    flags &= ~CV_CALL;
 
-  if (variable->flags & CV_NOINIT)
-    variable->flags |= CV_CALL;
+  Setvalue(defaultvalue);
 
-    // the SetValue will set this bit
-  variable->flags &= ~CV_MODIFIED;
+  if (flags & CV_NOINIT)
+    flags |= CV_CALL;
+
+  // the SetValue will set this bit
+  flags &= ~CV_MODIFIED;
+  return true;
 }
 
-
-//  Returns the string value of a console var
-//
-static char *CV_StringValue (char *var_name)
-{
-  consvar_t *var;
-
-  var = CV_FindVar (var_name);
-  if (!var)
-    return cv_null_string;
-  return var->str;
-}
 
 
 //  Completes the name of a console var
-//
-char *CV_CompleteVar (char *partial, int skips)
+const char *consvar_t::CompleteVar(char *partial, int skips)
 {
-  consvar_t   *cvar;
-  int         len;
-
-  len = strlen(partial);
+  int len = strlen(partial);
 
   if (!len)
     return NULL;
 
   // check functions
-  for (cvar=consvar_vars ; cvar ; cvar=cvar->next)
-    if (!strncmp (partial,cvar->name, len))
+  for (consvar_t *cvar = cvar_list; cvar; cvar = cvar->next)
+    if (!strncmp(partial, cvar->name, len))
       if (!skips--)
         return cvar->name;
 
@@ -991,269 +1032,168 @@ char *CV_CompleteVar (char *partial, int skips)
 
 
 
-//
-// Use XD_NETVAR argument :
 //      2 byte for variable identification
 //      then the value of the variable followed with a 0 byte (like str)
-//
-void Got_NetVar(char **p,int playernum)
+void consvar_t::Got_NetVar(unsigned short id, char *str)
 {
-  consvar_t  *cvar;
-  char *svalue;
-
-  cvar = CV_FindNetVar (READUSHORT(*p));
-  svalue = *p;
-  SKIPSTRING(*p);
-  if(cvar==NULL)
+  consvar_t *cvar = consvar_t::FindNetVar(id);
+  if (!cvar)
     {
       CONS_Printf("\2Netvar not found\n");
       return;
     }
-  Setvalue(cvar,svalue);
+  cvar->Setvalue(str);
 }
 
-// get implicit parameter save_p
-void CV_SaveNetVars(char **p)
-{
-  consvar_t  *cvar;
-  byte *q = (byte *)*p;
 
-  // we must send all cvar because on the other side maybe
-  // it have a cvar modified and here not (same for true savegame)
-  for (cvar=consvar_vars; cvar; cvar = cvar->next)
+// write the netvars into a packet
+void consvar_t::SaveNetVars(TNL::BitStream *s)
+{
+  for (consvar_t *cvar = cvar_list; cvar; cvar = cvar->next)
     if (cvar->flags & CV_NETVAR)
       {
-        WRITESHORT(q,cvar->netid);
-        WRITESTRING(q,cvar->str);
+	s->write(cvar->netid);
+        s->writeString(cvar->str);
       }
-  *p = (char *)q;
 }
 
-// get implicit parameter save_p
-void CV_LoadNetVars( char **p )
+// read the netvars from a packet
+void consvar_t::LoadNetVars(TNL::BitStream *s)
 {
-  consvar_t  *cvar;
-
-  for (cvar=consvar_vars; cvar; cvar = cvar->next)
+  for (consvar_t *cvar = cvar_list; cvar; cvar = cvar->next)
     if (cvar->flags & CV_NETVAR)
-      Got_NetVar(p, 0);
+      {
+	// the for loop is just used for count
+	unsigned short id;
+	s->read(&id);
+	char temp[256];
+        s->readString(temp);
+	Got_NetVar(id, temp);
+      }
 }
 
-//
-//  does as if "<varname> <value>" is entered at the console
-//
-void CV_Set(consvar_t *var, char *value)
-{
-  //changed = strcmp(var->str, value);
 
+// as if "<varname> <value>" is entered at the console
+void consvar_t::Set(char *s)
+{
   consvar_t *cv;
-  // is it registered?
-  for (cv = consvar_vars; cv; cv = cv->next)
-    if (cv == var)
+  // am i registered?
+  for (cv = cvar_list; cv; cv = cv->next)
+    if (cv == this)
       break;
 
   if (!cv)
-    CV_RegisterVar(var);
+    Reg();
 
 #ifdef PARANOIA
-  if(!var)
-    I_Error("CV_Set : no variable\n");
-  if(!var->str)
-    I_Error("cv_Set : %s no string set ?!\n",var->name);
+  if (!str)
+    I_Error("CV_Set : %s no string set ?!\n",name);
 #endif
-  if (stricmp(var->str, value)==0)
+
+  if (!stricmp(str, s))
     return; // no changes
 
-  if (var->flags & CV_NETVAR)
+  if (flags & CV_NOTINNET && game.netgame)
+    {
+      CONS_Printf("This variable cannot be changed while in a netgame.\n");
+      return;
+    }
+
+  if (flags & CV_NETVAR && game.netgame)
     {
       // send the value of the variable
-      char buf[128];
-      byte *p;
       if (!game.server)
         {
           CONS_Printf("Only the server can change this variable\n");
           return;
         }
-      p = (byte *)buf;
-      WRITEUSHORT(p, var->netid);
-      WRITESTRING(p, value);
-      // FIXME netvars
-      //SendNetXCmd (XD_NETVAR, buf, (char *)p-buf);
+
+      //game.net->SendNetVar(netid, s); FIXME
     }
-  else if ((var->flags & CV_NOTINNET) && game.netgame)
-    {
-      CONS_Printf("This Variable can't be changed while in netgame\n");
-      return;
-    }
-  else
-    Setvalue(var,value);
+
+  Setvalue(s);
 }
 
 
 //  Expands value to string before calling CV_Set()
-//
-void CV_SetValue(consvar_t *var, int value)
+void consvar_t::Set(int newval)
 {
-  char    val[32];
-
-  sprintf (val, "%d", value);
-  CV_Set (var, val);
+  char val[32];
+  sprintf(val, "%d", newval);
+  Set(val);
 }
 
-void CV_AddValue(consvar_t *var, int increment)
+// increments the cvar
+void consvar_t::AddValue(int increment)
 {
-  int   newvalue=var->value+increment;
+  int n;
+  int newvalue = value + increment;
 
-  if( var->PossibleValue )
+  if (PossibleValue)
     {
-#define MIN 0
-
-      if( strcmp(var->PossibleValue[MIN].strvalue,"MIN")==0 )
+      if (!strcmp(PossibleValue[0].strvalue, "MIN"))
         {
-          int max;
           // seach the next to last
-          for(max=0;var->PossibleValue[max+1].strvalue!=NULL;max++)
+          for (n=0; PossibleValue[n+1].strvalue; n++)
             ;
+	  int minval = PossibleValue[0].value;
+	  int maxval = PossibleValue[n].value;
 
-          if( newvalue<var->PossibleValue[MIN].value )
-            newvalue+=var->PossibleValue[max].value-var->PossibleValue[MIN].value+1;   // add the max+1
-          newvalue=var->PossibleValue[MIN].value +
-            (newvalue-var->PossibleValue[MIN].value) %
-            (var->PossibleValue[max].value -
-             var->PossibleValue[MIN].value+1);
+          if (newvalue < minval)
+            newvalue += maxval - minval + 1; // TODO not safe (increment -1000, for example)
 
-          CV_SetValue(var,newvalue);
+          newvalue = minval + (newvalue - minval) % (maxval - minval + 1);
+          Set(newvalue);
         }
       else
         {
-          int max,currentindice=-1,newindice;
+          int i = -1;
 
           // this code do not support more than same value for differant PossibleValue
-          for(max=0;var->PossibleValue[max].strvalue!=NULL;max++)
-            if( var->PossibleValue[max].value==var->value )
-              currentindice=max;
-          max--;
+          for (n=0; PossibleValue[n].strvalue; n++)
+            if (PossibleValue[n].value == value)
+              i = n;
+
 #ifdef PARANOIA
-          if( currentindice==-1 )
-            I_Error("CV_AddValue : current value %d not found in possible value\n",var->value);
+          if (i == -1)
+            I_Error("CV_AddValue : current value %d not found in possible values\n", value);
 #endif
-          newindice=(currentindice+increment+max+1) % (max+1);
-          CV_Set(var,var->PossibleValue[newindice].strvalue);
+          i = (i + increment + n) % n;
+          Set(PossibleValue[i].strvalue);
         }
     }
   else
-    CV_SetValue(var,newvalue);
+    Set(newvalue);
 }
 
 
-//  Allow display of variable content or change from the console
+//  Displays or changes variable from the console
 //
 //  Returns false if the passed command was not recognised as
 //  console variable.
-//
-static bool CV_Command()
+bool consvar_t::Command()
 {
   // check variables
-  consvar_t *v = CV_FindVar(COM_Argv(0));
+  consvar_t *v = FindVar(COM_Argv(0));
   if (!v)
     return false;
 
   // perform a variable print or set
   if (COM_Argc() == 1)
     {
-      CONS_Printf ("\"%s\" is \"%s\" default is \"%s\"\n", v->name, v->str, v->defaultvalue);
+      CONS_Printf("\"%s\" is \"%s\" default is \"%s\"\n", v->name, v->str, v->defaultvalue);
       return true;
     }
 
-  CV_Set(v, COM_Argv(1));
+  v->Set(COM_Argv(1));
   return true;
 }
 
 
 //  Save console variables that have the CV_SAVE flag set
-//
-void CV_SaveVariables (FILE *f)
+void consvar_t::SaveVariables(FILE *f)
 {
-  consvar_t      *cvar;
-
-  for (cvar = consvar_vars ; cvar ; cvar=cvar->next)
+  for (consvar_t *cvar = cvar_list; cvar; cvar=cvar->next)
     if (cvar->flags & CV_SAVE)
-      fprintf (f, "%s \"%s\"\n", cvar->name, cvar->str);
-}
-
-
-//============================================================================
-//                            SCRIPT PARSE
-//============================================================================
-
-//  Parse a token out of a string, handles script files too
-//  returns the data pointer after the token
-static char *COM_Parse(char *data)
-{
-  int     c;
-  int     len;
-
-  len = 0;
-  com_token[0] = 0;
-
-  if (!data)
-    return NULL;
-
-  // skip whitespace
- skipwhite:
-  while ( (c = *data) <= ' ')
-    {
-      if (c == 0)
-        return NULL;            // end of file;
-      data++;
-    }
-
-  // skip // comments
-  if (c=='/' && data[1] == '/')
-    {
-      while (*data && *data != '\n')
-        data++;
-      goto skipwhite;
-    }
-
-
-  // handle quoted strings specially
-  if (c == '\"')
-    {
-      data++;
-      while (1)
-        {
-          c = *data++;
-          if (c=='\"' || !c)
-            {
-              com_token[len] = 0;
-              return data;
-            }
-          com_token[len] = c;
-          len++;
-        }
-    }
-
-  // parse single characters
-  if (c=='{' || c=='}'|| c==')'|| c=='(' || c=='\'' || c==':')
-    {
-      com_token[len] = c;
-      len++;
-      com_token[len] = 0;
-      return data+1;
-    }
-
-  // parse a regular word
-  do
-    {
-      com_token[len] = c;
-      data++;
-      len++;
-      c = *data;
-      if (c=='{' || c=='}'|| c==')'|| c=='(' || c=='\'' || c==':')
-        break;
-    } while (c>32);
-
-  com_token[len] = 0;
-  return data;
+      fprintf(f, "%s \"%s\"\n", cvar->name, cvar->str);
 }

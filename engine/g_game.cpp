@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.28  2004/07/11 14:32:00  smite-meister
+// Consvars updated, bugfixes
+//
 // Revision 1.27  2004/07/09 19:43:39  smite-meister
 // Netcode fixes
 //
@@ -661,12 +664,12 @@ bool GameInfo::Responder(event_t* ev)
           return true;
 
         case KEY_MINUS:     // Screen size down
-          CV_SetValue (&cv_viewsize, cv_viewsize.value-1);
+          cv_viewsize.Set(cv_viewsize.value - 1);
           S_StartAmbSound(sfx_menu_adjust);
           return true;
 
         case KEY_EQUALS:    // Screen size up
-          CV_SetValue (&cv_viewsize, cv_viewsize.value+1);
+          cv_viewsize.Set(cv_viewsize.value + 1);
           S_StartAmbSound(sfx_menu_adjust);
           return true;
         }

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/07/11 14:32:01  smite-meister
+// Consvars updated, bugfixes
+//
 // Revision 1.7  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
 //
@@ -234,8 +237,8 @@ void I_GetEvent()
 
 	  // TODO actually this belongs in D_PostEvent, but not until we have another interface...
 	  temp = inputEvent.key.keysym.mod; // modifier key status
-	  shiftdown = (temp && KMOD_SHIFT);
-	  altdown = (temp && KMOD_ALT);
+	  shiftdown = (temp & KMOD_SHIFT);
+	  altdown = (temp & KMOD_ALT);
 
 	  D_PostEvent(&event);
 	  break;

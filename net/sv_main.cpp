@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/07/11 14:32:01  smite-meister
+// Consvars updated, bugfixes
+//
 // Revision 1.3  2004/07/09 19:43:40  smite-meister
 // Netcode fixes
 //
@@ -180,7 +183,7 @@ void FragLimit_OnChange();
 void TimeLimit_OnChange();
 void FastMonster_OnChange();
 
-consvar_t cv_deathmatch = {"deathmatch","0",CV_NETVAR | CV_CALL, deathmatch_cons_t, Deathmatch_OnChange};
+consvar_t cv_deathmatch = {"deathmatch","0",CV_NETVAR | CV_NOINIT | CV_CALL, deathmatch_cons_t, Deathmatch_OnChange};
 consvar_t cv_teamplay   = {"teamplay"  ,"0",CV_NETVAR | CV_CALL,teamplay_cons_t, TeamPlay_OnChange};
 consvar_t cv_teamdamage = {"teamdamage","0",CV_NETVAR,CV_OnOff};
 consvar_t cv_exitmode   = {"exitmode", "1", CV_NETVAR, exitmode_cons_t, NULL};
@@ -198,7 +201,7 @@ consvar_t cv_respawnmonsters = {"respawnmonsters","0",CV_NETVAR,CV_OnOff};
 consvar_t cv_respawnmonsterstime = {"respawnmonsterstime","12",CV_NETVAR,CV_Unsigned};
 consvar_t cv_fragsweaponfalling  = {"fragsweaponfalling","0", CV_SAVE | CV_NETVAR, CV_OnOff};
 
-consvar_t cv_gravity = {"gravity","1", CV_NETVAR | CV_FLOAT | CV_SHOWMODIF};
+consvar_t cv_gravity = {"gravity","1", CV_NETVAR | CV_FLOAT | CV_ANNOUNCE};
 consvar_t cv_fastmonsters = {"fastmonsters","0", CV_NETVAR | CV_CALL,CV_OnOff,FastMonster_OnChange};
 consvar_t cv_solidcorpse  = {"solidcorpse","0", CV_NETVAR | CV_SAVE,CV_OnOff};
 
@@ -238,9 +241,9 @@ void Deathmatch_OnChange()
   if (game.server)
     {
       if (cv_deathmatch.value >= 2)
-	CV_SetValue(&cv_itemrespawn, 1);
+	cv_itemrespawn.Set(1);
       else
-	CV_SetValue(&cv_itemrespawn, 0);
+	cv_itemrespawn.Set(0);
     }
   // FIXME, deathmatch_onchange
   //if (cv_deathmatch.value == 1 || cv_deathmatch.value == 3) P_RespawnWeapons();
@@ -626,39 +629,39 @@ void SV_Init()
   COM_AddCommand("meminfo", Command_Meminfo_f);
 
   //Added by Hurdler for master server connection
-  CV_RegisterVar(&cv_masterserver);
+  cv_masterserver.Reg();
   COM_AddCommand("listserv", Command_Listserv_f);
 
   // register console variables
-  CV_RegisterVar(&cv_internetserver);
-  CV_RegisterVar(&cv_servername);
-  CV_RegisterVar(&cv_allownewplayer);
-  CV_RegisterVar(&cv_maxplayers);
+  cv_internetserver.Reg();
+  cv_servername.Reg();
+  cv_allownewplayer.Reg();
+  cv_maxplayers.Reg();
 
-  CV_RegisterVar(&cv_deathmatch);
-  CV_RegisterVar(&cv_teamplay);
-  CV_RegisterVar(&cv_teamdamage);
-  CV_RegisterVar(&cv_exitmode);
-  CV_RegisterVar(&cv_fraglimit);
-  CV_RegisterVar(&cv_timelimit);
+  cv_deathmatch.Reg();
+  cv_teamplay.Reg();
+  cv_teamdamage.Reg();
+  cv_exitmode.Reg();
+  cv_fraglimit.Reg();
+  cv_timelimit.Reg();
 
-  CV_RegisterVar(&cv_allowjump);
-  CV_RegisterVar(&cv_allowrocketjump);
-  CV_RegisterVar(&cv_allowautoaim);
-  CV_RegisterVar(&cv_allowmlook);
+  cv_allowjump.Reg();
+  cv_allowrocketjump.Reg();
+  cv_allowautoaim.Reg();
+  cv_allowmlook.Reg();
 
-  CV_RegisterVar(&cv_itemrespawn);
-  CV_RegisterVar(&cv_itemrespawntime);
-  CV_RegisterVar(&cv_respawnmonsters);
-  CV_RegisterVar(&cv_respawnmonsterstime);
-  CV_RegisterVar(&cv_fragsweaponfalling);
+  cv_itemrespawn.Reg();
+  cv_itemrespawntime.Reg();
+  cv_respawnmonsters.Reg();
+  cv_respawnmonsterstime.Reg();
+  cv_fragsweaponfalling.Reg();
 
-  CV_RegisterVar(&cv_gravity);
-  CV_RegisterVar(&cv_fastmonsters);
-  CV_RegisterVar(&cv_solidcorpse);
+  cv_gravity.Reg();
+  cv_fastmonsters.Reg();
+  cv_solidcorpse.Reg();
 
-  CV_RegisterVar(&cv_playdemospeed);
-  CV_RegisterVar(&cv_netstat);
+  cv_playdemospeed.Reg();
+  cv_netstat.Reg();
 
   // add chat macro consvars
   HU_HackChatmacros();

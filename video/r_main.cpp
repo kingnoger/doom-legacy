@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2004/07/11 14:32:02  smite-meister
+// Consvars updated, bugfixes
+//
 // Revision 1.16  2004/07/05 16:53:31  smite-meister
 // Netcode replaced
 //
@@ -796,11 +799,11 @@ void R_ExecuteSetViewSize()
 
   // no reduced view in splitscreen mode
   if (cv_splitscreen.value && cv_viewsize.value < 11)
-    CV_SetValue(&cv_viewsize, 11);
+    cv_viewsize.Set(11);
 
 #ifdef HWRENDER
   if ((rendermode != render_soft) && (cv_viewsize.value < 6))
-    CV_SetValue(&cv_viewsize, 6);
+    cv_viewsize.Set(6);
 #endif
 
   switch (game.mode)
@@ -844,7 +847,7 @@ void R_ExecuteSetViewSize()
     {
       setdetail = 0;
       CONS_Printf("lower detail mode n.a.\n");
-      CV_SetValue(&cv_detaillevel,setdetail);
+      cv_detaillevel.Set(setdetail);
     }
 
   detailshift = setdetail;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/07/11 14:32:02  smite-meister
+// Consvars updated, bugfixes
+//
 // Revision 1.6  2004/03/28 15:16:15  smite-meister
 // Texture cache.
 //
@@ -315,7 +318,7 @@ void M_SaveConfig(char *filename)
 
     //FIXME: save key aliases if ever implemented..
 
-    CV_SaveVariables(f);
+    consvar_t::SaveVariables(f);
     G_SaveKeySetting(f);
 
     fclose(f);

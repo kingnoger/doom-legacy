@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.32  2004/07/11 14:32:00  smite-meister
+// Consvars updated, bugfixes
+//
 // Revision 1.31  2004/07/05 16:53:24  smite-meister
 // Netcode replaced
 //
@@ -457,18 +460,18 @@ bool GameInfo::NewGame(skill_t sk)
   // set cvars
   if (skill == sk_nightmare)
     {
-      CV_SetValue(&cv_respawnmonsters, 1);
-      CV_SetValue(&cv_fastmonsters, 1);
+      cv_respawnmonsters.Set(1);
+      cv_fastmonsters.Set(1);
     }
   else
     {
-      CV_SetValue(&cv_respawnmonsters, 0);
-      CV_SetValue(&cv_fastmonsters, 0);
+      cv_respawnmonsters.Set(0);
+      cv_fastmonsters.Set(0);
     }
 
-  CV_SetValue(&cv_deathmatch, 0);
-  CV_SetValue(&cv_timelimit, 0);
-  CV_SetValue(&cv_fraglimit, 0);
+  cv_deathmatch.Set(0);
+  cv_timelimit.Set(0);
+  cv_fraglimit.Set(0);
 
   paused = false;
 

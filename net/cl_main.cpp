@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/07/11 14:32:01  smite-meister
+// Consvars updated, bugfixes
+//
 // Revision 1.3  2004/07/07 17:27:20  smite-meister
 // bugfixes
 //
@@ -178,80 +181,80 @@ void CL_Init()
   if (temp)
     cv_playername.defaultvalue = temp;
 
-  CV_RegisterVar(&cv_playername);
-  CV_RegisterVar(&cv_playercolor);
-  CV_RegisterVar(&cv_skin);
-  CV_RegisterVar(&cv_autoaim);
-  CV_RegisterVar(&cv_originalweaponswitch);
-  CV_RegisterVar(&cv_weaponpref);
+  cv_playername.Reg();
+  cv_playercolor.Reg();
+  cv_skin.Reg();
+  cv_autoaim.Reg();
+  cv_originalweaponswitch.Reg();
+  cv_weaponpref.Reg();
 
   // secondary player
-  CV_RegisterVar(&cv_playername2);
-  CV_RegisterVar(&cv_playercolor2);
-  CV_RegisterVar(&cv_skin2);
-  CV_RegisterVar(&cv_autoaim2);
-  //CV_RegisterVar(&cv_originalweaponswitch2);
-  //CV_RegisterVar(&cv_weaponpref2);
+  cv_playername2.Reg();
+  cv_playercolor2.Reg();
+  cv_skin2.Reg();
+  cv_autoaim2.Reg();
+  //cv_originalweaponswitch2.Reg();
+  //cv_weaponpref2.Reg();
 
 
   // client input
-  CV_RegisterVar(&cv_controlperkey);
+  cv_controlperkey.Reg();
 
-  CV_RegisterVar(&cv_autorun);
-  CV_RegisterVar(&cv_automlook);
-  CV_RegisterVar(&cv_usemouse);
-  CV_RegisterVar(&cv_invertmouse);
-  CV_RegisterVar(&cv_mousemove);
-  CV_RegisterVar(&cv_mousesensx);
-  CV_RegisterVar(&cv_mousesensy);
+  cv_autorun.Reg();
+  cv_automlook.Reg();
+  cv_usemouse.Reg();
+  cv_invertmouse.Reg();
+  cv_mousemove.Reg();
+  cv_mousesensx.Reg();
+  cv_mousesensy.Reg();
 
-  CV_RegisterVar(&cv_autorun2);
-  CV_RegisterVar(&cv_automlook2);  
-  CV_RegisterVar(&cv_usemouse2);
-  CV_RegisterVar(&cv_invertmouse2);
-  CV_RegisterVar(&cv_mousemove2);
-  CV_RegisterVar(&cv_mousesensx2);
-  CV_RegisterVar(&cv_mousesensy2);
+  cv_autorun2.Reg();
+  cv_automlook2.Reg();  
+  cv_usemouse2.Reg();
+  cv_invertmouse2.Reg();
+  cv_mousemove2.Reg();
+  cv_mousesensx2.Reg();
+  cv_mousesensy2.Reg();
 
   // WARNING : the order is important when initing mouse2, we need the mouse2port
-  CV_RegisterVar(&cv_mouse2port); 
+  cv_mouse2port.Reg(); 
 #ifdef LMOUSE2
-  CV_RegisterVar(&cv_mouse2opt);
+  cv_mouse2opt.Reg();
 #endif
 
-  CV_RegisterVar(&cv_usejoystick);
-  CV_RegisterVar(&cv_joystickfreelook);
+  cv_usejoystick.Reg();
+  cv_joystickfreelook.Reg();
 #ifdef LJOYSTICK
-  CV_RegisterVar(&cv_joyport);
-  CV_RegisterVar(&cv_joyscale);
+  cv_joyport.Reg();
+  cv_joyscale.Reg();
 #endif
 
 
   // client renderer
-  CV_RegisterVar(&cv_viewheight);
-  CV_RegisterVar(&cv_chasecam);
-  CV_RegisterVar(&cv_cam_dist);
-  CV_RegisterVar(&cv_cam_height);
-  CV_RegisterVar(&cv_cam_speed);
+  cv_viewheight.Reg();
+  cv_chasecam.Reg();
+  cv_cam_dist.Reg();
+  cv_cam_height.Reg();
+  cv_cam_speed.Reg();
 
-  CV_RegisterVar(&cv_scr_width);
-  CV_RegisterVar(&cv_scr_height);
-  CV_RegisterVar(&cv_scr_depth);
-  CV_RegisterVar(&cv_fullscreen); // only for opengl so use differant name please and move it to differant place
-  CV_RegisterVar(&cv_usegamma);
+  cv_scr_width.Reg();
+  cv_scr_height.Reg();
+  cv_scr_depth.Reg();
+  cv_fullscreen.Reg(); // only for opengl so use differant name please and move it to differant place
+  cv_usegamma.Reg();
 
-  CV_RegisterVar(&cv_viewsize);
-  CV_RegisterVar(&cv_detaillevel);
-  CV_RegisterVar(&cv_scalestatusbar);
-  //CV_RegisterVar(&cv_fov);
-  CV_RegisterVar(&cv_splitscreen);
+  cv_viewsize.Reg();
+  cv_detaillevel.Reg();
+  cv_scalestatusbar.Reg();
+  //cv_fov.Reg();
+  cv_splitscreen.Reg();
 
-  CV_RegisterVar(&cv_screenslink);
-  CV_RegisterVar(&cv_translucency);
-  CV_RegisterVar(&cv_fuzzymode);
-  CV_RegisterVar(&cv_splats);
-  CV_RegisterVar(&cv_bloodtime);
-  CV_RegisterVar(&cv_psprites);
+  cv_screenslink.Reg();
+  cv_translucency.Reg();
+  cv_fuzzymode.Reg();
+  cv_splats.Reg();
+  cv_bloodtime.Reg();
+  cv_psprites.Reg();
 
   //added by Hurdler
 #ifdef HWRENDER // not win32 only 19990829 by Kin

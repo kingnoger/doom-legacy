@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/07/11 14:32:01  smite-meister
+// Consvars updated, bugfixes
+//
 // Revision 1.2  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
 //
@@ -32,7 +35,6 @@
 #define command_h 1
 
 #include <stdio.h>
-#include "doomtype.h"
 
 //===================================
 // Command buffer & command execution
@@ -68,76 +70,99 @@ void    COM_Init();
 //==================
 // Console variables
 //==================
-// console vars are variables that can be changed through code or console,
-// at RUN TIME. They can also act as simplified commands, because a func-
-// tion can be attached to a console var, which is called whenever the
-// variable is modified (using flag CV_CALL).
 
-// flags for console vars
-
-typedef enum
+/// flags for console variables
+enum cvflags_t
 {
-    CV_SAVE   = 1,    // save to config when quit game
-    CV_CALL   = 2,    // call function on change
-    CV_NETVAR = 4,    // send it when change (see logboris.txt at 12-4-2000)
-    CV_NOINIT = 8,    // dont call function when var is registered (1st set)
-    CV_FLOAT  = 16,    // the value is fixed 16:16, where unit is FRACUNIT
-                      // (allow user to enter 0.45 for ex)
-                      // WARNING: currently only supports set with CV_Set()
-    CV_NOTINNET = 32, // some varaiable can't be changed in network but is not netvar (ex: splitscreen)
-    CV_MODIFIED = 64, // this bit is set when cvar is modified
-    CV_SHOWMODIF = 128,   // say something when modified
-    CV_SHOWMODIFONETIME = 256,  // same but will be reset to 0 when modified, set in toggle
-    CV_HIDEN   = 1024,    // variable is not part of the cvar list so cannot be accessed by the console
-                          // can only be set when we have the pointer to hit 
-                          // used on the menu
-} cvflags_t;
+  CV_SAVE       = 0x0001,    ///< cvar is saved in the config file when the game exits
+  CV_CALL       = 0x0002,    ///< call function on change
+  CV_NETVAR     = 0x0004,    ///< sent over net from server to clients
+  CV_NOINIT     = 0x0008,    ///< don't call function when cvar is registered (1st set)
+  CV_FLOAT      = 0x0010,    ///< the value is 16.16 fixed point
+  CV_NOTINNET   = 0x0020,    ///< can't be changed in netgame (NOTE: currently not used)
+  CV_MODIFIED   = 0x0040,    ///< set when cvar is modified
+  CV_ANNOUNCE   = 0x0080,    ///< print a message to console when modified
+  CV_ANNOUNCE_ONCE = 0x0100, ///< same but will be reset when modified, set in toggle
+  CV_HIDDEN     = 0x0200,    ///< cannot be accessed by the console (not part of the cvar list) (menu etc.)
+};
 
+/// \brief value restriction for consvar_t objects
 struct CV_PossibleValue_t
 {
   int   value;
-  char  *strvalue;
-};
-
-//typedef struct CV_PossibleValue_s CV_PossibleValue_t;
-
-struct consvar_t
-{
-  char    *name;
-  char    *defaultvalue;
-  int     flags;             // flags see cvflags_t above
-  CV_PossibleValue_t *PossibleValue;  // table of possible values
-  void    (*func)();    // called on change, if CV_CALL set
-  int     value;             // for int and fixed_t
-  char    *str;           // value in string
-  unsigned short netid;      // used internaly : netid for send end receive
-                               // used only with CV_NETVAR
-  consvar_t *next;
+  char *strvalue;
 };
 
 extern CV_PossibleValue_t CV_OnOff[];
 extern CV_PossibleValue_t CV_YesNo[];
 extern CV_PossibleValue_t CV_Unsigned[];
-// register a variable for use at the console
-void  CV_RegisterVar(consvar_t *variable);
 
-// returns the name of the nearest console variable name found
-char *CV_CompleteVar(char *partial, int skips);
 
-// equivalent to "<varname> <value>" typed at the console
-void  CV_Set(consvar_t *var, char *value);
+namespace TNL { class BitStream; };
 
-// expands value to a string and calls CV_Set
-void  CV_SetValue(consvar_t *var, int value);
+/// \brief console variables
+///
+/// Console vars are variables that can be changed through code or console,
+/// at RUN TIME. They can also act as simplified commands, because a func-
+/// tion can be attached to a console var, which is called whenever the
+/// variable is modified (using flag CV_CALL).
 
-// it a setvalue but with a modulo at the maximum
-void  CV_AddValue(consvar_t *var, int increment);
+struct consvar_t
+{
+  char      *name;
+  char      *defaultvalue;
+  int        flags;        ///< flags from cvflags_t
+  CV_PossibleValue_t *PossibleValue;  ///< array of possible values
+  void     (*func)();      ///< called on change, if CV_CALL is set
+  int        value;        ///< int/fixed_t value
+  char      *str;          ///< value in string format
+  unsigned short netid;    ///< unique network id for CV_NETVARs
 
-// write all CV_SAVE variables to config file
-void  CV_SaveVariables(FILE *f);
+  consvar_t *next;         ///< linked list
 
-// load/save gamesate (load and save option and for network join in game)
-void CV_SaveNetVars( char **p );
-void CV_LoadNetVars( char **p );
+
+
+  static consvar_t *cvar_list; ///< list of registered console variables
+
+protected:
+  /// internal setting method
+  void Setvalue(const char *s);
+
+
+  static unsigned short ComputeNetid(char *s);
+  static consvar_t *FindNetVar(unsigned short netid);
+  static void Got_NetVar(unsigned short id, char *str);
+
+public:
+
+  /// as if "<varname> <value>" was entered at the console
+  void Set(char *value);
+
+  /// expands value to a string before setting it
+  void Set(int value);
+
+  /// it a setvalue but with a modulo at the maximum
+  void AddValue(int increment);
+
+  /// register a variable for use at the console
+  bool Reg();
+
+  /// displays or changes variable through the console
+  static bool Command();
+
+  /// returns the cvar with the corresponding name or NULL
+  static consvar_t *FindVar(char *name);
+
+  /// returns the name of the nearest console variable name found
+  static const char *CompleteVar(char *partial, int skips);
+
+  /// write all CV_SAVE variables to config file
+  static void SaveVariables(FILE *f);
+
+  /// save all CV_NETVAR variables into a buffer
+  static void SaveNetVars(TNL::BitStream *s);
+  /// load all CV_NETVAR variables from a buffer
+  static void LoadNetVars(TNL::BitStream *s);
+};
 
 #endif

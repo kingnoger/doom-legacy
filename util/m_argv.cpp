@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/07/11 14:32:02  smite-meister
+// Consvars updated, bugfixes
+//
 // Revision 1.3  2004/01/10 16:03:00  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
@@ -27,17 +30,16 @@
 // Revision 1.1.1.1  2002/11/16 14:18:38  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//   Commandline argument processing
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Commandline argument processing
 
 #include <stdlib.h>
 #include <string.h>
 
 #include "doomdef.h"
+#include "doomtype.h"
 #include "command.h"
 
 int             myargc;

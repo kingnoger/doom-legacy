@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.28  2004/07/11 14:32:00  smite-meister
+// Consvars updated, bugfixes
+//
 // Revision 1.27  2004/07/05 16:53:24  smite-meister
 // Netcode replaced
 //
@@ -804,7 +807,7 @@ void D_DoomMain()
   if (M_CheckParm("-teamskin"))
     COM_BufAddText("teamplay 2\n");
   if (M_CheckParm("-splitscreen"))
-    CV_SetValue(&cv_splitscreen,1);
+    cv_splitscreen.Set(1);
 
   if (M_CheckParm("-altdeath"))
     COM_BufAddText("deathmatch 2\n");

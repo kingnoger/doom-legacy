@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2004/07/11 14:32:00  smite-meister
+// Consvars updated, bugfixes
+//
 // Revision 1.22  2004/07/05 16:53:23  smite-meister
 // Netcode replaced
 //
@@ -358,16 +361,16 @@ SoundSystem::SoundSystem()
 // allocates channel buffer, sets S_sfx lookup.
 void SoundSystem::Startup()
 {
-  CV_RegisterVar(&cv_soundvolume);
-  CV_RegisterVar(&cv_musicvolume);
-  CV_RegisterVar(&cd_volume);
-  CV_RegisterVar(&cv_numChannels);
-  CV_RegisterVar(&cv_stereoreverse);
-  CV_RegisterVar(&cv_surround);
-  CV_RegisterVar(&cv_precachesound);
+  cv_soundvolume.Reg();
+  cv_musicvolume.Reg();
+  cd_volume.Reg();
+  cv_numChannels.Reg();
+  cv_stereoreverse.Reg();
+  cv_surround.Reg();
+  cv_precachesound.Reg();
 
   if (M_CheckParm("-precachesound"))
-    CV_Set(&cv_precachesound, "1");
+    cv_precachesound.Set("1");
 
   I_StartupSound();
   I_InitMusic();

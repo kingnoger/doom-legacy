@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2004/07/11 14:32:00  smite-meister
+// Consvars updated, bugfixes
+//
 // Revision 1.14  2004/07/05 16:53:27  smite-meister
 // Netcode replaced
 //
@@ -174,11 +177,11 @@ HUD::HUD()
 void HUD::Startup()
 {
   // client hud
-  CV_RegisterVar(&cv_crosshair);
-  CV_RegisterVar(&cv_crosshair2);
-  CV_RegisterVar(&cv_showmessages);
-  CV_RegisterVar(&cv_showmessages2);  
-  CV_RegisterVar(&cv_stbaroverlay);
+  cv_crosshair.Reg();
+  cv_crosshair2.Reg();
+  cv_showmessages.Reg();
+  cv_showmessages2.Reg();  
+  cv_stbaroverlay.Reg();
 
   // first initialization
   Init();
@@ -1075,7 +1078,7 @@ void HU_HackChatmacros()
 
   // register chatmacro vars ready for config.cfg
   for (int i=0;i<10;i++)
-    CV_RegisterVar(chat_macros[i]);
+    chat_macros[i]->Reg();
 }
 
 
@@ -1099,5 +1102,5 @@ void Command_Chatmacro_f()
     }
 
   // change a chatmacro
-  CV_Set(chat_macros[i], COM_Argv(2));
+  chat_macros[i]->Set(COM_Argv(2));
 }
