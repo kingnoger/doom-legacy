@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2004/11/18 20:30:10  smite-meister
+// tnt, plutonia
+//
 // Revision 1.14  2004/11/09 20:38:50  smite-meister
 // added packing to I/O structs
 //
@@ -319,7 +322,7 @@ void A_StaffAttackPL2(PlayerPawn *p, pspdef_t *psp)
 void A_FireBlasterPL1(PlayerPawn *p, pspdef_t *psp)
 {
   S_StartSound(p, sfx_gldhit);
-  p->ammo[am_blaster] -= USE_BLSR_AMMO_1;
+  p->ammo[am_blaster] -= wpnlev1info[wp_blaster].ammopershoot;
 
   int damage = HITDICE(4);
   angle_t angle = p->angle;
@@ -412,7 +415,8 @@ void DActor::BlasterMissileThink()
 
 void A_FireBlasterPL2(PlayerPawn *p, pspdef_t *psp)
 {
-  p->ammo[am_blaster] -= cv_deathmatch.value ? USE_BLSR_AMMO_1 : USE_BLSR_AMMO_2;
+  p->ammo[am_blaster] -= cv_deathmatch.value ? wpnlev1info[wp_blaster].ammopershoot
+    : wpnlev2info[wp_blaster].ammopershoot;
 
   DActor *m = p->SpawnPlayerMissile(MT_BLASTERFX1);
   if (m)
@@ -433,7 +437,7 @@ void A_FireBlasterPL2(PlayerPawn *p, pspdef_t *psp)
 
 void A_FireGoldWandPL1(PlayerPawn *p, pspdef_t *psp)
 {
-  p->ammo[am_goldwand] -= USE_GWND_AMMO_1;
+  p->ammo[am_goldwand] -= wpnlev1info[wp_goldwand].ammopershoot;
 
   int damage = 7+(P_Random()&7);
   angle_t angle = p->angle;
@@ -452,7 +456,9 @@ void A_FireGoldWandPL1(PlayerPawn *p, pspdef_t *psp)
 
 void A_FireGoldWandPL2(PlayerPawn *p, pspdef_t *psp)
 {
-  p->ammo[am_goldwand] -= cv_deathmatch.value ? USE_GWND_AMMO_1 : USE_GWND_AMMO_2;
+  p->ammo[am_goldwand] -= cv_deathmatch.value ? wpnlev1info[wp_goldwand].ammopershoot
+    : wpnlev2info[wp_goldwand].ammopershoot;
+
   PuffType = MT_GOLDWANDPUFF2;
 
   fixed_t slope = P_BulletSlope(p);
@@ -478,10 +484,10 @@ void A_FireGoldWandPL2(PlayerPawn *p, pspdef_t *psp)
 
 void A_FireMacePL1B(PlayerPawn *p, pspdef_t *psp)
 {
-  if (p->ammo[am_mace] < USE_MACE_AMMO_1)
+  if (p->ammo[am_mace] < wpnlev1info[wp_mace].ammopershoot)
     return;
 
-  p->ammo[am_mace] -= USE_MACE_AMMO_1;
+  p->ammo[am_mace] -= wpnlev1info[wp_mace].ammopershoot;
 
   DActor *ball = p->mp->SpawnDActor(p->x, p->y, p->z + 28*FRACUNIT - p->floorclip, MT_MACEFX2);
   ball->pz = 2*FRACUNIT+((p->aiming)<<(FRACBITS-5));
@@ -511,10 +517,10 @@ void A_FireMacePL1(PlayerPawn *p, pspdef_t *psp)
       A_FireMacePL1B(p, psp);
       return;
     }
-  if (p->ammo[am_mace] < USE_MACE_AMMO_1)
+  if (p->ammo[am_mace] < wpnlev1info[wp_mace].ammopershoot)
     return;
 
-  p->ammo[am_mace] -= USE_MACE_AMMO_1;
+  p->ammo[am_mace] -= wpnlev1info[wp_mace].ammopershoot;
   psp->sx = ((P_Random()&3)-2)*FRACUNIT;
   psp->sy = WEAPONTOP+(P_Random()&3)*FRACUNIT;
   DActor *ball = p->SPMAngle(MT_MACEFX1, p->angle +(((P_Random()&7)-4)<<24));
@@ -640,7 +646,8 @@ void A_MaceBallImpact2(DActor *ball)
 
 void A_FireMacePL2(PlayerPawn *p, pspdef_t *psp)
 {
-  p->ammo[am_mace] -= cv_deathmatch.value ? USE_MACE_AMMO_1 : USE_MACE_AMMO_2;
+  p->ammo[am_mace] -= cv_deathmatch.value ? wpnlev1info[wp_mace].ammopershoot
+    : wpnlev2info[wp_mace].ammopershoot;
 
   DActor *mo = p->SpawnPlayerMissile(MT_MACEFX4);
   if (mo)
@@ -757,7 +764,7 @@ void A_SpawnRippers(DActor *actor)
 
 void A_FireCrossbowPL1(PlayerPawn *p, pspdef_t *psp)
 {
-  p->ammo[am_crossbow] -= USE_CBOW_AMMO_1;
+  p->ammo[am_crossbow] -= wpnlev1info[wp_crossbow].ammopershoot;
   p->SpawnPlayerMissile(MT_CRBOWFX1);
   p->SPMAngle(MT_CRBOWFX3, p->angle-(ANG45/10));
   p->SPMAngle(MT_CRBOWFX3, p->angle+(ANG45/10));
@@ -771,7 +778,8 @@ void A_FireCrossbowPL1(PlayerPawn *p, pspdef_t *psp)
 
 void A_FireCrossbowPL2(PlayerPawn *p, pspdef_t *psp)
 {
-  p->ammo[am_crossbow] -= cv_deathmatch.value ? USE_CBOW_AMMO_1 : USE_CBOW_AMMO_2;
+  p->ammo[am_crossbow] -= cv_deathmatch.value ? wpnlev1info[wp_crossbow].ammopershoot
+    : wpnlev2info[wp_crossbow].ammopershoot;
   p->SpawnPlayerMissile(MT_CRBOWFX2);
   p->SPMAngle(MT_CRBOWFX2, p->angle-(ANG45/10));
   p->SPMAngle(MT_CRBOWFX2, p->angle+(ANG45/10));
@@ -805,14 +813,11 @@ void A_BoltSpark(DActor *bolt)
 
 void A_FireSkullRodPL1(PlayerPawn *p, pspdef_t *psp)
 {
-  DActor *mo;
+  if (p->ammo[am_skullrod] < wpnlev1info[wp_skullrod].ammopershoot)
+    return;
 
-  if(p->ammo[am_skullrod] < USE_SKRD_AMMO_1)
-    {
-      return;
-    }
-  p->ammo[am_skullrod] -= USE_SKRD_AMMO_1;
-  mo = p->SpawnPlayerMissile(MT_HORNRODFX1);
+  p->ammo[am_skullrod] -= wpnlev1info[wp_skullrod].ammopershoot;
+  DActor *mo = p->SpawnPlayerMissile(MT_HORNRODFX1);
   // Randomize the first frame
   if(mo && P_Random() > 128)
     {
@@ -833,7 +838,8 @@ void A_FireSkullRodPL1(PlayerPawn *p, pspdef_t *psp)
 void A_FireSkullRodPL2(PlayerPawn *p, pspdef_t *psp)
 {
   p->ammo[am_skullrod] -=
-    cv_deathmatch.value ? USE_SKRD_AMMO_1 : USE_SKRD_AMMO_2;
+    cv_deathmatch.value ? wpnlev1info[wp_skullrod].ammopershoot
+    : wpnlev2info[wp_skullrod].ammopershoot;
  
   DActor *mi = p->SpawnPlayerMissile(MT_HORNRODFX2);
   // Use mi instead of the return value from
@@ -1010,12 +1016,11 @@ void A_HideInCeiling(DActor *actor)
 
 void A_FirePhoenixPL1(PlayerPawn *p, pspdef_t *psp)
 {
-  angle_t angle;
-
-  p->ammo[am_phoenixrod] -= USE_PHRD_AMMO_1;
+  p->ammo[am_phoenixrod] -= wpnlev1info[wp_phoenixrod].ammopershoot;
   p->SpawnPlayerMissile(MT_PHOENIXFX1);
   //p->SpawnPlayerMissile(MT_MNTRFX2);
-  angle = p->angle+ANG180;
+
+  angle_t angle = p->angle+ANG180;
   angle >>= ANGLETOFINESHIFT;
   p->px += FixedMul(4*FRACUNIT, finecosine[angle]);
   p->py += FixedMul(4*FRACUNIT, finesine[angle]);
@@ -1106,7 +1111,7 @@ void A_FirePhoenixPL2(PlayerPawn *p, pspdef_t *psp)
 
 void A_ShutdownPhoenixPL2(PlayerPawn *p, pspdef_t *psp)
 {
-  p->ammo[am_phoenixrod] -= USE_PHRD_AMMO_2;
+  p->ammo[am_phoenixrod] -= wpnlev2info[wp_phoenixrod].ammopershoot;
 }
 
 //----------------------------------------------------------------------------

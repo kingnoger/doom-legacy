@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/11/18 20:30:12  smite-meister
+// tnt, plutonia
+//
 // Revision 1.13  2004/11/04 21:12:53  smite-meister
 // save/load fixed
 //
@@ -1122,25 +1125,21 @@ void A_CFlamePuff(DActor *actor)
 
 void A_CFlameMissile(DActor *actor)
 {
-  int i;
-  int an, an90;
-  fixed_t dist;
-  DActor *mo;
-  extern Actor *BlockingMobj;
-
   A_UnHideThing(actor);
   S_StartSound(actor, SFX_CLERIC_FLAME_EXPLODE);
-  if(BlockingMobj && BlockingMobj->flags&MF_SHOOTABLE)
-    { // Hit something, so spawn the flame circle around the thing
-      dist = BlockingMobj->radius+18*FRACUNIT;
-      for(i = 0; i < 4; i++)
+
+  if (Blocking.thing && Blocking.thing->flags & MF_SHOOTABLE)
+    {
+      // Hit something, so spawn the flame circle around the thing
+      fixed_t dist = Blocking.thing->radius+18*FRACUNIT;
+      for (int i = 0; i < 4; i++)
 	{
-	  an = (i*ANG45)>>ANGLETOFINESHIFT;
-	  an90 = (i*ANG45+ANG90)>>ANGLETOFINESHIFT;
-	  mo = actor->mp->SpawnDActor(BlockingMobj->x+FixedMul(dist, finecosine[an]),
-			   BlockingMobj->y+FixedMul(dist, finesine[an]), 
-			   BlockingMobj->z+5*FRACUNIT, MT_CIRCLEFLAME);
-	  if(mo)
+	  int an = (i*ANG45) >> ANGLETOFINESHIFT;
+	  //int an90 = (i*ANG45 + ANG90) >> ANGLETOFINESHIFT;
+	  DActor *mo = actor->mp->SpawnDActor(Blocking.thing->x + FixedMul(dist, finecosine[an]),
+					      Blocking.thing->y + FixedMul(dist, finesine[an]), 
+					      Blocking.thing->z + 5*FRACUNIT, MT_CIRCLEFLAME);
+	  if (mo)
 	    {
 	      mo->angle = an<<ANGLETOFINESHIFT;
 	      mo->owner = actor->owner;
@@ -1148,10 +1147,10 @@ void A_CFlameMissile(DActor *actor)
 	      mo->py = mo->special2 = FixedMul(FLAMESPEED, finesine[an]);
 	      mo->tics -= P_Random()&3;
 	    }
-	  mo = actor->mp->SpawnDActor(BlockingMobj->x-FixedMul(dist, finecosine[an]),
-			   BlockingMobj->y-FixedMul(dist, finesine[an]), 
-			   BlockingMobj->z+5*FRACUNIT, MT_CIRCLEFLAME);
-	  if(mo)
+	  mo = actor->mp->SpawnDActor(Blocking.thing->x - FixedMul(dist, finecosine[an]),
+				      Blocking.thing->y - FixedMul(dist, finesine[an]), 
+				      Blocking.thing->z + 5*FRACUNIT, MT_CIRCLEFLAME);
+	  if (mo)
 	    {
 	      mo->angle = ANG180+(an<<ANGLETOFINESHIFT);
 	      mo->owner = actor->owner;
@@ -1695,21 +1694,24 @@ void A_FireConePL1(PlayerPawn *player, pspdef_t *psp)
 	  mo->special1 = SHARDSPAWN_LEFT|SHARDSPAWN_DOWN|SHARDSPAWN_UP
 	    |SHARDSPAWN_RIGHT;
 	  mo->special2 = 3; // Set sperm count (levels of reproductivity)
-	  mo->args[0] = 3;		// Mark Initial shard as super damage
+	  //mo->args[0] = 3; // Mark Initial shard as super damage
 	}
     }
 }
 
 void A_ShedShard(DActor *actor)
 {
-  DActor *mo;
-  int spawndir = actor->special1;
   int spermcount = actor->special2;
 
   if (spermcount <= 0)
     return; // No sperm left
-  actor->special2 = 0;
-  spermcount--;
+
+  int spawndir = actor->special1;
+
+  actor->special2 = 0; // this shard is emptied of sperm
+  spermcount--; // next generation shards have less sperm
+
+  DActor *mo;
 
   // every so many calls, spawn a new missile in it's set directions
   if (spawndir & SHARDSPAWN_LEFT)
@@ -1720,11 +1722,11 @@ void A_ShedShard(DActor *actor)
 	{
 	  mo->px = (20 + 2*spermcount) * finecosine[m_angle >> ANGLETOFINESHIFT];
 	  mo->py = (20 + 2*spermcount) * finesine[m_angle >> ANGLETOFINESHIFT];
+	  mo->pz = actor->pz;
 	  mo->special1 = SHARDSPAWN_LEFT;
 	  mo->special2 = spermcount;
-	  mo->pz = actor->pz;
 	  mo->owner = actor->owner;
-	  mo->args[0] = (spermcount==3)?2:0;
+	  //mo->args[0] = (spermcount==3)?2:0;
 	}
     }
   if (spawndir & SHARDSPAWN_RIGHT)
@@ -1735,11 +1737,11 @@ void A_ShedShard(DActor *actor)
 	{
 	  mo->px = (20 + 2*spermcount) * finecosine[m_angle >> ANGLETOFINESHIFT];
 	  mo->py = (20 + 2*spermcount) * finesine[m_angle >> ANGLETOFINESHIFT];
+	  mo->pz = actor->pz;
 	  mo->special1 = SHARDSPAWN_RIGHT;
 	  mo->special2 = spermcount;
-	  mo->pz = actor->pz;
 	  mo->owner = actor->owner;
-	  mo->args[0] = (spermcount==3)?2:0;
+	  //mo->args[0] = (spermcount==3)?2:0;
 	}
     }
   if (spawndir & SHARDSPAWN_UP)
@@ -1758,7 +1760,7 @@ void A_ShedShard(DActor *actor)
 	    mo->special1 = SHARDSPAWN_UP;
 	  mo->special2 = spermcount;
 	  mo->owner = actor->owner;
-	  mo->args[0] = (spermcount==3)?2:0;
+	  //mo->args[0] = (spermcount==3)?2:0;
 	}
     }
   if (spawndir & SHARDSPAWN_DOWN)
@@ -1777,7 +1779,7 @@ void A_ShedShard(DActor *actor)
 	    mo->special1 = SHARDSPAWN_DOWN;
 	  mo->special2 = spermcount;
 	  mo->owner = actor->owner;
-	  mo->args[0] = (spermcount==3)?2:0;
+	  //mo->args[0] = (spermcount==3)?2:0;
 	}
     }
 }

@@ -7,7 +7,6 @@
 clusterdef 1 "UAC experimental labs"
 interpic INTERPIC
 intermusic D_DM2INT
-finale 1
 music D_READ_M
 flat SLIME16
 exittext "You've fought your way out of the infested\nexperimental labs.   It seems that UAC has\nonce again gulped it down.  With their\nhigh turnover, it must be hard for poor\nold UAC to buy corporate health insurance\nnowadays..\n\nAhead lies the military complex, now\nswarming with diseased horrors hot to get\ntheir teeth into you. With luck, the\ncomplex still has some warlike ordnance\nlaying around."
@@ -59,7 +58,6 @@ music D_THE_DA
 clusterdef 2 "Military complex"
 interpic INTERPIC
 intermusic D_DM2INT
-finale 1
 music D_READ_M
 flat RROCK14
 exittext "You hear the grinding of heavy machinery\nahead.  You sure hope they're not stamping\nout new hellspawn, but you're ready to\nream out a whole herd if you have to.\nThey might be planning a blood feast, but\nyou feel about as mean as two thousand\nmaniacs packed into one mad killer.\n\nYou don't plan to go down easy."
@@ -107,7 +105,6 @@ music D_STLKS2
 clusterdef 3 "Heavy machinery"
 interpic INTERPIC
 intermusic D_DM2INT
-finale 1
 music D_READ_M
 flat RROCK07
 exittext "The vista opening ahead looks real damn\nfamiliar. Smells familiar, too -- like\nfried excrement. You didn't like this\nplace before, and you sure as hell ain't\nplanning to like it now. The more you\nbrood on it, the madder you get.\nHefting your gun, an evil grin trickles\nonto your face. Time to take some names."
@@ -177,7 +174,6 @@ music D_MESSAG
 clusterdef 4 "Hell"
 interpic INTERPIC
 intermusic D_DM2INT
-finale 1
 music D_READ_M
 flat RROCK17
 exittext "Suddenly, all is silent, from one horizon\nto the other. The agonizing echo of Hell\nfades away, the nightmare sky turns to\nblue, the heaps of monster corpses start \nto evaporate along with the evil stench \nthat filled the air. Jeeze, maybe you've\ndone it. Have you really won?\n\nSomething rumbles in the distance.\nA blue light begins to glow inside the\nruined skull of the demon-spitter."
@@ -255,7 +251,6 @@ bossdeath 256
 clusterdef 5 "Secret"
 interpic INTERPIC
 intermusic D_DM2INT
-finale 1
 music D_READ_M
 flat RROCK13
 entertext "What now? Looks totally different. Kind\nof like King Tut's condo. Well,\nwhatever's here can't be any worse\nthan usual. Can it?  Or maybe it's best\nto let sleeping gods lie.."
@@ -275,7 +270,6 @@ sky1 SKY3 0
 clusterdef 6 "Super secret"
 interpic INTERPIC
 intermusic D_DM2INT
-finale 1
 music D_READ_M
 flat RROCK19
 entertext "Time for a vacation. You've burst the\nbowels of hell and by golly you're ready\nfor a break. You mutter to yourself,\nMaybe someone else can kick Hell's ass\nnext time around. Ahead lies a quiet town,\nwith peaceful flowing water, quaint\nbuildings, and presumably no Hellspawn.\n\nAs you step off the transport, you hear\nthe stomp of a cyberdemon's iron shoe."

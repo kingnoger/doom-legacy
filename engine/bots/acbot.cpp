@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/11/18 20:30:13  smite-meister
+// tnt, plutonia
+//
 // Revision 1.3  2004/11/09 20:38:51  smite-meister
 // added packing to I/O structs
 //
@@ -1126,7 +1129,7 @@ void ACBot::GetInput(int lpnum, int elapsed)
 	{
 	  if (++blockedcount > 20 &&
 	      (P_AproxDistance(pawn->px, pawn->py) < 4*FRACUNIT ||
-	       (BlockingMobj && (BlockingMobj->flags & MF_SOLID))))
+	       (Blocking.thing && (Blocking.thing->flags & MF_SOLID))))
 	    avoidtimer = 20;
 
 	  if (tmfloorz - pawn->z > 24*FRACUNIT &&

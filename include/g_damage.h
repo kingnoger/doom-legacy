@@ -3,52 +3,68 @@
 //
 // $Id$
 //
+// Copyright (C) 2002-2004 by DooM Legacy Team.
+//
+// This program is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public License
+// as published by the Free Software Foundation; either version 2
+// of the License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+//
 // $Log$
+// Revision 1.3  2004/11/18 20:30:14  smite-meister
+// tnt, plutonia
+//
 // Revision 1.2  2002/12/16 22:07:59  smite-meister
 // cr/lf fix
 //
 // Revision 1.1  2002/12/16 22:06:24  smite-meister
 // Added damage system
 //
-//
-// DESCRIPTION:
-//   Damage types for Doom Legacy
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Damage types
 
 #ifndef g_damage_h
 #define g_damage_h 1
 
-// Damagetypes are not implemented yet
-// damagetype bit field
-typedef enum {
-  // what kind of damage
-  dt_kinetic    = 0x0001, // bullets
-  dt_crushing   = 0x0002, // fist
-  dt_concussion = 0x0004, // shock wave
-  dt_cutting    = 0x0008, // claws, shrapnel
-  dt_heat       = 0x0010, // imp fireball
-  dt_cold       = 0x0020,
-  dt_radiation  = 0x0040, // nukage
-  dt_biological = 0x0080, // biowarfare agents
-  dt_corrosive  = 0x0100, // chemicals, acid
-  dt_poison     = 0x0200,
-  dt_shock      = 0x0400, // electric shock
-  dt_magic      = 0x0800, // ethereal or otherwise strange
-  dt_oxygen     = 0x1000, // lack of oxygen
-  dt_telefrag   = 0x2000, // telefrag
-  dt_typemask   = 0xFFFF,
+
+/// Damage type bit field (uses only bits 17-32 !)
+enum damage_t
+{
+  dt_DAMAGEMASK = 0xFFFF,
+
+  /// what kind of damage (4 bits)
+  dt_kinetic    = 0x00000, ///< bullets
+  dt_crushing   = 0x10000, ///< fist
+  dt_concussion = 0x20000, ///< shock wave
+  dt_cutting    = 0x30000, ///< claws, shrapnel
+  dt_heat       = 0x40000, ///< imp fireball
+  dt_cold       = 0x50000, ///< cone of cold
+  dt_radiation  = 0x60000, ///< nukage
+  dt_biological = 0x70000, ///< biowarfare agents
+  dt_corrosive  = 0x80000, ///< chemicals, acid
+  dt_poison     = 0x90000, ///< poison clouds, darts
+  dt_shock      = 0xA0000, ///< electric shock
+  dt_magic      = 0xB0000, ///< ethereal or otherwise strange
+  dt_oxygen     = 0xC0000, ///< lack of oxygen
+  dt_telefrag   = 0xD0000, ///< telefrag
+  dt_TYPEMASK   = 0xF0000,
 
   // other effects (bit of a hack)
-  dt_oldrecoil  = 0x10000, // target is pushed by an amount based on the damage given
-  dt_always     = 0x20000, // cannot be avoided, even if in god mode
-  dt_othermask  = 0xF0000,
+  dt_oldrecoil  = 0x100000, // target is pushed by an amount based on the damage given
+  dt_always     = 0x200000, // cannot be avoided, even if in god mode
+  dt_OTHERMASK  = 0xF00000,
+
   /*
-  // how intense? (armor piercing bullets etc.)
-  dt_normal     = 0x000000,
-  dt_intense    = 0x010000,
-  dt_heavy      = 0x100000,
-  dt_devastate  = 0x110000,
+  // other properties (armor piercing bullets etc.)
+  dt_armorpiercing, // replace MF2_RIP?
 
   // admission methods?
   dt_local,
@@ -57,7 +73,6 @@ typedef enum {
   */
 
   dt_normal = dt_kinetic + dt_oldrecoil
-
-} damage_t;
+};
 
 #endif

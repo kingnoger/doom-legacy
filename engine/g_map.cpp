@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.49  2004/11/18 20:30:07  smite-meister
+// tnt, plutonia
+//
 // Revision 1.48  2004/11/13 22:38:42  smite-meister
 // intermission works
 //
@@ -13,9 +16,6 @@
 //
 // Revision 1.46  2004/11/04 21:12:51  smite-meister
 // save/load fixed
-//
-// Revision 1.45  2004/10/31 22:30:53  smite-meister
-// cleanup
 //
 // Revision 1.44  2004/10/27 17:37:06  smite-meister
 // netcode update
@@ -106,7 +106,11 @@
 #include "bots/b_path.h"
 
 #include "p_spec.h"
+#include "p_maputl.h"
 #include "p_hacks.h"
+
+#include "r_splats.h"
+
 #include "hud.h"
 #include "m_random.h"
 
@@ -266,22 +270,21 @@ void Map::SpawnSplash(Actor *mo, fixed_t z)
 //---------------------------------------
 
 static Actor   *bloodthing;
-#ifdef WALLSPLATS
 static fixed_t  blood_x, blood_y;
 
 static bool PTR_BloodTraverse(intercept_t *in)
 {
   if (in->isaline)
     {
-      line_t *li = in->d.line;
+      line_t *li = in->line;
       fixed_t z = bloodthing->z + (P_SignedRandom()<<(FRACBITS-3));
       if (li->flags & ML_TWOSIDED)
 	{
-	  P_LineOpening(li);
+	  line_opening_t *open = P_LineOpening(li);
 
 	  // hit lower or upper texture?
-	  if ((li->frontsector->floorheight == li->backsector->floorheight || openbottom <= z) &&
-	      (li->frontsector->ceilingheight == li->backsector->ceilingheight || opentop >= z))
+	  if ((li->frontsector->floorheight == li->backsector->floorheight || open->bottom <= z) &&
+	      (li->frontsector->ceilingheight == li->backsector->ceilingheight || open->top >= z))
 	    return true; // nope
 	}
 
@@ -290,26 +293,23 @@ static bool PTR_BloodTraverse(intercept_t *in)
 
       fixed_t frac = P_InterceptVector(&divl, &trace);
       if (game.mode >= gm_heretic)
-	R_AddWallSplat(li, P_PointOnLineSide(blood_x,blood_y,li),"BLODC0", z, frac, SPLATDRAWMODE_TRANS);
+	in->m->R_AddWallSplat(li, P_PointOnLineSide(blood_x,blood_y,li),"BLODC0", z, frac, SPLATDRAWMODE_TRANS);
       else
-	R_AddWallSplat(li, P_PointOnLineSide(blood_x,blood_y,li),"BLUDC0", z, frac, SPLATDRAWMODE_TRANS);
+	in->m->R_AddWallSplat(li, P_PointOnLineSide(blood_x,blood_y,li),"BLUDC0", z, frac, SPLATDRAWMODE_TRANS);
       return false;
     }
 
   //continue
   return true;
 }
-#endif
 
 
-// the new SpawnBlood : this one first calls P_SpawnBlood for the usual blood sprites
-// then spawns blood splats around on walls
+// First calls SpawnBlood for the usual blood sprites, then spawns blood splats around on walls.
 void Map::SpawnBloodSplats(fixed_t x, fixed_t y, fixed_t z, int damage, fixed_t px, fixed_t py)
 {
   // spawn the usual falling blood sprites at location
   bloodthing = SpawnBlood(x,y,z,damage);
 
-#ifdef WALLSPLATS
   fixed_t x2,y2;
   angle_t angle;
   angle_t anglemul = 1;
@@ -351,9 +351,8 @@ void Map::SpawnBloodSplats(fixed_t x, fixed_t y, fixed_t z, int damage, fixed_t 
       x2 = x + distance*finecosine[anglesplat>>ANGLETOFINESHIFT];
       y2 = y + distance*finesine[anglesplat>>ANGLETOFINESHIFT];
       
-      P_PathTraverse(x, y, x2, y2, PT_ADDLINES, PTR_BloodTraverse);
+      PathTraverse(x, y, x2, y2, PT_ADDLINES, PTR_BloodTraverse);
   }
-#endif
 
 #ifdef FLOORSPLATS
   // add a test floor splat

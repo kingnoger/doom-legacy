@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/11/18 20:30:15  smite-meister
+// tnt, plutonia
+//
 // Revision 1.9  2004/11/09 20:38:53  smite-meister
 // added packing to I/O structs
 //
@@ -222,7 +225,6 @@ short*          maskedtexturecol;
 // R_Splats Wall Splats Drawer
 // ==========================================================================
 
-#ifdef WALLSPLATS
 #define BORIS_FIX
 #ifdef BORIS_FIX
 static short last_ceilingclip[MAXVIDWIDTH];
@@ -427,7 +429,6 @@ void Rend::R_DrawWallSplats()
     colfunc = basecolfunc;
 }
 
-#endif //WALLSPLATS
 
 
 
@@ -2310,10 +2311,8 @@ void Rend::R_StoreWallRange(int start, int stop)
         R_RenderSegLoop ();
 #else
     R_RenderSegLoop ();
-#ifdef WALLSPLATS
     if (linedef->splats)
         R_DrawWallSplats ();
-#endif
 #endif
     colfunc = basecolfunc;
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.27  2004/11/18 20:30:12  smite-meister
+// tnt, plutonia
+//
 // Revision 1.26  2004/11/09 20:38:50  smite-meister
 // added packing to I/O structs
 //
@@ -393,6 +396,11 @@ void P_ArtiTele(PlayerPawn *p)
 
 void P_TeleportOther(Actor *v)
 {
+  if (!(v->flags & MF_COUNTKILL) ||
+      v->flags2 & MF2_BOSS ||
+      v->flags2 & MF2_CANTLEAVEFLOORPIC)
+    return;
+
   Map *m = v->mp;
 
   if (v->flags & MF_NOTMONSTER)
@@ -403,7 +411,7 @@ void P_TeleportOther(Actor *v)
   else
     {
       // For death actions, teleporting is as good as killing
-      // TODO possible bug: see A_SorcDeath
+      // FIXME possible bug: see A_SorcDeath
       if (v->flags & MF_COUNTKILL && v->special)
 	{
 	  m->RemoveFromTIDmap(v);

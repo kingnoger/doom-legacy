@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.40  2004/11/18 20:30:10  smite-meister
+// tnt, plutonia
+//
 // Revision 1.39  2004/11/13 22:38:42  smite-meister
 // intermission works
 //
@@ -133,18 +136,20 @@
 #include "g_pawn.h"
 
 #include "p_spec.h"
-#include "p_enemy.h"
 #include "p_heretic.h"
 #include "sounds.h"
 #include "r_sprite.h"
 #include "tables.h"
 
-#include "hud.h"
 
-#define BONUSADD 6
 #define BASETHRESHOLD 100
 
 extern int ArmorIncrement[NUMCLASSES][NUMARMOR];
+
+void P_TeleportOther(Actor *v);
+bool P_AutoUseChaosDevice(PlayerPawn *p);
+void P_AutoUseHealth(PlayerPawn *p, int saveHealth);
+
 
 //======================================================
 //   Killing a PlayerPawn
@@ -332,14 +337,15 @@ bool Actor::Touch(Actor *p)
 
 bool DActor::Touch(Actor *p)
 {
-  int damage;
+  int damage = info->damage & dt_DAMAGEMASK;
+  int dtype = info->damage & dt_TYPEMASK;
 
   // check for skulls slamming into things
   if (eflags & MFE_SKULLFLY)
     {
-      damage = ((P_Random()%8)+1) * info->damage;
+      damage = ((P_Random()%8) + 1) * damage;
 
-      p->Damage(this, this, damage);
+      p->Damage(this, this, damage, dtype);
 
       eflags &= ~MFE_SKULLFLY;
       px = py = pz = 0;
@@ -384,18 +390,15 @@ bool DActor::Touch(Actor *p)
 	  return (p->flags & MF_SOLID);
         }
 
-      // more heretic stuff
+      // ripping projectiles
       if (flags2 & MF2_RIP)
         {
-	  damage = ((P_Random () & 3) + 2) * info->damage;
-	  S_StartSound (this, sfx_ripslop);
-	  if (p->Damage(this, owner, damage))
+	  damage = ((P_Random () & 3) + 2) * damage;
+	  S_StartSound(this, sfx_ripslop);
+	  if (p->Damage(this, owner, damage, dtype))
             {
 	      if (!(p->flags & MF_NOBLOOD))
-                { // Ok to spawn some blood
-		  mp->SpawnBlood(x, y, z, damage);
-		  //P_RipperBlood (this);
-                }
+		mp->SpawnBlood(x, y, z, damage);
             }
 
 	  if ((p->flags2 & MF2_PUSHABLE) && !(flags2 & MF2_CANNOTPUSH))
@@ -408,16 +411,18 @@ bool DActor::Touch(Actor *p)
         }
 
       // damage / explode
-      damage = ((P_Random()%8)+1) * info->damage;
-      if (p->Damage(this, owner, damage) && !(p->flags & MF_NOBLOOD))
-	mp->SpawnBloodSplats(x,y,z, damage, p->px, p->py);
+      damage = ((P_Random()%8)+1) * damage;
+      if (p->Damage(this, owner, damage, dtype) &&
+	  !(p->flags & MF_NOBLOOD))
+	mp->SpawnBloodSplats(x, y, z, damage, p->px, p->py);
 
       // don't traverse any more
       return true;
     }
 
   if ((p->flags2 & MF2_PUSHABLE) && !(flags2 & MF2_CANNOTPUSH))
-    { // Push thing
+    {
+      // Push thing
       p->px += px >> 2;
       p->py += py >> 2;
     }
@@ -448,7 +453,6 @@ bool DActor::Touch(Actor *p)
     }
   */
 
-  //if (game.demoversion<112 ||game.demoversion>=132 || !(flags & MF_SOLID))
 
   return (p->flags & MF_SOLID);
 
@@ -537,7 +541,12 @@ bool Actor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
   if (!(flags & MF_SHOOTABLE))
     return false;
 
+  if ((dtype & dt_TYPEMASK) == dt_poison && flags & MF_NOBLOOD)
+    return false; // only damage living things with poison
+
   // old recoil code
+  // TODO Some close combat weapons should not
+  // inflict thrust and push the victim out of reach
   if (inflictor && !(flags & MF_NOCLIPTHING) && (dtype & dt_oldrecoil)
       && !(inflictor->flags2 & MF2_NODMGTHRUST))      
     {
@@ -561,8 +570,8 @@ bool Actor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 
       ang >>= ANGLETOFINESHIFT;
 
-      apx = FixedMul (thrust, finecosine[ang]);
-      apy = FixedMul (thrust, finesine[ang]);
+      apx = FixedMul(thrust, finecosine[ang]);
+      apy = FixedMul(thrust, finesine[ang]);
       px += apx;
       py += apy;
             
@@ -587,7 +596,7 @@ bool Actor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 	  // rocket jump code
 	  fixed_t delta1 = abs(inflictor->z - z);
 	  fixed_t delta2 = abs(inflictor->z - (z + height));
-	  apz = (abs(apx) + abs(apy))>>1;
+	  apz = (abs(apx) + abs(apy)) >> 1;
 	  
 	  if (delta1 >= delta2 && inflictor->pz < 0)
 	    apz = -apz;
@@ -611,9 +620,7 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
     return false; // shouldn't happen...
 
   if (dtype & dt_always)
-    {
-      return Actor::Damage(inflictor, source, damage, dtype);
-    }
+    return Actor::Damage(inflictor, source, damage, dtype);
 
   if (health <= 0)
     return false;
@@ -637,6 +644,7 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 	  return false; // Always return
         case MT_WHIRLWIND:
 	  return P_TouchWhirlwind(this);
+
         case MT_MINOTAUR:
 	  if (inflictor->eflags & MFE_SKULLFLY)
             { // Slam only when in charge mode
@@ -676,81 +684,34 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 		return false;
             }
 	  break;
+
+	  // Hexen
+	case MT_TELOTHER_FX1:
+	case MT_TELOTHER_FX2:
+	case MT_TELOTHER_FX3:
+	case MT_TELOTHER_FX4:
+	case MT_TELOTHER_FX5:
+	  P_TeleportOther(this);
+	  return true;
+	case MT_SHARDFX1:
+	  damage <<= inf->special2; // shard damage depends on spermcount
+	  break;
+
         default:
 	  break;
         }
     }
 
-  unsigned    ang;
-  fixed_t     thrust;  
+  if (!Actor::Damage(inflictor, source, damage, dtype))
+    return false; // not hurt after all
 
-  // Some close combat weapons should not
-  // inflict thrust and push the victim out of reach
-  if (inflictor && !(flags & MF_NOCLIPTHING) && (dtype & dt_oldrecoil)
-      && !(inflictor->flags2 & MF2_NODMGTHRUST))      
-    {
-      fixed_t            apx, apy, apz = 0;//SoM: 3/28/2000
-
-      ang = R_PointToAngle2(inflictor->x, inflictor->y, x, y);
-
-      if (game.mode == gm_heretic )
-	thrust = damage*(FRACUNIT>>3)*150/info->mass;
-      else
-	thrust = damage*(FRACUNIT>>3)*100/info->mass;
-
-      // sometimes a target shot down might fall off a ledge forwards
-      if (damage < 40 && damage > health
-	  && (z - inflictor->z) > 64*FRACUNIT && (P_Random() & 1))
-        {
-	  ang += ANG180;
-	  thrust *= 4;
-        }
-
-      ang >>= ANGLETOFINESHIFT;
-
-      apx = FixedMul (thrust, finecosine[ang]);
-      apy = FixedMul (thrust, finesine[ang]);
-      px += apx;
-      py += apy;
-            
-      // added pz (do it better for missiles explotion)
-      if (source && !cv_allowrocketjump.value)
-	{
-	  fixed_t dist, sx, sy, sz;
-
-	  sx = inflictor->x;
-	  sy = inflictor->y;
-	  sz = inflictor->z;
-
-	  dist = R_PointToDist2(sx, sy, x, y);
-                
-	  ang = R_PointToAngle2(0, sz, dist, z);
-                
-	  ang >>= ANGLETOFINESHIFT;
-	  apz = FixedMul (thrust, finesine[ang]);
-	}
-      else if (cv_allowrocketjump.value)
-	{
-	  fixed_t delta1 = abs(inflictor->z - z);
-	  fixed_t delta2 = abs(inflictor->z - (z + height));
-	  apz = (abs(apx) + abs(apy))>>1;
-	  
-	  if (delta1 >= delta2 && inflictor->pz < 0)
-	    apz = -apz;
-	}
-      pz += apz;
-    }
-
-  
-  // do the damage
-  health -= damage;
   if (health <= 0)
     {
-      special1 = damage;
-
-      Die(inflictor, source);
+      //special1 = damage; // wtf?
       return true;
     }
+
+  // hurt but not dead
 
   if ((P_Random () < info->painchance)
       && !(eflags & MFE_SKULLFLY || flags & MF_CORPSE))
@@ -792,8 +753,6 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 }
 
 
-bool P_AutoUseChaosDevice(PlayerPawn *p);
-void P_AutoUseHealth(PlayerPawn *p, int saveHealth);
 
 bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 {
@@ -805,9 +764,7 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
       return Actor::Damage(inflictor, source, damage, dtype);
     }
 
-  if (game.skill == sk_baby)
-    damage >>= 1;   // take half damage in trainer mode
-  
+  // TODO this is nastily duplicated in DActor::Damage, but...
   if (inflictor && inflictor->IsOf(DActor::_type))
     {
       DActor *d = (DActor *)inflictor;
@@ -829,10 +786,63 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 	      reactiontime += 4;
             }
 	  break;
+
+        case MT_EGGFX:
+	  Morph(MT_CHICKEN);
+	  return false; // Always return
+        case MT_WHIRLWIND:
+	  return P_TouchWhirlwind(this);
+
+	  // Hexen
+	case MT_TELOTHER_FX1:
+	case MT_TELOTHER_FX2:
+	case MT_TELOTHER_FX3:
+	case MT_TELOTHER_FX4:
+	case MT_TELOTHER_FX5:
+	  P_TeleportOther(this);
+	  return true;
+	case MT_SHARDFX1:
+	  damage <<= d->special2; // shard damage depends on spermcount
+	  break;
+
+	  // TODO Hexen damage effects
+	  /*
+	case MT_BISH_FX:
+	  damage >>= 1; // Bishops are just too nasty TODO fix this elsewhere
+	  break;
+	case MT_ICEGUY_FX2:
+	  damage >>= 1; // same here
+	  break;
+	case MT_CSTAFF_MISSILE:
+	  // Cleric Serpent Staff does poison damage
+	  P_PoisonPlayer(player, source, 20);
+	  damage >>= 1;
+	  break;
+	case MT_POISONDART:
+	  P_PoisonPlayer(player, source, 20);
+	  damage >>= 1;
+	  break;
+	case MT_POISONCLOUD:
+	  if (player->poisoncount < 4)
+	    {
+	      P_PoisonDamage(player, source, 15+(P_Random()&15), false); // Don't play painsound
+	      P_PoisonPlayer(player, source, 50);
+	      S_StartSound(target, SFX_PLAYER_POISONCOUGH);
+	    }	
+	  return;
+	case MT_FSWORD_MISSILE:
+	  if (player)
+	    damage -= damage>>2;
+	  break;
+	  */
+
 	default:
 	  break;
 	}
     }
+
+  if (game.skill == sk_baby)
+    damage >>= 1;   // take half damage in trainer mode
 
   int i, temp;
   // player specific
@@ -891,7 +901,7 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
       if (source && source->IsOf(PlayerPawn::_type))
 	s = (PlayerPawn *)source;
 
-      // added team play and teamdamage (view logboris at 13-8-98 to understand)
+      // added teamplay and teamdamage
       if (s && (s->player->team == player->team) && !cv_teamdamage.value && (s != this))
 	return false;
 
@@ -909,9 +919,7 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 
   attacker = source;
 
-  bool ret = Actor::Damage(inflictor, source, damage, dtype);
-
-  return ret;
+  return Actor::Damage(inflictor, source, damage, dtype);
 }
 
 
@@ -1089,710 +1097,6 @@ void PlayerPawn::Die(Actor *inflictor, Actor *source)
   //S_StartSound(this, sfx_hedat1); // Burn sound
 }
 
-
-
-
-//======================================================
-//   Picking things up
-//======================================================
-
-
-//  The Heretic way of respawning items. Unused.
-
-void P_HideSpecialThing(DActor *thing)
-{
-  thing->flags &= ~MF_SPECIAL;
-  thing->flags2 |= MF2_DONTDRAW;
-  thing->SetState(S_HIDESPECIAL1);
-}
-
-// Make a special thing visible again.
-void A_RestoreSpecialThing1(DActor *thing)
-{
-  if (thing->type == MT_WMACE)
-    { // Do random mace placement
-      thing->mp->RepositionMace(thing);
-    }
-  thing->flags2 &= ~MF2_DONTDRAW;
-  S_StartSound(thing, sfx_itemrespawn);
-}
-
-void A_RestoreSpecialThing2(DActor *thing)
-{
-  thing->flags |= MF_SPECIAL;
-  thing->SetState(thing->info->spawnstate);
-}
-
-
-int  p_sound;  // pickupsound
-bool p_remove; // should the stuff be removed?
-
-
-void PlayerPawn::TouchSpecialThing(DActor *special)
-{                  
-  // Dead thing touching.
-  // Can happen with a sliding player corpse.
-  if (health <= 0 || flags & MF_CORPSE)
-    return;
-
-  p_remove = true; // should the item be removed from map?
-  p_sound = sfx_itemup;
-
-  int stype = special->type;
-
-  // Identify item
-  switch (stype)
-    {
-    case MT_ARMOR_1:
-      if (!GiveArmor(armor_armor, 3.0, -1))
-	return;
-      player->SetMessage(text[TXT_ARMOR1]);
-      break;
-    case MT_ARMOR_2:
-      if(!GiveArmor(armor_shield, 3.0, -1))
-	return;
-      player->SetMessage(text[TXT_ARMOR2]);
-      break;
-    case MT_ARMOR_3:
-      if(!GiveArmor(armor_helmet, 3.0, -1))
-	return;
-      player->SetMessage(text[TXT_ARMOR3]);
-      break;
-    case MT_ARMOR_4:
-      if(!GiveArmor(armor_amulet, 3.0, -1))
-	return;
-      player->SetMessage(text[TXT_ARMOR4]);
-      break;
-
-    case MT_ITEMSHIELD1:
-    case MT_ITEMSHIELD2:
-      if (!GiveArmor(armor_field, special->info->speed, special->health))
-	return;
-      player->SetMessage(text[stype - MT_ITEMSHIELD1 + TXT_ITEMSHIELD1]);
-      break;
-
-    case MT_GREENARMOR:
-    case MT_BLUEARMOR:
-      if (!GiveArmor(armor_field, special->info->speed, special->health))
-	return;
-      player->SetMessage(text[stype - MT_GREENARMOR + TXT_GOTARMOR]);
-      break;
-
-    case MT_HEALTHBONUS:  // health bonus
-      health++;               // can go over 100%
-      if (health > 2*maxhealth)
-	health = 2*maxhealth;
-      if (cv_showmessages.value==1)
-	player->SetMessage(GOTHTHBONUS);
-      break;
-
-    case MT_ARMORBONUS:  // spirit armor
-      GiveArmor(armor_field, -0.333f, 1);
-      if (cv_showmessages.value==1)
-	player->SetMessage(GOTARMBONUS);
-      break;
-
-    case MT_SOULSPHERE:
-      health += special->health;
-      if (health > 2*maxhealth)
-	health = 2*maxhealth;
-      player->SetMessage(GOTSUPER);
-      p_sound = sfx_powerup;
-      break;
-
-    case MT_MEGA:
-      health += special->health;
-      if (health > 2*maxhealth)
-	health = 2*maxhealth;
-      GiveArmor(armor_field, 0.5, special->health);
-      player->SetMessage(GOTMSPHERE);
-      p_sound = sfx_powerup;
-      break;
-
-      // keys
-    case MT_KEY1:
-    case MT_KEY2:
-    case MT_KEY3:
-    case MT_KEY4:
-    case MT_KEY5:
-    case MT_KEY6:
-    case MT_KEY7:
-    case MT_KEY8:
-    case MT_KEY9:
-    case MT_KEYA:
-    case MT_KEYB:
-      if (!GiveKey(keycard_t(1 << (stype - MT_KEY1))))
-	return;
-      if (game.multiplayer) // Only remove keys in single player game
-	p_remove = false;
-      break;
-
-      // leave cards for everyone
-    case MT_BKEY: // Key_Blue
-    case MT_BLUECARD:
-      if (!GiveKey(it_bluecard))
-	return;
-      if (game.multiplayer)
-	p_remove = false;
-      break;
-
-    case MT_CKEY: // Key_Yellow
-    case MT_YELLOWCARD:
-      if (!GiveKey(it_yellowcard))
-	return;
-      if (game.multiplayer)
-	p_remove = false;
-      break;
-
-    case MT_AKEY: // Key_Green
-    case MT_REDCARD:
-      if (!GiveKey(it_redcard))
-	return;
-      if (game.multiplayer)
-	p_remove = false;
-      break;
-
-    case MT_BLUESKULL:
-      if (!GiveKey(it_blueskull))
-	return;
-      if (game.multiplayer)
-	p_remove = false;
-      break;
-
-    case MT_YELLOWSKULL:
-      if (!GiveKey(it_yellowskull))
-        return;
-      if (game.multiplayer)
-	p_remove = false;
-      break;
-
-    case MT_REDSKULL:
-      if (!GiveKey(it_redskull))
-        return;
-      if (game.multiplayer)
-	p_remove = false;
-      break;
-
-      // medikits, heals
-    case MT_XHEALINGBOTTLE:
-    case MT_HEALINGBOTTLE:
-    case MT_STIM:
-      if (!GiveBody (10))
-	return;
-      if (cv_showmessages.value == 1)
-	if (stype == MT_STIM)
-	  player->SetMessage(GOTSTIM);
-	else
-	  player->SetMessage(text[TXT_ITEMHEALTH]);
-      break;
-
-    case MT_MEDI:
-      if (!GiveBody (25))
-	return;
-      if (cv_showmessages.value == 1)
-        {
-	  if (health < 25)
-	    player->SetMessage(GOTMEDINEED);
-	  else
-	    player->SetMessage(GOTMEDIKIT);
-        }
-      break;
-
-      // Artifacts :
-    case MT_XHEALTHFLASK:
-    case MT_HEALTHFLASK:
-      if (!GiveArtifact(arti_health, special))
-	return;
-      break;
-    case MT_XARTIFLY:
-    case MT_ARTIFLY:
-      if (!GiveArtifact(arti_fly, special))
-	return;
-      break;
-    case MT_XARTIINVULNERABILITY:
-    case MT_ARTIINVULNERABILITY:
-      if (!GiveArtifact(arti_invulnerability, special))
-	return;
-      break;
-    case MT_ARTITOMEOFPOWER:
-      if (!GiveArtifact(arti_tomeofpower, special))
-	return;
-      break;
-    case MT_ARTIINVISIBILITY:
-      if (!GiveArtifact(arti_invisibility, special))
-	return;
-      break;
-    case MT_ARTIEGG:
-      if (!GiveArtifact(arti_egg, special))
-	return;
-      break;
-    case MT_XARTISUPERHEAL:
-    case MT_ARTISUPERHEAL:
-      if (!GiveArtifact(arti_superhealth, special))
-	return;
-      break;
-    case MT_XARTITORCH:
-    case MT_ARTITORCH:
-      if (!GiveArtifact(arti_torch, special))
-	return;
-      break;
-    case MT_ARTIFIREBOMB:
-      if (!GiveArtifact(arti_firebomb, special))
-	return;
-      break;
-    case MT_XARTITELEPORT:
-    case MT_ARTITELEPORT:
-      if (!GiveArtifact(arti_teleport, special))
-	return;
-      break;
-
-    case MT_SUMMONMAULATOR:
-      if (!GiveArtifact(arti_summon, special))
-	return;
-      break;
-    case MT_XARTIEGG:
-      if (!GiveArtifact(arti_pork, special))
-	return;
-      break;
-    case MT_HEALRADIUS:
-      if (!GiveArtifact(arti_healingradius, special))
-	return;
-      break;
-    case MT_TELEPORTOTHER:
-      if (!GiveArtifact(arti_teleportother, special))
-	return;
-      break;
-    case MT_ARTIPOISONBAG:
-      if (!GiveArtifact(arti_poisonbag, special))
-	return;
-      break;
-    case MT_SPEEDBOOTS:
-      if (!GiveArtifact(arti_speed, special))
-	return;
-      break;
-    case MT_BOOSTMANA:
-      if (!GiveArtifact(arti_boostmana, special))
-	return;
-      break;
-    case MT_BOOSTARMOR:
-      if (!GiveArtifact(arti_boostarmor, special))
-	return;
-      break;
-    case MT_BLASTRADIUS:
-      if (!GiveArtifact(arti_blastradius, special))
-	return;
-      break;
-
-      // Puzzle artifacts
-    case MT_ARTIPUZZSKULL:
-    case MT_ARTIPUZZGEMBIG:
-    case MT_ARTIPUZZGEMRED:
-    case MT_ARTIPUZZGEMGREEN1:
-    case MT_ARTIPUZZGEMGREEN2:
-    case MT_ARTIPUZZGEMBLUE1:
-    case MT_ARTIPUZZGEMBLUE2:
-    case MT_ARTIPUZZBOOK1:
-    case MT_ARTIPUZZBOOK2:
-    case MT_ARTIPUZZSKULL2:
-    case MT_ARTIPUZZFWEAPON:
-    case MT_ARTIPUZZCWEAPON:
-    case MT_ARTIPUZZMWEAPON:
-    case MT_ARTIPUZZGEAR:
-    case MT_ARTIPUZZGEAR2:
-    case MT_ARTIPUZZGEAR3:
-    case MT_ARTIPUZZGEAR4:
-      if (!GiveArtifact(artitype_t(arti_puzzskull + stype - MT_ARTIPUZZSKULL), special))
-	return;
-      break;
-
-      // power ups
-    case MT_INV:
-      if (!GivePower(pw_invulnerability))
-	return;
-      player->SetMessage(GOTINVUL);
-      break;
-
-    case MT_BERSERKPACK:
-      if (!GivePower(pw_strength))
-	return;
-      player->SetMessage(GOTBERSERK);
-      if (readyweapon != wp_fist)
-	pendingweapon = wp_fist;
-      break;
-
-    case MT_INS:
-      if (!GivePower(pw_invisibility))
-	return;
-      player->SetMessage(GOTINVIS);
-      break;
-
-    case MT_RADSUIT:
-      if (!GivePower(pw_ironfeet))
-	return;
-      player->SetMessage(GOTSUIT);
-      break;
-
-    case MT_MAPSCROLL:
-    case MT_COMPUTERMAP:
-      if (!GivePower(pw_allmap))
-	return;
-      if (stype == MT_MAPSCROLL)
-	player->SetMessage(text[TXT_ITEMSUPERMAP]);
-      else
-	player->SetMessage(GOTMAP);
-      break;
-
-    case MT_IRVISOR:
-      if (!GivePower (pw_infrared))
-	return;
-      player->SetMessage(GOTVISOR);
-      break;
-
-      // Mana
-    case MT_MANA1:
-      if (!GiveAmmo(am_mana1, 15))
-	return;
-      player->SetMessage(text[TXT_MANA_1]);
-      break;
-    case MT_MANA2:
-      if (!GiveAmmo(am_mana2, 15))
-	return;
-      player->SetMessage(text[TXT_MANA_2]);
-      break;
-    case MT_MANA3:
-      if (GiveAmmo(am_mana1, 20))
-	{
-	  if (!GiveAmmo(am_mana2, 20))
-	    return;
-	}
-      else
-	GiveAmmo(am_mana2, 20);
-      player->SetMessage(text[TXT_MANA_BOTH]);
-      break;
-
-      // heretic Ammo
-    case MT_AMGWNDWIMPY:
-      if(!GiveAmmo(am_goldwand, special->health))
-	return;
-      if( cv_showmessages.value==1 )
-	player->SetMessage(GOT_AMMOGOLDWAND1);
-      break;
-
-    case MT_AMGWNDHEFTY:
-      if(!GiveAmmo(am_goldwand, special->health))
-	return;
-      if( cv_showmessages.value==1 )
-	player->SetMessage(GOT_AMMOGOLDWAND2);
-      break;
-
-    case MT_AMMACEWIMPY:
-      if(!GiveAmmo(am_mace, special->health))
-	return;
-      if( cv_showmessages.value==1 )
-	player->SetMessage(GOT_AMMOMACE1);
-      break;
-
-    case MT_AMMACEHEFTY:
-      if(!GiveAmmo(am_mace, special->health))
-	return;
-      if( cv_showmessages.value==1 )
-	player->SetMessage(GOT_AMMOMACE2);
-      break;
-
-    case MT_AMCBOWWIMPY:
-      if(!GiveAmmo(am_crossbow, special->health))
-	return;
-      if( cv_showmessages.value==1 )
-	player->SetMessage(GOT_AMMOCROSSBOW1);
-      break;
-
-    case MT_AMCBOWHEFTY:
-      if(!GiveAmmo(am_crossbow, special->health))
-	return;
-      if( cv_showmessages.value==1 )
-	player->SetMessage(GOT_AMMOCROSSBOW2);
-      break;
-
-    case MT_AMBLSRWIMPY:
-      if(!GiveAmmo(am_blaster, special->health))
-	return;
-      if( cv_showmessages.value==1 )
-	player->SetMessage(GOT_AMMOBLASTER1);
-      break;
-
-    case MT_AMBLSRHEFTY:
-      if(!GiveAmmo(am_blaster, special->health))
-	return;
-      if( cv_showmessages.value==1 )
-	player->SetMessage(GOT_AMMOBLASTER2);
-      break;
-
-    case MT_AMSKRDWIMPY:
-      if(!GiveAmmo(am_skullrod, special->health))
-	return;
-      if( cv_showmessages.value==1 )
-	player->SetMessage(GOT_AMMOSKULLROD1);
-      break;
-
-    case MT_AMSKRDHEFTY:
-      if(!GiveAmmo(am_skullrod, special->health))
-	return;
-      if( cv_showmessages.value==1 )
-	player->SetMessage(GOT_AMMOSKULLROD2);
-      break;
-
-    case MT_AMPHRDWIMPY:
-      if(!GiveAmmo(am_phoenixrod, special->health))
-	return;
-      if( cv_showmessages.value==1 )
-	player->SetMessage(GOT_AMMOPHOENIXROD1);
-      break;
-
-    case MT_AMPHRDHEFTY:
-      if(!GiveAmmo(am_phoenixrod, special->health))
-	return;
-      if( cv_showmessages.value==1 )
-	player->SetMessage(GOT_AMMOPHOENIXROD2);
-      break;
-
-      // ammo
-    case MT_CLIP:
-      if (special->flags & MF_DROPPED)
-        {
-	  if (!GiveAmmo(am_clip,clipammo[am_clip]/2))
-	    return;
-        }
-      else
-        {
-	  if (!GiveAmmo(am_clip,clipammo[am_clip]))
-	    return;
-        }
-      if(cv_showmessages.value==1)
-	player->SetMessage(GOTCLIP);
-      break;
-
-    case MT_AMMOBOX:
-      if (!GiveAmmo (am_clip,5*clipammo[am_clip]))
-	return;
-      if(cv_showmessages.value==1)
-	player->SetMessage(GOTCLIPBOX);
-      break;
-
-    case MT_ROCKETAMMO:
-      if (!GiveAmmo (am_misl,clipammo[am_misl]))
-	return;
-      if(cv_showmessages.value==1)
-	player->SetMessage(GOTROCKET);
-      break;
-
-    case MT_ROCKETBOX:
-      if (!GiveAmmo (am_misl,5*clipammo[am_misl]))
-	return;
-      if(cv_showmessages.value==1)
-	player->SetMessage(GOTROCKBOX);
-      break;
-
-    case MT_CELL:
-      if (!GiveAmmo (am_cell,clipammo[am_cell]))
-	return;
-      if(cv_showmessages.value==1)
-	player->SetMessage(GOTCELL);
-      break;
-
-    case MT_CELLPACK:
-      if (!GiveAmmo (am_cell,5*clipammo[am_cell]))
-	return;
-      if(cv_showmessages.value==1)
-	player->SetMessage(GOTCELLBOX);
-      break;
-
-    case MT_SHELL:
-      if (!GiveAmmo (am_shell,clipammo[am_shell]))
-	return;
-      if(cv_showmessages.value==1)
-	player->SetMessage(GOTSHELLS);
-      break;
-
-    case MT_SHELLBOX:
-      if (!GiveAmmo (am_shell,5*clipammo[am_shell]))
-	return;
-      if(cv_showmessages.value==1)
-	player->SetMessage(GOTSHELLBOX);
-      break;
-
-    case MT_BACKPACK:
-      if (!backpack)
-        {
-	  maxammo = maxammo2;
-	  backpack = true;
-        }
-      for (int i=0 ; i<am_heretic ; i++)
-	GiveAmmo (ammotype_t(i), clipammo[i]);
-      player->SetMessage(GOTBACKPACK);
-      break;
-
-    case MT_BAGOFHOLDING:
-      if (!backpack)
-        {
-	  maxammo = maxammo2;
-	  backpack = true;
-        }
-      GiveAmmo(am_goldwand, AMMO_GWND_WIMPY);
-      GiveAmmo(am_blaster, AMMO_BLSR_WIMPY);
-      GiveAmmo(am_crossbow, AMMO_CBOW_WIMPY);
-      GiveAmmo(am_skullrod, AMMO_SKRD_WIMPY);
-      GiveAmmo(am_phoenixrod, AMMO_PHRD_WIMPY);
-      player->SetMessage(text[TXT_ITEMBAGOFHOLDING]);
-      break;
-
-        // weapons
-    case MT_BFG9000:
-      if (!GiveWeapon (wp_bfg, false) )
-	return;
-      player->SetMessage(GOTBFG9000);
-      break;
-
-    case MT_CHAINGUN:
-      if (!GiveWeapon (wp_chaingun, special->flags & MF_DROPPED) )
-	return;
-      player->SetMessage(GOTCHAINGUN);
-      break;
-
-    case MT_SHAINSAW:
-      if (!GiveWeapon (wp_chainsaw, false) )
-	return;
-      player->SetMessage(GOTCHAINSAW);
-      break;
-
-    case MT_ROCKETLAUNCH:
-      if (!GiveWeapon (wp_missile, false) )
-	return;
-      player->SetMessage(GOTLAUNCHER);
-      break;
-
-    case MT_PLASMAGUN:
-      if (!GiveWeapon (wp_plasma, false) )
-	return;
-      player->SetMessage(GOTPLASMA);
-      break;
-
-    case MT_SHOTGUN:
-      if (!GiveWeapon (wp_shotgun, special->flags&MF_DROPPED ) )
-	return;
-      player->SetMessage(GOTSHOTGUN);
-      break;
-
-    case MT_SUPERSHOTGUN:
-      if (!GiveWeapon (wp_supershotgun, special->flags&MF_DROPPED ) )
-	return;
-      player->SetMessage(GOTSHOTGUN2);
-      break;
-
-      // heretic weapons
-    case MT_WMACE:
-      if(!GiveWeapon(wp_mace,false))
-	return;
-      player->SetMessage(GOT_WPNMACE);
-      break;
-    case MT_WCROSSBOW:
-      if(!GiveWeapon(wp_crossbow,false))
-	return;
-      player->SetMessage(GOT_WPNCROSSBOW);
-      break;
-    case MT_WBLASTER:
-      if(!GiveWeapon(wp_blaster,false))
-	return;
-      player->SetMessage(GOT_WPNBLASTER);
-      break;
-    case MT_WSKULLROD:
-      if(!GiveWeapon(wp_skullrod, false))
-	return;
-      player->SetMessage(GOT_WPNSKULLROD);
-      break;
-    case MT_WPHOENIXROD:
-      if(!GiveWeapon(wp_phoenixrod, false))
-	return;
-      player->SetMessage(GOT_WPNPHOENIXROD);
-      break;
-    case MT_WGAUNTLETS:
-      if(!GiveWeapon(wp_gauntlets, false))
-	return;
-      player->SetMessage(GOT_WPNGAUNTLETS);
-      break;
-
-      // Hexen weapons
-    case MT_MW_CONE: // Frost Shards
-      if(!GiveWeapon(wp_cone_of_shards, false))
-	return;
-      player->SetMessage(text[TXT_WEAPON_M2]);
-      break;
-
-    case MT_MW_LIGHTNING: // Arc of Death
-      if(!GiveWeapon(wp_arc_of_death, false))
-	return;
-      player->SetMessage(text[TXT_WEAPON_M3]);
-      break;
-
-    case MT_FW_AXE: // Timon's Axe
-      if(!GiveWeapon(wp_timons_axe, false))
-	return;
-      player->SetMessage(text[TXT_WEAPON_F2]);
-      break;
-    case MT_FW_HAMMER: // Hammer of Retribution
-      if(!GiveWeapon(wp_hammer_of_retribution, false))
-	return;
-      player->SetMessage(text[TXT_WEAPON_F3]);
-      break;
-
-      // 2nd and 3rd Cleric Weapons
-    case MT_CW_SERPSTAFF: // Serpent Staff
-      if(!GiveWeapon(wp_serpent_staff, false))
-	return;
-      player->SetMessage(text[TXT_WEAPON_C2]);
-      break;
-    case MT_CW_FLAME: // Firestorm
-    if(!GiveWeapon(wp_firestorm, false))
-      return;
-    player->SetMessage(text[TXT_WEAPON_C3]);
-      break;
-
-      // Fourth Weapon Pieces
-    case MT_FW_SWORD1:
-    case MT_FW_SWORD2:
-    case MT_FW_SWORD3:
-    case MT_CW_HOLY1:
-    case MT_CW_HOLY2:
-    case MT_CW_HOLY3:
-    case MT_MW_STAFF1:
-    case MT_MW_STAFF2:
-    case MT_MW_STAFF3:
-      if (!GiveArtifact(artitype_t(arti_fsword1 + stype - MT_FW_SWORD1), special))
-	return;
-      break;
-
-    default:
-      // SoM: New gettable things with FraggleScript!
-      //CONS_Printf ("\2P_TouchSpecialThing: Unknown gettable thing\n");
-      return;
-    }
-
-  if (special->flags & MF_COUNTITEM)
-    player->items++;
-
-  player->bonuscount += BONUSADD;
-
-  S_StartAmbSound(player, p_sound);
-
-  // pickup special (Hexen)
-  if (special->special)
-    {
-      mp->ExecuteLineSpecial(special->special, special->args, NULL, 0, this);
-      special->special = 0;
-    }
-
-  if (p_remove)
-    special->Remove();
-}
 
 
 /*

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.38  2004/11/18 20:30:11  smite-meister
+// tnt, plutonia
+//
 // Revision 1.37  2004/11/09 20:38:50  smite-meister
 // added packing to I/O structs
 //
@@ -29,7 +32,6 @@
 //
 // Revision 1.34  2004/09/06 19:58:03  smite-meister
 // Doom linedefs done!
-//
 //
 // Revision 1.29  2004/08/15 18:08:28  smite-meister
 // palette-to-palette colormaps etc.
@@ -735,7 +737,7 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
       return 0;
     }
 
-  CONS_Printf("sec %d: %d  => ", sec-sectors, sp);
+  //CONS_Printf("sec %d: %d  => ", sec-sectors, sp);
 
   if (sp == DOOM_Secret)
     {
@@ -989,7 +991,6 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
     temp -= 20;
     }
   */
-  CONS_Printf("%d\n", sp);
 
   sec->special = sp;
   return sp;
@@ -1100,7 +1101,7 @@ void Map::SpawnLineSpecials()
   const int LEGACY_BOOM_PUSHERS   = 2;
   const int LEGACY_BOOM_RENDERER  = 3;
   const int LEGACY_BOOM_EXOTIC    = 4;
-  const int LEGACY_FF        = 10;
+  const int LEGACY_FAKEFLOOR      = 10;
   const int LEGACY_RENDERER  = 11;
   const int LEGACY_MISC      = 13;
 
@@ -1206,7 +1207,7 @@ void Map::SpawnLineSpecials()
 		  goto error;
 		}
 	    }
-	  else if (subtype == LEGACY_FF)  // fake floors
+	  else if (subtype == LEGACY_FAKEFLOOR)  // fake floors
 	    {
 	      int ff_flags = FF_EXISTS;
 

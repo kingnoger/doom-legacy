@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.35  2004/11/18 20:30:06  smite-meister
+// tnt, plutonia
+//
 // Revision 1.34  2004/11/13 22:38:42  smite-meister
 // intermission works
 //
@@ -225,13 +228,18 @@ void BeginGame(int sk, int episode)
       m = "MAPINFO";
       break;
     case gm_heretic:
-      m = "MINFO_H";
+      m = "MI_HTIC";
       break;
     case gm_doom2:
-      m = "MINFO_D2";
+      if (mission == gmi_tnt)
+	m = "MI_TNT";
+      else if (mission == gmi_plut)
+	m = "MI_PLUT";
+      else
+	m = "MI_DOOM2";
       break;
     default:
-      m = "MINFO_D1";
+      m = "MI_DOOM1";
     }
 
   COM_BufAddText(va("newgame %s %d %d\n", m, episode, sk));

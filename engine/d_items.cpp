@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/11/18 20:30:06  smite-meister
+// tnt, plutonia
+//
 // Revision 1.8  2004/07/05 16:53:24  smite-meister
 // Netcode replaced
 //
@@ -41,42 +44,78 @@
 //
 // Revision 1.1.1.1  2002/11/16 14:17:49  hurdler
 // Initial C++ version of Doom Legacy
-//
-//
-// DESCRIPTION: 
-//      holds the weapon info for now...
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Game items and pickups: keys, armor, artifacts, weapons, ammo.
 
-#include "info.h"
+#include "dstrings.h"
 #include "d_items.h"
 
+#include "g_game.h"
+#include "g_map.h"
+#include "g_player.h"
+#include "g_pawn.h"
+
+#include "info.h"
+#include "sounds.h"
 
 
-/// "static" weapon data
-weapondata_t weapondata[NUMWEAPONS] =
+#define BONUSADD 6
+
+
+// TODO add first weapons as THINGs: goldwand 25 ammo, pistol 20 ammo, hexen first weapons 0 ammo
+// TODO FLOATBOB to use something else than health as phase index, hexen mana to use health
+
+
+//======================================================
+//  inventory_t implementation
+//======================================================
+
+inventory_t::inventory_t()
+{
+  type = count = 0;
+}
+
+inventory_t::inventory_t(byte t, byte c)
+{
+  type = t;
+  count = c;
+}
+
+
+//======================================================
+//  Weapon data
+//======================================================
+
+/// weapon grouping
+weapon_group_t weapongroup[NUMWEAPONS] =
 {
   // Doom
-  {0, wp_chainsaw, 0}, {0, wp_staff, 0}, {1, wp_goldwand, 20}, {2, wp_supershotgun, 8}, {2, wp_crossbow, 8},
-  {3, wp_blaster, 20}, {4, wp_phoenixrod, 2}, {5, wp_skullrod, 40}, {6, wp_mace, 40},
+  {0, wp_chainsaw}, {0, wp_staff},
+  {1, wp_goldwand},
+  {2, wp_supershotgun}, {2, wp_crossbow},
+  {3, wp_blaster}, {4, wp_phoenixrod}, {5, wp_skullrod}, {6, wp_mace},
   // Heretic
-  {0, wp_gauntlets, 0}, {0, wp_fpunch, 0}, {1, wp_timons_axe, 25}, {2, wp_hammer_of_retribution, 10},
-  {3, wp_quietus, 30}, {4, wp_missile, 2}, {5, wp_plasma, 50}, {6, wp_bfg, 50}, {7, wp_snout, 0},
+  {0, wp_gauntlets}, {0, wp_fpunch},
+  {1, wp_timons_axe}, {2, wp_hammer_of_retribution}, {3, wp_quietus},
+  {4, wp_missile}, {5, wp_plasma}, {6, wp_bfg}, {7, wp_snout},
   // Hexen
-  {0, wp_cmace, 0}, {0, wp_mwand, 0}, {0, wp_fist, 0}, {1, wp_serpent_staff, 25}, {1, wp_cone_of_shards, 25},
-  {1, wp_pistol, 25}, {2, wp_firestorm, 25}, {2, wp_arc_of_death, 25}, {2, wp_shotgun, 25},
-  {3, wp_wraithverge, 25}, {3, wp_bloodscourge, 25}, {3, wp_chaingun, 25}, {7, wp_beak, 0}
+  {0, wp_cmace}, {0, wp_mwand}, {0, wp_fist},
+  {1, wp_serpent_staff}, {1, wp_cone_of_shards}, {1, wp_pistol},
+  {2, wp_firestorm}, {2, wp_arc_of_death}, {2, wp_shotgun},
+  {3, wp_wraithverge}, {3, wp_bloodscourge}, {3, wp_chaingun},
+  {7, wp_beak}
 };
 
 
+/// Max ammo capacity for players
 int maxammo1[NUMAMMO] =
 {
   200, 50, 300, 50, // Doom
   100, 50, 200, 200, 20, 150,  // Heretic
   200, 200 // Hexen
 };
-
 
 int maxammo2[NUMAMMO] =
 {
@@ -86,22 +125,7 @@ int maxammo2[NUMAMMO] =
 };
 
 
-// a weapon is found with two clip loads,
-// a big item has five clip loads
-int clipammo[NUMAMMO] =
-{
-  10, 4, 20, 1,       // Doom
-  5, 2, 6, 10, 1, 10,  // Heretic // used in deathmatch 1 & 3 mul by 5 (P_GiveWeapon)
-  15, 15 // Hexen
-};
-
-
-//
-// PSPRITE ACTIONS for weapons.
-// This struct controls the weapon animations.
-//
-
-
+/// Weapon info, weapon animations
 weaponinfo_t wpnlev1info[NUMWEAPONS] =
 {
   // Doom weapons
@@ -116,15 +140,15 @@ weaponinfo_t wpnlev1info[NUMWEAPONS] =
   {am_cell,  40, S_BFGUP, S_BFGDOWN, S_BFG, S_BFG1, S_BFG1, S_BFGFLASH1}, // bfg 9000
 
   // Heretic weapons
-  {am_noammo, 0, S_STAFFUP, S_STAFFDOWN, S_STAFFREADY, S_STAFFATK1_1, S_STAFFATK1_1, S_WNULL}, // Staff
-  {am_noammo, 0, S_GAUNTLETUP, S_GAUNTLETDOWN, S_GAUNTLETREADY, S_GAUNTLETATK1_1, S_GAUNTLETATK1_3, S_WNULL}, // Gauntlets
-  {am_goldwand, USE_GWND_AMMO_1, S_GOLDWANDUP, S_GOLDWANDDOWN, S_GOLDWANDREADY, S_GOLDWANDATK1_1, S_GOLDWANDATK1_1, S_WNULL}, // Gold wand
-  {am_crossbow, USE_CBOW_AMMO_1, S_CRBOWUP, S_CRBOWDOWN, S_CRBOW1, S_CRBOWATK1_1, S_CRBOWATK1_1, S_WNULL}, // Crossbow
-  {am_blaster, USE_BLSR_AMMO_1, S_BLASTERUP, S_BLASTERDOWN, S_BLASTERREADY, S_BLASTERATK1_1, S_BLASTERATK1_3, S_WNULL}, // Blaster
-  {am_phoenixrod, USE_PHRD_AMMO_1, S_PHOENIXUP, S_PHOENIXDOWN, S_PHOENIXREADY, S_PHOENIXATK1_1, S_PHOENIXATK1_1, S_WNULL}, // Phoenix rod
-  {am_skullrod, USE_SKRD_AMMO_1, S_HORNRODUP, S_HORNRODDOWN, S_HORNRODREADY, S_HORNRODATK1_1, S_HORNRODATK1_1, S_WNULL}, // Skull rod
-  {am_mace, USE_MACE_AMMO_1, S_MACEUP, S_MACEDOWN, S_MACEREADY, S_MACEATK1_1, S_MACEATK1_2, S_WNULL}, // Mace
-  {am_noammo, 0, S_BEAKUP, S_BEAKDOWN, S_BEAKREADY, S_BEAKATK1_1, S_BEAKATK1_1, S_WNULL}, // Beak
+  {am_noammo,   0, S_STAFFUP, S_STAFFDOWN, S_STAFFREADY, S_STAFFATK1_1, S_STAFFATK1_1, S_WNULL}, // Staff
+  {am_noammo,   0, S_GAUNTLETUP, S_GAUNTLETDOWN, S_GAUNTLETREADY, S_GAUNTLETATK1_1, S_GAUNTLETATK1_3, S_WNULL}, // Gauntlets
+  {am_goldwand, 1, S_GOLDWANDUP, S_GOLDWANDDOWN, S_GOLDWANDREADY, S_GOLDWANDATK1_1, S_GOLDWANDATK1_1, S_WNULL}, // Gold wand
+  {am_crossbow, 1, S_CRBOWUP, S_CRBOWDOWN, S_CRBOW1, S_CRBOWATK1_1, S_CRBOWATK1_1, S_WNULL}, // Crossbow
+  {am_blaster,  1, S_BLASTERUP, S_BLASTERDOWN, S_BLASTERREADY, S_BLASTERATK1_1, S_BLASTERATK1_3, S_WNULL}, // Blaster
+  {am_phoenixrod, 1, S_PHOENIXUP, S_PHOENIXDOWN, S_PHOENIXREADY, S_PHOENIXATK1_1, S_PHOENIXATK1_1, S_WNULL}, // Phoenix rod
+  {am_skullrod, 1, S_HORNRODUP, S_HORNRODDOWN, S_HORNRODREADY, S_HORNRODATK1_1, S_HORNRODATK1_1, S_WNULL}, // Skull rod
+  {am_mace,     1, S_MACEUP, S_MACEDOWN, S_MACEREADY, S_MACEATK1_1, S_MACEATK1_2, S_WNULL}, // Mace
+  {am_noammo,   0, S_BEAKUP, S_BEAKDOWN, S_BEAKREADY, S_BEAKATK1_1, S_BEAKATK1_1, S_WNULL}, // Beak
 
   // Hexen weapons
   {am_noammo, 0, S_XPUNCHUP, S_XPUNCHDOWN, S_XPUNCHREADY, S_PUNCHATK1_1, S_PUNCHATK1_1, S_WNULL}, // Fighter - Punch
@@ -144,7 +168,6 @@ weaponinfo_t wpnlev1info[NUMWEAPONS] =
 
 
 // right now Doom and Hexen weapons are exactly the same when tome of power is active, but who knows...
-
 weaponinfo_t wpnlev2info[NUMWEAPONS] =
 {
   // Doom weapons
@@ -159,15 +182,15 @@ weaponinfo_t wpnlev2info[NUMWEAPONS] =
   {am_cell,  40, S_BFGUP, S_BFGDOWN, S_BFG, S_BFG1, S_BFG1, S_BFGFLASH1}, // bfg 9000
 
   // Heretic weapons
-  {am_noammo, 0, S_STAFFUP2, S_STAFFDOWN2, S_STAFFREADY2_1, S_STAFFATK2_1, S_STAFFATK2_1, S_WNULL}, // Staff
-  {am_noammo, 0, S_GAUNTLETUP2, S_GAUNTLETDOWN2, S_GAUNTLETREADY2_1, S_GAUNTLETATK2_1, S_GAUNTLETATK2_3, S_WNULL}, // Gauntlets
-  {am_goldwand, USE_GWND_AMMO_2, S_GOLDWANDUP, S_GOLDWANDDOWN, S_GOLDWANDREADY, S_GOLDWANDATK2_1, S_GOLDWANDATK2_1, S_WNULL}, // Gold wand
-  {am_crossbow, USE_CBOW_AMMO_2, S_CRBOWUP, S_CRBOWDOWN, S_CRBOW1, S_CRBOWATK2_1, S_CRBOWATK2_1, S_WNULL}, // Crossbow
-  {am_blaster, USE_BLSR_AMMO_2, S_BLASTERUP, S_BLASTERDOWN, S_BLASTERREADY, S_BLASTERATK2_1, S_BLASTERATK2_3, S_WNULL}, // Blaster
-  {am_phoenixrod, USE_PHRD_AMMO_2, S_PHOENIXUP, S_PHOENIXDOWN, S_PHOENIXREADY, S_PHOENIXATK2_1, S_PHOENIXATK2_2, S_WNULL}, // Phoenix rod
-  {am_skullrod, USE_SKRD_AMMO_2, S_HORNRODUP, S_HORNRODDOWN, S_HORNRODREADY, S_HORNRODATK2_1, S_HORNRODATK2_1, S_WNULL}, // Skull rod
-  {am_mace, USE_MACE_AMMO_2, S_MACEUP, S_MACEDOWN, S_MACEREADY, S_MACEATK2_1, S_MACEATK2_1, S_WNULL}, // Mace
-  {am_noammo, 0, S_BEAKUP, S_BEAKDOWN, S_BEAKREADY, S_BEAKATK2_1, S_BEAKATK2_1, S_WNULL}, // Beak
+  {am_noammo,   0, S_STAFFUP2, S_STAFFDOWN2, S_STAFFREADY2_1, S_STAFFATK2_1, S_STAFFATK2_1, S_WNULL}, // Staff
+  {am_noammo,   0, S_GAUNTLETUP2, S_GAUNTLETDOWN2, S_GAUNTLETREADY2_1, S_GAUNTLETATK2_1, S_GAUNTLETATK2_3, S_WNULL}, // Gauntlets
+  {am_goldwand, 1, S_GOLDWANDUP, S_GOLDWANDDOWN, S_GOLDWANDREADY, S_GOLDWANDATK2_1, S_GOLDWANDATK2_1, S_WNULL}, // Gold wand
+  {am_crossbow, 1, S_CRBOWUP, S_CRBOWDOWN, S_CRBOW1, S_CRBOWATK2_1, S_CRBOWATK2_1, S_WNULL}, // Crossbow
+  {am_blaster,  5, S_BLASTERUP, S_BLASTERDOWN, S_BLASTERREADY, S_BLASTERATK2_1, S_BLASTERATK2_3, S_WNULL}, // Blaster
+  {am_phoenixrod, 1, S_PHOENIXUP, S_PHOENIXDOWN, S_PHOENIXREADY, S_PHOENIXATK2_1, S_PHOENIXATK2_2, S_WNULL}, // Phoenix rod
+  {am_skullrod, 5, S_HORNRODUP, S_HORNRODDOWN, S_HORNRODREADY, S_HORNRODATK2_1, S_HORNRODATK2_1, S_WNULL}, // Skull rod
+  {am_mace,     5, S_MACEUP, S_MACEDOWN, S_MACEREADY, S_MACEATK2_1, S_MACEATK2_1, S_WNULL}, // Mace
+  {am_noammo,   0, S_BEAKUP, S_BEAKDOWN, S_BEAKREADY, S_BEAKATK2_1, S_BEAKATK2_1, S_WNULL}, // Beak
 
   // Hexen weapons
   {am_noammo, 0, S_XPUNCHUP, S_XPUNCHDOWN, S_XPUNCHREADY, S_PUNCHATK1_1, S_PUNCHATK1_1, S_WNULL}, // Fighter - Punch
@@ -186,15 +209,653 @@ weaponinfo_t wpnlev2info[NUMWEAPONS] =
 };
 
 
-// inventory_t implementation
 
-inventory_t::inventory_t()
+
+//======================================================
+//   Picking things up
+//======================================================
+
+
+//  The Heretic way of respawning items. Unused.
+
+void P_HideSpecialThing(DActor *thing)
 {
-  type = count = 0;
+  thing->flags &= ~MF_SPECIAL;
+  thing->flags2 |= MF2_DONTDRAW;
+  thing->SetState(S_HIDESPECIAL1);
 }
 
-inventory_t::inventory_t(byte t, byte c)
+// Make a special thing visible again.
+void A_RestoreSpecialThing1(DActor *thing)
 {
-  type = t;
-  count = c;
+  if (thing->type == MT_WMACE)
+    { // Do random mace placement
+      thing->mp->RepositionMace(thing);
+    }
+  thing->flags2 &= ~MF2_DONTDRAW;
+  S_StartSound(thing, sfx_itemrespawn);
+}
+
+void A_RestoreSpecialThing2(DActor *thing)
+{
+  thing->flags |= MF_SPECIAL;
+  thing->SetState(thing->info->spawnstate);
+}
+
+
+
+int  p_sound;  // pickupsound
+bool p_remove; // should the stuff be removed?
+
+
+void PlayerPawn::TouchSpecialThing(DActor *special)
+{                  
+  // Dead thing touching.
+  // Can happen with a sliding player corpse.
+  if (health <= 0 || flags & MF_CORPSE)
+    return;
+
+  p_remove = true; // should the item be removed from map?
+  p_sound = sfx_itemup;
+
+  int stype = special->type;
+
+  // Identify item
+  switch (stype)
+    {
+    case MT_ARMOR_1:
+      if (!GiveArmor(armor_armor, 3.0, -1))
+	return;
+      player->SetMessage(text[TXT_ARMOR1]);
+      break;
+    case MT_ARMOR_2:
+      if (!GiveArmor(armor_shield, 3.0, -1))
+	return;
+      player->SetMessage(text[TXT_ARMOR2]);
+      break;
+    case MT_ARMOR_3:
+      if (!GiveArmor(armor_helmet, 3.0, -1))
+	return;
+      player->SetMessage(text[TXT_ARMOR3]);
+      break;
+    case MT_ARMOR_4:
+      if (!GiveArmor(armor_amulet, 3.0, -1))
+	return;
+      player->SetMessage(text[TXT_ARMOR4]);
+      break;
+
+    case MT_ITEMSHIELD1:
+    case MT_ITEMSHIELD2:
+      if (!GiveArmor(armor_field, special->info->speed, special->health))
+	return;
+      player->SetMessage(text[stype - MT_ITEMSHIELD1 + TXT_ITEMSHIELD1]);
+      break;
+
+    case MT_GREENARMOR:
+    case MT_BLUEARMOR:
+      if (!GiveArmor(armor_field, special->info->speed, special->health))
+	return;
+      player->SetMessage(text[stype - MT_GREENARMOR + TXT_GOTARMOR]);
+      break;
+
+    case MT_HEALTHBONUS:  // health bonus
+      health++;               // can go over 100%
+      if (health > 2*maxhealth)
+	health = 2*maxhealth;
+      player->SetMessage(GOTHTHBONUS, 2);
+      break;
+
+    case MT_ARMORBONUS:  // spirit armor
+      GiveArmor(armor_field, -0.333f, 1);
+      player->SetMessage(GOTARMBONUS, 2);
+      break;
+
+    case MT_SOULSPHERE:
+      health += special->health;
+      if (health > 2*maxhealth)
+	health = 2*maxhealth;
+      player->SetMessage(GOTSUPER);
+      p_sound = sfx_powerup;
+      break;
+
+    case MT_MEGA:
+      health += special->health;
+      if (health > 2*maxhealth)
+	health = 2*maxhealth;
+      GiveArmor(armor_field, 0.5, special->health);
+      player->SetMessage(GOTMSPHERE);
+      p_sound = sfx_powerup;
+      break;
+
+      // keys
+    case MT_KEY1:
+    case MT_KEY2:
+    case MT_KEY3:
+    case MT_KEY4:
+    case MT_KEY5:
+    case MT_KEY6:
+    case MT_KEY7:
+    case MT_KEY8:
+    case MT_KEY9:
+    case MT_KEYA:
+    case MT_KEYB:
+      if (!GiveKey(keycard_t(1 << (stype - MT_KEY1))))
+	return;
+      break;
+
+      // leave cards for everyone
+    case MT_BKEY: // Key_Blue
+    case MT_BLUECARD:
+      if (!GiveKey(it_bluecard))
+	return;
+      break;
+
+    case MT_CKEY: // Key_Yellow
+    case MT_YELLOWCARD:
+      if (!GiveKey(it_yellowcard))
+	return;
+      break;
+
+    case MT_AKEY: // Key_Green
+    case MT_REDCARD:
+      if (!GiveKey(it_redcard))
+	return;
+      break;
+
+    case MT_BLUESKULL:
+      if (!GiveKey(it_blueskull))
+	return;
+      break;
+
+    case MT_YELLOWSKULL:
+      if (!GiveKey(it_yellowskull))
+        return;
+      break;
+
+    case MT_REDSKULL:
+      if (!GiveKey(it_redskull))
+        return;
+      break;
+
+      // medikits, heals
+    case MT_STIM:
+      if (!GiveBody(10))
+	return;
+      player->SetMessage(GOTSTIM, 1);
+      break;
+
+    case MT_XHEALINGBOTTLE:
+    case MT_HEALINGBOTTLE:
+      if (!GiveBody(10))
+	return;
+      player->SetMessage(text[TXT_ITEMHEALTH], 1);
+      break;
+
+    case MT_MEDI:
+      if (!GiveBody(25))
+	return;
+      if (health < 25)
+	player->SetMessage(GOTMEDINEED, 1);
+      else
+	player->SetMessage(GOTMEDIKIT, 1);
+      break;
+
+      // Artifacts :
+    case MT_XHEALTHFLASK:
+    case MT_HEALTHFLASK:
+      if (!GiveArtifact(arti_health, special))
+	return;
+      break;
+    case MT_XARTIFLY:
+    case MT_ARTIFLY:
+      if (!GiveArtifact(arti_fly, special))
+	return;
+      break;
+    case MT_XARTIINVULNERABILITY:
+    case MT_ARTIINVULNERABILITY:
+      if (!GiveArtifact(arti_invulnerability, special))
+	return;
+      break;
+    case MT_ARTITOMEOFPOWER:
+      if (!GiveArtifact(arti_tomeofpower, special))
+	return;
+      break;
+    case MT_ARTIINVISIBILITY:
+      if (!GiveArtifact(arti_invisibility, special))
+	return;
+      break;
+    case MT_ARTIEGG:
+      if (!GiveArtifact(arti_egg, special))
+	return;
+      break;
+    case MT_XARTISUPERHEAL:
+    case MT_ARTISUPERHEAL:
+      if (!GiveArtifact(arti_superhealth, special))
+	return;
+      break;
+    case MT_XARTITORCH:
+    case MT_ARTITORCH:
+      if (!GiveArtifact(arti_torch, special))
+	return;
+      break;
+    case MT_ARTIFIREBOMB:
+      if (!GiveArtifact(arti_firebomb, special))
+	return;
+      break;
+    case MT_XARTITELEPORT:
+    case MT_ARTITELEPORT:
+      if (!GiveArtifact(arti_teleport, special))
+	return;
+      break;
+
+    case MT_SUMMONMAULATOR:
+      if (!GiveArtifact(arti_summon, special))
+	return;
+      break;
+    case MT_XARTIEGG:
+      if (!GiveArtifact(arti_pork, special))
+	return;
+      break;
+    case MT_HEALRADIUS:
+      if (!GiveArtifact(arti_healingradius, special))
+	return;
+      break;
+    case MT_TELEPORTOTHER:
+      if (!GiveArtifact(arti_teleportother, special))
+	return;
+      break;
+    case MT_ARTIPOISONBAG:
+      if (!GiveArtifact(arti_poisonbag, special))
+	return;
+      break;
+    case MT_SPEEDBOOTS:
+      if (!GiveArtifact(arti_speed, special))
+	return;
+      break;
+    case MT_BOOSTMANA:
+      if (!GiveArtifact(arti_boostmana, special))
+	return;
+      break;
+    case MT_BOOSTARMOR:
+      if (!GiveArtifact(arti_boostarmor, special))
+	return;
+      break;
+    case MT_BLASTRADIUS:
+      if (!GiveArtifact(arti_blastradius, special))
+	return;
+      break;
+
+      // Puzzle artifacts
+    case MT_ARTIPUZZSKULL:
+    case MT_ARTIPUZZGEMBIG:
+    case MT_ARTIPUZZGEMRED:
+    case MT_ARTIPUZZGEMGREEN1:
+    case MT_ARTIPUZZGEMGREEN2:
+    case MT_ARTIPUZZGEMBLUE1:
+    case MT_ARTIPUZZGEMBLUE2:
+    case MT_ARTIPUZZBOOK1:
+    case MT_ARTIPUZZBOOK2:
+    case MT_ARTIPUZZSKULL2:
+    case MT_ARTIPUZZFWEAPON:
+    case MT_ARTIPUZZCWEAPON:
+    case MT_ARTIPUZZMWEAPON:
+    case MT_ARTIPUZZGEAR:
+    case MT_ARTIPUZZGEAR2:
+    case MT_ARTIPUZZGEAR3:
+    case MT_ARTIPUZZGEAR4:
+      if (!GiveArtifact(artitype_t(arti_puzzskull + stype - MT_ARTIPUZZSKULL), special))
+	return;
+      break;
+
+      // power ups
+    case MT_INV:
+      if (!GivePower(pw_invulnerability))
+	return;
+      player->SetMessage(GOTINVUL);
+      break;
+
+    case MT_BERSERKPACK:
+      if (!GivePower(pw_strength))
+	return;
+      player->SetMessage(GOTBERSERK);
+      if (readyweapon != wp_fist)
+	pendingweapon = wp_fist;
+      break;
+
+    case MT_INS:
+      if (!GivePower(pw_invisibility))
+	return;
+      player->SetMessage(GOTINVIS);
+      break;
+
+    case MT_RADSUIT:
+      if (!GivePower(pw_ironfeet))
+	return;
+      player->SetMessage(GOTSUIT);
+      break;
+
+    case MT_MAPSCROLL:
+    case MT_COMPUTERMAP:
+      if (!GivePower(pw_allmap))
+	return;
+      if (stype == MT_MAPSCROLL)
+	player->SetMessage(text[TXT_ITEMSUPERMAP]);
+      else
+	player->SetMessage(GOTMAP);
+      break;
+
+    case MT_IRVISOR:
+      if (!GivePower(pw_infrared))
+	return;
+      player->SetMessage(GOTVISOR);
+      break;
+
+      // Mana
+    case MT_MANA1:
+      if (!GiveAmmo(am_mana1, 15)) // cannot use health because of MF2_FLOATBOB!
+	return;
+      player->SetMessage(text[TXT_MANA_1]);
+      break;
+    case MT_MANA2:
+      if (!GiveAmmo(am_mana2, 15))
+	return;
+      player->SetMessage(text[TXT_MANA_2]);
+      break;
+    case MT_MANA3:
+      if (GiveAmmo(am_mana1, 20))
+	{
+	  if (!GiveAmmo(am_mana2, 20))
+	    return;
+	}
+      else
+	GiveAmmo(am_mana2, 20);
+      player->SetMessage(text[TXT_MANA_BOTH]);
+      break;
+
+      // heretic Ammo
+    case MT_AMGWNDWIMPY:
+      if (!GiveAmmo(am_goldwand, special->health))
+	return;
+      player->SetMessage(GOT_AMMOGOLDWAND1, 1);
+      break;
+
+    case MT_AMGWNDHEFTY:
+      if (!GiveAmmo(am_goldwand, special->health))
+	return;
+      player->SetMessage(GOT_AMMOGOLDWAND2, 1);
+      break;
+
+    case MT_AMMACEWIMPY:
+      if (!GiveAmmo(am_mace, special->health))
+	return;
+      player->SetMessage(GOT_AMMOMACE1, 1);
+      break;
+
+    case MT_AMMACEHEFTY:
+      if (!GiveAmmo(am_mace, special->health))
+	return;
+      player->SetMessage(GOT_AMMOMACE2, 1);
+      break;
+
+    case MT_AMCBOWWIMPY:
+      if (!GiveAmmo(am_crossbow, special->health))
+	return;
+      player->SetMessage(GOT_AMMOCROSSBOW1, 1);
+      break;
+
+    case MT_AMCBOWHEFTY:
+      if (!GiveAmmo(am_crossbow, special->health))
+	return;
+      player->SetMessage(GOT_AMMOCROSSBOW2, 1);
+      break;
+
+    case MT_AMBLSRWIMPY:
+      if (!GiveAmmo(am_blaster, special->health))
+	return;
+      player->SetMessage(GOT_AMMOBLASTER1, 1);
+      break;
+
+    case MT_AMBLSRHEFTY:
+      if (!GiveAmmo(am_blaster, special->health))
+	return;
+      player->SetMessage(GOT_AMMOBLASTER2, 1);
+      break;
+
+    case MT_AMSKRDWIMPY:
+      if (!GiveAmmo(am_skullrod, special->health))
+	return;
+      player->SetMessage(GOT_AMMOSKULLROD1, 1);
+      break;
+
+    case MT_AMSKRDHEFTY:
+      if (!GiveAmmo(am_skullrod, special->health))
+	return;
+      player->SetMessage(GOT_AMMOSKULLROD2, 1);
+      break;
+
+    case MT_AMPHRDWIMPY:
+      if (!GiveAmmo(am_phoenixrod, special->health))
+	return;
+      player->SetMessage(GOT_AMMOPHOENIXROD1, 1);
+      break;
+
+    case MT_AMPHRDHEFTY:
+      if (!GiveAmmo(am_phoenixrod, special->health))
+	return;
+      player->SetMessage(GOT_AMMOPHOENIXROD2, 1);
+      break;
+
+      // doom ammo
+    case MT_CLIP:
+      if (!GiveAmmo(am_clip, special->health))
+	return;
+      player->SetMessage(GOTCLIP, 1);
+      break;
+
+    case MT_AMMOBOX:
+      if (!GiveAmmo(am_clip, special->health))
+	return;
+      player->SetMessage(GOTCLIPBOX, 1);
+      break;
+
+    case MT_ROCKETAMMO:
+      if (!GiveAmmo(am_misl, special->health))
+	return;
+      player->SetMessage(GOTROCKET, 1);
+      break;
+
+    case MT_ROCKETBOX:
+      if (!GiveAmmo(am_misl, special->health))
+	return;
+      player->SetMessage(GOTROCKBOX, 1);
+      break;
+
+    case MT_CELL:
+      if (!GiveAmmo(am_cell, special->health))
+	return;
+      player->SetMessage(GOTCELL, 1);
+      break;
+
+    case MT_CELLPACK:
+      if (!GiveAmmo(am_cell, special->health))
+	return;
+      player->SetMessage(GOTCELLBOX, 1);
+      break;
+
+    case MT_SHELL:
+      if (!GiveAmmo(am_shell, special->health))
+	return;
+      player->SetMessage(GOTSHELLS, 1);
+      break;
+
+    case MT_SHELLBOX:
+      if (!GiveAmmo(am_shell, special->health))
+	return;
+      player->SetMessage(GOTSHELLBOX, 1);
+      break;
+
+    case MT_BACKPACK:
+      if (!backpack)
+        {
+	  maxammo = maxammo2;
+	  backpack = true;
+        }
+      GiveAmmo(am_clip, mobjinfo[MT_CLIP].spawnhealth);
+      GiveAmmo(am_shell, mobjinfo[MT_SHELL].spawnhealth);
+      GiveAmmo(am_cell, mobjinfo[MT_CELL].spawnhealth);
+      GiveAmmo(am_misl, mobjinfo[MT_ROCKETAMMO].spawnhealth);
+      player->SetMessage(GOTBACKPACK);
+      break;
+
+    case MT_BAGOFHOLDING:
+      if (!backpack)
+        {
+	  maxammo = maxammo2;
+	  backpack = true;
+        }
+      GiveAmmo(am_goldwand, mobjinfo[MT_AMGWNDWIMPY].spawnhealth);
+      GiveAmmo(am_blaster, mobjinfo[MT_AMBLSRWIMPY].spawnhealth);
+      GiveAmmo(am_crossbow, mobjinfo[MT_AMCBOWWIMPY].spawnhealth);
+      GiveAmmo(am_skullrod, mobjinfo[MT_AMSKRDWIMPY].spawnhealth);
+      GiveAmmo(am_phoenixrod, mobjinfo[MT_AMPHRDWIMPY].spawnhealth);
+      player->SetMessage(text[TXT_ITEMBAGOFHOLDING]);
+      break;
+
+        // weapons
+    case MT_BFG9000:
+      if (!GiveWeapon(wp_bfg, special->health, special->flags & MF_DROPPED))
+	return;
+      player->SetMessage(GOTBFG9000);
+      break;
+    case MT_CHAINGUN:
+      if (!GiveWeapon(wp_chaingun, special->health, special->flags & MF_DROPPED))
+	return;
+      player->SetMessage(GOTCHAINGUN);
+      break;
+    case MT_SHAINSAW:
+      if (!GiveWeapon(wp_chainsaw, special->health, special->flags & MF_DROPPED))
+	return;
+      player->SetMessage(GOTCHAINSAW);
+      break;
+    case MT_ROCKETLAUNCH:
+      if (!GiveWeapon(wp_missile, special->health, special->flags & MF_DROPPED))
+	return;
+      player->SetMessage(GOTLAUNCHER);
+      break;
+    case MT_PLASMAGUN:
+      if (!GiveWeapon(wp_plasma, special->health, special->flags & MF_DROPPED))
+	return;
+      player->SetMessage(GOTPLASMA);
+      break;
+    case MT_SHOTGUN:
+      if (!GiveWeapon(wp_shotgun, special->health, special->flags & MF_DROPPED))
+	return;
+      player->SetMessage(GOTSHOTGUN);
+      break;
+    case MT_SUPERSHOTGUN:
+      if (!GiveWeapon(wp_supershotgun, special->health, special->flags & MF_DROPPED))
+	return;
+      player->SetMessage(GOTSHOTGUN2);
+      break;
+
+      // heretic weapons
+    case MT_WMACE:
+      if (!GiveWeapon(wp_mace, special->health, special->flags & MF_DROPPED))
+	return;
+      player->SetMessage(GOT_WPNMACE);
+      break;
+    case MT_WCROSSBOW:
+      if (!GiveWeapon(wp_crossbow, special->health, special->flags & MF_DROPPED))
+	return;
+      player->SetMessage(GOT_WPNCROSSBOW);
+      break;
+    case MT_WBLASTER:
+      if (!GiveWeapon(wp_blaster, special->health, special->flags & MF_DROPPED))
+	return;
+      player->SetMessage(GOT_WPNBLASTER);
+      break;
+    case MT_WSKULLROD:
+      if (!GiveWeapon(wp_skullrod, special->health, special->flags & MF_DROPPED))
+	return;
+      player->SetMessage(GOT_WPNSKULLROD);
+      break;
+    case MT_WPHOENIXROD:
+      if (!GiveWeapon(wp_phoenixrod, special->health, special->flags & MF_DROPPED))
+	return;
+      player->SetMessage(GOT_WPNPHOENIXROD);
+      break;
+    case MT_WGAUNTLETS:
+      if (!GiveWeapon(wp_gauntlets, special->health, special->flags & MF_DROPPED))
+	return;
+      player->SetMessage(GOT_WPNGAUNTLETS);
+      break;
+
+      // Hexen weapons
+    case MT_MW_CONE:
+      if (!GiveWeapon(wp_cone_of_shards, special->health, special->flags & MF_DROPPED))
+	return;
+      player->SetMessage(text[TXT_WEAPON_M2]);
+      break;
+    case MT_MW_LIGHTNING:
+      if (!GiveWeapon(wp_arc_of_death, special->health, special->flags & MF_DROPPED))
+	return;
+      player->SetMessage(text[TXT_WEAPON_M3]);
+      break;
+    case MT_FW_AXE:
+      if (!GiveWeapon(wp_timons_axe, special->health, special->flags & MF_DROPPED))
+	return;
+      player->SetMessage(text[TXT_WEAPON_F2]);
+      break;
+    case MT_FW_HAMMER:
+      if (!GiveWeapon(wp_hammer_of_retribution, special->health, special->flags & MF_DROPPED))
+	return;
+      player->SetMessage(text[TXT_WEAPON_F3]);
+      break;
+    case MT_CW_SERPSTAFF:
+      if (!GiveWeapon(wp_serpent_staff, special->health, special->flags & MF_DROPPED))
+	return;
+      player->SetMessage(text[TXT_WEAPON_C2]);
+      break;
+    case MT_CW_FLAME:
+      if (!GiveWeapon(wp_firestorm, special->health, special->flags & MF_DROPPED))
+	return;
+      player->SetMessage(text[TXT_WEAPON_C3]);
+      break;
+
+      // Fourth Weapon Pieces
+    case MT_FW_SWORD1:
+    case MT_FW_SWORD2:
+    case MT_FW_SWORD3:
+    case MT_CW_HOLY1:
+    case MT_CW_HOLY2:
+    case MT_CW_HOLY3:
+    case MT_MW_STAFF1:
+    case MT_MW_STAFF2:
+    case MT_MW_STAFF3:
+      if (!GiveArtifact(artitype_t(arti_fsword1 + stype - MT_FW_SWORD1), special))
+	return;
+      break;
+
+    default:
+      // SoM: New gettable things with FraggleScript!
+      CONS_Printf("\2TouchSpecialThing: Unknown pickup type (%d)!\n", stype);
+      return;
+    }
+
+  if (special->flags & MF_COUNTITEM)
+    player->items++;
+
+  player->bonuscount += BONUSADD;
+
+  S_StartAmbSound(player, p_sound);
+
+  // pickup special (Hexen)
+  if (special->special)
+    {
+      mp->ExecuteLineSpecial(special->special, special->args, NULL, 0, this);
+      special->special = 0;
+    }
+
+  if (p_remove)
+    special->Remove();
 }

@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.44  2004/11/18 20:30:07  smite-meister
+// tnt, plutonia
+//
 // Revision 1.43  2004/11/13 22:38:42  smite-meister
 // intermission works
 //
@@ -569,7 +572,7 @@ void PlayerPawn::Think()
 	      && (psprites[ps_weapon].state != &weaponstates[S_PHOENIXUP]))
 	    {
 	      SetPsprite(ps_weapon, S_PHOENIXREADY);
-	      ammo[am_phoenixrod] -= USE_PHRD_AMMO_2;
+	      ammo[am_phoenixrod] -= wpnlev2info[wp_phoenixrod].ammopershoot;
 	      refire = 0;
 	    }
 	  else if ((readyweapon == wp_gauntlets) || (readyweapon == wp_staff))
@@ -951,20 +954,20 @@ void PlayerPawn::Reset()
 // returns the next owned weapon in group g
 weapontype_t PlayerPawn::FindWeapon(int g)
 {
-  if (readyweapon != wp_none && g == weapondata[readyweapon].group)
+  if (readyweapon != wp_none && g == weapongroup[readyweapon].group)
     {
-      weapontype_t n = weapondata[readyweapon].next;
+      weapontype_t n = weapongroup[readyweapon].next;
       while (n != readyweapon)
 	{
 	  if (n == wp_none || weaponowned[n])
 	    return n;
 
-	  n = weapondata[n].next;
+	  n = weapongroup[n].next;
 	}
     }
   else
     for (int i=0; i<NUMWEAPONS; i++)
-      if (g == weapondata[i].group && weaponowned[i])
+      if (g == weapongroup[i].group && weaponowned[i])
 	return weapontype_t(i);
 
   return wp_none;
@@ -1551,10 +1554,9 @@ bool PlayerPawn::GiveAmmo(ammotype_t at, int count)
 }
 
 
-bool PlayerPawn::GiveWeapon(weapontype_t wt, bool dropped)
+bool PlayerPawn::GiveWeapon(weapontype_t wt, int ammocontent, bool dropped)
 {
-  bool     gaveammo;
-  bool     gaveweapon;
+  ammotype_t at = wpnlev1info[wt].ammo;
 
   if (game.multiplayer && (cv_deathmatch.value != 2) && !dropped)
     {
@@ -1564,40 +1566,32 @@ bool PlayerPawn::GiveWeapon(weapontype_t wt, bool dropped)
 
       weaponowned[wt] = true;
 
-      if (cv_deathmatch.value)
-	GiveAmmo(weaponinfo[wt].ammo, 5*clipammo[weaponinfo[wt].ammo]);
-      else
-	GiveAmmo(weaponinfo[wt].ammo, weapondata[wt].getammo);
+      if (cv_deathmatch.value == 1)
+	ammocontent = int(ammocontent * 5/2);
+
+      GiveAmmo(at, ammocontent);
 
       // Boris hack preferred weapons order...
-      if (player->originalweaponswitch
-	  || player->weaponpref[wt] > player->weaponpref[readyweapon])
-	pendingweapon = wt;     // do like Doom2 original
+      if (player->originalweaponswitch ||
+	  player->weaponpref[wt] > player->weaponpref[readyweapon])
+	pendingweapon = wt; // do like Doom2 original
 
       S_StartAmbSound(player, sfx_weaponup);
       return false;
     }
 
-  if (weaponinfo[wt].ammo != am_noammo)
-    {
-      // give one clip with a dropped weapon,
-      // two clips with a found weapon
-      if (dropped)
-	gaveammo = GiveAmmo(weaponinfo[wt].ammo, clipammo[weaponinfo[wt].ammo]);
-      else
-	gaveammo = GiveAmmo(weaponinfo[wt].ammo, weapondata[wt].getammo);
-    }
-  else
-    gaveammo = false;
+  bool gaveammo = false;
+  bool gaveweapon = false;
 
-  if (weaponowned[wt])
-    gaveweapon = false;
-  else
+  if (at != am_noammo)
+    gaveammo = GiveAmmo(at, ammocontent);
+
+  if (!weaponowned[wt])
     {
       gaveweapon = true;
       weaponowned[wt] = true;
-      if (player->originalweaponswitch
-	  || player->weaponpref[wt] > player->weaponpref[readyweapon])
+      if (player->originalweaponswitch ||
+	  player->weaponpref[wt] > player->weaponpref[readyweapon])
 	pendingweapon = wt;    // Doom2 original stuff
     }
 
@@ -1657,6 +1651,9 @@ bool PlayerPawn::GiveKey(keycard_t k)
   player->SetMessage(text[TXT_KEY_STEEL + i]);
 
   p_sound = sfx_keyup;
+  if (game.multiplayer) // Only remove keys in single player game
+    p_remove = false;
+
   return true;
 }
 

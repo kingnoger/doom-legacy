@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/11/18 20:30:14  smite-meister
+// tnt, plutonia
+//
 // Revision 1.8  2004/11/09 20:38:52  smite-meister
 // added packing to I/O structs
 //
@@ -66,7 +69,14 @@ extern class Actor *linetarget;
 
 extern std::vector<struct line_t *> spechit;
 
-extern Actor *BlockingMobj;
+struct position_check_t
+{
+  Actor  *thing;
+  line_t *line;
+};
+
+extern position_check_t Blocking;
+extern line_t *ceilingline;
 
 
 // P_MAPUTL
@@ -100,12 +110,12 @@ void    P_MakeDivline(line_t* li, divline_t* dl);
 fixed_t P_InterceptVector(divline_t* v2, divline_t* v1);
 
 
-extern fixed_t          opentop;
-extern fixed_t          openbottom;
-extern fixed_t          openrange;
-extern fixed_t          lowfloor;
+struct line_opening_t
+{
+  fixed_t top, bottom, range, lowfloor;
+};
 
-void    P_LineOpening(line_t* linedef);
+line_opening_t *P_LineOpening(line_t *linedef);
 
 
 #define PT_ADDLINES     1

@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/11/18 20:30:15  smite-meister
+// tnt, plutonia
+//
 // Revision 1.3  2004/03/28 15:16:15  smite-meister
 // Texture cache.
 //
@@ -26,218 +29,135 @@
 // Revision 1.1.1.1  2002/11/16 14:18:48  hurdler
 // Initial C++ version of Doom Legacy
 //
-// Revision 1.4  2002/08/19 18:06:48  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.3  2002/07/01 21:01:12  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:39  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.5  2000/11/02 19:49:36  bpereira
-// no message
-//
-// Revision 1.4  2000/08/11 19:10:13  metzgermeister
-// *** empty log message ***
-//
-// Revision 1.3  2000/04/30 10:30:10  bpereira
-// no message
-//
-// Revision 1.2  2000/02/27 00:42:11  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
-//
-//
-// DESCRIPTION:
-//      floor and wall splats
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief SW renderer: Decals, floor and wall splats
 
 #include "doomdef.h"
 
-#include "g_game.h" // demoversion
-
+#include "g_map.h"
 #include "r_render.h"
-#include "r_state.h"
-#include "r_draw.h"
+#include "r_data.h"
 #include "r_main.h"
-#include "r_plane.h"
 #include "r_splats.h"
-#include "w_wad.h"
-#include "z_zone.h"
 
 
-#ifdef WALLSPLATS
+//==========================================================================
+//                                                               WALL SPLATS
+//==========================================================================
+
 static wallsplat_t  wallsplats[MAXLEVELSPLATS];     // WALL splats
 static int          freewallsplat;
-#endif
-
-#ifdef FLOORSPLATS
-static floorsplat_t floorsplats[MAXLEVELSPLATS];    // FLOOR splats
-static int          freefloorsplat;
-
-struct rastery_s {
-    fixed_t minx, maxx;     // for each raster line starting at line 0
-    fixed_t tx1,ty1;
-    fixed_t tx2,ty2;        // start/end points in texture at this line
-};
-static struct rastery_s rastertab[MAXVIDHEIGHT];
-
-static void prepare_rastertab (void);
-
-//r_plane.c
-extern fixed_t     cachedheight[MAXVIDHEIGHT];
-extern fixed_t     cacheddistance[MAXVIDHEIGHT];
-extern fixed_t     cachedxstep[MAXVIDHEIGHT];
-extern fixed_t     cachedystep[MAXVIDHEIGHT];
-extern fixed_t     basexscale;
-extern fixed_t     baseyscale;
-#endif
-// for floorsplats, accessed by asm code
-struct rastery_s * prastertab;
 
 
-
-// --------------------------------------------------------------------------
-// setup splat cache
-// --------------------------------------------------------------------------
-void R_ClearLevelSplats (void)
-{
-#ifdef WALLSPLATS
-    freewallsplat = 0;
-    memset (wallsplats, 0, sizeof(wallsplats));
-#endif
-#ifdef FLOORSPLATS
-    freefloorsplat = 0;
-    memset (floorsplats, 0, sizeof(floorsplats));
-
-    //setup to draw floorsplats
-    prastertab = rastertab;
-    prepare_rastertab ();
-#endif
-}
-
-
-// ==========================================================================
-//                                                                WALL SPLATS
-// ==========================================================================
-#ifdef WALLSPLATS
 // --------------------------------------------------------------------------
 // Return a pointer to a splat free for use, or NULL if no more splats are
 // available
 // --------------------------------------------------------------------------
-static wallsplat_t* R_AllocWallSplat (void)
+static wallsplat_t *R_AllocWallSplat()
 {
-    wallsplat_t* splat;
-    wallsplat_t* p_splat;
-    line_t*  li;
+  // clear the splat from the line if it was in use
+  wallsplat_t *splat = &wallsplats[freewallsplat];
+  line_t *li = splat->line;
 
-    // clear the splat from the line if it was in use
-    splat = &wallsplats[freewallsplat];
-    li=splat->line;
-    if ( li )
+  if (li)
     {
-        // remove splat from line splats list
-        if (li->splats == splat)
-            li->splats = splat->next;   //remove from head
-        else
+      // remove splat from line splats list
+      if (li->splats == splat)
+	li->splats = splat->next;   //remove from head
+      else
         {
 #ifdef PARANOIA
-            if(!li->splats)
-                I_Error("R_AllocWallSplat : No splat in this line\n");
+	  if (!li->splats)
+	    I_Error("R_AllocWallSplat : No splat in this line\n");
 #endif
-            for(p_splat = (wallsplat_t *)li->splats;p_splat->next;p_splat = p_splat->next)
-                if (p_splat->next == splat)
+	  for (wallsplat_t *p = li->splats; p->next; p = p->next)
+	    if (p->next == splat)
                 {
-                    p_splat->next = splat->next;
-                    break;
+		  p->next = splat->next;
+		  break;
                 }
         }
     }
 
-    memset (splat, 0, sizeof(wallsplat_t));
+  memset(splat, 0, sizeof(wallsplat_t));
 
-    // for next allocation
-    freewallsplat++;
-    if (freewallsplat >= MAXLEVELSPLATS)
-        freewallsplat = 0;
+  // for next allocation
+  freewallsplat++;
+  if (freewallsplat >= MAXLEVELSPLATS)
+    freewallsplat = 0;
 
-    return splat;
+  return splat;
 }
 
+
+
+static fixed_t P_SegLength(line_t *l)
+{
+  const double fixedtofloat = 1.0 / 65536.0;
+  double dx = double(l->v2->x - l->v1->x)*fixedtofloat;
+  double dy = double(l->v2->y - l->v1->y)*fixedtofloat;
+
+  return int(sqrt(dx*dx+dy*dy) * FRACUNIT);
+}
 
 // Add a new splat to the linedef:
 // top : top z coord
 // wallfrac : frac along the linedef vector (0 to FRACUNIT)
 // splatpatchname : name of patch to draw
-void Rend::R_AddWallSplat(line_t  *wallline,
-			  int      sectorside,
-			  char    *patchname,
-			  fixed_t  top,
-			  fixed_t  wallfrac,
-			  int      flags)
+void Map::R_AddWallSplat(line_t *line, int side, char *name, fixed_t top, fixed_t wallfrac, int flags)
 {
-    fixed_t         fracsplat;
-    wallsplat_t*    splat;
-    wallsplat_t*    p_splat;
-    fixed_t         linelength;
-    sector_t        *backsector=NULL;
+  //CONS_Printf("wall splat: %s\n", name);
+  wallsplat_t *splat = R_AllocWallSplat();
+  if (!splat)
+    return;
 
-    if( game.demoversion<128 )
-        return;
-
-    splat = R_AllocWallSplat ();
-    if (!splat)
-        return;
-
-    // set the splat
-    Texture *t = splat->tex = tc.GetPtr(patchname);
-    sectorside^=1;
-    if( wallline->sidenum[sectorside]!=-1 )
+  // set the splat
+  Texture *t = splat->tex = tc.GetPtr(name);
+  side ^= 1;
+ 
+  sector_t *backsector = NULL;
+  if (line->sidenum[side] != -1)
     {
-        backsector = sides[wallline->sidenum[sectorside]].sector;
+      backsector = sides[line->sidenum[side]].sector;
 
-        if(top<backsector->floorheight)
+      if (top < backsector->floorheight)
         {
-            splat->yoffset = &backsector->floorheight;
-            top -= backsector->floorheight;
+	  splat->yoffset = &backsector->floorheight;
+	  top -= backsector->floorheight;
         }
-        else
-        if(top>backsector->ceilingheight)
+      else if(top > backsector->ceilingheight)
         {
-            splat->yoffset = &backsector->ceilingheight;
-            top -= backsector->ceilingheight;
+	  splat->yoffset = &backsector->ceilingheight;
+	  top -= backsector->ceilingheight;
         }
     }
-    //splat->sectorside = sectorside;
+  //splat->sectorside = side;
 
-    splat->top = top;
-    splat->flags = flags;
-
+  splat->top = top;
+  splat->flags = flags;
+  
+  // offset needed by draw code for texture mapping
+  fixed_t linelength = P_SegLength(line);
+  splat->offset = FixedMul(wallfrac, linelength) - (t->width << (FRACBITS-1));
+  //CONS_Printf("offset splat %d\n",splat->offset);
+  fixed_t fracsplat = FixedDiv( ((t->width<<FRACBITS)>>1) , linelength );
     
-    // offset needed by draw code for texture mapping
-    linelength = (fixed_t)P_SegLength((seg_t*)wallline);
-    splat->offset = FixedMul(wallfrac, linelength) - (t->width << (FRACBITS-1));
-    //CONS_Printf("offset splat %d\n",splat->offset);
-    fracsplat = FixedDiv( ((t->width<<FRACBITS)>>1) , linelength );
-    
-    wallfrac -= fracsplat;
-    if( wallfrac>linelength )
-        return;
-    //CONS_Printf("final splat possition %f\n",FIXED_TO_FLOAT(wallfrac));
-    splat->v1.x = wallline->v1->x + FixedMul (wallline->dx, wallfrac);
-    splat->v1.y = wallline->v1->y + FixedMul (wallline->dy, wallfrac);
-    wallfrac += fracsplat + fracsplat;
-    if( wallfrac<0 )
-        return;
-    splat->v2.x = wallline->v1->x + FixedMul (wallline->dx, wallfrac);
-    splat->v2.y = wallline->v1->y + FixedMul (wallline->dy, wallfrac);
+  wallfrac -= fracsplat;
+  if (wallfrac > linelength)
+    return;
+  //CONS_Printf("final splat position %f\n",FIXED_TO_FLOAT(wallfrac));
+  splat->v1.x = line->v1->x + FixedMul (line->dx, wallfrac);
+  splat->v1.y = line->v1->y + FixedMul (line->dy, wallfrac);
+  wallfrac += fracsplat + fracsplat;
+  if (wallfrac < 0)
+    return;
+  splat->v2.x = line->v1->x + FixedMul (line->dx, wallfrac);
+  splat->v2.y = line->v1->y + FixedMul (line->dy, wallfrac);
 
 
-    if( wallline->frontsector && wallline->frontsector == backsector )
+  if (line->frontsector && line->frontsector == backsector)
     {
 /*  BP: dont work texture mapping problem :(
         // in the other side
@@ -246,37 +166,72 @@ void Rend::R_AddWallSplat(line_t  *wallline,
         splat->v2 = p;
         CONS_Printf("split\n");
 */
-        return;
+      return;
     }
 
-    // insert splat in the linedef splat list
-    // BP: why not insert in head is mush more simple ?
-    // BP: because for remove it is more simple !
-    splat->line = wallline;
-    splat->next = NULL;
-    if (wallline->splats)
+  // insert splat in the linedef splat list
+  // BP: why not insert in head is mush more simple ?
+  // BP: because for remove it is more simple !
+  splat->line = line;
+  splat->next = NULL;
+  if (line->splats)
     {
-        p_splat = (wallsplat_t *)wallline->splats;
-        while (p_splat->next)
-            p_splat = p_splat->next;
-        p_splat->next = splat;
+      wallsplat_t *p = line->splats;
+      while (p->next)
+	p = p->next;
+      p->next = splat;
     }
-    else
-        wallline->splats = splat;
+  else
+    line->splats = splat;
 }
-#endif // WALLSPLATS
 
 
-// ==========================================================================
-//                                                               FLOOR SPLATS
-// ==========================================================================
+
+
+
+//==========================================================================
+//                                                              FLOOR SPLATS
+//==========================================================================
 #ifdef FLOORSPLATS
+
+static floorsplat_t floorsplats[MAXLEVELSPLATS];    // FLOOR splats
+static int          freefloorsplat;
+
+struct rastery_t
+{
+  fixed_t minx, maxx;     // for each raster line starting at line 0
+  fixed_t tx1,ty1;
+  fixed_t tx2,ty2;        // start/end points in texture at this line
+};
+
+// for floorsplats, accessed by asm code
+static rastery_t rastertab[MAXVIDHEIGHT];
+rastery_t *prastertab;
+
+
+//r_plane.c
+extern fixed_t     cachedheight[MAXVIDHEIGHT];
+extern fixed_t     cacheddistance[MAXVIDHEIGHT];
+extern fixed_t     cachedxstep[MAXVIDHEIGHT];
+extern fixed_t     cachedystep[MAXVIDHEIGHT];
+extern fixed_t     basexscale;
+extern fixed_t     baseyscale;
+
+static void prepare_rastertab()
+{
+  for (int i=0; i<vid.height; i++)
+    {
+      rastertab[i].minx = MAXINT;
+      rastertab[i].maxx = MININT;
+    }
+}
+
 
 // --------------------------------------------------------------------------
 // Return a pointer to a splat free for use, or NULL if no more splats are
 // available
 // --------------------------------------------------------------------------
-static floorsplat_t* R_AllocFloorSplat (void)
+static floorsplat_t* R_AllocFloorSplat()
 {
     floorsplat_t* splat;
     floorsplat_t* p_splat;
@@ -362,7 +317,7 @@ void R_AddFloorSplat (subsector_t* subsec, char* picname, fixed_t x, fixed_t y, 
 // --------------------------------------------------------------------------
 static floorsplat_t*   visfloorsplats;
 
-void R_ClearVisibleFloorSplats (void)
+void R_ClearVisibleFloorSplats()
 {
     visfloorsplats = NULL;
 }
@@ -614,7 +569,7 @@ static void R_RenderFloorSplat (floorsplat_t* pSplat, vertex_t* verts, byte* pTe
 // R_DrawFloorSplats
 // draw the flat floor/ceiling splats
 // --------------------------------------------------------------------------
-void R_DrawVisibleFloorSplats (void)
+void R_DrawVisibleFloorSplats()
 {
     floorsplat_t* pSplat;
     int           iCount = 0;
@@ -682,16 +637,26 @@ skipit:
     CONS_Printf ("%d floor splats in view\n", iCount);
 }
 
-
-static void prepare_rastertab (void)
-{
-    int iLine;
-    for (iLine=0; iLine<vid.height; iLine++)
-    {
-         rastertab[iLine].minx = MAXINT;
-         rastertab[iLine].maxx = MININT;
-    }
-}
-
-
 #endif // FLOORSPLATS
+
+
+
+
+//--------------------------------------------------------------------------
+// setup splat cache
+//--------------------------------------------------------------------------
+
+void R_ClearLevelSplats()
+{
+  freewallsplat = 0;
+  memset(wallsplats, 0, sizeof(wallsplats));
+
+#ifdef FLOORSPLATS
+  freefloorsplat = 0;
+  memset(floorsplats, 0, sizeof(floorsplats));
+
+  //setup to draw floorsplats
+  prastertab = rastertab;
+  prepare_rastertab();
+#endif
+}

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/11/18 20:30:14  smite-meister
+// tnt, plutonia
+//
 // Revision 1.13  2004/11/09 20:38:52  smite-meister
 // added packing to I/O structs
 //
@@ -78,9 +81,6 @@
 // Revision 1.23  2001/04/30 17:19:24  stroggonmeth
 // HW fix and misc. changes
 //
-// Revision 1.22  2001/03/30 17:12:51  bpereira
-// no message
-//
 // Revision 1.21  2001/03/21 18:24:39  stroggonmeth
 // Misc changes and fixes. Code cleanup
 //
@@ -92,9 +92,6 @@
 //
 // Revision 1.19  2001/03/13 22:14:20  stroggonmeth
 // Long time no commit. 3D floors, FraggleScript, portals, ect.
-//
-// Revision 1.18  2001/02/28 17:50:55  bpereira
-// no message
 //
 // Revision 1.17  2001/01/25 22:15:44  bpereira
 // added heretic support
@@ -111,35 +108,14 @@
 // Revision 1.13  2000/10/07 20:36:13  crashrl
 // Added deathmatch team-start-sectors via sector/line-tag and linedef-type 1000-1031
 //
-// Revision 1.12  2000/10/04 16:19:24  hurdler
-// Change all those "3dfx names" to more appropriate names
-//
-// Revision 1.11  2000/07/01 09:23:49  bpereira
-// no message
-//
-// Revision 1.10  2000/04/18 17:39:39  stroggonmeth
-// Bug fixes and performance tuning.
-//
-// Revision 1.9  2000/04/18 12:55:39  hurdler
-// join with Boris' code
-//
-// Revision 1.7  2000/04/15 22:12:58  stroggonmeth
-// Minor bug fixes
-//
 // Revision 1.6  2000/04/12 16:01:59  hurdler
 // ready for T&L code and true static lighting
-//
-// Revision 1.5  2000/04/11 19:07:25  stroggonmeth
-// Finished my logs, fixed a crashing bug.
 //
 // Revision 1.4  2000/04/06 20:47:08  hurdler
 // add Boris' changes for coronas in doom3.wad
 //
 // Revision 1.3  2000/04/04 00:32:47  stroggonmeth
 // Initial Boom compatability plus few misc changes all around.
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
 //
 // Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
 // Initial import into CVS (v1.29 pr3)
@@ -157,7 +133,7 @@
 #include "m_bbox.h"
 
 
-/// Your plain vanilla vertex.
+/// \brief Your plain vanilla vertex
 struct vertex_t
 {
   fixed_t  x, y;
@@ -249,7 +225,7 @@ enum floortype_t
   FLOOR_SLUDGE
 };
 
-/// The runtime sector struct.
+/// \brief Runtime map sector
 struct sector_t
 {
   fixed_t  floorheight, ceilingheight;
@@ -336,7 +312,7 @@ struct sector_t
 
 
 
-/// SideDef.
+/// \brief SideDef
 struct side_t
 {
   // add this to the calculated texture column
@@ -441,16 +417,14 @@ enum line_flags_e
 #define GET_SPAC(flags) (((flags) & ML_SPAC_MASK) >> ML_SPAC_SHIFT)
 
 
-/// LineDef.
+/// \brief LineDef
 struct line_t
 {
-  // Vertices, from v1 to v2.
-  vertex_t*   v1;
-  vertex_t*   v2;
+  /// Vertices, from v1 to v2.
+  vertex_t *v1, *v2;
 
   // Precalculated v2 - v1 for side checking.
-  fixed_t     dx;
-  fixed_t     dy;
+  fixed_t   dx, dy;
 
   short       flags;
   short       special;
@@ -480,7 +454,7 @@ struct line_t
   Thinker  *thinker;
 
   // wallsplat_t list
-  void*       splats;
+  struct wallsplat_t *splats;
 
   int transmap;          // translucency filter, -1 == none
 
@@ -491,7 +465,7 @@ struct line_t
 
 
 
-/// \brief SubSector.
+/// \brief SubSector
 ///
 /// References a Sector.
 /// Basically, this is a list of LineSegs,
@@ -510,7 +484,7 @@ struct subsector_t
 };
 
 
-/// Sector list node showing all sectors an object appears in.
+/// \brief Sector list node, showing all sectors an object appears in.
 ///
 /// There are two threads that flow through these nodes. The first thread
 /// starts at touching_thinglist in a sector_t and flows through the m_snext
@@ -536,26 +510,21 @@ struct msecnode_t
 
 
 
-/// LineSeg.
+/// \brief LineSeg
 struct seg_t
 {
-  vertex_t*   v1;
-  vertex_t*   v2;
-
-  int         side;
-
-  fixed_t     offset;
-
-  angle_t     angle;
-
-  side_t*     sidedef;
-  line_t*     linedef;
+  vertex_t *v1, *v2;
+  int       side;
+  fixed_t   offset;
+  angle_t   angle;
+  side_t   *sidedef;
+  line_t   *linedef;
 
   // Sector references.
   // Could be retrieved from linedef, too.
   // backsector is NULL for one sided lines
-  sector_t*   frontsector;
-  sector_t*   backsector;
+  sector_t *frontsector;
+  sector_t *backsector;
 
   // lenght of the seg : used by the hardware renderer
   //float       length;
@@ -570,7 +539,7 @@ struct seg_t
 
 
 
-/// BSP node
+/// \brief BSP node
 struct node_t
 {
   /// Partition line.
@@ -587,10 +556,10 @@ struct node_t
 
 
 
-/// Legacy runtime mapthing
+/// \brief Runtime mapthing
 struct mapthing_t
 {
-  short tid;
+  short tid;      ///< Thing ID (from Hexen)
   short x, y, z;
   short angle;
   short type;
@@ -600,6 +569,7 @@ struct mapthing_t
 
   class Actor *mobj;
 };
+
 
 /// mapthing_t flags
 enum mapthing_flags_e

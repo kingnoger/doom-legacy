@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.50  2004/11/18 20:30:11  smite-meister
+// tnt, plutonia
+//
 // Revision 1.49  2004/11/09 20:38:50  smite-meister
 // added packing to I/O structs
 //
@@ -1137,10 +1140,10 @@ bool Map::Setup(tic_t start, bool spawnthings)
   // FIXME client stuff, move elsewhere!
   // Make sure all sounds are stopped before Z_FreeTags.
   S.Stop3DSounds();
-#ifdef WALLSPLATS
+
   // clear the splats from previous map
   R_ClearLevelSplats();
-#endif
+
   // textures are needed first
   //    R_LoadTextures ();
   //    R_FlushTextureCache();

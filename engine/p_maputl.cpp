@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2004/11/18 20:30:11  smite-meister
+// tnt, plutonia
+//
 // Revision 1.14  2004/11/13 22:38:43  smite-meister
 // intermission works
 //
@@ -275,24 +278,20 @@ fixed_t P_InterceptVector(divline_t *v2, divline_t *v1)
 
 
 
-// Sets opentop and openbottom to the window
-// through a two sided line.
+// Sets Open to the window through a two sided line.
 // OPTIMIZE: keep this precalculated
 
-fixed_t opentop;
-fixed_t openbottom;
-fixed_t openrange;
-fixed_t lowfloor;
+static line_opening_t Opening;
 
-void P_LineOpening(line_t *linedef)
+line_opening_t *P_LineOpening(line_t *linedef)
 {
   extern Actor *tmthing;
 
   if (linedef->sidenum[1] == -1)
     {
       // single sided line
-      openrange = 0;
-      return;
+      Opening.range = 0;
+      return &Opening;
     }
 
   sector_t *front = linedef->frontsector;
@@ -305,19 +304,19 @@ void P_LineOpening(line_t *linedef)
 #endif
 
   if (front->ceilingheight < back->ceilingheight)
-    opentop = front->ceilingheight;
+    Opening.top = front->ceilingheight;
   else
-    opentop = back->ceilingheight;
+    Opening.top = back->ceilingheight;
 
   if (front->floorheight > back->floorheight)
     {
-      openbottom = front->floorheight;
-      lowfloor = back->floorheight;
+      Opening.bottom = front->floorheight;
+      Opening.lowfloor = back->floorheight;
     }
   else
     {
-      openbottom = back->floorheight;
-      lowfloor = front->floorheight;
+      Opening.bottom = back->floorheight;
+      Opening.lowfloor = front->floorheight;
     }
 
   if (tmthing && (front->ffloors || back->ffloors))
@@ -327,9 +326,9 @@ void P_LineOpening(line_t *linedef)
       fixed_t thingbot = tmthing->z;
       fixed_t thingtop = thingbot + tmthing->height;
 
-      fixed_t lowestceiling = opentop;
-      fixed_t highestfloor = openbottom;
-      fixed_t highest_lowfloor = lowfloor;
+      fixed_t lowestceiling = Opening.top;
+      fixed_t highestfloor = Opening.bottom;
+      fixed_t highest_lowfloor = Opening.lowfloor;
       fixed_t delta1, delta2;
 
       // Check for frontsector's fake floors
@@ -380,17 +379,19 @@ void P_LineOpening(line_t *linedef)
 	      }
 	  }
 
-      if (lowestceiling < opentop)
-	opentop = lowestceiling;
+      if (lowestceiling < Opening.top)
+	Opening.top = lowestceiling;
 
-      if (highestfloor > openbottom)
-	openbottom = highestfloor;
+      if (highestfloor > Opening.bottom)
+	Opening.bottom = highestfloor;
 
-      if (highest_lowfloor > lowfloor)
-	lowfloor = highest_lowfloor;
+      if (highest_lowfloor > Opening.lowfloor)
+	Opening.lowfloor = highest_lowfloor;
     }
 
-  openrange = opentop - openbottom;
+  Opening.range = Opening.top - Opening.bottom;
+
+  return &Opening;
 }
 
 

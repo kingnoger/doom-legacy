@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.26  2004/11/18 20:30:13  smite-meister
+// tnt, plutonia
+//
 // Revision 1.25  2004/11/13 22:38:43  smite-meister
 // intermission works
 //
@@ -144,7 +147,7 @@ CV_PossibleValue_t crosshair_cons_t[]   ={{0,"Off"},{1,"Cross"},{2,"Angle"},{3,"
 consvar_t cv_crosshair        = {"crosshair"   ,"0",CV_SAVE,crosshair_cons_t};
 consvar_t cv_crosshair2       = {"crosshair2"  ,"0",CV_SAVE,crosshair_cons_t};
 consvar_t cv_stbaroverlay     = {"hud_overlay", "kahmf", CV_SAVE|CV_CALL, NULL, ST_Overlay_OnChange};
-CV_PossibleValue_t showmessages_cons_t[]={{0,"Off"},{1,"On"},{2,"Not All"},{0,NULL}};
+CV_PossibleValue_t showmessages_cons_t[]={{0,"Off"},{1,"Important"},{2,"All"},{0,NULL}};
 consvar_t cv_showmessages     = {"showmessages","1",CV_SAVE | CV_CALL | CV_NOINIT,showmessages_cons_t,ShowMessage_OnChange};
 consvar_t cv_showmessages2    = {"showmessages2","1",CV_SAVE | CV_CALL | CV_NOINIT,showmessages_cons_t,ShowMessage_OnChange};
 consvar_t *chat_macros[10];

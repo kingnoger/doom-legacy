@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2004/11/18 20:30:10  smite-meister
+// tnt, plutonia
+//
 // Revision 1.14  2004/11/09 20:38:50  smite-meister
 // added packing to I/O structs
 //
@@ -1339,7 +1342,7 @@ void A_HScream(DActor *actor)
 //
 //---------------------------------------------------------------------------
 
-void P_DropItem(Actor *source, mobjtype_t type, int special, int chance, bool onfloor = false)
+void P_DropItem(Actor *source, mobjtype_t type, int amount, int chance, bool onfloor = false)
 {
   if (P_Random() > chance)
     return;
@@ -1359,7 +1362,7 @@ void P_DropItem(Actor *source, mobjtype_t type, int special, int chance, bool on
     }
 
   mo->flags |= MF_DROPPED;
-  mo->health = special;
+  mo->health = amount;
 }
 
 //----------------------------------------------------------------------------
@@ -1410,13 +1413,13 @@ void A_NoBlocking(DActor *actor)
       // Doom
     case MT_WOLFSS:
     case MT_POSSESSED:
-      P_DropItem(actor, MT_CLIP, 1, 255, true);
+      P_DropItem(actor, MT_CLIP, mobjinfo[MT_CLIP].spawnhealth/2, 255, true); // half a clip
       break;
     case MT_SHOTGUY:
-      P_DropItem(actor, MT_SHOTGUN, 1, 255, true);
+      P_DropItem(actor, MT_SHOTGUN, mobjinfo[MT_SHOTGUN].spawnhealth/2, 255, true);
       break;
     case MT_CHAINGUY:
-      P_DropItem(actor, MT_CHAINGUN, 1, 255, true);
+      P_DropItem(actor, MT_CHAINGUN, mobjinfo[MT_CHAINGUN].spawnhealth/2, 255, true);
       break;
 
     default:

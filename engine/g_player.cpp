@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.30  2004/11/18 20:30:07  smite-meister
+// tnt, plutonia
+//
 // Revision 1.29  2004/11/13 22:38:42  smite-meister
 // intermission works
 //
@@ -249,8 +252,8 @@ void PlayerInfo::unpackUpdate(GhostConnection *connection, BitStream *stream)
 // send a message to the player
 void PlayerInfo::SetMessage(const char *msg, int priority, int type)
 {
-  if (priority < messagefilter)
-    return;  // not interested
+  if (priority > messagefilter)
+    return;  // not interested (lesser is more important!)
 
   if (connection)
     connection->rpcMessage_s2c(number, msg, priority, type); // send it over network (usually server does this)

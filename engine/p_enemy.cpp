@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.27  2004/11/18 20:30:09  smite-meister
+// tnt, plutonia
+//
 // Revision 1.26  2004/11/13 22:38:42  smite-meister
 // intermission works
 //
@@ -338,9 +341,9 @@ static void P_RecursiveSound(const Map *m, sector_t *sec, int soundblocks)
       if (!(check->flags & ML_TWOSIDED))
 	continue;
 
-      P_LineOpening(check);
+      line_opening_t *open = P_LineOpening(check);
 
-      if (openrange <= 0)
+      if (open->range <= 0)
 	continue;   // closed door
 
       sector_t *other;
@@ -1878,7 +1881,7 @@ void A_Explode(DActor *actor)
       damageSelf = false;
       break;
     case MT_POISONCLOUD:
-      damage = 4;
+      damage = 4 | dt_poison;
       distance = 40;
       break;
     case MT_ZXMAS_TREE:

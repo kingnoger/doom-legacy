@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.31  2004/11/18 20:30:10  smite-meister
+// tnt, plutonia
+//
 // Revision 1.30  2004/11/13 22:38:43  smite-meister
 // intermission works
 //
@@ -126,10 +129,6 @@ fixed_t  tmceilingz;
 fixed_t  tmdropoffz;
 int      tmfloorpic;
 
-// keep track of special lines as they are hit,
-// but don't process them until the move is proven valid
-vector<line_t *> spechit;
-
 Actor *tmfloorthing;   // the thing corresponding to tmfloorz
                                 // or NULL if tmfloorz is from a sector
 
@@ -137,19 +136,22 @@ Actor *tmfloorthing;   // the thing corresponding to tmfloorz
 fixed_t  tmsectorfloorz;
 fixed_t  tmsectorceilingz;
 
-// keep track of the line that lowers the ceiling,
-// so missiles don't explode against sky hack walls
+//=======================================================
+//   Stuff set by PIT_CheckLine() and PIT_CheckThing
+//=======================================================
+vector<line_t *>  spechit;
+position_check_t Blocking; // thing or line that blocked the position (NULL if not blocked)
+
+// keep track of the line that lowers the ceiling, so missiles don't explode against sky hack walls
 line_t *ceilingline;
 
-// set by PIT_CheckLine() for any line that stopped the PIT_CheckLine()
-// that is, for any line which is 'solid'
-line_t *blockingline;
 
-Actor *BlockingMobj; //thing that blocked position (NULL if not blocked, or blocked by a line)
+
 
 static msecnode_t *sector_list = NULL;
 msecnode_t *P_AddSecnode(sector_t *s, Actor *thing, msecnode_t *nextnode);
 msecnode_t *P_DelSecnode(msecnode_t *node);
+
 
 bbox_t tmb; // a bounding box
 
@@ -226,7 +228,6 @@ bool Actor::TeleportMove(fixed_t nx, fixed_t ny)
   tmb.Set(nx, ny, radius);
 
   subsector_t *newsubsec = mp->R_PointInSubsector(nx,ny);
-  ceilingline = NULL;
 
   // FIXME do a checkposition first
 
@@ -505,7 +506,7 @@ static bool PIT_CheckThing(Actor *thing)
       // didn't hit it
       return true;
     }
-  BlockingMobj = thing;
+  Blocking.thing = thing;
 
   // heretic stuffs
   if ((tmthing->flags2 & MF2_PASSMOBJ) && !(thing->flags & MF_SPECIAL))
@@ -587,7 +588,7 @@ static bool PIT_CheckLine(line_t *ld)
 
   // 10-12-99 BP: moved this line to out of the if so upper and 
   //              lower texture can be hit by a splat
-  blockingline = ld;
+  Blocking.line = ld;
 
   bool stopped = false;
   bool push = true;
@@ -623,21 +624,20 @@ static bool PIT_CheckLine(line_t *ld)
       return false;
     }
 
-  // set openrange, opentop, openbottom
-  P_LineOpening(ld);
+  line_opening_t *open = P_LineOpening(ld);
 
   // adjust floor / ceiling heights
-  if (opentop < tmceilingz)
+  if (open->top < tmceilingz)
     {
-      tmsectorceilingz = tmceilingz = opentop;
+      tmsectorceilingz = tmceilingz = open->top;
       ceilingline = ld;
     }
 
-  if (openbottom > tmfloorz)
-    tmsectorfloorz = tmfloorz = openbottom;
+  if (open->bottom > tmfloorz)
+    tmsectorfloorz = tmfloorz = open->bottom;
 
-  if (lowfloor < tmdropoffz)
-    tmdropoffz = lowfloor;
+  if (open->lowfloor < tmdropoffz)
+    tmdropoffz = open->lowfloor;
 
   // if contacted a special line, add it to the list
   if (ld->special)
@@ -939,27 +939,19 @@ static bool PTR_SlideTraverse(intercept_t *in)
 	  // don't hit the back side
 	  return true;
         }
-      goto isblocking;
     }
+  else
+    {
+      line_opening_t *open = P_LineOpening(li);
 
-  // set openrange, opentop, openbottom
-  P_LineOpening (li);
-
-  if (openrange < slidemo->height)
-    goto isblocking;                // doesn't fit
-
-  if (opentop - slidemo->z < slidemo->height)
-    goto isblocking;                // mobj is too high
-
-  if (openbottom - slidemo->z > 24*FRACUNIT)
-    goto isblocking;                // too big a step up
-
-  // this line doesn't block movement
-  return true;
+      if (!(open->range < slidemo->height ||
+	    open->top - slidemo->z < slidemo->height || 
+	    open->bottom - slidemo->z > 24*FRACUNIT))
+	return true; // this line doesn't block movement
+    }
 
   // the line does block movement,
   // see if it is closer than best so far
- isblocking:
 
   if (in->frac < bestslidefrac)
     {
@@ -1165,23 +1157,23 @@ static bool PTR_AimTraverse(intercept_t *in)
       // A two sided line will restrict
       // the possible target ranges.
       tmthing = NULL;
-      P_LineOpening (li);
+      line_opening_t *open = P_LineOpening(li);
 
-      if (openbottom >= opentop)
+      if (open->range <= 0)
 	return false;               // stop
 
       dist = FixedMul (attackrange, in->frac);
 
       if (li->frontsector->floorheight != li->backsector->floorheight)
         {
-	  slope = FixedDiv (openbottom - shootz , dist);
+	  slope = FixedDiv (open->bottom - shootz , dist);
 	  if (slope > bottomslope)
 	    bottomslope = slope;
         }
 
       if (li->frontsector->ceilingheight != li->backsector->ceilingheight)
         {
-	  slope = FixedDiv (opentop - shootz , dist);
+	  slope = FixedDiv (open->top - shootz , dist);
 	  if (slope < topslope)
 	    topslope = slope;
         }
@@ -1342,34 +1334,33 @@ static bool PTR_ShootTraverse(intercept_t *in)
 	goto hitline;
 
       // crosses a two sided line
-      //added:16-02-98: Fab comments : sets opentop, openbottom, openrange
-      //                lowfloor is the height of the lowest floor
-      //                         (be it front or back)
-      tmthing = NULL;
-      P_LineOpening (li);
+      {
+	tmthing = NULL;
+	line_opening_t *open = P_LineOpening(li);
 
-      dist = FixedMul (attackrange, in->frac);
+	dist = FixedMul (attackrange, in->frac);
 
-      // hit lower texture ?
-      if (li->frontsector->floorheight != li->backsector->floorheight)
-        {
-	  //added:18-02-98: comments :
-	  // find the slope aiming on the border between the two floors
-	  slope = FixedDiv (openbottom - shootz , dist);
-	  if (slope > aimslope)
-	    goto hitline;
-        }
+	// hit lower texture ?
+	if (li->frontsector->floorheight != li->backsector->floorheight)
+	  {
+	    //added:18-02-98: comments :
+	    // find the slope aiming on the border between the two floors
+	    slope = FixedDiv (open->bottom - shootz , dist);
+	    if (slope > aimslope)
+	      goto hitline;
+	  }
 
-      // hit upper texture ?
-      if (li->frontsector->ceilingheight != li->backsector->ceilingheight)
-        {
-	  //added:18-02-98: remember : diff ceil heights
-	  diffheights = true;
+	// hit upper texture ?
+	if (li->frontsector->ceilingheight != li->backsector->ceilingheight)
+	  {
+	    //added:18-02-98: remember : diff ceil heights
+	    diffheights = true;
 
-	  slope = FixedDiv (opentop - shootz , dist);
-	  if (slope < aimslope)
-	    goto hitline;
-        }
+	    slope = FixedDiv (open->top - shootz , dist);
+	    if (slope < aimslope)
+	      goto hitline;
+	  }
+      }
 
       if (li->frontsector->ffloors || li->backsector->ffloors)
         {
@@ -1485,19 +1476,17 @@ static bool PTR_ShootTraverse(intercept_t *in)
 		z = floorz;
             }
         }
-      //SPLAT TEST ----------------------------------------------------------
-#ifdef WALLSPLATS
+
+      // make a wall splat
       if (!hitplane)
         {
 	  divline_t   divl;
 	  fixed_t     frac;
 
-	  P_MakeDivline (li, &divl);
-	  frac = P_InterceptVector (&divl, &trace);
-	  R.R_AddWallSplat (li, sectorside, "A_DMG1", z, frac, SPLATDRAWMODE_SHADE);
+	  P_MakeDivline(li, &divl);
+	  frac = P_InterceptVector(&divl, &trace);
+	  m->R_AddWallSplat(li, sectorside, "A_DMG1", z, frac, SPLATDRAWMODE_SHADE);
         }
-#endif
-      // --------------------------------------------------------- SPLAT TEST
 
 
       x = trace.x + FixedMul (trace.dx, frac);
@@ -1747,9 +1736,9 @@ static bool PTR_UseTraverse(intercept_t *in)
   CONS_Printf("Line: s = %d, tag = %d\n", line->special, line->tag);
   if (!line->special)
     {
-      P_LineOpening(line);
+      line_opening_t *open = P_LineOpening(line);
       // TEST: use through a hole only if you can reach it
-      if (openrange <= 0 || opentop < usething->z || openbottom > usething->z + usething->height)
+      if (open->range <= 0 || open->top < usething->z || open->bottom > usething->z + usething->height)
         {
 	  S_StartSound(usething, sfx_usefail);
 
@@ -1818,8 +1807,8 @@ static bool PTR_PuzzleItemTraverse(intercept_t *in)
       line_t *line = in->line;
       if (line->special != USE_PUZZLE_ITEM_SPECIAL)
 	{
-	  P_LineOpening(line);
-	  if (openrange <= 0)
+	  line_opening_t *open = P_LineOpening(line);
+	  if (open->range <= 0)
 	    {
 	      int sound;
 	      switch (PuzzleItemUser->pclass)
@@ -2367,8 +2356,7 @@ Actor *Actor::CheckOnmobj()
   
   tmb.Set(x, y, tmthing->radius);
 
-  newsubsec = mp->R_PointInSubsector (x, y);
-  ceilingline = NULL;
+  newsubsec = mp->R_PointInSubsector(x, y);
     
   //
   // the base floor / ceiling is from the subsector that contains the
@@ -2453,7 +2441,6 @@ bool Actor::CheckPosition(fixed_t nx, fixed_t ny)
   tmb.Set(nx, ny, radius);
 
   subsector_t *newsubsec = mp->R_PointInSubsector(nx,ny);
-  ceilingline = blockingline = NULL;
 
   // The base floor / ceiling is from the subsector
   // that contains the point.
@@ -2463,14 +2450,12 @@ bool Actor::CheckPosition(fixed_t nx, fixed_t ny)
   tmceilingz = tmsectorceilingz = newsubsec->sector->ceilingheight;
   tmfloorpic = newsubsec->sector->floorpic;
 
-  //SoM: 3/23/2000: Check list of fake floors and see if
-  //tmfloorz/tmceilingz need to be altered.
+  // Check list of fake floors and see if tmfloorz/tmceilingz need to be altered.
   if (newsubsec->sector->ffloors)
     {
-      ffloor_t *rover;
-      int        thingtop = z + height;
+      int thingtop = z + height;
 
-      for(rover = newsubsec->sector->ffloors; rover; rover = rover->next)
+      for (ffloor_t *rover = newsubsec->sector->ffloors; rover; rover = rover->next)
 	{
 	  if (!(rover->flags & FF_SOLID) || !(rover->flags & FF_EXISTS))
 	    continue;
@@ -2488,6 +2473,8 @@ bool Actor::CheckPosition(fixed_t nx, fixed_t ny)
 
   validcount++;
   spechit.clear();
+  ceilingline = Blocking.line = NULL;
+  Blocking.thing = NULL;
 
   // Check things first, possibly picking things up.
   // The bounding box is extended by MAXRADIUS
@@ -2507,7 +2494,6 @@ bool Actor::CheckPosition(fixed_t nx, fixed_t ny)
       yl = (tmb[BOXBOTTOM] - bmoy - MAXRADIUS)>>MAPBLOCKSHIFT;
       yh = (tmb[BOXTOP] - bmoy + MAXRADIUS)>>MAPBLOCKSHIFT;
 
-      BlockingMobj = NULL;        
       for (bx=xl ; bx<=xh ; bx++)
 	for (by=yl ; by<=yh ; by++)
 	  if (!mp->BlockThingsIterator(bx,by,PIT_CheckThing))
@@ -2517,8 +2503,6 @@ bool Actor::CheckPosition(fixed_t nx, fixed_t ny)
   if (!(flags & MF_NOCLIPLINE))
     {
       // check lines
-      BlockingMobj = NULL;
-
       xl = (tmb[BOXLEFT] - bmox)>>MAPBLOCKSHIFT;
       xh = (tmb[BOXRIGHT] - bmox)>>MAPBLOCKSHIFT;
       yl = (tmb[BOXBOTTOM] - bmoy)>>MAPBLOCKSHIFT;

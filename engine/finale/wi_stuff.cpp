@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2004/11/18 20:30:12  smite-meister
+// tnt, plutonia
+//
 // Revision 1.21  2004/11/13 22:38:43  smite-meister
 // intermission works
 //
@@ -1423,12 +1426,11 @@ void Intermission::Drawer()
       if (count <= 0)  // all removed no draw !!!
         return;
 
-      if (episode > 0)
+      if (episode >= 1 && episode <= 3)
         DrawYAH();
 
       // draws which level you are entering..
-      if (game.mode != gm_doom2 || next != 30) // stupid...
-        WI_drawEL(nextlevelname);
+      WI_drawEL(nextlevelname);
       break;
 
     default:

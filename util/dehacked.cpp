@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/11/18 20:30:14  smite-meister
+// tnt, plutonia
+//
 // Revision 1.11  2004/09/24 11:34:00  smite-meister
 // fix
 //
@@ -687,8 +690,14 @@ Per ammo = 40
 */
 static void Read_Ammo(Parser &p, int num)
 {
-  char *word;
-  int value;
+  // support only Doom ammo with this command
+  const mobjtype_t clips[4][4] =
+  {
+    {MT_CLIP, MT_SHELL, MT_CELL, MT_ROCKETAMMO},
+    {MT_AMMOBOX, MT_SHELLBOX, MT_CELLPACK, MT_ROCKETBOX},
+    {MT_CHAINGUN, MT_SHOTGUN, MT_PLASMA, MT_ROCKETLAUNCH},
+    {MT_NONE, MT_SUPERSHOTGUN, MT_BFG, MT_NONE}
+  };
 
   while (p.NewLine(false))
     {
@@ -696,18 +705,22 @@ static void Read_Ammo(Parser &p, int num)
       if (!p.LineLen())
 	break; // a whitespace-only line ends the record
 
-      value = SearchValue(p);
-      word = p.GetToken(" ");
+      int value = SearchValue(p);
+      char *word = p.GetToken(" ");
 
       if (!strcasecmp(word,"Max"))
 	maxammo1[num] = value;
       else if (!strcasecmp(word,"Per"))
 	{
-	  clipammo[num] = value;
-	  weapondata[num].getammo = 2*value; // only works for Doom
+	  mobjinfo[clips[0][num]].spawnhealth = value;
+	  mobjinfo[clips[1][num]].spawnhealth = 5*value;
 	}
       else if (!strcasecmp(word,"Perweapon"))
-	weapondata[num].getammo = 2*value; 
+	{
+	  mobjinfo[clips[2][num]].spawnhealth = value;
+	  if (clips[3][num] > 0)
+	    mobjinfo[clips[3][num]].spawnhealth = value;
+	}
       else
 	DEH.error("Ammo %d : unknown word '%s'\n", num, word);
     }

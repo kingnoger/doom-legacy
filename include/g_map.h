@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.39  2004/11/18 20:30:14  smite-meister
+// tnt, plutonia
+//
 // Revision 1.38  2004/10/17 02:01:39  smite-meister
 // bots!
 //
@@ -538,6 +541,10 @@ public:
   void FS_AddRunningScript(runningscript_t *s);
 protected:
   bool FS_wait_finished(runningscript_t *script);
+
+public:
+  // TESTing
+  void R_AddWallSplat(line_t *line, int side, char *name, fixed_t top, fixed_t wallfrac, int flags);
 };
 
 

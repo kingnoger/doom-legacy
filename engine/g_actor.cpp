@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.37  2004/11/18 20:30:07  smite-meister
+// tnt, plutonia
+//
 // Revision 1.36  2004/11/09 20:38:50  smite-meister
 // added packing to I/O structs
 //
@@ -116,6 +119,7 @@
 #include "p_maputl.h"
 
 #include "r_sprite.h"
+#include "r_splats.h"
 #include "sounds.h"
 #include "s_sound.h"
 
@@ -465,7 +469,6 @@ float Actor::GetMoveFactor()
 // handles horizontal movement
 void Actor::XYMovement()
 {
-  extern line_t *ceilingline;
   extern int skyflatnum;
 
   if (px > MAXMOVE)
@@ -526,37 +529,25 @@ void Actor::XYMovement()
                     // Hack to prevent missiles exploding
                     // against the sky.
                     // Does not handle sky floors.
-                    //SoM: 4/3/2000: Check frontsector as well..
-		    /*
-		    if (type == MT_BLOODYSKULL)
-                      {
-			px = py = 0;
-			pz = -FRACUNIT;
-                      }
-		    else
-		    */
-		      Remove();
+		    Remove();
 		    return;
                   }
 
-#ifdef WALLSPLATS
 	      // draw damage on wall
-	      if (blockingline)   //set by last P_TryMove() that failed
+	      if (Blocking.line)  // set by last TryMove() that failed
                 {
 		  divline_t   divl;
 		  divline_t   misl;
-		  fixed_t     frac;
 
-		  P_MakeDivline (blockingline, &divl);
+		  P_MakeDivline(Blocking.line, &divl);
 		  misl.x = x;
 		  misl.y = y;
 		  misl.dx = px;
 		  misl.dy = py;
-		  frac = P_InterceptVector (&divl, &misl);
-		  R_AddWallSplat (blockingline, P_PointOnLineSide(x,y,blockingline)
-				  ,"A_DMG3", z, frac, SPLATDRAWMODE_SHADE);
+		  fixed_t frac = P_InterceptVector(&divl, &misl);
+		  mp->R_AddWallSplat(Blocking.line, P_PointOnLineSide(x, y, Blocking.line),
+				     "A_DMG3", z, frac, SPLATDRAWMODE_SHADE);
                 }
-#endif
 
 	      flags &= ~MF_MISSILE;
 	      //ExplodeMissile();

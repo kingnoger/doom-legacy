@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.25  2004/11/18 20:30:14  smite-meister
+// tnt, plutonia
+//
 // Revision 1.24  2004/11/13 22:38:59  smite-meister
 // intermission works
 //
@@ -230,7 +233,7 @@ public:
 
   bool GivePower(int power);
   bool GiveAmmo(ammotype_t at, int count);
-  bool GiveWeapon(weapontype_t wt, bool dropped);
+  bool GiveWeapon(weapontype_t wt, int ammocontent, bool dropped = false);
   bool GiveArmor(armortype_t type, float factor, int points);
   bool GiveKey(keycard_t k);
   bool GiveArtifact(artitype_t arti, DActor *from);

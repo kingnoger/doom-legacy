@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/11/18 20:30:14  smite-meister
+// tnt, plutonia
+//
 // Revision 1.12  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
 //
@@ -66,33 +69,6 @@
 #include "doomtype.h"
 #include "info.h"
 
-
-// heretic stuff
-#define AMMO_GWND_WIMPY 10
-#define AMMO_GWND_HEFTY 50
-#define AMMO_CBOW_WIMPY 5
-#define AMMO_CBOW_HEFTY 20
-#define AMMO_BLSR_WIMPY 10
-#define AMMO_BLSR_HEFTY 25
-#define AMMO_SKRD_WIMPY 20
-#define AMMO_SKRD_HEFTY 100
-#define AMMO_PHRD_WIMPY 1
-#define AMMO_PHRD_HEFTY 10
-#define AMMO_MACE_WIMPY 20
-#define AMMO_MACE_HEFTY 100
-
-#define USE_GWND_AMMO_1 1
-#define USE_GWND_AMMO_2 1
-#define USE_CBOW_AMMO_1 1
-#define USE_CBOW_AMMO_2 1
-#define USE_BLSR_AMMO_1 1
-#define USE_BLSR_AMMO_2 5
-#define USE_SKRD_AMMO_1 1
-#define USE_SKRD_AMMO_2 5
-#define USE_PHRD_AMMO_1 1
-#define USE_PHRD_AMMO_2 1
-#define USE_MACE_AMMO_1 1
-#define USE_MACE_AMMO_2 5
 
 /// Key types
 enum keycard_t
@@ -318,8 +294,12 @@ enum ammotype_t
   am_manaboth  // both mana types
 };
 
+/// Ammo limits for players
+extern int maxammo1[NUMAMMO]; ///< without backpack
+extern int maxammo2[NUMAMMO]; ///< with backpack
 
-/// "volatile" weapon info (tome of power etc...)
+
+/// "volatile" weapon info (changes with tome of power etc...)
 struct weaponinfo_t
 {
   ammotype_t ammo;
@@ -332,26 +312,17 @@ struct weaponinfo_t
   weaponstatenum_t flashstate;
 };
 
-
-/// "static" weapon info
-struct weapondata_t
-{
-  int group;   // in which group it resides
-  weapontype_t next; // next weapon in group
-  int getammo; // how much ammo does a discarded weapon contain?
-};
-
-
-extern weapondata_t weapondata[NUMWEAPONS];
-
 extern weaponinfo_t wpnlev1info[NUMWEAPONS];
 extern weaponinfo_t wpnlev2info[NUMWEAPONS];
 
-// LUT of ammunition limits for each kind.
-// This doubles with BackPack powerup item.
-extern int maxammo1[NUMAMMO];
-extern int maxammo2[NUMAMMO];
 
-extern int clipammo[NUMAMMO];
+/// Weapon grouping
+struct weapon_group_t
+{
+  int group;   // in which group it resides
+  weapontype_t next; // next weapon in group
+};
+
+extern weapon_group_t weapongroup[NUMWEAPONS];
 
 #endif
