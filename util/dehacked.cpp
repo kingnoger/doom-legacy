@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/09/24 11:34:00  smite-meister
+// fix
+//
 // Revision 1.10  2004/03/28 15:16:15  smite-meister
 // Texture cache.
 //
@@ -87,11 +90,10 @@
 // Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
 // Initial import into CVS (v1.29 pr3)
 //
-//
-// DESCRIPTION:
-//   DeHackEd and BEX support
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief DeHackEd and BEX support
 
 #include <stdarg.h>
 
@@ -759,7 +761,7 @@ void dehacked_t::Read_Misc(Parser &p)
 	  else if (!strcasecmp(word2,"Class"))      idkfa_armor_class = value;
 	}
       else if (!strcasecmp(word1,"BFG"))            wpnlev1info[wp_bfg].ammopershoot = value;
-      else if (!strcasecmp(word1,"Monsters"))      {} // i don't found where is implemented
+      else if (!strcasecmp(word1,"Monsters"))      {} // TODO
       else error("Misc : unknown command '%s'\n", word1);
     }
 }
@@ -1034,8 +1036,10 @@ bool dehacked_t::LoadDehackedLump(const char *buf, int len)
 	      Read_CODEPTR(p);
 	      break;
 	    case DEH_PARS:
+	      // TODO support PARS
 	      break;
 	    case DEH_STRINGS:
+	      // TODO support STRINGS
 	      break;
 	    default:
 	      error("Unknown command : %s\n", word1);

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2004/09/24 11:34:00  smite-meister
+// fix
+//
 // Revision 1.19  2004/09/20 22:42:49  jussip
 // Joystick axis binding works. New joystick code ready for use.
 //
@@ -120,14 +123,13 @@
 
 #include "screen.h"
 #include "g_game.h"
-#include "g_input.h"
 #include "keys.h"
 
 #include "sdl/endtxt.h"
 
 
 vector<SDL_Joystick*> joysticks;
-vector<joybinding> joybindings;
+
 
 #ifdef LMOUSE2
 static int fdmouse2 = -1;

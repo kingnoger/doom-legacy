@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2004/09/24 11:34:00  smite-meister
+// fix
+//
 // Revision 1.19  2004/09/23 23:21:18  smite-meister
 // HUD updated
 //
@@ -75,7 +78,7 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Heads Up Display.
+/// \brief Heads Up Display (everything that is rendered on the 3D view)
 
 #include "doomdef.h"
 #include "command.h"
@@ -108,7 +111,7 @@
 #include "d_main.h"
 
 #ifdef HWRENDER
-#include "hardware/hwr_render.h"
+# include "hardware/hwr_render.h"
 #endif
 
 
@@ -771,56 +774,50 @@ void HUD::DrawPics()
 //  startline  : y coord to start clear,
 //  clearlines : how many lines to clear.
 //
-static int     oldclearlines;
 
 void HUD::HU_Erase()
 {
+  static int oldclearlines;
   int y,yoffset;
-
-  //faB: clear hud msgs on double buffer (Glide mode)
-  static int secondframelines;
 
   if (con_clearlines==oldclearlines && !con_hudupdate && !chat_on)
     return;
 
   // clear the other frame in double-buffer modes
-  bool secondframe = (con_clearlines!=oldclearlines);
-  if (secondframe)
-    secondframelines = oldclearlines;
+  bool secondframe = (con_clearlines != oldclearlines);
 
-    // clear the message lines that go away, so use _oldclearlines_
-    int bottomline = oldclearlines;
-    oldclearlines = con_clearlines;
-    if( chat_on )
-        if( bottomline < 8 )
-            bottomline=8;
+  // clear the message lines that go away, so use _oldclearlines_
+  int bottomline = oldclearlines;
+  oldclearlines = con_clearlines;
+  if (chat_on && bottomline < 8)
+    bottomline = 8;
 
-    if (automap.active || viewwindowx==0)   // hud msgs don't need to be cleared
-        return;
+  if (automap.active || viewwindowx==0)   // hud msgs don't need to be cleared
+    return;
 
 #ifdef HWRENDER
-    if (rendermode!=render_soft)
+  if (rendermode!=render_soft)
     {
-        // refresh just what is needed from the view borders
-        HWR.DrawViewBorder();
-        con_hudupdate = secondframe;
+      // refresh just what is needed from the view borders
+      HWR.DrawViewBorder();
+      con_hudupdate = secondframe;
     }
-    else
+  else
 #endif
     { // software mode copies view border pattern & beveled edges from the backbuffer
-        int topline = 0;
-        for (y=topline,yoffset=y*vid.width; y<bottomline ; y++,yoffset+=vid.width)
+      int topline = 0;
+      for (y=topline,yoffset=y*vid.width; y<bottomline ; y++,yoffset+=vid.width)
         {
-            if (y < viewwindowy || y >= viewwindowy + viewheight)
-                R_VideoErase(yoffset, vid.width); // erase entire line
-            else
+	  if (y < viewwindowy || y >= viewwindowy + viewheight)
+	    R_VideoErase(yoffset, vid.width); // erase entire line
+	  else
             {
-                R_VideoErase(yoffset, viewwindowx); // erase left border
-                // erase right border
-                R_VideoErase(yoffset + viewwindowx + viewwidth, viewwindowx);
+	      R_VideoErase(yoffset, viewwindowx); // erase left border
+	      // erase right border
+	      R_VideoErase(yoffset + viewwindowx + viewwidth, viewwindowx);
             }
         }
-        con_hudupdate = false;      // if it was set..
+      con_hudupdate = false;      // if it was set..
     }
 }
 

@@ -17,8 +17,8 @@
 //
 //
 // $Log$
-// Revision 1.18  2004/09/23 23:21:19  smite-meister
-// HUD updated
+// Revision 1.19  2004/09/24 11:34:00  smite-meister
+// fix
 //
 // Revision 1.16  2004/08/12 18:30:33  smite-meister
 // cleaned startup
@@ -1205,18 +1205,14 @@ void CONS_Printf(char *fmt, ...)
   vsprintf (txt,fmt,argptr);
   va_end   (argptr);
 
-  // echo console prints to log file
-
   if (!con.graphic)
     {
       I_OutputMsg("%s", txt); // This function MUST be found in EVERY interface / platform in i_system.c
       return;
     }
-  else
-    {
-      I_OutputMsg("%s",txt); //  FIXME make copies of console messages to stdout for debugging
-      con.Print(txt); // write message in con text buffer
-    }
+
+  I_OutputMsg("%s",txt); //  FIXME make copies of console messages to stdout for debugging
+  con.Print(txt); // write message in con text buffer
 
   // make sure new text is visible
   con.con_scrollup = 0;

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/09/24 11:34:01  smite-meister
+// fix
+//
 // Revision 1.7  2004/09/23 23:21:20  smite-meister
 // HUD updated
 //
@@ -38,34 +41,38 @@
 // Revision 1.1  2004/05/01 23:29:19  hurdler
 // add dummy new renderer
 //
-//
-//
-// DESCRIPTION:
-//      new hardware renderer, using the standard HardWareRender driver DLL for Doom Legacy
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief New hardware renderer, using the standard HardWareRender
+/// driver DLL for Doom Legacy
+
+#include <string.h>
+#include <SDL/SDL.h>
+
 #include "doomdef.h"
+#include "doomdata.h"
 #include "command.h"
 #include "cvars.h"
+
+#include "g_map.h"
+#include "g_actor.h"
+
 #include "hardware/hwr_states.h"
 #include "hardware/hwr_geometry.h"
 #include "hardware/hwr_render.h"
 #include "hardware/hwr_bsp.h"
 #include "sdl/ogl_sdl.h"
-#include <string.h>
-#include <SDL/SDL.h>
-#include "tables.h"
 
+#include "tables.h"
 #include "m_bbox.h"
-#include "g_map.h"
-#include "doomdata.h"
+
 #include "r_bsp.h"
 #include "r_sprite.h"
-#include "g_actor.h"
 #include "r_data.h"
 #include "r_main.h"
 #include "r_draw.h"
+#include "v_video.h"
 
 void show_stackframe();
 

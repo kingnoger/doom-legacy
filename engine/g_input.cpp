@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2004/09/24 11:33:59  smite-meister
+// fix
+//
 // Revision 1.16  2004/09/23 23:21:16  smite-meister
 // HUD updated
 //
@@ -92,7 +95,7 @@
 #include<SDL/SDL.h>
 
 extern vector<SDL_Joystick*> joysticks;
-extern vector<joybinding_t> joybindings;
+vector<joybinding_t> joybindings;
 
 
 #define MAXMOUSESENSITIVITY 40 // sensitivity steps
@@ -456,8 +459,9 @@ struct dclick_t
   int state;
   int clicks;
 };
+
 static  dclick_t  mousedclicks[MOUSEBUTTONS];
-static  dclick_t  joydclicks[JOYBUTTONS];
+//static  dclick_t  joydclicks[JOYBUTTONS];
 
 //
 //  General double-click detection routine for any kind of input.
