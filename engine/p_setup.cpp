@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2003/06/08 16:19:21  smite-meister
+// Hexen lights.
+//
 // Revision 1.21  2003/06/01 18:56:30  smite-meister
 // zlib compression, partial polyobj fix
 //
@@ -685,10 +688,10 @@ void Map::LoadThings(int lump)
 	  // Ambient sound sequences
 	  if (ednum >= 1200 && ednum < 1210)
 	    {
-          if (SoundSeqs[ednum - 1200])
+	      if (SoundSeqs.find(ednum - 1200) != SoundSeqs.end())
 	        AmbientSeqs.push_back(SoundSeqs[ednum - 1200]);
-          else
-            printf("WARNING: SNDSEQ not corret\n");
+	      else
+		CONS_Printf("WARNING: Ambient sequence %d not defined!\n", ednum - 1200);
 	      continue;
 	    }
 

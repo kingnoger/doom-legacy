@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.17  2003/06/08 16:19:21  smite-meister
+// Hexen lights.
+//
 // Revision 1.16  2003/05/30 13:34:48  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -363,22 +366,21 @@ public:
   int EV_DoGenLockedDoor(line_t* line);
 
   // in p_lights.cpp
-  void SpawnFireFlicker(sector_t *sector);  
-  void SpawnLightFlash(sector_t *sector);
-  void SpawnStrobeFlash(sector_t *sector, int fastOrSlow, int inSync);
-  void SpawnGlowingLight(sector_t *sector);
-  void FadeLight(int tag, int destvalue, int speed);
-  int EV_StartLightStrobing(line_t *line);
-  int EV_TurnTagLightsOff(line_t* line);
-  int EV_LightTurnOn(line_t *line, int bright);
+  void SpawnPhasedLightSequence(sector_t *sec, int indexStep);
+  void SpawnStrobeLight(sector_t *sec, short brighttime, short darktime, bool inSync);
+  int  EV_StartLightStrobing(line_t *line);
+  int  EV_FadeLight(int tag, int destvalue, int speed);
+  int  EV_SpawnLight(int tag, int type, short maxl, short minl = 0, short maxt = 0, short mint = 0);
+  int  EV_TurnTagLightsOff(line_t* line);
+  int  EV_LightTurnOn(line_t *line, int bright);
 
   // in p_plats.cpp
   void AddActivePlat(plat_t* plat);
   void ActivateInStasisPlat(int tag);
   void RemoveActivePlat(plat_t* plat);
   void RemoveAllActivePlats();
-  int EV_DoPlat(line_t *line, int type, fixed_t speed, int wait, fixed_t height);
-  int EV_StopPlat(line_t* line);
+  int  EV_DoPlat(line_t *line, int type, fixed_t speed, int wait, fixed_t height);
+  int  EV_StopPlat(line_t* line);
 
   // in p_ceiling.cpp
   void AddActiveCeiling(ceiling_t* ceiling);

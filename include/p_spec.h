@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2003/06/08 16:19:21  smite-meister
+// Hexen lights.
+//
 // Revision 1.11  2003/05/30 13:34:49  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -136,17 +139,15 @@ enum sectorspecial_t
   // bits 10-15 are free
 
   // Hexen: TODO a real mess
-  /*
   SS_Light_Phased = 1,
-  SS_LightSequenceStart = 2,
-  SS_LightSequenceSpecial1 = 3,
-  SS_LightSequenceSpecial2 = 4,
+  SS_LightSequence_Start = 2,
+  SS_LightSequence_1 = 3,
+  SS_LightSequence_2 = 4,
   SS_Stairs_Special1 = 26,
   SS_Stairs_Special2 = 27,
   SS_Light_IndoorLightning1 = 198,
   SS_Light_IndoorLightning2 = 199,
-  SS_Sky2 = 200,
-  */
+  SS_Sky2 = 200
 };
 
 
@@ -229,77 +230,61 @@ enum
 //   Sector light effects
 //======================================
 
-class fireflicker_t : public Thinker
+class lightfx_t : public Thinker
 {
   friend class Map;
-  sector_t *sector;
-  int       count;
-  int       maxlight;
-  int       minlight;
+protected:
+  sector_t *sec;
+  short     type;
+  short     count;
+  short     maxlight, minlight;
+  union
+  {
+    short maxtime;
+    short rate; // 10.6 fixed point for smoother light changes
+  };
+  union
+  {
+    short mintime;
+    short currentlight; // 10.6 fixed point for smoother light changes
+  };
+
 public:
-  //  _t(plattype_e ty, sector_t *s, line_t *l);
+  enum lightfx_e
+  {
+    AbsChange,   // one-time absolute change
+    RelChange,   // one-time relative change
+    Fade,        // linear ramp to maxlight, rate is speed
+    Glow,        // sawtooth wave between min and max, rate is speed
+    Strobe,      // square wave, constant min and max times
+    Flicker,     // square wave, random min and max times
+    FireFlicker  // square wave with more randomness
+  };
+
+  lightfx_t(sector_t *sec, lightfx_e type, short maxlight, short minlight = 0, short maxtime = 0, short mintime = 0);
+  virtual int  Serialize(LArchive & a);
   virtual void Think();
 };
 
+// strobe light timings
+#define STROBEBRIGHT  5
+#define FASTDARK     15
+#define SLOWDARK     35
 
-class lightflash_t : public Thinker
+
+class phasedlight_t: public Thinker
 {
   friend class Map;
-  sector_t *sector;
-  int         count;
-  int         maxlight;
-  int         minlight;
-  int         maxtime;
-  int         mintime;
+protected:
+  sector_t *sec;
+  short base;
+  short index;
+
 public:
-  //  _t(plattype_e ty, sector_t *s, line_t *l);
+  phasedlight_t(sector_t *sec, int base, int index);
+  virtual int  Serialize(LArchive & a);
   virtual void Think();
 };
-
-
-class strobe_t : public Thinker
-{
-  friend class Map;
-  sector_t *sector;
-  int         count;
-  int         minlight;
-  int         maxlight;
-  int         darktime;
-  int         brighttime;
-public:
-  //  _t(plattype_e ty, sector_t *s, line_t *l);
-  virtual void Think();
-};
-
-
-class glow_t : public Thinker
-{
-  friend class Map;
-  sector_t *sector;
-  int         minlight;
-  int         maxlight;
-  int         direction;
-public:
-  //  _t(plattype_e ty, sector_t *s, line_t *l);
-  virtual void Think();
-};
-
-
-class lightlevel_t : public Thinker
-{
-  friend class Map;
-  sector_t *sector;
-  int destlevel;
-  int speed;
-public:
-  //  _t(plattype_e ty, sector_t *s, line_t *l);
-  virtual void Think();
-};
-
-#define GLOWSPEED               8
-#define STROBEBRIGHT            5
-#define FASTDARK                15
-#define SLOWDARK                35
 
 
 //======================================
@@ -358,8 +343,8 @@ enum special_e
 };
 
 
-//SoM: 3/6/2000
-int P_SectorActive(special_e t, sector_t *s);
+bool P_SectorActive(special_e t, sector_t *s);
+
 
 enum change_e
 {

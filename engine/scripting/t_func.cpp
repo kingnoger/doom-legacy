@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.7  2003/06/08 16:19:21  smite-meister
+// Hexen lights.
+//
 // Revision 1.6  2003/05/30 13:34:47  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -1715,7 +1718,7 @@ void SF_FadeLight()
   destlevel = intvalue(t_argv[1]);
   speed = t_argc>2 ? intvalue(t_argv[2]) : 1;
 
-  current_map->FadeLight(sectag, destlevel, speed);
+  current_map->EV_FadeLight(sectag, destlevel, speed);
 }
 
 

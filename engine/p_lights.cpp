@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,234 +18,200 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:17:59  hurdler
-// Initial revision
+// Revision 1.2  2003/06/08 16:19:21  smite-meister
+// Hexen lights.
 //
-// Revision 1.6  2002/08/17 21:21:49  vberghol
-// Only scripting to be fixed in engine!
-//
-// Revision 1.5  2002/08/06 13:14:23  vberghol
-// ...
-//
-// Revision 1.4  2002/07/23 19:21:42  vberghol
-// fixed up to p_enemy.cpp
-//
-// Revision 1.3  2002/07/01 21:00:19  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:14  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.5  2000/11/02 17:50:07  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.4  2000/04/11 19:07:24  stroggonmeth
-// Finished my logs, fixed a crashing bug.
-//
-// Revision 1.3  2000/04/04 00:32:46  stroggonmeth
-// Initial Boom compatability plus few misc changes all around.
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
+// Revision 1.1.1.1  2002/11/16 14:17:59  hurdler
+// Initial C++ version of Doom Legacy
 //
 //
 // DESCRIPTION:
-//      Handle Sector base lighting effects.
-//      Muzzle flash?
+//      Handle sector based lighting effects.
 //
 //-----------------------------------------------------------------------------
 
 
 #include "doomdef.h"
 #include "p_spec.h"
-#include "r_state.h"
+#include "r_defs.h"
 #include "g_map.h"
-#include "z_zone.h"
 #include "m_random.h"
 
 
 // =========================================================================
-//                           FIRELIGHT FLICKER
+//                           Sector light effects
 // =========================================================================
 
-//
-// was T_FireFlicker
-//
-void fireflicker_t::Think()
-{
-  int amount;
 
-  if (--count)
+lightfx_t::lightfx_t(sector_t *s, lightfx_e t, short maxl, short minl, short maxt, short mint)
+{
+  sec = s;
+  type = t;
+  count = 0;
+  maxlight = maxl;
+  minlight = minl;
+  maxtime = maxt;
+  if (mint < 0)
+    currentlight = s->lightlevel << 6; // 10.6 fixed point
+  else
+    mintime = mint;
+
+  s->lightingdata = this;
+}
+
+
+int lightfx_t::Serialize(LArchive & a)
+{
+  return 0;
+}
+
+
+void lightfx_t::Think()
+{
+  int i;
+
+  if (count-- > 0)
     return;
 
-  amount = (P_Random()&3)*16;
-
-  if (sector->lightlevel - amount < minlight)
-    sector->lightlevel = minlight;
-  else
-    sector->lightlevel = maxlight - amount;
-
-  count = 4;
-}
-
-
-
-//
-// was P_SpawnFireFlicker
-//
-void Map::SpawnFireFlicker(sector_t *sector)
-{
-  fireflicker_t *flick;
-
-  // Note that we are resetting sector attributes.
-  // Nothing special about it during gameplay.
-  sector->special &= ~31; //SoM: Clear non-generalized sector type
-
-  flick = new fireflicker_t();
-  AddThinker(flick);
-
-  flick->sector = sector;
-  flick->maxlight = sector->lightlevel;
-  flick->minlight = P_FindMinSurroundingLight(sector, sector->lightlevel)+16;
-  flick->count = 4;
-}
-
-
-
-//
-// BROKEN LIGHT FLASHING
-//
-
-
-//
-// was T_LightFlash
-// Do flashing lights.
-//
-void lightflash_t::Think()
-{
-  if (--count)
-    return;
-
-  if (sector->lightlevel == maxlight)
+  switch (type)
     {
-       sector->lightlevel = minlight;
-      count = (P_Random()&mintime)+1;
-    }
-  else
-    {
-       sector->lightlevel = maxlight;
-      count = (P_Random()&maxtime)+1;
-    }
-}
+    case Fade:
+      {
+	// formerly "lightlevel", the only effect that ends by itself
+	bool finish = false;
+	currentlight += rate;
+	sec->lightlevel = currentlight >> 6;
 
+	if (rate >= 0)
+	  {
+	    if (sec->lightlevel >= maxlight)
+	      finish = true;
+	  }
+	else
+	  {
+	    if (sec->lightlevel <= maxlight)
+	      finish = true;
+	  }
 
-//
-// was P_SpawnLightFlash
-// After the map has been loaded, scan each sector
-// for specials that spawn thinkers
-//
-void Map::SpawnLightFlash(sector_t *sector)
-{
-  lightflash_t*       flash;
+	if (finish)
+	  {
+	    sec->lightlevel = maxlight;  // set to dest lightlevel
+	    sec->lightingdata = NULL;    // clear lightingdata
+	    mp->RemoveThinker(this);     // remove thinker       
+	  }
+      }
+      break;
 
-  // nothing special about it during gameplay
-  sector->special &= ~31; //SoM: 3/7/2000: Clear non-generalized type
+    case Glow:
+      currentlight += rate;
+      sec->lightlevel = currentlight >> 6;
+      if (rate > 0)
+	{
+	  if (sec->lightlevel > maxlight)
+	    {
+	      sec->lightlevel = 2*maxlight - sec->lightlevel;
+	      currentlight = sec->lightlevel << 6;
+	      rate = -rate; // reverse direction
+	    }
+	}
+      else
+	{
+	  if (sec->lightlevel < minlight)
+	    {
+	      sec->lightlevel = 2*minlight - sec->lightlevel;
+	      currentlight = sec->lightlevel << 6;
+	      rate = -rate; // reverse direction
+	    }
+	}
+      break;
 
-  flash = new lightflash_t();
-  AddThinker(flash);
+    case Strobe:
+      if (sec->lightlevel == maxlight)
+	{
+	  sec->lightlevel = minlight;
+	  count = mintime;
+	}
+      else
+	{
+	  sec->lightlevel = maxlight;
+	  count = maxtime;
+	}
+      break;
 
-  flash->sector = sector;
-  flash->maxlight = sector->lightlevel;
+    case Flicker:
+      // formerly "lightflash"
+      if (sec->lightlevel == maxlight)
+	{
+	  sec->lightlevel = minlight;
+	  count = (P_Random() % mintime) + 1;
+	}
+      else
+	{
+	  sec->lightlevel = maxlight;
+	  count = (P_Random() % maxtime) + 1;
+	}
+      break;
 
-  flash->minlight = P_FindMinSurroundingLight(sector,sector->lightlevel);
-  flash->maxtime = 64;
-  flash->mintime = 7;
-  flash->count = (P_Random()&flash->maxtime)+1;
-}
+    case FireFlicker:
+      i = (P_Random()&3) * 16;
+      if (maxlight - i < minlight)
+	sec->lightlevel = minlight;
+      else
+	sec->lightlevel = maxlight - i;
 
+      count = maxtime;
+      break;
 
-
-//
-// STROBE LIGHT FLASHING
-//
-
-
-//
-// was T_StrobeFlash
-//
-void strobe_t::Think()
-{
-  if (--count)
-    return;
-
-  if (sector->lightlevel == minlight)
-    {
-      sector->lightlevel = maxlight;
-      count = brighttime;
-    }
-  else
-    {
-      sector->lightlevel = minlight;
-      count =darktime;
+    default:
+      break;
     }
 }
+
 
 //
 // was P_SpawnStrobeFlash
-// After the map has been loaded, scan each sector
-// for specials that spawn thinkers
 //
-void Map::SpawnStrobeFlash(sector_t *sector, int fastOrSlow, int inSync)
+void Map::SpawnStrobeLight(sector_t *sec, short brighttime, short darktime, bool inSync)
 {
-  strobe_t*   flash;
+  short minlight = P_FindMinSurroundingLight(sec, sec->lightlevel);
+  short maxlight = sec->lightlevel;
+  if (minlight == maxlight)
+    minlight = 0;
 
-  flash = new strobe_t();
-  AddThinker (flash);
+  lightfx_t *lfx = new lightfx_t(sec, lightfx_t::Strobe, maxlight, minlight, brighttime, darktime);
 
-  flash->sector = sector;
-  flash->darktime = fastOrSlow;
-  flash->brighttime = STROBEBRIGHT;
-  flash->maxlight = sector->lightlevel;
-  flash->minlight = P_FindMinSurroundingLight(sector, sector->lightlevel);
-
-  if (flash->minlight == flash->maxlight)
-    flash->minlight = 0;
-  // nothing special about it during gameplay
-  sector->special &= ~31; //SoM: 3/7/2000: Clear non-generalized sector type
+  AddThinker(lfx);
 
   if (!inSync)
-    flash->count = (P_Random()&7)+1;
+    lfx->count = (P_Random() & 7) + 1;
   else
-    flash->count = 1;
+    lfx->count = 1;
 }
 
 
-// was EV_StartLightStrobing
+//
 // Start strobing lights (usually from a trigger)
 //
 int Map::EV_StartLightStrobing(line_t *line)
 {
-  int         secnum;
-  sector_t*   sec;
+  int rtn = 0;
 
-  secnum = -1;
-  while ((secnum = FindSectorFromLineTag(line,secnum)) >= 0)
+  for (int i = -1; (i = FindSectorFromLineTag(line,i)) >= 0; )
     {
-      sec = &sectors[secnum];
+      rtn++;
+      sector_t *sec = &sectors[i];
       if (P_SectorActive(lighting_special,sec)) //SoM: 3/7/2000: New way to check thinker
 	continue;
 
-      SpawnStrobeFlash (sec,SLOWDARK, 0);
+      SpawnStrobeLight(sec, STROBEBRIGHT, SLOWDARK, false);
     }
-  return 1;
+
+  return rtn;
 }
 
 
 
-// was EV_TurnTagLightsOff
+//
 // TURN LINE'S TAG LIGHTS OFF
 //
 int Map::EV_TurnTagLightsOff(line_t* line)
@@ -280,7 +246,7 @@ int Map::EV_TurnTagLightsOff(line_t* line)
 }
 
 
-// was EV_LightTurnOn
+//
 // TURN LINE'S TAG LIGHTS ON
 //
 int Map::EV_LightTurnOn(line_t *line, int bright)
@@ -323,119 +289,199 @@ int Map::EV_LightTurnOn(line_t *line, int bright)
 }
 
 
-// was T_Glow
-// Spawn glowing light
-//
-
-void glow_t::Think()
-{
-    switch(direction)
-    {
-      case -1:
-        // DOWN
-        sector->lightlevel -= GLOWSPEED;
-        if (sector->lightlevel <= minlight)
-        {
-            sector->lightlevel += GLOWSPEED;
-            direction = 1;
-        }
-        break;
-
-      case 1:
-        // UP
-        sector->lightlevel += GLOWSPEED;
-        if (sector->lightlevel >= maxlight)
-        {
-            sector->lightlevel -= GLOWSPEED;
-            direction = -1;
-        }
-        break;
-    }
-}
-
-// was P_SpawnGlowingLight
-void Map::SpawnGlowingLight(sector_t *sector)
-{
-  glow_t*     g;
-
-  g = new glow_t();
-
-  AddThinker(g);
-
-  g->sector = sector;
-  g->minlight = P_FindMinSurroundingLight(sector,sector->lightlevel);
-  g->maxlight = sector->lightlevel;
-  g->direction = -1;
-
-  sector->special &= ~31; //SoM: 3/7/2000: Reset only non-generic types.
-}
-
-
-
-// was P_FadeLight()
 //
 // Fade all the lights in sectors with a particular tag to a new value
 //
-void Map::FadeLight(int tag, int destvalue, int speed)
+int Map::EV_FadeLight(int tag, int destvalue, int speed)
+{
+  int rtn = 0;
+  // search all sectors for ones with tag
+  for (int i = -1; (i = FindSectorFromTag(tag, i)) >= 0; )
+    {
+      rtn++;
+      sector_t *sec = &sectors[i];
+
+      lightfx_t *lfx = new lightfx_t(sec, lightfx_t::Fade, destvalue, 0, speed << 6, -1);
+      AddThinker(lfx);
+  }
+
+  return rtn;
+}
+
+
+//
+// Start a light effect in all sectors with a particular tag
+//
+int Map::EV_SpawnLight(int tag, int type, short maxl, short minl, short maxt, short mint)
+{
+  lightfx_t *lfx;
+  int rtn = 0;
+  fixed_t speed;
+
+  for (int i = -1; (i = FindSectorFromTag(tag, i)) >= 0; )
+    {
+      rtn++;
+      lfx = NULL;
+      sector_t *sec = &sectors[i];
+
+      switch (type)
+	{
+	case lightfx_t::RelChange:
+	  sec->lightlevel += maxl;
+	  if (sec->lightlevel > 255)
+	    sec->lightlevel = 255;
+	  else if (sec->lightlevel < 0)
+	    sec->lightlevel = 0;
+	  break;
+
+	case lightfx_t::AbsChange:
+	  sec->lightlevel = maxl;
+	  if (sec->lightlevel < 0)
+	    sec->lightlevel = 0;
+	  else if(sec->lightlevel > 255)
+	    sec->lightlevel = 255;
+	  break;
+
+	case lightfx_t::Fade:
+	  speed = FixedDiv((maxl - sec->lightlevel) << FRACBITS, maxt << FRACBITS);
+	  lfx = new lightfx_t(sec, lightfx_t::Fade, maxl, 0, speed >> 10, -1); // use a custom 10.6 fixed point
+	  break;
+
+	case lightfx_t::Glow:
+	  speed = FixedDiv((maxl - minl) << FRACBITS, maxt << FRACBITS);
+	  lfx = new lightfx_t(sec, lightfx_t::Glow, maxl, minl, speed >> 10, -1); // use a custom 10.6 fixed point
+	  break;
+
+	case lightfx_t::Flicker:
+	  sec->lightlevel = maxl;
+	  lfx = new lightfx_t(sec, lightfx_t::Flicker, maxl, minl, maxt, mint);
+	  lfx->count = (P_Random() & 64) + 1;
+	  break;
+
+	case lightfx_t::Strobe:
+	  sec->lightlevel = maxl;
+	  lfx = new lightfx_t(sec, lightfx_t::Strobe, maxl, minl, maxt, mint);
+	  lfx->count = maxt;
+	  break;
+
+	default:
+	  rtn = false;
+	  break;
+	}
+
+      if (lfx)
+	AddThinker(lfx);
+    }
+  return rtn;
+}
+
+
+
+//==========================================================================
+//
+// Phased lights (Hexen)
+//
+//==========================================================================
+
+static int PhaseTable[64] =
+{
+  128, 112, 96, 80, 64, 48, 32, 32,
+  16, 16, 16, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 16, 16, 16,
+  32, 32, 48, 64, 80, 96, 112, 128
+};
+
+
+int phasedlight_t::Serialize(LArchive & a)
+{
+  return 0;
+}
+
+
+void phasedlight_t::Think()
+{
+  index = (index + 1) & 63;
+  sec->lightlevel = base + PhaseTable[index];
+}
+
+
+phasedlight_t::phasedlight_t(sector_t *s, int b, int ind)
+{
+  sec = s;
+  s->lightingdata = this;
+
+  if (ind == -1)
+    index = s->lightlevel & 63; // by-hand method
+  else
+    index = ind & 63;  // automatic method
+
+  base = b & 255;
+  s->lightlevel = base + PhaseTable[index];
+}
+
+
+//
+// was P_SpawnLightSequence
+//
+void Map::SpawnPhasedLightSequence(sector_t *sector, int indexStep)
 {
   int i;
-  lightlevel_t *ll;
 
-  // search all sectors for ones with tag
-  for (i = -1; (i = FindSectorFromTag(tag,i)) >= 0;)
+  sector_t *sec = sector;
+  sector_t *nextSec;
+  sector_t *tempSec;
+
+  int count = 1;
+  int seqSpecial = SS_LightSequence_1; // look for LightSequence_1 first
+  do
     {
-      sector_t *sector = &sectors[i];
-      sector->lightingdata = sector;    // just set it to something
+      nextSec = NULL;
+      sec->special = SS_LightSequence_Start; // make sure that the search doesn't back up.
+      for (i = 0; i < sec->linecount; i++)
+	{
+	  tempSec = getNextSector(sec->lines[i], sec);
+	  if (!tempSec)
+	    continue;
 
-      ll = new lightlevel_t();
-      AddThinker(ll);       // add thinker
+	  if (tempSec->special == seqSpecial)
+	    {
+	      if (seqSpecial == SS_LightSequence_1)
+		seqSpecial = SS_LightSequence_2;
+	      else
+		seqSpecial = SS_LightSequence_1;
 
-      ll->sector = sector;
-      ll->destlevel = destvalue;
-      ll->speed = speed;
-  }
+	      nextSec = tempSec;
+	      count++;
+	    }
+	}
+      sec = nextSec;
+    } while(sec);
+  
+  sec = sector;
+  count *= indexStep;
+  fixed_t index = 0;
+  fixed_t indexDelta = FixedDiv(64*FRACUNIT, count*FRACUNIT);
+  int base = sector->lightlevel;
+  do
+    {
+      nextSec = NULL;
+      if (sec->lightlevel)
+	base = sec->lightlevel;
+      AddThinker(new phasedlight_t(sec, base, index >> FRACBITS));
+      index += indexDelta;
+      for (i = 0; i < sec->linecount; i++)
+	{
+	  tempSec = getNextSector(sec->lines[i], sec);
+	  if (!tempSec)
+	    continue;
+
+	  if (tempSec->special == SS_LightSequence_Start)
+	    nextSec = tempSec;
+	}
+      sec = nextSec;
+    } while(sec);
 }
-
-
-
-// was T_LightFade()
-//
-// Just fade the light level in a sector to a new level
-//
-
-void lightlevel_t::Think()
-{
-  if(sector->lightlevel < destlevel)
-  {
-      // increase the lightlevel
-    if(sector->lightlevel + speed >= destlevel)
-    {
-          // stop changing light level
-       sector->lightlevel = destlevel;    // set to dest lightlevel
-
-       sector->lightingdata = NULL;          // clear lightingdata
-       mp->RemoveThinker(this);    // remove thinker       
-    }
-    else
-    {
-        sector->lightlevel += speed; // move lightlevel
-    }
-  }
-  else
-  {
-        // decrease lightlevel
-    if(sector->lightlevel - speed <= destlevel)
-    {
-          // stop changing light level
-       sector->lightlevel = destlevel;    // set to dest lightlevel
-
-       sector->lightingdata = NULL;          // clear lightingdata
-       mp->RemoveThinker(this);            // remove thinker       
-    }
-    else
-    {
-        sector->lightlevel -= speed;      // move lightlevel
-    }
-  }
-}
-

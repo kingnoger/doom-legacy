@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/06/08 16:19:21  smite-meister
+// Hexen lights.
+//
 // Revision 1.3  2003/04/24 20:29:57  hurdler
 // Remove lots of compiling warnings
 //
@@ -296,6 +299,7 @@ bool Map::SN_StopSequence(void *origin)
       if ((*i)->act == origin)
 	{
 	  (*i)->Stop();
+	  delete *i;
 	  ActiveSeqs.erase(i);
 	  return true;
 	}

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2003/06/08 16:19:21  smite-meister
+// Hexen lights.
+//
 // Revision 1.12  2003/05/30 13:34:46  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -925,21 +928,23 @@ int P_FindMinSurroundingLight(sector_t* sector, int max)
 // are the same.
 //
 //
-int P_SectorActive(special_e t, sector_t *sec)
+bool P_SectorActive(special_e t, sector_t *sec)
 {
   if (!boomsupport)
     return sec->floordata || sec->ceilingdata || sec->lightingdata;
-  else
-    switch (t)
-      {
-      case floor_special:
-        return (int)sec->floordata;
-      case ceiling_special:
-        return (int)sec->ceilingdata;
-      case lighting_special:
-        return (int)sec->lightingdata;
-      }
-  return 1;
+  else switch (t)
+    {
+    case floor_special:
+      return sec->floordata;
+
+    case ceiling_special:
+      return sec->ceilingdata;
+
+    case lighting_special:
+      return sec->lightingdata;
+    }
+
+  return true;
 }
 
 
@@ -1513,27 +1518,29 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       success = true;
       P_ForceLightning();
       break;
+      */
     case 110: // Light Raise by Value
-      success = EV_SpawnLight(line, args, LITE_RAISEBYVALUE);
-      break; 
+      success = EV_SpawnLight(args[0], lightfx_t::RelChange, args[1]);
+      break;
     case 111: // Light Lower by Value
-      success = EV_SpawnLight(line, args, LITE_LOWERBYVALUE);
-      break; 
+      success = EV_SpawnLight(args[0], lightfx_t::RelChange, -args[1]);
+      break;
     case 112: // Light Change to Value
-      success = EV_SpawnLight(line, args, LITE_CHANGETOVALUE);
-      break; 
+      success = EV_SpawnLight(args[0], lightfx_t::AbsChange, args[1]);
+      break;
     case 113: // Light Fade
-      success = EV_SpawnLight(line, args, LITE_FADE);
-      break; 
+      success = EV_SpawnLight(args[0], lightfx_t::Fade, args[1], 0, args[2]);
+      break;
     case 114: // Light Glow
-      success = EV_SpawnLight(line, args, LITE_GLOW);
-      break; 
+      success = EV_SpawnLight(args[0], lightfx_t::Glow, args[1], args[2], args[3]);
+      break;
     case 115: // Light Flicker
-      success = EV_SpawnLight(line, args, LITE_FLICKER);
-      break; 
+      success = EV_SpawnLight(args[0], lightfx_t::Flicker, args[1], args[2], 32, 8);
+      break;
     case 116: // Light Strobe
-      success = EV_SpawnLight(line, args, LITE_STROBE);
-      break; 
+      success = EV_SpawnLight(args[0], lightfx_t::Strobe, args[1], args[2], args[3], args[4]);
+      break;
+      /*
     case 120: // Quake Tremor
       success = A_LocalQuake(args, mo);
       break;
@@ -2723,7 +2730,6 @@ void Map::UpdateSpecials()
 }
 
 
-//SoM: 3/8/2000: EV_DoDonut moved to p_floor.c
 
 //SoM: 3/23/2000: Adds a sectors floor and ceiling to a sector's ffloor list
 //void P_AddFakeFloor(sector_t* sec, sector_t* sec2, line_t* master, int flags);
@@ -2797,6 +2803,8 @@ void P_AddFFloor(sector_t* sec, ffloor_t* ffloor)
   ffloor->next = 0;
 }
 
+
+
 //
 // SPECIAL SPAWNING
 //
@@ -2854,15 +2862,15 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
 	}
       else switch (temp)
 	{
-	  //TODO hexen lights etc.
 	case 1: // Phased light
 	  // Hardcoded base, use sector->lightlevel as the index
-	  //P_SpawnPhasedLight(sector, 80, -1);
+	  AddThinker(new phasedlight_t(sec, 80, -1));
 	  break;
 	case 2: // Phased light sequence start
-	  //P_SpawnLightSequence(sector, 1);
+	  SpawnPhasedLightSequence(sec, 1);
 	  break;
 
+	  //TODO hexen stairs etc.
 	case 26: // Stairs_Special1
 	case 27: // Stairs_Special2
 	  // Used in (P_floor):ProcessStairSector
@@ -2964,7 +2972,12 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
 
   temp = sp & SS_LIGHTMASK;
   sp &= ~SS_LIGHTMASK; // zeroed "light" bits
-  int dam = 0;
+
+  int i, dam = 0;
+  lightfx_t *lfx = NULL;
+
+  const short ff_tics = 4;
+  const short glowspeed = 8;
 
   switch (temp)
     {
@@ -2977,7 +2990,7 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
       break;
 
     case 4:  // strobe hurt
-      SpawnStrobeFlash(sec, FASTDARK, 0); // fallthru
+      SpawnStrobeLight(sec, STROBEBRIGHT, FASTDARK, false); // fallthru
     case 16: // super hellslime
       dam = 20;
       break;
@@ -2996,36 +3009,44 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
       break;
 
     case 1: // FLICKERING LIGHTS
-      SpawnLightFlash(sec);
+      i = P_FindMinSurroundingLight(sec, sec->lightlevel);
+      lfx = new lightfx_t(sec, lightfx_t::Flicker, sec->lightlevel, i, 64, 7);
+      lfx->count = (P_Random() & lfx->maxtime) + 1;
       break;
 
     case 2: // STROBE FAST
-      SpawnStrobeFlash(sec,FASTDARK,0);
+      SpawnStrobeLight(sec, STROBEBRIGHT, FASTDARK, false);
       break;
 
     case 3: // STROBE SLOW
-      SpawnStrobeFlash(sec,SLOWDARK,0);
+      SpawnStrobeLight(sec, STROBEBRIGHT, SLOWDARK, false);
       break;
 
     case 8: // GLOWING LIGHT
-      SpawnGlowingLight(sec);
+      i = P_FindMinSurroundingLight(sec, sec->lightlevel);
+      lfx = new lightfx_t(sec, lightfx_t::Glow, sec->lightlevel, i, -glowspeed);
       break;
 
     case 12: // SYNC STROBE SLOW
-      SpawnStrobeFlash(sec, SLOWDARK, 1);
+      SpawnStrobeLight(sec, STROBEBRIGHT, SLOWDARK, true);
       break;
 
     case 13: // SYNC STROBE FAST
-      SpawnStrobeFlash(sec, FASTDARK, 1);
+      SpawnStrobeLight(sec, STROBEBRIGHT, FASTDARK, true);
       break;
 
     case 17:
-      SpawnFireFlicker(sec);
+      i = P_FindMinSurroundingLight(sec, sec->lightlevel) + 16;
+      lfx = new lightfx_t(sec, lightfx_t::FireFlicker, sec->lightlevel, i, ff_tics);
+      lfx->count = ff_tics;
       break;
 
     default:
       break;
     }
+
+  if (lfx)
+    AddThinker(lfx);
 
   if (dam)
     {
@@ -3051,17 +3072,9 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
 // After the map has been loaded, scan for specials
 //  that spawn thinkers
 //
-
-// Parses command line parameters.
 void Map::SpawnSpecials()
 {
   int i;
-
-  /*
-  int episode = 1;
-  if (W_CheckNumForName("texture2") >= 0)
-    episode = 2;
-  */
 
   //SoM: 3/8/2000: Boom level init functions
   RemoveAllActiveCeilings();

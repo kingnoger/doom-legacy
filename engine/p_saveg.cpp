@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/06/08 16:19:21  smite-meister
+// Hexen lights.
+//
 // Revision 1.7  2003/06/01 18:56:30  smite-meister
 // zlib compression, partial polyobj fix
 //
@@ -54,6 +57,7 @@
 
 #include "g_game.h"
 #include "g_map.h"
+#include "g_team.h"
 #include "g_player.h"
 #include "g_actor.h"
 
@@ -90,6 +94,7 @@ extern  consvar_t  cv_deathmatch;
 
 int Map::Serialize(LArchive &a)
 {
+  // Each active (or in_stasis) Map is then serialized. Map::Serialize must _not_ re-serialize its players.
   // was P_ArchiveWorld
 
   /*
@@ -1865,63 +1870,13 @@ void P_UnArchiveScripts()
   */
 }
 
-// =======================================================================
-//          Misc
-// =======================================================================
-void P_ArchiveMisc()
-{
-  /*
-    // replace with game.Serialize();, map.Serialize();
 
-  ULONG pig=0;
-  int i;
 
-  *save_p++ = game.skill;
-  *save_p++ = gameepisode;
-  *save_p++ = gamemap;
-
-  for (i=0 ; i<MAXPLAYERS ; i++)
-    pig |= (playeringame[i] != 0)<<i;
-
-  WRITEULONG( save_p, pig );
-
-  WRITEULONG( save_p, cmap.leveltic );
-  *save_p++ = P_GetRandIndex();
-  */
-}
-
-bool P_UnArchiveMisc()
-{
-  /*
-  ULONG pig;
-  int i;
-
-  game.skill  = skill_t(*save_p++);
-  gameepisode = *save_p++;
-  gamemap     = *save_p++;
-
-  pig         = READULONG(save_p);
-
-  for (i=0 ; i<MAXPLAYERS ; i++)
-    {
-      playeringame[i] = (pig & (1<<i))!=0;
-      players[i].playerstate = PST_REBORN;
-    }
-
-  if( !P_SetupLevel (gameepisode, gamemap, game.skill, NULL) )
-    return false;
-
-  // get the time
-  cmap.leveltic = READULONG(save_p);
-  P_SetRandIndex(*save_p++);
-  */
-  return true;
-}
 
 void P_SaveGame()
 {
   //CV_SaveNetVars((char**)&save_p);
-  P_ArchiveMisc();
+  //P_ArchiveMisc();
   P_ArchivePlayers ();
   //P_ArchiveWorld ();
   //P_ArchiveThinkers ();
@@ -1934,8 +1889,7 @@ void P_SaveGame()
 bool P_LoadGame()
 {
   //CV_LoadNetVars((char**)&save_p);
-  if( !P_UnArchiveMisc() )
-    return false;
+  //if( !P_UnArchiveMisc() ) return false;
   P_UnArchivePlayers ();
   P_UnArchiveWorld ();
   //P_UnArchiveThinkers ();
@@ -1950,54 +1904,96 @@ bool P_LoadGame()
 // takes a snapshot of the entire game state and stores it in the archive
 int GameInfo::Serialize(LArchive &a)
 {
-  // FIXME
-  // this is how it should go:
-  // Players are serialized next, with info about their current Map
-  // Each active (or in_stasis) Map is then serialized. Map::Serialize must _not_ re-serialize its players.
-  // Archive is closed.
-  // FIXME right now p_saveg.cpp is mostly commented out.
+  /*
+  int i, n;
+  // TODO just saves now, loading needs some thought...
+
+  // gameaction is always ga_nothing here
+
+  // treat all enums as ints
+  a << int(demoversion);
+  a << int(mode);
+  a << int(mission);
+  a << int(state) << int(wipestate);
+  a << int(skill);
+
+  // flags
+  a << netgame << multiplayer << modified << nomonsters << paused << inventory;
+
+  a << maxteams;
+  a << maxplayers;
+
+  if (a.IsStoring())
+    {
+      a << (n = teams.size());
+      for (i = 0; i < n; i++)
+	{
+	  a << teams[i]->name;
+	  a << teams[i]->color;
+	  a << teams[i]->score;
+	}
+
+      a << (n = Players.size());
+      player_iter_t j;
+      for (j = Players.begin(); j != Players.end(); j++)
+	(*j).second->Serialize(a); // must store the map number in which the player is?
+
+      a << (n = maps.size());
+      for (i = 0; i < n; i++)
+	maps[i]->Serialize(a);
+    }
+  else
+    {
+      // the containers should be emptied and old contents deleted somewhere
+
+      a << n;
+      teams.resize(n);
+      for (i = 0; i < n; i++)
+	{
+	  TeamInfo *t = new TeamInfo(a);
+	  teams[i] = t;
+	}
+
+      a << n;
+      for (i = 0; i < n; i++)
+	{
+	  PlayerInfo *p = new PlayerInfo(a);
+	  Players[p->number] = p;
+	}
+
+      a << n;
+      for (i = 0; i < n; i++)
+	{
+	  Map *m = new Map(a);
+	  maps[i] = m;
+	  // m->Setup() ?
+	}
+    }
+  // TODO levelnode graph and currentlevel!
+
+  // misc shit
+  if (a.IsStoring())
+    {
+      a << P_GetRandIndex();
+    }
+  else
+    {
+      a << n;
+      P_SetRandIndex(n);
+    }
+
+
+  displayplayer = consoleplayer;
+  displayplayer2 = consoleplayer2;
+
 
   // check if required resource files are to be found / can be downloaded
-  // uncompress rest of the file if necessary
   // read consvars
   // read player info (netgame? authentication?)
   // read levelgraph
   // read map name(s), load them from wads?
   // read global scripts
   // read saved maps
-  multiplayer = (Players.size() > 1);
-  // FIXME! why can't this be saved as well?
-  //if (playeringame[1] && !netgame)
-  //  CV_SetValue(&cv_splitscreen,1);
-  displayplayer = consoleplayer;
-  displayplayer2 = consoleplayer2;
-
-
-
-  // make sure that gameaction is ga_nothing
-  /*
-  int i, j, n;
-
-  a << demoversion;
-  a << mode;
-  a << mission;
-  a << state << wipestate;
-  a << skill;
-
-
-  // and so on
-  a << (n = teams.size());
-  for (i = 0; i<n; i++)
-    {
-      a << teams[i]->name;
-      a << teams[i]->color;
-      a << teams[i]->score;
-    }
-  a << Players.size();
-
-  a << (n = maps.size());
-  for (i = 0; i<n; i++)
-    maps[i]->Serialize(a);
 
   */
   return 0;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/06/08 16:19:21  smite-meister
+// Hexen lights.
+//
 // Revision 1.6  2003/06/01 18:56:30  smite-meister
 // zlib compression, partial polyobj fix
 //
@@ -1166,7 +1169,7 @@ void Map::SpawnPolyobj(int index, int tag, bool crush)
 	  polyobjs[index].crush = crush;
 	  polyobjs[index].tag = tag;
 	  polyobjs[index].seqType = segs[i].linedef->args[2];
-
+	  CONS_Printf("--- seg1 x1 = %d\n", segs[i].v1->x >> FRACBITS);
 	  /*
 	    // not necessary
 	  if (polyobjs[index].seqType >= SEQTYPE_NUMSEQ)
@@ -1278,7 +1281,8 @@ void Map::TranslateToStartSpot(int tag, int originX, int originY)
   po->prevPts = (vertex_t *)Z_Malloc(po->numsegs*sizeof(vertex_t), PU_LEVEL, 0);
   int deltaX = originX-po->startSpot.x;
   int deltaY = originY-po->startSpot.y;
-
+  CONS_Printf("origin x,y = %d,%d \n", originX >> FRACBITS, originY >> FRACBITS);
+  CONS_Printf("delta x,y = %d,%d \n", deltaX >> FRACBITS, deltaY >> FRACBITS);
   seg_t **tempSeg = po->segs;
   seg_t **veryTempSeg;
   vertex_t *tempPt = po->originalPts;
@@ -1307,6 +1311,8 @@ void Map::TranslateToStartSpot(int tag, int originX, int originY)
 	  (*tempSeg)->v1->x -= deltaX;
 	  (*tempSeg)->v1->y -= deltaY;
 	}
+      CONS_Printf("tempseg x = %d, ", (*tempSeg)->v1->x>>FRACBITS);
+      CONS_Printf("tempseg y = %d\n", (*tempSeg)->v1->y>>FRACBITS);
       avg.x += (*tempSeg)->v1->x>>FRACBITS;
       avg.y += (*tempSeg)->v1->y>>FRACBITS;
       // the original Pts are based off the startSpot Pt, and are
@@ -1316,12 +1322,13 @@ void Map::TranslateToStartSpot(int tag, int originX, int originY)
     }
   avg.x /= po->numsegs;
   avg.y /= po->numsegs;
+  CONS_Printf("avg x,y = %d,%d\n", avg.x, avg.y);
   subsector_t *sub = R_PointInSubsector(avg.x<<FRACBITS, avg.y<<FRACBITS);
 
   // FIXME errors in polyobj spawning
   if (sub->poly != NULL)
-    I_Error("PO_TranslateToStartSpot:  Multiple polyobjs in a single subsector.\n");
-    //CONS_Printf("Multiple polyobjs (%d) in a single subsector %d\n", tag, sub-subsectors);
+    //I_Error("PO_TranslateToStartSpot:  Multiple polyobjs in a single subsector.\n");
+    CONS_Printf("Multiple polyobjs (%d) in a single subsector %d (%d)\n", tag, sub-subsectors, numsubsectors);
 
   sub->poly = po;
 }
@@ -1358,6 +1365,7 @@ void Map::InitPolyobjs()
 	  CONS_Printf("Polyobj %d: tag = %d\n", index, mt->angle);
 	  index++;
 	}
+      CONS_Printf(" xyz = (%d %d %d), angle = %d, tid = %d\n", mt->x, mt->y, mt->z, mt->angle, mt->tid);
     }
 
   for (i=0; i<n; i++)
