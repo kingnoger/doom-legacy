@@ -235,7 +235,8 @@ export video_objects = \
 	$(objdir)/hw_main.o \
 	$(objdir)/hw_md2.o \
 	$(objdir)/hw_trick.o \
-	$(objdir)/hw_light.o
+	$(objdir)/hw_light.o \
+	$(objdir)/hwr_render.o
 
 export net_objects = \
 	$(objdir)/d_client.o \

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.38  2004/05/01 23:29:19  hurdler
+// add dummy new renderer
+//
 // Revision 1.37  2004/04/25 16:26:50  smite-meister
 // Doxygen
 //
@@ -173,6 +176,7 @@
 # include "i_video.h"            //rendermode
 # include "hardware/hw_main.h"
 # include "hardware/hw_light.h"
+# include "hardware/hwr_render.h"
 #endif
 
 
@@ -241,9 +245,9 @@ void Map::LoadSegs(int lump)
       // used for the hardware render
       if (rendermode != render_soft)
         {
-	  li->length = P_SegLength (li);
-	  //Hurdler: 04/12/2000: for now, only used in hardware mode
-	  li->lightmaps = NULL; // list of static lightmap for this seg
+          li->length = P_SegLength (li);
+          //Hurdler: 04/12/2000: for now, only used in hardware mode
+          li->lightmaps = NULL; // list of static lightmap for this seg
         }
 #endif
 
@@ -256,9 +260,9 @@ void Map::LoadSegs(int lump)
       li->sidedef = &sides[ldef->sidenum[side]];
       li->frontsector = sides[ldef->sidenum[side]].sector;
       if (ldef-> flags & ML_TWOSIDED)
-	li->backsector = sides[ldef->sidenum[side^1]].sector;
+        li->backsector = sides[ldef->sidenum[side^1]].sector;
       else
-	li->backsector = 0;
+        li->backsector = 0;
 
       li->numlights = 0;
       li->rlights = NULL;
@@ -303,7 +307,7 @@ floortype_t P_GetFloorType(const char *pic);
 
 void Map::LoadSectors2(int lump)
 {
-  extern float normal_friction; 
+  extern float normal_friction;
   int i;
   byte *data = (byte *)fc.CacheLumpNum(lump, PU_STATIC);
 
@@ -325,7 +329,7 @@ void Map::LoadSectors2(int lump)
 
       //added:31-03-98: quick hack to test water with DCK
       /*        if (ss->tag < 0)
-		CONS_Printf("Level uses dck-water-hack\n");*/
+                CONS_Printf("Level uses dck-water-hack\n");*/
 
       ss->thinglist = NULL;
       ss->touching_thinglist = NULL; //SoM: 4/7/2000
@@ -346,7 +350,7 @@ void Map::LoadSectors2(int lump)
       ss->moved = true;
       ss->floor_xoffs = ss->ceiling_xoffs = ss->floor_yoffs = ss->ceiling_yoffs = 0;
       ss->bottommap = ss->midmap = ss->topmap = -1;
-        
+
       // ----- for special tricks with HW renderer -----
       ss->pseudoSector = false;
       ss->virtualFloor = false;
@@ -401,9 +405,9 @@ void Map::LoadNodes(int lump)
       no->dy = SHORT(mn->dy)<<FRACBITS;
       for (j=0 ; j<2 ; j++)
         {
-	  no->children[j] = SHORT(mn->children[j]);
-	  for (k=0 ; k<4 ; k++)
-	    no->bbox[j][k] = SHORT(mn->bbox[j][k])<<FRACBITS;
+          no->children[j] = SHORT(mn->children[j]);
+          for (k=0 ; k<4 ; k++)
+            no->bbox[j][k] = SHORT(mn->bbox[j][k])<<FRACBITS;
         }
     }
 
@@ -450,31 +454,31 @@ void Map::LoadThings(int lump)
     {
       // Hexen flags
       if (!game.multiplayer)
-	fmode = MTF_GSINGLE;
+        fmode = MTF_GSINGLE;
       else if (cv_deathmatch.value)
-	fmode = MTF_GDEATHMATCH;
+        fmode = MTF_GDEATHMATCH;
       else
-	fmode = MTF_GCOOP;
+        fmode = MTF_GCOOP;
 
       // If there are _any_ clerics in the game, MTF_CLERIC stuff should be spawned etc.
       fclass = (MTF_FIGHTER | MTF_CLERIC | MTF_MAGE); // 0;
       /*
       for (player_iter_t k = game.Players.begin(); k != game.Players.end(); k++)
-	switch ((*k)->pclass)
-	  {
-	  case PCLASS_FIGHTER:
-	    fclass |= MTF_FIGHTER;
-	    break;
-	  case PCLASS_CLERIC:
-	    fclass |= MTF_CLERIC;
-	    break;
-	  case PCLASS_MAGE:
-	    fclass |= MTF_MAGE;
-	    break;
-	  default:
-	    fclass |= (MTF_FIGHTER | MTF_CLERIC | MTF_MAGE);
-	    break;
-	  }
+        switch ((*k)->pclass)
+          {
+          case PCLASS_FIGHTER:
+            fclass |= MTF_FIGHTER;
+            break;
+          case PCLASS_CLERIC:
+            fclass |= MTF_CLERIC;
+            break;
+          case PCLASS_MAGE:
+            fclass |= MTF_MAGE;
+            break;
+          default:
+            fclass |= (MTF_FIGHTER | MTF_CLERIC | MTF_MAGE);
+            break;
+          }
       */
     }
   else
@@ -483,11 +487,11 @@ void Map::LoadThings(int lump)
       // multiplayer only thing flag
       // "not deathmatch"/"not coop" thing flags
       if (!game.multiplayer)
-	ffail |= MTF_MULTIPLAYER;
+        ffail |= MTF_MULTIPLAYER;
       else if (cv_deathmatch.value)
-	ffail |= MTF_NOT_IN_DM;
+        ffail |= MTF_NOT_IN_DM;
       else
-	ffail |= MTF_NOT_IN_COOP;
+        ffail |= MTF_NOT_IN_COOP;
     }
 
 
@@ -495,68 +499,68 @@ void Map::LoadThings(int lump)
   for (i=0 ; i<nummapthings ; i++, t++)
     {
       if (hexen_format)
-	{
-	  t->tid = SHORT(ht->tid);
-	  t->x = SHORT(ht->x);
-	  t->y = SHORT(ht->y);
-	  t->z = SHORT(ht->height); // temp
-	  t->angle  = SHORT(ht->angle);
-	  ednum     = SHORT(ht->type);
-	  t->flags  = SHORT(ht->flags);
+        {
+          t->tid = SHORT(ht->tid);
+          t->x = SHORT(ht->x);
+          t->y = SHORT(ht->y);
+          t->z = SHORT(ht->height); // temp
+          t->angle  = SHORT(ht->angle);
+          ednum     = SHORT(ht->type);
+          t->flags  = SHORT(ht->flags);
 
-	  t->special = ht->special;
-	  for (int j=0; j<5; j++)
-	    t->args[j] = ht->args[j];
-	  ht++;
-	}
+          t->special = ht->special;
+          for (int j=0; j<5; j++)
+            t->args[j] = ht->args[j];
+          ht++;
+        }
       else
-	{
-	  t->tid = 0;
-	  t->x = SHORT(mt->x);
-	  t->y = SHORT(mt->y);
-	  t->z = 0;
-	  t->angle = SHORT(mt->angle);
-	  ednum    = SHORT(mt->type);
-	  t->flags = SHORT(mt->flags);
+        {
+          t->tid = 0;
+          t->x = SHORT(mt->x);
+          t->y = SHORT(mt->y);
+          t->z = 0;
+          t->angle = SHORT(mt->angle);
+          ednum    = SHORT(mt->type);
+          t->flags = SHORT(mt->flags);
 
-	  t->special = 0;
-	  for (int j=0; j<5; j++)
-	    t->args[j] = 0;
-	  mt++;
-	}
+          t->special = 0;
+          for (int j=0; j<5; j++)
+            t->args[j] = 0;
+          mt++;
+        }
       t->mobj = NULL;
 
       // convert editor number to mobjtype_t number right now
       if (!ednum)
-	continue; // Ignore type-0 things as NOPs
+        continue; // Ignore type-0 things as NOPs
 
       // deathmatch start positions
       if (ednum == 11)
-	{
-	  if (dmstarts.size() < MAX_DM_STARTS)
-	    dmstarts.push_back(t);
-	  t->type = 0;
-	  continue;
-	}
+        {
+          if (dmstarts.size() < MAX_DM_STARTS)
+            dmstarts.push_back(t);
+          t->type = 0;
+          continue;
+        }
 
       // normal playerstarts (normal 4 + 28 extra)
       if ((ednum >= 1 && ednum <= 4) || (ednum >= 4001 && ednum <= 4028))
-	{
-	  if (ednum > 4000)
-	    ednum -= 4001 - 5;
+        {
+          if (ednum > 4000)
+            ednum -= 4001 - 5;
 
-	  playerstarts.insert(pair<int, mapthing_t *>(ednum, t));
-	  t->type = 0; // t->type is used as a timer
-	  continue;
-	}
+          playerstarts.insert(pair<int, mapthing_t *>(ednum, t));
+          t->type = 0; // t->type is used as a timer
+          continue;
+        }
 
       if (ednum == 14)
-	{
-	  // a bit of a hack
-	  // same with doom / heretic / hexen, but only one mobjtype_t
-	  t->type = MT_TELEPORTMAN;
-	  continue;
-	}
+        {
+          // a bit of a hack
+          // same with doom / heretic / hexen, but only one mobjtype_t
+          t->type = MT_TELEPORTMAN;
+          continue;
+        }
 
       low = 0;
       high = 0;
@@ -564,101 +568,101 @@ void Map::LoadThings(int lump)
       // find which type to spawn
       // this is because the ednum ranges normally overlap in different games
       if (ednum >= info->doom_offs[0] && ednum <= info->doom_offs[1])
-	{
-	  ednum -= info->doom_offs[0];
-	  low = MT_DOOM;
-	  high = MT_DOOM_END;
+        {
+          ednum -= info->doom_offs[0];
+          low = MT_DOOM;
+          high = MT_DOOM_END;
 
-	  // DoomII braintarget list
-	  if (ednum == 87)
-	    braintargets.push_back(t);
-	}
+          // DoomII braintarget list
+          if (ednum == 87)
+            braintargets.push_back(t);
+        }
       else if (ednum >= info->heretic_offs[0] && ednum <= info->heretic_offs[1])
-	{
-	  ednum -= info->heretic_offs[0];
-	  low = MT_HERETIC;
-	  high = MT_HERETIC_END;
+        {
+          ednum -= info->heretic_offs[0];
+          low = MT_HERETIC;
+          high = MT_HERETIC_END;
 
-	  // Ambient sound sequences
-	  if (ednum >= 1200 && ednum < 1210)
-	    {
-	      AmbientSeqs.push_back(ednum - 1200);
-	      t->type = 0;
-	      continue;
-	    }
+          // Ambient sound sequences
+          if (ednum >= 1200 && ednum < 1210)
+            {
+              AmbientSeqs.push_back(ednum - 1200);
+              t->type = 0;
+              continue;
+            }
 
-	  // D'Sparil teleport spot (no Actor spawned)
-	  if (ednum == 56)
-	    {
-	      BossSpots.push_back(t);
-	      t->type = 0;
-	      continue;
-	    }
+          // D'Sparil teleport spot (no Actor spawned)
+          if (ednum == 56)
+            {
+              BossSpots.push_back(t);
+              t->type = 0;
+              continue;
+            }
 
-	  // Mace spot (no Actor spawned)
-	  if (ednum == 2002)
-	    {
-	      MaceSpots.push_back(t);
-	      t->type = 0;
-	      continue;
-	    }
-	}
+          // Mace spot (no Actor spawned)
+          if (ednum == 2002)
+            {
+              MaceSpots.push_back(t);
+              t->type = 0;
+              continue;
+            }
+        }
       else if (ednum >= info->hexen_offs[0] && ednum <= info->hexen_offs[1])
-	{
-	  ednum -= info->hexen_offs[0];
-	  low = MT_HEXEN;
-	  high = MT_HEXEN_END;
+        {
+          ednum -= info->hexen_offs[0];
+          low = MT_HEXEN;
+          high = MT_HEXEN_END;
 
-	  extern vector<mapthing_t *> polyspawn;
-	  // The polyobject system is pretty stupid, since the mapthings are not always in
-	  // any particular order. Polyobjects have to be picked apart
-	  // from other things  => polyspawn vector
-	  if (ednum == PO_ANCHOR_TYPE || ednum == PO_SPAWN_TYPE || ednum == PO_SPAWNCRUSH_TYPE)
-	    {
-	      t->type = ednum;
-	      polyspawn.push_back(t);
-	      if (ednum != PO_ANCHOR_TYPE)
-		// a polyobj marker
-		NumPolyobjs++;
-	      continue;
-	    }
+          extern vector<mapthing_t *> polyspawn;
+          // The polyobject system is pretty stupid, since the mapthings are not always in
+          // any particular order. Polyobjects have to be picked apart
+          // from other things  => polyspawn vector
+          if (ednum == PO_ANCHOR_TYPE || ednum == PO_SPAWN_TYPE || ednum == PO_SPAWNCRUSH_TYPE)
+            {
+              t->type = ednum;
+              polyspawn.push_back(t);
+              if (ednum != PO_ANCHOR_TYPE)
+                // a polyobj marker
+                NumPolyobjs++;
+              continue;
+            }
 
-	  // Check for player starts 5 to 8
-	  if (ednum >= 9100 && ednum <= 9103)
-	    {
-	      ednum = 5 + ednum - 9100;
-	      playerstarts.insert(pair<int, mapthing_t *>(ednum, t));
-	      t->type = 0;
-	      continue;
-	    }
+          // Check for player starts 5 to 8
+          if (ednum >= 9100 && ednum <= 9103)
+            {
+              ednum = 5 + ednum - 9100;
+              playerstarts.insert(pair<int, mapthing_t *>(ednum, t));
+              t->type = 0;
+              continue;
+            }
 
-	  // sector sound sequences
-	  if (ednum >= 1400 && ednum < 1410)
-	    {
-	      R_PointInSubsector(t->x << FRACBITS, t->y << FRACBITS)->sector->seqType = ednum - 1400;
-	      t->type = 0;
-	      continue;
-	    }
-	}
+          // sector sound sequences
+          if (ednum >= 1400 && ednum < 1410)
+            {
+              R_PointInSubsector(t->x << FRACBITS, t->y << FRACBITS)->sector->seqType = ednum - 1400;
+              t->type = 0;
+              continue;
+            }
+        }
 
       // Spawning flags don't apply to playerstarts, teleport exits or polyobjs! Why, pray, is that?
       // wrong flags?
       if ((t->flags & ffail) || !(t->flags & fskill) || !(t->flags & fmode) || !(t->flags & fclass))
-	{
-	  t->type = 0;
-	  continue;
-	}
+        {
+          t->type = 0;
+          continue;
+        }
 
       for (n = low; n <= high; n++)
-	if (ednum == mobjinfo[n].doomednum)
-	  break;
+        if (ednum == mobjinfo[n].doomednum)
+          break;
 
       if (n > high)
-	{
-	  CONS_Printf("\2Map::LoadThings: Unknown type %i at (%i, %i)\n", ednum, t->x, t->y);
-	  t->type = 0;
-	  continue;
-	}
+        {
+          CONS_Printf("\2Map::LoadThings: Unknown type %i at (%i, %i)\n", ednum, t->x, t->y);
+          t->type = 0;
+          continue;
+        }
 
       t->type = mobjtype_t(n);
     }
@@ -692,79 +696,79 @@ void Map::LoadLineDefs(int lump)
   for (i=0 ; i<numlines ; i++, ld++)
     {
       if (hexen_format)
-	{
-	  ld->flags = SHORT(hld->flags);
-	  ld->special = hld->special;
-	  //ld->tag = hld->args[0]; // 16-bit tags
-	  
-	  for (j=0; j<5; j++)
-	    ld->args[j] = hld->args[j];
+        {
+          ld->flags = SHORT(hld->flags);
+          ld->special = hld->special;
+          //ld->tag = hld->args[0]; // 16-bit tags
 
-	  v1 = ld->v1 = &vertexes[SHORT(hld->v1)];
-	  v2 = ld->v2 = &vertexes[SHORT(hld->v2)];
+          for (j=0; j<5; j++)
+            ld->args[j] = hld->args[j];
 
-	  if (SHORT(hld->v1) > numvertexes)
-	    CONS_Printf("v1 > numverts: %d\n", SHORT(hld->v1));
-	  if (SHORT(hld->v2) > numvertexes)
-	    CONS_Printf("v2 > numverts: %d\n", SHORT(hld->v2));
+          v1 = ld->v1 = &vertexes[SHORT(hld->v1)];
+          v2 = ld->v2 = &vertexes[SHORT(hld->v2)];
 
-	  ld->sidenum[0] = SHORT(hld->sidenum[0]);
-	  ld->sidenum[1] = SHORT(hld->sidenum[1]);
-	  hld++;
-	}
+          if (SHORT(hld->v1) > numvertexes)
+            CONS_Printf("v1 > numverts: %d\n", SHORT(hld->v1));
+          if (SHORT(hld->v2) > numvertexes)
+            CONS_Printf("v2 > numverts: %d\n", SHORT(hld->v2));
+
+          ld->sidenum[0] = SHORT(hld->sidenum[0]);
+          ld->sidenum[1] = SHORT(hld->sidenum[1]);
+          hld++;
+        }
       else
-	{
-	  ld->flags = SHORT(mld->flags);
-	  ld->special = SHORT(mld->special);
-	  ld->tag = SHORT(mld->tag);
-	  //for (j=0; j<5; j++) ld->args[j] = 0;
+        {
+          ld->flags = SHORT(mld->flags);
+          ld->special = SHORT(mld->special);
+          ld->tag = SHORT(mld->tag);
+          //for (j=0; j<5; j++) ld->args[j] = 0;
 
-	  v1 = ld->v1 = &vertexes[SHORT(mld->v1)];
-	  v2 = ld->v2 = &vertexes[SHORT(mld->v2)];
+          v1 = ld->v1 = &vertexes[SHORT(mld->v1)];
+          v2 = ld->v2 = &vertexes[SHORT(mld->v2)];
 
-	  ld->sidenum[0] = SHORT(mld->sidenum[0]);
-	  ld->sidenum[1] = SHORT(mld->sidenum[1]);
+          ld->sidenum[0] = SHORT(mld->sidenum[0]);
+          ld->sidenum[1] = SHORT(mld->sidenum[1]);
 
-	  if (ld->sidenum[0] != -1 && ld->special)
-	    sides[ld->sidenum[0]].special = ld->special;
-	  mld++;
-	}
+          if (ld->sidenum[0] != -1 && ld->special)
+            sides[ld->sidenum[0]].special = ld->special;
+          mld++;
+        }
 
       ld->dx = v2->x - v1->x;
       ld->dy = v2->y - v1->y;
 
       if (!ld->dx)
-	ld->slopetype = ST_VERTICAL;
+        ld->slopetype = ST_VERTICAL;
       else if (!ld->dy)
-	ld->slopetype = ST_HORIZONTAL;
+        ld->slopetype = ST_HORIZONTAL;
       else
         {
-	  if (FixedDiv (ld->dy , ld->dx) > 0)
-	    ld->slopetype = ST_POSITIVE;
-	  else
-	    ld->slopetype = ST_NEGATIVE;
+          if (FixedDiv (ld->dy , ld->dx) > 0)
+            ld->slopetype = ST_POSITIVE;
+          else
+            ld->slopetype = ST_NEGATIVE;
         }
 
       if (v1->x < v2->x)
         {
-	  ld->bbox[BOXLEFT] = v1->x;
-	  ld->bbox[BOXRIGHT] = v2->x;
+          ld->bbox[BOXLEFT] = v1->x;
+          ld->bbox[BOXRIGHT] = v2->x;
         }
       else
         {
-	  ld->bbox[BOXLEFT] = v2->x;
-	  ld->bbox[BOXRIGHT] = v1->x;
+          ld->bbox[BOXLEFT] = v2->x;
+          ld->bbox[BOXRIGHT] = v1->x;
         }
 
       if (v1->y < v2->y)
         {
-	  ld->bbox[BOXBOTTOM] = v1->y;
-	  ld->bbox[BOXTOP] = v2->y;
+          ld->bbox[BOXBOTTOM] = v1->y;
+          ld->bbox[BOXTOP] = v2->y;
         }
       else
         {
-	  ld->bbox[BOXBOTTOM] = v2->y;
-	  ld->bbox[BOXTOP] = v1->y;
+          ld->bbox[BOXBOTTOM] = v2->y;
+          ld->bbox[BOXTOP] = v1->y;
         }
     }
 
@@ -779,14 +783,14 @@ void Map::LoadLineDefs2()
   for(i = 0; i < numlines; i++, ld++)
     {
       if (ld->sidenum[0] != -1)
-	ld->frontsector = sides[ld->sidenum[0]].sector;
+        ld->frontsector = sides[ld->sidenum[0]].sector;
       else
-	ld->frontsector = 0;
+        ld->frontsector = 0;
 
       if (ld->sidenum[1] != -1)
-	ld->backsector = sides[ld->sidenum[1]].sector;
+        ld->backsector = sides[ld->sidenum[1]].sector;
       else
-	ld->backsector = 0;
+        ld->backsector = 0;
     }
 }
 
@@ -868,93 +872,93 @@ void Map::LoadSideDefs2(int lump)
         case 280:  // Legacy: swimmable water, colormaps
 #ifdef HWRENDER
           if(rendermode == render_soft)
-	    {
+            {
 #endif
-	      num = tc.Get(ttex, false);
+              num = tc.Get(ttex, false);
 
-	      if(num == -1)
-		{
-		  sec->topmap = mapnum = R_ColormapNumForName(ttex);
-		  sd->toptexture = 0;
-		}
-	      else
-		sd->toptexture = num;
+              if(num == -1)
+                {
+                  sec->topmap = mapnum = R_ColormapNumForName(ttex);
+                  sd->toptexture = 0;
+                }
+              else
+                sd->toptexture = num;
 
-	      num = tc.Get(mtex, false);
-	      if(num == -1)
-		{
-		  sec->midmap = mapnum = R_ColormapNumForName(mtex);
-		  sd->midtexture = 0;
-		}
-	      else
-		sd->midtexture = num;
+              num = tc.Get(mtex, false);
+              if(num == -1)
+                {
+                  sec->midmap = mapnum = R_ColormapNumForName(mtex);
+                  sd->midtexture = 0;
+                }
+              else
+                sd->midtexture = num;
 
-	      num = tc.Get(btex, false);
-	      if(num == -1)
-		{
-		  sec->bottommap = mapnum = R_ColormapNumForName(btex);
-		  sd->bottomtexture = 0;
-		}
-	      else
-		sd->bottomtexture = num;
+              num = tc.Get(btex, false);
+              if(num == -1)
+                {
+                  sec->bottommap = mapnum = R_ColormapNumForName(btex);
+                  sd->bottomtexture = 0;
+                }
+              else
+                sd->bottomtexture = num;
 #ifdef HWRENDER
-	    }
+            }
           else
-	    {
-	      sd->toptexture = tc.Get(ttex);
-	      sd->midtexture = tc.Get(mtex);
-	      sd->bottomtexture = tc.Get(btex);
-	    }
+            {
+              sd->toptexture = tc.Get(ttex);
+              sd->midtexture = tc.Get(mtex);
+              sd->bottomtexture = tc.Get(btex);
+            }
 #endif
-	  break;
+          break;
 
         case 282: // Legacy: set colormap
 #ifdef HWRENDER
           if(rendermode == render_soft)
-	    {
+            {
 #endif
-	      if(ttex[0] == '#' || btex[0] == '#')
-		{
-		  sec->midmap = R_CreateColormap(ttex, mtex, btex);
-		  sd->toptexture = sd->bottomtexture = 0;
-		}
-	      else
-		{
-		  sd->toptexture = tc.Get(ttex);
-		  sd->midtexture = tc.Get(mtex);
-		  sd->bottomtexture = tc.Get(btex);
-		}
+              if(ttex[0] == '#' || btex[0] == '#')
+                {
+                  sec->midmap = R_CreateColormap(ttex, mtex, btex);
+                  sd->toptexture = sd->bottomtexture = 0;
+                }
+              else
+                {
+                  sd->toptexture = tc.Get(ttex);
+                  sd->midtexture = tc.Get(mtex);
+                  sd->bottomtexture = tc.Get(btex);
+                }
 
 #ifdef HWRENDER
-	    }
+            }
           else
-	    {
-	      //Hurdler: for now, full support of toptexture only
-	      if(ttex[0] == '#')// || btex[0] == '#')
-		{
-		  char *col = ttex;
+            {
+              //Hurdler: for now, full support of toptexture only
+              if(ttex[0] == '#')// || btex[0] == '#')
+                {
+                  char *col = ttex;
 
-		  sec->midmap = R_CreateColormap(ttex, mtex, btex);
-		  sd->toptexture = sd->bottomtexture = 0;
+                  sec->midmap = R_CreateColormap(ttex, mtex, btex);
+                  sd->toptexture = sd->bottomtexture = 0;
 # define HEX2INT(x) (x >= '0' && x <= '9' ? x - '0' : x >= 'a' && x <= 'f' ? x - 'a' + 10 : x >= 'A' && x <= 'F' ? x - 'A' + 10 : 0)
 # define ALPHA2INT(x) (x >= 'a' && x <= 'z' ? x - 'a' : x >= 'A' && x <= 'Z' ? x - 'A' : 0)
-		  sec->extra_colormap = &extra_colormaps[sec->midmap];
-		  sec->extra_colormap->rgba = 
-		    (HEX2INT(col[1]) << 4) + (HEX2INT(col[2]) << 0) +
-		    (HEX2INT(col[3]) << 12) + (HEX2INT(col[4]) << 8) +
-		    (HEX2INT(col[5]) << 20) + (HEX2INT(col[6]) << 16) + 
-		    (ALPHA2INT(col[7]) << 24);
+                  sec->extra_colormap = &extra_colormaps[sec->midmap];
+                  sec->extra_colormap->rgba =
+                    (HEX2INT(col[1]) << 4) + (HEX2INT(col[2]) << 0) +
+                    (HEX2INT(col[3]) << 12) + (HEX2INT(col[4]) << 8) +
+                    (HEX2INT(col[5]) << 20) + (HEX2INT(col[6]) << 16) +
+                    (ALPHA2INT(col[7]) << 24);
 # undef ALPHA2INT
 # undef HEX2INT
-		}
-	      else
-		{
-		  sd->toptexture = tc.Get(ttex);
-		  sd->midtexture = tc.Get(mtex);
-		  sd->bottomtexture = tc.Get(btex);
-		}
-	      break;
-	    }
+                }
+              else
+                {
+                  sd->toptexture = tc.Get(ttex);
+                  sd->midtexture = tc.Get(mtex);
+                  sd->bottomtexture = tc.Get(btex);
+                }
+              break;
+            }
 #endif
 
         case 260: // BOOM: make texture transparent
@@ -977,29 +981,29 @@ void Map::LoadSideDefs2(int lump)
             sd->bottomtexture = num;
           break;
 
-	  /*        case 260: // killough 4/11/98: apply translucency to 2s normal texture
-		    sd->midtexture = strncasecmp("TRANMAP", mtex, 8) ?
-		    (sd->special = fc.CheckNumForName(mtex)) < 0 ||
-		    fc.LumpLength(sd->special) != 65536 ?
-		    sd->special=0, R_TextureNumForName(mtex) :
-		    (sd->special++, 0) : (sd->special=0);
-		    sd->toptexture = R_TextureNumForName(ttex);
-		    sd->bottomtexture = R_TextureNumForName(btex);
-		    break;*/ //This code is replaced.. I need to fix this though
+          /*        case 260: // killough 4/11/98: apply translucency to 2s normal texture
+                    sd->midtexture = strncasecmp("TRANMAP", mtex, 8) ?
+                    (sd->special = fc.CheckNumForName(mtex)) < 0 ||
+                    fc.LumpLength(sd->special) != 65536 ?
+                    sd->special=0, R_TextureNumForName(mtex) :
+                    (sd->special++, 0) : (sd->special=0);
+                    sd->toptexture = R_TextureNumForName(ttex);
+                    sd->bottomtexture = R_TextureNumForName(btex);
+                    break;*/ //This code is replaced.. I need to fix this though
 
 
-	  //Hurdler: added for alpha value with translucent 3D-floors/water
+          //Hurdler: added for alpha value with translucent 3D-floors/water
         case 300:
         case 301:
-	  if(ttex[0] == '#')
+          if(ttex[0] == '#')
             {
-	      char *col = ttex;
-	      sd->toptexture = sd->bottomtexture = ((col[1]-'0')*100+(col[2]-'0')*10+col[3]-'0')+1;
+              char *col = ttex;
+              sd->toptexture = sd->bottomtexture = ((col[1]-'0')*100+(col[2]-'0')*10+col[3]-'0')+1;
             }
-	  else
-	    sd->toptexture = sd->bottomtexture = 0;
-	  sd->midtexture = tc.Get(mtex);
-	  break;
+          else
+            sd->toptexture = sd->bottomtexture = 0;
+          sd->midtexture = tc.Get(mtex);
+          break;
 
         default: // normal cases
           sd->midtexture = tc.Get(mtex);
@@ -1066,8 +1070,8 @@ void Map::GroupLines()
 
       if (li->backsector && li->backsector != li->frontsector)
         {
-	  li->backsector->linecount++;
-	  total++;
+          li->backsector->linecount++;
+          total++;
         }
     }
 
@@ -1081,15 +1085,15 @@ void Map::GroupLines()
       li = lines;
       for (j=0 ; j<numlines ; j++, li++)
         {
-	  if (li->frontsector == sector || li->backsector == sector)
+          if (li->frontsector == sector || li->backsector == sector)
             {
-	      *lb++ = li;
-	      M_AddToBox(bbox, li->v1->x, li->v1->y);
-	      M_AddToBox(bbox, li->v2->x, li->v2->y);
+              *lb++ = li;
+              M_AddToBox(bbox, li->v1->x, li->v1->y);
+              M_AddToBox(bbox, li->v2->x, li->v2->y);
             }
         }
       if (lb - sector->lines != sector->linecount)
-	I_Error("Map::GroupLines: miscounted");
+        I_Error("Map::GroupLines: miscounted");
 
       // set the degenmobj_t to the middle of the bounding box
       sector->soundorg.x = (bbox[BOXRIGHT]+bbox[BOXLEFT])/2;
@@ -1143,7 +1147,7 @@ static char *levellumps[] =
   {
   int  i;
   int  file, lump;
-  
+
   for(i=ML_THINGS; i<=ML_BLOCKMAP; i++)
   {
   file = lumpnum >> 16;
@@ -1287,13 +1291,20 @@ bool Map::Setup(tic_t start, bool spawnthings)
 #ifdef HWRENDER // not win32 only 19990829 by Kin
   if (rendermode != render_soft)
     {
-      // BP: reset light between levels (we draw preview frame lights on current frame)
-      HWR_ResetLights();
-      // Correct missing sidedefs & deep water trick
-      R.HWR_CorrectSWTricks();
-      //CONS_Printf("\n xxx seg(%d) v1 = %d, line(%d) v1 = %d\n", 1578, segs[1578].v1 - vertexes, segs[1578].linedef - lines, segs[1578].linedef->v1 - vertexes);
-      R.HWR_CreatePlanePolygons(numnodes-1); // FIXME BUG this messes up the polyobjs
-      //CONS_Printf(" xxx seg(%d) v1 = %d, line(%d) v1 = %d\n", 1578, segs[1578].v1 - vertexes, segs[1578].linedef - lines, segs[1578].linedef->v1 - vertexes);
+      if (cv_grnewrenderer.value)
+        {
+          HWR.Setup(numnodes);
+        }
+      else
+        {
+          // BP: reset light between levels (we draw preview frame lights on current frame)
+          HWR_ResetLights();
+          // Correct missing sidedefs & deep water trick
+          R.HWR_CorrectSWTricks();
+          //CONS_Printf("\n xxx seg(%d) v1 = %d, line(%d) v1 = %d\n", 1578, segs[1578].v1 - vertexes, segs[1578].linedef - lines, segs[1578].linedef->v1 - vertexes);
+          R.HWR_CreatePlanePolygons(numnodes-1); // FIXME BUG this messes up the polyobjs
+          //CONS_Printf(" xxx seg(%d) v1 = %d, line(%d) v1 = %d\n", 1578, segs[1578].v1 - vertexes, segs[1578].linedef - lines, segs[1578].linedef->v1 - vertexes);
+        }
     }
 #endif
 
@@ -1306,8 +1317,8 @@ bool Map::Setup(tic_t start, bool spawnthings)
   if (spawnthings)
     {
       for (int i=0; i<nummapthings; i++)
-	if (mapthings[i].type)
-	  SpawnMapThing(&mapthings[i]);
+        if (mapthings[i].type)
+          SpawnMapThing(&mapthings[i]);
 
       PlaceWeapons(); // Heretic mace
     }
@@ -1323,8 +1334,11 @@ bool Map::Setup(tic_t start, bool spawnthings)
 #ifdef HWRENDER
   if (rendermode != render_soft)
     {
-      HWR_PrepLevelCache();
-      R.HWR_CreateStaticLightmaps(numnodes-1);
+      if (!cv_grnewrenderer.value)
+        {
+          HWR_PrepLevelCache();
+          R.HWR_CreateStaticLightmaps(numnodes-1);
+        }
     }
 #endif
 
@@ -1358,32 +1372,32 @@ void Map::ConvertLineDefs()
   for (i=0; i<numlines; i++, ld++)
     {
       if (ld->special < n)
-	{
-	  bool passuse = ld->flags & ML_PASSUSE;
-	  bool alltrigger = ld->flags & ML_ALLTRIGGER;
-	  ld->flags &= 0x1ff; // only basic Doom flags are kept
-	  
-	  p = &xt[ld->special];
+        {
+          bool passuse = ld->flags & ML_PASSUSE;
+          bool alltrigger = ld->flags & ML_ALLTRIGGER;
+          ld->flags &= 0x1ff; // only basic Doom flags are kept
 
-	  if (p->type)
-	    ld->special = p->type; // some specials are unaffected
+          p = &xt[ld->special];
 
-	  for (j=0; j<5; j++)
-	    ld->args[j] = p->args[j];
+          if (p->type)
+            ld->special = p->type; // some specials are unaffected
 
-	  trig = p->trigger;
+          for (j=0; j<5; j++)
+            ld->args[j] = p->args[j];
 
-	  // time to put the flags back
-	  ld->flags |= (trig & 0x0f) << (ML_SPAC_SHIFT-1); // activation and repeat
-	  
-	  if (passuse && (GET_SPAC(ld->flags) == SPAC_USE))
-	    {
-	      ld->flags &= ~ML_SPAC_MASK;
-	      ld->flags |= SPAC_PASSUSE << ML_SPAC_SHIFT;
-	    }
+          trig = p->trigger;
 
-	  if (trig & T_ALLOWMONSTER || alltrigger)
-	    ld->flags |= ML_MONSTERS_CAN_ACTIVATE;
-	}
+          // time to put the flags back
+          ld->flags |= (trig & 0x0f) << (ML_SPAC_SHIFT-1); // activation and repeat
+
+          if (passuse && (GET_SPAC(ld->flags) == SPAC_USE))
+            {
+              ld->flags &= ~ML_SPAC_MASK;
+              ld->flags |= SPAC_PASSUSE << ML_SPAC_SHIFT;
+            }
+
+          if (trig & T_ALLOWMONSTER || alltrigger)
+            ld->flags |= ML_MONSTERS_CAN_ACTIVATE;
+        }
     }
 }

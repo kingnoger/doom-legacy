@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C++ -*- 
+// Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
 // $Id$
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.25  2004/05/01 23:29:19  hurdler
+// add dummy new renderer
+//
 // Revision 1.24  2004/04/25 16:26:48  smite-meister
 // Doxygen
 //
@@ -140,8 +143,9 @@
 
 #include "i_joy.h" // move input processing somewhere else
 
-#ifdef HWRENDER 
+#ifdef HWRENDER
 # include "hardware/hw_main.h"
+# include "hardware/hwr_render.h"
 #endif
 
 
@@ -284,7 +288,7 @@ static byte NextWeapon(PlayerPawn *p, int step)
     {
       w = (w + step) % NUMWEAPONS;
       if (p->weaponowned[w] && p->ammo[p->weaponinfo[w].ammo] >= p->weaponinfo[w].ammopershoot)
-	return BT_CHANGE | (weapondata[w].group << BT_WEAPONSHIFT);
+        return BT_CHANGE | (weapondata[w].group << BT_WEAPONSHIFT);
     } while (w != p->readyweapon);
 
   return 0;
@@ -327,12 +331,12 @@ void G_BuildTiccmd(ticcmd_t* cmd, bool primary, int realtics)
       j = cv_alwaysfreelook.value;
       k = 0;
       if (consoleplayer)
-	{
-	  // FIXME this is a hack to ease debugging until the new netcode is done
-	  // Here the netcode is bypassed. See also Game::Ticker() !
-	  cmd = &consoleplayer->cmd;
-	  p = consoleplayer->pawn;
-	}
+        {
+          // FIXME this is a hack to ease debugging until the new netcode is done
+          // Here the netcode is bypassed. See also Game::Ticker() !
+          cmd = &consoleplayer->cmd;
+          p = consoleplayer->pawn;
+        }
     }
   else
     {
@@ -341,7 +345,7 @@ void G_BuildTiccmd(ticcmd_t* cmd, bool primary, int realtics)
       j = cv_alwaysfreelook2.value;
       k = 1;
       if (consoleplayer2)
-	p = consoleplayer2->pawn;
+        p = consoleplayer2->pawn;
     }
   // FIXME no pawn nor player should be needed here. Fix doom network protocol!
 
@@ -359,7 +363,7 @@ void G_BuildTiccmd(ticcmd_t* cmd, bool primary, int realtics)
     ||gamekeydown[gc[gc_turnleft][1]];
 
   mouseaiming = (gamekeydown[gc[gc_mouseaiming][0]]
-		 ||gamekeydown[gc[gc_mouseaiming][1]]) ^ j;
+                 ||gamekeydown[gc[gc_mouseaiming][1]]) ^ j;
 
   if (primary) {
     analogjoystickmove  = cv_usejoystick.value && !Joystick.bGamepadStyle && !cv_splitscreen.value;
@@ -395,27 +399,27 @@ void G_BuildTiccmd(ticcmd_t* cmd, bool primary, int realtics)
   if (strafe)
     {
       if (turnright)
-	side += sidemove[speed];
+        side += sidemove[speed];
       if (turnleft)
-	side -= sidemove[speed];
+        side -= sidemove[speed];
 
       if (analogjoystickmove)
         {
-	  //faB: JOYAXISRANGE is supposed to be 1023 ( divide by 1024)
-	  side += ( (joyxmove * sidemove[1]) >> 10 );
+          //faB: JOYAXISRANGE is supposed to be 1023 ( divide by 1024)
+          side += ( (joyxmove * sidemove[1]) >> 10 );
         }
     }
   else
     {
       if (turnright)
-	cmd->angleturn -= angleturn[tspeed];
+        cmd->angleturn -= angleturn[tspeed];
       //else
       if (turnleft)
-	cmd->angleturn += angleturn[tspeed];
+        cmd->angleturn += angleturn[tspeed];
       if ( joyxmove && analogjoystickmove) {
-	//faB: JOYAXISRANGE should be 1023 ( divide by 1024)
-	cmd->angleturn -= ( (joyxmove * angleturn[1]) >> 10 );        // ANALOG!
-	//CONS_Printf ("joyxmove %d  angleturn %d\n", joyxmove, cmd->angleturn);
+        //faB: JOYAXISRANGE should be 1023 ( divide by 1024)
+        cmd->angleturn -= ( (joyxmove * angleturn[1]) >> 10 );        // ANALOG!
+        //CONS_Printf ("joyxmove %d  angleturn %d\n", joyxmove, cmd->angleturn);
       }
     }
 
@@ -430,8 +434,8 @@ void G_BuildTiccmd(ticcmd_t* cmd, bool primary, int realtics)
     {
       forward -= forwardmove[speed];
     }
-        
-  if (joyymove && analogjoystickmove && !cv_joystickfreelook.value) 
+
+  if (joyymove && analogjoystickmove && !cv_joystickfreelook.value)
     forward -= ( (joyymove * forwardmove[1]) >> 10 );               // ANALOG!
 
   //added:07-02-98: some people strafe left & right with mouse buttons
@@ -461,9 +465,9 @@ void G_BuildTiccmd(ticcmd_t* cmd, bool primary, int realtics)
   else for (i=gc_weapon1; i<=gc_weapon8; i++)
     if (gamekeydown[gc[i][0]] || gamekeydown[gc[i][1]])
       {
-	cmd->buttons |= BT_CHANGE;
-	cmd->buttons |= (i-gc_weapon1)<<BT_WEAPONSHIFT; // 8 keys = three bits
-	break;
+        cmd->buttons |= BT_CHANGE;
+        cmd->buttons |= (i-gc_weapon1)<<BT_WEAPONSHIFT; // 8 keys = three bits
+        break;
       }
 
   static bool keyboard_look[2];      // true if lookup/down using keyboard
@@ -476,9 +480,9 @@ void G_BuildTiccmd(ticcmd_t* cmd, bool primary, int realtics)
 
         // looking up/down
         if (cv_invertmouse.value)
-	  localaiming -= mlooky<<19;
+          localaiming -= mlooky<<19;
         else
-	  localaiming += mlooky<<19;
+          localaiming += mlooky<<19;
       }
     if (cv_usejoystick.value && analogjoystickmove && cv_joystickfreelook.value)
       localaiming += joyymove<<16;
@@ -522,12 +526,12 @@ void G_BuildTiccmd(ticcmd_t* cmd, bool primary, int realtics)
     if (mouseaiming)
       {
         keyboard_look[1] = false;
-	
+
         // looking up/down
         if (cv_invertmouse2.value)
-	  localaiming2 -= mlook2y<<19;
+          localaiming2 -= mlook2y<<19;
         else
-	  localaiming2 += mlook2y<<19;
+          localaiming2 += mlook2y<<19;
       }
 
     if (analogjoystickmove && cv_joystickfreelook.value)
@@ -543,13 +547,13 @@ void G_BuildTiccmd(ticcmd_t* cmd, bool primary, int realtics)
         keyboard_look[1] = true;
       }
     else if (gamekeydown[gamecontrol2[gc_lookdown][0]] ||
-	     gamekeydown[gamecontrol2[gc_lookdown][1]])
+             gamekeydown[gamecontrol2[gc_lookdown][1]])
       {
         localaiming2 -= KB_LOOKSPEED;
         keyboard_look[1] = true;
       }
     else if (gamekeydown[gamecontrol2[gc_centerview][0]] ||
-	     gamekeydown[gamecontrol2[gc_centerview][1]])
+             gamekeydown[gamecontrol2[gc_centerview][1]])
       localaiming2 = 0;
 
     //26/02/2000: added by Hurdler: accept no mlook for network games
@@ -583,7 +587,7 @@ void G_BuildTiccmd(ticcmd_t* cmd, bool primary, int realtics)
   cmd->sidemove += side;
 
   //CONS_Printf("Move: %d, %d, %d\n", cmd->buttons, cmd->forwardmove, cmd->sidemove);
-   
+
 #ifdef ABSOLUTEANGLE
   if (primary) {
     localangle += (cmd->angleturn<<16);
@@ -626,12 +630,17 @@ void GameInfo::Drawer()
       && displayplayer->playerstate != PST_RESPAWN)
     {
       R.SetMap(displayplayer->mp);
-#ifdef HWRENDER 
+#ifdef HWRENDER
       if (rendermode != render_soft)
-	R.HWR_RenderPlayerView(0, displayplayer);
+        {
+          if (cv_grnewrenderer.value)
+            HWR.RenderPlayerView(0, displayplayer);
+          else
+            R.HWR_RenderPlayerView(0, displayplayer);
+        }
       else //if (rendermode == render_soft)
 #endif
-	R.R_RenderPlayerView(displayplayer);
+        R.R_RenderPlayerView(displayplayer);
     }
 
   // added 16-6-98: render the second screen
@@ -639,21 +648,26 @@ void GameInfo::Drawer()
       && displayplayer2->playerstate != PST_RESPAWN)
     {
       R.SetMap(displayplayer2->mp);
-#ifdef HWRENDER 
+#ifdef HWRENDER
       if (rendermode != render_soft)
-	R.HWR_RenderPlayerView(1, displayplayer2);
-      else 
+        {
+          if (cv_grnewrenderer.value)
+            HWR.RenderPlayerView(1, displayplayer2);
+          else
+            R.HWR_RenderPlayerView(1, displayplayer2);
+        }
+      else
 #endif
-	{
-	  //faB: Boris hack :P !!
-	  viewwindowy = vid.height/2;
-	  memcpy(ylookup,ylookup2,viewheight*sizeof(ylookup[0]));
-		  
-	  R.R_RenderPlayerView(displayplayer2);
-		  
-	  viewwindowy = 0;
-	  memcpy(ylookup,ylookup1,viewheight*sizeof(ylookup[0]));
-	}
+        {
+          //faB: Boris hack :P !!
+          viewwindowy = vid.height/2;
+          memcpy(ylookup,ylookup2,viewheight*sizeof(ylookup[0]));
+
+          R.R_RenderPlayerView(displayplayer2);
+
+          viewwindowy = 0;
+          memcpy(ylookup,ylookup1,viewheight*sizeof(ylookup[0]));
+        }
     }
 
   //CONS_Printf("GI::Draw done\n");
@@ -676,55 +690,55 @@ bool PlayerInfo::InventoryResponder(int (*gc)[2], event_t *ev)
     {
     case ev_keydown :
       if (ev->data1 == gc[gc_invprev][0] || ev->data1 == gc[gc_invprev][1])
-	{
-	  if (pawn->invTics)
-	    {
-	      if (--(pawn->invSlot) < 0)
-		pawn->invSlot = 0;
-	      else if (--st_curpos < 0)
-		st_curpos = 0;
-	    }
-	  pawn->invTics = 5*TICRATE;
-	  return true;
-	}
+        {
+          if (pawn->invTics)
+            {
+              if (--(pawn->invSlot) < 0)
+                pawn->invSlot = 0;
+              else if (--st_curpos < 0)
+                st_curpos = 0;
+            }
+          pawn->invTics = 5*TICRATE;
+          return true;
+        }
       else if (ev->data1 == gc[gc_invnext][0] || ev->data1 == gc[gc_invnext][1])
-	{
-	  int n = pawn->inventory.size();
+        {
+          int n = pawn->inventory.size();
 
-	  if (pawn->invTics)
-	    {
-	      if (++(pawn->invSlot) >= n)
-		pawn->invSlot = n-1;
-	      else if (++st_curpos > 6)
-		st_curpos = 6;
-	    }
-	  pawn->invTics = 5*TICRATE;
-	  return true;
-	}
+          if (pawn->invTics)
+            {
+              if (++(pawn->invSlot) >= n)
+                pawn->invSlot = n-1;
+              else if (++st_curpos > 6)
+                st_curpos = 6;
+            }
+          pawn->invTics = 5*TICRATE;
+          return true;
+        }
       else if (ev->data1 == gc[gc_invuse ][0] || ev->data1 == gc[gc_invuse ][1])
-	{
-	  if (pawn->invTics)
-	    pawn->invTics = 0;
-	  else if (pawn->inventory[pawn->invSlot].count > 0)
-	    {
-	      // FIXME HACK bypassing netcode
-	      pawn->UseArtifact(artitype_t(pawn->inventory[pawn->invSlot].type));
-	      /*
-	      if (1) // FIXME send playernum in the message...
-		SendNetXCmd(XD_USEARTEFACT, &pawn->inventory[pawn->invSlot].type, 1);
-	      else
-		SendNetXCmd2(XD_USEARTEFACT, &pawn->inventory[pawn->invSlot].type, 1);
-	      */
-	    }
-	  return true;
-	}
+        {
+          if (pawn->invTics)
+            pawn->invTics = 0;
+          else if (pawn->inventory[pawn->invSlot].count > 0)
+            {
+              // FIXME HACK bypassing netcode
+              pawn->UseArtifact(artitype_t(pawn->inventory[pawn->invSlot].type));
+              /*
+              if (1) // FIXME send playernum in the message...
+                SendNetXCmd(XD_USEARTEFACT, &pawn->inventory[pawn->invSlot].type, 1);
+              else
+                SendNetXCmd2(XD_USEARTEFACT, &pawn->inventory[pawn->invSlot].type, 1);
+              */
+            }
+          return true;
+        }
       break;
 
     case ev_keyup:
       if (ev->data1 == gc[gc_invuse ][0] || ev->data1 == gc[gc_invuse ][1] ||
-	  ev->data1 == gc[gc_invprev][0] || ev->data1 == gc[gc_invprev][1] ||
-	  ev->data1 == gc[gc_invnext][0] || ev->data1 == gc[gc_invnext][1])
-	return true;
+          ev->data1 == gc[gc_invprev][0] || ev->data1 == gc[gc_invprev][1] ||
+          ev->data1 == gc[gc_invnext][0] || ev->data1 == gc[gc_invnext][1])
+        return true;
       break;
 
     default:
@@ -748,28 +762,28 @@ bool GameInfo::Responder(event_t* ev)
       // spy mode
       map<int, PlayerInfo *>::iterator i;
       if (displayplayer == NULL)
-	i = Players.begin();
+        i = Players.begin();
       else
-	{
-	  i = Players.upper_bound(displayplayer->number);
-	  if (i == Players.end())
-	    i = Players.begin();
-	}
+        {
+          i = Players.upper_bound(displayplayer->number);
+          if (i == Players.end())
+            i = Players.begin();
+        }
 
       if (i == Players.end())
-	displayplayer = NULL;
+        displayplayer = NULL;
       else
-	displayplayer = (*i).second;
+        displayplayer = (*i).second;
 
       if (displayplayer)
-	{
-	  //added:16-01-98:change statusbar also if playingback demo
-	  if (singledemo)
-	    hud.ST_Start(displayplayer->pawn);
+        {
+          //added:16-01-98:change statusbar also if playingback demo
+          if (singledemo)
+            hud.ST_Start(displayplayer->pawn);
 
-	  //added:11-04-98: tell who's the view
-	  CONS_Printf("Viewpoint : %s\n", displayplayer->name.c_str());
-	}
+          //added:11-04-98: tell who's the view
+          CONS_Printf("Viewpoint : %s\n", displayplayer->name.c_str());
+        }
       return true;
     }
 
@@ -779,8 +793,8 @@ bool GameInfo::Responder(event_t* ev)
     {
       if (ev->type == ev_keydown)
         {
-	  Menu::Open();
-	  return true;
+          Menu::Open();
+          return true;
         }
       return false;
     }
@@ -789,28 +803,28 @@ bool GameInfo::Responder(event_t* ev)
     {
     case GS_LEVEL:
       if (!multiplayer) //FIXME! The _server_ CAN cheat in multiplayer (maybe using console only?)
-	if (cht_Responder (ev))
-	  return true;
+        if (cht_Responder (ev))
+          return true;
       if (hud.Responder(ev))
-	return true;        // HUD ate the event
+        return true;        // HUD ate the event
       if (automap.Responder(ev))
-	return true;        // automap ate it
+        return true;        // automap ate it
 
       if (consoleplayer->InventoryResponder(gamecontrol, ev))
-	return true;
+        return true;
 
       if (cv_splitscreen.value && consoleplayer2->InventoryResponder(gamecontrol2, ev))
-	return true;
+        return true;
       break;
 
     case GS_INTERMISSION:
       if (wi.Responder(ev))
-	return true;
+        return true;
       break;
 
     case GS_FINALE:
       if (F_Responder (ev))
-	return true;        // finale ate the event
+        return true;        // finale ate the event
       break;
 
     default:
@@ -825,21 +839,21 @@ bool GameInfo::Responder(event_t* ev)
     {
     case ev_keydown:
       switch (ev->data1)
-	{
-	case KEY_PAUSE:
-	  COM_BufAddText("pause\n");
-	  return true;
-	  
-	case KEY_MINUS:     // Screen size down
-	  CV_SetValue (&cv_viewsize, cv_viewsize.value-1);
-	  S_StartAmbSound(sfx_menu_adjust);
-	  return true;
+        {
+        case KEY_PAUSE:
+          COM_BufAddText("pause\n");
+          return true;
 
-	case KEY_EQUALS:    // Screen size up
-	  CV_SetValue (&cv_viewsize, cv_viewsize.value+1);
-	  S_StartAmbSound(sfx_menu_adjust);
-	  return true;
-	}
+        case KEY_MINUS:     // Screen size down
+          CV_SetValue (&cv_viewsize, cv_viewsize.value-1);
+          S_StartAmbSound(sfx_menu_adjust);
+          return true;
+
+        case KEY_EQUALS:    // Screen size up
+          CV_SetValue (&cv_viewsize, cv_viewsize.value+1);
+          S_StartAmbSound(sfx_menu_adjust);
+          return true;
+        }
 
       return true;
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2004/05/01 23:29:19  hurdler
+// add dummy new renderer
+//
 // Revision 1.14  2004/03/28 15:16:15  smite-meister
 // Texture cache.
 //
@@ -163,10 +166,14 @@
 
 #ifdef HWRENDER
 # include "hardware/hw_main.h"
+# include "hardware/hwr_render.h"
 #endif
 
 
 Rend R;
+#ifdef HWRENDER
+HWRend HWR;
+#endif
 
 
 //profile stuff ---------------------------------------------------------
@@ -288,12 +295,12 @@ void SplitScreen_OnChange()
   if (!demoplayback)
     {
       if(cv_splitscreen.value)
-	CL_AddSplitscreenPlayer();
+    CL_AddSplitscreenPlayer();
       else
-	CL_RemoveSplitscreenPlayer();
+    CL_RemoveSplitscreenPlayer();
 
       if (server && !game.netgame)
-	game.multiplayer = cv_splitscreen.value;
+    game.multiplayer = cv_splitscreen.value;
     }
   else
     displayplayer2 = game.FindPlayer(1);
@@ -315,14 +322,14 @@ int R_PointOnSide(fixed_t x, fixed_t y, node_t *node)
   if (!node->dx)
     {
       if (x <= node->x)
-	return node->dy > 0;
+    return node->dy > 0;
 
       return node->dy < 0;
     }
   if (!node->dy)
     {
       if (y <= node->y)
-	return node->dx < 0;
+    return node->dx < 0;
 
       return node->dx > 0;
     }
@@ -335,8 +342,8 @@ int R_PointOnSide(fixed_t x, fixed_t y, node_t *node)
     {
       if ( (node->dy ^ dx) & 0x80000000 )
         {
-	  // (left is negative)
-	  return 1;
+      // (left is negative)
+      return 1;
         }
       return 0;
     }
@@ -801,7 +808,7 @@ void R_SetViewSize()
 void R_ExecuteSetViewSize()
 {
   int i, j;
-    
+
   setsizeneeded = false;
 
   // no reduced view in splitscreen mode
@@ -825,7 +832,7 @@ void R_ExecuteSetViewSize()
       hud.stbarheight = ST_HEIGHT_DOOM;
       break;
     }
-    
+
   if (cv_scalestatusbar.value || cv_viewsize.value > 10)
     hud.stbarheight = (int)(hud.stbarheight * (rendermode==render_soft) ? vid.dupy : vid.fdupy);
 
@@ -909,12 +916,12 @@ void R_ExecuteSetViewSize()
       // this is only used for planes rendering in software mode
       j = viewheight*4;
       for (i=0 ; i<j ; i++)
-	{
-	  //added:10-02-98:(i-centery) became (i-centery*2) and centery*2=viewheight
-	  fixed_t dy = ((i-viewheight*2)<<FRACBITS)+FRACUNIT/2;
-	  dy = abs(dy);
-	  yslopetab[i] = FixedDiv (aspectx*FRACUNIT, dy);
-	}
+    {
+      //added:10-02-98:(i-centery) became (i-centery*2) and centery*2=viewheight
+      fixed_t dy = ((i-viewheight*2)<<FRACBITS)+FRACUNIT/2;
+      dy = abs(dy);
+      yslopetab[i] = FixedDiv (aspectx*FRACUNIT, dy);
+    }
     }
 
   for (i=0 ; i<viewwidth ; i++)
@@ -930,15 +937,15 @@ void R_ExecuteSetViewSize()
       int startmap = ((LIGHTLEVELS-1-i)*2)*NUMCOLORMAPS/LIGHTLEVELS;
       for (j=0 ; j<MAXLIGHTSCALE ; j++)
         {
-	  int level = startmap - j*vid.width/(viewwidth<<detailshift)/DISTMAP;
+      int level = startmap - j*vid.width/(viewwidth<<detailshift)/DISTMAP;
 
-	  if (level < 0)
-	    level = 0;
+      if (level < 0)
+        level = 0;
 
-	  if (level >= NUMCOLORMAPS)
-	    level = NUMCOLORMAPS-1;
+      if (level >= NUMCOLORMAPS)
+        level = NUMCOLORMAPS-1;
 
-	  scalelight[i][j] = colormaps + level*256;
+      scalelight[i][j] = colormaps + level*256;
         }
     }
 
@@ -1002,57 +1009,57 @@ static void TestAnims()
       printf("\n%d: %s\n", i, sprnames[spr]);
 
       for (j = 0; j<9; j++)
-	seq[j] = &states[info->*seqptr[j]];;
+    seq[j] = &states[info->*seqptr[j]];;
 
       for (j = 0; j<9; j++)
-	{
-	  s = n = seq[j];
-	  printf(" %s: ", snames[j]);
-	  if (n == &states[S_NULL])
-	    {
-	      printf("(none)\n");
-	      continue;
-	    }
+    {
+      s = n = seq[j];
+      printf(" %s: ", snames[j]);
+      if (n == &states[S_NULL])
+        {
+          printf("(none)\n");
+          continue;
+        }
 
-	  for (k = 0; k < 40; k++)
-	    {
-	      if (n == &states[S_NULL])
-		{
-		  printf("S_NULL, %d\n", k);
-		  break;
-		}
+      for (k = 0; k < 40; k++)
+        {
+          if (n == &states[S_NULL])
+        {
+          printf("S_NULL, %d\n", k);
+          break;
+        }
 
-	      if (n->sprite != spr)
-		{
-		  printf("! name: %s: ", sprnames[n->sprite]);
-		  spr = n->sprite;
-		}
+          if (n->sprite != spr)
+        {
+          printf("! name: %s: ", sprnames[n->sprite]);
+          spr = n->sprite;
+        }
 
-	      if (n->tics < 0)
-		{
-		  printf("hold, %d\n", k+1);
-		  break;
-		}
+          if (n->tics < 0)
+        {
+          printf("hold, %d\n", k+1);
+          break;
+        }
 
-	      n = &states[n->nextstate];
-	      if (n == s)
-		{
-		  printf("loop, %d\n", k+1);
-		  break;
-		}
-	      else for (l=0; l<9; l++)
-		if (n == seq[l] && n != &states[S_NULL])
-		  break;
+          n = &states[n->nextstate];
+          if (n == s)
+        {
+          printf("loop, %d\n", k+1);
+          break;
+        }
+          else for (l=0; l<9; l++)
+        if (n == seq[l] && n != &states[S_NULL])
+          break;
 
-	      if (l < 9)
-		{
-		  printf("6-loop to %s, %d+\n", snames[l], k+1);
-		  break;
-		}
-	    }
-	  if (k == 40)
-	    printf("l >= 40 !!!\n");
-	}
+          if (l < 9)
+        {
+          printf("6-loop to %s, %d+\n", snames[l], k+1);
+          break;
+        }
+        }
+      if (k == 40)
+        printf("l >= 40 !!!\n");
+    }
     }
 
   I_Error("\n ... done.\n");
@@ -1074,7 +1081,7 @@ void R_Init()
     R_InitTables ();
 
     R_InitViewBorder ();
-    
+
     R_SetViewSize ();   // setsizeneeded is set true
 
     if(devparm)
@@ -1215,18 +1222,18 @@ void Rend::R_SetupFrame(PlayerInfo *player)
         viewangle = viewactor->angle+viewangleoffset;
 
         if(!demoplayback && player->playerstate!=PST_DEAD && !drone)
-	  {
+      {
             if (player == consoleplayer)
-	      {
+          {
                 viewangle = localangle; // WARNING : camera use this
                 aimingangle=localaiming;
-	      }
+          }
             else if (player == consoleplayer2)
-	      {
-		viewangle = localangle2; 
-		aimingangle=localaiming2;
-	      }
-	  } 
+          {
+        viewangle = localangle2;
+        aimingangle=localaiming2;
+          }
+      }
       }
 
 #ifdef PARANOIA
@@ -1236,7 +1243,7 @@ void Rend::R_SetupFrame(PlayerInfo *player)
   viewplayer = player->pawn;
   viewx = viewactor->x;
   viewy = viewactor->y;
-  
+
   viewsin = finesine[viewangle>>ANGLETOFINESHIFT];
   viewcos = finecosine[viewangle>>ANGLETOFINESHIFT];
 
@@ -1249,7 +1256,7 @@ void Rend::R_SetupFrame(PlayerInfo *player)
       walllights = scalelightfixed;
 
       for (i=0 ; i<MAXLIGHTSCALE ; i++)
-	scalelightfixed[i] = fixedcolormap;
+    scalelightfixed[i] = fixedcolormap;
     }
   else
     fixedcolormap = 0;
@@ -1258,16 +1265,16 @@ void Rend::R_SetupFrame(PlayerInfo *player)
   //               slopes are already calculated for the full
   //               possible view (which is 4*viewheight).
 
-  if ( rendermode == render_soft ) 
+  if ( rendermode == render_soft )
     {
       // clip it in the case we are looking a hardware 90° full aiming
       // (lmps, nework and use F12...)
       G_ClipAimingPitch((int *)&aimingangle);
 
       if(!cv_splitscreen.value)
-	dy = AIMINGTODY(aimingangle)* viewheight/BASEVIDHEIGHT ;
+    dy = AIMINGTODY(aimingangle)* viewheight/BASEVIDHEIGHT ;
       else
-	dy = AIMINGTODY(aimingangle)* viewheight*2/BASEVIDHEIGHT ;
+    dy = AIMINGTODY(aimingangle)* viewheight*2/BASEVIDHEIGHT ;
 
       yslope = &yslopetab[(3*viewheight/2) - dy];
     }
@@ -1399,9 +1406,9 @@ void Rend::R_RenderPlayerView(PlayerInfo *player)
     //  but does not draw on side views
     if (!viewangleoffset && !camera.chase && cv_psprites.value
 #ifdef FRAGGLESCRIPT
-	&& !script_camera_on
+    && !script_camera_on
 #endif
-	)
+    )
       R_DrawPlayerSprites ();
 
     // Check for new console commands.

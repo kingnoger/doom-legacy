@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C++ -*- 
+// Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
 // $Id$
@@ -8,6 +8,9 @@
 // Renderer is a friend class of Map
 //
 // $Log$
+// Revision 1.5  2004/05/01 23:29:19  hurdler
+// add dummy new renderer
+//
 // Revision 1.4  2003/06/20 20:56:08  smite-meister
 // Presentation system tweaked
 //
@@ -58,7 +61,7 @@ private:
   // temporarily we have here COPIES of, or pointers to certain Map data members (geometry).
   // these MUST be set every time before rendering begins
 
-  // when the renderer is rewritten, this can be done in a better way (the Map* should be enough) 
+  // when the renderer is rewritten, this can be done in a better way (the Map* should be enough)
 
   int             numvertexes;
   vertex_t*       vertexes;
@@ -127,8 +130,8 @@ public:
   void R_DrawMasked();
 
   sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec,
-		       int *floorlightlevel, int *ceilinglightlevel,
-		       bool back);
+               int *floorlightlevel, int *ceilinglightlevel,
+               bool back);
   void R_Prep3DFloors(sector_t*  sector);
   void R_Subsector(int num);
   void R_RenderBSPNode (int bspnum);
@@ -138,11 +141,11 @@ public:
   void R_RenderThickSideRange(drawseg_t *ds, int x1, int x2, ffloor_t *ffloor);
 
   void R_AddWallSplat(line_t  *wallline,
-		      int      sectorside,
-		      char    *patchname,
-		      fixed_t  top,
-		      fixed_t  wallfrac,
-		      int      flags);
+              int      sectorside,
+              char    *patchname,
+              fixed_t  top,
+              fixed_t  wallfrac,
+              int      flags);
 
   void R_AddSprites(sector_t *sec, int lightlevel);
   //void R_ProjectSprite (Actor* thing);
@@ -176,9 +179,9 @@ public:
   void HWR_CreateStaticLightmaps(int bspnum);
 
   void HWR_RenderPlane(extrasubsector_t *xsub, fixed_t fixedheight,
-		       FBITFIELD PolyFlags, int lightlevel);
+               FBITFIELD PolyFlags, int lightlevel);
   void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, int texnum,
-			   FSurfaceInfo *Surf, int cutflag);
+               FSurfaceInfo *Surf, int cutflag);
   void HWR_StoreWallRange(int startfrac, int endfrac);
   void HWR_Subsector(int num);
   void HWR_RenderBSPNode(int bspnum);
