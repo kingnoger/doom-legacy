@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.37  2004/11/28 18:02:24  smite-meister
+// RPCs finally work!
+//
 // Revision 1.36  2004/11/19 16:51:07  smite-meister
 // cleanup
 //
@@ -127,6 +130,7 @@
 #include <png.h>
 
 #include "doomdef.h"
+#include "doomdata.h"
 #include "command.h"
 #include "cvars.h"
 #include "parser.h"
@@ -402,38 +406,6 @@ byte *PatchTexture::GetData()
 //==================================================================
 //  DoomTexture
 //==================================================================
-
-// Texture definitions in the WAD file. Assumes that int = 32 bits, short = 16 bits
-
-// Each texture is composed of one or more patches,
-// with patches being lumps stored in the WAD.
-// The lumps are referenced by number, and patched
-// into the rectangular texture space using origin
-// and possibly other attributes.
-struct mappatch_t
-{
-  short       originx;
-  short       originy;
-  short       patch;
-  short       stepdir;  // always 1
-  short       colormap; // always 0
-} __attribute__((packed));
-
-
-// Texture definition struct in the WAD file.
-// A DOOM wall texture is a list of patches
-// which are to be combined in a predefined order.
-struct maptexture_t
-{
-  char        name[8];
-  short       flags;          // extension, used to be zero
-  byte        xscale, yscale; // extension, used to be zero
-  short       width;
-  short       height;
-  void      **columndirectory; // unused, always zero
-  short       patchcount;
-  mappatch_t  patches[1];
-} __attribute__((packed));
 
 
 DoomTexture::DoomTexture(const maptexture_t *mtex)

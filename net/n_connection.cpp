@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/11/28 18:02:23  smite-meister
+// RPCs finally work!
+//
 // Revision 1.9  2004/11/09 20:38:52  smite-meister
 // added packing to I/O structs
 //
@@ -69,9 +72,7 @@ void objectLocalScopeAlways(o)
 void objectLocalClearAlways(o)
 bool isGhosting()
 
-virtual void onEndGhosting()
 */
-
 
 // netobject:
 /*
@@ -261,7 +262,6 @@ void LConnection::onConnectionEstablished()
     }
   else
     {
-      rpcSay(0, 0, "sdoysdfsha!\n");
       // server side
       n->client_con.push_back(this);
 
@@ -306,7 +306,7 @@ void LConnection::ConnectionTerminated(bool established)
 	      player[i]->playerstate = PST_REMOVE;
 	    }
 	  resetGhosting();
-	  // TODO inform others
+	  // TODO inform others, remove client_con member
 	}
       else
 	{
@@ -319,7 +319,14 @@ void LConnection::ConnectionTerminated(bool established)
 
 void LConnection::onStartGhosting()
 {
-  I_Error("Ghosting started...\n");
+  CONS_Printf("Ghosting started...\n");
+}
+
+
+
+void LConnection::onEndGhosting()
+{
+  CONS_Printf("Ghosting ended.\n");
 }
 
 
@@ -328,37 +335,60 @@ void LConnection::onStartGhosting()
 //            Remote Procedure Calls
 //========================================================
 
-TNL_IMPLEMENT_RPC(LConnection, rpcTest, (U8 num), 
-		  NetClassGroupGameMask, RPCGuaranteedOrdered, RPCDirClientToServer, 0)
+LCONNECTION_RPC(rpcTest, (U8 num), RPCGuaranteedOrdered, RPCDirClientToServer, 0)
 {
   CONS_Printf("client sent this: %d\n", num);
 };
 
 
-// to: 0 means everyone, positive numbers are players, negative numbers are teams
-TNL_IMPLEMENT_RPC(LConnection, rpcSay, (S8 from, S8 to, const char *msg), 
-		  NetClassGroupGameMask, RPCGuaranteedOrdered, RPCDirAny, 0)
+void LNetInterface::SendNetVar(U16 netid, const char *str)
 {
+  // send netvar as an rpc event to all clients
+  int n = client_con.size();
+  for (int i = 0; i < n; i++)
+    client_con[i]->rpcSendNetVar(netid, str);
+}
+
+LCONNECTION_RPC(rpcSendNetVar, (U16 netid, const char *str), RPCGuaranteed, RPCDirServerToClient, 0)
+{
+  consvar_t::GotNetVar(netid, str);
+}
+
+
+
+// to: 0 means everyone, positive numbers are players, negative numbers are teams
+LCONNECTION_RPC(rpcChat, (S8 from, S8 to, const char *msg), 
+		RPCGuaranteedOrdered, RPCDirAny, 0)
+{
+  PlayerInfo *p = game.FindPlayer(from);
+
   if (isConnectionToServer())
     {
       // client
-      CONS_Printf("%s: %s\n", game.Players[from]->name.c_str(), msg);
+      if (p)
+	CONS_Printf("%s: %s\n", p->name.c_str(), msg);
+      else
+	CONS_Printf("Unknown player %d: %s\n", from, msg);
     }
   else
     {
-      from = player[0]->number;
+      if (!p || p->connection != this)
+	{
+	  CONS_Printf("counterfeit message!\n"); // false sender
+	  return;
+	}
 
-      CONS_Printf("message!\n");
-      CONS_Printf("\3%s: %s\n", game.Players[from]->name.c_str(), msg);
-      game.net->SayCmd(player[0]->number, to, msg);
+      game.SendChat(from, to, msg);
     }
 };
 
 
 
 
-TNL_IMPLEMENT_RPC(LConnection, rpcMessage_s2c, (S32 pnum, const char *msg, S8 priority, S8 type), 
-		  NetClassGroupGameMask, RPCGuaranteedOrdered, RPCDirServerToClient, 0)
+
+
+LCONNECTION_RPC(rpcMessage_s2c, (S32 pnum, const char *msg, S8 priority, S8 type), 
+		RPCGuaranteedOrdered, RPCDirServerToClient, 0)
 {
   int n = Consoleplayer.size();
   for (int i=0; i<n; i++)
@@ -368,26 +398,26 @@ TNL_IMPLEMENT_RPC(LConnection, rpcMessage_s2c, (S32 pnum, const char *msg, S8 pr
 	return;
       }
 
-  I_Error("Received someone else's message!\n");
+  CONS_Printf("Received someone else's message!\n");
 }
 
 
-TNL_IMPLEMENT_RPC(LConnection, rpcStartIntermission_s2c, (), 
-		  NetClassGroupGameMask, RPCGuaranteedOrdered, RPCDirServerToClient, 0)
+LCONNECTION_RPC(rpcStartIntermission_s2c, (), 
+		RPCGuaranteedOrdered, RPCDirServerToClient, 0)
 {
   //wi.StartIntermission();
 }
 
 
-TNL_IMPLEMENT_RPC(LConnection, rpcIntermissionDone_c2s, (), 
-		  NetClassGroupGameMask, RPCGuaranteedOrdered, RPCDirClientToServer, 0)
+LCONNECTION_RPC(rpcIntermissionDone_c2s, (), 
+		RPCGuaranteedOrdered, RPCDirClientToServer, 0)
 {
   //player[0]->playerstate = PST_NEEDMAP; 
 }
 
 
-TNL_IMPLEMENT_RPC(LConnection, rpcRequestPOVchange_c2s, (S32 pnum), 
-		  NetClassGroupGameMask, RPCGuaranteedOrdered, RPCDirClientToServer, 0)
+LCONNECTION_RPC(rpcRequestPOVchange_c2s, (S32 pnum), 
+		  RPCGuaranteedOrdered, RPCDirClientToServer, 0)
 {
   // spy mode
   if (game.state == GameInfo::GS_LEVEL && !cv_hiddenplayers.value)

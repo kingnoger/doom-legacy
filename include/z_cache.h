@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/11/28 18:02:23  smite-meister
+// RPCs finally work!
+//
 // Revision 1.9  2004/09/03 16:28:51  smite-meister
 // bugfixes and ZDoom linedef types
 //
@@ -89,6 +92,7 @@ public:
 };
 
 
+
 /// \brief ABC for different types of caches
 class cache_t
 {
@@ -106,8 +110,17 @@ protected:
   c_map_t c_map; ///< hash_map from data item names to cacheitem_t's
 
   memtag_t     tagtype;       ///< memory tag used for the cached data
-  const char  *default_name;  ///< name of the default data item
-  cacheitem_t *default_item;  ///< the default data item itself
+  cacheitem_t *default_item;  ///< the default data item
+
+  /// The safe way of inserting stuff into the hash_map.
+  /// The main point is that 'name' is stored in the cacheitem structure itself.
+  inline void Insert(cacheitem_t *p)
+  {
+    c_map.insert(c_map_t::value_type(p->name, p));
+  }
+
+  /// Returns either a newly-loaded cacheitem or a link to the default item.
+  cacheitem_t *CreateItem(const char *name);
 
   /// Does the actual loading and conversion of the data during a Cache() operation
   virtual cacheitem_t *Load(const char *p) = 0;
@@ -130,7 +143,7 @@ public:
   int  Cleanup();
 
   /// does not work yet
-  void Flush();
+  //void Flush();
 };
 
 #endif

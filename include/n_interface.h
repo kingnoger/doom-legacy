@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/11/28 18:02:23  smite-meister
+// RPCs finally work!
+//
 // Revision 1.7  2004/11/04 21:12:54  smite-meister
 // save/load fixed
 //
@@ -25,9 +28,6 @@
 //
 // Revision 1.5  2004/07/09 19:43:40  smite-meister
 // Netcode fixes
-//
-// Revision 1.4  2004/07/07 17:27:19  smite-meister
-// bugfixes
 //
 // Revision 1.3  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
@@ -158,7 +158,7 @@ public:
 
   //================================================
 
-  void SayCmd(int from, int to, const char *msg);
+  void SendNetVar(U16 netid, const char *str);
 };
 
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/11/28 18:02:22  smite-meister
+// RPCs finally work!
+//
 // Revision 1.11  2004/09/23 23:21:18  smite-meister
 // HUD updated
 //
@@ -434,7 +437,7 @@ void HudInventory::Draw()
       else
 	{
 	  // just a single item in a box
-	  tex[1]->Draw(x+100, y, fgbuffer);
+	  //tex[1]->Draw(x+100, y, fgbuffer);
 	  // tex[7]->Draw(st_x+180, st_y+3, fgbuffer);
 	  if (slots[sel].type != arti_none)
 	    {

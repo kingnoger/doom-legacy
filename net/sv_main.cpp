@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2004/11/28 18:02:23  smite-meister
+// RPCs finally work!
+//
 // Revision 1.18  2004/11/19 16:51:06  smite-meister
 // cleanup
 //
@@ -137,39 +140,9 @@ Net tasks: (ghost, rpc, netevent, info packet, raw packet)
  - file transfer (?)
 
 
-RPC's from server to client:
- - startsound/stopsound/sequence/music
- - HUD colormap and other effects?
- - pause
- - console/HUD message (unicast/multicast)
- - map change/load
-
-client to server:
- - request pause
- - say
-
-Player ticcmd contains both guaranteed_ordered and unguaranteed elements.
-Shooting and artifact use should be guaranteed...
-
-
-
-    XD_NAMEANDCOLOR=1,
-    XD_WEAPONPREF,
-    XD_NETVAR,
-    XD_SAY,
-    XD_MAP,
-    XD_EXITLEVEL,
-    XD_LOADGAME,
-    XD_SAVEGAME,
-    XD_PAUSE,
-    XD_ADDPLAYER,
-    XD_USEARTEFACT,
-
-
 In future, do dll mods like this:
 polymorph Map, PlayerInfo? (and Actor descendants, of course)
 Have polymorphed class GameType which creates these into GameInfo containers
-
  */
 
 
@@ -214,7 +187,7 @@ consvar_t cv_masterserver   = {"masterserver", "doomlegacy.dhs.org:"MS_PORT, CV_
 consvar_t cv_netstat = {"netstat", "0", 0, CV_OnOff};
 
 // server info
-consvar_t cv_internetserver  = {"publicserver", "No", CV_SAVE, CV_YesNo};
+consvar_t cv_publicserver  = {"publicserver", "No", CV_SAVE, CV_YesNo};
 consvar_t cv_servername      = {"servername", "DooM Legacy server", CV_SAVE, NULL};
 consvar_t cv_allownewplayers = {"allownewplayers", "1", 0, CV_OnOff};
 CV_PossibleValue_t maxplayers_cons_t[]={{1, "MIN"},{100, "MAX"},{0, NULL}};
@@ -244,6 +217,7 @@ consvar_t cv_jumpspeed       = {"jumpspeed", "6", CV_NETVAR | CV_FLOAT, CV_Unsig
 consvar_t cv_allowrocketjump = {"allowrocketjump", "0", CV_NETVAR, CV_YesNo};
 consvar_t cv_allowautoaim    = {"allowautoaim", "1", CV_NETVAR, CV_YesNo};
 consvar_t cv_allowmlook      = {"allowfreelook", "1", CV_NETVAR, CV_YesNo};
+consvar_t cv_allowpause      = {"allowpause", "1", CV_NETVAR, CV_YesNo};
 
 consvar_t cv_itemrespawn     ={"respawnitem"    , "0", CV_NETVAR, CV_OnOff};
 consvar_t cv_itemrespawntime ={"respawnitemtime", "30", CV_NETVAR, CV_Unsigned};
@@ -256,6 +230,7 @@ consvar_t cv_nomonsters = {"nomonsters", "0", CV_NETVAR, CV_OnOff};
 consvar_t cv_fastmonsters = {"fastmonsters", "0", CV_NETVAR | CV_CALL, CV_OnOff,FastMonster_OnChange};
 consvar_t cv_solidcorpse  = {"solidcorpse", "0", CV_NETVAR | CV_SAVE, CV_OnOff};
 consvar_t cv_voodoodolls  = {"voodoodolls", "1", CV_NETVAR, CV_OnOff};
+
 
 void TeamPlay_OnChange()
 {
@@ -401,7 +376,9 @@ bool GameInfo::Playing()
 
 void P_ACSInitNewGame();
 
-/// after this you are not Playing()
+
+/// Close net connections, delete players, clear game status.
+/// After this you are not Playing().
 void GameInfo::SV_Reset()
 {
   net->SV_Reset(); // disconnect clients etc.
@@ -423,8 +400,9 @@ void GameInfo::SV_Reset()
 }
 
 
-/// Initializes and opens the server.
+/// Resets and initializes the server.
 /// Sets up the game if given a valid MAPINFO lump.
+/// If given a negative lump number, does not read any MAPINFO (for loading games).
 bool GameInfo::SV_SpawnServer(int mapinfo_lump)
 {
   if (Playing())
@@ -442,12 +420,6 @@ bool GameInfo::SV_SpawnServer(int mapinfo_lump)
 	{
 	  CONS_Printf("Bad MAPINFO lump.\n");
 	  return false;
-	}
-
-      if (netgame)
-	{
-	  net->SV_Open();
-	  multiplayer = true;
 	}
     }
 
@@ -480,6 +452,7 @@ void GameInfo::ReadResourceLumps()
 	S_PrecacheSounds();
     }
 
+  // FIXME not correct, texturecache should be cleared and refilled first...
   // texture and flat animations
   if (P_Read_ANIMDEFS(fc.FindNumForName("ANIMDEFS")) < 0)
     P_Read_ANIMATED(fc.FindNumForName("ANIMATED"));
@@ -489,7 +462,15 @@ void GameInfo::ReadResourceLumps()
 }
 
 
-
+void GameInfo::SV_SetServerState(bool open)
+{
+  if (open)
+    {
+      net->SV_Open(false);
+      netgame = multiplayer = true;
+    }
+  // TODO else net->SV_Close()
+}
 
 
 
@@ -520,13 +501,10 @@ void InitNetwork()
   // misc. commandline parameters
   n->nodownload = M_CheckParm("-nodownload");
 
-
   // parse network game options,
   if (M_CheckParm("-server") || game.dedicated)
     {
-      game.netgame = true;
-
-      // give a number of clients to wait for before starting game?
+      // TODO give a number of clients to wait for before starting game?
       // if (M_IsNextParm())
       //   doomcom->numnodes = atoi(M_GetNextParm());
     }
@@ -707,7 +685,7 @@ void SV_Init()
   COM_AddCommand("listserv", Command_Listserv_f);
 
   // register console variables
-  cv_internetserver.Reg();
+  cv_publicserver.Reg();
   cv_servername.Reg();
   cv_allownewplayers.Reg();
   cv_maxplayers.Reg();
@@ -724,6 +702,7 @@ void SV_Init()
   cv_allowrocketjump.Reg();
   cv_allowautoaim.Reg();
   cv_allowmlook.Reg();
+  cv_allowpause.Reg();
 
   cv_itemrespawn.Reg();
   cv_itemrespawntime.Reg();

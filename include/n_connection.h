@@ -17,26 +17,14 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/11/28 18:02:23  smite-meister
+// RPCs finally work!
+//
 // Revision 1.8  2004/11/09 20:38:52  smite-meister
 // added packing to I/O structs
 //
-// Revision 1.7  2004/10/27 17:37:09  smite-meister
-// netcode update
-//
-// Revision 1.6  2004/08/12 18:30:29  smite-meister
-// cleaned startup
-//
-// Revision 1.5  2004/08/06 19:33:49  smite-meister
-// netcode
-//
-// Revision 1.4  2004/07/09 19:43:40  smite-meister
-// Netcode fixes
-//
 // Revision 1.3  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
-//
-// Revision 1.2  2004/06/25 19:53:23  smite-meister
-// Netcode
 //
 // Revision 1.1  2004/06/18 08:17:02  smite-meister
 // New TNL netcode!
@@ -99,19 +87,55 @@ public:
   /// called at the client when ghosting starts
   virtual void onStartGhosting();
 
+  /// called at the client when ghosting stops
+  virtual void onEndGhosting();
+
 
   //============ RPCs =============== 
+
+  /*
+RPC's from server to client:
+ - startsound/stopsound/sequence/music
+ - HUD colormap and other effects?
+ - pause
+ - console/HUD message (unicast/multicast)
+ - map change/load
+
+
+Player ticcmd contains both guaranteed_ordered and unguaranteed elements.
+Shooting and artifact use should be guaranteed...
+
+    XD_NAMEANDCOLOR=1,
+    XD_WEAPONPREF,
+    XD_NETVAR,
+    XD_SAY,
+    XD_MAP,
+    XD_EXITLEVEL,
+    XD_LOADGAME,
+    XD_SAVEGAME,
+    XD_PAUSE,
+    XD_ADDPLAYER,
+    XD_USEARTEFACT,
+  */
 
   /// client updates his player info (or asks the server to add a new local player?)
   //TNL_DECLARE_RPC(rpcUpdatePlayerInfo_c2s, (U8 pnum, const char *name, U8 color, U8 team));
 
   TNL_DECLARE_RPC(rpcTest, (U8 num));
 
-  /// transmits chat messages between client and server
-  TNL_DECLARE_RPC(rpcSay, (S8 from, S8 to, const char *msg));
+
+
+  /// Transmits chat messages between client and server.
+  TNL_DECLARE_RPC(rpcChat, (S8 from, S8 to, const char *msg));
 
   /// server prints a message on client's console/HUD
   TNL_DECLARE_RPC(rpcMessage_s2c, (S32 pnum, const char *msg, S8 priority, S8 type));
+
+  /// Pauses/unpauses the game, or, when used by a client, requests this from the server.
+  TNL_DECLARE_RPC(rpcPause, (bool on, U8 playernum));
+
+  /// When the server changes a netvar during the game, this rpc notifies the clients.
+  TNL_DECLARE_RPC(rpcSendNetVar, (U16 netid, const char *str));
 
   /// server starts a positional sound on the client
   //TNL_DECLARE_RPC(rpcStartSound_s2c, (origin, sfx_id, volume));
@@ -136,6 +160,10 @@ public:
 
   /// Makes this a valid connection class to the TNL network system.
   TNL_DECLARE_NETCONNECTION(LConnection);
+
+  /// A little shorthand for implementing RPCs
+#define LCONNECTION_RPC(rpc_name, args, guarantee, direction, version) \
+TNL_IMPLEMENT_RPC(LConnection, rpc_name, args, NetClassGroupGameMask, guarantee, direction, version)
 };
 
 

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/11/28 18:02:23  smite-meister
+// RPCs finally work!
+//
 // Revision 1.11  2004/11/19 16:51:06  smite-meister
 // cleanup
 //
@@ -143,8 +146,8 @@ LNetInterface::LNetInterface(const Address &bind)
   setAllowsConnections(false);
 
   // Asymmetric cipher based on elliptic curves
-  setPrivateKey(new AsymmetricKey(32));
-  setRequiresKeyExchange(true);
+  //setPrivateKey(new AsymmetricKey(32));
+  //setRequiresKeyExchange(true);
 }
 
 
@@ -521,3 +524,5 @@ void FileCache::WriteNetInfo(BitStream &s)
       s.write(16, md5);
     }
 }
+
+

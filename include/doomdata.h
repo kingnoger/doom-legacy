@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/11/28 18:02:23  smite-meister
+// RPCs finally work!
+//
 // Revision 1.10  2004/11/09 20:38:52  smite-meister
 // added packing to I/O structs
 //
@@ -57,6 +60,8 @@
 
 // The most basic types we use, portability.
 #include "doomtype.h"
+
+// NOTE: Currently we assume that int = 32 bits, short = 16 bits.
 
 
 /// Lump order in a map WAD: each map needs a couple of lumps
@@ -202,6 +207,85 @@ struct hex_mapthing_t
   byte args[5];
 } __attribute__((packed));
 
+
+
+
+//===========================================================
+//   Not directly map-related data
+//===========================================================
+
+/// \brief A DoomTexture patch constituent.
+///
+/// Each texture is composed of one or more patches,
+/// with patches being lumps stored in the WAD.
+/// The lumps are referenced by number, and patched
+/// into the rectangular texture space using origin
+/// and possibly other attributes.
+struct mappatch_t
+{
+  short       originx;
+  short       originy;
+  short       patch;
+  short       stepdir;  ///< always 1
+  short       colormap; ///< always 0
+} __attribute__((packed));
+
+
+
+/// \brief A DoomTexture definition in a TEXTUREx lump.
+///
+/// A Doom wall texture is a list of patches
+/// which are to be combined in a predefined order.
+struct maptexture_t
+{
+  char        name[8];
+  short       flags;          // extension, used to be zero
+  byte        xscale, yscale; // extension, used to be zero
+  short       width;
+  short       height;
+  void      **columndirectory; // unused, always zero
+  short       patchcount;
+  mappatch_t  patches[1];
+} __attribute__((packed));
+
+
+
+/// \brief Header for Doom native sound format.
+///
+/// First a 8-byte header composed of 4 unsigned (16-bit) short integers (LE/BE ?),
+/// then the data (8-bit 11 kHz mono sound).
+/// Max. # of samples = 65535 = about 6 seconds of sound.
+struct doomsfx_t
+{
+  unsigned short magic;   ///< always 3
+  unsigned short rate;    ///< always 11025
+  unsigned short samples; ///< number of 1-byte samples
+  unsigned short zero;    ///< always 0
+  byte data[0]; // actual data begins here
+} __attribute__((packed));
+
+
+
+/// \brief Template for the Boom ANIMATED lump.
+///
+/// Used for defining texture and flat animation sequences.
+struct ANIMATED_t
+{
+  char  istexture;   ///< 0 means flat, -1 is a terminator
+  char  endname[9];
+  char  startname[9];
+  int   speed;
+} __attribute__((packed));
+
+
+
+/// \brief Template for the Boom SWITCHES lump.
+struct SWITCHES_t
+{
+  char   name1[9];
+  char   name2[9];
+  short  episode;
+} __attribute__((packed));
 
 
 #endif

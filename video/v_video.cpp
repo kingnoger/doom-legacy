@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2004/11/28 18:02:25  smite-meister
+// RPCs finally work!
+//
 // Revision 1.18  2004/11/13 22:39:00  smite-meister
 // intermission works
 //
@@ -602,12 +605,6 @@ void V_DrawFadeScreen()
 //added:20-03-98: console test
 void V_DrawFadeConsBack(int x1, int y1, int x2, int y2)
 {
-  int         x,y,w;
-  int         *buf;
-  unsigned    quad;
-  byte        p1, p2, p3, p4;
-  short*      wput;
-
 #ifdef HWRENDER
   if (rendermode!=render_soft)
     {
@@ -618,32 +615,24 @@ void V_DrawFadeConsBack(int x1, int y1, int x2, int y2)
 
   if (vid.BytesPerPixel == 1)
     {
-      x1 >>=2;
-      x2 >>=2;
-      for (y=y1 ; y<y2 ; y++)
+      for (int y=y1; y<y2; y++)
         {
-          buf = (int *)(vid.screens[0] + vid.width*y);
-          for (x=x1 ; x<x2 ; x++)
-            {
-              quad = buf[x];
-              p1 = greenmap[quad&255];
-              p2 = greenmap[(quad>>8)&255];
-              p3 = greenmap[(quad>>16)&255];
-              p4 = greenmap[quad>>24];
-              buf[x] = (p4<<24) | (p3<<16) | (p2<<8) | p1;
-            }
+	  byte *buf = vid.screens[0] + vid.width*y;
+          for (int x=x1 ; x<x2 ; x++)
+            buf[x] = greenmap[buf[x]];
         }
     }
   else
     {
-      w = x2-x1;
-      for (y=y1 ; y<y2 ; y++)
+      int w = x2-x1;
+      for (int y=y1 ; y<y2 ; y++)
         {
-          wput = (short*)(vid.screens[0] + vid.width*y) + x1;
-          for (x=0 ; x<w ; x++) {
-            *wput = ((*wput&0x7bde) + (15<<5)) >>1;
-            wput++;
-          }
+	  short *wput = (short*)(vid.screens[0] + vid.width*y) + x1;
+          for (int x=0 ; x<w ; x++)
+	    {
+	      *wput = ((*wput&0x7bde) + (15<<5)) >>1;
+	      wput++;
+	    }
         }
     }
 }

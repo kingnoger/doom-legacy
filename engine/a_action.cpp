@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2004/11/28 18:02:19  smite-meister
+// RPCs finally work!
+//
 // Revision 1.17  2004/11/04 21:12:51  smite-meister
 // save/load fixed
 //
@@ -1465,11 +1468,19 @@ void A_BatMove(DActor *actor)
 
 void A_TreeDeath(DActor *actor)
 {
-  if(!(actor->flags2&MF2_FIREDAMAGE))
+  if (actor->type == MT_TREEDESTRUCTIBLE)
     {
-      actor->height <<= 2;
+      actor->height = 24*FRACUNIT;
+      return;
+    }
+
+  // some trees can only be burned
+  if (!(actor->flags2 & MF2_FIREDAMAGE))
+    {
+      // A_Fall is not called on the trees, so these hacks are not needed
+      //actor->height <<= 2;
+      //actor->flags &= ~(MF_CORPSE+MF_DROPOFF);
       actor->flags |= MF_SHOOTABLE;
-      actor->flags &= ~(MF_CORPSE+MF_DROPOFF);
       actor->health = 35;
       return;
     }

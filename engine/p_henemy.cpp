@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2004/11/28 18:02:21  smite-meister
+// RPCs finally work!
+//
 // Revision 1.15  2004/11/18 20:30:10  smite-meister
 // tnt, plutonia
 //
@@ -1365,12 +1368,8 @@ void P_DropItem(Actor *source, mobjtype_t type, int amount, int chance, bool onf
   mo->health = amount;
 }
 
-//----------------------------------------------------------------------------
-//
-// PROC A_NoBlocking
-//
-//----------------------------------------------------------------------------
 
+/// First A_Fall, the drop something.
 void A_NoBlocking(DActor *actor)
 {
   A_Fall(actor);

@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.23  2004/11/28 18:02:23  smite-meister
+// RPCs finally work!
+//
 // Revision 1.22  2004/11/09 20:38:52  smite-meister
 // added packing to I/O structs
 //
@@ -116,7 +119,6 @@
 #include "m_random.h"
 
 #include "p_spec.h"
-#include "p_inter.h"
 
 #include "r_data.h"
 #include "r_main.h"

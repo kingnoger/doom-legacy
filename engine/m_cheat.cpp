@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.24  2004/11/28 18:02:20  smite-meister
+// RPCs finally work!
+//
 // Revision 1.23  2004/11/04 21:12:52  smite-meister
 // save/load fixed
 //
@@ -184,8 +187,21 @@ void Command_CheatGimme_f()
       }
     else if (!strncmp(s,"weapons",7))
       {
-	for (j=0;j<NUMWEAPONS;j++)
-	  p->weaponowned[j] = true;
+	switch (game.mode)
+	  {
+	  case gm_hexen:
+	    for (j = wp_hexen; j < NUMWEAPONS; j++)
+	      p->weaponowned[j] = true;
+	    break;
+	  case gm_heretic:
+	    for (j = wp_heretic; j < wp_hexen; j++)
+	      p->weaponowned[j] = true;
+	    break;
+	  default:
+	    for (j = wp_doom; j < wp_heretic; j++)
+	      p->weaponowned[j] = true;
+	    break;
+	  }
 
 	for (j=0;j<NUMAMMO;j++)
 	  p->ammo[j] = p->maxammo[j];
@@ -255,13 +271,11 @@ void Command_CheatGimme_f()
 	  p->GivePower(pw_strength);
 	CONS_Printf("got berserk strength\n");
       }
-    //22/08/99: added by Hurdler
     else if (!strncmp(s,"map",3))
       {
 	automap.am_cheating = 1;
 	CONS_Printf("got map\n");
       }
-    //
     else if (!strncmp(s,"fullmap",7))
       {
 	automap.am_cheating = 2;

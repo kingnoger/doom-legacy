@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2004/11/28 18:02:21  smite-meister
+// RPCs finally work!
+//
 // Revision 1.19  2004/11/19 16:51:04  smite-meister
 // cleanup
 //
@@ -64,6 +67,7 @@
 
 #include <vector>
 
+#include "doomdata.h"
 #include "g_game.h"
 #include "g_map.h"
 
@@ -164,14 +168,6 @@ switchdef_t HexenSwitchList[] =
 };
 
 
-// template for the Boom SWITCHES lump
-struct switches_t
-{
-  char   name1[9];
-  char   name2[9];
-  short  episode;
-};
-
 
 struct switchlist_t
 {
@@ -217,7 +213,7 @@ void P_InitSwitchList()
   if ((i = fc.FindNumForName("SWITCHES")) != -1)
     {
       // ss is not needed anymore after this function, therefore not PU_STATIC
-      switches_t *ss = (switches_t *)fc.CacheLumpNum(i, PU_CACHE);
+      SWITCHES_t *ss = (SWITCHES_t *)fc.CacheLumpNum(i, PU_CACHE);
 
       // endian conversion only when loading from extra lump
       for (i=0; ss[i].episode != 0; i++)

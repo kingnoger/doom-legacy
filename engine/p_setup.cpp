@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.52  2004/11/28 18:02:21  smite-meister
+// RPCs finally work!
+//
 // Revision 1.51  2004/11/19 16:51:04  smite-meister
 // cleanup
 //
@@ -181,7 +184,7 @@ void Map::LoadVertexes(int lump)
 {
   // Determine number of lumps: total lump length / vertex record length.
   numvertexes = fc.LumpLength(lump) / sizeof(mapvertex_t);
-  CONS_Printf("vertices: %d, ", numvertexes);
+  //CONS_Printf("vertices: %d, ", numvertexes);
 
   // Allocate zone memory for buffer.
   vertexes = (vertex_t*)Z_Malloc(numvertexes*sizeof(vertex_t), PU_LEVEL, 0);
@@ -673,7 +676,7 @@ void Map::LoadLineDefs(int lump)
   else
     numlines = fc.LumpLength(lump)/sizeof(doom_maplinedef_t);
 
-  CONS_Printf("lines: %d\n", numlines);
+  //CONS_Printf("lines: %d\n", numlines);
 
   lines = (line_t *)Z_Malloc(numlines*sizeof(line_t), PU_LEVEL, 0);
   memset(lines, 0, numlines*sizeof(line_t));

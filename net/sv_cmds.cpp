@@ -17,8 +17,8 @@
 //
 //
 // $Log$
-// Revision 1.11  2004/11/19 16:51:06  smite-meister
-// cleanup
+// Revision 1.12  2004/11/28 18:02:23  smite-meister
+// RPCs finally work!
 //
 // Revision 1.10  2004/11/09 20:38:53  smite-meister
 // added packing to I/O structs
@@ -43,9 +43,6 @@
 //
 // Revision 1.3  2004/07/09 19:43:40  smite-meister
 // Netcode fixes
-//
-// Revision 1.2  2004/07/07 17:27:20  smite-meister
-// bugfixes
 //
 // Revision 1.1  2004/07/05 16:53:30  smite-meister
 // Netcode replaced
@@ -205,8 +202,11 @@ void Command_Say_f()
       return;
     }
 
+  if (!com_player)
+    return;
+
   PasteMsg(buf, 1);
-  game.net->SayCmd(0, 0, buf);
+  game.SendChat(com_player->number, 0, buf);
 }
 
 
@@ -220,12 +220,15 @@ void Command_Sayto_f()
       return;
     }
 
+  if (!com_player)
+    return;
+
   PlayerInfo *p = game.FindPlayer(COM_Argv(1));
   if (!p)
     return;
 
   PasteMsg(buf, 2);
-  game.net->SayCmd(0, p->number, buf);
+  game.SendChat(com_player->number, p->number, buf);
 }
 
 
@@ -239,36 +242,55 @@ void Command_Sayteam_f()
       return;
     }
 
+  if (!com_player)
+    return;
+
   PasteMsg(buf, 1);
-  game.net->SayCmd(0, -com_player->team, buf);
+  game.SendChat(com_player->number, -com_player->team, buf);
 }
 
 
 // the chat message "router"
-void LNetInterface::SayCmd(int from, int to, const char *msg)
+void GameInfo::SendChat(int from, int to, const char *msg)
 {
-  if (!game.netgame)
+  if (!netgame)
     return;
 
   if (from == 0 && com_player)
     from = com_player->number;
 
-  if (server_con)
-    server_con->rpcSay(from, to, msg);
-  else if (game.server)
-    for (GameInfo::player_iter_t t = game.Players.begin(); t != game.Players.end(); t++)
-      {
-	PlayerInfo *p = (*t).second;
+  PlayerInfo *sender = FindPlayer(from);
+  if (!sender)
+    return;
 
-	if (to == 0 || p->number == to || p->team == -to)
-	  {
-	    if (p->connection)
-	      p->connection->rpcSay(from, to, msg);
+  if (server)
+    {
+      int n = net->client_con.size();
+      for (int i = 0; i < n; i++)
+	{
+	  LConnection *c = net->client_con[i];
+	  int np = c->player.size();
+	  for (int j = 0; j < np; j++)
+	    {
+	      PlayerInfo *p = c->player[j];
+	      if (to == 0 || p->number == to || p->team == -to)
+		{
+		  // We could also use PlayerInfo::SetMessage to trasmit chat messages from server to client,
+		  // but it is mainly for messages which can easily use TNL::StringTableEntry.
+		  c->rpcChat(from, to, msg);
+		  if (p->number == to)
+		    return; // nobody else should get it
 
-	    if (p->number == to)
-	      break; // nobody else should get it
-	  }
-      }
+		  break; // one rpc per connection
+		}
+	    }
+	}
+
+      // TODO how to handle messages for local (server) players?
+      CONS_Printf("\3%s: %s\n", sender->name.c_str(), msg);
+    }
+  else if (net->server_con)
+    net->server_con->rpcChat(from, to, msg);
 }
 
 
@@ -281,52 +303,90 @@ void LNetInterface::SayCmd(int from, int to, const char *msg)
 // temporarily pauses the game, or in netgame, requests pause from server
 void Command_Pause_f()
 {
-  bool pause;
+  if (!game.server && !cv_allowpause.value)
+    {
+      CONS_Printf("Server allows no pauses.\n");
+      return;
+    }
+
+  bool on;
 
   if (COM_Argc() > 1)
-    pause = atoi(COM_Argv(1));
+    on = atoi(COM_Argv(1));
   else
-    pause = !game.paused;
+    on = !game.paused;
 
-  if (game.server)
-    {
-      game.paused = pause;
-
-      if (pause)
-	CONS_Printf("Game paused.\n");
-      else
-	CONS_Printf("Game unpaused.\n");
-    }
-
-  //SendNetXCmd(XD_PAUSE,&buf,1); // TODO
+  game.Pause(on, 0);
 }
 
 
-/*
-void Got_Pause(char **cp,int playernum)
+static void PauseMsg(bool on, int pnum)
 {
-  game.paused = READBYTE(*cp);
-  if(!demoplayback)
+  const char *guilty = "server";
+  if (pnum > 0)
     {
-      const char *name = game.FindPlayer(playernum)->name.c_str();
-      if(game.netgame)
-        {
-	  if( game.paused )
-	    CONS_Printf("Game paused by %s\n", name);
-	  else
-	    CONS_Printf("Game unpaused by %s\n", name);
-        }
+      PlayerInfo *p = game.FindPlayer(pnum);
+      if (p)
+	guilty = p->name.c_str();
+    }
 
-      if (game.paused)
+  if (on)
+    CONS_Printf("Game paused by %s.\n", guilty);
+  else
+    CONS_Printf("Game unpaused by %s.\n", guilty);
+}
+
+
+
+
+/// pauses or unpauses the game
+void GameInfo::Pause(bool on, int playernum)
+{
+  if (server)
+    {
+      // server can pause the game anytime
+      paused = on;
+
+      // send rpc event to all clients
+      if (netgame && net->client_con.size())
 	{
-	  if(!Menu::active || game.netgame)
-	    S.PauseMusic();
-        }
+	  int n = net->client_con.size();
+	  NetEvent *e = TNL_RPC_CONSTRUCT_NETEVENT(net->client_con[0], rpcPause, (on, playernum));
+
+	  for (int i = 0; i < n; i++)
+	    net->client_con[i]->postNetEvent(e);
+	}
+
+      PauseMsg(on, playernum);
+    }
+  else if (net->server_con)
+    {
+      // client must request a pause from the server
+      net->server_con->rpcPause(on, 0);
+
+      if (on)
+	CONS_Printf("Pause request sent.\n");
       else
-	S.ResumeMusic();
+	CONS_Printf("Unpause request sent.\n");
     }
 }
-*/
+
+
+LCONNECTION_RPC(rpcPause, (bool on, U8 playernum), RPCGuaranteedOrdered, RPCDirAny, 0)
+{
+  if (isConnectionToServer())
+    {
+      // server orders a pause
+      game.paused = on;
+      PauseMsg(on, playernum);
+    }
+  else if (cv_allowpause.value)
+    {
+      // got a pause request from a client
+      game.Pause(on, player[0]->number);
+    }
+}
+
 
 
 // quit the game immediately
@@ -346,10 +406,9 @@ void Command_Connect_f()
       return;
     }
 
-  if (game.netgame)
+  if (game.Playing())
     {
-      CONS_Printf("You cannot connect while in a netgame!\n"
-		  "Leave this game first.\n");
+      CONS_Printf("End the current game first.\n");
       return;
     }
 
@@ -395,12 +454,7 @@ void Command_Load_f() // TODO
       return;
     }
 
-  // spawn a server if needed
-  //SV_SpawnServer();
-
-  int slot = atoi(COM_Argv(1));
-
-  game.LoadGame(slot);
+  game.LoadGame(atoi(COM_Argv(1)));
 }
 
 
@@ -495,35 +549,47 @@ void Command_Addfile_f() // TODO
 }
 
 
+
 /// Initialize a new game using a MAPINFO lump
 void Command_NewGame_f()
 {
+  if (COM_Argc() < 3 || COM_Argc() > 5)
+    {
+      CONS_Printf("Usage: newgame <MAPINFOlump> local | server [episode] [skill]\n");
+      return;
+    }
+
   if (game.Playing())
     {
       CONS_Printf("First end the current game.\n");
       return;
     }
 
-  if (COM_Argc() < 2 || COM_Argc() > 4)
-    {
-      CONS_Printf("Usage: newgame <MAPINFOlump> [episode] [skill]\n");
-      return;
-    }
-
   int sk = sk_medium;
   int epi = 1;
-  if (COM_Argc() >= 3)
+  if (COM_Argc() >= 4)
     {
-      epi = atoi(COM_Argv(2));
+      epi = atoi(COM_Argv(3));
 
-      if (COM_Argc() == 4)
+      if (COM_Argc() >= 5)
 	{
-	  sk = atoi(COM_Argv(3));
+	  sk = atoi(COM_Argv(4));
 	  sk = (sk > sk_nightmare) ? sk_nightmare : ((sk < 0) ? 0 : sk);
 	}
     }
 
-  game.SV_SpawnServer(fc.FindNumForName(COM_Argv(1)));
+  int lump = fc.FindNumForName(COM_Argv(1));
+  if (lump < 0)
+    {
+      CONS_Printf("MAPINFO lump '%s' not found.\n", COM_Argv(1));
+      return;
+    }
+
+  if (!game.SV_SpawnServer(lump))
+    return;
+
+  if (!strcasecmp(COM_Argv(2), "server"))
+    game.SV_SetServerState(true);
 
   if (!game.dedicated)
     {
@@ -599,15 +665,12 @@ void Command_RestartLevel_f()
       return;
     }
 
+
   if (game.state == GameInfo::GS_LEVEL)
     ; // game.StartLevel(true, true); FIXME
   else
     CONS_Printf("You should be in a level to restart it!\n");
 }
-
-
-
-
 
 
 
@@ -636,9 +699,6 @@ void Command_Kick_f()
 /*
 void Got_KickCmd(char **p,int playernum)
 {
-  int pnum=READBYTE(*p);
-  int msg =READBYTE(*p);
-  
   CONS_Printf("\2%s ", game.FindPlayer(pnum)->name.c_str());
   
   switch(msg)

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.41  2004/11/28 18:02:21  smite-meister
+// RPCs finally work!
+//
 // Revision 1.40  2004/11/18 20:30:10  smite-meister
 // tnt, plutonia
 //
@@ -949,7 +952,10 @@ void Actor::Die(Actor *inflictor, Actor *source)
 
   // thing death actions
   if (special) // formerly also demanded MF_COUNTKILL (MT_ZBELL!)
-    mp->ExecuteLineSpecial(special, args, NULL, 0, this);
+    {
+      mp->ExecuteLineSpecial(special, args, NULL, 0, this);
+      special = 0;
+    }
 
   // if a player killed a monster, update kills
   if (flags & MF_COUNTKILL)
@@ -966,6 +972,8 @@ void Actor::Die(Actor *inflictor, Actor *source)
 	  // even those caused by other monsters
 	  game.Players.begin()->second->kills++;
 	}
+
+      flags &= ~MF_COUNTKILL;
     }
 }
 
@@ -974,8 +982,7 @@ bool P_CheckSpecialDeath(DActor *m, int dtype);
 
 void DActor::Die(Actor *inflictor, Actor *source)
 {
-  if (!inflictor)
-    inflictor = source;
+  Actor::Die(inflictor, source);
 
   if (flags & MF_CORPSE)
     {
@@ -986,7 +993,7 @@ void DActor::Die(Actor *inflictor, Actor *source)
 	  SetState(S_GIBS);
 	  S_StartSound(this, sfx_gib); // lets have a neat 'crunch' sound!
 	}
-      Actor::Die(inflictor, source);      
+
       return;
     }
 
@@ -1000,14 +1007,17 @@ void DActor::Die(Actor *inflictor, Actor *source)
   if ((type == MT_BARREL || type == MT_POD) && source)
     owner = source;
 
+  if (!inflictor)
+    inflictor = source;
+
   // TODO mobjinfo.damage, upper 16 bits could hold damage type, remove MF2_FIREDAMAGE et al.
   if (inflictor)
     {
       int dtype = 0;
       if (inflictor->flags2 & MF2_FIREDAMAGE)
-	dtype |= dt_heat;
+	dtype = dt_heat;
       if (inflictor->flags2 & MF2_ICEDAMAGE)
-	dtype |= dt_cold;
+	dtype = dt_cold;
 
       if (P_CheckSpecialDeath(this, dtype))
 	return;
@@ -1025,8 +1035,6 @@ void DActor::Die(Actor *inflictor, Actor *source)
 
   if (tics < 1)
     tics = 1;
-
-  Actor::Die(inflictor, source);
 }
 
 

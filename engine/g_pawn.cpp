@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.45  2004/11/28 18:02:19  smite-meister
+// RPCs finally work!
+//
 // Revision 1.44  2004/11/18 20:30:07  smite-meister
 // tnt, plutonia
 //
@@ -341,7 +344,6 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, int type)
   morphTics = 0;
 
   invSlot = invTics = 0;
-  inventory.resize(1, inventory_t(arti_none,1)); // at least 1 empty slot
 
   usedown = attackdown = jumpdown = true;  // don't do anything immediately
   refire = 0;

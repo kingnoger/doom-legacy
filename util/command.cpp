@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/11/28 18:02:24  smite-meister
+// RPCs finally work!
+//
 // Revision 1.9  2004/10/27 17:37:10  smite-meister
 // netcode update
 //
@@ -63,6 +66,8 @@
 #include "command.h"
 #include "console.h"
 #include "z_zone.h"
+
+#include "n_interface.h"
 
 #include "m_misc.h"
 #include "m_fixed.h"
@@ -1046,10 +1051,8 @@ const char *consvar_t::CompleteVar(char *partial, int skips)
 }
 
 
-
-//      2 byte for variable identification
-//      then the value of the variable followed with a 0 byte (like str)
-void consvar_t::Got_NetVar(unsigned short id, char *str)
+// set a new value to a netvar
+void consvar_t::GotNetVar(unsigned short id, const char *str)
 {
   consvar_t *cvar = consvar_t::FindNetVar(id);
   if (!cvar)
@@ -1083,7 +1086,7 @@ void consvar_t::LoadNetVars(TNL::BitStream &s)
 	s.read(&id);
 	char temp[256];
         s.readString(temp);
-	Got_NetVar(id, temp);
+	GotNetVar(id, temp);
       }
 }
 
@@ -1123,7 +1126,7 @@ void consvar_t::Set(char *s)
           return;
         }
 
-      //game.net->SendNetVar(netid, s); FIXME
+      game.net->SendNetVar(netid, s);
     }
 
   Setvalue(s);

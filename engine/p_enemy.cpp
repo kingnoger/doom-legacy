@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.28  2004/11/28 18:02:21  smite-meister
+// RPCs finally work!
+//
 // Revision 1.27  2004/11/18 20:30:09  smite-meister
 // tnt, plutonia
 //
@@ -223,7 +226,7 @@ bool P_CheckSpecialDeath(DActor *m, int dtype)
   bool ret = false;
       
   // Check for flame death
-  if (dtype & dt_heat)
+  if ((dtype & dt_TYPEMASK) == dt_heat)
     {
       ret = true;
       switch (m->type)
@@ -254,7 +257,7 @@ bool P_CheckSpecialDeath(DActor *m, int dtype)
 	return true;
     }
 
-  if (dtype & dt_cold)
+  if ((dtype & dt_TYPEMASK) == dt_cold)
     {
       ret = true;
       //flags |= MF_ICECORPSE; // TODO
@@ -1020,9 +1023,8 @@ void A_Pain(DActor *actor)
     S_StartScreamSound(actor, actor->info->painsound);
 }
 
-//
-//  A dying thing falls to the ground (monster deaths)
-//
+
+/// A dying thing falls to the ground (monster deaths)
 void A_Fall(DActor *actor)
 {
   // actor is on ground, it can be walked over

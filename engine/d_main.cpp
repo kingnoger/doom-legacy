@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.37  2004/11/28 18:02:19  smite-meister
+// RPCs finally work!
+//
 // Revision 1.36  2004/11/19 16:51:04  smite-meister
 // cleanup
 //
@@ -220,7 +223,7 @@ int mission = gmi_doom2;
 
 
 // Helper function: start a new game using the predefined MAPINFO lumps in legacy.wad...
-void BeginGame(int sk, int episode)
+void BeginGame(int episode, int skill, bool public_server)
 {
   char *m;
 
@@ -244,7 +247,10 @@ void BeginGame(int sk, int episode)
       m = "MI_DOOM1";
     }
 
-  COM_BufAddText(va("newgame %s %d %d\n", m, episode, sk));
+  if (public_server)
+    COM_BufAddText(va("newgame %s server %d %d\n", m, episode, skill));
+  else
+    COM_BufAddText(va("newgame %s local %d %d\n", m, episode, skill));
 }
 
 
@@ -794,7 +800,8 @@ void D_DoomMain()
 
   // ------------- starting the game ----------------
 
-  bool autostart = game.netgame; // -server or -dedicated
+  bool public_server = game.dedicated || M_CheckParm("-server");
+  bool autostart = public_server; // server starts automatically
   int  episode = 1;
   skill_t sk = sk_medium;
 
@@ -818,7 +825,7 @@ void D_DoomMain()
   if (p && M_IsNextParm())
     COM_BufAddText(va("load %d\n", atoi(myargv[p+1])));
   else if (autostart)
-    BeginGame(sk, episode);
+    BeginGame(episode, sk, public_server);
   else
     game.StartIntro(); // start up intro loop
 

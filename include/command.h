@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/11/28 18:02:23  smite-meister
+// RPCs finally work!
+//
 // Revision 1.6  2004/10/27 17:37:09  smite-meister
 // netcode update
 //
@@ -138,10 +141,8 @@ protected:
   /// internal setting method
   void Setvalue(const char *s);
 
-
   static unsigned short ComputeNetid(char *s);
   static consvar_t *FindNetVar(unsigned short netid);
-  static void Got_NetVar(unsigned short id, char *str);
 
 public:
 
@@ -173,6 +174,8 @@ public:
   static void SaveNetVars(TNL::BitStream &s);
   /// load all CV_NETVAR variables from a buffer
   static void LoadNetVars(TNL::BitStream &s);
+  /// received a new value for a netvar
+  static void GotNetVar(unsigned short id, const char *str);
 };
 
 #endif

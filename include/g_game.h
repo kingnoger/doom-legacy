@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2004/11/28 18:02:23  smite-meister
+// RPCs finally work!
+//
 // Revision 1.17  2004/11/19 16:51:06  smite-meister
 // cleanup
 //
@@ -200,6 +203,7 @@ public:
   bool Playing();
   void SV_Reset();
   bool SV_SpawnServer(int mapinfo_lump);
+  void SV_SetServerState(bool open);
   void CL_Reset();
   void TryRunTics(tic_t realtics);
 
@@ -234,6 +238,10 @@ public:
   void WriteDemoTiccmd(ticcmd_t* cmd, int playernum);
   void StopDemo();
   bool CheckDemoStatus();
+
+  // network commands
+  void Pause(bool on, int playernum);
+  void SendChat(int from, int to, const char *msg);
 };
 
 

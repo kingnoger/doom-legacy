@@ -17,8 +17,8 @@
 //
 //
 // $Log$
-// Revision 1.13  2004/11/19 16:51:06  smite-meister
-// cleanup
+// Revision 1.14  2004/11/28 18:02:23  smite-meister
+// RPCs finally work!
 //
 // Revision 1.12  2004/11/04 21:12:54  smite-meister
 // save/load fixed
@@ -46,9 +46,6 @@
 //
 // Revision 1.4  2004/07/11 14:32:01  smite-meister
 // Consvars updated, bugfixes
-//
-// Revision 1.3  2004/07/07 17:27:20  smite-meister
-// bugfixes
 //
 // Revision 1.2  2004/07/05 16:53:30  smite-meister
 // Netcode replaced
@@ -378,104 +375,9 @@ void D_SendPlayerConfig()
 
 
 
-
-
-
-
-
-
-
-
-/*
-
-void SL_InsertServer( serverinfo_pak *info, int node)
-{
-    int i;
-    bool moved;
-
-    // search if not allready on it
-    i = SL_SearchServer( node );
-    if( i==-1 )
-    {
-        // not found add it
-        if( serverlistcount >= MAXSERVERLIST )
-            return; // list full
-        i=serverlistcount++;
-    }
-
-    serverlist[i].info = *info;
-    serverlist[i].node = node;
-
-    // list is sorted by time (ping)
-    // so move the entry until it is sorted
-    do {
-        moved = false;
-        if( i>0 && serverlist[i].info.time < serverlist[i-1].info.time )
-        {
-            serverelem_t s;
-            s = serverlist[i];
-            serverlist[i] =  serverlist[i-1];
-            serverlist[i-1] = s;
-            i--;
-            moved = true;
-        }
-        else
-        if( i<serverlistcount-1 && serverlist[i].info.time > serverlist[i+1].info.time )
-        {
-            serverelem_t s;
-            s = serverlist[i];
-            serverlist[i] =  serverlist[i+1];
-            serverlist[i+1] = s;
-            i++;
-            moved = true;
-        }
-    } while(moved);
-}
-
-void CL_UpdateServerList( bool internetsearch )
-{
-    SL_ClearServerList(0);
-
-    if( !game.netgame )
-    {
-        I_NetOpenSocket();
-        game.netgame = true;
-        game.multiplayer = true;
-    }
-    // search for local servers
-    SendAskInfo( BROADCASTADDR );
-
-    if( internetsearch )
-    {
-        msg_server_t *server_list;
-        int          i;
-
-        if( (server_list = GetShortServersList()) )
-        {
-            for (i=0; server_list[i].header[0]; i++)
-            {
-                int  node;
-                char addr_str[24];
-
-                // insert ip (and optionaly port) in node list
-                sprintf(addr_str, "%s:%s", server_list[i].ip, server_list[i].port);
-                node = I_NetMakeNode(addr_str);
-                if( node == -1 )
-                    break; // no more node free
-                SendAskInfo( node );
-            }
-        }
-    }
-}
-*/
-
-
-
-
 /*
 void CL_RemovePlayer(int playernum)
 {
-  // FIXME netnode information should be stored in PlayerInfo!
   if( server && !demoplayback )
     {
       int node = playernode[playernum];

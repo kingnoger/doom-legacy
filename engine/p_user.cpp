@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.28  2004/11/28 18:02:21  smite-meister
+// RPCs finally work!
+//
 // Revision 1.27  2004/11/18 20:30:12  smite-meister
 // tnt, plutonia
 //
@@ -932,7 +935,7 @@ bool PlayerPawn::InventoryResponder(short (*gc)[2], event_t *ev)
         {
           if (invTics)
             invTics = 0;
-          else if (inventory[invSlot].count > 0)
+          else if (invSlot < int(inventory.size()) && inventory[invSlot].count > 0)
 	    player->cmd.item = inventory[invSlot].type + 1;
 
           return true;

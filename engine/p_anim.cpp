@@ -17,8 +17,8 @@
 //
 //
 // $Log$
-// Revision 1.12  2004/11/19 16:51:04  smite-meister
-// cleanup
+// Revision 1.13  2004/11/28 18:02:21  smite-meister
+// RPCs finally work!
 //
 // Revision 1.11  2004/10/14 19:35:30  smite-meister
 // automap, bbox_t
@@ -26,20 +26,11 @@
 // Revision 1.10  2004/09/23 23:21:16  smite-meister
 // HUD updated
 //
-// Revision 1.9  2004/09/15 19:23:59  smite-meister
-// bugfixes
-//
 // Revision 1.8  2004/09/06 19:58:02  smite-meister
 // Doom linedefs done!
 //
 // Revision 1.7  2004/09/03 16:28:49  smite-meister
 // bugfixes and ZDoom linedef types
-//
-// Revision 1.6  2004/08/29 20:48:48  smite-meister
-// bugfixes. wow.
-//
-// Revision 1.5  2004/08/13 18:25:10  smite-meister
-// sw renderer fix
 //
 // Revision 1.4  2004/07/05 16:53:25  smite-meister
 // Netcode replaced
@@ -58,30 +49,18 @@
 #include <string>
 
 #include "doomdef.h"
-#include "parser.h"
+#include "doomdata.h"
 
 #include "g_game.h"
 
 #include "r_data.h"
 #include "r_defs.h" // for floortypes
 
+#include "parser.h"
 #include "m_swap.h"
 #include "m_random.h"
 #include "w_wad.h"
 #include "z_zone.h"
-
-
-/// template for the Boom ANIMATED lump entries
-/// used for defining texture and flat animation sequences
-#pragma pack(1) // GCC needs this!
-struct ANIMATED_t
-{
-  char        istexture;   // 0 means flat, -1 is a terminator
-  char        endname[9];
-  char        startname[9];
-  int         speed;
-};
-#pragma pack()
 
 
 // Floor/ceiling animation sequences,

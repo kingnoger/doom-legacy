@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/11/28 18:02:24  smite-meister
+// RPCs finally work!
+//
 // Revision 1.8  2004/09/03 16:28:52  smite-meister
 // bugfixes and ZDoom linedef types
 //
@@ -77,18 +80,33 @@ void cacheitem_t::operator delete(void *mem)
 bool cacheitem_t::Release()
 {
   if (--refcount < 0)
-    I_Error("cacheitem_t: Too many releases!\n");
+    I_Error("cacheitem_t '%s': Too many releases!\n", name);
 
-  if (refcount == 0)
-    return true;
-
-  return false;
+  return (refcount == 0);
 }
 
 
 //==========================================================
 
-// cache constructor
+/// Pure virtual, renew. This is a sample implementation.
+/*
+cacheitem_t *cache_t::Load(const char *n)
+{
+  int lump = fc.FindNumForName(n, false);
+  if (lump == -1)
+    return NULL;
+
+  derived_cacheitem_t *p = new derived_cacheitem_t(n);
+
+  p->lumpnum = lump;
+  p->data = fc.CacheLumpNum(lump, tagtype);
+  p->length = fc.LumpLength(lump);
+  return p;
+}
+*/
+
+
+/// cache constructor
 cache_t::cache_t(memtag_t tag)
 {
   tagtype = tag;
@@ -96,7 +114,7 @@ cache_t::cache_t(memtag_t tag)
 }
 
 
-// cache destructor
+/// cache destructor
 // just to shut up compiler, since entire caches are probably never destroyed
 cache_t::~cache_t()
 {
@@ -104,109 +122,99 @@ cache_t::~cache_t()
 }
 
 
-// Has to be separate from constructor. Static class instances are constructed when
-// program starts, and at that time we do not yet have a working FileCache.
+
+/// Has to be separate from constructor. Static class instances are constructed when
+/// program starts, and at that time we do not yet have a working FileCache.
 void cache_t::SetDefaultItem(const char *name)
 {
   if (default_item)
+    CONS_Printf("cache: Replacing default_item!\n");
+
+  default_item = Load(name);
+  if (!default_item)
+    I_Error("cache: New default_item '%s' not found!\n", name);
+  // TODO delete the old default item?
+}
+
+
+
+/// If 'name' is found, creates a new cacheitem and inserts it to the map.
+/// Otherwise creates a link from 'name' to the defaultitem.
+/// Always retuns a valid pointer.
+cacheitem_t *cache_t::CreateItem(const char *name)
+{
+  cacheitem_t *p = Load(name);
+  if (!p)
     {
-      CONS_Printf("cache: Replacing default_item!\n");
-      // the old default item is made a normal cacheitem
-      default_item->refcount--; // take away the extra reference
+      // TEST some nonexistant items are asked again and again.
+      // We use a special cacheitem_t to link their names to the default item.
+      p = new cacheitem_t(name);
+      p->usefulness = -1; // negative usefulness marks them as links
     }
 
-  cacheitem_t *t = Load(name);
-  if (!t)
-    I_Error("cache: New default_item '%s' not found!\n", name);
-
-  // it is also inserted into the map as a normal item
-  c_map.insert(c_map_t::value_type(name, t));
-  t->refcount++; // one extra reference so that it is never freed
-
-  default_name = name;
-  default_item = t;  
+  Insert(p);
+  return p;
 }
 
 
-// Pure virtual, renew. This is a sample implementation.
-/*
-  void cacheitem_t *cache_t::Load(const char *p)
-{
-  int lump = fc.FindNumForName(p, false);
-  if (lump == -1)
-    return NULL;
 
-  derived_cacheitem_t *t = new derived_cacheitem_t;
-
-  t->lumpnum = lump;
-  t->data = fc.CacheLumpNum(lump, tagtype);
-  t->length = fc.LumpLength(lump);
-  return t;
-}
-*/
-
-
-// Checks if item is already in cache. If so, increments refcount and returns it.
-// If not, tries to cache and convert it. If succesful, returns the item.
-// If not, returns the defaultitem.
+/// Checks if item is already in cache. If so, increments refcount and returns it.
+/// If not, tries to cache and convert it. If succesful, returns the item.
+/// If not, returns the defaultitem.
 cacheitem_t *cache_t::Cache(const char *name)
 {
-  // data used through a  cache must not be used anywhere
-  // else, because z_free and z_changetag will cause problems
+  // NOTE Data used through a cache must not be used anywhere
+  // else, because z_free and z_changetag will cause problems.
 
-  cacheitem_t *t;
-  c_iter_t i;
+  cacheitem_t *p;
 
   if (name == NULL)
-    t = default_item;
+    p = default_item;
   else
     { 
-      i = c_map.find(name);
+      c_iter_t s = c_map.find(name);
 
-      if (i == c_map.end())
+      if (s == c_map.end())
 	{
 	  //CONS_Printf("--- cache miss, %s, %p\n", name, name);
-	  // not found
-	  t = Load(name);
-	  if (t)
-	    c_map.insert(c_map_t::value_type(t->name, t));
-	  else
-	    {
-	      // TEST some nonexistant items are asked again and again.
-	      // what if I just bind them to the defaultitem for good?
-	      t = default_item;
-	      c_map.insert(c_map_t::value_type(t->name, t));
-	    }
+	  p = CreateItem(name);
 	}
       else
 	{
 	  //CONS_Printf("+++ cache hit, %s, %p\n", name, name);
-	  // found
-	  t = (*i).second;
+	  p = s->second;
 	}
     }
 
-  t->refcount++;
-  t->usefulness++;
+  if (p->usefulness < 0)
+    {
+      // a "link" to default_item
+      p->refcount++;
+      p->usefulness--; // negated
 
-  return t;
+      default_item->refcount++;
+      default_item->usefulness++;
+      return default_item;
+    }
+
+  p->refcount++;
+  p->usefulness++;
+  return p;
 }
 
 
-// lists the contents of the cache
+/// Lists the contents of the cache.
 void cache_t::Inventory()
 {
-  cacheitem_t *t = default_item;
+  cacheitem_t *p = default_item;
 
-  if (t)
-    CONS_Printf("Defitem %s, rc = %d, use = %d\n",
-		default_name, t->refcount, t->usefulness);
+  if (p)
+    CONS_Printf("Defitem %s, rc = %d, use = %d\n", p->name, p->refcount, p->usefulness);
  
-  for (c_iter_t i = c_map.begin(); i != c_map.end(); i++)
+  for (c_iter_t s = c_map.begin(); s != c_map.end(); s++)
     {
-      const char *name = (*i).first;
-      t = (*i).second;
-      CONS_Printf("- %s, rc = %d, use = %d\n", name, t->refcount, t->usefulness);
+      p = s->second;
+      CONS_Printf("- %s, rc = %d, use = %d\n", p->name, p->refcount, p->usefulness);
     }
 }
 
@@ -216,17 +224,17 @@ void cache_t::Inventory()
 int cache_t::Cleanup()
 {
   int k = 0;
-  c_iter_t i, j;
-  for (i = j = c_map.begin(); i != c_map.end(); j = i)
+  for (c_iter_t s = c_map.begin(); s != c_map.end(); )
     {
-      cacheitem_t *t = (*i).second;
-      i++;
-      if (t->refcount == 0)
+      cacheitem_t *p = s->second;
+      c_iter_t t = s++; // first copy s to t, then increment s
+
+      if (p->refcount == 0)
 	{
-	  c_map.erase(j); // erase it from the hash_map
+	  c_map.erase(t); // erase it from the hash_map
 	  // Once an iterator is erased, it becomes invalid
-	  // and cannot be incremented! Therefore we have both i and j.
-	  delete t; // delete the cacheitem itself
+	  // and cannot be incremented! Therefore we have both s and t.
+	  delete p; // delete the cacheitem itself
 	  k++;
 	}
     }
@@ -234,36 +242,37 @@ int cache_t::Cleanup()
 }
 
 
-// Recaches and converts every item in cache using their names.
+/// Recaches and converts every item in cache using their names.
+/// Existing pointers to cacheitems are preserved.
+// TODO does not work yet, needs redesign. We may need an additional pointer layer...
+/*
 void cache_t::Flush()
 {
-  // TODO does not work very cleanly, needs redesigning
-
   Cleanup(); // remove unused items
 
-  // default item is also stored in the map with the others
-  // recache the items preserving refcounts
+  cacheitem_t *old_default = default_item;
 
-  for (c_iter_t i = c_map.begin(); i != c_map.end(); )
+  if (!default_item->Reload()) // virtual method
     {
-      const char *name = (*i).first;
-      cacheitem_t *t = (*i).second;
+      // not found
+      I_Error("cache: Unable to recache default item '%s'!\n", default_item->name);
+    }
 
-      cacheitem_t *s = Load(name);
-      if (s == NULL)
-	{
-	  // not found
-	  if (t == default_item)
-	    I_Error("cache: Unable to recache default_item '%s'!\n", default_name);
-	  // FIXME. Normally, the defaultitem would be used, but
-	  // since we must preserve pointers to the cacheitem, we'll have to do something else.
-	  // (*i).second = default_item;? what about refcount?
-	  I_Error("cache: Unable to recache item '%s'\n", name);
-	}
-
-      c_iter_t j = i++;
-      c_map.erase(j);
-      c_map.insert(c_map_t::value_type(name, s));
-      delete t;
+  for (c_iter_t s = c_map.begin(); s != c_map.end(); )
+    {
+      s->second->Reload();
     }
 }
+
+
+bool cacheitem_t::Reload()
+{
+  // always a "link"
+}
+
+
+bool derived_cacheitem_t::Reload()
+{
+  // might be anything
+}
+*/

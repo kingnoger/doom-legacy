@@ -17,20 +17,17 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/11/28 18:02:23  smite-meister
+// RPCs finally work!
+//
 // Revision 1.7  2004/11/13 22:38:59  smite-meister
 // intermission works
 //
 // Revision 1.6  2004/09/09 17:15:20  jussip
 // Cleared out old joystick crap in preparation for brand new code.
 //
-// Revision 1.5  2004/08/12 18:30:29  smite-meister
-// cleaned startup
-//
 // Revision 1.4  2004/07/25 20:18:47  hurdler
 // Remove old hardware renderer and add part of the new one
-//
-// Revision 1.3  2004/07/14 16:13:13  smite-meister
-// cleanup, commands
 //
 // Revision 1.2  2004/07/13 20:23:37  smite-meister
 // Mod system basics
@@ -53,16 +50,13 @@ extern consvar_t cv_masterserver;
 extern consvar_t cv_netstat;
 
 // menu only cvars (used when launching server, and in doing serversearch)
-extern consvar_t cv_skill;
-extern consvar_t cv_monsters;
-extern consvar_t cv_nextmap;
-extern consvar_t cv_newdeathmatch;
-extern consvar_t cv_serversearch;
-
+extern consvar_t cv_menu_skill;
+extern consvar_t cv_menu_nextmap;
+extern consvar_t cv_menu_serversearch;
 
 // server info
 extern consvar_t cv_servername;
-extern consvar_t cv_internetserver;
+extern consvar_t cv_publicserver;
 extern consvar_t cv_allownewplayers;
 extern consvar_t cv_maxplayers;
 //extern consvar_t cv_maxteams;
@@ -70,7 +64,7 @@ extern consvar_t cv_maxplayers;
 // server demo
 extern consvar_t cv_playdemospeed;
 
-// server game
+// server rules
 extern consvar_t cv_deathmatch;
 extern consvar_t cv_teamplay;
 extern consvar_t cv_teamdamage;
@@ -84,6 +78,7 @@ extern consvar_t cv_jumpspeed;
 extern consvar_t cv_allowrocketjump;
 extern consvar_t cv_allowautoaim;
 extern consvar_t cv_allowmlook;
+extern consvar_t cv_allowpause;
 
 extern consvar_t cv_itemrespawn;
 extern consvar_t cv_itemrespawntime;
