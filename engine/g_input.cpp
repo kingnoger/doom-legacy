@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/09/09 22:04:38  jussip
+// New joy code a bit more finished. Button binding works.
+//
 // Revision 1.11  2004/09/09 17:15:18  jussip
 // Cleared out old joystick crap in preparation for brand new code.
 //
@@ -545,11 +548,13 @@ void G_MapEventsToControls(event_t *ev)
       gamekeydown[KEY_DBLMOUSE1+i] = flag;
     }
 
+  /* FIXME, removed. Do we even want to have joystick double clicks?
   for (i=0;i<JOYBUTTONS;i++)
     {
       flag = G_CheckDoubleClick(gamekeydown[KEY_JOY1+i], &joydclicks[i]);
       gamekeydown[KEY_DBLJOY1+i] = flag;
     }
+  */
 }
 
 
@@ -650,24 +655,6 @@ static keyname_t keynames[] =
   {KEY_2MOUSE1+6,"SEC_MOUSE7"},
   {KEY_2MOUSE1+7,"SEC_MOUSE8"},
 
-  {KEY_JOY1,  "JOY1"},
-  {KEY_JOY1+1,"JOY2"},
-  {KEY_JOY1+2,"JOY3"},
-  {KEY_JOY1+3,"JOY4"},
-  {KEY_JOY1+4,"JOY5"},
-  {KEY_JOY1+5,"JOY6"},
-  // we use up to 10 buttons in DirectInput
-  {KEY_JOY1+6,"JOY7"},
-  {KEY_JOY1+7,"JOY8"},
-  {KEY_JOY1+8,"JOY9"},
-  {KEY_JOY1+9,"JOY10"},
-  // the DOS version uses Allegro's joystick support
-  // the Hat is reported as extra buttons
-  {KEY_JOY1+10,"HATUP"},
-  {KEY_JOY1+11,"HATDOWN"},
-  {KEY_JOY1+12,"HATLEFT"},
-  {KEY_JOY1+13,"HATRIGHT"},
-
   {KEY_DBLMOUSE1,   "DBLMOUSE1"},
   {KEY_DBLMOUSE1+1, "DBLMOUSE2"},
   {KEY_DBLMOUSE1+2, "DBLMOUSE3"},
@@ -685,12 +672,73 @@ static keyname_t keynames[] =
   {KEY_DBL2MOUSE1+6,"DBLSEC_MOUSE7"},
   {KEY_DBL2MOUSE1+7,"DBLSEC_MOUSE8"},
 
-  {KEY_DBLJOY1,  "DBLJOY1"},
-  {KEY_DBLJOY1+1,"DBLJOY2"},
-  {KEY_DBLJOY1+2,"DBLJOY3"},
-  {KEY_DBLJOY1+3,"DBLJOY4"},
-  {KEY_DBLJOY1+4,"DBLJOY5"},
-  {KEY_DBLJOY1+5,"DBLJOY6"}
+  {KEY_JOY0BUT0, "Joy 0 btn 0"},
+  {KEY_JOY0BUT1, "Joy 0 btn 1"},
+  {KEY_JOY0BUT2, "Joy 0 btn 2"},
+  {KEY_JOY0BUT3, "Joy 0 btn 3"},
+  {KEY_JOY0BUT4, "Joy 0 btn 4"},
+  {KEY_JOY0BUT5, "Joy 0 btn 5"},
+  {KEY_JOY0BUT6, "Joy 0 btn 6"},
+  {KEY_JOY0BUT7, "Joy 0 btn 7"},
+  {KEY_JOY0BUT8, "Joy 0 btn 8"},
+  {KEY_JOY0BUT9, "Joy 0 btn 9"},
+  {KEY_JOY0BUT10, "Joy 0 btn 10"},
+  {KEY_JOY0BUT11, "Joy 0 btn 11"},
+  {KEY_JOY0BUT12, "Joy 0 btn 12"},
+  {KEY_JOY0BUT13, "Joy 0 btn 13"},
+  {KEY_JOY0BUT14, "Joy 0 btn 14"},
+  {KEY_JOY0BUT15, "Joy 0 btn 15"},
+
+  {KEY_JOY1BUT0, "Joy 1 btn 0"},
+  {KEY_JOY1BUT1, "Joy 1 btn 1"},
+  {KEY_JOY1BUT2, "Joy 1 btn 2"},
+  {KEY_JOY1BUT3, "Joy 1 btn 3"},
+  {KEY_JOY1BUT4, "Joy 1 btn 4"},
+  {KEY_JOY1BUT5, "Joy 1 btn 5"},
+  {KEY_JOY1BUT6, "Joy 1 btn 6"},
+  {KEY_JOY1BUT7, "Joy 1 btn 7"},
+  {KEY_JOY1BUT8, "Joy 1 btn 8"},
+  {KEY_JOY1BUT9, "Joy 1 btn 9"},
+  {KEY_JOY1BUT10, "Joy 1 btn 10"},
+  {KEY_JOY1BUT11, "Joy 1 btn 11"},
+  {KEY_JOY1BUT12, "Joy 1 btn 12"},
+  {KEY_JOY1BUT13, "Joy 1 btn 13"},
+  {KEY_JOY1BUT14, "Joy 1 btn 14"},
+  {KEY_JOY1BUT15, "Joy 1 btn 15"},
+
+  {KEY_JOY2BUT0, "Joy 2 btn 0"},
+  {KEY_JOY2BUT1, "Joy 2 btn 1"},
+  {KEY_JOY2BUT2, "Joy 2 btn 2"},
+  {KEY_JOY2BUT3, "Joy 2 btn 3"},
+  {KEY_JOY2BUT4, "Joy 2 btn 4"},
+  {KEY_JOY2BUT5, "Joy 2 btn 5"},
+  {KEY_JOY2BUT6, "Joy 2 btn 6"},
+  {KEY_JOY2BUT7, "Joy 2 btn 7"},
+  {KEY_JOY2BUT8, "Joy 2 btn 8"},
+  {KEY_JOY2BUT9, "Joy 2 btn 9"},
+  {KEY_JOY2BUT10, "Joy 2 btn 10"},
+  {KEY_JOY2BUT11, "Joy 2 btn 11"},
+  {KEY_JOY2BUT12, "Joy 2 btn 12"},
+  {KEY_JOY2BUT13, "Joy 2 btn 13"},
+  {KEY_JOY2BUT14, "Joy 2 btn 14"},
+  {KEY_JOY2BUT15, "Joy 2 btn 15"},
+
+  {KEY_JOY3BUT0, "Joy 3 btn 0"},
+  {KEY_JOY3BUT1, "Joy 3 btn 1"},
+  {KEY_JOY3BUT2, "Joy 3 btn 2"},
+  {KEY_JOY3BUT3, "Joy 3 btn 3"},
+  {KEY_JOY3BUT4, "Joy 3 btn 4"},
+  {KEY_JOY3BUT5, "Joy 3 btn 5"},
+  {KEY_JOY3BUT6, "Joy 3 btn 6"},
+  {KEY_JOY3BUT7, "Joy 3 btn 7"},
+  {KEY_JOY3BUT8, "Joy 3 btn 8"},
+  {KEY_JOY3BUT9, "Joy 3 btn 9"},
+  {KEY_JOY3BUT10, "Joy 3 btn 10"},
+  {KEY_JOY3BUT11, "Joy 3 btn 11"},
+  {KEY_JOY3BUT12, "Joy 3 btn 12"},
+  {KEY_JOY3BUT13, "Joy 3 btn 13"},
+  {KEY_JOY3BUT14, "Joy 3 btn 14"},
+  {KEY_JOY3BUT15, "Joy 3 btn 15"},
 };
 
 char *gamecontrolname[num_gamecontrols] =
@@ -821,8 +869,8 @@ void G_Controldefault()
   gamecontrol[gc_scores     ][0]='f';
   gamecontrol[gc_jump       ][0]='/';
   gamecontrol[gc_console    ][0]=KEY_CONSOLE;
-  gamecontrol[gc_nextweapon ][1]=KEY_JOY1+4;
-  gamecontrol[gc_prevweapon ][1]=KEY_JOY1+5;
+  gamecontrol[gc_nextweapon ][1]=KEY_JOY0BUT4;
+  gamecontrol[gc_prevweapon ][1]=KEY_JOY0BUT5;
   
   gamecontrol[gc_invnext    ][0] = ']';
   gamecontrol[gc_invprev    ][0] = '[';

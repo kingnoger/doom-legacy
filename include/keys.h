@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/09/09 22:04:39  jussip
+// New joy code a bit more finished. Button binding works.
+//
 // Revision 1.3  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
 //
@@ -122,7 +125,9 @@ enum key_input_e
 
   // mouse and joystick buttons are handled as 'virtual' keys
   MOUSEBUTTONS =  8,
-  JOYBUTTONS   = 14,  // 10 bases + 4 hat
+  MAXJOYSTICKS = 4,   // "Only" 4 joysticks per machine.
+  JOYBUTTONS   = 16,  // Max number of buttons for a joystick.
+  JOYHATBUTTONS = 4,  // Four hat directions.
 
   KEY_MOUSE1          = KEY_NUMKB, // mouse buttons, including the wheel
   KEY_MOUSEWHEELUP    = KEY_MOUSE1 + 3, // usually
@@ -134,9 +139,80 @@ enum key_input_e
   KEY_2MOUSEWHEELDOWN,
   KEY_DBL2MOUSE1      = KEY_2MOUSE1    + MOUSEBUTTONS,
 
-  KEY_JOY1          = KEY_DBL2MOUSE1 + MOUSEBUTTONS, // joystick buttons
+  KEY_JOYSTICKSTART   = KEY_DBL2MOUSE1 + MOUSEBUTTONS, // joystick buttons
+  KEY_JOY0BUT0,
+  KEY_JOY0BUT1,
+  KEY_JOY0BUT2,
+  KEY_JOY0BUT3,
+  KEY_JOY0BUT4,
+  KEY_JOY0BUT5,
+  KEY_JOY0BUT6,
+  KEY_JOY0BUT7,
+  KEY_JOY0BUT8,
+  KEY_JOY0BUT9,
+  KEY_JOY0BUT10,
+  KEY_JOY0BUT11,
+  KEY_JOY0BUT12,
+  KEY_JOY0BUT13,
+  KEY_JOY0BUT14,
+  KEY_JOY0BUT15,
+
+  KEY_JOY1BUT0,
+  KEY_JOY1BUT1,
+  KEY_JOY1BUT2,
+  KEY_JOY1BUT3,
+  KEY_JOY1BUT4,
+  KEY_JOY1BUT5,
+  KEY_JOY1BUT6,
+  KEY_JOY1BUT7,
+  KEY_JOY1BUT8,
+  KEY_JOY1BUT9,
+  KEY_JOY1BUT10,
+  KEY_JOY1BUT11,
+  KEY_JOY1BUT12,
+  KEY_JOY1BUT13,
+  KEY_JOY1BUT14,
+  KEY_JOY1BUT15,
+
+  KEY_JOY2BUT0,
+  KEY_JOY2BUT1,
+  KEY_JOY2BUT2,
+  KEY_JOY2BUT3,
+  KEY_JOY2BUT4,
+  KEY_JOY2BUT5,
+  KEY_JOY2BUT6,
+  KEY_JOY2BUT7,
+  KEY_JOY2BUT8,
+  KEY_JOY2BUT9,
+  KEY_JOY2BUT10,
+  KEY_JOY2BUT11,
+  KEY_JOY2BUT12,
+  KEY_JOY2BUT13,
+  KEY_JOY2BUT14,
+  KEY_JOY2BUT15,
+
+  KEY_JOY3BUT0,
+  KEY_JOY3BUT1,
+  KEY_JOY3BUT2,
+  KEY_JOY3BUT3,
+  KEY_JOY3BUT4,
+  KEY_JOY3BUT5,
+  KEY_JOY3BUT6,
+  KEY_JOY3BUT7,
+  KEY_JOY3BUT8,
+  KEY_JOY3BUT9,
+  KEY_JOY3BUT10,
+  KEY_JOY3BUT11,
+  KEY_JOY3BUT12,
+  KEY_JOY3BUT13,
+  KEY_JOY3BUT14,
+  KEY_JOY3BUT15,
+
+  KEY_JOYSTICKEND,
+  /*
   KEY_DBLJOY1       = KEY_JOY1 + JOYBUTTONS,
   KEY_DBLJOY14      = KEY_DBLJOY1 + JOYBUTTONS - 1,
+  */
 
   // number of total 'button' inputs, includes keyboard keys, plus virtual
   // keys (mousebuttons and joybuttons become keys)

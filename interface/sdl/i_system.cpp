@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2004/09/09 22:04:39  jussip
+// New joy code a bit more finished. Button binding works.
+//
 // Revision 1.15  2004/09/09 17:15:20  jussip
 // Cleared out old joystick crap in preparation for brand new code.
 //
@@ -218,6 +221,26 @@ static int xlatekey(SDLKey sym)
   return rc;
 }
 
+//! Translates a SDL joystick button to a doom key_input_e number.
+
+static int TranslateJoybutton(Uint8 which, Uint8 button) {
+  int base;
+
+  if(which >= MAXJOYSTICKS) 
+    which = MAXJOYSTICKS-1;
+
+  if(button >= JOYBUTTONS)
+    button = JOYBUTTONS-1;
+
+  switch(which) {
+  case 0 : base = KEY_JOY0BUT0; break;
+  case 1 : base = KEY_JOY1BUT0; break;
+  case 2 : base = KEY_JOY2BUT0; break;
+  case 3 : base = KEY_JOY3BUT0; break;
+  }
+  return base + button;
+}
+
 
 void I_GetEvent()
 {
@@ -298,6 +321,21 @@ void I_GetEvent()
 	      D_PostEvent(&event);
             }
 	  break;
+
+	case SDL_JOYBUTTONDOWN : 
+	  event.type = ev_keydown;
+	  event.data1 = TranslateJoybutton(inputEvent.jbutton.which, 
+					   inputEvent.jbutton.button);
+	  D_PostEvent(&event);
+	  break;
+
+	case SDL_JOYBUTTONUP : 
+	  event.type = ev_keyup;
+	  event.data1 = TranslateJoybutton(inputEvent.jbutton.which, 
+					   inputEvent.jbutton.button);
+	  D_PostEvent(&event);
+	  break;
+
         case SDL_QUIT:
 	  I_Quit();
 	  break;
@@ -576,7 +614,10 @@ void I_JoystickInit() {
   numjoysticks = SDL_NumJoysticks();
   CONS_Printf("%d joystick(s) found.\n", numjoysticks);
 
-  // Add SDL_JoystickEventState(SDL_ENABLE) and other such stuff here.
+  // Start receiving joystick events.
+  SDL_JoystickEventState(SDL_ENABLE);
+
+  // ADD: Put the SDL_Joystick pointers to a vector or something.
   for(i=0; i<numjoysticks; i++) {
     joy = SDL_JoystickOpen(i);
     CONS_Printf("Properties of joystick %d:\n", i);
