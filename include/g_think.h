@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/10/16 12:43:49  smite-meister
+// iteration
+//
 // Revision 1.10  2004/08/12 18:30:29  smite-meister
 // cleaned startup
 //
@@ -210,6 +213,10 @@ public:
 
   /// pointer management
   virtual void CheckPointers() {}
+
+  /// safe iteration through the linked ring
+  inline Thinker *Next() const { return next; };
+  inline Thinker *Prev() const { return prev; };
 
   /// memory management
   void *operator new(size_t size);
