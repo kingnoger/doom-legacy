@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2003/04/26 12:01:13  smite-meister
+// Bugfixes. Hexen maps work again.
+//
 // Revision 1.17  2003/04/24 20:30:17  hurdler
 // Remove lots of compiling warnings
 //
@@ -124,30 +127,30 @@
 //
 void Map::LoadVertexes(int lump)
 {
-  byte*               data;
+
   int                 i;
-  mapvertex_t*        ml;
-  vertex_t*           li;
+
 
   // Determine number of lumps:
   //  total lump length / vertex record length.
-  numvertexes = fc.LumpLength (lump) / sizeof(mapvertex_t);
+  numvertexes = fc.LumpLength(lump) / sizeof(mapvertex_t);
+  CONS_Printf("vertices: %d, ", numvertexes);
 
   // Allocate zone memory for buffer.
-  vertexes = (vertex_t*)Z_Malloc(numvertexes*sizeof(vertex_t),PU_LEVEL,0);
+  vertexes = (vertex_t*)Z_Malloc(numvertexes*sizeof(vertex_t), PU_LEVEL, 0);
 
   // Load data into cache.
-  data = (byte *)fc.CacheLumpNum(lump,PU_STATIC);
+  byte *data = (byte *)fc.CacheLumpNum(lump, PU_STATIC);
 
-  ml = (mapvertex_t *)data;
-  li = vertexes;
+  mapvertex_t *mv = (mapvertex_t *)data;
+  vertex_t *v = vertexes;
 
   // Copy and convert vertex coordinates,
   // internal representation as fixed.
-  for (i=0 ; i<numvertexes ; i++, li++, ml++)
+  for (i=0 ; i<numvertexes ; i++, v++, mv++)
     {
-      li->x = SHORT(ml->x)<<FRACBITS;
-      li->y = SHORT(ml->y)<<FRACBITS;
+      v->x = SHORT(mv->x)<<FRACBITS;
+      v->y = SHORT(mv->y)<<FRACBITS;
     }
 
   // Free buffer memory.
@@ -772,7 +775,9 @@ void Map::LoadLineDefs(int lump)
   else
     numlines = fc.LumpLength(lump)/sizeof(maplinedef_t);
 
-  lines = (line_t *)Z_Malloc(numlines*sizeof(line_t), PU_LEVEL,0);
+  CONS_Printf("lines: %d, ", numlines);
+
+  lines = (line_t *)Z_Malloc(numlines*sizeof(line_t), PU_LEVEL, 0);
   memset(lines, 0, numlines*sizeof(line_t));
   byte *data = (byte *)fc.CacheLumpNum(lump, PU_STATIC);
 
@@ -794,6 +799,11 @@ void Map::LoadLineDefs(int lump)
 
 	  v1 = ld->v1 = &vertexes[SHORT(hld->v1)];
 	  v2 = ld->v2 = &vertexes[SHORT(hld->v2)];
+
+	  if (SHORT(hld->v1) > numvertexes)
+	    CONS_Printf("v1 > numverts: %d\n", SHORT(hld->v1));
+	  if (SHORT(hld->v2) > numvertexes)
+	    CONS_Printf("v2 > numverts: %d\n", SHORT(hld->v2));
 
 	  ld->sidenum[0] = SHORT(hld->sidenum[0]);
 	  ld->sidenum[1] = SHORT(hld->sidenum[1]);
@@ -1380,19 +1390,20 @@ bool Map::Setup(tic_t start)
   levelscript->data = info->Load(lumpnum); // load map separator lump info (map properties, FS...)
 
   // is the map in Hexen format?
-  if (fc.GetNumLumps(lumpnum >> 16) > (lumpnum + ML_BEHAVIOR) &&
-      !strncmp(fc.FindNameForNum(lumpnum + ML_BEHAVIOR), "BEHAVIOR", 8))
+  const char *acslumpname = fc.FindNameForNum(lumpnum + ML_BEHAVIOR);
+  if (acslumpname && !strncmp(acslumpname, "BEHAVIOR", 8))
     {
+      CONS_Printf("Map in Hexen format!\n");
       hexen_format = true;
       S_Read_SNDINFO(fc.GetNumForName("SNDINFO"));
-      S_Read_SNDSEQ(fc.GetNumForName("SNDSEQ"));
+      //S_Read_SNDSEQ(fc.GetNumForName("SNDSEQ"));
     }
   else
     {
       hexen_format = false;
+      // TODO cumulative SNDSEQ reading? First-to-last order.
       S_Read_SNDSEQ(fc.FindNumForNamePwad("SNDSEQ", 0, 0)); // Doom and Heretic sequences in legacy.wad
     }
-
 
 #ifdef FRAGGLESCRIPT
   T_PreprocessScripts();        // preprocess FraggleScript scripts (needs already added players)
@@ -1419,9 +1430,9 @@ bool Map::Setup(tic_t start)
   // note: most of this ordering is important
   LoadBlockMap (lumpnum+ML_BLOCKMAP);
   LoadVertexes (lumpnum+ML_VERTEXES);
+
   LoadSectors1 (lumpnum+ML_SECTORS);
   LoadSideDefs (lumpnum+ML_SIDEDEFS);
-
   LoadLineDefs (lumpnum+ML_LINEDEFS);
   LoadSideDefs2(lumpnum+ML_SIDEDEFS);
   LoadLineDefs2();

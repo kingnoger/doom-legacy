@@ -348,7 +348,8 @@ const char *FileCache::FindNameForNum(int lump)
   if (lfile >= wadfiles.size())
     I_Error("FileCache::FindNameForNum: %i >= numwadfiles(%i)\n", lfile, wadfiles.size());
   if (llump >= wadfiles[lfile]->header.numentries)
-    I_Error("FileCache::FindNameForNum: %i >= numlumps", llump);
+    return NULL;
+    //I_Error("FileCache::FindNameForNum: %i >= numlumps", llump);
 
   return wadfiles[lfile]->GetLumpName(llump);
 }

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/04/26 12:01:12  smite-meister
+// Bugfixes. Hexen maps work again.
+//
 // Revision 1.9  2003/04/20 16:45:50  smite-meister
 // partial SNDSEQ fix
 //
@@ -822,7 +825,7 @@ void S_Read_SNDINFO(int lump)
 		else
 		  {
 		    // must be a tagname => lumpname mapping
-		    for (i = NUMSFX - 1; i >= 0; i--)
+		    for (i = sfx_amb1; i < NUMSFX; i++) // TODO give all sounds tags
 		      if (!strcmp(S_sfx[i].tagname, tag))
 			{
 			  n = sscanf(s, "%*40s%16s", lname);

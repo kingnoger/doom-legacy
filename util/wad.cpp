@@ -67,10 +67,10 @@ WadFile::WadFile()
 WadFile::~WadFile()
 {
   if (stream)
-  {
-    fclose(stream);
-    //stream = NULL; no need
-  }
+    {
+      fclose(stream);
+      stream = NULL;
+    }
   // TODO: free cache memory, invalidate cache
 }
 
@@ -117,13 +117,6 @@ Wad::Wad()
 
 Wad::~Wad()
 {
-  /* Hurdler: this is done in the parent destructor
-  if (stream)
-    {
-      fclose(stream);
-      stream = NULL;
-    }
-  */
   // TODO free hwrcache
   Z_Free(directory);
 }
@@ -304,7 +297,6 @@ Wad3::Wad3()
 // destructor
 Wad3::~Wad3()
 {
-  fclose(stream);
   Z_Free(directory);
 }
 

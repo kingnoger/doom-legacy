@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/04/26 12:01:12  smite-meister
+// Bugfixes. Hexen maps work again.
+//
 // Revision 1.9  2003/04/04 00:01:53  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -157,25 +160,11 @@ static fixed_t sidemove[2]    = {24/NEWTICRATERATIO, 40/NEWTICRATERATIO};
 static char forwardmove[2] = {50, 100};
 static char sidemove[2]    = {48, 80};
 
-/*
-fixed_t MaxPlayerMove[NUMCLASSES] = { 60, 50, 45, 49 };
 
-fixed_t Forwardmove[NUMCLASSES][2] = 
-{
-  { 29, 60 }, // 1.2
-  { 25, 50 }, // 1
-  { 22, 46 }, // 0.92
-  { 24, 49 }  //0.96
-};
+// fixed_t MaxPlayerMove[NUMCLASSES] = { 60, 50, 45, 49 }; // implemented as pawn speeds in info_m.cpp
+// Otherwise OK, but fighter should also run sideways almost as fast as forward,
+// (59/60) instead of (80/100). Weird. Affects straferunning.
 
-fixed_t sidemove[NUMCLASSES][2] = 
-{
-  { 27, 59 }, 
-  { 24, 40 },
-  { 21, 37 },
-  { 23, 39 }
-};
-*/
 
 static fixed_t angleturn[3]   = {640, 1280, 320};  // + slow turn
 #define MAXPLMOVE (forwardmove[1])
@@ -651,7 +640,7 @@ void GameInfo::StartIntro()
 void GameInfo::Drawer()
 {
   // draw the view directly
-  CONS_Printf("GI::Draw: %p, %p\n", displayplayer,displayplayer2);
+  //CONS_Printf("GI::Draw: %p, %p\n", displayplayer,displayplayer2);
   if (displayplayer && displayplayer->pawn)
     {
       R.SetMap(displayplayer->pawn->mp);
@@ -696,7 +685,7 @@ void GameInfo::Drawer()
 #endif
     }
 
-  CONS_Printf("GI::Draw done\n");
+  //CONS_Printf("GI::Draw done\n");
 }
 
 // was G_InventoryResponder

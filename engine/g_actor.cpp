@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2003/04/26 12:01:12  smite-meister
+// Bugfixes. Hexen maps work again.
+//
 // Revision 1.13  2003/04/19 17:38:46  smite-meister
 // SNDSEQ support, tools, linedef system...
 //
@@ -246,12 +249,12 @@ Actor::Actor(fixed_t nx, fixed_t ny, fixed_t nz)
   x = nx;
   y = ny;
   z = nz;
-
+  angle = aiming = 0;
   px = py = pz = 0;
 
   spawnpoint = NULL;
   touching_sectorlist = NULL;
-
+  special = tid = 0;
   owner = target = NULL;
 
   pres = NULL;
@@ -626,8 +629,6 @@ void Actor::XYMovement()
 
   fixed_t xmove = px;
   fixed_t ymove = py;
-
-  CONS_Printf("p = (%d, %d), v = %f / tic\n", px, py, sqrt(px*px+py*py)/FRACUNIT);
 
   //reducing bobbing/momentum on ice
   fixed_t oldx = x;

@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.16  2003/04/26 12:01:12  smite-meister
+// Bugfixes. Hexen maps work again.
+//
 // Revision 1.15  2003/04/19 17:38:46  smite-meister
 // SNDSEQ support, tools, linedef system...
 //
@@ -81,6 +84,7 @@ Map::Map(const string & mname)
   levelscript = NULL;
   runningscripts = NULL;
 
+  hexen_format = false;
   ActiveAmbientSeq = NULL;
 };
 

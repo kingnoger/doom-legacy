@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/04/26 12:01:13  smite-meister
+// Bugfixes. Hexen maps work again.
+//
 // Revision 1.9  2003/04/24 20:30:19  hurdler
 // Remove lots of compiling warnings
 //
@@ -194,6 +197,8 @@ void PlayerPawn::Move()
 
   fixed_t movepushforward = 0, movepushside = 0;
 
+  //CONS_Printf("p = (%d, %d), v = %f / tic\n", px, py, sqrt(px*px+py*py)/FRACUNIT);
+
   float mf = GetMoveFactor();
 
   // limit speed = push/(1-friction) => magic multiplier = 2*(1-friction) = 0.1875
@@ -201,7 +206,7 @@ void PlayerPawn::Move()
 
   if (cmd->forwardmove)
     {
-      CONS_Printf("::m %d, %f\n", cmd->forwardmove, mf);
+      //CONS_Printf("::m %d, %f, magic = %f\n", cmd->forwardmove, mf, magic);
       movepushforward = int(magic * cmd->forwardmove/100);
       Thrust(angle, movepushforward);
     }
