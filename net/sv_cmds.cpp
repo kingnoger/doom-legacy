@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/07/09 19:43:40  smite-meister
+// Netcode fixes
+//
 // Revision 1.2  2004/07/07 17:27:20  smite-meister
 // bugfixes
 //
@@ -157,7 +160,7 @@ void Command_Say_f()
     }
 
   PasteMsg(buf, 1);
-  game.net->SayCmd(0, buf);
+  game.net->SayCmd(0, 0, buf);
 }
 
 
@@ -176,7 +179,7 @@ void Command_Sayto_f()
     return;
 
   PasteMsg(buf, 2);
-  game.net->SayCmd(p->number, buf);
+  game.net->SayCmd(0, p->number, buf);
 }
 
 
@@ -191,14 +194,34 @@ void Command_Sayteam_f()
     }
 
   PasteMsg(buf, 1);
-  game.net->SayCmd(-consoleplayer->team, buf);
+  game.net->SayCmd(0, -consoleplayer->team, buf);
 }
 
 
-void LNetInterface::SayCmd(int to, const char *msg)
+void LNetInterface::SayCmd(int from, int to, const char *msg)
 {
+  if (!game.netgame)
+    return;
+
+  if (from == 0 && consoleplayer)
+    from = consoleplayer->number;
+
   if (server_con)
-    server_con->rpcSay(0, to, msg);
+    server_con->rpcSay(from, to, msg);
+  else if (game.server)
+    for (GameInfo::player_iter_t t = game.Players.begin(); t != game.Players.end(); t++)
+      {
+	PlayerInfo *p = (*t).second;
+
+	if (to == 0 || p->number == to || p->team == -to)
+	  {
+	    if (p->connection)
+	      p->connection->rpcSay(from, to, msg);
+
+	    if (p->number == to)
+	      break; // nobody else should get it
+	  }
+      }
 }
 
 
@@ -208,11 +231,16 @@ TNL_IMPLEMENT_RPC(LConnection, rpcSay, (S8 from, S8 to, const char *msg),
 {
   if (isConnectionToServer())
     {
-      // message from server
-      if (to == 0 || from == 0)
-	CONS_Printf("\3%s\n", msg);
+      // client
+      CONS_Printf("\3%s: %s\n", game.Players[from]->name.c_str(), msg);
+    }
+  else
+    {
+      from = player[0]->number;
 
-      //CONS_Printf("\3%s: %s\n", game.players[playernum]->name.c_str(), *p);
+      CONS_Printf("message!\n");
+      CONS_Printf("\3%s: %s\n", game.Players[from]->name.c_str(), msg);
+      game.net->SayCmd(player[0]->number, to, msg);
     }
 };
 

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/07/09 19:43:40  smite-meister
+// Netcode fixes
+//
 // Revision 1.2  2004/07/05 16:53:30  smite-meister
 // Netcode replaced
 //
@@ -405,7 +408,6 @@ void InitNetwork()
   CONS_Printf("Initializing network...");
 
   bool ipx = M_CheckParm("-ipx");
-
   TransportProtocol ptc = ipx ? IPXProtocol : IPProtocol;
 
   S32 port = DEFAULT_PORT;
@@ -416,7 +418,7 @@ void InitNetwork()
   LNetInterface *n = new LNetInterface(Address(ptc, Address::Any, port));
   game.net = n;
 
-  n->SetPingAddress(Address(ptc, Address::Broadcast, port));
+  n->ping_address = Address(ptc, Address::Broadcast, port);
 
   // misc. commandline parameters
   n->nodownload = M_CheckParm("-nodownload");

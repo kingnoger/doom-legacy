@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.23  2004/07/09 19:43:39  smite-meister
+// Netcode fixes
+//
 // Revision 1.22  2004/07/07 17:27:19  smite-meister
 // bugfixes
 //
@@ -102,6 +105,8 @@ static char default_weaponpref[NUMWEAPONS] =
 };
 
 
+// TNL_IMPLEMENT_NETOBJECT(PlayerInfo);
+
 PlayerInfo::PlayerInfo(const string & n)
 {
   number = 0;
@@ -112,7 +117,7 @@ PlayerInfo::PlayerInfo(const string & n)
   color = 0;
   skin  = 0;
 
-  conn = NULL;
+  connection = NULL;
   spectator = false;
   playerstate = PST_WAITFORMAP;
   memset(&cmd, 0, sizeof(ticcmd_t));
@@ -132,6 +137,9 @@ PlayerInfo::PlayerInfo(const string & n)
   mp = NULL;
   time = 0;
   Reset(false, true);
+
+  // net stuff
+  // mNetFlags.set(Ghostable);
 };
 
 

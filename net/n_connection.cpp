@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2004/07/09 19:43:40  smite-meister
+// Netcode fixes
+//
 // Revision 1.1  2004/07/05 16:53:30  smite-meister
 // Netcode replaced
 //
@@ -33,6 +36,7 @@
 #include "n_connection.h"
 
 #include "g_game.h"
+#include "g_player.h"
 
 
 
@@ -55,10 +59,17 @@ void LConnection::writeConnectRequest(BitStream *stream)
 
    stream->write(VERSION);
    stream->writeString(VERSIONSTRING);
-   /*
-     TODO: send local player data
-     stream->writeString(playerName.getString());
-   */
+
+   // send local player data
+   byte n = cv_splitscreen.value + 1; // number of local players
+   stream->write(n);
+
+   stream->writeString(localplayer.name.c_str());
+
+   if (n == 2)
+     {
+       stream->writeString(localplayer2.name.c_str());
+     }
 }
 
 
@@ -67,7 +78,7 @@ bool LConnection::readConnectRequest(BitStream *stream, const char **errorString
   if (!Parent::readConnectRequest(stream, errorString))
     return false;
 
-  char temp[255];
+  char temp[256];
   *errorString = temp; // in case we need it
 
   int version;
@@ -81,20 +92,35 @@ bool LConnection::readConnectRequest(BitStream *stream, const char **errorString
       return false;
     }
 
-  if (game.Players.size() >= unsigned(cv_maxplayers.value))
-    {
-      sprintf(temp, "Maximum number of players reached (%d).", cv_maxplayers.value);
-      return false;
-    }
-
   if (!cv_allownewplayer.value)
     {
       sprintf(temp, "The server is not accepting new players at the moment.");
       return false;
     }
 
+  // how many players want to get in?
+  byte n;
+  stream->read(&n);
 
-  // TODO read playerdata,
+  if (game.Players.size() + n > unsigned(cv_maxplayers.value))
+    {
+      sprintf(temp, "Maximum number of players reached (%d).", cv_maxplayers.value);
+      return false;
+    }
+
+  // read playerdata
+  for (int i = 0; i<n; i++)
+    {
+      stream->readString(temp);
+      temp[32] = '\0'; // limit name length
+
+      PlayerInfo *p = new PlayerInfo(temp);
+      p->connection = this;
+
+      player.push_back(p);
+      if (!game.AddPlayer(p))
+	I_Error("shouldn't happen! rotten!\n");
+    }
 
   return true; // server accepts
 }
@@ -102,18 +128,24 @@ bool LConnection::readConnectRequest(BitStream *stream, const char **errorString
 
 void LConnection::writeConnectAccept(BitStream *stream)
 {
-  // TODO check that name is unique, send corrected info back etc.
+  Parent::writeConnectAccept(stream);  
+  // TODO check that name is unique, send corrected info back, send pnum
 
   //SV_SendServerConfig(node)
+  //CV_SaveNetVars();
 }
 
 
 bool LConnection::readConnectAccept(BitStream *stream, const char **errorString)
 {
+  if(!Parent::readConnectAccept(stream, errorString))
+    return false;
+
+  // TODO read serverconfig
+
   // TEST
-  char temp[255];
+  char temp[256];
   *errorString = temp; // in case we need it
-  sprintf(temp, "up yours, server!\n");
 
   return true;
 }
@@ -124,7 +156,7 @@ bool LConnection::readConnectAccept(BitStream *stream, const char **errorString)
 
 void LConnection::onConnectTerminated(TerminationReason r, const char *reason)
 {
-  CONS_Printf("%s\n", reason);
+  CONS_Printf("Connect terminated (%d), %s\n", r, reason);
   ConnectionTerminated(false);
 }
 
@@ -141,6 +173,7 @@ void LConnection::onConnectionEstablished()
    
   if (isInitiator())
     {
+      // client side
       setGhostFrom(false);
       setGhostTo(true);
       CONS_Printf("%s - connected to server.\n", getNetAddressString());
@@ -150,16 +183,16 @@ void LConnection::onConnectionEstablished()
     }
   else
     {
-      // TODO: make scope object
+      // server side
       ((LNetInterface *)getInterface())->client_con.push_back(this);
 
-      /*
-	Player *player = new Player;
-	myPlayer = player;
-	myPlayer->setInterface(getInterface());
-	myPlayer->addToGame(((TestNetInterface *) getInterface())->game);
-	setScopeObject(myPlayer);
-      */
+      int n = player.size();
+      for (int i = 0; i<n; i++)
+	{
+	  CONS_Printf("%s entered the game (player %d)\n", player[i]->name.c_str(), player[i]->number);
+	  //SendPlayerConfig();
+	}
+      //setScopeObject(x); // TODO
 
       setGhostFrom(true);
       setGhostTo(false);
@@ -188,7 +221,19 @@ void LConnection::ConnectionTerminated(bool established)
   else
     {
       if (established)
-	;// drop client, inform others
+	{
+	  int n = player.size();
+	  for (int i = 0; i<n; i++)
+	    {
+	      CONS_Printf("Player (%d) dropped.\n", player[i]->number);
+	      game.RemovePlayer(player[i]->number); // PI is also deleted here
+	    }
+	  // drop client, inform others
+	}
+      else
+	{
+	  CONS_Printf("Unsuccesful connect attempt\n");
+	}
     }
 }
 
@@ -203,29 +248,66 @@ void LConnection::ConnectionTerminated(bool established)
 
 
 
-
-
+// TEST ghosting
 /*
-void Got_UseArtefact (char **cp,int playernum)
+  typedef NetObject Parent;
+  TNL_DECLARE_CLASS(PlayerInfo);
+  virtual bool onGhostAdd(class GhostConnection *theConnection);
+  virtual void onGhostRemove();
+  virtual U32  packUpdate(GhostConnection *connection, U32 updateMask, class BitStream *stream);
+  virtual void unpackUpdate(GhostConnection *connection, BitStream *stream);
+  virtual void performScopeQuery(GhostConnection *connection);
+
+
+bool PlayerInfo::onGhostAdd(class GhostConnection *theConnection)
 {
-  int art = READBYTE(*cp);
-  game.FindPlayer(playernum)->pawn->UseArtifact((artitype_t)art);
+  CONS_Printf("added new player\n");
+  game.AddPlayer(this);
+  return true;
 }
-*/
 
-
-/*
-void Got_AddPlayer(char **s, int playernum)
+void PlayerInfo::onGhostRemove()
 {
-  int newplayernum = READBYTE(*s);
-  bool splitscreenplayer = newplayernum & 0x80;
+  game.RemovePlayer(number);
+}
 
-  PlayerInfo *p = new PlayerInfo();
-  p = game.AddPlayer(p);
+const int UM_INIT = 0x1; // TEMP
 
-  CONS_Printf("Player %d entered the game (node %d)\n",newplayernum,node);
+U32 PlayerInfo::packUpdate(GhostConnection *connection, U32 mask, class BitStream *stream)
+{
+  // check which states need to be updated, and write updates
+  if (stream->writeFlag(mask & UM_INIT))
+    {
+      stream->write(number);
+      stream->writeString(name.c_str());
+    }
+
+  // the return value from packUpdate can set which states still
+  // need to be updated for this object.
+  return 0;
+}
+
+void PlayerInfo::unpackUpdate(GhostConnection *connection, BitStream *stream)
+{
+  char temp[256];
+
+  // the unpackUpdate function must be symmetrical to packUpdate
+  if (stream->readFlag())
+    {
+      stream->read(&number);
+      stream->readString(temp);
+      name = temp;
+    }
+}
 
 
-      D_SendPlayerConfig();
+// scope query on server
+void PlayerInfo::performScopeQuery(GhostConnection *c)
+{
+  for (GameInfo::player_iter_t t = game.Players.begin(); t != game.Players.end(); t++)
+    {
+      PlayerInfo *p = (*t).second;
+      c->objectInScope(p); // player information is always in scope
+    }
 }
 */

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.27  2004/07/09 19:43:39  smite-meister
+// Netcode fixes
+//
 // Revision 1.26  2004/07/05 16:53:24  smite-meister
 // Netcode replaced
 //
@@ -734,16 +737,17 @@ PlayerInfo *GameInfo::AddPlayer(PlayerInfo *p)
   // TODO what if maxplayers has recently been set to a lower-than-n value?
   // when are the extra players kicked? cv_maxplayers action func?
 
+  // player numbers range from 1 to maxplayers
   int pnum = p->number;
   if (pnum > maxplayers)
-    pnum = -1;  // pnum too high
+    pnum = 0;  // pnum too high
 
   // check if pnum is free
   if (pnum > 0 && Players.count(pnum))
-    pnum = -1; // pnum already taken
+    pnum = 0; // pnum already taken
 
   // find first free player number, if necessary
-  if (pnum < 0)
+  if (pnum <= 0)
     {
       for (int j = 1; j <= maxplayers; j++)
 	if (Players.count(j) == 0)

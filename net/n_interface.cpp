@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/07/09 19:43:40  smite-meister
+// Netcode fixes
+//
 // Revision 1.4  2004/07/07 17:27:20  smite-meister
 // bugfixes
 //
@@ -88,7 +91,7 @@ LNetInterface::LNetInterface(const Address &bind)
   server_con = NULL;
   netstate = NS_Unconnected;
 
-  nextpingtime = 0;
+  nowtime = nextpingtime = 0;
   autoconnect = false;
   nodownload = false;
 
@@ -99,12 +102,6 @@ LNetInterface::LNetInterface(const Address &bind)
   setRequiresKeyExchange(true);
 }
 
-
-
-void LNetInterface::SetPingAddress(const Address &a)
-{
-  ping_address = a;
-}
 
 
 void LNetInterface::CL_StartPinging(bool connectany)
@@ -128,10 +125,10 @@ void LNetInterface::SendPing(const Address &a, const Nonce &cn)
   cn.write(&out);           // client nonce
   out.write(VERSION);       // version information
   out.writeString(VERSIONSTRING);
-  out.write(I_GetTime());  // this is used to calculate the ping value
+  out.write(nowtime);  // this is used to calculate the ping value
 
   out.sendto(mSocket, a);
-  nextpingtime = I_GetTime() + PingDelay;
+  nextpingtime = nowtime + PingDelay;
 }
 
 
@@ -147,7 +144,7 @@ void LNetInterface::SendQuery(serverinfo_t *s)
   out.write(s->token);
 
   out.sendto(mSocket, s->addr);
-  s->nextquery = I_GetTime() + QueryDelay;
+  s->nextquery = nowtime + QueryDelay;
 }
 
 
@@ -223,7 +220,7 @@ void LNetInterface::handleInfoPacket(const Address &address, U8 packetType, BitS
 
 	  unsigned time;
 	  stream->read(&time);
-	  s->ping = I_GetTime() - time;
+	  s->ping = nowtime - time;
 	  CONS_Printf("ping: %d ms\n", s->ping);
 
 	  SendQuery(s);
@@ -335,6 +332,15 @@ void LNetInterface::SL_Clear()
 }
 
 
+void LNetInterface::SL_Update()
+{
+  int n = serverlist.size();
+  for (int i = 0; i<n; i++)
+    if (serverlist[i]->nextquery <= nowtime)
+      SendQuery(serverlist[i]);
+}
+
+
 
 
 
@@ -408,17 +414,17 @@ void LNetInterface::SV_Reset()
 
 void LNetInterface::Update()
 {
-  U32 now = I_GetTime();
+  nowtime = I_GetTime();
 
   checkIncomingPackets();
 
   switch (netstate)
     {
     case CL_PingingServers:
-      if (nextpingtime <= now)
+      if (nextpingtime <= nowtime)
 	SendPing(ping_address, pingnonce);
 
-      // TODO send new server queries
+      SL_Update(); // refresh the server list by sending new queries
       break;
 
     case CL_Connecting:

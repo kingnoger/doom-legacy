@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/07/09 19:43:40  smite-meister
+// Netcode fixes
+//
 // Revision 1.3  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
 //
@@ -35,6 +38,7 @@
 #ifndef n_connection_h
 #define n_connection_h 1
 
+#include <vector>
 #include "tnl/tnlGhostConnection.h"
 
 using namespace TNL;
@@ -51,6 +55,9 @@ class LConnection : public GhostConnection
 public:
   /// Makes this a valid connection class to the TNL network system.
   TNL_DECLARE_NETCONNECTION(LConnection);
+
+public:
+  vector<class PlayerInfo *> player; ///< players beyond this connection
 
 
   LConnection();

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/07/09 19:43:40  smite-meister
+// Netcode fixes
+//
 // Revision 1.4  2004/07/07 17:27:19  smite-meister
 // bugfixes
 //
@@ -71,7 +74,7 @@ public:
   /// network state
   netstate_t netstate;
 
-
+protected:
   /// local constants
   enum
   {
@@ -86,19 +89,37 @@ public:
   };
 
 
+  U32          nowtime; ///< time of current/last update in ms
+
   /// server pinging
   U32     nextpingtime;
   Nonce      pingnonce;
+public:
   Address ping_address; ///< Host or a LAN broadcast address used in server search
   bool     autoconnect;
 
-public:
+  /// information about currently known servers
   vector<class serverinfo_t *> serverlist;
 
+protected:
+  /// server list manipulation
   serverinfo_t *SL_FindServer(const Address &a);
   serverinfo_t *SL_AddServer(const Address &a);
+  void SL_Update();
   void SL_Clear();
 
+
+  /// overrides the method in the NetInterface class to handle ping and info packets
+  virtual void handleInfoPacket(const Address &a, U8 packetType, BitStream *stream);
+
+  /// Sends out a server ping
+  void SendPing(const Address &a, const Nonce &cn);
+
+  /// Sends out a server query
+  void SendQuery(serverinfo_t *s);
+
+
+public:
 
   // active connections
   class MasterConnection *master_con;   ///< connection to master server
@@ -111,17 +132,6 @@ public:
 
   /// The constructor initializes and binds the network interface
   LNetInterface(const Address &bind);
-
-  void SetPingAddress(const Address &a);
-
-  /// overrides the method in the NetInterface class to handle ping and info packets
-  virtual void handleInfoPacket(const Address &a, U8 packetType, BitStream *stream);
-
-  /// Sends out a server ping
-  void SendPing(const Address &a, const Nonce &cn);
-
-  /// Sends out a server query
-  void SendQuery(serverinfo_t *s);
 
   /// Checks for incoming packets, sends out packets if needed, processes connections.
   void Update();
@@ -144,7 +154,7 @@ public:
 
   //================================================
 
-  void SayCmd(int to, const char *msg);
+  void SayCmd(int from, int to, const char *msg);
 };
 
 

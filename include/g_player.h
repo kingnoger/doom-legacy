@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.15  2004/07/09 19:43:40  smite-meister
+// Netcode fixes
+//
 // Revision 1.14  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
 //
@@ -25,6 +28,8 @@
 //
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief PlayerInfo class definition.
 
 #ifndef g_player_h
 #define g_player_h 1
@@ -36,9 +41,6 @@
 #include "d_items.h"
 
 using namespace std;
-
-/// \file
-/// \brief PlayerInfo class definition.
 
 
 
@@ -61,6 +63,7 @@ enum playerstate_t
 class PlayerInfo
 {
   friend class GameInfo;
+
 public:
   int    number;   ///< The player number.
   int    team;     ///< index into game.teams vector
@@ -71,7 +74,7 @@ public:
   int color; ///< skin color to be copied to each pawn
   int skin;  ///< skin to be copied to each pawn
 
-  class LConnection *conn; ///< network connection
+  class LConnection *connection; ///< network connection
   bool spectator;
   playerstate_t playerstate;
   ticcmd_t  cmd;
