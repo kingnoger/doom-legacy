@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/07/02 17:52:46  smite-meister
+// VDir fix
+//
 // Revision 1.6  2003/06/10 22:39:59  smite-meister
 // Bugfixes
 //
@@ -55,7 +58,7 @@ using namespace std;
 // note! several exits in the Map can have the same exit number,
 // exit numbers can be remapped to point to new destinations.
 
-// for now it's simple: exit[0] is the normal exit, exit[1] secret exit
+// for now it's simple: exit[0] is the normal exit, exit[100] secret exit
 // exits are pointers to new levelnodes. NULL means episode ends here.
 
 class LevelNode
@@ -94,8 +97,5 @@ public:
   LevelNode(class MapInfo_t *info);
 };
 
-
-LevelNode *G_Create_classic_(int episode);
-LevelNode *G_Create_MAPINFO_levelgraph(int lump);
 
 #endif

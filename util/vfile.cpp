@@ -184,8 +184,9 @@ int VDir::ReadItemHeader(int i, void *dest, int size)
   if (size == 0 || size > item->size)
     size = item->size;
 
+  string temp = filename + item->name;
   // cache cannot be used here, because this function is used in the caching process
-  FILE *str = fopen(item->name, "rb");
+  FILE *str = fopen(temp.c_str(), "rb");
   if (!str)
     {
       I_Error("Could not access file %s within directory %s!\n", item->name, filename.c_str());

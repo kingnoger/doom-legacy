@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.2  2003/07/02 17:52:46  smite-meister
+// VDir fix
+//
 // Revision 1.1  2003/06/10 22:39:54  smite-meister
 // Bugfixes
 //
@@ -378,4 +381,3 @@ int GameInfo::Create_Classic_levelgraph(int episode)
     }
   return n;
 }
-

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2003/07/02 17:52:46  smite-meister
+// VDir fix
+//
 // Revision 1.15  2003/06/29 17:33:59  smite-meister
 // VFile system, PAK support, Hexen bugfixes
 //
@@ -491,6 +494,7 @@ bool SoundSystem::StartMusic(const char *name, bool loop)
   if (mus_playing && !strcmp(mus_playing->name, name))
     return true;
 
+  CONS_Printf("StartMusic: %s\n", name);
   // so music needs to be changed.
 
   // shutdown old music
