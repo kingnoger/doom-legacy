@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/03/08 16:06:59  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.10  2003/02/23 22:49:30  smite-meister
 // FS is back! L2 cache works.
 //
@@ -97,7 +100,7 @@
 // DESCRIPTION:
 //      DOOM main program (D_DoomMain) and game loop (D_DoomLoop),
 //      plus functions to determine game mode (shareware, registered),
-//      parse command line parameters, configure game parameters (turbo),
+//      parse command line parameters, configure game parameters,
 //      and call the startup functions.
 //
 //-----------------------------------------------------------------------------
@@ -247,7 +250,6 @@ void D_AdvanceDemo()
 //
 void D_DoAdvanceDemo()
 {
-  //consoleplayer->playerstate = PST_LIVE;  // not reborn
   advancedemo = false;
   //game.action = ga_nothing;
 
@@ -259,74 +261,79 @@ void D_DoAdvanceDemo()
   switch (demosequence)
     {
     case 0:
-        pagename = "TITLEPIC";
-        switch (game.mode) {
-        case gm_hexen :
-        case gm_heretic :
-            pagetic = 210+140;
-            pagename = "TITLE";
-            S_StartMusic(mus_htitl);
-            break;
-        case gm_doom2 :
-            pagetic = TICRATE * 11;
-            S_StartMusic(mus_dm2ttl);
-            break;
-        default :
-            pagetic = 170;
-            S_StartMusic (mus_intro);
-            break;
+      pagename = "TITLEPIC";
+      switch (game.mode)
+	{
+	case gm_hexen:
+	  pagetic = 280;
+	  pagename = "TITLE";
+	  S.StartMusic("HEXEN", true);
+	  break;
+	case gm_heretic:
+	  pagetic = 210+140;
+	  pagename = "TITLE";
+	  S_StartMusic(mus_htitl);
+	  break;
+	case gm_doom2:
+	  pagetic = TICRATE * 11;
+	  S_StartMusic(mus_dm2ttl);
+	  break;
+	default:
+	  pagetic = 170;
+	  S_StartMusic (mus_intro);
+	  break;
+	}
+      game.state = GS_DEMOSCREEN;
+      break;
+    case 1:
+      G_DeferedPlayDemo ("demo1");
+      pagetic = 9999999;
+      break;
+    case 2:
+      pagetic = 200;
+      game.state = GS_DEMOSCREEN;
+      pagename = "CREDIT";
+      break;
+    case 3:
+      G_DeferedPlayDemo ("demo2");
+      pagetic = 9999999;
+      break;
+    case 4:
+      game.state = GS_DEMOSCREEN;
+      pagetic = 200;
+      switch (game.mode)
+	{
+	case gm_doom2:
+	  pagetic = TICRATE * 11;
+	  pagename = "TITLEPIC";
+	  S_StartMusic(mus_dm2ttl);
+	  break;
+	case gm_heretic:
+	  pagetic = 200;
+	  if (fc.FindNumForName("e2m1") == -1)
+	    pagename = "ORDER";
+	  else
+	    pagename = "CREDIT";
+	  break;
+	case gm_hexen:
+	  pagename = "CREDIT";
+	  break;
+	case gm_udoom:
+	  pagename = text[CREDIT_NUM];
+	  break;
+	default:
+	  pagename = text[HELP2_NUM];
         }
-        game.state = GS_DEMOSCREEN;
-        break;
-      case 1:
-        G_DeferedPlayDemo ("demo1");
-        pagetic = 9999999;
-        break;
-      case 2:
-        pagetic = 200;
-        game.state = GS_DEMOSCREEN;
-        pagename = "CREDIT";
-        break;
-      case 3:
-        G_DeferedPlayDemo ("demo2");
-        pagetic = 9999999;
-        break;
-      case 4:
-        game.state = GS_DEMOSCREEN;
-        if (game.mode == gm_doom2)
-        {
-            pagetic = TICRATE * 11;
-            pagename = "TITLEPIC";
-            S_StartMusic(mus_dm2ttl);
-        }
-        else
-        if (game.mode == gm_heretic)
-        {
-             pagetic = 200;
-             if(fc.FindNumForName("e2m1")==-1)
-                 pagename = "ORDER";
-             else
-                 pagename = "CREDIT";
-        }
-        else
-        {
-            pagetic = 200;
-
-            if (game.mode == gm_udoom)
-              pagename = text[CREDIT_NUM];
-            else
-              pagename = text[HELP2_NUM];
-        }
-        break;
-      case 5:
-        G_DeferedPlayDemo ("demo3");
-        pagetic = 9999999;
-        break;
-        // THE DEFINITIVE DOOM Special Edition demo
-      case 6:
-        G_DeferedPlayDemo ("demo4");
-        pagetic = 9999999;
-        break;
+      break;
+    case 5:
+      G_DeferedPlayDemo ("demo3");
+      pagetic = 9999999;
+      break;
+      // THE DEFINITIVE DOOM Special Edition demo
+    case 6:
+      G_DeferedPlayDemo ("demo4");
+      pagetic = 9999999;
+      break;
     }
 }
 
@@ -875,6 +882,7 @@ void D_IdentifyVersion()
 
   // external Legacy data file
   D_AddFile("legacy.wad");
+  D_AddFile("doom.wad"); // FIXME testing hexen
 
   // Specify the name of an IWAD file to use.
   // Internally the game makes no difference between IWADs and PWADs.
@@ -1165,7 +1173,7 @@ void D_DoomMain()
 #ifdef PC_DOS
   D_Titlebar(legacy,title);
 #else
-  CONS_Printf ("%s\n%s\n", legacy, title);
+  CONS_Printf ("%s\n%s\n\n", legacy, title);
 #endif
 
 #ifdef __OS2__
@@ -1410,11 +1418,6 @@ void D_DoomMain()
       COM_BufAddText("timelimit 20\n");
       CONS_Printf(text[AUSTIN_NUM]);
     }
-
-  // turbo option, is not meant to be saved in config, still
-  // supported at cmd-line for compatibility
-  if ( M_CheckParm ("-turbo") && M_IsNextParm())
-    COM_BufAddText (va("turbo %s\n",M_GetNextParm()));
 
   // push all "+" parameter at the command buffer
   M_PushSpecialParameters();

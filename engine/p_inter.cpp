@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/03/08 16:07:08  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.8  2003/02/16 16:54:51  smite-meister
 // L2 sound cache done
 //
@@ -1330,8 +1333,11 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
   else
     sound = sfx_itemup;
 
+  // TODO replace the sprite switch with a mobjtype_t switch
+  int sprite = special->state->sprite;
+
   // Identify by sprite.
-  switch (special->sprite)
+  switch (sprite)
     {
     case SPR_SHLD: // Item_Shield1
       // armor
@@ -2104,8 +2110,6 @@ void P_AutoUseHealth(PlayerPawn *p, int saveHealth)
 
 bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 {
-  CONS_Printf("Ach, scheisse! %d damage, h %d =>\n", damage, health);
-
   if (dtype & dt_always)
     {
       // unavoidable damage

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2002 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/03/08 16:07:08  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.8  2003/02/23 22:49:31  smite-meister
 // FS is back! L2 cache works.
 //
@@ -504,6 +507,7 @@ void Map::LoadSectors(int lump)
 	  else
             ss->floortype = FLOOR_SOLID;
 
+      // TODO cache flats here
       ss->floorpic = P_AddLevelFlat (ms->floorpic,foundflats);
       ss->ceilingpic = P_AddLevelFlat (ms->ceilingpic,foundflats);
 
@@ -605,15 +609,18 @@ void Map::LoadNodes(int lump)
 //
 void Map::LoadThings(int lump)
 {
-  char *data, *datastart;
+  if (game.mode == gm_hexen)
+    nummapthings = fc.LumpLength(lump)/sizeof(hex_mapthing_t);
+  else
+    nummapthings = fc.LumpLength(lump)/sizeof(doom_mapthing_t);
 
-  data = datastart = (char *)fc.CacheLumpNum (lump,PU_LEVEL);
-  nummapthings     = fc.LumpLength (lump) / (5 * sizeof(short));
-  mapthings        = (mapthing_t *)Z_Malloc(nummapthings * sizeof(mapthing_t), PU_LEVEL, NULL);
+  mapthings    = (mapthing_t *)Z_Malloc(nummapthings*sizeof(mapthing_t), PU_LEVEL, NULL);
+  char *data   = (char *)fc.CacheLumpNum(lump, PU_STATIC);
 
-  //SoM: Because I put a new member into the mapthing_t for use with
-  //fragglescript, the format has changed and things won't load correctly
-  //using the old method.
+  doom_mapthing_t *mt = (doom_mapthing_t *)data;
+  hex_mapthing_t *ht = (hex_mapthing_t *)data;
+
+  mapthing_t *t = mapthings;
 
   int ffail = 0;
   // multiplayer only thing flag
@@ -637,22 +644,33 @@ void Map::LoadThings(int lump)
   else
     skillbit = 1 << (game.skill-1);
 
-  mapthing_t *mt = mapthings;
 
   int i, n, low, high, ednum;
-  for (i=0 ; i<nummapthings ; i++, mt++)
+  for (i=0 ; i<nummapthings ; i++, t++)
     {
-      mt->x = SHORT(READSHORT(data));
-      mt->y = SHORT(READSHORT(data));
-      mt->angle = SHORT(READSHORT(data));
-
-      ednum = SHORT(READSHORT(data));
-
-      mt->flags = SHORT(READSHORT(data));
-      mt->mobj = NULL; //SoM:
+      if (game.mode == gm_hexen)
+	{
+	  t->x = SHORT(ht->x);
+	  t->y = SHORT(ht->y);
+	  t->angle = SHORT(ht->angle);
+	  ednum    = SHORT(ht->type);
+	  t->flags = SHORT(ht->flags);
+	  // TODO rest
+	  ht++;
+	}
+      else
+	{
+	  t->x = SHORT(mt->x);
+	  t->y = SHORT(mt->y);
+	  t->angle = SHORT(mt->angle);
+	  ednum    = SHORT(mt->type);
+	  t->flags = SHORT(mt->flags);
+	  mt++;
+	}
+      t->mobj = NULL;
 
       // wrong flags?
-      if ((mt->flags & ffail) || !(mt->flags & skillbit))
+      if ((t->flags & ffail) || !(t->flags & skillbit))
 	continue;
 
       // convert editor number to mobjtype_t number right now
@@ -664,8 +682,8 @@ void Map::LoadThings(int lump)
 	{
 	  if (dmstarts.size() < MAX_DM_STARTS)
 	    {
-	      dmstarts.push_back(mt);
-	      mt->type = 0;
+	      dmstarts.push_back(t);
+	      t->type = 0;
 	    }
 	  continue;
 	}
@@ -678,8 +696,8 @@ void Map::LoadThings(int lump)
 	  // save spots for respawning in network games
 	  if (playerstarts.size() < ednum)
 	    playerstarts.resize(ednum);
-	  playerstarts[ednum - 1] = mt;
-	  mt->type = 0; // mt->type is used as a timer
+	  playerstarts[ednum - 1] = t;
+	  t->type = 0; // t->type is used as a timer
 	  continue;
 	}
 
@@ -692,10 +710,10 @@ void Map::LoadThings(int lump)
 
       if (ednum == 14)
 	{
-	  // ugly HACK, FIXME somehow!
+	  // ugly HACK
 	  // same with doom and heretic, but only one mobjtype_t
-	  mt->type = MT_TELEPORTMAN;
-	  SpawnMapThing(mt);
+	  t->type = MT_TELEPORTMAN;
+	  SpawnMapThing(t);
 	  continue;
 	}
 
@@ -708,6 +726,10 @@ void Map::LoadThings(int lump)
 	  ednum -= info->doom_offs[0];
 	  low = MT_DOOM;
 	  high = MT_DOOM_END;
+
+	  // DoomII braintarget list
+	  if (ednum == 87)
+	    braintargets.push_back(t);
 	}
       else if (ednum >= info->heretic_offs[0] && ednum <= info->heretic_offs[1])
 	{
@@ -718,23 +740,14 @@ void Map::LoadThings(int lump)
 	  // D'Sparil teleport spot (no Actor spawned)
 	  if (ednum == 56)
 	    {
-	      BossSpots.push_back(mt);
-	      /*
-		BossSpots[BossSpotCount].x = mthing->x << FRACBITS;
-		BossSpots[BossSpotCount].y = mthing->y << FRACBITS;
-		BossSpots[BossSpotCount].angle = ANG45 * (mthing->angle/45);
-	      */
+	      BossSpots.push_back(t);
 	      continue;
 	    }
 
 	  // Mace spot (no Actor spawned)
 	  if (ednum == 2002)
 	    {
-	      MaceSpots.push_back(mt);
-	      /*
-		MaceSpots[MaceSpotCount].x = mthing->x<<FRACBITS;
-		MaceSpots[MaceSpotCount].y = mthing->y<<FRACBITS;
-	      */
+	      MaceSpots.push_back(t);
 	      continue;
 	    }
 	}
@@ -746,20 +759,17 @@ void Map::LoadThings(int lump)
       if (n > high)
 	{
 	  CONS_Printf("\2P_SpawnMapThing: Unknown type %i at (%i, %i)\n",
-		      ednum, mt->x, mt->y);
+		      ednum, t->x, t->y);
 	  continue;
 	}
 
-      // DoomII braintarget list
-      if (n == MT_BOSSTARGET)
-	braintargets.push_back(mt);
 
       // spawn here
-      mt->type = mobjtype_t(n); 
-      SpawnMapThing(mt);
+      t->type = mobjtype_t(n); 
+      SpawnMapThing(t);
     }
 
-  Z_Free(datastart);
+  Z_Free(data);
 }
 
 
@@ -769,27 +779,66 @@ void Map::LoadThings(int lump)
 //
 void Map::LoadLineDefs(int lump)
 {
-  byte*               data;
+
   int                 i;
-  maplinedef_t*       mld;
-  line_t*             ld;
+
+
   vertex_t*           v1;
   vertex_t*           v2;
 
-  numlines = fc.LumpLength (lump) / sizeof(maplinedef_t);
-  lines = (line_t *)Z_Malloc(numlines*sizeof(line_t),PU_LEVEL,0);
-  memset (lines, 0, numlines*sizeof(line_t));
-  data = (byte *)fc.CacheLumpNum (lump,PU_STATIC);
+  if (game.mode == gm_hexen)
+    numlines = fc.LumpLength(lump)/sizeof(hex_maplinedef_t);
+  else
+    numlines = fc.LumpLength(lump)/sizeof(maplinedef_t);
 
-  mld = (maplinedef_t *)data;
-  ld = lines;
-  for (i=0 ; i<numlines ; i++, mld++, ld++)
+  lines = (line_t *)Z_Malloc(numlines*sizeof(line_t), PU_LEVEL,0);
+  memset(lines, 0, numlines*sizeof(line_t));
+  byte *data = (byte *)fc.CacheLumpNum(lump, PU_STATIC);
+
+  maplinedef_t *mld = (maplinedef_t *)data;
+  hex_maplinedef_t *hld = (hex_maplinedef_t *)data;
+
+  line_t *ld = lines;
+
+  for (i=0 ; i<numlines ; i++, ld++)
     {
-      ld->flags = SHORT(mld->flags);
-      ld->special = SHORT(mld->special);
-      ld->tag = SHORT(mld->tag);
-      v1 = ld->v1 = &vertexes[SHORT(mld->v1)];
-      v2 = ld->v2 = &vertexes[SHORT(mld->v2)];
+      if (game.mode == gm_hexen)
+	{
+	  ld->flags = SHORT(hld->flags);
+
+	  // New line special info ...
+	  ld->special = hld->special;
+	  /*
+	    // TODO add
+	  ld->arg1 = hld->arg1;
+	  ld->arg2 = hld->arg2;
+	  ld->arg3 = hld->arg3;
+	  ld->arg4 = hld->arg4;
+	  ld->arg5 = hld->arg5;
+	  */
+	  v1 = ld->v1 = &vertexes[SHORT(hld->v1)];
+	  v2 = ld->v2 = &vertexes[SHORT(hld->v2)];
+
+	  ld->sidenum[0] = SHORT(hld->sidenum[0]);
+	  ld->sidenum[1] = SHORT(hld->sidenum[1]);
+	  hld++;
+	}
+      else
+	{
+	  ld->flags = SHORT(mld->flags);
+	  ld->special = SHORT(mld->special);
+	  ld->tag = SHORT(mld->tag);
+	  v1 = ld->v1 = &vertexes[SHORT(mld->v1)];
+	  v2 = ld->v2 = &vertexes[SHORT(mld->v2)];
+
+	  ld->sidenum[0] = SHORT(mld->sidenum[0]);
+	  ld->sidenum[1] = SHORT(mld->sidenum[1]);
+
+	  if (ld->sidenum[0] != -1 && ld->special)
+	    sides[ld->sidenum[0]].special = ld->special;
+	  mld++;
+	}
+
       ld->dx = v2->x - v1->x;
       ld->dy = v2->y - v1->y;
 
@@ -826,13 +875,6 @@ void Map::LoadLineDefs(int lump)
 	  ld->bbox[BOXBOTTOM] = v2->y;
 	  ld->bbox[BOXTOP] = v1->y;
         }
-
-      ld->sidenum[0] = SHORT(mld->sidenum[0]);
-      ld->sidenum[1] = SHORT(mld->sidenum[1]);
-
-      if (ld->sidenum[0] != -1 && ld->special)
-	sides[ld->sidenum[0]].special = ld->special;
-
     }
 
   Z_Free (data);
@@ -1339,10 +1381,6 @@ bool Map::Setup(tic_t start)
     
   InitThinkers();
 
-  // if working with a devlopment map, reload it
-  // FIXME! temporarily removed, is it ever even necessary?
-  // fc.Reload ();
-
   //
   //  load the map from internal game resource or external wad file
   //
@@ -1388,7 +1426,7 @@ bool Map::Setup(tic_t start)
   // Otherwise use given LevelNode data.
   if (!info->musiclump.empty())
     S.StartMusic(info->musiclump.c_str());
-  else
+  else if (!level->musiclump.empty())
     S.StartMusic(level->musiclump.c_str());
 
   //faB: now part of level loading since in future each level may have
@@ -1432,7 +1470,8 @@ bool Map::Setup(tic_t start)
 
   InitAmbientSound();
   LoadThings (lumpnum+ML_THINGS);
-  PlaceWeapons();
+  PlaceWeapons(); // Heretic mace
+  // LoadACScripts(lumpnum+ML_BEHAVIOR); // ACS object code
 
   // set up world state
   SpawnSpecials();

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/03/08 16:07:13  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.4  2003/02/16 16:54:51  smite-meister
 // L2 sound cache done
 //
@@ -113,16 +116,8 @@ struct inventory_t
   byte type;
   byte count;
 
-  inventory_t()
-  {
-    type = count = 0;
-  }
-
-  inventory_t(byte t, byte c)
-  {
-    type = t;
-    count = c;
-  }
+  inventory_t();
+  inventory_t(byte t, byte c);
 };
 
 #define NUMINVENTORYSLOTS  14

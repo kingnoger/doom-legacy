@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/03/08 16:07:11  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.7  2003/01/18 20:17:41  smite-meister
 // HUD fixed, levelchange crash fixed.
 //
@@ -80,11 +83,19 @@ int fgbuffer = FG;
 // Palette indices.
 // For damage/bonus red-/gold-shifts
 #define STARTREDPALS            1
-#define STARTBONUSPALS          9
 #define NUMREDPALS              8
+#define STARTBONUSPALS          9
 #define NUMBONUSPALS            4
 // Radiation suit, green shift.
 #define RADIATIONPAL            13
+// new Hexen palettes
+#define STARTPOISONPALS 13
+#define NUMPOISONPALS	8
+#define STARTICEPAL	21
+#define STARTHOLYPAL	22
+#define STARTSCOURGEPAL 25
+
+
 
 // N/256*100% probability
 //  that the normal face state will change
@@ -93,9 +104,6 @@ int fgbuffer = FG;
 // For Responder
 #define ST_TOGGLECHAT           KEY_ENTER
 
-// Location of status bar
-  //added:08-01-98:status bar position changes according to resolution.
-#define ST_FX                     143
 
 // Number of status faces.
 #define ST_NUMPAINFACES         5
@@ -520,7 +528,7 @@ void HUD::ST_RefreshBackground()
       else
 	colormap = translationtables - 256 + (sbpawn->color<<8);
 
-      V_DrawMappedPatch(st_x+ST_FX, st_y, flags, PatchFaceBack, colormap);
+      V_DrawMappedPatch(st_x+143, st_y, flags, PatchFaceBack, colormap);
     }
 
   // copy the statusbar buffer to the screen
@@ -1236,7 +1244,7 @@ void HUD::ST_Start(PlayerPawn *p)
 {
   int i;
 
-  CONS_Printf("HUD::ST_Start");
+  CONS_Printf("HUD::ST_Start\n");
 
   if (st_active)
     ST_Stop();

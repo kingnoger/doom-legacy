@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2002 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.8  2003/03/08 16:07:00  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.7  2003/02/16 16:54:50  smite-meister
 // L2 sound cache done
 //
@@ -35,6 +38,7 @@
 #include "hu_stuff.h" // HUD
 #include "tables.h" // angle
 #include "r_main.h" // PointToAngle functions FIXME which do not belong there
+#include "r_sprite.h"
 #include "m_random.h"
 
 
@@ -74,14 +78,10 @@ Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, const pawn_info_t *t)
   health = info->spawnhealth;
   maxhealth = 2*health;
   reactiontime = info->reactiontime;
+  speed = info->speed;
 
-  //FIXME remove this and just set the correct sprite/model here...  
-  /*
-  state = &states[info->spawnstate];
-  tics = state->tics;
-  */
   state_t *state = &states[info->spawnstate];
-  sprite = state->sprite;
+  pres = sprites.Get(sprnames[state->sprite]);
   frame = state->frame; // FF_FRAMEMASK for frame, and other bits..
 }
 
@@ -1081,13 +1081,13 @@ DActor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
   th->owner = this;
 
   th->angle = ang;
-  th->px = FixedMul(th->info->speed, finecosine[ang>>ANGLETOFINESHIFT]);
-  th->py = FixedMul(th->info->speed, finesine[ang>>ANGLETOFINESHIFT]);
+  th->px = int(th->info->speed * finecosine[ang>>ANGLETOFINESHIFT]);
+  th->py = int(th->info->speed * finesine[ang>>ANGLETOFINESHIFT]);
     
   th->px = FixedMul(th->px, finecosine[aiming>>ANGLETOFINESHIFT]);
   th->py = FixedMul(th->py, finecosine[aiming>>ANGLETOFINESHIFT]);
 
-  th->pz = FixedMul(th->info->speed, slope);
+  th->pz = int(th->info->speed * slope);
 
   if (th->type == MT_BLASTERFX1)
     { // Ultra-fast ripper spawning missile

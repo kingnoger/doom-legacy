@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/03/08 16:07:14  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.2  2003/02/23 22:49:31  smite-meister
 // FS is back! L2 cache works.
 //
@@ -95,13 +98,26 @@ struct mapsidedef_t
 // to the BSP builder.
 struct maplinedef_t
 {
-  short         v1;
-  short         v2;
-  short         flags;
-  short         special;
-  short         tag;
+  short v1, v2;
+  short flags;
+  short special;
+  short tag;
   // sidenum[1] will be -1 if one sided
-  short         sidenum[2];             
+  short sidenum[2];             
+};
+
+// extended Hexen maplinedef
+struct hex_maplinedef_t
+{
+  short v1, v2;
+  short flags;
+  byte special;
+  byte arg1;
+  byte arg2;
+  byte arg3;
+  byte arg4;
+  byte arg5;
+  short sidenum[2]; // sidenum[1] will be -1 if one sided
 };
 
 
@@ -111,14 +127,14 @@ struct maplinedef_t
 
 enum {
   // Solid, is an obstacle.
-  ML_BLOCKING = 1,
+  ML_BLOCKING = 0x0001,
 
   // Blocks monsters only.
-  ML_BLOCKMONSTERS = 2,
+  ML_BLOCKMONSTERS = 0x0002,
 
   // Backside will not be present at all
   //  if not two sided.
-  ML_TWOSIDED = 4,
+  ML_TWOSIDED = 0x0004,
 
   // If a texture is pegged, the texture will have
   // the end exposed to air held constant at the
@@ -130,29 +146,43 @@ enum {
   // top and bottom textures (use next to windows).
 
   // upper texture unpegged
-  ML_DONTPEGTOP = 8,
+  ML_DONTPEGTOP = 0x0008,
 
   // lower texture unpegged
-  ML_DONTPEGBOTTOM = 16,
+  ML_DONTPEGBOTTOM = 0x0010,
 
   // In AutoMap: don't map as two sided: IT'S A SECRET!
-  ML_SECRET = 32,
+  ML_SECRET = 0x0020,
 
   // Sound rendering: don't let sound cross two of these.
-  ML_SOUNDBLOCK = 64,
+  ML_SOUNDBLOCK = 0x0040,
 
   // Don't draw on the automap at all.
-  ML_DONTDRAW = 128,
+  ML_DONTDRAW = 0x0080,
 
   // Set if already seen, thus drawn in automap.
-  ML_MAPPED = 256,
+  ML_MAPPED = 0x0100,
 
   //SoM: 3/29/2000: If flag is set, the player can use through it.
-  ML_PASSUSE = 512,
+  ML_PASSUSE = 0x0200,
+  ML_REPEAT_SPECIAL = 0x0200, // Hexen: special is repeatable
 
   //SoM: 4/1/2000: If flag is set, anything can trigger the line.
-  ML_ALLTRIGGER = 1024,
+  ML_ALLTRIGGER = 0x0400,
+  ML_SPAC_SHIFT	= 10,    // Hexen: Special activation, 3 bit field
+  ML_SPAC_MASK	= 0x1c00,
+
+  // Special activation types
+  SPAC_CROSS  =	0,	// when player crosses line
+  SPAC_USE    = 1,	// when player uses line
+  SPAC_MCROSS =	2,	// when monster crosses line
+  SPAC_IMPACT =	3,	// when projectile hits line
+  SPAC_PUSH   =	4,	// when player/monster pushes line
+  SPAC_PCROSS =	5	// when projectile crosses line
 };
+
+#define GET_SPAC(flags) (((flags) & ML_SPAC_MASK) >> ML_SPAC_SHIFT)
+
 
 
 // Sector definition, from editing.
@@ -215,9 +245,34 @@ struct mapnode_t
 
 
 
-
 // Thing definition, position, orientation and type,
 // plus skill/visibility flags and attributes.
+struct doom_mapthing_t
+{
+  short x, y;
+  short angle;
+  short type;
+  short flags;
+};
+
+// extended Hexen mapthing
+struct hex_mapthing_t
+{
+  short tid;
+  short x, y;
+  short height;
+  short angle;
+  short type;
+  short flags;
+  byte special;
+  byte arg1;
+  byte arg2;
+  byte arg3;
+  byte arg4;
+  byte arg5;
+};
+
+// Legacy runtime mapthing
 struct mapthing_t
 {
   short x, y, z;
@@ -229,21 +284,29 @@ struct mapthing_t
 
 // mapthing_t flags
 enum {
-  // at which skill is it present?
-  MTF_EASY   = 1,
-  MTF_NORMAL = 2,
-  MTF_HARD   = 4,
-  // Deaf monsters/do not react to sound.
-  MTF_AMBUSH = 8,
-  // only present in multiplayer
-  MTF_MULTIPLAYER = 16,
-  // extra BOOM flags
-  MTF_NOT_IN_DM   = 32, 
-  MTF_NOT_IN_COOP = 64
+  // original Doom flags
+  MTF_EASY   = 0x0001,      // at which skill is it present?
+  MTF_NORMAL = 0x0002,
+  MTF_HARD   = 0x0004,
+  MTF_AMBUSH = 0x0008,      // Deaf monsters/do not react to sound.
+  MTF_MULTIPLAYER = 0x0010, // only present in multiplayer
+
+  // BOOM extras
+  MTF_NOT_IN_DM   = 0x0020,  
+  MTF_NOT_IN_COOP = 0x0040,
+
+  // Hexen extras
+  MTF_DORMANT  = 0x0010,  // dormant until activated     
+  MTF_FIGHTER  = 0x0020,  // appears for fighter
+  MTF_CLERIC   = 0x0040,  // appears for cleric
+  MTF_MAGE     = 0x0080,  // appears for mage
+  MTF_GSINGLE  = 0x0100,   // appears in single player games
+  MTF_GCOOP    = 0x0200,   // appears in coop games
+  MTF_GDEATHMATCH = 0x0400 // appears in dm games
 };
 
 
 extern char *Color_Names[MAXSKINCOLORS];
 
 
-#endif                  // __DOOMDATA__
+#endif

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Portions Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/03/08 16:07:20  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.4  2003/01/12 12:56:42  smite-meister
 // Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
 //
@@ -30,45 +33,8 @@
 // Revision 1.1.1.1  2002/11/16 14:18:49  hurdler
 // Initial C++ version of Doom Legacy
 //
-// Revision 1.9  2002/09/25 15:17:43  vberghol
-// Intermission fixed?
-//
-// Revision 1.7  2002/09/06 17:18:36  vberghol
-// added most of the changes up to RC2
-//
-// Revision 1.6  2002/09/05 14:12:20  vberghol
-// network code partly bypassed
-//
-// Revision 1.5  2002/08/21 16:58:40  vberghol
-// Version 1.41 Experimental compiles and links!
-//
-// Revision 1.4  2002/08/19 18:06:48  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.3  2002/07/01 21:01:13  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:39  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.42  2001/12/31 16:56:39  metzgermeister
-// see Dec 31 log
-// .
-//
-// Revision 1.41  2001/08/12 15:21:04  bpereira
-// see my log
-//
 // Revision 1.40  2001/08/06 23:57:09  stroggonmeth
 // Removed portal code, improved 3D floors in hardware mode.
-//
-// Revision 1.39  2001/06/16 08:07:55  bpereira
-// no message
-//
-// Revision 1.38  2001/06/10 21:16:01  bpereira
-// no message
-//
-// Revision 1.37  2001/05/30 18:15:21  stroggonmeth
-// Small crashing bug fix...
 //
 // Revision 1.36  2001/05/30 04:00:52  stroggonmeth
 // Fixed crashing bugs in software with 3D floors.
@@ -76,26 +42,14 @@
 // Revision 1.35  2001/05/22 14:22:23  hurdler
 // show 3d-floors bug + hack for filesearch with vc++
 //
-// Revision 1.34  2001/05/07 20:27:16  stroggonmeth
-// no message
-//
-// Revision 1.33  2001/04/27 13:32:14  bpereira
-// no message
-//
 // Revision 1.32  2001/04/17 21:12:08  stroggonmeth
 // Little commit. Re-enables colormaps for trans columns in C and fixes some sprite bugs.
-//
-// Revision 1.31  2001/03/30 17:12:51  bpereira
-// no message
 //
 // Revision 1.30  2001/03/21 18:24:56  stroggonmeth
 // Misc changes and fixes. Code cleanup
 //
 // Revision 1.29  2001/03/13 22:14:20  stroggonmeth
 // Long time no commit. 3D floors, FraggleScript, portals, ect.
-//
-// Revision 1.28  2001/02/24 13:35:21  bpereira
-// no message
 //
 // Revision 1.27  2001/01/25 22:15:44  bpereira
 // added heretic support
@@ -118,38 +72,11 @@
 // Revision 1.21  2000/10/04 16:19:24  hurdler
 // Change all those "3dfx names" to more appropriate names
 //
-// Revision 1.20  2000/10/02 18:25:45  bpereira
-// no message
-//
-// Revision 1.19  2000/10/01 10:18:19  bpereira
-// no message
-//
-// Revision 1.18  2000/09/30 16:33:08  metzgermeister
-// fixed compilation
-//
-// Revision 1.17  2000/09/28 20:57:18  bpereira
-// no message
-//
-// Revision 1.16  2000/09/21 16:45:08  bpereira
-// no message
-//
-// Revision 1.15  2000/08/31 14:30:56  bpereira
-// no message
-//
 // Revision 1.14  2000/08/11 21:37:17  hurdler
 // fix win32 compilation problem
 //
 // Revision 1.13  2000/08/11 19:10:13  metzgermeister
 // *** empty log message ***
-//
-// Revision 1.12  2000/04/30 10:30:10  bpereira
-// no message
-//
-// Revision 1.11  2000/04/24 20:24:38  bpereira
-// no message
-//
-// Revision 1.10  2000/04/20 21:47:24  stroggonmeth
-// no message
 //
 // Revision 1.9  2000/04/18 17:39:40  stroggonmeth
 // Bug fixes and performance tuning.
@@ -159,9 +86,6 @@
 //
 // Revision 1.7  2000/04/09 02:30:57  stroggonmeth
 // Fixed missing sprite def
-//
-// Revision 1.6  2000/04/08 17:29:25  stroggonmeth
-// no message
 //
 // Revision 1.5  2000/04/06 21:06:20  stroggonmeth
 // Optimized extra_colormap code...
@@ -198,16 +122,15 @@
 #include "r_state.h"
 
 #include "p_pspr.h"
-//#include "sounds.h"             //skin sounds
 
 #include "w_wad.h"
-#include "wad.h" // ugly, but...
+#include "wad.h"
 
 #include "z_zone.h"
+#include "z_cache.h"
 
 #include "i_video.h"            //rendermode
 
-typedef waddir_t lumpinfo_t;
 
 static void R_InitSkins (void);
 
@@ -215,26 +138,22 @@ static void R_InitSkins (void);
 #define BASEYCENTER           (BASEVIDHEIGHT/2)
 
 // put this in transmap of visprite to draw a shade
-//#define
 // ahaha, the pointer cannot be changed but its target can!
 lighttable_t * const VIS_SMOKESHADE = (lighttable_t *)-1;
 
 
-typedef struct
+struct maskdraw_t
 {
-    int         x1;
-    int         x2;
-
-    int         column;
-    int         topclip;
-    int         bottomclip;
-
-} maskdraw_t;
+  int  x1, x2;
+  int  column;
+  int  topclip;
+  int  bottomclip;
+};
 
 
 // SoM: A drawnode is something that points to a 3D floor, 3D side or masked
 // middle texture. This is used for sorting with sprites.
-typedef struct drawnode_s
+struct drawnode_t
 {
   visplane_t*   plane;
   drawseg_t*    seg;
@@ -242,9 +161,8 @@ typedef struct drawnode_s
   ffloor_t*     ffloor;
   vissprite_t*  sprite;
 
-  struct drawnode_s* next;
-  struct drawnode_s* prev;
-} drawnode_t;
+  drawnode_t *next, *prev;
+};
 
 
 //
@@ -270,15 +188,6 @@ short           screenheightarray[MAXVIDWIDTH];
 // INITIALIZATION FUNCTIONS
 //
 
-// variables used to look up
-//  and range check thing_t sprites patches
-spritedef_t*    sprites;
-int             numsprites;
-
-spriteframe_t   sprtemp[29];
-int             maxframe;
-char*           spritename;
-
 
 // ==========================================================================
 //
@@ -288,67 +197,219 @@ char*           spritename;
 //
 // ==========================================================================
 
-//
-//
-//
-void R_InstallSpriteLump ( int           lumppat,     // graphics patch
-                           int           lumpid,      // identifier
-                           unsigned      frame,
-                           unsigned      rotation,
-                           bool       flipped )
+// used when building a sprite from lumps
+static spriteframe_t sprtemp[29];
+static int maxframe;
+
+static void R_InstallSpriteLump(int lumpnum, int lumpid, int frame, int rot, bool flip)
 {
-    int         r;
+  // uses sprtemp array, maxframe 
+  if (frame >= 29 || rot > 8)
+    I_Error("R_InstallSpriteLump: Bad frame characters in lump %i", lumpnum);
 
-    if (frame >= 29 || rotation > 8)
-        I_Error("R_InstallSpriteLump: "
-                "Bad frame characters in lump %i", lumpid);
+  if (frame > maxframe)
+    maxframe = frame;
 
-    if ((int)frame > maxframe)
-        maxframe = frame;
-
-    if (rotation == 0)
+  if (rot == 0)
     {
-        // the lump should be used for all rotations
-        if (sprtemp[frame].rotate == 0 && devparm)
-            CONS_Printf ("R_InitSprites: Sprite %s frame %c has "
-                        "multiple rot=0 lump\n", spritename, 'A'+frame);
+      // the lump should be used for all rotations
+      if (sprtemp[frame].rotate == 0 && devparm)
+	CONS_Printf ("R_InitSprites: Sprite %d frame %c has "
+		     "multiple rot=0 lump\n", lumpnum, 'A'+frame);
 
-        if (sprtemp[frame].rotate == 1 && devparm)
-            CONS_Printf ("R_InitSprites: Sprite %s frame %c has rotations "
-                        "and a rot=0 lump\n", spritename, 'A'+frame);
+      if (sprtemp[frame].rotate == 1 && devparm)
+	CONS_Printf ("R_InitSprites: Sprite %d frame %c has rotations "
+		     "and a rot=0 lump\n", lumpnum, 'A'+frame);
 
-        sprtemp[frame].rotate = 0;
-        for (r=0 ; r<8 ; r++)
+      sprtemp[frame].rotate = 0;
+      for (int r = 0; r < 8; r++)
         {
-            sprtemp[frame].lumppat[r] = lumppat;
-            sprtemp[frame].lumpid[r]  = lumpid;
-            sprtemp[frame].flip[r] = (byte)flipped;
+	  sprtemp[frame].lumppat[r] = lumpnum;
+	  sprtemp[frame].lumpid[r]  = lumpid;
+	  sprtemp[frame].flip[r] = flip;
         }
-        return;
     }
+  else
+    {
+      // the lump is only used for one rotation
+      if (sprtemp[frame].rotate == 0 && devparm)
+        CONS_Printf ("R_InitSprites: Sprite %d frame %c has rotations "
+                     "and a rot=0 lump\n", lumpnum, 'A'+frame);
 
-    // the lump is only used for one rotation
-    if (sprtemp[frame].rotate == 0 && devparm)
-        CONS_Printf ("R_InitSprites: Sprite %s frame %c has rotations "
-                     "and a rot=0 lump\n", spritename, 'A'+frame);
+      sprtemp[frame].rotate = 1;
+      rot--; // make 0 based
 
-    sprtemp[frame].rotate = 1;
-
-    // make 0 based
-    rotation--;
-
-    if (sprtemp[frame].lumpid[rotation] != -1 && devparm)
-        CONS_Printf ("R_InitSprites: Sprite %s : %c : %c "
+      if (sprtemp[frame].lumpid[rot] != -1 && devparm)
+        CONS_Printf ("R_InitSprites: Sprite %d : %c : %c "
                      "has two lumps mapped to it\n",
-                     spritename, 'A'+frame, '1'+rotation);
+                     lumpnum, 'A'+frame, '1'+rot);
 
-    // lumppat & lumpid are the same for original Doom, but different
-    // when using sprites in pwad : the lumppat points the new graphics
-    sprtemp[frame].lumppat[rotation] = lumppat;
-    sprtemp[frame].lumpid[rotation] = lumpid;
-    sprtemp[frame].flip[rotation] = (byte)flipped;
+      // lumppat & lumpid are the same for original Doom, but different
+      // when using sprites in pwad : the lumppat points the new graphics
+      sprtemp[frame].lumppat[rot] = lumpnum;
+      sprtemp[frame].lumpid[rot] = lumpid;
+      sprtemp[frame].flip[rot] = flip;
+    }
 }
 
+//==============================================
+
+spritecache_t::spritecache_t(memtag_t tag)
+  : L2cache_t(tag)
+{}
+
+
+// We assume that the sprite is in Doom sprite format
+cacheitem_t *spritecache_t::Load(const char *p, cacheitem_t *r)
+{
+  // etsi joka tiedostosta S_START, sen jälkeen p-alkuisia lumppeja. lisää ne spriteen.
+  int i, l;
+  int intname = *(int *)p;
+
+  memset(sprtemp, -1, sizeof(sprtemp));
+  maxframe = -1;
+
+  CONS_Printf(" Sprite: %s  |  ", p);
+
+  int nwads = fc.Size();
+  for (i=0; i<nwads; i++)
+    {
+      // find the sprites section in this file
+      // we need at least the S_END
+      // (not really, but for speedup)
+
+      int start = fc.FindNumForNamePwad("S_START", i, 0);
+      if (start == -1)
+	start = fc.FindNumForNamePwad("SS_START", i, 0); //deutex compatib.
+
+      if (start == -1)
+	start = 0;      // search frames from start of wad (lumpnum low word is 0)
+      else
+	start++;   // just after S_START
+
+      start &= 0xFFFF;    // 0 based in waddir
+
+      int end = fc.FindNumForNamePwad("S_END", i, 0);
+      if (end == -1)
+	end = fc.FindNumForNamePwad("SS_END", i, 0);     //deutex compatib.
+
+      if (end == -1)
+	continue; // no S_END, no sprites accepted
+      end &= 0xFFFF;
+
+      patch_t patch;
+
+      // scan the lumps, filling in the frames for whatever is found
+      waddir_t *waddir = fc.GetLumpinfo(i);
+
+      for (l = start; l < end; l++)
+	{
+	  if (*(int *)waddir[l].name == intname)
+	    {
+	      int frame = waddir[l].name[4] - 'A';
+	      int rotation = waddir[l].name[5] - '0';
+
+	      // skip NULL sprites from very old dmadds pwads
+	      if (waddir[l].size <= 8)
+		continue;
+
+	      // store sprite info in lookup tables
+	      //FIXME:numspritelumps do not duplicate sprite replacements
+	      fc.ReadLumpHeader((i << 16) + l, &patch, sizeof(patch_t));
+	      spritewidth[numspritelumps] = SHORT(patch.width)<<FRACBITS;
+	      spriteoffset[numspritelumps] = SHORT(patch.leftoffset)<<FRACBITS;
+	      spritetopoffset[numspritelumps] = SHORT(patch.topoffset)<<FRACBITS;
+	      spriteheight[numspritelumps] = SHORT(patch.height)<<FRACBITS;
+
+#ifdef HWRENDER
+# define min(x,y) ( ((x)<(y)) ? (x) : (y) )
+	      //BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
+	      if (rendermode != render_soft && SHORT(patch.topoffset) > 0 // not for psprite
+		  && SHORT(patch.topoffset) < SHORT(patch.height))
+		// perfect is patch.height but sometime it is too high
+		spritetopoffset[numspritelumps] = min(SHORT(patch.topoffset)+4,SHORT(patch.height)) << FRACBITS;            
+#endif
+
+	      R_InstallSpriteLump((i << 16) + l, numspritelumps, frame, rotation, false);
+
+	      if (waddir[l].name[6])
+		{
+		  frame = waddir[l].name[6] - 'A';
+		  rotation = waddir[l].name[7] - '0';
+		  R_InstallSpriteLump((i << 16) + l, numspritelumps, frame, rotation, true);
+		}
+
+	      if (++numspritelumps>=MAXSPRITELUMPS)
+		I_Error("R_AddSingleSpriteDef: too much sprite replacements (numspritelumps)\n");
+	    }
+	}
+    }
+  
+  // if no frames found for this sprite
+  if (maxframe == -1)
+    return NULL;
+
+  maxframe++;
+
+  //  some checks to help development
+  for (i = 0; i < maxframe; i++)
+    switch (sprtemp[i].rotate)
+      {
+      case -1:
+	// no rotations were found for that frame at all
+	I_Error("No patches found for sprite %s frame %c", p, i+'A');
+	break;
+	  
+      case 0:
+	// only the first rotation is needed
+	break;
+
+      case 1:
+	// must have all 8 frames
+	for (l = 0; l < 8; l++)
+	  // we test the patch lump, or the id lump whatever
+	  // if it was not loaded the two are -1
+	  if (sprtemp[i].lumppat[l] == -1)
+	    I_Error("Sprite %s frame %c is missing rotations", p, i+'A');
+	break;
+      }
+
+  sprite_t *t = (sprite_t *)r;
+  if (t == NULL)
+    t = new sprite_t;
+
+  // allocate this sprite's frames
+  t->spr.numframes = maxframe;
+  t->spr.spriteframes = (spriteframe_t *)Z_Malloc(maxframe*sizeof(spriteframe_t), PU_STATIC, NULL);
+  memcpy(t->spr.spriteframes, sprtemp, maxframe*sizeof(spriteframe_t));
+
+  CONS_Printf("frames = %d\n", maxframe);
+
+  return t;
+}
+
+
+void spritecache_t::Free(cacheitem_t *r)
+{
+  sprite_t *t = (sprite_t *)r;
+  /*
+  int i, j;
+  for (i = 0; i < t->spr.numframes; i++)
+    {
+      spriteframe_t *frame = &t->spr.spriteframes[i];
+      // TODO release textures of each frame...
+    }
+  */
+  Z_Free(t->spr.spriteframes);
+}
+
+
+spritecache_t sprites(PU_STATIC); // TODO: make a cool new PU_tag for sprites/models
+
+
+void spritedef_t::Draw(const Actor *p)
+{
+}
 
 // Install a single sprite, given its identifying name (4 chars)
 //
@@ -363,13 +424,14 @@ void R_InstallSpriteLump ( int           lumppat,     // graphics patch
 //
 // Returns true if the sprite was succesfully added
 //
-bool R_AddSingleSpriteDef (char* sprname, spritedef_t* spritedef, int wadnum, int startlump, int endlump)
+/*
+static bool R_AddSingleSpriteDef (char* sprname, spritedef_t* spritedef, int wadnum, int startlump, int endlump)
 {
   int         l;
   int         intname;
   int         frame;
   int         rotation;
-  lumpinfo_t* lumpinfo;
+  waddir_t* lumpinfo;
   int nlumps;
   patch_t     patch;
 
@@ -517,31 +579,30 @@ bool R_AddSingleSpriteDef (char* sprname, spritedef_t* spritedef, int wadnum, in
 //
 // Search for sprites replacements in a wad whose names are in namelist
 //
-void R_AddSpriteDefs (char** namelist, int wadnum)
+static void R_AddSpriteDefs (char** namelist, int wadnum)
 {
   int         i;
-  int         start;
-  int         end;
 
   // find the sprites section in this pwad
   // we need at least the S_END
   // (not really, but for speedup)
 
-  start = fc.FindNumForNamePwad ("S_START",wadnum,0);
-  if (start==-1)
-    start = fc.FindNumForNamePwad ("SS_START",wadnum,0); //deutex compatib.
-  if (start==-1)
-    start=0;      // search frames from start of wad
-                              // (lumpnum low word is 0)
+  int start = fc.FindNumForNamePwad("S_START", wadnum, 0);
+  if (start == -1)
+    start = fc.FindNumForNamePwad("SS_START", wadnum, 0); //deutex compatib.
+
+  if (start == -1)
+    start = 0;      // search frames from start of wad (lumpnum low word is 0)
   else
     start++;   // just after S_START
 
   start &= 0xFFFF;    // 0 based in lumpinfo
 
-  end = fc.FindNumForNamePwad ("S_END",wadnum,0);
-  if (end==-1)
-    end = fc.FindNumForNamePwad ("SS_END",wadnum,0);     //deutex compatib.
-  if (end==-1)
+  int end = fc.FindNumForNamePwad("S_END",wadnum,0);
+  if (end == -1)
+    end = fc.FindNumForNamePwad("SS_END",wadnum,0);     //deutex compatib.
+
+  if (end == -1)
     {
       if (devparm)
 	CONS_Printf ("no sprites in pwad %d\n", wadnum);
@@ -571,14 +632,14 @@ void R_AddSpriteDefs (char** namelist, int wadnum)
   CONS_Printf ("%d sprites added from file %d\n", addsprites, wadnum);//Fab
   //CONS_Error ("press enter\n");
 }
-
+*/
 
 
 //
 // GAME FUNCTIONS
 //
-static vissprite_t     vissprites[MAXVISSPRITES];
-static vissprite_t*    vissprite_p;
+static vissprite_t  vissprites[MAXVISSPRITES];
+static vissprite_t *vissprite_p;
 
 
 //
@@ -591,13 +652,15 @@ void R_InitSprites (char** namelist)
   char**      check;
 
   for (i=0 ; i<MAXVIDWIDTH ; i++)
-    {
-      negonearray[i] = -1;
-    }
+    negonearray[i] = -1;
+
+  sprites.SetDefaultItem("PLAY");
 
   //
   // count the number of sprite names, and allocate sprites table
   //
+  int nwads = fc.Size();
+  /*
   check = namelist;
   while (*check != NULL)
     check++;
@@ -606,14 +669,13 @@ void R_InitSprites (char** namelist)
   if (!numsprites)
     I_Error ("R_AddSpriteDefs: no sprites in namelist\n");
 
-  sprites = (spritedef_t *)Z_Malloc(numsprites * sizeof(*sprites), PU_STATIC, NULL);
-  memset (sprites, 0, numsprites * sizeof(*sprites));
+  //sprites = (spritedef_t *)Z_Malloc(numsprites * sizeof(*sprites), PU_STATIC, NULL);
+  //memset (sprites, 0, numsprites * sizeof(*sprites));
 
   // find sprites in each -file added pwad
-  int nwads = fc.Size();
   for (i=0; i<nwads; i++)
     R_AddSpriteDefs (namelist, i);
-
+  */
     //
     // now check for skins
     //
@@ -639,9 +701,9 @@ void R_InitSprites (char** namelist)
 // R_ClearSprites
 // Called at frame start.
 //
-void R_ClearSprites (void)
+void R_ClearSprites()
 {
-    vissprite_p = vissprites;
+  vissprite_p = vissprites;
 }
 
 
@@ -741,41 +803,37 @@ void R_DrawMaskedColumn (column_t* column)
 // R_DrawVisSprite
 //  mfloorclip and mceilingclip should also be set.
 //
-static void R_DrawVisSprite ( vissprite_t*          vis,
-                              int                   x1,
-                              int                   x2 )
+static void R_DrawVisSprite(vissprite_t *vis, int  x1, int x2)
 {
-    column_t*           column;
-    int                 texturecolumn;
-    fixed_t             frac;
-    patch_t*            patch;
+  column_t*           column;
+  int                 texturecolumn;
+  fixed_t             frac;
+  patch_t*            patch;
 
 
-    //Fab:R_InitSprites now sets a wad lump number
-    patch = (patch_t *)fc.CacheLumpNum (vis->patch, PU_CACHE);
+  //Fab:R_InitSprites now sets a wad lump number
+  patch = (patch_t *)fc.CacheLumpNum (vis->patch, PU_CACHE);
 
-    dc_colormap = vis->colormap;
-    if (vis->transmap==VIS_SMOKESHADE)
-        // shadecolfunc uses 'colormaps'
-        colfunc = shadecolfunc;
-    else if (vis->transmap)
+  dc_colormap = vis->colormap;
+  if (vis->transmap == VIS_SMOKESHADE)
+    // shadecolfunc uses 'colormaps'
+    colfunc = shadecolfunc;
+  else if (vis->transmap)
     {
-        colfunc = fuzzcolfunc;
-        dc_transmap = vis->transmap;    //Fab:29-04-98: translucency table
+      colfunc = fuzzcolfunc;
+      dc_transmap = vis->transmap;    //Fab:29-04-98: translucency table
     }
-    /*
-      // FIXME player skin color should be a skin property, not some flag hack.
-      // Even the standard marine skin should be a skin_t instance
-    else if (vis->mobjflags & MF_TRANSLATION)
+  /*
+    FIXME color translation
+  else if ()
     {
-        // translate green skin to another color
-        colfunc = transcolfunc;
-        dc_translation = translationtables - 256 +
-            ( (vis->mobjflags & MF_TRANSLATION) >> (MF_TRANSSHIFT-8) );
+      // translate green skin to another color
+      colfunc = transcolfunc;
+      dc_translation = vis->colormap;
     }
-    */
+  */
 
-    if(vis->extra_colormap && !fixedcolormap)
+  if(vis->extra_colormap && !fixedcolormap)
     {
       if(!dc_colormap)
         dc_colormap = vis->extra_colormap->colormap;
@@ -911,95 +969,60 @@ void Rend::R_SplitSprite(vissprite_t* sprite, Actor* thing)
 //
 void Rend::R_ProjectSprite(Actor* thing)
 {
-    fixed_t             tr_x;
-    fixed_t             tr_y;
+  // transform the origin point
+  fixed_t  tr_x = thing->x - viewx;
+  fixed_t  tr_y = thing->y - viewy;
 
-    fixed_t             gxt;
-    fixed_t             gyt;
+  fixed_t  gxt = FixedMul(tr_x,viewcos);
+  fixed_t  gyt = -FixedMul(tr_y,viewsin);
 
-    fixed_t             tx;
-    fixed_t             tz;
+  fixed_t  tz = gxt - gyt;
 
-    fixed_t             xscale;
-    fixed_t             yscale; //added:02-02-98:aaargll..if I were a math-guy!!!
+  // thing is behind view plane?
+  if (tz < MINZ)
+    return;
 
-    int                 x1;
-    int                 x2;
+  // aspect ratio stuff :
+  fixed_t  xscale = FixedDiv(projection, tz);
+  fixed_t  yscale = FixedDiv(projectiony, tz); //added:02-02-98:aaargll..if I were a math-guy!!!
 
-    spritedef_t*        sprdef;
-    spriteframe_t*      sprframe;
-    int                 lump;
+  gxt = -FixedMul(tr_x,viewsin);
+  gyt = FixedMul(tr_y,viewcos);
+  fixed_t  tx = -gyt - gxt;
 
-    unsigned            rot;
-    bool             flip;
+  // too far off the side?
+  if (abs(tx) > (tz << 2))
+    return;
 
-    int                 index;
+  // FIXME HERE the new presentation system!
 
-    vissprite_t*        vis;
-
-    angle_t             ang;
-    fixed_t             iscale;
-
-    //SoM: 3/17/2000
-    fixed_t             gzt;
-    int                 heightsec;
-    int                 light = 0;
-
-    // transform the origin point
-    tr_x = thing->x - viewx;
-    tr_y = thing->y - viewy;
-
-    gxt = FixedMul(tr_x,viewcos);
-    gyt = -FixedMul(tr_y,viewsin);
-
-    tz = gxt-gyt;
-
-    // thing is behind view plane?
-    if (tz < MINZ)
-        return;
-
-    // aspect ratio stuff :
-    xscale = FixedDiv(projection, tz);
-    yscale = FixedDiv(projectiony, tz);
-
-    gxt = -FixedMul(tr_x,viewsin);
-    gyt = FixedMul(tr_y,viewcos);
-    tx = -(gyt+gxt);
-
-    // too far off the side?
-    if (abs(tx)>(tz<<2))
-        return;
-
-    // decide which patch to use for sprite relative to player
+  // decide which patch to use for sprite relative to player
 #ifdef RANGECHECK
-    if ((unsigned)thing->sprite >= numsprites)
-        I_Error ("R_ProjectSprite: invalid sprite number %i ",
-                 thing->sprite);
+  if ((unsigned)thing->sprite >= numsprites)
+    I_Error ("R_ProjectSprite: invalid sprite number %i ",
+	     thing->sprite);
 #endif
 
-    //Fab:02-08-98: 'skin' override spritedef currently used for skin
-    /* // FIXME put skins back
-    if (thing->skin)
-        sprdef = &((skin_t *)thing->skin)->spritedef;
-	else
-    */
-    sprdef = &sprites[thing->sprite];
-    
+  spritedef_t *sprdef = (spritedef_t *)thing->pres;
 
 #ifdef RANGECHECK
-    if ( (thing->frame&FF_FRAMEMASK) >= sprdef->numframes )
-        I_Error ("R_ProjectSprite: invalid sprite frame %i : %i for %s",
-                 thing->sprite, thing->frame, sprnames[thing->sprite]);
+  if ( (thing->frame&FF_FRAMEMASK) >= sprdef->numframes )
+    I_Error ("R_ProjectSprite: invalid sprite frame %i : %i for %s",
+	     thing->sprite, thing->frame, sprnames[thing->sprite]);
 #endif
-    sprframe = &sprdef->spriteframes[ thing->frame & FF_FRAMEMASK];
+  spriteframe_t *sprframe = &sprdef->spriteframes[ thing->frame & FF_FRAMEMASK];
 
 #ifdef PARANOIA
-    //heretic hack
-    if( !sprframe )
-        I_Error("sprframes NULL for sprite %d\n", thing->sprite);
+  //heretic hack
+  //if( !sprframe ) I_Error("sprframes NULL for sprite %d\n", thing->sprite);
 #endif
 
-    if (sprframe->rotate)
+  angle_t   ang;
+  unsigned  rot;
+  bool      flip;
+  int       lump;
+
+  if (sprframe->rotate)
     {
         // choose a different rotation based on player view
         ang = R_PointToAngle (thing->x, thing->y);
@@ -1008,7 +1031,7 @@ void Rend::R_ProjectSprite(Actor* thing)
         lump = sprframe->lumpid[rot];
         flip = (bool)sprframe->flip[rot];
     }
-    else
+  else
     {
         // use single rotation for all views
         rot = 0;                        //Fab: for vis->patch below
@@ -1016,26 +1039,26 @@ void Rend::R_ProjectSprite(Actor* thing)
         flip = (bool)sprframe->flip[0];
     }
 
-    // calculate edges of the shape
-    tx -= spriteoffset[lump];
-    x1 = (centerxfrac + FixedMul (tx,xscale) ) >>FRACBITS;
+  // calculate edges of the shape
+  tx -= spriteoffset[lump];
+  int x1 = (centerxfrac + FixedMul (tx,xscale) ) >>FRACBITS;
 
-    // off the right side?
-    if (x1 > viewwidth)
-        return;
+  // off the right side?
+  if (x1 > viewwidth)
+    return;
 
-    tx +=  spritewidth[lump];
-    x2 = ((centerxfrac + FixedMul (tx,xscale) ) >>FRACBITS) - 1;
+  tx +=  spritewidth[lump];
+  int x2 = ((centerxfrac + FixedMul (tx,xscale) ) >>FRACBITS) - 1;
 
-    // off the left side
-    if (x2 < 0)
-        return;
+  // off the left side
+  if (x2 < 0)
+    return;
 
-    //SoM: 3/17/2000: Disreguard sprites that are out of view..
-    gzt = thing->z + spritetopoffset[lump];
+  //SoM: 3/17/2000: Disreguard sprites that are out of view..
+  fixed_t gzt = thing->z + spritetopoffset[lump];
+  int light = 0;
 
-
-    if(thing->subsector->sector->numlights)
+  if (thing->subsector->sector->numlights)
     {
       int lightnum;
       light = R_GetPlaneLight(thing->subsector->sector, gzt, false);
@@ -1052,9 +1075,9 @@ void Rend::R_ProjectSprite(Actor* thing)
           spritelights = scalelight[lightnum];
     }
 
-    heightsec = thing->subsector->sector->heightsec;
+  int heightsec = thing->subsector->sector->heightsec;
 
-    if (heightsec != -1)   // only clip things which are in special sectors
+  if (heightsec != -1)   // only clip things which are in special sectors
     {
       int phs = viewplayer->subsector->sector->heightsec;
       if (phs != -1 && viewz < sectors[phs].floorheight ?
@@ -1068,11 +1091,13 @@ void Rend::R_ProjectSprite(Actor* thing)
         return;
     }
 
-    // store information in a vissprite
-    vis = R_NewVisSprite ();
-    vis->heightsec = heightsec; //SoM: 3/17/2000
-    vis->mobjflags = thing->flags;
-    vis->scale = yscale;           //<<detailshift;
+  // store information in a vissprite
+  vissprite_t *vis = R_NewVisSprite();
+  vis->heightsec = heightsec; //SoM: 3/17/2000
+
+  //vis->mobjflags = thing->flags;
+
+  vis->scale = yscale;           //<<detailshift;
     vis->gx = thing->x;
     vis->gy = thing->y;
     vis->gz = gzt - spriteheight[lump];
@@ -1098,72 +1123,77 @@ void Rend::R_ProjectSprite(Actor* thing)
     else
       vis->extra_colormap = thing->subsector->sector->extra_colormap;
 
-    iscale = FixedDiv (FRACUNIT, xscale);
+  fixed_t iscale = FixedDiv (FRACUNIT, xscale);
 
-    if (flip)
+  if (flip)
     {
         vis->startfrac = spritewidth[lump]-1;
         vis->xiscale = -iscale;
     }
-    else
+  else
     {
         vis->startfrac = 0;
         vis->xiscale = iscale;
     }
 
-    if (vis->x1 > x1)
-        vis->startfrac += vis->xiscale*(vis->x1-x1);
+  if (vis->x1 > x1)
+    vis->startfrac += vis->xiscale*(vis->x1-x1);
 
-    //Fab: lumppat is the lump number of the patch to use, this is different
-    //     than lumpid for sprites-in-pwad : the graphics are patched
-    vis->patch = sprframe->lumppat[rot];
+  //Fab: lumppat is the lump number of the patch to use, this is different
+  //     than lumpid for sprites-in-pwad : the graphics are patched
+  vis->patch = sprframe->lumppat[rot];
 
 
-//
-// determine the colormap (lightlevel & special effects)
-//
-    vis->transmap = NULL;
+  // determine the colormap (lightlevel & special effects)
+  vis->transmap = NULL;
     
-    // specific translucency
-    if (thing->frame & FF_SMOKESHADE)
-        // not realy a colormap ... see R_DrawVisSprite
-        vis->colormap = VIS_SMOKESHADE; 
-    else
+  // specific translucency
+  if (thing->frame & FF_SMOKESHADE)
+    // not realy a colormap ... see R_DrawVisSprite
+    //vis->colormap = VIS_SMOKESHADE; 
+    vis->transmap = VIS_SMOKESHADE; 
+  else
     {
-        if (thing->frame & FF_TRANSMASK)
-            vis->transmap = (thing->frame & FF_TRANSMASK) - 0x10000 + transtables;
-        else if (thing->flags & MF_SHADOW)
-            // actually only the player should use this (temporary invisibility)
-            // because now the translucency is set through FF_TRANSMASK
-            vis->transmap = ((tr_transhi-1)<<FF_TRANSSHIFT) + transtables;
+      if (thing->frame & FF_TRANSMASK)
+	vis->transmap = (thing->frame & FF_TRANSMASK) - 0x10000 + transtables;
+      else if (thing->flags & MF_SHADOW)
+	// actually only the player should use this (temporary invisibility)
+	// because now the translucency is set through FF_TRANSMASK
+	vis->transmap = ((tr_transhi-1)<<FF_TRANSSHIFT) + transtables;
 
-    
-        if (fixedcolormap )
+      if (fixedcolormap)
         {
-            // fixed map : all the screen has the same colormap
-            //  eg: negative effect of invulnerability
-            vis->colormap = fixedcolormap;
+	  // fixed map : all the screen has the same colormap
+	  //  eg: negative effect of invulnerability
+	  vis->colormap = fixedcolormap;
         }
-        else if (((thing->frame & (FF_FULLBRIGHT|FF_TRANSMASK)) || (thing->flags & MF_SHADOW)) && (!vis->extra_colormap || !vis->extra_colormap->fog))
+      else if (((thing->frame & (FF_FULLBRIGHT|FF_TRANSMASK)) || (thing->flags & MF_SHADOW)) && (!vis->extra_colormap || !vis->extra_colormap->fog))
         {
-            // full bright : goggles
-            vis->colormap = colormaps;
+	  // full bright : goggles
+	  vis->colormap = colormaps;
         }
-        else
+      else
         {
+	  // diminished light
+	  int index = xscale>>(LIGHTSCALESHIFT-detailshift);
 
-            // diminished light
-            index = xscale>>(LIGHTSCALESHIFT-detailshift);
+	  if (index >= MAXLIGHTSCALE)
+	    index = MAXLIGHTSCALE-1;
 
-            if (index >= MAXLIGHTSCALE)
-                index = MAXLIGHTSCALE-1;
-
-            vis->colormap = spritelights[index];
+	  vis->colormap = spritelights[index];
         }
     }
 
-    if(thing->subsector->sector->numlights)
-      R_SplitSprite(vis, thing);
+  /*
+    FIXME color translation
+  if (thing->color != 0)
+    vis->colormap = translationtables + ((thing->color - 1) << 8);
+  else
+    vis->colormap = colormaps;
+  */
+
+  if (thing->subsector->sector->numlights)
+    R_SplitSprite(vis, thing);
 }
 
 
@@ -1175,40 +1205,39 @@ void Rend::R_ProjectSprite(Actor* thing)
 //
 void R_AddSprites (sector_t* sec, int lightlevel)
 {
-    Actor*             thing;
-    int                 lightnum;
+  if (rendermode != render_soft)
+    return;
 
-    if (rendermode != render_soft)
-        return;
+  // BSP is traversed by subsector.
+  // A sector might have been split into several
+  //  subsectors during BSP building.
+  // Thus we check whether its already added.
+  if (sec->validcount == validcount)
+    return;
 
-    // BSP is traversed by subsector.
-    // A sector might have been split into several
-    //  subsectors during BSP building.
-    // Thus we check whether its already added.
-    if (sec->validcount == validcount)
-        return;
+  // Well, now it will be done.
+  sec->validcount = validcount;
 
-    // Well, now it will be done.
-    sec->validcount = validcount;
-
-    if(!sec->numlights)
+  if (!sec->numlights)
     {
-      if(sec->heightsec == -1) lightlevel = sec->lightlevel;
+      if (sec->heightsec == -1)
+	lightlevel = sec->lightlevel;
 
-      lightnum = (lightlevel >> LIGHTSEGSHIFT)+extralight;
+      int lightnum = (lightlevel >> LIGHTSEGSHIFT)+extralight;
 
       if (lightnum < 0)
-          spritelights = scalelight[0];
+	spritelights = scalelight[0];
       else if (lightnum >= LIGHTLEVELS)
-          spritelights = scalelight[LIGHTLEVELS-1];
+	spritelights = scalelight[LIGHTLEVELS-1];
       else
-          spritelights = scalelight[lightnum];
+	spritelights = scalelight[lightnum];
     }
 
-    // Handle all things in sector.
-    for (thing = sec->thinglist ; thing ; thing = thing->snext)
-        if((thing->flags2 & MF2_DONTDRAW)==0)
-            R.R_ProjectSprite(thing);
+  // Handle all things in sector.
+  Actor *thing;
+  for (thing = sec->thinglist ; thing ; thing = thing->snext)
+    if (!(thing->flags2 & MF2_DONTDRAW))
+      R.R_ProjectSprite(thing);
 }
 
 
@@ -1233,7 +1262,6 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
     fixed_t             tx;
     int                 x1;
     int                 x2;
-    spritedef_t*        sprdef;
     spriteframe_t*      sprframe;
     int                 lump;
     bool             flip;
@@ -1246,7 +1274,7 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
         I_Error ("R_ProjectSprite: invalid sprite number %i ",
                  psp->state->sprite);
 #endif
-    sprdef = &sprites[psp->state->sprite];
+    spritedef_t *sprdef = sprites.Get(sprnames[psp->state->sprite]);
 #ifdef RANGECHECK
     if ( (psp->state->frame & FF_FRAMEMASK)  >= sprdef->numframes)
         I_Error ("R_ProjectSprite: invalid sprite frame %i : %i for %s",
@@ -1287,7 +1315,6 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
 
     // store information in a vissprite
     vis = &avis;
-    vis->mobjflags = 0;
     if(cv_splitscreen.value)
         vis->texturemid = (120<<(FRACBITS))+FRACUNIT/2-(psp->sy-spritetopoffset[lump]);
     else
@@ -2023,7 +2050,7 @@ void Sk_SetDefaultValue(skin_t *skin)
             skin->soundsid[S_sfx[i].skinsound] = i;
         }
     */
-    memcpy(&skins[0].spritedef, &sprites[SPR_PLAY], sizeof(spritedef_t));
+    memcpy(&skins[0].spritedef, sprites.Get("PLAY"), sizeof(spritedef_t));
 }
 
 //
@@ -2121,7 +2148,7 @@ int W_CheckForSkinMarkerInPwad (int wadid, int startlump)
 {
   int         i;
   int         v1;
-  lumpinfo_t* lump_p;
+  waddir_t* lump_p;
   int nlumps;
   
   union {
@@ -2159,7 +2186,7 @@ void R_AddSkins (int wadnum)
     int         lumpnum;
     int         lastlump;
 
-    lumpinfo_t* lumpinfo;
+    waddir_t* lumpinfo;
     char*       sprname=NULL;
     int         intname;
 

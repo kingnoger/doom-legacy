@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.8  2003/03/08 16:07:15  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.7  2003/02/16 16:54:52  smite-meister
 // L2 sound cache done
 //
@@ -98,6 +101,7 @@ private:
 
 public:
   int maxhealth;
+  float speed; // walking speed (units/tic), runspeed = 2*speed
   const pawn_info_t *pinfo;
 
   // Who did damage (NULL for floors/ceilings).
@@ -124,7 +128,6 @@ public:
   PlayerInfo *player; // controlling player
 
   int skin;
-  int color; // may be defined by team membership. See PlayerInfo class.
 
   int morphTics;   // player is in a morphed state if > 0
 

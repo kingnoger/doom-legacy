@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by Raven Software, Corp.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Portions Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/03/08 16:07:07  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.3  2002/12/23 23:15:41  smite-meister
 // Weapon groups, MAPINFO parser added!
 //
@@ -26,46 +29,6 @@
 //
 // Revision 1.1.1.1  2002/11/16 14:17:58  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.12  2002/09/20 22:41:30  vberghol
-// Sound system rewritten! And it workscvs update
-//
-// Revision 1.11  2002/08/23 09:53:42  vberghol
-// fixed Actor:: target/owner/tracer
-//
-// Revision 1.10  2002/08/17 21:21:48  vberghol
-// Only scripting to be fixed in engine!
-//
-// Revision 1.9  2002/08/17 16:02:04  vberghol
-// final compile for engine!
-//
-// Revision 1.8  2002/08/11 17:16:49  vberghol
-// ...
-//
-// Revision 1.7  2002/08/08 12:01:27  vberghol
-// pian engine on valmis!
-//
-// Revision 1.6  2002/08/02 20:14:50  vberghol
-// p_enemy.cpp done!
-//
-// Revision 1.5  2002/07/10 19:56:59  vberghol
-// g_pawn.cpp tehty
-//
-// Revision 1.4  2002/07/08 20:46:33  vberghol
-// More files compile!
-//
-// Revision 1.3  2002/07/01 21:00:17  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:13  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.3  2001/05/27 13:42:47  bpereira
-// no message
-//
-// Revision 1.2  2001/02/24 13:35:20  bpereira
-// no message
-//
 //
 //
 // DESCRIPTION:
@@ -525,13 +488,12 @@ void A_FireGoldWandPL2(PlayerPawn *p, pspdef_t *psp)
   int i;
   angle_t angle;
   int damage;
-  fixed_t pz;
 
-  p->ammo[am_goldwand] -=
-    cv_deathmatch.value ? USE_GWND_AMMO_1 : USE_GWND_AMMO_2;
+  p->ammo[am_goldwand] -= cv_deathmatch.value ? USE_GWND_AMMO_1 : USE_GWND_AMMO_2;
   PuffType = MT_GOLDWANDPUFF2;
   P_BulletSlope(p);
-  pz = FixedMul(mobjinfo[MT_GOLDWANDFX2].speed, bulletslope);
+  // FIXME what is this?
+  // fixed_t pz = int(mobjinfo[MT_GOLDWANDFX2].speed * bulletslope);
   //      P_SpawnMissileAngle(p, MT_GOLDWANDFX2, p->angle-(ANG45/8), pz);
   //      P_SpawnMissileAngle(p, MT_GOLDWANDFX2, p->angle+(ANG45/8), pz);
   angle = p->angle-(ANG45/8);
@@ -569,9 +531,9 @@ void A_FireMacePL1B(PlayerPawn *p, pspdef_t *psp)
   ball->z += (p->aiming)<<(FRACBITS-4);
   angle >>= ANGLETOFINESHIFT;
   ball->px = (p->px>>1)
-    +FixedMul(ball->info->speed, finecosine[angle]);
+    + int(ball->info->speed * finecosine[angle]);
   ball->py = (p->py>>1)
-    +FixedMul(ball->info->speed, finesine[angle]);
+    + int(ball->info->speed * finesine[angle]);
   S_StartSound(ball, sfx_lobsht);
   ball->CheckMissileSpawn();
 }
@@ -792,8 +754,8 @@ void A_DeathBallImpact(DActor *ball)
 	{
 	  ball->angle = angle;
 	  angle >>= ANGLETOFINESHIFT;
-	  ball->px = FixedMul(ball->info->speed, finecosine[angle]);
-	  ball->py = FixedMul(ball->info->speed, finesine[angle]);
+	  ball->px = int(ball->info->speed * finecosine[angle]);
+	  ball->py = int(ball->info->speed * finesine[angle]);
 	}
       ball->SetState(ball->info->spawnstate);
       S_StartSound(ball, sfx_pstop);
@@ -825,8 +787,8 @@ void A_SpawnRippers(DActor *actor)
       ripper->owner = actor->owner;
       ripper->angle = angle;
       angle >>= ANGLETOFINESHIFT;
-      ripper->px = FixedMul(ripper->info->speed, finecosine[angle]);
-      ripper->py = FixedMul(ripper->info->speed, finesine[angle]);
+      ripper->px = int(ripper->info->speed * finecosine[angle]);
+      ripper->py = int(ripper->info->speed * finesine[angle]);
       ripper->CheckMissileSpawn();
     }
 }
@@ -1063,7 +1025,7 @@ void A_SkullRodStorm(DActor *actor)
   mo->target = actor->target;
   mo->owner = actor->owner;
   mo->px = 1; // Force collision detection
-  mo->pz = -mo->info->speed;
+  mo->pz = -int(mo->info->speed * FRACUNIT);
   mo->special2 = actor->special2; // Transfer player number
   mo->CheckMissileSpawn();
   if(!(actor->special1 & 31))
@@ -1132,14 +1094,14 @@ void A_PhoenixPuff(DActor *actor)
   puff = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_PHOENIXPUFF);
   angle = actor->angle+ANG90;
   angle >>= ANGLETOFINESHIFT;
-  puff->px = FixedMul(FRACUNIT*1.3, finecosine[angle]);
-  puff->py = FixedMul(FRACUNIT*1.3, finesine[angle]);
+  puff->px = int(1.3 * finecosine[angle]);
+  puff->py = int(1.3 * finesine[angle]);
   puff->pz = 0;
   puff = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_PHOENIXPUFF);
   angle = actor->angle-ANG90;
   angle >>= ANGLETOFINESHIFT;
-  puff->px = FixedMul(FRACUNIT*1.3, finecosine[angle]);
-  puff->py = FixedMul(FRACUNIT*1.3, finesine[angle]);
+  puff->px = int(1.3 * finecosine[angle]);
+  puff->py = int(1.3 * finesine[angle]);
   puff->pz = 0;
 }
 
@@ -1187,11 +1149,9 @@ void A_FirePhoenixPL2(PlayerPawn *p, pspdef_t *psp)
   DActor *mo = p->mp->SpawnDActor(x, y, z, MT_PHOENIXFX2);
   mo->owner = p;
   mo->angle = angle;
-  mo->px = p->px+FixedMul(mo->info->speed,
-				finecosine[angle>>ANGLETOFINESHIFT]);
-  mo->py = p->py+FixedMul(mo->info->speed,
-				finesine[angle>>ANGLETOFINESHIFT]);
-  mo->pz = FixedMul(mo->info->speed, slope);
+  mo->px = p->px + int(mo->info->speed * finecosine[angle>>ANGLETOFINESHIFT]);
+  mo->py = p->py + int(mo->info->speed * finesine[angle>>ANGLETOFINESHIFT]);
+  mo->pz = int(mo->info->speed * slope);
   if(!p->refire || !(p->mp->maptic % 38))
     {
       S_StartSound(p, sfx_phopow);
@@ -1218,7 +1178,7 @@ void A_ShutdownPhoenixPL2(PlayerPawn *p, pspdef_t *psp)
 
 void A_FlameEnd(DActor *actor)
 {
-  actor->pz += 1.5*FRACUNIT;
+  actor->pz += int(1.5*FRACUNIT);
 }
 
 //----------------------------------------------------------------------------
@@ -1229,7 +1189,7 @@ void A_FlameEnd(DActor *actor)
 
 void A_FloatPuff(DActor *puff)
 {
-  puff->pz += 1.8*FRACUNIT;
+  puff->pz += int(1.8*FRACUNIT);
 }
 
 //---------------------------------------------------------------------------

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by Raven Software, Corp.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Portions Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,60 +18,14 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/03/08 16:07:06  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.2  2002/12/16 22:11:32  smite-meister
 // Actor/DActor separation done!
 //
 // Revision 1.1.1.1  2002/11/16 14:17:57  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.13  2002/09/20 22:41:30  vberghol
-// Sound system rewritten! And it workscvs update
-//
-// Revision 1.12  2002/08/23 09:53:41  vberghol
-// fixed Actor:: target/owner/tracer
-//
-// Revision 1.11  2002/08/17 21:21:47  vberghol
-// Only scripting to be fixed in engine!
-//
-// Revision 1.10  2002/08/11 17:16:48  vberghol
-// ...
-//
-// Revision 1.9  2002/08/08 12:01:26  vberghol
-// pian engine on valmis!
-//
-// Revision 1.8  2002/08/06 13:14:22  vberghol
-// ...
-//
-// Revision 1.7  2002/08/02 20:14:49  vberghol
-// p_enemy.cpp done!
-//
-// Revision 1.6  2002/07/26 19:23:04  vberghol
-// a little something
-//
-// Revision 1.5  2002/07/23 19:21:41  vberghol
-// fixed up to p_enemy.cpp
-//
-// Revision 1.4  2002/07/12 19:21:38  vberghol
-// hop
-//
-// Revision 1.3  2002/07/01 21:00:17  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:13  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.6  2001/08/12 15:21:04  bpereira
-// see my log
-//
-// Revision 1.5  2001/05/27 13:42:47  bpereira
-// no message
-//
-// Revision 1.4  2001/04/17 22:26:07  calumr
-// Initial Mac add
-//
-// Revision 1.3  2001/02/24 13:35:20  bpereira
-// no message
-//
 //
 //
 // DESCRIPTION:
@@ -1150,8 +1104,8 @@ void A_HeadIceImpact(DActor *ice)
       shard->target = ice->target;
       shard->angle = angle;
       angle >>= ANGLETOFINESHIFT;
-      shard->px = FixedMul(shard->info->speed, finecosine[angle]);
-      shard->py = FixedMul(shard->info->speed, finesine[angle]);
+      shard->px = int(shard->info->speed * finecosine[angle]);
+      shard->py = int(shard->info->speed * finesine[angle]);
       shard->pz = int(-0.6*FRACUNIT);
       shard->CheckMissileSpawn();
     }
@@ -1685,8 +1639,8 @@ void A_VolcBallImpact(DActor *ball)
       angle = i*ANG90;
       tiny->angle = angle;
       angle >>= ANGLETOFINESHIFT;
-      tiny->px = FixedMul(FRACUNIT*.7, finecosine[angle]);
-      tiny->py = FixedMul(FRACUNIT*.7, finesine[angle]);
+      tiny->px = int(0.7 * finecosine[angle]);
+      tiny->py = int(0.7 * finesine[angle]);
       tiny->pz = FRACUNIT+(P_Random()<<9);
       tiny->CheckMissileSpawn();
     }

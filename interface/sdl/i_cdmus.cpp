@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,27 +17,15 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:31  hurdler
-// Initial revision
+// Revision 1.2  2003/03/08 16:07:17  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
 //
-// Revision 1.3  2002/07/01 21:01:02  jpakkane
-// Fixed cr+lf to UNIX form.
+// Revision 1.1.1.1  2002/11/16 14:18:31  hurdler
+// Initial C++ version of Doom Legacy
 //
-// Revision 1.2  2002/06/28 10:57:34  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.3  2001/05/16 22:33:35  bock
-// Initial FreeBSD support.
-//
-// Revision 1.2  2000/09/10 10:56:00  metzgermeister
-// clean up & made it work again
-//
-// Revision 1.1  2000/08/21 21:17:32  metzgermeister
-// Initial import to CVS
 //
 // DESCRIPTION:
 //      cd music interface
-// VB: added prototypes before first use
 //-----------------------------------------------------------------------------
 
 
@@ -193,13 +181,12 @@ static void Command_Cd_f (void)
 	return;
     }
         
-    if (!cdValid) {
+    if (!cdValid)
+      {
 	CDAudio_GetAudioDiskInfo();
-	if (!cdValid) {
-	    CONS_Printf("No CD in player.\n");
-	    return;
-	}
-    }
+	if (!cdValid)
+	  return;
+      }
 
     if (!strncmp(command, "open", 4)) {
 	I_EjectCD();
@@ -374,6 +361,8 @@ void I_InitCD (void)
     if (M_CheckParm ("-nocd"))
 	return ;
     
+    CONS_Printf("I_InitCD: Init CD audio\n");
+
     // Initialize SDL first
     if (SDL_Init(SDL_INIT_CDROM) < 0) {
 	fprintf(stderr, "Couldn't initialize SDL: %s\n",SDL_GetError());
@@ -406,14 +395,11 @@ void I_InitCD (void)
     initialized = true;
     enabled = true;
 
-    if (CDAudio_GetAudioDiskInfo()) {
-	CONS_Printf("I_InitCD: No CD in player.\n");
-	cdValid = false;
-    }
+    CDAudio_GetAudioDiskInfo();
 
     COM_AddCommand ("cd", Command_Cd_f);
     
-    CONS_Printf("CD Audio Initialized\n");
+    CONS_Printf("CD audio initialized.\n");
     
     return ;
 }

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/03/08 16:07:19  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.5  2003/02/23 22:49:31  smite-meister
 // FS is back! L2 cache works.
 //
@@ -1037,8 +1040,6 @@ subsector_t* Map::R_IsPointInSubsector(fixed_t x, fixed_t y)
 //
 // R_SetupFrame
 //
-
-//Actor*   viewmobj;
 
 // WARNING : a should be unsigned but to add with 2048, it isn't !
 #define AIMINGTODY(a) ((finetangent[(2048+(((int)a)>>ANGLETOFINESHIFT)) & FINEMASK]*160)>>FRACBITS)

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/03/08 16:07:16  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.3  2003/02/16 16:54:52  smite-meister
 // L2 sound cache done
 //
@@ -116,11 +119,16 @@ struct soundsource_t
 };
 
 
-class scacheitem_t : public cacheitem_t
+class sounditem_t : public cacheitem_t
 {
   friend class soundcache_t;
+protected:
+  int   lumpnum; // lump number of data
+
 public:
-  void *sdata; // raw converted sound data
+  void *data;    // unconverted data
+  int   length;  // in bytes
+  void *sdata;   // raw converted sound data
 };
 
 
@@ -136,7 +144,7 @@ struct channel_t
   int opitch;
   int osep; // left/right x^2 separation. 128 is front, 0 is totally left, 256 is totally right
 
-  scacheitem_t *cip;
+  sounditem_t *si;
 
   bool playing;
 };

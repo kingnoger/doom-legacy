@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/03/08 16:07:14  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.5  2003/02/16 16:54:52  smite-meister
 // L2 sound cache done
 //
@@ -163,16 +166,6 @@ typedef enum
 
   MF_NOTDMATCH        = 0x02000000, // Not spawned in DM (keycards etc.)
 
-  //VB: this kludge is herewith removed. Color should be stored in the sprite, as should translucency...
-  // Player sprites in multiplayer modes are modified
-  //  using an internal color lookup table for re-indexing.
-  // If 0x4 0x8 or 0xc,
-  //  use a translation table for player colormaps
-  //  MF_TRANSLATION      = 0x3C000000,    // 0xc000000, original 4color
-  // Hmm ???.
-  //MF_TRANSSHIFT       = 26,
-
-  // VB: instead we put here new flags, such as
   MF_NOTMONSTER       = 0x04000000, // Not affected by ML_BLOCKMONSTERS lines (PlayerPawns etc.)
   MF_NORESPAWN        = 0x08000000, // Will not respawn after being picked up. Pretty similar to MF_DROPPED?
   MF_NOSPLASH         = 0x10000000, // Does not cause a splash when hitting water
@@ -247,10 +240,11 @@ class  LArchive;
 class Actor : public Thinker
 {
 public:
-  // FIXME temporary drawing info until we get the representation class finished.
-  // Then move these to DActor.
-  spritenum_t    sprite; // used to find patch_t and flip value
-  int            frame;  // frame number, plus bits see p_pspr.h
+  // graphic presentation
+  class presentation_t *pres;
+  int   frame;  // frame number and bit flags
+  float interp;
+  char  color; // may be defined by team membership. See PlayerInfo class.
 
   // sector links
   Actor *snext;
@@ -317,8 +311,8 @@ public:
   int  reactiontime;
 
   //SoM: Friction.
-  int friction;
-  int movefactor;
+  float friction; 
+  float movefactor;
 
 public:
   virtual thinkertype_e Type() {return tt_actor;}; // "name-tag" function
@@ -335,7 +329,7 @@ public:
 
   void CheckWater(); // set some eflags if sector contains water
 
-  int  GetMoveFactor();
+  float GetMoveFactor();
   virtual void XYMovement();
   virtual void ZMovement();
 
@@ -386,8 +380,6 @@ public:
   // state machine variables
   const state_t *state;
   int            tics;   // state tic counter
-  //spritenum_t    sprite; // used to find patch_t and flip value
-  //int            frame;  // frame number, plus bits see p_pspr.h
 
   // Movement direction, movement generation (zig-zagging).
   int  movedir;        // 0-7

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/03/08 16:06:58  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.3  2003/02/16 16:54:50  smite-meister
 // L2 sound cache done
 //
@@ -139,3 +142,17 @@ weaponinfo_t wpnlev2info[NUMWEAPONS] =
   {am_noammo, 0, S_GAUNTLETUP2, S_GAUNTLETDOWN2, S_GAUNTLETREADY2_1, S_GAUNTLETATK2_1, S_GAUNTLETATK2_3, S_NULL}, // Gauntlets
   {am_noammo, 0, S_BEAKUP, S_BEAKDOWN, S_BEAKREADY, S_BEAKATK2_1, S_BEAKATK2_1, S_NULL} // Beak
 };
+
+
+// inventory_t implementation
+
+inventory_t::inventory_t()
+{
+  type = count = 0;
+}
+
+inventory_t::inventory_t(byte t, byte c)
+{
+  type = t;
+  count = c;
+}

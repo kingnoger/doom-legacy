@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2002 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/03/08 16:07:16  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.4  2003/01/12 12:56:42  smite-meister
 // Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
 //
@@ -37,7 +40,7 @@
 
 #include <vector>
 #include "doomtype.h"
-
+#include "z_cache.h"
 
 /*
   Doom "sequences"
@@ -120,27 +123,25 @@ struct animation_t
   // (in principle each frame can have its own duration
   //  independently of others in the sequence)
 };
+*/
+
+class Actor;
 
 // Idea: Game entities have a pointer to a graphic presentation, frame, nextframe,
 // current sequence and location/rotation information stored in them.
 // The actual implementation of the "graphic presentation" can be a sprite, md3 or anything.
 
 // abstract base class
-class graph_presentation_t
+class presentation_t
 {
 protected:
-  vector<animation_t> anim; // all known animation sequences
+  //vector<animation_t> anim; // all known animation sequences
   
 public:
 
-  void DrawInterpolated(fixed_t frame, int nextframe, pos, rot) = 0;
+  virtual void Draw(const Actor *p) = 0;
 };
 
-class MD3 : public graph_presentation_t
-{
-  
-};
-*/
 
 
 // Doom sprites in wads are patches with a special naming convention
@@ -176,12 +177,43 @@ struct spriteframe_t
 //
 // A sprite definition:  a number of animation frames.
 //
-struct spritedef_t
+
+class spritedef_t : public presentation_t
 {
+public:
   int            numframes;
   spriteframe_t *spriteframes;
+
+  virtual void Draw(const Actor *p);
 };
 
+
+class sprite_t : public cacheitem_t
+{
+  friend class spritecache_t;
+public:
+  spritedef_t spr;
+};
+
+
+class spritecache_t : public L2cache_t
+{
+protected:
+  virtual cacheitem_t *Load(const char *p, cacheitem_t *t = NULL);
+  virtual void Free(cacheitem_t *t);
+public:
+  spritecache_t(memtag_t tag);
+
+  spritedef_t *Get(const char *p)
+  {
+    return &((sprite_t *)Cache(p))->spr;
+  };
+};
+
+
+extern spritecache_t sprites;
+
+extern int numspritelumps;
 
 // -----------
 // SKINS STUFF

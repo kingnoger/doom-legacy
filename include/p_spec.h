@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/03/08 16:07:15  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.3  2003/02/23 22:49:31  smite-meister
 // FS is back! L2 cache works.
 //
@@ -975,21 +978,15 @@ class friction_t : public Thinker
 {
   friend class Map;
 private:
-  int friction;        // friction value (E800 = normal)
-  int movefactor;      // inertia factor when adding to momentum
-  int affectee;        // Number of affected sector
+  float friction;        // friction value (E800 = normal)
+  float movefactor;      // inertia factor when adding to momentum
+  int   affectee;        // Number of affected sector
 public:
-  friction_t(int fri, int mf, int aff);
+  friction_t(float fri, float mf, int aff);
   virtual void Think();
 };
 
-//SoM: Friction defines.
-#define MORE_FRICTION_MOMENTUM 15000       // mud factor based on momentum
-#define ORIG_FRICTION          0xE800      // original value
-#define ORIG_FRICTION_FACTOR   2048        // original value
-
-
-
+extern const float normal_friction;
 
 //SoM: 3/8/2000: Model for Pushers for push/pull effects
 

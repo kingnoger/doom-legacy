@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/03/08 16:07:00  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.7  2003/02/23 22:49:30  smite-meister
 // FS is back! L2 cache works.
 //
@@ -109,7 +112,6 @@ tic_t   gametic;
 
 
 void ShowMessage_OnChange();
-void AllowTurbo_OnChange();
 
 CV_PossibleValue_t showmessages_cons_t[]={{0,"Off"},{1,"On"},{2,"Not All"},{0,NULL}};
 CV_PossibleValue_t crosshair_cons_t[]   ={{0,"Off"},{1,"Cross"},{2,"Angle"},{3,"Point"},{0,NULL}};
@@ -130,7 +132,7 @@ consvar_t cv_showmessages2    = {"showmessages2","1",CV_SAVE | CV_CALL | CV_NOIN
 
 //consvar_t cv_crosshairscale   = {"crosshairscale","0",CV_SAVE,CV_YesNo};
 
-consvar_t cv_allowturbo       = {"allowturbo"  ,"0",CV_NETVAR | CV_CALL, CV_YesNo, AllowTurbo_OnChange};
+//consvar_t cv_allowturbo       = {"allowturbo"  ,"0",CV_NETVAR | CV_CALL, CV_YesNo, AllowTurbo_OnChange};
 
 consvar_t cv_joystickfreelook = {"joystickfreelook" ,"0",CV_SAVE,CV_OnOff};
 
@@ -143,14 +145,23 @@ void ShowMessage_OnChange()
     CONS_Printf("%s\n",MSGON);
 }
 
-
+/*
 static fixed_t originalforwardmove[2] = {0x19, 0x32};
 static fixed_t originalsidemove[2]    = {0x18, 0x28};
 static fixed_t forwardmove[2] = {25/NEWTICRATERATIO, 50/NEWTICRATERATIO};
 static fixed_t sidemove[2]    = {24/NEWTICRATERATIO, 40/NEWTICRATERATIO};
-static fixed_t angleturn[3]   = {640, 1280, 320};        // + slow turn
+*/
+
+// stored in a signed char, but min = -100, max = 100, mmmkay?
+// There is no more turbo cheat, you should modify the pawn's max speed instead
+static char forwardmove[2] = {50, 100};
+static char sidemove[2]    = {48, 80};
+
+static fixed_t angleturn[3]   = {640, 1280, 320};  // + slow turn
+#define MAXPLMOVE (forwardmove[1])
 
 
+/*
 void AllowTurbo_OnChange()
 {
   if(!cv_allowturbo.value && game.netgame)
@@ -195,7 +206,7 @@ void Command_Turbo_f()
   sidemove[0] = originalsidemove[0]*scale/100;
   sidemove[1] = originalsidemove[1]*scale/100;
 }
-
+*/
 
 
 //  Clip the console player mouse aiming to the current view,
@@ -295,7 +306,6 @@ angle_t localangle,localangle2;
 
 //added:06-02-98: mouseaiming (looking up/down with the mouse or keyboard)
 #define KB_LOOKSPEED    (1<<25)
-#define MAXPLMOVE       (forwardmove[1])
 
 #define SLOWTURNTICS    (6*NEWTICRATERATIO)
 
@@ -609,7 +619,7 @@ void GameInfo::StartIntro()
 {
   extern int demosequence;
   action = ga_nothing;
-  //playerdeadview = false;
+
   displayplayer = consoleplayer = NULL;
   demosequence = -1;
   paused = false;
@@ -621,7 +631,7 @@ void GameInfo::StartIntro()
 void GameInfo::Drawer()
 {
   // draw the view directly
-  //CONS_Printf("GI::Draw: %p, %p\n", displayplayer,displayplayer2);
+  CONS_Printf("GI::Draw: %p, %p\n", displayplayer,displayplayer2);
   if (displayplayer && displayplayer->pawn)
     {
       R.SetMap(displayplayer->pawn->mp);
@@ -665,6 +675,8 @@ void GameInfo::Drawer()
       displayplayer2->pawn->flags2 &=~MF2_DONTDRAW;
 #endif
     }
+
+  CONS_Printf("GI::Draw done\n");
 }
 
 // was G_InventoryResponder

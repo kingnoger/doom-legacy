@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/03/08 16:07:09  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.3  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -307,6 +310,9 @@ animdef_t harddefs[] =
   {-1}
 };
 
+animdef_t nulldefs[] = {
+  {-1}
+};
 
 //
 //      Animating line specials
@@ -325,8 +331,12 @@ void P_InitPicAnims ()
   //  Init animation
   int         i;
 
-  if(fc.FindNumForName("ANIMATED") != -1)
+
+
+  if (fc.FindNumForName("ANIMATED") != -1)
     animdefs = (animdef_t *)fc.CacheLumpName("ANIMATED", PU_STATIC);
+  if (game.mode == gm_hexen)
+    animdefs = nulldefs; // TODO hexen ANIMDEFS lump...
   else
     animdefs = harddefs;
 
@@ -369,6 +379,7 @@ void P_InitPicAnims ()
     }
   lastanim->istexture = -1;
 
+  // FIXME animdefs is used even after this!
   if(animdefs != harddefs)
     Z_ChangeTag (animdefs,PU_CACHE);
 }
@@ -2860,7 +2871,7 @@ void Map::SpawnScrollers()
 
 // constructor
 // Adds friction thinker.
-friction_t::friction_t(int fri, int mf, int aff)
+friction_t::friction_t(float fri, float mf, int aff)
 {
   friction = fri;
   movefactor = mf;
@@ -2903,7 +2914,7 @@ void friction_t::Think()
 	  !(thing->flags & (MF_NOGRAVITY | MF_NOCLIP)) &&
 	  thing->z <= sec->floorheight)
 	{
-	  if ((thing->friction == ORIG_FRICTION) ||     // normal friction?
+	  if ((thing->friction == normal_friction) ||
 	      (friction < thing->friction))
 	    {
 	      thing->friction   = friction;
@@ -2921,33 +2932,42 @@ void Map::SpawnFriction()
   int i;
   line_t *l = lines;
   register int s;
-  int length;     // line length controls magnitude
-  int friction;   // friction value to be applied during movement
-  int movefactor; // applied to each player move to simulate inertia
+  float length;     // line length controls magnitude
+  float friction;   // friction value to be applied during movement
+  float movefactor; // applied to each player move to simulate inertia
 
   for (i = 0 ; i < numlines ; i++,l++)
     if (l->special == 223)
       {
-	length = P_AproxDistance(l->dx,l->dy)>>FRACBITS;
-	friction = (0x1EB8*length)/0x80 + 0xD000;
+	length = P_AproxDistance(l->dx,l->dy) >> FRACBITS;
 
-	if(friction > FRACUNIT)
-	  friction = FRACUNIT;
-	if(friction < 0)
-	  friction = 0;
+	//friction = (0x1EB8*length)/0x80 + 0xD000;
+	// l = 200 gives 1, l = 100 gives the original, l = 0 gives 0.8125
+	friction = length * 9.375e-4 + 0.8125;
 
-	// The following check might seem odd. At the time of movement,
-	// the move distance is multiplied by 'friction/0x10000', so a
+	if (friction > 1.0)
+	  friction = 1.0;
+	if (friction < 0.0)
+	  friction = 0.0;
+
+	// object max speed is proportional to movefactor/(1-friction)
 	// higher friction value actually means 'less friction'.
+	// the movefactors are a bit different from BOOM (better;)
 
-	if (friction > ORIG_FRICTION)       // ice
-	  movefactor = ((0x10092 - friction)*(0x70))/0x158;
+	if (friction > normal_friction)
+	  // ice, max speed is unchanged.
+	  //movefactor = ((0x10092 - friction)*(0x70))/0x158;
+	  //movefactor = (65682 - friction) * 112/344;
+	  movefactor = (1.0 - friction) * 10.667;
 	else
-	  movefactor = ((friction - 0xDB34)*(0xA))/0x80;
+	  // mud
+	  //movefactor = ((friction - 0xDB34)*(0xA))/0x80;
+	  //movefactor = (friction - 56116) * 10/128;
+	  movefactor = (friction - 0.8125) * 10.667;
 
-	// killough 8/28/98: prevent odd situations
-	if (movefactor < 32)
-	  movefactor = 32;
+	// minimum movefactor (1/64)
+	if (movefactor < 1.0/64)
+	  movefactor = 1.0/64;
 
 	for (s = -1; (s = FindSectorFromLineTag(l,s)) >= 0 ; )
 	  AddThinker(new friction_t(friction,movefactor,s));

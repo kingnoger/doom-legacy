@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Portions Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/03/08 16:07:06  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.6  2003/02/08 21:43:50  smite-meister
 // New Memzone system. Choose your pawntype! Cyberdemon OK.
 //
@@ -35,45 +38,6 @@
 //
 // Revision 1.1.1.1  2002/11/16 14:17:55  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.14  2002/09/20 22:41:29  vberghol
-// Sound system rewritten! And it workscvs update
-//
-// Revision 1.13  2002/08/23 09:53:41  vberghol
-// fixed Actor:: target/owner/tracer
-//
-// Revision 1.12  2002/08/21 16:58:31  vberghol
-// Version 1.41 Experimental compiles and links!
-//
-// Revision 1.11  2002/08/17 21:21:45  vberghol
-// Only scripting to be fixed in engine!
-//
-// Revision 1.10  2002/08/14 17:07:18  vberghol
-// p_map.cpp done... 3 to go
-//
-// Revision 1.9  2002/08/13 19:47:41  vberghol
-// p_inter.cpp done
-//
-// Revision 1.8  2002/08/11 17:16:48  vberghol
-// ...
-//
-// Revision 1.7  2002/08/06 13:14:21  vberghol
-// ...
-//
-// Revision 1.6  2002/08/02 20:14:49  vberghol
-// p_enemy.cpp done!
-//
-// Revision 1.5  2002/07/26 19:23:04  vberghol
-// a little something
-//
-// Revision 1.4  2002/07/23 19:21:40  vberghol
-// fixed up to p_enemy.cpp
-//
-// Revision 1.3  2002/07/01 21:00:16  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:12  vberghol
-// Version 133 Experimental!
 //
 // Revision 1.12  2001/04/04 20:24:21  judgecutor
 // Added support for the 3D Sound
@@ -173,7 +137,7 @@ void FastMonster_OnChange(void)
   static bool fast=false;
   static const struct {
     mobjtype_t type;
-    int speed[2];
+    float speed[2];
   } MonsterMissileInfo[] =
     {
       // doom
@@ -218,7 +182,7 @@ void FastMonster_OnChange(void)
   for(i = 0; MonsterMissileInfo[i].type != -1; i++)
     {
       mobjinfo[MonsterMissileInfo[i].type].speed
-	= MonsterMissileInfo[i].speed[cv_fastmonsters.value]<<FRACBITS;
+	= MonsterMissileInfo[i].speed[cv_fastmonsters.value];
     }
 }
 
@@ -420,8 +384,8 @@ static bool P_Move(DActor *actor)
     I_Error ("Weird actor->movedir!");
 #endif
 
-  tryx = actor->x + actor->info->speed*xspeed[actor->movedir];
-  tryy = actor->y + actor->info->speed*yspeed[actor->movedir];
+  tryx = actor->x + fixed_t(actor->info->speed * xspeed[actor->movedir]);
+  tryy = actor->y + fixed_t(actor->info->speed * yspeed[actor->movedir]);
 
   if (!actor->TryMove (tryx, tryy, false))
     {
@@ -641,16 +605,13 @@ bool DActor::LookForPlayers(bool allaround)
   //  // Single player game and player is dead, look for monsters
   //  return LookForMonsters();
 
-  //sector_t *sector = subsector->sector;
   int n = mp->players.size();
   if (n == 0)
     return false;
 
   // BP: first time init, this allow minimum lastlook changes
-  if (lastlook < 0 && game.demoversion >= 129)
+  if (lastlook < 0)
     lastlook = P_Random () % n;
-
-  //int stop = (lastlook - 1) % n;
 
   for (int c = 0; c < n; c++, lastlook++)
     {
@@ -660,9 +621,6 @@ bool DActor::LookForPlayers(bool allaround)
       // check max. 2 players/turn
       if (c >= 2)
 	return false;
-
-      //if (!playeringame[lastlook]) continue;
-      //if (c++ == 2) return false;
 
       p = mp->players[lastlook]->pawn;
 
@@ -699,7 +657,7 @@ bool DActor::LookForPlayers(bool allaround)
         }
 
       target = p;
-      CONS_Printf("+++++ got target!\n");
+
       return true;
     }
 
@@ -1190,10 +1148,6 @@ int     TRACEANGLE = 0xc000000;
 // guide a guiding missile
 void A_Tracer(DActor *actor)
 {
-  angle_t     exact;
-  fixed_t     dist;
-  fixed_t     slope;
-
   Map *m = actor->mp;
 
   if (gametic % (4 * NEWTICRATERATIO))
@@ -1217,10 +1171,7 @@ void A_Tracer(DActor *actor)
     return;
 
   // change angle
-  exact = R_PointToAngle2 (actor->x,
-			   actor->y,
-			   dest->x,
-			   dest->y);
+  angle_t exact = R_PointToAngle2(actor->x, actor->y, dest->x, dest->y);
 
   if (exact != actor->angle)
     {
@@ -1239,18 +1190,16 @@ void A_Tracer(DActor *actor)
     }
 
   exact = actor->angle>>ANGLETOFINESHIFT;
-  actor->px = FixedMul (actor->info->speed, finecosine[exact]);
-  actor->py = FixedMul (actor->info->speed, finesine[exact]);
+  actor->px = int(actor->info->speed * finecosine[exact]);
+  actor->py = int(actor->info->speed * finesine[exact]);
 
   // change slope
-  dist = P_AproxDistance (dest->x - actor->x,
-			  dest->y - actor->y);
-
-  dist = dist / actor->info->speed;
+  int dist = P_AproxDistance(dest->x - actor->x, dest->y - actor->y);
+  dist = dist / int(actor->info->speed * FRACUNIT);
 
   if (dist < 1)
     dist = 1;
-  slope = (dest->z+40*FRACUNIT - actor->z) / dist;
+  fixed_t slope = (dest->z+40*FRACUNIT - actor->z) / dist;
 
   if (slope < actor->pz)
     actor->pz -= FRACUNIT/8;
@@ -1349,8 +1298,8 @@ void A_VileChase(DActor *actor)
   if (actor->movedir != DI_NODIR)
     {
       // check for corpses to raise
-      viletryx = actor->x + actor->info->speed*xspeed[actor->movedir];
-      viletryy = actor->y + actor->info->speed*yspeed[actor->movedir];
+      viletryx = actor->x + fixed_t(actor->info->speed*xspeed[actor->movedir]);
+      viletryy = actor->y + fixed_t(actor->info->speed*yspeed[actor->movedir]);
 
       xl = (viletryx - m->bmaporgx - MAXRADIUS*2)>>MAPBLOCKSHIFT;
       xh = (viletryx - m->bmaporgx + MAXRADIUS*2)>>MAPBLOCKSHIFT;
@@ -1534,8 +1483,8 @@ void A_FatAttack1(DActor *actor)
     {
       mo->angle += FATSPREAD;
       an = mo->angle >> ANGLETOFINESHIFT;
-      mo->px = FixedMul (mo->info->speed, finecosine[an]);
-      mo->py = FixedMul (mo->info->speed, finesine[an]);
+      mo->px = int(mo->info->speed * finecosine[an]);
+      mo->py = int(mo->info->speed * finesine[an]);
     }
 }
 
@@ -1554,8 +1503,8 @@ void A_FatAttack2(DActor *actor)
     {
       mo->angle -= FATSPREAD*2;
       an = mo->angle >> ANGLETOFINESHIFT;
-      mo->px = FixedMul (mo->info->speed, finecosine[an]);
-      mo->py = FixedMul (mo->info->speed, finesine[an]);
+      mo->px = int(mo->info->speed * finecosine[an]);
+      mo->py = int(mo->info->speed * finesine[an]);
     }
 }
 
@@ -1571,8 +1520,8 @@ void A_FatAttack3(DActor *actor)
     {
       mo->angle -= FATSPREAD/2;
       an = mo->angle >> ANGLETOFINESHIFT;
-      mo->px = FixedMul (mo->info->speed, finecosine[an]);
-      mo->py = FixedMul (mo->info->speed, finesine[an]);
+      mo->px = int(mo->info->speed * finecosine[an]);
+      mo->py = int(mo->info->speed * finesine[an]);
     }
     
   mo = actor->SpawnMissile(actor->target, MT_FATSHOT);
@@ -1580,8 +1529,8 @@ void A_FatAttack3(DActor *actor)
     {
       mo->angle += FATSPREAD/2;
       an = mo->angle >> ANGLETOFINESHIFT;
-      mo->px = FixedMul (mo->info->speed, finecosine[an]);
-      mo->py = FixedMul (mo->info->speed, finesine[an]);
+      mo->px = int(mo->info->speed * finecosine[an]);
+      mo->py = int(mo->info->speed * finesine[an]);
     }
 }
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/03/08 16:07:15  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.3  2003/02/16 16:54:52  smite-meister
 // L2 sound cache done
 //
@@ -27,29 +30,11 @@
 // Revision 1.1.1.1  2002/11/16 14:18:24  hurdler
 // Initial C++ version of Doom Legacy
 //
-// Revision 1.5  2002/07/18 19:16:40  vberghol
-// renamed a few files
-//
-// Revision 1.4  2002/07/08 20:46:35  vberghol
-// More files compile!
-//
-// Revision 1.3  2002/07/01 21:00:48  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:24  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.7  2001/08/07 00:53:33  hurdler
-// lil' change
-//
 // Revision 1.6  2001/01/25 22:15:42  bpereira
 // added heretic support
 //
 // Revision 1.5  2000/11/02 17:50:07  stroggonmeth
 // Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.4  2000/10/21 08:43:29  bpereira
-// no message
 //
 // Revision 1.3  2000/04/04 00:32:46  stroggonmeth
 // Initial Boom compatability plus few misc changes all around.
@@ -68,8 +53,8 @@
 //
 //-----------------------------------------------------------------------------
 
-#ifndef __INFO__
-#define __INFO__
+#ifndef info_h
+#define info_h 1
 
 // Needed for action function pointer handling.
 #include "g_think.h"
@@ -2887,33 +2872,31 @@ MT_SOUNDWATERFALL,
 
 struct mobjinfo_t
 {
-  // VB: states used to be ints, but why? lot less casts this way
   int doomednum;
   statenum_t spawnstate;
   int spawnhealth;
-  //int seestate;
   statenum_t seestate;
-    int seesound;
-    int reactiontime;
-    int attacksound;
+  int seesound;
+  int reactiontime;
+  int attacksound;
   statenum_t painstate;
-    int painchance;
-    int painsound;
+  int painchance;
+  int painsound;
   statenum_t meleestate;
   statenum_t missilestate;
   statenum_t crashstate;   // from heretic/hexen
   statenum_t deathstate;
   statenum_t xdeathstate;
-    int deathsound;
-    int speed;
-    int radius;
-    int height;
-    int mass;
-    int damage;
-    int activesound;
-    int flags;
+  int deathsound;
+  float speed;
+  int radius;
+  int height;
+  int mass;
+  int damage;
+  int activesound;
+  int flags;
   statenum_t raisestate;
-    int flags2;       // from heretic/hexen
+  int flags2;       // from heretic/hexen
 };
 
 extern mobjinfo_t mobjinfo[NUMMOBJTYPES];

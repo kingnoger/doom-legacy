@@ -18,35 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:27  hurdler
-// Initial revision
+// Revision 1.2  2003/03/08 16:07:16  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
 //
-// Revision 1.12  2002/09/25 15:17:41  vberghol
-// Intermission fixed?
-//
-// Revision 1.9  2002/08/19 18:06:42  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.8  2002/08/06 13:14:29  vberghol
-// ...
-//
-// Revision 1.7  2002/08/02 20:14:52  vberghol
-// p_enemy.cpp done!
-//
-// Revision 1.6  2002/07/18 19:16:41  vberghol
-// renamed a few files
-//
-// Revision 1.5  2002/07/13 17:56:58  vberghol
-// *** empty log message ***
-//
-// Revision 1.4  2002/07/12 19:21:41  vberghol
-// hop
-//
-// Revision 1.3  2002/07/01 21:00:54  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:28  vberghol
-// Version 133 Experimental!
+// Revision 1.1.1.1  2002/11/16 14:18:27  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.32  2001/08/19 20:41:04  hurdler
 // small changes
@@ -216,8 +192,7 @@ struct extracolormap_t
 //
 struct vertex_t
 {
-  fixed_t     x;
-  fixed_t     y;
+  fixed_t  x, y;
 };
 
 
@@ -754,8 +729,6 @@ struct vissprite_t
 
   //Fab:29-04-98: for MF_SHADOW sprites, which translucency table to use
   byte*               transmap;
-
-  int                 mobjflags;
 
   // SoM: 3/6/2000: height sector for underwater/fake ceiling support
   int                 heightsec;

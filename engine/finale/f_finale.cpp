@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/03/08 16:07:10  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.6  2003/02/16 16:54:51  smite-meister
 // L2 sound cache done
 //
@@ -461,7 +464,7 @@ void F_CastDrawer()
   F_CastPrint(castorder[castnum].name);
 
   // draw the current frame in the middle of the screen
-  sprdef = &sprites[caststate->sprite];
+  sprdef = sprites.Get(sprnames[caststate->sprite]);
   sprframe = &sprdef->spriteframes[ caststate->frame & FF_FRAMEMASK];
   lump = sprframe->lumppat[0];      //Fab: see R_InitSprites for more
   flip = (bool)sprframe->flip[0];

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/03/08 16:07:02  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.10  2003/02/23 22:49:30  smite-meister
 // FS is back! L2 cache works.
 //
@@ -445,7 +448,7 @@ void GameInfo::Ticker()
       default : I_Error("game.action = %d\n", action);
       }
 
-  //CONS_Printf("======== GI::Ticker, tic %d, st %d, nplayers %d\n", gametic, state, n);
+  CONS_Printf("======== GI::Ticker, tic %d, st %d\n", gametic, state);
 
   // assign players to maps if needed
   vector<PlayerInfo *>::iterator it;
@@ -487,7 +490,7 @@ void GameInfo::Ticker()
   ticcmd_t *cmd;
 
   int i, n = players.size();
-  // read/write demo and check turbo cheat
+  // read/write demo
 
   for (i=0 ; i<n ; i++)
     {
@@ -505,17 +508,7 @@ void GameInfo::Ticker()
 
 	  if (demorecording)
 	    WriteDemoTiccmd(cmd, i);
-	
-#define TURBOTHRESHOLD  0x32  
-	  // check for turbo cheats FIXME.. move away from here!
-	  if (cmd->forwardmove > TURBOTHRESHOLD
-	      && !(gametic % (32*NEWTICRATERATIO)) && ((gametic / (32*NEWTICRATERATIO))&3) == i)
-            {
-	      static char turbomessage[80];
-	      sprintf (turbomessage, "%s is turbo!", players[i]->name.c_str());
-	      consoleplayer->message = turbomessage;
-            }
-        }
+	}
     }
 
   // do main actions

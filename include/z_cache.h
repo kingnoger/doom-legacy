@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/03/08 16:07:17  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.2  2003/02/23 22:49:31  smite-meister
 // FS is back! L2 cache works.
 //
@@ -34,21 +37,19 @@
 #define z_cache_h 1
 
 #include <ext/hash_map>
+#include <string.h>
 #include "z_zone.h"
 
 class cacheitem_t
 {
   friend class L2cache_t;
 protected:
-  int   lumpnum;    // lump number of data
   int   usefulness; // how many times has it been used?
   int   refcount;   // reference count, number of current users
 
 public:
-  void *data;       // data
-  int   length;     // in bytes
 
-  ~cacheitem_t();
+  cacheitem_t();
 
   bool  Release();
 
@@ -56,21 +57,30 @@ public:
   void  operator delete(void *mem);
 };
 
+// c-string comparison functor
+struct compare_strings
+{
+  bool operator()(const char* s1, const char* s2) const
+  { return strcmp(s1, s2) == 0; }
+};
 
 class L2cache_t
 {
 protected:
   // annoying namespace declarations, because hash_map is an extension...
-  typedef __gnu_cxx::hash_map<const char*, cacheitem_t*> c_map_t;
-  typedef __gnu_cxx::hash_map<const char*, cacheitem_t*>::iterator c_iter_t;
+  // Arrr, matey! STL designers be cursed with scurvy and lice! The default hash function
+  // is okay but default key comparison function compares pointers, not c-strings!
+  typedef __gnu_cxx::hash_map<const char*, cacheitem_t*,
+    __gnu_cxx::hash<const char *>, compare_strings> c_map_t;
+  typedef c_map_t::iterator c_iter_t;
   c_map_t c_map;
 
   memtag_t     tagtype; // tag type used for cached data
   const char  *default_name;
   cacheitem_t *default_item; // default replace item
 
-  virtual cacheitem_t *CreateItem(const char *p);
-  virtual void LoadAndConvert(cacheitem_t *t);
+  virtual cacheitem_t *Load(const char *p, cacheitem_t *t = NULL) = 0;
+  virtual void Free(cacheitem_t *t) = 0;
 
 public:
 

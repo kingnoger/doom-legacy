@@ -18,29 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:27  hurdler
-// Initial revision
+// Revision 1.2  2003/03/08 16:07:16  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
 //
-// Revision 1.8  2002/09/25 15:17:42  vberghol
-// Intermission fixed?
-//
-// Revision 1.7  2002/09/05 14:12:18  vberghol
-// network code partly bypassed
-//
-// Revision 1.6  2002/08/19 18:06:43  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.5  2002/07/13 17:56:59  vberghol
-// *** empty log message ***
-//
-// Revision 1.4  2002/07/12 19:21:41  vberghol
-// hop
-//
-// Revision 1.3  2002/07/01 21:00:55  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:29  vberghol
-// Version 133 Experimental!
+// Revision 1.1.1.1  2002/11/16 14:18:27  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.10  2001/12/31 16:56:39  metzgermeister
 // see Dec 31 log
@@ -90,7 +72,7 @@ typedef post_t column_t;
 // Fab: this is a hack : should allocate the lookup tables per sprite
 #define     MAXSPRITELUMPS     4096
 
-#define MAXVISSPRITES   256 // added 2-2-98 was 128
+#define MAXVISSPRITES   256
 
 // Constant arrays used for psprite clipping
 //  and initializing clipping.
@@ -115,10 +97,6 @@ extern const int PSpriteSY[];
 void R_DrawMaskedColumn(column_t* column);
 
 void R_SortVisSprites();
-
-//faB: find sprites in wadfile, replace existing, add new ones
-//     (only sprites from namelist are added or replaced)
-void R_AddSpriteDefs(char** namelist, int wadnum);
 
 //SoM: 6/5/2000: Light sprites correctly!
 void R_AddSprites(sector_t* sec, int lightlevel);

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/03/08 16:07:09  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.4  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -160,7 +163,6 @@ extern int ticruned,ticmiss;
 void PlayerPawn::Move()
 {
   extern int variable_friction;
-  int       movefactor = 2048; //For Boom friction
 
   ticcmd_t *cmd = &player->cmd;
 
@@ -183,18 +185,17 @@ void PlayerPawn::Move()
 
   fixed_t movepushforward = 0, movepushside = 0;
 
-  if (morphTics)
-    movefactor = 2500;
+  float mf = 1.0f;
   if (boomsupport && variable_friction)
-    {
-      //SoM: This seems to be buggy! Can anyone figure out why??
-      movefactor = GetMoveFactor();
-      //CONS_Printf("movefactor: %i\n", movefactor);
-    }
+    mf = GetMoveFactor();
+
+  // limit speed = push/(1-friction) => magic multiplier = 2*(1-friction) = 0.1875
+  float magic = 0.1875 * FRACUNIT * speed * mf;
+  CONS_Printf("speed = %f, m = %f\n", speed, magic);
 
   if (cmd->forwardmove)
     {
-      movepushforward = cmd->forwardmove * movefactor;
+      movepushforward = int(magic * cmd->forwardmove/100);
       
       if (eflags & MF_UNDERWATER)
 	{
@@ -217,7 +218,7 @@ void PlayerPawn::Move()
 
   if (cmd->sidemove)
     {
-      movepushside = cmd->sidemove * movefactor;
+      movepushside = int(magic * cmd->sidemove/100);
       if (eflags & MF_UNDERWATER)
 	{
 	  if (!onground)

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/03/08 16:06:59  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.7  2003/02/23 22:49:30  smite-meister
 // FS is back! L2 cache works.
 //
@@ -221,6 +224,7 @@ int DActor::Serialize(LArchive & a)
 
 Actor::Actor()
 {
+  pres = NULL;
   snext = sprev = bnext = bprev = NULL;
 }
 
@@ -245,12 +249,12 @@ Actor::Actor(fixed_t nx, fixed_t ny, fixed_t nz)
   z = nz;
 
   touching_sectorlist = NULL;
-  friction = ORIG_FRICTION;
-  movefactor = ORIG_FRICTION_FACTOR;
+  friction = normal_friction;
+  movefactor = 1.0f;
 
-  //FIXME temporary exploding imp
-  sprite = spritenum_t(0);
-  frame = 15;
+  pres = NULL;
+  frame = 0;
+  color = 0;
 }
 
 
@@ -275,8 +279,12 @@ DActor::DActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
   // because action routines can not be called yet
   state = &states[info->spawnstate];
   tics = state->tics;
-  sprite = state->sprite;
+  pres = sprites.Get(sprnames[state->sprite]);
   frame = state->frame; // FF_FRAMEMASK for frame, and other bits..
+  // FIXME color testing
+  static byte cc = 0;
+  cc++;
+  color = cc % 11;
 }
 
 
@@ -355,9 +363,9 @@ void DActor::Think()
   /*
     - is it a ppawn
     - checkwater
-    - jos on pxy tai MF_SKULLFLY, xymovement
+    - if pxy or MF_SKULLFLY, xymovement
     - floatbob
-    - z movement, 3 koodia, MF_ONGROUND, MF2_PASSMOBJ, MF2_ONMOBJ
+    - z movement, 3 codes, MF_ONGROUND, MF2_PASSMOBJ, MF2_ONMOBJ
     - state update
     - nightmare respawn
    */
@@ -512,11 +520,13 @@ void Actor::Think()
 // was P_GetMoveFactor()
 // returns the value by which the x,y
 // movements are multiplied to add to player movement.
+const float normal_friction = 0.90625f; // 0xE800
 
-int Actor::GetMoveFactor()
+float Actor::GetMoveFactor()
 {
   extern int variable_friction;
-  int mf = ORIG_FRICTION_FACTOR;
+
+  float mf = 1.0f;
 
   // If the floor is icy or muddy, it's harder to get moving. This is where
   // the different friction factors are applied to 'trying to move'. In
@@ -525,31 +535,31 @@ int Actor::GetMoveFactor()
   if (boomsupport && variable_friction &&
       !(flags & (MF_NOGRAVITY | MF_NOCLIP)))
     {
-      int frict = friction;
-      if (frict == ORIG_FRICTION)            // normal floor
+      float frict = friction;
+
+      if (frict == normal_friction)            // normal floor
 	;
-      else if (frict > ORIG_FRICTION)        // ice
+      else if (frict > normal_friction)        // ice
 	{
           mf = movefactor;
-          movefactor = ORIG_FRICTION_FACTOR;  // reset
+          movefactor = 1.0f;  // reset
 	}
       else                                      // sludge
 	{
           // phares 3/11/98: you start off slowly, then increase as
           // you get better footing
-          
-          int momentum = P_AproxDistance(px,py);
+#define MORE_FRICTION_MOMENTUM 15000       // mud factor based on momentum
+
+          fixed_t momentum = P_AproxDistance(px,py);
           mf = movefactor;
-          if (momentum > MORE_FRICTION_MOMENTUM<<2)
-	    mf <<= 3;
-          
-          else if (momentum > MORE_FRICTION_MOMENTUM<<1)
-	    mf <<= 2;
-          
-          else if (momentum > MORE_FRICTION_MOMENTUM)
-	    mf <<= 1;
-          
-          movefactor = ORIG_FRICTION_FACTOR;  // reset
+	  if (momentum < MORE_FRICTION_MOMENTUM)
+	    mf *= 0.125;
+          else if (momentum < MORE_FRICTION_MOMENTUM<<1)
+	    mf *= 0.25; 
+          else if (momentum < MORE_FRICTION_MOMENTUM<<2)
+	    mf *= 0.5;
+
+          movefactor = 1.0f;  // reset
 	}
     }
   return mf;
@@ -602,6 +612,8 @@ void Actor::XYMovement()
 
   fixed_t xmove = px;
   fixed_t ymove = py;
+
+  // CONS_Printf("v = %f / tic\n", sqrt(px*px+py*py)/FRACUNIT);
 
   //reducing bobbing/momentum on ice
   fixed_t oldx = x;
@@ -765,16 +777,12 @@ void Actor::XYFriction(fixed_t oldx, fixed_t oldy)
 	{
 	  //SoM: 3/28/2000: Use boom friction.
 	  if ((oldx == x) && (oldy == y)) // Did you go anywhere?
-	    {
-	      px = FixedMul(px, ORIG_FRICTION);
-	      py = FixedMul(py, ORIG_FRICTION);
-	    }
-	  else
-	    {
-	      px = FixedMul(px, friction);
-	      py = FixedMul(py, friction);
-	    }
-	  friction = ORIG_FRICTION;
+	    friction = normal_friction;
+
+	  px = int(px * friction);
+	  py = int(py * friction);
+
+	  friction = normal_friction;
 	}
     }
 }
@@ -1095,7 +1103,7 @@ bool DActor::SetState(statenum_t ns, bool call)
     st = &states[ns];
     state = st;
     tics = st->tics;
-    sprite = st->sprite;
+    // FIXME spritetest   sprite = st->sprite;
     frame = st->frame;
     
     // Modified handling.
@@ -1244,11 +1252,11 @@ DActor *DActor::SpawnMissile(Actor *dest, mobjtype_t type)
 
   th->angle = an;
   an >>= ANGLETOFINESHIFT;
-  th->px = FixedMul (th->info->speed, finecosine[an]);
-  th->py = FixedMul (th->info->speed, finesine[an]);
+  th->px = int(th->info->speed * finecosine[an]);
+  th->py = int(th->info->speed * finesine[an]);
 
-  int dist = P_AproxDistance (dest->x - x, dest->y - y);
-  dist = dist / th->info->speed;
+  int dist = P_AproxDistance(dest->x - x, dest->y - y);
+  dist = dist / int(th->info->speed * FRACUNIT);
 
   if (dist < 1)
     dist = 1;

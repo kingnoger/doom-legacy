@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/03/08 16:07:09  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.2  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -166,6 +169,22 @@ switchlist_t HereticSwitchList[] =
   {"\0",      "\0",           0}
 };
 
+// TODO Hexen switch sounds
+switchlist_t HexenSwitchList[] =
+{
+  {"SW_1_UP",  "SW_1_DN", 1}, // SFX_SWITCH1},
+  {"SW_2_UP",  "SW_2_DN", 1}, // SFX_SWITCH1},
+  {"VALVE1",   "VALVE2",  1}, // SFX_VALVE_TURN},
+  {"SW51_OFF", "SW51_ON", 1}, // SFX_SWITCH2},
+  {"SW52_OFF", "SW52_ON", 1}, // SFX_SWITCH2},
+  {"SW53_UP",  "SW53_DN", 1}, // SFX_ROPE_PULL},
+  {"PUZZLE5",  "PUZZLE9", 1}, // SFX_SWITCH1},
+  {"PUZZLE6",  "PUZZLE10", 1}, // SFX_SWITCH1},
+  {"PUZZLE7",  "PUZZLE11", 1}, // SFX_SWITCH1},
+  {"PUZZLE8",  "PUZZLE12", 1}, // SFX_SWITCH1},
+  {"\0",       "\0", 0}
+};
+
 // list of switch texture numbers (on/off states), common to all maps
 static vector<int> switchlist;
 
@@ -190,6 +209,10 @@ void P_InitSwitchList()
     case gm_heretic:
       sl = HereticSwitchList;
       nameset = 4;
+      break;
+    case gm_hexen:
+      sl = HexenSwitchList;
+      nameset = 1;
       break;
     default:
       nameset = 1;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/03/08 16:07:19  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.5  2003/02/23 22:49:31  smite-meister
 // FS is back! L2 cache works.
 //
@@ -175,7 +178,7 @@ int             firstwaterflat; //added:18-02-98:WATER!
 
 int             firstflat, lastflat, numflats;
 int             firstpatch, lastpatch, numpatches;
-int             firstspritelump, lastspritelump, numspritelumps;
+int             numspritelumps;
 
 
 
@@ -1378,7 +1381,8 @@ void Map::PrecacheMap()
     //
     // Precache sprites.
     //
-    //spritepresent = (char *)alloca(numsprites);
+    /*  FIXME
+    spritepresent = (char *)alloca(numsprites);
     spritepresent = (char *)Z_Malloc(numsprites, PU_STATIC, 0);
     memset (spritepresent,0, numsprites);
 
@@ -1402,7 +1406,7 @@ void Map::PrecacheMap()
             for (k=0 ; k<8 ; k++)
             {
                 //Fab: see R_InitSprites for more about lumppat,lumpid
-                lump = /*firstspritelump +*/ sf->lumppat[k];
+                lump = sf->lumppat[k];
                 if(devparm)
                    spritememory += fc.LumpLength(lump);
                 fc.CachePatchNum(lump , PU_CACHE);
@@ -1410,7 +1414,8 @@ void Map::PrecacheMap()
         }
     }
     Z_Free(spritepresent);
-    
+    */
+
     //FIXME: this is no more correct with glide render mode
     if (devparm)
     {

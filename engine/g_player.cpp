@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.8  2003/03/08 16:07:00  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.7  2003/02/16 16:54:50  smite-meister
 // L2 sound cache done
 //
@@ -96,9 +99,11 @@ PlayerInfo::PlayerInfo(const string & n)
   name = n;
   number = 0;
   team = 0;
-  playerstate = PST_WAITFORMAP;
-  frags.resize(game.maxplayers);
   pawntype = 0;
+  color = 0;
+
+  playerstate = PST_WAITFORMAP;
+  frags.resize(game.maxplayers);  
 };
 
 

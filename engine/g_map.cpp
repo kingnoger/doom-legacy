@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.9  2003/03/08 16:07:00  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.8  2003/02/23 22:49:30  smite-meister
 // FS is back! L2 cache works.
 //
@@ -431,14 +434,9 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
   //SoM:
   mthing->mobj = p;
 
+  // FIXME set skin sprite here
   // set color translations for player sprites
-  // added 6-2-98 : change color : now use skincolor (befor is mthing->type-1
-  //mobj->flags |= (p->skincolor)<<MF_TRANSSHIFT;
-  // set 'spritedef' override in mobj for player skins.. (see ProjectSprite)
-  // (usefulness : when body mobj is detached from player (who respawns),
-  //  the dead body mobj retain the skin through the 'spritedef' override).
-  //mobj->skin = &skins[p->skin];
-  // FIXME set sprite and color here
+  p->color = pi->color;
 
   p->angle = ANG45 * (mthing->angle/45);
   if (pi == consoleplayer)
@@ -463,8 +461,6 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
     {
       // wake up the status bar
       hud.ST_Start(p);
-      // wake up the heads up text
-      //HU_Start ();
     }
 
 #ifdef CLIENTPREDICTION2
@@ -488,7 +484,7 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
   // FIXME what does it do?
   SV_SpawnPlayer(pi->number, p->x, p->y, p->angle);
 
-  if(camera.chase && displayplayer == pi)
+  if (camera.chase && displayplayer == pi)
     camera.ResetCamera(p);
 }
 

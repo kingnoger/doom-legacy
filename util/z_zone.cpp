@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/03/08 16:07:19  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.2  2003/02/08 21:43:50  smite-meister
 // New Memzone system. Choose your pawntype! Cyberdemon OK.
 //
@@ -163,8 +166,6 @@ void Z_Init()
       if (mb_alloc > 20)
 	mb_alloc = 20; // min 6 MB max 20 MB
     }
-
-  mb_alloc = 2; // TESTING
 
   memzone_t *newzone = memzone_t::NewZone(mb_alloc << 20);
   zones.push_back(newzone);

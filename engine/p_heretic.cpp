@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/03/08 16:07:07  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.5  2003/02/16 16:54:51  smite-meister
 // L2 sound cache done
 //
@@ -189,7 +192,6 @@ int P_FaceMobj(Actor *source, Actor *target, angle_t *delta)
 bool DActor::SeekerMissile(angle_t thresh, angle_t turnMax)
 {
   int dir;
-  int dist;
   angle_t delta;
   angle_t ang;
 
@@ -219,13 +221,13 @@ bool DActor::SeekerMissile(angle_t thresh, angle_t turnMax)
       angle -= delta;
     }
   ang = angle>>ANGLETOFINESHIFT;
-  px = FixedMul(info->speed, finecosine[ang]);
-  py = FixedMul(info->speed, finesine[ang]);
+  px = int(info->speed * finecosine[ang]);
+  py = int(info->speed * finesine[ang]);
   if (z+height < t->z || t->z+t->height < z)
     { // Need to seek vertically
-      dist = P_AproxDistance(t->x-x, t->y-y);
-      dist = dist/info->speed;
-      if(dist < 1)
+      int dist = P_AproxDistance(t->x-x, t->y-y);
+      dist = dist / int(info->speed * FRACUNIT);
+      if (dist < 1)
 	dist = 1;
       pz = (t->z+(t->height>>1) - (z+(height>>1))) / dist;
     }
@@ -270,8 +272,8 @@ DActor *DActor::SpawnMissileAngle(mobjtype_t t, angle_t angle, fixed_t momz)
   mo->owner = this; // Originator
   mo->angle = angle;
   angle >>= ANGLETOFINESHIFT;
-  mo->px = FixedMul(mo->info->speed, finecosine[angle]);
-  mo->py = FixedMul(mo->info->speed, finesine[angle]);
+  mo->px = int(mo->info->speed * finecosine[angle]);
+  mo->py = int(mo->info->speed * finesine[angle]);
   mo->pz = momz;
   return (mo->CheckMissileSpawn() ? mo : NULL);
 }

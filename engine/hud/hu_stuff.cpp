@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/03/08 16:07:11  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.6  2003/01/18 20:17:41  smite-meister
 // HUD fixed, levelchange crash fixed.
 //
@@ -277,13 +280,14 @@ void HUD::Init()
 
   // cache the HUD font for entire game execution
   // TODO add legacy default font (in legacy.wad)
-  if (game.mode == gm_heretic)
+  switch (game.mode)
     {
+    case gm_heretic:
+    case gm_hexen:
       startlump = fc.GetNumForName("FONTA01");
       endlump  =  fc.GetNumForName("FONTA59");
-    }
-  else
-    {
+      break;
+    default:
       startlump = fc.GetNumForName("STCFN033");
       endlump =   fc.GetNumForName("STCFN095");
     }

@@ -16,6 +16,9 @@
 // for more details.
 //
 // $Log$
+// Revision 1.5  2003/03/08 16:07:18  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.4  2003/02/16 16:54:52  smite-meister
 // L2 sound cache done
 //
@@ -251,9 +254,9 @@ int I_StartSound(channel_t *s_channel)
   c->ch = s_channel;
 
   // Set pointer to raw data.
-  c->data = (Uint8 *)s_channel->cip->sdata;
+  c->data = (Uint8 *)s_channel->si->sdata;
   // Set pointer to end of raw data.
-  c->end = c->data + s_channel->cip->length;
+  c->end = c->data + s_channel->si->length;
   
   c->stepremainder = 0;
 

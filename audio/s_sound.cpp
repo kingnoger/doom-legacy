@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/03/08 16:06:58  smite-meister
+// Lots of stuff. Sprite cache. Movement+friction fix.
+//
 // Revision 1.6  2003/02/23 22:49:30  smite-meister
 // FS is back! L2 cache works.
 //
@@ -152,8 +155,8 @@ SoundSystem S;
 class soundcache_t : public L2cache_t
 {
 protected:
-  virtual cacheitem_t *CreateItem(const char *p);
-  virtual void LoadAndConvert(cacheitem_t *t);
+  virtual cacheitem_t *Load(const char *p, cacheitem_t *t = NULL);
+  virtual void Free(cacheitem_t *t);
 public:
   soundcache_t(memtag_t tag);
 };
@@ -164,31 +167,23 @@ soundcache_t::soundcache_t(memtag_t tag)
   : L2cache_t(tag)
 {}
 
-cacheitem_t *soundcache_t::CreateItem(const char *p)
-{
-  scacheitem_t *t = new scacheitem_t; // here
 
+// We assume that the sound is in Doom sound format (for now).
+// TODO: Make it recognize other formats as well! WAV for example
+cacheitem_t *soundcache_t::Load(const char *p, cacheitem_t *r)
+{
   int lump = fc.FindNumForName(p, false);
   if (lump == -1)
     return NULL;
 
+  sounditem_t *t = (sounditem_t *)r;
+  if (t == NULL)
+    t = new sounditem_t;
+
   CONS_Printf(" Sound: %s  |  ", p);
-
   t->lumpnum = lump;
-  t->refcount = 0;
-  LoadAndConvert(t);
-  
-  return t;
-}
-
-
-// We assume that the sound is in Doom sound format (for now).
-// TODO: Make it recognize other formats as well! WAV for example
-void soundcache_t::LoadAndConvert(cacheitem_t *r)
-{
-  scacheitem_t *t = (scacheitem_t *)r;
-  t->data = fc.CacheLumpNum(t->lumpnum, tagtype);
-  int size = fc.LumpLength(t->lumpnum);
+  t->data = fc.CacheLumpNum(lump, tagtype);
+  int size = fc.LumpLength(lump);
 
 #ifdef HW3SOUND
   if (hws_mode != HWS_DEFAULT_MODE)
@@ -204,7 +199,18 @@ void soundcache_t::LoadAndConvert(cacheitem_t *r)
 
   t->length = size - 8;  // 8 byte header
   t->sdata = &ds->data;
+
+  return t;
 }
+
+
+void soundcache_t::Free(cacheitem_t *r)
+{
+  sounditem_t *t = (sounditem_t *)r;
+  if (t->data)
+    Z_ChangeTag(t->data, PU_CACHE);
+}
+
 
 
 // returns a value in the range [0.0, 1.0]
@@ -521,7 +527,7 @@ void SoundSystem::ResetChannels(int stat, int dyn)
 
   for (i=n; i<stat; i++)
     {
-      channels[i].cip = NULL;
+      channels[i].si = NULL;
       channels[i].playing = false;
     }
 
@@ -533,7 +539,7 @@ void SoundSystem::ResetChannels(int stat, int dyn)
 
   for (i=n; i<dyn; i++)
     {
-      channel3Ds[i].cip = NULL;
+      channel3Ds[i].si = NULL;
       channel3Ds[i].playing = false;
     }
 }
@@ -550,7 +556,7 @@ int SoundSystem::GetChannel(int pri)
   // Find a free channel
   for (i=0; i<n; i++)
     {
-      if (channels[i].cip == NULL)
+      if (channels[i].si == NULL)
 	break;
       else if (channels[i].priority < min)
 	{
@@ -593,7 +599,7 @@ int SoundSystem::Get3DChannel(int pri)
   // Find a free channel
   for (i=0; i<n; i++)
     {
-      if (channel3Ds[i].cip == NULL)
+      if (channel3Ds[i].si == NULL)
 	break;
       else if (channel3Ds[i].priority < min)
 	{
@@ -642,7 +648,7 @@ void SoundSystem::StartAmbSound(const char *name, int volume, int separation, in
   c->osep = separation;
   c->priority = pri;
 
-  c->cip = (scacheitem_t *)sc.Cache(name);
+  c->si = (sounditem_t *)sc.Cache(name);
 
   I_StartSound(c);
 }
@@ -706,7 +712,7 @@ void SoundSystem::Start3DSound(const char *name, soundsource_t *source, int volu
   // Check sound parameters, attenuation and stereo effects.
   S_AdjustChannel(listener, c);
 
-  c->cip = (scacheitem_t *)sc.Cache(name);
+  c->si = (sounditem_t *)sc.Cache(name);
 
   I_StartSound(c);
 }
@@ -731,7 +737,7 @@ void SoundSystem::Stop3DSounds()
   int cnum, n = channel3Ds.size();
 
   for (cnum = 0; cnum < n; cnum++)
-    if (channel3Ds[cnum].cip)
+    if (channel3Ds[cnum].si)
       Stop3DChannel(cnum);
 }
 
@@ -755,7 +761,7 @@ void SoundSystem::Stop3DSound(void *origin)
   int cnum, n = channel3Ds.size();
   for (cnum=0; cnum<n; cnum++)
     {
-      if (channel3Ds[cnum].cip && channel3Ds[cnum].source.origin == origin)
+      if (channel3Ds[cnum].si && channel3Ds[cnum].source.origin == origin)
 	{
 	  Stop3DChannel(cnum);
 	  break; // what about several sounds from one origin?
@@ -770,13 +776,13 @@ void SoundSystem::StopChannel(int cnum)
 
   channel_t *c = &channels[cnum];
 
-  if (c->cip)
+  if (c->si)
     {
       I_StopSound(c);
 
       // degrade reference count of sound data
-      c->cip->Release();
-      c->cip = NULL;
+      c->si->Release();
+      c->si = NULL;
     }
   c->playing = false;
 }
@@ -787,13 +793,13 @@ void SoundSystem::Stop3DChannel(int cnum)
 
   channel_t *c = &channel3Ds[cnum];
 
-  if (c->cip)
+  if (c->si)
     {
       I_StopSound(c);
 
       // degrade reference count of sound data
-      c->cip->Release();
-      c->cip = NULL;
+      c->si->Release();
+      c->si = NULL;
     }
   c->playing = false;
 }
