@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/11/20 18:49:57  smite-meister
+// oops
+//
 // Revision 1.2  2004/11/19 16:51:06  smite-meister
 // cleanup
 //
@@ -36,16 +39,12 @@
 
 #ifdef __BIG_ENDIAN__
 # define SHORT(x) ((short)( \
-(((unsigned short)(x) & (unsigned short)0x00ffU) << 8) \
-| \
-(((unsigned short)(x) & (unsigned short)0xff00U) >> 8) )) \
+(((unsigned short)(x) & (unsigned short)0x00ffU) << 8) | \
+(((unsigned short)(x) & (unsigned short)0xff00U) >> 8) ))
 # define LONG(x) ((int)( \
-(((unsigned int)(x) & (unsigned int)0x000000ffUL) << 24) \
-| \
-(((unsigned int)(x) & (unsigned int)0x0000ff00UL) <<  8) \
-| \
-(((unsigned int)(x) & (unsigned int)0x00ff0000UL) >>  8) \
-| \
+(((unsigned int)(x) & (unsigned int)0x000000ffUL) << 24) | \
+(((unsigned int)(x) & (unsigned int)0x0000ff00UL) <<  8) | \
+(((unsigned int)(x) & (unsigned int)0x00ff0000UL) >>  8) | \
 (((unsigned int)(x) & (unsigned int)0xff000000UL) >> 24) ))
 #else
 # define SHORT(x) (x)
