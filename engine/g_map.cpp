@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.45  2004/10/31 22:30:53  smite-meister
+// cleanup
+//
 // Revision 1.44  2004/10/27 17:37:06  smite-meister
 // netcode update
 //
@@ -502,7 +505,6 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
   nz = ONFLOORZ;
 
   PlayerPawn *p;
-  CONS_Printf("SpawnPlayer\n");
 
   // the player may have his old pawn from the previous level
   if (!pi->pawn)
@@ -554,8 +556,6 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
     p->keycards = it_allkeys;
 
   pi->pov = p;
-
-  CONS_Printf("spawn done\n");
 
   p->spawnpoint = mthing;
   // set the timer
@@ -707,8 +707,6 @@ bool Map::DeathMatchRespawn(PlayerInfo *p)
 
 bool Map::CoopRespawn(PlayerInfo *p)
 {
-  CONS_Printf("CoopRespawn, p = %p, pnum = %d\n", p, p->number - 1);
-
   int i = p->number;
   multimap<int, mapthing_t *>::iterator s, t;
 
@@ -766,7 +764,7 @@ int Map::RespawnPlayers()
 
   bool ok;
   do {
-    CONS_Printf("RespawnPlayers: %d, count = %d\n", respawnqueue.size(), count);
+    //CONS_Printf("RespawnPlayers: %d, count = %d\n", respawnqueue.size(), count);
     p = respawnqueue.front();
     ok = false;
 
@@ -1229,7 +1227,7 @@ void Map::RespawnWeapons()
 // exit teleporter, endgame teleporter, E1M8 sectordamage, bossdeath, timelimit
 void Map::ExitMap(Actor *activator, int next, int ep)
 {
-  CONS_Printf("ExitMap => %d, %d\n", next, ep);
+  //CONS_Printf("ExitMap => %d, %d\n", next, ep);
 
   if (!cv_exitmode.value)
     return; // exit not allowed

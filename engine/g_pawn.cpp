@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.41  2004/10/31 22:30:53  smite-meister
+// cleanup
+//
 // Revision 1.40  2004/10/27 17:37:06  smite-meister
 // netcode update
 //
@@ -490,16 +493,8 @@ void PlayerPawn::Think()
       //  (read: not in the middle of an attack).
 
       w = (w >> ticcmd_t::WEAPONSHIFT) - 1;
-      CONS_Printf("wp change, %d, %d\n", w, cmd->buttons);
       if (w < NUMWEAPONS && weaponowned[w])
 	pendingweapon = weapontype_t(w);
-
-      CONS_Printf("pend %d\n", pendingweapon);
-
-      // Do not go to plasma or BFG in shareware, even if cheated.
-      if ((game.mode == gm_doom1s) &&
-	  (pendingweapon == wp_plasma || pendingweapon == wp_bfg))
-	pendingweapon = wp_none;
     }
 
   // check for use

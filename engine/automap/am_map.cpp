@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2004/10/31 22:30:53  smite-meister
+// cleanup
+//
 // Revision 1.19  2004/10/27 17:37:07  smite-meister
 // netcode update
 //
@@ -111,27 +114,22 @@ byte *fb; // pseudo-frame buffer
 // player radius used only in am_map.c
 #define PLAYERRADIUS    (16*FRACUNIT)
 
-
 // For use if I do walls with outsides/insides
-static byte REDS        =    (256-5*16);
-static byte REDRANGE    =    16;
-static byte BLUES       =    (256-4*16+8);
-static byte BLUERANGE   =    8;
-static byte GREENS      =    (7*16);
-static byte GREENRANGE  =    16;
-static byte GRAYS       =    (6*16);
-static byte GRAYSRANGE  =    16;
-static byte BROWNS      =    (4*16);
-static byte BROWNRANGE  =    16;
-static byte YELLOWS     =    (256-32+7);
-static byte YELLOWRANGE =    1;
-static byte DBLACK      =    0;
-static byte DWHITE      =    (256-47);
-
-static byte BLUEKEYCOLOR;
-static byte YELLOWKEYCOLOR;
-static byte REDKEYCOLOR;
-
+static byte REDS        = 256-5*16;
+static byte REDRANGE    = 16;
+static byte BLUES       = 256-4*16+8;
+static byte BLUERANGE   = 8;
+static byte GREENS      = 7*16;
+static byte GREENRANGE  = 16;
+static byte GRAYS       = 6*16;
+static byte GRAYSRANGE  = 16;
+static byte BROWNS      = 4*16;
+static byte BROWNRANGE  = 16;
+static byte YELLOWS     = 256-32+7;
+static byte YELLOWRANGE = 1;
+static byte DBLACK      = 0;
+static byte DWHITE      = 256-47;
+static byte PARCH       = 0;
 
 // Automap colors
 #define BACKGROUND      DBLACK
@@ -152,6 +150,29 @@ static byte REDKEYCOLOR;
 #define GRIDCOLORS      (GRAYS + GRAYSRANGE/2)
 #define GRIDRANGE       0
 #define XHAIRCOLORS     GRAYS
+
+enum AMcolor_e
+{
+  c_bluekey = 0,
+  c_yellowkey,
+  c_redkey, // or green
+  c_teleport,
+  c_exit,
+  NUM_AMCOLORS
+};
+
+static byte AMcolors[3][NUM_AMCOLORS] =
+{
+  // Doom
+  { 200, 231, 176, 184, 176 },
+  // Heretic
+  { 197, 144, 220, 197, 150 },
+  // Hexen
+  { 157, 137, 198, 157, 177 }
+};
+
+static byte *AMcolor = NULL;
+
 
 // keys
 #define AM_PANDOWNKEY   KEY_DOWNARROW
@@ -174,10 +195,10 @@ static byte REDKEYCOLOR;
 #define F_PANINC        4
 // how much zoom-in per tic
 // goes to 2x in 1 second
-#define M_ZOOMIN        ((int) (1.02*FRACUNIT))
+#define M_ZOOMIN        (int(1.02*FRACUNIT))
 // how much zoom-out per tic
 // pulls out to 0.5x in 1 second
-#define M_ZOOMOUT       ((int) (FRACUNIT/1.02))
+#define M_ZOOMOUT       (int(FRACUNIT/1.02))
 
 // translates between frame-buffer and map distances
 #define FTOM(x) FixedMul(((x)<<16),scale_ftom)
@@ -319,7 +340,7 @@ AutoMap::AutoMap()
 
   followplayer = true;
   grid = false;
-  markpointnum = 0;
+  clearMarks();
 
   mapback = NULL;
 
@@ -352,7 +373,7 @@ void AutoMap::Open(const PlayerPawn *p)
 {
   if (active)
     return;
-  CONS_Printf("AM::Open, pawn = %p, map = %p\n", p, p->mp);
+
   mpawn = p;
   mp = p->mp;
 
@@ -421,7 +442,7 @@ void AutoMap::Resize()
       return;
     }
 
-  CONS_Printf("AM::Resize\n");
+  //CONS_Printf("AM::Resize\n");
 
   fb = vid.screens[0];
 
@@ -441,7 +462,6 @@ void AutoMap::Resize()
     scale_mtof = min_scale_mtof;
   scale_ftom = FixedDiv(FRACUNIT, scale_mtof);
 }
-
 
 
 // initializes the map window location, panning, zoom, colors etc.
@@ -471,11 +491,12 @@ void AutoMap::InitVariables()
 
   if (game.mode >= gm_heretic)
     {
+      // different palette
       REDS       = 12*8;
       REDRANGE   = 1;
       BLUES      = (256-4*16+8);
       BLUERANGE  = 1;
-      GREENS     = 224;
+      GREENS     = 33*8; //224;
       GREENRANGE = 1;
       GRAYS      = (5*8);
       GRAYSRANGE = 1;
@@ -485,17 +506,15 @@ void AutoMap::InitVariables()
       YELLOWRANGE= 1;
       DBLACK      = 0;
       DWHITE      = 4*8;
+      PARCH	  = 13*8-1;
 
-      BLUEKEYCOLOR = 197;
-      YELLOWKEYCOLOR = 144;
-      REDKEYCOLOR = 220; // green
+      if (game.mode == gm_heretic)
+	AMcolor = AMcolors[1];
+      else
+	AMcolor = AMcolors[2]; // hexen
     }
   else
-    {
-      BLUEKEYCOLOR = 200;
-      YELLOWKEYCOLOR = 231;
-      REDKEYCOLOR = 176;
-    }
+    AMcolor = AMcolors[0]; // doom
 
   // inform the status bar of the change
   hud.st_refresh = true;
@@ -1189,17 +1208,22 @@ void AutoMap::drawWalls()
             {
               switch (mp->lines[i].special)
 		{
-		case 70: // teleporters
-		  AM_drawMline(&l, WALLCOLORS+WALLRANGE/2);
-		  break;
 		case 13: // locked doors
-		  // mp->lines[i].args[3] = lock type
-		  AM_drawMline(&l, BLUEKEYCOLOR);
-		  //AM_drawMline(&l, YELLOWKEYCOLOR);
-		  //AM_drawMline(&l, REDKEYCOLOR);
-		  break;
 		case 83: // ACS_Locked_Execute
-		  AM_drawMline(&l, REDKEYCOLOR);
+		  // mp->lines[i].args[3] = lock type
+		  //AM_drawMline(&l, AMcolor[c_bluekey]);
+		  //AM_drawMline(&l, AMcolor[c_yellowkey]);
+		  AM_drawMline(&l, AMcolor[c_redkey]); // red/green
+		  break;
+
+		case 70: // teleporters
+		case 71:
+		  AM_drawMline(&l, AMcolor[c_teleport]);
+		  break;
+
+		case 74: // level teleporters
+		case 75:
+		  AM_drawMline(&l, AMcolor[c_exit]);
 		  break;
 
 		default :

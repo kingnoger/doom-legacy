@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.25  2004/10/31 22:30:54  smite-meister
+// cleanup
+//
 // Revision 1.24  2004/10/27 17:37:08  smite-meister
 // netcode update
 //
@@ -281,10 +284,10 @@ static Texture *PatchSTATBAR;
 // ammo type pics (Texture's)
 static const char DHAmmoPics[NUMAMMO + 1][10] =
 {
-  {"CLIPA0"},  // 0, bullets
-  {"SHELA0"},  // shells
-  {"CELLA0"},  // plasma
-  {"ROCKA0"},  // rockets
+  {"SBOAMMO1"}, //{"CLIPA0"},  // 0, bullets
+  {"SBOAMMO2"}, //{"SHELA0"},  // shells
+  {"SBOAMMO3"}, //{"CELLA0"},  // plasma
+  {"SBOAMMO4"}, //{"ROCKA0"},  // rockets
   {"INAMGLD"}, // gold wand
   {"INAMBOW"}, // crossbow
   {"INAMBST"}, // blaster
@@ -906,7 +909,6 @@ void HUD::ST_updateFaceWidget()
               st_faceindex = ST_calcPainOffset() + ST_EVILGRINOFFSET;
             }
         }
-
     }
 
   if (priority < 8)
@@ -980,9 +982,7 @@ void HUD::ST_updateFaceWidget()
               st_facecount = ST_TURNCOUNT;
               st_faceindex = ST_calcPainOffset() + ST_RAMPAGEOFFSET;
             }
-
         }
-
     }
 
   if (priority < 6)
@@ -1002,7 +1002,6 @@ void HUD::ST_updateFaceWidget()
         }
       else
         lastattackdown = -1;
-
     }
 
   if (priority < 5)
@@ -1015,9 +1014,7 @@ void HUD::ST_updateFaceWidget()
 
           st_faceindex = ST_GODFACE;
           st_facecount = 1;
-
         }
-
     }
 
   // look left or look right if the facecount has timed out
