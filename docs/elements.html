@@ -22,38 +22,40 @@ td.d { color: #00F000; }
 <body>
 
 <h1>Progress indicators for Doom Legacy subsystems</h1>
+(don't take these too seriously!)
 
 <table cellspacing="2">
 <tr><th>Subsystem<th>Status<th>Location
 <tr><td><br />
 <tr><td><b>Fundamentals</b>
 <tr><td>Basic data classes<td class="s">Starting<td>util/
-<tr><td>Event system<td class="u">Unmodified<td>engine/
+<tr><td>Event system<td class="w">Works<td>engine/
 <tr><td>Cache<td class="w">Works<td> util/
-<tr><td>Menu<td class="w">Works<td>engine/menu/
+<tr><td>Menu<td class="m">Modified<td>engine/menu/
 <tr><td>Console<td class="w">Works<td>util/
 <tr><td><br />
 <tr><td><b>Game simulation</b>
 <tr><td>World object class hierarchy<td class="w">Works<td>include/g_*.h
 <tr><td>Object serialization/persistence<td class="w">Works<td>engine/g_save.cpp
 <tr><td>World subdivision (bsp-tree, octree, lists)<td class="u">Unmodified<td>engine/
-<tr><td>Physics engine<td class="s">Starting<td>engine/
+<tr><td>Physics engine<td class="m">Modified<td>engine/
 <tr><td>AI<td class="s">Starting<td>engine/
 <tr><td>Scripting<td class="w">Works<td>engine/scripting/
-<tr><td>DLL interface<td class="s">Starting<td>
 <tr><td>Network code<td class="m">Modified<td>net/
+<tr><td>DLL interface<td class="s">Starting<td>
+<tr><td>Bots<td class="m">Modified<td>engine/bots/
 <tr><td><br />
 <tr><td><b>Extra stuff</b>
 <tr><td>HUD<td class="w">Works<td>engine/HUD/
-<tr><td>Automap<td class="s">Starting<td>engine/automap/
+<tr><td>Automap<td class="m">Modified<td>engine/automap/
 <tr><td>Intermission/Finale<td class="m">Modified<td>engine/animation/
 <tr><td>Cheating<td class="d">Done<td>engine/m_cheat.cpp
 <tr><td><br />
 <tr><td><b>Video</b>
-<tr><td>Texture class<td class="m">Modified<td>video/
+<tr><td>Texture class<td class="w">Works<td>video/
 <tr><td>2D sprite/billboard/decal class<td class="w">Works<td>video/
 <tr><td>3D model class<td class="s">Starting<td>video/
-<tr><td>Software renderer<td class="s">Starting<td>video/
+<tr><td>Software renderer<td class="m">Modified<td>video/
 <tr><td>OpenGL renderer<td class="s">Starting<td>video/hardware/
 <tr><td><br />
 <tr><td><b>Audio</b>

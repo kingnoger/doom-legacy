@@ -49,24 +49,6 @@ Branched off from version 1.40.
 </ul>
 
 <hr />
-<h2>Possible benefits of the new architecture:</h2>
-
-<ul>
-<li>Recruiting new coders is easier with an easy-to-understand source,
-  as is debugging</li>
-<li>New game modes to old games: <a href="ctf.html">Capture the
-  Flag</a>, <a href="doomfortress.html">Doom Fortress</a>...</li>
-<li>Cross-over games: Heretic and Doom entities in the same level,
-  players playing Hellspawn instead of Marines...</li>
-<li>Possibility to create different AI's for monsters (in addition to
-  the standard "cannon fodder" AI)</li>
-<li>Extendable: New sector-based game types should be "relatively easy" to add
-  without kludges (Duke Nukem 3D, Hexen, Dark Forces etc.)</li>
-<li>Bots</li>
-<li>Mods using external dll:s?</li>
-</ul>
-
-<hr />
 <h2>Coding conventions</h2>
 
 <ul>
@@ -135,9 +117,8 @@ networking library based on the Torque Network Library.</li>
 <li><a href="http://www.mesa3d.org/">Mesa 3D</a>, a free OpenGL
 implementation.<br /> Note: Windows includes OpenGL runtime dll's, all you
 need are the header files and import libraries used when
-compiling and linking. OpenGL import libraries are included in MinGW standard
-distribution. If OpenGL headers aren't included in your MinGW
-distribution, just use Mesa headers. They work fine.</li>
+compiling and linking.
+They should be included in the MinGW standard distribution.</li>
 <li><a href="http://www.doxygen.org/">Doxygen</a>, an automatic
 source documentation system.</li>
 </ul>
