@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/11/12 11:07:20  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.6  2003/06/20 20:56:07  smite-meister
 // Presentation system tweaked
 //
@@ -245,6 +248,10 @@ int Map::T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest,
 
 
 //=================================
+
+IMPLEMENT_CLASS(floor_t, "Floor");
+floor_t::floor_t() {}
+
 // constructor
 floor_t::floor_t(int ty, sector_t *sec, fixed_t sp, int cru, fixed_t height)
 {
@@ -312,11 +319,6 @@ floor_t::floor_t(int ty, sector_t *sec, fixed_t sp, int cru, fixed_t height)
     }
 
   //SN_StartSequence((mobj_t *)&sector->soundorg, SEQ_PLATFORM+floor->sector->seqType);
-}
-
-int floor_t::Serialize(LArchive & a)
-{
-  return 0;
 }
 
 
@@ -622,6 +624,10 @@ int Map::EV_DoDonut(int tag)
 
 
 //==============================
+
+IMPLEMENT_CLASS(elevator_t, "Elevator");
+elevator_t::elevator_t() {}
+
 // constructor
 elevator_t::elevator_t(int ty, sector_t *sec, line_t *line)
 {
@@ -666,10 +672,6 @@ elevator_t::elevator_t(int ty, sector_t *sec, line_t *line)
     }
 }
 
-int elevator_t::Serialize(LArchive & a)
-{
-  return 0;
-}
 
 // SoM: 3/6/2000: Lots'o'copied code here.. Elevators.
 //

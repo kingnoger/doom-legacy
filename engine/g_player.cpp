@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.16  2003/11/12 11:07:18  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.15  2003/06/20 20:56:07  smite-meister
 // Presentation system tweaked
 //
@@ -51,6 +54,7 @@
 #include "doomdef.h"
 #include "g_player.h"
 #include "g_game.h"
+#include "g_map.h"
 #include "g_actor.h"
 #include "g_pawn.h"
 #include "d_netcmd.h" // consvars
@@ -69,68 +73,22 @@ PlayerInfo *displayplayer = NULL;   // view being displayed
 PlayerInfo *displayplayer2 = NULL;  // secondary view (splitscreen)
 
 
-// lists of mobjtypes that can be played by humans!
-pawn_info_t pawndata[] = 
-{
-  {MT_PLAYER,   wp_pistol,  50, MT_NONE}, // 0
-  {MT_POSSESSED, wp_pistol,  20, MT_NONE},
-  {MT_SHOTGUY,  wp_shotgun,  8, MT_NONE},
-  {MT_TROOP,    wp_nochange, 0, MT_TROOPSHOT},
-  {MT_SERGEANT, wp_nochange, 0, MT_NONE},
-  {MT_SHADOWS,  wp_nochange, 0, MT_NONE},
-  {MT_SKULL,    wp_nochange, 0, MT_NONE},
-  {MT_HEAD,     wp_nochange, 0, MT_HEADSHOT},
-  {MT_BRUISER,  wp_nochange, 0, MT_BRUISERSHOT},
-  {MT_SPIDER,   wp_chaingun, 100, MT_NONE},
-  {MT_CYBORG,   wp_missile,  20,  MT_NONE}, //10
-
-  {MT_WOLFSS,   wp_chaingun, 50, MT_NONE},
-  {MT_CHAINGUY, wp_chaingun, 50, MT_NONE},
-  {MT_KNIGHT,   wp_nochange, 0,  MT_BRUISERSHOT},
-  {MT_BABY,     wp_plasma,  50,  MT_ARACHPLAZ},
-  {MT_PAIN,     wp_nochange, 0,  MT_SKULL},
-  {MT_UNDEAD,   wp_nochange, 0,  MT_TRACER},
-  {MT_FATSO,    wp_nochange, 0,  MT_FATSHOT},
-  {MT_VILE,     wp_nochange, 0,  MT_FIRE}, // 18
-
-  {MT_HPLAYER,  wp_goldwand, 50, MT_NONE},
-  {MT_CHICKEN,  wp_beak,      0, MT_NONE},
-  {MT_MUMMY,    wp_nochange, 0, MT_NONE},
-  {MT_MUMMYLEADER, wp_nochange, 0, MT_MUMMYFX1},
-  {MT_MUMMYGHOST,  wp_nochange, 0, MT_NONE},
-  {MT_MUMMYLEADERGHOST, wp_nochange, 0, MT_MUMMYFX1},
-  {MT_BEAST,    wp_nochange, 0, MT_BEASTBALL},
-  {MT_SNAKE,    wp_nochange, 0, MT_SNAKEPRO_A},
-  {MT_HHEAD,    wp_nochange, 0, MT_HEADFX1},
-  {MT_CLINK,    wp_nochange, 0, MT_NONE},
-  {MT_WIZARD,   wp_nochange, 0, MT_WIZFX1},
-  {MT_IMP,      wp_nochange, 0, MT_NONE},
-  {MT_IMPLEADER,wp_nochange, 0, MT_IMPBALL},
-  {MT_HKNIGHT,  wp_nochange, 0, MT_KNIGHTAXE},
-  {MT_KNIGHTGHOST, wp_nochange, 0, MT_REDAXE},
-  {MT_SORCERER1, wp_nochange, 0, MT_SRCRFX1},
-  {MT_SORCERER2, wp_nochange, 0, MT_SOR2FX1},
-  {MT_MINOTAUR,  wp_nochange, 0, MT_MNTRFX1}, // 36
-
-  {MT_PLAYER_FIGHTER, wp_fpunch, 0, MT_NONE},
-  {MT_PLAYER_CLERIC, wp_cmace, 0, MT_NONE},
-  {MT_PLAYER_MAGE, wp_mwand, 0, MT_NONE}
-};
-
 
 PlayerInfo::PlayerInfo(const string & n)
 {
-  name = n;
   number = 0;
   team = 0;
-  pawntype = NULL;
-  pclass = 0;
+  name = n;
+
+  ptype = -1;
   color = 0;
-  skin = 0;
+  skin  = 0;
 
-  time = 0;
-
+  spectator = false;
+  playerstate = PST_WAITFORMAP;
   memset(&cmd, 0, sizeof(ticcmd_t));
+
+  requestmap = entrypoint = 0;
 
   viewz = viewheight = deltaviewheight = bob = 0;
   message = NULL;
@@ -141,16 +99,14 @@ PlayerInfo::PlayerInfo(const string & n)
   autoaim = false;
 
   pawn = NULL;
-  Reset(true, true);
+  mp = NULL;
+  time = 0;
+  Reset(false, true);
 };
 
 
 
-//--------------------------------------------------------------------------
-// was P_SetMessage
-
-
-bool ultimatemsg;
+static bool ultimatemsg;
 
 void PlayerInfo::SetMessage(const char *msg, bool ultmsg)
 {
@@ -165,31 +121,61 @@ void PlayerInfo::SetMessage(const char *msg, bool ultmsg)
 }
 
 
-// Reset players between levels
-void PlayerInfo::Reset(bool resetpawn, bool resetfrags)
+void PlayerInfo::ExitLevel(int nextmap, int ep)
 {
-  // if player didn't get out alive, reset his pawn anyway
-  if (playerstate != PST_LIVE)
-    resetpawn = true;
+  if (!requestmap)
+    {
+      requestmap = nextmap;
+      entrypoint = ep;
+    }
 
+  switch (playerstate) 
+    {
+    case PST_ALIVE:
+    case PST_DONE:
+      // save pawn for next level
+      pawn->Detach();
+      break;
+
+    case PST_DEAD:
+      // drop the pawn
+      pawn->player = NULL;
+      mp->QueueBody(pawn);
+      pawn = NULL;
+      break;
+
+    case PST_SPECTATOR:
+    case PST_REMOVE:
+      pawn->Remove();
+      pawn = NULL;
+
+    default:
+      break;
+    }
+
+  mp->RemovePlayer(this);
+  mp = NULL;
   playerstate = PST_WAITFORMAP;
+}
+
+
+// Reset players between levels
+void PlayerInfo::Reset(bool rpawn, bool rfrags)
+{
   kills = items = secrets = 0;
 
-  if (resetpawn)
+  if (pawn)
     {
-      // TODO: actually, only PST_LIVE players _can_ have pawns at this point...
-      if (pawn)
-	{
-	  delete pawn;
-	  pawn = NULL;
-	}
+      if (rpawn)
+	pawn->Reset();
+      pawn->powers[pw_allmap] = 0; // automap never carries over to the next map 
     }
 
   // Initial height of PointOfView
   // will be set by player think.
   viewz = 1;
 
-  if (resetfrags)
+  if (rfrags)
     {
       score = 0;
       Frags.clear();

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2003/11/12 11:07:21  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.13  2003/05/11 21:23:50  smite-meister
 // Hexen fixes
 //
@@ -80,6 +83,7 @@
 #include "dstrings.h"
 #include "p_heretic.h"
 #include "wi_stuff.h"
+#include "tables.h"
 
 //---------------------------------------------------------------------------
 // P_MinotaurSlam

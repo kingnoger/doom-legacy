@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/11/12 11:07:26  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.2  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -64,7 +67,7 @@ void F_Ticker();
 // Called by main loop.
 void F_Drawer();
 
-void F_StartFinale(const clusterdef_t *cd, bool enter, bool endgame);
+void F_StartFinale(const class MapCluster *c, bool enter, bool endgame);
 
 
 #endif

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/11/12 11:07:26  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.8  2003/05/11 21:23:51  smite-meister
 // Hexen fixes
 //
@@ -57,6 +60,7 @@
 #include "g_player.h"
 #include "g_game.h"
 
+#include "p_acs.h"
 #include "command.h"
 #include "m_random.h"
 #include "r_defs.h"
@@ -66,69 +70,12 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
-#define MAX_ACS_SCRIPT_VARS 10
-#define MAX_ACS_MAP_VARS 32
-#define MAX_ACS_WORLD_VARS 64
-#define ACS_STACK_DEPTH 32
-#define MAX_ACS_STORE 20
 
-typedef enum
-{
-  ACS_inactive,
-  ACS_running,
-  ACS_suspended,
-  ACS_waitfortag,
-  ACS_waitforpoly,
-  ACS_waitforscript,
-  ACS_terminating
-} acs_state_t;
-
-
-struct acsInfo_t
-{
-  int  number;
-  int *address;
-  int  argCount;
-  acs_state_t state;
-  int  waitValue;
-};
-
-class acs_t : public Thinker
-{
-public:
-  Actor *activator;
-  line_t *line;
-  int side;
-  int number;
-  int infoIndex;
-  int delayCount;
-  int stackPtr;
-  int stak[ACS_STACK_DEPTH];
-  int vars[MAX_ACS_SCRIPT_VARS];
-  int *ip;
-
-public:
-  acs_t(int num, int infoindex, int *ip);
-
-  virtual void Think();
-  // TODO new and delete for hub/global scripts (not PU_LEVSPEC)
-};
-
-struct acsstore_t
-{
-  int map;		// Target map
-  int script;		// Script number on target map
-  byte args[4];	// Padded to 4 for alignment
-};
-
+IMPLEMENT_CLASS(acs_t, "AC script");
+acs_t::acs_t() {}
 
 void P_ACSInitNewGame();
 void P_CheckACSStore();
-
-
-extern int MapVars[MAX_ACS_MAP_VARS];
-extern int WorldVars[MAX_ACS_WORLD_VARS];
-extern acsstore_t ACSStore[MAX_ACS_STORE+1]; // +1 for termination marker
 
 // static stuff
 
@@ -148,17 +95,6 @@ extern acsstore_t ACSStore[MAX_ACS_STORE+1]; // +1 for termination marker
 #define S_PUSH(x) ACScript->stak[ACScript->stackPtr++] = x
 
 
-
-struct acsHeader_t
-{
-  int marker;
-  int infoOffset;
-  int code;
-};
-
-
-//static bool AddToACSStore(int map, int number, byte *args);
-//static int GetACSIndex(int number);
 static void Push(int value);
 static int Pop();
 static int Top();
@@ -270,16 +206,17 @@ static int CmdEndPrintBold();
 static void ThingCount(int type, int tid);
 
 
-int MapVars[MAX_ACS_MAP_VARS];
+// global ACS stuff
 int WorldVars[MAX_ACS_WORLD_VARS];
 acsstore_t ACSStore[MAX_ACS_STORE+1]; // +1 for termination marker
 
 static acs_t *ACScript; // script being interpreted
 static Map   *ACMap;    // where it runs (shorthand)
-static int *PCodePtr;
-static byte SpecArgs[8];
-static char PrintBuffer[PRINT_BUFFER_SIZE];
-static acs_t *NewScript;
+static int   *PCodePtr;
+static byte   SpecArgs[8];
+static char   PrintBuffer[PRINT_BUFFER_SIZE];
+static acs_t *NewScript; // was a new script just started by Map::StartACS ?
+
 
 // pcode-to-function table
 static int (*PCodeCmds[])() =
@@ -403,22 +340,28 @@ void Map::LoadACScripts(int lump)
   int i;
   acsInfo_t *info;
 
+  struct acsHeader_t
+  {
+    int marker;
+    int infoOffset;
+    int code;
+  };
+
   acsHeader_t *header = (acsHeader_t *)fc.CacheLumpNum(lump, PU_LEVEL);
   ActionCodeBase = (byte *)header;
   int *buffer = (int *)((byte *)header+header->infoOffset);
   ACScriptCount = *buffer++;
-  if(ACScriptCount == 0)
-    { // Empty behavior lump
-      return;
-    }
+  if (ACScriptCount == 0)
+    return; // Empty behavior lump
+
   ACSInfo = (acsInfo_t *)Z_Malloc(ACScriptCount*sizeof(acsInfo_t), PU_LEVEL, 0);
   memset(ACSInfo, 0, ACScriptCount*sizeof(acsInfo_t));
-  for(i = 0, info = ACSInfo; i < ACScriptCount; i++, info++)
+  for (i = 0, info = ACSInfo; i < ACScriptCount; i++, info++)
     {
       info->number = *buffer++;
       info->address = (int *)((byte *)ActionCodeBase+*buffer++);
       info->argCount = *buffer++;
-      if(info->number >= OPEN_SCRIPTS_BASE)
+      if (info->number >= OPEN_SCRIPTS_BASE)
 	{ // Auto-activate
 	  info->number -= OPEN_SCRIPTS_BASE;
 	  StartOpenACS(info->number, i, info->address);
@@ -431,11 +374,10 @@ void Map::LoadACScripts(int lump)
     }
   ACStringCount = *buffer++;
   ACStrings = (char **)buffer;
-  for(i = 0; i < ACStringCount; i++)
-    {
-      ACStrings[i] += (int)ActionCodeBase;
-    }
-  memset(MapVars, 0, sizeof(MapVars));
+  for (i = 0; i < ACStringCount; i++)
+    ACStrings[i] += (int)ActionCodeBase;
+
+  memset(ACMapVars, 0, sizeof(ACMapVars));
 }
 
 //==========================================================================
@@ -502,30 +444,28 @@ bool Map::StartACS(int number, byte *args, Actor *activator, line_t *line, int s
     }
   */
   int infoIndex = GetACSIndex(number);
-  if(infoIndex == -1)
+  if (infoIndex == -1)
     { // Script not found
-      I_Error("P_StartACS: Unknown script number %d\n", number);
+      I_Error("Map::StartACS: Unknown script number %d\n", number);
     }
   acs_state_t *statePtr = &ACSInfo[infoIndex].state;
-  if(*statePtr == ACS_suspended)
+  if (*statePtr == ACS_suspended)
     { // Resume a suspended script
       *statePtr = ACS_running;
       return true;
     }
-  if(*statePtr != ACS_inactive)
-    { // Script is already executing
-      return false;
-    }
+  if (*statePtr != ACS_inactive)
+    return false; // Script is already executing
+
   acs_t *script = new acs_t(number, infoIndex, ACSInfo[infoIndex].address);
 
   script->activator = activator;
   script->line = line;
   script->side = side;
 
-  for(i = 0; i < ACSInfo[infoIndex].argCount; i++)
-    {
-      script->vars[i] = args[i];
-    }
+  for (i = 0; i < ACSInfo[infoIndex].argCount; i++)
+    script->vars[i] = args[i];
+
   *statePtr = ACS_running;
   AddThinker(script);
   NewScript = script;
@@ -583,15 +523,12 @@ static bool AddToACSStore(int map, int number, byte *args)
 
 bool Map::TerminateACS(int number)
 {
-  int infoIndex;
+  int infoIndex = GetACSIndex(number);
+  if (infoIndex == -1)
+    return false; // Script not found
 
-  infoIndex = GetACSIndex(number);
-  if(infoIndex == -1)
-    { // Script not found
-      return false;
-    }
-  if(ACSInfo[infoIndex].state == ACS_inactive
-     || ACSInfo[infoIndex].state == ACS_terminating)
+  if (ACSInfo[infoIndex].state == ACS_inactive
+      || ACSInfo[infoIndex].state == ACS_terminating)
     { // States that disallow termination
       return false;
     }
@@ -607,14 +544,11 @@ bool Map::TerminateACS(int number)
 
 bool Map::SuspendACS(int number)
 {
-  int infoIndex;
+  int infoIndex = GetACSIndex(number);
+  if (infoIndex == -1)
+    return false; // Script not found
 
-  infoIndex = GetACSIndex(number);
-  if(infoIndex == -1)
-    { // Script not found
-      return false;
-    }
-  if(ACSInfo[infoIndex].state == ACS_inactive
+  if (ACSInfo[infoIndex].state == ACS_inactive
      || ACSInfo[infoIndex].state == ACS_suspended
      || ACSInfo[infoIndex].state == ACS_terminating)
     { // States that disallow suspension
@@ -624,10 +558,6 @@ bool Map::SuspendACS(int number)
   return true;
 }
 
-//==========================================================================
-//
-// P_Init
-//
 //==========================================================================
 
 void P_ACSInitNewGame()
@@ -670,11 +600,11 @@ void acs_t::Think()
       mp->RemoveThinker(this);
       return;
     }
+
   if (mp->ACSInfo[infoIndex].state != ACS_running)
-    {
-      return;
-    }
-  if(delayCount)
+    return;
+
+  if (delayCount)
     {
       delayCount--;
       return;
@@ -688,9 +618,9 @@ void acs_t::Think()
     {
       cmd = *PCodePtr++;
       action = PCodeCmds[cmd]();
-    } while(action == SCRIPT_CONTINUE);
+    } while (action == SCRIPT_CONTINUE);
   ACScript->ip = PCodePtr;
-  if(action == SCRIPT_TERMINATE)
+  if (action == SCRIPT_TERMINATE)
     {
       mp->ACSInfo[infoIndex].state = ACS_inactive;
       mp->ScriptFinished(ACScript->number);
@@ -706,20 +636,12 @@ void acs_t::Think()
 
 void Map::TagFinished(int tag)
 {
-  int i;
+  if (TagBusy(tag) == true)
+    return;
 
-  if(TagBusy(tag) == true)
-    {
-      return;
-    }
-  for(i = 0; i < ACScriptCount; i++)
-    {
-      if(ACSInfo[i].state == ACS_waitfortag
-	 && ACSInfo[i].waitValue == tag)
-	{
-	  ACSInfo[i].state = ACS_running;
-	}
-    }
+  for (int i = 0; i < ACScriptCount; i++)
+    if (ACSInfo[i].state == ACS_waitfortag && ACSInfo[i].waitValue == tag)
+      ACSInfo[i].state = ACS_running;
 }
 
 //==========================================================================
@@ -730,19 +652,12 @@ void Map::TagFinished(int tag)
 
 void Map::PolyobjFinished(int po)
 {
-  int i;
-
   if (PO_Busy(po) == true)
     return;
 
-  for(i = 0; i < ACScriptCount; i++)
-    {
-      if(ACSInfo[i].state == ACS_waitforpoly
-	 && ACSInfo[i].waitValue == po)
-	{
-	  ACSInfo[i].state = ACS_running;
-	}
-    }
+  for (int i = 0; i < ACScriptCount; i++)
+    if(ACSInfo[i].state == ACS_waitforpoly && ACSInfo[i].waitValue == po)
+      ACSInfo[i].state = ACS_running;
 }
 
 //==========================================================================
@@ -753,16 +668,9 @@ void Map::PolyobjFinished(int po)
 
 void Map::ScriptFinished(int number)
 {
-  int i;
-
-  for(i = 0; i < ACScriptCount; i++)
-    {
-      if(ACSInfo[i].state == ACS_waitforscript
-	 && ACSInfo[i].waitValue == number)
-	{
-	  ACSInfo[i].state = ACS_running;
-	}
-    }
+  for (int i = 0; i < ACScriptCount; i++)
+    if (ACSInfo[i].state == ACS_waitforscript && ACSInfo[i].waitValue == number)
+      ACSInfo[i].state = ACS_running;
 }
 
 //==========================================================================
@@ -773,17 +681,13 @@ void Map::ScriptFinished(int number)
 
 bool Map::TagBusy(int tag)
 {
-  int sectorIndex;
-
-  sectorIndex = -1;
-  while((sectorIndex = FindSectorFromTag(tag, sectorIndex)) >= 0)
+  int sectorIndex = -1;
+  while ((sectorIndex = FindSectorFromTag(tag, sectorIndex)) >= 0)
     {
       if (sectors[sectorIndex].floordata ||
 	  sectors[sectorIndex].ceilingdata ||
 	  sectors[sectorIndex].lightingdata)
-	{
-	  return true;
-	}
+	return true;
     }
   return false;
 }
@@ -799,9 +703,7 @@ bool Map::TagBusy(int tag)
 
 int Map::GetACSIndex(int number)
 {
-  int i;
-
-  for(i = 0; i < ACScriptCount; i++)
+  for (int i = 0; i < ACScriptCount; i++)
     if (ACSInfo[i].number == number)
       return i;
 
@@ -1105,7 +1007,7 @@ static int CmdAssignScriptVar()
 
 static int CmdAssignMapVar()
 {
-  MapVars[*PCodePtr++] = Pop();
+  ACMap->ACMapVars[*PCodePtr++] = Pop();
   return SCRIPT_CONTINUE;
 }
 
@@ -1123,7 +1025,7 @@ static int CmdPushScriptVar()
 
 static int CmdPushMapVar()
 {
-  Push(MapVars[*PCodePtr++]);
+  Push(ACMap->ACMapVars[*PCodePtr++]);
   return SCRIPT_CONTINUE;
 }
 
@@ -1141,7 +1043,7 @@ static int CmdAddScriptVar()
 
 static int CmdAddMapVar()
 {
-  MapVars[*PCodePtr++] += Pop();
+  ACMap->ACMapVars[*PCodePtr++] += Pop();
   return SCRIPT_CONTINUE;
 }
 
@@ -1159,7 +1061,7 @@ static int CmdSubScriptVar()
 
 static int CmdSubMapVar()
 {
-  MapVars[*PCodePtr++] -= Pop();
+  ACMap->ACMapVars[*PCodePtr++] -= Pop();
   return SCRIPT_CONTINUE;
 }
 
@@ -1177,7 +1079,7 @@ static int CmdMulScriptVar()
 
 static int CmdMulMapVar()
 {
-  MapVars[*PCodePtr++] *= Pop();
+  ACMap->ACMapVars[*PCodePtr++] *= Pop();
   return SCRIPT_CONTINUE;
 }
 
@@ -1195,7 +1097,7 @@ static int CmdDivScriptVar()
 
 static int CmdDivMapVar()
 {
-  MapVars[*PCodePtr++] /= Pop();
+  ACMap->ACMapVars[*PCodePtr++] /= Pop();
   return SCRIPT_CONTINUE;
 }
 
@@ -1213,7 +1115,7 @@ static int CmdModScriptVar()
 
 static int CmdModMapVar()
 {
-  MapVars[*PCodePtr++] %= Pop();
+  ACMap->ACMapVars[*PCodePtr++] %= Pop();
   return SCRIPT_CONTINUE;
 }
 
@@ -1231,7 +1133,7 @@ static int CmdIncScriptVar()
 
 static int CmdIncMapVar()
 {
-  MapVars[*PCodePtr++]++;
+  ACMap->ACMapVars[*PCodePtr++]++;
   return SCRIPT_CONTINUE;
 }
 
@@ -1249,7 +1151,7 @@ static int CmdDecScriptVar()
 
 static int CmdDecMapVar()
 {
-  MapVars[*PCodePtr++]--;
+  ACMap->ACMapVars[*PCodePtr++]--;
   return SCRIPT_CONTINUE;
 }
 
@@ -1357,16 +1259,12 @@ static void ThingCount(int type, int tid)
     { // Count TID things
       while ((mobj = ACMap->FindFromTIDmap(tid, &searcher)) != NULL)
 	{
-	  if (type == 0)
-	    { // Just count TIDs
-	      count++;
-	    }
+	  if (type == 0)	    
+	    count++; // Just count TIDs
 	  else if (mobj->Type() == Thinker::tt_dactor && moType == ((DActor *)mobj)->type)
 	    {
 	      if (mobj->flags & MF_COUNTKILL && mobj->health <= 0)
-		{ // Don't count dead monsters
-		  continue;
-		}
+		continue; // Don't count dead monsters
 	      count++;
 	    }
 	}

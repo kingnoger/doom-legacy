@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/11/12 11:07:15  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.4  2003/05/30 13:34:41  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -462,15 +465,12 @@ void A_CorpseExplode(DActor *actor)
 
 void A_LeafSpawn(DActor *actor)
 {
-  Actor *mo;
-  int i;
-
-  for(i = (P_Random()&3)+1; i; i--)
+  for (int i = (P_Random()&3)+1; i; i--)
     {
-      mo = actor->mp->SpawnDActor(actor->x + ((P_Random()-P_Random())<<14), actor->y+
-				  ((P_Random()-P_Random())<<14), actor->z+(P_Random()<<14), 
-				  mobjtype_t(MT_LEAF1 + (P_Random() & 1)));
-      if(mo)
+      DActor *mo = actor->mp->SpawnDActor(actor->x + ((P_Random()-P_Random())<<14), actor->y+
+		   ((P_Random()-P_Random())<<14), actor->z + (P_Random()<<14), 
+		   mobjtype_t(MT_LEAF1 + (P_Random() & 1)));
+      if (mo)
 	{
 	  mo->Thrust(actor->angle, (P_Random()<<9)+3*FRACUNIT);
 	  mo->owner = actor;
@@ -846,7 +846,7 @@ void A_Summon(DActor *actor)
 
 void A_FogSpawn(DActor *actor)
 {
-  Actor *mo=NULL;
+  DActor *mo = NULL;
   angle_t delta;
 
   if (actor->special1-- > 0) return;
@@ -873,9 +873,9 @@ void A_FogSpawn(DActor *actor)
       mo->angle = actor->angle + (((P_Random()%delta)-(delta>>1))<<24);
       mo->owner = actor;
       if (actor->args[0] < 1) actor->args[0] = 1;
-      mo->args[0] = (P_Random() % (actor->args[0]))+1;	// Random speed
-      mo->args[3] = actor->args[3];						// Set lifetime
-      mo->args[4] = 1;									// Set to moving
+      mo->args[0] = (P_Random() % (actor->args[0])) + 1; // Random speed
+      mo->args[3] = actor->args[3];		         // Set lifetime
+      mo->args[4] = 1;				         // Set to moving
       mo->special2 = P_Random()&63;
     }
 }
@@ -915,13 +915,10 @@ void A_FogMove(DActor *actor)
 
 void A_PoisonBagInit(DActor *actor)
 {
-  Actor *mo;
+  DActor *mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z+28*FRACUNIT, MT_POISONCLOUD);
+  if (!mo)
+    return;
 
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z+28*FRACUNIT, MT_POISONCLOUD);
-  if(!mo)
-    {
-      return;
-    }
   mo->px = 1; // missile objects must move to impact other objects
   mo->special1 = 24+(P_Random()&7);
   mo->special2 = 0;
@@ -1113,9 +1110,7 @@ void A_Quake(DActor *actor)
 
 void A_TeloSpawnA(DActor *actor)
 {
-  Actor *mo;
-
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_TELOTHER_FX2);
+  DActor *mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_TELOTHER_FX2);
   if (mo)
     {
       mo->special1 = TELEPORT_LIFE;			// Lifetime countdown
@@ -1129,9 +1124,7 @@ void A_TeloSpawnA(DActor *actor)
 
 void A_TeloSpawnB(DActor *actor)
 {
-  Actor *mo;
-
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_TELOTHER_FX3);
+  DActor *mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_TELOTHER_FX3);
   if (mo)
     {
       mo->special1 = TELEPORT_LIFE;			// Lifetime countdown
@@ -1145,9 +1138,7 @@ void A_TeloSpawnB(DActor *actor)
 
 void A_TeloSpawnC(DActor *actor)
 {
-  Actor *mo;
-
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_TELOTHER_FX4);
+  DActor *mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_TELOTHER_FX4);
   if (mo)
     {
       mo->special1 = TELEPORT_LIFE;			// Lifetime countdown
@@ -1161,9 +1152,7 @@ void A_TeloSpawnC(DActor *actor)
 
 void A_TeloSpawnD(DActor *actor)
 {
-  Actor *mo;
-
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_TELOTHER_FX5);
+  DActor *mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_TELOTHER_FX5);
   if (mo)
     {
       mo->special1 = TELEPORT_LIFE;			// Lifetime countdown
@@ -1418,7 +1407,7 @@ void A_BatSpawn(DActor *actor)
   int delta = actor->args[1];
   if (delta==0) delta=1;
   angle_t angle = actor->angle + (((P_Random()%delta)-(delta>>1))<<24);
-  Actor *mo = actor->SpawnMissileAngle(MT_BAT, angle, 0);
+  DActor *mo = actor->SpawnMissileAngle(MT_BAT, angle, 0);
   if (mo)
     {
       mo->args[0] = P_Random()&63;			// floatbob index

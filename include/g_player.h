@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.9  2003/11/12 11:07:27  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.8  2003/06/20 20:56:08  smite-meister
 // Presentation system tweaked
 //
@@ -65,9 +68,10 @@ using namespace std;
 enum playerstate_t
 {
   PST_WAITFORMAP, // waiting to be assigned to a map respawn queue (by GameInfo)
-  PST_SPECTATOR,  // a ghost spectator
+  PST_SPECTATOR,  // a ghost spectator in a map. when player presses a key, he is sent to a respawn queue.
   PST_RESPAWN,    // waiting in a respawn queue (of a certain Map)
-  PST_LIVE,       // Playing or camping.
+  PST_ALIVE,      // Playing or camping.
+  PST_DONE,       // has finished the map, but continues playing
   PST_DEAD,       // Dead on the ground, view follows killer.
   PST_REMOVE      // waiting to be removed from the game
 };
@@ -77,19 +81,21 @@ class PlayerInfo
 {
   friend class GameInfo;
 public:
+  int    number;   // The player number.
+  int    team;     // index into game.teams vector
   string name;
-  int number;   // The player number.
-  int team;     // index into game.teams vector
-
-  struct pawn_info_t *pawntype; // what kind of pawn are we playing?
-  byte pclass;  // pawn class
 
   // Can be changed during the game, takes effect at next respawn.
+  int ptype; // what kind of pawn are we playing?
   int color; // skin color to be copied to each pawn
-  int skin; // skin to be copied to each pawn
+  int skin;  // skin to be copied to each pawn
 
+  bool spectator;
   playerstate_t playerstate;
   ticcmd_t  cmd;
+
+  int requestmap; // the map which we wish to enter
+  int entrypoint; // which spawning point to use
 
   // Determine POV,
   //  including viewpoint bobbing during movement.
@@ -113,14 +119,17 @@ public:
 
   bool autoaim; // using autoaim?
 
-
+  class Map        *mp;   // the map with which the player is currently associated
   class PlayerPawn *pawn; // the thing that is being controlled by this player (marine, imp, whatever)
 
 public:
 
   PlayerInfo(const string & n = "");
 
+  int Serialize(class LArchive &a);
+  int Unserialize(LArchive &a);
   // resets the player (when starting a new level, for example)
+  void ExitLevel(int nextmap, int ep);
   void Reset(bool resetpawn, bool resetfrags);
 
   void SetMessage(const char *msg, bool ultmsg = true);

@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:20  hurdler
-// Initial revision
+// Revision 1.2  2003/11/12 11:07:26  smite-meister
+// Serialization done. Map progression.
+//
+// Revision 1.1.1.1  2002/11/16 14:18:20  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.7  2002/09/17 14:26:28  vberghol
 // switch bug fixed
@@ -59,9 +62,7 @@
 #include "doomtype.h"
 #include "m_fixed.h"
 
-class Map;
-class PlayerPawn;
-struct mpoint_t;
+
 struct patch_t;
 struct event_t;
 
@@ -93,8 +94,8 @@ private:
   bool followplayer; // specifies whether to follow the player around
   bool grid;
 
-  const Map *mp;     // currently seen Map
-  const PlayerPawn *mpawn; // the pawn represented by an arrow
+  const class Map *mp;     // currently seen Map
+  const class PlayerPawn *mpawn; // the pawn represented by an arrow
 
   patch_t *marknums[10];            // numbers used for marking by the automap
 

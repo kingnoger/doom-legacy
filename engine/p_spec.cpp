@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2003/11/12 11:07:23  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.14  2003/06/20 20:56:07  smite-meister
 // Presentation system tweaked
 //
@@ -89,11 +92,10 @@
 
 #include "r_data.h"
 #include "r_state.h"
+#include "r_main.h"   //Two extra includes.
 
 #include "s_sound.h"
 #include "sounds.h"
-#include "dstrings.h" //SoM: 3/10/2000
-#include "r_main.h"   //Two extra includes.
 #include "t_script.h"
 
 #include "hardware/hw3sound.h"
@@ -1440,33 +1442,28 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
     case 74: // Teleport_NewMap
       if (!side)
 	{ // Only teleport when crossing the front side of a line
-	  if (mo->health <= 0 || mo->flags & MF_CORPSE)
-	    return false; // Activator must be alive
-
-	  ExitMap(args[0], args[1]);
-	  success = true;
-	}
-      break;
-      /*
-    case 75: // Teleport_EndGame
-      if(side == 0)
-	{ // Only teleport when crossing the front side of a line
-	  if(!(mo && mo->player && mo->player->playerstate
-	       == PST_DEAD)) // Players must be alive to teleport
+	  if (mo->health > 0 && !(mo->flags & MF_CORPSE) && cv_allowexitlevel.value)
 	    {
+	      // Activator must be alive
+	      ExitMap(mo, args[0], args[1]);
 	      success = true;
-	      if(deathmatch)
-		{ // Winning in deathmatch just goes back to map 1
-		  G_Completed(1, 0);
-		}
-	      else
-		{ // Passing -1, -1 to G_Completed() starts the Finale
-		  G_Completed(-1, -1);
-		}
 	    }
 	}
       break;
-      */
+    case 75: // Teleport_EndGame
+      if (!side)
+	{ // Only teleport when crossing the front side of a line
+	  if (mo->health > 0 && !(mo->flags & MF_CORPSE) && cv_allowexitlevel.value)
+	    {
+	      if (cv_deathmatch.value)
+		ExitMap(mo, 1, 0);// Winning in deathmatch just goes back to map 1
+	      else
+		ExitMap(mo, -1, 0);
+
+	      success = true;
+	    }
+	}
+      break;
     case 80: // ACS_Execute
       // TODO FIXME: check that args[1] is current map, else store script
       success = StartACS(args[0], &args[2], mo, line, side);
@@ -2711,8 +2708,8 @@ void Map::UpdateSpecials()
   levelflat_t *foundflats;        // for flat animation
 
   //  LEVEL TIMER
-  if (cv_timelimit.value && (ULONG)cv_timelimit.value < maptic)
-    ExitMap(0);
+  if (cv_timelimit.value && maptic > cv_timelimit.value)
+    ExitMap(NULL, 0);
 
   //  ANIMATE TEXTURES
   for (anim = anims ; anim < lastanim ; anim++)
@@ -3238,10 +3235,8 @@ void Map::SpawnSpecials()
   SoM: 3/8/2000: General scrolling functions.
 */
 
-int scroll_t::Serialize(LArchive & a)
-{
-  return 0;
-}
+IMPLEMENT_CLASS(scroll_t, "Scroller");
+scroll_t::scroll_t() {}
 
 //
 // This function, with the help of r_plane.c and r_bsp.c, supports generalized
@@ -3485,6 +3480,9 @@ void Map::SpawnScrollers()
   SoM: 3/8/2000: Friction functions start.
 */
 
+IMPLEMENT_CLASS(friction_t, "Friction");
+friction_t::friction_t() {}
+
 // constructor
 // Adds friction thinker.
 friction_t::friction_t(float fri, float mf, int aff)
@@ -3494,7 +3492,7 @@ friction_t::friction_t(float fri, float mf, int aff)
   affectee = aff;
 }
 
-int friction_t::Serialize(LArchive & a)
+int friction_t::Marshal(LArchive & a)
 {
   return 0;
 }
@@ -3609,6 +3607,8 @@ void Map::SpawnFriction()
   SoM: 3/8/2000: Push/Pull/Wind/Current functions.
 */
 
+IMPLEMENT_CLASS(pusher_t, "Pusher");
+pusher_t::pusher_t() {}
 
 #define PUSH_FACTOR 7
 
@@ -3666,11 +3666,6 @@ bool PIT_PushThing(Actor* thing)
 	}
     }
   return true;
-}
-
-int pusher_t::Serialize(LArchive & a)
-{
-  return 0;
 }
 
 // was T_Pusher 

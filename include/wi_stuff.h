@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/11/12 11:07:27  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.4  2003/06/10 22:40:01  smite-meister
 // Bugfixes
 //
@@ -68,9 +71,8 @@
 
 using namespace std;
 
-class LevelNode;
-class PlayerInfo;
-struct event_t;
+class MapCluster;
+class MapInfo;
 
 struct fragsort_t
 {
@@ -104,12 +106,12 @@ private:
   // player wants to accelerate or skip a stage
   bool acceleratestage;
 
-  // level graph pointers that contain intermission data
-  const LevelNode *level;
-  const LevelNode *nextlevel;
-
   // what animation, if any, do we show?
   int episode;
+
+  const char *interpic;
+  const char *lastlevelname;
+  const char *nextlevelname;
 
   // level numbers for old Doom style graphic levelnames and YAH's
   int next, last; 
@@ -141,14 +143,13 @@ private:
   // counters for each player
   vector<statcounter_t> cnt;
   // players that participate in the intermission
-  vector<PlayerInfo *> plrs;
+  vector<class PlayerInfo *> plrs;
 
   // level totals
   statcounter_t total;
 
-  int  cnt_time;
-  int  cnt_par;
-
+  int  cnt_time, cnt_par;
+  int  time, partime;
 
   void LoadData();
   void UnloadData();
@@ -173,13 +174,13 @@ public:
   static int s_count; // counting sound
 
   // starts the intermission
-  void Start(const LevelNode *l);
+  void Start(const MapInfo *l, const MapInfo *n);
 
   // the intermission is ended when the server says so
   void End();
 
   // accelerate stage?
-  bool Responder(event_t* ev);
+  bool Responder(struct event_t *ev);
 
   // Updates stuff each tick
   void Ticker();

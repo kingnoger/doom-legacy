@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/11/12 11:07:23  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.9  2003/06/20 20:56:07  smite-meister
 // Presentation system tweaked
 //
@@ -78,6 +81,9 @@ static void RotatePt(int an, fixed_t *x, fixed_t *y, fixed_t startSpotX, fixed_t
 
 //==========================================================================
 
+IMPLEMENT_CLASS(polyobject_t, "Polyobject rotator");
+polyobject_t::polyobject_t() {}
+
 polyobject_t::polyobject_t(int num)
 {
   polyobj = num;
@@ -100,18 +106,9 @@ polyobject_t::polyobject_t(int num, byte *args, int dir)
   speed = (args[1]*dir*(ANGLE_90/64))>>3;
 }
 
-//==========================================================================
-//
-// was T_RotatePoly
-//
-//==========================================================================
 int polyobject_t::PushForce() { return speed >> 8; }
 
-int polyobject_t::Serialize(LArchive & a)
-{
-  return 0;
-}
-
+// was T_RotatePoly
 void polyobject_t::Think()
 {
   if (mp->PO_RotatePolyobj(polyobj, speed))
@@ -195,6 +192,9 @@ bool Map::EV_RotatePoly(byte *args, int direction, bool overRide)
 
 //==========================================================================
 
+IMPLEMENT_CLASS(polymove_t, "Polyobject mover");
+polymove_t::polymove_t() {}
+
 polymove_t::polymove_t(int num, byte *args, bool timesEight, bool mirror)
   : polyobject_t(num)
 {
@@ -214,19 +214,9 @@ polymove_t::polymove_t(int num, byte *args, bool timesEight, bool mirror)
   ys = FixedMul(speed, finesine[angle]);
 }
 
-//==========================================================================
-//
-// was T_MovePoly
-//
-//==========================================================================
-
 int polymove_t::PushForce() { return speed >> 3; }
 
-int polymove_t::Serialize(LArchive & a)
-{
-  return 0;
-}
-
+// was T_MovePoly
 void polymove_t::Think()
 {
   int absSpeed;
@@ -310,12 +300,10 @@ bool Map::EV_MovePoly(byte *args, bool timesEight, bool overRide)
 //
 //==========================================================================
 
-int polydoor_t::PushForce() { return speed >> 3; }
+IMPLEMENT_CLASS(polydoor_t, "Polyobject door");
+polydoor_t::polydoor_t() {}
 
-int polydoor_t::Serialize(LArchive & a)
-{
-  return 0;
-}
+int polydoor_t::PushForce() { return speed >> 3; }
 
 void polydoor_t::Think()
 {
@@ -1380,6 +1368,7 @@ void Map::InitPolyobjs()
       mt = polyspawn[i];
       if (mt->type == PO_ANCHOR_TYPE)
 	TranslateToStartSpot(mt->angle, mt->x<<FRACBITS, mt->y<<FRACBITS);
+      mt->type = 0; // so that it won't interfere with the spawning of the real THINGS
     }
 
   // check for a startspot without an anchor point

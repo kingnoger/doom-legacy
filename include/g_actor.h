@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2003/11/12 11:07:26  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.12  2003/05/30 13:34:48  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -145,8 +148,7 @@
 
 
 // Actor flags. More or less permanent attributes of the Actor.
-
-typedef enum
+enum mobjflag_t
 {
   // physical properties
   MF_NOSECTOR         = 0x0001, // Don't link to sector (invisible but touchable)
@@ -168,24 +170,23 @@ typedef enum
   // spawning
   MF_SPAWNCEILING     = 0x4000, // Spawned hanging from the ceiling
   MF_NOTDMATCH        = 0x8000, // Not spawned in DM (keycards etc.)
-  MF_COUNTKILL       = 0x10000, // On kill, count this enemy object towards intermission kill total. Happy gathering.
-  MF_COUNTITEM       = 0x20000, // On picking up, count this item object towards intermission item total.
-  MF_NORESPAWN       = 0x40000, // Will not respawn after being picked up. Pretty similar to MF_DROPPED?
+  MF_COUNTKILL    = 0x00010000, // On kill, count this enemy object towards intermission kill total. Happy gathering.
+  MF_COUNTITEM    = 0x00020000, // On picking up, count this item object towards intermission item total.
+  MF_NORESPAWN    = 0x00040000, // Will not respawn after being picked up. Pretty similar to MF_DROPPED?
   // classification
-  MF_MISSILE         = 0x80000, // Player missiles as well as fireballs. Don't hit same species, explode on block.
-  MF_PICKUP         = 0x100000, // Can/will pick up items. (players)
-  MF_SPECIAL        = 0x200000, // Call TouchSpecialThing when touched
-  MF_NOTMONSTER     = 0x400000, // *Not affected by ML_BLOCKMONSTERS lines (PlayerPawns etc.)
+  MF_MISSILE      = 0x00080000, // Player missiles as well as fireballs. Don't hit same species, explode on block.
+  MF_PICKUP       = 0x00100000, // Can/will pick up items. (players)
+  MF_SPECIAL      = 0x00200000, // Call TouchSpecialThing when touched
+  MF_NOTMONSTER   = 0x00400000, // *Not affected by ML_BLOCKMONSTERS lines (PlayerPawns etc.)
   // misc (usually set just once)
-  MF_CORPSE         = 0x800000, // *Acts like a corpse, falls down stairs etc.
-  MF_DROPPED       = 0x1000000, // *Dropped by a monster
-  MF_AMBUSH        = 0x2000000, // *Not to be activated by sound, deaf monster.
-
-} mobjflag_t;
+  MF_CORPSE       = 0x00800000, // *Acts like a corpse, falls down stairs etc.
+  MF_DROPPED      = 0x01000000, // *Dropped by a monster
+  MF_AMBUSH       = 0x02000000, // *Not to be activated by sound, deaf monster.
+};
 
 // More semi-permanent flags. Mostly came with Heretic.
-
-typedef enum {
+enum mobjflag2_t
+{
   MF2_LOGRAV         =     0x00000001,      // alternate gravity setting
   MF2_WINDTHRUST     =     0x00000002,      // gets pushed around by the wind specials
   MF2_FLOORBOUNCE    =     0x00000004,      // bounces off the floor
@@ -200,7 +201,6 @@ typedef enum {
   MF2_ONMOBJ         =     0x00000800,      // mobj is resting on top of another mobj
   MF2_PASSMOBJ       =     0x00001000,      // Actor can move over/under other Actors 
   MF2_CANNOTPUSH     =     0x00002000,      // cannot push other pushable mobjs
-
   MF2_BOSS           =     0x00008000,      // mobj is a major boss
   MF2_FIREDAMAGE     =     0x00010000,      // does fire damage
   MF2_NODMGTHRUST    =     0x00020000,      // does not thrust target when damaging        
@@ -218,11 +218,10 @@ typedef enum {
   MF2_ICEDAMAGE		 = 0x20000000,	    // does ice damage
   MF2_SEEKERMISSILE	 = 0x40000000,	    // is a seeker (for reflection)
   MF2_REFLECTIVE	 = 0x80000000
-} mobjflag2_t;
+};
 
 // Extra flags. They describe the transient state of the Actor.
-
-typedef enum
+enum mobjeflag_t
 {
   // location
   MFE_ONGROUND      = 0x0001,  // The mobj stands on solid floor (not on another mobj or in air)
@@ -240,14 +239,17 @@ typedef enum
   MFE_JUSTHIT       = 0x0100,  // Got hit, will try to attack right back.
   MFE_JUSTATTACKED  = 0x0200,  // Will take at least one step before attacking again.
 
-  MFE_TELEPORT      = 0x1000, // *Don't cross lines or check heights in teleport move. (unused?)
-} mobjeflag_t;
+  MFE_TELEPORT      = 0x1000,  // *Don't cross lines or check heights in teleport move. (unused?)
+
+  MFE_REMOVE    = 0x80000000   // Actor will be deleted after the tic
+};
 
 
 
 // Actor class. Basis class for all things.
 class Actor : public Thinker
 {
+  DECLARE_CLASS(Actor);
 public:
   // graphic presentation
   class presentation_t *pres;
@@ -297,9 +299,6 @@ public:
   int  flags2;
   int  eflags;
 
-  // general storage, can hold pointers, ints etc. Like asking for bugs;)
-  int  special1;
-  int  special2;
 
   // Hexen fields
   short	tid;     // thing identifier
@@ -325,14 +324,13 @@ public:
   virtual thinkertype_e Type() {return tt_actor;}; // "name-tag" function
 
   // in g_actor.cpp
-  // construct a new Actor
-  Actor();
-  Actor(fixed_t nx, fixed_t ny, fixed_t nz);
-  void Remove();   // delayed destruction
+  Actor(fixed_t nx, fixed_t ny, fixed_t nz); // construct a new Actor
 
-  virtual int Serialize(class LArchive & a);
+  void Remove();  // delayed destruction
+  void Detach();  // detaches the Actor from the Map
 
   virtual void Think();
+  virtual void CheckPointers();
 
   void CheckWater(); // set some eflags if sector contains water
 
@@ -380,6 +378,7 @@ public:
 // (uses the A_* routines and the states table in info.cpp)
 class DActor : public Actor
 {
+  DECLARE_CLASS(DActor);
 public:
   mobjtype_t  type;       // what kind of thing is it?
   const mobjinfo_t *info; // basic properties    
@@ -395,6 +394,10 @@ public:
   int  threshold;  // If >0, the target will be chased no matter what (even if shot)
   int  lastlook;   // Player number last looked for.
 
+  // general storage, can hold pointers, ints etc. Like asking for bugs;)
+  int  special1;
+  int  special2;
+
 public:
   virtual thinkertype_e Type() {return tt_dactor;}; // "name-tag" function
 
@@ -402,8 +405,6 @@ public:
   DActor(mobjtype_t t);
   // create a new DActor of type t
   DActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t);
-
-  virtual int Serialize(LArchive & a);
 
   virtual void Think();
 

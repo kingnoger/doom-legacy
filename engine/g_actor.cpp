@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2003/11/12 11:07:16  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.19  2003/06/20 20:56:07  smite-meister
 // Presentation system tweaked
 //
@@ -92,7 +95,6 @@
 #include "g_pawn.h"
 #include "g_player.h"
 #include "g_input.h"
-#include "g_save.h"
 #include "p_enemy.h" // #defines
 
 #include "hu_stuff.h"
@@ -128,6 +130,9 @@ consvar_t cv_respawnmonsterstime = {"respawnmonsterstime","12",CV_NETVAR,CV_Unsi
 
 extern fixed_t FloatBobOffsets[64];
 
+IMPLEMENT_CLASS(Actor,"Actor");
+IMPLEMENT_CLASS(DActor,"DActor");
+
 int Actor::s_pickup    = sfx_None;
 int Actor::s_keypickup = sfx_None;
 int Actor::s_weaponpickup = sfx_None;
@@ -136,124 +141,47 @@ int Actor::s_teleport = sfx_None;
 int Actor::s_respawn  = sfx_None;
 int Actor::s_gibbed   = sfx_None;
 
-int Actor::Serialize(LArchive & a)
-{ 
-  // FIXME the entire serialization system!
-  /* crap?
-    // not a monster nor a picable item so don't save it
-    if( (((flags & (MF_COUNTKILL | MF_PICKUP | MF_SHOOTABLE )) == 0)
-    && (flags & MF_MISSILE)
-    && (info->doomednum !=-1) )
-    || (type == MT_BLOOD) )
-    continue;
-  */
-
-
-  /*
-  ULONG       diff;
-  if (spawnpoint && (info->doomednum !=-1)) {
-    // spawnpoint is not moddified but we must save it since it is a indentifier
-    diff = MD_SPAWNPOINT;
-    
-    if((x != spawnpoint->x << FRACBITS) ||
-       (y != spawnpoint->y << FRACBITS) ||
-       (angle != (unsigned)(ANG45 * (spawnpoint->angle/45))) ) diff |= MD_POS;
-    if(info->doomednum != spawnpoint->type)        diff |= MD_TYPE;
-  }
-  else
-    {
-      // not a map spawned thing so make it from scratch
-      diff = MD_POS | MD_TYPE;
-    }
-
-  // not the default but the most probable
-  if( z             != floorz)                       diff |= MD_Z;
-  if((px != 0)||(py != 0)||(pz != 0) )   diff |= MD_MOM;
-  if( radius        != info->radius       )          diff |= MD_RADIUS;
-  if( height        != info->height       )          diff |= MD_HEIGHT;
-  if( flags         != info->flags        )          diff |= MD_FLAGS;
-  if( flags2        != info->flags2       )          diff |= MD_FLAGS2;
-  if( health        != info->spawnhealth  )          diff |= MD_HEALTH;
-  if( reactiontime  != info->reactiontime )          diff |= MD_RTIME;
-  if( state-states  != info->spawnstate   )          diff |= MD_STATE;
-  if( tics          != state->tics        )          diff |= MD_TICS;
-  if( sprite        != state->sprite      )          diff |= MD_SPRITE;
-  if( frame         != state->frame       )          diff |= MD_FRAME;
-  if( eflags        )                                      diff |= MD_EFLAGS;
-  if( player        )                                      diff |= MD_PLAYER;
-
-  if( movedir       )                                      diff |= MD_MOVEDIR;
-  if( movecount     )                                      diff |= MD_MOVECOUNT;
-  if( threshold     )                                      diff |= MD_THRESHOLD;
-  if( lastlook      != -1 )                                diff |= MD_LASTLOOK;
-  if( target        )                                      diff |= MD_TARGET;
-  if( tracer        )                                      diff |= MD_TRACER;
-  if( friction      !=ORIG_FRICTION             )          diff |= MD_FRICTION;
-  if( movefactor    !=ORIG_FRICTION_FACTOR      )          diff |= MD_MOVEFACTOR;
-  if( special1      )                                      diff |= MD_SPECIAL1;
-  if( special2      )                                      diff |= MD_SPECIAL2;
-
-  PADSAVEP();
-  *save_p++ = tc_mobj;
-  WRITEULONG(save_p, diff);
-  // save pointer, at load time we will search this pointer to reinitilize pointers
-  WRITEULONG(save_p, (ULONG)mobj);
-
-  if( diff & MD_SPAWNPOINT )   WRITESHORT(save_p, spawnpoint-mapthings);
-  if( diff & MD_TYPE       )   WRITEULONG(save_p, type);
-  if( diff & MD_POS        ) { WRITEFIXED(save_p, x);
-  WRITEFIXED(save_p, y);
-  WRITEANGLE(save_p, angle);     }
-  if( diff & MD_Z          )   WRITEFIXED(save_p, z);
-  if( diff & MD_MOM        ) { WRITEFIXED(save_p, px);
-  WRITEFIXED(save_p, py);
-  WRITEFIXED(save_p, pz);      }
-  if( diff & MD_RADIUS     )   WRITEFIXED(save_p, radius      );
-  if( diff & MD_HEIGHT     )   WRITEFIXED(save_p, height      );
-  if( diff & MD_FLAGS      )   WRITELONG (save_p, flags       );
-  if( diff & MD_FLAGS2     )   WRITELONG (save_p, flags2      );
-  if( diff & MD_HEALTH     )   WRITELONG (save_p, health      );
-  if( diff & MD_RTIME      )   WRITELONG (save_p, reactiontime);
-  if( diff & MD_STATE      )  WRITEUSHORT(save_p, state-states);
-  if( diff & MD_TICS       )   WRITELONG (save_p, tics        );
-  if( diff & MD_SPRITE     )  WRITEUSHORT(save_p, sprite      );
-  if( diff & MD_FRAME      )   WRITEULONG(save_p, frame       );
-  if( diff & MD_EFLAGS     )   WRITEULONG(save_p, eflags      );
-  if( diff & MD_PLAYER     )   *save_p++ = player-players;
-  if( diff & MD_MOVEDIR    )   WRITELONG (save_p, movedir     );
-  if( diff & MD_MOVECOUNT  )   WRITELONG (save_p, movecount   );
-  if( diff & MD_THRESHOLD  )   WRITELONG (save_p, threshold   );
-  if( diff & MD_LASTLOOK   )   WRITELONG (save_p, lastlook    );
-  if( diff & MD_TARGET     )   WRITEULONG(save_p, (ULONG)target      );
-  if( diff & MD_TRACER     )   WRITEULONG(save_p, (ULONG)tracer      );
-  if( diff & MD_FRICTION   )   WRITELONG (save_p, friction    );
-  if( diff & MD_MOVEFACTOR )   WRITELONG (save_p, movefactor  );
-  if( diff & MD_SPECIAL1   )   WRITELONG (save_p, special1    );
-  if( diff & MD_SPECIAL2   )   WRITELONG (save_p, special2    );
-  */
-  return 0;
-}
-
-int DActor::Serialize(LArchive & a)
-{
-  //Actor::Serialize(a);
-
-  a << byte(type);
-  
-  return 0;
-}
 
 //----------------------------------------------
 // trick constructors
-//
 
 Actor::Actor()
 {
+  mp = NULL;
+
   pres = NULL;
   snext = sprev = bnext = bprev = NULL;
   subsector = NULL;
+
+  floorz = ceilingz = 0;
+  touching_sectorlist = NULL;
+  spawnpoint = NULL;
+
+  x = y = z = 0;
+  angle = aiming = 0;
+  px = py = pz = 0;
+
+  flags = flags2 = eflags = 0;
+
+  special = tid = 0;
+  args[0] = args[1] = args[2] = args[3] = args[4] = 0;
+
+  owner = target = NULL;
+
+  reactiontime = 0;
+  floorclip = 0;
 }
 
+DActor::DActor()
+  : Actor()
+{
+  type = MT_NONE;
+  info = NULL;
+  state = NULL;
+  tics = movedir = movecount = threshold = 0;
+  lastlook = -1;
+  special1 = special2 = 0;
+}
 
 DActor::DActor(mobjtype_t t)
   : Actor()
@@ -262,8 +190,8 @@ DActor::DActor(mobjtype_t t)
 }
 
 //----------------------------------------------
-// was P_SpawnMobj, see Map::SpawnActor
-//
+//  Normal constructors
+
 Actor::Actor(fixed_t nx, fixed_t ny, fixed_t nz)
   : Thinker()
 {
@@ -285,7 +213,6 @@ Actor::Actor(fixed_t nx, fixed_t ny, fixed_t nz)
   // some attributes left uninitialized here
   flags = flags2 = eflags = 0;
 
-  special1 = special2 = 0;
   special = tid = 0;
   args[0] = args[1] = args[2] = args[3] = args[4] = 0;
 
@@ -317,8 +244,8 @@ DActor::DActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
     reactiontime = 0;
 
   movedir = movecount = threshold = 0;
-
-  lastlook = -1;  // stuff moved in P_enemy.P_LookForPlayer
+  lastlook = -1;
+  special1 = special2 = 0;
 
   // do not set the state with SetState,
   // because action routines can not be called yet
@@ -334,23 +261,61 @@ DActor::DActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
 }
 
 
+// NULLs pointers to objects that will be deleted soon
+void Actor::CheckPointers()
+{
+  if (owner && (owner->eflags & MFE_REMOVE))
+    owner = NULL;
+
+  if (target && (target->eflags & MFE_REMOVE))
+    target = NULL;
+}
+
+
+// detaches the Actor from the Map
+void Actor::Detach()
+{
+  void P_DelSeclist(msecnode_t *p);
+
+  UnsetPosition();
+
+  if (touching_sectorlist)
+    {
+      P_DelSeclist(touching_sectorlist);
+      touching_sectorlist = NULL;
+    }
+
+  eflags |= MFE_REMOVE; // so that pointers to it will be NULLed
+
+  // save the presentation too
+  if (pres)
+    Z_ChangeTag(pres, PU_STATIC);
+
+  mp->DetachThinker(this);
+}
+
+
+
 //----------------------------------------------
-// was P_RemoveMobj
-//
+
 void Actor::Remove()
 {
-  extern consvar_t cv_itemrespawn;
-  // lazy deallocation/destruction: memory freed next time it thinks.
+  // Lazy deallocation: Memory freed only after pointers to this object
+  // have been NULLed in Map::RunThinkers()
 
   if (mp == NULL)
-    return; // already removed, waiting deletion
-
-  if (mp == reinterpret_cast<Map *>(-1))
     {
       // in transit between maps/levels
       delete this;
       return;
     }
+
+  if (eflags & MFE_REMOVE)
+    return; // already marked for removal
+
+  eflags |= MFE_REMOVE;
+
+  extern consvar_t cv_itemrespawn;
 
   if ((flags & MF_SPECIAL) && !(flags & MF_DROPPED) &&
       !(flags & MF_NORESPAWN) && cv_itemrespawn.value)
@@ -374,7 +339,7 @@ void Actor::Remove()
   // stop any playing sound
   S.Stop3DSound(this);
 
-  // free block
+  // remove it from active Thinker list, add it to the removal list
   mp->RemoveThinker(this);
 }
 
@@ -569,7 +534,6 @@ void Actor::Think()
 }
 
 
-// was P_GetMoveFactor()
 // returns the value by which the x,y
 // movements are multiplied to add to player movement.
 const float normal_friction = 0.90625f; // 0xE800
@@ -642,8 +606,6 @@ float Actor::GetMoveFactor()
 
 
 //-----------------------------------------
-// was P_XYMovement
-//
 
 void Actor::XYMovement()
 {
@@ -1048,9 +1010,9 @@ void Actor::CheckWater()
     eflags &= ~(MFE_UNDERWATER|MFE_TOUCHWATER);
 
   /*
-    if( (eflags ^ oldeflags) & MFE_TOUCHWATER)
+    if ((eflags ^ oldeflags) & MFE_TOUCHWATER)
     CONS_Printf("touchewater %d\n",eflags & MFE_TOUCHWATER ? 1 : 0);
-    if( (eflags ^ oldeflags) & MFE_UNDERWATER)
+    if ((eflags ^ oldeflags) & MFE_UNDERWATER)
     CONS_Printf("underwater %d\n",eflags & MFE_UNDERWATER ? 1 : 0);
   */
 }
@@ -1179,7 +1141,7 @@ bool P_SetMobjStateNF(Actor *mobj, statenum_t state)
 {
   state_t *st;
     
-  if(state == S_NULL)
+  if (state == S_NULL)
     { // Remove mobj
       P_RemoveMobj(mobj);
       return(false);
@@ -1255,7 +1217,7 @@ DActor *DActor::SpawnMissile(Actor *dest, mobjtype_t type)
   fixed_t  mz;
 
 #ifdef PARANOIA
-  if(!dest)
+  if (!dest)
     I_Error("P_SpawnMissile : no dest");
 #endif
   switch (type)

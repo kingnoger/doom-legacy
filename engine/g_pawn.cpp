@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.19  2003/11/12 11:07:18  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.18  2003/06/29 17:33:59  smite-meister
 // VFile system, PAK support, Hexen bugfixes
 //
@@ -74,10 +77,95 @@
 #include "m_random.h"
 
 
+// lists of mobjtypes that can be played by humans!
+pawn_info_t pawndata[] = 
+{
+  {MT_PLAYER,   wp_pistol,  50, MT_NONE}, // 0
+  {MT_POSSESSED, wp_pistol,  20, MT_NONE},
+  {MT_SHOTGUY,  wp_shotgun,  8, MT_NONE},
+  {MT_TROOP,    wp_nochange, 0, MT_TROOPSHOT},
+  {MT_SERGEANT, wp_nochange, 0, MT_NONE},
+  {MT_SHADOWS,  wp_nochange, 0, MT_NONE},
+  {MT_SKULL,    wp_nochange, 0, MT_NONE},
+  {MT_HEAD,     wp_nochange, 0, MT_HEADSHOT},
+  {MT_BRUISER,  wp_nochange, 0, MT_BRUISERSHOT},
+  {MT_SPIDER,   wp_chaingun, 100, MT_NONE},
+  {MT_CYBORG,   wp_missile,  20,  MT_NONE}, //10
+
+  {MT_WOLFSS,   wp_chaingun, 50, MT_NONE},
+  {MT_CHAINGUY, wp_chaingun, 50, MT_NONE},
+  {MT_KNIGHT,   wp_nochange, 0,  MT_BRUISERSHOT},
+  {MT_BABY,     wp_plasma,  50,  MT_ARACHPLAZ},
+  {MT_PAIN,     wp_nochange, 0,  MT_SKULL},
+  {MT_UNDEAD,   wp_nochange, 0,  MT_TRACER},
+  {MT_FATSO,    wp_nochange, 0,  MT_FATSHOT},
+  {MT_VILE,     wp_nochange, 0,  MT_FIRE}, // 18
+
+  {MT_HPLAYER,  wp_goldwand, 50, MT_NONE},
+  {MT_CHICKEN,  wp_beak,      0, MT_NONE},
+  {MT_MUMMY,    wp_nochange, 0, MT_NONE},
+  {MT_MUMMYLEADER, wp_nochange, 0, MT_MUMMYFX1},
+  {MT_MUMMYGHOST,  wp_nochange, 0, MT_NONE},
+  {MT_MUMMYLEADERGHOST, wp_nochange, 0, MT_MUMMYFX1},
+  {MT_BEAST,    wp_nochange, 0, MT_BEASTBALL},
+  {MT_SNAKE,    wp_nochange, 0, MT_SNAKEPRO_A},
+  {MT_HHEAD,    wp_nochange, 0, MT_HEADFX1},
+  {MT_CLINK,    wp_nochange, 0, MT_NONE},
+  {MT_WIZARD,   wp_nochange, 0, MT_WIZFX1},
+  {MT_IMP,      wp_nochange, 0, MT_NONE},
+  {MT_IMPLEADER,wp_nochange, 0, MT_IMPBALL},
+  {MT_HKNIGHT,  wp_nochange, 0, MT_KNIGHTAXE},
+  {MT_KNIGHTGHOST, wp_nochange, 0, MT_REDAXE},
+  {MT_SORCERER1, wp_nochange, 0, MT_SRCRFX1},
+  {MT_SORCERER2, wp_nochange, 0, MT_SOR2FX1},
+  {MT_MINOTAUR,  wp_nochange, 0, MT_MNTRFX1}, // 36
+
+  {MT_PLAYER_FIGHTER, wp_fpunch, 0, MT_NONE},
+  {MT_PLAYER_CLERIC, wp_cmace, 0, MT_NONE},
+  {MT_PLAYER_MAGE, wp_mwand, 0, MT_NONE},
+  {MT_PIGPLAYER, wp_snout, 0, MT_NONE}
+};
+
+
+
+IMPLEMENT_CLASS(Pawn, "Pawn");
+IMPLEMENT_CLASS(PlayerPawn, "PlayerPawn");
+
+Pawn::Pawn()
+  : Actor()
+{
+  color = 0;
+  maxhealth = 0;
+  speed = 0;
+  pinfo = NULL;
+  attacker = NULL;
+}
+
+PlayerPawn::PlayerPawn()
+  : Pawn()
+{
+  player = NULL;
+  weaponinfo = NULL;
+  maxammo = NULL;
+}
+
 // Pawn methods
 
-// virtuals
 void Pawn::Think() {}
+
+void Pawn::CheckPointers()
+{
+  if (owner && (owner->eflags & MFE_REMOVE))
+    owner = NULL;
+
+  if (target && (target->eflags & MFE_REMOVE))
+    target = NULL;
+
+  if (attacker && (attacker->eflags & MFE_REMOVE))
+    attacker = NULL;
+}
+
+
 bool Pawn::Morph() { return false; }
 bool Pawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 { return false; }
@@ -89,23 +177,18 @@ PlayerPawn::~PlayerPawn()
   delete pres; // delete the presentation object too
 }
 
-int PlayerPawn::Serialize(LArchive & a)
-{
-  return 0;
-}
 
-void P_UpdateBeak(PlayerPawn *p, pspdef_t *psp);
 
 // added 2-2-98 for hacking with dehacked patch
 int initial_health=100; //MAXHEALTH;
 int initial_bullets=50;
 
 // creates a pawn based on a Doom/Heretic mobj
-Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, const pawn_info_t *t)
+Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, int type)
   : Actor(x, y, z)
 {
-  pinfo = t;
-  const mobjinfo_t *info = &mobjinfo[t->mt];
+  pinfo = &pawndata[type];
+  const mobjinfo_t *info = &mobjinfo[pinfo->mt];
 
   mass   = info->mass;
   radius = info->radius;
@@ -127,9 +210,18 @@ Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, const pawn_info_t *t)
 }
 
 
-PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, const pawn_info_t *t)
-  : Pawn(nx, ny, nz, t)
+PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, int type)
+  : Pawn(nx, ny, nz, type)
 {
+  const float AutoArmorSave[] = { 0.0, 0.15, 0.10, 0.05, 0.0 };
+  // TODO fix this kludge when you feel like adding toughness to pawndata array...
+  if (type >= 37)
+    pclass = type - 36;
+  else
+    pclass = 0;
+
+  toughness = AutoArmorSave[pclass];
+
   int i;
   // note! here Map *mp is not yet set! This means you can't call functions such as
   // SetPosition that have something to do with a map.
@@ -138,8 +230,6 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, const pawn_info_t *t)
   flags2 |= (MF2_WINDTHRUST | MF2_SLIDE | MF2_PASSMOBJ | MF2_TELESTOMP);
 
   player = NULL;
-
-  pclass = 0;
 
   morphTics = 0;
 
@@ -195,9 +285,7 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, const pawn_info_t *t)
   extralight = fixedcolormap = 0;
 
   // crap
-  flyheight = flamecount = 0;
-  
-  rain1 = rain2 = NULL;
+  flyheight = 0;
 }
 
 
@@ -366,8 +454,8 @@ void PlayerPawn::Think()
   if (morphTics)
     {
       // Chicken attack counter
-      if (chickenPeck)
-	chickenPeck -= 3;
+      if (attackphase)
+	attackphase -= 3;
       // Attempt to undo the chicken
       if (--morphTics == 0)
 	UndoMorph();
@@ -463,8 +551,6 @@ void PlayerPawn::Think()
 //
 #define ANG5    (ANG90/18)
 
-//static bool onground;
-
 void PlayerPawn::DeathThink()
 {
   MovePsprites();
@@ -508,10 +594,7 @@ void PlayerPawn::DeathThink()
     }
   
   if (player->cmd.buttons & BT_USE)
-    {
-      mp->RebornPlayer(player);
-      special2 = 666;
-    }
+    mp->RebornPlayer(player);
 }
 
 
@@ -526,7 +609,7 @@ void PlayerPawn::MorphThink()
     {
       if (health > 0)
 	// Handle beak movement
-	P_UpdateBeak(this, &psprites[ps_weapon]);
+	psprites[ps_weapon].sy = WEAPONTOP + (attackphase << (FRACBITS-1));
 
       if (morphTics & 15)
 	return;
@@ -658,39 +741,34 @@ void PlayerPawn::XYFriction(fixed_t oldx, fixed_t oldy, bool oldfriction)
 //-----------------------------------------------------
 //
 // was G_PlayerFinishLevel
-//  Called when a player completes a level alive.
-//  throws away extra items, removes powers, keys, curses
+//  Called when a player exits a map.
+//  Throws away extra items, removes powers, keys, curses
 
-void PlayerPawn::FinishLevel()
+void PlayerPawn::Reset()
 {
-  int i, n;
-
-  n = inventory.size();
+  int i, n = inventory.size();
   for (i=0; i<n; i++)
     if (inventory[i].count > 1) 
       inventory[i].count = 1; // why? not fair
 
+  /*
   if (!cv_deathmatch.value)
     for(i = 0; i < MAXARTECONT; i++)
       UseArtifact(arti_fly);
-  memset(powers, 0, sizeof (powers));
+  */
 
-  weaponinfo = wpnlev1info;    // cancel power weapons
   keycards = 0;
+  memset(powers, 0, sizeof (powers));
+  weaponinfo = wpnlev1info;    // cancel power weapons
   flags &= ~MF_SHADOW;         // cancel invisibility
-  extralight = 0;                  // cancel gun flashes
-  fixedcolormap = 0;               // cancel ir gogles
+  extralight = 0;              // cancel gun flashes
+  fixedcolormap = 0;           // cancel ir goggles
 
   if (morphTics)
     {
-      readyweapon = (weapontype_t)special1; // Restore weapon
+      readyweapon = weapontype_t(attackphase); // Restore weapon
       morphTics = 0;
     }
-  rain1 = NULL; //FIXME! instead rain actor should have an owner playerpawn!
-  rain2 = NULL;
-
-  // save pawn for next level
-  mp->DetachActor(this);
 }
 
 
@@ -774,7 +852,7 @@ bool PlayerPawn::GivePower(int /*powertype_t*/ power)
 	return false;
       powers[power] = INVULNTICS;
       flags2 |= MF2_INVULNERABLE;
-      //if (class == PCLASS_MAGE) flags2 |= MF2_REFLECTIVE;
+      if (pclass == 3) flags2 |= MF2_REFLECTIVE; // Hexen mage
       break;
 
     case pw_weaponlevel2:
@@ -865,7 +943,7 @@ bool PlayerPawn::UndoMorph()
   fixed_t r = radius;
   fixed_t h = height;
 
-  mobjinfo_t *i = &mobjinfo[player->pawntype->mt];
+  mobjinfo_t *i = &mobjinfo[pawndata[player->ptype].mt];
 
   radius = i->radius;
   height = i->height;
@@ -891,7 +969,7 @@ bool PlayerPawn::UndoMorph()
   DActor *fog = mp->SpawnDActor(x+20*finecosine[ang], y+20*finesine[ang],
 				z+TELEFOGHEIGHT, MT_TFOG);
   S_StartSound(fog, sfx_telept);
-  PostMorphWeapon(weapontype_t(special1));
+  PostMorphWeapon(weapontype_t(attackphase));
 
   /*
   if(oldFlags2 & MF2_FLY)
@@ -953,7 +1031,7 @@ void PlayerPawn::CalcHeight(bool onground)
   // move viewheight
   fixed_t viewheight = cv_viewheight.value << FRACBITS; // default eye view height
 
-  if (pl->playerstate == PST_LIVE)
+  if (pl->playerstate == PST_ALIVE)
     {
       pl->viewheight += pl->deltaviewheight;
 
@@ -1207,9 +1285,9 @@ void PlayerPawn::ProcessSpecialSector(sector_t *sector, bool instantdamage)
           // EXIT SUPER DAMAGE! (for E1M8 finale)
 	  cheats &= ~CF_GODMODE;
 	  Damage(NULL, NULL, 20);
-          if ((health <= 10) && cv_allowexitlevel.value)
+          if (health <= 10)
 	    {
-	      mp->ExitMap(0);
+	      mp->ExitMap(this, 0);
 	      return;
 	    }
 	}

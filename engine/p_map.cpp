@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2003/11/12 11:07:22  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.14  2003/06/10 22:39:56  smite-meister
 // Bugfixes
 //
@@ -89,6 +92,7 @@
 #include "sounds.h"
 
 #include "r_splats.h"
+#include "tables.h"
 
 #include "z_zone.h"
 

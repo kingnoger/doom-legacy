@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/11/12 11:07:21  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.6  2003/05/11 21:23:50  smite-meister
 // Hexen fixes
 //
@@ -61,14 +64,9 @@
 #include "s_sound.h"
 #include "sounds.h"
 #include "m_random.h"
+#include "tables.h"
 
 // Macros
-
-#define LOWERSPEED FRACUNIT*6
-#define RAISESPEED FRACUNIT*6
-#define WEAPONBOTTOM 128*FRACUNIT
-#define WEAPONTOP 32*FRACUNIT
-#define MAGIC_JUNK 1234
 
 #define FLAME_THROWER_TICS      (10*TICRATE)
 
@@ -165,16 +163,6 @@ void PlayerPawn::PostMorphWeapon(weapontype_t weapon)
   SetPsprite(ps_weapon, weaponinfo[weapon].upstate);
 }
 
-//---------------------------------------------------------------------------
-//
-// PROC P_UpdateBeak
-//
-//---------------------------------------------------------------------------
-
-void P_UpdateBeak(PlayerPawn *p, pspdef_t *psp)
-{
-  psp->sy = WEAPONTOP+(p->chickenPeck << (FRACBITS-1));
-}
 
 //---------------------------------------------------------------------------
 //
@@ -250,7 +238,7 @@ void A_BeakAttackPL1(PlayerPawn *p, pspdef_t *psp)
       p->angle = R_PointToAngle2(p->x, p->y, linetarget->x, linetarget->y);
     }
   S_StartSound(p, sfx_chicpk1+(P_Random()%3));
-  p->chickenPeck = 12;
+  p->attackphase = 12;
   psp->tics -= P_Random()&7;
 }
 
@@ -276,7 +264,7 @@ void A_BeakAttackPL2(PlayerPawn *p, pspdef_t *psp)
       p->angle = R_PointToAngle2(p->x, p->y, linetarget->x, linetarget->y);
     }
   S_StartSound(p, sfx_chicpk1+(P_Random()%3));
-  p->chickenPeck = 12;
+  p->attackphase = 12;
   psp->tics -= P_Random()&3;
 }
 
@@ -548,25 +536,20 @@ void A_FireMacePL1B(PlayerPawn *p, pspdef_t *psp)
 
 void A_FireMacePL1(PlayerPawn *p, pspdef_t *psp)
 {
-  Actor *ball;
-
-  if(P_Random() < 28)
+  if (P_Random() < 28)
     {
       A_FireMacePL1B(p, psp);
       return;
     }
-  if(p->ammo[am_mace] < USE_MACE_AMMO_1)
-    {
-      return;
-    }
+  if (p->ammo[am_mace] < USE_MACE_AMMO_1)
+    return;
+
   p->ammo[am_mace] -= USE_MACE_AMMO_1;
   psp->sx = ((P_Random()&3)-2)*FRACUNIT;
   psp->sy = WEAPONTOP+(P_Random()&3)*FRACUNIT;
-  ball = p->SPMAngle(MT_MACEFX1, p->angle +(((P_Random()&7)-4)<<24));
+  DActor *ball = p->SPMAngle(MT_MACEFX1, p->angle +(((P_Random()&7)-4)<<24));
   if (ball)
-    {
-      ball->special1 = 16; // tics till dropoff
-    }
+    ball->special1 = 16; // tics till dropoff
 }
 
 //----------------------------------------------------------------------------
@@ -601,6 +584,7 @@ void A_MacePL1Check(DActor *ball)
 // PROC A_MaceBallImpact
 //
 //----------------------------------------------------------------------------
+#define MAGIC_JUNK 1234
 
 void A_MaceBallImpact(DActor *ball)
 {
@@ -881,7 +865,7 @@ void A_FireSkullRodPL2(PlayerPawn *p, pspdef_t *psp)
   p->ammo[am_skullrod] -=
     cv_deathmatch.value ? USE_SKRD_AMMO_1 : USE_SKRD_AMMO_2;
  
- Actor *mi = p->SpawnPlayerMissile(MT_HORNRODFX2);
+  DActor *mi = p->SpawnPlayerMissile(MT_HORNRODFX2);
   // Use mi instead of the return value from
   // P_SpawnPlayerMissile because we need to give info to the mobj
   // even if it exploded immediately.
@@ -889,7 +873,6 @@ void A_FireSkullRodPL2(PlayerPawn *p, pspdef_t *psp)
     {
       if (game.multiplayer)
         { // Multi-player game
-	  //mi->special2 = p-players;
 	  mi->special2 = p->player->number;
 	  mi->owner = p;
         }
@@ -924,17 +907,9 @@ void A_SkullRodPL2Seek(DActor *actor)
 void A_AddPlayerRain(DActor *actor)
 {
   /*
-    int playerNum = game.multiplayer ? actor->special2 : 0;
-    if (!playeringame[playerNum])
-    { // Player left the game
-    return;
-    }
-    player = &players[playerNum];
-    if (p->health <= 0)
-    { // Player is dead
-    return;
-    }
-  */
+    // this code used to limit the number of active rains for each player, but
+    // I removed it for convenience. Besides, each rain only lasts for 4 seconds.
+
   Actor *o = actor->owner;
 
   if (o == NULL || o->health <= 0)
@@ -973,6 +948,7 @@ void A_AddPlayerRain(DActor *actor)
     {
       p->rain1 = actor;
     }
+  */
 }
 
 //----------------------------------------------------------------------------
@@ -984,20 +960,13 @@ void A_AddPlayerRain(DActor *actor)
 void A_SkullRodStorm(DActor *actor)
 {
   fixed_t x, y;
-  //int playerNum;
-  Actor *o = actor->owner;
 
   if (actor->health-- == 0)
     {
       actor->SetState(S_NULL);
+
       /*
-      playerNum = game.multiplayer ? actor->special2 : 0;
-      if(!playeringame[playerNum])
-	{ // Player left the game
-	  return;
-	}
-      p = &players[playerNum];
-      */
+      Actor *o = actor->owner;
       if (o == NULL)
 	return;
 
@@ -1013,6 +982,7 @@ void A_SkullRodStorm(DActor *actor)
 	      p->rain2 = NULL;
 	    }
 	}
+      */
       return;
     }
 
@@ -1115,7 +1085,7 @@ void A_PhoenixPuff(DActor *actor)
 
 void A_InitPhoenixPL2(PlayerPawn *p, pspdef_t *psp)
 {
-  p->flamecount = FLAME_THROWER_TICS;
+  p->attackphase = FLAME_THROWER_TICS;
 }
 
 //----------------------------------------------------------------------------
@@ -1132,7 +1102,7 @@ void A_FirePhoenixPL2(PlayerPawn *p, pspdef_t *psp)
   fixed_t x, y, z;
   fixed_t slope;
 
-  if(--p->flamecount == 0)
+  if(--p->attackphase == 0)
     { // Out of flame
       p->SetPsprite(ps_weapon, S_PHOENIXATK2_4);
       p->refire = 0;

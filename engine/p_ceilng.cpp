@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/11/12 11:07:19  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.6  2003/06/20 20:56:07  smite-meister
 // Presentation system tweaked
 //
@@ -55,6 +58,9 @@
 // ==========================================================================
 //                              CEILINGS
 // ==========================================================================
+
+IMPLEMENT_CLASS(ceiling_t, "Ceiling");
+ceiling_t::ceiling_t() {}
 
 int ceiling_t::ceilmovesound = 0;
 
@@ -123,11 +129,6 @@ ceiling_t::ceiling_t(int ty, sector_t *sec, fixed_t usp, fixed_t dsp, int cru, f
     }
 }
 
-
-int ceiling_t::Serialize(LArchive & a)
-{
-  return 0;
-}
 
 //
 // was T_MoveCeiling

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/11/12 11:07:26  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.7  2003/07/02 17:52:46  smite-meister
 // VDir fix
 //
@@ -35,13 +38,8 @@
 //
 //
 // DESCRIPTION:
-//   LevelNode class.
+//   MapCluster class.
 //-----------------------------------------------------------------------------
-
-// These are used to build a graph describing connections
-// between maps, e.g. which map follows which. A levelnode
-// also holds all the necessary information for the intermission/finale
-// following the level.
 
 #ifndef g_level_h
 #define g_level_h 1
@@ -51,50 +49,48 @@
 
 using namespace std;
 
-// (implemented as sparse graphs). These generalize map ordering.
-// idea: each map has n "exit methods". These could be
-// normal exits, secret exits, portals etc. Each exit number
-// corresponds to a destination in the 'exit' map.
-// note! several exits in the Map can have the same exit number,
-// exit numbers can be remapped to point to new destinations.
+// These are used to group maps together. All maps within a cluster
+// share the same intermission. When a cluster is entered/exited, a finale may
+// take place. Clusters are also used for hubs.
+// They roughly correspond to Hexen/ZDoom clusters and Doom/Heretic episodes.
 
-// for now it's simple: exit[0] is the normal exit, exit[100] secret exit
-// exits are pointers to new levelnodes. NULL means episode ends here.
 
-class LevelNode
+class MapCluster
 {
   friend class GameInfo;
   friend class Map;
 
 public:
-  unsigned  number;     // unique level number
-  unsigned  cluster;    // level cluster (for finales, hubs etc. See p_info.h)
-  string    levelname;  // nice long name
+  int    number;     // unique levelcluster number
+  string clustername;  // nice long name for the cluster ("Knee-deep in the dead")
 
-  unsigned entrypoint;  // the requested entry point in this level (Hexen)  
-  map<int, LevelNode *> exit;  // remapping of exit numbers
-  LevelNode *exitused;  // exit used when the map was last exited
+  bool   hub;       // if true, save the maps when they are exited.
+  bool   keepstuff; // if true, keys and powers are never taken away inside this cluster
 
-  bool done;            // has it been finished yet?
+  vector<class MapInfo *> maps; // the maps which make up this level
 
-  vector<class MapInfo_t *> contents; // the maps which make up this level
+  int kills, items, secrets;  // cluster totals
+  int time, partime; // the time it took to complete cluster, partime (in s)
 
-public:
-  int kills, items, secrets;  // level totals
-  int time, partime; // the time it took to complete level, partime (in s)
+  // intermission data
+  string interpic;  // intermission background picture lumpname
+  string intermusic;
 
-  // old Doom relics, deprecated
-  // Scripting is a better solution for new levels.
-  int BossDeathKey; // What will boss deaths accomplish?
+  // finale data
+  string entertext;
+  string exittext;
+  string finalepic;
+  string finalemusic;
+  int    episode; // which finale to show?
 
-  // intermission data for the level.
-  int episode; // Episode. Only used to decide which intermission to show.
-  string interpic; // intermission background picture lumpname
-  //intermission music lumpname?
+  MapCluster();
+  MapCluster(int n);
 
-public:
-  LevelNode();
-  LevelNode(class MapInfo_t *info);
+  void Ticker();
+  void Finish(int nextmap, int ep);
+
+  int Serialize(class LArchive &a);
+  int Unserialize(LArchive &a);
 };
 
 

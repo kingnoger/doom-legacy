@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/11/12 11:07:27  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.6  2003/05/30 13:34:49  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -37,13 +40,18 @@
 //
 //
 // DESCRIPTION:
-//   Thinkers. It starts.
+//   TypeInfo. Thinkers. It starts.
 //
 //-----------------------------------------------------------------------------
 
 
 #ifndef g_think_h
 #define g_think_h 1
+
+//==========================================================
+// The information here applies to the original C code.
+// It is saved for learning purposes.
+//==========================================================
 
 // Thinkers are used to implement all dynamic properties of a Doom map,
 // eg. monsters, moving doors etc.
@@ -83,24 +91,72 @@
 // friction_t: T_Friction
 // pusher_t: T_Pusher
 
-// discrepancies towards a new-class -style mobj creation: P_BlasterMobjThinker (mobj_t)
+// note also P_BlasterMobjThinker
+
 
 #include <map>
 #include <vector>
 
+using namespace std;
 
-// Dynamic map elements, stored in a doubly linked list.
+class Thinker;
+
+//==========================================================
+// TypeInfo
+// A RTTI helper class for Thinkers, used in serialization.
+
+// When a Thinker class is implemented, the corresponding typeinfo object
+// should be (statically) constructed (which adds its code to the map etc.)
+
+class TypeInfo
+{
+private:
+  typedef Thinker* (*thinker_factory_t)();
+  static map<unsigned, TypeInfo*> IDmap; // mapping from ID numbers to TypeInfo instances
+
+public:
+  unsigned           type_id; // class/type ID number
+  const char        *name;    // a plaintext name for the class/type
+  thinker_factory_t  factory; // well, a factory for the class
+  // could contain even more info about the class
+
+  TypeInfo(const char *n, thinker_factory_t f);
+  static TypeInfo *Find(unsigned code);
+};
+
+class LArchive;
+
+// macro used in declaring Thinker classes (defines the TypeInfo/serialization related members)
+#define DECLARE_CLASS(cls) \
+protected: \
+  static TypeInfo _type; \
+  static inline Thinker *Create() { return new (cls); }; \
+public: \
+  virtual TypeInfo *_Type() const { return &_type; }; \
+  cls(); \
+  virtual int Marshal(LArchive &a)
+
+
+
+// this macro implements the stuff declared in DECLARE_CLASS
+#define IMPLEMENT_CLASS(c,name) \
+TypeInfo c::_type((name), c::Create)
+
+
+
+//==========================================================
+// Thinker: All dynamic map elements, stored in a doubly linked list.
 // Base class for most game objects.
 class Thinker
 {
   friend class Map;
-private:
-  typedef std::map<Thinker *, int> IDmap_t;
-  typedef std::vector<Thinker *> IDvec_t;
-  typedef std::map<Thinker *, int>::iterator IDmap_iter_t;
 
+  DECLARE_CLASS(Thinker);
+
+private:
   Thinker  *prev;
   Thinker  *next;
+
 public:
   Map *mp; // the map where the thinker is situated
 
@@ -115,24 +171,25 @@ public:
     tt_dactor,
     tt_other
   };
+  // TODO should be replaced by _Type()
   virtual thinkertype_e Type() {return tt_thinker;}; // "name-tag" function
 
   // constructor and destructor
-  Thinker();
   virtual ~Thinker();
 
   // serialization (save/load)
-  virtual int Serialize(class LArchive & a);
+  static int Serialize(Thinker *p, LArchive &a);
+  static Thinker *Unserialize(LArchive &a);
 
-  // what it actually does;)
+  // what it actually does :)
   virtual void Think() {}
 
-  // memory management
-  void *operator new (size_t size);
+  // pointer management
+  virtual void CheckPointers() {}
 
-  // Deallocation is lazy -- it will not actually be freed
-  // until its thinking turn comes up.
-  void operator delete (void *mem);
+  // memory management
+  void *operator new(size_t size);
+  void  operator delete(void *mem);
 };
 
 

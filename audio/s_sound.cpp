@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2003/11/12 11:07:14  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.16  2003/07/02 17:52:46  smite-meister
 // VDir fix
 //
@@ -101,12 +104,12 @@ extern int msg_id;
 #include "m_random.h"
 #include "r_main.h"     //R_PointToAngle2() used to calc stereo sep.
 #include "r_things.h"     // for skins
-#include "p_info.h"
 #include "d_main.h"
 
 #include "i_sound.h"
 #include "s_sound.h"
 #include "sounds.h"
+#include "tables.h"
 
 #include "w_wad.h"
 #include "z_zone.h"
@@ -166,6 +169,9 @@ consvar_t surround = {"surround", "0", CV_SAVE, CV_OnOff};
 #define SURROUND_SEP            -128
 #endif
 
+
+bool  nomusic;    
+bool  nosound;
 
 SoundSystem S;
 

@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.9  2003/11/12 11:07:26  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.8  2003/06/10 22:39:58  smite-meister
 // Bugfixes
 //
@@ -290,7 +293,7 @@ void SF_Clock()
 
 void SF_ExitLevel()
 {
-  game.ExitLevel(-1, 0); // TODO! lots of ways to exit!
+  current_map->ExitMap(NULL, 0, 0); // TODO! lots of ways to exit!
 }
 
         // centremsg

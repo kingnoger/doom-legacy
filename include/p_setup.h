@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/11/12 11:07:27  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.3  2003/04/19 17:38:47  smite-meister
 // SNDSEQ support, tools, linedef system...
 //
@@ -38,9 +41,6 @@
 #define p_setup_h 1
 
 struct mapthing_t;
-
-extern int lastloadedmaplumpnum; // for comparative savegame
-
 
 typedef unsigned char byte;
 

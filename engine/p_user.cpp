@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2003/11/12 11:07:23  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.13  2003/06/29 17:33:59  smite-meister
 // VFile system, PAK support, Hexen bugfixes
 //
@@ -81,10 +84,8 @@
 #include "r_sprite.h"
 #include "s_sound.h"
 #include "sounds.h"
-#include "p_setup.h"
 #include "m_random.h"
-
-
+#include "tables.h"
 
 #include "hardware/hw3sound.h"
 
@@ -282,26 +283,29 @@ void PlayerPawn::Move()
 
 void P_ArtiTele(PlayerPawn *p)
 {
-  int i, n = p->mp->dmstarts.size();
   fixed_t destX;
   fixed_t destY;
   angle_t destAngle;
   extern  consvar_t  cv_deathmatch;
+  int i;
 
-
+  mapthing_t *m;
   if (cv_deathmatch.value)
     {
+      int n = p->mp->dmstarts.size();
       i = P_Random() % n;
-      destX = p->mp->dmstarts[i]->x << FRACBITS;
-      destY = p->mp->dmstarts[i]->y << FRACBITS;
-      destAngle = ANG45*(p->mp->dmstarts[i]->angle/45);
+      m = p->mp->dmstarts[i];
     }
   else
     {
-      destX = p->mp->playerstarts[0]->x<<FRACBITS;
-      destY = p->mp->playerstarts[0]->y<<FRACBITS;
-      destAngle = ANG45*(p->mp->playerstarts[0]->angle/45);
+      multimap<int, mapthing_t *>::iterator s;
+      s = p->mp->playerstarts.begin(); // TODO probably not the smartest possible behavior
+      m = (*s).second;
     }
+  destX = m->x << FRACBITS;
+  destY = m->y << FRACBITS;
+  destAngle = ANG45*(m->angle/45);
+
   p->Teleport(destX, destY, destAngle);
   S_StartAmbSound(sfx_wpnup); // Full volume laugh
 }

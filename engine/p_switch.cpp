@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/11/12 11:07:23  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.8  2003/05/30 13:34:47  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -69,6 +72,11 @@
 
 #include "w_wad.h"
 #include "z_zone.h"
+
+
+IMPLEMENT_CLASS(button_t, "Button");
+button_t::button_t() {}
+
 
 struct switchdef_t
 {
@@ -262,12 +270,6 @@ button_t::button_t(line_t *l, button_e w, int tex, int time)
   texture = tex;
   timer = time;
   soundorg = &line->frontsector->soundorg;
-}
-
-
-int button_t::Serialize(LArchive & a)
-{
-  return 0;
 }
 
 

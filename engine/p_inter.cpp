@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2003/11/12 11:07:22  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.18  2003/06/29 17:33:59  smite-meister
 // VFile system, PAK support, Hexen bugfixes
 //
@@ -99,6 +102,7 @@
 #include "sounds.h"
 #include "r_sprite.h"
 #include "r_main.h"
+#include "tables.h"
 
 #include "hu_stuff.h" // HUD
 
@@ -563,10 +567,7 @@ bool Actor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
   // do the damage
   health -= damage;
   if (health <= 0)
-    {
-      special1 = damage;
-      Die(inflictor, source);
-    }
+    Die(inflictor, source);
 
   return true;
 }

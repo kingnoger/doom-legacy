@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/11/12 11:07:22  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.3  2003/06/20 20:56:07  smite-meister
 // Presentation system tweaked
 //
@@ -45,6 +48,8 @@
 //                           Sector light effects
 // =========================================================================
 
+IMPLEMENT_CLASS(lightfx_t, "Light FX");
+lightfx_t::lightfx_t() {}
 
 lightfx_t::lightfx_t(sector_t *s, lightfx_e t, short maxl, short minl, short maxt, short mint)
 {
@@ -60,12 +65,6 @@ lightfx_t::lightfx_t(sector_t *s, lightfx_e t, short maxl, short minl, short max
     mintime = mint;
 
   s->lightingdata = this;
-}
-
-
-int lightfx_t::Serialize(LArchive & a)
-{
-  return 0;
 }
 
 
@@ -398,12 +397,8 @@ static int PhaseTable[64] =
   32, 32, 48, 64, 80, 96, 112, 128
 };
 
-
-int phasedlight_t::Serialize(LArchive & a)
-{
-  return 0;
-}
-
+IMPLEMENT_CLASS(phasedlight_t, "Phased light");
+phasedlight_t::phasedlight_t() {}
 
 void phasedlight_t::Think()
 {

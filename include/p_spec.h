@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2003/11/12 11:07:27  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.13  2003/06/20 20:56:08  smite-meister
 // Presentation system tweaked
 //
@@ -162,6 +165,7 @@ enum sectorspecial_t
 class polyobject_t : public Thinker
 {
   friend class Map;
+  DECLARE_CLASS(polyobject_t);
 protected:  
   int polyobj;
   int speed;
@@ -170,7 +174,7 @@ protected:
 public:
   polyobject_t(int num);
   polyobject_t(int num, byte *args, int dir);
-  virtual int  Serialize(LArchive & a);
+  
   virtual void Think();
   virtual int  PushForce();
 };
@@ -178,13 +182,14 @@ public:
 class polymove_t : public polyobject_t
 {
   friend class Map;
+  DECLARE_CLASS(polymove_t);
 protected:
   int angle;
   fixed_t xs, ys;
 
 public:
   polymove_t(int num, byte *args, bool timesEight, bool mirror);
-  virtual int  Serialize(LArchive & a);
+  
   virtual void Think();
   virtual int  PushForce();
 };
@@ -193,6 +198,7 @@ public:
 class polydoor_t : public polyobject_t
 {
   friend class Map;
+  DECLARE_CLASS(polydoor_t);
 public:
   enum podoor_e
   {
@@ -207,12 +213,12 @@ protected:
   fixed_t xs, ys;
   int tics;
   int waitTics;
-  podoor_e type;
+  byte type; // podoor_e
   bool close;
 
 public:
   polydoor_t(int num, int type, byte *args, bool mirror);
-  virtual int  Serialize(LArchive & a);
+  
   virtual void Think();
   virtual int  PushForce();
 };
@@ -236,6 +242,7 @@ enum
 class lightfx_t : public Thinker
 {
   friend class Map;
+  DECLARE_CLASS(lightfx_t);
 protected:
   sector_t *sec;
   short     type;
@@ -265,7 +272,7 @@ public:
   };
 
   lightfx_t(sector_t *sec, lightfx_e type, short maxlight, short minlight = 0, short maxtime = 0, short mintime = 0);
-  virtual int  Serialize(LArchive & a);
+  
   virtual void Think();
 };
 
@@ -278,6 +285,7 @@ public:
 class phasedlight_t: public Thinker
 {
   friend class Map;
+  DECLARE_CLASS(phasedlight_t);
 protected:
   sector_t *sec;
   short base;
@@ -285,7 +293,7 @@ protected:
 
 public:
   phasedlight_t(sector_t *sec, int base, int index);
-  virtual int  Serialize(LArchive & a);
+  
   virtual void Think();
 };
 
@@ -299,6 +307,7 @@ void P_InitSwitchList();
 class button_t : public Thinker
 {
   friend class Map;
+  DECLARE_CLASS(button_t);
 public:
   enum button_e
   {
@@ -313,13 +322,13 @@ private:
   mappoint_t *soundorg;
   int     texture;
   int     timer;
-  button_e where;
+  byte where; // button_e
 
 public:
   static int buttonsound;
 
   button_t(line_t *l, button_e w, int tex, int time);
-  virtual int  Serialize(LArchive & a);
+  
   virtual void Think();
 };
 
@@ -363,6 +372,7 @@ enum change_e
 class plat_t : public Thinker
 {
   friend class Map;
+  DECLARE_CLASS(plat_t);
 public:
   enum plat_e
   {
@@ -391,19 +401,19 @@ public:
   };
 
 private:
-  int         type;
-  sector_t   *sector;
-  fixed_t     speed;
-  fixed_t     low, high;
-  int         wait, count;
-  status_e    status, oldstatus;
-  int         tag;
+  int       type;
+  sector_t *sector;
+  fixed_t   speed;
+  fixed_t   low, high;
+  int       wait, count;
+  byte      status, oldstatus; // status_e
+  int       tag;
 
   list<plat_t *>::iterator li;
 
 public:
   plat_t(int type, sector_t *sec, int tag, fixed_t speed, int wait, fixed_t height);
-  virtual int  Serialize(LArchive & a);
+  
   virtual void Think();
 };
 
@@ -420,6 +430,7 @@ public:
 class vdoor_t : public Thinker
 {
   friend class Map;
+  DECLARE_CLASS(vdoor_t);
 public:
   enum vdoor_e
   {
@@ -448,7 +459,7 @@ public:
   static int s_close, s_bclose, s_open, s_bopen; // sounds
 
   vdoor_t(byte type, sector_t *sec, fixed_t speed, int delay, line_t *line);
-  virtual int  Serialize(LArchive & a);
+  
   virtual void Think();
   void MakeSound(bool open) const;
 };
@@ -468,6 +479,7 @@ public:
 class ceiling_t : public Thinker
 {
   friend class Map;
+  DECLARE_CLASS(ceiling_t);
 public:
 
   enum ceiling_e
@@ -513,7 +525,7 @@ public:
   static int ceilmovesound;
 
   ceiling_t(int ty, sector_t *sec, fixed_t usp, fixed_t dsp, int cru, fixed_t height);
-  virtual int  Serialize(LArchive & a);
+  
   virtual void Think();
 };
 
@@ -538,6 +550,7 @@ enum stair_e
 class floor_t : public Thinker
 {
   friend class Map;
+  DECLARE_CLASS(floor_t);
 public:
   enum floor_e
   {
@@ -576,7 +589,7 @@ public:
 
 public:
   floor_t(int type, sector_t *sec, fixed_t speed, int crush, fixed_t height);
-  virtual int  Serialize(LArchive & a);
+  
   virtual void Think();
 };
 
@@ -584,6 +597,7 @@ public:
 class elevator_t : public Thinker
 {
   friend class Map;
+  DECLARE_CLASS(elevator_t);
 public:
   enum elevator_e
   {
@@ -602,7 +616,7 @@ private:
 
 public:
   elevator_t(int ty, sector_t *s, line_t *l);
-  virtual int  Serialize(LArchive & a);
+  
   virtual void Think();
 };
 
@@ -855,7 +869,7 @@ typedef enum
 class scroll_t : public Thinker
 {
   friend class Map;
-
+  DECLARE_CLASS(scroll_t);
 public:
   enum scroll_e
   {
@@ -869,7 +883,7 @@ public:
   };
 
 private:
-  scroll_e  type;
+  byte type; // scroll_e
   fixed_t   vx, vy;    // scroll speeds
   int       affectee;  // Number of affected sidedef, sector, tag, or whatever
   sector_t *control;   // Control sector (NULL if none) used to control scrolling
@@ -880,7 +894,7 @@ private:
 public:
 
   scroll_t(scroll_e type, fixed_t dx, fixed_t dy, sector_t *csec, int aff, bool acc);
-  virtual int  Serialize(LArchive & a);
+  
   virtual void Think();
 };
 
@@ -890,13 +904,14 @@ public:
 class friction_t : public Thinker
 {
   friend class Map;
+  DECLARE_CLASS(friction_t);
 private:
   float friction;        // friction value (E800 = normal)
   float movefactor;      // inertia factor when adding to momentum
   int   affectee;        // Number of affected sector
 public:
   friction_t(float fri, float mf, int aff);
-  virtual int  Serialize(LArchive & a);
+  
   virtual void Think();
 };
 
@@ -907,7 +922,7 @@ extern const float normal_friction;
 class pusher_t : public Thinker
 {
   friend class Map;
-
+  DECLARE_CLASS(pusher_t);
 public:
   enum pusher_e
   {
@@ -920,7 +935,7 @@ public:
   };
 
 private:
-  pusher_e type;
+  byte type; // pusher_e
   DActor *source;     // Point source if point pusher
   int x_mag, y_mag;   // X, Y Strength
   int magnitude;      // Vector strength for point pusher
@@ -930,7 +945,7 @@ private:
 
 public:
   pusher_t(pusher_e t, int x_m, int y_m, DActor *src, int aff);
-  virtual int  Serialize(LArchive & a);
+  
   virtual void Think();
 
   friend bool PIT_PushThing(Actor *thing);

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/11/12 11:07:19  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.9  2003/06/20 20:56:07  smite-meister
 // Presentation system tweaked
 //
@@ -60,7 +63,7 @@
 #include "g_game.h"
 #include "g_pawn.h"
 #include "g_map.h"
-#include "g_player.h"
+//#include "g_player.h"
 
 #include "dstrings.h"
 #include "s_sound.h"
@@ -81,6 +84,8 @@ int vdoor_t::s_bopen = 0;
 int vdoor_t::s_close = 0;
 int vdoor_t::s_bclose = 0;
 
+IMPLEMENT_CLASS(vdoor_t, "Door");
+vdoor_t::vdoor_t() {}
 
 // constructor
 vdoor_t::vdoor_t(byte t, sector_t *s, fixed_t sp, int delay, line_t *li)
@@ -125,11 +130,6 @@ vdoor_t::vdoor_t(byte t, sector_t *s, fixed_t sp, int delay, line_t *li)
     }
 }
 
-
-int vdoor_t::Serialize(LArchive & a)
-{
-  return 0;
-}
 
 //
 // was T_VerticalDoor
@@ -389,15 +389,15 @@ int Map::EV_DoDoor(line_t *line, Actor *mo, byte type, fixed_t speed, int delay)
   else
     {
       // tag == 0, door is on the other side of the linedef
-      PlayerPawn *p = mo ? ((mo->Type() == Thinker::tt_ppawn) ? (PlayerPawn *)mo : NULL) : NULL;
-
+      //PlayerPawn *p = mo ? ((mo->Type() == Thinker::tt_ppawn) ? (PlayerPawn *)mo : NULL) : NULL;
+      bool good = mo->flags & MF_NOTMONSTER;
       vdoor_t*   door;
 
       //SoM: 3/6/2000
       // if the wrong side of door is pushed, give oof sound
-      if (line->sidenum[1] == -1)
+      if (line->sidenum[1] == -1 && good)
 	{
-	  S_StartScreamSound(p, sfx_oof);    // killough 3/20/98
+	  S_StartScreamSound(mo, sfx_oof);    // killough 3/20/98
 	  return 0;
 	}
 
@@ -413,7 +413,7 @@ int Map::EV_DoDoor(line_t *line, Actor *mo, byte type, fixed_t speed, int delay)
 		door->direction = 1;    // go back up
 	      else if (GET_SPAC(line->flags) != SPAC_PUSH) // so that you can get them open
 		{
-		  if (!p)
+		  if (!good)
 		    return 0;            // JDC: bad guys never close doors
 
 		  door->direction = -1;   // start going down immediately

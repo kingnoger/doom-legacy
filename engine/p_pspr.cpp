@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/11/12 11:07:23  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.10  2003/06/29 17:33:59  smite-meister
 // VFile system, PAK support, Hexen bugfixes
 //
@@ -76,14 +79,11 @@
 #include "sounds.h"
 #include "r_main.h"
 #include "m_random.h"
+#include "tables.h"
 
 #include "hardware/hw3sound.h"
 
-#define LOWERSPEED              FRACUNIT*6
-#define RAISESPEED              FRACUNIT*6
 
-#define WEAPONBOTTOM            128*FRACUNIT
-#define WEAPONTOP               32*FRACUNIT
 
 // FIXME TESTING: play any creature!
 // changes: S_PLAY => info->spawnstate
@@ -285,6 +285,7 @@ void PlayerPawn::BringUpWeapon()
     }
     
   pendingweapon = wp_nochange;
+  attackphase = 0;
   psprites[ps_weapon].sy = WEAPONBOTTOM;
 
   SetPsprite(ps_weapon, newstate);

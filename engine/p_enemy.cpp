@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/11/12 11:07:20  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.10  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -97,6 +100,7 @@
 #include "sounds.h"
 #include "m_random.h"
 #include "p_maputl.h"
+#include "tables.h"
 
 #include "hardware/hw3sound.h"
 

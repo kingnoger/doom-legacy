@@ -117,8 +117,20 @@ export LD = $(CC)
 export objdir = objs
 
 export engine_objects = \
+	$(objdir)/g_game.o \
 	$(objdir)/g_state.o \
+	$(objdir)/g_demo.o \
+	$(objdir)/g_input.o \
 	$(objdir)/g_level.o \
+	$(objdir)/g_mapinfo.o \
+	$(objdir)/g_map.o \
+	$(objdir)/g_player.o \
+	$(objdir)/g_think.o \
+	$(objdir)/g_actor.o \
+	$(objdir)/g_pawn.o \
+	$(objdir)/p_tick.o \
+	$(objdir)/p_setup.o \
+	$(objdir)/p_saveg.o \
 	$(objdir)/p_spec.o \
 	$(objdir)/p_floor.o \
 	$(objdir)/p_plats.o \
@@ -126,10 +138,16 @@ export engine_objects = \
 	$(objdir)/p_doors.o \
 	$(objdir)/p_genlin.o \
 	$(objdir)/p_things.o \
+	$(objdir)/p_lights.o \
+	$(objdir)/p_switch.o \
 	$(objdir)/p_poly.o \
 	$(objdir)/p_acs.o \
 	$(objdir)/a_action.o \
+	$(objdir)/p_pspr.o \
+	$(objdir)/p_hpspr.o \
 	$(objdir)/p_xpspr.o \
+	$(objdir)/p_enemy.o \
+	$(objdir)/p_henemy.o \
 	$(objdir)/p_xenemy.o \
 	$(objdir)/info_s.o \
 	$(objdir)/info_m.o \
@@ -140,46 +158,27 @@ export engine_objects = \
 	$(objdir)/t_vari.o \
 	$(objdir)/t_script.o \
 	$(objdir)/t_func.o \
+	$(objdir)/p_map.o \
+	$(objdir)/p_maputl.o \
+	$(objdir)/p_sight.o \
+	$(objdir)/p_hsight.o \
+	$(objdir)/p_telept.o \
+	$(objdir)/p_heretic.o \
+	$(objdir)/p_camera.o \
+	$(objdir)/p_user.o \
+	$(objdir)/p_inter.o \
+	$(objdir)/am_map.o \
 	$(objdir)/m_menu.o \
 	$(objdir)/f_finale.o \
 	$(objdir)/f_wipe.o \
 	$(objdir)/wi_stuff.o \
-	$(objdir)/am_map.o \
 	$(objdir)/st_lib.o \
 	$(objdir)/st_stuff.o \
-	$(objdir)/g_save.o \
-	$(objdir)/g_player.o \
-	$(objdir)/g_game.o \
-	$(objdir)/g_demo.o \
-	$(objdir)/g_map.o \
-	$(objdir)/p_maputl.o \
-	$(objdir)/g_think.o \
-	$(objdir)/g_actor.o \
-	$(objdir)/g_pawn.o \
-	$(objdir)/g_input.o \
-	$(objdir)/d_main.o \
+	$(objdir)/hu_stuff.o \
 	$(objdir)/m_cheat.o \
-	$(objdir)/p_lights.o \
-	$(objdir)/p_telept.o \
-	$(objdir)/p_switch.o \
-	$(objdir)/p_enemy.o \
-	$(objdir)/p_henemy.o \
-	$(objdir)/p_heretic.o \
-	$(objdir)/p_camera.o \
-	$(objdir)/p_user.o \
-	$(objdir)/p_pspr.o \
-	$(objdir)/p_hpspr.o \
-	$(objdir)/p_tick.o \
-	$(objdir)/p_sight.o \
-	$(objdir)/p_hsight.o \
-	$(objdir)/p_info.o \
-	$(objdir)/p_setup.o \
-	$(objdir)/p_saveg.o \
-	$(objdir)/p_map.o \
-	$(objdir)/p_inter.o \
 	$(objdir)/p_fab.o \
 	$(objdir)/d_items.o \
-	$(objdir)/hu_stuff.o \
+	$(objdir)/d_main.o \
 	$(objdir)/dstrings.o
 
 
@@ -188,6 +187,7 @@ export util_objects = \
 	$(objdir)/console.o \
 	$(objdir)/dehacked.o \
 	$(objdir)/m_argv.o \
+	$(objdir)/m_archive.o \
 	$(objdir)/m_bbox.o \
 	$(objdir)/m_dll.o \
 	$(objdir)/m_fixed.o \

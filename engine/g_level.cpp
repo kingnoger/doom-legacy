@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.3  2003/11/12 11:07:17  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.2  2003/07/02 17:52:46  smite-meister
 // VDir fix
 //
@@ -29,69 +32,65 @@
 //
 //
 // DESCRIPTION:
-//   Implementation of LevelNode class
+//   Implementation of MapCluster class
 //
 //-----------------------------------------------------------------------------
 
 #include "g_game.h"
 #include "g_level.h"
-#include "p_info.h"
+#include "g_mapinfo.h"
+#include "g_map.h"
 #include "dstrings.h"
 #include "sounds.h"
 
+#include "z_zone.h"
 
-LevelNode::LevelNode()
+// default cluster constructor
+MapCluster::MapCluster()
 {
   number = 0;
-  cluster = 0;
-
-  entrypoint = 0;
-  exitused = NULL;
-  done = false;
-};
-
-
-// one MapInfo_t per level -constructor
-LevelNode::LevelNode(MapInfo_t *info)
-{
-  number    = info->mapnumber;
-  cluster   = info->cluster;
-
-  levelname = info->nicename;
-
-  entrypoint = 0;
-  exitused = NULL;
-  done = false;
-
-  contents.push_back(info);
+  keepstuff = hub = false;
+  episode = 0;
 
   kills = items = secrets = 0;
   time = partime = 0;
+};
 
-  BossDeathKey = 0;
-  episode = 1;
 
-  // FIXME what kind of intermission should we show?
-  switch (game.mode)
-    {
-    case gm_doom2:
-    case gm_hexen:
-      interpic = "INTERPIC";
-      break;
-    case gm_heretic:
-      interpic = "MAPE0";
-      break;
-    default:
-      interpic = "WIMAP0";
-    }
+MapCluster::MapCluster(int n)
+{
+  number = n;
+  keepstuff = hub = false;
+  episode = 0;
 
-  // all set except exit (which cannot be set yet)
+  kills = items = secrets = 0;
+  time = partime = 0;
 }
 
 
+// ticks the entire cluster forward in time
+void MapCluster::Ticker()
+{
+  int i, n = maps.size();
+  for (i=0; i<n; i++)
+    maps[i]->Ticker(hub);
+}
 
-// creates a LevelNode graph based on the 'mapinfo' data.
-int GameInfo::Create_MAPINFO_levelgraph(int lump)
+
+// called before moving on to a new cluster
+void MapCluster::Finish(int nextmap, int ep)
+{
+ int i, n = maps.size();
+  for (i=0; i<n; i++)
+    maps[i]->Close(nextmap, ep);
+
+  Z_FreeTags(PU_LEVEL, PU_PURGELEVEL-1); // destroys pawns if they are not Detached
+}
+
+
+//==================================================================
+// creates a MapCluster graph based on the MAPINFO data.
+int GameInfo::Create_MAPINFO_game(int lump)
 {
   if (lump < 0)
     return -1;
@@ -99,50 +98,31 @@ int GameInfo::Create_MAPINFO_levelgraph(int lump)
   CONS_Printf("Reading MAPINFO lump... ");
 
   int num;
-  int n = P_Read_MAPINFO(lump);
+  int n = Read_MAPINFO(lump);
   if (n <= 0)
     return 0;
 
-  map<int, LevelNode *>::iterator t;
-  for (t = levelgraph.begin(); t != levelgraph.end(); t++)
-    delete (*t).second;
-  levelgraph.clear();
+  MapInfo *m;
 
-  map<int, MapInfo_t *>::iterator i;
-  LevelNode *l;
-
-  // One level per map.
-  // When using MAPINFO, we don't really need the extra layer of flexibility
-  // that the LevelNode::exit remapping offers. This creates a mapping in which
-  // exit number x is mapped to map (or level) number x.
-
-  map<int, LevelNode *> warptransmap;
+  // warptrans. wtf were you thinking?!?! time to unravel the warptrans numbering.
+  map<int, MapInfo *> warptransmap;
+  mapinfo_iter_t i;
   for (i = mapinfo.begin(); i != mapinfo.end(); i++)
     {
-      l = new LevelNode((*i).second); // generate the corresponding LevelNode
-      num = ((*i).second)->mapnumber;
-      levelgraph[num] = l;
-      // Now I'm starting to get pissed. warptrans, wtf were you thinking?!?!
-      num = ((*i).second)->warptrans; 
-      warptransmap[num] = l;      
+      m = (*i).second;
+      num = m->warptrans; 
+      warptransmap[num] = m;
     }
 
-  // now just put the correct exit data in the LevelNodes
-  for (t = levelgraph.begin(); t != levelgraph.end(); t++)
+  // now just put the correct exit data in the MapInfos
+  for (i = mapinfo.begin(); i != mapinfo.end(); i++)
     {
-      l = (*t).second;
-      l->exit = levelgraph; // Blessed STL. The exits map directly to levels.
+      m = (*i).second;
 
-      MapInfo_t *info = l->contents[0];
       // set normal and secret exits
       // 'nextlevel' overrides 'next'
-      if (info->nextlevel > 0)
-	l->exit[0] = levelgraph[info->nextlevel];
-      else if (info->warpnext > 0)
-	l->exit[0] = warptransmap[info->warpnext];
-
-      if (info->secretlevel > 0)
-	l->exit[100] = levelgraph[info->secretlevel];
+      if (m->nextlevel < 0 && m->warpnext > 0)
+	m->nextlevel = warptransmap[m->warpnext]->mapnumber;
     }
 
   CONS_Printf(" ...done. %d maps.\n", n);
@@ -153,13 +133,11 @@ int GameInfo::Create_MAPINFO_levelgraph(int lump)
 
 //==================================================================
 // This function recreates the classical Doom/DoomII/Heretic maplist
-// using episode and game.mode info
+// using episode and game.mode
 // Most of the original game dependent crap is here,
 // all the other code is general and clean.
 
-// P_FindLevelName() moves into history.
-
-int GameInfo::Create_Classic_levelgraph(int episode)
+int GameInfo::Create_classic_game(int episode)
 {
   const char *HereticSky[5] = {"SKY1", "SKY2", "SKY3", "SKY1", "SKY3"};
 
@@ -199,11 +177,10 @@ int GameInfo::Create_Classic_levelgraph(int episode)
 
   int i, n, base, base2;
   char name[9];
-  MapInfo_t *p;
-  LevelNode *l;
-  clusterdef_t *cd;
+  MapInfo *p;
+  MapCluster *c;
 
-  P_Clear_mapinfo_clusterdef();
+  Clear_mapinfo_clusterdef();
 
   // convention: Doom/Heretic normal exit is exit number 0, secret is exit number 100.
   // (room for Hexen exits 1-99)
@@ -227,8 +204,8 @@ int GameInfo::Create_Classic_levelgraph(int episode)
       n = 32;
       for (i=0; i<n; i++)
 	{
-	  p = new MapInfo_t;
-	  p->mapnumber = i;
+	  p = new MapInfo;
+	  p->mapnumber = i + 1;
 	  sprintf(name, "MAP%2.2d", i+1);
 	  p->lumpname = name;
 	  p->nicename = text[base + i];
@@ -240,44 +217,40 @@ int GameInfo::Create_Classic_levelgraph(int episode)
 	  else
 	    p->sky1 = "SKY3";
 	  p->musiclump = MusicNames[mus_runnin + i];
-
-	  l = new LevelNode(p);
-	  l->interpic = "INTERPIC";
-
-	  mapinfo[i] = p;
-	  levelgraph[i] = l;
+	  p->nextlevel = i + 2;
+	  mapinfo[i+1] = p;
 	}
 
-      for (i=0; i<29; i++)
-	levelgraph[i]->exit[0] = levelgraph[i+1]; // next level
+      mapinfo[30]->nextlevel = -1; // finish
+      mapinfo[31]->nextlevel = 16; // return from secret
+      mapinfo[32]->nextlevel = 16; // return from ss
 
-      levelgraph[29]->exit[0] = NULL; // finish
-      levelgraph[30]->exit[0] = levelgraph[15]; // return from secret
-      levelgraph[31]->exit[0] = levelgraph[15]; // return from ss
+      mapinfo[15]->secretlevel = 31; // secret
+      mapinfo[31]->secretlevel = 32; // super secret
+      
+      mapinfo[7]->BossDeathKey = 32+64; // fatsos and baby spiders
+      mapinfo[30]->BossDeathKey = 256;  // brain
+      mapinfo[32]->BossDeathKey = 128;  // keen
 
-      levelgraph[14]->exit[100] = levelgraph[30]; // secret
-      levelgraph[30]->exit[100] = levelgraph[31]; // super secret
+      // 1-6,7-11,12-20,21-30, ,31,32
+      for (i=1; i<7; i++)   mapinfo[i]->cluster = 1;
+      for (i=7; i<12; i++)  mapinfo[i]->cluster = 2;
+      for (i=12; i<21; i++) mapinfo[i]->cluster = 3;
+      for (i=21; i<31; i++) mapinfo[i]->cluster = 4;
+      mapinfo[31]->cluster = 5;
+      mapinfo[32]->cluster = 6;
 
-      levelgraph[6]->BossDeathKey = 32+64; // fatsos and baby spiders
-      levelgraph[29]->BossDeathKey = 256;  // brain
-      levelgraph[31]->BossDeathKey = 128;  // keen
-
-      levelgraph[6]->cluster  = 1;
-      levelgraph[11]->cluster = 2;
-      levelgraph[20]->cluster = 3;
-      levelgraph[29]->cluster = 4;
-      levelgraph[30]->cluster = 5;
-      levelgraph[31]->cluster = 6;
       for (i=0; i<6; i++)
 	{
-	  clusterdef[i+1] = cd = new clusterdef_t(i+1);
-	  cd->entertext = text[base2+i];
-	  cd->flatlump = DoomIIFlat[i];
-	  cd->musiclump = "D_READ_M";
-	  cd->episode = episode;
+	  clustermap[i+1] = c = new MapCluster(i+1);
+	  c->interpic = "INTERPIC";
+	  if (i < 4)
+	    c->exittext = text[base2+i];
+	  else
+	    c->entertext = text[base2+i];
+	  c->finalepic = DoomIIFlat[i];
+	  c->finalemusic = "D_READ_M";
 	}
-      clusterdef[3]->entertext = "";
-      clusterdef[3]->exittext = text[base2+3];      
       break;
 
     case gm_doom1s:
@@ -292,44 +265,34 @@ int GameInfo::Create_Classic_levelgraph(int episode)
       n = 9;
       for (i=0; i<n; i++)
 	{
-	  p = new MapInfo_t;
-	  p->mapnumber = i;
+	  p = new MapInfo;
+	  p->mapnumber = i + 1;
 	  sprintf(name, "E%1.1dM%1.1d", episode, i+1);
 	  p->lumpname = name;
 	  p->nicename = text[base + (episode-1)*9 + i];
 	  p->partime = DoomPars[episode-1][i];
 	  p->sky1 = string("SKY") + char('0' + episode);
 	  p->musiclump = MusicNames[mus_e1m1 + (episode-1)*9 + i];
-
-	  l = new LevelNode(p);
-	  l->episode = episode;
-	  sprintf(name, "WIMAP%d", (episode-1)%3);
-	  l->interpic = name;
-
-	  mapinfo[i] = p;
-	  levelgraph[i] = l;
+	  p->nextlevel = i + 2;
+	  p->cluster = 1;
+	  mapinfo[i+1] = p;
 	}
 
-      for (i=0; i<7; i++)
-	{
-	  if (i == DoomSecret[episode-1] - 1)
-	    continue;
-	  levelgraph[i]->exit[0] = levelgraph[i+1];
-	}
-      levelgraph[7]->exit[0] = NULL;
-      levelgraph[8]->exit[0] = levelgraph[DoomSecret[episode-1]];
-      levelgraph[DoomSecret[episode-1] - 1]->exit[100] = levelgraph[8]; // secret
+      mapinfo[8]->nextlevel = -1; // finish
+      mapinfo[9]->nextlevel = DoomSecret[episode-1] + 1; // return from secret
+      mapinfo[DoomSecret[episode-1]]->secretlevel = 9; // secret
 
-      levelgraph[7]->BossDeathKey = DoomBossKey[episode-1];
+      mapinfo[8]->BossDeathKey = DoomBossKey[episode-1];
       if (episode == 4)
-	levelgraph[5]->BossDeathKey = 4; // cyborg in E4M6...
+	mapinfo[6]->BossDeathKey = 4; // cyborg in E4M6...
 
-      levelgraph[7]->cluster = 1;
-      clusterdef[1] = cd = new clusterdef_t(1);
-      cd->exittext = text[E1TEXT_NUM + episode-1];
-      cd->flatlump = DoomFlat[episode-1];
-      cd->musiclump = "D_VICTOR";
-      cd->episode = episode;
+      clustermap[1] = c = new MapCluster(1);
+      c->exittext = text[E1TEXT_NUM + episode-1];
+      c->finalepic = DoomFlat[episode-1];
+      c->finalemusic = "D_VICTOR";
+      c->episode = episode;
+      sprintf(name, "WIMAP%d", (episode-1)%3);
+      c->interpic = name;
       break;
 
     case gm_heretic:
@@ -338,42 +301,32 @@ int GameInfo::Create_Classic_levelgraph(int episode)
       n = 9;
       for (i=0; i<n; i++)
 	{
-	  p = new MapInfo_t;
-	  p->mapnumber = i;
+	  p = new MapInfo;
+	  p->mapnumber = i + 1;
 	  sprintf(name, "E%1.1dM%1.1d", episode, i+1);
 	  p->lumpname = name;
 	  p->nicename = text[base + (episode-1)*9 + i];
 	  p->partime = HereticPars[episode-1][i];
 	  p->sky1 = HereticSky[episode-1];
 	  p->musiclump = MusicNames[mus_he1m1 + (episode-1)*9 + i];
-
-	  l = new LevelNode(p);
-	  l->episode = episode;
-	  sprintf(name, "MAPE%d", ((episode-1)%3)+1);
-	  l->interpic = name;
-
-	  mapinfo[i] = p;
-	  levelgraph[i] = l;
+	  p->nextlevel = i + 2;
+	  p->cluster = 1;
+	  mapinfo[i+1] = p;
 	}
 
-      for (i=0; i<7; i++)
-	{
-	  if (i == HereticSecret[episode-1] - 1)
-	    continue;
-	  levelgraph[i]->exit[0] = levelgraph[i+1];
-	}
-      levelgraph[7]->exit[0] = NULL;
-      levelgraph[8]->exit[0] = levelgraph[HereticSecret[episode-1]];
-      levelgraph[HereticSecret[episode-1] - 1]->exit[100] = levelgraph[8]; //secret
+      mapinfo[8]->nextlevel = -1; // finish
+      mapinfo[9]->nextlevel = HereticSecret[episode-1] + 1; // return from secret
+      mapinfo[HereticSecret[episode-1]]->secretlevel = 9; // secret
 
-      levelgraph[7]->BossDeathKey = HereticBossKey[episode-1];
+      mapinfo[8]->BossDeathKey = HereticBossKey[episode-1];
 
-      levelgraph[7]->cluster = 1;
-      clusterdef[1] = cd = new clusterdef_t(1);
-      cd->exittext = text[HERETIC_E1TEXT + episode-1];
-      cd->flatlump = HereticFlat[episode-1];
-      cd->musiclump = "MUS_CPTD";
-      cd->episode = episode;
+      clustermap[1] = c = new MapCluster(1);
+      c->exittext = text[HERETIC_E1TEXT + episode-1];
+      c->finalepic = HereticFlat[episode-1];
+      c->finalemusic = "MUS_CPTD";
+      c->episode = episode;
+      sprintf(name, "MAPE%d", ((episode-1)%3)+1);
+      c->interpic = name;
       break;
 
     default:

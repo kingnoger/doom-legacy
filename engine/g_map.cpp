@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.23  2003/11/12 11:07:17  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.22  2003/06/29 17:33:59  smite-meister
 // VFile system, PAK support, Hexen bugfixes
 //
@@ -69,13 +72,13 @@
 
 #include "doomdata.h"
 #include "g_map.h"
+#include "g_mapinfo.h"
 #include "g_game.h"
 #include "g_player.h"
 #include "g_actor.h"
 #include "g_pawn.h"
 
 #include "p_spec.h"
-#include "p_info.h"
 #include "command.h"
 
 #include "r_main.h"
@@ -85,6 +88,7 @@
 #include "s_sound.h"
 #include "sounds.h"
 #include "z_zone.h"
+#include "tables.h"
 
 extern consvar_t cv_deathmatch;
 
@@ -95,16 +99,20 @@ consvar_t cv_itemrespawn    ={"respawnitem"    , "0",CV_NETVAR,CV_OnOff};
 #define FLOATRANDZ      (MAXINT-1)
 
 // Map class constructor
-Map::Map(const string & mname)
+Map::Map(MapInfo *i)
 {
-  mapname = mname;
-  level = NULL;
-  info = NULL;
+  info = i;
+
+  //level = i->level;
+  lumpname = i->lumpname;
+
   levelscript = NULL;
   runningscripts = NULL;
 
   hexen_format = false;
   ActiveAmbientSeq = NULL;
+
+  force_pointercheck = false;
 };
 
 // destructor
@@ -127,28 +135,7 @@ void Map::SpawnActor(Actor *p)
   p->SetPosition();  // set subsector and/or block links
 }
 
-void Map::DetachActor(Actor *p)
-{
-  void P_DelSeclist(msecnode_t *p);
 
-  p->UnsetPosition();
-
-  if (p->touching_sectorlist)
-    {
-      P_DelSeclist(p->touching_sectorlist);
-      p->touching_sectorlist = NULL;
-    }
-
-  // save the presentation too
-  if (p->pres)
-    Z_ChangeTag(p->pres, PU_STATIC);
-
-  DetachThinker(p);
-}
-
-
-// was P_SpawnSplash
-//
 // when player moves in water
 // SoM: Passing the Z height saves extra calculations...
 void Map::SpawnSplash(Actor *mo, fixed_t z)
@@ -240,10 +227,8 @@ bool PTR_BloodTraverse (intercept_t *in)
 }
 #endif
 
-// was P_SpawnBloodSplats
 // the new SpawnBlood : this one first calls P_SpawnBlood for the usual blood sprites
 // then spawns blood splats around on walls
-//
 void Map::SpawnBloodSplats(fixed_t x, fixed_t y, fixed_t z, int damage, fixed_t px, fixed_t py)
 {
   // spawn the usual falling blood sprites at location
@@ -303,7 +288,6 @@ void Map::SpawnBloodSplats(fixed_t x, fixed_t y, fixed_t z, int damage, fixed_t 
 #endif
 }
 
-// was P_SpawnBlood
 // spawn a blood sprite with falling z movement, at location
 // the duration and first sprite frame depends on the damage level
 // the more damage, the longer is the sprite animation
@@ -332,7 +316,6 @@ DActor *Map::SpawnBlood(fixed_t x, fixed_t y, fixed_t z, int damage)
 
 
 // ---------------------------------------
-// was P_SpawnSmoke
 // when player gets hurt by lava/slime, spawn at feet
 
 void Map::SpawnSmoke(fixed_t x, fixed_t y, fixed_t z)
@@ -350,6 +333,7 @@ void Map::SpawnSmoke(fixed_t x, fixed_t y, fixed_t z)
 }
 
 
+// ---------------------------------------
 // adds a DActor to a Map
 DActor *Map::SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
 {
@@ -426,8 +410,7 @@ extern byte weapontobutton[NUMWEAPONS];
 
 
 void SV_SpawnPlayer(int playernum, int x, int y, angle_t angle);
-// was P_SpawnPlayer
-// was G_PlayerReborn
+
 // Called when a player is spawned on the level.
 // Most of the player structure stays unchanged
 //  between levels.
@@ -445,13 +428,9 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
   // the player may have his old pawn from the previous level
   if (!pi->pawn)
     {
-      const float AutoArmorSave[] = { 0.0, 0.15, 0.10, 0.05, 0.0 };
-
-      p = new PlayerPawn(nx, ny, nz, pi->pawntype);
+      p = new PlayerPawn(nx, ny, nz, pi->ptype);
       p->player = pi;
       pi->pawn  = p;
-      p->pclass = pi->pclass;
-      p->toughness = AutoArmorSave[p->pclass];
       CONS_Printf("-- new pawn, health == %d\n", p->health);
     }
   else
@@ -491,7 +470,7 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
   pi->viewheight = cv_viewheight.value<<FRACBITS;
   pi->viewz = p->z + pi->viewheight;
 
-  pi->playerstate = PST_LIVE;
+  pi->playerstate = PST_ALIVE;
 
   // setup gun psprite
   p->SetupPsprites();
@@ -512,6 +491,10 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
   if (camera.chase && displayplayer == pi)
     camera.ResetCamera(p);
   CONS_Printf("spawn done\n");
+
+  p->spawnpoint = mthing;
+  // set the timer
+  mthing->type = short((maptic + 20) & 0xFFFF);
 }
 
 
@@ -601,7 +584,10 @@ bool Map::CheckRespawnSpot(PlayerInfo *p, mapthing_t *mthing)
 {
   extern consvar_t cv_teamplay;
 
-  if (mthing == NULL)
+  if (!p || !mthing)
+    return false;
+
+  if (mthing->args[0] != p->entrypoint)
     return false;
 
   // has the spawn spot been used just recently?
@@ -631,11 +617,9 @@ bool Map::CheckRespawnSpot(PlayerInfo *p, mapthing_t *mthing)
 }
 
 
-//
-// was G_DeathMatchSpawnPlayer
+
 // Spawns a player at one of the random death match spots
 // called at level load and each death
-//
 bool Map::DeathMatchRespawn(PlayerInfo *p)
 {
   int n = dmstarts.size();
@@ -649,8 +633,6 @@ bool Map::DeathMatchRespawn(PlayerInfo *p)
   do {
     if (CheckRespawnSpot(p, dmstarts[j]))
       {
-	// set the timer
-	dmstarts[j]->type = (short)((maptic + 20) & 0xFFFF);
 	SpawnPlayer(p, dmstarts[j]);
 	return true;
       }
@@ -663,33 +645,36 @@ bool Map::DeathMatchRespawn(PlayerInfo *p)
 }
 
 
-// was G_CoopSpawnPlayer
 bool Map::CoopRespawn(PlayerInfo *p)
 {
   CONS_Printf("CoopRespawn, p = %p, pnum = %d\n", p, p->number - 1);
 
-  int n = playerstarts.size();
-  int i = p->number - 1;
-  if (i < n)
+  int i = p->number;
+  multimap<int, mapthing_t *>::iterator s, t;
+  mapthing_t *m;
+
+  // let's check his own start first
+  s = playerstarts.lower_bound(i);
+  t = playerstarts.upper_bound(i);
+  for ( ; s != t; s++)
     {
-      // let's check his own start first
-      if (CheckRespawnSpot(p, playerstarts[i]))
+      m = (*s).second;
+      if (CheckRespawnSpot(p, m))
 	{
-	  // set the timer
-	  playerstarts[i]->type = (short)((maptic + 20) & 0xFFFF);
-	  SpawnPlayer(p, playerstarts[i]);
+	  SpawnPlayer(p, m);
 	  return true;
 	}
     }
 
-  // try to spawn at one of the other players' spots
-  for (i=0 ; i<n ; i++)
+  // try to spawn at one of the other players' spots, then
+  s = playerstarts.begin();
+  t = playerstarts.end();
+  for ( ; s != t; s++)
     {
-      if (CheckRespawnSpot(p, playerstarts[i]))
+      m = (*s).second;
+      if (CheckRespawnSpot(p, m))
 	{
-	  // set the timer
-	  playerstarts[i]->type = (short)((maptic + 20) & 0xFFFF);
-	  SpawnPlayer(p, playerstarts[i]);
+	  SpawnPlayer(p, m);
 	  return true;
 	}
     }
@@ -747,21 +732,10 @@ void Map::RebornPlayer(PlayerInfo *p)
   if (p->pawn)
     {
       if (p == displayplayer)
-	{
-	  // shutdown the status bar
-	  hud.ST_Stop();
-	}
+	hud.ST_Stop(); // shutdown the status bar
 
       p->pawn->player = NULL;
-      p->pawn->flags2 &= ~MF2_DONTDRAW;
-
-      // flush an old corpse if needed
-      if (bodyqueue.size() >= BODYQUESIZE)
-	{
-	  bodyqueue.front()->Remove();
-	  bodyqueue.pop_front();
-	}
-      bodyqueue.push_back(p->pawn);
+      QueueBody(p->pawn);
       p->pawn = NULL;
     }
 
@@ -776,6 +750,9 @@ void Map::RebornPlayer(PlayerInfo *p)
   //if (displayplayer->viewz != 1)
   //  S_StartSound(mo, sfx_telept);  // don't start sound on first frame
 
+  if (!game.multiplayer)
+    ; // FIXME Z_FreeTags (PU_LEVEL, MAXINT); Setup();
+
   respawnqueue.push_back(p);
   p->playerstate = PST_RESPAWN;
 }
@@ -784,13 +761,37 @@ void Map::RebornPlayer(PlayerInfo *p)
 void Map::AddPlayer(PlayerInfo *p)
 {
   // At this point the player may or may not have a pawn.
-  players.push_back(p); // add p to the Map's playerlist
+  players.push_back(p);
   respawnqueue.push_back(p);
+  p->mp = this;
   p->playerstate = PST_RESPAWN;
+  p->requestmap = 0;
+  // TODO if (p->spectator) spawn PST_SPECTATOR
 
   if (p->pawn)
-    Z_ChangeTag(p->pawn, PU_LEVSPEC);
+    {
+      p->pawn->eflags &= ~MFE_REMOVE;
+      Z_ChangeTag(p->pawn, PU_LEVSPEC);
+      if (p->pawn->pres)
+	Z_ChangeTag(p->pawn->pres, PU_LEVSPEC);
+    }
 }
+
+
+// removes a player from map (but does not remove the pawn!)
+bool Map::RemovePlayer(PlayerInfo *p)
+{
+  vector<PlayerInfo *>::iterator i;
+  for (i = players.begin(); i != players.end(); i++)
+    if (*i == p)
+      {
+	players.erase(i);
+	return true;
+      }
+  return false;
+}
+
+
 
 // returns player 'number' if he is in the map, otherwise NULL
 PlayerInfo *Map::FindPlayer(int num)
@@ -802,6 +803,24 @@ PlayerInfo *Map::FindPlayer(int num)
 
   return NULL;
 }
+
+
+
+void Map::QueueBody(Actor *p)
+{
+  p->flags2 &= ~MF2_DONTDRAW;
+
+  // flush an old corpse if needed
+  if (bodyqueue.size() >= BODYQUESIZE)
+    {
+      bodyqueue.front()->Remove();
+      bodyqueue.pop_front();
+    }
+  bodyqueue.push_back(p);
+}
+
+
+
 
 //----------------------------------------------------------------------------
 // was P_Massacre
@@ -845,22 +864,21 @@ static state_t *P_FinalState(statenum_t state)
 
 void Map::BossDeath(const DActor *mo)
 {
-  extern consvar_t cv_allowexitlevel;
-
-  // FIXME! this is how it is supposed to work:
+  // TODO! This is how it is supposed to work:
   // A map knows what it should do when, say, the last monster of type X dies.
-  // this information is taken from the LevelNode when the map is initialized.
 
   // It may be doing something to tags 666 or 667, or maybe even exiting the
-  // map (but not necessarily the level!)
+  // map (but not necessarily the cluster!)
   // But how to code it generally and efficiently?
   // Maybe just copy existing Doom/Doom2/Heretic 666 and 667 tricks and do everything else by FS?
 
   // Ways to end level:
   // Baron of Hell, Cyberdemon, Spider Mastermind,
   // Mancubus, Arachnotron, Keen, Brain
+  extern consvar_t cv_allowexitlevel;
 
-  if (BossDeathKey == 0)
+  int key = info->BossDeathKey;
+  if (!cv_allowexitlevel.value || key == 0)
     // no action taken
     return;
 
@@ -893,7 +911,7 @@ void Map::BossDeath(const DActor *mo)
       return;
     }
 
-  if (BossDeathKey & b == 0)
+  if (key & b == 0)
     // wrong boss type for this level
     return;
  
@@ -901,7 +919,7 @@ void Map::BossDeath(const DActor *mo)
 
   // make sure there is a player alive for victory
   for (i=0 ; i<n ; i++)
-    if (players[i]->playerstate == PST_LIVE)
+    if (players[i]->playerstate == PST_ALIVE)
     // if (players[i]->pawn->health > 0) // crashes if pawn==NULL!
       break;
 
@@ -918,7 +936,6 @@ void Map::BossDeath(const DActor *mo)
   // if all bosses are dead
   for (th = thinkercap.next ; th != &thinkercap ; th=th->next)
     {
-      //if (th->function.acp1 != (actionf_p1)P_MobjThinker)
       if (th->Type() != Thinker::tt_dactor)
 	continue;
 
@@ -945,7 +962,7 @@ void Map::BossDeath(const DActor *mo)
       return;
 
     case MT_CYBORG:
-      if (BossDeathKey & 2 != 0)
+      if (key & 2 != 0)
 	break;
       else
 	{
@@ -956,7 +973,7 @@ void Map::BossDeath(const DActor *mo)
 	}
 
     case MT_SPIDER:
-      if (BossDeathKey & 8 != 0)
+      if (key & 8 != 0)
 	break;
       else
 	{
@@ -985,7 +1002,7 @@ void Map::BossDeath(const DActor *mo)
       break;
 
     case MT_HHEAD:
-      if (BossDeathKey & 0x400 == 0)
+      if (key & 0x400 == 0)
 	goto nomassacre;
     case MT_MINOTAUR:
     case MT_SORCERER2:
@@ -1002,8 +1019,7 @@ void Map::BossDeath(const DActor *mo)
       return;
     }
 
-  if (cv_allowexitlevel.value)
-    ExitMap(-1);
+  ExitMap(NULL, 0); // to the next level
 }
 
 //
@@ -1125,12 +1141,43 @@ void Map::RespawnWeapons()
     }
 }
 
-void Map::ExitMap(int exit, unsigned entrypoint)
+
+// called when someone activates an exit
+void Map::ExitMap(Actor *activator, int next, int ep)
 {
-  // TODO maybe in future you can exit and load maps asynchronously
-  // (level consists of 2 maps, one is exited and replaced with a new one,
-  // the other keeps running)
-  game.ExitLevel(exit, entrypoint);
+  extern consvar_t cv_exitmode;
+
+  info->state = MAP_FINISHED;
+
+  if (next == 0)
+    next = info->nextlevel; // zero means "normal exit"
+
+  if (next == 100)
+    next = info->secretlevel; // 100 means "secret exit"
+
+  // HACK FIXME
+  PlayerInfo *quitter = (activator && activator->Type() == Thinker::tt_ppawn) ?
+    ((PlayerPawn *)activator)->player : NULL;
+
+  if (!quitter || cv_exitmode.value == 1) 
+    {
+      // all players exit the map when someone activates an exit
+      int n = players.size();
+      for (int i = 0; i < n; i++)
+	players[i]->ExitLevel(next, ep); // save the pawn if needed
+      return;
+    }
+
+  if (cv_exitmode.value == 0)
+    // players may exit one at a time, the new maps are launched immediately, the old map keeps running until it is empty
+    quitter->ExitLevel(next, ep);
+  else
+    {
+      // all players need to reach the exit, others have to wait for the last one
+      quitter->playerstate = PST_DONE;
+      quitter->requestmap = next;
+      quitter->entrypoint = ep;
+    }
 }
 
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/11/12 11:07:26  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.5  2003/06/10 22:39:59  smite-meister
 // Bugfixes
 //
@@ -131,7 +134,7 @@ private:
   enum gameaction_t
   {
     ga_nothing,
-    ga_levelcompleted,
+    ga_intermission,
     ga_nextlevel,
     //HeXen
     /*
@@ -171,31 +174,34 @@ protected:
   int maxplayers; // max # of players allowed
   int maxteams;   // max # of teams
 
-  typedef map<int, PlayerInfo *>::iterator player_iter_t;
-  map<int, PlayerInfo *> Players; // mapping from player number to Playerinfo*
+  typedef map<int, class PlayerInfo*>::iterator player_iter_t;
+  map<int, PlayerInfo*> Players; // mapping from player number to Playerinfo*
 
-  vector<class TeamInfo *> teams;
+  vector<class TeamInfo*> teams;
 
-  map<int, class LevelNode *> levelgraph;
-  LevelNode *currentlevel; // in which LevelNode are we in the game
+  typedef map<int, class MapInfo*>::iterator mapinfo_iter_t;
+  map<int, MapInfo*> mapinfo;
 
-  vector<class Map *> maps; // active map (level) info
-  // several maps can be active at once!
-  // same server consvars and game state/action for everyone though.
-  // when one map is Exit():ed, all are exited.
+  typedef map<int, class MapCluster*>::iterator cluster_iter_t;
+  map<int, MapCluster*> clustermap;
 
-  // vector<Map *> stasismaps;  // for Hexen-style hubs
+  MapCluster *currentcluster; // in which MapCluster are we in the game
+  MapCluster *nextcluster; // temp HACK
+  MapInfo    *currentmap;     // this is used ONLY for time/scorelimit games
 
 public:
 
   GameInfo();
   ~GameInfo();
 
+  int  Serialize(class LArchive &a);
+  int  Unserialize(LArchive &a);
+
   // in g_game.cpp
   void StartIntro();
   void Drawer();
   bool Responder(struct event_t *ev);
-  int  Serialize(class LArchive &a);
+
   void LoadGame(int slot);
   void SaveGame(int slot, char* description);
 
@@ -215,16 +221,19 @@ public:
 
   // ----- level-related stuff -----
   // in g_level.cpp
-  int Create_MAPINFO_levelgraph(int lump);
-  int Create_Classic_levelgraph(int episode);
+  int  Read_SNDINFO(int lump);
+  int  Read_MAPINFO(int lump);
+  void Clear_mapinfo_clusterdef();
+  MapCluster *FindCluster(int c);
+  MapInfo *FindMapInfo(int c);
+
+  int Create_MAPINFO_game(int lump);
+  int Create_classic_game(int episode);
 
   // in g_state.cpp
   bool DeferredNewGame(skill_t sk, bool splitscreen);
   bool StartGame();
-  void SetupLevel(LevelNode *n, skill_t skill, bool resetplayers);
-  void StartLevel(bool restart, bool resetplayers);
-  void ExitLevel(int exit, unsigned entrypoint);
-  void EndLevel();
+  void StartIntermission();
   void EndIntermission();
   void EndFinale();
   void NextLevel();
@@ -240,20 +249,9 @@ public:
 
 extern GameInfo game;
 
-// =========================
-// Status flags for refresh.
-// =========================
-// VB: miscellaneous stuff, doesn't really belong here
 
-extern  bool         nodrawers;
-extern  bool         noblit;
-
-extern  bool   devparm;                // development mode (-devparm)
-
-// Hardware flags
-
-extern bool  nomusic; //defined in d_main.c
-extern bool  nosound;
+// miscellaneous stuff, doesn't really belong here
+extern bool       devparm; // development mode (-devparm)
 extern language_t language;
 
 
@@ -295,7 +293,6 @@ extern consvar_t cv_fastmonsters;
 //extern consvar_t  cv_crosshairscale;
 extern consvar_t cv_joystickfreelook;
 
-void  Command_Turbo_f();
 
 short G_ClipAimingPitch(int* aiming);
 
@@ -303,20 +300,10 @@ extern angle_t localangle,localangle2;
 extern int     localaiming,localaiming2; // should be a angle_t but signed
 
 void G_BuildTiccmd(ticcmd_t* cmd, bool primary, int realtics);
-
-void G_LoadGame(int slot);
-void G_SaveGame(int slot, char* description);
-
 void G_ReadDemoTiccmd(ticcmd_t* cmd,int playernum);
 void G_WriteDemoTiccmd(ticcmd_t* cmd,int playernum);
 
 
 void G_DeferedPlayDemo(char* demo);
-void G_DoneLevelLoad();
-
-// Only called by startup code.
-void G_RecordDemo(char* name);
-
-void G_TimeDemo(char* name);
 
 #endif

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/11/12 11:07:27  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.2  2003/03/15 20:07:21  smite-meister
 // Initial Hexen compatibility!
 //
@@ -37,15 +40,12 @@
 // Basic data types.
 // Needs fixed point, and BAM angles.
 #include "m_fixed.h"
-#include "tables.h"
-#include "info.h"
 
+#define LOWERSPEED              FRACUNIT*6
+#define RAISESPEED              FRACUNIT*6
 
-#ifdef __GNUG__
-#pragma interface
-#endif
-
-
+#define WEAPONBOTTOM            128*FRACUNIT
+#define WEAPONTOP               32*FRACUNIT
 
 //
 // Overlay psprites are scaled shapes
@@ -62,7 +62,7 @@ typedef enum
 
 struct pspdef_t
 {
-  weaponstate_t  *state;  // a NULL state means not active
+  struct weaponstate_t *state;  // a NULL state means not active
   int       tics;
   fixed_t   sx, sy;
 };

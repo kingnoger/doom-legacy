@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/11/12 11:07:25  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.9  2003/06/10 22:39:58  smite-meister
 // Bugfixes
 //
@@ -55,6 +58,7 @@
 #include "d_event.h"
 
 #include "g_game.h"
+#include "g_mapinfo.h"
 #include "g_level.h"
 #include "g_pawn.h"
 #include "g_player.h"
@@ -688,7 +692,7 @@ void Intermission::SlamBackground()
       //V_MarkRect (0, 0, vid.width, vid.height);
     }
   else 
-    V_DrawScaledPatch(0, 0, 1+V_NOSCALESTART, fc.CachePatchName(level->interpic.c_str(), PU_CACHE));
+    V_DrawScaledPatch(0, 0, 1+V_NOSCALESTART, fc.CachePatchName(interpic, PU_CACHE));
 }
 
 
@@ -1197,8 +1201,8 @@ void Intermission::UpdateCoopStats()
 
 	  if (dofrags) cnt[i].frags = plrs[i]->score;
         }
-      cnt_time = level->time;
-      cnt_par = level->partime;
+      cnt_time = time;
+      cnt_par = partime;
 
       S_StartAmbSound(sfx_barexp);
       ng_state = 12;
@@ -1307,16 +1311,16 @@ void Intermission::UpdateCoopStats()
 
       cnt_time += 3;
 
-      if (cnt_time >= level->time)
-	cnt_time = level->time;
+      if (cnt_time >= time)
+	cnt_time = time;
       else
 	finished = false;
 
       cnt_par += 3;
 
-      if (cnt_par >= level->partime)
+      if (cnt_par >= partime)
         {
-	  cnt_par = level->partime;
+	  cnt_par = partime;
 
 	  if (finished)
             {
@@ -1521,7 +1525,7 @@ void Intermission::LoadData()
       // clear backbuffer from status bar stuff and borders
       memset(vid.screens[1], 0, vid.width*vid.height*vid.BytesPerPixel); 
       // background stored in backbuffer        
-      V_DrawScaledPatch(0, 0, 1, fc.CachePatchName(level->interpic.c_str(), PU_CACHE));
+      V_DrawScaledPatch(0, 0, 1, fc.CachePatchName(interpic, PU_CACHE));
     }
 
   // UNUSED unsigned char *pic = vid.screens[1];
@@ -1790,7 +1794,7 @@ void Intermission::Drawer()
     {
     case StatCount:
       // draw "<level> finished"
-      WI_drawLF(level->levelname.c_str(), last);
+      WI_drawLF(lastlevelname, last);
 
       if (cv_deathmatch.value)
         {
@@ -1815,7 +1819,7 @@ void Intermission::Drawer()
 
       // draws which level you are entering..
       if (game.mode != gm_doom2 || next != 30)
-	WI_drawEL(nextlevel->levelname.c_str(), next);
+	WI_drawEL(nextlevelname, next);
       break;
     }
 }
@@ -1879,28 +1883,34 @@ void Intermission::Ticker()
     }
 }
 
-void Intermission::Start(const LevelNode *l)
+void Intermission::Start(const MapInfo *l, const MapInfo *n)
 {  
-  level = l;
-  nextlevel = l->exitused;
-  episode = l->episode;
+  last = l->mapnumber; // number of level just completed
+  next = n->mapnumber; // number of next level
 
-  last = level->number; //level - firstlevel; // number of level just completed
-  next = nextlevel->number; // number of next level
+  partime = l->partime;
+  lastlevelname = l->nicename.c_str();
+  nextlevelname = n->nicename.c_str();
 
   acceleratestage = false;
   count = bcount = 0;
   state = StatCount;
 
-  total.kills = level->kills;
+  MapCluster *m = game.FindCluster(l->cluster);
+  episode = m->episode;
+  interpic = m->interpic.c_str();
+
+  time = m->time;
+
+  total.kills = m->kills;
   if (total.kills == 0)
     total.kills = 1;
 
-  total.items = level->items;
+  total.items = m->items;
   if (total.items == 0)
     total.items = 1;
 
-  total.secrets = level->secrets;
+  total.secrets = m->secrets;
   if (total.secrets == 0)
     total.secrets = 1;
 

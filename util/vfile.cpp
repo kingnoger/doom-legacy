@@ -123,7 +123,7 @@ bool VDir::Open(const char *fname)
   filename = fname;
 
   dirent *d; // d points to a static structure (not thread-safe)
-  while (d = readdir(dstream))
+  while ((d = readdir(dstream)))
     {
       // count the items
       //printf("%s\n", name);
@@ -135,12 +135,12 @@ bool VDir::Open(const char *fname)
   rewinddir(dstream);
   contents = (vdiritem_t *)Z_Malloc(numitems * sizeof(vdiritem_t), PU_STATIC, NULL); 
   int i = 0;
-  while (d = readdir(dstream))
+  while ((d = readdir(dstream)))
     {
       const char *name = d->d_name;
       if (name[0] != '.')
 	{
-	  strncpy(contents[i].name, name, d->d_namlen);
+	  strncpy(contents[i].name, name, MAX_VDIR_ITEM_NAME);
 	  stat(name, &tempstat);
 	  contents[i].size = tempstat.st_size;
 	  imap.insert(pair<const char *, int>(contents[i].name, i)); // fill the name map

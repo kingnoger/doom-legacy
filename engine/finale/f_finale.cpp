@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/11/12 11:07:25  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.10  2003/05/11 21:23:51  smite-meister
 // Hexen fixes
 //
@@ -50,7 +53,7 @@
 #include "z_zone.h"
 
 #include "g_level.h"
-#include "p_info.h"
+//#include "p_info.h"
 
 void  F_TextInit(int dummy);
 void  F_TextTicker();
@@ -130,17 +133,17 @@ static bool keypressed = false;
 //
 // F_StartFinale
 //
-void F_StartFinale(const clusterdef_t *cd, bool enter, bool end)
+void F_StartFinale(const MapCluster *cd, bool enter, bool end)
 {
   endgame = end;
   gameepisode = cd->episode;
-  finaleflat = cd->flatlump.c_str();
+  finaleflat = cd->finalepic.c_str();
   if (enter)
     finaletext = cd->entertext.c_str();
   else
     finaletext = cd->exittext.c_str();
 
-  S.StartMusic(cd->musiclump.c_str(), true);
+  S.StartMusic(cd->finalemusic.c_str(), true);
 
   switch (game.mode)
     {

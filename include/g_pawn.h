@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.15  2003/11/12 11:07:27  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.14  2003/05/30 13:34:48  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -68,6 +71,7 @@
 using namespace std;
 
 
+
 //
 // Player internal flags, for cheats and debug. Must fit into an int.
 //
@@ -94,6 +98,7 @@ struct pawn_info_t
 
 class Pawn : public Actor
 {
+  DECLARE_CLASS(Pawn);
 private:
 
 
@@ -103,15 +108,18 @@ public:
 
   int maxhealth;
   float speed; // walking speed (units/tic), runspeed = 2*speed
-  const pawn_info_t *pinfo;
+  const struct pawn_info_t *pinfo;
 
+  int attackphase; // for the more complex weapons
   // Who did damage (NULL for floors/ceilings).
   Actor *attacker;
 
 public:
-  Pawn(fixed_t x, fixed_t y, fixed_t z, const pawn_info_t *t);
+  Pawn(fixed_t x, fixed_t y, fixed_t z, int type);
 
   virtual void Think();
+  virtual void CheckPointers();
+
   virtual thinkertype_e Type() {return tt_pawn;}; // "name-tag" function
   virtual bool Morph();
   virtual bool Damage(Actor *inflictor, Actor *source, int damage, int dtype = dt_normal);
@@ -122,6 +130,7 @@ public:
 
 class PlayerPawn : public Pawn
 {
+  DECLARE_CLASS(PlayerPawn);
 public:
   // Overlay view sprites (gun, etc).
   pspdef_t psprites[NUMPSPRITES];
@@ -147,7 +156,8 @@ public:
   bool attackdown;
   bool usedown;
   bool jumpdown;   // dont jump like a monkey!
-  int refire;    // Refired shots are less accurate.
+
+  int  refire;     // Refired shots are less accurate.
 
   int  keycards; // bit field, see the definition of keycard_t
   bool backpack;
@@ -173,21 +183,16 @@ public:
   //  can be set to REDCOLORMAP for pain, etc.
   int fixedcolormap;
 
-  // heretic crap, remove...
-  int flyheight; // z for smoothing the z motion
-  int chickenPeck;
-  int flamecount;
-  Actor *rain1;   // active rain maker 1
-  Actor *rain2;   // active rain maker 2
+  // TODO heretic crap, remove...
+  int flyheight; //  for smoothing the z motion
+
 
 public:
   virtual thinkertype_e Type() {return tt_ppawn;}; // "name-tag" function
 
   // in g_pawn.cpp
-  PlayerPawn(fixed_t x, fixed_t y, fixed_t z, const pawn_info_t *t);
+  PlayerPawn(fixed_t x, fixed_t y, fixed_t z, int type);
   virtual ~PlayerPawn();
-
-  virtual int  Serialize(class LArchive & a);
 
   virtual void XYMovement();
   virtual void ZMovement();
@@ -199,7 +204,7 @@ public:
   void MorphThink();
   bool UndoMorph();
 
-  void FinishLevel();
+  void Reset();
 
   void UseArtifact(artitype_t arti);
   bool GivePower(int /*powertype_t*/ power);

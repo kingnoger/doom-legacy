@@ -43,7 +43,7 @@
 #include "g_map.h" // Map
 #include "g_level.h"
 
-#include "p_info.h"
+//#include "p_info.h"
 #include "p_fab.h"
 #include "m_argv.h"
 #include "m_misc.h"
@@ -60,8 +60,6 @@ extern consvar_t cv_vidwait;
 //bool G_CheckDemoStatus(void);
 
 bool         timingdemo;             // if true, exit with report on completion
-bool         nodrawers;              // for comparative timing purposes
-bool         noblit;                 // for comparative timing purposes
 tic_t        demostarttime;              // for comparative timing purposes
 
 char         demoname[32];
@@ -321,7 +319,7 @@ void GameInfo::BeginRecording()
 
   *demo_p++ = VERSION;
   *demo_p++ = skill;
-  *demo_p++ = currentlevel->episode; //gameepisode;
+  //*demo_p++ = currentlevel->episode; //gameepisode;
   *demo_p++ = 1; //FIXME! no more gamemap;
   *demo_p++ = cv_deathmatch.value;     // just to be compatible with old demo (no more used)
   *demo_p++ = cv_respawnmonsters.value;// just to be compatible with old demo (no more used)
@@ -418,6 +416,7 @@ static int restorecv_vidwait;
 
 void G_TimeDemo(char* name)
 {
+  extern bool nodrawers, noblit;
   nodrawers = M_CheckParm ("-nodraw");
   noblit = M_CheckParm ("-noblit");
   restorecv_vidwait = cv_vidwait.value;
@@ -468,7 +467,7 @@ bool GameInfo::CheckDemoStatus()
       f1 = time;
       f2 = framecount*TICRATE;
       CONS_Printf ("timed %i gametics in %i realtics\n%f seconds, %f avg fps\n",
-		   maps[0]->maptic, time, f1/TICRATE, f2/f1);
+		   gametic, time, f1/TICRATE, f2/f1);
       if( restorecv_vidwait != cv_vidwait.value )
 	CV_SetValue(&cv_vidwait, restorecv_vidwait);
       D_AdvanceDemo ();

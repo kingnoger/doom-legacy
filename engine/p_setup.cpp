@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.25  2003/11/12 11:07:23  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.24  2003/06/20 20:56:07  smite-meister
 // Presentation system tweaked
 //
@@ -103,8 +106,9 @@
 #include "doomdata.h"
 #include "byteptr.h"
 
-#include "g_map.h"
 #include "g_game.h"
+#include "g_map.h"
+#include "g_mapinfo.h"
 #include "g_level.h"
 
 #include "p_setup.h"
@@ -125,7 +129,6 @@
 #include "w_wad.h"
 #include "z_zone.h"
 #include "r_splats.h"
-#include "p_info.h"
 
 #include "t_parse.h"
 #include "t_func.h"
@@ -633,10 +636,8 @@ void Map::LoadThings(int lump)
       if (ednum == 11)
 	{
 	  if (dmstarts.size() < MAX_DM_STARTS)
-	    {
-	      dmstarts.push_back(t);
-	      t->type = 0;
-	    }
+	    dmstarts.push_back(t);
+	  t->type = 0;
 	  continue;
 	}
 
@@ -645,20 +646,17 @@ void Map::LoadThings(int lump)
 	{
 	  if (ednum > 4000)
 	    ednum -= 4001 - 5;
-	  // save spots for respawning in network games
-	  if ((int)playerstarts.size() < ednum)
-	    playerstarts.resize(ednum);
-	  playerstarts[ednum - 1] = t;
+
+	  playerstarts.insert(pair<int, mapthing_t *>(ednum, t));
 	  t->type = 0; // t->type is used as a timer
 	  continue;
 	}
 
       if (ednum == 14)
 	{
-	  // ugly HACK
+	  // a bit of a hack
 	  // same with doom / heretic / hexen, but only one mobjtype_t
 	  t->type = MT_TELEPORTMAN;
-	  SpawnMapThing(t);
 	  continue;
 	}
 
@@ -690,6 +688,7 @@ void Map::LoadThings(int lump)
 	        AmbientSeqs.push_back(SoundSeqs[ednum - 1200]);
 	      else
 		CONS_Printf("WARNING: Ambient sequence %d not defined!\n", ednum - 1200);
+	      t->type = 0;
 	      continue;
 	    }
 
@@ -697,6 +696,7 @@ void Map::LoadThings(int lump)
 	  if (ednum == 56)
 	    {
 	      BossSpots.push_back(t);
+	      t->type = 0;
 	      continue;
 	    }
 
@@ -704,6 +704,7 @@ void Map::LoadThings(int lump)
 	  if (ednum == 2002)
 	    {
 	      MaceSpots.push_back(t);
+	      t->type = 0;
 	      continue;
 	    }
 	}
@@ -731,10 +732,7 @@ void Map::LoadThings(int lump)
 	  if (ednum >= 9100 && ednum <= 9103)
 	    {
 	      ednum = 5 + ednum - 9100;
-
-	      if ((int)playerstarts.size() < ednum)
-		playerstarts.resize(ednum);
-	      playerstarts[ednum - 1] = t;
+	      playerstarts.insert(pair<int, mapthing_t *>(ednum, t));
 	      t->type = 0;
 	      continue;
 	    }
@@ -743,14 +741,18 @@ void Map::LoadThings(int lump)
 	    {
 	      // FIXME soundseqs
 	      //R_PointInSubsector(t->x << FRACBITS, t->y << FRACBITS)->sector->seqType = ednum - 1400;
+	      t->type = 0;
 	      continue;
 	    }
 	}
 
-      // Spawning flags don't apply to playerstarts or polyobjs! Why, pray, is that?
+      // Spawning flags don't apply to playerstarts, teleport exits or polyobjs! Why, pray, is that?
       // wrong flags?
       if ((t->flags & ffail) || !(t->flags & fskill) || !(t->flags & fmode))
-	continue;
+	{
+	  t->type = 0;
+	  continue;
+	}
 
       for (n = low; n <= high; n++)
 	if (ednum == mobjinfo[n].doomednum)
@@ -758,15 +760,12 @@ void Map::LoadThings(int lump)
 
       if (n > high)
 	{
-	  CONS_Printf("\2P_SpawnMapThing: Unknown type %i at (%i, %i)\n",
-		      ednum, t->x, t->y);
+	  CONS_Printf("\2Map::LoadThings: Unknown type %i at (%i, %i)\n", ednum, t->x, t->y);
+	  t->type = 0;
 	  continue;
 	}
 
-      // spawn here
       t->type = mobjtype_t(n);
-      //CONS_Printf("Spawning ednum %d\n", ednum);
-      SpawnMapThing(t);
     }
 
   Z_Free(data);
@@ -1341,11 +1340,11 @@ void P_Initsecnode();
 //
 // (re)loads the map from an already opened wad
 //
-bool Map::Setup(tic_t start)
+bool Map::Setup(tic_t start, bool spawnthings)
 {
   extern  bool precache;
 
-  CONS_Printf("Map::Setup: %s\n", mapname.c_str());
+  CONS_Printf("Map::Setup: %s\n", lumpname.c_str());
 
   maptic = 0;
   starttic = start;
@@ -1383,7 +1382,7 @@ bool Map::Setup(tic_t start)
   //
 
   // internal game map
-  lumpnum = fc.GetNumForName(mapname.c_str());
+  lumpnum = fc.GetNumForName(lumpname.c_str());
 
   // textures are needed first
   //    R_LoadTextures ();
@@ -1396,7 +1395,7 @@ bool Map::Setup(tic_t start)
   T_ClearScripts();
 #endif
 
-  levelscript->data = info->Load(lumpnum); // load map separator lump info (map properties, FS...)
+  levelscript->data = info->Read(lumpnum); // load map separator lump info (map properties, FS...)
 
   // is the map in Hexen format?
   const char *acslumpname = fc.FindNameForNum(lumpnum + ML_BEHAVIOR);
@@ -1445,7 +1444,7 @@ bool Map::Setup(tic_t start)
   LoadSubsectors(lumpnum+ML_SSECTORS);
   LoadNodes(lumpnum+ML_NODES);
   LoadSegs (lumpnum+ML_SEGS);
-  LoadSectors2(lumpnum+ML_SECTORS);
+  LoadSectors2(lumpnum+ML_SECTORS); // also spawns the sector special Thinkers
   rejectmatrix = (byte *)fc.CacheLumpNum(lumpnum+ML_REJECT,PU_LEVEL);
 
   GroupLines();
@@ -1460,23 +1459,31 @@ bool Map::Setup(tic_t start)
       HWR_ResetLights();
       // Correct missing sidedefs & deep water trick
       R.HWR_CorrectSWTricks();
-      CONS_Printf("\n xxx seg(%d) v1 = %d, line(%d) v1 = %d\n", 1578, segs[1578].v1 - vertexes, segs[1578].linedef - lines, segs[1578].linedef->v1 - vertexes);
-      R.HWR_CreatePlanePolygons(numnodes-1);
-      CONS_Printf(" xxx seg(%d) v1 = %d, line(%d) v1 = %d\n", 1578, segs[1578].v1 - vertexes, segs[1578].linedef - lines, segs[1578].linedef->v1 - vertexes);
+      //CONS_Printf("\n xxx seg(%d) v1 = %d, line(%d) v1 = %d\n", 1578, segs[1578].v1 - vertexes, segs[1578].linedef - lines, segs[1578].linedef->v1 - vertexes);
+      R.HWR_CreatePlanePolygons(numnodes-1); // FIXME BUG this messes up the polyobjs
+      //CONS_Printf(" xxx seg(%d) v1 = %d, line(%d) v1 = %d\n", 1578, segs[1578].v1 - vertexes, segs[1578].linedef - lines, segs[1578].linedef->v1 - vertexes);
     }
 #endif
 
   LoadThings(lumpnum + ML_THINGS);
-  PlaceWeapons(); // Heretic mace
 
   if (hexen_format)
+    InitPolyobjs(); // create the polyobjs, clear their mapthings
+
+  // spawn the THINGS (Actors) if needed
+  if (spawnthings)
     {
-      InitPolyobjs();
-      LoadACScripts(lumpnum+ML_BEHAVIOR);
+      for (int i=0; i<nummapthings; i++)
+	if (mapthings[i].type)
+	  SpawnMapThing(&mapthings[i]);
+
+      PlaceWeapons(); // Heretic mace
     }
 
-  // set up world state
-  SpawnSpecials();
+  if (hexen_format)
+    LoadACScripts(lumpnum + ML_BEHAVIOR);
+
+  SpawnSpecials(); // spawn Thinkers created by linedefs (also does some mandatory initializations!)
 
   // build subsector connect matrix
   //  UNUSED P_ConnectSubsectors ();

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2003/11/12 11:07:16  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.19  2003/06/10 22:39:53  smite-meister
 // Bugfixes
 //
@@ -169,7 +172,6 @@
 #include "m_misc.h" // configfile
 
 #include "p_fab.h"
-#include "p_info.h"
 
 #include "r_local.h"
 
@@ -193,9 +195,14 @@
 #include "hardware/hw3sound.h"
 
 
+void P_Info_AddCommands();
+
 bool dedicated;
 bool devparm;        // started game with -devparm
 bool singletics = false; // timedemo
+
+bool nodrawers;    // for comparative timing purposes
+bool noblit;       // for comparative timing purposes
 
 
 //------------------------------------------
@@ -302,7 +309,7 @@ void D_DoAdvanceDemo()
 	  break;
 	default:
 	  pagetic = 170;
-	  S_StartMusic (mus_intro);
+	  S_StartMusic(mus_intro);
 	  break;
 	}
       game.state = GS_DEMOSCREEN;
@@ -425,7 +432,7 @@ void D_PageDrawer(char *lumpname)
   //added:08-01-98:if you wanna centre the pages it's here.
   //          I think it's not so beautiful to have the pic centered,
   //          so I leave it in the upper-left corner for now...
-  //V_DrawPatch (0,0, 0, fc.CachePatchName(pagename, PU_CACHE));
+  //V_DrawPatch(0,0, 0, fc.CachePatchName(pagename, PU_CACHE));
 }
 
 
@@ -464,8 +471,7 @@ void D_Display()
 
   //CONS_Printf(">>> D_Display\n");
 
-  if (dedicated || nodrawers) return;
-  //  if (nodrawers) return;        // for comparative timing / profiling
+  if (dedicated || nodrawers) return; // for comparative timing / profiling
 
   bool redrawsbar = false;
 
@@ -492,7 +498,7 @@ void D_Display()
 
   // draw buffered stuff to screen
   // BP: Used only by linux GGI version
-  I_UpdateNoBlit ();
+  I_UpdateNoBlit();
 
   // do buffered drawing
   switch (game.state)
@@ -513,7 +519,7 @@ void D_Display()
       if (oldgamestate != GS_LEVEL )
 	{
 	  viewactivestate = false;        // view was not active
-	  R_FillBackScreen ();    // draw the pattern into the back screen
+	  R_FillBackScreen();    // draw the pattern into the back screen
 	}
       // draw either automap or game
       if (automap.active)
@@ -531,7 +537,7 @@ void D_Display()
 	  
 	      if (borderdrawcount)
 		{
-		  R_DrawViewBorder ();    // erase old menu stuff
+		  R_DrawViewBorder();    // erase old menu stuff
 		  borderdrawcount--;
 		}
 	    }
@@ -574,7 +580,7 @@ void D_Display()
 	y = 4;
       else
 	y = viewwindowy+4;
-      patch = fc.CachePatchName ("M_PAUSE", PU_CACHE);
+      patch = fc.CachePatchName("M_PAUSE", PU_CACHE);
       V_DrawScaledPatch(viewwindowx+(BASEVIDWIDTH - patch->width)/2, y, 0, patch);
     }
 
@@ -597,13 +603,13 @@ void D_Display()
 	  char s[50];
 	  Net_GetNetStat();
 	  sprintf(s,"get %d b/s",getbps);
-	  V_DrawString(BASEVIDWIDTH-V_StringWidth (s),165-40, V_WHITEMAP, s);
+	  V_DrawString(BASEVIDWIDTH-V_StringWidth(s),165-40, V_WHITEMAP, s);
 	  sprintf(s,"send %d b/s",sendbps);
-	  V_DrawString(BASEVIDWIDTH-V_StringWidth (s),165-30, V_WHITEMAP, s);
+	  V_DrawString(BASEVIDWIDTH-V_StringWidth(s),165-30, V_WHITEMAP, s);
 	  sprintf(s,"GameMiss %.2f%%",gamelostpercent);
-	  V_DrawString(BASEVIDWIDTH-V_StringWidth (s),165-20, V_WHITEMAP, s);
+	  V_DrawString(BASEVIDWIDTH-V_StringWidth(s),165-20, V_WHITEMAP, s);
 	  sprintf(s,"SysMiss %.2f%%",lostpercent);
-	  V_DrawString(BASEVIDWIDTH-V_StringWidth (s),165-10, V_WHITEMAP, s);
+	  V_DrawString(BASEVIDWIDTH-V_StringWidth(s),165-10, V_WHITEMAP, s);
         }
 
 #ifdef TILTVIEW
@@ -625,8 +631,8 @@ void D_Display()
 #endif
 	  {
             //I_BeginProfile();
-            I_FinishUpdate ();              // page flip or blit buffer
-            //CONS_Printf ("last frame update took %d\n", I_EndProfile());
+            I_FinishUpdate();              // page flip or blit buffer
+            //CONS_Printf("last frame update took %d\n", I_EndProfile());
 	  }
       return;
     }
@@ -639,21 +645,21 @@ void D_Display()
 
   wipe_EndScreen(0, 0, vid.width, vid.height);
 
-  wipestart = I_GetTime () - 1;
+  wipestart = I_GetTime() - 1;
   y=wipestart+2*TICRATE; // init a timeout
   do {
     do {
-      nowtime = I_GetTime ();
+      nowtime = I_GetTime();
       tics = nowtime - wipestart;
     } while (!tics);
     wipestart = nowtime;
-    done = wipe_ScreenWipe (cv_screenslink.value-1
+    done = wipe_ScreenWipe(cv_screenslink.value-1
 			    , 0, 0, vid.width, vid.height, tics);
-    I_OsPolling ();
-    I_UpdateNoBlit ();
+    I_OsPolling();
+    I_UpdateNoBlit();
     Menu::Drawer();            // menu is drawn even on top of wipes
 
-    I_FinishUpdate ();      // page flip or blit buffer
+    I_FinishUpdate();      // page flip or blit buffer
 
   } while (!done && I_GetTime()<(unsigned)y);
   
@@ -678,20 +684,20 @@ void D_DoomLoop()
     game.BeginRecording();
 
   // user settings
-  COM_BufAddText ("exec autoexec.cfg\n");
+  COM_BufAddText("exec autoexec.cfg\n");
 
   // end of loading screen: CONS_Printf() will no more call FinishUpdate()
   con_startup = false;
 
-  //CONS_Printf ("I_StartupKeyboard...\n");
-  //I_StartupKeyboard ();
+  //CONS_Printf("I_StartupKeyboard...\n");
+  //I_StartupKeyboard();
 
 #ifdef WIN32_DIRECTX
-  CONS_Printf ("I_StartupMouse...\n");
-  I_DoStartupMouse ();
+  CONS_Printf("I_StartupMouse...\n");
+  I_DoStartupMouse();
 #endif
 
-  oldtics = I_GetTime ();
+  oldtics = I_GetTime();
 
   // make sure to do a d_display to init mode _before_ load a level
   vid.SetMode();  // change video mode if needed, recalculate...
@@ -700,12 +706,12 @@ void D_DoomLoop()
     {
 
       // get real tics
-      nowtics = I_GetTime ();
+      nowtics = I_GetTime();
       elapsedtics = nowtics - oldtics;
       oldtics = nowtics;
         
 #ifdef SAVECPU_EXPERIMENTAL
-      if(elapsedtics == 0)
+      if (elapsedtics == 0)
 	{
 	  usleep(10000);
 	  continue;
@@ -715,7 +721,7 @@ void D_DoomLoop()
       // frame syncronous IO operations
       // UNUSED for the moment (18/12/98)
       // in SDL locks screen if necessary
-      I_StartFrame ();
+      I_StartFrame();
 
 
 #ifdef HW3SOUND
@@ -723,7 +729,7 @@ void D_DoomLoop()
 #endif
 
       // process tics (but maybe not if elapsedtics==0), run tickers, advance game state
-      TryRunTics (elapsedtics);
+      TryRunTics(elapsedtics);
 
       if (singletics || gametic > rendergametic)
         {
@@ -734,13 +740,13 @@ void D_DoomLoop()
 	  // move positional sounds, adjust volumes
 	  S.UpdateSounds();
 	  // Update display, next frame, with current state.
-	  D_Display ();
+	  D_Display();
         }
       else if (rendertimeout < nowtics )
 	{
 	  // otherwise render if enough real time has elapsed since last rendering
 	  // in case the server hang or netsplit
-	  D_Display ();
+	  D_Display();
 	}
 
 	// FIXME! Doesn't look good.
@@ -760,7 +766,7 @@ void D_DoomLoop()
 
 #endif // WIN32_DIRECTX, SDL, other civilized systems
         // check for media change, loop music..
-        I_UpdateCD ();
+        I_UpdateCD();
 
 #ifdef HW3SOUND
         HW3S_EndFrameUpdate();
@@ -1138,6 +1144,7 @@ extern char savegamename[256]; // temporary, FIXME
 //
 void D_DoomMain()
 {
+  extern bool nomusic, nosound;
 
   // keep error messages until the final flush(stderr)
   //if (setvbuf(stderr,NULL,_IOFBF,1000)) CONS_Printf("setvbuf didnt work\n");
@@ -1245,14 +1252,14 @@ void D_DoomMain()
     {
       CONS_Printf(D_CDROM);
       I_mkdir("c:\\doomdata", S_IRWXU);
-      strcpy (configfile,"c:/doomdata/"CONFIGFILENAME);
-      strcpy (savegamename,text[CDROM_SAVEI_NUM]);
+      strcpy(configfile,"c:/doomdata/"CONFIGFILENAME);
+      strcpy(savegamename,text[CDROM_SAVEI_NUM]);
     }
 
   // add any files specified on the command line with -file wadfile
   // to the wad list
 
-  if (M_CheckParm ("-file"))
+  if (M_CheckParm("-file"))
     {
       // the parms after p are wadfile/lump names,
       // until end of parms or another - preceded parm
@@ -1262,13 +1269,13 @@ void D_DoomMain()
 
   int p;
   // load dehacked files
-  p = M_CheckParm ("-dehacked");
+  p = M_CheckParm("-dehacked");
   if (!p)
-    p = M_CheckParm ("-deh");
+    p = M_CheckParm("-deh");
   if (p != 0)
     {
       while (M_IsNextParm())
-	D_AddFile (M_GetNextParm());
+	D_AddFile(M_GetNextParm());
     }
 
   // ----------- start subsystem initializations
@@ -1278,7 +1285,7 @@ void D_DoomMain()
 
 
   // init zone memory management
-  CONS_Printf (text[Z_INIT_NUM]);
+  CONS_Printf(text[Z_INIT_NUM]);
   Z_Init(); 
   
   // adapt tables to legacy needs
@@ -1297,7 +1304,7 @@ void D_DoomMain()
     }
 
   // initialize file cache
-  CONS_Printf (text[W_INIT_NUM]);  
+  CONS_Printf(text[W_INIT_NUM]);  
   if (!fc.InitMultipleFiles(startupwadfiles))
     CONS_Error("A WAD file was not found\n");
 
@@ -1335,7 +1342,7 @@ void D_DoomMain()
 	  if (fc.FindNumForName(name[i]) < 0)
 	    I_Error("\nThis is not the registered version.");
       // If additonal PWAD files are used, print modified banner
-      CONS_Printf ( text[MODIFIED_NUM] );
+      CONS_Printf( text[MODIFIED_NUM] );
     }
   */
 
@@ -1347,11 +1354,11 @@ void D_DoomMain()
 
   // now initted automatically by use_mouse var code
   //CONS_Printf("I_StartupMouse...\n");
-  //I_StartupMouse ();
+  //I_StartupMouse();
 
   // now initialised automatically by use_joystick var code
-  //CONS_Printf (text[I_INIT_NUM]);
-  //I_InitJoystick ();
+  //CONS_Printf(text[I_INIT_NUM]);
+  //I_InitJoystick();
 
   // we need to check for dedicated before initialization of some subsystems
   dedicated = M_CheckParm("-dedicated") != 0;
@@ -1362,21 +1369,21 @@ void D_DoomMain()
 
   // we need the font of the console
   // HUD font, crosshairs, say commands
-  CONS_Printf (text[HU_INIT_NUM]);
-  CONS_Printf (text[ST_INIT_NUM]);
+  CONS_Printf(text[HU_INIT_NUM]);
+  CONS_Printf(text[ST_INIT_NUM]);
   hud.Startup();
 
   // add basic console commands (echo, exec etc.)
-  COM_Init ();
+  COM_Init();
   // startup console
-  CON_Init ();
+  CON_Init();
 
   //-------------------------------------- CONSOLE is on
 
-  D_RegisterClientCommands (); //Hurdler: be sure that this is called before D_CheckNetGame
+  D_RegisterClientCommands(); //Hurdler: be sure that this is called before D_CheckNetGame
   // commands for new Legacy features
 
-  D_AddDeathmatchCommands ();
+  D_AddDeathmatchCommands();
 
   ST_AddCommands();
 
@@ -1389,12 +1396,12 @@ void D_DoomMain()
   // renderer-related console commands
   R_RegisterEngineStuff();
 
-  S_RegisterSoundStuff ();
+  S_RegisterSoundStuff();
 
-  CV_RegisterVar (&cv_screenslink);
+  CV_RegisterVar(&cv_screenslink);
 
   //Fab:29-04-98: do some dirty chatmacros strings initialisation
-  HU_HackChatmacros ();
+  HU_HackChatmacros();
   //------------------------------------- CONFIG.CFG
   // loads and executes config file
   M_FirstLoadConfig(); // WARNING : this does a "COM_BufExecute()"
@@ -1402,34 +1409,34 @@ void D_DoomMain()
   I_PrepareVideoModeList(); // Regenerate Modelist according to cv_fullscreen
 
   // set user default mode or mode set at cmdline
-  SCR_CheckDefaultMode ();
+  SCR_CheckDefaultMode();
 
   game.wipestate = game.state;
   //-------------------------------------- COMMAND LINE PARAMS
 
   // Initialize CD-Audio
-  if (!M_CheckParm ("-nocd"))
-    I_InitCD ();
-  if (M_CheckParm ("-respawn"))
-    COM_BufAddText ("respawnmonsters 1\n");
+  if (!M_CheckParm("-nocd"))
+    I_InitCD();
+  if (M_CheckParm("-respawn"))
+    COM_BufAddText("respawnmonsters 1\n");
   if (M_CheckParm("-teamplay"))
-    COM_BufAddText ("teamplay 1\n");
+    COM_BufAddText("teamplay 1\n");
   if (M_CheckParm("-teamskin"))
-    COM_BufAddText ("teamplay 2\n");
+    COM_BufAddText("teamplay 2\n");
   if (M_CheckParm("-splitscreen"))
     CV_SetValue(&cv_splitscreen,1);
 
-  if (M_CheckParm ("-altdeath"))
-    COM_BufAddText ("deathmatch 2\n");
-  else if (M_CheckParm ("-deathmatch"))
-    COM_BufAddText ("deathmatch 1\n");
+  if (M_CheckParm("-altdeath"))
+    COM_BufAddText("deathmatch 2\n");
+  else if (M_CheckParm("-deathmatch"))
+    COM_BufAddText("deathmatch 1\n");
 
-  if (M_CheckParm ("-fast"))
-    COM_BufAddText ("fastmonsters 1\n");
+  if (M_CheckParm("-fast"))
+    COM_BufAddText("fastmonsters 1\n");
 
   game.nomonsters = M_CheckParm("-nomonsters");
 
-  if (M_CheckParm ("-timer"))
+  if (M_CheckParm("-timer"))
     {
       char *s = M_GetNextParm();
       COM_BufAddText(va("timelimit %s\n",s ));
@@ -1447,15 +1454,16 @@ void D_DoomMain()
   M_PushSpecialParameters();
 
   // setup menu
-  CONS_Printf (text[M_INIT_NUM]);
+  CONS_Printf(text[M_INIT_NUM]);
   Menu::Startup();
 
   // init renderer
-  CONS_Printf (text[R_INIT_NUM]);
-  R_Init ();
+  CONS_Printf(text[R_INIT_NUM]);
+  R_Init();
  
   // set up sound and music
-  CONS_Printf (text[S_SETSOUND_NUM]);
+  CONS_Printf(text[S_SETSOUND_NUM]);
+
   nosound = M_CheckParm("-nosound");
   nomusic = M_CheckParm("-nomusic");
   S.Startup();
@@ -1472,11 +1480,11 @@ void D_DoomMain()
   bool autostart = false;
   // init all NETWORK
   CONS_Printf(text[D_CHECKNET_NUM]);
-  if (D_CheckNetGame ())
+  if (D_CheckNetGame())
     autostart = true;
 
   // check for a driver that wants intermission stats
-  p = M_CheckParm ("-statcopy");
+  p = M_CheckParm("-statcopy");
   if (p && p<myargc-1)
     {
       I_Error("Sorry but statcopy isn't supported at this time\n");
@@ -1485,14 +1493,14 @@ void D_DoomMain()
         extern  void*   statcopy;
 
         statcopy = (void*)atoi(myargv[p+1]);
-        CONS_Printf (text[STATREG_NUM]);
+        CONS_Printf(text[STATREG_NUM]);
       */
     }
 
   // get skill / episode / map from parms
   skill_t sk = sk_medium;
 
-  p = M_CheckParm ("-skill");
+  p = M_CheckParm("-skill");
   if (p && p < myargc-1)
     {
       sk = (skill_t)(myargv[p+1][0]-'1');
@@ -1502,14 +1510,14 @@ void D_DoomMain()
   int startepisode = 1;
   int startmap = 1;
 
-  p = M_CheckParm ("-episode");
+  p = M_CheckParm("-episode");
   if (p && p < myargc-1)
     {
       startepisode = myargv[p+1][0]-'0';
       autostart = true;
     }
 
-  p = M_CheckParm ("-warp");
+  p = M_CheckParm("-warp");
   if (p && p < myargc-1)
     {
       if (game.mode == gm_doom2)
@@ -1532,30 +1540,30 @@ void D_DoomMain()
   switch (game.mode)
     {
     case gm_doom1s:
-      CONS_Printf (text[SHAREWARE_NUM]);
+      CONS_Printf(text[SHAREWARE_NUM]);
       break;
     case gm_doom1:
     case gm_udoom:
     case gm_doom2:
-      CONS_Printf (text[COMERCIAL_NUM]);
+      CONS_Printf(text[COMERCIAL_NUM]);
       break;
     default:
       break;
     }
 
   // start the apropriate game based on parms
-  p = M_CheckParm ("-record");
+  p = M_CheckParm("-record");
   if (p && p < myargc-1)
     {
       // sets up demo recording
-      G_RecordDemo (myargv[p+1]);
+      //G_RecordDemo(myargv[p+1]);
       autostart = true;
     }
 
   // demo doesn't need anymore to be added with D_AddFile()
-  p = M_CheckParm ("-playdemo");
+  p = M_CheckParm("-playdemo");
   if (!p)
-    p = M_CheckParm ("-timedemo");
+    p = M_CheckParm("-timedemo");
   if (p && M_IsNextParm())
     {
       char tmp[MAX_WADPATH];
@@ -1563,32 +1571,32 @@ void D_DoomMain()
       // it is NOT possible to play an internal demo using -playdemo,
       // rather push a playdemo command.. to do.
 
-      strcpy (tmp,M_GetNextParm());
+      strcpy(tmp,M_GetNextParm());
       // get spaced filename or directory
       while(M_IsNextParm()) { strcat(tmp," ");strcat(tmp,M_GetNextParm()); }
       // VB: just horrible;)
-      FIL_DefaultExtension (tmp,".lmp");
+      FIL_DefaultExtension(tmp,".lmp");
 
-      CONS_Printf ("Playing demo %s.\n",tmp);
+      CONS_Printf("Playing demo %s.\n",tmp);
 
-      if ( (p=M_CheckParm("-playdemo")) )
+      if ((p = M_CheckParm("-playdemo")))
         {
 	  singledemo = true;              // quit after one demo
-	  G_DeferedPlayDemo (tmp);
+	  G_DeferedPlayDemo(tmp);
         }
-      else
-	G_TimeDemo (tmp);
+      //else G_TimeDemo(tmp);
+	
       game.state = game.wipestate = GS_NULL;
 
       return;         
     }
 
-  p = M_CheckParm ("-loadgame");
+  p = M_CheckParm("-loadgame");
   if (p && p < myargc-1)
     {
-      G_LoadGame (atoi(myargv[p+1]));
+      COM_BufAddText(va("load %d\n", atoi(myargv[p+1])));
     }
-  else if(dedicated && server)
+  else if (dedicated && server)
     {
       pagename = "TITLEPIC";
       game.state = GS_DEDICATEDSERVER;
@@ -1597,7 +1605,7 @@ void D_DoomMain()
     {
       if (server && !M_CheckParm("+map"))
 	{
-	  game.Create_Classic_levelgraph(startepisode);
+	  game.Create_classic_game(startepisode);
 	  //COM_BufAddText (va("map \"%s\"\n", G_BuildMapName(startepisode, startmap)));
 	  // FIXME this function nukes most of the game parameters that may have
 	  // been set using cmdline args. Perhaps most cmdline args should be removed?

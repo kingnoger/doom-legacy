@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.20  2003/11/12 11:07:26  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.19  2003/06/20 20:56:08  smite-meister
 // Presentation system tweaked
 //
@@ -95,11 +98,11 @@ class Map
 {
   friend class GameInfo;
 public:
-  class LevelNode *level;   // the level in which this Map belongs
-  string filename, mapname; // name of the map file, map lump
-  int lumpnum;              // lumpnum of the separator beginning the map
+  //class LevelNode *level;   // the level in which this Map belongs
+  class MapInfo   *info;    // see g_mapinfo.h
 
-  class MapInfo_t *info;    // see p_info.h
+  string lumpname;   // map lump name
+  int    lumpnum;    // lumpnum of the separator beginning the map
 
   tic_t starttic, maptic;   // number of tics the map has played
   int   kills, items, secrets;  // map totals
@@ -176,12 +179,15 @@ public:
   // currently active FS scripts
   struct runningscript_t *runningscripts; // linked list
 
-  // ACS script data
-  int   ACScriptCount;
-  byte *ActionCodeBase;
+  // ACS data
+#define MAX_ACS_MAP_VARS 32
+
   struct acsInfo_t *ACSInfo;
-  int ACStringCount;
-  char **ACStrings;
+  int     ACScriptCount;
+  byte   *ActionCodeBase;
+  int     ACStringCount;
+  char  **ACStrings;
+  int     ACMapVars[MAX_ACS_MAP_VARS];
 
   //------------ Mapthings and Thinkers ------------
 
@@ -191,6 +197,9 @@ public:
   // Thinkers in the map
   // Both the head and tail of the thinker list.
   Thinker thinkercap;
+
+  bool force_pointercheck;
+  vector<Thinker *> DeletionList; // Thinkers to be deleted are kept here
 
   deque<mapthing_t *> itemrespawnqueue;
   deque<tic_t>        itemrespawntime; // this could be combined to the previous, but...
@@ -211,7 +220,7 @@ public:
   vector<class PlayerInfo *> players;
   deque<PlayerInfo *>  respawnqueue;  // for players queuing to be respawned
 
-  vector<mapthing_t *> playerstarts;
+  multimap<int, mapthing_t *> playerstarts; // playerstart args[0] has the location code
 #define MAX_DM_STARTS 32
   vector<mapthing_t *> dmstarts;
 
@@ -224,8 +233,6 @@ public:
 
   //------------------------------------
   // TODO: from this line on it's badly designed stuff to be fixed someday
-  int BossDeathKey;  // bit flags to see which bosses end the map when killed.
-
   vector<mapthing_t *> braintargets; // DoomII demonbrain spawnbox targets
   int braintargeton;
 
@@ -234,13 +241,14 @@ public:
 
 public:
   // constructor and destructor
-  Map(const string & mname); //(const char *mname)
+  Map(MapInfo *i);
   ~Map(); // also destroys all objects that belong to this map
 
   // not yet implemented
   void Reset(); // resets the map to starting position. Lighter than Setup().
 
-  int  Serialize(class LArchive & a);
+  int  Serialize(class LArchive &a);
+  int  Unserialize(LArchive &a);
 
   // in p_tick.cpp
   void Ticker();
@@ -253,22 +261,23 @@ public:
 
   // in g_map.cpp
   void AddPlayer(PlayerInfo *p); // adds a new player to the map (and respawnqueue)
+  bool RemovePlayer(PlayerInfo *p);
   void RebornPlayer(PlayerInfo *p); // adds a player to respawnqueue, gets rid of corpse
   PlayerInfo *FindPlayer(int number); // returns player 'number' if he is in the map, otherwise NULL
   int  RespawnPlayers();
   bool DeathMatchRespawn(PlayerInfo *p);
   bool CoopRespawn(PlayerInfo *p);
   bool CheckRespawnSpot(PlayerInfo *p, mapthing_t *mthing);
+  void QueueBody(Actor *p);
 
   void BossDeath(const class DActor *mo);
   int  Massacre();
-  void ExitMap(int exit, unsigned entrypoint = 0);
+  void ExitMap(Actor *activator, int exit, int entrypoint = 0);
 
   void RespawnSpecials();
   void RespawnWeapons();
 
   void SpawnActor(Actor *p);
-  void DetachActor(Actor *p);
   DActor *SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t);
   void SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing);
   void SpawnMapThing(mapthing_t *mthing);
@@ -289,7 +298,7 @@ public:
   void SlideMove(Actor* mo);
 
   // in p_setup.cpp
-  bool Setup(tic_t start);
+  bool Setup(tic_t start, bool spawnthings = true);
   void LoadVertexes(int lump);
   void LoadSegs(int lump);
   void LoadSubsectors(int lump);

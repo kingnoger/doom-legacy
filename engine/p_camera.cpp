@@ -1,6 +1,9 @@
 // $Id$
 //
 // $Log$
+// Revision 1.6  2003/11/12 11:07:19  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.5  2003/03/15 20:07:15  smite-meister
 // Initial Hexen compatibility!
 //
@@ -47,7 +50,7 @@ Camera::Camera()
 void Camera::ClearCamera()
 {
   if (mp)
-    mp->DetachActor(this);
+    Detach();
 }
 
 

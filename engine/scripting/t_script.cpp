@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.4  2003/11/12 11:07:26  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.3  2003/05/11 21:23:52  smite-meister
 // Hexen fixes
 //
@@ -47,12 +50,12 @@
 #include "command.h"
 #include "g_game.h"
 #include "g_map.h"
+#include "g_mapinfo.h"
 #include "g_actor.h"
 #include "g_pawn.h"
 #include "g_player.h"
 
 #include "r_state.h"
-#include "p_info.h"
 #include "p_spec.h"
 #include "p_setup.h"
 #include "w_wad.h"

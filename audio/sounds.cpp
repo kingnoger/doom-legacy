@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2003/11/12 11:07:15  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.12  2003/06/29 17:33:59  smite-meister
 // VFile system, PAK support, Hexen bugfixes
 //
@@ -68,7 +71,8 @@
 #include "sounds.h"
 #include "z_zone.h"
 #include "w_wad.h"
-#include "p_info.h" // mapinfo
+#include "g_game.h"
+#include "g_mapinfo.h"
 
 
 // Doom/Heretic music names corresponding to musicenum_t
@@ -795,10 +799,10 @@ sfxinfo_t S_sfx[NUMSFX] =
 
 
 // parses the Hexen SNDINFO lump
-void S_Read_SNDINFO(int lump)
+int GameInfo::Read_SNDINFO(int lump)
 {
   if (lump < 0)
-    return;
+    return 0;
 
   int i, j, n;
 
@@ -831,9 +835,9 @@ void S_Read_SNDINFO(int lump)
 			  {
 			    // store the map music
 			    strupr(lname);
-			    map<int, MapInfo_t *>::iterator t = mapinfo.find(j);
-			    if (t != mapinfo.end())
-			      (*t).second->musiclump = lname;
+			    MapInfo *t = FindMapInfo(j);
+			    if (t)
+			      t->musiclump = lname;
 			  }
 		      }
 		    // $ARCHIVEPATH ignored
@@ -871,6 +875,7 @@ void S_Read_SNDINFO(int lump)
 	CONS_Printf("SNDINFO: Missing tag %s\n", S_sfx[i].tagname);
 	strcpy(S_sfx[i].lumpname, "default");
       }
+  return 1;
 }
 
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/11/12 11:07:24  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.3  2003/05/30 13:34:47  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -53,13 +56,8 @@
 
 #include "s_sound.h"
 #include "sounds.h"
+#include "tables.h"
 
-
-
-#define LOWERSPEED FRACUNIT*6
-#define RAISESPEED FRACUNIT*6
-#define WEAPONBOTTOM 128*FRACUNIT
-#define WEAPONTOP 32*FRACUNIT
 
 void A_UnHideThing(DActor *actor);
 int P_FaceMobj(Actor *source, Actor *target, angle_t *delta);
@@ -156,7 +154,7 @@ void A_FHammerAttack(PlayerPawn *player, pspdef_t *psp)
 	    {
 	      linetarget->Thrust(angle, power);
 	    }
-	  player->special1 = false; // Don't throw a hammer
+	  player->attackphase = false; // Don't throw a hammer
 	  goto hammerdone;
 	}
       angle = player->angle-i*(ANG45/32);
@@ -170,7 +168,7 @@ void A_FHammerAttack(PlayerPawn *player, pspdef_t *psp)
 	    {
 	      linetarget->Thrust(angle, power);
 	    }
-	  player->special1 = false; // Don't throw a hammer
+	  player->attackphase = false; // Don't throw a hammer
 	  goto hammerdone;
 	}
     }
@@ -181,16 +179,16 @@ void A_FHammerAttack(PlayerPawn *player, pspdef_t *psp)
   player->LineAttack(angle, HAMMER_RANGE, slope, damage);
   if(PuffSpawned)
     {
-      player->special1 = false;
+      player->attackphase = false;
     }
   else
     {
-      player->special1 = true;
+      player->attackphase = true;
     }
  hammerdone:
   if (player->ammo[am_mana2] < player->weaponinfo[player->readyweapon].ammopershoot)
     { // Don't spawn a hammer if the player doesn't have enough mana
-      player->special1 = false;
+      player->attackphase = false;
     }
   return;		
 }
@@ -203,18 +201,13 @@ void A_FHammerAttack(PlayerPawn *player, pspdef_t *psp)
 
 void A_FHammerThrow(PlayerPawn *player, pspdef_t *psp)
 {
-  Actor *mo;
+  if (!player->attackphase)
+    return;
 
-  if(!player->special1)
-    {
-      return;
-    }
   player->ammo[am_mana2] -= player->weaponinfo[player->readyweapon].ammopershoot;
-  mo = player->SpawnPlayerMissile(MT_HAMMER_MISSILE); 
-  if(mo)
-    {
-      mo->special1 = 0;
-    }	
+  DActor *mo = player->SpawnPlayerMissile(MT_HAMMER_MISSILE); 
+  if (mo)
+    mo->special1 = 0;
 }
 
 //============================================================================
@@ -786,8 +779,8 @@ void A_FPunchAttack(PlayerPawn *player, pspdef_t *psp)
       slope = player->AimLineAttack(angle, 2*MELEERANGE);
       if(linetarget)
 	{
-	  player->special1++;
-	  if(player->special1 == 3)
+	  player->attackphase++;
+	  if(player->attackphase == 3)
 	    {
 	      damage <<= 1;
 	      power = 6*FRACUNIT;
@@ -806,8 +799,8 @@ void A_FPunchAttack(PlayerPawn *player, pspdef_t *psp)
       slope = player->AimLineAttack(angle, 2*MELEERANGE);
       if(linetarget)
 	{
-	  player->special1++;
-	  if(player->special1 == 3)
+	  player->attackphase++;
+	  if(player->attackphase == 3)
 	    {
 	      damage <<= 1;
 	      power = 6*FRACUNIT;
@@ -824,16 +817,16 @@ void A_FPunchAttack(PlayerPawn *player, pspdef_t *psp)
 	}
     }
   // didn't find any creatures, so try to strike any walls
-  player->special1 = 0;
+  player->attackphase = 0;
 
   angle = player->angle;
   slope = player->AimLineAttack(angle, MELEERANGE);
   player->LineAttack(angle, MELEERANGE, slope, damage);
 
  punchdone:
-  if(player->special1 == 3)
+  if(player->attackphase == 3)
     {
-      player->special1 = 0;
+      player->attackphase = 0;
       player->SetPsprite(ps_weapon, S_PUNCHATK2_1);
       S_StartSound(player, SFX_FIGHTER_GRUNT);
     }
@@ -904,7 +897,7 @@ void A_FAxeAttack(PlayerPawn *player, pspdef_t *psp)
 	}
     }
   // didn't find any creatures, so try to strike any walls
-  player->special1 = 0;
+  player->attackphase = 0;
 
   angle = player->angle;
   slope = player->AimLineAttack(angle, MELEERANGE);
@@ -963,7 +956,7 @@ void A_CMaceAttack(PlayerPawn *player, pspdef_t *psp)
 	}
     }
   // didn't find any creatures, so try to strike any walls
-  player->special1 = 0;
+  player->attackphase = 0;
 
   angle = player->angle;
   slope = player->AimLineAttack(angle, MELEERANGE);
@@ -1087,7 +1080,7 @@ void A_CStaffMissileSlither(DActor *actor)
 
 void A_CStaffInitBlink(PlayerPawn *player, pspdef_t *psp)
 {
-  player->special1 = (P_Random()>>1)+20;
+  player->attackphase = (P_Random()>>1)+20;
 }
 
 //============================================================================
@@ -1098,10 +1091,10 @@ void A_CStaffInitBlink(PlayerPawn *player, pspdef_t *psp)
 
 void A_CStaffCheckBlink(PlayerPawn *player, pspdef_t *psp)
 {
-  if(!--player->special1)
+  if(!--player->attackphase)
     {
       player->SetPsprite(ps_weapon, S_CSTAFFBLINK1);
-      player->special1 = (P_Random()+50)>>2;
+      player->attackphase = (P_Random()+50)>>2;
     }
 }
 
@@ -1116,9 +1109,7 @@ void A_CStaffCheckBlink(PlayerPawn *player, pspdef_t *psp)
 
 void A_CFlameAttack(PlayerPawn *player, pspdef_t *psp)
 {
-  Actor *mo;
-
-  mo = player->SpawnPlayerMissile(MT_CFLAME_MISSILE);
+  DActor *mo = player->SpawnPlayerMissile(MT_CFLAME_MISSILE);
   if (mo)
     mo->special1 = 2;
 
@@ -1742,7 +1733,7 @@ void A_FireConePL1(PlayerPawn *player, pspdef_t *psp)
 
 void A_ShedShard(DActor *actor)
 {
-  Actor *mo;
+  DActor *mo;
   int spawndir = actor->special1;
   int spermcount = actor->special2;
 
@@ -1753,10 +1744,12 @@ void A_ShedShard(DActor *actor)
   // every so many calls, spawn a new missile in it's set directions
   if (spawndir & SHARDSPAWN_LEFT)
     {
-      // FIXME mo = actor->P_SpawnMissileAngleSpeed(MT_SHARDFX1, actor->angle+(ANG45/9), 0, (20+2*spermcount)<<FRACBITS);
-      mo = actor->SpawnMissileAngle(MT_SHARDFX1, actor->angle+(ANG45/9));
+      angle_t m_angle = actor->angle+(ANG45/9);
+      mo = actor->SpawnMissileAngle(MT_SHARDFX1, m_angle);
       if (mo)
 	{
+	  mo->px = (20 + 2*spermcount) * finecosine[m_angle];
+	  mo->py = (20 + 2*spermcount) * finesine[m_angle];
 	  mo->special1 = SHARDSPAWN_LEFT;
 	  mo->special2 = spermcount;
 	  mo->pz = actor->pz;
@@ -1766,10 +1759,12 @@ void A_ShedShard(DActor *actor)
     }
   if (spawndir & SHARDSPAWN_RIGHT)
     {
-      //mo = P_SpawnMissileAngleSpeed(actor, MT_SHARDFX1, actor->angle-(ANG45/9), 0, (20+2*spermcount)<<FRACBITS);
-      mo = actor->SpawnMissileAngle(MT_SHARDFX1, actor->angle-(ANG45/9));
+      angle_t m_angle = actor->angle-(ANG45/9);
+      mo = actor->SpawnMissileAngle(MT_SHARDFX1, m_angle);
       if (mo)
 	{
+	  mo->px = (20 + 2*spermcount) * finecosine[m_angle];
+	  mo->py = (20 + 2*spermcount) * finesine[m_angle];
 	  mo->special1 = SHARDSPAWN_RIGHT;
 	  mo->special2 = spermcount;
 	  mo->pz = actor->pz;
@@ -1779,10 +1774,12 @@ void A_ShedShard(DActor *actor)
     }
   if (spawndir & SHARDSPAWN_UP)
     {
-      //mo=P_SpawnMissileAngleSpeed(actor, MT_SHARDFX1, actor->angle, 0, (15+2*spermcount)<<FRACBITS);
-      mo = actor->SpawnMissileAngle(MT_SHARDFX1, actor->angle);
+      angle_t m_angle = actor->angle;
+      mo = actor->SpawnMissileAngle(MT_SHARDFX1, m_angle);
       if (mo)
 	{
+	  mo->px = (15 + 2*spermcount) * finecosine[m_angle];
+	  mo->py = (15 + 2*spermcount) * finesine[m_angle];
 	  mo->pz = actor->pz;
 	  mo->z += 8*FRACUNIT;
 	  if (spermcount & 1)			// Every other reproduction
@@ -1796,10 +1793,12 @@ void A_ShedShard(DActor *actor)
     }
   if (spawndir & SHARDSPAWN_DOWN)
     {
-      //mo=P_SpawnMissileAngleSpeed(actor, MT_SHARDFX1, actor->angle, 0, (15+2*spermcount)<<FRACBITS);
-      mo = actor->SpawnMissileAngle(MT_SHARDFX1, actor->angle);
+      angle_t m_angle = actor->angle;
+      mo = actor->SpawnMissileAngle(MT_SHARDFX1, m_angle);
       if (mo)
 	{
+	  mo->px = (15 + 2*spermcount) * finecosine[m_angle];
+	  mo->py = (15 + 2*spermcount) * finesine[m_angle];
 	  mo->pz = actor->pz;
 	  mo->z -= 4*FRACUNIT;
 	  if (spermcount & 1)			// Every other reproduction

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/11/12 11:07:23  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.6  2003/05/30 13:34:47  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -58,7 +61,7 @@
 #include "r_main.h"
 #include "sounds.h"
 #include "s_sound.h"
-
+#include "tables.h"
 
 extern consvar_t  cv_deathmatch;
 extern fixed_t FloatBobOffsets[64];
@@ -3040,9 +3043,10 @@ void A_DecelBalls(DActor *actor)
 // Update angle if first ball - actor is ball
 void A_SorcUpdateBallAngle(DActor *actor)
 {
+  DActor *parent = (DActor *)actor->owner;
   if (actor->type == MT_SORCBALL1)
     {
-      actor->owner->special1 += ANGLE_1*actor->owner->args[4];
+      parent->special1 += ANGLE_1*parent->args[4];
     }
 }
 

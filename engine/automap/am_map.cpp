@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/11/12 11:07:25  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.8  2003/06/10 22:39:58  smite-meister
 // Bugfixes
 //
@@ -55,6 +58,7 @@
 #include "g_input.h"
 #include "g_pawn.h"
 #include "g_map.h"
+#include "g_mapinfo.h"
 
 #include "m_cheat.h"
 #include "v_video.h"
@@ -64,7 +68,6 @@
 #include "r_draw.h"
 #include "r_main.h"
 #include "r_sprite.h"
-#include "p_info.h"
 #include "d_main.h"
 
 #include "p_maputl.h"
@@ -74,6 +77,7 @@
 
 #include "i_system.h"
 #include "i_video.h"
+#include "tables.h"
 
 
 #ifdef HWRENDER

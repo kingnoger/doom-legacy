@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/11/12 11:07:23  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.6  2003/06/01 18:56:30  smite-meister
 // zlib compression, partial polyobj fix
 //
@@ -53,80 +56,83 @@
 
 // THINKERS, see g_think.h
 
-//
-// was P_InitThinkers
-//
+// Resets the Thinker list
 void Map::InitThinkers()
 {
   thinkercap.prev = thinkercap.next = &thinkercap;
 }
 
 
-//
-// was P_AddThinker
-// Adds a new thinker at the end of the list.
-//
-void Map::AddThinker(Thinker *thinker)
+// Adds a new Thinker at the end of the list.
+void Map::AddThinker(Thinker *t)
 {
-  thinker->mp = this;
-  thinkercap.prev->next = thinker;
-  thinker->next = &thinkercap;
-  thinker->prev = thinkercap.prev;
-  thinkercap.prev = thinker;
-}
-
-// removes a thinker from the Map without deleting it
-void Map::DetachThinker(Thinker *thinker)
-{
-  thinker->mp = reinterpret_cast<Map *>(-1); // NULL will not do, since it means "Removed, waiting for deletion"
-  thinker->next->prev = thinker->prev;
-  thinker->prev->next = thinker->next;
-  thinker->prev = thinker->next = NULL;
-  Z_ChangeTag(thinker, PU_STATIC);
-}
-
-//
-// was P_RemoveThinker
-// Deallocation is lazy -- it will not actually be freed
-// until its thinking turn comes up.
-// TODO this also gives other thinkers time to reset their pointers to the removed thinker?
-void Map::RemoveThinker(Thinker *thinker)
-{
-  thinker->mp = NULL;
+  t->mp = this;
+  thinkercap.prev->next = t;
+  t->next = &thinkercap;
+  t->prev = thinkercap.prev;
+  thinkercap.prev = t;
 }
 
 
-//
-// was P_RunThinkers
-//
+// Removes a Thinker from the Map without deleting it
+void Map::DetachThinker(Thinker *t)
+{
+  t->mp = NULL;
+  t->next->prev = t->prev;
+  t->prev->next = t->next;
+  t->prev = t->next = NULL;
+  Z_ChangeTag(t, PU_STATIC);
+
+  force_pointercheck = true;
+}
+
+
+// Moves a Thinker to the removal list
+void Map::RemoveThinker(Thinker *t)
+{
+  t->next->prev = t->prev;
+  t->prev->next = t->next;
+  //t->prev = t->next = NULL;
+
+  // Most Thinkers could be deleted right away (it is assumed that there will be
+  // no dangling pointers, or that they have already been taken care of.)
+  // This does not work for Actors. Hence...
+  DeletionList.push_back(t);
+  // TODO perhaps this is needed just for Actors, and other Thinkers can be deleted right away?
+}
+
+
 void Map::RunThinkers()
 {
-  Thinker *t;
+  Thinker *t = thinkercap.next;
+  while (t != &thinkercap)
+    {
+      //if (t->mp == NULL) I_Error("Thinker::mp == NULL! Cannot be!\n");
+      t->Think();
+      t = t->next;
+    }
+
+  int n = DeletionList.size();
+  if (n == 0 && !force_pointercheck)
+    return;
 
   t = thinkercap.next;
   while (t != &thinkercap)
     {
-      if (t->mp == NULL)
-        {
-	  // time to remove it
-	  t->next->prev = t->prev;
-	  t->prev->next = t->next;
-	  Thinker *removeit = t;
-	  t = t->next;
-	  delete removeit;
-        }
-      else
-        {
-	  t->Think();
-	  t = t->next;
-        }
+      t->CheckPointers();
+      t = t->next;
     }
+
+  force_pointercheck = false;
+
+  for (int i=0; i<n; i++)
+    delete DeletionList[i];
+
+  DeletionList.clear();
 }
 
 
-//
-// was P_Ticker
-//
+// Ticks the map forward in time
 void Map::Ticker()
 {
   int i = 0;

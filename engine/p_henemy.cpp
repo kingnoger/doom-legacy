@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/11/12 11:07:21  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.6  2003/05/30 13:34:45  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -64,6 +67,8 @@
 //=========================================
 //   ACTION ROUTINES
 //=========================================
+
+void A_AddPlayerCorpse(DActor *actor) {}
 
 //----------------------------------------------------------------------------
 //
@@ -1431,7 +1436,7 @@ void A_RemovePod(DActor *actor)
 {
   if (actor->owner)
     {
-      Actor *mo = actor->owner;
+      DActor *mo = (DActor *)actor->owner;
       if (mo->special1 > 0)
 	mo->special1--;
     }
@@ -1739,27 +1744,6 @@ void A_FreeTargMobj(DActor *mo)
   //mo->health = -1000;
 }
 
-//----------------------------------------------------------------------------
-//
-// PROC A_AddPlayerCorpse
-//
-//----------------------------------------------------------------------------
-
-void A_AddPlayerCorpse(DActor *actor)
-{
-  // unused function, see Map::RebornPlayer
-  /*
-  Map *m = actor->mp;
-
-  if (m->bodyqueue.size() >= BODYQUESIZE)
-    {
-      // Too many player corpses - remove an old one
-      (m->bodyqueue.front())->Remove();
-      m->bodyqueue.pop_front();
-    }
-  m->bodyqueue.push_back(actor);
-  */
-}
 
 //----------------------------------------------------------------------------
 //

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/11/12 11:07:22  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.6  2003/06/20 20:56:07  smite-meister
 // Presentation system tweaked
 //
@@ -52,6 +55,9 @@
 #include "g_game.h"
 #include "g_map.h"
 
+
+IMPLEMENT_CLASS(plat_t, "Platform");
+plat_t::plat_t() {}
 
 // constructor
 plat_t::plat_t(int ty, sector_t *sec, int t, fixed_t sp, int wt, fixed_t height)
@@ -154,11 +160,6 @@ plat_t::plat_t(int ty, sector_t *sec, int t, fixed_t sp, int wt, fixed_t height)
   //S_StartSound(&sec->soundorg,sfx_pstart);
 }
 
-
-int plat_t::Serialize(LArchive & a)
-{
-  return 0;
-}
 
 // was T_PlatRaise
 // Move a plat up and down

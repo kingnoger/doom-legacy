@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/11/12 11:07:22  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.6  2003/06/10 22:39:57  smite-meister
 // Bugfixes
 //
@@ -947,7 +950,7 @@ Actor *Map::RoughBlockSearch(Actor *center, Actor *master, int distance, int fla
 	
   if (startX >= 0 && startX < bmapwidth && startY >= 0 && startY < bmapheight)
     {
-      if (target = RoughBlockCheck(center, master, startY*bmapwidth+startX, flags))
+      if ((target = RoughBlockCheck(center, master, startY*bmapwidth+startX, flags)))
 	{ // found a target right away
 	  return target;
 	}
@@ -989,23 +992,23 @@ Actor *Map::RoughBlockSearch(Actor *center, Actor *master, int distance, int fla
       int finalStop = blockIndex;		
 
       // Trace the first block section (along the top)
-      for( ; blockIndex <= firstStop; blockIndex++)
-	if (target = RoughBlockCheck(center, master, blockIndex, flags))
+      for ( ; blockIndex <= firstStop; blockIndex++)
+	if ((target = RoughBlockCheck(center, master, blockIndex, flags)))
 	  return target;
 
       // Trace the second block section (right edge)
       for (blockIndex--; blockIndex <= secondStop; blockIndex += bmapwidth)
-	if(target = RoughBlockCheck(center, master, blockIndex, flags))
+	if ((target = RoughBlockCheck(center, master, blockIndex, flags)))
 	  return target;
 
       // Trace the third block section (bottom edge)
       for (blockIndex -= bmapwidth; blockIndex >= thirdStop; blockIndex--)
-	if (target = RoughBlockCheck(center, master, blockIndex, flags))
+	if ((target = RoughBlockCheck(center, master, blockIndex, flags)))
 	  return target;
 
       // Trace the final block section (left edge)
       for (blockIndex++; blockIndex > finalStop; blockIndex -= bmapwidth)
-	if (target = RoughBlockCheck(center, master, blockIndex, flags))
+	if ((target = RoughBlockCheck(center, master, blockIndex, flags)))
 	  return target;
     }
   return NULL;	

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2003/11/12 11:07:19  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.16  2003/06/10 22:39:55  smite-meister
 // Bugfixes
 //
@@ -72,9 +75,10 @@
 #include "g_player.h"
 #include "g_team.h"
 #include "g_map.h"
+#include "g_mapinfo.h"
 #include "g_level.h"
 #include "g_pawn.h"
-#include "p_info.h"
+
 
 #include "g_input.h" // gamekeydown!
 #include "m_misc.h" // FIL_* file functions
@@ -97,9 +101,10 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+void S_Read_SNDINFO(int lump);
 
-bool         nomusic;    
-bool         nosound;
+
+
 language_t   language = la_english;            // Language.
 
 GameInfo game;
@@ -118,13 +123,15 @@ GameInfo::GameInfo()
   maxplayers = 32;
   maxteams = 4;
   teams.resize(maxteams);
+  currentcluster = NULL;
+  currentmap = NULL;
 };
 
 //destructor
 GameInfo::~GameInfo()
 {
   ClearPlayers();
-  maps.clear();
+  // FIXME maps.clear();
 };
 
 
@@ -139,24 +146,18 @@ bool GameInfo::CheckScoreLimit()
       int i, n = teams.size();
       for (i=0; i<n; i++)
 	if (teams[i]->score >= cv_fraglimit.value)
-	  {
-	    ExitLevel(-1, 0);
-	    return true;
-	  }
+	  return true;
     }
   else
     {
       player_iter_t i;
-
       for (i = Players.begin(); i != Players.end(); i++)
 	if ((*i).second->score >= cv_fraglimit.value)
-	  {
-	    ExitLevel(-1, 0);
-	    return true;
-	  }
+	  return true;
     }
   return false;
 }
+
 
 void GameInfo::UpdateScore(PlayerInfo *killer, PlayerInfo *victim)
 {
@@ -178,10 +179,6 @@ void GameInfo::UpdateScore(PlayerInfo *killer, PlayerInfo *victim)
       teams[killer->team]->score--;
       killer->score--;
     }
-
-  // check fraglimit cvar
-  if (cv_fraglimit.value)
-    CheckScoreLimit();
 }
 
 int GameInfo::GetFrags(fragsort_t **fragtab, int type)
@@ -461,13 +458,78 @@ void D_PageTicker();
 void GameInfo::Ticker()
 {
   extern bool dedicated;
+  MapInfo *m;
+  PlayerInfo *p;
+  player_iter_t t;
+
+  // TODO fix the intermissions and finales. when should they appear in general?
+  // perhaps they should be made client-only stuff, the server waits until the clients are ready to continue.
+
+  // check fraglimit cvar
+  if (cv_fraglimit.value && CheckScoreLimit())
+    {
+      // go on to the next map
+      currentcluster->Finish(currentmap->nextlevel, 0);
+    }
+
+  if (state == GS_LEVEL)
+    {
+      // manage players
+      for (t = Players.begin(); t != Players.end(); )
+	{
+	  p = (*t).second;
+	  t++; // because "old t" may be invalidated
+	  if (p->playerstate == PST_REMOVE)
+	    {
+	      // the player is removed from the game (invalidates "old t")
+	      p->ExitLevel(0, 0);
+	      RemovePlayer(p->number);
+	    }
+	}
+
+      for (t = Players.begin(); t != Players.end(); t++)
+	{
+	  p = (*t).second;
+	  if (p->playerstate == PST_WAITFORMAP)
+	    {
+	      // assign the player to a map
+	      m = FindMapInfo(p->requestmap);
+
+	      if (m == NULL)
+		{
+		  // game ends
+		  currentcluster->Finish(0, 0);
+		  //action = ga_intermission;
+		  break;
+		}
+
+	      if (currentcluster->number != m->cluster)
+		{
+		  // cluster change, everyone follows p!
+		  currentcluster->Finish(p->requestmap, p->entrypoint);
+		  currentcluster = FindCluster(m->cluster);
+		  currentmap = currentcluster->maps[0];
+		  //action = ga_intermission;
+		  break;
+		}
+
+	      // normal individual mapchange
+	      if (!m->Activate())
+		I_Error("Darn!\n");
+
+	      p->Reset(currentcluster->keepstuff, true);
+	      m->me->AddPlayer(p);
+	    }
+	}
+    }
+
 
   // do things to change the game state
   while (action != ga_nothing)
     switch (action)
       {
-      case ga_levelcompleted:
-	EndLevel(); // starts intermission (and finales)
+      case ga_intermission:
+	StartIntermission();
 	break;
       case ga_nextlevel:
 	NextLevel();
@@ -479,52 +541,13 @@ void GameInfo::Ticker()
 
   //CONS_Printf("======== GI::Ticker, tic %d, st %d\n", gametic, state);
 
-  // manage players
-  player_iter_t i;
-  if (state == GS_LEVEL)
-    {
-      for (i = Players.begin(); i != Players.end(); )
-	{
-	  PlayerInfo *p = (*i).second;
-	  i++; // because "old i" may be invalidated
-	  switch (p->playerstate)
-	    {
-	    case PST_WAITFORMAP:
-	      /*
-		if (!multiplayer && !cv_deathmatch.value)
-		{
-		// FIXME, not right. Map should call StartLevel
-		// reload the level from scratch
-		StartLevel(true, true);
-		}
-		else
-	      */ 
-	      {
-		int m = 0;
-		// just assign the player to a map
-		maps[m]->AddPlayer(p);
-	      }
-	      break;
-	    case PST_REMOVE:
-	      // the player is removed from the game (invalidates "old i")
-	      RemovePlayer(p->number);
-	      break;
-
-	    default:
-	      break;
-	    }
-	}
-    }
-
-
-  //int buf = gametic % BACKUPTICS; TODO
 
   // read/write demo
   if (!dedicated)
-    for (i = Players.begin(); i != Players.end(); i++)
+    for (t = Players.begin(); t != Players.end(); t++)
       {
-	ticcmd_t *cmd = &((*i).second)->cmd;
-	int j = (*i).first; // playernum
+	ticcmd_t *cmd = &((*t).second)->cmd;
+	int j = (*t).first; // playernum
 	  
 	if (demoplayback)
 	  ReadDemoTiccmd(cmd, j);
@@ -542,12 +565,9 @@ void GameInfo::Ticker()
   switch (state)
     {
     case GS_LEVEL:
+
       if (!paused)
-	{
-	  int j, n = maps.size();
-	  for (j=0; j<n; j++)
-	    maps[j]->Ticker(); // tick the maps
-	}
+	currentcluster->Ticker();
       hud.Ticker();
       automap.Ticker();
       break;
@@ -576,15 +596,20 @@ void GameInfo::Ticker()
 // starts a new local game
 bool GameInfo::DeferredNewGame(skill_t sk, bool splitscreen)
 {
-  if (levelgraph.empty())
+  if (clustermap.empty())
     return false;
 
-  // FIXME first we should check if we have all the WAD resources n requires
-  // if (not enough resources) return false;
+  // read these lumps _after_ MAPINFO but not separately for each map
+  Read_SNDINFO(fc.FindNumForName("SNDINFO"));
+  //S_Read_SNDSEQ(fc.FindNumForName("SNDSEQ"));
 
   Downgrade(VERSION);
   paused = false;
   nomonsters = false;
+
+  if (sk > sk_nightmare)
+    sk = sk_nightmare;
+
   skill = sk;
 
   if (demoplayback)
@@ -610,39 +635,24 @@ bool GameInfo::DeferredNewGame(skill_t sk, bool splitscreen)
   return true;
 }
 
-void S_Read_SNDINFO(int lump);
 
-// starts or restarts the game. firstlevel must be set.
+
+// starts or restarts the game.
 bool GameInfo::StartGame()
 {
-  if (levelgraph.empty())
+  void P_InitSwitchList();
+
+  if (clustermap.empty())
     return false;
 
-  // read the lumps _after_ MAPINFO but not separately for each map
-  S_Read_SNDINFO(fc.FindNumForName("SNDINFO"));
-  //S_Read_SNDSEQ(fc.FindNumForName("SNDSEQ"));
+  cluster_iter_t t = clustermap.begin();
+  MapCluster *m = (*t).second; 
+  currentmap = m->maps[0];
 
-  map<int, LevelNode *>::iterator t = levelgraph.begin();
+  currentcluster = m; // TODO delete the old clusters...?
 
-  SetupLevel((*t).second, skill, true);
-  return true;
-}
-
-// was G_InitNew()
-// Sets up and starts a new level inside a game.
-//
-// This is the map command interpretation (result of Command_Map_f())
-void GameInfo::SetupLevel(LevelNode *n, skill_t sk, bool resetplayers)
-{
-  currentlevel = n;
-
+  // TODO client-only stuff...
   automap.Close();
-
-  // delete old level
-  int i;
-  for (i = maps.size()-1; i>=0; i--)
-    delete maps[i];
-  maps.clear();
 
   //added:27-02-98: disable selected features for compatibility with
   //                older demos, plus reset new features as default
@@ -651,7 +661,7 @@ void GameInfo::SetupLevel(LevelNode *n, skill_t sk, bool resetplayers)
       CONS_Printf("Cannot Downgrade engine.\n");
       CL_Reset();
       StartIntro();
-      return;
+      return false;
     }
 
   if (paused)
@@ -660,96 +670,32 @@ void GameInfo::SetupLevel(LevelNode *n, skill_t sk, bool resetplayers)
       S.ResumeMusic();
     }
 
-  if (sk > sk_nightmare)
-    sk = sk_nightmare;
-
   M_ClearRandom();
 
-  if (server && sk == sk_nightmare)
+  if (server && skill == sk_nightmare)
     {
       CV_SetValue(&cv_respawnmonsters,1);
       CV_SetValue(&cv_fastmonsters,1);
     }
 
-  skill = sk;
-
   // this should be CL_Reset or something...
   //playerdeadview = false;
 
-  for (i = 0; i < n->contents.size(); i++)
-    {
-      const char *temp = n->contents[i]->lumpname.c_str();
-      if (fc.FindNumForName(temp) == -1)
-	{
-	  // FIXME! this entire block
-	  //has the name got a dot (.) in it?
-	  if (!FIL_CheckExtension(temp))
-	    // append .wad to the name
-	    ;
-
-	  // try to load the file
-	  if (true)
-	    CONS_Printf("\2Map '%s' not found\n"
-			"(use .wad extension for external maps)\n", temp);
-	  Command_ExitGame_f();
-	  return;
-	}
-    }
-
-  for (i = 0; i < n->contents.size(); i++)
-    {
-      Map *m = new Map(n->contents[i]->lumpname);
-      m->level = n;
-      m->info = n->contents[i];
-      maps.push_back(m);
-    }
-
-  StartLevel(false, resetplayers);
-}
-
-
-void P_InitSwitchList();
-//
-// StartLevel : (re)starts the 'currentlevel' stored in 'maps' vector
-// was G_DoLoadLevel()
-// if re is true, do not reload the entire maps, just restart them.
-void GameInfo::StartLevel(bool re, bool resetplayers)
-{
-  // FIXME make restart option work, do not FreeTags and Setup,
+  // FIXME make map restart option work, do not FreeTags and Setup,
   // instead just Reset the maps
 
-  //levelstarttic = gametic;        // for time calculation
-
   if (wipestate == GS_LEVEL)
-    wipestate = GS_WIPE;             // force a wipe
+    wipestate = GS_WIPE;  // force a wipe
 
   state = GS_LEVEL;
 
   player_iter_t i;
   for (i = Players.begin(); i != Players.end(); i++)
-    (*i).second->Reset(resetplayers, cv_deathmatch.value ? false : true);
-
-  Z_FreeTags(PU_LEVEL, PU_PURGELEVEL-1); // destroys pawns if they are not Detached
+    (*i).second->Reset(true, true);
 
   // set switch texture names/numbers (TODO bad design, fix...)
   P_InitSwitchList();
 
-  // setup all maps in the level
-  LevelNode *l = currentlevel;
-  l->kills = l->items = l->secrets = 0;
-  int j, n = maps.size();
-  for (j = 0; j<n; j++)
-    {
-      if (!(maps[j]->Setup(gametic)))
-	{
-	  // fail so reset game stuff
-	  Command_ExitGame_f();
-	  return;
-	}
-      l->kills += maps[j]->kills;
-      l->items += maps[j]->items;
-      l->secrets += maps[j]->secrets;
-    }
 
   //Fab:19-07-98:start cd music for this level (note: can be remapped)
   /*
@@ -763,6 +709,7 @@ void GameInfo::StartLevel(bool re, bool resetplayers)
   //AM_LevelInit()
   //BOT_InitLevelBots ();
 
+  // TODO client stuff!!!
   displayplayer = consoleplayer;          // view the guy you are playing
   if (cv_splitscreen.value)
     displayplayer2 = consoleplayer2;
@@ -780,34 +727,10 @@ void GameInfo::StartLevel(bool re, bool resetplayers)
 
   // clear hud messages remains (usually from game startup)
   CON_ClearHUD();
+  return true;
 }
 
 
-// was G_ExitLevel
-//
-// exit -1 means "next level"
-void GameInfo::ExitLevel(int exit, unsigned entrypoint)
-{
-  if (state == GS_LEVEL)
-    {
-      action = ga_levelcompleted;
-      map<int, LevelNode *>::iterator i;
-      
-      LevelNode *next = NULL;
-
-      if (exit < 0)
-	exit = 0; // default "next level"
-
-      i = currentlevel->exit.find(exit);
-      if (i != currentlevel->exit.end())
-	next = (*i).second;
-
-      if (next)
-	next->entrypoint = entrypoint;
-
-      currentlevel->exitused = next;
-    }
-}
 
 // Here's for the german edition.
 /*
@@ -818,28 +741,12 @@ void G_SecretExitLevel (void)
 */
 
 
-// was G_DoCompleted
-//
 // start intermission
-void GameInfo::EndLevel()
+void GameInfo::StartIntermission()
 {
   action = ga_nothing;
 
   hud.ST_Stop();
-
-  // save or forfeit pawns
-  // player has a pawn if he is alive or dead, but not if he is in respawnqueue
-  player_iter_t i;
-  for (i = Players.begin(); i != Players.end(); i++)
-    if ((*i).second->playerstate == PST_LIVE) 
-      (*i).second->pawn->FinishLevel(); // take away cards and stuff, save the pawn
-    else
-      (*i).second->pawn = NULL; // let the pawn be destroyed with the map
-
-  // TODO here we have a problem with hubs: if a player is dead when the hub is exited,
-  // his corpse is never placed in bodyqueue and thus never flushed out...
-
-  // compact the frags vectors, reassign player numbers? Maybe not.
 
   // detach chasecam
   if (camera.chase)
@@ -847,60 +754,45 @@ void GameInfo::EndLevel()
 
   automap.Close();
 
-  currentlevel->done = true;
-  currentlevel->time = maps[0]->maptic / TICRATE;
-
-  // dm nextmap wraparound?
-
-  state = GS_INTERMISSION;
-
-  wi.Start(currentlevel);
+  //state = GS_INTERMISSION;
+  //wi.Start(currentcluster, nextcluster);
 }
 
 
-//
-// was G_NextLevel (WorldDone)
-//
 // called when intermission ends
 // init next level or go to the final scene
 void GameInfo::EndIntermission()
 {
   // TODO purge the removed players from the frag maps
 
-  // action is ga_nothing
-  const LevelNode *next = currentlevel->exitused;
-
   // check need for finale
   if (cv_deathmatch.value == 0)
     {
-      int c = currentlevel->cluster;
-      clusterdef_t *cd = P_FindCluster(c);
-
       // check winning
-      if (next == NULL)
+      if (nextcluster == NULL)
 	{
 	  // disconnect from network
 	  CL_Reset();
 	  state = GS_FINALE;
-	  F_StartFinale(cd, false, true); // final piece of story is exittext
+	  F_StartFinale(currentcluster, false, true); // final piece of story is exittext
 	  return;
 	}
 
-      int n = next->cluster;
+      int c = currentcluster->number;
+      int n = nextcluster->number;
       // check "mid-game finale" (story) (cluster change)
       if (n != c)
 	{
-	  clusterdef_t *ncd = P_FindCluster(n);
-	  if (ncd && !(ncd->entertext.empty()))
+	  if (!(nextcluster->entertext.empty()))
 	    {
 	      state = GS_FINALE;
-	      F_StartFinale(ncd, true, false);
+	      F_StartFinale(nextcluster, true, false);
 	      return;
 	    }
-	  else if (cd && !(cd->exittext.empty()))
+	  else if (!(currentcluster->exittext.empty()))
 	    {
 	      state = GS_FINALE;
-	      F_StartFinale(cd, false, false);
+	      F_StartFinale(currentcluster, false, false);
 	      return;
 	    }
 	}
@@ -909,7 +801,7 @@ void GameInfo::EndIntermission()
     {
       // no finales in deathmatch
       // FIXME end game here, show final frags
-      if (next == NULL)
+      if (nextcluster == NULL)
 	CL_Reset();
     }
 
@@ -928,18 +820,5 @@ void GameInfo::EndFinale()
 void GameInfo::NextLevel()
 {
   action = ga_nothing;
-  // maybe a state change here? Right now state is GS_INTERMISSION or GS_FINALE ??
-
-  LevelNode *next = currentlevel->exitused;
-
-  if (server && !demoplayback)
-    // not in demo because demo have the mapcommand on it
-    {
-      bool reset = false;
-      // resetplayer in deathmatch for more equality
-      if (cv_deathmatch.value)
-	reset = true;
-
-      SetupLevel(next, skill, reset);
-    }
+  state = GS_LEVEL;
 }

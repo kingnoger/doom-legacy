@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2003/11/12 11:07:17  smite-meister
+// Serialization done. Map progression.
+//
 // Revision 1.13  2003/06/01 18:56:29  smite-meister
 // zlib compression, partial polyobj fix
 //
@@ -74,7 +77,6 @@
 #include "g_player.h"
 #include "g_map.h"
 #include "g_pawn.h"
-#include "g_save.h"
 
 #include "d_items.h"
 #include "g_input.h"
@@ -883,16 +885,6 @@ bool GameInfo::Responder(event_t* ev)
 
 
 //
-// G_InitFromSavegame
-// Can be called by the startup code or the menu task.
-//
-void G_LoadGame(int slot)
-{
-  COM_BufAddText(va("load %d\n",slot));
-}
-
-
-//
 // G_SaveGame
 // Called by the menu task.
 // Description is a 24 byte text string
@@ -931,7 +923,7 @@ void G_DeferedInitNew (skill_t skill, char* mapname, bool StartSplitScreenGame)
 // returns player number 'num' if he is in the game, otherwise NULL
 PlayerInfo *GameInfo::FindPlayer(int num)
 {
-  map<int, PlayerInfo *>::iterator i = Players.find(num);
+  player_iter_t i = Players.find(num);
   if (i != Players.end())
     return (*i).second;
 
