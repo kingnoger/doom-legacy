@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 2002 by DooM Legacy Team.
+// Copyright (C) 2002-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -16,92 +16,92 @@
 //
 //
 // DESCRIPTION:
-// WadFile, Wad, Wad3 classes: WAD file I/O
+// Wad, Wad3 and Pak classes: datafile I/O
 //
 //-----------------------------------------------------------------------------
 
 
 #include <stdio.h>
-#include <sys/stat.h>
-
-#ifndef __WIN32__
-//# include <unistd.h>
-#endif
 
 #include "doomdef.h"
 #include "wad.h"
 
 #include "dehacked.h"
 #include "i_system.h"
-#include "md5.h"
 #include "z_zone.h"
 
 
-//===========================================================================
-// WadFile class implementation
-
-
-void *WadFile::operator new(size_t size)
+struct wadheader_t 
 {
-  return Z_Malloc(size, PU_STATIC, NULL);
-}
+  char magic[4];   // "IWAD", "PWAD", "WAD2" or "WAD3"
+  int  numentries; // number of entries in WAD
+  int  diroffset;  // offset to WAD directory
+};
 
-void WadFile::operator delete(void *mem)
+// a WAD directory entry
+struct waddir_t
 {
-  Z_Free(mem);
-}
+  int  offset;  // file offset of the resource
+  int  size;    // size of the resource
+  union
+  {
+    char name[8]; // name of the resource (NUL-padded)
+    int  iname[2];
+  };
+};
 
-
-// -----------------------------------------------------
-// constructor
-WadFile::WadFile()
+// a WAD2 or WAD3 directory entry
+struct wad3dir_t
 {
-  filename = "";
-  stream = NULL;
-  cache = NULL;
-}
+  int  offset; // offset of the data lump
+  int  dsize;  // data lump size in file (compressed)
+  int  size;   // data lump size in memory (uncompressed)
+  char type;   // type (data format) of entry. not needed.
+  char compression; // kind of compression used. 0 means none.
+  char padding[2];  // unused
+  union
+  {
+    char name[16]; // name of the entry, padded with '\0'
+    int  iname[4];
+  };
+};
 
 
-// -----------------------------------------------------
-// WadFile destructor. Closes the open file.
-WadFile::~WadFile()
+struct pakheader_t
 {
-  if (stream)
-    {
-      fclose(stream);
-      stream = NULL;
-    }
-  // TODO: free cache memory, invalidate cache
-}
+  char magic[4];   // "PACK"
+  int  diroffset;  // offset to directory
+  int  dirsize;    // numentries * sizeof(pakdir_t) == numentries * 64
+};
 
-
-bool WadFile::Load(const char *fname, FILE *str)
+// PACK directory entry
+struct pakdir_t
 {
-  // at this point we have already checked the magic number and opened the file
-  stream = str;
-  filename = fname;
+  char name[56]; // item name, NUL-padded
+  int  offset;
+  int  size;
+};
 
-  // get file system info about the file
-  struct stat bufstat;
-  fstat(fileno(stream), &bufstat);
-  filesize = bufstat.st_size;
 
-  // read header
-  rewind(str);
-  fread(&header, sizeof(wadheader_t), 1, stream);
-  // endianness swapping
-  header.numentries = LONG(header.numentries);
-  header.diroffset = LONG(header.diroffset);
-
-  // set up caching
-  cache = (lumpcache_t *)Z_Malloc(header.numentries * sizeof(lumpcache_t), PU_STATIC, NULL);
-  memset(cache, 0, header.numentries * sizeof(lumpcache_t));
-
-  // generate md5sum 
-  rewind(str);
-  md5_stream(stream, md5sum);
-
-  return true;
+static bool TestPadding(char *name, int len)
+{
+  // TEST padding of lumpnames
+  int j;
+  bool warn = false;
+  for (j=0; j<len; j++)
+    if (name[j] == 0)
+      {
+	for (j++; j<len; j++)
+	  if (name[j] != 0)
+	    {
+	      name[j] = 0; // fix it
+	      warn = true;
+	    }
+	if (warn)
+	  CONS_Printf("Warning: Lumpname %s not padded with zeros!\n", name);
+	break;
+      }
+  return warn;
 }
 
 
@@ -110,98 +110,124 @@ bool WadFile::Load(const char *fname, FILE *str)
 
 // constructor
 Wad::Wad()
-  : WadFile()
 {
   directory = NULL;
 }
 
 Wad::~Wad()
 {
-  // TODO free hwrcache
   Z_Free(directory);
+}
+
+// trick constructor for DEH files (does the "opening" also)
+Wad::Wad(string &fname)
+{
+  // this code emulates a wadfile with one lump name "DEHACKED" 
+  // at position 0 and size of the whole file
+  // this allows deh files to be treated like wad files,
+  // copied by network and loaded at the console
+
+  filename = fname;
+  stream = fopen(fname.c_str(), "rb");
+  if (!stream)
+    {
+      directory = NULL;
+      return;
+    }
+
+  // diroffset, md5sum, cache, hwrcache unset
+  numitems = 1;
+  directory = (waddir_t *)Z_Malloc(sizeof(waddir_t), PU_STATIC, NULL);
+  directory->offset = 0;
+
+  // get file system info about the file
+  struct stat bufstat;
+  fstat(fileno(stream), &bufstat);
+  size = directory->size = bufstat.st_size;
+  strncpy(directory->name, "DEHACKED", 8);
+
+  LoadDehackedLumps();
 }
 
 // -----------------------------------------------------
 // Loads a WAD file, sets up the directory and cache.
 // Returns false in case of problem
-//
-// FIXME! unfortunately needs to know its index in the FileCache vector.
 
-bool Wad::Load(const char *fname, FILE *str, int num)
+// FIXME! unfortunately hwrcache needs to know the file's index in the FileCache vector.
+int file_num;
+
+bool Wad::Open(const char *fname)
 {
-  // common to all WAD files
-  if (!WadFile::Load(fname, str))
+  // common to all files
+  if (!VDataFile::Open(fname))
     return false;
 
-  int i, n;
-  n = header.numentries;
-  
-  waddir_t *p;
+  // read header
+  wadheader_t h;
+  rewind(stream);
+  fread(&h, sizeof(wadheader_t), 1, stream);
+  // endianness swapping
+  numitems = LONG(h.numentries);
+  diroffset = LONG(h.diroffset);
+
+  // set up caching
+  cache = (lumpcache_t *)Z_Malloc(numitems * sizeof(lumpcache_t), PU_STATIC, NULL);
+  memset(cache, 0, numitems * sizeof(lumpcache_t));
 
   // read wad file directory
-  fseek(stream, header.diroffset, SEEK_SET);
-  p = directory = (waddir_t *)Z_Malloc(n * sizeof(waddir_t), PU_STATIC, NULL); 
-  fread(directory, sizeof(waddir_t), n, stream);  
+  fseek(stream, diroffset, SEEK_SET);
+  waddir_t *p = directory = (waddir_t *)Z_Malloc(numitems * sizeof(waddir_t), PU_STATIC, NULL); 
+  fread(directory, sizeof(waddir_t), numitems, stream);  
+
+  int i;
   // endianness conversion for directory
-  for (i=0; i<n; i++, p++)
+  for (i = 0; i < numitems; i++, p++)
     {
       p->offset = LONG(p->offset);
       p->size   = LONG(p->size);
-      // TEST padding of lumpnames
-      int j;
-      bool warn = false;
-      for (j=0; j<8; j++)
-	if (p->name[j] == 0)
-	  {
-	    for (j++; j<8; j++)
-	      if (p->name[j] != 0)
-		{
-		  p->name[j] = 0; // fix it
-		  warn = true;
-		}
-	    if (warn)
-	      CONS_Printf("Warning: Lumpname %s not padded with zeros!\n", p->name);
-	    break;
-	  }
+      TestPadding(p->name, 8);
     }
     
 #ifdef HWRENDER
   //faB: now allocates GlidePatch info structures STATIC from the start,
   //     because these were causing a lot of fragmentation of the heap,
   //     considering they are never freed.
-  int length = n * sizeof(GlidePatch_t);
+  int length = numitems * sizeof(GlidePatch_t);
   hwrcache = (GlidePatch_t*)Z_Malloc(length, PU_HWRPATCHINFO, NULL);    //never freed
   // set mipmap.downloaded to false
   memset(hwrcache, 0, length);
-  for (i=0; i<n; i++)
+  for (i=0; i<numitems; i++)
     {
       //store the software patch lump number for each GlidePatch
-      hwrcache[i].patchlump = (num << 16) + i;
+      hwrcache[i].patchlump = (file_num << 16) + i;
     }
 #endif
 
+  /*
   char buf[5];
-  strncpy(buf, header.magic, 4);
+  strncpy(buf, h.magic, 4);
   buf[4] = '\0';
+  */
+  h.numentries = 0; // what a great hack!
 
-  CONS_Printf("Added %s file %s (%i lumps)\n", buf, filename.c_str(), n);
+  CONS_Printf("Added %s file %s (%i lumps)\n", h.magic, filename.c_str(), numitems);
   LoadDehackedLumps();
   return true;
 }
 
 
-int Wad::GetLumpSize(int i)
+int Wad::GetItemSize(int i)
 {
   return directory[i].size;
 }
 
-char *Wad::GetLumpName(int i)
+const char *Wad::GetItemName(int i)
 {
   return directory[i].name;
 }
 
 
-int Wad::ReadLumpHeader(int lump, void *dest, int size)
+int Wad::ReadItemHeader(int lump, void *dest, int size)
 {
   waddir_t *l = directory + lump;
 
@@ -212,73 +238,70 @@ int Wad::ReadLumpHeader(int lump, void *dest, int size)
   // 0 size means read all the lump
   if (size == 0 || size > l->size)
     size = l->size;
-    
-  fseek(stream, l->offset, SEEK_SET);
 
+  fseek(stream, l->offset, SEEK_SET);
   return fread(dest, 1, size, stream); 
 }
 
 
-void Wad::ListDir()
+void Wad::ListItems()
 {
-  int i;
   waddir_t *p = directory;
-  for (i=0; i<header.numentries; i++, p++)
+  for (int i = 0; i < numitems; i++, p++)
     printf("%-8s\n", p->name);
 }
 
+
 // -----------------------------------------------------
-// FindNumForName
 // Searches the wadfile for lump named 'name', returns the lump number
 // if not found, returns -1
 int Wad::FindNumForName(const char *name, int startlump)
 {
-  union {
+  union
+  {
     char s[9];
     int  x[2];
-  } name8;
-
-  int j;
-  int v1, v2;
+  };
 
   // make the name into two integers for easy compares
-  strncpy(name8.s, name, 8);
+  strncpy(s, name, 8);
 
-  // in case the name was a fill 8 chars
-  name8.s[8] = 0;
-
+  /*
+  // in case the name was 8 chars long
+  s[8] = 0;
   // case insensitive TODO make it case sensitive if possible
-  strupr(name8.s);
-
-  v1 = name8.x[0];
-  v2 = name8.x[1];
+  strupr(s);
+  */
 
   waddir_t *p = directory + startlump;
 
-  for (j = startlump; j < header.numentries; j++, p++)
-    if (*(int *)p->name == v1 && *(int *)&p->name[4] == v2)
+  // a slower alternative could use strncasecmp()
+  for (int j = startlump; j < numitems; j++, p++)
+    if (p->iname[0] == x[0] && p->iname[1] == x[1])
       return j;
 
   // not found
   return -1;
 }
-/*
-// slower alternative, not needed because lumpnames are now always zero-padded
-int Wad::FindNumForName(const char *name, int startlump)
+
+
+int Wad::FindPartialName(int iname, int startlump, const char **fullname)
 {
+  // checks only first 4 characters, returns full name
+  // a slower alternative could use strncasecmp()
+
   waddir_t *p = directory + startlump;
 
-  for (int j = startlump; j < header.numentries; j++, p++)
-  {
-    if (!strncasecmp(p->name, name, 8)) // TODO: might not be as fast as the original function
-      return j;
-  }
+  for (int j = startlump; j < numitems; j++, p++)
+    if (p->iname[0] == iname)
+      {
+	*fullname = p->name;
+	return j;
+      }
 
   // not found
   return -1;
 }
-*/
-
 
 // -----------------------------------------------------
 // LoadDehackedLumps
@@ -321,7 +344,6 @@ void Wad::LoadDehackedLumps()
 
 // constructor
 Wad3::Wad3()
-  : WadFile()
 {
   directory = NULL;
 }
@@ -337,53 +359,64 @@ Wad3::~Wad3()
 // Loads a WAD2 or WAD3 file, sets up the directory and cache.
 // Returns false in case of problem
 
-bool Wad3::Load(const char *fname, FILE *str)
+bool Wad3::Open(const char *fname)
 {
-  // common to all WAD files
-  if (!WadFile::Load(fname, str))
+  // common to all files
+  if (!VDataFile::Open(fname))
     return false;
 
-  int i, n;
-  n = header.numentries;
+  // read header
+  wadheader_t h;
+  rewind(stream);
+  fread(&h, sizeof(wadheader_t), 1, stream);
+  // endianness swapping
+  numitems = LONG(h.numentries);
+  diroffset = LONG(h.diroffset);
 
-  wad3dir_t *p;
+  // set up caching
+  cache = (lumpcache_t *)Z_Malloc(numitems * sizeof(lumpcache_t), PU_STATIC, NULL);
+  memset(cache, 0, numitems * sizeof(lumpcache_t));
 
   // read in directory
-  fseek(stream, header.diroffset, SEEK_SET);
-  p = directory = (wad3dir_t *)Z_Malloc(n * sizeof(wad3dir_t), PU_STATIC, NULL);
-  fread(directory, sizeof(wad3dir_t), n, stream);  
+  fseek(stream, diroffset, SEEK_SET);
+  wad3dir_t *p = directory = (wad3dir_t *)Z_Malloc(numitems * sizeof(wad3dir_t), PU_STATIC, NULL);
+  fread(directory, sizeof(wad3dir_t), numitems, stream);
+
   // endianness conversion for directory
-  for (i=0; i<n; i++, p++)
+  for (int i = 0; i < numitems; i++, p++)
     {
       p->offset = LONG(p->offset);
       p->dsize  = LONG(p->dsize);
       p->size   = LONG(p->size);
+      TestPadding(p->name, 16);
     }
     
-  // TODO hwrcache?? maybe not. All graphics in WAD2/WAD2
-  // files should be in sensible formats.
+  h.numentries = 0; // what a great hack!
 
-  char buf[5];
-  strncpy(buf, header.magic, 4);
-  buf[4] = '\0';
-
-  CONS_Printf("Added %s file %s (%i lumps)\n", buf, filename.c_str(), n);
+  CONS_Printf("Added %s file %s (%i lumps)\n", h.magic, filename.c_str(), numitems);
   return true;
 }
 
 
-int Wad3::GetLumpSize(int i)
+int Wad3::GetItemSize(int i)
 {
   return directory[i].size;
 }
 
-char *Wad3::GetLumpName(int i)
+const char *Wad3::GetItemName(int i)
 {
   return directory[i].name;
 }
 
+void Wad3::ListItems()
+{
+  wad3dir_t *p = directory;
+  for (int i = 0; i < numitems; i++, p++)
+    printf("%-16s\n", p->name);
+}
 
-int Wad3::ReadLumpHeader(int lump, void *dest, int size)
+
+int Wad3::ReadItemHeader(int lump, void *dest, int size)
 {
   wad3dir_t *l = directory + lump;
 
@@ -403,14 +436,6 @@ int Wad3::ReadLumpHeader(int lump, void *dest, int size)
 }
 
 
-void Wad3::ListDir()
-{
-  int i;
-  wad3dir_t *p = directory;
-  for (i=0; i<header.numentries; i++, p++)
-    printf("%-16s\n", p->name);
-}
-
 // -----------------------------------------------------
 // FindNumForName
 // Searches the wadfile for lump named 'name', returns the lump number
@@ -421,7 +446,7 @@ int Wad3::FindNumForName(const char *name, int startlump)
   {
     char s[16];
     int  x[4];
-  }; // name16;
+  };
 
   // make the name into 4 integers for easy compares
   // strncpy pads the target string with zeros if needed
@@ -432,10 +457,10 @@ int Wad3::FindNumForName(const char *name, int startlump)
   wad3dir_t *p = directory + startlump;
 
   int j;
-  for (j = startlump; j<header.numentries; j++, p++)
+  for (j = startlump; j < numitems; j++, p++)
     {
-      if (*(int *)p->name == x[0] && *(int *)(p->name + 4) == x[1] &&
-	  *(int *)(p->name + 8) == x[2] && *(int *)(p->name + 12) == x[3])
+      if (p->iname[0] == x[0] && p->iname[1] == x[1] &&
+	  p->iname[2] == x[2] && p->iname[3] == x[3])
 	return j; 
     }
   // not found
@@ -443,55 +468,102 @@ int Wad3::FindNumForName(const char *name, int startlump)
 }
 
 
-// -----------------------------------------------------
-// !!!NOT CHECKED WITH NEW WAD SYSTEM
-// DOESN'T WORK! DOESN'T MAKE SENSE!
-// W_Reload
-// Flushes any of the reloadable lumps in memory
-//  and reloads the directory.
-/*
-void WadFile::Reload(void)
+//===========================================================================
+// Pak class implementation
+
+
+// constructor
+Pak::Pak()
 {
-  wadinfo_t           header;
-  int                 lumpcount;
-  lumpinfo_t*         lump_p;
-  int                 i;
-  int                 handle;
-  int                 length;
-  filelump_t*         fileinfo;
-  lumpcache_t*        lumpcache;
-
-  // FIXME! the file is already open?? reopen() ??
-  if ((handle = open(filename, O_RDONLY | O_BINARY)) == -1)
-    I_Error("WadFile::Reload: couldn't open %s", filename);
-
-  read(handle, &header, sizeof(header));
-  lumpcount = LONG(header.numlumps);
-  header.infotableofs = LONG(header.infotableofs);
-  length = lumpcount*sizeof(filelump_t);
-  fileinfo = alloca(length);
-  lseek(handle, header.infotableofs, SEEK_SET);
-  read(handle, fileinfo, length);
-
-  // Fill in lumpinfo
-  lump_p = wadfiles[reloadlump>>16]->lumpinfo + (reloadlump&0xFFFF);
-
-  lumpcache = wadfiles[reloadlump>>16]->lumpcache;
-
-  for (i=reloadlump ;
-       i<reloadlump+lumpcount ;
-       i++,lump_p++, fileinfo++)
-    {
-      if (lumpcache[i])
-	Z_Free(lumpcache[i]);
-      
-      lump_p->position = LONG(fileinfo->filepos);
-      lump_p->size = LONG(fileinfo->size);
-    }
-  
-  close(handle);
+  directory = NULL;
 }
-*/
+
+// destructor
+Pak::~Pak()
+{
+  Z_Free(directory);
+}
+
+
+// -----------------------------------------------------
+// Loads a PACK file, sets up the directory and cache.
+// Returns false in case of problem
+
+bool Pak::Open(const char *fname)
+{
+  // common to all files
+  if (!VDataFile::Open(fname))
+    return false;
+
+  // read header
+  pakheader_t h;
+  rewind(stream);
+  fread(&h, sizeof(pakheader_t), 1, stream);
+  // endianness swapping
+  numitems = LONG(h.dirsize) / sizeof(pakdir_t);
+  diroffset = LONG(h.diroffset);
+
+  // set up caching
+  cache = (lumpcache_t *)Z_Malloc(numitems * sizeof(lumpcache_t), PU_STATIC, NULL);
+  memset(cache, 0, numitems * sizeof(lumpcache_t));
+
+  // read in directory
+  fseek(stream, diroffset, SEEK_SET);
+  pakdir_t *p = directory = (pakdir_t *)Z_Malloc(numitems * sizeof(pakdir_t), PU_STATIC, NULL);
+  fread(directory, sizeof(pakdir_t), numitems, stream);
+
+  // endianness conversion for directory
+  for (int i = 0; i < numitems; i++, p++)
+    {
+      p->offset = LONG(p->offset);
+      p->size   = LONG(p->size);
+      TestPadding(p->name, 56);
+      p->name[55] = 0; // precaution
+      imap.insert(pair<const char *, int>(p->name, i)); // fill the name map
+    }
+    
+  h.diroffset = 0; // what a great hack!
+
+  CONS_Printf("Added %s file %s (%i lumps)\n", h.magic, filename.c_str(), numitems);
+  return true;
+}
+
+
+int Pak::GetItemSize(int i)
+{
+  return directory[i].size;
+}
+
+const char *Pak::GetItemName(int i)
+{
+  return directory[i].name;
+}
+
+void Pak::ListItems()
+{
+  pakdir_t *p = directory;
+  for (int i = 0; i < numitems; i++, p++)
+    printf("%-56s\n", p->name);
+}
+
+
+int Pak::ReadItemHeader(int item, void *dest, int size)
+{
+  pakdir_t *l = directory + item;
+
+  if (l->size == 0)
+    return 0;
+  
+  // 0 size means read all the item
+  if (size == 0 || size > l->size)
+    size = l->size;
+    
+  fseek(stream, l->offset, SEEK_SET);
+
+  return fread(dest, 1, size, stream);
+}
+
+
 
 
 // --------------------------------------------------------------------------
@@ -556,29 +628,12 @@ void W_Profile(void)
     }
     fclose (f);
 }
+*/
 
 // --------------------------------------------------------------------------
 // W_AddFile : the old code kept for reference
 // --------------------------------------------------------------------------
-// All files are optional, but at least one file must be
-//  found (PWAD, if all required lumps are present).
-// Files with a .wad extension are wadlink files
-//  with multiple lumps.
-// Other files are single lumps with the base filename
-//  for the lump name.
-//
-
-int filelen (int handle)
-{
-    struct stat fileinfo;
-
-    if (fstat (handle,&fileinfo) == -1)
-        I_Error ("Error fstating");
-
-    return fileinfo.st_size;
-}
-
-
+/*
 int W_AddFile (char *filename)
 {
     wadinfo_t           header;

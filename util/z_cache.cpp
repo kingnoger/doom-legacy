@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/06/29 17:33:59  smite-meister
+// VFile system, PAK support, Hexen bugfixes
+//
 // Revision 1.4  2003/04/04 00:01:58  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -166,7 +169,12 @@ cacheitem_t *L2cache_t::Cache(const char *p)
 	  if (t)
 	    c_map.insert(c_map_t::value_type(p, t));
 	  else
-	    t = default_item;
+	    {
+	      // TEST some nonexistant items are asked again and again.
+	      // what if I just bind them to the defaultitem for good?
+	      t = default_item;
+	      c_map.insert(c_map_t::value_type(p, t));
+	    }
 	}
       else
 	{

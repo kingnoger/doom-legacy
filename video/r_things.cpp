@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/06/29 17:33:59  smite-meister
+// VFile system, PAK support, Hexen bugfixes
+//
 // Revision 1.10  2003/06/20 20:56:08  smite-meister
 // Presentation system tweaked
 //
@@ -163,6 +166,7 @@ void spritepres_t::SetFrame(const state_t *st)
 {
   // some sprites change name during animation (!!!)
   char *name = sprnames[st->sprite]; 
+  // FIXME for now the name of SPR_NONE is "NONE", fix it when we have the default sprite
   if (spr->iname != *reinterpret_cast<int *>(name))
     {
       spr->Release();
@@ -171,13 +175,16 @@ void spritepres_t::SetFrame(const state_t *st)
 
   state = st;
   flags = st->frame & FF_FRAMEMASK; // TODO the low 16 bits are wasted, but so what
-  lastupdate = 0; // TODO lastupdate should be set to nowtic
+  lastupdate = -1; // hack TODO lastupdate should be set to nowtic
 }
 
 
 void spritepres_t::SetAnim(int seq)
 {
   const state_t *st;
+
+  if (animseq == seq)
+    return; // do not interrupt the animation
 
   animseq = seq;
   switch (seq)
@@ -197,7 +204,9 @@ void spritepres_t::SetAnim(int seq)
 
     case Melee:
       st = &states[info->meleestate];
-      break;
+      if (st != &states[S_NULL])
+	break;
+      // if no melee anim, fallthrough to shoot anim
 
     case Shoot:
       st = &states[info->missilestate];
@@ -224,21 +233,27 @@ void spritepres_t::SetAnim(int seq)
 }
 
 
-bool spritepres_t::Update(int nowtic)
+bool spritepres_t::Update(int advance)
 {
-  // TODO nowtic isn't really nowtic, but rather "tics elapsed since last update"... I should fix it later
+  // TODO replace "tics elapsed since last update" with "nowtic"... 
   // the idea is to keep the count inside the presentation, not outside
-  lastupdate += nowtic; // how many tics to advance, lastupdate is the remainder from last update
+  advance += lastupdate; // how many tics to advance, lastupdate is the remainder from last update
 
-  while (state->tics >= 0 && lastupdate >= state->tics)
+  const state_t *st = state;
+  while (st->tics >= 0 && advance >= st->tics)
     {
-      lastupdate -= state->tics;
-
-      int ns = state->nextstate;
-      if (ns != S_NULL)
-	state = &states[ns];
+      advance -= st->tics;
+      int ns = st->nextstate;
+      st = &states[ns];
     }
-  SetFrame(state);
+
+  if (st != state)
+    SetFrame(st);
+
+  lastupdate = advance;
+
+  if (state == &states[info->spawnstate])
+    animseq = Idle; // another HACK, since higher animations often end up here
 
   return true;
 }
@@ -341,9 +356,9 @@ cacheitem_t *spritecache_t::Load(const char *p, cacheitem_t *r)
       // we need at least the S_END
       // (not really, but for speedup)
 
-      int start = fc.FindNumForNamePwad("S_START", i, 0);
+      int start = fc.FindNumForNameFile("S_START", i, 0);
       if (start == -1)
-	start = fc.FindNumForNamePwad("SS_START", i, 0); //deutex compatib.
+	start = fc.FindNumForNameFile("SS_START", i, 0); //deutex compatib.
 
       if (start == -1)
 	start = 0;      // search frames from start of wad (lumpnum low word is 0)
@@ -352,59 +367,59 @@ cacheitem_t *spritecache_t::Load(const char *p, cacheitem_t *r)
 
       start &= 0xFFFF;    // 0 based in waddir
 
-      int end = fc.FindNumForNamePwad("S_END", i, 0);
+      int end = fc.FindNumForNameFile("S_END", i, 0);
       if (end == -1)
-	end = fc.FindNumForNamePwad("SS_END", i, 0);     //deutex compatib.
+	end = fc.FindNumForNameFile("SS_END", i, 0);     //deutex compatib.
 
       if (end == -1)
 	continue; // no S_END, no sprites accepted
       end &= 0xFFFF;
 
       patch_t patch;
+      const char *fullname;
 
       // scan the lumps, filling in the frames for whatever is found
-      waddir_t *waddir = fc.GetLumpinfo(i);
-
-      for (l = start; l < end; l++)
+      l = fc.FindPartialName(intname, i, start, &fullname);
+      while (l != -1 && l < end)
 	{
-	  if (*(int *)waddir[l].name == intname)
-	    {
-	      int frame = waddir[l].name[4] - 'A';
-	      int rotation = waddir[l].name[5] - '0';
+	  int lump = (i << 16) + l;
+	  int frame = fullname[4] - 'A';
+	  int rotation = fullname[5] - '0';
 
-	      // skip NULL sprites from very old dmadds pwads
-	      if (waddir[l].size <= 8)
-		continue;
+	  // skip NULL sprites from very old dmadds pwads
+	  if (fc.LumpLength(lump) <= 8)
+	    continue;
 
-	      // store sprite info in lookup tables
-	      //FIXME:numspritelumps do not duplicate sprite replacements
-	      fc.ReadLumpHeader((i << 16) + l, &patch, sizeof(patch_t));
-	      spritewidth[numspritelumps] = SHORT(patch.width)<<FRACBITS;
-	      spriteoffset[numspritelumps] = SHORT(patch.leftoffset)<<FRACBITS;
-	      spritetopoffset[numspritelumps] = SHORT(patch.topoffset)<<FRACBITS;
-	      spriteheight[numspritelumps] = SHORT(patch.height)<<FRACBITS;
+	  // store sprite info in lookup tables
+	  //FIXME:numspritelumps do not duplicate sprite replacements
+	  fc.ReadLumpHeader(lump, &patch, sizeof(patch_t));
+	  spritewidth[numspritelumps] = SHORT(patch.width)<<FRACBITS;
+	  spriteoffset[numspritelumps] = SHORT(patch.leftoffset)<<FRACBITS;
+	  spritetopoffset[numspritelumps] = SHORT(patch.topoffset)<<FRACBITS;
+	  spriteheight[numspritelumps] = SHORT(patch.height)<<FRACBITS;
 
 #ifdef HWRENDER
 # define min(x,y) ( ((x)<(y)) ? (x) : (y) )
-	      //BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
-	      if (rendermode != render_soft && SHORT(patch.topoffset) > 0 // not for psprite
-		  && SHORT(patch.topoffset) < SHORT(patch.height))
-		// perfect is patch.height but sometime it is too high
-		spritetopoffset[numspritelumps] = min(SHORT(patch.topoffset)+4,SHORT(patch.height)) << FRACBITS;            
+	  //BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
+	  if (rendermode != render_soft && SHORT(patch.topoffset) > 0 // not for psprite
+	      && SHORT(patch.topoffset) < SHORT(patch.height))
+	    // perfect is patch.height but sometime it is too high
+	    spritetopoffset[numspritelumps] = min(SHORT(patch.topoffset)+4,SHORT(patch.height)) << FRACBITS;            
 #endif
 
-	      R_InstallSpriteLump((i << 16) + l, numspritelumps, frame, rotation, false);
+	  R_InstallSpriteLump((i << 16) + l, numspritelumps, frame, rotation, false);
 
-	      if (waddir[l].name[6])
-		{
-		  frame = waddir[l].name[6] - 'A';
-		  rotation = waddir[l].name[7] - '0';
-		  R_InstallSpriteLump((i << 16) + l, numspritelumps, frame, rotation, true);
-		}
-
-	      if (++numspritelumps>=MAXSPRITELUMPS)
-		I_Error("R_AddSingleSpriteDef: too much sprite replacements (numspritelumps)\n");
+	  if (fullname[6])
+	    {
+	      frame = fullname[6] - 'A';
+	      rotation = fullname[7] - '0';
+	      R_InstallSpriteLump(lump, numspritelumps, frame, rotation, true);
 	    }
+
+	  if (++numspritelumps>=MAXSPRITELUMPS)
+	    I_Error("R_AddSingleSpriteDef: too much sprite replacements (numspritelumps)\n");
+
+	  l = fc.FindPartialName(intname, i, l+1, &fullname);
 	}
     }
   
@@ -1800,35 +1815,23 @@ void SetPlayerSkin(int playernum, char *skinname)
 //
 int W_CheckForSkinMarkerInPwad (int wadid, int startlump)
 {
-  int         i;
-  int         v1;
-  waddir_t* lump_p;
-  int nlumps;
-  
-  union {
-    char s[4];
-    int  x;
-  } name4;
+  int iname = *reinterpret_cast<const int *>("S_SK");
+  int nlumps = fc.GetNumLumps(wadid);
+  const char *fullname;
 
-    strncpy (name4.s, "S_SK", 4);
-    v1 = name4.x;
-
-    nlumps = fc.GetNumLumps(wadid);
-    // scan forward, start at <startlump>
-    if (startlump < nlumps)
+  // scan forward, start at <startlump>
+  if (startlump < nlumps)
     {
-        lump_p = fc.GetLumpinfo(wadid) + startlump;
-        for (i = startlump; i < nlumps; i++,lump_p++)
-        {
-            if ( *(int *)lump_p->name == v1 &&
-                 lump_p->name[4] == 'I'     &&
-                 lump_p->name[5] == 'N')
-            {
-                return ((wadid<<16)+i);
-            }
+      int i = fc.FindPartialName(iname, wadid, startlump, &fullname);
+      while (i != -1)
+	{
+	  if (fullname[4] == 'I' && fullname[5] == 'N')
+	    return ((wadid<<16)+i);	    
+	  
+	  i = fc.FindPartialName(iname, wadid, i+1, &fullname);
         }
     }
-    return -1; // not found
+  return -1; // not found
 }
 
 //

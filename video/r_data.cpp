@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/06/29 17:33:59  smite-meister
+// VFile system, PAK support, Hexen bugfixes
+//
 // Revision 1.10  2003/04/24 20:30:34  hurdler
 // Remove lots of compiling warnings
 //
@@ -174,6 +177,15 @@
 
 #include "w_wad.h"
 #include "z_zone.h"
+
+
+//SoM: 4/13/2000: Store lists of lumps for F_START/F_END ect.
+struct lumplist_t
+{
+  int wadfile;
+  int firstlump;
+  int numlumps;
+};
 
 
 //
@@ -680,7 +692,7 @@ int R_CheckNumForNameList(const char *name, lumplist_t* list, int listsize)
   int   lump;
   for(i = listsize - 1; i > -1; i--)
   {
-    lump = fc.FindNumForNamePwad(name, list[i].wadfile, list[i].firstlump);
+    lump = fc.FindNumForNameFile(name, list[i].wadfile, list[i].firstlump);
     if((lump & 0xffff) > (list[i].firstlump + list[i].numlumps) || lump == -1)
       continue;
     else
@@ -710,11 +722,11 @@ void R_InitExtraColormaps()
 
     for(;cfile < nwads;cfile ++, clump = 0)
     {
-        startnum = fc.FindNumForNamePwad("C_START", cfile, clump);
+        startnum = fc.FindNumForNameFile("C_START", cfile, clump);
         if(startnum == -1)
             continue;
 
-        endnum = fc.FindNumForNamePwad("C_END", cfile, clump);
+        endnum = fc.FindNumForNameFile("C_END", cfile, clump);
 
         if(endnum == -1)
             I_Error("R_InitColormaps: C_START without C_END\n");
@@ -758,11 +770,11 @@ void R_InitFlats ()
 
   for(;cfile < nwads;cfile ++, clump = 0)
   {
-    startnum = fc.FindNumForNamePwad("F_START", cfile, clump);
+    startnum = fc.FindNumForNameFile("F_START", cfile, clump);
     if(startnum == -1)
     {
       clump = 0;
-      startnum = fc.FindNumForNamePwad("FF_START", cfile, clump);
+      startnum = fc.FindNumForNameFile("FF_START", cfile, clump);
 
       if(startnum == -1) //If STILL -1, search the whole file!
       {
@@ -775,9 +787,9 @@ void R_InitFlats ()
       }
     }
 
-    endnum = fc.FindNumForNamePwad("F_END", cfile, clump);
+    endnum = fc.FindNumForNameFile("F_END", cfile, clump);
     if(endnum == -1)
-      endnum = fc.FindNumForNamePwad("FF_END", cfile, clump);
+      endnum = fc.FindNumForNameFile("FF_END", cfile, clump);
 
     if(endnum == -1 || (startnum &0xFFFF) > (endnum & 0xFFFF))
     {

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2003/06/29 17:33:59  smite-meister
+// VFile system, PAK support, Hexen bugfixes
+//
 // Revision 1.17  2003/05/30 13:34:45  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -94,6 +97,7 @@
 #include "p_heretic.h"
 #include "s_sound.h"
 #include "sounds.h"
+#include "r_sprite.h"
 #include "r_main.h"
 
 #include "hu_stuff.h" // HUD
@@ -784,8 +788,6 @@ void Actor::Die(Actor *inflictor, Actor *source)
       return;
     }
 
-  // TODO FIXME start playing death anim. sequence
-
   // if killed by a player
   if (flags & MF_COUNTKILL)
     {
@@ -878,6 +880,12 @@ void DActor::Die(Actor *inflictor, Actor *source)
 void PlayerPawn::Die(Actor *inflictor, Actor *source)
 {
   Actor::Die(inflictor, source);
+
+  // start playing death anim. sequence
+  if (health < -maxhealth >> 1)
+    pres->SetAnim(presentation_t::Death2);
+  else
+    pres->SetAnim(presentation_t::Death1);
 
   if (!source)
     {
@@ -2362,6 +2370,8 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
       // pain flash
       if (player == displayplayer)
 	hud.damagecount += damage;
+
+      pres->SetAnim(presentation_t::Pain);
 
       //added:22-02-98: force feedback ??? electro-shock???
       if (player == consoleplayer)

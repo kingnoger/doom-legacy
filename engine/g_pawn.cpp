@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.18  2003/06/29 17:33:59  smite-meister
+// VFile system, PAK support, Hexen bugfixes
+//
 // Revision 1.17  2003/06/20 20:56:07  smite-meister
 // Presentation system tweaked
 //
@@ -107,9 +110,8 @@ Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, const pawn_info_t *t)
   mass   = info->mass;
   radius = info->radius;
   height = info->height;
-  health = info->spawnhealth;
+  maxhealth = health = info->spawnhealth;
 
-  maxhealth = 2*health;
   speed  = info->speed;
 
   flags  = info->flags;
@@ -536,8 +538,7 @@ void PlayerPawn::MorphThink()
       if ((z <= floorz) && (P_Random() < 32))
 	{ // Jump and noise
 	  pz += FRACUNIT;
-	  // FIXME set pain state here...
-	  // SetState(S_CHICPLAY_PAIN);
+	  pres->SetAnim(presentation_t::Pain);
 	  return;
 	}
       if(P_Random() < 48)
@@ -642,15 +643,9 @@ void PlayerPawn::XYFriction(fixed_t oldx, fixed_t oldy, bool oldfriction)
       (player->cmd.forwardmove == 0 && player->cmd.sidemove == 0 ))
     {
       // if in a walking frame, stop moving
-      // FIXME set states accordingly
-      if (morphTics)
-	{
-	  //if((unsigned)((state - states) -S_CHICPLAY_RUN1) < 4) SetState(S_CHICPLAY);
-	}
-      else
-	{
-	  //if((unsigned)((state - states) -S_PLAY_RUN1) < 4) SetState(S_PLAY);
-	}
+      int anim = pres->GetAnim();
+      if (anim == presentation_t::Run)
+	pres->SetAnim(presentation_t::Idle);
     
       px = 0;
       py = 0;
@@ -887,11 +882,11 @@ bool PlayerPawn::UndoMorph()
 
   morphTics = 0;
 
-  maxhealth = 2 * i->spawnhealth;
+  health = maxhealth = i->spawnhealth;
   reactiontime = 18;
   powers[pw_weaponlevel2] = 0;
   weaponinfo = wpnlev1info;
-  health = maxhealth;
+
   angle_t ang = angle >> ANGLETOFINESHIFT;
   DActor *fog = mp->SpawnDActor(x+20*finecosine[ang], y+20*finesine[ang],
 				z+TELEFOGHEIGHT, MT_TFOG);

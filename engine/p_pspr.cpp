@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/06/29 17:33:59  smite-meister
+// VFile system, PAK support, Hexen bugfixes
+//
 // Revision 1.9  2003/05/30 13:34:46  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -68,6 +71,7 @@
 #include "p_enemy.h"
 #include "p_maputl.h"
 
+#include "r_sprite.h"
 #include "s_sound.h"
 #include "sounds.h"
 #include "r_main.h"
@@ -434,10 +438,9 @@ void PlayerPawn::FireWeapon()
   if (!CheckAmmo())
     return;
 
-  // FIXME go to shooting state
-  //SetState(weaponstatenum_t(info->missilestate + 1));
+  // go to melee state (later move to shooting state if needed....)
+  pres->SetAnim(presentation_t::Melee);
   //  P_SetMobjState(player->mo, PStateAttack[player->class]); // S_PLAY_ATK1);
-  //SetState(info->missilestate); // refire? +1 or not?
 
   if (readyweapon == wp_timons_axe && ammo[am_mana1] > 0)
     newstate = S_FAXEATK_G1;
@@ -483,13 +486,9 @@ void A_WeaponReady(PlayerPawn *p, pspdef_t *psp)
     }
 
   // get out of attack state
-  /*
-  if (p->state == &states[p->info->missilestate]
-      || p->state == &states[p->info->missilestate + 1] )
-    {
-      p->SetState(p->info->spawnstate);
-    }
-  */
+  int anim = p->pres->GetAnim();
+  if (anim == presentation_t::Shoot || anim == presentation_t::Melee)
+    p->pres->SetAnim(presentation_t::Idle);
 
   if (p->readyweapon == wp_chainsaw
       && psp->state == &weaponstates[S_SAW])
@@ -654,7 +653,7 @@ void A_Raise(PlayerPawn *p, pspdef_t *psp)
 //
 void A_GunFlash(PlayerPawn *p, pspdef_t *psp)
 {
-  //p->SetState(weaponstatenum_t(p->info->missilestate + 1));
+  p->pres->SetAnim(presentation_t::Shoot);
   p->SetPsprite(ps_flash, p->weaponinfo[p->readyweapon].flashstate);
 }
 
@@ -848,8 +847,8 @@ void P_GunShot(Actor *mo, bool accurate)
 void A_FirePistol(PlayerPawn *p, pspdef_t *psp)
 {
   S_StartAttackSound(p, sfx_pistol);
+  p->pres->SetAnim(presentation_t::Shoot);
 
-  //p->SetState(weaponstatenum_t(p->info->missilestate + 1));
   p->ammo[p->weaponinfo[p->readyweapon].ammo]--;
 
   p->SetPsprite(ps_flash, p->weaponinfo[p->readyweapon].flashstate);
@@ -867,7 +866,7 @@ void A_FireShotgun(PlayerPawn *p, pspdef_t *psp)
   int         i;
 
   S_StartAttackSound(p, sfx_shotgn);
-  //p->SetState(weaponstatenum_t(p->info->missilestate + 1));
+  p->pres->SetAnim(presentation_t::Shoot);
 
   p->ammo[p->weaponinfo[p->readyweapon].ammo]--;
   p->SetPsprite(ps_flash, p->weaponinfo[p->readyweapon].flashstate);
@@ -889,7 +888,7 @@ void A_FireShotgun2(PlayerPawn *p, pspdef_t *psp)
   int         damage;
 
   S_StartAttackSound(p, sfx_dshtgn);
-  //p->SetState(weaponstatenum_t(p->info->missilestate + 1));
+  p->pres->SetAnim(presentation_t::Shoot);
 
   p->ammo[p->weaponinfo[p->readyweapon].ammo]-=2;
 
@@ -917,7 +916,7 @@ void A_FireCGun(PlayerPawn *p, pspdef_t *psp)
   if (!p->ammo[p->weaponinfo[p->readyweapon].ammo])
     return;
 
-  //p->SetState(weaponstatenum_t(p->info->missilestate + 1));
+  p->pres->SetAnim(presentation_t::Shoot);
   p->ammo[p->weaponinfo[p->readyweapon].ammo]--;
 
   p->SetPsprite(ps_flash, weaponstatenum_t(p->weaponinfo[p->readyweapon].flashstate

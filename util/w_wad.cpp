@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,7 +18,7 @@
 //
 //
 // DESCRIPTION:
-// FileCache: Interface to the WadFile class
+// FileCache: Container of VFiles
 //
 //-----------------------------------------------------------------------------
 
@@ -32,7 +32,6 @@
 #include "d_netfil.h" // nameonly()
 #include "z_zone.h"
 #include "i_video.h" //rendermode
-//#include "r_defs.h" // pic_t
 #include "byteptr.h"
 
 #ifdef HWRENDER
@@ -44,8 +43,10 @@ char *strupr(char *n); // from dosstr.c
 char *strlwr(char *n); // from dosstr.c
 #endif
 
+#include "vfile.h" // VFile class
+#include "wad.h"
 #include "w_wad.h"
-#include "wad.h" // WadFile class
+
 
 
 // ====================================================================
@@ -65,11 +66,11 @@ FileCache fc;
 
 FileCache::~FileCache()
 {
-  for (int i = wadfiles.size()-1; i>=0; i--)
+  for (int i = vfiles.size()-1; i>=0; i--)
     {
-      delete wadfiles[i];
+      delete vfiles[i];
     }
-  wadfiles.clear();
+  vfiles.clear();
   return;
 }
 
@@ -80,7 +81,7 @@ FileCache::~FileCache()
 
 void FileCache::SetPath(const char *p)
 {
-  wadpath = p;
+  datapath = p;
 }
 
 // -----------------------------------------------------
@@ -96,11 +97,13 @@ bool FileCache::InitMultipleFiles(const char *const*filenames)
 {
   bool result = true;
 
-  for ( ; *filenames != NULL; filenames++) {
-    if (LoadWadFile(*filenames) == -1) result = false;
-  }
+  for ( ; *filenames != NULL; filenames++)
+    {
+      if (AddFile(*filenames) == -1)
+	result = false;
+    }
 
-  if (wadfiles.size() == 0)
+  if (vfiles.size() == 0)
     I_Error("FileCache::InitMultipleFiles: no files found");
 
   // result = false : at least one file was missing
@@ -109,99 +112,91 @@ bool FileCache::InitMultipleFiles(const char *const*filenames)
 
 // -----------------------------------------------------
 // was W_LoadWadFile
-// Loads a wad file into memory, adds it into wadfiles vector.
+// Loads a wad file into memory, adds it into vfiles vector.
 // returns the number of the wadfile (0 is the first one)
 // or -1 in the case of error
 
-int FileCache::LoadWadFile(const char *fname)
+int FileCache::AddFile(const char *fname)
 {
-  int nwadfiles = wadfiles.size();
+  int nfiles = vfiles.size();
   
-  if (nwadfiles >= MAX_WADFILES)
+  if (nfiles >= MAX_WADFILES)
     {
-      CONS_Printf("Maximum number of wad files reached\n");
+      CONS_Printf("Maximum number of resource files reached\n");
       return -1;
     }
 
-  string path = wadpath + '/' + fname;
+  string name = datapath + '/' + fname;
 
-  FILE *str = fopen(path.c_str(), "rb");
-  if (!str)
+  if (access(name.c_str(), F_OK))
     {
-      str = fopen(fname, "rb");
-      if (!str)
+      name = fname; // try just the name
+      if (access(fname, F_OK))
 	{
-	  CONS_Printf("FileCache::LoadWadFile: Can't open file %s (path %s)\n", fname, wadpath.c_str());
+	  CONS_Printf("FileCache::AddFile: Can't access file %s (path %s)\n", fname, datapath.c_str());
 	  return -1;
 	}
     }
 
-  WadFile *wf = NULL;
+  VFile *vf = NULL;
+  int l = name.size();
 
-  // detect dehacked file with the "deh" extension
-  if (!stricmp(&fname[strlen(fname) - 3], "deh"))
+  if (!stricmp(&name[l - 4], ".deh")) // FIXME name is a std:string
     {
-      // this code emulates a wadfile with one lump name "DEHACKED" 
-      // at position 0 and size of the whole file
-      // this allows deh files to be treated like wad files,
-      // copied by network and loaded at the console
-
-      Wad *p = new Wad;
-      p->stream = str;
-      p->header.numentries = 1; 
-      p->directory = (waddir_t *)Z_Malloc(sizeof(waddir_t), PU_STATIC, NULL);
-      p->directory->offset = 0;
-
-      // get file system info about the file
-      struct stat bufstat;
-      fstat(fileno(str), &bufstat);
-      p->directory->size = bufstat.st_size;
-      strcpy(p->directory->name, "DEHACKED");
-      wf = p;
+      // detect dehacked file with the "deh" extension
+      vf = new Wad(name);
     }
-  else 
+  else if (name[l-1] == '/')
     {
-      char magic[4];
-      fread(magic, 4, 1, str);
+      // directory
+      vf = new VDir();
+      vf->Open(name.c_str());
+    }
+  else
+    {
+      union
+      {
+	char magic[5];
+	int  imagic;
+      };
+      // open the file to read magic number
+      FILE *str = fopen(name.c_str(), "rb");
+      if (!str)
+	return -1;
 
+      fread(magic, 4, 1, str);
+      magic[4] = 0;
+      
       // check file type
-      if (!strncmp(magic, "IWAD", 4) || !strncmp(magic, "PWAD", 4))
+      if (imagic == *reinterpret_cast<const int *>("IWAD")
+	  || imagic == *reinterpret_cast<const int *>("PWAD"))
 	{
-	  Wad *p = new Wad;
-	  p->Load(fname, str, nwadfiles);
-	  wf = p;
+	  vf = new Wad();
+	  extern int file_num;
+	  file_num = nfiles; // HACK
 	}
-      else if (!strncmp(magic, "WAD2", 4) || !strncmp(magic, "WAD3", 4))
+      else if (imagic == *reinterpret_cast<const int *>("WAD2")
+	       || imagic == *reinterpret_cast<const int *>("WAD3"))
 	{
-	  Wad3 *p = new Wad3;
-	  p->Load(fname, str);
-	  wf = p;
+	  vf = new Wad3();
 	}
-      else 
+      else if (imagic == *reinterpret_cast<const int *>("PACK"))
 	{
-	  if (!strncmp(magic, "PACK", 4))
-	    CONS_Printf("PAK files are not yet implemented!\n");
-	  else
-	    CONS_Printf("FileCache::LoadWadFile: Unknown file signature %4c\n", magic);
+	  vf = new Pak();
+	}
+      else
+	{
+	  // TODO PK3 magic number is recognized by zlib?
+	  CONS_Printf("FileCache::AddFile: Unknown file signature %4c\n", magic);
 	  fclose(str);
 	  return -1;
 	}
+      fclose(str);
+      vf->Open(name.c_str());
     }
-  // *.PK3 magic number is recognized by zlib 
 
-  // This is a less widely known property of C++.
-  // First we allocate space for one WadFile class instance on the internal zone heap
-  //void *temp = Z_Malloc(sizeof(WadFile), PU_STATIC, NULL);
-  // then, we create a new instance of WadFile class _into_ the allocated space!
-  // The new operator can be given an extra parameter denoting the address to be used.
-  // If this is the case, no new memory is allocated, hopefully!?!
-  //newfile = new(temp) WadFile(filename, nwadfiles);
-
-  // of course, it's better to do this by just redefining
-  // new and delete for the WadFile class ;)
-
-  wadfiles.push_back(wf);
-  return nwadfiles;
+  vfiles.push_back(vf);
+  return nfiles;
 }
 
 
@@ -210,73 +205,58 @@ int FileCache::LoadWadFile(const char *fname)
 
 
 // -----------------------------------------------------
-// size
-// returns the number of open wadfiles
-
-int FileCache::Size()
-{
-  return wadfiles.size();
-}
-
-// -----------------------------------------------------
 // was W_LumpLength
 // Returns the buffer size needed to load the given lump.
 
 int FileCache::LumpLength(int lump)
 {
-  int llump = lump & 0xffff;
-  unsigned int lfile = lump >> 16;
+  int item = lump & 0xffff;
+  unsigned int file = lump >> 16;
   
-  if (lfile >= wadfiles.size())
-    I_Error("FileCache::LumpLength: %i >= numwadfiles(%i)\n", lfile, wadfiles.size());
-  if (llump >= wadfiles[lfile]->header.numentries)
-    I_Error("FileCache::LumpLength: %i >= numlumps", llump);
+  if (file >= vfiles.size())
+    I_Error("FileCache::LumpLength: %i >= numvfiles(%i)\n", file, vfiles.size());
+  if (item >= vfiles[file]->numitems)
+    I_Error("FileCache::LumpLength: %i >= numitems", item);
 
-  return wadfiles[lfile]->GetLumpSize(llump);
+  return vfiles[file]->GetItemSize(item);
 }
 
 // was W_Name
-
 const char *FileCache::Name(int i)
 {
-  return wadfiles[i]->filename.c_str();
+  return vfiles[i]->filename.c_str();
 }
 
 // was W_md5
-
-const byte *FileCache::md5(int i)
+bool FileCache::GetNetworkInfo(int i, int *size, unsigned char *md5)
 {
-  return wadfiles[i]->md5sum;
-}
-
-//was W_GetLumpinfo
-
-waddir_t *FileCache::GetLumpinfo(int wadnum)
-{
-  return wadfiles[wadnum]->GetDirectory();
+  return vfiles[i]->GetNetworkInfo(size, md5);
 }
 
 //was W_GetNumLumps
-
-unsigned int FileCache::GetNumLumps(int wadnum)
+unsigned int FileCache::GetNumLumps(int filenum)
 {
-  return wadfiles[wadnum]->header.numentries;
+  return vfiles[filenum]->numitems;
 }
 
 // was W_WriteFileHeaders
-
 void FileCache::WriteFileHeaders(byte *p)
 {
   unsigned int i;
   char wadfilename[MAX_WADPATH];
 
-  for(i=0; i<wadfiles.size(); i++)
+  int size;
+  unsigned char md5[16];
+  for(i=0; i<vfiles.size(); i++)
     {
-      WRITEULONG(p, wadfiles[i]->filesize);
-      strcpy(wadfilename, wadfiles[i]->filename.c_str());
-      nameonly(wadfilename);
-      WRITESTRING(p, wadfilename);
-      WRITEMEM(p, wadfiles[i]->md5sum, 16);
+      if (vfiles[i]->GetNetworkInfo(&size, md5))
+	{
+	  WRITEULONG(p, size);
+	  strcpy(wadfilename, vfiles[i]->filename.c_str());
+	  nameonly(wadfilename);
+	  WRITESTRING(p, wadfilename);
+	  WRITEMEM(p, md5, 16);
+	}
     }
 }
 
@@ -292,13 +272,13 @@ void FileCache::WriteFileHeaders(byte *p)
 
 int FileCache::FindNumForName(const char* name, bool scanforward)
 {
-  int i, n = wadfiles.size();
+  int i, n = vfiles.size();
   int res;
 
   if (!scanforward) {
     // scan wad files backwards so patch lump files take precedence
     for (i = n-1; i >= 0; i--) {
-      res = wadfiles[i]->FindNumForName(name);
+      res = vfiles[i]->FindNumForName(name);
       // high word is the wad file number, low word the lump number
       if (res != -1) return ((i<<16) + res);
     }
@@ -306,7 +286,7 @@ int FileCache::FindNumForName(const char* name, bool scanforward)
     // scan wad files forward, when original wad resources
     //  must take precedence
     for (i = 0; i<n; i++) {
-      res = wadfiles[i]->FindNumForName(name);
+      res = vfiles[i]->FindNumForName(name);
       if (res != -1) return ((i<<16) + res);
     }
   }  
@@ -318,20 +298,20 @@ int FileCache::FindNumForName(const char* name, bool scanforward)
 // -----------------------------------------------------
 // was W_CheckNumForNamePwad
 // Same as the original, but checks in one wad only
-// 'wadnum' is a wad number (Used for sprites loading)
+// 'filenum' is a wad number (Used for sprites loading)
 // 'startlump' is the lump number to start the search
 
-int FileCache::FindNumForNamePwad(const char* name, int wadnum, int startlump)
+int FileCache::FindNumForNameFile(const char* name, unsigned filenum, int startlump)
 {
   // start at 'startlump', useful parameter when there are multiple
   // resources with the same name
 
-  if (wadnum >= (int)wadfiles.size())
-    I_Error("FileCache::FindNumForNamePwad: %i >= numwadfiles(%i)\n", wadnum, wadfiles.size());
+  if (filenum >= vfiles.size())
+    I_Error("FileCache::FindNumForNamePwad: %i >= numvfiles(%i)\n", filenum, vfiles.size());
  
-  int res = wadfiles[wadnum]->FindNumForName(name, startlump);
+  int res = vfiles[filenum]->FindNumForName(name, startlump);
 
-  if (res != -1) return ((wadnum<<16) + res);
+  if (res != -1) return ((filenum<<16) + res);
   
   // not found.
   return -1;
@@ -342,41 +322,42 @@ int FileCache::FindNumForNamePwad(const char* name, int wadnum, int startlump)
 
 const char *FileCache::FindNameForNum(int lump)
 {
-  unsigned int lfile = lump >> 16;
-  int llump = lump & 0xffff;
+  unsigned int file = lump >> 16;
+  int item = lump & 0xffff;
 
-  if (lfile >= wadfiles.size())
-    I_Error("FileCache::FindNameForNum: %i >= numwadfiles(%i)\n", lfile, wadfiles.size());
-  if (llump >= wadfiles[lfile]->header.numentries)
-    return NULL;
-    //I_Error("FileCache::FindNameForNum: %i >= numlumps", llump);
+  if (file >= vfiles.size())
+    I_Error("FileCache::FindNameForNum: %i >= numvfiles(%i)\n", file, vfiles.size());
+  if (item >= vfiles[file]->numitems)
+    I_Error("FileCache::FindNameForNum: %i >= numitems", item);
+    //return NULL;
 
-  return wadfiles[lfile]->GetLumpName(llump);
+  return vfiles[file]->GetItemName(item);
 }
 
 // -----------------------------------------------------
 // was W_GetNumForName, W_GetNumForNameFirst (scanforw == true)
 // Calls FindNumForName, but bombs out if not found.
 
-int FileCache::GetNumForName(const char* name, bool scanforward)
+int FileCache::GetNumForName(const char *name, bool scanforward)
 {
-  int i;
-  
-  i = FindNumForName(name, scanforward);
+  int i = FindNumForName(name, scanforward);
   if (i == -1)
     I_Error("FileCache::GetNumForName: %s not found!\n", name);
   
   return i;
 }
 
+int FileCache::FindPartialName(int iname, unsigned filenum, int startlump, const char **fullname)
+{
+  if (filenum >= vfiles.size())
+    I_Error("FileCache::FindNumForNamePwad: %i >= numvfiles(%i)\n", filenum, vfiles.size());
+ 
+  return vfiles[filenum]->FindPartialName(iname, startlump, fullname);
+}
 
-//=============
-// reading and caching lumps
 
-// -----------------------------------------------------
-//  was W_ReadLump
-//  Loads the lump into the given buffer,
-//  which must be >= W_LumpLength().
+//================================
+//    reading and caching
 
 // -----------------------------------------------------
 // was W_ReadLumpHeader
@@ -385,15 +366,15 @@ int FileCache::GetNumForName(const char* name, bool scanforward)
 
 int FileCache::ReadLumpHeader(int lump, void *dest, int size)
 {
-  int llump = lump & 0xffff;
-  unsigned int lfile = lump >> 16;
+  int item = lump & 0xffff;
+  unsigned int file = lump >> 16;
 
-  if (lfile >= wadfiles.size())
-    I_Error("FileCache::ReadLumpHeader: %i >= numwadfiles(%i)\n", lfile, wadfiles.size());
-  if (llump >= wadfiles[lfile]->header.numentries)
-    I_Error("FileCache::ReadLumpHeader: %i >= numlumps", llump);
+  if (file >= vfiles.size())
+    I_Error("FileCache::ReadLumpHeader: %i >= numvfiles(%i)\n", file, vfiles.size());
+  if (item >= vfiles[file]->numitems)
+    I_Error("FileCache::ReadLumpHeader: %i >= numitems", item);
 
-  return wadfiles[lfile]->ReadLumpHeader(llump, dest, size);
+  return vfiles[file]->ReadItemHeader(item, dest, size);
 }
 
 // -----------------------------------------------------
@@ -410,37 +391,22 @@ void *FileCache::CacheLumpName(const char *name, int tag)
 
 void *FileCache::CacheLumpNum(int lump, int tag)
 {
-  int llump = lump & 0xffff;
-  unsigned int lfile = lump >> 16;
+  int item = lump & 0xffff;
+  unsigned int file = lump >> 16;
 
-  if (lfile >= wadfiles.size())
-    I_Error("FileCache::CacheLumpNum: %i >= numwadfiles(%i)\n", lfile, wadfiles.size());
-  if (llump >= wadfiles[lfile]->header.numentries)
-    I_Error("FileCache::CacheLumpNum: %i >= numlumps", llump);
+  if (file >= vfiles.size())
+    I_Error("FileCache::CacheLumpNum: %i >= numvfiles(%i)\n", file, vfiles.size());
+  if (item >= vfiles[file]->numitems)
+    I_Error("FileCache::CacheLumpNum: %i >= numitems", item);
 
-  lumpcache_t *lcache = wadfiles[lfile]->cache;
-  if (!lcache[llump])
-    {
-      // read the lump in    
-      //CONS_Printf("cache miss on lump %i\n",lump);
-      // looks frightening, but actually Z_Malloc sets lcache[llump] to point to the memory
-      //byte *ptr = (byte *)
-      Z_Malloc(wadfiles[lfile]->GetLumpSize(llump), tag, &lcache[llump]);
-      wadfiles[lfile]->ReadLumpHeader(llump, lcache[llump], 0);
-    }
-  else
-    {
-      //CONS_Printf("cache hit on lump %i\n",lump);
-      Z_ChangeTag(lcache[llump], tag);
-    }
-
-  return lcache[llump];
+  return vfiles[file]->CacheItem(item, tag);
 }
 
 
 // ==========================================================================
 //                                         CACHING OF GRAPHIC PATCH RESOURCES
 // ==========================================================================
+// FIXME TODO replace all this with texture L2 cache
 
 // Graphic 'patches' are loaded, and if necessary, converted into the format
 // the most useful for the current rendermode. For software renderer, the
@@ -474,16 +440,16 @@ patch_t *FileCache::CachePatchNum(int lump, int tag)
   if (rendermode == render_soft)
     return (patch_t*)CacheLumpNum(lump, tag);
 
-  int llump = lump & 0xffff;
-  unsigned int lfile = lump >> 16;
+  int item = lump & 0xffff;
+  unsigned int file = lump >> 16;
 
-  if (lfile >= wadfiles.size())
-    I_Error("FileCache::CachePatchNum: %i >= numwadfiles(%i)\n", lfile, wadfiles.size());
-  if (llump >= wadfiles[lfile]->header.numentries)
-    I_Error("FileCache::CachePatchNum: %i >= numlumps", llump);
+  if (file >= vfiles.size())
+    I_Error("FileCache::CachePatchNum: %i >= numvfiles(%i)\n", file, vfiles.size());
+  if (item >= vfiles[file]->numitems)
+    I_Error("FileCache::CachePatchNum: %i >= numitems", item);
 
 
-  GlidePatch_t *grPatch = &(wadfiles[lfile]->hwrcache[llump]);
+  GlidePatch_t *grPatch = &(vfiles[file]->hwrcache[item]);
 
   if (grPatch->mipmap.grInfo.data) 
     {   
@@ -515,30 +481,30 @@ patch_t *FileCache::CachePatchNum(int lump, int tag)
 
 pic_t *FileCache::CacheRawAsPic(int lump, int width, int height, int tag)
 {
-  int llump = lump & 0xffff;
-  unsigned int lfile = lump >> 16;
+  int item = lump & 0xffff;
+  unsigned int file = lump >> 16;
 
-  if (lfile >= wadfiles.size())
-    I_Error("FileCache::CacheRawAsPic: %i >= numwadfiles(%i)\n", lfile, wadfiles.size());
-  if (llump >= wadfiles[lfile]->header.numentries)
-    I_Error("FileCache::CacheRawAsPic: %i >= numlumps", llump);
+  if (file >= vfiles.size())
+    I_Error("FileCache::CacheRawAsPic: %i >= numvfiles(%i)\n", file, vfiles.size());
+  if (item >= vfiles[file]->numitems)
+    I_Error("FileCache::CacheRawAsPic: %i >= numitems", item);
 
   pic_t *pic;
 
-  lumpcache_t *lcache = wadfiles[lfile]->cache;
-  if (!lcache[llump])
+  lumpcache_t *lcache = vfiles[file]->cache;
+  if (!lcache[item])
     {
       // read the lump in
-      pic = (pic_t *)Z_Malloc(wadfiles[lfile]->GetLumpSize(llump) + sizeof(pic_t), tag, &lcache[llump]);
-      wadfiles[lfile]->ReadLumpHeader(llump, pic->data, 0);
+      pic = (pic_t *)Z_Malloc(vfiles[file]->GetItemSize(item) + sizeof(pic_t), tag, &lcache[item]);
+      vfiles[file]->ReadItemHeader(item, pic->data, 0);
       pic->width = SHORT(width);
       pic->height = SHORT(height);
       pic->mode = PALETTE;
     }
   else 
-    Z_ChangeTag(lcache[llump], tag);
+    Z_ChangeTag(lcache[item], tag);
 
-  return (pic_t *)lcache[llump];
+  return (pic_t *)lcache[item];
 }
 
 //-----------------------------------------------------
@@ -546,15 +512,15 @@ pic_t *FileCache::CacheRawAsPic(int lump, int width, int height, int tag)
 
 GlidePatch_t *FileCache::GetHWRNum(int lump)
 {
-  unsigned int lfile = lump >> 16;
-  int llump = lump & 0xffff;
+  unsigned int file = lump >> 16;
+  int item = lump & 0xffff;
 
-  if (lfile >= wadfiles.size())
-    I_Error("FileCache::CacheHWRNum: %i >= numwadfiles(%i)\n", lfile, wadfiles.size());
-  if (llump >= wadfiles[lfile]->header.numentries)
-    I_Error("FileCache::CacheHWRNum: %i >= numlumps", llump);
+  if (file >= vfiles.size())
+    I_Error("FileCache::CacheHWRNum: %i >= numvfiles(%i)\n", file, vfiles.size());
+  if (item >= vfiles[file]->numitems)
+    I_Error("FileCache::CacheHWRNum: %i >= numitems", item);
 
-  return &(wadfiles[lfile]->hwrcache[llump]);
+  return &(vfiles[file]->hwrcache[item]);
 }
 
 
@@ -583,15 +549,15 @@ int FileCache::Replace(unsigned int wadnum, char **firstmapname)
   unsigned int i;
   int r1 = 0, r2 = 0;
   bool texturechange = false;
-  unsigned int numlumps = wadfiles[wadnum]->numlumps;
-  lumpinfo_t *lp = wadfiles[wadnum]->lumpinfo;
+  unsigned int numitems = vfiles[wadnum]->numitems;
+  lumpinfo_t *lp = vfiles[wadnum]->lumpinfo;
   char *name;
   // search for sound replacements
 
   int num, firstmapreplaced = 0;
 
   // this crap doesn't recognize Heretic sounds! What on Earth am I doing??
-  for (i=0; i<numlumps; i++, lp++) {
+  for (i=0; i<numitems; i++, lp++) {
     name = lp->name;
     num = firstmapreplaced;
     if (name[0]=='D' && name[1]=='S') {
@@ -690,9 +656,9 @@ void FileCache::FreeTextureCache()
   unsigned int j;
   int i;
 
-  for (j=0; j<wadfiles.size(); j++)
-    for (i=0; i<wadfiles[j]->header.numentries; i++) {
-      GlidePatch_t *grpatch = &(wadfiles[j]->hwrcache[i]);
+  for (j=0; j<vfiles.size(); j++)
+    for (i=0; i<vfiles[j]->numitems; i++) {
+      GlidePatch_t *grpatch = &(vfiles[j]->hwrcache[i]);
       while (grpatch->mipmap.nextcolormap)
 	{
 	  GlideMipmap_t *grmip = grpatch->mipmap.nextcolormap;
@@ -701,4 +667,3 @@ void FileCache::FreeTextureCache()
 	}
     }
 }
-

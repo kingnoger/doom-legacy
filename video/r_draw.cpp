@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/06/29 17:33:59  smite-meister
+// VFile system, PAK support, Hexen bugfixes
+//
 // Revision 1.4  2003/05/11 21:23:53  smite-meister
 // Hexen fixes
 //
@@ -430,8 +433,8 @@ void R_InitViewBuffer(int width, int height)
 int viewborderlump[8];
 void R_InitViewBorder()
 {
-  const char *Doom_borders[] = {"brdr_t", "brdr_b", "brdr_l", "brdr_r", "brdr_tl", "brdr_tr", "brdr_bl", "brdr_br"};
-  const char *Raven_borders[] = {"bordt", "bordb", "bordl", "bordr", "bordtl", "bordtr", "bordbl", "bordbr"};
+  const char *Doom_borders[] = {"BRDR_T", "BRDR_B", "BRDR_L", "BRDR_R", "BRDR_TL", "BRDR_TR", "BRDR_BL", "BRDR_BR"};
+  const char *Raven_borders[] = {"BORDT", "BORDB", "BORDL", "BORDR", "BORDTL", "BORDTR", "BORDBL", "BORDBR"};
   const char **bname;
   if (game.mode < gm_heretic)
     bname = Doom_borders;

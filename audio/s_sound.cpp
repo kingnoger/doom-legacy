@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2003/06/29 17:33:59  smite-meister
+// VFile system, PAK support, Hexen bugfixes
+//
 // Revision 1.14  2003/05/11 21:23:48  smite-meister
 // Hexen fixes
 //
@@ -779,7 +782,7 @@ int SoundSystem::Start3DSound(const char *name, soundsource_t *source, float vol
   c->si = (sounditem_t *)sc.Cache(name);
 
   I_StartSound(c);
-  CONS_Printf("3D sound started, %d, %f\n", c->ovol, v1);
+  //CONS_Printf("3D sound started, %d, %f\n", c->ovol, v1);
   return i;
 }
 

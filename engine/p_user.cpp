@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2003/06/29 17:33:59  smite-meister
+// VFile system, PAK support, Hexen bugfixes
+//
 // Revision 1.12  2003/05/30 13:34:47  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -75,7 +78,7 @@
 
 #include "d_event.h"
 
-#include "r_main.h"
+#include "r_sprite.h"
 #include "s_sound.h"
 #include "sounds.h"
 #include "p_setup.h"
@@ -226,16 +229,10 @@ void PlayerPawn::Move()
 
   if (cmd->forwardmove || cmd->sidemove)
     {
-      /*
-	// TODO set the running/walking state here...
-      if (morphTics)
-        {
-	  if (state == &states[S_CHICPLAY])
-	    SetState(S_CHICPLAY_RUN1);
-        }
-      else if (state == &states[S_PLAY])
-	SetState(S_PLAY_RUN1);
-      */
+      // set the running state if nothing more important is going on
+      int anim = pres->GetAnim();
+      if (anim == presentation_t::Idle)
+	pres->SetAnim(presentation_t::Run);
     }
 
   if (game.mode == gm_heretic && (cmd->angleturn & BT_FLYDOWN))

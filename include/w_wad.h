@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002 by DooM Legacy Team.
+// Copyright (C) 2002-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,7 +17,7 @@
 //
 //
 // DESCRIPTION:
-//   FileCache class definition
+//   FileCache, a class for storing VFiles
 //
 //-----------------------------------------------------------------------------
 
@@ -38,54 +38,43 @@ typedef void GlidePatch_t;
 
 using namespace std;
 
-class WadFile;
-struct waddir_t;
-
-//SoM: 4/13/2000: Store lists of lumps for F_START/F_END ect.
-struct lumplist_t
-{
-  int         wadfile;
-  int         firstlump;
-  int         numlumps;
-};
 
 // ========================================================================
 // class FileCache
-// A class for holding open wad (and maybe other) files and giving out information about them
+// A class for holding open VFiles and giving out information about them
 // This class also handles game dependent operations concerning wad files
 
 class FileCache
 {
 private:
-  string wadpath; // absolute path for searching wadfiles
-  vector<WadFile *> wadfiles;    // open .wad files
+  string datapath; // absolute path for searching files
+  vector<class VFile *> vfiles; // open virtual files
 
 public:
   ~FileCache();
 
-  // set wad path
+  // set file path
   void SetPath(const char *p);
 
-  // loads one wadfile, returns -1 on error
-  int LoadWadFile(const char *filename);
-  // Loads multiple wadfiles.
+  // opens a new vfile, returns -1 on error
+  int  AddFile(const char *filename);
   // returns true if everything is OK, false if at least one file was missing
   bool InitMultipleFiles(const char *const*filenames);
 
-  // basic info about open wadfiles
-  int Size();
+  // info about open vfiles
+  int Size() { return vfiles.size(); }; // number of open VFiles
   int LumpLength(int lump);
   const char *Name(int i);
-  const byte *md5(int i);
-  waddir_t *GetLumpinfo(int wadnum);
-  unsigned int GetNumLumps(int wadnum);
+  bool GetNetworkInfo(int filenum, int *size, unsigned char *md5);
+  unsigned int GetNumLumps(int filenum);
   void WriteFileHeaders(byte *p);
 
   // searching: Find gives -1 if not found, Get gives an error.
   int FindNumForName(const char *name, bool scanforward = false);
-  int FindNumForNamePwad(const char *name, int wadnum, int startlump);
+  int GetNumForName(const char *name, bool scanforward = false);
+  int FindNumForNameFile(const char *name, unsigned filenum, int startlump);
   const char *FindNameForNum(int lump);
-  int GetNumForName(const char* name, bool scanforward = false);
+  int FindPartialName(int iname, unsigned filenum, int startlump, const char **fullname);
 
   // reading and caching lumps
   inline int ReadLump(int lump, void *dest) { return ReadLumpHeader(lump, dest, 0); };
@@ -120,10 +109,6 @@ bool P_AddWadFile (char* wadfilename,char **firstmapname);
 #define MAX_WADFILES  32       // maximum of wad files used at the same time
                                // (there is a max of simultaneous open files
                                // anyway, and this should be plenty)
-
-// FIXME! this is crap! used to replace already cached resources when loading a
-// new wadfile in the middle of a game
-//int W_Replace(unsigned int wadnum, char **fmn);
 
 
 #endif

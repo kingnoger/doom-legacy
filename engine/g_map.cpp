@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.22  2003/06/29 17:33:59  smite-meister
+// VFile system, PAK support, Hexen bugfixes
+//
 // Revision 1.21  2003/06/20 20:56:07  smite-meister
 // Presentation system tweaked
 //
@@ -1156,7 +1159,7 @@ void Map::RemoveFromTIDmap(Actor *p)
   multimap<short, Actor*>::iterator i, j;
   i = TIDmap.lower_bound(tid);
   if (i == TIDmap.end())
-    return; // not found
+    return; // not found (early out)
 
   j = TIDmap.upper_bound(tid);
 
@@ -1166,6 +1169,7 @@ void Map::RemoveFromTIDmap(Actor *p)
 	TIDmap.erase(i);
 	return;
       }
+  // not found
 }
 
 
@@ -1173,18 +1177,22 @@ Actor *Map::FindFromTIDmap(int tid, int *pos)
 {
   multimap<short, Actor*>::iterator i, j;
   i = TIDmap.lower_bound(tid);
-  j = TIDmap.end();
+  j = TIDmap.upper_bound(tid);
   if (i == j)
     {
-      *pos = -1;
-      return NULL; // not found
+      // not found
+      *pos = -1; // this is needed too (TODO damn old code)
+      return NULL;
     }
 
-  int k;
   ++(*pos);
-  for (k = 0; k < *pos; ++i, ++k)
+  for (int k = 0; k < *pos; ++i, ++k)
     if (i == j)
-      return NULL;
+      {
+	// not found
+	*pos = -1;
+	return NULL;
+      }
 
   return (*i).second;
 }

@@ -196,6 +196,7 @@ export util_objects = \
 	$(objdir)/m_swap.o \
 	$(objdir)/md5.o \
 	$(objdir)/tables.o \
+	$(objdir)/vfile.o \
 	$(objdir)/wad.o \
 	$(objdir)/w_wad.o \
 	$(objdir)/z_cache.o \
