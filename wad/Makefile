@@ -11,5 +11,6 @@ all	:
 	./wadtool.exe -x legacy.wad
 	cp ../resources/*.lmp .
 	./d2h.exe ../resources/doom2hexen.txt XDOOM.lmp
-	cp XDOOM.lmp XHERETIC.lmp
+	./d2h.exe ../resources/heretic2hexen.txt XHERETIC.lmp
 	./wadtool.exe -c legacy.wad ../resources/legacy.wad.inventory
+	rm *.lmp
