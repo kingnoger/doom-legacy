@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/01/03 10:52:31  jussip
+// Added missing include.
+//
 // Revision 1.13  2004/01/02 14:25:02  smite-meister
 // cleanup
 //
@@ -46,6 +49,8 @@
 #include "g_game.h"
 #include "g_level.h"
 #include "hu_stuff.h"
+
+#include "i_video.h"
 
 #include "r_state.h" // sprites array
 #include "r_sprite.h"
