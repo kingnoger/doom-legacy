@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:12  hurdler
-// Initial revision
+// Revision 1.2  2002/12/03 10:15:29  smite-meister
+// Older update
 //
 // Revision 1.4  2002/08/19 18:06:40  vberghol
 // renderer somewhat fixed
@@ -90,7 +90,7 @@ int wipe_initColorXForm ( int   width,
                           int   height,
                           int   ticks )
 {
-    memcpy(wipe_scr, wipe_scr_start, width*height*scr_bpp);
+    memcpy(wipe_scr, wipe_scr_start, width*height*vid.BytesPerPixel);
     return 0;
 }
 
@@ -200,12 +200,12 @@ int wipe_initMelt ( int   width,
     int i, r;
 
     // copy start screen to main screen
-    memcpy(wipe_scr, wipe_scr_start, width*height*scr_bpp);
+    memcpy(wipe_scr, wipe_scr_start, width*height*vid.BytesPerPixel);
 
     // makes this wipe faster (in theory)
     // to have stuff in column-major format
-    wipe_shittyColMajorXform((short*)wipe_scr_start, width*scr_bpp/2, height);
-    wipe_shittyColMajorXform((short*)wipe_scr_end, width*scr_bpp/2, height);
+    wipe_shittyColMajorXform((short*)wipe_scr_start, width*vid.BytesPerPixel/2, height);
+    wipe_shittyColMajorXform((short*)wipe_scr_end, width*vid.BytesPerPixel/2, height);
 
     // setup initial column positions
     // (y<0 => not ready to scroll yet)
@@ -239,7 +239,7 @@ int wipe_doMelt ( int   width,
     short*      d;
     bool     done = true;
 
-    width = (width * scr_bpp) / 2;
+    width = (width * vid.BytesPerPixel) / 2;
 
     while (ticks--)
     {
@@ -297,7 +297,7 @@ int wipe_StartScreen ( int   x,
                        int   width,
                        int   height )
 {
-    wipe_scr_start = screens[2];
+    wipe_scr_start = vid.screens[2];
     I_ReadScreen(wipe_scr_start);
     return 0;
 }
@@ -310,7 +310,7 @@ int wipe_EndScreen ( int   x,
                      int   width,
                      int   height )
 {
-    wipe_scr_end = screens[3];
+    wipe_scr_end = vid.screens[3];
     I_ReadScreen(wipe_scr_end);
     V_DrawBlock(x, y, 0, width, height, wipe_scr_start); // restore start scr.
     return 0;
@@ -342,8 +342,8 @@ int wipe_ScreenWipe ( int   wipeno,
     if (!go)
     {
         go = 1;
-        // wipe_scr = (byte *) Z_Malloc(width*height*scr_bpp, PU_STATIC, 0); // DEBUG
-        wipe_scr = screens[0];
+        // wipe_scr = (byte *) Z_Malloc(width*height*vid.BytesPerPixel, PU_STATIC, 0); // DEBUG
+        wipe_scr = vid.screens[0];
         (*wipes[wipeno*3])(width, height, ticks);
     }
 

@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:12  hurdler
-// Initial revision
+// Revision 1.2  2002/12/03 10:15:29  smite-meister
+// Older update
 //
 // Revision 1.11  2002/09/20 22:41:33  vberghol
 // Sound system rewritten! And it workscvs update
@@ -560,7 +560,7 @@ static void F_DrawPatchCol (int           x,
   int         count;
 
   column = (column_t *)((byte *)patch + LONG(patch->columnofs[col]));
-  desttop = screens[0]+x*vid.dupx;
+  desttop = vid.screens[0]+x*vid.dupx;
 
   // step through the posts in a column
   while (column->topdelta != 0xff )
@@ -697,7 +697,7 @@ void F_DrawUnderwater()
       if(!underwawa)
 	{
 	  underwawa = true;
-	  V_SetPaletteLump("E2PAL");
+	  vid.SetPaletteLump("E2PAL");
 	}
       V_DrawRawScreen(0, 0, fc.FindNumForName("E2END"),320,200);
       break;

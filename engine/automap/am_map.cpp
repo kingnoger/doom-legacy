@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:13  hurdler
-// Initial revision
+// Revision 1.2  2002/12/03 10:16:49  smite-meister
+// Older update
 //
 // Revision 1.14  2002/09/17 14:26:27  vberghol
 // switch bug fixed
@@ -636,7 +636,7 @@ void AutoMap::Resize()
 
   CONS_Printf("AM::Resize\n");
 
-  fb = screens[0];
+  fb = vid.screens[0];
 
   f_x = f_y = 0;
   f_w = vid.width;
@@ -968,7 +968,7 @@ void AutoMap::clearFB(int color)
 
   if (!mapback)
     {
-      memset(fb, color, f_w*f_h*vid.bpp);
+      memset(fb, color, f_w*f_h*vid.BytesPerPixel);
     }
   else
     {
@@ -977,7 +977,7 @@ void AutoMap::clearFB(int color)
       int dmapy; 
       static int mapxstart;
       static int mapystart;
-      byte *dest = screens[0],*src;
+      byte *dest = vid.screens[0],*src;
 #define MAPLUMPHEIGHT (200-SBARHEIGHT)
         
       if(followplayer)
@@ -1525,7 +1525,7 @@ void AM_drawCrosshair(int color)
       return;
     }
     
-  if( scr_bpp==1 )
+  if (vid.BytesPerPixel == 1)
     fb[(f_w*(f_h+1))/2] = color; // single point for now
   else
     *( (short *)fb + (f_w*(f_h+1))/2) = color;

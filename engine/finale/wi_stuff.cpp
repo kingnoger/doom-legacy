@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:13  hurdler
-// Initial revision
+// Revision 1.2  2002/12/03 10:15:29  smite-meister
+// Older update
 //
 // Revision 1.12  2002/09/25 15:17:38  vberghol
 // Intermission fixed?
@@ -730,7 +730,7 @@ void Intermission::SlamBackground()
     V_DrawFlatFill(0, 0, vid.width/vid.dupx, vid.height/vid.dupy, fc.FindNumForName("FLOOR16"));
   else if (rendermode == render_soft) 
     {
-      memcpy(screens[0], screens[1], vid.width * vid.height);
+      memcpy(vid.screens[0], vid.screens[1], vid.width * vid.height);
       //V_MarkRect (0, 0, vid.width, vid.height);
     }
   else 
@@ -1560,18 +1560,18 @@ void Intermission::LoadData()
 
   if (rendermode == render_soft)
     {
-      memset(screens[0], 0, vid.width*vid.height*vid.bpp);
+      memset(vid.screens[0], 0, vid.width*vid.height*vid.BytesPerPixel);
       // clear backbuffer from status bar stuff and borders
-      memset(screens[1], 0, vid.width*vid.height*vid.bpp); 
+      memset(vid.screens[1], 0, vid.width*vid.height*vid.BytesPerPixel); 
       // background stored in backbuffer        
       V_DrawScaledPatch(0, 0, 1, fc.CachePatchName(level->interpic.c_str(), PU_CACHE));
     }
 
-  // UNUSED unsigned char *pic = screens[1];
+  // UNUSED unsigned char *pic = vid.screens[1];
   // if (game.mode == commercial)
   // {
   // darken the background image
-  // while (pic != screens[1] + SCREENHEIGHT*SCREENWIDTH)
+  // while (pic != vid.screens[1] + SCREENHEIGHT*SCREENWIDTH)
   // {
   //   *pic = colormaps[256*25 + *pic];
   //   pic++;
