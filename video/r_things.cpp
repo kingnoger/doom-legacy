@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2004/08/13 18:25:11  smite-meister
+// sw renderer fix
+//
 // Revision 1.18  2004/08/12 18:30:33  smite-meister
 // cleaned startup
 //
@@ -764,9 +767,10 @@ static void R_DrawVisSprite(vissprite_t *vis, int  x1, int x2)
       if (texturecolumn < 0 || texturecolumn >= t->width)
         I_Error ("R_DrawSpriteRange: bad texturecolumn");
 #endif
-      column_t *column = (column_t *)t->GetColumn(texturecolumn);
+      column_t *column = t->GetMaskedColumn(texturecolumn);
       R_DrawMaskedColumn(column);
     }
+  // TODO unmasked drawer...
 
   colfunc = basecolfunc;
 }

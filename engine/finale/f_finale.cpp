@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2004/08/13 18:25:10  smite-meister
+// sw renderer fix
+//
 // Revision 1.20  2004/08/12 18:30:26  smite-meister
 // cleaned startup
 //
@@ -156,9 +159,9 @@ static int      finalecount;
 static int      finalewait;
 static bool endgame;
 static int  gameepisode;
-static const char *finaleflat;
 static const char *finaletext;
 static Texture *finalepic = NULL;
+static Texture *finaleflat = NULL;
 
 static bool keypressed = false;
 
@@ -169,7 +172,8 @@ void F_StartFinale(const MapCluster *cd, bool enter, bool end)
 {
   endgame = end;
   gameepisode = cd->episode;
-  finaleflat = cd->finalepic.c_str();
+  finaleflat = tc.GetPtr(cd->finalepic.c_str());
+
   if (enter)
     finaletext = cd->entertext.c_str();
   else
@@ -308,7 +312,7 @@ void F_TextWrite(int sx, int sy)
   if (finalepic)
     finalepic->Draw(0, 0, V_SCALE);
   else
-    V_DrawFlatFill(0,0,vid.width,vid.height,tc.GetPtr(finaleflat));
+    finaleflat->DrawFill(0,0,vid.width,vid.height);
 
   // draw some of the text onto the screen
   ch = finaletext;

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/08/13 18:25:10  smite-meister
+// sw renderer fix
+//
 // Revision 1.4  2004/07/05 16:53:25  smite-meister
 // Netcode replaced
 //
@@ -152,7 +155,7 @@ floortype_t P_GetFloorType(const char *pic)
 #define MAX_FRAME_DEFS 20
 
 
-/// Metaclass for animated Textures
+/// \brief Metaclass for animated Textures
 class AnimatedTexture : public Texture
 {
 public:
@@ -162,23 +165,26 @@ public:
     int tics;
   };
 
-  int numframes;
-  int currentframe;
-  tic_t tics;
-  framedef_t *frames;
-  tic_t lastupdate;
+  framedef_t *frames; ///< the animation frames
+  int      numframes; ///< number of frames
+  int   currentframe; ///< current frame index
+  tic_t    changetic; ///< when will the current frame end?
 
+protected:
   Texture *Update();
+  virtual byte *Generate() { return NULL; }; /// not used for now
+  virtual void HWR_Prepare()  { /* Update()->HWR_Prepare(); */ }
 
 public:
   AnimatedTexture(const char *p, int n);
   ~AnimatedTexture();
 
-  virtual byte *Generate();
-  virtual byte *GetColumn(int col);
-  virtual void HWR_Prepare();
+  virtual byte *GetColumn(int col) { return Update()->GetColumn(col); }
+  virtual column_t *GetMaskedColumn(int col) { return Update()->GetMaskedColumn(col); }
+  virtual byte *GetData() { return Update()->GetData(); }
 
-  // TODO drawers
+  virtual void Draw(int x, int y, int scrn) { Update()->Draw(x, y, scrn); }
+  virtual void HWR_Draw(int x, int y, int flags) { Update()->HWR_Draw(x, y, flags); }
 };
 
 
@@ -188,8 +194,7 @@ AnimatedTexture::AnimatedTexture(const char *p, int n)
 {
   numframes = n;
   currentframe = 0;
-  tics = 0;
-  lastupdate = game.tic;
+  changetic = game.tic;
   
   frames = (framedef_t *)Z_Malloc(n*sizeof(framedef_t), PU_TEXTURE, NULL);
 }
@@ -204,46 +209,20 @@ AnimatedTexture::~AnimatedTexture()
 
 Texture *AnimatedTexture::Update()
 {
-  tic_t elapsed = game.tic - lastupdate;
-  while (elapsed > 0)
+  while (changetic <= game.tic)
     {
-      if (tics <= elapsed)
-	{
-	  elapsed -= tics;
+      // next frame
+      if (++currentframe == numframes)
+	currentframe = 0;
 
-	  if (++currentframe == numframes)
-	    currentframe = 0;
-
-	  tics = frames[currentframe].tics;
-
-	  if (tics > 255)
-	    tics = (tics >> 16) + P_Random() % ((tics & 0xFF00) >> 8); // Random tics
-	}
-      else
-	{
-	  tics -= elapsed;
-	  break;
-	}
+      tic_t tics = frames[currentframe].tics;
+      if (tics > 255)
+	tics = (tics >> 16) + P_Random() % ((tics & 0xFF00) >> 8); // Random tics     
+   
+      changetic += tics;
     }
 
   return frames[currentframe].tx;
-}
-
-
-byte *AnimatedTexture::Generate()
-{
-  return Update()->Generate();
-}
-
-
-byte *AnimatedTexture::GetColumn(int col)
-{
-  return Update()->GetColumn(col);
-}
-
-void AnimatedTexture::HWR_Prepare()
-{
-  Update()->HWR_Prepare();
 }
 
 
@@ -284,6 +263,7 @@ int P_Read_ANIMATED(int lump)
       count++;
 
       /*
+      // FIXME half-assed animation system
       // TODO a small-time HACK, create one instance for each frame of animation
       for (i = 1; i < n; i++)
 	{
@@ -345,7 +325,7 @@ int P_Read_ANIMDEFS(int lump)
 
 	      // create the animation (it has the same name as its
 	      // 1st frame, which is thus overwritten from tc map)
-	      // This is problem if several animations share the frame!
+	      // TODO This is a problem if several animations share the frame!
 	      AnimatedTexture *t = new AnimatedTexture(name, n);
 	      tc.Insert(t);
 	      count++;

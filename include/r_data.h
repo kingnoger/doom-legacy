@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/08/13 18:25:11  smite-meister
+// sw renderer fix
+//
 // Revision 1.8  2004/08/12 18:30:29  smite-meister
 // cleaned startup
 //
@@ -50,6 +53,20 @@
 #include "doomtype.h"
 #include "m_fixed.h"
 #include "z_cache.h"
+
+
+/// posts are vertical runs of nonmasked source pixels in a patch_t
+struct post_t
+{
+  byte topdelta; ///< how many pixels to skip, -1 (0xff) means the column ends
+  byte length;   ///< number of data bytes
+  byte crap;     ///< always 1?
+  byte data[0];  ///< data starts here, ends with another crap byte (not included in length)
+};
+
+/// column_t is a list of 0 or more post_t, (byte)-1 terminated
+typedef post_t column_t;
+
 
 
 /// flags for drawing Textures
@@ -102,6 +119,11 @@ public:
     struct Mipmap_t *mipmap; // for hardware renderer
   };
 
+protected:
+  /// Prepare the texture for use. Returned data layout depends on subclass.
+  virtual byte *Generate() = 0;
+  virtual void HWR_Prepare() = 0;
+
 public:
   Texture(const char *name);
   virtual ~Texture();
@@ -109,13 +131,25 @@ public:
   void *operator new(size_t size);
   void  operator delete(void *mem);
 
-  virtual bool Masked() { return false; }; // HACK for sw renderer
+  /// HACK for sw renderer, means that texture is in column_t format
+  virtual bool Masked() { return false; };
 
-  virtual byte *Generate() = 0;         // get row-major data
-  virtual byte *GetColumn(int col) = 0; // get texture column data for span blitting.
-  virtual void HWR_Prepare() = 0;       // prepare the texture for hw use
+  /// sw renderer: get raw texture column data for span blitting.
+  /// NOTE if Masked() is true, we only return the first post.
+  virtual byte *GetColumn(int col) = 0;
+
+  /// sw renderer: masked textures. if Masked() is false, returns NULL
+  virtual column_t *GetMaskedColumn(int col) = 0;
+
+  /// returns raw data in row-major form
+  virtual byte *GetData() = 0;
+
+  /// draw the Texture flat on screen.
   virtual void Draw(int x, int y, int scrn) {}; // scrn may contain flags
   virtual void HWR_Draw(int x, int y, int flags) {};
+
+  /// tile an area of the screen with the Texture
+  virtual void DrawFill(int x, int y, int w, int h) {};
 };
 
 
@@ -136,14 +170,19 @@ public:
   byte   type;
   byte   mode;
 
+protected:
+  virtual byte *Generate();   ///< returns row-major data
+  virtual void HWR_Prepare();
+
 public:
   LumpTexture(const char *name, int lump, int w, int h);
 
-  virtual byte *Generate();
   virtual byte *GetColumn(int col);
-  virtual void HWR_Prepare();
+  virtual column_t *GetMaskedColumn(int col) { return NULL; }
+  virtual byte *GetData() { return Generate(); }
   virtual void Draw(int x, int y, int scrn);
   virtual void HWR_Draw(int x, int y, int flags);
+  virtual void DrawFill(int x, int y, int w, int h);
 };
 
 
@@ -153,15 +192,17 @@ class PatchTexture : public Texture
 {
   int lump;
 
+protected:
+  virtual byte *Generate();  ///< 
+  virtual void HWR_Prepare();
+
 public:
   PatchTexture(const char *name, int lump);
 
-
   virtual bool Masked() { return true; };
-
-  virtual byte *Generate();
   virtual byte *GetColumn(int col);
-  virtual void HWR_Prepare();
+  virtual column_t *GetMaskedColumn(int col);
+  virtual byte *GetData();
   virtual void Draw(int x, int y, int scrn);
   virtual void HWR_Draw(int x, int y, int flags);
 };
@@ -169,6 +210,9 @@ public:
 
 
 /// \brief Doom Textures (which are built out of patches)
+///
+/// In SW mode, the texture data is stored in column-major order (like patches)
+
 class DoomTexture : public Texture
 {
 public:
@@ -179,7 +223,7 @@ public:
   {
     // Block origin (always UL), which has already accounted
     // for the internal origin of the patch.
-    int originx, originy;
+    int originx, originy; ///< 
     int patch;
   };
 
@@ -190,21 +234,26 @@ public:
   short       patchcount;
   texpatch_t *patches;
 
-  unsigned   *columnofs;  // offsets to
-  byte       *texdata;
+  int        *columnofs; ///< offsets from texdata to raw column data
+  byte       *texdata;   ///< texture data
+
+protected:
+  virtual byte *Generate();
+  virtual void HWR_Prepare();
 
 public:
   DoomTexture(const struct maptexture_t *mtex);
   virtual ~DoomTexture();
 
   virtual bool Masked() { return (patchcount == 1); };
-
-  virtual byte *Generate();
-  virtual byte *GetColumn(int col); // Retrieve texture column data for span blitting.
-  virtual void HWR_Prepare();
+  virtual byte *GetColumn(int col);
+  virtual column_t *GetMaskedColumn(int col);
+  virtual byte *GetData();
 };
 
 
+
+//===============================================================================
 
 /// \brief Second-level cache for Textures
 ///

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/08/13 18:25:11  smite-meister
+// sw renderer fix
+//
 // Revision 1.9  2004/08/12 18:30:34  smite-meister
 // cleaned startup
 //
@@ -437,6 +440,43 @@ void LumpTexture::Draw(int x, int y, int scrn = 0)
 }
 
 
+
+// Fills a box of pixels using a flat texture as a pattern,
+// scaled to screen size.
+void LumpTexture::DrawFill(int x, int y, int w, int h)
+{
+#ifdef HWRENDER
+  if (rendermode != render_soft)
+    {
+      HWR.DrawFill(x, y, w, h, this);
+      return;
+    }
+#endif
+
+  byte *flat = Generate();
+  byte *dest = vid.screens[0] + y*vid.dupy*vid.width + x*vid.dupx + vid.scaledofs;
+
+  w *= vid.dupx;
+  h *= vid.dupy;
+
+  fixed_t dx = FixedDiv(FRACUNIT, vid.dupx<<FRACBITS);
+  fixed_t dy = FixedDiv(FRACUNIT, vid.dupy<<FRACBITS);
+
+  fixed_t yfrac = 0;
+  for (int v=0; v<h; v++, dest += vid.width)
+    {
+      fixed_t xfrac = 0;
+      byte *src = flat + (((yfrac >> FRACBITS) % height) * width);
+      for (int u=0; u<w; u++)
+        {
+          dest[u] = src[(xfrac >> FRACBITS) % width];
+          xfrac += dx;
+        }
+      yfrac += dy;
+    }
+}
+
+
 //======================================================================
 
 //
@@ -514,47 +554,6 @@ void V_DrawFill(int x, int y, int w, int h, int c)
       dest[u] = c;
 }
 
-
-
-//
-//  Fills a box of pixels using a flat texture as a pattern,
-//  scaled to screen size.
-//
-void V_DrawFlatFill(int x, int y, int w, int h, Texture *t)
-{
-#ifdef HWRENDER
-  if (rendermode != render_soft)
-    {
-      HWR.DrawFill(x, y, w, h, t);
-      return;
-    }
-#endif
-
-  byte *flat = t->Generate();
-  byte *dest = vid.screens[0] + y*vid.dupy*vid.width + x*vid.dupx + vid.scaledofs;
-
-  w *= vid.dupx;
-  h *= vid.dupy;
-
-  int height = t->height;
-  int width = t->width;
-
-  fixed_t dx = FixedDiv(FRACUNIT, vid.dupx<<FRACBITS);
-  fixed_t dy = FixedDiv(FRACUNIT, vid.dupy<<FRACBITS);
-
-  fixed_t yfrac = 0;
-  for (int v=0; v<h; v++, dest += vid.width)
-    {
-      fixed_t xfrac = 0;
-      byte *src = flat + (((yfrac >> FRACBITS) % height) * width);
-      for (int u=0; u<w; u++)
-        {
-          dest[u] = src[(xfrac >> FRACBITS) % width];
-          xfrac += dx;
-        }
-      yfrac += dy;
-    }
-}
 
 
 

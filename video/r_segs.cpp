@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/08/13 18:25:11  smite-meister
+// sw renderer fix
+//
 // Revision 1.5  2004/07/05 16:53:31  smite-meister
 // Netcode replaced
 //
@@ -405,7 +408,7 @@ void Rend::R_DrawWallSplats()
                 continue;
 
             // draw the texture
-            col = (column_t *)patch->GetColumn(texturecolumn);
+            col = patch->GetMaskedColumn(texturecolumn);
             R_DrawSplatColumn (col);
 
         }
@@ -459,7 +462,7 @@ void R_Render2sidedMultiPatchColumn (column_t* column)
 
     if (dc_yl <= dc_yh)
     {
-        dc_source = (byte *)column + 3;
+        dc_source = (byte *)column;
         colfunc ();
     }
 }
@@ -613,7 +616,7 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
 	      dc_iscale = 0xffffffffu / (unsigned)spryscale;
             
 	      // draw the texture
-	      col = (column_t *)(tex->GetColumn(maskedtexturecol[dc_x]) - 3);
+	      col = tex->GetMaskedColumn(maskedtexturecol[dc_x]);
 
 	      for(i = 0; i < dc_numlights; i++)
 		{
@@ -702,7 +705,7 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
 	  dc_iscale = 0xffffffffu / (unsigned)spryscale;
             
 	  // draw the texture
-	  col = (column_t *)(tex->GetColumn(maskedtexturecol[dc_x]) - 3);
+	  col = tex->GetMaskedColumn(maskedtexturecol[dc_x]);
 	  colfunc_2s(col);
         }
       spryscale += rw_scalestep;
@@ -884,7 +887,7 @@ void Rend::R_RenderThickSideRange(drawseg_t *ds, int x1, int x2, ffloor_t *ffloo
           dc_iscale = 0xffffffffu / (unsigned)spryscale;
             
           // draw the texture
-          col = (column_t *)(tex->GetColumn(maskedtexturecol[dc_x]) - 3);
+          col = tex->GetMaskedColumn(maskedtexturecol[dc_x]);
 
           for(i = 0; i < dc_numlights; i++)
           {
@@ -1021,7 +1024,7 @@ void Rend::R_RenderThickSideRange(drawseg_t *ds, int x1, int x2, ffloor_t *ffloo
         dc_iscale = 0xffffffffu / (unsigned)spryscale;
             
         // draw the texture
-        col = (column_t *)(tex->GetColumn(maskedtexturecol[dc_x]) - 3);
+        col = tex->GetMaskedColumn(maskedtexturecol[dc_x]);
             
         colfunc_2s (col);
         spryscale += rw_scalestep;

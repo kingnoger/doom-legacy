@@ -13,6 +13,9 @@ all	: ../d2h.exe
 ../d2h.exe: $(objdir)/d2h.o
 	$(LD) $(LDFLAGS) $< -o $@
 
+../wadtool.exe: $(objdir)/wadtool.o
+	$(LD) $(LDFLAGS) $< -o $@
+
 depend	:
 	$(CC) -MM $(CFLAGS) *.cpp | sed -e 's/^\([^ ]\)/$$(objdir)\/\1/' > tools.dep
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2004/08/13 18:25:11  smite-meister
+// sw renderer fix
+//
 // Revision 1.21  2004/08/12 18:30:33  smite-meister
 // cleaned startup
 //
@@ -159,13 +162,13 @@
 // Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
 // Initial import into CVS (v1.29 pr3)
 //
-//
-// DESCRIPTION:
-//   Texture generation and caching. Colormap loading.
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Texture generation and caching. Colormap loading.
+
 #include <math.h>
+#include <png.h>
 
 #include "doomdef.h"
 #include "g_game.h"
@@ -178,7 +181,7 @@
 #include "r_state.h"
 #include "r_sky.h"
 #include "r_data.h"
-#include "v_video.h" //pLoaclPalette
+#include "v_video.h"
 
 #include "w_wad.h"
 #include "z_zone.h"
@@ -209,18 +212,6 @@ int             texturememory;
 short    color8to16[256];       //remap color index to highcolor rgb value
 short*   hicolormaps;           // test a 32k colormap remaps high -> high
 
-
-//
-// MAPTEXTURE_T CACHING
-// When a texture is first needed,
-//  it counts the number of composite columns
-//  required in the texture and allocates space
-//  for a column directory and any new columns.
-// The directory will simply point inside other patches
-//  if there is only one patch in a given column,
-//  but any columns with multiple patches
-//  will have new column_ts generated.
-//
 
 
 //==================================================================
@@ -301,8 +292,9 @@ byte *LumpTexture::Generate()
 
 byte *LumpTexture::GetColumn(int col)
 {
-  return Generate(); // TODO not correct
+  return Generate(); // TODO not correct but better than nothing?
 }
+
 
 //==================================================================
 //  PatchTexture
@@ -350,8 +342,26 @@ byte *PatchTexture::GetColumn(int col)
     col += width; // wraparound
 
   patch_t *p = (patch_t *)Generate();
-  return (data + p->columnofs[col]);
+  return data + p->columnofs[col] + 3; // skip the post_t info
 }
+
+
+column_t *PatchTexture::GetMaskedColumn(int col)
+{
+  col %= width;
+  if (col < 0)
+    col += width; // wraparound
+
+  patch_t *p = (patch_t *)Generate();
+  return (column_t *)(data + p->columnofs[col]);
+}
+
+
+byte *PatchTexture::GetData()
+{
+  return Generate(); // TODO not correct but better than nothing?
+}
+
 
 //==================================================================
 //  DoomTexture
@@ -398,8 +408,8 @@ DoomTexture::DoomTexture(const maptexture_t *mtex)
 
   width  = SHORT(mtex->width);
   height = SHORT(mtex->height);
-  xscale = mtex->xscale ? mtex->xscale << (FRACBITS - 3) : 0;
-  yscale = mtex->yscale ? mtex->yscale << (FRACBITS - 3) : 0;
+  xscale = mtex->xscale ? mtex->xscale << (FRACBITS - 3) : FRACUNIT;
+  yscale = mtex->yscale ? mtex->yscale << (FRACBITS - 3) : FRACUNIT;
 
   int j = 1;
   while (j*2 <= width)
@@ -415,19 +425,18 @@ DoomTexture::~DoomTexture()
 
 
 // Clip and draw a column from a patch into a cached post.
-static void R_DrawColumnInCache(column_t *patch, byte *cache, int originy, int cacheheight)
+static void R_DrawColumnInCache(column_t *col, byte *cache, int originy, int cacheheight)
 {
-  //byte *dest = (byte *)cache;// + 3;
-
-  while (patch->topdelta != 0xff)
+  while (col->topdelta != 0xff)
     {
-      byte *source = (byte *)patch + 3; // go to the data
-      int count = patch->length;
-      int position = originy + patch->topdelta;
+      byte *source = col->data; // go to the data
+      int count = col->length;
+      int position = originy + col->topdelta;
 
       if (position < 0)
         {
           count += position;
+	  source -= position;
           position = 0;
         }
 
@@ -437,9 +446,21 @@ static void R_DrawColumnInCache(column_t *patch, byte *cache, int originy, int c
       if (count > 0)
         memcpy(cache + position, source, count);
 
-      patch = (column_t *)((byte *)patch + patch->length + 4);
+      col = (column_t *)&col->data[col->length + 1];
     }
 }
+
+
+
+// TODO better DoomTexture handling?
+// When a texture is first needed,
+//  it counts the number of composite columns
+//  required in the texture and allocates space
+//  for a column directory and any new columns.
+// The directory will simply point inside other patches
+//  if there is only one patch in a given column,
+//  but any columns with multiple patches
+//  will have new column_ts generated.
 
 
 //   Allocate space for full size texture, either single patch or 'composite'
@@ -468,29 +489,40 @@ byte *DoomTexture::Generate()
 
       Z_Malloc(blocksize, PU_TEXTURE, (void **)&data); // change tag at end of function
       fc.ReadLump(tp->patch, data);
+      p = (patch_t *)data; // TODO would it be possible to use just any lumptexture here?
 
       // use the patch's column lookup
-      columnofs = (unsigned int*)(data + 8);
+      columnofs = p->columnofs;
       texdata = data;
 
+      // FIXME should use patch width here? texture may be wider!
+      if (width > SHORT(p->width))
+	I_Error("masked tex too wide\n"); // FIXME TEMP behavior
+
       for (i=0; i<width; i++)
-        columnofs[i] += 3; // point directly to the data
+        columnofs[i] = LONG(columnofs[i]) + 3; // skip post_t info by default
     }
   else
     {
       // multi-patch (or 'composite') textures are stored as a simple bitmap
 
-      blocksize = (width * sizeof(unsigned)) + (width * height);
+      blocksize = (width * sizeof(int)) + (width * height);
       //CONS_Printf ("R_GenTex MULTI  %.8s size: %d\n",name,blocksize);
 
       Z_Malloc(blocksize, PU_TEXTURE, (void **)&data);
 
       // columns lookup table
-      columnofs = (unsigned *)data;
+      columnofs = (int *)data;
       // texture data after the lookup table
-      texdata = data + (width * sizeof(unsigned)); // FIXME bug?
+      texdata = data + (width * sizeof(int));
 
-      // Composite the columns together.
+      memset(texdata, 0, width * height); // TEST
+
+      // generate column offset lookup
+      for (i=0; i<width; i++)
+	columnofs[i] = i * height;
+
+      // Composite the patches together.
       for (i=0, tp = patches; i<patchcount; i++, tp++)
         {
           p = (patch_t *)fc.CacheLumpNum(tp->patch, PU_CACHE);
@@ -507,11 +539,7 @@ byte *DoomTexture::Generate()
           for ( ; x < x2; x++)
             {
               column_t *patchcol = (column_t *)((byte *)p + LONG(p->columnofs[x-x1]));
-
-              // generate column offset lookup
-              columnofs[x] = (width*sizeof(unsigned)) + (x * height);
-
-              R_DrawColumnInCache(patchcol, data + columnofs[x], tp->originy, height);
+              R_DrawColumnInCache(patchcol, texdata + columnofs[x], tp->originy, height);
             }
         }
     }
@@ -526,9 +554,7 @@ byte *DoomTexture::Generate()
 
 
 
-//
-// new test version, short!
-//
+// returns a pointer to column-major raw data
 byte *DoomTexture::GetColumn(int col)
 {
   return Generate() + columnofs[col & widthmask];
@@ -536,7 +562,19 @@ byte *DoomTexture::GetColumn(int col)
 }
 
 
+column_t *DoomTexture::GetMaskedColumn(int col)
+{
+  if (patchcount == 1)
+    return (column_t *)(Generate() + columnofs[col & widthmask] - 3); // put back post_t info
+  else
+    return NULL;
+}
 
+
+byte *DoomTexture::GetData()
+{
+  return Generate(); // TODO not correct but better than nothing?
+}
 
 
 //==================================================================
@@ -548,10 +586,8 @@ texturecache_t tc(PU_TEXTURE);
 
 Texture *texturecache_t::operator[](unsigned id)
 {
-  /*
   if (id >= texture_ids.size())
     I_Error("Invalid texture ID %d (max %d)!\n", id, texture_ids.size());
-  */
 
   map<unsigned, Texture *>::iterator i = texture_ids.find(id);
   if (i == texture_ids.end())
@@ -622,7 +658,7 @@ Texture *texturecache_t::GetPtrNum(int n)
 
 void texturecache_t::Insert(Texture *t)
 {
-  t->id = c_map.size() + 1; // First texture gets the id 1
+  t->id = c_map.size(); // First texture gets the id 1, 'cos zero maps to NULL
   texture_ids[t->id] = t;
 
   c_iter_t i = c_map.find(t->name);
@@ -660,8 +696,12 @@ cacheitem_t *texturecache_t::Load(const char *name)
   int size = fc.LumpLength(lump);
 
   // first check possible magic numbers!
-  // then try some common sizes for raw picture lumps
-  if (size == 64*64)
+  if (!png_sig_cmp(data, 0, sizeof(data)))
+    {
+      // it's a PNG
+      I_Error("PNG support is on its way...\n");
+    } // then try some common sizes for raw picture lumps
+  else if (size == 64*64)
     {
       // Flat is 64*64 bytes of raw paletted picture data in one lump
       t = new LumpTexture(name, lump, 64, 64);
@@ -702,7 +742,7 @@ cacheitem_t *texturecache_t::Load(const char *name)
       t = new PatchTexture(name, lump);
     }
 
-  t->id = c_map.size() + 1; // unique id (used instead of pointers)
+  t->id = c_map.size(); // unique id (used instead of pointers)
   texture_ids[t->id] = t;
   return t;
 }

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/08/13 18:25:11  smite-meister
+// sw renderer fix
+//
 // Revision 1.4  2004/08/12 18:30:30  smite-meister
 // cleaned startup
 //
@@ -102,18 +105,6 @@ struct patch_t
   // the [0] is &columnofs[width]
 };
 
-/// posts are vertical runs of nonmasked source pixels in a patch_t
-struct post_t
-{
-  byte topdelta; ///< how many pixels to skip, -1 (0xff) means the column ends
-  byte length;   ///< number of data bytes
-  byte crap;     ///< always 1?
-  byte data[0];  ///< data starts here, ends with another crap byte (not included in length)
-};
-
-// column_t is a list of 0 or more post_t, (byte)-1 terminated
-typedef post_t column_t;
-
 
 //======================================================================
 
@@ -159,8 +150,6 @@ void V_GetBlock( int x, int y, int scrn, int width, int height, byte* dest);
 
 //added:05-02-98: fill a box with a single color
 void V_DrawFill(int x, int y, int w, int h, int c);
-//added:06-02-98: fill a box with tiled pattern
-void V_DrawFlatFill(int x, int y, int w, int h, class Texture *t);
 
 //added:10-02-98: fade down the screen buffer before drawing the menu over
 void V_DrawFadeScreen();

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/08/13 18:25:11  smite-meister
+// sw renderer fix
+//
 // Revision 1.3  2004/04/25 16:26:51  smite-meister
 // Doxygen
 //
@@ -939,7 +942,7 @@ void Rend::R_DrawSinglePlane(visplane_t* pl, bool handlesource)
   currentplane = pl;
 
   if (handlesource)
-    ds_source = (byte *)tc[pl->picnum]->Generate(); // FIXME
+    ds_source = (byte *)tc[pl->picnum]->GetData();
 
   xoffs = pl->xoffs;
   yoffs = pl->yoffs;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2004/08/13 18:25:10  smite-meister
+// sw renderer fix
+//
 // Revision 1.16  2004/08/12 18:30:26  smite-meister
 // cleaned startup
 //
@@ -563,7 +566,7 @@ void Intermission::SlamBackground()
 {
   // Heretic has a different bg during statcount
   if (game.mode == gm_heretic && state == StatCount)
-    V_DrawFlatFill(0, 0, vid.width/vid.dupx, vid.height/vid.dupy, tc.GetPtr("FLOOR16"));
+    tc.GetPtr("FLOOR16")->DrawFill(0, 0, vid.width/vid.dupx, vid.height/vid.dupy);
   else if (rendermode == render_soft)
     memcpy(vid.screens[0], vid.screens[1], vid.width * vid.height);
   else
