@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2005/03/10 22:28:43  smite-meister
+// poly renderer
+//
 // Revision 1.17  2004/11/09 20:38:50  smite-meister
 // added packing to I/O structs
 //
@@ -84,7 +87,7 @@
 
 static void ThrustMobj(Actor *mobj, seg_t *seg, polyobj_t *po);
 static void UpdateSegBBox(seg_t *seg);
-static void RotatePt(int an, fixed_t *x, fixed_t *y, fixed_t startSpotX, fixed_t startSpotY);
+static void RotatePt(angle_t an, fixed_t *x, fixed_t *y, fixed_t startSpotX, fixed_t startSpotY);
 
 
 //==========================================================================
@@ -157,9 +160,8 @@ bool Map::EV_RotatePoly(byte *args, int direction, bool overRide)
   if (poly)
     {
       if (poly->specialdata && !overRide)
-	{ // poly is already moving
-	  return false;
-	}
+	// poly is already moving
+	return false;
     }
   else
     I_Error("EV_RotatePoly:  Invalid polyobj num: %d\n", polynum);
@@ -175,9 +177,9 @@ bool Map::EV_RotatePoly(byte *args, int direction, bool overRide)
     {
       poly = GetPolyobj(mirror);
       if (poly && poly->specialdata && !overRide)
-	{ // mirroring poly is already in motion
-	  break;
-	}
+	// mirroring poly is already in motion
+	break;
+
       direction = -direction;
 
       p = new polyobject_t(mirror, args, direction);
@@ -727,8 +729,10 @@ bool Map::PO_MovePolyobj(int num, fixed_t x, fixed_t y)
 
 //==========================================================================
 
-static void RotatePt(int an, fixed_t *x, fixed_t *y, fixed_t startSpotX, fixed_t startSpotY)
+static void RotatePt(angle_t an, fixed_t *x, fixed_t *y, fixed_t startSpotX, fixed_t startSpotY)
 {
+  an >>= ANGLETOFINESHIFT;
+
   fixed_t tx, ty;
   fixed_t gxt, gyt;
 
@@ -749,37 +753,28 @@ static void RotatePt(int an, fixed_t *x, fixed_t *y, fixed_t startSpotX, fixed_t
 bool Map::PO_RotatePolyobj(int num, angle_t angle)
 {
   int count;
-  seg_t **segList;
-  vertex_t *originalPts;
-  vertex_t *prevPts;
-  int an;
   polyobj_t *po;
-  bool blocked;
 
   if (!(po = GetPolyobj(num)))
-    {
-      I_Error("PO_RotatePolyobj:  Invalid polyobj number: %d\n", num);
-    }
-  an = (po->angle+angle)>>ANGLETOFINESHIFT;
+    I_Error("PO_RotatePolyobj:  Invalid polyobj number: %d\n", num);
 
   UnLinkPolyobj(po);
 
-  segList = po->segs;
-  originalPts = po->originalPts;
-  prevPts = po->prevPts;
+  seg_t **segList = po->segs;
+  vertex_t *originalPts = po->originalPts;
+  vertex_t *prevPts = po->prevPts;
 
-  for (count = po->numsegs; count; count--, segList++, originalPts++,
-	prevPts++)
+  for (count = po->numsegs; count; count--, segList++, originalPts++, prevPts++)
     {
       prevPts->x = (*segList)->v1->x;
       prevPts->y = (*segList)->v1->y;
       (*segList)->v1->x = originalPts->x;
       (*segList)->v1->y = originalPts->y;
-      RotatePt(an, &(*segList)->v1->x, &(*segList)->v1->y, po->startSpot.x,
-	       po->startSpot.y);
+      RotatePt(po->angle + angle, &(*segList)->v1->x, &(*segList)->v1->y,
+	       po->startSpot.x, po->startSpot.y);
     }
   segList = po->segs;
-  blocked = false;
+  bool blocked = false;
   validcount++;
   for (count = po->numsegs; count; count--, segList++)
     {
