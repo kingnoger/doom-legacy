@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/03/25 18:14:50  smite-meister
+// Memory debug
+//
 // Revision 1.3  2003/03/08 16:07:19  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -48,8 +51,8 @@
 
 using namespace std;
 
-// use malloc so when go over malloced region do a sigsegv
-//#define DEBUGMEMCLACH
+// Use malloc instead of zone memory to detect leaks. This way we always get a SIGSEGV.
+//#define MEMDEBUG 1
 
 void Command_Meminfo_f();
 
@@ -114,7 +117,7 @@ public:
   static memzone_t *NewZone(int size); // allocates a new memzone of size 'size' and activates it
 
   void  Clear(); // clears and initializes the zone
-  void *Malloc(int size, int tag, void *user, int alignbits); // allocate zone memory
+  void *Malloc(int size, int tag, void **user, int alignbits); // allocate zone memory
   void  Free(void* ptr); // free zone memory
   void  FreeTags(int lowtag, int hightag); // frees tags between lowtag and hightag within this zone
 
@@ -141,7 +144,7 @@ int memzone_t::mb_increment = 6; // This value is a guesstimate.
 //
 void Z_Init()
 {
-#ifndef DEBUGMEMCLACH
+#ifndef MEMDEBUG
   ULONG free, total;
   int mb_alloc = memzone_t::mb_increment; 
 
@@ -210,7 +213,7 @@ void memzone_t::Clear()
   // block is the only free block in the zone
   blocklist.next = blocklist.prev = block;
   blocklist.size = sizeof(memzone_t);
-  blocklist.user = (void **)this;
+  blocklist.user = (void **)this; // just a marker
   blocklist.tag = PU_STATIC;
   blocklist.id = 0;
   base = block;
@@ -236,28 +239,14 @@ void Z_Free(void *ptr)
   // We could do without if we stored the proper memzone_t* into each block header
   // and made memzone_t::Free again Z_Free
 
-  // Find the correct block in which to do the free'ing.
-  for (unsigned int i=0; i < zones.size(); i++) 
-    if (ptr >= zones[i] && ptr <= zones[i] + zones[i]->size)
-      {
-	zones[i]->Free(ptr);
-	return;
-      }
-  I_Error("Attempt to free zone memory outside the allocated area.\n");
-}
- 
-void memzone_t::Free(void* ptr)
-{
+#ifdef MEMDEBUG
   memblock_t *block = (memblock_t *)((byte *)ptr - sizeof(memblock_t));
 
-#ifdef DEBUGMEMCLACH
   if (block->user > (void **)0x100)
-    *block->user = 0;
+    *block->user = NULL;
   free(block);
   return;
 #endif
-
-  memblock_t *other;
 
 #ifdef ZDEBUG
   // SoM: HARDERCORE debuging
@@ -277,6 +266,20 @@ void memzone_t::Free(void* ptr)
 	}
     }
 #endif
+
+  // Find the correct block in which to do the free'ing.
+  for (unsigned int i=0; i < zones.size(); i++) 
+    if (ptr >= zones[i] && ptr <= zones[i] + zones[i]->size)
+      {
+	zones[i]->Free(ptr);
+	return;
+      }
+  I_Error("Attempt to free zone memory outside the allocated area.\n");
+}
+ 
+void memzone_t::Free(void* ptr)
+{
+  memblock_t *block = (memblock_t *)((byte *)ptr - sizeof(memblock_t));
 
   if (block->id != ZONEID)
     I_Error("Z_Free: freed a pointer without ZONEID");
@@ -300,7 +303,7 @@ void memzone_t::Free(void* ptr)
   block->tag = 0;
   block->id = 0;
 
-  other = block->prev;
+  memblock_t *other = block->prev;
   if (!other->user)
     {
       // merge with previous free block
@@ -333,14 +336,27 @@ void memzone_t::Free(void* ptr)
 // Z_Malloc
 // You can pass a NULL user if the tag is < PU_PURGELEVEL.
 //
-#define MINFRAGMENT sizeof(memblock_t)
+#define MINFRAGMENT int(sizeof(memblock_t))
 
 #ifdef ZDEBUG
-void *Z_Malloc2 (int size, int tag, void *user,int alignbits, char *file,int line)
+void *Z_Malloc2 (int size, int tag, void **user, int alignbits, char *file, int line)
 #else
-void *Z_MallocAlign(int size, int tag, void *user, int alignbits)
+void *Z_MallocAlign(int size, int tag, void **user, int alignbits)
 #endif
 {
+#ifdef MEMDEBUG
+  size += sizeof(memblock_t);
+  memblock_t *temp = (memblock_t *)malloc(size);
+  temp->size = size;
+  temp->id = ZONEID;
+  temp->tag = tag;
+  temp->user = user;
+  ((byte *)temp) += sizeof(memblock_t);
+  if (user)
+    *user = temp;
+  return temp;
+#endif    
+
   void *allocation;
   for (unsigned int i=0; i < zones.size(); i++)
     {
@@ -370,7 +386,7 @@ void *Z_MallocAlign(int size, int tag, void *user, int alignbits)
 
 // Searches the given memory zone for free space. Then gives a
 // pointer to the memory. Returns NULL on failure.
-void* memzone_t::Malloc(int size, int tag, void *user, int alignbits)
+void* memzone_t::Malloc(int size, int tag, void **user, int alignbits)
 {
   ULONG alignmask = (1 << alignbits) - 1;
 
@@ -379,17 +395,6 @@ void* memzone_t::Malloc(int size, int tag, void *user, int alignbits)
   size = (size + 3) & ~3; // align size to next multiple of 4
   size += sizeof(memblock_t); // account for size of block header
 
-#ifdef DEBUGMEMCLACH
-  memblock_t *temp;
-
-  temp=malloc(size);
-  temp->id=ZONEID;
-  temp->tag = tag;
-  temp->user = user;
-  ((byte *)temp) += sizeof(memblock_t);
-  if(user) *(void **)user=temp;
-  return temp;
-#endif    
 
   // if there is a free block behind the base, back up to it
   // added comment : base is used to point at the begin of a region in case
@@ -495,8 +500,8 @@ void* memzone_t::Malloc(int size, int tag, void *user, int alignbits)
   if (user)
     {
       // mark as an in use block
-      base->user = (void **)user;
-      *(void **)user = (void *)((byte *)base + sizeof(memblock_t));
+      base->user = user;
+      *user = (void *)((byte *)base + sizeof(memblock_t));
     }
   else
     {
@@ -530,22 +535,19 @@ void* memzone_t::Malloc(int size, int tag, void *user, int alignbits)
 //
 void Z_FreeTags(int lowtag, int hightag)
 {
+#ifdef MEMDEBUG
+  return;
+#endif
+
   for (unsigned int i=0; i < zones.size(); i++)
     zones[i]->FreeTags(lowtag, hightag);
 }
 
 void memzone_t::FreeTags(int lowtag, int hightag)
 {
-#ifdef DEBUGMEMCLACH
-  return;
-#endif
+  memblock_t *block, *next;
 
-  memblock_t *block;
-  memblock_t *next;
-
-  for (block = blocklist.next;
-       block != &blocklist;
-       block = next)
+  for (block = blocklist.next; block != &blocklist; block = next)
     {
       // get link before freeing
       next = block->next;
@@ -567,6 +569,10 @@ void memzone_t::FreeTags(int lowtag, int hightag)
 //  console should be rewritten as a stream?
 void Z_DumpHeap(int lowtag, int hightag)
 {
+#ifdef MEMDEBUG
+  return;
+#endif
+
   for (unsigned int i=0; i < zones.size(); i++)
     {
       CONS_Printf("Z_DumpHeap info for zone %d/%d.\n\n", i, zones.size());
@@ -619,6 +625,10 @@ void memzone_t::DumpHeap(int lowtag, int hightag)
 //
 void Z_FileDumpHeap(FILE *f)
 {
+#ifdef MEMDEBUG
+  return;
+#endif
+
   for (unsigned int i=0; i < zones.size(); i++)
     {
       fprintf(f, "Z_FileDumpHeap info for zone %d/%d.\n", i, zones.size());
@@ -667,17 +677,18 @@ void memzone_t::FileDumpHeap(FILE *f)
 //----------------------------------------------------------
 // Z_CheckHeap
 //
-void Z_CheckHeap(int i)
+void Z_CheckHeap(int mark)
 {
+#ifdef MEMDEBUG
+  return;
+#endif
+
   for (unsigned int i=0; i < zones.size(); i++)
-    zones[i]->CheckHeap(i);
+    zones[i]->CheckHeap(mark);
 }
 
 void memzone_t::CheckHeap(int i)
 {
-#ifdef DEBUGMEMCLACH
-  return;
-#endif
   for (memblock_t *block = blocklist.next; ; block = block->next)
     {
       if ((block->user > (void **)0x100) &&
@@ -705,10 +716,8 @@ void memzone_t::CheckHeap(int i)
 //
 void Z_ChangeTag(void *ptr, int tag)
 {
-#ifdef DEBUGMEMCLACH
-  // can't free because the most pu_cache allocated is to use juste after
-  //    if(tag>=PU_PURGELEVEL)
-  //        Z_Free(ptr);
+#ifdef MEMDEBUG
+  // no point in changing tag because it is never used
   return;
 #endif
 
@@ -717,7 +726,7 @@ void Z_ChangeTag(void *ptr, int tag)
   if (block->id != ZONEID)
     I_Error("Z_ChangeTag: pointer without ZONEID");
 
-  if (tag >= PU_PURGELEVEL && (unsigned)block->user < 0x100)
+  if (tag >= PU_PURGELEVEL && block->user < (void **)0x100)
     I_Error("Z_ChangeTag: an owner is required for purgable blocks");
 
   block->tag = tag;
@@ -735,6 +744,10 @@ void Z_FreeMemory(int *realfree,int *cachemem,int *usedmem,int *largestfreeblock
   *cachemem = 0;
   *realfree = 0;
 
+#ifdef MEMDEBUG
+  return;
+#endif
+
   int tmpfree, tmpcache, tmpused, tmplargest;
   for (unsigned int i=0; i < zones.size(); i++)
     {
@@ -749,10 +762,6 @@ void Z_FreeMemory(int *realfree,int *cachemem,int *usedmem,int *largestfreeblock
 
 void memzone_t::FreeMemory(int *realfree, int *cachemem, int *usedmem, int *largestfreeblock)
 {
-#ifdef DEBUGMEMCLACH
-  return;
-#endif
-
   memblock_t *block;
   int freeblock = 0;
 
@@ -793,6 +802,10 @@ void memzone_t::FreeMemory(int *realfree, int *cachemem, int *usedmem, int *larg
 // - return number of bytes currently allocated in the heap for the given tag
 int Z_TagUsage(int tagnum)
 {
+#ifdef MEMDEBUG
+  return 0;
+#endif
+
   int total = 0;
   for (unsigned int i=0; i < zones.size(); i++)
     total += zones[i]->TagUsage(tagnum);

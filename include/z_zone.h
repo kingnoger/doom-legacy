@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/03/25 18:15:17  smite-meister
+// Memory debug
+//
 // Revision 1.4  2003/02/23 22:49:31  smite-meister
 // FS is back! L2 cache works.
 //
@@ -87,13 +90,13 @@ void    Z_FreeMemory (int *realfree,int *cachemem,int *usedmem,int *largefreeblo
 //#define ZDEBUG
 
 #ifdef ZDEBUG
-void *Z_Malloc2(int size, int tag, void *ptr, int alignbits, char *file, int line);
+void *Z_Malloc2(int size, int tag, void **user, int alignbits, char *file, int line);
 void  Z_Free2(void *ptr,char *file,int line);
 # define Z_Free(p) Z_Free2(p,__FILE__,__LINE__)
 # define Z_Malloc(s,t,p) Z_Malloc2(s,t,p,0,__FILE__,__LINE__)
 # define Z_MallocAlign(s,t,p,a) Z_Malloc2(s,t,p,a,__FILE__,__LINE__)
 #else
-void *Z_MallocAlign(int size, int tag, void *user, int alignbits);
+void *Z_MallocAlign(int size, int tag, void **user, int alignbits);
 void  Z_Free(void *ptr);
 # define Z_Malloc(s,t,p) Z_MallocAlign(s,t,p,0)
 #endif
