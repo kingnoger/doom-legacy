@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2003/05/11 21:23:51  smite-meister
+// Hexen fixes
+//
 // Revision 1.15  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -937,6 +940,7 @@ void PlayerPawn::Die(Actor *inflictor, Actor *source)
 //
 
 static int p_sound; // pickupsound
+static bool p_remove; // should the stuff be removed?
 
 //
 // was P_GiveAmmo
@@ -1203,16 +1207,47 @@ int maxsoul=200;
 
 
 //---------------------------------------------------------------------------
+//
+// Removes the MF_SPECIAL flag, and initiates the artifact pickup
+// animation. The artifact is restored after a number of tics.
+//
+//---------------------------------------------------------------------------
+
+static void SetDormantArtifact(DActor *arti)
+{
+  arti->flags &= ~MF_SPECIAL;
+  if (cv_deathmatch.value && !(arti->flags & MF_DROPPED))
+    {
+      // respawn delay
+      if (arti->type == MT_XARTIINVULNERABILITY)
+	arti->SetState(S_DORMANTARTI3_1);
+      //else if (arti->type == MT_ARTIINVISIBILITY) 
+      else if (arti->type == MT_SUMMONMAULATOR || arti->type == MT_XARTIFLY)
+	arti->SetState(S_DORMANTARTI2_1);
+      else
+	arti->SetState(S_DORMANTARTI1_1);
+    }
+  else
+    arti->SetState(S_DEADARTI1); // Don't respawn
+
+  S_StartSound(arti, sfx_artiup);
+}
+
+//---------------------------------------------------------------------------
 // was P_GiveArtifact
 //
-// Returns true if artifact accepted. FIXME turn into giveitem
+// Returns true if artifact accepted.
 
-bool PlayerPawn::GiveArtifact(artitype_t arti, Actor *from)
+bool PlayerPawn::GiveArtifact(artitype_t arti, DActor *from)
 {
+  if (arti >= NUMARTIFACTS || arti <= arti_none)
+    return false;
+
   vector<inventory_t>::iterator i = inventory.begin();
 
   // find the right slot
-  while (i < inventory.end() && i->type != arti) i++;
+  while (i < inventory.end() && i->type != arti)
+    i++;
 
   if (i == inventory.end())
     // give one artifact
@@ -1227,40 +1262,39 @@ bool PlayerPawn::GiveArtifact(artitype_t arti, Actor *from)
       i->count++; // one more
     }
 
-  //if (inventory[inv_ptr].count == 0) inv_ptr = i;
+  p_remove = false;
 
   if (from && (from->flags & MF_COUNTITEM))
     player->items++;
 
-  p_sound = Actor::s_artipickup;
+  int j;
+  if (arti < arti_firstpuzzitem)
+    {
+      j = TXT_ARTIINVULNERABILITY_NUM - 1 + arti;
+      if (from->type == MT_XARTIINVULNERABILITY)
+	j = TXT_XARTIINVULNERABILITY;
+      player->SetMessage(text[TXT_ARTIINVULNERABILITY_NUM - 1 + arti], false);
+      SetDormantArtifact(from);
+      p_sound = Actor::s_artipickup;
+    }
+  else
+    {
+      // Puzzle item
+      j = TXT_ARTIPUZZSKULL - 1 + arti;
+      if (arti >= arti_puzzgear1)
+	j = TXT_ARTIPUZZGEAR;
+      player->SetMessage(text[j], true);
+      SetDormantArtifact(from);
+      /*
+      if (!game.multiplayer || deathmatch)
+        // Remove puzzle items if not cooperative netplay
+        P_RemoveMobj(artifact);
+      */
+    }
 
   return true;
 }
 
-
-//---------------------------------------------------------------------------
-//
-// PROC P_SetDormantArtifact
-//
-// Removes the MF_SPECIAL flag, and initiates the artifact pickup
-// animation.
-//
-//---------------------------------------------------------------------------
-
-void P_SetDormantArtifact(DActor *arti)
-{
-  arti->flags &= ~MF_SPECIAL;
-  if(cv_deathmatch.value && (arti->type != MT_ARTIINVULNERABILITY)
-     && (arti->type != MT_ARTIINVISIBILITY))
-    {
-      arti->SetState(S_DORMANTARTI1);
-    }
-  else
-    { // Don't respawn
-      arti->SetState(S_DEADARTI1);
-    }
-  S_StartSound(arti, sfx_artiup);
-}
 
 //---------------------------------------------------------------------------
 //
@@ -1324,25 +1358,12 @@ void A_RestoreSpecialThing2(DActor *thing)
 //
 void PlayerPawn::TouchSpecialThing(DActor *special)
 {                  
-  int         i;
-
-  /*
-  fixed_t delta = special->z - z;
-
-  //SoM: 3/27/2000: For some reason, the old code allowed the player to
-  //grab items that were out of reach...
-  if (delta > height || delta < -special->height)
-    {
-      // out of reach
-      return;
-    }
-  */
-
   // Dead thing touching.
   // Can happen with a sliding player corpse.
   if (health <= 0 || flags & MF_CORPSE)
     return;
 
+  p_remove = true; // should the item be removed from map?
   p_sound = s_pickup;
 
   // Identify item
@@ -1428,62 +1449,55 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
     case MT_KEYB:
       if (!GiveKey(key_t(1 << (special->type - MT_KEY1))))
 	return;
-
-      if (!game.multiplayer) // Only remove keys in single player game
-	break;
-      // activate the special in any case
-      if (special->special)
-	{
-	  mp->ExecuteLineSpecial(special->special, special->args, NULL, 0, this);
-	  special->special = 0;
-	}
-      return;
+      if (game.multiplayer) // Only remove keys in single player game
+	p_remove = false;
+      break;
 
       // leave cards for everyone
     case MT_BKEY: // Key_Blue
     case MT_BLUECARD:
       if (!GiveKey(it_bluecard))
 	return;
-      if (!game.multiplayer)
-	break;
-      return;
+      if (game.multiplayer)
+	p_remove = false;
+      break;
 
     case MT_CKEY: // Key_Yellow
     case MT_YELLOWCARD:
       if (!GiveKey(it_yellowcard))
 	return;
-      if (!game.multiplayer)
-	break;
-      return;
+      if (game.multiplayer)
+	p_remove = false;
+      break;
 
     case MT_AKEY: // Key_Green
     case MT_REDCARD:
       if (!GiveKey(it_redcard))
 	return;
-      if (!game.multiplayer)
-	break;
-      return;
+      if (game.multiplayer)
+	p_remove = false;
+      break;
 
     case MT_BLUESKULL:
       if (!GiveKey(it_blueskull))
 	return;
-      if (!game.multiplayer)
-	break;
-      return;
+      if (game.multiplayer)
+	p_remove = false;
+      break;
 
     case MT_YELLOWSKULL:
       if (!GiveKey(it_yellowskull))
         return;
-      if (!game.multiplayer)
-	break;
-      return;
+      if (game.multiplayer)
+	p_remove = false;
+      break;
 
     case MT_REDSKULL:
       if (!GiveKey(it_redskull))
         return;
-      if (!game.multiplayer)
-	break;
-      return;
+      if (game.multiplayer)
+	p_remove = false;
+      break;
 
       // medikits, heals
     case MT_XHEALINGBOTTLE:
@@ -1510,181 +1524,109 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       // Artifacts :
     case MT_XHEALTHFLASK:
     case MT_HEALTHFLASK:
-      if(GiveArtifact(arti_health, special))
-	{
-	  if( cv_showmessages.value==1 )
-	    player->SetMessage(TXT_ARTIHEALTH, false);
-              
-	  P_SetDormantArtifact(special);
-	}
-      return;
+      if (!GiveArtifact(arti_health, special))
+	return;
+      break;
     case MT_XARTIFLY:
     case MT_ARTIFLY:
-      if(GiveArtifact(arti_fly, special))
-	{
-	  player->SetMessage(TXT_ARTIFLY, false);
-	  P_SetDormantArtifact(special);
-	}
-      return;
+      if (!GiveArtifact(arti_fly, special))
+	return;
+      break;
     case MT_XARTIINVULNERABILITY:
     case MT_ARTIINVULNERABILITY:
-      if(GiveArtifact(arti_invulnerability, special))
-	{
-	  player->SetMessage(TXT_ARTIINVULNERABILITY, false);
-	  P_SetDormantArtifact(special);
-	}
-      return;
+      if (!GiveArtifact(arti_invulnerability, special))
+	return;
+      break;
     case MT_ARTITOMEOFPOWER:
-      if(GiveArtifact(arti_tomeofpower, special))
-	{
-	  player->SetMessage(TXT_ARTITOMEOFPOWER, false);
-	  P_SetDormantArtifact(special);
-	}
-      return;
+      if (!GiveArtifact(arti_tomeofpower, special))
+	return;
+      break;
     case MT_ARTIINVISIBILITY:
-      if(GiveArtifact(arti_invisibility, special))
-	{
-	  player->SetMessage(TXT_ARTIINVISIBILITY, false);
-	  P_SetDormantArtifact(special);
-	}
-      return;
+      if (!GiveArtifact(arti_invisibility, special))
+	return;
+      break;
     case MT_ARTIEGG:
-      if(GiveArtifact(arti_egg, special))
-	{
-	  player->SetMessage(TXT_ARTIEGG, false);
-	  P_SetDormantArtifact(special);
-	}
-      return;
+      if (!GiveArtifact(arti_egg, special))
+	return;
+      break;
+    case MT_XARTISUPERHEAL:
     case MT_ARTISUPERHEAL:
-      if(GiveArtifact(arti_superhealth, special))
-	{
-	  player->SetMessage(TXT_ARTISUPERHEALTH, false);
-	  P_SetDormantArtifact(special);
-	}
-      return;
+      if (!GiveArtifact(arti_superhealth, special))
+	return;
+      break;
     case MT_XARTITORCH:
     case MT_ARTITORCH:
-      if(GiveArtifact(arti_torch, special))
-	{
-	  player->SetMessage(TXT_ARTITORCH, false);
-	  P_SetDormantArtifact(special);
-	}
-      return;
+      if (!GiveArtifact(arti_torch, special))
+	return;
+      break;
     case MT_ARTIFIREBOMB:
-      if(GiveArtifact(arti_firebomb, special))
-	{
-	  player->SetMessage(TXT_ARTIFIREBOMB, false);
-	  P_SetDormantArtifact(special);
-	}
-      return;
+      if (!GiveArtifact(arti_firebomb, special))
+	return;
+      break;
+    case MT_XARTITELEPORT:
     case MT_ARTITELEPORT:
-      if(GiveArtifact(arti_teleport, special))
-	{
-	  player->SetMessage(TXT_ARTITELEPORT, false);
-	  P_SetDormantArtifact(special);
-	}
-      return;
+      if (!GiveArtifact(arti_teleport, special))
+	return;
+      break;
 
-      /*
-		case SPR_PTN2:
-			TryPickupArtifact(player, arti_health, special);
-			return;
-		case SPR_SOAR:
-			TryPickupArtifact(player, arti_fly, special);
-			return;
-		case SPR_INVU:
-			TryPickupArtifact(player, arti_invulnerability, special);
-			return;
-		case SPR_SUMN:
-			TryPickupArtifact(player, arti_summon, special);
-			return;
-		case SPR_PORK:
-			TryPickupArtifact(player, arti_egg, special);
-			return;
-		case SPR_SPHL:
-			TryPickupArtifact(player, arti_superhealth, special);
-			return;
-		case SPR_HRAD:
-			TryPickupArtifact(player, arti_healingradius, special);
-			return;
-		case SPR_TRCH:
-			TryPickupArtifact(player, arti_torch, special);
-			return;
-		case SPR_ATLP:
-			TryPickupArtifact(player, arti_teleport, special);
-			return;
-		case SPR_TELO:
-			TryPickupArtifact(player, arti_teleportother, special);
-			return;
-		case SPR_PSBG:
-			TryPickupArtifact(player, arti_poisonbag, special);
-			return;
-		case SPR_SPED:
-			TryPickupArtifact(player, arti_speed, special);
-			return;
-		case SPR_BMAN:
-			TryPickupArtifact(player, arti_boostmana, special);
-			return;
-		case SPR_BRAC:
-			TryPickupArtifact(player, arti_boostarmor, special);
-			return;
-		case SPR_BLST:
-			TryPickupArtifact(player, arti_blastradius, special);
-			return;
+    case MT_SUMMONMAULATOR:
+      if (!GiveArtifact(arti_summon, special))
+	return;
+      break;
+    case MT_XARTIEGG:
+      if (!GiveArtifact(arti_pork, special))
+	return;
+      break;
+    case MT_HEALRADIUS:
+      if (!GiveArtifact(arti_healingradius, special))
+	return;
+      break;
+    case MT_TELEPORTOTHER:
+      if (!GiveArtifact(arti_teleportother, special))
+	return;
+      break;
+    case MT_ARTIPOISONBAG:
+      if (!GiveArtifact(arti_poisonbag, special))
+	return;
+      break;
+    case MT_SPEEDBOOTS:
+      if (!GiveArtifact(arti_speed, special))
+	return;
+      break;
+    case MT_BOOSTMANA:
+      if (!GiveArtifact(arti_boostmana, special))
+	return;
+      break;
+    case MT_BOOSTARMOR:
+      if (!GiveArtifact(arti_boostarmor, special))
+	return;
+      break;
+    case MT_BLASTRADIUS:
+      if (!GiveArtifact(arti_blastradius, special))
+	return;
+      break;
 
-		// Puzzle artifacts
-		case SPR_ASKU:
-			TryPickupArtifact(player, arti_puzzskull, special);
-			return;
-		case SPR_ABGM:
-			TryPickupArtifact(player, arti_puzzgembig, special);
-			return;
-		case SPR_AGMR:
-			TryPickupArtifact(player, arti_puzzgemred, special);
-			return;
-		case SPR_AGMG:
-			TryPickupArtifact(player, arti_puzzgemgreen1, special);
-			return;
-		case SPR_AGG2:
-			TryPickupArtifact(player, arti_puzzgemgreen2, special);
-			return;
-		case SPR_AGMB:
-			TryPickupArtifact(player, arti_puzzgemblue1, special);
-			return;
-		case SPR_AGB2:
-			TryPickupArtifact(player, arti_puzzgemblue2, special);
-			return;
-		case SPR_ABK1:
-			TryPickupArtifact(player, arti_puzzbook1, special);
-			return;
-		case SPR_ABK2:
-			TryPickupArtifact(player, arti_puzzbook2, special);
-			return;
-		case SPR_ASK2:
-			TryPickupArtifact(player, arti_puzzskull2, special);
-			return;
-		case SPR_AFWP:
-			TryPickupArtifact(player, arti_puzzfweapon, special);
-			return;
-		case SPR_ACWP:
-			TryPickupArtifact(player, arti_puzzcweapon, special);
-			return;
-		case SPR_AMWP:
-			TryPickupArtifact(player, arti_puzzmweapon, special);
-			return;
-		case SPR_AGER:
-			TryPickupArtifact(player, arti_puzzgear1, special);
-			return;
-		case SPR_AGR2:
-			TryPickupArtifact(player, arti_puzzgear2, special);
-			return;
-		case SPR_AGR3:
-			TryPickupArtifact(player, arti_puzzgear3, special);
-			return;
-		case SPR_AGR4:
-			TryPickupArtifact(player, arti_puzzgear4, special);
-			return;
-      */
+      // Puzzle artifacts
+    case MT_ARTIPUZZSKULL:
+    case MT_ARTIPUZZGEMBIG:
+    case MT_ARTIPUZZGEMRED:
+    case MT_ARTIPUZZGEMGREEN1:
+    case MT_ARTIPUZZGEMGREEN2:
+    case MT_ARTIPUZZGEMBLUE1:
+    case MT_ARTIPUZZGEMBLUE2:
+    case MT_ARTIPUZZBOOK1:
+    case MT_ARTIPUZZBOOK2:
+    case MT_ARTIPUZZSKULL2:
+    case MT_ARTIPUZZFWEAPON:
+    case MT_ARTIPUZZCWEAPON:
+    case MT_ARTIPUZZMWEAPON:
+    case MT_ARTIPUZZGEAR:
+    case MT_ARTIPUZZGEAR2:
+    case MT_ARTIPUZZGEAR3:
+    case MT_ARTIPUZZGEAR4:
+      if (!GiveArtifact(artitype_t(arti_puzzskull + special->type - MT_ARTIPUZZSKULL), special))
+	return;
+      break;
 
       // power ups
     case MT_INV:
@@ -1911,7 +1853,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	  maxammo = maxammo2;
 	  backpack = true;
         }
-      for (i=0 ; i<am_heretic ; i++)
+      for (int i=0 ; i<am_heretic ; i++)
 	GiveAmmo (ammotype_t(i), clipammo[i]);
       player->message = GOTBACKPACK;
       break;
@@ -2089,11 +2031,10 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 
   if (special->flags & MF_COUNTITEM)
     player->items++;
-  special->Remove();
+
   if (displayplayer == player)
     hud.bonuscount += BONUSADD;
 
-    //added:16-01-98:consoleplayer -> displayplayer (hear sounds from viewpoint)
   if (player == displayplayer || (cv_splitscreen.value && player == displayplayer2))
     S_StartAmbSound(p_sound);
 
@@ -2103,6 +2044,9 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       mp->ExecuteLineSpecial(special->special, special->args, NULL, 0, this);
       special->special = 0;
     }
+
+  if (p_remove)
+    special->Remove();
 }
 
 
@@ -2357,11 +2301,9 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
   // player specific
   if (!(flags & MF_CORPSE))
     {
-      // end of game hell hack
+      // end of game hellslime hack
       if (subsector->sector->special == 11 && damage >= health)
-        {
-	  damage = health - 1;
-        }
+	damage = health - 1;
 
       // ignore damage in GOD mode, or with INVUL power.
       if ((cheats & CF_GODMODE) || powers[pw_invulnerability])
@@ -2430,12 +2372,10 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
       if (player == consoleplayer)
 	I_Tactile (40,10,40+min(damage, 100)*2);
     }
-  CONS_Printf("2\n");
 
   attacker = source;
 
   bool ret = Actor::Damage(inflictor, source, damage, dtype);
-  CONS_Printf(" => %d.\n", health);
 
   return ret;
 
@@ -2470,6 +2410,7 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 
 bool PlayerPawn::Morph()
 {
+  // TODO morph should take a mobjtype_t parameter into which to morph
   if (morphTics)
     {
       if ((morphTics < CHICKENTICS-TICRATE)

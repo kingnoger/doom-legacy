@@ -17,8 +17,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:56  hurdler
-// Initial revision
+// Revision 1.2  2003/05/11 21:23:53  smite-meister
+// Hexen fixes
+//
+// Revision 1.1.1.1  2002/11/16 14:18:56  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.6  2002/09/17 14:26:30  vberghol
 // switch bug fixed
@@ -851,8 +854,8 @@ void Rend::HWR_CorrectSWTricks()
   sector_t **sectorList;
   sector_t *outSector;
     
-    if ( (0 == cv_grcorrecttricks.value) || game.raven )
-	return;
+  if ((0 == cv_grcorrecttricks.value) || game.mode >= gm_heretic)
+    return;
     
     // determine lines for sectors
     for(i=0; i<numlines; i++)

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2003/05/11 21:23:48  smite-meister
+// Hexen fixes
+//
 // Revision 1.13  2003/04/24 20:29:58  hurdler
 // Remove lots of compiling warnings
 //
@@ -146,15 +149,6 @@ consvar_t surround = {"surround", "0", CV_SAVE, CV_OnOff};
 #endif
 
 
-// when to clip out sounds
-// Does not fit the large outdoor areas.
-const float S_CLIPPING_DIST = 1200;
-
-// Distance to origin when sounds should be maxed out.
-// This should relate to movement clipping resolution
-// (see BLOCKMAP handling).
-// Originally: 200.
-const float S_CLOSE_DIST = 160;
 
 #define NORM_PITCH              128
 #define NORM_PRIORITY           64
@@ -250,10 +244,19 @@ void soundsource_t::Update()
     }
 }
 
-
 // returns a value in the range [0.0, 1.0]
 static float S_ObservedVolume(Actor *listener, soundsource_t *source)
 {
+  // when to clip out sounds
+  // Does not fit the large outdoor areas.
+  const float S_CLIPPING_DIST = 1200;
+
+  // Distance to origin when sounds should be maxed out.
+  // This should relate to movement clipping resolution
+  // (see BLOCKMAP handling).
+  // Originally: 200.
+  const float S_CLOSE_DIST = 160;
+
   if (!listener)
     return 0;
 
@@ -280,7 +283,7 @@ static float S_ObservedVolume(Actor *listener, soundsource_t *source)
     return 1.0f;
 
   // linear distance attenuation
-  return (S_CLIPPING_DIST - (dist >> FRACBITS)) / (S_CLIPPING_DIST - S_CLOSE_DIST);
+  return (S_CLIPPING_DIST - dist) / (S_CLIPPING_DIST - S_CLOSE_DIST);
 }
 
 

@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.15  2003/05/11 21:23:52  smite-meister
+// Hexen fixes
+//
 // Revision 1.14  2003/05/05 00:24:50  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -71,15 +74,8 @@
 
 using namespace std;
 
-class Actor;
-class DActor;
-class Pawn;
-class PlayerPawn;
-class PlayerInfo;
 
-struct intercept_t; 
-typedef bool (*traverser_t) (intercept_t *in);
-
+typedef bool (*traverser_t) (struct intercept_t *in);
 
 // new class for maps
 
@@ -200,7 +196,7 @@ public:
 
   //------------ Players ------------
 
-  vector<PlayerInfo *> players;
+  vector<class PlayerInfo *> players;
   deque<PlayerInfo *>  respawnqueue;  // for players queuing to be respawned
 
   vector<mapthing_t *> playerstarts;
@@ -244,14 +240,15 @@ public:
   // in g_map.cpp
   void AddPlayer(PlayerInfo *p); // adds a new player to the map (and respawnqueue)
   void RebornPlayer(PlayerInfo *p); // adds a player to respawnqueue, gets rid of corpse
+  PlayerInfo *FindPlayer(int number); // returns player 'number' if he is in the map, otherwise NULL
   int  RespawnPlayers();
   bool DeathMatchRespawn(PlayerInfo *p);
   bool CoopRespawn(PlayerInfo *p);
   bool CheckRespawnSpot(PlayerInfo *p, mapthing_t *mthing);
 
-  void BossDeath(const DActor *mo);
+  void BossDeath(const class DActor *mo);
   int  Massacre();
-  void ExitMap(int exit);
+  void ExitMap(int exit, unsigned entrypoint = 0);
 
   void RespawnSpecials();
   void RespawnWeapons();
@@ -447,7 +444,7 @@ public:
   // ACS scripting
   void StartOpenACS(int number, int infoIndex, int *address);
   bool StartACS(int number, byte *args, Actor *activator, line_t *line, int side);
-  bool StartLockedACS(line_t *line, byte *args, PlayerPawn *p, int side);
+  bool StartLockedACS(line_t *line, byte *args, class PlayerPawn *p, int side);
   bool TerminateACS(int number);
   bool SuspendACS(int number);
 

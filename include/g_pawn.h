@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.13  2003/05/11 21:23:52  smite-meister
+// Hexen fixes
+//
 // Revision 1.12  2003/05/05 00:24:50  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -247,7 +250,7 @@ public:
   bool GiveWeapon(weapontype_t wt, bool dropped);
   bool GiveArmor(armortype_t type, float factor, int points);
   bool GiveKey(key_t k);
-  bool GiveArtifact(artitype_t arti, Actor *from);
+  bool GiveArtifact(artitype_t arti, DActor *from);
   void TouchSpecialThing(DActor *special);
   virtual bool Touch(Actor *a); // PPawn touches another Actor
   virtual void Die(Actor *inflictor, Actor *source);

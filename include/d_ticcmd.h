@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:22  hurdler
-// Initial revision
+// Revision 1.2  2003/05/11 21:23:52  smite-meister
+// Hexen fixes
+//
+// Revision 1.1.1.1  2002/11/16 14:18:22  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.3  2002/07/01 21:00:44  jpakkane
 // Fixed cr+lf to UNIX form.
@@ -46,8 +49,8 @@
 //-----------------------------------------------------------------------------
 
 
-#ifndef __D_TICCMD__
-#define __D_TICCMD__
+#ifndef d_ticcmd_h
+#define d_ticcmd_h 1
 
 #include "m_fixed.h" // fixed_t
 #include "doomtype.h"
@@ -64,24 +67,24 @@
 //added:16-02-98: bit of value 64 doesnt seem to be used,
 //                now its used to jump
 
-typedef enum
+enum buttoncode_t
 {
-    // Press "Fire".
-    BT_ATTACK           = 1,
-    // Use button, to open doors, activate switches.
-    BT_USE              = 2,
+  // Press "Fire".
+  BT_ATTACK           = 1,
+  // Use button, to open doors, activate switches.
+  BT_USE              = 2,
 
-    // Flag, weapon change pending.
-    // If true, the next 3 bits hold weapon num.
-    BT_CHANGE           = 4,
-    // The 3bit weapon mask and shift, convenience.
-    BT_WEAPONMASK       = (8+16+32),
-    BT_WEAPONSHIFT      = 3,
+  // Flag, weapon change pending.
+  // If true, the next 3 bits hold weapon num.
+  BT_CHANGE           = 4,
+  // The 3bit weapon mask and shift, convenience.
+  BT_WEAPONMASK       = (8+16+32),
+  BT_WEAPONSHIFT      = 3,
 
-    // Jump button.
-    BT_JUMP             = 64,
-    BT_EXTRAWEAPON      = 128
-} buttoncode_t;
+  // Jump button.
+  BT_JUMP             = 64,
+  BT_EXTRAWEAPON      = 128
+};
 
 
 // The data sampled per tick (single player)
@@ -93,7 +96,7 @@ typedef enum
 #define TICCMD_RECEIVED 1      
 #define TICCMD_XY       2
 #define BT_FLYDOWN      4
-typedef struct
+struct ticcmd_t
 {
 #ifdef CLIENTPREDICTION2
     fixed_t      x;
@@ -105,7 +108,7 @@ typedef struct
                                  // SAVED AS A BYTE into demos
     signed short aiming;    //added:16-02-98:mouse aiming, see G_BuildTicCmd
     byte         buttons;
-} ticcmd_t;
+};
 
 
 #endif

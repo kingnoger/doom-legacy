@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2002 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2003/05/11 21:23:49  smite-meister
+// Hexen fixes
+//
 // Revision 1.16  2003/05/05 00:24:48  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -245,9 +248,9 @@ void D_ProcessEvents()
 //  DEMO LOOP
 //
 int   demosequence;
-int   pagetic;
-char *pagename = "TITLEPIC";
 bool  advancedemo;
+static int   pagetic;
+static char *pagename = "TITLEPIC";
 
 //
 // D_AdvanceDemo
@@ -261,12 +264,10 @@ void D_AdvanceDemo()
 
 //
 // This cycles through the demo sequences.
-// FIXME - version dependend demo numbers?
 //
 void D_DoAdvanceDemo()
 {
   advancedemo = false;
-  //game.action = ga_nothing;
 
   if (game.mode == gm_udoom)
     demosequence = (demosequence+1)%7;
@@ -375,8 +376,8 @@ void D_PageDrawer(char *lumpname)
 {
   byte*   src;
   byte*   dest;
-  int     x;
-  int     y;
+  int     x, y;
+
 
   // software mode which uses generally lower resolutions doesn't look
   // good when the pic is scaled, so it fills space aorund with a pattern,
@@ -403,8 +404,9 @@ void D_PageDrawer(char *lumpname)
             }
         }
     }
-  if (game.raven && demosequence != 2) // big hack for legacy's credits
+  if (game.mode >= gm_heretic && demosequence != 2) // big hack for legacy's credits
     {
+      // Heretic and Hexen page graphics are in a different format
       V_DrawRawScreen(0, 0, fc.GetNumForName(lumpname), 320, 200);
       if (demosequence == 0 && pagetic<=140 )
 	V_DrawScaledPatch(4, 160, 0, fc.CachePatchName("ADVISOR", PU_CACHE));
@@ -1032,8 +1034,6 @@ void D_IdentifyVersion()
 	          "from any sharware or commercial version of Doom, Heretic or Hexen!\n");
 	}
     }
-  
-  game.raven = game.mode == gm_heretic || game.mode == gm_hexen;
 }
 
 
@@ -1155,7 +1155,7 @@ void D_DoomMain()
   D_MakeTitleString(legacy);
 
   // identify the main IWAD file to use (if any),
-  // set game.mode, game.mission, devparm, game.raven accordingly
+  // set game.mode, game.mission, devparm accordingly
   D_IdentifyVersion();
 
   setbuf(stdout, NULL);      // non-buffered output

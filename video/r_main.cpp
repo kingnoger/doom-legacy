@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/05/11 21:23:53  smite-meister
+// Hexen fixes
+//
 // Revision 1.9  2003/04/24 20:30:36  hurdler
 // Remove lots of compiling warnings
 //
@@ -281,16 +284,7 @@ void SplitScreen_OnChange()
 	game.multiplayer = cv_splitscreen.value;
     }
   else
-    {
-      vector<PlayerInfo *>::iterator i;
-      displayplayer2 = NULL;
-      for (i = game.players.begin(); i<game.players.end(); i++)
-	if (*i != consoleplayer)
-	  {
-	    displayplayer2 = *i;
-	    break;
-	  }
-    }
+    displayplayer2 = game.FindPlayer(1);
 }
 
 //

@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.7  2003/05/11 21:23:52  smite-meister
+// Hexen fixes
+//
 // Revision 1.6  2003/04/04 00:01:57  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -44,33 +47,27 @@
 #ifndef g_player_h
 #define g_player_h 1
 
-#include <vector>
+#include <map>
 #include <string>
-#include "d_items.h"
+#include "doomtype.h"
 #include "d_ticcmd.h"
+#include "d_items.h"
 
 using namespace std;
 
-class PlayerPawn;
-typedef unsigned angle_t;
-struct event_t;
 
 //
 // Player states.
 //
-typedef enum
+enum playerstate_t
 {
-  // waiting to be assigned to a map respawn queue (by GameInfo)
-  PST_WAITFORMAP,
-  // waiting in a respawn queue (of a certain Map)
-  PST_RESPAWN,
-  // Playing or camping.
-  PST_LIVE,
-  // Dead on the ground, view follows killer.
-  PST_DEAD,
-  // waiting to be removed from the game
-  PST_REMOVE
-} playerstate_t;
+  PST_WAITFORMAP, // waiting to be assigned to a map respawn queue (by GameInfo)
+  PST_SPECTATOR,  // a ghost spectator
+  PST_RESPAWN,    // waiting in a respawn queue (of a certain Map)
+  PST_LIVE,       // Playing or camping.
+  PST_DEAD,       // Dead on the ground, view follows killer.
+  PST_REMOVE      // waiting to be removed from the game
+};
 
 
 class PlayerInfo
@@ -78,11 +75,11 @@ class PlayerInfo
   friend class GameInfo;
 public:
   string name;
-  int number; // The player number. _NOT_ the corresponding PlayerInfo*'s location in the game.players vector.
-  int team; // index into game.teams vector + 1
+  int number;   // The player number.
+  int team;     // index into game.teams vector
 
   int pawntype; // what kind of pawn are we playing?
-  byte pclass;
+  byte pclass;  // pawn class
 
   // Can be changed during the game, takes effect at next respawn.
   int color; // skin color to be copied to each pawn
@@ -93,18 +90,13 @@ public:
 
   // Determine POV,
   //  including viewpoint bobbing during movement.
-  // Focal origin above r.z
-  fixed_t  viewz;
-  // Base height above floor for viewz.
-  fixed_t  viewheight;
-  // Bob/squat speed.
-  fixed_t  deltaviewheight;
-  // bounded/scaled total momentum.
-  fixed_t  bob;
+  fixed_t  viewz;   // Focal origin above r.z
+  fixed_t  viewheight;  // Base height above floor for viewz.
+  fixed_t  deltaviewheight;  // Bob/squat speed.
+  fixed_t  bob;  // bounded/scaled total momentum.
 
   // Frags, kills of other players. (type was USHORT)
-  //int extrafrags; // fragged some guys who then left the game (called score nowadays...)
-  vector<int> frags; // one entry for each player
+  map<int, int> Frags; // player number -> frags
   int score; // game-type dependent scoring based on frags, updated in real time
 
   int kills, items, secrets, time;
@@ -119,7 +111,7 @@ public:
   bool autoaim; // using autoaim?
 
 
-  PlayerPawn *pawn; // the thing that is being controlled by this player (marine, imp, whatever)
+  class PlayerPawn *pawn; // the thing that is being controlled by this player (marine, imp, whatever)
 
 public:
 
@@ -128,23 +120,10 @@ public:
   // resets the player (when starting a new level, for example)
   void Reset(bool resetpawn, bool resetfrags);
 
-  void CheckFragLimit();
-
   void SetMessage(const char *msg, bool ultmsg = true);
 
   // in g_game.cpp
-  bool InventoryResponder(int (*gc)[2], event_t *ev);
-};
-
-
-class TeamInfo
-{
-  friend class GameInfo;
-public:
-  string name;
-  int color;
-  int score;
-  // team flag/symbol ?
+  bool InventoryResponder(int (*gc)[2], struct event_t *ev);
 };
 
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/05/11 21:23:51  smite-meister
+// Hexen fixes
+//
 // Revision 1.8  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -96,14 +99,10 @@ bool Actor::Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent)
       fog = mp->SpawnDActor(nx+20*finecosine[an], ny+20*finesine[an], z + fogDelta, MT_TFOG);
       S_StartSound (fog, Actor::s_teleport);
 
-      if ((flags2 & MF2_FOOTCLIP) && (subsector->sector->floortype != FLOOR_SOLID) && (game.mode == gm_heretic))
-	{
-	  flags2 |= MF2_FEETARECLIPPED;
-	}
-      else if (flags2 & MF2_FEETARECLIPPED)
-	{
-	  flags2 &= ~MF2_FEETARECLIPPED;
-	}
+      if ((flags2 & MF2_FOOTCLIP) && (subsector->sector->floortype >= FLOOR_LIQUID))
+	floorclip = FOOTCLIPSIZE;
+      else
+	floorclip = 0;
 
       if (flags & MF_MISSILE)
 	{

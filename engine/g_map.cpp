@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.18  2003/05/11 21:23:49  smite-meister
+// Hexen fixes
+//
 // Revision 1.17  2003/05/05 00:24:48  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -399,15 +402,13 @@ DActor *Map::SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
 	p->z = p->floorz;
     }
   else
-    {
-      p->z = nz;
-    }
+    p->z = nz;
 
-  if ((p->flags2 & MF2_FOOTCLIP) && (p->subsector->sector->floortype != FLOOR_SOLID)
-      && (p->floorz == p->subsector->sector->floorheight) && (game.mode == gm_heretic))
-    p->flags2 |= MF2_FEETARECLIPPED;
+  if ((p->flags2 & MF2_FOOTCLIP) && (p->subsector->sector->floortype >= FLOOR_LIQUID)
+      && (p->floorz == p->subsector->sector->floorheight))
+    p->floorclip = FOOTCLIPSIZE;
   else
-    p->flags2 &= ~MF2_FEETARECLIPPED;
+    p->floorclip = 0;
 
   return p;
 }
@@ -802,6 +803,16 @@ void Map::AddPlayer(PlayerInfo *p)
     Z_ChangeTag(p->pawn, PU_LEVSPEC);
 }
 
+// returns player 'number' if he is in the map, otherwise NULL
+PlayerInfo *Map::FindPlayer(int num)
+{
+  int i, n = players.size();
+  for (i = 0; i < n; i++)
+    if (players[i]->number == num)
+      return players[i];
+
+  return NULL;
+}
 
 //----------------------------------------------------------------------------
 // was P_Massacre
@@ -1003,7 +1014,7 @@ void Map::BossDeath(const DActor *mo)
     }
 
   if (cv_allowexitlevel.value)
-    ExitMap(0);
+    ExitMap(-1);
 }
 
 //
@@ -1125,9 +1136,12 @@ void Map::RespawnWeapons()
     }
 }
 
-void Map::ExitMap(int exit)
+void Map::ExitMap(int exit, unsigned entrypoint)
 {
-  game.ExitLevel(exit);
+  // TODO maybe in future you can exit and load maps asynchronously
+  // (level consists of 2 maps, one is exited and replaced with a new one,
+  // the other keeps running)
+  game.ExitLevel(exit, entrypoint);
 }
 
 

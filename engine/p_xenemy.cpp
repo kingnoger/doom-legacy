@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/05/11 21:23:51  smite-meister
+// Hexen fixes
+//
 // Revision 1.4  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -426,10 +429,10 @@ void A_MinotaurLook(DActor *actor)
   actor->target = NULL;
   if (cv_deathmatch.value)  // Quick search for players
     {
-      int n = game.players.size();
+      int n = actor->mp->players.size();
       for (i=0; i<n; i++)
 	{
-	  mo = game.players[i]->pawn;
+	  mo = actor->mp->players[i]->pawn;
 	  if (!mo || mo == master)
 	    continue;
 	  if (mo->health <= 0)

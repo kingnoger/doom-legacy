@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/05/11 21:23:51  smite-meister
+// Hexen fixes
+//
 // Revision 1.6  2003/04/24 20:30:22  hurdler
 // Remove lots of compiling warnings
 //
@@ -1397,11 +1400,11 @@ void AutoMap::drawPlayers()
   int i;
   int color;
   PlayerPawn *p;
-  int n = game.players.size();
+  int n = mp->players.size();
   // multiplayer, no secrets
   for (i=0;i<n;i++)
     {
-      p = game.players[i]->pawn;
+      p = mp->players[i]->pawn;
       if (p == NULL)
 	continue;
 

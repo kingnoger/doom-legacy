@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2003/05/11 21:23:49  smite-meister
+// Hexen fixes
+//
 // Revision 1.15  2003/05/05 00:24:48  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -262,6 +265,7 @@ Actor::Actor(fixed_t nx, fixed_t ny, fixed_t nz)
   z = nz;
   angle = aiming = 0;
   px = py = pz = 0;
+  floorclip = 0;
 
   spawnpoint = NULL;
   touching_sectorlist = NULL;
@@ -1264,8 +1268,8 @@ DActor *DActor::SpawnMissile(Actor *dest, mobjtype_t type)
       mz = z+32*FRACUNIT;
       break;
     }
-  if (flags2 & MF2_FEETARECLIPPED)
-    mz -= FOOTCLIPSIZE;
+
+  mz -= floorclip;
 
   DActor *th = mp->SpawnDActor(x, y, mz, type);
 

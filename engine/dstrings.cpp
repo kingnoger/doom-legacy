@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/05/11 21:23:49  smite-meister
+// Hexen fixes
+//
 // Revision 1.4  2003/05/05 00:24:48  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -609,16 +612,28 @@ char *text[NUMTEXT] = {
   "You need all six keys to open this door",
 
   // heretic strings
-  "QUARTZ FLASK",                       
-  "WINGS OF WRATH",                    
   "RING OF INVINCIBILITY",
-  "TOME OF POWER",                      
-  "SHADOWSPHERE",                       
-  "MORPH OVUM",                         
-  "MYSTIC URN",                         
-  "TORCH",                              
-  "TIME BOMB OF THE ANCIENTS",          
-  "CHAOS DEVICE",                       
+  "SHADOWSPHERE",
+  "QUARTZ FLASK",
+  "MYSTIC URN",
+  "TOME OF POWER",
+  "TORCH",
+  "TIME BOMB OF THE ANCIENTS",
+  "MORPH OVUM",
+  "WINGS OF WRATH",
+  "CHAOS DEVICE",
+
+  "MYSTIC AMBIT INCANT",
+  "DARK SERVANT",
+  "PORKALATOR",
+  "DISC OF REPULSION",
+  "FLECHETTE",
+  "BANISHMENT DEVICE",
+  "BOOTS OF SPEED",
+  "KRATER OF MIGHT",
+  "DRAGONSKIN BRACERS",
+
+  "ICON OF THE DEFENDER",
                                        
   "WAND CRYSTAL",                       
   "CRYSTAL GEODE",                      
@@ -892,23 +907,6 @@ char *text[NUMTEXT] = {
   "Picked up a blue skull key.",
   "Picked up a yellow skull key.",
   "Picked up a red skull key.",
-
-  // Artifacts
-  "ICON OF THE DEFENDER",
-  "QUARTZ FLASK",
-  "MYSTIC URN",
-  "DARK SERVANT",
-  "TORCH",
-  "PORKALATOR",
-  "WINGS OF WRATH",
-  "CHAOS DEVICE",
-  "FLECHETTE",
-  "BANISHMENT DEVICE",
-  "BOOTS OF SPEED",
-  "KRATER OF MIGHT",
-  "DRAGONSKIN BRACERS",
-  "DISC OF REPULSION",
-  "MYSTIC AMBIT INCANT",
   
   // Puzzle artifacts
   "YORICK'S SKULL",

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2003/05/11 21:23:50  smite-meister
+// Hexen fixes
+//
 // Revision 1.12  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -267,8 +270,8 @@ DActor *DActor::SpawnMissileAngle(mobjtype_t t, angle_t angle, fixed_t momz)
       break;
 
     }
-  if (flags2 & MF2_FEETARECLIPPED)
-    mz -= FOOTCLIPSIZE;
+
+  mz -= floorclip;
     
   DActor *mo = mp->SpawnDActor(x, y, mz, t);
   if (mo->info->seesound)

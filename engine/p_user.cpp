@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/05/11 21:23:51  smite-meister
+// Hexen fixes
+//
 // Revision 1.10  2003/04/26 12:01:13  smite-meister
 // Bugfixes. Hexen maps work again.
 //
@@ -538,32 +541,24 @@ void P_ArtiTele(PlayerPawn *p)
 
 bool P_UseArtifact(PlayerPawn *p, artitype_t arti)
 {
+  DActor *mo;
+  angle_t ang;
+  int count;
+
   switch(arti)
     {
     case arti_invulnerability:
-      if(!p->GivePower(pw_invulnerability))
-        {
-	  return false;
-        }
-      break;
+      return p->GivePower(pw_invulnerability);
+
     case arti_invisibility:
-      if(!p->GivePower(pw_invisibility))
-        {
-	  return false;
-        }
-      break;
+      return p->GivePower(pw_invisibility);
+
     case arti_health:
-      if(!p->GiveBody(25))
-        {
-	  return false;
-        }
-      break;
+      return p->GiveBody(25);
+
     case arti_superhealth:
-      if(!p->GiveBody(100))
-        {
-	  return false;
-        }
-      break;
+      return p->GiveBody(100);
+
     case arti_tomeofpower:
       if (p->morphTics)
         { // Attempt to undo chicken
@@ -580,33 +575,24 @@ bool P_UseArtifact(PlayerPawn *p, artitype_t arti)
       else
         {
 	  if (!p->GivePower(pw_weaponlevel2))
-            {
-	      return false;
-            }
+	    return false;
+
 	  if (p->readyweapon == wp_staff)
-            {
-	      p->SetPsprite(ps_weapon, S_STAFFREADY2_1);
-            }
+	    p->SetPsprite(ps_weapon, S_STAFFREADY2_1);
 	  else if (p->readyweapon == wp_gauntlets)
-            {
-	      p->SetPsprite(ps_weapon, S_GAUNTLETREADY2_1);
-            }
+	    p->SetPsprite(ps_weapon, S_GAUNTLETREADY2_1);
         }
       break;
+
     case arti_torch:
-      if(!p->GivePower(pw_infrared))
-        {
-	  return false;
-        }
-      break;
+      return p->GivePower(pw_infrared);
+
     case arti_firebomb:
-      {
-	angle_t ang = p->angle >> ANGLETOFINESHIFT;
-	DActor *mo = p->mp->SpawnDActor(p->x+24*finecosine[ang], p->y+24*finesine[ang],
-	  p->z - 15*FRACUNIT*((p->flags2&MF2_FEETARECLIPPED) != 0), MT_FIREBOMB);
-	mo->owner = p;
-      }
+      ang = p->angle >> ANGLETOFINESHIFT;
+      mo = p->mp->SpawnDActor(p->x+24*finecosine[ang], p->y+24*finesine[ang], p->z - p->floorclip, MT_FIREBOMB);
+      mo->owner = p;
       break;
+
     case arti_egg:
       p->SpawnPlayerMissile(MT_EGGFX);
       p->SPMAngle(MT_EGGFX, p->angle-(ANG45/6));
@@ -614,15 +600,124 @@ bool P_UseArtifact(PlayerPawn *p, artitype_t arti)
       p->SPMAngle(MT_EGGFX, p->angle-(ANG45/3));
       p->SPMAngle(MT_EGGFX, p->angle+(ANG45/3));
       break;
+
     case arti_fly:
-      if(!p->GivePower(pw_flight))
-        {
-	  return false;
-        }
-      break;
+      return p->GivePower(pw_flight);
+
     case arti_teleport:
       P_ArtiTele(p);
       break;
+
+    case arti_healingradius:
+      //return P_HealRadius(p);
+      break;
+
+    case arti_summon:
+      mo = p->SpawnPlayerMissile(MT_SUMMON_FX);
+      if (mo)
+	{
+	  mo->owner = p;
+	  mo->special1 = (int)p;
+	  mo->pz = 5*FRACUNIT;
+	}
+      break;
+
+    case arti_pork:
+      p->SpawnPlayerMissile(MT_XEGGFX);
+      p->SPMAngle(MT_XEGGFX, p->angle-(ANG45/6));
+      p->SPMAngle(MT_XEGGFX, p->angle+(ANG45/6));
+      p->SPMAngle(MT_XEGGFX, p->angle-(ANG45/3));
+      p->SPMAngle(MT_XEGGFX, p->angle+(ANG45/3));
+      break;
+
+    case arti_blastradius:
+      //P_BlastRadius(p);
+      break;
+
+    case arti_poisonbag:
+      /* FIXME flechettes
+      ang = p->angle >> ANGLETOFINESHIFT;
+      if (p->pclass == PCLASS_CLERIC)
+	{
+	  mo = P_SpawnMobj(p->x+16*finecosine[angle], p->y+24*finesine[angle],
+			   player->mo->z - p->floorclip+8*FRACUNIT, MT_POISONBAG);
+	  if (mo)
+	    mo->owner = p;
+	}
+      else if (p->pclass == PCLASS_MAGE)
+	{
+	  mo = P_SpawnMobj(p->x+16*finecosine[angle],
+			   p->y+24*finesine[angle], player->mo->z-
+			   p->floorclip+8*FRACUNIT, MT_FIREBOMB);
+	  if (mo)
+	    mo->owner = p;
+	}			
+      else // PCLASS_FIGHTER, obviously (also pig, not so obviously)
+	{
+	  mo = P_SpawnMobj(p->x, p->y, p->z - p->floorclip+35*FRACUNIT, MT_THROWINGBOMB);
+	  if (mo)
+	    {
+	      mo->angle = p->angle+(((P_Random()&7)-4)<<24);
+	      mo->pz = 4*FRACUNIT+((player->lookdir)<<(FRACBITS-4));
+	      mo->z += player->lookdir<<(FRACBITS-4);
+	      P_ThrustMobj(mo, mo->angle, mo->info->speed);
+	      mo->px += p->px>>1;
+	      mo->py += p->py>>1;
+	      mo->owner = p;
+	      mo->tics -= P_Random()&3;
+	      P_CheckMissileSpawn(mo);											
+	    } 
+	}
+      break;
+      */
+    case arti_teleportother:
+      //P_ArtiTeleportOther(p);
+      break;
+
+    case arti_speed:
+      return p->GivePower(pw_speed);
+
+    case arti_boostmana:
+      if (!p->GiveAmmo(am_mana1, 200))
+	return p->GiveAmmo(am_mana2, 200);
+      else
+	p->GiveAmmo(am_mana2, 200);
+      break;
+
+    case arti_boostarmor:
+      count = 0;
+      for (int i = armor_armor; i < NUMARMOR; ++i)
+	count += p->GiveArmor(armortype_t(i), -3.0, 1); // 1 point per armor type
+      return count;
+
+    case arti_puzzskull:
+    case arti_puzzgembig:
+    case arti_puzzgemred:
+    case arti_puzzgemgreen1:
+    case arti_puzzgemgreen2:
+    case arti_puzzgemblue1:
+    case arti_puzzgemblue2:
+    case arti_puzzbook1:
+    case arti_puzzbook2:
+    case arti_puzzskull2:
+    case arti_puzzfweapon:
+    case arti_puzzcweapon:
+    case arti_puzzmweapon:
+    case arti_puzzgear1:
+    case arti_puzzgear2:
+    case arti_puzzgear3:
+    case arti_puzzgear4:
+      /*
+      if (p->UsePuzzleItem(arti - arti_firstpuzzitem))
+	return true;
+      else
+	{
+	  P_SetYellowMessage(player, TXT_USEPUZZLEFAILED, false);
+	  return false;
+	}
+      */
+      break;
+
     default:
       return false;
     }

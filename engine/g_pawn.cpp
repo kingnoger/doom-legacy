@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.15  2003/05/11 21:23:49  smite-meister
+// Hexen fixes
+//
 // Revision 1.14  2003/05/05 00:24:48  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -1070,8 +1073,8 @@ void PlayerPawn::CalcHeight(bool onground)
   else
     pl->viewz = z + pl->viewheight + bob;
 
-  if (flags2 & MF2_FEETARECLIPPED && pl->playerstate != PST_DEAD && z <= floorz)
-    pl->viewz -= FOOTCLIPSIZE;
+  if (pl->playerstate != PST_DEAD && z <= floorz)
+    pl->viewz -= floorclip;
 
   if (pl->viewz > ceilingz-4*FRACUNIT)
     pl->viewz = ceilingz-4*FRACUNIT;
@@ -1116,13 +1119,9 @@ DActor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
   //added:18-02-98: if not autoaim, or if the autoaim didnt aim something,
   //                use the mouseaiming
   if (!(player->autoaim && cv_allowautoaim.value) || !linetarget)
-    {
-      slope = AIMINGTOSLOPE(aiming);
-    }
+    slope = AIMINGTOSLOPE(aiming);
 
-  fixed_t mz = z + 4*8*FRACUNIT;
-  if (flags2 & MF2_FEETARECLIPPED)
-    z -= FOOTCLIPSIZE;
+  fixed_t mz = z + 4*8*FRACUNIT - floorclip;
 
   DActor *th = mp->SpawnDActor(x, y, mz, type);
 

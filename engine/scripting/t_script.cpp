@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.3  2003/05/11 21:23:52  smite-meister
+// Hexen fixes
+//
 // Revision 1.2  2003/02/23 22:49:31  smite-meister
 // FS is back! L2 cache works.
 //
@@ -207,11 +210,10 @@ void Map::T_PreprocessScripts()
 {
   // run the levelscript first
   // get the other scripts
-  
-  // FIXME who is superplayer?
+
   // levelscript started by first player (not necessarily player 0) 'superplayer'
-  levelscript->player = game.players[0];
-  levelscript->trigger = game.players[0]->pawn;
+  levelscript->player = NULL;  // FIXME who is superplayer?
+  levelscript->trigger = NULL; // superplayer->pawn;
 
   preprocess(levelscript);
   run_script(levelscript);

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2002 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/05/11 21:23:52  smite-meister
+// Hexen fixes
+//
 // Revision 1.3  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -38,44 +41,40 @@
 #define g_game_h 1
 
 #include <vector>
+#include <map>
 #include <string>
 
 #include "doomdef.h"
-#include "d_event.h"
-#include "d_ticcmd.h"
+#include "doomdata.h"
 
 using namespace std;
 
-class LevelNode;
-class Map;
-class PlayerInfo;
-class TeamInfo;
-class LArchive;
-
-struct fragsort_t;
 
 // languages
-typedef enum {
+enum language_t
+{
   la_english,
   la_french,
   la_german,
   la_unknown
-} language_t;
+};
 
 
 // skill levels
-typedef enum {
+enum skill_t
+{
   sk_baby,
   sk_easy,
   sk_medium,
   sk_hard,
   sk_nightmare
-} skill_t;
+};
 
 // Game mode handling - identify IWAD version,
 //  handle IWAD dependent animations etc.
 // change mode to a bitfield? We might be playing doom AND heretic (crossover game)?
-typedef enum {
+enum gamemode_t
+{
   gm_none,
   gm_doom1s,  // DOOM 1 shareware, E1, M9
   gm_doom1,   // DOOM 1 registered, E3, M27
@@ -83,19 +82,21 @@ typedef enum {
   gm_udoom,   // DOOM 1 retail (Ultimate DOOM), E4, M36
   gm_heretic,
   gm_hexen
-} gamemode_t;
+};
 
 
 // Mission packs - might be useful for TC stuff? NOT! This is a RELIC! Do NOT use!
-typedef enum {
+enum gamemission_t
+{
   gmi_none,
   gmi_doom2,  // DOOM 2, default
   gmi_tnt,    // TNT Evilution mission pack
   gmi_plut    // Plutonia Experiment pack
-} gamemission_t;
+};
 
 // the current state of the game
-typedef enum {
+enum gamestate_t
+{
   GS_WIPE = -1,     // game never assumes this state, used to force a wipe
   GS_NULL = 0,                // at begin
   GS_LEVEL,                   // we are playing
@@ -105,25 +106,12 @@ typedef enum {
   //legacy
   GS_DEDICATEDSERVER,         // added 27-4-98 : new state for dedicated server
   GS_WAITINGPLAYERS           // added 3-9-98 : waiting player in net game
-} gamestate_t;
+};
 
 
 /*
-// boolean flags describing game properties (common to all players)
-typedef enum {
-  gf_multiplayer =    1,  // Only true if >1 player (or one remote player). 
-  //netgame => multiplayer but not (multiplayer=>netgame)
-  gf_netgame     =    2,  // Netgame? only true in a netgame
-  gf_modified    =    4,  // added homemade stuff (PWADs, deh files?)
-  gf_paused      =    8,  // only server can pause a multiplayer game
-  gf_nomonsters  =   16  // no monsters
-} gameflags_t;
-*/
-
-
-/*
-  GameInfo:  Info about one game, common to all players
-  Should this be different for clients and servers? Probably no.
+  GameInfo:  Info about the game, common to all players
+  Should this be different for clients and servers? Probably not.
 
   Born: on a server when a new game is started, copied to joining clients?
   Dies: when server ends the game
@@ -132,12 +120,16 @@ typedef enum {
 
 class GameInfo
 {
+  friend class Intermission;
+  friend class PlayerInfo;
+  friend class NetCode; // kludge until netcode is rewritten
 private:
   // gameaction: delayed game state changes
-  typedef enum {
+  enum gameaction_t
+  {
     ga_nothing,
-    ga_completed,
-    ga_worlddone,
+    ga_levelcompleted,
+    ga_nextlevel,
     //HeXen
     /*
     ga_initnew,
@@ -147,7 +139,7 @@ private:
     ga_leavemap,
     ga_singlereborn
     */
-  } gameaction_t;
+  };
 
   gameaction_t  action; // delayed state changes
 public:
@@ -157,38 +149,35 @@ public:
   // the game version, if it's older, the changes are not done, and the older
   // code is used for compatibility.
 
-  byte demoversion;
+  unsigned demoversion;
 
   gamemode_t    mode;       // which game are we playing?
   gamemission_t mission;    // for specialized "mission pack" iwads. Deprecated.
   gamestate_t   state, wipestate;
   skill_t       skill;      // skill level
 
-  //int flags;      // bit flags: multiplayer, nomonsters, allowcheats... for now just bools
   bool netgame;     // only true in a netgame (nonlocal players possible)
   bool multiplayer; // Only true if >1 player. netgame => multiplayer but not (multiplayer=>netgame)
   bool modified;    // an external modification-dll is in use
   bool nomonsters;  // checkparm of -nomonsters
   bool paused;      // Game Pause?
 
-  bool inventory;   // true with heretic and hexen
-  bool raven;       // true with heretic and hexen
+  bool inventory;   // playerpawns have an inventory
 
+protected:
   int maxplayers; // max # of players allowed
   int maxteams;   // max # of teams
 
-  // two structures for storing players (each player must be in both)
-  vector<PlayerInfo *> players; // no NULLs here, players not necessarily in order
-  vector<PlayerInfo *> present; // NULL == not present, PI's in playernumber order
-  // present[i]->number == i+1
+  typedef map<int, PlayerInfo *>::iterator player_iter_t;
+  map<int, PlayerInfo *> Players; // mapping from player number to Playerinfo*
 
-  vector<TeamInfo *> teams;
+  vector<class TeamInfo *> teams;
 
-  LevelNode *firstlevel;   // first LevelNode
+  class LevelNode *firstlevel;   // first LevelNode
   LevelNode *currentlevel; // in which levelNode are we in the game
   // one levelnode can include several maps to be opened a once
 
-  vector<Map *> maps; // active map (level) info
+  vector<class Map *> maps; // active map (level) info
   // several maps can be active at once!
   // same server consvars and game state/action for everyone though.
   // when one map is Exit():ed, all are exited.
@@ -197,71 +186,47 @@ public:
 
 public:
 
-  // constructor
-  GameInfo()
-  {
-    demoversion = VERSION;
-    mode = gm_none;
-    mission = gmi_doom2;
-    state = GS_NULL;
-    wipestate = GS_DEMOSCREEN;
-    action = ga_nothing;
-    skill = sk_medium;
-    maxplayers = 32;
-    maxteams = 4;
-    present.resize(maxplayers);
-    teams.resize(maxteams);
-  };
-
-  //destructor
-  ~GameInfo()
-  {
-    ClearPlayers();
-    maps.clear();
-  };
+  GameInfo();
+  ~GameInfo();
 
   // in g_game.cpp
   void StartIntro();
   void Drawer();
-  bool Responder(event_t *ev);
-  int  Serialize(LArchive &a);
+  bool Responder(struct event_t *ev);
+  int  Serialize(class LArchive &a);
   void LoadGame(int slot);
   void SaveGame(int slot, char* description);
 
-
   bool Downgrade(int version);
-
-  // in g_state.cpp
-  bool DeferredNewGame(skill_t sk, LevelNode *n, bool splitscreen);
-  bool StartGame();
 
   void Ticker(); // ticks the game forward in time
 
   // ----- player-related stuff -----
-  // tries to add a player to the game
-  PlayerInfo *AddPlayer(int pnum, PlayerInfo *in = NULL);
-  // erases player pointed to by it from players vector
-  void RemovePlayer(vector<PlayerInfo *>::iterator it);
-  // erases all players
-  void ClearPlayers();
+  PlayerInfo *AddPlayer(int pnum, PlayerInfo *in = NULL); // tries to add a player to the game
+  bool RemovePlayer(int number);  // erases player from game
+  void ClearPlayers();            // erases all players
+  PlayerInfo *FindPlayer(int number); // returns player 'number' if he is in the game, otherwise NULL
 
-  bool SameTeam(int a, int b);
   void UpdateScore(PlayerInfo *killer, PlayerInfo *victim);
-  int  GetFrags(fragsort_t **fs, int type);
+  int  GetFrags(struct fragsort_t **fs, int type);
+  bool CheckScoreLimit();
 
   // ----- level-related stuff -----
-  void NewLevel(skill_t skill, LevelNode *n, bool resetplayer);
-  void StartLevel(bool restart, bool resetplayer);
-  void ExitLevel(int exit);
-  void LevelCompleted();
+  // in g_state.cpp
+  bool DeferredNewGame(skill_t sk, LevelNode *n, bool splitscreen);
+  bool StartGame();
+  void SetupLevel(LevelNode *n, skill_t skill, bool resetplayers);
+  void StartLevel(bool restart, bool resetplayers);
+  void ExitLevel(int exit, unsigned entrypoint);
+  void EndLevel();
   void EndIntermission();
   void EndFinale();
-  void WorldDone();
+  void NextLevel();
 
   // ----- demos -----
   void BeginRecording();
   void PlayDemo(char *defdemoname);
-  void ReadDemoTiccmd(ticcmd_t* cmd, int playernum);
+  void ReadDemoTiccmd(struct ticcmd_t* cmd, int playernum);
   void WriteDemoTiccmd(ticcmd_t* cmd, int playernum);
   void StopDemo();
   bool CheckDemoStatus();
@@ -284,8 +249,6 @@ extern  bool   devparm;                // development mode (-devparm)
 extern bool  nomusic; //defined in d_main.c
 extern bool  nosound;
 extern language_t language;
-
-//unsigned int  hwflags;    // nomusic, nosound, hwrender...
 
 
 // ======================================
@@ -335,11 +298,7 @@ extern int     localaiming,localaiming2; // should be a angle_t but signed
 
 void G_BuildTiccmd(ticcmd_t* cmd, bool primary, int realtics);
 
-// Can be called by the startup code or M_Responder,
-// calls P_SetupLevel or W_EnterWorld.
 void G_LoadGame(int slot);
-
-// Called by M_Responder.
 void G_SaveGame(int slot, char* description);
 
 void G_ReadDemoTiccmd(ticcmd_t* cmd,int playernum);

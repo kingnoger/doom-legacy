@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/05/11 21:23:49  smite-meister
+// Hexen fixes
+//
 // Revision 1.10  2003/04/26 12:01:12  smite-meister
 // Bugfixes. Hexen maps work again.
 //
@@ -769,22 +772,32 @@ bool GameInfo::Responder(event_t* ev)
   // allow spy mode changes even during the demo
   if (state == GS_LEVEL && ev->type == ev_keydown
       && ev->data1 == KEY_F12 && (singledemo || !cv_deathmatch.value))
-    { // spy mode
-      int i;
-      int n = players.size();
-      for (i = 0; i < n; i++)
-	if (players[i] == displayplayer) break;
-      // find next active player
-      if (++i >= n) i = 0;
-      displayplayer = players[i];
+    {
+      // spy mode
+      map<int, PlayerInfo *>::iterator i;
+      if (displayplayer == NULL)
+	i = Players.begin();
+      else
+	{
+	  i = Players.upper_bound(displayplayer->number);
+	  if (i == Players.end())
+	    i = Players.begin();
+	}
 
-      //added:16-01-98:change statusbar also if playingback demo
-      if (singledemo)
-	hud.ST_Start(displayplayer->pawn);
+      if (i == Players.end())
+	displayplayer = NULL;
+      else
+	displayplayer = (*i).second;
 
-      //added:11-04-98: tell who's the view
-      CONS_Printf("Viewpoint : %s\n", displayplayer->name.c_str());
+      if (displayplayer)
+	{
+	  //added:16-01-98:change statusbar also if playingback demo
+	  if (singledemo)
+	    hud.ST_Start(displayplayer->pawn);
 
+	  //added:11-04-98: tell who's the view
+	  CONS_Printf("Viewpoint : %s\n", displayplayer->name.c_str());
+	}
       return true;
     }
 
@@ -945,7 +958,7 @@ void GameInfo::LoadGame(int slot)
   // done
   Z_Free(savebuffer);
 
-  multiplayer = (players.size() > 1);
+  multiplayer = (Players.size() > 1);
   // FIXME! why can't this be saved as well?
   //if (playeringame[1] && !netgame)
   //  CV_SetValue(&cv_splitscreen,1);
@@ -1065,3 +1078,12 @@ void G_DeferedInitNew (skill_t skill, char* mapname, bool StartSplitScreenGame)
   COM_BufAddText (va("map \"%s\" -skill %d -monsters 1\n",mapname,skill+1));
 }
 
+// returns player 'number' if he is in the map, otherwise NULL
+PlayerInfo *GameInfo::FindPlayer(int num)
+{
+  map<int, PlayerInfo *>::iterator i = Players.find(num);
+  if (i != Players.end())
+    return (*i).second;
+
+  return NULL;
+}

@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.12  2003/05/11 21:23:50  smite-meister
+// Hexen fixes
+//
 // Revision 1.11  2003/04/04 00:01:54  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -119,29 +122,8 @@ PlayerInfo::PlayerInfo(const string & n)
   message = NULL;
 
   playerstate = PST_WAITFORMAP;
-  frags.resize(game.maxplayers);  
 };
 
-
-// was P_CheckFragLimit
-// WARNING : check cv_fraglimit>0 before call this function !
-void PlayerInfo::CheckFragLimit()
-{
-  // only checks score, doesn't count it. score must therefore be
-  // updated in real time
-  if (cv_teamplay.value)
-    {
-      int teamscore = game.teams[team]->score;
-
-      if(cv_fraglimit.value <= teamscore)
-	game.ExitLevel(0);
-    }
-  else
-    {
-      if (cv_fraglimit.value <= score)
-	game.ExitLevel(0);
-    }
-}
 
 
 //--------------------------------------------------------------------------
@@ -194,8 +176,7 @@ void PlayerInfo::Reset(bool resetpawn, bool resetfrags)
   if (resetfrags)
     {
       score = 0;
-      frags.clear();
-      frags.resize(game.players.size(), 0);
+      Frags.clear();
     }
 
   return;

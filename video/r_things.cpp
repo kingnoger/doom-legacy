@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/05/11 21:23:53  smite-meister
+// Hexen fixes
+//
 // Revision 1.8  2003/04/04 00:01:58  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -1036,9 +1039,8 @@ void Rend::R_ProjectSprite(Actor* thing)
         vis->pzt = vis->pz + vis->thingheight;
     vis->texturemid = vis->gzt - viewz;
     // foot clipping
-    if(thing->flags2&MF2_FEETARECLIPPED
-    && thing->z <= thing->subsector->sector->floorheight)
-         vis->texturemid -= 10*FRACUNIT;
+    if (thing->z <= thing->subsector->sector->floorheight)
+      vis->texturemid -= thing->floorclip;
 
     vis->x1 = x1 < 0 ? 0 : x1;
     vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
@@ -1246,9 +1248,9 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
     else
         vis->texturemid = (BASEYCENTER<<FRACBITS)+FRACUNIT/2-(psp->sy-spritetopoffset[lump]);
 
-    if( game.raven )
-        if( viewheight == vid.height || (!cv_scalestatusbar.value && vid.dupy>1))
-            vis->texturemid -= PSpriteSY[viewplayer->readyweapon];
+    if (game.mode >= gm_heretic)
+      if (viewheight == vid.height || (!cv_scalestatusbar.value && vid.dupy>1))
+	vis->texturemid -= PSpriteSY[viewplayer->readyweapon];
 
     //vis->texturemid += FRACUNIT/2;
 

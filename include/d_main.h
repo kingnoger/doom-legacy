@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:22  hurdler
-// Initial revision
+// Revision 1.2  2003/05/11 21:23:52  smite-meister
+// Hexen fixes
+//
+// Revision 1.1.1.1  2002/11/16 14:18:22  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.5  2002/08/24 11:57:27  vberghol
 // d_main.cpp is better
@@ -61,8 +64,6 @@
 #define d_main_h 1
 
 #include "doomtype.h"
-#include "d_event.h"
-
 
 // make sure not to write back the config until it's been correctly loaded
 extern tic_t rendergametic;
@@ -71,7 +72,7 @@ extern tic_t rendergametic;
 extern bool dedicated;
 
 // the infinite loop of D_DoomLoop() called from win_main for windows version
-void D_DoomLoop (void);
+void D_DoomLoop();
 
 //
 // D_DoomMain()
@@ -79,22 +80,22 @@ void D_DoomLoop (void);
 // calls all startup code, parses command line options.
 // If not overrided by user input, calls N_AdvanceDemo.
 //
-void D_DoomMain (void);
+void D_DoomMain();
 
 // Called by IO functions when input is detected.
-void D_PostEvent (const event_t* ev);
-void D_PostEvent_end (void);    // delimiter for locking memory
+void D_PostEvent(const struct event_t* ev);
+void D_PostEvent_end();    // delimiter for locking memory
 
-void D_ProcessEvents (void);
-void D_DoAdvanceDemo (void);
+void D_ProcessEvents();
+void D_DoAdvanceDemo();
 
 //
 // BASE LEVEL
 //
-void D_PageTicker (void);
+void D_PageTicker();
 // pagename is lumpname of a 320x200 patch to fill the screen
-void D_PageDrawer (char* pagename);
-void D_AdvanceDemo (void);
+void D_PageDrawer(char* pagename);
+void D_AdvanceDemo();
 
 
 #endif

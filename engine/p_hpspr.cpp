@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/05/11 21:23:50  smite-meister
+// Hexen fixes
+//
 // Revision 1.5  2003/03/15 20:07:16  smite-meister
 // Initial Hexen compatibility!
 //
@@ -522,8 +525,7 @@ void A_FireMacePL1B(PlayerPawn *p, pspdef_t *psp)
     }
   p->ammo[am_mace] -= USE_MACE_AMMO_1;
 
-  DActor *ball = p->mp->SpawnDActor(p->x, p->y,
-    p->z + 28*FRACUNIT - FOOTCLIPSIZE*((p->flags2&MF2_FEETARECLIPPED) != 0), MT_MACEFX2);
+  DActor *ball = p->mp->SpawnDActor(p->x, p->y, p->z + 28*FRACUNIT - p->floorclip, MT_MACEFX2);
   ball->pz = 2*FRACUNIT+((p->aiming)<<(FRACBITS-5));
   angle = p->angle;
   ball->owner = p;
@@ -1140,11 +1142,8 @@ void A_FirePhoenixPL2(PlayerPawn *p, pspdef_t *psp)
   angle = p->angle;
   x = p->x+(P_SignedRandom()<<9);
   y = p->y+(P_SignedRandom()<<9);
-  z = p->z+26*FRACUNIT+((p->aiming)<<FRACBITS)/173;
-  if(p->flags2 & MF2_FEETARECLIPPED)
-    {
-      z -= FOOTCLIPSIZE;
-    }
+  z = p->z + 26*FRACUNIT + ((p->aiming)<<FRACBITS)/173 - p->floorclip;
+
   slope = AIMINGTOSLOPE(p->aiming);
   DActor *mo = p->mp->SpawnDActor(x, y, z, MT_PHOENIXFX2);
   mo->owner = p;

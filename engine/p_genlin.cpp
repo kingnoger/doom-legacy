@@ -530,6 +530,7 @@ int Map::EV_DoGenLift(line_t *line)
 	  wait = 5*35;
 	  break;
 	case 3:
+	default:
 	  wait = 10*35;
 	  break;
 	}

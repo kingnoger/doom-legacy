@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/05/11 21:23:52  smite-meister
+// Hexen fixes
+//
 // Revision 1.10  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -184,8 +187,6 @@ typedef enum
 // More semi-permanent flags. Mostly came with Heretic.
 
 typedef enum {
-  // Note: the Hexen flag MF2_BLASTED is not implemented. It is used to show that the thing is
-  // being thrown by a blast wave...
   MF2_LOGRAV         =     0x00000001,      // alternate gravity setting
   MF2_WINDTHRUST     =     0x00000002,      // gets pushed around by the wind specials
   MF2_FLOORBOUNCE    =     0x00000004,      // bounces off the floor
@@ -200,7 +201,7 @@ typedef enum {
   MF2_ONMOBJ         =     0x00000800,      // mobj is resting on top of another mobj
   MF2_PASSMOBJ       =     0x00001000,      // Actor can move over/under other Actors 
   MF2_CANNOTPUSH     =     0x00002000,      // cannot push other pushable mobjs
-  MF2_FEETARECLIPPED =     0x00004000,      // a mobj's feet are now being cut
+
   MF2_BOSS           =     0x00008000,      // mobj is a major boss
   MF2_FIREDAMAGE     =     0x00010000,      // does fire damage
   MF2_NODMGTHRUST    =     0x00020000,      // does not thrust target when damaging        
@@ -234,13 +235,13 @@ typedef enum
   MFE_SWIMMING      = 0x0010,  // swimming physics used (different gravity)
   MFE_INFLOAT       = 0x0020,  // Floating move in progress, don't auto float to target's height.
   MFE_SKULLFLY      = 0x0040,  // A charging skull.
+  MFE_BLASTED       = 0x0080,  // uncontrollably thrown by a blast wave
+
   // combat
-  MFE_JUSTHIT       = 0x0080,  // Got hit, will try to attack right back.
-  MFE_JUSTATTACKED  = 0x0100,  // Will take at least one step before attacking again.
+  MFE_JUSTHIT       = 0x0100,  // Got hit, will try to attack right back.
+  MFE_JUSTATTACKED  = 0x0200,  // Will take at least one step before attacking again.
 
   MFE_TELEPORT      = 0x1000, // *Don't cross lines or check heights in teleport move. (unused?)
-  //MFE_NOZCHECKING ,  // used for client prediction code, player can't be blocked in z by walls
-  // it is set temporarely when player follow the spirit
 } mobjeflag_t;
 
 

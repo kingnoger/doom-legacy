@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2003/05/11 21:23:50  smite-meister
+// Hexen fixes
+//
 // Revision 1.14  2003/05/05 00:24:48  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -64,6 +67,7 @@
 
 #include "g_game.h"
 #include "g_player.h"
+#include "g_team.h"
 #include "g_map.h"
 #include "g_level.h"
 #include "g_pawn.h"
@@ -98,9 +102,62 @@ language_t   language = la_english;            // Language.
 GameInfo game;
 
 
+// constructor
+GameInfo::GameInfo()
+{
+  demoversion = VERSION;
+  mode = gm_none;
+  mission = gmi_doom2;
+  state = GS_NULL;
+  wipestate = GS_DEMOSCREEN;
+  action = ga_nothing;
+  skill = sk_medium;
+  maxplayers = 32;
+  maxteams = 4;
+  teams.resize(maxteams);
+};
+
+//destructor
+GameInfo::~GameInfo()
+{
+  ClearPlayers();
+  maps.clear();
+};
+
+
+// was P_CheckFragLimit
+// WARNING : check cv_fraglimit>0 before call this function !
+bool GameInfo::CheckScoreLimit()
+{
+  // only checks score, doesn't count it. score must therefore be
+  // updated in real time
+  if (cv_teamplay.value)
+    {
+      int i, n = teams.size();
+      for (i=0; i<n; i++)
+	if (teams[i]->score >= cv_fraglimit.value)
+	  {
+	    ExitLevel(-1, 0);
+	    return true;
+	  }
+    }
+  else
+    {
+      player_iter_t i;
+
+      for (i = Players.begin(); i != Players.end(); i++)
+	if ((*i).second->score >= cv_fraglimit.value)
+	  {
+	    ExitLevel(-1, 0);
+	    return true;
+	  }
+    }
+  return false;
+}
+
 void GameInfo::UpdateScore(PlayerInfo *killer, PlayerInfo *victim)
 {
-  killer->frags[victim->number]++;
+  killer->Frags[victim->number]++;
   
   // scoring rule
   if (killer->team == 0)
@@ -121,7 +178,7 @@ void GameInfo::UpdateScore(PlayerInfo *killer, PlayerInfo *victim)
 
   // check fraglimit cvar
   if (cv_fraglimit.value)
-    killer->CheckFragLimit();
+    CheckScoreLimit();
 }
 
 int GameInfo::GetFrags(fragsort_t **fragtab, int type)
@@ -135,16 +192,18 @@ int GameInfo::GetFrags(fragsort_t **fragtab, int type)
 
   extern consvar_t cv_teamplay;
   int i, j;
-  int n = players.size();
-  int m = teams.size();
+  int n = Players.size();
+
   int ret;
   fragsort_t *ft;
-  int **teamfrags;
+
+  player_iter_t u, w;
 
   if (cv_teamplay.value)
     {
+      int m = teams.size();
       ft = new fragsort_t[m];
-      teamfrags = (int **)(new int[m][m]);
+      int **teamfrags = (int **)(new int[m][m]);
 
       for (i=0; i<m; i++)
 	{
@@ -154,17 +213,16 @@ int GameInfo::GetFrags(fragsort_t **fragtab, int type)
 	}
 
       // calculate teamfrags
-      int team1, team2;
-      for (i=0; i<n; i++)
+      for (u = Players.begin(); u != Players.end(); u++)
 	{
-	  team1 = players[i]->team;
+	  int team1 = (*u).second->team;
 
-	  for (j=0; j<n; j++)
+	  for (w = Players.begin(); w != Players.end(); w++)
 	    {
-	      team2 = players[j]->team;
+	      int team2 = (*w).second->team;
 
 	      teamfrags[team1][team2] +=
-		players[i]->frags[players[j]->number - 1];
+		(*u).second->Frags[(*w).first];
 	    }
 	}
 
@@ -215,62 +273,63 @@ int GameInfo::GetFrags(fragsort_t **fragtab, int type)
 	}
       delete [] teamfrags;
       ret = m;
-
-    } else { // not teamgame
+    }
+  else
+    {
+      // not teamgame
       ft = new fragsort_t[n]; 
-
-      for (i=0; i<n; i++)
+      for (i = 0, u = Players.begin(); u != Players.end(); i++, u++)
 	{
-	  ft[i].num = players[i]->number;
-	  ft[i].color = players[i]->pawn->color;
-	  ft[i].name  = players[i]->name.c_str();
+	  ft[i].num = (*u).second->number;
+	  ft[i].color = (*u).second->pawn->color;
+	  ft[i].name  = (*u).second->name.c_str();
 	}
 
       // type is a magic number telling which fragtable we want
       switch (type)
 	{
 	case 0: // just normal frags
-	  for (i=0; i<n; i++)
-	    ft[i].count = players[i]->score;
+	  for (i = 0, u = Players.begin(); u != Players.end(); i++, u++)
+	    ft[i].count = (*u).second->score;
 	  break;
 
 	case 1: // buchholtz
-	  for (i=0; i<n; i++)
+	  for (i = 0, u = Players.begin(); u != Players.end(); i++, u++)
 	    {
 	      ft[i].count = 0;
-	      for (j=0; j<n; j++)
-		if (i != j)
+	      for (w = Players.begin(); w != Players.end(); w++)
+		if (u != w)
 		  {
-		    int k = players[j]->number - 1;
-		    ft[i].count += players[i]->frags[k]*(players[j]->score + players[j]->frags[k]);
+		    int k = (*w).first;
+		    ft[i].count += (*u).second->Frags[k]*((*w).second->score + (*w).second->Frags[k]);
 		    // FIXME is this formula correct?
 		  }
 	    }
 	  break;
 
 	case 2: // individual
-	  for (i=0; i<n; i++)
+	  for (i = 0, u = Players.begin(); u != Players.end(); i++, u++)
 	    {
 	      ft[i].count = 0;
-	      for (j=0; j<n; j++)
-		if (i != j)
+	      for (w = Players.begin(); w != Players.end(); w++)
+		if (u != w)
 		  {
-		    int k = players[i]->number - 1;
-		    int l = players[j]->number - 1;
-		    if(players[i]->frags[l] > players[j]->frags[k])
+		    int k = (*u).first;
+		    int l = (*w).first;
+		    if ((*u).second->Frags[l] > (*w).second->Frags[k])
 		      ft[i].count += 3;
-		    else if(players[i]->frags[l] == players[j]->frags[k])
+		    else if ((*u).second->Frags[l] == (*w).second->Frags[k])
 		      ft[i].count += 1;
 		  }
 	    }
 	  break;
 
 	case 3: // deaths
-	  for (i=0; i<n; i++)
+	  for (i = 0, u = Players.begin(); u != Players.end(); i++, u++)
 	    {
 	      ft[i].count = 0;
-	      for (j=0; j<n; j++)
-		ft[i].count += players[j]->frags[players[i]->number - 1];
+	      for (w = Players.begin(); w != Players.end(); w++)
+		ft[i].count += (*w).second->Frags[(*u).first];
 	    }
 	  break;
       
@@ -285,75 +344,47 @@ int GameInfo::GetFrags(fragsort_t **fragtab, int type)
 }
 
 
-// Tries to add a player into the game. The new player gets the number pnum+1
+// Tries to add a player into the game. The new player gets the number pnum
 // if it is free, otherwise she gets the next free number.
 // An already constructed PI can be given in "in", if necessary.
 // Returns NULL if a new player cannot be added.
 
-PlayerInfo *GameInfo::AddPlayer(int pnum, PlayerInfo *in)
+PlayerInfo *GameInfo::AddPlayer(int pnum, PlayerInfo *p)
 {
   // a negative pnum just uses the first free slot
-  int n = players.size();
+  int n = Players.size();
 
-  // no room in game
   if (n >= maxplayers)
-    return NULL;
+    return NULL;  // no room in game
 
-  // too high a pnum
-  if (pnum >= maxplayers)
-    pnum = -1;
+  // TODO what if maxplayers has recently been set to a lower-than-n value?
+  // when are the extra players kicked?
 
-  //vector<bool> present(maxplayers, false);
-  /*
-    // not needed anymore because now "present" vector is available at GameInfo
-  for (i=0; i<n; i++)
-    {
-      // what if maxplayers has recently been set to a lower-than-n value?
-      // when are the extra players kicked?
-      present[players[i]->number-1] = true;
-    }
-  */
+  if (pnum > maxplayers)
+    pnum = -1;  // pnum too high
 
-  if (pnum >= (int)present.size())
-    present.resize(maxplayers);
-  else if (pnum >= 0 && present[pnum])
-  // pnum already taken
-    pnum = -1;
+  // check if pnum is free
+  if (pnum > 0 && Players.count(pnum))
+    pnum = -1; // pnum already taken
 
-  int m = present.size();
-  int i;
   // find first free player number, if necessary
   if (pnum < 0)
     {
-      for (i=0; i<m; i++)
-	if (present[i] == NULL)
+      for (int j = 1; j <= maxplayers; j++)
+	if (Players.count(j) == 0)
 	  {
-	    pnum = i;
+	    pnum = j;
 	    break;
 	  }
-      // make room for one more player
-      if (i == m)
-	{
-	  present.push_back(NULL);
-	  pnum = i;
-	}
     }
 
-  // player number is not too high, has not been taken and there's room in the game!
-
-  PlayerInfo *p;
-
+  // pnum is valid and free!
   // if a valid PI is given, use it. Otherwise, create a new PI.
-  if (in == NULL)
+  if (p == NULL)
     p = new PlayerInfo();
-  else
-    p = in;
 
-  p->number = pnum+1;
-  players.push_back(p);
-  present[pnum] = p;
-
-  // FIXME the frags vectors of other players must be lengthened
+  p->number = pnum;
+  Players[pnum] = p;
 
   return p;
 }
@@ -361,22 +392,15 @@ PlayerInfo *GameInfo::AddPlayer(int pnum, PlayerInfo *in)
 
 // Removes a player from game.
 // This and ClearPlayers are the ONLY ways a player should be removed.
-void GameInfo::RemovePlayer(vector<PlayerInfo *>::iterator it)
+bool GameInfo::RemovePlayer(int num)
 {
-  // it is an iterator to _players_ vector ! NOT a player number!
-  int j, n = players.size();
+  player_iter_t i = Players.find(num);
 
-  if (it >= players.end())
-    return;
+  if (i == Players.end())
+    return false; // not found
 
-  PlayerInfo *p = *it;
+  PlayerInfo *p = (*i).second;
 
-  for (j = 0 ; j<n ; j++)
-    {
-      // the frags vector is not compacted (shortened) now, only between levels 
-      players[j]->frags[p->number - 1] = 0;
-    }
-	    
   // remove avatar of player
   if (p->pawn)
     {
@@ -387,29 +411,29 @@ void GameInfo::RemovePlayer(vector<PlayerInfo *>::iterator it)
   if (p == displayplayer)
     hud.ST_Stop();
 
-  // FIXME make sure that global PI pointers are still OK
+  // make sure that global PI pointers are still OK
   if (consoleplayer == p) consoleplayer = NULL;
   if (consoleplayer2 == p) consoleplayer2 = NULL;
 
   if (displayplayer == p) displayplayer = NULL;
   if (displayplayer2 == p) displayplayer2 = NULL;
 
-  present[p->number - 1] = NULL;
   delete p;
   // NOTE! because PI's are deleted, even local PI's must be dynamically
   // allocated, using a copy constructor: new PlayerInfo(localplayer).
-  players.erase(it);
+  Players.erase(i);
+  return true;
 }
 
 // Removes all players from a game.
 void GameInfo::ClearPlayers()
 {
-  int i, n = players.size();
+  player_iter_t i;
   PlayerInfo *p;
 
-  for (i=0; i<n; i++)
+  for (i = Players.begin(); i != Players.end(); i++)
     {
-      p = players[i];
+      p = (*i).second;
       // remove avatar of player
       if (p->pawn)
 	{
@@ -418,10 +442,11 @@ void GameInfo::ClearPlayers()
 	}
       delete p;
     }
-  present.clear();
-  players.clear();
+
+  Players.clear();
   consoleplayer = consoleplayer2 = NULL;
   displayplayer = displayplayer2 = NULL;
+  hud.ST_Stop();
 }
 
 void F_Ticker();
@@ -432,42 +457,34 @@ void D_PageTicker();
 //
 void GameInfo::Ticker()
 {
-  //extern ticcmd_t netcmds[32][32]; TODO
   extern bool dedicated;
-
-  // level is physically exited -> ExitLevel(int exit)
-  // ExitLevel(int exit): action is set to ga_completed
-  // 
-  // LevelCompleted(): end level, start intermission (set state), reset action to ga_nothing
-  // intermission ends -> EndIntermission()
-  // EndIntermission(): check winning/finale (set state, init finale), else set ga_worlddone
-  //
-  // WorldDone(): action to ga_nothing, load next level, set state to GS_LEVEL
 
   // do things to change the game state
   while (action != ga_nothing)
     switch (action)
       {
-      case ga_completed :
-	LevelCompleted();
+      case ga_levelcompleted:
+	EndLevel(); // starts intermission (and finales)
 	break;
-      case ga_worlddone :
-	WorldDone();
+      case ga_nextlevel:
+	NextLevel();
 	break;
-      case ga_nothing   :
+      case ga_nothing:
 	break;
       default : I_Error("game.action = %d\n", action);
       }
 
   CONS_Printf("======== GI::Ticker, tic %d, st %d\n", gametic, state);
 
-  // assign players to maps if needed
-  vector<PlayerInfo *>::iterator it;
+  // manage players
+  player_iter_t i;
   if (state == GS_LEVEL)
     {
-      for (it = players.begin(); it < players.end(); it++)
+      for (i = Players.begin(); i != Players.end(); )
 	{
-	  switch ((*it)->playerstate)
+	  PlayerInfo *p = (*i).second;
+	  i++; // because "old i" may be invalidated
+	  switch (p->playerstate)
 	    {
 	    case PST_WAITFORMAP:
 	      /*
@@ -482,14 +499,14 @@ void GameInfo::Ticker()
 	      {
 		int m = 0;
 		// just assign the player to a map
-		maps[m]->AddPlayer(*it);
+		maps[m]->AddPlayer(p);
 	      }
 	      break;
 	    case PST_REMOVE:
-	      // the player is removed from the game
-	      RemovePlayer(it);
-	      // FIXME should we do it-- here?
+	      // the player is removed from the game (invalidates "old i")
+	      RemovePlayer(p->number);
 	      break;
+
 	    default:
 	      break;
 	    }
@@ -498,29 +515,25 @@ void GameInfo::Ticker()
 
 
   //int buf = gametic % BACKUPTICS; TODO
-  ticcmd_t *cmd;
 
-  int i, n = players.size();
   // read/write demo
-
-  for (i=0 ; i<n ; i++)
-    {
-      if (!dedicated)
-        {
-	  cmd = &players[i]->cmd;
+  if (!dedicated)
+    for (i = Players.begin(); i != Players.end(); i++)
+      {
+	ticcmd_t *cmd = &((*i).second)->cmd;
+	int j = (*i).first; // playernum
 	  
-	  if (demoplayback)
-	    ReadDemoTiccmd(cmd, i);
-	  else
-	    {
-	      // FIXME here the netcode is bypassed until it's fixed. See also G_BuildTiccmd()!
-	      //memcpy(cmd, &netcmds[buf][players[i]->number-1], sizeof(ticcmd_t));
-	    }
+	if (demoplayback)
+	  ReadDemoTiccmd(cmd, j);
+	else
+	  {
+	    // FIXME here the netcode is bypassed until it's fixed. See also G_BuildTiccmd()!
+	    //memcpy(cmd, &netcmds[buf][players[i]->number-1], sizeof(ticcmd_t));
+	  }
 
-	  if (demorecording)
-	    WriteDemoTiccmd(cmd, i);
-	}
-    }
+	if (demorecording)
+	  WriteDemoTiccmd(cmd, j);
+      }
 
   // do main actions
   switch (state)
@@ -528,9 +541,9 @@ void GameInfo::Ticker()
     case GS_LEVEL:
       if (!paused)
 	{
-	  n = maps.size();
-	  for (i=0; i<n; i++)
-	    maps[i]->Ticker(); // tick the maps
+	  int j, n = maps.size();
+	  for (j=0; j<n; j++)
+	    maps[j]->Ticker(); // tick the maps
 	}
       hud.Ticker();
       automap.Ticker();
@@ -599,7 +612,7 @@ bool GameInfo::StartGame()
   if (firstlevel == NULL)
     return false;
 
-  NewLevel(skill, firstlevel, true);
+  SetupLevel(firstlevel, skill, true);
   return true;
 }
 
@@ -607,7 +620,7 @@ bool GameInfo::StartGame()
 // Sets up and starts a new level inside a game.
 //
 // This is the map command interpretation (result of Command_Map_f())
-void GameInfo::NewLevel(skill_t sk, LevelNode *n, bool resetplayer)
+void GameInfo::SetupLevel(LevelNode *n, skill_t sk, bool resetplayers)
 {
   currentlevel = n;
 
@@ -671,7 +684,7 @@ void GameInfo::NewLevel(skill_t sk, LevelNode *n, bool resetplayer)
   m->level = n;
   maps.push_back(m); // just one map for now
 
-  StartLevel(false, resetplayer);
+  StartLevel(false, resetplayers);
 }
 
 
@@ -680,11 +693,10 @@ void P_InitSwitchList();
 // StartLevel : (re)starts the 'currentlevel' stored in 'maps' vector
 // was G_DoLoadLevel()
 // if re is true, do not reload the entire maps, just restart them.
-void GameInfo::StartLevel(bool re, bool resetplayer)
+void GameInfo::StartLevel(bool re, bool resetplayers)
 {
   // FIXME make restart option work, do not FreeTags and Setup,
   // instead just Reset the maps
-  int i;
 
   //levelstarttic = gametic;        // for time calculation
 
@@ -693,9 +705,9 @@ void GameInfo::StartLevel(bool re, bool resetplayer)
 
   state = GS_LEVEL;
 
-  int n = players.size();
-  for (i=0 ; i<n ; i++)
-    players[i]->Reset(resetplayer, cv_deathmatch.value ? false : true);
+  player_iter_t i;
+  for (i = Players.begin(); i != Players.end(); i++)
+    (*i).second->Reset(resetplayers, cv_deathmatch.value ? false : true);
 
   Z_FreeTags(PU_LEVEL, PU_PURGELEVEL-1); // destroys pawns if they are not Detached
 
@@ -705,18 +717,18 @@ void GameInfo::StartLevel(bool re, bool resetplayer)
   // setup all maps in the level
   LevelNode *l = currentlevel;
   l->kills = l->items = l->secrets = 0;
-  n = maps.size();
-  for (i = 0; i<n; i++)
+  int j, n = maps.size();
+  for (j = 0; j<n; j++)
     {
-      if (!(maps[i]->Setup(gametic)))
+      if (!(maps[j]->Setup(gametic)))
 	{
 	  // fail so reset game stuff
 	  Command_ExitGame_f();
 	  return;
 	}
-      l->kills += maps[i]->kills;
-      l->items += maps[i]->items;
-      l->secrets += maps[i]->secrets;
+      l->kills += maps[j]->kills;
+      l->items += maps[j]->items;
+      l->secrets += maps[j]->secrets;
     }
 
   //Fab:19-07-98:start cd music for this level (note: can be remapped)
@@ -753,13 +765,27 @@ void GameInfo::StartLevel(bool re, bool resetplayer)
 
 // was G_ExitLevel
 //
-// for now, exit can be 0 (normal exit) or 1 (secret exit)
-void GameInfo::ExitLevel(int ex)
+// exit -1 means "next level"
+void GameInfo::ExitLevel(int exit, unsigned entrypoint)
 {
-  if (state == GS_LEVEL) // FIXME! is this necessary?
+  if (state == GS_LEVEL)
     {
-      action = ga_completed;
-      currentlevel->exitused = (*(currentlevel->exit.find(ex))).second;
+      action = ga_levelcompleted;
+      map<int, LevelNode *>::iterator i;
+      
+      LevelNode *next = NULL;
+
+      if (exit < 0)
+	exit = 0; // default "next level"
+
+      i = currentlevel->exit.find(exit);
+      if (i != currentlevel->exit.end())
+	next = (*i).second;
+
+      if (next)
+	next->entrypoint = entrypoint;
+
+      currentlevel->exitused = next;
     }
 }
 
@@ -767,13 +793,7 @@ void GameInfo::ExitLevel(int ex)
 /*
 void G_SecretExitLevel (void)
 {
-    // IF NO WOLF3D LEVELS, NO SECRET EXIT!
-    if ((game.mode == commercial)
-      && (W_CheckNumForName("map31")<0))
-        secretexit = false;
-    else
-        secretexit = true;
-    game.action = ga_completed;
+  // IF NO WOLF3D LEVELS, NO SECRET EXIT!
 }
 */
 
@@ -781,26 +801,20 @@ void G_SecretExitLevel (void)
 // was G_DoCompleted
 //
 // start intermission
-void GameInfo::LevelCompleted()
+void GameInfo::EndLevel()
 {
-  int i, n;
-
-  // action is ga_completed
   action = ga_nothing;
 
   hud.ST_Stop();
 
   // save or forfeit pawns
   // player has a pawn if he is alive or dead, but not if he is in respawnqueue
-  n = players.size();
-  for (i=0 ; i<n ; i++)
-    if (players[i]->playerstate == PST_LIVE) 
-      {     
-	//if (players[i]->pawn)
-	players[i]->pawn->FinishLevel(); // take away cards and stuff, save the pawn
-      }
+  player_iter_t i;
+  for (i = Players.begin(); i != Players.end(); i++)
+    if ((*i).second->playerstate == PST_LIVE) 
+      (*i).second->pawn->FinishLevel(); // take away cards and stuff, save the pawn
     else
-      players[i]->pawn = NULL; // let the pawn be destroyed with the map
+      (*i).second->pawn = NULL; // let the pawn be destroyed with the map
 
   // TODO here we have a problem with hubs: if a player is dead when the hub is exited,
   // his corpse is never placed in bodyqueue and thus never flushed out...
@@ -831,6 +845,8 @@ void GameInfo::LevelCompleted()
 // init next level or go to the final scene
 void GameInfo::EndIntermission()
 {
+  // TODO purge the removed players from the frag maps
+
   // action is ga_nothing
   const LevelNode *next = currentlevel->exitused;
 
@@ -868,38 +884,34 @@ void GameInfo::EndIntermission()
 	      return;
 	    }
 	}
-    } else {
+    }
+  else
+    {
       // no finales in deathmatch
       // FIXME end game here, show final frags
       if (next == NULL)
 	CL_Reset();
     }
 
-  action = ga_worlddone;
+  action = ga_nextlevel;
 }
 
 void GameInfo::EndFinale()
 {
-  if (state == GS_FINALE) action = ga_worlddone;
+  if (state == GS_FINALE)
+    action = ga_nextlevel;
 }
 
 // was G_DoWorldDone
 // load next level
 
-void GameInfo::WorldDone()
+void GameInfo::NextLevel()
 {
   action = ga_nothing;
   // maybe a state change here? Right now state is GS_INTERMISSION or GS_FINALE ??
 
   LevelNode *next = currentlevel->exitused;
 
-  /*
-  if (demoversion < 129)
-    {
-      // FIXME! doesn't work! restarts the same level!
-      StartLevel(true, false);
-    }
-    else */
   if (server && !demoplayback)
     // not in demo because demo have the mapcommand on it
     {
@@ -908,8 +920,6 @@ void GameInfo::WorldDone()
       if (cv_deathmatch.value)
 	reset = true;
 
-      NewLevel(skill, next, reset);
-      //COM_BufAddText (va("map \"%s\" -noresetplayers\n", currentlevel->mapname.c_str()));
-      //COM_BufAddText (va("map \"%s\"\n", currentlevel->mapname.c_str())); 
+      SetupLevel(next, skill, reset);
     }
 }

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/05/11 21:23:51  smite-meister
+// Hexen fixes
+//
 // Revision 1.9  2003/04/19 17:38:47  smite-meister
 // SNDSEQ support, tools, linedef system...
 //
@@ -547,7 +550,8 @@ void Got_Saycmd(char **p,int playernum)
   // FIXME make the message system handle better player number changes
   if (to==0 || to == consoleplayer->number || consoleplayer->number == playernum
      || (to < 0 && consoleplayer->team == -to) )
-    CONS_Printf("\3%s: %s\n", game.players[playernum]->name.c_str(), *p);
+    CONS_Printf("\3%s\n", *p);
+    //CONS_Printf("\3%s: %s\n", game.players[playernum]->name.c_str(), *p);
 
   *p+=strlen(*p)+1;
 }
@@ -1157,7 +1161,6 @@ void HU_drawDeathmatchRankings()
 {
   fragsort_t  *fragtab;
   int          scorelines;
-  int          whiteplayer;
 
   // draw the ranking title panel
   V_DrawScaledPatch((BASEVIDWIDTH - PatchRankings->width)/2, 5, 0, PatchRankings);
@@ -1167,22 +1170,20 @@ void HU_drawDeathmatchRankings()
   //Fab:25-04-98: when you play, you quickly see your frags because your
   //  name is displayed white, when playback demo, you quicly see who's the
   //  view.
-  whiteplayer = demoplayback ? displayplayer->number : consoleplayer->number;
+  PlayerInfo *whiteplayer = demoplayback ? displayplayer : consoleplayer;
   
   if (scorelines>9)
     scorelines = 9; //dont draw past bottom of screen, show the best only
 
   if (cv_teamplay.value == 0)
-    WI_drawRanking(NULL,80,70,fragtab,scorelines,true,whiteplayer);
+    WI_drawRanking(NULL,80,70,fragtab,scorelines,true, whiteplayer->number);
   else
     {
       // draw the frag to the right
       //        WI_drawRanking("Individual",170,70,fragtab,scorelines,true,whiteplayer);
 
       // and the team frag to the left
-      whiteplayer = game.players[whiteplayer]->team;
-
-      WI_drawRanking("Teams",80,70,fragtab,scorelines,true, whiteplayer);
+      WI_drawRanking("Teams",80,70,fragtab,scorelines,true, whiteplayer->team);
     }
   delete [] fragtab;
 }

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2003/05/11 21:23:51  smite-meister
+// Hexen fixes
+//
 // Revision 1.11  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -573,10 +576,10 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
   SetPosition();
 
   // Heretic fake water...
-  if ((flags2 & MF2_FOOTCLIP) && (subsector->sector->floortype != FLOOR_SOLID))
-    flags2 |= MF2_FEETARECLIPPED;
+  if ((flags2 & MF2_FOOTCLIP) && (subsector->sector->floortype >= FLOOR_LIQUID))
+    floorclip = FOOTCLIPSIZE;
   else
-    flags2 &= ~MF2_FEETARECLIPPED;
+    floorclip = 0;
 
   // if any special lines were hit, do the effect
   if (!(flags & (MF_NOCLIPLINE|MF_NOTRIGGER) || eflags & MFE_TELEPORT))
@@ -1559,9 +1562,7 @@ void Actor::LineAttack(angle_t yaw, fixed_t distance, fixed_t pitch, int damage,
       y2 = y + FixedMul(FixedMul(distance,finesine[yaw]),cosangle); 
     }
 
-  shootz = lastz = z + (height>>1) + 8*FRACUNIT;
-  if (flags2 & MF2_FEETARECLIPPED)
-    shootz -= FOOTCLIPSIZE;
+  shootz = lastz = z + (height>>1) + 8*FRACUNIT - floorclip;
 
   attackrange = distance;
   aimslope = pitch;

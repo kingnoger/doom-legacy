@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/05/11 21:23:51  smite-meister
+// Hexen fixes
+//
 // Revision 1.7  2003/03/15 20:07:19  smite-meister
 // Initial Hexen compatibility!
 //
@@ -1037,7 +1040,7 @@ static void WI_ddrawDeathmatchStats()
 // was WI_initNetgameStats
 void Intermission::InitCoopStats()
 {
-  int i, n = game.players.size();
+  int i, n = game.Players.size();
 
   ng_state = 1;
   count = TICRATE;
@@ -1051,11 +1054,11 @@ void Intermission::InitCoopStats()
   // right now he is not shown at all.
 
   dofrags = false;
-
-  for (i=0 ; i<n ; i++)
+  map<int, PlayerInfo *>::iterator u;
+  for (i = 0, u = game.Players.begin(); u != game.Players.end(); i++, u++)
     {
       cnt[i].kills = cnt[i].items = cnt[i].secrets = cnt[i].frags = 0;
-      plrs[i] = game.players[i];
+      plrs[i] = (*u).second;
       dofrags = dofrags || (plrs[i]->score != 0);
     }
 }

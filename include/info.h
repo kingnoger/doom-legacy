@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/05/11 21:23:52  smite-meister
+// Hexen fixes
+//
 // Revision 1.7  2003/04/04 00:01:57  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -6176,7 +6179,7 @@ typedef enum {
   MT_SGSHARD9,
   MT_SGSHARD0,
   MT_XARTIEGG,
-  //MT_EGGFX,
+  MT_XEGGFX,
   MT_XARTISUPERHEAL,
   MT_ZWINGEDSTATUENOSKULL,
   MT_ZGEMPEDESTAL,

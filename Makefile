@@ -117,6 +117,7 @@ export LD = $(CC)
 export objdir = objs
 
 export engine_objects = \
+	$(objdir)/g_state.o \
 	$(objdir)/p_spec.o \
 	$(objdir)/p_floor.o \
 	$(objdir)/p_plats.o \
@@ -143,13 +144,11 @@ export engine_objects = \
 	$(objdir)/f_wipe.o \
 	$(objdir)/wi_stuff.o \
 	$(objdir)/am_map.o \
-	$(objdir)/hu_stuff.o \
 	$(objdir)/st_lib.o \
 	$(objdir)/st_stuff.o \
 	$(objdir)/g_save.o \
 	$(objdir)/g_player.o \
 	$(objdir)/g_game.o \
-	$(objdir)/g_state.o \
 	$(objdir)/g_demo.o \
 	$(objdir)/g_map.o \
 	$(objdir)/p_maputl.o \
@@ -179,6 +178,7 @@ export engine_objects = \
 	$(objdir)/p_inter.o \
 	$(objdir)/p_fab.o \
 	$(objdir)/d_items.o \
+	$(objdir)/hu_stuff.o \
 	$(objdir)/dstrings.o
 
 

@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002 by DooM Legacy Team.
+// Copyright (C) 2002-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/05/11 21:23:52  smite-meister
+// Hexen fixes
+//
 // Revision 1.4  2003/01/25 21:33:05  smite-meister
 // Now compiles with MinGW 2.0 / GCC 3.2.
 // Builder can choose between dynamic and static linkage.
@@ -64,9 +67,9 @@ public:
   int cluster;      // level cluster (for finales, hubs etc. See p_info.h)
   string levelname; // nice long name
   
-  map<int, LevelNode *, less<int> > exit;  // remapping of exit numbers
-  LevelNode *exitused;   // exit used when the map was last exited
-  //int entrypoint; // the requested entry point in the next level (Hexen)
+  map<int, LevelNode *> exit;  // remapping of exit numbers
+  LevelNode *exitused;  // exit used when the map was last exited
+  unsigned entrypoint;  // the requested entry point in this level (Hexen)
 
   bool done; // has it been finished yet?
   string maplump; // will be a vector of map lumpnames
@@ -93,6 +96,7 @@ public:
       cluster = 0;
       done = false;
       exitused = NULL;
+      entrypoint = 0;
     };
 
   /*

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/05/11 21:23:52  smite-meister
+// Hexen fixes
+//
 // Revision 1.2  2003/04/04 00:01:58  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -109,14 +112,17 @@ extern byte*            ds_transmap;
 
 
 // viewborder patches lump numbers
-#define BRDR_T      0
-#define BRDR_B      1
-#define BRDR_L      2
-#define BRDR_R      3
-#define BRDR_TL     4
-#define BRDR_TR     5
-#define BRDR_BL     6
-#define BRDR_BR     7
+enum windowborder_e
+{
+  BRDR_T = 0,
+  BRDR_B,
+  BRDR_L,
+  BRDR_R,
+  BRDR_TL,
+  BRDR_TR,
+  BRDR_BL,
+  BRDR_BR
+};
 
 extern int viewborderlump[8];
 

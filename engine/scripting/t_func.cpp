@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.5  2003/05/11 21:23:52  smite-meister
+// Hexen fixes
+//
 // Revision 1.4  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -278,7 +281,7 @@ void SF_Clock()
 
 void SF_ExitLevel()
 {
-  game.ExitLevel(0); // TODO! lots of ways to exit!
+  game.ExitLevel(-1, 0); // TODO! lots of ways to exit!
 }
 
         // centremsg
@@ -452,12 +455,11 @@ void SF_PlayerInGame()
 
   t_return.type = svt_int;
 
-  int n = game.present.size();
   int i = intvalue(t_argv[0]);
-  if (i >= n)
+  if (!current_map->FindPlayer(i))
     t_return.value.i = false;
   else
-    t_return.value.i = game.present[i] ? true : false;
+    t_return.value.i = true;
 }
 
 
@@ -486,10 +488,7 @@ void SF_PlayerName()
 
   t_return.type = svt_string;
 
-  if (plnum < 0 || plnum >= game.maxplayers)
-    pl = NULL;
-  else
-    pl = game.present[plnum];
+  pl = current_map->FindPlayer(plnum);
 
   if (pl)
     t_return.value.s = pl->name.c_str();
@@ -517,10 +516,7 @@ void SF_PlayerObj()
 
   t_return.type = svt_actor;
 
-  if (plnum < 0 || plnum >= game.maxplayers)
-    pl = NULL;
-  else
-    pl = game.present[plnum];
+  pl = current_map->FindPlayer(plnum);
 
   if (pl)
     t_return.value.mobj = pl->pawn;
@@ -572,7 +568,7 @@ void SF_PlayerKeys()
   else
     {
       playernum = intvalue(t_argv[0]);
-      PlayerInfo *pi = game.present[playernum-1];
+      PlayerInfo *pi = current_map->FindPlayer(playernum);
       if (!pi)
 	{
 	  script_error("player %i not in game\n", playernum);
@@ -632,7 +628,7 @@ void SF_PlayerAmmo()
   else
     {
       playernum = intvalue(t_argv[0]);
-      PlayerInfo *pi = game.present[playernum-1];
+      PlayerInfo *pi = current_map->FindPlayer(playernum);
       if (!pi)
 	{
 	  script_error("player %i not in game\n", playernum);
@@ -687,7 +683,7 @@ void SF_MaxPlayerAmmo()
   else
     {
       playernum = intvalue(t_argv[0]);
-      PlayerInfo *pi = game.present[playernum-1];
+      PlayerInfo *pi = current_map->FindPlayer(playernum);
       if (!pi)
 	{
 	  script_error("player %i not in game\n", playernum);

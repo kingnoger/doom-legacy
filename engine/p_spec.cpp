@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/05/11 21:23:51  smite-meister
+// Hexen fixes
+//
 // Revision 1.10  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -1246,11 +1249,21 @@ bool Map::ActivateLine(line_t *line, Actor *thing, int side, int atype)
 #define TICS(a)   (((a)*TICRATE)/35)
 #define OCTICS(a) (((a)*TICRATE)/8)
 #define ANGLE(a)  angle_t((a) << 24) // angle_t is 32-bit int, Hexen angle is a 8-bit byte
+
 bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int side, Actor *mo)
 {
   bool success = false;
   int lock;
-
+  // temporary kludge so that I don't have to change the EV_ function interfaces yet
+  // line->tag and args[0] are not always same (scripts!)  
+  int temptag;
+  if (line && args[0])
+    {
+      temptag = line->tag;
+      line->tag = args[0];
+    }
+  
+  //CONS_Printf("ExeSpecial (%d), tag %d (%d)\n", special, line->tag, args[0]);
   switch (special)
     {
     case 1: // Poly Start Line
@@ -1423,7 +1436,7 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
 	  if (mo->health <= 0 || mo->flags & MF_CORPSE)
 	    return false; // Activator must be alive
 
-	  ExitMap(args[0]); //, args[1]); FIXME start position in the new map
+	  ExitMap(args[0], args[1]);
 	  success = true;
 	}
       break;
@@ -1569,6 +1582,9 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
     default:
       break;
     }
+
+  if (line)
+    line->tag = temptag;
 
   return success;
 }

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/05/11 21:23:53  smite-meister
+// Hexen fixes
+//
 // Revision 1.3  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -236,7 +239,7 @@ int fuzzpos = 0;     // move through the fuzz table
 //  fuzzoffsets are dependend of vid width, for optimising purpose
 //  this is called by SCR_Recalc() whenever the screen size changes
 //
-void R_RecalcFuzzOffsets (void)
+void R_RecalcFuzzOffsets()
 {
     int i;
     for (i=0;i<FUZZTABLE;i++)
@@ -274,7 +277,7 @@ CV_PossibleValue_t Color_cons_t[]={{0,NULL},{1,NULL},{2,NULL},{3,NULL},
 //  This is precalculated for drawing the player sprites in the player's
 //  chosen color
 //
-void R_InitTranslationTables (void)
+void R_InitTranslationTables()
 {
     int         i,j;
 
@@ -425,30 +428,18 @@ void R_InitViewBuffer(int width, int height)
 // Store the lumpnumber of the viewborder patches.
 //
 int viewborderlump[8];
-void R_InitViewBorder (void)
+void R_InitViewBorder()
 {
-    if( game.raven )
-    {
-        viewborderlump[BRDR_T]  = fc.GetNumForName ("bordt");
-        viewborderlump[BRDR_B]  = fc.GetNumForName ("bordb");
-        viewborderlump[BRDR_L]  = fc.GetNumForName ("bordl");
-        viewborderlump[BRDR_R]  = fc.GetNumForName ("bordr");
-        viewborderlump[BRDR_TL] = fc.GetNumForName ("bordtl");
-        viewborderlump[BRDR_BL] = fc.GetNumForName ("bordbl");
-        viewborderlump[BRDR_TR] = fc.GetNumForName ("bordtr");
-        viewborderlump[BRDR_BR] = fc.GetNumForName ("bordbr");
-    }
-    else
-    {
-        viewborderlump[BRDR_T]  = fc.GetNumForName ("brdr_t");
-        viewborderlump[BRDR_B]  = fc.GetNumForName ("brdr_b");
-        viewborderlump[BRDR_L]  = fc.GetNumForName ("brdr_l");
-        viewborderlump[BRDR_R]  = fc.GetNumForName ("brdr_r");
-        viewborderlump[BRDR_TL] = fc.GetNumForName ("brdr_tl");
-        viewborderlump[BRDR_BL] = fc.GetNumForName ("brdr_bl");
-        viewborderlump[BRDR_TR] = fc.GetNumForName ("brdr_tr");
-        viewborderlump[BRDR_BR] = fc.GetNumForName ("brdr_br");
-    }
+  const char *Doom_borders[] = {"brdr_t", "brdr_b", "brdr_l", "brdr_r", "brdr_tl", "brdr_tr", "brdr_bl", "brdr_br"};
+  const char *Raven_borders[] = {"bordt", "bordb", "bordl", "bordr", "bordtl", "bordtr", "bordbl", "bordbr"};
+  const char **bname;
+  if (game.mode < gm_heretic)
+    bname = Doom_borders;
+  else
+    bname = Raven_borders;
+
+  for (int i=0; i<8; i++)
+    viewborderlump[i] = fc.GetNumForName(bname[i]);
 }
 
 
@@ -457,7 +448,7 @@ void R_InitViewBorder (void)
 // Fills the back screen with a pattern for variable screen sizes
 // Also draws a beveled edge.
 //
-void R_FillBackScreen (void)
+void R_FillBackScreen()
 {
     byte*       src;
     byte*       dest;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/05/11 21:23:51  smite-meister
+// Hexen fixes
+//
 // Revision 1.7  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -1636,10 +1639,9 @@ static int CmdEndPrintBold()
 {
   int i, n = ACMap->players.size();
 
-  for(i = 0; i < n; i++)
-    {
-      ACMap->players[i]->SetMessage(PrintBuffer, true);
-    }
+  for (i = 0; i < n; i++)
+    ACMap->players[i]->SetMessage(PrintBuffer, true);
+
   return SCRIPT_CONTINUE;
 }
 

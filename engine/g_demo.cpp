@@ -86,15 +86,12 @@ bool         precache = true;        // if true, load all graphics at start
 //
 bool GameInfo::Downgrade(int version)
 {
-  //extern player_t  players[MAXPLAYERS];
   extern int boomsupport;
   extern int allow_pushers;
   extern int variable_friction;
 
-  int i;
-  int n = players.size();
 
-  if (version<109)
+  if (version<120)
     return false;
 
   if( version<130 )
@@ -126,33 +123,6 @@ bool GameInfo::Downgrade(int version)
       // smoke trails behind the skull heads
       states[S_SKULL_ATK3].action = A_SmokeTrailer;
       states[S_SKULL_ATK4].action = A_SmokeTrailer;
-    }
-
-
-  switch (version)
-    {
-    case 109:
-      // disable rocket trails
-      states[S_ROCKET].action = NULL; //NULL like in Doom2 v1.9
-      
-      // Boris : for older demos, initalise the new skincolor value
-      //         also disable the new preferred weapons order.
-      /*
-      for(i=0;i<4;i++)
-        {
-	  players[i].skincolor = i % MAXSKINCOLORS;
-	  players[i].originalweaponswitch=true;
-        }//eof Boris
-      */
-    case 110:
-    case 111:
-      //added:16-02-98: make sure autoaim is used for older
-      //                demos not using mouse aiming
-      for(i=0;i<n;i++)
-	players[i]->autoaim = true;
-      
-    default:
-      break;
     }
 
   //SoM: 3/17/2000: Demo compatability
@@ -346,7 +316,7 @@ void G_RecordDemo (char* name)
 void GameInfo::BeginRecording()
 {
   //extern byte gamemap;
-  int n = players.size();
+  int n = Players.size();
   demo_p = demobuffer;
 
   *demo_p++ = VERSION;
@@ -433,103 +403,9 @@ no_demo:
   if (demoversion < VERSION)
     CONS_Printf ("\2Demo is from an older game version\n");
 
-  skill   = (skill_t)(*demo_p++);
-  episode = *demo_p++;
-  level   = *demo_p++;
-  if (demoversion < 127)
-    // push it in the console will be too late set
-    cv_deathmatch.value=*demo_p++;
-  else
-    demo_p++;
 
-  if (demoversion < 128)
-    // push it in the console will be too late set
-    cv_respawnmonsters.value=*demo_p++;
-  else
-    demo_p++;
-
-  if (demoversion < 128)
-    {
-      // push it in the console will be too late set
-      cv_fastmonsters.value=*demo_p++;
-      cv_fastmonsters.func();
-    }
-  else
-    demo_p++;
-
-  nomonsters  = *demo_p++;
-
-  //added:08-02-98: added displayplayer because the status bar links
-  // to the display player when playing back a demo.
-  //displayplayer == consoleplayer
   int j = *demo_p++;
-  players.clear();
-  //PlayerInfo *pl; 
-
-  //added:11-01-98:
-  //  support old v1.9 demos with ONLY 4 PLAYERS ! Man! what a shame!!!
-  if (demoversion==109)
-    {
-      for (i=0 ; i<4 ; i++)
-	//playeringame[i] = *demo_p++;
-	if (*demo_p++)
-	  AddPlayer(i);
-    }
-  else
-    {
-      if(demoversion<128)
-        {
-	  cv_timelimit.value=*demo_p++;
-	  cv_timelimit.func();
-        }
-      else
-	demo_p++;
-
-      if (demoversion<113)
-        {
-	  for (i=0 ; i<8 ; i++)
-	    //playeringame[i] = *demo_p++;
-	    if (*demo_p++)
-	      AddPlayer(i);
-	}
-      else
-        {
-	  if( demoversion>=131 )
-	    multiplayer = *demo_p++;
-	  
-	  for (i=0 ; i<32 ; i++)
-	    //playeringame[i] = *demo_p++;
-	    if (*demo_p++)
-	      AddPlayer(i);
-        }
-      //#if MAXPLAYERS>32
-      //#error Please add support for old lmps
-      //#endif
-    }
-  consoleplayer = displayplayer = players[j];
-  n = players.size();
-  
-  // FIXME: do a proper test here
-  if (demoversion < 131)
-    //multiplayer = playeringame[1];
-    multiplayer = (n > 1);
-
-  //memset(oldcmd,0,sizeof(oldcmd));
-  oldcmd.clear();
-  oldcmd.resize(n);
-
-  // don't spend a lot of time in loadlevel
-  if(demoversion<127)
-    {
-      LevelNode *p = G_CreateClassicMapList(episode);
-      precache = false;
-      game.DeferredNewGame(skill, p+level-1,true);
-      precache = true;
-      CON_ToggleOff (); // will be done at the end of map command
-    }
-  else
-    // wait map command in the demo
-    state = wipestate = GS_WAITINGPLAYERS;
+  Players.clear();
 
   demoplayback = true;
 }
