@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/07/07 19:24:43  hurdler
+// manage buffers properly
+//
 // Revision 1.2  2004/06/27 10:50:35  hurdler
 // new renderer things which will not break everyting else
 //
@@ -36,6 +39,9 @@ GLfloat *Geometry::last_vertex_array = 0;
 GLfloat *Geometry::last_tex_coord_arrays[State::MAX_TEXTURE_UNITS] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 GLfloat *Geometry::last_normal_array = 0;
 GLuint *Geometry::last_color_array = 0;
+std::map<GLfloat *, int> Geometry::float_refcount;
+std::map<GLuint *, int> Geometry::uint_refcount;
+std::map<GLushort *, int> Geometry::ushort_refcount;
 
 Geometry::Geometry():
     vertex_array(0),
@@ -51,15 +57,16 @@ Geometry::Geometry():
 
 Geometry::~Geometry()
 {
-#if 0 // those delete [] are not safe, but someone has to delete them (should we use a ref count or something like that?)
-    delete [] vertex_array;
-    delete [] tex_coord_arrays;
-    delete [] normal_array;
-    delete [] color_array;
-    delete [] primitive_length;
-    delete [] primitive_type;
-    delete [] indices;
-#endif
+    UnrefDelete(vertex_array);
+    for (int i = 0; i < State::MAX_TEXTURE_UNITS; i++)
+    {
+        UnrefDelete(tex_coord_arrays[i]);
+    }
+    UnrefDelete(normal_array);
+    UnrefDelete(color_array);
+    UnrefDelete(primitive_length);
+    UnrefDelete(primitive_type);
+    UnrefDelete(indices);
 }
 
 void Geometry::EnableArrays()
@@ -128,15 +135,17 @@ void Geometry::EnableArrays()
     last_normal_array = normal_array;
 }
 
-void Geometry::SetPrimitiveLength(int *length)
+void Geometry::SetPrimitiveLength(GLuint *length)
 {
-    //delete [] primitive_length;  // this is not safe (see destructor comment)
+    Ref(length);
+    UnrefDelete(primitive_length);
     primitive_length = length;
 }
 
-void Geometry::SetPrimitiveType(int *type)
+void Geometry::SetPrimitiveType(GLuint *type)
 {
-    //delete [] primitive_type;  // this is not safe (see destructor comment)
+    Ref(type);
+    UnrefDelete(primitive_type);
     primitive_type = type;
 }
 
@@ -149,18 +158,26 @@ void Geometry::SetAttributes(GeometryAttributes attr, void *array)
 {
     if (attr == VERTEX_ARRAY)
     {
+        Ref(static_cast<GLfloat *>(array));
+        UnrefDelete(vertex_array);
         vertex_array = static_cast<GLfloat *>(array);
     }
     else if ((attr >= TEXCOORD_ARRAY) && (attr < (TEXCOORD_ARRAY + State::MAX_TEXTURE_UNITS)))
     {
+        Ref(static_cast<GLfloat *>(array));
+        UnrefDelete(tex_coord_arrays[attr - TEXCOORD_ARRAY]);
         tex_coord_arrays[attr - TEXCOORD_ARRAY] = static_cast<GLfloat *>(array);
     }
     else if (attr == NORMAL_ARRAY)
     {
+        Ref(static_cast<GLfloat *>(array));
+        UnrefDelete(normal_array);
         normal_array = static_cast<GLfloat *>(array);
     }
     else if (attr == COLOR_ARRAY)
     {
+        Ref(static_cast<GLuint *>(array));
+        UnrefDelete(color_array);
         color_array = static_cast<GLuint *>(array);
     }
     else
@@ -171,7 +188,8 @@ void Geometry::SetAttributes(GeometryAttributes attr, void *array)
 
 void Geometry::SetIndices(GLushort *indices)
 {
-    //delete [] this->indices;  // this is not safe (see destructor comment)
+    Ref(indices);
+    UnrefDelete(this->indices);
     this->indices = indices;
 }
 
@@ -179,18 +197,32 @@ void Geometry::CreateTexturedRectangle(bool overwrite, float x1, float y1, float
 {
     if (!overwrite)
     {
-        // TODO: still the same: we must free or at least unref those arrays before allocating a new one
-        primitive_length = new int(4);
-        primitive_type = new int(GL_TRIANGLE_STRIP);
-        vertex_array = new GLfloat[3 * 4];
-        GLfloat *tex_coord_array = tex_coord_arrays[0] = new GLfloat[2 * 4];
-        indices = new GLushort[4];
         num_primitives = 1;
+
+        UnrefDelete(primitive_length);
+        primitive_length = new GLuint(4);
+        Ref(primitive_length);
+
+        UnrefDelete(primitive_type);
+        primitive_type = new GLuint(GL_TRIANGLE_STRIP);
+        Ref(primitive_type);
+
+        UnrefDelete(vertex_array);
+        vertex_array = new GLfloat[3 * 4];
+        Ref(vertex_array);
+
+        UnrefDelete(tex_coord_arrays[0]);
+        GLfloat *tex_coord_array = tex_coord_arrays[0] = new GLfloat[2 * 4];
         tex_coord_array[0] = 0.0f; tex_coord_array[1] = 0.0f;
         tex_coord_array[2] = 0.0f; tex_coord_array[3] = 1.0f;
         tex_coord_array[4] = 1.0f; tex_coord_array[5] = 0.0f;
         tex_coord_array[6] = 1.0f; tex_coord_array[7] = 1.0f;
+        Ref(tex_coord_arrays[0]);
+
+        UnrefDelete(indices);
+        indices = new GLushort[4];
         indices[0] = 0; indices[1] = 1; indices[2] = 2; indices[3] = 3;
+        Ref(indices);
     }
     vertex_array[ 0] = x1; vertex_array[ 1] = y1; vertex_array[ 2] = z;
     vertex_array[ 3] = x1; vertex_array[ 4] = y2; vertex_array[ 5] = z;
@@ -218,6 +250,31 @@ void Geometry::DisableArrays()
         {
             glClientActiveTexture(GL_TEXTURE0 + i);
             glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+        }
+    }
+}
+
+void Geometry::FreeAllBuffers()
+{
+    for (std::map<GLfloat *, int>::iterator float_it = float_refcount.begin(); float_it != float_refcount.end(); ++float_it)
+    {
+        if ((float_it->second <=0) && float_it->first)
+        {
+            delete [] float_it->first;
+        }
+    }
+    for (std::map<GLuint *, int>::iterator uint_it = uint_refcount.begin(); uint_it != uint_refcount.end(); ++uint_it)
+    {
+        if ((uint_it->second <= 0) && uint_it->first)
+        {
+            delete [] uint_it->first;
+        }
+    }
+    for (std::map<GLushort *, int>::iterator ushort_it = ushort_refcount.begin(); ushort_it != ushort_refcount.end(); ++ushort_it)
+    {
+        if ((ushort_it->second <= 0) && ushort_it->first)
+        {
+            delete [] ushort_it->first;
         }
     }
 }

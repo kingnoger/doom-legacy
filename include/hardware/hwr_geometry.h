@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/07/07 19:24:44  hurdler
+// manage buffers properly
+//
 // Revision 1.2  2004/06/27 10:50:35  hurdler
 // new renderer things which will not break everyting else
 //
@@ -30,6 +33,7 @@
 #define hwr_geometry_h 1
 
 #include "hwr_states.h"
+#include <map>
 
 /**
   \brief Geometry class
@@ -61,14 +65,19 @@ private:
     GLfloat *normal_array;
     GLuint *color_array;
     GLushort *indices;
-    int *primitive_length;
-    int *primitive_type;
+    GLuint *primitive_length;
+    GLuint *primitive_type;
     GLushort num_primitives;
 
     static GLfloat *last_vertex_array;
     static GLfloat *last_tex_coord_arrays[State::MAX_TEXTURE_UNITS];
     static GLfloat *last_normal_array;
     static GLuint *last_color_array;
+
+    // kind of garbage collector (TODO: should be an hash_map instead of a map)
+    static std::map<GLfloat *, int> float_refcount;   // keep a reference count for all GLfloat pointers
+    static std::map<GLuint *, int> uint_refcount;     // keep a reference count for all GLuint pointers
+    static std::map<GLushort *, int> ushort_refcount; // keep a reference count for all GLishort pointers
 
     void EnableArrays();
 
@@ -79,9 +88,9 @@ public:
     /// Destroy a Geometry.
     ~Geometry();
     /// Set the length of each primitive of the Geometry.
-    void SetPrimitiveLength(int *length);
+    void SetPrimitiveLength(GLuint *length);
     /// Set the primitive type (GL_TRIANGLES, GL_TRIANGLE_STRIP, GL_TRIANGLE_FAN) of each Geometry's primitives.
-    void SetPrimitiveType(int *type);
+    void SetPrimitiveType(GLuint *type);
     /// Set the number of primitive in the Geometry.
     void SetNumPrimitives(int num);
     /// Change one of the attributes (VERTEX_ARRAY, COLOR_ARRAY, NORMAL_ARRAY, TEXCOORD_ARRAY, TEXCOORD_ARRAYi) of the Geometry.
@@ -96,6 +105,25 @@ public:
     void Draw();
     /// Disbale all arrays
     static void DisableArrays();
+
+    // memory management (TODO: for now we delete once we see the refcount is zero,
+    //                          we might delete all null refcount when not playing a map
+    //                          or when too much memory is already allocated for geometry)
+
+    /// Increment the reference count of the float buffer
+    inline static void Ref(GLfloat *buffer);
+    /// Increment the reference count of the unsigned int buffer
+    inline static void Ref(GLuint *buffer);
+    /// Increment the reference count of the unsigned short buffer
+    inline static void Ref(GLushort *buffer);
+    /// Free the memory allocated for the float buffer if it's not used anymore (refcount == 0)
+    inline static void UnrefDelete(GLfloat *buffer);
+    /// Free the memory allocated for unsigned int buffer if it's not used anymore (refcount == 0)
+    inline static void UnrefDelete(GLuint *buffer);
+    /// Free the memory allocated for the unsigned short buffer if it's not used anymore (refcount == 0)
+    inline static void UnrefDelete(GLushort *buffer);
+    /// Free the memory allocated for all non used buffers (refcount == 0), see TODO above
+    static void FreeAllBuffers();
 };
 
 inline void Geometry::SetTexturedVertex(int which, float x, float y, float z, float s, float t)
@@ -107,6 +135,45 @@ inline void Geometry::SetTexturedVertex(int which, float x, float y, float z, fl
     GLfloat *tex_coords = &tex_coord_arrays[0][which * 2];
     tex_coords[0] = s;
     tex_coords[1] = t;
+}
+
+inline void Geometry::Ref(GLfloat *buffer)
+{
+    float_refcount[buffer]++;
+}
+
+inline void Geometry::Ref(GLuint *buffer)
+{
+    uint_refcount[buffer]++;
+}
+
+inline void Geometry::Ref(GLushort *buffer)
+{
+    ushort_refcount[buffer]++;
+}
+
+inline void Geometry::UnrefDelete(GLfloat *buffer)
+{
+    if (buffer && (--float_refcount[buffer] == 0))
+    {
+        delete [] buffer;
+    }
+}
+
+inline void Geometry::UnrefDelete(GLuint *buffer)
+{
+    if (buffer && (--uint_refcount[buffer] == 0))
+    {
+        delete [] buffer;
+    }
+}
+
+inline void Geometry::UnrefDelete(GLushort *buffer)
+{
+    if (buffer && (--ushort_refcount[buffer] == 0))
+    {
+        delete [] buffer;
+    }
 }
 
 #endif
