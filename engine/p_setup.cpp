@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2003/04/26 19:03:26  hurdler
+// Being able to load an heretic map without sndseq (until it's officially put in legacy.wad)
+//
 // Revision 1.18  2003/04/26 12:01:13  smite-meister
 // Bugfixes. Hexen maps work again.
 //
@@ -680,7 +683,10 @@ void Map::LoadThings(int lump)
 	  // Ambient sound sequences
 	  if (ednum >= 1200 && ednum < 1210)
 	    {
-	      AmbientSeqs.push_back(SoundSeqs[ednum - 1200]);
+          if (SoundSeqs[ednum - 1200])
+	        AmbientSeqs.push_back(SoundSeqs[ednum - 1200]);
+          else
+            printf("WARNING: SNDSEQ not corret\n");
 	      continue;
 	    }
 
