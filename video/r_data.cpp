@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.24  2004/08/16 20:54:18  smite-meister
+// bugfix
+//
 // Revision 1.23  2004/08/15 18:08:30  smite-meister
 // palette-to-palette colormaps etc.
 //
@@ -259,8 +262,6 @@ static byte NearestColor(byte r, byte g, byte b)
 // create best possible colormap from one palette to another
 static byte *R_CreatePaletteConversionColormap(int wadnum)
 {
-  byte *usegamma = gammatable[cv_usegamma.value];
-
   int i = fc.FindNumForNameFile("PLAYPAL", wadnum);
   if (i == -1)
     {
@@ -271,6 +272,7 @@ static byte *R_CreatePaletteConversionColormap(int wadnum)
   if (fc.LumpLength(i) < int(256 * sizeof(RGB_t)))
     I_Error("Bad PLAYPAL lump in file %d!\n", wadnum);
 
+  byte *usegamma = gammatable[cv_usegamma.value];
   byte *colormap = (byte *)Z_Malloc(256, PU_STATIC, NULL);
   RGB_t* pal = (RGB_t *)fc.CacheLumpNum(i, PU_CACHE);
 

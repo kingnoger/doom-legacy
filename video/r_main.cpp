@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2004/08/16 20:54:18  smite-meister
+// bugfix
+//
 // Revision 1.19  2004/08/15 18:08:30  smite-meister
 // palette-to-palette colormaps etc.
 //
@@ -1013,25 +1016,12 @@ void R_ServerInit()
 
 
 void R_InitColormaps();
-void R_Init8to16();
 
 /// Initializes the client renderer.
 /// The server part has already been initialized in R_ServerInit.
 void R_Init()
 {
   //TestAnims();
-
-  //fab highcolor maps
-  if (vid.BytesPerPixel == 2)
-    {
-      CONS_Printf("\nInitHighColor...");
-      R_Init8to16();
-    }
-
-  // create palette conversion colormaps if necessary (palette must be set!)
-  if (devparm)
-    CONS_Printf("InitPaletteConversion...\n");
-  tc.InitPaletteConversion();
 
   // prepare the window border textures
   R_InitViewBorder();

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/08/16 20:54:18  smite-meister
+// bugfix
+//
 // Revision 1.13  2004/08/15 18:08:30  smite-meister
 // palette-to-palette colormaps etc.
 //
@@ -329,6 +332,8 @@ void Video::SetMode()
   Recalc();
 }
 
+void R_Init8to16();
+
 // Starts and initializes the video subsystem
 void Video::Startup()
 {
@@ -345,6 +350,17 @@ void Video::Startup()
 
   LoadPalette("PLAYPAL");
   SetPalette(0);
+
+
+  //fab highcolor maps
+  if (BytesPerPixel == 2)
+    {
+      CONS_Printf("\nInitHighColor...");
+      R_Init8to16();
+    }
+
+  // create palette conversion colormaps if necessary (palette must be set!)
+  tc.InitPaletteConversion();
 
   buffer = NULL;
 
