@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/11/23 19:07:41  smite-meister
+// New startup order
+//
 // Revision 1.5  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -255,13 +258,4 @@ void BloodTime_OnChange()
     states[S_BLOOD3].tics = (cv_bloodtime.value*TICRATE) - 16;
 
     CONS_Printf ("blood lasts for %d seconds\n", cv_bloodtime.value);
-}
-
-
-void D_AddDeathmatchCommands()
-{
-    CV_RegisterVar (&cv_solidcorpse);
-    CV_RegisterVar (&cv_bloodtime);
-    // BP:not realy in deathmatch but is just here
-    CV_RegisterVar (&cv_translucency);
 }

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/11/23 19:07:42  smite-meister
+// New startup order
+//
 // Revision 1.2  2002/12/03 10:23:46  smite-meister
 // Video system overhaul
 //
@@ -87,8 +90,8 @@ extern boolean winnt;
 extern BOOL   bDX0300;
 #endif
 
-// Called by DoomMain.
-void I_InitJoystick ();
+// basic system initialization
+void I_SysInit();
 
 // return free and total physical memory in the system
 ULONG I_GetFreeMem(ULONG *total);
@@ -146,7 +149,8 @@ void I_Tactile (int on, int off, int total);
 //                the return code 0 of I_Quit();
 void I_OutputMsg (char *error, ...);
 
-void I_StartupMouse ();
+void I_InitJoystick();
+void I_StartupMouse();
 void I_StartupMouse2();
 
 // setup timer irq and user timer routine.

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/11/23 19:07:42  smite-meister
+// New startup order
+//
 // Revision 1.6  2003/02/23 22:49:32  smite-meister
 // FS is back! L2 cache works.
 //
@@ -312,19 +315,16 @@ void Video::SetMode()
   Recalc();
 }
 
-// was SCR_Startup
-//  do some initial settings for the game loading screen
-//
+// Starts and initializes the video subsystem
 void Video::Startup()
 {
-  CONS_Printf("I_StartupGraphics...\n");
+  if (dedicated)
+    return;
+
   I_StartupGraphics();
 
   modenum = 0; // not exactly true, but doesn't matter here.
   setmodeneeded = 0;
-
-  if (dedicated)
-    return;
 
   CV_RegisterVar(&cv_ticrate);
   // FIXME make a real font system!

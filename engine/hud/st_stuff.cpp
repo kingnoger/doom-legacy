@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2003/11/23 19:07:41  smite-meister
+// New startup order
+//
 // Revision 1.13  2003/05/30 13:34:47  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -1578,12 +1581,6 @@ void ST_CreateOverlay()
 }
 
 consvar_t cv_stbaroverlay = {"overlay", "kahmf", CV_SAVE|CV_CALL, NULL, ST_CreateOverlay};
-
-
-void ST_AddCommands()
-{
-  CV_RegisterVar(&cv_stbaroverlay);
-}
 
 /*
 static inline int SCY( int y)

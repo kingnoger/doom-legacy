@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/11/23 19:07:42  smite-meister
+// New startup order
+//
 // Revision 1.3  2003/02/23 22:49:31  smite-meister
 // FS is back! L2 cache works.
 //
@@ -36,11 +39,6 @@
 
 #ifndef R_DATA_H
 #define R_DATA_H 1
-
-
-#ifdef __GNUG__
-#pragma interface
-#endif
 
 // Texture definitions in the WAD file. Assumes that int = 32 bits, short = 16 bits
 
@@ -107,8 +105,6 @@ struct texture_t
 // all loaded and prepared textures from the start of the game
 extern texture_t**     textures;
 
-//extern lighttable_t    *colormaps;
-extern struct CV_PossibleValue_t Color_cons_t[];
 
 // Load TEXTURE1/TEXTURE2/PNAMES definitions, create lookup tables
 void  R_LoadTextures();

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2003/11/23 19:07:42  smite-meister
+// New startup order
+//
 // Revision 1.12  2003/06/20 20:56:08  smite-meister
 // Presentation system tweaked
 //
@@ -1056,9 +1059,7 @@ static void TestAnims()
 void R_Init()
 {
   //TestAnims();
-  if (dedicated)
-    return;
-    
+
   //added:24-01-98: screensize independent
   if(devparm)
     CONS_Printf ("\nR_InitData");

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/11/23 19:07:41  smite-meister
+// New startup order
+//
 // Revision 1.10  2003/05/11 21:23:51  smite-meister
 // Hexen fixes
 //
@@ -247,23 +250,17 @@ HUD::HUD()
 };
 
 
-void Command_Say_f();
-void Command_Sayto_f();
-void Command_Sayteam_f();
-void Got_Saycmd(char **p,int playernum);
-
 void HUD::Startup()
 {
-  COM_AddCommand ("say"    , Command_Say_f);
-  COM_AddCommand ("sayto"  , Command_Sayto_f);
-  COM_AddCommand ("sayteam", Command_Sayteam_f);
-  RegisterNetXCmd(XD_SAY, Got_Saycmd);
+  extern consvar_t cv_stbaroverlay;
 
   // set shift translation table
   if (language == la_french)
     shiftxform = french_shiftxform;
   else
     shiftxform = english_shiftxform;
+
+  CV_RegisterVar(&cv_stbaroverlay);
 
   // first initialization
   Init();
@@ -280,11 +277,6 @@ void ST_LoadDoomData();
 
 void HUD::Init()
 {
-  extern bool dedicated;
-
-  if (dedicated)
-    return;
-
   int startlump, endlump;
   int  i;
 

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/11/23 19:07:42  smite-meister
+// New startup order
+//
 // Revision 1.7  2003/04/24 20:30:27  hurdler
 // Remove lots of compiling warnings
 //
@@ -631,7 +634,7 @@ bool I_StartupGraphics()
   // video modes are available, but...
   // vidInfo->vfmt is the pixelformat of the "best" video mode available
 
-  CONS_Printf("Bpp = %d, bpp = %d\n", vidInfo->vfmt->BytesPerPixel, vidInfo->vfmt->BitsPerPixel);
+  //CONS_Printf("Bpp = %d, bpp = %d\n", vidInfo->vfmt->BytesPerPixel, vidInfo->vfmt->BitsPerPixel);
 
   // list all available video modes corresponding to the "best" pixelformat
   modeList = SDL_ListModes(NULL, SDL_FULLSCREEN | surfaceFlags);

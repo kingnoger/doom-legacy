@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/11/23 19:07:42  smite-meister
+// New startup order
+//
 // Revision 1.3  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -479,10 +482,11 @@ tic_t  I_GetTime ()
 //
 // I_Init
 //
-void I_Init ()
+void I_SysInit()
 {
-  I_StartupSound();
-  I_InitMusic();
+  I_StartupTimer(); // does nothing in SDL
+  //I_StartupSound();
+  //I_InitMusic();
 }
 
 //

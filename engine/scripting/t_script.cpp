@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.6  2003/11/23 19:07:42  smite-meister
+// New startup order
+//
 // Revision 1.5  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -117,10 +120,8 @@ static void free_runningscript(runningscript_t *runscr)
 
 void init_functions();
 
-//     T_Init()
-//
-//    called at program start
 
+//    called at program start
 void T_Init()
 {
   init_variables();
@@ -743,11 +744,3 @@ void spec_script()
   rover = current_section->end + 1;
 }
 
-
-// console commands
-void T_AddCommands()
-{
-  COM_AddCommand("t_dumpscript",  COM_T_DumpScript_f);
-  COM_AddCommand("t_runscript",   COM_T_RunScript_f);
-  COM_AddCommand("t_running",     COM_T_Running_f);
-}

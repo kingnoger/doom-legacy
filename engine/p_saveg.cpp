@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/11/23 19:07:41  smite-meister
+// New startup order
+//
 // Revision 1.10  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -2040,9 +2043,6 @@ int GameInfo::Unserialize(LArchive &a)
   // misc shit
   a << n;
   P_SetRandIndex(n);
-
-  n = P_GetRandIndex();
-  a << n;
 
   return 0;
 }

@@ -10,7 +10,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// need this 19990118 by Kin
 #include "doomdef.h"
 #include "w_wad.h"
 #include "z_zone.h"

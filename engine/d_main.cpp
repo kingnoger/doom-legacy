@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2003/11/23 19:07:41  smite-meister
+// New startup order
+//
 // Revision 1.20  2003/11/12 11:07:16  smite-meister
 // Serialization done. Map progression.
 //
@@ -195,7 +198,6 @@
 #include "hardware/hw3sound.h"
 
 
-void P_Info_AddCommands();
 
 bool dedicated;
 bool devparm;        // started game with -devparm
@@ -444,21 +446,17 @@ void D_PageDrawer(char *lumpname)
 //  draw current display, possibly wiping it from the previous
 //
 
-#ifdef WIN32_DIRECTX
-void I_DoStartupMouse();   //win_sys.c
-#endif
 
-// added comment : there is a wipe at each change of the gamestate
-
-CV_PossibleValue_t screenslink_cons_t[] =
-  {{0,"None"},{wipe_ColorXForm+1,"Color"},{wipe_Melt+1,"Melt"},{0,NULL}};
+// there is a wipe at each change of the gamestate
+CV_PossibleValue_t screenslink_cons_t[] = {
+  {0,"None"},{wipe_ColorXForm+1,"Color"},{wipe_Melt+1,"Melt"},{0,NULL}
+};
 
 consvar_t cv_screenslink    = {"screenlink","2", CV_SAVE,screenslink_cons_t};
 
 void D_Display()
 {
   extern  int             scaledviewwidth;
-  //static  bool             menuactivestate = false;
   static  gamestate_t         oldgamestate = GS_WIPE;
   static  int                 borderdrawcount;
   tic_t                       nowtime;
@@ -677,7 +675,6 @@ tic_t rendergametic;
 void D_DoomLoop()
 {
   // timekeeping for the game
-  //tic_t rendertimeout = -1;
   tic_t oldtics, nowtics, elapsedtics, rendertimeout = 0;
 
   if (demorecording)
@@ -688,14 +685,6 @@ void D_DoomLoop()
 
   // end of loading screen: CONS_Printf() will no more call FinishUpdate()
   con_startup = false;
-
-  //CONS_Printf("I_StartupKeyboard...\n");
-  //I_StartupKeyboard();
-
-#ifdef WIN32_DIRECTX
-  CONS_Printf("I_StartupMouse...\n");
-  I_DoStartupMouse();
-#endif
 
   oldtics = I_GetTime();
 
@@ -784,19 +773,15 @@ static char *startupwadfiles[MAX_WADFILES];
 
 static void D_AddFile(const char *file)
 {
-  int   i;
-
-  for (i = 0 ; startupwadfiles[i] ; i++);
+  static int i = 0;
 
   if (i >= MAX_WADFILES)
     return;
 
   char *newfile = (char *)malloc(strlen(file)+1);
-  //strcpy(newfile, path);
-  //strcat(newfile, "/");
   strcpy(newfile, file);
 
-  startupwadfiles[i] = newfile;
+  startupwadfiles[i++] = newfile;
 }
 
 
@@ -864,46 +849,6 @@ void D_IdentifyVersion()
   // will be overwritten in case of -cdrom or linux home
   sprintf(configfile, "%s/"CONFIGFILENAME, waddir);
 
-  /*
-  if (M_CheckParm ("-shdev")) // WHAT is this?
-    {
-      game.mode = gm_doom1s;
-      devparm = true;
-      D_AddFile (DEVDATA"doom1.wad");
-      D_AddFile (DEVMAPS"data_se/texture1.lmp");
-      D_AddFile (DEVMAPS"data_se/pnames.lmp");
-      strcpy (configfile,DEVDATA CONFIGFILENAME);
-    }
-  else if (M_CheckParm ("-regdev"))
-    {
-      game.mode = gm_doom1;
-      devparm = true;
-      D_AddFile (DEVDATA"doom.wad");
-      D_AddFile (DEVMAPS"data_se/texture1.lmp");
-      D_AddFile (DEVMAPS"data_se/texture2.lmp");
-      D_AddFile (DEVMAPS"data_se/pnames.lmp");
-      strcpy (configfile,DEVDATA CONFIGFILENAME);
-      return;
-    }
-  else if (M_CheckParm ("-comdev"))
-    {
-      game.mode = gm_doom2;
-      devparm = true;
-      // I don't bother
-	// if(plutonia)
-	// D_AddFile (DEVDATA"plutonia.wad");
-	// else if(tnt)
-	// D_AddFile (DEVDATA"tnt.wad");
-	// else
-      D_AddFile (DEVDATA"doom2.wad");
-      D_AddFile (DEVMAPS"cdata/texture1.lmp");
-      D_AddFile (DEVMAPS"cdata/pnames.lmp");
-      strcpy (configfile,DEVDATA CONFIGFILENAME);
-      return;
-    }
-  else
-  */
-
   // external Legacy data file
   D_AddFile("legacy.wad");
 
@@ -922,17 +867,6 @@ void D_IdentifyVersion()
 
       D_AddFile(s);
 
-      /*
-      // BP: big hack for fullpath wad, we should use wadpath instead in d_addfile
-      char pathiwad[_MAX_PATH+16];
-      if (s[0] == '/' || s[0] == '\\' || s[1]==':')
-	// full path
-	sprintf(pathiwad, "%s", s);
-      else
-	sprintf(pathiwad, "%s/%s", waddir, s);     
-	D_AddFile(pathiwad);      
-      */
-      
       int i;
       // point to start of filename only
       for (i = strlen(s) - 1; i >= 0; i--)
@@ -1043,9 +977,9 @@ void D_IdentifyVersion()
 }
 
 
-/* ======================================================================== */
+// ========================================================================
 // Just print the nice red titlebar like the original DOOM2 for DOS.
-/* ======================================================================== */
+// ========================================================================
 #ifdef PC_DOS
 void D_Titlebar(char *title1, char *title2)
 {
@@ -1096,25 +1030,6 @@ void D_MakeTitleString(char *s)
 
 void D_CheckWadVersion()
 {
-/* BP: disabled since this should work fine now...
-    // check main iwad using demo1 version 
-    lump = fc.FindNumForNameFirst("demo1");
-    // well no demo1, this is not a main wad file
-    if(lump == -1)
-        I_Error("%s is not a Main wad file (IWAD)\n"
-                "try with Doom.wad or Doom2.wad\n"
-                "\n"
-                "Use -nocheckwadversion to remove this check,\n"
-                "but this can cause Legacy to hang\n",wadfiles[0]->filename);
-    fc.ReadLumpHeader (lump,&wadversion,1);
-    if (wadversion<109)
-        I_Error("Your %s file is version %d.%d\n"
-                "Doom Legacy need version 1.9\n"
-                "Upgrade your version to 1.9 using IdSofware patch\n"
-                "\n"
-                "Use -nocheckwadversion to remove this check,\n"
-                "but this can cause Legacy to hang\n",wadfiles[0]->filename,wadversion/100,wadversion%100);
-*/
   // check version of legacy.wad using version lump
   int wadversion = 0;
   int lump = fc.FindNumForName("VERSION", true);
@@ -1138,6 +1053,9 @@ void D_CheckWadVersion()
 
 
 extern char savegamename[256]; // temporary, FIXME
+
+void SV_Init();
+void CL_Init();
 
 //
 // D_DoomMain
@@ -1233,14 +1151,10 @@ void D_DoomMain()
 	sprintf(legacyhome, "%s/"DEFAULTDIR, userhome);
 	// little hack to allow a different config file for opengl
 	// may be a problem if opengl cannot really be started
-	if(M_CheckParm("-opengl"))
-	  {
-	    sprintf(configfile, "%s/gl"CONFIGFILENAME, legacyhome);
-	  }
+	if (M_CheckParm("-opengl"))
+	  sprintf(configfile, "%s/gl"CONFIGFILENAME, legacyhome);
 	else
-	  {
-	    sprintf(configfile, "%s/"CONFIGFILENAME, legacyhome);
-	  }
+	  sprintf(configfile, "%s/"CONFIGFILENAME, legacyhome);
       
 	// can't use sprintf since there is %d in savegamename
 	strcatbf(savegamename, legacyhome, "/");
@@ -1248,17 +1162,8 @@ void D_DoomMain()
       }
   }
 
-  if (M_CheckParm("-cdrom"))
-    {
-      CONS_Printf(D_CDROM);
-      I_mkdir("c:\\doomdata", S_IRWXU);
-      strcpy(configfile,"c:/doomdata/"CONFIGFILENAME);
-      strcpy(savegamename,text[CDROM_SAVEI_NUM]);
-    }
-
   // add any files specified on the command line with -file wadfile
   // to the wad list
-
   if (M_CheckParm("-file"))
     {
       // the parms after p are wadfile/lump names,
@@ -1283,11 +1188,28 @@ void D_DoomMain()
   //  video, HUD, console (now consvars can be registered), read config file,
   //  menu, renderer, sound, scripting.
 
-
   // init zone memory management
   CONS_Printf(text[Z_INIT_NUM]);
   Z_Init(); 
-  
+
+  // initialize file cache
+  CONS_Printf(text[W_INIT_NUM]);  
+  if (!fc.InitMultipleFiles(startupwadfiles))
+    CONS_Error("A WAD file was not found\n");
+
+  // see that legacy.wad version matches program version
+  if (!M_CheckParm("-nocheckwadversion"))
+    D_CheckWadVersion();
+
+  // the command buffer
+  CONS_Printf("COM_Init: Init the command buffer\n");
+  COM_Init();
+
+  CONS_Printf("Sys_Init: Init system-specific stuff.\n");
+  I_SysInit();
+
+  // TODO init keybindings and controls, init network stuff 
+
   // adapt tables to legacy needs
   P_PatchInfoTables();
 
@@ -1300,116 +1222,33 @@ void D_DoomMain()
       HereticPatchEngine();
       break;
     default:
-      DoomPatchEngine(); // FIXME, TODO temporary solution, we must be able to switch game.mode anytime!
+      DoomPatchEngine(); // TODO temporary solution, we must be able to switch game.mode anytime!
     }
-
-  // initialize file cache
-  CONS_Printf(text[W_INIT_NUM]);  
-  if (!fc.InitMultipleFiles(startupwadfiles))
-    CONS_Error("A WAD file was not found\n");
-
-  // see that legacy.wad version matches program version
-  if (!M_CheckParm("-nocheckwadversion"))
-    D_CheckWadVersion();
-
-  //Hurdler: someone wants to keep those lines?
-  //BP: i agree with you why should be registered to play someone wads ?
-  //    unfotunately most addistional wad have more texture and monsters 
-  //    that sharware wad do, so there will miss resourse :(
-  //smite-meister: So what. Then the game will tell them so. In theory
-  // there could be free wads that have all necessary resources included.
-
-  /*
-  // Check for -file in shareware
-  if (modified)
-    {
-      // These are the lumps that will be checked in IWAD,
-      // if any one is not present, execution will be aborted.
-      char name[23][9]= {
-	  "e2m1","e2m2","e2m3","e2m4","e2m5","e2m6","e2m7","e2m8","e2m9",
-	  "e3m1","e3m3","e3m3","e3m4","e3m5","e3m6","e3m7","e3m8","e3m9",
-	  "dphoof","bfgga0","heada1","cybra1","spida1d1"};
-      int i;
-
-      if (game.mode == gm_doom1s)
-	I_Error("\nYou cannot -file with the shareware "
-		"version. Register!");
-      
-      // Check for fake IWAD with right name,
-      // but w/o all the lumps of the registered version.
-      if (game.mode == gm_doom1)
-	for (i = 0;i < 23; i++)
-	  if (fc.FindNumForName(name[i]) < 0)
-	    I_Error("\nThis is not the registered version.");
-      // If additonal PWAD files are used, print modified banner
-      CONS_Printf( text[MODIFIED_NUM] );
-    }
-  */
-
-  // init cheat_xlate_table (not necessary)
-  //cht_Init(); 
-
-  CONS_Printf("I_StartupTimer...\n");
-  I_StartupTimer(); // does nothing in SDL
-
-  // now initted automatically by use_mouse var code
-  //CONS_Printf("I_StartupMouse...\n");
-  //I_StartupMouse();
-
-  // now initialised automatically by use_joystick var code
-  //CONS_Printf(text[I_INIT_NUM]);
-  //I_InitJoystick();
 
   // we need to check for dedicated before initialization of some subsystems
-  dedicated = M_CheckParm("-dedicated") != 0;
+  dedicated = M_CheckParm("-dedicated");
+  nosound = M_CheckParm("-nosound");
+  nomusic = M_CheckParm("-nomusic");
 
-  // set the video mode, graphics scaling properties, load palette
-  CONS_Printf("Video Startup...\n");
-  vid.Startup();
+  // Server init
+  SV_Init();
 
-  // we need the font of the console
-  // HUD font, crosshairs, say commands
-  CONS_Printf(text[HU_INIT_NUM]);
-  CONS_Printf(text[ST_INIT_NUM]);
-  hud.Startup();
+  // Client init
+  if (!dedicated) 
+    CL_Init();
 
-  // add basic console commands (echo, exec etc.)
-  COM_Init();
-  // startup console
-  CON_Init();
-
-  //-------------------------------------- CONSOLE is on
-
-  D_RegisterClientCommands(); //Hurdler: be sure that this is called before D_CheckNetGame
-  // commands for new Legacy features
-
-  D_AddDeathmatchCommands();
-
-  ST_AddCommands();
-
-#ifdef FRAGGLESCRIPT
-  T_AddCommands();
-#endif
-
-  P_Info_AddCommands();
-
-  // renderer-related console commands
-  R_RegisterEngineStuff();
-
-  S_RegisterSoundStuff();
-
-  CV_RegisterVar(&cv_screenslink);
-
-  //Fab:29-04-98: do some dirty chatmacros strings initialisation
-  HU_HackChatmacros();
+  // FIXME should all the consvars be registered by now?
   //------------------------------------- CONFIG.CFG
   // loads and executes config file
   M_FirstLoadConfig(); // WARNING : this does a "COM_BufExecute()"
 
-  I_PrepareVideoModeList(); // Regenerate Modelist according to cv_fullscreen
-
-  // set user default mode or mode set at cmdline
-  SCR_CheckDefaultMode();
+  if (!dedicated)
+    {
+      // FIXME replace these with cv_fullscreen_onchange or something...
+      I_PrepareVideoModeList(); // Regenerate Modelist according to cv_fullscreen
+      // set user default mode or mode set at cmdline
+      SCR_CheckDefaultMode();
+    }
 
   game.wipestate = game.state;
   //-------------------------------------- COMMAND LINE PARAMS
@@ -1442,38 +1281,9 @@ void D_DoomMain()
       COM_BufAddText(va("timelimit %s\n",s ));
     }
 
-  /*
-  if (M_CheckParm ("-avg"))
-    {
-      COM_BufAddText("timelimit 20\n");
-      CONS_Printf(text[AUSTIN_NUM]);
-    }
-  */
-
   // push all "+" parameter at the command buffer
   M_PushSpecialParameters();
-
-  // setup menu
-  CONS_Printf(text[M_INIT_NUM]);
-  Menu::Startup();
-
-  // init renderer
-  CONS_Printf(text[R_INIT_NUM]);
-  R_Init();
  
-  // set up sound and music
-  CONS_Printf(text[S_SETSOUND_NUM]);
-
-  nosound = M_CheckParm("-nosound");
-  nomusic = M_CheckParm("-nomusic");
-  S.Startup();
-
-#ifdef FRAGGLESCRIPT
-  ////////////////////////////////
-  // SoM: Init FraggleScript
-  ////////////////////////////////
-  T_Init();
-#endif
 
   // ------------- starting the game ----------------
 

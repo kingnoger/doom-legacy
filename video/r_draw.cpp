@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/11/23 19:07:42  smite-meister
+// New startup order
+//
 // Revision 1.5  2003/06/29 17:33:59  smite-meister
 // VFile system, PAK support, Hexen bugfixes
 //
@@ -255,24 +258,6 @@ void R_RecalcFuzzOffsets()
 // =========================================================================
 //                   TRANSLATION COLORMAP CODE
 // =========================================================================
-
-char *Color_Names[MAXSKINCOLORS]={
-   "Green",
-   "Gray" ,
-   "Brown",
-   "Red"  ,
-   "Light gray" ,
-   "Light brown",
-   "Light red"  ,
-   "Light blue" ,
-   "Blue"       ,
-   "Yellow"     ,
-   "Beige"
-};
-
-CV_PossibleValue_t Color_cons_t[]={{0,NULL},{1,NULL},{2,NULL},{3,NULL},
-                                   {4,NULL},{5,NULL},{6,NULL},{7,NULL},
-                                   {8,NULL},{9,NULL},{10,NULL},{0,NULL}};
 
 //  Creates the translation tables to map the green color ramp to
 //  another ramp (gray, brown, red, ...)

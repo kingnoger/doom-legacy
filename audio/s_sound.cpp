@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2003/11/23 19:07:41  smite-meister
+// New startup order
+//
 // Revision 1.17  2003/11/12 11:07:14  smite-meister
 // Serialization done. Map progression.
 //
@@ -373,14 +376,43 @@ SoundSystem::SoundSystem()
   soundvolume = musicvolume = -1; // force hardware update
 }
 
-// was S_Init
+
 // Initializes sound hardware, sets up channels.
 // Sound and music volume is set before first update.
 // allocates channel buffer, sets S_sfx lookup.
 void SoundSystem::Startup()
 {
-  if (dedicated)
-    return;
+  CV_RegisterVar(&stereoreverse);
+  CV_RegisterVar(&precachesound);
+
+#ifdef SNDSERV
+  CV_RegisterVar(&sndserver_cmd);
+  CV_RegisterVar(&sndserver_arg);
+#endif
+#ifdef MUSSERV
+  CV_RegisterVar(&musserver_cmd);
+  CV_RegisterVar(&musserver_arg);
+#endif
+#ifdef SURROUND
+  CV_RegisterVar(&surround);
+#endif
+
+#ifdef __MACOS__        //mp3 playlist stuff
+  {
+    int i;
+    for (i=0;i<PLAYLIST_LENGTH;i++)
+      {
+	user_songs[i].name = malloc(7);
+	sprintf(user_songs[i].name, "song%i%i",i/10,i%10);
+	user_songs[i].defaultvalue = malloc(1);
+	*user_songs[i].defaultvalue = 0;
+	user_songs[i].flags = CV_SAVE;
+	user_songs[i].PossibleValue = NULL;
+	CV_RegisterVar (&user_songs[i]);
+      }
+    CV_RegisterVar (&play_mode);
+  }
+#endif
 
   I_StartupSound();
   I_InitMusic();
@@ -981,50 +1013,6 @@ void SoundSystem::UpdateSounds()
 	StopChannel(cnum);
     }
 }
-
-
-//=====================================================================
-// non-class functions
-
-void S_RegisterSoundStuff()
-{
-  if (dedicated)
-    return;
-    
-  //added:11-04-98: stereoreverse
-  CV_RegisterVar(&stereoreverse);
-  CV_RegisterVar(&precachesound);
-
-#ifdef SNDSERV
-  CV_RegisterVar(&sndserver_cmd);
-  CV_RegisterVar(&sndserver_arg);
-#endif
-#ifdef MUSSERV
-  CV_RegisterVar(&musserver_cmd);
-  CV_RegisterVar(&musserver_arg);
-#endif
-#ifdef SURROUND
-  CV_RegisterVar(&surround);
-#endif
-
-#ifdef __MACOS__        //mp3 playlist stuff
-  {
-    int i;
-    for (i=0;i<PLAYLIST_LENGTH;i++)
-      {
-	user_songs[i].name = malloc(7);
-	sprintf(user_songs[i].name, "song%i%i",i/10,i%10);
-	user_songs[i].defaultvalue = malloc(1);
-	*user_songs[i].defaultvalue = 0;
-	user_songs[i].flags = CV_SAVE;
-	user_songs[i].PossibleValue = NULL;
-	CV_RegisterVar (&user_songs[i]);
-      }
-    CV_RegisterVar (&play_mode);
-  }
-#endif
-}
-
 
 
 //=========================================================

@@ -22,6 +22,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.3  2003/11/23 19:07:41  smite-meister
+// New startup order
+//
 // Revision 1.2  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -895,29 +898,6 @@ int GameInfo::Read_MAPINFO(int lump)
 }
 
 
-//==============================================
-// Console Commands
-
-
-void COM_MapInfo_f()
-{
-  if (!consoleplayer || !consoleplayer->mp)
-    return;
-
-  Map *m = consoleplayer->mp;
-  CONS_Printf("%s\n", m->info->nicename.c_str());
-  CONS_Printf("%s\n", m->info->author.c_str());
-}
-
-//void COM_Levelname_f() { CONS_Printf("%s\n", game.currentlevel->levelname.c_str()); }
-
-
-void P_Info_AddCommands()
-{
-  COM_AddCommand("mapinfo",    COM_MapInfo_f);
-  //COM_AddCommand("levelname",  COM_Levelname_f);
-}
-
 
 //==============================================
 // GameInfo utilities related to MapInfo and MapCluster
@@ -953,4 +933,18 @@ MapInfo *GameInfo::FindMapInfo(int c)
     return NULL;
 
   return (*i).second;
+}
+
+
+//==============================================
+// Console Commands
+
+void Command_MapInfo_f()
+{
+  if (!consoleplayer || !consoleplayer->mp)
+    return;
+
+  Map *m = consoleplayer->mp;
+  CONS_Printf("%s\n", m->info->nicename.c_str());
+  CONS_Printf("%s\n", m->info->author.c_str());
 }

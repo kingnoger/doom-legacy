@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,34 +18,15 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:38  hurdler
-// Initial revision
+// Revision 1.2  2003/11/23 19:07:42  smite-meister
+// New startup order
 //
-// Revision 1.3  2002/07/01 21:01:07  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:36  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.5  2001/12/26 17:24:46  hurdler
-// Update Linux version
-//
-// Revision 1.4  2001/08/12 15:21:04  bpereira
-// see my log
-//
-// Revision 1.3  2000/03/29 19:39:48  bpereira
-// no message
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
+// Revision 1.1.1.1  2002/11/16 14:18:38  hurdler
+// Initial C++ version of Doom Legacy
 //
 //
 // DESCRIPTION:
-//
-// Commandline argument processing
+//   Commandline argument processing
 //
 //-----------------------------------------------------------------------------
 
@@ -65,7 +46,7 @@ static int      found = 0;
 // in the program's command line arguments.
 // Returns the argument number (1 to argc-1)
 // or 0 if not present
-int M_CheckParm (char *check)
+int M_CheckParm(char *check)
 {
   int         i;
 
@@ -83,7 +64,7 @@ int M_CheckParm (char *check)
 
 // return true if there is available parameters
 // called after M_CheckParm
-bool M_IsNextParm(void)
+bool M_IsNextParm()
 {
   if(found > 0 && found+1 < myargc && myargv[found+1][0] != '-' && myargv[found+1][0] != '+')
     return true;
@@ -92,43 +73,43 @@ bool M_IsNextParm(void)
 
 // return the next parameter after a M_CheckParm
 // NULL if not found use M_IsNext to find if there is a parameter
-char *M_GetNextParm(void)
+char *M_GetNextParm()
 {
-    if(M_IsNextParm())
+  if(M_IsNextParm())
     {
-        found++;
-        return myargv[found];
+      found++;
+      return myargv[found];
     }
-    return NULL;
+  return NULL;
 }
 
 // push all parameters begining by '+'
-void M_PushSpecialParameters( void )
+void M_PushSpecialParameters()
 {
-    int     i;
-    char    s[256];
-    bool onetime=false;
+  int     i;
+  char    s[256];
+  bool onetime=false;
 
-    for (i = 1;i<myargc;i++)
+  for (i = 1;i<myargc;i++)
     {
-        if ( myargv[i][0]=='+' )
+      if ( myargv[i][0]=='+' )
         {
-            strcpy(s,&myargv[i][1]);
-            i++;
+	  strcpy(s,&myargv[i][1]);
+	  i++;
 
-            // get the parameter of the command too
-            for(;i<myargc && myargv[i][0]!='+' && myargv[i][0]!='-' ;i++)
+	  // get the parameter of the command too
+	  for(;i<myargc && myargv[i][0]!='+' && myargv[i][0]!='-' ;i++)
             {
-                strcat(s," ");
-                if(!onetime) { strcat(s,"\"");onetime=true; }
-                strcat(s,myargv[i]);
+	      strcat(s," ");
+	      if(!onetime) { strcat(s,"\"");onetime=true; }
+	      strcat(s,myargv[i]);
             }
-            if( onetime )    { strcat(s,"\"");onetime=false; }
-            strcat(s,"\n");
+	  if( onetime )    { strcat(s,"\"");onetime=false; }
+	  strcat(s,"\n");
 
-            // push it
-            COM_BufAddText (s);
-            i--;
+	  // push it
+	  COM_BufAddText (s);
+	  i--;
         }
     }
 }
@@ -136,7 +117,7 @@ void M_PushSpecialParameters( void )
 //
 // Find a Response File
 //
-void M_FindResponseFile (void)
+void M_FindResponseFile()
 {
 #define MAXARGVS        256
 
