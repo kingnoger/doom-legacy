@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2003/11/27 11:28:26  smite-meister
+// Doom/Heretic startup bug fixed
+//
 // Revision 1.11  2003/11/23 19:07:41  smite-meister
 // New startup order
 //
@@ -114,6 +117,7 @@ enum consistency_marker_t
 //==============================================
 // Marshalling functions for various Thinkers
 //==============================================
+// FIXME all the marshalling funcs have to be able to handle NULL in pointer fields!
 
 int acs_t::Marshal(LArchive &a)
 {

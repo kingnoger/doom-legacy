@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/11/27 11:28:26  smite-meister
+// Doom/Heretic startup bug fixed
+//
 // Revision 1.7  2003/11/12 11:07:23  smite-meister
 // Serialization done. Map progression.
 //
@@ -405,7 +408,7 @@ void A_MinotaurRoam(DActor *actor)
       actor->movedir = P_Random() % 8;
       FaceMovementDirection(actor);
     }
-  if (!P_Move(actor))
+  if (!actor->P_Move())
     {
       // Turn
       if (P_Random() & 1)
@@ -540,9 +543,9 @@ void A_MinotaurChase(DActor *actor)
     }
 
   // chase towards target
-  if (!P_Move(actor))
+  if (!actor->P_Move())
     {
-      P_NewChaseDir(actor);
+      actor->P_NewChaseDir();
     }
 
   // Active sound
@@ -901,7 +904,7 @@ void A_SerpentChase(DActor *actor)
     {
       actor->eflags &= ~MFE_JUSTATTACKED;
       if (game.skill != sk_nightmare)
-	P_NewChaseDir (actor);
+	actor->P_NewChaseDir();
       return;
     }
 
@@ -933,14 +936,14 @@ void A_SerpentChase(DActor *actor)
   oldX = actor->x;
   oldY = actor->y;
   oldFloor = actor->subsector->sector->floorpic;
-  if (--actor->movecount<0 || !P_Move (actor))
+  if (--actor->movecount<0 || !actor->P_Move())
     {
-      P_NewChaseDir (actor);
+      actor->P_NewChaseDir();
     }
   if(actor->subsector->sector->floorpic != oldFloor)
     {
       actor->TryMove(oldX, oldY, true);
-      P_NewChaseDir (actor);
+      actor->P_NewChaseDir();
     }
 
   //
@@ -1102,7 +1105,7 @@ void A_SerpentWalk(DActor *actor)
     {
       actor->eflags &= ~MFE_JUSTATTACKED;
       if (game.skill != sk_nightmare)
-	P_NewChaseDir (actor);
+	actor->P_NewChaseDir();
       return;
     }
 
@@ -1130,9 +1133,9 @@ void A_SerpentWalk(DActor *actor)
   //
   // chase towards player
   //
-  if (--actor->movecount<0 || !P_Move (actor))
+  if (--actor->movecount<0 || !actor->P_Move())
     {
-      P_NewChaseDir (actor);
+      actor->P_NewChaseDir();
     }
 }
 
@@ -2517,9 +2520,9 @@ void A_FiredChase(DActor *actor)
   // Normal movement
   if (!actor->special2)
     {
-      if (--actor->movecount<0 || !P_Move (actor))
+      if (--actor->movecount<0 || !actor->P_Move())
 	{
-	  P_NewChaseDir (actor);
+	  actor->P_NewChaseDir();
 	}
     }
 
@@ -3466,7 +3469,7 @@ void A_FastChase(DActor *actor)
     {
       actor->eflags &= ~MFE_JUSTATTACKED;
       if (game.skill != sk_nightmare)
-	P_NewChaseDir (actor);
+	actor->P_NewChaseDir();
       return;
     }
 
@@ -3529,9 +3532,9 @@ void A_FastChase(DActor *actor)
   //
   if (!actor->special2)
     {
-      if (--actor->movecount<0 || !P_Move (actor))
+      if (--actor->movecount<0 || !actor->P_Move())
 	{
-	  P_NewChaseDir (actor);
+	  actor->P_NewChaseDir();
 	}
     }
 }

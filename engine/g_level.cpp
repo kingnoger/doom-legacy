@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.5  2003/11/27 11:28:25  smite-meister
+// Doom/Heretic startup bug fixed
+//
 // Revision 1.4  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -336,5 +339,18 @@ int GameInfo::Create_classic_game(int episode)
     default:
       n = 0;
     }
+
+  // and populate the clusters
+  mapinfo_iter_t t;
+  for (t = mapinfo.begin(); t != mapinfo.end(); t++)
+    {
+      p = (*t).second;
+      n = p->cluster;
+      if (!clustermap.count(n))
+	CONS_Printf("Missing cluster %d (map %d)!\n", n, p->mapnumber);
+      else
+	clustermap[n]->maps.push_back(p);
+    }
+
   return n;
 }

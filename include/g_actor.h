@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2003/11/27 11:28:26  smite-meister
+// Doom/Heretic startup bug fixed
+//
 // Revision 1.13  2003/11/12 11:07:26  smite-meister
 // Serialization done. Map progression.
 //
@@ -431,7 +434,10 @@ public:
   bool CheckMissileRange();
   bool LookForPlayers(bool allaround);
   bool LookForMonsters();
-
+  void P_NewChaseDir();
+  bool P_TryWalk();
+  bool P_Move();
+  
   // in p_hpspr.cpp
   void BlasterMissileThink();
   void XBlasterMissileThink();

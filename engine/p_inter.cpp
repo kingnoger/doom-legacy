@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2003/11/27 11:28:25  smite-meister
+// Doom/Heretic startup bug fixed
+//
 // Revision 1.20  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -308,7 +311,6 @@ bool Actor::Touch(Actor *p)
 
 bool DActor::Touch(Actor *p)
 {
-  extern int numspechit;
   int damage;
 
   // check for skulls slamming into things
@@ -384,7 +386,7 @@ bool DActor::Touch(Actor *p)
 	      p->px += px >> 2;
 	      p->py += py >> 2;
             }
-	  numspechit = 0;
+	  //spechit.clear(); FIXME why?
 	  return false;
         }
 

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2003/11/27 11:28:25  smite-meister
+// Doom/Heretic startup bug fixed
+//
 // Revision 1.18  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -505,14 +508,14 @@ void GameInfo::Ticker()
 	      // assign the player to a map
 	      m = FindMapInfo(p->requestmap);
 	      if (m == NULL)
-		m = currentcluster->maps[0];
+		m = *currentcluster->maps.begin();
 
 	      if (currentcluster->number != m->cluster)
 		{
 		  // cluster change, everyone follows p!
 		  currentcluster->Finish(p->requestmap, p->entrypoint);
 		  currentcluster = FindCluster(m->cluster);
-		  currentmap = currentcluster->maps[0];
+		  currentmap = *currentcluster->maps.begin();
 		  //action = ga_intermission;
 		  break;
 		}
@@ -650,19 +653,17 @@ bool GameInfo::StartGame()
   CONS_Printf("Starting a new game, any time now\n");
   void P_InitSwitchList();
 
-  if (clustermap.empty())
+  if (clustermap.empty() || mapinfo.empty())
     return false;
 
   CONS_Printf("Starting a new game, %d clusters\n", clustermap.size());
 
   cluster_iter_t t = clustermap.begin();
-  MapCluster *m = (*t).second; 
-  currentmap = m->maps[0];
+  currentcluster = (*t).second; 
+  currentmap = *currentcluster->maps.begin();
+  // TODO delete the old clusters...?
 
-  currentcluster = m; // TODO delete the old clusters...?
-
-  // TODO client-only stuff...
-  automap.Close();
+  automap.Close();  // TODO client-only stuff...
 
   //added:27-02-98: disable selected features for compatibility with
   //                older demos, plus reset new features as default

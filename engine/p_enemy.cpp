@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2003/11/27 11:28:25  smite-meister
+// Doom/Heretic startup bug fixed
+//
 // Revision 1.12  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -450,84 +453,78 @@ bool DActor::CheckMissileRange()
 static const fixed_t xspeed[8] = {FRACUNIT,47000,0,-47000,-FRACUNIT,-47000,0,47000};
 static const fixed_t yspeed[8] = {0,47000,FRACUNIT,47000,0,-47000,-FRACUNIT,-47000};
 
-bool P_Move(DActor *actor)
+bool DActor::P_Move()
 {
   // movement function communication variables
-  extern int  numspechit;
-  extern line_t **spechit;
+  extern vector<line_t *> spechit;
 
-  fixed_t     tryx;
-  fixed_t     tryy;
+  fixed_t tryx, tryy;
 
-  line_t *ld;
-
-  bool     good;
-
-  if (actor->movedir == DI_NODIR)
+  if (movedir == DI_NODIR)
     return false;
 
-  //if (actor->flags2 & MF2_BLASTED) return true;
+  //if (flags2 & MF2_BLASTED) return true;
 
 #ifdef PARANOIA
-  if ((unsigned)actor->movedir >= 8)
-    I_Error ("Weird actor->movedir!");
+  if (unsigned(movedir) >= 8)
+    I_Error ("Weird movedir!");
 #endif
 
-  tryx = actor->x + fixed_t(actor->info->speed * xspeed[actor->movedir]);
-  tryy = actor->y + fixed_t(actor->info->speed * yspeed[actor->movedir]);
+  tryx = x + fixed_t(info->speed * xspeed[movedir]);
+  tryy = y + fixed_t(info->speed * yspeed[movedir]);
 
-  if (!actor->TryMove (tryx, tryy, false))
+  if (!TryMove(tryx, tryy, false))
     {
       // open any specials
-      if (actor->flags & MF_FLOAT && floatok)
+      if (flags & MF_FLOAT && floatok)
         {
 	  // must adjust height
-	  if (actor->z < tmfloorz)
-	    actor->z += FLOATSPEED;
+	  if (z < tmfloorz)
+	    z += FLOATSPEED;
 	  else
-	    actor->z -= FLOATSPEED;
+	    z -= FLOATSPEED;
 
-	  actor->eflags |= MFE_INFLOAT;
+	  eflags |= MFE_INFLOAT;
 	  return true;
         }
 
-      if (!numspechit)
+      if (!spechit.size())
 	return false;
 
-      actor->movedir = DI_NODIR;
-      good = false;
-      while (numspechit--)
-        {
-	  ld = spechit[numspechit];
+      movedir = DI_NODIR;
+
+      bool good = false;
+      while (spechit.size())
+        {	  
+	  line_t *ld = spechit.back();
 	  // if the special is not a door
 	  // that can be opened,
 	  // return false
-
-	  if (actor->mp->ActivateLine(ld, actor, 0, SPAC_USE))
+	  if (mp->ActivateLine(ld, this, 0, SPAC_USE))
 	    good = true;
 	  // Old version before use/cross/impact specials were combined
-	  //if (actor->mp->UseSpecialLine(actor, ld, 0))
+	  //if (mp->UseSpecialLine(this, ld, 0))
+	  spechit.pop_back();
         }
       return good;
     }
   else
     {
-      actor->eflags &= ~MFE_INFLOAT;
+      eflags &= ~MFE_INFLOAT;
     }
 
 
-  if (! (actor->flags & MF_FLOAT) )
+  if (!(flags & MF_FLOAT))
     {
-      if(actor->z > actor->floorz)
-	actor->HitFloor();
-      actor->z = actor->floorz;
+      if (z > floorz)
+	HitFloor();
+      z = floorz;
     }
   return true;
 }
 
 
 //
-// TryWalk
 // Attempts to move actor on
 // in its current (ob->moveangle) direction.
 // If blocked by either a wall or an actor
@@ -537,32 +534,30 @@ bool P_Move(DActor *actor)
 // If a door is in the way,
 // an OpenDoor call is made to start it opening.
 //
-static bool P_TryWalk(DActor *actor)
+bool DActor::P_TryWalk()
 {
-  if (!P_Move (actor))
-    {
-      return false;
-    }
-  actor->movecount = P_Random()&15;
+  if (!P_Move())
+    return false;
+
+  movecount = P_Random() & 15;
   return true;
 }
 
 
 
-void P_NewChaseDir(DActor *actor)
+void DActor::P_NewChaseDir()
 {
   fixed_t   deltax, deltay;
   dirtype_t d[3];
-  dirtype_t turnaround;
 
-  if (!actor->target)
+  if (!target)
     I_Error("P_NewChaseDir: called with no target");
 
-  int olddir = actor->movedir;
-  turnaround = opposite[olddir];
+  int olddir = movedir;
+  dirtype_t turnaround = opposite[olddir];
 
-  deltax = actor->target->x - actor->x;
-  deltay = actor->target->y - actor->y;
+  deltax = target->x - x;
+  deltay = target->y - y;
 
   if (deltax > 10*FRACUNIT)
     d[1]= DI_EAST;
@@ -581,8 +576,8 @@ void P_NewChaseDir(DActor *actor)
   // try direct route
   if (d[1] != DI_NODIR && d[2] != DI_NODIR)
     {
-      actor->movedir = diags[((deltay<0)<<1)+(deltax>0)];
-      if (actor->movedir != turnaround && P_TryWalk(actor))
+      movedir = diags[((deltay<0)<<1)+(deltax>0)];
+      if (movedir != turnaround && P_TryWalk())
 	return;
     }
 
@@ -601,8 +596,8 @@ void P_NewChaseDir(DActor *actor)
 
   if (d[1] != DI_NODIR)
     {
-      actor->movedir = d[1];
-      if (P_TryWalk(actor))
+      movedir = d[1];
+      if (P_TryWalk())
         {
 	  // either moved forward or attacked
 	  return;
@@ -611,8 +606,8 @@ void P_NewChaseDir(DActor *actor)
 
   if (d[2] != DI_NODIR)
     {
-      actor->movedir = d[2];
-      if (P_TryWalk(actor))
+      movedir = d[2];
+      if (P_TryWalk())
 	return;
     }
 
@@ -620,9 +615,9 @@ void P_NewChaseDir(DActor *actor)
   // so pick another direction.
   if (olddir!=DI_NODIR)
     {
-      actor->movedir = olddir;
+      movedir = olddir;
 
-      if (P_TryWalk(actor))
+      if (P_TryWalk())
 	return;
     }
 
@@ -634,9 +629,9 @@ void P_NewChaseDir(DActor *actor)
         {
 	  if (tdir != turnaround)
             {
-	      actor->movedir = tdir;
+	      movedir = tdir;
 
-	      if (P_TryWalk(actor))
+	      if (P_TryWalk())
 		return;
             }
         }
@@ -647,9 +642,9 @@ void P_NewChaseDir(DActor *actor)
         {
 	  if (tdir != turnaround)
             {
-	      actor->movedir = tdir;
+	      movedir = tdir;
 
-	      if (P_TryWalk(actor))
+	      if (P_TryWalk())
 		return;
             }
         }
@@ -657,12 +652,12 @@ void P_NewChaseDir(DActor *actor)
 
   if (turnaround !=  DI_NODIR)
     {
-      actor->movedir = turnaround;
-      if (P_TryWalk(actor))
+      movedir = turnaround;
+      if (P_TryWalk())
 	return;
     }
 
-  actor->movedir = DI_NODIR;  // can not move
+  movedir = DI_NODIR;  // can not move
 }
 
 
@@ -930,7 +925,7 @@ void A_Chase(DActor *actor)
     {
       actor->eflags &= ~MFE_JUSTATTACKED;
       if (!cv_fastmonsters.value)
-	P_NewChaseDir(actor);
+	actor->P_NewChaseDir();
       return;
     }
 
@@ -968,8 +963,8 @@ void A_Chase(DActor *actor)
     }
 
   // chase towards player
-  if (--actor->movecount < 0 || !P_Move(actor))
-    P_NewChaseDir (actor);
+  if (--actor->movecount < 0 || !actor->P_Move())
+    actor->P_NewChaseDir();
 
   // make active sound
   if (actor->info->activesound && P_Random () < 3)

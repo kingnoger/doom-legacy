@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2003/11/27 11:28:25  smite-meister
+// Doom/Heretic startup bug fixed
+//
 // Revision 1.15  2003/11/12 11:07:22  smite-meister
 // Serialization done. Map progression.
 //
@@ -114,10 +117,7 @@ fixed_t  tmdropoffz;
 
 // keep track of special lines as they are hit,
 // but don't process them until the move is proven valid
-line_t **spechit;
-int      numspechit;
-
-
+vector<line_t *> spechit;
 
 Actor *tmfloorthing;   // the thing corresponding to tmfloorz
                                 // or NULL if tmfloorz is from a sector
@@ -190,6 +190,7 @@ static bool PIT_StompThing(Actor *thing)
 
   return true;
 }
+
 
 static bool PIT_ThrustStompThing(Actor *thing)
 {
@@ -410,7 +411,7 @@ bool Actor::TeleportMove(fixed_t nx, fixed_t ny)
   tmceilingz = newsubsec->sector->ceilingheight;
 
   validcount++;
-  numspechit = 0;
+  spechit.clear();
 
   // stomp on any things contacted
   xl = (tmbbox[BOXLEFT] - mp->bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
@@ -426,8 +427,6 @@ bool Actor::TeleportMove(fixed_t nx, fixed_t ny)
   // the move is ok,
   // so link the thing into its new position
   UnsetPosition();
-  //floorz = tmfloorz;
-  //ceilingz = tmceilingz;
   x = nx;
   y = ny;
   SetPosition();
@@ -439,23 +438,6 @@ bool Actor::TeleportMove(fixed_t nx, fixed_t ny)
 //===========================================
 //           MOVEMENT ITERATORS
 //===========================================
-
-
-static void add_spechit(line_t *ld)
-{
-  static int spechit_max = 0;
-
-  //SoM: 3/15/2000: Boom limit removal.
-  // TODO: STL vector...
-  if (numspechit >= spechit_max)
-    {
-      spechit_max = spechit_max ? spechit_max*2 : 16;
-      spechit = (line_t **)realloc(spechit, sizeof(line_t *) * spechit_max);
-    }
-  
-  spechit[numspechit] = ld;
-  numspechit++;
-}
 
 static void CheckForPushSpecial(line_t *line, int side, Actor *thing)
 {
@@ -478,6 +460,9 @@ static bool PIT_CheckThing(Actor *thing)
     return true;
 
   if (!(thing->flags & (MF_SOLID|MF_SPECIAL|MF_SHOOTABLE)))
+    return true;
+
+  if (thing->flags & MF_NOCLIPTHING)
     return true;
 
   fixed_t blockdist = thing->radius + tmthing->radius;
@@ -579,7 +564,7 @@ static bool PIT_CheckLine(line_t *ld)
   if (!ld->backsector)
     {
       if ((tmthing->flags & MF_MISSILE) && ld->special)
-        add_spechit(ld);
+        spechit.push_back(ld);
 
       return false;           // one sided line
     }
@@ -613,7 +598,7 @@ static bool PIT_CheckLine(line_t *ld)
 
   // if contacted a special line, add it to the list
   if (ld->special)
-    add_spechit(ld);
+    spechit.push_back(ld);
 
   return true;
 }
@@ -627,9 +612,8 @@ static bool PIT_CheckLine(line_t *ld)
 
 void Actor::CheckMissileImpact()
 {
-  int i;
-    
-  if (!(flags & MF_MISSILE) || !numspechit || !owner)
+  int n = spechit.size();
+  if (!(flags & MF_MISSILE) || !n || !owner)
     return;
 
   // monsters don't shoot triggers
@@ -637,7 +621,7 @@ void Actor::CheckMissileImpact()
   if (!(owner->flags & MF_NOTMONSTER))
     return;
 
-  for(i = numspechit-1; i >= 0; i--)
+  for (int i = n - 1; i >= 0; i--)
     mp->ActivateLine(spechit[i], owner, 0, SPAC_IMPACT);
   //mp->ShootSpecialLine(owner, spechit[i]);
 }
@@ -724,8 +708,6 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 
   oldx = x;
   oldy = y;
-  //floorz = tmfloorz;
-  //ceilingz = tmceilingz;
   x = nx;
   y = ny;
 
@@ -746,23 +728,23 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
   // if any special lines were hit, do the effect
   if (!(flags & (MF_NOCLIPLINE|MF_NOTRIGGER) || eflags & MFE_TELEPORT))
     {
-      while (numspechit--)
+      while (spechit.size())
         {
 	  // see if the line was crossed
-	  line_t *ld = spechit[numspechit];
+	  line_t *ld = spechit.back();
+	  spechit.pop_back();
+
 	  side = P_PointOnLineSide (x, y, ld);
 	  oldside = P_PointOnLineSide (oldx, oldy, ld);
 	  if (side != oldside)
             {
 	      if (ld->special)
 		{
-		  //FIXME doom/hexen
-		  //mp->ActivateCrossedLine(ld, oldside, this);
 		  if (flags & MF_NOTMONSTER)
 		    mp->ActivateLine(ld, this, oldside, SPAC_CROSS);
 		  else if (flags2 & MF2_MCROSS)
 		    mp->ActivateLine(ld, this, oldside, SPAC_MCROSS);
-		  else if(flags2 & MF2_PCROSS)
+		  else if (flags2 & MF2_PCROSS)
 		    mp->ActivateLine(ld, this, oldside, SPAC_PCROSS);
 		}
             }
@@ -2456,7 +2438,7 @@ Actor *Actor::CheckOnmobj()
   tmceilingz = newsubsec->sector->ceilingheight;
     
   validcount++;
-  numspechit = 0;
+  spechit.clear();
     
   if (tmflags & MF_NOCLIPTHING)
     return NULL;
@@ -2561,10 +2543,10 @@ bool Actor::CheckPosition(fixed_t nx, fixed_t ny)
     }
 
   // tmfloorthing is set when tmfloorz comes from a thing's top
-  tmfloorthing = NULL;
+  tmfloorthing = NULL; // FIXME for this to work, the lines should be checked first, then things...
 
   validcount++;
-  numspechit = 0;
+  spechit.clear();
 
   // Check things first, possibly picking things up.
   // The bounding box is extended by MAXRADIUS

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2003/11/27 11:28:25  smite-meister
+// Doom/Heretic startup bug fixed
+//
 // Revision 1.21  2003/11/23 00:41:54  smite-meister
 // bugfixes
 //
@@ -479,11 +482,22 @@ void Actor::Think()
   // XY movement
   if (px || py)
     XYMovement();
-  else if (eflags & MFE_SKULLFLY)
+  else
     {
-      // the skull slammed into something
-      eflags &= ~MFE_SKULLFLY;
-      pz = 0;
+      if (eflags & MFE_BLASTED)
+	{
+	  // Reset to not blasted when momentums are gone
+	  eflags &= ~MFE_BLASTED;
+	  // if (!(flags & MF_ICECORPSE)) TODO ICECORPSE
+	    flags2 &= ~MF2_SLIDE;
+	}
+
+      if (eflags & MFE_SKULLFLY)
+	{
+	  // the skull slammed into something
+	  eflags &= ~MFE_SKULLFLY;
+	  pz = 0;
+	}
     }
 
   // Z movement

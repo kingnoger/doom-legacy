@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/11/27 11:28:26  smite-meister
+// Doom/Heretic startup bug fixed
+//
 // Revision 1.3  2003/03/15 20:07:21  smite-meister
 // Initial Hexen compatibility!
 //
@@ -41,10 +44,6 @@
 
 #define FLOATSPEED      (FRACUNIT*4)
 
-class Actor;
-class DActor;
-class PlayerPawn;
-
 typedef enum
 {
   DI_EAST,
@@ -60,12 +59,10 @@ typedef enum
 
 } dirtype_t;
 
-void   P_NoiseAlert(Actor *target, Actor *emitter);
-void   P_BulletSlope(PlayerPawn *p);
-bool   P_Move(DActor *actor);
-void   P_NewChaseDir(DActor *actor);
+void   P_NoiseAlert(class Actor *target, Actor *emitter);
+void   P_BulletSlope(class PlayerPawn *p);
 
-void   A_FaceTarget(DActor *actor);
+void   A_FaceTarget(class DActor *actor);
 void   A_Chase(DActor *actor);
 void   A_Fall(DActor *actor);
 void   A_Look(DActor *actor);
