@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2004/12/31 16:19:41  smite-meister
+// alpha fixes
+//
 // Revision 1.14  2004/12/19 23:43:20  smite-meister
 // more BEX support
 //
@@ -50,27 +53,8 @@
 // Revision 1.1.1.1  2002/11/16 14:18:38  hurdler
 // Initial C++ version of Doom Legacy
 //
-// Revision 1.13  2001/07/16 22:35:40  bpereira
-// - fixed crash of e3m8 in heretic
-// - fixed crosshair not drawed bug
-//
-// Revision 1.12  2001/06/30 15:06:01  bpereira
-// fixed wronf next level name in intermission
-//
-// Revision 1.11  2001/04/30 17:19:24  stroggonmeth
-// HW fix and misc. changes
-//
-// Revision 1.10  2001/02/10 12:27:13  bpereira
-// no message
-//
 // Revision 1.9  2001/01/25 22:15:41  bpereira
 // added heretic support
-//
-// Revision 1.8  2000/11/04 16:23:42  bpereira
-// no message
-//
-// Revision 1.7  2000/11/03 13:15:13  hurdler
-// Some debug comments, please verify this and change what is needed!
 //
 // Revision 1.6  2000/11/02 17:50:06  stroggonmeth
 // Big 3Dfloors & FraggleScript commit!!
@@ -94,6 +78,7 @@
 
 #include "g_game.h"
 #include "g_actor.h"
+#include "g_pawn.h"
 
 #include "dstrings.h"
 #include "d_items.h"
@@ -275,6 +260,7 @@ string_mnemonic_t BEX_StringMnemonics[] =
   BEX_STR(GOTPLASMA)
   BEX_STR(GOTSHOTGUN)
   BEX_STR(GOTSHOTGUN2)
+
   BEX_STR(PD_BLUEO)
   BEX_STR(PD_YELLOWO)
   BEX_STR(PD_REDO)
@@ -326,22 +312,15 @@ dehacked_t::dehacked_t()
   loaded = false;
   num_errors = 0;
 
-  // FIXME most of these are not really used
   idfa_armor = 200;
-  idfa_armor_class = 2;
+  idfa_armorfactor = 0.5;
   idkfa_armor = 200;
-  idkfa_armor_class = 2;
+  idkfa_armorfactor = 0.5;
   god_health = 100;
 
-  initial_health = 100;
-  initial_bullets = 50;
+  // TODO these are not yet used...
   max_health = 200;
-  maxsoul = 200;
-
-  green_armor_class = 1;
-  blue_armor_class = 2;
-  soul_health = 200;
-  mega_health = 200;
+  max_soul_health = 200;
 }
 
 
@@ -355,22 +334,34 @@ void dehacked_t::error(char *first, ...)
   vsprintf(buf, first, argptr);
   va_end(argptr);
 
-  CONS_Printf("%s\n", buf);
+  CONS_Printf("DEH: %s\n", buf);
   num_errors++;
 }
 
 
-// a small hack for retrieving values following a '=' sign
+// A small hack for retrieving values following a '=' sign.
+// Does not change the parser state.
 int dehacked_t::FindValue()
 {
-  int value;
   char *temp = p.Pointer(); // save the current location
-  p.GoToNext("=");
+
+  // find the first occurrence of str
+  char *res = strstr(temp, "=");
+  if (res)
+    p.SetPointer(++res); // pass the = sign
+  else
+    {
+      error("Missing equality sign!\n");
+      return 0;
+    }
+
+  int value;
   if (!p.MustGetInt(&value))
     {
       error("No value found\n");
       value = 0;
     }
+
   p.SetPointer(temp); // and go back
   return value;
 }
@@ -580,7 +571,7 @@ void dehacked_t::Read_Thing(int num)
 	    }
 	  else if (!strcasecmp(word,"sound")) mobjinfo[num].deathsound  = value;
 	}
-      else if (!strcasecmp(word,"Speed"))     mobjinfo[num].speed       = value;
+      else if (!strcasecmp(word,"Speed"))     mobjinfo[num].speed       = float(value)/FRACUNIT;
       else if (!strcasecmp(word,"Width"))     mobjinfo[num].radius      = value;
       else if (!strcasecmp(word,"Height"))    mobjinfo[num].height      = value;
       else if (!strcasecmp(word,"Mass"))      mobjinfo[num].mass        = value;
@@ -845,6 +836,7 @@ void dehacked_t::Read_Text(int len1, int len2)
 /*
   Weapon sample:
 Ammo type = 2
+TODO ammopershoot
 Deselect frame = 11
 Select frame = 12
 Bobbing frame = 13
@@ -945,6 +937,7 @@ void dehacked_t::Read_Ammo(int num)
 void dehacked_t::Read_Misc()
 {
   extern int MaxArmor[];
+  const double ac = 1.0/6;
 
   char *word1, *word2;
   int value;
@@ -961,33 +954,41 @@ void dehacked_t::Read_Misc()
 
       if (!strcasecmp(word1,"Initial"))
 	{
-	  if (!strcasecmp(word2,"Health"))          initial_health = value;
-	  else if (!strcasecmp(word2,"Bullets"))    initial_bullets = value;
+	  if (!strcasecmp(word2,"Health"))       mobjinfo[MT_PLAYER].spawnhealth = value;
+	  else if (!strcasecmp(word2,"Bullets")) pawndata[0].bammo = value;
 	}
       else if (!strcasecmp(word1,"Max"))
 	{
 	  if (!strcasecmp(word2,"Health"))          max_health = value;
 	  else if (!strcasecmp(word2,"Armor"))      MaxArmor[0] = value;
-	  else if (!strcasecmp(word2,"Soulsphere")) maxsoul = value;
+	  else if (!strcasecmp(word2,"Soulsphere")) max_soul_health = value;
 	}
-      else if (!strcasecmp(word1,"Green"))         green_armor_class = value;
-      else if (!strcasecmp(word1,"Blue"))          blue_armor_class = value;
-      else if (!strcasecmp(word1,"Soulsphere"))    soul_health = value;
-      else if (!strcasecmp(word1,"Megasphere"))    mega_health = value;
-      else if (!strcasecmp(word1,"God"))           god_health = value;
+      else if (!strcasecmp(word1,"Green"))
+	{
+	  mobjinfo[MT_GREENARMOR].spawnhealth = value*100;
+	  mobjinfo[MT_GREENARMOR].speed = ac*(value+1);
+	}
+      else if (!strcasecmp(word1,"Blue"))
+	{
+	  mobjinfo[MT_BLUEARMOR].spawnhealth = value*100;
+	  mobjinfo[MT_BLUEARMOR].speed = ac*(value+1);
+	}
+      else if (!strcasecmp(word1,"Soulsphere")) mobjinfo[MT_SOULSPHERE].spawnhealth = value;
+      else if (!strcasecmp(word1,"Megasphere")) mobjinfo[MT_MEGA].spawnhealth = value;
+      else if (!strcasecmp(word1,"God"))        god_health = value;
       else if (!strcasecmp(word1,"IDFA"))
 	{
 	  word2 = p.GetToken(" ");
-	  if (!strcasecmp(word2,"="))               idfa_armor = value;
-	  else if (!strcasecmp(word2,"Class"))      idfa_armor_class = value;
+	  if (!strcasecmp(word2,"="))          idfa_armor = value;
+	  else if (!strcasecmp(word2,"Class")) idfa_armorfactor = ac*(value+1);
 	}
       else if (!strcasecmp(word1,"IDKFA"))
 	{
 	  word2 = p.GetToken(" ");
-	  if (!strcasecmp(word2,"="))               idkfa_armor = value;
-	  else if (!strcasecmp(word2,"Class"))      idkfa_armor_class = value;
+	  if (!strcasecmp(word2,"="))          idkfa_armor = value;
+	  else if (!strcasecmp(word2,"Class")) idkfa_armorfactor = ac*(value+1);
 	}
-      else if (!strcasecmp(word1,"BFG"))            wpnlev1info[wp_bfg].ammopershoot = value;
+      else if (!strcasecmp(word1,"BFG")) wpnlev1info[wp_bfg].ammopershoot = value;
       else if (!strcasecmp(word1,"Monsters"))      {} // TODO
       else error("Misc : unknown command '%s'\n", word1);
     }
@@ -1125,8 +1126,8 @@ void dehacked_t::Read_STRINGS()
 	}
 
       // FIXME backslash-continued lines...
-      p.GetToken("=");
-      text[m->num] = Z_StrDup(p.Pointer());
+      char *newtext = p.GetToken("=");
+      text[m->num] = Z_StrDup(newtext);
     }
 }
 
@@ -1198,7 +1199,7 @@ bool dehacked_t::LoadDehackedLump(const char *buf, int len)
 	  else
 	    {
 	      i = 0;
-	      error("Warning: missing argument for '%s'\n", word1);
+	      //error("Warning: missing argument for '%s'\n", word1);
 	    }
 
 	  switch (P_MatchString(word1, DEH_cmds))
@@ -1318,7 +1319,7 @@ bool dehacked_t::LoadDehackedLump(const char *buf, int len)
 
   if (num_errors > 0)
     {
-      CONS_Printf("%d warning(s) in the dehacked file\n", num_errors);
+      CONS_Printf("DEH: %d warning(s).\n", num_errors);
       if (devparm)
 	getchar();
     }

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/12/31 16:19:41  smite-meister
+// alpha fixes
+//
 // Revision 1.5  2004/12/19 23:43:20  smite-meister
 // more BEX support
 //
@@ -227,6 +230,8 @@ char *Parser::GetToken(const char *delim)
 
   char *temp = strtok(s, delim);
   s += strlen(temp) + 1;
+  if (s >= e)
+    s = e-1; // do not leave the line
   return temp;
 }
 

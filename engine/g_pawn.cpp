@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.47  2004/12/31 16:19:37  smite-meister
+// alpha fixes
+//
 // Revision 1.46  2004/12/02 17:22:31  smite-meister
 // HUD fixed
 //
@@ -353,7 +356,6 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, int type)
     }
 
   // armor
-  toughness = 0;
   for (i = 0; i < NUMARMOR; i++)
     {
       armorpoints[i] = 0;

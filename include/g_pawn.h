@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.26  2004/12/31 16:19:40  smite-meister
+// alpha fixes
+//
 // Revision 1.25  2004/11/18 20:30:14  smite-meister
 // tnt, plutonia
 //
@@ -106,6 +109,8 @@ struct pawn_info_t
   int          bammo;   // ammo for bweapon
   mobjtype_t   nproj;   // natural projectile, if any
 };
+
+extern pawn_info_t pawndata[];
 
 
 /// \brief An Actor that has active AI or human control.

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.39  2004/12/31 16:19:38  smite-meister
+// alpha fixes
+//
 // Revision 1.38  2004/11/19 16:51:04  smite-meister
 // cleanup
 //
@@ -762,7 +765,6 @@ int Pawn::Marshal(LArchive & a)
   a << maxhealth << speed;
   a << attackphase;
 
-  extern pawn_info_t pawndata[];
   int temp;
 
   if (a.IsStoring())

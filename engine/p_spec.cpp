@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.39  2004/12/31 16:19:38  smite-meister
+// alpha fixes
+//
 // Revision 1.38  2004/11/18 20:30:11  smite-meister
 // tnt, plutonia
 //
@@ -1301,10 +1304,10 @@ void Map::SpawnLineSpecials()
         {
 	  // Hexen
 	case 100: // Scroll_Texture_Left
-          AddThinker(new scroll_t(scroll_t::sc_side, -l->args[0] << 10, 0, NULL, l->sidenum[0], false));
+          AddThinker(new scroll_t(scroll_t::sc_side, l->args[0] << 10, 0, NULL, l->sidenum[0], false));
 	  break;
 	case 101: // Scroll_Texture_Right
-          AddThinker(new scroll_t(scroll_t::sc_side, l->args[0] << 10, 0, NULL, l->sidenum[0], false));
+          AddThinker(new scroll_t(scroll_t::sc_side, -l->args[0] << 10, 0, NULL, l->sidenum[0], false));
 	  break;
 	case 102: // Scroll_Texture_Up
           AddThinker(new scroll_t(scroll_t::sc_side, 0, l->args[0] << 10, NULL, l->sidenum[0], false));

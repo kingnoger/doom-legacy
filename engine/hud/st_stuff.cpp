@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.30  2004/12/31 16:19:38  smite-meister
+// alpha fixes
+//
 // Revision 1.29  2004/12/05 14:46:33  smite-meister
 // keybar
 //
@@ -242,7 +245,7 @@ static int  st_maxammo[NUMAMMO];
 static int  st_faceindex = 0; // current marine face
 
 // owned keys
-static bool st_keyboxes[NUMKEYS];
+static int st_keyboxes[NUMKEYS];
 
 // number of frags so far in deathmatch
 static int  st_fragscount;
@@ -1183,9 +1186,9 @@ void HUD::UpdateWidgets()
   else
     st_readywp_ammo = st_pawn->ammo[st_atype];
 
-  // update keycard multiple widgets
+  // update keycard widgets
   for (i=0; i<NUMKEYS; i++)
-    st_keyboxes[i] = st_pawn->keycards & (1 << i);
+    st_keyboxes[i] = (st_pawn->keycards & (1 << i)) ? i : -1;
 }
 
 // sets the new palette based upon current values of damagecount
@@ -1383,7 +1386,7 @@ void HUD::CreateHexenWidgets()
   // Keybar (in map screen, keys and armor pieces)
   for (i=0; i<5; i++)
     {
-      h = new HudBinIcon(st_x+46+i*20, st_y+3, &st_keyboxes[i], NULL, PatchKeys[i]);
+      h = new HudMultIcon(st_x+46+i*20, st_y+3, &st_keyboxes[i], PatchKeys);
       keybar.push_back(h);
     }
 
@@ -1444,7 +1447,7 @@ void HUD::CreateHereticWidgets()
   const int ST_KEYY[3] = {22, 6, 14};
   for (i=0; i<6; i++)
     {
-      h = new HudBinIcon(st_x + 153, st_y + ST_KEYY[i%3], &st_keyboxes[i+11], NULL, PatchKeys[i+11]);
+      h = new HudMultIcon(st_x+153, st_y+ST_KEYY[i%3], &st_keyboxes[i+11], PatchKeys);
       mainbar.push_back(h);
     }
 
@@ -1536,7 +1539,7 @@ void HUD::CreateDoomWidgets()
   const int ST_KEYY[3] = {3, 13, 23};
   for (i=0; i<6; i++)
     {
-      h = new HudBinIcon(st_x+239+(i/3)*10, st_y + ST_KEYY[i%3], &st_keyboxes[i+11], NULL, PatchKeys[i+11]);
+      h = new HudMultIcon(st_x+239+(i/3)*10, st_y+ST_KEYY[i%3], &st_keyboxes[i+11], PatchKeys);
       statusbar.push_back(h);
     }
 }
@@ -1727,10 +1730,14 @@ void HUD::CreateOverlayWidgets()
 	  break;
 
         case 'k': // draw keys
-          for (int i=0; i<NUMKEYS; i++)
+          for (int i=0; i<6; i++)
             {
-              //h = new HudMultIcon(308-(i/3)*10, 190-(i%3)*10, &st_keyboxes[i], PatchKeys);
-	      h = new HudBinIcon(308-(i/3)*10, 190-(i%3)*10, &st_keyboxes[i], NULL, PatchKeys[i]);
+              h = new HudMultIcon(308-(i/3)*10, 190-(i%3)*10, &st_keyboxes[i+11], PatchKeys);
+              overlay.push_back(h);
+            }
+          for (int i=0; i<11; i++)
+            {
+              h = new HudMultIcon(4+(i/6)*296, 25+(i%6)*30, &st_keyboxes[i], PatchKeys);
               overlay.push_back(h);
             }
           break;

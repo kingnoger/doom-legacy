@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/12/31 16:19:40  smite-meister
+// alpha fixes
+//
 // Revision 1.3  2004/12/19 23:30:17  smite-meister
 // More BEX support
 //
@@ -72,21 +75,14 @@ public:
   bool LoadDehackedLump(const char *buf, int len);
   void error(char *first, ...);
 
-  int idfa_armor;
-  int idfa_armor_class;
-  int idkfa_armor;
-  int idkfa_armor_class;
-  int god_health;
+  int   idfa_armor;
+  float idfa_armorfactor;
+  int   idkfa_armor;
+  float idkfa_armorfactor;
+  int   god_health;
 
-  int initial_health;
-  int initial_bullets;
   int max_health;
-  int maxsoul;
-
-  int green_armor_class;
-  int blue_armor_class;
-  int soul_health;
-  int mega_health;
+  int max_soul_health;
 };
 
 extern dehacked_t DEH;

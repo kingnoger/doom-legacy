@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.29  2004/12/31 16:19:41  smite-meister
+// alpha fixes
+//
 // Revision 1.28  2004/12/08 16:53:10  segabor
 // Missing devparm reference added
 //
@@ -283,10 +286,6 @@ angle_t                 xtoviewangle[MAXVIDWIDTH+1];
 lighttable_t*           scalelight[LIGHTLEVELS][MAXLIGHTSCALE];
 lighttable_t*           scalelightfixed[MAXLIGHTSCALE];
 lighttable_t*           zlight[LIGHTLEVELS][MAXLIGHTZ];
-
-//SoM: 3/30/2000: Hack to support extra boom colormaps.
-int                     num_extra_colormaps;
-extracolormap_t         extra_colormaps[MAXCOLORMAPS];
 
 // bumped light from gun blasts
 int                     extralight;

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/12/31 16:19:40  smite-meister
+// alpha fixes
+//
 // Revision 1.3  2004/12/08 09:45:45  segabor
 // "segabor: endianness fixed"
 //
@@ -25,7 +28,6 @@
 //
 // Revision 1.1  2004/08/14 16:38:01  smite-meister
 // new tool for easy wad manipulation
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -334,8 +336,8 @@ int CreateWad(const char *wadname, const char *inv_name)
   // file layout: header, lumps, directory
   wadheader_t h;
   h.imagic = *reinterpret_cast<const int *>("PWAD");
-  h.numentries = LONG(len);	//FIXME endianness
-  h.diroffset = LONG(0); // temporary
+  h.numentries = LONG(len);
+  h.diroffset = 0; // temporary, will be fixed later
 
   // write header
   fwrite(&h, sizeof(wadheader_t), 1, outfile);
@@ -367,14 +369,15 @@ int CreateWad(const char *wadname, const char *inv_name)
       free(buf);
    }
 
-  h.diroffset = LONG(ftell(outfile));
+  h.diroffset = LONG(ftell(outfile)); // actual directory offset
 
   // write the directory
-  for (i=0; i<len; i++) {
+  for (i=0; i<len; i++)
+    {
       dir[i].offset = LONG(dir[i].offset);
       dir[i].size   = LONG(dir[i].size);
-	  fwrite(&dir[i], sizeof(waddir_t), 1, outfile);
-  }
+      fwrite(&dir[i], sizeof(waddir_t), 1, outfile);
+    }
 
   // re-write the header with the correct diroffset
   rewind(outfile);

@@ -29,7 +29,7 @@
 <li><a href="#graphics">Graphics</a></li>
 <li><a href="#sound">Sound</a></li>
 <li><a href="#music">Music</a></li>
-<li><a href="#dehacked">DeHackEd support</a></li>
+<li><a href="#dehacked">DeHackEd and BEX</a></li>
 <li><a href="#legacy.wad">Legacy.wad contents</a></li>
 </ol>
 
@@ -100,7 +100,7 @@ all things related to map ordering, finales and hubs.
 <p>
 There should be only one MAPINFO lump per wad, containing entries for
 each map and cluster in the game.<br/>
-For examples of MAPINFO lumps, see the <b>MINFO_*</b> lumps
+For examples of MAPINFO lumps, see the <b>MI_*</b> lumps
 in legacy.wad.
 </p>
 
@@ -248,7 +248,8 @@ cluster, all the hubsaves are deleted.
 <h2><a name="levelinfo">LevelInfo lumps</a></h2>
 
 <p>The LevelInfo lumps are plain text files, stored
-in the map separator (mapname) lump, which is normally empty.
+in the <b>map separator lump</b>, which has the same name as the map
+(e.g. E1M4, MAP21) and is normally empty.
 Each map can have its own LevelInfo. The lump consists of
 one or more <b>blocks</b>. Each block begins with
 </p>
@@ -765,7 +766,7 @@ Don't you? Well, you should.
 <p>
 SNDINFO is a plaintext lump which defines the sound effects in
 the game. Unlike normal WAD resources, SNDINFO lumps are
-handled in a cumulative, not overriding, fashion.
+handled in a <b>cumulative</b>, not overriding, fashion.
 The SNDINFO lump in <b>legacy.wad</b> defines the basic sound effect
 naming in Legacy. You can freely define new sound effects or change
 the existing ones by using your own SNDINFO lumps.
@@ -818,12 +819,12 @@ Starts a conditional block that is only executed when in Doom mode.
 
 <tr><td>$ifheretic</td>
 <td>
-Also these conditionals
+Also these conditionals...
 </td></tr>
 
 <tr><td>$ifhexen</td>
 <td>
-are available.
+...are available.
 </td></tr>
 
 <tr><td>$endif</td>
@@ -924,20 +925,41 @@ automagically. The names of the music lumps can be freely chosen.
 
 
 <hr />
-<h2><a name="dehacked">DeHackEd support</a></h2>
+<h2><a name="dehacked">DeHackEd and BEX</a></h2>
 
 <p>
-Legacy supports the most important DeHackEd and BEX features.... TODO
+Legacy supports the most important DeHackEd and BEX features.
+Some of the features are <b>deprecated</b>, which means that you should not
+use them since there is a better way to achieve the same effect.
 </p>
 
+<table class="def">
+<tr><th>Feature</th><th>Support status</th><th>Notes</th></tr>
+<tr><td>Mapthings</td><td>full</td><td>BEX flag mnemonics are supported.</td></tr>
+<tr><td>Frame table</td><td>full</td></tr>
+<tr><td>Weapons</td><td>full</td></tr>
+<tr><td>Sprites</td><td>full</td></tr>
+<tr><td>Misc</td><td>partial</td></tr>
+<tr><td>Cheats</td><td>partial</td></tr>
+<tr><td>Sounds</td><td>deprecated</td><td>Use <a href="#sound">SNDINFO</a> instead.</td></tr>
+<tr><td>Text strings</td><td>deprecated</td><td>Use [STRINGS] or
+<a href="#MAPINFO">MAPINFO</a> instead.</td></tr>
+<tr><td>[CODEPTR]</td><td>full</td><td>Extended with a few
+Legacy-specific codepointers.</td></tr>
+<tr><td>[STRINGS]</td><td>partial</td><td>Use <a href="#MAPINFO">MAPINFO</a>
+for intermission texts and nice mapnames.</td></tr>
+<tr><td>[PARS]</td><td>deprecated</td><td>Use <a href="#levelinfo">LevelInfo</a> instead.</td></tr>
+</table>
+
+
+<h3>Frames and codepointers</h3>
+
 <p>
-A few words about nomenclature: Unfortunately the DeHackEd terminology is
+Unfortunately the DeHackEd terminology is
 quite different from the Doom source code terminology. In the
 following, the source code terms are written in <b>bold</b>,
 followed by the corresponding DeHackEd terms (in parentheses).
 </p>
-
-<h3>Frames and codepointers</h3>
 
 <p>
 In Doom, the mapthing AI is basically a finite state machine.
@@ -966,7 +988,7 @@ and Hexen action functions available can be found in the source file
 <a href="../include/a_functions.h">a_functions.h</a>. Remember that
 you can use the mnemonic <b>NULL</b> to clear a codepointer.<br />
 Legacy also has introduced a few new action functions, which can only
-be accessed using the [CODEPTR] block:
+be accessed using their mnemonics:
 </p>
 
 <table class="def">
@@ -974,7 +996,8 @@ be accessed using the [CODEPTR] block:
 
 <tr><td>StartFS</td>
 <td>
-Starts an FS script, using <b>tics</b> for the script number.
+Starts an FS script, using <b>tics</b> for the script number. The
+actual duration of the state is always zero.
 </td></tr>
 
 <tr><td>StartWeaponFS</td>
@@ -993,11 +1016,41 @@ for the args??? TODO
 <td>
 Same as above, but for weapon frames.
 </td></tr>
-
 </table>
 
 
 
+<h3>Item pickups</h3>
+
+<p>
+If a mapthing has the flag <b>SPECIAL</b>, the player may pick it up.
+Unlike in the original Doom, Legacy does not determine the type of a
+mapthing by its sprite, but rather by its mobjtype number.
+The effects of the basic Doom/Heretic/Hexen pickups are hardcoded.
+However, the pickup system has been made more flexible in some
+ways.
+Where applicable, the <b>health</b> field of an item mapthing
+determines the pickup's &quot;size&quot;, be it health, armor points
+or ammo.
+</p>
+
+TODO examples (an example DEH file!)
+
+<p>
+You can also create new types of pickups by combining DeHackEd with scripting...TODO
+</p>
+
+<table class="def">
+<tr><th>DeHackEd field</th><th>Suggested usage</th><th>May not be used with...</th></tr>
+<tr><td>Hit points*</td><td>An integer amount. (Health/armor/ammo...)</td><td>SHOOTABLE</td></tr>
+<tr><td>Reaction time*</td><td>A counter.</td><td>FLOATBOB</td></tr>
+<tr><td>Pain chance</td><td>A probability (0-255)</td><td>SHOOTABLE</td></tr>
+<tr><td>Speed</td><td>Fixed point quantity, quality (armor factor...)</td><td>MISSILE</td></tr>
+<tr><td>Missile damage</td><td>An integer amount</td><td>MISSILE, SKULLFLY</td></tr>
+</table>
+
+TODO more howtos: creating a new weapon with scripting, new pickups,
+new monsters...
 
 <hr />
 <h2><a name="legacy.wad">Legacy.wad contents</a></h2>
@@ -1018,17 +1071,27 @@ Plaintext lumps
 Legacy.wad version string
 </td></tr>
 
-<tr><td>MINFO_D1</td>
+<tr><td>MI_DOOM1</td>
 <td>
 MAPINFO lump for Doom1
 </td></tr>
 
-<tr><td>MINFO_D2</td>
+<tr><td>MI_DOOM2</td>
 <td>
 MAPINFO lump for Doom2
 </td></tr>
 
-<tr><td>MINFO_H</td>
+<tr><td>MI_TNT</td>
+<td>
+MAPINFO lump for the Doom2 mission pack "TNT Evilution"
+</td></tr>
+
+<tr><td>MI_PLUT</td>
+<td>
+MAPINFO lump for the Doom2 mission pack "Plutonia Experiment"
+</td></tr>
+
+<tr><td>MI_HTIC</td>
 <td>
 MAPINFO lump for Heretic
 </td></tr>
@@ -1043,17 +1106,47 @@ Basic sound effect definitions
 Basic sound sequence definitions
 </td></tr>
 
-<tr><td>ENDOOM</td>
-<td>
-End text
-</td></tr>
-
 <tr><td>THINGS.H</td>
 <td>
 <a href="fs.html">FraggleScript</a> header file containing THING names
 and flags
 </td></tr>
 
+<tr><td>ENDOOM</td>
+<td>
+End text
+</td></tr>
+
+
+<tr><td class="note" colspan="2">
+Binary lumps
+</td></tr>
+
+<tr><td>XDOOM</td>
+<td>
+Doom-to-Hexen linedeftype conversion table. Generated using tools/doom2hexen.exe.
+</td></tr>
+
+<tr><td>XHERETIC</td>
+<td>
+Heretic-to-Hexen linedeftype conversion table
+</td></tr>
+
+
+
+<tr><td class="note" colspan="2">
+Default data items
+</td></tr>
+
+<tr><td>DEF_SND</td>
+<td>
+Default sound effect
+</td></tr>
+
+<tr><td>DEF_TEX</td>
+<td>
+Default texture
+</td></tr>
 
 
 <tr><td class="note" colspan="2">
@@ -1232,14 +1325,10 @@ Status bar overlay icons
 <tr><td>SBOHEALT</td><td>health (default shows a red cross)</td></tr>
 <tr><td>SBOFRAGS</td><td>frags (default shows a skull)</td></tr>
 <tr><td>SBOARMOR</td><td>armor (default shows a green armor)</td></tr>
-<tr><td>SBOAMMO1</td><td>pistol ammo</td></tr>
-<tr><td>SBOAMMO2</td><td>shotgun ammo</td></tr>
-<tr><td>SBOAMMO3</td><td>chaingun ammo</td></tr>
-<tr><td>SBOAMMO4</td><td>rocket ammo</td></tr>
-<tr><td>SBOAMMO5</td><td>plasma ammo</td></tr>
-<tr><td>SBOAMMO6</td><td>bfg ammo</td></tr>
-<tr><td>SBOAMMO8</td><td>super shotgun ammo</td></tr>
-<tr><td>SBOEMPTY</td><td>???</td></tr>
+<tr><td>SBOAMMO1</td><td>bullets</td></tr>
+<tr><td>SBOAMMO2</td><td>shotgun shells</td></tr>
+<tr><td>SBOAMMO3</td><td>power cells</td></tr>
+<tr><td>SBOAMMO4</td><td>rockets</td></tr>
 
 <tr><td></td>
 <td>

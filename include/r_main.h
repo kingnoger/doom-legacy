@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/12/31 16:19:40  smite-meister
+// alpha fixes
+//
 // Revision 1.5  2004/11/09 20:38:52  smite-meister
 // added packing to I/O structs
 //
@@ -109,9 +112,10 @@ extern int      framecount;
 typedef byte lighttable_t;
 
 
-// SoM: ExtraColormap type. Use for extra_colormaps from now on.
+/// Used for "colored lighting" colormaps from Boom etc.
 struct extracolormap_t
 {
+  int             lump; ///< the lump number of the colormap
   unsigned short  maskcolor;
   unsigned short  fadecolor;
   double          maskamt;
@@ -121,7 +125,7 @@ struct extracolormap_t
   //Hurdler: rgba is used in hw mode for coloured sector lighting
   int             rgba; // similar to maskcolor in sw mode
 
-  lighttable_t*   colormap;
+  lighttable_t *colormap;
 };
 
 
@@ -217,30 +221,20 @@ extern lighttable_t*    fixedcolormap;
 
 
 
+// Blocky/low detail mode. remove this?
+// 0 = high, 1 = low
+extern int detailshift;
 
 
-// Blocky/low detail mode.
-//B remove this?
-//  0 = high, 1 = low
-extern  int             detailshift;
 
-
-//
 // Utility functions.
-int R_PointOnSide(fixed_t x, fixed_t y, node_t* node);
 
+int R_PointOnSide(fixed_t x, fixed_t y, node_t* node);
 int R_PointOnSegSide(fixed_t x, fixed_t y, seg_t* line);
 
-angle_t R_PointToAngle2(fixed_t x2, fixed_t y2, fixed_t x1, fixed_t y1);
-fixed_t R_PointToDist2(fixed_t x2, fixed_t y2, fixed_t x1, fixed_t y1);
-
-void R_AddPointToBox(int x, int y, fixed_t* box);
 
 
-
-//
 // REFRESH - the actual rendering functions.
-//
 
 // initializes the client part of the renderer
 void R_Init();

@@ -18,38 +18,20 @@
 //
 //
 // $Log$
-// Revision 1.40  2004/12/19 23:54:08  smite-meister
-// small fixes
-//
-// Revision 1.39  2004/12/08 16:54:04  segabor
-// Endianness fix
-//
-// Revision 1.38  2004/12/02 17:22:36  smite-meister
-// HUD fixed
+// Revision 1.41  2004/12/31 16:19:41  smite-meister
+// alpha fixes
 //
 // Revision 1.37  2004/11/28 18:02:24  smite-meister
 // RPCs finally work!
 //
-// Revision 1.36  2004/11/19 16:51:07  smite-meister
-// cleanup
-//
 // Revision 1.35  2004/11/09 20:38:53  smite-meister
 // added packing to I/O structs
-//
-// Revision 1.34  2004/11/04 21:12:55  smite-meister
-// save/load fixed
 //
 // Revision 1.33  2004/10/31 22:22:13  smite-meister
 // Hasta la vista, pic_t!
 //
-// Revision 1.32  2004/10/27 17:37:11  smite-meister
-// netcode update
-//
 // Revision 1.31  2004/10/14 19:35:52  smite-meister
 // automap, bbox_t
-//
-// Revision 1.30  2004/09/23 23:21:20  smite-meister
-// HUD updated
 //
 // Revision 1.29  2004/09/14 21:41:57  hurdler
 // rename "data" to "pixels" (I think it's more appropriate and that's how SDL and OpenGL name such data after all)
@@ -57,29 +39,14 @@
 // Revision 1.28  2004/09/03 16:28:52  smite-meister
 // bugfixes and ZDoom linedef types
 //
-// Revision 1.27  2004/08/29 20:48:50  smite-meister
-// bugfixes. wow.
-//
-// Revision 1.26  2004/08/19 19:42:42  smite-meister
-// bugfixes
-//
 // Revision 1.25  2004/08/18 14:35:23  smite-meister
 // PNG support!
 //
 // Revision 1.23  2004/08/15 18:08:30  smite-meister
 // palette-to-palette colormaps etc.
 //
-// Revision 1.22  2004/08/13 18:25:11  smite-meister
-// sw renderer fix
-//
-// Revision 1.21  2004/08/12 18:30:33  smite-meister
-// cleaned startup
-//
 // Revision 1.20  2004/07/25 20:16:43  hurdler
 // Remove old hardware renderer and add part of the new one
-//
-// Revision 1.19  2004/07/07 17:27:20  smite-meister
-// bugfixes
 //
 // Revision 1.18  2004/07/05 16:53:30  smite-meister
 // Netcode replaced
@@ -95,9 +62,6 @@
 //
 // Revision 1.13  2004/01/10 16:03:00  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
-//
-// Revision 1.12  2003/11/23 00:41:55  smite-meister
-// bugfixes
 //
 // Revision 1.11  2003/06/29 17:33:59  smite-meister
 // VFile system, PAK support, Hexen bugfixes
@@ -160,10 +124,19 @@
 
 extern byte gammatable[5][256];
 
+static int R_TransmapNumForName(const char *name);
+
+
+// TODO after exiting a mapcluster, flush unnecessary graphics...
+//  R_LoadTextures ();
+//  R_FlushTextureCache();
+//  R_ClearColormaps();
+
+
 //
 // Graphics.
 // DOOM graphics for walls and sprites
-// is stored in vertical runs of opaque pixels (posts).
+// are stored in vertical runs of opaque pixels (posts).
 // A column is composed of zero or more posts,
 // a patch or sprite is composed of zero or more columns.
 //
@@ -171,10 +144,6 @@ extern byte gammatable[5][256];
 #ifdef OLDWATER
 int             firstwaterflat; //added:18-02-98:WATER!
 #endif
-
-
-/// lightlevel colormaps from COLORMAP lump
-lighttable_t    *colormaps;
 
 
 //faB: for debugging/info purpose
@@ -191,6 +160,30 @@ short*   hicolormaps;           // test a 32k colormap remaps high -> high
 //==================================================================
 //  Utilities
 //==================================================================
+
+
+/// Store lists of lumps for F_START/F_END etc.
+struct lumplist_t
+{
+  int wadfile;
+  int firstlump;
+  int numlumps;
+};
+
+
+static int R_CheckNumForNameList(const char *name, lumplist_t *ll, int listsize)
+{
+  for (int i = listsize - 1; i > -1; i--)
+    {
+      int lump = fc.FindNumForNameFile(name, ll[i].wadfile, ll[i].firstlump);
+      if ((lump & 0xffff) >= (ll[i].firstlump + ll[i].numlumps) || lump == -1)
+        continue;
+      else
+        return lump;
+    }
+  return -1;
+}
+
 
 
 // given an RGB triplet, returns the index of the nearest color in
@@ -370,11 +363,14 @@ byte *PatchTexture::Generate()
       // to avoid unnecessary memcpy
       fc.ReadLump(lump, pixels);
 
+      /*
       // [segabor] necessary endianness conversion
+      // [smite] should not be necessary, because these fields are never used 
 	  p->width		= SHORT(p->width);
 	  p->height		= SHORT(p->height);
 	  p->leftoffset	= SHORT(p->leftoffset);
 	  p->topoffset	= SHORT(p->topoffset);
+      */
 	  
       for (int i=0; i < width; i++)
         p->columnofs[i] = LONG(p->columnofs[i]);
@@ -382,7 +378,10 @@ byte *PatchTexture::Generate()
       // do a palette conversion if needed
       byte *colormap = tc.GetPaletteConv(lump >> 16);
       if (colormap)
-        R_ColormapPatch(p, colormap);
+	{
+	  p->width = SHORT(p->width);
+	  R_ColormapPatch(p, colormap);
+	}
     }
 
   return pixels;
@@ -610,11 +609,11 @@ Texture *texturecache_t::operator[](unsigned id)
   if (id >= texture_ids.size())
     I_Error("Invalid texture ID %d (max %d)!\n", id, texture_ids.size());
 
-  map<unsigned, Texture *>::iterator i = texture_ids.find(id);
-  if (i == texture_ids.end())
+  map<unsigned, Texture *>::iterator t = texture_ids.find(id);
+  if (t == texture_ids.end())
     return NULL;
   else
-    return (*i).second;
+    return t->second;
 }
 
 
@@ -651,19 +650,6 @@ void texturecache_t::InitPaletteConversion()
     palette_conversion[i] = R_CreatePaletteConversionColormap(i);
 }
 
-
-
-/// tries to retrieve a transmap by name. returns transtable number, -1 if unsuccesful.
-static int R_TransmapNumForName(const char *name)
-{
-  int lump = fc.FindNumForName(name);
-  if (lump >= 0 && fc.LumpLength(lump) == tr_size)
-    {
-      fc.ReadLump(lump, transtables); // FIXME just testing, we can't clobber existing transmaps
-      return 0;
-    }
-  return -1;
-}
 
 
 // semi-hack for linedeftype 242 and the like, where the
@@ -940,39 +926,22 @@ int texturecache_t::ReadTextures()
 
 
 
+
 //==================================================================
-//  Colormaps
+//    Colormaps
 //==================================================================
 
 
-//SoM: 4/13/2000: Store lists of lumps for F_START/F_END ect.
-struct lumplist_t
-{
-  int wadfile;
-  int firstlump;
-  int numlumps;
-};
+/// lightlevel colormaps from COLORMAP lump
+lighttable_t *colormaps;
 
+/// extra boom colormaps
+int             num_extra_colormaps;
+extracolormap_t extra_colormaps[MAXCOLORMAPS];
 
-static int R_CheckNumForNameList(const char *name, lumplist_t *ll, int listsize)
-{
-  for (int i = listsize - 1; i > -1; i--)
-    {
-      int lump = fc.FindNumForNameFile(name, ll[i].wadfile, ll[i].firstlump);
-      if ((lump & 0xffff) >= (ll[i].firstlump + ll[i].numlumps) || lump == -1)
-        continue;
-      else
-        return lump;
-    }
-  return -1;
-}
-
-
-// lumplist for C_START - C_END pairs in wads
-static lumplist_t *colormaplumps;
+/// lumplist for C_START - C_END pairs in wads
 static int         numcolormaplumps;
-
-static int foundcolormaps[MAXCOLORMAPS]; // colormap number to lumpnumber
+static lumplist_t *colormaplumps;
 
 
 
@@ -986,9 +955,7 @@ void R_InitColormaps()
   fc.ReadLump(lump, colormaps);
 
   //SoM: 3/30/2000: Init Boom colormaps.
-
-  num_extra_colormaps = 0;
-  memset(extra_colormaps, 0, sizeof(extra_colormaps));
+  R_ClearColormaps();
 
   // build the colormap lumplists (which record the locations of C_START and C_END in each wad)
   numcolormaplumps = 0;
@@ -1022,14 +989,13 @@ void R_InitColormaps()
 
 
 
-
-//SoM: Clears out extra colormaps between levels.
+/// Clears out all extra colormaps.
 void R_ClearColormaps()
 {
   num_extra_colormaps = 0;
-  for (int i = 0; i < MAXCOLORMAPS; i++)
-    foundcolormaps[i] = -1;
-  memset(extra_colormaps, 0, sizeof(extra_colormaps));
+  memset(extra_colormaps, 0, MAXCOLORMAPS * sizeof(extracolormap_t));
+  for (int i=0; i < MAXCOLORMAPS; i++)
+    extra_colormaps[i].lump = -1;
 }
 
 
@@ -1041,29 +1007,33 @@ int R_ColormapNumForName(const char *name)
   if (lump == -1)
     return -1;
 
-  for (int i = 0; i < num_extra_colormaps; i++)
-    if (lump == foundcolormaps[i])
+  for (int i=0; i < num_extra_colormaps; i++)
+    if (lump == extra_colormaps[i].lump)
       return i;
+
+  // not already cached, we must read it from WAD
 
   if (num_extra_colormaps == MAXCOLORMAPS)
     I_Error("R_ColormapNumForName: Too many colormaps!\n");
 
-  foundcolormaps[num_extra_colormaps] = lump;
+  int n = num_extra_colormaps++;
+
+  extra_colormaps[n].lump = lump;
 
   // aligned on 8 bit for asm code
-  extra_colormaps[num_extra_colormaps].colormap = (lighttable_t *)Z_MallocAlign (fc.LumpLength (lump), PU_LEVEL, 0, 8);
-  fc.ReadLump(lump, extra_colormaps[num_extra_colormaps].colormap);
+  extra_colormaps[n].colormap = (lighttable_t *)Z_MallocAlign(fc.LumpLength(lump), PU_LEVEL, 0, 8);
+  fc.ReadLump(lump, extra_colormaps[n].colormap);
 
   // SoM: Added, we set all params of the colormap to normal because there
   // is no real way to tell how GL should handle a colormap lump anyway..
-  extra_colormaps[num_extra_colormaps].maskcolor = 0xffff;
-  extra_colormaps[num_extra_colormaps].fadecolor = 0x0;
-  extra_colormaps[num_extra_colormaps].maskamt = 0x0;
-  extra_colormaps[num_extra_colormaps].fadestart = 0;
-  extra_colormaps[num_extra_colormaps].fadeend = 33;
-  extra_colormaps[num_extra_colormaps].fog = 0;
+  extra_colormaps[n].maskcolor = 0xffff;
+  extra_colormaps[n].fadecolor = 0x0;
+  extra_colormaps[n].maskamt = 0x0;
+  extra_colormaps[n].fadestart = 0;
+  extra_colormaps[n].fadeend = 33;
+  extra_colormaps[n].fog = 0;
 
-  return num_extra_colormaps++;
+  return n;
 }
 
 
@@ -1076,18 +1046,17 @@ const char *R_ColormapNameForNum(int num)
   if (num < 0 || num >= MAXCOLORMAPS)
     I_Error("R_ColormapNameForNum: num is invalid!\n");
 
-  if (foundcolormaps[num] == -1)
+  if (extra_colormaps[num].lump == -1)
     return "INLEVEL";
 
-  return fc.FindNameForNum(foundcolormaps[num]);
+  return fc.FindNameForNum(extra_colormaps[num].lump);
 }
 
 
 
 
-
 // Rounds off floating numbers and checks for 0 - 255 bounds
-int RoundUp(double number)
+static int RoundUp(double number)
 {
   if (number >= 255.0)
     return 255;
@@ -1100,29 +1069,32 @@ int RoundUp(double number)
   return int(number);
 }
 
+
 // R_CreateColormap
 // This is a more GL friendly way of doing colormaps: Specify colormap
 // data in a special linedef's texture areas and use that to generate
 // custom colormaps at runtime. NOTE: For GL mode, we only need to color
 // data and not the colormap data.
-double  deltas[256][3], cmap[256][3];
 
 int R_CreateColormap(char *p1, char *p2, char *p3)
 {
+  if (num_extra_colormaps == MAXCOLORMAPS)
+    I_Error("R_CreateColormap: Too many colormaps!\n");
+
   double cmaskr, cmaskg, cmaskb, cdestr, cdestg, cdestb;
   double r, g, b;
   double cbrightness;
   double maskamt = 0, othermask = 0;
   int    i, p;
-  char   *colormap_p;
   unsigned int  cr, cg, cb;
   unsigned int  maskcolor, fadecolor;
   unsigned int  fadestart = 0, fadeend = 33, fadedist = 33;
-  int           fog = 0;
-  int           mapnum = num_extra_colormaps;
+  int fog = 0;
 
-#define HEX2INT(x) (x >= '0' && x <= '9' ? x - '0' : x >= 'a' && x <= 'f' ? x - 'a' + 10 : x >= 'A' && x <= 'F' ? x - 'A' + 10 : 0)
-  if(p1[0] == '#')
+#define HEX2INT(x) (x >= '0' && x <= '9' ? x - '0' : \
+		    x >= 'a' && x <= 'f' ? x - 'a' + 10 : \
+		    x >= 'A' && x <= 'F' ? x - 'A' + 10 : 0)
+  if (p1[0] == '#')
     {
       cmaskr = cr = ((HEX2INT(p1[1]) * 16) + HEX2INT(p1[2]));
       cmaskg = cg = ((HEX2INT(p1[3]) * 16) + HEX2INT(p1[4]));
@@ -1153,7 +1125,7 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
 
 
 #define NUMFROMCHAR(c)  (c >= '0' && c <= '9' ? c - '0' : 0)
-  if(p2[0] == '#')
+  if (p2[0] == '#')
     {
       // SoM: Get parameters like, fadestart, fadeend, and the fogflag...
       fadestart = NUMFROMCHAR(p2[3]) + (NUMFROMCHAR(p2[2]) * 10);
@@ -1168,7 +1140,7 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
 #undef NUMFROMCHAR
 
 
-  if(p3[0] == '#')
+  if (p3[0] == '#')
     {
       cdestr = cr = ((HEX2INT(p3[1]) * 16) + HEX2INT(p3[2]));
       cdestg = cg = ((HEX2INT(p3[3]) * 16) + HEX2INT(p3[4]));
@@ -1184,27 +1156,27 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
     }
 #undef HEX2INT
 
+  // check if we already have created one like it
+  for (i = 0; i < num_extra_colormaps; i++)
+    {
+      if (extra_colormaps[i].lump == -1 &&
+	  maskcolor == extra_colormaps[i].maskcolor &&
+	  fadecolor == extra_colormaps[i].fadecolor &&
+	  maskamt == extra_colormaps[i].maskamt &&
+	  fadestart == extra_colormaps[i].fadestart &&
+	  fadeend == extra_colormaps[i].fadeend &&
+	  fog == extra_colormaps[i].fog)
+	return i;
+    }
 
-/*  for(i = 0; i < num_extra_colormaps; i++)
-  {
-    if(foundcolormaps[i] != -1)
-      continue;
-    if(maskcolor == extra_colormaps[i].maskcolor &&
-       fadecolor == extra_colormaps[i].fadecolor &&
-       maskamt == extra_colormaps[i].maskamt &&
-       fadestart == extra_colormaps[i].fadestart &&
-       fadeend == extra_colormaps[i].fadeend &&
-       fog == extra_colormaps[i].fog)
-      return i;
-  }*/
+  // nope, we have to create it now
 
-  if(num_extra_colormaps == MAXCOLORMAPS)
-    I_Error("R_CreateColormap: Too many colormaps!\n");
-  num_extra_colormaps++;
+  int n = num_extra_colormaps++;
+  double  deltas[256][3], cmap[256][3];
 
 #ifdef HWRENDER
   // TODO: Hurdler: see why we need to have a separate code here
-  if(rendermode == render_soft)
+  if (rendermode == render_soft)
 #endif
   {
     for(i = 0; i < 256; i++)
@@ -1231,25 +1203,25 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
     }
   }
 
-  foundcolormaps[mapnum] = -1;
+  extra_colormaps[n].lump = -1;
 
   // aligned on 8 bit for asm code
-  extra_colormaps[mapnum].colormap = NULL;
-  extra_colormaps[mapnum].maskcolor = maskcolor;
-  extra_colormaps[mapnum].fadecolor = fadecolor;
-  extra_colormaps[mapnum].maskamt = maskamt;
-  extra_colormaps[mapnum].fadestart = fadestart;
-  extra_colormaps[mapnum].fadeend = fadeend;
-  extra_colormaps[mapnum].fog = fog;
+  extra_colormaps[n].colormap = NULL;
+  extra_colormaps[n].maskcolor = maskcolor;
+  extra_colormaps[n].fadecolor = fadecolor;
+  extra_colormaps[n].maskamt = maskamt;
+  extra_colormaps[n].fadestart = fadestart;
+  extra_colormaps[n].fadeend = fadeend;
+  extra_colormaps[n].fog = fog;
 
 #define ABS2(x) (x) < 0 ? -(x) : (x)
 #ifdef HWRENDER
   // TODO: Hurdler: see why we need to have a separate code here
-  if(rendermode == render_soft)
+  if (rendermode == render_soft)
 #endif
   {
-    colormap_p = (char *)Z_MallocAlign ((256 * 34) + 1, PU_LEVEL, 0, 8);
-    extra_colormaps[mapnum].colormap = (lighttable_t *)colormap_p;
+    char *colormap_p = (char *)Z_MallocAlign((256 * 34) + 1, PU_LEVEL, 0, 8);
+    extra_colormaps[n].colormap = (lighttable_t *)colormap_p;
 
     for(p = 0; p < 34; p++)
     {
@@ -1280,14 +1252,12 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
   }
 #undef ABS2
 
-  return mapnum;
+  return n;
 }
 
 
 
-//
 //  build a table for quick conversion from 8bpp to 15bpp
-//
 static int makecol15(int r, int g, int b)
 {
   return (((r >> 3) << 10) | ((g >> 3) << 5) | ((b >> 3)));
@@ -1310,6 +1280,121 @@ void R_Init8to16()
   for (i=0;i<16384;i++)
     hicolormaps[i] = i<<1;
 }
+
+
+
+
+
+//==================================================================
+//    Translucency tables
+//==================================================================
+
+
+static int num_transtables;
+int  transtable_lumps[MAXTRANSTABLES]; // i'm so lazy
+byte *transtables[MAXTRANSTABLES];
+
+
+/// Tries to retrieve a transmap by name. Returns transtable number, or -1 if unsuccesful.
+static int R_TransmapNumForName(const char *name)
+{
+  int lump = fc.FindNumForName(name);
+  if (lump >= 0 && fc.LumpLength(lump) == tr_size)
+    {
+      for (int i=0; i<num_transtables; i++)
+	if (transtable_lumps[i] == lump)
+	  return i;
+
+      if (num_transtables == MAXTRANSTABLES)
+	I_Error("R_TransmapNumForName: Too many transmaps!\n");
+      
+      int n = num_transtables++;
+      transtables[n] = (byte *)Z_MallocAlign(tr_size, PU_STATIC, 0, 16);
+      fc.ReadLump(lump, transtables[n]);
+      return n;
+    }
+  return -1;
+}
+
+
+void R_InitTranslucencyTables()
+{
+  // NOTE: the translation tables MUST BE aligned on 64k for the asm optimised code
+  //       (in other words, transtables pointer low word is 0)
+  int i;
+
+  for (i=0; i<MAXTRANSTABLES; i++)
+    {
+      transtable_lumps[i] = -1;
+      transtables[i] = NULL;
+    }
+    
+  transtables[0] = (byte *)Z_MallocAlign(tr_size, PU_STATIC, 0, 16);
+
+  // load in translucency tables
+
+  // first transtable
+  // check for the Boom default transtable lump
+  int lump = fc.FindNumForName("TRANMAP");
+  if (lump >= 0)
+    fc.ReadLump(lump, transtables[0]);
+  else if (game.mode >= gm_heretic)
+    fc.ReadLump(fc.GetNumForName("TINTTAB"), transtables[0]);
+  else
+    fc.ReadLump(fc.GetNumForName("TRANSMED"), transtables[0]); // in legacy.wad
+
+  if (game.mode >= gm_heretic)
+    {
+      // all the basic transmaps are the same
+      for (i=1; i<5; i++)
+	transtables[i] = transtables[0];
+    }
+  else
+    {
+      // we can use the transmaps in legacy.wad
+      for (i=1; i<5; i++)
+	transtables[i] = (byte *)Z_MallocAlign(tr_size, PU_STATIC, 0, 16);
+
+      fc.ReadLump(fc.GetNumForName("TRANSMOR"), transtables[1]);
+      fc.ReadLump(fc.GetNumForName("TRANSHI"),  transtables[2]);
+      fc.ReadLump(fc.GetNumForName("TRANSFIR"), transtables[3]);
+      fc.ReadLump(fc.GetNumForName("TRANSFX1"), transtables[4]);
+    }
+
+  num_transtables = 5;
+
+
+  // Compose a default linear filter map based on PLAYPAL.
+  /*
+  // Thanks to TeamTNT for prBoom sources!
+  if (false)
+    {
+      // filter weights
+      float w1 = 0.66;
+      float w2 = 1 - w1;
+
+      int i, j;
+      byte *tp = transtables[0];
+
+      for (i=0; i<256; i++)
+	{
+	  float r2 = vid.palette[i].red   * w2;
+	  float g2 = vid.palette[i].green * w2;
+	  float b2 = vid.palette[i].blue  * w2;
+
+	  for (j=0; j<256; j++, tp++)
+	    {
+	      byte r = vid.palette[j].red   * w1 + r2;
+	      byte g = vid.palette[j].green * w1 + g2;
+	      byte b = vid.palette[j].blue  * w1 + b2;
+
+	      *tp = NearestColor(r, g, b);
+	    }
+	}
+    }
+  */
+}
+
 
 
 
@@ -1453,7 +1538,7 @@ void Map::PrecacheMap()
     //
     // Precache sprites.
     //
-    /*  FIXME
+    /*
     spritepresent = (char *)alloca(numsprites);
     spritepresent = (char *)Z_Malloc(numsprites, PU_STATIC, 0);
     memset (spritepresent,0, numsprites);

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/12/31 16:19:29  smite-meister
+// alpha fixes
+//
 // Revision 1.10  2004/12/02 17:22:31  smite-meister
 // HUD fixed
 //
@@ -251,7 +254,7 @@ int  p_sound;  // pickupsound
 bool p_remove; // should the stuff be removed?
 
 
-void PlayerPawn::TouchSpecialThing(DActor *special)
+void PlayerPawn::TouchSpecialThing(DActor *thing)
 {                  
   // Dead thing touching.
   // Can happen with a sliding player corpse.
@@ -261,8 +264,9 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
   p_remove = true; // should the item be removed from map?
   p_sound = sfx_itemup;
 
-  int stype = special->type;
-  int amount = special->health; // item amounts are stored in health
+  int stype = thing->type;
+  int amount = thing->health; // item amounts are stored in health
+  float quality = thing->info->speed; // "quality" is stored in speed
 
   // Identify item
   switch (stype)
@@ -290,27 +294,27 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 
     case MT_ITEMSHIELD1:
     case MT_ITEMSHIELD2:
-      if (!GiveArmor(armor_field, special->info->speed, amount))
+      if (!GiveArmor(armor_field, quality, amount))
 	return;
       player->SetMessage(text[stype - MT_ITEMSHIELD1 + TXT_ITEMSHIELD1]);
       break;
 
     case MT_GREENARMOR:
     case MT_BLUEARMOR:
-      if (!GiveArmor(armor_field, special->info->speed, amount))
+      if (!GiveArmor(armor_field, quality, amount))
 	return;
       player->SetMessage(text[stype - MT_GREENARMOR + TXT_GOTARMOR]);
       break;
 
     case MT_HEALTHBONUS:  // health bonus
-      health++;               // can go over 100%
+      health += amount;   // can go over 100%
       if (health > 2*maxhealth)
 	health = 2*maxhealth;
       player->SetMessage(GOTHTHBONUS, 2);
       break;
 
     case MT_ARMORBONUS:  // spirit armor
-      GiveArmor(armor_field, -0.333f, 1);
+      GiveArmor(armor_field, -quality, amount);
       player->SetMessage(GOTARMBONUS, 2);
       break;
 
@@ -326,7 +330,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       health += amount;
       if (health > 2*maxhealth)
 	health = 2*maxhealth;
-      GiveArmor(armor_field, 0.5, amount);
+      GiveArmor(armor_field, quality, amount);
       player->SetMessage(GOTMSPHERE);
       p_sound = sfx_powerup;
       break;
@@ -407,85 +411,85 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       // Artifacts :
     case MT_XHEALTHFLASK:
     case MT_HEALTHFLASK:
-      if (!GiveArtifact(arti_health, special))
+      if (!GiveArtifact(arti_health, thing))
 	return;
       break;
     case MT_XARTIFLY:
     case MT_ARTIFLY:
-      if (!GiveArtifact(arti_fly, special))
+      if (!GiveArtifact(arti_fly, thing))
 	return;
       break;
     case MT_XARTIINVULNERABILITY:
     case MT_ARTIINVULNERABILITY:
-      if (!GiveArtifact(arti_invulnerability, special))
+      if (!GiveArtifact(arti_invulnerability, thing))
 	return;
       break;
     case MT_ARTITOMEOFPOWER:
-      if (!GiveArtifact(arti_tomeofpower, special))
+      if (!GiveArtifact(arti_tomeofpower, thing))
 	return;
       break;
     case MT_ARTIINVISIBILITY:
-      if (!GiveArtifact(arti_invisibility, special))
+      if (!GiveArtifact(arti_invisibility, thing))
 	return;
       break;
     case MT_ARTIEGG:
-      if (!GiveArtifact(arti_egg, special))
+      if (!GiveArtifact(arti_egg, thing))
 	return;
       break;
     case MT_XARTISUPERHEAL:
     case MT_ARTISUPERHEAL:
-      if (!GiveArtifact(arti_superhealth, special))
+      if (!GiveArtifact(arti_superhealth, thing))
 	return;
       break;
     case MT_XARTITORCH:
     case MT_ARTITORCH:
-      if (!GiveArtifact(arti_torch, special))
+      if (!GiveArtifact(arti_torch, thing))
 	return;
       break;
     case MT_ARTIFIREBOMB:
-      if (!GiveArtifact(arti_firebomb, special))
+      if (!GiveArtifact(arti_firebomb, thing))
 	return;
       break;
     case MT_XARTITELEPORT:
     case MT_ARTITELEPORT:
-      if (!GiveArtifact(arti_teleport, special))
+      if (!GiveArtifact(arti_teleport, thing))
 	return;
       break;
 
     case MT_SUMMONMAULATOR:
-      if (!GiveArtifact(arti_summon, special))
+      if (!GiveArtifact(arti_summon, thing))
 	return;
       break;
     case MT_XARTIEGG:
-      if (!GiveArtifact(arti_pork, special))
+      if (!GiveArtifact(arti_pork, thing))
 	return;
       break;
     case MT_HEALRADIUS:
-      if (!GiveArtifact(arti_healingradius, special))
+      if (!GiveArtifact(arti_healingradius, thing))
 	return;
       break;
     case MT_TELEPORTOTHER:
-      if (!GiveArtifact(arti_teleportother, special))
+      if (!GiveArtifact(arti_teleportother, thing))
 	return;
       break;
     case MT_ARTIPOISONBAG:
-      if (!GiveArtifact(arti_poisonbag, special))
+      if (!GiveArtifact(arti_poisonbag, thing))
 	return;
       break;
     case MT_SPEEDBOOTS:
-      if (!GiveArtifact(arti_speed, special))
+      if (!GiveArtifact(arti_speed, thing))
 	return;
       break;
     case MT_BOOSTMANA:
-      if (!GiveArtifact(arti_boostmana, special))
+      if (!GiveArtifact(arti_boostmana, thing))
 	return;
       break;
     case MT_BOOSTARMOR:
-      if (!GiveArtifact(arti_boostarmor, special))
+      if (!GiveArtifact(arti_boostarmor, thing))
 	return;
       break;
     case MT_BLASTRADIUS:
-      if (!GiveArtifact(arti_blastradius, special))
+      if (!GiveArtifact(arti_blastradius, thing))
 	return;
       break;
 
@@ -507,7 +511,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
     case MT_ARTIPUZZGEAR2:
     case MT_ARTIPUZZGEAR3:
     case MT_ARTIPUZZGEAR4:
-      if (!GiveArtifact(artitype_t(arti_puzzskull + stype - MT_ARTIPUZZSKULL), special))
+      if (!GiveArtifact(artitype_t(arti_puzzskull + stype - MT_ARTIPUZZSKULL), thing))
 	return;
       break;
 
@@ -727,101 +731,101 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 
         // weapons
     case MT_BFG9000:
-      if (!GiveWeapon(wp_bfg, amount, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_bfg, amount, thing->flags & MF_DROPPED))
 	return;
       player->SetMessage(GOTBFG9000);
       break;
     case MT_CHAINGUN:
-      if (!GiveWeapon(wp_chaingun, amount, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_chaingun, amount, thing->flags & MF_DROPPED))
 	return;
       player->SetMessage(GOTCHAINGUN);
       break;
     case MT_SHAINSAW:
-      if (!GiveWeapon(wp_chainsaw, amount, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_chainsaw, amount, thing->flags & MF_DROPPED))
 	return;
       player->SetMessage(GOTCHAINSAW);
       break;
     case MT_ROCKETLAUNCH:
-      if (!GiveWeapon(wp_missile, amount, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_missile, amount, thing->flags & MF_DROPPED))
 	return;
       player->SetMessage(GOTLAUNCHER);
       break;
     case MT_PLASMAGUN:
-      if (!GiveWeapon(wp_plasma, amount, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_plasma, amount, thing->flags & MF_DROPPED))
 	return;
       player->SetMessage(GOTPLASMA);
       break;
     case MT_SHOTGUN:
-      if (!GiveWeapon(wp_shotgun, amount, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_shotgun, amount, thing->flags & MF_DROPPED))
 	return;
       player->SetMessage(GOTSHOTGUN);
       break;
     case MT_SUPERSHOTGUN:
-      if (!GiveWeapon(wp_supershotgun, amount, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_supershotgun, amount, thing->flags & MF_DROPPED))
 	return;
       player->SetMessage(GOTSHOTGUN2);
       break;
 
       // heretic weapons
     case MT_WMACE:
-      if (!GiveWeapon(wp_mace, amount, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_mace, amount, thing->flags & MF_DROPPED))
 	return;
       player->SetMessage(GOT_WPNMACE);
       break;
     case MT_WCROSSBOW:
-      if (!GiveWeapon(wp_crossbow, amount, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_crossbow, amount, thing->flags & MF_DROPPED))
 	return;
       player->SetMessage(GOT_WPNCROSSBOW);
       break;
     case MT_WBLASTER:
-      if (!GiveWeapon(wp_blaster, amount, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_blaster, amount, thing->flags & MF_DROPPED))
 	return;
       player->SetMessage(GOT_WPNBLASTER);
       break;
     case MT_WSKULLROD:
-      if (!GiveWeapon(wp_skullrod, amount, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_skullrod, amount, thing->flags & MF_DROPPED))
 	return;
       player->SetMessage(GOT_WPNSKULLROD);
       break;
     case MT_WPHOENIXROD:
-      if (!GiveWeapon(wp_phoenixrod, amount, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_phoenixrod, amount, thing->flags & MF_DROPPED))
 	return;
       player->SetMessage(GOT_WPNPHOENIXROD);
       break;
     case MT_WGAUNTLETS:
-      if (!GiveWeapon(wp_gauntlets, amount, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_gauntlets, amount, thing->flags & MF_DROPPED))
 	return;
       player->SetMessage(GOT_WPNGAUNTLETS);
       break;
 
       // Hexen weapons
     case MT_MW_CONE:
-      if (!GiveWeapon(wp_cone_of_shards, amount, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_cone_of_shards, amount, thing->flags & MF_DROPPED))
 	return;
       player->SetMessage(text[TXT_WEAPON_M2]);
       break;
     case MT_MW_LIGHTNING:
-      if (!GiveWeapon(wp_arc_of_death, amount, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_arc_of_death, amount, thing->flags & MF_DROPPED))
 	return;
       player->SetMessage(text[TXT_WEAPON_M3]);
       break;
     case MT_FW_AXE:
-      if (!GiveWeapon(wp_timons_axe, amount, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_timons_axe, amount, thing->flags & MF_DROPPED))
 	return;
       player->SetMessage(text[TXT_WEAPON_F2]);
       break;
     case MT_FW_HAMMER:
-      if (!GiveWeapon(wp_hammer_of_retribution, amount, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_hammer_of_retribution, amount, thing->flags & MF_DROPPED))
 	return;
       player->SetMessage(text[TXT_WEAPON_F3]);
       break;
     case MT_CW_SERPSTAFF:
-      if (!GiveWeapon(wp_serpent_staff, amount, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_serpent_staff, amount, thing->flags & MF_DROPPED))
 	return;
       player->SetMessage(text[TXT_WEAPON_C2]);
       break;
     case MT_CW_FLAME:
-      if (!GiveWeapon(wp_firestorm, amount, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_firestorm, amount, thing->flags & MF_DROPPED))
 	return;
       player->SetMessage(text[TXT_WEAPON_C3]);
       break;
@@ -836,17 +840,25 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
     case MT_MW_STAFF1:
     case MT_MW_STAFF2:
     case MT_MW_STAFF3:
-      if (!GiveArtifact(artitype_t(arti_fsword1 + stype - MT_FW_SWORD1), special))
+      if (!GiveArtifact(artitype_t(arti_fsword1 + stype - MT_FW_SWORD1), thing))
 	return;
       break;
 
     default:
-      // SoM: New gettable things with FraggleScript!
-      CONS_Printf("\2TouchSpecialThing: Unknown pickup type (%d)!\n", stype);
-      return;
+      {
+	// TEST: New gettable things with scripting!
+	int script = thing->info->damage; // this field holds the script number
+	if (script)
+	  mp->FS_RunScript(script, this); // too bad FS can't use parameters, maybe we should use ACS instead...
+	else
+	  {
+	    CONS_Printf("\2TouchSpecialThing: Unknown pickup type (%d)!\n", stype);
+	    return;
+	  }
+      }
     }
 
-  if (special->flags & MF_COUNTITEM)
+  if (thing->flags & MF_COUNTITEM)
     player->items++;
 
   player->bonuscount += BONUSADD;
@@ -854,12 +866,12 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
   S_StartAmbSound(player, p_sound);
 
   // pickup special (Hexen)
-  if (special->special)
+  if (thing->special)
     {
-      mp->ExecuteLineSpecial(special->special, special->args, NULL, 0, this);
-      special->special = 0;
+      mp->ExecuteLineSpecial(thing->special, thing->args, NULL, 0, this);
+      thing->special = 0;
     }
 
   if (p_remove)
-    special->Remove();
+    thing->Remove();
 }

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2004/12/31 16:19:41  smite-meister
+// alpha fixes
+//
 // Revision 1.20  2004/12/02 17:22:36  smite-meister
 // HUD fixed
 //
@@ -270,7 +273,7 @@ void PatchTexture::Draw(int x, int y, int scrn = 0)
                   pixel = current_colormap[pixel];
 
                 if (flags & V_TL)
-                  pixel = transtables[(pixel << 8) + *dest];
+                  pixel = transtables[0][(pixel << 8) + *dest];
 
                 *dest = pixel;
                 dest += vid.width;
@@ -300,7 +303,7 @@ void PatchTexture::Draw(int x, int y, int scrn = 0)
                   pixel = current_colormap[pixel];
 
                 if (flags & V_TL)
-                  pixel = transtables[(pixel << 8) + *dest];
+                  pixel = transtables[0][(pixel << 8) + *dest];
 
                 *dest = pixel;
                 dest += vid.width;
@@ -382,7 +385,7 @@ void LumpTexture::Draw(int x, int y, int scrn = 0)
 	      pixel = current_colormap[pixel];
 
 	    if (flags & V_TL)
-	      pixel = transtables[(pixel << 8) + *dest];
+	      pixel = transtables[0][(pixel << 8) + *dest];
 
 	    *dest = pixel;
 	  }
@@ -401,7 +404,7 @@ void LumpTexture::Draw(int x, int y, int scrn = 0)
 	      pixel = current_colormap[pixel];
 
 	    if (flags & V_TL)
-	      pixel = transtables[(pixel << 8) + *dest];
+	      pixel = transtables[0][(pixel << 8) + *dest];
 
 	    *dest = pixel;
 	  }

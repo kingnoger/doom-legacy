@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/12/31 16:19:41  smite-meister
+// alpha fixes
+//
 // Revision 1.10  2004/11/18 20:30:15  smite-meister
 // tnt, plutonia
 //
@@ -372,7 +375,7 @@ void Rend::R_DrawWallSplats()
                     colfunc = basecolfunc;
                 else
                 {
-		  dc_transmap = ((tr_transmed-1) << tr_shift) + transtables;
+		  dc_transmap = transtables[tr_transmed-1];
                     colfunc = fuzzcolfunc;
                 }
     
@@ -493,7 +496,7 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
   line_t *ldef = curline->linedef;
   if (ldef->transmap != -1)
     {
-      dc_transmap = transtables + (ldef->transmap << tr_shift);
+      dc_transmap = transtables[ldef->transmap];
       colfunc = fuzzcolfunc;
     }
   else if (ldef->special == 50 && ldef->args[0] == 11) // HACK fog sheet
@@ -750,7 +753,7 @@ void Rend::R_RenderThickSideRange(drawseg_t *ds, int x1, int x2, ffloor_t *ffloo
 
     if(ffloor->flags & FF_TRANSLUCENT)
     {
-      dc_transmap = transtables;   // get first transtable 50/50
+      dc_transmap = transtables[0];   // get first transtable 50/50
       colfunc = fuzzcolfunc;
     }
     else if(ffloor->flags & FF_FOG)

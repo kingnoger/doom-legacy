@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.53  2004/12/31 16:19:38  smite-meister
+// alpha fixes
+//
 // Revision 1.52  2004/11/28 18:02:21  smite-meister
 // RPCs finally work!
 //
@@ -1130,13 +1133,6 @@ bool Map::Setup(tic_t start, bool spawnthings)
   // internal game map
   lumpnum = fc.GetNumForName(lumpname.c_str());
 
-
-  // textures are needed first
-  //    R_LoadTextures ();
-  //    R_FlushTextureCache();
-  R_ClearColormaps();
-
-
   InitThinkers();
 
   FS_ClearScripts();
@@ -1290,7 +1286,7 @@ void Map::ConvertLineDefs()
 	ld->flags |= ML_MONSTERS_CAN_ACTIVATE;
 
       // HACK some linedefs use texture names as data fields
-      if (ld->special == 50 && ld->args[0] == 4 && ld->sidenum[0] != -1)
+      if (ld->special == LEGACY_EXT && ld->args[0] == 4 && ld->sidenum[0] != -1)
 	sides[ld->sidenum[0]].special = ld->args[1];
     }
 }

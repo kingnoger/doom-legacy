@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/12/31 16:19:38  smite-meister
+// alpha fixes
+//
 // Revision 1.7  2004/11/09 20:38:51  smite-meister
 // added packing to I/O structs
 //
@@ -144,7 +147,6 @@ int wipe_doColorXForm(int width, int height, int ticks)
 
 bool wipe_doColorXForm(int width, int height, int ticks)
 {
-  extern byte *transtables;
   static int slowdown = 0;
 
   byte newval;
@@ -167,9 +169,9 @@ bool wipe_doColorXForm(int width, int height, int ticks)
 	{
 	  if (*w != *e)
 	    {
-	      if ((newval = transtables[(*e << 8) + *w + ((tr_transmor-1) << tr_shift)]) == *w)
-		if ((newval = transtables[(*e << 8) + *w + ((tr_transmed-1) << tr_shift)]) == *w)
-		  if ((newval = transtables[(*w << 8) + *e + ((tr_transmor-1) << tr_shift)]) == *w)
+	      if ((newval = transtables[tr_transmor-1][(*e << 8) + *w]) == *w)
+		if ((newval = transtables[tr_transmed-1][(*e << 8) + *w]) == *w)
+		  if ((newval = transtables[tr_transmor-1][(*w << 8) + *e]) == *w)
 		    newval = *e;
 	      *w = newval;
 	      changed = true;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/12/31 16:19:41  smite-meister
+// alpha fixes
+//
 // Revision 1.6  2004/08/19 19:42:42  smite-meister
 // bugfixes
 //
@@ -902,7 +905,7 @@ void Rend::R_DrawSinglePlane(visplane_t* pl, bool handlesource)
     if(pl->ffloor->flags & FF_TRANSLUCENT)
     {
       spanfunc = R_DrawTranslucentSpan_8;
-      ds_transmap = transtables + (1 << tr_shift);
+      ds_transmap = transtables[1];
       if(pl->extra_colormap && pl->extra_colormap->fog)
         light = (pl->lightlevel >> LIGHTSEGSHIFT);
       else

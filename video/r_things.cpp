@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.27  2004/12/31 16:19:41  smite-meister
+// alpha fixes
+//
 // Revision 1.26  2004/12/08 16:52:45  segabor
 // Missing devparm reference added
 //
@@ -583,11 +586,11 @@ void spritepres_t::Project(Actor *p)
   else
     {
       if (flags & TFF_TRANSMASK)
-        vis->transmap = transtables + (((flags & TFF_TRANSMASK) >> TFF_TRANSSHIFT) << tr_shift) - tr_size;
+        vis->transmap = transtables[((flags & TFF_TRANSMASK) >> TFF_TRANSSHIFT) - 1];
       else if (p->flags & MF_SHADOW)
         // actually only the player should use this (temporary invisibility)
         // because now the translucency is set through TFF_TRANSMASK
-        vis->transmap = transtables + ((tr_transhi-1) << tr_shift);
+        vis->transmap = transtables[tr_transhi - 1];
 
       if (fixedcolormap)
         {
@@ -1323,9 +1326,9 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
       // now it switch between invis/less invis the last seconds
       if (viewplayer->powers[pw_invisibility] > 4*TICRATE
           || viewplayer->powers[pw_invisibility] & 8)
-        vis->transmap = ((tr_transhi-1) << tr_shift) + transtables;
+        vis->transmap = transtables[tr_transhi - 1];
       else
-        vis->transmap = ((tr_transmed-1) << tr_shift) + transtables;
+        vis->transmap = transtables[tr_transmed - 1];
     }
   else if (fixedcolormap)
     {

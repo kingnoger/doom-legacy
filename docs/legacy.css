@@ -44,6 +44,14 @@ div.example
   padding: 0.2em 0.5em;
 }
 
+div.code
+{
+  white-space: pre;
+  background: #203000;
+  margin: 0 5em 0 2em;
+  padding: 0.2em 0.5em;
+}
+
 
 ol > li > ol
 {
@@ -53,7 +61,6 @@ ol > li > ol
 
 table.def
 {
-  width: 90%;
   margin: 0.5em 1em;
   padding: 0em;
   border-collapse: separate;

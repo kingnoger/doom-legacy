@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.25  2004/12/31 16:19:37  smite-meister
+// alpha fixes
+//
 // Revision 1.24  2004/11/28 18:02:20  smite-meister
 // RPCs finally work!
 //
@@ -523,7 +526,7 @@ static void CheatWeaponsFunc(PlayerPawn *p, const byte *arg)
   int i;
 
   p->armorpoints[0] = DEH.idfa_armor;
-  p->armorfactor[0] = 0.5;
+  p->armorfactor[0] = DEH.idfa_armorfactor;
 
   if (game.mode == gm_heretic)
     {
@@ -699,7 +702,7 @@ static void CheatIDKFAFunc(PlayerPawn *p, const byte *arg)
     {
       // doom, give stuff
       p->armorpoints[0] = DEH.idkfa_armor;
-      p->armorfactor[0] = 0.5;
+      p->armorfactor[0] = DEH.idkfa_armorfactor;
 
       for (i = wp_doom; i < wp_heretic; i++)
 	p->weaponowned[i] = true;

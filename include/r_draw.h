@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/12/31 16:19:40  smite-meister
+// alpha fixes
+//
 // Revision 1.8  2004/11/09 20:38:52  smite-meister
 // added packing to I/O structs
 //
@@ -92,9 +95,12 @@ extern fixed_t          dc_texturemid;
 
 extern byte*            dc_source;      // first pixel in a column
 
+
 // translucency stuff here
-extern byte*            transtables;    // translucency tables, should be (*transtables)[5][256][256]
-extern byte*            dc_transmap;
+
+#define  MAXTRANSTABLES  20  // how many translucency tables may be used
+extern byte  *transtables[MAXTRANSTABLES]; // translucency tables
+extern byte  *dc_transmap;
 
 // TODO: add another asm routine which use the fg and bg indexes in the
 //       inverse order so the 20-80 becomes 80-20 translucency, no need
@@ -109,8 +115,9 @@ enum transnum_t
   tr_transfir = 4,    // 50 50 but brighter for fireballs, shots..
   tr_transfx1 = 5,    // 50 50 brighter some colors, else opaque for torches
   tr_size     = 0x10000,  // one transtable is 256*256 bytes in size
-  tr_shift    = 16    // 2^16 == tr_size
 };
+
+
 
 
 // translation stuff here

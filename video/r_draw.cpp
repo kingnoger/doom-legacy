@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/12/31 16:19:41  smite-meister
+// alpha fixes
+//
 // Revision 1.13  2004/10/27 17:37:11  smite-meister
 // netcode update
 //
@@ -26,9 +29,6 @@
 //
 // Revision 1.11  2004/09/23 23:21:20  smite-meister
 // HUD updated
-//
-// Revision 1.10  2004/08/29 20:48:50  smite-meister
-// bugfixes. wow.
 //
 // Revision 1.9  2004/08/15 18:08:30  smite-meister
 // palette-to-palette colormaps etc.
@@ -45,35 +45,11 @@
 // Revision 1.5  2003/06/29 17:33:59  smite-meister
 // VFile system, PAK support, Hexen bugfixes
 //
-// Revision 1.4  2003/05/11 21:23:53  smite-meister
-// Hexen fixes
-//
 // Revision 1.3  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
 // Revision 1.2  2002/12/03 10:07:13  smite-meister
 // Video unit overhaul begins
-//
-// Revision 1.8  2002/09/25 15:17:43  vberghol
-// Intermission fixed?
-//
-// Revision 1.7  2002/08/21 16:58:39  vberghol
-// Version 1.41 Experimental compiles and links!
-//
-// Revision 1.6  2002/08/19 18:06:47  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.5  2002/08/11 17:16:53  vberghol
-// ...
-//
-// Revision 1.4  2002/07/13 17:57:53  vberghol
-// pitäkää tunkkinne:)
-//
-// Revision 1.3  2002/07/01 21:01:11  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:38  vberghol
-// Version 133 Experimental!
 //
 // Revision 1.13  2001/08/06 23:57:09  stroggonmeth
 // Removed portal code, improved 3D floors in hardware mode.
@@ -195,12 +171,9 @@ byte*                   dc_source;
 // -----------------------
 // translucency stuff here
 // -----------------------
-#define NUMTRANSTABLES  5     // how many translucency tables are used
-
-byte*                   transtables;    // translucency tables
 
 // R_DrawTransColumn uses this
-byte*                   dc_transmap;    // one of the translucency tables
+byte                   *dc_transmap; // one of the translucency tables
 
 
 // ----------------------
@@ -347,78 +320,6 @@ void R_InitTranslationTables()
     }
 }
 
-//=========================================================================
-//                    TRANSLUCENCY TABLES
-//=========================================================================
-
-
-void R_InitTranslucencyTables()
-{
-  //added:11-01-98: load here the transparency lookup tables 'TINTTAB'
-  // NOTE: the TINTTAB resource MUST BE aligned on 64k for the asm optimised
-  //       (in other words, transtables pointer low word is 0)
-  transtables = (byte *)Z_MallocAlign(NUMTRANSTABLES*0x10000, PU_STATIC, 0, 16);
-
-  // load in translucency tables
-
-  // first transtable
-  // check for the Boom default transtable lump
-  int lump = fc.FindNumForName("TRANMAP");
-  if (lump >= 0)
-    fc.ReadLump(lump, transtables);
-  else if (game.mode >= gm_heretic)
-    fc.ReadLump(fc.GetNumForName("TINTTAB"), transtables);
-  else
-    fc.ReadLump(fc.GetNumForName("TRANSMED"), transtables); // in legacy.wad
-
-  if (game.mode >= gm_heretic)
-    {
-      // all the transmaps are the same
-      memcpy(transtables + tr_size, transtables, tr_size);
-      memcpy(transtables + 2*tr_size, transtables, tr_size);
-      memcpy(transtables + 3*tr_size, transtables, tr_size);
-      memcpy(transtables + 4*tr_size, transtables, tr_size);
-    }
-  else
-    {
-      // we can use the transmaps in legacy.wad
-      fc.ReadLump(fc.GetNumForName("TRANSMOR"), transtables + tr_size);
-      fc.ReadLump(fc.GetNumForName("TRANSHI"),  transtables + 2*tr_size);
-      fc.ReadLump(fc.GetNumForName("TRANSFIR"), transtables + 3*tr_size);
-      fc.ReadLump(fc.GetNumForName("TRANSFX1"), transtables + 4*tr_size);
-    }
-
-
-  // Compose a default linear filter map based on PLAYPAL.
-  /*
-  // Thanks to TeamTNT for prBoom sources!
-  if (false)
-    {
-      // filter weights
-      float w1 = 0.66;
-      float w2 = 1 - w1;
-
-      int i, j;
-      byte *tp = transtables;
-
-      for (i=0; i<256; i++)
-	{
-	  float r2 = vid.palette[i].red   * w2;
-	  float g2 = vid.palette[i].green * w2;
-	  float b2 = vid.palette[i].blue  * w2;
-
-	  for (j=0; j<256; j++, tp++)
-	    {
-	      byte r = vid.palette[j].red   * w1 + r2;
-	      byte g = vid.palette[j].green * w1 + g2;
-	      byte b = vid.palette[j].blue  * w1 + b2;
-
-	      *tp = NearestColor(r, g, b);
-	    }
-	}
-    }
-  */
-}
 
 // ==========================================================================
 //               COMMON DRAWER FOR 8 AND 16 BIT COLOR MODES

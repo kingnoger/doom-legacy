@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.42  2004/12/31 16:19:37  smite-meister
+// alpha fixes
+//
 // Revision 1.41  2004/11/28 18:02:21  smite-meister
 // RPCs finally work!
 //
@@ -852,7 +855,7 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
   if (!(flags & MF_CORPSE))
     {
       // end of game hellslime hack
-      if (subsector->sector->special == 11 && damage >= health)
+      if (subsector->sector->special == SS_EndLevelHurt && damage >= health)
 	damage = health - 1;
 
       // ignore damage in GOD mode, or with INVUL power.

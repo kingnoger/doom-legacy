@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.39  2004/12/31 16:19:29  smite-meister
+// alpha fixes
+//
 // Revision 1.38  2004/12/08 16:42:36  segabor
 // MacOS X specific DEFAULTDIR and D_RunDoom() entry point
 //
@@ -195,7 +198,7 @@ void CL_Init();
 
 // Version information
 const int  VERSION = 150;
-const char VERSIONSTRING[] = "prealpha2";
+const char VERSIONSTRING[] = "alpha1";
 
 // Name of local directory for config files and savegames
 #ifdef LINUX 
