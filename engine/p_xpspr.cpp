@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2003/05/05 00:24:49  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.1  2003/03/15 20:07:18  smite-meister
 // Initial Hexen compatibility!
 //
@@ -55,7 +58,6 @@
 #define WEAPONBOTTOM 128*FRACUNIT
 #define WEAPONTOP 32*FRACUNIT
 
-Actor *P_RoughMonsterSearch(Actor *mo, int distance);
 void A_UnHideThing(DActor *actor);
 int P_FaceMobj(Actor *source, Actor *target, angle_t *delta);
 
@@ -63,7 +65,6 @@ extern tic_t gametic;
 extern fixed_t FloatBobOffsets[64];
 extern mobjtype_t PuffType;
 extern Actor *PuffSpawned;
-//fixed_t bulletslope;
 
 
 //============================================================================
@@ -640,10 +641,7 @@ void MStaffSpawn(PlayerPawn *pmo, angle_t angle)
 {
   Actor *mo = pmo->SPMAngle(MT_MSTAFF_FX2, angle);
   if (mo)
-    {
-      mo->target = pmo;
-      mo->special1 = (int)P_RoughMonsterSearch(mo, 10);
-    }
+    mo->special1 = int(pmo->mp->RoughBlockSearch(mo, pmo, 10, 2));
 }
 
 //============================================================================
@@ -742,7 +740,7 @@ void A_MStaffTrack(DActor *actor)
 {
   if ((actor->special1 == 0) && (P_Random()<50))
     {
-      actor->special1 = (int)P_RoughMonsterSearch(actor, 10);
+      actor->special1 = int(actor->mp->RoughBlockSearch(actor, actor->owner, 10, 2));
     }
   actor->SeekerMissile(ANGLE_1*2, ANGLE_1*10);
 }
@@ -761,8 +759,8 @@ void MStaffSpawn2(DActor *actor, angle_t angle)
   mo = actor->SpawnMissileAngle(MT_MSTAFF_FX2, angle, 0);
   if (mo)
     {
-      mo->target = actor;
-      mo->special1 = (int)P_RoughMonsterSearch(mo, 10);
+      mo->owner = actor;
+      mo->special1 = int(actor->mp->RoughBlockSearch(mo, actor, 10, 2));
     }
 }
 
@@ -1365,7 +1363,7 @@ void A_CHolyAttack2(DActor *actor)
       mo->z = actor->z;
       mo->angle = actor->angle+(ANGLE_45+ANGLE_45/2)-ANGLE_45*j;
       mo->Thrust(mo->angle, int(mo->info->speed * FRACUNIT));
-      mo->target = actor->target;
+      mo->owner = actor->owner;
       mo->args[0] = 10; // initial turn value
       mo->args[1] = 0; // initial look angle
       if (cv_deathmatch.value)
@@ -1444,7 +1442,7 @@ void A_CHolyPalette(PlayerPawn *player, pspdef_t *psp)
 
 static void CHolyFindTarget(DActor *actor)
 {
-  Actor *target = P_RoughMonsterSearch(actor, 6);
+  Actor *target = actor->mp->RoughBlockSearch(actor, actor->owner, 6, 0);
 
   if (target)
     {

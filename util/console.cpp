@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/05/05 00:24:50  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.6  2003/04/24 20:30:33  hurdler
 // Remove lots of compiling warnings
 //
@@ -959,6 +962,8 @@ static void CON_Linefeed(int player2_message)
 //  Outputs text into the console text buffer
 //
 //TODO: fix this mess!!
+int console_alert = sfx_tink;
+
 void CON_Print (char *msg)
 {
   int l;
@@ -973,10 +978,7 @@ void CON_Print (char *msg)
       else if (*msg=='\3')
 	{
           mask = 128;                         // white text + sound
-          if (game.mode == gm_doom2)
-	    S_StartAmbSound(sfx_radio);
-          else
-	    S_StartAmbSound(sfx_tink);
+	  S_StartAmbSound(console_alert);
 	}
       else if (*msg == '\4') //Splitscreen: This message is for the second player
 	p2 = 1;

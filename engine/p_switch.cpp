@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/05/05 00:24:49  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.6  2003/04/19 17:38:47  smite-meister
 // SNDSEQ support, tools, linedef system...
 //
@@ -268,15 +271,15 @@ void button_t::Think()
     {
       switch (where)
 	{
-	case button_top:
+	case top:
 	  mp->sides[line->sidenum[0]].toptexture = texture;
 	  break;
 
-	case button_middle:
+	case middle:
 	  mp->sides[line->sidenum[0]].midtexture = texture;
 	  break;
 
-	case button_bottom:
+	case bottom:
 	  mp->sides[line->sidenum[0]].bottomtexture = texture;
 	  break;
 	default:
@@ -296,7 +299,7 @@ void Map::ChangeSwitchTexture(line_t *line, int useAgain)
 {
   int     texTop, texMid, texBot;
   int     i, n = switchlist.size();
-  button_e loc = button_none;
+  button_t::button_e loc = button_t::none;
 
   if (!useAgain)
     line->special = 0;
@@ -310,24 +313,24 @@ void Map::ChangeSwitchTexture(line_t *line, int useAgain)
       if (switchlist[i].tex == texTop)
         {
 	  sides[line->sidenum[0]].toptexture = switchlist[i^1].tex; // clever...
-	  loc = button_top;
+	  loc = button_t::top;
 	  break;
         }
       else if (switchlist[i].tex == texMid)
 	{
 	  sides[line->sidenum[0]].midtexture = switchlist[i^1].tex;
-	  loc = button_middle;
+	  loc = button_t::middle;
 	  break;
 	}
       else if (switchlist[i].tex == texBot)
 	{
 	  sides[line->sidenum[0]].bottomtexture = switchlist[i^1].tex;
-	  loc = button_bottom;
+	  loc = button_t::bottom;
 	  break;
 	}
     }
 
-  if (loc != button_none)
+  if (loc != button_t::none)
     {
       // EXIT SWITCH?
       if (line->special == 11)
@@ -350,6 +353,7 @@ void Map::ChangeSwitchTexture(line_t *line, int useAgain)
 // Called when a thing uses a special line.
 // Only the front sides of lines are usable.
 //
+/*
 bool Map::UseSpecialLine(Actor *thing, line_t *line, int side)
 {
   extern consvar_t   cv_allowexitlevel;
@@ -1229,3 +1233,4 @@ bool Map::UseSpecialLine(Actor *thing, line_t *line, int side)
 
   return true;
 }
+*/

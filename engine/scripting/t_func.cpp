@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.4  2003/05/05 00:24:49  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.3  2003/04/19 17:38:47  smite-meister
 // SNDSEQ support, tools, linedef system...
 //
@@ -49,6 +52,7 @@
 #include <stdio.h>
 
 #include "doomtype.h"
+#include "doomdata.h"
 #include "command.h"
 
 #include "g_actor.h"
@@ -885,7 +889,7 @@ void SF_Teleport()
     }
 
   if(mo)
-    current_map->EV_Teleport(&line, 0, mo);
+    current_map->EV_Teleport(&line, mo);
 }
 
 
@@ -912,7 +916,7 @@ void SF_SilentTeleport()
     }
 
   if(mo)
-    current_map->EV_SilentTeleport(&line, 0, mo);
+    current_map->EV_Teleport(&line, mo, true);
 }
 
 
@@ -1550,7 +1554,7 @@ void SF_FloorHeight()
         {
 	  s = &current_map->sectors[i];
           if (current_map->T_MovePlane(s, abs(fixedvalue(t_argv[1]) - s->floorheight), fixedvalue(t_argv[1]),
-	     crush, 0, fixedvalue(t_argv[1]) > s->floorheight ? 1 : -1) == crushed)
+	     crush, 0, fixedvalue(t_argv[1]) > s->floorheight ? 1 : -1) == res_crushed)
             returnval = 0;
         }
     }
@@ -1568,15 +1572,13 @@ void SF_MoveFloor()
 {
   int secnum = -1;
   sector_t *sec;
-  floormove_t *floor;
-  int platspeed = 1, destheight;
 
   if(t_argc < 2)
     { script_error("insufficient arguments to function\n"); return; }
 
   int tagnum = intvalue(t_argv[0]);
-  destheight = intvalue(t_argv[1]) << FRACBITS;
-  platspeed = FLOORSPEED * (t_argc > 2 ? intvalue(t_argv[2]) : 1);
+  fixed_t destheight = intvalue(t_argv[1]) << FRACBITS;
+  fixed_t platspeed = FLOORSPEED * (t_argc > 2 ? intvalue(t_argv[2]) : 1);
 
   // move all sectors with tag
 
@@ -1588,12 +1590,8 @@ void SF_MoveFloor()
       if (P_SectorActive(floor_special,sec))
         continue;
 
-      floor = new floormove_t(floor_e(-1), sec, NULL, secnum);
+      floor_t *floor = new floor_t(floor_t::AbsHeight, sec, platspeed, 0, destheight);
       current_map->AddThinker(floor);
-
-      floor->direction = destheight < sec->floorheight ? -1 : 1;
-      floor->speed = platspeed;
-      floor->floordestheight = destheight;
     }
 }
 
@@ -1627,7 +1625,7 @@ void SF_CeilingHeight()
         {
 	  s = &current_map->sectors[i];
           if (current_map->T_MovePlane(s, abs(fixedvalue(t_argv[1]) - s->ceilingheight),
-	   fixedvalue(t_argv[1]), crush, 1, fixedvalue(t_argv[1]) > s->ceilingheight ? 1 : -1) == crushed)
+	   fixedvalue(t_argv[1]), crush, 1, fixedvalue(t_argv[1]) > s->ceilingheight ? 1 : -1) == res_crushed)
             returnval = 0;
         }
     }
@@ -1647,14 +1645,13 @@ void SF_MoveCeiling()
   int secnum = -1;
   sector_t *sec;
   ceiling_t *ceiling;
-  int platspeed = 1, destheight;
 
   if(t_argc < 2)
     { script_error("insufficient arguments to function\n"); return; }
 
   int tagnum = intvalue(t_argv[0]);
-  destheight = intvalue(t_argv[1]) << FRACBITS;
-  platspeed = FLOORSPEED * (t_argc > 2 ? intvalue(t_argv[2]) : 1);
+  fixed_t destheight = intvalue(t_argv[1]) << FRACBITS;
+  fixed_t platspeed = FLOORSPEED * (t_argc > 2 ? intvalue(t_argv[2]) : 1);
 
   // move all sectors with tag
 
@@ -1666,14 +1663,8 @@ void SF_MoveCeiling()
       if (P_SectorActive(ceiling_special,sec))
         continue;
 
-      ceiling = new ceiling_t(genCeiling, sec, sec->tag);
+      ceiling = new ceiling_t(ceiling_t::AbsHeight, sec, platspeed, platspeed, 0, destheight);
       current_map->AddThinker(ceiling);
-
-      ceiling->direction = destheight < sec->ceilingheight ? -1 : 1;
-      ceiling->speed = platspeed;
-      // just set top and bottomheight the same
-      ceiling->topheight = ceiling->bottomheight = destheight;
-
       current_map->AddActiveCeiling(ceiling);
     }
 }
@@ -1994,8 +1985,12 @@ void SF_LineTrigger()
   junk.special = intvalue(t_argv[0]);
   junk.tag = t_argc < 2 ? 0 : intvalue(t_argv[1]);
 
-  current_map->UseSpecialLine(t_trigger, &junk, 0);    // Try using it
-  current_map->ActivateCrossedLine(&junk, 0, t_trigger);   // Try crossing it
+  //current_map->UseSpecialLine(t_trigger, &junk, 0);    // Try using it
+  //current_map->ActivateCrossedLine(&junk, 0, t_trigger);   // Try crossing it
+
+  // TODO this function does not yet work as expected, because the special type needs to be translated.
+  current_map->ActivateLine(&junk, t_trigger, 0, SPAC_USE);
+  current_map->ActivateLine(&junk, t_trigger, 0, SPAC_CROSS);
 }
 
 

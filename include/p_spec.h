@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/05/05 00:24:50  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.9  2003/04/19 17:38:47  smite-meister
 // SNDSEQ support, tools, linedef system...
 //
@@ -178,17 +181,16 @@ public:
 };
 
 
-typedef enum
-{
-  PODOOR_NONE,
-  PODOOR_SLIDE,
-  PODOOR_SWING,
-} podoortype_e;
-
-
 class polydoor_t : public polyobject_t
 {
   friend class Map;
+public:
+  enum podoor_e
+  {
+    pd_none,
+    pd_slide,
+    pd_swing,
+  }; 
 
 protected:
   int totalDist;
@@ -196,29 +198,30 @@ protected:
   fixed_t xs, ys;
   int tics;
   int waitTics;
-  podoortype_e type;
+  podoor_e type;
   bool close;
 
 public:
-  polydoor_t(int num, podoortype_e t, byte *args, bool mirror);
+  polydoor_t(int num, int type, byte *args, bool mirror);
   virtual void Think();
   virtual int  PushForce();
 };
 
 enum
 {
+  // linedef specials
+  PO_LINE_START = 1,
+  PO_LINE_EXPLICIT = 5,
+  // mapthing specials
   PO_ANCHOR_TYPE = 3000,
   PO_SPAWN_TYPE,
   PO_SPAWNCRUSH_TYPE
 };
 
-#define PO_LINE_START 1 // polyobj line start special
-#define PO_LINE_EXPLICIT 5
 
-
-//
-// P_LIGHTS
-//
+//======================================
+//   Sector light effects
+//======================================
 
 class fireflicker_t : public Thinker
 {
@@ -275,8 +278,7 @@ public:
   virtual void Think();
 };
 
-//SoM: thinker struct for fading lights. ToDo: Add effects for light
-// transition
+
 class lightlevel_t : public Thinker
 {
   friend class Map;
@@ -294,25 +296,25 @@ public:
 #define SLOWDARK                35
 
 
-//
+//======================================
 // P_SWITCH
-//
+//======================================
 
 void P_InitSwitchList();
-
-typedef enum
-{
-  button_none,
-  button_top,
-  button_middle,
-  button_bottom
-
-} button_e;
-
 
 class button_t : public Thinker
 {
   friend class Map;
+public:
+  enum button_e
+  {
+    none = 0,
+    top,
+    middle,
+    bottom
+  };
+
+private:
   line_t *line;
   mappoint_t *soundorg;
   int     texture;
@@ -333,73 +335,79 @@ public:
 
 // SoM: 3/4/2000: Misc Boom stuff for thinkers that can share sectors, and some other stuff
 
-typedef enum
+// the result of a plane movement
+enum planeresult_e
+{
+  res_ok = 0,
+  res_crushed,
+  res_pastdest
+};
+
+enum special_e
 {
   floor_special,
   ceiling_special,
   lighting_special,
-} special_e;
+};
 
 
 //SoM: 3/6/2000
 int P_SectorActive(special_e t, sector_t *s);
 
-
-typedef enum
+enum change_e
 {
   trigChangeOnly,
   numChangeOnly,
-} change_e;
+};
 
 
-//
-// P_PLATS
-//
-typedef enum
-{
-  up,
-  down,
-  waiting,
-  in_stasis
-
-} plat_e;
-
-
-typedef enum
-{
-  perpetualRaise,
-  downWaitUpStay,
-  raiseAndChange,
-  raiseToNearestAndChange,
-  blazeDWUS,
-  //SoM:3/4/2000: Added boom stuffs
-  genLift,      //General stuff
-  genPerpetual, 
-  toggleUpDn,   //Instant toggle of stuff.
-
-} plattype_e;
-
+//======================================
+//    Platforms (Lifts)
+//======================================
 
 class plat_t : public Thinker
 {
   friend class Map;
+public:
+  enum plat_e
+  {
+    // targets
+    RelHeight = 0,
+    AbsHeight,
+    LnF,
+    NLnF,
+    NHnF,
+    LnC,
+    LHF,
+    CeilingToggle,
+    TMASK = 0xF,
+    // flags
+    Returning = 0x10, // coming back, will stop
+    Perpetual = 0x20, // will not stop until stopped
+    SetTexture = 0x40,
+  };
+
+  enum status_e
+  {
+    up,
+    down,
+    waiting,
+    in_stasis
+  };
+
 private:
-  plattype_e  type;
-  sector_t *sector;
+  int         type;
+  sector_t   *sector;
   fixed_t     speed;
-  fixed_t     low;
-  fixed_t     high;
-  int         wait;
-  int         count;
-  plat_e      status;
-  plat_e      oldstatus;
-  bool        crush;
+  fixed_t     low, high;
+  int         wait, count;
+  status_e    status, oldstatus;
   int         tag;
 
   list<plat_t *>::iterator li;
 
 public:
-  plat_t(plattype_e ty, sector_t *s, line_t *l);
+  plat_t(int type, sector_t *sec, int tag, fixed_t speed, int wait, fixed_t height);
   virtual void Think();
 };
 
@@ -408,11 +416,11 @@ public:
 #define PLATSPEED               (FRACUNIT/NEWTICRATERATIO)
 
 
-//
-// P_DOORS
-//
+//======================================
+//   Doors
+//======================================
 
-
+// vertical door
 class vdoor_t : public Thinker
 {
   friend class Map;
@@ -424,30 +432,9 @@ public:
     Open,
     CwO,
     Close,
-    tmask   = 0x3,
-    blazing = 0x4,
-    delayed = 0x8 // initial delay (topcount)
-
-    /*
-    normalDoor,
-    close30ThenOpen,
-    doorclose,
-    dooropen,
-    raiseIn5Mins,
-    blazeRaise,
-    blazeOpen,
-    blazeClose,
-
-    //SoM: 3/4/2000: General door types...
-    genRaise,
-    genBlazeRaise,
-    genOpen,
-    genBlazeOpen,
-    genClose,
-    genBlazeClose,
-    genCdO,
-    genBlazeCdO,
-    */
+    TMASK   = 0x3,
+    Blazing = 0x4,
+    Delayed = 0x8 // initial delay (topcount)
   };
 
 private:
@@ -474,146 +461,61 @@ public:
 #define VDOORWAIT     150
 
 
-#if 0 // UNUSED
-//
-//      Sliding doors...
-//
-typedef enum
-{
-  sd_opening,
-  sd_waiting,
-  sd_closing
-
-} sd_e;
+// Sliding doors removed
 
 
-
-typedef enum
-{
-  sdt_openOnly,
-  sdt_closeOnly,
-  sdt_openAndClose
-
-} sdt_e;
-
-
-class slidedoor_t : public Thinker
-{
-  friend class Map;
-private:
-  sdt_e       type;
-  line_t *line;
-  int         frame;
-  int         whichDoorIndex;
-  int         timer;
-  sector_t *frontsector;
-  sector_t *backsector;
-  sd_e         status;
-public:
-  slidedoor_t();
-  virtual void Think();
-};
-
-
-typedef struct
-{
-  char        frontFrame1[9];
-  char        frontFrame2[9];
-  char        frontFrame3[9];
-  char        frontFrame4[9];
-  char        backFrame1[9];
-  char        backFrame2[9];
-  char        backFrame3[9];
-  char        backFrame4[9];
-
-} slidename_t;
-
-
-
-typedef struct
-{
-  int             frontFrames[4];
-  int             backFrames[4];
-
-} slideframe_t;
-
-
-
-// how many frames of animation
-#define SNUMFRAMES              4
-
-#define SDOORWAIT               (35*3)
-#define SWAITTICS               4
-
-// how many diff. types of anims
-#define MAXSLIDEDOORS   5
-
-void P_InitSlidingDoorFrames();
-void EV_SlidingDoor(line_t *line, Actor *thing);
-#endif
-
-
-
-//
-// P_CEILNG
-//
-typedef enum
-{
-  lowerToFloor,
-  raiseToHighest,
-  //SoM:3/4/2000: Extra boom stuffs that tricked me...
-  lowerToLowest,
-  lowerToMaxFloor,
-
-  lowerAndCrush,
-  crushAndRaise,
-  fastCrushAndRaise,
-  silentCrushAndRaise,
-  instantRaise,
-
-  //SoM:3/4/2000
-  //jff 02/04/98 add types for generalized ceiling mover
-  genCeiling,
-  genCeilingChg,
-  genCeilingChg0,
-  genCeilingChgT,
-
-  //jff 02/05/98 add types for generalized ceiling mover
-  genCrusher,
-  genSilentCrusher,
-
-} ceiling_e;
-
+//======================================
+//  Ceilings and crushers
+//======================================
 
 class ceiling_t : public Thinker
 {
   friend class Map;
+public:
+
+  enum ceiling_e
+  {
+    // target
+    RelHeight = 0,
+    AbsHeight,
+    Floor,
+    HnC,
+    //NnC,
+    LnC,
+    HnF,
+    CrushOnce,
+    Crusher,
+    TMASK  = 0xF,
+    // flags
+    Silent = 0x10,
+    SetTexture = 0x20,
+    SetSpecial = 0x40,
+    SetTxTy    = 0x20 + 0x40
+  };
+
 private:
-  ceiling_e  type;
-  sector_t  *sector;
-  fixed_t    oldspeed; //SoM: 3/6/2000
-  bool       crush;
+  int       type;
+  sector_t *sector;
+  int       crush;
 
-  //SoM: 3/6/2000: Support ceiling changers
-  int newspecial;
-  int oldspecial;
-  short texture;
+  // ceiling changers
+  int       oldspecial, newspecial;
+  short     texture;
 
-  int         tag;   // ID
-  int         olddirection;
+  fixed_t   upspeed, downspeed;
+  fixed_t   oldspeed;
 
+  int       tag;
+  char      olddirection;
   list<ceiling_t *>::iterator li;
 
 public:
-  int        direction;   // 1 = up, 0 = waiting, -1 = down
-  fixed_t    speed;
-  fixed_t    bottomheight;
-  fixed_t    topheight;
+  char      direction;   // 1 = up, 0 = waiting, -1 = down
+  fixed_t   bottomheight, topheight;
 
-public:
   static int ceilmovesound;
 
-  ceiling_t(ceiling_e ty, sector_t *s, int t);
+  ceiling_t(int ty, sector_t *sec, fixed_t usp, fixed_t dsp, int cru, fixed_t height);
   virtual void Think();
 };
 
@@ -622,101 +524,60 @@ public:
 #define CEILWAIT                150
 
 
-//
-// P_FLOOR
-//
-typedef enum
+//======================================
+//  Floors
+//======================================
+
+
+enum stair_e
 {
-  // lower floor to highest surrounding floor
-  lowerFloor,
-
-    // lower floor to lowest surrounding floor
-  lowerFloorToLowest,
-
-  // lower floor to highest surrounding floor VERY FAST
-  turboLower,
-
-  // raise floor to lowest surrounding CEILING
-  raiseFloor,
-
-  // raise floor to next highest surrounding floor
-  raiseFloorToNearest,
-
-  // lower floor to lowest surrounding floor
-  lowerFloorToNearest,
-
-  // lower floor 24
-  lowerFloor24,
-
-  // lower floor 32
-  lowerFloor32Turbo,
-
-  // raise floor to shortest height texture around it
-  raiseToTexture,
-
-  // lower floor to lowest surrounding floor
-  //  and change floorpic
-  lowerAndChange,
-
-  raiseFloor24,
-
-  //raise floor 32
-  raiseFloor32Turbo,
-
-  raiseFloor24AndChange,
-  raiseFloorCrush,
-
-  // raise to next highest floor, turbo-speed
-  raiseFloorTurbo,
-  donutRaise,
-  raiseFloor512,
-  instantLower,
-
-  //SoM: 3/4/2000 Boom copy YEAH YEAH
-  genFloor,
-  genFloorChg,
-  genFloorChg0,
-  genFloorChgT,
-
-    //new types for stair builders
-  buildStair,
-  genBuildStair,
-
-} floor_e;
-
-//SoM:3/4/2000: Anothe boom code copy.
-typedef enum
-{
-  elevateUp,
-  elevateDown,
-  elevateCurrent,
-} elevator_e;
+  STAIRS_NORMAL,
+  STAIRS_SYNC,
+  STAIRS_PHASED
+};
 
 
-typedef enum
-{
-  build8,     // slowly build by 8
-  turbo16     // quickly build by 16
-} stair_e;
-
-
-class floormove_t : public Thinker
+class floor_t : public Thinker
 {
   friend class Map;
-private:
-  floor_e     type;
-  bool     crush;
-  sector_t *sector;
-  int         newspecial;
-  int         oldspecial; //SoM: 3/6/2000
-  short       texture;
 public:
-  int         direction;
-  fixed_t     floordestheight;
-  fixed_t     speed;
+  enum floor_e
+  {
+    // target
+    RelHeight = 0,
+    AbsHeight,
+    Ceiling,
+    LnF,
+    UpNnF,
+    DownNnF,
+    HnF,
+    LnC,
+    SLT,
+    TMASK = 0xF,
+    // flags
+    SetTexture = 0x10,
+    SetSpecial = 0x20,
+    SetTxTy    = 0x10 + 0x20,
+    NumericModel = 0x40 // otherwise assume "trigger model"
+  };
+
+private:
+  int       type;
+  sector_t *sector;
+  int       crush;
+
+  // floor changers
+  int       oldspecial, newspecial;
+  short     texture;
+
+  fixed_t   speed;
 
 public:
-  floormove_t(floor_e ty, sector_t *s, line_t *line, int secnum);
+  char      direction;
+  fixed_t   destheight;
+
+public:
+  floor_t(int type, sector_t *sec, fixed_t speed, int crush, fixed_t height);
   virtual void Think();
 };
 
@@ -724,8 +585,16 @@ public:
 class elevator_t : public Thinker
 {
   friend class Map;
+public:
+  enum elevator_e
+  {
+    elevateUp,
+    elevateDown,
+    elevateCurrent,
+  };
+
 private:
-  elevator_e type;
+  int type;
   sector_t *sector;
   int direction;
   fixed_t floordestheight;
@@ -733,7 +602,7 @@ private:
   fixed_t speed;
 
 public:
-  elevator_t(elevator_e ty, sector_t *s, line_t *l);
+  elevator_t(int ty, sector_t *s, line_t *l);
   virtual void Think();
 };
 
@@ -741,17 +610,10 @@ public:
 #define ELEVATORSPEED (FRACUNIT*4/NEWTICRATERATIO) //SoM: 3/6/2000
 #define FLOORSPEED    (FRACUNIT/NEWTICRATERATIO)
 
-enum result_e
-{
-  ok,
-  crushed,
-  pastdest
-};
 
-
-//
+//======================================
 // BOOM generalized linedefs
-// 
+//======================================
 
 /* SoM: 3/4/2000: This is a large section of copied code. Sorry if this offends people, but
    I really don't want to read, understand and rewrite all the changes to the source and entire
@@ -1071,13 +933,5 @@ public:
   friend bool PIT_PushThing(Actor *thing);
 };
 
-//SoM: 3/9/2000: Prototype functions for pushers
-//bool  PIT_PushThing(Actor *thing);
-
-// heretic stuff
-void P_InitLava();
-void P_AmbientSound();
-void P_AddAmbientSfx(int sequence);
-void P_InitAmbientSound();
 
 #endif

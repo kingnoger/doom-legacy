@@ -117,8 +117,13 @@ export LD = $(CC)
 export objdir = objs
 
 export engine_objects = \
-	$(objdir)/p_doors.o \
 	$(objdir)/p_spec.o \
+	$(objdir)/p_floor.o \
+	$(objdir)/p_plats.o \
+	$(objdir)/p_ceilng.o \
+	$(objdir)/p_doors.o \
+	$(objdir)/p_genlin.o \
+	$(objdir)/p_things.o \
 	$(objdir)/p_poly.o \
 	$(objdir)/p_acs.o \
 	$(objdir)/a_action.o \
@@ -147,17 +152,14 @@ export engine_objects = \
 	$(objdir)/g_state.o \
 	$(objdir)/g_demo.o \
 	$(objdir)/g_map.o \
+	$(objdir)/p_maputl.o \
 	$(objdir)/g_think.o \
 	$(objdir)/g_actor.o \
 	$(objdir)/g_pawn.o \
 	$(objdir)/g_input.o \
 	$(objdir)/d_main.o \
 	$(objdir)/m_cheat.o \
-	$(objdir)/p_genlin.o \
-	$(objdir)/p_ceilng.o \
-	$(objdir)/p_floor.o \
 	$(objdir)/p_lights.o \
-	$(objdir)/p_plats.o \
 	$(objdir)/p_telept.o \
 	$(objdir)/p_switch.o \
 	$(objdir)/p_enemy.o \
@@ -173,7 +175,6 @@ export engine_objects = \
 	$(objdir)/p_info.o \
 	$(objdir)/p_setup.o \
 	$(objdir)/p_saveg.o \
-	$(objdir)/p_maputl.o \
 	$(objdir)/p_map.o \
 	$(objdir)/p_inter.o \
 	$(objdir)/p_fab.o \

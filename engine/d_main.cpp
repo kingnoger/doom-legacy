@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2003/05/05 00:24:48  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.15  2003/04/19 17:38:46  smite-meister
 // SNDSEQ support, tools, linedef system...
 //
@@ -298,7 +301,7 @@ void D_DoAdvanceDemo()
       game.state = GS_DEMOSCREEN;
       break;
     case 1:
-      G_DeferedPlayDemo ("demo1");
+      G_DeferedPlayDemo("DEMO1");
       pagetic = 9999999;
       break;
     case 2:
@@ -307,7 +310,7 @@ void D_DoAdvanceDemo()
       pagename = "CREDIT";
       break;
     case 3:
-      G_DeferedPlayDemo ("demo2");
+      G_DeferedPlayDemo("DEMO2");
       pagetic = 9999999;
       break;
     case 4:
@@ -322,7 +325,7 @@ void D_DoAdvanceDemo()
 	  break;
 	case gm_heretic:
 	  pagetic = 200;
-	  if (fc.FindNumForName("e2m1") == -1)
+	  if (fc.FindNumForName("E2M1") == -1)
 	    pagename = "ORDER";
 	  else
 	    pagename = "CREDIT";
@@ -338,12 +341,12 @@ void D_DoAdvanceDemo()
         }
       break;
     case 5:
-      G_DeferedPlayDemo ("demo3");
+      G_DeferedPlayDemo("DEMO3");
       pagetic = 9999999;
       break;
       // THE DEFINITIVE DOOM Special Edition demo
     case 6:
-      G_DeferedPlayDemo ("demo4");
+      G_DeferedPlayDemo("DEMO4");
       pagetic = 9999999;
       break;
     }
@@ -1108,7 +1111,7 @@ void D_CheckWadVersion()
 */
   // check version of legacy.wad using version lump
   int wadversion = 0;
-  int lump = fc.FindNumForName("version", true);
+  int lump = fc.FindNumForName("VERSION", true);
   if (lump != -1)
     {
       char s[128];

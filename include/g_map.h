@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.14  2003/05/05 00:24:50  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.13  2003/04/20 16:45:50  smite-meister
 // partial SNDSEQ fix
 //
@@ -65,7 +68,6 @@
 #include "g_think.h"
 #include "m_fixed.h"
 #include "info.h" // mobjtype_t
-#include "p_spec.h"
 
 using namespace std;
 
@@ -271,8 +273,8 @@ public:
 
   // in p_map.cpp
   void CreateSecNodeList(Actor *thing, fixed_t x, fixed_t y);
-  bool CheckSector(sector_t* sector, bool crunch);
-  bool ChangeSector(sector_t *sector, bool crunch);
+  bool CheckSector(sector_t* sector, int crunch);
+  bool ChangeSector(sector_t *sector, int crunch);
   void SlideMove(Actor* mo);
 
   // in p_setup.cpp
@@ -304,22 +306,23 @@ public:
   bool BlockLinesIterator(int x, int y, bool (*func)(line_t*));
   bool BlockThingsIterator(int x, int y, bool(*func)(Actor*));
   bool PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags, traverser_t trav);
+  Actor *RoughBlockSearch(Actor *center, Actor *master, int distance, int flags);
+  Actor *RoughBlockCheck(Actor *center, Actor *master, int index, int flags);
 
   // in p_hpspr.cpp
   void PlaceWeapons();
   void RepositionMace(DActor *mo);
 
   // in p_telept.cpp
-  bool EV_Teleport(line_t *line, int side, Actor *thing);
-  bool EV_SilentTeleport(line_t *line, int side, Actor *thing);
+  bool EV_Teleport(line_t *line, Actor *thing, bool silent = false);
   int  EV_SilentLineTeleport(line_t *line, int side, Actor *thing, bool reverse);
 
   // in p_spec.cpp
   side_t   *getSide(int sec, int line, int side);
   sector_t *getSector(int sec, int line, int side);
   int       twoSided(int sec, int line);
-  fixed_t   FindShortestUpperAround(int secnum);
-  fixed_t   FindShortestTextureAround(int secnum);
+  fixed_t   FindShortestUpperAround(sector_t *sec);
+  fixed_t   FindShortestLowerAround(sector_t *sec);
 
   sector_t *FindModelFloorSector(fixed_t floordestheight, sector_t *sec);
   sector_t *FindModelCeilingSector(fixed_t ceildestheight, sector_t *sec);
@@ -333,8 +336,8 @@ public:
   bool ActivateLine(line_t *line, Actor *thing, int side, int activationType);
   bool ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int side, Actor *mo);
 
-  void ActivateCrossedLine(line_t *line, int side, Actor *thing);
-  void ShootSpecialLine(Actor *thing, line_t *line);
+  //void ActivateCrossedLine(line_t *line, int side, Actor *thing);
+  //void ShootSpecialLine(Actor *thing, line_t *line);
   void UpdateSpecials();
 
   int  SpawnSectorSpecial(int sp, sector_t *sec);
@@ -346,7 +349,7 @@ public:
 
   // in p_switch.cpp
   void ChangeSwitchTexture(line_t *line, int useAgain);
-  bool UseSpecialLine(Actor *thing, line_t *line, int side);
+  //bool UseSpecialLine(Actor *thing, line_t *line, int side);
 
   // in p_genlin.cpp
   int EV_DoGenFloor(line_t* line);
@@ -372,7 +375,7 @@ public:
   void ActivateInStasisPlat(int tag);
   void RemoveActivePlat(plat_t* plat);
   void RemoveAllActivePlats();
-  int EV_DoPlat(line_t *line, plattype_e type, int amount);
+  int EV_DoPlat(line_t *line, int type, fixed_t speed, int wait, fixed_t height);
   int EV_StopPlat(line_t* line);
 
   // in p_ceiling.cpp
@@ -380,32 +383,27 @@ public:
   int  ActivateInStasisCeiling(line_t *line);
   void RemoveActiveCeiling(ceiling_t* ceiling);
   void RemoveAllActiveCeilings();
-  int  EV_DoCeiling(line_t *line, ceiling_e type);
-  int  EV_CeilingCrushStop(line_t *line);
+  int  EV_DoCeiling(line_t *line, int type, fixed_t upspeed, fixed_t downspeed, int crush, fixed_t height);
+  int  EV_StopCeiling(line_t *line);
 
   // in p_doors.cpp
   void EV_OpenDoor(int sectag, int speed, int wait_time);
   void EV_CloseDoor(int sectag, int speed);
-  //int  EV_DoDoor(line_t *line, byte *args, vldoor_e type);
-  int  EV_DoDoor(line_t* line, byte type, fixed_t speed = VDOORSPEED, int delay = VDOORWAIT);
-  int  EV_DoLockedDoor(line_t* line, PlayerPawn *p, byte type, byte lock,
-		       fixed_t speed = VDOORSPEED, int delay = VDOORWAIT);
-  int  EV_VerticalDoor(line_t* line, Actor *p);
-  void SpawnDoorCloseIn30 (sector_t* sec);
+  int  EV_DoDoor(line_t* line, Actor *mo, byte type, fixed_t speed, int delay);
+  void SpawnDoorCloseIn30(sector_t* sec);
   void SpawnDoorRaiseIn5Mins(sector_t* sec);
   
   // in p_floor.cpp
-  int EV_DoFloor(line_t *line, floor_e floortype);
-  int EV_DoChange(line_t *line, change_e changetype);
-  int EV_BuildStairs(line_t *line, stair_e type);
+  int EV_DoFloor(line_t *line, int type, fixed_t speed, int crush, fixed_t height);
+  int EV_DoChange(line_t *line, int changetype);
+  int EV_BuildStairs(line_t *line, int type, fixed_t speed, fixed_t stepsize, int crush);
   int EV_DoDonut(line_t *line);
-  int EV_DoElevator(line_t* line, elevator_e elevtype);
-  result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest,
-		       bool crush, int floorOrCeiling, int direction);
+  int EV_DoElevator(line_t* line, int type);
+  int T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, int crush, int floorOrCeiling, int direction);
 
   // in s_sndseq.cpp
   void S_Read_SNDSEQ(int lump);
-  bool SN_StartSequence(mappoint_t *m, unsigned seq);
+  bool SN_StartSequence(struct mappoint_t *m, unsigned seq);
   bool SN_StartSequence(Actor *a, unsigned seq);
   bool SN_StartSequenceName(Actor *m, const char *name);
   bool SN_StopSequence(void *origin);
@@ -436,7 +434,15 @@ public:
 
   bool EV_RotatePoly(line_t *line, byte *args, int direction, bool overRide);
   bool EV_MovePoly(line_t *line, byte *args, bool timesEight, bool overRide);
-  bool EV_OpenPolyDoor(line_t *line, byte *args, podoortype_e type);
+  bool EV_OpenPolyDoor(line_t *line, byte *args, int type);
+
+  // in p_things.cpp
+  bool EV_ThingProjectile(byte *args, bool gravity);
+  bool EV_ThingSpawn(byte *args, bool fog);
+  bool EV_ThingActivate(int tid);
+  bool EV_ThingDeactivate(int tid);
+  bool EV_ThingRemove(int tid);
+  bool EV_ThingDestroy(int tid);
 
   // ACS scripting
   void StartOpenACS(int number, int infoIndex, int *address);

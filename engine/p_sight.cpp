@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/05/05 00:24:49  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.2  2003/03/15 20:07:17  smite-meister
 // Initial Hexen compatibility!
 //
@@ -36,6 +39,7 @@
 #include "g_actor.h"
 #include "g_map.h"
 #include "p_maputl.h"
+#include "r_defs.h"
 
 extern int validcount; // in r_main.cpp, really awful
 

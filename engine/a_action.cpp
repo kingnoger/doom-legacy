@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/05/05 00:24:48  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.2  2003/04/14 08:58:24  smite-meister
 // Hexen maps load.
 //
@@ -467,7 +470,7 @@ void A_LeafSpawn(DActor *actor)
       if(mo)
 	{
 	  mo->Thrust(actor->angle, (P_Random()<<9)+3*FRACUNIT);
-	  mo->target = actor;
+	  mo->owner = actor;
 	  mo->special1 = 0;
 	}
     }
@@ -506,14 +509,14 @@ void A_LeafCheck(DActor *actor)
     {
       if(!actor->px && !actor->py)
 	{
-	  actor->Thrust(actor->target->angle,
+	  actor->Thrust(actor->owner->angle,
 		       (P_Random()<<9)+FRACUNIT);
 	}
       return;
     }
   actor->SetState(S_LEAF1_8);
   actor->pz = (P_Random()<<9)+FRACUNIT;
-  actor->Thrust(actor->target->angle, (P_Random()<<9)+2*FRACUNIT);
+  actor->Thrust(actor->owner->angle, (P_Random()<<9)+2*FRACUNIT);
   actor->flags |= MF_MISSILE;
 }
 
@@ -566,19 +569,20 @@ void GenerateOrbitTable(void)
 //		special1	true == removing from world
 //
 //	Child
-//		target		pointer to center mobj
+//		owner		pointer to center mobj
 //		args[0]		angle of ball
 
 void A_BridgeOrbit(DActor *actor)
 {
-  if (actor->target->special1)
+  //  if (actor->owner->special1)
+  if (actor->owner->mp == NULL) // "to be removed -signal"
     {
       actor->SetState(S_NULL);
     }
   actor->args[0]+=3;
-  actor->x = actor->target->x + orbitTableX[actor->args[0]];
-  actor->y = actor->target->y + orbitTableY[actor->args[0]];
-  actor->z = actor->target->z;
+  actor->x = actor->owner->x + orbitTableX[actor->args[0]];
+  actor->y = actor->owner->y + orbitTableY[actor->args[0]];
+  actor->z = actor->owner->z;
 }
 
 
@@ -599,28 +603,28 @@ void A_BridgeInit(DActor *actor)
   // Spawn triad into world
   ball1 = actor->mp->SpawnDActor(cx, cy, cz, MT_BRIDGEBALL);
   ball1->args[0] = startangle;
-  ball1->target = actor;
+  ball1->owner = actor;
 
   ball2 = actor->mp->SpawnDActor(cx, cy, cz, MT_BRIDGEBALL);
   ball2->args[0] = (startangle+85)&255;
-  ball2->target = actor;
+  ball2->owner = actor;
 
   ball3 = actor->mp->SpawnDActor(cx, cy, cz, MT_BRIDGEBALL);
   ball3->args[0] = (startangle+170)&255;
-  ball3->target = actor;
+  ball3->owner = actor;
 
   A_BridgeOrbit(ball1);
   A_BridgeOrbit(ball2);
   A_BridgeOrbit(ball3);
 }
-
+/*
 void A_BridgeRemove(DActor *actor)
 {
   actor->special1 = true;		// Removing the bridge
   actor->flags &= ~MF_SOLID;
   actor->SetState(S_FREE_BRIDGE1);
 }
-
+*/
 
 //==========================================================================
 //
@@ -869,7 +873,7 @@ void A_FogSpawn(DActor *actor)
       delta = actor->args[1];
       if (delta==0) delta=1;
       mo->angle = actor->angle + (((P_Random()%delta)-(delta>>1))<<24);
-      mo->target = actor;
+      mo->owner = actor;
       if (actor->args[0] < 1) actor->args[0] = 1;
       mo->args[0] = (P_Random() % (actor->args[0]))+1;	// Random speed
       mo->args[3] = actor->args[3];						// Set lifetime
@@ -1424,7 +1428,7 @@ void A_BatSpawn(DActor *actor)
       mo->args[0] = P_Random()&63;			// floatbob index
       mo->args[4] = actor->args[4];			// turn degrees
       mo->special2 = actor->args[3]<<3;		// Set lifetime
-      mo->target = actor;
+      mo->owner = actor;
     }
 }
 
@@ -1459,7 +1463,7 @@ void A_BatMove(DActor *actor)
     S_StartSound(actor, SFX_BAT_SCREAM);
 
   // Handle Z movement
-  actor->z = actor->target->z + 2*FloatBobOffsets[actor->args[0]];
+  actor->z = actor->owner->z + 2*FloatBobOffsets[actor->args[0]];
   actor->args[0] = (actor->args[0]+3)&63;	
 }
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/05/05 00:24:49  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.3  2003/04/14 08:58:28  smite-meister
 // Hexen maps load.
 //
@@ -58,11 +61,6 @@ angle_t abs(angle_t a);
 int  P_FaceMobj(Actor *source, Actor *target, angle_t *delta);
 void P_SpawnDirt(DActor *actor, fixed_t radius);
 
-// FIXME this is a hack to make it temporarily compile
-Actor *P_RoughMonsterSearch(Actor *mo, int distance)
-{
-  return NULL;
-}
 
 //----------------------------------------------------------------------------
 //
@@ -447,9 +445,9 @@ void A_MinotaurLook(DActor *actor)
   if (!actor->target) // Near player monster search
     {
       if (master && (master->health > 0))
-	mo = P_RoughMonsterSearch(master, 20);
+	mo = actor->mp->RoughBlockSearch(master, master, 20, 1);
       else
-	mo = P_RoughMonsterSearch(actor, 20);
+	mo = actor->mp->RoughBlockSearch(actor, master, 20, 1);
       actor->target = mo;
     }
 

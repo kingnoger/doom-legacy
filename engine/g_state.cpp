@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2003/05/05 00:24:48  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.13  2003/04/24 20:30:02  hurdler
 // Remove lots of compiling warnings
 //
@@ -672,6 +675,7 @@ void GameInfo::NewLevel(skill_t sk, LevelNode *n, bool resetplayer)
 }
 
 
+void P_InitSwitchList();
 //
 // StartLevel : (re)starts the 'currentlevel' stored in 'maps' vector
 // was G_DoLoadLevel()
@@ -695,7 +699,7 @@ void GameInfo::StartLevel(bool re, bool resetplayer)
 
   Z_FreeTags(PU_LEVEL, PU_PURGELEVEL-1); // destroys pawns if they are not Detached
 
-  // set switch texture names/numbers (bad design..)
+  // set switch texture names/numbers (TODO bad design, fix...)
   P_InitSwitchList();
 
   // setup all maps in the level

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/05/05 00:24:49  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.4  2003/02/23 22:49:30  smite-meister
 // FS is back! L2 cache works.
 //
@@ -44,6 +47,7 @@
 #include "g_map.h"
 
 #include "m_bbox.h"
+#include "r_poly.h"
 #include "r_main.h"
 #include "r_state.h"
 #include "p_maputl.h"
@@ -69,11 +73,6 @@ fixed_t P_AproxDistance(fixed_t dx, fixed_t dy)
 //
 int P_PointOnLineSide(fixed_t x, fixed_t y, line_t *line)
 {
-  fixed_t     dx;
-  fixed_t     dy;
-  fixed_t     left;
-  fixed_t     right;
-
   if (!line->dx)
     {
       if (x <= line->v1->x)
@@ -89,11 +88,11 @@ int P_PointOnLineSide(fixed_t x, fixed_t y, line_t *line)
       return line->dx > 0;
     }
 
-  dx = (x - line->v1->x);
-  dy = (y - line->v1->y);
+  fixed_t dx = (x - line->v1->x);
+  fixed_t dy = (y - line->v1->y);
 
-  left = FixedMul (line->dy>>FRACBITS , dx);
-  right = FixedMul (dy , line->dx>>FRACBITS);
+  fixed_t left = FixedMul (line->dy>>FRACBITS , dx);
+  fixed_t right = FixedMul (dy , line->dx>>FRACBITS);
 
   if (right < left)
     return 0;               // front side
@@ -474,11 +473,8 @@ void Actor::UnsetPosition()
 	  blockx = (x - mp->bmaporgx)>>MAPBLOCKSHIFT;
 	  blocky = (y - mp->bmaporgy)>>MAPBLOCKSHIFT;
 
-	  if (blockx>=0 && blockx < mp->bmapwidth
-	      && blocky>=0 && blocky < mp->bmapheight)
-            {
-	      mp->blocklinks[blocky * mp->bmapwidth + blockx] = bnext;
-            }
+	  if (blockx>=0 && blockx < mp->bmapwidth && blocky>=0 && blocky < mp->bmapheight)
+	    mp->blocklinks[blocky * mp->bmapwidth + blockx] = bnext;
         }
     }
 }
@@ -585,15 +581,42 @@ void Actor::SetPosition()
 //
 bool Map::BlockLinesIterator(int x, int y, bool (*func)(line_t*))
 {
-  short *list;
+  int i;
+  short  *p;
   line_t *ld;
 
   if (x<0 || y<0 || x>=bmapwidth || y>=bmapheight)
+    return true;
+
+  // first iterate through polyblockmap, then normal blockmap
+  int offset = y*bmapwidth + x;
+
+  polyblock_t *polyLink = PolyBlockMap[offset];
+  seg_t **tempSeg;
+
+  while (polyLink)
     {
-      return true;
+      if (polyLink->polyobj)
+	{
+	  if (polyLink->polyobj->validcount != validcount)
+	    {
+	      polyLink->polyobj->validcount = validcount;
+	      tempSeg = polyLink->polyobj->segs;
+	      for (i=0; i < polyLink->polyobj->numsegs; i++, tempSeg++)
+		{
+		  if ((*tempSeg)->linedef->validcount == validcount)
+		    continue;
+
+		  (*tempSeg)->linedef->validcount = validcount;
+		  if (!func((*tempSeg)->linedef))
+		    return false;
+		}
+	    }
+	}
+      polyLink = polyLink->next;
     }
 
-  int offset = blockmap[y*bmapwidth+x];
+  offset = blockmap[offset];
 
   //Hurdler: FIXME: this a temporary "fix" for the bug with phobia...
   //                ... but it's not correct!!!!! 
@@ -608,9 +631,9 @@ bool Map::BlockLinesIterator(int x, int y, bool (*func)(line_t*))
       return true;
     }
 
-  for (list = blockmaplump+offset ; *list != -1 ; list++)
+  for (p = blockmaplump+offset ; *p != -1 ; p++)
     {
-      ld = &lines[*list];
+      ld = &lines[*p];
 
       if (ld->validcount == validcount)
 	continue;   // line has already been checked
@@ -632,15 +655,11 @@ bool Map::BlockThingsIterator(int x, int y, bool(*func)(Actor*))
   Actor *mobj;
 
   if (x<0 || y<0 || x>=bmapwidth || y>=bmapheight)
-    {
-      return true;
-    }
+    return true;
 
   //added:15-02-98: check interaction (ligne de tir, ...)
   //                avec les objets dans le blocmap
-  for (mobj = blocklinks[y*bmapwidth+x] ;
-       mobj ;
-       mobj = mobj->bnext)
+  for (mobj = blocklinks[y*bmapwidth+x]; mobj; mobj = mobj->bnext)
     {
       if (!func(mobj))
 	return false;
@@ -665,7 +684,7 @@ bool         earlyout;
 int             ptflags;
 
 
-
+// TODO replace with STL vector
 //SoM: 4/6/2000: Remove limit on intercepts.
 void P_CheckIntercepts()
 {
@@ -1055,3 +1074,131 @@ bool P_RadiusLinesCheck (fixed_t radius, fixed_t x, fixed_t y, bool (*func)(line
   return true;
 }
 */
+
+
+
+//===========================================================================
+//
+// was P_RoughMonsterSearch
+//
+// Searches though the surrounding mapblocks for Actors.
+//		distance is in MAPBLOCKUNITS
+//===========================================================================
+
+Actor *Map::RoughBlockSearch(Actor *center, Actor *master, int distance, int flags)
+{
+  // TODO this is pretty ugly. One that searches a circular area would be better...
+  int count;
+  Actor *target;
+
+  int startX = (center->x - bmaporgx)>>MAPBLOCKSHIFT;
+  int startY = (center->y - bmaporgy)>>MAPBLOCKSHIFT;
+	
+  if (startX >= 0 && startX < bmapwidth && startY >= 0 && startY < bmapheight)
+    {
+      if (target = RoughBlockCheck(center, master, startY*bmapwidth+startX, flags))
+	{ // found a target right away
+	  return target;
+	}
+    }
+
+  for (count = 1; count <= distance; count++)
+    {
+      int blockX = startX-count;
+      int blockY = startY-count;
+
+      if (blockY < 0)
+	blockY = 0;
+      else if (blockY >= bmapheight)
+	blockY = bmapheight-1;
+
+      if (blockX < 0)
+	blockX = 0;
+      else if (blockX >= bmapwidth)
+	blockX = bmapwidth-1;
+
+      int blockIndex = blockY*bmapwidth+blockX;
+      int firstStop = startX+count;
+      if (firstStop < 0)
+	continue;
+
+      if (firstStop >= bmapwidth)
+	firstStop = bmapwidth-1;
+
+      int secondStop = startY+count;
+      if (secondStop < 0)
+	continue;
+
+      if (secondStop >= bmapheight)
+	secondStop = bmapheight-1;
+
+      int thirdStop = secondStop*bmapwidth+blockX;
+      secondStop = secondStop*bmapwidth+firstStop;
+      firstStop += blockY*bmapwidth;
+      int finalStop = blockIndex;		
+
+      // Trace the first block section (along the top)
+      for( ; blockIndex <= firstStop; blockIndex++)
+	if (target = RoughBlockCheck(center, master, blockIndex, flags))
+	  return target;
+
+      // Trace the second block section (right edge)
+      for (blockIndex--; blockIndex <= secondStop; blockIndex += bmapwidth)
+	if(target = RoughBlockCheck(center, master, blockIndex, flags))
+	  return target;
+
+      // Trace the third block section (bottom edge)
+      for (blockIndex -= bmapwidth; blockIndex >= thirdStop; blockIndex--)
+	if (target = RoughBlockCheck(center, master, blockIndex, flags))
+	  return target;
+
+      // Trace the final block section (left edge)
+      for (blockIndex++; blockIndex > finalStop; blockIndex -= bmapwidth)
+	if (target = RoughBlockCheck(center, master, blockIndex, flags))
+	  return target;
+    }
+  return NULL;	
+}
+
+//===========================================================================
+//
+// was RoughBlockCheck
+//
+//===========================================================================
+
+Actor *Map::RoughBlockCheck(Actor *center, Actor *master, int index, int flags)
+{
+  enum { friendly = 1, bloodsc = 2 }; // you could add more
+
+  Actor *link;
+  for (link = blocklinks[index]; link; link = link->bnext)
+    if ((link->flags & MF_SHOOTABLE) &&
+	((link->flags & MF_COUNTKILL) || (link->flags & MF_NOTMONSTER)) && // meaning "monster or player"
+	!(link->flags2 & MF2_DORMANT))
+      {
+	if (link == master)
+	  continue; // don't target master
+
+	if ((flags & friendly) &&
+	    (link->owner == master)) // or his little helpers TODO teammates
+	  continue;
+
+	if (flags & bloodsc)
+	  {
+	    if (CheckSight(center, link))
+	      {
+		angle_t angle = R_PointToAngle2(master->x, master->y, link->x, link->y) - master->angle;
+		angle >>= 24;
+		if (angle>226 || angle<30)
+		  return link;
+	      }
+	  }
+	else
+	  {
+	    if (CheckSight(center, link))
+	      return link;
+	  }
+      }
+
+  return NULL;
+}

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/05/05 00:24:49  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.8  2003/04/19 17:38:47  smite-meister
 // SNDSEQ support, tools, linedef system...
 //
@@ -116,7 +119,7 @@ typedef enum
 
   NUMKEYS = 17,
   it_allkeys = 0x1ffff,
-} card_t;
+} key_t;
 
 
 enum armortype_t

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2003/05/05 00:24:48  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.14  2003/04/26 12:01:12  smite-meister
 // Bugfixes. Hexen maps work again.
 //
@@ -81,6 +84,7 @@
 #include "p_enemy.h" // #defines
 
 #include "hu_stuff.h"
+#include "p_spec.h"
 #include "p_maputl.h"
 
 #include "p_setup.h"    //levelflats to test if mobj in water sector
@@ -112,6 +116,13 @@ consvar_t cv_respawnmonsterstime = {"respawnmonsterstime","12",CV_NETVAR,CV_Unsi
 
 extern fixed_t FloatBobOffsets[64];
 
+int Actor::s_pickup    = sfx_None;
+int Actor::s_keypickup = sfx_None;
+int Actor::s_weaponpickup = sfx_None;
+int Actor::s_artipickup = sfx_None;
+int Actor::s_teleport = sfx_None;
+int Actor::s_respawn  = sfx_None;
+int Actor::s_gibbed   = sfx_None;
 
 int Actor::Serialize(LArchive & a)
 { 
@@ -1298,7 +1309,7 @@ DActor *DActor::SpawnMissile(Actor *dest, mobjtype_t type)
 //
 bool DActor::CheckMissileSpawn()
 {
-  if (game.mode != gm_heretic)
+  if (game.mode != gm_heretic && game.mode != gm_hexen)
     {
       tics -= P_Random()&3;
       if (tics < 1)

@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.14  2003/05/05 00:24:48  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.13  2003/04/14 08:58:26  smite-meister
 // Hexen maps load.
 //
@@ -1316,8 +1319,7 @@ void PlayerPawn::ProcessSpecialSector(sector_t *sector, bool instantdamage)
       sector->special &= ~SS_secret;
 
       if (!cv_deathmatch.value && this == displayplayer->pawn)
-	CONS_Printf ("\2You found a secret area!\n");
-      // TODO nice sound
+	CONS_Printf("\3You found a secret area!\n");
     }
 }
 
@@ -1399,14 +1401,6 @@ void PlayerPawn::PlayerInSpecialSector()
 
   if (!special)     // nothing special, exit
     return;
-
-  /*
-  if (game.mode == gm_heretic)
-    {
-      HerePlayerInSpecialSector();
-      return;
-    }
-  */
 
   // Falling, not all the way down yet?
   //SoM: 3/17/2000: Damage if in slimey water!

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/05/05 00:24:49  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.9  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -401,10 +404,10 @@ bool P_Move(DActor *actor)
 	  // that can be opened,
 	  // return false
 
-	  // if (P_ActivateLine(ld, actor, 0, SPAC_USE))
-	  // Old version before use/cross/impact specials were combined
-	  if (actor->mp->UseSpecialLine(actor, ld, 0))
+	  if (actor->mp->ActivateLine(ld, actor, 0, SPAC_USE))
 	    good = true;
+	  // Old version before use/cross/impact specials were combined
+	  //if (actor->mp->UseSpecialLine(actor, ld, 0))
         }
       return good;
     }

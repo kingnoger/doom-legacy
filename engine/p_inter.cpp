@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2003/05/05 00:24:49  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.14  2003/04/24 20:30:08  hurdler
 // Remove lots of compiling warnings
 //
@@ -778,15 +781,9 @@ void Actor::Die(Actor *inflictor, Actor *source)
   // scream a corpse :)
   if (flags & MF_CORPSE)
     {
-      // FIXME turn it to gibs
-      //SetState(S_GIBS);
-
-      flags &= ~MF_SOLID;
+      flags &= ~(MF_SOLID | MF_SHOOTABLE);
       height = 0;
-      radius<<= 1;
-
-      //added:22-02-98: lets have a neat 'crunch' sound!
-      S_StartSound (this, sfx_slop);
+      radius = 0;
       return;
     }
 
@@ -816,7 +813,16 @@ void DActor::Die(Actor *inflictor, Actor *source)
   Actor::Die(inflictor, source);
 
   if (flags & MF_CORPSE)
-    return;
+    {
+      if (flags & MF_NOBLOOD)
+	Remove();
+      else
+	{
+	  SetState(S_GIBS);
+	  S_StartSound(this, s_gibbed); // lets have a neat 'crunch' sound!
+	}
+      return;
+    }
 
   if (type != MT_SKULL)
     flags &= ~MF_NOGRAVITY;
@@ -930,6 +936,7 @@ void PlayerPawn::Die(Actor *inflictor, Actor *source)
 // GET STUFF
 //
 
+static int p_sound; // pickupsound
 
 //
 // was P_GiveAmmo
@@ -1107,6 +1114,7 @@ bool PlayerPawn::GiveWeapon(weapontype_t wt, bool dropped)
 	pendingweapon = wt;    // Doom2 original stuff
     }
 
+  p_sound = Actor::s_weaponpickup;
   return (gaveweapon || gaveammo);
 }
 
@@ -1169,14 +1177,23 @@ bool PlayerPawn::GiveArmor(armortype_t type, float factor, int points)
 //
 // P_GiveCard
 //
-bool PlayerPawn::GiveCard(card_t ct)
+bool PlayerPawn::GiveKey(key_t k)
 {
-  if (cards & ct)
+  if (cards & k)
     return false;
+
+  cards |= k;
+
+  int i, j = k;
+  for (i = -1; j; i++)
+    j >>= 1; // count the key number
+    
+  player->message = text[TXT_KEY_STEEL + i];
 
   if (displayplayer == player)
     hud.bonuscount = BONUSADD;
-  cards |= ct;
+  p_sound = Actor::s_keypickup;
+
   return true;
 }
 
@@ -1214,6 +1231,8 @@ bool PlayerPawn::GiveArtifact(artitype_t arti, Actor *from)
 
   if (from && (from->flags & MF_COUNTITEM))
     player->items++;
+
+  p_sound = Actor::s_artipickup;
 
   return true;
 }
@@ -1253,7 +1272,7 @@ void A_RestoreArtifact(DActor *arti)
 {
   arti->flags |= MF_SPECIAL;
   arti->SetState(arti->info->spawnstate);
-  S_StartSound(arti, sfx_itmbk);
+  S_StartSound(arti, Actor::s_respawn);
 }
 
 //----------------------------------------------------------------------------
@@ -1284,7 +1303,7 @@ void A_RestoreSpecialThing1(DActor *thing)
       thing->mp->RepositionMace(thing);
     }
   thing->flags2 &= ~MF2_DONTDRAW;
-  S_StartSound(thing, sfx_itmbk);
+  S_StartSound(thing, Actor::s_respawn);
 }
 
 //---------------------------------------------------------------------------
@@ -1299,8 +1318,6 @@ void A_RestoreSpecialThing2(DActor *thing)
   thing->SetState(thing->info->spawnstate);
 }
 
-
-int item_pickup_sound;
 
 //
 // was P_TouchSpecialThing
@@ -1326,7 +1343,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
   if (health <= 0 || flags & MF_CORPSE)
     return;
 
-  int sound = item_pickup_sound;
+  p_sound = s_pickup;
 
   // Identify item
   switch (special->type)
@@ -1385,7 +1402,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       if (health > 2*maxhealth)
 	health = 2*maxhealth;
       player->message = GOTSUPER;
-      sound = sfx_getpow;
+      p_sound = sfx_getpow;
       break;
 
     case MT_MEGA:
@@ -1394,70 +1411,76 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	health = 2*maxhealth;
       GiveArmor(armor_field, 0.5, special->health);
       player->message = GOTMSPHERE;
-      sound = sfx_getpow;
+      p_sound = sfx_getpow;
       break;
 
-      // cards
+      // keys
+    case MT_KEY1:
+    case MT_KEY2:
+    case MT_KEY3:
+    case MT_KEY4:
+    case MT_KEY5:
+    case MT_KEY6:
+    case MT_KEY7:
+    case MT_KEY8:
+    case MT_KEY9:
+    case MT_KEYA:
+    case MT_KEYB:
+      if (!GiveKey(key_t(1 << (special->type - MT_KEY1))))
+	return;
+
+      if (!game.multiplayer) // Only remove keys in single player game
+	break;
+      // activate the special in any case
+      if (special->special)
+	{
+	  mp->ExecuteLineSpecial(special->special, special->args, NULL, 0, this);
+	  special->special = 0;
+	}
+      return;
+
       // leave cards for everyone
     case MT_BKEY: // Key_Blue
     case MT_BLUECARD:
-      if (GiveCard(it_bluecard))
-        {
-	  player->message = GOTBLUECARD;
-	  if( game.mode == gm_heretic ) sound = sfx_keyup;
-        }
+      if (!GiveKey(it_bluecard))
+	return;
       if (!game.multiplayer)
 	break;
       return;
 
     case MT_CKEY: // Key_Yellow
     case MT_YELLOWCARD:
-      if (GiveCard(it_yellowcard))
-        {
-	  player->message = GOTYELWCARD;
-	  if( game.mode == gm_heretic ) sound = sfx_keyup;
-        }
+      if (!GiveKey(it_yellowcard))
+	return;
       if (!game.multiplayer)
 	break;
       return;
 
     case MT_AKEY: // Key_Green
     case MT_REDCARD:
-      if (GiveCard(it_redcard))
-        {
-	  player->message = GOTREDCARD;
-	  if( game.mode == gm_heretic ) sound = sfx_keyup;
-        }
+      if (!GiveKey(it_redcard))
+	return;
       if (!game.multiplayer)
 	break;
       return;
 
     case MT_BLUESKULL:
-      if (GiveCard(it_blueskull))
-        {
-	  player->message = GOTBLUESKUL;
-	  if( game.mode == gm_heretic ) sound = sfx_keyup;
-        }
+      if (!GiveKey(it_blueskull))
+	return;
       if (!game.multiplayer)
 	break;
       return;
 
     case MT_YELLOWSKULL:
-      if (GiveCard(it_yellowskull))
-        {
-	  player->message = GOTYELWSKUL;
-	  if( game.mode == gm_heretic ) sound = sfx_keyup;
-        }
+      if (!GiveKey(it_yellowskull))
+        return;
       if (!game.multiplayer)
 	break;
       return;
 
     case MT_REDSKULL:
-      if (GiveCard(it_redskull))
-        {
-	  player->message = GOTREDSKULL;
-	  if( game.mode == gm_heretic ) sound = sfx_keyup;
-        }
+      if (!GiveKey(it_redskull))
+        return;
       if (!game.multiplayer)
 	break;
       return;
@@ -1562,12 +1585,113 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	}
       return;
 
+      /*
+		case SPR_PTN2:
+			TryPickupArtifact(player, arti_health, special);
+			return;
+		case SPR_SOAR:
+			TryPickupArtifact(player, arti_fly, special);
+			return;
+		case SPR_INVU:
+			TryPickupArtifact(player, arti_invulnerability, special);
+			return;
+		case SPR_SUMN:
+			TryPickupArtifact(player, arti_summon, special);
+			return;
+		case SPR_PORK:
+			TryPickupArtifact(player, arti_egg, special);
+			return;
+		case SPR_SPHL:
+			TryPickupArtifact(player, arti_superhealth, special);
+			return;
+		case SPR_HRAD:
+			TryPickupArtifact(player, arti_healingradius, special);
+			return;
+		case SPR_TRCH:
+			TryPickupArtifact(player, arti_torch, special);
+			return;
+		case SPR_ATLP:
+			TryPickupArtifact(player, arti_teleport, special);
+			return;
+		case SPR_TELO:
+			TryPickupArtifact(player, arti_teleportother, special);
+			return;
+		case SPR_PSBG:
+			TryPickupArtifact(player, arti_poisonbag, special);
+			return;
+		case SPR_SPED:
+			TryPickupArtifact(player, arti_speed, special);
+			return;
+		case SPR_BMAN:
+			TryPickupArtifact(player, arti_boostmana, special);
+			return;
+		case SPR_BRAC:
+			TryPickupArtifact(player, arti_boostarmor, special);
+			return;
+		case SPR_BLST:
+			TryPickupArtifact(player, arti_blastradius, special);
+			return;
+
+		// Puzzle artifacts
+		case SPR_ASKU:
+			TryPickupArtifact(player, arti_puzzskull, special);
+			return;
+		case SPR_ABGM:
+			TryPickupArtifact(player, arti_puzzgembig, special);
+			return;
+		case SPR_AGMR:
+			TryPickupArtifact(player, arti_puzzgemred, special);
+			return;
+		case SPR_AGMG:
+			TryPickupArtifact(player, arti_puzzgemgreen1, special);
+			return;
+		case SPR_AGG2:
+			TryPickupArtifact(player, arti_puzzgemgreen2, special);
+			return;
+		case SPR_AGMB:
+			TryPickupArtifact(player, arti_puzzgemblue1, special);
+			return;
+		case SPR_AGB2:
+			TryPickupArtifact(player, arti_puzzgemblue2, special);
+			return;
+		case SPR_ABK1:
+			TryPickupArtifact(player, arti_puzzbook1, special);
+			return;
+		case SPR_ABK2:
+			TryPickupArtifact(player, arti_puzzbook2, special);
+			return;
+		case SPR_ASK2:
+			TryPickupArtifact(player, arti_puzzskull2, special);
+			return;
+		case SPR_AFWP:
+			TryPickupArtifact(player, arti_puzzfweapon, special);
+			return;
+		case SPR_ACWP:
+			TryPickupArtifact(player, arti_puzzcweapon, special);
+			return;
+		case SPR_AMWP:
+			TryPickupArtifact(player, arti_puzzmweapon, special);
+			return;
+		case SPR_AGER:
+			TryPickupArtifact(player, arti_puzzgear1, special);
+			return;
+		case SPR_AGR2:
+			TryPickupArtifact(player, arti_puzzgear2, special);
+			return;
+		case SPR_AGR3:
+			TryPickupArtifact(player, arti_puzzgear3, special);
+			return;
+		case SPR_AGR4:
+			TryPickupArtifact(player, arti_puzzgear4, special);
+			return;
+      */
+
       // power ups
     case MT_INV:
       if (!GivePower (pw_invulnerability))
 	return;
       player->message = GOTINVUL;
-      sound = sfx_getpow;
+      p_sound = sfx_getpow;
       break;
 
     case MT_BERSERKPACK:
@@ -1576,21 +1700,21 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       player->message = GOTBERSERK;
       if (readyweapon != wp_fist)
 	pendingweapon = wp_fist;
-      sound = sfx_getpow;
+      p_sound = sfx_getpow;
       break;
 
     case MT_INS:
       if (!GivePower (pw_invisibility))
 	return;
       player->message = GOTINVIS;
-      sound = sfx_getpow;
+      p_sound = sfx_getpow;
       break;
 
     case MT_RADSUIT:
       if (!GivePower (pw_ironfeet))
 	return;
       player->message = GOTSUIT;
-      sound = sfx_getpow;
+      p_sound = sfx_getpow;
       break;
 
     case MT_MAPSCROLL:
@@ -1599,14 +1723,36 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	return;
       player->message = GOTMAP;
       if( game.mode != gm_heretic )
-	sound = sfx_getpow;
+	p_sound = sfx_getpow;
       break;
 
     case MT_IRVISOR:
       if (!GivePower (pw_infrared))
 	return;
       player->message = GOTVISOR;
-      sound = sfx_getpow;
+      p_sound = sfx_getpow;
+      break;
+
+      // Mana
+    case MT_MANA1:
+      if (!GiveAmmo(am_mana1, 15))
+	return;
+      player->SetMessage(text[TXT_MANA_1], false);
+      break;
+    case MT_MANA2:
+      if (!GiveAmmo(am_mana2, 15))
+	return;
+      player->SetMessage(text[TXT_MANA_2], false);
+      break;
+    case MT_MANA3:
+      if (GiveAmmo(am_mana1, 20))
+	{
+	  if (!GiveAmmo(am_mana2, 20))
+	    return;
+	}
+      else
+	GiveAmmo(am_mana2, 20);
+      player->SetMessage(text[TXT_MANA_BOTH], false);
       break;
 
       // heretic Ammo
@@ -1789,100 +1935,151 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       if (!GiveWeapon (wp_bfg, false) )
 	return;
       player->message = GOTBFG9000;
-      sound = sfx_wpnup;
       break;
 
     case MT_CHAINGUN:
       if (!GiveWeapon (wp_chaingun, special->flags & MF_DROPPED) )
 	return;
       player->message = GOTCHAINGUN;
-      sound = sfx_wpnup;
       break;
 
     case MT_SHAINSAW:
       if (!GiveWeapon (wp_chainsaw, false) )
 	return;
       player->message = GOTCHAINSAW;
-      sound = sfx_wpnup;
       break;
 
     case MT_ROCKETLAUNCH:
       if (!GiveWeapon (wp_missile, false) )
 	return;
       player->message = GOTLAUNCHER;
-      sound = sfx_wpnup;
       break;
 
     case MT_PLASMAGUN:
       if (!GiveWeapon (wp_plasma, false) )
 	return;
       player->message = GOTPLASMA;
-      sound = sfx_wpnup;
       break;
 
     case MT_SHOTGUN:
       if (!GiveWeapon (wp_shotgun, special->flags&MF_DROPPED ) )
 	return;
       player->message = GOTSHOTGUN;
-      sound = sfx_wpnup;
       break;
 
     case MT_SUPERSHOTGUN:
       if (!GiveWeapon (wp_supershotgun, special->flags&MF_DROPPED ) )
 	return;
       player->message = GOTSHOTGUN2;
-      sound = sfx_wpnup;
       break;
 
       // heretic weapons
     case MT_WMACE:
       if(!GiveWeapon(wp_mace,false))
-	{
-	  return;
-	}
+	return;
       player->SetMessage(TXT_WPNMACE, false);
-      sound = sfx_hwpnup;
       break;
     case MT_WCROSSBOW:
       if(!GiveWeapon(wp_crossbow,false))
-	{
-	  return;
-	}
+	return;
       player->SetMessage(TXT_WPNCROSSBOW, false);
-      sound = sfx_hwpnup;
       break;
     case MT_WBLASTER:
       if(!GiveWeapon(wp_blaster,false))
-	{
-	  return;
-	}
+	return;
       player->SetMessage(TXT_WPNBLASTER, false);
-      sound = sfx_hwpnup;
       break;
     case MT_WSKULLROD:
       if(!GiveWeapon(wp_skullrod, false))
-	{
-	  return;
-	}
+	return;
       player->SetMessage(TXT_WPNSKULLROD, false);
-      sound = sfx_hwpnup;
       break;
     case MT_WPHOENIXROD:
       if(!GiveWeapon(wp_phoenixrod, false))
-	{
-	  return;
-	}
+	return;
       player->SetMessage(TXT_WPNPHOENIXROD, false);
-      sound = sfx_hwpnup;
       break;
     case MT_WGAUNTLETS:
       if(!GiveWeapon(wp_gauntlets, false))
-	{
-	  return;
-	}
+	return;
       player->SetMessage(TXT_WPNGAUNTLETS, false);
-      sound = sfx_hwpnup;
       break;
+
+      // Hexen weapons
+    case MT_MW_CONE: // Frost Shards
+      if(!GiveWeapon(wp_cone_of_shards, false))
+	return;
+      player->message = text[TXT_WEAPON_M2];
+      break;
+
+    case MT_MW_LIGHTNING: // Arc of Death
+      if(!GiveWeapon(wp_arc_of_death, false))
+	return;
+      player->message = text[TXT_WEAPON_M3];
+      break;
+
+    case MT_FW_AXE: // Timon's Axe
+      if(!GiveWeapon(wp_timons_axe, false))
+	return;
+      player->message = text[TXT_WEAPON_F2];
+      break;
+    case MT_FW_HAMMER: // Hammer of Retribution
+      if(!GiveWeapon(wp_hammer_of_retribution, false))
+	return;
+      player->message = text[TXT_WEAPON_F3];
+      break;
+
+      // 2nd and 3rd Cleric Weapons
+    case MT_CW_SERPSTAFF: // Serpent Staff
+      if(!GiveWeapon(wp_serpent_staff, false))
+	return;
+      player->message = text[TXT_WEAPON_C2];
+      break;
+    case MT_CW_FLAME: // Firestorm
+    if(!GiveWeapon(wp_firestorm, false))
+      return;
+    player->message = text[TXT_WEAPON_C3];
+      break;
+
+      // TODO Fourth Weapon Pieces
+      /*
+    case SPR_WFR1:
+      TryPickupWeaponPiece(player, PCLASS_FIGHTER, WPIECE1,
+			   special);
+      return;
+		case SPR_WFR2:
+			TryPickupWeaponPiece(player, PCLASS_FIGHTER, WPIECE2,
+				special);
+			return;
+		case SPR_WFR3:
+			TryPickupWeaponPiece(player, PCLASS_FIGHTER, WPIECE3,
+				special);
+			return;
+		case SPR_WCH1:
+			TryPickupWeaponPiece(player, PCLASS_CLERIC, WPIECE1,
+				special);
+			return;
+		case SPR_WCH2:
+			TryPickupWeaponPiece(player, PCLASS_CLERIC, WPIECE2,
+				special);
+			return;
+		case SPR_WCH3:
+			TryPickupWeaponPiece(player, PCLASS_CLERIC, WPIECE3,
+				special);
+			return;
+		case SPR_WMS1:
+			TryPickupWeaponPiece(player, PCLASS_MAGE, WPIECE1,
+				special);
+			return;
+		case SPR_WMS2:
+			TryPickupWeaponPiece(player, PCLASS_MAGE, WPIECE2,
+				special);
+			return;
+		case SPR_WMS3:
+			TryPickupWeaponPiece(player, PCLASS_MAGE, WPIECE3,
+				special);
+			return;
+      */
 
     default:
       // SoM: New gettable things with FraggleScript!
@@ -1898,7 +2095,14 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 
     //added:16-01-98:consoleplayer -> displayplayer (hear sounds from viewpoint)
   if (player == displayplayer || (cv_splitscreen.value && player == displayplayer2))
-    S_StartAmbSound(sound);
+    S_StartAmbSound(p_sound);
+
+  // pickup special (Hexen)
+  if (special->special)
+    {
+      mp->ExecuteLineSpecial(special->special, special->args, NULL, 0, this);
+      special->special = 0;
+    }
 }
 
 

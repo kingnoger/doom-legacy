@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/05/05 00:24:49  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.10  2003/04/24 20:30:12  hurdler
 // Remove lots of compiling warnings
 //
@@ -80,12 +83,12 @@
 
 #include "z_zone.h"
 
+extern int boomsupport;
 
 fixed_t   tmbbox[4];
 Actor    *tmthing;
 int       tmflags;
-fixed_t   tmx;
-fixed_t   tmy;
+fixed_t   tmx, tmy;
 
 
 // If "floatok" true, move would be ok
@@ -118,24 +121,17 @@ line_t *ceilingline;
 // that is, for any line which is 'solid'
 line_t *blockingline;
 
-Actor *BlockingMobj; //thing that blocked position (NULL if not
-// blocked, or blocked by a line)
+Actor *BlockingMobj; //thing that blocked position (NULL if not blocked, or blocked by a line)
 
 //SoM: 3/15/2000
 static msecnode_t *sector_list = NULL;
 
-//SoM: 3/15/2000
-/*
-TODO
-static int pe_x; // Pain Elemental position for Lost Soul checks
-static int pe_y; // Pain Elemental position for Lost Soul checks
-static int ls_x; // Lost Soul position for Lost Soul checks
-static int ls_y; // Lost Soul position for Lost Soul checks
-*/
-
+//===========================================
+//        COMMON UTILITY FUNCTIONS
+//===========================================
 
 // set temp location and boundingbox
-void P_SetBox(fixed_t x, fixed_t y, fixed_t r)
+static void P_SetBox(fixed_t x, fixed_t y, fixed_t r)
 {
   tmx = x;
   tmy = y;
@@ -147,13 +143,11 @@ void P_SetBox(fixed_t x, fixed_t y, fixed_t r)
 }
 
 
-//
-// Iterator functions
-//
+//===========================================
+//       TELEPORT and SPIKE ITERATORS
+//===========================================
 
-//
-// PIT_StompThing
-//
+
 static bool PIT_StompThing(Actor *thing)
 {
   // don't clip against self
@@ -273,10 +267,9 @@ bool Actor::TeleportMove(fixed_t nx, fixed_t ny)
 }
 
 
-// =========================================================================
-//                       MOVEMENT ITERATOR FUNCTIONS
-// =========================================================================
-
+//===========================================
+//           MOVEMENT ITERATORS
+//===========================================
 
 
 static void add_spechit(line_t *ld)
@@ -284,21 +277,28 @@ static void add_spechit(line_t *ld)
   static int spechit_max = 0;
 
   //SoM: 3/15/2000: Boom limit removal.
+  // TODO: STL vector...
   if (numspechit >= spechit_max)
     {
       spechit_max = spechit_max ? spechit_max*2 : 16;
       spechit = (line_t **)realloc(spechit, sizeof(line_t *) * spechit_max);
     }
   
-  //int linenum = ld - lines;
   spechit[numspechit] = ld;
   numspechit++;
 }
 
+static void CheckForPushSpecial(line_t *line, int side, Actor *thing)
+{
+  if (line->special)
+    {
+      if (thing->flags2 & MF2_PUSHWALL)
+	thing->mp->ActivateLine(line, thing, side, SPAC_PUSH);
+      else if (thing->flags2 & MF2_IMPACT)
+	thing->mp->ActivateLine(line, thing, side, SPAC_IMPACT);
+    }
+}
 
-//
-// PIT_CheckThing
-//
 // Iterator function for Actor->Actor collision checks. Global variable 'tmthing'
 // is the active object whose collisions are checked. 'thing' is any other object
 // to which it may collide.
@@ -385,8 +385,7 @@ static bool PIT_CrossLine (line_t *ld)
 */
 
 
-//
-// PIT_CheckLine
+// Iterator for Actor->Line collision checking
 // Adjusts tmfloorz and tmceilingz as lines are contacted
 //
 static bool PIT_CheckLine(line_t *ld)
@@ -423,7 +422,7 @@ static bool PIT_CheckLine(line_t *ld)
     }
 
   // missile and Camera can cross uncrossable lines with a backsector
-  if (!(tmthing->flags & MF_MISSILE)) // && !(tmthing->type == MT_CHASECAM))
+  if (!(tmthing->flags & MF_MISSILE))
     {
       if (ld->flags & ML_BLOCKING)
 	return false;       // explicitly blocking everything
@@ -476,7 +475,8 @@ void Actor::CheckMissileImpact()
     return;
 
   for(i = numspechit-1; i >= 0; i--)
-    mp->ShootSpecialLine(owner, spechit[i]);
+    mp->ActivateLine(spechit[i], owner, 0, SPAC_IMPACT);
+  //mp->ShootSpecialLine(owner, spechit[i]);
 }
 
 //
@@ -590,8 +590,16 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 	  if (side != oldside)
             {
 	      if (ld->special)
-		//P_CrossSpecialLine(ld-lines, oldside, this);
-		mp->ActivateCrossedLine(ld, oldside, this);
+		{
+		  //FIXME doom/hexen
+		  //mp->ActivateCrossedLine(ld, oldside, this);
+		  if (flags & MF_NOTMONSTER)
+		    mp->ActivateLine(ld, this, oldside, SPAC_CROSS);
+		  else if (flags2 & MF2_MCROSS)
+		    mp->ActivateLine(ld, this, oldside, SPAC_MCROSS);
+		  else if(flags2 & MF2_PCROSS)
+		    mp->ActivateLine(ld, this, oldside, SPAC_PCROSS);
+		}
             }
         }
     }
@@ -1162,7 +1170,8 @@ static bool PTR_ShootTraverse (intercept_t *in)
       li = in->d.line;
 
       if (li->special)
-	m->ShootSpecialLine(shootthing, li);
+	m->ActivateLine(li, shootthing, 0, SPAC_IMPACT);
+      // m->ShootSpecialLine(shootthing, li); // your documentation no longer confuses me, old version
 
       if (!(li->flags & ML_TWOSIDED))
 	goto hitline;
@@ -1335,15 +1344,6 @@ static bool PTR_ShootTraverse (intercept_t *in)
 	  if (z > li->frontsector->ceilingheight)
 	    return false;
 
-	  //added:24-02-98: compatibility with older demos
-	  /*
-	  if (game.demoversion<112)
-            {
-	      diffheights = true;
-	      hitplane = false;
-            }
-	  */
-
 	  // it's a sky hack wall
 	  if  ((!hitplane &&      //added:18-02-98:not for shots on planes
 		li->backsector &&
@@ -1438,19 +1438,17 @@ static bool PTR_ShootTraverse (intercept_t *in)
 
   // Spawn bullet puffs or blood spots,
   // depending on target type.
-  if (in->d.thing->flags & MF_NOBLOOD && game.mode != gm_heretic)
+
+  if (PuffType == MT_BLASTERPUFF1)   
+    PuffType = MT_BLASTERPUFF2;  // Make blaster big puff
+
+  if (in->d.thing->flags & MF_NOBLOOD)
     m->SpawnPuff (x,y,z);
   else
     {
-      if (game.mode == gm_heretic)
-	{
-	  extern mobjtype_t PuffType;
-	  if (PuffType == MT_BLASTERPUFF1)
-	    // Make blaster big puff
-	    S_StartSound(m->SpawnDActor(x, y, z, MT_BLASTERPUFF2), sfx_blshit);
-	  else
-	    m->SpawnPuff(x, y, z);
-	}    
+      if (game.mode == gm_heretic || game.mode == gm_hexen)
+	m->SpawnPuff(x, y, z);
+
       if (hitplane)
 	{
 	  m->SpawnBloodSplats (x,y,z, la_damage, trace.dx, trace.dy);
@@ -1580,39 +1578,47 @@ void Actor::LineAttack(angle_t yaw, fixed_t distance, fixed_t pitch, int damage,
 //
 PlayerPawn *usething;
 
-static bool PTR_UseTraverse (intercept_t *in)
+static bool PTR_UseTraverse(intercept_t *in)
 {
-  int         side;
-
-  tmthing = NULL;
-  if (!in->d.line->special)
+  tmthing = NULL; // FIXME why? affects P_LineOpening
+  line_t *line = in->d.line;
+  if (!line->special)
     {
-      P_LineOpening (in->d.line);
-      if (openrange <= 0)
+      P_LineOpening (line);
+      // TEST: use through a hole only if you can reach it
+      if (openrange <= 0 || opentop < usething->z || openbottom > usething->z + usething->height)
         {
+	  // TODO skinsound: failed use
 	  if (game.mode != gm_heretic)
-	    S_StartSound (usething, sfx_noway);
+	    S_StartSound(usething, sfx_noway);
 
 	  // can't use through a wall
 	  return false;
         }
+
       // not a special line, but keep checking
       return true ;
     }
 
-  side = 0;
-  if (P_PointOnLineSide (usething->x, usething->y, in->d.line) == 1)
-    side = 1;
+  // can't use backsides of lines
+  int side = P_PointOnLineSide(usething->x, usething->y, line);
+  if (side != 0)
+    return false;
 
-  //  return false;           // don't use back side
-  usething->mp->UseSpecialLine (usething, in->d.line, side);
+  int act = GET_SPAC(line->flags);
 
   // can't use for than one special line in a row
   // SoM: USE MORE THAN ONE!
-  if (boomsupport && (in->d.line->flags&ML_PASSUSE))
-    return true;
-  else
-    return false;
+  if (boomsupport && act == SPAC_PASSUSE)
+    {
+      usething->mp->ActivateLine(line, usething, side, SPAC_PASSUSE);
+      return true;
+    }
+
+  if (act == SPAC_USE)
+    usething->mp->ActivateLine(line, usething, side, SPAC_USE);
+  //usething->mp->UseSpecialLine(usething, in->d.line, 0);
+  return false;
 }
 
 
@@ -1622,15 +1628,11 @@ static bool PTR_UseTraverse (intercept_t *in)
 //
 void PlayerPawn::UseLines()
 {
-  int ang;
-  fixed_t     x1;
-  fixed_t     y1;
-  fixed_t     x2;
-  fixed_t     y2;
+  fixed_t  x1, y1, x2, y2;
 
   usething = this;
 
-  ang = angle >> ANGLETOFINESHIFT;
+  int ang = angle >> ANGLETOFINESHIFT;
 
   x1 = x;
   y1 = y;
@@ -1764,9 +1766,9 @@ void Actor::RadiusAttack(Actor *culprit, int damage, int distance, int dtype, bo
 //  the way it was and call P_ChangeSector again
 //  to undo the changes.
 //
-bool         crushchange;
-bool         nofit;
-sector_t        *sectorchecked;
+int         crushdamage;
+bool        nofit;
+sector_t   *sectorchecked;
 
 //
 // PIT_ChangeSector
@@ -1775,24 +1777,6 @@ static bool PIT_ChangeSector(Actor *thing)
 {
   if (P_ThingHeightClip (thing))
     {
-      // keep checking
-      return true;
-    }
-
-  // crunch bodies to giblets
-  if (thing->flags & MF_CORPSE)
-    {
-      if (!game.raven)
-        {
-	  //thing->SetState(S_GIBS);
-	  thing->Damage(NULL, NULL, 1000, dt_crushing);
-	  thing->flags &= ~MF_SOLID;
-	  // lets have a neat 'crunch' sound!
-	  S_StartSound (thing, sfx_slop);
-        }
-      thing->height = 0;
-      thing->radius = 0;
-
       // keep checking
       return true;
     }
@@ -1806,7 +1790,7 @@ static bool PIT_ChangeSector(Actor *thing)
       return true;
     }
 
-  if (!(thing->flags & MF_SHOOTABLE))
+  if (!(thing->flags & MF_SHOOTABLE) || !(thing->flags & MF_SOLID))
     {
       // assume it is bloody gibs or something
       return true;
@@ -1814,12 +1798,11 @@ static bool PIT_ChangeSector(Actor *thing)
 
   nofit = true;
 
-  if (crushchange && !(thing->mp->maptic % (4*NEWTICRATERATIO)))
+  if (crushdamage && !(thing->mp->maptic % (4*NEWTICRATERATIO)))
     {
-      thing->Damage(NULL,NULL,10);
+      thing->Damage(NULL, NULL, crushdamage, dt_crushing); // was 10
 
-      if (game.demoversion<132 || (!(thing->mp->maptic % (16*NEWTICRATERATIO)) && 
-			      !(thing->flags&MF_NOBLOOD)))
+      if ((!(thing->mp->maptic % (16*NEWTICRATERATIO)) && !(thing->flags&MF_NOBLOOD)))
         {
 	  // spray blood in a random direction
 	  DActor *mo = thing->mp->SpawnDActor(thing->x, thing->y,
@@ -1839,13 +1822,13 @@ static bool PIT_ChangeSector(Actor *thing)
 //
 // was P_ChangeSector
 //
-bool Map::ChangeSector(sector_t *sector, bool crunch)
+bool Map::ChangeSector(sector_t *sector, int crunch)
 {
   int         x;
   int         y;
 
   nofit = false;
-  crushchange = crunch;
+  crushdamage = crunch;
   sectorchecked = sector;
 
   // re-check heights for all things near the moving sector
@@ -1859,7 +1842,7 @@ bool Map::ChangeSector(sector_t *sector, bool crunch)
 
 // was P_CheckSector
 //SoM: 3/15/2000: New function. Much faster.
-bool Map::CheckSector(sector_t *sector, bool crunch)
+bool Map::CheckSector(sector_t *sector, int crunch)
 {
   msecnode_t      *n;
 
@@ -1867,7 +1850,7 @@ bool Map::CheckSector(sector_t *sector, bool crunch)
     return ChangeSector(sector,crunch);
 
   nofit = false;
-  crushchange = crunch;
+  crushdamage = crunch;
 
 
   // killough 4/4/98: scan list front-to-back until empty or exhausted,
@@ -2068,7 +2051,7 @@ void P_DelSeclist(msecnode_t *node)
 // at this location, so don't bother with checking impassable or
 // blocking lines.
 
-bool PIT_GetSectors(line_t *ld)
+static bool PIT_GetSectors(line_t *ld)
 {
   if (tmbbox[BOXRIGHT]  <= ld->bbox[BOXLEFT]   ||
       tmbbox[BOXLEFT]   >= ld->bbox[BOXRIGHT]  ||
@@ -2167,53 +2150,42 @@ void Map::CreateSecNodeList(Actor *thing, fixed_t x, fixed_t y)
   sector_list = NULL;
 }
 
+
+//=============================================================================
+
+//===========================================
+//   "STANDING ON ANOTHER ACTOR" ITERATOR
+//===========================================
 // heretic code
 
-//---------------------------------------------------------------------------
-//
-// PIT_CheckOnmobjZ
-//
-//---------------------------------------------------------------------------
 Actor *onmobj; //generic global onmobj...used for landing on pods/players
 
 static bool PIT_CheckOnmobjZ(Actor *thing)
 {
-  fixed_t blockdist;
+  if (!(thing->flags & (MF_SOLID|MF_SPECIAL|MF_SHOOTABLE)))    
+    return true; // Can't hit thing
     
-  if (!(thing->flags&(MF_SOLID|MF_SPECIAL|MF_SHOOTABLE)))
-    { // Can't hit thing
-      return true;
-    }
-  blockdist = thing->radius+tmthing->radius;
-  if (abs(thing->x-tmx) >= blockdist || abs(thing->y-tmy) >= blockdist)
-    { // Didn't hit thing
-      return true;
-    }
+  fixed_t blockdist = thing->radius + tmthing->radius;
+  if (abs(thing->x-tmx) >= blockdist || abs(thing->y-tmy) >= blockdist)    
+    return true; // Didn't hit thing
+
   if (thing == tmthing)
-    { // Don't clip against self
-      return true;
-    }
-  if (tmthing->z > thing->z+thing->height)
-    {
-      return true;
-    }
-  else if (tmthing->z+tmthing->height < thing->z)
-    { // under thing
-      return true;
-    }
-  if (thing->flags&MF_SOLID)
-    {
-      onmobj = thing;
-    }
-  return(!(thing->flags&MF_SOLID));
+    return true; // Don't clip against self
+
+  if (tmthing->z > thing->z + thing->height)
+    return true; // over
+  else if (tmthing->z + tmthing->height < thing->z)    
+    return true; // under thing
+
+  if (thing->flags & MF_SOLID)
+    onmobj = thing;
+  
+  return !(thing->flags & MF_SOLID);
 }
 
-//=============================================================================
-//
+
 // was P_FakeZMovement
-//
 //              Fake the zmovement so that we can check if a move is legal
-//=============================================================================
 
 void Actor::FakeZMovement()
 {
@@ -2296,7 +2268,7 @@ void Actor::FakeZMovement()
   pz = npz;
 }
 
-//=============================================================================
+
 // was P_CheckOnmobj
 // Checks if the new Z position is legal
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/05/05 00:24:49  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.6  2003/04/24 20:30:26  hurdler
 // Remove lots of compiling warnings
 //
@@ -489,6 +492,7 @@ bool Map::StartACS(int number, byte *args, Actor *activator, line_t *line, int s
 
   NewScript = NULL;
   /*
+    // FIXME TODO make a separate function for storing scripts ( removed map parameter )
   if(map && map != gamemap)
     { // Add to the script store
       return AddToACSStore(map, number, args);

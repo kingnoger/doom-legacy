@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2003/05/05 00:24:49  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.19  2003/04/26 19:03:26  hurdler
 // Being able to load an heretic map without sndseq (until it's officially put in legacy.wad)
 //
@@ -798,7 +801,7 @@ void Map::LoadLineDefs(int lump)
 	{
 	  ld->flags = SHORT(hld->flags);
 	  ld->special = hld->special;
-	  ld->tag = 0;
+	  ld->tag = hld->args[0]; // FIXME kludge for current EV_* functions
 	  
 	  for (j=0; j<5; j++)
 	    ld->args[j] = hld->args[j];
@@ -1167,6 +1170,9 @@ void Map::LoadBlockMap(int lump)
   count = sizeof(*blocklinks)* bmapwidth*bmapheight;
   blocklinks = (Actor **)Z_Malloc(count, PU_LEVEL, 0);
   memset(blocklinks, 0, count);
+
+  PolyBlockMap = (polyblock_t **)Z_Malloc(bmapwidth*bmapheight*sizeof(polyblock_t *), PU_LEVEL, 0);
+  memset(PolyBlockMap, 0, bmapwidth*bmapheight*sizeof(polyblock_t *));
 }
 
 
@@ -1426,7 +1432,6 @@ bool Map::Setup(tic_t start)
   //faB: now part of level loading since in future each level may have
   //     its own anim texture sequences, switches etc.
   P_InitPicAnims();
-  P_InitLava();
   SetupSky();
 
   // SoM: WOO HOO!
@@ -1442,10 +1447,10 @@ bool Map::Setup(tic_t start)
   LoadLineDefs (lumpnum+ML_LINEDEFS);
   LoadSideDefs2(lumpnum+ML_SIDEDEFS);
   LoadLineDefs2();
-  /*
+
   if (!hexen_format)
     ConvertLineDefs(); // Doom => Hexen
-  */
+
   LoadSubsectors (lumpnum+ML_SSECTORS);
   LoadNodes (lumpnum+ML_NODES);
   LoadSegs (lumpnum+ML_SEGS);
@@ -1467,7 +1472,6 @@ bool Map::Setup(tic_t start)
     }
 #endif
 
-  //InitAmbientSound();
   LoadThings(lumpnum + ML_THINGS);
   PlaceWeapons(); // Heretic mace
 

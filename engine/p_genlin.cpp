@@ -51,7 +51,7 @@ int Map::EV_DoGenFloor(line_t *line)
   int                   rtn;
   bool               manual;
   sector_t*             sec;
-  floormove_t*          floor;
+  floor_t*          floor;
   unsigned              value = (unsigned)line->special - GenFloorBase;
 
   // parse the bit fields in the line's special type
@@ -93,72 +93,70 @@ int Map::EV_DoGenFloor(line_t *line)
 	    return rtn;
 	}
 
-      // new floor thinker
-      rtn = 1;
+      fixed_t speed;
+      // set the speed of motion
+      switch (Sped)
+	{
+	case SpeedNormal:
+	  speed = FLOORSPEED*2;
+	  break;
+	case SpeedFast:
+	  speed = FLOORSPEED*4;
+	  break;
+	case SpeedTurbo:
+	  speed = FLOORSPEED*8;
+	  break;
+	case SpeedSlow:
+	default:
+	  speed = FLOORSPEED;
+	  break;
+	}
 
-      floor = new floormove_t(genFloor, sec, line, secnum);
+      // new floor thinker
+      rtn++;
+      floor = new floor_t(floor_t::RelHeight, sec, speed, Crsh ? 10 : 0, 0);
       AddThinker(floor);
 
-      floor->crush = Crsh;
       floor->direction = Dirn? 1 : -1;
       floor->texture = sec->floorpic;
       floor->newspecial = sec->special;
       floor->oldspecial = sec->oldspecial;
 
-      // set the speed of motion
-      switch (Sped)
-	{
-	case SpeedSlow:
-	  floor->speed = FLOORSPEED;
-	  break;
-	case SpeedNormal:
-	  floor->speed = FLOORSPEED*2;
-	  break;
-	case SpeedFast:
-	  floor->speed = FLOORSPEED*4;
-	  break;
-	case SpeedTurbo:
-	  floor->speed = FLOORSPEED*8;
-	  break;
-	default:
-	  break;
-	}
-
       // set the destination height
       switch(Targ)
 	{
 	case FtoHnF:
-	  floor->floordestheight = P_FindHighestFloorSurrounding(sec);
+	  floor->destheight = P_FindHighestFloorSurrounding(sec);
 	  break;
 	case FtoLnF:
-	  floor->floordestheight = P_FindLowestFloorSurrounding(sec);
+	  floor->destheight = P_FindLowestFloorSurrounding(sec);
 	  break;
 	case FtoNnF:
-	  floor->floordestheight = Dirn?
+	  floor->destheight = Dirn?
 	    P_FindNextHighestFloor(sec,sec->floorheight) :
 	      P_FindNextLowestFloor(sec,sec->floorheight);
 	  break;
 	case FtoLnC:
-	  floor->floordestheight = P_FindLowestCeilingSurrounding(sec);
+	  floor->destheight = P_FindLowestCeilingSurrounding(sec);
 	  break;
 	case FtoC:
-	  floor->floordestheight = sec->ceilingheight;
+	  floor->destheight = sec->ceilingheight;
 	  break;
 	case FbyST:
-	  floor->floordestheight = (floor->sector->floorheight>>FRACBITS) +
-	    floor->direction * (FindShortestTextureAround(secnum)>>FRACBITS);
-	  if (floor->floordestheight>32000)
-	    floor->floordestheight=32000;
-	  if (floor->floordestheight<-32000)
-	    floor->floordestheight=-32000;
-	  floor->floordestheight<<=FRACBITS;
+	  floor->destheight = (floor->sector->floorheight>>FRACBITS) +
+	    floor->direction * (FindShortestLowerAround(sec)>>FRACBITS);
+	  if (floor->destheight>32000)
+	    floor->destheight=32000;
+	  if (floor->destheight<-32000)
+	    floor->destheight=-32000;
+	  floor->destheight<<=FRACBITS;
 	  break;
 	case Fby24:
-	  floor->floordestheight = floor->sector->floorheight +
+	  floor->destheight = floor->sector->floorheight +
 	    floor->direction * 24*FRACUNIT;
 	  break;
 	case Fby32:
-	  floor->floordestheight = floor->sector->floorheight +
+	  floor->destheight = floor->sector->floorheight +
 	    floor->direction * 32*FRACUNIT;
 	  break;
 	default:
@@ -173,8 +171,8 @@ int Map::EV_DoGenFloor(line_t *line)
 	      sector_t *sec2;
 
 	      sec2 = (Targ==FtoLnC || Targ==FtoC)?
-		FindModelCeilingSector(floor->floordestheight,sec) :
-		FindModelFloorSector(floor->floordestheight,sec);
+		FindModelCeilingSector(floor->destheight,sec) :
+		FindModelFloorSector(floor->destheight,sec);
 	      if (sec2)
 		{
 		  floor->texture = sec2->floorpic;
@@ -183,15 +181,15 @@ int Map::EV_DoGenFloor(line_t *line)
 		    case FChgZero:  // zero type
 		      floor->newspecial = 0;
 		      floor->oldspecial = 0;
-		      floor->type = genFloorChg0;
+		      floor->type |= floor_t::SetTxTy;
 		      break;
 		    case FChgTyp:   // copy type
 		      floor->newspecial = sec2->special;
 		      floor->oldspecial = sec2->oldspecial;
-		      floor->type = genFloorChgT;
+		      floor->type |= floor_t::SetTxTy;
 		      break;
 		    case FChgTxt:   // leave type be
-		      floor->type = genFloorChg;
+		      floor->type |= floor_t::SetTexture;
 		      break;
 		    default:
 		      break;
@@ -206,15 +204,15 @@ int Map::EV_DoGenFloor(line_t *line)
 		case FChgZero:    // zero type
 		  floor->newspecial = 0;
 		  floor->oldspecial = 0;
-		  floor->type = genFloorChg0;
+		  floor->type |= floor_t::SetTxTy;
 		  break;
 		case FChgTyp:     // copy type
 		  floor->newspecial = line->frontsector->special;
 		  floor->oldspecial = line->frontsector->oldspecial;
-		  floor->type = genFloorChgT;
+		  floor->type |= floor_t::SetTxTy;
 		  break;
 		case FChgTxt:     // leave type be
-		  floor->type = genFloorChg;
+		  floor->type |= floor_t::SetTexture;
 		default:
 		  break;
 		}
@@ -283,36 +281,34 @@ int Map::EV_DoGenCeiling(line_t *line)
 	    return rtn;
 	}
 
+      fixed_t speed;
+      // set speed of motion
+      switch (Sped)
+	{
+	case SpeedNormal:
+	  speed = CEILSPEED*2;
+	  break;
+	case SpeedFast:
+	  speed = CEILSPEED*4;
+	  break;
+	case SpeedTurbo:
+	  speed = CEILSPEED*8;
+	  break;
+	case SpeedSlow:
+	default:
+	  speed = CEILSPEED;
+	  break;
+	}
+
       // new ceiling thinker
-      rtn = 1;
-      ceiling = new ceiling_t(genCeiling, sec, sec->tag);
+      rtn++;
+      ceiling = new ceiling_t(ceiling_t::RelHeight, sec, speed, speed, Crsh ? 10 : 0, 0);
       AddThinker(ceiling);
 
-      ceiling->crush = Crsh;
       ceiling->direction = Dirn? 1 : -1;
       ceiling->texture = sec->ceilingpic;
       ceiling->newspecial = sec->special;
       ceiling->oldspecial = sec->oldspecial;
-
-
-      // set speed of motion
-      switch (Sped)
-	{
-	case SpeedSlow:
-	  ceiling->speed = CEILSPEED;
-	  break;
-	case SpeedNormal:
-	  ceiling->speed = CEILSPEED*2;
-	  break;
-	case SpeedFast:
-	  ceiling->speed = CEILSPEED*4;
-	  break;
-	case SpeedTurbo:
-	  ceiling->speed = CEILSPEED*8;
-	  break;
-	default:
-	  break;
-	}
 
       // set destination target height
       targheight = sec->ceilingheight;
@@ -337,7 +333,7 @@ int Map::EV_DoGenCeiling(line_t *line)
 	  break;
 	case CbyST:
 	  targheight = (ceiling->sector->ceilingheight>>FRACBITS) +
-	    ceiling->direction * (FindShortestUpperAround(secnum)>>FRACBITS);
+	    ceiling->direction * (FindShortestUpperAround(sec)>>FRACBITS);
 	  if (targheight>32000)
 	    targheight=32000;
 	  if (targheight<-32000)
@@ -380,15 +376,15 @@ int Map::EV_DoGenCeiling(line_t *line)
 		    case CChgZero:  // type is zeroed
 		      ceiling->newspecial = 0;
 		      ceiling->oldspecial = 0;
-		      ceiling->type = genCeilingChg0;
+		      ceiling->type |= ceiling_t::SetTxTy;
 		      break;
 		    case CChgTyp:   // type is copied
 		      ceiling->newspecial = sec2->special;
 		      ceiling->oldspecial = sec2->oldspecial;
-		      ceiling->type = genCeilingChgT;
+		      ceiling->type |= ceiling_t::SetTxTy;
 		      break;
 		    case CChgTxt:   // type is left alone
-		      ceiling->type = genCeilingChg;
+		      ceiling->type |= ceiling_t::SetTexture;
 		      break;
 		    default:
 		      break;
@@ -403,15 +399,15 @@ int Map::EV_DoGenCeiling(line_t *line)
 		case CChgZero:    // type is zeroed
 		  ceiling->newspecial = 0;
 		  ceiling->oldspecial = 0;
-		  ceiling->type = genCeilingChg0;
+		  ceiling->type |= ceiling_t::SetTxTy;
 		  break;
 		case CChgTyp:     // type is copied
 		  ceiling->newspecial = line->frontsector->special;
 		  ceiling->oldspecial = line->frontsector->oldspecial;
-		  ceiling->type = genCeilingChgT;
+		  ceiling->type |= ceiling_t::SetTxTy;
 		  break;
 		case CChgTxt:     // type is left alone
-		  ceiling->type = genCeilingChg;
+		  ceiling->type |= ceiling_t::SetTexture;
 		  break;
 		default:
 		  break;
@@ -482,81 +478,66 @@ int Map::EV_DoGenLift(line_t *line)
 	    return rtn;
 	}
       
-      // Setup the plat thinker
-      rtn = 1;
-      plat = new plat_t(genLift, sec, line);
-      AddThinker(plat);
-
-      plat->high = sec->floorheight;
-      plat->status = down;
-
+      int type;
       // setup the target destination height
       switch(Targ)
 	{
 	case F2LnF:
-	  plat->low = P_FindLowestFloorSurrounding(sec);
-	  if (plat->low > sec->floorheight)
-	    plat->low = sec->floorheight;
+	  type = plat_t::LnF;
 	  break;
 	case F2NnF:
-	  plat->low = P_FindNextLowestFloor(sec,sec->floorheight);
+	  type = plat_t::NLnF;
 	  break;
 	case F2LnC:
-	  plat->low = P_FindLowestCeilingSurrounding(sec);
-	  if (plat->low > sec->floorheight)
-	    plat->low = sec->floorheight;
+	  type = plat_t::LnC;
 	  break;
 	case LnF2HnF:
-	  plat->type = genPerpetual;
-	  plat->low = P_FindLowestFloorSurrounding(sec);
-	  if (plat->low > sec->floorheight)
-	    plat->low = sec->floorheight;
-	  plat->high = P_FindHighestFloorSurrounding(sec);
-	  if (plat->high < sec->floorheight)
-	    plat->high = sec->floorheight;
-	  plat->status = plat_e(P_Random()&1);
-	  break;
 	default:
+	  type = plat_t::LHF;
 	  break;
 	}
 
+      fixed_t speed;
       // setup the speed of motion
       switch(Sped)
 	{
-	case SpeedSlow:
-	  plat->speed = PLATSPEED * 2;
-	  break;
 	case SpeedNormal:
-	  plat->speed = PLATSPEED * 4;
+	  speed = PLATSPEED * 4;
 	  break;
 	case SpeedFast:
-	  plat->speed = PLATSPEED * 8;
+	  speed = PLATSPEED * 8;
 	  break;
 	case SpeedTurbo:
-	  plat->speed = PLATSPEED * 16;
+	  speed = PLATSPEED * 16;
 	  break;
+	case SpeedSlow:
 	default:
+	  speed = PLATSPEED * 2;
 	  break;
 	}
 
+      int wait;
       // setup the delay time before the floor returns
       switch(Dely)
 	{
 	case 0:
-	  plat->wait = 1*35;
+	  wait = 1*35;
 	  break;
 	case 1:
-	  plat->wait = PLATWAIT*35;
+	  wait = PLATWAIT*35;
 	  break;
 	case 2:
-	  plat->wait = 5*35;
+	  wait = 5*35;
 	  break;
 	case 3:
-	  plat->wait = 10*35;
+	  wait = 10*35;
 	  break;
 	}
 
-      S_StartSound(&sec->soundorg,sfx_pstart);
+      // Setup the plat thinker
+      rtn++;
+      plat = new plat_t(type, sec, line->tag, speed, wait, 0);
+      AddThinker(plat);
       AddActivePlat(plat); // add this plat to the list of active plats
 
       if (manual)
@@ -575,25 +556,11 @@ int Map::EV_DoGenLift(line_t *line)
 //
 int Map::EV_DoGenStairs(line_t *line)
 {
-  int                   secnum;
-  int                   osecnum;
-  int                   height;
-  int                   i;
-  int                   newsecnum;
-  int                   texture;
-  int                   ok;
-  int                   rtn;
-  bool               manual;
+  int       secnum;
+  int       i;
+  sector_t *sec;
     
-  sector_t*             sec;
-  sector_t*             tsec;
-
-  floormove_t*  floor;
-    
-  fixed_t               stairsize;
-  fixed_t               speed;
-
-  unsigned              value = (unsigned)line->special - GenStairsBase;
+  unsigned value = (unsigned)line->special - GenStairsBase;
 
   // parse the bit fields in the line's special type
 
@@ -603,10 +570,10 @@ int Map::EV_DoGenStairs(line_t *line)
   int Sped = (value & StairSpeed) >> StairSpeedShift;
   int Trig = (value & TriggerType) >> TriggerTypeShift;
 
-  rtn = 0;
+  int rtn = 0;
 
   // check if a manual trigger, if so do just the sector on the backside
-  manual = false;
+  bool manual = false;
   if (Trig==PushOnce || Trig==PushMany)
     {
       if (!(sec = line->backsector))
@@ -634,31 +601,26 @@ int Map::EV_DoGenStairs(line_t *line)
 	    return rtn;
 	}
       
-      // new floor thinker
-      rtn = 1;
-      floor = new floormove_t(genBuildStair, sec, line, secnum);
-      AddThinker(floor);
-
-      floor->direction = Dirn? 1 : -1;
-
+      fixed_t speed;
       // setup speed of stair building
       switch(Sped)
 	{
 	default:
 	case SpeedSlow:
-	  floor->speed = FLOORSPEED/4;
+	  speed = FLOORSPEED/4;
 	  break;
 	case SpeedNormal:
-	  floor->speed = FLOORSPEED/2;
+	  speed = FLOORSPEED/2;
 	  break;
 	case SpeedFast:
-	  floor->speed = FLOORSPEED*2;
+	  speed = FLOORSPEED*2;
 	  break;
 	case SpeedTurbo:
-	  floor->speed = FLOORSPEED*4;
+	  speed = FLOORSPEED*4;
 	  break;
 	}
 
+      fixed_t stairsize;
       // setup stepsize for stairs
       switch(Step)
 	{
@@ -677,29 +639,34 @@ int Map::EV_DoGenStairs(line_t *line)
 	  break;
 	}
 
-      speed = floor->speed;
-      height = sec->floorheight + floor->direction * stairsize;
-      floor->floordestheight = height;
-      texture = sec->floorpic;
+      fixed_t height = sec->floorheight + (Dirn ? 1 : -1) * stairsize;
+
+      // new floor thinker
+      rtn++;
+      floor_t *floor = new floor_t(floor_t::AbsHeight, sec, speed, 0, height);
+      AddThinker(floor);
+
+      int texture = sec->floorpic;
 
       sec->stairlock = -2;
       sec->nextsec = -1;
       sec->prevsec = -1;
 
-      osecnum = secnum;
+      int osecnum = secnum;
       // Find next sector to raise
       // 1.     Find 2-sided line with same sector side[0]
       // 2.     Other side is the next sector to raise
+      bool ok;
       do
 	{
-	  ok = 0;
+	  ok = false;
 	  for (i = 0;i < sec->linecount;i++)
 	    {
 	      if ( !((sec->lines[i])->backsector) )
 		continue;
                                   
-	      tsec = (sec->lines[i])->frontsector;
-	      newsecnum = tsec-sectors;
+	      sector_t *tsec = (sec->lines[i])->frontsector;
+	      int newsecnum = tsec-sectors;
           
 	      if (secnum != newsecnum)
 		continue;
@@ -710,14 +677,10 @@ int Map::EV_DoGenStairs(line_t *line)
 	      if (!Igno && tsec->floorpic != texture)
 		continue;
 
-	      if (!boomsupport)
-		height += floor->direction * stairsize;
-
 	      if (P_SectorActive(floor_special,tsec) || tsec->stairlock)
 		continue;
-        
-	      if (boomsupport)
-		height += floor->direction * stairsize;
+
+	      height += floor->direction * stairsize;
 
 	      // link the stair chain in both directions
 	      // lock the stair sector until building complete
@@ -729,14 +692,12 @@ int Map::EV_DoGenStairs(line_t *line)
 	      sec = tsec;
 	      secnum = newsecnum;
 
-	      floor = new floormove_t(genBuildStair, sec, line, secnum);
+	      floor = new floor_t(floor_t::AbsHeight, sec, speed, 0, height);
 	      AddThinker(floor);
 
-	      floor->direction = Dirn? 1 : -1;
-	      floor->speed = speed;
-	      floor->floordestheight = height;
+	      //floor->direction = Dirn? 1 : -1;
 
-	      ok = 1;
+	      ok = true;
 	      break;
 	    }
 	} while(ok);
@@ -802,38 +763,34 @@ int Map::EV_DoGenCrusher(line_t *line)
 	    return rtn;
 	}
 
-      // new ceiling thinker
-      rtn = 1;
-      ceiling = new ceiling_t(genCrusher, sec, sec->tag);
-      AddThinker(ceiling);
-
-      ceiling->crush = true;
-      ceiling->direction = -1;
-      ceiling->texture = sec->ceilingpic;
-      ceiling->newspecial = sec->special;
-      ceiling->type = Slnt? genSilentCrusher : genCrusher;
-      ceiling->topheight = sec->ceilingheight;
-      ceiling->bottomheight = sec->floorheight + (8*FRACUNIT);
-
+      int speed;
       // setup ceiling motion speed
       switch (Sped)
 	{
-	case SpeedSlow:
-	  ceiling->speed = CEILSPEED;
-	  break;
 	case SpeedNormal:
-	  ceiling->speed = CEILSPEED*2;
+	  speed = CEILSPEED*2;
 	  break;
 	case SpeedFast:
-	  ceiling->speed = CEILSPEED*4;
+	  speed = CEILSPEED*4;
 	  break;
 	case SpeedTurbo:
-	  ceiling->speed = CEILSPEED*8;
+	  speed = CEILSPEED*8;
 	  break;
 	default:
+	case SpeedSlow:
+	  speed = CEILSPEED;
 	  break;
 	}
-      ceiling->oldspeed=ceiling->speed;
+
+      // new ceiling thinker
+      rtn = 1;
+      ceiling = new ceiling_t(ceiling_t::Crusher, sec, speed, speed, 10, 8*FRACUNIT);
+      AddThinker(ceiling);
+
+      ceiling->texture = sec->ceilingpic;
+      ceiling->newspecial = sec->special;
+      if (Slnt)
+	ceiling->type |= ceiling_t::Silent;
 
       AddActiveCeiling(ceiling);  // add to list of active ceilings
       if (manual) return rtn;
@@ -914,11 +871,11 @@ int Map::EV_DoGenLockedDoor(line_t *line)
 	  door->speed = VDOORSPEED*2;
 	  break;
 	case SpeedFast:
-	  door->type |= vdoor_t::blazing;
+	  door->type |= vdoor_t::Blazing;
 	  door->speed = VDOORSPEED*4;
 	  break;
 	case SpeedTurbo:
-	  door->type |= vdoor_t::blazing;
+	  door->type |= vdoor_t::Blazing;
 	  door->speed = VDOORSPEED*8;
 
 	  break;
@@ -992,7 +949,7 @@ int Map::EV_DoGenDoor(line_t *line)
   
       // new door thinker
       rtn = 1;
-      door = new vdoor_t(vdoor_t::delayed, sec, 0, VDOORWAIT, line);
+      door = new vdoor_t(vdoor_t::Delayed, sec, 0, VDOORWAIT, line);
       AddThinker(door);
 
       // setup delay for door remaining open/closed
@@ -1069,7 +1026,7 @@ int Map::EV_DoGenDoor(line_t *line)
 	}
 
       if (Sped >= SpeedFast)
-	door->type |= vdoor_t::blazing;
+	door->type |= vdoor_t::Blazing;
 
       if (manual)
 	return rtn;

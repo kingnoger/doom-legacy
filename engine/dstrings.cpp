@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/05/05 00:24:48  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.3  2003/04/19 17:38:46  smite-meister
 // SNDSEQ support, tools, linedef system...
 //
@@ -72,13 +75,6 @@ char *text[NUMTEXT] = {
   "Picked up a medikit that you REALLY need!",
   "Picked up a medikit.",
   "Supercharge!",
-
-  "Picked up a blue keycard.",
-  "Picked up a yellow keycard.",
-  "Picked up a red keycard.",
-  "Picked up a blue skull key.",
-  "Picked up a yellow skull key.",
-  "Picked up a red skull key.",
 
   "Invulnerability!",
   "Berserk!",
@@ -890,6 +886,12 @@ char *text[NUMTEXT] = {
   "HORN KEY",
   "SWAMP KEY",
   "CASTLE KEY",
+  "Picked up a blue keycard.",
+  "Picked up a yellow keycard.",
+  "Picked up a red keycard.",
+  "Picked up a blue skull key.",
+  "Picked up a yellow skull key.",
+  "Picked up a red skull key.",
 
   // Artifacts
   "ICON OF THE DEFENDER",

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/05/05 00:24:49  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.6  2003/04/19 17:38:47  smite-meister
 // SNDSEQ support, tools, linedef system...
 //
@@ -44,6 +47,7 @@
 
 
 #include "doomdef.h"
+#include "doomdata.h"
 
 #include "p_spec.h"
 
@@ -82,13 +86,13 @@ vdoor_t::vdoor_t(byte t, sector_t *s, fixed_t sp, int delay, line_t *li)
   line = li;
   s->ceilingdata = this;
 
-  if (type & delayed)
+  if (type & Delayed)
     {
       direction = 2;
       return;
     }
 
-  switch (type & tmask)
+  switch (type & TMASK)
     {
     case Close:
       direction = -1;
@@ -121,7 +125,7 @@ vdoor_t::vdoor_t(byte t, sector_t *s, fixed_t sp, int delay, line_t *li)
 //
 void vdoor_t::Think()
 {
-  result_e    res;
+  int res;
 
   switch (direction)
     {
@@ -129,7 +133,7 @@ void vdoor_t::Think()
       // WAITING
       if (!--topcount)
         {
-	  switch (type & tmask)
+	  switch (type & TMASK)
             {
 	    case OwC:
 	      direction = -1; // time to go back down
@@ -151,7 +155,7 @@ void vdoor_t::Think()
       //  INITIAL WAIT
       if (!--topcount)
         {
-	  switch (type & tmask)
+	  switch (type & TMASK)
 	    {
 	    case Close:
 	      direction = -1;
@@ -182,13 +186,14 @@ void vdoor_t::Think()
     case -1:
       // DOWN
       res = mp->T_MovePlane(sector, speed, sector->floorheight, false, 1, -1);
-      if (res == pastdest)
+      if (res == res_pastdest)
         {
-	  switch (type & tmask)
+	  switch (type & TMASK)
             {
 	    case OwC:
 	    case Close:
 	      sector->ceilingdata = NULL;  // SoM: 3/6/2000
+	      mp->TagFinished(sector->tag);
 	      mp->RemoveThinker(this);  // unlink and free
 	      if (boomsupport) //SoM: Removes the double closing sound of doors.
 		MakeSound(false);
@@ -221,9 +226,9 @@ void vdoor_t::Think()
                 }
             }
         }
-      else if (res == crushed)
+      else if (res == res_crushed)
         {
-	  if ((type & tmask) != Close)
+	  if ((type & TMASK) != Close)
             {
 	      direction = 1;
 	      MakeSound(true);
@@ -235,9 +240,9 @@ void vdoor_t::Think()
       // UP
       res = mp->T_MovePlane(sector, speed, topheight, false, 1, 1);
 
-      if (res == pastdest)
+      if (res == res_pastdest)
         {
-	  switch(type & tmask)
+	  switch(type & TMASK)
             {
 	    case OwC:
 	      direction = 0; // wait at top
@@ -247,6 +252,7 @@ void vdoor_t::Think()
 	    case Open:
 	    case CwO:
 	      sector->ceilingdata = NULL;
+	      mp->TagFinished(sector->tag);
 	      mp->RemoveThinker(this);  // unlink and free
 	      // if (game.mode == gm_heretic) S.Stop3DSound(&sector->soundorg);
 	      break;
@@ -284,14 +290,14 @@ void vdoor_t::MakeSound(bool open) const
   // TODO sound sequences (makes more sense in Heretic too...)
   if (open)
     {
-      if (type & blazing)
+      if (type & Blazing)
 	S_StartSound(&sector->soundorg, s_bopen);
       else
 	S_StartSound(&sector->soundorg, s_open);
     }
   else
     {
-      if (type & blazing)
+      if (type & Blazing)
 	S_StartSound(&sector->soundorg, s_bclose);
       else
 	S_StartSound(&sector->soundorg, s_close);
@@ -299,35 +305,13 @@ void vdoor_t::MakeSound(bool open) const
 }
 
 
-static bool P_CheckKeys(PlayerPawn *p, byte lock)
-{
-  if (lock > NUMKEYS)
-    return false;
-
-  if (!lock)
-    return true;
-
-  if (!(p->cards & (1 << (lock-1))))
-    {
-      if (lock >= it_bluecard) // skulls and cards are equivalent
-	if (p->cards & (1 << (lock+2)))
-	  return true;
-      // FIXME complain properly
-      p->player->SetMessage(PD_BLUEO);
-      p->player->SetMessage(PD_REDO);
-      p->player->SetMessage(PD_YELLOWO);
-      S_StartScreamSound(p, sfx_oof); //SoM: 3/6/200: killough's idea
-      return false; // no ticket
-    }
-  return true;
-}
-
 //
 // was EV_DoLockedDoor
 // Move a locked door up/down
 //
 // SoM: Removed the player checks at every different color door (checking to make sure 'p' is 
 // not NULL) because you only need to do that once.
+/*
 int Map::EV_DoLockedDoor(line_t *line, PlayerPawn *p, byte type, byte lock, fixed_t speed, int delay)
 {
   if (!p)
@@ -336,7 +320,6 @@ int Map::EV_DoLockedDoor(line_t *line, PlayerPawn *p, byte type, byte lock, fixe
   if (!P_CheckKeys(p, lock))
     return 0;
 
-  /*
   switch(line->special)
     {
       case 99:  // Blue Lock
@@ -370,34 +353,77 @@ int Map::EV_DoLockedDoor(line_t *line, PlayerPawn *p, byte type, byte lock, fixe
         }
         break;
     }
-  */
+
   return EV_DoDoor(line,type,speed, delay);
 }
-
+*/
 
 //  was EV_DoDoor()
 
-int Map::EV_DoDoor(line_t *line, byte type, fixed_t speed, int delay)
+int Map::EV_DoDoor(line_t *line, Actor *mo, byte type, fixed_t speed, int delay)
 {
   sector_t*  sec;
   vdoor_t*   door;
 
   int secnum = -1;
-  bool rtn = 0;
+  int rtn = 0;
 
-  while ((secnum = FindSectorFromLineTag(line,secnum)) >= 0)
+  if (line->tag)
     {
-      sec = &sectors[secnum];
-      if (P_SectorActive(ceiling_special,sec)) //SoM: 3/6/2000
-	continue;
+      while ((secnum = FindSectorFromLineTag(line,secnum)) >= 0)
+	{
+	  sec = &sectors[secnum];
+	  if (P_SectorActive(ceiling_special,sec)) //SoM: 3/6/2000
+	    continue;
 
+	  // new door thinker
+	  rtn++;
+	  door = new vdoor_t(type, sec, speed, delay, line);
+	  AddThinker(door);
+	}
+      return rtn;
+    }
+  else
+    {
+      // tag == 0, door is on the other side of the linedef
+      PlayerPawn *p = mo ? ((mo->Type() == Thinker::tt_ppawn) ? (PlayerPawn *)mo : NULL) : NULL;
+
+      vdoor_t*   door;
+
+      //SoM: 3/6/2000
+      // if the wrong side of door is pushed, give oof sound
+      if (line->sidenum[1] == -1)
+	{
+	  S_StartScreamSound(p, sfx_oof);    // killough 3/20/98
+	  return 0;
+	}
+
+      // if the sector has an active thinker, use it
+      sec = sides[line->sidenum[1]].sector;
+
+      if (sec->ceilingdata) //SoM: 3/6/2000
+	{
+	  door = (vdoor_t *)sec->ceilingdata; //SoM: 3/6/2000
+	  if (door->type & vdoor_t::TMASK == vdoor_t::OwC)
+	    {
+	      if (door->direction == -1)
+		door->direction = 1;    // go back up
+	      else if (GET_SPAC(line->flags) != SPAC_PUSH) // so that you can get them open
+		{
+		  if (!p)
+		    return 0;            // JDC: bad guys never close doors
+
+		  door->direction = -1;   // start going down immediately
+		}
+	      return 1;
+	    }
+	}      
       // new door thinker
-      rtn++;
       door = new vdoor_t(type, sec, speed, delay, line);
       AddThinker(door);
-    }
 
-  return rtn;
+      return 1;
+    }
 }
 
 
@@ -416,15 +442,15 @@ void Map::EV_OpenDoor(int sectag, int speed, int wait_time)
 
   if (wait_time)               // door closes afterward
     {
-      if(speed >= 4)              // blazing ?
-        door_type = vdoor_t::OwC | vdoor_t::blazing;
+      if(speed >= 4)              // Blazing ?
+        door_type = vdoor_t::OwC | vdoor_t::Blazing;
       else
         door_type = vdoor_t::OwC;
     }
   else
     {
-      if(speed >= 4)              // blazing ?
-        door_type = vdoor_t::Open | vdoor_t::blazing;
+      if(speed >= 4)              // Blazing ?
+        door_type = vdoor_t::Open | vdoor_t::Blazing;
       else
         door_type = vdoor_t::Open;
     }
@@ -458,8 +484,8 @@ void Map::EV_CloseDoor(int sectag, int speed)
   
   // find out door type first
 
-  if(speed >= 4)              // blazing ?
-    door_type = vdoor_t::Close | vdoor_t::blazing;
+  if(speed >= 4)              // Blazing ?
+    door_type = vdoor_t::Close | vdoor_t::Blazing;
   else
     door_type = vdoor_t::Close;
   
@@ -485,15 +511,13 @@ void Map::EV_CloseDoor(int sectag, int speed)
 //
 //SoM: 3/6/2000: Needs int return for boom compatability. Also removed "side" and used boom
 //methods insted.
+/*
 int Map::EV_VerticalDoor(line_t* line, Actor *m)
 {
   PlayerPawn *p = (m->Type() == Thinker::tt_ppawn) ? (PlayerPawn *)m : NULL;
   int         secnum;
   sector_t*   sec;
   vdoor_t*   door;
-//    int         side; //SoM: 3/6/2000
-
-//    side = 0;   // only front sides can be used
 
   //  Check for locks
 
@@ -629,14 +653,14 @@ int Map::EV_VerticalDoor(line_t* line, Actor *m)
 
   return 1;
 }
-
+*/
 
 // was P_SpawnDoorCloseIn30
 // Spawn a door that closes after 30 seconds
 //
 void Map::SpawnDoorCloseIn30(sector_t* sec)
 {
-  vdoor_t *door = new vdoor_t(vdoor_t::Close | vdoor_t::delayed, sec, VDOORSPEED, VDOORWAIT, NULL);
+  vdoor_t *door = new vdoor_t(vdoor_t::Close | vdoor_t::Delayed, sec, VDOORSPEED, VDOORWAIT, NULL);
   door->topcount = 30 * 35;
   AddThinker(door);
 
@@ -648,7 +672,7 @@ void Map::SpawnDoorCloseIn30(sector_t* sec)
 //
 void Map::SpawnDoorRaiseIn5Mins(sector_t *sec)
 {
-  vdoor_t *door = new vdoor_t(vdoor_t::Open | vdoor_t::delayed, sec, VDOORSPEED, VDOORWAIT, NULL);
+  vdoor_t *door = new vdoor_t(vdoor_t::Open | vdoor_t::Delayed, sec, VDOORSPEED, VDOORWAIT, NULL);
   door->topcount = 5 * 60 * 35;
   AddThinker(door);
 

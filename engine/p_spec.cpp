@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/05/05 00:24:49  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.9  2003/04/19 17:38:47  smite-meister
 // SNDSEQ support, tools, linedef system...
 //
@@ -65,6 +68,7 @@
 
 #include "d_netcmd.h"
 
+#include "p_spec.h"
 #include "p_setup.h"    //levelflats for flat animation
 #include "p_maputl.h"
 
@@ -75,6 +79,7 @@
 #include "r_state.h"
 
 #include "s_sound.h"
+#include "sounds.h"
 #include "dstrings.h" //SoM: 3/10/2000
 #include "r_main.h"   //Two extra includes.
 #include "t_script.h"
@@ -643,13 +648,15 @@ fixed_t P_FindHighestCeilingSurrounding(sector_t* sec)
 // Passed a sector number, returns the shortest lower texture on a
 // linedef bounding the sector.
 //
-//
-fixed_t Map::FindShortestTextureAround(int secnum)
+// TODO in this and FindShortestUpperAround: replace all indices with pointers
+// (in line_t, replace sidenum with side_t *)
+fixed_t Map::FindShortestLowerAround(sector_t *sec)
 {
   int minsize = MAXINT;
   side_t*     side;
   int i;
-  sector_t *sec = &sectors[secnum];
+  int secnum = sec - sectors;
+  //sector_t *sec = &sectors[secnum];
 
   if (boomsupport)
     minsize = 32000<<FRACBITS;
@@ -680,12 +687,13 @@ fixed_t Map::FindShortestTextureAround(int secnum)
 // linedef bounding the sector.
 //
 //
-fixed_t Map::FindShortestUpperAround(int secnum)
+fixed_t Map::FindShortestUpperAround(sector_t *sec)
 {
   int minsize = MAXINT;
   side_t*     side;
   int i;
-  sector_t *sec = &sectors[secnum];
+  int secnum = sec - sectors;
+  //sector_t *sec = &sectors[secnum];
 
   if (boomsupport)
     minsize = 32000<<FRACBITS;
@@ -1025,6 +1033,37 @@ int P_CheckTag(line_t *line)
 
 
 
+static bool P_CheckKeys(Actor *mo, int lock)
+{
+  PlayerPawn *p = (mo->Type() == Thinker::tt_ppawn) ? (PlayerPawn *)mo : NULL;
+
+  if (!p)
+    return false;
+
+  if (!lock)
+    return true;
+
+  if (lock > NUMKEYS)
+    return false;
+
+  if (!(p->cards & (1 << (lock-1))))
+    {
+      if (lock >= it_bluecard) // skulls and cards are equivalent
+	if (p->cards & (1 << (lock+2)))
+	  return true;
+      // FIXME complain properly
+      /*
+      p->player->SetMessage(PD_BLUEO);
+      p->player->SetMessage(PD_REDO);
+      p->player->SetMessage(PD_YELLOWO);
+      */
+      S_StartScreamSound(p, sfx_oof); //SoM: 3/6/200: killough's idea
+      //S_StartSound(mo, SFX_DOOR_LOCKED);
+      return false; // no ticket!
+    }
+  return true;
+}
+
 //
 // P_WasSecret()
 //
@@ -1054,16 +1093,10 @@ bool Map::ActivateLine(line_t *line, Actor *thing, int side, int atype)
   if (thing->flags & MF_NOTRIGGER)
     return false;
 
-  // Err...
-  // Use the back sides of VERY SPECIAL lines...
-  /*
-  if (use && side)
-    return false;
-  */
-
   unsigned spec = unsigned(line->special);
   bool p = (thing->Type() == Thinker::tt_ppawn);
-  bool forceuse = false; // FIXME move alltrigger flag (line->flags & ML_ALLTRIGGER) && !(thing->flags & MF_NOSPLASH);
+  // flying blood or water does not activate anything
+  bool forceuse = (line->flags & ML_MONSTERS_CAN_ACTIVATE) && !(thing->flags & MF_NOSPLASH);
 
   // Boom generalized types first
   if (boomsupport && spec >= GenCrusherBase)
@@ -1077,7 +1110,7 @@ bool Map::ActivateLine(line_t *line, Actor *thing, int side, int atype)
 	  break;
 
 	case SwitchOnce:
-	  if (atype != SPAC_USE)
+	  if (!(atype == SPAC_USE || atype == SPAC_PASSUSE))
 	    return false;
 	  break;
 
@@ -1087,7 +1120,7 @@ bool Map::ActivateLine(line_t *line, Actor *thing, int side, int atype)
 	  break;
 
 	case PushOnce: // like opening a door, means using it
-	  if (atype != SPAC_USE) // yeah. SPAC_USE, not SPAC_PUSH.
+	  if (!(atype == SPAC_USE || atype == SPAC_PASSUSE)) // yeah. SPAC_USE, not SPAC_PUSH.
 	    return false;
 	  break;
 
@@ -1187,8 +1220,8 @@ bool Map::ActivateLine(line_t *line, Actor *thing, int side, int atype)
   if (act != atype)
     return false;
 
-  // monsters can only activate the MCROSS activation type, but never open secret doors
-  if (!p && !(thing->flags & MF_MISSILE))
+  // monsters can activate the MCROSS activation type, but never open secret doors
+  if (!p && !(thing->flags & MF_MISSILE) && !forceuse)
     if (act != SPAC_MCROSS || line->flags & ML_SECRET)
       return false;
 
@@ -1198,7 +1231,7 @@ bool Map::ActivateLine(line_t *line, Actor *thing, int side, int atype)
   if (!repeat && success)
     line->special = 0;    // clear the special on non-retriggerable lines
 
-  if ((act == SPAC_USE || act == SPAC_IMPACT) && success)
+  if ((act == SPAC_USE || act == SPAC_PASSUSE || act == SPAC_IMPACT) && success)
     ChangeSwitchTexture(line, repeat); // FIXME the function
 
   return true;
@@ -1208,11 +1241,16 @@ bool Map::ActivateLine(line_t *line, Actor *thing, int side, int atype)
 // P_ExecuteLineSpecial
 // Hexen linedefs
 //
+#define SPEED(a)  (((a)*FRACUNIT)/8)
+#define HEIGHT(a) ((a)*FRACUNIT)
+#define TICS(a)   (((a)*TICRATE)/35)
+#define OCTICS(a) (((a)*TICRATE)/8)
+#define ANGLE(a)  angle_t((a) << 24) // angle_t is 32-bit int, Hexen angle is a 8-bit byte
 bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int side, Actor *mo)
 {
   bool success = false;
+  int lock;
 
-  /*
   switch (special)
     {
     case 1: // Poly Start Line
@@ -1232,74 +1270,54 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       success = EV_MovePoly(line, args, true, false);
       break;
     case 7: // Poly Door Swing
-      success = EV_OpenPolyDoor(line, args, PODOOR_SWING);
+      success = EV_OpenPolyDoor(line, args, polydoor_t::pd_swing);
       break;
     case 8: // Poly Door Slide
-      success = EV_OpenPolyDoor(line, args, PODOOR_SLIDE);
+      success = EV_OpenPolyDoor(line, args, polydoor_t::pd_slide);
       break;
     case 10: // Door Close
-      success = EV_DoDoor(line, args, DREV_CLOSE);
+      success = EV_DoDoor(line, mo, vdoor_t::Close, SPEED(args[1]), TICS(args[2]));
       break;
     case 11: // Door Open
-      if(!args[0])
-	{
-	  success = EV_VerticalDoor(line, mo);
-	}
-      else
-	{
-	  success = EV_DoDoor(line, args, DREV_OPEN);
-	}
+      success = EV_DoDoor(line, mo, vdoor_t::Open, SPEED(args[1]), TICS(args[2]));
       break;
     case 12: // Door Raise
-      if(!args[0])
-	{
-	  success = EV_VerticalDoor(line, mo);
-	}
-      else
-	{
-	  success = EV_DoDoor(line, args, DREV_NORMAL);
-	}
+      success = EV_DoDoor(line, mo, vdoor_t::OwC, SPEED(args[1]), TICS(args[2]));
       break;
     case 13: // Door Locked_Raise
-      if(CheckedLockedDoor(mo, args[3]))
-	{
-	  if(!args[0])
-	    {
-	      success = EV_VerticalDoor(line, mo);
-	    }
-	  else
-	    {
-	      success = EV_DoDoor(line, args, DREV_NORMAL);
-	    }
-	}
+      if (P_CheckKeys(mo, args[3]))
+	success = EV_DoDoor(line, mo, vdoor_t::OwC, SPEED(args[1]), TICS(args[2]));
       break;
     case 20: // Floor Lower by Value
-      success = EV_DoFloor(line, args, FLEV_LOWERFLOORBYVALUE);
+      success = EV_DoFloor(line, floor_t::RelHeight, SPEED(args[1]), 0, -HEIGHT(args[2]));
       break;
     case 21: // Floor Lower to Lowest
-      success = EV_DoFloor(line, args, FLEV_LOWERFLOORTOLOWEST);
+      success = EV_DoFloor(line, floor_t::LnF, SPEED(args[1]), 0, 0);
       break;
     case 22: // Floor Lower to Nearest
-      success = EV_DoFloor(line, args, FLEV_LOWERFLOOR);
+      success = EV_DoFloor(line, floor_t::DownNnF, SPEED(args[1]), 0, 0);
       break;
     case 23: // Floor Raise by Value
-      success = EV_DoFloor(line, args, FLEV_RAISEFLOORBYVALUE);
+      success = EV_DoFloor(line, floor_t::RelHeight, SPEED(args[1]), 0, HEIGHT(args[2]));
       break;
     case 24: // Floor Raise to Highest
-      success = EV_DoFloor(line, args, FLEV_RAISEFLOOR);
+      success = EV_DoFloor(line, floor_t::HnF, SPEED(args[1]), 0, 0);
       break;
     case 25: // Floor Raise to Nearest
-      success = EV_DoFloor(line, args, FLEV_RAISEFLOORTONEAREST);
+      success = EV_DoFloor(line, floor_t::UpNnF, SPEED(args[1]), 0, 0);
       break;
+      /*
     case 26: // Stairs Build Down Normal
       success = EV_BuildStairs(line, args, -1, STAIRS_NORMAL);
       break;
     case 27: // Build Stairs Up Normal
       success = EV_BuildStairs(line, args, 1, STAIRS_NORMAL);
       break;
+      */
     case 28: // Floor Raise and Crush
-      success = EV_DoFloor(line, args, FLEV_RAISEFLOORCRUSH);
+      success = EV_DoFloor(line, floor_t::Ceiling, SPEED(args[1]), args[2], -HEIGHT(8));
       break;
+      /*
     case 29: // Build Pillar (no crushing)
       success = EV_BuildPillar(line, args, false);
       break;
@@ -1312,105 +1330,104 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
     case 32: // Build Stairs Up Sync
       success = EV_BuildStairs(line, args, 1, STAIRS_SYNC);
       break;
+      */
     case 35: // Raise Floor by Value Times 8
-      success = EV_DoFloor(line, args, FLEV_RAISEBYVALUETIMES8);
+      success = EV_DoFloor(line, floor_t::RelHeight, SPEED(args[1]), 0, 8*HEIGHT(args[2]));
       break;
     case 36: // Lower Floor by Value Times 8
-      success = EV_DoFloor(line, args, FLEV_LOWERBYVALUETIMES8);
+      success = EV_DoFloor(line, floor_t::RelHeight, SPEED(args[1]), 0, -8*HEIGHT(args[2]));
       break;
     case 40: // Ceiling Lower by Value
-      success = EV_DoCeiling(line, args, CLEV_LOWERBYVALUE);
+      success = EV_DoCeiling(line, ceiling_t::RelHeight, SPEED(args[1]), 0, 0, -HEIGHT(args[2]));
       break;
     case 41: // Ceiling Raise by Value
-      success = EV_DoCeiling(line, args, CLEV_RAISEBYVALUE);
+      success = EV_DoCeiling(line, ceiling_t::RelHeight, SPEED(args[1]), 0, 0, HEIGHT(args[2]));
       break;
     case 42: // Ceiling Crush and Raise
-      success = EV_DoCeiling(line, args, CLEV_CRUSHANDRAISE);
+      success = EV_DoCeiling(line, ceiling_t::Crusher, SPEED(args[1]), SPEED(args[1])/2, args[2], HEIGHT(8));
       break;
     case 43: // Ceiling Lower and Crush
-      success = EV_DoCeiling(line, args, CLEV_LOWERANDCRUSH);
+      success = EV_DoCeiling(line, ceiling_t::Floor, SPEED(args[1]), 0, args[2], HEIGHT(8));
       break;
     case 44: // Ceiling Crush Stop
-      success = EV_CeilingCrushStop(line, args);
+      success = EV_StopCeiling(line);
       break;
     case 45: // Ceiling Crush Raise and Stay
-      success = EV_DoCeiling(line, args, CLEV_CRUSHRAISEANDSTAY);
+      success = EV_DoCeiling(line, ceiling_t::CrushOnce, SPEED(args[1]), SPEED(args[1])/2, args[2], HEIGHT(8));
       break;
-    case 46: // Floor Crush Stop
+      /*
+      case 46: // Floor Crush Stop TODO activefloors list or something
       success = EV_FloorCrushStop(line, args);
       break;
+      */
     case 60: // Plat Perpetual Raise
-      success = EV_DoPlat(line, args, PLAT_PERPETUALRAISE, 0);
+      success = EV_DoPlat(line, plat_t::LHF, SPEED(args[1]), TICS(args[2]), 0);
       break;
     case 61: // Plat Stop
-      EV_StopPlat(line, args);
+      EV_StopPlat(line);
       break;
     case 62: // Plat Down-Wait-Up-Stay
-      success = EV_DoPlat(line, args, PLAT_DOWNWAITUPSTAY, 0);
+      success = EV_DoPlat(line, plat_t::LnF, SPEED(args[1]), TICS(args[2]), 0);
       break;
     case 63: // Plat Down-by-Value*8-Wait-Up-Stay
-      success = EV_DoPlat(line, args, PLAT_DOWNBYVALUEWAITUPSTAY,
-				0);
+      success = EV_DoPlat(line, plat_t::RelHeight, SPEED(args[1]), TICS(args[2]), -8*HEIGHT(args[3]));
       break;
     case 64: // Plat Up-Wait-Down-Stay
-      success = EV_DoPlat(line, args, PLAT_UPWAITDOWNSTAY, 0);
+      success = EV_DoPlat(line, plat_t::NHnF, SPEED(args[1]), TICS(args[2]), 0);
       break;
     case 65: // Plat Up-by-Value*8-Wait-Down-Stay
-      success = EV_DoPlat(line, args, PLAT_UPBYVALUEWAITDOWNSTAY, 0);
+      success = EV_DoPlat(line, plat_t::RelHeight, SPEED(args[1]), TICS(args[2]), 8*HEIGHT(args[3]));
       break;
     case 66: // Floor Lower Instant * 8
-      success = EV_DoFloor(line, args, FLEV_LOWERTIMES8INSTANT);
+      success = EV_DoFloor(line, floor_t::RelHeight, SPEED(16000), 0, -8*HEIGHT(args[2]));
       break;
     case 67: // Floor Raise Instant * 8
-      success = EV_DoFloor(line, args, FLEV_RAISETIMES8INSTANT);
+      success = EV_DoFloor(line, floor_t::RelHeight, SPEED(16000), 0, 8*HEIGHT(args[2]));
       break;
     case 68: // Floor Move to Value * 8
-      success = EV_DoFloor(line, args, FLEV_MOVETOVALUETIMES8);
+      success = EV_DoFloor(line, floor_t::AbsHeight, SPEED(args[1]), 0,
+			   (args[3] ? -1 : 1) * 8 * HEIGHT(args[2]));
       break;
     case 69: // Ceiling Move to Value * 8
-      success = EV_DoCeiling(line, args, CLEV_MOVETOVALUETIMES8);
+      success = EV_DoCeiling(line, ceiling_t::AbsHeight, SPEED(args[1]), SPEED(args[1]), 0,
+			     (args[3] ? -1 : 1) * 8 * HEIGHT(args[2]));
       break;
     case 70: // Teleport
-      if(side == 0)
-	{ // Only teleport when crossing the front side of a line
-	  success = EV_Teleport(args[0], mo, true);
-	}
+      if (!side)
+	// Only teleport when crossing the front side of a line
+	success = EV_Teleport(line, mo, false);
       break;
-    case 71: // Teleport, no fog
-      if(side == 0)
-	{ // Only teleport when crossing the front side of a line
-	  success = EV_Teleport(args[0], mo, false);
-	}
+    case 71: // Teleport, no fog (silent)
+      if (!side)
+	// Only teleport when crossing the front side of a line
+	success = EV_Teleport(line, mo, true);
       break;
     case 72: // Thrust Mobj
       if(!side) // Only thrust on side 0
 	{
-	  mo->Thrust(args[0]*(ANGLE_90/64), args[1]<<FRACBITS);
+	  mo->Thrust(ANGLE(args[0]), args[1]<<FRACBITS);
 	  success = 1;
 	}
       break;
     case 73: // Damage Mobj
-      if(args[0])
-	{
-	  mo->Damage(NULL, NULL, args[0]);
-	}
+      if (args[0])
+	mo->Damage(NULL, NULL, args[0]);
       else
-	{ // If arg1 is zero, then guarantee a kill
-	  mo->Damage(NULL, NULL, 10000, dt_always);
-	}
-      success = 1;
+	// If arg1 is zero, then guarantee a kill
+	mo->Damage(NULL, NULL, 10000, dt_always);
+      success = true;
       break;
     case 74: // Teleport_NewMap
-      if(side == 0)
+      if (!side)
 	{ // Only teleport when crossing the front side of a line
-	  if(!(mo && mo->player && mo->player->playerstate
-	       == PST_DEAD)) // Players must be alive to teleport
-	    {
-	      G_Completed(args[0], args[1]);
-	      success = true;
-	    }
+	  if (mo->health <= 0 || mo->flags & MF_CORPSE)
+	    return false; // Activator must be alive
+
+	  ExitMap(args[0]); //, args[1]); FIXME start position in the new map
+	  success = true;
 	}
       break;
+      /*
     case 75: // Teleport_EndGame
       if(side == 0)
 	{ // Only teleport when crossing the front side of a line
@@ -1429,42 +1446,29 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
 	    }
 	}
       break;
+      */
     case 80: // ACS_Execute
-      success =
-	StartACS(args[0], args[1], &args[2], mo, line, side);
+      // TODO FIXME: check that args[1] is current map, else store script
+      success = StartACS(args[0], &args[2], mo, line, side);
       break;
     case 81: // ACS_Suspend
-      success = SuspendACS(args[0], args[1]);
+      //success = SuspendACS(args[0], args[1]);
+      success = SuspendACS(args[0]);
       break;
     case 82: // ACS_Terminate
-      success = TerminateACS(args[0], args[1]);
+      //success = TerminateACS(args[0], args[1]);
+      success = TerminateACS(args[0]);
       break;
     case 83: // ACS_LockedExecute
-      if (mo->Type() == Thinker::tt_ppawn)
-        {
-	PlayerPawn *p = (PlayerPawn *p)mo;
-	if (p->player)
-	  {
-	    int lock = args[4];
-	    if (lock)
-	      {
-		if (!(p->cards & (1 << (lock-1))))
-		  {
-		    extern char *TextKeyMessages[11];
-		    char LockedBuffer[80];
-		    sprintf(LockedBuffer, "YOU NEED THE %s\n", TextKeyMessages[lock-1]);
-		    p->SetMessage(LockedBuffer, true);
-		    S_StartSound(p, SFX_DOOR_LOCKED);
-		    return false;
-		  }
-	      }
-	    args[4] = 0;
-	    // StartACS(newArgs[0], newArgs[1], &newArgs[2], p, line, side);
-	    // FIXME check the args[1] map number to see if it is this map
-	    // if not, do not start script but store it
-	    StartACS(args[0], &args[2], p, line, side);
-	    args[4] = lock;
-	  }
+      lock = args[4];
+      if (P_CheckKeys(mo, lock))
+	{
+	  args[4] = 0;
+	  // StartACS(newArgs[0], newArgs[1], &newArgs[2], p, line, side);
+	  // FIXME check the args[1] map number to see if it is this map
+	  // if not, do not start script but store it. same in 80.
+	  StartACS(args[0], &args[2], mo, line, side);
+	  args[4] = lock;
 	}
       break;
     case 90: // Poly Rotate Left Override
@@ -1479,6 +1483,7 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
     case 93: // Poly Move Times 8 Override
       success = EV_MovePoly(line, args, true, true);
       break;
+      /*
     case 94: // Build Pillar Crush 
       success = EV_BuildPillar(line, args, true);
       break;
@@ -1519,6 +1524,7 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
     case 129: // UsePuzzleItem
       success = EV_LineSearchForPuzzleItem(line, args, mo);
       break;
+      */
     case 130: // Thing_Activate
       success = EV_ThingActivate(args[0]);
       break;
@@ -1543,6 +1549,7 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
     case 137: // Thing_SpawnNoFog
       success = EV_ThingSpawn(args, 0);
       break;
+      /*
     case 138: // Floor_Waggle
       success = EV_StartFloorWaggle(args[0], args[1],
 					  args[2], args[3], args[4]);
@@ -1550,7 +1557,7 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
     case 140: // Sector_SoundChange
       success = EV_SectorSoundChange(args);
       break;
-
+      */
       // Line specials only processed during level initialization
       // 100: Scroll_Texture_Left
       // 101: Scroll_Texture_Right
@@ -1562,7 +1569,7 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
     default:
       break;
     }
-  */
+
   return success;
 }
 
@@ -1573,6 +1580,7 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
 //  to cross a line with a non 0 special.
 //
 // was P_ActivateCrossedLine
+/*
 void Map::ActivateCrossedLine(line_t *line, int side, Actor *thing)
 {
   int  ok;
@@ -1589,21 +1597,6 @@ void Map::ActivateCrossedLine(line_t *line, int side, Actor *thing)
       // Things that should NOT trigger specials...
       if (thing->flags & MF_NOTRIGGER)
 	return;
-      /*
-      switch(thing->type)
-        {
-	case MT_ROCKET:
-	case MT_PLASMA:
-	case MT_BFG:
-	case MT_TROOPSHOT:
-	case MT_HEADSHOT:
-	case MT_BRUISERSHOT:
-	  return;
-	  break;
-
-	default: break;
-        }
-      */
     }
 
   //int res;
@@ -2471,13 +2464,14 @@ void Map::ActivateCrossedLine(line_t *line, int side, Actor *thing)
       }
     }
 }
-
+*/
 
 
 //
 // was P_ShootSpecialLine - IMPACT SPECIALS
 // Called when a thing shoots a special line.
 //
+/*
 void Map::ShootSpecialLine(Actor *thing, line_t *line)
 {
   int ok;
@@ -2658,7 +2652,7 @@ void Map::ShootSpecialLine(Actor *thing, line_t *line)
       break;
     }
 }
-
+*/
 
 
 //
@@ -3166,12 +3160,12 @@ void Map::SpawnSpecials()
 
 	  // Instant lower for floor SSNTails 06-13-2002
 	case 290:
-	  EV_DoFloor(&lines[i], instantLower);
+	  EV_DoFloor(&lines[i], floor_t::LnF, MAXINT/2, 0, 0);
 	  break;
 	  
 	  // Instant raise for ceilings SSNTails 06-13-2002
 	case 291:
-	  EV_DoCeiling(&lines[i], instantRaise);
+	  EV_DoCeiling(&lines[i], ceiling_t::HnC, MAXINT/2, MAXINT/2, 0, 0);
 	  break;
 
 	default:

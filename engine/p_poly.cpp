@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/05/05 00:24:49  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.3  2003/04/24 20:30:15  hurdler
 // Remove lots of compiling warnings
 //
@@ -42,6 +45,7 @@
 
 #include "p_spec.h"
 #include "p_maputl.h"
+#include "r_poly.h"
 #include "r_defs.h"
 #include "r_main.h"
 #include "m_bbox.h"
@@ -50,32 +54,6 @@
 #include "z_zone.h"
 
 #define PO_MAXPOLYSEGS 64
-
-
-struct polyobj_t
-{
-  int numsegs;
-  seg_t **segs;
-  mappoint_t startSpot; 
-  vertex_t *originalPts; 	// used as the base for the rotations
-  vertex_t *prevPts; 		// use to restore the old point values
-  angle_t angle;
-  int tag;						// reference tag assigned in HereticEd
-  int bbox[4];
-  int validcount;
-  bool crush; 			// should the polyobj attempt to crush mobjs?
-  unsigned seqType;
-  //fixed_t size; // polyobj size (area of POLY_AREAUNIT == size of FRACUNIT)
-  polyobject_t *specialdata; // pointer a thinker, if the poly is moving
-};
-
-// one polyobj can be linked to many blockmap cells
-struct polyblock_t
-{
-  polyobj_t *polyobj;
-  polyblock_t *prev;
-  polyblock_t *next;
-};
 
 
 static void ThrustMobj(Actor *mobj, seg_t *seg, polyobj_t *po);
@@ -325,7 +303,7 @@ void polydoor_t::Think()
     }
   switch(type)
     {
-    case PODOOR_SLIDE:
+    case pd_slide:
       if(mp->PO_MovePolyobj(polyobj, xs, ys))
 	{
 	  absSpeed = abs(speed);
@@ -373,7 +351,7 @@ void polydoor_t::Think()
 	    }
 	}
       break;
-    case PODOOR_SWING:
+    case pd_swing:
       if(mp->PO_RotatePolyobj(polyobj, speed))
 	{
 	  absSpeed = abs(speed);
@@ -427,13 +405,13 @@ void polydoor_t::Think()
 
 //==========================================================================
 
-polydoor_t::polydoor_t(int num, podoortype_e t, byte *args, bool mirror)
+polydoor_t::polydoor_t(int num, int t, byte *args, bool mirror)
   : polyobject_t(num)
 {
-  type = t;
+  type = podoor_e(t);
 
   angle_t an;
-  if (t == PODOOR_SLIDE)
+  if (t == pd_slide)
     {
       waitTics = args[4];
       speed = args[1]*(FRACUNIT/8);
@@ -447,7 +425,7 @@ polydoor_t::polydoor_t(int num, podoortype_e t, byte *args, bool mirror)
       xs = FixedMul(speed, finecosine[direction]);
       ys = FixedMul(speed, finesine[direction]);
     }
-  else if (t == PODOOR_SWING)
+  else if (t == pd_swing)
     {
       waitTics = args[3];
       direction = mirror ? -1 : 1; // ADD:  PODOOR_SWINGL, PODOOR_SWINGR
@@ -471,7 +449,7 @@ polydoor_t::polydoor_t(int num, podoortype_e t, byte *args, bool mirror)
 //
 //==========================================================================
 
-bool Map::EV_OpenPolyDoor(line_t *line, byte *args, podoortype_e type)
+bool Map::EV_OpenPolyDoor(line_t *line, byte *args, int type)
 {
   int mirror;
   int polynum;
@@ -1059,9 +1037,6 @@ void Map::InitPolyBlockMap()
   int area;
   int leftX, rightX;
   int topY, bottomY;
-
-  PolyBlockMap = (polyblock_t **)Z_Malloc(bmapwidth*bmapheight*sizeof(polyblock_t *), PU_LEVEL, 0);
-  memset(PolyBlockMap, 0, bmapwidth*bmapheight*sizeof(polyblock_t *));
 
   for(i = 0; i < NumPolyobjs; i++)
     {

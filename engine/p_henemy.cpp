@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/05/05 00:24:49  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.4  2003/03/15 20:07:15  smite-meister
 // Initial Hexen compatibility!
 //
@@ -44,6 +47,7 @@
 #include "g_player.h"
 #include "p_enemy.h"
 #include "p_maputl.h"
+#include "r_defs.h"
 #include "s_sound.h"
 #include "sounds.h"
 #include "m_random.h"

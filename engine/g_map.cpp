@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.17  2003/05/05 00:24:48  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.16  2003/04/26 12:01:12  smite-meister
 // Bugfixes. Hexen maps work again.
 //
@@ -56,6 +59,7 @@
 #include "g_actor.h"
 #include "g_pawn.h"
 
+#include "p_spec.h"
 #include "p_info.h"
 #include "command.h"
 
@@ -937,7 +941,7 @@ void Map::BossDeath(const DActor *mo)
     {
     case MT_BRUISER:
       junk.tag = 666;
-      EV_DoFloor (&junk, lowerFloorToLowest);
+      EV_DoFloor(&junk, floor_t::LnF, FLOORSPEED, 0, 0);
       return;
 
     case MT_CYBORG:
@@ -947,7 +951,7 @@ void Map::BossDeath(const DActor *mo)
 	{
 	  // used in ult. Doom, map 6
 	  junk.tag = 666;
-	  EV_DoDoor (&junk, vdoor_t::Open | vdoor_t::blazing,4*VDOORSPEED);
+	  EV_DoDoor(&junk, NULL, vdoor_t::Open | vdoor_t::Blazing, 4*VDOORSPEED, VDOORWAIT);
 	  return;
 	}
 
@@ -958,23 +962,23 @@ void Map::BossDeath(const DActor *mo)
 	{
 	  // ult. Doom, map 8
 	  junk.tag = 666;
-	  EV_DoFloor (&junk, lowerFloorToLowest);
+	  EV_DoFloor (&junk, floor_t::LnF, FLOORSPEED, 0, 0);
 	  return;
 	}
 
     case MT_FATSO:
       junk.tag = 666;
-      EV_DoFloor(&junk,lowerFloorToLowest);
+      EV_DoFloor(&junk, floor_t::LnF, FLOORSPEED, 0, 0);
       return;
 
     case MT_BABY:
       junk.tag = 667;
-      EV_DoFloor(&junk,raiseToTexture);
+      EV_DoFloor(&junk,  floor_t::SLT, FLOORSPEED, 0, 0);
       return;
 
     case MT_KEEN:
       junk.tag = 666;
-      EV_DoDoor(&junk,vdoor_t::Open,VDOORSPEED);
+      EV_DoDoor(&junk, NULL, vdoor_t::Open,VDOORSPEED, VDOORWAIT);
       return;
 
     case MT_BOSSBRAIN:
@@ -990,7 +994,7 @@ void Map::BossDeath(const DActor *mo)
       Massacre();
     nomassacre:
       junk.tag = 666;
-      EV_DoFloor(&junk, lowerFloor);
+      EV_DoFloor(&junk, floor_t::LnF, FLOORSPEED, 0, 0);
       return;
 
     default:
@@ -1031,7 +1035,7 @@ void Map::RespawnSpecials()
 	{
 	  subsector_t *ss = R_PointInSubsector (x,y);
 	  mo = SpawnDActor(x, y, ss->sector->floorheight, MT_IFOG);
-	  S_StartSound (mo, sfx_itmbk);
+	  S_StartSound (mo, Actor::s_respawn);
 	}
 
       int t = mthing->type;
@@ -1047,7 +1051,7 @@ void Map::RespawnSpecials()
       mo->angle = ANG45 * (mthing->angle/45);
 
       if (game.mode == gm_heretic)
-	S_StartSound (mo, sfx_itmbk);
+	S_StartSound (mo, Actor::s_respawn);
     }
   // pull it from the queue anyway
   //iquetail = (iquetail+1)&(ITEMQUESIZE-1);
@@ -1062,13 +1066,9 @@ void Map::RespawnWeapons()
 {
   fixed_t x, y, z;
 
-  //int                 i,j,freeslot;
-
-  //freeslot=iquetail;
   deque<mapthing_t *>::iterator i = itemrespawnqueue.begin();
   deque<tic_t>::iterator j = itemrespawntime.begin();
 
-  //for(j=iquetail;j!=iquehead;j=(j+1)&(ITEMQUESIZE-1))
   for( ; i != itemrespawnqueue.end() ; i++, j++)
     {
       mapthing_t *mthing = *i;
@@ -1111,7 +1111,7 @@ void Map::RespawnWeapons()
       // spawn a teleport fog at the new spot
       subsector_t *ss = R_PointInSubsector(x,y);
       DActor *mo = SpawnDActor(x, y, ss->sector->floorheight, MT_IFOG);
-      S_StartSound(mo, sfx_itmbk);
+      S_StartSound(mo, Actor::s_respawn);
 
       // spawn it
       if (mobjinfo[n].flags & MF_SPAWNCEILING)
@@ -1122,9 +1122,7 @@ void Map::RespawnWeapons()
       mo = SpawnDActor(x,y,z, mobjtype_t(n));
       mo->spawnpoint = mthing;
       mo->angle = ANG45 * (mthing->angle/45);
-      // here don't increment freeslot
     }
-  //iquehead=freeslot;
 }
 
 void Map::ExitMap(int exit)

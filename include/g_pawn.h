@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.12  2003/05/05 00:24:50  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.11  2003/04/04 00:01:57  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -243,7 +246,7 @@ public:
   bool GiveAmmo(ammotype_t at, int count);
   bool GiveWeapon(weapontype_t wt, bool dropped);
   bool GiveArmor(armortype_t type, float factor, int points);
-  bool GiveCard(card_t ct);
+  bool GiveKey(key_t k);
   bool GiveArtifact(artitype_t arti, Actor *from);
   void TouchSpecialThing(DActor *special);
   virtual bool Touch(Actor *a); // PPawn touches another Actor
@@ -264,9 +267,6 @@ public:
   // in p_hpspr.cpp
   void ActivateMorphWeapon();
   void PostMorphWeapon(weapontype_t weapon);
-
-  // in p_heretic.cpp
-  void HerePlayerInSpecialSector();
 };
 
 

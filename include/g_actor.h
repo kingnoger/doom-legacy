@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/05/05 00:24:49  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.9  2003/04/14 08:58:30  smite-meister
 // Hexen maps load.
 //
@@ -321,6 +324,9 @@ public:
   fixed_t floorclip; // cut this amount from legs (deep water illusion) (Hexen)
 
 public:
+  // sounds TODO these could be replaced with SNDINFO
+  static int s_pickup, s_keypickup, s_weaponpickup, s_artipickup, s_teleport, s_respawn, s_gibbed;
+
   virtual thinkertype_e Type() {return tt_actor;}; // "name-tag" function
 
   // in g_actor.cpp
@@ -440,6 +446,10 @@ public:
 
   // in p_heretic.cpp
   bool SeekerMissile(angle_t thresh, angle_t turnMax);
+
+  // in p_things.cpp
+  bool Activate();
+  bool Deactivate();
 };
 
 #endif

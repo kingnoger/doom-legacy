@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/05/05 00:24:49  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.7  2003/04/14 08:58:27  smite-meister
 // Hexen maps load.
 //
@@ -51,11 +54,12 @@
 #include "g_actor.h"
 #include "g_map.h"
 
+#include "m_random.h"
 #include "p_maputl.h"
 #include "r_state.h"
 #include "s_sound.h"
 #include "sounds.h"
-#include "r_main.h" //SoM: 3/16/2000
+#include "r_main.h"
 
 // was P_Teleport
 
@@ -73,28 +77,7 @@ bool Actor::Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent)
   if (!TeleportMove(nx, ny))
     return false;
 
-  /* 
-  z = floorz;  //fixme: not needed?
-  if (player)
-    {
-      // heretic code
-      player_t *player = player;
-      if(player->powers[pw_flight] && aboveFloor)
-        {
-	  z = floorz+aboveFloor;
-	  if (z + height > ceilingz)
-	    z = ceilingz-height;
-        }
-      player->viewz = z+player->viewheight;
-    }
-  else if (flags & MF_MISSILE) // heretic stuff
-    {
-      z = floorz+aboveFloor;
-      if(z+height > ceilingz)
-	z = ceilingz-height;
-    }
-  */
-  //FIXME why can't all things retain their flying height like this:
+  // CHANGED now all things retain their flying height like this:
   z = floorz + aboveFloor;
   if (z + height > ceilingz)
     z = ceilingz-height;
@@ -107,11 +90,11 @@ bool Actor::Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent)
 
       // spawn teleport fog at source and destination
       DActor *fog = mp->SpawnDActor(oldx, oldy, oldz+fogDelta, MT_TFOG);
-      S_StartSound(fog, sfx_telept);
+      S_StartSound(fog, Actor::s_teleport);
 
       unsigned an = nangle >> ANGLETOFINESHIFT;
       fog = mp->SpawnDActor(nx+20*finecosine[an], ny+20*finesine[an], z + fogDelta, MT_TFOG);
-      S_StartSound (fog, sfx_telept);
+      S_StartSound (fog, Actor::s_teleport);
 
       if ((flags2 & MF2_FOOTCLIP) && (subsector->sector->floortype != FLOOR_SOLID) && (game.mode == gm_heretic))
 	{
@@ -155,102 +138,56 @@ bool Actor::Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent)
 // =========================================================================
 
 // was EV_Teleport
-
-bool Map::EV_Teleport(line_t *line, int side, Actor *thing)
+// was EV_SilentTeleport
+bool Map::EV_Teleport(line_t *line, Actor *thing, bool silent)
 {
-  int    i;
-  Actor *m;
-
   // don't teleport missiles
   // TODO give all Doom missiles the MF2_NOTELEPORT flag....simpler
+  // Don't teleport if hit back of line,
+  //  so you can get out of teleporter.
   if (thing->flags2 & MF2_NOTELEPORT)
     return false;
 
-  // Don't teleport if hit back of line,
-  //  so you can get out of teleporter.
-  if (side == 1)
-    return false;
+  Actor *m;
 
-
-  int tag = line->tag;
-  for (i = 0; i < numsectors; i++)
+  // first check TID
+  int i = TIDmap.count(line->tag);
+  if (i > 0)
     {
-      if (sectors[i].tag == tag )
-        {
-	  // FIXME why search the entire Thinker list, why not just the sector's thinglist?
-	  for (m = sectors[i].thinglist; m != NULL; m = m->snext)
-	    {
-	      if (m->Type() != Thinker::tt_dactor)
-		continue;
-	      DActor *dm = (DActor *)m;
-	      // not a teleportman
-	      if (dm->type != MT_TELEPORTMAN)
-		continue;
+      i = (P_Random() % i) - 1;
+      m = FindFromTIDmap(line->tag, &i);
+      if (!m)
+	I_Error("Can't find teleport mapspot\n");
 
-	      /*
-		 sector_t *sec = m->subsector->sector;
-	      // wrong sector
-	      if (sec-sectors != i )
-		continue;
-	      */
-
-	      return thing->Teleport(m->x, m->y, m->angle);
-            }	  
-        }
+      return thing->Teleport(m->x, m->y, m->angle, silent); // does the angle change work correctly?
     }
-  return false;
-}
 
-
-
-
-//
-//  New boom teleporting functions.
-//  
-
-// was EV_SilentTeleport
-
-bool Map::EV_SilentTeleport(line_t *line, int side, Actor *thing)
-{
-  int       i;
-  Actor    *m;
-
-  // don't teleport missiles
-  // Don't teleport if hit back of line,
-  // so you can get out of teleporter.
-
-  if (side || thing->flags & MF_MISSILE)
-    return false;
-
+  // otherwise use Boom system
   for (i = -1; (i = FindSectorFromLineTag(line, i)) >= 0;)
-    /*   
-    for (th = thinkercap.next; th != &thinkercap; th = th->next)
-      if (th->function.acp1 == (actionf_p1) P_MobjThinker &&
-          (m = (Actor *) th)->type == MT_TELEPORTMAN  &&
-          m->subsector->sector-sectors == i)
-    */
-
     for (m = sectors[i].thinglist; m != NULL; m = m->snext)
-        {
-	  if (m->Type() != Thinker::tt_dactor)
-	    continue;
-	  DActor *dm = (DActor *)m;
-	  // not a teleportman
-	  if (dm->type != MT_TELEPORTMAN)
-	    continue;
+      {
+	if (m->Type() != Thinker::tt_dactor)
+	  continue;
+	DActor *dm = (DActor *)m;
+	// not a teleportman
+	if (dm->type != MT_TELEPORTMAN)
+	  continue;
 
-          // Get the angle between the exit thing and source linedef.
-          // Rotate 90 degrees, so that walking perpendicularly across
-          // teleporter linedef causes thing to exit in the direction
-          // indicated by the exit thing.
-          angle_t ang = m->angle + thing->angle
-	    - R_PointToAngle2(0, 0, line->dx, line->dy) - ANG90;
-	  // FIXME is the angle ever normalized to [0, 360] ?
-
-	  return thing->Teleport(m->x, m->y, ang, true);
-        }
+	if (silent)
+	  {
+	    // Get the angle between the exit thing and source linedef.
+	    // Rotate 90 degrees, so that walking perpendicularly across
+	    // teleporter linedef causes thing to exit in the direction
+	    // indicated by the exit thing.
+	    angle_t ang = m->angle + thing->angle - R_PointToAngle2(0, 0, line->dx, line->dy) - ANG90;
+	    return thing->Teleport(m->x, m->y, ang, true);
+	  }
+	else
+	  return thing->Teleport(m->x, m->y, m->angle, false);
+      }
   return false;
 }
+
 
 //
 // Silent linedef-based TELEPORTATION, by Lee Killough

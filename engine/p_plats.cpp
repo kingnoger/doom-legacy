@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/05/05 00:24:49  smite-meister
+// Hexen linedef system. Pickups.
+//
 // Revision 1.3  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -26,45 +29,6 @@
 //
 // Revision 1.1.1.1  2002/11/16 14:18:02  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.11  2002/09/20 22:41:32  vberghol
-// Sound system rewritten! And it workscvs update
-//
-// Revision 1.9  2002/09/05 14:12:14  vberghol
-// network code partly bypassed
-//
-// Revision 1.7  2002/08/17 21:21:50  vberghol
-// Only scripting to be fixed in engine!
-//
-// Revision 1.6  2002/08/08 12:01:28  vberghol
-// pian engine on valmis!
-//
-// Revision 1.5  2002/08/06 13:14:24  vberghol
-// ...
-//
-// Revision 1.4  2002/07/23 19:21:42  vberghol
-// fixed up to p_enemy.cpp
-//
-// Revision 1.3  2002/07/01 21:00:20  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:15  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.5  2001/01/25 22:15:43  bpereira
-// added heretic support
-//
-// Revision 1.4  2000/10/21 08:43:30  bpereira
-// no message
-//
-// Revision 1.3  2000/04/04 00:32:47  stroggonmeth
-// Initial Boom compatability plus few misc changes all around.
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //
 // DESCRIPTION:
@@ -82,18 +46,127 @@
 #include "g_game.h"
 #include "g_map.h"
 
+
+// constructor
+plat_t::plat_t(int ty, sector_t *sec, int t, fixed_t sp, int wt, fixed_t height)
+{
+  type = ty;
+  sector = sec;
+  tag = t;
+  speed = sp;
+  wait = wt;
+
+  sec->floordata = this;
+
+  //jff 1/26/98 Avoid raise plat bouncing a head off a ceiling and then
+  //going down forever -- default low to plat height when triggered
+  fixed_t fl = low = sec->floorheight;
+
+  switch (ty & TMASK)
+    {
+    case RelHeight:
+      if (height > 0)
+	{
+	  high = low + height;
+	  status = up;
+	}
+      else
+	{
+	  high = low;
+	  low += height;
+	  status = down;
+	}
+      break;
+
+    case AbsHeight:
+      if (height > low)
+	{
+	  high = height;
+	  status = up;	 
+	}
+      else
+	{
+	  high = low;
+	  low = height;
+	  status = down;
+	}
+      break;
+
+    case LnF:
+      high = fl;
+      low = P_FindLowestFloorSurrounding(sec) + height;
+      if (low > fl)
+	low = fl;
+      status = down;
+      break;
+
+    case NLnF:
+      high = fl;
+      low = P_FindNextLowestFloor(sec, fl) + height;
+      status = down;
+      break;
+
+    case NHnF:
+      low = fl;
+      high = P_FindNextHighestFloor(sec, fl) + height;
+      status = up;
+      break;
+
+    case LnC:
+      high = fl;
+      low = P_FindLowestCeilingSurrounding(sec) + height;
+      if (low > high)
+	low = high;
+      status = down;
+      break;
+
+    case LHF:
+      type |= Perpetual;
+      low = P_FindLowestFloorSurrounding(sec);
+      if (low > fl)
+	low = fl;
+      high = P_FindHighestFloorSurrounding(sec) + height;
+      if (high < fl)
+	high = fl;
+      status = status_e(P_Random() & 1); // Ugh. The bones have spoken.
+      break;
+
+    case CeilingToggle: // instant toggle (reversed targets!)
+      type |= Perpetual;
+      low = sec->ceilingheight;
+      high = sec->floorheight;
+      status =  down;
+      break;
+
+    default:
+      I_Error("Unknown plat_t target %d!\n", ty);
+      break;
+    }
+
+  // TODO sound sequences
+  S_StartSound(&sec->soundorg,sfx_stnmov);
+  //S_StartSound(&sec->soundorg,sfx_pstart);
+}
+
+
 // was T_PlatRaise
 // Move a plat up and down
 //
 void plat_t::Think()
 {
-  result_e    res;
+  int  res;
+  int  crush = 0;
+
+  if ((type & TMASK) == CeilingToggle)
+    crush = 10; // the only crushing "platform"
 
   switch (status)
     {
     case up:
       res = mp->T_MovePlane(sector, speed, high, crush, 0, 1);
 
+      // TODO sequences...
+      /*
       if (game.mode == gm_heretic && !(mp->maptic % (32*NEWTICRATERATIO)))
 	S_StartSound ( & sector->soundorg, sfx_stnmov);
 
@@ -102,246 +175,120 @@ void plat_t::Think()
 	  if (!(mp->maptic % (8*NEWTICRATERATIO)))
 	    S_StartSound(&sector->soundorg, sfx_stnmov);
         }
+      */
 
-      if (res == crushed && (!crush))
+      if (res == res_crushed && !crush)
         {
 	  count = wait;
 	  status = down;
 	  S_StartSound(&sector->soundorg, sfx_pstart);
         }
-      else
-        {
-	  if (res == pastdest)
-            {
-	      //SoM: 3/7/2000: Moved this little baby over.
-	      // if not an instant toggle type, wait, make plat stop sound
-	      if (type != toggleUpDn)
-                {
-                  count = wait;
-                  status = waiting;
-                  S_StartSound(&sector->soundorg, sfx_pstop);
-                }
-	      else // else go into stasis awaiting next toggle activation
-                {
-                  oldstatus = status;//jff 3/14/98 after action wait  
-                  status = in_stasis;      //for reactivation of toggle
-                }
+      else if (res == res_pastdest)
+	{
+	  if (type & Returning)
+	    {
+              S_StartSound(&sector->soundorg,sfx_pstop);
+	      mp->RemoveActivePlat(this); // done
+	    }
+	  else switch (type & TMASK)
+	    {
+	    case CeilingToggle:
+	      // go into stasis awaiting next toggle activation
+	      oldstatus = status;
+	      status = in_stasis;
+	      break;
 
-	      switch (type)
-                {
-		case blazeDWUS:
-		case downWaitUpStay:
-		case raiseAndChange:
-		case raiseToNearestAndChange:
-		case genLift:
-		  mp->RemoveActivePlat(this); //SoM: 3/7/2000: Much cleaner boom code.
-		default:
-		  break;
-                }
-            }
+	    default:
+	      // wait before going back down
+	      count = wait;
+	      status = waiting;
+	      S_StartSound(&sector->soundorg, sfx_pstop);
+	      break;
+	    }
         }
       break;
 
-    case      down:
+    case down:
       res = mp->T_MovePlane(sector,speed,low,false,0,-1);
 
-      if (res == pastdest)
+      if (res == res_pastdest)
         {
-	  //SoM: 3/7/2000: if not an instant toggle, start waiting, make plat stop sound
-	  if (type!=toggleUpDn) 
-            {                           
+	  if (type & Returning)
+	    {
+              S_StartSound(&sector->soundorg,sfx_pstop);
+	      mp->RemoveActivePlat(this); // done
+	    }
+	  else switch (type & TMASK)
+	    {
+	    case CeilingToggle:
+	      // go into stasis awaiting next activation
+              oldstatus = status;  
+              status = in_stasis;      
+	      break;
+
+	    default:
+	      // start waiting, make plat stop sound
               count = wait;
               status = waiting;
               S_StartSound(&sector->soundorg,sfx_pstop);
-            }
-	  else //SoM: 3/7/2000: instant toggles go into stasis awaiting next activation
-            {
-              oldstatus = status;  
-              status = in_stasis;      
-            }
-
-	  //jff 1/26/98 remove the plat if it bounced so it can be tried again
-	  //only affects plats that raise and bounce
-    
-	  if (boomsupport)
-            {
-              switch(type)
-		{
-                case raiseAndChange:
-                case raiseToNearestAndChange:
-                  mp->RemoveActivePlat(this);
-                default:
-                  break;
-		}
-            }
+	      break;
+	    }
         }
-      else
-	if (game.mode == gm_heretic && !(mp->maptic & 31))
-	  S_StartSound ( & sector->soundorg, sfx_stnmov);
-
+      else if (game.mode == gm_heretic && !(mp->maptic & 31))
+	S_StartSound ( & sector->soundorg, sfx_stnmov);
       break;
 
-    case      waiting:
+    case waiting:
       if (!--count)
         {
 	  if (sector->floorheight == low)
 	    status = up;
 	  else
 	    status = down;
+
+	  if (!(type & Perpetual))
+	    type |= Returning;
 	  S_StartSound(&sector->soundorg,sfx_pstart);
         }
-    case      in_stasis:
-      break;
-    }
-}
 
-
-// constructor
-plat_t::plat_t(plattype_e ty, sector_t *sec, line_t *line)
-{
-  type = ty;
-  sector = sec;
-  crush = false;
-  tag = line->tag;
-
-  sec->floordata = this;
-
-  //jff 1/26/98 Avoid raise plat bouncing a head off a ceiling and then
-  //going down forever -- default low to plat height when triggered
-  low = sec->floorheight;
-
-  switch (ty)
-    {
-    case raiseToNearestAndChange:
-      speed = PLATSPEED/2;
-      high = P_FindNextHighestFloor(sec,sec->floorheight);
-      wait = 0;
-      status = up;
-      // NO MORE DAMAGE, IF APPLICABLE
-      sec->special = 0;
-      sec->oldspecial = 0;
-
-      S_StartSound(&sec->soundorg,sfx_stnmov);
-      break;
-
-    case raiseAndChange:
-      speed = PLATSPEED/2;
-      wait = 0;
-      status = up;
-
-      S_StartSound(&sec->soundorg,sfx_stnmov);
-      break;
-
-    case downWaitUpStay:
-      speed = PLATSPEED * 4;
-      low = P_FindLowestFloorSurrounding(sec);
-
-      if (low > sec->floorheight)
-	low = sec->floorheight;
-
-      high = sec->floorheight;
-      wait = 35*PLATWAIT;
-      status = down;
-      S_StartSound(&sec->soundorg,sfx_pstart);
-      break;
-
-    case blazeDWUS:
-      speed = PLATSPEED * 8;
-      low = P_FindLowestFloorSurrounding(sec);
-
-      if (low > sec->floorheight)
-	low = sec->floorheight;
-
-      high = sec->floorheight;
-      wait = 35*PLATWAIT;
-      status = down;
-      S_StartSound(&sec->soundorg,sfx_pstart);
-      break;
-
-    case perpetualRaise:
-      speed = PLATSPEED;
-      low = P_FindLowestFloorSurrounding(sec);
-      if (low > sec->floorheight)
-	low = sec->floorheight;
-
-      high = P_FindHighestFloorSurrounding(sec);
-      if (high < sec->floorheight)
-	high = sec->floorheight;
-
-      wait = 35*PLATWAIT;
-      status = plat_e(P_Random()&1);
-
-      S_StartSound(&sec->soundorg,sfx_pstart);
-      break;
-
-    case toggleUpDn: //SoM: 3/7/2000: Instant toggle.
-      speed = PLATSPEED;
-      wait = 35*PLATWAIT;
-      crush = true;
-
-      // set up toggling between ceiling, floor inclusive
-      low = sec->ceilingheight;
-      high = sec->floorheight;
-      status =  down;
-      break;
-
+    case in_stasis:
     default:
       break;
     }
 }
 
 
-// was EV_DoPlat
-// Do Platforms
-//  "amount" is only used for SOME platforms.
+
 //
-int Map::EV_DoPlat(line_t *line, plattype_e type, int amount)
+// was EV_DoPlat
+//
+int Map::EV_DoPlat(line_t *line, int type, fixed_t speed, int wait, fixed_t height)
 {
-  plat_t*     plat;
-  int         secnum = -1;
-  int         rtn = 0;
-  sector_t*   sec;
+  int  secnum = -1;
+  int  rtn = 0;
 
   //  Activate all <type> plats that are in_stasis
-  switch(type)
+  if (type & plat_t::Perpetual)
     {
-    case perpetualRaise:
       ActivateInStasisPlat(line->tag);
-      break;
-
-    case toggleUpDn:
-      ActivateInStasisPlat(line->tag);
-      rtn=1;
-      break;
-
-    default:
-      break;
+      rtn++;
     }
 
   while ((secnum = FindSectorFromLineTag(line,secnum)) >= 0)
     {
-      sec = &sectors[secnum];
+      sector_t *sec = &sectors[secnum];
 
       if (P_SectorActive(floor_special,sec)) //SoM: 3/7/2000: 
 	continue;
 
       // Find lowest & highest floors around sector
-      rtn = 1;
-      plat = new plat_t(type, sec, line);
+      rtn++;
+      plat_t *plat = new plat_t(type, sec, line->tag, speed, wait, height);
       AddThinker(plat);
 
-      switch (type)
-	{
-	case raiseToNearestAndChange:
-	  sec->floorpic = sides[line->sidenum[0]].sector->floorpic;
-	  break;
-	case raiseAndChange:
-	  plat->high = sec->floorheight + amount*FRACUNIT;
-	  sec->floorpic = sides[line->sidenum[0]].sector->floorpic;
-	  break;
-	default:
-	  break;
-	}
+      if (type & plat_t::SetTexture)
+	sec->floorpic = sides[line->sidenum[0]].sector->floorpic;
+
       AddActivePlat(plat);
     }
   return rtn;
@@ -355,97 +302,51 @@ void Map::ActivateInStasisPlat(int tag)
   for (i = activeplats.begin(); i != activeplats.end(); i++)
     {
       plat_t *plat = *i;
-      if (plat->tag == tag && plat->status == in_stasis) 
+      if (plat->tag == tag && plat->status == plat_t::in_stasis) 
 	{
-	  if (plat->type == toggleUpDn)
-	    plat->status = plat->oldstatus == up ? down : up;
+	  if (plat->type == plat_t::CeilingToggle)
+	    plat->status = plat->oldstatus == plat_t::up ? plat_t::down : plat_t::up;
 	  else
 	    plat->status = plat->oldstatus;
 	}
     }
-
-  /*
-  platlist_t *pl;
-  for (pl=activeplats; pl; pl=pl->next)
-    {
-      plat_t *plat = pl->plat;
-      if (plat->tag == tag && plat->status == in_stasis) 
-	{
-	  if (plat->type==toggleUpDn)
-	    plat->status = plat->oldstatus==up? down : up;
-	  else
-	    plat->status = plat->oldstatus;
-	}
-    }
-  */
 }
 
 // was EV_StopPlat
 //SoM: 3/7/2000: use Boom code insted.
 int Map::EV_StopPlat(line_t* line)
 {
+  int rtn = 0;
   list<plat_t *>::iterator i;
   for (i = activeplats.begin(); i != activeplats.end(); i++)
     {
       plat_t *plat = *i;
-      if (plat->status != in_stasis && plat->tag == line->tag)
+      if (plat->status != plat_t::in_stasis && plat->tag == line->tag)
 	{
+	  TagFinished(plat->sector->tag);
 	  plat->oldstatus = plat->status;
-	  plat->status = in_stasis;
+	  plat->status = plat_t::in_stasis;
+	  rtn++;
 	}
     }
-  return 1;
-
-  /*
-  platlist_t *pl;
-  for (pl=activeplats; pl; pl=pl->next)
-    {
-      plat_t *plat = pl->plat;
-      if (plat->status != in_stasis && plat->tag == line->tag)
-	{
-	  plat->oldstatus = plat->status;
-	  plat->status = in_stasis;
-	}
-    }
-  return 1;
-  */
+  return rtn;
 }
 
 // was P_AddActivePlat
-//SoM: 3/7/2000: No more limits!
 void Map::AddActivePlat(plat_t *plat)
 {
   activeplats.push_front(plat);
   plat->li = activeplats.begin();
   // list iterators are not invalidated until erased
-
-  /*
-  platlist_t *list = (platlist_t *)malloc(sizeof *list);
-  list->plat = plat;
-  plat->list = list;
-  if ((list->next = activeplats))
-    list->next->prev = &list->next;
-  list->prev = &activeplats;
-  activeplats = list;
-  */
 }
 
 // was P_RemoveActivePlat
-//SoM: 3/7/2000: No more limits!
 void Map::RemoveActivePlat(plat_t* plat)
 {
   activeplats.erase(plat->li); // remove the pointer from list
   plat->sector->floordata = NULL;
+  TagFinished(plat->sector->tag);
   RemoveThinker(plat);
-
-  /*
-  platlist_t *list = plat->list;
-  plat->sector->floordata = NULL; //jff 2/23/98 multiple thinkers
-  RemoveThinker(plat);
-  if ((*list->prev = list->next))
-    list->next->prev = list->prev;
-  free(list);
-  */
 }
 
 // was P_RemoveAllActivePlats
@@ -453,12 +354,4 @@ void Map::RemoveActivePlat(plat_t* plat)
 void Map::RemoveAllActivePlats()
 {
   activeplats.clear();
-  /*
-  while (activeplats)
-    {
-      platlist_t *next = activeplats->next;
-      free(activeplats);
-      activeplats = next;
-    }
-  */
 }
