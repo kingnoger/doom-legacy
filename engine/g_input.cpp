@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2005/03/16 21:16:05  smite-meister
+// menu cleanup, bugfixes
+//
 // Revision 1.20  2004/11/04 21:12:51  smite-meister
 // save/load fixed
 //
@@ -112,7 +115,7 @@ vector<joybinding_t> joybindings;
 
 CV_PossibleValue_t onecontrolperkey_cons_t[]={{1,"One"},{2,"Several"},{0,NULL}};
 CV_PossibleValue_t usemouse_cons_t[]={{0,"Off"},{1,"On"},{2,"Force"},{0,NULL}};
-CV_PossibleValue_t mousesens_cons_t[]={{1,"MIN"},{MAXMOUSESENSITIVITY,"MAXCURSOR"},{MAXINT,"MAX"},{0,NULL}};
+CV_PossibleValue_t mousesens_cons_t[]={{1,"MIN"},{MAXMOUSESENSITIVITY,"MAX"},{0,NULL}};
 
 consvar_t  cv_controlperkey = {"controlperkey","1",CV_SAVE,onecontrolperkey_cons_t};
 

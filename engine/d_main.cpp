@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.41  2005/03/16 21:15:49  smite-meister
+// menu cleanup, bugfixes
+//
 // Revision 1.40  2005/01/25 18:29:13  smite-meister
 // preparing for alpha
 //
@@ -493,6 +496,9 @@ static void D_IdentifyVersion()
 	          "from any sharware or commercial version of Doom, Heretic or Hexen!\n");
 	}
     }
+
+  // should we enable inventory?
+  game.inventory = (game.mode >= gm_heretic);
 }
 
 

@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.32  2005/03/16 21:16:06  smite-meister
+// menu cleanup, bugfixes
+//
 // Revision 1.31  2004/12/02 17:22:32  smite-meister
 // HUD fixed
 //
@@ -137,7 +140,7 @@ PlayerInfo::PlayerInfo(const string & n)
   pawn = NULL;
   pov = NULL;
 
-  messagefilter = 0;
+  messagefilter = 10;
 
   ptype = -1;
   color = 0;

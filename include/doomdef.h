@@ -18,11 +18,12 @@
 //
 //
 // $Log$
-// Revision 1.9  2005/01/25 18:29:15  smite-meister
-// preparing for alpha
+// Revision 1.10  2005/03/16 21:16:08  smite-meister
+// menu cleanup, bugfixes
 //
 // Revision 1.1.1.1  2002/11/16 14:18:23  hurdler
 // Initial C++ version of Doom Legacy
+//
 //-----------------------------------------------------------------------------
 
 /// \file
@@ -44,7 +45,6 @@ extern const char VERSIONSTRING[];
 
 #define MAXPLAYERNAME           21
 #define MAXSKINCOLORS           11
-#define SAVESTRINGSIZE          24
 
 /// Frame rate, number of game tics / second.
 #define OLDTICRATE       35

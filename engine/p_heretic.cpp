@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.25  2005/03/16 21:16:06  smite-meister
+// menu cleanup, bugfixes
+//
 // Revision 1.24  2004/12/02 17:22:34  smite-meister
 // HUD fixed
 //
@@ -294,7 +297,6 @@ void P_InitLava()
 
 void DoomPatchEngine()
 {
-  game.inventory = false;
   cv_jumpspeed.Set("6.0");
 
   // hacks: teleport fog, blood, gibs
@@ -306,7 +308,6 @@ void DoomPatchEngine()
 
 void HereticPatchEngine()
 {
-  game.inventory = true;
   cv_jumpspeed.Set("6.0");
 
   // hacks
@@ -324,7 +325,6 @@ void HereticPatchEngine()
 
 void HexenPatchEngine()
 {
-  game.inventory = true;
   cv_jumpspeed.Set("9.0");
 
   // hacks

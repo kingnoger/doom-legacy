@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2005/03/16 21:16:08  smite-meister
+// menu cleanup, bugfixes
+//
 // Revision 1.8  2004/11/28 18:02:23  smite-meister
 // RPCs finally work!
 //
@@ -48,11 +51,6 @@ struct consvar_t;
 // misc
 extern consvar_t cv_masterserver;
 extern consvar_t cv_netstat;
-
-// menu only cvars (used when launching server, and in doing serversearch)
-extern consvar_t cv_menu_skill;
-extern consvar_t cv_menu_nextmap;
-extern consvar_t cv_menu_serversearch;
 
 // server info
 extern consvar_t cv_servername;

@@ -170,7 +170,7 @@ export engine_objects = \
 	$(objdir)/p_user.o \
 	$(objdir)/p_inter.o \
 	$(objdir)/am_map.o \
-	$(objdir)/m_menu.o \
+	$(objdir)/menu.o \
 	$(objdir)/f_finale.o \
 	$(objdir)/f_wipe.o \
 	$(objdir)/wi_stuff.o \

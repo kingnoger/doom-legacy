@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2005/03/16 21:16:09  smite-meister
+// menu cleanup, bugfixes
+//
 // Revision 1.17  2004/12/09 06:13:37  segabor
 // An illegal character removed from source
 //
@@ -371,9 +374,6 @@ int I_SetVideoMode(int modeNum)
       flags = surfaceFlags;
 
       CONS_Printf("I_SetVideoMode: windowed %d x %d (%d bpp)\n", vid.width, vid.height, vid.BitsPerPixel);
-
-      // Window title
-      SDL_WM_SetCaption("Legacy", "Legacy");
     }
 
   if (rendermode == render_soft)

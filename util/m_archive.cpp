@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.6  2005/03/16 21:16:09  smite-meister
+// menu cleanup, bugfixes
+//
 // Revision 1.5  2005/01/25 18:29:17  smite-meister
 // preparing for alpha
 //
@@ -129,7 +132,7 @@ bool LArchive::Open(byte *buffer, size_t length)
   // check the magic string
   if (strncmp(header.id_string, Savegame_id, 24))
     {
-      M_StartMessage("Unknown savegame format\n\nPress ESC\n",NULL,MM_NOTHING);
+      M_StartMessage("Unknown savegame format\n\nPress ESC\n");
       return false;
     }
       
@@ -137,7 +140,7 @@ bool LArchive::Open(byte *buffer, size_t length)
 
   if (i > VERSION || i < VERSION) // here you can do backwards save compatibility
     {
-      M_StartMessage("Savegame from different version\n\nPress ESC\n",NULL,MM_NOTHING);
+      M_StartMessage("Savegame from different version\n\nPress ESC\n");
       return false;
     }
 

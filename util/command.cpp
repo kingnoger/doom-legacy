@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2005/03/16 21:16:09  smite-meister
+// menu cleanup, bugfixes
+//
 // Revision 1.12  2005/01/25 18:29:17  smite-meister
 // preparing for alpha
 //
@@ -851,7 +854,7 @@ consvar_t *consvar_t::cvar_list = NULL;
 
 //  Search if a variable has been registered
 //  returns true if given variable has been registered
-consvar_t *consvar_t::FindVar(char *name)
+consvar_t *consvar_t::FindVar(const char *name)
 {
   for (consvar_t *cvar = cvar_list; cvar; cvar = cvar->next)
     if (!strcmp(name, cvar->name))
@@ -863,7 +866,7 @@ consvar_t *consvar_t::FindVar(char *name)
 
 //  Build a unique Net Variable identifier number, that is used
 //  in network packets instead of the fullname
-unsigned short consvar_t::ComputeNetid(char *s)
+unsigned short consvar_t::ComputeNetid(const char *s)
 {
   static int premiers[16] = {2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53};
 
@@ -980,36 +983,41 @@ void consvar_t::Setvalue(const char *s)
 //  Register a variable, that can be used later at the console
 bool consvar_t::Reg()
 {
-  // first check to see if it has already been defined
-  if (FindVar(name))
-    {
-      CONS_Printf("Variable %s is already defined\n", name);
-      return false;
-    }
-
-  // check for overlap with a command
-  if (COM_Exists(name))
-    {
-      CONS_Printf("%s is a command name\n", name);
-      return false;
-    }
-
-  // check net variables
-  if (flags & CV_NETVAR)
-    {
-      netid = ComputeNetid(name);
-      if (FindNetVar(netid))
-	{
-	  I_Error("Variable %s has same netid\n", name);
-	  return false;
-	}
-    }
-
-  // link the variable in
+  // link the variable in, unless it is for internal use only
   if (!(flags & CV_HIDDEN))
     {
+      // first check to see if it has already been defined
+      if (FindVar(name))
+	{
+	  CONS_Printf("Variable %s is already defined\n", name);
+	  return false;
+	}
+
+      // check for overlap with a command
+      if (COM_Exists(name))
+	{
+	  CONS_Printf("%s is a command name\n", name);
+	  return false;
+	}
+
+      // check net variables
+      if (flags & CV_NETVAR)
+	{
+	  netid = ComputeNetid(name);
+	  if (FindNetVar(netid))
+	    {
+	      I_Error("Variable %s has same netid\n", name);
+	      return false;
+	    }
+	}
+
       next = cvar_list;
       cvar_list = this;
+    }
+  else
+    {
+      netid = 0;
+      next = NULL;
     }
 
   str = NULL;
@@ -1037,7 +1045,7 @@ bool consvar_t::Reg()
 
 
 //  Completes the name of a console var
-const char *consvar_t::CompleteVar(char *partial, int skips)
+const char *consvar_t::CompleteVar(const char *partial, int skips)
 {
   int len = strlen(partial);
 
@@ -1095,16 +1103,25 @@ void consvar_t::LoadNetVars(TNL::BitStream &s)
 
 
 // as if "<varname> <value>" is entered at the console
-void consvar_t::Set(char *s)
+void consvar_t::Set(const char *s)
 {
-  consvar_t *cv;
-  // am i registered?
-  for (cv = cvar_list; cv; cv = cv->next)
-    if (cv == this)
-      break;
+  if (!(flags & CV_HIDDEN))
+    {
+      consvar_t *cv;
+      // am i registered?
+      for (cv = cvar_list; cv; cv = cv->next)
+	if (cv == this)
+	  break;
 
-  if (!cv)
-    Reg();
+      if (!cv)
+	Reg();
+
+      if (flags & CV_NOTINNET && game.netgame)
+	{
+	  CONS_Printf("This variable cannot be changed while in a netgame.\n");
+	  return;
+	}
+    }
 
 #ifdef PARANOIA
   if (!str)
@@ -1113,12 +1130,6 @@ void consvar_t::Set(char *s)
 
   if (!strcmp(str, s))
     return; // no changes
-
-  if (flags & CV_NOTINNET && game.netgame)
-    {
-      CONS_Printf("This variable cannot be changed while in a netgame.\n");
-      return;
-    }
 
   if (flags & CV_NETVAR && game.netgame)
     {

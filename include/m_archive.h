@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.5  2005/03/16 21:16:08  smite-meister
+// menu cleanup, bugfixes
+//
 // Revision 1.4  2004/08/18 14:35:20  smite-meister
 // PNG support!
 //
@@ -58,12 +61,14 @@
 
 using namespace std;
 
+#define SAVEGAME_DESC_SIZE 32
+
 // little-endian, int = 32 bits, short = 16 bits, char = 8 bits
 struct savegame_header_t
 {
   char id_string[24];
   char version_string[8];
-  char description[32];
+  char description[SAVEGAME_DESC_SIZE];
   int  version;
   int  compression_method;
   size_t   uncompressed_size;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2005/03/16 21:16:07  smite-meister
+// menu cleanup, bugfixes
+//
 // Revision 1.20  2004/11/09 20:38:52  smite-meister
 // added packing to I/O structs
 //
@@ -1494,11 +1497,13 @@ static int CmdEndPrint()
     {
       PlayerPawn *p = (PlayerPawn *)ACScript->activator;
       if (p->player)
-	p->player->SetMessage(PrintBuffer, true);
+	p->player->SetMessage(PrintBuffer, 1, PlayerInfo::M_HUD);
     }
   else
     {
-      CONS_Printf(PrintBuffer);
+      int n = ACMap->players.size();
+      for (int i = 0; i < n; i++)
+	ACMap->players[i]->SetMessage(PrintBuffer, 1, PlayerInfo::M_HUD);
     }
 
   return SCRIPT_CONTINUE;
@@ -1506,10 +1511,10 @@ static int CmdEndPrint()
 
 static int CmdEndPrintBold()
 {
-  int i, n = ACMap->players.size();
+  int n = ACMap->players.size();
 
-  for (i = 0; i < n; i++)
-    ACMap->players[i]->SetMessage(PrintBuffer, true);
+  for (int i = 0; i < n; i++)
+    ACMap->players[i]->SetMessage(PrintBuffer, 1, PlayerInfo::M_HUD);
 
   return SCRIPT_CONTINUE;
 }

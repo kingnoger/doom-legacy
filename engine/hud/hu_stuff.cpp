@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.29  2005/03/16 21:16:06  smite-meister
+// menu cleanup, bugfixes
+//
 // Revision 1.28  2004/12/02 17:22:35  smite-meister
 // HUD fixed
 //
@@ -397,14 +400,14 @@ void HUD::Ticker()
 	  PlayerInfo::message_t &m = pl->messages.front();
 	  // TODO message priorities: a message blocks lower-priority messages for n seconds
 
-	  if (m.priority >= pl->messagefilter)
+	  if (m.priority <= pl->messagefilter)
 	    switch (m.type)
 	      {
 	      case PlayerInfo::M_CONSOLE:
 		CONS_Printf("%s\n", m.msg.c_str());
 		break;
 	      case PlayerInfo::M_HUD:
-		tips.push_back(new HudTip(m.msg, m.priority));
+		tips.push_back(new HudTip(m.msg, 150));
 		break;
 	      }
 
@@ -650,19 +653,21 @@ void HUD::DrawTips()
 {
   int cy = 32; // cursor y
   list<HudTip *>::iterator i, j;
-  for (i = tips.begin(); i != tips.end(); i = j)
+  for (i = tips.begin(); i != tips.end(); )
     {
-      j = i++;
+      j = i; // because erase invalidates the iterator, we must use a copy
       HudTip *h = *i;
+      i++;
+
       if (h->time > 0)
 	{
-	  h->Draw(32, cy);
+	  h->Draw(16, cy);
 	  cy += h->lines * 8;
 	}
       else
 	{
 	  delete h;
-	  tips.erase(i);
+	  tips.erase(j);
 	}
     }
 }

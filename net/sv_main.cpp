@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2005/03/16 21:16:09  smite-meister
+// menu cleanup, bugfixes
+//
 // Revision 1.21  2005/01/25 18:29:16  smite-meister
 // preparing for alpha
 //
@@ -203,7 +206,7 @@ consvar_t cv_maxplayers     = {"maxplayers", "32", CV_NETVAR, maxplayers_cons_t,
 CV_PossibleValue_t teamplay_cons_t[]={{0, "Off"},{1, "Color"},{2, "Skin"},{3, NULL}};
 CV_PossibleValue_t deathmatch_cons_t[]={{0, "Coop"},{1, "1"},{2, "2"},{3, "3"},{0, NULL}};
 CV_PossibleValue_t fraglimit_cons_t[]={{0, "MIN"},{1000, "MAX"},{0, NULL}};
-CV_PossibleValue_t exitmode_cons_t[]={{0, "noexit"},{1, "first"},{2, "ind"},{3, "last"},{4, NULL}};
+CV_PossibleValue_t exitmode_cons_t[]={{0, "no exit"},{1, "first"},{2, "individual"},{3, "last"},{4, NULL}};
 
 void TeamPlay_OnChange();
 void Deathmatch_OnChange();
@@ -219,7 +222,7 @@ consvar_t cv_exitmode   = {"exitmode", "1", CV_NETVAR, exitmode_cons_t, NULL};
 consvar_t cv_fraglimit  = {"fraglimit" , "0", CV_NETVAR | CV_CALL | CV_NOINIT,fraglimit_cons_t, FragLimit_OnChange};
 consvar_t cv_timelimit  = {"timelimit" , "0", CV_NETVAR | CV_CALL | CV_NOINIT, CV_Unsigned, TimeLimit_OnChange};
 
-consvar_t cv_jumpspeed       = {"jumpspeed", "6", CV_NETVAR | CV_FLOAT, CV_Unsigned};
+consvar_t cv_jumpspeed       = {"jumpspeed", "6", CV_NETVAR | CV_FLOAT};
 consvar_t cv_allowrocketjump = {"allowrocketjump", "0", CV_NETVAR, CV_YesNo};
 consvar_t cv_allowautoaim    = {"allowautoaim", "1", CV_NETVAR, CV_YesNo};
 consvar_t cv_allowmlook      = {"allowfreelook", "1", CV_NETVAR, CV_YesNo};

@@ -16,6 +16,9 @@
 // for more details.
 //
 // $Log$
+// Revision 1.23  2005/03/16 21:16:08  smite-meister
+// menu cleanup, bugfixes
+//
 // Revision 1.22  2005/03/04 16:23:08  smite-meister
 // mp3, sector_t
 //
@@ -618,8 +621,6 @@ int I_RegisterSong(void* data, int len)
   if (nomusic)
     return 0;
 
-  // TODO SDL_Mixer _should_ support playing music buffers directly from memory,
-  // it makes no sense to save them to disk first!
   TempMusicFileName = "Legacy_music.tmp";
 
   FILE *midfile = fopen(TempMusicFileName, "wb");
@@ -645,23 +646,34 @@ int I_RegisterSong(void* data, int len)
 	}
       fwrite(musicbuffer, 1, midlength, midfile);
     }
-  else if (memcmp(data,"MThd", 4) == 0 || memcmp(data, "Ogg", 3) == 0 ||
-	   (memcmp(data,"ID3", 3) == 0 || (bdata[0] == 255 && (bdata[1] & 0xe0 == 0xe0))))
+  else
+  //  else if (memcmp(data,"MThd", 4) == 0 || memcmp(data, "Ogg", 3) == 0 ||
+  // (memcmp(data,"ID3", 3) == 0 || (bdata[0] == 255 && (bdata[1] & 0xe0 == 0xe0))))
     // Damn, MP3 has no real header! This code only recognizes ID3 tags
     // or the 11 bits long frame sync block which is all ones!
     {
       fwrite(data, 1, len, midfile);  // MIDI, MP3 and Ogg Vorbis
     }
+  /*
   else
     {
       CONS_Printf("Music lump is not in MUS, Midi, MP3 or Ogg Vorbis format!\n");
       return 0;
     }
+  */
   
   fclose(midfile);
 
   music[0] = Mix_LoadMUS(TempMusicFileName);
-    
+  /*
+  // TODO SDL_mixer _should_ support playing music buffers directly from memory,
+  // it makes no sense to save them to disk first!
+  // I hope the SDL_mixer guys finish this soon!
+  SDL_RWops *rwop = SDL_RWFromConstMem(data, len);
+  music[0] = Mix_LoadMUS_RW(rwop);
+  SDL_FreeRW(rwop);
+  */
+
   if (music[0] == NULL)
     {
       CONS_Printf("Couldn't load music from tempfile %s: %s\n", TempMusicFileName, Mix_GetError());

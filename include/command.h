@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2005/03/16 21:16:08  smite-meister
+// menu cleanup, bugfixes
+//
 // Revision 1.7  2004/11/28 18:02:23  smite-meister
 // RPCs finally work!
 //
@@ -141,13 +144,13 @@ protected:
   /// internal setting method
   void Setvalue(const char *s);
 
-  static unsigned short ComputeNetid(char *s);
+  static unsigned short ComputeNetid(const char *s);
   static consvar_t *FindNetVar(unsigned short netid);
 
 public:
 
   /// as if "<varname> <value>" was entered at the console
-  void Set(char *value);
+  void Set(const char *value);
 
   /// expands value to a string before setting it
   void Set(int value);
@@ -162,10 +165,10 @@ public:
   static bool Command();
 
   /// returns the cvar with the corresponding name or NULL
-  static consvar_t *FindVar(char *name);
+  static consvar_t *FindVar(const char *name);
 
   /// returns the name of the nearest console variable name found
-  static const char *CompleteVar(char *partial, int skips);
+  static const char *CompleteVar(const char *partial, int skips);
 
   /// write all CV_SAVE variables to config file
   static void SaveVariables(FILE *f);

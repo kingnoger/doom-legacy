@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2005/03/16 21:16:08  smite-meister
+// menu cleanup, bugfixes
+//
 // Revision 1.9  2004/12/08 10:16:03  segabor
 // "segabor: byte alignment fix"
 //
@@ -131,13 +134,12 @@ public:
 
   void DrawCharacter(int x, int y, char c, int flags = 0);
   void DrawString(int x, int y, const char *str, int flags = V_SCALE);
-  void DrawGrayString(int x, int y, const char *str);
   int  StringWidth(const char *str);
   int  StringWidth(const char *str, int n);
   int  StringHeight(const char *str);
 };
 
-
+extern byte   *current_colormap; // for applying colormaps to Drawn Textures
 extern font_t *hud_font;
 extern font_t *big_font;
 

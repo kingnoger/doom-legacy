@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2005/03/16 21:16:10  smite-meister
+// menu cleanup, bugfixes
+//
 // Revision 1.21  2004/12/31 16:19:41  smite-meister
 // alpha fixes
 //
@@ -762,14 +765,6 @@ void font_t::DrawString(int x, int y, const char *str, int flags)
 
       cx += w;
     }
-}
-
-
-// TODO could take a colormap as a parameter...
-void font_t::DrawGrayString(int x, int y, const char *str)
-{
-  current_colormap = graymap;
-  DrawString(x, y, str, V_SCALE | V_MAP);
 }
 
 

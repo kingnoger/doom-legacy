@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2005/03/16 21:16:06  smite-meister
+// menu cleanup, bugfixes
+//
 // Revision 1.18  2005/03/10 22:28:43  smite-meister
 // poly renderer
 //
@@ -116,7 +119,7 @@ polyobject_t::polyobject_t(int num, byte *args, int dir)
   else
     dist = ANGLE_MAX-1;
 
-  speed = (args[1]*dir*(ANG90/64))>>3;
+  speed = args[1] * dir * int(ANG90 >> 9);
 }
 
 int polyobject_t::PushForce() { return speed >> 8; }
@@ -137,9 +140,8 @@ void polyobject_t::Think()
 	{
 	  polyobj_t *poly = mp->GetPolyobj(polyobj);
 	  if (poly->specialdata == this)
-	    {
-	      poly->specialdata = NULL;
-	    }
+	    poly->specialdata = NULL;
+
 	  mp->SN_StopSequence(&poly->startSpot);
 	  mp->PolyobjFinished(poly->tag);
 	  mp->RemoveThinker(this);
@@ -331,7 +333,7 @@ polydoor_t::polydoor_t(int num, int t, byte *args, bool mirror)
     {
       waitTics = args[3];
       direction = mirror ? -1 : 1; // ADD:  PODOOR_SWINGL, PODOOR_SWINGR
-      speed = (args[1] * direction * (ANG90/64))>>3;
+      speed = args[1] * direction * int(ANG90 >> 9);
       dist = totalDist = args[2]*(ANG90/64);
     }
   else

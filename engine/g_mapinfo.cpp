@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.25  2005/03/16 21:16:05  smite-meister
+// menu cleanup, bugfixes
+//
 // Revision 1.24  2005/01/25 18:29:13  smite-meister
 // preparing for alpha
 //
@@ -747,12 +750,12 @@ void GameInfo::Clear_mapinfo_clustermap()
   // delete old mapinfo and clusterdef
   mapinfo_iter_t s;
   for (s = mapinfo.begin(); s != mapinfo.end(); s++)
-    delete (*s).second;
+    delete s->second;
   mapinfo.clear(); 
 
   cluster_iter_t t;
   for (t = clustermap.begin(); t != clustermap.end(); t++)
-    delete (*t).second;
+    delete t->second;
   clustermap.clear();
 
   currentcluster = NULL;
@@ -765,17 +768,18 @@ MapCluster *GameInfo::FindCluster(int c)
   if (i == clustermap.end())
     return NULL;
 
-  return (*i).second;
+  return i->second;
 }
 
 
 MapInfo *GameInfo::FindMapInfo(int c)
 {
   mapinfo_iter_t i = mapinfo.find(c);
+
   if (i == mapinfo.end())
     return NULL;
 
-  return (*i).second;
+  return i->second;
 }
 
 
@@ -788,8 +792,8 @@ MapInfo *GameInfo::FindMapInfo(const char *name)
     return FindMapInfo(n); // by number
 
   for (mapinfo_iter_t i = mapinfo.begin(); i != mapinfo.end(); i++)
-    if ((*i).second->lumpname == name)
-      return (*i).second;
+    if (i->second->lumpname == name)
+      return i->second;
 
   return NULL;
 }
