@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/04/04 00:01:58  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.6  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -245,14 +248,6 @@ public:
 //
 // P_SWITCH
 //
-#pragma pack(1) //Hurdler: 04/04/2000: I think pragma is more portable
-struct switchlist_t
-{
-  char        name1[9];
-  char        name2[9];
-  short       episode;
-};
-#pragma pack()
 
 void P_InitSwitchList();
 

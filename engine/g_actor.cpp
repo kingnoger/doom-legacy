@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/04/04 00:01:53  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.10  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -238,11 +241,18 @@ Actor::Actor(fixed_t nx, fixed_t ny, fixed_t nz)
   y = ny;
   z = nz;
 
+  px = py = pz = 0;
+
+  spawnpoint = NULL;
   touching_sectorlist = NULL;
+
+  owner = target = NULL;
+
   friction = normal_friction;
   movefactor = 1.0f;
 
   pres = NULL;
+  // TODO hexen fields initialization
 }
 
 
@@ -251,15 +261,22 @@ DActor::DActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
 {
   type = t;
   info = &mobjinfo[t];
+
   mass = info->mass;
   radius = info->radius;
   height = info->height;
+  health = info->spawnhealth;
+
   flags  = info->flags;
   flags2 = info->flags2;
-  health = info->spawnhealth;
+  eflags = 0;
 
   if (game.skill != sk_nightmare)
     reactiontime = info->reactiontime;
+  else
+    reactiontime = 0;
+
+  movedir = movecount = threshold = 0;
 
   lastlook = -1;  // stuff moved in P_enemy.P_LookForPlayer
 
@@ -1096,8 +1113,16 @@ bool DActor::SetState(statenum_t ns, bool call)
     st = &states[ns];
     state = st;
     tics = st->tics;
-    // FIXME spritetest   sprite = st->sprite;
-    pres->SetFrame(st->frame);
+    if (pres->IsSprite())
+      {
+	// kludge to fix those sprites that change name during animation (!!!)
+	if (((spritepres_t *)pres)->spr->iname != *(int *)(sprnames[state->sprite]))
+	  {
+	    delete pres;
+	    pres = new spritepres_t(sprnames[state->sprite], state->frame, 0); 
+	  }
+	pres->SetFrame(st->frame);	
+      }
     
     // Modified handling.
     // Call action functions when the state is set

@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.11  2003/04/04 00:01:57  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.10  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -106,7 +109,8 @@ private:
 
 
 public:
-  int color; // stupid extra color value (mostly teamcolor...)
+  int color; // stupid extra color value for automap
+  //int skin;
 
   int maxhealth;
   float speed; // walking speed (units/tic), runspeed = 2*speed
@@ -130,49 +134,47 @@ public:
 class PlayerPawn : public Pawn
 {
 public:
+  // Overlay view sprites (gun, etc).
+  pspdef_t psprites[NUMPSPRITES];
+
   PlayerInfo *player; // controlling player
 
-  int skin;
+  byte pclass; // player class, a Hexen kludge
 
   int morphTics;   // player is in a morphed state if > 0
 
-  // inventory
+  // Inventory
   int invTics; // when >0 show inventory in hud
   vector<inventory_t> inventory;
   int invSlot;   // active inventory slot is inventory[invSlot]
 
-  // Power ups. invinc and invis are tic counters.
+  // Tic counters for power ups.
   int powers[NUMPOWERS];
 
   // Bit flags, for cheats and debug.
   int cheats;
 
-  // True if button was down last tic.
+  // True if button was down last tic. (into eflags?)
   bool attackdown;
   bool usedown;
-  bool jumpdown;   //added:19-03-98:dont jump like a monkey!
+  bool jumpdown;   // dont jump like a monkey!
   int refire;    // Refired shots are less accurate.
 
-
+  int  cards; // bit field see declration of card_t
   bool backpack;
 
   weapontype_t pendingweapon;   // Is wp_nochange if not changing.
   weapontype_t readyweapon;
   bool         weaponowned[NUMWEAPONS];
 
+  const weaponinfo_t *weaponinfo; // can be changed when use level2 weapons (heretic)
+
   int ammo[NUMAMMO];
   const int *maxammo;
 
   float toughness; // natural armor
-  byte armortype;   // Armor type is 0-2.
-  int  armorpoints;
-
-  int cards; // bit field see declration of card_t
-
-  const weaponinfo_t *weaponinfo; // can be changed when use level2 weapons (heretic)
-
-  // Overlay view sprites (gun, etc).
-  pspdef_t psprites[NUMPSPRITES];
+  float armorfactor[NUMARMOR];
+  int   armorpoints[NUMARMOR];
 
   int specialsector; // current sector special (lava/slime/water...)
 
@@ -240,7 +242,7 @@ public:
   // in p_inter.cpp
   bool GiveAmmo(ammotype_t at, int count);
   bool GiveWeapon(weapontype_t wt, bool dropped);
-  bool GiveArmor(int at);
+  bool GiveArmor(armortype_t type, float factor, int points);
   bool GiveCard(card_t ct);
   bool GiveArtifact(artitype_t arti, Actor *from);
   void TouchSpecialThing(DActor *special);

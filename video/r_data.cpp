@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/04/04 00:01:58  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.8  2003/03/29 20:08:04  smite-meister
 // Cast added
 //
@@ -916,7 +919,7 @@ int R_ColormapNumForName(const char *name)
 // data in a special linedef's texture areas and use that to generate
 // custom colormaps at runtime. NOTE: For GL mode, we only need to color
 // data and not the colormap data. 
-double  deltas[256][3], map[256][3];
+double  deltas[256][3], cmap[256][3];
 
 unsigned char  NearestColor(unsigned char r, unsigned char g, unsigned char b);
 int            RoundUp(double number);
@@ -1029,20 +1032,20 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
       cbrightness = sqrt((r*r) + (g*g) + (b*b));
 
 
-      map[i][0] = (cbrightness * cmaskr) + (r * othermask);
-      if(map[i][0] > 255.0)
-        map[i][0] = 255.0;
-      deltas[i][0] = (map[i][0] - cdestr) / (double)fadedist;
+      cmap[i][0] = (cbrightness * cmaskr) + (r * othermask);
+      if(cmap[i][0] > 255.0)
+        cmap[i][0] = 255.0;
+      deltas[i][0] = (cmap[i][0] - cdestr) / (double)fadedist;
 
-      map[i][1] = (cbrightness * cmaskg) + (g * othermask);
-      if(map[i][1] > 255.0)
-        map[i][1] = 255.0;
-      deltas[i][1] = (map[i][1] - cdestg) / (double)fadedist;
+      cmap[i][1] = (cbrightness * cmaskg) + (g * othermask);
+      if(cmap[i][1] > 255.0)
+        cmap[i][1] = 255.0;
+      deltas[i][1] = (cmap[i][1] - cdestg) / (double)fadedist;
 
-      map[i][2] = (cbrightness * cmaskb) + (b * othermask);
-      if(map[i][2] > 255.0)
-        map[i][2] = 255.0;
-      deltas[i][2] = (map[i][2] - cdestb) / (double)fadedist;
+      cmap[i][2] = (cbrightness * cmaskb) + (b * othermask);
+      if(cmap[i][2] > 255.0)
+        cmap[i][2] = 255.0;
+      deltas[i][2] = (cmap[i][2] - cdestb) / (double)fadedist;
     }
   }
 
@@ -1069,26 +1072,26 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
     {
       for(i = 0; i < 256; i++)
       {
-        *colormap_p = NearestColor(RoundUp(map[i][0]), RoundUp(map[i][1]), RoundUp(map[i][2]));
+        *colormap_p = NearestColor(RoundUp(cmap[i][0]), RoundUp(cmap[i][1]), RoundUp(cmap[i][2]));
         colormap_p++;
   
         if((unsigned int)p < fadestart)
           continue;
   
-        if(ABS2(map[i][0] - cdestr) > ABS2(deltas[i][0]))
-          map[i][0] -= deltas[i][0];
+        if(ABS2(cmap[i][0] - cdestr) > ABS2(deltas[i][0]))
+          cmap[i][0] -= deltas[i][0];
         else
-          map[i][0] = cdestr;
+          cmap[i][0] = cdestr;
 
-        if(ABS2(map[i][1] - cdestg) > ABS2(deltas[i][1]))
-          map[i][1] -= deltas[i][1];
+        if(ABS2(cmap[i][1] - cdestg) > ABS2(deltas[i][1]))
+          cmap[i][1] -= deltas[i][1];
         else
-          map[i][1] = cdestg;
+          cmap[i][1] = cdestg;
 
-        if(ABS2(map[i][2] - cdestb) > ABS2(deltas[i][1]))
-          map[i][2] -= deltas[i][2];
+        if(ABS2(cmap[i][2] - cdestb) > ABS2(deltas[i][1]))
+          cmap[i][2] -= deltas[i][2];
         else
-          map[i][2] = cdestb;
+          cmap[i][2] = cdestb;
       }
     }
   }

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/04/04 00:01:56  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.3  2003/02/23 22:49:31  smite-meister
 // FS is back! L2 cache works.
 //
@@ -26,48 +29,6 @@
 //
 // Revision 1.1.1.1  2002/11/16 14:18:03  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.8  2002/09/25 15:17:37  vberghol
-// Intermission fixed?
-//
-// Revision 1.7  2002/08/25 18:22:00  vberghol
-// little fixes
-//
-// Revision 1.6  2002/08/13 19:47:43  vberghol
-// p_inter.cpp done
-//
-// Revision 1.5  2002/08/08 12:01:28  vberghol
-// pian engine on valmis!
-//
-// Revision 1.4  2002/07/23 19:21:43  vberghol
-// fixed up to p_enemy.cpp
-//
-// Revision 1.3  2002/07/01 21:00:20  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:15  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.15  2001/01/25 22:15:43  bpereira
-// added heretic support
-//
-// Revision 1.12  2000/11/02 17:50:08  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.6  2000/04/11 19:07:24  stroggonmeth
-// Finished my logs, fixed a crashing bug.
-//
-// Revision 1.5  2000/04/04 00:32:47  stroggonmeth
-// Initial Boom compatability plus few misc changes all around.
-//
-// Revision 1.4  2000/02/27 16:30:28  hurdler
-// dead player bug fix + add allowmlook <yes|no>
-//
-// Revision 1.3  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.2  2000/02/26 00:28:42  hurdler
-// Mostly bug fix (see borislog.txt 23-2-2000, 24-2-2000)
 //
 //
 // DESCRIPTION:
@@ -79,11 +40,11 @@
 #include "doomdata.h"
 #include "command.h"
 
-#include "d_debug.h" // DEBFILE
 
 #include "g_game.h"
 #include "g_actor.h"
 #include "g_map.h"
+#include "g_save.h"
 
 #include "d_items.h"
 
@@ -704,22 +665,34 @@ enum
 // T_PlatRaise, (plat_t: sector_t *), - active list
 // BP: added missing : T_FireFlicker
 //
-void P_ArchiveThinkers()
+/*
+void Map::ArchiveThinkers(LArchive & arc)
 {
-  /*
-  Thinker  *th;
-  Actor    *mobj;
-  ULONG               diff;
 
-  // save off the current thinkers
-  for (th = thinkercap.next ; th != &thinkercap ; th=th->next)
+  Thinker *th;
+  Thinker::IDmap_iter_t iter;
+  int n;
+
+  // save off the current thinkers using a two-pass algorithm (because of pointers)
+  // only the shit in the thinker ring is mapped. what about LavaInflictor et al.?
+  // recursion? aww.
+  Thinker::IDmap[NULL] = 0;
+  for (th = thinkercap.next ; th != &thinkercap ; th = th->next)
+    //th->AddToIDmap();
     {
-      th->Serialize(archive);
-
-      if (th->function.acp1 == (actionf_p1)P_MobjThinker)
-        {
-	  // moved to Actor::Serialize(), others will follow
+      iter = Thinker::IDmap.find(th);
+      if (iter == Thinker::IDmap.end())
+	{
+	  n = Thinker::IDmap.size(); // next free index
+	  Thinker::IDmap[th] = n;
 	}
+    }
+
+  for (iter = Thinker::IDmap.begin(); iter != Thinker::IDmap.end(); ++iter) 
+    (*iter).first->Serialize(arc);
+
+  Thinker::IDmap.clear(); // no longer needed?
+
       else if (th->function.acv == (actionf_v)NULL)
 	{ 
 	  //SoM: 3/15/2000: Boom stuff...
@@ -881,8 +854,9 @@ void P_ArchiveThinkers()
     }
 
   *save_p++ = tc_end;
-  */
+
 }
+*/
 
 // Now save the pointers, tracer and target, but at load time we must
 // relink to this, the savegame contain the old position in the pointer
@@ -907,11 +881,30 @@ static Actor *FindNewPosition(void *oldposition)
 }
 
 //
-// P_UnArchiveThinkers
+// was P_UnArchiveThinkers
 //
-void P_UnArchiveThinkers (void)
+/*
+void Map::UnArchiveThinkers(FArchive & arc)
 {
-  /*
+  Thinker *th;
+  int i;
+  
+  Thinker::IDvec.push_back(NULL);
+  for (each_thinker)
+    {
+      arc >> i;
+      th = ThinkerFactoryMap[i]();
+      th->Serialize(arc);
+      AddThinker(th);
+
+      Thinker::IDvec.push_back(th);
+    }
+
+  for (each_thinker)
+    th->SetPointersFromIDvec();
+
+  Thinker::IDvec.clear();
+
   thinker_t*          currentthinker;
   thinker_t*          next;
   Actor*             mobj;
@@ -1224,9 +1217,8 @@ void P_UnArchiveThinkers (void)
             }
         }
     }
-*/
 }
-
+*/
 
 //
 // P_FinishMobjs
@@ -1891,21 +1883,21 @@ void P_SaveGame()
   P_ArchiveMisc();
   P_ArchivePlayers ();
   P_ArchiveWorld ();
-  P_ArchiveThinkers ();
+  //P_ArchiveThinkers ();
   P_ArchiveSpecials ();
   P_ArchiveScripts ();
     
   *save_p++ = 0x1d;           // consistancy marker
 }
 
-bool P_LoadGame (void)
+bool P_LoadGame()
 {
   CV_LoadNetVars((char**)&save_p);
   if( !P_UnArchiveMisc() )
     return false;
   P_UnArchivePlayers ();
   P_UnArchiveWorld ();
-  P_UnArchiveThinkers ();
+  //P_UnArchiveThinkers ();
   P_UnArchiveSpecials ();
   P_UnArchiveScripts ();
 

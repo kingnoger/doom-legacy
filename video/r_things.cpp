@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/04/04 00:01:58  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.7  2003/03/23 14:24:14  smite-meister
 // Polyobjects, MD3 models
 //
@@ -130,6 +133,9 @@ void presentation_t::operator delete(void *mem)
   Z_Free(mem);
 }
 
+presentation_t::~presentation_t()
+{}
+
 spritepres_t::spritepres_t(const char *name, int startframe, int col)
 {
   color = col;
@@ -137,8 +143,17 @@ spritepres_t::spritepres_t(const char *name, int startframe, int col)
   frame = startframe;
 }
 
+spritepres_t::~spritepres_t()
+{
+  spr->Release();
+}
+
 void spritepres_t::SetFrame(int fr)
 {
+  /*
+  if ((fr & FF_FRAMEMASK) >= spr->numframes)
+    I_Error("spritepres_t::SetFrame: illegal frame %d(%d)\n", fr, spr->numframes);
+  */
   frame = fr;
 }
 
@@ -341,6 +356,7 @@ cacheitem_t *spritecache_t::Load(const char *p, cacheitem_t *r)
     t = new sprite_t;
 
   // allocate this sprite's frames
+  t->iname = intname;
   t->numframes = maxframe;
   t->spriteframes = (spriteframe_t *)Z_Malloc(maxframe*sizeof(spriteframe_t), PU_STATIC, NULL);
   memcpy(t->spriteframes, sprtemp, maxframe*sizeof(spriteframe_t));

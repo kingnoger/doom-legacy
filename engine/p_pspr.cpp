@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/04/04 00:01:56  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.7  2003/03/15 20:07:16  smite-meister
 // Initial Hexen compatibility!
 //
@@ -242,7 +245,12 @@ void PlayerPawn::MovePsprites()
 void PlayerPawn::BringUpWeapon()
 {
   if (pendingweapon == wp_nochange)
-    pendingweapon = readyweapon;
+    {
+      if (readyweapon == wp_nochange)
+	return; // well, no weapon held
+      else
+	pendingweapon = readyweapon;
+    }
 
 #ifdef PARANOIA
   if (pendingweapon >= NUMWEAPONS )

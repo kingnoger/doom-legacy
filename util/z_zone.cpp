@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/04/04 00:01:58  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.4  2003/03/25 18:14:50  smite-meister
 // Memory debug
 //
@@ -52,7 +55,7 @@
 using namespace std;
 
 // Use malloc instead of zone memory to detect leaks. This way we always get a SIGSEGV.
-//#define MEMDEBUG 1
+#define MEMDEBUG 1
 
 void Command_Meminfo_f();
 
@@ -286,7 +289,7 @@ void memzone_t::Free(void* ptr)
 
 #ifdef PARANOIA
   // get direct a segv when using a pointer that isn't right FIXME is this necessary?
-  memset(ptr, 0, block->size - sizeof(memblock_t));
+  //memset(ptr, 0, block->size - sizeof(memblock_t));
 #endif
 
   if (block->user > (void **)0x100)
@@ -363,7 +366,7 @@ void *Z_MallocAlign(int size, int tag, void **user, int alignbits)
       allocation = zones[i]->Malloc(size, tag, user, alignbits);
       if (allocation != NULL)
 	{
-	  memset(allocation, 0, size); // FIXME TEST. Crashes if bad return value.
+	  //memset(allocation, 0, size); // FIXME TEST. Crashes if bad return value.
 	  return allocation;
 	}
     }
@@ -379,7 +382,7 @@ void *Z_MallocAlign(int size, int tag, void **user, int alignbits)
   if (allocation == NULL)
     I_Error("Memory allocation function serious failure.\n");
 
-  memset(allocation, 0, size); // FIXME TEST. Crashes if bad return value.
+  //memset(allocation, 0, size); // FIXME TEST. Crashes if bad return value.
   return allocation;
 }
 

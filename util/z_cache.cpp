@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/04/04 00:01:58  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.3  2003/03/08 16:07:18  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -147,23 +150,30 @@ cacheitem_t *L2cache_t::Cache(const char *p)
   // data used through a L2 cache must not be used anywhere else (z_free and z_changetag will cause problems)
 
   cacheitem_t *t;
-  c_iter_t i = c_map.find(p);
+  c_iter_t i;
 
-  if (i == c_map.end())
-    {
-      //CONS_Printf("--- cache miss, %s, %p\n", p, p);
-      // not found
-      t = Load(p, NULL);
-      if (t)
-	c_map.insert(c_map_t::value_type(p, t));
-      else
-	t = default_item;
-    }
+  if (p == NULL)
+    t = default_item;
   else
-    {
-      //CONS_Printf("+++ cache hit, %s, %p\n", p, p);
-      // found
-      t = (*i).second;
+    { 
+      i = c_map.find(p);
+
+      if (i == c_map.end())
+	{
+	  //CONS_Printf("--- cache miss, %s, %p\n", p, p);
+	  // not found
+	  t = Load(p, NULL);
+	  if (t)
+	    c_map.insert(c_map_t::value_type(p, t));
+	  else
+	    t = default_item;
+	}
+      else
+	{
+	  //CONS_Printf("+++ cache hit, %s, %p\n", p, p);
+	  // found
+	  t = (*i).second;
+	}
     }
 
   t->refcount++;

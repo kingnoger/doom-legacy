@@ -2,9 +2,12 @@
 //-----------------------------------------------------------------------------
 //  $Id$
 //
-// Copyright (C) 1998-2002 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.11  2003/04/04 00:01:54  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.10  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -26,6 +29,8 @@
 //
 // DESCRIPTION:
 //   Pawn / PlayerPawn class implementation
+//
+//-----------------------------------------------------------------------------
 
 #include "g_pawn.h"
 #include "g_player.h"
@@ -80,60 +85,99 @@ Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, const pawn_info_t *t)
 {
   pinfo = t;
   const mobjinfo_t *info = &mobjinfo[t->mt];
+
   mass   = info->mass;
   radius = info->radius;
   height = info->height;
+  health = info->spawnhealth;
+
+  maxhealth = 2*health;
+  speed  = info->speed;
+
   flags  = info->flags;
   flags2 = info->flags2;
-  health = info->spawnhealth;
-  maxhealth = 2*health;
+  eflags = 0;
+
   reactiontime = info->reactiontime;
-  speed = info->speed;
+  attacker = NULL;
 
   color = 0;
   state_t *state = &states[info->spawnstate];
   pres = new spritepres_t(sprnames[state->sprite], state->frame, 0);
 }
 
+
 PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, const pawn_info_t *t)
   : Pawn(nx, ny, nz, t)
 {
+  int i;
   // note! here Map *mp is not yet set! This means you can't call functions such as
   // SetPosition that have something to do with a map.
-  refire = 0;
-  morphTics = 0;
-  flamecount = 0;
-  flyheight = 0;
-  rain1 = NULL;
-  rain2 = NULL;
-  extralight = 0;
-  fixedcolormap = 0;
-  invSlot = 0;
-  inventory.resize(2, inventory_t(3,2)); // at least 1 empty slot
   flags |= (MF_NOTMONSTER | MF_PICKUP | MF_SHOOTABLE | MF_DROPOFF);
   flags &= ~MF_COUNTKILL;
-  // the playerpawn is not a monster. MT_PLAYER might be.
   flags2 |= (MF2_WINDTHRUST | MF2_SLIDE | MF2_PASSMOBJ | MF2_TELESTOMP);
 
-  usedown = attackdown = true;  // don't do anything immediately
+  player = NULL;
+
+  pclass = 0;
+
+  morphTics = 0;
+
+  invSlot = invTics = 0;
+  inventory.resize(2, inventory_t(3,2)); // at least 1 empty slot
+
+  usedown = attackdown = jumpdown = true;  // don't do anything immediately
+  refire = 0;
+
+  cheats = 0;
+  for (i=0; i<NUMPOWERS; i++)
+    powers[i] = 0;
+
+  cards = 0;
+  backpack = false;
 
   weaponinfo = wpnlev1info;
   maxammo = maxammo1;
 
+  for (i=0; i<NUMAMMO; i++)
+    ammo[i] = 0;
+
+  for (i=0; i<NUMWEAPONS; i++)
+    weaponowned[i] = false;
+
   if (game.mode == gm_heretic)
     weaponowned[wp_staff] = true;
+  else if (game.mode == gm_hexen)
+    {}
   else
     weaponowned[wp_fist] = true;
 
   weapontype_t w = pinfo->bweapon;
+  readyweapon = pendingweapon = w;
+
   if (w != wp_nochange)
     {
       weaponowned[w] = true;
-      readyweapon = pendingweapon = w;
       ammotype_t a = wpnlev1info[w].ammo;
       if (a != am_noammo)
 	ammo[a] = pinfo->bammo;
     }
+
+  // armor
+  toughness = 0;
+  for (i = 0; i < NUMARMOR; i++)
+    {
+      armorpoints[i] = 0;
+      armorfactor[i] = 0;
+    }
+
+  specialsector = 0;
+  extralight = fixedcolormap = 0;
+
+  // crap
+  flyheight = flamecount = 0;
+  
+  rain1 = rain2 = NULL;
 }
 
 
@@ -253,43 +297,34 @@ void PlayerPawn::Think()
       //  (read: not in the middle of an attack).
       int wg = (cmd->buttons & BT_WEAPONMASK) >> BT_WEAPONSHIFT;
       weapontype_t newweapon;
-      int i, j;
-      if (weapondata[readyweapon].group == wg)
-	{
-	  for (i=0; i<4; i++) // find next weapon in the group
-	    if (wgroups[wg][i] == readyweapon)
-	      break;
-	  i++;
-	}
-      else
-	i = 0; // choose first weapon in group
 
-      for (j=0; j<4; j++, i++)
+      CONS_Printf("wp change, %d\n", wg);
+
+      if (wg == weapondata[readyweapon].group)
 	{
-	  newweapon = wgroups[wg][i%4];
-	  if ((newweapon < NUMWEAPONS) && weaponowned[newweapon])
+	  newweapon = weapondata[readyweapon].next;
+	  while (newweapon != readyweapon)
 	    {
-	      pendingweapon = newweapon;
-	      break;
+	      if (newweapon == wp_nochange || weaponowned[newweapon])
+		{
+		  pendingweapon = newweapon;
+		  break;
+		}
+	      newweapon = weapondata[newweapon].next;
 	    }
 	}
-
-      /*
-	//if (cmd->buttons & BT_EXTRAWEAPON)
-	switch (newweapon)
+      else
 	{
-	case wp_fist:
-	  if (weaponowned[wp_chainsaw] && (readyweapon == wp_fist))
-	    newweapon = wp_chainsaw;
-	  break;
-	case wp_shotgun: 
-	  if (game.mode == commercial && weaponowned[wp_supershotgun] && (readyweapon == wp_shotgun))
-	    newweapon = wp_supershotgun;
-	  break;
-	default:
-	  break;
-	  }
-      */
+	  int i;
+	  for (i=0; i<NUMWEAPONS; i++)
+	    if (wg == weapondata[i].group && weaponowned[i])
+	      {
+		pendingweapon = weapontype_t(i);
+		break;
+	      }
+	}
+      
+      CONS_Printf("pend %d\n", pendingweapon);
 
       // Do not go to plasma or BFG in shareware, even if cheated.
       if ((game.mode == gm_doom1s) &&
@@ -682,8 +717,6 @@ void PlayerPawn::FinishLevel()
 
   // save pawn for next level
   mp->DetachActor(this);
-  // save the presentation too
-  Z_ChangeTag(pres, PU_STATIC);
 }
 
 

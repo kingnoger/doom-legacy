@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/04/04 00:01:57  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.6  2003/03/15 20:07:20  smite-meister
 // Initial Hexen compatibility!
 //
@@ -109,6 +112,18 @@ typedef enum
   it_allkeys = 0x1ffff,
 } card_t;
 
+
+enum armortype_t
+{
+  armor_field, // old doom style armor
+  armor_armor,
+  armor_shield,
+  armor_helmet,
+  armor_amulet,
+  NUMARMOR
+};
+
+
 typedef enum
 {
   arti_none,
@@ -122,6 +137,38 @@ typedef enum
   arti_egg,
   arti_fly,
   arti_teleport,
+
+  // hexen
+  arti_healingradius,
+  arti_summon,
+  arti_pork,
+  arti_blastradius,
+  arti_poisonbag,
+  arti_teleportother,
+  arti_speed,
+  arti_boostmana,
+  arti_boostarmor,
+
+  // Puzzle artifacts
+  arti_firstpuzzitem,
+  arti_puzzskull = arti_firstpuzzitem,
+  arti_puzzgembig,
+  arti_puzzgemred,
+  arti_puzzgemgreen1,
+  arti_puzzgemgreen2,
+  arti_puzzgemblue1,
+  arti_puzzgemblue2,
+  arti_puzzbook1,
+  arti_puzzbook2,
+  arti_puzzskull2,
+  arti_puzzfweapon,
+  arti_puzzcweapon,
+  arti_puzzmweapon,
+  arti_puzzgear1,
+  arti_puzzgear2,
+  arti_puzzgear3,
+  arti_puzzgear4,
+
   NUMARTIFACTS
 } artitype_t;
 
@@ -183,28 +230,27 @@ typedef enum
 //  user has not changed weapon.
 typedef enum
 {
-  wp_nochange = -1, // No pending weapon change.
   wp_doom = 0,
   wp_fist = wp_doom,
+  wp_chainsaw,
   wp_pistol,
   wp_shotgun,
+  wp_supershotgun,
   wp_chaingun,
   wp_missile,
   wp_plasma,
   wp_bfg,
-  wp_chainsaw,
-  wp_supershotgun,
 
   // heretic stuff
   wp_heretic,
   wp_staff = wp_heretic, //=wp_fist,
+  wp_gauntlets,
   wp_goldwand,
   wp_crossbow,
   wp_blaster,
-  wp_skullrod,
   wp_phoenixrod,
+  wp_skullrod,
   wp_mace,
-  wp_gauntlets,
   wp_beak,
 
   wp_hexen,
@@ -223,6 +269,7 @@ typedef enum
   wp_snout,
 
   NUMWEAPONS,
+  wp_nochange = NUMWEAPONS, // No pending weapon change.
   wp_barrel    // barrel explosion
 } weapontype_t;
 
@@ -273,11 +320,11 @@ struct weaponinfo_t
 struct weapondata_t
 {
   int group;   // in which group it resides
+  weapontype_t next; // next weapon in group
   int getammo; // how much ammo does a discarded weapon contain?
 };
 
-extern weapondata_t weapondata[NUMWEAPONS];
-extern weapontype_t wgroups[8][7];
+extern weapondata_t weapondata[NUMWEAPONS+1];
 
 //extern weaponinfo_t doomweaponinfo[NUMWEAPONS];
 extern weaponinfo_t wpnlev1info[NUMWEAPONS];

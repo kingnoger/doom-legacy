@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2003/04/04 00:01:54  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.11  2003/03/08 16:07:02  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -77,6 +80,8 @@
 #include "p_camera.h" // camera
 #include "wi_stuff.h"
 #include "console.h"
+
+#include "w_wad.h"
 #include "z_zone.h"
 
 
@@ -807,8 +812,6 @@ void GameInfo::LevelCompleted()
   // dm nextmap wraparound?
 
   state = GS_INTERMISSION;
-
-  //if (statcopy) memcpy(statcopy, currentlevel, sizeof(*currentlevel));
 
   wi.Start(currentlevel, firstlevel);
 }

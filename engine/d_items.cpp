@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/04/04 00:01:52  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.5  2003/03/15 20:07:13  smite-meister
 // Initial Hexen compatibility!
 //
@@ -46,24 +49,20 @@
 #include "d_items.h"
 
 // "static" weapon data
-weapondata_t weapondata[NUMWEAPONS] =
+weapondata_t weapondata[NUMWEAPONS+1] =
 {
-  {0, 0}, {1, 20}, {2, 8}, {3, 20}, {4, 2}, {5, 40}, {6, 40}, {0, 0}, {2, 8}, // Doom
-  {0, 0}, {1, 25}, {2, 10}, {3, 30}, {5, 50}, {4, 2}, {6, 50}, {0, 0}, {7, 0},  // Heretic
-  {0, 0}, {0, 0}, {0, 0}, {1, 25}, {1, 25}, {1, 25}, {2, 25}, {2, 25}, {2, 25}, {3, 25}, {3, 25}, {3, 25}, {7, 0}  // Hexen
-};
-
-
-weapontype_t wgroups[8][7] =
-{
-  {wp_fist,     wp_chainsaw,   wp_staff,   wp_gauntlets, wp_fpunch,   wp_cmace,    wp_mwand},
-  {wp_pistol,   wp_goldwand,   wp_timons_axe, wp_serpent_staff, wp_cone_of_shards, wp_nochange, wp_nochange},
-  {wp_shotgun,  wp_supershotgun, wp_crossbow, wp_hammer_of_retribution, wp_firestorm, wp_arc_of_death, wp_nochange},
-  {wp_chaingun, wp_blaster,    wp_quietus, wp_wraithverge, wp_bloodscourge, wp_nochange, wp_nochange},
-  {wp_missile,  wp_phoenixrod, wp_nochange, wp_nochange, wp_nochange, wp_nochange, wp_nochange},
-  {wp_plasma,   wp_skullrod,   wp_nochange, wp_nochange, wp_nochange, wp_nochange, wp_nochange},
-  {wp_bfg,      wp_mace,       wp_nochange, wp_nochange, wp_nochange, wp_nochange, wp_nochange},
-  {wp_beak,     wp_snout,      wp_nochange, wp_nochange, wp_nochange, wp_nochange, wp_nochange}
+  // Doom
+  {0, wp_chainsaw, 0}, {0, wp_staff, 0}, {1, wp_goldwand, 20}, {2, wp_supershotgun, 8}, {2, wp_crossbow, 8},
+  {3, wp_blaster, 20}, {4, wp_phoenixrod, 2}, {5, wp_skullrod, 40}, {6, wp_mace, 40},
+  // Heretic
+  {0, wp_gauntlets, 0}, {0, wp_fpunch, 0}, {1, wp_timons_axe, 25}, {2, wp_hammer_of_retribution, 10},
+  {3, wp_quietus, 30}, {4, wp_missile, 2}, {5, wp_plasma, 50}, {6, wp_bfg, 50}, {7, wp_snout, 0},
+  // Hexen
+  {0, wp_cmace, 0}, {0, wp_mwand, 0}, {0, wp_fist, 0}, {1, wp_serpent_staff, 25}, {1, wp_cone_of_shards, 25},
+  {1, wp_pistol, 25}, {2, wp_firestorm, 25}, {2, wp_arc_of_death, 25}, {2, wp_shotgun, 25},
+  {3, wp_wraithverge, 25}, {3, wp_bloodscourge, 25}, {3, wp_chaingun, 25}, {7, wp_beak, 0},
+  // wp_nochange
+  {0, wp_fist, 0}
 };
 
 int maxammo1[NUMAMMO] =
@@ -99,24 +98,24 @@ weaponinfo_t wpnlev1info[NUMWEAPONS] =
 {
   // Doom weapons
   {am_noammo, 0, S_PUNCHUP, S_PUNCHDOWN, S_PUNCH, S_PUNCH1, S_PUNCH1, S_WNULL},             // fist
+  {am_noammo, 0, S_SAWUP, S_SAWDOWN, S_SAW, S_SAW1, S_SAW1, S_WNULL},      // chainsaw
   {am_clip,   1, S_PISTOLUP, S_PISTOLDOWN, S_PISTOL, S_PISTOL1, S_PISTOL1, S_PISTOLFLASH}, // pistol
   {am_shell,  1, S_SGUNUP, S_SGUNDOWN, S_SGUN, S_SGUN1, S_SGUN1, S_SGUNFLASH1},            // shotgun
+  {am_shell,  2, S_DSGUNUP, S_DSGUNDOWN, S_DSGUN, S_DSGUN1, S_DSGUN1, S_DSGUNFLASH1}, // super shotgun
   {am_clip,   1, S_CHAINUP, S_CHAINDOWN, S_CHAIN, S_CHAIN1, S_CHAIN1, S_CHAINFLASH1},      // chaingun
   {am_misl,   1, S_MISSILEUP, S_MISSILEDOWN, S_MISSILE, S_MISSILE1, S_MISSILE1, S_MISSILEFLASH1}, // missile launcher
   {am_cell,   1, S_PLASMAUP, S_PLASMADOWN, S_PLASMA, S_PLASMA1, S_PLASMA1, S_PLASMAFLASH1},       // plasma rifle
   {am_cell,  40, S_BFGUP, S_BFGDOWN, S_BFG, S_BFG1, S_BFG1, S_BFGFLASH1}, // bfg 9000
-  {am_noammo, 0, S_SAWUP, S_SAWDOWN, S_SAW, S_SAW1, S_SAW1, S_WNULL},      // chainsaw
-  {am_shell,  2, S_DSGUNUP, S_DSGUNDOWN, S_DSGUN, S_DSGUN1, S_DSGUN1, S_DSGUNFLASH1}, // super shotgun
 
   // Heretic weapons
   {am_noammo, 0, S_STAFFUP, S_STAFFDOWN, S_STAFFREADY, S_STAFFATK1_1, S_STAFFATK1_1, S_WNULL}, // Staff
+  {am_noammo, 0, S_GAUNTLETUP, S_GAUNTLETDOWN, S_GAUNTLETREADY, S_GAUNTLETATK1_1, S_GAUNTLETATK1_3, S_WNULL}, // Gauntlets
   {am_goldwand, USE_GWND_AMMO_1, S_GOLDWANDUP, S_GOLDWANDDOWN, S_GOLDWANDREADY, S_GOLDWANDATK1_1, S_GOLDWANDATK1_1, S_WNULL}, // Gold wand
   {am_crossbow, USE_CBOW_AMMO_1, S_CRBOWUP, S_CRBOWDOWN, S_CRBOW1, S_CRBOWATK1_1, S_CRBOWATK1_1, S_WNULL}, // Crossbow
   {am_blaster, USE_BLSR_AMMO_1, S_BLASTERUP, S_BLASTERDOWN, S_BLASTERREADY, S_BLASTERATK1_1, S_BLASTERATK1_3, S_WNULL}, // Blaster
-  {am_skullrod, USE_SKRD_AMMO_1, S_HORNRODUP, S_HORNRODDOWN, S_HORNRODREADY, S_HORNRODATK1_1, S_HORNRODATK1_1, S_WNULL}, // Skull rod
   {am_phoenixrod, USE_PHRD_AMMO_1, S_PHOENIXUP, S_PHOENIXDOWN, S_PHOENIXREADY, S_PHOENIXATK1_1, S_PHOENIXATK1_1, S_WNULL}, // Phoenix rod
+  {am_skullrod, USE_SKRD_AMMO_1, S_HORNRODUP, S_HORNRODDOWN, S_HORNRODREADY, S_HORNRODATK1_1, S_HORNRODATK1_1, S_WNULL}, // Skull rod
   {am_mace, USE_MACE_AMMO_1, S_MACEUP, S_MACEDOWN, S_MACEREADY, S_MACEATK1_1, S_MACEATK1_2, S_WNULL}, // Mace
-  {am_noammo, 0, S_GAUNTLETUP, S_GAUNTLETDOWN, S_GAUNTLETREADY, S_GAUNTLETATK1_1, S_GAUNTLETATK1_3, S_WNULL}, // Gauntlets
   {am_noammo, 0, S_BEAKUP, S_BEAKDOWN, S_BEAKREADY, S_BEAKATK1_1, S_BEAKATK1_1, S_WNULL}, // Beak
 
   // Hexen weapons
@@ -142,24 +141,24 @@ weaponinfo_t wpnlev2info[NUMWEAPONS] =
 {
   // Doom weapons
   {am_noammo, 0, S_PUNCHUP, S_PUNCHDOWN, S_PUNCH, S_PUNCH1, S_PUNCH1, S_WNULL},             // fist
+  {am_noammo, 0, S_SAWUP, S_SAWDOWN, S_SAW, S_SAW1, S_SAW1, S_WNULL},      // chainsaw
   {am_clip,   1, S_PISTOLUP, S_PISTOLDOWN, S_PISTOL, S_PISTOL1, S_PISTOL1, S_PISTOLFLASH}, // pistol
   {am_shell,  1, S_SGUNUP, S_SGUNDOWN, S_SGUN, S_SGUN1, S_SGUN1, S_SGUNFLASH1},            // shotgun
+  {am_shell,  2, S_DSGUNUP, S_DSGUNDOWN, S_DSGUN, S_DSGUN1, S_DSGUN1, S_DSGUNFLASH1}, // super shotgun
   {am_clip,   1, S_CHAINUP, S_CHAINDOWN, S_CHAIN, S_CHAIN1, S_CHAIN1, S_CHAINFLASH1},      // chaingun
   {am_misl,   1, S_MISSILEUP, S_MISSILEDOWN, S_MISSILE, S_MISSILE1, S_MISSILE1, S_MISSILEFLASH1}, // missile launcher
   {am_cell,   1, S_PLASMAUP, S_PLASMADOWN, S_PLASMA, S_PLASMA1, S_PLASMA1, S_PLASMAFLASH1},       // plasma rifle
   {am_cell,  40, S_BFGUP, S_BFGDOWN, S_BFG, S_BFG1, S_BFG1, S_BFGFLASH1}, // bfg 9000
-  {am_noammo, 0, S_SAWUP, S_SAWDOWN, S_SAW, S_SAW1, S_SAW1, S_WNULL},      // chainsaw
-  {am_shell,  2, S_DSGUNUP, S_DSGUNDOWN, S_DSGUN, S_DSGUN1, S_DSGUN1, S_DSGUNFLASH1}, // super shotgun
 
   // Heretic weapons
   {am_noammo, 0, S_STAFFUP2, S_STAFFDOWN2, S_STAFFREADY2_1, S_STAFFATK2_1, S_STAFFATK2_1, S_WNULL}, // Staff
+  {am_noammo, 0, S_GAUNTLETUP2, S_GAUNTLETDOWN2, S_GAUNTLETREADY2_1, S_GAUNTLETATK2_1, S_GAUNTLETATK2_3, S_WNULL}, // Gauntlets
   {am_goldwand, USE_GWND_AMMO_2, S_GOLDWANDUP, S_GOLDWANDDOWN, S_GOLDWANDREADY, S_GOLDWANDATK2_1, S_GOLDWANDATK2_1, S_WNULL}, // Gold wand
   {am_crossbow, USE_CBOW_AMMO_2, S_CRBOWUP, S_CRBOWDOWN, S_CRBOW1, S_CRBOWATK2_1, S_CRBOWATK2_1, S_WNULL}, // Crossbow
   {am_blaster, USE_BLSR_AMMO_2, S_BLASTERUP, S_BLASTERDOWN, S_BLASTERREADY, S_BLASTERATK2_1, S_BLASTERATK2_3, S_WNULL}, // Blaster
-  {am_skullrod, USE_SKRD_AMMO_2, S_HORNRODUP, S_HORNRODDOWN, S_HORNRODREADY, S_HORNRODATK2_1, S_HORNRODATK2_1, S_WNULL}, // Skull rod
   {am_phoenixrod, USE_PHRD_AMMO_2, S_PHOENIXUP, S_PHOENIXDOWN, S_PHOENIXREADY, S_PHOENIXATK2_1, S_PHOENIXATK2_2, S_WNULL}, // Phoenix rod
+  {am_skullrod, USE_SKRD_AMMO_2, S_HORNRODUP, S_HORNRODDOWN, S_HORNRODREADY, S_HORNRODATK2_1, S_HORNRODATK2_1, S_WNULL}, // Skull rod
   {am_mace, USE_MACE_AMMO_2, S_MACEUP, S_MACEDOWN, S_MACEREADY, S_MACEATK2_1, S_MACEATK2_1, S_WNULL}, // Mace
-  {am_noammo, 0, S_GAUNTLETUP2, S_GAUNTLETDOWN2, S_GAUNTLETREADY2_1, S_GAUNTLETATK2_1, S_GAUNTLETATK2_3, S_WNULL}, // Gauntlets
   {am_noammo, 0, S_BEAKUP, S_BEAKDOWN, S_BEAKREADY, S_BEAKATK2_1, S_BEAKATK2_1, S_WNULL}, // Beak
 
   // Hexen weapons

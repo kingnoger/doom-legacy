@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/04/04 00:01:58  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.6  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -154,6 +157,7 @@ class sprite_t : public cacheitem_t
   friend class spritepres_t;
   //protected: // FIXME some old code wants to use spriteframes directly. Fix the old code...
 public:
+  int  iname; // sprite name (4 chars) as an int
   int            numframes;
   spriteframe_t *spriteframes;
 };
@@ -195,6 +199,10 @@ public:
   char color;
   int  frame; // temp solution, for flags
 
+  virtual ~presentation_t() = 0;
+
+  virtual bool IsSprite() {return false;}; // damn Doom sprites.
+
   virtual void SetFrame(int fr) = 0; // bad
   virtual void SetAnim(int seq) = 0; // good
 
@@ -215,7 +223,9 @@ public: // for sw renderer, FIXME
 
 public:
   spritepres_t(const char *name, int startframe, int col);
+  virtual ~spritepres_t();
 
+  virtual bool IsSprite() {return true;}; 
   virtual void SetFrame(int fr);
   virtual void SetAnim(int seq);
   virtual void Project(Actor *p);
@@ -241,9 +251,10 @@ class modelpres_t : public presentation_t
 public:
 
   modelpres_t(const char *mname, int col = 0, const char *skin = "default");
+  virtual ~modelpres_t();
 
   virtual void SetFrame(int fr);
-  void SetAnim(int seq);
+  virtual void SetAnim(int seq);
   virtual void Project(Actor *p);
   virtual bool Draw(const Actor *p);
 };

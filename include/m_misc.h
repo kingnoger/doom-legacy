@@ -18,23 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:24  hurdler
-// Initial revision
+// Revision 1.2  2003/04/04 00:01:58  smite-meister
+// bugfixes, Hexen HUD
 //
-// Revision 1.3  2002/07/01 21:00:50  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:25  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.3  2000/04/16 18:38:07  bpereira
-// no message
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
+// Revision 1.1.1.1  2002/11/16 14:18:24  hurdler
+// Initial C++ version of Doom Legacy
 //
 //
 // DESCRIPTION:
@@ -46,54 +34,44 @@
 //-----------------------------------------------------------------------------
 
 
-#ifndef __M_MISC__
-#define __M_MISC__
-
+#ifndef m_misc_h
+#define m_misc_h 1
 
 #include "doomtype.h"
-#include "w_wad.h"
 
 //
 // MISC
 //
 //===========================================================================
 
-bool FIL_WriteFile ( char const*   name,
-                        void*         source,
-                        int           length );
+bool FIL_WriteFile(const char *name, void *source, int length);
 
-int  FIL_ReadFile ( char const*   name,
-                    byte**        buffer );
+int  FIL_ReadFile(const char *name, byte **buffer);
 
-void FIL_DefaultExtension (char *path, char *extension);
+void FIL_DefaultExtension(char *path, char *extension);
 
 //added:11-01-98:now declared here for use by G_DoPlayDemo(), see there...
-void FIL_ExtractFileBase (char* path, char* dest);
+void FIL_ExtractFileBase(char *path, char *dest);
 
-bool FIL_CheckExtension (const char *in);
-
-//===========================================================================
-
-void M_ScreenShot (void);
+bool FIL_CheckExtension(const char *in);
 
 //===========================================================================
 
-extern char   configfile[MAX_WADPATH];
+void M_ScreenShot();
 
-void Command_SaveConfig_f (void);
-void Command_LoadConfig_f (void);
-void Command_ChangeConfig_f (void);
+//===========================================================================
 
-void M_FirstLoadConfig(void);
+extern char configfile[128];
+
+void Command_SaveConfig_f();
+void Command_LoadConfig_f();
+void Command_ChangeConfig_f();
+
+void M_FirstLoadConfig();
 //Fab:26-04-98: save game config : cvars, aliases..
-void M_SaveConfig (char *filename);
+void M_SaveConfig(char *filename);
 
 //===========================================================================
-
-int M_DrawText ( int           x,
-                 int           y,
-                 bool       direct,
-                 char*         string );
 
 // s1=s2+s3+s1 (1024 lenghtmax)
 void strcatbf(char *s1,char *s2,char *s3);

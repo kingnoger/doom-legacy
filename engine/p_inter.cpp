@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2003/04/04 00:01:56  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.11  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -1105,9 +1108,8 @@ bool PlayerPawn::GiveWeapon(weapontype_t wt, bool dropped)
 int green_armor_class, blue_armor_class, soul_health, mega_health;
 
 #define NUMCLASSES 4
-#define NUMARMOR 4
 
-int ArmorIncrement[NUMCLASSES][NUMARMOR] =
+static int ArmorIncrement[NUMCLASSES][NUMARMOR] =
 {
   { 25, 20, 15, 5 },
   { 10, 25, 5, 20 },
@@ -1115,23 +1117,42 @@ int ArmorIncrement[NUMCLASSES][NUMARMOR] =
   { 0, 0, 0, 0 }
 };
 
-int AutoArmorSave[NUMCLASSES] = { 15, 10, 5, 0 };
-int ArmorMax[NUMCLASSES] = { 20, 18, 16, 1 };
+static int ArmorMax[NUMCLASSES] = { 100, 90, 80, 5 };
 
 //
 // was P_GiveArmor
 // Returns false if the armor is worse
 // than the current armor.
 //
-bool PlayerPawn::GiveArmor(int amount)
+bool PlayerPawn::GiveArmor(armortype_t type, float factor, int points)
 {
-  int at = amount / 100;
-  int hits = amount;
-  if (armorpoints >= hits)
-    return false;   // don't pick up
+  // Kludgy mess. The correct way would be making each pickup-item a separate class
+  // with a Give method... same thing with weapons and artifacts
+  if (factor > 0)
+    {
+      // new piece of armor
+      if (points < 0) // means use standard Hexen armor increments
+	points = ArmorIncrement[pclass][type];
 
-  armortype = at;
-  armorpoints = hits;
+      if (armorpoints[type] >= points)
+	return false; // don't pick up
+
+      armorfactor[type] = factor;
+      armorpoints[type] = points;
+    }
+  else
+    {
+      // negative factor means bonus to current armor
+      int i, total = int(100 * toughness);
+      for (i = armor_armor; i < NUMARMOR; i++)
+	total += armorpoints[i];
+
+      if (total >= ArmorMax[pclass])
+	return false;
+
+      armorfactor[type] = 3.0;
+      armorpoints[type] += points;
+    }
 
   return true;
 }
@@ -1303,39 +1324,37 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
   // Identify item
   switch (special->type)
     {
-      /*
     case MT_ARMOR_1:
-      if(!GiveArmor(ARMOR_ARMOR, -1))
+      if (!GiveArmor(armor_armor, 3.0, -1))
 	return;
-      player->message = TXT_ARMOR1;
+      player->message = text[TXT_ARMOR1];
       break;
     case MT_ARMOR_2:
-      if(!GiveArmor(ARMOR_SHIELD, -1))
+      if(!GiveArmor(armor_shield, 3.0, -1))
 	return;
-      player->message = TXT_ARMOR2;
+      player->message = text[TXT_ARMOR2];
       break;
     case MT_ARMOR_3:
-      if(!GiveArmor(ARMOR_HELMET, -1))
+      if(!GiveArmor(armor_helmet, 3.0, -1))
 	return;
-      player->message = TXT_ARMOR3;
+      player->message = text[TXT_ARMOR3];
       break;
     case MT_ARMOR_4:
-      if(!GiveArmor(ARMOR_AMULET, -1))
+      if(!GiveArmor(armor_amulet, 3.0, -1))
 	return;
-      player->message = TXT_ARMOR4;
+      player->message = text[TXT_ARMOR4];
       break;
-      */
 
     case MT_ITEMSHIELD1:
     case MT_GREENARMOR:
-      if (!GiveArmor(special->health))
+      if (!GiveArmor(armor_field, special->info->speed, special->health))
 	return;
       player->message = GOTARMOR;
       break;
 
     case MT_ITEMSHIELD2:
     case MT_BLUEARMOR:
-      if (!GiveArmor(special->health))
+      if (!GiveArmor(armor_field, special->info->speed, special->health))
 	return;
       player->message = GOTMEGA;
       break;
@@ -1349,11 +1368,11 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       break;
 
     case MT_ARMORBONUS:  // spirit armor
-      armorpoints++;          // can go over 100%
-      if (armorpoints > max_armor)
-	armorpoints = max_armor;
-      if (!armortype)
-	armortype = 1;
+      armorpoints[armor_field]++;          // can go over 100%
+      if (armorpoints[armor_field] > max_armor)
+	armorpoints[armor_field] = max_armor;
+      if (armorfactor[0] == 0)
+	armorfactor[0] = 0.333f;
       if (cv_showmessages.value==1)
 	player->message = GOTARMBONUS;
       break;
@@ -1370,7 +1389,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       health += special->health;
       if (health > 2*maxhealth)
 	health = 2*maxhealth;
-      GiveArmor(special->health);
+      GiveArmor(armor_field, 0.5, special->health);
       player->message = GOTMSPHERE;
       sound = sfx_getpow;
       break;
@@ -2127,7 +2146,7 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 	}
     }
 
-
+  int i, temp;
   // player specific
   if (!(flags & MF_CORPSE))
     {
@@ -2140,24 +2159,47 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
       // ignore damage in GOD mode, or with INVUL power.
       if ((cheats & CF_GODMODE) || powers[pw_invulnerability])
 	return false;
-      
-      if (armortype)
-        {
-	  int saved;
-	  if (armortype == 1)
-	    saved = game.mode == gm_heretic ? damage>>1 : damage/3;
-	  else
-	    saved = game.mode == gm_heretic ? (damage>>1)+(damage>>2) : damage/2;
 
-	  if (armorpoints <= saved)
+      // doom armor
+      temp = armorpoints[armor_field];
+      if (temp > 0)
+        {
+	  int saved = int(damage * armorfactor[armor_field]);
+
+	  if (temp <= saved)
             {
 	      // armor is used up
-	      saved = armorpoints;
-	      armortype = 0;
+	      saved = temp;
+	      armorfactor[armor_field] = 0;
             }
-	  armorpoints -= saved;
+	  armorpoints[armor_field] -= saved;
 	  damage -= saved;
         }
+
+      // hexen armor
+      float save = toughness;
+      for (i = armor_armor; i < NUMARMOR; i++)
+	save += float(armorpoints[i])/100;
+      if (save > 0)
+	{
+	  // armor absorbed some damage
+	  if (save > 1)
+	    save = 1;
+
+	  // armor deteriorates
+	  for (i = armor_armor; i < NUMARMOR; i++)
+	    if (armorpoints[i])
+	      {
+		armorpoints[i] -= int(damage * ArmorIncrement[pclass][i] / (100 * armorfactor[i]));
+		if (armorpoints[i] <= 2)
+		  armorpoints[i] = 0;
+	      }
+
+	  int saved = int(damage * save);
+	  if (damage > 200)
+	    saved = int(200 * save);
+	  damage -= saved;
+	}      
 
       PlayerPawn *s = NULL;
       if (source && source->Type() == Thinker::tt_ppawn)
@@ -2249,7 +2291,7 @@ bool PlayerPawn::Morph()
   //chicken->player = player;
   //chicken->health = MAXCHICKENHEALTH;
   //player->mo = chicken;
-  armorpoints = armortype = 0;
+  armorpoints[0] = armorfactor[0] = 0;
   powers[pw_invisibility] = 0;
   powers[pw_weaponlevel2] = 0;
   weaponinfo = wpnlev1info;

@@ -18,38 +18,11 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/04/04 00:01:58  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.2  2002/12/03 10:26:38  smite-meister
 // ...
-//
-// Revision 1.4  2002/07/15 20:52:42  vberghol
-// w_wad.cpp (FileCache class) finally fixed
-//
-// Revision 1.3  2002/07/01 21:01:08  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:37  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.8  2001/03/03 06:17:33  bpereira
-// no message
-//
-// Revision 1.7  2001/02/24 13:35:20  bpereira
-// no message
-//
-// Revision 1.6  2001/01/25 22:15:42  bpereira
-// added heretic support
-//
-// Revision 1.5  2000/10/08 13:30:01  bpereira
-// no message
-//
-// Revision 1.4  2000/09/28 20:57:15  bpereira
-// no message
-//
-// Revision 1.3  2000/04/16 18:38:07  bpereira
-// no message
-//
-// Revision 1.2  2000/02/26 00:28:42  hurdler
-// Mostly bug fix (see borislog.txt 23-2-2000, 24-2-2000)
 //
 //
 // DESCRIPTION:
@@ -77,14 +50,16 @@
 #include "d_main.h"
 #include "m_argv.h"
 
+#include "w_wad.h"
+
 #ifdef HWRENDER
 # include "hardware/hw_main.h"
 #endif
 
+
 // ==========================================================================
 //                         FILE INPUT / OUTPUT
 // ==========================================================================
-
 
 //
 // FIL_WriteFile
@@ -93,111 +68,94 @@
 //#define O_BINARY 0
 //#endif
 
-bool FIL_WriteFile ( char const*   name,
-                        void*         source,
-                        int           length )
+bool FIL_WriteFile(const char *name, void *source, int length)
 {
-    int         handle;
-    int         count;
+  int handle = open(name, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, 0666);
 
-    handle = open ( name, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, 0666);
+  if (handle == -1)
+    return false;
 
-    if (handle == -1)
-        return false;
+  int count = write(handle, source, length);
+  close(handle);
 
-    count = write (handle, source, length);
-    close (handle);
+  if (count < length)
+    return false;
 
-    if (count < length)
-        return false;
-
-    return true;
+  return true;
 }
 
 
 //
 // FIL_ReadFile : return length, 0 on error
 //
-//Fab:26-04-98:
-//  appends a zero byte at the end
-int FIL_ReadFile ( char const*   name,
-                   byte**        buffer )
+int FIL_ReadFile(const char *name, byte **buffer)
 {
-    int    handle, count, length;
-    struct stat fileinfo;
-    byte   *buf;
+  struct stat fileinfo;
 
-    handle = open (name, O_RDONLY | O_BINARY, 0666);
-    if (handle == -1)
-        return 0;
+  int handle = open(name, O_RDONLY | O_BINARY, 0666);
 
-    if (fstat (handle,&fileinfo) == -1)
-        return 0;
+  if (handle == -1)
+    return 0;
 
-    length = fileinfo.st_size;
-    buf = (byte *)Z_Malloc (length+1, PU_STATIC, 0);
-    count = read (handle, buf, length);
-    close (handle);
+  if (fstat(handle, &fileinfo) == -1)
+    return 0;
 
-    if (count < length)
-        return 0;
+  int length = fileinfo.st_size;
+  byte *buf = (byte *)Z_Malloc(length+1, PU_STATIC, 0);
 
-    //Fab:26-04-98:append 0 byte for script text files
-    buf[length]=0;
+  int count = read(handle, buf, length);
+  close(handle);
 
-    *buffer = buf;
-    return length;
+  if (count < length)
+    return 0;
+
+  //Fab:26-04-98:append 0 byte for script text files
+  buf[length] = 0;
+
+  *buffer = buf;
+  return length;
 }
 
 
 //
 // checks if needed, and add default extension to filename
 //
-void FIL_DefaultExtension (char *path, char *extension)
+void FIL_DefaultExtension(char *path, char *extension)
 {
-    char    *src;
-
   // search for '.' from end to begin, add .EXT only when not found
-    src = path + strlen(path) - 1;
+  char *src = path + strlen(path) - 1;
 
-    while (*src != '/' && src != path)
+  while (*src != '/' && src != path)
     {
-        if (*src == '.')
-            return;                 // it has an extension
-        src--;
+      if (*src == '.')
+	return;                 // it has an extension
+      src--;
     }
 
-    strcat (path, extension);
+  strcat(path, extension);
 }
 
 
 //  Creates a resource name (max 8 chars 0 padded) from a file path
 //
-void FIL_ExtractFileBase ( char*  path,  char* dest )
+void FIL_ExtractFileBase(char *path, char *dest)
 {
-    char*       src;
-    int         length;
+  char *src = path + strlen(path) - 1;
 
-    src = path + strlen(path) - 1;
+  // back up until a \ or the start
+  while (src != path && *(src-1) != '\\' && *(src-1) != '/')
+    src--;
 
-    // back up until a \ or the start
-    while (src != path
-           && *(src-1) != '\\'
-           && *(src-1) != '/')
+  // copy up to eight characters
+  memset(dest, 0, 8);
+  int length = 0;
+
+  while (*src && *src != '.')
     {
-        src--;
-    }
+      if (++length == 9)
+	I_Error("Filename base of %s >8 chars",path);
 
-    // copy up to eight characters
-    memset (dest,0,8);
-    length = 0;
-
-    while (*src && *src != '.')
-    {
-        if (++length == 9)
-            I_Error ("Filename base of %s >8 chars",path);
-
-        *dest++ = toupper((int)*src++);
+      *dest++ = toupper((int)*src++);
     }
 }
 
@@ -205,7 +163,7 @@ void FIL_ExtractFileBase ( char*  path,  char* dest )
 //  Returns true if a filename extension is found
 //  There are no '.' in wad resource name
 //
-bool FIL_CheckExtension (const char *in)
+bool FIL_CheckExtension(const char *in)
 {
   while (*in++)
     if (*in=='.')
@@ -222,8 +180,9 @@ bool FIL_CheckExtension (const char *in)
 //
 // DEFAULTS
 //
+#define MAX_CONFIGNAME 128
 
-char   configfile[MAX_WADPATH];
+char   configfile[MAX_CONFIGNAME];
 
 // ==========================================================================
 //                          CONFIGURATION
@@ -234,7 +193,7 @@ bool         gameconfig_loaded = false;      // true once config.cfg loaded
 
 void Command_SaveConfig_f (void)
 {
-    char tmpstr[MAX_WADPATH];
+    char tmpstr[MAX_CONFIGNAME];
 
     if (COM_Argc()!=2)
     {
@@ -456,11 +415,11 @@ bool WritePCXfile ( char*         filename,
 //
 // M_ScreenShot
 //
-void M_ScreenShot (void)
+void M_ScreenShot()
 {
   int         i;
   byte*       linear;
-  char        lbmname[MAX_WADPATH];
+  char        lbmname[MAX_CONFIGNAME];
   bool     ret = false;
 
 #ifdef HWRENDER 

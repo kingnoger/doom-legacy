@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.11  2003/04/04 00:01:54  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.10  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -110,6 +113,7 @@ PlayerInfo::PlayerInfo(const string & n)
   number = 0;
   team = 0;
   pawntype = 0;
+  pclass = 0;
   color = 0;
 
   message = NULL;

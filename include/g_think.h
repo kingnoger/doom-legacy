@@ -3,8 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2002 by DooM Legacy Team.
+// Copyright (C) 2002-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/04/04 00:01:57  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.4  2003/03/15 20:07:21  smite-meister
 // Initial Hexen compatibility!
 //
@@ -40,8 +42,6 @@
 #ifndef g_think_h
 #define g_think_h 1
 
-#include <stddef.h>
-
 // Thinkers are used to implement all dynamic properties of a Doom map,
 // eg. monsters, moving doors etc.
 
@@ -55,12 +55,6 @@
 // The normal way to invoke a thinker descendant is to call its "function" (acp1) with one parameter,
 // a pointer to the class itself. This is just like a C++ method call passing the implicit
 // 'this' pointer to a method.
-
-// acv is not really used at all (only dummy use)
-// acp2 is used to update player weapon state, through the
-// player mobj_t state variable, but not by thinkers.
-
-
 
 // mobj_t : one function pointer in thinker_t (always P_MobjThinker), another available through state,
 //     called _by_ P_MobjThinker.
@@ -88,15 +82,25 @@
 
 // discrepancies towards a new-class -style mobj creation: P_BlasterMobjThinker (mobj_t)
 
+#include <map>
+#include <vector>
+
 
 class Map;
 class LArchive;
 
-// Doubly linked list of action functions
+
+// Dynamic map elements, stored in a doubly linked list.
+// Base class for most game objects.
 class Thinker
 {
   friend class Map;
 private:
+  typedef std::map<Thinker *, int> IDmap_t;
+  typedef std::vector<Thinker *> IDvec_t;
+  typedef std::map<Thinker *, int>::iterator IDmap_iter_t;
+  static IDmap_t IDmap;
+
   Thinker  *prev;
   Thinker  *next;
 public:
@@ -120,6 +124,7 @@ public:
   virtual ~Thinker();
 
   // serialization (save/load)
+  virtual bool AddToIDmap();
   virtual int Serialize(LArchive & a);
 
   // what it actually does;)

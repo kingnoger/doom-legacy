@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2003/04/04 00:01:52  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.12  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -814,8 +817,9 @@ void D_IdentifyVersion()
 {
   // the file where all game vars and settings are saved
 #define CONFIGFILENAME   "config.cfg"
+
   
-  char  pathtemp[_MAX_PATH];
+ char  pathtemp[_MAX_PATH];
   
 #ifdef LINUX_X11 // change to the directory where 'legacy.wad' is found
   I_LocateWad();
@@ -1118,6 +1122,8 @@ void D_CheckWadVersion()
 }
 
 
+extern char savegamename[256]; // temporary, FIXME
+
 //
 // D_DoomMain
 //
@@ -1269,10 +1275,17 @@ void D_DoomMain()
   // adapt tables to legacy needs
   P_PatchInfoTables();
 
-  DoomPatchEngine(); // FIXME, TODO temporary solution, we must be able to switch game.mode anytime!
-
-  if (game.mode == gm_heretic)
-    HereticPatchEngine();
+  switch (game.mode)
+    {
+    case gm_hexen:
+      HexenPatchEngine();
+      break;
+    case gm_heretic:
+      HereticPatchEngine();
+      break;
+    default:
+      DoomPatchEngine(); // FIXME, TODO temporary solution, we must be able to switch game.mode anytime!
+    }
 
   // initialize file cache
   CONS_Printf (text[W_INIT_NUM]);  

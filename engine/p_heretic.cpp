@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/04/04 00:01:56  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.8  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -326,12 +329,7 @@ void HereticPatchEngine()
   text[GOTYELWCARD_NUM] = "YELLOW KEY";
   text[GOTREDCARD_NUM ] = "GREEN KEY";
 
-  strcpy(S_sfx[sfx_swtchn].lumpname, "switch");
-  S_sfx[sfx_swtchn].priority = 40;
-  strcpy(S_sfx[sfx_swtchx].lumpname, "switch");
-  S_sfx[sfx_swtchx].priority = 40;
   S_sfx[sfx_telept].priority = 50;
-
 
   // console alert
   strcpy(S_sfx[sfx_tink].lumpname, "chat");

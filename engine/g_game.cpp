@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/04/04 00:01:53  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.8  2003/03/08 16:07:00  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -59,6 +62,7 @@
 #include "g_player.h"
 #include "g_map.h"
 #include "g_pawn.h"
+#include "g_save.h"
 
 #include "d_items.h"
 #include "g_input.h"
@@ -102,10 +106,6 @@
 #ifdef HWRENDER 
 # include "hardware/hw_main.h"
 #endif
-
-
-byte *savebuffer;
-void *statcopy;                      // for statistics driver
 
 
 tic_t   gametic;
@@ -156,6 +156,26 @@ static fixed_t sidemove[2]    = {24/NEWTICRATERATIO, 40/NEWTICRATERATIO};
 // There is no more turbo cheat, you should modify the pawn's max speed instead
 static char forwardmove[2] = {50, 100};
 static char sidemove[2]    = {48, 80};
+
+/*
+fixed_t MaxPlayerMove[NUMCLASSES] = { 60, 50, 45, 49 };
+
+fixed_t Forwardmove[NUMCLASSES][2] = 
+{
+  { 29, 60 }, // 1.2
+  { 25, 50 }, // 1
+  { 22, 46 }, // 0.92
+  { 24, 49 }  //0.96
+};
+
+fixed_t sidemove[NUMCLASSES][2] = 
+{
+  { 27, 59 }, 
+  { 24, 40 },
+  { 21, 37 },
+  { 23, 39 }
+};
+*/
 
 static fixed_t angleturn[3]   = {640, 1280, 320};  // + slow turn
 #define MAXPLMOVE (forwardmove[1])
@@ -879,11 +899,15 @@ void G_LoadGame(int slot)
 
 // was G_DoLoadGame
 
+char savegamename[256];
+
 void GameInfo::LoadGame(int slot)
 {
   int         length;
   char        vcheck[VERSIONSIZE];
   char        savename[255];
+
+  byte *savebuffer;
 
   sprintf(savename, savegamename, slot);
 
@@ -962,6 +986,21 @@ const int SAVEGAMESIZE = (128*1024);
 
 void GameInfo::SaveGame(int savegameslot, char *savedescription)
 {
+  if (action != ga_nothing)
+    return; // not while changing state
+
+  // loading:
+  // check magic & version
+  // check if required resource files are to be found / can be downloaded
+  // uncompress rest of the file if necessary
+  // read consvars
+  // read player info (netgame? authentication?)
+  // read levelgraph
+  // read map name(s), load them from wads?
+  // read global scripts
+  // read saved maps
+
+
   // FIXME
   // this is how it should go:
   // Here we create an instance of an Archive class.
@@ -971,16 +1010,19 @@ void GameInfo::SaveGame(int savegameslot, char *savedescription)
   // Archive is closed.
   // FIXME right now p_saveg.cpp is mostly commented out.
 
+  /*
+  LArchive *ar = new LArchive();
+
   char        name2[VERSIONSIZE];
   char        description[SAVESTRINGSIZE];
   int         length;
   char        name[256];
 
-  action = ga_nothing;
+  byte *savebuffer = (byte *)malloc(SAVEGAMESIZE);
 
   sprintf(name, savegamename, savegameslot);
 
-  save_p = savebuffer = (byte *)malloc(SAVEGAMESIZE);
+  save_p = savebuffer = 
   if(!save_p)
     {
       CONS_Printf ("No More free memory for savegame\n");
@@ -1005,7 +1047,7 @@ void GameInfo::SaveGame(int savegameslot, char *savedescription)
   action = ga_nothing;
 
   consoleplayer->message = GGSAVED;
-
+  */
   // draw the pattern into the back screen
   R_FillBackScreen ();
 }

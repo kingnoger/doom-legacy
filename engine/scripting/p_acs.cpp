@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/04/04 00:01:57  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.2  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -1739,31 +1742,29 @@ static int CmdSetLineTexture()
   int side;
   int position;
   int texture;
-  int searcher;
+  int s;
 
   texture = R_TextureNumForName(ACMap->ACStrings[Pop()]);
   position = Pop();
   side = Pop();
   lineTag = Pop();
-  searcher = -1;
-  /*
-    FIXME urgh. Somehow this Hexen P_FindLine should be replaced with the corresponding BOOM function used in Legacy...
-  while((line = P_FindLine(lineTag, &searcher)) != NULL)
+
+  for (s = -1; (line = ACMap->FindLineFromTag(lineTag, &s)) != NULL; )
     {
-      if(position == TEXTURE_MIDDLE)
+      if (position == TEXTURE_MIDDLE)
 	{
-	  sides[line->sidenum[side]].midtexture = texture;
+	  ACMap->sides[line->sidenum[side]].midtexture = texture;
 	}
-      else if(position == TEXTURE_BOTTOM)
+      else if (position == TEXTURE_BOTTOM)
 	{
-	  sides[line->sidenum[side]].bottomtexture = texture;
+	  ACMap->sides[line->sidenum[side]].bottomtexture = texture;
 	}
       else
 	{ // TEXTURE_TOP
-	  sides[line->sidenum[side]].toptexture = texture;
+	  ACMap->sides[line->sidenum[side]].toptexture = texture;
 	}
     }
-  */
+
   return SCRIPT_CONTINUE;
 }
 
@@ -1772,17 +1773,16 @@ static int CmdSetLineBlocking()
   line_t *line;
   int lineTag;
   int blocking;
-  int searcher;
+  int s;
 
   blocking = Pop() ? ML_BLOCKING : 0;
   lineTag = Pop();
-  searcher = -1;
-  /*
-  while((line = P_FindLine(lineTag, &searcher)) != NULL)
+
+  for (s = -1; (line = ACMap->FindLineFromTag(lineTag, &s)) != NULL; )
     {
       line->flags = (line->flags&~ML_BLOCKING) | blocking;
     }
-  */
+
   return SCRIPT_CONTINUE;
 }
 
@@ -1791,7 +1791,7 @@ static int CmdSetLineSpecial()
   line_t *line;
   int lineTag;
   int special, arg1, arg2, arg3, arg4, arg5;
-  int searcher;
+  int s;
 
   arg5 = Pop();
   arg4 = Pop();
@@ -1800,17 +1800,16 @@ static int CmdSetLineSpecial()
   arg1 = Pop();
   special = Pop();
   lineTag = Pop();
-  searcher = -1;
-  /*
-  while((line = P_FindLine(lineTag, &searcher)) != NULL)
+
+  for (s = -1; (line = ACMap->FindLineFromTag(lineTag, &s)) != NULL; )
     {
       line->special = special;
-      line->arg1 = arg1;
-      line->arg2 = arg2;
-      line->arg3 = arg3;
-      line->arg4 = arg4;
-      line->arg5 = arg5;
+      line->args[0] = arg1;
+      line->args[1] = arg2;
+      line->args[2] = arg3;
+      line->args[3] = arg4;
+      line->args[4] = arg5;
     }
-  */
+
   return SCRIPT_CONTINUE;
 }

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/04/04 00:01:57  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.7  2003/03/08 16:07:11  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -265,6 +268,7 @@ void HUD::Startup()
 // was ST_Init, HU_Init
 //  Initializes the HUD
 //  sets the defaults border patch for the window borders.
+void ST_LoadHexenData();
 void ST_LoadHereticData();
 void ST_LoadDoomData();
 
@@ -315,6 +319,9 @@ void HUD::Init()
 
   switch (game.mode)
     {
+    case gm_hexen:
+      ST_LoadHexenData();
+      break;
     case gm_heretic:
       ST_LoadHereticData();
       break;

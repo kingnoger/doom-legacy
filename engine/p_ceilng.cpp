@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/04/04 00:01:56  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.2  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -37,7 +40,7 @@
 #include "s_sound.h"
 #include "sounds.h"
 #include "z_zone.h"
-#include "g_game.h" // FIXME! temp
+
 
 // ==========================================================================
 //                              CEILINGS
@@ -115,7 +118,6 @@ ceiling_t::ceiling_t(ceiling_e ty, sector_t *s, int t)
 void ceiling_t::Think()
 {
   result_e    res;
-  //Map *mp = game.maps[0]; // FIXME! must get right Map* from somewhere!
 
   switch(direction)
     {
@@ -408,7 +410,6 @@ int Map::EV_CeilingCrushStop(line_t *line)
 	{
 	  ceil->olddirection = ceil->direction;
 	  ceil->direction = 0;
-	  //ceiling->thinker.function.acv = (actionf_v)NULL; // FIXME put in stasis
 	  rtn = 1;
 	}
     }
@@ -423,7 +424,7 @@ int Map::EV_CeilingCrushStop(line_t *line)
     {
       ceiling->olddirection = ceiling->direction;
       ceiling->direction = 0;
-      //ceiling->thinker.function.acv = (actionf_v)NULL; // FIXME put in stasis
+      ceiling->thinker.function.acv = (actionf_v)NULL;
       rtn = 1;
     }
   }

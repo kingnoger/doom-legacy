@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/04/04 00:01:57  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.5  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -265,8 +268,8 @@ int Map::EV_SilentLineTeleport(line_t *line, int side, Actor *thing, bool revers
   if (side || thing->flags & MF_MISSILE)
     return 0;
 
-  for (i = -1; (i = FindLineFromLineTag(line, i)) >= 0;)
-    if ((l=lines+i) != line && l->backsector)
+  for (i = -1; (l = FindLineFromTag(line->tag, &i)) != NULL;)
+    if (l != line && l->backsector)
       {
         // Get the thing's position along the source linedef
         fixed_t pos = abs(line->dx) > abs(line->dy) ?

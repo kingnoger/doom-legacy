@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/04/04 00:01:57  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.4  2003/03/15 20:07:17  smite-meister
 // Initial Hexen compatibility!
 //
@@ -29,57 +32,6 @@
 //
 // Revision 1.1.1.1  2002/11/16 14:18:04  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.11  2002/09/25 15:17:38  vberghol
-// Intermission fixed?
-//
-// Revision 1.7  2002/08/21 16:58:34  vberghol
-// Version 1.41 Experimental compiles and links!
-//
-// Revision 1.6  2002/08/08 18:36:25  vberghol
-// p_spec.cpp fixed
-//
-// Revision 1.5  2002/08/08 12:01:29  vberghol
-// pian engine on valmis!
-//
-// Revision 1.4  2002/07/23 19:21:44  vberghol
-// fixed up to p_enemy.cpp
-//
-// Revision 1.3  2002/07/01 21:00:21  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:16  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.10  2001/04/18 21:00:22  metzgermeister
-// fix crash bug
-//
-// Revision 1.9  2001/02/24 13:35:21  bpereira
-// no message
-//
-// Revision 1.8  2001/01/25 22:15:44  bpereira
-// added heretic support
-//
-// Revision 1.7  2000/11/02 17:50:09  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.6  2000/09/28 20:57:17  bpereira
-// no message
-//
-// Revision 1.5  2000/04/16 18:38:07  bpereira
-// no message
-//
-// Revision 1.4  2000/04/06 20:40:22  hurdler
-// Mostly remove warnings under windows
-//
-// Revision 1.3  2000/04/04 00:32:47  stroggonmeth
-// Initial Boom compatability plus few misc changes all around.
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //
 // DESCRIPTION:
@@ -109,96 +61,118 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
-//
-// CHANGE THE TEXTURE OF A WALL SWITCH TO ITS OPPOSITE
-//
-switchlist_t DoomSwitchList[] =
+struct switchdef_t
 {
-  // Doom shareware episode 1 switches
-  {"SW1BRCOM","SW2BRCOM",     1},
-  {"SW1BRN1", "SW2BRN1",      1},
-  {"SW1BRN2", "SW2BRN2",      1},
-  {"SW1BRNGN","SW2BRNGN",     1},
-  {"SW1BROWN","SW2BROWN",     1},
-  {"SW1COMM", "SW2COMM",      1},
-  {"SW1COMP", "SW2COMP",      1},
-  {"SW1DIRT", "SW2DIRT",      1},
-  {"SW1EXIT", "SW2EXIT",      1},
-  {"SW1GRAY", "SW2GRAY",      1},
-  {"SW1GRAY1","SW2GRAY1",     1},
-  {"SW1METAL","SW2METAL",     1},
-  {"SW1PIPE", "SW2PIPE",      1},
-  {"SW1SLAD", "SW2SLAD",      1},
-  {"SW1STARG","SW2STARG",     1},
-  {"SW1STON1","SW2STON1",     1},
-  {"SW1STON2","SW2STON2",     1},
-  {"SW1STONE","SW2STONE",     1},
-  {"SW1STRTN","SW2STRTN",     1},
-
-  // Doom registered episodes 2&3 switches
-  {"SW1BLUE", "SW2BLUE",      2},
-  {"SW1CMT",  "SW2CMT",       2},
-  {"SW1GARG", "SW2GARG",      2},
-  {"SW1GSTON","SW2GSTON",     2},
-  {"SW1HOT",  "SW2HOT",       2},
-  {"SW1LION", "SW2LION",      2},
-  {"SW1SATYR","SW2SATYR",     2},
-  {"SW1SKIN", "SW2SKIN",      2},
-  {"SW1VINE", "SW2VINE",      2},
-  {"SW1WOOD", "SW2WOOD",      2},
-
-    // Doom II switches
-  {"SW1PANEL","SW2PANEL",     3},
-  {"SW1ROCK", "SW2ROCK",      3},
-  {"SW1MET2", "SW2MET2",      3},
-  {"SW1WDMET","SW2WDMET",     3},
-  {"SW1BRIK", "SW2BRIK",      3},
-  {"SW1MOD1", "SW2MOD1",      3},
-  {"SW1ZIM",  "SW2ZIM",       3},
-  {"SW1STON6","SW2STON6",     3},
-  {"SW1TEK",  "SW2TEK",       3},
-  {"SW1MARB", "SW2MARB",      3},
-  {"SW1SKULL","SW2SKULL",     3},
-
-  {"\0",      "\0",           0}
+  char name1[9], name2[9];
+  short sound;
+  short episode;
 };
 
-switchlist_t HereticSwitchList[] =
+switchdef_t DoomSwitchList[] =
+{
+  // Doom shareware episode 1 switches
+  {"SW1BRCOM","SW2BRCOM", sfx_swtchn, 1},
+  {"SW1BRN1", "SW2BRN1",  sfx_swtchn, 1},
+  {"SW1BRN2", "SW2BRN2",  sfx_swtchn, 1},
+  {"SW1BRNGN","SW2BRNGN", sfx_swtchn, 1},
+  {"SW1BROWN","SW2BROWN", sfx_swtchn, 1},
+  {"SW1COMM", "SW2COMM",  sfx_swtchn, 1},
+  {"SW1COMP", "SW2COMP",  sfx_swtchn, 1},
+  {"SW1DIRT", "SW2DIRT",  sfx_swtchn, 1},
+  {"SW1EXIT", "SW2EXIT",  sfx_swtchn, 1},
+  {"SW1GRAY", "SW2GRAY",  sfx_swtchn, 1},
+  {"SW1GRAY1","SW2GRAY1", sfx_swtchn, 1},
+  {"SW1METAL","SW2METAL", sfx_swtchn, 1},
+  {"SW1PIPE", "SW2PIPE",  sfx_swtchn, 1},
+  {"SW1SLAD", "SW2SLAD",  sfx_swtchn, 1},
+  {"SW1STARG","SW2STARG", sfx_swtchn, 1},
+  {"SW1STON1","SW2STON1", sfx_swtchn, 1},
+  {"SW1STON2","SW2STON2", sfx_swtchn, 1},
+  {"SW1STONE","SW2STONE", sfx_swtchn, 1},
+  {"SW1STRTN","SW2STRTN", sfx_swtchn, 1},
+
+  // Doom registered episodes 2&3 switches
+  {"SW1BLUE", "SW2BLUE",  sfx_swtchn, 2},
+  {"SW1CMT",  "SW2CMT",   sfx_swtchn, 2},
+  {"SW1GARG", "SW2GARG",  sfx_swtchn, 2},
+  {"SW1GSTON","SW2GSTON", sfx_swtchn, 2},
+  {"SW1HOT",  "SW2HOT",   sfx_swtchn, 2},
+  {"SW1LION", "SW2LION",  sfx_swtchn, 2},
+  {"SW1SATYR","SW2SATYR", sfx_swtchn, 2},
+  {"SW1SKIN", "SW2SKIN",  sfx_swtchn, 2},
+  {"SW1VINE", "SW2VINE",  sfx_swtchn, 2},
+  {"SW1WOOD", "SW2WOOD",  sfx_swtchn, 2},
+
+    // Doom II switches
+  {"SW1PANEL","SW2PANEL", sfx_swtchn, 3},
+  {"SW1ROCK", "SW2ROCK",  sfx_swtchn, 3},
+  {"SW1MET2", "SW2MET2",  sfx_swtchn, 3},
+  {"SW1WDMET","SW2WDMET", sfx_swtchn, 3},
+  {"SW1BRIK", "SW2BRIK",  sfx_swtchn, 3},
+  {"SW1MOD1", "SW2MOD1",  sfx_swtchn, 3},
+  {"SW1ZIM",  "SW2ZIM",   sfx_swtchn, 3},
+  {"SW1STON6","SW2STON6", sfx_swtchn, 3},
+  {"SW1TEK",  "SW2TEK",   sfx_swtchn, 3},
+  {"SW1MARB", "SW2MARB",  sfx_swtchn, 3},
+  {"SW1SKULL","SW2SKULL", sfx_swtchn, 3},
+
+  {"\0",      "\0",       sfx_swtchn, 0}
+};
+
+switchdef_t HereticSwitchList[] =
 {
   // heretic
-  {"SW1OFF",  "SW1ON",        4},
-  {"SW2OFF",  "SW2ON",        4},
+  {"SW1OFF",  "SW1ON", sfx_switch, 1},
+  {"SW2OFF",  "SW2ON", sfx_switch, 1},
 
-  {"\0",      "\0",           0}
+  {"\0",      "\0",    sfx_switch, 0}
 };
 
 // TODO Hexen switch sounds
-switchlist_t HexenSwitchList[] =
+switchdef_t HexenSwitchList[] =
 {
-  {"SW_1_UP",  "SW_1_DN", 1}, // SFX_SWITCH1},
-  {"SW_2_UP",  "SW_2_DN", 1}, // SFX_SWITCH1},
-  {"VALVE1",   "VALVE2",  1}, // SFX_VALVE_TURN},
-  {"SW51_OFF", "SW51_ON", 1}, // SFX_SWITCH2},
-  {"SW52_OFF", "SW52_ON", 1}, // SFX_SWITCH2},
-  {"SW53_UP",  "SW53_DN", 1}, // SFX_ROPE_PULL},
-  {"PUZZLE5",  "PUZZLE9", 1}, // SFX_SWITCH1},
-  {"PUZZLE6",  "PUZZLE10", 1}, // SFX_SWITCH1},
-  {"PUZZLE7",  "PUZZLE11", 1}, // SFX_SWITCH1},
-  {"PUZZLE8",  "PUZZLE12", 1}, // SFX_SWITCH1},
-  {"\0",       "\0", 0}
+  {"SW_1_UP",  "SW_1_DN", SFX_SWITCH1, 1},
+  {"SW_2_UP",  "SW_2_DN", SFX_SWITCH1, 1},
+  {"VALVE1",   "VALVE2",  SFX_VALVE_TURN, 1},
+  {"SW51_OFF", "SW51_ON", SFX_SWITCH2, 1},
+  {"SW52_OFF", "SW52_ON", SFX_SWITCH2, 1},
+  {"SW53_UP",  "SW53_DN", SFX_ROPE_PULL, 1},
+  {"PUZZLE5",  "PUZZLE9", SFX_SWITCH1, 1},
+  {"PUZZLE6",  "PUZZLE10", SFX_SWITCH1, 1},
+  {"PUZZLE7",  "PUZZLE11", SFX_SWITCH1, 1},
+  {"PUZZLE8",  "PUZZLE12", SFX_SWITCH1, 1},
+  {"\0",       "\0",       SFX_SWITCH1, 0}
 };
 
-// list of switch texture numbers (on/off states), common to all maps
-static vector<int> switchlist;
 
-//
+// this must not be changed, since it is used to interpret the Boom SWITCHES lump
+#pragma pack(1)
+struct switches_t
+{
+  char   name1[9];
+  char   name2[9];
+  short  episode;
+};
+#pragma pack()
+
+
+struct switchlist_t
+{
+  int tex;
+  short sound;
+};
+
+// list of switch types, common to all maps
+static vector<switchlist_t> switchlist;
+
+
 // P_InitSwitchList
 // this is now called at GI::Startlevel()
-//
+// FIXME should each map have its own swlist? same goes with animated flats/textures?
 void P_InitSwitchList()
 {
-  int i, nameset = 0;
-  switchlist_t *sl = DoomSwitchList;
+  int i, n, nameset;
+  switchdef_t *sd = DoomSwitchList;
 
   switch (game.mode)
     {
@@ -210,42 +184,58 @@ void P_InitSwitchList()
       nameset = 3;
       break;
     case gm_heretic:
-      sl = HereticSwitchList;
-      nameset = 4;
+      sd = HereticSwitchList;
+      nameset = 1;
       break;
     case gm_hexen:
-      sl = HexenSwitchList;
+      sd = HexenSwitchList;
       nameset = 1;
       break;
     default:
       nameset = 1;
     }
 
-  // Boom SWITCHES lump present?
-  if (fc.FindNumForName("SWITCHES") != -1)
-    {
-      // sl is not needed anymore after this function, therefore not PU_STATIC
-      sl = (switchlist_t *)fc.CacheLumpName("SWITCHES", PU_CACHE);
-      // endian conversion only when loading from extra lump
-      for (i=0; sl[i].episode != 0; i++)
-        sl[i].episode = SHORT(sl[i].episode);
-    }
-
-  // initialization for artificial levels without switches (yes, they exist!)
-  //if (NULL == switchlist) switchlist = (int *)malloc(sizeof(*switchlist));
-
   switchlist.clear();
-  for (i=0; sl[i].episode != 0; i++)
+  switchlist_t temp;
+
+  // Is Boom SWITCHES lump present?
+  if ((i = fc.FindNumForName("SWITCHES")) != -1)
     {
-      if (sl[i].episode <= nameset)
+      // ss is not needed anymore after this function, therefore not PU_STATIC
+      switches_t *ss = (switches_t *)fc.CacheLumpNum(i, PU_CACHE);
+
+      // endian conversion only when loading from extra lump
+      for (i=0; ss[i].episode != 0; i++)
 	{
-	  switchlist.push_back(R_TextureNumForName(sl[i].name1));
-	  switchlist.push_back(R_TextureNumForName(sl[i].name2));
+	  n = SHORT(ss[i].episode);
+	  if (n > nameset)
+	    continue;
+
+	  temp.tex = R_TextureNumForName(ss[i].name1);
+	  temp.sound = button_t::buttonsound; // default
+	  switchlist.push_back(temp);
+
+	  temp.tex = R_TextureNumForName(ss[i].name2);
+	  temp.sound = button_t::buttonsound; // default
+	  switchlist.push_back(temp);
 	}
+
+      return; // nothing else
     }
 
-  //SoM: 3/22/2000: Don't change tag if not from lump
-  //if (sl != oldalphSwitchList) Z_ChangeTag(alphSwitchList,PU_CACHE);
+  for (i=0; sd[i].episode != 0; i++)
+    {
+      if (sd[i].episode > nameset)
+	continue;
+
+      temp.tex = R_TextureNumForName(sd[i].name1);
+      temp.sound = sd[i].sound;
+      switchlist.push_back(temp);
+
+      temp.tex = R_TextureNumForName(sd[i].name2);
+      temp.sound = sd[i].sound; // could have different on/off sounds
+      switchlist.push_back(temp);
+    }
 }
 
 // button_t statics
@@ -314,24 +304,21 @@ void Map::ChangeSwitchTexture(line_t *line, int useAgain)
 
   for (i = 0; i < n; i++)
     {
-      if (switchlist[i] == texTop)
+      if (switchlist[i].tex == texTop)
         {
-	  sides[line->sidenum[0]].toptexture = switchlist[i^1];
-
+	  sides[line->sidenum[0]].toptexture = switchlist[i^1].tex; // clever...
 	  loc = button_top;
 	  break;
         }
-      else if (switchlist[i] == texMid)
+      else if (switchlist[i].tex == texMid)
 	{
-	  sides[line->sidenum[0]].midtexture = switchlist[i^1];
-
+	  sides[line->sidenum[0]].midtexture = switchlist[i^1].tex;
 	  loc = button_middle;
 	  break;
 	}
-      else if (switchlist[i] == texBot)
+      else if (switchlist[i].tex == texBot)
 	{
-	  sides[line->sidenum[0]].bottomtexture = switchlist[i^1];
-
+	  sides[line->sidenum[0]].bottomtexture = switchlist[i^1].tex;
 	  loc = button_bottom;
 	  break;
 	}
@@ -339,19 +326,16 @@ void Map::ChangeSwitchTexture(line_t *line, int useAgain)
 
   if (loc != button_none)
     {
-      // FIXME sounds/gametype, see HereticPatchEngine
-      int sound = sfx_swtchn;
-
       // EXIT SWITCH?
       if (line->special == 11)
-	sound = sfx_swtchx;
-
-      S_StartSound(&line->frontsector->soundorg, sound);
+	S_StartSound(&line->frontsector->soundorg, sfx_swtchx);
+      else
+	S_StartSound(&line->frontsector->soundorg, switchlist[i].sound);
 
       // See if it is a button and not already pressed
       if (useAgain && line->thinker == NULL)
 	{
-	  button_t *but = new button_t(line, loc, switchlist[i], BUTTONTIME);
+	  button_t *but = new button_t(line, loc, switchlist[i].tex, BUTTONTIME);
 	  AddThinker(but);
 	}
     }

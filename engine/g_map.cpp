@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.12  2003/04/04 00:01:53  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.11  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -105,7 +108,11 @@ void Map::DetachActor(Actor *p)
       p->touching_sectorlist = NULL;
     }
 
- DetachThinker(p);
+  // save the presentation too
+  if (p->pres)
+    Z_ChangeTag(p->pres, PU_STATIC);
+
+  DetachThinker(p);
 }
 
 
@@ -411,9 +418,13 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
   // the player may have his old pawn from the previous level
   if (!pi->pawn)
     {
+      const float AutoArmorSave[] = { 0.15, 0.10, 0.05, 0.0 };
+
       p = new PlayerPawn(nx, ny, nz, allowed_pawns[pi->pawntype]);
       p->player = pi;
       pi->pawn  = p;
+      p->pclass = pi->pclass;
+      p->toughness = AutoArmorSave[p->pclass];
       CONS_Printf("-- new pawn, health == %d\n", p->health);
     }
   else
@@ -437,7 +448,6 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
   p->eflags |= MFE_ONGROUND;
   p->z = p->floorz;
 
-  //SoM:
   mthing->mobj = p;
 
   // FIXME set skin sprite here
@@ -450,7 +460,6 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
   else if (pi == displayplayer2)
     localangle2 = p->angle;
 
-  // added 2-12-98
   pi->viewheight = cv_viewheight.value<<FRACBITS;
   pi->viewz = p->z + pi->viewheight;
 
@@ -492,6 +501,7 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
 
   if (camera.chase && displayplayer == pi)
     camera.ResetCamera(p);
+  CONS_Printf("spawn done\n");
 }
 
 

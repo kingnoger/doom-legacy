@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2003/04/04 00:01:56  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.11  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -442,7 +445,11 @@ void Map::LoadSectors(int lump)
   //CONS_Printf ("%d flats found\n", numlevelflats);
 
   // set the sky flat num
-  skyflatnum = P_AddLevelFlat ("F_SKY1",foundflats);
+  // FIXME we need a completely new flat/texture cache.
+  if (game.mode == gm_hexen)
+    skyflatnum = P_AddLevelFlat ("F_SKY",foundflats);
+  else
+    skyflatnum = P_AddLevelFlat ("F_SKY1",foundflats);
 
   // copy table for global usage
   levelflats = (levelflat_t *)Z_Malloc (numlevelflats*sizeof(levelflat_t),PU_LEVEL,0);
@@ -501,6 +508,8 @@ void Map::LoadThings(int lump)
     nummapthings = fc.LumpLength(lump)/sizeof(doom_mapthing_t);
 
   mapthings    = (mapthing_t *)Z_Malloc(nummapthings*sizeof(mapthing_t), PU_LEVEL, NULL);
+  NumPolyobjs  = 0;
+
   char *data   = (char *)fc.CacheLumpNum(lump, PU_STATIC);
 
   doom_mapthing_t *mt = (doom_mapthing_t *)data;
@@ -717,7 +726,8 @@ void Map::LoadThings(int lump)
 
 
       // spawn here
-      t->type = mobjtype_t(n); 
+      t->type = mobjtype_t(n);
+      CONS_Printf("Spawning ednum %d\n", ednum);
       SpawnMapThing(t);
     }
 

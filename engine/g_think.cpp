@@ -4,7 +4,6 @@
 #include "g_think.h"
 #include "z_zone.h"
 
-
 Thinker::Thinker()
 {
   mp = NULL;
@@ -12,6 +11,8 @@ Thinker::Thinker()
 
 Thinker::~Thinker()
 {}
+
+bool Thinker::AddToIDmap() { return true; }
 
 int Thinker::Serialize(LArchive & a)
 {

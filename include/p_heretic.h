@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/04/04 00:01:58  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.3  2003/03/15 20:07:21  smite-meister
 // Initial Hexen compatibility!
 //
@@ -31,9 +34,15 @@
 //     Misc. routines from Heretic
 //-----------------------------------------------------------------------------
 
+#ifndef p_heretic_h
+#define p_heretic_h 1
+
 class Actor;
 
 void P_MinotaurSlam(Actor *source, Actor *target);
 bool P_TouchWhirlwind(Actor *target);
 void DoomPatchEngine();
 void HereticPatchEngine();
+void HexenPatchEngine();
+
+#endif

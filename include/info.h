@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/04/04 00:01:57  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.6  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -53,12 +56,12 @@
 #ifndef info_h
 #define info_h 1
 
-// Needed for action function pointer handling.
-#include "g_think.h"
+
 
 typedef enum
 {
-  SPR_TROO, // 0
+  SPR_NONE, // 0
+  SPR_TROO,
   SPR_SHTG,
   SPR_PUNG,
   SPR_PISG,
@@ -67,8 +70,8 @@ typedef enum
   SPR_SHT2,
   SPR_CHGG,
   SPR_CHGF,
-  SPR_MISG,
-  SPR_MISF, // 10
+  SPR_MISG, // 10
+  SPR_MISF,
   SPR_SAWG,
   SPR_PLSG,
   SPR_PLSF,
@@ -77,8 +80,8 @@ typedef enum
   SPR_BLUD,
   SPR_PUFF,
   SPR_BAL1,
-  SPR_BAL2,
-  SPR_PLSS, // 20
+  SPR_BAL2, // 20
+  SPR_PLSS,
   SPR_PLSE,
   SPR_MISL,
   SPR_BFS1,
@@ -87,8 +90,8 @@ typedef enum
   SPR_TFOG,
   SPR_IFOG,
   SPR_PLAY,
-  SPR_POSS,
-  SPR_SPOS, // 30
+  SPR_POSS, // 30
+  SPR_SPOS,
   SPR_VILE,
   SPR_FIRE,
   SPR_FATB,
@@ -98,7 +101,7 @@ typedef enum
   SPR_FATT,
   SPR_CPOS,
   SPR_SARG,
-  SPR_HEAD, // 40
+  SPR_HEAD,
   SPR_BAL7,
   SPR_BOSS,
   SPR_BOS2,
@@ -108,7 +111,7 @@ typedef enum
   SPR_APLS,
   SPR_APBX,
   SPR_CYBR,
-  SPR_PAIN, // 50
+  SPR_PAIN,
   SPR_SSWV,
   SPR_KEEN,
   SPR_BBRN,
@@ -118,7 +121,7 @@ typedef enum
   SPR_BAR1,
   SPR_BEXP,
   SPR_FCAN,
-  SPR_BON1, // 60
+  SPR_BON1,
   SPR_BON2,
   SPR_BKEY,
   SPR_RKEY,
@@ -128,7 +131,7 @@ typedef enum
   SPR_YSKU,
   SPR_STIM,
   SPR_MEDI,
-  SPR_SOUL, // 70
+  SPR_SOUL,
   SPR_PINV,
   SPR_PSTR,
   SPR_PINS,
@@ -138,7 +141,7 @@ typedef enum
   SPR_PVIS,
   SPR_CLIP,
   SPR_AMMO,
-  SPR_ROCK, // 80
+  SPR_ROCK,
   SPR_BROK,
   SPR_CELL,
   SPR_CELP,
@@ -148,7 +151,7 @@ typedef enum
   SPR_BFUG,
   SPR_MGUN,
   SPR_CSAW,
-  SPR_LAUN, // 90
+  SPR_LAUN,
   SPR_PLAS,
   SPR_SHOT,
   SPR_SGN2,
@@ -157,8 +160,8 @@ typedef enum
   SPR_GOR1,
   SPR_POL2,
   SPR_POL5,
-  SPR_POL4,
-  SPR_POL3, // 100
+  SPR_POL4, // 100
+  SPR_POL3,
   SPR_POL1,
   SPR_POL6,
   SPR_GOR2,
@@ -168,7 +171,7 @@ typedef enum
   SPR_SMIT,
   SPR_COL1,
   SPR_COL2,
-  SPR_COL3, // 110
+  SPR_COL3,
   SPR_COL4,
   SPR_CAND,
   SPR_CBRA,
@@ -178,7 +181,7 @@ typedef enum
   SPR_ELEC,
   SPR_CEYE,
   SPR_FSKU,
-  SPR_COL5, // 120
+  SPR_COL5,
   SPR_TBLU,
   SPR_TGRN,
   SPR_TRED,
@@ -188,7 +191,7 @@ typedef enum
   SPR_HDB1,
   SPR_HDB2,
   SPR_HDB3,
-  SPR_HDB4, // 130
+  SPR_HDB4,
   SPR_HDB5,
   SPR_HDB6,
   SPR_POB1,
@@ -199,7 +202,7 @@ typedef enum
   //Fab:
   SPR_SMOK,
   SPR_SPLA,
-  SPR_TNT1, // 140  SoM: 3/8/2000: add invisible sprite
+  SPR_TNT1, // 141  SoM: 3/8/2000: add invisible sprite
 
   // Heretic
   SPR_IMPX,

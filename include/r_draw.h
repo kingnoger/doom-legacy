@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,38 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:26  hurdler
-// Initial revision
+// Revision 1.2  2003/04/04 00:01:58  smite-meister
+// bugfixes, Hexen HUD
 //
-// Revision 1.4  2002/08/19 18:06:42  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.3  2002/07/01 21:00:54  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:28  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.7  2001/08/06 23:57:09  stroggonmeth
-// Removed portal code, improved 3D floors in hardware mode.
-//
-// Revision 1.6  2001/03/13 22:14:20  stroggonmeth
-// Long time no commit. 3D floors, FraggleScript, portals, ect.
-//
-// Revision 1.5  2001/02/24 13:35:21  bpereira
-// no message
-//
-// Revision 1.4  2000/11/09 17:56:20  stroggonmeth
-// Hopefully fixed a few bugs and did a few optimizations.
-//
-// Revision 1.3  2000/11/02 17:50:09  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
+// Revision 1.1.1.1  2002/11/16 14:18:26  hurdler
+// Initial C++ version of Doom Legacy
 //
 //
 // DESCRIPTION:
@@ -58,9 +31,10 @@
 //-----------------------------------------------------------------------------
 
 
-#ifndef __R_DRAW__
-#define __R_DRAW__
+#ifndef r_draw_h
+#define r_draw_h 1
 
+#include "doomdef.h"
 #include "r_defs.h"
 
 // -------------------------------
@@ -151,23 +125,21 @@ extern int viewborderlump[8];
 // ------------------------------------------------
 
 //added:26-01-98: called by SCR_Recalc() when video mode changes
-void    R_RecalcFuzzOffsets (void);
+void    R_RecalcFuzzOffsets();
 // Initialize color translation tables, for player rendering etc.
-void    R_InitTranslationTables (void);
+void    R_InitTranslationTables();
 
-void    R_InitViewBuffer ( int   width,
-                           int   height );
+void    R_InitViewBuffer(int width, int height);
 
-void    R_InitViewBorder (void);
+void    R_InitViewBorder();
 
-void    R_VideoErase ( unsigned      ofs,
-                       int           count );
+void    R_VideoErase(unsigned ofs, int count);
 
 // Rendering function.
-void    R_FillBackScreen (void);
+void    R_FillBackScreen();
 
 // If the view size is not full screen, draws a border around it.
-void    R_DrawViewBorder (void);
+void    R_DrawViewBorder();
 
 
 // -----------------
@@ -176,34 +148,34 @@ void    R_DrawViewBorder (void);
 
 #ifdef HORIZONTALDRAW
 //Fab 17-06-98
-void    R_DrawHColumn_8 (void);
+void    R_DrawHColumn_8();
 #endif
 
-void    ASMCALL R_DrawColumn_8 (void);
-void    ASMCALL R_DrawSkyColumn_8 (void);
-void    ASMCALL R_DrawShadeColumn_8 (void);             //smokie test..
-void    ASMCALL R_DrawFuzzColumn_8 (void);
-void    ASMCALL R_DrawTranslucentColumn_8 (void);
-void    ASMCALL R_DrawTranslatedColumn_8 (void);
-void    ASMCALL R_DrawSpan_8 (void);
+void    ASMCALL R_DrawColumn_8();
+void    ASMCALL R_DrawSkyColumn_8();
+void    ASMCALL R_DrawShadeColumn_8();             //smokie test..
+void    ASMCALL R_DrawFuzzColumn_8();
+void    ASMCALL R_DrawTranslucentColumn_8();
+void    ASMCALL R_DrawTranslatedColumn_8();
+void    ASMCALL R_DrawSpan_8();
 
-void    R_DrawTranslucentSpan_8 (void);
-void    R_DrawFogSpan_8 (void);
-void    R_DrawFogColumn_8 (void); //SoM: Test
-void    R_DrawColumnShadowed_8 (void);
-void    R_DrawPortalColumn_8 (void);
+void    R_DrawTranslucentSpan_8();
+void    R_DrawFogSpan_8();
+void    R_DrawFogColumn_8(); //SoM: Test
+void    R_DrawColumnShadowed_8();
+void    R_DrawPortalColumn_8();
 
 // ------------------
 // 16bpp DRAWING CODE
 // ------------------
 
-void    ASMCALL R_DrawColumn_16 (void);
-void    ASMCALL R_DrawSkyColumn_16 (void);
-void    ASMCALL R_DrawFuzzColumn_16 (void);
-void    ASMCALL R_DrawTranslucentColumn_16 (void);
-void    ASMCALL R_DrawTranslatedColumn_16 (void);
-void    ASMCALL R_DrawSpan_16 (void);
+void    ASMCALL R_DrawColumn_16();
+void    ASMCALL R_DrawSkyColumn_16();
+void    ASMCALL R_DrawFuzzColumn_16();
+void    ASMCALL R_DrawTranslucentColumn_16();
+void    ASMCALL R_DrawTranslatedColumn_16();
+void    ASMCALL R_DrawSpan_16();
 
 
 // =========================================================================
-#endif  // __R_DRAW__
+#endif

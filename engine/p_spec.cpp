@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/04/04 00:01:56  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.5  2003/03/15 20:07:17  smite-meister
 // Initial Hexen compatibility!
 //
@@ -807,7 +810,7 @@ int Map::FindSectorFromTag(int tag, int start)
 // was P_FindLineFromLineTag
 //SoM: 3/7/2000: More boom specific stuff...
 // killough 4/16/98: Same thing, only for linedefs
-
+/*
 int Map::FindLineFromLineTag(const line_t *line, int start)
 {
   start = start >= 0 ? lines[start].nexttag :
@@ -815,6 +818,23 @@ int Map::FindLineFromLineTag(const line_t *line, int start)
   while (start >= 0 && lines[start].tag != line->tag)
     start = lines[start].nexttag;
   return start;
+}
+*/
+line_t *Map::FindLineFromTag(int tag, int *start)
+{
+  int index = (*start >= 0) ? lines[*start].nexttag :
+    lines[(unsigned) tag % (unsigned) numlines].firsttag;
+
+  for ( ; index >= 0; index = lines[index].nexttag)
+    if (lines[index].tag == tag)
+      {
+	*start = index;
+	return &lines[index];
+      }
+
+  // not found
+  *start = index;
+  return NULL;
 }
 
 
@@ -1398,12 +1418,14 @@ bool Map::ExecuteLineSpecial(int special, byte *args, line_t *line, int side, Ac
 //  to cross a line with a non 0 special.
 //
 // Unused.
+/*
 void Map::CrossSpecialLine(int linenum, int side, Actor *thing)
 {
   line_t *line = &lines[linenum];
 
   ActivateCrossedLine(line, side, thing);
 }
+*/
 
 // was P_ActivateCrossedLine
 void Map::ActivateCrossedLine(line_t *line, int side, Actor *thing)
@@ -3010,7 +3032,7 @@ static scroll_t *Add_WallScroller(fixed_t dx, fixed_t dy, const line_t *l,
 void Map::SpawnScrollers()
 {
   int i;
-  line_t *l = lines;
+  line_t *l = lines, *l2;
 
   for (i=0;i<numlines;i++,l++)
     {
@@ -3063,9 +3085,9 @@ void Map::SpawnScrollers()
           // scroll wall according to linedef
           // (same direction and speed as scrolling floors)
         case 254:
-          for (s=-1; (s = FindLineFromLineTag(l,s)) >= 0;)
+          for (s=-1; (l2 = FindLineFromTag(l->tag, &s)) != NULL; )
             if (s != i)
-              AddThinker(Add_WallScroller(dx, dy, lines+s, control, accel, csec));
+              AddThinker(Add_WallScroller(dx, dy, l2, control, accel, csec));
           break;
 
         case 255:

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/04/04 00:01:57  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.3  2003/02/23 22:49:31  smite-meister
 // FS is back! L2 cache works.
 //
@@ -42,14 +45,7 @@
 #include "z_zone.h"
 #include "t_script.h"
 
-// (old info)
-// THINKERS
-// All thinkers should be allocated by Z_Malloc
-// so they can be operated on uniformly.
-// The actual structures will vary in size,
-// but the first element must be thinker_t.
-//
-
+// THINKERS, see g_think.h
 
 //
 // was P_InitThinkers
@@ -87,10 +83,9 @@ void Map::DetachThinker(Thinker *thinker)
 // was P_RemoveThinker
 // Deallocation is lazy -- it will not actually be freed
 // until its thinking turn comes up.
-//
+// TODO this also gives other thinkers time to reset their pointers to the removed thinker?
 void Map::RemoveThinker(Thinker *thinker)
 {
-  //thinker->function.acv = (actionf_v)(-1);
   thinker->mp = NULL;
 }
 
@@ -128,7 +123,7 @@ void Map::RunThinkers()
 //
 void Map::Ticker()
 {
-  int i=0, n = players.size();
+  int i = 0;
 
   if (!respawnqueue.empty())
     i = RespawnPlayers();
@@ -137,17 +132,26 @@ void Map::Ticker()
   // now playerpawns are ticked with other Thinkers at RunThinkers.
   // the Thinking order may have changed...
 
+  //CONS_Printf("think..");
   RunThinkers();
+
+  //CONS_Printf("specials..");
   UpdateSpecials();
+
+  //CONS_Printf("respawnspecials..");
   RespawnSpecials();
 
+  //CONS_Printf("ambients..");
   AmbientSound();
 
   // for par times etc.
   maptic++;
 
+  //CONS_Printf("FS..");
 #ifdef FRAGGLESCRIPT
   // SoM: Update FraggleScript...
   T_DelayedScripts();
 #endif
+
+  //CONS_Printf("tick done\n");
 }

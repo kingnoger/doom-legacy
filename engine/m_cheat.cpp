@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/04/04 00:01:56  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.9  2003/03/15 20:07:15  smite-meister
 // Initial Hexen compatibility!
 //
@@ -271,8 +274,8 @@ void Command_CheatGimme_f()
       }
     else if (!strncmp(s,"armor",5))
       {
-	p->armorpoints = idfa_armor;
-	p->armortype = idfa_armor_class;
+	p->armorpoints[0] = idfa_armor;
+	p->armorfactor[0] = 0.5;
 
 	CONS_Printf("got armor\n");
       }
@@ -836,8 +839,8 @@ static void CheatWeaponsFunc(PlayerPawn *p, const byte *arg)
   char *msg;
   int i;
 
-  p->armorpoints = idfa_armor;
-  p->armortype = idfa_armor_class;
+  p->armorpoints[0] = idfa_armor;
+  p->armorfactor[0] = 0.5;
 
   if (game.mode == gm_heretic)
     {
@@ -1064,8 +1067,8 @@ static void CheatIDKFAFunc(PlayerPawn *p, const byte *arg)
   else
     {
       // doom, give stuff
-      p->armorpoints = idkfa_armor;
-      p->armortype = idkfa_armor_class;
+      p->armorpoints[0] = idkfa_armor;
+      p->armorfactor[0] = 0.5;
 
       for (i=0;i<wp_heretic;i++)
 	p->weaponowned[i] = true;

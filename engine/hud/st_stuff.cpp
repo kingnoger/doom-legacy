@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/04/04 00:01:57  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.9  2003/03/15 20:07:19  smite-meister
 // Initial Hexen compatibility!
 //
@@ -157,11 +160,11 @@ static patch_t *PatchAmmoPic[NUMAMMO + 1];
 // "WINUM0", large, red, minus is base-2, '%' is base-1
 
 // "STTNUM0", large, red, minus is base-1, '%' is base+10
-static patch_t *tallnum[11]; // 0-9, tall numbers, STTMINUS
-static patch_t *tallpercent; // tall % sign
+static patch_t *PatchBNum[11]; // 0-9, big numbers, STTMINUS
+static patch_t *tallpercent; // big % sign
 
 // "STYSNUM0", small, yellow, no minus
-static patch_t *shortnum[11];
+static patch_t *PatchSNum[11];
 
 // "STGNUM0", small, dark gray, no minus
 static patch_t *PatchArms[6][2]; // weapon ownership patches
@@ -187,6 +190,8 @@ static const char DHAmmoPics[NUMAMMO + 1][10] =
   {"INAMRAM"}, // skullrod
   {"INAMPNX"}, // phoenix rod
   {"INAMLOB"}, // mace
+  {"MANABRT1"}, // mana 1 
+  {"MANABRT2"}, // mana 2
   {"BLACKSQ"}  // no ammopic
 };
 
@@ -200,43 +205,222 @@ static patch_t *PatchBARBACK;
 static patch_t *PatchLTFCTOP;
 static patch_t *PatchRTFCTOP;
 static patch_t *PatchARMCLEAR;
-//static patch_t *PatchBLACKSQ;
 
 static patch_t *Patch_InvBar[13];
-static patch_t *PatchARTI[11];
+static patch_t *PatchARTI[NUMARTIFACTS];
 static patch_t *Patch_ChainSlider[5];
 
-// numbers
-patch_t *PatchSmNum[11]; // SMALLIN0, small yellow number
-patch_t *PatchINum[11];  // IN0, big yellow number
-patch_t *PatchBNum[11];  // FONTB16, big green numbers (of a font)
+// Heretic numbers:
+// SMALLIN0, small yellow number
+static patch_t *PatchINum[11];  // IN0, big yellow number
+// FONTB16, big green numbers (of a font)
 // FONTA16, medium silver numbers (of a font)
 
+// Hexen:
+// IN0 : medium yellow numbers with minus (NEGNUM)
+// SMALLIN0: little yellow numbers
+// INRED0 : medium red numbers, no minus
+// FONTA01-59 : medium silver font
+// FONTAY01-59 : like FONTA but yellow
+// FONTB01-59 : large brown font
+
 int playpalette;
-int spinbooklump; // frames 0-15
-int spinflylump;
+
+int SpinBookLump; // frames 0-15 each
+int SpinFlyLump;
+int SpinSpeedLump;
+int SpinDefenseLump;
+int SpinMinotaurLump;
 
 patch_t *PatchFlight[16];
 patch_t *PatchBook[16];
+patch_t *PatchSpeed[16];
+patch_t *PatchDefense[16];
+patch_t *PatchMinotaur[16];
 
+// Hexen extras
+static patch_t *PatchH2BAR;
+static patch_t *PatchMana1[2];
+static patch_t *PatchMana2[2];
+static patch_t *PatchKILLS;
+
+static const char ArtiPatchName[][10] =
+{
+  {"ARTIBOX"},    // none
+  {"ARTIINVU"},   // invulnerability
+  {"ARTIINVS"},   // invisibility
+  {"ARTIPTN2"},   // health
+  {"ARTISPHL"},   // superhealth
+  {"ARTIPWBK"},   // tomeofpower
+  {"ARTITRCH"},   // torch
+  {"ARTIFBMB"},   // firebomb
+  {"ARTIEGGC"},   // egg
+  {"ARTISOAR"},   // fly
+  {"ARTIATLP"},   // teleport
+
+  {"ARTIHRAD"},   // healing radius
+  {"ARTISUMN"},   // summon maulotaur
+  {"ARTIPORK"},   // porkelator
+  {"ARTIBLST"},   // blast radius
+  {"ARTIPSBG"},   // poison bag
+  {"ARTITELO"},   // teleport other
+  {"ARTISPED"},   // speed
+  {"ARTIBMAN"},   // boost mana
+  {"ARTIBRAC"},   // boost armor
+
+  {"ARTISKLL"},   // arti_puzzskull
+  {"ARTIBGEM"},   // arti_puzzgembig
+  {"ARTIGEMR"},   // arti_puzzgemred
+  {"ARTIGEMG"},   // arti_puzzgemgreen1
+  {"ARTIGMG2"},   // arti_puzzgemgreen2
+  {"ARTIGEMB"},   // arti_puzzgemblue1
+  {"ARTIGMB2"},   // arti_puzzgemblue2
+  {"ARTIBOK1"},   // arti_puzzbook1
+  {"ARTIBOK2"},   // arti_puzzbook2
+  {"ARTISKL2"},   // arti_puzzskull2
+  {"ARTIFWEP"},   // arti_puzzfweapon
+  {"ARTICWEP"},   // arti_puzzcweapon
+  {"ARTIMWEP"},   // arti_puzzmweapon
+  {"ARTIGEAR"},   // arti_puzzgear1
+  {"ARTIGER2"},   // arti_puzzgear2
+  {"ARTIGER3"},   // arti_puzzgear3
+  {"ARTIGER4"},   // arti_puzzgear4
+};
+
+
+
+static void ST_SetClassData(int num, int cls)
+{
+  if (game.mode == gm_hexen)
+    {
+      /*
+	PatchWEAPONSLOT = fc.CacheLumpNum(fc.GetNumForName("WPSLOT0") + cls, PU_STATIC);
+	PatchWEAPONFULL = fc.CacheLumpNum(fc.GetNumForName("WPFULL0") + cls, PU_STATIC);
+	PatchPIECE1	= fc.CacheLumpNum(fc.GetNumForName("WPIECEF1") + cls, PU_STATIC);
+	PatchPIECE2	= fc.CacheLumpNum(fc.GetNumForName("WPIECEF2") + cls, PU_STATIC);
+	PatchPIECE3	= fc.CacheLumpNum(fc.GetNumForName("WPIECEF3") + cls, PU_STATIC);
+      */
+
+      Patch_ChainSlider[1] = fc.CachePatchNum(fc.GetNumForName("CHAIN") + cls, PU_STATIC);
+
+      int base = fc.GetNumForName("LIFEGEM");
+      if (!game.multiplayer)
+	// single player game uses red life gem
+	Patch_ChainSlider[2] = fc.CachePatchNum(base + 4*cls + 1, PU_STATIC);
+      else
+	Patch_ChainSlider[2] = fc.CachePatchNum(base + 4*cls + num % 4, PU_STATIC);
+    }
+  else
+    {
+      // heretic
+      if (!game.multiplayer)
+	// single player game uses red life gem
+	Patch_ChainSlider[2] = fc.CachePatchName("LIFEGEM2", PU_STATIC);
+      else
+	Patch_ChainSlider[2] = fc.CachePatchNum(fc.GetNumForName("LIFEGEM0") + num % 4, PU_STATIC);  
+    }
+}
+
+
+void ST_LoadHexenData()
+{
+  int i;
+  int startLump;
+
+  PatchH2BAR = fc.CachePatchName("H2BAR", PU_STATIC);
+  //PatchH2TOP = fc.CachePatchName("H2TOP", PU_STATIC);
+
+  PatchSTATBAR = fc.CachePatchName("STATBAR", PU_STATIC);
+  //PatchKEYBAR = fc.CachePatchName("KEYBAR", PU_STATIC);
+
+  //PatchARTICLEAR = fc.CachePatchName("ARTICLS", PU_STATIC);
+  PatchARMCLEAR = fc.CachePatchName("ARMCLS", PU_STATIC);
+  //PatchMANACLEAR = fc.CachePatchName("MANACLS", PU_STATIC);
+  /*
+    PatchMANAVIAL1 = fc.CachePatchName("MANAVL1", PU_STATIC);
+    PatchMANAVIAL2 = fc.CachePatchName("MANAVL2", PU_STATIC);
+    PatchMANAVIALDIM1 = fc.CachePatchName("MANAVL1D", PU_STATIC);
+    PatchMANAVIALDIM2 = fc.CachePatchName("MANAVL2D", PU_STATIC);
+  */
+  PatchMana1[0] = fc.CachePatchName("MANADIM1", PU_STATIC);
+  PatchMana1[1] = fc.CachePatchName("MANABRT1", PU_STATIC);
+  PatchMana2[0] = fc.CachePatchName("MANADIM2", PU_STATIC);
+  PatchMana2[1] = fc.CachePatchName("MANABRT2", PU_STATIC);
+
+  sbohealth = fc.CachePatchName("PTN2A0", PU_STATIC);  //SBOHEALT
+  sbofrags  = fc.CachePatchName("ARTISKLL", PU_STATIC);  //SBOFRAGS
+  sboarmor  = fc.CachePatchName("ARM1A0", PU_STATIC);  //SBOARMOR  
+
+  Patch_InvBar[0] = fc.CachePatchName("INVBAR", PU_STATIC); 
+  Patch_InvBar[1] = fc.CachePatchName("ARTIBOX", PU_STATIC);
+  Patch_InvBar[2] = fc.CachePatchName("SELECTBO", PU_STATIC);
+  Patch_InvBar[3] = fc.CachePatchName("INVGEML1", PU_STATIC);
+  Patch_InvBar[4] = fc.CachePatchName("INVGEML2", PU_STATIC);
+  Patch_InvBar[5] = fc.CachePatchName("INVGEMR1", PU_STATIC);
+  Patch_InvBar[6] = fc.CachePatchName("INVGEMR2", PU_STATIC);
+  Patch_InvBar[7] = fc.CachePatchName("BLACKSQ", PU_STATIC);
+
+  // artifact inventory pics
+  for (i=0; i <= NUMARTIFACTS; i++)
+    PatchARTI[i] = fc.CachePatchName(ArtiPatchName[i], PU_STATIC);
+
+  // artifact use flash
+  startLump = fc.GetNumForName("USEARTIA");
+  for (i=0; i<5; i++) Patch_InvBar[i+8] = fc.CachePatchNum(startLump + i, PU_STATIC);
+
+  // ammo pics
+  for (i=0; i < NUMAMMO; i++)
+    PatchAmmoPic[i] = fc.CachePatchName(DHAmmoPics[i], PU_STATIC);
+
+  // keys TODO rest
+  startLump = fc.GetNumForName("KEYSLOT1");
+  for (i=0; i<NUMCARDS; i++)
+    PatchKeys[i] = fc.CachePatchNum(startLump+i, PU_STATIC);
+
+  //	PatchCHAINBACK = fc.CachePatchName("CHAINBACK", PU_STATIC);
+  startLump = fc.GetNumForName("IN0");
+  for (i = 0; i < 10; i++)
+    PatchINum[i] = fc.CachePatchNum(startLump+i, PU_STATIC);
+  PatchINum[10] = fc.CachePatchName("NEGNUM", PU_STATIC);
+	
+  // BNum
+  startLump = fc.GetNumForName("FONTB16");
+  for (i = 0; i < 10; i++)
+    PatchBNum[i] = fc.CachePatchNum(startLump+i, PU_STATIC);
+  PatchBNum[10] = fc.CachePatchNum(startLump-3, PU_STATIC); //("FONTB13")
+
+  //SNum
+  startLump = fc.GetNumForName("SMALLIN0");
+  for (i = 0; i < 10; i++)
+    PatchSNum[i] = fc.CachePatchNum(startLump+i, PU_STATIC);
+  // no minus
+
+  playpalette = fc.GetNumForName("PLAYPAL");
+
+  SpinFlyLump = fc.GetNumForName("SPFLY0");
+  SpinSpeedLump = fc.GetNumForName("SPBOOT0");
+  SpinDefenseLump = fc.GetNumForName("SPSHLD0");
+  SpinMinotaurLump = fc.GetNumForName("SPMINO0");
+
+  for (i=0; i<16; i++)
+    {
+      PatchFlight[i] = fc.CachePatchNum(SpinFlyLump + i, PU_STATIC);
+      PatchSpeed[i] = fc.CachePatchNum(SpinSpeedLump + i, PU_STATIC);
+      PatchDefense[i] = fc.CachePatchNum(SpinDefenseLump + i, PU_STATIC);
+      PatchMinotaur[i] = fc.CachePatchNum(SpinMinotaurLump + i, PU_STATIC);
+    }
+
+  PatchKILLS = fc.CachePatchName("KILLS", PU_STATIC);
+
+  // health chain slider
+  Patch_ChainSlider[0] = fc.CachePatchName("CHAINBACK", PU_STATIC);
+  Patch_ChainSlider[3] = fc.CachePatchName("LFEDGE", PU_STATIC);
+  Patch_ChainSlider[4] = fc.CachePatchName("RTEDGE", PU_STATIC);
+  ST_SetClassData(0, 0);
+}
 
 void ST_LoadHereticData()
 {
-  const char patcharti[11][10] =
-  {
-    {"ARTIBOX"},    // none
-    {"ARTIINVU"},   // invulnerability
-    {"ARTIINVS"},   // invisibility
-    {"ARTIPTN2"},   // health
-    {"ARTISPHL"},   // superhealth
-    {"ARTIPWBK"},   // tomeofpower
-    {"ARTITRCH"},   // torch
-    {"ARTIFBMB"},   // firebomb
-    {"ARTIEGGC"},   // egg
-    {"ARTISOAR"},   // fly
-    {"ARTIATLP"}    // teleport
-  };
-
   int i;
   int startLump;
 
@@ -258,7 +442,7 @@ void ST_LoadHereticData()
   // inventory bar pics
   Patch_InvBar[0] = fc.CachePatchName("INVBAR", PU_STATIC); 
   Patch_InvBar[1] = fc.CachePatchName("ARTIBOX", PU_STATIC);
-  Patch_InvBar[2] = fc.CachePatchName("SELECTBOX", PU_STATIC);
+  Patch_InvBar[2] = fc.CachePatchName("SELECTBO", PU_STATIC);
   Patch_InvBar[3] = fc.CachePatchName("INVGEML1", PU_STATIC);
   Patch_InvBar[4] = fc.CachePatchName("INVGEML2", PU_STATIC);
   Patch_InvBar[5] = fc.CachePatchName("INVGEMR1", PU_STATIC);
@@ -270,13 +454,14 @@ void ST_LoadHereticData()
   for (i=0; i<5; i++) Patch_InvBar[i+8] = fc.CachePatchNum(startLump + i, PU_STATIC);
 
   // artifact inventory pics
-  for (i=0; i < 11; i++) PatchARTI[i] = fc.CachePatchName(patcharti[i], PU_STATIC);
+  for (i=0; i <= NUMARTIFACTS; i++)
+    PatchARTI[i] = fc.CachePatchName(ArtiPatchName[i], PU_STATIC);
 
   // ammo pics
-  for (i=0; i < am_heretic; i++)
-    PatchAmmoPic[i] = NULL;
-
-  for (i=am_heretic; i <= NUMAMMO; i++)
+  //  for (i=0; i < am_heretic; i++)
+  //  PatchAmmoPic[i] = NULL;
+  //for (i=am_heretic; i <= NUMAMMO; i++)
+  for (i = 0; i < NUMAMMO; i++)
     PatchAmmoPic[i] = fc.CachePatchName(DHAmmoPics[i], PU_STATIC);
 
   sbohealth = fc.CachePatchName("PTN2A0", PU_STATIC);  //SBOHEALT
@@ -291,13 +476,9 @@ void ST_LoadHereticData()
   // health chain slider
   Patch_ChainSlider[0] = fc.CachePatchName("CHAINBACK", PU_STATIC);
   Patch_ChainSlider[1] = fc.CachePatchName("CHAIN", PU_STATIC);
-  if (!game.multiplayer)
-    // single player game uses red life gem
-    Patch_ChainSlider[2] = fc.CachePatchName("LIFEGEM2", PU_STATIC);
-  else
-    Patch_ChainSlider[2] = fc.CachePatchNum(fc.GetNumForName("LIFEGEM0") + consoleplayer->number%4, PU_STATIC);  
   Patch_ChainSlider[3] = fc.CachePatchName("LTFACE", PU_STATIC);
   Patch_ChainSlider[4] = fc.CachePatchName("RTFACE", PU_STATIC);
+  ST_SetClassData(0, 0);
 
   // INum
   startLump = fc.GetNumForName("IN0");
@@ -312,20 +493,20 @@ void ST_LoadHereticData()
     PatchBNum[i] = fc.CachePatchNum(startLump+i, PU_STATIC);
   PatchBNum[10] = fc.CachePatchNum(startLump-3, PU_STATIC); //("FONTB13")
 
-  //SmNum
+  //SNum
   startLump = fc.GetNumForName("SMALLIN0");
   for (i = 0; i < 10; i++)
-    PatchSmNum[i] = fc.CachePatchNum(startLump+i, PU_STATIC);
+    PatchSNum[i] = fc.CachePatchNum(startLump+i, PU_STATIC);
   // no minus
 
   playpalette = fc.GetNumForName("PLAYPAL");
-  spinbooklump = fc.GetNumForName("SPINBK0");
-  spinflylump = fc.GetNumForName("SPFLY0");
+  SpinBookLump = fc.GetNumForName("SPINBK0");
+  SpinFlyLump = fc.GetNumForName("SPFLY0");
 
   for (i=0; i<16; i++)
     {
-      PatchFlight[i] = fc.CachePatchNum(spinflylump + i, PU_STATIC);
-      PatchBook[i] = fc.CachePatchNum(spinbooklump + i, PU_STATIC);
+      PatchFlight[i] = fc.CachePatchNum(SpinFlyLump + i, PU_STATIC);
+      PatchBook[i] = fc.CachePatchNum(SpinBookLump + i, PU_STATIC);
     }
 }
 
@@ -339,27 +520,27 @@ void ST_LoadDoomData()
   for (i=0; i<10; i++)
     {
       sprintf(namebuf, "STTNUM%d", i);
-      tallnum[i] = (patch_t *) fc.CachePatchName(namebuf, PU_STATIC);
+      PatchBNum[i] = fc.CachePatchName(namebuf, PU_STATIC);
 
       sprintf(namebuf, "STYSNUM%d", i);
-      shortnum[i] = (patch_t *) fc.CachePatchName(namebuf, PU_STATIC);
+      PatchSNum[i] = fc.CachePatchName(namebuf, PU_STATIC);
     }
 
-  tallnum[10] = (patch_t *) fc.CachePatchName("STTMINUS", PU_STATIC);
-  shortnum[10] = shortnum[0]; // no minus available 
+  PatchBNum[10] = fc.CachePatchName("STTMINUS", PU_STATIC);
+  PatchSNum[10] = PatchSNum[0]; // no minus available 
 
   // percent signs.
-  tallpercent = (patch_t *) fc.CachePatchName("STTPRCNT", PU_STATIC);
+  tallpercent = fc.CachePatchName("STTPRCNT", PU_STATIC);
 
   // key cards
   for (i=0;i<NUMCARDS;i++)
     {
       sprintf(namebuf, "STKEYS%d", i);
-      PatchKeys[i] = (patch_t *)fc.CachePatchName(namebuf, PU_STATIC);
+      PatchKeys[i] = fc.CachePatchName(namebuf, PU_STATIC);
     }
 
   // arms background box
-  PatchArmsBack = (patch_t *)fc.CachePatchName("STARMS", PU_STATIC);
+  PatchArmsBack = fc.CachePatchName("STARMS", PU_STATIC);
 
   // arms ownership widgets
   for (i=0;i<6;i++)
@@ -367,24 +548,21 @@ void ST_LoadDoomData()
       sprintf(namebuf, "STGNUM%d", i+2);
 
       // gray #
-      PatchArms[i][0] = (patch_t *)fc.CachePatchName(namebuf, PU_STATIC);
+      PatchArms[i][0] = fc.CachePatchName(namebuf, PU_STATIC);
 
       // yellow #
-      PatchArms[i][1] = shortnum[i+2];
+      PatchArms[i][1] = PatchSNum[i+2];
     }
 
   // status bar background bits
-  PatchSTATBAR = (patch_t *)fc.CachePatchName("STBAR", PU_STATIC);
+  PatchSTATBAR = fc.CachePatchName("STBAR", PU_STATIC);
 
   // the original Doom uses 'STF' as base name for all face graphics
   ST_loadFaceGraphics("STF");
 
   // ammo pics
-  for (i=0; i < am_heretic; i++)
+  for (i = 0; i < NUMAMMO; i++)
     PatchAmmoPic[i] = fc.CachePatchName(DHAmmoPics[i], PU_STATIC);
-
-  for (i=am_heretic; i <= NUMAMMO; i++)
-    PatchAmmoPic[i] = NULL;
 
   sbohealth = fc.CachePatchName("STIMA0", PU_STATIC);  //SBOHEALT
   sbofrags  = fc.CachePatchName("M_SKULL1", PU_STATIC);  //SBOFRAGS
@@ -440,9 +618,9 @@ void ST_loadFaceGraphics (char *facestr)
   strcpy (namebuf, "B0");
   i = fc.FindNumForName(namelump);
   if (i != -1)
-    PatchFaceBack = (patch_t *) fc.CachePatchNum(i, PU_STATIC);
+    PatchFaceBack = fc.CachePatchNum(i, PU_STATIC);
   else
-    PatchFaceBack = (patch_t *) fc.CachePatchName("STFB0", PU_STATIC);
+    PatchFaceBack = fc.CachePatchName("STFB0", PU_STATIC);
 
 }
 
@@ -456,8 +634,8 @@ void ST_unloadData()
       // unload the numbers, tall and short
       for (i=0;i<10;i++)
         {
-	  Z_ChangeTag(tallnum[i], PU_CACHE);
-	  Z_ChangeTag(shortnum[i], PU_CACHE);
+	  Z_ChangeTag(PatchBNum[i], PU_CACHE);
+	  Z_ChangeTag(PatchSNum[i], PU_CACHE);
         }
       // unload tall percent
       Z_ChangeTag(tallpercent, PU_CACHE);
@@ -507,7 +685,11 @@ void HUD::ST_RefreshBackground()
   byte*       colormap;
   int flags = (fgbuffer & 0xffff0000) | BG;
 
-  if (game.mode == gm_heretic)
+  if (game.mode == gm_hexen)
+    {
+      V_DrawScaledPatch(st_x, 134, flags, PatchH2BAR);
+    }
+  else if (game.mode == gm_heretic)
     {
       V_DrawScaledPatch(st_x, st_y, flags, PatchBARBACK);
       V_DrawScaledPatch(st_x+34, st_y+2, flags, PatchSTATBAR);
@@ -578,6 +760,9 @@ static int  st_fragscount;
 // Heretic spinning icons
 static int  st_flight = -1;
 static int  st_book = -1;
+static int  st_speed = -1;
+static int  st_defense = -1;
+static int  st_minotaur = -1;
 
 static inventory_t st_invslots[7+1]; // visible inventory slots (+ one hack slot)
 int st_curpos = 0; // active inv. slot (0-6)
@@ -585,6 +770,8 @@ int st_curpos = 0; // active inv. slot (0-6)
 // used for evil grin
 static bool st_oldweaponsowned[NUMWEAPONS];
 
+static bool st_mana1icon, st_mana2icon;
+static int st_mana1, st_mana2;
 
 #define BLINKTHRESHOLD  (4*32)
 
@@ -813,7 +1000,9 @@ void HUD::UpdateWidgets()
 
   st_godmode = (sbpawn->cheats & CF_GODMODE);
 
-  if (game.mode == gm_heretic)
+  st_health = sbpawn->health;
+
+  if (game.mode == gm_heretic || game.mode == gm_hexen)
     {
       if (sbpawn->invTics)
 	invopen = true;
@@ -821,25 +1010,6 @@ void HUD::UpdateWidgets()
 	invopen = false;
 
       mainbaron = statusbaron && !invopen;
-
-      // Heretic flight icon
-      if (sbpawn->powers[pw_flight] > BLINKTHRESHOLD || (sbpawn->powers[pw_flight] & 16))
-	{
-	  st_flight = (gametic/3) & 15;
-	  // TODO stop the spinning when not in air?
-	  // if (sbpawn->flags2 & MF2_FLY)
-	}
-      else
-	st_flight = -1;
-    
-      // Heretic book icon
-      if ((sbpawn->powers[pw_weaponlevel2] > BLINKTHRESHOLD || (sbpawn->powers[pw_weaponlevel2] & 16))
-	  && !sbpawn->morphTics)
-	{
-	  st_book = (gametic/3) & 15;
-	}
-      else
-	st_book = -1;
 
       // inventory
       if (itemuse > 0)
@@ -855,6 +1025,44 @@ void HUD::UpdateWidgets()
 
       st_invslots[7].type = (left > 0) ? 1 : 0; // hack
       st_invslots[7].count = (n - left > 7) ? 1 : 0;
+
+      int frame = (gametic/3) & 15;
+      // flight icon
+      if (sbpawn->powers[pw_flight] > BLINKTHRESHOLD || (sbpawn->powers[pw_flight] & 16))
+	st_flight = frame;
+	  // TODO stop the spinning when not in air?
+	  // if (sbpawn->flags2 & MF2_FLY)
+      else
+	st_flight = -1;
+
+      // book icon
+      if ((sbpawn->powers[pw_weaponlevel2] > BLINKTHRESHOLD || (sbpawn->powers[pw_weaponlevel2] & 16)) && !sbpawn->morphTics)
+	st_book = frame;
+      else
+	st_book = -1;
+
+      // speed icon
+      if (sbpawn->powers[pw_speed] > BLINKTHRESHOLD || (sbpawn->powers[pw_speed] & 16))
+	st_speed = frame;
+      else
+	st_speed = -1;
+
+      // defense icon
+      if (sbpawn->powers[pw_invulnerability] > BLINKTHRESHOLD || (sbpawn->powers[pw_invulnerability] & 16))
+	st_defense = frame;
+      else
+	st_defense = -1;
+
+      // minotaur icon
+      if (sbpawn->powers[pw_minotaur] > BLINKTHRESHOLD || (sbpawn->powers[pw_minotaur] & 16))
+	st_minotaur = frame;
+      else
+	st_minotaur = -1;
+
+      st_mana1 = sbpawn->ammo[am_mana1];
+      st_mana2 = sbpawn->ammo[am_mana2];
+      st_mana1icon = (st_mana1 > 0);
+      st_mana2icon = (st_mana2 > 0);
     }
   else
     {
@@ -864,28 +1072,32 @@ void HUD::UpdateWidgets()
 	  st_ammo[i] = sbpawn->ammo[i];
 	  st_maxammo[i] = sbpawn->maxammo[i];
 	}
+
+      // refresh everything if this is him coming back to life
+      ST_updateFaceWidget(); // updates st_oldweaponsowned
+      st_oldhealth = st_health;
     }
 
-  st_health = sbpawn->health;
-  st_armor = sbpawn->armorpoints;
+  st_armor = int(100 * sbpawn->toughness);
+  for (i=0; i<NUMARMOR; i++)
+    st_armor += sbpawn->armorpoints[i];
+
+  if (game.mode == gm_hexen)
+    st_armor /= 5; // "AC"
+
   st_readywp = sbpawn->readyweapon;
 
   st_atype = sbpawn->weaponinfo[sbpawn->readyweapon].ammo;
   if (st_atype == am_noammo)
-    st_readywp_ammo = largeammo;    
+    st_readywp_ammo = largeammo;
+  else if (st_atype == am_manaboth)
+    st_readywp_ammo = min(sbpawn->ammo[am_mana1], sbpawn->ammo[am_mana2]);
   else
     st_readywp_ammo = sbpawn->ammo[st_atype];
 
   // update keycard multiple widgets
   for (i=0;i<6;i++)
     st_keyboxes[i] = (sbpawn->cards & (1<<i)) ? i : -1;
-
-  // refresh everything if this is him coming back to life
-  if (game.mode != gm_heretic)
-    {
-      ST_updateFaceWidget(); // updates st_oldweaponsowned
-      st_oldhealth = st_health;
-    }
 }
 
 // was ST_doPaletteStuff
@@ -894,24 +1106,29 @@ void HUD::UpdateWidgets()
 void HUD::PaletteFlash()
 {
   int palette;
-  int cnt;
-  int bzc;
-
-  cnt = damagecount;
+  int dcount = damagecount;
 
   // not relevant in heretic
   if (sbpawn->powers[pw_strength])
     {
       // slowly fade the berzerk out
-      bzc = 12 - (sbpawn->powers[pw_strength]>>6);
+      int bzc = 12 - (sbpawn->powers[pw_strength]>>6);
 
-      if (bzc > cnt)
-	cnt = bzc;
+      if (bzc > dcount)
+	dcount = bzc;
     }
-  
-  if (cnt)
+
+  if (poisoncount)
     {
-      palette = (cnt+7)>>3;
+      palette = (poisoncount + 7) >> 3;
+      if (palette >= NUMPOISONPALS)
+	palette = NUMPOISONPALS-1;
+
+      palette += STARTPOISONPALS;
+    }  
+  else if (dcount)
+    {
+      palette = (dcount + 7) >> 3;
 
       if (palette >= NUMREDPALS)
 	palette = NUMREDPALS-1;
@@ -927,9 +1144,14 @@ void HUD::PaletteFlash()
 
       palette += STARTBONUSPALS;
     }
-  else if (sbpawn->powers[pw_ironfeet] > 4*32
-	   || sbpawn->powers[pw_ironfeet]&8)
+  else if (sbpawn->powers[pw_ironfeet] > 4*32 || sbpawn->powers[pw_ironfeet] & 8)
     palette = RADIATIONPAL; // not relevant in heretic
+  /*
+  else if (sbpawn->flags2 & MF2_ICEDAMAGE)
+    { // TODO Frozen player
+      palette = STARTICEPAL;
+    }
+  */
   else
     palette = 0;
 
@@ -1027,6 +1249,60 @@ void HUD::ST_Recalc()
   ST_CreateWidgets();
 }
 
+void HUD::CreateHexenWidgets()
+{
+  HudWidget *h;
+
+  // spinning icons
+  h = new HudMultIcon(st_x+20, 19, &statusbaron, &st_flight, PatchFlight);
+  widgets.push_back(h);
+
+  h = new HudMultIcon(st_x+60, 19, &statusbaron, &st_speed, PatchSpeed);
+  widgets.push_back(h);
+
+  h = new HudMultIcon(st_x+260, 19, &statusbaron, &st_defense, PatchDefense);
+  widgets.push_back(h);
+
+  h = new HudMultIcon(st_x+300, 19, &statusbaron, &st_minotaur, PatchMinotaur);
+  widgets.push_back(h);
+
+  // H2TOP ?
+
+  // health slider
+  h = new HudSlider(st_x, st_y+35, &statusbaron, &st_health, 0, 100, Patch_ChainSlider);
+  widgets.push_back(h);
+
+  // mainbar (closed inventory shown)
+  // frags / health
+  if (cv_deathmatch.value)
+    //V_DrawPatch(38, 162, PatchKILLS);
+    h = new HudNumber(st_x+40, 176, &mainbaron, 3, &st_fragscount, PatchINum);
+  else
+    // TODO: use red numbers if health is low
+    h = new HudNumber(st_x+40, 176, &mainbaron, 3, &st_health, PatchINum);
+  widgets.push_back(h);
+
+  // mana
+  h = new HudNumber(st_x + 79, 181, &mainbaron, 3, &st_mana1, PatchSNum);
+  widgets.push_back(h);
+  h = new HudBinIcon(st_x+77, 164, &mainbaron, &st_mana1icon, PatchMana1[0], PatchMana1[1]);
+  widgets.push_back(h);
+
+  h = new HudNumber(st_x + 111, 181, &mainbaron, 3, &st_mana2, PatchSNum);
+  widgets.push_back(h);
+  h = new HudBinIcon(st_x+110, 164, &mainbaron, &st_mana2icon, PatchMana2[0], PatchMana2[1]);
+  widgets.push_back(h);
+  // TODO mana vials (new widget type?)
+
+  // armor
+  h = new HudNumber(st_x+250, 176, &mainbaron, 3, &st_armor, PatchINum);
+  widgets.push_back(h);
+
+
+  // TODO Weapon Pieces
+  // TODO entire Keybar (in map screen, keys and armor pieces)
+}
+
 
 void HUD::CreateHereticWidgets()
 {
@@ -1053,7 +1329,7 @@ void HUD::CreateHereticWidgets()
 
   // inventory system
   h = new HudInventory(st_x+34, st_y, &statusbaron, &invopen, &itemuse, st_invslots, &st_curpos,
-		       false, PatchSmNum, PatchARTI, Patch_InvBar);
+		       false, PatchSNum, PatchARTI, Patch_InvBar);
   widgets.push_back(h);
 
   // mainbar (closed inventory shown)
@@ -1107,30 +1383,30 @@ void HUD::CreateDoomWidgets()
   //st_  statusbaron, armson, fragson
 
   // ready weapon ammo
-  h = new HudNumber(st_x+44, st_y+3, &statusbaron, 3, &st_readywp_ammo, tallnum);
+  h = new HudNumber(st_x+44, st_y+3, &statusbaron, 3, &st_readywp_ammo, PatchBNum);
   widgets.push_back(h);
 
   // frags
-  h = new HudNumber(st_x+138, st_y+3, &st_fragson, 2, &st_fragscount, tallnum);
+  h = new HudNumber(st_x+138, st_y+3, &st_fragson, 2, &st_fragscount, PatchBNum);
   widgets.push_back(h);
 
   // ammo count and maxammo (all four kinds)
   const int ST_AMMOY[4] = {5, 11, 23, 17};
   for (i=0; i<4; i++)
     {
-      h = new HudNumber(st_x+288, st_y + ST_AMMOY[i], &statusbaron, 3, &st_ammo[i], shortnum);
+      h = new HudNumber(st_x+288, st_y + ST_AMMOY[i], &statusbaron, 3, &st_ammo[i], PatchSNum);
       widgets.push_back(h);
 
-      h = new HudNumber(st_x+314, st_y + ST_AMMOY[i], &statusbaron, 3, &st_maxammo[i], shortnum);
+      h = new HudNumber(st_x+314, st_y + ST_AMMOY[i], &statusbaron, 3, &st_maxammo[i], PatchSNum);
       widgets.push_back(h);
     }
 
   // health percentage
-  h = new HudPercent(st_x+90, st_y+3, &statusbaron, &st_health, tallnum, tallpercent);
+  h = new HudPercent(st_x+90, st_y+3, &statusbaron, &st_health, PatchBNum, tallpercent);
   widgets.push_back(h);
 
   // armor percentage - should be colored later
-  h = new HudPercent(st_x+221, st_y+3, &statusbaron, &st_armor, tallnum, tallpercent);
+  h = new HudPercent(st_x+221, st_y+3, &statusbaron, &st_armor, PatchBNum, tallpercent);
   widgets.push_back(h);
 
   // Weapons
@@ -1171,6 +1447,9 @@ void HUD::ST_CreateWidgets()
 
   switch (game.mode)
     {
+    case gm_hexen:
+      CreateHexenWidgets();
+      break;
     case gm_heretic:
       CreateHereticWidgets();
       break;
@@ -1257,8 +1536,14 @@ void HUD::ST_Start(PlayerPawn *p)
 
   st_palette = -1;
 
-  if (game.mode != gm_heretic)
+  if (game.mode == gm_heretic || game.mode == gm_hexen)
     {
+      ST_SetClassData(p->pclass, p->player->number);
+    }
+  else
+    {
+      // Doom
+      // face initialization
       st_faceindex = 0;
       st_oldhealth = -1;
       st_maxhealth = p->maxhealth / 2;
@@ -1318,8 +1603,6 @@ void HUD::CreateOverlayWidgets()
   const char *cmds = cv_stbaroverlay.str;
   char   c;
   int    i;
-  patch_t **lnum; // large numbers, 0-9, num[10] is minus sign
-  patch_t **snum; // small numbers
 
   HudWidget *h;
 
@@ -1327,50 +1610,40 @@ void HUD::CreateOverlayWidgets()
     delete overlay[i];
   overlay.clear();
 
-  if (game.mode == gm_heretic)
-    {
-      lnum = PatchBNum;
-      snum = PatchSmNum;
-    }
-  else
-    {
-      lnum = tallnum;
-      snum = shortnum;
-    };
-
   for (c = *cmds++; c; c = *cmds++)
     {
       if (c >= 'A' && c <= 'Z')
 	c = c + 'a' - 'A';
+
       switch (c)
 	{
 	case 'i': // inventory
 	  h = new HudInventory(st_x+34, st_y+9, &overlayon, &invopen, &itemuse, st_invslots, &st_curpos,
-			       true, snum, PatchARTI, Patch_InvBar);
+			       true, PatchSNum, PatchARTI, Patch_InvBar);
 	  overlay.push_back(h);
 	  break;
 
 	case 'h': // draw health
-	  //ST_drawOverlayNum(SCX(50), SCY(198)-(16*vid.dupy), tallnum,NULL);
+	  //ST_drawOverlayNum(SCX(50), SCY(198)-(16*vid.dupy), PatchBNum,NULL);
 	  //DrBNumber(CPawn->health, 5, st_y+22);
-	  h = new HudNumber(50, 198-16, &overlayon, 3, &st_health, lnum);
+	  h = new HudNumber(50, 198-16, &overlayon, 3, &st_health, PatchBNum);
 	  overlay.push_back(h);
 	  h = new HudBinIcon(62, 198, &overlayon, &st_true, NULL, sbohealth);
 	  overlay.push_back(h);
 	  break;
 
 	case 'f': // draw frags
-	  //ST_drawOverlayNum(SCX(300), SCY(2), st_fragscount, tallnum,NULL);
+	  //ST_drawOverlayNum(SCX(300), SCY(2), st_fragscount, PatchBNum,NULL);
 	  //DrINumber(temp, 45, st_y+27);	  
-	  h = new HudNumber(300, 2, &overlayon, 3, &st_fragscount, lnum);
+	  h = new HudNumber(300, 2, &overlayon, 3, &st_fragscount, PatchBNum);
 	  overlay.push_back(h);
 	  h = new HudBinIcon(302, 2, &overlayon, &st_true, NULL, sbofrags);
 	  overlay.push_back(h);
 	  break;
 
 	case 'a': // draw ammo
-	  //ST_drawOverlayNum(SCX(234), SCY(198)-(16*vid.dupy), sbpawn->ammo[sbpawn->weaponinfo[sbpawn->readyweapon].ammo], tallnum,NULL);
-	  h = new HudNumber(198, 198-16, &overlayon, 3, &st_readywp_ammo, lnum);
+	  //ST_drawOverlayNum(SCX(234), SCY(198)-(16*vid.dupy), sbpawn->ammo[sbpawn->weaponinfo[sbpawn->readyweapon].ammo], PatchBNum,NULL);
+	  h = new HudNumber(198, 198-16, &overlayon, 3, &st_readywp_ammo, PatchBNum);
 	  overlay.push_back(h);
 	  h = new HudMultIcon(210, 196, &overlayon, &st_atype, PatchAmmoPic);
 	  overlay.push_back(h);	  
@@ -1386,8 +1659,8 @@ void HUD::CreateOverlayWidgets()
 	  break;
 
          case 'm': // draw armor
-           //ST_drawOverlayNum(SCX(300), SCY(198)-(16*vid.dupy), sbpawn->armorpoints, tallnum,NULL);
-	   h = new HudNumber(264, 198-16, &overlayon, 3, &st_armor, lnum);
+           //ST_drawOverlayNum(SCX(300), SCY(198)-(16*vid.dupy), sbpawn->armorpoints, PatchBNum,NULL);
+	   h = new HudNumber(264, 198-16, &overlayon, 3, &st_armor, PatchBNum);
 	   overlay.push_back(h);
 	   h = new HudBinIcon(280, 198, &overlayon, &st_true, NULL, sboarmor);
 	   overlay.push_back(h);

@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.9  2003/04/04 00:01:57  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.8  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -295,7 +298,7 @@ public:
   sector_t *FindModelCeilingSector(fixed_t ceildestheight, sector_t *sec);
   int  FindSectorFromLineTag(line_t *line, int start);
   int  FindSectorFromTag(int tag, int start);
-  int  FindLineFromLineTag(const line_t *line, int start);
+  line_t *FindLineFromTag(int tag, int *start);
   void InitTagLists();
 
   void AddFakeFloor(sector_t* sec, sector_t* sec2, line_t* master, int flags);

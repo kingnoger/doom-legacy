@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.6  2003/04/04 00:01:57  smite-meister
+// bugfixes, Hexen HUD
+//
 // Revision 1.5  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -79,6 +82,7 @@ public:
   int team; // index into game.teams vector + 1
 
   int pawntype; // what kind of pawn are we playing?
+  byte pclass;
 
   // Can be changed during the game, takes effect at next respawn.
   int color; // skin color to be copied to each pawn

@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:23  hurdler
-// Initial revision
+// Revision 1.2  2003/04/04 00:01:57  smite-meister
+// bugfixes, Hexen HUD
+//
+// Revision 1.1.1.1  2002/11/16 14:18:23  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.3  2002/07/01 21:00:45  jpakkane
 // Fixed cr+lf to UNIX form.
@@ -59,8 +62,6 @@
 
 // Misc. other strings.
 #define SAVEGAMENAME    "doomsav"
-
-extern char savegamename[256];
 
 //
 // File locations,
