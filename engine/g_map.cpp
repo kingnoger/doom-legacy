@@ -2,17 +2,17 @@
 //-----------------------------------------------------------------------------
 // $Id$
 //
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.53  2005/04/05 16:15:13  smite-meister
+// valgrind fixes
+//
 // Revision 1.52  2005/03/17 21:42:50  smite-meister
 // Exl bugfixes
 //
 // Revision 1.51  2004/12/02 17:22:31  smite-meister
 // HUD fixed
-//
-// Revision 1.50  2004/11/19 16:51:04  smite-meister
-// cleanup
 //
 // Revision 1.49  2004/11/18 20:30:07  smite-meister
 // tnt, plutonia
@@ -124,6 +124,7 @@
 #include "m_random.h"
 
 #include "sounds.h"
+#include "s_sound.h"
 #include "z_zone.h"
 #include "tables.h"
 
@@ -229,8 +230,8 @@ Map::~Map()
 
   // clear the splats from deleted map
   R_ClearLevelSplats(); // FIXME find a better way
-  // Make sure all sounds are stopped before Z_FreeTags.
-  //S.Stop3DSounds();
+  // 3D sounds must be stopped when their sources are deleted...
+  S.Stop3DSounds(); // TODO not correct, since several maps may run simultaneously.
 }
 
 

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,14 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.22  2005/03/16 21:16:10  smite-meister
-// menu cleanup, bugfixes
-//
-// Revision 1.21  2004/12/31 16:19:41  smite-meister
-// alpha fixes
-//
-// Revision 1.20  2004/12/02 17:22:36  smite-meister
-// HUD fixed
+// Revision 1.23  2005/04/05 16:15:13  smite-meister
+// valgrind fixes
 //
 // Revision 1.19  2004/11/28 18:02:25  smite-meister
 // RPCs finally work!
@@ -35,9 +29,6 @@
 //
 // Revision 1.17  2004/11/09 20:38:53  smite-meister
 // added packing to I/O structs
-//
-// Revision 1.16  2004/11/04 21:12:55  smite-meister
-// save/load fixed
 //
 // Revision 1.15  2004/10/31 22:22:13  smite-meister
 // Hasta la vista, pic_t!
@@ -57,17 +48,8 @@
 // Revision 1.10  2004/08/13 18:25:11  smite-meister
 // sw renderer fix
 //
-// Revision 1.9  2004/08/12 18:30:34  smite-meister
-// cleaned startup
-//
-// Revision 1.8  2004/08/02 20:49:58  jussip
-// Minor compilation fix.
-//
 // Revision 1.7  2004/07/25 20:16:43  hurdler
 // Remove old hardware renderer and add part of the new one
-//
-// Revision 1.6  2004/04/01 09:16:16  smite-meister
-// Texture system bugfixes
 //
 // Revision 1.4  2004/01/10 16:03:00  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
@@ -331,7 +313,7 @@ void LumpTexture::Draw(int x, int y, int scrn = 0)
     }
 #endif
 
-  // scaling
+  // location scaling
   if (flags & V_SLOC)
     {
       x *= vid.dupx;
@@ -339,46 +321,53 @@ void LumpTexture::Draw(int x, int y, int scrn = 0)
       //dest += vid.scaledofs;
     }
 
+  // size scaling, clipping to LFB
+  fixed_t rowfrac, colfrac;
+  int x2, y2; // clipped past-the-end coordinates of the lower right corner
+
   if (flags & V_SSIZE)
     {
       x -= leftoffset * vid.dupx;
       y -= topoffset * vid.dupy;
+      x2 = min(x + width*vid.dupx, vid.width);
+      y2 = min(y + height*vid.dupy, vid.height);
+      colfrac = FixedDiv(FRACUNIT, vid.dupx << FRACBITS);
+      rowfrac = FixedDiv(FRACUNIT, vid.dupy << FRACBITS);
     }
   else
     {
       x -= leftoffset;
       y -= topoffset;
+      x2 = min(x + width, vid.width);
+      y2 = min(y + height, vid.height);
+      colfrac = rowfrac = 1;
     }
 
+  // clipped upper left corner
+  int x1 = max(x, 0);
+  int y1 = max(y, 0);
 
-  byte *dest_left = vid.screens[scrn] + max(0, y*vid.width) + max(0, x);
-  byte *destend;
-  fixed_t rowfrac, colfrac;
-
-  // clipping (TODO left and top clips are not completely correct...)
-  int visible_width = min(width*vid.dupx, vid.width - x);
-  int visible_height = min(height*vid.dupy, vid.height - y);
+  // starting location in texture space
+  fixed_t startcol = (x1 - x) << FRACBITS;
+  fixed_t startrow = (y1 - y) << FRACBITS;
 
   if (flags & V_SSIZE)
     {
-      colfrac = FixedDiv(FRACUNIT, vid.dupx<<FRACBITS);
-      rowfrac = FixedDiv(FRACUNIT, vid.dupy<<FRACBITS);
-      destend = dest_left + visible_height*vid.width;
+      startcol = FixedDiv(startcol, vid.dupx << FRACBITS);
+      startrow = FixedDiv(startrow, vid.dupy << FRACBITS);
     }
-  else
-    {
-      colfrac = rowfrac = 1;
-      destend = dest_left + height*vid.width;
-    }
+
+  byte *dest_left = vid.screens[scrn] + y1*vid.width + x1; // top left
+  byte *dest_end = dest_left + (y2-y1)*vid.width; // lower left, past-the-end
 
   byte *base = Generate();
 
   if (flags & V_SSIZE)
-    for (fixed_t row = 0; dest_left < destend; row += rowfrac, dest_left += vid.width)
+    for (fixed_t row = startrow; dest_left < dest_end; row += rowfrac, dest_left += vid.width)
       {
 	byte *source = base + width*(row >> FRACBITS);
-	byte *dest_right = dest_left + visible_width;
-	fixed_t col = 0;
+	byte *dest_right = dest_left + x2 - x1; // past-the-end
+	fixed_t col = startcol;
 	for (byte *dest = dest_left; dest < dest_right; col += colfrac, dest++)
 	  {
 	    byte pixel = source[col >> FRACBITS];
@@ -394,10 +383,10 @@ void LumpTexture::Draw(int x, int y, int scrn = 0)
 	  }
       }
   else // unscaled, perhaps a bit faster?
-    for (int row = 0; dest_left < destend; row++, dest_left += vid.width)
+    for (int row = x1-x; dest_left < dest_end; row++, dest_left += vid.width)
       {
-	byte *dest_right = dest_left + visible_width;
-	int col = 0;
+	byte *dest_right = dest_left + x2 - x1;
+	int col = y1-y;
 	for (byte *dest = dest_left; dest < dest_right; col++, dest++)
 	  {
 	    byte pixel = base[col];
@@ -579,9 +568,7 @@ void V_DrawFadeScreen()
 }
 
 
-// Simple translucence with one color, coords are resolution dependent
-//
-//added:20-03-98: console test
+/// Simple translucence with one color, coords are true LFB coords
 void V_DrawFadeConsBack(int x1, int y1, int x2, int y2)
 {
 #ifdef HWRENDER

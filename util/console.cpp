@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.24  2005/04/05 16:15:13  smite-meister
+// valgrind fixes
+//
 // Revision 1.23  2005/03/21 17:44:20  smite-meister
 // fixes
 //
@@ -429,7 +432,7 @@ Console::Console()
 Console::~Console()
 {
   if (con_buffer)
-    delete con_buffer;
+    delete [] con_buffer;
 }
 
 

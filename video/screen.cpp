@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2005/04/05 16:15:13  smite-meister
+// valgrind fixes
+//
 // Revision 1.17  2004/11/19 16:51:07  smite-meister
 // cleanup
 //
@@ -416,7 +419,7 @@ void Video::Recalc()
         free(buffer);
 
       int screensize = width * height * BytesPerPixel;
-      buffer = (byte *)malloc(screensize * NUMSCREENS);
+      buffer = (byte *)calloc(screensize * NUMSCREENS, 1);
 
       for (i=0 ; i<NUMSCREENS ; i++)
         screens[i] = buffer + i*screensize;
