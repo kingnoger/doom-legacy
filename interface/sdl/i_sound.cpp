@@ -16,6 +16,9 @@
 // for more details.
 //
 // $Log$
+// Revision 1.20  2004/12/09 06:16:16  segabor
+// fixed SDL headers for Mac
+//
 // Revision 1.19  2004/08/29 20:48:49  smite-meister
 // bugfixes. wow.
 //
@@ -86,7 +89,7 @@ rcsid[] = "$Id$";
 #include <unistd.h>
 #include <stdlib.h>
 
-#ifdef FREEBSD
+#if defined(FREEBSD) || defined(__APPLE__) || defined(__MACOS__)
 # include <SDL.h>
 # include <SDL_mixer.h>
 #else
