@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2005/01/25 18:29:13  smite-meister
+// preparing for alpha
+//
 // Revision 1.14  2005/01/04 18:32:41  smite-meister
 // better colormap handling
 //
@@ -273,14 +276,14 @@ int P_Read_ANIMATED(int lump)
       if (n < 2 || n > MAX_FRAME_DEFS || base <= 0 || last <= 0)
 	{
 	  if (lump >= 0)
-	    CONS_Printf("ANIMATED: Bad cycle from %s to %s", a->startname, a->endname);
+	    CONS_Printf(" ANIMATED: Bad cycle from %s to %s", a->startname, a->endname);
 	  continue;
 	}
 
-      AnimatedTexture *t = new AnimatedTexture(a->startname, n);
-
       int tics = ((lump >= 0) ? LONG(a->speed) : a->speed) * NEWTICRATERATIO; // duration of one frame in tics
-      for (i = 0; i < n; i++)
+
+      AnimatedTexture *t = new AnimatedTexture(a->startname, n);
+      for (i=0; i<n; i++)
 	{
 	  if (a->istexture)
 	    t->frames[i].tx = tc[base + i];
@@ -289,31 +292,32 @@ int P_Read_ANIMATED(int lump)
 
 	  t->frames[i].tics = tics;
 	}
-
       tc.Insert(t);
-      count++;
 
-      /*
-      // FIXME half-assed animation system
-      // TODO a small-time HACK, create one instance for each frame of animation
-      for (i = 1; i < n; i++)
+
+      // small-time HACK, create one instance for each frame of animation
+      for (i=1; i<n; i++)
 	{
-	  AnimatedTexture *r = new AnimatedTexture(*t); // copy construct
-	  if (a->istexture)
-	    r->name = textures[base + i]->name;
-	  else
-	    r->name = fc.FindNameForNum(base + i);
+	  AnimatedTexture *r = new AnimatedTexture(t->frames[i].tx->GetName(), n);
 
-	  r->currentframe = i;
+	  // copy the frames from t
+	  for (int j=0; j<n; j++)
+	    {
+	      r->frames[j].tx = t->frames[j].tx;
+	      r->frames[j].tics = tics;
+	    }
+
+	  r->currentframe = i; // but use a different start frame
 	  tc.Insert(r);
 	}
-      */
+
+      count++;
     }
 
   if (lump >= 0)
     {
       Z_Free(anims);
-      CONS_Printf("... done. %d animations.\n", count);
+      CONS_Printf(" %d animations found.\n", count);
     }
 
   return count;
@@ -400,9 +404,9 @@ int P_Read_ANIMDEFS(int lump)
 		  else
 		    {
 		      if (word)
-			CONS_Printf("Unknown modifier: '%s'\n", word);
+			CONS_Printf(" Unknown modifier: '%s'\n", word);
 		      else
-			CONS_Printf("Missing modifier!\n");
+			CONS_Printf(" Missing modifier!\n");
 		      fd.tics = 35;
 		    }
 
@@ -432,13 +436,13 @@ int P_Read_ANIMDEFS(int lump)
 	    state = PS_TEX;
 	}
       else
-	CONS_Printf("Unknown command: '%s'", word);
+	CONS_Printf(" Unknown command: '%s'", word);
     }
 
 
   if (count >= MAX_ANIM_DEFS)
     I_Error("Too many AnimDefs.");
 
-  CONS_Printf("... done. %d animations.\n", count);
+  CONS_Printf(" %d animations found.\n", count);
   return count;
 }

@@ -16,6 +16,9 @@
 // for more details.
 //
 // $Log$
+// Revision 1.21  2005/01/25 18:29:16  smite-meister
+// preparing for alpha
+//
 // Revision 1.20  2004/12/09 06:16:16  segabor
 // fixed SDL headers for Mac
 //
@@ -509,14 +512,14 @@ void I_InitMusic()
   // because we use SDL_mixer, audio is opened here.
   if (Mix_OpenAudio(audio.freq, audio.format, audio.channels, audio.samples) < 0)
     {
-      CONS_Printf("Unable to open audio: %s\n", Mix_GetError());
+      CONS_Printf(" Unable to open audio: %s\n", Mix_GetError());
       nosound = nomusic = true;
       return;
     }
 
   Mix_SetPostMix(audio.callback, NULL);  // after mixing music, add sound effects
 
-  CONS_Printf(" configured audio device with %d samples/slice\n", samplecount);
+  CONS_Printf(" Configured audio device with %d samples/slice\n", samplecount);
   //SDL_PauseAudio(0);
   Mix_Resume(-1); // start all sound channels (although they are not used)
 

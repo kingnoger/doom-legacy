@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,26 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.8  2004/11/19 16:51:06  smite-meister
-// cleanup
-//
-// Revision 1.7  2004/09/03 16:28:51  smite-meister
-// bugfixes and ZDoom linedef types
-//
-// Revision 1.6  2004/07/05 16:53:29  smite-meister
-// Netcode replaced
-//
-// Revision 1.5  2004/01/10 16:02:59  smite-meister
-// Cleanup and Hexen gameplay -related bugfixes
-//
-// Revision 1.4  2003/11/23 00:41:55  smite-meister
-// bugfixes
-//
-// Revision 1.3  2003/05/30 13:34:48  smite-meister
-// Cleanup, HUD improved, serialization
-//
-// Revision 1.2  2003/02/23 22:49:31  smite-meister
-// FS is back! L2 cache works.
+// Revision 1.9  2005/01/25 18:29:15  smite-meister
+// preparing for alpha
 //
 // Revision 1.1.1.1  2002/11/16 14:18:23  hurdler
 // Initial C++ version of Doom Legacy
@@ -51,7 +33,9 @@
 
 /// version control
 extern const int  VERSION;
+extern const int  SUBVERSION;
 extern const char VERSIONSTRING[];
+#define VERSION_BANNER "Doom Legacy %d.%d.%d %s"
 
 
 //#define RANGECHECK              // Uncheck this to compile debugging code

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,11 +18,11 @@
 //
 //
 // $Log$
+// Revision 1.43  2005/01/25 18:29:17  smite-meister
+// preparing for alpha
+//
 // Revision 1.42  2005/01/04 18:32:45  smite-meister
 // better colormap handling
-//
-// Revision 1.41  2004/12/31 16:19:41  smite-meister
-// alpha fixes
 //
 // Revision 1.37  2004/11/28 18:02:24  smite-meister
 // RPCs finally work!
@@ -74,9 +74,6 @@
 //
 // Revision 1.9  2003/04/04 00:01:58  smite-meister
 // bugfixes, Hexen HUD
-//
-// Revision 1.8  2003/03/29 20:08:04  smite-meister
-// Cast added
 //
 // Revision 1.7  2003/03/23 14:24:14  smite-meister
 // Polyobjects, MD3 models
@@ -302,7 +299,6 @@ void Texture::operator delete(void *mem)
 
 
 // Flats etc.
-//
 LumpTexture::LumpTexture(const char *n, int l, int w, int h)
   : Texture(n)
 {
@@ -742,7 +738,7 @@ void texturecache_t::Insert(Texture *t)
   if (i != c_map.end())
     {
       Texture *old = (Texture *)i->second;
-      CONS_Printf("Texture %s replaced!\n", old->name);
+      //CONS_Printf("Texture %s replaced!\n", old->name);
       // A Texture of that name is already there, so the old Texture
       // needs to be renamed and reinserted to the map.
       // Happens when generating animated textures.
@@ -827,7 +823,8 @@ int texturecache_t::ReadTextures()
   int lump = fc.GetNumForName("PNAMES");
   char *pnames = (char *)fc.CacheLumpNum(lump, PU_STATIC);
   int nummappatches = LONG(*((int *)pnames)); // sizeof(int) better be 4
-  CONS_Printf("PNAMES: lump %d:%d, %d patches\n", lump >> 16, lump & 0xffff, nummappatches);
+  if (devparm)
+    CONS_Printf("PNAMES: lump %d:%d, %d patches\n", lump >> 16, lump & 0xffff, nummappatches);
 
   char *name_p = pnames + 4;
   vector<int> patchlookup(nummappatches); // mapping from patchnumber to lumpnumber
@@ -851,7 +848,8 @@ int texturecache_t::ReadTextures()
   maptex = maptex1 = (int *)fc.CacheLumpNum(lump, PU_STATIC);
   int numtextures1 = LONG(*maptex);
   int maxoff = fc.LumpLength(lump);
-  CONS_Printf("TEXTURE1: lump %d:%d, %d textures, maxoff %d\n", lump >> 16, lump & 0xffff, numtextures1, maxoff);
+  if (devparm)
+    CONS_Printf("TEXTURE1: lump %d:%d, %d textures\n", lump >> 16, lump & 0xffff, numtextures1);
   int *directory = maptex+1;
 
   int numtextures2, maxoff2;
@@ -861,7 +859,8 @@ int texturecache_t::ReadTextures()
       maptex2 = (int *)fc.CacheLumpNum(lump, PU_STATIC);
       numtextures2 = LONG(*maptex2);
       maxoff2 = fc.LumpLength(lump);
-      CONS_Printf("TEXTURE2: lump %d:%d, %d textures, maxoff %d\n", lump >> 16, lump & 0xffff, numtextures2, maxoff2);
+      if (devparm)
+	CONS_Printf("TEXTURE2: lump %d:%d, %d textures\n", lump >> 16, lump & 0xffff, numtextures2);
     }
   else
     {

@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.5  2005/01/25 18:29:17  smite-meister
+// preparing for alpha
+//
 // Revision 1.4  2004/01/02 14:19:39  smite-meister
 // save bugfix
 //
@@ -132,7 +135,7 @@ bool LArchive::Open(byte *buffer, size_t length)
       
   int i = LONG(header.version);
 
-  if (i > VERSION || i < 141) // here you can do backwards save compatibility
+  if (i > VERSION || i < VERSION) // here you can do backwards save compatibility
     {
       M_StartMessage("Savegame from different version\n\nPress ESC\n",NULL,MM_NOTHING);
       return false;

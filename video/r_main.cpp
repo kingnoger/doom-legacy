@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.30  2005/01/25 18:29:18  smite-meister
+// preparing for alpha
+//
 // Revision 1.29  2004/12/31 16:19:41  smite-meister
 // alpha fixes
 //
@@ -886,7 +889,7 @@ static void TestAnims()
 void R_ServerInit()
 {
   // server needs to know the texture names and dimensions
-  CONS_Printf("\nInitTextures...");
+  CONS_Printf("InitTextures...\n");
   tc.Clear();
   tc.SetDefaultItem("DEF_TEX");
   tc.ReadTextures();
@@ -894,7 +897,7 @@ void R_ServerInit()
   //tc.Inventory();
 
   // set the default items for sprite and model caches
-  CONS_Printf("\nInitSprites...\n");
+  CONS_Printf("InitSprites...\n");
   R_InitSprites(sprnames);
 }
 

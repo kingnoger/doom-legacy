@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.29  2005/01/25 18:29:18  smite-meister
+// preparing for alpha
+//
 // Revision 1.28  2005/01/04 18:32:48  smite-meister
 // better colormap handling
 //
@@ -763,7 +766,7 @@ cacheitem_t *spritecache_t::Load(const char *p)
   memset(sprtemp, -1, sizeof(sprtemp));
   maxframe = -1;
 
-  CONS_Printf(" Sprite: %s  |  ", p);
+  //CONS_Printf(" Sprite: %s  |  ", p);
 
   int nwads = fc.Size();
   for (i=0; i<nwads; i++)
@@ -856,7 +859,7 @@ cacheitem_t *spritecache_t::Load(const char *p)
   t->spriteframes = (spriteframe_t *)Z_Malloc(maxframe*sizeof(spriteframe_t), PU_STATIC, NULL);
   memcpy(t->spriteframes, sprtemp, maxframe*sizeof(spriteframe_t));
 
-  CONS_Printf("frames = %d\n", maxframe);
+  //CONS_Printf("frames = %d\n", maxframe);
 
   return t;
 }

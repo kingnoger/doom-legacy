@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,26 +18,14 @@
 //
 //
 // $Log$
-// Revision 1.39  2004/12/31 16:19:29  smite-meister
-// alpha fixes
+// Revision 1.40  2005/01/25 18:29:13  smite-meister
+// preparing for alpha
 //
 // Revision 1.38  2004/12/08 16:42:36  segabor
 // MacOS X specific DEFAULTDIR and D_RunDoom() entry point
 //
-// Revision 1.37  2004/11/28 18:02:19  smite-meister
-// RPCs finally work!
-//
-// Revision 1.36  2004/11/19 16:51:04  smite-meister
-// cleanup
-//
 // Revision 1.35  2004/11/18 20:30:06  smite-meister
 // tnt, plutonia
-//
-// Revision 1.34  2004/11/13 22:38:42  smite-meister
-// intermission works
-//
-// Revision 1.33  2004/10/27 17:37:06  smite-meister
-// netcode update
 //
 // Revision 1.32  2004/09/06 22:28:53  jussip
 // Beginnings of new joystick code.
@@ -45,29 +33,11 @@
 // Revision 1.31  2004/08/18 14:35:20  smite-meister
 // PNG support!
 //
-// Revision 1.30  2004/08/12 18:30:23  smite-meister
-// cleaned startup
-//
-// Revision 1.29  2004/07/14 16:13:13  smite-meister
-// cleanup, commands
-//
-// Revision 1.28  2004/07/11 14:32:00  smite-meister
-// Consvars updated, bugfixes
-//
 // Revision 1.27  2004/07/05 16:53:24  smite-meister
 // Netcode replaced
 //
 // Revision 1.26  2004/04/25 16:26:48  smite-meister
 // Doxygen
-//
-// Revision 1.24  2004/01/10 16:02:59  smite-meister
-// Cleanup and Hexen gameplay -related bugfixes
-//
-// Revision 1.23  2004/01/02 14:25:01  smite-meister
-// cleanup
-//
-// Revision 1.22  2003/12/03 10:49:49  smite-meister
-// Save/load bugfix, text strings updated
 //
 // Revision 1.21  2003/11/23 19:07:41  smite-meister
 // New startup order
@@ -75,26 +45,11 @@
 // Revision 1.20  2003/11/12 11:07:16  smite-meister
 // Serialization done. Map progression.
 //
-// Revision 1.19  2003/06/10 22:39:53  smite-meister
-// Bugfixes
-//
-// Revision 1.18  2003/05/30 13:34:42  smite-meister
-// Cleanup, HUD improved, serialization
-//
-// Revision 1.17  2003/05/11 21:23:49  smite-meister
-// Hexen fixes
-//
 // Revision 1.16  2003/05/05 00:24:48  smite-meister
 // Hexen linedef system. Pickups.
 //
 // Revision 1.15  2003/04/19 17:38:46  smite-meister
 // SNDSEQ support, tools, linedef system...
-//
-// Revision 1.14  2003/04/05 12:20:00  smite-meister
-// Makefiles fixed
-//
-// Revision 1.13  2003/04/04 00:01:52  smite-meister
-// bugfixes, Hexen HUD
 //
 // Revision 1.12  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
@@ -195,9 +150,9 @@ void SV_Init();
 void CL_Init();
 
 
-
-// Version information
-const int  VERSION = 150;
+// Version number: major.minor.subversion
+const int  VERSION = 199;  // major*100 + minor
+const int  SUBVERSION = 0; // for bugfix releases, should not affect compatibility
 const char VERSIONSTRING[] = "alpha1";
 
 // Name of local directory for config files and savegames
@@ -600,7 +555,7 @@ static void D_CheckWadVersion()
       char s[128];
       int  l = fc.ReadLumpHeader(lump, s, 127);
       s[l]='\0';
-      if (sscanf(s, "Doom Legacy WAD V%d.%d", &l, &wadversion) == 2)
+      if (sscanf(s, "Doom Legacy WAD v%d.%d.%*d", &l, &wadversion) == 2)
 	wadversion += l*100;
     }
 
@@ -609,7 +564,7 @@ static void D_CheckWadVersion()
 	    "Use the legacy.wad coming from the same zip file as this executable\n"
 	    "\n"
 	    "Use -noversioncheck to remove this check,\n"
-	    "but this can cause Legacy to hang\n",
+	    "but this can cause Legacy to crash\n",
 	    wadversion/100,wadversion%100,VERSION/100,VERSION%100);
 }
 
@@ -692,7 +647,7 @@ void D_DoomMain()
 
   // start console output by the banner line
   char banner[81];
-  sprintf(banner, "Doom Legacy %d.%d %s", VERSION/100, VERSION%100, VERSIONSTRING);
+  sprintf(banner, VERSION_BANNER, VERSION/100, VERSION%100, SUBVERSION, VERSIONSTRING);
   CONS_Printf("%s\n", D_MakeTitleString(banner));
 
   // get parameters from a response file (eg: legacy @parms.txt)
@@ -762,7 +717,7 @@ void D_DoomMain()
   COM_Init();
 
   // system-specific stuff
-  CONS_Printf("Sys_Init: Init system-specific stuff.\n");
+  CONS_Printf("SYS_Init: Init system-specific stuff.\n");
   I_SysInit();
 
   // Initialize the joystick subsystem.

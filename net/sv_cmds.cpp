@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2005/01/25 18:29:16  smite-meister
+// preparing for alpha
+//
 // Revision 1.12  2004/11/28 18:02:23  smite-meister
 // RPCs finally work!
 //
@@ -81,8 +84,8 @@
 //  Returns program version.
 void Command_Version_f()
 {
-  CONS_Printf("Doom Legacy version %d.%d %s ("__TIME__" "__DATE__")\n",
-	      VERSION/100, VERSION%100, VERSIONSTRING);
+  CONS_Printf(VERSION_BANNER" "__TIME__" "__DATE__"\n",
+	      VERSION/100, VERSION%100, SUBVERSION, VERSIONSTRING);
 }
 
 

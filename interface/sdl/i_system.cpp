@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.26  2005/01/25 18:29:16  smite-meister
+// preparing for alpha
+//
 // Revision 1.25  2004/12/08 16:58:10  segabor
 // Small Mac related fixes
 //
@@ -559,7 +562,7 @@ void I_SysInit()
     }
 
   char title[30];
-  sprintf(title, "Doom Legacy %d.%d %s", VERSION/100, VERSION%100, VERSIONSTRING);
+  sprintf(title, VERSION_BANNER, VERSION/100, VERSION%100, SUBVERSION, VERSIONSTRING);
 
   // Window title
   SDL_WM_SetCaption(title, "Doom Legacy");

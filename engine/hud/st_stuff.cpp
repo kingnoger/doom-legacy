@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.31  2005/01/25 18:29:14  smite-meister
+// preparing for alpha
+//
 // Revision 1.30  2004/12/31 16:19:38  smite-meister
 // alpha fixes
 //
@@ -1649,8 +1652,6 @@ void HUD::ST_Stop()
 void HUD::ST_Start(PlayerInfo *p)
 {
   int i;
-
-  CONS_Printf("HUD::ST_Start\n");
 
   if (st_active)
     ST_Stop();

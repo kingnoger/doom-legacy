@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.24  2005/01/25 18:29:14  smite-meister
+// preparing for alpha
+//
 // Revision 1.23  2004/11/28 18:02:23  smite-meister
 // RPCs finally work!
 //
@@ -1047,51 +1050,47 @@ void SF_ObjDead()
 
 void SF_ObjFlag()
 {
+  // FIXME this function is crap, and should be defined differently. And fixed.
   Actor *mo;
-  int flagnum;
+  int f;
 
-  if(t_argc==0)   // no arguments
+  if (t_argc == 0)   // no arguments
     {
       script_error("no arguments for function\n");
       return;
     }
-  else
-    if(t_argc == 1)         // use trigger, 1st is flag
-      {
-        // use trigger:
-        mo = current_script->trigger;
-        flagnum = intvalue(t_argv[0]);
-      }
-    else
-      if(t_argc == 2)
-        {
-          // specified object
-          mo = MobjForSvalue(t_argv[0]);
-          flagnum = intvalue(t_argv[1]);
-        }
-      else                     // >= 3 : SET flags
-        {
-          mo = MobjForSvalue(t_argv[0]);
-          flagnum = intvalue(t_argv[1]);
-
-          if(mo)          // nullptr check
-            {
-              long newflag;
-              // remove old bit
-              mo->flags = mo->flags & ~(1 << flagnum);
-
-              // make the new flag
-              newflag = (!!intvalue(t_argv[2])) << flagnum;
-              mo->flags |= newflag;   // add new flag to mobj flags
-            }
-
-          //P_UpdateThinker(&mo->thinker);     // update thinker
-
-        }
+  else if (t_argc == 1)
+    {
+      // query flags of trigger object:
+      mo = current_script->trigger;
+      f = intvalue(t_argv[0]);
+    }
+  else if (t_argc == 2)
+    {
+      // query flags of specified object
+      mo = MobjForSvalue(t_argv[0]);
+      f = intvalue(t_argv[1]);
+    }
+  else  // >= 3 : SET flags of specified object
+    {
+      mo = MobjForSvalue(t_argv[0]);
+      f = intvalue(t_argv[1]);
+      
+      if (mo)
+	{
+	  int newflag;
+	  // remove old bit
+	  mo->flags = mo->flags & ~(1 << f);
+	  
+	  // make the new flag
+	  newflag = (!!intvalue(t_argv[2])) << f;
+	  mo->flags |= newflag;   // add new flag to mobj flags
+	}
+    }
 
   t_return.type = svt_int;
   // nullptr check:
-  t_return.value.i = mo ? !!(mo->flags & (1 << flagnum)) : 0;
+  t_return.value.i = mo ? !!(mo->flags & (1 << f)) : 0;
 }
 
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2005/01/25 18:29:18  smite-meister
+// preparing for alpha
+//
 // Revision 1.14  2004/12/31 16:19:41  smite-meister
 // alpha fixes
 //
@@ -419,7 +422,6 @@ void R_InitViewBorder()
       break;
     default:
       // DOOM border patch.
-      // FIXME! should be default patch in legacy.wad
       window_background = tc.GetPtr("FLOOR7_2");
     }
 }

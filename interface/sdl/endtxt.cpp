@@ -16,26 +16,35 @@
 #include "m_argv.h"
 #include "sdl/endtxt.h"
 
+
 void ShowEndTxt()
 {
   int i, j;
-  int att = 0;
-  int nlflag = 0;
-  unsigned short *text;
-  char *col;
 
   /* if option -noendtxt is set, don't print the text */
   if (M_CheckParm("-noendtxt"))
     return;
 
-  /* if the xterm has more then 80 columns we need to add nl's */
-  col = getenv("COLUMNS");
-  if (col) {
-    if (atoi(col) > 80) nlflag++;
-  }
-
   /* get the lump with the text */
-  text = (unsigned short *)fc.CacheLumpNum(fc.GetNumForName("ENDOOM"), PU_CACHE);
+  unsigned short *text = (unsigned short *)fc.CacheLumpNum(fc.GetNumForName("ENDOOM"), PU_CACHE);
+
+  /* if the xterm has more then 80 columns we need to add nl's */
+  char *col = getenv("COLUMNS");
+  bool nlflag = false;
+  if (col && atoi(col) > 80)
+    nlflag = true;
+
+#if 1
+  // just the text, no colors
+  for (i=1; i<=80*25; i++)
+    {
+      putchar(*text++ & 0xff);
+      if (!(i % 80))
+	putchar('\n');
+    }
+#else
+
+  int att = 0;
 
   /* print 80x25 text and deal with the attributes too */
   for (i=1; i<=80*25; i++) {
@@ -169,4 +178,5 @@ void ShowEndTxt()
 
   if (nlflag)
     printf("\n");
+#endif
 }

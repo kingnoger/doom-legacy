@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2005/01/25 18:29:12  smite-meister
+// preparing for alpha
+//
 // Revision 1.18  2004/11/09 20:38:49  smite-meister
 // added packing to I/O structs
 //
@@ -1056,7 +1059,7 @@ int S_Read_SNDINFO(int lump)
 	}
     }
 
-  CONS_Printf("%d sounds found.\n", soundnumber - 1);
+  CONS_Printf(" %d sounds found.\n", soundnumber - 1);
   return (soundnumber - 1);
 }
 

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2005/01/25 18:29:16  smite-meister
+// preparing for alpha
+//
 // Revision 1.20  2004/11/28 18:17:10  smite-meister
 // load bugfix
 //
@@ -399,7 +402,7 @@ void GameInfo::SV_Reset()
   netgame = false;
   multiplayer = cv_splitscreen.value;
 
-  CONS_Printf("-- Server reset --\n");
+  CONS_Printf("\n--- Server reset ---\n");
 }
 
 
@@ -417,11 +420,11 @@ bool GameInfo::SV_SpawnServer(int mapinfo_lump)
 	}
 
       SV_Reset();
-      CONS_Printf("Starting a server...\n");
+      CONS_Printf("Starting a server.\n");
 
       if (Read_MAPINFO(mapinfo_lump) <= 0)
 	{
-	  CONS_Printf("Bad MAPINFO lump.\n");
+	  CONS_Printf(" Bad MAPINFO lump.\n");
 	  return false;
 	}
     }

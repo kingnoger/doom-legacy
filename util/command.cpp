@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2005/01/25 18:29:17  smite-meister
+// preparing for alpha
+//
 // Revision 1.11  2004/12/08 16:49:04  segabor
 // Missing devparm reference added
 //
@@ -700,28 +703,24 @@ static void COM_Echo_f()
 //
 static void COM_Exec_f()
 {
-  byte*   buf=NULL;
-
   if (COM_Argc() != 2)
     {
       CONS_Printf ("exec <filename> : run a script file\n");
       return;
     }
 
+  byte *buf = NULL;
+
   // load file
-#if 0
-  int length =
-#endif
-  FIL_ReadFile (COM_Argv(1), &buf);
-  //CONS_Printf ("debug file length : %d\n",length);
+  FIL_ReadFile(COM_Argv(1), &buf);
 
   if (!buf)
     {
-      CONS_Printf ("couldn't execute file %s\n",COM_Argv(1));
+      CONS_Printf ("Couldn't execute file %s\n",COM_Argv(1));
       return;
     }
 
-  CONS_Printf ("executing %s\n",COM_Argv(1));
+  CONS_Printf ("Executing %s\n",COM_Argv(1));
 
   // insert text file into the command buffer
   COM_BufInsertText((char *)buf);

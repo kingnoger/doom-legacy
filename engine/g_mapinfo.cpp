@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.24  2005/01/25 18:29:13  smite-meister
+// preparing for alpha
+//
 // Revision 1.23  2004/11/19 16:51:04  smite-meister
 // cleanup
 //
@@ -729,7 +732,7 @@ int GameInfo::Read_MAPINFO(int lump)
     }
 
   n = mapinfo.size();
-  CONS_Printf("...done. %d maps.\n", n);
+  CONS_Printf(" %d maps found.\n", n);
   return n;
 }
 

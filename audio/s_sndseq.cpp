@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2005/01/25 18:29:12  smite-meister
+// preparing for alpha
+//
 // Revision 1.9  2004/10/27 17:37:05  smite-meister
 // netcode update
 //
@@ -343,7 +346,7 @@ int S_Read_SNDSEQ(int lump)
 	}
     }
 
-  CONS_Printf(" done. %d sequences.\n", SoundSeqs.size());
+  CONS_Printf(" %d sequences found.\n", SoundSeqs.size());
   return SoundSeqs.size();
 }
 
