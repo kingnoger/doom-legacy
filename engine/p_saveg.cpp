@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:03  hurdler
-// Initial revision
+// Revision 1.2  2002/12/04 09:13:40  smite-meister
+// Player clipping bug fixed
+//
+// Revision 1.1.1.1  2002/11/16 14:18:03  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.8  2002/09/25 15:17:37  vberghol
 // Intermission fixed?
@@ -1833,6 +1836,8 @@ void P_UnArchiveScripts()
 void P_ArchiveMisc()
 {
   /*
+    // replace with game.Serialize();, map.Serialize();
+
   ULONG pig=0;
   int i;
 

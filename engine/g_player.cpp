@@ -28,6 +28,7 @@ PlayerInfo::PlayerInfo(const string & n = "")
   team = 0;
   playerstate = PST_WAITFORMAP;
   frags.resize(game.maxplayers);
+  pawntype = MT_PLAYER;
 };
 
 

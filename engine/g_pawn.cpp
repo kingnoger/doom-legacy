@@ -62,6 +62,7 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
   fixedcolormap = 0;
   invSlot = 0;
   inventory.resize(1, inventory_t(3,3)); // at least 1 empty slot // FIXME testing
+  flags |= MF_NOTMONSTER; // the playerpawn is not a monster. MT_PLAYER might be.
 
   usedown = attackdown = true;  // don't do anything immediately
 
@@ -610,7 +611,7 @@ void PlayerPawn::Think()
     goto actor_think;
 
   // inventory
-  // TODO: invTics should be a PlayerInfo or HUD property and ticked elsewhere?
+  // TODO: invTics should be a PlayerInfo or HUD property and ticked elsewhere? nah.
   if (invTics) invTics--;
 
   // Turn on required cheats
