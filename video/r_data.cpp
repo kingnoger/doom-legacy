@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.39  2004/12/08 16:54:04  segabor
+// Endianness fix
+//
 // Revision 1.38  2004/12/02 17:22:36  smite-meister
 // HUD fixed
 //
@@ -364,7 +367,12 @@ byte *PatchTexture::Generate()
       // to avoid unnecessary memcpy
       fc.ReadLump(lump, pixels);
 
-      // necessary endianness conversion
+      // [segabor] necessary endianness conversion
+	  p->width		= SHORT(p->width);
+	  p->height		= SHORT(p->height);
+	  p->leftoffset	= SHORT(p->leftoffset);
+	  p->topoffset	= SHORT(p->topoffset);
+	  
       for (int i=0; i < width; i++)
         p->columnofs[i] = LONG(p->columnofs[i]);
 
