@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.6  2004/10/27 17:37:09  smite-meister
+// netcode update
+//
 // Revision 1.5  2004/08/12 18:30:28  smite-meister
 // cleaned startup
 //
@@ -741,7 +744,7 @@ void script_error(char *s, ...)
   CONS_Printf(": %s", tempstr);
   
   // make a noise
-  S_StartAmbSound(sfx_pldeth);
+  S_StartLocalAmbSound(sfx_pldeth);
   
   killscript = true;
 }

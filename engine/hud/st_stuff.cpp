@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.24  2004/10/27 17:37:08  smite-meister
+// netcode update
+//
 // Revision 1.23  2004/10/14 19:35:46  smite-meister
 // automap, bbox_t
 //
@@ -1249,8 +1252,7 @@ void HUD::PaletteFlash()
       else
 #endif
         {
-          if (!cv_splitscreen.value || !palette)
-            vid.SetPalette(palette);
+	  vid.SetPalette(palette);
         }
     }
 }
@@ -1539,7 +1541,8 @@ void HUD::ST_Drawer(bool refresh)
   if (!st_active)
     return;
 
-  st_refresh = st_refresh || refresh;
+  //st_refresh = st_refresh || refresh;
+  st_refresh = true;
 
   // Do red-/gold-shifts from damage/items
   PaletteFlash();

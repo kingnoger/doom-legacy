@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2004/10/27 17:37:05  smite-meister
+// netcode update
+//
 // Revision 1.16  2004/01/02 14:25:01  smite-meister
 // cleanup
 //
@@ -1075,7 +1078,14 @@ bool S_StartMusic(int m_id, bool loop)
 
 #define NORM_SEP 128
 
-int S_StartAmbSound(int sfx_id, float volume)
+
+int S_StartAmbSound(PlayerInfo *p, int sfx_id, float volume)
+{
+  // TEMPorary
+  return S_StartLocalAmbSound(sfx_id, volume);
+}
+
+int S_StartLocalAmbSound(int sfx_id, float volume)
 {
 #ifdef PARANOIA
   // check for bogus sound #

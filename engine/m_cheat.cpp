@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2004/10/27 17:37:06  smite-meister
+// netcode update
+//
 // Revision 1.21  2004/08/15 18:08:28  smite-meister
 // palette-to-palette colormaps etc.
 //
@@ -32,15 +35,6 @@
 //
 // Revision 1.17  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
-//
-// Revision 1.16  2004/01/02 14:25:01  smite-meister
-// cleanup
-//
-// Revision 1.15  2003/12/18 11:57:31  smite-meister
-// fixes / new bugs revealed
-//
-// Revision 1.14  2003/12/14 00:20:02  smite-meister
-// quick bugfix
 //
 // Revision 1.13  2003/12/03 10:49:49  smite-meister
 // Save/load bugfix, text strings updated
@@ -82,7 +76,7 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Cheat sequences.
+/// \brief Cheat sequences and related console commands.
 
 #include "tables.h"
 #include "dstrings.h"
@@ -108,10 +102,10 @@
 
 void Command_CheatNoClip_f()
 {
-  if (!game.server || !consoleplayer)
+  if (!game.server || !com_player)
     return;
 
-  PlayerPawn *p = consoleplayer->pawn;
+  PlayerPawn *p = com_player->pawn;
   if (p == NULL) return;
 
   p->cheats ^= CF_NOCLIP;
@@ -124,10 +118,10 @@ void Command_CheatNoClip_f()
 
 void Command_CheatGod_f()
 {
-  if (!game.server || !consoleplayer)
+  if (!game.server || !com_player)
     return;
 
-  PlayerPawn *p = consoleplayer->pawn;
+  PlayerPawn *p = com_player->pawn;
   if (p == NULL) return;
 
   p->cheats ^= CF_GODMODE;
@@ -145,7 +139,7 @@ void Command_CheatGimme_f()
   char*     s;
   int       i,j;
 
-  if (!game.server || !consoleplayer)
+  if (!game.server || !com_player)
     return;
 
   if (COM_Argc()<2)
@@ -154,7 +148,7 @@ void Command_CheatGimme_f()
       return;
     }
 
-  PlayerPawn* p = consoleplayer->pawn;
+  PlayerPawn* p = com_player->pawn;
   if (p == NULL) return;
 
   for (i=1; i<COM_Argc(); i++) {
@@ -277,71 +271,31 @@ void Command_CheatGimme_f()
 
 
 
+//==========================================================================
+//  General cheats
+//==========================================================================
+
+byte cheat_fly_around_seq[] = {'i', 'd', 'f', 'l', 'y', 0xff};
+byte cheat_cd_seq[] = {'i', 'd', 'c', 'd', 0, 0, 0xff};
+byte cheat_mypos_seq[] = {'i', 'd', 'm', 'y', 'p', 'o', 's', 0xff};
 
 //==========================================================================
 //  Doom cheats
 //==========================================================================
 
-byte   cheat_mus_seq[] =
-{
-  //0xb2, 0x26, 0xb6, 0xae, 0xea, 0, 0, 0xff // idmus__
-  'i', 'd', 'm', 'u', 's', 0, 0, 0xff
-};
-
-byte   cheat_cd_seq[] =
-{
-  //0xb2, 0x26, 0xe2, 0x26, 0, 0, 0xff // idcd__
-  'i', 'd', 'c', 'd', 0, 0, 0xff
-};
-
-byte   cheat_choppers_seq[] =
-{
-  //0xb2, 0x26, 0xe2, 0x32, 0xf6, 0x2a, 0x2a, 0xa6, 0x6a, 0xea, 0xff // idchoppers
-  'i', 'd', 'c', 'h', 'o', 'p', 'p', 'e', 'r', 's', 0xff
-};
-
-byte   cheat_god_seq[] =
-{
-  //0xb2, 0x26, 0x26, 0xaa, 0x26, 0xff  // iddqd
-  'i', 'd', 'd', 'q', 'd', 0xff
-};
-
-
-byte   cheat_ammo_seq[] =
-{
-  //0xb2, 0x26, 0xf2, 0x66, 0xa2, 0xff  // idkfa
-  'i', 'd', 'k', 'f', 'a', 0xff
-};
-
-byte   cheat_ammonokey_seq[] =
-{
-  //0xb2, 0x26, 0x66, 0xa2, 0xff        // idfa
-  'i', 'd', 'f', 'a', 0xff 
-};
-
-
+byte cheat_mus_seq[] = {'i', 'd', 'm', 'u', 's', 0, 0, 0xff};
+byte cheat_choppers_seq[] = {'i', 'd', 'c', 'h', 'o', 'p', 'p', 'e', 'r', 's', 0xff};
+byte cheat_god_seq[] = {'i', 'd', 'd', 'q', 'd', 0xff};
+byte cheat_ammo_seq[] = {'i', 'd', 'k', 'f', 'a', 0xff};
+byte cheat_ammonokey_seq[] = {'i', 'd', 'f', 'a', 0xff};
 // Smashing Pumpkins Into Small Pieces Of Putrid Debris.
-byte   cheat_noclip_seq[] =
-{
-  //0xb2, 0x26, 0xea, 0x2a, 0xb2,       // idspispopd
-  //0xea, 0x2a, 0xf6, 0x2a, 0x26, 0xff
-  'i', 'd', 's', 'p', 'i', 's', 'p', 'o', 'p', 'd', 0xff
-};
-
-byte   cheat_commercial_noclip_seq[] =
-{
-  //0xb2, 0x26, 0xe2, 0x36, 0xb2, 0x2a, 0xff    // idclip
-  'i', 'd', 'c', 'l', 'i', 'p', 0xff
-};
-
-//added:28-02-98: new cheat to fly around levels using jump !!
-byte   cheat_fly_around_seq[] =
-{
-  'i', 'd', 'f', 'l', 'y', 0xff // idfly
-};
+byte cheat_noclip_seq[] = {'i', 'd', 's', 'p', 'i', 's', 'p', 'o', 'p', 'd', 0xff};
+byte cheat_commercial_noclip_seq[] = {'i', 'd', 'c', 'l', 'i', 'p', 0xff};
+byte cheat_clev_seq[] = {'i', 'd', 'c', 'l', 'e', 'v', 0, 0, 0xff};
+byte cheat_amap_seq[] = {'i', 'd', 'd', 't', 0xff};
 
 /*
-byte   cheat_powerup_seq[7][10] =
+byte cheat_powerup_seq[7][10] =
 {
     { 0xb2, 0x26, 0x62, 0xa6, 0x32, 0xf6, 0x36, 0x26, 0x6e, 0xff },     // beholdv
     { 0xb2, 0x26, 0x62, 0xa6, 0x32, 0xf6, 0x36, 0x26, 0xea, 0xff },     // beholds
@@ -354,133 +308,35 @@ byte   cheat_powerup_seq[7][10] =
 */
 
 // idbehold message
-byte   cheat_powerup_seq1[] =
-{
-  //0xb2, 0x26, 0x62, 0xa6, 0x32, 0xf6, 0x36, 0x26, 0xff // idbehold
-  'i', 'd', 'b', 'e', 'h', 'o', 'l', 'd', 0xff
-};
-
+byte   cheat_powerup_seq1[] = {'i', 'd', 'b', 'e', 'h', 'o', 'l', 'd', 0xff};
 // actual cheat
-byte   cheat_powerup_seq2[] =
-{
-  //0xb2, 0x26, 0x62, 0xa6, 0x32, 0xf6, 0x36, 0x26, 0, 0xff // idbehold_
-  'i', 'd', 'b', 'e', 'h', 'o', 'l', 'd', 0, 0xff
-};
-
-byte   cheat_clev_seq[] =
-{
-  //0xb2, 0x26,  0xe2, 0x36, 0xa6, 0x6e, 0, 0, 0xff  // idclev__
-  'i', 'd', 'c', 'l', 'e', 'v', 0, 0, 0xff
-};
-
-// my position cheat
-byte   cheat_mypos_seq[] =
-{
-  //0xb2, 0x26, 0xb6, 0xba, 0x2a, 0xf6, 0xea, 0xff      // idmypos
-  'i', 'd', 'm', 'y', 'p', 'o', 's', 0xff
-};
-
-byte cheat_amap_seq[] =
-{
-  //0xb2, 0x26, 0x26, 0x2e, 0xff // iddt
-  'i', 'd', 'd', 't', 0xff
-};
+byte   cheat_powerup_seq2[] = {'i', 'd', 'b', 'e', 'h', 'o', 'l', 'd', 0, 0xff};
 
 
 //==========================================================================
 //  Heretic cheats
 //==========================================================================
 
-
-// Toggle god mode
-static byte CheatGodSeq[] =
-{
-  'q', 'u', 'i', 'c', 'k', 'e', 'n', 0xff
-};
-
-// Toggle no clipping mode
-static byte CheatNoClipSeq[] =
-{
-  'k', 'i', 't', 't', 'y', 0xff
-};
-
-// Get all weapons and ammo
-static byte CheatWeaponsSeq[] =
-{
-  'r', 'a', 'm', 'b', 'o', 0xff
-};
-
-// Toggle tome of power
-static byte CheatPowerSeq[] =
-{
-  's', 'h', 'a', 'z', 'a', 'm', 0xff, 0
-};
-
-// Get full health
-static byte CheatHealthSeq[] =
-{
-  'p', 'o', 'n', 'c', 'e', 0xff
-};
-
-// Get all keys
-static byte CheatKeysSeq[] =
-{
-  's', 'k', 'e', 'l', 0xff, 0
-};
-
-// Get an artifact 1st stage (ask for type)
-static byte CheatArtifact1Seq[] =
-{
-  'g', 'i', 'm', 'm', 'e', 0xff
-};
-
-// Get an artifact 2nd stage (ask for count)
-static byte CheatArtifact2Seq[] =
-{
-  'g', 'i', 'm', 'm', 'e', 0, 0xff, 0
-};
-
-// Get an artifact final stage
-static byte CheatArtifact3Seq[] =
-{
-  'g', 'i', 'm', 'm', 'e', 0, 0, 0xff
-};
-
-// Warp to new level
-static byte CheatWarpSeq[] =
-{
-  'e', 'n', 'g', 'a', 'g', 'e', 0, 0, 0xff, 0
-};
-
-// Save a screenshot
-static byte CheatChickenSeq[] =
-{
-  'c', 'o', 'c', 'k', 'a', 'd', 'o', 'o', 'd', 'l', 'e', 'd', 'o', 'o', 0xff, 0
-};
-
-// Kill all monsters
-static byte CheatMassacreSeq[] =
-{
-  'm', 'a', 's', 's', 'a', 'c', 'r', 'e', 0xff, 0
-};
-
-static byte CheatIDKFASeq[] =
-{
-  'i', 'd', 'k', 'f', 'a', 0xff, 0
-};
-
-static byte CheatIDDQDSeq[] =
-{
-  'i', 'd', 'd', 'q', 'd', 0xff, 0
-};
+static byte CheatGodSeq[] = {'q', 'u', 'i', 'c', 'k', 'e', 'n', 0xff};
+static byte CheatNoClipSeq[] = {'k', 'i', 't', 't', 'y', 0xff};
+static byte CheatWeaponsSeq[] = {'r', 'a', 'm', 'b', 'o', 0xff}; // weapons and ammo
+static byte CheatPowerSeq[] = {'s', 'h', 'a', 'z', 'a', 'm', 0xff, 0}; // tome of power
+static byte CheatHealthSeq[] = {'p', 'o', 'n', 'c', 'e', 0xff};
+static byte CheatKeysSeq[] = {'s', 'k', 'e', 'l', 0xff, 0};
+static byte CheatArtifact1Seq[] = {'g', 'i', 'm', 'm', 'e', 0xff};
+static byte CheatArtifact2Seq[] = {'g', 'i', 'm', 'm', 'e', 0, 0xff, 0};
+static byte CheatArtifact3Seq[] = {'g', 'i', 'm', 'm', 'e', 0, 0, 0xff};
+static byte CheatWarpSeq[] = {'e', 'n', 'g', 'a', 'g', 'e', 0, 0, 0xff, 0};
+static byte CheatChickenSeq[] = {'c', 'o', 'c', 'k', 'a', 'd', 'o', 'o', 'd', 'l', 'e', 'd', 'o', 'o', 0xff, 0};
+static byte CheatMassacreSeq[] = {'m', 'a', 's', 's', 'a', 'c', 'r', 'e', 0xff, 0}; // kill all monsters
+static byte CheatIDKFASeq[] = {'i', 'd', 'k', 'f', 'a', 0xff, 0};
+static byte CheatIDDQDSeq[] = {'i', 'd', 'd', 'q', 'd', 0xff, 0};
 
 
 
-//--------------------------------------------------------------------------
-//
-// CHEAT FUNCTIONS
-//
-//--------------------------------------------------------------------------
+//==========================================================================
+//    CHEAT FUNCTIONS
+//==========================================================================
 
 // not yet a console command, but a cheat
 void CheatFlyFunc(PlayerPawn *p, const byte *arg)
@@ -975,12 +831,12 @@ bool cht_Responder(event_t* ev)
   if (ev->type != ev_keydown)
     return false;
 
-  if (!game.server || game.skill == sk_nightmare || !consoleplayer)
+  if (!game.server || game.skill == sk_nightmare || Consoleplayer.empty())
     { // Can't cheat in a net-game, or in nightmare mode
       return false;
     }
 
-  PlayerPawn *p = consoleplayer->pawn;
+  PlayerPawn *p = Consoleplayer[0]->pawn;
 
   if (p == NULL || p->health <= 0)
     { // Dead players can't cheat
@@ -1013,7 +869,7 @@ bool cht_Responder(event_t* ev)
 	  CONS_Printf("Cheating, %d\n", i);
 	  cheats[i].func(p, cheats[i].args);
 	  if (game.mode == gm_heretic)
-	    S_StartAmbSound(sfx_dorcls);
+	    S_StartLocalAmbSound(sfx_dorcls);
 	}
     }
   return eat;

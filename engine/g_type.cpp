@@ -1,6 +1,34 @@
+// Emacs style mode select   -*- C++ -*-
+//-----------------------------------------------------------------------------
+//
+// $Id$
+//
+// Copyright (C) 2004 by DooM Legacy Team.
+//
+// This program is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public License
+// as published by the Free Software Foundation; either version 2
+// of the License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+//
+// $Log$
+// Revision 1.3  2004/10/27 17:37:06  smite-meister
+// netcode update
+//
+//-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Game types (dm, coop, ctf...)
 
 #include "tnl/tnlBitStream.h"
 #include "tnl/tnlGhostConnection.h"
+
+#include "n_connection.h"
 
 #include "command.h"
 #include "cvars.h"
@@ -54,9 +82,14 @@ void GameType::performScopeQuery(GhostConnection *c)
   //CONS_Printf("doing scope query\n");
   for (GameInfo::player_iter_t t = e.game->Players.begin(); t != e.game->Players.end(); t++)
     {
+      bool owner = (t->second->connection == c); // connection c owns this player
+
+      // TODO set/clear masks so that HUD data is only sent to the client owning the pinfo etc.
       c->objectInScope(t->second); // player information is always in scope
+
+      // pawns are usually in scope only to their owners
       /*
-	if (!cv_hiddenplayers.value)
+      if (!cv_hiddenplayers.value || owner)
         c->objectInScope(t->second->pawn);
       */
     }

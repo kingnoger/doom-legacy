@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/10/27 17:37:10  smite-meister
+// netcode update
+//
 // Revision 1.8  2004/09/03 16:28:51  smite-meister
 // bugfixes and ZDoom linedef types
 //
@@ -105,9 +108,9 @@ void Command_MapInfo_f()
     }
   else
     {
-      if (!consoleplayer || !consoleplayer->mp)
+      if (!com_player || !com_player->mp)
 	return;
-      m = consoleplayer->mp->info;
+      m = com_player->mp->info;
     }
 
   CONS_Printf("Map %d: %s (%s)\n", m->mapnumber, m->nicename.c_str(), m->lumpname.c_str());
@@ -231,7 +234,7 @@ void Command_Sayteam_f()
     }
 
   PasteMsg(buf, 1);
-  game.net->SayCmd(0, -consoleplayer->team, buf);
+  game.net->SayCmd(0, -com_player->team, buf);
 }
 
 
@@ -241,8 +244,8 @@ void LNetInterface::SayCmd(int from, int to, const char *msg)
   if (!game.netgame)
     return;
 
-  if (from == 0 && consoleplayer)
-    from = consoleplayer->number;
+  if (from == 0 && com_player)
+    from = com_player->number;
 
   if (server_con)
     server_con->rpcSay(from, to, msg);
@@ -270,7 +273,7 @@ TNL_IMPLEMENT_RPC(LConnection, rpcSay, (S8 from, S8 to, const char *msg),
   if (isConnectionToServer())
     {
       // client
-      CONS_Printf("\3%s: %s\n", game.Players[from]->name.c_str(), msg);
+      CONS_Printf("%s: %s\n", game.Players[from]->name.c_str(), msg);
     }
   else
     {
@@ -521,7 +524,7 @@ void Command_NewGame_f()
 
   if (COM_Argc() < 2 || COM_Argc() > 4)
     {
-      CONS_Printf("Usage: newgame <MAPINFOlump> [<skill>] [<episode>]\n");
+      CONS_Printf("Usage: newgame <MAPINFOlump> [episode] [skill]\n");
       return;
     }
 
@@ -529,11 +532,13 @@ void Command_NewGame_f()
   int epi = 1;
   if (COM_Argc() >= 3)
     {
-      sk = atoi(COM_Argv(2));
-      sk = (sk > sk_nightmare) ? sk_nightmare : ((sk < 0) ? 0 : sk);
+      epi = atoi(COM_Argv(2));
 
       if (COM_Argc() == 4)
-	epi = atoi(COM_Argv(3));
+	{
+	  sk = atoi(COM_Argv(3));
+	  sk = (sk > sk_nightmare) ? sk_nightmare : ((sk < 0) ? 0 : sk);
+	}
     }
 
   game.SV_SpawnServer();
@@ -698,7 +703,7 @@ void Command_Kill_f()
 {
   if (COM_Argc() < 2)
     {
-      CONS_Printf ("Usage: kill [me] | [<playernum>] | [monsters]\n");
+      CONS_Printf ("Usage: kill me | <playernum> | monsters\n");
       // TODO extend usage: kill team
       return;
     }
@@ -708,8 +713,8 @@ void Command_Kill_f()
       // client players can only commit suicide
       if (COM_Argc() > 2 || strcmp(COM_Argv(1), "me"))
 	CONS_Printf("Only the server can kill others thru console!\n");
-      else if (consoleplayer)
-	Kill_pawn(consoleplayer->pawn, consoleplayer->pawn);
+      else if (com_player)
+	Kill_pawn(com_player->pawn, com_player->pawn);
       return;
     }
 
@@ -719,12 +724,12 @@ void Command_Kill_f()
       char *s = COM_Argv(i);
       Actor *m = NULL;
 
-      if (!strcmp(s, "me") && consoleplayer)
-	m = consoleplayer->pawn; // suicide
-      else if (!strcmp(s, "monsters") && consoleplayer)
+      if (!strcasecmp(s, "me") && com_player)
+	m = com_player->pawn; // suicide
+      else if (!strcasecmp(s, "monsters") && com_player && com_player->mp)
 	{
 	  // monsters
-	  CONS_Printf("%d monsters killed.\n", consoleplayer->mp->Massacre());
+	  CONS_Printf("%d monsters killed.\n", com_player->mp->Massacre());
 	  continue;
 	}
       else if ((p = game.FindPlayer(s)))

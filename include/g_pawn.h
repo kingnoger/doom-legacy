@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.22  2004/10/27 17:37:09  smite-meister
+// netcode update
+//
 // Revision 1.21  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
 //
@@ -227,7 +230,6 @@ public:
 
   void Reset();
 
-  void UseArtifact(artitype_t arti);
   bool GivePower(int /*powertype_t*/ power);
 
   weapontype_t FindWeapon(int g);
@@ -243,8 +245,11 @@ public:
   void PlayerInSpecialSector();
 
   // in p_user.cpp
-  virtual bool Teleport(fixed_t nx, fixed_t ny, angle_t nangle);
+  virtual bool Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent = false);
   void Move();
+
+  void UseArtifact(artitype_t arti);
+  bool InventoryResponder(short (*gc)[2], struct event_t *ev);
 
   // in p_map.cpp
   void UseLines();

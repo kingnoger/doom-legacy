@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.9  2004/10/27 17:37:06  smite-meister
+// netcode update
+//
 // Revision 1.8  2004/07/05 16:53:25  smite-meister
 // Netcode replaced
 //
@@ -34,10 +37,10 @@
 // Revision 1.3  2002/12/23 23:15:41  smite-meister
 // Weapon groups, MAPINFO parser added!
 //
-//
-// DESCRIPTION:
-//   Chasecam class implementation
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Chasecam
 
 #include <math.h>
 
@@ -48,7 +51,6 @@
 #include "tables.h"
 #include "r_main.h"
 
-Camera camera;
 
 consvar_t cv_chasecam   = {"chasecam","0",0,CV_OnOff};
 consvar_t cv_cam_dist   = {"cam_dist"  ,"128"  ,CV_FLOAT,NULL};
@@ -87,7 +89,10 @@ void Camera::Think()
 
   if (mp == NULL)
     I_Error("ChaseCamera: no map set\n");
+
+  // TODO warp to target if it's too far away!
   //ResetCamera(p);
+  // chasecam is reset when 1) target respawns, 2) target teleports, 3) chasecam is first turned on
 
   angle_t ang = target->angle;
   fixed_t tx, ty, tz;
@@ -150,12 +155,9 @@ void Camera::Think()
 }
 
 
-//
-// was P_MoveCamera :
+
 // make sure the camera is not outside the world
 // and looks at the thing it is supposed to
-//
-// chasecam is reset when 1) target respawns, 2) target teleports, 3) chasecam is first turned on
 void Camera::ResetCamera(Actor *p)
 {
   chase = true;

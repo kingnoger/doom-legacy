@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2004/10/27 17:37:06  smite-meister
+// netcode update
+//
 // Revision 1.18  2004/09/24 21:19:59  jussip
 // Joystick axis unbinding.
 //
@@ -87,6 +90,7 @@
 #include "d_event.h"
 #include "g_input.h"
 
+#include "g_game.h"
 #include "g_player.h"
 #include "g_pawn.h"
 
@@ -143,9 +147,9 @@ static int mousex, mousey, mouse2x, mouse2y;
 byte gamekeydown[NUMINPUTS];
 
 // two key (or virtual key) codes per game control
-int  gamecontrol[num_gamecontrols][2];
-int  gamecontrol2[num_gamecontrols][2];
+short gamecontrol[2][num_gamecontrols][2];
 
+short gk_console, gk_talk, gk_scores;
 
 //========================================================================
 
@@ -200,35 +204,42 @@ static byte NextWeapon(PlayerPawn *p, int step)
 
 
 
-//! Builds a ticcmd from all of the available inputs
+void ticcmd_t::Clear()
+{
+  buttons = 0;
+  item = 0;
+  forward = 0;
+  side = 0;
+}
 
-void ticcmd_t::Build(bool primary, int realtics)
+
+//! Builds a ticcmd from all of the available inputs
+void ticcmd_t::Build(int lpnum, int realtics)
 {
 #define KB_LOOKSPEED    (1<<25)
 #define SLOWTURNTICS    (6*NEWTICRATERATIO)
 
   int  i, j, k;
-  int (*gc)[2]; //pointer to array[num_gamecontrols][2]
+  short (*gc)[2];
   PlayerPawn *p = NULL;
 
-  if (primary)
+  if (lpnum == 0)
     {
-      gc = gamecontrol;
+      gc = gamecontrol[0];
       i = cv_autorun.value;
       j = cv_automlook.value;
       k = 0;
-      if (consoleplayer)
-	p = consoleplayer->pawn;
     }
   else
     {
-      gc = gamecontrol2;
+      // TODO not OK if there are more than two local players...
+      gc = gamecontrol[1];
       i = cv_autorun2.value;
       j = cv_automlook2.value;
       k = 1;
-      if (consoleplayer2)
-        p = consoleplayer2->pawn;
     }
+
+  p = Consoleplayer[lpnum]->pawn;
 
 
   int  speed = (gamekeydown[gc[gc_speed][0]] || gamekeydown[gc[gc_speed][1]]) ^ i;
@@ -242,7 +253,6 @@ void ticcmd_t::Build(bool primary, int realtics)
   // initialization
   //memcpy(this, I_BaseTiccmd(), sizeof(ticcmd_t)); // FIXME dangerous
   buttons = 0;
-  item = 0;
   forward = side = 0;
   yaw = pitch = 0;
   if (p)
@@ -375,7 +385,7 @@ void ticcmd_t::Build(bool primary, int realtics)
 
   // mouse
 
-  if (primary)
+  if (lpnum == 0)
     {
       if (mouseaiming)
 	{
@@ -397,7 +407,7 @@ void ticcmd_t::Build(bool primary, int realtics)
 
       mousex = mousey = 0;
     }
-  else
+  else if (lpnum == 1)
     {
       if (mouseaiming)
 	{
@@ -423,9 +433,11 @@ void ticcmd_t::Build(bool primary, int realtics)
   // Finally the joystick.
   for (i=0; i < int(joybindings.size()); i++)
     {
-      joybinding_t j = joybindings[i];
+      joybinding_t &j = joybindings[i];
 
-      // FIXME add check for console player number.
+      if (j.playnum != lpnum)
+	continue;
+
       int value = int(j.scale * SDL_JoystickGetAxis(joysticks[j.joynum], j.axisnum));
       switch (j.action)
 	{
@@ -501,8 +513,14 @@ static bool G_CheckDoubleClick(int state, dclick_t *dt)
 //  A game control can be triggered by one or more keys/buttons.
 //  Each key/mousebutton/joybutton triggers ONLY ONE game control.
 //
-void G_MapEventsToControls(event_t *ev)
+bool G_MapEventsToControls(event_t *ev)
 {
+  if (game.inventory)
+    for (unsigned i=0; i < Consoleplayer.size(); i++)
+      if (Consoleplayer[i]->pawn &&
+	  Consoleplayer[i]->pawn->InventoryResponder(gamecontrol[i % 2], ev))
+	return true;
+
   switch (ev->type)
     {
     case ev_keydown:
@@ -546,6 +564,7 @@ void G_MapEventsToControls(event_t *ev)
       gamekeydown[KEY_DBLJOY1+i] = flag;
     }
   */
+  return false; // let them filter through
 }
 
 
@@ -558,62 +577,59 @@ struct keyname_t
 
 static keyname_t keynames[] =
 {
-  {KEY_SPACE     ,"SPACE"},
-  {KEY_CAPSLOCK  ,"CAPS LOCK"},
-  {KEY_ENTER     ,"ENTER"},
-  {KEY_TAB       ,"TAB"},
-  {KEY_ESCAPE    ,"ESCAPE"},
-  {KEY_BACKSPACE ,"BACKSPACE"},
-  {KEY_CONSOLE   ,"CONSOLE"},
+  {KEY_BACKSPACE, "BACKSPACE"},
+  {KEY_TAB,       "TAB"},
+  {KEY_ENTER,     "ENTER"},
+  {KEY_PAUSE,     "PAUSE"},
+  {KEY_ESCAPE,    "ESCAPE"},
+  {KEY_SPACE,     "SPACE"},
 
-  {KEY_NUMLOCK   ,"NUMLOCK"},
-  {KEY_SCROLLLOCK,"SCROLLLOCK"},
+  {KEY_CONSOLE,     "CONSOLE"},
 
-  // bill gates keys
-
-  {KEY_LEFTWIN   ,"LEFTWIN"},
-  {KEY_RIGHTWIN  ,"RIGHTWIN"},
-  {KEY_MENU      ,"MENU"},
-
-  // shift,ctrl,alt are not distinguished between left & right
-
-  {KEY_SHIFT     ,"SHIFT"},
-  {KEY_CTRL      ,"CTRL"},
-  {KEY_ALT       ,"ALT"},
+  {KEY_NUMLOCK,    "NUMLOCK"},
+  {KEY_CAPSLOCK,   "CAPS LOCK"},
+  {KEY_SCROLLLOCK, "SCROLLLOCK"},
+  {KEY_RSHIFT,     "RIGHT SHIFT"},
+  {KEY_LSHIFT,     "LEFT SHIFT"},
+  {KEY_RCTRL,      "RIGHT CTRL"},
+  {KEY_LCTRL,      "LEFT CTRL"},
+  {KEY_RALT,       "RIGHT ALT"},
+  {KEY_LALT,       "LEFT ALT"},
+  {KEY_LWIN, "LEFT WIN"},
+  {KEY_RWIN, "RIGHT WIN"},
+  {KEY_MODE, "AltGr"},
+  {KEY_MENU, "MENU"},
 
   // keypad keys
-
-  {KEY_KPADSLASH,"KEYPAD /"},
-
-  {KEY_KEYPAD7, "KEYPAD 7"},
-  {KEY_KEYPAD8, "KEYPAD 8"},
-  {KEY_KEYPAD9, "KEYPAD 9"},
-  {KEY_MINUSPAD,"KEYPAD -"},
-  {KEY_KEYPAD4, "KEYPAD 4"},
-  {KEY_KEYPAD5, "KEYPAD 5"},
-  {KEY_KEYPAD6, "KEYPAD 6"},
-  {KEY_PLUSPAD, "KEYPAD +"},
+  {KEY_KEYPAD0, "KEYPAD 0"},
   {KEY_KEYPAD1, "KEYPAD 1"},
   {KEY_KEYPAD2, "KEYPAD 2"},
   {KEY_KEYPAD3, "KEYPAD 3"},
-  {KEY_KEYPAD0, "KEYPAD 0"},
-  {KEY_KPADDEL, "KEYPAD ."},
+  {KEY_KEYPAD4, "KEYPAD 4"},
+  {KEY_KEYPAD5, "KEYPAD 5"},
+  {KEY_KEYPAD6, "KEYPAD 6"},
+  {KEY_KEYPAD7, "KEYPAD 7"},
+  {KEY_KEYPAD8, "KEYPAD 8"},
+  {KEY_KEYPAD9, "KEYPAD 9"},
+  {KEY_KPADPERIOD,"KEYPAD ."},
+  {KEY_KPADSLASH, "KEYPAD /"},
+  {KEY_KPADMULT,  "KEYPAD *"},
+  {KEY_MINUSPAD,  "KEYPAD -"},
+  {KEY_PLUSPAD,   "KEYPAD +"},
 
   // extended keys (not keypad)
-
-  {KEY_HOME,      "HOME"},
   {KEY_UPARROW,   "UP ARROW"},
-  {KEY_PGUP,      "PGUP"},
-  {KEY_LEFTARROW ,"LEFT ARROW"},
-  {KEY_RIGHTARROW,"RIGHT ARROW"},
-  {KEY_END,       "END"},
   {KEY_DOWNARROW, "DOWN ARROW"},
-  {KEY_PGDN,      "PGDN"},
+  {KEY_RIGHTARROW,"RIGHT ARROW"},
+  {KEY_LEFTARROW, "LEFT ARROW"},
   {KEY_INS,       "INS"},
   {KEY_DELETE,    "DEL"},
+  {KEY_HOME,      "HOME"},
+  {KEY_END,       "END"},
+  {KEY_PGUP,      "PGUP"},
+  {KEY_PGDN,      "PGDN"},
 
   // other keys
-
   {KEY_F1, "F1"},
   {KEY_F2, "F2"},
   {KEY_F3, "F3"},
@@ -628,7 +644,6 @@ static keyname_t keynames[] =
   {KEY_F12,"F12"},
 
   // virtual keys for mouse buttons and joystick buttons
-
   {KEY_MOUSE1,  "MOUSE1"},
   {KEY_MOUSE1+1,"MOUSE2"},
   {KEY_MOUSE1+2,"MOUSE3"},
@@ -757,10 +772,7 @@ char *gamecontrolname[num_gamecontrols] =
   "weapon6",
   "weapon7",
   "weapon8",
-  "talkkey",
-  "scores",
   "jump",
-  "console",
   "nextweapon",
   "prevweapon",
   "bestweapon",
@@ -775,10 +787,10 @@ static const int NUMKEYNAMES = sizeof(keynames)/sizeof(keyname_t);
 //
 //  Detach any keys associated to the given game control
 //  - pass the pointer to the gamecontrol table for the player being edited
-void  G_ClearControlKeys(int (*setupcontrols)[2], int control)
+void  G_ClearControlKeys(short (*setup_gc)[2], int control)
 {
-  setupcontrols[control][0] = KEY_NULL;
-  setupcontrols[control][1] = KEY_NULL;
+  setup_gc[control][0] = KEY_NULL;
+  setup_gc[control][1] = KEY_NULL;
 }
 
 //
@@ -831,78 +843,66 @@ int G_KeyStringtoNum(char *keystr)
 
 void G_Controldefault()
 {
-  gamecontrol[gc_forward    ][0]=KEY_UPARROW;
-  gamecontrol[gc_forward    ][1]=KEY_MOUSE1+2;
-  gamecontrol[gc_backward   ][0]=KEY_DOWNARROW;
-  gamecontrol[gc_strafe     ][0]=KEY_ALT;
-  gamecontrol[gc_strafe     ][1]=KEY_MOUSE1+1;
-  gamecontrol[gc_straferight][0]='.';
-  gamecontrol[gc_strafeleft ][0]=',';
-  gamecontrol[gc_speed      ][0]=KEY_SHIFT;
-  gamecontrol[gc_turnleft   ][0]=KEY_LEFTARROW;
-  gamecontrol[gc_turnright  ][0]=KEY_RIGHTARROW;
-  gamecontrol[gc_fire       ][0]=KEY_CTRL;
-  gamecontrol[gc_fire       ][1]=KEY_MOUSE1;
-  gamecontrol[gc_use        ][0]=KEY_SPACE;
-  gamecontrol[gc_lookup     ][0]=KEY_PGUP;
-  gamecontrol[gc_lookdown   ][0]=KEY_PGDN;
-  gamecontrol[gc_centerview ][0]=KEY_END;
-  gamecontrol[gc_mouseaiming][0]='s';
-  gamecontrol[gc_weapon1    ][0]='1';
-  gamecontrol[gc_weapon2    ][0]='2';
-  gamecontrol[gc_weapon3    ][0]='3';
-  gamecontrol[gc_weapon4    ][0]='4';
-  gamecontrol[gc_weapon5    ][0]='5';
-  gamecontrol[gc_weapon6    ][0]='6';
-  gamecontrol[gc_weapon7    ][0]='7';
-  gamecontrol[gc_weapon8    ][0]='8';
-  gamecontrol[gc_talkkey    ][0]='t';
-  gamecontrol[gc_scores     ][0]='f';
-  gamecontrol[gc_jump       ][0]='/';
-  gamecontrol[gc_console    ][0]=KEY_CONSOLE;
-  gamecontrol[gc_nextweapon ][1]=KEY_JOY0BUT4;
-  gamecontrol[gc_prevweapon ][1]=KEY_JOY0BUT5;
-  
-  gamecontrol[gc_invnext    ][0] = ']';
-  gamecontrol[gc_invprev    ][0] = '[';
-  gamecontrol[gc_invuse     ][0] = KEY_ENTER;
-  gamecontrol[gc_jump       ][0] = KEY_INS;
-  gamecontrol[gc_flydown    ][0] = KEY_KPADDEL;
+  short (*gc)[2] = gamecontrol[0];
+  gc[gc_forward    ][0]=KEY_UPARROW;
+  gc[gc_forward    ][1]=KEY_MOUSE1+2;
+  gc[gc_backward   ][0]=KEY_DOWNARROW;
+  gc[gc_strafe     ][0]=KEY_RALT;
+  gc[gc_strafe     ][1]=KEY_MOUSE1+1;
+  gc[gc_straferight][0]='.';
+  gc[gc_strafeleft ][0]=',';
+  gc[gc_speed      ][0]=KEY_RSHIFT;
+  gc[gc_turnleft   ][0]=KEY_LEFTARROW;
+  gc[gc_turnright  ][0]=KEY_RIGHTARROW;
+  gc[gc_fire       ][0]=KEY_RCTRL;
+  gc[gc_fire       ][1]=KEY_MOUSE1;
+  gc[gc_use        ][0]=KEY_SPACE;
+  gc[gc_lookup     ][0]=KEY_PGUP;
+  gc[gc_lookdown   ][0]=KEY_PGDN;
+  gc[gc_centerview ][0]=KEY_END;
+  gc[gc_mouseaiming][0]='s';
+  gc[gc_weapon1    ][0]='1';
+  gc[gc_weapon2    ][0]='2';
+  gc[gc_weapon3    ][0]='3';
+  gc[gc_weapon4    ][0]='4';
+  gc[gc_weapon5    ][0]='5';
+  gc[gc_weapon6    ][0]='6';
+  gc[gc_weapon7    ][0]='7';
+  gc[gc_weapon8    ][0]='8';
+  gc[gc_jump       ][0]='/';
+  gc[gc_nextweapon ][1]=KEY_JOY0BUT4;
+  gc[gc_prevweapon ][1]=KEY_JOY0BUT5;
+  gc[gc_invnext    ][0] = ']';
+  gc[gc_invprev    ][0] = '[';
+  gc[gc_invuse     ][0] = KEY_ENTER;
+  gc[gc_jump       ][0] = KEY_INS;
+  gc[gc_flydown    ][0] = KEY_KPADPERIOD;
 
-  //gamecontrol[gc_nextweapon ][0]=']';
-  //gamecontrol[gc_prevweapon ][0]='[';
+  //gc[gc_nextweapon ][0]=']';
+  //gc[gc_prevweapon ][0]='[';
+
+  // common game keys
+  gk_talk    = 't';
+  gk_console = KEY_CONSOLE;
+  gk_scores  = 'f';
 }
+
 
 void G_SaveKeySetting(FILE *f)
 {
-  int i;
+  for (int j=0; j<2; j++)
+    for(int i=1; i<num_gamecontrols; i++)
+      {
+	fprintf(f,"setcontrol %d \"%s\" \"%s\"", j, gamecontrolname[i],
+		G_KeynumToString(gamecontrol[j][i][0]));
 
-  for(i=1;i<num_gamecontrols;i++)
-    {
-      fprintf(f,"setcontrol \"%s\" \"%s\""
-	      ,gamecontrolname[i]
-	      ,G_KeynumToString(gamecontrol[i][0]));
-
-      if(gamecontrol[i][1])
-	fprintf(f," \"%s\"\n"
-		,G_KeynumToString(gamecontrol[i][1]));
-      else
-	fprintf(f,"\n");
-    }
-
-  for(i=1;i<num_gamecontrols;i++)
-    {
-      fprintf(f,"setcontrol2 \"%s\" \"%s\""
-	      ,gamecontrolname[i]
-	      ,G_KeynumToString(gamecontrol2[i][0]));
-
-      if(gamecontrol2[i][1])
-	fprintf(f," \"%s\"\n"
-		,G_KeynumToString(gamecontrol2[i][1]));
-      else
-	fprintf(f,"\n");
-    }
+	if (gamecontrol[j][i][1])
+	  fprintf(f," \"%s\"\n", G_KeynumToString(gamecontrol[j][i][1]));
+	else
+	  fprintf(f,"\n");
+      }
 }
+
 
 //! Writes the axis binding commands to the config file.
 void G_SaveJoyAxisBindings(FILE *f)
@@ -915,74 +915,54 @@ void G_SaveJoyAxisBindings(FILE *f)
     }
 }
 
+
 void G_CheckDoubleUsage(int keynum)
 {
-  if( cv_controlperkey.value==1 )
-    {
-      int i;
-      for(i=0;i<num_gamecontrols;i++)
-        {
-	  if( gamecontrol[i][0]==keynum )
-	    gamecontrol[i][0]= KEY_NULL;
-	  if( gamecontrol[i][1]==keynum )
-	    gamecontrol[i][1]= KEY_NULL;
-	  if( gamecontrol2[i][0]==keynum )
-	    gamecontrol2[i][0]= KEY_NULL;
-	  if( gamecontrol2[i][1]==keynum )
-	    gamecontrol2[i][1]= KEY_NULL;
-        }
-    }
+  if (cv_controlperkey.value == 1)
+    for (int i=0; i<2; i++)
+      for (int j=0; j<num_gamecontrols; j++)
+	for (int k=0; k<2; k++)
+	  if (gamecontrol[i][j][k] == keynum)
+	    gamecontrol[i][j][k] = KEY_NULL;
 }
 
-void setcontrol(int (*gc)[2],int na)
-{
-  int i;
-  char *namectrl = COM_Argv(1);
 
-  for (i = 0; i < num_gamecontrols && strcasecmp(namectrl, gamecontrolname[i]); i++)
-    ;
-
-  if (i == num_gamecontrols)
-    {
-      CONS_Printf("Control '%s' unknown\n",namectrl);
-      return;
-    }
-
-  int keynum = G_KeyStringtoNum(COM_Argv(2));
-  G_CheckDoubleUsage(keynum);
-  gc[i][0] = keynum;
-
-  if (na == 4)
-    gc[i][1] = G_KeyStringtoNum(COM_Argv(3));
-  else
-    gc[i][1] = 0;
-}
 
 void Command_Setcontrol_f()
 {
   int na = COM_Argc();
 
-  if (na!= 3 && na!=4)
+  if (na < 4 || na > 5)
     {
-      CONS_Printf ("setcontrol <controlname> <keyname> [<2nd keyname>]\n");
+      CONS_Printf ("setcontrol <playernum> <controlname> <keyname> [2nd keyname]\n");
       return;
     }
 
-  setcontrol(gamecontrol,na);
-}
+  int p = atoi(COM_Argv(1));
+  short (*gc)[2] = gamecontrol[p % 2];
 
-void Command_Setcontrol2_f()
-{
-  int na = COM_Argc();
+  char *cname = COM_Argv(2);
 
-  if (na!= 3 && na!=4)
+  int i;
+  for (i = 0; i < num_gamecontrols && strcasecmp(cname, gamecontrolname[i]); i++)
+    ;
+
+  if (i == num_gamecontrols)
     {
-      CONS_Printf ("setcontrol2 <controlname> <keyname> [<2nd keyname>]\n");
+      CONS_Printf("Control '%s' unknown\n", cname);
       return;
     }
 
-  setcontrol(gamecontrol2,na);
+  int keynum = G_KeyStringtoNum(COM_Argv(3));
+  G_CheckDoubleUsage(keynum);
+  gc[i][0] = keynum;
+
+  if (na == 5)
+    gc[i][1] = G_KeyStringtoNum(COM_Argv(4));
+  else
+    gc[i][1] = 0;
 }
+
 
 
 //! Magically converts a console command to a joystick axis binding.
@@ -1056,7 +1036,8 @@ void Command_BindJoyaxis_f()
   bindings are removed.
 */
 
-void Command_UnbindJoyaxis_f() {
+void Command_UnbindJoyaxis_f()
+{
   int joynum  = -1;
   int axisnum = -1;
   int na = COM_Argc();

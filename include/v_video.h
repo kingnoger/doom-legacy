@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/10/27 17:37:09  smite-meister
+// netcode update
+//
 // Revision 1.6  2004/09/23 23:21:19  smite-meister
 // HUD updated
 //
@@ -163,7 +166,7 @@ public:
 public:
   font_t(int startlump, int endlump, char firstchar = '!');
 
-  void DrawCharacter(int x, int y, int c);
+  void DrawCharacter(int x, int y, char c, int flags = 0);
   void DrawString(int x, int y, const char *str, int flags = V_SCALE);
   void DrawGrayString(int x, int y, const char *str);
   int  StringWidth(const char *str);

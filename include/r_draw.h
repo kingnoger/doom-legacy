@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/10/27 17:37:09  smite-meister
+// netcode update
+//
 // Revision 1.6  2004/08/29 20:48:49  smite-meister
 // bugfixes. wow.
 //
@@ -59,7 +62,7 @@ typedef byte lighttable_t;
 extern int fuzzoffset[FUZZTABLE];
 extern int fuzzpos;
 
-extern byte*            ylookup[MAXVIDHEIGHT];
+extern byte**           ylookup;
 extern byte*            ylookup1[MAXVIDHEIGHT];
 extern byte*            ylookup2[MAXVIDHEIGHT];
 extern int              columnofs[MAXVIDWIDTH];

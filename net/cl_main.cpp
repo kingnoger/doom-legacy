@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/10/27 17:37:10  smite-meister
+// netcode update
+//
 // Revision 1.10  2004/10/14 19:35:51  smite-meister
 // automap, bbox_t
 //
@@ -135,6 +138,7 @@ void SplitScreen_OnChange()
     return;
 
   // FIXME splitscreen
+  /*
   if (cv_splitscreen.value)
     {
       displayplayer2 = consoleplayer2 = game.AddPlayer(new PlayerInfo(localplayer2));
@@ -144,7 +148,7 @@ void SplitScreen_OnChange()
     {
       consoleplayer2->playerstate = PST_REMOVE;
     }
-
+  */
   // TODO in a demo, just open another viewport...
   //displayplayer2 = game.FindPlayer(1);
 }
@@ -195,7 +199,6 @@ void CL_Init()
 
 
   COM_AddCommand("setcontrol", Command_Setcontrol_f);
-  COM_AddCommand("setcontrol2", Command_Setcontrol2_f);
   COM_AddCommand("bindjoyaxis", Command_BindJoyaxis_f);
   COM_AddCommand("unbindjoyaxis", Command_UnbindJoyaxis_f);
 

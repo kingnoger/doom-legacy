@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/10/27 17:37:09  smite-meister
+// netcode update
+//
 // Revision 1.6  2004/08/12 18:30:29  smite-meister
 // cleaned startup
 //
@@ -62,7 +65,7 @@ public:
   TNL_DECLARE_NETCONNECTION(LConnection);
 
 public:
-  vector<class PlayerInfo *> player; ///< players beyond this connection
+  std::vector<class PlayerInfo *> player; ///< players beyond this connection
 
 
   LConnection();
@@ -100,18 +103,33 @@ public:
 
   //============ RPCs =============== 
 
+  /// client updates his player info (or asks the server to add a new local player?)
+  //TNL_DECLARE_RPC(rpcUpdatePlayerInfo_c2s, (U8 pnum, const char *name, U8 color, U8 team));
+
   /// transmits chat messages between client and server
   TNL_DECLARE_RPC(rpcSay, (S8 from, S8 to, const char *msg));
 
   /// server prints a message on client's console/HUD
   TNL_DECLARE_RPC(rpcMessage_s2c, (S32 pnum, const char *msg, S8 priority, S8 type));
 
+  /// server starts a positional sound on the client
+  //TNL_DECLARE_RPC(rpcStartSound_s2c, (origin, sfx_id, volume));
+
+  /// server asks client to load a map
+  //TNL_DECLARE_RPC(rpcStartMap_c2s, (U8 pnum));
+
   /// server tells the client to start intermission
   TNL_DECLARE_RPC(rpcStartIntermission_s2c, ());
-
   /// client tells server that it has finished playing the intermission
   TNL_DECLARE_RPC(rpcIntermissionDone_c2s, ());
 
+  /// client asks for a new POV ("spy mode")
+  TNL_DECLARE_RPC(rpcRequestPOVchange_c2s, (S32 pnum));
+
+  /// server tells client to play a sound
+  // TODO how to make a client stop a sound? pseudorandom sound netIDs?
+  //TNL_DECLARE_RPC(rpcStartAmbSound_s2c, (U8 pnum));
+  //TNL_DECLARE_RPC(rpcStart3DSound_s2c, (U8 pnum));
 };
 
 

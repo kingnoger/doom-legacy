@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/10/27 17:37:10  smite-meister
+// netcode update
+//
 // Revision 1.8  2004/08/18 14:35:22  smite-meister
 // PNG support!
 //
@@ -63,7 +66,9 @@
 
 #include "m_misc.h"
 #include "m_fixed.h"
+
 #include "g_game.h"
+#include "g_player.h"
 
 
 // =========================================================================
@@ -333,6 +338,9 @@ static char       *com_argv[MAX_ARGS];
 static char       *com_null_string = "";
 static char       *com_args = NULL;          // current command args or NULL
 
+PlayerInfo *com_player; // player associated with the current command. 
+// Only "interactive" commands may require this.
+
 
 //  Initialise command buffer and add basic commands
 void COM_Init()
@@ -519,6 +527,9 @@ static void COM_ExecuteString(char *text)
   // execute the command line
   if (!COM_Argc())
     return;     // no tokens
+
+  // try to find the player "using" the command buffer
+  com_player = Consoleplayer.empty() ? NULL : Consoleplayer[0];
 
   // check functions
   for (cmd=com_commands ; cmd ; cmd=cmd->next)

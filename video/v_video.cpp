@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/10/27 17:37:11  smite-meister
+// netcode update
+//
 // Revision 1.13  2004/10/14 19:35:52  smite-meister
 // automap, bbox_t
 //
@@ -712,11 +715,15 @@ font_t::font_t(int startlump, int endlump, char firstchar)
 
 
 // Writes a single character (draw WHITE if bit 7 set)
-void font_t::DrawCharacter(int x, int y, int c)
+void font_t::DrawCharacter(int x, int y, char c, int flags)
 {
-  bool white = c & 0x80;
-  int flags = c & V_FLAGMASK;
-  c &= 0x7F;
+  if (c & 0x80)
+    {
+      // special "white" property used by console
+      flags |= V_MAP;
+      current_colormap = whitemap;
+      c &= 0x7F;
+    }
 
   c = toupper(c);
   if (c < start || c > end)
@@ -725,12 +732,6 @@ void font_t::DrawCharacter(int x, int y, int c)
   Texture *t = font[c - start];
   if (x + t->width > vid.width)
     return;
-
-  if (white)
-    {
-      flags |= V_MAP;
-      current_colormap = whitemap;
-    }
 
   t->Draw(x, y, flags);
 }

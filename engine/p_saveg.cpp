@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.34  2004/10/27 17:37:07  smite-meister
+// netcode update
+//
 // Revision 1.33  2004/09/23 23:21:17  smite-meister
 // HUD updated
 //
@@ -1923,8 +1926,8 @@ int GameInfo::Serialize(LArchive &a)
   // TODO FS hub_script, global_script...
 
   // misc shit
-  a << (n = consoleplayer ? consoleplayer->number : -1);
-  a << (n = consoleplayer2 ? consoleplayer2->number : -1);
+  // TODO how to save Consoleplayer info?? and net info???
+  //a << (n = consoleplayer ? consoleplayer->number : -1);
 
   a << (n = P_GetRandIndex());
 
@@ -2018,10 +2021,6 @@ int GameInfo::Unserialize(LArchive &a)
     }
 
   // misc shit
-  a << n;
-  consoleplayer = FindPlayer(n);
-  a << n;
-  consoleplayer2 = FindPlayer(n);
 
   a << n;
   P_SetRandIndex(n);
@@ -2067,15 +2066,12 @@ void GameInfo::LoadGame(int slot)
       return;
     }
 
-  if (consoleplayer && consoleplayer->pawn)
-    hud.ST_Start(consoleplayer->pawn);
-
   action = ga_nothing;
   state = GS_LEVEL;
   paused = false;
 
-  displayplayer = consoleplayer;
-  displayplayer2 = consoleplayer2;
+  // TODO set up local "consoleplayer" stuff... have other playerinfos waiting for clients to rejoin
+  //  if (consoleplayer && consoleplayer->pawn)    hud.ST_Start(consoleplayer->pawn);
 
   // done
   /*
@@ -2108,6 +2104,6 @@ void GameInfo::SaveGame(int savegameslot, char *description)
 
   Z_Free(buffer);
 
-  consoleplayer->SetMessage(text[TXT_GGSAVED]);
+  CONS_Printf(text[TXT_GGSAVED]);
   //R_FillBackScreen();  // draw the pattern into the back screen
 }

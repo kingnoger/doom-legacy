@@ -113,9 +113,6 @@ export LD = $(CC)
 
 export objdir = objs
 
-#	$(objdir)/acbot.o \
-#	$(objdir)/b_bot.o \
-#	$(objdir)/b_node.o \
 
 export engine_objects = \
 	$(objdir)/g_game.o \
@@ -185,8 +182,10 @@ export engine_objects = \
 	$(objdir)/p_hacks.o \
 	$(objdir)/d_items.o \
 	$(objdir)/d_main.o \
-	$(objdir)/dstrings.o
-
+	$(objdir)/dstrings.o \
+	$(objdir)/acbot.o \
+	$(objdir)/b_bot.o \
+	$(objdir)/b_path.o
 
 export util_objects = \
 	$(objdir)/command.o \

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.26  2004/10/27 17:37:05  smite-meister
+// netcode update
+//
 // Revision 1.25  2004/09/03 16:28:49  smite-meister
 // bugfixes and ZDoom linedef types
 //
@@ -391,7 +394,7 @@ void SoundSystem::Startup()
     I_InitCD();
 
   ResetChannels(16);
-  sc.SetDefaultItem("DSSPLASH"); // default sound
+  sc.SetDefaultItem("DEFSOUND"); // default sound
 
   nextcleanup = game.tic + 35*100;
 }
@@ -659,23 +662,25 @@ int SoundSystem::Start3DSound(sfxinfo_t *s, soundsource_t *source, float volume)
   if (nosound)
     return -1;
 
-  Actor *listener = NULL;
-  if (displayplayer)
-    listener = displayplayer->pawn;
-
   source->Update();
-  float v1 = S_ObservedVolume(listener, source);
-  if (cv_splitscreen.value && displayplayer2)
+
+  Actor *listener = NULL;
+  float vmax = -1;
+
+  int n = Consoleplayer.size();
+  for (int i=0; i<n; i++)
     {
-      float v2 = S_ObservedVolume(displayplayer2->pawn, source);
-      if (v2 > v1)
+      Actor *temp = Consoleplayer[i]->pawn;    
+      float v = S_ObservedVolume(temp, source);
+
+      if (v > vmax)
 	{
-	  listener = displayplayer2->pawn;
-	  v1 = v2;
+	  listener = temp;
+	  vmax = v;
 	}
     }
 
-  if (v1 <= 0.0f)
+  if (vmax <= 0.0f)
     return -1;
 
   // kill old sound if any (max. one sound per source)
@@ -706,7 +711,7 @@ int SoundSystem::Start3DSound(sfxinfo_t *s, soundsource_t *source, float volume)
   c->priority = s->priority;
   c->source = *source;
 
-  c->ovol = int(volume * 255 * v1);
+  c->ovol = int(volume * 255 * vmax);
 
   // Check pitch and separation
   c->Adjust(listener);
@@ -835,45 +840,43 @@ void SoundSystem::UpdateSounds()
 
 
   // 3D sound channels
-  Actor *listener1 = NULL, *listener2 = NULL;
 
-  if (displayplayer)
-    listener1 = displayplayer->pawn;
-  if (cv_splitscreen.value && displayplayer2)
-    listener2 = displayplayer2->pawn;
-
-  bool heard = listener1 || listener2;
-  Actor *listener;
+  int n = Consoleplayer.size();
 
   // static sound channels
-  int cnum, n = channels.size();
+  int nchan = channels.size();
 
-  for (cnum = 0; cnum < n; cnum++)
+  for (int cnum = 0; cnum < nchan; cnum++)
     {
       channel_t *c = &channels[cnum];
 
       if (c->playing)
 	{
-	  if (!c->source.act || !heard)
+	  if (!c->source.act)
 	    continue;
 
 	  // check non-local sounds for distance clipping
 	  //  or modify their params
-	  float v1 = S_ObservedVolume(listener1, &c->source);
-	  float v2 = S_ObservedVolume(listener2, &c->source);
-	  if (v2 > v1)
+	  float vmax = -1;
+	  Actor *listener = NULL;
+
+	  for (int i=0; i<n; i++)
 	    {
-	      listener = listener2;
-	      v1 = v2;
+	      Actor *temp = Consoleplayer[i]->pawn;    
+	      float v = S_ObservedVolume(temp, &c->source);
+	      
+	      if (v > vmax)
+		{
+		  listener = temp;
+		  vmax = v;
+		}
 	    }
-	  else
-	    listener = listener1;
             
-	  if (v1 <= 0.0)
+	  if (vmax <= 0.0)
 	    StopChannel(cnum);
 	  else
 	    {
-	      c->ovol = int(c->volume * v1);
+	      c->ovol = int(c->volume * vmax);
 	      c->Adjust(listener);
 	    }
 	}

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/10/27 17:37:09  smite-meister
+// netcode update
+//
 // Revision 1.5  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
 //
@@ -62,8 +65,6 @@ public:
 
   virtual void Think();
 };
-
-extern Camera camera;
 
 
 #endif

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/10/27 17:37:09  smite-meister
+// netcode update
+//
 // Revision 1.4  2004/09/09 22:04:39  jussip
 // New joy code a bit more finished. Button binding works.
 //
@@ -29,24 +32,17 @@
 // Revision 1.1.1.1  2002/11/16 14:18:24  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//   Key codes
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Key codes
 
 #ifndef keys_h
 #define keys_h 1
 
-//
-// DOOM keyboard definition.
-//
-
-// This is the key event codes as posted by the keyboard handler,
-// ascii codes are 0->127,
-// scancodes are 0x80 + 0->127
-
+// These are the key event codes posted by the keyboard handler.
+// 0-127 are ascii codes, 128-255 are something else
+// The codes 256- are reserved for virtual keys.
 enum key_input_e
 {
   KEY_NULL = 0,       // null key, triggers nothing
@@ -58,68 +54,70 @@ enum key_input_e
   KEY_ESCAPE     = 27,
   KEY_SPACE      = 32,
 
-  KEY_MINUS      = 45,
   // numbers
-  KEY_EQUALS     = 61,
-  KEY_CONSOLE    = 96,
+  // big letters
+  KEY_BACKQUOTE  = 96,
+  KEY_CONSOLE    = KEY_BACKQUOTE,
   // small letters
   KEY_DELETE     = 127, // ascii ends here
 
-  // the rest are in arbitrary, almost-scancode-like order
-  KEY_SHIFT     = (0x80+54),
-  KEY_CTRL      = (0x80+29),
-  KEY_ALT       = (0x80+56),
+  // the rest are grouped as in SDL, but the groups are in arbitrary order
+  KEY_NUMLOCK = 128,
+  KEY_CAPSLOCK,
+  KEY_SCROLLLOCK,
+  KEY_RSHIFT,
+  KEY_LSHIFT,
+  KEY_RCTRL,
+  KEY_LCTRL,
+  KEY_RALT,
+  KEY_LALT,
+  KEY_unused1,
+  KEY_unused2,
+  KEY_LWIN,
+  KEY_RWIN,
+  KEY_MODE, // altgr
+  KEY_unused3,
 
-  KEY_NUMLOCK    = (0x80+69),
-  KEY_CAPSLOCK   = (0x80+58),
-  KEY_SCROLLLOCK = (0x80+70),
+  KEY_MENU,
 
-  //  scancodes 71-83 (non-extended)
-  KEY_KEYPAD7   = (0x80+71),
-  KEY_KEYPAD8   = (0x80+72),
-  KEY_KEYPAD9   = (0x80+73),
-  KEY_MINUSPAD  = (0x80+74),
-  KEY_KEYPAD4   = (0x80+75),
-  KEY_KEYPAD5   = (0x80+76),
-  KEY_KEYPAD6   = (0x80+77),
-  KEY_PLUSPAD   = (0x80+78),
-  KEY_KEYPAD1   = (0x80+79),
-  KEY_KEYPAD2   = (0x80+80),
-  KEY_KEYPAD3   = (0x80+81),
-  KEY_KEYPAD0   = (0x80+82),
-  //KEY_KPADDEL   = (0x80+83),
-
-  //  windows95 keys...
-  KEY_LEFTWIN   = (0x80+91),
-  KEY_RIGHTWIN  = (0x80+92),
-  KEY_MENU      = (0x80+93),
-
-  //  scancodes 71-83 EXTENDED are remapped
-  //  to these by the keyboard handler (just add 30)
-  KEY_KPADSLASH  = (0x80+100),      //extended scancode 53 '/' remapped
-  KEY_HOME       = (0x80+101),
-  KEY_UPARROW    = (0x80+102),
-  KEY_PGUP       = (0x80+103),
-  KEY_LEFTARROW  = (0x80+105),
-  KEY_RIGHTARROW = (0x80+107),
-  KEY_END        = (0x80+109),
-  KEY_DOWNARROW  = (0x80+110),
-  KEY_PGDN       = (0x80+111),
-  KEY_INS        = (0x80+112),
-  KEY_KPADDEL    = (0x80+113),
-
-  KEY_F1        = (0x80+0x3b),
-  KEY_F2        = (0x80+0x3c),
-  KEY_F3        = (0x80+0x3d),
-  KEY_F4        = (0x80+0x3e),
-  KEY_F5        = (0x80+0x3f),
-  KEY_F6        = (0x80+0x40),
-  KEY_F7        = (0x80+0x41),
-  KEY_F8        = (0x80+0x42),
-  KEY_F9        = (0x80+0x43),
-  KEY_F10       = (0x80+0x44),
-  KEY_F11       = (0x80+0x57),
-  KEY_F12       = (0x80+0x58),
+  KEY_KEYPAD0,
+  KEY_KEYPAD1,
+  KEY_KEYPAD2,
+  KEY_KEYPAD3,
+  KEY_KEYPAD4,
+  KEY_KEYPAD5,
+  KEY_KEYPAD6,
+  KEY_KEYPAD7,
+  KEY_KEYPAD8,
+  KEY_KEYPAD9,
+  KEY_KPADPERIOD,
+  KEY_KPADSLASH,
+  KEY_KPADMULT,
+  KEY_MINUSPAD,
+  KEY_PLUSPAD,
+  KEY_KPADENTER,
+  KEY_KPADEQUALS,
+  KEY_UPARROW,
+  KEY_DOWNARROW,
+  KEY_RIGHTARROW,
+  KEY_LEFTARROW,
+  KEY_INS,
+  KEY_HOME,
+  KEY_END,
+  KEY_PGUP,
+  KEY_PGDN,
+  KEY_F1,
+  KEY_F2,
+  KEY_F3,
+  KEY_F4,
+  KEY_F5,
+  KEY_F6,
+  KEY_F7,
+  KEY_F8,
+  KEY_F9,
+  KEY_F10,
+  KEY_F11,
+  KEY_F12,
 
   KEY_NUMKB     = 256, // all real keyboard codes are under this value
 

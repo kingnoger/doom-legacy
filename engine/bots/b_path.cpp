@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2004/10/27 17:37:08  smite-meister
+// netcode update
+//
 // Revision 1.1  2004/10/17 01:57:05  smite-meister
 // bots!
 //
@@ -191,7 +194,7 @@ SearchNode_t *priorityQ_t::RemoveNode(SearchNode_t *node)
 
 static int botteledestx, botteledesty;
 static bool botteledestfound = false;
-static Actor *mover;
+static fixed_t pawn_height;
 static sector_t *last_sector;
 
 /// Examines the trace intercept, sees it if can be activated/opened/circumvented.
@@ -281,7 +284,7 @@ static bool PTR_BotPath(intercept_t *in)
 	    fixed_t floorheight = s->floorheight;
 	    if (s != oksector)
 	      {
-		if (ceilingheight - floorheight < mover->height && !s->tag)
+		if (ceilingheight - floorheight < pawn_height && !s->tag)
 		  return false; // can't fit
 		if (floorheight > last_sector->floorheight + 45*FRACUNIT ||
 		    (floorheight > last_sector->floorheight + 37*FRACUNIT && last_sector->floortype == FLOOR_WATER))
@@ -330,7 +333,7 @@ bool BotNodes::DirectlyReachable(Actor *mo, fixed_t x, fixed_t y, fixed_t destx,
       last_sector = mp->R_PointInSubsector(x, y)->sector;
       if (mo)
 	{
-	  mover = mo;
+	  pawn_height = mo->height;
 	  if (mp->RadiusLinesCheck(destx, desty, mo->radius, PIT_BBoxFit) // does it fit there?
 	      && mp->PathTraverse(x, y, destx - 1, desty + 1, PT_ADDLINES|PT_ADDTHINGS, PTR_BotPath)
 	      && mp->PathTraverse(x, y, destx + 1, desty + 1, PT_ADDLINES|PT_ADDTHINGS, PTR_BotPath)
@@ -349,7 +352,10 @@ bool BotNodes::DirectlyReachable(Actor *mo, fixed_t x, fixed_t y, fixed_t destx,
 	    }
 	}
       else
-	return mp->PathTraverse(x, y, destx, desty, PT_ADDLINES, PTR_BotPath);
+	{
+	  pawn_height = 56*FRACUNIT;
+	  return mp->PathTraverse(x, y, destx, desty, PT_ADDLINES, PTR_BotPath);
+	}
     }
 
   return false;

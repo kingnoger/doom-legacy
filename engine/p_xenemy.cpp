@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1996 by Raven Software, Corp.
-// Copyright (C) 2003 by DooM Legacy Team.
+// Copyright (C) 2003-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,38 +18,23 @@
 //
 //
 // $Log$
+// Revision 1.16  2004/10/27 17:37:07  smite-meister
+// netcode update
+//
 // Revision 1.15  2004/07/05 16:53:26  smite-meister
 // Netcode replaced
 //
 // Revision 1.14  2004/04/25 16:26:50  smite-meister
 // Doxygen
 //
-// Revision 1.13  2004/01/06 14:37:45  smite-meister
-// six bugfixes, cleanup
-//
-// Revision 1.12  2004/01/02 14:25:02  smite-meister
-// cleanup
-//
-// Revision 1.11  2003/12/31 18:32:50  smite-meister
-// Last commit of the year? Sound works.
-//
-// Revision 1.10  2003/12/13 23:51:03  smite-meister
-// Hexen update
-//
 // Revision 1.9  2003/12/09 01:02:01  smite-meister
 // Hexen mapchange works, keycodes fixed
-//
-// Revision 1.8  2003/11/27 11:28:26  smite-meister
-// Doom/Heretic startup bug fixed
 //
 // Revision 1.7  2003/11/12 11:07:23  smite-meister
 // Serialization done. Map progression.
 //
 // Revision 1.6  2003/05/30 13:34:47  smite-meister
 // Cleanup, HUD improved, serialization
-//
-// Revision 1.5  2003/05/11 21:23:51  smite-meister
-// Hexen fixes
 //
 // Revision 1.4  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
@@ -63,12 +48,10 @@
 // Revision 1.1  2003/03/15 20:07:18  smite-meister
 // Initial Hexen compatibility!
 //
-//
-//
-// DESCRIPTION:
-//   Hexen enemy AI
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Hexen enemy AI
 
 #include "g_actor.h"
 #include "g_pawn.h"
@@ -2847,7 +2830,7 @@ void A_SorcBallOrbit(DActor *actor)
 
 	  if (actor->type==MT_SORCBALL1 && P_Random()<200)
 	    {
-	      S_StartAmbSound(SFX_SORCERER_SPELLCAST);
+	      S_StartAmbSound(NULL, SFX_SORCERER_SPELLCAST);
 	      actor->special2 = SORCFX4_RAPIDFIRE_TIME;
 	      actor->args[4] = 128;
 	      parent->args[3] = SORC_FIRING_SPELL;
@@ -3004,7 +2987,7 @@ void A_CastSorcererSpell(DActor *actor)
   fixed_t z;
   DActor *parent = (DActor *)actor->owner;
 
-  S_StartAmbSound(SFX_SORCERER_SPELLCAST);
+  S_StartAmbSound(NULL, SFX_SORCERER_SPELLCAST);
 
   // Put sorcerer into throw spell animation
   if (parent->health > 0) parent->SetState(S_SORC_ATTACK4, false);
@@ -3300,7 +3283,7 @@ void A_SorcFX4Check(DActor *actor)
 
 void A_SorcBallPop(DActor *actor)
 {
-  S_StartAmbSound(SFX_SORCERER_BALLPOP);
+  S_StartAmbSound(NULL, SFX_SORCERER_BALLPOP);
   actor->flags &= ~MF_NOGRAVITY;
   actor->flags2 |= MF2_LOGRAV;
   actor->px = ((P_Random()%10)-5) << FRACBITS;
@@ -3324,10 +3307,10 @@ void A_BounceCheck(DActor *actor)
 	    case MT_SORCBALL1:
 	    case MT_SORCBALL2:
 	    case MT_SORCBALL3:
-	      S_StartAmbSound(SFX_SORCERER_BIGBALLEXPLODE);
+	      S_StartAmbSound(NULL, SFX_SORCERER_BIGBALLEXPLODE);
 	      break;
 	    case MT_SORCFX1:
-	      S_StartAmbSound(SFX_SORCERER_HEADSCREAM);
+	      S_StartAmbSound(NULL, SFX_SORCERER_HEADSCREAM);
 	      break;
 	    default:
 	      break;
@@ -3744,7 +3727,7 @@ void A_KoraxChase(DActor *actor)
     }
   else if (P_Random()<30)
     {
-      S_StartAmbSound(SFX_KORAX_ACTIVE);
+      S_StartAmbSound(NULL, SFX_KORAX_ACTIVE);
     }
 
   // Teleport away
@@ -3770,7 +3753,7 @@ void A_KoraxStep(DActor *actor)
 
 void A_KoraxStep2(DActor *actor)
 {
-  S_StartAmbSound(SFX_KORAX_STEP);
+  S_StartAmbSound(NULL, SFX_KORAX_STEP);
   A_Chase(actor);
 }
 
@@ -3875,7 +3858,7 @@ void A_KoraxMissile(DActor *actor)
     }
 
   // Fire all 6 missiles at once
-  S_StartAmbSound(sound);
+  S_StartAmbSound(NULL, sound);
   KoraxFire1(actor, type);
   KoraxFire2(actor, type);
   KoraxFire3(actor, type);
@@ -4179,7 +4162,7 @@ void A_KSpiritRoam(DActor *actor)
       A_KSpiritWeave(actor);
       if (P_Random()<50)
 	{
-	  S_StartAmbSound(SFX_SPIRIT_ACTIVE);
+	  S_StartAmbSound(NULL, SFX_SPIRIT_ACTIVE);
 	}
     }
 }

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.37  2004/10/27 17:37:06  smite-meister
+// netcode update
+//
 // Revision 1.36  2004/09/23 23:21:16  smite-meister
 // HUD updated
 //
@@ -68,7 +71,6 @@
 #include "f_finale.h"
 #include "wi_stuff.h"
 #include "hud.h"
-#include "p_camera.h" // camera
 
 #include "w_wad.h"
 #include "z_zone.h"
@@ -421,8 +423,6 @@ bool GameInfo::StartGame(skill_t sk, int cluster)
   cv_timelimit.Set(0);
   cv_fraglimit.Set(0);
 
-
-
   if (paused)
     {
       paused = false;
@@ -442,10 +442,6 @@ bool GameInfo::StartGame(skill_t sk, int cluster)
   P_ACSInitNewGame(); // clear the ACS world vars etc.
 
   memset(gamekeydown, 0, sizeof(gamekeydown));  // clear cmd building stuff
-
-  // view the guy you are playing
-  displayplayer = consoleplayer;
-  displayplayer2 = consoleplayer2;
 
   // clear hud messages remains (usually from game startup)
   con.ClearHUD();
@@ -467,11 +463,6 @@ void GameInfo::StartIntermission()
   // TODO separate server, client stuff in intermission
 
   hud.ST_Stop();
-
-  // detach chasecam
-  if (camera.chase)
-    camera.ClearCamera();
-
   automap.Close();
 
   //state = GS_INTERMISSION;

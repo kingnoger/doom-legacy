@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.37  2004/10/27 17:37:06  smite-meister
+// netcode update
+//
 // Revision 1.36  2004/10/14 19:35:30  smite-meister
 // automap, bbox_t
 //
@@ -57,12 +60,6 @@
 // Revision 1.24  2004/04/25 16:26:48  smite-meister
 // Doxygen
 //
-// Revision 1.22  2004/01/06 14:37:45  smite-meister
-// six bugfixes, cleanup
-//
-// Revision 1.21  2004/01/05 11:48:08  smite-meister
-// 7 bugfixes
-//
 // Revision 1.20  2004/01/02 14:22:58  smite-meister
 // items work
 //
@@ -77,9 +74,6 @@
 //
 // Revision 1.16  2003/12/06 23:57:47  smite-meister
 // save-related bugfixes
-//
-// Revision 1.15  2003/11/23 00:41:54  smite-meister
-// bugfixes
 //
 // Revision 1.14  2003/11/12 11:07:17  smite-meister
 // Serialization done. Map progression.
@@ -139,6 +133,8 @@
 #include "g_pawn.h"
 #include "g_input.h"
 #include "g_type.h"
+
+#include "n_connection.h"
 
 #include "d_event.h"
 #include "d_items.h"
@@ -364,6 +360,7 @@ void GameInfo::Display()
 
   static gamestate_t oldgamestate = GS_NULL;
   static int borderdrawcount;
+  static int screenwipe = 0; // screen wipe progress
 
   if (nodrawers)
     return;
@@ -385,14 +382,11 @@ void GameInfo::Display()
       borderdrawcount = 3;
     }
 
-
-  bool screenwipe = false; // screen wipe in progress
-
   // save the current screen if about to wipe
-  if (force_wipe && rendermode == render_soft)
+  if (force_wipe && cv_screenslink.value && rendermode == render_soft)
     {
       force_wipe = false;
-      screenwipe = true;
+      screenwipe = 1;
       wipe_StartScreen(0, 0, vid.width, vid.height); // "before", s0->s2
     }
 
@@ -501,12 +495,9 @@ void GameInfo::Display()
       I_FinishUpdate();              // page flip or blit buffer
       //CONS_Printf("last frame update took %d\n", I_EndProfile());
     }
-  else
+  else if (screenwipe++ == 2) // we must wait until the "after" screen is rendered
     {
       // wipe update
-      if (!cv_screenslink.value)
-        return;
-
       wipe_EndScreen(0, 0, vid.width, vid.height); // "after", s0->s3
 
       bool done;
@@ -533,6 +524,7 @@ void GameInfo::Display()
 
         }
       while (!done && I_GetTics() < wipe_end);
+      screenwipe = 0;
     }
 }
 
@@ -542,44 +534,14 @@ void GameInfo::Display()
 /// Renders the game view
 void GameInfo::Drawer()
 {
-  // draw the view directly
-  //CONS_Printf("GI::Draw: %p, %p\n", displayplayer,displayplayer2);
-  if (displayplayer && displayplayer->pawn && displayplayer->mp
-      && displayplayer->playerstate != PST_RESPAWN)
+  // draw the player views
+
+  int n = Consoleplayer.size();
+  for (int i = 0; i < n; i++)
     {
-      R.SetMap(displayplayer->mp);
-#ifdef HWRENDER
-      if (rendermode != render_soft)
-        {
-          HWR.RenderPlayerView(0, displayplayer);
-        }
-      else //if (rendermode == render_soft)
-#endif
-        R.R_RenderPlayerView(displayplayer);
-    }
-
-  // added 16-6-98: render the second screen
-  if (displayplayer2 && displayplayer2->pawn && displayplayer2->mp
-      && displayplayer2->playerstate != PST_RESPAWN)
-    {
-      R.SetMap(displayplayer2->mp);
-#ifdef HWRENDER
-      if (rendermode != render_soft)
-        {
-          HWR.RenderPlayerView(1, displayplayer2);
-        }
-      else
-#endif
-        {
-          //faB: Boris hack :P !!
-          viewwindowy = vid.height/2;
-          memcpy(ylookup,ylookup2,viewheight*sizeof(ylookup[0]));
-
-          R.R_RenderPlayerView(displayplayer2);
-
-          viewwindowy = 0;
-          memcpy(ylookup,ylookup1,viewheight*sizeof(ylookup[0]));
-        }
+      PlayerInfo *p = Consoleplayer[i];
+      if (p->pov && p->mp && p->playerstate != PST_RESPAWN)
+	R.R_RenderPlayerView(i, p);
     }
 
   //CONS_Printf("GI::Draw done\n");
@@ -596,31 +558,7 @@ bool GameInfo::Responder(event_t* ev)
   if (state == GS_LEVEL && ev->type == ev_keydown
       && ev->data1 == KEY_F12 && !cv_hiddenplayers.value)
     {
-      // spy mode
-      map<int, PlayerInfo *>::iterator i;
-      if (displayplayer == NULL)
-        i = Players.begin();
-      else
-        {
-          i = Players.upper_bound(displayplayer->number);
-          if (i == Players.end())
-            i = Players.begin();
-        }
-
-      if (i == Players.end())
-        displayplayer = NULL;
-      else
-        displayplayer = (*i).second;
-
-      if (displayplayer)
-        {
-          //added:16-01-98:change statusbar also if playingback demo
-          if (singledemo)
-            hud.ST_Start(displayplayer->pawn);
-
-          //added:11-04-98: tell who's the view
-          CONS_Printf("Viewpoint : %s\n", displayplayer->name.c_str());
-        }
+      Consoleplayer[0]->connection->rpcRequestPOVchange_c2s(-1);
       return true;
     }
 
@@ -644,12 +582,6 @@ bool GameInfo::Responder(event_t* ev)
         return true;        // HUD ate the event
       if (automap.Responder(ev))
         return true;        // automap ate it
-
-      if (consoleplayer->InventoryResponder(gamecontrol, ev))
-        return true;
-
-      if (cv_splitscreen.value && consoleplayer2->InventoryResponder(gamecontrol2, ev))
-        return true;
       break;
 
     case GS_INTERMISSION:
@@ -666,8 +598,9 @@ bool GameInfo::Responder(event_t* ev)
       break;
     }
 
-  // update keys current state
-  G_MapEventsToControls(ev);
+  // update current controlkey state
+  if (G_MapEventsToControls(ev))
+    return true;
 
   // FIXME move these to Menu::Responder?
   switch (ev->type)
@@ -679,14 +612,14 @@ bool GameInfo::Responder(event_t* ev)
           COM_BufAddText("pause\n");
           return true;
 
-        case KEY_MINUS:     // Screen size down
+        case '-':     // Screen size down
           cv_viewsize.Set(cv_viewsize.value - 1);
-          S_StartAmbSound(sfx_menu_adjust);
+          S_StartLocalAmbSound(sfx_menu_adjust);
           return true;
 
-        case KEY_EQUALS:    // Screen size up
+        case '+':    // Screen size up
           cv_viewsize.Set(cv_viewsize.value + 1);
-          S_StartAmbSound(sfx_menu_adjust);
+          S_StartLocalAmbSound(sfx_menu_adjust);
           return true;
         }
 
@@ -790,7 +723,7 @@ bool GameInfo::RemovePlayer(int num)
   if (i == Players.end())
     return false; // not found
 
-  PlayerInfo *p = (*i).second;
+  PlayerInfo *p = i->second;
 
   // remove avatar of player
   if (p->pawn)
@@ -799,15 +732,19 @@ bool GameInfo::RemovePlayer(int num)
       p->pawn->Remove();
     }
 
-  if (p == displayplayer)
-    hud.ST_Stop();
-
-  // make sure that global PI pointers are still OK
-  if (consoleplayer == p) consoleplayer = NULL;
-  if (consoleplayer2 == p) consoleplayer2 = NULL;
-
-  if (displayplayer == p) displayplayer = NULL;
-  if (displayplayer2 == p) displayplayer2 = NULL;
+  if (p->connection)
+    ; // TODO send kick message
+  else
+    {
+      // must be local
+      vector<PlayerInfo *>::iterator j;
+      for (j = Consoleplayer.begin(); j != Consoleplayer.end(); j++)
+	if (*j == p)
+	  {
+	    Consoleplayer.erase(j);
+	    break;
+	  }
+    }
 
   delete p;
   // NOTE! because PI's are deleted, even local PI's must be dynamically
@@ -836,7 +773,6 @@ void GameInfo::ClearPlayers()
     }
 
   Players.clear();
-  consoleplayer = consoleplayer2 = NULL;
-  displayplayer = displayplayer2 = NULL;
+  Consoleplayer.clear();
   hud.ST_Stop();
 }

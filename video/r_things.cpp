@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.24  2004/10/27 17:37:11  smite-meister
+// netcode update
+//
 // Revision 1.23  2004/09/03 16:28:52  smite-meister
 // bugfixes and ZDoom linedef types
 //
@@ -944,7 +947,7 @@ void R_InitSprites(char** namelist)
   for (i=0 ; i<MAXVIDWIDTH ; i++)
     negonearray[i] = -1;
 
-  sprites.SetDefaultItem("PLAY");
+  sprites.SetDefaultItem("SMOK");
   //models.SetDefaultItem("models/sarge/");
   //MD3_InitNormLookup();
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/10/27 17:37:07  smite-meister
+// netcode update
+//
 // Revision 1.11  2004/09/23 23:21:17  smite-meister
 // HUD updated
 //
@@ -58,8 +61,6 @@
 #include "p_pspr.h"
 #include "p_enemy.h"
 #include "r_main.h"
-#include "screen.h" // palettes
-#include "hud.h"
 
 #include "sounds.h"
 #include "tables.h"
@@ -619,26 +620,19 @@ void MStaffSpawn(PlayerPawn *pmo, angle_t angle)
 //============================================================================
 #define STARTHOLYPAL    22
 #define STARTSCOURGEPAL 25
-void A_MStaffAttack(PlayerPawn *player, pspdef_t *psp)
+void A_MStaffAttack(PlayerPawn *p, pspdef_t *psp)
 {
-
-  angle_t angle;
-
-  int mana = player->weaponinfo[player->readyweapon].ammopershoot;
-  player->ammo[am_mana1] -= mana;
-  player->ammo[am_mana2] -= mana;
-  angle = player->angle;
+  int mana = p->weaponinfo[p->readyweapon].ammopershoot;
+  p->ammo[am_mana1] -= mana;
+  p->ammo[am_mana2] -= mana;
+  angle_t angle = p->angle;
 	
-  MStaffSpawn(player, angle);
-  MStaffSpawn(player, angle-ANGLE_1*5);
-  MStaffSpawn(player, angle+ANGLE_1*5);
-  S_StartSound(player, SFX_MAGE_STAFF_FIRE);
-  if (player == displayplayer->pawn)
-    {
-      hud.damagecount = 0;
-      hud.bonuscount = 0;
-      vid.SetPalette(STARTSCOURGEPAL);
-    }
+  MStaffSpawn(p, angle);
+  MStaffSpawn(p, angle-ANGLE_1*5);
+  MStaffSpawn(p, angle+ANGLE_1*5);
+  S_StartSound(p, SFX_MAGE_STAFF_FIRE);
+
+  p->player->palette = STARTSCOURGEPAL;
 }
 
 //============================================================================
@@ -647,19 +641,13 @@ void A_MStaffAttack(PlayerPawn *player, pspdef_t *psp)
 //
 //============================================================================
 
-void A_MStaffPalette(PlayerPawn *player, pspdef_t *psp)
+void A_MStaffPalette(PlayerPawn *p, pspdef_t *psp)
 {
-  int pal;
-
-  if (player == displayplayer->pawn)
-    {
-      pal = STARTSCOURGEPAL+psp->state-(&weaponstates[S_MSTAFFATK_2]);
-      if(pal == STARTSCOURGEPAL+3)
-	{ // reset back to original playpal
-	  pal = 0;
-	}
-      vid.SetPalette(pal);
-    }
+  int pal = STARTSCOURGEPAL+psp->state-(&weaponstates[S_MSTAFFATK_2]);
+  if (pal == STARTSCOURGEPAL+3)
+    pal = 0; // reset back to original playpal
+    
+  p->player->palette = pal;
 }
 
 //============================================================================
@@ -1361,21 +1349,15 @@ void A_CHolyAttack2(DActor *actor)
 //
 //============================================================================
 
-void A_CHolyAttack(PlayerPawn *player, pspdef_t *psp)
+void A_CHolyAttack(PlayerPawn *p, pspdef_t *psp)
 {
-  Actor *mo;
+  int mana = p->weaponinfo[p->readyweapon].ammopershoot;
+  p->ammo[am_mana1] -= mana;
+  p->ammo[am_mana2] -= mana;
+  p->SpawnPlayerMissile(MT_HOLY_MISSILE);
 
-  int mana = player->weaponinfo[player->readyweapon].ammopershoot;
-  player->ammo[am_mana1] -= mana;
-  player->ammo[am_mana2] -= mana;
-  mo = player->SpawnPlayerMissile(MT_HOLY_MISSILE);
-  if (player == displayplayer->pawn)
-    {
-      hud.damagecount = 0;
-      hud.bonuscount = 0;
-      vid.SetPalette(STARTHOLYPAL);
-    }
-  S_StartSound(player, SFX_CHOLY_FIRE);
+  p->player->palette = STARTHOLYPAL;
+  S_StartSound(p, SFX_CHOLY_FIRE);
 }
 
 //============================================================================
@@ -1384,19 +1366,13 @@ void A_CHolyAttack(PlayerPawn *player, pspdef_t *psp)
 //
 //============================================================================
 
-void A_CHolyPalette(PlayerPawn *player, pspdef_t *psp)
+void A_CHolyPalette(PlayerPawn *p, pspdef_t *psp)
 {
-  int pal;
+  int pal = STARTHOLYPAL + psp->state-(&weaponstates[S_CHOLYATK_6]);
+  if (pal == STARTHOLYPAL+3)
+    pal = 0; // reset back to original playpal
 
-  if(player == displayplayer->pawn)
-    {
-      pal = STARTHOLYPAL+psp->state-(&weaponstates[S_CHOLYATK_6]);
-      if(pal == STARTHOLYPAL+3)
-	{ // reset back to original playpal
-	  pal = 0;
-	}
-      vid.SetPalette(pal);
-    }
+  p->player->palette = pal;
 }
 
 //============================================================================

@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.18  2004/10/27 17:37:09  smite-meister
+// netcode update
+//
 // Revision 1.17  2004/08/12 18:30:29  smite-meister
 // cleaned startup
 //
@@ -41,6 +44,7 @@
 #define g_player_h 1
 
 #include <map>
+#include <vector>
 #include <deque>
 #include <string>
 #include "tnl/tnlNetObject.h"
@@ -95,6 +99,19 @@ public:
 
   ticcmd_t  cmd;   ///< current state of the player's controls
 
+  class Map        *mp;   ///< the map with which the player is currently associated
+  class PlayerPawn *pawn; ///< the thing that is being controlled by this player (marine, imp, whatever)
+  class Actor      *pov;  ///< the POV of the player. usually same as pawn, but can also be a chasecam etc...
+
+
+  //============ Score ============
+
+  map<int, int> Frags; ///< mapping from player number to how many times you have fragged him
+  int score;           ///< game-type dependent scoring based on frags, updated in real time
+  int kills, items, secrets, time; ///< accomplishments in the current Map
+
+
+  //============ Messages ============
 
   enum messagetype_t
   {
@@ -112,7 +129,10 @@ public:
   int messagefilter; ///< minimum message priority the player wants to receive
   deque<message_t> messages; ///< local message queue
 
-  // weapon preferences
+
+  //============ Preferences ============
+
+  // Weapon preferences
   char weaponpref[NUMWEAPONS];  ///< 
   bool originalweaponswitch;    ///< 
   bool autoaim;                 ///< using autoaim?
@@ -122,9 +142,8 @@ public:
   int color; ///< skin color to be copied to each pawn
   int skin;  ///< skin to be copied to each pawn
 
-  class Map        *mp;   ///< the map with which the player is currently associated
-  class PlayerPawn *pawn; ///< the thing that is being controlled by this player (marine, imp, whatever)
-  class Actor      *pov;  ///< the POV of the player. usually same as pawn, but can also be a chasecam etc...
+
+  //============ Feedback ============
 
   // POV height and bobbing during movement.
   fixed_t  viewz;           ///< absolute viewpoint z coordinate
@@ -132,37 +151,35 @@ public:
   fixed_t  deltaviewheight; ///< bob/squat speed.
   fixed_t  bob_amplitude;   ///< basically pawn speed squared, affects weapon movement
 
-  map<int, int> Frags; ///< mapping from player number to how many times you have fragged him
-  int score;           ///< game-type dependent scoring based on frags, updated in real time
-  int kills, items, secrets, time; ///< accomplishments in the current Map
+  // HUD flashes
+  int palette;
+  int damagecount;
+  int bonuscount;
+  //int poisoncount;
+  int itemuse;
+
 
 public:
-
   PlayerInfo(const string & n = "");
 
   int Serialize(class LArchive &a);
   int Unserialize(LArchive &a);
+
+  virtual void GetInput(int localpnum, int elapsed) { cmd.Build(localpnum, elapsed); }
   void ExitLevel(int nextmap, int ep);
   void Reset(bool resetpawn, bool resetfrags);  // resets the player (when starting a new level, for example)
 
-  void SetMessage(const char *msg, int priority = 0, int type = M_CONSOLE);
+  virtual void SetMessage(const char *msg, int priority = 0, int type = M_CONSOLE);
 
   void CalcViewHeight(bool onground); // update bobbing view height
-
-  // in g_game.cpp
-  bool InventoryResponder(int (*gc)[2], struct event_t *ev);
 };
 
 
-/// Locally controlled players
-extern  PlayerInfo *consoleplayer;
-extern  PlayerInfo *consoleplayer2;
-// Players whose view is rendered on screen
-extern  PlayerInfo *displayplayer;
-extern  PlayerInfo *displayplayer2; // for splitscreen
 
 // model PI's for both local players
 extern PlayerInfo localplayer;
 extern PlayerInfo localplayer2;
+
+extern vector<PlayerInfo *> Consoleplayer;  // local players
 
 #endif

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/10/27 17:37:09  smite-meister
+// netcode update
+//
 // Revision 1.6  2004/09/13 20:43:31  smite-meister
 // interface cleanup, sp map reset fixed
 //
@@ -83,8 +86,8 @@ struct ticcmd_t
   /// sets the ticcmd into a neutral state
   void Clear();
 
-  /// Fills the ticcmd_t with input data.
-  void Build(bool primary, int realtics);
+  /// Fills the ticcmd_t with local input data.
+  void Build(int playernumber, int elapsedtics);
 };
 
 #endif

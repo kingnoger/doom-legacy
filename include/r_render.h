@@ -8,6 +8,9 @@
 // Renderer is a friend class of Map
 //
 // $Log$
+// Revision 1.8  2004/10/27 17:37:09  smite-meister
+// netcode update
+//
 // Revision 1.7  2004/10/14 19:35:50  smite-meister
 // automap, bbox_t
 //
@@ -144,7 +147,7 @@ public:
   void R_Subsector(int num);
   void R_RenderBSPNode (int bspnum);
 
-  void R_RenderPlayerView(PlayerInfo *player);
+  void R_RenderPlayerView(int viewport, PlayerInfo *player);
 
   void R_RenderThickSideRange(drawseg_t *ds, int x1, int x2, ffloor_t *ffloor);
 

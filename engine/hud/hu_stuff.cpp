@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2004/10/27 17:37:08  smite-meister
+// netcode update
+//
 // Revision 1.22  2004/10/17 02:00:49  smite-meister
 // mingw fixes
 //
@@ -283,7 +286,7 @@ bool HUD::Responder(event_t *ev)
   if (!chat_on)
     {
       // enter chat mode
-      if (ev->data1 == gamecontrol[gc_talkkey][0] || ev->data1 == gamecontrol[gc_talkkey][1])
+      if (ev->data1 == gk_talk)
         {
           chat_on = true;
 	  return true;
@@ -291,7 +294,7 @@ bool HUD::Responder(event_t *ev)
     }
   else
     {
-      char c = ev->data1;
+      int c = ev->data1;
 
       // use console translations for chat
       if (shiftdown)
@@ -354,14 +357,6 @@ void HUD::Ticker()
   hu_tick++;
   hu_tick &= 7; // currently only to blink chat input cursor
 
-  if (damagecount > 100)
-    damagecount = 100;  // teleport stomp does 10k points...
-  else if (damagecount)
-    damagecount--;
-
-  if (bonuscount)
-    bonuscount--;
-
   /*
   if ((game.mode == gm_heretic) && (gametic & 1))
     ChainWiggle = M_Random()&1;
@@ -370,11 +365,24 @@ void HUD::Ticker()
   // update widget data
   UpdateWidgets();
 
-  // display player messages
-  if (consoleplayer)
+  int n = Consoleplayer.size();
+  for (int i=0; i<n; i++)
     {
-      PlayerInfo *pl = consoleplayer;
+      PlayerInfo *pl = Consoleplayer[i];
 
+      if (pl->palette >= 0)
+	{
+	  vid.SetPalette(pl->palette);
+	  damagecount = bonuscount = 0;
+	}
+      else
+	{
+	  damagecount += pl->damagecount;
+	  bonuscount += pl->bonuscount;
+	}
+
+
+      // display player messages
       while (!pl->messages.empty())
 	{
 	  PlayerInfo::message_t &m = pl->messages.front();
@@ -399,36 +407,18 @@ void HUD::Ticker()
 	drawscore = (pl->playerstate == PST_DEAD);
     }
 
-  // In splitscreen, display second player's messages
-  if (cv_splitscreen.value && consoleplayer2)
-    {
-      PlayerInfo *pl = consoleplayer2;
+  if (damagecount > 100)
+    damagecount = 100;  // teleport stomp does 10k points...
+  else if (damagecount > 0)
+    damagecount--;
 
-      while (!pl->messages.empty())
-        {
-	  PlayerInfo::message_t &m = pl->messages.front();
-
-	  if (m.priority >= pl->messagefilter)
-	    switch (m.type)
-	      {
-	      case PlayerInfo::M_CONSOLE:
-		CONS_Printf("\4%s\n", m.msg.c_str());
-		break;
-	      case PlayerInfo::M_HUD:
-		tips.push_back(new HudTip(m.msg, m.priority));
-		break;
-	      }
-
-	  pl->messages.pop_front();
-        }
-    }
-
+  if (bonuscount > 0)
+    bonuscount--;
 
   // deathmatch rankings overlay if press key or while in death view
   if (cv_deathmatch.value)
     {
-      if (gamekeydown[gamecontrol[gc_scores][0]] ||
-	  gamekeydown[gamecontrol[gc_scores][1]])
+      if (gamekeydown[gk_scores])
 	drawscore = !chat_on;
     }
   else
@@ -535,7 +525,7 @@ void HU_drawDeathmatchRankings()
   //Fab:25-04-98: when you play, you quickly see your frags because your
   //  name is displayed white, when playback demo, you quicly see who's the
   //  view.
-  PlayerInfo *whiteplayer = (game.state == GameInfo::GS_DEMOPLAYBACK) ? displayplayer : consoleplayer;
+  PlayerInfo *whiteplayer = Consoleplayer[0];
 
   if (scorelines > 9)
     scorelines = 9; //dont draw past bottom of screen, show the best only

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/10/27 17:37:11  smite-meister
+// netcode update
+//
 // Revision 1.3  2004/10/14 19:35:52  smite-meister
 // automap, bbox_t
 //
@@ -823,10 +826,10 @@ void Command_Water_f (void)
   if (COM_Argc()<2)
     {
       CONS_Printf("dev_water [height] : set water level (development test)");
-
+      /*
       if (consoleplayer->pawn)
         dev_waterheight = consoleplayer->pawn->z + (16<<16) + 1;
-
+      */
       return;
     }
 

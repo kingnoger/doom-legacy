@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/10/27 17:37:10  smite-meister
+// netcode update
+//
 // Revision 1.6  2004/08/12 18:30:31  smite-meister
 // cleaned startup
 //
@@ -50,6 +53,7 @@
 #include "g_game.h"
 #include "g_type.h"
 #include "g_player.h"
+#include "g_pawn.h"
 
 
 /*
@@ -230,7 +234,7 @@ void LConnection::onConnectionEstablished()
       n->netstate = LNetInterface::CL_Connected;
       CONS_Printf("Connected to server at %s.\n", getNetAddressString());
 
-      rpcSay(0, 0, "hello world!\n");
+      //rpcSay(0, 0, "hello world!\n");
     }
   else
     {
@@ -305,12 +309,15 @@ void LConnection::onStartGhosting()
 TNL_IMPLEMENT_RPC(LConnection, rpcMessage_s2c, (S32 pnum, const char *msg, S8 priority, S8 type), 
 		  NetClassGroupGameMask, RPCGuaranteedOrdered, RPCDirServerToClient, 0)
 {
-  if (consoleplayer && consoleplayer->number == pnum)
-    consoleplayer->SetMessage(msg, priority, type);
-  else if (consoleplayer2 && consoleplayer2->number == pnum)
-    consoleplayer2->SetMessage(msg, priority, type);
-  else
-    I_Error("Received someone else's message!\n");
+  int n = Consoleplayer.size();
+  for (int i=0; i<n; i++)
+    if (Consoleplayer[i]->number == pnum)
+      {
+	Consoleplayer[i]->SetMessage(msg, priority, type);
+	return;
+      }
+
+  I_Error("Received someone else's message!\n");
 }
 
 
@@ -325,4 +332,39 @@ TNL_IMPLEMENT_RPC(LConnection, rpcIntermissionDone_c2s, (),
 		  NetClassGroupGameMask, RPCGuaranteedOrdered, RPCDirClientToServer, 0)
 {
   //player[0]->playerstate = PST_NEEDMAP; 
+}
+
+
+TNL_IMPLEMENT_RPC(LConnection, rpcRequestPOVchange_c2s, (S32 pnum), 
+		  NetClassGroupGameMask, RPCGuaranteedOrdered, RPCDirClientToServer, 0)
+{
+  // spy mode
+  if (game.state == GameInfo::GS_LEVEL && !cv_hiddenplayers.value)
+    {
+      PlayerInfo *p = NULL;
+
+      /* FIXME NOW
+      if (pnum <= 0)
+	{
+	  // simply "next available POV"
+	  player_iter_t i = Players.upper_bound(player[0]->povnum + 1);
+	  if (i == Players.end())
+	    i = Players.begin();
+	  
+	  p = i->second;
+	}
+      else
+	p = game.FindPlayer(pnum);
+      */
+
+      if (p)
+	player[0]->pov = p->pawn;
+      else
+	player[0]->pov = player[0]->pawn;
+
+      // tell who's the view
+      player[0]->SetMessage(va("Viewpoint: %s\n", p->name.c_str()));
+    }
+
+  // TODO client should start HUD on the new pov...
 }

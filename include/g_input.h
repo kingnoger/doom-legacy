@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/10/27 17:37:09  smite-meister
+// netcode update
+//
 // Revision 1.7  2004/09/23 23:21:19  smite-meister
 // HUD updated
 //
@@ -74,10 +77,7 @@ enum gamecontrols_e
   gc_weapon6,
   gc_weapon7,
   gc_weapon8,
-  gc_talkkey,
-  gc_scores,
   gc_jump,
-  gc_console,
   gc_nextweapon,
   gc_prevweapon,
   gc_bestweapon,
@@ -109,26 +109,24 @@ struct joybinding_t
 };
 
 // current state of the keys : true if pushed
-extern  byte    gamekeydown[NUMINPUTS];
+extern byte gamekeydown[NUMINPUTS];
 
-// two key codes (or virtual key) per game control
-extern  int     gamecontrol[num_gamecontrols][2];
-extern  int     gamecontrol2[num_gamecontrols][2];    // secondary splitscreen player
+// per-player keys (two (virtual) key codes per game control)
+extern short gamecontrol[2][num_gamecontrols][2];
 
-// peace to my little coder fingers!
-// check a gamecontrol being active or not
+// common keys
+extern short gk_console, gk_talk, gk_scores;
 
 // remaps the input event to a game control.
-void  G_MapEventsToControls(struct event_t *ev);
+bool  G_MapEventsToControls(struct event_t *ev);
 
 // returns the name of a key
 char* G_KeynumToString(int keynum);
 int   G_KeyStringtoNum(char *keystr);
 
 // detach any keys associated to the given game control
-void  G_ClearControlKeys(int (*setupcontrols)[2], int control);
+void  G_ClearControlKeys(short (*setupcontrols)[2], int control);
 void  Command_Setcontrol_f();
-void  Command_Setcontrol2_f();
 void  G_Controldefault();
 void  G_CheckDoubleUsage(int keynum);
 

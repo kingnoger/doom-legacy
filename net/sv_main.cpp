@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2004/10/27 17:37:10  smite-meister
+// netcode update
+//
 // Revision 1.14  2004/10/14 19:35:51  smite-meister
 // automap, bbox_t
 //
@@ -340,11 +343,10 @@ void GameInfo::TryRunTics(tic_t elapsed)
       Menu::Ticker();
       con.Ticker();
 
-      // translate inputs (keyboard/mouse/joystick) into game controls
-      if (consoleplayer)
-	consoleplayer->cmd.Build(true, elapsed);
-      if (consoleplayer2)
-	consoleplayer2->cmd.Build(false, elapsed);
+      // translate inputs (keyboard/mouse/joystick) into a ticcmd
+      int n = Consoleplayer.size();
+      for (int i=0; i<n; i++)
+	Consoleplayer[i]->GetInput(i, elapsed);
     }
 
   D_ProcessEvents(); // read control events, feed them to responders
@@ -414,12 +416,14 @@ bool GameInfo::SV_SpawnServer()
   SV_Reset();
   CONS_Printf("Starting server...\n");
 
+  Consoleplayer.clear();
+
   if (!dedicated)
     {
       // add local players
-      consoleplayer = AddPlayer(new PlayerInfo(localplayer));
+      Consoleplayer.push_back(AddPlayer(new PlayerInfo(localplayer)));
       if (cv_splitscreen.value)
-	consoleplayer2 = AddPlayer(new PlayerInfo(localplayer2));
+	Consoleplayer.push_back(AddPlayer(new PlayerInfo(localplayer2)));
     }
 
   if (!local)
@@ -607,6 +611,8 @@ void COM_FS_RunScript_f();
 void COM_FS_Running_f();
 void FS_Init();
 
+void Command_AddBot_f();
+
 // set chatmacros cvars point the original or dehacked texts, before config.cfg is executed !!
 void HU_HackChatmacros();
 
@@ -687,7 +693,7 @@ void SV_Init()
 #endif
 
   // bots
-  //COM_AddCommand("addbot", Command_AddBot_f);
+  COM_AddCommand("addbot", Command_AddBot_f);
 
   // cheat commands, I'm bored of deh patches renaming the idclev ! :-)
   COM_AddCommand("noclip", Command_CheatNoClip_f);

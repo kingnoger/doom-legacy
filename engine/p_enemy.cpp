@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2004/10/27 17:37:06  smite-meister
+// netcode update
+//
 // Revision 1.22  2004/08/12 18:30:23  smite-meister
 // cleaned startup
 //
@@ -873,7 +876,7 @@ void A_Look(DActor *actor)
       if (actor->flags2 & MF2_BOSS)
         {
 	  // full volume
-	  S_StartAmbSound(sound);
+	  S_StartAmbSound(NULL, sound);
         }
       else
 	S_StartScreamSound(actor, sound);
@@ -990,7 +993,7 @@ void A_Chase(DActor *actor)
       if ((actor->type == MT_WIZARD || actor->type == MT_BISHOP)&& P_Random() < 128)
 	S_StartScreamSound(actor, actor->info->seesound);
       else if(actor->flags2 & MF2_BOSS)
-	S_StartAmbSound(actor->info->activesound);
+	S_StartAmbSound(NULL, actor->info->activesound);
       //FIXME else if (actor->type == MT_PIG) S_StartScreamSound(actor, SFX_PIG_ACTIVE1+(P_Random()&1));
       else
 	S_StartScreamSound(actor, actor->info->activesound);
@@ -1807,7 +1810,7 @@ void A_Scream(DActor *actor)
 
   // Check for bosses.
   if (actor->flags2 & MF2_BOSS)
-    S_StartAmbSound(sound); // full volume
+    S_StartAmbSound(NULL, sound); // full volume
   else
     S_StartScreamSound(actor, sound);
 }
@@ -1946,13 +1949,13 @@ void A_BabyMetal(DActor *mo)
 
 void A_BrainAwake(DActor *mo)
 {
-  S_StartAmbSound(sfx_bossit);
+  S_StartAmbSound(NULL, sfx_bossit);
 }
 
 
 void A_BrainPain(DActor *mo)
 {
-  S_StartAmbSound(sfx_bospn);
+  S_StartAmbSound(NULL, sfx_bospn);
 }
 
 
@@ -1977,7 +1980,7 @@ void A_BrainScream(DActor *mo)
 	th->tics = 1;
     }
 
-  S_StartAmbSound(sfx_bosdth);
+  S_StartAmbSound(NULL, sfx_bosdth);
 }
 
 
@@ -2036,7 +2039,7 @@ void A_BrainSpit(DActor *mo)
 	    ((targ->y - mo->y)/newmobj->py) / newmobj->state->tics;
         }
 
-      S_StartAmbSound(sfx_bospit);
+      S_StartAmbSound(NULL, sfx_bospit);
     }
 }
 

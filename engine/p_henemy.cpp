@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/10/27 17:37:06  smite-meister
+// netcode update
+//
 // Revision 1.12  2004/04/25 16:26:49  smite-meister
 // Doxygen
 //
@@ -705,7 +708,7 @@ void A_Srcr2Attack(DActor *actor)
     {
       return;
     }
-  S_StartAmbSound(actor->info->attacksound);
+  S_StartAmbSound(NULL, actor->info->attacksound);
   if(actor->CheckMeleeRange())
     {
       actor->target->Damage(actor, actor, HITDICE(20));
@@ -801,12 +804,12 @@ void A_Sor2DthLoop(DActor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_SorZap(DActor *actor) {S_StartAmbSound(sfx_sorzap);}
-void A_SorRise(DActor *actor) {S_StartAmbSound(sfx_sorrise);}
-void A_SorDSph(DActor *actor) {S_StartAmbSound(sfx_sordsph);}
-void A_SorDExp(DActor *actor) {S_StartAmbSound(sfx_sordexp);}
-void A_SorDBon(DActor *actor) {S_StartAmbSound(sfx_sordbon);}
-void A_SorSightSnd(DActor *actor) {S_StartAmbSound(sfx_sorsit);}
+void A_SorZap(DActor *actor) {S_StartAmbSound(NULL, sfx_sorzap);}
+void A_SorRise(DActor *actor) {S_StartAmbSound(NULL, sfx_sorrise);}
+void A_SorDSph(DActor *actor) {S_StartAmbSound(NULL, sfx_sordsph);}
+void A_SorDExp(DActor *actor) {S_StartAmbSound(NULL, sfx_sordexp);}
+void A_SorDBon(DActor *actor) {S_StartAmbSound(NULL, sfx_sordbon);}
+void A_SorSightSnd(DActor *actor) {S_StartAmbSound(NULL, sfx_sorsit);}
 
 //----------------------------------------------------------------------------
 //
@@ -1312,7 +1315,7 @@ void A_HScream(DActor *actor)
     case MT_SORCERER1:
     case MT_MINOTAUR:
       // Make boss death sounds full volume
-      S_StartAmbSound(actor->info->deathsound);
+      S_StartAmbSound(NULL, actor->info->deathsound);
       break;
     case MT_HPLAYER:
       // Handle the different player death screams

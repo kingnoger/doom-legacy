@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/10/27 17:37:05  smite-meister
+// netcode update
+//
 // Revision 1.8  2004/08/12 18:30:22  smite-meister
 // cleaned startup
 //
@@ -415,7 +418,7 @@ void ActiveSndSeq::StartSnd(int snd)
 	channel = S_StartSound(mpt, snd, volume);
     }
   else
-    channel = S_StartAmbSound(snd, volume);
+    channel = S_StartAmbSound(NULL, snd, volume);
 }
 
 

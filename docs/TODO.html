@@ -23,7 +23,8 @@ In order of decreasing importance:
  <ul>
  <li>game object ghosting
  <li>client input transmission (ticcmds)
- <li>miscellaneous RPCs which replace most old XCMDs (chat etc.)
+ <li>miscellaneous RPCs which replace most old XCMDs (chat, client
+ feedback, sounds etc.)
  <li>client interpolation and extrapolation (makes the game smoother and more
 responsive, but is not strictly necessary)
  <li>file transfers
@@ -32,8 +33,6 @@ responsive, but is not strictly necessary)
 
 <li>Finish Hexen support. Intermission, polyobj renderer, extra
 physics.
-
-<li>Heretic linedef conversion table
 
 <li>Default parameters to FS functions
 
@@ -45,10 +44,14 @@ physics.
  <li>simple menu graphics
  <li>HUD overlay graphics
  <li>a standard replacement texture, sound, music, sprite and model
- <li>translation maps for Doom/Boom/Heretic linedefs (XDOOM, XHERETIC)
  <li>"Legacy demo" map in case someone decides to use it as an iwad
  + MAPINFO lump to handle it.
  </ul>
+
+<li>turn basic data types (mainly fixed_t) into classes with
+  overloaded operators.
+
+<li>A 3D vector template class? vect&lt;float&gt; p;?
 
 <li>Finish the OGG/MP3 music support
 
@@ -67,7 +70,7 @@ physics.
 
 <li>More FS functions, better FS documentation, FS arrays
 
-<li>AIPlayer-based bot system, bots implemented as DLLs.
+<li>Bots implemented as DLLs.
 
 <li>Turn the Menu into a widget-based browser, including a levelgraph
   editor etc. Maybe replace the launcher altogether?
@@ -76,11 +79,6 @@ physics.
 
 <li>turn Console into a modern iostream-based class that can print
   strings etc. ( console &lt;&lt; "Hello world!" &lt;&lt; endl; )
-
-<li>turn basic data types (mainly fixed_t) into classes with
-  overloaded operators.
-
-<li>A 3D vector template class? vect&lt;float&gt; p;?
 
 <li>Other pawntypes besides Marine and Heretic
  <ul>

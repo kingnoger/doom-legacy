@@ -5,11 +5,11 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.44  2004/10/27 17:37:06  smite-meister
+// netcode update
+//
 // Revision 1.43  2004/09/23 23:21:16  smite-meister
 // HUD updated
-//
-// Revision 1.42  2004/09/15 19:23:59  smite-meister
-// bugfixes
 //
 // Revision 1.41  2004/09/13 20:43:29  smite-meister
 // interface cleanup, sp map reset fixed
@@ -17,50 +17,17 @@
 // Revision 1.40  2004/09/03 16:28:49  smite-meister
 // bugfixes and ZDoom linedef types
 //
-// Revision 1.39  2004/08/12 18:30:23  smite-meister
-// cleaned startup
-//
-// Revision 1.38  2004/07/14 16:13:13  smite-meister
-// cleanup, commands
-//
 // Revision 1.37  2004/07/05 16:53:24  smite-meister
 // Netcode replaced
 //
 // Revision 1.36  2004/04/25 16:26:48  smite-meister
 // Doxygen
 //
-// Revision 1.34  2004/01/10 16:02:59  smite-meister
-// Cleanup and Hexen gameplay -related bugfixes
-//
-// Revision 1.33  2004/01/06 14:37:45  smite-meister
-// six bugfixes, cleanup
-//
-// Revision 1.32  2004/01/05 11:48:08  smite-meister
-// 7 bugfixes
-//
-// Revision 1.31  2004/01/02 14:25:01  smite-meister
-// cleanup
-//
 // Revision 1.30  2003/12/31 18:32:49  smite-meister
 // Last commit of the year? Sound works.
 //
 // Revision 1.29  2003/12/23 18:06:06  smite-meister
 // Hexen stairbuilders. Moving geometry done!
-//
-// Revision 1.28  2003/12/21 12:29:09  smite-meister
-// bugfixes
-//
-// Revision 1.27  2003/12/18 11:57:31  smite-meister
-// fixes / new bugs revealed
-//
-// Revision 1.26  2003/12/06 23:57:47  smite-meister
-// save-related bugfixes
-//
-// Revision 1.25  2003/11/30 00:09:42  smite-meister
-// bugfixes
-//
-// Revision 1.24  2003/11/23 00:41:55  smite-meister
-// bugfixes
 //
 // Revision 1.23  2003/11/12 11:07:17  smite-meister
 // Serialization done. Map progression.
@@ -71,29 +38,17 @@
 // Revision 1.21  2003/06/20 20:56:07  smite-meister
 // Presentation system tweaked
 //
-// Revision 1.20  2003/06/10 22:39:54  smite-meister
-// Bugfixes
-//
 // Revision 1.19  2003/05/30 13:34:43  smite-meister
 // Cleanup, HUD improved, serialization
 //
-// Revision 1.18  2003/05/11 21:23:49  smite-meister
-// Hexen fixes
-//
 // Revision 1.17  2003/05/05 00:24:48  smite-meister
 // Hexen linedef system. Pickups.
-//
-// Revision 1.16  2003/04/26 12:01:12  smite-meister
-// Bugfixes. Hexen maps work again.
 //
 // Revision 1.15  2003/04/19 17:38:46  smite-meister
 // SNDSEQ support, tools, linedef system...
 //
 // Revision 1.14  2003/04/14 08:58:25  smite-meister
 // Hexen maps load.
-//
-// Revision 1.13  2003/04/08 09:46:05  smite-meister
-// Bugfixes
 //
 // Revision 1.12  2003/04/04 00:01:53  smite-meister
 // bugfixes, Hexen HUD
@@ -137,11 +92,12 @@
 #include "command.h"
 #include "cvars.h"
 
+#include "bots/b_path.h"
+
 #include "p_spec.h"
 #include "p_hacks.h"
 #include "r_main.h"
 #include "hud.h"
-#include "p_camera.h"
 #include "m_random.h"
 #include "sounds.h"
 #include "z_zone.h"
@@ -183,9 +139,13 @@ Map::Map(MapInfo *i)
 
   mapthings = NULL;
 
+  botnodes = NULL;
+
   ActiveAmbientSeq = NULL;
 
   force_pointercheck = false;
+
+  braintargeton = 0;
 };
 
 
@@ -224,6 +184,9 @@ Map::~Map()
 
   Z_Free(mapthings);
 
+  if (botnodes)
+    delete botnodes;
+
   Thinker *t, *next;
   for (t = thinkercap.next; t != &thinkercap; t = next)
     {
@@ -242,10 +205,10 @@ Map::~Map()
 }
 
 
-//
-// GAME SPAWN FUNCTIONS
-//
 
+//===================================================
+//             GAME SPAWN FUNCTIONS
+//===================================================
 
 void Map::SpawnActor(Actor *p)
 {
@@ -590,14 +553,6 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
   if (cv_deathmatch.value)
     p->keycards = it_allkeys;
 
-  if (pi == consoleplayer)
-    {
-      // wake up the status bar
-      hud.ST_Start(p);
-    }
-
-  if (camera.chase && displayplayer == pi)
-    camera.ResetCamera(p);
   pi->pov = p;
 
   CONS_Printf("spawn done\n");
@@ -608,11 +563,9 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
 }
 
 
-//
-// was P_SpawnMapThing
+
 // The fields of the mapthing should
 // already be in host byte order.
-//
 void Map::SpawnMapThing(mapthing_t *mt)
 {
   int t = mt->type;
@@ -873,9 +826,6 @@ void Map::RebornPlayer(PlayerInfo *p)
   // first dissociate the corpse
   if (p->pawn)
     {
-      if (p == displayplayer)
-	hud.ST_Stop(); // shutdown the status bar
-
       p->pawn->player = NULL;
       QueueBody(p->pawn);
       p->pawn = NULL;
@@ -889,7 +839,6 @@ void Map::RebornPlayer(PlayerInfo *p)
 		    , ss->sector->floorheight
 		    , MT_TFOG);
   */
-  //if (displayplayer->viewz != 1)
   //  S_StartSound(mo, sfx_telept);  // don't start sound on first frame
 
   if (!game.multiplayer)
@@ -1209,7 +1158,7 @@ void Map::RespawnSpecials()
   itemrespawntime.pop_front();
 }
 
-// was P_RespawnWeapons
+
 // used when we are going from deathmatch 2 to deathmatch 1
 // picks out all weapons from itemrespawnqueue and respawns them
 void Map::RespawnWeapons()

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.24  2004/10/27 17:37:11  smite-meister
+// netcode update
+//
 // Revision 1.23  2004/09/23 23:21:20  smite-meister
 // HUD updated
 //
@@ -999,7 +1002,7 @@ void R_ServerInit()
   // server needs to know the texture names and dimensions
   CONS_Printf("\nInitTextures...");
   tc.Clear();
-  tc.SetDefaultItem("SMOKA0");
+  tc.SetDefaultItem("DEF_TEX");
   tc.ReadTextures();
   //tc.Inventory();
 
@@ -1123,14 +1126,6 @@ void Rend::R_SetupFrame(PlayerInfo *player)
 
   extralight = player->pawn->extralight;
 
-  if (cv_chasecam.value && !camera.chase)
-    {
-      camera.ResetCamera(player->pawn);
-      camera.chase = true;
-    }
-  else if (!cv_chasecam.value)
-    camera.chase = false;
-
 #ifdef FRAGGLESCRIPT
   if (script_camera_on)
     {
@@ -1143,26 +1138,15 @@ void Rend::R_SetupFrame(PlayerInfo *player)
     }
   else
 #endif
-    if (camera.chase)
-      {
-        // use outside cam view
-        viewactor = &camera;
+    {
+      // use the player's eyes view
+      viewactor = player->pawn;
+      viewz = player->viewz;
 
-        viewz = viewactor->z + (viewactor->height>>1);
-        fixedcolormap_setup = camera.fixedcolormap;
-        aimingangle = camera.aiming;
-        viewangle = viewactor->angle;
-      }
-    else
-      {
-        // use the player's eyes view
-        viewactor = player->pawn;
-        viewz = player->viewz;
-
-        fixedcolormap_setup = player->pawn->fixedcolormap;
-        aimingangle = viewactor->aiming;
-        viewangle = viewactor->angle+viewangleoffset;
-      }
+      fixedcolormap_setup = player->pawn->fixedcolormap;
+      aimingangle = viewactor->aiming;
+      viewangle = viewactor->angle+viewangleoffset;
+    }
 
 #ifdef PARANOIA
   if (!viewactor)
@@ -1267,77 +1251,105 @@ void R_RotateBuffere (void)
 // I mean, there is a win16lock() or something that lasts all the rendering,
 // so maybe we should release screen lock before each netupdate below..?
 
-void Rend::R_RenderPlayerView(PlayerInfo *player)
+void Rend::R_RenderPlayerView(int viewport, PlayerInfo *player)
 {
-    R_SetupFrame (player);
+  SetMap(player->mp);
 
-    // Clear buffers.
-    R_ClearClipSegs ();
-    R_ClearDrawSegs ();
-    R_ClearPlanes (player->pawn->subsector->sector->tag); //needs OLDwaterheight in occupied sector
-    //R_ClearPortals ();
-    R_ClearSprites ();
+#ifdef HWRENDER
+  if (rendermode != render_soft)
+    {
+      HWR.RenderPlayerView(viewport, player);
+      return;
+    }
+#endif
+
+  if (viewport == 0) // support just two viewports for now
+    {
+      ylookup = ylookup1;
+    }
+  else
+    {
+      //faB: Boris hack :P !!
+      viewwindowy = vid.height/2;
+      ylookup = ylookup2;
+    }
+
+
+  R_SetupFrame(player);
+
+  // Clear buffers.
+  R_ClearClipSegs ();
+  R_ClearDrawSegs ();
+  R_ClearPlanes(player->pawn->subsector->sector->tag); //needs OLDwaterheight in occupied sector
+  //R_ClearPortals();
+  R_ClearSprites();
 
 #ifdef FLOORSPLATS
-    R_ClearVisibleFloorSplats ();
+  R_ClearVisibleFloorSplats();
 #endif
 
-    // check for new console commands.
-    //NetUpdate ();
+  // check for new console commands.
+  //NetUpdate ();
 
-    // The head node is the last node output.
+  // The head node is the last node output.
 
-//profile stuff ---------------------------------------------------------
+  //profile stuff ---------------------------------------------------------
 #ifdef TIMING
-    mytotal=0;
-    ProfZeroTimer();
+  mytotal=0;
+  ProfZeroTimer();
 #endif
-    R_RenderBSPNode (numnodes-1);
+
+  R_RenderBSPNode(numnodes-1);
+
 #ifdef TIMING
-    RDMSR(0x10,&mycount);
-    mytotal += mycount;   //64bit add
-
-    CONS_Printf("RenderBSPNode: 0x%d %d\n", *((int*)&mytotal+1),
-                                             (int)mytotal );
+  RDMSR(0x10,&mycount);
+  mytotal += mycount;   //64bit add
+  CONS_Printf("RenderBSPNode: 0x%d %d\n", *((int*)&mytotal+1), (int)mytotal );
 #endif
-//profile stuff ---------------------------------------------------------
+  //profile stuff ---------------------------------------------------------
 
-// horizontal column draw optimisation test.. deceiving.
+  // horizontal column draw optimisation test.. deceiving.
 #ifdef HORIZONTALDRAW
-//    R_RotateBuffere ();
-    dc_source   = yhlookup[0];
-    dc_colormap = ylookup[0] + columnofs[0];
-    R_RotateBufferasm ();
+  //    R_RotateBuffere ();
+  dc_source   = yhlookup[0];
+  dc_colormap = ylookup[0] + columnofs[0];
+  R_RotateBufferasm ();
 #endif
 
-    // Check for new console commands.
-    //NetUpdate ();
+  // Check for new console commands.
+  //NetUpdate ();
 
-    //R_DrawPortals ();
-    R_DrawPlanes ();
+  //R_DrawPortals();
+  R_DrawPlanes();
 
-    // Check for new console commands.
-    //NetUpdate ();
+  // Check for new console commands.
+  //NetUpdate ();
 
 #ifdef FLOORSPLATS
-    //faB(21jan): testing
-    R_DrawVisibleFloorSplats ();
+  //faB(21jan): testing
+  R_DrawVisibleFloorSplats();
 #endif
 
-    // draw mid texture and sprite
-    // SoM: And now 3D floors/sides!
-    R_DrawMasked ();
+  // draw mid texture and sprite
+  // SoM: And now 3D floors/sides!
+  R_DrawMasked();
 
-    // draw the psprites on top of everything
-    //  but does not draw on side views
-    if (!viewangleoffset && !camera.chase && cv_psprites.value
+  // draw the psprites on top of everything
+  //  but does not draw on side views
+  if (!viewangleoffset && cv_psprites.value
 #ifdef FRAGGLESCRIPT
-    && !script_camera_on
+      && !script_camera_on
 #endif
-    )
-      R_DrawPlayerSprites ();
+      )
+    R_DrawPlayerSprites();
 
-    // Check for new console commands.
-    //NetUpdate ();
-    player->pawn->flags &= ~MF_NOSECTOR; // don't show self (uninit) clientprediction code
+  // Check for new console commands.
+  //NetUpdate ();
+  player->pawn->flags &= ~MF_NOSECTOR; // don't show self (uninit) clientprediction code
+
+  if (viewport != 0) // HACK support just two viewports for now
+    {
+      viewwindowy = 0;
+      ylookup = ylookup1;
+    }
 }

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.32  2004/10/27 17:37:11  smite-meister
+// netcode update
+//
 // Revision 1.31  2004/10/14 19:35:52  smite-meister
 // automap, bbox_t
 //
@@ -912,6 +915,21 @@ cacheitem_t *texturecache_t::Load(const char *name)
       tt->mode = p->mode;
       tt->type = LumpTexture::Pic;
       t = tt;
+
+      /*
+
+bool WritePCXfile( const char*         filename,
+                    byte*         data,
+                    int           width,
+                    int           height,
+		   byte*         palette );
+
+      string ugh = name;
+      ugh += ".pcx";
+      
+      WritePCXfile(ugh.c_str(), t->Generate(), t->width, t->height,
+		   (byte *)fc.CacheLumpName("PLAYPAL",PU_CACHE));
+      */
     }
   else
     {

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2004/10/27 17:37:07  smite-meister
+// netcode update
+//
 // Revision 1.18  2004/10/14 19:35:46  smite-meister
 // automap, bbox_t
 //
@@ -623,16 +626,13 @@ bool AutoMap::Responder(event_t *ev)
 
   if (!active)
     {
-      if (ev->type == ev_keydown && ev->data1 == AM_STARTKEY)
+      if (ev->type == ev_keydown && ev->data1 == AM_STARTKEY && !altdown)
         {
           //faB: prevent alt-tab in win32 version to activate automap just before minimizing the app
           //     doesn't do any harm to the DOS version
-          if (!altdown)
-            {
-              if (displayplayer->pawn)
-                Open(displayplayer->pawn);
-              rc = true;
-            }
+	  if (Consoleplayer[0]->pawn)
+	    Open(Consoleplayer[0]->pawn);
+	  rc = true;
         }
     }
   else if (ev->type == ev_keydown)
@@ -678,24 +678,24 @@ bool AutoMap::Responder(event_t *ev)
 	    restoreScaleAndLoc();
           break;
 
-          // messages are given to consoleplayer, because he's pressing the keys
+          // messages are printed on local console
         case AM_FOLLOWKEY:
           followplayer = !followplayer;
           f_oldloc.x = MAXINT;
-          consoleplayer->SetMessage(followplayer ? AMSTR_FOLLOWON : AMSTR_FOLLOWOFF);
+          CONS_Printf(followplayer ? AMSTR_FOLLOWON : AMSTR_FOLLOWOFF);
           break;
         case AM_GRIDKEY:
           grid = !grid;
-          consoleplayer->SetMessage(grid ? AMSTR_GRIDON : AMSTR_GRIDOFF);
+          CONS_Printf(grid ? AMSTR_GRIDON : AMSTR_GRIDOFF);
           break;
         case AM_MARKKEY:
           sprintf(buffer, "%s %d", AMSTR_MARKEDSPOT, markpointnum);
-          consoleplayer->SetMessage(buffer);
+          CONS_Printf(buffer);
           addMark();
           break;
         case AM_CLEARMARKKEY:
           clearMarks();
-          consoleplayer->SetMessage(AMSTR_MARKSCLEARED);
+          CONS_Printf(AMSTR_MARKSCLEARED);
           break;
         default:
           cheatstate=0;
@@ -759,6 +759,13 @@ void AutoMap::Ticker()
 
   if (!active)
     return;
+
+  if (mpawn->player->playerstate == PST_DEAD)
+    {
+      // don't die in auto map, switch view prior to dying
+      Close();
+      return;
+    }
 
   if (followplayer && (f_oldloc.x != mpawn->x || f_oldloc.y != mpawn->y))
     {

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2004/10/27 17:37:08  smite-meister
+// netcode update
+//
 // Revision 1.1  2004/10/17 01:57:05  smite-meister
 // bots!
 //
@@ -247,9 +250,6 @@ struct ai_item_t
   int misc; ///< different enum/int values depending on type
 };
 
-extern int maxsoul;
-extern int max_armor;
-
 
 static ai_item_t item_ai[] =
 {
@@ -298,22 +298,25 @@ static ai_item_t item_ai[] =
   {MT_MANA2, 6,   F_AMMO, am_mana2},
   {MT_MANA3, 6.5, F_AMMO, am_mana1},
 
+#define MAXSOUL  200
+#define MAXARMOR 200
+
   // medication, take if you need or are selfish, low health => more interest, low skill => less interest
-  {MT_MEGA,          9, F_HEAL, maxsoul}, // max_armor too...
-  {MT_BERSERKPACK,   9, F_HEAL, maxsoul}, // pw_strength too..., also, more skill => less interest?
-  {MT_SOULSPHERE,    8, F_HEAL, maxsoul},
-  {MT_MEDI,          6, F_HEAL, maxsoul/2},
-  {MT_STIM,          6, F_HEAL, maxsoul/2},
-  {MT_HEALTHBONUS,   1, F_HEAL, maxsoul},
-  {MT_ARTISUPERHEAL, 8, F_HEAL, maxsoul},
-  {MT_HEALINGBOTTLE, 1, F_HEAL, maxsoul/2},
+  {MT_MEGA,          9, F_HEAL, MAXSOUL}, // MAXARMOR too...
+  {MT_BERSERKPACK,   9, F_HEAL, MAXSOUL}, // pw_strength too..., also, more skill => less interest?
+  {MT_SOULSPHERE,    8, F_HEAL, MAXSOUL},
+  {MT_MEDI,          6, F_HEAL, MAXSOUL/2},
+  {MT_STIM,          6, F_HEAL, MAXSOUL/2},
+  {MT_HEALTHBONUS,   1, F_HEAL, MAXSOUL},
+  {MT_ARTISUPERHEAL, 8, F_HEAL, MAXSOUL},
+  {MT_HEALINGBOTTLE, 1, F_HEAL, MAXSOUL/2},
 
   // armor, take if you can (can => need), low skill => less interest
-  {MT_BLUEARMOR,   8, F_ARMOR, max_armor},
-  {MT_GREENARMOR,  5, F_ARMOR, max_armor/2},
-  {MT_ARMORBONUS,  1, F_ARMOR, max_armor},
-  {MT_ITEMSHIELD2, 8, F_ARMOR, max_armor},
-  {MT_ITEMSHIELD1, 5, F_ARMOR, max_armor/2},
+  {MT_BLUEARMOR,   8, F_ARMOR, MAXARMOR},
+  {MT_GREENARMOR,  5, F_ARMOR, MAXARMOR/2},
+  {MT_ARMORBONUS,  1, F_ARMOR, MAXARMOR},
+  {MT_ITEMSHIELD2, 8, F_ARMOR, MAXARMOR},
+  {MT_ITEMSHIELD1, 5, F_ARMOR, MAXARMOR/2},
 
   // keys (take it if you don't already have it)
   {MT_BLUECARD,    5, F_KEY, it_bluecard},
@@ -811,7 +814,8 @@ void ACBot::AimWeapon()
 	      nx = dest->x + dest->px * t;
 	      ny = dest->y + dest->py * t;
 	      nz = dest->z + dest->pz * t;
-	    } while (!mp->CheckSight2(pawn, dest, nx, ny, nz) && (t > 0));
+          //} while (!mp->CheckSight2(pawn, dest, nx, ny, nz) && (t > 0));
+	    } while (false); // FIXME
 
 	  subsector_t *sec = mp->R_PointInSubsector(nx, ny);
 	  if (!sec)
@@ -909,7 +913,8 @@ void ACBot::AimWeapon()
 // Main ACBot AI
 //=================================================================
 
-void ACBot::BuildTiccmd()
+
+void ACBot::GetInput(int lpnum, int elapsed)
 {
   bool use_down = (cmd.buttons & ticcmd_t::BT_USE);
   // needed so bot doesn't hold down use before reaching a switch

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/10/27 17:37:11  smite-meister
+// netcode update
+//
 // Revision 1.11  2004/09/20 22:42:50  jussip
 // Joystick axis binding works. New joystick code ready for use.
 //
@@ -371,11 +374,11 @@ struct pcx_t
 //
 // WritePCXfile
 //
-bool WritePCXfile( char*         filename,
-                    byte*         data,
-                    int           width,
-                    int           height,
-                    byte*         palette )
+bool WritePCXfile(const char*   filename,
+                  byte*         data,
+                  int           width,
+                  int           height,
+                  byte*         palette)
 {
     int         i;
     int         length;

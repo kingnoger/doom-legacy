@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2004/10/27 17:37:07  smite-meister
+// netcode update
+//
 // Revision 1.18  2004/09/23 23:21:17  smite-meister
 // HUD updated
 //
@@ -730,7 +733,7 @@ void Intermission::UpdateDMStats()
 {
   if (--count <= 0)
     {
-      S_StartAmbSound(sfx_gib);
+      S_StartLocalAmbSound(sfx_gib);
       InitWait();
     }
 }
@@ -745,15 +748,11 @@ void Intermission::DrawDMStats()
 
   int white = -1;
   //Fab:25-04-98: when you play, you quickly see your frags because your
-  //  name is displayed white, when playback demo, you quicly see who's the
-  //  view.
+  //  name is displayed white, when playback demo, you quicly see who's the view.
   // TODO: splitscreen... another color?
-  bool demo = (game.state == GameInfo::GS_DEMOPLAYBACK);
 
-  if (cv_teamplay.value)
-    white = demo ? displayplayer->team : consoleplayer->team;
-  else
-    white = demo ? displayplayer->number : consoleplayer->number;
+  if (Consoleplayer.size())
+    white = cv_teamplay.value ? Consoleplayer[0]->team : Consoleplayer[0]->number;
 
   // count frags for each present player
   HU_DrawRanking("Frags", 5, RANKINGY, dm_score[0], nplayers, false, white);
@@ -898,7 +897,7 @@ void Intermission::UpdateCoopStats()
       cnt_time = time;
       cnt_par = partime;
 
-      S_StartAmbSound(sfx_barexp);
+      S_StartLocalAmbSound(sfx_barexp);
       count_stage = 12;
     }
 
@@ -906,7 +905,7 @@ void Intermission::UpdateCoopStats()
     {
       // count kills
       if (!(bcount&3))
-        S_StartAmbSound(s_count);
+        S_StartLocalAmbSound(s_count);
 
       for (i=0 ; i<n ; i++)
         {
@@ -922,7 +921,7 @@ void Intermission::UpdateCoopStats()
     {
       // count items
       if (!(bcount&3))
-        S_StartAmbSound(s_count);
+        S_StartLocalAmbSound(s_count);
 
       for (i=0 ; i<n ; i++)
         {
@@ -938,7 +937,7 @@ void Intermission::UpdateCoopStats()
     {
       // count secrets
       if (!(bcount&3))
-        S_StartAmbSound(s_count);
+        S_StartLocalAmbSound(s_count);
 
       for (i=0 ; i<n ; i++)
         {
@@ -954,7 +953,7 @@ void Intermission::UpdateCoopStats()
     {
       // count frags
       if (!(bcount&3))
-        S_StartAmbSound(s_count);
+        S_StartLocalAmbSound(s_count);
 
       for (i=0 ; i<n ; i++)
         {
@@ -973,7 +972,7 @@ void Intermission::UpdateCoopStats()
     {
       // count time and partime
       if (!(bcount&3))
-        S_StartAmbSound(s_count);
+        S_StartLocalAmbSound(s_count);
 
       cnt_time += 3;
 
@@ -994,7 +993,7 @@ void Intermission::UpdateCoopStats()
       // wait for a keypress
       if (acceleratestage)
         {
-          S_StartAmbSound(sfx_sgcock);
+          S_StartLocalAmbSound(sfx_sgcock);
 
           if (!episode)
             InitWait();
@@ -1022,16 +1021,16 @@ void Intermission::UpdateCoopStats()
       switch (count_stage)
 	{
 	case 6:
-          S_StartAmbSound(sfx_barexp);
+          S_StartLocalAmbSound(sfx_barexp);
           count_stage += 2 * !dofrags;
 	  break;
 
 	case 8:
-          S_StartAmbSound(sfx_pldeth);
+          S_StartLocalAmbSound(sfx_pldeth);
 	  break;
 
 	default:
-	  S_StartAmbSound(sfx_barexp);
+	  S_StartLocalAmbSound(sfx_barexp);
 	}
 
       count_stage++;
@@ -1111,7 +1110,7 @@ void Intermission::DrawCoopStats()
           stpb->Draw(x - stpb->width, y, FB | V_MAP);
 
           // TODO splitscreen
-          if (plrs[i]->number == consoleplayer->number)
+          if (plrs[i]->number == Consoleplayer[0]->number)
             star->Draw(x-stpb->width, y, FB);
 
           // draw stats

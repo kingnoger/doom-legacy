@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2004/10/27 17:37:08  smite-meister
+// netcode update
+//
 // Revision 1.1  2004/10/17 01:57:05  smite-meister
 // bots!
 //
@@ -29,8 +32,11 @@
 #include "command.h"
 
 #include "g_game.h"
+#include "g_map.h"
+#include "g_mapinfo.h"
 
 #include "acbot.h"
+#include "b_path.h"
 
 #include "m_random.h"
 
@@ -78,9 +84,7 @@ const int NUMBOTNAMES = sizeof(botnames)/sizeof(char *);
 // add bots to game
 void Command_AddBot_f()
 {
-  extern bool server;
-
-  if (!server)
+  if (!game.server)
     {
       CONS_Printf("Only the server can add a bot\n");
       return;
@@ -88,9 +92,18 @@ void Command_AddBot_f()
 
   // TODO syntax: "addbot [bottype] [team] [parameters]..."
   // default: ACBot
+
+  int n = COM_Argc();
   int i = P_Random() % NUMBOTNAMES;
   PlayerInfo *p = new ACBot(botnames[i], game.skill);
-  
+
+  Map *m = com_player ? com_player->mp : NULL;
+
+  p->requestmap = m->info->mapnumber;
+
+  if (!m->botnodes)
+    m->botnodes = new BotNodes(m);
+
   if (!game.AddPlayer(p)) 
     {
       CONS_Printf("Cannot add any more players.\n");
@@ -98,5 +111,5 @@ void Command_AddBot_f()
       return; 
     }
   else
-    consoleplayer2 = p; // FIXME TEST
+    Consoleplayer.push_back(p); // FIXME TEST
 }

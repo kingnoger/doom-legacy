@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2004/10/27 17:37:09  smite-meister
+// netcode update
+//
 // Revision 1.18  2004/07/05 16:53:28  smite-meister
 // Netcode replaced
 //
@@ -397,7 +400,7 @@ void Command_RunACS_f()
       return;
     }
 
-  if (!consoleplayer || !consoleplayer->pawn)
+  if (!com_player || !com_player->mp || !com_player->pawn)
     return;
   
   byte args[5] = {0,0,0,0,0};
@@ -407,7 +410,7 @@ void Command_RunACS_f()
     args[i] = atoi(COM_Argv(i+2));
 
   // line_t* is always NULL...
-  consoleplayer->mp->StartACS(num, args, consoleplayer->pawn, NULL, 0);
+  com_player->mp->StartACS(num, args, com_player->pawn, NULL, 0);
 }
 
 
@@ -1488,18 +1491,17 @@ static int CmdBeginPrint()
 
 static int CmdEndPrint()
 {
-  PlayerPawn *p;
-
   if (ACScript->activator && ACScript->activator->IsOf(PlayerPawn::_type))
     {
-      p = (PlayerPawn *)ACScript->activator;
+      PlayerPawn *p = (PlayerPawn *)ACScript->activator;
+      if (p->player)
+	p->player->SetMessage(PrintBuffer, true);
     }
   else
     {
-      p = consoleplayer->pawn;
+      CONS_Printf(PrintBuffer);
     }
-  if (p->player)
-    p->player->SetMessage(PrintBuffer, true);
+
   return SCRIPT_CONTINUE;
 }
 
@@ -1613,7 +1615,7 @@ static int CmdThingSound()
 static int CmdAmbientSound()
 {
   int volume = Pop();
-  S_StartAmbSound(S_GetSoundID(ACMap->ACStrings[Pop()]), volume/127.0);
+  S_StartAmbSound(NULL, S_GetSoundID(ACMap->ACStrings[Pop()]), volume/127.0);
   return SCRIPT_CONTINUE;
 }
 

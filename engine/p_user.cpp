@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.24  2004/10/27 17:37:07  smite-meister
+// netcode update
+//
 // Revision 1.23  2004/09/13 20:43:30  smite-meister
 // interface cleanup, sp map reset fixed
 //
@@ -84,22 +87,23 @@
 // Revision 1.1.1.1  2002/11/16 14:18:04  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//   part of PlayerPawn class implementation
-//   Artifacts and their effects
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief PlayerPawn class: Movement, morphing, artifacts
+
 
 #include "doomdef.h"
 #include "doomdata.h"
+#include "command.h"
+#include "d_event.h"
 
 #include "g_game.h"
 #include "g_map.h"
 #include "g_pawn.h"
 #include "g_player.h"
+#include "g_input.h"
 
-#include "command.h"
 #include "p_camera.h"
 
 #include "p_enemy.h"
@@ -120,17 +124,13 @@
 //
 
 
-bool PlayerPawn::Teleport(fixed_t nx, fixed_t ny, angle_t nangle)
+bool PlayerPawn::Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent)
 {
-  bool ret = Actor::Teleport(nx,ny,nangle);
+  bool ret = Actor::Teleport(nx, ny, nangle, silent);
 
   // don't move for a bit
   if (!powers[pw_weaponlevel2])
     reactiontime = 18;
-
-  // move chasecam at new player location
-  if (camera.chase && displayplayer == player)
-    camera.ResetCamera(this);
     
   // FIXME code below is useless, right?
   // Adjust player's view, in case there has been a height change
@@ -444,7 +444,7 @@ void P_ArtiTele(PlayerPawn *p)
   if (p->morphTics)
     p->UndoMorph(); // Teleporting away will undo any morph effects (pig)
 
-  S_StartAmbSound(sfx_weaponup); // Full volume laugh
+  S_StartAmbSound(p->player, sfx_weaponup); // Full volume laugh
 }
 
 
@@ -870,7 +870,7 @@ bool P_UseArtifact(PlayerPawn *p, artitype_t arti)
 	    p->weaponowned[wp + wp_quietus] = true;
 	    p->pendingweapon = weapontype_t(wp + wp_quietus);
 	    p->player->SetMessage(text[TXT_WEAPON_F4 + 3*wp], false);
-	    S_StartAmbSound(SFX_WEAPON_BUILD); // warn all players!
+	    S_StartAmbSound(NULL, SFX_WEAPON_BUILD); // warn all players!
 	  }
 	else
 	  {
@@ -884,4 +884,122 @@ bool P_UseArtifact(PlayerPawn *p, artitype_t arti)
       return false;
     }
   return true;
+}
+
+
+
+// called by the server
+void PlayerPawn::UseArtifact(artitype_t arti)
+{
+  extern int st_curpos;
+  int n;
+  vector<inventory_t>::iterator i;
+
+  for(i = inventory.begin(); i < inventory.end(); i++) 
+    if (i->type == arti)
+      {
+	// Found match - try to use
+	if (P_UseArtifact(this, arti))
+	  {
+	    // Artifact was used - remove it from inventory
+	    if (--(i->count) == 0)
+	      {
+		if (inventory.size() > 1)
+		  {
+		    // Used last of a type - compact the artifact list
+		    inventory.erase(i);
+		    // Set position markers and get next readyArtifact
+		    if (--invSlot < 6)
+		      if (--st_curpos < 0) st_curpos = 0;
+		    n = inventory.size();
+		    if (invSlot >= n)
+		      invSlot = n - 1; // necessary?
+		    if (invSlot < 0)
+		      invSlot = 0;
+		  }
+		else
+		  i->type = arti_none; // leave always 1 empty slot
+	      }
+
+	    S_StartSound(this, sfx_artiuse);
+	    player->itemuse = 4;
+	  }
+	else
+	  { // Unable to use artifact, advance pointer
+	    n = inventory.size();
+	    if (--invSlot < 6)
+	      if (--st_curpos < 0) st_curpos = 0;
+	      
+	    if (invSlot < 0)
+	      {
+		invSlot = n-1;
+		if (invSlot < 6)
+		  st_curpos = invSlot;
+		else
+		  st_curpos = 6;
+	      }
+	  }
+	break;
+      }
+}
+
+
+
+
+bool PlayerPawn::InventoryResponder(short (*gc)[2], event_t *ev)
+{
+  //gc is a pointer to array[num_gamecontrols][2]
+  extern int st_curpos; // TODO: what about splitscreenplayer??
+
+  switch (ev->type)
+    {
+    case ev_keydown :
+      if (ev->data1 == gc[gc_invprev][0] || ev->data1 == gc[gc_invprev][1])
+        {
+          if (invTics)
+            {
+              if (--(invSlot) < 0)
+                invSlot = 0;
+              else if (--st_curpos < 0)
+                st_curpos = 0;
+            }
+          invTics = 5*TICRATE;
+          return true;
+        }
+      else if (ev->data1 == gc[gc_invnext][0] || ev->data1 == gc[gc_invnext][1])
+        {
+          int n = inventory.size();
+
+          if (invTics)
+            {
+              if (++(invSlot) >= n)
+                invSlot = n-1;
+              else if (++st_curpos > 6)
+                st_curpos = 6;
+            }
+          invTics = 5*TICRATE;
+          return true;
+        }
+      else if (ev->data1 == gc[gc_invuse ][0] || ev->data1 == gc[gc_invuse ][1])
+        {
+          if (invTics)
+            invTics = 0;
+          else if (inventory[invSlot].count > 0)
+	    player->cmd.item = inventory[invSlot].type + 1;
+
+          return true;
+        }
+      break;
+
+    case ev_keyup:
+      if (ev->data1 == gc[gc_invuse ][0] || ev->data1 == gc[gc_invuse ][1] ||
+          ev->data1 == gc[gc_invprev][0] || ev->data1 == gc[gc_invprev][1] ||
+          ev->data1 == gc[gc_invnext][0] || ev->data1 == gc[gc_invnext][1])
+        return true;
+      break;
+
+    default:
+      break; // shut up compiler
+    }
+  return false;
 }

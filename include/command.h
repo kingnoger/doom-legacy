@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/10/27 17:37:09  smite-meister
+// netcode update
+//
 // Revision 1.5  2004/07/25 20:18:47  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -47,6 +50,7 @@
 //===================================
 
 typedef void (*com_func_t)();
+extern class PlayerInfo *com_player;
 
 void    COM_AddCommand(char *name, com_func_t func);
 

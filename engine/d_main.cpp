@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.33  2004/10/27 17:37:06  smite-meister
+// netcode update
+//
 // Revision 1.32  2004/09/06 22:28:53  jussip
 // Beginnings of new joystick code.
 //
@@ -228,7 +231,7 @@ void BeginGame(int sk, int episode)
       m = "MINFO_D1";
     }
 
-  COM_BufAddText(va("newgame %s %d %d\n", m, sk, episode));
+  COM_BufAddText(va("newgame %s %d %d\n", m, episode, sk));
 }
 
 

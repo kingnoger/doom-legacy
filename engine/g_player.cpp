@@ -5,11 +5,11 @@
 // Copyright (C) 2002-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.27  2004/10/27 17:37:06  smite-meister
+// netcode update
+//
 // Revision 1.26  2004/09/13 20:43:29  smite-meister
 // interface cleanup, sp map reset fixed
-//
-// Revision 1.25  2004/08/12 18:30:23  smite-meister
-// cleaned startup
 //
 // Revision 1.24  2004/07/13 20:23:36  smite-meister
 // Mod system basics
@@ -17,23 +17,11 @@
 // Revision 1.23  2004/07/09 19:43:39  smite-meister
 // Netcode fixes
 //
-// Revision 1.22  2004/07/07 17:27:19  smite-meister
-// bugfixes
-//
 // Revision 1.21  2004/07/05 16:53:24  smite-meister
 // Netcode replaced
 //
 // Revision 1.20  2004/03/28 15:16:12  smite-meister
 // Texture cache.
-//
-// Revision 1.19  2003/12/18 11:57:31  smite-meister
-// fixes / new bugs revealed
-//
-// Revision 1.18  2003/12/06 23:57:47  smite-meister
-// save-related bugfixes
-//
-// Revision 1.17  2003/11/30 00:09:43  smite-meister
-// bugfixes
 //
 // Revision 1.16  2003/11/12 11:07:18  smite-meister
 // Serialization done. Map progression.
@@ -46,9 +34,6 @@
 //
 // Revision 1.13  2003/05/30 13:34:43  smite-meister
 // Cleanup, HUD improved, serialization
-//
-// Revision 1.12  2003/05/11 21:23:50  smite-meister
-// Hexen fixes
 //
 // Revision 1.11  2003/04/04 00:01:54  smite-meister
 // bugfixes, Hexen HUD
@@ -91,11 +76,13 @@
 
 #include "n_connection.h"
 
-#include "g_input.h"
-#include "d_event.h"
+#include "hud.h"
 #include "tables.h"
 
-// global data
+
+//===================================
+//           global data
+//===================================
 
 // PI's for both local players. Used by menu to setup their properties.
 // These are only "models" for local players, the actual PI's
@@ -103,10 +90,9 @@
 PlayerInfo localplayer("Batman");
 PlayerInfo localplayer2("Robin");
 
-PlayerInfo *consoleplayer = NULL;   // player taking events
-PlayerInfo *consoleplayer2 = NULL;   // secondary player taking events
-PlayerInfo *displayplayer = NULL;   // view being displayed
-PlayerInfo *displayplayer2 = NULL;  // secondary view (splitscreen)
+vector<PlayerInfo *> Consoleplayer;  // local players
+
+
 
 static char default_weaponpref[NUMWEAPONS] =
 {
@@ -124,30 +110,35 @@ PlayerInfo::PlayerInfo(const string & n)
   team = 0;
   name = n;
 
-  ptype = -1;
-  color = 0;
-  skin  = 0;
-
   connection = NULL;
-  spectator = false;
   playerstate = PST_NEEDMAP;
-  memset(&cmd, 0, sizeof(ticcmd_t));
+  spectator = false;
+  map_completed = false;
 
   requestmap = entrypoint = 0;
 
+  cmd.Clear();
+
+  mp = NULL;
+  pawn = NULL;
+  pov = NULL;
+
   messagefilter = 0;
 
-  viewz = viewheight = deltaviewheight = bob_amplitude = 0;
+  ptype = -1;
+  color = 0;
+  skin  = 0;
 
   for (int i = 0; i<NUMWEAPONS; i++)
     weaponpref[i] = default_weaponpref[i];
   originalweaponswitch = true;
   autoaim = false;
 
-  pawn = NULL;
-  pov = NULL;
-  mp = NULL;
-  time = 0;
+  viewz = viewheight = deltaviewheight = bob_amplitude = 0;
+  palette = -1;
+  damagecount = bonuscount = 0;
+  itemuse = 0;
+
   Reset(false, true);
 
   // net stuff
@@ -169,7 +160,7 @@ void PlayerInfo::onGhostRemove()
 }
 
 
-U32 PlayerInfo::packUpdate(GhostConnection *connection, U32 mask, class BitStream *stream)
+U32 PlayerInfo::packUpdate(GhostConnection *c, U32 mask, class BitStream *stream)
 {
   if (isInitialUpdate())
     mask = 0x1;
@@ -181,6 +172,33 @@ U32 PlayerInfo::packUpdate(GhostConnection *connection, U32 mask, class BitStrea
       stream->write(number);
       stream->writeString(name.c_str());
     }
+
+
+  if (c != connection)
+    return 0;
+
+  // feedback (goes only to the owner)
+  /*
+  if (stream->writeFlag(palette >= 0))
+    {
+      stream->write(palette);
+      palette = -1;
+    }
+  else
+    {
+      // palette change overrides flashes
+      if (stream->writeFlag(damagecount))
+	stream->write(damagecount);
+      if (stream->writeFlag(bonuscount))
+	stream->write(bonuscount);
+      damagecount = bonuscount = 0;
+    }
+
+  if (stream->writeFlag(itemuse))
+    stream->write(itemuse);
+  itemuse = 0;
+  */
+
 
   // the return value from packUpdate can set which states still
   // need to be updated for this object.
@@ -199,6 +217,23 @@ void PlayerInfo::unpackUpdate(GhostConnection *connection, BitStream *stream)
       stream->readString(temp);
       name = temp;
     }
+
+  // feedback
+  /*
+  if (stream->readFlag())
+    stream->read(&palette);
+  else
+    {
+      // palette change overrides flashes
+      if (stream->readFlag())
+	stream->read(&damagecount);
+      if (stream->readFlag())
+	stream->read(&bonuscount);
+    }
+
+  if (stream->readFlag())
+    stream->read(&itemuse);
+  */
 }
 
 
@@ -252,7 +287,8 @@ void PlayerInfo::ExitLevel(int nextmap, int ep)
       break;
 
     case PST_REMOVE:
-      pawn->Remove();
+      if (pawn)
+	pawn->Remove();
       pawn = NULL;
       break;
 
@@ -281,7 +317,8 @@ void PlayerInfo::ExitLevel(int nextmap, int ep)
 // Reset players between levels
 void PlayerInfo::Reset(bool rpawn, bool rfrags)
 {
-  kills = items = secrets = 0;
+  kills = items = secrets = time = 0;
+  map_completed = false;
 
   if (pawn)
     {
@@ -289,6 +326,8 @@ void PlayerInfo::Reset(bool rpawn, bool rfrags)
 	pawn->Reset();
       pawn->powers[pw_allmap] = 0; // automap never carries over to the next map 
     }
+
+  pov = NULL;
 
   // Initial height of PointOfView
   // will be set by player think.
@@ -373,70 +412,4 @@ void PlayerInfo::CalcViewHeight(bool onground)
 
   if (viewz > pawn->ceilingz - 4*FRACUNIT)
     viewz = pawn->ceilingz - 4*FRACUNIT;
-}
-
-
-
-bool PlayerInfo::InventoryResponder(int (*gc)[2], event_t *ev)
-{
-  //gc is a pointer to array[num_gamecontrols][2]
-  extern int st_curpos; // TODO: what about splitscreenplayer??
-
-  if (!game.inventory)
-    return false;
-
-  if (!pawn)
-    return false;
-
-  switch (ev->type)
-    {
-    case ev_keydown :
-      if (ev->data1 == gc[gc_invprev][0] || ev->data1 == gc[gc_invprev][1])
-        {
-          if (pawn->invTics)
-            {
-              if (--(pawn->invSlot) < 0)
-                pawn->invSlot = 0;
-              else if (--st_curpos < 0)
-                st_curpos = 0;
-            }
-          pawn->invTics = 5*TICRATE;
-          return true;
-        }
-      else if (ev->data1 == gc[gc_invnext][0] || ev->data1 == gc[gc_invnext][1])
-        {
-          int n = pawn->inventory.size();
-
-          if (pawn->invTics)
-            {
-              if (++(pawn->invSlot) >= n)
-                pawn->invSlot = n-1;
-              else if (++st_curpos > 6)
-                st_curpos = 6;
-            }
-          pawn->invTics = 5*TICRATE;
-          return true;
-        }
-      else if (ev->data1 == gc[gc_invuse ][0] || ev->data1 == gc[gc_invuse ][1])
-        {
-          if (pawn->invTics)
-            pawn->invTics = 0;
-          else if (pawn->inventory[pawn->invSlot].count > 0)
-	    cmd.item = pawn->inventory[pawn->invSlot].type + 1;
-
-          return true;
-        }
-      break;
-
-    case ev_keyup:
-      if (ev->data1 == gc[gc_invuse ][0] || ev->data1 == gc[gc_invuse ][1] ||
-          ev->data1 == gc[gc_invprev][0] || ev->data1 == gc[gc_invprev][1] ||
-          ev->data1 == gc[gc_invnext][0] || ev->data1 == gc[gc_invnext][1])
-        return true;
-      break;
-
-    default:
-      break; // shut up compiler
-    }
-  return false;
 }

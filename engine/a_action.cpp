@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2004/10/27 17:37:05  smite-meister
+// netcode update
+//
 // Revision 1.15  2004/07/14 16:13:12  smite-meister
 // cleanup, commands
 //
@@ -401,37 +404,20 @@ void A_PotteryChooseBit(DActor *actor)
 
 void A_PotteryCheck(DActor *actor)
 {
-  int i;
-  Actor *pmo;
-
-  if(!game.netgame)
+  Map *m = actor->mp;
+  int n = m->players.size();
+  for (int i = 0; i < n; i++)
     {
-      pmo = consoleplayer->pawn;
-      if (actor->mp->CheckSight(actor, pmo)
-	  && (abs(R_PointToAngle2(pmo->x, pmo->y, actor->x, actor->y)-pmo->angle) <= ANG45))
-	{ // Previous state (pottery bit waiting state)
-	  actor->SetState(statenum_t(actor->state - &states[0] - 1));
-	}
-      else
+      Actor *pmo = m->players[i]->pawn;
+      if (m->CheckSight(actor, pmo) &&
+	  (abs(R_PointToAngle2(pmo->x, pmo->y, actor->x, actor->y)-pmo->angle) <= ANG45))
 	{
+	  // Previous state (pottery bit waiting state)
+	  actor->SetState(statenum_t(actor->state - &states[0] - 1));
 	  return;
 	}
     }
-  else
-    {
-      int n = actor->mp->players.size();
-      for(i = 0; i < n; i++)
-	{
-	  pmo = actor->mp->players[i]->pawn;
-	  if (actor->mp->CheckSight(actor, pmo) &&
-	      (abs(R_PointToAngle2(pmo->x, pmo->y, actor->x, actor->y)-pmo->angle) <= ANG45))
-	    { // Previous state (pottery bit waiting state)
-	      actor->SetState(statenum_t(actor->state - &states[0] - 1));
-	      return;
-	    }
-	}
-    }		
-}
+}		
 
 //============================================================================
 //

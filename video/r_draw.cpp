@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/10/27 17:37:11  smite-meister
+// netcode update
+//
 // Revision 1.12  2004/10/14 19:35:52  smite-meister
 // automap, bbox_t
 //
@@ -153,9 +156,8 @@ int             viewheight;
 int             viewwindowx;
 int             viewwindowy;
 
-                // pointer to the start of each line of the screen,
-byte*           ylookup[MAXVIDHEIGHT];
-
+// pointer to the start of each line of the screen,
+byte**          ylookup;
 byte*           ylookup1[MAXVIDHEIGHT]; // for view1 (splitscreen)
 byte*           ylookup2[MAXVIDHEIGHT]; // for view2 (splitscreen)
 
@@ -435,47 +437,46 @@ void R_InitTranslucencyTables()
 //
 void R_InitViewBuffer(int width, int height)
 {
-    int         i;
-    int         bytesperpixel = vid.BytesPerPixel;
+  int i;
+  int bytesperpixel = vid.BytesPerPixel;
 
-    if (bytesperpixel<1 || bytesperpixel>4)
-        I_Error ("R_InitViewBuffer : wrong bytesperpixel value %d\n",
-                 bytesperpixel);
+  if (bytesperpixel<1 || bytesperpixel>4)
+    I_Error ("R_InitViewBuffer : wrong bytesperpixel value %d\n", bytesperpixel);
 
-    // Handle resize,
-    //  e.g. smaller view windows
-    //  with border and/or status bar.
-    viewwindowx = (vid.width-width) >> 1;
+  // Handle resize,
+  //  e.g. smaller view windows
+  //  with border and/or status bar.
+  viewwindowx = (vid.width-width) >> 1;
 
-    // Column offset for those columns of the view window, but
-    // relative to the entire screen
-    for (i=0 ; i<width ; i++)
-        columnofs[i] = (viewwindowx + i) * bytesperpixel;
+  // Column offset for those columns of the view window, but
+  // relative to the entire screen
+  for (i=0 ; i<width ; i++)
+    columnofs[i] = (viewwindowx + i) * bytesperpixel;
 
-    // Same with base row offset.
-    if (width == vid.width)
-        viewwindowy = 0;
-    else
-        viewwindowy = (vid.height-hud.stbarheight-height) >> 1;
+  // Same with base row offset.
+  if (width == vid.width)
+    viewwindowy = 0;
+  else
+    viewwindowy = (vid.height-hud.stbarheight-height) >> 1;
 
-    // Precalculate all row offsets.
-    for (i=0 ; i<height ; i++)
+  // Precalculate all row offsets.
+  for (i=0 ; i<height ; i++)
     {
-        ylookup[i] = ylookup1[i] = vid.buffer + (i+viewwindowy)*vid.width*bytesperpixel;
-                     ylookup2[i] = vid.buffer + (i+(vid.height>>1))*vid.width*bytesperpixel; // for splitscreen
+      ylookup1[i] = vid.buffer + (i+viewwindowy)*vid.width*bytesperpixel;
+      ylookup2[i] = vid.buffer + (i+(vid.height>>1))*vid.width*bytesperpixel; // for splitscreen
     }
 
 
 #ifdef HORIZONTALDRAW
-    //Fab 17-06-98
-    // create similar lookup tables for horizontal column draw optimisation
+  //Fab 17-06-98
+  // create similar lookup tables for horizontal column draw optimisation
 
-    // (the first column is the bottom line)
-    for (i=0; i<width; i++)
-        yhlookup[i] = vid.screens[2] + ((width-i-1) * bytesperpixel * height);
+  // (the first column is the bottom line)
+  for (i=0; i<width; i++)
+    yhlookup[i] = vid.screens[2] + ((width-i-1) * bytesperpixel * height);
 
-    for (i=0; i<height; i++)
-        hcolumnofs[i] = i * bytesperpixel;
+  for (i=0; i<height; i++)
+    hcolumnofs[i] = i * bytesperpixel;
 #endif
 }
 

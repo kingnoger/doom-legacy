@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2004/10/27 17:37:08  smite-meister
+// netcode update
+//
 // Revision 1.1  2004/10/17 01:57:05  smite-meister
 // bots!
 //
@@ -37,9 +40,9 @@ class BotPlayer : public PlayerInfo
 {
 public:
   BotPlayer(const string &n) : PlayerInfo(n) {};
-  virtual ~BotPlayer();
 
-  virtual void BuildTiccmd() = 0;
+  virtual void GetInput(int lpnum, int elapsed) = 0;
+  virtual void SetMessage(const char *msg, int priority = 0, int type = M_CONSOLE) {}
 };
 
 

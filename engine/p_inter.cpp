@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.37  2004/10/27 17:37:06  smite-meister
+// netcode update
+//
 // Revision 1.36  2004/09/23 23:21:16  smite-meister
 // HUD updated
 //
@@ -26,15 +29,6 @@
 //
 // Revision 1.34  2004/09/06 19:58:03  smite-meister
 // Doom linedefs done!
-//
-// Revision 1.33  2004/09/03 17:28:06  smite-meister
-// bugfixes
-//
-// Revision 1.32  2004/08/19 19:42:40  smite-meister
-// bugfixes
-//
-// Revision 1.31  2004/08/12 18:30:23  smite-meister
-// cleaned startup
 //
 // Revision 1.30  2004/07/13 20:23:36  smite-meister
 // Mod system basics
@@ -45,14 +39,8 @@
 // Revision 1.28  2004/04/25 16:26:49  smite-meister
 // Doxygen
 //
-// Revision 1.26  2004/01/02 14:25:01  smite-meister
-// cleanup
-//
 // Revision 1.25  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
-//
-// Revision 1.24  2003/12/18 11:57:31  smite-meister
-// fixes / new bugs revealed
 //
 // Revision 1.23  2003/12/13 23:51:03  smite-meister
 // Hexen update
@@ -62,9 +50,6 @@
 //
 // Revision 1.21  2003/11/27 11:28:25  smite-meister
 // Doom/Heretic startup bug fixed
-//
-// Revision 1.20  2003/11/23 00:41:55  smite-meister
-// bugfixes
 //
 // Revision 1.19  2003/11/12 11:07:22  smite-meister
 // Serialization done. Map progression.
@@ -83,9 +68,6 @@
 //
 // Revision 1.14  2003/04/24 20:30:08  hurdler
 // Remove lots of compiling warnings
-//
-// Revision 1.13  2003/04/08 09:46:05  smite-meister
-// Bugfixes
 //
 // Revision 1.12  2003/04/04 00:01:56  smite-meister
 // bugfixes, Hexen HUD
@@ -162,15 +144,13 @@
 // It returns the proper death message and updates the score.
 void Actor::Killed(PlayerPawn *victim, Actor *inflictor)
 {
-  CONS_Printf("%s is killed by an inanimate object\n", victim->player->name.c_str());
+  CONS_Printf("%s is killed by an inanimate carbon rod.\n", victim->player->name.c_str());
 }
+
 
 void DActor::Killed(PlayerPawn *victim, Actor *inflictor)
 {
   // monster killer
-  // show death message only if it concerns the console players
-  if (victim->player != consoleplayer && victim->player != consoleplayer2)
-    return;
 
   char *str = NULL;
   switch (type)
@@ -197,7 +177,7 @@ void DActor::Killed(PlayerPawn *victim, Actor *inflictor)
     default:           str = text[TXT_DEATHMSG_DEAD];      break;
     }
 
-  CONS_Printf(str, victim->player->name.c_str());
+  victim->player->SetMessage(va(str, victim->player->name.c_str()));
 }
 
 
@@ -206,8 +186,7 @@ void PlayerPawn::Killed(PlayerPawn *victim, Actor *inflictor)
   // player killer
   game.gtype->Frag(player, victim->player);
 
-  if (player == displayplayer || player == displayplayer2)
-    S_StartAmbSound(sfx_frag);
+  S_StartAmbSound(player, sfx_frag);
 
   if (game.mode == gm_heretic)
     {
@@ -216,19 +195,11 @@ void PlayerPawn::Killed(PlayerPawn *victim, Actor *inflictor)
 	GivePower(pw_weaponlevel2);
     }
 
-  // show death message only if it concerns the console players
-  if (player != consoleplayer && player != consoleplayer2 &&
-      victim->player != consoleplayer && victim->player != consoleplayer2)
-    return;
-
   char *str = NULL;
 
   if (player == victim->player)
     {
-      CONS_Printf(text[TXT_DEATHMSG_SUICIDE], player->name.c_str());
-      // FIXME when console is rewritten to accept << >>
-      //if (cv_splitscreen.value)
-      // console << "\4" << t->player->name << text[TXT_DEATHMSG_SUICIDE];
+      player->SetMessage(va(text[TXT_DEATHMSG_SUICIDE], player->name.c_str()));
       return;
     }
 
@@ -300,10 +271,11 @@ void PlayerPawn::Killed(PlayerPawn *victim, Actor *inflictor)
 	  break;
 	}
     }
-  CONS_Printf(str, victim->player->name.c_str(), player->name.c_str());
-  // FIXME when console is rewritten to accept << >>
-  //if (cv_splitscreen.value)
-  // console << "\4" << str...
+
+  // send message to both parties
+  str = va(str, victim->player->name.c_str(), player->name.c_str());
+  player->SetMessage(str);
+  victim->player->SetMessage(str);
 }
 
 
@@ -839,7 +811,7 @@ void Actor::Die(Actor *inflictor, Actor *source)
 	{
 	  // count all monster deaths,
 	  // even those caused by other monsters
-	  consoleplayer->kills++;
+	  game.Players.begin()->second->kills++;
 	}
     }
 }
@@ -905,7 +877,7 @@ void DActor::Die(Actor *inflictor, Actor *source)
 }
 
 
-//---------------------------------------------
+
 
 void PlayerPawn::Die(Actor *inflictor, Actor *source)
 {
@@ -936,8 +908,7 @@ void PlayerPawn::Die(Actor *inflictor, Actor *source)
 	    str = text[TXT_DEATHMSG_SUPHELLSLIME];
 	}
 
-      if (player == consoleplayer || player == consoleplayer2)
-	CONS_Printf(str, player->name.c_str());
+      player->SetMessage(va(str, player->name.c_str()));
 
       // count environment kills against you (you fragged yourself!)
       game.gtype->Frag(player, player);
@@ -952,15 +923,6 @@ void PlayerPawn::Die(Actor *inflictor, Actor *source)
   DropWeapon();  // put weapon away
 
   player->playerstate = PST_DEAD;
-
-  if (player == consoleplayer || player == consoleplayer2)
-    {
-      // don't die in auto map,
-      // switch view prior to dying
-      if (automap.active)
-	automap.Close();
-    }
-
 
   // (since A_Fall is not called for PlayerPawns)
   // actor is on ground, it can be walked over
@@ -1669,11 +1631,9 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
   if (special->flags & MF_COUNTITEM)
     player->items++;
 
-  if (displayplayer == player)
-    hud.bonuscount += BONUSADD;
+  player->bonuscount += BONUSADD;
 
-  if (player == displayplayer || (cv_splitscreen.value && player == displayplayer2))
-    S_StartAmbSound(p_sound);
+  S_StartAmbSound(player, p_sound);
 
   // pickup special (Hexen)
   if (special->special)

@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.40  2004/10/27 17:37:06  smite-meister
+// netcode update
+//
 // Revision 1.39  2004/09/23 23:21:16  smite-meister
 // HUD updated
 //
@@ -434,9 +437,8 @@ void PlayerPawn::Think()
   else
     Move();
 
-  //added:22-02-98: bob view only if looking by the marine's eyes
-  if (!camera.chase)
-    player->CalcViewHeight(z <= floorz);
+  // bob the view
+  player->CalcViewHeight(z <= floorz);
 
   // check special sectors : damage & secrets
   PlayerInSpecialSector();
@@ -800,12 +802,9 @@ void PlayerPawn::XYFriction(fixed_t oldx, fixed_t oldy, bool oldfriction)
 
 
 
-//-----------------------------------------------------
-//
-// was G_PlayerFinishLevel
+
 //  Called when a player exits a map.
 //  Throws away extra items, removes powers, keys, curses
-
 void PlayerPawn::Reset()
 {
   int i, n = inventory.size();
@@ -856,68 +855,6 @@ weapontype_t PlayerPawn::FindWeapon(int g)
   return wp_none;
 }
 
-
-bool P_UseArtifact(PlayerPawn *player, artitype_t arti);
-
-//----------------------------------------------------------------------------
-
-void PlayerPawn::UseArtifact(artitype_t arti)
-{
-  extern int st_curpos;
-  int n;
-  vector<inventory_t>::iterator i;
-
-  for(i = inventory.begin(); i < inventory.end(); i++) 
-    if (i->type == arti)
-      {
-	// Found match - try to use
-	if (P_UseArtifact(this, arti))
-	  {
-	    // Artifact was used - remove it from inventory
-	    if (--(i->count) == 0)
-	      {
-		if (inventory.size() > 1)
-		  {
-		    // Used last of a type - compact the artifact list
-		    inventory.erase(i);
-		    // Set position markers and get next readyArtifact
-		    if (--invSlot < 6)
-		      if (--st_curpos < 0) st_curpos = 0;
-		    n = inventory.size();
-		    if (invSlot >= n)
-		      invSlot = n - 1; // necessary?
-		    if (invSlot < 0)
-		      invSlot = 0;
-		  }
-		else
-		  i->type = arti_none; // leave always 1 empty slot
-	      }
-
-	    if (this == displayplayer->pawn
-		|| this == displayplayer2->pawn)
-	      {
-		S_StartSound(this, sfx_artiuse);
-		hud.itemuse = 4;
-	      }
-	  }
-	else
-	  { // Unable to use artifact, advance pointer
-	    n = inventory.size();
-	    if (--invSlot < 6)
-	      if (--st_curpos < 0) st_curpos = 0;
-	      
-	    if (invSlot < 0)
-	      {
-		invSlot = n-1;
-		if (invSlot < 6)
-		  st_curpos = invSlot;
-		else
-		  st_curpos = 6;
-	      }
-	  }
-	break;
-      }
-}
 
 
 //
@@ -1383,8 +1320,7 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
     {
       // unavoidable damage
       // pain flash
-      if (player == displayplayer)
-	hud.damagecount += damage;
+      player->damagecount += damage;
       return Actor::Damage(inflictor, source, damage, dtype);
     }
 
@@ -1485,8 +1421,7 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 	}
 
       // pain flash
-      if (player == displayplayer)
-	hud.damagecount += damage;
+      player->damagecount += damage;
 
       pres->SetAnim(presentation_t::Pain);
     }
@@ -1736,8 +1671,7 @@ bool PlayerPawn::GiveWeapon(weapontype_t wt, bool dropped)
 	  || player->weaponpref[wt] > player->weaponpref[readyweapon])
 	pendingweapon = wt;     // do like Doom2 original
 
-      if (player == displayplayer || (cv_splitscreen.value && player == displayplayer2))
-	S_StartAmbSound(sfx_weaponup);
+      S_StartAmbSound(player, sfx_weaponup);
       return false;
     }
 

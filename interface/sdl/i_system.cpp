@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2004/10/27 17:37:10  smite-meister
+// netcode update
+//
 // Revision 1.22  2004/10/14 19:35:51  smite-meister
 // automap, bbox_t
 //
@@ -152,88 +155,32 @@ static int lastmousey = 0;
 //
 static int xlatekey(SDLKey sym)
 {
-  int rc = KEY_NULL;
+  // leave ASCII codes unchanged
+  if (sym >= SDLK_BACKSPACE && sym <= SDLK_DELETE)
+    return sym;
 
+  // modifiers
+  if (sym >= SDLK_NUMLOCK && sym <= SDLK_COMPOSE)
+    return sym - SDLK_NUMLOCK + KEY_NUMLOCK;
+
+  // keypads, function keys
+  if (sym >= SDLK_KP0 && sym <= SDLK_F12)
+    return sym - SDLK_KP0 + KEY_KEYPAD0;
+
+  // unfortunately most international keys fall here!
+  if (sym >= SDLK_WORLD_0 && sym <= SDLK_WORLD_95)
+    return KEY_CONSOLE;
+
+  // some individual special keys
   switch (sym)
     {
-    case SDLK_LEFT:  rc = KEY_LEFTARROW;     break;
-    case SDLK_RIGHT: rc = KEY_RIGHTARROW;    break;
-    case SDLK_DOWN:  rc = KEY_DOWNARROW;     break;
-    case SDLK_UP:    rc = KEY_UPARROW;       break;
-
-    case SDLK_ESCAPE:   rc = KEY_ESCAPE;        break;
-    case SDLK_RETURN:   rc = KEY_ENTER;         break;
-    case SDLK_TAB:      rc = KEY_TAB;           break;
-    case SDLK_F1:       rc = KEY_F1;            break;
-    case SDLK_F2:       rc = KEY_F2;            break;
-    case SDLK_F3:       rc = KEY_F3;            break;
-    case SDLK_F4:       rc = KEY_F4;            break;
-    case SDLK_F5:       rc = KEY_F5;            break;
-    case SDLK_F6:       rc = KEY_F6;            break;
-    case SDLK_F7:       rc = KEY_F7;            break;
-    case SDLK_F8:       rc = KEY_F8;            break;
-    case SDLK_F9:       rc = KEY_F9;            break;
-    case SDLK_F10:      rc = KEY_F10;           break;
-    case SDLK_F11:      rc = KEY_F11;           break;
-    case SDLK_F12:      rc = KEY_F12;           break;
-
-    case SDLK_BACKSPACE: rc = KEY_BACKSPACE;    break;
-    case SDLK_PAUSE:     rc = KEY_PAUSE;        break;
-
-    case SDLK_EQUALS:
-    case SDLK_PLUS:      rc = KEY_EQUALS;       break;
-
-    case SDLK_MINUS:     rc = KEY_MINUS;        break;
-
-    case SDLK_LSHIFT:
-    case SDLK_RSHIFT:
-      rc = KEY_SHIFT;
-      break;
-          
-      //case SDLK_XK_Caps_Lock:
-      //rc = KEY_CAPSLOCK;
-      //break;
-
-    case SDLK_LCTRL:
-    case SDLK_RCTRL:
-      rc = KEY_CTRL;
-      break;
-          
-    case SDLK_LALT:
-    case SDLK_RALT:
-      rc = KEY_ALT;
-      break;
-        
-    case SDLK_PAGEUP:   rc = KEY_PGUP; break;
-    case SDLK_PAGEDOWN: rc = KEY_PGDN; break;
-    case SDLK_END:      rc = KEY_END;  break;
-    case SDLK_HOME:     rc = KEY_HOME; break;
-    case SDLK_INSERT:   rc = KEY_INS;  break;
-      
-    case SDLK_KP0: rc = KEY_KEYPAD0;  break;
-    case SDLK_KP1: rc = KEY_KEYPAD1;  break;
-    case SDLK_KP2: rc = KEY_KEYPAD2;  break;
-    case SDLK_KP3: rc = KEY_KEYPAD3;  break;
-    case SDLK_KP4: rc = KEY_KEYPAD4;  break;
-    case SDLK_KP5: rc = KEY_KEYPAD5;  break;
-    case SDLK_KP6: rc = KEY_KEYPAD6;  break;
-    case SDLK_KP7: rc = KEY_KEYPAD7;  break;
-    case SDLK_KP8: rc = KEY_KEYPAD8;  break;
-    case SDLK_KP9: rc = KEY_KEYPAD9;  break;
-
-    case SDLK_KP_MINUS:  rc = KEY_KPADDEL;  break;
-    case SDLK_KP_DIVIDE: rc = KEY_KPADSLASH; break;
-    case SDLK_KP_ENTER:  rc = KEY_ENTER;    break;
-
-      // TODO add support for more special keys
+    case SDLK_MENU:  return KEY_MENU;
     default:
-      // most ascii chars
-      if (sym >= SDLK_SPACE && sym <= SDLK_DELETE)
-	rc = sym - SDLK_SPACE + KEY_SPACE;
       break;
+      // unknown keys
     }
-    
-  return rc;
+
+  return KEY_NULL;
 }
 
 

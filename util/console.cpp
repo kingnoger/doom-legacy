@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2004/10/27 17:37:11  smite-meister
+// netcode update
+//
 // Revision 1.19  2004/09/24 11:34:00  smite-meister
 // fix
 //
@@ -645,8 +648,7 @@ bool Console::Responder(event_t *ev)
   int key = ev->data1;
 
   // check for console toggle key
-  if (key == gamecontrol[gc_console][0] ||
-      key == gamecontrol[gc_console][1])
+  if (key == gk_console)
     {
       Toggle();
       return true;
@@ -665,7 +667,7 @@ bool Console::Responder(event_t *ev)
     }
 
   // eat shift if console is active
-  if (key == KEY_SHIFT)
+  if (key == KEY_RSHIFT || key == KEY_LSHIFT)
     return true;
 
   // escape key toggles off console
@@ -862,21 +864,12 @@ bool Console::Responder(event_t *ev)
     }
 
   // convert keycode to ASCII
-  if (key >= KEY_KEYPAD7 && key <= KEY_KPADDEL)
+  if (key >= KEY_KEYPAD0 && key <= KEY_PLUSPAD)
     {
       // allow people to use keypad in console (good for typing IP addresses) - Calum
-      char keypad_translation[] =
-      {
-        '7','8','9','-',
-        '4','5','6','+',
-        '1','2','3',
-        '0','.'
-      };
-
-      key = keypad_translation[key - KEY_KEYPAD7];
+      const char keypad_translation[] = {'0','1','2','3','4','5','6','7','8','9','.','/','*','-','+'};
+      key = keypad_translation[key - KEY_KEYPAD0];
     }
-  else if (key == KEY_KPADSLASH)
-    key = '/';
   else if (shiftdown)
     key = shiftxform[key];
   else if (con_keymap != la_english)
@@ -936,7 +929,7 @@ void Console::Print(char *msg)
       else if (*msg=='\3')
         {
           mask = 128;                         // white text + sound
-          S_StartAmbSound(sfx_message);
+          S_StartLocalAmbSound(sfx_message);
         }
       else if (*msg == '\4') //Splitscreen: This message is for the second player
         p = 2;

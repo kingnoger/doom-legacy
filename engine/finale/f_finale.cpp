@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.24  2004/10/27 17:37:07  smite-meister
+// netcode update
+//
 // Revision 1.23  2004/09/23 23:21:17  smite-meister
 // HUD updated
 //
@@ -363,7 +366,7 @@ void F_CastTicker()
       if (castorder[castnum].name == NULL)
         castnum = 0;
       if (mobjinfo[castorder[castnum].type].seesound)
-        S_StartAmbSound(mobjinfo[castorder[castnum].type].seesound);
+        S_StartLocalAmbSound(mobjinfo[castorder[castnum].type].seesound);
       caststate = &states[mobjinfo[castorder[castnum].type].seestate];
       castframes = 0;
     }
@@ -409,7 +412,7 @@ void F_CastTicker()
         }
 
       if (sfx)
-        S_StartAmbSound(sfx);
+        S_StartLocalAmbSound(sfx);
     }
 
   if (castframes == 12)
@@ -451,7 +454,7 @@ void F_CastTicker()
 
 
 
-bool F_CastResponder (event_t* ev)
+bool F_CastResponder(event_t* ev)
 {
   if (ev->type != ev_keydown)
     return false;
@@ -466,13 +469,13 @@ bool F_CastResponder (event_t* ev)
   castframes = 0;
   castattacking = false;
   if (mobjinfo[castorder[castnum].type].deathsound)
-    S_StartAmbSound(mobjinfo[castorder[castnum].type].deathsound);
+    S_StartLocalAmbSound(mobjinfo[castorder[castnum].type].deathsound);
 
   return true;
 }
 
 
-void F_CastPrint (char* text)
+void F_CastPrint(char* text)
 {
   hud_font->DrawString((BASEVIDWIDTH - hud_font->StringWidth(text)) / 2, 180, text);
 }
@@ -545,7 +548,7 @@ void F_BunnyScroll()
     stage = 6;
   if (stage > laststage)
     {
-      S_StartAmbSound(sfx_pistol);
+      S_StartLocalAmbSound(sfx_pistol);
       laststage = stage;
     }
 

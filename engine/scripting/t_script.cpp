@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.12  2004/10/27 17:37:09  smite-meister
+// netcode update
+//
 // Revision 1.11  2004/08/29 20:48:49  smite-meister
 // bugfixes. wow.
 //
@@ -459,13 +462,15 @@ void COM_FS_DumpScript_f()
       return;
     }
 
-  if (!consoleplayer || !consoleplayer->mp)
+  if (!com_player || !com_player->mp)
     return;
 
+  Map *m = com_player->mp;
+
   if (!strcmp(COM_Argv(1), "level"))
-    script = consoleplayer->mp->levelscript;
+    script = m->levelscript;
   else
-    script = consoleplayer->mp->levelscript->children[atoi(COM_Argv(1))];
+    script = m->levelscript->children[atoi(COM_Argv(1))];
   
   if (!script)
     {
@@ -486,18 +491,20 @@ void COM_FS_RunScript_f()
       return;
     }
 
-  if (!consoleplayer || !consoleplayer->mp)
+  if (!com_player || !com_player->mp)
     return;
+
+  Map *m = com_player->mp;
 
   int sn = atoi(COM_Argv(1));
   
-  if (!consoleplayer->mp->levelscript->children[sn])
+  if (!m->levelscript->children[sn])
     {
       CONS_Printf("script not defined\n");
       return;
     }
 
-  consoleplayer->mp->FS_RunScript(sn, consoleplayer->pawn);
+  m->FS_RunScript(sn, com_player->pawn);
 }
 
 
@@ -505,10 +512,12 @@ void COM_FS_RunScript_f()
 // running scripts
 void COM_FS_Running_f()
 {
-  if (!consoleplayer || !consoleplayer->mp)
+  if (!com_player || !com_player->mp)
     return;
 
-  runningscript_t *current = consoleplayer->mp->runningscripts;
+  Map *m = com_player->mp;
+
+  runningscript_t *current = m->runningscripts;
   
   CONS_Printf("Running scripts:\n");
   

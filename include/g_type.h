@@ -71,6 +71,7 @@ public:
 
   //----- in game -----
 
+  /// Called when a player frags another. Usually a scoring rule.
   virtual void Frag(class PlayerInfo *killer, PlayerInfo *victim);
 
   /// GameType is the scope object for _all_ the client connections

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/10/27 17:37:06  smite-meister
+// netcode update
+//
 // Revision 1.2  2004/09/06 19:58:03  smite-meister
 // Doom linedefs done!
 //
@@ -198,7 +201,7 @@ void Map::LightningFlash()
     }
 
   skytexture = tc.GetPtr(info->sky2.c_str()); // set alternate sky
-  S_StartAmbSound(SFX_THUNDER_CRASH);
+  S_StartAmbSound(NULL, SFX_THUNDER_CRASH);
 
   // Calculate the next lighting flash
   if (P_Random() < 50)
