@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2004/08/29 20:48:50  smite-meister
+// bugfixes. wow.
+//
 // Revision 1.20  2004/08/16 20:54:18  smite-meister
 // bugfix
 //
@@ -1015,7 +1018,7 @@ void R_ServerInit()
 }
 
 
-void R_InitColormaps();
+
 
 /// Initializes the client renderer.
 /// The server part has already been initialized in R_ServerInit.
@@ -1039,10 +1042,15 @@ void R_Init()
     CONS_Printf("InitLightTables...\n");
   R_InitLightTables();
 
-  // load playercolor translation colormaps AND translucency tables
+  // load playercolor translation colormaps
   if (devparm)
-    CONS_Printf("InitTranslationsTables...\n");
+    CONS_Printf("InitTranslationTables...\n");
   R_InitTranslationTables();
+
+  // load or create translucency tables
+  if (devparm)
+    CONS_Printf("InitTranslucencyTables...\n");
+  R_InitTranslucencyTables();
 
   R_InitDrawNodes();
 

@@ -16,6 +16,9 @@
 // for more details.
 //
 // $Log$
+// Revision 1.19  2004/08/29 20:48:49  smite-meister
+// bugfixes. wow.
+//
 // Revision 1.18  2004/08/18 14:35:21  smite-meister
 // PNG support!
 //
@@ -139,6 +142,8 @@ public:
   void CalculateParams();
 };
 
+
+
 static vector<chan_t> channels;
 
 const int samplecount = 512; // requested audio buffer size (about 46 ms at 11 kHz)
@@ -160,6 +165,11 @@ extern bool nomusic;
 
 static bool musicStarted = false;
 static bool soundStarted = false;
+
+static SDL_AudioSpec audio;
+static Mix_Music *music[2] = { NULL, NULL };
+
+
 
 
 static void I_SetChannels()
@@ -196,13 +206,9 @@ static int FindChannel(int handle)
 */
 
 
-//
-// SFX API
-//
-
-
 //----------------------------------------------
-//
+
+
 void I_SetSfxVolume(int volume)
 {
   // Basically, this should propagate
@@ -256,7 +262,7 @@ int I_StartSound(channel_t *s_channel)
   if (nosound)
     return 0;
 
-  SDL_LockAudio();
+  //SDL_LockAudio();
 
   int n = channels.size();
   //CONS_Printf("SDL channels: %d\n", n);
@@ -280,7 +286,7 @@ int I_StartSound(channel_t *s_channel)
 
   s_channel->playing = true;
 
-  SDL_UnlockAudio();
+  //SDL_UnlockAudio();
 
   /*
   // Assign current handle number.
@@ -450,21 +456,8 @@ bool I_UpdateSoundParams(int handle, int vol, int sep, int pitch)
 }
 */
 
-void I_ShutdownSound()
-{
-  if (nosound)
-    return;
 
-  if (!soundStarted)
-    return;
-    
-  CONS_Printf("I_ShutdownSound: ");
-  SDL_CloseAudio();
-  CONS_Printf("shut down\n");
-  soundStarted = false;
-}
 
-static SDL_AudioSpec audio;
 
 void I_StartupSound()
 {
@@ -490,19 +483,7 @@ void I_StartupSound()
   audio.samples = samplecount;
   audio.callback = I_UpdateSound_sdl;
 
-  /*
-    // VB: if we have SDL_mixer, audio device is opened later in InitMusic. Ugly, I know.
-    if ( SDL_OpenAudio(&audio, NULL) < 0 ) {
-    CONS_Printf("Couldn't open audio with desired format\n");
-    SDL_CloseAudio();
-    nosound = true;
-    return;
-    }
-    samplecount = audio.samples;
-    CONS_Printf(" configured audio device with %d samples/slice\n", samplecount);
-    SDL_PauseAudio(0);
-    soundStarted = true;
-  */
+  // SDL_mixer controls the audio device, see I_InitMusic.
 
   I_SetChannels();
   // Finished initialization.
@@ -512,27 +493,7 @@ void I_StartupSound()
 
 
 
-//
-// MUSIC API.
-//
-
-
-static Mix_Music *music[2] = { NULL, NULL };
-
-void I_ShutdownMusic()
-{
-  if (nomusic)
-    return;
-
-  if (!musicStarted)
-    return;
-    
-  Mix_CloseAudio();
-
-  CONS_Printf("I_ShutdownMusic: shut down\n");
-  musicStarted = false;  
-}
-
+// initializes both sound and music
 void I_InitMusic()
 {
   if (nosound)
@@ -541,14 +502,11 @@ void I_InitMusic()
       nomusic = true;
       return;
     }
-    
-  if (nomusic)
-    return;
 
   // because we use SDL_mixer, audio is opened here.
   if (Mix_OpenAudio(audio.freq, audio.format, audio.channels, audio.samples) < 0)
     {
-      CONS_Printf("Unable to open music: %s\n", Mix_GetError());
+      CONS_Printf("Unable to open audio: %s\n", Mix_GetError());
       nosound = nomusic = true;
       return;
     }
@@ -556,14 +514,44 @@ void I_InitMusic()
   Mix_SetPostMix(audio.callback, NULL);  // after mixing music, add sound effects
 
   CONS_Printf(" configured audio device with %d samples/slice\n", samplecount);
-  SDL_PauseAudio(0);
+  //SDL_PauseAudio(0);
+  Mix_Resume(-1); // start all sound channels (although they are not used)
+
   soundStarted = true;
 
-  // musicbuffer is never freed
-  musicbuffer = (char *)Z_Malloc(MIDBUFFERSIZE,PU_STATIC,NULL); // FIXME: catch return value
+  if (nomusic)
+    return;
+
+  Mix_ResumeMusic();  // start music playback
+  musicbuffer = (char *)Z_Malloc(MIDBUFFERSIZE, PU_MUSIC, NULL); // FIXME: catch return value
   CONS_Printf("I_InitMusic: music initialized\n");
   musicStarted = true;
 }
+
+
+
+// finish sound and music
+void I_ShutdownSound()
+{
+  if (!soundStarted)
+    return;
+    
+  CONS_Printf("I_ShutdownSound: ");
+  Mix_CloseAudio();
+  //SDL_CloseAudio();
+
+  CONS_Printf("shut down\n");
+  soundStarted = false;
+
+  if (!musicStarted)
+    return;
+
+  Z_Free(musicbuffer);
+  CONS_Printf("I_ShutdownMusic: shut down\n");
+  musicStarted = false;  
+}
+
+
 
 void I_PlaySong(int handle, int looping)
 {

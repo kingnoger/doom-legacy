@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/08/29 20:48:49  smite-meister
+// bugfixes. wow.
+//
 // Revision 1.10  2004/08/19 19:42:42  smite-meister
 // bugfixes
 //
@@ -452,7 +455,7 @@ struct side_t
   sector_t*   sector;
 
   //SoM: 3/6/2000: This is the special of the linedef this side belongs to.
-  int special;
+  int special; // only used during map setup, but...
 };
 
 
@@ -511,9 +514,8 @@ struct line_t
   // wallsplat_t list
   void*       splats;
 
-  //SoM: 3/6/2000
-  int tranlump;          // translucency filter, -1 == none
-  // (Will have to fix to use with Legacy's Translucency?)
+  int transmap;          // translucency filter, -1 == none
+
   int firsttag,nexttag;  // improves searches for tags.
 
   int ecolormap;         // SoM: Used for 282 linedefs

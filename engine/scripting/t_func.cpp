@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.19  2004/08/29 20:48:48  smite-meister
+// bugfixes. wow.
+//
 // Revision 1.18  2004/08/12 18:30:28  smite-meister
 // cleaned startup
 //
@@ -942,7 +945,7 @@ void SF_Teleport()
     }
 
   if(mo)
-    current_map->EV_Teleport(line.tag, &line, mo);
+    current_map->EV_Teleport(line.tag, &line, mo, 1, 0);
 }
 
 
@@ -969,7 +972,7 @@ void SF_SilentTeleport()
     }
 
   if(mo)
-    current_map->EV_Teleport(line.tag, &line, mo, true);
+    current_map->EV_Teleport(line.tag, &line, mo, 1, 0x2);
 }
 
 
@@ -1830,6 +1833,8 @@ void SF_SectorColormap()
     {
       int i = -1;
       int mapnum = R_ColormapNumForName(t_argv[1].value.s);
+      if (mapnum == -1)
+	{ script_error("colormap %s not found\n", t_argv[1].value.s); return; }
 
       // set all sectors with tag
       while ((i = current_map->FindSectorFromTag(tagnum, i)) >= 0)

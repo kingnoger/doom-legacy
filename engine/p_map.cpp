@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.24  2004/08/29 20:48:48  smite-meister
+// bugfixes. wow.
+//
 // Revision 1.23  2004/08/12 18:30:24  smite-meister
 // cleaned startup
 //
@@ -783,7 +786,7 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
             {
 	      if (ld->special)
 		{
-		  if (flags & MF_NOTMONSTER)
+		  if (flags & MF_NOTMONSTER || ld->flags & ML_MONSTERS_CAN_ACTIVATE)
 		    mp->ActivateLine(ld, this, oldside, SPAC_CROSS);
 		  else if (flags2 & MF2_MCROSS)
 		    mp->ActivateLine(ld, this, oldside, SPAC_MCROSS);
@@ -1799,7 +1802,7 @@ static bool PTR_UseTraverse(intercept_t *in)
       return true;
     }
 
-  if (act == SPAC_USE)
+  if (act == SPAC_USE || line->flags & ML_BOOM_GENERALIZED)
     usething->mp->ActivateLine(line, usething, side, SPAC_USE);
 
   return false;

@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.33  2004/08/29 20:48:49  smite-meister
+// bugfixes. wow.
+//
 // Revision 1.32  2004/08/29 13:50:07  hurdler
 // minor update
 //
@@ -378,8 +381,8 @@ public:
   void RepositionMace(DActor *mo);
 
   // in p_telept.cpp
-  bool EV_Teleport(int tag, line_t *line, Actor *thing, bool silent = false);
-  bool EV_SilentLineTeleport(line_t *line, int side, Actor *thing, bool reverse);
+  bool EV_Teleport(int tag, line_t *line, Actor *thing, int type, int flags);
+  bool EV_SilentLineTeleport(int tag, line_t *line, Actor *thing, bool reverse);
 
   // in p_spec.cpp
   side_t   *getSide(int sec, int line, int side);
@@ -404,9 +407,9 @@ public:
 
   int  SpawnSectorSpecial(int sp, sector_t *sec);
   void SpawnLineSpecials();
-  void SpawnScrollers();
-  void SpawnFriction();
-  void SpawnPushers();
+  void SpawnScroller(line_t *l, int tag, int type, int control);
+  void SpawnFriction(line_t *l, int tag);
+  void SpawnPusher(line_t *l, int tag, int type);
   DActor *GetPushThing(int s);
   // some event functions that fit nowhere else
   int  EV_SectorSoundChange(int tag, int seq);

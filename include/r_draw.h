@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/08/29 20:48:49  smite-meister
+// bugfixes. wow.
+//
 // Revision 1.5  2004/08/15 18:08:29  smite-meister
 // palette-to-palette colormaps etc.
 //
@@ -33,18 +36,19 @@
 // Revision 1.1.1.1  2002/11/16 14:18:26  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//      low level span/column drawer functions.
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Software renderer: low level span/column drawer functions.
 
 #ifndef r_draw_h
 #define r_draw_h 1
 
 #include "doomdef.h"
-#include "r_defs.h"
+#include "screen.h"  // MAXVIDWIDTH, MAXVIDHEIGHT
+
+
+typedef byte lighttable_t;
 
 // -------------------------------
 // COMMON STUFF FOR 8bpp AND 16bpp
@@ -86,13 +90,12 @@ extern byte*            transtables;    // translucency tables, should be (*tran
 extern byte*            dc_transmap;
 
 // translation stuff here
-
 extern byte*            translationtables;
 extern byte*            dc_translation;
 
-extern r_lightlist_t   *dc_lightlist;
-extern int                        dc_numlights;
-extern int                        dc_maxlights;
+extern struct r_lightlist_t *dc_lightlist;
+extern int              dc_numlights;
+extern int              dc_maxlights;
 
 //Fix TUTIFRUTI
 extern int      dc_texheight;
@@ -140,8 +143,11 @@ extern Texture *window_background;
 
 //added:26-01-98: called by SCR_Recalc() when video mode changes
 void    R_RecalcFuzzOffsets();
+
 // Initialize color translation tables, for player rendering etc.
 void    R_InitTranslationTables();
+
+void    R_InitTranslucencyTables();
 
 void    R_InitViewBuffer(int width, int height);
 
@@ -191,5 +197,4 @@ void    ASMCALL R_DrawTranslatedColumn_16();
 void    ASMCALL R_DrawSpan_16();
 
 
-// =========================================================================
 #endif

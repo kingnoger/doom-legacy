@@ -27,13 +27,43 @@
 #include "r_sprite.h"
 
 
+
 VoodooDoll::VoodooDoll(const PlayerPawn &p)
   : PlayerPawn(p)
 {
   flags  = MF_SOLID | MF_SHOOTABLE | MF_DROPOFF | MF_PICKUP | MF_NOTMONSTER;
   flags2 = MF2_WINDTHRUST | MF2_PUSHABLE | MF2_SLIDE | MF2_PASSMOBJ | MF2_TELESTOMP;
-  pres->color = 2;
+  eflags = 0;
+  //pres->color = 2;
 }
+
+
+
+VoodooDoll::~VoodooDoll()
+{
+  pres = NULL; // (has no presentation of its own, so Actor must not delete it!)
+}
+
+
+
+void VoodooDoll::CheckPointers()
+{
+  if (owner && (owner->eflags & MFE_REMOVE))
+    owner = NULL;
+
+  if (target && (target->eflags & MFE_REMOVE))
+    target = NULL;
+
+  if (attacker && (attacker->eflags & MFE_REMOVE))
+    attacker = NULL;
+
+  if (victim && (victim->eflags & MFE_REMOVE))
+    {
+      victim = NULL;
+      Remove(); // deleted when its victim is deleted
+    }
+}
+
 
 
 void VoodooDoll::Spawn(PlayerInfo *p, mapthing_t *mthing)
@@ -66,10 +96,79 @@ void VoodooDoll::Spawn(PlayerInfo *p, mapthing_t *mthing)
 }
 
 
+
 bool VoodooDoll::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 {
+  // tricky. Now even the recoil is given to the victim!
   return victim->Damage(inflictor, source, damage, dtype);
 }
 
 
-// TODO: pickup, linedef activation, zombie effect
+
+bool VoodooDoll::Touch(Actor *a)
+{
+  //PlayerPawn::Touch(a);
+  return victim->Touch(a);
+}
+
+
+
+void VoodooDoll::Think()
+{
+  // a corpse, for example. Thinks just like an actor.
+  //  if (!player || player->playerstate == PST_DEAD)
+  //  goto actor_think;
+
+  if (!victim || victim->health <= 0 || victim->flags & MF_CORPSE)
+    {
+      Remove(); // deleted when its victim is deleted or just dead
+      return;
+    }
+
+  // CheckWater is also called at Actor::Think later...
+  CheckWater();
+
+  // check special sectors : damage & secrets
+  PlayerInSpecialSector();
+
+  // Counters, time dependend power ups.
+  if (powers[pw_invulnerability])
+    powers[pw_invulnerability]--;
+
+  // the MF_SHADOW activates the tr_transhi translucency while it is set
+  // (it doesnt use a preset value through FF_TRANSMASK)
+  if (powers[pw_invisibility])
+    if (--powers[pw_invisibility] == 0)
+      flags &= ~MF_SHADOW;
+
+  if (powers[pw_ironfeet])
+    powers[pw_ironfeet]--;
+
+  if (powers[pw_flight])
+    {
+      if(--powers[pw_flight] == 0)
+	{
+	  flags2 &= ~MF2_FLY;
+	  flags &= ~MF_NOGRAVITY;
+	}
+    }
+
+
+ actor_think:
+  // this is where the "actor part" of the thinking begins
+  // we call Actor::Think(), because a playerpawn is an actor too
+  Actor::Think();
+}
+
+
+
+
+void VoodooDoll::XYFriction(fixed_t oldx, fixed_t oldy, bool oldfriction)
+{
+  Actor::XYFriction(oldx, oldy);
+}
+
+
+
+
+// TODO: linedef activation, zombie effect

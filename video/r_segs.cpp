@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/08/29 20:48:50  smite-meister
+// bugfixes. wow.
+//
 // Revision 1.7  2004/08/19 19:42:42  smite-meister
 // bugfixes
 //
@@ -436,54 +439,42 @@ void Rend::R_DrawWallSplats()
 //  textures don't have holes in it. At least not for now.
 static int  column2s_length;     // column->length : for multi-patch on 2sided wall = texture->height
 
-void R_Render2sidedMultiPatchColumn (column_t* column)
+void R_Render2sidedMultiPatchColumn(column_t *column)
 {
-    int         topscreen;
-    int         bottomscreen;
+  int topscreen = sprtopscreen; // + spryscale*column->topdelta;  topdelta is 0 for the wall
+  int bottomscreen = topscreen + spryscale * column2s_length;
 
-    topscreen = sprtopscreen; // + spryscale*column->topdelta;  topdelta is 0 for the wall
-    bottomscreen = topscreen + spryscale * column2s_length;
+  dc_yl = (sprtopscreen+FRACUNIT-1)>>FRACBITS;
+  dc_yh = (bottomscreen-1)>>FRACBITS;
 
-    dc_yl = (sprtopscreen+FRACUNIT-1)>>FRACBITS;
-    dc_yh = (bottomscreen-1)>>FRACBITS;
-
-    if(windowtop != MAXINT && windowbottom != MAXINT)
+  if(windowtop != MAXINT && windowbottom != MAXINT)
     {
       dc_yl = ((windowtop + FRACUNIT) >> FRACBITS);
       dc_yh = (windowbottom - 1) >> FRACBITS;
     }
 
-    {
-      if (dc_yh >= mfloorclip[dc_x])
-          dc_yh =  mfloorclip[dc_x]-1;
-      if (dc_yl <= mceilingclip[dc_x])
-          dc_yl =  mceilingclip[dc_x]+1;
-    }
+  {
+    if (dc_yh >= mfloorclip[dc_x])
+      dc_yh =  mfloorclip[dc_x]-1;
+    if (dc_yl <= mceilingclip[dc_x])
+      dc_yl =  mceilingclip[dc_x]+1;
+  }
 
-    if (dc_yl >= vid.height || dc_yh < 0)
-      return;
+  if (dc_yl >= vid.height || dc_yh < 0)
+    return;
 
-    if (dc_yl <= dc_yh)
+  if (dc_yl <= dc_yh)
     {
-        dc_source = (byte *)column;
-        colfunc ();
+      dc_source = (byte *)column;
+      colfunc();
     }
 }
 
 
 void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
 {
-  unsigned        index;
-  column_t*       col;
-  int             lightnum;
-
   int             i;
-  fixed_t         height;
-  fixed_t         realbot;
-
   void (*colfunc_2s) (column_t*);
-
-  line_t* ldef;   //faB
 
   // Calculate light table.
   // Use different light tables
@@ -494,20 +485,14 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
   backsector = curline->backsector;
   windowbottom = windowtop = sprbotscreen = MAXINT;
 
-  //faB: hack translucent linedef types (201-205 for transtables 1-5)
-  //SoM: 201-205 are taken... So I'm switching to 284 - 288
-  ldef = curline->linedef;
-  if (ldef->special>=284 && ldef->special<=288)
+  // translucent?
+  line_t *ldef = curline->linedef;
+  if (ldef->transmap != -1)
     {
-      dc_transmap = transtables + ((ldef->special - 284) << tr_shift);
+      dc_transmap = transtables + (ldef->transmap << tr_shift);
       colfunc = fuzzcolfunc;
     }
-  else if (ldef->special==260)
-    {
-      dc_transmap = transtables; // get first transtable 50/50
-      colfunc = fuzzcolfunc;
-    }
-  else if (ldef->special==283)
+  else if (ldef->special == 50 && ldef->args[0] == 11) // HACK fog sheet
     {
       colfunc = R_DrawFogColumn_8;
       windowtop = frontsector->ceilingheight;
@@ -524,15 +509,20 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
 
   //faB: handle case where multipatch texture is drawn on a 2sided wall, multi-patch textures
   //     are not stored per-column with post info anymore in Doom Legacy
+  bool masked = true;
   if (tex->Masked())
     colfunc_2s = R_DrawMaskedColumn;   //render the usual 2sided single-patch packed texture
   else
     {
+      masked = false;
       colfunc_2s = R_Render2sidedMultiPatchColumn;        //render multipatch with no holes (no post_t info)
       column2s_length = tex->height;
     }
 
+
   dc_numlights = 0;
+  int lightnum;
+
   if(frontsector->numlights)
     {
       dc_numlights = frontsector->numlights;
@@ -609,17 +599,22 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
       // calculate lighting
       if (maskedtexturecol[dc_x] != MAXSHORT)
         {
+	  // draw the texture
+	  column_t *col;
+	  if (masked)
+	    col = tex->GetMaskedColumn(maskedtexturecol[dc_x]);
+	  else
+	    col = (column_t *)tex->GetColumn(maskedtexturecol[dc_x]); // HACK
+
+	  unsigned index;
           if(dc_numlights)
 	    {
 	      lighttable_t** xwalllights;
 
 	      sprbotscreen = MAXINT;
 	      sprtopscreen = windowtop = (centeryfrac - FixedMul(dc_texturemid, spryscale));
-	      realbot = windowbottom = tex->height * spryscale + sprtopscreen;
+	      fixed_t realbot = windowbottom = tex->height * spryscale + sprtopscreen;
 	      dc_iscale = 0xffffffffu / (unsigned)spryscale;
-            
-	      // draw the texture
-	      col = tex->GetMaskedColumn(maskedtexturecol[dc_x]);
 
 	      for(i = 0; i < dc_numlights; i++)
 		{
@@ -662,7 +657,7 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
 
 		  dc_lightlist[i].height += dc_lightlist[i].heightstep;
 
-		  height = dc_lightlist[i].height;
+		  fixed_t height = dc_lightlist[i].height;
 		  if(height <= windowtop)
 		    {
 		      dc_colormap = dc_lightlist[i].rcolormap;
@@ -708,7 +703,6 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
 	  dc_iscale = 0xffffffffu / (unsigned)spryscale;
             
 	  // draw the texture
-	  col = tex->GetMaskedColumn(maskedtexturecol[dc_x]);
 	  colfunc_2s(col);
         }
       spryscale += rw_scalestep;

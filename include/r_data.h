@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/08/29 20:48:49  smite-meister
+// bugfixes. wow.
+//
 // Revision 1.11  2004/08/18 14:35:20  smite-meister
 // PNG support!
 //
@@ -318,6 +321,9 @@ public:
   /// returns the Texture with the corresponding id
   Texture *operator[](unsigned id);
 
+  /// First checks if the lump is a valid colormap (or transmap). If not, acts like Get.
+  int GetTextureOrColormap(const char *name, int &colmap, bool transmap = false);
+
   /// reads the PNAMES and TEXTUREn lumps, generates the corresponding Textures
   int ReadTextures();
 
@@ -338,9 +344,10 @@ byte NearestColor(byte r, byte g, byte b);
 void R_ServerInit();
 
 // colormap management
+void R_InitColormaps();
 void R_ClearColormaps();
 int  R_ColormapNumForName(const char *name);
-int  R_CreateColormap(char *p1, char *p2, char *p3);
 const char *R_ColormapNameForNum(int num);
+int  R_CreateColormap(char *p1, char *p2, char *p3);
 
 #endif

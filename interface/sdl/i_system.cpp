@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/08/29 20:48:49  smite-meister
+// bugfixes. wow.
+//
 // Revision 1.12  2004/08/18 14:35:21  smite-meister
 // PNG support!
 //
@@ -723,7 +726,6 @@ void I_Quit()
   if (demorecording)
     game.CheckDemoStatus();
   game.SV_Reset();
-  I_ShutdownMusic();
   I_ShutdownSound();
   I_ShutdownCD();
 
@@ -791,7 +793,6 @@ void I_Error(char *error, ...)
 
   //game.net->QuitNetGame();
 
-  I_ShutdownMusic();
   I_ShutdownSound();
   I_ShutdownGraphics();
   // shutdown everything else which was registered

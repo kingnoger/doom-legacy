@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/08/29 20:48:48  smite-meister
+// bugfixes. wow.
+//
 // Revision 1.5  2004/08/13 18:25:10  smite-meister
 // sw renderer fix
 //
@@ -51,6 +54,7 @@
 
 /// template for the Boom ANIMATED lump entries
 /// used for defining texture and flat animation sequences
+#pragma pack(1) // GCC needs this!
 struct ANIMATED_t
 {
   char        istexture;   // 0 means flat, -1 is a terminator
@@ -58,6 +62,7 @@ struct ANIMATED_t
   char        startname[9];
   int         speed;
 };
+#pragma pack()
 
 
 // Floor/ceiling animation sequences,
@@ -68,8 +73,8 @@ struct ANIMATED_t
 //  using all the flats between the start
 //  and end entry, in the order found in
 //  the WAD file.
-//
-static ANIMATED_t harddefs[] =
+
+static ANIMATED_t DoomAnims[] =
 {
   // DOOM II flat animations.
   {false,     "NUKAGE3",      "NUKAGE1",      8},
@@ -99,7 +104,11 @@ static ANIMATED_t harddefs[] =
   {true,      "SFALL4",       "SFALL1",       8},
   {true,      "WFALL4",       "WFALL1",       8},
   {true,      "DBRAIN4",      "DBRAIN1",      8},
+  {-1}
+};
 
+static ANIMATED_t HereticAnims[] =
+{
   // heretic 
   {false,     "FLTWAWA3",     "FLTWAWA1",     8}, // Water
   {false,     "FLTSLUD3",     "FLTSLUD1",     8}, // Sludge
@@ -109,7 +118,6 @@ static ANIMATED_t harddefs[] =
   {false,     "FLATHUH4",     "FLATHUH1",     8}, // Super Lava
   {true,      "LAVAFL3",      "LAVAFL1",      6}, // Texture: Lavaflow
   {true,      "WATRWAL3",     "WATRWAL1",     4}, // Texture: Waterfall
-
   {-1}
 };
 
@@ -230,12 +238,16 @@ Texture *AnimatedTexture::Update()
 /// Reads and interprets the Boom ANIMATED lump
 int P_Read_ANIMATED(int lump)
 {
-  if (lump < 0)
-    return -1;
-
-  CONS_Printf("Reading ANIMATED...\n");
-
-  ANIMATED_t *anims = (ANIMATED_t *)fc.CacheLumpNum(lump, PU_STATIC);
+  ANIMATED_t *anims;
+  if (lump >= 0)
+    {
+      CONS_Printf("Reading ANIMATED...\n");
+      anims = (ANIMATED_t *)fc.CacheLumpNum(lump, PU_STATIC);
+    }
+  else if (game.mode == gm_heretic)
+    anims = HereticAnims;
+  else
+    anims = DoomAnims;
 
   int i, count = 0;
 
@@ -243,19 +255,36 @@ int P_Read_ANIMATED(int lump)
     {
       // TODO problem with flats
       // check different episode ?
-      int base = fc.FindNumForName(a->startname);
-      int last = fc.FindNumForName(a->endname);
+      int base, last;
+      if (a->istexture)
+	{
+	  base = tc.Get(a->startname, false);
+	  last = tc.Get(a->endname, false);
+	}
+      else
+	{
+	  base = fc.FindNumForName(a->startname);
+	  last = fc.FindNumForName(a->endname);
+	}
 
       int n = last - base + 1; // number of frames
-      if (n < 2 || n > MAX_FRAME_DEFS)
-        I_Error("Bad cycle from %s to %s", a->startname, a->endname);
+      if (n < 2 || n > MAX_FRAME_DEFS || base == -1 || last == -1)
+	{
+	  if (lump)
+	    CONS_Printf("ANIMATED: Bad cycle from %s to %s", a->startname, a->endname);
+	  continue;
+	}
 
       AnimatedTexture *t = new AnimatedTexture(a->startname, n);
 
       int tics = LONG(a->speed) * NEWTICRATERATIO; // duration of one frame in tics
       for (i = 0; i < n; i++)
 	{
-	  t->frames[i].tx = tc.GetPtrNum(base + i);
+	  if (a->istexture)
+	    t->frames[i].tx = tc[base + i];
+	  else
+	    t->frames[i].tx = tc.GetPtrNum(base + i);
+
 	  t->frames[i].tics = tics;
 	}
 
@@ -279,8 +308,12 @@ int P_Read_ANIMATED(int lump)
       */
     }
 
-  Z_Free(anims);
-  CONS_Printf("... done. %d animations.\n", count);
+  if (lump >= 0)
+    {
+      Z_Free(anims);
+      CONS_Printf("... done. %d animations.\n", count);
+    }
+
   return count;
 }
 

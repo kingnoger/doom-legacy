@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.24  2004/08/29 20:48:49  smite-meister
+// bugfixes. wow.
+//
 // Revision 1.23  2004/08/12 18:30:29  smite-meister
 // cleaned startup
 //
@@ -956,17 +959,25 @@ class scroll_t : public Thinker
 public:
   enum scroll_e
   {
-    sc_side,
-    sc_floor,
-    sc_ceiling,
-    sc_carry_floor,
-    sc_carry_ceiling,
-    sc_push, // no texture scroll, just Actor movement
-    sc_wind
+    // what is being scrolled?
+    sc_floor         = 0x01,
+    sc_ceiling       = 0x02,
+    sc_carry_floor   = 0x04,
+    sc_carry_ceiling = 0x08, ///< not implemented
+
+    sc_side          = 0x10, ///< not stackable with the other types
+
+    sc_wind = 0x20,  ///< only affects things with MF2_WINDTHRUST flag
+
+    // how is the scrolling controlled?
+    sc_constant     = 0x0,
+    sc_displacement = 0x1,
+    sc_accelerative = 0x2,
+    sc_offsets      = 0x4,
   };
 
 private:
-  byte type;
+  short     type;
   fixed_t   vx, vy;      ///< scroll speed
   int       affectee;    ///< Number of affected sidedef, sector, tag, or whatever
   sector_t *control;     ///< Control sector (NULL if none) used to control scrolling
@@ -976,7 +987,7 @@ private:
 
 public:
 
-  scroll_t(scroll_e type, fixed_t dx, fixed_t dy, sector_t *csec, int aff, bool acc);
+  scroll_t(short type, fixed_t dx, fixed_t dy, sector_t *csec, int aff, bool acc);
   
   virtual void Think();
 };
@@ -992,10 +1003,9 @@ class pusher_t : public Thinker
 public:
   enum pusher_e
   {
-    p_push,
-    p_pull,
-    p_wind,
-    p_current,
+    p_wind        = 0,
+    p_current     = 1,
+    p_point       = 2,
     p_upcurrent,
     p_downcurrent
   };

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.30  2004/08/29 20:48:48  smite-meister
+// bugfixes. wow.
+//
 // Revision 1.29  2004/08/15 18:08:28  smite-meister
 // palette-to-palette colormaps etc.
 //
@@ -142,6 +145,11 @@
 #include "w_wad.h"
 #include "z_zone.h"
 #include "tables.h"
+
+
+// some Hexen linedeftype extensions we use
+const int LEGACY_EXT = 50;
+const int LEGACY_FS = 128;
 
 
 //SoM: Enable Boom features?
@@ -868,7 +876,7 @@ bool Map::ActivateLine(line_t *line, Actor *thing, int side, int atype)
     line->special = 0;    // clear the special on non-retriggerable lines
 
   if ((act == SPAC_USE || act == SPAC_PASSUSE || act == SPAC_IMPACT) && success)
-    ChangeSwitchTexture(line, repeat); // FIXME the function
+    ChangeSwitchTexture(line, repeat); // check if texture needs to be changed
 
   return true;
 }
@@ -1045,12 +1053,12 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
     case 70: // Teleport
       if (!side)
 	// Only teleport when crossing the front side of a line
-	success = EV_Teleport(tag, line, mo, false);
+	success = EV_Teleport(tag, line, mo, args[1], args[2]);
       break;
     case 71: // Teleport, no fog (silent)
       if (!side)
 	// Only teleport when crossing the front side of a line
-	success = EV_Teleport(tag, line, mo, true);
+	success = EV_Teleport(tag, line, mo, 0, 2);
       break;
     case 72: // Thrust Mobj
       if(!side) // Only thrust on side 0
@@ -1115,12 +1123,6 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
 	    success = StartACS(args[0], &args[2], mo, line, side);
 	  args[4] = lock;
 	}
-      break;
-
-    case 85: // TEST new linedeftype FS_Execute
-#ifdef FRAGGLESCRIPT
-      success = FS_RunScript(tag, mo);
-#endif
       break;
 
     case 90: // Poly Rotate Left Override
@@ -1232,6 +1234,29 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       break;
     case 247: // ZDoom Elevator_LowerToNearest
       success = EV_DoElevator(tag, elevator_t::Down, SPEED(args[1]), 0);
+      break;
+
+
+    case LEGACY_EXT: // Legacy extensions to Hexen linedef namespace (all under this one type)
+
+      // different tag handling
+      if (line && line->tag) 
+	tag = line->tag; // Doom style
+      else
+	tag = args[3] + (args[4] << 8); // Hexen style
+
+      switch (args[0])
+	{
+	case LEGACY_FS:
+#ifdef FRAGGLESCRIPT
+	  if (side == 0 || args[1] == 0) // 1-sided?
+	    success = FS_RunScript(tag, mo);
+#endif
+	  break;
+
+	default:
+	  CONS_Printf("Unknown Legacy linedef extension %d.\n", args[0]);
+	}
       break;
 
       // Inert Line specials
@@ -1480,8 +1505,9 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
 	  fixed_t dx = HScrollDirs[temp/5][0]*HScrollSpeeds[temp%5]*2048;
 	  fixed_t dy = HScrollDirs[temp/5][1]*HScrollSpeeds[temp%5]*2048;
 
-	  // texture does not scroll, Actors do
-	  AddThinker(new scroll_t(scroll_t::sc_push, dx, dy, NULL, sec - sectors, false));
+	  // texture scrolls, actors are pushed
+	  AddThinker(new scroll_t(scroll_t::sc_floor | scroll_t::sc_carry_floor,
+				  dx, dy, NULL, sec - sectors, false));
 	}
       else if (temp <= 51)
 	{
@@ -1491,7 +1517,8 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
 	  fixed_t dx = HScrollDirs[temp/3][0]*HScrollSpeeds[temp%3]*2048;
 	  fixed_t dy = HScrollDirs[temp/3][1]*HScrollSpeeds[temp%3]*2048;
 	  
-	  AddThinker(new scroll_t(scroll_t::sc_wind, dx, dy, NULL, sec - sectors, false));
+	  AddThinker(new scroll_t(scroll_t::sc_carry_floor | scroll_t::sc_wind,
+				  dx, dy, NULL, sec - sectors, false));
 	}
     }
   else
@@ -1606,10 +1633,10 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
   return sp;
 }
 
-//
-// After the map has been loaded, scan for linedefs
-//  that spawn thinkers or confer properties
-//
+
+
+/// After the map has been loaded, scan for linedefs
+/// that spawn thinkers or confer properties
 void Map::SpawnLineSpecials()
 {
   int i;
@@ -1626,135 +1653,236 @@ void Map::SpawnLineSpecials()
 	lines[i].special = 0;
       }
 
-  InitTagLists();   //Create xref tables for tags
+  InitTagLists(); // Create xref tables for tags
 
-  // Then spawn the stuff that use the line/sector tags.
-  SpawnScrollers(); //Add generalized scrollers
-  SpawnFriction();  //New friction model using linedefs
-  SpawnPushers();   //New pusher model using linedefs
+  // subtypes
+  const int LEGACY_BOOM_SCROLLERS = 0;
+  const int LEGACY_BOOM_FRICTION  = 1;
+  const int LEGACY_BOOM_PUSHERS   = 2;
+  const int LEGACY_BOOM_RENDERER  = 3;
+  const int LEGACY_BOOM_EXOTIC    = 4;
+  const int LEGACY_FF        = 10;
+  const int LEGACY_RENDERER  = 11;
+  const int LEGACY_MISC      = 13;
 
   //  Init line EFFECTs
   for (i = 0; i < numlines; i++)
     {
-      switch (lines[i].special)
-        {
-          int s, sec;
-          // support for drawn heights coming from different sector
-	case 242: // Boom: fake floor and ceiling
-	  sec = sides[*lines[i].sidenum].sector-sectors;
-	  for (s = -1; (s = FindSectorFromLineTag(lines+i,s)) >= 0;)
-	    sectors[s].heightsec = sec;
-	  break;
+      line_t *l = &lines[i];
+      line_t *l2;
+      int special = l->special;
 
-          //SoM: 3/20/2000: support for drawn heights coming from different sector
-	case 280: // Legacy: swimmable water with Boom 242-style colormaps
-	  sec = sides[*lines[i].sidenum].sector-sectors;
-	  for (s = -1; (s = FindSectorFromLineTag(lines+i,s)) >= 0;)
-            {
-              sectors[s].heightsec = sec;
-              sectors[s].altheightsec = 1;
-            }
-	  break;
+      int s, subtype;
 
-          //SoM: 4/4/2000: HACK! Copy colormaps. Just plain colormaps.
-	case 282: // Legacy: easy colormap/fog effect
-	  for(s = -1; (s = FindSectorFromLineTag(lines + i, s)) >= 0;)
-            {
-              sectors[s].midmap = lines[i].frontsector->midmap;
-              sectors[s].altheightsec = 2;
-            }
-	  break;
+      // Legacy extensions are mapped to Hexen linedef namespace so they are reachable from Hexen as well!
+      // only check for clearable stuff here
+      if (special == LEGACY_EXT && (subtype = l->args[0]) < 128)
+	{
+	  int tag = l->tag; // Doom format: use the tag if we have one
+	  if (!tag)
+	    tag = l->args[3] + 256 * l->args[4]; // Hexen format: get the tag from args[3-4]
 
-	case 281: // Legacy: 3D floor
-	  sec = sides[*lines[i].sidenum].sector-sectors;
-	  for (s = -1; (s = FindSectorFromLineTag(lines+i,s)) >= 0;)
-	    AddFakeFloor(&sectors[s], &sectors[sec], lines+i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL);
-	  break;
+	  int sec = sides[*l->sidenum].sector - sectors;
+	  int kind = l->args[1];
 
-	case 289: // Legacy: 3D floor without shadow
-	  sec = sides[*lines[i].sidenum].sector-sectors;
-	  for (s = -1; (s = FindSectorFromLineTag(lines+i,s)) >= 0;)
-	    AddFakeFloor(&sectors[s], &sectors[sec], lines+i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_NOSHADE|FF_CUTLEVEL);
-	  break;
 
-	case 300: // Legacy: translucent 3D floor
-	  sec = sides[*lines[i].sidenum].sector-sectors;
-	  for (s = -1; (s = FindSectorFromLineTag(lines+i,s)) >= 0;)
-	    AddFakeFloor(&sectors[s], &sectors[sec], lines+i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_NOSHADE|FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA);
-	  break;
+	  if (subtype == LEGACY_BOOM_SCROLLERS)
+	    {
+	      SpawnScroller(l, tag, kind, l->args[2]);
+	    }
+	  else if (subtype == LEGACY_BOOM_FRICTION)
+	    {
+	      SpawnFriction(l, tag);
+	    }
+	  else if (subtype == LEGACY_BOOM_PUSHERS)
+	    {
+	      SpawnPusher(l, tag, kind);
+	    }
+	  else if (subtype == LEGACY_BOOM_RENDERER)
+	    {
+	      switch (kind)
+		{
+		  // Boom: 213 floor lighting independently (e.g. lava)
+		case 0:
+		  for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0;)
+		    sectors[s].floorlightsec = sec;
+		  break;
 
-	case 301: // Legacy: translucent swimmable water
-	  sec = sides[*lines[i].sidenum].sector-sectors;
-	  for (s = -1; (s = FindSectorFromLineTag(lines+i,s)) >= 0;)
-	    AddFakeFloor(&sectors[s], &sectors[sec], lines+i, FF_EXISTS|FF_RENDERALL|FF_TRANSLUCENT|FF_SWIMMABLE|FF_BOTHPLANES|FF_ALLSIDES|FF_CUTEXTRA|FF_EXTRA|FF_DOUBLESHADOW|FF_CUTSPRITES);
-	  break;
+		  // Boom: 261 ceiling lighting independently
+		case 1:
+		  for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0;)
+		    sectors[s].ceilinglightsec = sec;
+		  break;
 
-	case 302: // Legacy: 3D fog
-	  sec = sides[*lines[i].sidenum].sector-sectors;
-	  // SoM: Because it's fog, check for an extra colormap and set
-	  // the fog flag...
-	  if(sectors[sec].extra_colormap)
-	    sectors[sec].extra_colormap->fog = 1;
-	  for (s = -1; (s = FindSectorFromLineTag(lines+i,s)) >= 0;)
-	    AddFakeFloor(&sectors[s], &sectors[sec], lines+i, FF_EXISTS|FF_RENDERALL|FF_FOG|FF_BOTHPLANES|FF_INVERTPLANES|FF_ALLSIDES|FF_INVERTSIDES|FF_CUTEXTRA|FF_EXTRA|FF_DOUBLESHADOW|FF_CUTSPRITES);
-	  break;
+		default:
+		  goto error;
+		}
+	    }
+	  else if (subtype == LEGACY_BOOM_EXOTIC)
+	    {
+	      // types which store data in the texture name fields
+	      switch (kind)
+		{
+		  // Boom: 242 fake floor and ceiling
+		case 1:
+		  for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0;)
+		    sectors[s].heightsec = sec;
+		  break;
 
-          // Light effect
-	case 303:
-	  sec = sides[*lines[i].sidenum].sector-sectors;
-	  for (s = -1; (s = FindSectorFromLineTag(lines+i,s)) >= 0;)
-	    AddFakeFloor(&sectors[s], &sectors[sec], lines+i, FF_EXISTS|FF_CUTSPRITES);
-	  break;
+		  // Boom: 260 transparent middle texture
+		case 2:
+		  {
+		    int temp = sides[*l->sidenum].special; // transmap number stored here 
+		    if (!tag || temp == -1)
+		      l->transmap = temp;
+		    else for (s = -1; (l2 = FindLineFromTag(tag, &s)); )
+		      l2->transmap = temp; // make tagged lines translucent too
+		  }
+		  break;
 
-          // Opaque water
-	case 304:
-	  sec = sides[*lines[i].sidenum].sector-sectors;
-	  for (s = -1; (s = FindSectorFromLineTag(lines+i,s)) >= 0;)
-	    AddFakeFloor(&sectors[s], &sectors[sec], lines+i, FF_EXISTS|FF_RENDERALL|FF_SWIMMABLE|FF_BOTHPLANES|FF_ALLSIDES|FF_CUTEXTRA|FF_EXTRA|FF_DOUBLESHADOW|FF_CUTSPRITES);
-	  break;
+		  // Legacy: swimmable water with Boom 242-style colormaps
+		case 3:
+		  for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0;)
+		    {
+		      sectors[s].heightsec = sec;
+		      sectors[s].altheightsec = 1;
+		    }
+		  break;
 
-          // Double light effect
-	case 305:
-	  sec = sides[*lines[i].sidenum].sector-sectors;
-	  for (s = -1; (s = FindSectorFromLineTag(lines+i,s)) >= 0;)
-	    AddFakeFloor(&sectors[s], &sectors[sec], lines+i, FF_EXISTS|FF_CUTSPRITES|FF_DOUBLESHADOW);
-	  break;
+		  // Legacy: easy colormap/fog effect
+		case 4:
+		  for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0;)
+		    {
+		      sectors[s].midmap = l->frontsector->midmap;
+		      sectors[s].altheightsec = 2;
+		    }
+		  break;
 
-          // floor lighting independently (e.g. lava)
-	case 213:
-	  sec = sides[*lines[i].sidenum].sector-sectors;
-	  for (s = -1; (s = FindSectorFromLineTag(lines+i,s)) >= 0;)
-	    sectors[s].floorlightsec = sec;
-	  break;
+		default:
+		  goto error;
+		}
+	    }
+	  else if (subtype == LEGACY_FF)  // fake floors
+	    {
+	      int ff_flags = FF_EXISTS;
 
-          // ceiling lighting independently
-	case 261:
-	  sec = sides[*lines[i].sidenum].sector-sectors;
-	  for (s = -1; (s = FindSectorFromLineTag(lines+i,s)) >= 0;)
-	    sectors[s].ceilinglightsec = sec;
-	  break;
+	      // make it simple for now
+	      switch (kind + 281)
+		{
+		case 281: // Legacy: 3D floor
+		  ff_flags |= FF_SOLID|FF_RENDERALL|FF_CUTLEVEL;
+		  break;
 
-	  // Instant lower for floor SSNTails 06-13-2002
-	case 290:
-	  EV_DoFloor(lines[i].tag, &lines[i], floor_t::LnF, MAXINT/2, 0, 0);
-	  break;
+		case 289: // Legacy: 3D floor without shadow
+		  ff_flags |= FF_SOLID|FF_RENDERALL|FF_NOSHADE|FF_CUTLEVEL;
+		  break;
+
+		case 300: // Legacy: translucent 3D floor
+		  ff_flags |= FF_SOLID|FF_RENDERALL|FF_NOSHADE|FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA;
+		  break;
+
+		case 301: // Legacy: translucent swimmable water
+		  ff_flags |= FF_RENDERALL|FF_TRANSLUCENT|FF_SWIMMABLE|FF_BOTHPLANES |
+		    FF_ALLSIDES|FF_CUTEXTRA|FF_EXTRA|FF_DOUBLESHADOW|FF_CUTSPRITES;
+		  break;
+
+		case 304: // Legacy: Opaque water
+		  ff_flags |= FF_RENDERALL|FF_SWIMMABLE|FF_BOTHPLANES |
+		    FF_ALLSIDES|FF_CUTEXTRA|FF_EXTRA|FF_DOUBLESHADOW|FF_CUTSPRITES;
+		  break;
+
+		case 302: // Legacy: 3D fog
+		  // SoM: Because it's fog, check for an extra colormap and set the fog flag...
+		  if (sectors[sec].extra_colormap)
+		    sectors[sec].extra_colormap->fog = 1;
+		  ff_flags |= FF_RENDERALL|FF_FOG|FF_BOTHPLANES|FF_INVERTPLANES |
+		    FF_ALLSIDES|FF_INVERTSIDES|FF_CUTEXTRA|FF_EXTRA|FF_DOUBLESHADOW|FF_CUTSPRITES;
+		  break;
+
+		case 303: // Legacy: Light effect
+		  ff_flags |= FF_CUTSPRITES;
+		  break;
+
+		case 305: // Legacy: Double light effect
+		  ff_flags |= FF_CUTSPRITES|FF_DOUBLESHADOW;
+		  break;
+
+		default:
+		  goto error;
+		}
+
+	      if (ff_flags)
+		for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0; )
+		  AddFakeFloor(&sectors[s], &sectors[sec], lines+i, ff_flags);
+	    }
+	  else if (subtype == LEGACY_RENDERER)
+	    {
+	      if (kind >= 100)
+		l->transmap = kind - 100; // transmap number
+	      else if (kind == 0) // 283 (legacy fog sheet)
+		continue;  // FIXME fog sheet requires keeping (renderer!, r_segs):
+	    }
+	  else if (subtype == LEGACY_MISC)
+	    {
+	      switch (kind)
+		{
+		  // Instant lower for floor SSNTails 06-13-2002
+		case 0:
+		  EV_DoFloor(tag, l, floor_t::LnF, MAXINT/2, 0, 0);
+		  break;
 	  
-	  // Instant raise for ceilings SSNTails 06-13-2002
-	case 291:
-	  EV_DoCeiling(lines[i].tag, ceiling_t::HnC, MAXINT/2, MAXINT/2, 0, 0);
+		  // Instant raise for ceilings SSNTails 06-13-2002
+		case 1:
+		  EV_DoCeiling(tag, ceiling_t::HnC, MAXINT/2, MAXINT/2, 0, 0);
+		  break;
+
+		default:
+		  goto error;
+		}
+	    }
+
+	  l->special = 0;
+	  continue;
+
+	error:
+	  I_Error("Unknown Legacy linedef subtype %d in line %d.\n", kind, i);
+	}
+
+
+      // finally check ungrouped specials 
+      bool clear = true;
+
+      switch (special)
+        {
+	  // Hexen
+	case 100: // Scroll_Texture_Left
+          AddThinker(new scroll_t(scroll_t::sc_side, -l->args[0] << 10, 0, NULL, l->sidenum[0], false));
+	  break;
+	case 101: // Scroll_Texture_Right
+          AddThinker(new scroll_t(scroll_t::sc_side, l->args[0] << 10, 0, NULL, l->sidenum[0], false));
+	  break;
+	case 102: // Scroll_Texture_Up
+          AddThinker(new scroll_t(scroll_t::sc_side, 0, l->args[0] << 10, NULL, l->sidenum[0], false));
+	  break;
+	case 103: // Scroll_Texture_Down
+          AddThinker(new scroll_t(scroll_t::sc_side, 0, -l->args[0] << 10, NULL, l->sidenum[0], false));
 	  break;
 
 	default:
 	  // TODO is this used? if not, replace it with a thing...
-	  if (lines[i].special>=1000 && lines[i].special<1032)
+	  if (special >= 1000 && special < 1032)
             {
-	      for (s = -1; (s = FindSectorFromLineTag(lines+i,s)) >= 0;)
-                {
-                  sectors[s].teamstartsec = lines[i].special-999; // only 999 so we know when it is set (it's != 0)
-                }
+	      for (s = -1; (s = FindSectorFromTag(l->tag, s)) >= 0;)
+		sectors[s].teamstartsec = special - 999; // only 999 so we know when it is set (it's != 0)
 	      break;
             }
+	  else
+	    clear = false;
         }
+
+
+      if (clear)
+	l->special = 0;
     }
 }
 
@@ -1949,47 +2077,48 @@ void scroll_t::Think()
   if (!(tdx | tdy))                   // no-op if both (x,y) offsets 0
     return;
 
-  switch (type)
+  if (type == sc_side)  //Scroll wall texture
     {
-      side_t *side;
-      sector_t *sec;
-      fixed_t height, waterheight;
-      msecnode_t *node;
-      Actor *thing;
-
-    case sc_side:                   //Scroll wall texture
-      side = mp->sides + affectee;
+      side_t *side = mp->sides + affectee;
       side->textureoffset += tdx;
       side->rowoffset += tdy;
-      break;
+      return;
+    }
 
-    case sc_floor:                  //Scroll floor texture
-      sec = mp->sectors + affectee;
+  sector_t *sec = mp->sectors + affectee;
+
+  if (type & sc_floor)  //Scroll floor texture
+    {
       sec->floor_xoffs += tdx;
       sec->floor_yoffs += tdy;
-      break;
-
-    case sc_ceiling:               //Scroll ceiling texture
-      sec = mp->sectors + affectee;
+    }
+  
+  if (type & sc_ceiling)  //Scroll ceiling texture
+    {
       sec->ceiling_xoffs += tdx;
       sec->ceiling_yoffs += tdy;
-      break;
+    }
 
-    case sc_carry_floor:
-    case sc_push:
-    case sc_wind:
 
-      sec = mp->sectors + affectee;
-      height = sec->floorheight;
-      waterheight = sec->heightsec != -1 &&
+  // Factor to scale scrolling effect into mobj-carrying properties = 3/32.
+  // (This is so scrolling floors and objects on them can move at same speed.)
+  const fixed_t CARRYFACTOR = fixed_t(FRACUNIT * 0.09375);
+
+  if (type & sc_carry_floor)
+    {
+      tdx = -FixedMul(tdx, CARRYFACTOR); // it seems texture offsets go the other way?
+      tdy = FixedMul(tdy, CARRYFACTOR);
+
+      fixed_t height = sec->floorheight;
+      fixed_t waterheight = sec->heightsec != -1 &&
         mp->sectors[sec->heightsec].floorheight > height ?
         mp->sectors[sec->heightsec].floorheight : MININT;
 
-      for (node = sec->touching_thinglist; node; node = node->m_snext)
+      for (msecnode_t *node = sec->touching_thinglist; node; node = node->m_snext)
 	{
-	  thing = node->m_thing;
+	  Actor *thing = node->m_thing;
 
-	  if (type == sc_wind && !(thing->flags2 & MF2_WINDTHRUST))
+	  if (type & sc_wind && !(thing->flags2 & MF2_WINDTHRUST))
 	    continue;
 
 	  if (!(thing->flags & MF_NOCLIPLINE) &&
@@ -2002,10 +2131,6 @@ void scroll_t::Think()
             thing->py += tdy;
           }
 	}
-      break;
-
-    case sc_carry_ceiling:       // to be added later
-      break;
     }
 }
 
@@ -2023,7 +2148,7 @@ void scroll_t::Think()
 //
 // accel: non-zero if this is an accelerative effect
 
-scroll_t::scroll_t(scroll_e t, fixed_t dx, fixed_t dy, sector_t *csec, int aff, bool acc)
+scroll_t::scroll_t(short t, fixed_t dx, fixed_t dy, sector_t *csec, int aff, bool acc)
 {
   type = t;
   vx = dx;
@@ -2058,12 +2183,9 @@ static scroll_t *Add_WallScroller(fixed_t dx, fixed_t dy, const line_t *l,
 // Amount (dx,dy) vector linedef is shifted right to get scroll amount
 #define SCROLL_SHIFT 5
 
-// Factor to scale scrolling effect into mobj-carrying properties = 3/32.
-// (This is so scrolling floors and objects on them can move at same speed.)
-#define CARRYFACTOR ((fixed_t)(FRACUNIT*.09375))
-
 
 // Initialize the scrollers
+/*
 void Map::SpawnScrollers()
 {
   int i, s;
@@ -2131,20 +2253,6 @@ void Map::SpawnScrollers()
                        sides[s].rowoffset, NULL, l->sidenum[0], accel));
           break;
 
-	  // Hexen
-	case 100: // Scroll_Texture_Left
-          AddThinker(new scroll_t(scroll_t::sc_side, -l->args[0] << 10, 0, NULL, l->sidenum[0], false));
-	  break;
-	case 101: // Scroll_Texture_Right
-          AddThinker(new scroll_t(scroll_t::sc_side, l->args[0] << 10, 0, NULL, l->sidenum[0], false));
-	  break;
-	case 102: // Scroll_Texture_Up
-          AddThinker(new scroll_t(scroll_t::sc_side, 0, l->args[0] << 10, NULL, l->sidenum[0], false));
-	  break;
-	case 103: // Scroll_Texture_Down
-          AddThinker(new scroll_t(scroll_t::sc_side, 0, -l->args[0] << 10, NULL, l->sidenum[0], false));
-	  break;
-
 	default:
 	  clear = false;
         }
@@ -2153,6 +2261,40 @@ void Map::SpawnScrollers()
 	l->special = 0;
     }
 }
+*/
+
+
+/// spawns Boom wall, floor and ceiling scrollers
+void Map::SpawnScroller(line_t *l, int tag, int type, int control)
+{
+  int s = l->sidenum[0];
+  line_t *l2;
+  fixed_t dx = l->dx >> SCROLL_SHIFT;  // direction and speed of scrolling
+  fixed_t dy = l->dy >> SCROLL_SHIFT;
+
+  // possible control sector
+  sector_t *csec = (control & scroll_t::sc_displacement) ? sides[s].sector : NULL;
+  bool accel = control & scroll_t::sc_accelerative;
+
+  if (type == scroll_t::sc_side)
+    {
+      if (control & scroll_t::sc_offsets)
+	{
+	  AddThinker(new scroll_t(scroll_t::sc_side, -sides[s].textureoffset,
+				  sides[s].rowoffset, NULL, s, accel));
+	}
+      else
+	for (s = -1; (l2 = FindLineFromTag(tag, &s)) != NULL; )
+	  if (l2 != l)
+	    AddThinker(Add_WallScroller(dx, dy, l2, csec, accel));
+      return;
+    }
+
+  // okay, the rest of the types are stackable (flags)
+  for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0;)
+    AddThinker(new scroll_t(type, -dx, dy, csec, s, accel));
+}
+
 
 
 
@@ -2245,59 +2387,51 @@ void friction_t::Think()
 */
 
 //Spawn all friction.
-void Map::SpawnFriction()
+void Map::SpawnFriction(line_t *l, int tag)
 {
-  int i;
-  line_t *l = lines;
-  register int s;
-  float length;     // line length controls magnitude
-  float friction;   // friction value to be applied during movement
-  float movefactor; // applied to each player move to simulate inertia
-
   extern float normal_friction;
 
-  for (i = 0 ; i < numlines ; i++,l++)
-    if (l->special == 223)
-      {
-	length = P_AproxDistance(l->dx,l->dy) >> FRACBITS;
+  // line length controls magnitude
+  float length = P_AproxDistance(l->dx,l->dy) >> FRACBITS;
 
-	//friction = (0x1EB8*length)/0x80 + 0xD000;
-	// l = 200 gives 1, l = 100 gives the original, l = 0 gives 0.8125
-	friction = length * 9.375e-4 + 0.8125;
+  // l = 200 gives 1, l = 100 gives the original, l = 0 gives 0.8125
 
-	if (friction > 1.0)
-	  friction = 1.0;
-	if (friction < 0.0)
-	  friction = 0.0;
+  // friction value to be applied during movement
+  //friction = (0x1EB8*length)/0x80 + 0xD000;
+  float friction = length * 9.375e-4 + 0.8125;
 
-	// object max speed is proportional to movefactor/(1-friction)
-	// higher friction value actually means 'less friction'.
-	// the movefactors are a bit different from BOOM (better;)
+  if (friction > 1.0)
+    friction = 1.0;
+  if (friction < 0.0)
+    friction = 0.0;
 
-	if (friction > normal_friction)
-	  // ice, max speed is unchanged.
-	  //movefactor = ((0x10092 - friction)*(0x70))/0x158;
-	  //movefactor = (65682 - friction) * 112/344;
-	  movefactor = (1.0 - friction) * 10.667;
-	else
-	  // mud
-	  //movefactor = ((friction - 0xDB34)*(0xA))/0x80;
-	  //movefactor = (friction - 56116) * 10/128;
-	  movefactor = (friction - 0.8125) * 10.667;
+  // object max speed is proportional to movefactor/(1-friction)
+  // higher friction value actually means 'less friction'.
+  // the movefactors are a bit different from BOOM (better;)
 
-	// minimum movefactor (1/64)
-	if (movefactor < 1.0/64)
-	  movefactor = 1.0/64;
+  float movefactor; // applied to each player move to simulate inertia
 
-	for (s = -1; (s = FindSectorFromLineTag(l,s)) >= 0 ; )
-	  {
-	    //AddThinker(new friction_t(friction,movefactor,s));
-	    sectors[s].friction   = friction;
-	    sectors[s].movefactor = movefactor;
-	  }
+  if (friction > normal_friction)
+    // ice, max speed is unchanged.
+    //movefactor = ((0x10092 - friction)*(0x70))/0x158;
+    //movefactor = (65682 - friction) * 112/344;
+    movefactor = (1.0 - friction) * 10.667;
+  else
+    // mud
+    //movefactor = ((friction - 0xDB34)*(0xA))/0x80;
+    //movefactor = (friction - 56116) * 10/128;
+    movefactor = (friction - 0.8125) * 10.667;
 
-	l->special = 0;
-      }
+  // minimum movefactor (1/64)
+  if (movefactor < 1.0/64)
+    movefactor = 1.0/64;
+
+  for (int s = -1; (s = FindSectorFromTag(tag, s)) >= 0 ; )
+    {
+      //AddThinker(new friction_t(friction,movefactor,s));
+      sectors[s].friction   = friction;
+      sectors[s].movefactor = movefactor;
+    }
 }
 
 
@@ -2398,7 +2532,7 @@ void pusher_t::Think()
   //
   // In Phase II, you can apply these effects to Things other than players.
 
-  if (type == p_push)
+  if (type == p_point)
     {
       int xl,xh,yl,yh,bx,by;
       // Seek out all pushable things within the force radius of this
@@ -2496,11 +2630,9 @@ void pusher_t::Think()
 // Get pusher object.
 DActor *Map::GetPushThing(int s)
 {
-  Actor* thing;
-  sector_t* sec;
+  sector_t *sec = sectors + s;
+  Actor *thing = sec->thinglist;
 
-  sec = sectors + s;
-  thing = sec->thinglist;
   while (thing)
     {
       if (thing->IsOf(DActor::_type))
@@ -2521,40 +2653,29 @@ DActor *Map::GetPushThing(int s)
 }
 
 // Spawn pushers.
-void Map::SpawnPushers()
+void Map::SpawnPusher(line_t *l, int tag, int type)
 {
-  int i;
-  line_t *l = lines;
-  register int s;
+  int s;
 
-  for (i = 0; i < numlines; i++, l++)
+  switch (type)
     {
-      bool clear = true;
-      switch (l->special)
+    case pusher_t::p_wind:
+      for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0 ; )	  
+	AddThinker(new pusher_t(pusher_t::p_wind, l->dx, l->dy, NULL, s));
+      break;
+
+    case pusher_t::p_current:
+      for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0 ; )
+	AddThinker(new pusher_t(pusher_t::p_current, l->dx, l->dy, NULL, s));
+      break;
+
+    case pusher_t::p_point:
+      for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0 ; )
 	{
-	case 224: // wind
-	  for (s = -1; (s = FindSectorFromLineTag(l,s)) >= 0 ; )	  
-	    AddThinker(new pusher_t(pusher_t::p_wind, l->dx, l->dy, NULL, s));
-	  break;
-	case 225: // current
-	  for (s = -1; (s = FindSectorFromLineTag(l,s)) >= 0 ; )
-	    AddThinker(new pusher_t(pusher_t::p_current, l->dx, l->dy, NULL, s));
-	  break;
-	case 226: // push/pull
-	  for (s = -1; (s = FindSectorFromLineTag(l,s)) >= 0 ; )
-	    {
-	      // TODO don't spawn push mapthings at all?
-	      DActor* thing = GetPushThing(s);
-	      if (thing) // No MT_P* means no effect
-		AddThinker(new pusher_t(pusher_t::p_push, l->dx, l->dy, thing, s));
-	    }
-	  break;
-
-	default:
-	  clear = false;
+	  DActor* thing = GetPushThing(s);
+	  if (thing) // No MT_P* means no effect
+	    AddThinker(new pusher_t(pusher_t::p_point, l->dx, l->dy, thing, s));
 	}
-
-      if (clear)
-	l->special = 0;
+      break;
     }
 }

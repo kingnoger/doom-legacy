@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.27  2004/08/29 20:48:50  smite-meister
+// bugfixes. wow.
+//
 // Revision 1.26  2004/08/19 19:42:42  smite-meister
 // bugfixes
 //
@@ -189,6 +192,7 @@
 
 #include "i_video.h"
 #include "r_data.h"
+#include "r_draw.h"
 #include "r_state.h"
 #include "v_video.h"
 
@@ -210,6 +214,7 @@ int             firstwaterflat; //added:18-02-98:WATER!
 #endif
 
 
+/// lightlevel colormaps from COLORMAP lump
 lighttable_t    *colormaps;
 
 
@@ -721,6 +726,64 @@ void texturecache_t::InitPaletteConversion()
 }
 
 
+
+/// tries to retrieve a transmap by name. returns transtable number, -1 if unsuccesful.
+static int R_TransmapNumForName(const char *name)
+{
+  int lump = fc.FindNumForName(name);
+  if (lump >= 0 && fc.LumpLength(lump) == tr_size)
+    {
+      fc.ReadLump(lump, transtables); // FIXME just testing, we can't clobber existing transmaps
+      return 0;
+    }
+  return -1;
+}
+
+
+// semi-hack for linedeftype 242 and the like, where the
+// "texture name" field can hold a colormap or a transmap name instead.
+int texturecache_t::GetTextureOrColormap(const char *name, int &colmap, bool transmap)
+{
+  // "NoTexture" marker. No texture, no colormap.
+  if (name[0] == '-')
+    {
+      colmap = -1;
+      return 0;
+    }
+
+#ifdef HWRENDER
+  if (rendermode == render_soft)
+    {
+#endif
+      int temp;
+      if (transmap)
+	temp = R_TransmapNumForName(name);
+      else
+	temp = R_ColormapNumForName(name); // check C_*... lists
+
+      if (temp >= 0)
+	{
+	  // it is a trans/colormap lumpname, not a texture
+	  colmap = temp;
+	  return 0;
+	}
+#ifdef HWRENDER
+    }
+#endif
+
+  // it could be a texture, let's check
+  Texture *t = (Texture *)Cache(name);
+
+  if (t == default_item)
+    CONS_Printf("Def. texture used for '%s'\n", name);
+    //I_Error("halt");
+
+  colmap = -1;
+  return t->id;
+}
+
+
+
 int texturecache_t::Get(const char *name, bool substitute)
 {
   // "NoTexture" marker.
@@ -980,12 +1043,12 @@ struct lumplist_t
 };
 
 
-int R_CheckNumForNameList(const char *name, lumplist_t *ll, int listsize)
+static int R_CheckNumForNameList(const char *name, lumplist_t *ll, int listsize)
 {
   for (int i = listsize - 1; i > -1; i--)
     {
       int lump = fc.FindNumForNameFile(name, ll[i].wadfile, ll[i].firstlump);
-      if ((lump & 0xffff) > (ll[i].firstlump + ll[i].numlumps) || lump == -1)
+      if ((lump & 0xffff) >= (ll[i].firstlump + ll[i].numlumps) || lump == -1)
         continue;
       else
         return lump;
@@ -994,138 +1057,60 @@ int R_CheckNumForNameList(const char *name, lumplist_t *ll, int listsize)
 }
 
 
+// lumplist for C_START - C_END pairs in wads
+static lumplist_t *colormaplumps;
+static int         numcolormaplumps;
 
-lumplist_t*  colormaplumps;
-int          numcolormaplumps;
+static int foundcolormaps[MAXCOLORMAPS]; // colormap number to lumpnumber
 
-void R_InitExtraColormaps()
+
+
+/// called in R_Init
+void R_InitColormaps()
 {
+  // Load in the lightlevel colormaps, now 64k aligned for smokie...
+
+  int lump = fc.GetNumForName("COLORMAP");
+  colormaps = (lighttable_t *)Z_MallocAlign(fc.LumpLength(lump), PU_STATIC, 0, 16);
+  fc.ReadLump(lump, colormaps);
+
+  //SoM: 3/30/2000: Init Boom colormaps.
+
+  num_extra_colormaps = 0;
+  memset(extra_colormaps, 0, sizeof(extra_colormaps));
+
+  // build the colormap lumplists (which record the locations of C_START and C_END in each wad)
   numcolormaplumps = 0;
   colormaplumps = NULL;
 
-  int cfile, clump = 0;
+  int clump = 0;
   int nwads = fc.Size();
 
-  for (cfile = 0; cfile < nwads; cfile++, clump = 0)
+  for (int cfile = 0; cfile < nwads; cfile++, clump = 0)
     {
       int startnum = fc.FindNumForNameFile("C_START", cfile, clump);
       if (startnum == -1)
-        continue;
+        continue; // required
 
       int endnum = fc.FindNumForNameFile("C_END", cfile, clump);
-
       if (endnum == -1)
         I_Error("R_InitColormaps: C_START without C_END\n");
 
       if ((startnum >> 16) != (endnum >> 16))
-        I_Error("R_InitColormaps: C_START and C_END in different wad files!\n");
+        I_Error("R_InitColormaps: C_START and C_END in different wad files!\n"); // cannot happen...
 
       colormaplumps = (lumplist_t *)realloc(colormaplumps, sizeof(lumplist_t) * (numcolormaplumps + 1));
       colormaplumps[numcolormaplumps].wadfile = startnum >> 16;
-      colormaplumps[numcolormaplumps].firstlump = (startnum&0xFFFF) + 1;
+      colormaplumps[numcolormaplumps].firstlump = (startnum & 0xFFFF) + 1; // after C_START
       colormaplumps[numcolormaplumps].numlumps = endnum - (startnum + 1);
       numcolormaplumps++;
     }
-}
 
-
-
-//lumplist_t*  flats;
-//int          numflatlists;
-//extern int   numwadfiles;
-
-/*
-void R_InitFlats()
-{
-  int       startnum;
-  int       endnum;
-  int       cfile;
-  int       clump;
-  int nwads;
-
-  numflatlists = 0;
-  flats = NULL;
-  cfile = clump = 0;
-
-#ifdef OLDWATER
-  //added:18-02-98: WATER! flatnum of the first waterflat
-  firstwaterflat = fc.GetNumForName ("WATER0");
-#endif
-  nwads = fc.Size();
-
-  for(;cfile < nwads;cfile ++, clump = 0)
-  {
-    startnum = fc.FindNumForNameFile("F_START", cfile, clump);
-    if(startnum == -1)
-    {
-      clump = 0;
-      startnum = fc.FindNumForNameFile("FF_START", cfile, clump);
-
-      if(startnum == -1) //If STILL -1, search the whole file!
-      {
-        flats = (lumplist_t *)realloc(flats, sizeof(lumplist_t) * (numflatlists + 1));
-        flats[numflatlists].wadfile = cfile;
-        flats[numflatlists].firstlump = 0;
-        flats[numflatlists].numlumps = 0xffff; //Search the entire file!
-        numflatlists ++;
-        continue;
-      }
-    }
-
-    endnum = fc.FindNumForNameFile("F_END", cfile, clump);
-    if(endnum == -1)
-      endnum = fc.FindNumForNameFile("FF_END", cfile, clump);
-
-    if(endnum == -1 || (startnum &0xFFFF) > (endnum & 0xFFFF))
-    {
-      flats = (lumplist_t *)realloc(flats, sizeof(lumplist_t) * (numflatlists + 1));
-      flats[numflatlists].wadfile = cfile;
-      flats[numflatlists].firstlump = 0;
-      flats[numflatlists].numlumps = 0xffff; //Search the entire file!
-      numflatlists ++;
-      continue;
-    }
-
-    flats = (lumplist_t *)realloc(flats, sizeof(lumplist_t) * (numflatlists + 1));
-    flats[numflatlists].wadfile = startnum >> 16;
-    flats[numflatlists].firstlump = (startnum&0xFFFF) + 1;
-    flats[numflatlists].numlumps = endnum - (startnum + 1);
-    numflatlists++;
-    continue;
-  }
-
-  if(!numflatlists)
-    I_Error("R_InitFlats: No flats found!\n");
-}
-*/
-
-
-
-
-//
-// R_InitColormaps
-//
-void R_InitColormaps()
-{
-  int lump;
-
-  // Load in the light tables,
-  // now 64k aligned for smokie...
-  lump = fc.GetNumForName("COLORMAP");
-  colormaps = (lighttable_t *)Z_MallocAlign(fc.LumpLength(lump), PU_STATIC, 0, 16);
-  fc.ReadLump(lump,colormaps);
-
-  //SoM: 3/30/2000: Init Boom colormaps.
-  {
-    num_extra_colormaps = 0;
-    memset(extra_colormaps, 0, sizeof(extra_colormaps));
-    R_InitExtraColormaps();
-  }
   // TODO Hexen maps can have custom lightmaps ("fadetable" MAPINFO command)... just a note.
 }
 
 
-int    foundcolormaps[MAXCOLORMAPS];
+
 
 //SoM: Clears out extra colormaps between levels.
 void R_ClearColormaps()
@@ -1138,26 +1123,25 @@ void R_ClearColormaps()
 
 
 
+// tries to retrieve a colormap by name. returns -1 if unsuccesful.
 int R_ColormapNumForName(const char *name)
 {
-  int lump, i;
+  int lump = R_CheckNumForNameList(name, colormaplumps, numcolormaplumps);
+  if (lump == -1)
+    return -1;
+
+  for (int i = 0; i < num_extra_colormaps; i++)
+    if (lump == foundcolormaps[i])
+      return i;
 
   if (num_extra_colormaps == MAXCOLORMAPS)
     I_Error("R_ColormapNumForName: Too many colormaps!\n");
-
-  lump = R_CheckNumForNameList(name, colormaplumps, numcolormaplumps);
-  if (lump == -1)
-    I_Error("R_ColormapNumForName: Cannot find colormap lump %s\n", name);
-
-  for (i = 0; i < num_extra_colormaps; i++)
-    if (lump == foundcolormaps[i])
-      return i;
 
   foundcolormaps[num_extra_colormaps] = lump;
 
   // aligned on 8 bit for asm code
   extra_colormaps[num_extra_colormaps].colormap = (lighttable_t *)Z_MallocAlign (fc.LumpLength (lump), PU_LEVEL, 0, 8);
-  fc.ReadLump (lump,extra_colormaps[num_extra_colormaps].colormap);
+  fc.ReadLump(lump, extra_colormaps[num_extra_colormaps].colormap);
 
   // SoM: Added, we set all params of the colormap to normal because there
   // is no real way to tell how GL should handle a colormap lump anyway..
@@ -1168,9 +1152,26 @@ int R_ColormapNumForName(const char *name)
   extra_colormaps[num_extra_colormaps].fadeend = 33;
   extra_colormaps[num_extra_colormaps].fog = 0;
 
-  num_extra_colormaps++;
-  return num_extra_colormaps - 1;
+  return num_extra_colormaps++;
 }
+
+
+
+const char *R_ColormapNameForNum(int num)
+{
+  if (num == -1)
+    return "NONE";
+
+  if (num < 0 || num >= MAXCOLORMAPS)
+    I_Error("R_ColormapNameForNum: num is invalid!\n");
+
+  if (foundcolormaps[num] == -1)
+    return "INLEVEL";
+
+  return fc.FindNameForNum(foundcolormaps[num]);
+}
+
+
 
 
 
@@ -1188,8 +1189,6 @@ int RoundUp(double number)
   return int(number);
 }
 
-// SoM:
-//
 // R_CreateColormap
 // This is a more GL friendly way of doing colormaps: Specify colormap
 // data in a special linedef's texture areas and use that to generate
@@ -1375,23 +1374,6 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
 
 
 
-
-const char *R_ColormapNameForNum(int num)
-{
-  if(num == -1)
-    return "NONE";
-
-  if(num < 0 || num > MAXCOLORMAPS)
-    I_Error("R_ColormapNameForNum: num is invalid!\n");
-
-  if(foundcolormaps[num] == -1)
-    return "INLEVEL";
-
-  return fc.FindNameForNum(foundcolormaps[num]);
-  //wadfiles[foundcolormaps[num] >> 16]->lumpinfo[foundcolormaps[num] & 0xffff].name;
-}
-
-
 //
 //  build a table for quick conversion from 8bpp to 15bpp
 //
@@ -1417,6 +1399,82 @@ void R_Init8to16()
   for (i=0;i<16384;i++)
     hicolormaps[i] = i<<1;
 }
+
+
+
+
+
+
+
+
+//lumplist_t*  flats;
+//int          numflatlists;
+//extern int   numwadfiles;
+
+/*
+void R_InitFlats()
+{
+  int       startnum;
+  int       endnum;
+  int       cfile;
+  int       clump;
+  int nwads;
+
+  numflatlists = 0;
+  flats = NULL;
+  cfile = clump = 0;
+
+#ifdef OLDWATER
+  //added:18-02-98: WATER! flatnum of the first waterflat
+  firstwaterflat = fc.GetNumForName ("WATER0");
+#endif
+  nwads = fc.Size();
+
+  for(;cfile < nwads;cfile ++, clump = 0)
+  {
+    startnum = fc.FindNumForNameFile("F_START", cfile, clump);
+    if(startnum == -1)
+    {
+      clump = 0;
+      startnum = fc.FindNumForNameFile("FF_START", cfile, clump);
+
+      if(startnum == -1) //If STILL -1, search the whole file!
+      {
+        flats = (lumplist_t *)realloc(flats, sizeof(lumplist_t) * (numflatlists + 1));
+        flats[numflatlists].wadfile = cfile;
+        flats[numflatlists].firstlump = 0;
+        flats[numflatlists].numlumps = 0xffff; //Search the entire file!
+        numflatlists ++;
+        continue;
+      }
+    }
+
+    endnum = fc.FindNumForNameFile("F_END", cfile, clump);
+    if(endnum == -1)
+      endnum = fc.FindNumForNameFile("FF_END", cfile, clump);
+
+    if(endnum == -1 || (startnum &0xFFFF) > (endnum & 0xFFFF))
+    {
+      flats = (lumplist_t *)realloc(flats, sizeof(lumplist_t) * (numflatlists + 1));
+      flats[numflatlists].wadfile = cfile;
+      flats[numflatlists].firstlump = 0;
+      flats[numflatlists].numlumps = 0xffff; //Search the entire file!
+      numflatlists ++;
+      continue;
+    }
+
+    flats = (lumplist_t *)realloc(flats, sizeof(lumplist_t) * (numflatlists + 1));
+    flats[numflatlists].wadfile = startnum >> 16;
+    flats[numflatlists].firstlump = (startnum&0xFFFF) + 1;
+    flats[numflatlists].numlumps = endnum - (startnum + 1);
+    numflatlists++;
+    continue;
+  }
+
+  if(!numflatlists)
+    I_Error("R_InitFlats: No flats found!\n");
+}
+*/
 
 
 

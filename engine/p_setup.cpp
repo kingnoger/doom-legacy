@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.44  2004/08/29 20:48:48  smite-meister
+// bugfixes. wow.
+//
 // Revision 1.43  2004/08/19 19:42:41  smite-meister
 // bugfixes
 //
@@ -740,9 +743,6 @@ void Map::LoadLineDefs(int lump)
 
           ld->sidenum[0] = SHORT(mld->sidenum[0]);
           ld->sidenum[1] = SHORT(mld->sidenum[1]);
-
-          if (ld->sidenum[0] != -1 && ld->special)
-            sides[ld->sidenum[0]].special = ld->special;
           mld++;
         }
 
@@ -782,6 +782,8 @@ void Map::LoadLineDefs(int lump)
           ld->bbox[BOXBOTTOM] = v2->y;
           ld->bbox[BOXTOP] = v1->y;
         }
+
+      ld->transmap = -1; // no transmap by default
     }
 
   Z_Free (data);
@@ -850,7 +852,6 @@ void Map::LoadSideDefs2(int lump)
 {
   byte *data = (byte *)fc.CacheLumpNum(lump,PU_STATIC);
   int  i;
-  int  num;
 
   // Texture names should be NUL-terminated.
   // Also, they should be uppercase (e.g. Doom E1M2)
@@ -874,154 +875,90 @@ void Map::LoadSideDefs2(int lump)
       // refined to allow colormaps to work as wall
       // textures if invalid as colormaps but valid as textures.
 
-      // FIXME these linedeftypes do not work as expected (tags! you cannot use them yet!)
-
       sd->sector = sec = &sectors[SHORT(msd->sector)];
-      switch (sd->special)
-        {
-        case 242:  // BOOM: fake ceiling/floor, variable colormaps
-        case 280:  // Legacy: swimmable water, colormaps
+
+      // specials where texture names might be something else
+      if (sd->special)
+	switch (sd->special)
+	  {
+	  case 1:  // BOOM: 242 fake ceiling/floor, variable colormaps
+	  case 3:  // Legacy: swimmable water, colormaps
+	    sd->toptexture = tc.GetTextureOrColormap(ttex, sec->topmap);
+	    sd->midtexture = tc.GetTextureOrColormap(mtex, sec->midmap);
+	    sd->bottomtexture = tc.GetTextureOrColormap(btex, sec->bottommap);
+	    break;
+
+	  case 2: // BOOM: 260 make middle texture translucent
+	    sd->toptexture = tc.Get(ttex);
+	    sd->midtexture = tc.GetTextureOrColormap(mtex, sd->special, true); // can also be a transmap lumpname
+	    sd->bottomtexture = tc.Get(btex);
+	    break;
+
+	  case 4: // Legacy: create a colormap
 #ifdef HWRENDER
-          if(rendermode == render_soft)
-            {
+	    if (rendermode == render_soft)
+	      {
 #endif
-	      int  mapnum;
-              num = tc.Get(ttex, false);
-
-              if(num == -1)
-                {
-                  sec->topmap = mapnum = R_ColormapNumForName(ttex);
-                  sd->toptexture = 0;
-                }
-              else
-                sd->toptexture = num;
-
-              num = tc.Get(mtex, false);
-              if(num == -1)
-                {
-                  sec->midmap = mapnum = R_ColormapNumForName(mtex);
-                  sd->midtexture = 0;
-                }
-              else
-                sd->midtexture = num;
-
-              num = tc.Get(btex, false);
-              if(num == -1)
-                {
-                  sec->bottommap = mapnum = R_ColormapNumForName(btex);
-                  sd->bottomtexture = 0;
-                }
-              else
-                sd->bottomtexture = num;
+		if(ttex[0] == '#' || btex[0] == '#')
+		  {
+		    sec->midmap = R_CreateColormap(ttex, mtex, btex);
+		    sd->toptexture = sd->bottomtexture = 0;
+		  }
+		else
+		  {
+		    sd->toptexture = tc.Get(ttex);
+		    sd->midtexture = tc.Get(mtex);
+		    sd->bottomtexture = tc.Get(btex);
+		  }
 #ifdef HWRENDER
-            }
-          else
-            {
-              sd->toptexture = tc.Get(ttex);
-              sd->midtexture = tc.Get(mtex);
-              sd->bottomtexture = tc.Get(btex);
-            }
-#endif
-          break;
+	      }
+	    else
+	      {
+		//TODO: Hurdler: for now, full support of toptexture only
+		if (ttex[0] == '#')// || btex[0] == '#')
+		  {
+		    char *col = ttex;
 
-        case 282: // Legacy: set colormap
-#ifdef HWRENDER
-          if(rendermode == render_soft)
-            {
-#endif
-              if(ttex[0] == '#' || btex[0] == '#')
-                {
-                  sec->midmap = R_CreateColormap(ttex, mtex, btex);
-                  sd->toptexture = sd->bottomtexture = 0;
-                }
-              else
-                {
-                  sd->toptexture = tc.Get(ttex);
-                  sd->midtexture = tc.Get(mtex);
-                  sd->bottomtexture = tc.Get(btex);
-                }
-
-#ifdef HWRENDER
-            }
-          else
-            {
-              //TODO: Hurdler: for now, full support of toptexture only
-              if(ttex[0] == '#')// || btex[0] == '#')
-                {
-                  char *col = ttex;
-
-                  sec->midmap = R_CreateColormap(ttex, mtex, btex);
-                  sd->toptexture = sd->bottomtexture = 0;
+		    sec->midmap = R_CreateColormap(ttex, mtex, btex);
+		    sd->toptexture = sd->bottomtexture = 0;
 # define HEX2INT(x) (x >= '0' && x <= '9' ? x - '0' : x >= 'a' && x <= 'f' ? x - 'a' + 10 : x >= 'A' && x <= 'F' ? x - 'A' + 10 : 0)
 # define ALPHA2INT(x) (x >= 'a' && x <= 'z' ? x - 'a' : x >= 'A' && x <= 'Z' ? x - 'A' : 0)
-                  sec->extra_colormap = &extra_colormaps[sec->midmap];
-                  sec->extra_colormap->rgba =
-                    (HEX2INT(col[1]) << 4) + (HEX2INT(col[2]) << 0) +
-                    (HEX2INT(col[3]) << 12) + (HEX2INT(col[4]) << 8) +
-                    (HEX2INT(col[5]) << 20) + (HEX2INT(col[6]) << 16) +
-                    (ALPHA2INT(col[7]) << 24);
+		    sec->extra_colormap = &extra_colormaps[sec->midmap];
+		    sec->extra_colormap->rgba =
+		      (HEX2INT(col[1]) << 4) + (HEX2INT(col[2]) << 0) +
+		      (HEX2INT(col[3]) << 12) + (HEX2INT(col[4]) << 8) +
+		      (HEX2INT(col[5]) << 20) + (HEX2INT(col[6]) << 16) +
+		      (ALPHA2INT(col[7]) << 24);
 # undef ALPHA2INT
 # undef HEX2INT
-                }
-              else
-                {
-                  sd->toptexture = tc.Get(ttex);
-                  sd->midtexture = tc.Get(mtex);
-                  sd->bottomtexture = tc.Get(btex);
-                }
-              break;
-            }
+		  }
+		else
+		  {
+		    sd->toptexture = tc.Get(ttex);
+		    sd->midtexture = tc.Get(mtex);
+		    sd->bottomtexture = tc.Get(btex);
+		  }
+	      }
 #endif
+	    break;
 
-        case 260: // BOOM: make texture transparent
-          num = tc.Get(mtex, false);
-          if(num == -1)
-            sd->midtexture = 1;
-          else
-            sd->midtexture = num;
-
-          num = tc.Get(ttex, false);
-          if(num == -1)
-            sd->toptexture = 1;
-          else
-            sd->toptexture = num;
-
-          num = tc.Get(btex, false);
-          if(num == -1)
-            sd->bottomtexture = 1;
-          else
-            sd->bottomtexture = num;
-          break;
-
-          /*        case 260: // killough 4/11/98: apply translucency to 2s normal texture
-                    sd->midtexture = strncasecmp("TRANMAP", mtex, 8) ?
-                    (sd->special = fc.CheckNumForName(mtex)) < 0 ||
-                    fc.LumpLength(sd->special) != 65536 ?
-                    sd->special=0, R_TextureNumForName(mtex) :
-                    (sd->special++, 0) : (sd->special=0);
-                    sd->toptexture = R_TextureNumForName(ttex);
-                    sd->bottomtexture = R_TextureNumForName(btex);
-                    break;*/ //This code is replaced.. I need to fix this though
-
-
-          //Hurdler: added for alpha value with translucent 3D-floors/water
-        case 300:
-        case 301:
-          if(ttex[0] == '#')
-            {
-              char *col = ttex;
-              sd->toptexture = sd->bottomtexture = ((col[1]-'0')*100+(col[2]-'0')*10+col[3]-'0')+1;
-            }
-          else
-            sd->toptexture = sd->bottomtexture = 0;
-          sd->midtexture = tc.Get(mtex);
-          break;
-
-        default: // normal cases
-          sd->midtexture = tc.Get(mtex);
+	    //Hurdler: added for alpha value with translucent 3D-floors/water
+	    // TODO FIXME is this correct??
+	  case 300:
+	  case 301:
+	    if (ttex[0] == '#')
+	      sd->toptexture = sd->bottomtexture = ((ttex[1] - '0')*100 + (ttex[2] - '0')*10 + ttex[3] - '0') + 1;
+	    else
+	      sd->toptexture = sd->bottomtexture = 0;
+	    sd->midtexture = tc.Get(mtex);
+	    break;
+	  }
+      else
+	{
+	  // normal linedefs
           sd->toptexture = tc.Get(ttex);
+          sd->midtexture = tc.Get(mtex);
           sd->bottomtexture = tc.Get(btex);
-          break;
         }
     }
   Z_Free (data);
@@ -1284,11 +1221,12 @@ bool Map::Setup(tic_t start, bool spawnthings)
   LoadSectors1 (lumpnum+ML_SECTORS);
   LoadSideDefs (lumpnum+ML_SIDEDEFS);
   LoadLineDefs (lumpnum+ML_LINEDEFS);
-  LoadSideDefs2(lumpnum+ML_SIDEDEFS); // also processes some linedef specials
-  LoadLineDefs2();
 
   if (!hexen_format)
     ConvertLineDefs(); // Doom => Hexen conversion
+
+  LoadSideDefs2(lumpnum+ML_SIDEDEFS); // also processes some linedef specials
+  LoadLineDefs2();
 
   LoadSubsectors(lumpnum+ML_SSECTORS);
   LoadNodes(lumpnum+ML_NODES);
@@ -1358,12 +1296,12 @@ void Map::ConvertLineDefs()
   line_t *ld = lines;
   for (i=0; i<numlines; i++, ld++)
     {
+      bool passuse = ld->flags & ML_PASSUSE;
+      bool alltrigger = ld->flags & ML_ALLTRIGGER;
+      ld->flags &= 0x1ff; // only basic Doom flags are kept
+
       if (ld->special < n)
         {
-          bool passuse = ld->flags & ML_PASSUSE;
-          bool alltrigger = ld->flags & ML_ALLTRIGGER;
-          ld->flags &= 0x1ff; // only basic Doom flags are kept
-
           p = &xt[ld->special];
 
           if (p->type)
@@ -1374,7 +1312,7 @@ void Map::ConvertLineDefs()
 
           trig = p->trigger;
 
-          // time to put the flags back
+          // flags
           ld->flags |= (trig & 0x0f) << (ML_SPAC_SHIFT-1); // activation and repeat
 
           if (passuse && (GET_SPAC(ld->flags) == SPAC_USE))
@@ -1383,8 +1321,23 @@ void Map::ConvertLineDefs()
               ld->flags |= SPAC_PASSUSE << ML_SPAC_SHIFT;
             }
 
-          if (trig & T_ALLOWMONSTER || alltrigger)
+          if (trig & T_ALLOWMONSTER)
             ld->flags |= ML_MONSTERS_CAN_ACTIVATE;
         }
+      else if (ld->special >= GenCrusherBase)
+	{
+	  // Boom generalized linedefs
+	  ld->flags |= ML_BOOM_GENERALIZED;
+	  if (passuse)
+	    ld->flags |= SPAC_PASSUSE << ML_SPAC_SHIFT;
+	}
+
+      // put flags back
+      if (alltrigger)
+	ld->flags |= ML_MONSTERS_CAN_ACTIVATE;
+
+      // HACK some linedefs use texture names as data fields
+      if (ld->special == 50 && ld->args[0] == 4 && ld->sidenum[0] != -1)
+	sides[ld->sidenum[0]].special = ld->args[1];
     }
 }

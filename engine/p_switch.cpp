@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2004/08/29 20:48:48  smite-meister
+// bugfixes. wow.
+//
 // Revision 1.15  2004/08/12 18:30:25  smite-meister
 // cleaned startup
 //
@@ -347,7 +350,7 @@ void Map::ChangeSwitchTexture(line_t *line, int useAgain)
   if (loc != button_t::none)
     {
       // EXIT SWITCH?
-      if (line->special == 11)
+      if (line->special == 74)
 	S_StartSound(&line->frontsector->soundorg, sfx_switchoff);
       else
 	S_StartSound(&line->frontsector->soundorg, switchlist[i].sound);

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2004/08/29 20:48:48  smite-meister
+// bugfixes. wow.
+//
 // Revision 1.14  2004/04/25 16:26:50  smite-meister
 // Doxygen
 //
@@ -149,7 +152,7 @@ bool Actor::Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent)
 //                            TELEPORTATION
 // =========================================================================
 
-bool Map::EV_Teleport(int tag, line_t *line, Actor *thing, bool silent)
+bool Map::EV_Teleport(int tag, line_t *line, Actor *thing, int type, int flags)
 {
   if (!line)
     return false;
@@ -161,67 +164,78 @@ bool Map::EV_Teleport(int tag, line_t *line, Actor *thing, bool silent)
     return false;
 
   Actor *m;
+  int i;
 
-  // first check TID (Hexen system)
-  int i = TIDmap.count(tag);
-  if (i > 0)
+  bool noplayer = flags & 0x1; // TODO
+  bool silent   = flags & 0x2;
+  bool reldir   = flags & 0x4;
+  bool reverse  = flags & 0x8;
+
+  if (type == 0) // go to thing with correct TID (Hexen system)
     {
-      i = (P_Random() % i) - 1;
-      m = FindFromTIDmap(tag, &i);
-      if (!m)
-	I_Error("Can't find teleport mapspot\n");
+      i = TIDmap.count(tag);
+      if (i > 0)
+	{
+	  i = (P_Random() % i) - 1;
+	  m = FindFromTIDmap(tag, &i);
+	  if (!m)
+	    I_Error("Can't find teleport mapspot\n");
 
-      return thing->Teleport(m->x, m->y, m->angle, silent); // does the angle change work correctly?
+	  return thing->Teleport(m->x, m->y, m->angle, silent); // does the angle change work correctly?
+	}
     }
-
-  // otherwise use Boom system
-  for (i = -1; (i = FindSectorFromTag(tag, i)) >= 0;)
-    for (m = sectors[i].thinglist; m != NULL; m = m->snext)
-      {
-	if (!m->IsOf(DActor::_type))
-	  continue;
-	DActor *dm = (DActor *)m;
-	// not a teleportman
-	if (dm->type != MT_TELEPORTMAN)
-	  continue;
-
-	if (silent)
+  else if (type == 1) // go to teleport thing in tagged sector
+    {
+      for (i = -1; (i = FindSectorFromTag(tag, i)) >= 0;)
+	for (m = sectors[i].thinglist; m != NULL; m = m->snext)
 	  {
-	    // Get the angle between the exit thing and source linedef.
-	    // Rotate 90 degrees, so that walking perpendicularly across
-	    // teleporter linedef causes thing to exit in the direction
-	    // indicated by the exit thing.
-	    angle_t ang = m->angle + thing->angle - R_PointToAngle2(0, 0, line->dx, line->dy) - ANG90;
-	    return thing->Teleport(m->x, m->y, ang, true);
+	    if (!m->IsOf(DActor::_type))
+	      continue;
+	    DActor *dm = (DActor *)m;
+	    // not a teleportman
+	    if (dm->type != MT_TELEPORTMAN)
+	      continue;
+
+	    if (silent || reldir)
+	      {
+		// Get the angle between the exit thing and source linedef.
+		// Rotate 90 degrees, so that walking perpendicularly across
+		// teleporter linedef causes thing to exit in the direction
+		// indicated by the exit thing.
+		angle_t ang = m->angle + thing->angle - R_PointToAngle2(0, 0, line->dx, line->dy) - ANG90;
+		return thing->Teleport(m->x, m->y, ang, true);
+	      }
+	    else
+	      return thing->Teleport(m->x, m->y, m->angle, false);
 	  }
-	else
-	  return thing->Teleport(m->x, m->y, m->angle, false);
-      }
+    }
+  else
+    return EV_SilentLineTeleport(tag, line, thing, reverse);
+
   return false;
 }
 
 
-//
+
 // Silent linedef-based TELEPORTATION, by Lee Killough
 // Primarily for rooms-over-rooms etc.
 // This is the complete player-preserving kind of teleporter.
 // It has advantages over the teleporter with thing exits.
-//
 
 // maximum fixed_t units to move object to avoid hiccups
 #define FUDGEFACTOR 10
 
-bool Map::EV_SilentLineTeleport(line_t *line, int side, Actor *thing, bool reverse)
+bool Map::EV_SilentLineTeleport(int tag, line_t *line, Actor *thing, bool reverse)
 {
   int i;
   line_t *l;
   if (!line)
     return false;
 
-  if (side || thing->flags & MF_MISSILE)
+  if (thing->flags2 & MF2_NOTELEPORT)
     return false;
 
-  for (i = -1; (l = FindLineFromTag(line->tag, &i)) != NULL;)
+  for (i = -1; (l = FindLineFromTag(tag, &i)) != NULL;)
     if (l != line && l->backsector)
       {
         // Get the thing's position along the source linedef

@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.17  2004/08/29 20:48:47  smite-meister
+// bugfixes. wow.
+//
 // Revision 1.16  2004/08/12 18:30:23  smite-meister
 // cleaned startup
 //
@@ -402,6 +405,7 @@ static parsercmd_t MAPINFO_MAP_commands[] =
   {P_ITEM_INT, "cdtrack", MI_offset(cdtrack)},
   {P_ITEM_STR, "music", MI_offset(musiclump)},
   {P_ITEM_INT, "par", MI_offset(partime)},
+  {P_ITEM_INT, "bossdeath", MI_offset(BossDeathKey)},
 
   {P_ITEM_IGNORE, "cd_start_track", 0},
   {P_ITEM_IGNORE, "cd_end1_track", 0},

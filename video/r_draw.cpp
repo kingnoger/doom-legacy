@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/08/29 20:48:50  smite-meister
+// bugfixes. wow.
+//
 // Revision 1.9  2004/08/15 18:08:30  smite-meister
 // palette-to-palette colormaps etc.
 //
@@ -104,17 +107,16 @@
 // Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
 // Initial import into CVS (v1.29 pr3)
 //
-//
-// DESCRIPTION:
-//      span / column drawer functions, for 8bpp and 16bpp
-//
-//      All drawing to the view buffer is accomplished in this file.
-//      The other refresh files only know about ccordinates,
-//      not the architecture of the frame buffer.
-//      The frame buffer is a linear one, and we need only the base address.
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Software renderer: span/column drawer functions, all related global variables
+///
+/// All drawing to the view buffer is accomplished in this file.
+/// The other refresh files only know about coordinates,
+/// not the architecture of the frame buffer.
+/// The frame buffer is a linear one, and we need only the base address.
+/// NOTE: Actual drawing routines found in r_draw8.cpp and r_draw16.cpp
 
 #include "doomdef.h"
 #include "command.h"
@@ -278,29 +280,6 @@ void R_InitTranslationTables()
 {
   int         i,j;
 
-  //added:11-01-98: load here the transparency lookup tables 'TINTTAB'
-  // NOTE: the TINTTAB resource MUST BE aligned on 64k for the asm optimised
-  //       (in other words, transtables pointer low word is 0)
-  transtables = (byte *)Z_MallocAlign (NUMTRANSTABLES*0x10000, PU_STATIC, 0, 16);
-
-  // load in translucency tables
-  if (game.mode >= gm_heretic)
-    {
-        fc.ReadLump( fc.GetNumForName("TINTTAB"), transtables );
-        fc.ReadLump( fc.GetNumForName("TINTTAB"), transtables+0x10000 );
-        fc.ReadLump( fc.GetNumForName("TINTTAB"), transtables+0x20000 );
-        fc.ReadLump( fc.GetNumForName("TINTTAB"), transtables+0x30000 );
-        fc.ReadLump( fc.GetNumForName("TINTTAB"), transtables+0x40000 );
-    }
-  else
-    {
-        fc.ReadLump( fc.GetNumForName("TRANSMED"), transtables );
-        fc.ReadLump( fc.GetNumForName("TRANSMOR"), transtables+0x10000 );
-        fc.ReadLump( fc.GetNumForName("TRANSHI"),  transtables+0x20000 );
-        fc.ReadLump( fc.GetNumForName("TRANSFIR"), transtables+0x30000 );
-        fc.ReadLump( fc.GetNumForName("TRANSFX1"), transtables+0x40000 );
-    }
-
   // player color translation
   translationtables = (byte *)Z_MallocAlign (256*(MAXSKINCOLORS-1), PU_STATIC, 0, 8);
 
@@ -310,58 +289,129 @@ void R_InitTranslationTables()
   // translate just the 16 green colors
   for (i=0 ; i<256 ; i++)
     {
-        if ((i >= 0x70 && i <= 0x7f && game.mode != gm_heretic) ||
-            (i >=  225 && i <=  240 && game.mode == gm_heretic))
+      if ((i >= 0x70 && i <= 0x7f && game.mode != gm_heretic) ||
+	  (i >=  225 && i <=  240 && game.mode == gm_heretic))
         {
-            if( game.mode == gm_heretic )
+	  if (game.mode >= gm_heretic)
             {
-                translationtables[i+ 0*256] =   0+(i-225); // dark gray
-                translationtables[i+ 1*256] =  67+(i-225); // brown
-                translationtables[i+ 2*256] = 145+(i-225); // red
-                translationtables[i+ 3*256] =   9+(i-225); // light gray
-                translationtables[i+ 4*256] =  74+(i-225); // light brown
-                translationtables[i+ 5*256] = 150+(i-225); // light red
-                translationtables[i+ 6*256] = 192+(i-225); // light blue
-                translationtables[i+ 7*256] = 185+(i-225); // dark blue
-                translationtables[i+ 8*256] = 114+(i-225); // yellow
-                translationtables[i+ 9*256] =  95+(i-225); // beige
+	      translationtables[i+ 0*256] =   0+(i-225); // dark gray
+	      translationtables[i+ 1*256] =  67+(i-225); // brown
+	      translationtables[i+ 2*256] = 145+(i-225); // red
+	      translationtables[i+ 3*256] =   9+(i-225); // light gray
+	      translationtables[i+ 4*256] =  74+(i-225); // light brown
+	      translationtables[i+ 5*256] = 150+(i-225); // light red
+	      translationtables[i+ 6*256] = 192+(i-225); // light blue
+	      translationtables[i+ 7*256] = 185+(i-225); // dark blue
+	      translationtables[i+ 8*256] = 114+(i-225); // yellow
+	      translationtables[i+ 9*256] =  95+(i-225); // beige
             }
-            else
+	  else
             {
-                // map green ramp to gray, brown, red
-                translationtables [i      ] = 0x60 + (i&0xf);
-                translationtables [i+  256] = 0x40 + (i&0xf);
-                translationtables [i+2*256] = 0x20 + (i&0xf);
+	      // map green ramp to gray, brown, red
+	      translationtables [i      ] = 0x60 + (i&0xf);
+	      translationtables [i+  256] = 0x40 + (i&0xf);
+	      translationtables [i+2*256] = 0x20 + (i&0xf);
 
-                // added 9-2-98
-                translationtables [i+3*256] = 0x58 + (i&0xf); // light gray
-                translationtables [i+4*256] = 0x38 + (i&0xf); // light brown
-                translationtables [i+5*256] = 0xb0 + (i&0xf); // light red
-                translationtables [i+6*256] = 0xc0 + (i&0xf); // light blue
+	      // added 9-2-98
+	      translationtables [i+3*256] = 0x58 + (i&0xf); // light gray
+	      translationtables [i+4*256] = 0x38 + (i&0xf); // light brown
+	      translationtables [i+5*256] = 0xb0 + (i&0xf); // light red
+	      translationtables [i+6*256] = 0xc0 + (i&0xf); // light blue
 
-                if ((i&0xf) <9)
-                    translationtables [i+7*256] = 0xc7 + (i&0xf);   // dark blue
-                else
-                    translationtables [i+7*256] = 0xf0-9 + (i&0xf);
+	      if ((i&0xf) < 9)
+		translationtables [i+7*256] = 0xc7 + (i&0xf);   // dark blue
+	      else
+		translationtables [i+7*256] = 0xf0-9 + (i&0xf);
 
-                if ((i&0xf) <8)
-                    translationtables [i+8*256] = 0xe0 + (i&0xf);   // yellow
-                else
-                    translationtables [i+8*256] = 0xa0-8 + (i&0xf);
+	      if ((i&0xf) < 8)
+		translationtables [i+8*256] = 0xe0 + (i&0xf);   // yellow
+	      else
+		translationtables [i+8*256] = 0xa0-8 + (i&0xf);
 
-                translationtables [i+9*256] = 0x80 + (i&0xf);     // beige
+	      translationtables [i+9*256] = 0x80 + (i&0xf);     // beige
             }
-
         }
-        else
+      else
         {
-            // Keep all other colors as is.
-            for (j=0;j<(MAXSKINCOLORS-1)*256;j+=256)
-                translationtables [i+j] = i;
+	  // Keep all other colors as is.
+	  for (j=0;j<(MAXSKINCOLORS-1)*256;j+=256)
+	    translationtables [i+j] = i;
         }
     }
 }
 
+//=========================================================================
+//                    TRANSLUCENCY TABLES
+//=========================================================================
+
+
+void R_InitTranslucencyTables()
+{
+  //added:11-01-98: load here the transparency lookup tables 'TINTTAB'
+  // NOTE: the TINTTAB resource MUST BE aligned on 64k for the asm optimised
+  //       (in other words, transtables pointer low word is 0)
+  transtables = (byte *)Z_MallocAlign(NUMTRANSTABLES*0x10000, PU_STATIC, 0, 16);
+
+  // load in translucency tables
+
+  // first transtable
+  // check for the Boom default transtable lump
+  int lump = fc.FindNumForName("TRANMAP");
+  if (lump >= 0)
+    fc.ReadLump(lump, transtables);
+  else if (game.mode >= gm_heretic)
+    fc.ReadLump(fc.GetNumForName("TINTTAB"), transtables);
+  else
+    fc.ReadLump(fc.GetNumForName("TRANSMED"), transtables); // in legacy.wad
+
+  if (game.mode >= gm_heretic)
+    {
+      // all the transmaps are the same
+      memcpy(transtables + tr_size, transtables, tr_size);
+      memcpy(transtables + 2*tr_size, transtables, tr_size);
+      memcpy(transtables + 3*tr_size, transtables, tr_size);
+      memcpy(transtables + 4*tr_size, transtables, tr_size);
+    }
+  else
+    {
+      // we can use the transmaps in legacy.wad
+      fc.ReadLump(fc.GetNumForName("TRANSMOR"), transtables + tr_size);
+      fc.ReadLump(fc.GetNumForName("TRANSHI"),  transtables + 2*tr_size);
+      fc.ReadLump(fc.GetNumForName("TRANSFIR"), transtables + 3*tr_size);
+      fc.ReadLump(fc.GetNumForName("TRANSFX1"), transtables + 4*tr_size);
+    }
+
+
+  // Compose a default linear filter map based on PLAYPAL.
+  /*
+  // Thanks to TeamTNT for prBoom sources!
+  if (false)
+    {
+      // filter weights
+      float w1 = 0.66;
+      float w2 = 1 - w1;
+
+      int i, j;
+      byte *tp = transtables;
+
+      for (i=0; i<256; i++)
+	{
+	  float r2 = vid.palette[i].red   * w2;
+	  float g2 = vid.palette[i].green * w2;
+	  float b2 = vid.palette[i].blue  * w2;
+
+	  for (j=0; j<256; j++, tp++)
+	    {
+	      byte r = vid.palette[j].red   * w1 + r2;
+	      byte g = vid.palette[j].green * w1 + g2;
+	      byte b = vid.palette[j].blue  * w1 + b2;
+
+	      *tp = NearestColor(r, g, b);
+	    }
+	}
+    }
+  */
+}
 
 // ==========================================================================
 //               COMMON DRAWER FOR 8 AND 16 BIT COLOR MODES

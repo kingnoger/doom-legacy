@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2004/08/29 20:48:50  smite-meister
+// bugfixes. wow.
+//
 // Revision 1.21  2004/08/19 19:42:42  smite-meister
 // bugfixes
 //
@@ -428,7 +431,11 @@ void spritepres_t::Project(Actor *p)
   int frame = state->frame & TFF_FRAMEMASK;
 
   if (frame >= spr->numframes)
-    I_Error("spritepres_t::Project: invalid sprite frame %d (%d)\n", frame, spr->numframes);
+    {
+      frame = spr->numframes - 1; // Thing may require more frames than the defaultsprite has...
+      //I_Error("spritepres_t::Project: invalid sprite frame %d (%d)\n", frame, spr->numframes);
+    }
+    
 
   spriteframe_t *sprframe = &spr->spriteframes[frame];
 

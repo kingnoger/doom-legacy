@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.11  2004/08/29 20:48:49  smite-meister
+// bugfixes. wow.
+//
 // Revision 1.10  2004/08/12 18:30:28  smite-meister
 // cleaned startup
 //
@@ -331,7 +334,8 @@ void Map::FS_ClearScripts()
   else if (levelscript->data)
     Z_Free(levelscript->data);
 
-  levelscript->data = NULL;
+  //levelscript->data = NULL;
+  memset(levelscript, 0, sizeof(script_t));
 }
 
 void FS_LoadThingScript()

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.32  2004/08/29 20:48:47  smite-meister
+// bugfixes. wow.
+//
 // Revision 1.31  2004/08/19 19:42:40  smite-meister
 // bugfixes
 //
@@ -156,7 +159,8 @@ IMPLEMENT_CLASS(DActor, Actor);
 
 Actor::~Actor()
 {
-  delete pres; // delete the presentation object too
+  if (pres)
+    delete pres; // delete the presentation object too
 }
 
 

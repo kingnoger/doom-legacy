@@ -27,14 +27,25 @@
 
 /// \brief Voodoo dolls
 ///
-/// Originally a bug in the player spawning code.
+/// Originally a bug in the player spawning code. When there are several player_x
+/// playerstarts in a map, the PlayerPawn is spawned to the first (FIXME last?) one and the rest
+/// spawn Voodoo dolls attached to the real pawn.
+/// Whatever happens to the dolls, happens to the pawn.
+ 
 class VoodooDoll : public PlayerPawn
 {
   PlayerPawn *victim;
 
 public:
   VoodooDoll(const PlayerPawn &p);
+  virtual ~VoodooDoll();
 
+  virtual void CheckPointers();
+  virtual void XYFriction(fixed_t oldx, fixed_t oldy, bool oldfriction);
+  virtual void Think();
+
+
+  virtual bool Touch(Actor *a);
   virtual bool Damage(Actor *inflictor, Actor *source, int damage, int dtype = dt_normal);
 
   static void Spawn(PlayerInfo *p, struct mapthing_t *mthing);

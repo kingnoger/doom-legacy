@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/08/29 20:48:49  smite-meister
+// bugfixes. wow.
+//
 // Revision 1.8  2004/08/14 16:28:38  smite-meister
 // removed libtnl.a
 //
@@ -189,8 +192,11 @@ enum
   // new types
   SPAC_PASSUSE = 6,     ///< Converted Boom ML_PASSUSE
 
-  /// Converted Alltrigger
+  /// internal: converted Alltrigger
   ML_MONSTERS_CAN_ACTIVATE = 0x2000,
+
+  /// internal: Boom generalized linedef
+  ML_BOOM_GENERALIZED = 0x4000,
 };
 
 #define GET_SPAC(flags) (((flags) & ML_SPAC_MASK) >> ML_SPAC_SHIFT)
