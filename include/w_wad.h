@@ -55,6 +55,7 @@ public:
   ~FileCache();
 
   void SetPath(const char *p);        ///< set the default path
+  const char *Access(const char *f);  ///< tries to find the given file, returns path where found
 
   int  AddFile(const char *filename); ///< opens a new VFile, returns -1 on error
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/08/12 18:30:25  smite-meister
+// cleaned startup
+//
 // Revision 1.11  2003/12/21 12:29:09  smite-meister
 // bugfixes
 //
@@ -51,22 +54,17 @@
 // Revision 1.1.1.1  2002/11/16 14:18:08  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//  Part of Map class implementation.
-//      Thinkers, Ticker().
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Part of Map class implementation. Thinkers, Map::Ticker().
 
 #include "g_map.h"
 #include "g_game.h"
-#include "g_player.h" // invTics
-#include "g_pawn.h" // invTics
+#include "g_player.h"
+#include "g_pawn.h"
 #include "z_zone.h"
-#include "t_script.h"
 
-// THINKERS, see g_think.h
 
 // Resets the Thinker list
 void Map::InitThinkers()
@@ -169,7 +167,7 @@ void Map::Ticker()
   //CONS_Printf("FS..");
 #ifdef FRAGGLESCRIPT
   // SoM: Update FraggleScript...
-  T_DelayedScripts();
+  FS_DelayedScripts();
 #endif
 
   //CONS_Printf("tick done\n");

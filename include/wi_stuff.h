@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/08/12 18:30:30  smite-meister
+// cleaned startup
+//
 // Revision 1.5  2003/11/12 11:07:27  smite-meister
 // Serialization done. Map progression.
 //
@@ -57,11 +60,10 @@
 // Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
 // Initial import into CVS (v1.29 pr3)
 //
-//
-// DESCRIPTION:
-//   Intermission handler.
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Intermission handler.
 
 #ifndef wi_stuff_h
 #define wi_stuff_h 1
@@ -71,8 +73,6 @@
 
 using namespace std;
 
-class MapCluster;
-class MapInfo;
 
 struct fragsort_t
 {
@@ -83,30 +83,32 @@ struct fragsort_t
 };
 
 
-// a one-instance class for Winning/Intermission animations etc.
-// could be done using static functions, but I happen to like classes;)
-
-// NOTE: during the intermission players may enter and leave the game.
-// players who enter do not show up in the stats listing
-// players who leave are not removed until the next level starts, so no problem there.
+/// \brief Intermission handler
+///
+/// A one-instance class for Winning/Intermission animations etc.
+/// could be done using static functions, but I happen to like classes;)
+/// NOTE: during the intermission players may enter and leave the game.
+/// players who enter do not show up in the stats listing
+/// players who leave are not removed until the next level starts, so no problem there.
 
 class Intermission
 {
 private:
-  // States for the intermission
-  typedef enum {
-    NoState = -1,
+  /// States for the intermission
+  enum WIstate_e
+  {
     StatCount,
-    ShowNextLoc
-  } WIstate_t;
+    ShowNextLoc,
+    Wait
+  };
 
-  // specifies current state
-  WIstate_t state;
+  /// specifies current state
+  WIstate_e state;
 
   // player wants to accelerate or skip a stage
   bool acceleratestage;
 
-  // what animation, if any, do we show?
+  /// What animation, if any, do we show? Applicable in Doom1 and Heretic, otherwise zero.
   int episode;
 
   const char *interpic;
@@ -116,11 +118,8 @@ private:
   // level numbers for old Doom style graphic levelnames and YAH's
   int next, last; 
 
-  // used for general timing (was cnt)
-  int count;
-
-  // used for timing of background animation
-  int bcount;
+  // used for general timing and bg animation timing
+  int count, bcount;
 
   // blinking pointer
   bool pointeron;
@@ -130,7 +129,7 @@ private:
   fragsort_t *dm_score[4];
 
   // Coop stats
-  int  ng_state;
+  int  count_stage;
   bool dofrags;
   struct statcounter_t
   {
@@ -151,12 +150,16 @@ private:
   int  cnt_time, cnt_par;
   int  time, partime;
 
+  int s_count; /// counting sound id
+
+
   void LoadData();
   void UnloadData();
 
+  /// draw background
   void SlamBackground();
-  // background animations (Doom 1 only)
-  void InitAnimatedBack();
+
+  /// background animations (Doom 1 only)
   void UpdateAnimatedBack();
 
   void InitCoopStats();
@@ -167,25 +170,25 @@ private:
   void UpdateDMStats();
   void DrawDMStats();
 
-  void InitNoState();
-
   void DrawYAH();
+
+  void InitWait();
+
 public:
-  static int s_count; // counting sound
 
-  // starts the intermission
-  void Start(const MapInfo *l, const MapInfo *n);
+  /// starts the intermission
+  void Start();
 
-  // the intermission is ended when the server says so
+  /// the intermission is ended when the server says so
   void End();
 
-  // accelerate stage?
+  /// accelerate stage?
   bool Responder(struct event_t *ev);
 
-  // Updates stuff each tick
+  /// Updates stuff each tick
   void Ticker();
 
-  // well.
+  /// well.
   void Drawer();
 };
 

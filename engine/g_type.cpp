@@ -51,7 +51,7 @@ void GameType::WriteServerInfo(BitStream &s)
 // scope query on server
 void GameType::performScopeQuery(GhostConnection *c)
 {
-  CONS_Printf("doing scope query\n");
+  //CONS_Printf("doing scope query\n");
   for (GameInfo::player_iter_t t = e.game->Players.begin(); t != e.game->Players.end(); t++)
     {
       c->objectInScope(t->second); // player information is always in scope

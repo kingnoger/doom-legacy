@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/08/12 18:30:29  smite-meister
+// cleaned startup
+//
 // Revision 1.3  2004/07/13 20:23:37  smite-meister
 // Mod system basics
 //
@@ -53,6 +56,7 @@ void M_ScreenShot();
 //===========================================================================
 
 extern char configfile[128];
+extern char savegamename[256];
 
 void Command_SaveConfig_f();
 void Command_LoadConfig_f();

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.28  2004/08/12 18:30:24  smite-meister
+// cleaned startup
+//
 // Revision 1.27  2004/07/05 16:53:26  smite-meister
 // Netcode replaced
 //
@@ -128,7 +131,6 @@
 #include "r_sky.h"
 
 #include "sounds.h"
-#include "t_script.h"
 #include "p_acs.h"
 
 #include "hardware/hw3sound.h"
@@ -1113,7 +1115,7 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
 
     case 85: // TEST new linedeftype FS_Execute
 #ifdef FRAGGLESCRIPT
-      success = T_RunScript(tag, mo);
+      success = FS_RunScript(tag, mo);
 #endif
       break;
 

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/08/12 18:30:30  smite-meister
+// cleaned startup
+//
 // Revision 1.12  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
 //
@@ -158,7 +161,7 @@ public:
 
 
 /// \brief Cache for sprite_t's
-class spritecache_t : public L2cache_t
+class spritecache_t : public cache_t
 {
 protected:
   cacheitem_t *Load(const char *p);

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2004/08/12 18:30:27  smite-meister
+// cleaned startup
+//
 // Revision 1.15  2004/07/25 20:19:21  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -60,16 +63,16 @@
 // Revision 1.2  2002/12/03 10:16:49  smite-meister
 // Older update
 //
-//
-// DESCRIPTION:
-//      the automap code
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief The automap code
 
 #include "am_map.h"
 
 #include "doomdef.h"
 #include "doomdata.h"
+#include "d_event.h"
 
 #include "g_game.h"
 #include "g_player.h"

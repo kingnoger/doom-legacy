@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/08/12 18:30:31  smite-meister
+// cleaned startup
+//
 // Revision 1.10  2004/07/14 16:13:13  smite-meister
 // cleanup, commands
 //
@@ -961,11 +964,24 @@ int I_mkdir(const char *dirname, int unixright)
 #endif
 }
 
-
-void I_LocateWad()
+/// returns the path to the default wadfile location (usually the current working directory)
+char *I_GetWadPath()
 {
-  // relict from the Linux version
-  return;
+  static char temp[256];
+
+  // get the current directory (possible problem on NT with "." as current dir)
+  if (getcwd(temp, 255))
+    {
+#ifdef __MACOS__
+      // cwd is always "/" when app is dbl-clicked
+      if (!stricmp(temp, "/"))
+	return I_GetWadDir();
+#endif
+
+      return temp;
+    }
+  else
+    return ".";
 }
 
 #ifdef LINUX

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/08/12 18:30:29  smite-meister
+// cleaned startup
+//
 // Revision 1.12  2004/07/14 16:13:13  smite-meister
 // cleanup, commands
 //
@@ -86,8 +89,8 @@ enum gamemode_t
   gm_none,
   gm_doom1s,  // DOOM 1 shareware, E1, M9
   gm_doom1,   // DOOM 1 registered, E3, M27
-  gm_doom2,   // DOOM 2 retail (commercial), E1 M34
   gm_udoom,   // DOOM 1 retail (Ultimate DOOM), E4, M36
+  gm_doom2,   // DOOM 2 retail (commercial), E1 M34
   gm_heretic,
   gm_hexen
 };
@@ -151,7 +154,7 @@ public:
 
   unsigned demoversion;
 
-  gamemode_t    mode;   ///< which game are we playing?
+  gamemode_t    mode;   ///< Which game? Doom? Heretic? Hexen?
   skill_t       skill;  ///< skill level
 
   bool server;      ///< are we the game authority?
@@ -162,8 +165,6 @@ public:
 
   bool inventory;   ///< PlayerPawns have an inventory
 
-  GameType      *type; ///< TEST
-  LNetInterface  *net; ///< our network interface (contains th enetstate)
 
   // Demo sequences
   int pagetic;    ///< how many tics left until demo is changed?
@@ -186,10 +187,10 @@ public:
   typedef map<int, class MapCluster*>::iterator cluster_iter_t;
   map<int, MapCluster*> clustermap;  ///< map clusters or hubs of the current game
 
-  MapCluster *currentcluster;  ///< currently active MapCluster
-  MapCluster *nextcluster; // temp HACK
-  MapInfo    *currentmap;     // this is used ONLY for time/scorelimit games
+  MapCluster *currentcluster;  ///< currently active MapCluster (contains active Maps)
 
+  GameType     *gtype; ///< TEST
+  LNetInterface  *net; ///< our network interface (netstate and connections)
 
 public:
 
@@ -213,6 +214,8 @@ public:
   void ClearPlayers();                  ///< erases all players
 
 
+  // in sv_main.cpp
+  void ReadResourceLumps();
   bool Playing();
   void SV_Reset();
   bool SV_SpawnServer();
@@ -233,24 +236,20 @@ public:
 
   // in g_mapinfo.cpp
   int  Read_MAPINFO(int lump);
-  void Clear_mapinfo_clusterdef();
+  void Clear_mapinfo_clustermap();
   MapCluster *FindCluster(int number);
   MapInfo *FindMapInfo(int number);
   MapInfo *FindMapInfo(const char *name);
 
-  int Create_MAPINFO_game(int lump);
-  int Create_classic_game(int episode);
 
   // in g_state.cpp
   void Ticker(); // ticks the game forward in time
-  bool NewGame(skill_t sk);
-  bool StartGame();
+  bool StartGame(skill_t skill, int cluster = 1);
   void StartIntermission();
-  void EndIntermission();
+  void StartFinale(MapCluster *next);
   void EndFinale();
-  void NextLevel();
 
-  // ----- demos -----
+  // in g_demo.cpp
   void BeginRecording();
   void PlayDemo(char *defdemoname);
   void ReadDemoTiccmd(struct ticcmd_t* cmd, int playernum);

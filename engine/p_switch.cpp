@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2004/08/12 18:30:25  smite-meister
+// cleaned startup
+//
 // Revision 1.14  2004/04/25 16:26:50  smite-meister
 // Doxygen
 //
@@ -57,17 +60,15 @@
 // Revision 1.1.1.1  2002/11/16 14:18:04  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//      Switches, buttons. Two-state animation.
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Switches, buttons. Two-state animation.
 
 #include <vector>
 
 #include "doomdef.h"
 #include "doomdata.h"
-#include "command.h"
 #include "g_game.h"
 #include "g_actor.h"
 #include "g_pawn.h"
@@ -78,8 +79,6 @@
 #include "r_main.h"
 #include "r_data.h"
 #include "r_state.h"
-
-#include "t_script.h"
 
 #include "w_wad.h"
 #include "z_zone.h"
@@ -192,9 +191,7 @@ struct switchlist_t
 static vector<switchlist_t> switchlist;
 
 
-// P_InitSwitchList
-// this is now called at GI::Startlevel()
-// FIXME should each map have its own swlist? same goes with animated flats/textures?
+// TODO should each map have its own swlist? same goes with animated flats/textures?
 void P_InitSwitchList()
 {
   int i, n, nameset;
@@ -238,11 +235,11 @@ void P_InitSwitchList()
 	    continue;
 
 	  temp.tex = tc.Get(ss[i].name1);
-	  temp.sound = button_t::buttonsound; // default
+	  temp.sound = sfx_switchon; // default
 	  switchlist.push_back(temp);
 
 	  temp.tex = tc.Get(ss[i].name2);
-	  temp.sound = button_t::buttonsound; // default
+	  temp.sound = sfx_switchon; // default
 	  switchlist.push_back(temp);
 	}
 
@@ -264,12 +261,9 @@ void P_InitSwitchList()
     }
 }
 
-// button_t statics
-int button_t::buttonsound = 0;
 
-// was P_StartButton
+
 // Start a button counting down till it turns off.
-//
 button_t::button_t(line_t *l, button_e w, int tex, int time)
 {
   l->thinker = this;
@@ -306,16 +300,15 @@ void button_t::Think()
 	default:
 	  break;
 	}
-      S_StartSound(soundorg, buttonsound);
+      S_StartSound(soundorg, sfx_switchon);
       line->thinker = NULL;
       mp->RemoveThinker(this);  // unlink and free
     }
 }
 
-// was P_ChangeSwitchTexture
+
 // Function that changes wall texture.
 // Tell it if switch is ok to use again (1=yes, it's a button).
-//
 void Map::ChangeSwitchTexture(line_t *line, int useAgain)
 {
   int     texTop, texMid, texBot;

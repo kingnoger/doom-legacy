@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.39  2004/08/12 18:30:23  smite-meister
+// cleaned startup
+//
 // Revision 1.38  2004/07/14 16:13:13  smite-meister
 // cleanup, commands
 //
@@ -119,10 +122,11 @@
 #include "g_actor.h"
 #include "g_pawn.h"
 
-#include "p_spec.h"
 #include "command.h"
 #include "cvars.h"
 
+#include "p_spec.h"
+#include "p_hacks.h"
 #include "r_main.h"
 #include "hu_stuff.h"
 #include "p_camera.h"
@@ -198,7 +202,7 @@ Map::~Map()
   Z_Free(rejectmatrix);
 
   // FIXME free FS stuff
-  T_ClearRunningScripts();
+  FS_ClearRunningScripts();
 
   if (ACSInfo)
     {
@@ -754,6 +758,15 @@ bool Map::CoopRespawn(PlayerInfo *p)
       if (CheckRespawnSpot(p, m))
 	{
 	  SpawnPlayer(p, m);
+
+	  if (cv_voodoodolls.value)
+	    for ( ; s != t; s++)
+	      {
+		m = (*s).second;
+		if (CheckRespawnSpot(p, m))
+		  VoodooDoll::Spawn(p, m);
+	      }
+
 	  return true;
 	}
     }
@@ -1274,7 +1287,7 @@ void Map::ExitMap(Actor *activator, int next, int ep)
       break;
 
     case 3: // last: all players need to reach the exit, others have to wait for the last one
-      quitter->playerstate = PST_DONE;
+      quitter->map_completed = true;
       quitter->requestmap = next;
       quitter->entrypoint = ep;
 

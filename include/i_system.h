@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/08/12 18:30:29  smite-meister
+// cleaned startup
+//
 // Revision 1.4  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
 //
@@ -173,8 +176,9 @@ void I_GetDiskFreeSpace(INT64 *freespace);
 char *I_GetUserName();
 int  I_mkdir(const char *dirname, int unixright);
 
-#ifdef LINUX // locate a shared wad file
-void I_LocateWad();
-#endif
+
+/// returns the path to the default wadfile location (usually the current working directory)
+char *I_GetWadPath();
+
 
 #endif

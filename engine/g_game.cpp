@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.32  2004/08/12 18:30:23  smite-meister
+// cleaned startup
+//
 // Revision 1.31  2004/07/25 20:19:19  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -125,6 +128,7 @@
 #include "g_input.h"
 #include "g_type.h"
 
+#include "d_event.h"
 #include "d_items.h"
 #include "d_main.h"
 
@@ -175,7 +179,6 @@ GameInfo::GameInfo()
   maxplayers = 32;
   maxteams = 4;
   currentcluster = NULL;
-  currentmap = NULL;
 
   server = true;
   netgame = multiplayer = false;
@@ -184,7 +187,7 @@ GameInfo::GameInfo()
 
   time = tic = 0;
 
-  type = new GameType(); // TEST
+  gtype = new GameType(); // TEST
 };
 
 
@@ -644,7 +647,7 @@ bool GameInfo::Responder(event_t* ev)
       break;
 
     case GS_FINALE:
-      if (F_Responder (ev))
+      if (F_Responder(ev))
         return true;        // finale ate the event
       break;
 

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/08/12 18:30:31  smite-meister
+// cleaned startup
+//
 // Revision 1.7  2004/08/06 18:54:39  smite-meister
 // netcode update
 //
@@ -586,11 +589,11 @@ void Command_CheatGimme_f();
 void Command_Meminfo_f();
 
 void Command_RunACS_f();
-void COM_T_DumpScript_f();
-void COM_T_RunScript_f();
-void COM_T_Running_f();
 
-void T_Init();
+void COM_FS_DumpScript_f();
+void COM_FS_RunScript_f();
+void COM_FS_Running_f();
+void FS_Init();
 
 
 
@@ -663,10 +666,10 @@ void SV_Init()
 
   COM_AddCommand("runacs", Command_RunACS_f);
 #ifdef FRAGGLESCRIPT
-  T_Init();
-  COM_AddCommand("t_dumpscript", COM_T_DumpScript_f);
-  COM_AddCommand("t_runscript",  COM_T_RunScript_f);
-  COM_AddCommand("t_running",    COM_T_Running_f);
+  FS_Init();
+  COM_AddCommand("fs_dumpscript", COM_FS_DumpScript_f);
+  COM_AddCommand("fs_runscript",  COM_FS_RunScript_f);
+  COM_AddCommand("fs_running",    COM_FS_Running_f);
 #endif
 
   // bots

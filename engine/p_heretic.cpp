@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2004/08/12 18:30:23  smite-meister
+// cleaned startup
+//
 // Revision 1.20  2004/01/06 14:37:45  smite-meister
 // six bugfixes, cleanup
 //
@@ -99,7 +102,6 @@
 #include "m_random.h"
 #include "dstrings.h"
 #include "p_heretic.h"
-#include "wi_stuff.h"
 #include "tables.h"
 
 //---------------------------------------------------------------------------
@@ -325,9 +327,6 @@ void P_InitLava()
 
 void DoomPatchEngine()
 {
-  Intermission::s_count = sfx_pistol;
-  button_t::buttonsound = sfx_switchon;
-
   game.inventory = false;
 
   // hacks: teleport fog, blood, gibs
@@ -339,9 +338,6 @@ void DoomPatchEngine()
 
 void HereticPatchEngine()
 {
-  Intermission::s_count = sfx_keyup;
-  button_t::buttonsound = sfx_switchon;
-
   game.inventory = true;
 
   // hacks
@@ -359,10 +355,6 @@ void HereticPatchEngine()
 
 void HexenPatchEngine()
 {
-  // FIXME sounds
-  Intermission::s_count = sfx_switchon;
-  button_t::buttonsound = sfx_switchon;
-
   game.inventory = true;
 
   // hacks

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.35  2004/08/12 18:30:23  smite-meister
+// cleaned startup
+//
 // Revision 1.34  2004/07/14 16:13:13  smite-meister
 // cleanup, commands
 //
@@ -69,9 +72,6 @@
 
 
 void F_Ticker();
-int P_Read_ANIMATED(int lump);
-int P_Read_ANIMDEFS(int lump);
-void P_InitSwitchList();
 void P_ACSInitNewGame();
 
 
@@ -265,15 +265,7 @@ int GameInfo::GetFrags(fragsort_t **fragtab, int type)
 // ticks the game forward in time
 void GameInfo::Ticker()
 {
-  MapInfo *m;
-  PlayerInfo *p;
-  player_iter_t t;
-
-
   tic++;
-
-  // TODO fix the intermissions and finales. when should they appear in general?
-  // perhaps they should be made client-only stuff, the server waits until the clients are ready to continue.
 
   // check fraglimit cvar TODO how does this work? when are the scores (or teamscores) zeroed?
   if (cv_fraglimit.value && CheckScoreLimit())
@@ -290,9 +282,6 @@ void GameInfo::Ticker()
       {
       case ga_intermission:
 	StartIntermission();
-	break;
-      case ga_nextlevel:
-	NextLevel();
 	break;
       case ga_nothing:
 	break;
@@ -333,47 +322,57 @@ void GameInfo::Ticker()
     }
 
 
+  MapInfo *m;
+  PlayerInfo *p;
+
   if (state == GS_LEVEL)
     {
       // manage players
-      for (t = Players.begin(); t != Players.end(); )
+      for (player_iter_t t = Players.begin(); t != Players.end(); )
 	{
-	  p = (*t).second;
+	  p = t->second;
 	  t++; // because "old t" may be invalidated
+
 	  if (p->playerstate == PST_REMOVE)
 	    {
 	      // the player is removed from the game (invalidates "old t")
 	      p->ExitLevel(0, 0);
 	      RemovePlayer(p->number);
+	      // TODO purge the removed players from the frag maps of other players?
+	      continue;
 	    }
-	}
-
-      for (t = Players.begin(); t != Players.end(); t++)
-	{
-	  p = (*t).second;
-	  if (p->playerstate == PST_WAITFORMAP)
+	  else if (p->playerstate == PST_NEEDMAP)
 	    {
 	      CONS_Printf("Map request..");
-	      if (p->requestmap < 0)
-		{
-		  // TODO game ends!
-		  //action = ga_intermission;
-		  break;
-		}
-	      
-	      // assign the player to a map
-	      m = FindMapInfo(p->requestmap);
-	      if (!m)
-		m = *currentcluster->maps.begin();
 
-	      if (currentcluster->number != m->cluster)
+	      // assign the player to a map
+	      if (p->requestmap == 0)
+		m = currentcluster->maps[0]; // first map in cluster
+	      else
+		m = FindMapInfo(p->requestmap);
+
+	      if (!m || currentcluster->number != m->cluster)
 		{
+		  // TODO minor thing: if several players exit maps on the same tick,
+		  // and someone besides the first one causes a cluster change, some
+		  // maps could be loaded in vain...
+
 		  // cluster change!
 		  currentcluster->Finish(p->requestmap, p->entrypoint);
-		  currentcluster = FindCluster(m->cluster);
 
-		  //action = ga_intermission;
-		  //break; // this is important!
+		  if (m)
+		    {
+		      MapCluster *next = FindCluster(m->cluster);
+		      StartFinale(next);
+		      currentcluster = next;
+		    }
+		  else
+		    {
+		      // game ends here
+		      StartFinale(NULL);
+		    }
+
+		  break; // this is important! no need to check the other players.
 		}
 
 	      p->Reset(!currentcluster->keepstuff, true);
@@ -387,49 +386,19 @@ void GameInfo::Ticker()
 }
 
 
-/// starts a new local game (assumes that we have done a SV_Reset()!)
-bool GameInfo::NewGame(skill_t sk)
+
+
+/// starts or restarts the game. assumes that we have set up the clustermap.
+bool GameInfo::StartGame(skill_t sk, int cluster)
 {
-  if (clustermap.empty())
+  if (clustermap.empty() || mapinfo.empty())
     return false;
 
   CONS_Printf("Starting a game\n");
 
-  if (!dedicated)
-    {
-      // add local players
-      consoleplayer = AddPlayer(new PlayerInfo(localplayer));
-      if (cv_splitscreen.value)
-	consoleplayer2 = AddPlayer(new PlayerInfo(localplayer2));
-
-
-      // read these lumps _after_ MAPINFO but not separately for each map
-      extern bool nosound;
-      if (!nosound)
-	{
-	  //S_ClearSounds();
-	  int n = fc.Size();
-	  for (int i = 1; i < n; i++)
-	    {
-	      // cumulative reading
-	      S_Read_SNDINFO(fc.FindNumForNameFile("SNDINFO", i));
-	      S_Read_SNDSEQ(fc.FindNumForNameFile("SNDSEQ", i));
-	    }
-
-	  if (cv_precachesound.value)
-	    S_PrecacheSounds();
-	}
-    }
-
-  // texture and flat animations
-  if (P_Read_ANIMDEFS(fc.FindNumForName("ANIMDEFS")) < 0)
-    P_Read_ANIMATED(fc.FindNumForName("ANIMATED"));
-
-  // set switch texture names/numbers, read "SWITCHES" lump
-  P_InitSwitchList();
-
-  if (sk > sk_nightmare)
-    sk = sk_nightmare;
+  currentcluster = FindCluster(cluster);
+  if (!currentcluster)
+    currentcluster = clustermap.begin()->second;
 
   skill = sk;
 
@@ -449,39 +418,13 @@ bool GameInfo::NewGame(skill_t sk)
   cv_timelimit.Set(0);
   cv_fraglimit.Set(0);
 
-  paused = false;
 
-  StartGame();
-
-  return true;
-}
-
-
-
-/// starts or restarts the game.
-bool GameInfo::StartGame()
-{
-  if (clustermap.empty() || mapinfo.empty())
-    return false;
-
-  cluster_iter_t t = clustermap.begin();
-  currentcluster = (*t).second; 
 
   if (paused)
     {
       paused = false;
       S.ResumeMusic();
     }
-
-  //Fab:19-07-98:start cd music for this level (note: can be remapped)
-  /*
-    FIXME cd music
-  if (game.mode==commercial)
-    I_PlayCD (map, true);                // Doom2, 32 maps
-  else
-    I_PlayCD ((episode-1)*9+map, true);  // Doom1, 9maps per episode
-  */
-
 
   extern bool force_wipe;
   force_wipe = true;
@@ -493,7 +436,6 @@ bool GameInfo::StartGame()
   for (i = Players.begin(); i != Players.end(); i++)
     (*i).second->Reset(true, true);
 
-  M_ClearRandom();
   P_ACSInitNewGame(); // clear the ACS world vars etc.
 
   memset(gamekeydown, 0, sizeof(gamekeydown));  // clear cmd building stuff
@@ -519,6 +461,7 @@ bool GameInfo::StartGame()
 void GameInfo::StartIntermission()
 {
   action = ga_nothing;
+  // TODO separate server, client stuff in intermission
 
   hud.ST_Stop();
 
@@ -529,38 +472,33 @@ void GameInfo::StartIntermission()
   automap.Close();
 
   //state = GS_INTERMISSION;
-  //wi.Start(currentcluster, nextcluster);
+  //wi.Start(currentcluster, next);
 }
 
 
-// called when intermission ends
-// init next level or go to the final scene
-void GameInfo::EndIntermission()
-{
-  // TODO purge the removed players from the frag maps
 
+void GameInfo::StartFinale(MapCluster *next)
+{
   // check need for finale
   if (cv_deathmatch.value == 0)
     {
       // check winning
-      if (nextcluster == NULL)
+      if (!next)
 	{
-	  // disconnect from network
-	  //CL_Reset();
 	  state = GS_FINALE;
 	  F_StartFinale(currentcluster, false, true); // final piece of story is exittext
 	  return;
 	}
 
       int c = currentcluster->number;
-      int n = nextcluster->number;
-      // check "mid-game finale" (story) (cluster change)
+      int n = next->number;
+      // check "mid-game finale" (story) (requires cluster change)
       if (n != c)
 	{
-	  if (!(nextcluster->entertext.empty()))
+	  if (!next->entertext.empty())
 	    {
 	      state = GS_FINALE;
-	      F_StartFinale(nextcluster, true, false);
+	      F_StartFinale(next, true, false);
 	      return;
 	    }
 	  else if (!(currentcluster->exittext.empty()))
@@ -578,21 +516,13 @@ void GameInfo::EndIntermission()
       //if (nextcluster == NULL)
 	//CL_Reset();
     }
-
-  action = ga_nextlevel;
 }
+
 
 void GameInfo::EndFinale()
 {
   if (state == GS_FINALE)
-    action = ga_nextlevel;
-}
+    state = GS_LEVEL;
 
-
-// load next level
-
-void GameInfo::NextLevel()
-{
   action = ga_nothing;
-  state = GS_LEVEL;
 }

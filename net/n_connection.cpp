@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/08/12 18:30:31  smite-meister
+// cleaned startup
+//
 // Revision 1.5  2004/08/06 18:54:39  smite-meister
 // netcode update
 //
@@ -299,13 +302,13 @@ void LConnection::onStartGhosting()
 //========================================================
 
 
-TNL_IMPLEMENT_RPC(LConnection, rpcMessage_s2c, (S32 pnum, const char *msg, S8 priority), 
+TNL_IMPLEMENT_RPC(LConnection, rpcMessage_s2c, (S32 pnum, const char *msg, S8 priority, S8 type), 
 		  NetClassGroupGameMask, RPCGuaranteedOrdered, RPCDirServerToClient, 0)
 {
   if (consoleplayer && consoleplayer->number == pnum)
-    consoleplayer->SetMessage(msg, priority);
+    consoleplayer->SetMessage(msg, priority, type);
   else if (consoleplayer2 && consoleplayer2->number == pnum)
-    consoleplayer2->SetMessage(msg, priority);
+    consoleplayer2->SetMessage(msg, priority, type);
   else
     I_Error("Received someone else's message!\n");
 }

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2004/08/12 18:30:23  smite-meister
+// cleaned startup
+//
 // Revision 1.19  2004/07/05 16:53:25  smite-meister
 // Netcode replaced
 //
@@ -645,7 +648,6 @@ static void CheatNoClipFunc(PlayerPawn *p, const byte *arg)
   p->player->SetMessage(msg, false);
 }
 
-static const bool shareware = true;
 
 static void CheatWeaponsFunc(PlayerPawn *p, const byte *arg)
 {
@@ -666,16 +668,6 @@ static void CheatWeaponsFunc(PlayerPawn *p, const byte *arg)
 
       for (i = wp_heretic; i <= wp_gauntlets; i++)
 	p->weaponowned[i] = true;
-
-      // FIXME shareware == true always (it is not a variable!)
-      // (we do not have "heretic shareware" gametype)(yet?)
-      // also elsewhere in this file
-      if (shareware)
-	{
-	  p->weaponowned[wp_skullrod] = false;
-	  p->weaponowned[wp_phoenixrod] = false;
-	  p->weaponowned[wp_mace] = false;
-	}
 
       msg = CHEAT_WEAPONS;
     }
@@ -738,39 +730,21 @@ static void CheatArtifact3Func(PlayerPawn *p, const byte *arg)
 {
   int i;
   int j;
-  artitype_t type;
-  int count;
-
-  type = artitype_t(arg[0]-'a'+1);
-  count = arg[1]-'0';
+  artitype_t type = artitype_t(arg[0]-'a'+1);
+  int count = arg[1]-'0';
   if (type == 26 && count == 0)
     { // All artifacts
-      for(i = arti_none+1; i < NUMARTIFACTS; i++)
-	{
-	  if(shareware && (i == arti_superhealth
-			   || i == arti_teleport))
-	    {
-	      continue;
-	    }
-	  for(j = 0; j < 16; j++)
-	    {
-	      p->GiveArtifact(artitype_t(i), NULL);
-	    }
-	}
+      for (i = arti_none+1; i < NUMARTIFACTS; i++)
+	for (j = 0; j < 16; j++)
+	  p->GiveArtifact(artitype_t(i), NULL);
+
       p->player->SetMessage(CHEAT_ARTIFACTS3, false);
     }
-  else if(type > arti_none && type < NUMARTIFACTS
-	  && count > 0 && count < 10)
+  else if(type > arti_none && type < NUMARTIFACTS && count > 0 && count < 10)
     {
-      if(shareware && (type == arti_superhealth || type == arti_teleport))
-	{
-	  p->player->SetMessage(CHEAT_ARTIFACTSFAIL, false);
-	  return;
-	}
       for(i = 0; i < count; i++)
-	{
-	  p->GiveArtifact(type, NULL);
-	}
+	p->GiveArtifact(type, NULL);
+
       p->player->SetMessage(CHEAT_ARTIFACTS3, false);
     }
   else
@@ -1006,7 +980,7 @@ bool cht_Responder(event_t* ev)
   if (ev->type != ev_keydown)
     return false;
 
-  if (game.netgame || game.skill == sk_nightmare || !consoleplayer)
+  if (!game.server || game.skill == sk_nightmare || !consoleplayer)
     { // Can't cheat in a net-game, or in nightmare mode
       return false;
     }

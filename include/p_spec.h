@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2004/08/12 18:30:29  smite-meister
+// cleaned startup
+//
 // Revision 1.22  2004/04/25 16:26:51  smite-meister
 // Doxygen
 //
@@ -218,8 +221,6 @@ private:
   byte where; // button_e
 
 public:
-  static int buttonsound;
-
   button_t(line_t *l, button_e w, int tex, int time);
   
   virtual void Think();

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/08/12 18:30:23  smite-meister
+// cleaned startup
+//
 // Revision 1.9  2004/07/05 16:53:25  smite-meister
 // Netcode replaced
 //
@@ -69,7 +72,7 @@ void A_StartFS(DActor *actor)
 {
   int script = actor->tics;
   actor->tics = 0; // takes no time
-  actor->mp->T_RunScript(script, actor);
+  actor->mp->FS_RunScript(script, actor);
 }
 
 
@@ -78,7 +81,7 @@ void A_StartWeaponFS(PlayerPawn *p, pspdef_t *psp)
 {
   int script = psp->tics;
   psp->tics = 0; // takes no time
-  p->mp->T_RunScript(script, p);
+  p->mp->FS_RunScript(script, p);
 }
 
 

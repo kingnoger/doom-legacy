@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/08/12 18:30:29  smite-meister
+// cleaned startup
+//
 // Revision 1.4  2004/07/25 20:18:47  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -54,7 +57,7 @@ extern consvar_t cv_serversearch;
 // server info
 extern consvar_t cv_servername;
 extern consvar_t cv_internetserver;
-extern consvar_t cv_allownewplayer;
+extern consvar_t cv_allownewplayers;
 extern consvar_t cv_maxplayers;
 //extern consvar_t cv_maxteams;
 
@@ -86,7 +89,7 @@ extern consvar_t cv_gravity;
 extern consvar_t cv_nomonsters;
 extern consvar_t cv_fastmonsters;
 extern consvar_t cv_solidcorpse;
-
+extern consvar_t cv_voodoodolls;
 
 
 // client info (server needs to know)

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/08/12 18:30:29  smite-meister
+// cleaned startup
+//
 // Revision 1.4  2004/03/28 15:16:14  smite-meister
 // Texture cache.
 //
@@ -30,11 +33,10 @@
 // Revision 1.1.1.1  2002/11/16 14:18:20  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//   AutoMap class
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief AutoMap class
 
 #ifndef am_map_h
 #define am_map_h 1
@@ -59,6 +61,9 @@ struct mpoint_t
 };
 
 
+/// \brief The in-game overhead map.
+///
+/// There is only one global instance in use, called "automap".
 class AutoMap
 {
 private:

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/08/12 18:30:34  smite-meister
+// cleaned startup
+//
 // Revision 1.7  2004/07/05 16:53:45  smite-meister
 // Netcode replaced
 //
@@ -82,7 +85,7 @@ void MD3_InitNormLookup()
 }
 
 modelcache_t::modelcache_t(memtag_t tag)
-  : L2cache_t(tag)
+  : cache_t(tag)
 {}
 
 cacheitem_t *modelcache_t::Load(const char *p)
@@ -176,10 +179,9 @@ static int LoadTGATexture(const char *filename)
       return -1;
     }
 
-  // TODO: endianness correction of multi-byte fields
   // Get the width, height, and color depth
-  // h.width = SHORT(h.width);
-  // h.height = SHORT(h.height);
+  h.width = SHORT(h.width);
+  h.height = SHORT(h.height);
   int imagesize = h.width * h.height * (h.bpp / 8);
 
   char *image = new char[imagesize];

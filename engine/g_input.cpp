@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/08/12 18:30:23  smite-meister
+// cleaned startup
+//
 // Revision 1.8  2004/07/07 17:27:19  smite-meister
 // bugfixes
 //
@@ -215,7 +218,7 @@ void ticcmd_t::Build(bool primary, int realtics)
   bool turnleft  = gamekeydown[gc[gc_turnleft][0]] || gamekeydown[gc[gc_turnleft][1]];
 
   bool mouseaiming = (gamekeydown[gc[gc_mouseaiming][0]]
-		      ||gamekeydown[gc[gc_mouseaiming][1]]) ^ j;
+		      || gamekeydown[gc[gc_mouseaiming][1]]) ^ j;
 
   bool analogjoystickmove, gamepadjoystickmove;
 

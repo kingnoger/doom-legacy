@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2004/08/12 18:30:26  smite-meister
+// cleaned startup
+//
 // Revision 1.19  2004/05/02 21:15:56  hurdler
 // add dummy new renderer (bis)
 //
@@ -51,15 +54,15 @@
 // Revision 1.9  2003/04/24 20:30:21  hurdler
 // Remove lots of compiling warnings
 //
-//
-// DESCRIPTION:
-//      Game completion, final screen animation.
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Finale animations
 
 #include <ctype.h>
 
 #include "dstrings.h"
+#include "d_event.h"
 #include "d_main.h"
 #include "g_game.h"
 #include "g_level.h"
@@ -566,54 +569,11 @@ void F_CastDrawer(int dummy)
 
 
 //
-// F_DrawPatchCol, used in BunnyScroll
-//
-static void F_DrawPatchCol(int x, Texture *patch, int col)
-{
-#warning FIXME end scroller
-#if 0
-  column_t*   column;
-  byte*       source;
-  byte*       dest;
-  byte*       desttop;
-  int         count;
-
-  column = (column_t *)((byte *)patch + LONG(patch->columnofs[col]));
-  desttop = vid.screens[0]+x*vid.dupx;
-
-  // step through the posts in a column
-  while (column->topdelta != 0xff )
-    {
-      source = (byte *)column + 3;
-      dest = desttop + column->topdelta*vid.width;
-      count = column->length;
-
-      while (count--)
-        {
-          int dupycount=vid.dupy;
-
-          while(dupycount--)
-            {
-              int dupxcount=vid.dupx;
-              while(dupxcount--)
-                *dest++ = *source;
-
-              dest += (vid.width-vid.dupx);
-            }
-          source++;
-        }
-      column = (column_t *)(  (byte *)column + column->length + 4 );
-    }
-#endif
-}
-
-//
 // F_BunnyScroll
 //
 void F_BunnyScroll()
 {
   int         scrolled;
-  int         x;
   char        name[10];
   int         stage;
   static int  laststage;
@@ -628,9 +588,8 @@ void F_BunnyScroll()
     scrolled = 320;
   if (scrolled < 0)
     scrolled = 0;
-  //faB:do equivalent for hw mode ?
-  if (rendermode==render_soft)
-    {
+
+  /*
       for ( x=0 ; x<320 ; x++)
         {
           if (x+scrolled < 320)
@@ -638,14 +597,12 @@ void F_BunnyScroll()
           else
             F_DrawPatchCol (x, p2, x+scrolled - 320);
         }
-    }
-  else
-    {
-      if( scrolled>0 )
-        p2->Draw(320-scrolled,0, V_SCALE);
-      if( scrolled<320 )
-        p1->Draw(-scrolled,0, V_SCALE);
-    }
+  */
+
+  if (scrolled > 0)
+    p2->Draw(320-scrolled,0, V_SCALE);
+  if (scrolled < 320)
+    p1->Draw(-scrolled,0, V_SCALE);
 
   if (finalecount < 1130)
     return;

@@ -122,7 +122,7 @@ Wad::~Wad()
 
 
 // trick constructor for .lmp and .deh files
-Wad::Wad(string &fname, const char *lumpname)
+Wad::Wad(const char *fname, const char *lumpname)
 {
   // this code emulates a wadfile with one lump
   // at position 0 and size of the whole file
@@ -130,7 +130,7 @@ Wad::Wad(string &fname, const char *lumpname)
   // copied by network and loaded at the console
 
   filename = fname;
-  stream = fopen(fname.c_str(), "rb");
+  stream = fopen(fname, "rb");
   if (!stream)
     {
       directory = NULL;

@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.7  2004/08/12 18:30:29  smite-meister
+// cleaned startup
+//
 // Revision 1.6  2004/07/14 16:13:13  smite-meister
 // cleanup, commands
 //
@@ -124,15 +127,8 @@ public:
   string nicename;   ///< map long nice name ("The Nuclear Plant")
   string savename;   ///< name of the file the map is currently saved in
 
-  int    cluster;
+  int    cluster;    ///< in which cluster does this map belong?
   int    mapnumber;  ///< real map number, used with Teleport_NewMap
-
-  unsigned entrypoint;  ///< the requested entry point in this map
-  int    exitused, exitloc; ///< exit used when the level was last exited
-
-  //map<int, MapInfo *> exit;  // possible remapping of exit numbers
-  // for now it's simple: exit 0 is the "normal exit", exit 100 is the "secret exit"
-  // exit 255 means that the game ends here.
 
   string version;   ///< map version string
   string author;    ///< map creator

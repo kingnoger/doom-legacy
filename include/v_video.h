@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/08/12 18:30:30  smite-meister
+// cleaned startup
+//
 // Revision 1.3  2004/03/28 15:16:14  smite-meister
 // Texture cache.
 //
@@ -99,11 +102,13 @@ struct patch_t
   // the [0] is &columnofs[width]
 };
 
-// posts are runs of non masked source pixels
+/// posts are vertical runs of nonmasked source pixels in a patch_t
 struct post_t
 {
-  byte topdelta;       // -1 (0xff) is the last post in a column
-  byte length;         // length data bytes follows
+  byte topdelta; ///< how many pixels to skip, -1 (0xff) means the column ends
+  byte length;   ///< number of data bytes
+  byte crap;     ///< always 1?
+  byte data[0];  ///< data starts here, ends with another crap byte (not included in length)
 };
 
 // column_t is a list of 0 or more post_t, (byte)-1 terminated

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright(C) 2000 Simon Howard
-// Copyright(C) 2001-2003 Doom Legacy Team
+// Copyright(C) 2001-2004 Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,114 +21,124 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.3  2004/08/12 18:30:30  smite-meister
+// cleaned startup
+//
 // Revision 1.2  2003/02/23 22:49:31  smite-meister
 // FS is back! L2 cache works.
 //
 // Revision 1.1.1.1  2002/11/16 14:18:28  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
 //--------------------------------------------------------------------------
 
+/// \file
+/// \brief FS variables
 
 #ifndef t_vari_h
 #define t_vari_h 1
 
-#define VARIABLESLOTS 16
-
 #include "m_fixed.h"
 
-class Actor;
-class PlayerPawn;
-struct script_t;
-
-// hash the variables for speed: this is the hashkey
-
-#define variable_hash(n)                \
-              (   ( (n)[0] + (n)[1] +   \
-                   ((n)[1] ? (n)[2] +   \
-                   ((n)[2] ? (n)[3]  : 0) : 0) ) % VARIABLESLOTS )
-
-struct svalue_t
-{
-  int type;
-  union
-  {
-    long i;
-    fixed_t f;
-    const char *s;
-    char *labelptr; // goto() label
-    Actor *mobj;
-  } value;
-};
-
-struct svariable_t
-{
-  char *name;
-  int type;       // vt_string or vt_int: same as in svalue_t
-  union
-  {
-    char *s;
-    long i;
-    Actor *mobj;
-    fixed_t fixed;
-    
-    char **pS;              // pointer to game string
-    int *pI;                // pointer to game int
-    fixed_t *pFixed;
-    Actor **pMobj;         // pointer to game obj
-    double *pf;
-    
-    void (*handler)();      // for functions
-    char *labelptr;         // for labels
-  } value;
-  svariable_t *next;       // for hashing
-};
-
-// variable types
-
-typedef enum
+/// FS variable types
+enum svartype_t
 {
   svt_string,
   svt_int,
   svt_fixed,
   svt_actor,        // a map object
-  svt_ppawn,        // a playerpawn
+  svt_pString,      // pointer to game string
+  svt_pInt,
+  svt_pFixed,
+  svt_pActor,
   svt_function,     // functions are stored as variables
   svt_label,        // labels for goto calls are variables
-  svt_const,        // const
-  svt_pInt,         // pointer to game int
-  svt_pFixed,
-  svt_pString,      // pointer to game string
-  svt_pMobj,        // pointer to game mobj
-} svartype_t;
+  svt_const,        // temporary value type: adapts when first set
+};
 
-// variables
 
-void T_ClearHubScript();
+/// \brief Value of an FS variable
+struct svalue_t
+{
+  int type;
+  union
+  {
+    const char *s;
+    int i;
+    fixed_t f;
+    class Actor *mobj;
+    char *labelptr; // goto() label
+  } value;
+};
 
-void init_variables();
-svariable_t *new_variable(script_t *script, char *name, int vtype);
+extern svalue_t nullvar;
+
+
+inline int intvalue(svalue_t v)
+{
+  return v.type == svt_string ? atoi(v.value.s) :
+    v.type == svt_fixed ? (v.value.f / FRACUNIT) :
+    v.type == svt_actor ? (v.value.mobj ? 1 : 0) : v.value.i;
+}
+
+inline fixed_t fixedvalue(svalue_t v)
+{
+  return v.type == svt_fixed ? v.value.f :
+    v.type == svt_string ? fixed_t(atof(v.value.s) * FRACUNIT) :
+    intvalue(v) * FRACUNIT;
+}
+
+const char *stringvalue(svalue_t v);
+Actor *MobjForSvalue(svalue_t v);
+
+
+/// \brief FS variable
+struct svariable_t
+{
+  char *name;
+  int   type;
+  union
+  {
+    char    *s;
+    int      i;
+    fixed_t  fixed;
+    Actor   *mobj;
+    // pointers to the same
+    char    **pS;
+    int      *pI;
+    fixed_t  *pFixed;
+    Actor   **pMobj;
+    
+    void (*handler)();   // for functions
+    char *labelptr;      // for labels
+  } value;
+  svariable_t *next;     // for hashing
+
+public:
+  void setvalue(svalue_t newvalue);
+  svalue_t getvalue();
+
+  int Serialize(class LArchive &a);
+  int Unserialize(LArchive &a);
+};
+
+
+
 svariable_t *find_variable(char *name);
-svariable_t *variableforname(script_t *script, char *name);
-svalue_t getvariablevalue(svariable_t *v);
-void setvariablevalue(svariable_t *v, svalue_t newvalue);
-void clear_variables(script_t *script);
 
+// creating global variables
 svariable_t *add_game_int(char *name, int *var);
 svariable_t *add_game_string(char *name, char **var);
 svariable_t *add_game_mobj(char *name, Actor **mo);
 
 // functions
-
-svalue_t evaluate_function(int start, int stop);   // actually run a function
 svariable_t *new_function(char *name, void (*handler)() );
+svalue_t evaluate_function(int start, int stop);   // actually run a function
 
 // arguments to handler functions
-
 #define MAXARGS 128
 extern int t_argc;
 extern svalue_t *t_argv;
-extern svalue_t t_return;
+extern svalue_t  t_return;
 
 #endif

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/08/12 18:30:29  smite-meister
+// cleaned startup
+//
 // Revision 1.5  2004/08/06 19:33:49  smite-meister
 // netcode
 //
@@ -31,7 +34,6 @@
 //
 // Revision 1.1  2004/06/18 08:17:02  smite-meister
 // New TNL netcode!
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -49,7 +51,7 @@ using namespace TNL;
 
 /// \brief TNL GhostConnection between a server and a client
 ///
-/// Does connection housekeeping
+/// Does connection housekeeping, RPC's etc.
 
 class LConnection : public GhostConnection
 {
@@ -102,7 +104,7 @@ public:
   TNL_DECLARE_RPC(rpcSay, (S8 from, S8 to, const char *msg));
 
   /// server prints a message on client's console/HUD
-  TNL_DECLARE_RPC(rpcMessage_s2c, (S32 pnum, const char *msg, S8 priority));
+  TNL_DECLARE_RPC(rpcMessage_s2c, (S32 pnum, const char *msg, S8 priority, S8 type));
 
   /// server tells the client to start intermission
   TNL_DECLARE_RPC(rpcStartIntermission_s2c, ());

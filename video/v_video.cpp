@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/08/12 18:30:34  smite-meister
+// cleaned startup
+//
 // Revision 1.8  2004/08/02 20:49:58  jussip
 // Minor compilation fix.
 //
@@ -239,12 +242,6 @@ void VID_BlitLinearScreen(byte* srcptr, byte* destptr,
 
 //======================================================================
 
-//
-// V_DrawPatch
-// V_DrawScaledPatch: like V_DrawPatch, but scaled 2,3,4 times the original size and position
-// V_DrawMappedPatch: like V_DrawScaledPatch, but with a colormap.
-// V_DrawTranslucentPatch: like scaled, but also translucent
-//
 void PatchTexture::Draw(int x, int y, int scrn = 0)
 {
   int flags = scrn & V_FLAGMASK;
@@ -259,9 +256,26 @@ void PatchTexture::Draw(int x, int y, int scrn = 0)
     }
 #endif
 
-  x -= leftoffset; // TODO offset*dup
-  y -= topoffset;
+  byte *desttop = vid.screens[scrn];
 
+  // scaling
+  if (flags & V_SLOC)
+    {
+      x *= vid.dupx;
+      y *= vid.dupy;
+      desttop += vid.scaledofs;
+    }
+
+  if (flags & V_SSIZE)
+    {
+      x -= leftoffset * vid.dupx;
+      y -= topoffset * vid.dupy;
+    }
+  else
+    {
+      x -= leftoffset;
+      y -= topoffset;
+    }
 
 #ifdef RANGECHECK
   if (x<0 || x + width > vid.width || y<0 || y + height > vid.height || scrn > 4)
@@ -273,12 +287,7 @@ void PatchTexture::Draw(int x, int y, int scrn = 0)
     }
 #endif
 
-  // scaling
-  byte *desttop = vid.screens[scrn];
-  if (flags & V_SLOC)
-    desttop += y*vid.dupy*vid.width + x*vid.dupx + vid.scaledofs;
-  else
-    desttop += y*vid.width + x;
+  desttop += y * vid.width + x;
 
   byte *destend;
   fixed_t rowfrac, colfrac;
@@ -312,14 +321,14 @@ void PatchTexture::Draw(int x, int y, int scrn = 0)
   if (flags & V_SSIZE)
     for ( ; desttop < destend; col += colfrac, desttop++)
       {
-        column_t *column = (column_t *)(data + LONG(p->columnofs[col >> FRACBITS]));
+        post_t *post = (post_t *)(data + p->columnofs[col >> FRACBITS]);
 
         // step through the posts in a column
-        while (column->topdelta != 0xff)
+        while (post->topdelta != 0xff)
           {
-            byte *source = (byte *)column + 3;
-            byte *dest   = desttop + column->topdelta*vid.dupy*vid.width;
-            int count  = column->length*vid.dupy;
+            byte *source = post->data;
+            byte *dest   = desttop + post->topdelta*vid.dupy*vid.width;
+            int count  = post->length*vid.dupy;
 
             int row = 0;
             while (count--)
@@ -337,20 +346,20 @@ void PatchTexture::Draw(int x, int y, int scrn = 0)
                 dest += vid.width;
                 row += rowfrac;
               }
-            column = (column_t *)((byte *)column + column->length + 4);
+            post = (post_t *)&post->data[post->length + 1]; // next post
           }
       }
   else // unscaled, perhaps a bit faster?
     for ( ; desttop < destend; col += colfrac, desttop++)
       {
-        column_t *column = (column_t *)(data + LONG(p->columnofs[col]));
+        post_t *post = (post_t *)(data + p->columnofs[col]);
 
         // step through the posts in a column
-        while (column->topdelta != 0xff)
+        while (post->topdelta != 0xff)
           {
-            byte *source = (byte *)column + 3;
-            byte *dest = desttop + column->topdelta*vid.width;
-            int count = column->length;
+            byte *source = post->data;
+            byte *dest = desttop + post->topdelta*vid.width;
+            int count = post->length;
 
             while (count--)
               {
@@ -366,7 +375,7 @@ void PatchTexture::Draw(int x, int y, int scrn = 0)
                 *dest = pixel;
                 dest += vid.width;
               }
-            column = (column_t *)((byte *)column + column->length + 4);
+            post = (post_t *)&post->data[post->length + 1];
           }
       }
 }

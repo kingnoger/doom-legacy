@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2004/08/12 18:30:33  smite-meister
+// cleaned startup
+//
 // Revision 1.17  2004/07/25 20:16:43  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -388,7 +391,7 @@ static void R_InstallSpriteLump(const char *name, int frame, int rot, bool flip)
 //==============================================
 
 spritecache_t::spritecache_t(memtag_t tag)
-  : L2cache_t(tag)
+  : cache_t(tag)
 {}
 
 

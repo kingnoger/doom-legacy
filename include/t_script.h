@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright(C) 2000 Simon Howard
-// Copyright(C) 2001-2003 Doom Legacy Team
+// Copyright(C) 2001-2004 Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,56 +21,54 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.3  2004/08/12 18:30:30  smite-meister
+// cleaned startup
+//
 // Revision 1.2  2003/02/23 22:49:31  smite-meister
 // FS is back! L2 cache works.
 //
 // Revision 1.1.1.1  2002/11/16 14:18:28  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
 //--------------------------------------------------------------------------
+
+/// \file
+/// \brief Main FS interface, running scripts
 
 #ifndef t_script_h
 #define t_script_h 1
 
-#include "t_vari.h"
-class Actor;
-struct script_t;
+#define VARIABLESLOTS 16
 
 
-typedef enum {
+/// \brief FS wait state
+enum fs_wait_e
+{
   wt_none,        // not waiting
   wt_delay,       // wait for a set amount of time
   wt_tagwait,     // wait for sector to stop moving
   wt_scriptwait,  // wait for script to finish
-} wait_type_e;
-
-struct runningscript_t
-{
-  script_t *script;
-  
-  // where we are
-  char *savepoint;
-
-  wait_type_e wait_type;
-  int wait_data;  // data for wait: tagnum, counter, script number etc
-	
-  // saved variables
-  svariable_t *variables[VARIABLESLOTS];
-  
-  runningscript_t *prev, *next;  // for chain
-  Actor *trigger;
 };
 
-void T_Init();
-void T_AddCommands();
-void T_RunThingScript(int);
-Actor *MobjForSvalue(svalue_t svalue);
 
-// console commands
-void T_Dump();
-void T_ConsRun();
+/// \brief stores the state of a paused FS script
+struct runningscript_t
+{
+  struct script_t     *script;  ///< script definition
+  char      *savepoint;  ///< saved rover position
+  fs_wait_e  wait_type;  ///< what are we waiting for?
+  int        wait_data;  ///< data for wait: tagnum, counter, script number etc
+	
+  struct svariable_t *variables[VARIABLESLOTS]; ///< saved variables
+  class Actor *trigger;  
 
-extern Actor *t_trigger;
+  runningscript_t *prev, *next;  // for chain
+
+
+  static runningscript_t *freelist; ///< maintain a freelist for speed
+  void *operator new(size_t size);
+  void  operator delete(void *mem);
+};
+
 
 #endif

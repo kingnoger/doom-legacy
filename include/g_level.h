@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/08/12 18:30:29  smite-meister
+// cleaned startup
+//
 // Revision 1.13  2004/07/14 16:13:13  smite-meister
 // cleanup, commands
 //
@@ -86,12 +89,11 @@ public:
 
   vector<class MapInfo *> maps; ///< the maps which make up this level
 
-  int kills, items, secrets;  ///< cluster totals
   int time, partime; ///< the time it took to complete cluster, partime (in s)
 
   // intermission data
-  string interpic;  ///< intermission background picture lumpname
-  string intermusic;
+  string interpic;   ///< intermission background picture lumpname
+  string intermusic; ///< intermission music lumpname
 
   // finale data
   string entertext;

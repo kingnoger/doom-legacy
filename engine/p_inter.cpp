@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.31  2004/08/12 18:30:23  smite-meister
+// cleaned startup
+//
 // Revision 1.30  2004/07/13 20:23:36  smite-meister
 // Mod system basics
 //
@@ -186,7 +189,7 @@ void DActor::Killed(PlayerPawn *victim, Actor *inflictor)
 void PlayerPawn::Killed(PlayerPawn *victim, Actor *inflictor)
 {
   // player killer
-  game.type->Frag(player, victim->player);
+  game.gtype->Frag(player, victim->player);
 
   if (player == displayplayer || player == displayplayer2)
     S_StartAmbSound(sfx_frag);
@@ -919,7 +922,7 @@ void PlayerPawn::Die(Actor *inflictor, Actor *source)
 	CONS_Printf(str, player->name.c_str());
 
       // count environment kills against you (you fragged yourself!)
-      game.type->Frag(player, player);
+      game.gtype->Frag(player, player);
     }
   else
     source->Killed(this, inflictor);

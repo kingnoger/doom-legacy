@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/08/12 18:30:30  smite-meister
+// cleaned startup
+//
 // Revision 1.7  2004/03/28 15:16:14  smite-meister
 // Texture cache.
 //
@@ -38,12 +41,10 @@
 // Revision 1.1  2003/02/18 20:03:18  smite-meister
 // L2 cache added
 //
-//
-//
-// DESCRIPTION:
-//   Abstract second-level cache system with reference counting
-//
 //---------------------------------------------------------------------
+
+/// \file
+/// \brief Abstract cache class with reference counting
 
 #ifndef z_cache_h
 #define z_cache_h 1
@@ -60,25 +61,27 @@
 using namespace std;
 
 
+/// \brief BC for cache items
 class cacheitem_t
 {
-  friend class L2cache_t;
+  friend class cache_t;
 protected:
-  int   usefulness; // how many times has it been used?
-  int   refcount;   // reference count, number of current users
+  int   usefulness; ///< how many times has it been used?
+  int   refcount;   ///< reference count, number of current users
 
 public:
 
   cacheitem_t();
   virtual ~cacheitem_t();
-  bool  Release();
+  bool  Release();  ///< releases the item by decrementing the refcount
 
   void *operator new(size_t size);
   void  operator delete(void *mem);
 };
 
 
-class L2cache_t
+/// \brief ABC for different types of caches
+class cache_t
 {
 protected:
   // annoying namespace declarations, because hash_map is an extension...
@@ -91,24 +94,32 @@ protected:
 #endif
 
   typedef c_map_t::iterator c_iter_t;
-  c_map_t c_map;
+  c_map_t c_map; ///< hash_map from data item names to cacheitem_t's
 
-  memtag_t     tagtype; // tag type used for cached data
-  const char  *default_name;
-  cacheitem_t *default_item; // default replace item
+  memtag_t     tagtype;       ///< memory tag used for the cached data
+  const char  *default_name;  ///< name of the default data item
+  cacheitem_t *default_item;  ///< the default data item itself
 
+  /// Does the actual loading and conversion of the data during a Cache() operation
   virtual cacheitem_t *Load(const char *p) = 0;
 
 public:
-  L2cache_t(memtag_t tag);
-  virtual ~L2cache_t();
+  cache_t(memtag_t tag);
+  virtual ~cache_t();
 
+  /// Defines the default data item for the cache
   void SetDefaultItem(const char *defitem);
 
+  /// Caches and returns the requested data item
   cacheitem_t *Cache(const char *p);
 
+  /// Prints current cache contents
   void Inventory();
+
+  /// Removes unused data items from cache
   int  Cleanup();
+
+  /// does not work yet
   void Flush();
 };
 

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright(C) 2000 Simon Howard
-// Copyright(C) 2001-2003 Doom Legacy Team
+// Copyright(C) 2001-2004 Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.4  2004/08/12 18:30:28  smite-meister
+// cleaned startup
+//
 // Revision 1.3  2003/04/21 15:58:33  hurdler
 // Fix compiling problem with gcc 3.x under Linux
 //
@@ -30,17 +33,12 @@
 // Revision 1.1.1.1  2002/11/16 14:18:18  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
 //--------------------------------------------------------------------------
-//
-// Operators
-//
-// Handler code for all the operators. The 'other half'
-// of the parsing.
-//
-// By Simon Howard
-//
-//----------------------------------------------------------------------------
+
+/// \file
+/// \brief FS operators
+///
+/// Handler code for all the operators. The 'other half' of the parsing.
 
 #include <stdlib.h>
 #include <string.h>
@@ -118,19 +116,17 @@ int num_operators = sizeof(operators) / sizeof(operator_t);
 
 svalue_t OPequals(int start, int n, int stop)
 {
-  svariable_t *var;
   svalue_t evaluated;
-  
-  var = find_variable(tokens[start]);
+  svariable_t *var = find_variable(tokens[start].v);
   
   if(var)
     {
       evaluated = evaluate_expression(n+1, stop);
-      setvariablevalue(var, evaluated);
+      var->setvalue(evaluated);
     }
   else
     {
-      script_error("unknown variable '%s'\n", tokens[start]);
+      script_error("unknown variable '%s'\n", tokens[start].v);
       return nullvar;
     }
   
@@ -286,7 +282,6 @@ svalue_t OPplus(int start, int n, int stop)
   
   evaluate_leftnright(start, n, stop);
   
-  //if(left.type == svt_fixed || right.type == svt_fixed)
   if (left.type == svt_string)
     {
       char *tmp;
@@ -303,7 +298,7 @@ svalue_t OPplus(int start, int n, int stop)
       else
 	{
 	  tmp = (char *)Z_Malloc(strlen(left.value.s) + 12, PU_LEVEL, 0);
-	  sprintf(tmp, "%s%li\n", left.value.s, intvalue(right));
+	  sprintf(tmp, "%s%i\n", left.value.s, intvalue(right));
 	}
       returnvar.type = svt_string;
       returnvar.value.s = tmp;
@@ -330,7 +325,8 @@ svalue_t OPminus(int start, int n, int stop)
   if(start == n)
     {
       // kinda hack, hehe
-      left.value.i = 0; left.type = svt_int;
+      left.value.i = 0;
+      left.type = svt_int;
       right = evaluate_expression(n+1, stop);
     }
   else
@@ -457,39 +453,34 @@ svalue_t OPincrement(int start, int n, int stop)
 {
   if(start == n)          // ++n
     {
-      svalue_t value;
-      svariable_t *var;
-      
-      var = find_variable(tokens[stop]);
+      svariable_t *var = find_variable(tokens[stop].v);
       if(!var)
 	{
-	  script_error("unknown variable '%s'\n", tokens[stop]);
+	  script_error("unknown variable '%s'\n", tokens[stop].v);
 	  return nullvar;
 	}
-      value = getvariablevalue(var);
+      svalue_t value = var->getvalue();
       
       value.value.i = intvalue(value) + 1;
       value.type = svt_int;
-      setvariablevalue(var, value);
+      var->setvalue(value);
       
       return value;
     }
   else if(stop == n)     // n++
     {
       svalue_t origvalue, value;
-      svariable_t *var;
-      
-      var = find_variable(tokens[start]);
+      svariable_t *var = find_variable(tokens[start].v);
       if(!var)
 	{
-	  script_error("unknown variable '%s'\n", tokens[start]);
+	  script_error("unknown variable '%s'\n", tokens[start].v);
 	  return nullvar;
 	}
-      origvalue = getvariablevalue(var);
+      origvalue = var->getvalue();
       
       value.type = svt_int;
       value.value.i = intvalue(origvalue) + 1;
-      setvariablevalue(var, value);
+      var->setvalue(value);
       
       return origvalue;
     }
@@ -503,39 +494,34 @@ svalue_t OPdecrement(int start, int n, int stop)
 {
   if(start == n)          // ++n
     {
-      svalue_t value;
-      svariable_t *var;
-      
-      var = find_variable(tokens[stop]);
+      svariable_t *var = find_variable(tokens[stop].v);
       if(!var)
 	{
-	  script_error("unknown variable '%s'\n", tokens[stop]);
+	  script_error("unknown variable '%s'\n", tokens[stop].v);
 	  return nullvar;
 	}
-      value = getvariablevalue(var);
+      svalue_t value = var->getvalue();
       
       value.value.i = intvalue(value) - 1;
       value.type = svt_int;
-      setvariablevalue(var, value);
+      var->setvalue(value);
       
       return value;
     }
   else if(stop == n)   // n++
     {
       svalue_t origvalue, value;
-      svariable_t *var;
-      
-      var = find_variable(tokens[start]);
+      svariable_t *var = find_variable(tokens[start].v);
       if(!var)
 	{
-          script_error("unknown variable '%s'\n", tokens[start]);
+          script_error("unknown variable '%s'\n", tokens[start].v);
 	  return nullvar;
 	}
-      origvalue = getvariablevalue(var);
+      origvalue = var->getvalue();
       
       value.type = svt_int;
       value.value.i = intvalue(origvalue) - 1;
-      setvariablevalue(var, value);
+      var->setvalue(value);
       
       return origvalue;
     }

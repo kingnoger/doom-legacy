@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/08/12 18:30:33  smite-meister
+// cleaned startup
+//
 // Revision 1.6  2004/03/28 15:16:15  smite-meister
 // Texture cache.
 //
@@ -35,15 +38,15 @@
 // Revision 1.1  2003/02/18 20:03:19  smite-meister
 // L2 cache added
 //
-//
-// DESCRIPTION:
-//   Abstract second-level cache system with reference counting
-//
 //---------------------------------------------------------------------
+
+/// \file
+/// \brief Abstract cache system with reference counting
 
 #include "doomdef.h"
 #include "w_wad.h"
 #include "z_cache.h"
+
 
 cacheitem_t::cacheitem_t()
 {
@@ -78,10 +81,11 @@ bool cacheitem_t::Release()
   return false;
 }
 
+
 //==========================================================
 
 // cache constructor
-L2cache_t::L2cache_t(memtag_t tag)
+cache_t::cache_t(memtag_t tag)
 {
   tagtype = tag;
   default_item = NULL;
@@ -90,7 +94,7 @@ L2cache_t::L2cache_t(memtag_t tag)
 
 // cache destructor
 // just to shut up compiler, since entire caches are probably never destroyed
-L2cache_t::~L2cache_t()
+cache_t::~cache_t()
 {
   // should empty the map and delete the items
 }
@@ -98,18 +102,18 @@ L2cache_t::~L2cache_t()
 
 // Has to be separate from constructor. Static class instances are constructed when
 // program starts, and at that time we do not yet have a working FileCache.
-void L2cache_t::SetDefaultItem(const char *name)
+void cache_t::SetDefaultItem(const char *name)
 {
   if (default_item)
     {
-      CONS_Printf("L2cache: Replacing default_item!\n");
+      CONS_Printf("cache: Replacing default_item!\n");
       // the old default item is made a normal cacheitem
       default_item->refcount--; // take away the extra reference
     }
 
   cacheitem_t *t = Load(name);
   if (!t)
-    I_Error("L2cache: New default_item '%s' not found!\n", name);
+    I_Error("cache: New default_item '%s' not found!\n", name);
 
   // it is also inserted into the map as a normal item
   c_map.insert(c_map_t::value_type(name, t));
@@ -122,7 +126,7 @@ void L2cache_t::SetDefaultItem(const char *name)
 
 // Pure virtual, renew. This is a sample implementation.
 /*
-  void cacheitem_t *L2cache_t::Load(const char *p)
+  void cacheitem_t *cache_t::Load(const char *p)
 {
   int lump = fc.FindNumForName(p, false);
   if (lump == -1)
@@ -141,9 +145,9 @@ void L2cache_t::SetDefaultItem(const char *name)
 // Checks if item is already in cache. If so, increments refcount and returns it.
 // If not, tries to cache and convert it. If succesful, returns the item.
 // If not, returns the defaultitem.
-cacheitem_t *L2cache_t::Cache(const char *name)
+cacheitem_t *cache_t::Cache(const char *name)
 {
-  // data used through a L2 cache must not be used anywhere
+  // data used through a  cache must not be used anywhere
   // else, because z_free and z_changetag will cause problems
 
   cacheitem_t *t;
@@ -186,7 +190,7 @@ cacheitem_t *L2cache_t::Cache(const char *name)
 
 
 // lists the contents of the cache
-void L2cache_t::Inventory()
+void cache_t::Inventory()
 {
   cacheitem_t *t = default_item;
 
@@ -204,8 +208,8 @@ void L2cache_t::Inventory()
 
 
 // Erases unused items (refcount == 0) from cache and makes
-// their data purgable (it _may_ still remain in L1 cache)
-int L2cache_t::Cleanup()
+// their data purgable (it _may_ still remain in the filecache)
+int cache_t::Cleanup()
 {
   int k = 0;
   c_iter_t i, j;
@@ -227,7 +231,7 @@ int L2cache_t::Cleanup()
 
 
 // Recaches and converts every item in cache using their names.
-void L2cache_t::Flush()
+void cache_t::Flush()
 {
   // TODO does not work very cleanly, needs redesigning
 
@@ -246,11 +250,11 @@ void L2cache_t::Flush()
 	{
 	  // not found
 	  if (t == default_item)
-	    I_Error("L2cache: Unable to recache default_item '%s'!\n", default_name);
+	    I_Error("cache: Unable to recache default_item '%s'!\n", default_name);
 	  // FIXME. Normally, the defaultitem would be used, but
 	  // since we must preserve pointers to the cacheitem, we'll have to do something else.
 	  // (*i).second = default_item;? what about refcount?
-	  I_Error("L2cache: Unable to recache item '%s'\n", name);
+	  I_Error("cache: Unable to recache item '%s'\n", name);
 	}
 
       c_iter_t j = i++;

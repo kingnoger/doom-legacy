@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2004/08/12 18:30:24  smite-meister
+// cleaned startup
+//
 // Revision 1.22  2004/04/01 09:16:16  smite-meister
 // Texture system bugfixes
 //
@@ -318,6 +321,16 @@ void Actor::UnsetPosition()
     }
 }
 
+/*
+bool Map::SetBMlink(fixed_t x, fixed_t y, Actor *a)
+{
+  int blockx = (x - bmaporgx) >> MAPBLOCKSHIFT;
+  int blocky = (y - bmaporgy) >> MAPBLOCKSHIFT;
+
+  if (blockx >= 0 && blockx < bmapwidth && blocky >= 0 && blocky < bmapheight)
+    blocklinks[blocky * bmapwidth + blockx] = a;
+}
+*/
 
 //
 // Links a thing into both a block and a subsector

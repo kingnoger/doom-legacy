@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/08/12 18:30:30  smite-meister
+// cleaned startup
+//
 // Revision 1.2  2004/03/28 15:16:14  smite-meister
 // Texture cache.
 //
@@ -193,7 +196,7 @@ public:
 };
 
 
-class modelcache_t : public L2cache_t
+class modelcache_t : public cache_t
 {
 protected:
   cacheitem_t *Load(const char *p);

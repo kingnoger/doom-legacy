@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2003 by DooM Legacy Team.
+// Copyright (C) 2003-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/08/12 18:30:22  smite-meister
+// cleaned startup
+//
 // Revision 1.7  2004/01/02 14:25:01  smite-meister
 // cleanup
 //
@@ -38,13 +41,11 @@
 // Revision 1.1  2003/04/19 17:38:46  smite-meister
 // SNDSEQ support, tools, linedef system...
 //
-//
-//
-// DESCRIPTION:  
-//   Sound sequences. Incorporates Hexen sequences, Heretic ambient sequences
-//   and Legacy-specific sequences.
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Sound sequences. Incorporates Hexen sequences, Heretic ambient sequences
+/// and Legacy-specific sequences.
 
 #include <vector>
 #include <string.h>
@@ -350,17 +351,17 @@ int S_Read_SNDSEQ(int lump)
 //===========================================
 
 
-// dynamic data (could also be a Thinker... maybe not)
+/// dynamic data (could also be a Thinker... maybe not)
 class ActiveSndSeq
 {
   friend class Map;
 
   const sndseq_t *seq;
-  int   ip;
-  int   delay;
-  float volume;
-  int   channel;
-  bool  isactor;
+  unsigned  ip;
+  int       delay;
+  float     volume;
+  int       channel;
+  bool      isactor;
   union
   { // the sound origin. if NULL, the sound is ambient
     mappoint_t *mpt;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.30  2004/08/12 18:30:24  smite-meister
+// cleaned startup
+//
 // Revision 1.29  2004/07/14 16:13:13  smite-meister
 // cleanup, commands
 //
@@ -153,10 +156,7 @@
 // from the context. However, some thinkers are not always associated with a Map.
 // Hence they must save the Map reference as well.
 
-void Command_Reset_f();
 
-
-runningscript_t *new_runningscript();
 
 // Pads save_p to a 4-byte boundary
 //  so that the load/save works on SGI&Gecko.
@@ -817,7 +817,7 @@ int PlayerPawn::Marshal(LArchive &a)
 	}
 
       // store the player number (if there is one)
-      a << (n = player ? player->number : -1);
+      //a << (n = player ? player->number : -1);
 
       // inventory is closed.
       a << invSlot;
@@ -864,7 +864,7 @@ int PlayerPawn::Marshal(LArchive &a)
 	  a << psprites[i].tics << psprites[i].sx << psprites[i].sy;
 	}
 
-      // NOTE that this is a bit unsecure...
+      /*
       a << n; //player->number;
       player = game.FindPlayer(n);
       if (player)
@@ -872,6 +872,7 @@ int PlayerPawn::Marshal(LArchive &a)
 	  player->mp = mp;
 	  player->pawn = this;
 	}
+      */
 
       a << invSlot;
       a << n;
@@ -921,6 +922,63 @@ int PlayerPawn::Marshal(LArchive &a)
 
 
 
+
+//==============================================
+//   Script serialization stuff
+//==============================================
+
+int svariable_t::Serialize(LArchive &a)
+{
+  a << name;
+  a << type;
+  switch (type)
+    {
+    case svt_string:
+      a << value.s;
+      break;
+    case svt_int:
+      a << value.i;
+      break;
+    case svt_actor:
+      Thinker::Serialize(value.mobj, a);
+      break;
+    case svt_fixed:
+      a << value.fixed;
+      break;
+    }
+
+  return 0;
+}
+
+
+int svariable_t::Unserialize(LArchive &a)
+{
+  a << name;
+  Z_ChangeTag(name, PU_LEVEL);
+  a << type;
+  switch (type)
+    {
+    case svt_string:
+      a << value.s;
+      Z_ChangeTag(value.s, PU_LEVEL);
+      break;
+    case svt_int:
+      a << value.i;
+      break;
+    case svt_actor:
+      value.mobj = (Actor *)Thinker::Unserialize(a);
+      break;
+    case svt_fixed:
+      a << value.fixed;
+      break;
+    }
+
+  return 0;
+}      
+
+
+
+
 //==============================================
 //  Map serialization
 //==============================================
@@ -965,6 +1023,8 @@ enum mapdiff_e
     LD_S2BOTTEX = 0x04,
     LD_S2MIDTEX = 0x08,
 };
+
+
 
 
 int Map::Serialize(LArchive &a)
@@ -1195,23 +1255,7 @@ int Map::Serialize(LArchive &a)
       // variables in the list to store
       while (sv && sv->type != svt_label)
         {
-          a << sv->name;
-          a << sv->type;
-          switch (sv->type)
-            {
-            case svt_string:
-	      a << sv->value.s;
-	      break;
-            case svt_int:
-	      a << sv->value.i;
-	      break;
-            case svt_actor:
-              Thinker::Serialize(sv->value.mobj, a);
-	      break;
-            case svt_fixed:
-	      a << sv->value.fixed;
-	      break;
-            }
+	  sv->Serialize(a);
           sv = sv->next;
         }
     }
@@ -1252,26 +1296,9 @@ int Map::Serialize(LArchive &a)
       for (i=0; i<VARIABLESLOTS; i++)
 	{
 	  svariable_t *sv = rs->variables[i];
-      
 	  while (sv && sv->type != svt_label)
 	    {
-	      a << sv->name;
-	      a << sv->type;
-	      switch (sv->type)
-		{
-		case svt_string:
-		  a << sv->value.s;
-		  break;
-		case svt_int:
-		  a << sv->value.i;
-		  break;
-		case svt_actor:
-		  Thinker::Serialize(sv->value.mobj, a);
-		  break;
-		case svt_fixed:
-		  a << sv->value.fixed;
-		  break;
-		}
+	      sv->Serialize(a);
 	      sv = sv->next;
 	    }
 	}
@@ -1498,42 +1525,23 @@ int Map::Unserialize(LArchive &a)
   for (i=0; i<n; i++)
     {
       svariable_t *sv = (svariable_t*)Z_Malloc(sizeof(svariable_t), PU_LEVEL, 0);
-
-      a << sv->name;
-      Z_ChangeTag(sv->name, PU_LEVEL);
-      a << sv->type;      
-      switch (sv->type)
-        {
-        case svt_string:
-	  a << sv->value.s;
-	  Z_ChangeTag(sv->value.s, PU_LEVEL);
-	  break;
-        case svt_int:
-	  a << sv->value.i;
-	  break;
-        case svt_actor:
-	  sv->value.mobj = (Actor *)Thinker::Unserialize(a);
-	  break;
-        case svt_fixed:
-	  a << sv->value.fixed;
-	  break;
-        }
+      sv->Unserialize(a);
       
       // link in the new variable
-      int hashkey = variable_hash(sv->name);
+      int hashkey = script_t::variable_hash(sv->name);
       sv->next = levelscript->variables[hashkey];
       levelscript->variables[hashkey] = sv;
     }
 
   // restore runningscripts
   // remove all runningscripts first: levelscript may have started them
-  T_ClearRunningScripts(); 
+  FS_ClearRunningScripts(); 
 
   a << n;
   for (i=0; i<n; i++)
     {
       // create a new runningscript
-      runningscript_t *rs = new_runningscript();
+      runningscript_t *rs = new runningscript_t();
   
       int scriptnum;
       a << scriptnum;
@@ -1547,7 +1555,7 @@ int Map::Unserialize(LArchive &a)
       a << n; // read out offset from save
       rs->savepoint = rs->script->data + n;
       a << n;
-      rs->wait_type = wait_type_e(n);
+      rs->wait_type = fs_wait_e(n);
       a << rs->wait_data;
       rs->trigger = (Actor *)Thinker::Unserialize(a);
     
@@ -1562,34 +1570,16 @@ int Map::Unserialize(LArchive &a)
       for (i=0; i<n; i++)
 	{
 	  svariable_t *sv = (svariable_t*)Z_Malloc(sizeof(svariable_t), PU_LEVEL, 0);
-	  a << sv->name;
-	  Z_ChangeTag(sv->name, PU_LEVEL);
-	  a << sv->type;      
-	  switch (sv->type)
-	    {
-	    case svt_string:
-	      a << sv->value.s;
-	      Z_ChangeTag(sv->value.s, PU_LEVEL);
-	      break;
-	    case svt_int:
-	      a << sv->value.i;
-	      break;
-	    case svt_actor:
-	      sv->value.mobj = (Actor *)Thinker::Unserialize(a);
-	      break;
-	    case svt_fixed:
-	      a << sv->value.fixed;
-	      break;
-	    }
+	  sv->Unserialize(a);
 
 	  // link in the new variable
-	  int hashkey = variable_hash(sv->name);
+	  int hashkey = script_t::variable_hash(sv->name);
 	  sv->next = rs->variables[hashkey];
 	  rs->variables[hashkey] = sv;
 	}
       
       // hook into chain
-      T_AddRunningScript(rs);
+      FS_AddRunningScript(rs);
     }
 
   // TODO Unarchive the script camera
@@ -1639,6 +1629,7 @@ int Map::Unserialize(LArchive &a)
 }
 
 
+
 //==============================================
 //  PlayerInfo serialization
 //==============================================
@@ -1670,9 +1661,8 @@ int PlayerInfo::Serialize(LArchive &a)
       a << m << n;
     }
 
-  // in this state only may the Player be carrying a pawn which does not belong to any map.
-  if (playerstate == PST_WAITFORMAP)
-    Thinker::Serialize(pawn, a); 
+  // players are serialized after maps, so pawn may already be stored
+  Thinker::Serialize(pawn, a); 
 
   return 0;
 }
@@ -1704,10 +1694,11 @@ int PlayerInfo::Unserialize(LArchive &a)
       Frags.insert(pair<int, int>(t1, t2));
     }
 
-  if (playerstate == PST_WAITFORMAP)
+  pawn = (PlayerPawn *)Thinker::Unserialize(a);
+  if (pawn)
     {
-      a.active_map = NULL; // so that it will not be "spawned"
-      pawn = (PlayerPawn *)Thinker::Unserialize(a);
+      mp = pawn->mp;
+      pawn->player = this;
     }
 
   return 0;
@@ -1720,7 +1711,6 @@ int MapCluster::Serialize(LArchive &a)
   a << clustername;
   a << hub << keepstuff;
 
-  a << kills << items << secrets;
   a << time << partime;
 
   a << interpic << intermusic;
@@ -1740,7 +1730,6 @@ int MapCluster::Unserialize(LArchive &a)
   a << clustername;
   a << hub << keepstuff;
 
-  a << kills << items << secrets;
   a << time << partime;
 
   a << interpic << intermusic;
@@ -1838,6 +1827,7 @@ int MapInfo::Unserialize(LArchive &a)
     {
       me = new Map(this);
       me->Unserialize(a);
+      a.active_map = NULL; // this map is done
     }
   else
     me = NULL;
@@ -1878,18 +1868,6 @@ int GameInfo::Serialize(LArchive &a)
   a << maxteams;
   a << maxplayers;
 
-  // teams
-  a << (n = teams.size());
-  for (i = 0; i < n; i++)
-    teams[i]->Serialize(a);
-
-  a.Marker(MARK_GROUP);
-  // players 
-  a << (n = Players.size());
-  player_iter_t j;
-  for (j = Players.begin(); j != Players.end(); j++)
-    (*j).second->Serialize(a);
-
   a.Marker(MARK_GROUP);
   // mapinfo (and maps)
   a << (n = mapinfo.size());
@@ -1903,6 +1881,20 @@ int GameInfo::Serialize(LArchive &a)
   cluster_iter_t l;
   for (l = clustermap.begin(); l != clustermap.end(); l++)
     (*l).second->Serialize(a);
+
+  a.Marker(MARK_GROUP);
+  // teams
+  a << (n = teams.size());
+  for (i = 0; i < n; i++)
+    teams[i]->Serialize(a);
+
+  a.Marker(MARK_GROUP);
+  // players 
+  a << (n = Players.size());
+  player_iter_t j;
+  for (j = Players.begin(); j != Players.end(); j++)
+    (*j).second->Serialize(a);
+
 
   a.Marker(MARK_GROUP);
   a << currentcluster->number;
@@ -2024,8 +2016,6 @@ int GameInfo::Unserialize(LArchive &a)
 }
 
 
-
-char savegamename[256];
 
 void GameInfo::LoadGame(int slot)
 {

@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.4  2004/08/12 18:30:30  smite-meister
+// cleaned startup
+//
 // Revision 1.3  2003/02/23 22:49:31  smite-meister
 // FS is back! L2 cache works.
 //
@@ -37,9 +40,7 @@
 #ifndef t_func_h
 #define t_func_h 1
 
-class Camera;
-
-extern Camera *script_camera;
+extern class Camera *script_camera;
 extern bool    script_camera_on;
 
 #define AngleToFixed(x)  fixed_t((double(x) / (double(ANG45)/45)) * FRACUNIT)

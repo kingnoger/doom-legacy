@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/08/12 18:30:29  smite-meister
+// cleaned startup
+//
 // Revision 1.7  2004/07/07 17:27:19  smite-meister
 // bugfixes
 //
@@ -209,7 +212,7 @@ public:
 /// Cache("name") (->Load("name"))creates a texture from a lump (flats...)
 /// Insert(Texture*) inserts a finished texture to cache (anims, doomtextures)
 
-class texturecache_t : public L2cache_t
+class texturecache_t : public cache_t
 {
 protected:
   /// generates a Texture from a single data lump

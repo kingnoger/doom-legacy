@@ -1,8 +1,14 @@
 // Emacs style mode select   -*- C++ -*- 
+//---------------------------------------------------------------------
 //
 // $Id$
 //
-// Auxiliary STL functors for various purposes
+// Copyright (C) 2003 by DooM Legacy Team.
+//
+//---------------------------------------------------------------------
+
+/// \file
+/// \brief Auxiliary STL functors for various purposes
 
 #ifndef functors_h
 #define functors_h 1

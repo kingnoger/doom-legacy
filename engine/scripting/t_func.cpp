@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.18  2004/08/12 18:30:28  smite-meister
+// cleaned startup
+//
 // Revision 1.17  2004/07/25 20:19:22  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -69,21 +72,17 @@
 // Revision 1.1.1.1  2002/11/16 14:18:18  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
 //--------------------------------------------------------------------------
-//
-// Functions
-//
-// functions are stored as variables(see variable.c), the
-// value being a pointer to a 'handler' function for the
-// function. Arguments are stored in an argc/argv-style list
-//
-// this module contains all the handler functions for the
-// basic FraggleScript Functions.
-//
-// By Simon Howard
-//
-//---------------------------------------------------------------------------
+
+/// \file
+/// \brief FS functions
+///
+/// FS functions are stored as variables, the
+/// value being a pointer to a 'handler' function for the
+/// function. Arguments are stored in an argc/argv-style list.
+///
+/// this module contains all the handler functions for the
+/// basic FraggleScript Functions.
 
 #include <stdio.h>
 #include <math.h>
@@ -125,7 +124,6 @@
 #include "t_parse.h"
 #include "t_spec.h"
 #include "t_script.h"
-#include "t_oper.h"
 #include "t_vari.h"
 #include "t_func.h"
 
@@ -182,9 +180,9 @@ void SF_PRnd()
 // looping section. using the rover, find the highest level
 // loop we are currently in and return the section_t for it.
 
-section_t *looping_section()
+fs_section_t *looping_section()
 {
-  section_t *best = NULL;         // highest level loop we're in
+  fs_section_t *best = NULL;         // highest level loop we're in
                                   // that has been found so far
   int n;
 
@@ -192,7 +190,7 @@ section_t *looping_section()
 
   for(n=0; n<SECTIONSLOTS; n++)
     {
-      section_t *current = current_script->sections[n];
+      fs_section_t *current = current_script->sections[n];
 
       // check all the sections in this hashchain
       while(current)
@@ -217,7 +215,7 @@ section_t *looping_section()
         // "continue;" in FraggleScript is a function
 void SF_Continue()
 {
-  section_t *section;
+  fs_section_t *section;
 
   if(!(section = looping_section()) )       // no loop found
     {
@@ -230,7 +228,7 @@ void SF_Continue()
 
 void SF_Break()
 {
-  section_t *section;
+  fs_section_t *section;
 
   if(!(section = looping_section()) )
     {
@@ -304,11 +302,57 @@ void SF_Beep()
   CONS_Printf("\3");
 }
 
+
 void SF_Clock()
 {
   t_return.type = svt_int;
-  t_return.value.i = (game.tic*100)/35;
+  t_return.value.i = (current_map->maptic*100)/35;
 }
+
+
+
+// script function
+void SF_Wait()
+{
+  if(t_argc != 1)
+    {
+      script_error("incorrect arguments to function\n");
+      return;
+    }
+
+  current_script->save(rover, wt_delay, (intvalue(t_argv[0]) * 35) / 100);
+}
+
+
+// wait for sector with particular tag to stop moving
+void SF_TagWait()
+{
+  if(t_argc != 1)
+    {
+      script_error("incorrect arguments to function\n");
+      return;
+    }
+
+  current_script->save(rover, wt_tagwait, intvalue(t_argv[0]));
+}
+
+
+
+
+// wait for a script to finish
+void SF_ScriptWait()
+{
+  if(t_argc != 1)
+    {
+      script_error("incorrect arguments to function\n");
+      return;
+    }
+
+  current_script->save(rover, wt_scriptwait, intvalue(t_argv[0]));
+}
+
+
+
 
     /**************** doom stuff ****************/
 
@@ -317,36 +361,25 @@ void SF_ExitLevel()
   current_map->ExitMap(NULL, 0, 0); // TODO! lots of ways to exit!
 }
 
-        // centremsg
+
+// centremsg
 void SF_Tip()
 {
-  int     i;
-  char    *tempstr;
-  int     strsize = 0;
-
-  // FIXME add player field in script_t ?
-  /*
-  if (!current_script->trigger->IsOf(PlayerPawn::_type))
-    return;
-  PlayerPawn *p = (PlayerPawn *)current_script->trigger;
-  if (p->player != displayplayer)
-    return;
-  */
-  // TODO: displayplayer2, tips to lower half of screen...
-  if (current_script->player != displayplayer)
+  if (!trigger_player)
     return;
 
-  for(i = 0; i < t_argc; i++)
+  int i, strsize = 0;
+
+  for (i = 0; i < t_argc; i++)
     strsize += strlen(stringvalue(t_argv[i]));
 
-  tempstr = (char *)Z_Malloc(strsize + 1, PU_STATIC, 0);
+  char *tempstr = (char *)Z_Malloc(strsize + 1, PU_STATIC, 0);
   tempstr[0] = '\0';
 
-  for(i=0; i<t_argc; i++)
+  for (i=0; i<t_argc; i++)
     sprintf(tempstr, "%s%s", tempstr, stringvalue(t_argv[i]));
 
-
-  HU_SetTip(tempstr, 53);
+  trigger_player->SetMessage(tempstr, 53, PlayerInfo::M_HUD);
   Z_Free(tempstr);
 }
 
@@ -354,32 +387,29 @@ void SF_Tip()
 // SoM: Timed tip!
 void SF_TimedTip()
 {
-  int     i;
-  char    *tempstr;
-  int     strsize = 0;
+  if (t_argc < 2)
+    {
+      script_error("Missing parameters.\n");
+      return;
+    }
 
-  if(t_argc < 2)
-  {
-    script_error("Missing parameters.\n");
-    return;
-  }
-
-  if(current_script->player != displayplayer)
+  if (!trigger_player)
     return;
 
   int tiptime = (intvalue(t_argv[0]) * 35) / 100;
 
-  for(i = 0; i < t_argc; i++)
+  int i, strsize = 0;
+
+  for (i = 0; i < t_argc; i++)
     strsize += strlen(stringvalue(t_argv[i]));
 
-  tempstr = (char *)Z_Malloc(strsize + 1, PU_STATIC, 0);
+  char *tempstr = (char *)Z_Malloc(strsize + 1, PU_STATIC, 0);
   tempstr[0] = '\0';
 
-  for(i=1; i<t_argc; i++)
+  for (i=1; i<t_argc; i++)
     sprintf(tempstr, "%s%s", tempstr, stringvalue(t_argv[i]));
 
-  //CONS_Printf("%s\n", tempstr);
-  HU_SetTip(tempstr, tiptime);
+  trigger_player->SetMessage(tempstr, tiptime, PlayerInfo::M_HUD);
   Z_Free(tempstr);
 }
 
@@ -387,28 +417,27 @@ void SF_TimedTip()
 // tip to a particular player
 void SF_PlayerTip()
 {
-  int     i, plnum;
-  char    *tempstr;
-  int     strsize = 0;
+  if (!t_argc)
+    { script_error("player not specified\n"); return; }
 
-  if(!t_argc)
-    { script_error("player not specified\n"); return;}
+  int plnum = intvalue(t_argv[0]) + 1;
+  PlayerInfo *p = current_map->FindPlayer(plnum);
 
-  plnum = intvalue(t_argv[0]);
+  if (!p)
+    return;
 
-  if ((consoleplayer->number - 1) != plnum) return;
+  int i, strsize = 0;
 
-  for(i = 0; i < t_argc; i++)
+  for (i = 0; i < t_argc; i++)
     strsize += strlen(stringvalue(t_argv[i]));
 
-  tempstr = (char *)Z_Malloc(strsize + 1, PU_STATIC, 0);
+  char *tempstr = (char *)Z_Malloc(strsize + 1, PU_STATIC, 0);
   tempstr[0] = '\0';
 
-  for(i=1; i<t_argc; i++)
+  for (i=1; i<t_argc; i++)
     sprintf(tempstr, "%s%s", tempstr, stringvalue(t_argv[i]));
 
-  //CONS_Printf("%s\n", tempstr);
-  HU_SetTip(tempstr, 53);
+  p->SetMessage(tempstr, 53, PlayerInfo::M_HUD);
   Z_Free(tempstr);
 }
 
@@ -416,23 +445,21 @@ void SF_PlayerTip()
 // message player
 void SF_Message()
 {
-  int     i;
-  char    *tempstr;
-  int     strsize = 0;
-
-  if(current_script->player != displayplayer)
+  if (!trigger_player)
     return;
 
-  for(i = 0; i < t_argc; i++)
+  int i, strsize = 0;
+
+  for (i = 0; i < t_argc; i++)
     strsize += strlen(stringvalue(t_argv[i]));
 
-  tempstr = (char *)Z_Malloc(strsize + 1, PU_STATIC, 0);
+  char *tempstr = (char *)Z_Malloc(strsize + 1, PU_STATIC, 0);
   tempstr[0] = '\0';
 
-  for(i=0; i<t_argc; i++)
+  for (i=0; i<t_argc; i++)
     sprintf(tempstr, "%s%s", tempstr, stringvalue(t_argv[i]));
 
-  CONS_Printf("%s\n", tempstr);
+  trigger_player->SetMessage(tempstr, 1);
   Z_Free(tempstr);
 }
 
@@ -454,27 +481,26 @@ void SF_GameMode()
 // message to a particular player
 void SF_PlayerMsg()
 {
-  int     i, plnum;
-  char    *tempstr;
-  int     strsize = 0;
+  if (!t_argc)
+    { script_error("player not specified\n"); return; }
 
-  if(!t_argc)
-    { script_error("player not specified\n"); return;}
+  int plnum = intvalue(t_argv[0]) + 1;
+  PlayerInfo *p = current_map->FindPlayer(plnum);
 
-  plnum = intvalue(t_argv[0]);
+  if (!p)
+    return;
 
-  if(displayplayer->number != plnum) return;
-
-  for(i = 0; i < t_argc; i++)
+  int i, strsize = 0;
+  for (i = 0; i < t_argc; i++)
     strsize += strlen(stringvalue(t_argv[i]));
 
-  tempstr = (char *)Z_Malloc(strsize + 1, PU_STATIC, 0);
+  char *tempstr = (char *)Z_Malloc(strsize + 1, PU_STATIC, 0);
   tempstr[0] = '\0';
 
-  for(i=1; i<t_argc; i++)
+  for (i=1; i<t_argc; i++)
     sprintf(tempstr, "%s%s", tempstr, stringvalue(t_argv[i]));
 
-  CONS_Printf("%s\n", tempstr);
+  p->SetMessage(tempstr, 1);
   Z_Free(tempstr);
 }
 
@@ -507,7 +533,7 @@ void SF_PlayerName()
 
   if(!t_argc)
     {
-      pl = current_script->player;
+      pl = trigger_player;
       if (pl)
         t_return.value.s = pl->name.c_str();
       else
@@ -535,7 +561,7 @@ void SF_PlayerObj()
 
   if(!t_argc)
     {
-      pl = current_script->player;
+      pl = trigger_player;
       if (pl) //plnum = pl - players;
         t_return.value.mobj = pl->pawn;
       else
@@ -561,7 +587,7 @@ void SF_MobjIsPlayer()
   if (t_argc == 0)
     {
       t_return.type = svt_int;
-      t_return.value.i = current_script->player ? 1 : 0;
+      t_return.value.i = trigger_player ? 1 : 0;
       return;
     }
 
@@ -570,7 +596,7 @@ void SF_MobjIsPlayer()
   if(!mobj)
     t_return.value.i = 0;
   else
-    t_return.value.i = (mobj->IsOf(PlayerPawn::_type)) ? 1 : 0;
+    t_return.value.i = mobj->IsOf(PlayerPawn::_type) ? 1 : 0;
   return;
 }
 
@@ -747,9 +773,7 @@ void SF_MaxPlayerAmmo()
 
 extern void SF_StartScript();      // in t_script.c
 extern void SF_ScriptRunning();
-extern void SF_Wait();
-extern void SF_TagWait();
-extern void SF_ScriptWait();
+
 
 /*********** Mobj code ***************/
 
@@ -1896,14 +1920,22 @@ void SF_ChangeHubLevel()
 void SF_StartSkill()
 {
   if(t_argc < 1)
-    { script_error("need skill level to start on\n"); return;}
+    {
+      script_error("need skill level to start on\n");
+      return;
+    }
 
   // -1: 1-5 is how we normally see skills
   // 0-4 is how doom sees them
 
-  game.skill = skill_t(intvalue(t_argv[0]) - 1);
+  int s = intvalue(t_argv[0]) - 1;
+  if (s < 0 || s > 4)
+    {
+      script_error("skill level out of bounds\n");
+      return;
+    }
 
-  game.StartGame();
+  game.StartGame(skill_t(s), 1);
 }
 
 
@@ -2019,8 +2051,8 @@ void SF_LineTrigger()
   //current_map->ActivateCrossedLine(&junk, 0, t_trigger);   // Try crossing it
 
   // FIXME this function does not yet work as expected, because the special type needs to be translated to a Hexen special
-  current_map->ActivateLine(&junk, t_trigger, 0, SPAC_USE);
-  current_map->ActivateLine(&junk, t_trigger, 0, SPAC_CROSS);
+  current_map->ActivateLine(&junk, trigger_obj, 0, SPAC_USE);
+  current_map->ActivateLine(&junk, trigger_obj, 0, SPAC_CROSS);
 }
 
 
@@ -2441,6 +2473,13 @@ void SF_SetCorona()
 #endif
 #endif // if 0
 
+
+
+
+
+
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // Init Functions
@@ -2449,7 +2488,7 @@ void SF_SetCorona()
 //extern int fov; // r_main.c
 int fov;
 
-void init_functions()
+void FS_init_functions()
 {
   // add all the functions
   //add_game_int("consoleplayer", &consoleplayer);

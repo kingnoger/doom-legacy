@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/08/12 18:30:27  smite-meister
+// cleaned startup
+//
 // Revision 1.8  2004/07/05 16:53:27  smite-meister
 // Netcode replaced
 //
@@ -63,6 +66,9 @@ extern int fgbuffer; // in fact a HUD property, but...
 // was ST_drawOverlayNum: Draw a number fully, scaled, over the view
 // was DrINumber: Draws a three digit number, left aligned, w = 9
 // was DrBNumber: Draws positive left-aligned 3-digit number at x+6-w/2  (w = 12)
+
+
+// Returns new x position.
 // right-aligned field!
 void HudNumber::Draw()
 {
@@ -83,13 +89,8 @@ void HudNumber::Draw()
   int w = n[0]->width;
   int h = n[0]->height;
   int dx = x - width * w; // drawing x coord
+
   // clear the area (right aligned field)
-
-#ifdef DEBUG
-  CONS_Printf("V_CopyRect1: %d %d %d %d %d %d %d %d val: %d\n",
-	      dx, y, BG, w*width, h, dx, y, fgbuffer, lnum);
-#endif
-
   // dont clear background in overlay
   if (!hud.overlayon && rendermode == render_soft)
     V_CopyRect(dx, y, BG, w*width, h, dx, y, fgbuffer);
@@ -99,9 +100,6 @@ void HudNumber::Draw()
     return;
 
   dx = x;
-
-  // V_DrawScaledPatch(\([^,]+\),\([^,]+\),\([^,]+\),\([^,;]+\));$
-  // \4->Draw(\1,\2,\3 | V_SCALE);
 
   // in the special case of 0, you draw 0
   if (lnum == 0)
@@ -163,10 +161,6 @@ void HudMultIcon::Draw()
       w = p[oldinum]->width;
       h = p[oldinum]->height;
 
-#ifdef DEBUG
-      CONS_Printf("V_CopyRect2: %d %d %d %d %d %d %d %d\n",
-		  dx, dy, BG, w, h, dx, dy, fgbuffer);
-#endif
       V_CopyRect(dx, dy, BG, w, h, dx, dy, fgbuffer);
     }
   int i = *inum;
@@ -198,15 +192,10 @@ void HudBinIcon::Draw()
       int dx, dy;
       //faB:current hardware mode always refresh the statusbar
       // just clear
-      dx = x; // - SHORT(p[1]->leftoffset); FIXME hud offsets
-      dy = y; // - SHORT(p[1]->topoffset);
+      dx = x; // - p[1]->leftoffset; // FIXME scaling, offsets...
+      dy = y; // - p[1]->topoffset;
       w = p[1]->width;
       h = p[1]->height;
-
-#ifdef DEBUG
-      CONS_Printf("V_CopyRect3: %d %d %d %d %d %d %d %d\n",
-		  dx, dy, BG, w, h, dx, dy, fgbuffer);
-#endif
 
       V_CopyRect(dx, dy, BG, w, h, dx, dy, fgbuffer);
     }

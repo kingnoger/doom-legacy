@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2004/08/12 18:30:33  smite-meister
+// cleaned startup
+//
 // Revision 1.20  2004/07/25 20:16:43  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -545,8 +548,10 @@ texturecache_t tc(PU_TEXTURE);
 
 Texture *texturecache_t::operator[](unsigned id)
 {
+  /*
   if (id >= texture_ids.size())
     I_Error("Invalid texture ID %d (max %d)!\n", id, texture_ids.size());
+  */
 
   map<unsigned, Texture *>::iterator i = texture_ids.find(id);
   if (i == texture_ids.end())
@@ -557,7 +562,7 @@ Texture *texturecache_t::operator[](unsigned id)
 
 
 texturecache_t::texturecache_t(memtag_t tag)
-  : L2cache_t(tag)
+  : cache_t(tag)
 {
   texture_ids[0] = NULL; // "no texture" id
 }
@@ -1030,7 +1035,7 @@ int R_ColormapNumForName(const char *name)
 // data and not the colormap data.
 double  deltas[256][3], cmap[256][3];
 
-unsigned char  NearestColor(unsigned char r, unsigned char g, unsigned char b);
+static unsigned char  NearestColor(unsigned char r, unsigned char g, unsigned char b);
 int            RoundUp(double number);
 
 int R_CreateColormap(char *p1, char *p2, char *p3)
@@ -1211,7 +1216,7 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
 
 
 // Thanks to quake2 source!
-byte NearestColor(byte r, byte g, byte b)
+static byte NearestColor(byte r, byte g, byte b)
 {
   int bestdistortion = 256 * 256 * 4;
   int bestcolor = 0;

@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.31  2004/08/12 18:30:29  smite-meister
+// cleaned startup
+//
 // Revision 1.30  2004/04/25 16:26:51  smite-meister
 // Doxygen
 //
@@ -525,15 +528,14 @@ public:
   void ScriptFinished(int number);
 
   // FS scripting
-  void T_ClearScripts();
-  void T_ClearRunningScripts();
-  void T_PreprocessScripts();
-  bool T_RunScript(int n, Actor *trig);
-  void T_DelayedScripts();
-  void T_AddRunningScript(runningscript_t *s);
-  runningscript_t *T_SaveCurrentScript();
+  void FS_ClearScripts();
+  void FS_ClearRunningScripts();
+  void FS_PreprocessScripts();
+  bool FS_RunScript(int n, Actor *trig);
+  void FS_DelayedScripts();
+  void FS_AddRunningScript(runningscript_t *s);
 protected:
-  bool T_wait_finished(runningscript_t *script);
+  bool FS_wait_finished(runningscript_t *script);
 };
 
 

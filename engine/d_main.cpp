@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.30  2004/08/12 18:30:23  smite-meister
+// cleaned startup
+//
 // Revision 1.29  2004/07/14 16:13:13  smite-meister
 // cleanup, commands
 //
@@ -160,8 +163,6 @@
 #include "z_zone.h"
 
 
-#define _MAX_PATH   MAX_WADPATH
-
 
 void SV_Init();
 void CL_Init();
@@ -174,13 +175,14 @@ const char VERSIONSTRING[] = "prealpha2";
 
 // Name of local directory for config files and savegames
 #ifdef LINUX 
-# define DEFAULTDIR ".legacy"
+# define DEFAULTDIR "/.legacy"
 #else
-# define DEFAULTDIR "legacy"
+# define DEFAULTDIR "/legacy"
 #endif
 
 // the file where all game vars and settings are saved
 #define CONFIGFILENAME   "config.cfg"  
+
 
 
 bool dedicated  = false;
@@ -199,6 +201,29 @@ enum gamemission_t
 
 int mission = gmi_doom2;
 
+
+// Helper function: start a new game using the predefined MAPINFO lumps in legacy.wad...
+void BeginGame(int sk, int episode)
+{
+  char *m;
+
+  switch (game.mode)
+    {
+    case gm_hexen:
+      m = "MAPINFO";
+      break;
+    case gm_heretic:
+      m = "MINFO_H";
+      break;
+    case gm_doom2:
+      m = "MINFO_D2";
+      break;
+    default:
+      m = "MINFO_D1";
+    }
+
+  COM_BufAddText(va("newgame %s %d %d\n", m, sk, episode));
+}
 
 
 //======================================================================
@@ -260,18 +285,10 @@ void D_ProcessEvents()
 
 void D_DoomLoop()
 {
-  // user settings
-  COM_BufAddText("exec autoexec.cfg\n");
-
-  // end of loading screen: CONS_Printf() will no more call FinishUpdate()
-  con.refresh = false;
-
   // timekeeping for the game
   tic_t rendertimeout = 0; // next time the screen MUST be updated
   tic_t rendertic = 0;     // last rendered gametic
   tic_t oldtics = I_GetTics(); // current time
-
-  vid.SetMode(); // change video mode if needed, recalculate...
 
   // main game loop
   while (1)
@@ -348,10 +365,6 @@ static void D_AddFile(const char *file)
 
 
 
-
-
-
-
 // ==========================================================================
 // Identify the Doom version, and IWAD file to use.
 // Sets 'game.mode' to determine whether registered/commmercial features are
@@ -376,76 +389,56 @@ static gamemode_t D_GetDoomType(const char *wadname)
 // identifies the iwad used
 static void D_IdentifyVersion()
 {
-  char  pathtemp[_MAX_PATH];
-
-  char *waddir = getenv("DOOMWADDIR");
-  if (!waddir)
-    {
-      // get the current directory (possible problem on NT with "." as current dir)
-      if (getcwd(pathtemp, _MAX_PATH) != NULL)
-	waddir = pathtemp;
-      else
-	waddir = ".";
-    }
-  
-#ifdef __MACOS__
-  // cwd is always "/" when app is dbl-clicked
-  if (!stricmp(waddir,"/"))
-    waddir = I_GetWadDir();
-#endif
-
-  // store the wad path
-  fc.SetPath(waddir);
-
-  // will be overwritten in case of -cdrom or linux home
-  sprintf(configfile, "%s/"CONFIGFILENAME, waddir);
-
-  // external Legacy data file
-  D_AddFile("legacy.wad");
-
   // Specify the name of an IWAD file to use.
   // Internally the game makes no difference between IWADs and PWADs.
   // Non-free files are just not offered for upload in network games.
   // The -iwad parameter just means that we MUST have this wad file
   // in order to continue. It is also loaded right after legacy.wad.
 
+  char *doom1wad = "doom1.wad";
+  char *doomwad = "doom.wad";
+  char *doomuwad = "doomu.wad";
+  char *doom2wad = "doom2.wad";
+  char *plutoniawad = "plutonia.wad";
+  char *tntwad = "tnt.wad";
+  char *hereticwad = "heretic.wad";
+  char *heretic1wad = "heretic1.wad";
+  char *hexenwad = "hexen.wad";
+
   if (M_CheckParm("-iwad"))
     {
-      char *s = M_GetNextParm();
+      const char *s = M_GetNextParm();
 
-      if (access(s, F_OK))
+      if (!fc.Access(s))
 	I_Error("IWAD %s not found!\n", s);
 
       D_AddFile(s);
 
-      int i;
       // point to start of filename only
-      for (i = strlen(s) - 1; i >= 0; i--)
-	if (s[i]=='\\' || s[i]=='/' || s[i]==':') break;
-      i++;
+      s = FIL_StripPath(s);
       
       // try to find implied gamemode
-      if (!stricmp("plutonia.wad", s+i))
+      if (!stricmp(plutoniawad, s))
 	{
 	  game.mode = gm_doom2;
 	  mission = gmi_plut;
 	}
-      else if (!stricmp("tnt.wad", s+i))
+      else if (!stricmp(tntwad, s))
 	{
 	  game.mode = gm_doom2;
 	  mission = gmi_tnt;
 	}
-      else if (!stricmp("heretic.wad", s+i) || !stricmp("heretic1.wad", s+i))
+      else if (!stricmp(hereticwad, s) || !stricmp(heretic1wad, s))
 	game.mode = gm_heretic;
-      else if (!stricmp("hexen.wad", s+i))
+      else if (!stricmp(hexenwad, s))
 	game.mode = gm_hexen;
-      else if (!stricmp("doom2.wad", s+i))
+      else if (!stricmp(doom2wad, s))
 	game.mode = gm_doom2;
-      else if (!stricmp("doomu.wad", s+i))
+      else if (!stricmp(doomuwad, s))
 	game.mode = gm_udoom;
-      else if (!stricmp("doom.wad", s+i))
+      else if (!stricmp(doomwad, s))
 	game.mode = D_GetDoomType(s);
-      else if (!stricmp("doom1.wad", s+i))
+      else if (!stricmp(doom1wad, s))
 	game.mode = gm_doom1s;
       else
 	game.mode = gm_doom2;
@@ -454,59 +447,49 @@ static void D_IdentifyVersion()
   // start the game without any preloaded wadfiles other than legacy.wad
   else // finally we'll try to find a wad file by ourselves
     {
-      char *doom1wad = "doom1.wad";
-      char *doomwad = "doom.wad";
-      char *doomuwad = "doomu.wad";
-      char *doom2wad = "doom2.wad";
-      char *plutoniawad = "plutonia.wad";
-      char *tntwad = "tnt.wad";
-      char *hereticwad = "heretic.wad";
-      char *heretic1wad = "heretic1.wad";
-      char *hexenwad = "hexen.wad";
-
-      if (!access(doom2wad, F_OK))
+      if (fc.Access(doom2wad))
 	{
 	  game.mode = gm_doom2;
 	  D_AddFile(doom2wad);
 	}
-      else if (!access(doomuwad, F_OK))
+      else if (fc.Access(doomuwad))
 	{
 	  game.mode = gm_udoom;
 	  D_AddFile(doomuwad);
 	}
-      else if (!access(doomwad, F_OK))
+      else if (fc.Access(doomwad))
 	{
 	  game.mode = D_GetDoomType(doomwad);
 	  D_AddFile(doomwad);
 	}
-      else if (!access(doom1wad, F_OK))
+      else if (fc.Access(doom1wad))
 	{
 	  game.mode = gm_doom1s;
 	  D_AddFile(doom1wad);
 	}
-      else if (!access(plutoniawad, F_OK))
+      else if (fc.Access(plutoniawad))
 	{
 	  game.mode = gm_doom2;
 	  mission = gmi_plut;
 	  D_AddFile(plutoniawad);
 	}
-      else if (!access(tntwad, F_OK))
+      else if (fc.Access(tntwad))
 	{
 	  game.mode = gm_doom2;
 	  mission = gmi_tnt;
 	  D_AddFile(tntwad);
 	}
-      else if (!access(hereticwad, F_OK))
+      else if (fc.Access(hereticwad))
 	{
 	  game.mode = gm_heretic;
 	  D_AddFile(hereticwad);
 	}
-      else if (!access(heretic1wad, F_OK))
+      else if (fc.Access(heretic1wad))
 	{
 	  game.mode = gm_heretic;
 	  D_AddFile(heretic1wad);
 	}
-      else if (!access(hexenwad, F_OK))
+      else if (fc.Access(hexenwad))
 	{
 	  game.mode = gm_hexen;
 	  D_AddFile(hexenwad);
@@ -514,8 +497,8 @@ static void D_IdentifyVersion()
       else
 	{
 	  I_Error("Main IWAD file not found\n"
-		  "You need either Doom.wad, Doom1.wad, Doomu.wad, Doom2.wad,\n"
-		  "Tnt.wad, Plutonia.wad, Heretic.wad, Heretic1.wad or Hexen.wad\n"
+		  "You need either doom.wad, doom1.wad, doomu.wad, doom2.wad,\n"
+		  "tnt.wad, plutonia.wad, heretic.wad, heretic1.wad or hexen.wad\n"
 	          "from any sharware or commercial version of Doom, Heretic or Hexen!\n");
 	}
     }
@@ -587,15 +570,69 @@ static void D_CheckWadVersion()
 
   if (wadversion != VERSION)
     I_Error("Your legacy.wad file is version %d.%d, you need version %d.%d\n"
-	    "Use the legacy.wad coming from the same zip file of this exe\n"
+	    "Use the legacy.wad coming from the same zip file as this executable\n"
 	    "\n"
-	    "Use -nocheckwadversion to remove this check,\n"
+	    "Use -noversioncheck to remove this check,\n"
 	    "but this can cause Legacy to hang\n",
 	    wadversion/100,wadversion%100,VERSION/100,VERSION%100);
 }
 
 
-extern char savegamename[256]; // temporary, FIXME
+
+// set up correct paths to wads, configfiles and saves
+void D_SetPaths()
+{
+  char *wadpath = getenv("DOOMWADDIR");
+  if (!wadpath)
+    wadpath = I_GetWadPath();
+
+  // store the wad path
+  fc.SetPath(wadpath);
+
+  char *userhome;
+
+  if (M_CheckParm("-home") && M_IsNextParm())
+    userhome = M_GetNextParm();
+  else
+    userhome = getenv("HOME");
+
+#ifdef LINUX // user home directory
+  if (!userhome)
+    I_Error("Please set $HOME to your home directory\n");
+#endif
+
+  string legacyhome = "";
+
+  if (userhome)
+    {
+      // use user specific config files and saves
+      legacyhome = string(userhome);
+      legacyhome += DEFAULTDIR; // config files, saves here
+      I_mkdir(legacyhome.c_str(), S_IRWXU);
+      legacyhome += '/';
+    }
+
+  // check for a custom config file
+  if (M_CheckParm("-config") && M_IsNextParm())
+    {
+      strcpy(configfile, M_GetNextParm());
+      CONS_Printf("Using config file '%s'\n", configfile);
+    }
+  else
+    {
+      // little hack to allow a different config file for opengl
+      // may be a problem if opengl cannot really be started
+      if (M_CheckParm("-opengl"))
+	sprintf(configfile, "%sgl"CONFIGFILENAME, legacyhome.c_str());
+      else
+	sprintf(configfile, "%s"CONFIGFILENAME, legacyhome.c_str());
+    }
+
+  // savegame name template
+  sprintf(savegamename, "%s%s", legacyhome.c_str(), SAVEGAMENAME);
+}
+
+
 
 //
 // D_DoomMain
@@ -614,91 +651,56 @@ void D_DoomMain()
       if (freopen("stdout.txt", "w", stdout) == NULL) CONS_Printf("freopen didnt work\n");
       if (freopen("stderr.txt", "w", stderr) == NULL) CONS_Printf("freopen didnt work\n");
     }
-  
+
+  setbuf(stdout, NULL);      // non-buffered output
+
+  // start console output by the banner line
+  char banner[81];
+  sprintf(banner, "Doom Legacy %d.%d %s", VERSION/100, VERSION%100, VERSIONSTRING);
+  CONS_Printf("%s\n", D_MakeTitleString(banner));
+
   // get parameters from a response file (eg: legacy @parms.txt)
   // adds parameters found within file to myargc, myargv.
   M_FindResponseFile();
+
+  // set up correct paths to wads, configfiles and saves
+  D_SetPaths();
+
+  // external Legacy data file (load it before iwad!)
+  D_AddFile("legacy.wad");
 
   // identify the main IWAD file to use (if any),
   // set game.mode, game.mission accordingly
   D_IdentifyVersion();
 
-  setbuf(stdout, NULL);      // non-buffered output
-
   // game title
-  char *title;
-  switch (game.mode)
-    {
-    case gm_udoom    :
-      title = "The Ultimate DOOM Startup"; break;
-    case gm_doom1s :
-      title = "DOOM Shareware Startup"; break;
-    case gm_doom1:
-      title = "DOOM Registered Startup"; break;
-    case gm_doom2:
-      switch (mission)
-	{
-	case gmi_plut:
-	  title = "DOOM 2: Plutonia Experiment"; break;
-	case gmi_tnt:
-	  title = "DOOM 2: TNT - Evilution"; break;
-	default:
-	  title = "DOOM 2: Hell on Earth"; break;
-	}
-      break;
-    case gm_heretic:
-      title = "Heretic: Shadow of the Serpent Riders"; break;
-    case gm_hexen:
-      title = "Hexen: Beyond Heretic"; break;
-    default:
-      title = "Doom Legacy Startup"; break;
-    }
+  const char *Titles[] =
+  {
+    "No game mode chosen.",
+    "DOOM Shareware Startup",
+    "DOOM Registered Startup",
+    "DOOM 2: Hell on Earth",
+    "The Ultimate DOOM Startup",
+    "Heretic: Shadow of the Serpent Riders",
+    "Hexen: Beyond Heretic"
+  };
 
+  const char *title = Titles[game.mode];
 
-  char banner[81];
-  sprintf(banner, "Doom Legacy %d.%d %s", VERSION/100, VERSION%100, VERSIONSTRING);
+  if (mission == gmi_plut)
+    title = "DOOM 2: Plutonia Experiment";
+  else if (mission == gmi_tnt)
+    title = "DOOM 2: TNT - Evilution";
 
-  // start console output by the banner line and game title
-  CONS_Printf("%s\n%s\n\n", D_MakeTitleString(banner), title);
+  // print out game title
+  CONS_Printf("%s\n\n", title);
 
   // "developement parameter"
   devparm = M_CheckParm("-devparm");
   if (devparm)
     CONS_Printf(D_DEVSTR);
-  
-  // default savegame
-  strcpy(savegamename, SAVEGAMENAME);
 
-  {
-    char *userhome, legacyhome[256];
-    if (M_CheckParm("-home") && M_IsNextParm())
-      userhome = M_GetNextParm();
-    else
-      userhome = getenv("HOME");
-
-#ifdef LINUX // user home directory
-    if (!userhome)
-      I_Error("Please set $HOME to your home directory\n");
-#endif  
-    if (userhome)
-      {
-	// use user specific config file
-	sprintf(legacyhome, "%s/"DEFAULTDIR, userhome);
-	// little hack to allow a different config file for opengl
-	// may be a problem if opengl cannot really be started
-	if (M_CheckParm("-opengl"))
-	  sprintf(configfile, "%s/gl"CONFIGFILENAME, legacyhome);
-	else
-	  sprintf(configfile, "%s/"CONFIGFILENAME, legacyhome);
-      
-	// can't use sprintf since there is %d in savegamename
-	strcatbf(savegamename, legacyhome, "/");
-	I_mkdir(legacyhome, S_IRWXU);
-      }
-  }
-
-  // add any files specified on the command line with -file wadfile
-  // to the wad list
+  // add any files specified on the command line with -file to the wad list
   if (M_CheckParm("-file"))
     {
       // the parms after p are wadfile/lump names,
@@ -707,17 +709,7 @@ void D_DoomMain()
 	D_AddFile(M_GetNextParm());
     }
 
-  // load dehacked files
-  int p = M_CheckParm("-dehacked");
-  if (!p)
-    p = M_CheckParm("-deh");
-  if (p != 0)
-    {
-      while (M_IsNextParm())
-	D_AddFile(M_GetNextParm());
-    }
-
-  // ----------- start subsystem initializations
+  //========================== start subsystem initializations ==========================
   // order: memory, engine patching, L1 cache,
   //  video, HUD, console (now consvars can be registered), read config file,
   //  menu, renderer, sound, scripting.
@@ -730,7 +722,7 @@ void D_DoomMain()
     I_Error("A WAD file was not found\n");
 
   // see that legacy.wad version matches program version
-  if (!M_CheckParm("-nocheckwadversion"))
+  if (!M_CheckParm("-noversioncheck"))
     D_CheckWadVersion();
 
   // the command buffer
@@ -780,165 +772,46 @@ void D_DoomMain()
       SCR_CheckDefaultMode();
     }
 
-  //-------------------------------------- COMMAND LINE PARAMS
-
-  // Initialize CD-Audio
-  if (!M_CheckParm("-nocd"))
-    I_InitCD();
-  if (M_CheckParm("-respawn"))
-    COM_BufAddText("respawnmonsters 1\n");
-  if (M_CheckParm("-teamplay"))
-    COM_BufAddText("teamplay 1\n");
-  if (M_CheckParm("-teamskin"))
-    COM_BufAddText("teamplay 2\n");
-  if (M_CheckParm("-splitscreen"))
-    cv_splitscreen.Set(1);
-
-  if (M_CheckParm("-altdeath"))
-    COM_BufAddText("deathmatch 2\n");
-  else if (M_CheckParm("-deathmatch"))
-    COM_BufAddText("deathmatch 1\n");
-
-  if (M_CheckParm("-fast"))
-    COM_BufAddText("fastmonsters 1\n");
-
-  if (M_CheckParm("-nomonsters"))
-    cv_nomonsters.Set(1); 
-
-  if (M_CheckParm("-timer"))
-    {
-      char *s = M_GetNextParm();
-      COM_BufAddText(va("timelimit %s\n",s ));
-    }
-
-  // push all "+" parameter at the command buffer
-  M_PushSpecialParameters();
- 
-
   // ------------- starting the game ----------------
 
-  bool autostart = false;
-  int startepisode = 1;
-  int startmap = 1;
+  bool autostart = game.netgame; // -server or -dedicated
+  int  episode = 1;
   skill_t sk = sk_medium;
 
-  // check for a driver that wants intermission stats
-  p = M_CheckParm("-statcopy");
-  if (p && p<myargc-1)
-    {
-      I_Error("Sorry but statcopy isn't supported at this time\n");
-      /*
-        // for statistics driver
-        extern  void*   statcopy;
-        statcopy = (void*)atoi(myargv[p+1]);
-      */
-    }
+  // get skill / episode
 
-  // get skill / episode / map from parms
-
-  p = M_CheckParm("-skill");
-  if (p && p < myargc-1)
+  int p = M_CheckParm("-skill");
+  if (p && M_IsNextParm())
     {
-      sk = (skill_t)(myargv[p+1][0]-'1');
+      sk = skill_t(myargv[p+1][0]-'1');
       autostart = true;
     }
 
   p = M_CheckParm("-episode");
-  if (p && p < myargc-1)
-    {
-      startepisode = myargv[p+1][0]-'0';
-      autostart = true;
-    }
-
-  p = M_CheckParm("-warp");
-  if (p && p < myargc-1)
-    {
-      if (game.mode == gm_doom2)
-	startmap = atoi(myargv[p+1]);
-      else
-	{
-	  startepisode = myargv[p+1][0]-'0';
-	  if (p < myargc-2 &&
-	      myargv[p+2][0]>='0' &&
-	      myargv[p+2][0]<='9')
-	    startmap = myargv[p+2][0]-'0';
-	  else
-	    startmap = 1;
-	}
-      autostart = true;
-    }
-
-
-  // Check and print which version is executed.
-  switch (game.mode)
-    {
-    case gm_doom1s:
-      CONS_Printf(text[TXT_SHAREWARE]);
-      break;
-    case gm_doom1:
-    case gm_udoom:
-    case gm_doom2:
-      CONS_Printf(text[TXT_COMMERCIAL]);
-      break;
-    default:
-      break;
-    }
-
-  // start the apropriate game based on parms
-  p = M_CheckParm("-record");
-  if (p && p < myargc-1)
-    {
-      // sets up demo recording
-      //G_RecordDemo(myargv[p+1]);
-      autostart = true;
-    }
-
-  // demo doesn't need anymore to be added with D_AddFile()
-  p = M_CheckParm("-playdemo");
-  if (!p)
-    p = M_CheckParm("-timedemo");
   if (p && M_IsNextParm())
     {
-      char tmp[MAX_WADPATH];
-      // add .lmp to identify the EXTERNAL demo file
-      // it is NOT possible to play an internal demo using -playdemo,
-      // rather push a playdemo command.. to do.
-
-      strcpy(tmp,M_GetNextParm());
-      // get spaced filename or directory
-      while(M_IsNextParm()) { strcat(tmp," ");strcat(tmp,M_GetNextParm()); }
-      // VB: just horrible;)
-      FIL_DefaultExtension(tmp,".lmp");
-
-      CONS_Printf("Playing demo %s.\n",tmp);
-
-      if ((p = M_CheckParm("-playdemo")))
-        {
-	  singledemo = true;              // quit after one demo
-	  //G_DeferedPlayDemo(tmp);
-        }
-      //else G_TimeDemo(tmp);
-	
-      game.state = GameInfo::GS_NULL;
-
-      return;         
+      episode = myargv[p+1][0]-'0';
+      autostart = true;
     }
 
   p = M_CheckParm("-loadgame");
-  if (p && p < myargc-1)
-    {
-      COM_BufAddText(va("load %d\n", atoi(myargv[p+1])));
-    }
-  else if (game.netgame || autostart)
-    {
-      // -server or -dedicated: start immediately.
-      if (game.mode == gm_hexen)
-	game.Create_MAPINFO_game(fc.FindNumForName("MAPINFO"));
-      else
-	game.Create_classic_game(startepisode);
-
-      game.NewGame(sk);
-    }
+  if (p && M_IsNextParm())
+    COM_BufAddText(va("load %d\n", atoi(myargv[p+1])));
+  else if (autostart)
+    BeginGame(sk, episode);
   else
-    game.StartIntro(); // start up intro loop 
+    game.StartIntro(); // start up intro loop
+
+  // push all "+" parameter into the command buffer (they are not yet executed!)
+  M_PushSpecialParameters();
+
+  // user settings
+  COM_BufAddText("exec autoexec.cfg\n");
+
+  // execute all the waiting commands in the buffer
+  COM_BufExecute();
+
+  // end of loading screen: CONS_Printf() will no more call FinishUpdate()
+  con.refresh = false;
+  vid.SetMode(); // change video mode if needed, recalculate...
 }

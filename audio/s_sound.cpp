@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.24  2004/08/12 18:30:22  smite-meister
+// cleaned startup
+//
 // Revision 1.23  2004/07/11 14:32:00  smite-meister
 // Consvars updated, bugfixes
 //
@@ -154,7 +157,7 @@ sounditem_t::~sounditem_t()
 
 
 
-class soundcache_t : public L2cache_t
+class soundcache_t : public cache_t
 {
 protected:
   cacheitem_t *Load(const char *p);
@@ -169,7 +172,7 @@ static soundcache_t sc(PU_SOUND);
 
 
 soundcache_t::soundcache_t(memtag_t tag)
-  : L2cache_t(tag)
+  : cache_t(tag)
 {}
 
 
@@ -374,6 +377,10 @@ void SoundSystem::Startup()
 
   I_StartupSound();
   I_InitMusic();
+
+  // Initialize CD-Audio
+  if (!M_CheckParm("-nocd"))
+    I_InitCD();
 
   ResetChannels(16);
   sc.SetDefaultItem("DSSPLASH"); // default sound
@@ -803,9 +810,9 @@ void SoundSystem::UpdateSounds()
     }
 #endif
 
-  // Go through L2 cache,
+  // Go through cache,
   // clean up unused data.
-  if (game.tic > nextcleanup)
+  if (game.tic >= nextcleanup)
     {
       CONS_Printf("Sound cache cleanup...\n");
 

@@ -39,14 +39,10 @@ physics.
 
 <li>New legacy.wad contents:
  <ul>
- <li>version string
  <li>a complete font (for console and menu)
- <li>title pictures, consback pictures
  <li>simple menu graphics
  <li>HUD overlay graphics
- <li>FS definition
  <li>a standard replacement texture, sound, music, sprite and model
- <li>SNDSEQ lump for Doom and Heretic sequences, maybe SNDINFO too
  <li>translation maps for Doom/Boom/Heretic linedefs (XDOOM, XHERETIC)
  <li>"Legacy demo" map in case someone decides to use it as an iwad
  + MAPINFO lump to handle it.
@@ -56,6 +52,8 @@ physics.
 
 <li>Finish the MD3 renderer
 
+<li>WAV sounds support
+
 <li>support for PK3(== zip) file format
 
 <li>General team system, teamstarts etc.
@@ -63,11 +61,11 @@ physics.
 <li>Game modifications using DLLs. Standard interface. CTF, Doom
   Fortress...
 
+<li>Rewrite the FS parser using flex and bison.
+
 <li>More FS functions, better FS documentation, FS arrays
 
 <li>AIPlayer-based bot system, bots implemented as DLLs.
-
-<li>WAV sounds support
 
 <li>Turn the Menu into a widget-based browser, including a levelgraph
   editor etc. Maybe replace the launcher altogether?

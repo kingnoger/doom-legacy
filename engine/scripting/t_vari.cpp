@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright(C) 2000 Simon Howard
-// Copyright(C) 2001-2003 Doom Legacy Team
+// Copyright(C) 2001-2004 Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,32 +21,33 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.3  2004/08/12 18:30:29  smite-meister
+// cleaned startup
+//
 // Revision 1.2  2003/02/23 22:49:31  smite-meister
 // FS is back! L2 cache works.
 //
 // Revision 1.1.1.1  2002/11/16 14:18:19  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
 //--------------------------------------------------------------------------
-//
-// Variables.
-//
-// Variable code: create new variables, look up variables, get value,
-// set value
-//
-// variables are stored inside the individual scripts, to allow for
-// 'local' and 'global' variables. This way, individual scripts cannot
-// access variables in other scripts. However, 'global' variables can
-// be made which can be accessed by all scripts. These are stored inside
-// a dedicated script_t which exists only to hold all of these global
-// variables.
-//
-// functions are also stored as variables, these are kept in the global
-// script so they can be accessed by all scripts. function variables
-// cannot be set or changed inside the scripts themselves.
-//
-//---------------------------------------------------------------------------
+
+/// \file
+/// \brief FS variables
+///
+/// Variable code: create new variables, look up variables, get value,
+/// set value
+///
+/// variables are stored inside the individual scripts, to allow for
+/// 'local' and 'global' variables. This way, individual scripts cannot
+/// access variables in other scripts. However, 'global' variables can
+/// be made which can be accessed by all scripts. These are stored inside
+/// a dedicated script_t which exists only to hold all of these global
+/// variables.
+///
+/// functions are also stored as variables, these are kept in the global
+/// script so they can be accessed by all scripts. function variables
+/// cannot be set or changed inside the scripts themselves.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -59,61 +60,52 @@
 #include "t_vari.h"
 #include "t_func.h"
 
-// the global script just holds all
-// the global variables
-script_t global_script;
 
-// the hub script holds all the variables
-// shared between levels in a hub
-script_t hub_script;
+svalue_t nullvar = { svt_int, {0} }; // null var for empty return
 
 
-// initialise the global script: clear all the variables
 
-void init_variables()
+
+// sf: string value of an svalue_t
+const char *stringvalue(svalue_t v)
 {
-  int i;
-  
-  global_script.parent = NULL;    // globalscript is the root script
-  hub_script.parent = &global_script; // hub_script is the next level down
-  
-  for(i=0; i<VARIABLESLOTS; i++)
-    global_script.variables[i] = hub_script.variables[i] = NULL;
-  
-  // any hardcoded global variables can be added here
-}
+  static char buffer[256];
 
-void T_ClearHubScript()
-{
-  int i;
+  switch(v.type)
+   {
+      case svt_string:
+        return v.value.s;
 
-  for(i=0; i<VARIABLESLOTS; i++)
-    {
-      while(hub_script.variables[i])
-	{
-	  svariable_t *next = hub_script.variables[i]->next;
-	  if(hub_script.variables[i]->type == svt_string)
-	    Z_Free(hub_script.variables[i]->value.s);
-	  Z_Free(hub_script.variables[i]);
-	  hub_script.variables[i] = next;
-	}
+      case svt_actor:
+        return "map object";
+
+      case svt_fixed:
+        {
+          double val = ((double)v.value.f / FRACUNIT);
+          sprintf(buffer, "%g", val);
+          return buffer;
+        }
+
+      case svt_int:
+      default:
+        sprintf(buffer, "%i", v.value.i);
+        return buffer;
     }
 }
 
+
+
 // find_variable checks through the current script, level script
 // and global script to try to find the variable of the name wanted
-
 svariable_t *find_variable(char *name)
 {
   svariable_t *var;
-  script_t *current;
+  script_t *current = current_script;
   
-  current = current_script;
-  
-  while(current)
+  while (current)
     {
       // check this script
-      if((var = variableforname(current, name)))
+      if((var = current->variableforname(name)))
 	return var;
       current = current->parent;    // try the parent of this one
     }
@@ -121,23 +113,19 @@ svariable_t *find_variable(char *name)
   return NULL;    // no variable
 }
 
+
 // create a new variable in a particular script.
 // returns a pointer to the new variable.
-
-svariable_t *new_variable(script_t *script, char *name, int vtype)
+svariable_t *script_t::new_variable(char *name, int vtype)
 {
-  int n;
-  svariable_t *newvar;
-  int tagtype =
-    script==&global_script || script==&hub_script ? PU_STATIC : PU_LEVEL;
+  int tagtype = (this == &global_script || this == &hub_script) ? PU_STATIC : PU_LEVEL;
   
   // find an empty slot first
-
-  newvar = (svariable_t *)Z_Malloc(sizeof(svariable_t), tagtype, 0);
-  newvar->name = (char*)Z_Strdup(name, tagtype, 0);
+  svariable_t *newvar = (svariable_t *)Z_Malloc(sizeof(svariable_t), tagtype, 0);
+  newvar->name = (char *)Z_Strdup(name, tagtype, 0);
   newvar->type = vtype;
   
-  if(vtype == svt_string)
+  if (vtype == svt_string)
     {
       // 256 bytes for string
       newvar->value.s = (char *)Z_Malloc(256, tagtype, 0);
@@ -146,30 +134,24 @@ svariable_t *new_variable(script_t *script, char *name, int vtype)
   else
     newvar->value.i = 0;
   
-  // now hook it into the hashchain
+  // now hook it into the hashchain  
+  int n = variable_hash(name);
+  newvar->next = variables[n];
+  variables[n] = newvar;
   
-  n = variable_hash(name);
-  newvar->next = script->variables[n];
-  script->variables[n] = newvar;
-  
-  return script->variables[n];
+  return newvar;
 }
+
 
 // search a particular script for a variable, which
 // is returned if it exists
-
-svariable_t *variableforname(script_t *script, char *name)
+svariable_t *script_t::variableforname(char *name)
 {
-  int n;
-  svariable_t *current;
+  svariable_t *current = variables[variable_hash(name)];
   
-  n = variable_hash(name);
-  
-  current = script->variables[n];
-  
-  while(current)
+  while (current)
     {
-      if(!strcmp(name, current->name))        // found it?
+      if (!strcmp(name, current->name)) // found it?
 	return current;         
       current = current->next;        // check next in chain
     }
@@ -177,135 +159,131 @@ svariable_t *variableforname(script_t *script, char *name)
   return NULL;
 }
 
-        // free all the variables in a given script
-void clear_variables(script_t *script)
+
+// free all the variables in a given script
+void script_t::clear_variables()
 {
-  int i;
   svariable_t *current, *next;
   
-  for(i=0; i<VARIABLESLOTS; i++)
+  for (int i=0; i<VARIABLESLOTS; i++)
     {
-      current = script->variables[i];
+      current = variables[i];
       
       // go thru this chain
-      while(current)
+      while (current)
 	{
 	  // labels are added before variables, during
 	  // preprocessing, so will be at the end of the chain
 	  // we can be sure there are no more variables to free
-	  if(current->type == svt_label)
+	  if (current->type == svt_label)
 	    break;
 	  
 	  next = current->next; // save for after freeing
 	  
+	  //FIXME free them too?
 	  // if a string, free string data
-	  if(current->type == svt_string)
+	  if (current->type == svt_string)
 	    Z_Free(current->value.s);
 	  
 	  current = next; // go to next in chain
 	}
       // start of labels or NULL
-      script->variables[i] = current;
+      variables[i] = current;
     }
 }
 
+
 // returns an svalue_t holding the current
 // value of a particular variable.
-
-svalue_t getvariablevalue(svariable_t *v)
+svalue_t svariable_t::getvalue()
 {
   svalue_t returnvar;
   
-  if(!v) return nullvar;
-  
-  if(v->type == svt_pString)
+  if(type == svt_pString)
     {
       returnvar.type = svt_string;
-      returnvar.value.s = *v->value.pS;
+      returnvar.value.s = *value.pS;
     }
-  else if(v->type == svt_pInt)
+  else if(type == svt_pInt)
     {
       returnvar.type = svt_int;
-      returnvar.value.i = *v->value.pI;
+      returnvar.value.i = *value.pI;
     }
-  else if(v->type == svt_pFixed)
+  else if(type == svt_pFixed)
     {
       returnvar.type = svt_fixed;
-      returnvar.value.f = *v->value.pFixed;
+      returnvar.value.f = *value.pFixed;
     }
-  else if(v->type == svt_pMobj)
+  else if(type == svt_pActor)
     {
       returnvar.type = svt_actor;
-      returnvar.value.mobj = *v->value.pMobj;
+      returnvar.value.mobj = *value.pMobj;
     }
   else
     {
-      returnvar.type = v->type;
+      returnvar.type = type;
       // copy the value
-      returnvar.value.i = v->value.i;
+      returnvar.value.i = value.i;
     }
   
   return returnvar;
 }
 
-// set a variable to a value from an svalue_t
 
-void setvariablevalue(svariable_t *v, svalue_t newvalue)
+// set a variable to a value from an svalue_t
+void svariable_t::setvalue(svalue_t newvalue)
 {
-  if(killscript) return;  // protect the variables when killing script
+  if (killscript) return;  // protect the variables when killing script
   
-  if(!v) return;
-  
-  if(v->type == svt_const)
+  if (type == svt_const)
     {
       // const adapts to the value it is set to
-      v->type = newvalue.type;
+      type = newvalue.type;
 
       // alloc memory for string
-      if(v->type == svt_string)   // static incase a global_script var
-	v->value.s = (char *)Z_Malloc(256, PU_STATIC, 0);
+      if(type == svt_string)   // static incase a global_script var
+	value.s = (char *)Z_Malloc(256, PU_STATIC, 0);
     }
-  
-  if(v->type == svt_int)
-      v->value.i = intvalue(newvalue);
 
-  if(v->type == svt_string)
-    strcpy(v->value.s, stringvalue(newvalue));
-
-  if(v->type == svt_fixed)
-    v->value.fixed = fixedvalue(newvalue);
-
-  if(v->type == svt_actor)
-      v->value.mobj = MobjForSvalue(newvalue);
-
-  if(v->type == svt_pInt)
-      *v->value.pI = intvalue(newvalue);
-
-  if(v->type == svt_pString)
+  switch (type)
     {
+    case svt_int:
+      value.i = intvalue(newvalue);
+      break;
+    case svt_string:
+      strcpy(value.s, stringvalue(newvalue));
+      break;
+    case svt_fixed:
+      value.fixed = fixedvalue(newvalue);
+      break;
+    case svt_actor:
+      value.mobj = MobjForSvalue(newvalue);
+      break;
+    case svt_pInt:
+      *value.pI = intvalue(newvalue);
+      break;
+    case svt_pString:
       // free old value
-      free(*v->value.pS);
-      
+      free(*value.pS);
       // dup new string
-      *v->value.pS = strdup(stringvalue(newvalue));
+      *value.pS = strdup(stringvalue(newvalue));
+      break;
+    case svt_pFixed:
+      *value.pFixed = fixedvalue(newvalue);
+      break;
+    case svt_pActor:
+      *value.pMobj = MobjForSvalue(newvalue);
+      break;
+    case svt_function:
+      script_error("attempt to set function to a value\n");
     }
-
-  if(v->type == svt_pFixed)
-    *v->value.pFixed = fixedvalue(newvalue);
-
-  if(v->type == svt_pMobj)
-      *v->value.pMobj = MobjForSvalue(newvalue);
-  
-  if(v->type == svt_function)
-    script_error("attempt to set function to a value\n");
-
 }
 
 
 
 svariable_t *add_game_int(char *name, int *var)
 {
-  svariable_t* newvar = new_variable(&global_script, name, svt_pInt);
+  svariable_t* newvar = global_script.new_variable(name, svt_pInt);
   newvar->value.pI = var;
 
   return newvar;
@@ -314,8 +292,7 @@ svariable_t *add_game_int(char *name, int *var)
 
 svariable_t *add_game_fixed(char *name, fixed_t *fixed)
 {
-  svariable_t *newvar;
-  newvar = new_variable(&global_script, name, svt_pFixed);
+  svariable_t *newvar = global_script.new_variable(name, svt_pFixed);
   newvar->value.pFixed = fixed;
 
   return newvar;
@@ -323,23 +300,33 @@ svariable_t *add_game_fixed(char *name, fixed_t *fixed)
 
 svariable_t *add_game_string(char *name, char **var)
 {
-  svariable_t* newvar;
-  newvar = new_variable(&global_script, name, svt_pString);
+  svariable_t* newvar = global_script.new_variable(name, svt_pString);
   newvar->value.pS = var;
 
   return newvar;
 }
 
 
-
 svariable_t *add_game_mobj(char *name, Actor **mo)
 {
-  svariable_t* newvar;
-  newvar = new_variable(&global_script, name, svt_pMobj);
+  svariable_t* newvar = global_script.new_variable(name, svt_pActor);
   newvar->value.pMobj = mo;
 
   return newvar;
 }
+
+
+// create a new function. returns the function number
+svariable_t *new_function(char *name, void (*handler)())
+{
+  // create the new variable for the function
+  // add to the global script
+  svariable_t *newvar = global_script.new_variable(name, svt_function);
+  newvar->value.handler = handler;
+
+  return newvar;
+}
+
 
 
 /********************************
@@ -366,7 +353,8 @@ svariable_t *add_game_mobj(char *name, Actor **mo)
 
 int t_argc;                     // number of arguments
 svalue_t *t_argv;               // arguments
-svalue_t t_return;              // returned value
+svalue_t  t_return;             // returned value
+
 
 svalue_t evaluate_function(int start, int stop)
 {
@@ -380,18 +368,15 @@ svalue_t evaluate_function(int start, int stop)
   int argc;
   svalue_t argv[MAXARGS];
 
-  if(tokentype[start] != to_function || tokentype[stop] != to_oper
-     || tokens[stop][0] != ')' )
+  if (tokens[start].type != to_function || tokens[stop].type != to_oper || tokens[stop].v[0] != ')')
     script_error("misplaced closing bracket\n");
-
   // all the functions are stored in the global script
-  else if( !(func = variableforname(&global_script, tokens[start]))  )
-    script_error("no such function: '%s'\n",tokens[start]);
+  else if (!(func = global_script.variableforname(tokens[start].v)))
+    script_error("no such function: '%s'\n", tokens[start].v);
+  else if (func->type != svt_function)
+    script_error("'%s' not a function\n", tokens[start].v);
 
-  else if(func->type != svt_function)
-    script_error("'%s' not a function\n", tokens[start]);
-
-  if(killscript) return nullvar; // one of the above errors occurred
+  if (killscript) return nullvar; // one of the above errors occurred
 
   // build the argument list
   // use a C command-line style system rather than
@@ -400,17 +385,16 @@ svalue_t evaluate_function(int start, int stop)
   argc = 0;
   endpoint = start + 2;   // ignore the function name and first bracket
   
-  while(endpoint < stop)
+  while (endpoint < stop)
     {
       startpoint = endpoint;
       endpoint = find_operator(startpoint, stop-1, ",");
       
       // check for -1: no more ','s 
-      if(endpoint == -1)
-	{               // evaluate the last expression
-	  endpoint = stop;
-	}
-      if(endpoint-1 < startpoint)
+      if (endpoint == -1)
+	endpoint = stop; // evaluate the last expression
+
+      if (endpoint-1 < startpoint)
 	break;
       
       argv[argc] = evaluate_expression(startpoint, endpoint-1);
@@ -452,16 +436,14 @@ svalue_t OPstructure(int start, int n, int stop)
   svalue_t argv[MAXARGS];
 
   // all the functions are stored in the global script
-  if( !(func = variableforname(&global_script, tokens[n+1]))  )
-    script_error("no such function: '%s'\n",tokens[n+1]);
-  
+  if (!(func = global_script.variableforname(tokens[n+1].v)))
+    script_error("no such function: '%s'\n", tokens[n+1].v);
   else if(func->type != svt_function)
-    script_error("'%s' not a function\n", tokens[n+1]);
+    script_error("'%s' not a function\n", tokens[n+1].v);
 
   if(killscript) return nullvar; // one of the above errors occurred
   
   // build the argument list
-
   // add the left part as first arg
 
   argv[0] = evaluate_expression(start, n-1);
@@ -504,23 +486,4 @@ svalue_t OPstructure(int start, int n, int stop)
   
   // return the returned value
   return t_return;
-}
-
-
-// create a new function. returns the function number
-
-svariable_t *new_function(char *name, void (*handler)() )
-{
-  svariable_t *newvar;
-
-  // create the new variable for the function
-  // add to the global script
-  
-  newvar = new_variable(&global_script, name, svt_function);
-  
-  // add neccesary info
-  
-  newvar->value.handler = handler;
-
-  return newvar;
 }

@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/08/12 18:30:29  smite-meister
+// cleaned startup
+//
 // Revision 1.3  2004/07/25 20:18:47  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -42,11 +45,7 @@
 /// Console serves as an user interface to the command buffer.
 /// It gathers input, keeps track of command history and of course
 /// draws the messages on screen.
-
-/// For dedicated server: input responder, command history
-
-/// For client: printing, Key bindings,
-
+/// There is only one global instance in use, called "con".
 
 class Console
 {
@@ -58,7 +57,7 @@ protected:
   bool graphic; ///< console can be drawn
   bool active;  ///< console is active (accepting input)
 
-  int con_tick; // console ticker for anim or blinking prompt cursor
+  int con_tick; ///< console ticker for anim of blinking prompt cursor
 
 
   // console input

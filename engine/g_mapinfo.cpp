@@ -3,9 +3,7 @@
 //
 // $Id$
 //
-// Portions Copyright(C) 2000 Simon Howard
 // Copyright (C) 2002-2004 by Doom Legacy Team
-// Thanks to Randy Heit for ZDoom ideas
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -22,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.16  2004/08/12 18:30:23  smite-meister
+// cleaned startup
+//
 // Revision 1.15  2004/07/14 16:13:13  smite-meister
 // cleanup, commands
 //
@@ -70,11 +71,11 @@
 // Revision 1.1.1.1  2002/11/16 14:17:59  hurdler
 // Initial C++ version of Doom Legacy
 //
-// DESCRIPTION:
-//   Implementation of MapInfo class.
-//   MapInfo lump parser. Hexen/ZDoom MAPINFO lump parser.
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Implementation of MapInfo class.
+/// MapInfo lump parser. Hexen/ZDoom MAPINFO lump parser.
 
 #include <stdio.h>
 #include <unistd.h>
@@ -94,17 +95,15 @@
 #include "m_misc.h"
 #include "m_archive.h"
 
-#include "t_script.h"
-#include "t_parse.h"
-
 #include "w_wad.h"
 #include "z_zone.h"
 
 
 //=================================
-// MapInfo class methods
+//    MapInfo class methods
+//=================================
 
-// default constructor
+/// default constructor
 MapInfo::MapInfo()
 {
   state = MAP_UNLOADED;
@@ -134,14 +133,14 @@ MapInfo::MapInfo()
 }
 
 
-// destructor
+/// destructor
 MapInfo::~MapInfo()
 {
   Close(-1);
 }
 
 
-// ticks the map forward, 
+/// ticks the map forward
 void MapInfo::Ticker(bool hub)
 {
   if (me && state != MAP_INSTASIS)
@@ -151,27 +150,23 @@ void MapInfo::Ticker(bool hub)
       if (state == MAP_FINISHED)
 	{
 	  // check if it's time to stop
-	  bool players_remaining = false;
 	  int n = me->players.size();
 	  for (int i=0; i<n; i++)
-	    if (me->players[i]->playerstate != PST_DONE &&
-		me->players[i]->playerstate != PST_SPECTATOR)
-	      players_remaining = true;
+	    if (!me->players[i]->map_completed && !me->players[i]->spectator)
+	      return;
 
-	  if (!players_remaining)
-	    {
-	      // TODO spectators have no destinations set, they should perhaps follow the last exiting player...
-	      if (hub)
-		HubSave();
-	      else
-		Close(-1);
-	    }
+	  // no players left
+	  // TODO spectators have no destinations set, they should perhaps follow the last exiting player...
+	  if (hub)
+	    HubSave();
+	  else
+	    Close(-1);
 	}
     }
 }
 
 
-// if this returns true, "me" must be valid
+/// if this returns true, "me" must be valid
 bool MapInfo::Activate(PlayerInfo *p)
 {
   const char *temp;
@@ -219,7 +214,7 @@ bool MapInfo::Activate(PlayerInfo *p)
 }
 
 
-// throws out all the players from the map
+/// throws out all the players from the map
 int MapInfo::EvictPlayers(int next, int ep, bool force)
 {
   if (!me)
@@ -246,7 +241,7 @@ int MapInfo::EvictPlayers(int next, int ep, bool force)
 }
 
 
-// shuts the map down
+/// shuts the map down
 void MapInfo::Close(int next, int ep, bool force)
 {
   // delete the save file
@@ -266,7 +261,7 @@ void MapInfo::Close(int next, int ep, bool force)
 }
 
 
-// for making hub saves
+/// for making hub saves
 bool MapInfo::HubSave()
 {
   if (!me)
@@ -298,7 +293,7 @@ bool MapInfo::HubSave()
 }
 
 
-// well, loading the hub saves
+/// well, loading the hub saves
 bool MapInfo::HubLoad()
 {
   if (state != MAP_SAVED)
@@ -333,8 +328,9 @@ bool MapInfo::HubLoad()
 
 
 
-//=================================
-// Legacy MapInfo parser
+//==================================================================
+//   Legacy MapInfo parser
+//==================================================================
 
 //  Level vars: level variables in the [level info] section.
 //
@@ -361,10 +357,11 @@ static parsercmd_t MapInfo_commands[]=
   {P_ITEM_STR, "author",     MI_offset(author)},
   {P_ITEM_STR, "hint",       MI_offset(hint)},
   {P_ITEM_INT, "partime",    MI_offset(partime)},
+  {P_ITEM_STR, "music",      MI_offset(musiclump)},
 
   {P_ITEM_FLOAT, "gravity",  MI_offset(gravity)}, 
   {P_ITEM_STR, "skyname",    MI_offset(sky1)},
-  {P_ITEM_STR, "music",      MI_offset(musiclump)},
+
   //{P_ITEM_STR, "nextlevel",  MI_offset(nextlevel)},
   //{P_ITEM_STR, "nextsecret", MI_offset(nextsecret)},
   /*
@@ -374,16 +371,14 @@ static parsercmd_t MapInfo_commands[]=
     {P_ITEM_STR,    "defaultweapons",&info_weapons},
   */
   // {IVT_CONSOLECMD,"consolecmd",    NULL},
+  {P_ITEM_INT_INT, "doom_thingoffset", MI_offset(doom_offs)},
+  {P_ITEM_INT_INT, "heretic_thingoffset", MI_offset(heretic_offs)},
+  {P_ITEM_INT_INT, "hexen_thingoffset", MI_offset(hexen_offs)},
   {P_ITEM_IGNORE, NULL, 0} // terminator
 };
 
-static parsercmd_t MapFormat_commands[]=
-{
-  {P_ITEM_INT_INT, "doom_things", MI_offset(doom_offs)},
-  {P_ITEM_INT_INT, "heretic_things", MI_offset(heretic_offs)},
-  {P_ITEM_INT_INT, "hexen_things", MI_offset(hexen_offs)},
-  {P_ITEM_IGNORE, NULL, 0} // terminator
-};
+
+
 
 static parsercmd_t MAPINFO_MAP_commands[] =
 {
@@ -419,9 +414,8 @@ static parsercmd_t MAPINFO_MAP_commands[] =
 #undef MI_offset
 
 
-//====================================
-// Reads a MapInfo lump for a map.
 
+/// Reads a MapInfo lump for a map.
 char *MapInfo::Read(int lump)
 {
   Parser p;
@@ -431,7 +425,7 @@ char *MapInfo::Read(int lump)
     {
       CONS_Printf("Reading MapInfo...\n");
 
-      enum {PS_CLEAR, PS_MAPFORMAT, PS_SCRIPT, PS_INTERTEXT, PS_LEVELINFO} parsestate = PS_CLEAR;
+      enum {PS_CLEAR, PS_SCRIPT, PS_INTERTEXT, PS_MAPINFO} parsestate = PS_CLEAR;
       char line[40];
 
       p.RemoveComments('/'); // TODO can we also remove other types of comments?
@@ -445,7 +439,7 @@ char *MapInfo::Read(int lump)
 	    {
 	      p.GetStringN(line, 12);
 	      if (!strncasecmp(line, "[level info]", 12))
-		parsestate = PS_LEVELINFO;
+		parsestate = PS_MAPINFO;
 	      else if (!strncasecmp(line, "[scripts]", 9))
 		{
 		  parsestate = PS_SCRIPT;
@@ -453,12 +447,10 @@ char *MapInfo::Read(int lump)
 		}
 	      else if(!strncasecmp(line, "[intertext]", 11))
 		parsestate = PS_INTERTEXT;
-	      else if(!strncasecmp(line, "[map format]", 12))
-		parsestate = PS_MAPFORMAT;
 	    }
 	  else switch (parsestate)
 	    {
-	    case PS_LEVELINFO:
+	    case PS_MAPINFO:
 	      p.ParseCmd(MapInfo_commands, (char *)this);
 	      break;
 
@@ -471,10 +463,6 @@ char *MapInfo::Read(int lump)
 	    case PS_INTERTEXT:
 	      //intertext += '\n';
 	      //intertext += s;
-	      break;
-
-	    case PS_MAPFORMAT:
-	      p.ParseCmd(MapFormat_commands, (char *)this);
 	      break;
 
 	    case PS_CLEAR:
@@ -506,13 +494,14 @@ char *MapInfo::Read(int lump)
   COM_BufExecute(); //Hurdler: flush the command buffer
 
   // FS script data
-  return Z_Strdup(scriptblock.c_str(), PU_LEVEL, NULL);
+  return (scriptblock.size() > 0) ? Z_Strdup(scriptblock.c_str(), PU_LEVEL, NULL) : NULL;
 }
 
 
 
 //==============================================
-// Hexen/ZDoom MAPINFO parser.
+//   Hexen/ZDoom MAPINFO parser.
+//==============================================
 
 #ifdef LINUX
 #define CD_offset(field) (size_t(&MapCluster::field))
@@ -522,26 +511,34 @@ char *MapInfo::Read(int lump)
 // ZDoom clusterdef commands
 static parsercmd_t MAPINFO_CLUSTERDEF_commands[] =
 {
+  {P_ITEM_STR, "interpic", CD_offset(interpic)},
+  {P_ITEM_STR, "intermusic", CD_offset(intermusic)},
+
+  {P_ITEM_INT, "finale", CD_offset(episode)},
   {P_ITEM_STR, "entertext", CD_offset(entertext)},
   {P_ITEM_STR, "exittext", CD_offset(exittext)},
-  {P_ITEM_STR, "music", CD_offset(finalemusic)},
   {P_ITEM_STR, "flat", CD_offset(finalepic)},
+  {P_ITEM_STR, "music", CD_offset(finalemusic)},
+
   {P_ITEM_BOOL, "hub", CD_offset(hub)},
   {P_ITEM_IGNORE, NULL, 0}
 };
 #undef CD_offset
 
 
-// Reads the MAPINFO lump, filling mapinfo and clusterdef maps with data
+/// Reads the MAPINFO lump, filling mapinfo and clustermap with data
 int GameInfo::Read_MAPINFO(int lump)
 {
-  CONS_Printf("Reading MAPINFO...\n");
-  Parser p;
+  if (lump < 0)
+    return -1;
 
+  CONS_Printf("Reading MAPINFO...\n");
+
+  Parser p;
   if (!p.Open(lump))
     return -1;
 
-  Clear_mapinfo_clusterdef();
+  Clear_mapinfo_clustermap();
 
   enum {PS_CLEAR, PS_MAP, PS_CLUSTERDEF} parsestate = PS_CLEAR;
   int i, n;
@@ -641,10 +638,15 @@ int GameInfo::Read_MAPINFO(int lump)
       mapinfo[j] = info;
     }
 
+  mapinfo_iter_t r;
+
   // generate the missing clusters and fill them all with maps
-  for (mapinfo_iter_t t = mapinfo.begin(); t != mapinfo.end(); t++)
+  for (r = mapinfo.begin(); r != mapinfo.end(); r++)
     {
-      info = (*t).second;
+      info = r->second;
+      if (info->mapnumber <= 0)
+	I_Error("Map numbers must be positive (%s)!\n", info->lumpname.c_str());
+
       n = info->cluster;
       if (!clustermap.count(n))
 	{
@@ -674,18 +676,37 @@ int GameInfo::Read_MAPINFO(int lump)
 	}
     }
 
+  // time to unravel the warptrans numbering.
+  map<int, MapInfo *> warptransmap;
+  for (r = mapinfo.begin(); r != mapinfo.end(); r++)
+    {
+      info = r->second;
+      warptransmap[info->warptrans] = info;
+    }
+
+  // now just put the correct exit data in the MapInfos
+  for (r = mapinfo.begin(); r != mapinfo.end(); r++)
+    {
+      info = r->second;
+
+      // set normal and secret exits
+      // 'nextlevel' overrides 'next'
+      if (info->nextlevel < 0 && info->warpnext > 0)
+	info->nextlevel = warptransmap[info->warpnext]->mapnumber;
+    }
+
   n = mapinfo.size();
   CONS_Printf("...done. %d maps.\n", n);
-
   return n;
 }
 
 
 
-//==============================================
-// GameInfo utilities related to MapInfo and MapCluster
+//==============================================================
+//   GameInfo utilities related to MapInfo and MapCluster
+//==============================================================
 
-void GameInfo::Clear_mapinfo_clusterdef()
+void GameInfo::Clear_mapinfo_clustermap()
 {
   // delete old mapinfo and clusterdef
   mapinfo_iter_t s;
@@ -698,8 +719,7 @@ void GameInfo::Clear_mapinfo_clusterdef()
     delete (*t).second;
   clustermap.clear();
 
-  currentcluster = nextcluster = NULL;
-  currentmap = NULL;
+  currentcluster = NULL;
 }
 
 

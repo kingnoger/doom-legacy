@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2004/08/12 18:30:27  smite-meister
+// cleaned startup
+//
 // Revision 1.17  2004/07/25 20:19:21  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -65,6 +68,7 @@
 //
 // Revision 1.1.1.1  2002/11/16 14:18:15  hurdler
 // Initial C++ version of Doom Legacy
+//
 //-----------------------------------------------------------------------------
 
 /// \file
@@ -73,6 +77,8 @@
 #include "doomdef.h"
 #include "command.h"
 #include "cvars.h"
+
+#include "d_event.h"
 #include "hu_stuff.h"
 
 #include "g_game.h"
@@ -104,6 +110,8 @@
 
 HUD hud;
 
+void HU_SetTip(const char *tip, int displaytics);
+
 void ShowMessage_OnChange()
 {
   if (!cv_showmessages.value)
@@ -121,7 +129,7 @@ void ST_Overlay_OnChange()
 CV_PossibleValue_t crosshair_cons_t[]   ={{0,"Off"},{1,"Cross"},{2,"Angle"},{3,"Point"},{0,NULL}};
 consvar_t cv_crosshair        = {"crosshair"   ,"0",CV_SAVE,crosshair_cons_t};
 consvar_t cv_crosshair2       = {"crosshair2"  ,"0",CV_SAVE,crosshair_cons_t};
-consvar_t cv_stbaroverlay     = {"overlay", "kahmf", CV_SAVE|CV_CALL, NULL, ST_Overlay_OnChange};
+consvar_t cv_stbaroverlay     = {"hud_overlay", "kahmf", CV_SAVE|CV_CALL, NULL, ST_Overlay_OnChange};
 CV_PossibleValue_t showmessages_cons_t[]={{0,"Off"},{1,"On"},{2,"Not All"},{0,NULL}};
 consvar_t cv_showmessages     = {"showmessages","1",CV_SAVE | CV_CALL | CV_NOINIT,showmessages_cons_t,ShowMessage_OnChange};
 consvar_t cv_showmessages2    = {"showmessages2","1",CV_SAVE | CV_CALL | CV_NOINIT,showmessages_cons_t,ShowMessage_OnChange};
@@ -430,46 +438,69 @@ void HUD::Ticker()
   UpdateWidgets();
 
   // display player messages
-  PlayerInfo *pl = consoleplayer;
-
-  while (!pl->messages.empty())
+  if (consoleplayer)
     {
-      pair<string, int> &m = pl->messages.front();
-      // TODO message priorities: a message blocks lower-priority messages for n seconds
+      PlayerInfo *pl = consoleplayer;
 
-      if (cv_showmessages.value || m.second >= 1)
-        CONS_Printf("%s\n", m.first.c_str());
+      while (!pl->messages.empty())
+	{
+	  PlayerInfo::message_t &m = pl->messages.front();
+	  // TODO message priorities: a message blocks lower-priority messages for n seconds
 
-      pl->messages.pop_front();
+	  if (m.priority >= pl->messagefilter)
+	    switch (m.type)
+	      {
+	      case PlayerInfo::M_CONSOLE:
+		CONS_Printf("%s\n", m.msg.c_str());
+		break;
+	      case PlayerInfo::M_HUD:
+		HU_SetTip(m.msg.c_str(), m.priority);
+		break;
+	      }
+
+	  pl->messages.pop_front();
+	}
+
+      // dead players see the frag roster
+      if (cv_deathmatch.value)
+	drawscore = (pl->playerstate == PST_DEAD);
     }
 
   // In splitscreen, display second player's messages
-  if (cv_splitscreen.value)
+  if (cv_splitscreen.value && consoleplayer2)
     {
-      pl = consoleplayer2;
+      PlayerInfo *pl = consoleplayer2;
+
       while (!pl->messages.empty())
         {
-          pair<string, int> &m = pl->messages.front();
-          // TODO message priorities: a message blocks lower-priority messages for n seconds
+	  PlayerInfo::message_t &m = pl->messages.front();
 
-          if (cv_showmessages2.value || m.second >= 1)
-            CONS_Printf("\4%s\n", m.first.c_str());
+	  if (m.priority >= pl->messagefilter)
+	    switch (m.type)
+	      {
+	      case PlayerInfo::M_CONSOLE:
+		CONS_Printf("\4%s\n", m.msg.c_str());
+		break;
+	      case PlayerInfo::M_HUD:
+		HU_SetTip(m.msg.c_str(), m.priority);
+		break;
+	      }
 
-          pl->messages.pop_front();
+	  pl->messages.pop_front();
         }
     }
+
 
   // deathmatch rankings overlay if press key or while in death view
   if (cv_deathmatch.value)
     {
       if (gamekeydown[gamecontrol[gc_scores][0]] ||
-          gamekeydown[gamecontrol[gc_scores][1]] )
-        drawscore = !chat_on;
-      else
-        drawscore = (pl->playerstate == PST_DEAD); // dead players see the frag roster
+	  gamekeydown[gamecontrol[gc_scores][1]])
+	drawscore = !chat_on;
     }
   else
     drawscore = false;
+
 }
 
 
@@ -600,10 +631,10 @@ int     largestline = 0;
 
 
 
-void HU_SetTip(char *tip, int displaytics)
+void HU_SetTip(const char *tip, int displaytics)
 {
   int    i;
-  char   *rover, *ctipline, *ctipline_p;
+  char *ctipline, *ctipline_p;
 
 
   for(i = 0; i < numtiplines; i++)
@@ -612,14 +643,13 @@ void HU_SetTip(char *tip, int displaytics)
 
   numtiplines = 0;
 
-  rover = tip;
   ctipline = ctipline_p = (char *)Z_Malloc(128, PU_STATIC, NULL);
   *ctipline = 0;
   largestline = 0;
 
-  while(*rover)
+  while(*tip)
   {
-    if(*rover == '\n' || strlen(ctipline) + 2 >= 128 || V_StringWidth(ctipline) + 16 >= BASEVIDWIDTH)
+    if(*tip == '\n' || strlen(ctipline) + 2 >= 128 || V_StringWidth(ctipline) + 16 >= BASEVIDWIDTH)
     {
       if(numtiplines > MAXTIPLINES)
         break;
@@ -633,13 +663,13 @@ void HU_SetTip(char *tip, int displaytics)
     }
     else
     {
-      *ctipline_p = *rover;
+      *ctipline_p = *tip;
       ctipline_p++;
       *ctipline_p = 0;
     }
-    rover++;
+    tip++;
 
-    if(!*rover)
+    if(!*tip)
     {
       if(V_StringWidth(ctipline) > largestline)
         largestline = V_StringWidth(ctipline);

@@ -74,6 +74,21 @@ void FileCache::SetPath(const char *p)
   datapath = p;
 }
 
+
+// Not like libc access(). If file exists, returns the path+filename where it was found, otherwise NULL.
+const char *FileCache::Access(const char *f)
+{
+  if (!access(f, F_OK))
+    return f; // first try the current dir
+
+  static string n = datapath + '/' + f;
+  if (!access(n.c_str(), F_OK))
+    return n.c_str();
+
+  return NULL;
+}
+
+
 // -----------------------------------------------------
 // Pass a null terminated list of files to use.
 // All files are optional, but at least one file must be found.
@@ -115,16 +130,12 @@ int FileCache::AddFile(const char *fname)
       return -1;
     }
 
-  string name = datapath + '/' + fname;
+  const char *name = Access(fname);
 
-  if (access(name.c_str(), F_OK))
+  if (!name)
     {
-      name = fname; // try just the name
-      if (access(fname, F_OK))
-	{
-	  CONS_Printf("FileCache::AddFile: Can't access file %s (path %s)\n", fname, datapath.c_str());
-	  return -1;
-	}
+      CONS_Printf("FileCache::AddFile: Can't access file %s (path %s)\n", fname, datapath.c_str());
+      return -1;
     }
 
   VFile *vf = NULL;
@@ -147,7 +158,7 @@ int FileCache::AddFile(const char *fname)
     {
       // directory
       vf = new VDir();
-      vf->Open(name.c_str());
+      vf->Open(name);
     }
   else
     {
@@ -157,7 +168,7 @@ int FileCache::AddFile(const char *fname)
 	int  imagic;
       };
       // open the file to read the magic number
-      FILE *str = fopen(name.c_str(), "rb");
+      FILE *str = fopen(name, "rb");
       if (!str)
 	return -1;
 
@@ -187,7 +198,7 @@ int FileCache::AddFile(const char *fname)
 	  return -1;
 	}
       fclose(str);
-      vf->Open(name.c_str());
+      vf->Open(name);
     }
 
   vfiles.push_back(vf);
@@ -294,8 +305,8 @@ const char *FileCache::FindNameForNum(int lump)
   if (file >= vfiles.size())
     I_Error("FileCache::FindNameForNum: %i >= numvfiles(%i)\n", file, vfiles.size());
   if (item >= vfiles[file]->numitems)
-    I_Error("FileCache::FindNameForNum: %i >= numitems", item);
-    //return NULL;
+    //I_Error("FileCache::FindNameForNum: %i >= numitems", item);
+    return NULL;
 
   return vfiles[file]->GetItemName(item);
 }

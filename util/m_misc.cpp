@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/08/12 18:30:33  smite-meister
+// cleaned startup
+//
 // Revision 1.9  2004/07/25 20:17:05  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -183,7 +186,7 @@ bool FIL_CheckExtension(const char *in)
 // returns a pointer to the "filename-part" of a pathname
 const char *FIL_StripPath(const char *s)
 {
-  for (int j = strlen(s); j >= 0; j--)
+  for (int j = strlen(s) - 1; j >= 0; j--)
     if ((s[j] == '\\') || (s[j] == ':') || (s[j] == '/'))
       return &s[j+1];
 
@@ -196,12 +199,12 @@ const char *FIL_StripPath(const char *s)
 //                        CONFIGURATION FILE
 // ==========================================================================
 
-//
-// DEFAULTS
-//
 #define MAX_CONFIGNAME 128
 
-char   configfile[MAX_CONFIGNAME];
+char configfile[MAX_CONFIGNAME];
+
+
+char savegamename[256]; // path + name template
 
 // ==========================================================================
 //                          CONFIGURATION
@@ -265,29 +268,17 @@ void Command_ChangeConfig_f()
 //
 void M_FirstLoadConfig()
 {
-    int p;
+  // load default control
+  G_Controldefault();
 
-    //  configfile is initialised by d_main when sherching for the wad ?!
+  // load config, make sure those commands doesnt require the screen..
+  CONS_Printf("\n");
+  COM_BufInsertText(va("exec \"%s\"\n",configfile));
+  COM_BufExecute();       // make sure initial settings are done
 
-    // check for a custom config file
-    p = M_CheckParm("-config");
-    if (p && p<myargc-1)
-    {
-        strcpy(configfile, myargv[p+1]);
-        CONS_Printf("config file: %s\n",configfile);
-    }
-
-    // load default control
-    G_Controldefault();
-
-    // load config, make sure those commands doesnt require the screen..
-    CONS_Printf("\n");
-    COM_BufInsertText(va("exec \"%s\"\n",configfile));
-    COM_BufExecute();       // make sure initial settings are done
-
-    // make sure I_Quit() will write back the correct config
-    // (do not write back the config if it crash before)
-    gameconfig_loaded = true;
+  // make sure I_Quit() will write back the correct config
+  // (do not write back the config if it crash before)
+  gameconfig_loaded = true;
 }
 
 

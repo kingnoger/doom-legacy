@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2003 by Doom Legacy Team
+// Copyright (C) 2002-2004 by Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.15  2004/08/12 18:30:23  smite-meister
+// cleaned startup
+//
 // Revision 1.14  2004/07/14 16:13:13  smite-meister
 // cleanup, commands
 //
@@ -62,12 +65,10 @@
 // Revision 1.1  2003/06/10 22:39:54  smite-meister
 // Bugfixes
 //
-//
-//
-// DESCRIPTION:
-//   Implementation of MapCluster class
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Implementation of MapCluster class
 
 #include "g_game.h"
 #include "g_level.h"
@@ -78,6 +79,8 @@
 
 #include "z_zone.h"
 
+
+
 // default cluster constructor
 MapCluster::MapCluster()
 {
@@ -85,7 +88,6 @@ MapCluster::MapCluster()
   keepstuff = hub = false;
   episode = 0;
 
-  kills = items = secrets = 0;
   time = partime = 0;
 };
 
@@ -96,7 +98,6 @@ MapCluster::MapCluster(int n)
   keepstuff = hub = false;
   episode = 0;
 
-  kills = items = secrets = 0;
   time = partime = 0;
 }
 
@@ -123,43 +124,6 @@ void MapCluster::Finish(int nextmap, int ep)
 }
 
 
-//==================================================================
-// creates a MapCluster graph based on the MAPINFO data.
-int GameInfo::Create_MAPINFO_game(int lump)
-{
-  if (lump < 0)
-    return -1;
-
-  int num;
-  int n = Read_MAPINFO(lump);
-  if (n <= 0)
-    return 0;
-
-  MapInfo *m;
-
-  // warptrans. wtf were you thinking?!?! time to unravel the warptrans numbering.
-  map<int, MapInfo *> warptransmap;
-  mapinfo_iter_t i;
-  for (i = mapinfo.begin(); i != mapinfo.end(); i++)
-    {
-      m = (*i).second;
-      num = m->warptrans; 
-      warptransmap[num] = m;
-    }
-
-  // now just put the correct exit data in the MapInfos
-  for (i = mapinfo.begin(); i != mapinfo.end(); i++)
-    {
-      m = (*i).second;
-
-      // set normal and secret exits
-      // 'nextlevel' overrides 'next'
-      if (m->nextlevel < 0 && m->warpnext > 0)
-	m->nextlevel = warptransmap[m->warpnext]->mapnumber;
-    }
-
-  return n;
-}
 
 
 //==================================================================
@@ -167,7 +131,7 @@ int GameInfo::Create_MAPINFO_game(int lump)
 // using episode and game.mode
 // Most of the original game dependent crap is here,
 // all the other code is general and clean.
-
+/*
 int GameInfo::Create_classic_game(int episode)
 {
   const char *HereticSky[5] = {"SKY1", "SKY2", "SKY3", "SKY1", "SKY3"};
@@ -379,3 +343,4 @@ int GameInfo::Create_classic_game(int episode)
 
   return n;
 }
+*/

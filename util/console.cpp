@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2004/08/12 18:30:33  smite-meister
+// cleaned startup
+//
 // Revision 1.15  2004/07/25 20:17:05  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -54,12 +57,6 @@
 // Revision 1.3  2002/12/16 22:19:36  smite-meister
 // HUD fix
 //
-// Revision 1.2  2002/12/03 10:26:39  smite-meister
-// ...
-//
-// Revision 1.1.1.1  2002/11/16 14:18:37  hurdler
-// Initial C++ version of Doom Legacy
-//
 //-----------------------------------------------------------------------------
 
 /// \file
@@ -69,20 +66,23 @@
 
 #include "doomdef.h"
 #include "dstrings.h"
+#include "d_event.h"
+
 #include "command.h"
 #include "console.h"
+
 #include "g_game.h"
 #include "g_input.h"
 #include "hu_stuff.h"
 #include "keys.h"
 #include "r_data.h"
 #include "sounds.h"
+#include "screen.h"
 
 #include "v_video.h"
 #include "i_video.h"
 #include "z_zone.h"
 #include "i_system.h"
-#include "d_main.h"
 #include "w_wad.h"
 
 const char CON_PROMPTCHAR = '>';

@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.25  2004/08/12 18:30:23  smite-meister
+// cleaned startup
+//
 // Revision 1.24  2004/07/13 20:23:36  smite-meister
 // Mod system basics
 //
@@ -83,6 +86,8 @@
 #include "g_actor.h"
 #include "g_pawn.h"
 
+#include "n_connection.h"
+
 #include "g_input.h"
 #include "d_event.h"
 #include "tables.h"
@@ -122,10 +127,12 @@ PlayerInfo::PlayerInfo(const string & n)
 
   connection = NULL;
   spectator = false;
-  playerstate = PST_WAITFORMAP;
+  playerstate = PST_NEEDMAP;
   memset(&cmd, 0, sizeof(ticcmd_t));
 
   requestmap = entrypoint = 0;
+
+  messagefilter = 0;
 
   viewz = viewheight = deltaviewheight = bob_amplitude = 0;
 
@@ -193,11 +200,25 @@ void PlayerInfo::unpackUpdate(GhostConnection *connection, BitStream *stream)
 
 
 
-// put a new message into the queue, if there's room
-void PlayerInfo::SetMessage(const char *msg, int priority)
+// send a message to the player
+void PlayerInfo::SetMessage(const char *msg, int priority, int type)
 {
-  if (messages.size() <= 20)
-    messages.push_back(pair<string, int>(string(msg), priority)); // makes a copy of msg, so we can use va() etc.
+  if (priority < messagefilter)
+    return;  // not interested
+
+  if (connection)
+    connection->rpcMessage_s2c(number, msg, priority, type); // send it over network (usually server does this)
+  else if (messages.size() < 20)
+    {
+      // the player is local and has room in her message queue
+      // TODO high priority overrides low priority messages?
+      message_t temp;
+      temp.priority = priority;
+      temp.type = type;
+      temp.msg = msg; // makes a copy of msg, so we can use va() etc.
+
+      messages.push_back(temp);
+    }
 }
 
 
@@ -216,7 +237,6 @@ void PlayerInfo::ExitLevel(int nextmap, int ep)
   switch (playerstate) 
     {
     case PST_ALIVE:
-    case PST_DONE:
       // save pawn for next level
       pawn->Detach();
       break;
@@ -228,20 +248,30 @@ void PlayerInfo::ExitLevel(int nextmap, int ep)
       pawn = NULL;
       break;
 
-    case PST_SPECTATOR:
     case PST_REMOVE:
       pawn->Remove();
       pawn = NULL;
+      break;
 
     default:
-      // PST_WAITFORMAP, PST_RESPAWN, meaning there is no pawn
+      // PST_NEEDMAP, PST_RESPAWN, PST_int, PST_wait, meaning the possible pawn is not connected to any Map
       break;
     }
 
   if (mp)
     mp->RemovePlayer(this); // NOTE that this may invalidate iterators to Map::players!
 
-  playerstate = PST_WAITFORMAP;
+  if (playerstate == PST_REMOVE)  // you will still be removed!
+    return;
+
+  if (false) // TODO disable intermissions server option?
+    {
+      playerstate = PST_INTERMISSION;
+      if (connection)
+	connection->rpcStartIntermission_s2c(); // nonlocal players need intermission data
+    }
+  else
+    playerstate = PST_NEEDMAP;
 }
 
 

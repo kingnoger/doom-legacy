@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright(C) 2000 Simon Howard
-// Copyright(C) 2001-2003 Doom Legacy Team
+// Copyright(C) 2001-2004 Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,63 +21,77 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.3  2004/08/12 18:30:30  smite-meister
+// cleaned startup
+//
 // Revision 1.2  2003/02/23 22:49:31  smite-meister
 // FS is back! L2 cache works.
 //
 // Revision 1.1.1.1  2002/11/16 14:18:28  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
 //--------------------------------------------------------------------------
 
+/// \file
+/// \brief FS parsing
 
 #ifndef t_parse_h
 #define t_parse_h 1
 
 #include "m_fixed.h"
-
 #include "t_vari.h"
-#include "t_prepro.h"
 
-class Actor;
-class PlayerInfo;
-class Map;
 
 #define T_MAXTOKENS 128
 #define TOKENLENGTH 128
 
-#define intvalue(v)                                               \
-  ( (v).type == svt_string ? atoi((v).value.s) :                  \
-    (v).type == svt_fixed ? ((v).value.f / FRACUNIT) :            \
-    (v).type == svt_actor ? (v).value.mobj ? 1 : 0 : (v).value.i )
 
-#define fixedvalue(v)                                             \
-  ( (v).type == svt_fixed ? (v).value.f :                         \
-    (v).type == svt_string ? fixed_t(atof((v).value.s) * FRACUNIT) :  \
-    intvalue(v) * FRACUNIT )
+/// \brief FS {} sections
+struct fs_section_t
+{
+  char *start;    // offset of starting brace {
+  char *end;      // offset of ending brace   }
+  int type;       // section type: for() loop, while() loop etc
+  
+  union
+  {
+    struct
+    {
+      char *loopstart;  // positioned before the while()
+    } data_loop;
+  } data; // data for section
+  
+  fs_section_t *next;        // for hashing
+};
 
-struct svariable_t;
 
-const char *stringvalue(svalue_t v);
+/// \brief FS {} section types
+enum fs_section_e
+{
+  st_empty,       // none: empty {} braces
+  st_if,          // if() statement
+  st_elseif,      // elseif() statement
+  st_else,        // else() statement
+  st_loop,        // loop
+};
 
+
+#define VARIABLESLOTS 16
+#define SECTIONSLOTS 17
 #define MAXSCRIPTS 256
 
+/// \brief FS script definition
 struct script_t
 {
-  Map *mp;
-
-  // script data 
-  char *data;
-  int scriptnum;  // this script's number
+  char *data;     ///< script data 
+  int scriptnum;  ///< this script's number
   int len;
   
-  // {} sections
+  /// {} sections
+  fs_section_t *sections[SECTIONSLOTS];
   
-  section_t *sections[SECTIONSLOTS];
-  
-  // variables:
-  
-  svariable_t *variables[VARIABLESLOTS];
+  /// variables, goto labels
+  struct svariable_t *variables[VARIABLESLOTS];
   
   // ptr to the parent script
   // the parent script is the script above this level
@@ -89,16 +103,50 @@ struct script_t
   // child scripts.
   // levelscript holds ptrs to all of the level's scripts
   // here.
-  
   script_t *children[MAXSCRIPTS];
   
-  Actor *trigger;       // object which triggered this script
-  PlayerInfo *player;   // player who triggered this script. may be NULL
+  class Actor      *trigger;  // object which triggered this script
 
   //SoM: Used for if/elseif/else statements
   bool  lastiftrue;
+
+protected:
+
+  void clear_variables();
+
+  inline int section_hash(char *b) { return int((b - data) % SECTIONSLOTS); }
+  fs_section_t *new_section(char *brace);
+  svariable_t *new_label(char *labelptr);
+
+  void parse();
+
+public: 
+  void clear(); // nukes sections, variables, children (does not free them!)
+
+  void preprocess();
+  void dry_run();
+  void run();
+  void save(char *r, int wt, int wdata);
+  void continue_script(char *continue_point);
+
+  // variables are hashed for speed. this is the hashkey.
+  inline static int variable_hash(char *n)
+  {
+    return ((n[0] + n[1] + (n[1] ? n[2] + (n[2] ? n[3] : 0) : 0)) % VARIABLESLOTS);
+  }
+
+  fs_section_t *find_section_start(char *brace);
+  fs_section_t *find_section_end(char *brace);
+  char *process_find_char(char *data, char find);
+  svariable_t *new_variable(char *name, int vtype);
+  svariable_t *variableforname(char *name);
 };
 
+
+
+
+
+/// \brief FS operator definition
 struct operator_t
 {
   char *str;
@@ -106,14 +154,16 @@ struct operator_t
   int direction;
 };
 
+extern operator_t operators[];
+extern int num_operators;
+
 enum
 {
   forward,
   backward
 };
 
-void run_script(script_t *script);
-void continue_script(script_t *script, char *continue_point);
+void parse_data(char *data, char *end);
 void parse_include(char *lumpname);
 void run_statement();
 void script_error(char *s, ...);
@@ -122,9 +172,11 @@ svalue_t evaluate_expression(int start, int stop);
 int find_operator(int start, int stop, char *value);
 int find_operator_backwards(int start, int stop, char *value);
 
+char *get_tokens(char *r);
+
 /******* tokens **********/
 
-typedef enum
+enum tokentype_t
 {
   to_name,   // a name, eg 'count1' or 'frag'
   to_number,
@@ -132,7 +184,15 @@ typedef enum
   to_string,
   to_unset,
   to_function          // function name
-} tokentype_t;
+};
+
+
+struct token_t
+{
+  char *v;
+  tokentype_t type;
+};
+
 
 enum    // brace types: where current_section is a { or }
 {
@@ -144,18 +204,19 @@ extern svalue_t nullvar;
 extern int script_debug;
 
 extern script_t *current_script;
-extern Map *current_map;
-extern Actor *trigger_obj;
-extern int killscript;
+extern class Map *current_map;
+extern class Actor *trigger_obj;
+extern class PlayerInfo *trigger_player;
+extern bool killscript;
 
-extern char *tokens[T_MAXTOKENS];
-extern tokentype_t tokentype[T_MAXTOKENS];
+extern token_t tokens[T_MAXTOKENS];
 extern int num_tokens;
-extern char *rover;     // current point reached in parsing
-extern char *linestart; // start of the current expression
 
-extern section_t *current_section;
-extern section_t *prev_section;
+extern char *linestart; // start of the current expression
+extern char *rover;     // current point reached in script
+
+extern fs_section_t *current_section;
+extern fs_section_t *prev_section;
 extern int bracetype;
 
 // the global_script is the root

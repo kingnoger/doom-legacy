@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.41  2004/08/12 18:30:24  smite-meister
+// cleaned startup
+//
 // Revision 1.40  2004/07/25 20:19:21  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -173,7 +176,6 @@
 #include "r_splats.h"
 
 #include "t_parse.h"
-#include "t_func.h"
 
 #include "hu_stuff.h"
 #include "console.h"
@@ -1240,8 +1242,7 @@ bool Map::Setup(tic_t start, bool spawnthings)
   R_ClearColormaps();
 
 #ifdef FRAGGLESCRIPT
-  script_camera_on = false;
-  T_ClearScripts();
+  FS_ClearScripts();
 #endif
 
   // NOTE Hexen map separators are not empty!!! They contain a version string "version 2.3\0"
@@ -1260,13 +1261,14 @@ bool Map::Setup(tic_t start, bool spawnthings)
     }
 
 #ifdef FRAGGLESCRIPT
-  T_PreprocessScripts();        // preprocess FraggleScript scripts (needs already added players)
-  script_camera_on = false;
+  FS_PreprocessScripts();        // preprocess FraggleScript scripts (needs already added players)
 #endif
 
   // If the map defines its music in MapInfo_t, use it.
   if (!info->musiclump.empty())
     S.StartMusic(info->musiclump.c_str());
+  // I_PlayCD(info->mapnumber, true);  // FIXME cd music
+
 
   //faB: now part of level loading since in future each level may have
   //     its own anim texture sequences, switches etc.

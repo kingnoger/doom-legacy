@@ -182,6 +182,7 @@ export engine_objects = \
 	$(objdir)/hu_stuff.o \
 	$(objdir)/m_cheat.o \
 	$(objdir)/p_fab.o \
+	$(objdir)/p_hacks.o \
 	$(objdir)/d_items.o \
 	$(objdir)/d_main.o \
 	$(objdir)/dstrings.o

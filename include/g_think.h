@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/08/12 18:30:29  smite-meister
+// cleaned startup
+//
 // Revision 1.9  2004/04/25 16:26:51  smite-meister
 // Doxygen
 //
@@ -128,6 +131,12 @@ public:
   // could contain even more info about the class
 
   TypeInfo(const char *n, thinker_factory_t f, TypeInfo *par);
+
+  inline bool IsDescendantOf(const TypeInfo *p) const
+  {
+    return (p == this) || (parent && parent->IsDescendantOf(p));
+  }
+
   static TypeInfo *Find(unsigned code); ///< Searches the ID map for 'code'
 };
 
@@ -141,7 +150,7 @@ protected: \
 public: \
   static  TypeInfo _type; \
   virtual TypeInfo *Type() const { return &_type; } \
-  virtual bool IsOf(const TypeInfo &t) const { return (&t == &_type); } \
+  virtual bool IsOf(const TypeInfo &t) const { return _type.IsDescendantOf(&t); } \
   cls(); \
   virtual int Marshal(LArchive &a);
 
@@ -166,7 +175,7 @@ class Thinker
 {
   friend class Map;
 
-  DECLARE_CLASS(Thinker)
+  DECLARE_CLASS(Thinker);
 
 private:
   /// linked list pointers

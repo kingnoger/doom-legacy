@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2004/08/12 18:30:23  smite-meister
+// cleaned startup
+//
 // Revision 1.21  2004/07/05 16:53:25  smite-meister
 // Netcode replaced
 //
@@ -709,7 +712,7 @@ bool DActor::LookForPlayers(bool allaround)
 	return false;
 
       PlayerInfo *k = mp->players[lastlook];
-      if (!(k->playerstate == PST_ALIVE || k->playerstate == PST_DONE) || !k->pawn)
+      if (k->playerstate != PST_ALIVE || !k->pawn || k->spectator)
 	continue;
 
       PlayerPawn *p = k->pawn;

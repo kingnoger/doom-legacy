@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/08/12 18:30:30  smite-meister
+// cleaned startup
+//
 // Revision 1.11  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
 //
@@ -180,6 +183,11 @@ public:
 };
 
 
+/// \brief Sound and music subsystem
+///
+/// Manages sound channels for both ambient (normal stereo) and 3D sound effects.
+/// Also takes care of playing music.
+/// There is only one global instance in use, called "S".
 class SoundSystem
 {
 private:
@@ -193,7 +201,7 @@ private:
   musicinfo_t *mus_playing;   // music currently being played
 
   // gametic when to do cleanup
-  int nextcleanup;
+  unsigned nextcleanup;
 
   // these are only used internally, user can change them using consvars
   void SetSoundVolume(int volume);

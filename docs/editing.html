@@ -369,6 +369,7 @@ compiled into bytecode using <b>ACC</b>, the ACS compiler.
 <hr />
 <h2><a name="linedef">New linedef types</a></h2>
 
+TODO new things: 4001-4060 playerstarts in doom namespace
 
 <h3>New linedef flags</h3>
 
@@ -670,6 +671,9 @@ Don't you? Well, you should.
 </p>
 
 
+<h3>Colormaps and transmaps</h3>
+
+<p>TODO, C_START, C_END</p>
 
 
 <hr />
@@ -769,7 +773,7 @@ Again, semicolons start comments, which end at the next newline.
 <tr><td>:&lt;seqname&gt; &lt;number&gt;</td>
 <td>
 Starts a sound sequence definition. The beginning colon is
-essential. Each sequence must have an unique (positive) number.
+essential. Each sequence must have a unique (positive) number.
 </td></tr>
 
 <tr><td>play &lt;sndname&gt;</td>
@@ -841,7 +845,38 @@ automagically. The names of the music lumps can be freely chosen.
 <hr />
 <h2><a name="dehacked">DeHackEd support</a></h2>
 
-Legacy supports most DeHackEd and BEX features.
+Legacy supports the most important DeHackEd and BEX features.... TODO
+
+<h3>New codepointers</h3>
+
+<table class="def">
+<tr><th>BEX mnemonic</th><th>effect</th></tr>
+
+<tr><td>StartFS</td>
+<td>
+Starts an FS script, using <i>tics</i> for the script number.
+</td></tr>
+
+<tr><td>StartWeaponFS</td>
+<td>
+Same thing, but for weapon frames.
+</td></tr>
+
+<tr><td>StartACS</td>
+<td>
+Starts an ACS script, using <i>tics</i> for the script number,
+<i>sprite subnumber</i>
+for the args??? TODO
+</td></tr>
+
+<tr><td>StartWeaponACS</td>
+<td>
+Same as above, but for weapon frames.
+</td></tr>
+
+</table>
+
+
 
 
 <hr />
@@ -855,16 +890,184 @@ Naturally, you can also replace these resources using PWADs.
 <tr><th>lump</th><th>contents</th></tr>
 
 <tr><td class="note" colspan="2">
-Graphics
+Plaintext lumps
+</td></tr>
+
+<tr><td>VERSION</td>
+<td>
+Legacy.wad version string
+</td></tr>
+
+<tr><td>MINFO_D1</td>
+<td>
+MAPINFO lump for Doom1
+</td></tr>
+
+<tr><td>MINFO_D2</td>
+<td>
+MAPINFO lump for Doom2
+</td></tr>
+
+<tr><td>MINFO_H</td>
+<td>
+MAPINFO lump for Heretic
+</td></tr>
+
+<tr><td>SNDINFO</td>
+<td>
+Basic sound effect definitions
+</td></tr>
+
+<tr><td>SNDSEQ</td>
+<td>
+Basic sound sequence definitions
+</td></tr>
+
+<tr><td>ENDOOM</td>
+<td>
+End text
+</td></tr>
+
+<tr><td>THINGS.H</td>
+<td>
+<a href="fs.html">FraggleScript</a> header file containing THING names
+and flags
+</td></tr>
+
+
+
+<tr><td class="note" colspan="2">
+Color- and transmaps
+</td></tr>
+
+<tr><td>
+WATERMAP
+</td>
+<td>
+Boom underwater colormap
+</td></tr>
+
+<tr><td>
+TRANSMED
+TRANSMOR
+TRANSHI
+TRANSFIR
+TRANSFX1
+</td>
+<td>
+Transmaps
+</td></tr>
+
+
+
+<tr><td class="note" colspan="2">
+Sounds
+</td></tr>
+
+<tr><td>
+DSOUCH
+DSJUMP
+DSFLOUSH
+DSGLOOP
+DSSPLASH
+</td>
+<td>
+New player and environment sounds
+</td></tr>
+
+
+
+<tr><td class="note" colspan="2">
+Sprites
+</td></tr>
+
+<tr><td>BLUD[ab]0</td>
+<td>
+Blood
+</td></tr>
+
+<tr><td>SMOK[a-e]0</td>
+<td>
+Smoke
+</td></tr>
+
+<tr><td>SPLA[a-c]0</td>
+<td>
+Water splash?
+</td></tr>
+
+<tr><td>TNT1A0</td>
+<td>
+?
+</td></tr>
+
+
+
+<tr><td class="note" colspan="2">
+Other graphics
+</td></tr>
+
+<tr><td>CREDIT</td>
+<td>
+Credits page
+</td></tr>
+
+<tr><td>CORONA</td>
+<td>
+Corona luminosity map
+</td></tr>
+
+<tr><td>CROSHAI[1-3]</td>
+<td>
+HUD crosshairs
+</td></tr>
+
+<tr><td>
+BRDR_MM
+BRDR_MT
+</td>
+<td>
+window border patches?
+</td></tr>
+
+<tr><td>A_DMG[1-3]</td>
+<td>
+Wall splat patches
+</td></tr>
+
+
+<tr><td>WATER[0-7]</td>
+<td>
+"old water" flats
+</td></tr>
+
+<tr><td>
+M_CONTROL
+M_CDVOL
+M_VIDEO
+M_SINGLE
+M_MULTI
+M_SETUPM
+M_SETUPA
+M_SETUPB
+M_2PLAYR
+M_STSERV
+M_CONNEC
+M_SLIDEL
+M_SLIDER
+M_SLIDEC
+</td>
+<td>
+Menu patches
 </td></tr>
 
 <tr><td>RANKINGS</td>
 <td>
 the graphic displayed at the top of the deathmatch
-rankings (while in a net-game).
+rankings (while in a net-game)
 </td></tr>
 
-<tr><td>RSKY1<br/>RSKY2<br/>RSKY3</td>
+<tr><td>RSKY[1-3]</td>
 <td>
 The sky graphics are now 256x240, not 256x128.
 That's because of the freelook : you are able to look
@@ -905,6 +1108,7 @@ Console rigth border, used with translucent console background MUST BE 200 lines
 Status bar overlay icons
 </td></tr>
 
+
 <tr><td>SBOHEALT</td><td>health (default shows a red cross)</td></tr>
 <tr><td>SBOFRAGS</td><td>frags (default shows a skull)</td></tr>
 <tr><td>SBOARMOR</td><td>armor (default shows a green armor)</td></tr>
@@ -915,39 +1119,7 @@ Status bar overlay icons
 <tr><td>SBOAMMO5</td><td>plasma ammo</td></tr>
 <tr><td>SBOAMMO6</td><td>bfg ammo</td></tr>
 <tr><td>SBOAMMO8</td><td>super shotgun ammo</td></tr>
-
-<tr><td class="note" colspan="2">
-Special MAPINFO lumps
-</td></tr>
-
-<tr><td>MINFO_D1</td>
-<td>
-MAPINFO lump containing the Doom1 map ordering.
-</td></tr>
-
-<tr><td>MINFO_D2</td>
-<td>
-MAPINFO lump containing the Doom2 map ordering.
-</td></tr>
-
-<tr><td>MINFO_H</td>
-<td>
-MAPINFO lump containing the Heretic map ordering.
-</td></tr>
-
-<tr><td class="note" colspan="2">
-Other plaintext lumps
-</td></tr>
-
-<tr><td>SNDINFO</td>
-<td>
-Basic sound effect definitions.
-</td></tr>
-
-<tr><td>SNDSEQ</td>
-<td>
-Basic sound sequence definitions.
-</td></tr>
+<tr><td>SBOEMPTY</td><td>???</td></tr>
 
 <tr><td></td>
 <td>
