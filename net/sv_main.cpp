@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/08/06 18:54:39  smite-meister
+// netcode update
+//
 // Revision 1.6  2004/07/14 16:13:13  smite-meister
 // cleanup, commands
 //
@@ -106,16 +109,17 @@ Net tasks: (ghost, rpc, netevent, info packet, raw packet)
  - score
  - file transfer (?)
 
-XD:
- - client map change (restart?)
- - artifact use
- - kick
- - pause request / pause
 
 RPC's from server to client:
  - startsound/stopsound/sequence/music
  - HUD colormap and other effects?
+ - pause
+ - console/HUD message (unicast/multicast)
+ - map change/load
 
+client to server:
+ - request pause
+ - say
 
 Player ticcmd contains both guaranteed_ordered and unguaranteed elements.
 Shooting and artifact use should be guaranteed...
@@ -148,7 +152,9 @@ Have polymorphed class GameType which creates these into GameInfo containers
 #include "i_system.h"
 #include "m_argv.h"
 #include "r_data.h"
+#include "sounds.h"
 
+#include "w_wad.h"
 #include "z_zone.h"
 
 
@@ -171,11 +177,11 @@ consvar_t cv_masterserver   = {"masterserver", "doomlegacy.dhs.org:"MS_PORT, CV_
 consvar_t cv_netstat = {"netstat","0",0,CV_OnOff};
 
 // server info
-consvar_t cv_internetserver = {"internetserver", "No", CV_SAVE, CV_YesNo };
-consvar_t cv_servername     = {"servername", "DooM Legacy server", CV_SAVE, NULL };
-consvar_t cv_allownewplayer = {"sv_allownewplayers","1",0,CV_OnOff};
-CV_PossibleValue_t maxplayers_cons_t[]={{1,"MIN"},{32,"MAX"},{0,NULL}};
-consvar_t cv_maxplayers     = {"sv_maxplayers","32",CV_NETVAR,maxplayers_cons_t,NULL,32};
+consvar_t cv_internetserver  = {"publicserver", "No", CV_SAVE, CV_YesNo };
+consvar_t cv_servername      = {"servername", "DooM Legacy server", CV_SAVE, NULL };
+consvar_t cv_allownewplayers = {"allownewplayers","1",0,CV_OnOff};
+CV_PossibleValue_t maxplayers_cons_t[]={{1,"MIN"},{100,"MAX"},{0,NULL}};
+consvar_t cv_maxplayers     = {"maxplayers","32",CV_NETVAR,maxplayers_cons_t,NULL,32};
 
 // game rules
 CV_PossibleValue_t teamplay_cons_t[]={{0,"Off"},{1,"Color"},{2,"Skin"},{3,NULL}};
@@ -200,7 +206,7 @@ consvar_t cv_timelimit  = {"timelimit" ,"0",CV_NETVAR | CV_CALL | CV_NOINIT,CV_U
 consvar_t cv_allowjump       = {"allowjump","1",CV_NETVAR,CV_YesNo};
 consvar_t cv_allowrocketjump = {"allowrocketjump","0",CV_NETVAR,CV_YesNo};
 consvar_t cv_allowautoaim    = {"allowautoaim","1",CV_NETVAR,CV_YesNo};
-consvar_t cv_allowmlook      = {"allowmlook","1",CV_NETVAR,CV_YesNo};
+consvar_t cv_allowmlook      = {"allowfreelook","1",CV_NETVAR,CV_YesNo};
 
 consvar_t cv_itemrespawn     ={"respawnitem"    , "0",CV_NETVAR,CV_OnOff};
 consvar_t cv_itemrespawntime ={"respawnitemtime","30",CV_NETVAR,CV_Unsigned};
@@ -212,7 +218,7 @@ consvar_t cv_gravity = {"gravity","1", CV_NETVAR | CV_FLOAT | CV_ANNOUNCE};
 consvar_t cv_nomonsters = {"nomonsters","0", CV_NETVAR, CV_OnOff};
 consvar_t cv_fastmonsters = {"fastmonsters","0", CV_NETVAR | CV_CALL,CV_OnOff,FastMonster_OnChange};
 consvar_t cv_solidcorpse  = {"solidcorpse","0", CV_NETVAR | CV_SAVE,CV_OnOff};
-
+consvar_t cv_voodoodolls  = {"voodoodolls","1",CV_NETVAR,CV_OnOff};
 
 void TeamPlay_OnChange()
 {
@@ -353,6 +359,9 @@ bool GameInfo::Playing()
 }
 
 
+
+
+
 void P_ACSInitNewGame();
 
 /// after this you are not Playing()
@@ -360,7 +369,7 @@ void GameInfo::SV_Reset()
 {
   net->SV_Reset(); // disconnect clients etc.
 
-  Clear_mapinfo_clusterdef();
+  Clear_mapinfo_clustermap();
   ClearPlayers();
   // clear teams?
   P_ACSInitNewGame(); // TODO clear FS global/hub data
@@ -381,22 +390,65 @@ void GameInfo::SV_Reset()
 bool GameInfo::SV_SpawnServer()
 {
   if (Playing())
-    I_Error("tried to spawn server while playing\n");
-  //  return false;
+    {
+      I_Error("tried to spawn server while playing\n");
+      return false;
+    }
 
-  CONS_Printf("Starting server...\n");
+  bool local = !netgame; // temp HACK
   SV_Reset();
-  //if (cv_internetserver.value) RegisterServer(0, 0);
+  CONS_Printf("Starting server...\n");
 
-  net->SV_Open();
+  if (!dedicated)
+    {
+      // add local players
+      consoleplayer = AddPlayer(new PlayerInfo(localplayer));
+      if (cv_splitscreen.value)
+	consoleplayer2 = AddPlayer(new PlayerInfo(localplayer2));
+    }
 
-  server = true;
-  netgame = true;
-  multiplayer = true;
+  if (!local)
+    {
+      net->SV_Open();
+      netgame = true;
+      multiplayer = true;
+    }
 
   return true;
 }
 
+
+int P_Read_ANIMATED(int lump);
+int P_Read_ANIMDEFS(int lump);
+void P_InitSwitchList();
+
+/// reads some lumps affecting the game behavior
+void GameInfo::ReadResourceLumps()
+{
+  // read these lumps _after_ MAPINFO but not separately for each map
+  extern bool nosound;
+  if (!nosound)
+    {
+      S_ClearSounds();
+      int n = fc.Size();
+      for (int i = 0; i < n; i++)
+	{
+	  // cumulative reading
+	  S_Read_SNDINFO(fc.FindNumForNameFile("SNDINFO", i));
+	  S_Read_SNDSEQ(fc.FindNumForNameFile("SNDSEQ", i));
+	}
+
+      if (cv_precachesound.value)
+	S_PrecacheSounds();
+    }
+
+  // texture and flat animations
+  if (P_Read_ANIMDEFS(fc.FindNumForName("ANIMDEFS")) < 0)
+    P_Read_ANIMATED(fc.FindNumForName("ANIMATED"));
+
+  // set switch texture names/numbers, read "SWITCHES" lump
+  P_InitSwitchList();
+}
 
 
 
@@ -418,7 +470,7 @@ void InitNetwork()
   TransportProtocol ptc = ipx ? IPXProtocol : IPProtocol;
 
   S32 port = DEFAULT_PORT;
-  if (M_CheckParm ("-udpport"))
+  if (M_CheckParm ("-port"))
     port = atoi(M_GetNextParm());
 
   // set up the interface
@@ -434,7 +486,7 @@ void InitNetwork()
   // parse network game options,
   if (M_CheckParm("-server") || dedicated)
     {
-      game.SV_SpawnServer();
+      game.netgame = true;
 
       // give a number of clients to wait for before starting game?
       // if (M_IsNextParm())
@@ -442,7 +494,6 @@ void InitNetwork()
     }
   else if (M_CheckParm("-connect"))
     {
-      game.server = false;
       char server_hostname[255];
 
       if (M_IsNextParm())
@@ -507,16 +558,15 @@ void Command_TeamFrags_f();
 void Command_Pause_f();
 void Command_Quit_f ();
 void Command_Connect_f();
-void Command_Disconnect_f();
+void Command_Reset_f();
+
 void Command_Kick_f();
 void Command_Kill_f();
-
 void Command_Addfile_f();
+
+void Command_NewGame_f();
+void Command_StartGame_f();
 void Command_Map_f();
-void Command_RestartLevel_f();
-void Command_ExitLevel_f();
-void Command_RestartGame_f();
-void Command_Reset_f();
 
 void Command_Save_f();
 void Command_Load_f();
@@ -580,6 +630,7 @@ void SV_Init()
 
   // informational commands
   COM_AddCommand("version", Command_Version_f);
+  COM_AddCommand("meminfo", Command_Meminfo_f);
   COM_AddCommand("gameinfo", Command_GameInfo_f);
   COM_AddCommand("mapinfo", Command_MapInfo_f);
   COM_AddCommand("players", Command_Players_f);
@@ -595,23 +646,20 @@ void SV_Init()
   COM_AddCommand("pause", Command_Pause_f);
   COM_AddCommand("quit",  Command_Quit_f);
   COM_AddCommand("connect", Command_Connect_f);
-  COM_AddCommand("disconnect", Command_Disconnect_f);
+  COM_AddCommand("reset", Command_Reset_f);
 
   // game management (server only)
   COM_AddCommand("save", Command_Save_f);
   COM_AddCommand("load", Command_Load_f);
   COM_AddCommand("playdemo", Command_Playdemo_f);
   COM_AddCommand("stopdemo", Command_Stopdemo_f);
-
   COM_AddCommand("addfile", Command_Addfile_f);
-  COM_AddCommand("map", Command_Map_f);
-  COM_AddCommand("restartlevel", Command_RestartLevel_f);
-  COM_AddCommand("exitlevel", Command_ExitLevel_f);
-  COM_AddCommand("restartgame", Command_RestartGame_f);
-  COM_AddCommand("reset", Command_Reset_f);
-
   COM_AddCommand("kick", Command_Kick_f);
   COM_AddCommand("kill", Command_Kill_f);
+
+  COM_AddCommand("newgame", Command_NewGame_f);
+  COM_AddCommand("startgame", Command_StartGame_f);
+  COM_AddCommand("map", Command_Map_f);
 
   COM_AddCommand("runacs", Command_RunACS_f);
 #ifdef FRAGGLESCRIPT
@@ -629,9 +677,6 @@ void SV_Init()
   COM_AddCommand("god", Command_CheatGod_f);
   COM_AddCommand("gimme", Command_CheatGimme_f);
 
-  // miscellaneous subsystem commands
-  COM_AddCommand("meminfo", Command_Meminfo_f);
-
   //Added by Hurdler for master server connection
   cv_masterserver.Reg();
   COM_AddCommand("listserv", Command_Listserv_f);
@@ -639,7 +684,7 @@ void SV_Init()
   // register console variables
   cv_internetserver.Reg();
   cv_servername.Reg();
-  cv_allownewplayer.Reg();
+  cv_allownewplayers.Reg();
   cv_maxplayers.Reg();
 
   cv_deathmatch.Reg();
@@ -665,6 +710,7 @@ void SV_Init()
   cv_nomonsters.Reg();
   cv_fastmonsters.Reg();
   cv_solidcorpse.Reg();
+  cv_voodoodolls.Reg();
 
   cv_playdemospeed.Reg();
   cv_netstat.Reg();

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/08/06 18:54:39  smite-meister
+// netcode update
+//
 // Revision 1.4  2004/07/13 20:23:38  smite-meister
 // Mod system basics
 //
@@ -51,12 +54,8 @@ More serverside stuff:
 
 void objectLocalScopeAlways(o)
 void objectLocalClearAlways(o)
-
-void activateGhosting()
-void resetGhosting()
 bool isGhosting()
 
-virtual void onStartGhosting()
 virtual void onEndGhosting()
 */
 
@@ -122,7 +121,7 @@ bool LConnection::readConnectRequest(BitStream *stream, const char **errorString
       return false;
     }
 
-  if (!cv_allownewplayer.value)
+  if (!cv_allownewplayers.value)
     {
       sprintf(temp, "The server is not accepting new players at the moment.");
       return false;
@@ -167,7 +166,7 @@ void LConnection::writeConnectAccept(BitStream *stream)
   for (int i = 0; i < n; i++)
     stream->write(player[i]->number); // send pnums
 
-  game.type->WriteServerInfo(*stream);
+  game.gtype->WriteServerInfo(*stream);
 }
 
 
@@ -227,9 +226,12 @@ void LConnection::onConnectionEstablished()
       n->server_con = this;
       n->netstate = LNetInterface::CL_Connected;
       CONS_Printf("Connected to server at %s.\n", getNetAddressString());
+
+      rpcSay(0, 0, "hello world!\n");
     }
   else
     {
+      rpcSay(0, 0, "sdoysdfsha!\n");
       // server side
       n->client_con.push_back(this);
 
@@ -239,7 +241,7 @@ void LConnection::onConnectionEstablished()
 	  CONS_Printf("%s entered the game (player %d)\n", player[i]->name.c_str(), player[i]->number);
 	  // TODO multicast/RPC playerinfo to other players?
 	}
-      setScopeObject(game.type);
+      setScopeObject(game.gtype);
       setGhostFrom(true);
       setGhostTo(false);
       activateGhosting();
@@ -259,7 +261,6 @@ void LConnection::onConnectionTerminated(TerminationReason r, const char *error)
 
 void LConnection::ConnectionTerminated(bool established)
 {
-  CONS_Printf("Unsuccesful connect attempt\n");
   if (isConnectionToServer())
     {
       ((LNetInterface *)getInterface())->CL_Reset();
@@ -272,7 +273,7 @@ void LConnection::ConnectionTerminated(bool established)
 	  for (int i = 0; i<n; i++)
 	    {
 	      CONS_Printf("Player (%d) dropped.\n", player[i]->number);
-	      game.RemovePlayer(player[i]->number); // PI is also deleted here
+	      player[i]->playerstate = PST_REMOVE;
 	    }
 	  resetGhosting();
 	  // TODO inform others
@@ -282,4 +283,43 @@ void LConnection::ConnectionTerminated(bool established)
 	  CONS_Printf("Unsuccesful connect attempt\n");
 	}
     }
+}
+
+
+
+void LConnection::onStartGhosting()
+{
+  I_Error("Ghosting started...\n");
+}
+
+
+
+//========================================================
+//            Remote Procedure Calls
+//========================================================
+
+
+TNL_IMPLEMENT_RPC(LConnection, rpcMessage_s2c, (S32 pnum, const char *msg, S8 priority), 
+		  NetClassGroupGameMask, RPCGuaranteedOrdered, RPCDirServerToClient, 0)
+{
+  if (consoleplayer && consoleplayer->number == pnum)
+    consoleplayer->SetMessage(msg, priority);
+  else if (consoleplayer2 && consoleplayer2->number == pnum)
+    consoleplayer2->SetMessage(msg, priority);
+  else
+    I_Error("Received someone else's message!\n");
+}
+
+
+TNL_IMPLEMENT_RPC(LConnection, rpcStartIntermission_s2c, (), 
+		  NetClassGroupGameMask, RPCGuaranteedOrdered, RPCDirServerToClient, 0)
+{
+  //wi.StartIntermission();
+}
+
+
+TNL_IMPLEMENT_RPC(LConnection, rpcIntermissionDone_c2s, (), 
+		  NetClassGroupGameMask, RPCGuaranteedOrdered, RPCDirClientToServer, 0)
+{
+  //player[0]->playerstate = PST_NEEDMAP; 
 }

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/08/06 18:54:39  smite-meister
+// netcode update
+//
 // Revision 1.7  2004/07/13 20:23:39  smite-meister
 // Mod system basics
 //
@@ -281,7 +284,7 @@ void LNetInterface::handleInfoPacket(const Address &address, U8 packetType, BitS
 	      out.write(U8(PT_QueryResponse));
 	      cn.write(&out);
 
-	      game.type->WriteServerQueryResponse(out);
+	      game.gtype->WriteServerQueryResponse(out);
 
 	      out.sendto(mSocket, address);
 	    }	  
@@ -401,8 +404,16 @@ void LNetInterface::SV_Open()
 {
   setAllowsConnections(true);
   netstate = SV_WaitingClients;
+  //if (cv_internetserver.value) RegisterServer(0, 0);
 }
 
+/*
+void LNetInterface::SV_Close()
+{
+  setAllowsConnections(false);
+  netstate = SV_WaitingClients;
+}
+*/
 
 
 class MasterConnection : public LConnection {};

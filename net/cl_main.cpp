@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/08/06 18:54:39  smite-meister
+// netcode update
+//
 // Revision 1.5  2004/07/25 20:17:26  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -115,9 +118,11 @@ void SplitScreen_OnChange()
   if (game.state < GameInfo::GS_LEVEL)
     return;
 
+  // FIXME splitscreen
   if (cv_splitscreen.value)
     {
       displayplayer2 = consoleplayer2 = game.AddPlayer(new PlayerInfo(localplayer2));
+      // TODO as server first
     }
   else
     {
@@ -243,7 +248,7 @@ void CL_Init()
   cv_scr_width.Reg();
   cv_scr_height.Reg();
   cv_scr_depth.Reg();
-  cv_fullscreen.Reg(); // only for opengl so use differant name please and move it to differant place
+  cv_fullscreen.Reg();
   cv_usegamma.Reg();
 
   cv_viewsize.Reg();

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/08/06 18:54:39  smite-meister
+// netcode update
+//
 // Revision 1.5  2004/07/14 16:13:13  smite-meister
 // cleanup, commands
 //
@@ -51,6 +54,8 @@
 #include "g_player.h"
 #include "g_actor.h"
 #include "g_pawn.h"
+
+#include "w_wad.h"
 
 #include "i_system.h"
 
@@ -223,6 +228,7 @@ void Command_Sayteam_f()
 }
 
 
+// the chat message "router"
 void LNetInterface::SayCmd(int from, int to, const char *msg)
 {
   if (!game.netgame)
@@ -286,7 +292,7 @@ void Command_Pause_f()
   bool pause;
 
   if (COM_Argc() > 1)
-    pause = (atoi(COM_Argv(1)) != 0);
+    pause = atoi(COM_Argv(1));
   else
     pause = !game.paused;
 
@@ -364,20 +370,23 @@ void Command_Connect_f()
 }
 
 
-// drop out of netgame
-void Command_Disconnect_f() // TODO
+
+// shuts down the current game
+void Command_Reset_f()
 {
-  game.server = true;
-  game.netgame = false;
+  game.SV_Reset();
+
+  if (!dedicated)
+    game.StartIntro();
 }
-
-
 
 
 
 //========================================================================
 //    Game management (server only)
 //========================================================================
+
+
 
 // load a game
 void Command_Load_f() // TODO
@@ -390,7 +399,7 @@ void Command_Load_f() // TODO
 
   if (!game.server)
     {
-      CONS_Printf("Only server can load a game\n");
+      CONS_Printf("Only the server can load a game.\n");
       return;
     }
 
@@ -423,6 +432,9 @@ void Command_Save_f()
 
   game.SaveGame(slot, desc);
 }
+
+
+
 
 
 
@@ -491,6 +503,59 @@ void Command_Addfile_f() // TODO
 }
 
 
+/// Initialize a new game using a MAPINFO lump
+void Command_NewGame_f()
+{
+  if (game.Playing())
+    {
+      CONS_Printf("First end the current game.\n");
+      return;
+    }
+
+  if (COM_Argc() < 2 || COM_Argc() > 4)
+    {
+      CONS_Printf("Usage: newgame <MAPINFOlump> [<skill>] [<episode>]\n");
+      return;
+    }
+
+  int sk = sk_medium;
+  int epi = 1;
+  if (COM_Argc() >= 3)
+    {
+      sk = atoi(COM_Argv(2));
+      sk = (sk > sk_nightmare) ? sk_nightmare : ((sk < 0) ? 0 : sk);
+
+      if (COM_Argc() == 4)
+	epi = atoi(COM_Argv(3));
+    }
+
+  game.SV_SpawnServer();
+  int lump = fc.FindNumForName(COM_Argv(1));
+  if (game.Read_MAPINFO(lump) <= 0)
+    {
+      CONS_Printf("Bad MAPINFO lump.\n");
+      return;
+    }
+
+  game.ReadResourceLumps(); // SNDINFO etc.
+  game.StartGame(skill_t(sk), epi);
+}
+
+
+// starts or restarts the game
+void Command_StartGame_f()
+{
+  if (!game.server)
+    {
+      CONS_Printf("Only the server can restart the game.\n");
+      return;
+    }
+
+  if (!game.StartGame(game.skill, 1))
+    CONS_Printf("You must first set the levelgraph!\n");
+}
+
+
 
 /// Warp to a new map.
 /// Called either from map <mapname> console command, or idclev cheat.
@@ -543,47 +608,6 @@ void Command_RestartLevel_f()
     CONS_Printf("You should be in a level to restart it!\n");
 }
 
-
-
-void Command_ExitLevel_f()
-{
-  if (!game.server)
-    {
-      CONS_Printf("Only the server can exit the level\n");
-      return;
-    }
-
-  if (game.state != GameInfo::GS_LEVEL)
-    CONS_Printf("You should be playing a level to exit it !\n");
-
-  // TODO exitlevel
-}
-
-
-
-
-void Command_RestartGame_f()
-{
-  if (!game.server)
-    {
-      CONS_Printf("Only the server can restart the game.\n");
-      return;
-    }
-
-  if (!game.StartGame())
-    CONS_Printf("You must first set the levelgraph!\n");
-}
-
-
-
-// shuts down the current game
-void Command_Reset_f()
-{
-  game.SV_Reset();
-
-  if (!dedicated)
-    game.StartIntro();
-}
 
 
 
