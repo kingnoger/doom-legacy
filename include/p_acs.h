@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2003/11/12 11:14:52  smite-meister
+// cr/lf
+//
 // Revision 1.1  2003/11/12 11:13:15  smite-meister
 // Serialization done. Map progression.
 //
