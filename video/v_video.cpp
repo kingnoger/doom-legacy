@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/09/14 21:41:57  hurdler
+// rename "data" to "pixels" (I think it's more appropriate and that's how SDL and OpenGL name such data after all)
+//
 // Revision 1.10  2004/08/13 18:25:11  smite-meister
 // sw renderer fix
 //
@@ -324,7 +327,7 @@ void PatchTexture::Draw(int x, int y, int scrn = 0)
   if (flags & V_SSIZE)
     for ( ; desttop < destend; col += colfrac, desttop++)
       {
-        post_t *post = (post_t *)(data + p->columnofs[col >> FRACBITS]);
+        post_t *post = (post_t *)(pixels + p->columnofs[col >> FRACBITS]);
 
         // step through the posts in a column
         while (post->topdelta != 0xff)
@@ -355,7 +358,7 @@ void PatchTexture::Draw(int x, int y, int scrn = 0)
   else // unscaled, perhaps a bit faster?
     for ( ; desttop < destend; col += colfrac, desttop++)
       {
-        post_t *post = (post_t *)(data + p->columnofs[col]);
+        post_t *post = (post_t *)(pixels + p->columnofs[col]);
 
         // step through the posts in a column
         while (post->topdelta != 0xff)
@@ -653,8 +656,8 @@ void V_DrawFadeConsBack(int x1, int y1, int x2, int y2)
           wput = (short*)(vid.screens[0] + vid.width*y) + x1;
           for (x=0 ; x<w ; x++) {
             *wput = ((*wput&0x7bde) + (15<<5)) >>1;
-	    wput++;
-	  }
+            wput++;
+          }
         }
     }
 }

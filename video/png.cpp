@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2004/09/14 21:41:57  hurdler
+// rename "data" to "pixels" (I think it's more appropriate and that's how SDL and OpenGL name such data after all)
+//
 // Revision 1.1  2004/08/18 14:35:23  smite-meister
 // PNG support!
 //
@@ -93,10 +96,10 @@ PNGTexture::PNGTexture(const char *n, int l)
 
 byte *PNGTexture::Generate()
 {
-  if (!data)
-    data = ReadData(true);
+  if (!pixels)
+    pixels = ReadData(true);
 
-  return data;
+  return pixels;
 }
 
 
@@ -140,7 +143,7 @@ byte *PNGTexture::ReadData(bool read_image)
   png_get_IHDR(png_p, info_p, &w, &h, &bit_depth, &color_type, NULL, NULL, NULL);
 
   CONS_Printf("PNG header: %ld, %ld, %d, %d, %ld, chan:%d\n", w, h, bit_depth, color_type,
-	      png_get_rowbytes(png_p, info_p), info_p->channels);
+              png_get_rowbytes(png_p, info_p), info_p->channels);
 
   width = w;
   height = h;
@@ -158,34 +161,34 @@ byte *PNGTexture::ReadData(bool read_image)
       // gamma (pc monitor in a dark room (as Doom should be played!))
       screen_gamma = 2.0;
       if (png_get_gAMA(png_p, info_p, &gamma))
-	png_set_gamma(png_p, screen_gamma, gamma);
+        png_set_gamma(png_p, screen_gamma, gamma);
       else
-	png_set_gamma(png_p, screen_gamma, 0.45455);
+        png_set_gamma(png_p, screen_gamma, 0.45455);
 
       // get 8-bit data
       if (bit_depth == 16)
-	{
-	  png_set_strip_16(png_p);
+        {
+          png_set_strip_16(png_p);
 #ifdef __LITTLE_ENDIAN__
-	  //png_set_swap(png_p);
+          //png_set_swap(png_p);
 #endif
-	}
+        }
 
       // expand to rgb
       if (color_type == PNG_COLOR_TYPE_PALETTE)
-	png_set_palette_to_rgb(png_p);
+        png_set_palette_to_rgb(png_p);
       else if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8)
-	png_set_gray_1_2_4_to_8(png_p);
+        png_set_gray_1_2_4_to_8(png_p);
 
       // grayscale to rgb
       if (color_type == PNG_COLOR_TYPE_GRAY ||
-	  color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
-	png_set_gray_to_rgb(png_p);
+          color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
+        png_set_gray_to_rgb(png_p);
 
       /*
       // transparency to alpha channel
       if (png_get_valid(png_p, info_p, PNG_INFO_tRNS))
-	png_set_tRNS_to_alpha(png_p);
+        png_set_tRNS_to_alpha(png_p);
       */
 
       // get rid of alpha channel TODO not with HW renderer
@@ -194,19 +197,19 @@ byte *PNGTexture::ReadData(bool read_image)
 
       // one byte per pixel
       if (bit_depth < 8)
-	png_set_packing(png_p);
+        png_set_packing(png_p);
 
       // no fillers
       // png_set_dither for palette conversion?
       // no interlacing
 
       /*
-	// update the info struct
-	png_read_update_info(png_p, info_p);
+        // update the info struct
+        png_read_update_info(png_p, info_p);
 
-	png_get_IHDR(png_p, info_p, &w, &h, &bit_depth, &color_type, NULL, NULL, NULL);
-	printf("PNG header: %ld, %ld, %d, %d, %ld, chan:%d\n", w, h, bit_depth, color_type,
-	png_get_rowbytes(png_p, info_p), info_p->channels);
+        png_get_IHDR(png_p, info_p, &w, &h, &bit_depth, &color_type, NULL, NULL, NULL);
+        printf("PNG header: %ld, %ld, %d, %d, %ld, chan:%d\n", w, h, bit_depth, color_type,
+        png_get_rowbytes(png_p, info_p), info_p->channels);
       */
 
       // read image data
@@ -215,7 +218,7 @@ byte *PNGTexture::ReadData(bool read_image)
       byte **row_pointers = static_cast<byte **>(alloca(h * sizeof(byte*)));
 
       for (i=0, j=0; i<h; i++, j += w)
-	row_pointers[i] = reinterpret_cast<byte *>(rgb_buf + j);
+        row_pointers[i] = reinterpret_cast<byte *>(rgb_buf + j);
 
       png_read_image(png_p, row_pointers);
       png_destroy_read_struct(&png_p, &info_p, NULL);
@@ -227,7 +230,7 @@ byte *PNGTexture::ReadData(bool read_image)
 
       // this takes some time, so better do it only once (never flush PNG textures automatically)
       for (i=0; i < w*h; i++)
-	tmpdata[i] = NearestColor(rgb_buf[i].r, rgb_buf[i].g, rgb_buf[i].b);
+        tmpdata[i] = NearestColor(rgb_buf[i].r, rgb_buf[i].g, rgb_buf[i].b);
 
       Z_Free(rgb_buf); // free the RGB data
     }

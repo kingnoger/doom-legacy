@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.29  2004/09/14 21:41:57  hurdler
+// rename "data" to "pixels" (I think it's more appropriate and that's how SDL and OpenGL name such data after all)
+//
 // Revision 1.28  2004/09/03 16:28:52  smite-meister
 // bugfixes and ZDoom linedef types
 //
@@ -300,11 +303,11 @@ static void R_ColormapPatch(patch_t *p, byte *colormap)
 
      while (post->topdelta != 0xff)
        {
-	 int count = post->length;
-	 for (int j=0; j<count; j++)
-	   post->data[j] = colormap[post->data[j]];
+         int count = post->length;
+         for (int j=0; j<count; j++)
+           post->data[j] = colormap[post->data[j]];
 
-	 post = (post_t *)&post->data[post->length + 1];
+         post = (post_t *)&post->data[post->length + 1];
        }
    }
 }
@@ -324,7 +327,7 @@ Texture::Texture(const char *n)
   width = height = 0;
   leftoffset = topoffset = 0;
   xscale = yscale = FRACUNIT;
-  data = NULL;
+  pixels = NULL;
 
   // crap follows.
   id = 0;
@@ -333,8 +336,8 @@ Texture::Texture(const char *n)
 
 Texture::~Texture()
 {
-  if (data)
-    Z_Free(data);
+  if (pixels)
+    Z_Free(pixels);
 }
 
 
@@ -369,22 +372,22 @@ LumpTexture::LumpTexture(const char *n, int l, int w, int h)
 
 byte *LumpTexture::Generate()
 {
-  if (!data)
+  if (!pixels)
     {
       int len = fc.LumpLength(lump);
-      Z_Malloc(len, PU_TEXTURE, (void **)(&data));
+      Z_Malloc(len, PU_TEXTURE, (void **)(&pixels));
 
       // to avoid unnecessary memcpy
-      fc.ReadLump(lump, data);
+      fc.ReadLump(lump, pixels);
 
       // convert to high color
       // short pix16 = ((color8to16[*data++] & 0x7bde) + ((i<<9|j<<4) & 0x7bde))>>1;
     }
 
   if (type == Pic)
-    return data + sizeof(pic_t);
+    return pixels + sizeof(pic_t);
   else
-    return data;
+    return pixels;
 }
 
 
@@ -416,13 +419,13 @@ PatchTexture::PatchTexture(const char *n, int l)
 
 byte *PatchTexture::Generate()
 {
-  if (!data)
+  if (!pixels)
     {
       int len = fc.LumpLength(lump);
-      patch_t *p = (patch_t *)Z_Malloc(len, PU_TEXTURE, (void **)&data);
+      patch_t *p = (patch_t *)Z_Malloc(len, PU_TEXTURE, (void **)&pixels);
 
       // to avoid unnecessary memcpy
-      fc.ReadLump(lump, data);
+      fc.ReadLump(lump, pixels);
 
       // necessary endianness conversion
       for (int i=0; i < width; i++)
@@ -431,10 +434,10 @@ byte *PatchTexture::Generate()
       // do a palette conversion if needed
       byte *colormap = tc.GetPalConv(lump >> 16);
       if (colormap)
-	R_ColormapPatch(p, colormap);
+        R_ColormapPatch(p, colormap);
     }
 
-  return data;
+  return pixels;
 }
 
 
@@ -445,7 +448,7 @@ byte *PatchTexture::GetColumn(int col)
     col += width; // wraparound
 
   patch_t *p = (patch_t *)Generate();
-  return data + p->columnofs[col] + 3; // skip the post_t info
+  return pixels + p->columnofs[col] + 3; // skip the post_t info
 }
 
 
@@ -456,7 +459,7 @@ column_t *PatchTexture::GetMaskedColumn(int col)
     col += width; // wraparound
 
   patch_t *p = (patch_t *)Generate();
-  return (column_t *)(data + p->columnofs[col]);
+  return (column_t *)(pixels + p->columnofs[col]);
 }
 
 
@@ -539,7 +542,7 @@ static void R_DrawColumnInCache(column_t *col, byte *cache, int originy, int cac
       if (position < 0)
         {
           count += position;
-	  source -= position;
+          source -= position;
           position = 0;
         }
 
@@ -572,7 +575,7 @@ static void R_DrawColumnInCache(column_t *col, byte *cache, int originy, int cac
 
 byte *DoomTexture::Generate()
 {
-  if (data)
+  if (pixels)
     return texdata; // still in cache!
 
   // allocate texture column offset lookup
@@ -589,17 +592,17 @@ byte *DoomTexture::Generate()
       blocksize = fc.LumpLength(tp->patchlump);
       //CONS_Printf ("R_GenTex SINGLE %.8s size: %d\n",name,blocksize);
 
-      Z_Malloc(blocksize, PU_TEXTURE, (void **)&data); // change tag at end of function
-      fc.ReadLump(tp->patchlump, data);
-      p = (patch_t *)data; // TODO would it be possible to use just any lumptexture here?
+      Z_Malloc(blocksize, PU_TEXTURE, (void **)&pixels); // change tag at end of function
+      fc.ReadLump(tp->patchlump, pixels);
+      p = (patch_t *)pixels; // TODO would it be possible to use just any lumptexture here?
 
       // use the patch's column lookup
       columnofs = p->columnofs;
-      texdata = data;
+      texdata = pixels;
 
       // FIXME should use patch width here? texture may be wider!
       if (width > SHORT(p->width))
-	I_Error("masked tex too wide\n"); // FIXME TEMP behavior
+        I_Error("masked tex too wide\n"); // FIXME TEMP behavior
 
       for (i=0; i<width; i++)
         columnofs[i] = LONG(columnofs[i]) + 3; // skip post_t info by default
@@ -611,18 +614,18 @@ byte *DoomTexture::Generate()
       blocksize = (width * sizeof(int)) + (width * height);
       //CONS_Printf ("R_GenTex MULTI  %.8s size: %d\n",name,blocksize);
 
-      Z_Malloc(blocksize, PU_TEXTURE, (void **)&data);
+      Z_Malloc(blocksize, PU_TEXTURE, (void **)&pixels);
 
       // columns lookup table
-      columnofs = (int *)data;
+      columnofs = (int *)pixels;
       // texture data after the lookup table
-      texdata = data + (width * sizeof(int));
+      texdata = pixels + (width * sizeof(int));
 
       memset(texdata, 0, width * height); // TEST
 
       // generate column offset lookup
       for (i=0; i<width; i++)
-	columnofs[i] = i * height;
+        columnofs[i] = i * height;
 
       // Composite the patches together.
       for (i=0, tp = patches; i<patchcount; i++, tp++)
@@ -649,7 +652,7 @@ byte *DoomTexture::Generate()
   texturememory += blocksize;
   // Now that the texture has been built in column cache,
   //  it is purgable from zone memory.
-  Z_ChangeTag(data, PU_CACHE);
+  Z_ChangeTag(pixels, PU_CACHE);
 
   return texdata;
 }
@@ -764,16 +767,16 @@ int texturecache_t::GetTextureOrColormap(const char *name, int &colmap, bool tra
 #endif
       int temp;
       if (transmap)
-	temp = R_TransmapNumForName(name);
+        temp = R_TransmapNumForName(name);
       else
-	temp = R_ColormapNumForName(name); // check C_*... lists
+        temp = R_ColormapNumForName(name); // check C_*... lists
 
       if (temp >= 0)
-	{
-	  // it is a trans/colormap lumpname, not a texture
-	  colmap = temp;
-	  return 0;
-	}
+        {
+          // it is a trans/colormap lumpname, not a texture
+          colmap = temp;
+          return 0;
+        }
 #ifdef HWRENDER
     }
 #endif
@@ -905,8 +908,8 @@ cacheitem_t *texturecache_t::Load(const char *name)
       t = new PNGTexture(name, lump);
     } // then try some common sizes for raw picture lumps
   else if (size ==  64*64 || // normal flats
-	   size ==  65*64 || // Damn you, Heretic animated flats!
-	   size == 128*64)   // TODO Some Hexen flats are different! Why?
+           size ==  65*64 || // Damn you, Heretic animated flats!
+           size == 128*64)   // TODO Some Hexen flats are different! Why?
     {
       // Flat is 64*64 bytes of raw paletted picture data in one lump
       t = new LumpTexture(name, lump, 64, 64);

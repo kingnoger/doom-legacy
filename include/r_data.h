@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C++ -*- 
+// Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
 // $Id$
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/09/14 21:41:57  hurdler
+// rename "data" to "pixels" (I think it's more appropriate and that's how SDL and OpenGL name such data after all)
+//
 // Revision 1.13  2004/09/03 16:28:51  smite-meister
 // bugfixes and ZDoom linedef types
 //
@@ -66,6 +69,7 @@
 #include "m_fixed.h"
 #include "z_cache.h"
 
+class GLTexture;
 
 /// posts are vertical runs of nonmasked source pixels in a patch_t
 struct post_t
@@ -127,8 +131,10 @@ public:
 
   union
   {
-    byte  *data;
-    struct Mipmap_t *mipmap; // for hardware renderer
+    byte  *pixels;
+#ifdef HWRENDER
+    GLTexture *gltex;  // for hardware renderer
+#endif
   };
 
 protected:
@@ -223,7 +229,7 @@ class PatchTexture : public Texture
   int lump;
 
 protected:
-  virtual byte *Generate();  ///< 
+  virtual byte *Generate();  ///<
   virtual void HWR_Prepare();
 
 public:
@@ -308,7 +314,7 @@ public:
   void Clear();
 
   /// insert a special Texture into the cache (animation, DoomTexture...)
-  void Insert(class Texture *t); 
+  void Insert(class Texture *t);
 
   /// returns the id of an existing Texture, or tries Caching it if nonexistant
   inline int Get(const char *p, bool substitute = true)
