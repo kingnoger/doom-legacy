@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.32  2004/12/09 06:25:08  segabor
+// endianness fix; disabled music playing on Mac (actually it is not working); see FIXME note
+//
 // Revision 1.31  2004/11/28 18:02:18  smite-meister
 // RPCs finally work!
 //
@@ -145,6 +148,7 @@
 // 3D Sound Interface
 #include "hardware/hw3sound.h"
 
+#include "m_swap.h"
 
 CV_PossibleValue_t soundvolume_cons_t[]={{0,"MIN"},{31,"MAX"},{0,NULL}};
 
@@ -215,7 +219,11 @@ cacheitem_t *soundcache_t::Load(const char *p)
 
   doomsfx_t *ds = (doomsfx_t *)t->data;
   // TODO: endianness conversion (currently not needed)
-
+  ds->magic	= SHORT(ds->magic);
+  ds->rate	= SHORT(ds->rate);
+  ds->samples	= SHORT(ds->samples);
+  ds->zero	= SHORT(ds->zero);
+  
   //CONS_Printf(" Sound '%s', s = %d\n", p, ds->samples);
   //CONS_Printf("m = %d, r = %d, s = %d, z = %d, length = %d\n", ds->magic, ds->rate, ds->samples, ds->zero, size);
 
@@ -330,7 +338,7 @@ int channel_t::Adjust(Actor *l)
     return volume;
 
   source.Update();
-
+  
   // angle of source to listener
   angle_t angle = R_PointToAngle2(l->x, l->y, source.x, source.y);
 
@@ -522,9 +530,14 @@ bool SoundSystem::StartMusic(const char *name, bool loop)
   m->data = (void *)fc.CacheLumpNum(musiclump, PU_MUSIC);
   m->length = fc.LumpLength(musiclump);
 
-#ifdef __MACOS__
+#if defined(__APPLE__) || defined(__MACOS__)
   // FIXME make Mac interface similar to the other interfaces
-  m->handle = I_RegisterSong(music_num);
+  // m->handle = I_RegisterSong(music_num);
+  // FIXME /Mac OS X/ sound part of Legacy should be taken from version 1.42
+  // but it will take some time to get and rewrite the old code
+  // now playing music is disabled
+#warning Later!
+  return false;
 #else
   m->handle = I_RegisterSong(m->data, m->length);
 #endif
