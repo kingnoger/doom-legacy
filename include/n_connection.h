@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2004/06/25 19:53:23  smite-meister
+// Netcode
+//
 // Revision 1.1  2004/06/18 08:17:02  smite-meister
 // New TNL netcode!
 //
@@ -42,17 +45,25 @@ class LConnection : public GhostConnection
 {
   typedef GhostConnection Parent;
 
+public:
   /// Makes this a valid connection class to the TNL network system.
   TNL_DECLARE_NETCONNECTION(LConnection);
 
-public:
 
   LConnection();
 
-
+  /// client sends info to server and requests a connection
   virtual void writeConnectRequest(BitStream *stream);
 
+  /// server decides whether to accept the connection
   virtual bool readConnectRequest(BitStream *stream, const char **errorString);
+
+  /// server sends info to client
+  virtual void writeConnectAccept(BitStream *stream);
+
+  /// client decides whether to accept the connection
+  virtual bool readConnectAccept(BitStream *stream, const char **errorString);
+
 
 
   // FIXME the onXXX() methods are under change in TNL. Fix them when we decide which version to use...
@@ -75,17 +86,16 @@ public:
   /// Called when the remote host issues a disconnect packet to this instance.
   virtual void onDisconnect(const char *reason);           
 
-  /// called when an established connection is terminated, whether
+  /// called when a connection or connection attempt is terminated, whether
   /// from the local or remote hosts explicitly disconnecting, timing out or network error.
-  void ConnectionTerminated(const char *reason);
+  void ConnectionTerminated(bool established);
 
 
 
   //============ RPCs =============== 
 
-
-  /// Remote function that client calls to set the position of the player on the server.
-  TNL_DECLARE_RPC(rpcTest, (F32 x, F32 y));
+  /// transmits chat messages between client and server
+  TNL_DECLARE_RPC(rpcSay, (S8 from, S8 to, const char *msg));
 };
 
 

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2004/06/25 19:53:23  smite-meister
+// Netcode
+//
 // Revision 1.1  2004/06/18 08:17:02  smite-meister
 // New TNL netcode!
 //
@@ -48,10 +51,13 @@ public:
 
   enum netstate_t
   {
-    NS_None,
-    CL_PingingServers,
-    CL_Connecting,
-    SV_WaitingForClients,
+    NS_Unconnected,    ///< uninitialized or no network connections
+    CL_PingingServers, ///< client looking for servers
+    CL_Connecting,     ///< client trying to connect to a server
+    CL_Connected,      ///< client connected to a server
+    SV_Loading,        ///< server loading a map (clients should be loading it also)
+    SV_WaitingClients, ///< server ready but not starting the game yet
+    SV_Running         ///< server running the game
   };
 
   /// network state
@@ -100,7 +106,7 @@ public:
   void SendQuery(const Address &a, const Nonce &cn, U32 token);
 
   /// Checks for incoming packets, sends out packets if needed, processes connections.
-  void Tick();
+  void Update();
 
   /// Starts searching for LAN servers
   void CL_StartPinging();
@@ -108,8 +114,19 @@ public:
   /// Tries to connect to a server
   void CL_Connect(const Address &a);
 
-  void SV_StartServer();
-  void SV_StopServer();
+  void CL_Reset();
+
+  /// Opens a server to the world
+  void SV_Open();
+
+  /// Closes all connections
+  void SV_Reset();
+
+  void QuitNetGame();
+
+  //================================================
+
+  void SayCmd(int to, const char *msg);
 };
 
 

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2004/06/25 19:54:09  smite-meister
+// Netcode
+//
 // Revision 1.1  2004/06/18 08:15:30  smite-meister
 // New TNL netcode!
 //
@@ -31,10 +34,12 @@
 #include "tnl/tnlAsymmetricKey.h"
 
 #include "doomdef.h"
+#include "command.h"
+#include "cvars.h"
+
 #include "n_interface.h"
 #include "n_connection.h"
 
-#include "command.h"
 #include "g_game.h"
 
 #include "i_system.h"
@@ -42,8 +47,6 @@
 
 using namespace TNL;
 
-extern bool server;
-extern consvar_t cv_servername;
 
 static char *ConnectionState[] =
 {
@@ -66,7 +69,7 @@ LNetInterface::LNetInterface(const Address &bind)
 {
   master_con = NULL;
   server_con = NULL;
-  netstate = NS_None;
+  netstate = NS_Unconnected;
 
   lastpingtime = I_GetTime();
 
@@ -87,6 +90,7 @@ void LNetInterface::SetPingAddress(const Address &a)
 
 void LNetInterface::CL_StartPinging()
 {
+  lastpingtime = I_GetTime() - PingDelay;
   netstate = CL_PingingServers;
   pingnonce.getRandom();
 }
@@ -132,7 +136,7 @@ void LNetInterface::handleInfoPacket(const Address &address, U8 packetType, BitS
     {
     case PT_ServerPing:
       // ping packet only contains a client nonce and the Legacy ID string(s)
-      if (server)
+      if (game.server)
 	{
 	  CONS_Printf("received ping from %s\n", address.toString());
 
@@ -183,7 +187,7 @@ void LNetInterface::handleInfoPacket(const Address &address, U8 packetType, BitS
 
 	  unsigned time;
 	  stream->read(&time);
-	  CONS_Printf("ping: %d ms\n", time - I_GetTime());
+	  CONS_Printf("ping: %d ms\n", I_GetTime() - time);
 
 	  // TODO if no autoconnect, now we should add it to the server table...
 	  SendQuery(address, cn, token);
@@ -192,7 +196,7 @@ void LNetInterface::handleInfoPacket(const Address &address, U8 packetType, BitS
 
     case PT_ServerQuery:
       // packet contains the client nonce and the id token
-      if (server)
+      if (game.server)
 	{
 	  CONS_Printf("Got server query from %s\n", address.toString());
 
@@ -216,6 +220,7 @@ void LNetInterface::handleInfoPacket(const Address &address, U8 packetType, BitS
 	      out.write(game.maxplayers);
 
 	      // server load, game type, current map, how long it has been running, how long to go...
+	      // what WADs are needed, can they be downloaded from server...
 	      //CV_SaveNetVars((char**)&p); TODO
 	      
 	      out.sendto(mSocket, address);
@@ -266,27 +271,51 @@ void LNetInterface::CL_Connect(const Address &a)
 
 
 
-void LNetInterface::SV_StartServer()
+void LNetInterface::CL_Reset()
 {
-  setAllowsConnections(true);
-  netstate = SV_WaitingForClients;
+  if (server_con)
+    disconnect(server_con, "Client quits.\n");
+
+  netstate = NS_Unconnected;
 }
 
 
 
-void LNetInterface::SV_StopServer()
+
+void LNetInterface::SV_Open()
+{
+  setAllowsConnections(true);
+  netstate = SV_WaitingClients;
+}
+
+
+class MasterConnection : public LConnection {};
+
+
+void LNetInterface::SV_Reset()
 {
   setAllowsConnections(false);
 
-  //disconnect(NetConnection *conn, const char *reason)
-  netstate = NS_None;
+  vector<LConnection *>::iterator t = client_con.begin();
+  for (; t != client_con.end(); t++)
+    disconnect(*t, "Server shutdown!\n");
+
+  client_con.clear();
+
+
+  if (master_con)
+    disconnect(master_con, "Server shutdown.\n");
+
+  master_con = NULL;
+
+  CL_Reset();
+  netstate = NS_Unconnected;
 }
 
 
 
 
-
-void LNetInterface::Tick()
+void LNetInterface::Update()
 {
   U32 now = I_GetTime();
 
@@ -312,5 +341,36 @@ void LNetInterface::Tick()
       break;
     }
 
+  //Local_Maketic(realtics);    // make local tic, and call menu ?!
+  //CL_SendClientCmd();   // send tic cmd
+
+  //if( cv_internetserver.value ) SendHeartbeatMasterServer();
+
+
   processConnections();
+
+
+  /*
+  FiletxTicker();
+  */
+}
+
+
+
+//
+// was D_QuitNetGame
+// Called before quitting to leave a net game
+// without hanging the other players
+//
+
+
+void LNetInterface::QuitNetGame()
+{
+  if (!game.netgame)
+    return;
+ 
+  if (game.server)
+    SV_Reset();
+  else
+    CL_Reset();
 }
