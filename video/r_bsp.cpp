@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2005/03/10 22:29:14  smite-meister
+// polyobj rendering
+//
 // Revision 1.5  2004/11/09 20:38:53  smite-meister
 // added packing to I/O structs
 //
@@ -57,32 +60,11 @@
 // Revision 1.15  2000/11/09 17:56:20  stroggonmeth
 // Hopefully fixed a few bugs and did a few optimizations.
 //
-// Revision 1.14  2000/11/02 19:49:36  bpereira
-// no message
-//
 // Revision 1.13  2000/11/02 17:50:09  stroggonmeth
 // Big 3Dfloors & FraggleScript commit!!
 //
-// Revision 1.12  2000/05/23 15:22:34  stroggonmeth
-// Not much. A graphic bug fixed.
-//
-// Revision 1.11  2000/05/03 23:51:01  stroggonmeth
-// A few, quick, changes.
-//
-// Revision 1.10  2000/04/20 21:47:24  stroggonmeth
-// no message
-//
 // Revision 1.9  2000/04/18 17:39:39  stroggonmeth
 // Bug fixes and performance tuning.
-//
-// Revision 1.8  2000/04/15 22:12:58  stroggonmeth
-// Minor bug fixes
-//
-// Revision 1.7  2000/04/13 23:47:47  stroggonmeth
-// See logs
-//
-// Revision 1.6  2000/04/11 19:07:25  stroggonmeth
-// Finished my logs, fixed a crashing bug.
 //
 // Revision 1.5  2000/04/06 21:06:19  stroggonmeth
 // Optimized extra_colormap code...
@@ -94,9 +76,6 @@
 // Revision 1.3  2000/04/04 00:32:47  stroggonmeth
 // Initial Boom compatability plus few misc changes all around.
 //
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
 // Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
 // Initial import into CVS (v1.29 pr3)
 //
@@ -107,6 +86,7 @@
 
 #include "doomdef.h"
 
+#include "command.h" // oldwater, remove
 #include "g_game.h"
 #include "g_map.h"
 #include "g_actor.h"
@@ -114,13 +94,11 @@
 #include "g_player.h"
 
 #include "r_render.h" // experiment
-
-#include "command.h"
-#include "p_camera.h"
 #include "r_local.h"
 #include "r_state.h"
-
+#include "r_poly.h"
 #include "r_splats.h"
+
 #include "z_zone.h"   //SoM: Check R_Prep3DFloors
 
 seg_t*          curline;
@@ -843,183 +821,187 @@ drawseg_t*   firstseg;
 
 void Rend::R_Subsector(int num)
 {
-    int                 count;
-    seg_t*              line;
-    subsector_t*        sub;
-    static sector_t     tempsec; //SoM: 3/17/2000: Deep water hack
-    int                 floorlightlevel;
-    int                 ceilinglightlevel;
-    extracolormap_t*    floorcolormap;
-    extracolormap_t*    ceilingcolormap;
-    int                 light;
-
 #ifdef RANGECHECK
-    if (num>=numsubsectors)
-        I_Error ("R_Subsector: ss %i with numss = %i",
-                 num,
-                 numsubsectors);
+  if (num>=numsubsectors)
+    I_Error ("R_Subsector: ss %i with numss = %i",
+	     num,
+	     numsubsectors);
 #endif
 
-    //faB: subsectors added at run-time
-    if (num>=numsubsectors)
-        return;
+  //faB: subsectors added at run-time
+  if (num >= numsubsectors)
+    return;
 
-    sub = &subsectors[num];
-    frontsector = sub->sector;
-    count = sub->numlines;
-    line = &segs[sub->firstline];
+  subsector_t *sub = &subsectors[num];
+  frontsector = sub->sector;
 
+  int floorlightlevel, ceilinglightlevel;
+  static sector_t tempsec; //SoM: 3/17/2000: Deep water hack
 
-    //SoM: 3/17/2000: Deep water/fake ceiling effect.
-    frontsector = R_FakeFlat(frontsector, &tempsec, &floorlightlevel,
-                             &ceilinglightlevel, false);
+  //SoM: 3/17/2000: Deep water/fake ceiling effect.
+  frontsector = R_FakeFlat(frontsector, &tempsec, &floorlightlevel,
+			   &ceilinglightlevel, false);
 
-    floorcolormap = ceilingcolormap = frontsector->extra_colormap;
+  extracolormap_t *ceilingcolormap, *floorcolormap;
+  floorcolormap = ceilingcolormap = frontsector->extra_colormap;
 
-    // SoM: Check and prep all 3D floors. Set the sector floor/ceiling light
-    // levels and colormaps.
-    if(frontsector->ffloors)
+  // SoM: Check and prep all 3D floors. Set the sector floor/ceiling light
+  // levels and colormaps.
+  int light;
+
+  if (frontsector->ffloors)
     {
-      if(frontsector->moved)
-      {
-        frontsector->numlights = sub->sector->numlights = 0;
-        R_Prep3DFloors(frontsector);
-        sub->sector->lightlist = frontsector->lightlist;
-        sub->sector->numlights = frontsector->numlights;
-        sub->sector->moved = frontsector->moved = false;
-      }
+      if (frontsector->moved)
+	{
+	  frontsector->numlights = sub->sector->numlights = 0;
+	  R_Prep3DFloors(frontsector);
+	  sub->sector->lightlist = frontsector->lightlist;
+	  sub->sector->numlights = frontsector->numlights;
+	  sub->sector->moved = frontsector->moved = false;
+	}
 
       light = R_GetPlaneLight(frontsector, frontsector->floorheight, false);
-      if(frontsector->floorlightsec == -1)
+      if (frontsector->floorlightsec == -1)
         floorlightlevel = *frontsector->lightlist[light].lightlevel;
       floorcolormap = frontsector->lightlist[light].extra_colormap;
       light = R_GetPlaneLight(frontsector, frontsector->ceilingheight, false);
-      if(frontsector->ceilinglightsec == -1)
+      if (frontsector->ceilinglightsec == -1)
         ceilinglightlevel = *frontsector->lightlist[light].lightlevel;
       ceilingcolormap = frontsector->lightlist[light].extra_colormap;
     }
 
-    sub->sector->extra_colormap = frontsector->extra_colormap;
+  sub->sector->extra_colormap = frontsector->extra_colormap;
 
-    if ((frontsector->floorheight < viewz || (frontsector->heightsec != -1 &&
+  if ((frontsector->floorheight < viewz || (frontsector->heightsec != -1 &&
         sectors[frontsector->heightsec].ceilingpic == skyflatnum)))
     {
-        floorplane = R_FindPlane (frontsector->floorheight,
-                                  frontsector->floorpic,
-                                  floorlightlevel,
-                                  frontsector->floor_xoffs,
-                                  frontsector->floor_yoffs,
-                                  floorcolormap,
-                                  NULL);
+      floorplane = R_FindPlane (frontsector->floorheight,
+				frontsector->floorpic,
+				floorlightlevel,
+				frontsector->floor_xoffs,
+				frontsector->floor_yoffs,
+				floorcolormap,
+				NULL);
     }
-    else
-        floorplane = NULL;
+  else
+    floorplane = NULL;
 
-    if ((frontsector->ceilingheight > viewz
-        || frontsector->ceilingpic == skyflatnum ||
-        (frontsector->heightsec != -1 &&
-         sectors[frontsector->heightsec].floorpic == skyflatnum)))
+  if ((frontsector->ceilingheight > viewz
+       || frontsector->ceilingpic == skyflatnum ||
+       (frontsector->heightsec != -1 &&
+	sectors[frontsector->heightsec].floorpic == skyflatnum)))
     {
-        ceilingplane = R_FindPlane (frontsector->ceilingheight,
-                                    frontsector->ceilingpic,
-                                    ceilinglightlevel,
-                                    frontsector->ceiling_xoffs,
-                                    frontsector->ceiling_yoffs,
-                                    ceilingcolormap,
-                                    NULL);
+      ceilingplane = R_FindPlane (frontsector->ceilingheight,
+				  frontsector->ceilingpic,
+				  ceilinglightlevel,
+				  frontsector->ceiling_xoffs,
+				  frontsector->ceiling_yoffs,
+				  ceilingcolormap,
+				  NULL);
     }
-    else
-        ceilingplane = NULL;
+  else
+    ceilingplane = NULL;
 
 #ifdef OLDWATER
-    // -------------------- WATER IN DEV. TEST ------------------------
-    //dck hack : use abs(tag) for waterheight
-    if (frontsector->tag<0)
-        waterheight = ((-frontsector->tag) <<16) + (1<<15);
-    else
-        waterheight = dev_waterheight;
+  // -------------------- WATER IN DEV. TEST ------------------------
+  //dck hack : use abs(tag) for waterheight
+  if (frontsector->tag<0)
+    waterheight = ((-frontsector->tag) <<16) + (1<<15);
+  else
+    waterheight = dev_waterheight;
 
-    //
-    if (waterheight > frontsector->floorheight &&
-        waterheight < frontsector->ceilingheight )
+  //
+  if (waterheight > frontsector->floorheight &&
+      waterheight < frontsector->ceilingheight)
     {
-        waterplane = R_FindPlane (waterheight,
-                                  1998,
-                                  frontsector->lightlevel,
-                                  0, 0,
-                                  frontsector->extra_colormap,
-                                  NULL);
+      waterplane = R_FindPlane (waterheight,
+				1998,
+				frontsector->lightlevel,
+				0, 0,
+				frontsector->extra_colormap,
+				NULL);
     }
-    else
-        waterplane = NULL;
+  else
+    waterplane = NULL;
 #endif
-    // -------------------- WATER IN DEV. TEST ------------------------
+  // -------------------- WATER IN DEV. TEST ------------------------
 
-    numffloors = 0;
-    ffloor[numffloors].plane = NULL;
-    if(frontsector->ffloors)
+  numffloors = 0;
+  ffloor[numffloors].plane = NULL;
+  for (ffloor_t *rover = frontsector->ffloors; rover && numffloors < MAXFFLOORS; rover = rover->next)
     {
-      ffloor_t*  rover;
-
-      for(rover = frontsector->ffloors; rover && numffloors < MAXFFLOORS; rover = rover->next) {
-
-      if(!(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERPLANES))
-        continue;
+      if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERPLANES))
+	continue;
 
       ffloor[numffloors].plane = NULL;
-      if(*rover->bottomheight <= frontsector->ceilingheight &&
-         *rover->bottomheight >= frontsector->floorheight &&
-         ((viewz < *rover->bottomheight && !(rover->flags & FF_INVERTPLANES)) ||
-         (viewz > *rover->bottomheight && (rover->flags & FF_BOTHPLANES))))
-      {
-        light = R_GetPlaneLight(frontsector, *rover->bottomheight, viewz < *rover->bottomheight ? true : false);
-        ffloor[numffloors].plane = R_FindPlane(*rover->bottomheight,
-                                  *rover->bottompic,
-                                  *frontsector->lightlist[light].lightlevel,
-                                  *rover->bottomxoffs,
-                                  *rover->bottomyoffs,
-                                  frontsector->lightlist[light].extra_colormap,
-                                  rover);
+      if (*rover->bottomheight <= frontsector->ceilingheight &&
+	  *rover->bottomheight >= frontsector->floorheight &&
+	  ((viewz < *rover->bottomheight && !(rover->flags & FF_INVERTPLANES)) ||
+	   (viewz > *rover->bottomheight && (rover->flags & FF_BOTHPLANES))))
+	{
+	  light = R_GetPlaneLight(frontsector, *rover->bottomheight, viewz < *rover->bottomheight ? true : false);
+	  ffloor[numffloors].plane = R_FindPlane(*rover->bottomheight,
+						 *rover->bottompic,
+						 *frontsector->lightlist[light].lightlevel,
+						 *rover->bottomxoffs,
+						 *rover->bottomyoffs,
+						 frontsector->lightlist[light].extra_colormap,
+						 rover);
 
-        ffloor[numffloors].height = *rover->bottomheight;
-        ffloor[numffloors].ffloor = rover;
-        numffloors++;
-      }
-      if(numffloors >= MAXFFLOORS)
-        break;
-      if(*rover->topheight >= frontsector->floorheight &&
-         *rover->topheight <= frontsector->ceilingheight &&
-         ((viewz > *rover->topheight && !(rover->flags & FF_INVERTPLANES)) ||
-         (viewz < *rover->topheight && (rover->flags & FF_BOTHPLANES))))
-          {
-              light = R_GetPlaneLight(frontsector, *rover->topheight, viewz < *rover->topheight ? true : false);
-              ffloor[numffloors].plane = R_FindPlane(*rover->topheight,
-                                                     *rover->toppic,
-                                                     *frontsector->lightlist[light].lightlevel,
-                                                     *rover->topxoffs,
-                                                     *rover->topyoffs,
-                                                     frontsector->lightlist[light].extra_colormap,
-                                                     rover);
-              ffloor[numffloors].height = *rover->topheight;
-              ffloor[numffloors].ffloor = rover;
-              numffloors++;
-          }
-      }
+	  ffloor[numffloors].height = *rover->bottomheight;
+	  ffloor[numffloors].ffloor = rover;
+	  numffloors++;
+	}
+
+      if (numffloors >= MAXFFLOORS)
+	break;
+
+      if (*rover->topheight >= frontsector->floorheight &&
+	  *rover->topheight <= frontsector->ceilingheight &&
+	  ((viewz > *rover->topheight && !(rover->flags & FF_INVERTPLANES)) ||
+	   (viewz < *rover->topheight && (rover->flags & FF_BOTHPLANES))))
+	{
+	  light = R_GetPlaneLight(frontsector, *rover->topheight, viewz < *rover->topheight ? true : false);
+	  ffloor[numffloors].plane = R_FindPlane(*rover->topheight,
+						 *rover->toppic,
+						 *frontsector->lightlist[light].lightlevel,
+						 *rover->topxoffs,
+						 *rover->topyoffs,
+						 frontsector->lightlist[light].extra_colormap,
+						 rover);
+	  ffloor[numffloors].height = *rover->topheight;
+	  ffloor[numffloors].ffloor = rover;
+	  numffloors++;
+	}
     }
 
-
 #ifdef FLOORSPLATS
-    if (sub->splats)
-        R_AddVisibleFloorSplats (sub);
+  if (sub->splats)
+    R_AddVisibleFloorSplats (sub);
 #endif
 
-    R_AddSprites (sub->sector, tempsec.lightlevel);
+  R_AddSprites(sub->sector, tempsec.lightlevel);
 
-    firstseg = NULL;
+  firstseg = NULL;
 
-    while (count--)
+  int count;
+
+  // Render the polyobj in the subsector first
+  if (sub->poly)
     {
-      R_AddLine (line);
+      count = sub->poly->numsegs;
+      seg_t **polySeg = sub->poly->segs;
+      while (count--)
+	{
+	  R_AddLine(*polySeg++);
+	}
+    }
+
+  count = sub->numlines;
+  seg_t *line = &segs[sub->firstline];
+  while (count--)
+    {
+      R_AddLine(line);
       line++;
     }
 }
