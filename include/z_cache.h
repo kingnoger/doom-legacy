@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/04/21 15:58:33  hurdler
+// Fix compiling problem with gcc 3.x under Linux
+//
 // Revision 1.4  2003/03/15 20:15:49  smite-meister
 // Fixed namespace problem
 //
@@ -39,7 +42,7 @@
 #ifndef z_cache_h
 #define z_cache_h 1
 
-#ifdef __WIN32__
+#if (__GNUC__ != 2)
 # include <ext/hash_map>
 #else
 # include <hash_map>
@@ -79,7 +82,7 @@ protected:
   // annoying namespace declarations, because hash_map is an extension...
   // Arrr, matey! STL designers be cursed with scurvy and lice! The default hash function
   // is okay but default key comparison function compares pointers, not c-strings!
-#ifdef __WIN32__
+#if (__GNUC__ != 2)
   typedef __gnu_cxx::hash_map<const char*, cacheitem_t*,
     __gnu_cxx::hash<const char *>, compare_strings> c_map_t;
 #else

@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.3  2003/04/21 15:58:33  hurdler
+// Fix compiling problem with gcc 3.x under Linux
+//
 // Revision 1.2  2003/02/23 22:49:31  smite-meister
 // FS is back! L2 cache works.
 //
@@ -40,6 +43,7 @@
 //----------------------------------------------------------------------------
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "command.h"
 #include "doomtype.h"
