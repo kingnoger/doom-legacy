@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:49  hurdler
-// Initial revision
+// Revision 1.2  2002/12/16 22:22:02  smite-meister
+// Actor/DActor separation
+//
+// Revision 1.1.1.1  2002/11/16 14:18:49  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.9  2002/09/25 15:17:43  vberghol
 // Intermission fixed?
@@ -1379,7 +1382,7 @@ void Rend::R_DrawPlayerSprites()
     // get light level
     if(viewplayer->subsector->sector->numlights)
     {
-      light = R_GetPlaneLight(viewplayer->subsector->sector, viewplayer->z + viewplayer->info->height, false);
+      light = R_GetPlaneLight(viewplayer->subsector->sector, viewplayer->z + viewplayer->height, false);
       lightnum = (*viewplayer->subsector->sector->lightlist[i].lightlevel >> LIGHTSEGSHIFT) + extralight;
     }
     else

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/16 22:22:05  smite-meister
+// Actor/DActor separation
+//
 // Revision 1.2  2002/12/03 10:07:13  smite-meister
 // Video unit overhaul begins
 //
@@ -902,15 +905,15 @@ void V_DrawCharacter (int x, int y, int c)
     if (c < 0 || c>= HU_FONTSIZE)
         return;
 
-    w = (hu_font[c]->width);
+    w = (hud.font[c]->width);
     if (x+w > vid.width)
         return;
 
     if (white)
         // draw with colormap, WITHOUT scale
-        V_DrawMappedPatch(x, y, 0|flags, hu_font[c], whitemap);
+        V_DrawMappedPatch(x, y, 0|flags, hud.font[c], whitemap);
     else
-        V_DrawScaledPatch(x, y, 0|flags, hu_font[c]);
+        V_DrawScaledPatch(x, y, 0|flags, hud.font[c]);
 }
 
 
@@ -960,13 +963,13 @@ void V_DrawString (int x, int y, int option, const char *str)
             continue;
         }
 
-        w = (hu_font[c]->width)*dupx;
+        w = (hud.font[c]->width)*dupx;
         if (cx+w > scrwidth)
             break;
         if (option & V_WHITEMAP)
-            V_DrawMappedPatch(cx, cy, option, hu_font[c], whitemap);
+            V_DrawMappedPatch(cx, cy, option, hud.font[c], whitemap);
         else
-            V_DrawScaledPatch(cx, cy, option, hu_font[c]);
+            V_DrawScaledPatch(cx, cy, option, hud.font[c]);
         cx+=w;
     }
 }
@@ -986,7 +989,7 @@ int V_StringWidth(const char *str)
       if (c < 0 || c >= HU_FONTSIZE)
 	w += 4;
       else
-	w +=  (hu_font[c]->width);
+	w +=  (hud.font[c]->width);
     }
 
   return w;
@@ -997,7 +1000,7 @@ int V_StringWidth(const char *str)
 //
 int V_StringHeight (const char *str)
 {
-  return (hu_font[0]->height);
+  return (hud.font[0]->height);
 }
 
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/16 22:21:58  smite-meister
+// Actor/DActor separation
+//
 // Revision 1.2  2002/12/03 10:07:13  smite-meister
 // Video unit overhaul begins
 //
@@ -1370,9 +1373,8 @@ void Map::PrecacheMap()
 
     for (th = thinkercap.next ; th != &thinkercap ; th=th->next)
     {
-      //if (th->function.acp1 == (actionf_p1)P_MobjThinker)
-      if (th->Type() == Thinker::tt_actor)
-	spritepresent[((Actor *)th)->sprite] = 1;
+      if (th->Type() == Thinker::tt_dactor)
+	spritepresent[((DActor *)th)->sprite] = 1;
     }
 
     spritememory = 0;

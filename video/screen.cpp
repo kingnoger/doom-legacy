@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/16 22:22:04  smite-meister
+// Actor/DActor separation
+//
 // Revision 1.2  2002/12/03 10:07:13  smite-meister
 // Video unit overhaul begins
 //
@@ -284,6 +287,13 @@ void CV_Fullscreen_OnChange()
 
 // =========================================================================
 
+Video::Video()
+{
+  buffer = direct = NULL;
+  palette = NULL;
+}
+
+
 //added:27-01-98: tell asm code the new rowbytes value.
 void ASMCALL ASM_PatchRowBytes(int rowbytes);
 
@@ -465,13 +475,11 @@ void Video::Recalc()
 
   // scr_viewsize doesn't change, neither detailLevel, but the pixels
   // per screenblock is different now, since we've changed resolution.
-  R_SetViewSize();   //just set setsizeneeded true now ..
+  R_SetViewSize();
 
-  // vid.recalc lasts only for the next refresh...
   con_recalc = true;
-  //    CON_ToggleOff ();  // make sure con height is right for new screen height
 
-  hud.st_recalc = true;
+  hud.st_palette = -1;
 
   // update automap because some screensize-dependent values
   // have to be calculated

@@ -9,7 +9,6 @@
 
 void Rend::SetMap(Map *m)
 {
-  CONS_Printf("Rend::SetMap, m == %p\n", m);
   numvertexes = m->numvertexes;
   vertexes = m->vertexes;
 

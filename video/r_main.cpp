@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:46  hurdler
-// Initial revision
+// Revision 1.2  2002/12/16 22:22:01  smite-meister
+// Actor/DActor separation
+//
+// Revision 1.1.1.1  2002/11/16 14:18:46  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.10  2002/09/08 14:38:09  vberghol
 // Now it works! Sorta.
@@ -788,9 +791,9 @@ void R_InitLightTables (void)
 //
 bool         setsizeneeded;
 
-void R_SetViewSize (void)
+void R_SetViewSize()
 {
-    setsizeneeded = true;
+  setsizeneeded = true;
 }
 
 
@@ -801,66 +804,63 @@ void R_SetViewSize (void)
 
 // now uses screen variables cv_viewsize, cv_detaillevel
 //
-void R_ExecuteSetViewSize(void)
+void R_ExecuteSetViewSize()
 {
-    fixed_t     cosadj;
-    fixed_t     dy;
-    int         i;
-    int         j;
-    int         level;
-    int         startmap;
+  fixed_t     cosadj;
+  fixed_t     dy;
+  int i, j;
+  int         level;
+  int         startmap;
 
-    int         setdetail;
+  int         aspectx;  //added:02-02-98:for aspect ratio calc. below...
+    
+  setsizeneeded = false;
+  // no reduced view in splitscreen mode
+  if (cv_splitscreen.value && cv_viewsize.value < 11)
+    CV_SetValue(&cv_viewsize, 11);
 
-    int         aspectx;  //added:02-02-98:for aspect ratio calc. below...
-
-    setsizeneeded = false;
-    // no reduced view in splitscreen mode
-    if( cv_splitscreen.value && cv_viewsize.value < 11 )
-        CV_SetValue (&cv_viewsize, 11);
-
-    // added by Hurdler
+  // added by Hurdler
 #ifdef HWRENDER
-    if ((rendermode!=render_soft) && (cv_viewsize.value < 6))
-        CV_SetValue (&cv_viewsize, 6);
+  if ((rendermode!=render_soft) && (cv_viewsize.value < 6))
+    CV_SetValue (&cv_viewsize, 6);
 #endif
 
-    setdetail = cv_detaillevel.value;
+  int setdetail = cv_detaillevel.value;
     
-    // clamp detail level (actually ignore it, keep it for later who knows)
-    if (setdetail)
+  // clamp detail level (actually ignore it, keep it for later who knows)
+  if (setdetail)
     {
-        setdetail = 0;
-        CONS_Printf ("lower detail mode n.a.\n");
-        CV_SetValue (&cv_detaillevel,setdetail);
+      setdetail = 0;
+      CONS_Printf ("lower detail mode n.a.\n");
+      CV_SetValue (&cv_detaillevel,setdetail);
     }
 
-    hud.stbarheight = game.mode == heretic ? SBARHEIGHT : ST_HEIGHT; 
+  hud.stbarheight = game.mode == heretic ? SBARHEIGHT : ST_HEIGHT; 
     
-    if( cv_scalestatusbar.value || cv_viewsize.value>=11)
-        hud.stbarheight *= (rendermode==render_soft) ? vid.dupy : vid.fdupy;
+  if (cv_scalestatusbar.value || cv_viewsize.value > 10)
+    hud.stbarheight *= (rendermode==render_soft) ? vid.dupy : vid.fdupy;
 
-    //added 01-01-98: full screen view, without statusbar
-    if (cv_viewsize.value > 10)
+  //added 01-01-98: full screen view, without statusbar
+  if (cv_viewsize.value > 10)
     {
-        scaledviewwidth = vid.width;
-        viewheight = vid.height;
+      scaledviewwidth = vid.width;
+      viewheight = vid.height;
     }
-    else
+  else
     {
-        //added 01-01-98: always a multiple of eight
-        scaledviewwidth = (cv_viewsize.value*vid.width/10)&~7;
-        //added:05-02-98: make viewheight multiple of 2 because sometimes
-        //                a line is not refreshed by R_DrawViewBorder()
-        viewheight = (cv_viewsize.value*(vid.height-hud.stbarheight)/10)&~1;
+      //added 01-01-98: always a multiple of eight
+      scaledviewwidth = (cv_viewsize.value*vid.width/10)&~7;
+      //added:05-02-98: make viewheight multiple of 2 because sometimes
+      //                a line is not refreshed by R_DrawViewBorder()
+      viewheight = (cv_viewsize.value*(vid.height-hud.stbarheight)/10)&~1;
     }
 
-    // added 16-6-98:splitscreen
-    if( cv_splitscreen.value )
-        viewheight >>= 1;
+  // added 16-6-98:splitscreen
+  if (cv_splitscreen.value)
+    viewheight >>= 1;
 
-    detailshift = setdetail;
-    viewwidth = scaledviewwidth>>detailshift;
+  detailshift = setdetail;
+  viewwidth = scaledviewwidth>>detailshift;
 
     centery = viewheight/2;
     centerx = viewwidth/2;
@@ -950,8 +950,9 @@ void R_ExecuteSetViewSize(void)
         HWR_SetViewSize (cv_viewsize.value);
 #endif
 
-    hud.st_recalc = true;
-    automap.Resize();
+  hud.ST_Recalc();
+
+  automap.Resize();
 }
 
 
@@ -1092,11 +1093,8 @@ void Rend::R_SetupFrame(PlayerInfo *player)
 #ifdef FRAGGLESCRIPT
   if (script_camera_on)
     {
-      viewactor = script_camera.cam;
-#ifdef PARANOIA
-      if (!viewactor)
-	I_Error("no mobj for the camera");
-#endif
+      viewactor = &script_camera;
+
       viewz = viewactor->z;
       fixedcolormap_setup = camera.fixedcolormap;
       aimingangle=script_camera.aiming;
@@ -1107,11 +1105,8 @@ void Rend::R_SetupFrame(PlayerInfo *player)
     if (camera.chase)
       // use outside cam view
       {
-        viewactor = camera.cam;
-#ifdef PARANOIA
-        if (!viewactor)
-	  I_Error("no mobj for the camera");
-#endif
+        viewactor = &camera;
+
         viewz = viewactor->z + (viewactor->height>>1);
         fixedcolormap_setup = camera.fixedcolormap;
         aimingangle = camera.aiming;
