@@ -362,9 +362,9 @@ void G_DeferedPlayDemo (char* name)
 //
 void GameInfo::PlayDemo(char *defdemoname)
 {
-  // FIXME debug aid
+#warning FIXME debug aid
   return;
-
+#if 0
   //  skill_t skill;
   int i, n, episode, level;
 
@@ -406,6 +406,7 @@ no_demo:
   Players.clear();
 
   demoplayback = true;
+#endif  
 }
 
 //
