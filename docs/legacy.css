@@ -1,0 +1,28 @@
+
+:link { color: #80FF00; text-decoration: none; }
+:visited { color: #5EBB00; text-decoration: none; }
+a:active { color: #FFCCFF; }
+a:hover { color: #FFFFFF; text-decoration: underline; }
+
+body
+{
+  font-size: 12pt;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #000000;
+  color: #CCCCCC;
+  margin-left: 20px;
+  margin-right: 20px;
+}
+
+h1 { text-align: center; }
+h2 { color: #89d850; }
+
+
+
+/*
+blockquote { color: #FFFFFF}
+li { color: #FFFFFF}
+u { color: #FFFFFF}
+*/
+
+b { color: #DDE0DD; }
