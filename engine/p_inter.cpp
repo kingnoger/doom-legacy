@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/23 23:15:41  smite-meister
+// Weapon groups, MAPINFO parser added!
+//
 // Revision 1.2  2002/12/16 22:11:40  smite-meister
 // Actor/DActor separation done!
 //
@@ -55,11 +58,6 @@
 
 #define BONUSADD        6
 
-
-// a weapon is found with two clip loads,
-// a big item has five clip loads
-int     maxammo[NUMAMMO] = {200, 50, 300, 50};
-int     clipammo[NUMAMMO] = {10, 4, 20, 1};
 
 consvar_t cv_fragsweaponfalling = {"fragsweaponfalling"   ,"0",CV_SAVE,CV_OnOff};
 
@@ -917,16 +915,6 @@ void PlayerPawn::SetMessage(const char *msg, bool ultmsg = true)
 //
 
 
-static const weapontype_t GetAmmoChange[] =
-{
-  wp_goldwand,
-  wp_crossbow,
-  wp_blaster,
-  wp_skullrod,
-  wp_phoenixrod,
-  wp_mace
-};
-
 //
 // was P_GiveAmmo
 // Num is the number of clip loads,
@@ -936,10 +924,21 @@ static const weapontype_t GetAmmoChange[] =
 
 bool PlayerPawn::GiveAmmo(ammotype_t at, int count)
 {
+  static const weapontype_t GetAmmoChange[] =
+  {
+    wp_chaingun, wp_shotgun, wp_plasma, wp_missile,
+    wp_goldwand,
+    wp_crossbow,
+    wp_blaster,
+    wp_skullrod,
+    wp_phoenixrod,
+    wp_mace
+  };
+
   if (at == am_noammo)
     return false;
 
-  if (at < 0 || at > NUMAMMO)
+  if (at < 0 || at >= NUMAMMO)
     {
       CONS_Printf ("\2P_GiveAmmo: bad type %i", at);
       return false;
@@ -1036,19 +1035,6 @@ bool PlayerPawn::GiveAmmo(ammotype_t at, int count)
   return true;
 }
 
-// ammo get with the weapon
-int GetWeaponAmmo[NUMWEAPONS] =
-{
-    0,  // staff       fist
-   20,  // gold wand   pistol
-    8,  // crossbow    shotgun
-   20,  // blaster     chaingun
-    2,  // skull rod   missile    
-   40,  // phoenix rod plasma     
-   40,  // mace        bfg        
-    0,  // gauntlets   chainsaw   
-    8,  // beak        supershotgun
-};
 
 //
 // was P_GiveWeapon
@@ -1746,11 +1732,10 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
     case SPR_BPAK:
       if (!backpack)
         {
-	  for (i=0 ; i<NUMAMMO ; i++)
-	    maxammo[i] *= 2;
+	  maxammo = maxammo2;
 	  backpack = true;
         }
-      for (i=0 ; i<NUMAMMO ; i++)
+      for (i=0 ; i<am_heretic ; i++)
 	GiveAmmo (ammotype_t(i), clipammo[i]);
       message = GOTBACKPACK;
       break;
@@ -1758,8 +1743,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
     case SPR_BAGH: // Item_BagOfHolding
       if(!backpack)
         {
-	  for(i = 0; i < NUMAMMO; i++)
-	    maxammo[i] *= 2;
+	  maxammo = maxammo2;
 	  backpack = true;
         }
       GiveAmmo(am_goldwand, AMMO_GWND_WIMPY);

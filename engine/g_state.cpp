@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2002/12/23 23:15:41  smite-meister
+// Weapon groups, MAPINFO parser added!
+//
 // Revision 1.3  2002/12/16 22:11:12  smite-meister
 // Actor/DActor separation done!
 //
@@ -145,180 +148,6 @@ language_t   language = english;            // Language.
 
 GameInfo game;
 
-
-// This function recreates the classical Doom/DoomII/Heretic maplist
-// using episode and game.mode info
-// Most of the original game dependent crap is here,
-// all the other code is general and clean.
-
-#include "sounds.h"
-
-LevelNode *G_CreateClassicMapList(int episode)
-{
-  const char *HereticSky[5] = {"SKY1", "SKY2", "SKY3", "SKY1", "SKY3"};
-
-  const int DoomBossKey[4] = { 1, 2, 8, 16 };
-  const int HereticBossKey[5] = { 0x200, 0x800, 0x1000, 0x400, 0x800 };
-
-  const int DoomSecret[4] = { 3, 5, 6, 2 };
-  const int HereticSecret[5] = { 6, 4, 4, 4, 3 };
-  const int DoomPars[4][9] =
-  {
-    {30,75,120,90,165,180,180,30,165},
-    {90,90,90,120,90,360,240,30,170},
-    {90,45,90,150,90,90,165,30,135},
-    {0}
-  };
-  const int HereticPars[5][9] =
-  {
-    {90,0,0,0,0,0,0,0,0},
-    {0},
-    {0},
-    {0},
-    {0}
-  };
-  const int DoomIIPars[32] =
-  {
-    30,90,120,120,90,150,120,120,270,90,        //  1-10
-    210,150,150,150,210,150,420,150,210,150,    // 11-20
-    240,150,180,150,150,300,330,420,300,180,    // 21-30
-    120,30                                      // 31-32
-  };
-  // FIXME! check the partimes! Heretic and Doom I episode 4!
-  // I made these Heretic partimes by myself...
-  // finale flat names
-  const char DoomFlat[4][9] = {"FLOOR4_8", "SFLR6_1", "MFLR8_4", "MFLR8_3"};
-  const char HereticFlat[5][9] = {"FLOOR25", "FLATHUH1", "FLTWAWA2", "FLOOR28", "FLOOR08"};
-
-  int i, base, base2;
-  char name[9];
-  LevelNode *m;
-    
-  switch (game.mode)
-    {
-    case commercial:
-      base2 = C1TEXT_NUM;
-      switch (game.mission)
-	{
-	case gmi_tnt:
-	  base = THUSTR_1_NUM;
-	  base2 = T1TEXT_NUM;
-	  break;
-	case gmi_plut:
-	  base = PHUSTR_1_NUM;
-	  break;
-	default:
-	  base = HUSTR_1_NUM;
-	}
-      m = new LevelNode[32];
-      for (i=0; i<32; i++)
-	{
-	  m[i].number = i;
-	  sprintf(name, "MAP%2.2d", i+1);
-	  m[i].mapname = name;
-	  m[i].levelname = text[base + i];
-	  m[i].exit.push_back(m+i+1); // next level
-	  m[i].partime = DoomIIPars[i];
-	  m[i].interpic = "INTERPIC";
-	  if (i < 11)
-	    m[i].skyname = "SKY1";
-	  else if (i < 20)
-	    m[i].skyname = "SKY2";
-	  else
-	    m[i].skyname = "SKY3";
-	  m[i].musicname = MusicNames[mus_runnin + i];
-	}
-      m[29].exit[0] = NULL; // finish
-      m[30].exit[0] = &m[15]; // return from secret
-      m[31].exit[0] = &m[15]; // return from ss
-
-      m[14].exit.push_back(&m[30]); // secret
-      m[30].exit.push_back(&m[31]); // super secret
-
-      m[6].BossDeathKey = 32+64; // fatsos and baby spiders
-      m[29].BossDeathKey = 256;  // brain
-      m[31].BossDeathKey = 128;  // keen
-
-      m[5].finaletext = text[base2];
-      m[5].finaleflat = "SLIME16";
-      m[10].finaletext = text[base2+1];
-      m[10].finaleflat = "RROCK14";
-      m[19].finaletext = text[base2+2];
-      m[19].finaleflat = "RROCK07";
-      m[29].finaletext = text[base2+3];
-      m[29].finaleflat = "RROCK17";
-      m[14].finaletext = text[base2+4];
-      m[14].finaleflat = "RROCK13";
-      m[30].finaletext = text[base2+5];
-      m[30].finaleflat = "RROCK19";
-      break;
-
-    case shareware:
-      if (episode != 1) return NULL;
-    case registered:
-      if (episode < 1 || episode > 3) return NULL;
-    case retail:
-      if (episode < 1 || episode > 4) return NULL;
-
-      base = HUSTR_E1M1_NUM;
-      m = new LevelNode[9];
-      for (i=0; i<9; i++)
-	{
-	  m[i].number = i;
-	  m[i].episode = episode;
-	  sprintf(name, "E%1.1dM%1.1d", episode, i+1);
-	  m[i].mapname = name;
-	  m[i].levelname = text[base + (episode-1)*9 + i];
-	  m[i].exit.push_back(m+i+1);
-	  m[i].partime = DoomPars[episode-1][i];
-	  sprintf(name, "WIMAP%d", (episode-1)%3);
-	  m[i].interpic = name;
-	  m[i].skyname = string("SKY") + char('0' + episode);	  
-	  m[i].musicname = MusicNames[mus_e1m1 + (episode-1)*9 + i];
-	}
-      m[7].exit[0] = NULL;
-      m[8].exit[0] = &m[DoomSecret[episode-1]];
-
-      m[DoomSecret[episode-1] - 1].exit.push_back(&m[8]); // secret
-      m[7].BossDeathKey = DoomBossKey[episode-1];
-      if (episode == 4) m[5].BossDeathKey = 4; // cyborg in map 6...
-
-      m[7].finaletext = text[E1TEXT_NUM + episode-1];
-      m[7].finaleflat = DoomFlat[episode-1];
-      break;
-
-    case heretic:
-      base = HERETIC_E1M1_NUM;
-      m = new LevelNode[9];
-      for (i=0; i<9; i++)
-	{
-	  m[i].number = i;
-	  m[i].episode = episode;
-	  sprintf(name, "E%1.1dM%1.1d", episode, i+1);
-	  m[i].mapname = name;
-	  m[i].levelname = text[base + (episode-1)*9 + i];
-	  m[i].exit.push_back(m+i+1);
-	  m[i].partime = HereticPars[episode-1][i];
-	  sprintf(name, "MAPE%d", ((episode-1)%3)+1);
-	  m[i].interpic = name;
-	  m[i].skyname = HereticSky[episode-1];
-	  m[i].musicname = MusicNames[mus_he1m1 + (episode-1)*9 + i];
-	}
-      m[7].exit[0] = NULL;
-      m[8].exit[0] = &m[HereticSecret[episode-1]];
-
-      m[HereticSecret[episode-1] - 1].exit.push_back(&m[8]); //secret
-      m[7].BossDeathKey = HereticBossKey[episode-1];
-
-      m[7].finaletext = text[HERETIC_E1TEXT + episode-1];
-      m[7].finaleflat = HereticFlat[episode-1];
-      break;
-
-    default:
-      m = NULL;
-    }
-  return m;
-}
 /*
 // this is useless now since we have team numbers for each player?
 bool GameInfo::SameTeam(int a, int b)
@@ -803,11 +632,6 @@ void GameInfo::Ticker()
 	{
 	  // FIXME just one map for now
 	  maps[0]->Ticker(); // tic the maps
-	  // FIXME Chasecam movement. Think over.
-	  // Chasecam is an independent local actor, or ...?
-	  // (local == not copied over network) It follows the displayplayer. Splitscreen?
-	  if (camera.chase)
-	    camera.MoveChaseCamera(displayplayer->pawn);
 	}
       hud.Ticker();
       automap.Ticker();
@@ -1096,6 +920,10 @@ void GameInfo::LevelCompleted()
   // his corpse is never placed in bodyqueue and thus never flushed out...
 
   // compact the frags vectors, reassign player numbers? Maybe not.
+
+  // detach chasecam
+  if (camera.chase)
+    camera.ClearCamera();
 
   automap.Close();
 

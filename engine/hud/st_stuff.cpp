@@ -18,113 +18,14 @@
 //
 //
 // $Log$
+// Revision 1.4  2002/12/23 23:15:41  smite-meister
+// Weapon groups, MAPINFO parser added!
+//
 // Revision 1.3  2002/12/16 22:12:18  smite-meister
 // Actor/DActor separation done!
 //
 // Revision 1.2  2002/12/03 10:20:08  smite-meister
 // HUD rationalized
-//
-// Revision 1.18  2002/09/25 15:17:39  vberghol
-// Intermission fixed?
-//
-// Revision 1.15  2002/09/05 14:12:16  vberghol
-// network code partly bypassed
-//
-// Revision 1.14  2002/08/24 11:57:27  vberghol
-// d_main.cpp is better
-//
-// Revision 1.13  2002/08/23 18:05:38  vberghol
-// idiotic segfaults fixed
-//
-// Revision 1.11  2002/08/17 16:02:04  vberghol
-// final compile for engine!
-//
-// Revision 1.10  2002/08/13 19:47:44  vberghol
-// p_inter.cpp done
-//
-// Revision 1.9  2002/08/08 12:01:30  vberghol
-// pian engine on valmis!
-//
-// Revision 1.8  2002/08/06 13:14:26  vberghol
-// ...
-//
-// Revision 1.7  2002/07/15 20:52:40  vberghol
-// w_wad.cpp (FileCache class) finally fixed
-//
-// Revision 1.6  2002/07/12 19:21:39  vberghol
-// hop
-//
-// Revision 1.5  2002/07/10 19:57:02  vberghol
-// g_pawn.cpp tehty
-//
-// Revision 1.4  2002/07/01 21:00:38  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:01:55  vberghol
-// HUD alkaa olla kunnossa
-//
-// Revision 1.21  2001/08/20 21:37:35  hurdler
-// fix palette in splitscreen + hardware mode
-//
-// Revision 1.20  2001/08/20 20:40:39  metzgermeister
-// *** empty log message ***
-//
-// Revision 1.19  2001/08/08 20:34:43  hurdler
-// Big TANDL update
-//
-// Revision 1.18  2001/05/16 21:21:14  bpereira
-// no message
-//
-// Revision 1.17  2001/04/01 17:35:07  bpereira
-// no message
-//
-// Revision 1.16  2001/03/03 06:17:34  bpereira
-// no message
-//
-// Revision 1.15  2001/02/24 13:35:21  bpereira
-// no message
-//
-// Revision 1.14  2001/02/10 13:05:45  hurdler
-// no message
-//
-// Revision 1.13  2001/01/31 17:14:07  hurdler
-// Add cv_scalestatusbar in hardware mode
-//
-// Revision 1.12  2001/01/25 22:15:44  bpereira
-// added heretic support
-//
-// Revision 1.11  2000/11/02 19:49:37  bpereira
-// no message
-//
-// Revision 1.10  2000/10/04 16:34:51  hurdler
-// Change a little the presentation of monsters/secrets numbers
-//
-// Revision 1.9  2000/10/02 18:25:45  bpereira
-// no message
-//
-// Revision 1.8  2000/10/01 10:18:19  bpereira
-// no message
-//
-// Revision 1.7  2000/10/01 01:12:00  hurdler
-// Add number of monsters and secrets in overlay
-//
-// Revision 1.6  2000/09/28 20:57:18  bpereira
-// no message
-//
-// Revision 1.5  2000/09/25 19:28:15  hurdler
-// Enable Direct3D support as OpenGL
-//
-// Revision 1.4  2000/09/21 16:45:09  bpereira
-// no message
-//
-// Revision 1.3  2000/08/31 14:30:56  bpereira
-// no message
-//
-// Revision 1.2  2000/02/27 00:42:11  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:33  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //
 // DESCRIPTION:
@@ -864,9 +765,29 @@ void HUD::UpdateWidgets()
   const int largeammo = 1994; // means "n/a"
   int i;
 
-  // if sbpawn == NULL, don't update. where should we set it to NULL then?
+  // if sbpawn == NULL, don't update. ST_Stop sets it to NULL.
   if (sbpawn == NULL)
     return;
+
+  statusbaron = (cv_viewsize.value < 11) || automap.active;
+
+  // status bar overlay at viewsize 11
+  overlayon = (cv_viewsize.value == 11);
+
+  if (sbpawn->invTics)
+    invopen = true;
+  else
+    invopen = false;
+
+  mainbaron = statusbaron && !invopen;
+
+  // when pawn is detached from player, no more update
+  if (sbpawn->player)
+    st_fragscount = sbpawn->player->score;
+
+  st_armson = statusbaron && !cv_deathmatch.value;
+  st_fragson =  statusbaron && cv_deathmatch.value;
+  st_notdeathmatch = !cv_deathmatch.value;
 
   st_godmode = (sbpawn->cheats & CF_GODMODE);
 
@@ -1052,8 +973,10 @@ void HUD::ST_Recalc()
       st_x = (vid.width-ST_WIDTH)>>1;
     }
 
+  // TODO not good. When should the widgets be created?
   // and renew the widgets
-  ST_CreateWidgets();
+  if (sbpawn)
+    ST_CreateWidgets();
 }
 
 
@@ -1064,10 +987,10 @@ void HUD::CreateHereticWidgets()
   int i;
   HudWidget *h;
 
-  h = new HudMultIcon(20, 17, &statusbaron, &st_flight, PatchFlight);
+  h = new HudMultIcon(st_x+20, 20, &statusbaron, &st_flight, PatchFlight);
   widgets.push_back(h);
 
-  h = new HudMultIcon(300, 17, &statusbaron, &st_book, PatchBook);
+  h = new HudMultIcon(st_x+300, 20, &statusbaron, &st_book, PatchBook);
   widgets.push_back(h);
 
   // godmode indicators
@@ -1221,29 +1144,9 @@ void HUD::ST_Drawer(bool refresh)
   // Do red-/gold-shifts from damage/items
   PaletteFlash(); //FIXME! why not in hardware?
 
-  statusbaron = (cv_viewsize.value < 11) || automap.active;
-
-  // status bar overlay at viewsize 11
-  overlayon = (cv_viewsize.value == 11);
-
   // is either statusbar or overlay on?
   if (!(statusbaron || overlayon))
     return;
-
-  if (sbpawn->invTics)
-    invopen = true;
-  else
-    invopen = false;
-
-  mainbaron = statusbaron && !invopen;
-
-  // when pawn is detached from player, no more update
-  if (sbpawn->player)
-    st_fragscount = sbpawn->player->score;
-
-  st_armson = statusbaron && !cv_deathmatch.value;
-  st_fragson = cv_deathmatch.value && statusbaron;
-  st_notdeathmatch = !cv_deathmatch.value;
 
   // and draw them
   if (statusbaron)

@@ -43,7 +43,7 @@
 #include "g_map.h" // Map
 #include "g_level.h"
 
-//#include "g_actor.h"
+#include "p_info.h"
 #include "p_fab.h"
 #include "m_argv.h"
 #include "m_misc.h"

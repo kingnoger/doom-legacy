@@ -18,50 +18,14 @@
 //
 //
 // $Log$
+// Revision 1.4  2002/12/23 23:15:41  smite-meister
+// Weapon groups, MAPINFO parser added!
+//
 // Revision 1.3  2002/12/16 22:10:53  smite-meister
 // Actor/DActor separation done!
 //
 // Revision 1.2  2002/12/03 10:11:39  smite-meister
 // Blindness and missile clipping bugs fixed
-//
-// Revision 1.20  2002/09/25 15:17:35  vberghol
-// Intermission fixed?
-//
-// Revision 1.16  2002/09/05 14:12:12  vberghol
-// network code partly bypassed
-//
-// Revision 1.14  2002/08/27 11:51:45  vberghol
-// Menu rewritten
-//
-// Revision 1.13  2002/08/24 11:57:26  vberghol
-// d_main.cpp is better
-//
-// Revision 1.12  2002/08/23 18:05:38  vberghol
-// idiotic segfaults fixed
-//
-// Revision 1.10  2002/08/17 16:02:02  vberghol
-// final compile for engine!
-//
-// Revision 1.9  2002/08/08 12:01:24  vberghol
-// pian engine on valmis!
-//
-// Revision 1.8  2002/08/06 13:14:19  vberghol
-// ...
-//
-// Revision 1.7  2002/07/18 19:16:35  vberghol
-// renamed a few files
-//
-// Revision 1.6  2002/07/15 20:52:37  vberghol
-// w_wad.cpp (FileCache class) finally fixed
-//
-// Revision 1.5  2002/07/04 18:02:24  vberghol
-// Pientä fiksausta, g_pawn.cpp uusi tiedosto
-//
-// Revision 1.4  2002/07/01 21:00:12  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:01:52  vberghol
-// HUD alkaa olla kunnossa
 //
 // Revision 1.53  2001/12/31 16:56:39  metzgermeister
 // see Dec 31 log
@@ -1199,8 +1163,6 @@ void D_MakeTitleString(char *s)
 
 void D_CheckWadVersion()
 {
-  int wadversion = 0;
-
 /* BP: disabled since this should work fine now...
     // check main iwad using demo1 version 
     lump = fc.FindNumForNameFirst("demo1");
@@ -1221,21 +1183,17 @@ void D_CheckWadVersion()
                 "but this can cause Legacy to hang\n",wadfiles[0]->filename,wadversion/100,wadversion%100);
 */
   // check version of legacy.wad using version lump
-  int lump = fc.FindNumForName("version");
-  if (lump == -1)
-    wadversion = 0; // or less
-  else
+  int wadversion = 0;
+  int lump = fc.FindNumForName("version", true);
+  if (lump != -1)
     {
       char s[128];
-      int  l = fc.ReadLumpHeader(lump,&s,128);
-      wadversion = 0;
-      if (l<128)
-        {
-	  s[l]='\0';
-	  if (sscanf(s,"Doom Legacy WAD V%d.%d", &l, &wadversion) == 2)
-	    wadversion += l*100;
-        }
+      int  l = fc.ReadLumpHeader(lump, s, 127);
+      s[l]='\0';
+      if (sscanf(s, "Doom Legacy WAD V%d.%d", &l, &wadversion) == 2)
+	wadversion += l*100;
     }
+
   if (wadversion != VERSION)
     I_Error("Your legacy.wad file is version %d.%d, you need version %d.%d\n"
 	    "Use the legacy.wad coming from the same zip file of this exe\n"
@@ -1477,7 +1435,9 @@ void D_DoomMain()
 
   D_RegisterClientCommands (); //Hurdler: be sure that this is called before D_CheckNetGame
   // commands for new Legacy features
+
   D_AddDeathmatchCommands ();
+
   ST_AddCommands();
 
 #ifdef FRAGGLESCRIPT
@@ -1485,9 +1445,12 @@ void D_DoomMain()
 #endif
 
   P_Info_AddCommands();
+
   // renderer-related console commands
-  R_RegisterEngineStuff ();
+  R_RegisterEngineStuff();
+
   S_RegisterSoundStuff ();
+
   CV_RegisterVar (&cv_screenslink);
 
   //Fab:29-04-98: do some dirty chatmacros strings initialisation

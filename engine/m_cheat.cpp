@@ -18,68 +18,14 @@
 //
 //
 // $Log$
+// Revision 1.4  2002/12/23 23:15:41  smite-meister
+// Weapon groups, MAPINFO parser added!
+//
 // Revision 1.3  2002/12/16 22:11:21  smite-meister
 // Actor/DActor separation done!
 //
 // Revision 1.2  2002/12/03 10:11:39  smite-meister
 // Blindness and missile clipping bugs fixed
-//
-// Revision 1.16  2002/09/20 22:41:28  vberghol
-// Sound system rewritten! And it workscvs update
-//
-// Revision 1.14  2002/08/25 18:21:59  vberghol
-// little fixes
-//
-// Revision 1.13  2002/08/21 16:58:31  vberghol
-// Version 1.41 Experimental compiles and links!
-//
-// Revision 1.12  2002/08/20 13:56:58  vberghol
-// sdfgsd
-//
-// Revision 1.11  2002/08/19 18:30:12  vberghol
-// just netcode to go!
-//
-// Revision 1.10  2002/08/17 16:02:03  vberghol
-// final compile for engine!
-//
-// Revision 1.9  2002/08/16 20:49:25  vberghol
-// engine ALMOST done!
-//
-// Revision 1.8  2002/08/06 13:14:20  vberghol
-// ...
-//
-// Revision 1.7  2002/08/02 20:14:49  vberghol
-// p_enemy.cpp done!
-//
-// Revision 1.6  2002/07/16 19:16:20  vberghol
-// Hardware sound interface again somewhat fixed
-//
-// Revision 1.5  2002/07/12 19:21:37  vberghol
-// hop
-//
-// Revision 1.4  2002/07/08 20:46:33  vberghol
-// More files compile!
-//
-// Revision 1.3  2002/07/01 21:00:15  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:11  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.5  2001/08/20 21:37:34  hurdler
-// fix palette in splitscreen + hardware mode
-//
-// Revision 1.4  2001/02/10 12:27:14  bpereira
-// no message
-//
-// Revision 1.3  2000/11/02 17:50:07  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //
 // DESCRIPTION:
@@ -508,180 +454,89 @@ static void CheatIDDQDFunc(PlayerPawn *p, const byte *arg);
 // Toggle god mode
 static byte CheatGodSeq[] =
 {
-  'q',
-  'u',
-  'i',
-  'c',
-  'k',
-  'e',
-  'n',
-  0xff
+  'q', 'u', 'i', 'c', 'k', 'e', 'n', 0xff
 };
 
 // Toggle no clipping mode
 static byte CheatNoClipSeq[] =
 {
-  'k',
-  'i',
-  't',
-  't',
-  'y',
-  0xff
+  'k', 'i', 't', 't', 'y', 0xff
 };
 
 // Get all weapons and ammo
 static byte CheatWeaponsSeq[] =
 {
-  'r',
-  'a',
-  'm',
-  'b',
-  'o',
-  0xff
+  'r', 'a', 'm', 'b', 'o', 0xff
 };
 
 // Toggle tome of power
 static byte CheatPowerSeq[] =
 {
-  's',
-  'h',
-  'a',
-  'z',
-  'a',
-  'm',
-  0xff, 0
+  's', 'h', 'a', 'z', 'a', 'm', 0xff, 0
 };
 
 // Get full health
 static byte CheatHealthSeq[] =
 {
-  'p',
-  'o',
-  'n',
-  'c',
-  'e',
-  0xff
+  'p', 'o', 'n', 'c', 'e', 0xff
 };
 
 // Get all keys
 static byte CheatKeysSeq[] =
 {
-  's',
-  'k',
-  'e',
-  'l',
-  0xff, 0
+  's', 'k', 'e', 'l', 0xff, 0
 };
 
 // Toggle ticker
 static byte CheatTickerSeq[] =
 {
-  't',
-  'i',
-  'c',
-  'k',
-  'e',
-  'r',
-  0xff, 0
+  't', 'i', 'c', 'k', 'e', 'r', 0xff, 0
 };
 
 // Get an artifact 1st stage (ask for type)
 static byte CheatArtifact1Seq[] =
 {
-  'g',
-  'i',
-  'm',
-  'm',
-  'e',
-  0xff
+  'g', 'i', 'm', 'm', 'e', 0xff
 };
 
 // Get an artifact 2nd stage (ask for count)
 static byte CheatArtifact2Seq[] =
 {
-  'g',
-  'i',
-  'm',
-  'm',
-  'e',
-  0, 0xff, 0
+  'g', 'i', 'm', 'm', 'e', 0, 0xff, 0
 };
 
 // Get an artifact final stage
 static byte CheatArtifact3Seq[] =
 {
-  'g',
-  'i',
-  'm',
-  'm',
-  'e',
-  0, 0, 0xff
+  'g', 'i', 'm', 'm', 'e', 0, 0, 0xff
 };
 
 // Warp to new level
 static byte CheatWarpSeq[] =
 {
-  'e',
-  'n',
-  'g',
-  'a',
-  'g',
-  'e',
-  0, 0, 0xff, 0
+  'e', 'n', 'g', 'a', 'g', 'e', 0, 0, 0xff, 0
 };
 
 // Save a screenshot
 static byte CheatChickenSeq[] =
 {
-  'c',
-  'o',
-  'c',
-  'k',
-  'a',
-  'd',
-  'o',
-  'o',
-  'd',
-  'l',
-  'e',
-  'd',
-  'o',
-  'o',
-  0xff, 0
+  'c', 'o', 'c', 'k', 'a', 'd', 'o', 'o', 'd', 'l', 'e', 'd', 'o', 'o', 0xff, 0
 };
 
 // Kill all monsters
 static byte CheatMassacreSeq[] =
 {
-  'm',
-  'a',
-  's',
-  's',
-  'a',
-  'c',
-  'r',
-  'e',
-  0xff, 0
+  'm', 'a', 's', 's', 'a', 'c', 'r', 'e', 0xff, 0
 };
 
 static byte CheatIDKFASeq[] =
 {
-  'i',
-  'd',
-  'k',
-  'f',
-  'a',
-  0xff, 0
+  'i', 'd', 'k', 'f', 'a', 0xff, 0
 };
 
 static byte CheatIDDQDSeq[] =
 {
-  'i',
-  'd',
-  'd',
-  'q',
-  'd',
-  0xff, 0
+  'i', 'd', 'd', 'q', 'd', 0xff, 0
 };
 
 
@@ -972,14 +827,16 @@ static void CheatWeaponsFunc(PlayerPawn *p, const byte *arg)
       // give backpack
       if (!p->backpack)
 	{
-	  for (i = 0; i < NUMAMMO; i++)
-	    p->maxammo[i] *= 2;
+	  //for (i = 0; i < NUMAMMO; i++) p->maxammo[i] *= 2;
+	  p->maxammo = maxammo2;
 	  p->backpack = true;
 	}
 
-      for (i = 0; i < NUMWEAPONS-1; i++)
+      for (i = wp_heretic; i < wp_gauntlets; i++)
 	p->weaponowned[i] = true;
 
+      // FIXME shareware == 0 always (it is an enum member, not a variable!)
+      // also elsewhere in this file
       if (shareware)
 	{
 	  p->weaponowned[wp_skullrod] = false;
@@ -991,8 +848,12 @@ static void CheatWeaponsFunc(PlayerPawn *p, const byte *arg)
     }
   else
     {
-      for (i=0; i<NUMWEAPONS; i++)
+      for (i=0; i < wp_heretic; i++)
 	p->weaponowned[i] = true;
+
+      if (game.mode != commercial)
+	p->weaponowned[wp_supershotgun] = false;
+
       msg = STSTR_FAADDED;
     }
 
@@ -1113,43 +974,40 @@ static void CheatArtifact3Func(PlayerPawn *p, const byte *arg)
 static void CheatWarpFunc(PlayerPawn *p, const byte *arg)
 {
   int episode;
-  int map;
+  int mapnum;
   char *msg;
 
-// "idclev" or "engage" change-level cheat
+  // "idclev" or "engage" change-level cheat
+  char name[9];
 
   if (game.mode == commercial)
     {
       episode = 0;
-      map = (arg[0] - '0')*10 + arg[1] - '0';
+      mapnum = (arg[0] - '0')*10 + arg[1] - '0';
+      if (mapnum < 1 || mapnum > 99)
+	return;
+      sprintf(name, "MAP%2d", mapnum);
     }
   else // doom1, heretic
     {
       episode = arg[0] - '0';
-      map = arg[1] - '0';
-      if (episode < 1) return;
+      mapnum = arg[1] - '0';
+      if (episode < 1 || episode > 9 || mapnum < 1 || mapnum > 9)
+	return;
+      sprintf(name, "E%1dM%1d", episode, mapnum);
     }
-
-  // Catch invalid maps.
-  if (map < 1) return;
 
   if (game.mode == heretic)
     msg = TXT_CHEATWARP;
   else
     msg = STSTR_CLEV;
 
-  //mapname = G_BuildMapName(episode, map);
-  //FIXME here build a levelgraph using G_CreateClassicMapList
-  LevelNode *lnp = G_CreateClassicMapList(episode);
-
-  if (game.DeferredNewGame(game.skill, lnp, false))
-    p->SetMessage(msg, false);
+  p->SetMessage(msg, false);
+  COM_BufAddText(va("map %s\n", name));
 }
 
 static void CheatChickenFunc(PlayerPawn *p, const byte *arg)
 {
-  //extern bool P_UndoPlayerChicken(PlayerPawn *p);
-
   if (p->morphTics)
     {
       if (p->UndoMorph())
@@ -1179,8 +1037,9 @@ static void CheatIDKFAFunc(PlayerPawn *p, const byte *arg)
       if (p->morphTics)
 	return;
 
-      for(i = 1; i < 8; i++)
+      for(i = 0; i < NUMWEAPONS; i++)
 	p->weaponowned[i] = false;
+      p->weaponowned[wp_staff] = true;
       p->pendingweapon = wp_staff;
 
       p->SetMessage(TXT_CHEATIDKFA, true);
@@ -1191,10 +1050,13 @@ static void CheatIDKFAFunc(PlayerPawn *p, const byte *arg)
       p->armorpoints = idkfa_armor;
       p->armortype = idkfa_armor_class;
 
-      for (i=0;i<NUMWEAPONS;i++)
+      for (i=0;i<wp_heretic;i++)
 	p->weaponowned[i] = true;
 
-      for (i=0;i<NUMAMMO;i++)
+      if (game.mode != commercial)
+	p->weaponowned[wp_supershotgun] = false;
+
+      for (i=0;i<am_heretic;i++)
 	p->ammo[i] = p->maxammo[i];
 
       p->cards = it_allkeys;

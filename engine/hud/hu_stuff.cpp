@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2002/12/23 23:15:41  smite-meister
+// Weapon groups, MAPINFO parser added!
+//
 // Revision 1.3  2002/12/16 22:12:10  smite-meister
 // Actor/DActor separation done!
 //
@@ -53,7 +56,6 @@
 #include "dstrings.h"
 #include "r_local.h"
 #include "wi_stuff.h"  // for drawrankings
-#include "p_info.h"
 
 #include "keys.h"
 #include "v_video.h"
@@ -223,6 +225,7 @@ HUD::HUD()
   stbarheight = ST_HEIGHT;
   st_palette = 0;
   st_active = false;
+  sbpawn = NULL;
 };
 
 
@@ -263,20 +266,28 @@ void HUD::Init()
   if (dedicated)
     return;
 
-  int startlump;
+  int startlump, endlump;
   int  i;
 
   // cache the HUD font for entire game execution
   // TODO add legacy default font (in legacy.wad)
   if (game.mode == heretic)
-    startlump = fc.GetNumForName("FONTA01");
+    {
+      startlump = fc.GetNumForName("FONTA01");
+      endlump  =  fc.GetNumForName("FONTA59");
+    }
   else
-    startlump = fc.GetNumForName("STCFN033");
+    {
+      startlump = fc.GetNumForName("STCFN033");
+      endlump =   fc.GetNumForName("STCFN095");
+    }
 
   // NOTE! Heretic FONTAxx ends with FONTA59, HU_FONTSIZE and STCFNxx are longer!
-  // Now it caches some FONTBxx letters in the end
-  for (i=0; i<HU_FONTSIZE; i++)
-    font[i] = fc.CachePatchNum(startlump + i, PU_STATIC);
+  for (i=0; i <= endlump-startlump; i++) // endlump - startlump < HU_FONTSIZE
+    font[i] = fc.CachePatchNum(i + startlump, PU_STATIC);
+  // fill the rest with the first character
+  for ( ; i < HU_FONTSIZE; i++)
+    font[i] = fc.CachePatchNum(startlump, PU_STATIC);
 
   //----------- cache all legacy.wad stuff here
 
@@ -561,8 +572,7 @@ void HUD::Ticker()
   if (dedicated)
     return;
 
-  if (!st_active)
-    return;
+  //if (!st_active) return;
 
   hu_tick++;
   hu_tick &= 7; // currently only to blink chat input cursor
@@ -590,8 +600,8 @@ void HUD::Ticker()
 
   if (cv_showmessages.value && pl->message)
     {
-        CONS_Printf ("%s\n", pl->message);
-        pl->message = NULL;
+      CONS_Printf ("%s\n", pl->message);
+      pl->message = NULL;
     }
 
   // In splitscreen, display second player's messages

@@ -18,61 +18,14 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/23 23:15:41  smite-meister
+// Weapon groups, MAPINFO parser added!
+//
 // Revision 1.2  2002/12/16 22:11:35  smite-meister
 // Actor/DActor separation done!
 //
 // Revision 1.1.1.1  2002/11/16 14:17:58  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.13  2002/09/20 22:41:30  vberghol
-// Sound system rewritten! And it workscvs update
-//
-// Revision 1.11  2002/08/23 09:53:41  vberghol
-// fixed Actor:: target/owner/tracer
-//
-// Revision 1.10  2002/08/21 16:58:32  vberghol
-// Version 1.41 Experimental compiles and links!
-//
-// Revision 1.9  2002/08/17 21:21:48  vberghol
-// Only scripting to be fixed in engine!
-//
-// Revision 1.8  2002/08/13 19:47:41  vberghol
-// p_inter.cpp done
-//
-// Revision 1.7  2002/08/11 17:16:48  vberghol
-// ...
-//
-// Revision 1.6  2002/08/08 12:01:27  vberghol
-// pian engine on valmis!
-//
-// Revision 1.5  2002/08/06 13:14:22  vberghol
-// ...
-//
-// Revision 1.4  2002/07/23 19:21:41  vberghol
-// fixed up to p_enemy.cpp
-//
-// Revision 1.3  2002/07/01 21:00:17  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:13  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.7  2001/07/16 22:35:41  bpereira
-// - fixed crash of e3m8 in heretic
-// - fixed crosshair not drawed bug
-//
-// Revision 1.6  2001/05/27 13:42:47  bpereira
-// no message
-//
-// Revision 1.5  2001/03/30 17:12:50  bpereira
-// no message
-//
-// Revision 1.4  2001/02/24 13:35:20  bpereira
-// no message
-//
-// Revision 1.3  2001/02/10 13:20:55  hurdler
-// update license
-//
 //
 //
 // DESCRIPTION:
@@ -318,7 +271,6 @@ DActor *DActor::SpawnMissileAngle(mobjtype_t t, angle_t angle, fixed_t momz)
 }
 
 
-extern int GetWeaponAmmo[];
 extern byte cheat_mus_seq[];
 extern byte cheat_choppers_seq[];
 extern byte cheat_god_seq[];
@@ -341,8 +293,6 @@ void DoomPatchEngine()
 
 void HereticPatchEngine()
 {
-  extern int clipammo[NUMAMMO];
-
   ceiling_t::ceilmovesound = sfx_dormov;
   vldoor_t::doorclosesound = sfx_doropn;
   button_t::buttonsound = sfx_swtchn;
@@ -366,27 +316,6 @@ void HereticPatchEngine()
 
   mobjinfo[MT_TFOG].spawnstate = S_HTFOG1;
   sprnames[SPR_BLUD] = "BLOD";
-  maxammo [am_goldwand  ] = 100;
-  maxammo [am_crossbow  ] = 50;
-  maxammo [am_blaster   ] = 200;
-  maxammo [am_skullrod  ] = 200;
-  maxammo [am_phoenixrod] = 20;
-  maxammo [am_mace      ] = 150;
-  clipammo[am_goldwand  ] = 5;  // used in deathmatch 1 & 3 mul by 5 (P_GiveWeapon)
-  clipammo[am_crossbow  ] = 2; 
-  clipammo[am_blaster   ] = 6;
-  clipammo[am_skullrod  ] = 10;
-  clipammo[am_phoenixrod] = 1; 
-  clipammo[am_mace      ] = 10;
-  GetWeaponAmmo[wp_staff     ] = 0;
-  GetWeaponAmmo[wp_goldwand  ] = 25;
-  GetWeaponAmmo[wp_crossbow  ] = 10;
-  GetWeaponAmmo[wp_blaster   ] = 30;
-  GetWeaponAmmo[wp_skullrod  ] = 50;
-  GetWeaponAmmo[wp_phoenixrod] = 2;
-  GetWeaponAmmo[wp_mace      ] = 50;
-  GetWeaponAmmo[wp_gauntlets ] = 0;
-  GetWeaponAmmo[wp_beak      ] = 0; 
 
   text[GOTARMOR_NUM] = "SILVER SHIELD";
   text[GOTMEGA_NUM ] = "ENCHANTED SHIELD";

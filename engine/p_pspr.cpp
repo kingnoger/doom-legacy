@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/23 23:15:41  smite-meister
+// Weapon groups, MAPINFO parser added!
+//
 // Revision 1.2  2002/12/16 22:11:55  smite-meister
 // Actor/DActor separation done!
 //
@@ -320,12 +323,10 @@ void PlayerPawn::BringUpWeapon()
 //
 bool PlayerPawn::CheckAmmo()
 {
-  int                 count;
-
   ammotype_t at = weaponinfo[readyweapon].ammo;
 
   // Minimal amount for one shot varies.
-  count = weaponinfo[readyweapon].ammopershoot;
+  int count = weaponinfo[readyweapon].ammopershoot;
 
   // Some do not need ammunition anyway.
   // Return if current ammunition sufficient.

@@ -18,147 +18,14 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/23 23:15:41  smite-meister
+// Weapon groups, MAPINFO parser added!
+//
 // Revision 1.2  2002/12/16 22:11:00  smite-meister
 // Actor/DActor separation done!
 //
 // Revision 1.1.1.1  2002/11/16 14:18:08  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.24  2002/09/25 15:17:36  vberghol
-// Intermission fixed?
-//
-// Revision 1.20  2002/09/05 14:12:13  vberghol
-// network code partly bypassed
-//
-// Revision 1.18  2002/08/27 11:51:45  vberghol
-// Menu rewritten
-//
-// Revision 1.17  2002/08/24 17:25:32  vberghol
-// bug fixes
-//
-// Revision 1.16  2002/08/23 18:05:38  vberghol
-// idiotic segfaults fixed
-//
-// Revision 1.14  2002/08/17 16:02:02  vberghol
-// final compile for engine!
-//
-// Revision 1.13  2002/08/16 20:49:23  vberghol
-// engine ALMOST done!
-//
-// Revision 1.12  2002/08/13 19:47:39  vberghol
-// p_inter.cpp done
-//
-// Revision 1.11  2002/08/11 17:16:46  vberghol
-// ...
-//
-// Revision 1.10  2002/08/08 12:01:25  vberghol
-// pian engine on valmis!
-//
-// Revision 1.9  2002/08/06 13:14:19  vberghol
-// ...
-//
-// Revision 1.8  2002/08/02 20:14:48  vberghol
-// p_enemy.cpp done!
-//
-// Revision 1.7  2002/07/23 19:21:39  vberghol
-// fixed up to p_enemy.cpp
-//
-// Revision 1.6  2002/07/12 19:21:37  vberghol
-// hop
-//
-// Revision 1.5  2002/07/04 18:02:24  vberghol
-// Pientä fiksausta, g_pawn.cpp uusi tiedosto
-//
-// Revision 1.4  2002/07/01 21:00:14  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:01:53  vberghol
-// HUD alkaa olla kunnossa
-//
-// Revision 1.43  2001/12/26 17:24:46  hurdler
-// Update Linux version
-//
-// Revision 1.42  2001/12/15 18:41:35  hurdler
-// small commit, mainly splitscreen fix
-//
-// Revision 1.41  2001/08/20 20:40:39  metzgermeister
-// *** empty log message ***
-//
-// Revision 1.40  2001/08/20 18:34:18  bpereira
-// glide ligthing and map30 bug
-//
-// Revision 1.39  2001/08/12 15:21:04  bpereira
-// see my log
-//
-// Revision 1.38  2001/08/02 19:15:59  bpereira
-// fix player reset in secret level of doom2
-//
-// Revision 1.37  2001/07/16 22:35:40  bpereira
-// - fixed crash of e3m8 in heretic
-// - fixed crosshair not drawed bug
-//
-// Revision 1.36  2001/05/16 21:21:14  bpereira
-// no message
-//
-// Revision 1.35  2001/05/03 21:22:25  hurdler
-// remove some warnings
-//
-// Revision 1.34  2001/04/17 22:26:07  calumr
-// Initial Mac add
-//
-// Revision 1.29  2001/01/25 22:15:41  bpereira
-// added heretic support
-//
-// Revision 1.28  2000/11/26 20:36:14  hurdler
-// Adding autorun2
-//
-// Revision 1.23  2000/11/02 17:50:06  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.22  2000/10/21 08:43:28  bpereira
-// no message
-//
-// Revision 1.21  2000/10/09 14:03:31  crashrl
-// *** empty log message ***
-//
-// Revision 1.20  2000/10/08 13:30:00  bpereira
-// no message
-//
-// Revision 1.19  2000/10/07 20:36:13  crashrl
-// Added deathmatch team-start-sectors via sector/line-tag and linedef-type 1000-1031
-//
-// Revision 1.12  2000/04/19 10:56:51  hurdler
-// commited for exe release and tag only
-//
-// Revision 1.11  2000/04/16 18:38:07  bpereira
-// no message
-//
-// Revision 1.10  2000/04/11 19:07:23  stroggonmeth
-// Finished my logs, fixed a crashing bug.
-//
-// Revision 1.9  2000/04/07 23:11:17  metzgermeister
-// added mouse move
-//
-// Revision 1.8  2000/04/06 20:40:22  hurdler
-// Mostly remove warnings under windows
-//
-// Revision 1.7  2000/04/04 00:32:45  stroggonmeth
-// Initial Boom compatability plus few misc changes all around.
-//
-// Revision 1.6  2000/03/29 19:39:48  bpereira
-// no message
-//
-// Revision 1.5  2000/03/23 22:54:00  metzgermeister
-// added support for HOME/.legacy under Linux
-//
-// Revision 1.4  2000/02/27 16:30:28  hurdler
-// dead player bug fix + add allowmlook <yes|no>
-//
-// Revision 1.3  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.2  2000/02/26 00:28:42  hurdler
-// Mostly bug fix (see borislog.txt 23-2-2000, 24-2-2000)
 //
 //
 // DESCRIPTION:
@@ -343,24 +210,40 @@ short G_ClipAimingPitch(int *aiming)
 
 
 // for change this table change also nextweapon func in g_game and P_PlayerThink
-static char extraweapons[8] = {wp_chainsaw, -1, wp_supershotgun, -1, -1, -1, -1, -1};
+//static char extraweapons[8] = {wp_chainsaw, -1, wp_supershotgun, -1, -1, -1, -1, -1};
+/*
 static byte nextweaponorder[NUMWEAPONS] = {wp_fist, wp_chainsaw, wp_pistol,
 					   wp_shotgun, wp_supershotgun, wp_chaingun,
 					   wp_missile, wp_plasma, wp_bfg};
+*/
+// Half-Life style weapon groups
+static byte nextweaponorder[NUMWEAPONS] =
+{
+  wp_fist, wp_staff, wp_chainsaw, wp_gauntlets,
+  wp_pistol, wp_goldwand,
+  wp_shotgun, wp_supershotgun, wp_crossbow,
+  wp_chaingun, wp_blaster,
+  wp_missile, wp_phoenixrod,
+  wp_plasma, wp_skullrod,
+  wp_bfg, wp_mace,
+  wp_beak
+};
 
 static byte NextWeapon(PlayerPawn *player, int step)
 {
-  byte   w;
+  extern int weapongroup[NUMWEAPONS];
   int    i;
-  for (i=0;i<NUMWEAPONS;i++)
+
+  for (i=0; i<NUMWEAPONS; i++)
     if (player->readyweapon == nextweaponorder[i])
       {
 	i = (i+NUMWEAPONS+step)%NUMWEAPONS;
 	break;
       }
+
   for (;nextweaponorder[i]!=player->readyweapon; i=(i+NUMWEAPONS+step)%NUMWEAPONS)
     {
-      w = nextweaponorder[i];
+      byte w = nextweaponorder[i];
         
       // skip super shotgun for non-Doom2
       if (game.mode!=commercial && w==wp_supershotgun)
@@ -370,14 +253,17 @@ static byte NextWeapon(PlayerPawn *player, int step)
       if (game.mode==shareware && (w==wp_plasma || w==wp_bfg))
 	continue;
 
-      if ( player->weaponowned[w] &&
-	   player->ammo[player->weaponinfo[w].ammo] >= player->weaponinfo[w].ammopershoot)
+      if (player->weaponowned[w] &&
+	  player->ammo[player->weaponinfo[w].ammo] >= player->weaponinfo[w].ammopershoot)
         {
+	  /*
 	  if(w==wp_chainsaw)
 	    return (BT_CHANGE | BT_EXTRAWEAPON | (wp_fist<<BT_WEAPONSHIFT));
 	  if(w==wp_supershotgun)
 	    return (BT_CHANGE | BT_EXTRAWEAPON | (wp_shotgun<<BT_WEAPONSHIFT));
-	  return (BT_CHANGE | (w<<BT_WEAPONSHIFT));
+	  */
+	  //return (BT_CHANGE | (w<<BT_WEAPONSHIFT));
+	  return BT_CHANGE | (weapongroup[w] << BT_WEAPONSHIFT);
         }
     }
   return 0;
@@ -514,14 +400,12 @@ void G_BuildTiccmd(ticcmd_t* cmd, bool primary, int realtics)
     }
 
   //added:07-02-98: forward with key or button
-  if (gamekeydown[gc[gc_forward][0]] ||
-      gamekeydown[gc[gc_forward][1]] ||
+  if (gamekeydown[gc[gc_forward][0]] || gamekeydown[gc[gc_forward][1]] ||
       ( joyymove < 0 && gamepadjoystickmove && !cv_joystickfreelook.value))
     {
       forward += forwardmove[speed];
     }
-  if (gamekeydown[gc[gc_backward][0]] ||
-      gamekeydown[gc[gc_backward][1]] ||
+  if (gamekeydown[gc[gc_backward][0]] || gamekeydown[gc[gc_backward][1]] ||
       (joyymove > 0 && gamepadjoystickmove && !cv_joystickfreelook.value))
     {
       forward -= forwardmove[speed];
@@ -531,47 +415,34 @@ void G_BuildTiccmd(ticcmd_t* cmd, bool primary, int realtics)
     forward -= ( (joyymove * forwardmove[1]) >> 10 );               // ANALOG!
 
   //added:07-02-98: some people strafe left & right with mouse buttons
-  if (gamekeydown[gc[gc_straferight][0]] ||
-      gamekeydown[gc[gc_straferight][1]])
+  if (gamekeydown[gc[gc_straferight][0]] || gamekeydown[gc[gc_straferight][1]])
     side += sidemove[speed];
-  if (gamekeydown[gc[gc_strafeleft][0]] ||
-      gamekeydown[gc[gc_strafeleft][1]])
+  if (gamekeydown[gc[gc_strafeleft][0]] || gamekeydown[gc[gc_strafeleft][1]])
     side -= sidemove[speed];
 
-  //added:07-02-98: fire with any button/key
-  if (gamekeydown[gc[gc_fire][0]] ||
-      gamekeydown[gc[gc_fire][1]])
-    {
-      cmd->buttons |= BT_ATTACK;
-      CONS_Printf("attack!\n");
-    }
+  if (gamekeydown[gc[gc_fire][0]] || gamekeydown[gc[gc_fire][1]])
+    cmd->buttons |= BT_ATTACK;
 
-  //added:07-02-98: use with any button/key
-  if (gamekeydown[gc[gc_use][0]] ||
-      gamekeydown[gc[gc_use][1]])
+  if (gamekeydown[gc[gc_use][0]] || gamekeydown[gc[gc_use][1]])
     cmd->buttons |= BT_USE;
 
-  //added:22-02-98: jump button
-  if (cv_allowjump.value && (gamekeydown[gc[gc_jump][0]] ||
-			     gamekeydown[gc[gc_jump][1]]))
+  if (cv_allowjump.value &&
+      (gamekeydown[gc[gc_jump][0]] || gamekeydown[gc[gc_jump][1]]))
     cmd->buttons |= BT_JUMP;
 
-
-  if (p == NULL) return;
+  if (p == NULL)
+    return;
   //added:07-02-98: any key / button can trigger a weapon
   // chainsaw overrides
-  if (gamekeydown[gc[gc_nextweapon][0]] ||
-      gamekeydown[gc[gc_nextweapon][1]])
+  if (gamekeydown[gc[gc_nextweapon][0]] || gamekeydown[gc[gc_nextweapon][1]])
     cmd->buttons |= NextWeapon(p, 1);
-  else if (gamekeydown[gc[gc_prevweapon][0]] ||
-	   gamekeydown[gc[gc_prevweapon][1]])
+  else if (gamekeydown[gc[gc_prevweapon][0]] || gamekeydown[gc[gc_prevweapon][1]])
     cmd->buttons |= NextWeapon(p, -1);
-  else for (i=gc_weapon1; i<gc_weapon1+NUMWEAPONS-1; i++)
-    if (gamekeydown[gc[i][0]] ||
-	gamekeydown[gc[i][1]])
+  else for (i=gc_weapon1; i<=gc_weapon8; i++)
+    if (gamekeydown[gc[i][0]] || gamekeydown[gc[i][1]])
       {
 	cmd->buttons |= BT_CHANGE; //| BT_EXTRAWEAPON; // extra by default
-	cmd->buttons |= (i-gc_weapon1)<<BT_WEAPONSHIFT;
+	cmd->buttons |= (i-gc_weapon1)<<BT_WEAPONSHIFT; // 8 keys = three bits
 	// already have extraweapon in hand switch to the normal one
 	/*
 	if (p->readyweapon == extraweapons[i-gc_weapon1])
@@ -601,20 +472,17 @@ void G_BuildTiccmd(ticcmd_t* cmd, bool primary, int realtics)
     if (!keyboard_look && !cv_joystickfreelook.value && !mouseaiming)
       localaiming = 0;
 
-    if (gamekeydown[gc[gc_lookup][0]] ||
-        gamekeydown[gc[gc_lookup][1]])
+    if (gamekeydown[gc[gc_lookup][0]] || gamekeydown[gc[gc_lookup][1]])
       {
         localaiming += KB_LOOKSPEED;
         keyboard_look[0] = true;
       }
-    else if (gamekeydown[gc[gc_lookdown][0]] ||
-	     gamekeydown[gc[gc_lookdown][1]])
+    else if (gamekeydown[gc[gc_lookdown][0]] || gamekeydown[gc[gc_lookdown][1]])
       {
         localaiming -= KB_LOOKSPEED;
         keyboard_look[0] = true;
       }
-    else if (gamekeydown[gc[gc_centerview][0]] ||
-	     gamekeydown[gc[gc_centerview][1]])
+    else if (gamekeydown[gc[gc_centerview][0]] || gamekeydown[gc[gc_centerview][1]])
       localaiming = 0;
 
     //26/02/2000: added by Hurdler: accept no mlook for network games
@@ -800,7 +668,7 @@ bool PlayerPawn::InventoryResponder(bool primary, event_t *ev)
   else
     gc = gamecontrol2;
 
-  CONS_Printf("PP:IR  %d, %d\n", ev->type, ev->data1);
+  int n = inventory.size();
 
   switch (ev->type)
     {
@@ -809,15 +677,10 @@ bool PlayerPawn::InventoryResponder(bool primary, event_t *ev)
 	{
 	  if (invTics)
 	    {
-	      invSlot--;
-	      if (invSlot < 0)
+	      if (--invSlot < 0)
 		invSlot = 0;
-	      else
-		{
-		  st_curpos--;
-		  if (st_curpos < 0)
-		    st_curpos = 0;
-		}
+	      else if (--st_curpos < 0)
+		st_curpos = 0;
 	    }
 	  invTics = 5*TICRATE;
 	  return true;
@@ -826,20 +689,13 @@ bool PlayerPawn::InventoryResponder(bool primary, event_t *ev)
 	{
 	  if (invTics)
 	    {
-	      invSlot++;
-	      if (invSlot >= inventory.size()) //inventorySlotNum)
-		{
-		  invSlot = inventory.size()-1;
-		  //invSlot--;
-		  //if (invSlot < 0)
-		  //  invSlot = 0;
-		}
-	      else
-		{
-		  st_curpos++;
-		  if (st_curpos > 6)
-		    st_curpos = 6;
-		}
+	      if (++invSlot >= n)
+		invSlot = n-1;
+	      //invSlot--;
+	      //if (invSlot < 0)
+	      //  invSlot = 0;
+	      else if (++st_curpos > 6)
+		st_curpos = 6;
 	    }
 	  invTics = 5*TICRATE;
 	  return true;
@@ -850,6 +706,7 @@ bool PlayerPawn::InventoryResponder(bool primary, event_t *ev)
 	    invTics = 0;
 	  else if (inventory[invSlot].count > 0)
 	    {
+	      CONS_Printf("PP:IR  USE %d\n", inventory[invSlot].type);
 	      //if (p == &consoleplayer)
 	      if (primary)
 		SendNetXCmd(XD_USEARTEFACT, &inventory[invSlot].type, 1);

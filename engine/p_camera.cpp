@@ -1,5 +1,10 @@
 // $Id$
 //
+// $Log$
+// Revision 1.3  2002/12/23 23:15:41  smite-meister
+// Weapon groups, MAPINFO parser added!
+//
+//
 // chasecam (and maybe other cameras) class implementation
 
 #include "doomdef.h"
@@ -17,40 +22,57 @@ consvar_t cv_cam_speed  = {"cam_speed" ,  "0.25",CV_FLOAT,NULL};
 
 short G_ClipAimingPitch(int *aiming);
 
+Camera::Camera()
+{
+  flags = MF_NOBLOCKMAP|MF_NOSECTOR|MF_NOGRAVITY|MF_FLOAT| MF_NOTRIGGER | MF_NOCLIPTHING;
+  flags2 = MF2_SLIDE;
+
+  health = 1000;
+  mass = 10*FRACUNIT;
+  radius = 20*FRACUNIT;
+  height = 16*FRACUNIT;
+
+  x = y = z = 0;
+
+  chase = false;
+}
+
+
 void Camera::ClearCamera()
 {
   if (mp)
-    Remove();
+    mp->DetachActor(this);
 }
 
-void Camera::MoveChaseCamera(Actor *p)
-{
-  fixed_t tx, ty, tz;
 
-  if (p == NULL)
-    I_Error("MoveChaseCamera: no target\n");
+void Camera::Think()
+{
+  if (target == NULL)
+    return;
 
   if (mp == NULL)
-    ResetCamera(p);
+    I_Error("ChaseCamera: no map set\n");
+  //ResetCamera(p);
 
-  angle_t ang = p->angle;
+  angle_t ang = target->angle;
+  fixed_t tx, ty, tz;
 
   // sets ideal cam pos
   fixed_t dist = cv_cam_dist.value;
-  tx = p->x - FixedMul( finecosine[(ang>>ANGLETOFINESHIFT) & FINEMASK], dist);
-  ty = p->y - FixedMul(   finesine[(ang>>ANGLETOFINESHIFT) & FINEMASK], dist);
-  tz = p->z + (cv_viewheight.value << FRACBITS) + cv_cam_height.value;
+  tx = target->x - FixedMul( finecosine[(ang>>ANGLETOFINESHIFT) & FINEMASK], dist);
+  ty = target->y - FixedMul(   finesine[(ang>>ANGLETOFINESHIFT) & FINEMASK], dist);
+  tz = target->z + (cv_viewheight.value << FRACBITS) + cv_cam_height.value;
 
-  // P_PathTraverse ( p->x, p->y, x, y, PT_ADDLINES, PTR_UseTraverse );
+  // P_PathTraverse ( target->x, target->y, x, y, PT_ADDLINES, PTR_UseTraverse );
 
   // move camera down to move under lower ceilings
-  subsector_t *newsubsec = mp->R_IsPointInSubsector((p->x + tx) >> 1, (p->y + ty) >> 1);
+  subsector_t *newsubsec = mp->R_IsPointInSubsector((target->x + tx) >> 1, (target->y + ty) >> 1);
               
   if (!newsubsec)
     {
       // use player sector 
-      if (p->subsector->sector->ceilingheight - height < tz)
-	tz = p->subsector->sector->ceilingheight - height - 11*FRACUNIT;
+      if (target->subsector->sector->ceilingheight - height < tz)
+	tz = target->subsector->sector->ceilingheight - height - 11*FRACUNIT;
       // don't be blocked by a opened door
     }
   else if (newsubsec->sector->ceilingheight - height < tz)
@@ -68,8 +90,8 @@ void Camera::MoveChaseCamera(Actor *p)
   dist = 64 << FRACBITS;
   fixed_t viewpointx, viewpointy;
 
-  viewpointx = p->x + FixedMul( finecosine[(ang>>ANGLETOFINESHIFT) & FINEMASK], dist);
-  viewpointy = p->y + FixedMul( finesine[(ang>>ANGLETOFINESHIFT) & FINEMASK], dist);
+  viewpointx = target->x + FixedMul( finecosine[(ang>>ANGLETOFINESHIFT) & FINEMASK], dist);
+  viewpointy = target->y + FixedMul( finesine[(ang>>ANGLETOFINESHIFT) & FINEMASK], dist);
 
   angle = R_PointToAngle2(tx, ty, viewpointx, viewpointy);
 
@@ -83,12 +105,14 @@ void Camera::MoveChaseCamera(Actor *p)
   f1 = FIXED_TO_FLOAT(viewpointx - x);
   f2 = FIXED_TO_FLOAT(viewpointy - y);
   dist = sqrt(f1*f1+f2*f2)*FRACUNIT;
-  angle = R_PointToAngle2(0, z, dist, p->z + (p->height>>1)
-			  + finesine[(p->aiming>>ANGLETOFINESHIFT) & FINEMASK] * 64);
+  ang = R_PointToAngle2(0, z, dist, target->z + (target->height>>1)
+			+ finesine[(target->aiming>>ANGLETOFINESHIFT) & FINEMASK] * 64);
 
-  G_ClipAimingPitch((int *)&angle);
-  dist = aiming - angle;
+  G_ClipAimingPitch((int *)&ang);
+  dist = aiming - ang;
   aiming -= (dist >> 3);
+
+  Actor::Think();
 }
 
 
@@ -97,27 +121,23 @@ void Camera::MoveChaseCamera(Actor *p)
 // make sure the camera is not outside the world
 // and looks at the thing it is supposed to
 //
-
+// chasecam is reset when 1) target respawns, 2) target teleports, 3) chasecam is first turned on
 void Camera::ResetCamera(Actor *p)
 {
   chase = true;
-
-  flags = MF_NOBLOCKMAP|MF_NOSECTOR|MF_NOGRAVITY|MF_FLOAT| MF_NOTRIGGER | MF_NOCLIPTHING;
-  flags2 = MF2_SLIDE;
-
-  health = 1000;
-  mass = 10*FRACUNIT;
-  radius = 20*FRACUNIT;
-  height = 16*FRACUNIT;
+  target = p;
 
   x = p->x;
   y = p->y;
   z = p->z + (cv_viewheight.value << FRACBITS);
 
-  if (mp == NULL)
+  if (mp != p->mp)
     {
+      if (mp != NULL)
+	ClearCamera();
+
       // add cam to the map
-      p->mp->AddThinker(this);
+      p->mp->SpawnActor(this);
       //cam = p->mp->SpawnActor(x,y,z, MT_CHASECAM);
     }
 

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Portions Copyright (C) 1998-2002 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,50 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:11  hurdler
-// Initial revision
+// Revision 1.2  2002/12/23 23:15:41  smite-meister
+// Weapon groups, MAPINFO parser added!
 //
-// Revision 1.20  2002/09/25 15:17:37  vberghol
-// Intermission fixed?
-//
-// Revision 1.16  2002/09/05 14:12:14  vberghol
-// network code partly bypassed
-//
-// Revision 1.13  2002/08/21 16:58:33  vberghol
-// Version 1.41 Experimental compiles and links!
-//
-// Revision 1.12  2002/08/19 18:30:13  vberghol
-// just netcode to go!
-//
-// Revision 1.11  2002/08/19 18:06:39  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.10  2002/08/17 21:21:51  vberghol
-// Only scripting to be fixed in engine!
-//
-// Revision 1.9  2002/08/13 19:47:43  vberghol
-// p_inter.cpp done
-//
-// Revision 1.8  2002/08/11 17:16:50  vberghol
-// ...
-//
-// Revision 1.7  2002/08/06 13:14:24  vberghol
-// ...
-//
-// Revision 1.6  2002/08/02 20:14:50  vberghol
-// p_enemy.cpp done!
-//
-// Revision 1.5  2002/07/23 19:21:43  vberghol
-// fixed up to p_enemy.cpp
-//
-// Revision 1.4  2002/07/01 21:00:20  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:01:54  vberghol
-// HUD alkaa olla kunnossa
-//
-// Revision 1.39  2001/08/19 20:41:03  hurdler
-// small changes
+// Revision 1.1.1.1  2002/11/16 14:18:11  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.38  2001/08/13 16:27:44  hurdler
 // Added translucency to linedef 300 and colormap to 3d-floors
@@ -1123,7 +1084,7 @@ void Map::GroupLines()
 
 
 // SoM: 6/27: Don't restrict maps to MAPxx/ExMx any more!
-char *levellumps[] =
+static char *levellumps[] =
 {
   "label",        // ML_LABEL,    A separator, name, ExMx or MAPxx
   "THINGS",       // ML_THINGS,   Monsters, items..
@@ -1234,9 +1195,6 @@ bool Map::Setup(tic_t start)
 
   HU_ClearTips();
 
-  if (camera.chase)
-    camera.ClearCamera();
-
   // UNUSED fc.Profile ();
     
   InitThinkers();
@@ -1273,7 +1231,7 @@ bool Map::Setup(tic_t start)
 
   R_ClearColormaps();
 
-  info = new MapInfo;
+  info = new MapInfo; // TODO: delete this in Map destructor...
 #ifdef FRAGGLESCRIPT
   script_camera_on = false;
   T_ClearScripts();
@@ -1337,7 +1295,7 @@ bool Map::Setup(tic_t start)
   //  UNUSED P_ConnectSubsectors ();
 
   // preload graphics
-#ifdef HWRENDER // not win32 only 19990829 by Kin
+#ifdef HWRENDER
   if (rendermode != render_soft)
     {
       HWR_PrepLevelCache (numtextures);

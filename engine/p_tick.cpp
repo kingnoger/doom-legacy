@@ -18,62 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:08  hurdler
-// Initial revision
+// Revision 1.2  2002/12/23 23:15:41  smite-meister
+// Weapon groups, MAPINFO parser added!
 //
-// Revision 1.15  2002/09/08 14:38:06  vberghol
-// Now it works! Sorta.
-//
-// Revision 1.14  2002/09/05 14:12:15  vberghol
-// network code partly bypassed
-//
-// Revision 1.12  2002/08/17 21:21:53  vberghol
-// Only scripting to be fixed in engine!
-//
-// Revision 1.11  2002/08/16 20:49:26  vberghol
-// engine ALMOST done!
-//
-// Revision 1.10  2002/08/11 17:16:50  vberghol
-// ...
-//
-// Revision 1.9  2002/08/06 13:14:25  vberghol
-// ...
-//
-// Revision 1.8  2002/07/23 19:21:44  vberghol
-// fixed up to p_enemy.cpp
-//
-// Revision 1.7  2002/07/18 19:16:38  vberghol
-// renamed a few files
-//
-// Revision 1.6  2002/07/12 19:21:39  vberghol
-// hop
-//
-// Revision 1.5  2002/07/10 19:57:01  vberghol
-// g_pawn.cpp tehty
-//
-// Revision 1.4  2002/07/01 21:00:22  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:01:54  vberghol
-// HUD alkaa olla kunnossa
-//
-// Revision 1.6  2001/01/25 22:15:44  bpereira
-// added heretic support
-//
-// Revision 1.5  2000/11/02 17:50:09  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.4  2000/10/21 08:43:31  bpereira
-// no message
-//
-// Revision 1.3  2000/10/08 13:30:01  bpereira
-// no message
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
+// Revision 1.1.1.1  2002/11/16 14:18:08  hurdler
+// Initial C++ version of Doom Legacy
 //
 //
 // DESCRIPTION:
@@ -138,18 +87,9 @@ void Map::DetachThinker(Thinker *thinker)
 //
 void Map::RemoveThinker(Thinker *thinker)
 {
-  // FIXME: NOP.
   //thinker->function.acv = (actionf_v)(-1);
   thinker->mp = NULL;
 }
-
-
-//
-// P_AllocateThinker
-// Allocates memory and adds a new thinker at the end of the list.
-//
-
-//void P_AllocateThinker (thinker_t *thinker) { }
 
 
 //

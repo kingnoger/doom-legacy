@@ -82,7 +82,9 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
   extralight = 0;
   fixedcolormap = 0;
   invSlot = 0;
-  inventory.resize(1, inventory_t(3,3)); // at least 1 empty slot // FIXME testing
+  inventory.resize(2, inventory_t(3,2)); // at least 1 empty slot
+  //inventory.push_back(inventory_t(4,2)); // FIXME testing
+  //inventory.push_back(inventory_t(3,3));
   flags |= (MF_NOTMONSTER | MF_PICKUP | MF_SHOOTABLE | MF_DROPOFF);
   flags &= ~MF_COUNTKILL;
   // the playerpawn is not a monster. MT_PLAYER might be.
@@ -90,9 +92,11 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
 
   usedown = attackdown = true;  // don't do anything immediately
 
+  weaponinfo = wpnlev1info;
+  maxammo = maxammo1;
+
   if (game.mode == heretic)
     {
-      weaponinfo = wpnlev1info;
       readyweapon = pendingweapon = wp_goldwand;
       weaponowned[wp_staff] = true;
       weaponowned[wp_goldwand] = true;
@@ -100,16 +104,11 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
     }
   else
     {
-      weaponinfo = doomweaponinfo;
       readyweapon = pendingweapon = wp_pistol;
       weaponowned[wp_fist] = true;
       weaponowned[wp_pistol] = true;
       ammo[am_clip] = initial_bullets;
     }
-
-  int i;
-  for (i=0 ; i<NUMAMMO ; i++)
-    maxammo[i] = ::maxammo[i];
 }
 
 
@@ -123,7 +122,6 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
 
 void PlayerPawn::Think()
 {
-  weapontype_t        newweapon;
   int                 waterz;
 
   ticcmd_t* cmd = &player->cmd;
@@ -231,9 +229,32 @@ void PlayerPawn::Think()
       // The actual changing of the weapon is done
       //  when the weapon psprite can do it
       //  (read: not in the middle of an attack).
-      newweapon = weapontype_t((cmd->buttons & BT_WEAPONMASK) >> BT_WEAPONSHIFT);
-      //if (cmd->buttons & BT_EXTRAWEAPON)
-      switch (newweapon)
+      int wg = (cmd->buttons & BT_WEAPONMASK) >> BT_WEAPONSHIFT;
+      weapontype_t newweapon;
+      int i, j;
+      if (weapongroup[readyweapon] == wg)
+	{
+	  for (i=0; i<4; i++) // find next weapon in the group
+	    if (wgroups[wg][i] == readyweapon)
+	      break;
+	  i++;
+	}
+      else
+	i = 0; // choose first weapon in group
+
+      for (j=0; j<4; j++, i++)
+	{
+	  newweapon = wgroups[wg][i%4];
+	  if ((newweapon < NUMWEAPONS) && weaponowned[newweapon])
+	    {
+	      pendingweapon = newweapon;
+	      break;
+	    }
+	}
+
+      /*
+	//if (cmd->buttons & BT_EXTRAWEAPON)
+	switch (newweapon)
 	{
 	case wp_fist:
 	  if (weaponowned[wp_chainsaw] && (readyweapon == wp_fist))
@@ -245,16 +266,13 @@ void PlayerPawn::Think()
 	  break;
 	default:
 	  break;
-	}
+	  }
+      */
 
-      if (weaponowned[newweapon] && (newweapon != readyweapon))
-        {
-	  // Do not go to plasma or BFG in shareware,
-	  //  even if cheated.
-	  if ((newweapon != wp_plasma && newweapon != wp_bfg)
-	      || (game.mode != shareware))
-	    pendingweapon = newweapon;
-        }
+      // Do not go to plasma or BFG in shareware, even if cheated.
+      if ((game.mode == shareware) &&
+	  (pendingweapon == wp_plasma || pendingweapon == wp_bfg))
+	pendingweapon = wp_nochange;
     }
 
   // check for use
@@ -605,10 +623,8 @@ void PlayerPawn::FinishLevel()
     for(i = 0; i < MAXARTECONT; i++)
       UseArtifact(arti_fly);
   memset(powers, 0, sizeof (powers));
-  if (game.mode == heretic)
-    weaponinfo = wpnlev1info;    // cancel power weapons
-  else
-    weaponinfo = doomweaponinfo;
+
+  weaponinfo = wpnlev1info;    // cancel power weapons
   cards = 0;
   flags &= ~MF_SHADOW;         // cancel invisibility
   extralight = 0;                  // cancel gun flashes
@@ -622,10 +638,8 @@ void PlayerPawn::FinishLevel()
   rain1 = NULL; //FIXME! instead rain actor should have an owner playerpawn!
   rain2 = NULL;
 
-  snext = sprev = NULL;
-  
   // save pawn for next level
-  mp->DetachThinker(this);
+  mp->DetachActor(this);
 }
 
 
@@ -653,12 +667,11 @@ void PlayerPawn::UseArtifact(artitype_t arti)
 		    // Used last of a type - compact the artifact list
 		    inventory.erase(i);
 		    // Set position markers and get next readyArtifact
-		    invSlot--;
-		    if (invSlot < 6)
+		    if (--invSlot < 6)
 		      if (--st_curpos < 0) st_curpos = 0;
 		    n = inventory.size();
 		    if (invSlot >= n)
-		      invSlot = inventory.size() - 1; // necessary?
+		      invSlot = n - 1; // necessary?
 		    if (invSlot < 0)
 		      invSlot = 0;
 		  }
@@ -676,8 +689,7 @@ void PlayerPawn::UseArtifact(artitype_t arti)
 	else
 	  { // Unable to use artifact, advance pointer
 	    n = inventory.size();
-	    invSlot--;
-	    if (invSlot < 6)
+	    if (--invSlot < 6)
 	      if (--st_curpos < 0) st_curpos = 0;
 	      
 	    if (invSlot < 0)

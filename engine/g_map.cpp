@@ -44,6 +44,20 @@ Map::~Map()
 //
 
 
+void Map::SpawnActor(Actor *p)
+{
+  // AddThinker sets Map *mp
+  AddThinker(p);
+  // set subsector and/or block links
+  p->SetPosition();
+}
+
+void Map::DetachActor(Actor *p)
+{
+  p->UnsetPosition();
+  DetachThinker(p);
+}
+
 
 // was P_SpawnSplash
 //
@@ -236,9 +250,6 @@ DActor *Map::SpawnBlood(fixed_t x, fixed_t y, fixed_t z, int damage)
 
 void Map::SpawnSmoke(fixed_t x, fixed_t y, fixed_t z)
 {
-  if (game.demoversion < 125)
-    return;
-
   x = x - ((P_Random()&8) * FRACUNIT) - 4*FRACUNIT;
   y = y - ((P_Random()&8) * FRACUNIT) - 4*FRACUNIT;
   z += (P_Random()&3) * FRACUNIT;

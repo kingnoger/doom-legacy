@@ -18,74 +18,14 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/23 23:15:41  smite-meister
+// Weapon groups, MAPINFO parser added!
+//
 // Revision 1.2  2002/12/16 22:12:03  smite-meister
 // Actor/DActor separation done!
 //
 // Revision 1.1.1.1  2002/11/16 14:18:04  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.17  2002/09/20 22:41:33  vberghol
-// Sound system rewritten! And it workscvs update
-//
-// Revision 1.16  2002/09/05 14:12:15  vberghol
-// network code partly bypassed
-//
-// Revision 1.14  2002/08/25 18:22:00  vberghol
-// little fixes
-//
-// Revision 1.13  2002/08/20 13:56:59  vberghol
-// sdfgsd
-//
-// Revision 1.12  2002/08/17 21:21:53  vberghol
-// Only scripting to be fixed in engine!
-//
-// Revision 1.11  2002/08/11 17:16:50  vberghol
-// ...
-//
-// Revision 1.10  2002/08/08 12:01:29  vberghol
-// pian engine on valmis!
-//
-// Revision 1.9  2002/08/06 13:14:25  vberghol
-// ...
-//
-// Revision 1.8  2002/07/23 19:21:44  vberghol
-// fixed up to p_enemy.cpp
-//
-// Revision 1.7  2002/07/10 19:57:02  vberghol
-// g_pawn.cpp tehty
-//
-// Revision 1.6  2002/07/08 20:46:33  vberghol
-// More files compile!
-//
-// Revision 1.5  2002/07/04 18:02:26  vberghol
-// Pientä fiksausta, g_pawn.cpp uusi tiedosto
-//
-// Revision 1.4  2002/07/01 21:00:22  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:01:54  vberghol
-// HUD alkaa olla kunnossa
-//
-// Revision 1.15  2001/05/27 13:42:48  bpereira
-// no message
-//
-// Revision 1.14  2001/04/04 20:24:21  judgecutor
-// Added support for the 3D Sound
-//
-// Revision 1.11  2001/01/25 22:15:44  bpereira
-// added heretic support
-//
-// Revision 1.10  2000/11/04 16:23:43  bpereira
-// no message
-//
-// Revision 1.9  2000/11/02 17:50:09  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //
 // DESCRIPTION:
