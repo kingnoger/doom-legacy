@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/01/02 14:25:01  smite-meister
+// cleanup
+//
 // Revision 1.12  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -69,11 +72,9 @@
 #include "m_random.h"
 #include "p_maputl.h"
 #include "r_state.h"
-#include "s_sound.h"
-#include "sounds.h"
 #include "r_main.h"
+#include "sounds.h"
 
-// was P_Teleport
 
 bool Actor::Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent)
 {

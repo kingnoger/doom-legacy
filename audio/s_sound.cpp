@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2004/01/02 14:25:01  smite-meister
+// cleanup
+//
 // Revision 1.19  2003/12/31 18:32:49  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -142,25 +145,20 @@ consvar_t  play_mode = {"play_mode","0",CV_SAVE,CV_Unsigned};
 #endif
 */
 
-
-consvar_t stereoreverse = {"stereoreverse","0",CV_SAVE ,CV_OnOff};
-
-// if true, all sounds are loaded at game startup
-consvar_t precachesound = {"precachesound","0",CV_SAVE ,CV_OnOff};
-
-// general sound & music volumes, saved into the config
 CV_PossibleValue_t soundvolume_cons_t[]={{0,"MIN"},{31,"MAX"},{0,NULL}};
 consvar_t cv_soundvolume = {"soundvolume","15",CV_SAVE,soundvolume_cons_t};
 consvar_t cv_musicvolume = {"musicvolume","15",CV_SAVE,soundvolume_cons_t};
-
 consvar_t cv_numChannels = {"snd_channels","16",CV_SAVE, CV_Unsigned};
 consvar_t cv_surround = {"surround", "0", CV_SAVE, CV_OnOff};
+consvar_t cv_stereoreverse = {"stereoreverse","0",CV_SAVE ,CV_OnOff};
+consvar_t cv_precachesound = {"precachesound","0",CV_SAVE ,CV_OnOff};
+
 
 
 #define SURROUND_SEP            -128
 #define S_STEREO_SWING          (96*0x10000)
 
-bool  nomusic, nosound;    
+bool  nomusic = false, nosound = false;
 
 SoundSystem S;
 
@@ -179,7 +177,9 @@ public:
   inline sounditem_t *Get(const char *p) { return (sounditem_t *)Cache(p); };
 };
 
+
 static soundcache_t sc(PU_SOUND);
+
 
 soundcache_t::soundcache_t(memtag_t tag)
   : L2cache_t(tag)
@@ -198,7 +198,6 @@ cacheitem_t *soundcache_t::Load(const char *p, cacheitem_t *r)
   if (t == NULL)
     t = new sounditem_t;
 
-  CONS_Printf(" Sound: %s  |  ", p);
   t->lumpnum = lump;
   t->data = fc.CacheLumpNum(lump, tagtype);
   int size = fc.LumpLength(lump);
@@ -206,8 +205,8 @@ cacheitem_t *soundcache_t::Load(const char *p, cacheitem_t *r)
   doomsfx_t *ds = (doomsfx_t *)t->data;
   // TODO: endianness conversion
 
-  CONS_Printf("m = %d, r = %d, s = %d, z = %d, length = %d\n",
-	      ds->magic, ds->rate, ds->samples, ds->zero, size);
+  CONS_Printf(" Sound '%s', s = %d\n", p, ds->samples);
+  //CONS_Printf("m = %d, r = %d, s = %d, z = %d, length = %d\n", ds->magic, ds->rate, ds->samples, ds->zero, size);
 
   t->length = size - 8;  // 8 byte header
   t->sdata = &ds->data;
@@ -221,6 +220,23 @@ void soundcache_t::Free(cacheitem_t *r)
   sounditem_t *t = (sounditem_t *)r;
   if (t->data)
     Z_ChangeTag(t->data, PU_CACHE);
+}
+
+
+//===========================================================
+//  Utilities
+//===========================================================
+
+
+void S_PrecacheSounds()
+{
+  // Initialize external data (all sounds) at start, keep static.
+  CONS_Printf("Precaching sounds... ");
+  soundID_iter_t i;
+  for (i = SoundID.begin(); i != SoundID.end(); i++)
+    sc.Cache((*i).second->lumpname); // one extra reference => never released
+
+  CONS_Printf("done.\n");
 }
 
 
@@ -327,7 +343,7 @@ int channel_t::Adjust(Actor *l)
       // stereo separation
       sep = 128 - (FixedMul(S_STEREO_SWING,finesine[angle])>>FRACBITS);
 
-      if (stereoreverse.value)
+      if (cv_stereoreverse.value)
 	sep = (~sep) & 255;
     }
 
@@ -367,8 +383,8 @@ SoundSystem::SoundSystem()
 // allocates channel buffer, sets S_sfx lookup.
 void SoundSystem::Startup()
 {
-  CV_RegisterVar(&stereoreverse);
-  CV_RegisterVar(&precachesound);
+  CV_RegisterVar(&cv_stereoreverse);
+  CV_RegisterVar(&cv_precachesound);
   CV_RegisterVar(&cv_surround);
 
   CV_RegisterVar(&cv_soundvolume);
@@ -377,6 +393,9 @@ void SoundSystem::Startup()
 
   CV_RegisterVar(&cd_volume);
   //CV_RegisterVar(&cdUpdate);
+
+  if (M_CheckParm("-precachesound"))
+    CV_Set(&cv_precachesound, "1");
 
 #ifdef LINUX_X11
   CV_RegisterVar(&cv_jigglecdvol);
@@ -389,7 +408,6 @@ void SoundSystem::Startup()
   CV_RegisterVar(&musserver_cmd);
   CV_RegisterVar(&musserver_arg);
 #endif
-
 #ifdef __MACOS__        //mp3 playlist stuff
   {
     int i;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2004/01/02 14:25:02  smite-meister
+// cleanup
+//
 // Revision 1.16  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -314,17 +317,14 @@ public:
   byte	special; // special type
   byte	args[5]; // special arguments
 
-  // Owner of this Actor. For example, for missiles this is the shooter.
-  Actor *owner;
+  Actor *owner; // Owner of this Actor. For example, for missiles this is the shooter.
+  Actor *target;  // Thing being chased/attacked (or NULL), also the target for missiles.
 
-  // Thing being chased/attacked (or NULL), also the target for missiles.
-  Actor *target;
-
-  // Reaction time: if non 0, don't attack yet.
-  // Used by player to freeze a bit after teleporting.
-  int  reactiontime;
+  int reactiontime; // time (in tics) before the thing can attack or move again
 
   fixed_t floorclip; // cut this amount from legs (deep water illusion) (Hexen)
+
+  short team; // see g_team.h
 
 public:
   virtual thinkertype_e Type() {return tt_actor;}; // "name-tag" function

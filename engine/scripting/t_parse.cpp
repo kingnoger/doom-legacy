@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.3  2004/01/02 14:25:02  smite-meister
+// cleanup
+//
 // Revision 1.2  2003/02/23 22:49:31  smite-meister
 // FS is back! L2 cache works.
 //
@@ -45,7 +48,6 @@
 #include "doomdef.h"
 #include "doomtype.h"
 #include "command.h"
-#include "s_sound.h"
 #include "sounds.h"
 #include "z_zone.h"
 

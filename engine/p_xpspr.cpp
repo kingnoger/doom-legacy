@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/01/02 14:25:02  smite-meister
+// cleanup
+//
 // Revision 1.7  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -63,7 +66,6 @@
 #include "screen.h" // palettes
 #include "hu_stuff.h"
 
-#include "s_sound.h"
 #include "sounds.h"
 #include "tables.h"
 

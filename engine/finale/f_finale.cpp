@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/01/02 14:25:02  smite-meister
+// cleanup
+//
 // Revision 1.12  2003/12/03 10:49:50  smite-meister
 // Save/load bugfix, text strings updated
 //
@@ -41,22 +44,21 @@
 #include "dstrings.h"
 #include "d_main.h"
 #include "g_game.h"
+#include "g_level.h"
 #include "hu_stuff.h"
 
 #include "r_state.h" // sprites array
 #include "r_sprite.h"
 #include "info.h"
-#include "p_pspr.h"
 
-#include "s_sound.h"
 #include "sounds.h"
-#include "i_video.h"
+#include "s_sound.h"
+
 #include "v_video.h"
 #include "w_wad.h"
 #include "z_zone.h"
 
-#include "g_level.h"
-//#include "p_info.h"
+
 
 void  F_TextInit(int dummy);
 void  F_TextTicker();

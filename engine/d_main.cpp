@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2004/01/02 14:25:01  smite-meister
+// cleanup
+//
 // Revision 1.22  2003/12/03 10:49:49  smite-meister
 // Save/load bugfix, text strings updated
 //
@@ -177,12 +180,10 @@
 #include "m_menu.h"
 #include "m_misc.h" // configfile
 
-#include "p_fab.h"
-
 #include "r_local.h"
 
-#include "s_sound.h"
 #include "sounds.h"
+#include "s_sound.h"
 #include "t_script.h"
 #include "v_video.h"
 
@@ -192,14 +193,11 @@
 #include "z_zone.h"
 #include "d_main.h"
 #include "p_heretic.h"
-#include "m_cheat.h"
+
 
 #ifdef HWRENDER
 # include "hardware/hw_main.h"   // 3D View Rendering
 #endif
-
-#include "hardware/hw3sound.h"
-
 
 
 bool dedicated;

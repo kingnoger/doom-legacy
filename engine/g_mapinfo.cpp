@@ -22,6 +22,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.11  2004/01/02 14:25:01  smite-meister
+// cleanup
+//
 // Revision 1.10  2003/12/31 18:32:49  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -269,7 +272,7 @@ bool MapInfo::HubSave()
   me->Serialize(a);
 
   byte *buffer;
-  unsigned length = a.Compress(&buffer, 0);
+  unsigned length = a.Compress(&buffer, 1);
 
   FIL_WriteFile(savename.c_str(), buffer, length);
   CONS_Printf("done. %d bytes written.\n", length);

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2004/01/02 14:25:01  smite-meister
+// cleanup
+//
 // Revision 1.17  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -89,7 +92,6 @@
 #include "p_camera.h"
 
 #include "r_sprite.h"
-#include "s_sound.h"
 #include "sounds.h"
 #include "m_random.h"
 #include "tables.h"
@@ -495,14 +497,14 @@ bool P_UseArtifact(PlayerPawn *p, artitype_t arti)
 	  mo = p->mp->SpawnDActor(p->x, p->y, p->z - p->floorclip + 35*FRACUNIT, MT_THROWINGBOMB);
 	  if (mo)
 	    {
-	      float sp = mo->info->speed;
+	      mo->owner = p;
 	      mo->angle = p->angle + (((P_Random() & 7)-4) << 24);
-	      ang = mo->angle >> ANGLETOFINESHIFT;
+	      ang = p->aiming >> ANGLETOFINESHIFT;
+	      float sp = mo->info->speed;
 	      mo->Thrust(mo->angle, int(sp * finecosine[ang]));
 	      mo->pz = 4*FRACUNIT + int(sp * finesine[ang]);
 	      mo->px += p->px >> 1;
 	      mo->py += p->py >> 1;
-	      mo->owner = p;
 	      mo->tics -= P_Random() & 3;
 	      mo->CheckMissileSpawn();
 	    }

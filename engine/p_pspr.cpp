@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/01/02 14:25:01  smite-meister
+// cleanup
+//
 // Revision 1.13  2003/12/13 23:51:03  smite-meister
 // Hexen update
 //
@@ -81,7 +84,6 @@
 #include "p_maputl.h"
 
 #include "r_sprite.h"
-#include "s_sound.h"
 #include "sounds.h"
 #include "r_main.h"
 #include "m_random.h"

@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.4  2004/01/02 14:25:02  smite-meister
+// cleanup
+//
 // Revision 1.3  2003/12/06 23:57:47  smite-meister
 // save-related bugfixes
 //
@@ -61,6 +64,7 @@ public:
   int color;
   int score;
   // team flag/symbol ?
+  int resources; // number of men left etc.
 
   TeamInfo();
   int  Serialize(class LArchive &a);

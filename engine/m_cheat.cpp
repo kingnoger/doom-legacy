@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2004/01/02 14:25:01  smite-meister
+// cleanup
+//
 // Revision 1.15  2003/12/18 11:57:31  smite-meister
 // fixes / new bugs revealed
 //
@@ -75,16 +78,16 @@
 #include "g_game.h"
 #include "g_map.h"
 #include "g_player.h"
+#include "g_pawn.h"
+
 #include "d_event.h"
 
-#include "m_cheat.h"
 #include "am_map.h"
+//#include "hu_stuff.h"
 #include "i_sound.h" // for I_PlayCD()
 #include "sounds.h"
-#include "s_sound.h"
-#include "hu_stuff.h"
 #include "w_wad.h"
-#include "g_pawn.h"
+
 
 // ==========================================================================
 //                             CHEAT Structures
@@ -1101,13 +1104,13 @@ static void CheatIDKFAFunc(PlayerPawn *p, const byte *arg)
       p->armorpoints[0] = idkfa_armor;
       p->armorfactor[0] = 0.5;
 
-      for (i=0;i<wp_heretic;i++)
+      for (i = wp_doom; i < wp_heretic; i++)
 	p->weaponowned[i] = true;
 
       if (game.mode != gm_doom2)
 	p->weaponowned[wp_supershotgun] = false;
 
-      for (i=0;i<am_heretic;i++)
+      for (i = am_doom; i < am_heretic; i++)
 	p->ammo[i] = p->maxammo[i];
 
       p->keycards = it_allkeys;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2004/01/02 14:25:01  smite-meister
+// cleanup
+//
 // Revision 1.16  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -111,7 +114,6 @@
 #include "g_player.h"
 
 #include "r_main.h"
-#include "s_sound.h"
 #include "sounds.h"
 #include "m_random.h"
 #include "p_maputl.h"
@@ -670,8 +672,6 @@ void DActor::P_NewChaseDir()
 
 
 
-//
-// was P_LookForPlayers
 // If allaround is false, only look 180 degrees in front.
 // Returns true if a player is targeted.
 //
@@ -2099,7 +2099,6 @@ void A_PlayerScream(DActor *actor)
 {
   // Default death sound.
   int sound = 0, i = 0;
-  S.Stop3DSound(actor);
 
   // Handle the different player death screams
   /*

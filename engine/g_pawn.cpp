@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.26  2004/01/02 14:25:01  smite-meister
+// cleanup
+//
 // Revision 1.25  2003/12/31 18:32:49  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -86,7 +89,6 @@
 #include "p_camera.h" // camera
 #include "p_spec.h"
 
-#include "s_sound.h"
 #include "sounds.h"
 #include "hardware/hw3sound.h" // ugh.
 #include "hu_stuff.h" // HUD
@@ -811,14 +813,13 @@ void PlayerPawn::UseArtifact(artitype_t arti)
   int n;
   vector<inventory_t>::iterator i;
 
-  CONS_Printf("USING arti %d\n", arti);
   for(i = inventory.begin(); i < inventory.end(); i++) 
     if (i->type == arti)
-      { // Found match - try to use
-	CONS_Printf("USING 2\n");
+      {
+	// Found match - try to use
 	if (P_UseArtifact(this, arti))
-	  { // Artifact was used - remove it from inventory
-	    CONS_Printf("USING 3\n");
+	  {
+	    // Artifact was used - remove it from inventory
 	    if (--(i->count) == 0)
 	      {
 		if (inventory.size() > 1)

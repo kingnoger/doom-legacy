@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2004/01/02 14:25:01  smite-meister
+// cleanup
+//
 // Revision 1.15  2003/12/31 18:32:49  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -817,8 +820,8 @@ static byte def_priority = 64;
 static int  def_pitch = 128;
 
 // Sound mappings
-static  map<const char*, sfxinfo_t*, less_cstring> SoundInfo; // tag => sound
-static  map<int, sfxinfo_t*> SoundID;  // ID-number => sound
+map<const char*, sfxinfo_t*, less_cstring> SoundInfo; // tag => sound
+map<int, sfxinfo_t*> SoundID;  // ID-number => sound
 
 typedef map<const char*, sfxinfo_t*, less_cstring>::iterator sound_iter_t;
 typedef map<int, sfxinfo_t*>::iterator soundID_iter_t;
@@ -860,21 +863,6 @@ void S_ClearSounds()
   def_multi = 0;
   def_priority = 64;
   def_pitch = 128;
-}
-
-
-void S_PrecacheSounds()
-{
-  // Initialize external data (all sounds) at start, keep static.
-  CONS_Printf("Precaching sounds... "); // TODO
-      /*
-      for (int i=1 ; i<NUMSFX ; i++)
-        {
-	  if (S_sfx[i].lumpname)
-	    sc.Cache(S_sfx[i].lumpname); // one extra reference => never released
-        }
-      */
-  CONS_Printf(" pre-cached all sound data\n");
 }
 
 
@@ -1002,7 +990,7 @@ int S_Read_SNDINFO(int lump)
 	  else
 	    info = (*t).second;
 
-	  CONS_Printf("  sound '%s'", tag);
+	  //CONS_Printf("  sound '%s'", tag);
 
 	  if (!(n = p.GetString(tag, 30)))
 	    {
@@ -1015,7 +1003,7 @@ int S_Read_SNDINFO(int lump)
 	    {
 	      // alias (hence no sound lumpname may be a plain "=")
 	      p.GetString(tag, S_TAGLEN);
-	      CONS_Printf(" alias '%s', #%d\n", tag, info->number);
+	      //CONS_Printf(" alias '%s', #%d\n", tag, info->number);
 
 	      sfxinfo_t *al;
 	      t = SoundInfo.find(tag); // is the alias already there?
@@ -1039,7 +1027,7 @@ int S_Read_SNDINFO(int lump)
 	      // lumpname
 	      if (n > 8)
 		CONS_Printf("Warning: Long lumpname '%s'\n", tag);
-	      CONS_Printf(" => '%s', #%d\n", tag, info->number);
+	      //CONS_Printf(" => '%s', #%d\n", tag, info->number);
 	      //strupr(tag);
 	      strncpy(info->lumpname, tag, 8);
 	    }

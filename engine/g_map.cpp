@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.31  2004/01/02 14:25:01  smite-meister
+// cleanup
+//
 // Revision 1.30  2003/12/31 18:32:49  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -509,6 +512,7 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
     {
       p = new PlayerPawn(nx, ny, nz, pi->ptype);
       p->player = pi;
+      p->team = pi->team;
       pi->pawn  = p;
       CONS_Printf("-- new pawn, health == %d\n", p->health);
     }

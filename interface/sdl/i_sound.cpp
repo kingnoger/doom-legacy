@@ -16,6 +16,9 @@
 // for more details.
 //
 // $Log$
+// Revision 1.13  2004/01/02 14:25:02  smite-meister
+// cleanup
+//
 // Revision 1.12  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -452,8 +455,6 @@ void I_StartupSound()
     return;
 
   // Configure sound device
-  CONS_Printf("I_StartupSound()\n");
-
   if (SDL_Init(SDL_INIT_AUDIO) < 0)
     {
       CONS_Printf("Couldn't initialize SDL Audio: %s\n",SDL_GetError());

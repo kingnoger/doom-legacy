@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/01/02 14:25:01  smite-meister
+// cleanup
+//
 // Revision 1.11  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -68,7 +71,6 @@
 #include "g_map.h"
 
 #include "p_spec.h"
-#include "s_sound.h"
 #include "sounds.h"
 #include "r_main.h"
 #include "r_data.h"

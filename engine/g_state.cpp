@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.27  2004/01/02 14:25:01  smite-meister
+// cleanup
+//
 // Revision 1.26  2003/12/31 18:32:49  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -114,8 +117,8 @@
 #include "m_menu.h"
 #include "am_map.h"
 
-#include "s_sound.h"
 #include "sounds.h"
+#include "s_sound.h"
 
 #include "f_finale.h"
 #include "d_netcmd.h"
@@ -643,19 +646,17 @@ bool GameInfo::DeferredNewGame(skill_t sk, bool splitscreen)
   extern bool nosound;
   if (!nosound)
     {
-      S_ClearSounds();
+      //S_ClearSounds();
       int n = fc.Size();
-      for (int i = 0; i < n; i++)
+      for (int i = 1; i < n; i++)
 	{
 	  // cumulative reading
 	  S_Read_SNDINFO(fc.FindNumForNameFile("SNDINFO", i));
 	  S_Read_SNDSEQ(fc.FindNumForNameFile("SNDSEQ", i));
 	}
 
-      /*
-      if (M_CheckParm("-precachesound") || cv_precachesound.value))
+      if (cv_precachesound.value)
 	S_PrecacheSounds();
-      */
     }
 
   Downgrade(VERSION);

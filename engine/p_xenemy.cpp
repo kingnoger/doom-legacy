@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/01/02 14:25:02  smite-meister
+// cleanup
+//
 // Revision 1.11  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -72,7 +75,6 @@
 
 #include "r_main.h"
 #include "sounds.h"
-#include "s_sound.h"
 #include "tables.h"
 
 extern consvar_t  cv_deathmatch;

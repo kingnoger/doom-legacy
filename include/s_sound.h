@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/01/02 14:25:02  smite-meister
+// cleanup
+//
 // Revision 1.8  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -55,6 +58,7 @@
 
 #include <vector>
 #include <string>
+#include <map>
 #include "m_fixed.h"
 #include "z_cache.h"
 
@@ -63,12 +67,13 @@ using namespace std;
 struct consvar_t;
 struct CV_PossibleValue_t;
 
-extern consvar_t stereoreverse;
+extern consvar_t cv_stereoreverse;
+extern consvar_t cv_precachesound;
 extern consvar_t cv_soundvolume;
 extern consvar_t cv_musicvolume;
 extern consvar_t cv_numChannels;
 extern consvar_t cd_volume;
-extern consvar_t cdUpdate;
+//extern consvar_t cv_cdUpdate;
 extern CV_PossibleValue_t soundvolume_cons_t[];
 
 
@@ -130,6 +135,20 @@ public:
 };
 
 
+// for sound cache
+class sounditem_t : public cacheitem_t
+{
+  friend class soundcache_t;
+protected:
+  int   lumpnum; // lump number of data
+
+public:
+  void *data;    // unconverted data
+  int   length;  // in bytes
+  void *sdata;   // raw converted sound data
+};
+
+
 // defines a 3D sound source. We can't just use an Actor* because of
 // sounds originating from mappoint_t's. A bit clumsy but works.
 struct soundsource_t
@@ -148,19 +167,6 @@ public:
 };
 
 
-class sounditem_t : public cacheitem_t
-{
-  friend class soundcache_t;
-protected:
-  int   lumpnum; // lump number of data
-
-public:
-  void *data;    // unconverted data
-  int   length;  // in bytes
-  void *sdata;   // raw converted sound data
-};
-
-
 // normal "static" mono(stereo) sound channel
 struct channel_t
 {
@@ -173,7 +179,7 @@ struct channel_t
   int opitch;
   int osep; // left/right x^2 separation. 128 is front, 0 is totally left, 256 is totally right
 
-  sounditem_t *si;
+  class sounditem_t *si;
 
   bool playing;
   soundsource_t source;  // origin of sound (or NULL)
@@ -240,6 +246,8 @@ public:
 
 extern SoundSystem S;
 
+extern  map<int, sfxinfo_t*> SoundID;  // ID-number => sound
+typedef map<int, sfxinfo_t*>::iterator soundID_iter_t;
 
 
 #endif

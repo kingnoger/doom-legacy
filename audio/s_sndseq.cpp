@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/01/02 14:25:01  smite-meister
+// cleanup
+//
 // Revision 1.6  2003/12/31 18:32:49  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -221,7 +224,7 @@ int S_Read_SNDSEQ(int lump)
 			  hseq = i;
 			}
 		    }
-		  CONS_Printf(" starting seq %d, '%s'\n", temp.number, temp.name.c_str());
+		  //CONS_Printf(" starting seq %d, '%s'\n", temp.number, temp.name.c_str());
 		}
 	    }
 	  else if (temp.number >= 0)
@@ -298,7 +301,7 @@ int S_Read_SNDSEQ(int lump)
 		ss = new sndseq_t(temp); // make a copy
 		SoundSeqs[ss->number] = ss; // insert into the map
 
-		CONS_Printf(" seq %d done\n", ss->number);
+		//CONS_Printf(" seq %d done\n", ss->number);
 
 		if (hseq >= 0)
 		  { // other half of the Hexen kludge:
@@ -309,7 +312,7 @@ int S_Read_SNDSEQ(int lump)
 			  ss = new sndseq_t(temp);
 			  ss->number = HexenSeqs[hseq].seq[n];
 			  SoundSeqs[ss->number] = ss;
-			  CONS_Printf(" seq %d done\n", ss->number);
+			  //CONS_Printf(" seq %d done\n", ss->number);
 			}
 		    
 		    hseq = -1;

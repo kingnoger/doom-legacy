@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/01/02 14:25:02  smite-meister
+// cleanup
+//
 // Revision 1.11  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -72,7 +75,6 @@
 #include "r_state.h" // colormap etc.
 #include "d_netcmd.h" // cvars
 
-#include "s_sound.h"
 #include "sounds.h"
 #include "i_video.h"
 #include "v_video.h"

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2004/01/02 14:25:02  smite-meister
+// cleanup
+//
 // Revision 1.15  2003/12/09 01:02:01  smite-meister
 // Hexen mapchange works, keycodes fixed
 //
@@ -1321,6 +1324,10 @@ void HUD::CreateHexenWidgets()
   h = new HudNumber(st_x+275, st_y+42, &mainbaron, 3, &st_armor, PatchINum);
   widgets.push_back(h);
 
+  // inventory system
+  h = new HudInventory(st_x+38, st_y, &statusbaron, &invopen, &itemuse, st_invslots, &st_curpos,
+		       false, PatchSNum, PatchARTI, Patch_InvBar);
+  widgets.push_back(h);
 
   // TODO Weapon Pieces
   // TODO entire Keybar (in map screen, keys and armor pieces)
