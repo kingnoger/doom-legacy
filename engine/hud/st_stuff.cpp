@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:14  hurdler
-// Initial revision
+// Revision 1.2  2002/12/03 10:20:08  smite-meister
+// HUD rationalized
 //
 // Revision 1.18  2002/09/25 15:17:39  vberghol
 // Intermission fixed?
@@ -161,11 +161,8 @@
 # include "hardware/hw_main.h"
 #endif
 
-
-//
-// STATUS BAR DATA
-//
-
+// buffer for drawing status bar
+int fgbuffer = FG;
 
 // Palette indices.
 // For damage/bonus red-/gold-shifts
@@ -273,118 +270,70 @@
 //#define ST_MAPHEIGHT            1
 
 
-// used for making messages go away
-static int              st_msgcounter=0;
 
-// used when in chat
-static st_chatstateenum_t       st_chatstate;
+//==================================
+//  Legacy status bar overlay
+//
 
-// whether status bar chat is active
-static bool          st_chat;
+static patch_t *sbohealth;
+static patch_t *sbofrags;
+static patch_t *sboarmor;
+static patch_t *sboammo[NUMWEAPONS];
 
-// value of st_chat before message popped up
-static bool          st_oldchat;
-
-// whether chat window has the cursor on
-static bool          st_cursoron;
-
-// !deathmatch
-static bool          st_notdeathmatch;
-
-// !deathmatch && st_statusbaron
-static bool          st_armson;
-
-// !deathmatch
-static bool          st_fragson;
-
-
-// "STTNUM0", large, minus is base-1, '%' is base+10
-// 0-9, tall numbers
-static patch_t* tallnum[11];
+//==================================
+// Doom status bar graphics
+//
 
 // doom.wad number sets:
-// "AMMNUM0", small numbers
+// "AMMNUM0", small, thin, gray, no minus
 // "WINUM0", large, minus is base-2, '%' is base-1
 
-// tall % sign
-static patch_t* tallpercent;
+// "STTNUM0", large, red, minus is base-1, '%' is base+10
+static patch_t *tallnum[11]; // 0-9, tall numbers, STTMINUS
+static patch_t *tallpercent; // tall % sign
 
-// "STYSNUM0", small
-// 0-9, short, yellow (,different!) numbers
-static patch_t* shortnum[11];
+// "STYSNUM0", small, yellow, no minus
+static patch_t *shortnum[11];
 
-// 3 key-cards, 3 skulls
-static patch_t* keys[NUMCARDS];
+// "STGNUM0", small, dark gray, no minus
+static patch_t *PatchArms[6][2]; // weapon ownership patches
 
-// face status patches
-static patch_t* faces[ST_NUMFACES];
+static patch_t *PatchArmsBack; // arms background
+static patch_t *PatchFaces[ST_NUMFACES]; // marine face patches
+static patch_t *PatchFaceBack; // face background
 
-// face background
-static patch_t*         faceback;
-
- // main bar right
-static patch_t*         armsbg;
-
-// "SGTNUM0", small
-// weapon ownership patches
-static patch_t* arms[6][2];
-
-
- // number of frags so far in deathmatch
-static int      st_fragscount;
-
-// used for evil grin
-static bool  oldweaponsowned[NUMWEAPONS];
-
- // count until face changes
-static int      st_facecount = 0;
-
-// current face index, used by w_faces
-static int      st_faceindex = 0;
-
-// holds key-type for each key box on bar
-static int      keyboxes[6];
-
-int fgbuffer = FG;
-
-// ------------------------------------------
-//             status bar overlay
-// ------------------------------------------
-
-// icons for overlay
-static   int   sbohealth;
-static   int   sbofrags;
-static   int   sboarmor;
-static   int   sboammo[NUMWEAPONS];
-
-
-//
-// STATUS BAR DATA
-//
-
+static patch_t *PatchKeys[NUMCARDS]; // 3 key-cards, 3 skulls
 static patch_t *PatchSTATBAR;
+
+//==================================
+// Heretic status bar graphics
+//
+
+static patch_t *PatchGod[2];
 static patch_t *PatchBARBACK;
 static patch_t *PatchLTFCTOP;
 static patch_t *PatchRTFCTOP;
 static patch_t *PatchARMCLEAR;
 //static patch_t *PatchBLACKSQ;
 
-patch_t *PatchGod[2];
-patch_t *Patch_ChainSlider[5];
-patch_t *Patch_InvBar[13];
-patch_t *PatchARTI[11];
+static patch_t *Patch_InvBar[13];
+static patch_t *PatchARTI[11];
+static patch_t *PatchAmmoPic[7];
+static patch_t *Patch_ChainSlider[5];
+
 // numbers
 patch_t *PatchSmNum[11];
 patch_t *PatchINum[11];
 patch_t *PatchBNum[11];
 
-patch_t *PatchAmmoPic[7];
-
 int playpalette;
-int spinbooklump;
+int spinbooklump; // frames 0-15
 int spinflylump;
 
-void ST_LoadHereticData()
+patch_t *PatchFlight[16];
+patch_t *PatchBook[16];
+
+static void ST_LoadHereticData()
 {
   const char patcharti[11][10] =
   {
@@ -402,7 +351,6 @@ void ST_LoadHereticData()
   };
 
   // small ammopics
-
   const char ammopic[7][10] =
   {
     {"BLACKSQ"}, // no ammopic for fists
@@ -417,13 +365,20 @@ void ST_LoadHereticData()
   int i;
   int startLump;
 
-
   // gargoyle eyes
   PatchGod[0] = fc.CachePatchName("GOD1", PU_STATIC);
   PatchGod[1] = fc.CachePatchName("GOD2", PU_STATIC);
-  
-  // ammo pics
-  for (i=0; i < 7; i++) PatchAmmoPic[i] = fc.CachePatchName(ammopic[i], PU_STATIC);
+
+  PatchBARBACK = fc.CachePatchName("BARBACK", PU_STATIC);
+
+  if (cv_deathmatch.value)
+    PatchSTATBAR = fc.CachePatchName("STATBAR", PU_STATIC);
+  else
+    PatchSTATBAR = fc.CachePatchName("LIFEBAR", PU_STATIC);
+
+  PatchLTFCTOP = fc.CachePatchName("LTFCTOP", PU_STATIC);
+  PatchRTFCTOP = fc.CachePatchName("RTFCTOP", PU_STATIC);
+  PatchARMCLEAR  = fc.CachePatchName("ARMCLEAR", PU_STATIC);
 
   // inventory bar pics
   Patch_InvBar[0] = fc.CachePatchName("INVBAR", PU_STATIC); 
@@ -442,21 +397,13 @@ void ST_LoadHereticData()
   // artifact inventory pics
   for (i=0; i < 11; i++) PatchARTI[i] = fc.CachePatchName(patcharti[i], PU_STATIC);
 
-  PatchBARBACK = fc.CachePatchName("BARBACK", PU_STATIC);
-
-  if (cv_deathmatch.value)
-    PatchSTATBAR = fc.CachePatchName("STATBAR", PU_STATIC);
-  else
-    PatchSTATBAR = fc.CachePatchName("LIFEBAR", PU_STATIC);
+  // ammo pics
+  for (i=0; i < 7; i++) PatchAmmoPic[i] = fc.CachePatchName(ammopic[i], PU_STATIC);
 
   // keys
-  keys[0] = keys[3] = fc.CachePatchName("BKEYICON", PU_STATIC);
-  keys[1] = keys[4] = fc.CachePatchName("YKEYICON", PU_STATIC);
-  keys[2] = keys[5] = fc.CachePatchName("GKEYICON", PU_STATIC);
-
-  PatchLTFCTOP = fc.CachePatchName("LTFCTOP", PU_STATIC);
-  PatchRTFCTOP = fc.CachePatchName("RTFCTOP", PU_STATIC);
-  PatchARMCLEAR  = fc.CachePatchName("ARMCLEAR", PU_STATIC);
+  PatchKeys[0] = PatchKeys[3] = fc.CachePatchName("BKEYICON", PU_STATIC);
+  PatchKeys[1] = PatchKeys[4] = fc.CachePatchName("YKEYICON", PU_STATIC);
+  PatchKeys[2] = PatchKeys[5] = fc.CachePatchName("GKEYICON", PU_STATIC);
 
   // health chain slider
   Patch_ChainSlider[0] = fc.CachePatchName("CHAINBACK", PU_STATIC);
@@ -469,36 +416,44 @@ void ST_LoadHereticData()
   Patch_ChainSlider[3] = fc.CachePatchName("LTFACE", PU_STATIC);
   Patch_ChainSlider[4] = fc.CachePatchName("RTFACE", PU_STATIC);
 
-
+  // INum
   startLump = fc.GetNumForName("IN0");
-  for(i = 0; i < 10; i++)
+  for (i = 0; i < 10; i++)
     PatchINum[i] = fc.CachePatchNum(startLump+i, PU_STATIC);
   PatchINum[10] = fc.CachePatchName("NEGNUM", PU_STATIC);
   // and "LAME"...
 
+  // BNum
   startLump = fc.GetNumForName("FONTB16");
-  for(i = 0; i < 10; i++)
+  for (i = 0; i < 10; i++)
     PatchBNum[i] = fc.CachePatchNum(startLump+i, PU_STATIC);
   PatchBNum[10] = fc.CachePatchNum(startLump-3, PU_STATIC); //("FONTB13")
 
+  //SmNum
   startLump = fc.GetNumForName("SMALLIN0");
-  for(i = 0; i < 10; i++)
+  for (i = 0; i < 10; i++)
     PatchSmNum[i] = fc.CachePatchNum(startLump+i, PU_STATIC);
   // no minus
 
   playpalette = fc.GetNumForName("PLAYPAL");
   spinbooklump = fc.GetNumForName("SPINBK0");
   spinflylump = fc.GetNumForName("SPFLY0");
+
+  for (i=0; i<16; i++)
+    {
+      PatchFlight[i] = fc.CachePatchNum(spinflylump + i, PU_STATIC);
+      PatchBook[i] = fc.CachePatchNum(spinbooklump + i, PU_STATIC);
+    }
 }
 
 
 static void ST_LoadDoomData()
 {
-  int         i;
-  char        namebuf[9];
+  int  i;
+  char namebuf[9];
 
   // Load the numbers, tall and short
-  for (i=0;i<10;i++)
+  for (i=0; i<10; i++)
     {
       sprintf(namebuf, "STTNUM%d", i);
       tallnum[i] = (patch_t *) fc.CachePatchName(namebuf, PU_STATIC);
@@ -511,18 +466,17 @@ static void ST_LoadDoomData()
   shortnum[10] = shortnum[0]; // no minus available 
 
   // percent signs.
-
   tallpercent = (patch_t *) fc.CachePatchName("STTPRCNT", PU_STATIC);
 
   // key cards
   for (i=0;i<NUMCARDS;i++)
     {
       sprintf(namebuf, "STKEYS%d", i);
-      keys[i] = (patch_t *)fc.CachePatchName(namebuf, PU_STATIC);
+      PatchKeys[i] = (patch_t *)fc.CachePatchName(namebuf, PU_STATIC);
     }
 
-  // arms background
-  armsbg = (patch_t *)fc.CachePatchName("STARMS", PU_STATIC);
+  // arms background box
+  PatchArmsBack = (patch_t *)fc.CachePatchName("STARMS", PU_STATIC);
 
   // arms ownership widgets
   for (i=0;i<6;i++)
@@ -530,10 +484,10 @@ static void ST_LoadDoomData()
       sprintf(namebuf, "STGNUM%d", i+2);
 
       // gray #
-      arms[i][0] = (patch_t *)fc.CachePatchName(namebuf, PU_STATIC);
+      PatchArms[i][0] = (patch_t *)fc.CachePatchName(namebuf, PU_STATIC);
 
       // yellow #
-      arms[i][1] = shortnum[i+2];
+      PatchArms[i][1] = shortnum[i+2];
     }
 
   // status bar background bits
@@ -542,6 +496,7 @@ static void ST_LoadDoomData()
   // the original Doom uses 'STF' as base name for all face graphics
   ST_loadFaceGraphics("STF");
 }
+
 
 // made separate so that skins code can reload custom face graphics
 void ST_loadFaceGraphics (char *facestr)
@@ -565,23 +520,23 @@ void ST_loadFaceGraphics (char *facestr)
       for (j=0;j<ST_NUMSTRAIGHTFACES;j++)
         {
 	  sprintf(namebuf, "ST%d%d", i, j);
-	  faces[facenum++] = fc.CachePatchName(namelump, PU_STATIC);
+	  PatchFaces[facenum++] = fc.CachePatchName(namelump, PU_STATIC);
         }
       sprintf(namebuf, "TR%d0", i);        // turn right
-      faces[facenum++] = fc.CachePatchName(namelump, PU_STATIC);
+      PatchFaces[facenum++] = fc.CachePatchName(namelump, PU_STATIC);
       sprintf(namebuf, "TL%d0", i);        // turn left
-      faces[facenum++] = fc.CachePatchName(namelump, PU_STATIC);
+      PatchFaces[facenum++] = fc.CachePatchName(namelump, PU_STATIC);
       sprintf(namebuf, "OUCH%d", i);       // ouch!
-      faces[facenum++] = fc.CachePatchName(namelump, PU_STATIC);
+      PatchFaces[facenum++] = fc.CachePatchName(namelump, PU_STATIC);
       sprintf(namebuf, "EVL%d", i);        // evil grin ;)
-      faces[facenum++] = fc.CachePatchName(namelump, PU_STATIC);
+      PatchFaces[facenum++] = fc.CachePatchName(namelump, PU_STATIC);
       sprintf(namebuf, "KILL%d", i);       // pissed off
-      faces[facenum++] = fc.CachePatchName(namelump, PU_STATIC);
+      PatchFaces[facenum++] = fc.CachePatchName(namelump, PU_STATIC);
     }
   strcpy (namebuf, "GOD0");
-  faces[facenum++] = fc.CachePatchName(namelump, PU_STATIC);
+  PatchFaces[facenum++] = fc.CachePatchName(namelump, PU_STATIC);
   strcpy (namebuf, "DEAD0");
-  faces[facenum++] = fc.CachePatchName(namelump, PU_STATIC);
+  PatchFaces[facenum++] = fc.CachePatchName(namelump, PU_STATIC);
 
   // face backgrounds for different player colors
   //added:08-02-98: uses only STFB0, which is remapped to the right
@@ -591,11 +546,63 @@ void ST_loadFaceGraphics (char *facestr)
   strcpy (namebuf, "B0");
   i = fc.FindNumForName(namelump);
   if (i != -1)
-    faceback = (patch_t *) fc.CachePatchNum(i, PU_STATIC);
+    PatchFaceBack = (patch_t *) fc.CachePatchNum(i, PU_STATIC);
   else
-    faceback = (patch_t *) fc.CachePatchName("STFB0", PU_STATIC);
+    PatchFaceBack = (patch_t *) fc.CachePatchName("STFB0", PU_STATIC);
 
 }
+
+static void ST_unloadData()
+{
+  int i;
+
+  //faB: GlidePatch_t are always purgeable
+  if (rendermode==render_soft)
+    {
+      // unload the numbers, tall and short
+      for (i=0;i<10;i++)
+        {
+	  Z_ChangeTag(tallnum[i], PU_CACHE);
+	  Z_ChangeTag(shortnum[i], PU_CACHE);
+        }
+      // unload tall percent
+      Z_ChangeTag(tallpercent, PU_CACHE);
+        
+      // unload arms background
+      Z_ChangeTag(PatchArmsBack, PU_CACHE);
+        
+      // unload gray #'s
+      for (i=0;i<6;i++)
+	Z_ChangeTag(PatchArms[i][0], PU_CACHE);
+        
+      // unload the key cards
+      for (i=0;i<NUMCARDS;i++)
+	Z_ChangeTag(PatchKeys[i], PU_CACHE);
+        
+      Z_ChangeTag(PatchSTATBAR, PU_CACHE);
+    }
+
+  ST_unloadFaceGraphics ();
+}
+
+
+// made separate so that skins code can reload custom face graphics
+void ST_unloadFaceGraphics()
+{
+  int    i;
+
+  //faB: GlidePatch_t are always purgeable
+  if (rendermode == render_soft)
+    {
+      for (i=0;i<ST_NUMFACES;i++)
+	Z_ChangeTag(PatchFaces[i], PU_CACHE);
+        
+      // face background
+      Z_ChangeTag(PatchFaceBack, PU_CACHE);
+    }
+}
+
+
 
 // refresh the status bar background
 void HUD::ST_RefreshBackground()
@@ -629,7 +636,7 @@ void HUD::ST_RefreshBackground()
       else
 	colormap = translationtables - 256 + (sbpawn->color<<8);
 
-      V_DrawMappedPatch(st_x+ST_FX, st_y, flags, faceback, colormap);
+      V_DrawMappedPatch(st_x+ST_FX, st_y, flags, PatchFaceBack, colormap);
     }
 
   // copy the statusbar buffer to the screen
@@ -637,13 +644,52 @@ void HUD::ST_RefreshBackground()
     V_CopyRect(0, vid.height-stbarheight, BG, vid.width, stbarheight, 0, vid.height-stbarheight, FG);
 }
 
-int HUD::ST_calcPainOffset()
+
+//=========================================
+// HUD widget control variables
+
+// inside the HUD class:
+// statusbaron, mainbaron, invopen
+
+static bool st_true = true; // for 
+
+static bool st_notdeathmatch;
+static bool st_armson; // !deathmatch && st_statusbaron
+static bool st_fragson;  // deathmatch && st_statusbaron
+
+static bool st_godmode;
+
+static int  st_health;
+static int  st_armor;
+static int  st_readywp;
+static int  st_readywp_ammo;
+
+static int  st_faceindex = 0; // current marine face
+
+// holds key-type for each key box on bar
+static int  st_keyboxes[6];
+
+// number of frags so far in deathmatch
+static int  st_fragscount;
+
+// Heretic spinning icons
+static int  st_flight = -1;
+static int  st_book = -1;
+
+// used for evil grin
+static bool  oldweaponsowned[NUMWEAPONS];
+
+
+#define BLINKTHRESHOLD  (4*32)
+
+
+static int ST_calcPainOffset()
 {
   int         health;
   static int  lastcalc;
   static int  oldhealth = -1;
 
-  health = sbpawn->health > 100 ? 100 : sbpawn->health;
+  health = (st_health > 100) ? 100 : st_health;
 
   if (health != oldhealth)
     {
@@ -654,7 +700,6 @@ int HUD::ST_calcPainOffset()
 }
 
 
-//
 // This is a not-very-pretty routine which handles
 //  the face states and their timing.
 // the precedence of expressions is:
@@ -668,6 +713,9 @@ void HUD::ST_updateFaceWidget()
   static int  lastattackdown = -1;
   static int  priority = 0;
   bool     doevilgrin;
+
+  // count until face changes
+  static int  st_facecount = 0;
 
   if (priority < 10)
     {
@@ -827,74 +875,64 @@ void HUD::ST_updateFaceWidget()
     }
 
   st_facecount--;
-
 }
 
-// count the frags of the playernum player
-//Fab: made as a tiny routine so ST_overlayDrawer() can use it
-//Boris: rename ST_countFrags in to ST_PlayerFrags for use anytime
-//       when we need the frags
-/*
-int ST_PlayerFrags (int playernum)
-{
-  int    i,frags;
-
-  frags = players[playernum].addfrags;
-  for (i=0 ; i<MAXPLAYERS ; i++)
-    {
-      if ((cv_teamplay.value==0 && i != playernum)
-	  || (cv_teamplay.value && !ST_SameTeam(&players[i],&players[playernum])))
-	frags += players[playernum].frags[i];
-      else
-	frags -= players[playernum].frags[i];
-    }
-
-  return frags;
-}
-*/
-
-static HudNumber *readywp; // a bit hackish
 
 // was ST_updateWidgets
-void HUD::ST_TickWidgets()
+void HUD::UpdateWidgets()
 {
-  // update widget data
   // TODO: put _all_ widget source variables here, so that we
   // may lose sbpawn anytime. Update source variables here.
-  // if sbpawn == NULL, don't update. where should we set it to NULL then?
-  static int largeammo = 1994; // means "n/a"
+
+  const int largeammo = 1994; // means "n/a"
   int i;
 
-  // FIXME, why do we do heretic differently here?
+  // if sbpawn == NULL, don't update. where should we set it to NULL then?
+  if (sbpawn == NULL)
+    return;
+
+  st_godmode = (sbpawn->cheats & CF_GODMODE);
+
   if (game.mode == heretic)
     {
-      // readyweapon ammo and ammo pic (heretic)
-      if (wpnlev1info[sbpawn->readyweapon].ammo == am_noammo)
-	readywp->Set(&largeammo);
-      else 
-	readywp->Set(&sbpawn->ammo[wpnlev1info[sbpawn->readyweapon].ammo]);
-    }
-  else
-    {
-      if (sbpawn->weaponinfo[sbpawn->readyweapon].ammo == am_noammo)
-	readywp->Set(&largeammo);
+      // Heretic flight icon
+      if (sbpawn->powers[pw_flight] > BLINKTHRESHOLD || (sbpawn->powers[pw_flight] & 16))
+	{
+	  st_flight = (gametic/3) & 15;
+	  // TODO stop the spinning when not in air?
+	  // if (sbpawn->flags2 & MF2_FLY)
+	}
       else
-	readywp->Set(&sbpawn->ammo[sbpawn->weaponinfo[sbpawn->readyweapon].ammo]);
-      //w_ready->data = sbpawn->readyweapon;
+	st_flight = -1;
+    
+      // Heretic book icon
+      if ((sbpawn->powers[pw_weaponlevel2] > BLINKTHRESHOLD || (sbpawn->powers[pw_weaponlevel2] & 16))
+	  && !sbpawn->morphTics)
+	{
+	  st_book = (gametic/3) & 15;
+	}
+      else
+	st_book = -1;
     }
+
+  st_health = sbpawn->health;
+  st_armor = sbpawn->armorpoints;
+  st_readywp = sbpawn->readyweapon;
+
+  ammotype_t atype = sbpawn->weaponinfo[sbpawn->readyweapon].ammo;
+  if (atype == am_noammo)
+    st_readywp_ammo = largeammo;    
+  else
+    st_readywp_ammo = sbpawn->ammo[atype];
 
   // update keycard multiple widgets
   for (i=0;i<6;i++)
-    keyboxes[i] = (sbpawn->cards & (1<<i)) ? i : -1;
+    st_keyboxes[i] = (sbpawn->cards & (1<<i)) ? i : -1;
 
   // refresh everything if this is him coming back to life
   ST_updateFaceWidget();
-
-  // get rid of chat window if up because of message
-  if (!--st_msgcounter)
-    st_chat = st_oldchat;
-
 }
+
 
 static int st_palette = 0;
 
@@ -988,7 +1026,7 @@ void HUD::ST_PaletteFlash()
 #endif
         {
 	  if (!cv_splitscreen.value || !palette)
-	    V_SetPalette(palette);
+	    vid.SetPalette(palette);
         }
     }
 }
@@ -1035,7 +1073,7 @@ void HUD::ST_DrawWidgets(bool r, bool o)
 
 void HUD::ST_CalcPos()
 {
-  if (cv_scalestatusbar.value || cv_viewsize.value>=11)
+  if (cv_scalestatusbar.value || cv_viewsize.value >= 11)
     {
       fgbuffer = FG | V_SCALESTART; // scale patch by default
       st_scalex = vid.dupx;
@@ -1045,7 +1083,7 @@ void HUD::ST_CalcPos()
       if (rendermode != render_soft)
         {
 	  st_x = 0;
-	  st_y = BASEVIDHEIGHT - stbarheight/vid.fdupy;
+	  st_y = BASEVIDHEIGHT - int(stbarheight/vid.fdupy);
         }
       else
 #endif
@@ -1064,9 +1102,6 @@ void HUD::ST_CalcPos()
     }
 }
 
-//added:30-01-98: NOTE: this is called at any level start, view change,
-//                      and after vid mode change.
-
 
 void HUD::CreateHereticWidgets()
 {
@@ -1077,50 +1112,53 @@ void HUD::CreateHereticWidgets()
 
   CONS_Printf("HUD::CHW, widgets_size = %d\n", widgets.size());  
 
-  // TODO: flight and book animated icons
-
-  // FIXME! (sbpawn->cheats & CF_GODMODE), not just conversion!
-  // godmode indicators
-  h = new HudBinIcon(st_x+16, st_y+9, &statusbaron, (bool *)&sbpawn->cheats, NULL, PatchGod[0]);
+  h = new HudMultIcon(20, 17, &statusbaron, &st_flight, PatchFlight);
   widgets.push_back(h);
-  h = new HudBinIcon(st_x+287, st_y+9, &statusbaron, (bool *)&sbpawn->cheats, NULL, PatchGod[1]);
+
+  h = new HudMultIcon(300, 17, &statusbaron, &st_book, PatchBook);
+  widgets.push_back(h);
+
+  // godmode indicators
+  h = new HudBinIcon(st_x+16, st_y+9, &statusbaron, &st_godmode, NULL, PatchGod[0]);
+  widgets.push_back(h);
+  h = new HudBinIcon(st_x+287, st_y+9, &statusbaron, &st_godmode, NULL, PatchGod[1]);
   widgets.push_back(h);
 
   // health slider
-  h = new HudSlider(st_x, st_y+32, &statusbaron, &sbpawn->health, 0, 100, Patch_ChainSlider);
+  h = new HudSlider(st_x, st_y+32, &statusbaron, &st_health, 0, 100, Patch_ChainSlider);
   widgets.push_back(h);
+
   // inventory system
   h = new HudInventory(st_x+34, st_y+9-9, &statusbaron, &invopen, &invuse, false, 7,
 		       PatchSmNum, PatchARTI, Patch_InvBar, sbpawn);
   widgets.push_back(h);
 
   // mainbar (closed inventory shown)
-
   // frags / health
   if (cv_deathmatch.value)
     h = new HudNumber(st_x+61+27, st_y+12, &mainbaron, 3, &st_fragscount, PatchINum);
   else
-    h = new HudNumber(st_x+61+27, st_y+12, &mainbaron, 3, &sbpawn->health, PatchINum);
+    h = new HudNumber(st_x+61+27, st_y+12, &mainbaron, 3, &st_health, PatchINum);
   widgets.push_back(h);
 
   // Keys
   const int ST_KEYY[3] = {22, 6, 14};
   for (i=0; i<6; i++)
     {
-      h = new HudMultIcon(st_x + 153, st_y + ST_KEYY[i%3], &mainbaron, &keyboxes[i], keys);
+      h = new HudMultIcon(st_x + 153, st_y + ST_KEYY[i%3], &mainbaron, &st_keyboxes[i], PatchKeys);
       widgets.push_back(h);
     }
 
-  // readyweapon ammo and ammo pic
-  h = readywp = new HudNumber(st_x + 109 + 27, st_y + 4, &mainbaron, 3,
-		    &sbpawn->ammo[wpnlev1info[sbpawn->readyweapon].ammo], PatchINum);
+  // readyweapon ammo
+  h = new HudNumber(st_x + 109 + 27, st_y + 4, &mainbaron, 3, &st_readywp_ammo, PatchINum);
   widgets.push_back(h);
-  h = new HudMultIcon(st_x + 111, st_y + 14, &mainbaron, (int *)&sbpawn->readyweapon, PatchAmmoPic);
+
+  // ammo type icon
+  h = new HudMultIcon(st_x + 111, st_y + 14, &mainbaron, &st_readywp, PatchAmmoPic);
   widgets.push_back(h);
-  //V_DrawScaledPatch(st_x+111, st_y+14, fgbuffer, fc.CachePatchName(ammopic[sbpawn->readyweapon-1], PU_CACHE));
 
   // armor
-  h = new HudNumber(st_x+228+27, st_y+12, &mainbaron, 3, &sbpawn->armorpoints, PatchINum);
+  h = new HudNumber(st_x+228+27, st_y+12, &mainbaron, 3, &st_armor, PatchINum);
   widgets.push_back(h);
 }
 
@@ -1146,8 +1184,7 @@ void HUD::CreateDoomWidgets()
   //st_  statusbaron, armson, fragson
 
   // ready weapon ammo
-  h = readywp = new HudNumber(st_x+44, st_y+3, &statusbaron, 3,
-		    &sbpawn->ammo[sbpawn->weaponinfo[sbpawn->readyweapon].ammo], tallnum);
+  h = new HudNumber(st_x+44, st_y+3, &statusbaron, 3, &st_readywp_ammo, tallnum);
   widgets.push_back(h);
 
   // the last weapon type
@@ -1159,47 +1196,50 @@ void HUD::CreateDoomWidgets()
 
   // ammo count and maxammo (all four kinds)
   const int ST_AMMOY[4] = {5, 11, 23, 17};
-  for (i=0; i<4; i++) {
-    h = new HudNumber(st_x+288, st_y + ST_AMMOY[i], &statusbaron, 3, &sbpawn->ammo[i], shortnum);
-    widgets.push_back(h);
+  for (i=0; i<4; i++)
+    {
+      h = new HudNumber(st_x+288, st_y + ST_AMMOY[i], &statusbaron, 3, &sbpawn->ammo[i], shortnum);
+      widgets.push_back(h);
 
-    h = new HudNumber(st_x+314, st_y + ST_AMMOY[i], &statusbaron, 3, &sbpawn->maxammo[i], shortnum);
-    widgets.push_back(h);
-  }
+      h = new HudNumber(st_x+314, st_y + ST_AMMOY[i], &statusbaron, 3, &sbpawn->maxammo[i], shortnum);
+      widgets.push_back(h);
+    }
 
   // health percentage
-  h = new HudPercent(st_x+90, st_y+3, &statusbaron, &sbpawn->health, tallnum, tallpercent);
+  h = new HudPercent(st_x+90, st_y+3, &statusbaron, &st_health, tallnum, tallpercent);
   widgets.push_back(h);
 
   // armor percentage - should be colored later
-  h = new HudPercent(st_x+221, st_y+3, &statusbaron,
-		      &sbpawn->armorpoints, tallnum, tallpercent);
+  h = new HudPercent(st_x+221, st_y+3, &statusbaron, &st_armor, tallnum, tallpercent);
   widgets.push_back(h);
 
   // Weapons
   // arms background
-  h = new HudBinIcon(st_x+104, st_y, &statusbaron, &st_notdeathmatch, NULL, armsbg);
+  h = new HudBinIcon(st_x+104, st_y, &statusbaron, &st_notdeathmatch, NULL, PatchArmsBack);
   widgets.push_back(h);
 
   // regexp  \([][a-z0-9&>_-]+\)
   // weapons owned
-  for (i=0; i<6; i++) {
-    h = new HudBinIcon(st_x+111+(i%3)*12, st_y+4+(i/3)*10, &st_armson,
-		       &sbpawn->weaponowned[i+1], arms[i][0], arms[i][1]);
-    widgets.push_back(h);
-  }
+  for (i=0; i<6; i++)
+    {
+      h = new HudBinIcon(st_x+111+(i%3)*12, st_y+4+(i/3)*10, &st_armson,
+			 &sbpawn->weaponowned[i+1], PatchArms[i][0], PatchArms[i][1]);
+      widgets.push_back(h);
+    }
 
   // face
-  h = new HudMultIcon(st_x+143, st_y, &statusbaron, &st_faceindex, faces);
+  h = new HudMultIcon(st_x+143, st_y, &statusbaron, &st_faceindex, PatchFaces);
   widgets.push_back(h);
 
   // Key icon positions.
   const int ST_KEYY[3] = {3, 13, 23};
-  for (i=0; i<6; i++) {  
-    h = new HudMultIcon(st_x+239+(i/3)*10, st_y + ST_KEYY[i%3], &statusbaron, &keyboxes[i], keys);
-    widgets.push_back(h);
-  }
+  for (i=0; i<6; i++)
+    {  
+      h = new HudMultIcon(st_x+239+(i/3)*10, st_y + ST_KEYY[i%3], &statusbaron, &st_keyboxes[i], PatchKeys);
+      widgets.push_back(h);
+    }
 }
+
 
 void HUD::ST_CreateWidgets()
 {
@@ -1280,54 +1320,6 @@ void HUD::ST_Drawer(bool refresh)
 
 
 
-void ST_unloadData()
-{
-  int i;
-
-  //faB: GlidePatch_t are always purgeable
-  if (rendermode==render_soft)
-    {
-      // unload the numbers, tall and short
-      for (i=0;i<10;i++)
-        {
-	  Z_ChangeTag(tallnum[i], PU_CACHE);
-	  Z_ChangeTag(shortnum[i], PU_CACHE);
-        }
-      // unload tall percent
-      Z_ChangeTag(tallpercent, PU_CACHE);
-        
-      // unload arms background
-      Z_ChangeTag(armsbg, PU_CACHE);
-        
-      // unload gray #'s
-      for (i=0;i<6;i++)
-	Z_ChangeTag(arms[i][0], PU_CACHE);
-        
-      // unload the key cards
-      for (i=0;i<NUMCARDS;i++)
-	Z_ChangeTag(keys[i], PU_CACHE);
-        
-      Z_ChangeTag(PatchSTATBAR, PU_CACHE);
-    }
-
-  ST_unloadFaceGraphics ();
-}
-
-// made separate so that skins code can reload custom face graphics
-void ST_unloadFaceGraphics()
-{
-  int    i;
-
-  //faB: GlidePatch_t are always purgeable
-  if (rendermode==render_soft)
-    {
-      for (i=0;i<ST_NUMFACES;i++)
-	Z_ChangeTag(faces[i], PU_CACHE);
-        
-      // face background
-      Z_ChangeTag(faceback, PU_CACHE);
-    }
-}
 
 
 void HUD::ST_Stop()
@@ -1335,7 +1327,7 @@ void HUD::ST_Stop()
   if (st_stopped)
     return;
 
-  V_SetPalette(0);
+  vid.SetPalette(0);
 
   st_stopped = true;
 }
@@ -1363,11 +1355,11 @@ void HUD::ST_Start(PlayerPawn *p)
 
   // used for timing
   //static unsigned int st_clock = 0;
-  st_chatstate = StartChatState;
+  //st_chatstate = StartChatState;
 
   statusbaron = true;
-  st_oldchat = st_chat = false;
-  st_cursoron = false;
+  //st_oldchat = st_chat = false;
+  //st_cursoron = false;
 
   st_palette = -1;
 
@@ -1396,13 +1388,33 @@ void HUD::ST_Start(PlayerPawn *p)
 void HUD::Init()
 {
   extern bool dedicated;
-  int i;
 
   if (dedicated)
     return;
 
   HU_Init(); // temp solution, later combine hud and status bar...
-    
+
+
+  // cache the status bar overlay icons  (fullscreen mode)
+  // legacy.wad stuff
+  // Damn! sbo* icons are in pic_t format, not patch_t!
+  // drawn using V_DrawScalePic()
+  // FIXME crashes here!
+  /*
+  sbohealth = fc.CachePatchName("SBOHEALT", PU_STATIC);
+  sbofrags  = fc.CachePatchName("SBOFRAGS", PU_STATIC);
+  sboarmor  = fc.CachePatchName("SBOARMOR", PU_STATIC);
+
+  int i;
+  for (i=0;i<NUMWEAPONS;i++)
+    {
+      if (i>0 && i!=7)
+	sboammo[i] = fc.CachePatchName(va("SBOAMMO%c",'0'+i), PU_STATIC);
+      else
+	sboammo[i] = NULL;
+      CONS_Printf("sbo: %d\n", i);
+    }
+  */
   //added:26-01-98:screens[4] is allocated at videomode setup, and
   //               set at V_Init(), the first time being at SCR_Recalc()
 
@@ -1413,31 +1425,8 @@ void HUD::Init()
 
   st_firsttime = true;
 
-  // cache the status bar overlay icons  (fullscreen mode)
-  // legacy.wad stuff
-  sbohealth = fc.GetNumForName ("SBOHEALT");
-  sbofrags  = fc.GetNumForName ("SBOFRAGS");
-  sboarmor  = fc.GetNumForName ("SBOARMOR");
-
-  for (i=0;i<NUMWEAPONS;i++)
-    {
-      if (i>0 && i!=7)
-	sboammo[i] = fc.GetNumForName (va("SBOAMMO%c",'0'+i));
-      else
-	sboammo[i] = 0;
-    }
 }
 
-//added:16-01-98: change the status bar too, when pressing F12 while viewing
-//                 a demo.
-/*
-void ST_changeDemoView ()
-{
-  //the same routine is called at multiplayer deathmatch spawn
-  // so it can be called multiple times
-  ST_Start();
-}
-*/
 
 // =========================================================================
 //                         STATUS BAR OVERLAY
@@ -1525,10 +1514,10 @@ void HUD::CreateOverlayWidgets()
 	case 'h': // draw health
 	  //ST_drawOverlayNum(SCX(50), SCY(198)-(16*vid.dupy), tallnum,NULL);
 	  //DrBNumber(CPawn->health, 5, st_y+22);
-	  h = new HudNumber(50, 198-16, &overlayon, 3, &sbpawn->health, lnum);
+	  h = new HudNumber(50, 198-16, &overlayon, 3, &st_health, lnum);
 	  overlay.push_back(h);
-	  // FIXME overlay pics
-	  //V_DrawScalePic (SCX(52),SCY(198)-16*vid.dupy,0,sbohealth);
+	  //h = new HudBinIcon(52, 198-16, &overlayon, &st_true, NULL, sbohealth);
+	  //overlay.push_back(h);
 	  break;
 
 	case 'f': // draw frags
@@ -1536,41 +1525,39 @@ void HUD::CreateOverlayWidgets()
 	  //DrINumber(temp, 45, st_y+27);	  
 	  h = new HudNumber(300, 2, &overlayon, 3, &st_fragscount, lnum);
 	  overlay.push_back(h);
-	  //V_DrawScalePic (SCX(302),SCY(2),0,sbofrags);	  
+	  //h = new HudBinIcon(302, 2, &overlayon, &st_true, NULL, sbofrags);
+	  //overlay.push_back(h);
 	  break;
 
 	case 'a': // draw ammo
-	  i = sboammo[sbpawn->readyweapon];
-	  if (i)
-	    {
-	      //ST_drawOverlayNum(SCX(234), SCY(198)-(16*vid.dupy), sbpawn->ammo[sbpawn->weaponinfo[sbpawn->readyweapon].ammo], tallnum,NULL);
-	      h = readywp = new HudNumber(234, 198-16, &overlayon, 3,
-		&sbpawn->ammo[sbpawn->weaponinfo[sbpawn->readyweapon].ammo], lnum);
-	      overlay.push_back(h);
-	      // V_DrawScalePic (SCX(236),SCY(198)-(16*vid.dupy),0,i);
-	    }
+	  //ST_drawOverlayNum(SCX(234), SCY(198)-(16*vid.dupy), sbpawn->ammo[sbpawn->weaponinfo[sbpawn->readyweapon].ammo], tallnum,NULL);
+	  h = new HudNumber(234, 198-16, &overlayon, 3, &st_readywp_ammo, lnum);
+	  overlay.push_back(h);
+	  //h = new HudMultIcon(236, 198-16, &overlayon, &st_readywp, sboammo);
+	  //overlay.push_back(h);	  
 	  break;
 
 	case 'k': // draw keys
 	  for (i=0; i<6; i++)
 	    {
-	      //V_DrawScaledPatch(SCX(318)-(c++)*(ST_KEY0WIDTH*vid.dupx), SCY(198)-((16+8)*vid.dupy), FG | V_NOSCALESTART, keys[i]);
-	      h = new HudMultIcon(318-(i/3)*10, 198-24-(i%3)*10, &overlayon, &keyboxes[i], keys);
+	      //V_DrawScaledPatch(SCX(318)-(c++)*(ST_KEY0WIDTH*vid.dupx), SCY(198)-((16+8)*vid.dupy), FG | V_NOSCALESTART, PatchKeys[i]);
+	      h = new HudMultIcon(318-(i/3)*10, 198-24-(i%3)*10, &overlayon, &st_keyboxes[i], PatchKeys);
 	      overlay.push_back(h);
 	    }
 	  break;
 
          case 'm': // draw armor
            //ST_drawOverlayNum(SCX(300), SCY(198)-(16*vid.dupy), sbpawn->armorpoints, tallnum,NULL);
-	   h = new HudNumber(300, 198-16, &overlayon, 3, &sbpawn->armorpoints, lnum);
+	   h = new HudNumber(300, 198-16, &overlayon, 3, &st_armor, lnum);
 	   overlay.push_back(h);
-
-           //V_DrawScalePic (SCX(302),SCY(198)-(16*vid.dupy),0,sboarmor);
+	   //h = new HudBinIcon(302, 198-16, &overlayon, &st_true, NULL, sboarmor);
+	   //overlay.push_back(h);
            break;
 
 	default:
 	  break;
 	   /*
+	     //TODO
 	case 'e': // number of monster killed 
 	  if ((!cv_deathmatch.value) && (!cv_splitscreen.value))
 	    {
@@ -1589,16 +1576,14 @@ void HUD::CreateOverlayWidgets()
 	      V_DrawString(SCX(318-V_StringWidth(buf)), SCY(11), V_NOSCALESTART, buf);
 	    }
 	  break;
-	   */
-	  /* //TODO
-	     case 'r': // current frame rate
-	     {
-	     char buf[8];
-	     int framerate = 35;
-	     sprintf(buf, "%d FPS", framerate);
-	     V_DrawString(SCX(2), SCY(4), V_NOSCALESTART, buf);
-	     }
-	     break;
+	  case 'r': // current frame rate
+	  {
+	  char buf[8];
+	  int framerate = 35;
+	  sprintf(buf, "%d FPS", framerate);
+	  V_DrawString(SCX(2), SCY(4), V_NOSCALESTART, buf);
+	  }
+	  break;
 	  */
 	}
     }

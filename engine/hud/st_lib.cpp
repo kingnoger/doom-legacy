@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:14  hurdler
-// Initial revision
+// Revision 1.2  2002/12/03 10:20:08  smite-meister
+// HUD rationalized
 //
 // Revision 1.10  2002/09/25 15:17:38  vberghol
 // Intermission fixed?
@@ -197,7 +197,7 @@ void HudMultIcon::Draw()
   int i = *inum;
   if (i >= 0)
     V_DrawScaledPatch(x, y, fgbuffer, p[i]);
-  // FIXME! *inum menee yli rajojen!
+  // FIXME! *inum might go beyond allowed limits!
   oldinum = i;
 }
 
@@ -278,7 +278,7 @@ static void ShadeLine(int x, int y, int height, int shade)
   byte *shades;
     
   shades = colormaps+9*256+shade*2*256;
-  dest = screens[0]+y*vid.width+x;
+  dest = vid.screens[0]+y*vid.width+x;
   while(height--)
     {
       *(dest) = *(shades+*dest);

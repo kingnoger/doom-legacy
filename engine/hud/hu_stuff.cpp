@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:15  hurdler
-// Initial revision
+// Revision 1.2  2002/12/03 10:20:08  smite-meister
+// HUD rationalized
+//
+// Revision 1.1.1.1  2002/11/16 14:18:15  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.16  2002/09/25 15:17:38  vberghol
 // Intermission fixed?
@@ -57,53 +60,6 @@
 // Revision 1.3  2002/07/01 15:01:55  vberghol
 // HUD alkaa olla kunnossa
 //
-// Revision 1.15  2001/12/15 18:41:35  hurdler
-// small commit, mainly splitscreen fix
-//
-// Revision 1.14  2001/08/20 20:40:39  metzgermeister
-// *** empty log message ***
-//
-// Revision 1.13  2001/07/16 22:35:40  bpereira
-// - fixed crash of e3m8 in heretic
-// - fixed crosshair not drawed bug
-//
-// Revision 1.12  2001/05/16 21:21:14  bpereira
-// no message
-//
-// Revision 1.11  2001/04/01 17:35:06  bpereira
-// no message
-//
-// Revision 1.10  2001/02/24 13:35:20  bpereira
-// no message
-//
-// Revision 1.9  2001/02/19 17:40:34  hurdler
-// Fix a bug with "chat on" in hw mode
-//
-// Revision 1.8  2001/01/25 22:15:42  bpereira
-// added heretic support
-//
-// Revision 1.7  2000/11/04 16:23:43  bpereira
-// no message
-//
-// Revision 1.6  2000/11/02 17:50:06  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.5  2000/09/28 20:57:15  bpereira
-// no message
-//
-// Revision 1.4  2000/08/31 14:30:55  bpereira
-// no message
-//
-// Revision 1.3  2000/08/03 17:57:42  bpereira
-// no message
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:33  hurdler
-// Initial import into CVS (v1.29 pr3)
-//
-//
 // DESCRIPTION:
 //      heads up displays, cleaned up (hasta la vista hu_lib)
 //      because a lot of code was unnecessary now
@@ -140,7 +96,7 @@
 #include "console.h"
 #include "am_map.h"
 #include "d_main.h"
-//#include "g_state.h"
+
 
 #ifdef HWRENDER
 # include "hardware/hw_main.h"
@@ -154,6 +110,20 @@
 
 HUD hud;
 
+
+
+// used for making messages go away
+//static int              st_msgcounter=0;
+// used when in chat
+//static st_chatstateenum_t       st_chatstate;
+// whether status bar chat is active
+//static bool          st_chat;
+// value of st_chat before message popped up
+//static bool          st_oldchat;
+// whether chat window has the cursor on
+//static bool          st_cursoron;
+
+
 //-------------------------------------------
 //              heads up font
 //-------------------------------------------
@@ -166,8 +136,6 @@ bool                 chat_on;
 static char             w_chat[HU_MAXMSGLEN];
 
 static bool          headsupactive = false;
-
-//bool                 hu_showscores;        // draw deathmatch rankings
 
 static char             hu_tick;
 
@@ -184,8 +152,8 @@ patch_t*           crosshair[3];     //3 precached crosshair graphics
 // -------
 // protos.
 // -------
-void   HU_drawDeathmatchRankings (void);
-void   HU_drawCrosshair (void);
+void   HU_drawDeathmatchRankings ();
+void   HU_drawCrosshair ();
 static void HU_DrawTip();
 
 
@@ -197,86 +165,78 @@ char*     shiftxform;
 
 char french_shiftxform[] =
 {
-    0,
-    1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-    11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-    21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
-    31,
-    ' ', '!', '"', '#', '$', '%', '&',
-    '"', // shift-'
-    '(', ')', '*', '+',
-    '?', // shift-,
-    '_', // shift--
-    '>', // shift-.
-    '?', // shift-/
-    '0', // shift-0
-    '1', // shift-1
-    '2', // shift-2
-    '3', // shift-3
-    '4', // shift-4
-    '5', // shift-5
-    '6', // shift-6
-    '7', // shift-7
-    '8', // shift-8
-    '9', // shift-9
-    '/',
-    '.', // shift-;
-    '<',
-    '+', // shift-=
-    '>', '?', '@',
-    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
-    'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-    '[', // shift-[
-    '!', // shift-backslash - OH MY GOD DOES WATCOM SUCK
-    ']', // shift-]
-    '"', '_',
-    '\'', // shift-`
-    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
-    'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-    '{', '|', '}', '~', 127
-
+  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+  16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+  ' ', '!', '"', '#', '$', '%', '&',
+  '"', // shift-'
+  '(', ')', '*', '+',
+  '?', // shift-,
+  '_', // shift--
+  '>', // shift-.
+  '?', // shift-/
+  '0', // shift-0
+  '1', // shift-1
+  '2', // shift-2
+  '3', // shift-3
+  '4', // shift-4
+  '5', // shift-5
+  '6', // shift-6
+  '7', // shift-7
+  '8', // shift-8
+  '9', // shift-9
+  '/',
+  '.', // shift-;
+  '<',
+  '+', // shift-=
+  '>', '?', '@',
+  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
+  'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+  '[', // shift-[
+  '!', // shift-backslash - OH MY GOD DOES WATCOM SUCK
+  ']', // shift-]
+  '"', '_',
+  '\'', // shift-`
+  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
+  'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+  '{', '|', '}', '~', 127
 };
 
 char english_shiftxform[] =
 {
-
-    0,
-    1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-    11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-    21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
-    31,
-    ' ', '!', '"', '#', '$', '%', '&',
-    '"', // shift-'
-    '(', ')', '*', '+',
-    '<', // shift-,
-    '_', // shift--
-    '>', // shift-.
-    '?', // shift-/
-    ')', // shift-0
-    '!', // shift-1
-    '@', // shift-2
-    '#', // shift-3
-    '$', // shift-4
-    '%', // shift-5
-    '^', // shift-6
-    '&', // shift-7
-    '*', // shift-8
-    '(', // shift-9
-    ':',
-    ':', // shift-;
-    '<',
-    '+', // shift-=
-    '>', '?', '@',
-    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
-    'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-    '[', // shift-[
-    '!', // shift-backslash - OH MY GOD DOES WATCOM SUCK
-    ']', // shift-]
-    '"', '_',
-    '\'', // shift-`
-    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
-    'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-    '{', '|', '}', '~', 127
+  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+  16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+  ' ', '!', '"', '#', '$', '%', '&',
+  '"', // shift-'
+  '(', ')', '*', '+',
+  '<', // shift-,
+  '_', // shift--
+  '>', // shift-.
+  '?', // shift-/
+  ')', // shift-0
+  '!', // shift-1
+  '@', // shift-2
+  '#', // shift-3
+  '$', // shift-4
+  '%', // shift-5
+  '^', // shift-6
+  '&', // shift-7
+  '*', // shift-8
+  '(', // shift-9
+  ':',
+  ':', // shift-;
+  '<',
+  '+', // shift-=
+  '>', '?', '@',
+  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
+  'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+  '[', // shift-[
+  '!', // shift-backslash - OH MY GOD DOES WATCOM SUCK
+  ']', // shift-]
+  '"', '_',
+  '\'', // shift-`
+  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
+  'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+  '{', '|', '}', '~', 127
 };
 
 
@@ -298,7 +258,7 @@ char frenchKeyMap[128]=
 
 char ForeignTranslation(unsigned char ch)
 {
-    return ch < 128 ? frenchKeyMap[ch] : ch;
+  return (ch < 128) ? frenchKeyMap[ch] : ch;
 }
 
 
@@ -316,9 +276,9 @@ HUD::HUD()
 
 
 // just after
-void Command_Say_f (void);
-void Command_Sayto_f (void);
-void Command_Sayteam_f (void);
+void Command_Say_f();
+void Command_Sayto_f();
+void Command_Sayteam_f();
 void Got_Saycmd(char **p,int playernum);
 
 // Initialise Heads up
@@ -366,7 +326,7 @@ void HU_Init()
 }
 
 
-void HU_Stop(void)
+void HU_Stop()
 {
   headsupactive = false;
 }
@@ -374,7 +334,7 @@ void HU_Stop(void)
 // 
 // Reset Heads up when consoleplayer spawns
 //
-void HU_Start(void)
+void HU_Start()
 {
   if (headsupactive)
     HU_Stop();
@@ -391,7 +351,7 @@ void HU_Start(void)
 //                            EXECUTION
 //======================================================================
 
-void Command_Say_f (void)
+void Command_Say_f()
 {
   char buf[255];
   int i,j;
@@ -412,7 +372,7 @@ void Command_Say_f (void)
   SendNetXCmd(XD_SAY,buf,strlen(buf+1)+2); // +2 because 1 for buf[0] and the other for null terminated string
 }
 
-void Command_Sayto_f (void)
+void Command_Sayto_f()
 {
     char buf[255];
     int i,j;
@@ -435,7 +395,7 @@ void Command_Sayto_f (void)
     SendNetXCmd(XD_SAY,buf,strlen(buf+1)+2);
 }
 
-void Command_Sayteam_f (void)
+void Command_Sayteam_f()
 {
     char buf[255];
     int i,j;
@@ -475,7 +435,7 @@ void Got_Saycmd(char **p,int playernum)
 
 //  Handles key input and string input
 //
-bool HU_keyInChatString (char *s, char ch)
+bool HU_keyInChatString(char *s, char ch)
 {
     int         l;
 
@@ -533,7 +493,10 @@ void HUD::Ticker()
   st_randomnumber = M_Random();
 
   //ST_updateWidgets();
-  ST_TickWidgets();
+  UpdateWidgets();
+
+  // get rid of chat window if up because of message
+  //if (!--st_msgcounter) st_chat = st_oldchat;
 
   st_oldhealth = sbpawn->health;
 
@@ -592,7 +555,7 @@ static int      tail = 0;
 
 //
 //
-char HU_dequeueChatChar(void)
+char HU_dequeueChatChar()
 {
     char c;
 
@@ -774,7 +737,7 @@ bool HUD::Responder(event_t *ev)
 
 //  Draw chat input
 //
-static void HU_DrawChat (void)
+static void HU_DrawChat ()
 {
     int  i,c,y;
 
@@ -1066,7 +1029,7 @@ void HU_DrawFSPics()
 //
 static int     oldclearlines;
 
-void HU_Erase (void)
+void HU_Erase()
 {
     int topline;
     int bottomline;
@@ -1261,44 +1224,45 @@ void HU_drawDeathmatchRankings()
 // draw the Crosshair, at the exact center of the view.
 //
 // Crosshairs are pre-cached at HU_Init
-#ifdef HWRENDER // not win32 only 19990829 by Kin
-    extern float gr_basewindowcentery;
-    extern float gr_viewheight;
-#endif
-void HU_drawCrosshair (void)
-{
-    int     i;
-    int     y;
-
-    i = cv_crosshair.value & 3;
-    if (!i)
-        return;
 
 #ifdef HWRENDER
-    if ( rendermode != render_soft ) 
-        y = gr_basewindowcentery;
-    else
+extern float gr_basewindowcentery;
+extern float gr_viewheight;
 #endif
-        y = viewwindowy+(viewheight>>1);
 
-/*	if (cv_crosshairscale.value)
-		V_DrawTranslucentPatch (vid.width>>1, y, 0, crosshair[i-1]);
+void HU_drawCrosshair()
+{
+  int i, y;
+
+  i = cv_crosshair.value & 3;
+  if (!i)
+    return;
+
+#ifdef HWRENDER
+  if (rendermode != render_soft) 
+    y = gr_basewindowcentery;
+  else
+#endif
+    y = viewwindowy+(viewheight>>1);
+
+  /*	if (cv_crosshairscale.value)
+	V_DrawTranslucentPatch (vid.width>>1, y, 0, crosshair[i-1]);
 	else*/
-		V_DrawTranslucentPatch (vid.width>>1, y, V_NOSCALESTART, crosshair[i-1]);
+  V_DrawTranslucentPatch(vid.width >> 1, y, V_NOSCALESTART, crosshair[i-1]);
 
-    if( cv_splitscreen.value )
+  if (cv_splitscreen.value)
     {
 #ifdef HWRENDER
-        if ( rendermode != render_soft )
-            y += gr_viewheight;
-        else
+      if ( rendermode != render_soft )
+	y += gr_viewheight;
+      else
 #endif
-            y += viewheight;
+	y += viewheight;
 
-/*		if (cv_crosshairscale.value)
-			V_DrawTranslucentPatch (vid.width>>1, y, 0, crosshair[i-1]);
-		else*/
-			V_DrawTranslucentPatch (vid.width>>1, y, V_NOSCALESTART, crosshair[i-1]);
+      /*	 if (cv_crosshairscale.value)
+		  V_DrawTranslucentPatch (vid.width>>1, y, 0, crosshair[i-1]);
+		  else*/
+      V_DrawTranslucentPatch(vid.width >> 1, y, V_NOSCALESTART, crosshair[i-1]);
     }
 }
 
@@ -1325,7 +1289,7 @@ consvar_t cv_chatmacro0 = {"_chatmacro0", NULL, CV_SAVE,NULL};
 // if a dehacked patch was loaded, it will set the hacked texts,
 // but the config.cfg will override it.
 //
-void HU_HackChatmacros (void)
+void HU_HackChatmacros()
 {
     int    i;
 
@@ -1361,7 +1325,7 @@ void HU_HackChatmacros (void)
 
 //  chatmacro <0-9> "chat message"
 //
-void Command_Chatmacro_f (void)
+void Command_Chatmacro_f()
 {
   int    i;
 
