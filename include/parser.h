@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/12/19 23:30:18  smite-meister
+// More BEX support
+//
 // Revision 1.5  2004/10/14 19:35:50  smite-meister
 // automap, bbox_t
 //
@@ -78,6 +81,7 @@ public:
 
   int  Open(int lump);
   int  Open(const char *buf, int len);
+  void Clear();
 
   void RemoveComments(char c);
   int  ReplaceChars(char from, char to);

@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,47 +17,53 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/12/19 23:30:17  smite-meister
+// More BEX support
+//
 // Revision 1.2  2004/03/28 15:16:14  smite-meister
 // Texture cache.
 //
 // Revision 1.1.1.1  2002/11/16 14:18:22  hurdler
 // Initial C++ version of Doom Legacy
 //
-// Revision 1.3  2002/07/01 21:00:44  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:22  vberghol
-// Version 133 Experimental!
-//
 // Revision 1.5  2000/11/02 17:50:06  stroggonmeth
 // Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.4  2000/04/16 18:38:07  bpereira
-// no message
 //
 // Revision 1.3  2000/04/05 15:47:46  stroggonmeth
 // Added hack for Dehacked lumps. Transparent sprites are now affected by colormaps.
 //
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
 // Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
 // Initial import into CVS (v1.29 pr3)
 //
-//
-// DESCRIPTION:
-//   DeHackEd support
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief DeHackEd and BEX support
 
 #ifndef dehacked_h
 #define dehacked_h 1
 
+#include "parser.h"
+
 class dehacked_t
 {
 private:
+  Parser p;
   int  num_errors;
-  void Read_Misc(class Parser &p);
+
+  int FindValue();
+  int ReadFlags(struct flag_mnemonic_t *mnemonics);
+
+  void Read_Thing(int num);
+  void Read_Frame(int num);
+  void Read_Sound(int num);
+  void Read_Text(int len1, int len2);
+  void Read_Weapon(int num);
+  void Read_Ammo(int num);
+  void Read_Misc();
+  void Read_Cheat();
+  void Read_CODEPTR();
+  void Read_STRINGS();
 
 public:
   bool loaded;
