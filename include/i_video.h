@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/12/08 16:59:25  segabor
+// A tiny fix: no macConfigureInput needed ...
+//
 // Revision 1.3  2004/08/18 14:35:20  smite-meister
 // PNG support!
 //
@@ -84,7 +87,7 @@ void I_ShutdownGraphics();   //restore old video mode
 void I_SetPalette (RGBA_t* palette);
 
 #ifdef __MACOS__
-void macConfigureInput();
+/* void macConfigureInput(); */
 void VID_Pause(int pause);
 #endif
 
