@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Portions Copyright (C) 1998-2002 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,74 +18,14 @@
 //
 //
 // $Log$
+// Revision 1.4  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
 // Revision 1.3  2002/12/16 22:12:06  smite-meister
 // Actor/DActor separation done!
 //
 // Revision 1.2  2002/12/03 10:15:29  smite-meister
 // Older update
-//
-// Revision 1.11  2002/09/20 22:41:33  vberghol
-// Sound system rewritten! And it workscvs update
-//
-// Revision 1.10  2002/08/31 11:40:17  vberghol
-// menu and map loading bugfixes
-//
-// Revision 1.9  2002/08/06 13:14:25  vberghol
-// ...
-//
-// Revision 1.8  2002/08/02 20:14:50  vberghol
-// p_enemy.cpp done!
-//
-// Revision 1.7  2002/07/15 20:52:39  vberghol
-// w_wad.cpp (FileCache class) finally fixed
-//
-// Revision 1.6  2002/07/13 17:55:54  vberghol
-// jäi kartan liikkuviin osiin... p_doors.cpp
-//
-// Revision 1.5  2002/07/04 18:02:26  vberghol
-// Pientä fiksausta, g_pawn.cpp uusi tiedosto
-//
-// Revision 1.4  2002/07/01 21:00:36  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:01:54  vberghol
-// HUD alkaa olla kunnossa
-//
-// Revision 1.12  2001/06/10 21:16:01  bpereira
-// no message
-//
-// Revision 1.11  2001/05/27 13:42:47  bpereira
-// no message
-//
-// Revision 1.10  2001/05/16 21:21:14  bpereira
-// no message
-//
-// Revision 1.9  2001/04/01 17:35:06  bpereira
-// no message
-//
-// Revision 1.8  2001/03/21 18:24:38  stroggonmeth
-// Misc changes and fixes. Code cleanup
-//
-// Revision 1.7  2001/03/03 11:11:49  hurdler
-// I hate warnigs ;)
-//
-// Revision 1.6  2001/02/24 13:35:19  bpereira
-// no message
-//
-// Revision 1.5  2001/02/10 13:05:45  hurdler
-// no message
-//
-// Revision 1.4  2001/01/25 22:15:41  bpereira
-// added heretic support
-//
-// Revision 1.3  2000/08/03 17:57:41  bpereira
-// no message
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //
 // DESCRIPTION:
@@ -111,7 +51,9 @@
 #include "v_video.h"
 #include "w_wad.h"
 #include "z_zone.h"
+
 #include "g_level.h"
+#include "p_info.h"
 
 
 // Stage of animation:
@@ -138,34 +80,37 @@ static bool keypressed = false;
 //
 // F_StartFinale
 //
-void F_StartFinale(const LevelNode *l, bool end)
+void F_StartFinale(const clusterdef_t *cd, bool enter, bool end)
 {
   endgame = end;
-  gameepisode = l->episode;
-  finaleflat = l->finaleflat.c_str();
-  finaletext = l->finaletext.c_str();
+  gameepisode = cd->episode;
+  finaleflat = cd->flatlump.c_str();
+  if (enter)
+    finaletext = cd->entertext.c_str();
+  else
+    finaletext = cd->exittext.c_str();
 
   // Okay - IWAD dependend stuff.
   // This has been changed severly, and
   //  some stuff might have changed in the process.
 
-  // FIXME! music should be referred to by lumpname, not "music number"!
-  // this requires redesigning the audio module... which is now done!
+  S.StartMusic(cd->musiclump.c_str(), true);
+  /*
   switch (game.mode)
     {
       // DOOM 1 - E1, E3 or E4, but each nine missions
-    case shareware:
-    case registered:
-    case retail:
+    case gm_doom1s:
+    case gm_doom1:
+    case gm_udoom:
       S.StartMusic(mus_victor, true);
       break;
 
       // DOOM II and missions packs with E1, M34
-    case commercial:
+    case gm_doom2:
       S.StartMusic(mus_read_m, true);
       break;
 
-    case heretic :
+    case gm_heretic :
       S.StartMusic(mus_hcptd, true);
       break;
 
@@ -174,7 +119,7 @@ void F_StartFinale(const LevelNode *l, bool end)
       S.StartMusic(mus_read_m, true);
       break;
     }
-
+  */
   finalestage = 0;
   finalecount = 0;
 }
@@ -226,7 +171,7 @@ void F_Ticker()
 	{
 	  if (endgame)
 	    { // skip to next stage
-	      if (game.mode == commercial)
+	      if (game.mode == gm_doom2)
 		F_StartCast();
 	      else {
 		finalecount = 0;
@@ -726,7 +671,7 @@ void F_Drawer()
       F_CastDrawer();
       break;
     default:
-      if (game.mode == heretic)
+      if (game.mode == gm_heretic)
 	{
 	  switch (gameepisode)
 	    {
@@ -752,7 +697,7 @@ void F_Drawer()
 	} else switch (gameepisode)
 	  {
 	  case 1:
-	    if ( game.mode == retail )
+	    if ( game.mode == gm_udoom )
 	      V_DrawScaledPatch (0,0,0, fc.CachePatchName(text[CREDIT_NUM],PU_CACHE));
 	    else
 	      V_DrawScaledPatch (0,0,0, fc.CachePatchName(text[HELP2_NUM],PU_CACHE));

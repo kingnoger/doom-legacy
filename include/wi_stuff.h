@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:29  hurdler
-// Initial revision
+// Revision 1.2  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
+// Revision 1.1.1.1  2002/11/16 14:18:29  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.7  2002/09/25 15:17:43  vberghol
 // Intermission fixed?
@@ -96,8 +99,12 @@ private:
   bool acceleratestage;
 
   // level graph pointers that contain intermission data
-  const LevelNode *level;
   const LevelNode *firstlevel;
+  const LevelNode *level;
+  const LevelNode *nextlevel;
+
+  // what animation, if any, do we show?
+  int episode;
 
   // level numbers for old Doom style graphic levelnames and YAH's
   int next, last; 

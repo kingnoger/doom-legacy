@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/29 18:57:02  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
 // Revision 1.2  2002/12/16 22:10:59  smite-meister
 // Actor/DActor separation done!
 //
@@ -40,6 +43,7 @@
 #include "g_pawn.h"
 #include "g_player.h"
 #include "g_input.h"
+#include "g_save.h"
 #include "p_enemy.h" // #defines
 
 #include "hu_stuff.h"
@@ -102,12 +106,8 @@ int Actor::Serialize(LArchive & a)
     || (type == MT_BLOOD) )
     continue;
   */
-  /*
-  if (a.IsStoring())
-    {
-      a << type;
-    }
-  */
+
+
   /*
   ULONG       diff;
   if (spawnpoint && (info->doomednum !=-1)) {
@@ -195,6 +195,10 @@ int Actor::Serialize(LArchive & a)
 
 int DActor::Serialize(LArchive & a)
 {
+  //Actor::Serialize(a);
+
+  a << byte(type);
+  
   return 0;
 }
 
@@ -350,7 +354,7 @@ void DActor::Think()
 
   // must have hit something
   if ((oldflags & MF_SKULLFLY) && !(flags & MF_SKULLFLY))
-    SetState(game.mode == heretic ? info->seestate : info->spawnstate);
+    SetState(game.mode == gm_heretic ? info->seestate : info->spawnstate);
   
   // must have exploded
   if ((oldflags & MF_MISSILE) && !(flags & MF_MISSILE))
@@ -725,7 +729,7 @@ void Actor::XYFriction(fixed_t oldx, fixed_t oldy)
     }
   else
     {
-      if (game.mode == heretic)
+      if (game.mode == gm_heretic)
         {
 	  if ((flags2 & MF2_FLY) && (z > floorz)
 	     && !(flags2 & MF2_ONMOBJ))
@@ -966,7 +970,7 @@ void Actor::CheckWater()
             eflags &= ~MF_UNDERWATER;
 
 	  if (!(oldeflags & (MF_TOUCHWATER|MF_UNDERWATER))
-	      && (eflags & (MF_TOUCHWATER|MF_UNDERWATER))) // && game.mode != heretic
+	      && (eflags & (MF_TOUCHWATER|MF_UNDERWATER))) // && game.mode != gm_heretic
             mp->SpawnSplash(this, *rover->topheight);
 	}
       return;
@@ -998,7 +1002,7 @@ int Actor::HitFloor()
   if (flags & MF_NOSPLASH)
     return floortype;
 
-  if (game.mode == heretic)
+  if (game.mode == gm_heretic)
     {
       DActor *p;
       switch (floortype)
@@ -1139,7 +1143,7 @@ void DActor::NightmareRespawn()
   // spawn a teleport fog at old spot
   // because of removal of the body?
   DActor *mo = mp->SpawnDActor(x, y, subsector->sector->floorheight + 
-			       (game.mode == heretic ? TELEFOGHEIGHT : 0), MT_TFOG);
+			       (game.mode == gm_heretic ? TELEFOGHEIGHT : 0), MT_TFOG);
   // initiate teleport sound
   S_StartSound(mo, sfx_telept);
 
@@ -1147,7 +1151,7 @@ void DActor::NightmareRespawn()
   subsector_t *ss = mp->R_PointInSubsector(nx, ny);
 
   mo = mp->SpawnDActor(nx, ny, ss->sector->floorheight +
-		   (game.mode == heretic ? TELEFOGHEIGHT : 0) , MT_TFOG);
+		   (game.mode == gm_heretic ? TELEFOGHEIGHT : 0) , MT_TFOG);
   S_StartSound(mo, sfx_telept);
 
   // spawn the new monster
@@ -1219,7 +1223,7 @@ DActor *DActor::SpawnMissile(Actor *dest, mobjtype_t type)
   // fuzzy player
   if (dest->flags & MF_SHADOW)
     {
-      if( game.mode == heretic )
+      if( game.mode == gm_heretic )
 	an += P_SignedRandom()<<21; 
       else
 	an += P_SignedRandom()<<20;
@@ -1249,7 +1253,7 @@ DActor *DActor::SpawnMissile(Actor *dest, mobjtype_t type)
 //
 bool DActor::CheckMissileSpawn()
 {
-  if (game.mode != heretic)
+  if (game.mode != gm_heretic)
     {
       tics -= P_Random()&3;
       if (tics < 1)
@@ -1287,7 +1291,7 @@ void DActor::ExplodeMissile()
 
   SetState(mobjinfo[type].deathstate);
 
-  if (game.mode != heretic)
+  if (game.mode != gm_heretic)
     {
       tics -= P_Random()&3;
         

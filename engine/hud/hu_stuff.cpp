@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
 // Revision 1.4  2002/12/23 23:15:41  smite-meister
 // Weapon groups, MAPINFO parser added!
 //
@@ -242,7 +245,7 @@ void HUD::Startup()
   RegisterNetXCmd(XD_SAY, Got_Saycmd);
 
   // set shift translation table
-  if (language == french)
+  if (language == la_french)
     shiftxform = french_shiftxform;
   else
     shiftxform = english_shiftxform;
@@ -271,7 +274,7 @@ void HUD::Init()
 
   // cache the HUD font for entire game execution
   // TODO add legacy default font (in legacy.wad)
-  if (game.mode == heretic)
+  if (game.mode == gm_heretic)
     {
       startlump = fc.GetNumForName("FONTA01");
       endlump  =  fc.GetNumForName("FONTA59");
@@ -305,13 +308,13 @@ void HUD::Init()
 
   switch (game.mode)
     {
-    case heretic:
+    case gm_heretic:
       ST_LoadHereticData();
       break;
-    case shareware:
-    case registered:
-    case retail:
-    case commercial:
+    case gm_doom1s:
+    case gm_doom1:
+    case gm_udoom:
+    case gm_doom2:
       ST_LoadDoomData();
       break;
     default:
@@ -371,7 +374,7 @@ bool HUD::Responder(event_t *ev)
         c = ev->data1;
 
         // use console translations
-        if (con_keymap==french)
+        if (con_keymap == la_french)
             c = ForeignTranslation(c);
         if (shiftdown)
             c = shiftxform[c];
@@ -399,7 +402,7 @@ bool HUD::Responder(event_t *ev)
         }
         else
         {
-            if (language==french)
+            if (language == la_french)
                 c = ForeignTranslation(c);
             if (shiftdown || (c >= 'a' && c <= 'z'))
                 c = shiftxform[c];
@@ -586,7 +589,7 @@ void HUD::Ticker()
     bonuscount--;
 
   /*
-  if ((game.mode == heretic) && (gametic & 1))
+  if ((game.mode == gm_heretic) && (gametic & 1))
     ChainWiggle = M_Random()&1;
   */  
 

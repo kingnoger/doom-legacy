@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
 // Revision 1.2  2002/12/16 22:12:00  smite-meister
 // Actor/DActor separation done!
 //
@@ -128,7 +131,7 @@ bool Actor::Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent = false
   if (!silent)
     {
       fixed_t fogDelta = 0;
-      if (game.mode == heretic && !(flags & MF_MISSILE))
+      if (game.mode == gm_heretic && !(flags & MF_MISSILE))
 	fogDelta = TELEFOGHEIGHT;
 
       // spawn teleport fog at source and destination
@@ -139,7 +142,7 @@ bool Actor::Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent = false
       fog = mp->SpawnDActor(nx+20*finecosine[an], ny+20*finesine[an], z + fogDelta, MT_TFOG);
       S_StartSound (fog, sfx_telept);
 
-      if ((flags2 & MF2_FOOTCLIP) && (subsector->sector->floortype != FLOOR_SOLID) && (game.mode == heretic))
+      if ((flags2 & MF2_FOOTCLIP) && (subsector->sector->floortype != FLOOR_SOLID) && (game.mode == gm_heretic))
 	{
 	  flags2 |= MF2_FEETARECLIPPED;
 	}
@@ -188,7 +191,8 @@ bool Map::EV_Teleport(line_t *line, int side, Actor *thing)
   Actor    *m;
 
   // don't teleport missiles
-  if (((thing->flags & MF_MISSILE) && game.mode != heretic) 
+  // TODO give all non-heretic missiles the MF2_NOTELEPORT flag....simpler
+  if (((thing->flags & MF_MISSILE) && game.mode != gm_heretic) 
       || (thing->flags2 & MF2_NOTELEPORT))
     return false;
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
 // Revision 1.3  2002/12/23 23:22:47  smite-meister
 // WAD2+WAD3 support, MAPINFO parser added!
 //
@@ -787,7 +790,7 @@ void R_ExecuteSetViewSize()
     CV_SetValue(&cv_viewsize, 6);
 #endif
 
-  hud.stbarheight = (game.mode == heretic) ? SBARHEIGHT : ST_HEIGHT; 
+  hud.stbarheight = (game.mode == gm_heretic) ? SBARHEIGHT : ST_HEIGHT; 
     
   if (cv_scalestatusbar.value || cv_viewsize.value > 10)
     hud.stbarheight *= (rendermode==render_soft) ? vid.dupy : vid.fdupy;

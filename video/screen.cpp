@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
 // Revision 1.4  2002/12/23 23:22:47  smite-meister
 // WAD2+WAD3 support, MAPINFO parser added!
 //
@@ -338,20 +341,20 @@ void Video::Startup()
   // choose and cache the default border patch
   switch (game.mode)
     {
-    case commercial :
+    case gm_doom2:
       // DOOM II border patch, original was GRNROCK
       scr_borderpatchnum = fc.GetNumForName ("GRNROCK");
       break;
-    case heretic :
+    case gm_heretic:
       if (fc.FindNumForName("e2m1") == -1)
 	scr_borderpatchnum = fc.GetNumForName ("FLOOR04");
       else
 	scr_borderpatchnum = fc.GetNumForName ("FLAT513");
       break;
-    case hexen :
+    case gm_hexen:
       scr_borderpatchnum = fc.GetNumForName ("F_022");
       break;
-    default :
+    default:
       // DOOM border patch.
       // FIXME! should be default patch in legacy.wad
       scr_borderpatchnum = fc.GetNumForName ("FLOOR7_2");

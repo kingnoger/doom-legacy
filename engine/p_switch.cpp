@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:04  hurdler
-// Initial revision
+// Revision 1.2  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
+// Revision 1.1.1.1  2002/11/16 14:18:04  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.11  2002/09/25 15:17:38  vberghol
 // Intermission fixed?
@@ -177,14 +180,14 @@ void P_InitSwitchList()
 
   switch (game.mode)
     {
-    case registered :
-    case retail:
+    case gm_doom1:
+    case gm_udoom:
       nameset = 2;
       break;
-    case commercial :
+    case gm_doom2:
       nameset = 3;
       break;
-    case heretic :
+    case gm_heretic:
       sl = HereticSwitchList;
       nameset = 4;
       break;
@@ -506,12 +509,12 @@ bool Map::UseSpecialLine(Actor *thing, line_t *line, int side)
       // SWITCHES
     case 7:
       // Build Stairs
-      if (EV_BuildStairs(line, stair_e(game.mode == heretic ? 8*FRACUNIT : build8)))
+      if (EV_BuildStairs(line, stair_e(game.mode == gm_heretic ? 8*FRACUNIT : build8)))
 	ChangeSwitchTexture(line,0);
       break;
 
     case 107:
-      if( game.mode == heretic )
+      if( game.mode == gm_heretic )
         {
 	  if (EV_BuildStairs (line, stair_e(16 * FRACUNIT)))
 	    ChangeSwitchTexture (line, 0);
@@ -589,7 +592,7 @@ bool Map::UseSpecialLine(Actor *thing, line_t *line, int side)
 
     case 49:
       // Ceiling Crush And Raise
-      if (EV_DoCeiling(line,game.mode==heretic ? lowerAndCrush : crushAndRaise))
+      if (EV_DoCeiling(line,game.mode==gm_heretic ? lowerAndCrush : crushAndRaise))
 	ChangeSwitchTexture(line,0);
       break;
 
@@ -1185,7 +1188,7 @@ bool Map::UseSpecialLine(Actor *thing, line_t *line, int side)
       break;
 
     case 99:
-      if( game.mode == heretic ) // used for right scrolling texture
+      if( game.mode == gm_heretic ) // used for right scrolling texture
 	break;
       // BlzOpenDoor BLUE
     case 134:

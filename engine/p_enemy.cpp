@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
 // Revision 1.3  2002/12/16 22:11:25  smite-meister
 // Actor/DActor separation done!
 //
@@ -628,7 +631,7 @@ bool DActor::LookForPlayers(bool allaround)
   fixed_t     dist;
 
   // FIXME removed until LookForMonsters is fixed
-  //if (!game.multiplayer && consoleplayer->pawn->health <= 0 && game.mode == heretic)
+  //if (!game.multiplayer && consoleplayer->pawn->health <= 0 && game.mode == gm_heretic)
   //  // Single player game and player is dead, look for monsters
   //  return LookForMonsters();
 
@@ -676,7 +679,7 @@ bool DActor::LookForPlayers(bool allaround)
             }
         }
 
-      if (game.mode == heretic && p->flags & MF_SHADOW)
+      if (game.mode == gm_heretic && p->flags & MF_SHADOW)
         { // Player is invisible
 	  if ((P_AproxDistance(p->x - x, p->y - y) > 2*MELEERANGE)
 	      && P_AproxDistance(p->px, p->py) < 5*FRACUNIT)
@@ -831,7 +834,7 @@ void A_Chase(DActor *actor)
   // modify target threshold
   if (actor->threshold)
     {
-      if (game.mode != heretic && (!actor->target
+      if (game.mode != gm_heretic && (!actor->target
 				   || actor->target->health <= 0
 				   || (actor->target->flags & MF_CORPSE)))
         {
@@ -841,7 +844,7 @@ void A_Chase(DActor *actor)
 	actor->threshold--;
     }
 
-  if (game.mode == heretic  && cv_fastmonsters.value)
+  if (game.mode == gm_heretic  && cv_fastmonsters.value)
     { // Monsters move faster in nightmare mode
       actor->tics -= actor->tics/2;
       if (actor->tics < 3)
@@ -2019,7 +2022,7 @@ void A_PlayerScream(DActor *mo)
   // Default death sound.
   int         sound = sfx_pldeth;
 
-  if ((game.mode == commercial) && (mo->health < -50))
+  if ((game.mode == gm_doom2) && (mo->health < -50))
     {
       // IF THE PLAYER DIES
       // LESS THAN -50% WITHOUT GIBBING

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
 // Revision 1.3  2002/12/23 23:19:37  smite-meister
 // Weapon groups, MAPINFO parser, WAD2+WAD3 support added!
 //
@@ -26,12 +29,6 @@
 //
 // Revision 1.1.1.1  2002/11/16 14:18:22  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.17  2002/08/23 09:53:42  vberghol
-// fixed Actor:: target/owner/tracer
-//
-// Revision 1.16  2002/08/21 16:58:35  vberghol
-// Version 1.41 Experimental compiles and links!
 //
 //
 // DESCRIPTION:
@@ -46,6 +43,8 @@
 #include "m_fixed.h"  // Basics.
 #include "g_think.h"  // We need the Thinker stuff.
 #include "g_damage.h" // and damage types
+
+class PlayerPawn;
 
 // States are tied to finite states are
 //  tied to animation frames.
@@ -335,7 +334,6 @@ public:
   virtual int Serialize(LArchive & a);
 
   virtual void Think();
-  virtual bool Touch(Actor *a); // Actor touches another Actor
 
   void CheckWater(); // set some eflags if sector contains water
 
@@ -349,7 +347,9 @@ public:
   int  HitFloor();
 
   // in p_inter.cpp
+  virtual bool Touch(Actor *a); // Actor touches another Actor
   virtual void Die(Actor *inflictor, Actor *source);
+  virtual void Killed(PlayerPawn *victim, Actor *inflictor);
   virtual bool Morph();
   virtual bool Damage(Actor *inflictor, Actor *source, int damage, int dtype = dt_normal);
 
@@ -409,9 +409,11 @@ public:
   virtual int Serialize(LArchive & a);
 
   virtual void Think();
-  virtual bool Touch(Actor *a);
 
+  // in p_inter.cpp
+  virtual bool Touch(Actor *a);
   virtual void Die(Actor *inflictor, Actor *source);
+  virtual void Killed(PlayerPawn *victim, Actor *inflictor);
   virtual bool Morph();
   virtual bool Damage(Actor *inflictor, Actor *source, int damage, int dtype = dt_normal);
 

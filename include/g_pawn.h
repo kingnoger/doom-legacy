@@ -189,9 +189,7 @@ public:
 
   virtual void Think();
   void DeathThink();
-  virtual bool Touch(Actor *a); // PPawn touches another Actor
 
-  virtual bool Morph();
   void MorphThink();
   bool UndoMorph();
 
@@ -233,11 +231,13 @@ public:
   bool GiveWeapon(weapontype_t wt, bool dropped);
   bool GiveArmor(int at);
   bool GiveCard(card_t ct);
-  void TouchSpecialThing(DActor *special);
-  virtual void Die(Actor *inflictor, Actor *source);
-
-  virtual bool Damage(Actor *inflictor, Actor *source, int damage, int dtype = dt_normal);
   bool GiveArtifact(artitype_t arti, Actor *from);
+  void TouchSpecialThing(DActor *special);
+  virtual bool Touch(Actor *a); // PPawn touches another Actor
+  virtual void Die(Actor *inflictor, Actor *source);
+  virtual void Killed(PlayerPawn *victim, Actor *inflictor);
+  virtual bool Morph();
+  virtual bool Damage(Actor *inflictor, Actor *source, int damage, int dtype = dt_normal);
 
   // in p_pspr.cpp
   void UseFavoriteWeapon();

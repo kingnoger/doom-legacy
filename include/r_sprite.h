@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
 // Revision 1.2  2002/12/23 23:19:37  smite-meister
 // Weapon groups, MAPINFO parser, WAD2+WAD3 support added!
 //
@@ -29,7 +32,112 @@
 #ifndef r_sprite_h
 #define r_sprite_h 1
 
+#include <vector>
 #include "doomtype.h"
+
+
+/*
+  Doom "sequences"
+  spawnstate  // stand idle
+  seestate    // run
+  painstate   // pain
+  meleestate   // melee attack (1)
+  missilestate // missile attack (2)
+
+  deathstate   // die (1)
+  xdeathstate  // explode, die (2)
+  crashstate   // one more way to die (3) (heretic/hexen imps)
+
+  raisestate   // being raised by an arch-vile (extra 1)
+ */
+
+/*
+MD2 sequences?
+
+IDLE1         The first of four idle animations
+RUN           Animation for the model running. RUN FORREST RUN!
+SHOT_STAND    Animation for when the model gets shot, but stays standing
+SHOT_SHOULDER Animation for when the model gets shot in the shoulder (still standing though)
+JUMP          Animation for the model jumping
+IDLE2         The second of four idle animations
+SHOT_FALLDOWN Animation for the model getting shot, and falling to the ground (used for getting shot by big weapons)
+IDLE3         The third of four idle animations
+IDLE4         The fourth of four idle animations
+CROUCH        Animation for making the model crouch
+CROUCH_CRAWL  Having the model crawl while crouching
+CROUCH_IDLE   An idle animation while in a crouching position
+CROUCH_DEATH  The model dying while in a crouching position
+DEATH_FALLBACK     The model dying while falling backwards (death shot from the front)
+DEATH_FALLFORWARD  The model dying while falling forwards (death shot from the back)
+DEATH_FALLBACKSLOW The model dying while falling backwards slowly
+*/
+/*
+Quake III player sequences
+enum
+{
+  BOTH_DEATH1 = 0,
+  BOTH_DEAD1  = 1,
+  BOTH_DEATH2 = 2,
+  BOTH_DEAD2  = 3,
+  BOTH_DEATH3 = 4,
+  BOTH_DEAD3  = 5,
+
+  TORSO_GESTURE = 6,
+  TORSO_ATTACK  = 7,
+  TORSO_ATTACK2 = 8,
+  TORSO_DROP    = 9,
+  TORSO_RAISE   = 10,
+  TORSO_STAND   = 11,
+  TORSO_STAND2  = 12,
+
+  LEGS_WALKCR   = 13,
+  LEGS_WALK     = 14,
+  LEGS_RUN      = 15,
+  LEGS_BACK     = 16,
+  LEGS_SWIM     = 17,
+  LEGS_JUMP     = 18,
+  LEGS_LAND     = 19,
+  LEGS_JUMPB    = 20,
+  LEGS_LANDB    = 21,
+  LEGS_IDLE     = 22,
+  LEGS_IDLECR   = 23,
+  LEGS_TURN     = 24,
+  MAX_ANIMATIONS = 25
+};
+*/
+
+/*
+// this struct describes one animation sequence
+struct animation_t
+{
+  int firstframe; // lastframe = firstframe + numframes - 1
+  int numframes;
+  int loopingframes;
+  fixed_t fps; // frames per second (not always used)
+  // (in principle each frame can have its own duration
+  //  independently of others in the sequence)
+};
+
+// Idea: Game entities have a pointer to a graphic presentation, frame, nextframe,
+// current sequence and location/rotation information stored in them.
+// The actual implementation of the "graphic presentation" can be a sprite, md3 or anything.
+
+// abstract base class
+class graph_presentation_t
+{
+protected:
+  vector<animation_t> anim; // all known animation sequences
+  
+public:
+
+  void DrawInterpolated(fixed_t frame, int nextframe, pos, rot) = 0;
+};
+
+class MD3 : public graph_presentation_t
+{
+  
+};
+*/
 
 
 // Doom sprites in wads are patches with a special naming convention

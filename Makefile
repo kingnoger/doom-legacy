@@ -2,7 +2,7 @@
 # Ville Bergholm 2002
 # This primary Makefile calls auxiliary Makefiles in subdirectories
 #
-# Use OPT=1 to make optimized version, else you'll get debug info.
+# Use 'make OPT=1' to make optimized version, else you'll get debug info.
 
 # Platform autodetect.
 
@@ -116,6 +116,7 @@ export engine_objects = \
 	$(objdir)/hu_stuff.o \
 	$(objdir)/st_lib.o \
 	$(objdir)/st_stuff.o \
+	$(objdir)/g_save.o \
 	$(objdir)/g_player.o \
 	$(objdir)/g_game.o \
 	$(objdir)/g_state.o \
@@ -149,9 +150,9 @@ export engine_objects = \
 	$(objdir)/p_info.o \
 	$(objdir)/p_setup.o \
 	$(objdir)/p_saveg.o \
-	$(objdir)/p_inter.o \
 	$(objdir)/p_maputl.o \
 	$(objdir)/p_map.o \
+	$(objdir)/p_inter.o \
 	$(objdir)/p_fab.o \
 	$(objdir)/d_items.o \
 	$(objdir)/dstrings.o \
@@ -206,10 +207,10 @@ export video_objects = \
 	$(objdir)/hw_bsp.o \
 	$(objdir)/hw_cache.o \
 	$(objdir)/hw_draw.o \
-	$(objdir)/hw_light.o \
 	$(objdir)/hw_main.o \
 	$(objdir)/hw_md2.o \
-	$(objdir)/hw_trick.o
+	$(objdir)/hw_trick.o \
+	$(objdir)/hw_light.o
 
 export net_objects = \
 	$(objdir)/d_client.o \
@@ -251,7 +252,7 @@ clean	:
 	$(rm) $(objects)
 
 depend:
-	$(MAKE) -C video depend
+#	$(MAKE) -C video depend
 #	$(MAKE) -C engine depend
 #	$(MAKE) -C util depend
 #	$(MAKE) -C audio depend

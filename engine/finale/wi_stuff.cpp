@@ -18,80 +18,14 @@
 //
 //
 // $Log$
+// Revision 1.4  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
 // Revision 1.3  2002/12/16 22:12:07  smite-meister
 // Actor/DActor separation done!
 //
 // Revision 1.2  2002/12/03 10:15:29  smite-meister
 // Older update
-//
-// Revision 1.12  2002/09/25 15:17:38  vberghol
-// Intermission fixed?
-//
-// Revision 1.9  2002/08/31 11:40:17  vberghol
-// menu and map loading bugfixes
-//
-// Revision 1.8  2002/08/06 13:14:25  vberghol
-// ...
-//
-// Revision 1.7  2002/08/02 20:14:50  vberghol
-// p_enemy.cpp done!
-//
-// Revision 1.6  2002/07/26 19:23:05  vberghol
-// a little something
-//
-// Revision 1.5  2002/07/15 20:52:39  vberghol
-// w_wad.cpp (FileCache class) finally fixed
-//
-// Revision 1.4  2002/07/01 21:00:37  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:01:55  vberghol
-// HUD alkaa olla kunnossa
-//
-// Revision 1.14  2001/06/30 15:06:01  bpereira
-// fixed wronf next level name in intermission
-//
-// Revision 1.13  2001/05/16 21:21:15  bpereira
-// no message
-//
-// Revision 1.12  2001/05/14 19:02:58  metzgermeister
-//   * Fixed floor not moving up with player on E3M1
-//   * Fixed crash due to oversized string in screen message ... bad bug!
-//   * Corrected some typos
-//   * fixed sound bug in SDL
-//
-// Revision 1.11  2001/03/03 06:17:34  bpereira
-// no message
-//
-// Revision 1.10  2001/02/24 13:35:21  bpereira
-// no message
-//
-// Revision 1.9  2001/02/10 12:27:14  bpereira
-// no message
-//
-// Revision 1.8  2001/01/27 11:02:36  bpereira
-// no message
-//
-// Revision 1.7  2001/01/25 22:15:44  bpereira
-// added heretic support
-//
-// Revision 1.6  2000/11/02 17:50:10  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.5  2000/09/21 16:45:09  bpereira
-// no message
-//
-// Revision 1.4  2000/08/31 14:30:56  bpereira
-// no message
-//
-// Revision 1.3  2000/04/16 18:38:07  bpereira
-// no message
-//
-// Revision 1.2  2000/02/27 00:42:11  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //
 // DESCRIPTION:
@@ -494,10 +428,10 @@ static void WI_drawAnimatedBack(int ep)
   int                 i;
   anim_t*             a;
 
-  if (game.mode == commercial || game.mode == heretic)
+  if (game.mode == gm_doom2 || game.mode == gm_heretic)
     return;
 
-  if (ep > 3)
+  if (ep < 1 || ep > 3)
     return;
 
   for (i=0 ; i<NUMANIMS[ep-1] ; i++)
@@ -570,7 +504,7 @@ static void WI_drawOnLnode(int n, patch_t *c[])
 
   point_t     *lnodes;
 
-  lnodes = &DoomMapSpots[level->episode-1][n];
+  lnodes = &DoomMapSpots[episode-1][n];
 
   i = 0;
   do
@@ -729,7 +663,7 @@ bool Intermission::Responder(event_t* ev)
 // slam background
 void Intermission::SlamBackground()
 {
-  if (game.mode == heretic && state == StatCount)
+  if (game.mode == gm_heretic && state == StatCount)
     V_DrawFlatFill(0, 0, vid.width/vid.dupx, vid.height/vid.dupy, fc.FindNumForName("FLOOR16"));
   else if (rendermode == render_soft) 
     {
@@ -744,17 +678,17 @@ void Intermission::SlamBackground()
 // was WI_initAnimatedBack
 void Intermission::InitAnimatedBack()
 {
-  if (game.mode == commercial || game.mode == heretic)
+  if (game.mode == gm_doom2 || game.mode == gm_heretic)
     return;
 
-  if (level->episode > 3)
+  if (episode < 1 || episode > 3)
     return;
 
   int         i;
   anim_t*     a;
-  for (i=0; i<NUMANIMS[level->episode-1]; i++)
+  for (i=0; i<NUMANIMS[episode-1]; i++)
     {
-      a = &anims[level->episode-1][i];
+      a = &anims[episode-1][i];
 
       // init variables
       a->ctr = -1;
@@ -775,15 +709,15 @@ void Intermission::UpdateAnimatedBack()
   int         i;
   anim_t*     a;
 
-  if (game.mode == commercial || game.mode == heretic)
+  if (game.mode == gm_doom2 || game.mode == gm_heretic)
     return;
 
-  if (level->episode > 3)
+  if (episode < 1 || episode > 3)
     return;
 
-  for (i=0;i<NUMANIMS[level->episode-1];i++)
+  for (i=0;i<NUMANIMS[episode-1];i++)
     {
-      a = &anims[level->episode-1][i];
+      a = &anims[episode-1][i];
 
       if (bcount >= a->nexttic)
         {
@@ -823,12 +757,12 @@ void Intermission::UpdateAnimatedBack()
 // was WI_DrawYAH
 void Intermission::DrawYAH()
 {
-  int ep = (level->episode - 1) % 3;
+  int ep = (episode - 1) % 3;
   // draws splats and "you are here" marker
   int i;
 
   point_t (*mapspots)[NUMMAPS] = DoomMapSpots;
-  if (game.mode == heretic)
+  if (game.mode == gm_heretic)
     mapspots = HereticMapSpots;
 
   // this REQUIRES that the levelnodes are in an array.
@@ -906,7 +840,7 @@ void WI_drawRanking(const char *title, int x, int y, fragsort_t *fragtable,
   int   i;
   int   colornum;
 
-  if (game.mode == heretic)
+  if (game.mode == gm_heretic)
     colornum = 230;
   else
     colornum = 0x78;
@@ -1204,7 +1138,7 @@ static void WI_updateStats()
         {
 	  S_StartAmbSound(sfx_sgcock);
 
-	  if (game.mode == commercial)
+	  if (game.mode == gm_doom2)
 	    WI_initNoState();
 	  else
 	    WI_initShowNextLoc();
@@ -1378,7 +1312,7 @@ void Intermission::UpdateCoopStats()
         {
 	  S_StartAmbSound(sfx_sgcock);
 
-	  if (game.mode == commercial)
+	  if (game.mode == gm_doom2)
 	    InitNoState();
 	  else
 	    {
@@ -1494,17 +1428,17 @@ void Intermission::DrawCoopStats()
   if (FontBBaseLump)
     {
       V_DrawTextB("Time", SP_TIMEX, SP_TIMEY);
-      // if (level->episode < 4 && game.mode!=heretic)
+      // if (episode < 4 && game.mode!=gm_heretic)
       V_DrawTextB("Par", BASEVIDWIDTH/2 + SP_TIMEX, SP_TIMEY);
     }
   else
     {
       V_DrawScaledPatch(SP_TIMEX, SP_TIMEY, FB, timePatch);
-      //if (level->episode < 4 && game.mode!=heretic)
+      //if (episode < 4 && game.mode!=gm_heretic)
       V_DrawScaledPatch(BASEVIDWIDTH/2 + SP_TIMEX, SP_TIMEY, FB, par);
     }
   WI_drawTime(BASEVIDWIDTH/2 - SP_TIMEX, SP_TIMEY, cnt_time);
-  // if (level->episode < 4 && game.mode!=heretic)
+  // if (episode < 4 && game.mode!=gm_heretic)
   WI_drawTime(BASEVIDWIDTH - SP_TIMEX, SP_TIMEY, cnt_par);
 
 }
@@ -1551,10 +1485,10 @@ void Intermission::LoadData()
 {  
   switch (game.mode)
     {
-    case commercial:
+    case gm_doom2:
       pname = patchnames[1]; // use Doom II patchnames
       break;
-    case heretic:
+    case gm_heretic:
       pname = patchnames[2]; // use Heretic patchnames
       break;
     default:
@@ -1571,7 +1505,7 @@ void Intermission::LoadData()
     }
 
   // UNUSED unsigned char *pic = vid.screens[1];
-  // if (game.mode == commercial)
+  // if (game.mode == gm_doom2)
   // {
   // darken the background image
   // while (pic != vid.screens[1] + SCREENHEIGHT*SCREENWIDTH)
@@ -1586,7 +1520,7 @@ void Intermission::LoadData()
 
   switch (game.mode)
     {
-    case commercial:
+    case gm_doom2:
       // NUMCMAPS = 32;
       // level name patches
       lnames = (patch_t **) Z_Malloc(sizeof(patch_t*) * NUMCMAPS, PU_STATIC, 0);
@@ -1596,53 +1530,55 @@ void Intermission::LoadData()
 	  lnames[i] = fc.CachePatchName(name, PU_STATIC);
 	}
       break;
-    case shareware:
-    case registered:
-    case retail:
+    case gm_doom1s:
+    case gm_doom1:
+    case gm_udoom:
       // Doom 1 intermission animations
       anim_t *a;
-      if (level->episode < 4)
+      if (episode >= 1)
 	{
-	  for (j = 0; j < NUMANIMS[level->episode-1]; j++)
+	  if (episode <= 3)
+	    for (j = 0; j < NUMANIMS[episode-1]; j++)
+	      {
+		a = &anims[episode-1][j];
+		for (i = 0; i < a->nanims; i++)
+		  {
+		    // MONDO HACK! There is no special picture of the
+		    // Tower of Babel for the secret level of Doom 1 ep. 2.
+		    if (episode == 2 && j == 8)
+		      {
+			// HACK ALERT!
+			a->p[i] = anims[1][4].p[i];
+		      }
+		    else
+		      {
+			// animations
+			sprintf(name, "WIA%d%.2d%.2d", episode-1, j, i);
+			a->p[i] = fc.CachePatchName(name, PU_STATIC);
+		      }
+		  }
+	      }
+
+	  // level name patches
+	  lnames = (patch_t **) Z_Malloc(sizeof(patch_t*) * NUMMAPS, PU_STATIC, 0);
+	  for (i=0 ; i<NUMMAPS ; i++)
 	    {
-	      a = &anims[level->episode-1][j];
-	      for (i = 0; i < a->nanims; i++)
-		{
-		  // MONDO HACK! There is no special picture of the
-		  // Tower of Babel for the secret level of Doom 1 ep. 2.
-		  if (level->episode == 2 && j == 8)
-		    {
-		      // HACK ALERT!
-		      a->p[i] = anims[1][4].p[i];
-		    }
-		  else
-		    {
-		      // animations
-		      sprintf(name, "WIA%d%.2d%.2d", level->episode-1, j, i);
-		      a->p[i] = fc.CachePatchName(name, PU_STATIC);
-		    }
-		}
+	      sprintf(name, "WILV%d%d", episode-1, i);
+	      lnames[i] = fc.CachePatchName(name, PU_STATIC);
 	    }
-	}
-      // level name patches
-      lnames = (patch_t **) Z_Malloc(sizeof(patch_t*) * NUMMAPS, PU_STATIC, 0);
-      for (i=0 ; i<NUMMAPS ; i++)
-	{
-	  sprintf(name, "WILV%d%d", level->episode-1, i);
-	  lnames[i] = fc.CachePatchName(name, PU_STATIC);
 	}
 
       // fallthru
-    case heretic:
+    case gm_heretic:
       // you are here
-      //yah[0] = fc.CachePatchName(game.mode == heretic ? "IN_YAH" : "WIURH0", PU_STATIC);
+      //yah[0] = fc.CachePatchName(game.mode == gm_heretic ? "IN_YAH" : "WIURH0", PU_STATIC);
       yah[0] = fc.CachePatchName(pname[PN_YAH], PU_STATIC);
 
       // you are here (alt.)
       yah[1] = fc.CachePatchName("WIURH1", PU_STATIC);
 
       // splat
-      //splat = fc.CachePatchName(game.mode == heretic ? "IN_X" : "WISPLAT", PU_STATIC);
+      //splat = fc.CachePatchName(game.mode == gm_heretic ? "IN_X" : "WISPLAT", PU_STATIC);
       splat = fc.CachePatchName(pname[PN_SPLAT], PU_STATIC);
       break;
     default:
@@ -1651,12 +1587,12 @@ void Intermission::LoadData()
 
   // TODO! these could use the new Hud widgets! the font is then cached just once!
   // More hacks on minus sign.
-  wiminus = fc.CachePatchName(game.mode == heretic ? "FONTB13" : "WIMINUS", PU_STATIC);
+  wiminus = fc.CachePatchName(game.mode == gm_heretic ? "FONTB13" : "WIMINUS", PU_STATIC);
 
   for (i=0;i<10;i++)
     {
       // numbers 0-9
-      if( game.mode == heretic )
+      if( game.mode == gm_heretic )
 	sprintf(name, "FONTB%d", 16+i);
       else
 	sprintf(name, "WINUM%d", i);
@@ -1664,9 +1600,9 @@ void Intermission::LoadData()
     }
 
   // percent sign
-  percent = fc.CachePatchName(game.mode == heretic ? "FONTB05" : "WIPCNT", PU_STATIC);
+  percent = fc.CachePatchName(game.mode == gm_heretic ? "FONTB05" : "WIPCNT", PU_STATIC);
 
-  if (game.mode != heretic)
+  if (game.mode != gm_heretic)
     {
       // "finished"
       finished = fc.CachePatchName("WIF", PU_STATIC);
@@ -1709,7 +1645,7 @@ void Intermission::LoadData()
     }
     
   // ":"
-  colon = fc.CachePatchName(game.mode == heretic ? "FONTB26" : "WICOLON", PU_STATIC);
+  colon = fc.CachePatchName(game.mode == gm_heretic ? "FONTB26" : "WICOLON", PU_STATIC);
 
   // your face
   star = fc.CachePatchName("STFST01", PU_STATIC);
@@ -1741,31 +1677,34 @@ void Intermission::UnloadData()
 
       switch (game.mode)
 	{
-	case commercial:
+	case gm_doom2:
 	  for (i=0 ; i<NUMCMAPS ; i++)
             Z_ChangeTag(lnames[i], PU_CACHE);
 	  Z_Free(lnames);
 	  break;
 
-	case shareware:
-	case registered:
-	case retail:
+	case gm_doom1s:
+	case gm_doom1:
+	case gm_udoom:
 	  // Doom 1
-	  for (i=0 ; i<NUMMAPS ; i++)
-            Z_ChangeTag(lnames[i], PU_CACHE);
-	  Z_Free(lnames);
-
-	  if (level->episode < 4)
+	  if (episode >= 1)
 	    {
-	      for (j=0;j<NUMANIMS[level->episode-1];j++)
+	      for (i=0 ; i<NUMMAPS ; i++)
+		Z_ChangeTag(lnames[i], PU_CACHE);
+	      Z_Free(lnames);
+	      
+	      if (episode <= 3)
 		{
-		  if (level->episode != 2 || j != 8)
-                    for (i=0;i<anims[level->episode-1][j].nanims;i++)
-		      Z_ChangeTag(anims[level->episode-1][j].p[i], PU_CACHE);
+		  for (j=0;j<NUMANIMS[episode-1];j++)
+		    {
+		      if (episode != 2 || j != 8)
+			for (i=0;i<anims[episode-1][j].nanims;i++)
+			  Z_ChangeTag(anims[episode-1][j].p[i], PU_CACHE);
+		    }
 		}
 	    }
 	  // fallthru
-	case heretic:
+	case gm_heretic:
 	  Z_ChangeTag(yah[0], PU_CACHE);
 	  Z_ChangeTag(yah[1], PU_CACHE);
 	  Z_ChangeTag(splat, PU_CACHE);
@@ -1780,7 +1719,7 @@ void Intermission::UnloadData()
       Z_ChangeTag(percent, PU_CACHE);
       Z_ChangeTag(colon, PU_CACHE);
 
-      if (game.mode != heretic)
+      if (game.mode != gm_heretic)
         {
 	  Z_ChangeTag(finished, PU_CACHE);
 	  Z_ChangeTag(entering, PU_CACHE);
@@ -1825,7 +1764,7 @@ void Intermission::Drawer()
 {
   SlamBackground();
   // draw animated background
-  WI_drawAnimatedBack(level->episode);
+  WI_drawAnimatedBack(episode);
 
   switch (state)
     {
@@ -1850,13 +1789,13 @@ void Intermission::Drawer()
       if (count <= 0)  // all removed no draw !!!
 	return;
 
-      // FIXME! what about Ultimate Doom (retail)?
-      if (game.mode != commercial)
+      // FIXME! what about Ultimate Doom (gm_udoom)?
+      if (game.mode != gm_doom2 && episode > 0)
 	DrawYAH();
 
       // draws which level you are entering..
-      if (game.mode != commercial || next != 30)
-	WI_drawEL(level->exit[level->exittype]->levelname.c_str(), next);
+      if (game.mode != gm_doom2 || next != 30)
+	WI_drawEL(nextlevel->levelname.c_str(), next);
       break;
     }
 }
@@ -1874,13 +1813,13 @@ void Intermission::Ticker()
     {
       int mus;
       // intermission music
-      // TODO make choice based on LevelInfo, not game.mode...
+      // FIXME make choice based on LevelInfo, not game.mode...
       switch (game.mode)
 	{
-	case commercial:
+	case gm_doom2:
           mus = mus_dm2int;
 	  break;
-        case heretic:
+        case gm_heretic:
 	  mus = mus_hintr;
 	  break;
 	default:
@@ -1925,10 +1864,12 @@ void Intermission::Ticker()
 void Intermission::Start(const LevelNode *l, const LevelNode *f)
 {  
   level = l;
+  nextlevel = l->exitused;
   firstlevel = f;
+  episode = l->episode;
 
   last = level->number; //level - firstlevel; // number of level just completed
-  next = (level->exit[level->exittype])->number; // number of next level
+  next = nextlevel->number; // number of next level
 
   acceleratestage = false;
   count = bcount = 0;

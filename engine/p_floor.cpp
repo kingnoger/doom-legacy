@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:17:56  hurdler
-// Initial revision
+// Revision 1.2  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
+// Revision 1.1.1.1  2002/11/16 14:17:56  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.11  2002/09/20 22:41:29  vberghol
 // Sound system rewritten! And it workscvs update
@@ -380,7 +383,7 @@ void floormove_t::Think()
 	    }
         }
 
-      if ((type == buildStair && game.mode == heretic) || game.mode != heretic)
+      if ((type == buildStair && game.mode == gm_heretic) || game.mode != gm_heretic)
 	S_StartSound(&sector->soundorg, sfx_pstop);
     }
 }
@@ -483,7 +486,7 @@ floormove_t::floormove_t(floor_e ty, sector_t *sec, line_t *line, int secnum)
       direction = -1;
       speed = FLOORSPEED * 4;
       floordestheight = P_FindHighestFloorSurrounding(sec);
-      if (floordestheight != sec->floorheight || game.mode == heretic )
+      if (floordestheight != sec->floorheight || game.mode == gm_heretic )
 	floordestheight += 8*FRACUNIT;
       break;
 

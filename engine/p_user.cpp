@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
 // Revision 1.3  2002/12/23 23:15:41  smite-meister
 // Weapon groups, MAPINFO parser added!
 //
@@ -281,7 +284,7 @@ void PlayerPawn::Move()
       */
     }
 
-  if (game.mode == heretic && (cmd->angleturn & BT_FLYDOWN))
+  if (game.mode == gm_heretic && (cmd->angleturn & BT_FLYDOWN))
     {
       flyheight = -10;
     }

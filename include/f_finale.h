@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:23  hurdler
-// Initial revision
+// Revision 1.2  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
+// Revision 1.1.1.1  2002/11/16 14:18:23  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.5  2002/08/21 16:58:35  vberghol
 // Version 1.41 Experimental compiles and links!
@@ -46,7 +49,7 @@
 #ifndef f_finale_h
 #define f_finale_h 1
 
-class LevelNode;
+class clusterdef_t;
 
 //
 // FINALE
@@ -61,7 +64,7 @@ void F_Ticker();
 // Called by main loop.
 void F_Drawer();
 
-void F_StartFinale(const LevelNode *l, bool endgame);
+void F_StartFinale(const clusterdef_t *cd, bool enter, bool endgame);
 
 
 #endif

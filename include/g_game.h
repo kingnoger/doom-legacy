@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2002 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,56 +18,14 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
 // Revision 1.2  2002/12/23 23:19:37  smite-meister
 // Weapon groups, MAPINFO parser, WAD2+WAD3 support added!
 //
 // Revision 1.1.1.1  2002/11/16 14:18:23  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.17  2002/08/31 11:40:19  vberghol
-// menu and map loading bugfixes
-//
-// Revision 1.16  2002/08/30 11:45:40  vberghol
-// players system modified
-//
-// Revision 1.15  2002/08/27 11:51:47  vberghol
-// Menu rewritten
-//
-// Revision 1.14  2002/08/24 12:39:36  vberghol
-// lousy fix
-//
-// Revision 1.13  2002/08/20 17:01:46  vberghol
-// Now it compiles. Will it link? Or work?
-//
-// Revision 1.12  2002/08/20 13:57:00  vberghol
-// sdfgsd
-//
-// Revision 1.11  2002/08/17 16:02:05  vberghol
-// final compile for engine!
-//
-// Revision 1.10  2002/08/16 20:49:27  vberghol
-// engine ALMOST done!
-//
-// Revision 1.9  2002/08/11 17:16:51  vberghol
-// ...
-//
-// Revision 1.8  2002/08/06 13:14:27  vberghol
-// ...
-//
-// Revision 1.7  2002/07/18 19:16:39  vberghol
-// renamed a few files
-//
-// Revision 1.6  2002/07/13 17:56:57  vberghol
-// *** empty log message ***
-//
-// Revision 1.5  2002/07/04 18:02:27  vberghol
-// Pientä fiksausta, g_pawn.cpp uusi tiedosto
-//
-// Revision 1.4  2002/07/01 21:00:46  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:01:57  vberghol
-// HUD alkaa olla kunnossa
 //
 //
 // DESCRIPTION:
@@ -92,15 +50,16 @@ class LevelNode;
 class Map;
 class PlayerInfo;
 class TeamInfo;
+class LArchive;
 
 struct fragsort_t;
 
 // languages
 typedef enum {
-  english,
-  french,
-  german,
-  unknown
+  la_english,
+  la_french,
+  la_german,
+  la_unknown
 } language_t;
 
 
@@ -115,24 +74,24 @@ typedef enum {
 
 // Game mode handling - identify IWAD version,
 //  handle IWAD dependent animations etc.
-// change mode to a bitfield. We might be playing doom AND heretic (crossover game)?
+// change mode to a bitfield? We might be playing doom AND heretic (crossover game)?
 typedef enum {
-  shareware,    // DOOM 1 shareware, E1, M9
-  registered,   // DOOM 1 registered, E3, M27
-  commercial,   // DOOM 2 retail, E1 M34
-  retail,       // DOOM 1 retail (Ultimate DOOM), E4, M36
-  heretic,
-  hexen,
-  indetermined  // Well, no IWAD found.
+  gm_none,
+  gm_doom1s,  // DOOM 1 shareware, E1, M9
+  gm_doom1,   // DOOM 1 registered, E3, M27
+  gm_doom2,   // DOOM 2 retail (commercial), E1 M34
+  gm_udoom,   // DOOM 1 retail (Ultimate DOOM), E4, M36
+  gm_heretic,
+  gm_hexen
 } gamemode_t;
 
 
-// Mission packs - might be useful for TC stuff? NOT!
+// Mission packs - might be useful for TC stuff? NOT! This is a RELIC! Do NOT use!
 typedef enum {
   gmi_none,
-  gmi_doom2,     // DOOM 2, default
-  gmi_tnt,  // TNT Evilution mission pack
-  gmi_plut  // Plutonia Experiment pack
+  gmi_doom2,  // DOOM 2, default
+  gmi_tnt,    // TNT Evilution mission pack
+  gmi_plut    // Plutonia Experiment pack
 } gamemission_t;
 
 // the current state of the game
@@ -148,22 +107,8 @@ typedef enum {
   GS_WAITINGPLAYERS           // added 3-9-98 : waiting player in net game
 } gamestate_t;
 
-// gameaction??
-typedef enum {
-  ga_nothing,
-  ga_completed,
-  ga_worlddone,
-    //HeXen
-/*
-    ga_initnew,
-    ga_newgame,
-    ga_loadgame,
-    ga_savegame,
-    ga_leavemap,
-    ga_singlereborn
-*/
-} gameaction_t;
 
+/*
 // boolean flags describing game properties (common to all players)
 typedef enum {
   gf_multiplayer =    1,  // Only true if >1 player (or one remote player). 
@@ -173,7 +118,7 @@ typedef enum {
   gf_paused      =    8,  // only server can pause a multiplayer game
   gf_nomonsters  =   16  // no monsters
 } gameflags_t;
-
+*/
 
 
 /*
@@ -188,6 +133,22 @@ typedef enum {
 class GameInfo
 {
 private:
+  // gameaction: delayed game state changes
+  typedef enum {
+    ga_nothing,
+    ga_completed,
+    ga_worlddone,
+    //HeXen
+    /*
+    ga_initnew,
+    ga_newgame,
+    ga_loadgame,
+    ga_savegame,
+    ga_leavemap,
+    ga_singlereborn
+    */
+  } gameaction_t;
+
   gameaction_t  action; // delayed state changes
 public:
   // demoversion is the 'dynamic' version number, this should be == game VERSION.
@@ -240,7 +201,7 @@ public:
   GameInfo()
   {
     demoversion = VERSION;
-    mode = indetermined;
+    mode = gm_none;
     mission = gmi_doom2;
     state = GS_NULL;
     wipestate = GS_DEMOSCREEN;
@@ -263,6 +224,7 @@ public:
   void StartIntro();
   void Drawer();
   bool Responder(event_t *ev);
+  int  Serialize(LArchive &a);
   void LoadGame(int slot);
   void SaveGame(int slot, char* description);
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
 // Revision 1.4  2002/12/23 23:15:41  smite-meister
 // Weapon groups, MAPINFO parser added!
 //
@@ -487,7 +490,7 @@ void HUD::ST_RefreshBackground()
   byte*       colormap;
   int flags = (fgbuffer & 0xffff0000) | BG;
 
-  if (game.mode == heretic)
+  if (game.mode == gm_heretic)
     {
       V_DrawScaledPatch(st_x, st_y, flags, PatchBARBACK);
       V_DrawScaledPatch(st_x+34, st_y+2, flags, PatchSTATBAR);
@@ -791,7 +794,7 @@ void HUD::UpdateWidgets()
 
   st_godmode = (sbpawn->cheats & CF_GODMODE);
 
-  if (game.mode == heretic)
+  if (game.mode == gm_heretic)
     {
       // Heretic flight icon
       if (sbpawn->powers[pw_flight] > BLINKTHRESHOLD || (sbpawn->powers[pw_flight] & 16))
@@ -1123,7 +1126,7 @@ void HUD::ST_CreateWidgets()
 
   switch (game.mode)
     {
-    case heretic:
+    case gm_heretic:
       CreateHereticWidgets();
       break;
     default:
@@ -1217,7 +1220,7 @@ void HUD::ST_Start(PlayerPawn *p)
   
   st_palette = -1;
 
-  if (game.mode != heretic)
+  if (game.mode != gm_heretic)
     {
       st_faceindex = 0;
       st_oldhealth = -1;
@@ -1289,7 +1292,7 @@ void HUD::CreateOverlayWidgets()
     delete overlay[i];
   overlay.clear();
 
-  if (game.mode == heretic)
+  if (game.mode == gm_heretic)
     {
       lnum = PatchBNum;
       snum = PatchSmNum;

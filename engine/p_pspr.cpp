@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
 // Revision 1.3  2002/12/23 23:15:41  smite-meister
 // Weapon groups, MAPINFO parser added!
 //
@@ -142,10 +145,10 @@ void PlayerPawn::UseFavoriteWeapon()
   for (i=0; i<NUMWEAPONS; i++)
     {
       // skip super shotgun for non-Doom2
-      if (game.mode != commercial && i == wp_supershotgun)
+      if (game.mode != gm_doom2 && i == wp_supershotgun)
 	continue;
       // skip plasma-bfg in sharware
-      if (game.mode == shareware && (i==wp_plasma || i==wp_bfg))
+      if (game.mode == gm_doom1s && (i==wp_plasma || i==wp_bfg))
 	continue;
 
       if (weaponowned[i] && priority < player->favoriteweapon[i] &&
@@ -339,7 +342,7 @@ bool PlayerPawn::CheckAmmo()
   if (!player->originalweaponswitch)
     UseFavoriteWeapon();
   else // eof Boris
-    if (game.mode == heretic)
+    if (game.mode == gm_heretic)
       do
         {
 	  if(weaponowned[wp_skullrod]
@@ -385,13 +388,13 @@ bool PlayerPawn::CheckAmmo()
         {
 	  if (weaponowned[wp_plasma]
 	      && ammo[am_cell]>=weaponinfo[wp_plasma].ammopershoot
-	      && (game.mode != shareware) )
+	      && (game.mode != gm_doom1s) )
             {
 	      pendingweapon = wp_plasma;
             }
 	  else if (weaponowned[wp_supershotgun]
 		   && ammo[am_shell]>=weaponinfo[wp_supershotgun].ammopershoot
-		   && (game.mode == commercial) )
+		   && (game.mode == gm_doom2) )
             {
 	      pendingweapon = wp_supershotgun;
             }
@@ -420,7 +423,7 @@ bool PlayerPawn::CheckAmmo()
             }
 	  else if (weaponowned[wp_bfg]
 		   && ammo[am_cell]>=weaponinfo[wp_bfg].ammopershoot
-		   && (game.mode != shareware) )
+		   && (game.mode != gm_doom1s) )
             {
 	      pendingweapon = wp_bfg;
             }
@@ -449,7 +452,7 @@ void PlayerPawn::FireWeapon()
   if (!CheckAmmo())
     return;
 
-  if (game.mode == heretic)
+  if (game.mode == gm_heretic)
     {
       // FIXME go to shooting state
       //SetState(statenum_t(info->missilestate + 1));
@@ -535,7 +538,7 @@ void A_WeaponReady(PlayerPawn *p, pspdef_t *psp)
     {
       if ( !p->attackdown
 	   || (p->readyweapon != wp_missile
-	       && (p->readyweapon != wp_bfg || game.mode == heretic)) )
+	       && (p->readyweapon != wp_bfg || game.mode == gm_heretic)) )
         {
 	  p->attackdown = true;
 	  p->FireWeapon();

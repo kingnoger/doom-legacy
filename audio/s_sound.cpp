@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:17:48  hurdler
-// Initial revision
+// Revision 1.2  2002/12/29 18:57:02  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
+// Revision 1.1.1.1  2002/11/16 14:17:48  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.14  2002/09/20 22:41:25  vberghol
 // Sound system rewritten! And it workscvs update
@@ -1103,7 +1106,6 @@ int S_GetSfxLumpNum(sfxinfo_t *sfx)
 // for a sound effect to be played.
 // If the sound is not audible, returns 0.
 // Otherwise, modifies parameters and returns sound volume.
-// TODO: Doppler effect;)
 static int S_AdjustSoundParams(Actor *listener, soundsource_t *source, int vol, int *sep, int *pitch)
 {
   if (!listener)
@@ -1166,6 +1168,15 @@ static int S_AdjustSoundParams(Actor *listener, soundsource_t *source, int vol, 
 	/ S_ATTENUATOR;
     }
 
+  // TODO Doppler effect (approximate)
+  /*
+  float dx, dy, dz;
+  dx = (listener->px - source->vx) / FRACUNIT;
+  dy = (listener->py - source->vy) / FRACUNIT;
+  dz = (listener->pz - source->vz) / FRACUNIT;
+  float v_os = sqrt(dx*dx + dy*dy + dz*dz);
+  //...and so on. We need a vector class.
+  */
   return vol;
 }
 

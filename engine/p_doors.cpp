@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:17:54  hurdler
-// Initial revision
+// Revision 1.2  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
+// Revision 1.1.1.1  2002/11/16 14:17:54  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.14  2002/09/20 22:41:29  vberghol
 // Sound system rewritten! And it workscvs update
@@ -283,7 +286,7 @@ void vldoor_t::Think()
 	    case genClose:
 	      sector->ceilingdata = NULL; //SoM: 3/6/2000
 	      mp->RemoveThinker(this);  // unlink and free
-	      if (game.mode == heretic)
+	      if (game.mode == gm_heretic)
 		S_StartSound (& sector->soundorg, sfx_dorcls);
 
 	      break;
@@ -367,7 +370,7 @@ void vldoor_t::Think()
               case genBlazeCdO:
                 sector->ceilingdata = NULL;
                 mp->RemoveThinker(this);  // unlink and free
-                if( game.mode == heretic )
+                if( game.mode == gm_heretic )
                     S.Stop3DSound(&sector->soundorg);
 
                 break;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
 // Revision 1.2  2002/12/23 23:15:41  smite-meister
 // Weapon groups, MAPINFO parser added!
 //
@@ -1138,15 +1141,15 @@ void Map::SetupSky()
   // original DOOM determined the sky texture to be used
   // depending on the current episode, and the game version.
 
-  if (!info->skyname.empty())
-    skytexture = R_TextureNumForName(info->skyname.c_str());
-  else if (!level->skyname.empty()) 
-    skytexture = R_TextureNumForName(level->skyname.c_str());
+  if (!info->skylump.empty())
+    skytexture = R_TextureNumForName(info->skylump.c_str());
+  else if (!level->skylump.empty()) 
+    skytexture = R_TextureNumForName(level->skylump.c_str());
   else
-    skytexture = R_TextureNumForName ("SKY1");
+    skytexture = R_TextureNumForName("SKY1");
 
   // scale up the old skies, if needed
-  R_SetupSkyDraw ();
+  R_SetupSkyDraw();
 }
 
 
@@ -1240,10 +1243,10 @@ bool Map::Setup(tic_t start)
 
   // If the map defines its music in MapInfo, use it.
   // Otherwise use given LevelNode data.
-  if (!info->music.empty())
-    S.StartMusic(info->music.c_str());
+  if (!info->musiclump.empty())
+    S.StartMusic(info->musiclump.c_str());
   else
-    S.StartMusic(level->musicname.c_str());
+    S.StartMusic(level->musiclump.c_str());
 
   //faB: now part of level loading since in future each level may have
   //     its own anim texture sequences, switches etc.

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
 // Revision 1.3  2002/12/23 23:15:41  smite-meister
 // Weapon groups, MAPINFO parser added!
 //
@@ -246,11 +249,11 @@ static byte NextWeapon(PlayerPawn *player, int step)
       byte w = nextweaponorder[i];
         
       // skip super shotgun for non-Doom2
-      if (game.mode!=commercial && w==wp_supershotgun)
+      if (game.mode != gm_doom2 && w == wp_supershotgun)
 	continue;
 
       // skip plasma-bfg in sharware
-      if (game.mode==shareware && (w==wp_plasma || w==wp_bfg))
+      if (game.mode==gm_doom1s && (w==wp_plasma || w==wp_bfg))
 	continue;
 
       if (player->weaponowned[w] &&
@@ -579,7 +582,7 @@ void G_BuildTiccmd(ticcmd_t* cmd, bool primary, int realtics)
   }
 #endif
 
- if (game.mode == heretic)
+ if (game.mode == gm_heretic)
    {
      if (gamekeydown[gc[gc_flydown][0]] ||
 	 gamekeydown[gc[gc_flydown][1]])

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
 // Revision 1.4  2002/12/23 23:15:41  smite-meister
 // Weapon groups, MAPINFO parser added!
 //
@@ -294,7 +297,7 @@ void Command_CheatGimme_f()
       }
     else if (!strncmp(s,"supershotgun",12))
       {
-	if (game.mode == commercial) // only in Doom2
+	if (game.mode == gm_doom2) // only in Doom2
 	  {
 	    p->weaponowned[wp_supershotgun] = true;
 	    p->ammo[am_shell] = p->maxammo[am_shell];
@@ -629,7 +632,7 @@ bool cht_Responder (event_t* ev)
     }
 
   // use heretic cheats instead?
-  if (game.mode == heretic)
+  if (game.mode == gm_heretic)
     cheats = Heretic_Cheats;
 
   for (i = 0; cheats[i].func != NULL; i++)
@@ -638,7 +641,7 @@ bool cht_Responder (event_t* ev)
 	{
 	  CONS_Printf("Cheating, %d\n", i);
 	  cheats[i].func(p, cheats[i].args);
-	  if (game.mode == heretic)
+	  if (game.mode == gm_heretic)
 	    S_StartAmbSound(sfx_dorcls);
 	}
     }
@@ -683,7 +686,7 @@ void CheatMusFunc(PlayerPawn *p, const byte *arg)
 
   msg = STSTR_MUS;
 
-  if (game.mode == commercial)
+  if (game.mode == gm_doom2)
     {
       musnum = (arg[0]-'0')*10 + arg[1]-'0';
 
@@ -724,7 +727,7 @@ static void CheatGodFunc(PlayerPawn *p, const byte *arg)
 
   p->cheats ^= CF_GODMODE;
 
-  if (game.mode == heretic) {
+  if (game.mode == gm_heretic) {
     if (p->cheats & CF_GODMODE)
       {
 	msg = TXT_CHEATGODON;
@@ -797,14 +800,14 @@ static void CheatNoClipFunc(PlayerPawn *p, const byte *arg)
 
   if (p->cheats & CF_NOCLIP)
     {
-      if (game.mode == heretic) 
+      if (game.mode == gm_heretic) 
 	msg = TXT_CHEATNOCLIPON;
       else
 	msg = STSTR_NCON;
     }
   else
     {
-      if (game.mode == heretic) 
+      if (game.mode == gm_heretic) 
 	msg = TXT_CHEATNOCLIPOFF;
       else
 	msg = STSTR_NCOFF;
@@ -813,6 +816,7 @@ static void CheatNoClipFunc(PlayerPawn *p, const byte *arg)
   p->SetMessage(msg, false);
 }
 
+static const bool shareware = true;
 
 static void CheatWeaponsFunc(PlayerPawn *p, const byte *arg)
 {
@@ -822,7 +826,7 @@ static void CheatWeaponsFunc(PlayerPawn *p, const byte *arg)
   p->armorpoints = idfa_armor;
   p->armortype = idfa_armor_class;
 
-  if (game.mode == heretic)
+  if (game.mode == gm_heretic)
     {
       // give backpack
       if (!p->backpack)
@@ -835,7 +839,8 @@ static void CheatWeaponsFunc(PlayerPawn *p, const byte *arg)
       for (i = wp_heretic; i < wp_gauntlets; i++)
 	p->weaponowned[i] = true;
 
-      // FIXME shareware == 0 always (it is an enum member, not a variable!)
+      // FIXME shareware == 0 always (it is not a variable!)
+      // (we do not have "heretic shareware" gametype)(yet?)
       // also elsewhere in this file
       if (shareware)
 	{
@@ -851,7 +856,7 @@ static void CheatWeaponsFunc(PlayerPawn *p, const byte *arg)
       for (i=0; i < wp_heretic; i++)
 	p->weaponowned[i] = true;
 
-      if (game.mode != commercial)
+      if (game.mode != gm_doom2)
 	p->weaponowned[wp_supershotgun] = false;
 
       msg = STSTR_FAADDED;
@@ -980,7 +985,7 @@ static void CheatWarpFunc(PlayerPawn *p, const byte *arg)
   // "idclev" or "engage" change-level cheat
   char name[9];
 
-  if (game.mode == commercial)
+  if (game.mode == gm_doom2)
     {
       episode = 0;
       mapnum = (arg[0] - '0')*10 + arg[1] - '0';
@@ -997,7 +1002,7 @@ static void CheatWarpFunc(PlayerPawn *p, const byte *arg)
       sprintf(name, "E%1dM%1d", episode, mapnum);
     }
 
-  if (game.mode == heretic)
+  if (game.mode == gm_heretic)
     msg = TXT_CHEATWARP;
   else
     msg = STSTR_CLEV;
@@ -1031,7 +1036,7 @@ static void CheatIDKFAFunc(PlayerPawn *p, const byte *arg)
 {
   int i;
 
-  if (game.mode == heretic)
+  if (game.mode == gm_heretic)
     {
       // playing heretic, let's punish the player!
       if (p->morphTics)
@@ -1053,7 +1058,7 @@ static void CheatIDKFAFunc(PlayerPawn *p, const byte *arg)
       for (i=0;i<wp_heretic;i++)
 	p->weaponowned[i] = true;
 
-      if (game.mode != commercial)
+      if (game.mode != gm_doom2)
 	p->weaponowned[wp_supershotgun] = false;
 
       for (i=0;i<am_heretic;i++)

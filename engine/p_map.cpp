@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
 // Revision 1.3  2002/12/16 22:11:46  smite-meister
 // Actor/DActor separation done!
 //
@@ -133,11 +136,11 @@ static bool PIT_StompThing(Actor *thing)
 
   // monsters don't stomp things except on boss level
   // FIXME boss level? does this mean a brainshooter? last condition was gamemap != 30
-  if (game.mode != heretic && tmthing->Type() != Thinker::tt_ppawn && thing->mp->braintargets.size())
+  if (game.mode != gm_heretic && tmthing->Type() != Thinker::tt_ppawn && thing->mp->braintargets.size())
     return false;
 
   // Not allowed to stomp things
-  if (game.mode == heretic && !(tmthing->flags2 & MF2_TELESTOMP))
+  if (game.mode == gm_heretic && !(tmthing->flags2 & MF2_TELESTOMP))
     return false;
 
   thing->Damage(tmthing, tmthing, 10000, dt_telefrag | dt_always);
@@ -856,7 +859,7 @@ void Map::SpawnPuff(fixed_t x, fixed_t y, fixed_t z)
 
   z += P_SignedRandom()<<10;
 
-  if (game.mode == heretic)
+  if (game.mode == gm_heretic)
     {
       puff = SpawnDActor(x, y, z, PuffType);
       if(puff->info->attacksound)
@@ -1312,7 +1315,7 @@ static bool PTR_ShootTraverse (intercept_t *in)
   // FIXME this is stupid. We should use some sort of damage type system.
   // (if damagetype != dt_ethereal ...)
   /*
-  if (game.mode == heretic && (th->flags & MF_SHADOW))
+  if (game.mode == gm_heretic && (th->flags & MF_SHADOW))
     if (shootthing->Type() == Thinker::tt_ppawn)
       if (((PlayerPawn *)shootthing)->player->readyweapon == wp_staff)
 	return true;
@@ -1371,11 +1374,11 @@ static bool PTR_ShootTraverse (intercept_t *in)
 
   // Spawn bullet puffs or blood spots,
   // depending on target type.
-  if (in->d.thing->flags & MF_NOBLOOD && game.mode != heretic)
+  if (in->d.thing->flags & MF_NOBLOOD && game.mode != gm_heretic)
     m->SpawnPuff (x,y,z);
   else
     {
-      if (game.mode == heretic)
+      if (game.mode == gm_heretic)
 	{
 	  extern mobjtype_t PuffType;
 	  if (PuffType == MT_BLASTERPUFF1)
@@ -1523,7 +1526,7 @@ static bool PTR_UseTraverse (intercept_t *in)
       P_LineOpening (in->d.line);
       if (openrange <= 0)
         {
-	  if (game.mode != heretic)
+	  if (game.mode != gm_heretic)
 	    S_StartSound (usething, sfx_noway);
 
 	  // can't use through a wall

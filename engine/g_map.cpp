@@ -1,6 +1,16 @@
+// Emacs style mode select   -*- C++ -*- 
+//-----------------------------------------------------------------------------
 // $Id$
 //
-// Map class implementation
+// Copyright (C) 1998-2002 by DooM Legacy Team.
+//
+// $Log$
+// Revision 1.4  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
+//
+// DESCRIPTION:
+//   Map class implementation
 
 #include "doomdata.h"
 #include "g_map.h"
@@ -141,7 +151,7 @@ bool PTR_BloodTraverse (intercept_t *in)
     hitline:
       P_MakeDivline (li, &divl);
       frac = P_InterceptVector (&divl, &trace);
-      if( game.mode == heretic )
+      if( game.mode == gm_heretic )
 	R_AddWallSplat (li, P_PointOnLineSide(bloodspawnpointx,bloodspawnpointy,li),"BLODC0", z, frac, SPLATDRAWMODE_TRANS);
       else
 	R_AddWallSplat (li, P_PointOnLineSide(bloodspawnpointx,bloodspawnpointy,li),"BLUDC0", z, frac, SPLATDRAWMODE_TRANS);
@@ -331,7 +341,7 @@ DActor *Map::SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
     }
 
   if ((p->flags2 & MF2_FOOTCLIP) && (p->subsector->sector->floortype != FLOOR_SOLID)
-      && (p->floorz == p->subsector->sector->floorheight) && (game.mode == heretic))
+      && (p->floorz == p->subsector->sector->floorheight) && (game.mode == gm_heretic))
     p->flags2 |= MF2_FEETARECLIPPED;
   else
     p->flags2 &= ~MF2_FEETARECLIPPED;
@@ -1177,7 +1187,7 @@ void Map::RespawnSpecials()
       DActor *mo;
 
       // spawn a teleport fog at the new spot
-      if (game.mode != heretic)
+      if (game.mode != gm_heretic)
 	{
 	  subsector_t *ss = R_PointInSubsector (x,y);
 	  mo = SpawnDActor(x, y, ss->sector->floorheight, MT_IFOG);
@@ -1201,7 +1211,7 @@ void Map::RespawnSpecials()
       mo->spawnpoint = mthing;
       mo->angle = ANG45 * (mthing->angle/45);
 
-      if (game.mode == heretic)
+      if (game.mode == gm_heretic)
 	S_StartSound (mo, sfx_itmbk);
     }
   // pull it from the queue anyway

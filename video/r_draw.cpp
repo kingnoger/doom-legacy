@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
 // Revision 1.2  2002/12/03 10:07:13  smite-meister
 // Video unit overhaul begins
 //
@@ -281,7 +284,7 @@ void R_InitTranslationTables (void)
     transtables = (byte *)Z_MallocAlign (NUMTRANSTABLES*0x10000, PU_STATIC, 0, 16);
 
     // load in translucency tables
-    if( game.mode == heretic )
+    if( game.mode == gm_heretic )
     {
         fc.ReadLump( fc.GetNumForName("TINTTAB"), transtables );
         fc.ReadLump( fc.GetNumForName("TINTTAB"), transtables+0x10000 );
@@ -303,10 +306,10 @@ void R_InitTranslationTables (void)
     // translate just the 16 green colors
     for (i=0 ; i<256 ; i++)
     {
-        if ((i >= 0x70 && i <= 0x7f && game.mode != heretic) || 
-            (i >=  225 && i <=  240 && game.mode == heretic))
+        if ((i >= 0x70 && i <= 0x7f && game.mode != gm_heretic) || 
+            (i >=  225 && i <=  240 && game.mode == gm_heretic))
         {
-            if( game.mode == heretic )
+            if( game.mode == gm_heretic )
             {
                 translationtables[i+ 0*256] =   0+(i-225); // dark gray
                 translationtables[i+ 1*256] =  67+(i-225); // brown
@@ -494,7 +497,7 @@ void R_FillBackScreen (void)
     if (scaledviewwidth == vid.width)
        return;
     
-    if( game.mode == heretic )
+    if( game.mode == gm_heretic )
     {
         step = 16;
         boff = 4; // borderoffset

@@ -18,81 +18,11 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
 // Revision 1.2  2002/12/03 10:16:49  smite-meister
 // Older update
-//
-// Revision 1.14  2002/09/17 14:26:27  vberghol
-// switch bug fixed
-//
-// Revision 1.13  2002/09/08 14:38:07  vberghol
-// Now it works! Sorta.
-//
-// Revision 1.12  2002/08/31 11:40:18  vberghol
-// menu and map loading bugfixes
-//
-// Revision 1.11  2002/08/21 16:58:34  vberghol
-// Version 1.41 Experimental compiles and links!
-//
-// Revision 1.10  2002/08/19 18:06:40  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.9  2002/08/08 12:01:30  vberghol
-// pian engine on valmis!
-//
-// Revision 1.8  2002/08/06 13:14:26  vberghol
-// ...
-//
-// Revision 1.7  2002/07/23 19:21:44  vberghol
-// fixed up to p_enemy.cpp
-//
-// Revision 1.6  2002/07/15 20:52:39  vberghol
-// w_wad.cpp (FileCache class) finally fixed
-//
-// Revision 1.5  2002/07/10 19:57:02  vberghol
-// g_pawn.cpp tehty
-//
-// Revision 1.4  2002/07/01 21:00:37  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:01:55  vberghol
-// HUD alkaa olla kunnossa
-//
-// Revision 1.12  2001/08/20 20:40:39  metzgermeister
-// *** empty log message ***
-//
-// Revision 1.11  2001/07/16 22:35:40  bpereira
-// - fixed crash of e3m8 in heretic
-// - fixed crosshair not drawed bug
-//
-// Revision 1.10  2001/05/27 13:42:47  bpereira
-// no message
-//
-// Revision 1.9  2001/05/16 21:21:14  bpereira
-// no message
-//
-// Revision 1.8  2001/03/03 06:17:33  bpereira
-// no message
-//
-// Revision 1.7  2001/02/28 17:50:54  bpereira
-// no message
-//
-// Revision 1.6  2001/02/24 13:35:19  bpereira
-// no message
-//
-// Revision 1.5  2001/02/10 13:14:53  hurdler
-// to be fixed
-//
-// Revision 1.4  2001/02/10 12:27:13  bpereira
-// no message
-//
-// Revision 1.3  2001/01/25 22:15:41  bpereira
-// added heretic support
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:33  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //
 // DESCRIPTION:  
@@ -536,7 +466,7 @@ void AutoMap::InitVariables()
   old_m_w = m_w;
   old_m_h = m_h;
 
-  if( game.mode == heretic )
+  if( game.mode == gm_heretic )
     {
       REDS       = 12*8;
       REDRANGE   = 1;
@@ -1557,7 +1487,7 @@ void AutoMap::Drawer()
   {
     int y;
     const char *mapname = mp->info->name.c_str();
-    y = BASEVIDHEIGHT-(game.mode == heretic ? SBARHEIGHT : ST_HEIGHT)-1;
+    y = BASEVIDHEIGHT-(game.mode == gm_heretic ? SBARHEIGHT : ST_HEIGHT)-1;
     V_DrawString(20, y - V_StringHeight(mapname), 0, mapname);
   }
 

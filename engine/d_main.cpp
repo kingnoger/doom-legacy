@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Portions Copyright (C) 1998-2002 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2002/12/29 18:57:02  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
 // Revision 1.4  2002/12/23 23:15:41  smite-meister
 // Weapon groups, MAPINFO parser added!
 //
@@ -27,132 +30,29 @@
 // Revision 1.2  2002/12/03 10:11:39  smite-meister
 // Blindness and missile clipping bugs fixed
 //
-// Revision 1.53  2001/12/31 16:56:39  metzgermeister
-// see Dec 31 log
-// .
-//
-// Revision 1.52  2001/08/20 20:40:39  metzgermeister
-// *** empty log message ***
-//
-// Revision 1.51  2001/08/12 15:21:03  bpereira
-// see my log
-//
-// Revision 1.50  2001/07/16 22:35:40  bpereira
-// - fixed crash of e3m8 in heretic
-// - fixed crosshair not drawed bug
-//
-// Revision 1.49  2001/05/27 13:42:47  bpereira
-// no message
-//
-// Revision 1.48  2001/05/16 21:21:14  bpereira
-// no message
-//
 // Revision 1.47  2001/05/16 17:12:52  crashrl
 // Added md5-sum support, removed recursiv wad search
-//
-// Revision 1.46  2001/04/27 13:32:13  bpereira
-// no message
 //
 // Revision 1.45  2001/04/17 22:26:07  calumr
 // Initial Mac add
 //
-// Revision 1.44  2001/04/04 20:24:21  judgecutor
-// Added support for the 3D Sound
-//
-// Revision 1.43  2001/04/02 18:54:32  bpereira
-// no message
-//
-// Revision 1.42  2001/04/01 17:35:06  bpereira
-// no message
-//
-// Revision 1.41  2001/03/30 17:12:49  bpereira
-// no message
-//
-// Revision 1.40  2001/03/19 18:25:02  hurdler
-// Is there a GOOD reason to check for modified game with shareware version?
-//
-// Revision 1.39  2001/03/03 19:43:09  ydario
-// OS/2 code cleanup
-//
-// Revision 1.38  2001/02/24 13:35:19  bpereira
-// no message
-//
-// Revision 1.37  2001/02/10 12:27:13  bpereira
-// no message
-//
 // Revision 1.36  2001/01/25 22:15:41  bpereira
 // added heretic support
-//
-// Revision 1.35  2000/11/06 20:52:15  bpereira
-// no message
-//
-// Revision 1.34  2000/11/03 03:27:17  stroggonmeth
-// Again with the bug fixing...
-//
-// Revision 1.33  2000/11/02 19:49:35  bpereira
-// no message
 //
 // Revision 1.32  2000/11/02 17:50:06  stroggonmeth
 // Big 3Dfloors & FraggleScript commit!!
 //
-// Revision 1.31  2000/10/21 08:43:28  bpereira
-// no message
-//
-// Revision 1.30  2000/10/08 13:29:59  bpereira
-// no message
-//
-// Revision 1.29  2000/10/02 18:25:44  bpereira
-// no message
-//
-// Revision 1.28  2000/10/01 10:18:16  bpereira
-// no message
-//
-// Revision 1.27  2000/09/28 20:57:14  bpereira
-// no message
-//
-// Revision 1.26  2000/08/31 14:30:55  bpereira
-// no message
-//
-// Revision 1.25  2000/08/29 15:53:47  hurdler
-// Remove master server connect timeout on LAN (not connected to Internet)
-//
-// Revision 1.24  2000/08/21 21:13:00  metzgermeister
-// Implementation of I_GetKey() in Linux
-//
 // Revision 1.23  2000/08/10 14:50:19  ydario
 // OS/2 port
-// Revision 1.20  2000/04/25 19:49:46  metzgermeister
-// support for automatic wad search
-//
-// Revision 1.17  2000/04/22 20:27:35  metzgermeister
-// support for immediate fullscreen switching
-//
-// Revision 1.16  2000/04/21 20:04:20  hurdler
-// fix a problem with my last SDL merge
 //
 // Revision 1.15  2000/04/19 15:21:02  hurdler
 // add SDL midi support
-//
-// Revision 1.14  2000/04/18 12:55:39  hurdler
-// join with Boris' code
-//
-// Revision 1.13  2000/04/16 18:38:07  bpereira
-// no message
-//
-// Revision 1.12  2000/04/07 23:10:15  metzgermeister
-// fullscreen support under X in Linux
-//
-// Revision 1.11  2000/04/06 20:40:22  hurdler
-// Mostly remove warnings under windows
 //
 // Revision 1.10  2000/04/05 15:47:46  stroggonmeth
 // Added hack for Dehacked lumps. Transparent sprites are now affected by colormaps.
 //
 // Revision 1.9  2000/04/04 00:32:45  stroggonmeth
 // Initial Boom compatability plus few misc changes all around.
-//
-// Revision 1.8  2000/03/29 19:39:48  bpereira
-// no message
 //
 // Revision 1.7  2000/03/28 16:18:41  linuxcub
 // Added a command to the Linux sound-server which sets a master volume.
@@ -177,18 +77,6 @@
 // a minimum of editing. Where can I upload my pre-built (S)RPMS to ?
 //
 // Erling Jacobsen, linuxcub@email.dk
-//
-// Revision 1.6  2000/03/23 22:54:00  metzgermeister
-// added support for HOME/.legacy under Linux
-//
-// Revision 1.5  2000/03/06 17:33:36  hurdler
-// compiler warning removed
-//
-// Revision 1.4  2000/03/05 17:10:56  bpereira
-// no message
-//
-// Revision 1.3  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
 //
 //
 // DESCRIPTION:
@@ -347,7 +235,7 @@ void D_DoAdvanceDemo()
   advancedemo = false;
   //game.action = ga_nothing;
 
-  if (game.mode == retail)
+  if (game.mode == gm_udoom)
     demosequence = (demosequence+1)%7;
   else
     demosequence = (demosequence+1)%6;
@@ -357,13 +245,13 @@ void D_DoAdvanceDemo()
     case 0:
         pagename = "TITLEPIC";
         switch (game.mode) {
-        case hexen :
-        case heretic :
+        case gm_hexen :
+        case gm_heretic :
             pagetic = 210+140;
             pagename = "TITLE";
             S.StartMusic(mus_htitl);
             break;
-        case commercial :
+        case gm_doom2 :
             pagetic = TICRATE * 11;
             S.StartMusic(mus_dm2ttl);
             break;
@@ -389,14 +277,14 @@ void D_DoAdvanceDemo()
         break;
       case 4:
         game.state = GS_DEMOSCREEN;
-        if (game.mode == commercial)
+        if (game.mode == gm_doom2)
         {
             pagetic = TICRATE * 11;
             pagename = "TITLEPIC";
             S.StartMusic(mus_dm2ttl);
         }
         else
-        if (game.mode == heretic)
+        if (game.mode == gm_heretic)
         {
              pagetic = 200;
              if(fc.FindNumForName("e2m1")==-1)
@@ -408,7 +296,7 @@ void D_DoAdvanceDemo()
         {
             pagetic = 200;
 
-            if (game.mode == retail)
+            if (game.mode == gm_udoom)
               pagename = text[CREDIT_NUM];
             else
               pagename = text[HELP2_NUM];
@@ -889,9 +777,9 @@ static gamemode_t D_GetDoomType(const char *wadname)
   // BP: main wad MUST not be patched !
   stat(wadname, &sbuf);
   if (sbuf.st_size<12408292)
-    return registered;
+    return gm_doom1;
   else
-    return retail;      // Ultimate
+    return gm_udoom;      // Ultimate
 }
 
 
@@ -932,7 +820,7 @@ void D_IdentifyVersion()
   /*
   if (M_CheckParm ("-shdev")) // WHAT is this?
     {
-      game.mode = shareware;
+      game.mode = gm_doom1s;
       devparm = true;
       D_AddFile (DEVDATA"doom1.wad");
       D_AddFile (DEVMAPS"data_se/texture1.lmp");
@@ -941,7 +829,7 @@ void D_IdentifyVersion()
     }
   else if (M_CheckParm ("-regdev"))
     {
-      game.mode = registered;
+      game.mode = gm_doom1;
       devparm = true;
       D_AddFile (DEVDATA"doom.wad");
       D_AddFile (DEVMAPS"data_se/texture1.lmp");
@@ -952,7 +840,7 @@ void D_IdentifyVersion()
     }
   else if (M_CheckParm ("-comdev"))
     {
-      game.mode = commercial;
+      game.mode = gm_doom2;
       devparm = true;
       // I don't bother
 	// if(plutonia)
@@ -971,6 +859,9 @@ void D_IdentifyVersion()
 
   // external Legacy data file
   D_AddFile("legacy.wad");
+
+  D_AddFile("test.wad"); // FIXME testing
+
 
   // Specify the name of an IWAD file to use.
   // Internally the game makes no difference between IWADs and PWADs.
@@ -1007,32 +898,32 @@ void D_IdentifyVersion()
       // try to find implied gamemode
       if (!stricmp("plutonia.wad", s+i))
 	{
-	  game.mode = commercial;
+	  game.mode = gm_doom2;
 	  game.mission = gmi_plut;
 	}
       else if (!stricmp("tnt.wad", s+i))
 	{
-	  game.mode = commercial;
+	  game.mode = gm_doom2;
 	  game.mission = gmi_tnt;
 	}
       else if (!stricmp("heretic.wad", s+i) || !stricmp("heretic1.wad", s+i))
-	game.mode = heretic;
+	game.mode = gm_heretic;
       else if (!stricmp("hexen.wad", s+i))
-	game.mode = hexen;
+	game.mode = gm_hexen;
       else if (!stricmp("doom2.wad", s+i))
 	{
-	  game.mode = commercial;
+	  game.mode = gm_doom2;
 	  game.mission = gmi_doom2; // doom2 is the default game.mission
 	}
       else if (!stricmp("doomu.wad", s+i))
-	game.mode = retail;
+	game.mode = gm_udoom;
       else if (!stricmp("doom.wad", s+i))
 	game.mode = D_GetDoomType(s);
       else if (!stricmp("doom1.wad", s+i))
-	game.mode = shareware;
+	game.mode = gm_doom1s;
       else
 	{
-	  game.mode = commercial;
+	  game.mode = gm_doom2;
 	  game.mission = gmi_doom2; // doom2 is the default game.mission
 	}
     }
@@ -1052,12 +943,12 @@ void D_IdentifyVersion()
 
       if (!access(doom2wad, F_OK))
 	{
-	  game.mode = commercial;
+	  game.mode = gm_doom2;
 	  D_AddFile(doom2wad);
 	}
       else if (!access(doomuwad, F_OK))
 	{
-	  game.mode = retail;
+	  game.mode = gm_udoom;
 	  D_AddFile(doomuwad);
 	}
       else if (!access(doomwad, F_OK))
@@ -1067,34 +958,34 @@ void D_IdentifyVersion()
 	}
       else if (!access(doom1wad, F_OK))
 	{
-	  game.mode = shareware;
+	  game.mode = gm_doom1s;
 	  D_AddFile(doom1wad);
 	}
       else if (!access(plutoniawad, F_OK))
 	{
-	  game.mode = commercial;
+	  game.mode = gm_doom2;
 	  game.mission = gmi_plut;
 	  D_AddFile(plutoniawad);
 	}
       else if (!access(tntwad, F_OK))
 	{
-	  game.mode = commercial;
+	  game.mode = gm_doom2;
 	  game.mission = gmi_tnt;
 	  D_AddFile(tntwad);
 	}
       else if (!access(hereticwad, F_OK))
 	{
-	  game.mode = heretic;
+	  game.mode = gm_heretic;
 	  D_AddFile(hereticwad);
 	}
       else if (!access(heretic1wad, F_OK))
 	{
-	  game.mode = heretic;
+	  game.mode = gm_heretic;
 	  D_AddFile(heretic1wad);
 	}
       else if (!access(hexenwad, F_OK))
 	{
-	  game.mode = hexen;
+	  game.mode = gm_hexen;
 	  D_AddFile(hexenwad);
 	}
       else
@@ -1106,7 +997,7 @@ void D_IdentifyVersion()
 	}
     }
   
-  game.raven = game.mode == heretic || game.mode == hexen;
+  game.raven = game.mode == gm_heretic || game.mode == gm_hexen;
 }
 
 
@@ -1234,13 +1125,13 @@ void D_DoomMain()
   // game title
   char *title;
   switch (game.mode) {
-  case retail    :
+  case gm_udoom    :
     title = "The Ultimate DOOM Startup"; break;
-  case shareware :
+  case gm_doom1s :
     title = "DOOM Shareware Startup"; break;
-  case registered:
+  case gm_doom1:
     title = "DOOM Registered Startup"; break;
-  case commercial:
+  case gm_doom2:
     switch (game.mission) {
     case gmi_plut:
       title = "DOOM 2: Plutonia Experiment"; break;
@@ -1250,9 +1141,9 @@ void D_DoomMain()
       title = "DOOM 2: Hell on Earth"; break;
     }
     break;
-  case heretic:
+  case gm_heretic:
     title = "Heretic: Shadow of the Serpent Riders"; break;
-  case hexen:
+  case gm_hexen:
     title = "Hexen: Beyond Heretic"; break;
   default:
     title = "Doom Legacy Startup"; break;
@@ -1353,7 +1244,7 @@ void D_DoomMain()
 
   DoomPatchEngine(); // FIXME, TODO temporary solution, we must be able to switch game.mode anytime!
 
-  if (game.mode == heretic)
+  if (game.mode == gm_heretic)
     HereticPatchEngine();
 
   // initialize file cache
@@ -1384,13 +1275,13 @@ void D_DoomMain()
 	  "dphoof","bfgga0","heada1","cybra1","spida1d1"};
       int i;
 
-      if (game.mode == shareware)
+      if (game.mode == gm_doom1s)
 	I_Error("\nYou cannot -file with the shareware "
 		"version. Register!");
       
       // Check for fake IWAD with right name,
       // but w/o all the lumps of the registered version.
-      if (game.mode == registered)
+      if (game.mode == gm_doom1)
 	for (i = 0;i < 23; i++)
 	  if (fc.FindNumForName(name[i]) < 0)
 	    I_Error("\nThis is not the registered version.");
@@ -1581,7 +1472,7 @@ void D_DoomMain()
   p = M_CheckParm ("-warp");
   if (p && p < myargc-1)
     {
-      if (game.mode == commercial)
+      if (game.mode == gm_doom2)
 	startmap = atoi(myargv[p+1]);
       else
 	{
@@ -1600,13 +1491,12 @@ void D_DoomMain()
   // Check and print which version is executed.
   switch (game.mode)
     {
-    case shareware:
-    case indetermined:
+    case gm_doom1s:
       CONS_Printf (text[SHAREWARE_NUM]);
       break;
-    case registered:
-    case retail:
-    case commercial:
+    case gm_doom1:
+    case gm_udoom:
+    case gm_doom2:
       CONS_Printf (text[COMERCIAL_NUM]);
       break;
     default:

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
 // Revision 1.2  2002/12/16 22:11:57  smite-meister
 // Actor/DActor separation done!
 //
@@ -1106,7 +1109,7 @@ int P_CheckTag(line_t *line)
     case 279:   // G1
       return 1;   // zero tag allowed
 
-    case 105: if( game.mode == heretic )
+    case 105: if( game.mode == gm_heretic )
       return 1;
 
     default:
@@ -1173,7 +1176,7 @@ void Map::ActivateCrossedLine(line_t *line, int side, Actor *thing)
   bool p = (thing->Type() == Thinker::tt_ppawn);
 
   //  Triggers that other things can activate
-  if (!p && game.mode != heretic)
+  if (!p && game.mode != gm_heretic)
     {
       // Things that should NOT trigger specials...
       if (thing->flags & MF_NOTRIGGER)
@@ -1296,7 +1299,7 @@ void Map::ActivateCrossedLine(line_t *line, int side, Actor *thing)
   if (!p)
     {
       ok = 0;
-      if ( game.mode == heretic && (line->special == 4 || line->special==39 || line->special == 97) )
+      if ( game.mode == gm_heretic && (line->special == 4 || line->special==39 || line->special == 97) )
 	ok = 1;
       else
         switch(line->special)
@@ -1376,7 +1379,7 @@ void Map::ActivateCrossedLine(line_t *line, int side, Actor *thing)
 
     case 8:
       // Build Stairs
-      if(EV_BuildStairs(line, stair_e(game.mode == heretic ? 8*FRACUNIT : build8)) || !boomsupport)
+      if(EV_BuildStairs(line, stair_e(game.mode == gm_heretic ? 8*FRACUNIT : build8)) || !boomsupport)
 	line->special = 0;
       break;
 
@@ -1542,7 +1545,7 @@ void Map::ActivateCrossedLine(line_t *line, int side, Actor *thing)
       break;
 
     case 100:
-      if( game.mode == heretic )
+      if( game.mode == gm_heretic )
 	EV_DoDoor (line, normalDoor, VDOORSPEED * 3);
       else
         {
@@ -1573,7 +1576,7 @@ void Map::ActivateCrossedLine(line_t *line, int side, Actor *thing)
     case 124:
       // Secret EXIT
       if( cv_allowexitlevel.value )
-	ExitMap(1);
+	ExitMap(100);
       break;
 
     case 125:
@@ -1750,11 +1753,11 @@ void Map::ActivateCrossedLine(line_t *line, int side, Actor *thing)
       break;
 
     case 105:
-      if( game.mode == heretic )
+      if( game.mode == gm_heretic )
         {
 	  if( cv_allowexitlevel.value )
             {
-	      ExitMap(1);
+	      ExitMap(100);
 	      line->special = 0;
             }
         }
@@ -1764,7 +1767,7 @@ void Map::ActivateCrossedLine(line_t *line, int side, Actor *thing)
       break;
 
     case 106:
-      if( game.mode == heretic )
+      if( game.mode == gm_heretic )
         {
           if(EV_BuildStairs (line, stair_e(16 * FRACUNIT)) || !boomsupport)
 	    line->special = 0;
@@ -1775,7 +1778,7 @@ void Map::ActivateCrossedLine(line_t *line, int side, Actor *thing)
       break;
 
     case 107:
-      if( game.mode != heretic ) // used for a switch !
+      if( game.mode != gm_heretic ) // used for a switch !
 	// Blazing Door Close (faster than TURBO!)
 	EV_DoDoor (line,blazeClose,4*VDOORSPEED);
       break;
@@ -2239,7 +2242,7 @@ void Map::ShootSpecialLine(Actor *thing, line_t *line)
 	    if( cv_allowexitlevel.value )
               {
 		ChangeSwitchTexture(line,0);
-		ExitMap(1);
+		ExitMap(100);
               }
 	    break;
 	    //jff end addition of new gun linedefs
@@ -2835,7 +2838,7 @@ void Map::SpawnScrollers()
           break;
 
         case 99: // heretic right scrolling
-          if(game.mode != heretic)
+          if(game.mode != gm_heretic)
 	    break; // doom use it as bluekeydoor
         case 85:                  // jff 1/30/98 2-way scroll
           AddThinker(new scroll_t(sc_side, -FRACUNIT, 0, -1, lines[i].sidenum[0], accel, NULL));

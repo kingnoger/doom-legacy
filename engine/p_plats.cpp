@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:02  hurdler
-// Initial revision
+// Revision 1.2  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
+// Revision 1.1.1.1  2002/11/16 14:18:02  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.11  2002/09/20 22:41:32  vberghol
 // Sound system rewritten! And it workscvs update
@@ -89,7 +92,7 @@ void plat_t::Think()
     case up:
       res = mp->T_MovePlane(sector, speed, high, crush, 0, 1);
 
-      if (game.mode == heretic && !(mp->maptic % (32*NEWTICRATERATIO)))
+      if (game.mode == gm_heretic && !(mp->maptic % (32*NEWTICRATERATIO)))
 	S_StartSound ( & sector->soundorg, sfx_stnmov);
 
       if (type == raiseAndChange || type == raiseToNearestAndChange)
@@ -171,7 +174,7 @@ void plat_t::Think()
             }
         }
       else
-	if (game.mode == heretic && !(mp->maptic & 31))
+	if (game.mode == gm_heretic && !(mp->maptic & 31))
 	  S_StartSound ( & sector->soundorg, sfx_stnmov);
 
       break;

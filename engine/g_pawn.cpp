@@ -1,5 +1,16 @@
+// Emacs style mode select   -*- C++ -*- 
+//-----------------------------------------------------------------------------
 //  $Id$
-//  Pawn / PlayerPawn class implementation
+//
+// Copyright (C) 1998-2002 by DooM Legacy Team.
+//
+// $Log$
+// Revision 1.5  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
+//
+// DESCRIPTION:
+//   Pawn / PlayerPawn class implementation
 
 #include "g_pawn.h"
 #include "g_player.h"
@@ -95,7 +106,7 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
   weaponinfo = wpnlev1info;
   maxammo = maxammo1;
 
-  if (game.mode == heretic)
+  if (game.mode == gm_heretic)
     {
       readyweapon = pendingweapon = wp_goldwand;
       weaponowned[wp_staff] = true;
@@ -270,7 +281,7 @@ void PlayerPawn::Think()
       */
 
       // Do not go to plasma or BFG in shareware, even if cheated.
-      if ((game.mode == shareware) &&
+      if ((game.mode == gm_doom1s) &&
 	  (pendingweapon == wp_plasma || pendingweapon == wp_bfg))
 	pendingweapon = wp_nochange;
     }
@@ -1403,7 +1414,7 @@ void PlayerPawn::PlayerInSpecialSector()
   if (!specialsector)     // nothing special, exit
     return;
 
-  if (game.mode == heretic)
+  if (game.mode == gm_heretic)
     {
       HerePlayerInSpecialSector();
       return;

@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2002 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
 // Revision 1.4  2002/12/23 23:15:41  smite-meister
 // Weapon groups, MAPINFO parser added!
 //
@@ -25,87 +28,6 @@
 //
 // Revision 1.2  2002/12/03 10:11:39  smite-meister
 // Blindness and missile clipping bugs fixed
-//
-// Revision 1.31  2002/09/27 08:18:41  vberghol
-// intermission fixed.
-//
-// Revision 1.30  2002/09/25 15:17:37  vberghol
-// Intermission fixed?
-//
-// Revision 1.26  2002/09/05 14:12:13  vberghol
-// network code partly bypassed
-//
-// Revision 1.23  2002/08/30 11:45:40  vberghol
-// players system modified
-//
-// Revision 1.22  2002/08/27 11:51:46  vberghol
-// Menu rewritten
-//
-// Revision 1.21  2002/08/24 12:39:36  vberghol
-// lousy fix
-//
-// Revision 1.20  2002/08/21 16:58:30  vberghol
-// Version 1.41 Experimental compiles and links!
-//
-// Revision 1.19  2002/08/20 17:01:45  vberghol
-// Now it compiles. Will it link? Or work?
-//
-// Revision 1.18  2002/08/20 13:56:57  vberghol
-// sdfgsd
-//
-// Revision 1.17  2002/08/19 18:06:38  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.16  2002/08/17 21:21:44  vberghol
-// Only scripting to be fixed in engine!
-//
-// Revision 1.15  2002/08/17 16:02:03  vberghol
-// final compile for engine!
-//
-// Revision 1.14  2002/08/16 20:49:24  vberghol
-// engine ALMOST done!
-//
-// Revision 1.13  2002/08/13 19:47:40  vberghol
-// p_inter.cpp done
-//
-// Revision 1.12  2002/08/11 17:16:47  vberghol
-// ...
-//
-// Revision 1.11  2002/08/06 13:14:20  vberghol
-// ...
-//
-// Revision 1.10  2002/08/02 20:14:49  vberghol
-// p_enemy.cpp done!
-//
-// Revision 1.9  2002/07/23 19:21:39  vberghol
-// fixed up to p_enemy.cpp
-//
-// Revision 1.8  2002/07/18 19:16:36  vberghol
-// renamed a few files
-//
-// Revision 1.7  2002/07/16 19:16:19  vberghol
-// Hardware sound interface again somewhat fixed
-//
-// Revision 1.6  2002/07/15 20:52:38  vberghol
-// w_wad.cpp (FileCache class) finally fixed
-//
-// Revision 1.5  2002/07/04 18:02:25  vberghol
-// Pientä fiksausta, g_pawn.cpp uusi tiedosto
-//
-// Revision 1.4  2002/07/01 21:00:14  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:01:53  vberghol
-// HUD alkaa olla kunnossa
-//
-// Revision 1.3  2000/03/29 19:39:48  bpereira
-// no message
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //
 // DESCRIPTION:
@@ -118,6 +40,8 @@
 #include "g_map.h"
 #include "g_level.h"
 #include "g_pawn.h"
+#include "p_info.h"
+
 
 #include "g_input.h" // gamekeydown!
 #include "m_misc.h" // FIL_* file functions
@@ -144,7 +68,7 @@
 
 bool         nomusic;    
 bool         nosound;
-language_t   language = english;            // Language.
+language_t   language = la_english;            // Language.
 
 GameInfo game;
 
@@ -752,18 +676,18 @@ void GameInfo::NewLevel(skill_t sk, LevelNode *n, bool resetplayer)
       CV_SetValue(&cv_fastmonsters,1);
     }
 
-  if (fc.FindNumForName(n->mapname.c_str()) == -1)
+  if (fc.FindNumForName(n->maplump.c_str()) == -1)
     {
       // FIXME! this entire block
       //has the name got a dot (.) in it?
-      if (!FIL_CheckExtension(n->mapname.c_str()))
+      if (!FIL_CheckExtension(n->maplump.c_str()))
 	// append .wad to the name
 	;
 
       // try to load the file
       if (true)
 	CONS_Printf("\2Map '%s' not found\n"
-		    "(use .wad extension for external maps)\n", n->mapname.c_str());
+		    "(use .wad extension for external maps)\n", n->maplump.c_str());
       Command_ExitGame_f();
       return;
     }
@@ -773,7 +697,7 @@ void GameInfo::NewLevel(skill_t sk, LevelNode *n, bool resetplayer)
   // this should be CL_Reset or something...
   //playerdeadview = false;
 
-  Map *m = new Map(n->mapname);
+  Map *m = new Map(n->maplump);
   m->level = n;
   maps.push_back(m); // just one map for now
 
@@ -869,12 +793,12 @@ void GameInfo::StartLevel(bool re, bool resetplayer)
 // was G_ExitLevel
 //
 // for now, exit can be 0 (normal exit) or 1 (secret exit)
-void GameInfo::ExitLevel(int exit)
+void GameInfo::ExitLevel(int ex)
 {
   if (state == GS_LEVEL) // FIXME! is this necessary?
     {
       action = ga_completed;
-      currentlevel->exittype = exit;
+      currentlevel->exitused = (*(currentlevel->exit.find(ex))).second;
     }
 }
 
@@ -948,31 +872,46 @@ void GameInfo::LevelCompleted()
 void GameInfo::EndIntermission()
 {
   // action is ga_nothing
+  const LevelNode *next = currentlevel->exitused;
 
   // check need for finale
   if (cv_deathmatch.value == 0)
     {
+      int c = currentlevel->cluster;
+      clusterdef_t *cd = P_FindCluster(c);
+
       // check winning
-      if (currentlevel->exit[currentlevel->exittype] == NULL)
+      if (next == NULL)
 	{
 	  // disconnect from network
 	  CL_Reset();
 	  state = GS_FINALE;
-	  F_StartFinale(currentlevel, true);
+	  F_StartFinale(cd, false, true); // final piece of story is exittext
 	  return;
 	}
 
-      // check "mid-game finale" (story)
-      if (!currentlevel->finaletext.empty())
+      int n = next->cluster;
+      // check "mid-game finale" (story) (cluster change)
+      if (n != c)
 	{
-	  state = GS_FINALE;
-	  F_StartFinale(currentlevel, false);
-	  return;
+	  clusterdef_t *ncd = P_FindCluster(n);
+	  if (ncd && !(ncd->entertext.empty()))
+	    {
+	      state = GS_FINALE;
+	      F_StartFinale(ncd, true, false);
+	      return;
+	    }
+	  else if (cd && !(cd->exittext.empty()))
+	    {
+	      state = GS_FINALE;
+	      F_StartFinale(cd, false, false);
+	      return;
+	    }
 	}
     } else {
       // no finales in deathmatch
       // FIXME end game here, show final frags
-      if (currentlevel->exit[currentlevel->exittype] == NULL)
+      if (next == NULL)
 	CL_Reset();
     }
 
@@ -990,10 +929,9 @@ void GameInfo::EndFinale()
 void GameInfo::WorldDone()
 {
   action = ga_nothing;
-
   // maybe a state change here? Right now state is GS_INTERMISSION or GS_FINALE ??
 
-  LevelNode *p = currentlevel->exit[currentlevel->exittype];
+  LevelNode *next = currentlevel->exitused;
 
   /*
   if (demoversion < 129)
@@ -1010,7 +948,7 @@ void GameInfo::WorldDone()
       if (cv_deathmatch.value)
 	reset = true;
 
-      NewLevel(skill, p, reset);
+      NewLevel(skill, next, reset);
       //COM_BufAddText (va("map \"%s\" -noresetplayers\n", currentlevel->mapname.c_str()));
       //COM_BufAddText (va("map \"%s\"\n", currentlevel->mapname.c_str())); 
     }

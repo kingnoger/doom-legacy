@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
 // Revision 1.3  2002/12/23 23:15:41  smite-meister
 // Weapon groups, MAPINFO parser added!
 //
@@ -67,146 +70,155 @@ consvar_t cv_fragsweaponfalling = {"fragsweaponfalling"   ,"0",CV_SAVE,CV_OnOff}
 
 
 // was P_DeathMessages
-// Death messages relating to the target (dying) player
-static void P_DeathMessages(PlayerPawn* t, Actor *inflictor, Actor *source)
+// Actor::Killed is called when PlayerPawn dies.
+// It returns the proper death message and updates the score.
+void Actor::Killed(PlayerPawn *victim, Actor *inflictor)
 {
+  CONS_Printf("%s is killed by an inanimate object\n", victim->player->name.c_str());
+}
+
+void DActor::Killed(PlayerPawn *victim, Actor *inflictor)
+{
+  // monster killer
+  // show death message only if it concerns the console players
+  if (victim->player != consoleplayer && victim->player != consoleplayer2)
+    return;
+
+  char *str = NULL;
+  switch (type)
+    {
+    case MT_BARREL:    str = text[DEATHMSG_BARREL]; break;
+    case MT_POSSESSED: str = text[DEATHMSG_POSSESSED]; break;
+    case MT_SHOTGUY:   str = text[DEATHMSG_SHOTGUY];   break;
+    case MT_VILE:      str = text[DEATHMSG_VILE];      break;
+    case MT_FATSO:     str = text[DEATHMSG_FATSO];     break;
+    case MT_CHAINGUY:  str = text[DEATHMSG_CHAINGUY];  break;
+    case MT_TROOP:     str = text[DEATHMSG_TROOP];     break;
+    case MT_SERGEANT:  str = text[DEATHMSG_SERGEANT];  break;
+    case MT_SHADOWS:   str = text[DEATHMSG_SHADOWS];   break;
+    case MT_HEAD:      str = text[DEATHMSG_HEAD];      break;
+    case MT_BRUISER:   str = text[DEATHMSG_BRUISER];   break;
+    case MT_UNDEAD:    str = text[DEATHMSG_UNDEAD];    break;
+    case MT_KNIGHT:    str = text[DEATHMSG_KNIGHT];    break;
+    case MT_SKULL:     str = text[DEATHMSG_SKULL];     break;
+    case MT_SPIDER:    str = text[DEATHMSG_SPIDER];    break;
+    case MT_BABY:      str = text[DEATHMSG_BABY];      break;
+    case MT_CYBORG:    str = text[DEATHMSG_CYBORG];    break;
+    case MT_PAIN:      str = text[DEATHMSG_PAIN];      break;
+    case MT_WOLFSS:    str = text[DEATHMSG_WOLFSS];    break;
+    default:           str = text[DEATHMSG_DEAD];      break;
+    }
+
+  CONS_Printf(str, victim->player->name.c_str());
+}
+
+
+void PlayerPawn::Killed(PlayerPawn *victim, Actor *inflictor)
+{
+  // player killer
+  game.UpdateScore(player, victim->player);
+
+  if (game.mode == gm_heretic)
+    {
+      if (player == displayplayer || player == displayplayer2)
+	S_StartAmbSound(sfx_gfrag);
+
+      // Make a super chicken
+      if (morphTics)
+	GivePower(pw_weaponlevel2);
+    }
+
+  // show death message only if it concerns the console players
+  if (player != consoleplayer && player != consoleplayer2 &&
+      victim->player != consoleplayer && victim->player != consoleplayer2)
+    return;
+
   char *str = NULL;
 
-  if (!source)
+  if (player == victim->player)
     {
-      // environment kills
-      int w = t->specialsector;      //see p_spec.c
-
-      if (w==5)
-	str = text[DEATHMSG_HELLSLIME];
-      else if (w==7)
-	str = text[DEATHMSG_NUKE];
-      else if (w==16 || w==4)
-	str = text[DEATHMSG_SUPHELLSLIME];
-      else
-	str = text[DEATHMSG_SPECUNKNOW];
-      CONS_Printf(str, t->player->name.c_str());
+      CONS_Printf(text[DEATHMSG_SUICIDE], player->name.c_str());
+      // FIXME when console is rewritten to accept << >>
+      //if (cv_splitscreen.value)
+      // console << "\4" << t->player->name << text[DEATHMSG_SUICIDE];
+      return;
     }
-  else if (source->Type() == Thinker::tt_ppawn)
-    {
-      // player kill
-      PlayerPawn *s = (PlayerPawn *)source;
 
-      if (s->player == t->player)
+  if (victim->health < -9000) // telefrag !
+    str = text[DEATHMSG_TELEFRAG];
+  else
+    {
+      int w = -1;
+      if (inflictor && (inflictor->Type() == Thinker::tt_dactor))
 	{
-	  CONS_Printf(text[DEATHMSG_SUICIDE], t->player->name.c_str());
-	  // FIXME when console is rewritten to accept << >>
-	  //if (cv_splitscreen.value)
-	  // console << "\4" << t->player->name << text[DEATHMSG_SUICIDE];
+	  DActor *inf = (DActor *)inflictor;
+	  switch (inf->type)
+	    {
+	    case MT_BARREL:
+	      w = wp_barrel;
+	      break;
+	    case MT_ROCKET   :
+	      w = wp_missile;
+	      break;
+	    case MT_PLASMA   :
+	      w = wp_plasma;
+	      break;
+	    case MT_EXTRABFG :
+	    case MT_BFG      :
+	      w = wp_bfg;
+	      break;
+	    default :
+	      w = readyweapon;
+	      break;
+	    }
 	}
-      else
-        {
-	  if (t->health < -9000) // telefrag !
-	    str = text[DEATHMSG_TELEFRAG];
-	  else
-            {
-	      int w = -1;
-	      if (inflictor && (inflictor->Type() == Thinker::tt_dactor))
-                {
-		  DActor *inf = (DActor *)inflictor;
-		  switch (inf->type)
-		    {
-		    case MT_BARREL:
-		      w = wp_barrel;
-		      break;
-		    case MT_ROCKET   :
-		      w = wp_missile;
-		      break;
-		    case MT_PLASMA   :
-		      w = wp_plasma;
-		      break;
-		    case MT_EXTRABFG :
-		    case MT_BFG      :
-		      w = wp_bfg;
-		      break;
-		    default :
-		      w = s->readyweapon;
-		      break;
-		    }
-                }
 
-	      switch(w)
-                {
-                case wp_fist:
-		  str = text[DEATHMSG_FIST];
-		  break;
-                case wp_pistol:
-		  str = text[DEATHMSG_GUN];
-		  break;
-                case wp_shotgun:
-		  str = text[DEATHMSG_SHOTGUN];
-		  break;
-                case wp_chaingun:
-		  str = text[DEATHMSG_MACHGUN];
-		  break;
-                case wp_missile:
-		  str = text[DEATHMSG_ROCKET];
-		  if (t->health < -t->maxhealth)
-		    str = text[DEATHMSG_GIBROCKET];
-		  break;
-                case wp_plasma:
-		  str = text[DEATHMSG_PLASMA];
-		  break;
-                case wp_bfg:
-		  str = text[DEATHMSG_BFGBALL];
-		  break;
-                case wp_chainsaw:
-		  str = text[DEATHMSG_CHAINSAW];
-		  break;
-                case wp_supershotgun:
-		  str = text[DEATHMSG_SUPSHOTGUN];
-		  break;
-		case wp_barrel:
-		  str = text[DEATHMSG_BARRELFRAG];
-		  break;
-                default:
-		  str = text[DEATHMSG_PLAYUNKNOW];
-		  break;
-                }
-            }
-	  CONS_Printf(str, t->player->name.c_str(),
-		      s->player->name.c_str());
-	  // FIXME when console is rewritten to accept << >>
-	  //if (cv_splitscreen.value)
-	  // console << "\4" << str...
-        }
-    }
-  else if (source->Type() == Thinker::tt_dactor)
-    {
-      // monster kill
-      DActor *so = (DActor *)source;
-      switch (so->type)
+      switch(w)
 	{
-	case MT_BARREL:    str = text[DEATHMSG_BARREL]; break;
-	case MT_POSSESSED: str = text[DEATHMSG_POSSESSED]; break;
-	case MT_SHOTGUY:   str = text[DEATHMSG_SHOTGUY];   break;
-	case MT_VILE:      str = text[DEATHMSG_VILE];      break;
-	case MT_FATSO:     str = text[DEATHMSG_FATSO];     break;
-	case MT_CHAINGUY:  str = text[DEATHMSG_CHAINGUY];  break;
-	case MT_TROOP:     str = text[DEATHMSG_TROOP];     break;
-	case MT_SERGEANT:  str = text[DEATHMSG_SERGEANT];  break;
-	case MT_SHADOWS:   str = text[DEATHMSG_SHADOWS];   break;
-	case MT_HEAD:      str = text[DEATHMSG_HEAD];      break;
-	case MT_BRUISER:   str = text[DEATHMSG_BRUISER];   break;
-	case MT_UNDEAD:    str = text[DEATHMSG_UNDEAD];    break;
-	case MT_KNIGHT:    str = text[DEATHMSG_KNIGHT];    break;
-	case MT_SKULL:     str = text[DEATHMSG_SKULL];     break;
-	case MT_SPIDER:    str = text[DEATHMSG_SPIDER];    break;
-	case MT_BABY:      str = text[DEATHMSG_BABY];      break;
-	case MT_CYBORG:    str = text[DEATHMSG_CYBORG];    break;
-	case MT_PAIN:      str = text[DEATHMSG_PAIN];      break;
-	case MT_WOLFSS:    str = text[DEATHMSG_WOLFSS];    break;
-	default:           str = text[DEATHMSG_DEAD];      break;
+	case wp_fist:
+	  str = text[DEATHMSG_FIST];
+	  break;
+	case wp_pistol:
+	  str = text[DEATHMSG_GUN];
+	  break;
+	case wp_shotgun:
+	  str = text[DEATHMSG_SHOTGUN];
+	  break;
+	case wp_chaingun:
+	  str = text[DEATHMSG_MACHGUN];
+	  break;
+	case wp_missile:
+	  str = text[DEATHMSG_ROCKET];
+	  if (victim->health < -victim->maxhealth)
+	    str = text[DEATHMSG_GIBROCKET];
+	  break;
+	case wp_plasma:
+	  str = text[DEATHMSG_PLASMA];
+	  break;
+	case wp_bfg:
+	  str = text[DEATHMSG_BFGBALL];
+	  break;
+	case wp_chainsaw:
+	  str = text[DEATHMSG_CHAINSAW];
+	  break;
+	case wp_supershotgun:
+	  str = text[DEATHMSG_SUPSHOTGUN];
+	  break;
+	case wp_barrel:
+	  str = text[DEATHMSG_BARRELFRAG];
+	  break;
+	default:
+	  str = text[DEATHMSG_PLAYUNKNOW];
+	  break;
 	}
     }
-  CONS_Printf(str, t->player->name.c_str());
-
+  CONS_Printf(str, victim->player->name.c_str(), player->name.c_str());
+  // FIXME when console is rewritten to accept << >>
+  //if (cv_splitscreen.value)
+  // console << "\4" << str...
 }
+
+
 
 //======================================================
 
@@ -260,7 +272,7 @@ bool DActor::Touch(Actor *p)
       flags &= ~MF_SKULLFLY;
       px = py = pz = 0;
 
-      SetState(game.mode == heretic ? info->seestate : info->spawnstate);
+      SetState(game.mode == gm_heretic ? info->seestate : info->spawnstate);
 
       return true; // stop moving
     }
@@ -457,7 +469,7 @@ bool Actor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 
       angle_t ang = R_PointToAngle2(inflictor->x, inflictor->y, x, y);
 
-      if (game.mode == heretic)
+      if (game.mode == gm_heretic)
 	thrust = damage*(FRACUNIT>>3)*150/(mass+1);
       else
 	thrust = damage*(FRACUNIT>>3)*100/(mass+1);
@@ -609,7 +621,7 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 
       ang = R_PointToAngle2(inflictor->x, inflictor->y, x, y);
 
-      if (game.mode == heretic )
+      if (game.mode == gm_heretic )
 	thrust = damage*(FRACUNIT>>3)*150/info->mass;
       else
 	thrust = damage*(FRACUNIT>>3)*100/info->mass;
@@ -785,8 +797,8 @@ void DActor::Die(Actor *inflictor, Actor *source)
   if ((type == MT_BARREL || type == MT_POD) && source)
     owner = source;
 
-  if (((game.mode != heretic && health < -info->spawnhealth)
-       ||(game.mode == heretic && health < -(info->spawnhealth>>1)))
+  if (((game.mode != gm_heretic && health < -info->spawnhealth)
+       ||(game.mode == gm_heretic && health < -(info->spawnhealth>>1)))
       && info->xdeathstate)
     {
       SetState(info->xdeathstate);
@@ -833,38 +845,29 @@ void PlayerPawn::Die(Actor *inflictor, Actor *source)
 {
   Actor::Die(inflictor, source);
 
-  PlayerPawn *s = NULL;
-  if (source && source->Type() == Thinker::tt_ppawn)
-    s = (PlayerPawn *)source;
-
-  // show death messages, only if it concern the console player
-  // (be it an attacker or a target)
-  if (player == consoleplayer)
-    P_DeathMessages (this, inflictor, source);
-  else if (s && s->player == consoleplayer)
-    P_DeathMessages (this, inflictor, source);
-
-
-  // count frags if player killed player
-  if (s)
-    {
-      game.UpdateScore(s->player, player);
-      if( game.mode == heretic )
-	{
-	  if(s->player == displayplayer 
-	     || s->player == displayplayer2 )
-	    S_StartAmbSound(sfx_gfrag);
-
-	  // Make a super chicken
-	  if (s->morphTics)
-	    s->GivePower(pw_weaponlevel2);
-	}
-    }
-  // count environment kills against you (you fragged yourself!)
   if (!source)
     {
+      // environment kills
+      int w = specialsector;      //see p_spec.c
+      char *str;
+
+      if (w == 5)
+	str = text[DEATHMSG_HELLSLIME];
+      else if (w == 7)
+	str = text[DEATHMSG_NUKE];
+      else if (w == 16 || w == 4)
+	str = text[DEATHMSG_SUPHELLSLIME];
+      else
+	str = text[DEATHMSG_SPECUNKNOW];
+
+      if (player == consoleplayer || player == consoleplayer2)
+	CONS_Printf(str, player->name.c_str());
+
+      // count environment kills against you (you fragged yourself!)
       game.UpdateScore(player, player);
     }
+  else
+    source->Killed(this, inflictor);
 
   // dead guy attributes
   flags2 &= ~MF2_FLY;
@@ -955,7 +958,7 @@ bool PlayerPawn::GiveAmmo(ammotype_t at, int count)
   if (game.skill == sk_baby
       || game.skill == sk_nightmare)
     {
-      if (game.mode == heretic)
+      if (game.mode == gm_heretic)
 	count += count>>1;
       else
 	// give double ammo in trainer mode,
@@ -986,7 +989,7 @@ bool PlayerPawn::GiveAmmo(ammotype_t at, int count)
 	UseFavoriteWeapon();
       return true;
     }
-  else if (game.mode == heretic)
+  else if (game.mode == gm_heretic)
     {
       if ((readyweapon == wp_staff || readyweapon == wp_gauntlets) 
 	  && weaponowned[GetAmmoChange[at]])
@@ -1366,7 +1369,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       if( GiveCard (it_bluecard) )
         {
 	  message = GOTBLUECARD;
-	  if( game.mode == heretic ) sound = sfx_keyup;
+	  if( game.mode == gm_heretic ) sound = sfx_keyup;
         }
       if (!game.multiplayer)
 	break;
@@ -1377,7 +1380,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       if( GiveCard (it_yellowcard) )
         {
 	  message = GOTYELWCARD;
-	  if( game.mode == heretic ) sound = sfx_keyup;
+	  if( game.mode == gm_heretic ) sound = sfx_keyup;
         }
       if (!game.multiplayer)
 	break;
@@ -1388,7 +1391,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       if (GiveCard (it_redcard))
         {
 	  message = GOTREDCARD;
-	  if( game.mode == heretic ) sound = sfx_keyup;
+	  if( game.mode == gm_heretic ) sound = sfx_keyup;
         }
       if (!game.multiplayer)
 	break;
@@ -1398,7 +1401,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       if (GiveCard (it_blueskull))
         {
 	  message = GOTBLUESKUL;
-	  if( game.mode == heretic ) sound = sfx_keyup;
+	  if( game.mode == gm_heretic ) sound = sfx_keyup;
         }
       if (!game.multiplayer)
 	break;
@@ -1408,7 +1411,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       if (GiveCard (it_yellowskull))
         {
 	  message = GOTYELWSKUL;
-	  if( game.mode == heretic ) sound = sfx_keyup;
+	  if( game.mode == gm_heretic ) sound = sfx_keyup;
         }
       if (!game.multiplayer)
 	break;
@@ -1418,7 +1421,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       if (GiveCard (it_redskull))
         {
 	  message = GOTREDSKULL;
-	  if( game.mode == heretic ) sound = sfx_keyup;
+	  if( game.mode == gm_heretic ) sound = sfx_keyup;
         }
       if (!game.multiplayer)
 	break;
@@ -1555,7 +1558,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       if (!GivePower (pw_allmap))
 	return;
       message = GOTMAP;
-      if( game.mode != heretic )
+      if( game.mode != gm_heretic )
 	sound = sfx_getpow;
       break;
 
@@ -2121,12 +2124,10 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 	}
     }
 
-  CONS_Printf("1\n");
 
   // player specific
   if (!(flags & MF_CORPSE))
     {
-      CONS_Printf("1.1\n");
       // end of game hell hack
       if (subsector->sector->special == 11 && damage >= health)
         {
@@ -2141,9 +2142,9 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
         {
 	  int saved;
 	  if (armortype == 1)
-	    saved = game.mode == heretic ? damage>>1 : damage/3;
+	    saved = game.mode == gm_heretic ? damage>>1 : damage/3;
 	  else
-	    saved = game.mode == heretic ? (damage>>1)+(damage>>2) : damage/2;
+	    saved = game.mode == gm_heretic ? (damage>>1)+(damage>>2) : damage/2;
 
 	  if (armorpoints <= saved)
             {

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2002/12/29 18:57:03  smite-meister
+// MAPINFO implemented, Actor deaths handled better
+//
 // Revision 1.3  2002/12/16 22:19:36  smite-meister
 // HUD fix
 //
@@ -259,7 +262,7 @@ int     con_keymap;      //0 english, 1 french
 static void CONS_English_f (void)
 {
     shiftxform = english_shiftxform;
-    con_keymap = english;
+    con_keymap = la_english;
     CONS_Printf("English keymap.\n");
 }
 
@@ -269,7 +272,7 @@ static void CONS_English_f (void)
 static void CONS_French_f (void)
 {
     shiftxform = french_shiftxform;
-    con_keymap = french;
+    con_keymap = la_french;
     CONS_Printf("French keymap.\n");
 }
 
@@ -342,7 +345,7 @@ static void CON_SetupBackColormap (void)
     {
         j = pal[i] + pal[i+1] + pal[i+2];
 
-        if( game.mode == heretic )
+        if( game.mode == gm_heretic )
         {
             greenmap[k] = 209 + (float)j*15/(3*255);   //remaps to greens(209-224)
             graymap[k]  =       (float)j*35/(3*255);   //remaps to grays(0-35)           
@@ -358,7 +361,7 @@ static void CON_SetupBackColormap (void)
     // this one doesn't need to be aligned, unless you convert the
     // V_DrawMappedPatch() into optimised asm.
 
-    if( game.mode != heretic )
+    if( game.mode != gm_heretic )
     {
         for(i=0; i<256; i++)
         {
@@ -898,7 +901,7 @@ static int     comskips,varskips;
     }
     else if (key == KEY_KPADSLASH)
         key = '/';
-    else if (con_keymap==french)
+    else if (con_keymap==la_french)
             key = ForeignTranslation((byte)key);   
 
     if (shiftdown)
@@ -964,7 +967,7 @@ void CON_Print (char *msg)
       else if (*msg=='\3')
 	{
           mask = 128;                         // white text + sound
-          if (game.mode == commercial)
+          if (game.mode == gm_doom2)
 	    S_StartAmbSound(sfx_radio);
           else
 	    S_StartAmbSound(sfx_tink);
