@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C++ -*- 
+// Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
 // $Id$
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/06/27 10:56:38  hurdler
+// minor things
+//
 // Revision 1.5  2004/03/28 15:16:14  smite-meister
 // Texture cache.
 //
@@ -95,9 +98,8 @@
 // so all the small-enough tables based on screen size, are allocated once
 // and for all at the maximum size.
 
-#define MAXVIDWIDTH     1024 //dont set this too high because actually
-#define MAXVIDHEIGHT    768  // lots of tables are allocated with the MAX
-                             // size.
+#define MAXVIDWIDTH     1600 //dont set this too high because actually
+#define MAXVIDHEIGHT    1200 // lots of tables are allocated with the MAX size.
 #define BASEVIDWIDTH    320  //NEVER CHANGE THIS! this is the original
 #define BASEVIDHEIGHT   200  // resolution of the graphics.
 
@@ -126,7 +128,7 @@ public:
   int   centerofs; // centering for the scaled menu gfx
   int   scaledofs; // centering offset for the scaled graphics,
 
-  int   baseratio;       // SoM: Used to get the correct value for lighting walls
+  //int   baseratio;       // SoM: Used to get the correct value for lighting walls //Hurdler: not used anymore
 
   int   setmodeneeded; // video mode change needed if > 0 // (the mode number to set + 1)
 
