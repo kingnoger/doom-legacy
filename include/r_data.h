@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2004/12/08 10:16:03  segabor
+// "segabor: byte alignment fix"
+//
 // Revision 1.16  2004/10/31 22:24:53  smite-meister
 // pic_t moves into history
 //
@@ -74,7 +77,7 @@ struct post_t
   byte length;   ///< number of data bytes
   byte crap;     ///< post border, should not be drawn
   byte data[0];  ///< data starts here, ends with another crap byte (not included in length)
-};
+} __attribute__((packed));
 
 /// column_t is a list of 0 or more post_t, (byte)-1 terminated
 typedef post_t column_t;

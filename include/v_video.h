@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/12/08 10:16:03  segabor
+// "segabor: byte alignment fix"
+//
 // Revision 1.8  2004/10/31 22:24:53  smite-meister
 // pic_t moves into history
 //
@@ -67,7 +70,7 @@ struct patch_t
   short               topoffset;      // pixels below the origin
   int                 columnofs[0];   // only [width] used
   // the [0] is &columnofs[width]
-};
+} __attribute__((packed));
 
 
 //======================================================================
