@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2005/03/17 21:42:50  smite-meister
+// Exl bugfixes
+//
 // Revision 1.18  2005/03/04 16:23:07  smite-meister
 // mp3, sector_t
 //
@@ -322,7 +325,7 @@ floor_t::floor_t(Map *m, int ty, sector_t *sec, fixed_t sp, int cru, fixed_t hei
     case UpSLT:
     case DownSLT:
       destheight = sector->floorheight + height;
-      if (type & TMASK == UpSLT)
+      if ((type & TMASK) == UpSLT)
 	destheight += mp->FindShortestLowerAround(sec);
       else
 	destheight -= mp->FindShortestLowerAround(sec);

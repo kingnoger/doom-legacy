@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,20 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.39  2004/11/19 16:51:04  smite-meister
-// cleanup
+// Revision 1.40  2005/03/17 21:42:50  smite-meister
+// Exl bugfixes
 //
 // Revision 1.38  2004/11/09 20:38:50  smite-meister
 // added packing to I/O structs
-//
-// Revision 1.37  2004/10/27 17:37:06  smite-meister
-// netcode update
-//
-// Revision 1.36  2004/10/14 19:35:30  smite-meister
-// automap, bbox_t
-//
-// Revision 1.35  2004/09/23 23:21:16  smite-meister
-// HUD updated
 //
 // Revision 1.34  2004/09/03 16:28:49  smite-meister
 // bugfixes and ZDoom linedef types
@@ -39,23 +30,14 @@
 // Revision 1.33  2004/08/15 18:08:28  smite-meister
 // palette-to-palette colormaps etc.
 //
-// Revision 1.32  2004/08/12 18:30:23  smite-meister
-// cleaned startup
-//
 // Revision 1.31  2004/07/25 20:19:19  hurdler
 // Remove old hardware renderer and add part of the new one
-//
-// Revision 1.30  2004/07/14 16:13:13  smite-meister
-// cleanup, commands
 //
 // Revision 1.29  2004/07/13 20:23:35  smite-meister
 // Mod system basics
 //
 // Revision 1.28  2004/07/11 14:32:00  smite-meister
 // Consvars updated, bugfixes
-//
-// Revision 1.27  2004/07/09 19:43:39  smite-meister
-// Netcode fixes
 //
 // Revision 1.26  2004/07/05 16:53:24  smite-meister
 // Netcode replaced
@@ -72,14 +54,8 @@
 // Revision 1.19  2003/12/31 18:32:49  smite-meister
 // Last commit of the year? Sound works.
 //
-// Revision 1.18  2003/12/13 23:51:03  smite-meister
-// Hexen update
-//
 // Revision 1.17  2003/12/09 01:02:00  smite-meister
 // Hexen mapchange works, keycodes fixed
-//
-// Revision 1.16  2003/12/06 23:57:47  smite-meister
-// save-related bugfixes
 //
 // Revision 1.14  2003/11/12 11:07:17  smite-meister
 // Serialization done. Map progression.
@@ -89,15 +65,6 @@
 //
 // Revision 1.12  2003/05/30 13:34:42  smite-meister
 // Cleanup, HUD improved, serialization
-//
-// Revision 1.11  2003/05/11 21:23:49  smite-meister
-// Hexen fixes
-//
-// Revision 1.10  2003/04/26 12:01:12  smite-meister
-// Bugfixes. Hexen maps work again.
-//
-// Revision 1.9  2003/04/04 00:01:53  smite-meister
-// bugfixes, Hexen HUD
 //
 // Revision 1.8  2003/03/08 16:07:00  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
@@ -464,13 +431,21 @@ void GameInfo::Display()
   // draw pause pic
   if (paused && !Menu::active)
     {
-      int y;
-      if (automap.active)
-        y = 4;
+      int x, y = (BASEVIDHEIGHT-hud.stbarheight)/2;
+      Texture *tex;
+
+      if (game.mode < gm_heretic)
+	{
+	  tex = tc.GetPtr("M_PAUSE");
+	  x = (BASEVIDWIDTH - tex->width)/2;
+	}
       else
-        y = viewwindowy + 4;
-      Texture *tex = tc.GetPtr("M_PAUSE");
-      tex->Draw(viewwindowx+(BASEVIDWIDTH - tex->width)/2, y, V_SCALE);
+	{
+	  tex = tc.GetPtr("PAUSED");
+	  x = BASEVIDWIDTH/2;
+	}
+
+      tex->Draw(x, y, V_SCALE);
     }
 
   //FIXME: draw either console or menu, not the two. Menu wins.

@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.52  2005/03/17 21:42:50  smite-meister
+// Exl bugfixes
+//
 // Revision 1.51  2004/12/02 17:22:31  smite-meister
 // HUD fixed
 //
@@ -1000,11 +1003,11 @@ void Map::BossDeath(const DActor *mo)
       return;
     }
 
-  if (key & b == 0)
+  if ((key & b) == 0)
     // wrong boss type for this level
     return;
  
-  int      i, n = players.size();
+  int i, n = players.size();
 
   // make sure there is a player alive for victory
   for (i=0 ; i<n ; i++)
@@ -1049,7 +1052,7 @@ void Map::BossDeath(const DActor *mo)
       return;
 
     case MT_CYBORG:
-      if (key & 2 != 0)
+      if ((key & 2) != 0)
 	break;
       else
 	{
@@ -1059,7 +1062,7 @@ void Map::BossDeath(const DActor *mo)
 	}
 
     case MT_SPIDER:
-      if (key & 8 != 0)
+      if ((key & 8) != 0)
 	break;
       else
 	{
@@ -1084,7 +1087,7 @@ void Map::BossDeath(const DActor *mo)
       break;
 
     case MT_HHEAD:
-      if (key & 0x400 == 0)
+      if ((key & 0x400) == 0)
 	goto nomassacre;
     case MT_MINOTAUR:
     case MT_SORCERER2:

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2005/03/17 21:42:50  smite-meister
+// Exl bugfixes
+//
 // Revision 1.15  2005/03/04 16:23:07  smite-meister
 // mp3, sector_t
 //
@@ -140,7 +143,7 @@ ceiling_t::ceiling_t(Map *m, int ty, sector_t *sec, fixed_t sp, int cru, fixed_t
     case UpSUT:
     case DownSUT:
       destheight = sector->ceilingheight + height;
-      if (type & TMASK == UpSUT)
+      if ((type & TMASK) == UpSUT)
 	destheight += mp->FindShortestUpperAround(sec);
       else
 	destheight -= mp->FindShortestUpperAround(sec);

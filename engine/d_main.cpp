@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.42  2005/03/17 21:42:50  smite-meister
+// Exl bugfixes
+//
 // Revision 1.41  2005/03/16 21:15:49  smite-meister
 // menu cleanup, bugfixes
 //
@@ -598,7 +601,7 @@ void D_SetPaths()
     I_Error("Please set $HOME to your home directory\n");
 #endif
 
-  string legacyhome = "";
+  string legacyhome = ".";
 
   if (userhome)
     {

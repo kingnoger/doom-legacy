@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2005/03/17 21:42:50  smite-meister
+// Exl bugfixes
+//
 // Revision 1.18  2005/03/04 16:23:07  smite-meister
 // mp3, sector_t
 //
@@ -338,7 +341,7 @@ int Map::EV_DoDoor(int tag, line_t *line, Actor *mo, byte type, fixed_t speed, i
 	{
 	  // FIXME dangerous and wrong, since it could be a ceiling_t for example, started using a script!
 	  vdoor_t *door = (vdoor_t *)sec->ceilingdata; //SoM: 3/6/2000
-	  if (door->type & vdoor_t::TMASK == vdoor_t::OwC)
+	  if ((door->type & vdoor_t::TMASK) == vdoor_t::OwC)
 	    {
 	      if (door->direction == -1)
 		door->direction = 1;    // go back up
