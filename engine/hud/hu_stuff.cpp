@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2004/10/17 02:00:49  smite-meister
+// mingw fixes
+//
 // Revision 1.21  2004/10/14 19:35:46  smite-meister
 // automap, bbox_t
 //
@@ -82,6 +85,8 @@
 
 /// \file
 /// \brief Heads Up Display (everything that is rendered on the 3D view)
+
+#include <ctype.h>
 
 #include "doomdef.h"
 #include "command.h"

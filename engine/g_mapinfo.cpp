@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.20  2004/10/17 02:00:16  smite-meister
+// mingw fixes
+//
 // Revision 1.19  2004/10/14 19:35:30  smite-meister
 // automap, bbox_t
 //
@@ -364,11 +367,9 @@ bool MapInfo::HubLoad()
 // TODO decide the actual format of MapInfo lump...
 
 // one command set per block
-#ifdef LINUX
+
 #define MI_offset(field) (size_t(&MapInfo::field))
-#else
-#define MI_offset(field) (size_t(&((MapInfo *)0)->field))
-#endif
+//#define MI_offset(field) (size_t(&((MapInfo *)0)->field))
 static parsercmd_t MapInfo_commands[]=
 {
   {P_ITEM_STR, "levelname",  MI_offset(nicename)},
@@ -526,11 +527,9 @@ char *MapInfo::Read(int lump)
 //   Hexen/ZDoom MAPINFO parser.
 //==============================================
 
-#ifdef LINUX
 #define CD_offset(field) (size_t(&MapCluster::field))
-#else
-#define CD_offset(field) (size_t(&((MapCluster *)0)->field))
-#endif
+//#define CD_offset(field) (size_t(&((MapCluster *)0)->field))
+
 // ZDoom clusterdef commands
 static parsercmd_t MAPINFO_CLUSTERDEF_commands[] =
 {
