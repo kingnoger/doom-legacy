@@ -11,10 +11,10 @@ all	: ../d2h.exe ../wadtool.exe
 
 
 ../d2h.exe: $(objdir)/d2h.o
-	$(LD) $(LDFLAGS) $< -o $@
+	$(LD) $(LDFLAGS) $^ -o $@
 
-../wadtool.exe: $(objdir)/wadtool.o
-	$(LD) $(LDFLAGS) $< -o $@
+../wadtool.exe: $(objdir)/wadtool.o $(objdir)/md5.o
+	$(LD) $(LDFLAGS) $^ -o $@
 
 
 depend	:
