@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/02/23 22:49:31  smite-meister
+// FS is back! L2 cache works.
+//
 // Revision 1.4  2003/01/18 20:17:41  smite-meister
 // HUD fixed, levelchange crash fixed.
 //
@@ -225,8 +228,6 @@ void HudSlider::Update(bool force)
       cval -= delta;
     }
 
-  CONS_Printf("HS:U 1\n");
-
   if (oldval != cval || force) Draw();
 }
 
@@ -270,7 +271,6 @@ void HudSlider::Draw()
   // FIXME! use actual patch sizes below...
 
   int pos = ((cval-minval)*256)/(maxval-minval);
-  CONS_Printf("HS:D 1, %d, %d\n", cval, pos);
 
   //int by = (cpos == CPawn->health) ? 0 : ChainWiggle;
   V_DrawScaledPatch(x, y, fgbuffer, p[0]);

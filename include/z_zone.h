@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/02/23 22:49:31  smite-meister
+// FS is back! L2 cache works.
+//
 // Revision 1.3  2003/02/16 16:54:52  smite-meister
 // L2 sound cache done
 //
@@ -74,7 +77,8 @@ void    Z_FreeTags (int lowtag, int hightag);
 void    Z_DumpHeap (int lowtag, int hightag);
 void    Z_FileDumpHeap (FILE *f);
 void    Z_CheckHeap (int i);
-void    Z_ChangeTag2 (void *ptr, int tag);
+//void    Z_ChangeTag2 (void *ptr, int tag);
+void    Z_ChangeTag(void *ptr, int tag);
 
 // returns number of bytes allocated for one tag type
 int     Z_TagUsage (int tagnum);
@@ -83,18 +87,18 @@ void    Z_FreeMemory (int *realfree,int *cachemem,int *usedmem,int *largefreeblo
 //#define ZDEBUG
 
 #ifdef ZDEBUG
-#define Z_Free(p) Z_Free2(p,__FILE__,__LINE__)
-void    Z_Free2 (void *ptr,char *file,int line);
-#define Z_Malloc(s,t,p) Z_Malloc2(s,t,p,0,__FILE__,__LINE__)
-#define Z_MallocAlign(s,t,p,a) Z_Malloc2(s,t,p,a,__FILE__,__LINE__)
-void*   Z_Malloc2 (int size, int tag, void *ptr, int alignbits, char *file,int line);
+void *Z_Malloc2(int size, int tag, void *ptr, int alignbits, char *file, int line);
+void  Z_Free2(void *ptr,char *file,int line);
+# define Z_Free(p) Z_Free2(p,__FILE__,__LINE__)
+# define Z_Malloc(s,t,p) Z_Malloc2(s,t,p,0,__FILE__,__LINE__)
+# define Z_MallocAlign(s,t,p,a) Z_Malloc2(s,t,p,a,__FILE__,__LINE__)
 #else
-void    Z_Free (void *ptr);
-void*   Z_MallocAlign(int size,int tag,void* user,int alignbits);
-#define Z_Malloc(s,t,p) Z_MallocAlign(s,t,p,0)
+void *Z_MallocAlign(int size, int tag, void *user, int alignbits);
+void  Z_Free(void *ptr);
+# define Z_Malloc(s,t,p) Z_MallocAlign(s,t,p,0)
 #endif
 
-void Z_ChangeTag(void *ptr, int tag);
+#define ZZ_Alloc(x) Z_Malloc((x), PU_STATIC, NULL)
 
 char *Z_Strdup(const char *s, int tag, void **user);
 

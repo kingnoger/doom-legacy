@@ -4,6 +4,7 @@
 // $Id$
 //
 // Copyright(C) 2000 Simon Howard
+// Copyright(C) 2001-2003 Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,20 +21,11 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:19  hurdler
-// Initial revision
+// Revision 1.2  2003/02/23 22:49:31  smite-meister
+// FS is back! L2 cache works.
 //
-// Revision 1.4  2002/09/25 15:17:41  vberghol
-// Intermission fixed?
-//
-// Revision 1.3  2002/07/01 21:00:41  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:20  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.1  2000/11/02 17:57:28  stroggonmeth
-// FraggleScript files...
+// Revision 1.1.1.1  2002/11/16 14:18:19  hurdler
+// Initial C++ version of Doom Legacy
 //
 //
 //--------------------------------------------------------------------------
@@ -55,8 +47,6 @@
 // cannot be set or changed inside the scripts themselves.
 //
 //---------------------------------------------------------------------------
-
-/* includes ************************/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -245,7 +235,7 @@ svalue_t getvariablevalue(svariable_t *v)
     }
   else if(v->type == svt_pMobj)
     {
-      returnvar.type = svt_mobj;
+      returnvar.type = svt_actor;
       returnvar.value.mobj = *v->value.pMobj;
     }
   else
@@ -285,7 +275,7 @@ void setvariablevalue(svariable_t *v, svalue_t newvalue)
   if(v->type == svt_fixed)
     v->value.fixed = fixedvalue(newvalue);
 
-  if(v->type == svt_mobj)
+  if(v->type == svt_actor)
       v->value.mobj = MobjForSvalue(newvalue);
 
   if(v->type == svt_pInt)
@@ -315,8 +305,7 @@ void setvariablevalue(svariable_t *v, svalue_t newvalue)
 
 svariable_t *add_game_int(char *name, int *var)
 {
-  svariable_t* newvar;
-  newvar = new_variable(&global_script, name, svt_pInt);
+  svariable_t* newvar = new_variable(&global_script, name, svt_pInt);
   newvar->value.pI = var;
 
   return newvar;
@@ -535,29 +524,3 @@ svariable_t *new_function(char *name, void (*handler)() )
 
   return newvar;
 }
-
-
-//---------------------------------------------------------------------------
-//
-// $Log$
-// Revision 1.1  2002/11/16 14:18:19  hurdler
-// Initial revision
-//
-// Revision 1.4  2002/09/25 15:17:41  vberghol
-// Intermission fixed?
-//
-// Revision 1.3  2002/07/01 21:00:41  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:20  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.1  2000/11/02 17:57:28  stroggonmeth
-// FraggleScript files...
-//
-// Revision 1.1.1.1  2000/04/30 19:12:08  fraggle
-// initial import
-//
-//
-//---------------------------------------------------------------------------
-

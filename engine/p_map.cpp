@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/02/23 22:49:30  smite-meister
+// FS is back! L2 cache works.
+//
 // Revision 1.6  2003/01/18 20:17:41  smite-meister
 // HUD fixed, levelchange crash fixed.
 //
@@ -2061,7 +2064,6 @@ void Map::CreateSecNodeList(Actor *thing, fixed_t x, fixed_t y)
   // represent the sectors the Thing has vacated.
 
   msecnode_t *node = sector_list = thing->touching_sectorlist;
-  // t8 node = sector_list;
   
   while (node)
     {
@@ -2105,7 +2107,7 @@ void Map::CreateSecNodeList(Actor *thing, fixed_t x, fixed_t y)
 	node = node->m_tnext;
     }
 
-  thing->touching_sectorlist = sector_list;   // t8
+  thing->touching_sectorlist = sector_list;
   sector_list = NULL;
 }
 

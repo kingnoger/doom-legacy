@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/02/23 22:49:32  smite-meister
+// FS is back! L2 cache works.
+//
 // Revision 1.5  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -55,10 +58,8 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
-#ifdef DIRECTFULLSCREEN
 // allow_fullscreen is set in I_PrepareVideoModeList
 extern bool allow_fullscreen;
-#endif
 
 // ------------------
 // global video state
@@ -225,7 +226,6 @@ int I_GetVideoModeForSize(int w, int h);
 // Change fullscreen on/off when cv_fullscreen is changed
 void CV_Fullscreen_OnChange()
 {
-#ifdef DIRECTFULLSCREEN
   int modenum;
   extern byte graphics_started;
 
@@ -240,7 +240,6 @@ void CV_Fullscreen_OnChange()
       modenum = I_GetVideoModeForSize(cv_scr_width.value, cv_scr_height.value);
       vid.setmodeneeded = ++modenum;
     }
-#endif
 }
 
 // =========================================================================

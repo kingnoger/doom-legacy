@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/02/23 22:49:31  smite-meister
+// FS is back! L2 cache works.
+//
 // Revision 1.2  2002/12/16 22:05:04  smite-meister
 // Actor / DActor separation done!
 //
@@ -345,7 +348,6 @@ private:
   bool        crush;
   int         tag;
 
-  //platlist_t *list; //SoM: 3/6/2000: Boom's improved code without limits.
   list<plat_t *>::iterator li;
 
 public:
@@ -353,15 +355,6 @@ public:
   virtual void Think();
 };
 
-
-//SoM: 3/6/2000: Boom's improved code without limits.
-/*
-struct platlist_t
-{
-  plat_t *plat; 
-  platlist_t *next,**prev;
-};
-*/
 
 #define PLATWAIT                3
 #define PLATSPEED               (FRACUNIT/NEWTICRATERATIO)
@@ -540,9 +533,6 @@ class ceiling_t : public Thinker
 private:
   ceiling_e  type;
   sector_t  *sector;
-  fixed_t    bottomheight;
-  fixed_t    topheight;
-  fixed_t    speed;
   fixed_t    oldspeed; //SoM: 3/6/2000
   bool       crush;
 
@@ -551,12 +541,16 @@ private:
   int oldspecial;
   short texture;
 
-  int         direction;   // 1 = up, 0 = waiting, -1 = down
   int         tag;   // ID
   int         olddirection;
 
-  //ceilinglist_t *list;   // SoM: 3/6/2000: by jff: copied from killough's plats
   list<ceiling_t *>::iterator li;
+
+public:
+  int        direction;   // 1 = up, 0 = waiting, -1 = down
+  fixed_t    speed;
+  fixed_t    bottomheight;
+  fixed_t    topheight;
 
 public:
   static int ceilmovesound;
@@ -566,15 +560,6 @@ public:
 };
 
 
-//SoM: 3/6/2000: Boom's improved ceiling list.
-// FIXME? is there _any_ reason for this list to be doubly linked? and this way?
-/*
-struct ceilinglist_t
-{
-  ceiling_t *ceiling; 
-  ceilinglist_t *next,**prev;
-};
-*/
 #define CEILSPEED               (FRACUNIT/NEWTICRATERATIO)
 #define CEILWAIT                150
 
@@ -664,10 +649,11 @@ private:
   floor_e     type;
   bool     crush;
   sector_t *sector;
-  int         direction;
   int         newspecial;
   int         oldspecial; //SoM: 3/6/2000
   short       texture;
+public:
+  int         direction;
   fixed_t     floordestheight;
   fixed_t     speed;
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/02/23 22:49:31  smite-meister
+// FS is back! L2 cache works.
+//
 // Revision 1.2  2002/12/04 09:13:40  smite-meister
 // Player clipping bug fixed
 //
@@ -88,7 +91,6 @@
 #include "byteptr.h"
 #include "t_vari.h"
 #include "t_script.h"
-#include "t_func.h"
 #include "m_random.h"
 
 #include "w_wad.h"

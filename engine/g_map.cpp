@@ -2,9 +2,12 @@
 //-----------------------------------------------------------------------------
 // $Id$
 //
-// Copyright (C) 1998-2002 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.8  2003/02/23 22:49:30  smite-meister
+// FS is back! L2 cache works.
+//
 // Revision 1.7  2003/02/16 16:54:50  smite-meister
 // L2 sound cache done
 //
@@ -52,6 +55,10 @@ consvar_t cv_itemrespawn    ={"respawnitem"    , "0",CV_NETVAR,CV_OnOff};
 Map::Map(const string & mname)
 {
   mapname = mname;
+  level = NULL;
+  info = NULL;
+  levelscript = NULL;
+  runningscripts = NULL;
 };
 
 // destructor
@@ -79,19 +86,10 @@ void Map::SpawnActor(Actor *p)
 
 void Map::DetachActor(Actor *p)
 {
-  extern msecnode_t *sector_list;
   void P_DelSeclist(msecnode_t *p);
 
   p->UnsetPosition();
 
-  //SoM: 4/7/2000: Remove touching_sectorlist from mobj.
-  /* t8
-  if (sector_list)
-    {
-      P_DelSeclist(sector_list);
-      sector_list = NULL;
-    }
-  */
   if (p->touching_sectorlist)
     {
       P_DelSeclist(p->touching_sectorlist);
@@ -312,14 +310,11 @@ DActor *Map::SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
   DActor *p = new DActor(nx, ny, nz, t);
   AddThinker(p);
 
-  CONS_Printf("Spawn, type: %d\n", t);
+  //CONS_Printf("Spawn, type: %d\n", t);
 
   // set subsector and/or block links
   p->SetPosition();
 
-  //added:27-02-98: if ONFLOORZ, stack the things one on another
-  //                so they do not occupy the same 3d space
-  //                allow for some funny thing arrangements!
   if (nz == ONFLOORZ)
     {
       //if (!P_CheckPosition(mobj,x,y))

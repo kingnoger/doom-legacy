@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/02/23 22:49:30  smite-meister
+// FS is back! L2 cache works.
+//
 // Revision 1.5  2003/02/16 16:54:49  smite-meister
 // L2 sound cache done
 //
@@ -180,7 +183,7 @@ cacheitem_t *soundcache_t::CreateItem(const char *p)
 
 
 // We assume that the sound is in Doom sound format (for now).
-// TODO: Make it recognize other formats as well!
+// TODO: Make it recognize other formats as well! WAV for example
 void soundcache_t::LoadAndConvert(cacheitem_t *r)
 {
   scacheitem_t *t = (scacheitem_t *)r;
@@ -331,12 +334,11 @@ void SoundSystem::Startup()
 	  // NOTE: linked sounds use the link's data at StartSound time
 	  if (S_sfx[i].name && !S_sfx[i].link)
 	    sc.Cache(S_sfx[i].name); // one extra reference => never released
-	    //I_GetSfx(&S_sfx[i]); 
         }
       CONS_Printf(" pre-cached all sound data\n");
     }
 
-  nextcleanup = gametic + 100;
+  nextcleanup = gametic + 35*100;
 }
 
 
@@ -832,13 +834,14 @@ void SoundSystem::UpdateSounds()
   if (gametic > nextcleanup)
     {
       CONS_Printf("Sound cache cleanup...\n");
-      sc.Inventory();
 
-      int i = sc.Cleanup();
+      // FIXME decide if regular cleanups are even needed. i think not.
+      // rather we could do a cleanup when memory is low based on usefulness
+      int i = 0; //sc.Cleanup();
       if (i > 0)
 	CONS_Printf ("Flushed %d sounds\n", i);
-      sc.Inventory();
-      nextcleanup = gametic + 100;
+      //sc.Inventory();
+      nextcleanup = gametic + 35*500;
     }
 
   // static sound channels

@@ -4,6 +4,7 @@
 // $Id$
 //
 // Copyright(C) 2000 Simon Howard
+// Copyright(C) 2001-2003 Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,24 +21,18 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:28  hurdler
-// Initial revision
+// Revision 1.2  2003/02/23 22:49:31  smite-meister
+// FS is back! L2 cache works.
 //
-// Revision 1.3  2002/07/01 21:00:57  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:31  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.1  2000/11/02 17:57:28  stroggonmeth
-// FraggleScript files...
+// Revision 1.1.1.1  2002/11/16 14:18:28  hurdler
+// Initial C++ version of Doom Legacy
 //
 //
 //--------------------------------------------------------------------------
 
 
-#ifndef __SPEC_H__
-#define __SPEC_H__
+#ifndef t_spec_h
+#define t_spec_h 1
 
 void spec_brace();
 
@@ -55,25 +50,3 @@ bool spec_variable();
 void spec_script();     // in t_script.c btw
 
 #endif
-
-//---------------------------------------------------------------------------
-//
-// $Log$
-// Revision 1.1  2002/11/16 14:18:28  hurdler
-// Initial revision
-//
-// Revision 1.3  2002/07/01 21:00:57  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:31  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.1  2000/11/02 17:57:28  stroggonmeth
-// FraggleScript files...
-//
-// Revision 1.1.1.1  2000/04/30 19:12:09  fraggle
-// initial import
-//
-//
-//---------------------------------------------------------------------------
-

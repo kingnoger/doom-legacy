@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/02/23 22:49:30  smite-meister
+// FS is back! L2 cache works.
+//
 // Revision 1.6  2003/02/16 16:54:50  smite-meister
 // L2 sound cache done
 //
@@ -576,7 +579,7 @@ void G_BuildTiccmd(ticcmd_t* cmd, bool primary, int realtics)
   cmd->forwardmove += forward;
   cmd->sidemove += side;
 
-  CONS_Printf("Move: %d, %d, %d\n", cmd->buttons, cmd->forwardmove, cmd->sidemove);
+  //CONS_Printf("Move: %d, %d, %d\n", cmd->buttons, cmd->forwardmove, cmd->sidemove);
    
 #ifdef ABSOLUTEANGLE
   if (primary) {
@@ -618,7 +621,7 @@ void GameInfo::StartIntro()
 void GameInfo::Drawer()
 {
   // draw the view directly
-  CONS_Printf("GI::Draw: %p, %p\n", displayplayer,displayplayer2);
+  //CONS_Printf("GI::Draw: %p, %p\n", displayplayer,displayplayer2);
   if (displayplayer && displayplayer->pawn)
     {
       R.SetMap(displayplayer->pawn->mp);
@@ -712,7 +715,6 @@ bool PlayerInfo::InventoryResponder(int (*gc)[2], event_t *ev)
 	    pawn->invTics = 0;
 	  else if (pawn->inventory[pawn->invSlot].count > 0)
 	    {
-	      CONS_Printf("PP:IR  USE %d\n", pawn->inventory[pawn->invSlot].type);
 	      if (1) // FIXME send playernum in the message...
 		SendNetXCmd(XD_USEARTEFACT, &pawn->inventory[pawn->invSlot].type, 1);
 	      else
@@ -780,13 +782,6 @@ bool GameInfo::Responder(event_t* ev)
   switch (state)
     {
     case GS_LEVEL:
-#if 1 // FIXME testing
-      if (ev->type == ev_keydown && ev->data1 == 'n')
-	{
-	  CONS_Printf("------ n pressed\n");
-	  consoleplayer->pawn->health += 50; 
-	}
-#endif
       if (!multiplayer) //FIXME! The _server_ CAN cheat in multiplayer (maybe using console only?)
 	if (cht_Responder (ev))
 	  return true;
@@ -797,7 +792,7 @@ bool GameInfo::Responder(event_t* ev)
 
       if (consoleplayer->InventoryResponder(gamecontrol, ev))
 	return true;
-      CONS_Printf("G:Resp 3\n");
+
       if (cv_splitscreen.value && consoleplayer2->InventoryResponder(gamecontrol2, ev))
 	return true;
       break;
@@ -815,8 +810,6 @@ bool GameInfo::Responder(event_t* ev)
     default:
       break;
     }
-
-  CONS_Printf("G:Resp 5\n");
 
   // update keys current state
   G_MapEventsToControls(ev);

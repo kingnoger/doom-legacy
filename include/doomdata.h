@@ -18,55 +18,22 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:22  hurdler
-// Initial revision
+// Revision 1.2  2003/02/23 22:49:31  smite-meister
+// FS is back! L2 cache works.
 //
-// Revision 1.9  2002/09/06 17:18:35  vberghol
-// added most of the changes up to RC2
-//
-// Revision 1.8  2002/08/19 18:06:41  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.7  2002/08/16 20:49:26  vberghol
-// engine ALMOST done!
-//
-// Revision 1.6  2002/08/08 18:36:26  vberghol
-// p_spec.cpp fixed
-//
-// Revision 1.5  2002/07/18 19:16:39  vberghol
-// renamed a few files
-//
-// Revision 1.4  2002/07/10 19:57:02  vberghol
-// g_pawn.cpp tehty
-//
-// Revision 1.3  2002/07/01 21:00:44  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:22  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.4  2000/11/02 17:50:06  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.3  2000/04/04 00:32:45  stroggonmeth
-// Initial Boom compatability plus few misc changes all around.
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
+// Revision 1.1.1.1  2002/11/16 14:18:22  hurdler
+// Initial C++ version of Doom Legacy
 //
 //
 // DESCRIPTION:
-//      all external data is defined here
-//      most of the data is loaded into different structures at run time
-//      some internal structures shared by many modules are here
+//      Most external data structures are defined here.
+//      Most of the data is loaded into different structures at run time.
+//      Some internal structures shared by many modules are here.
 //
 //-----------------------------------------------------------------------------
 
-#ifndef __DOOMDATA__
-#define __DOOMDATA__
+#ifndef doomdata_h
+#define doomdata_h 1
 
 // The most basic types we use, portability.
 #include "doomtype.h"
@@ -96,7 +63,8 @@ enum
   ML_NODES,             // BSP nodes
   ML_SECTORS,           // Sectors, from editing
   ML_REJECT,            // LUT, sector-sector visibility        
-  ML_BLOCKMAP           // LUT, motion clipping, walls/grid element
+  ML_BLOCKMAP,          // LUT, motion clipping, walls/grid element
+  ML_BEHAVIOR  // Hexen script lump
 };
 
 

@@ -4,6 +4,7 @@
 // $Id$
 //
 // Copyright(C) 2000 Simon Howard
+// Copyright(C) 2001-2003 Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,32 +21,11 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:19  hurdler
-// Initial revision
+// Revision 1.2  2003/02/23 22:49:31  smite-meister
+// FS is back! L2 cache works.
 //
-// Revision 1.4  2002/09/25 15:17:40  vberghol
-// Intermission fixed?
-//
-// Revision 1.3  2002/07/01 21:00:40  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:19  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.5  2001/08/14 00:36:26  hurdler
-// Small update
-//
-// Revision 1.4  2001/05/03 21:22:25  hurdler
-// remove some warnings
-//
-// Revision 1.3  2000/11/04 16:23:44  bpereira
-// no message
-//
-// Revision 1.2  2000/11/03 11:48:40  hurdler
-// Fix compiling problem under win32 with 3D-Floors and FragglScript (to verify!)
-//
-// Revision 1.1  2000/11/02 17:57:28  stroggonmeth
-// FraggleScript files...
+// Revision 1.1.1.1  2002/11/16 14:18:19  hurdler
+// Initial C++ version of Doom Legacy
 //
 //
 //--------------------------------------------------------------------------
@@ -58,8 +38,6 @@
 // By Simon Howard
 //
 //----------------------------------------------------------------------------
-
-/* includes ************************/
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -90,6 +68,8 @@ int num_tokens = 0;
 int script_debug = false;
 
 script_t *current_script;       // the current script
+Map *current_map; // current_script->mp, just for convenience
+
 svalue_t nullvar = { svt_int,  {0} };      // null var for empty return
 int killscript;         // when set to true, stop the script quickly
 section_t *prev_section;       // the section from the previous statement
@@ -601,7 +581,7 @@ static svalue_t simple_evaluate(int n)
       if(strchr(tokens[n], '.'))
         {
           returnvar.type = svt_fixed;
-          returnvar.value.f = atof(tokens[n]) * FRACUNIT;
+          returnvar.value.f = fixed_t(atof(tokens[n]) * FRACUNIT);
         }
       else
         {
@@ -700,9 +680,9 @@ svalue_t evaluate_expression(int start, int stop)
 
       if( -1 != (n = (operators[i].direction==forward ?
                 find_operator_backwards : find_operator)
-                 (start, stop, operators[i].string)) )
+                 (start, stop, operators[i].str)) )
         {
-          // CONS_Printf("operator %s, %i-%i-%i\n", operators[count].string, start, n, stop);
+          // CONS_Printf("operator %s, %i-%i-%i\n", operators[count].str, start, n, stop);
 
           // call the operator function and evaluate this chunk of tokens
 
@@ -775,7 +755,7 @@ const char *stringvalue(svalue_t v)
       case svt_string:
         return v.value.s;
 
-      case svt_mobj:
+      case svt_actor:
         return "map object";
 
       case svt_fixed:
@@ -791,39 +771,3 @@ const char *stringvalue(svalue_t v)
         return buffer;
     }
 }
-
-//---------------------------------------------------------------------------
-//
-// $Log$
-// Revision 1.1  2002/11/16 14:18:19  hurdler
-// Initial revision
-//
-// Revision 1.4  2002/09/25 15:17:40  vberghol
-// Intermission fixed?
-//
-// Revision 1.3  2002/07/01 21:00:40  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:19  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.5  2001/08/14 00:36:26  hurdler
-// Small update
-//
-// Revision 1.4  2001/05/03 21:22:25  hurdler
-// remove some warnings
-//
-// Revision 1.3  2000/11/04 16:23:44  bpereira
-// no message
-//
-// Revision 1.2  2000/11/03 11:48:40  hurdler
-// Fix compiling problem under win32 with 3D-Floors and FragglScript (to verify!)
-//
-// Revision 1.1  2000/11/02 17:57:28  stroggonmeth
-// FraggleScript files...
-//
-// Revision 1.1.1.1  2000/04/30 19:12:08  fraggle
-// initial import
-//
-//
-//---------------------------------------------------------------------------

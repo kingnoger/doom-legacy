@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/02/23 22:49:30  smite-meister
+// FS is back! L2 cache works.
+//
 // Revision 1.6  2003/01/25 21:33:05  smite-meister
 // Now compiles with MinGW 2.0 / GCC 3.2.
 // Builder can choose between dynamic and static linkage.
@@ -301,16 +304,6 @@ void Actor::Remove()
 
   // unlink from sector and block lists
   UnsetPosition();
-
-  //SoM: 4/7/2000: Remove touching_sectorlist from mobj.
-  /* t8
-     extern msecnode_t *sector_list;  
-     if (sector_list)
-    {
-      P_DelSeclist(sector_list);
-      sector_list = NULL;
-    }
-  */
 
   if (touching_sectorlist)
     {

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/02/23 22:49:31  smite-meister
+// FS is back! L2 cache works.
+//
 // Revision 1.2  2002/12/23 23:15:41  smite-meister
 // Weapon groups, MAPINFO parser added!
 //
@@ -127,11 +130,8 @@ void Map::Ticker()
 {
   int i=0, n = players.size();
 
-  CONS_Printf("Map::Ticker: nplayers = %d\n", n);
   if (!respawnqueue.empty())
     i = RespawnPlayers();
-
-  CONS_Printf("=> %d respawns\n", i);
 
   // players[i]->Think();
   // now playerpawns are ticked with other Thinkers at RunThinkers.

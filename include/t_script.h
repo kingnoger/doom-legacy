@@ -4,6 +4,7 @@
 // $Id$
 //
 // Copyright(C) 2000 Simon Howard
+// Copyright(C) 2001-2003 Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,37 +21,22 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:28  hurdler
-// Initial revision
+// Revision 1.2  2003/02/23 22:49:31  smite-meister
+// FS is back! L2 cache works.
 //
-// Revision 1.5  2002/08/17 21:21:55  vberghol
-// Only scripting to be fixed in engine!
-//
-// Revision 1.4  2002/07/18 19:16:42  vberghol
-// renamed a few files
-//
-// Revision 1.3  2002/07/01 21:00:57  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:30  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.2  2000/11/03 03:27:17  stroggonmeth
-// Again with the bug fixing...
-//
-// Revision 1.1  2000/11/02 17:57:28  stroggonmeth
-// FraggleScript files...
+// Revision 1.1.1.1  2002/11/16 14:18:28  hurdler
+// Initial C++ version of Doom Legacy
 //
 //
 //--------------------------------------------------------------------------
 
-#ifndef __T_SCRIPT_H__
-#define __T_SCRIPT_H__
+#ifndef t_script_h
+#define t_script_h 1
 
-
-#include "t_parse.h"
+#include "t_vari.h"
 class Actor;
 struct script_t;
+
 
 typedef enum {
   wt_none,        // not waiting
@@ -77,52 +63,14 @@ struct runningscript_t
 };
 
 void T_Init();
-void T_ClearScripts();
-void T_RunScript(int n);
+void T_AddCommands();
 void T_RunThingScript(int);
-void T_PreprocessScripts();
-void T_DelayedScripts();
 Actor *MobjForSvalue(svalue_t svalue);
 
-        // console commands
+// console commands
 void T_Dump();
 void T_ConsRun();
 
-extern script_t levelscript;
-//extern script_t *scripts[MAXSCRIPTS];       // the scripts
 extern Actor *t_trigger;
 
-void T_AddCommands();
-
 #endif
-
-//---------------------------------------------------------------------------
-//
-// $Log$
-// Revision 1.1  2002/11/16 14:18:28  hurdler
-// Initial revision
-//
-// Revision 1.5  2002/08/17 21:21:55  vberghol
-// Only scripting to be fixed in engine!
-//
-// Revision 1.4  2002/07/18 19:16:42  vberghol
-// renamed a few files
-//
-// Revision 1.3  2002/07/01 21:00:57  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:30  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.2  2000/11/03 03:27:17  stroggonmeth
-// Again with the bug fixing...
-//
-// Revision 1.1  2000/11/02 17:57:28  stroggonmeth
-// FraggleScript files...
-//
-// Revision 1.1.1.1  2000/04/30 19:12:09  fraggle
-// initial import
-//
-//
-//---------------------------------------------------------------------------
-

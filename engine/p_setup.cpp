@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/02/23 22:49:31  smite-meister
+// FS is back! L2 cache works.
+//
 // Revision 1.7  2003/02/08 21:43:50  smite-meister
 // New Memzone system. Choose your pawntype! Cyberdemon OK.
 //
@@ -195,8 +198,9 @@
 #include "z_zone.h"
 #include "r_splats.h"
 #include "p_info.h"
+
+#include "t_parse.h"
 #include "t_func.h"
-#include "t_script.h"
 
 #include "hu_stuff.h"
 #include "console.h"
@@ -425,7 +429,7 @@ int P_AddLevelFlat (char* flatname, levelflat_t* levelflat)
       *((int*)&levelflat->name[4]) = v2;
 
       // store the flat lump number
-      levelflat->lumpnum = R_GetFlatNumForName (flatname);
+      levelflat->lumpnum = R_FlatNumForName (flatname);
 
       if (devparm)
 	CONS_Printf ("flat %#03d: %s\n", numlevelflats, name8.s);
@@ -898,11 +902,7 @@ void Map::LoadSideDefs(int lump)
 
 // SoM: 3/22/2000: Delay loading texture names until after loaded linedefs.
 
-//Hurdler: 04/04/2000: proto added
-int R_ColormapNumForName(char *name);
-
 // was P_LoadSideDefs2
-
 void Map::LoadSideDefs2(int lump)
 {
   byte *data = (byte *)fc.CacheLumpNum(lump,PU_STATIC);
@@ -1377,7 +1377,12 @@ bool Map::Setup(tic_t start)
 #endif
 
   info = new MapInfo;
-  info->Load(lumpnum); // load map separator lump info (map name etc)
+  levelscript->data = info->Load(lumpnum); // load map separator lump info (map properties, FS...)
+
+#ifdef FRAGGLESCRIPT
+  T_PreprocessScripts();        // preprocess FraggleScript scripts (needs already added players)
+  script_camera_on = false;
+#endif
 
   // If the map defines its music in MapInfo, use it.
   // Otherwise use given LevelNode data.

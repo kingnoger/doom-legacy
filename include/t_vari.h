@@ -4,6 +4,7 @@
 // $Id$
 //
 // Copyright(C) 2000 Simon Howard
+// Copyright(C) 2001-2003 Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,36 +21,25 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:28  hurdler
-// Initial revision
+// Revision 1.2  2003/02/23 22:49:31  smite-meister
+// FS is back! L2 cache works.
 //
-// Revision 1.5  2002/08/17 21:21:56  vberghol
-// Only scripting to be fixed in engine!
-//
-// Revision 1.4  2002/07/18 19:16:42  vberghol
-// renamed a few files
-//
-// Revision 1.3  2002/07/01 21:00:57  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:31  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.1  2000/11/02 17:57:28  stroggonmeth
-// FraggleScript files...
+// Revision 1.1.1.1  2002/11/16 14:18:28  hurdler
+// Initial C++ version of Doom Legacy
 //
 //
 //--------------------------------------------------------------------------
 
 
-#ifndef __VARIABLE_H__
-#define __VARIABLE_H__
+#ifndef t_vari_h
+#define t_vari_h 1
 
 #define VARIABLESLOTS 16
 
-#include "t_parse.h"
 #include "m_fixed.h"
+
 class Actor;
+class PlayerPawn;
 struct script_t;
 
 // hash the variables for speed: this is the hashkey
@@ -59,7 +49,19 @@ struct script_t;
                    ((n)[1] ? (n)[2] +   \
                    ((n)[2] ? (n)[3]  : 0) : 0) ) % VARIABLESLOTS )
 
-     // svariable_t
+struct svalue_t
+{
+  int type;
+  union
+  {
+    long i;
+    fixed_t f;
+    const char *s;
+    char *labelptr; // goto() label
+    Actor *mobj;
+  } value;
+};
+
 struct svariable_t
 {
   char *name;
@@ -85,12 +87,13 @@ struct svariable_t
 
 // variable types
 
-enum
+typedef enum
 {
   svt_string,
   svt_int,
   svt_fixed,
-  svt_mobj,         // a map object
+  svt_actor,        // a map object
+  svt_ppawn,        // a playerpawn
   svt_function,     // functions are stored as variables
   svt_label,        // labels for goto calls are variables
   svt_const,        // const
@@ -98,7 +101,7 @@ enum
   svt_pFixed,
   svt_pString,      // pointer to game string
   svt_pMobj,        // pointer to game mobj
-};
+} svartype_t;
 
 // variables
 

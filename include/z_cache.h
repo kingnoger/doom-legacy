@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2003/02/23 22:49:31  smite-meister
+// FS is back! L2 cache works.
+//
 // Revision 1.1  2003/02/18 20:03:18  smite-meister
 // L2 cache added
 //
@@ -38,7 +41,8 @@ class cacheitem_t
   friend class L2cache_t;
 protected:
   int   lumpnum;    // lump number of data
-  int   refcount;   // reference count.
+  int   usefulness; // how many times has it been used?
+  int   refcount;   // reference count, number of current users
 
 public:
   void *data;       // data

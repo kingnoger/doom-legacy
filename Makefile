@@ -37,7 +37,7 @@ endif
 ifdef LINUX
 
 # file removal utility
- rm = rm
+ rm = rm -f
 # assembler
  NASM = nasm
  nasmformat = elf - DLINUX # hmmm... a define here...
@@ -100,15 +100,16 @@ export CC = g++
 # USEASM : use assembler routines where possible
 # HWRENDER : compile with hardware renderer included
 # HW3SOUND : compile with hardware 3D sound included. Currently only for DirectX.
-# DIRECTFULLSCREEN : allow change into fullscreen mode through console????
-# NDEBUG : catch various signals?
 # DEBUG : renderer and hud debugging messages?
-# POLL_POINTER : Something to do with linux_x version?
 #
-# ??? PURESDL, 
+# Removed, no longer relevant:
+# NDEBUG : remove assertations
+# POLL_POINTER : Something to do with linux_x version?
+# DIRECTFULLSCREEN : allow change into fullscreen mode through console????
+# PURESDL : ??? 
 # hmm. In Win98, -DUSEASM causes execution to stop (ASM_PatchRowBytes())
 
-defines := $(platform) $(interface) $(linkage) -DNDEBUG -DHWRENDER -DDIRECTFULLSCREEN
+defines := $(platform) $(interface) $(linkage) -DHWRENDER
 export CF := $(DEBUGFLAGS) $(OPTFLAGS) -Wall $(EXTRAFLAGS) $(defines) #-ansi
 INCLUDES = -Iinclude
 CFLAGS = $(CF) $(INCLUDES)
@@ -119,6 +120,13 @@ LD     	= $(CC)
 export objdir = objs
 
 export engine_objects = \
+	$(objdir)/t_oper.o \
+	$(objdir)/t_parse.o \
+	$(objdir)/t_prepro.o \
+	$(objdir)/t_spec.o \
+	$(objdir)/t_vari.o \
+	$(objdir)/t_script.o \
+	$(objdir)/t_func.o \
 	$(objdir)/m_menu.o \
 	$(objdir)/f_finale.o \
 	$(objdir)/f_wipe.o \
@@ -168,13 +176,6 @@ export engine_objects = \
 	$(objdir)/d_items.o \
 	$(objdir)/dstrings.o \
 	$(objdir)/info.o
-#	$(objdir)/t_func.o \
-#	$(objdir)/t_oper.o \
-#	$(objdir)/t_parse.o \
-#	$(objdir)/t_prepro.o \
-#	$(objdir)/t_script.o \
-#	$(objdir)/t_spec.o \
-#	$(objdir)/t_vari.o \
 
 
 export util_objects = \

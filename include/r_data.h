@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/02/23 22:49:31  smite-meister
+// FS is back! L2 cache works.
+//
 // Revision 1.2  2003/01/12 12:56:42  smite-meister
 // Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
 //
@@ -124,9 +127,7 @@ void R_PrecacheMap();
 // Retrieval.
 // Floor/ceiling opaque texture tiles,
 // lookup by name. For animation?
-int R_GetFlatNumForName(const char *name);
-int P_FlagNumForName(const char *flatname);
-#define R_FlatNumForName(x)    R_GetFlatNumForName(x)
+int R_FlatNumForName(const char *name);
 
 
 // Called by P_Ticker for switches and animations,

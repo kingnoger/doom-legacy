@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/02/23 22:49:31  smite-meister
+// FS is back! L2 cache works.
+//
 // Revision 1.3  2002/12/23 23:19:37  smite-meister
 // Weapon groups, MAPINFO parser, WAD2+WAD3 support added!
 //
@@ -44,7 +47,7 @@ struct consvar_t;
 
 class Camera : public Actor
 {
-private:
+public:
 
   //SoM: Things used by FS cameras.
   fixed_t  viewheight;

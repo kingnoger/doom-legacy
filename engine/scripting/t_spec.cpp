@@ -4,6 +4,7 @@
 // $Id$
 //
 // Copyright(C) 2000 Simon Howard
+// Copyright(C) 2001-2003 Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,26 +21,11 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:19  hurdler
-// Initial revision
+// Revision 1.2  2003/02/23 22:49:31  smite-meister
+// FS is back! L2 cache works.
 //
-// Revision 1.4  2002/09/25 15:17:41  vberghol
-// Intermission fixed?
-//
-// Revision 1.3  2002/07/01 21:00:41  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:19  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.3  2001/03/13 22:14:20  stroggonmeth
-// Long time no commit. 3D floors, FraggleScript, portals, ect.
-//
-// Revision 1.2  2000/11/03 11:48:40  hurdler
-// Fix compiling problem under win32 with 3D-Floors and FragglScript (to verify!)
-//
-// Revision 1.1  2000/11/02 17:57:28  stroggonmeth
-// FraggleScript files...
+// Revision 1.1.1.1  2002/11/16 14:18:19  hurdler
+// Initial C++ version of Doom Legacy
 //
 //
 //--------------------------------------------------------------------------
@@ -51,8 +37,6 @@
 // By Simon Howard
 //
 //----------------------------------------------------------------------------
-
-/* includes ************************/
 
 #include <stdio.h>
 
@@ -317,7 +301,7 @@ bool spec_variable()
     }
   else if(!strcmp(tokens[start], "mobj"))
     {
-      newvar_type = svt_mobj;
+      newvar_type = svt_actor;
       start++;
     }
   else if(!strcmp(tokens[start], "script"))     // check for script creation
@@ -343,34 +327,3 @@ bool spec_variable()
 
   return false; // not used: try normal parsing
 }
-
-//---------------------------------------------------------------------------
-//
-// $Log$
-// Revision 1.1  2002/11/16 14:18:19  hurdler
-// Initial revision
-//
-// Revision 1.4  2002/09/25 15:17:41  vberghol
-// Intermission fixed?
-//
-// Revision 1.3  2002/07/01 21:00:41  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:19  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.3  2001/03/13 22:14:20  stroggonmeth
-// Long time no commit. 3D floors, FraggleScript, portals, ect.
-//
-// Revision 1.2  2000/11/03 11:48:40  hurdler
-// Fix compiling problem under win32 with 3D-Floors and FragglScript (to verify!)
-//
-// Revision 1.1  2000/11/02 17:57:28  stroggonmeth
-// FraggleScript files...
-//
-// Revision 1.1.1.1  2000/04/30 19:12:08  fraggle
-// initial import
-//
-//
-//---------------------------------------------------------------------------
-

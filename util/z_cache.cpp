@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2003/02/23 22:49:31  smite-meister
+// FS is back! L2 cache works.
+//
 // Revision 1.1  2003/02/18 20:03:19  smite-meister
 // L2 cache added
 //
@@ -97,6 +100,7 @@ cacheitem_t *L2cache_t::CreateItem(const char *p)
     return NULL;
 
   t->lumpnum = lump;
+  t->usefulness = 0;
   t->refcount = 0;
   LoadAndConvert(t);
   
@@ -137,6 +141,7 @@ cacheitem_t *L2cache_t::Cache(const char *p)
     }
 
   t->refcount++;
+  t->usefulness++;
 
   return t;
 }
@@ -160,13 +165,16 @@ void L2cache_t::Inventory()
 int L2cache_t::Cleanup()
 {
   int k = 0;
-  c_iter_t i;
-  for (i = c_map.begin(); i != c_map.end(); i++)
+  c_iter_t i, j;
+  for (i = j = c_map.begin(); i != c_map.end(); j = i)
     {
       cacheitem_t *t = (*i).second;
+      i++;
       if (t->refcount == 0)
 	{
-	  c_map.erase(i);
+	  c_map.erase(j);
+	  // Once an iterator is erased, it becomes invalid
+	  // and cannot be incremented! Therefore we have both i and j.
 	  delete t;
 	  k++;
 	}

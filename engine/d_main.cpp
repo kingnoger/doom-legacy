@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/02/23 22:49:30  smite-meister
+// FS is back! L2 cache works.
+//
 // Revision 1.9  2003/02/16 16:54:50  smite-meister
 // L2 sound cache done
 //
@@ -429,7 +432,7 @@ void D_Display()
   bool                     wipe;
   bool                     viewactivestate = false;
 
-  CONS_Printf(">>> D_Display\n");
+  //CONS_Printf(">>> D_Display\n");
 
   if (dedicated || nodrawers) return;
   //  if (nodrawers) return;        // for comparative timing / profiling

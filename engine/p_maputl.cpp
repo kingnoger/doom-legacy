@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/02/23 22:49:30  smite-meister
+// FS is back! L2 cache works.
+//
 // Revision 1.3  2003/01/18 20:17:41  smite-meister
 // HUD fixed, levelchange crash fixed.
 //
@@ -453,10 +456,8 @@ void Actor::UnsetPosition()
 
       // smite-meister: This is because normally this function is used in a unset/set sequence.
       // the subsequent set requires that sector_list is preserved...
-      // TEST t8: sector_list does not have to be moved anywhere from the Actor!
 
-      // t8 sector_list = touching_sectorlist;
-      // t8 touching_sectorlist = NULL; //to be restored by SetPosition
+      // TEST t8: sector_list does not have to be moved anywhere from the Actor!
     }
 
   if (! (flags & MF_NOBLOCKMAP))
@@ -491,10 +492,6 @@ void Actor::UnsetPosition()
 //
 void Actor::SetPosition()
 {
-  //extern msecnode_t *sector_list;
-
-  CONS_Printf("acty = %d\n", Type());
-
   // link into subsector
   subsector_t *ss = mp->R_PointInSubsector(x,y);
   subsector = ss;
@@ -534,8 +531,6 @@ void Actor::SetPosition()
         // added, new sector links are created.
 
       mp->CreateSecNodeList(this,x,y);
-      // t8 touching_sectorlist = sector_list; // Attach to Thing's Actor
-      // t8 sector_list = NULL; // clear for next time
     }
 
   int blockx, blocky;

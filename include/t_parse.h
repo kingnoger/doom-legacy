@@ -4,6 +4,7 @@
 // $Id$
 //
 // Copyright(C) 2000 Simon Howard
+// Copyright(C) 2001-2003 Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,44 +21,27 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:28  hurdler
-// Initial revision
+// Revision 1.2  2003/02/23 22:49:31  smite-meister
+// FS is back! L2 cache works.
 //
-// Revision 1.6  2002/09/25 15:17:42  vberghol
-// Intermission fixed?
-//
-// Revision 1.5  2002/08/17 21:21:55  vberghol
-// Only scripting to be fixed in engine!
-//
-// Revision 1.4  2002/07/18 19:16:42  vberghol
-// renamed a few files
-//
-// Revision 1.3  2002/07/01 21:00:57  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:30  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.3  2001/08/06 23:57:10  stroggonmeth
-// Removed portal code, improved 3D floors in hardware mode.
-//
-// Revision 1.2  2001/03/13 22:14:20  stroggonmeth
-// Long time no commit. 3D floors, FraggleScript, portals, ect.
-//
-// Revision 1.1  2000/11/02 17:57:28  stroggonmeth
-// FraggleScript files...
+// Revision 1.1.1.1  2002/11/16 14:18:28  hurdler
+// Initial C++ version of Doom Legacy
 //
 //
 //--------------------------------------------------------------------------
 
 
-#ifndef __PARSE_H__
-#define __PARSE_H__
+#ifndef t_parse_h
+#define t_parse_h 1
 
 #include "m_fixed.h"
 
+#include "t_vari.h"
+#include "t_prepro.h"
+
 class Actor;
 class PlayerInfo;
+class Map;
 
 #define T_MAXTOKENS 128
 #define TOKENLENGTH 128
@@ -65,39 +49,24 @@ class PlayerInfo;
 #define intvalue(v)                                               \
   ( (v).type == svt_string ? atoi((v).value.s) :                  \
     (v).type == svt_fixed ? ((v).value.f / FRACUNIT) :            \
-    (v).type == svt_mobj ? (v).value.mobj ? 1 : 0 : (v).value.i )
+    (v).type == svt_actor ? (v).value.mobj ? 1 : 0 : (v).value.i )
 
 #define fixedvalue(v)                                             \
   ( (v).type == svt_fixed ? (v).value.f :                         \
-    (v).type == svt_string ? (atof((v).value.s) * FRACUNIT) :     \
+    (v).type == svt_string ? fixed_t(atof((v).value.s) * FRACUNIT) :  \
     intvalue(v) * FRACUNIT )
 
 struct svariable_t;
 
-struct svalue_t
-{
-  int type;
-  union
-  {
-    long i;
-    fixed_t f;
-    const char *s;
-    char *labelptr; // goto() label
-    Actor *mobj;
-  } value;
-};
-
 const char *stringvalue(svalue_t v);
-
-#include "t_vari.h"
-#include "t_prepro.h"
 
 #define MAXSCRIPTS 256
 
 struct script_t
 {
-  // script data
-  
+  Map *mp;
+
+  // script data 
   char *data;
   int scriptnum;  // this script's number
   int len;
@@ -132,7 +101,7 @@ struct script_t
 
 struct operator_t
 {
-  char *string;
+  char *str;
   svalue_t (*handler)(int, int, int); // left, mid, right
   int direction;
 };
@@ -175,6 +144,7 @@ extern svalue_t nullvar;
 extern int script_debug;
 
 extern script_t *current_script;
+extern Map *current_map;
 extern Actor *trigger_obj;
 extern int killscript;
 

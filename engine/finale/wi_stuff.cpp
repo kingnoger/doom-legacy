@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/02/23 22:49:31  smite-meister
+// FS is back! L2 cache works.
+//
 // Revision 1.5  2003/02/16 16:54:51  smite-meister
 // L2 sound cache done
 //
@@ -1808,7 +1811,6 @@ void Intermission::Drawer()
 // Updates stuff each tick
 void Intermission::Ticker()
 {
-  CONS_Printf(">>> I::Ticker\n");
   // counter for general background animation
   bcount++;
 
@@ -1861,7 +1863,6 @@ void Intermission::Ticker()
 	End();
       break;
     }
-  CONS_Printf("<<< I::Ticker\n");
 }
 
 void Intermission::Start(const LevelNode *l, const LevelNode *f)

@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.6  2003/02/23 22:49:31  smite-meister
+// FS is back! L2 cache works.
+//
 // Revision 1.5  2003/01/25 21:33:06  smite-meister
 // Now compiles with MinGW 2.0 / GCC 3.2.
 // Builder can choose between dynamic and static linkage.
@@ -49,20 +52,22 @@ class PlayerPawn;
 class PlayerInfo;
 struct mapthing_t;
 struct intercept_t; 
-
 typedef bool (*traverser_t) (intercept_t *in);
 
+struct script_t;
+struct runningscript_t;
 
-// new class for map info
+
+// new class for maps
 // note! a map doesn't need to know where it fits in the larger game! so no last, next pointers
 
 class Map
 {
   friend class GameInfo;
 public:
-  LevelNode *level;   // the level in which this Map belongs
+  LevelNode *level;         // the level in which this Map belongs
   string filename, mapname; // name of the map file, map lump
-  int lumpnum; // lumpnum of the separator beginning the map
+  int lumpnum;              // lumpnum of the separator beginning the map
   MapInfo *info;
 
   // geometry  
@@ -89,6 +94,9 @@ public:
 
   int             nummapthings;
   mapthing_t*     mapthings;
+
+  // the mother of all scripts (in the map)
+  script_t *levelscript;
 
 
   // BLOCKMAP
@@ -156,6 +164,9 @@ public:
   // Both the head and tail of the thinker list.
   Thinker thinkercap;
 
+  // currently active scripts
+  runningscript_t *runningscripts; // linked list
+
   // currently active dynamic geometry elements, based on BOOM code
   list<ceiling_t *> activeceilings;
   list<plat_t *>    activeplats;
@@ -167,9 +178,7 @@ public:
   vector<mapthing_t *> braintargets; // DoomII demonbrain spawnbox targets
   int braintargeton;
 
-  //#define MAX_BOSS_SPOTS 8
   vector<mapthing_t *> BossSpots;
-  //#define MAX_MACE_SPOTS 8
   vector<mapthing_t *> MaceSpots;
 
   vector<int *> AmbientSounds;
@@ -355,6 +364,16 @@ public:
   subsector_t *R_PointInSubsector(fixed_t x, fixed_t y);
   subsector_t* R_IsPointInSubsector(fixed_t x, fixed_t y);
   void HWR_SearchLightsInMobjs();
+
+  // scripting
+  void T_ClearScripts();
+  void T_PreprocessScripts();
+  void T_RunScript(int n);
+  void T_DelayedScripts();
+  void T_AddRunningScript(runningscript_t *s);
+  runningscript_t *T_SaveCurrentScript();
+protected:
+  bool T_wait_finished(runningscript_t *script);
 };
 
 

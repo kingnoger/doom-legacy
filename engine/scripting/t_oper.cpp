@@ -4,6 +4,7 @@
 // $Id$
 //
 // Copyright(C) 2000 Simon Howard
+// Copyright(C) 2001-2003 Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,29 +21,11 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:18  hurdler
-// Initial revision
+// Revision 1.2  2003/02/23 22:49:31  smite-meister
+// FS is back! L2 cache works.
 //
-// Revision 1.5  2002/09/25 15:17:40  vberghol
-// Intermission fixed?
-//
-// Revision 1.4  2002/09/06 17:18:35  vberghol
-// added most of the changes up to RC2
-//
-// Revision 1.3  2002/07/01 21:00:39  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:19  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.3  2001/03/21 18:24:56  stroggonmeth
-// Misc changes and fixes. Code cleanup
-//
-// Revision 1.2  2001/03/13 22:14:20  stroggonmeth
-// Long time no commit. 3D floors, FraggleScript, portals, ect.
-//
-// Revision 1.1  2000/11/02 17:57:28  stroggonmeth
-// FraggleScript files...
+// Revision 1.1.1.1  2002/11/16 14:18:18  hurdler
+// Initial C++ version of Doom Legacy
 //
 //
 //--------------------------------------------------------------------------
@@ -56,7 +39,6 @@
 //
 //----------------------------------------------------------------------------
 
-/* includes ************************/
 #include <stdlib.h>
 
 #include "command.h"
@@ -222,13 +204,13 @@ svalue_t OPcmp(int start, int n, int stop)
       return returnvar;
     }
 
-  if(left.type == svt_mobj || right.type == svt_mobj)
+  if(left.type == svt_actor || right.type == svt_actor)
   {
-    if(left.type == svt_mobj && right.type == svt_mobj)
+    if(left.type == svt_actor && right.type == svt_actor)
       returnvar.value.i = left.value.mobj == right.value.mobj;
-    else if(left.type == svt_mobj)
+    else if(left.type == svt_actor)
       returnvar.value.i = (left.value.mobj == MobjForSvalue(right)) ? 1 : 0;
-    else if(right.type == svt_mobj)
+    else if(right.type == svt_actor)
       returnvar.value.i = (MobjForSvalue(left) == right.value.mobj) ? 1 : 0;
 
     return returnvar;
@@ -578,39 +560,3 @@ svalue_t OPgreaterthanorequal(int start, int n, int stop)
   returnvar.value.i = intvalue(left) >= intvalue(right);
   return returnvar;
 }
-
-
-
-//---------------------------------------------------------------------------
-//
-// $Log$
-// Revision 1.1  2002/11/16 14:18:18  hurdler
-// Initial revision
-//
-// Revision 1.5  2002/09/25 15:17:40  vberghol
-// Intermission fixed?
-//
-// Revision 1.4  2002/09/06 17:18:35  vberghol
-// added most of the changes up to RC2
-//
-// Revision 1.3  2002/07/01 21:00:39  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:19  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.3  2001/03/21 18:24:56  stroggonmeth
-// Misc changes and fixes. Code cleanup
-//
-// Revision 1.2  2001/03/13 22:14:20  stroggonmeth
-// Long time no commit. 3D floors, FraggleScript, portals, ect.
-//
-// Revision 1.1  2000/11/02 17:57:28  stroggonmeth
-// FraggleScript files...
-//
-// Revision 1.1.1.1  2000/04/30 19:12:08  fraggle
-// initial import
-//
-//
-//---------------------------------------------------------------------------
-

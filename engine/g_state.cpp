@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2002 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/02/23 22:49:30  smite-meister
+// FS is back! L2 cache works.
+//
 // Revision 1.9  2003/02/08 21:43:50  smite-meister
 // New Memzone system. Choose your pawntype! Cyberdemon OK.
 //
@@ -47,7 +50,6 @@
 //    Part of GameInfo class implementation. Methods related to game state changes.
 //-----------------------------------------------------------------------------
 
-
 #include "g_game.h"
 #include "g_player.h"
 #include "g_map.h"
@@ -55,16 +57,12 @@
 #include "g_pawn.h"
 #include "p_info.h"
 
-
 #include "g_input.h" // gamekeydown!
 #include "m_misc.h" // FIL_* file functions
 #include "dstrings.h"
 #include "m_random.h"
 #include "m_menu.h"
 #include "am_map.h"
-
-#include "t_script.h"
-#include "t_func.h"
 
 #include "s_sound.h"
 #include "sounds.h"
@@ -91,32 +89,20 @@ void GameInfo::UpdateScore(PlayerInfo *killer, PlayerInfo *victim)
   killer->frags[victim->number]++;
   
   // scoring rule
-  /*
-  if (cv_teamplay.value == 0)
+  if (killer->team == 0)
+    if (killer != victim)
+      killer->score++;
+    else
+      killer->score--;
+  else if (killer->team != victim->team)
     {
-      if (killer != victim)
-	killer->score++;
-      else
-	killer->score--;
+      teams[killer->team]->score++;
+      killer->score++;
     }
   else
-  */
     {
-      if (killer->team == 0)
-	if (killer != victim)
-	  killer->score++;
-	else
-	  killer->score--;
-      else if (killer->team != victim->team)
-	{
-	  teams[killer->team]->score++;
-	  killer->score++;
-	}
-      else
-	{
-	  teams[killer->team]->score--;
-	  killer->score--;
-	}
+      teams[killer->team]->score--;
+      killer->score--;
     }
 
   // check fraglimit cvar
@@ -434,8 +420,6 @@ void GameInfo::Ticker()
 {
   extern ticcmd_t netcmds[32][32];
   extern bool dedicated;
-  int i;
-  int n = players.size();
 
   // level is physically exited -> ExitLevel(int exit)
   // ExitLevel(int exit): action is set to ga_completed
@@ -461,17 +445,15 @@ void GameInfo::Ticker()
       default : I_Error("game.action = %d\n", action);
       }
 
-  CONS_Printf("======== GI::Ticker, tic %d, st %d, nplayers %d\n", gametic, state, n);
-  if (n > 0)
-    CONS_Printf("= playerstate = %d\n", players[0]->playerstate);
+  //CONS_Printf("======== GI::Ticker, tic %d, st %d, nplayers %d\n", gametic, state, n);
 
   // assign players to maps if needed
-  // note! players vector must always contain only valid PI pointers! no NULLs!
+  vector<PlayerInfo *>::iterator it;
   if (state == GS_LEVEL)
     {
-      for (i=0; i<n; i++)
+      for (it = players.begin(); it < players.end(); it++)
 	{
-	  switch (players[i]->playerstate)
+	  switch ((*it)->playerstate)
 	    {
 	    case PST_WAITFORMAP:
 	      /*
@@ -486,14 +468,13 @@ void GameInfo::Ticker()
 	      {
 		int m = 0;
 		// just assign the player to a map
-		maps[m]->AddPlayer(players[i]);
+		maps[m]->AddPlayer(*it);
 	      }
 	      break;
 	    case PST_REMOVE:
 	      // the player is removed from the game
-	      RemovePlayer(players.begin() + i);
-	      n--; // FIXME not good, use an iterator or sth...
-	      i--; // because the vector was shortened
+	      RemovePlayer(it);
+	      // FIXME should we do it-- here?
 	      break;
 	    default:
 	      break;
@@ -505,12 +486,11 @@ void GameInfo::Ticker()
   int buf = gametic % BACKUPTICS;
   ticcmd_t *cmd;
 
-  n = players.size();
+  int i, n = players.size();
   // read/write demo and check turbo cheat
 
   for (i=0 ; i<n ; i++)
     {
-      // BP: i==0 for playback of demos 1.29 now new players is added with xcmd
       if (!dedicated)
         {
 	  cmd = &players[i]->cmd;
@@ -542,13 +522,11 @@ void GameInfo::Ticker()
   switch (state)
     {
     case GS_LEVEL:
-      //IO_Color(0,255,0,0);
-      // FIXME !paused should be enough, menu should put the game on pause if possible
-      // if (!paused && !(Menu::active && !netgame && !demoplayback))
       if (!paused)
 	{
-	  // FIXME just one map for now
-	  maps[0]->Ticker(); // tic the maps
+	  n = maps.size();
+	  for (i=0; i<n; i++)
+	    maps[i]->Ticker(); // tick the maps
 	}
       hud.Ticker();
       automap.Ticker();
@@ -620,13 +598,11 @@ bool GameInfo::StartGame()
   NewLevel(skill, firstlevel, true);
   return true;
 }
+
 // was G_InitNew()
 // Sets up and starts a new level inside a game.
 //
 // This is the map command interpretation (result of Command_Map_f())
-//
-// called at : map cmd execution, doloadgame, doplaydemo 
-
 void GameInfo::NewLevel(skill_t sk, LevelNode *n, bool resetplayer)
 {
   currentlevel = n;
@@ -747,11 +723,6 @@ void GameInfo::StartLevel(bool re, bool resetplayer)
     I_PlayCD ((episode-1)*9+map, true);  // Doom1, 9maps per episode
   */
 
-#ifdef FRAGGLESCRIPT
-  T_PreprocessScripts();        // preprocess FraggleScript scripts (needs already added players)
-  script_camera_on = false;
-#endif
-
   //AM_LevelInit()
   //BOT_InitLevelBots ();
 
@@ -769,9 +740,6 @@ void GameInfo::StartLevel(bool re, bool resetplayer)
 
   // clear cmd building stuff
   memset(gamekeydown, 0, sizeof(gamekeydown));
-
-  //joyxmove = joyymove = 0;
-  //mousex = mousey = 0;
 
   // clear hud messages remains (usually from game startup)
   CON_ClearHUD();

@@ -20,23 +20,11 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:19  hurdler
-// Initial revision
+// Revision 1.2  2003/02/23 22:49:31  smite-meister
+// FS is back! L2 cache works.
 //
-// Revision 1.5  2002/09/25 15:17:40  vberghol
-// Intermission fixed?
-//
-// Revision 1.4  2002/07/13 17:55:55  vberghol
-// jäi kartan liikkuviin osiin... p_doors.cpp
-//
-// Revision 1.3  2002/07/01 21:00:40  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:19  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.1  2000/11/02 17:57:28  stroggonmeth
-// FraggleScript files...
+// Revision 1.1.1.1  2002/11/16 14:18:19  hurdler
+// Initial C++ version of Doom Legacy
 //
 //
 //--------------------------------------------------------------------------
@@ -58,8 +46,6 @@
 // By Simon Howard
 //
 //---------------------------------------------------------------------------
-
-/* includes ************************/
 
 #include <stdio.h>
 #include <string.h>
@@ -378,6 +364,8 @@ void preprocess(script_t *script)
     fprintf(debugfile,"  preprocess script %i\n", script->scriptnum);
 
   current_script = script;
+  current_map = script->mp;
+
   script->len = strlen(script->data);
   
   clear_script();
@@ -446,31 +434,3 @@ void parse_include(char *lumpname)
   Z_Free(lump);
   Z_Free(temp);
 }
-
-//---------------------------------------------------------------------------
-//
-// $Log$
-// Revision 1.1  2002/11/16 14:18:19  hurdler
-// Initial revision
-//
-// Revision 1.5  2002/09/25 15:17:40  vberghol
-// Intermission fixed?
-//
-// Revision 1.4  2002/07/13 17:55:55  vberghol
-// jäi kartan liikkuviin osiin... p_doors.cpp
-//
-// Revision 1.3  2002/07/01 21:00:40  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:19  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.1  2000/11/02 17:57:28  stroggonmeth
-// FraggleScript files...
-//
-// Revision 1.1.1.1  2000/04/30 19:12:08  fraggle
-// initial import
-//
-//
-//---------------------------------------------------------------------------
-

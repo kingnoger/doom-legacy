@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/02/23 22:49:31  smite-meister
+// FS is back! L2 cache works.
+//
 // Revision 1.4  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -117,6 +120,8 @@
 #include "g_actor.h"
 #include "g_pawn.h"
 #include "g_map.h"
+
+#include "p_camera.h"
 
 #include "r_render.h"
 #include "hu_stuff.h"
@@ -1057,12 +1062,12 @@ void Rend::R_SetupFrame(PlayerInfo *player)
 #ifdef FRAGGLESCRIPT
   if (script_camera_on)
     {
-      viewactor = &script_camera;
+      viewactor = script_camera;
 
       viewz = viewactor->z;
-      fixedcolormap_setup = camera.fixedcolormap;
-      aimingangle=script_camera.aiming;
       viewangle = viewactor->angle;
+      aimingangle = viewactor->aiming;
+      fixedcolormap_setup = script_camera->fixedcolormap;
     }
   else
 #endif

@@ -4,6 +4,7 @@
 // $Id$
 //
 // Copyright(C) 2000 Simon Howard
+// Copyright(C) 2001-2003 Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,26 +21,11 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:19  hurdler
-// Initial revision
+// Revision 1.2  2003/02/23 22:49:31  smite-meister
+// FS is back! L2 cache works.
 //
-// Revision 1.5  2002/09/25 15:17:40  vberghol
-// Intermission fixed?
-//
-// Revision 1.4  2002/07/18 19:16:38  vberghol
-// renamed a few files
-//
-// Revision 1.3  2002/07/01 21:00:40  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:19  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.2  2001/03/13 22:14:20  stroggonmeth
-// Long time no commit. 3D floors, FraggleScript, portals, ect.
-//
-// Revision 1.1  2000/11/02 17:57:28  stroggonmeth
-// FraggleScript files...
+// Revision 1.1.1.1  2002/11/16 14:18:19  hurdler
+// Initial C++ version of Doom Legacy
 //
 //
 //--------------------------------------------------------------------------
@@ -54,8 +40,10 @@
 //----------------------------------------------------------------------------
 
 
+#include "doomdata.h"
 #include "command.h"
 #include "g_game.h"
+#include "g_map.h"
 #include "g_actor.h"
 #include "g_pawn.h"
 #include "g_player.h"
@@ -72,8 +60,6 @@
 #include "t_vari.h"
 #include "t_func.h"
 
-void clear_runningscripts();
-
 //                  script tree:
 //
 //                     global_script
@@ -87,18 +73,40 @@ void clear_runningscripts();
 
 // the level script is just the stuff put in the wad,
 // which the other scripts are derivatives of
-script_t levelscript;
-
-
 
 // the thing script
 //script_t thingscript;
 
-// the individual scripts
-//script_t *scripts[MAXSCRIPTS];       // the scripts
+
 Actor *t_trigger;
 
-runningscript_t runningscripts;        // first in chain
+runningscript_t *freelist = NULL; // maintain a freelist for speed
+
+runningscript_t *new_runningscript()
+{
+  // check the freelist
+  if(freelist)
+    {
+      runningscript_t *returnv=freelist;
+      freelist = freelist->next;
+      return returnv;
+    }
+  
+  // alloc static: can be used in other levels too
+  return (runningscript_t *)Z_Malloc(sizeof(runningscript_t), PU_STATIC, 0);
+}
+
+
+
+static void free_runningscript(runningscript_t *runscr)
+{
+  // add to freelist
+  runscr->next = freelist;
+  freelist = runscr;
+}
+
+
+void init_functions();
 
 //     T_Init()
 //
@@ -116,26 +124,42 @@ void T_Init()
 // called at level start, clears all scripts
 //
 
-void T_ClearScripts()
+void Map::T_ClearScripts()
 {
   int i;
+
+  current_map = this; // just in case
   
   // stop runningscripts
-  clear_runningscripts();
+  {
+    runningscript_t *runscr, *next;
+    runscr = runningscripts;
+  
+    // free the whole chain
+    while (runscr)
+      {
+	next = runscr->next;
+	free_runningscript(runscr);
+	runscr = next;
+      }
+    runningscripts = NULL;
+  }
+
+  if (!levelscript)
+    levelscript = (script_t *)Z_Malloc(sizeof(script_t), PU_LEVEL, NULL);
+  else if (levelscript->data)
+    Z_Free(levelscript->data);
 
   // clear the levelscript
-  levelscript.data = (char *)Z_Malloc(5, PU_LEVEL, 0);  // empty data
-  levelscript.data[0] = '\0';
+  levelscript->mp = this;
+  levelscript->data = NULL;
   
-  levelscript.scriptnum = -1;
-  levelscript.parent = &hub_script;
+  levelscript->scriptnum = -1;
+  levelscript->parent = &hub_script;
 
   // clear levelscript variables
-  
-  for(i=0; i<VARIABLESLOTS; i++)
-    {
-      levelscript.variables[i] = NULL;
-    }
+  for (i=0; i<VARIABLESLOTS; i++)
+    levelscript->variables[i] = NULL;
 }
 
 void T_LoadThingScript()
@@ -179,34 +203,32 @@ void T_LoadThingScript()
 
 
 
-void T_PreprocessScripts()
+void Map::T_PreprocessScripts()
 {
   // run the levelscript first
   // get the other scripts
   
   // FIXME who is superplayer?
   // levelscript started by first player (not necessarily player 0) 'superplayer'
-  levelscript.player = game.players[0];
-  levelscript.trigger = game.players[0]->pawn;
+  levelscript->player = game.players[0];
+  levelscript->trigger = game.players[0]->pawn;
 
-  preprocess(&levelscript);
-  run_script(&levelscript);
+  preprocess(levelscript);
+  run_script(levelscript);
 
   // load and run the thing script
-
   T_LoadThingScript();
 }
 
 
 
-void T_RunScript(int n)
+void Map::T_RunScript(int n)
 {
-  script_t *script;
-
-  if(n<0 || n>=MAXSCRIPTS) return;
+  if (n < 0 || n >= MAXSCRIPTS)
+    return;
 
   // use the level's child script script n
-  script = levelscript.children[n];
+  script_t *script = levelscript->children[n];
   if(!script) return;
  
   script->trigger = t_trigger;    // save trigger in script
@@ -240,22 +262,22 @@ void T_RunThingScript(int n)
 
 // console scripting debugging commands
 
-void COM_T_DumpScript_f (void)
+void COM_T_DumpScript_f()
 {
   script_t *script;
   
-  if(COM_Argc() < 2)
+  if (COM_Argc() < 2)
     {
       CONS_Printf("usage: T_DumpScript <scriptnum>\n");
       return;
     }
 
-  if(!strcmp(COM_Argv(1), "global"))
-    script = &levelscript;
+  if (!strcmp(COM_Argv(1), "global"))
+    script = current_map->levelscript;
   else
-    script = levelscript.children[atoi(COM_Argv(1))];
+    script = current_map->levelscript->children[atoi(COM_Argv(1))];
   
-  if(!script)
+  if (!script)
     {
       CONS_Printf("script '%s' not defined.\n", COM_Argv(1));
       return;
@@ -266,11 +288,11 @@ void COM_T_DumpScript_f (void)
 
 
 
-void COM_T_RunScript_f (void)
+void COM_T_RunScript_f()
 {
   int sn;
   
-  if(COM_Argc() < 2)
+  if (COM_Argc() < 2)
     {
       CONS_Printf("Usage: T_RunScript <script>\n");
       return;
@@ -278,14 +300,14 @@ void COM_T_RunScript_f (void)
   
   sn = atoi(COM_Argv(1));
   
-  if(!levelscript.children[sn])
+  if (!current_map->levelscript->children[sn])
     {
       CONS_Printf("script not defined\n");
       return;
     }
   t_trigger = consoleplayer->pawn;
   
-  T_RunScript(sn);
+  current_map->T_RunScript(sn);
 }
 
 
@@ -294,34 +316,8 @@ void COM_T_RunScript_f (void)
          PAUSING SCRIPTS
  ************************/
 
-runningscript_t *freelist=NULL;      // maintain a freelist for speed
 
-runningscript_t *new_runningscript()
-{
-  // check the freelist
-  if(freelist)
-    {
-      runningscript_t *returnv=freelist;
-      freelist = freelist->next;
-      return returnv;
-    }
-  
-  // alloc static: can be used in other levels too
-  return (runningscript_t *)Z_Malloc(sizeof(runningscript_t), PU_STATIC, 0);
-}
-
-
-
-static void free_runningscript(runningscript_t *runscr)
-{
-  // add to freelist
-  runscr->next = freelist;
-  freelist = runscr;
-}
-
-
-
-static bool wait_finished(runningscript_t *script)
+bool Map::T_wait_finished(runningscript_t *script)
 {
   switch(script->wait_type)
     {
@@ -329,7 +325,7 @@ static bool wait_finished(runningscript_t *script)
     case wt_scriptwait:               // waiting for script to finish
       {
 	runningscript_t *current;
-	for(current = runningscripts.next; current; current = current->next)
+	for(current = runningscripts; current; current = current->next)
 	  {
 	    if(current == script) continue;  // ignore this script
 	    if(current->script->scriptnum == script->wait_data)
@@ -347,7 +343,7 @@ static bool wait_finished(runningscript_t *script)
       {
 	int secnum = -1;
 
-	while ((secnum = P_FindSectorFromTag(script->wait_data, secnum)) >= 0)
+	while ((secnum = FindSectorFromTag(script->wait_data, secnum)) >= 0)
 	  {
 	    sector_t *sec = &sectors[secnum];
 	    if(sec->floordata || sec->ceilingdata || sec->lightingdata)
@@ -365,18 +361,19 @@ static bool wait_finished(runningscript_t *script)
 
 
 
-void T_DelayedScripts()
+void Map::T_DelayedScripts()
 {
   runningscript_t *current, *next;
   int i;
 
-  if(!info_scripts) return;       // no level scripts
+  if (!info->scripts)
+    return; // no level scripts
   
-  current = runningscripts.next;
+  current = runningscripts;
   
-  while(current)
+  while (current)
     {
-      if(wait_finished(current))
+      if (T_wait_finished(current))
 	{
 	  // copy out the script variables from the
 	  // runningscript_t
@@ -386,32 +383,45 @@ void T_DelayedScripts()
 	  current->script->trigger = current->trigger; // copy trigger
 	  
 	  // continue the script
-
 	  continue_script(current->script, current->savepoint);
-	  
-	  // unhook from chain and free
+	  // TODO? too bad we can't just keep this runningscript instance
+	  // if the script continues, but have to free this and create another
 
-	  current->prev->next = current->next;
-	  if(current->next) current->next->prev = current->prev;
+	  // unhook from chain and free
+	  if (current->prev)
+	    current->prev->next = current->next;
+	  else
+	    runningscripts = current->next;  // this was the first script in list
+
+	  if (current->next)
+	    current->next->prev = current->prev;
+
 	  next = current->next;   // save before freeing
 	  free_runningscript(current);
 	}
       else
 	next = current->next;
+
+
       current = next;   // continue to next in chain
     }
                 
 }
 
-
-
-
-static runningscript_t *T_SaveCurrentScript()
+void Map::T_AddRunningScript(runningscript_t *s)
 {
-  runningscript_t *runscr;
+  // hook into chain at start
+  s->next = runningscripts;
+  s->prev = NULL;
+  if (s->next)
+    s->next->prev = s;
+}
+
+runningscript_t *Map::T_SaveCurrentScript()
+{
   int i;
 
-  runscr = new_runningscript();
+  runningscript_t *runscr = new_runningscript();
   runscr->script = current_script;
   runscr->savepoint = rover;
 
@@ -419,12 +429,7 @@ static runningscript_t *T_SaveCurrentScript()
   runscr->wait_type = wt_none;
 
   // hook into chain at start
-  
-  runscr->next = runningscripts.next;
-  runscr->prev = &runningscripts;
-  runscr->prev->next = runscr;
-  if(runscr->next)
-    runscr->next->prev = runscr;
+  T_AddRunningScript(runscr);
   
   // save the script variables 
   for(i=0; i<VARIABLESLOTS; i++)
@@ -460,7 +465,7 @@ void SF_Wait()
       return;
     }
 
-  runscr = T_SaveCurrentScript();
+  runscr = current_map->T_SaveCurrentScript();
 
   runscr->wait_type = wt_delay;
   runscr->wait_data = (intvalue(t_argv[0]) * 35) / 100;
@@ -479,7 +484,7 @@ void SF_TagWait()
       return;
     }
 
-  runscr = T_SaveCurrentScript();
+  runscr = current_map->T_SaveCurrentScript();
 
   runscr->wait_type = wt_tagwait;
   runscr->wait_data = intvalue(t_argv[0]);
@@ -499,7 +504,7 @@ void SF_ScriptWait()
       return;
     }
 
-  runscr = T_SaveCurrentScript();
+  runscr = current_map->T_SaveCurrentScript();
 
   runscr->wait_type = wt_scriptwait;
   runscr->wait_data = intvalue(t_argv[0]);
@@ -513,7 +518,6 @@ extern Actor *trigger_obj;           // in t_func.c
 void SF_StartScript()
 {
   runningscript_t *runscr;
-  script_t *script;
   int i, snum;
   
   if(t_argc != 1)
@@ -524,9 +528,9 @@ void SF_StartScript()
 
   snum = intvalue(t_argv[0]);
   
-  script = levelscript.children[snum];
+  script_t *script = current_map->levelscript->children[snum];
   
-  if(!script)
+  if (!script)
     {
       script_error("script %i not defined\n", snum);
     }
@@ -537,12 +541,7 @@ void SF_StartScript()
   runscr->wait_type = wt_none;      // start straight away
 
   // hook into chain at start
-  
-  runscr->next = runningscripts.next;
-  runscr->prev = &runningscripts;
-  runscr->prev->next = runscr;
-  if(runscr->next)
-    runscr->next->prev = runscr;
+  current_map->T_AddRunningScript(runscr);
   
   // save the script variables 
   for(i=0; i<VARIABLESLOTS; i++)
@@ -567,19 +566,18 @@ void SF_StartScript()
 void SF_ScriptRunning()
 {
   runningscript_t *current;
-  int snum;
 
-  if(t_argc < 1)
+  if (t_argc < 1)
     {
       script_error("not enough arguments to function\n");
       return;
     }
 
-  snum = intvalue(t_argv[0]);
+  int snum = intvalue(t_argv[0]);
   
-  for(current=runningscripts.next; current; current=current->next)
+  for (current = current_map->runningscripts; current; current = current->next)
     {
-      if(current->script->scriptnum == snum)
+      if (current->script->scriptnum == snum)
 	{
 	  // script found so return
 	  t_return.type = svt_int;
@@ -598,21 +596,19 @@ void SF_ScriptRunning()
 
 // running scripts
 
-void COM_T_Running_f (void)
+void COM_T_Running_f()
 {
-  runningscript_t *current;
+  runningscript_t *current = current_map->runningscripts;
   
-  current = runningscripts.next;
+  CONS_Printf("Running scripts:\n");
   
-  CONS_Printf("running scripts\n");
+  if (!current)
+    CONS_Printf("none\n");
   
-  if(!current)
-    CONS_Printf("no running scripts.\n");
-  
-  while(current)
+  while (current)
     {
       CONS_Printf("%i:", current->script->scriptnum);
-      switch(current->wait_type)
+      switch (current->wait_type)
 	{
 	case wt_none:
 	  CONS_Printf("waiting for nothing?\n");
@@ -636,43 +632,29 @@ void COM_T_Running_f (void)
 
 
 
-
-void clear_runningscripts()
-{
-  runningscript_t *runscr, *next;
-  
-  runscr = runningscripts.next;
-  
-  // free the whole chain
-  while(runscr)
-    {
-      next = runscr->next;
-      free_runningscript(runscr);
-      runscr = next;
-    }
-  runningscripts.next = NULL;
-}
-
-
 Actor *MobjForSvalue(svalue_t svalue)
 {
-  int intval ;
-  
-  if(svalue.type == svt_mobj)
+  if (svalue.type == svt_actor)
     return svalue.value.mobj;
   
   // this requires some creativity. We use the intvalue
   // as the thing number of a thing in the level.
   
-  intval = intvalue(svalue);        
+  int intval = intvalue(svalue);        
   
-  if(intval < 0 || intval >= nummapthings || !mapthings[intval].mobj)
-    { script_error("no levelthing %i\n", intval); return NULL;}
+  if (intval < 0 || intval >= current_map->nummapthings)
+    {
+      script_error("no mapthing %i\n", intval);
+      return NULL;
+    }
 
-  return mapthings[intval].mobj;
+  Actor *p = current_map->mapthings[intval].mobj;
+
+  if (!p)
+    script_error("mapthing %i has no Actor\n", intval);
+
+  return p;
 }
-
-
 
 
 
@@ -753,46 +735,10 @@ void spec_script()
 }
 
 
-
-
-/****** scripting command list *******/
-
+// console commands
 void T_AddCommands()
 {
-#ifdef FRAGGLESCRIPT
   COM_AddCommand("t_dumpscript",  COM_T_DumpScript_f);
   COM_AddCommand("t_runscript",   COM_T_RunScript_f);
   COM_AddCommand("t_running",     COM_T_Running_f);
-#endif
 }
-
-//---------------------------------------------------------------------------
-//
-// $Log$
-// Revision 1.1  2002/11/16 14:18:19  hurdler
-// Initial revision
-//
-// Revision 1.5  2002/09/25 15:17:40  vberghol
-// Intermission fixed?
-//
-// Revision 1.4  2002/07/18 19:16:38  vberghol
-// renamed a few files
-//
-// Revision 1.3  2002/07/01 21:00:40  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:19  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.2  2001/03/13 22:14:20  stroggonmeth
-// Long time no commit. 3D floors, FraggleScript, portals, ect.
-//
-// Revision 1.1  2000/11/02 17:57:28  stroggonmeth
-// FraggleScript files...
-//
-// Revision 1.1.1.1  2000/04/30 19:12:08  fraggle
-// initial import
-//
-//
-//---------------------------------------------------------------------------
-

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/02/23 22:49:31  smite-meister
+// FS is back! L2 cache works.
+//
 // Revision 1.4  2003/01/25 21:33:07  smite-meister
 // Now compiles with MinGW 2.0 / GCC 3.2.
 // Builder can choose between dynamic and static linkage.
@@ -656,7 +659,7 @@ void R_LoadTextures (void)
 }
 
 
-int R_CheckNumForNameList(char *name, lumplist_t* list, int listsize)
+int R_CheckNumForNameList(const char *name, lumplist_t* list, int listsize)
 {
   int   i;
   int   lump;
@@ -785,14 +788,14 @@ void R_InitFlats ()
 
 
 
-int R_GetFlatNumForName(const char *name)
+int R_FlatNumForName(const char *name)
 {
     // BP: don't work with gothic2.wad
   //return R_CheckNumForNameList(name, flats, numflatlists);
 
   int lump = fc.FindNumForName(name); 
   if(lump == -1)
-    I_Error("R_GetFlatNumForName: Could not find flat %.8s\n", name);
+    I_Error("R_FlatNumForName: Could not find flat %.8s\n", name);
 
   return lump;
 }
@@ -861,7 +864,7 @@ void R_ClearColormaps()
 
 
 
-int R_ColormapNumForName(char *name)
+int R_ColormapNumForName(const char *name)
 {
   int lump, i;
 
