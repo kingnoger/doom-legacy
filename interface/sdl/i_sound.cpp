@@ -15,8 +15,11 @@
 // for more details.
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:31  hurdler
-// Initial revision
+// Revision 1.2  2002/12/23 23:25:53  smite-meister
+// Ogg Vorbis works!
+//
+// Revision 1.1.1.1  2002/11/16 14:18:31  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.6  2002/09/20 22:41:35  vberghol
 // Sound system rewritten! And it workscvs update
@@ -825,11 +828,9 @@ int I_RegisterSong(void* data, int len)
   
   fclose(midfile);
 
+  //music[0] = Mix_LoadMUS("compilation-ogg-q0.ogg"); // Ogg Vorbis works!
+  //music[0] = Mix_LoadMUS("first_call.mp3"); // mp3 test
   music[0] = Mix_LoadMUS(MIDI_tmpfilename);
-  // As soon as MP3 support is included in SDL_Mixer, we can put in an mp3 file here as well
-  // at the moment, the sound is played back at 11kHz with 44kHz sampling frequency - spooky :)
-  // For testing:
-  //music[0] = Mix_LoadMUS("/home/rob/cd2/mp3/Lenny%20Cravitz%20-%20American%20Woman.mp3");
     
   if (music[0] == NULL)
     {
