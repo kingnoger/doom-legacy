@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by Raven Software, Corp.
-// Portions Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2005/03/29 17:20:45  smite-meister
+// state and mobjinfo tables fixed
+//
 // Revision 1.16  2004/11/28 18:02:21  smite-meister
 // RPCs finally work!
 //
@@ -27,23 +30,11 @@
 // Revision 1.14  2004/11/09 20:38:50  smite-meister
 // added packing to I/O structs
 //
-// Revision 1.13  2004/10/27 17:37:06  smite-meister
-// netcode update
-//
 // Revision 1.12  2004/04/25 16:26:49  smite-meister
 // Doxygen
 //
-// Revision 1.11  2004/01/02 14:25:01  smite-meister
-// cleanup
-//
 // Revision 1.10  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
-//
-// Revision 1.9  2003/11/30 00:09:44  smite-meister
-// bugfixes
-//
-// Revision 1.8  2003/11/23 00:41:55  smite-meister
-// bugfixes
 //
 // Revision 1.7  2003/11/12 11:07:21  smite-meister
 // Serialization done. Map progression.
@@ -1752,7 +1743,7 @@ void A_CheckBurnGone(DActor *actor)
 {
   if(actor->special2 == 666)
     {
-      //actor->SetState(S_PLAY_FDTH20);
+      actor->SetState(S_PLAY_FDTH20);
     }
 }
 
@@ -1764,8 +1755,7 @@ void A_CheckBurnGone(DActor *actor)
 
 void A_FreeTargMobj(DActor *mo)
 {
-  // TODO since we now have a pointer tracking system for Actors, maybe we should
-  // delete the DActor here.
+  // FIXME TODO since we now have a pointer tracking system for Actors, maybe we should delete the DActor here.
 
   mo->px = mo->py = mo->pz = 0;
   mo->z = mo->ceilingz+4*FRACUNIT;

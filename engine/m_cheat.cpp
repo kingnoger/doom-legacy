@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.26  2005/03/29 17:20:45  smite-meister
+// state and mobjinfo tables fixed
+//
 // Revision 1.25  2004/12/31 16:19:37  smite-meister
 // alpha fixes
 //
@@ -203,6 +206,9 @@ void Command_CheatGimme_f()
 	  default:
 	    for (j = wp_doom; j < wp_heretic; j++)
 	      p->weaponowned[j] = true;
+
+	    if (game.mode != gm_doom2)
+	      p->weaponowned[wp_supershotgun] = false;
 	    break;
 	  }
 

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2005/03/29 17:20:45  smite-meister
+// state and mobjinfo tables fixed
+//
 // Revision 1.19  2004/11/04 21:12:52  smite-meister
 // save/load fixed
 //
@@ -859,15 +862,10 @@ void A_Light2 (PlayerPawn *p, pspdef_t *psp)
 //
 void A_BFGSpray(DActor *mo)
 {
-  int     i;
-  int     j;
-  int     damage;
-  angle_t an;
-
   // offset angles from its attack angle
-  for (i=0 ; i<40 ; i++)
+  for (int i=0 ; i<40 ; i++)
     {
-      an = mo->angle - ANG90/2 + ANG90/40*i;
+      angle_t an = mo->angle - ANG90/2 + ANG90/40*i;
 
       // mo->owner is the originator (player)
       //  of the missile
@@ -880,12 +878,12 @@ void A_BFGSpray(DActor *mo)
         linetarget->z + (linetarget->height>>2), MT_EXTRABFG);
       extrabfg->owner = mo->owner;
 
-      damage = 0;
-      for (j=0;j<15;j++)
+      int damage = 0;
+      for (int j=0; j<15; j++)
 	damage += (P_Random()&7) + 1;
 
-      //BP: use extramobj as inflictor so we have the good death message
-      linetarget->Damage(extrabfg, mo->owner, damage);
+      // to get correct recoil, we must use either the player or the BFG ball as the inflictor (matter of taste)
+      linetarget->Damage(mo, mo->owner, damage);
     }
 }
 

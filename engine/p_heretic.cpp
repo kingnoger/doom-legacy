@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by Raven Software, Corp.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.26  2005/03/29 17:20:45  smite-meister
+// state and mobjinfo tables fixed
+//
 // Revision 1.25  2005/03/16 21:16:06  smite-meister
 // menu cleanup, bugfixes
 //
@@ -33,23 +36,14 @@
 // Revision 1.21  2004/08/12 18:30:23  smite-meister
 // cleaned startup
 //
-// Revision 1.19  2004/01/02 14:25:01  smite-meister
-// cleanup
-//
 // Revision 1.18  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
-//
-// Revision 1.17  2003/12/06 23:57:47  smite-meister
-// save-related bugfixes
 //
 // Revision 1.16  2003/12/03 10:49:49  smite-meister
 // Save/load bugfix, text strings updated
 //
 // Revision 1.14  2003/11/12 11:07:21  smite-meister
 // Serialization done. Map progression.
-//
-// Revision 1.13  2003/05/11 21:23:50  smite-meister
-// Hexen fixes
 //
 // Revision 1.12  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
@@ -328,7 +322,7 @@ void HexenPatchEngine()
   cv_jumpspeed.Set("9.0");
 
   // hacks
-  mobjinfo[MT_TFOG].spawnstate = S_HTFOG1;
+  mobjinfo[MT_TFOG].spawnstate = S_XTFOG1;
   sprnames[SPR_BLUD] = "BLOD";
   states[S_GIBS].sprite = SPR_GIBS;
 }
