@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.38  2004/12/08 16:42:36  segabor
+// MacOS X specific DEFAULTDIR and D_RunDoom() entry point
+//
 // Revision 1.37  2004/11/28 18:02:19  smite-meister
 // RPCs finally work!
 //
@@ -197,6 +200,8 @@ const char VERSIONSTRING[] = "prealpha2";
 // Name of local directory for config files and savegames
 #ifdef LINUX 
 # define DEFAULTDIR "/.legacy"
+#elif defined(__MACOS__) || defined(__APPLE__)
+# define DEFAULTDIR "/Library/Application Support/DooMLegacy"
 #else
 # define DEFAULTDIR "/legacy"
 #endif
@@ -842,3 +847,13 @@ void D_DoomMain()
   con.refresh = false;
   vid.SetMode(); // change video mode if needed, recalculate...
 }
+
+// entry point for not C++ environments (C or Obj-C)
+extern "C" {
+	void D_RunDoom()
+	{
+		D_DoomMain ();
+		D_DoomLoop ();
+	}
+}
+ 
