@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/11/21 12:51:07  hurdler
+// might fix "glClientActiveTexture" compilation error on some systems
+//
 // Revision 1.5  2004/10/31 22:22:13  smite-meister
 // Hasta la vista, pic_t!
 //
@@ -37,7 +40,9 @@
 /// \file
 /// \brief Manage OpenGL geometry
 
+#define GL_GLEXT_PROTOTYPES
 #include <GL/gl.h>
+#include <GL/glext.h>
 
 #include "hardware/hwr_geometry.h"
 #include "doomdef.h"
@@ -87,7 +92,7 @@ void Geometry::EnableArrays()
     {
       if (vertex_array != last_vertex_array)
         {
-          glEnableClientState(GL_VERTEX_ARRAY);
+          glEnableClientState(GL_VERTEX_ARRAY); // TODO: do that only if last_vertex_array was null
           glVertexPointer(3, GL_FLOAT, 0, vertex_array);
         }
     }
@@ -103,7 +108,7 @@ void Geometry::EnableArrays()
     {
       if (tex_coord_arrays[i])
         {
-          if (tex_coord_arrays[i] != last_tex_coord_arrays[i])
+          if (tex_coord_arrays[i] != last_tex_coord_arrays[i])  // TODO: do that only if last_tex_coord_arrays[i] was null
             {
               glClientActiveTexture(GL_TEXTURE0 + i);
               glEnableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -120,7 +125,7 @@ void Geometry::EnableArrays()
 
   if (color_array)
     {
-      if (color_array != last_color_array)
+      if (color_array != last_color_array)  // TODO: do that only if last_color_array was null
         {
           glEnableClientState(GL_COLOR_ARRAY);
           glColorPointer(4, GL_UNSIGNED_BYTE, 0, color_array);
@@ -136,7 +141,7 @@ void Geometry::EnableArrays()
     {
       if (normal_array != last_normal_array)
         {
-          glEnableClientState(GL_NORMAL_ARRAY);
+          glEnableClientState(GL_NORMAL_ARRAY);  // TODO: do that only if last_normal_array was null
           glNormalPointer(GL_FLOAT, 0, normal_array);
         }
     }
