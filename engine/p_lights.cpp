@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2005/03/04 16:23:07  smite-meister
+// mp3, sector_t
+//
 // Revision 1.12  2004/11/09 20:38:50  smite-meister
 // added packing to I/O structs
 //
@@ -190,7 +193,7 @@ void lightfx_t::Think()
 
 void Map::SpawnStrobeLight(sector_t *sec, short brighttime, short darktime, bool inSync)
 {
-  short minlight = P_FindMinSurroundingLight(sec, sec->lightlevel);
+  short minlight = sec->FindMinSurroundingLight(sec->lightlevel);
   short maxlight = sec->lightlevel;
   if (minlight == maxlight)
     minlight = 0;
@@ -215,7 +218,7 @@ int Map::EV_StartLightStrobing(int tag, short brighttime, short darktime)
     {
       rtn++;
       sector_t *sec = &sectors[i];
-      if (P_SectorActive(lighting_special, sec))
+      if (sec->Active(sector_t::lighting_special))
 	continue;
 
       SpawnStrobeLight(sec, brighttime, darktime, false);

@@ -14,18 +14,8 @@
 <body>
 
 <h1>Doom Legacy Manual</h1>
+<h1 class="tagline">The Legacy of Doom</h1>
 
-<p>
-Original game &amp; sources by Id Software<br/>
-Heretic and Hexen by Raven Software<br/>
-</p>
-<div>
-Additions:<br/>
-&copy; 1998 by: Fabrice Denis &amp; Boris Pereira<br/>
-&copy; 1999 by: Fabrice Denis, Boris Pereira &amp; Thierry Van Elsuwe<br/>
-&copy; 2000 by: Boris Pereira &amp; Thierry Van Elsuwe<br/>
-&copy; 2001-2005 by: Doom Legacy Team<br/>
-</div>
 
 <p>
 Home page: <a href="http://legacy.newdoom.com/">http://legacy.newdoom.com/</a><br/>
@@ -50,12 +40,12 @@ e-mail: legacy@newdoom.com
 </li>
 <li><a href="#editing">Editing</a>
  <ol>
- <li><a href="#legacyedit">Legacy editing features</a></li>
+ <li><a href="#legacyedit">Legacy editing references</a></li>
  <li><a href="#ref">Standard references</a></li>
  </ol>
 </li>
 <li><a href="#dev">Development</a></li>
-<li><a href="#thanks">Acknowledgments</a></li>
+<li><a href="#thanks">Copyright info and acknowledgments</a></li>
 </ol>
 
 <p>
@@ -70,32 +60,28 @@ Old stuff:
 <h2><a name="intro">Introduction</a></h2>
 
 <p>
-Hello all Doom fans of the world, here is the latest release of
-Doom Legacy!
+Greetings to all the Doom fans of the world, and welcome to the latest
+release of Doom Legacy!<br/>
+This version introduces Hexen compatibility,
+new netcode, better portability and much more.
 </p>
 <p>
-Well, if you are reading this you probably know by now that the
-gods at IdSoftware have released the sources of the greatest game
-on earth : Doom !!
-</p>
-<p>
-Of course a lot of projects have started around the sources since
-about January 1998, and Doom LEGACY is competing to be the best of
-the choices!
-</p>
-<p>
-We have always dreamed of Doom sources being released, and all the
-features that we'd like to add. Since Doom1 was out we are fans
-of deathmatching. Don't ask us why we like it more than Duke Nukem
-or other clones, we like the atmosphere of Doom and its like that!
+Since Doom was out we have been fans of deathmatching. Don't ask us
+why, but we liked it more than Duke
+Nukem, Quake or other clones. We simply enjoy the atmosphere, look and
+feel of Doom.
+We always dreamed of Doom sources being released, and of all the
+features that we'd like to add.
+Then, in late 1997, id Software made public the full sources of the
+greatest game on Earth, Doom.
+A great number of open source projects have started around the sources
+since, and Doom Legacy is competing to be the best of the choices!
 </p>
 <p>
 Doom Legacy can run Doom, Boom, Heretic and Hexen maps. For each game, you
 will need the corresponding IWAD file, which contains all the graphics,
 sounds and music in the game. For example, if you want to play Doom II
 maps, you'll need the file "doom2.wad".
-</p>
-<p>
 Doom Legacy is free software, meaning that you can copy and distribute
 it without charge.
 Note that the original IWAD data files of Doom, Heretic and Hexen
@@ -105,7 +91,7 @@ IWADs available on the Internet.
 </p>
 <p>
 We hope that you enjoy this FPS classic.
-Have much fun!!
+Have much fun!
 </p>
 
 
@@ -150,8 +136,9 @@ current directory.
 <li>The variable <b>USER</b>, containing your username, is used as the
 default value for your player name in multiplayer games.</li>
 <li>You home directory, defined by the variable <b>HOME</b>, will be
-the place where Legacy stores your config and savegame files. By
-default, they will be stored in the current directory.</li>
+the place where Legacy stores your config and savegame files.
+If this variable is not defined, they will be stored in the current
+directory.</li>
 </ul>
 
 
@@ -183,7 +170,7 @@ General options
 </td></tr>
 
 <tr>
-<td>+&lt;console_expr&gt;</td>
+<td>+&lt;console expression&gt;</td>
 <td>You can enter any number of <a href="console.html">console expressions</a> at the command line.<br/>
 They will be executed right after the configfile, but before autoexec.cfg.</td>
 </tr>
@@ -335,11 +322,11 @@ currently playing.
 <hr/>
 <h2><a name="editing">Editing</a></h2>
 
-<h3><a name="legacyedit">Legacy editing features</a></h3>
+<h3><a name="legacyedit">Legacy editing references</a></h3>
 
 <p>
 Powerful editing features have long been one of Legacy's strongest points.
-As of version 1.5, the Legacy game engine has been rewritten in
+As of version 2.0, the Legacy game engine has been rewritten in
 C++. During the rewrite, loads of new features were added to the game.
 </p>
 
@@ -392,10 +379,23 @@ You'll have to compile the documentation first, though.
 </p>
 
 <hr/>
-<h2><a name="thanks">Acknowledgments</a></h2>
+<h2><a name="thanks">Copyright info and acknowledgments</a></h2>
+
+<p>
+Original game &amp; sources by id Software<br/>
+Heretic and Hexen by Raven Software<br/>
+</p>
+<div>
+Additions:<br/>
+&copy; 1998 by: Fabrice Denis &amp; Boris Pereira<br/>
+&copy; 1999 by: Fabrice Denis, Boris Pereira &amp; Thierry Van Elsuwe<br/>
+&copy; 2000 by: Boris Pereira &amp; Thierry Van Elsuwe<br/>
+&copy; 2001-2005 by: Doom Legacy Team<br/>
+</div>
+
 
 <ul>
-<li>Thanks to Id Software of course, for creating the greatest game of all
+<li>Thanks to id Software of course, for creating the greatest game of all
 time!</li>
 <li>To Raven Software, for Heretic and Hexen!</li>
 <li>Chi Hoang for DosDoom which got us started.</li>

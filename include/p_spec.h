@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.28  2005/03/04 16:23:07  smite-meister
+// mp3, sector_t
+//
 // Revision 1.27  2005/01/04 18:32:43  smite-meister
 // better colormap handling
 //
@@ -124,6 +127,7 @@ enum linedefspecial_e
   LEGACY_FAKEFLOOR      = 10,
   LEGACY_RENDERER       = 11,
   LEGACY_MISC           = 13,
+  LEGACY_FS             = 128,
 };
 
 /// mapthing specials
@@ -167,25 +171,8 @@ enum sectorspecial_t
 };
 
 
-
-
 // geom. info, independent of Map
 sector_t *getNextSector(line_t *line, sector_t *sec);
-
-fixed_t P_FindLowestFloorSurrounding(sector_t *sec);
-fixed_t P_FindHighestFloorSurrounding(sector_t *sec);
-
-fixed_t P_FindNextLowestFloor(sector_t *sec, int currentheight);
-fixed_t P_FindNextHighestFloor(sector_t *sec, int currentheight);
-
-fixed_t P_FindLowestCeilingSurrounding(sector_t *sec);
-fixed_t P_FindHighestCeilingSurrounding(sector_t *sec);
-
-fixed_t P_FindNextLowestCeiling(sector_t *sec, int currentheight);
-fixed_t P_FindNextHighestCeiling(sector_t *sec, int currentheight);
-
-int P_FindMinSurroundingLight(sector_t *sector, int     max);
-
 
 
 
@@ -197,20 +184,6 @@ enum planeresult_e
   res_pastdest
 };
 
-enum special_e
-{
-  floor_special,
-  ceiling_special,
-  lighting_special,
-};
-
-bool P_SectorActive(special_e t, sector_t *s);
-
-enum change_e
-{
-  trigChangeOnly,
-  numChangeOnly,
-};
 
 
 //======================================

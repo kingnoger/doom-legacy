@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 2000-2003 by Doom Legacy team
+// Copyright (C) 2000-2005 by Doom Legacy team
 //
 // This source is available for distribution and/or modification
 // only under the terms of the DOOM Source Code License as
@@ -16,6 +16,9 @@
 // for more details.
 //
 // $Log$
+// Revision 1.22  2005/03/04 16:23:08  smite-meister
+// mp3, sector_t
+//
 // Revision 1.21  2005/01/25 18:29:16  smite-meister
 // preparing for alpha
 //
@@ -83,10 +86,6 @@
 // DESCRIPTION:
 //   SDL system interface for sound.
 //-----------------------------------------------------------------------------
-
-
-static const char
-rcsid[] = "$Id$";
 
 #include <math.h>
 #include <unistd.h>
@@ -162,7 +161,7 @@ static int steptable[256];
 static int vol_lookup[128*256];
 
 // Buffer for MIDI
-static char* musicbuffer;
+static byte *musicbuffer;
 
 
 // Flags for the -nosound and -nomusic options
@@ -529,7 +528,7 @@ void I_InitMusic()
     return;
 
   Mix_ResumeMusic();  // start music playback
-  musicbuffer = (char *)Z_Malloc(MIDBUFFERSIZE, PU_MUSIC, NULL); // FIXME: catch return value
+  musicbuffer = (byte *)Z_Malloc(MIDBUFFERSIZE, PU_MUSIC, NULL); // FIXME: catch return value
   CONS_Printf("I_InitMusic: music initialized\n");
   musicStarted = true;
 }
@@ -593,7 +592,7 @@ void I_StopSong(int handle)
   Mix_FadeOutMusic(500);
 }
 
-static char *MIDI_tmpfilename = NULL;
+static char *TempMusicFileName = NULL;
 
 void I_UnRegisterSong(int handle)
 {
@@ -606,10 +605,10 @@ void I_UnRegisterSong(int handle)
       music[handle] = NULL;
     }
 
-  if (MIDI_tmpfilename)
+  if (TempMusicFileName)
     {
-      unlink(MIDI_tmpfilename);
-      MIDI_tmpfilename = NULL;
+      unlink(TempMusicFileName);
+      TempMusicFileName = NULL;
     }
 }
 
@@ -619,14 +618,18 @@ int I_RegisterSong(void* data, int len)
   if (nomusic)
     return 0;
 
-  MIDI_tmpfilename = "Legacy_music.tmp";
+  // TODO SDL_Mixer _should_ support playing music buffers directly from memory,
+  // it makes no sense to save them to disk first!
+  TempMusicFileName = "Legacy_music.tmp";
 
-  FILE *midfile = fopen(MIDI_tmpfilename, "wb");
+  FILE *midfile = fopen(TempMusicFileName, "wb");
   if (midfile == NULL)
     {
       CONS_Printf("Couldn't create a tmpfile for music!\n");
       return 0;
     }
+
+  byte *bdata = static_cast<byte *>(data);
 
   if (memcmp(data,"MUS",3) == 0)
     {
@@ -635,32 +638,33 @@ int I_RegisterSong(void* data, int len)
       // convert mus to mid with a wonderful function
       // thanks to S.Bacquet for the source of qmus2mid
       // convert mus to mid and load it in memory
-      if ((err = qmus2mid((byte *)data, (byte *)musicbuffer, 89, 64, 0, len, MIDBUFFERSIZE, &midlength)) != 0)
+      if ((err = qmus2mid(bdata, musicbuffer, 89, 64, 0, len, MIDBUFFERSIZE, &midlength)) != 0)
 	{
 	  CONS_Printf("Cannot convert mus to mid, converterror :%d\n",err);
 	  return 0;
 	}
       fwrite(musicbuffer, 1, midlength, midfile);
     }
-  else if (memcmp(data,"MThd",4) == 0 || memcmp(data, "Ogg", 3) == 0)
-    { // MIDI and Ogg Vorbis
-      fwrite(data, 1, len, midfile);
+  else if (memcmp(data,"MThd", 4) == 0 || memcmp(data, "Ogg", 3) == 0 ||
+	   (memcmp(data,"ID3", 3) == 0 || (bdata[0] == 255 && (bdata[1] & 0xe0 == 0xe0))))
+    // Damn, MP3 has no real header! This code only recognizes ID3 tags
+    // or the 11 bits long frame sync block which is all ones!
+    {
+      fwrite(data, 1, len, midfile);  // MIDI, MP3 and Ogg Vorbis
     }
   else
     {
-      CONS_Printf("Music Lump is not MID or MUS lump\n");
+      CONS_Printf("Music lump is not in MUS, Midi, MP3 or Ogg Vorbis format!\n");
       return 0;
     }
   
   fclose(midfile);
 
-  //music[0] = Mix_LoadMUS("compilation-ogg-q0.ogg"); // Ogg Vorbis works!
-  //music[0] = Mix_LoadMUS("first_call.mp3"); // mp3 test
-  music[0] = Mix_LoadMUS(MIDI_tmpfilename);
+  music[0] = Mix_LoadMUS(TempMusicFileName);
     
   if (music[0] == NULL)
     {
-      CONS_Printf("Couldn't load music from tempfile %s: %s\n", MIDI_tmpfilename, Mix_GetError());
+      CONS_Printf("Couldn't load music from tempfile %s: %s\n", TempMusicFileName, Mix_GetError());
     }
   return 0;
 }

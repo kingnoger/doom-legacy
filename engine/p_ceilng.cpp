@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2005/03/04 16:23:07  smite-meister
+// mp3, sector_t
+//
 // Revision 1.14  2004/11/09 20:38:50  smite-meister
 // added packing to I/O structs
 //
@@ -112,25 +115,25 @@ ceiling_t::ceiling_t(Map *m, int ty, sector_t *sec, fixed_t sp, int cru, fixed_t
       break;
 
     case HnC:
-      destheight = P_FindHighestCeilingSurrounding(sec) + height;
+      destheight = sec->FindHighestCeilingSurrounding() + height;
       break;
 
     case UpNnC:
-      destheight = P_FindNextHighestCeiling(sec, sec->ceilingheight) + height;
+      destheight = sec->FindNextHighestCeiling(sec->ceilingheight) + height;
       break;
 
     case DownNnC:
-      destheight = P_FindNextLowestCeiling(sec, sec->ceilingheight) + height;
+      destheight = sec->FindNextLowestCeiling(sec->ceilingheight) + height;
       //speed = -speed;
       break;
 
     case LnC:
-      destheight = P_FindLowestCeilingSurrounding(sec) + height;
+      destheight = sec->FindLowestCeilingSurrounding() + height;
       //speed = -speed;
       break;
 
     case HnF:
-      destheight = P_FindHighestFloorSurrounding(sec) + height;
+      destheight = sec->FindHighestFloorSurrounding() + height;
       //speed = -speed;
       break;
 
@@ -209,7 +212,7 @@ int Map::EV_DoCeiling(int tag, line_t *line, int type, fixed_t speed, int crush,
       ActivateInStasisCeiling(0); // should do no harm (but affects all manual ceilings...)
 
       sec = line->backsector;
-      if (P_SectorActive(ceiling_special, sec))
+      if (sec->Active(sector_t::ceiling_special))
 	return 0;
 
       goto manual_ceiling;
@@ -223,7 +226,7 @@ int Map::EV_DoCeiling(int tag, line_t *line, int type, fixed_t speed, int crush,
     {
       sec = &sectors[secnum];
 
-      if (P_SectorActive(ceiling_special, sec))
+      if (sec->Active(sector_t::ceiling_special))
 	continue;
 
     manual_ceiling:
@@ -353,7 +356,7 @@ int Map::EV_DoCrusher(int tag, int type, fixed_t uspeed, fixed_t dspeed, int cru
     {
       sec = &sectors[secnum];
 
-      if (P_SectorActive(ceiling_special, sec))
+      if (sec->Active(sector_t::ceiling_special))
 	continue;
 
       // new ceiling thinker

@@ -130,7 +130,7 @@ int Map::EV_DoGenFloor(line_t *line)
 
     manual_floor:                
       // Do not start another function if floor already moving
-      if (P_SectorActive(floor_special,sec))
+      if (sec->Active(sector_t::floor_special))
 	{
 	  if (!manual)
 	    continue;
@@ -299,7 +299,7 @@ int Map::EV_DoGenCeiling(line_t *line)
 
     manual_ceiling:                
       // Do not start another function if ceiling already moving
-      if (P_SectorActive(ceiling_special,sec))
+      if (sec->Active(sector_t::ceiling_special))
 	{
 	  if (!manual)
 	    continue;
@@ -420,7 +420,7 @@ int Map::EV_DoGenLift(line_t *line)
 
     manual_lift:
       // Do not start another function if floor already moving
-      if (P_SectorActive(floor_special,sec))
+      if (sec->Active(sector_t::floor_special))
 	{
 	  if (!manual)
 	    continue;
@@ -541,7 +541,7 @@ int Map::EV_DoGenStairs(line_t *line)
       //Do not start another function if floor already moving
       //Add special lockout condition to wait for entire
       //staircase to build before retriggering
-      if (P_SectorActive(floor_special,sec) || sec->stairlock)
+      if (sec->Active(sector_t::floor_special) || sec->stairlock)
 	{
 	  if (!manual)
 	    continue;
@@ -626,7 +626,7 @@ int Map::EV_DoGenStairs(line_t *line)
 	      if (!Igno && tsec->floorpic != texture)
 		continue;
 
-	      if (P_SectorActive(floor_special,tsec) || tsec->stairlock)
+	      if (tsec->Active(sector_t::floor_special) || tsec->stairlock)
 		continue;
 
 	      height += stairsize;
@@ -715,7 +715,7 @@ int Map::EV_DoGenCrusher(line_t *line)
 
     manual_crusher:                
       // Do not start another function if ceiling already moving
-      if (P_SectorActive(ceiling_special, sec))
+      if (sec->Active(sector_t::ceiling_special))
 	{
 	  if (!manual)
 	    continue;
@@ -776,7 +776,7 @@ int Map::EV_DoGenLockedDoor(line_t *line)
       sec = &sectors[secnum];
     manual_locked:
       // Do not start another function if ceiling already moving
-      if (P_SectorActive(ceiling_special,sec))
+      if (sec->Active(sector_t::ceiling_special))
 	{
 	  if (!manual)
 	    continue;
@@ -862,7 +862,7 @@ int Map::EV_DoGenDoor(line_t *line)
       sec = &sectors[secnum];
     manual_door:
       // Do not start another function if ceiling already moving
-      if (P_SectorActive(ceiling_special,sec))
+      if (sec->Active(sector_t::ceiling_special))
 	{
 	  if (!manual)
 	    continue;

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2005/03/04 16:23:07  smite-meister
+// mp3, sector_t
+//
 // Revision 1.17  2004/11/09 20:38:50  smite-meister
 // added packing to I/O structs
 //
@@ -290,26 +293,26 @@ floor_t::floor_t(Map *m, int ty, sector_t *sec, fixed_t sp, int cru, fixed_t hei
       break;
 
     case LnF:
-      destheight = P_FindLowestFloorSurrounding(sec) + height;
+      destheight = sec->FindLowestFloorSurrounding() + height;
       //speed = -speed;
       break;
 
     case UpNnF:
-      destheight = P_FindNextHighestFloor(sec, sec->floorheight) + height;
+      destheight = sec->FindNextHighestFloor(sec->floorheight) + height;
       break;
 
     case DownNnF:
-      destheight = P_FindNextLowestFloor(sec, sec->floorheight) + height;
+      destheight = sec->FindNextLowestFloor(sec->floorheight) + height;
       //speed = -speed;
       break;
 
     case HnF:
-      destheight = P_FindHighestFloorSurrounding(sec) + height;
+      destheight = sec->FindHighestFloorSurrounding() + height;
       //speed = -speed; // TODO up/down?
       break;
 
     case LnC:
-      destheight = P_FindLowestCeilingSurrounding(sec);
+      destheight = sec->FindLowestCeilingSurrounding();
       if (destheight > sec->ceilingheight)
 	destheight = sec->ceilingheight;
       destheight += height;
@@ -408,7 +411,7 @@ int Map::EV_DoFloor(int tag, line_t *line, int type, fixed_t speed, int crush, f
 	return 0;
 
       sec = line->backsector;
-      if (P_SectorActive(floor_special, sec))
+      if (sec->Active(sector_t::floor_special))
 	return 0;
       goto manual_floor;
     }
@@ -418,7 +421,7 @@ int Map::EV_DoFloor(int tag, line_t *line, int type, fixed_t speed, int crush, f
       sec = &sectors[secnum];
         
       // Don't start a second thinker on the same floor
-      if (P_SectorActive(floor_special, sec)) //jff 2/23/98
+      if (sec->Active(sector_t::floor_special)) //jff 2/23/98
 	continue;
 
     manual_floor:
@@ -469,6 +472,12 @@ int Map::EV_DoFloor(int tag, line_t *line, int type, fixed_t speed, int crush, f
 // The linedef causing the change and the type of change is passed
 // Returns true if any sector changes
 
+enum change_e
+{
+  trigChangeOnly,
+  numChangeOnly,
+};
+
 int Map::EV_DoChange(line_t *line, int changetype)
 {
   int secnum = -1;
@@ -518,7 +527,7 @@ int Map::EV_BuildStairs(int tag, int type, fixed_t speed, fixed_t stepsize, int 
       sector_t *sec = &sectors[secnum];
       
       // don't start a stair if the first step's floor is already moving
-      if (P_SectorActive(floor_special,sec))
+      if (sec->Active(sector_t::floor_special))
 	continue;
 
       fixed_t height = sec->floorheight + stepsize;      
@@ -557,7 +566,7 @@ int Map::EV_BuildStairs(int tag, int type, fixed_t speed, fixed_t stepsize, int 
 		continue;
 
 	      // if sector's floor already moving, look for another
-	      if (P_SectorActive(floor_special,tsec)) //jff 2/22/98
+	      if (tsec->Active(sector_t::floor_special)) //jff 2/22/98
 		continue;
                                   
 	      height += stepsize;
@@ -793,7 +802,7 @@ int Map::EV_DoDonut(int tag, fixed_t pspeed, fixed_t sspeed)
       sector_t *s1 = &sectors[secnum];  // s1 is pillar's sector
               
       // do not start the donut if the pillar is already moving
-      if (P_SectorActive(floor_special, s1))
+      if (s1->Active(sector_t::floor_special))
 	continue;
                       
       sector_t *s2 = getNextSector(s1->lines[0], s1);  // s2 is pool's sector
@@ -802,7 +811,7 @@ int Map::EV_DoDonut(int tag, fixed_t pspeed, fixed_t sspeed)
       // pillar must be two-sided 
 
       // do not start the donut if the pool is already moving
-      if (boomsupport && P_SectorActive(floor_special, s2)) 
+      if (boomsupport && s2->Active(sector_t::floor_special)) 
 	continue;
                       
       // find a two sided line around the pool whose other side isn't the pillar
@@ -869,13 +878,13 @@ elevator_t::elevator_t(Map *m, int ty, sector_t *sec, fixed_t sp, fixed_t height
       // elevator down to next floor
     case Down:
       sp = -sp;
-      floordest = P_FindNextLowestFloor(sec, sec->floorheight) + height_f;
+      floordest = sec->FindNextLowestFloor(sec->floorheight) + height_f;
       ceilingdest = floordest + sec->ceilingheight - sec->floorheight;
       break;
 
       // elevator up to next floor
     case Up:
-      floordest = P_FindNextHighestFloor(sec, sec->floorheight) + height_f;
+      floordest = sec->FindNextHighestFloor(sec->floorheight) + height_f;
       ceilingdest = floordest + sec->ceilingheight - sec->floorheight;
       break;
 
@@ -909,12 +918,12 @@ elevator_t::elevator_t(Map *m, int ty, sector_t *sec, fixed_t sp, fixed_t height
 
     case OpenPillar:
       if (!height_f)
-	floordest = P_FindLowestFloorSurrounding(sec);
+	floordest = sec->FindLowestFloorSurrounding();
       else
 	floordest = sec->floorheight - height_f;
 
       if (!height_c)
-	ceilingdest = P_FindHighestCeilingSurrounding(sec);
+	ceilingdest = sec->FindHighestCeilingSurrounding();
       else
 	ceilingdest = sec->ceilingheight + height_c;
 

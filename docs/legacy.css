@@ -21,6 +21,13 @@ body
 
 
 h1 { text-align: center; }
+h1.tagline
+{
+  text-align: center;
+  color: #AAAAAA;
+  font-size: 150%;
+}
+
 h2 { color: #89d850; }
 
 

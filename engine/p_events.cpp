@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2005/03/04 16:23:07  smite-meister
+// mp3, sector_t
+//
 // Revision 1.5  2004/11/19 16:51:04  smite-meister
 // cleanup
 //
@@ -60,9 +63,6 @@ static int ZDoom_GenFloor(int target, int flags);
 static int ZDoom_GenCeiling(int target, int flags);
 static int ZDoom_GenLift(int target);
 
-
-// some Legacy linedef extension subtypes we use
-const int LEGACY_FS = 128;
 
 
 void Map::UpdateSpecials()

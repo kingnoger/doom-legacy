@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2005/03/04 16:23:07  smite-meister
+// mp3, sector_t
+//
 // Revision 1.15  2005/01/04 18:32:44  smite-meister
 // better colormap handling
 //
@@ -311,6 +314,26 @@ struct sector_t
   sector_t                 **stackList;
   double                     lineoutLength;
   // ----- end special tricks -----
+
+public:
+  fixed_t FindLowestFloorSurrounding();
+  fixed_t FindHighestFloorSurrounding();
+  fixed_t FindLowestCeilingSurrounding();
+  fixed_t FindHighestCeilingSurrounding();
+
+  fixed_t FindNextLowestFloor(int currentheight);
+  fixed_t FindNextHighestFloor(int currentheight);
+  fixed_t FindNextLowestCeiling(int currentheight);
+  fixed_t FindNextHighestCeiling(int currentheight);
+
+  int FindMinSurroundingLight(int max);
+  enum special_e
+  {
+    floor_special,
+    ceiling_special,
+    lighting_special,
+  };
+  bool Active(special_e t);
 };
 
 

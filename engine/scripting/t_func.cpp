@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.25  2005/03/04 16:23:07  smite-meister
+// mp3, sector_t
+//
 // Revision 1.24  2005/01/25 18:29:14  smite-meister
 // preparing for alpha
 //
@@ -1658,7 +1661,7 @@ void SF_MoveFloor()
       sec = &current_map->sectors[secnum];
 
       // Don't start a second thinker on the same floor
-      if (P_SectorActive(floor_special,sec))
+      if (sec->Active(sector_t::floor_special))
         continue;
 
       new floor_t(current_map, floor_t::AbsHeight, sec, platspeed, 0, destheight);
@@ -1730,7 +1733,7 @@ void SF_MoveCeiling()
       sec = &current_map->sectors[secnum];
 
       // Don't start a second thinker on the same floor
-      if (P_SectorActive(ceiling_special,sec))
+      if (sec->Active(sector_t::ceiling_special))
         continue;
 
       ceiling = new ceiling_t(current_map, ceiling_t::AbsHeight, sec, platspeed, 0, destheight);

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2005/03/04 16:23:07  smite-meister
+// mp3, sector_t
+//
 // Revision 1.15  2004/12/05 14:46:32  smite-meister
 // keybar
 //
@@ -122,7 +125,7 @@ plat_t::plat_t(Map *m, int ty, sector_t *sec, fixed_t sp, int wt, fixed_t height
 
     case LnF:
       high = fl;
-      low = P_FindLowestFloorSurrounding(sec) + height;
+      low = sec->FindLowestFloorSurrounding() + height;
       if (low > fl)
 	low = fl;
       status = down;
@@ -130,29 +133,29 @@ plat_t::plat_t(Map *m, int ty, sector_t *sec, fixed_t sp, int wt, fixed_t height
 
     case NLnF:
       high = fl;
-      low = P_FindNextLowestFloor(sec, fl) + height;
+      low = sec->FindNextLowestFloor(fl) + height;
       status = down;
       break;
 
     case NHnF:
       low = fl;
-      high = P_FindNextHighestFloor(sec, fl) + height;
+      high = sec->FindNextHighestFloor(fl) + height;
       status = up;
       break;
 
     case LnC:
       high = fl;
-      low = P_FindLowestCeilingSurrounding(sec) + height;
+      low = sec->FindLowestCeilingSurrounding() + height;
       if (low > high)
 	low = high;
       status = down;
       break;
 
     case LHF:
-      low = P_FindLowestFloorSurrounding(sec);
+      low = sec->FindLowestFloorSurrounding();
       if (low > fl)
 	low = fl;
-      high = P_FindHighestFloorSurrounding(sec) + height;
+      high = sec->FindHighestFloorSurrounding() + height;
       if (high < fl)
 	high = fl;
       status = status_e(P_Random() & 1); // Ugh. The bones have spoken.
@@ -310,7 +313,7 @@ int Map::EV_DoPlat(int tag, line_t *line, int type, fixed_t speed, int wait, fix
     {
       sec = &sectors[secnum];
 
-      if (P_SectorActive(floor_special, sec))
+      if (sec->Active(sector_t::floor_special))
 	continue;
 
       rtn++;

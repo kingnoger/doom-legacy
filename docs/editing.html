@@ -723,7 +723,7 @@ simple will help reduce rendering times.
 <p>
 Any and all of the sprites, textures and flats in the IWAD can be replaced
 using PWADs. In addition to the patch and flat formats, you can also use
-the PNG and JPEG formats for the texture lumps.
+the PNG and (soon, TODO) JPEG formats for the texture lumps.
 </p>
 
 <h3>Sprites</h3>
@@ -743,7 +743,8 @@ part of the PLAYxxxx sprite, which would cause some confusing error messages.
 <h3>Models</h3>
 
 <p>
-TODO
+Legacy will support MD3 models as soon as the new OpenGL renderer is
+done. Yes, the ones from Quake III Arena.
 </p>
 
 <h3>Textures</h3>
@@ -934,7 +935,8 @@ Ends the sound sequence definition.
 <p>
 Legacy supports the MUS, MIDI, MP3 and Ogg Vorbis music formats, using
 the SDL_mixer library. The music lump format is detected
-automagically. The names of the music lumps can be freely chosen.
+automagically. The names of the music lumps can be
+<b>chosen freely</b>, they do not have to start with "D_".
 </p>
 
 <hr />

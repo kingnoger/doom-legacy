@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.41  2005/03/04 16:23:07  smite-meister
+// mp3, sector_t
+//
 // Revision 1.40  2005/01/04 18:32:41  smite-meister
 // better colormap handling
 //
@@ -150,29 +153,24 @@ sectoreffect_t::sectoreffect_t(Map *m, sector_t *s)
 // UTILITIES
 //========================================================
 
-// Will return a side_t*
-//  given the number of the current sector,
-//  the line number, and the side (0/1) that you want.
-
+///  Returns a side_t* given the number of the current sector,
+///  the line number, and the side (0/1) that you want.
 side_t *Map::getSide(int sec, int line, int side)
 {
   return &sides[ (sectors[sec].lines[line])->sidenum[side] ];
 }
 
 
-// Will return a sector_t*
-//  given the number of the current sector,
-//  the line number and the side (0/1) that you want.
-
+/// Returns a sector_t* given the number of the current sector,
+/// the line number and the side (0/1) that you want.
 sector_t *Map::getSector(int sec, int line, int side)
 {
   return sides[ (sectors[sec].lines[line])->sidenum[side] ].sector;
 }
 
 
-// Given the sector number and the line number,
-//  it will tell you whether the line is two-sided or not.
-
+/// Given the sector number and the line number,
+/// it will tell you whether the line is two-sided or not.
 int Map::twoSided(int sec, int line)
 {
   return boomsupport ?
@@ -182,9 +180,8 @@ int Map::twoSided(int sec, int line)
 }
 
 
-// Return sector_t * of sector next to current.
-// NULL if not two-sided line
-
+/// Return sector_t* of sector next to current.
+/// NULL if not two-sided line
 sector_t *getNextSector(line_t *line, sector_t *sec)
 {
   if (!boomsupport)
@@ -204,228 +201,183 @@ sector_t *getNextSector(line_t *line, sector_t *sec)
 }
 
 
-// FIND LOWEST FLOOR HEIGHT IN SURROUNDING SECTORS
-
-fixed_t P_FindLowestFloorSurrounding(sector_t* sec)
+/// Find the lowest floor height in the surrounding sectors, THIS SECTOR INCLUDED.
+fixed_t sector_t::FindLowestFloorSurrounding()
 {
-  int                 i;
-  line_t*             check;
-  sector_t*           other;
-  fixed_t             floor = sec->floorheight;
+  fixed_t h = floorheight;
 
-  for (i=0 ;i < sec->linecount ; i++)
+  for (int i=0; i < linecount; i++)
     {
-      check = sec->lines[i];
-      other = getNextSector(check,sec);
+      sector_t *other = getNextSector(lines[i], this);
 
       if (!other)
 	continue;
 
-      if (other->floorheight < floor)
-	floor = other->floorheight;
+      if (other->floorheight < h)
+	h = other->floorheight;
     }
-  return floor;
+  return h;
 }
 
 
-// FIND HIGHEST FLOOR HEIGHT IN SURROUNDING SECTORS
-
-fixed_t P_FindHighestFloorSurrounding(sector_t *sec)
+/// Find the highest floor height in the surrounding sectors, not including this sector.
+fixed_t sector_t::FindHighestFloorSurrounding()
 {
-  int                 i;
-  line_t*             check;
-  sector_t*           other;
-  fixed_t             floor = -500*FRACUNIT;
-  int                 foundsector = 0;
+  fixed_t h = -500*FRACUNIT; // why?
+  bool foundsector = false;
 
-
-  for (i=0 ;i < sec->linecount ; i++)
+  for (int i=0; i < linecount; i++)
     {
-      check = sec->lines[i];
-      other = getNextSector(check,sec);
+      sector_t *other = getNextSector(lines[i], this);
 
       if (!other)
 	continue;
 
-      if (other->floorheight > floor || !foundsector)
-	floor = other->floorheight;
+      if (other->floorheight > h || !foundsector)
+	h = other->floorheight;
 
-      if(!foundsector)
-	foundsector = 1;
+      if (!foundsector)
+	foundsector = true;
     }
-  return floor;
+  return h;
 }
 
 
-// FIND NEXT HIGHEST FLOOR IN SURROUNDING SECTORS
-// Rewritten by Lee Killough to avoid fixed array and to be faster
-
-fixed_t P_FindNextHighestFloor(sector_t *sec, int currentheight)
+/// Find the lowest ceiling height in the surrounding sectors, not including this sector.
+fixed_t sector_t::FindLowestCeilingSurrounding()
 {
-  sector_t *other;
-  int i;
+  fixed_t h = MAXINT;
+  bool foundsector = false;
 
-  for (i=0 ;i < sec->linecount ; i++)
-    if ((other = getNextSector(sec->lines[i],sec)) &&
-	other->floorheight > currentheight)
-      {
-	int height = other->floorheight;
-	while (++i < sec->linecount)
-	  if ((other = getNextSector(sec->lines[i],sec)) &&
-	      other->floorheight < height &&
-	      other->floorheight > currentheight)
-	    height = other->floorheight;
-	return height;
-      }
-  return currentheight;
+  if (boomsupport)
+    h = 32000*FRACUNIT; //SoM: 3/7/2000: Remove ovf
+                                              
+  for (int i=0; i < linecount; i++)
+    {
+      sector_t *other = getNextSector(lines[i], this);
+
+      if (!other)
+	continue;
+
+      if (other->ceilingheight < h || !foundsector)
+	h = other->ceilingheight;
+
+      if (!foundsector)
+	foundsector = true;
+    }
+  return h;
 }
 
 
-////////////////////////////////////////////////////
-// SoM: Start new Boom functions
-////////////////////////////////////////////////////
+/// Find the highest ceiling height in the surrounding sectors, not including this sector.
+fixed_t sector_t::FindHighestCeilingSurrounding()
+{
+  fixed_t h = 0;
+  bool foundsector = false;
 
-// Passed a sector and a floor height, returns the fixed point value
-// of the largest floor height in a surrounding sector smaller than
-// the floor height passed. If no such height exists the floorheight
-// passed is returned.
+  for (int i=0; i < linecount; i++)
+    {
+      sector_t *other = getNextSector(lines[i], this);
 
-fixed_t P_FindNextLowestFloor(sector_t *sec, int currentheight)
+      if (!other)
+	continue;
+
+      if (other->ceilingheight > h || !foundsector)
+	h = other->ceilingheight;
+
+      if (!foundsector)
+	foundsector = true;
+    }
+  return h;
+}
+
+
+/// Finds the highest floor in the surrounding sectors lower than currentheight.
+/// If no such sectors exist, returns currentheight.
+fixed_t sector_t::FindNextLowestFloor(int currentheight)
 {
   sector_t *other;
-  int i;
 
-  for (i=0 ;i < sec->linecount ; i++)
-    if ((other = getNextSector(sec->lines[i],sec)) &&
+  for (int i=0; i < linecount; i++)
+    if ((other = getNextSector(lines[i], this)) &&
 	other->floorheight < currentheight)
       {
-	int height = other->floorheight;
-	while (++i < sec->linecount)
-	  if ((other = getNextSector(sec->lines[i],sec)) &&
-	      other->floorheight > height &&
+	int h = other->floorheight;
+	while (++i < linecount)
+	  if ((other = getNextSector(lines[i], this)) &&
+	      other->floorheight > h &&
 	      other->floorheight < currentheight)
-	    height = other->floorheight;
-	return height;
+	    h = other->floorheight;
+	return h;
       }
   return currentheight;
 }
 
 
-// Passed a sector and a ceiling height, returns the fixed point value
-// of the largest ceiling height in a surrounding sector smaller than
-// the ceiling height passed. If no such height exists the ceiling height
-// passed is returned.
-
-fixed_t P_FindNextLowestCeiling(sector_t *sec, int currentheight)
+/// Finds the lowest floor in the surrounding sectors higher than currentheight.
+/// If no such sectors exist, returns currentheight.
+// Rewritten by Lee Killough to avoid fixed array and to be faster
+fixed_t sector_t::FindNextHighestFloor(int currentheight)
 {
   sector_t *other;
-  int i;
 
-  for (i=0 ;i < sec->linecount ; i++)
-    if ((other = getNextSector(sec->lines[i],sec)) &&
+  for (int i=0; i < linecount; i++)
+    if ((other = getNextSector(lines[i], this)) &&
+	other->floorheight > currentheight)
+      {
+	int h = other->floorheight;
+	while (++i < linecount)
+	  if ((other = getNextSector(lines[i], this)) &&
+	      other->floorheight < h &&
+	      other->floorheight > currentheight)
+	    h = other->floorheight;
+	return h;
+      }
+  return currentheight;
+}
+
+
+/// Finds the highest ceiling in the surrounding sectors lower than currentheight.
+/// If no such sectors exist, returns currentheight.
+fixed_t sector_t::FindNextLowestCeiling(int currentheight)
+{
+  sector_t *other;
+
+  for (int i=0; i < linecount; i++)
+    if ((other = getNextSector(lines[i], this)) &&
         other->ceilingheight < currentheight)
       {
-	int height = other->ceilingheight;
-	while (++i < sec->linecount)
-	  if ((other = getNextSector(sec->lines[i],sec)) &&
-	      other->ceilingheight > height &&
+	int h = other->ceilingheight;
+	while (++i < linecount)
+	  if ((other = getNextSector(lines[i], this)) &&
+	      other->ceilingheight > h &&
 	      other->ceilingheight < currentheight)
-	    height = other->ceilingheight;
-	return height;
+	    h = other->ceilingheight;
+	return h;
       }
   return currentheight;
 }
 
 
-
-// Passed a sector and a ceiling height, returns the fixed point value
-// of the smallest ceiling height in a surrounding sector larger than
-// the ceiling height passed. If no such height exists the ceiling height
-// passed is returned.
-
-fixed_t P_FindNextHighestCeiling(sector_t *sec, int currentheight)
+/// Finds the lowest ceiling in the surrounding sectors higher than currentheight.
+/// If no such sectors exist, returns currentheight.
+fixed_t sector_t::FindNextHighestCeiling(int currentheight)
 {
   sector_t *other;
-  int i;
 
-  for (i=0 ;i < sec->linecount ; i++)
-    if ((other = getNextSector(sec->lines[i],sec)) &&
+  for (int i=0; i < linecount; i++)
+    if ((other = getNextSector(lines[i], this)) &&
 	other->ceilingheight > currentheight)
       {
-	int height = other->ceilingheight;
-	while (++i < sec->linecount)
-	  if ((other = getNextSector(sec->lines[i],sec)) &&
-	      other->ceilingheight < height &&
+	int h = other->ceilingheight;
+	while (++i < linecount)
+	  if ((other = getNextSector(lines[i], this)) &&
+	      other->ceilingheight < h &&
 	      other->ceilingheight > currentheight)
-	    height = other->ceilingheight;
-	return height;
+	    h = other->ceilingheight;
+	return h;
       }
   return currentheight;
-}
-
-////////////////////////////
-// End New Boom functions
-////////////////////////////
-
-
-
-//
-// FIND LOWEST CEILING IN THE SURROUNDING SECTORS
-//
-fixed_t P_FindLowestCeilingSurrounding(sector_t* sec)
-{
-  int                 i;
-  line_t*             check;
-  sector_t*           other;
-  fixed_t             height = MAXINT;
-  int                 foundsector = 0;
-
-  if (boomsupport) height = 32000*FRACUNIT; //SoM: 3/7/2000: Remove ovf
-                                              
-  for (i=0 ;i < sec->linecount ; i++)
-    {
-      check = sec->lines[i];
-      other = getNextSector(check,sec);
-
-      if (!other)
-	continue;
-
-      if (other->ceilingheight < height || !foundsector)
-	height = other->ceilingheight;
-
-      if(!foundsector)
-	foundsector = 1;
-    }
-  return height;
-}
-
-
-//
-// FIND HIGHEST CEILING IN THE SURROUNDING SECTORS
-//
-fixed_t P_FindHighestCeilingSurrounding(sector_t* sec)
-{
-  int         i;
-  line_t*     check;
-  sector_t*   other;
-  fixed_t     height = 0;
-  int         foundsector = 0;
-
-  for (i=0 ;i < sec->linecount ; i++)
-    {
-      check = sec->lines[i];
-      other = getNextSector(check,sec);
-
-      if (!other)
-	continue;
-
-      if (other->ceilingheight > height || !foundsector)
-	height = other->ceilingheight;
-
-      if(!foundsector)
-	foundsector = 1;
-    }
-  return height;
 }
 
 
@@ -636,21 +588,13 @@ void Map::InitTagLists()
 
 
 
-//
-// Find minimum light from an adjacent sector
-//
-int P_FindMinSurroundingLight(sector_t* sector, int max)
+/// Find minimum light from an adjacent sector
+int sector_t::FindMinSurroundingLight(int max)
 {
-  int         i;
-  int         min;
-  line_t*     line;
-  sector_t*   check;
-
-  min = max;
-  for (i=0 ; i < sector->linecount ; i++)
+  int min = max;
+  for (int i=0; i < linecount; i++)
     {
-      line = sector->lines[i];
-      check = getNextSector(line,sector);
+      sector_t *check = getNextSector(lines[i], this);
 
       if (!check)
 	continue;
@@ -667,20 +611,20 @@ int P_FindMinSurroundingLight(sector_t* sector, int max)
 // same class. If old demo compatibility true, all linedef special classes
 // are the same.
 
-bool P_SectorActive(special_e t, sector_t *sec)
+bool sector_t::Active(special_e t)
 {
   if (!boomsupport)
-    return sec->floordata || sec->ceilingdata || sec->lightingdata;
+    return floordata || ceilingdata || lightingdata;
   else switch (t)
     {
     case floor_special:
-      return sec->floordata;
+      return floordata;
 
     case ceiling_special:
-      return sec->ceilingdata;
+      return ceilingdata;
 
     case lighting_special:
-      return sec->lightingdata;
+      return lightingdata;
     }
 
   return true;
@@ -947,7 +891,7 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
       break;
 
     case DOOM_Light_Flicker:
-      i = P_FindMinSurroundingLight(sec, sec->lightlevel);
+      i = sec->FindMinSurroundingLight(sec->lightlevel);
       lfx = new lightfx_t(this, sec, lightfx_t::Flicker, sec->lightlevel, i, 64, 7);
       lfx->count = (P_Random() & lfx->maxtime) + 1;
       break;
@@ -961,7 +905,7 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
       break;
 
     case DOOM_Light_Glow:
-      i = P_FindMinSurroundingLight(sec, sec->lightlevel);
+      i = sec->FindMinSurroundingLight(sec->lightlevel);
       lfx = new lightfx_t(this, sec, lightfx_t::Glow, sec->lightlevel, i, -glowspeed);
       break;
 
@@ -974,7 +918,7 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
       break;
 
     case DOOM_Light_Fireflicker:
-      i = P_FindMinSurroundingLight(sec, sec->lightlevel) + 16;
+      i = sec->FindMinSurroundingLight(sec->lightlevel) + 16;
       lfx = new lightfx_t(this, sec, lightfx_t::FireFlicker, sec->lightlevel, i, ff_tics);
       lfx->count = ff_tics;
       break;

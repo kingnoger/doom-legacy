@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2005/03/04 16:23:07  smite-meister
+// mp3, sector_t
+//
 // Revision 1.17  2004/11/09 20:38:50  smite-meister
 // added packing to I/O structs
 //
@@ -122,7 +125,7 @@ vdoor_t::vdoor_t(Map *m, byte t, sector_t *s, fixed_t sp, int delay)
     case Open:
     case OwC:
       direction = 1;
-      topheight = P_FindLowestCeilingSurrounding(s) - 4*FRACUNIT;
+      topheight = s->FindLowestCeilingSurrounding() - 4*FRACUNIT;
       if (topheight != s->ceilingheight)
 	MakeSound(true);
       break;
@@ -177,7 +180,7 @@ void vdoor_t::Think()
 	    case Open:
 	    case OwC:
 	      direction = 1;
-	      topheight = P_FindLowestCeilingSurrounding(sector) - 4*FRACUNIT;
+	      topheight = sector->FindLowestCeilingSurrounding() - 4*FRACUNIT;
 	      if (topheight != sector->ceilingheight)
 		MakeSound(true);
 	      break;
@@ -307,7 +310,7 @@ int Map::EV_DoDoor(int tag, line_t *line, Actor *mo, byte type, fixed_t speed, i
       while ((secnum = FindSectorFromTag(tag, secnum)) >= 0)
 	{
 	  sec = &sectors[secnum];
-	  if (P_SectorActive(ceiling_special,sec)) //SoM: 3/6/2000
+	  if (sec->Active(sector_t::ceiling_special)) //SoM: 3/6/2000
 	    continue;
 
 	  // new door thinker
@@ -382,7 +385,7 @@ void Map::EV_OpenDoor(int sectag, int speed, int wait_time)
     {
       sector_t *sec = &sectors[secnum];
       // if the ceiling already moving, don't start the door action
-      if (P_SectorActive(ceiling_special,sec))
+      if (sec->Active(sector_t::ceiling_special))
         continue;
 
       // new door thinker
@@ -409,7 +412,7 @@ void Map::EV_CloseDoor(int sectag, int speed)
     {
       sector_t *sec = &sectors[secnum];
       // if the ceiling already moving, don't start the door action
-      if (P_SectorActive(ceiling_special,sec)) //jff 2/22/98
+      if (sec->Active(sector_t::ceiling_special)) //jff 2/22/98
         continue;
 
       // new door thinker
