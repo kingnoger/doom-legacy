@@ -10,13 +10,16 @@ CFLAGS = $(CF) -I$(i)
 
 objdir := ../$(objdir)
 
-all	: ../wad/d2h.exe ../wad/wadtool.exe
+all	: ../wad/d2h.exe ../wad/wadtool.exe ../wad/convert_deh.exe
 
 
 ../wad/d2h.exe: $(objdir)/d2h.o
 	$(LD) $(LDFLAGS) $^ -o $@
 
 ../wad/wadtool.exe: $(objdir)/wadtool.o $(objdir)/md5.o
+	$(LD) $(LDFLAGS) $^ -o $@
+
+../wad/convert_deh.exe: $(objdir)/convert_deh.o
 	$(LD) $(LDFLAGS) $^ -o $@
 
 

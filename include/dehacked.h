@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2005/04/01 14:47:45  smite-meister
+// dehacked works
+//
 // Revision 1.4  2004/12/31 16:19:40  smite-meister
 // alpha fixes
 //
@@ -55,10 +58,11 @@ private:
   int  num_errors;
 
   int FindValue();
+  int FindState();
   int ReadFlags(struct flag_mnemonic_t *mnemonics);
 
-  void Read_Thing(int num);
-  void Read_Frame(int num);
+  void Read_Thing(const char *str);
+  void Read_Frame(const char *str);
   void Read_Sound(int num);
   void Read_Text(int len1, int len2);
   void Read_Weapon(int num);

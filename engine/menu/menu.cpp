@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2005/04/01 14:47:45  smite-meister
+// dehacked works
+//
 // Revision 1.3  2005/03/21 17:44:17  smite-meister
 // fixes
 //
@@ -3008,6 +3011,7 @@ bool Menu::Responder(event_t *ev)
       break;
 
     case IT_CV:
+    case IT_CV_NODRAW:
     case IT_CV_SLIDER:
       {
 	consvar_t *cv = currentMenu->items[itemOn].use.cvar;

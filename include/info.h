@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2005/04/01 14:47:45  smite-meister
+// dehacked works
+//
 // Revision 1.10  2005/03/29 17:20:46  smite-meister
 // state and mobjinfo tables fixed
 //
@@ -1231,10 +1234,9 @@ enum weaponstatenum_t
 enum statenum_t
 {
   S_NULL,
-
   // Doom
-  S_DOOM,
-  S_BLOOD1 = S_DOOM,
+  S_DOOM = S_NULL,
+  S_BLOOD1,
   S_BLOOD2,
   S_BLOOD3,
   S_PUFF1,
@@ -2111,11 +2113,13 @@ enum statenum_t
   S_TECH2LAMP2,
   S_TECH2LAMP3,
   S_TECH2LAMP4,
+  S_DOOM_END = S_TECH2LAMP4,
 
   // Legacy additions
   S_LEGACY,
+  S_DEFAULT_STATE = S_LEGACY, // unused state for DeHackEd
   //Fab: added lava/slime damage burn smoke
-  S_SMOK1 = S_LEGACY,
+  S_SMOK1,
   S_SMOK2,
   S_SMOK3,
   S_SMOK4,
@@ -2124,12 +2128,13 @@ enum statenum_t
   S_SPLASH1,
   S_SPLASH2,
   S_SPLASH3,
-  S_TNT1,   //SoM: 3/9/2000: add state for invisible sprite
-
+  S_TNT1,   // state for invisible things
+  S_LEGACY_END = S_TNT1,
 
   // Heretic
   S_HERETIC,
-  S_FREETARGMOBJ = S_HERETIC,
+  S_HNULL = S_HERETIC, // unused
+  S_FREETARGMOBJ,
   S_ITEM_PTN1_1,
   S_ITEM_PTN1_2,
   S_ITEM_PTN1_3,
@@ -2377,6 +2382,7 @@ enum statenum_t
   S_STAFFPUFF2_6,
 
   S_WGNT,
+
   S_GAUNTLETPUFF1_1,
   S_GAUNTLETPUFF1_2,
   S_GAUNTLETPUFF1_3,
@@ -2385,8 +2391,8 @@ enum statenum_t
   S_GAUNTLETPUFF2_2,
   S_GAUNTLETPUFF2_3,
   S_GAUNTLETPUFF2_4,
-
   S_BLSR,
+
   S_BLASTERFX1_1,
   S_BLASTERFXI1_1,
   S_BLASTERFXI1_2,
@@ -2419,8 +2425,8 @@ enum statenum_t
   S_BLASTERPUFF2_5,
   S_BLASTERPUFF2_6,
   S_BLASTERPUFF2_7,
-
   S_WMCE,
+
   S_MACEFX1_1,
   S_MACEFX1_2,
   S_MACEFXI1_1,
@@ -2435,8 +2441,8 @@ enum statenum_t
   S_MACEFX3_2,
   S_MACEFX4_1,
   S_MACEFXI4_1,
-
   S_WSKL,
+
   S_HRODFX1_1,
   S_HRODFX1_2,
   S_HRODFXI1_1,
@@ -2507,8 +2513,8 @@ enum statenum_t
   S_GWANDPUFF1_3,
   S_GWANDPUFF1_4,
   S_GWANDPUFF1_5,
-
   S_WPHX,
+
   S_PHOENIXFX1_1,
   S_PHOENIXFXI1_1,
   S_PHOENIXFXI1_2,
@@ -2538,8 +2544,8 @@ enum statenum_t
   S_PHOENIXFXI2_3,
   S_PHOENIXFXI2_4,
   S_PHOENIXFXI2_5,
-
   S_WBOW,
+
   S_CRBOWFX1,
   S_CRBOWFXI1_1,
   S_CRBOWFXI1_2,
@@ -2558,7 +2564,6 @@ enum statenum_t
   S_BLOODSPLATTER2,
   S_BLOODSPLATTER3,
   S_BLOODSPLATTERX,
- 
   S_HPLAY,
   S_HPLAY_RUN1,
   S_HPLAY_RUN2,
@@ -2606,7 +2611,6 @@ enum statenum_t
   S_HPLAY_FDTH18,
   S_HPLAY_FDTH19,
   S_HPLAY_FDTH20,
-
   S_BLOODYSKULL1,
   S_BLOODYSKULL2,
   S_BLOODYSKULL3,
@@ -3195,12 +3199,13 @@ enum statenum_t
   S_AMB2_3,
   S_SND_WIND,
   S_SND_WATERFALL,
-
+  S_HERETIC_END = S_SND_WATERFALL,
 
 
   // Hexen
   S_HEXEN,
-  S_XFREETARGMOBJ = S_HEXEN,
+  S_XNULL = S_HEXEN, // unused
+  S_XFREETARGMOBJ,
   S_MAPSPOT,
   S_FIREBALL1_1,
   S_FIREBALL1_2,
@@ -4190,8 +4195,8 @@ enum statenum_t
   S_PUNCHPUFF3,
   S_PUNCHPUFF4,
   S_PUNCHPUFF5,
-
   S_AXE,
+
   S_AXEPUFF_GLOW1,
   S_AXEPUFF_GLOW2,
   S_AXEPUFF_GLOW3,
@@ -4205,8 +4210,8 @@ enum statenum_t
   S_AXEBLOOD4,
   S_AXEBLOOD5,
   S_AXEBLOOD6,
-
   S_HAMM,
+
   S_HAMMER_MISSILE_1,
   S_HAMMER_MISSILE_2,
   S_HAMMER_MISSILE_3,
@@ -4256,6 +4261,7 @@ enum statenum_t
   S_FSWORD_FLAME10,
 
   S_CSTAFF,
+
   S_CSTAFF_MISSILE1,
   S_CSTAFF_MISSILE2,
   S_CSTAFF_MISSILE3,
@@ -4269,7 +4275,6 @@ enum statenum_t
   S_CSTAFFPUFF3,
   S_CSTAFFPUFF4,
   S_CSTAFFPUFF5,
-
   S_CFLAME1,
   S_CFLAME2,
   S_CFLAME3,
@@ -4278,6 +4283,7 @@ enum statenum_t
   S_CFLAME6,
   S_CFLAME7,
   S_CFLAME8,
+
   S_CFLAMEFLOOR1,
   S_CFLAMEFLOOR2,
   S_CFLAMEFLOOR3,
@@ -4383,7 +4389,6 @@ enum statenum_t
   S_MWANDSMOKE4,
   S_MWAND_MISSILE1,
   S_MWAND_MISSILE2,
-
   S_MW_LIGHTNING1,
   S_MW_LIGHTNING2,
   S_MW_LIGHTNING3,
@@ -4392,6 +4397,7 @@ enum statenum_t
   S_MW_LIGHTNING6,
   S_MW_LIGHTNING7,
   S_MW_LIGHTNING8,
+
   S_LIGHTNING_CEILING1,
   S_LIGHTNING_CEILING2,
   S_LIGHTNING_CEILING3,
@@ -4477,7 +4483,6 @@ enum statenum_t
   S_MSTAFF_FX2_X3,
   S_MSTAFF_FX2_X4,
   S_MSTAFF_FX2_X5,
-
   S_FSWORD1,
   S_FSWORD2,
   S_FSWORD3,
@@ -4491,6 +4496,7 @@ enum statenum_t
   S_COS1,
   S_COS2,
   S_COS3,
+
   S_SHARDFX1_1,
   S_SHARDFX1_2,
   S_SHARDFX1_3,
@@ -5771,6 +5777,7 @@ enum statenum_t
   S_BAT2,
   S_BAT3,
   S_BAT_DEATH,
+  S_HEXEN_END = S_BAT_DEATH,
 
   NUMSTATES
 };
@@ -5957,7 +5964,8 @@ enum mobjtype_t
   MT_MISC86,
 
   MT_LEGACY,
-  MT_CHASECAM = MT_LEGACY,
+  MT_DEFAULT_THING = MT_LEGACY,
+  MT_CHASECAM,
   MT_SPIRIT,
   MT_SMOK,        // test lave/slime damage smoke
   MT_SPLASH,      // test water splash

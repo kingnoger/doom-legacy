@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2005/04/01 14:47:38  smite-meister
+// dehacked works
+//
 // Revision 1.19  2005/01/25 18:29:12  smite-meister
 // preparing for alpha
 //
@@ -1092,11 +1095,15 @@ int S_StartAmbSound(PlayerInfo *p, int sfx_id, float volume)
 
 int S_StartLocalAmbSound(int sfx_id, float volume)
 {
-#ifdef PARANOIA
+  if (!sfx_id)
+    return -1; // no sound
+
   // check for bogus sound #
-  if (sfx_id < 1 || sfx_id >= NUMSFX)
-    I_Error("Bad sfx number: %d\n", sfx_id);
-#endif
+  if (sfx_id < 0 || sfx_id >= NUMSFX)
+    {
+      CONS_Printf("Bad sfx number: %d\n", sfx_id);
+      return -1;
+    }
 
 #ifdef HW3SOUND
   if (hws_mode != HWS_DEFAULT_MODE)
@@ -1119,17 +1126,21 @@ int S_StartLocalAmbSound(int sfx_id, float volume)
       return -1;
     }
 
-  return S.StartAmbSound((*i).second, volume, NORM_SEP);
+  return S.StartAmbSound(i->second, volume, NORM_SEP);
 }
 
 
 int S_StartSound(mappoint_t *m, int sfx_id, float vol)
 {
-#ifdef PARANOIA
+  if (!sfx_id)
+    return -1; // no sound
+
   // check for bogus sound #
-  if (sfx_id < 1 || sfx_id >= NUMSFX)
-    I_Error("Bad sfx number: %d\n", sfx_id);
-#endif
+  if (sfx_id < 0 || sfx_id >= NUMSFX)
+    {
+      CONS_Printf("Bad sfx number: %d\n", sfx_id);
+      return -1;
+    }
 
   soundsource_t s;
   s.isactor = false;
@@ -1148,17 +1159,21 @@ int S_StartSound(mappoint_t *m, int sfx_id, float vol)
       return -1;
     }
 
-  return S.Start3DSound((*i).second, &s, vol);
+  return S.Start3DSound(i->second, &s, vol);
 }
 
 
 int S_StartSound(Actor *a, int sfx_id, float vol)
 {
-#ifdef PARANOIA
+  if (!sfx_id)
+    return -1; // no sound
+
   // check for bogus sound #
-  if (sfx_id < 1 || sfx_id >= NUMSFX)
-    I_Error("Bad sfx number: %d\n", sfx_id);
-#endif
+  if (sfx_id < 0 || sfx_id >= NUMSFX)
+    {
+      CONS_Printf("Bad sfx number: %d\n", sfx_id);
+      return -1;
+    }
 
   soundsource_t s;
   s.isactor = true;
@@ -1186,5 +1201,5 @@ int S_StartSound(Actor *a, int sfx_id, float vol)
       return -1;
     }
 
-  return S.Start3DSound((*i).second, &s, vol);
+  return S.Start3DSound(i->second, &s, vol);
 }
