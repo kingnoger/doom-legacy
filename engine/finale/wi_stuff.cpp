@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2004/09/23 23:21:17  smite-meister
+// HUD updated
+//
 // Revision 1.17  2004/08/13 18:25:10  smite-meister
 // sw renderer fix
 //
@@ -34,8 +37,11 @@
 #include "doomdef.h"
 #include "command.h"
 #include "cvars.h"
-#include "wi_stuff.h"
+#include "console.h"
+
 #include "d_event.h"
+#include "wi_stuff.h"
+#include "hud.h"
 
 #include "g_game.h"
 #include "g_mapinfo.h"
@@ -43,8 +49,6 @@
 #include "g_player.h"
 
 #include "m_random.h"
-#include "w_wad.h"
-
 #include "r_state.h" // colormap etc.
 #include "r_data.h"
 
@@ -52,8 +56,10 @@
 #include "s_sound.h"
 #include "i_video.h"
 #include "v_video.h"
+
+#include "w_wad.h"
 #include "z_zone.h"
-#include "console.h"
+
 
 
 #define FB  (0 | V_SCALE)
@@ -473,11 +479,11 @@ static void WI_drawLF(const char *name)
   int y = WI_TITLEY;
 
   // draw <LevelName>
-  if (FontBBaseLump)
+  if (big_font)
     {
-      V_DrawTextB(name, (BASEVIDWIDTH - V_TextBWidth(name))/2, y);
-      y += (5*V_TextBHeight(name))/4;
-      V_DrawTextB("Finished", (BASEVIDWIDTH - V_TextBWidth("Finished"))/2, y);
+      big_font->DrawString((BASEVIDWIDTH - big_font->StringWidth(name))/2, y,name);
+      y += (5*big_font->StringHeight(name))/4;
+      big_font->DrawString((BASEVIDWIDTH - big_font->StringWidth("Finished"))/2, y, "Finished");
     }
   else
     {
@@ -496,11 +502,11 @@ static void WI_drawEL(const char *nextname)
   int y = WI_TITLEY;
 
   // draw "Entering"
-  if (FontBBaseLump)
+  if (big_font)
     {
-      V_DrawTextB("Entering", (BASEVIDWIDTH - V_TextBWidth("Entering"))/2, y);
-      y += (5*V_TextBHeight("Entering"))/4;
-      V_DrawTextB(nextname, (BASEVIDWIDTH - V_TextBWidth(nextname))/2, y);
+      big_font->DrawString((BASEVIDWIDTH - big_font->StringWidth("Entering"))/2, y, "Entering");
+      y += (5*big_font->StringHeight("Entering"))/4;
+      big_font->DrawString((BASEVIDWIDTH - big_font->StringWidth(nextname))/2, y,nextname);
     }
   else
     {
@@ -730,55 +736,6 @@ void Intermission::UpdateDMStats()
 }
 
 
-// Draw a column of rankings stored in fragtable
-//  Quick-patch for the Cave party 19-04-1998 !!
-void WI_drawRanking(const char *title, int x, int y, fragsort_t *fragtable,
-                    int scorelines, bool large, int white)
-{
-  int   i;
-  int   colornum;
-
-  if (game.mode == gm_heretic)
-    colornum = 230;
-  else
-    colornum = 0x78;
-
-  if (title != NULL)
-    V_DrawString(x, y-14, 0, title);
-
-  // draw rankings
-  int   plnum;
-  int   frags;
-  int   color;
-  char  num[12];
-  extern byte *translationtables;
-
-  for (i=0; i<scorelines; i++)
-    {
-      frags = fragtable[i].count;
-      plnum = fragtable[i].num;
-
-      // draw color background
-      color = fragtable[i].color;
-      if (!color)
-        color = *((byte *)colormaps + colornum);
-      else
-        color = *((byte *)translationtables - 256 + (color<<8) + colornum);
-      V_DrawFill(x-1, y-1, large ? 40 : 26, 9, color);
-
-      // draw frags count
-      sprintf(num, "%3i", frags);
-      V_DrawString (x+(large ? 32 : 24)-V_StringWidth(num), y, 0, num);
-
-      // draw name
-      V_DrawString (x+(large ? 64 : 29), y, (plnum == white) ? V_WHITEMAP : 0, fragtable[i].name);
-
-      y += 12;
-      if (y>=BASEVIDHEIGHT)
-        break;            // dont draw past bottom of screen
-    }
-}
-
 
 void Intermission::DrawDMStats()
 {
@@ -799,19 +756,19 @@ void Intermission::DrawDMStats()
     white = demo ? displayplayer->number : consoleplayer->number;
 
   // count frags for each present player
-  WI_drawRanking("Frags", 5, RANKINGY, dm_score[0], nplayers, false, white);
+  HU_DrawRanking("Frags", 5, RANKINGY, dm_score[0], nplayers, false, white);
 
   // count buchholz
-  WI_drawRanking("Buchholz",85,RANKINGY, dm_score[1],nplayers,false, white);
+  HU_DrawRanking("Buchholz",85,RANKINGY, dm_score[1],nplayers,false, white);
 
   // count individual
-  WI_drawRanking("Indiv.",165,RANKINGY, dm_score[2],nplayers,false, white);
+  HU_DrawRanking("Indiv.",165,RANKINGY, dm_score[2],nplayers,false, white);
 
   // count deads
-  WI_drawRanking("Deaths",245,RANKINGY, dm_score[3],nplayers,false, white);
+  HU_DrawRanking("Deaths",245,RANKINGY, dm_score[3],nplayers,false, white);
 
   timeleft = va("start in %d", count/TICRATE);
-  V_DrawString (200, 30, V_WHITEMAP, timeleft);
+  hud_font->DrawString(200, 30, timeleft, V_WHITEMAP | V_SCALE);
 }
 
 
@@ -1090,12 +1047,12 @@ void Intermission::DrawCoopStats()
       // line height
       int lh = (3*(num[0]->height))/2;
 
-      if (FontBBaseLump)
+      if (big_font)
         {
           // use FontB if any
-          V_DrawTextB("Kills", SP_STATSX, SP_STATSY);
-          V_DrawTextB("Items", SP_STATSX, SP_STATSY+lh);
-          V_DrawTextB("Secrets", SP_STATSX, SP_STATSY+2*lh);
+          big_font->DrawString(SP_STATSX, SP_STATSY, "Kills");
+          big_font->DrawString(SP_STATSX, SP_STATSY+lh, "Items");
+          big_font->DrawString(SP_STATSX, SP_STATSY+2*lh, "Secrets");
         }
       else
         {
@@ -1112,16 +1069,16 @@ void Intermission::DrawCoopStats()
       int x, y;
 
       // draw stat titles (top line)
-      if (FontBBaseLump)
+      if (big_font)
         {
           // use FontB if any
-          V_DrawTextB("Kills", NG_STATSX+  NG_SPACINGX-V_TextBWidth("Kills"), NG_STATSY);
-          V_DrawTextB("Items", NG_STATSX+2*NG_SPACINGX-V_TextBWidth("Items"), NG_STATSY);
-          V_DrawTextB("Scrt", NG_STATSX+3*NG_SPACINGX-V_TextBWidth("Scrt"), NG_STATSY);
+          big_font->DrawString(NG_STATSX+  NG_SPACINGX-big_font->StringWidth("Kills"), NG_STATSY, "Kills");
+          big_font->DrawString(NG_STATSX+2*NG_SPACINGX-big_font->StringWidth("Items"), NG_STATSY, "Items");
+          big_font->DrawString(NG_STATSX+3*NG_SPACINGX-big_font->StringWidth("Scrt"), NG_STATSY, "Scrt");
           if (dofrags)
-            V_DrawTextB("Frgs", NG_STATSX+4*NG_SPACINGX-V_TextBWidth("Frgs"), NG_STATSY);
+            big_font->DrawString(NG_STATSX+4*NG_SPACINGX-big_font->StringWidth("Frgs"), NG_STATSY, "Frgs");
 
-          y = NG_STATSY + V_TextBHeight("Kills");
+          y = NG_STATSY + big_font->StringHeight("Kills");
         }
       else
         {
@@ -1171,10 +1128,10 @@ void Intermission::DrawCoopStats()
     }
 
   // draw time and par
-  if (FontBBaseLump)
+  if (big_font)
     {
-      V_DrawTextB("Time", SP_TIMEX, SP_TIMEY);
-      V_DrawTextB("Par", BASEVIDWIDTH/2 + SP_TIMEX, SP_TIMEY);
+      big_font->DrawString(SP_TIMEX, SP_TIMEY, "Time");
+      big_font->DrawString(BASEVIDWIDTH/2 + SP_TIMEX, SP_TIMEY, "Par");
     }
   else
     {

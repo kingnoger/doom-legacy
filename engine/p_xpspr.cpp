@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1996 by Raven Software, Corp.
-// Copyright (C) 2003 by DooM Legacy Team.
+// Copyright (C) 2003-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,23 +18,14 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/09/23 23:21:17  smite-meister
+// HUD updated
+//
 // Revision 1.10  2004/07/05 16:53:26  smite-meister
 // Netcode replaced
 //
-// Revision 1.9  2004/01/06 14:37:45  smite-meister
-// six bugfixes, cleanup
-//
-// Revision 1.8  2004/01/02 14:25:02  smite-meister
-// cleanup
-//
 // Revision 1.7  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
-//
-// Revision 1.6  2003/12/14 00:20:02  smite-meister
-// quick bugfix
-//
-// Revision 1.5  2003/11/30 00:09:47  smite-meister
-// bugfixes
 //
 // Revision 1.4  2003/11/12 11:07:24  smite-meister
 // Serialization done. Map progression.
@@ -48,12 +39,10 @@
 // Revision 1.1  2003/03/15 20:07:18  smite-meister
 // Initial Hexen compatibility!
 //
-//
-//
-// DESCRIPTION:
-//   Hexen weapon action functions
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Hexen weapon action functions
 
 #include "g_game.h"
 #include "g_actor.h"
@@ -70,7 +59,7 @@
 #include "p_enemy.h"
 #include "r_main.h"
 #include "screen.h" // palettes
-#include "hu_stuff.h"
+#include "hud.h"
 
 #include "sounds.h"
 #include "tables.h"

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.36  2004/09/23 23:21:16  smite-meister
+// HUD updated
+//
 // Revision 1.35  2004/08/12 18:30:23  smite-meister
 // cleaned startup
 //
@@ -64,7 +67,7 @@
 
 #include "f_finale.h"
 #include "wi_stuff.h"
-#include "hu_stuff.h" // HUD
+#include "hud.h"
 #include "p_camera.h" // camera
 
 #include "w_wad.h"

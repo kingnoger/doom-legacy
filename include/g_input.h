@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/09/23 23:21:19  smite-meister
+// HUD updated
+//
 // Revision 1.6  2004/09/20 22:42:49  jussip
 // Joystick axis binding works. New joystick code ready for use.
 //
@@ -86,8 +89,8 @@ enum gamecontrols_e
 };
 
 //! All possible actions joystick axes can be bound to.
-
-enum joyactions_e {
+enum joyactions_e
+{
   ja_pitch,  //!< Set up/down looking angle.
   ja_move,   //!< Moving front and back.
   ja_turn,   //!< Turn left or right.
@@ -96,13 +99,13 @@ enum joyactions_e {
 };
 
 //! Contains the mappings from joystick axises to game actions.
-
-struct joybinding {
+struct joybinding_t
+{
   int playnum;         //!< What player is controlled.
   int joynum;          //!< Which joystick to use.
   int axisnum;         //!< Which axis is the important one.
   joyactions_e action; //!< What should be done.
-  int scale;           //!< A scaling factor. Set negative to flip axis.
+  float scale;         //!< A scaling factor. Set negative to flip axis.
 };
 
 // current state of the keys : true if pushed

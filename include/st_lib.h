@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/09/23 23:21:19  smite-meister
+// HUD updated
+//
 // Revision 1.5  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
 //
@@ -40,10 +43,6 @@
 #ifndef st_lib_h
 #define st_lib_h 1
 
-// Background and foreground screen numbers
-#define BG 1
-#define FG 0
-
 
 /// \brief ABC for HUD widgets
 ///
@@ -52,25 +51,18 @@
 class HudWidget
 {
 protected:
-  int       x, y; ///< screen coordinates
-  const bool *on; ///< pointer to bool stating whether to update widget or not
+  int x, y; ///< screen coordinates
+  //int type;    ///< overlay, shadowed, translucent...
 
   virtual void Draw() = 0; ///< pure virtual drawing routine
 
 public:
-  HudWidget(int nx, int ny, const bool *non)
-  {
-    x = nx;
-    y = ny;
-    on = non;
-  };
+  HudWidget(int x, int y);
 
   /// force: update even if no change
-  virtual void Update(bool force)
-  {
-    if (*on == true) Draw();
-  };
+  virtual void Update(bool force)  { Draw(); };
 };
+
 
 
 /// \brief Number widget
@@ -80,125 +72,88 @@ public:
 class HudNumber : public HudWidget
 {
 private:
-  int  width;  ///< max # of digits in the number
-  int type;    ///< overlay, shadowed, translucent...
-  class Texture **n; ///< graphics for numbers 0-9, n[10] is the minus sign
-protected:
-  const int *num; ///< pointer to current value
-  int oldnum;     ///< previous value
+  int digits;  ///< max # of digits in the number
+  class Texture **nums; ///< graphics for numbers 0-9, nums[10] is the minus sign
 
-  void Draw();
+protected:
+  const int *n; ///< pointer to current value
+  int     oldn; ///< last drawn value
+
+  virtual void Draw();
 
 public:
-  HudNumber(int x, int y, const bool *on, int nwidth, const int *nnum, Texture **pl)
-    : HudWidget(x, y, on)
-  {
-    width = nwidth;
-    oldnum = 0;
-    num = nnum;
-    n = pl;
-  };
-  
-  void Set(const int *ns)
-  {
-    num = ns;
-  }
+  HudNumber(int x, int y, int digits, const int *number, Texture **tex);
 
-  void Update(bool force)
-  {
-    if ((*on == true) && (oldnum != *num || force)) Draw();
-  }
+  virtual void Update(bool force);  
+  void Set(const int *nnum) { n = nnum; }
 };
 
 
-/// Percentile widget
+
+/// \brief Percentile widget
 class HudPercent : public HudNumber
 {
 private:
-  Texture *p; ///< percent sign graphic
+  Texture *pcent; ///< percent sign graphic
 
 public:
-  HudPercent(int x, int y, const bool *on, const int *nnum, Texture** pl, Texture* percent)
-    : HudNumber(x, y, on, 3, nnum, pl)
-  {
-    p = percent;
-  };
-
-  void Update(bool force);
+  HudPercent(int x, int y, const int *number, Texture **tex, Texture *percent);
+  virtual void Update(bool force);
 };
 
 
-/// Multiple Icons widget
+
+/// \brief Multiple Icons widget
 class HudMultIcon : public HudWidget
 {
 private:
   int     oldinum; ///< previous icon number
   const int *inum; ///< pointer to current icon number, -1 is a magic value meaning no icon is drawn
-  Texture     **p; ///< array of icons
+  Texture **icons; ///< array of icons
 
-  void Draw();
+  virtual void Draw();
 
 public:
-  HudMultIcon(int x, int y, const bool *on, const int *ninum, Texture **np) : HudWidget(x, y, on)
-  {
-    oldinum = -1;
-    inum = ninum;
-    p = np;
-  }
-
-  void Update(bool force);
+  HudMultIcon(int x, int y, const int *inum, Texture **tex);
+  virtual void Update(bool force);
 };
 
 
-/// Binary Icon widget
+
+/// \brief Binary Icon widget
 class HudBinIcon : public HudWidget
 {
 private:
   // center-justified location of icon
-  bool     oldval;  ///< last icon value
-  const bool *val;  ///< pointer to current icon status
-  Texture   *p[2];  ///< The icons. If p[0] == NULL, draw background instead
+  bool     oldstatus;  ///< last icon value
+  const bool *status;  ///< pointer to current icon status
+  Texture  *icons[2];  ///< The icons. If p[0] == NULL, draw background instead
 
-  void Draw();
+  virtual void Draw();
 
 public:
-  HudBinIcon(int x, int y, const bool *on, const bool *nval,
-	     Texture *p0, Texture *p1) : HudWidget(x, y, on)
-  {
-    oldval = false;
-    val = nval;
-    p[0] = p0;
-    p[1] = p1;
-  };
-
-  void Update(bool force);
+  HudBinIcon(int x, int y, const bool *status, Texture *p0, Texture *p1);
+  virtual void Update(bool force);
 };
 
 
-/// Horizontal "slow" slider widget (Heretic health bar etc.)
+
+/// \brief Horizontal "slow" slider widget (Heretic health bar etc.)
 class HudSlider : public HudWidget
 {
 private:
   int minval, maxval; ///< min and max values
   int   oldval, cval; ///< old and current values
   const int     *val; ///< pointer to current value
-  Texture **p;        ///< Slider graphics. See the Draw() implementation.
+  Texture      **tex; ///< Slider graphics. See the Draw() implementation.
 
-  void Draw();
+  virtual void Draw();
 
 public:
-  HudSlider(int x, int y, const bool *on, const int *v, int mi, int ma, Texture **np)
-    : HudWidget(x, y, on)
-  {
-    val = v;
-    minval = mi;
-    maxval = ma;
-    oldval = cval = 0;
-    p = np;
-  }
-
-  void Update(bool force);
+  HudSlider(int x, int y, const int *v, int mi, int ma, Texture **t);
+  virtual void Update(bool force);
 };
+
 
 
 /// \brief Inventory widget
@@ -211,29 +166,17 @@ private:
   const int  *itemuse; ///< counter for the item use animation
   const struct inventory_t *slots;
   const int *selected; ///< selected slot number 0-6
-  bool overlay;        ///< overlaid or normal?
-  Texture **n;     ///< small numbers 0-9
+  Texture **nums;  ///< small numbers 0-9
   Texture **items; ///< item graphics
-  Texture **p;     ///< inventory graphics
+  Texture **tex;   ///< inventory graphics
 
-  void Draw();
+  virtual void Draw();
   void DrawNumber(int x, int y, int val);
 
 public:
-  HudInventory(int x, int y, const bool *on, const bool *op, const int *iu, const inventory_t *vals,
-	       const int *sel, bool over, Texture **nn, Texture **ni, Texture **np)
-    : HudWidget(x, y, on)
-  {
-    open = op;
-    itemuse = iu;
-    slots = vals;
-    selected = sel;
-    overlay = over;
-    n = nn;
-    items = ni;
-    p = np;
-  }
-  void Update(bool force);
+  HudInventory(int x, int y, const bool *op, const int *iu, const inventory_t *vals,
+	       const int *sel, Texture **nn, Texture **it, Texture **t);
+  virtual void Update(bool force);
 };
 
 #endif

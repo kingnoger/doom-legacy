@@ -1,6 +1,8 @@
 // Emacs style mode select   -*- C++ -*- 
 //-----------------------------------------------------------------------------
 //
+// $Id$
+//
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
@@ -102,10 +104,9 @@ int Map::EV_DoGenFloor(line_t *line)
       height = (Dirn ? 1 : -1) * 24 * FRACUNIT;
       break;
     case Fby32:
+    default:
       type = floor_t::RelHeight;
       height = (Dirn ? 1 : -1) * 32 * FRACUNIT;
-      break;
-    default:
       break;
     }
 
@@ -271,10 +272,9 @@ int Map::EV_DoGenCeiling(line_t *line)
       height = (Dirn ? 1 : -1) * 24 * FRACUNIT;
       break;
     case Cby32:
+    default:
       type = ceiling_t::RelHeight;
       height = (Dirn ? 1 : -1) * 32 * FRACUNIT;
-      break;
-    default:
       break;
     }
 

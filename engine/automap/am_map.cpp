@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2004/09/23 23:21:17  smite-meister
+// HUD updated
+//
 // Revision 1.16  2004/08/12 18:30:27  smite-meister
 // cleaned startup
 //
@@ -81,7 +84,7 @@
 #include "g_map.h"
 #include "g_mapinfo.h"
 
-#include "hu_stuff.h"
+#include "hud.h"
 #include "dstrings.h"
 #include "keys.h"
 
@@ -485,8 +488,6 @@ void AutoMap::changeWindowLoc()
 }
 
 
-static event_t st_notifyon = { ev_keyup, AM_MSGENTERED };
-
 //
 // was AM_initVariables
 //
@@ -541,7 +542,7 @@ void AutoMap::InitVariables()
       REDKEYCOLOR = 176;
     }
   // inform the status bar of the change
-  hud.Responder(&st_notifyon);
+  hud.st_refresh = true;
 }
 
 
@@ -646,10 +647,7 @@ void AutoMap::Reset(const PlayerPawn *p)
   Resize();
 }
 
-static event_t st_notifyoff = { (evtype_t)0, ev_keyup, AM_MSGEXITED };
 
-//
-// was AM_Stop
 //
 void AutoMap::Close()
 {
@@ -657,15 +655,13 @@ void AutoMap::Close()
     return;
 
   unloadPics();
-  hud.Responder(&st_notifyoff);
   mp = NULL;
   mpawn = NULL;
   active = false;
   // stopped = true;
 }
 
-//
-// was AM_Start
+
 //
 void AutoMap::Open(const PlayerPawn *p)
 {
@@ -1527,7 +1523,7 @@ void AutoMap::Drawer()
     int y;
     const char *mapname = mp->info->nicename.c_str();
     y = vid.height - hud.stbarheight - 1;
-    V_DrawString(20, y - V_StringHeight(mapname), V_SSIZE, mapname);
+    hud_font->DrawString(20, y - hud_font->StringHeight(mapname), mapname, V_SSIZE);
   }
 
   //CONS_Printf("AM::Drawer n\n");

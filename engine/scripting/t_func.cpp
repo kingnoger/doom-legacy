@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.21  2004/09/23 23:21:19  smite-meister
+// HUD updated
+//
 // Revision 1.20  2004/09/03 16:28:51  smite-meister
 // bugfixes and ZDoom linedef types
 //
@@ -105,7 +108,7 @@
 
 #include "d_main.h"
 #include "g_game.h"
-#include "hu_stuff.h"
+#include "hud.h"
 
 #include "info.h"
 #include "m_random.h"
@@ -2339,11 +2342,6 @@ void SF_Pow()
 //////////////////////////////////////////////////////////////////////////
 // FraggleScript HUD graphics
 //////////////////////////////////////////////////////////////////////////
-int  HU_GetFSPic(int lumpnum, int xpos, int ypos);
-int  HU_DeleteFSPic(int handle);
-int  HU_ModifyFSPic(int handle, int lumpnum, int xpos, int ypos);
-int  HU_FSDisplay(int handle, bool newval);
-
 
 void SF_NewHUPic()
 {
@@ -2354,7 +2352,7 @@ void SF_NewHUPic()
   }
 
   t_return.type = svt_int;
-  t_return.value.i = HU_GetFSPic(fc.GetNumForName(stringvalue(t_argv[0])), intvalue(t_argv[1]), intvalue(t_argv[2]));
+  t_return.value.i = hud.GetFSPic(fc.GetNumForName(stringvalue(t_argv[0])), intvalue(t_argv[1]), intvalue(t_argv[2]));
   return;
 }
 
@@ -2367,7 +2365,7 @@ void SF_DeleteHUPic()
     return;
   }
 
-  if(HU_DeleteFSPic(intvalue(t_argv[0])) == -1)
+  if (hud.DeleteFSPic(intvalue(t_argv[0])))
     script_error("deletehupic: Invalid sfpic handle: %i\n", intvalue(t_argv[0]));
   return;
 }
@@ -2375,13 +2373,14 @@ void SF_DeleteHUPic()
 
 void SF_ModifyHUPic()
 {
-  if(t_argc != 4)
+  if (t_argc != 4)
   {
     script_error("modifyhupic: invalid number of arguments\n");
     return;
   }
 
-  if(HU_ModifyFSPic(intvalue(t_argv[0]), fc.GetNumForName(stringvalue(t_argv[1])), intvalue(t_argv[2]), intvalue(t_argv[3])) == -1)
+  if (hud.ModifyFSPic(intvalue(t_argv[0]), fc.GetNumForName(stringvalue(t_argv[1])),
+		     intvalue(t_argv[2]), intvalue(t_argv[3])))
     script_error("modifyhypic: invalid sfpic handle %i\n", intvalue(t_argv[0]));
   return;
 }
@@ -2396,7 +2395,7 @@ void SF_SetHUPicDisplay()
     return;
   }
 
-  if(HU_FSDisplay(intvalue(t_argv[0]), intvalue(t_argv[1]) > 0 ? 1 : 0) == -1)
+  if (hud.DisplayFSPic(intvalue(t_argv[0]), intvalue(t_argv[1]) > 0 ? true : false))
     script_error("sethupicdisplay: invalid pic handle %i\n", intvalue(t_argv[0]));
 }
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/09/23 23:21:20  smite-meister
+// HUD updated
+//
 // Revision 1.11  2004/09/14 21:41:57  hurdler
 // rename "data" to "pixels" (I think it's more appropriate and that's how SDL and OpenGL name such data after all)
 //
@@ -132,12 +135,10 @@
 // Revision 1.1.1.1  2000/02/22 20:32:33  hurdler
 // Initial import into CVS (v1.29 pr3)
 //
-//
-// DESCRIPTION:
-//      Functions to draw patches (by post) directly to screen.
-//      Functions to blit a block to the screen.
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Texture blitting, blitting rectangles between buffers. Font system.
 
 #include <ctype.h>
 
@@ -147,7 +148,6 @@
 #include "r_state.h"
 
 #include "v_video.h"
-#include "hu_stuff.h"
 #include "r_draw.h"
 #include "console.h"
 #include "command.h"
@@ -663,20 +663,78 @@ void V_DrawFadeConsBack(int x1, int y1, int x2, int y2)
 }
 
 
-//
+//========================================================================
+//                           Font system
+//========================================================================
+
+#define HU_FONTSTART    '!'     // the first font character
+#define HU_FONTEND      '_'     // the last font character
+#define HU_FONTSIZE (HU_FONTEND - HU_FONTSTART + 1) // default font size
+
+// Doom:
+// STCFN033-95 + 121 : small red font
+
+// Heretic:
+// FONTA01-59 : medium silver font
+// FONTB01-58 : large green font, some symbols empty
+
+// Hexen:
+// FONTA01-59 : medium silver font
+// FONTAY01-59 : like FONTA but yellow
+// FONTB01-58 : large red font, some symbols empty
+
+font_t *hud_font;
+font_t *big_font; // TODO used width-1 instead of width...
+
+
+font_t::font_t(int startlump, int endlump, char firstchar)
+{
+  if (startlump < 0 || endlump < 0)
+    I_Error("Incomplete font!\n");
+
+  int truesize = endlump - startlump + 1; // we have this many lumps
+  char lastchar = firstchar + truesize - 1;
+
+  // the font range must include '!' and '_'. We will duplicate letters if need be.
+  start = min(firstchar, '!');
+  end = max(lastchar, '_');
+  int size = end - start + 1;
+
+  font = (Texture **)Z_Malloc(size*sizeof(Texture*), PU_STATIC, NULL);
+
+  for (int i = start; i <= end; i++)
+    if (i < firstchar || i > lastchar)
+      // replace the missing letters with the first char
+      font[i - start] = tc.GetPtrNum(startlump);
+    else
+      font[i - start] = tc.GetPtrNum(i - firstchar + startlump);
+
+  // use the character '0' as a "prototype" for the font
+  if (start <= '0' && '0' <= end)
+    {
+      height = font['0' - start]->height;
+      width = font['0' - start]->width;
+    }
+  else
+    {
+      height = font[0]->height;
+      width = font[0]->width;
+    }
+}
+
+
 // Writes a single character (draw WHITE if bit 7 set)
-//
-void V_DrawCharacter(int x, int y, int c)
+void font_t::DrawCharacter(int x, int y, int c)
 {
   bool white = c & 0x80;
   int flags = c & V_FLAGMASK;
   c &= 0x7F;
 
-  c = toupper(c) - HU_FONTSTART;
-  if (c < 0 || c >= HU_FONTSIZE)
+  c = toupper(c);
+  if (c < start || c > end)
     return;
 
-  Texture *t = hud.font[c];
+  Texture *t = font[c - start];
   if (x + t->width > vid.width)
     return;
 
@@ -691,22 +749,20 @@ void V_DrawCharacter(int x, int y, int c)
 
 
 
-//
-//  Write a string using the hu_font
+//  Draw a string using the font
 //  NOTE: the text is centered for screens larger than the base width
-//
-void V_DrawString(int x, int y, int option, const char *str)
+void font_t::DrawString(int x, int y, const char *str, int flags)
 {
-  if (option & V_WHITEMAP)
+  if (flags & V_WHITEMAP)
     {
       current_colormap = whitemap;
-      option |= V_MAP;
+      flags |= V_MAP;
     }
 
   int dupx, dupy, scrwidth;
 
   // TODO
-  //if (option & V_SSIZE) {
+  //if (flags & V_SSIZE) {
       // scale later
       dupx = dupy = 1;
       scrwidth = BASEVIDWIDTH;
@@ -723,6 +779,7 @@ void V_DrawString(int x, int y, int option, const char *str)
   // cursor coordinates
   int cx = x;
   int cy = y;
+  int rowheight = font[0]->height + 1;
 
   while (1)
     {
@@ -737,124 +794,84 @@ void V_DrawString(int x, int y, int option, const char *str)
           continue;
         }
 
-      c = toupper(c) - HU_FONTSTART;
-      if (c < 0 || c >= HU_FONTSIZE)
+      c = toupper(c);
+      if (c < start || c > end)
         {
           cx += 4*dupx;
           continue;
         }
 
-      Texture *t = hud.font[c];
+      Texture *t = font[c - start];
 
       int w = t->width * dupx;
       if (cx + w > scrwidth)
         break;
 
-      t->Draw(cx, cy, option | V_SCALE);
+      t->Draw(cx, cy, flags);
 
       cx += w;
     }
 }
 
 
-//
-// Find string width from hu_font chars
-//
-int V_StringWidth(const char *str)
+// TODO could take a colormap as a parameter...
+void font_t::DrawGrayString(int x, int y, const char *str)
+{
+  current_colormap = graymap;
+  DrawString(x, y, str, V_SCALE | V_MAP);
+}
+
+
+// returns the width of the string
+int font_t::StringWidth(const char *str)
 {
   int w = 0;
 
   for (int i = 0; str[i]; i++)
     {
-      int c = toupper(str[i]) - HU_FONTSTART;
-      if (c < 0 || c >= HU_FONTSIZE)
+      int c = toupper(str[i]);
+      if (c < start || c > end)
         w += 4;
       else
-        w += hud.font[c]->width;
+        w += font[c - start]->width;
     }
 
   return w;
 }
 
-//
-// Find string height from hu_font chars
-//
-int V_StringHeight(const char *str)
+
+// returns the width of the next n chars of str
+int font_t::StringWidth(const char *str, int n)
 {
-  return hud.font[0]->height;
-}
+  int w = 0;
 
-
-//---------------------------------------------------------------------------
-
-int FontBBaseLump;
-
-// Draw text using font B.
-void V_DrawTextB(const char *text, int x, int y)
-{
-  char c;
-
-  while((c = *text++) != 0)
+  for (int i = 0; i<n && str[i]; i++)
     {
-      if (c < 33)
-        x += 8;
+      int c = toupper(str[i]);
+      if (c < start || c > end)
+        w += 4;
       else
-        {
-          Texture *t = tc.GetPtrNum(FontBBaseLump + toupper(c) - 33);
-          t->Draw(x, y, V_SCALE);
-          x += t->width - 1;
-        }
+        w += font[c - start]->width;
     }
+
+  return w;
 }
 
 
-void V_DrawTextBGray(char *text, int x, int y)
+int font_t::StringHeight(const char *str)
 {
-  char c;
-  current_colormap = graymap;
-
-  while((c = *text++) != 0)
-    {
-      if (c < 33)
-        x += 8;
-      else
-        {
-          Texture *t = tc.GetPtrNum(FontBBaseLump + toupper(c) - 33);
-          t->Draw(x, y, V_SCALE | V_MAP);
-          x += t->width - 1;
-        }
-    }
+  return font[0]->height;
 }
 
 
 
-// Returns the pixel width of a string using font B.
-int V_TextBWidth(const char *text)
-{
-  char c;
-  int width = 0;
-  while((c = *text++) != 0)
-    {
-      if (c < 33)
-        width += 5;
-      else
-        {
-          Texture *t = tc.GetPtrNum(FontBBaseLump + toupper(c) - 33);
-          width += t->width - 1;
-        }
-    }
-  return width;
-}
-
-int V_TextBHeight(const char *text)
-{
-  return 16;
-}
+//========================================================================
 
 
-//
-//
-//
+
+
+
+
 struct modelvertex_t
 {
   int px;

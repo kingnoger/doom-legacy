@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/09/23 23:21:19  smite-meister
+// HUD updated
+//
 // Revision 1.5  2004/08/12 18:30:29  smite-meister
 // cleaned startup
 //
@@ -128,10 +131,5 @@ public:
 };
 
 extern AutoMap automap;
-
-// Used by ST StatusBar stuff.
-#define AM_MSGHEADER (('a'<<24)+('m'<<16))
-#define AM_MSGENTERED (AM_MSGHEADER | ('e'<<8))
-#define AM_MSGEXITED (AM_MSGHEADER | ('x'<<8))
 
 #endif

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2004/09/23 23:21:20  smite-meister
+// HUD updated
+//
 // Revision 1.15  2004/08/18 14:35:23  smite-meister
 // PNG support!
 //
@@ -59,12 +62,11 @@
 // Revision 1.2  2002/12/03 10:07:13  smite-meister
 // Video unit overhaul begins
 //
-//
-// DESCRIPTION:
-//      handles multiple resolutions, 8bpp/16bpp(highcolor) modes
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Video subsystem. Handles multiple resolutions, 8bpp/16bpp(highcolor) modes,
+/// palettes etc.
 
 #include "doomdef.h"
 
@@ -75,7 +77,7 @@
 #include "console.h"
 #include "command.h"
 #include "am_map.h"
-#include "hu_stuff.h"
+#include "hud.h"
 
 #include "m_argv.h"
 #include "i_video.h"
@@ -348,12 +350,8 @@ void Video::Startup()
   modenum = 0; // not exactly true, but doesn't matter here.
   setmodeneeded = 0;
 
-  // FIXME make a real font system!
-  FontBBaseLump = fc.FindNumForName("FONTB_S")+1;
-
   LoadPalette("PLAYPAL");
   SetPalette(0);
-
 
   //fab highcolor maps
   if (BytesPerPixel == 2)

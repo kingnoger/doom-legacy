@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.39  2004/09/23 23:21:16  smite-meister
+// HUD updated
+//
 // Revision 1.38  2004/09/13 20:43:29  smite-meister
 // interface cleanup, sp map reset fixed
 //
@@ -126,7 +129,7 @@
 
 #include "sounds.h"
 #include "hardware/hw3sound.h" // ugh.
-#include "hu_stuff.h" // HUD
+#include "hud.h"
 #include "tables.h" // angle
 #include "r_main.h" // PointToAngle functions FIXME which do not belong there
 #include "r_sprite.h"

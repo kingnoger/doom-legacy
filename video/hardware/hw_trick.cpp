@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/09/23 23:21:20  smite-meister
+// HUD updated
+//
 // Revision 1.5  2004/08/15 18:08:30  smite-meister
 // palette-to-palette colormaps etc.
 //
@@ -103,6 +106,10 @@
 #include "r_state.h"
 #include "i_system.h"
 
+
+#ifndef M_PI
+# define M_PI 3.14159265358979323846 // matches value in gcc v2 math.h
+#endif
 
 //
 // add a line to a sectors list of lines

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/09/23 23:21:16  smite-meister
+// HUD updated
+//
 // Revision 1.9  2004/09/15 19:23:59  smite-meister
 // bugfixes
 //
@@ -345,13 +348,13 @@ int P_Read_ANIMDEFS(int lump)
   p.RemoveComments(';');
   enum p_state_e {PS_NONE, PS_FLAT, PS_TEX};
   p_state_e state = PS_NONE;
-  int base;
+  int base = 0;
   while (p.NewLine())
     {
       // texture/flat <name>
       // pic <n> tics <t>
       // pic <n> rand <min> <max>
-      char *word, *name;
+      char *word, *name = NULL;
 
       if (state != PS_NONE)
 	{
@@ -447,5 +450,5 @@ int P_Read_ANIMDEFS(int lump)
     I_Error("Too many AnimDefs.");
 
   CONS_Printf("... done. %d animations.\n", count);
-  return n;
+  return count;
 }

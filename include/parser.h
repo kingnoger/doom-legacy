@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/09/23 23:21:19  smite-meister
+// HUD updated
+//
 // Revision 1.3  2004/09/03 16:28:51  smite-meister
 // bugfixes and ZDoom linedef types
 //
@@ -101,11 +104,13 @@ public:
 bool IsNumeric(const char *p);
 int  P_MatchString(const char *p, const char *strings[]);
 
+#ifndef __WIN32__
 /// converts a c-string to upper case
 char *strupr(char *s);
 
 /// converts a c-string to lower case
 char *strlwr(char *s);
+#endif
 
 /// converts up to n chars to upper case
 char *strnupr(char *s, int n);

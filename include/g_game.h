@@ -18,11 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.13  2004/08/12 18:30:29  smite-meister
-// cleaned startup
-//
-// Revision 1.12  2004/07/14 16:13:13  smite-meister
-// cleanup, commands
+// Revision 1.14  2004/09/23 23:21:19  smite-meister
+// HUD updated
 //
 // Revision 1.11  2004/07/13 20:23:37  smite-meister
 // Mod system basics
@@ -38,12 +35,6 @@
 //
 // Revision 1.6  2003/11/12 11:07:26  smite-meister
 // Serialization done. Map progression.
-//
-// Revision 1.5  2003/06/10 22:39:59  smite-meister
-// Bugfixes
-//
-// Revision 1.4  2003/05/11 21:23:52  smite-meister
-// Hexen fixes
 //
 // Revision 1.3  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better

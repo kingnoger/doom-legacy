@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/09/23 23:21:19  smite-meister
+// HUD updated
+//
 // Revision 1.8  2004/09/13 20:43:31  smite-meister
 // interface cleanup, sp map reset fixed
 //
@@ -61,7 +64,7 @@
 
 #include "screen.h"
 #include "console.h"
-#include "hu_stuff.h"
+#include "hud.h"
 #include "m_menu.h"
 #include "s_sound.h"
 #include "sounds.h"

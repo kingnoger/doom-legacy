@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.35  2004/09/23 23:21:16  smite-meister
+// HUD updated
+//
 // Revision 1.34  2004/09/03 16:28:49  smite-meister
 // bugfixes and ZDoom linedef types
 //
@@ -147,13 +150,14 @@
 #include "r_data.h"
 #include "r_draw.h"
 #include "r_main.h"
+#include "v_video.h"
 
 #include "s_sound.h"
 #include "sounds.h"
 
 #include "m_menu.h"
 #include "am_map.h"
-#include "hu_stuff.h"
+#include "hud.h"
 #include "wi_stuff.h"
 #include "f_finale.h"
 #include "f_wipe.h"
@@ -401,7 +405,7 @@ void GameInfo::Display()
     case GS_LEVEL:
       if (game.tic)
         {
-          HU_Erase();
+          hud.HU_Erase();
           if (screenwipe || rendermode != render_soft)
             redrawsbar = true;
         }
@@ -687,9 +691,6 @@ bool GameInfo::Responder(event_t* ev)
       return false;   // always let key up events filter down
 
     case ev_mouse:
-      return true;    // eat events
-
-    case ev_joystick:
       return true;    // eat events
 
     default:

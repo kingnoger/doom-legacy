@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.30  2004/09/23 23:21:20  smite-meister
+// HUD updated
+//
 // Revision 1.29  2004/09/14 21:41:57  hurdler
 // rename "data" to "pixels" (I think it's more appropriate and that's how SDL and OpenGL name such data after all)
 //
@@ -792,34 +795,6 @@ int texturecache_t::GetTextureOrColormap(const char *name, int &colmap, bool tra
 }
 
 
-/*
-int texturecache_t::Get(const char *name, bool substitute)
-{
-  // "NoTexture" marker.
-  if (name[0] == '-')
-    return 0;
-
-  // unfortunate but necessary.
-  char name8[9];
-  strncpy(name8, name, 8);
-  name8[8] = '\0';
-  strupr(name8);
-
-  Texture *t = (Texture *)Cache(name8);
-
-  // if substitute == true, cache replaces missing textures automatically
-  if (!substitute && t == default_item)
-    return -1;
-
-  if (t == default_item)
-    CONS_Printf("Def. texture used for '%s'\n", name);
-
-  return t->id;
-}
-*/
-
-
-
 Texture *texturecache_t::GetPtr(const char *name, bool substitute)
 {
   // "NoTexture" marker.
@@ -834,11 +809,10 @@ Texture *texturecache_t::GetPtr(const char *name, bool substitute)
   strncpy(name8, name, 8);
   name8[8] = '\0';
   strupr(name8);
-  // name8 = pointer to local var... content changes!!!
 
-  // FIXME but how is this possible????
   Texture *t = (Texture *)Cache(name8);
   /*
+    FIXME remove! should be already fixed!
   Texture *t2 = (Texture *)Cache(name);
   if (t != t2)
     CONS_Printf("!!!!! '%s', '%s'\n", name8, name);

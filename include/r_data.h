@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2004/09/23 23:21:19  smite-meister
+// HUD updated
+//
 // Revision 1.14  2004/09/14 21:41:57  hurdler
 // rename "data" to "pixels" (I think it's more appropriate and that's how SDL and OpenGL name such data after all)
 //
@@ -69,7 +72,6 @@
 #include "m_fixed.h"
 #include "z_cache.h"
 
-class GLTexture;
 
 /// posts are vertical runs of nonmasked source pixels in a patch_t
 struct post_t
@@ -83,23 +85,6 @@ struct post_t
 /// column_t is a list of 0 or more post_t, (byte)-1 terminated
 typedef post_t column_t;
 
-
-
-/// flags for drawing Textures
-enum texture_draw_e
-{
-  V_SLOC     =  0x10000,   // scale starting location
-  V_SSIZE    =  0x20000,   // scale size
-  V_FLIPX    =  0x40000,   // mirror the patch in the vertical direction
-  V_MAP      =  0x80000,   // use a colormap
-  V_WHITEMAP = 0x100000,   // white colormap (for V_DrawString)
-  V_TL       = 0x200000,   // translucency using transmaps
-
-  V_SCALE = V_SLOC | V_SSIZE,
-
-  V_FLAGMASK = 0xFFFF0000,
-  V_SCREENMASK = 0xF
-};
 
 
 /// \brief ABC for all 2D bitmaps.
@@ -133,7 +118,7 @@ public:
   {
     byte  *pixels;
 #ifdef HWRENDER
-    GLTexture *gltex;  // for hardware renderer
+    class GLTexture *gltex;  // for hardware renderer
 #endif
   };
 

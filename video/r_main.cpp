@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2004/09/23 23:21:20  smite-meister
+// HUD updated
+//
 // Revision 1.22  2004/09/03 16:28:52  smite-meister
 // bugfixes and ZDoom linedef types
 //
@@ -178,7 +181,7 @@
 #include "p_camera.h"
 
 #include "r_render.h"
-#include "hu_stuff.h"
+#include "hud.h"
 #include "am_map.h"
 
 #include "r_local.h"

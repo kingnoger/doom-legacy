@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2004/09/23 23:21:16  smite-meister
+// HUD updated
+//
 // Revision 1.15  2004/09/20 22:42:48  jussip
 // Joystick axis binding works. New joystick code ready for use.
 //
@@ -89,7 +92,7 @@
 #include<SDL/SDL.h>
 
 extern vector<SDL_Joystick*> joysticks;
-extern vector<joybinding> joybindings;
+extern vector<joybinding_t> joybindings;
 
 
 #define MAXMOUSESENSITIVITY 40 // sensitivity steps
@@ -126,13 +129,9 @@ consvar_t cv_mousesensy2  = {"mousesensy2","10",CV_SAVE,mousesens_cons_t};
 #endif
 
 
-//consvar_t cv_joystickfreelook = {"joystickfreelook" ,"0",CV_SAVE,CV_OnOff};
-
-
 //========================================================================
 
 static int mousex, mousey, mouse2x, mouse2y;
-static int joyxmove, joyymove;
 
 // current state of the keys : true if down
 byte gamekeydown[NUMINPUTS];
@@ -416,22 +415,21 @@ void ticcmd_t::Build(bool primary, int realtics)
     }
 
   // Finally the joystick.
-  for(i=0; i<(int)joybindings.size(); i++) {
-    joybinding j = joybindings[i];
-    int value;
+  for (i=0; i < int(joybindings.size()); i++)
+    {
+      joybinding_t j = joybindings[i];
 
-    // FIXME add check for console player number.
-    value = (int) SDL_JoystickGetAxis(joysticks[j.joynum], j.axisnum);
-    value /= j.scale;
-
-    switch(j.action) {
-    case ja_pitch  : pitch = value; break;
-    case ja_move   : forward += value; break;
-    case ja_turn   : yaw += value; break;
-    case ja_strafe : side += value; break;
-    case num_joyactions : break;
+      // FIXME add check for console player number.
+      int value = int(j.scale * SDL_JoystickGetAxis(joysticks[j.joynum], j.axisnum));
+      switch (j.action)
+	{
+	case ja_pitch  : pitch = value; break;
+	case ja_move   : forward += value; break;
+	case ja_turn   : yaw += value; break;
+	case ja_strafe : side += value; break;
+	default: break;
+	}
     }
-  }
 
   if (forward > MAXPLMOVE)
     forward = MAXPLMOVE;
@@ -515,11 +513,6 @@ void G_MapEventsToControls(event_t *ev)
       mousey = int(ev->data3*((cv_mousesensy.value*cv_mousesensy.value)/110.0f + 0.1));
       break;
 
-    case ev_joystick:        // buttons are virtual keys
-      joyxmove = ev->data2;
-      joyymove = ev->data3;
-      break;
-
     case ev_mouse2:           // buttons are virtual keys
       mouse2x = int(ev->data2*((cv_mousesensx2.value*cv_mousesensx2.value)/110.0f + 0.1));
       mouse2y = int(ev->data3*((cv_mousesensy2.value*cv_mousesensy2.value)/110.0f + 0.1));
@@ -527,7 +520,6 @@ void G_MapEventsToControls(event_t *ev)
 
     default:
       break;
-
     }
 
   int i, flag;
@@ -906,16 +898,14 @@ void G_SaveKeySetting(FILE *f)
 }
 
 //! Writes the axis binding commands to the config file.
-
-void G_SaveJoyAxisBindings(FILE *f) {
-  unsigned int i;
-  joybinding j;
-  for(i=0; i<joybindings.size(); i++) {
-    j = joybindings[i];
-    // Are quotes necessary? I just copied this from above.
-    fprintf(f, "bindjoyaxis \"%d\" \"%d\" \"%d\" \"%d\" \"%d\"\n",
-	    j.playnum, j.joynum, j.axisnum, int(j.action), j.scale);
-  }
+void G_SaveJoyAxisBindings(FILE *f)
+{
+  for (unsigned i=0; i<joybindings.size(); i++)
+    {
+      joybinding_t j = joybindings[i];
+      fprintf(f, "bindjoyaxis %d %d %d %d %f\n",
+	      j.playnum, j.joynum, j.axisnum, int(j.action), j.scale);
+    }
 }
 
 void G_CheckDoubleUsage(int keynum)
@@ -985,4 +975,69 @@ void Command_Setcontrol2_f()
     }
 
   setcontrol(gamecontrol2,na);
+}
+
+
+//! Magically converts a console command to a joystick axis binding.
+void Command_BindJoyaxis_f()
+{
+  joybinding_t j;
+  unsigned int i;
+
+  int na = COM_Argc();
+
+  if(na == 1) { // Print bindings.
+    if(joybindings.size() == 0) {
+      CONS_Printf("No joy axis bindings.\n");
+      return;
+    }
+    CONS_Printf("Current axis bindings.\n");
+    for(unsigned int i=0; i<joybindings.size(); i++) {
+      j = joybindings[i];
+      CONS_Printf("%d %d %d %d %f\n", j.playnum, j.joynum, j.axisnum,
+		  (int)j.action, j.scale);
+    }
+    return;
+  }
+
+  if (na < 5)
+    {
+    CONS_Printf("bindjoyaxis [playnum] [joynum] [axisnum] [action] [scale]\n");
+    return;
+  }
+
+  j.playnum = atoi(COM_Argv(1));
+  j.joynum  = atoi(COM_Argv(2));
+  j.axisnum = atoi(COM_Argv(3));
+  j.action  = joyactions_e(atoi(COM_Argv(4)));
+  if (na == 6)
+    j.scale = atof(COM_Argv(5));
+  else
+    j.scale = 1.0f;
+
+  // Check the validity of the binding.
+  if(j.joynum < 0 || j.joynum >= (int)joysticks.size()) {
+    CONS_Printf("Attemting to bind non-existant joystick %d.\n", j.joynum);
+    return;
+  }
+  if(j.axisnum < 0 || j.axisnum >= SDL_JoystickNumAxes(joysticks[j.joynum])) {
+    CONS_Printf("Attemting to bind non-existant axis %d.\n", j.axisnum);
+    return;
+  }
+  if(j.action < 0 || j.action >= num_joyactions) {
+    CONS_Printf("Attemting to bind non-existant action %d.\n", int(j.action));
+    return;
+  }
+
+  // Overwrite existing binding, if any. Otherwise just append.
+  for(i=0; i<joybindings.size(); i++) {
+    joybinding_t j2 = joybindings[i];
+    if(j2.joynum == j.joynum && j2.axisnum == j.axisnum) {
+      joybindings[i] = j;
+      CONS_Printf("Joystick binding overwritten.\n");
+      return;
+    }
+  }
+  joybindings.push_back(j);
+  CONS_Printf("Joystick binding added.\n");
 }

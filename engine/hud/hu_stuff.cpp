@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2004/09/23 23:21:18  smite-meister
+// HUD updated
+//
 // Revision 1.18  2004/08/12 18:30:27  smite-meister
 // cleaned startup
 //
@@ -72,14 +75,15 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Heads Up Displays, cleaned up (hasta la vista hu_lib)
+/// \brief Heads Up Display.
 
 #include "doomdef.h"
 #include "command.h"
 #include "cvars.h"
+#include "console.h"
 
 #include "d_event.h"
-#include "hu_stuff.h"
+#include "hud.h"
 
 #include "g_game.h"
 #include "g_player.h"
@@ -92,7 +96,6 @@
 // Data.
 #include "dstrings.h"
 #include "r_local.h"
-#include "wi_stuff.h"  // for drawrankings
 
 #include "keys.h"
 #include "v_video.h"
@@ -100,7 +103,7 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
-#include "console.h"
+
 #include "am_map.h"
 #include "d_main.h"
 
@@ -108,9 +111,10 @@
 #include "hardware/hwr_render.h"
 #endif
 
-HUD hud;
 
-void HU_SetTip(const char *tip, int displaytics);
+//======================================================================
+//        HUD-related consvars
+//======================================================================
 
 void ShowMessage_OnChange()
 {
@@ -133,45 +137,34 @@ consvar_t cv_stbaroverlay     = {"hud_overlay", "kahmf", CV_SAVE|CV_CALL, NULL, 
 CV_PossibleValue_t showmessages_cons_t[]={{0,"Off"},{1,"On"},{2,"Not All"},{0,NULL}};
 consvar_t cv_showmessages     = {"showmessages","1",CV_SAVE | CV_CALL | CV_NOINIT,showmessages_cons_t,ShowMessage_OnChange};
 consvar_t cv_showmessages2    = {"showmessages2","1",CV_SAVE | CV_CALL | CV_NOINIT,showmessages_cons_t,ShowMessage_OnChange};
-
-
-
-// coords are scaled
-#define HU_INPUTX       0
-#define HU_INPUTY       0
-
-
-//-------------------------------------------
-//              heads up font
-//-------------------------------------------
-bool                 chat_on;
-
-static char             w_chat[HU_MAXMSGLEN];
-
-static char             hu_tick;
-
-//-------------------------------------------
-//              misc vars
-//-------------------------------------------
-
-consvar_t*   chat_macros[10];
-
-//added:16-02-98: crosshair 0=off, 1=cross, 2=angle, 3=point
-static Texture* crosshair[HU_CROSSHAIRS]; // precached crosshair graphics
-
-static Texture* PatchRankings;
-
-// -------
-// protos.
-// -------
-void   HU_drawDeathmatchRankings();
-void   HU_drawCrosshair();
-static void HU_DrawTip();
+consvar_t *chat_macros[10];
 
 
 //======================================================================
 //                          HEADS UP DISPLAY
 //======================================================================
+
+HUD hud;
+
+class HudTip
+{
+  string tip;
+public:
+  int lines;
+  int time;
+
+public:
+  HudTip(string &tip, int time);
+  void Draw(int x, int y);
+};
+
+static char hu_tick;
+
+
+#define HU_CROSSHAIRS 3
+static Texture* crosshair[HU_CROSSHAIRS]; // precached crosshair graphics
+static Texture* PatchRankings;
+
 
 HUD::HUD()
 {
@@ -198,21 +191,18 @@ void HUD::Startup()
 }
 
 
-//-------------------------------------------------------------------
-// was ST_Init, HU_Init
-//  Initializes the HUD
-//  sets the defaults border patch for the window borders.
 void ST_LoadHexenData();
 void ST_LoadHereticData();
 void ST_LoadDoomData();
 
+//  Initializes the HUD
+//  sets the defaults border patch for the window borders.
 void HUD::Init()
 {
   int startlump, endlump;
-  int  i;
-
-  // cache the HUD font for entire game execution
   // TODO add legacy default font (in legacy.wad)
+
+  // "hud font"
   switch (game.mode)
     {
     case gm_heretic:
@@ -225,26 +215,27 @@ void HUD::Init()
       endlump =   fc.GetNumForName("STCFN095");
     }
 
-  // NOTE! Heretic FONTAxx ends with FONTA59, HU_FONTSIZE and STCFNxx are longer!
-  for (i=0; i <= endlump-startlump; i++) // endlump - startlump < HU_FONTSIZE
-    font[i] = tc.GetPtrNum(i + startlump);
-  // fill the rest with the first character
-  for ( ; i < HU_FONTSIZE; i++)
-    font[i] = tc.GetPtrNum(startlump);
+  hud_font = new font_t(startlump, endlump);
+
+  // "big font"
+  if (fc.FindNumForName("FONTB_S") < 0)
+    big_font = NULL;
+  else
+    {
+      startlump = fc.FindNumForName("FONTB01");
+      endlump   = fc.GetNumForName("FONTB59");
+      big_font = new font_t(startlump, endlump);
+    }
 
   //----------- cache all legacy.wad stuff here
 
   startlump = fc.GetNumForName("CROSHAI1");
-  for (i=0; i<HU_CROSSHAIRS; i++)
+  for (int i=0; i<HU_CROSSHAIRS; i++)
     crosshair[i] = tc.GetPtrNum(startlump + i);
 
   PatchRankings = tc.GetPtr("RANKINGS");
 
   //----------- legacy.wad stuff ends
-
-  // Damn! sbo* icons are in pic_t format, not patch_t!
-  // drawn using V_DrawScalePic()
-  // using doom.wad or heretic.wad sprites instead...
 
   switch (game.mode)
     {
@@ -268,16 +259,10 @@ void HUD::Init()
 }
 
 
-char HU_dequeueChatChar();
-void HU_queueChatChar(char c);
-bool HU_keyInChatString(char *s, char ch);
 
-//--------------------------------------
-//  Returns true if key eaten
-//
 bool HUD::Responder(event_t *ev)
 {
-  bool  eatkey = false;
+  bool eatkey = false;
 
   if (ev->type != ev_keydown)
     return false;
@@ -287,12 +272,10 @@ bool HUD::Responder(event_t *ev)
   if (!chat_on)
     {
       // enter chat mode
-      if (ev->data1 == gamecontrol[gc_talkkey][0]
-          || ev->data1 == gamecontrol[gc_talkkey][1])
+      if (ev->data1 == gamecontrol[gc_talkkey][0] || ev->data1 == gamecontrol[gc_talkkey][1])
         {
-          eatkey = chat_on = true;
-          w_chat[0] = 0;
-          HU_queueChatChar(HU_BROADCAST);
+          chat_on = true;
+	  return true;
         }
     }
   else
@@ -312,99 +295,42 @@ bool HUD::Responder(event_t *ev)
           if (c > 9)
             return false;
 
-          char *macromessage = chat_macros[c]->str;
-
-          // kill last message with a '\n'
-          HU_queueChatChar(KEY_ENTER); // DEBUG!!!
+          // kill (and send) the last message
+	  SendChat();
 
           // send the macro message
-          while (*macromessage)
-            HU_queueChatChar(*macromessage++);
-          HU_queueChatChar(KEY_ENTER);
-
-          // leave chat mode and notify that it was sent
-          chat_on = false;
-          eatkey = true;
+	  chat_msg = chat_macros[c]->str;
+	  SendChat();
+	  return true;
         }
       else
         {
-          eatkey = HU_keyInChatString(w_chat,c);
-          if (eatkey)
+	  if (c >= ' ' && c <= '_')
+	    {
+	      if (chat_msg.length() < 80)
+		chat_msg.push_back(c);
+	      return true;
+	    }
+	  else if (c == KEY_BACKSPACE)
+	    {
+	      if (!chat_msg.empty())
+		chat_msg.erase(--chat_msg.end());
+	      return true;
+	    }
+          else if (c == KEY_ENTER)
             {
-              // static unsigned char buf[20]; // DEBUG
-              HU_queueChatChar(c);
-
-              // sprintf(buf, "KEY: %d => %d", ev->data1, c);
-              //      plr->message = buf;
-            }
-          if (c == KEY_ENTER)
-            {
-              chat_on = false;
+	      SendChat();
+	      return true;
             }
           else if (c == KEY_ESCAPE)
-            chat_on = false;
+	    {
+	      chat_on = false;
+	      return true;
+	    }
         }
     }
 
-  if (eatkey)
-    return true;
-
-  // ST_ part
-  if (ev->type == ev_keyup)
-    {
-      // Filter automap on/off : activates the statusbar while automap is active
-      if( (ev->data1 & 0xffff0000) == AM_MSGHEADER )
-        {
-          switch(ev->data1)
-            {
-            case AM_MSGENTERED:
-              st_refresh = true;        // force refresh of status bar
-              break;
-
-            case AM_MSGEXITED:
-              break;
-            }
-        }
-    }
-  return false;
-}
-
-
-
-
-//======================================================================
-//                            EXECUTION
-//======================================================================
-
-//  Handles key input and string input
-//
-bool HU_keyInChatString(char *s, char ch)
-{
-  int l;
-
-  if (ch >= ' ' && ch <= '_')
-    {
-      l = strlen(s);
-      if (l<HU_MAXMSGLEN-1)
-        {
-          s[l++]=ch;
-          s[l]=0;
-          return true;
-        }
-      return false;
-    }
-  else if (ch == KEY_BACKSPACE)
-    {
-      l = strlen(s);
-      if (l)
-        s[--l]=0;
-      else
-        return false;
-    }
-  else if (ch != KEY_ENTER)
-    return false; // did not eat key
-
-  return true; // ate the key
+  return eatkey;
 }
 
 
@@ -413,8 +339,6 @@ void HUD::Ticker()
 {
   if (dedicated)
     return;
-
-  //if (!st_active) return;
 
   hu_tick++;
   hu_tick &= 7; // currently only to blink chat input cursor
@@ -431,8 +355,6 @@ void HUD::Ticker()
   if ((game.mode == gm_heretic) && (gametic & 1))
     ChainWiggle = M_Random()&1;
   */
-
-  st_randomnumber = M_Random();
 
   // update widget data
   UpdateWidgets();
@@ -454,7 +376,7 @@ void HUD::Ticker()
 		CONS_Printf("%s\n", m.msg.c_str());
 		break;
 	      case PlayerInfo::M_HUD:
-		HU_SetTip(m.msg.c_str(), m.priority);
+		tips.push_back(new HudTip(m.msg, m.priority));
 		break;
 	      }
 
@@ -482,7 +404,7 @@ void HUD::Ticker()
 		CONS_Printf("\4%s\n", m.msg.c_str());
 		break;
 	      case PlayerInfo::M_HUD:
-		HU_SetTip(m.msg.c_str(), m.priority);
+		tips.push_back(new HudTip(m.msg, m.priority));
 		break;
 	      }
 
@@ -504,107 +426,138 @@ void HUD::Ticker()
 }
 
 
-#define QUEUESIZE               128
+//======================================================================
+//                             CHAT
+//======================================================================
 
-static char     chatchars[QUEUESIZE];
-static int      head = 0;
-static int      tail = 0;
-
-//
-//
-char HU_dequeueChatChar()
+void HUD::SendChat()
 {
-    char c;
+  // send the message, get out of chat mode
+  if (chat_msg.length() > 3)
+    COM_BufInsertText(va("say %s", chat_msg.c_str()));
 
-    if (head != tail)
-    {
-        c = chatchars[tail];
-        tail = (tail + 1) & (QUEUESIZE-1);
-    }
-    else
-    {
-        c = 0;
-    }
-
-    return c;
+  chat_msg.clear();
+  chat_on = false;
 }
-
-//
-//
-void HU_queueChatChar(char c)
-{
-  if (((head + 1) & (QUEUESIZE-1)) == tail)
-    {
-      consoleplayer->SetMessage(HUSTR_MSGU);      //message not sent
-    }
-    else
-    {
-        if (c == KEY_BACKSPACE)
-        {
-            if(tail!=head)
-                head = (head - 1) & (QUEUESIZE-1);
-        }
-        else
-        {
-            chatchars[head] = c;
-            head = (head + 1) & (QUEUESIZE-1);
-        }
-    }
-
-    // send automaticly the message (no more chat char)
-    if(c==KEY_ENTER)
-    {
-        char buf[255],c;
-        int i=0;
-
-        do {
-            c=HU_dequeueChatChar();
-            buf[i++]=c;
-        } while(c);
-        if(i>3)
-            COM_BufInsertText (va("say %s",buf));
-    }
-}
-
 
 
 //======================================================================
 //                         HEADS UP DRAWING
 //======================================================================
 
-//  Draw chat input
-//
-static void HU_DrawChat()
+
+// draw the Crosshair, at the exact center of the view.
+static void HU_drawCrosshair()
 {
-  int c = 0;
-  int i = 0;
-  int y = HU_INPUTY;
-  while (w_chat[i])
+#warning  FIXME: Hurdler, must be replaced by something compatible with the new renderer
+  int i = cv_crosshair.value & 3;
+  if (!i)
+    return;
+
+  int y = viewwindowy + (viewheight>>1);
+
+  crosshair[i-1]->Draw(vid.width >> 1, y, V_TL | V_SSIZE);
+
+  if (cv_splitscreen.value)
     {
-      //Hurdler: isn't it better like that?
-      V_DrawCharacter(HU_INPUTX + (c<<3), y, w_chat[i++] | 0x80);
-
-      c++;
-      if (c>=(vid.width>>3))
-        {
-          c = 0;
-          y+=8;
-        }
+      y += viewheight;
+      crosshair[i-1]->Draw(vid.width >> 1, y, V_TL | V_SSIZE);
     }
+}
 
-  if (hu_tick<4)
-    V_DrawCharacter(HU_INPUTX + (c<<3), y, '_' | 0x80);
+
+// Draw a column of rankings stored in fragtable
+//  Quick-patch for the Cave party 19-04-1998 !!
+void HU_DrawRanking(const char *title, int x, int y, fragsort_t *fragtable, int scorelines, bool large, int white)
+{
+  int colornum;
+
+  if (game.mode == gm_heretic)
+    colornum = 230;
+  else
+    colornum = 0x78;
+
+  if (title)
+    hud_font->DrawString(x, y-14, title);
+
+  // draw rankings
+  extern byte *translationtables;
+  extern byte *colormaps;
+
+  for (int i=0; i<scorelines; i++)
+    {
+      // draw color background
+      int color = fragtable[i].color;
+      if (!color)
+        color = *((byte *)colormaps + colornum);
+      else
+        color = *((byte *)translationtables - 256 + (color<<8) + colornum);
+      V_DrawFill(x-1, y-1, large ? 40 : 26, 9, color);
+
+      // draw frags count
+      char num[12];
+      sprintf(num, "%3i", fragtable[i].count);
+      hud_font->DrawString(x+(large ? 32 : 24) - hud_font->StringWidth(num), y, num);
+
+      // draw name
+      hud_font->DrawString(x+(large ? 64 : 29), y, fragtable[i].name,
+			   ((fragtable[i].num == white) ? V_WHITEMAP : 0) | V_SCALE);
+
+      y += 12;
+      if (y >= BASEVIDHEIGHT)
+        break;            // dont draw past bottom of screen
+    }
+}
+
+
+//  draw Deathmatch Rankings
+void HU_drawDeathmatchRankings()
+{
+  fragsort_t  *fragtab;
+
+  // draw the ranking title panel
+  PatchRankings->Draw((BASEVIDWIDTH - PatchRankings->width)/2, 5, V_SCALE);
+
+  // TODO alloc fragtab here...
+  int scorelines = game.GetFrags(&fragtab, 0);
+
+  //Fab:25-04-98: when you play, you quickly see your frags because your
+  //  name is displayed white, when playback demo, you quicly see who's the
+  //  view.
+  PlayerInfo *whiteplayer = (game.state == GameInfo::GS_DEMOPLAYBACK) ? displayplayer : consoleplayer;
+
+  if (scorelines > 9)
+    scorelines = 9; //dont draw past bottom of screen, show the best only
+
+  if (cv_teamplay.value == 0)
+    HU_DrawRanking(NULL, 80, 70, fragtab, scorelines, true, whiteplayer->number);
+  else
+    {
+      // draw the frag to the right
+      //        HU_drawRanking("Individual",170,70,fragtab,scorelines,true,whiteplayer);
+
+      // and the team frag to the left
+      HU_DrawRanking("Teams", 80, 70, fragtab, scorelines, true, whiteplayer->team);
+    }
+  delete [] fragtab;
 }
 
 
 //
-//  Heads up displays drawer, call each frame
+//  Heads up display drawer, called each frame
 //
 void HUD::Draw(bool redrawsbar)
 {
+#define HU_INPUTX 0
+#define HU_INPUTY 0
   // draw chat string plus cursor
   if (chat_on)
-    HU_DrawChat();
+    {
+      hud_font->DrawString(HU_INPUTX, HU_INPUTY, chat_msg.c_str(), V_SCALE | V_WHITEMAP);
+      int cx = HU_INPUTX + hud_font->StringWidth(chat_msg.c_str());
+      if (hu_tick < 4)
+	hud_font->DrawCharacter(cx, HU_INPUTY, '_' | 0x80);
+    }
 
   // draw deathmatch rankings
   if (drawscore)
@@ -612,241 +565,200 @@ void HUD::Draw(bool redrawsbar)
 
   // draw the crosshair, not with chasecam
   if (!automap.active && cv_crosshair.value && !cv_chasecam.value)
-    HU_drawCrosshair ();
+    HU_drawCrosshair();
 
-  HU_DrawTip();
-  HU_DrawFSPics();
+  DrawTips();
+  DrawPics();
 
   ST_Drawer(redrawsbar);
 }
 
+
+
 //======================================================================
 //                          PLAYER TIPS
 //======================================================================
-#define MAXTIPLINES 20
-char    *tiplines[MAXTIPLINES];
-int     numtiplines = 0;
-int     tiptime = 0;
-int     largestline = 0;
 
 
-
-void HU_SetTip(const char *tip, int displaytics)
+HudTip::HudTip(string &text, int tiptime)
 {
-  int    i;
-  char *ctipline, *ctipline_p;
+  //x = (BASEVIDWIDTH - largestline) / 2
+  //y = ((BASEVIDHEIGHT - (numlines * 8)) / 2
 
+  tip = text;
+  const char *t = tip.c_str();
+  time = tiptime;
+  lines = 1;
+  int n = tip.length();
+  int last_space = -1;
+  int cline = 0;
 
-  for(i = 0; i < numtiplines; i++)
-    Z_Free(tiplines[i]);
-
-
-  numtiplines = 0;
-
-  ctipline = ctipline_p = (char *)Z_Malloc(128, PU_STATIC, NULL);
-  *ctipline = 0;
-  largestline = 0;
-
-  while(*tip)
-  {
-    if(*tip == '\n' || strlen(ctipline) + 2 >= 128 || V_StringWidth(ctipline) + 16 >= BASEVIDWIDTH)
+  // TODO write a better word wrap algorithm (using newlines)
+  // crappy word wrap
+  for (int i=0; i<n; i++)
     {
-      if(numtiplines > MAXTIPLINES)
-        break;
-      if(V_StringWidth(ctipline) > largestline)
-        largestline = V_StringWidth(ctipline);
+      if (tip[i] == '\n')
+	{
+	  lines++;
+	  cline = i + 1;
+	  last_space = -1;
+	  continue;
+	}
 
-      tiplines[numtiplines] = ctipline;
-      ctipline = ctipline_p = (char *)Z_Malloc(128, PU_STATIC, NULL);
-      *ctipline = 0;
-      numtiplines ++;
-    }
-    else
-    {
-      *ctipline_p = *tip;
-      ctipline_p++;
-      *ctipline_p = 0;
-    }
-    tip++;
+      if (isspace(tip[i]))
+	last_space = i;
 
-    if(!*tip)
-    {
-      if(V_StringWidth(ctipline) > largestline)
-        largestline = V_StringWidth(ctipline);
-      tiplines[numtiplines] = ctipline;
-      numtiplines ++;
+      int clen = i - cline;
+      if (clen >= 128 || hud_font->StringWidth(&t[cline], clen) + 16 >= BASEVIDWIDTH)
+	{
+	  if (last_space == -1 || i - last_space > 32)
+	    {
+	      tip[i] = '\n'; // mangle really long words...
+	      i--;
+	    }
+	  else
+	    {
+	      tip[last_space] = '\n';
+	      i = last_space - 1;
+	    }
+	  continue;
+	}
     }
-  }
-
-  tiptime = displaytics;
 }
 
 
 
-
-static void HU_DrawTip()
+void HudTip::Draw(int x, int y)
 {
-  int    i;
-  if(!numtiplines) return;
-  if(!tiptime)
-  {
-    for(i = 0; i < numtiplines; i++)
-      Z_Free(tiplines[i]);
-    numtiplines = 0;
-    return;
-  }
-  tiptime--;
-
-
-  for(i = 0; i < numtiplines; i++)
-  {
-    V_DrawString((BASEVIDWIDTH - largestline) / 2,
-                 ((BASEVIDHEIGHT - (numtiplines * 8)) / 2) + ((i + 1) * 8),
-                 0,
-                 tiplines[i]);
-  }
+  time--;
+  hud_font->DrawString(x, y, tip.c_str());
 }
 
 
-void HU_ClearTips()
+
+void HUD::DrawTips()
 {
-  int    i;
-
-  for(i = 0; i < numtiplines; i++)
-    Z_Free(tiplines[i]);
-  numtiplines = 0;
-
-  tiptime = 0;
+  int cy = 32; // cursor y
+  list<HudTip *>::iterator i, j;
+  for (i = tips.begin(); i != tips.end(); i = j)
+    {
+      j = i++;
+      HudTip *h = *i;
+      if (h->time > 0)
+	{
+	  h->Draw(32, cy);
+	  cy += h->lines * 8;
+	}
+      else
+	{
+	  delete h;
+	  tips.erase(i);
+	}
+    }
 }
+
 
 
 //======================================================================
 //                           FS HUD Grapics!
 //======================================================================
-typedef struct
+
+class HudPic
 {
-  int       lumpnum;
-  int       xpos;
-  int       ypos;
-  Texture   *data;
-  bool   draw;
-} fspic_t;
+protected:
+  int      xpos, ypos;
+  Texture *data;
 
-fspic_t*   piclist = NULL;
-int        maxpicsize = 0;
+public:
+  bool     draw;
+
+public:
+  void Set(int lump, int x, int y)
+  {
+    xpos = x;
+    ypos = y;
+    data = tc.GetPtrNum(lump);
+    draw = true;
+  };
+
+  void Draw()
+  {
+    if (!draw)
+      return;
+    if (xpos >= vid.width || ypos >= vid.height)
+      return;
+    if ((xpos + data->width) < 0 || (ypos + data->height) < 0)
+      return;
+
+    data->Draw(xpos, ypos, V_SCALE);
+  };
+};
 
 
-//
-// HU_InitFSPics
-// This function is called when Doom starts and every time the piclist needs
-// to be expanded.
-void HU_InitFSPics()
+// creates a new HUD picture, returns a handle
+int HUD::GetFSPic(int lumpnum, int x, int y)
 {
-  int  newstart, newend, i;
+  int n = pics.size();
 
-  if(!maxpicsize)
+  // find the first free slot
+  for (int i = 0; i < n; i++)
   {
-    newstart = 0;
-    newend = maxpicsize = 128;
-  }
-  else
-  {
-    newstart = maxpicsize;
-    newend = maxpicsize = (maxpicsize * 2);
-  }
-
-  piclist = (fspic_t *)realloc(piclist, sizeof(fspic_t) * maxpicsize);
-  for(i = newstart; i < newend; i++)
-  {
-    piclist[i].lumpnum = -1;
-    piclist[i].data = NULL;
-  }
-}
-
-
-int  HU_GetFSPic(int lumpnum, int xpos, int ypos)
-{
-  int      i;
-
-  if(!maxpicsize)
-    HU_InitFSPics();
-
-  getpic:
-  for(i = 0; i < maxpicsize; i++)
-  {
-    if(piclist[i].lumpnum != -1)
+    if (pics[i])
       continue;
 
-    piclist[i].lumpnum = lumpnum;
-    piclist[i].xpos = xpos;
-    piclist[i].ypos = ypos;
-    piclist[i].draw = false;
+    pics[i] = new HudPic;
+    pics[i]->Set(lumpnum, x, y);
     return i;
   }
 
-  HU_InitFSPics();
-  goto getpic;
+  // no free slots, add a new one
+  pics.push_back(new HudPic);
+  pics[n]->Set(lumpnum, x, y);
+  return n;
 }
 
 
-int   HU_DeleteFSPic(int handle)
+// deletes a HUD picture
+// returns true if there was some problem
+bool HUD::DeleteFSPic(int handle)
 {
-  if(handle < 0 || handle > maxpicsize)
-    return -1;
+  if (handle < 0 || handle >= int(pics.size()) || pics[handle] == NULL)
+    return true;
 
-  piclist[handle].lumpnum = -1;
-  piclist[handle].data = NULL;
-  return 0;
+  delete pics[handle];
+  pics[handle] = NULL;
+  return false;
 }
 
 
-int   HU_ModifyFSPic(int handle, int lumpnum, int xpos, int ypos)
+// modifies an existing HUD picture
+bool HUD::ModifyFSPic(int handle, int lump, int x, int y)
 {
-  if(handle < 0 || handle > maxpicsize)
-    return -1;
+  if (handle < 0 || handle >= int(pics.size()) || pics[handle] == NULL)
+    return true;
 
-  if(piclist[handle].lumpnum == -1)
-    return -1;
-
-  piclist[handle].lumpnum = lumpnum;
-  piclist[handle].xpos = xpos;
-  piclist[handle].ypos = ypos;
-  piclist[handle].data = NULL;
-  return 0;
+  pics[handle]->Set(lump, x, y);
+  return false;
 }
 
 
-int   HU_FSDisplay(int handle, bool newval)
+bool HUD::DisplayFSPic(int handle, bool newval)
 {
-  if(handle < 0 || handle > maxpicsize)
-    return -1;
-  if(piclist[handle].lumpnum == -1)
-    return -1;
+  if (handle < 0 || handle >= int(pics.size()) || pics[handle] == NULL)
+    return true;
 
-  piclist[handle].draw = newval;
-  return 0;
+  pics[handle]->draw = newval;
+  return false;
 }
 
 
-void HU_DrawFSPics()
+void HUD::DrawPics()
 {
-  int       i;
-
-  for(i = 0; i < maxpicsize; i++)
-  {
-    if(piclist[i].lumpnum == -1 || piclist[i].draw == false)
-      continue;
-    if(piclist[i].xpos >= vid.width || piclist[i].ypos >= vid.height)
-      continue;
-
-    if(!piclist[i].data)
-      piclist[i].data = tc.GetPtrNum(piclist[i].lumpnum);
-
-    if((piclist[i].xpos + piclist[i].data->width) < 0 || (piclist[i].ypos + piclist[i].data->height) < 0)
-      continue;
-
-    piclist[i].data->Draw(piclist[i].xpos, piclist[i].ypos, V_SCALE);
-  }
+  int n = pics.size();
+  for (int i = 0; i < n; i++)
+    if (pics[i])
+      pics[i]->Draw();
+      
 }
 
 //======================================================================
@@ -861,26 +773,23 @@ void HU_DrawFSPics()
 //
 static int     oldclearlines;
 
-void HU_Erase()
+void HUD::HU_Erase()
 {
-    int topline;
-    int bottomline;
-    int y,yoffset;
+  int y,yoffset;
 
-    //faB: clear hud msgs on double buffer (Glide mode)
-    bool secondframe;
-    static  int     secondframelines;
+  //faB: clear hud msgs on double buffer (Glide mode)
+  static int secondframelines;
 
-    if (con_clearlines==oldclearlines && !con_hudupdate && !chat_on)
-        return;
+  if (con_clearlines==oldclearlines && !con_hudupdate && !chat_on)
+    return;
 
-    // clear the other frame in double-buffer modes
-    secondframe = (con_clearlines!=oldclearlines);
-    if (secondframe)
-        secondframelines = oldclearlines;
+  // clear the other frame in double-buffer modes
+  bool secondframe = (con_clearlines!=oldclearlines);
+  if (secondframe)
+    secondframelines = oldclearlines;
 
     // clear the message lines that go away, so use _oldclearlines_
-    bottomline = oldclearlines;
+    int bottomline = oldclearlines;
     oldclearlines = con_clearlines;
     if( chat_on )
         if( bottomline < 8 )
@@ -899,7 +808,7 @@ void HU_Erase()
     else
 #endif
     { // software mode copies view border pattern & beveled edges from the backbuffer
-        topline = 0;
+        int topline = 0;
         for (y=topline,yoffset=y*vid.width; y<bottomline ; y++,yoffset+=vid.width)
         {
             if (y < viewwindowy || y >= viewwindowy + viewheight)
@@ -912,166 +821,6 @@ void HU_Erase()
             }
         }
         con_hudupdate = false;      // if it was set..
-    }
-}
-
-
-
-//======================================================================
-//                   IN-LEVEL DEATHMATCH RANKINGS
-//======================================================================
-
-// count frags for each team
-/*
-int HU_CreateTeamFragTbl(fragsort_t *fragtab,int dmtotals[],int fragtbl[MAXPLAYERS][MAXPLAYERS])
-{
-  int i,j,k,scorelines,team;
-
-  scorelines = 0;
-  for (i=0; i<MAXPLAYERS; i++)
-    {
-      if (playeringame[i])
-        {
-          if(cv_teamplay.value==1)
-            team=players[i].skincolor;
-          else
-            team=players[i].skin;
-
-          for(j=0;j<scorelines;j++)
-            if (fragtab[j].num == team)
-              { // found there team
-                if(fragtbl)
-                  {
-                    for(k=0;k<MAXPLAYERS;k++)
-                      if(playeringame[k])
-                        {
-                          if(cv_teamplay.value==1)
-                            fragtbl[team][players[k].skincolor] +=
-                              players[i].frags[k];
-                          else
-                            fragtbl[team][players[k].skin] +=
-                              players[i].frags[k];
-                        }
-                  }
-
-                fragtab[j].count += ST_PlayerFrags(i);
-                if(dmtotals)
-                  dmtotals[team]=fragtab[j].count;
-                break;
-              }
-          if (j==scorelines)
-            {   // team not found add it
-
-              if(fragtbl)
-                for(k=0;k<MAXPLAYERS;k++)
-                  fragtbl[team][k] = 0;
-
-              fragtab[scorelines].count = ST_PlayerFrags(i);
-              fragtab[scorelines].num   = team;
-              fragtab[scorelines].color = players[i].skincolor;
-              fragtab[scorelines].name  = team_names[team];
-
-              if(fragtbl)
-                {
-                  for(k=0;k<MAXPLAYERS;k++)
-                    if(playeringame[k])
-                      {
-                        if(cv_teamplay.value==1)
-                          fragtbl[team][players[k].skincolor] +=
-                            players[i].frags[k];
-                        else
-                          fragtbl[team][players[k].skin] +=
-                            players[i].frags[k];
-                      }
-                }
-
-              if(dmtotals)
-                dmtotals[team]=fragtab[scorelines].count;
-
-              scorelines++;
-            }
-        }
-    }
-  return scorelines;
-}
-*/
-
-
-//
-//  draw Deathmatch Rankings
-//
-void HU_drawDeathmatchRankings()
-{
-  fragsort_t  *fragtab;
-  int          scorelines;
-
-  // draw the ranking title panel
-  PatchRankings->Draw((BASEVIDWIDTH - PatchRankings->width)/2, 5, V_SCALE);
-
-  scorelines = game.GetFrags(&fragtab, 0);
-
-  //Fab:25-04-98: when you play, you quickly see your frags because your
-  //  name is displayed white, when playback demo, you quicly see who's the
-  //  view.
-  PlayerInfo *whiteplayer = (game.state == GameInfo::GS_DEMOPLAYBACK) ? displayplayer : consoleplayer;
-
-  if (scorelines>9)
-    scorelines = 9; //dont draw past bottom of screen, show the best only
-
-  if (cv_teamplay.value == 0)
-    WI_drawRanking(NULL,80,70,fragtab,scorelines,true, whiteplayer->number);
-  else
-    {
-      // draw the frag to the right
-      //        WI_drawRanking("Individual",170,70,fragtab,scorelines,true,whiteplayer);
-
-      // and the team frag to the left
-      WI_drawRanking("Teams",80,70,fragtab,scorelines,true, whiteplayer->team);
-    }
-  delete [] fragtab;
-}
-
-
-// draw the Crosshair, at the exact center of the view.
-
-#if 0 //FIXME: Hurdler, must be replaced by something compatible with the new renderer
-#ifdef HWRENDER
-extern float gr_basewindowcentery;
-extern float gr_viewheight;
-#endif
-#endif
-
-void HU_drawCrosshair()
-{
-  int i, y;
-
-  i = cv_crosshair.value & 3;
-  if (!i)
-    return;
-
-#if 0 //FIXME: Hurdler, must be replaced by something compatible with the new renderer
-#ifdef HWRENDER
-  if (rendermode != render_soft)
-    y = int(gr_basewindowcentery);
-  else
-#endif
-#endif
-    y = viewwindowy+(viewheight>>1);
-
-  crosshair[i-1]->Draw(vid.width >> 1, y, V_TL | V_SSIZE);
-
-  if (cv_splitscreen.value)
-    {
-#if 0 //FIXME: Hurdler, must be replaced by something compatible with the new renderer
-#ifdef HWRENDER
-      if ( rendermode != render_soft )
-        y += int(gr_viewheight);
-      else
-#endif
-#endif
-        y += viewheight;
-
-      crosshair[i-1]->Draw(vid.width >> 1, y, V_TL | V_SSIZE);
     }
 }
 

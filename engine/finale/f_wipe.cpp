@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/09/23 23:21:17  smite-meister
+// HUD updated
+//
 // Revision 1.5  2004/08/19 19:42:41  smite-meister
 // bugfixes
 //
@@ -33,11 +36,10 @@
 // Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
 // Initial import into CVS (v1.29 pr3)
 //
-//
-// DESCRIPTION:
-//   Mission begin melt/wipe screen special effect.
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Mission begin melt/wipe screen special effect.
 
 #include <string.h>
 

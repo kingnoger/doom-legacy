@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/09/23 23:21:20  smite-meister
+// HUD updated
+//
 // Revision 1.10  2004/08/29 20:48:50  smite-meister
 // bugfixes. wow.
 //
@@ -124,10 +127,10 @@
 
 #include "r_local.h"
 #include "r_state.h"
-#include "hu_stuff.h"
+#include "hud.h"
 #include "i_video.h"
 #include "v_video.h"
-#include "console.h" //Som: Until I get buffering finished
+//#include "console.h" //Som: Until I get buffering finished
 
 #include "w_wad.h"
 #include "z_zone.h"

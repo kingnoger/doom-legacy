@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/09/23 23:21:19  smite-meister
+// HUD updated
+//
 // Revision 1.7  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
 //
@@ -168,10 +171,7 @@ class Menu
   friend class MsgBox;
 private:
   // video and audio resources
-  // FIXME make a real font system, fix v_video.cpp (text output)
-  static int   menufontbase;
-  static class Texture **smallfont;
-
+  static class font_t *font;
 
   static short AnimCount;  ///< skull animation counter
   static short WhichSkull; ///< which skull to draw

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/09/23 23:21:20  smite-meister
+// HUD updated
+//
 // Revision 1.6  2004/08/29 13:50:23  hurdler
 // minor update
 //
@@ -464,13 +467,13 @@ void HWRend::DrawAMline(fline_t* fl, int color)
 
 #include <stdio.h>
 #include <signal.h>
-#include <execinfo.h>
+//#include <execinfo.h>
 
 // Hurdler: helper function to show who called who (it's probably not portable and do not work
 //          the same with all GCC versions, so it can be safely commented out if necessary)
 void show_stackframe()
 {
-#if 1
+#if 0
   int i;
   void *trace[16];
 

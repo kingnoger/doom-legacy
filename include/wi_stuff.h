@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/09/23 23:21:19  smite-meister
+// HUD updated
+//
 // Revision 1.6  2004/08/12 18:30:30  smite-meister
 // cleaned startup
 //
@@ -73,16 +76,6 @@
 
 using namespace std;
 
-
-struct fragsort_t
-{
-  int  count;
-  int  num;
-  int  color;
-  const char *name;
-};
-
-
 /// \brief Intermission handler
 ///
 /// A one-instance class for Winning/Intermission animations etc.
@@ -126,7 +119,7 @@ private:
 
   // DM stats
   int nplayers;
-  fragsort_t *dm_score[4];
+  struct fragsort_t *dm_score[4];
 
   // Coop stats
   int  count_stage;
@@ -193,10 +186,5 @@ public:
 };
 
 extern Intermission wi;
-
-
-// draw rankings
-void WI_drawRanking(const char *title,int x,int y,fragsort_t *fragtable,
-		    int scorelines, bool large, int white);
 
 #endif

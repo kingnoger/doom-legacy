@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/09/23 23:21:18  smite-meister
+// HUD updated
+//
 // Revision 1.10  2004/09/03 16:28:50  smite-meister
 // bugfixes and ZDoom linedef types
 //
@@ -53,162 +56,218 @@
 #include "doomdef.h"
 #include "st_lib.h"
 
-#include "hu_stuff.h"
-#include "v_video.h"
+#include "hud.h"
 #include "r_data.h"
 
+#include "v_video.h"
 #include "i_video.h"    //rendermode
 #include "g_pawn.h"
 #include "g_game.h"
 
-extern int fgbuffer; // in fact a HUD property, but...
+#define BG 1
+extern int fgbuffer; // contains both the buffer and the drawing flags (updated elsewhere)
 
 
-//---------------------------------------------------------------------------
-// was ST_drawOverlayNum: Draw a number fully, scaled, over the view
-// was DrINumber: Draws a three digit number, left aligned, w = 9
-// was DrBNumber: Draws positive left-aligned 3-digit number at x+6-w/2  (w = 12)
+
+HudWidget::HudWidget(int nx, int ny)
+{
+  x = nx;
+  y = ny;
+}
 
 
-// Returns new x position.
-// right-aligned field!
+//===================================================================================
+
+HudNumber::HudNumber(int nx, int ny, int dig, const int *number, Texture **tex)
+  : HudWidget(nx, ny)
+{
+  digits = dig;
+  oldn = 0;
+  n = number;
+  nums = tex;
+}
+
+
+void HudNumber::Update(bool force)
+{
+  if (oldn != *n || force)
+    Draw();
+}
+
+
 void HudNumber::Draw()
 {
-  int lnum = oldnum = *num;
+  int lnum = oldn = *n; // the number to be drawn
+  int w = nums[0]->width;
+  int h = nums[0]->height;
+  int dx = x - digits * w; // drawing x coord (right-aligned field!)
+
+  // clear the area (right aligned field)
+  // dont clear background in overlay
+  if (!hud.overlay_on && rendermode == render_soft)
+    V_CopyRect(dx, y, BG, w*digits, h, dx, y, fgbuffer);
+
+  // if non-number, do not draw it
+  if (lnum == 1994)
+    return;
+
   bool neg = (lnum < 0);
 
   if (neg)
     {
       // INumber: if (val < -9) V_DrawScaledPatch(x+1, y+1, fgbuffer, W_CachePatchName("LAME", PU_CACHE));
-      if (width == 2 && lnum < -9)
-	lnum = -9;
-      else if (width == 3 && lnum < -99)
-	lnum = -99;
-      
-      lnum = -lnum;
+      if (digits == 2 && lnum < -9)
+	lnum = 9;
+      else if (digits == 3 && lnum < -99)
+	lnum = 99;
+      else
+	lnum = -lnum;
     }
-
-  int w = n[0]->width;
-  int h = n[0]->height;
-  int dx = x - width * w; // drawing x coord
-
-  // clear the area (right aligned field)
-  // dont clear background in overlay
-  if (!hud.overlayon && rendermode == render_soft)
-    V_CopyRect(dx, y, BG, w*width, h, dx, y, fgbuffer);
-
-  // if non-number, do not draw it
-  if (lnum == 1994)
-    return;
 
   dx = x;
 
   // in the special case of 0, you draw 0
   if (lnum == 0)
     {
-      // overlay: V_DrawScaledPatch(x - (w*vid.dupx), y, FG|V_NOSCALESTART, n[0]);
-      n[0]->Draw(dx - w, y, fgbuffer);
+      nums[0]->Draw(dx - w, y, fgbuffer);
       return;
     }
 
-  int digits = width; // local copy
+  int dig = digits; // local copy
   // draw the new number
-  while (lnum != 0 && digits--)
+  while (lnum != 0 && dig--)
     {
-      dx -= w; // overlay:  x -= (w * vid.dupx);
-      n[lnum % 10]->Draw(dx, y, fgbuffer);
+      dx -= w;
+      nums[lnum % 10]->Draw(dx, y, fgbuffer);
       lnum /= 10;
     }
 
   // draw a minus sign if necessary
   if (neg)
-    n[10]->Draw(dx - 8, y, fgbuffer);
-  // overlay:  sttminus->Draw(x - (8*vid.dupx), y, FG|V_NOSCALESTART);
+    nums[10]->Draw(dx - 8, y, fgbuffer);
 }
 
 
-//---------------------------------------------------------------------------
+
+//===================================================================================
+
+HudPercent::HudPercent(int nx, int ny, const int *number, Texture **tex, Texture *percent)
+  : HudNumber(nx, ny, 3, number, tex)
+{
+  pcent = percent;
+}
+
 
 void HudPercent::Update(bool force)
 {
-  if (*on == true)
-    {
-      // draw percent sign
-      if (force)
-	p->Draw(x, y, fgbuffer);
-      // draw number
-      if (oldnum != *num || force)
-	Draw();
-    }
-}
-
-//---------------------------------------------------------------------------
-
-void HudMultIcon::Update(bool force)
-{
-  if ((*on == true) && ((oldinum != *inum) || force) && (*inum != -1))
+  // draw percent sign
+  if (force)
+    pcent->Draw(x, y, fgbuffer);
+  // draw number
+  if (oldn != *n || force)
     Draw();
 }
 
+
+
+//===================================================================================
+
+HudMultIcon::HudMultIcon(int nx, int ny, const int *inumber, Texture **tex)
+  : HudWidget(nx, ny)
+{
+  oldinum = -1;
+  inum = inumber;
+  icons = tex;
+}
+
+
+void HudMultIcon::Update(bool force)
+{
+  if ((oldinum != *inum || force) && (*inum != -1))
+    Draw();
+}
+
+
 void HudMultIcon::Draw()
 {
-  if ((oldinum != -1) && !hud.overlayon && rendermode == render_soft && p[oldinum])
+  if ((oldinum != -1) && !hud.overlay_on && rendermode == render_soft && icons[oldinum])
     {
+      // sw mode: background is not always fully redrawn
       int w, h;
       int dx, dy;
-      //faB:current hardware mode always refresh the statusbar
-      // clear
-      dx = x - p[oldinum]->leftoffset;
-      dy = y - p[oldinum]->topoffset;
-      w = p[oldinum]->width;
-      h = p[oldinum]->height;
+      dx = x - icons[oldinum]->leftoffset;
+      dy = y - icons[oldinum]->topoffset;
+      w = icons[oldinum]->width;
+      h = icons[oldinum]->height;
 
       V_CopyRect(dx, dy, BG, w, h, dx, dy, fgbuffer);
     }
   int i = *inum;
-  if (i >= 0 && p[i])
-    p[i]->Draw(x, y, fgbuffer);
+  if (i >= 0 && icons[i])
+    icons[i]->Draw(x, y, fgbuffer);
   // FIXME! *inum might go beyond allowed limits!
   oldinum = i;
 }
 
-//---------------------------------------------------------------------------
+
+
+//===================================================================================
+
+HudBinIcon::HudBinIcon(int nx, int ny, const bool *st, Texture *p0, Texture *p1)
+  : HudWidget(nx, ny)
+{
+  oldstatus = false;
+  status = st;
+  icons[0] = p0;
+  icons[1] = p1;
+}
+
 
 void HudBinIcon::Update(bool force)
 {
-  if ((*on == true) && (oldval != *val || force))
+  if (oldstatus != *status || force)
     Draw();
 }
 
+
 void HudBinIcon::Draw()
 {
-  oldval = *val;
+  oldstatus = *status;
 
-  if (*val == true)
-    p[1]->Draw(x, y, fgbuffer);
-  else if (p[0] != NULL)
-    p[0]->Draw(x, y, fgbuffer);
-  else if (!hud.overlayon && rendermode == render_soft)
+  if (oldstatus == true)
+    icons[1]->Draw(x, y, fgbuffer);
+  else if (icons[0] != NULL)
+    icons[0]->Draw(x, y, fgbuffer);
+  else if (!hud.overlay_on && rendermode == render_soft)
     {
       int w, h;
       int dx, dy;
-      //faB:current hardware mode always refresh the statusbar
-      // just clear
-      dx = x; // - p[1]->leftoffset; // FIXME scaling, offsets...
-      dy = y; // - p[1]->topoffset;
-      w = p[1]->width;
-      h = p[1]->height;
+      dx = x - icons[1]->leftoffset;
+      dy = y - icons[1]->topoffset;
+      w = icons[1]->width;
+      h = icons[1]->height;
 
       V_CopyRect(dx, dy, BG, w, h, dx, dy, fgbuffer);
     }
 }
 
-//---------------------------------------------------------------------------
+
+
+//===================================================================================
+
+HudSlider::HudSlider(int nx, int ny, const int *v, int mi, int ma, Texture **t)
+  : HudWidget(nx, ny)
+{
+  val = v;
+  minval = mi;
+  maxval = ma;
+  oldval = cval = 0;
+  tex = t;
+}
+
 
 void HudSlider::Update(bool force)
 {
-  if (*on == false) return;
-
   // more like tick()!
   int i = *val; // marker targets here, moves slowly
 
@@ -232,7 +291,8 @@ void HudSlider::Update(bool force)
       cval -= delta;
     }
 
-  if (oldval != cval || force) Draw();
+  if (oldval != cval || force)
+    Draw();
 }
 
 /*
@@ -271,42 +331,52 @@ static void ShadeChain(int x, int y)
 void HudSlider::Draw()
 {
   oldval = cval;
+  // textures: chainback, chain, marker, ltface, rtface
+  // FIXME! use actual texture sizes below...
+
+  int pos = ((cval - minval)*256)/(maxval - minval);
+
   int by = 0;
-
-  // patches in p: chainback, chain, marker, ltface, rtface
-  // FIXME! use actual patch sizes below...
-
-  int pos = ((cval-minval)*256)/(maxval-minval);
-
   //int by = (cpos == CPawn->health) ? 0 : ChainWiggle;
-  p[0]->Draw(x, y, fgbuffer);
-  p[1]->Draw(x+2 + (pos%17), y+1+by, fgbuffer);
-  p[2]->Draw(x+17+pos, y+1+by, fgbuffer);
-  p[3]->Draw(x, y, fgbuffer);
-  p[4]->Draw(x+276, y, fgbuffer);
+  tex[0]->Draw(x, y, fgbuffer);
+  tex[1]->Draw(x+2 + (pos%17), y+1+by, fgbuffer);
+  tex[2]->Draw(x+17+pos, y+1+by, fgbuffer);
+  tex[3]->Draw(x, y, fgbuffer);
+  tex[4]->Draw(x+276, y, fgbuffer);
 
   //ShadeChain(x, y);
 }
 
 
-//---------------------------------------------------------------------------
 
-// was DrSmallNumber
+//===================================================================================
+
+HudInventory::HudInventory(int nx, int ny, const bool *op, const int *iu, const inventory_t *vals,
+			   const int *sel, Texture **nn, Texture **it, Texture **t)
+  : HudWidget(nx, ny)
+{
+  open = op;
+  itemuse = iu;
+  slots = vals;
+  selected = sel;
+  nums = nn;
+  items = it;
+  tex = t;
+}
+
+
 // draws up to 2 digits
-
 void HudInventory::DrawNumber(int x, int y, int val)
 {
   if (val == 1)
     return;
 
-  int w = n[0]->width; // was 4
+  int w = nums[0]->width; // was 4
     
   if (val > 9)
-    n[val/10]->Draw(x, y, fgbuffer);
-  n[val%10]->Draw(x+w, y, fgbuffer);
+    nums[val/10]->Draw(x, y, fgbuffer);
+  nums[val%10]->Draw(x+w, y, fgbuffer);
 }
-
-// was DrawInventoryBar
 
    
 void HudInventory::Draw()
@@ -317,7 +387,7 @@ void HudInventory::Draw()
 
   // x = st_x + 34, y = st_y + 1
   // two guiding bools: *open and overlay
-  // patch order in p: inv_background, artibox (also items[0]), selectbox,
+  // textures: inv_background, artibox (also items[0]), selectbox,
   // 4 inv_gems, blacksq, 5 artiflash frames
 
   int sel = *selected;
@@ -326,15 +396,14 @@ void HudInventory::Draw()
     {
       // open inventory
       // background (7 slots) (not for overlay!)
-      if (!overlay)
-	p[0]->Draw(x, y+1, fgbuffer);
+      tex[0]->Draw(x, y+1, fgbuffer);
 
-      // draw stuff
-      for(i = 0; i < 7; i++)
+      // draw items
+      for (i = 0; i < 7; i++)
 	{
-	  if (overlay)
-	    p[1]->Draw(x+16+i*31, y+1, fgbuffer | V_SLOC | V_TL); 
-	  //V_DrawScaledPatch(x+16+i*31, y+1, 0, W_CachePatchName("ARTIBOX", PU_CACHE));
+	  // draw artibox
+	  tex[1]->Draw(x+16+i*31, y+1, fgbuffer);
+
 	  if (slots[i].type != arti_none)
 	    {
 	      items[slots[i].type]->Draw(x+16+i*31, y+1, fgbuffer);
@@ -342,29 +411,31 @@ void HudInventory::Draw()
 	    }
 	}
 
-      // select box
-      p[2]->Draw(x+16 + sel*31, y+30, fgbuffer);
+      // draw select box
+      tex[2]->Draw(x+16 + sel*31, y+30, fgbuffer);
 
       // blinking arrowheads (using a hack slot. this is so embarassing.)
       if (slots[7].type)
-	(!(game.tic&4) ? p[3] : p[4])->Draw(x+4, y, fgbuffer);
+	(!(game.tic&4) ? tex[3] : tex[4])->Draw(x+4, y, fgbuffer);
 
       if (slots[7].count)
-	(!(game.tic&4) ? p[5] : p[6])->Draw(x+235, y, fgbuffer);
+	(!(game.tic&4) ? tex[5] : tex[6])->Draw(x+235, y, fgbuffer);
     }
   else
     {
-      // closed inv.
+      // closed inventory
       if (*itemuse > 0)
 	{
-	  p[7]->Draw(x, y, fgbuffer);
-	  p[8 + (*itemuse) - 1]->Draw(x, y, fgbuffer);
+	  // black square
+	  tex[7]->Draw(x, y, fgbuffer);
+	  // item use animation
+	  tex[8 + (*itemuse) - 1]->Draw(x, y, fgbuffer);
 	}
       else
 	{
-	  if (overlay)
-	    p[1]->Draw(x+100, y, fgbuffer | V_SLOC | V_TL);
-	  // p[7]->Draw(st_x+180, st_y+3, fgbuffer);
+	  // just a single item in a box
+	  tex[1]->Draw(x+100, y, fgbuffer);
+	  // tex[7]->Draw(st_x+180, st_y+3, fgbuffer);
 	  if (slots[sel].type != arti_none)
 	    {
 	      items[slots[sel].type]->Draw(x+145, y, fgbuffer);
@@ -374,9 +445,8 @@ void HudInventory::Draw()
     }
 }
 
+
 void HudInventory::Update(bool force)
 {
-  if (*on == true)
-    Draw();
-  // && (oldval != *val || force)
+  Draw();
 }

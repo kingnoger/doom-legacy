@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/09/23 23:21:19  smite-meister
+// HUD updated
+//
 // Revision 1.5  2004/08/13 18:25:11  smite-meister
 // sw renderer fix
 //
@@ -72,13 +75,10 @@
 // Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
 // Initial import into CVS (v1.29 pr3)
 //
-//
-// DESCRIPTION:
-//      Functions to draw patches (by post) directly to screen.
-//      Functions to blit a block to the screen.
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Texture blitting, blitting rectangles between buffers. Font system.
 
 #ifndef v_video_h
 #define v_video_h 1
@@ -133,6 +133,48 @@ struct pic_t
 
 
 
+/// flags for drawing Textures
+enum texture_draw_e
+{
+  V_SLOC     =  0x10000,   // scale starting location
+  V_SSIZE    =  0x20000,   // scale size
+  V_FLIPX    =  0x40000,   // mirror the patch in the vertical direction
+  V_MAP      =  0x80000,   // use a colormap
+  V_WHITEMAP = 0x100000,   // white colormap (for V_DrawString)
+  V_TL       = 0x200000,   // translucency using transmaps
+
+  V_SCALE = V_SLOC | V_SSIZE,
+
+  V_FLAGMASK = 0xFFFF0000,
+  V_SCREENMASK = 0xF
+};
+
+
+/// \brief Class for raster fonts
+class font_t
+{
+protected:
+  char  start, end;  ///< first and last ascii characters included in the font
+  class Texture **font;
+
+public:
+  int height, width; ///< dimensions of the character '0' in the font
+
+public:
+  font_t(int startlump, int endlump, char firstchar = '!');
+
+  void DrawCharacter(int x, int y, int c);
+  void DrawString(int x, int y, const char *str, int flags = V_SCALE);
+  void DrawGrayString(int x, int y, const char *str);
+  int  StringWidth(const char *str);
+  int  StringWidth(const char *str, int n);
+  int  StringHeight(const char *str);
+};
+
+
+extern font_t *hud_font;
+extern font_t *big_font;
+
 
 void VID_BlitLinearScreen(byte *srcptr, byte *destptr, int width,
 			  int height, int srcrowbytes, int destrowbytes);
@@ -156,21 +198,6 @@ void V_DrawFadeScreen();
 //added:20-03-98: test console
 void V_DrawFadeConsBack(int x1, int y1, int x2, int y2);
 
-//added:20-03-98: draw a single character
-void V_DrawCharacter(int x, int y, int c);
-//added:05-02-98: draw a string using the hu_font
-void V_DrawString(int x, int y, int option, const char *str);
-// Find string width from hu_font chars
-int V_StringWidth(const char* str);
-// Find string height from hu_font chars
-int V_StringHeight(const char* str);
-
-// draw text with fontB (big font)
-extern int FontBBaseLump;
-void V_DrawTextB(const char *text, int x, int y);
-void V_DrawTextBGray(char *text, int x, int y);
-int V_TextBWidth(const char *text);
-int V_TextBHeight(const char *text);
 
 //added:12-02-98:
 void V_DrawTiltView(byte *viewbuffer);

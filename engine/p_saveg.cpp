@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.33  2004/09/23 23:21:17  smite-meister
+// HUD updated
+//
 // Revision 1.32  2004/09/06 19:58:03  smite-meister
 // Doom linedefs done!
 //
@@ -114,11 +117,10 @@
 // Revision 1.1.1.1  2002/11/16 14:18:03  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//      Archiving: SaveGame I/O.
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Archiving: SaveGame I/O.
 
 #include "doomdef.h"
 #include "doomdata.h"
@@ -156,7 +158,7 @@
 #include "tables.h"
 
 #include "am_map.h"
-#include "hu_stuff.h"
+#include "hud.h"
 
 // NOTE! The Map *mp is not saved for Thinkers in general, because it can be deduced
 // from the context. However, some thinkers are not always associated with a Map.

@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.43  2004/09/23 23:21:16  smite-meister
+// HUD updated
+//
 // Revision 1.42  2004/09/15 19:23:59  smite-meister
 // bugfixes
 //
@@ -137,7 +140,7 @@
 #include "p_spec.h"
 #include "p_hacks.h"
 #include "r_main.h"
-#include "hu_stuff.h"
+#include "hud.h"
 #include "p_camera.h"
 #include "m_random.h"
 #include "sounds.h"

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/09/23 23:21:19  smite-meister
+// HUD updated
+//
 // Revision 1.11  2004/09/20 22:42:49  jussip
 // Joystick axis binding works. New joystick code ready for use.
 //
@@ -158,7 +161,6 @@ Have polymorphed class GameType which creates these into GameInfo containers
 #include "g_player.h"
 #include "n_interface.h"
 
-#include "hu_stuff.h"
 #include "m_menu.h"
 
 #include "i_system.h"
@@ -606,6 +608,8 @@ void COM_FS_RunScript_f();
 void COM_FS_Running_f();
 void FS_Init();
 
+// set chatmacros cvars point the original or dehacked texts, before config.cfg is executed !!
+void HU_HackChatmacros();
 
 
 /// This is needed by both servers and clients
@@ -655,7 +659,7 @@ void SV_Init()
   COM_AddCommand("say"    , Command_Say_f);
   COM_AddCommand("sayto"  , Command_Sayto_f);
   COM_AddCommand("sayteam", Command_Sayteam_f);
-  COM_AddCommand("chatmacro", Command_Chatmacro_f); // hu_stuff.c
+  COM_AddCommand("chatmacro", Command_Chatmacro_f);
 
   // basic commands for controlling the game
   COM_AddCommand("pause", Command_Pause_f);

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.34  2004/09/23 23:21:16  smite-meister
+// HUD updated
+//
 // Revision 1.33  2004/09/13 20:43:29  smite-meister
 // interface cleanup, sp map reset fixed
 //
@@ -104,7 +107,6 @@
 #include "g_input.h"
 #include "p_enemy.h" // #defines
 
-#include "hu_stuff.h"
 #include "p_spec.h"
 #include "p_maputl.h"
 

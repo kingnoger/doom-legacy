@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2004/09/23 23:21:17  smite-meister
+// HUD updated
+//
 // Revision 1.22  2004/08/19 19:42:41  smite-meister
 // bugfixes
 //
@@ -26,6 +29,7 @@
 /// \file
 /// \brief Finale animations
 
+#include <string>
 #include <ctype.h>
 
 #include "dstrings.h"
@@ -33,7 +37,7 @@
 #include "d_main.h"
 #include "g_game.h"
 #include "g_level.h"
-#include "hu_stuff.h"
+#include "hud.h"
 
 #include "i_video.h"
 
@@ -123,15 +127,13 @@ static int      finalecount;
 static int      finalewait;
 static bool endgame;
 static int  gameepisode;
-static const char *finaletext;
+static std::string finaletext;
 static Texture *finalepic = NULL;
 static Texture *finaleflat = NULL;
 
 static bool keypressed = false;
 
-//
-// F_StartFinale
-//
+
 void F_StartFinale(const MapCluster *cd, bool enter, bool end)
 {
   endgame = end;
@@ -139,9 +141,9 @@ void F_StartFinale(const MapCluster *cd, bool enter, bool end)
   finaleflat = tc.GetPtr(cd->finalepic.c_str());
 
   if (enter)
-    finaletext = cd->entertext.c_str();
+    finaletext = cd->entertext;
   else
-    finaletext = cd->exittext.c_str();
+    finaletext = cd->exittext;
 
   S.StartMusic(cd->finalemusic.c_str(), true);
 
@@ -189,9 +191,6 @@ bool F_Responder(event_t *event)
 }
 
 
-//
-// F_Ticker
-//
 void F_Ticker()
 {
   // special ticker?
@@ -224,6 +223,8 @@ void F_Ticker()
     }
 }
 
+
+
 void F_TextTicker()
 {
   finalecount++;
@@ -241,9 +242,7 @@ void F_TextTicker()
 }
 
 
-//
-// F_Drawer
-//
+
 void F_Drawer()
 {
   if (finalestage->drawer)
@@ -259,19 +258,12 @@ void F_Drawer()
 
 void F_TextInit(int dummy)
 {
-  finalewait = strlen(finaletext)*TEXTSPEED + TEXTWAIT;
+  finalewait = finaletext.length()*TEXTSPEED + TEXTWAIT;
 }
 
 
-//
-// F_TextWrite
-//
 void F_TextWrite(int sx, int sy)
 {
-  const char *ch;
-  int cx = sx;
-  int cy = sy;
-
   // erase the entire screen to a tiled background (or raw picture)
   if (finalepic)
     finalepic->Draw(0, 0, V_SCALE);
@@ -279,37 +271,18 @@ void F_TextWrite(int sx, int sy)
     finaleflat->DrawFill(0,0,vid.width,vid.height);
 
   // draw some of the text onto the screen
-  ch = finaletext;
-
   int count = (finalecount - 10)/TEXTSPEED;
   if (count < 0)
-    count = 0;
-  for ( ; count ; count-- )
-    {
-      int c = *ch++;
-      if (!c)
-        break;
-      if (c == '\n')
-        {
-          cx = sx;
-          cy += 10; //game.raven ? 9 : 11;
-          continue;
-        }
+    return;
 
-      c = toupper(c) - HU_FONTSTART;
-      if (c < 0 || c> HU_FONTSIZE)
-        {
-          cx += 4;
-          continue;
-        }
+  if (count > int(finaletext.length()))
+    count = finaletext.length();
 
-      int w = hud.font[c]->width;
-      if (cx+w > vid.width)
-        break;
-      hud.font[c]->Draw(cx, cy, V_SCALE);
-      cx += w;
-    }
-
+  // small hack
+  char c = finaletext[count];
+  finaletext[count] = '\0';
+  hud_font->DrawString(sx, sy, finaletext.c_str());
+  finaletext[count] = c;
 }
 
 //
@@ -354,11 +327,6 @@ int             castonmelee;
 bool         castattacking;
 
 
-//
-// F_StartCast
-//
-
-
 void F_StartCast(int dummy)
 {
   int i;
@@ -378,9 +346,7 @@ void F_StartCast(int dummy)
 }
 
 
-//
-// F_CastTicker
-//
+
 void F_CastTicker()
 {
   int         st;
@@ -484,9 +450,6 @@ void F_CastTicker()
 }
 
 
-//
-// F_CastResponder
-//
 
 bool F_CastResponder (event_t* ev)
 {
@@ -511,13 +474,11 @@ bool F_CastResponder (event_t* ev)
 
 void F_CastPrint (char* text)
 {
-  V_DrawString ((BASEVIDWIDTH-V_StringWidth (text))/2, 180, 0, text);
+  hud_font->DrawString((BASEVIDWIDTH - hud_font->StringWidth(text)) / 2, 180, text);
 }
 
 
-//
-// F_CastDrawer
-//
+
 void F_CastDrawer(int dummy)
 {
   // erase the entire screen to a background
@@ -536,9 +497,7 @@ void F_CastDrawer(int dummy)
 }
 
 
-//
-// F_BunnyScroll
-//
+
 void F_BunnyScroll()
 {
   int         scrolled;
@@ -595,11 +554,13 @@ void F_BunnyScroll()
 }
 
 
+
 void F_DoomStart(int dummy)
 {
   if (gameepisode == 3)
     S.StartMusic("D_BUNNY");
 }
+
 
 
 void F_DoomDrawer(int dummy)
@@ -625,13 +586,6 @@ void F_DoomDrawer(int dummy)
 }
 
 
-/*
-==================
-=
-= F_DemonScroll
-=
-==================
-*/
 
 void F_DemonScroll()
 {
@@ -647,13 +601,6 @@ void F_DemonScroll()
 }
 
 
-/*
-==================
-=
-= F_DrawUnderwater
-=
-==================
-*/
 
 void F_DrawUnderwater()
 {

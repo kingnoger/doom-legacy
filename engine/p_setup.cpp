@@ -18,14 +18,11 @@
 //
 //
 // $Log$
+// Revision 1.46  2004/09/23 23:21:17  smite-meister
+// HUD updated
+//
 // Revision 1.45  2004/09/03 16:28:50  smite-meister
 // bugfixes and ZDoom linedef types
-//
-// Revision 1.44  2004/08/29 20:48:48  smite-meister
-// bugfixes. wow.
-//
-// Revision 1.43  2004/08/19 19:42:41  smite-meister
-// bugfixes
 //
 // Revision 1.42  2004/08/15 18:08:28  smite-meister
 // palette-to-palette colormaps etc.
@@ -48,17 +45,8 @@
 // Revision 1.34  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
-// Revision 1.33  2004/01/06 14:37:45  smite-meister
-// six bugfixes, cleanup
-//
-// Revision 1.32  2004/01/05 11:48:08  smite-meister
-// 7 bugfixes
-//
 // Revision 1.31  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
-//
-// Revision 1.30  2003/12/21 12:29:09  smite-meister
-// bugfixes
 //
 // Revision 1.29  2003/12/18 11:57:31  smite-meister
 // fixes / new bugs revealed
@@ -66,20 +54,11 @@
 // Revision 1.28  2003/12/03 10:49:50  smite-meister
 // Save/load bugfix, text strings updated
 //
-// Revision 1.27  2003/11/30 00:09:46  smite-meister
-// bugfixes
-//
-// Revision 1.26  2003/11/23 00:41:55  smite-meister
-// bugfixes
-//
 // Revision 1.25  2003/11/12 11:07:23  smite-meister
 // Serialization done. Map progression.
 //
 // Revision 1.24  2003/06/20 20:56:07  smite-meister
 // Presentation system tweaked
-//
-// Revision 1.23  2003/06/10 22:39:57  smite-meister
-// Bugfixes
 //
 // Revision 1.22  2003/06/08 16:19:21  smite-meister
 // Hexen lights.
@@ -161,6 +140,7 @@
 #include "doomdef.h"
 #include "doomdata.h"
 #include "command.h"
+#include "console.h"
 
 #include "g_game.h"
 #include "g_pawn.h"
@@ -186,9 +166,6 @@
 #include "r_splats.h"
 
 #include "t_parse.h"
-
-#include "hu_stuff.h"
-#include "console.h"
 
 #ifdef HWRENDER
 #include "i_video.h"            //rendermode
@@ -1132,9 +1109,6 @@ void Map::SetupSky()
 }
 
 
-
-void P_Initsecnode();
-
 //
 // (re)loads the map from an already opened wad
 //
@@ -1154,30 +1128,25 @@ bool Map::Setup(tic_t start, bool spawnthings)
   starttic = start;
   kills = items = secrets = 0;
 
+
+  // FIXME client stuff, move elsewhere!
   // Make sure all sounds are stopped before Z_FreeTags.
   S.Stop3DSounds();
-
 #ifdef WALLSPLATS
   // clear the splats from previous map
   R_ClearLevelSplats();
 #endif
-
-  HU_ClearTips();
-
-  InitThinkers();
-
-  //
-  //  load the map from internal game resource or external wad file
-  //
-
-  // internal game map
-  lumpnum = fc.GetNumForName(lumpname.c_str());
-
   // textures are needed first
   //    R_LoadTextures ();
   //    R_FlushTextureCache();
-
   R_ClearColormaps();
+
+
+
+  InitThinkers();
+
+  // internal game map
+  lumpnum = fc.GetNumForName(lumpname.c_str());
 
 #ifdef FRAGGLESCRIPT
   FS_ClearScripts();

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.36  2004/09/23 23:21:16  smite-meister
+// HUD updated
+//
 // Revision 1.35  2004/09/13 20:43:30  smite-meister
 // interface cleanup, sp map reset fixed
 //
@@ -121,11 +124,10 @@
 // Revision 1.1.1.1  2002/11/16 14:17:59  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//  Handling Actor interactions (i.e., collisions).
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief  Handling Actor interactions (i.e., collisions).
 
 #include "doomdef.h"
 #include "command.h"
@@ -151,7 +153,7 @@
 #include "r_main.h"
 #include "tables.h"
 
-#include "hu_stuff.h" // HUD
+#include "hud.h"
 
 #define BONUSADD        6
 
