@@ -136,12 +136,12 @@ public:
   // TODO: from this line on it's badly designed stuff to be fixed someday
   int BossDeathKey;  // bit flags to see which bosses end the map when killed.
 
-  vector<Actor *>      braintargets; // DoomII demonbrain spawnbox targets
+  vector<mapthing_t *> braintargets; // DoomII demonbrain spawnbox targets
   int braintargeton;
 
-#define MAX_BOSS_SPOTS 8
+  //#define MAX_BOSS_SPOTS 8
   vector<mapthing_t *> BossSpots;
-#define MAX_MACE_SPOTS 8
+  //#define MAX_MACE_SPOTS 8
   vector<mapthing_t *> MaceSpots;
 
   vector<int *> AmbientSounds;

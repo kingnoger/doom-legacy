@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/01/12 12:56:40  smite-meister
+// Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
+//
 // Revision 1.3  2002/12/29 18:57:02  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -273,7 +276,8 @@ DActor::DActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
 void Actor::Remove()
 {
   extern msecnode_t *sector_list;
-  // lazy deallocation/destruction: memory freed in P_RemoveThinker
+  extern consvar_t cv_itemrespawn;
+  // lazy deallocation/destruction: memory freed next time it thinks.
 
   if (mp == NULL)
     {
@@ -282,7 +286,8 @@ void Actor::Remove()
       return;
     }
 
-  if ((flags & MF_SPECIAL) && !(flags & MF_DROPPED) && !(flags & MF_NORESPAWN))
+  if ((flags & MF_SPECIAL) && !(flags & MF_DROPPED) &&
+      !(flags & MF_NORESPAWN) && cv_itemrespawn.value)
     {
       mp->itemrespawnqueue.push_back(spawnpoint);
       mp->itemrespawntime.push_back(mp->maptic);

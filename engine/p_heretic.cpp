@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/01/12 12:56:40  smite-meister
+// Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
+//
 // Revision 1.3  2002/12/23 23:15:41  smite-meister
 // Weapon groups, MAPINFO parser added!
 //
@@ -571,8 +574,7 @@ static DActor *LavaInflictor;
 void P_InitLava()
 {
   LavaInflictor = new DActor(MT_PHOENIXFX2);
-  memset(LavaInflictor, 0, sizeof(DActor));
-  LavaInflictor->type = MT_PHOENIXFX2;
+  LavaInflictor->flags =  MF_NOBLOCKMAP | MF_NOGRAVITY;
   LavaInflictor->flags2 = MF2_FIREDAMAGE|MF2_NODMGTHRUST;
 }
 

@@ -1,6 +1,9 @@
 // $Id$
 //
 // $Log$
+// Revision 1.4  2003/01/12 12:56:40  smite-meister
+// Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
+//
 // Revision 1.3  2002/12/23 23:15:41  smite-meister
 // Weapon groups, MAPINFO parser added!
 //
@@ -24,8 +27,8 @@ short G_ClipAimingPitch(int *aiming);
 
 Camera::Camera()
 {
-  flags = MF_NOBLOCKMAP|MF_NOSECTOR|MF_NOGRAVITY|MF_FLOAT| MF_NOTRIGGER | MF_NOCLIPTHING;
-  flags2 = MF2_SLIDE;
+  flags = MF_NOBLOCKMAP|MF_NOSECTOR|MF_NOGRAVITY| MF_NOTRIGGER | MF_NOCLIPTHING | MF_NOTMONSTER | MF_FLOAT;
+  flags2 = MF2_SLIDE | MF2_DONTDRAW;
 
   health = 1000;
   mass = 10*FRACUNIT;

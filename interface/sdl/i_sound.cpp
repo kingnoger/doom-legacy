@@ -4,6 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
+// Copyright (C) 2000-2003 by Doom Legacy team
 //
 // This source is available for distribution and/or modification
 // only under the terms of the DOOM Source Code License as
@@ -15,66 +16,18 @@
 // for more details.
 //
 // $Log$
+// Revision 1.3  2003/01/12 12:56:42  smite-meister
+// Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
+//
 // Revision 1.2  2002/12/23 23:25:53  smite-meister
 // Ogg Vorbis works!
 //
 // Revision 1.1.1.1  2002/11/16 14:18:31  hurdler
 // Initial C++ version of Doom Legacy
 //
-// Revision 1.6  2002/09/20 22:41:35  vberghol
-// Sound system rewritten! And it workscvs update
-//
-// Revision 1.5  2002/08/23 18:05:39  vberghol
-// idiotic segfaults fixed
-//
-// Revision 1.4  2002/08/19 18:06:45  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.3  2002/07/01 21:01:03  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:34  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.10  2001/08/20 20:40:42  metzgermeister
-// *** empty log message ***
-//
-// Revision 1.9  2001/05/16 22:33:35  bock
-// Initial FreeBSD support.
-//
-// Revision 1.8  2001/05/14 19:02:58  metzgermeister
-//   * Fixed floor not moving up with player on E3M1
-//   * Fixed crash due to oversized string in screen message ... bad bug!
-//   * Corrected some typos
-//   * fixed sound bug in SDL
-//
-// Revision 1.7  2001/04/14 14:15:14  metzgermeister
-// fixed bug no sound device
-//
-// Revision 1.6  2001/04/09 20:21:56  metzgermeister
-// dummy for I_FreeSfx
-//
-// Revision 1.5  2001/03/25 18:11:24  metzgermeister
-//   * SDL sound bug with swapped stereo channels fixed
-//   * separate hw_trick.c now for HW_correctSWTrick(.)
-//
-// Revision 1.4  2001/03/09 21:53:56  metzgermeister
-// *** empty log message ***
-//
-// Revision 1.3  2000/11/02 19:49:40  bpereira
-// no message
-//
-// Revision 1.2  2000/09/10 10:56:00  metzgermeister
-// clean up & made it work again
-//
-// Revision 1.1  2000/08/21 21:17:32  metzgermeister
-// Initial import to CVS
-//
 //
 // DESCRIPTION:
 //   SDL system interface for sound.
-// VB: got SDL_mixer library! Fixed music! Mostly!
-//     What were open_music, close_music and music_mixer??
 //-----------------------------------------------------------------------------
 
 
@@ -159,8 +112,6 @@ static chan_t channels[NUM_CHANNELS];
 
 const int samplecount = 512; // requested audio buffer size
 
-//static int lengths[NUMSFX]; // The actual lengths of all sound effects.
-
 // Pitch to stepping lookup. 64 pitch units = 1 octave
 //  0 = 0.25x, 128 = 1x, 256 = 4x
 static int steptable[256];
@@ -171,7 +122,6 @@ static int vol_lookup[128*256];
 // Buffer for MIDI
 static char* musicbuffer;
 
-//#define MIDI_TMPFILE    "/tmp/.lsdlmidi"
 static const char *MIDI_tmpfilename;
 
 // Flags for the -nosound and -nomusic options
@@ -708,7 +658,6 @@ void I_ShutdownMusic()
 
 void I_InitMusic()
 {
-  /* Should this be exposed in mixer.h? */
   if (nosound)
     {
       // FIXME: workaround for shitty programming undoc'ed features

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/01/12 12:56:40  smite-meister
+// Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
+//
 // Revision 1.4  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -90,36 +93,8 @@ void F_StartFinale(const clusterdef_t *cd, bool enter, bool end)
   else
     finaletext = cd->exittext.c_str();
 
-  // Okay - IWAD dependend stuff.
-  // This has been changed severly, and
-  //  some stuff might have changed in the process.
-
   S.StartMusic(cd->musiclump.c_str(), true);
-  /*
-  switch (game.mode)
-    {
-      // DOOM 1 - E1, E3 or E4, but each nine missions
-    case gm_doom1s:
-    case gm_doom1:
-    case gm_udoom:
-      S.StartMusic(mus_victor, true);
-      break;
 
-      // DOOM II and missions packs with E1, M34
-    case gm_doom2:
-      S.StartMusic(mus_read_m, true);
-      break;
-
-    case gm_heretic :
-      S.StartMusic(mus_hcptd, true);
-      break;
-
-      // Indeterminate.
-    default:
-      S.StartMusic(mus_read_m, true);
-      break;
-    }
-  */
   finalestage = 0;
   finalecount = 0;
 }

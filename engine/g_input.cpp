@@ -17,8 +17,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:17:51  hurdler
-// Initial revision
+// Revision 1.2  2003/01/12 12:56:40  smite-meister
+// Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
+//
+// Revision 1.1.1.1  2002/11/16 14:17:51  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.6  2002/09/06 17:18:32  vberghol
 // added most of the changes up to RC2
@@ -153,13 +156,13 @@ void  G_MapEventsToControls (event_t *ev)
         break;
 
       case ev_mouse:           // buttons hare virtual keys
-        mousex = ev->data2*((cv_mousesens.value*cv_mousesens.value)/110.0f + 0.1);
-        mousey = ev->data3*((cv_mousesens.value*cv_mousesens.value)/110.0f + 0.1);
+        mousex = int(ev->data2*((cv_mousesens.value*cv_mousesens.value)/110.0f + 0.1));
+        mousey = int(ev->data3*((cv_mousesens.value*cv_mousesens.value)/110.0f + 0.1));
 
         //added:10-02-98:
         // for now I use the mlook sensitivity just for mlook,
         // instead of having a general mouse y sensitivity.
-        mlooky = ev->data3*((cv_mlooksens.value*cv_mlooksens.value)/110.0f + 0.1);
+        mlooky = int(ev->data3*((cv_mlooksens.value*cv_mlooksens.value)/110.0f + 0.1));
         break;
 
       case ev_joystick:        // buttons are virtual keys
@@ -168,13 +171,13 @@ void  G_MapEventsToControls (event_t *ev)
         break;
 
       case ev_mouse2:           // buttons hare virtual keys
-        mouse2x = ev->data2*((cv_mousesens2.value*cv_mousesens2.value)/110.0f + 0.1);
-        mouse2y = ev->data3*((cv_mousesens2.value*cv_mousesens2.value)/110.0f + 0.1);
+        mouse2x = int(ev->data2*((cv_mousesens2.value*cv_mousesens2.value)/110.0f + 0.1));
+        mouse2y = int(ev->data3*((cv_mousesens2.value*cv_mousesens2.value)/110.0f + 0.1));
 
         //added:10-02-98:
         // for now I use the mlook sensitivity just for mlook,
         // instead of having a general mouse y sensitivity.
-        mlook2y = ev->data3*((cv_mlooksens.value*cv_mlooksens.value)/110.0f + 0.1);
+        mlook2y = int(ev->data3*((cv_mlooksens.value*cv_mlooksens.value)/110.0f + 0.1));
         break;
 
       default:
@@ -410,7 +413,7 @@ char *gamecontrolname[num_gamecontrols] =
     "down"
 };
 
-#define NUMKEYNAMES (sizeof(keynames)/sizeof(keyname_t))
+static const int NUMKEYNAMES = sizeof(keynames)/sizeof(keyname_t);
 
 //
 //  Detach any keys associated to the given game control

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/01/12 12:56:42  smite-meister
+// Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
+//
 // Revision 1.3  2002/12/23 23:22:47  smite-meister
 // WAD2+WAD3 support, MAPINFO parser added!
 //
@@ -465,7 +468,7 @@ bool R_AddSingleSpriteDef (char* sprname, spritedef_t* spritedef, int wadnum, in
   //
   for (frame = 0 ; frame < maxframe ; frame++)
     {
-      switch ((int)sprtemp[frame].rotate)
+      switch (sprtemp[frame].rotate)
         {
 	case -1:
 	  // no rotations were found for that frame at all
@@ -519,7 +522,6 @@ void R_AddSpriteDefs (char** namelist, int wadnum)
   int         i;
   int         start;
   int         end;
-  int         addsprites;
 
   // find the sprites section in this pwad
   // we need at least the S_END
@@ -552,7 +554,7 @@ void R_AddSpriteDefs (char** namelist, int wadnum)
   //
   // scan through lumps, for each sprite, find all the sprite frames
   //
-  addsprites = 0;
+  int addsprites = 0;
   for (i=0 ; i<numsprites ; i++)
     {
       spritename = namelist[i];
@@ -585,42 +587,41 @@ static vissprite_t*    vissprite_p;
 //
 void R_InitSprites (char** namelist)
 {
-    int         i;
-    char**      check;
-    int nwads;
+  int         i;
+  char**      check;
 
-    for (i=0 ; i<MAXVIDWIDTH ; i++)
+  for (i=0 ; i<MAXVIDWIDTH ; i++)
     {
-        negonearray[i] = -1;
+      negonearray[i] = -1;
     }
 
-    //
-    // count the number of sprite names, and allocate sprites table
-    //
-    check = namelist;
-    while (*check != NULL)
-        check++;
-    numsprites = check - namelist;
+  //
+  // count the number of sprite names, and allocate sprites table
+  //
+  check = namelist;
+  while (*check != NULL)
+    check++;
+  numsprites = check - namelist;
 
-    if (!numsprites)
-        I_Error ("R_AddSpriteDefs: no sprites in namelist\n");
+  if (!numsprites)
+    I_Error ("R_AddSpriteDefs: no sprites in namelist\n");
 
-    sprites = (spritedef_t *)Z_Malloc(numsprites * sizeof(*sprites), PU_STATIC, NULL);
-    memset (sprites, 0, numsprites * sizeof(*sprites));
+  sprites = (spritedef_t *)Z_Malloc(numsprites * sizeof(*sprites), PU_STATIC, NULL);
+  memset (sprites, 0, numsprites * sizeof(*sprites));
 
-    // find sprites in each -file added pwad
-    nwads = fc.Size();
-    for (i=0; i<nwads; i++)
-      R_AddSpriteDefs (namelist, i);
+  // find sprites in each -file added pwad
+  int nwads = fc.Size();
+  for (i=0; i<nwads; i++)
+    R_AddSpriteDefs (namelist, i);
 
     //
     // now check for skins
     //
 
-    // it can be is do before loading config for skin cvar possible value
-    R_InitSkins ();
-    for (i=0; i<nwads; i++)
-      R_AddSkins (i);
+  // it can be is do before loading config for skin cvar possible value
+  R_InitSkins ();
+  for (i=0; i<nwads; i++)
+    R_AddSkins (i);
 
     //
     // check if all sprites have frames

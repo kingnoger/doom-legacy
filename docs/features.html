@@ -1,0 +1,125 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<meta name="description" content="New, even better Doom Legacy" />
+<meta name="keywords" lang="en" content="doom, legacy, fps, heretic, hexen" />
+<link rel="stylesheet" href="http://www.w3.org/StyleSheets/Core/Midnight" type="text/css" />
+<title>Doom Legacy features</title>
+</head>
+
+<body text="#70f070" bgcolor="#000000" link="#f0f070" vlink="#f04040" alink="#7070f0">
+
+$Id$
+
+<h1>Doom Legacy features</h1>
+
+<p />
+As of version XXX, the Legacy game engine has been rewritten in
+C++. A host of features were added to the game. Here is a short
+summary.
+
+<p />
+*   Implemented but doesn't affect the game yet.<br />
+**  Partly implemented
+
+<h2>Graphics</h2>
+
+<ul>
+ <li>** general graphic presentations, MD3 support
+</ul>
+
+<h2>Sound and Music</h2>
+
+<p />
+The preferred multimedia interface is now SDL, the Simple DirectMedia
+Layer. This makes Legacy easily portable and offers great multimedia
+capabilities. Music is produced using the SDL_mixer
+library. Highlights:
+
+<ul>
+ <li>Supports MUS, MIDI, MP3 and Ogg Vorbis music
+ <li>Original Doom and **WAV sounds
+ <li>Software 3D sound renderer
+</ul>
+
+<h2>Gameplay</h2>
+
+<p />
+Gameplay is nearly the same as in original Doom/Heretic. However, if
+required, it can be enhanced with the following features:
+
+<ul>
+ <li>Advanced teamplay. Deathmatch, co-op, team deathmatch...
+ <li>Weapon groups á la Half-Life
+ <li>Any creature can be played, not just Marines or Heretics
+ <li>Customizable HUD (using HUD widgets)
+</ul>
+
+
+<h2>Editing</h2>
+
+<p />
+The Doom map format is bad. It is hard to expand and relies in many
+cases on properties hard-coded in the original Doom executable.
+Things were improved a bit by Hexen, which extended the Doom map
+format and added the MAPINFO lump, which can be used to create a
+custom map ordering within the WAD.
+
+<p />
+Legacy improved the map format further by introducing the
+<a href="#MapInfo">MapInfo</a> (or LevelInfo) lumps. They are stored
+in the map separator (mapname) lump, which is normally empty. Each map
+can have its own MapInfo.
+
+<p />
+The WAD datafile format itself is somewhat constricting, mainly due to
+the 8 character lumpnames and lack of internal directory structure.
+This has been remedied in the WAD2/WAD3, PAK and PK3 datafile formats.
+
+<ul>
+ <li>MapInfo lumps
+ <li>Hexen/ZDoom-style MAPINFO support
+ <li>WAD2/WAD3 support
+ <li>** PAK and PK3 support
+</ul>
+
+
+<h2>Other new features</h2>
+
+<ul>
+ <li>* Can run several maps simultaneously
+ <li>New game objects with custom AI are easy to make through inheritance
+ <li>Level ordering is free, one level can in principle have any number
+of exits that lead to different levels.
+ <li>Damage system with different types of damage
+ <li>** DLL modifiability
+</ul>
+
+
+<hr />
+
+<a name="MapInfo"><h1>MapInfo lump structure</h1></a>
+
+The MapInfo lump is plain ASCII text and consists of
+<i>blocks</i>. Each block begins with
+<pre>
+[this is a blockname]&lt;\n&gt;
+</pre>
+and ends when the next block begins, or when the lump ends.
+
+<p />
+The recognized blocknames are
+[map info] / [level info]
+
+[scripts]
+
+[intertext]
+
+<!-- [mapformat] -->
+
+</body>
+</html>

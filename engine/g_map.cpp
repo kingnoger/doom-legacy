@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2002 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.5  2003/01/12 12:56:40  smite-meister
+// Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
+//
 // Revision 1.4  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -18,6 +21,8 @@
 #include "g_player.h"
 #include "g_actor.h"
 #include "g_pawn.h"
+
+#include "p_info.h"
 #include "command.h"
 
 #include "r_main.h"
@@ -32,6 +37,7 @@ extern consvar_t cv_deathmatch;
 
 consvar_t cv_itemrespawntime={"respawnitemtime","30",CV_NETVAR,CV_Unsigned};
 consvar_t cv_itemrespawn    ={"respawnitem"    , "0",CV_NETVAR,CV_OnOff};
+// TODO combine these to cv_itemrespawn CV_Unsigned, zero means no respawn, otherwise it is the respawntime
 
 #define FLOATRANDZ      (MAXINT-1)
 
@@ -44,6 +50,8 @@ Map::Map(const string & mname)
 // destructor
 Map::~Map()
 {
+  if (info)
+    delete info;
   // not much is needed because most memory is freed
   // in Z_FreeTags before a new level is started.
 }
@@ -469,159 +477,36 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
 // The fields of the mapthing should
 // already be in host byte order.
 //
-void Map::SpawnMapThing(mapthing_t *mthing)
+void Map::SpawnMapThing(mapthing_t *mt)
 {
-  if(!mthing->type)
-    return; //SoM: 4/7/2000: Ignore type-0 things as NOPs
-  
-  // multiplayer only thing flag
-  if (!game.multiplayer && (mthing->flags & MTF_MULTIPLAYER))
-    return;
-
-  //SoM: 4/7/2000: Implement "not deathmatch" thing flag
-  if (game.netgame && cv_deathmatch.value && (mthing->flags & MTF_NOT_IN_DM))
-    return;
-
-  //SoM: 4/7/2000: Implement "not cooperative" thing flag
-  if (game.netgame && !cv_deathmatch.value && (mthing->flags & MTF_NOT_IN_COOP))
-    return;
-
-  // check skill
-  int bit;
-  if (game.skill == sk_baby)
-    bit = 1;
-  else if (game.skill == sk_nightmare)
-    bit = 4;
-  else
-    bit = 1<<(game.skill-1);
-
-  if (!(mthing->flags & bit) )
-    return;
-
-
-  // count deathmatch start positions
-  if (mthing->type == 11)
-    {
-      if (dmstarts.size() < MAX_DM_STARTS)
-        {
-	  dmstarts.push_back(mthing);
-	  mthing->type = 0;
-        }
-      return;
-    }
-
-  // check for players specially
-  // added 9-2-98 type 5 -> 8 player[x] starts for cooperative
-  //              support ctfdoom cooperative playerstart
-  //SoM: 4/7/2000: Fix crashing bug.
-  if ((mthing->type > 0 && mthing->type <=4) ||
-      (mthing->type<=4028 && mthing->type>=4001) )
-    {
-      int pnum = mthing->type;
-      if (pnum > 4000)
-	pnum -= 4001 - 5;
-      // save spots for respawning in network games
-      if (playerstarts.size() < pnum)
-	playerstarts.resize(pnum);
-      playerstarts[pnum-1] = mthing;
-      mthing->type = 0; // mthing->type is used as a timer
-
-      // old version spawn player now, new version spawn player when level is 
-      // loaded, or in network event later when player join game
-      //if (cv_deathmatch.value == 0 && game.demoversion < 128) SpawnPlayer(mthing);	
-      return;
-    }
-
-  // Ambient sound sequences
-  if (mthing->type >= 1200 && mthing->type < 1300)
-    {
-      AddAmbientSfx(mthing->type-1200);
-      return;
-    }
-
-  // Check for boss spots
-  if (game.raven && mthing->type == 56) // Monster_BossSpot
-    {
-      if (BossSpots.size() >= MAX_BOSS_SPOTS)
-	{
-	  // BP:not a critical problem 
-	  CONS_Printf("Too many boss spots.");
-	}
-      else
-	{
-	  BossSpots.push_back(mthing);
-	  /*
-	  BossSpots[BossSpotCount].x = mthing->x << FRACBITS;
-	  BossSpots[BossSpotCount].y = mthing->y << FRACBITS;
-	  BossSpots[BossSpotCount].angle = ANG45 * (mthing->angle/45);
-	  BossSpotCount++;
-	  */
-	}
-      return;
-    }
-
-  int i;
-
-  // find which type to spawn
-  for (i=0 ; i< NUMMOBJTYPES ; i++)
-    if (mthing->type == mobjinfo[i].doomednum)
-      break;
-
-  if (i==NUMMOBJTYPES)
-    {
-      CONS_Printf ("\2P_SpawnMapThing: Unknown type %i at (%i, %i)\n",
-		   mthing->type,
-		   mthing->x, mthing->y);
-      return;
-    }
+  int t = mt->type;
 
   // don't spawn keycards and players in deathmatch
-  if (cv_deathmatch.value && mobjinfo[i].flags & MF_NOTDMATCH)
+  if (cv_deathmatch.value && mobjinfo[t].flags & MF_NOTDMATCH)
     return;
 
   // don't spawn any monsters if -nomonsters
-  if (game.nomonsters
-      && ( i == MT_SKULL || (mobjinfo[i].flags & MF_COUNTKILL)) )
-    {
-      return;
-    }
-
-  if( i == MT_WMACE )
-    {
-      if (MaceSpots.size() >= MAX_MACE_SPOTS)
-	{
-	  CONS_Printf("Too many mace spots.");
-	}
-      else
-	{
-	  MaceSpots.push_back(mthing);
-	  /*
-	  MaceSpots[MaceSpotCount].x = mthing->x<<FRACBITS;
-	  MaceSpots[MaceSpotCount].y = mthing->y<<FRACBITS;
-	  MaceSpotCount++;
-	  */
-	}
-      return;
-    }
+  if (game.nomonsters && (t == MT_SKULL || (mobjinfo[t].flags & MF_COUNTKILL)))
+    return;
 
   fixed_t nx, ny, nz;
   // spawn it
-  nx = mthing->x << FRACBITS;
-  ny = mthing->y << FRACBITS;
+  nx = mt->x << FRACBITS;
+  ny = mt->y << FRACBITS;
 
-  if (mobjinfo[i].flags & MF_SPAWNCEILING)
+  if (mobjinfo[t].flags & MF_SPAWNCEILING)
     nz = ONCEILINGZ;
-  else if (mobjinfo[i].flags2 & MF2_SPAWNFLOAT)
+  else if (mobjinfo[t].flags2 & MF2_SPAWNFLOAT)
     nz = FLOATRANDZ;
   else
     {
       // FIXME first think how the z spawning is supposed to work... really.
-      //mthing->z = R_PointInSubsector(nx, ny)->sector->floorheight >> FRACBITS;
+      //mt->z = R_PointInSubsector(nx, ny)->sector->floorheight >> FRACBITS;
       nz = ONFLOORZ;
     }
 
-  DActor *p = SpawnDActor(nx,ny,nz, mobjtype_t(i));
-  p->spawnpoint = mthing;
+  DActor *p = SpawnDActor(nx,ny,nz, mobjtype_t(t));
+  p->spawnpoint = mt;
 
   // Seed random starting index for bobbing motion
   if(p->flags2 & MF2_FLOATBOB)
@@ -635,18 +520,11 @@ void Map::SpawnMapThing(mapthing_t *mthing)
   if (p->flags & MF_COUNTITEM)
     items++;
 
-  p->angle = ANG45 * (mthing->angle/45);
-  if (mthing->flags & MTF_AMBUSH)
+  p->angle = ANG45 * (mt->angle/45);
+  if (mt->flags & MTF_AMBUSH)
     p->flags |= MF_AMBUSH;
 
-  mthing->mobj = p;
-
-
-  // DoomII braintarget list (braintarget is also spawned)
-  if (mthing->type == 87)
-    {
-      braintargets.push_back(p);
-    }
+  mt->mobj = p;
 }
 
 
@@ -1164,10 +1042,6 @@ void Map::BossDeath(const DActor *mo)
 //
 void Map::RespawnSpecials()
 {
-  // only respawn items in deathmatch
-  if (!cv_itemrespawn.value)
-    return; //
-
   // nothing left to respawn?
   if (itemrespawnqueue.empty()) //(iquehead == iquetail)
     return;
@@ -1179,6 +1053,7 @@ void Map::RespawnSpecials()
   mapthing_t *mthing = itemrespawnqueue.front();
   if (mthing != NULL)
     {
+      // TODO somewhat redundant code, see SpawnMapThing()
       fixed_t x, y, z;
 
       x = mthing->x << FRACBITS;
@@ -1194,20 +1069,15 @@ void Map::RespawnSpecials()
 	  S_StartSound (mo, sfx_itmbk);
 	}
 
-      int i;
-      // find which type to spawn
-      for (i=0 ; i< NUMMOBJTYPES ; i++)
-	if (mthing->type == mobjinfo[i].doomednum)
-	  break;
-      // TODO: why not replace here the doomednum with the actual type number in mthing?
+      int t = mthing->type;
 
       // spawn it
-      if (mobjinfo[i].flags & MF_SPAWNCEILING)
+      if (mobjinfo[t].flags & MF_SPAWNCEILING)
 	z = ONCEILINGZ;
       else
 	z = ONFLOORZ;
 
-      mo = SpawnDActor(x,y,z, mobjtype_t(i));
+      mo = SpawnDActor(x,y,z, mobjtype_t(t));
       mo->spawnpoint = mthing;
       mo->angle = ANG45 * (mthing->angle/45);
 

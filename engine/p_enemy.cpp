@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/01/12 12:56:40  smite-meister
+// Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
+//
 // Revision 1.4  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -1932,7 +1935,7 @@ void A_BrainSpit(DActor *mo)
   if (n > 0) 
     {
       // shoot a cube at current target
-      targ = m->braintargets[m->braintargeton];
+      targ = m->braintargets[m->braintargeton]->mobj;
       m->braintargeton = (m->braintargeton+1) % n;
         
       // spawn brain missile

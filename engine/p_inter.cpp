@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/01/12 12:56:40  smite-meister
+// Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
+//
 // Revision 1.4  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -363,7 +366,7 @@ bool DActor::Touch(Actor *p)
 	  // TODO: some beneficial effects for DActors too?
 	  p->Remove();
         }
-      return p->flags & MF_SOLID;
+      return p->flags & MF_SOLID; // most specials are not solid...
     }
 
   /*
@@ -442,10 +445,9 @@ bool PlayerPawn::Touch(Actor *p)
 	  if (p->Type() == Thinker::tt_dactor)
 	    {
 	      DActor *dp = (DActor *)p;
-	      TouchSpecialThing(dp);
+	      TouchSpecialThing(dp); // this also Removes() the item
 	    }
-	  p->Remove();
-	  return true;
+	  return false; // no collision, just possible pickup
         }
     }
 
@@ -1293,6 +1295,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 {                  
   int         i;
 
+  /*
   fixed_t delta = special->z - z;
 
   //SoM: 3/27/2000: For some reason, the old code allowed the player to
@@ -1302,6 +1305,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       // out of reach
       return;
     }
+  */
 
   // Dead thing touching.
   // Can happen with a sliding player corpse.

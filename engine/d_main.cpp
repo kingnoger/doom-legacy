@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/01/12 12:56:40  smite-meister
+// Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
+//
 // Revision 1.5  2002/12/29 18:57:02  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -861,7 +864,7 @@ void D_IdentifyVersion()
   D_AddFile("legacy.wad");
 
   D_AddFile("test.wad"); // FIXME testing
-
+  D_AddFile("heretic.wad"); // FIXME testing
 
   // Specify the name of an IWAD file to use.
   // Internally the game makes no difference between IWADs and PWADs.

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,64 +18,18 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/01/12 12:56:42  smite-meister
+// Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
+//
 // Revision 1.3  2002/12/16 22:14:50  smite-meister
 // Video unit fix
 //
 // Revision 1.2  2002/12/03 10:24:47  smite-meister
 // Video system overhaul
 //
-// Revision 1.4  2002/08/24 11:57:28  vberghol
-// d_main.cpp is better
-//
-// Revision 1.3  2002/07/01 21:01:03  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:35  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.11  2001/12/31 16:56:39  metzgermeister
-// see Dec 31 log
-// .
-//
-// Revision 1.10  2001/08/20 20:40:42  metzgermeister
-// *** empty log message ***
-//
-// Revision 1.9  2001/05/16 22:33:35  bock
-// Initial FreeBSD support.
-//
-// Revision 1.8  2001/04/28 14:25:03  metzgermeister
-// fixed mouse and menu bug
-//
-// Revision 1.7  2001/04/27 13:32:14  bpereira
-// no message
-//
-// Revision 1.6  2001/03/12 21:03:10  metzgermeister
-//   * new symbols for rendererlib added in SDL
-//   * console printout fixed for Linux&SDL
-//   * Crash fixed in Linux SW renderer initialization
-//
-// Revision 1.5  2001/03/09 21:53:56  metzgermeister
-// *** empty log message ***
-//
-// Revision 1.4  2001/02/24 13:35:23  bpereira
-// no message
-//
-// Revision 1.3  2001/01/25 22:15:45  bpereira
-// added heretic support
-//
-// Revision 1.2  2000/11/02 19:49:40  bpereira
-// no message
-//
-// Revision 1.1  2000/09/10 10:56:00  metzgermeister
-// clean up & made it work again
-//
-// Revision 1.1  2000/08/21 21:17:32  metzgermeister
-// Initial import to CVS
-//
-//
 //
 // DESCRIPTION:
-//      DOOM graphics stuff for SDL
+//   SDL video interface
 //
 //-----------------------------------------------------------------------------
 
@@ -152,13 +106,15 @@ static int firstEntry = 0;
 
 // windowed video modes from which to choose from.
 
-static int windowedModes[MAXWINMODES][2] = {
-    {MAXVIDWIDTH /*1024*/, MAXVIDHEIGHT/*768*/},
-    {800, 600},
-    {640, 480},
-    {512, 384},
-    {400, 300},
-    {320, 200}};
+static int windowedModes[MAXWINMODES][2] =
+{
+  {MAXVIDWIDTH /*1024*/, MAXVIDHEIGHT/*768*/},
+  {800, 600},
+  {640, 480},
+  {512, 384},
+  {400, 300},
+  {320, 200}
+};
 //
 //  Translates the SDL key into Doom key
 //
@@ -617,12 +573,9 @@ int I_SetVideoMode(int modeNum)
       SDL_WM_SetCaption("Legacy", "Legacy");
     }
 
-  //vid.recalc = true;
-
   if (rendermode == render_soft)
     {
       SDL_FreeSurface(vidSurface);
-      free(vid.buffer);
 	
       vidSurface = SDL_SetVideoMode(vid.width, vid.height, vid.BitsPerPixel, flags);
       if (vidSurface == NULL)
@@ -638,9 +591,7 @@ int I_SetVideoMode(int modeNum)
   else // !(render_soft == rendermode)
     {
       if (!OglSdlSurface(vid.width, vid.height, cv_fullscreen.value))
-	{
-	  I_Error("Could not set vidmode\n");
-	}
+	I_Error("Could not set vidmode\n");
     }
     
   I_StartupMouse();

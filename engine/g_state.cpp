@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/01/12 12:56:40  smite-meister
+// Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
+//
 // Revision 1.5  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -352,20 +355,6 @@ PlayerInfo *GameInfo::AddPlayer(int pnum, PlayerInfo *in = NULL)
   // FIXME the frags vectors of other players must be lengthened
 
   return p;
-
-  /*
-    p = &players[playernum];
-    memset(p->inventory, 0, sizeof(p->inventory));
-    p->inventorySlotNum = 0;
-    p->inv_ptr = 0;
-    p->st_curpos = 0;
-    p->st_inventoryTics = 0;
-
-  if (game.mode == heretic)
-    p->weaponinfo = wpnlev1info;
-  else
-    p->weaponinfo = doomweaponinfo;
-  */
 }
 
 

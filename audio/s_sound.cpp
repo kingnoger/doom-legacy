@@ -18,132 +18,14 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/01/12 12:56:40  smite-meister
+// Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
+//
 // Revision 1.2  2002/12/29 18:57:02  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
 // Revision 1.1.1.1  2002/11/16 14:17:48  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.14  2002/09/20 22:41:25  vberghol
-// Sound system rewritten! And it workscvs update
-//
-// Revision 1.11  2002/09/06 17:18:31  vberghol
-// added most of the changes up to RC2
-//
-// Revision 1.10  2002/08/24 17:26:32  vberghol
-// bug fixes
-//
-// Revision 1.9  2002/08/24 17:25:32  vberghol
-// bug fixes
-//
-// Revision 1.8  2002/08/21 16:58:28  vberghol
-// Version 1.41 Experimental compiles and links!
-//
-// Revision 1.7  2002/08/19 18:06:37  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.6  2002/07/18 19:16:34  vberghol
-// renamed a few files
-//
-// Revision 1.5  2002/07/16 19:16:18  vberghol
-// Hardware sound interface again somewhat fixed
-//
-// Revision 1.4  2002/07/01 20:59:48  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:01:52  vberghol
-// HUD alkaa olla kunnossa
-//
-// Revision 1.27  2001/08/20 20:40:39  metzgermeister
-// *** empty log message ***
-//
-// Revision 1.26  2001/05/27 13:42:48  bpereira
-// no message
-//
-// Revision 1.25  2001/04/30 17:19:24  stroggonmeth
-// HW fix and misc. changes
-//
-// Revision 1.24  2001/04/18 19:32:26  hurdler
-// no message
-//
-// Revision 1.23  2001/04/17 22:26:07  calumr
-// Initial Mac add
-//
-// Revision 1.22  2001/04/04 20:24:21  judgecutor
-// Added support for the 3D Sound
-//
-// Revision 1.21  2001/04/02 18:54:32  bpereira
-// no message
-//
-// Revision 1.20  2001/04/01 17:35:07  bpereira
-// no message
-//
-// Revision 1.19  2001/03/03 11:11:49  hurdler
-// I hate warnigs ;)
-//
-// Revision 1.18  2001/02/24 13:35:21  bpereira
-// no message
-//
-// Revision 1.17  2001/01/27 11:02:36  bpereira
-// no message
-//
-// Revision 1.16  2001/01/25 22:15:44  bpereira
-// added heretic support
-//
-// Revision 1.15  2000/11/21 21:13:18  stroggonmeth
-// Optimised 3D floors and fixed crashing bug in high resolutions.
-//
-// Revision 1.14  2000/11/12 21:59:53  hurdler
-// Please verify that sound bug
-//
-// Revision 1.13  2000/11/03 11:48:40  hurdler
-// Fix compiling problem under win32 with 3D-Floors and FragglScript (to verify!)
-//
-// Revision 1.12  2000/11/02 17:50:10  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.11  2000/10/27 20:38:20  judgecutor
-// - Added the SurroundSound support
-//
-// Revision 1.10  2000/09/28 20:57:18  bpereira
-// no message
-//
-// Revision 1.9  2000/05/07 08:27:57  metzgermeister
-// no message
-//
-// Revision 1.8  2000/04/22 16:16:50  emanne
-// Correction de l'interface.
-// Une erreur s'y était glissé, d'où un segfault si on compilait sans SDL.
-//
-// Revision 1.7  2000/04/21 08:23:47  emanne
-// To have SDL working.
-// Makefile: made the hiding by "@" optional. See the CC variable at
-// the begining. Sorry, but I like to see what's going on while building
-//
-// qmus2mid.h: force include of qmus2mid_sdl.h when needed.
-// s_sound.c: ??!
-// s_sound.h: with it.
-// (sorry for s_sound.* : I had problems with cvs...)
-//
-// Revision 1.6  2000/03/29 19:39:48  bpereira
-// no message
-//
-// Revision 1.5  2000/03/22 18:51:08  metzgermeister
-// introduced I_PauseCD() for Linux
-//
-// Revision 1.4  2000/03/12 23:21:10  linuxcub
-// Added consvars which hold the filenames and arguments which will be used
-// when running the soundserver and musicserver (under Linux). I hope I
-// didn't break anything ... Erling Jacobsen, linuxcub@email.dk
-//
-// Revision 1.3  2000/03/06 15:13:08  hurdler
-// maybe a bug detected
-//
-// Revision 1.2  2000/02/27 00:42:11  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //
 // DESCRIPTION:  
@@ -394,6 +276,10 @@ bool SoundSystem::StartMusic(const char *name, bool loop)
 
   // so music needs to be changed.
 
+  // shutdown old music
+  // TODO: add several music channels, crossfade;)
+  StopMusic();
+
   // FIXME temp hack: no 2nd level music cache, just one music plays at a time.
   // here we would check if the music 'name' already is in the 2nd level cache.
   // if not, cache it:
@@ -402,15 +288,10 @@ bool SoundSystem::StartMusic(const char *name, bool loop)
   if (musiclump < 0)
     {
       CONS_Printf("Music lump '%s' not found!\n", name);
-      StopMusic(); // stop music anyway
       return false;
     }
+
   musicinfo_t *m = &mu; // = new musicinfo_t...
-
-  // shutdown old music
-  // TODO: add several music channels, crossfade;)
-  StopMusic();
-
   strcpy(m->name, name);
   m->lumpnum = musiclump;
   m->data = (void *)fc.CacheLumpNum(musiclump, PU_MUSIC);
@@ -521,7 +402,7 @@ channel_t *SoundSystem::GetChannel(sfxinfo_t *sfx)
         }
     }
 
-  // channel is decided to be i.
+  // channel i is chosen
   channel_t *c = &channels[i];
   c->sfxinfo = sfx;
 
@@ -1367,60 +1248,3 @@ void S_ReplaceSound(const char *name)
   }
   return;
 }
-
-
-// unused old stuff
-
-/*
-void S_InitRuntimeMusic()
-{
-  int i;
-
-  for(i = mus_firstfreeslot; i < mus_lastfreeslot; i++)
-    S_music[i].name = NULL;
-}
-*/
-
-/*
-int S_FindMusic(const char *name)
-{ 
-  int   i;
-
-  for(i = 0; i < NUMMUSIC; i++)
-  {
-    if(!S_music[i].name)
-      continue;
-    if(!stricmp(name, S_music[i].name)) return i;
-  }
-
-  return S_AddMusic(name);
-  }
-*/
-
-/*
-//
-// S_AddMusic
-// Adds a single song to the runtime songs.
-int S_AddMusic(const char *name)
-{
-  int    i;
-  char   lumpname[9];
-
-  //sprintf(lumpname, "d_%.6s", name);
-  sprintf(lumpname, "%.8s", name);
-
-  for(i = mus_firstfreeslot; i < mus_lastfreeslot; i++)
-  {
-    if(S_music[i].name == NULL)
-    {
-      S_music[i].name = Z_Strdup(name, PU_STATIC, 0);
-      S_music[i].lumpnum = fc.GetNumForName(lumpname);
-      S_music[i].data = 0;
-      return i;
-    }
-  }
-
-  CONS_Printf("All music slots are full!\n");
-  return 0;
-  }
-*/

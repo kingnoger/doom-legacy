@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/01/12 12:56:40  smite-meister
+// Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
+//
 // Revision 1.4  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -136,8 +139,8 @@ static bool PIT_StompThing(Actor *thing)
 
   // monsters don't stomp things except on boss level
   // FIXME boss level? does this mean a brainshooter? last condition was gamemap != 30
-  if (game.mode != gm_heretic && tmthing->Type() != Thinker::tt_ppawn && thing->mp->braintargets.size())
-    return false;
+  //if (game.mode != gm_heretic && tmthing->Type() != Thinker::tt_ppawn && thing->mp->braintargets.size())
+  //  return false;
 
   // Not allowed to stomp things
   if (game.mode == gm_heretic && !(tmthing->flags2 & MF2_TELESTOMP))

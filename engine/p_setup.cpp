@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/01/12 12:56:40  smite-meister
+// Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
+//
 // Revision 1.3  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -187,7 +190,6 @@
 
 #include "hu_stuff.h"
 #include "console.h"
-
 
 
 #ifdef HWRENDER
@@ -588,10 +590,7 @@ void Map::LoadNodes(int lump)
 //
 void Map::LoadThings(int lump)
 {
-  int                 i;
-  mapthing_t*         mt;
-  bool             spawn;
-  char                *data, *datastart;
+  char *data, *datastart;
 
   data = datastart = (char *)fc.CacheLumpNum (lump,PU_LEVEL);
   nummapthings     = fc.LumpLength (lump) / (5 * sizeof(short));
@@ -601,20 +600,156 @@ void Map::LoadThings(int lump)
   //fragglescript, the format has changed and things won't load correctly
   //using the old method.
 
-  mt = mapthings;
+  int ffail = 0;
+  // multiplayer only thing flag
+  if (!game.multiplayer)
+    ffail |= MTF_MULTIPLAYER;
+
+  extern consvar_t cv_deathmatch;
+
+  // "not deathmatch"/"not coop" thing flags
+  if (game.netgame && cv_deathmatch.value)
+    ffail |= MTF_NOT_IN_DM;
+  else if (game.netgame && !cv_deathmatch.value)
+    ffail |= MTF_NOT_IN_COOP;
+
+  // check skill
+  int skillbit;
+  if (game.skill == sk_baby)
+    skillbit = 1;
+  else if (game.skill == sk_nightmare)
+    skillbit = 4;
+  else
+    skillbit = 1 << (game.skill-1);
+
+  mapthing_t *mt = mapthings;
+
+  // FIXME test extra golem!
+  mt->x = 128;
+  mt->y = 1150;
+  mt->angle = 0;
+  mt->type = MT_MUMMY;
+  mt->flags = 0;
+  mt->mobj = NULL;
+  SpawnMapThing(mt);
+
+  int i, n, low, high, ednum;
   for (i=0 ; i<nummapthings ; i++, mt++)
     {
-      spawn = true;
-
-      // Do spawn all other stuff.
-      // SoM: Do this first so all the mapthing slots are filled!
       mt->x = SHORT(READSHORT(data));
       mt->y = SHORT(READSHORT(data));
       mt->angle = SHORT(READSHORT(data));
-      mt->type = SHORT(READSHORT(data));
+
+      ednum = SHORT(READSHORT(data));
+
       mt->flags = SHORT(READSHORT(data));
       mt->mobj = NULL; //SoM:
 
+      // wrong flags?
+      if ((mt->flags & ffail) || !(mt->flags & skillbit))
+	continue;
+
+      // convert editor number to mobjtype_t number right now
+      if (!ednum)
+	continue; // Ignore type-0 things as NOPs
+
+      // deathmatch start positions
+      if (ednum == 11)
+	{
+	  if (dmstarts.size() < MAX_DM_STARTS)
+	    {
+	      dmstarts.push_back(mt);
+	      mt->type = 0;
+	    }
+	  continue;
+	}
+
+      // normal playerstarts (normal 4 + 28 extra)
+      if ((ednum >= 1 && ednum <= 4) || (ednum >= 4001 && ednum <= 4028))
+	{
+	  if (ednum > 4000)
+	    ednum -= 4001 - 5;
+	  // save spots for respawning in network games
+	  if (playerstarts.size() < ednum)
+	    playerstarts.resize(ednum);
+	  playerstarts[ednum - 1] = mt;
+	  mt->type = 0; // mt->type is used as a timer
+	  continue;
+	}
+
+      // Ambient sound sequences
+      if (ednum >= 1200 && ednum < 1300)
+	{
+	  AddAmbientSfx(ednum - 1200);
+	  continue;
+	}
+
+      if (ednum == 14)
+	{
+	  // ugly HACK, FIXME somehow!
+	  // same with doom and heretic, but only one mobjtype_t
+	  mt->type = MT_TELEPORTMAN;
+	  SpawnMapThing(mt);
+	  continue;
+	}
+
+      low = 0;
+      high = 0;
+
+      // find which type to spawn
+      if (ednum >= info->doom_offs[0] && ednum <= info->doom_offs[1])
+	{
+	  ednum -= info->doom_offs[0];
+	  low = MT_DOOM;
+	  high = MT_DOOM_END;
+	}
+      else if (ednum >= info->heretic_offs[0] && ednum <= info->heretic_offs[1])
+	{
+	  ednum -= info->heretic_offs[0];
+	  low = MT_HERETIC;
+	  high = MT_HERETIC_END;
+
+	  // D'Sparil teleport spot (no Actor spawned)
+	  if (ednum == 56)
+	    {
+	      BossSpots.push_back(mt);
+	      /*
+		BossSpots[BossSpotCount].x = mthing->x << FRACBITS;
+		BossSpots[BossSpotCount].y = mthing->y << FRACBITS;
+		BossSpots[BossSpotCount].angle = ANG45 * (mthing->angle/45);
+	      */
+	      continue;
+	    }
+
+	  // Mace spot (no Actor spawned)
+	  if (ednum == 2002)
+	    {
+	      MaceSpots.push_back(mt);
+	      /*
+		MaceSpots[MaceSpotCount].x = mthing->x<<FRACBITS;
+		MaceSpots[MaceSpotCount].y = mthing->y<<FRACBITS;
+	      */
+	      continue;
+	    }
+	}
+
+      for (n = low; n <= high; n++)
+	if (ednum == mobjinfo[n].doomednum)
+	  break;
+
+      if (n > high)
+	{
+	  CONS_Printf("\2P_SpawnMapThing: Unknown type %i at (%i, %i)\n",
+		      ednum, mt->x, mt->y);
+	  continue;
+	}
+
+      // DoomII braintarget list
+      if (n == MT_BOSSTARGET)
+	braintargets.push_back(mt);
+
+      // spawn here
+      mt->type = mobjtype_t(n); 
       SpawnMapThing(mt);
     }
 
@@ -1234,12 +1369,13 @@ bool Map::Setup(tic_t start)
 
   R_ClearColormaps();
 
-  info = new MapInfo; // TODO: delete this in Map destructor...
 #ifdef FRAGGLESCRIPT
   script_camera_on = false;
   T_ClearScripts();
-  info->Load(lumpnum);    // load level lump info(level name etc)
 #endif
+
+  info = new MapInfo;
+  info->Load(lumpnum); // load map separator lump info (map name etc)
 
   // If the map defines its music in MapInfo, use it.
   // Otherwise use given LevelNode data.

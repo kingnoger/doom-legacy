@@ -252,12 +252,12 @@ clean	:
 	$(rm) $(objects)
 
 depend:
-#	$(MAKE) -C video depend
-#	$(MAKE) -C engine depend
-#	$(MAKE) -C util depend
-#	$(MAKE) -C audio depend
-#	$(MAKE) -C net depend
-#	$(MAKE) -C interface/sdl depend
+	$(MAKE) -C video depend
+	$(MAKE) -C engine depend
+	$(MAKE) -C util depend
+	$(MAKE) -C audio depend
+	$(MAKE) -C net depend
+	$(MAKE) -C interface/sdl depend
 
 engine	:
 	$(MAKE) -C engine

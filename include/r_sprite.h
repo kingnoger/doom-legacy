@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/01/12 12:56:42  smite-meister
+// Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
+//
 // Revision 1.3  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -159,7 +162,7 @@ struct spriteframe_t
   // If false use 0 for any position.
   // Note: as eight entries are available,
   //  we might as well insert the same name eight times.
-  bool   rotate;
+  char   rotate;
 
   // Lump to use for view angles 0-7.
   int    lumppat[8];   // lump number 16:16 wad:lump

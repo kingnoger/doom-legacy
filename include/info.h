@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:24  hurdler
-// Initial revision
+// Revision 1.2  2003/01/12 12:56:42  smite-meister
+// Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
+//
+// Revision 1.1.1.1  2002/11/16 14:18:24  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.5  2002/07/18 19:16:40  vberghol
 // renamed a few files
@@ -2560,7 +2563,8 @@ extern char *sprnames[NUMSPRITES+1];
 
 
 typedef enum {
-    MT_PLAYER,
+  MT_DOOM,
+    MT_PLAYER = MT_DOOM,
     MT_POSSESSED,
     MT_SHOTGUY,
     MT_VILE,
@@ -2708,11 +2712,11 @@ typedef enum {
     MT_PLASMA2, //SoM: Hold the place.
     MT_CAMERA,  //SoM: SMMU Camera objects.
     MT_NODE,    //SoM: Level nodes...
-    ENDDOOM_MT = MT_NODE,
+    MT_DOOM_END = MT_NODE,
 
     // heretic stuff
-    BEGINHERETIC_MT,
-MT_HMISC0 = BEGINHERETIC_MT,
+  MT_HERETIC,
+MT_HMISC0 = MT_HERETIC,
 MT_ITEMSHIELD1,
 MT_ITEMSHIELD2,
 MT_HMISC1,
@@ -2872,7 +2876,7 @@ MT_AMBLSRWIMPY,
 MT_AMBLSRHEFTY,
 MT_SOUNDWIND,
 MT_SOUNDWATERFALL,
-
+  MT_HERETIC_END = MT_SOUNDWATERFALL,
 
     NUMMOBJTYPES
 

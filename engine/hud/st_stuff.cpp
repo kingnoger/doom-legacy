@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/01/12 12:56:41  smite-meister
+// Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
+//
 // Revision 1.5  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -769,7 +772,7 @@ void HUD::UpdateWidgets()
   int i;
 
   // if sbpawn == NULL, don't update. ST_Stop sets it to NULL.
-  if (sbpawn == NULL)
+  if (!st_active || sbpawn == NULL)
     return;
 
   statusbaron = (cv_viewsize.value < 11) || automap.active;
