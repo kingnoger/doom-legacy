@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/03/29 20:08:04  smite-meister
+// Cast added
+//
 // Revision 1.7  2003/03/23 14:24:14  smite-meister
 // Polyobjects, MD3 models
 //
@@ -317,7 +320,7 @@ byte* R_GenerateTexture (int texnum)
 
         block = (byte *)Z_Malloc (blocksize,
                           PU_STATIC,         // will change tag at end of this function
-                          &texturecache[texnum]);
+                          (void **)&texturecache[texnum]);
         memcpy (block, realpatch, blocksize);
 #else
         // FIXME: this version don't put the user z_block
@@ -343,7 +346,7 @@ byte* R_GenerateTexture (int texnum)
     //CONS_Printf ("R_GenTex MULTI  %.8s size: %d\n",texture->name,blocksize);
     texturememory+=blocksize;
 
-    block = (byte *)Z_Malloc(blocksize, PU_STATIC, &texturecache[texnum]);
+    block = (byte *)Z_Malloc(blocksize, PU_STATIC, (void **)&texturecache[texnum]);
 
     // columns lookup table
     colofs = (unsigned int*)block;
