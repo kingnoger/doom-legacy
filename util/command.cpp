@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/07/13 20:23:39  smite-meister
+// Mod system basics
+//
 // Revision 1.6  2004/07/11 14:32:01  smite-meister
 // Consvars updated, bugfixes
 //
@@ -1047,27 +1050,27 @@ void consvar_t::Got_NetVar(unsigned short id, char *str)
 
 
 // write the netvars into a packet
-void consvar_t::SaveNetVars(TNL::BitStream *s)
+void consvar_t::SaveNetVars(TNL::BitStream &s)
 {
   for (consvar_t *cvar = cvar_list; cvar; cvar = cvar->next)
     if (cvar->flags & CV_NETVAR)
       {
-	s->write(cvar->netid);
-        s->writeString(cvar->str);
+	s.write(cvar->netid);
+        s.writeString(cvar->str);
       }
 }
 
 // read the netvars from a packet
-void consvar_t::LoadNetVars(TNL::BitStream *s)
+void consvar_t::LoadNetVars(TNL::BitStream &s)
 {
   for (consvar_t *cvar = cvar_list; cvar; cvar = cvar->next)
     if (cvar->flags & CV_NETVAR)
       {
 	// the for loop is just used for count
 	unsigned short id;
-	s->read(&id);
+	s.read(&id);
 	char temp[256];
-        s->readString(temp);
+        s.readString(temp);
 	Got_NetVar(id, temp);
       }
 }

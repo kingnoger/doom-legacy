@@ -122,6 +122,7 @@ export engine_objects = \
 	$(objdir)/g_state.o \
 	$(objdir)/g_demo.o \
 	$(objdir)/g_input.o \
+	$(objdir)/g_type.o \
 	$(objdir)/g_level.o \
 	$(objdir)/g_mapinfo.o \
 	$(objdir)/g_map.o \

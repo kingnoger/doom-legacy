@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/07/13 20:23:39  smite-meister
+// Mod system basics
+//
 // Revision 1.4  2004/07/11 14:32:01  smite-meister
 // Consvars updated, bugfixes
 //
@@ -116,10 +119,10 @@ Shooting and artifact use should be guaranteed...
 
 
 
-  Relevant TNL classes:
+In future, do dll mods like this:
+polymorph Map, PlayerInfo? (and Actor descendants, of course)
+Have polymorphed class GameType which creates these into GameInfo containers
 
-  NetObject: Thinker should inherit this, these can be ghosted and have RPC's called on them.
-  NetEvent: Used for RPC's and communication...
  */
 
 
@@ -186,6 +189,7 @@ void FastMonster_OnChange();
 consvar_t cv_deathmatch = {"deathmatch","0",CV_NETVAR | CV_NOINIT | CV_CALL, deathmatch_cons_t, Deathmatch_OnChange};
 consvar_t cv_teamplay   = {"teamplay"  ,"0",CV_NETVAR | CV_CALL,teamplay_cons_t, TeamPlay_OnChange};
 consvar_t cv_teamdamage = {"teamdamage","0",CV_NETVAR,CV_OnOff};
+consvar_t cv_hiddenplayers = {"hiddenplayers","0",CV_NETVAR,CV_YesNo};
 consvar_t cv_exitmode   = {"exitmode", "1", CV_NETVAR, exitmode_cons_t, NULL};
 consvar_t cv_fraglimit  = {"fraglimit" ,"0",CV_NETVAR | CV_CALL | CV_NOINIT,fraglimit_cons_t, FragLimit_OnChange};
 consvar_t cv_timelimit  = {"timelimit" ,"0",CV_NETVAR | CV_CALL | CV_NOINIT,CV_Unsigned, TimeLimit_OnChange};
@@ -263,8 +267,6 @@ void Deathmatch_OnChange()
 
 void FragLimit_OnChange()
 {
-  if (cv_fraglimit.value > 0)
-    game.CheckScoreLimit();
 }
 
 
@@ -290,10 +292,6 @@ void TimeLimit_OnChange()
 void GameInfo::TryRunTics(tic_t elapsed)
 {
   extern  bool singletics;
-
-  // local input
-  //ticcmd_t localcmd[2];
-
 
   // max time step
   if (elapsed > TICRATE/7)
@@ -351,6 +349,7 @@ bool GameInfo::Playing()
 }
 
 
+void P_ACSInitNewGame();
 
 /// after this you are not Playing()
 void GameInfo::SV_Reset()
@@ -360,6 +359,7 @@ void GameInfo::SV_Reset()
   Clear_mapinfo_clusterdef();
   ClearPlayers();
   // clear teams?
+  P_ACSInitNewGame(); // TODO clear FS global/hub data
 
   Z_FreeTags(PU_LEVEL, MAXINT);
 
@@ -641,6 +641,7 @@ void SV_Init()
   cv_deathmatch.Reg();
   cv_teamplay.Reg();
   cv_teamdamage.Reg();
+  cv_hiddenplayers.Reg();
   cv_exitmode.Reg();
   cv_fraglimit.Reg();
   cv_timelimit.Reg();

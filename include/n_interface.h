@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/07/13 20:23:37  smite-meister
+// Mod system basics
+//
 // Revision 1.5  2004/07/09 19:43:40  smite-meister
 // Netcode fixes
 //
@@ -51,8 +54,8 @@ using namespace TNL;
 /// \brief TNL NetInterface class for Legacy
 ///
 /// Wrapper for a socket and more.
-/// Takes care of low-level network stuff, handles connections and authenthications,
-/// server pinging etc.
+/// Takes care of server pinging, server lists, connections,
+/// authenthication and basic network housekeeping.
 
 class LNetInterface : public NetInterface
 {
@@ -142,15 +145,14 @@ public:
   /// Tries to connect to a server
   void CL_Connect(const Address &a);
 
+  /// Closes server connection
   void CL_Reset();
 
   /// Opens a server to the world
   void SV_Open();
 
-  /// Closes all connections
+  /// Closes all connections, disallows new connections
   void SV_Reset();
-
-  void QuitNetGame();
 
   //================================================
 
@@ -170,19 +172,19 @@ public:
   U32            token; ///< id token the server returned
   unsigned   nextquery; ///< when should the next server query be sent?
 
-
   unsigned        ping;
-  string          name;
+
   int          version; ///< server version
   string versionstring;
+  string          name; ///< server name
   int          players;
   int       maxplayers;
-
-  int         gametype;
-
+  string       gt_name; ///< name of the gametype DLL
+  U32       gt_version; ///< DLL version
 
   serverinfo_t(const Address &a);
   void Draw(int x, int y);
+  void Read(TNL::BitStream &s);
 };
 
 

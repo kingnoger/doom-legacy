@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/07/13 20:23:36  smite-meister
+// Mod system basics
+//
 // Revision 1.13  2004/07/05 16:53:27  smite-meister
 // Netcode replaced
 //
@@ -64,8 +67,7 @@
 
 #include "doomdef.h"
 #include "doomdata.h"
-#include "command.h"
-#include "cvars.h"
+
 #include "g_game.h"
 #include "g_player.h"
 #include "g_input.h"
@@ -783,20 +785,20 @@ bool AutoMap::Responder(event_t *ev)
 	case AM_FOLLOWKEY:
 	  followplayer = !followplayer;
 	  f_oldloc.x = MAXINT;
-	  consoleplayer->message = followplayer ? AMSTR_FOLLOWON : AMSTR_FOLLOWOFF;
+	  consoleplayer->SetMessage(followplayer ? AMSTR_FOLLOWON : AMSTR_FOLLOWOFF);
 	  break;
 	case AM_GRIDKEY:
 	  grid = !grid;
-	  consoleplayer->message = grid ? AMSTR_GRIDON : AMSTR_GRIDOFF;
+	  consoleplayer->SetMessage(grid ? AMSTR_GRIDON : AMSTR_GRIDOFF);
 	  break;
 	case AM_MARKKEY:
 	  sprintf(buffer, "%s %d", AMSTR_MARKEDSPOT, markpointnum);
-	  consoleplayer->message = buffer;
+	  consoleplayer->SetMessage(buffer);
 	  addMark();
 	  break;
 	case AM_CLEARMARKKEY:
 	  clearMarks();
-	  consoleplayer->message = AMSTR_MARKSCLEARED;
+	  consoleplayer->SetMessage(AMSTR_MARKSCLEARED);
 	  break;
 	default:
 	  cheatstate=0;
@@ -1266,10 +1268,8 @@ void AutoMap::drawGrid(int color)
 }
 
 
-// was AM_drawWalls
 // Determines visible lines, draws them.
 // This is LineDef based, not LineSeg based.
-//
 void AutoMap::drawWalls()
 {
   int i;
@@ -1403,44 +1403,41 @@ static void AM_drawLineCharacter(mline_t*    lineguy,
     }
 }
 
-// was AM_drawPlayers
+
 
 void AutoMap::drawPlayers()
 {
-  if (!game.multiplayer || (cv_deathmatch.value && !singledemo))
-    {
-      if (am_cheating)
-	AM_drawLineCharacter
-	  (cheat_player_arrow, NUMCHEATPLYRLINES, 0,
-	   mpawn->angle, DWHITE, mpawn->x, mpawn->y);
-      else
-	AM_drawLineCharacter
-	  (player_arrow, NUMPLYRLINES, 0,
-	   mpawn->angle, DWHITE, mpawn->x, mpawn->y);
-      return;
-    }
-
-  int i;
-  int color;
-  PlayerPawn *p;
   int n = mp->players.size();
-  // multiplayer, no secrets
-  for (i=0;i<n;i++)
+
+  for (int i=0; i<n; i++)
     {
-      p = mp->players[i]->pawn;
+      PlayerPawn *p = mp->players[i]->pawn;
       if (p == NULL)
 	continue;
 
-      if (p->powers[pw_invisibility])
-	color = 246; // *close* to black
-      else if(p->pres->color == 0)
-	color = GREENS;
+      if (p == mpawn)
+	{
+	  if (am_cheating)
+	    AM_drawLineCharacter(cheat_player_arrow, NUMCHEATPLYRLINES, 0,
+				 p->angle, DWHITE, p->x, p->y);
+	  else
+	    AM_drawLineCharacter(player_arrow, NUMPLYRLINES, 0,
+				 p->angle, DWHITE, p->x, p->y);
+	}
       else
-	color = *(translationtables + ((p->pres->color-1)<<8) +GREENS+8);
+	{
+	  int color;
 
-      AM_drawLineCharacter
-	(player_arrow, NUMPLYRLINES, 0, p->angle,
-	 color, p->x, p->y);
+	  if (p->powers[pw_invisibility])
+	    color = 246; // *close* to black
+	  else if (p->pres->color == 0)
+	    color = GREENS;
+	  else
+	    color = *(translationtables + ((p->pres->color-1)<<8) +GREENS+8);
+
+	  AM_drawLineCharacter(player_arrow, NUMPLYRLINES, 0, p->angle,
+			       color, p->x, p->y);
+	}
     }
 }
 

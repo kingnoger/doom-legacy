@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/07/13 20:23:38  smite-meister
+// Mod system basics
+//
 // Revision 1.11  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
 //
@@ -81,8 +84,7 @@ void I_GrabMouse();
 
 
 #ifdef DYNAMIC_LINKAGE
-static dll_handle_t ogl_handle = NULL;
-static const dll_info_t *ogl_info = NULL;
+static LegacyDLL OGL_renderer;
 #endif
 
 // SDL vars
@@ -428,18 +430,15 @@ bool I_StartupGraphics()
 
 #ifdef DYNAMIC_LINKAGE
       // dynamic linkage
-      ogl_handle = OpenDLL("r_opengl.dll");
-      if (!ogl_handle)
-	I_Error("Could not load r_opengl.dll!\n");
+      OGL_renderer.Open("r_opengl.dll");
 
-      ogl_info = (dll_info_t *)GetSymbol(ogl_handle, "dll_info");
-      if (ogl_info->interface_version != R_OPENGL_INTERFACE_VERSION)
+      if (OGL_renderer.api_version != R_OPENGL_INTERFACE_VERSION)
 	I_Error("r_opengl.dll interface version does not match with Legacy.exe!\n"
 		"You must use the r_opengl.dll that came in the same distribution as your Legacy.exe.");
 
-      hw_renderer_export_t *temp = (hw_renderer_export_t *)GetSymbol(ogl_handle, "r_export");
+      hw_renderer_export_t *temp = (hw_renderer_export_t *)OGL_renderer.GetSymbol("r_export");
       memcpy(&HWD, temp, sizeof(hw_renderer_export_t));
-      CONS_Printf("%s loaded.\n", ogl_info->dll_name);
+      CONS_Printf("%s loaded.\n", OGL_renderer.name);
 #else
       // static linkage
       memcpy(&HWD, &r_export, sizeof(hw_renderer_export_t));

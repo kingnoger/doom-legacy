@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/07/13 20:23:39  smite-meister
+// Mod system basics
+//
 // Revision 1.6  2004/07/11 14:32:01  smite-meister
 // Consvars updated, bugfixes
 //
@@ -38,9 +41,9 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Legacy Network Interface code
+/// \brief Legacy Network Interface
 ///
-/// Uses OpenTNL
+/// Uses OpenTNL.
 
 #include "tnl/tnlAsymmetricKey.h"
 
@@ -52,11 +55,18 @@
 #include "n_connection.h"
 
 #include "g_game.h"
+#include "g_type.h"
 
 #include "i_system.h"
 
 
+#include "m_misc.h"
+#include "w_wad.h"
+#include "vfile.h"
+
 using namespace TNL;
+
+
 
 
 serverinfo_t::serverinfo_t(const Address &a)
@@ -65,10 +75,34 @@ serverinfo_t::serverinfo_t(const Address &a)
   nextquery = 0;
   version = 0;
   players = maxplayers = 0;
-  gametype = 0;
+  gt_version = 0;
 }
 
 
+void serverinfo_t::Read(BitStream &s)
+{
+  char temp[256];
+
+  s.read(&version);
+  s.readString(temp);
+  versionstring = temp;
+
+  s.readString(temp);
+  name = temp;
+
+  s.read(&players);
+  s.read(&maxplayers);
+
+  s.readString(temp);
+  gt_name = temp;
+  s.read(&gt_version);
+}
+
+
+
+//===================================================================
+//     Network Interface
+//===================================================================
 
 static char *ConnectionState[] =
 {
@@ -159,7 +193,7 @@ void LNetInterface::handleInfoPacket(const Address &address, U8 packetType, BitS
     {
     case PT_ServerPing:
       // ping packet only contains a client nonce and the Legacy ID string(s)
-      if (game.server)
+      if (game.server && mAllowConnections)
 	{
 	  CONS_Printf("received ping from %s\n", address.toString());
 
@@ -231,7 +265,7 @@ void LNetInterface::handleInfoPacket(const Address &address, U8 packetType, BitS
 
     case PT_ServerQuery:
       // packet contains the client nonce and the id token
-      if (game.server)
+      if (game.server && mAllowConnections)
 	{
 	  CONS_Printf("Got server query from %s\n", address.toString());
 
@@ -247,15 +281,8 @@ void LNetInterface::handleInfoPacket(const Address &address, U8 packetType, BitS
 	      out.write(U8(PT_QueryResponse));
 	      cn.write(&out);
 
-	      out.writeString(cv_servername.str);
-	      out.write(VERSION);
-	      out.writeString(VERSIONSTRING);
-	      out.write(game.Players.size());
-	      out.write(game.maxplayers);
+	      game.type->WriteServerQueryResponse(out);
 
-	      // TODO server load, game type, current map, how long it has been running, how long to go...
-	      // what WADs are needed, can they be downloaded from server...
-	      
 	      out.sendto(mSocket, address);
 	    }	  
 	}
@@ -275,16 +302,7 @@ void LNetInterface::handleInfoPacket(const Address &address, U8 packetType, BitS
 	  if (cn != s->cn)
 	    return; // wrong nonce. kind of marginal concern.
 
-	  char temp[256];
-	  stream->readString(temp);
-	  s->name = temp;
-
-	  stream->read(&s->version);
-	  stream->readString(temp);
-	  s->versionstring = temp;
-
-	  stream->read(&s->players);
-	  stream->read(&s->maxplayers);
+	  s->Read(*stream); // read the server info
 
 	  if (autoconnect)
 	    CL_Connect(address); // this will stop the pinging
@@ -450,20 +468,35 @@ void LNetInterface::Update()
 
 
 
-//
-// was D_QuitNetGame
-// Called before quitting to leave a net game
-// without hanging the other players
-//
 
 
-void LNetInterface::QuitNetGame()
+
+/// \brief xxx
+/*
+class NetFileInfo
 {
-  if (!game.netgame)
-    return;
- 
-  if (game.server)
-    SV_Reset();
-  else
-    CL_Reset();
+  string filename;
+  int        size;
+  byte    md5[16];
+
+  // current size, transfer status
+};
+*/
+
+
+void FileCache::WriteNetInfo(BitStream &s)
+{
+  S32 n = vfiles.size();
+  s.write(n); // number of files
+
+  for (int i=0; i<n; i++)
+    {
+      S32 size;
+      byte md5[16];
+
+      s.write(vfiles[i]->GetNetworkInfo(&size, md5)); // downloadable?
+      s.writeString(FIL_StripPath(vfiles[i]->filename.c_str()));
+      s.write(size);
+      s.write(16, md5);
+    }
 }

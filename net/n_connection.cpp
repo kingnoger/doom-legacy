@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/07/13 20:23:38  smite-meister
+// Mod system basics
+//
 // Revision 1.3  2004/07/11 14:32:01  smite-meister
 // Consvars updated, bugfixes
 //
@@ -39,8 +42,30 @@
 #include "n_connection.h"
 
 #include "g_game.h"
+#include "g_type.h"
 #include "g_player.h"
 
+
+/*
+More serverside stuff:
+
+void objectLocalScopeAlways(o)
+void objectLocalClearAlways(o)
+
+void activateGhosting()
+void resetGhosting()
+bool isGhosting()
+
+virtual void onStartGhosting()
+virtual void onEndGhosting()
+*/
+
+
+// netobject:
+/*
+  virtual void onGhostAvailable (GhostConnection *theConnection) // serverside
+  virtual F32  getUpdatePriority (NetObject *scopeObject, U32 updateMask, S32 updateSkips)
+*/
 
 
 
@@ -50,12 +75,13 @@ TNL_IMPLEMENT_NETCONNECTION(LConnection, NetClassGroupGame, true);
 LConnection::LConnection()
 {
   //setIsAdaptive();
+  //setTranslatesStrings();
   setFixedRateParameters(50, 50, 2000, 2000); // packet rates, sizes (send and receive)
 }
 
 
 
-
+// client
 void LConnection::writeConnectRequest(BitStream *stream)
 {
    Parent::writeConnectRequest(stream);
@@ -64,7 +90,7 @@ void LConnection::writeConnectRequest(BitStream *stream)
    stream->writeString(VERSIONSTRING);
 
    // send local player data
-   byte n = cv_splitscreen.value + 1; // number of local players
+   byte n = cv_splitscreen.value ? 2 : 1; // number of local players
    stream->write(n);
 
    stream->writeString(localplayer.name.c_str());
@@ -76,6 +102,7 @@ void LConnection::writeConnectRequest(BitStream *stream)
 }
 
 
+// server
 bool LConnection::readConnectRequest(BitStream *stream, const char **errorString)
 {
   if (!Parent::readConnectRequest(stream, errorString))
@@ -119,6 +146,7 @@ bool LConnection::readConnectRequest(BitStream *stream, const char **errorString
 
       PlayerInfo *p = new PlayerInfo(temp);
       p->connection = this;
+      // TODO check that name is unique, change if necessary
 
       player.push_back(p);
       if (!game.AddPlayer(p))
@@ -129,40 +157,48 @@ bool LConnection::readConnectRequest(BitStream *stream, const char **errorString
 }
 
 
+// server
 void LConnection::writeConnectAccept(BitStream *stream)
 {
-  Parent::writeConnectAccept(stream);  
-  // TODO check that name is unique, send corrected info back, send pnum
+  Parent::writeConnectAccept(stream);
 
-  // TODO SV_SendServerConfig(node)
-  /*
-    stream->writeString(cv_servername.str);
-    stream->write(VERSION);
-    stream->writeString(VERSIONSTRING);
-    stream->write(game.Players.size());
-    stream->write(game.maxplayers);
-  */
-  // TODO server load, game type, current map, how long it has been running, how long to go...
-  // what WADs are needed, can they be downloaded from server...
+  byte n = player.size();
+  stream->write(n);                   // how many players were accepted?
+  for (int i = 0; i < n; i++)
+    stream->write(player[i]->number); // send pnums
 
-  consvar_t::SaveNetVars(stream);
+  game.type->WriteServerInfo(*stream);
 }
 
 
+// client
 bool LConnection::readConnectAccept(BitStream *stream, const char **errorString)
 {
   if(!Parent::readConnectAccept(stream, errorString))
     return false;
 
-  // TODO read serverconfig
-  consvar_t::LoadNetVars(stream);
+  byte n;
+  stream->read(&n);
+  if (n > 2 || n == 0)
+    return false;
+
+  stream->read(&localplayer.number);
+  if (n == 2)
+    stream->read(&localplayer2.number);
+
+  // read server properties
+  serverinfo_t s(getNetAddress());
+  s.Read(*stream);
+
+  consvar_t::LoadNetVars(*stream);
+  // FIXME read needed files, check them, download them...
 
   return true;
 }
 
 
 
-/// connection response functions
+
 
 void LConnection::onConnectTerminated(TerminationReason r, const char *reason)
 {
@@ -180,34 +216,33 @@ void LConnection::onConnectionEstablished()
   // To see how this program performs with 50% packet loss,
   // Try uncommenting the next line :)
   //setSimulatedNetParams(0.5, 0);
+
+  LNetInterface *n = (LNetInterface *)getInterface();
    
   if (isInitiator())
     {
       // client side
       setGhostFrom(false);
       setGhostTo(true);
-      CONS_Printf("%s - connected to server.\n", getNetAddressString());
-      LNetInterface *n = (LNetInterface *)getInterface();
       n->server_con = this;
       n->netstate = LNetInterface::CL_Connected;
+      CONS_Printf("Connected to server at %s.\n", getNetAddressString());
     }
   else
     {
       // server side
-      ((LNetInterface *)getInterface())->client_con.push_back(this);
+      n->client_con.push_back(this);
 
-      int n = player.size();
-      for (int i = 0; i<n; i++)
+      int k = player.size();
+      for (int i = 0; i<k; i++)
 	{
 	  CONS_Printf("%s entered the game (player %d)\n", player[i]->name.c_str(), player[i]->number);
-	  //SendPlayerConfig();
+	  // TODO multicast/RPC playerinfo to other players?
 	}
-      //setScopeObject(x); // TODO
-
+      setScopeObject(game.type);
       setGhostFrom(true);
       setGhostTo(false);
       activateGhosting();
-      CONS_Printf("%s - client connected.\n", getNetAddressString());
     }
 }
 
@@ -224,6 +259,7 @@ void LConnection::onConnectionTerminated(TerminationReason r, const char *error)
 
 void LConnection::ConnectionTerminated(bool established)
 {
+  CONS_Printf("Unsuccesful connect attempt\n");
   if (isConnectionToServer())
     {
       ((LNetInterface *)getInterface())->CL_Reset();
@@ -238,7 +274,8 @@ void LConnection::ConnectionTerminated(bool established)
 	      CONS_Printf("Player (%d) dropped.\n", player[i]->number);
 	      game.RemovePlayer(player[i]->number); // PI is also deleted here
 	    }
-	  // drop client, inform others
+	  resetGhosting();
+	  // TODO inform others
 	}
       else
 	{
@@ -246,78 +283,3 @@ void LConnection::ConnectionTerminated(bool established)
 	}
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-// TEST ghosting
-/*
-  typedef NetObject Parent;
-  TNL_DECLARE_CLASS(PlayerInfo);
-  virtual bool onGhostAdd(class GhostConnection *theConnection);
-  virtual void onGhostRemove();
-  virtual U32  packUpdate(GhostConnection *connection, U32 updateMask, class BitStream *stream);
-  virtual void unpackUpdate(GhostConnection *connection, BitStream *stream);
-  virtual void performScopeQuery(GhostConnection *connection);
-
-
-bool PlayerInfo::onGhostAdd(class GhostConnection *theConnection)
-{
-  CONS_Printf("added new player\n");
-  game.AddPlayer(this);
-  return true;
-}
-
-void PlayerInfo::onGhostRemove()
-{
-  game.RemovePlayer(number);
-}
-
-const int UM_INIT = 0x1; // TEMP
-
-U32 PlayerInfo::packUpdate(GhostConnection *connection, U32 mask, class BitStream *stream)
-{
-  // check which states need to be updated, and write updates
-  if (stream->writeFlag(mask & UM_INIT))
-    {
-      stream->write(number);
-      stream->writeString(name.c_str());
-    }
-
-  // the return value from packUpdate can set which states still
-  // need to be updated for this object.
-  return 0;
-}
-
-void PlayerInfo::unpackUpdate(GhostConnection *connection, BitStream *stream)
-{
-  char temp[256];
-
-  // the unpackUpdate function must be symmetrical to packUpdate
-  if (stream->readFlag())
-    {
-      stream->read(&number);
-      stream->readString(temp);
-      name = temp;
-    }
-}
-
-
-// scope query on server
-void PlayerInfo::performScopeQuery(GhostConnection *c)
-{
-  for (GameInfo::player_iter_t t = game.Players.begin(); t != game.Players.end(); t++)
-    {
-      PlayerInfo *p = (*t).second;
-      c->objectInScope(p); // player information is always in scope
-    }
-}
-*/

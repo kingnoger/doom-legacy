@@ -117,8 +117,7 @@ public:
 
 //========================================================
 
-///  ABC for physical files (not directories!)
-
+/// \brief ABC for physical files (not directories!)
 class VDataFile : public VFile
 {
 protected:

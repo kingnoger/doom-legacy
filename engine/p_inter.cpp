@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.30  2004/07/13 20:23:36  smite-meister
+// Mod system basics
+//
 // Revision 1.29  2004/07/05 16:53:25  smite-meister
 // Netcode replaced
 //
@@ -119,6 +122,7 @@
 #include "g_damage.h"
 
 #include "g_game.h"
+#include "g_type.h"
 #include "g_player.h"
 #include "g_map.h"
 #include "g_actor.h"
@@ -182,7 +186,7 @@ void DActor::Killed(PlayerPawn *victim, Actor *inflictor)
 void PlayerPawn::Killed(PlayerPawn *victim, Actor *inflictor)
 {
   // player killer
-  game.UpdateScore(player, victim->player);
+  game.type->Frag(player, victim->player);
 
   if (player == displayplayer || player == displayplayer2)
     S_StartAmbSound(sfx_frag);
@@ -915,7 +919,7 @@ void PlayerPawn::Die(Actor *inflictor, Actor *source)
 	CONS_Printf(str, player->name.c_str());
 
       // count environment kills against you (you fragged yourself!)
-      game.UpdateScore(player, player);
+      game.type->Frag(player, player);
     }
   else
     source->Killed(this, inflictor);
@@ -994,36 +998,36 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
     case MT_ARMOR_1:
       if (!GiveArmor(armor_armor, 3.0, -1))
 	return;
-      player->message = text[TXT_ARMOR1];
+      player->SetMessage(text[TXT_ARMOR1]);
       break;
     case MT_ARMOR_2:
       if(!GiveArmor(armor_shield, 3.0, -1))
 	return;
-      player->message = text[TXT_ARMOR2];
+      player->SetMessage(text[TXT_ARMOR2]);
       break;
     case MT_ARMOR_3:
       if(!GiveArmor(armor_helmet, 3.0, -1))
 	return;
-      player->message = text[TXT_ARMOR3];
+      player->SetMessage(text[TXT_ARMOR3]);
       break;
     case MT_ARMOR_4:
       if(!GiveArmor(armor_amulet, 3.0, -1))
 	return;
-      player->message = text[TXT_ARMOR4];
+      player->SetMessage(text[TXT_ARMOR4]);
       break;
 
     case MT_ITEMSHIELD1:
     case MT_ITEMSHIELD2:
       if (!GiveArmor(armor_field, special->info->speed, special->health))
 	return;
-      player->message = text[stype - MT_ITEMSHIELD1 + TXT_ITEMSHIELD1];
+      player->SetMessage(text[stype - MT_ITEMSHIELD1 + TXT_ITEMSHIELD1]);
       break;
 
     case MT_GREENARMOR:
     case MT_BLUEARMOR:
       if (!GiveArmor(armor_field, special->info->speed, special->health))
 	return;
-      player->message = text[stype - MT_GREENARMOR + TXT_GOTARMOR];
+      player->SetMessage(text[stype - MT_GREENARMOR + TXT_GOTARMOR]);
       break;
 
     case MT_HEALTHBONUS:  // health bonus
@@ -1031,20 +1035,20 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       if (health > 2*maxhealth)
 	health = 2*maxhealth;
       if (cv_showmessages.value==1)
-	player->message = GOTHTHBONUS;
+	player->SetMessage(GOTHTHBONUS);
       break;
 
     case MT_ARMORBONUS:  // spirit armor
       GiveArmor(armor_field, -0.333f, 1);
       if (cv_showmessages.value==1)
-	player->message = GOTARMBONUS;
+	player->SetMessage(GOTARMBONUS);
       break;
 
     case MT_SOULSPHERE:
       health += special->health;
       if (health > 2*maxhealth)
 	health = 2*maxhealth;
-      player->message = GOTSUPER;
+      player->SetMessage(GOTSUPER);
       p_sound = sfx_powerup;
       break;
 
@@ -1053,7 +1057,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       if (health > 2*maxhealth)
 	health = 2*maxhealth;
       GiveArmor(armor_field, 0.5, special->health);
-      player->message = GOTMSPHERE;
+      player->SetMessage(GOTMSPHERE);
       p_sound = sfx_powerup;
       break;
 
@@ -1129,9 +1133,9 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	return;
       if (cv_showmessages.value == 1)
 	if (stype == MT_STIM)
-	  player->message = GOTSTIM;
+	  player->SetMessage(GOTSTIM);
 	else
-	  player->message = text[TXT_ITEMHEALTH];
+	  player->SetMessage(text[TXT_ITEMHEALTH]);
       break;
 
     case MT_MEDI:
@@ -1140,9 +1144,9 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       if (cv_showmessages.value == 1)
         {
 	  if (health < 25)
-	    player->message = GOTMEDINEED;
+	    player->SetMessage(GOTMEDINEED);
 	  else
-	    player->message = GOTMEDIKIT;
+	    player->SetMessage(GOTMEDIKIT);
         }
       break;
 
@@ -1257,13 +1261,13 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
     case MT_INV:
       if (!GivePower(pw_invulnerability))
 	return;
-      player->message = GOTINVUL;
+      player->SetMessage(GOTINVUL);
       break;
 
     case MT_BERSERKPACK:
       if (!GivePower(pw_strength))
 	return;
-      player->message = GOTBERSERK;
+      player->SetMessage(GOTBERSERK);
       if (readyweapon != wp_fist)
 	pendingweapon = wp_fist;
       break;
@@ -1271,13 +1275,13 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
     case MT_INS:
       if (!GivePower(pw_invisibility))
 	return;
-      player->message = GOTINVIS;
+      player->SetMessage(GOTINVIS);
       break;
 
     case MT_RADSUIT:
       if (!GivePower(pw_ironfeet))
 	return;
-      player->message = GOTSUIT;
+      player->SetMessage(GOTSUIT);
       break;
 
     case MT_MAPSCROLL:
@@ -1285,27 +1289,27 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       if (!GivePower(pw_allmap))
 	return;
       if (stype == MT_MAPSCROLL)
-	player->message = text[TXT_ITEMSUPERMAP];
+	player->SetMessage(text[TXT_ITEMSUPERMAP]);
       else
-	player->message = GOTMAP;
+	player->SetMessage(GOTMAP);
       break;
 
     case MT_IRVISOR:
       if (!GivePower (pw_infrared))
 	return;
-      player->message = GOTVISOR;
+      player->SetMessage(GOTVISOR);
       break;
 
       // Mana
     case MT_MANA1:
       if (!GiveAmmo(am_mana1, 15))
 	return;
-      player->SetMessage(text[TXT_MANA_1], false);
+      player->SetMessage(text[TXT_MANA_1]);
       break;
     case MT_MANA2:
       if (!GiveAmmo(am_mana2, 15))
 	return;
-      player->SetMessage(text[TXT_MANA_2], false);
+      player->SetMessage(text[TXT_MANA_2]);
       break;
     case MT_MANA3:
       if (GiveAmmo(am_mana1, 20))
@@ -1315,7 +1319,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	}
       else
 	GiveAmmo(am_mana2, 20);
-      player->SetMessage(text[TXT_MANA_BOTH], false);
+      player->SetMessage(text[TXT_MANA_BOTH]);
       break;
 
       // heretic Ammo
@@ -1323,84 +1327,84 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       if(!GiveAmmo(am_goldwand, special->health))
 	return;
       if( cv_showmessages.value==1 )
-	player->SetMessage(GOT_AMMOGOLDWAND1, false);
+	player->SetMessage(GOT_AMMOGOLDWAND1);
       break;
 
     case MT_AMGWNDHEFTY:
       if(!GiveAmmo(am_goldwand, special->health))
 	return;
       if( cv_showmessages.value==1 )
-	player->SetMessage(GOT_AMMOGOLDWAND2, false);
+	player->SetMessage(GOT_AMMOGOLDWAND2);
       break;
 
     case MT_AMMACEWIMPY:
       if(!GiveAmmo(am_mace, special->health))
 	return;
       if( cv_showmessages.value==1 )
-	player->SetMessage(GOT_AMMOMACE1, false);
+	player->SetMessage(GOT_AMMOMACE1);
       break;
 
     case MT_AMMACEHEFTY:
       if(!GiveAmmo(am_mace, special->health))
 	return;
       if( cv_showmessages.value==1 )
-	player->SetMessage(GOT_AMMOMACE2, false);
+	player->SetMessage(GOT_AMMOMACE2);
       break;
 
     case MT_AMCBOWWIMPY:
       if(!GiveAmmo(am_crossbow, special->health))
 	return;
       if( cv_showmessages.value==1 )
-	player->SetMessage(GOT_AMMOCROSSBOW1, false);
+	player->SetMessage(GOT_AMMOCROSSBOW1);
       break;
 
     case MT_AMCBOWHEFTY:
       if(!GiveAmmo(am_crossbow, special->health))
 	return;
       if( cv_showmessages.value==1 )
-	player->SetMessage(GOT_AMMOCROSSBOW2, false);
+	player->SetMessage(GOT_AMMOCROSSBOW2);
       break;
 
     case MT_AMBLSRWIMPY:
       if(!GiveAmmo(am_blaster, special->health))
 	return;
       if( cv_showmessages.value==1 )
-	player->SetMessage(GOT_AMMOBLASTER1, false);
+	player->SetMessage(GOT_AMMOBLASTER1);
       break;
 
     case MT_AMBLSRHEFTY:
       if(!GiveAmmo(am_blaster, special->health))
 	return;
       if( cv_showmessages.value==1 )
-	player->SetMessage(GOT_AMMOBLASTER2, false);
+	player->SetMessage(GOT_AMMOBLASTER2);
       break;
 
     case MT_AMSKRDWIMPY:
       if(!GiveAmmo(am_skullrod, special->health))
 	return;
       if( cv_showmessages.value==1 )
-	player->SetMessage(GOT_AMMOSKULLROD1, false);
+	player->SetMessage(GOT_AMMOSKULLROD1);
       break;
 
     case MT_AMSKRDHEFTY:
       if(!GiveAmmo(am_skullrod, special->health))
 	return;
       if( cv_showmessages.value==1 )
-	player->SetMessage(GOT_AMMOSKULLROD2, false);
+	player->SetMessage(GOT_AMMOSKULLROD2);
       break;
 
     case MT_AMPHRDWIMPY:
       if(!GiveAmmo(am_phoenixrod, special->health))
 	return;
       if( cv_showmessages.value==1 )
-	player->SetMessage(GOT_AMMOPHOENIXROD1, false);
+	player->SetMessage(GOT_AMMOPHOENIXROD1);
       break;
 
     case MT_AMPHRDHEFTY:
       if(!GiveAmmo(am_phoenixrod, special->health))
 	return;
       if( cv_showmessages.value==1 )
-	player->SetMessage(GOT_AMMOPHOENIXROD2, false);
+	player->SetMessage(GOT_AMMOPHOENIXROD2);
       break;
 
       // ammo
@@ -1416,56 +1420,56 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	    return;
         }
       if(cv_showmessages.value==1)
-	player->message = GOTCLIP;
+	player->SetMessage(GOTCLIP);
       break;
 
     case MT_AMMOBOX:
       if (!GiveAmmo (am_clip,5*clipammo[am_clip]))
 	return;
       if(cv_showmessages.value==1)
-	player->message = GOTCLIPBOX;
+	player->SetMessage(GOTCLIPBOX);
       break;
 
     case MT_ROCKETAMMO:
       if (!GiveAmmo (am_misl,clipammo[am_misl]))
 	return;
       if(cv_showmessages.value==1)
-	player->message = GOTROCKET;
+	player->SetMessage(GOTROCKET);
       break;
 
     case MT_ROCKETBOX:
       if (!GiveAmmo (am_misl,5*clipammo[am_misl]))
 	return;
       if(cv_showmessages.value==1)
-	player->message = GOTROCKBOX;
+	player->SetMessage(GOTROCKBOX);
       break;
 
     case MT_CELL:
       if (!GiveAmmo (am_cell,clipammo[am_cell]))
 	return;
       if(cv_showmessages.value==1)
-	player->message = GOTCELL;
+	player->SetMessage(GOTCELL);
       break;
 
     case MT_CELLPACK:
       if (!GiveAmmo (am_cell,5*clipammo[am_cell]))
 	return;
       if(cv_showmessages.value==1)
-	player->message = GOTCELLBOX;
+	player->SetMessage(GOTCELLBOX);
       break;
 
     case MT_SHELL:
       if (!GiveAmmo (am_shell,clipammo[am_shell]))
 	return;
       if(cv_showmessages.value==1)
-	player->message = GOTSHELLS;
+	player->SetMessage(GOTSHELLS);
       break;
 
     case MT_SHELLBOX:
       if (!GiveAmmo (am_shell,5*clipammo[am_shell]))
 	return;
       if(cv_showmessages.value==1)
-	player->message = GOTSHELLBOX;
+	player->SetMessage(GOTSHELLBOX);
       break;
 
     case MT_BACKPACK:
@@ -1476,7 +1480,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
         }
       for (int i=0 ; i<am_heretic ; i++)
 	GiveAmmo (ammotype_t(i), clipammo[i]);
-      player->message = GOTBACKPACK;
+      player->SetMessage(GOTBACKPACK);
       break;
 
     case MT_BAGOFHOLDING:
@@ -1490,118 +1494,118 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       GiveAmmo(am_crossbow, AMMO_CBOW_WIMPY);
       GiveAmmo(am_skullrod, AMMO_SKRD_WIMPY);
       GiveAmmo(am_phoenixrod, AMMO_PHRD_WIMPY);
-      player->SetMessage(text[TXT_ITEMBAGOFHOLDING], false);
+      player->SetMessage(text[TXT_ITEMBAGOFHOLDING]);
       break;
 
         // weapons
     case MT_BFG9000:
       if (!GiveWeapon (wp_bfg, false) )
 	return;
-      player->message = GOTBFG9000;
+      player->SetMessage(GOTBFG9000);
       break;
 
     case MT_CHAINGUN:
       if (!GiveWeapon (wp_chaingun, special->flags & MF_DROPPED) )
 	return;
-      player->message = GOTCHAINGUN;
+      player->SetMessage(GOTCHAINGUN);
       break;
 
     case MT_SHAINSAW:
       if (!GiveWeapon (wp_chainsaw, false) )
 	return;
-      player->message = GOTCHAINSAW;
+      player->SetMessage(GOTCHAINSAW);
       break;
 
     case MT_ROCKETLAUNCH:
       if (!GiveWeapon (wp_missile, false) )
 	return;
-      player->message = GOTLAUNCHER;
+      player->SetMessage(GOTLAUNCHER);
       break;
 
     case MT_PLASMAGUN:
       if (!GiveWeapon (wp_plasma, false) )
 	return;
-      player->message = GOTPLASMA;
+      player->SetMessage(GOTPLASMA);
       break;
 
     case MT_SHOTGUN:
       if (!GiveWeapon (wp_shotgun, special->flags&MF_DROPPED ) )
 	return;
-      player->message = GOTSHOTGUN;
+      player->SetMessage(GOTSHOTGUN);
       break;
 
     case MT_SUPERSHOTGUN:
       if (!GiveWeapon (wp_supershotgun, special->flags&MF_DROPPED ) )
 	return;
-      player->message = GOTSHOTGUN2;
+      player->SetMessage(GOTSHOTGUN2);
       break;
 
       // heretic weapons
     case MT_WMACE:
       if(!GiveWeapon(wp_mace,false))
 	return;
-      player->SetMessage(GOT_WPNMACE, false);
+      player->SetMessage(GOT_WPNMACE);
       break;
     case MT_WCROSSBOW:
       if(!GiveWeapon(wp_crossbow,false))
 	return;
-      player->SetMessage(GOT_WPNCROSSBOW, false);
+      player->SetMessage(GOT_WPNCROSSBOW);
       break;
     case MT_WBLASTER:
       if(!GiveWeapon(wp_blaster,false))
 	return;
-      player->SetMessage(GOT_WPNBLASTER, false);
+      player->SetMessage(GOT_WPNBLASTER);
       break;
     case MT_WSKULLROD:
       if(!GiveWeapon(wp_skullrod, false))
 	return;
-      player->SetMessage(GOT_WPNSKULLROD, false);
+      player->SetMessage(GOT_WPNSKULLROD);
       break;
     case MT_WPHOENIXROD:
       if(!GiveWeapon(wp_phoenixrod, false))
 	return;
-      player->SetMessage(GOT_WPNPHOENIXROD, false);
+      player->SetMessage(GOT_WPNPHOENIXROD);
       break;
     case MT_WGAUNTLETS:
       if(!GiveWeapon(wp_gauntlets, false))
 	return;
-      player->SetMessage(GOT_WPNGAUNTLETS, false);
+      player->SetMessage(GOT_WPNGAUNTLETS);
       break;
 
       // Hexen weapons
     case MT_MW_CONE: // Frost Shards
       if(!GiveWeapon(wp_cone_of_shards, false))
 	return;
-      player->message = text[TXT_WEAPON_M2];
+      player->SetMessage(text[TXT_WEAPON_M2]);
       break;
 
     case MT_MW_LIGHTNING: // Arc of Death
       if(!GiveWeapon(wp_arc_of_death, false))
 	return;
-      player->message = text[TXT_WEAPON_M3];
+      player->SetMessage(text[TXT_WEAPON_M3]);
       break;
 
     case MT_FW_AXE: // Timon's Axe
       if(!GiveWeapon(wp_timons_axe, false))
 	return;
-      player->message = text[TXT_WEAPON_F2];
+      player->SetMessage(text[TXT_WEAPON_F2]);
       break;
     case MT_FW_HAMMER: // Hammer of Retribution
       if(!GiveWeapon(wp_hammer_of_retribution, false))
 	return;
-      player->message = text[TXT_WEAPON_F3];
+      player->SetMessage(text[TXT_WEAPON_F3]);
       break;
 
       // 2nd and 3rd Cleric Weapons
     case MT_CW_SERPSTAFF: // Serpent Staff
       if(!GiveWeapon(wp_serpent_staff, false))
 	return;
-      player->message = text[TXT_WEAPON_C2];
+      player->SetMessage(text[TXT_WEAPON_C2]);
       break;
     case MT_CW_FLAME: // Firestorm
     if(!GiveWeapon(wp_firestorm, false))
       return;
-    player->message = text[TXT_WEAPON_C3];
+    player->SetMessage(text[TXT_WEAPON_C3]);
       break;
 
       // Fourth Weapon Pieces

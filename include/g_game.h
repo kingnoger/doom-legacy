@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/07/13 20:23:37  smite-meister
+// Mod system basics
+//
 // Revision 1.10  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
 //
@@ -100,6 +103,7 @@ class GameInfo
   friend class PlayerInfo;
   friend class LNetInterface;
   friend class LConnection;
+  friend class GameType;
 
 private:
   /// delayed game state changes
@@ -156,7 +160,8 @@ public:
 
   bool inventory;   ///< PlayerPawns have an inventory
 
-  LNetInterface *net; ///< our network interface (contains th enetstate)
+  GameType      *type; ///< TEST
+  LNetInterface  *net; ///< our network interface (contains th enetstate)
 
   // Demo sequences
   int pagetic; ///< how many tics left until demo is changed?
@@ -186,28 +191,14 @@ public:
 
 public:
 
+  // in g_game.cpp
   GameInfo();
   ~GameInfo();
 
-
-
-  bool Playing();
-  void SV_Reset();
-  bool SV_SpawnServer();
-  void CL_Reset();
-
-  void TryRunTics(tic_t realtics);
-
-  void Display();
-
-  int  Serialize(class LArchive &a);
-  int  Unserialize(LArchive &a);
-
-
-  // in g_game.cpp
   void StartIntro();
   void AdvanceIntro();
 
+  void Display();
   void Drawer();
   bool Responder(struct event_t *ev);
 
@@ -220,24 +211,24 @@ public:
   void ClearPlayers();                  ///< erases all players
 
 
+  bool Playing();
+  void SV_Reset();
+  bool SV_SpawnServer();
+  void CL_Reset();
+  void TryRunTics(tic_t realtics);
 
 
+  int  Serialize(class LArchive &a);
+  int  Unserialize(LArchive &a);
 
   void LoadGame(int slot);
   void SaveGame(int slot, char* description);
 
   bool Downgrade(int version);
 
-  void Ticker(); // ticks the game forward in time
-
-
-
-
-  void UpdateScore(PlayerInfo *killer, PlayerInfo *victim);
   int  GetFrags(struct fragsort_t **fs, int type);
   bool CheckScoreLimit();
 
-  // ----- level-related stuff -----
   // in g_level.cpp
   int  Read_MAPINFO(int lump);
   void Clear_mapinfo_clusterdef();
@@ -248,6 +239,7 @@ public:
   int Create_classic_game(int episode);
 
   // in g_state.cpp
+  void Ticker(); // ticks the game forward in time
   bool NewGame(skill_t sk);
   bool StartGame();
   void StartIntermission();

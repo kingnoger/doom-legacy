@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2003 by DooM Legacy Team.
+// Copyright (C) 2002-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/07/13 20:23:39  smite-meister
+// Mod system basics
+//
 // Revision 1.2  2003/04/26 12:01:13  smite-meister
 // Bugfixes. Hexen maps work again.
 //
@@ -24,11 +27,11 @@
 // Now compiles with MinGW 2.0 / GCC 3.2.
 // Builder can choose between dynamic and static linkage.
 //
-//
-// DESCRIPTION:
-//   This zone is for loading and unloading of Doom Legacy DLL's only.
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief This zone is for loading and unloading of Doom Legacy DLLs only.
+
 
 // Why oh why can't there be just one standard DLL system inteface?!?
 #ifdef __WIN32__
@@ -38,7 +41,9 @@
   // unices
 # include <dlfcn.h>
 #endif
+#include <string.h>
 
+#include "doomdef.h"
 #include "m_dll.h"
 
 
@@ -72,4 +77,53 @@ void *GetSymbol(dll_handle_t handle, const char *symbol)
 #else
   return dlsym(handle, symbol);
 #endif
+}
+
+
+
+
+
+LegacyDLL::LegacyDLL()
+{
+  handle = NULL;
+}
+
+
+LegacyDLL::~LegacyDLL()
+{
+  if (handle)
+    CloseDLL(handle);
+}
+
+
+bool LegacyDLL::Open(const char *filename)
+{
+  handle = OpenDLL(filename);
+  if (!handle)
+    {
+      I_Error("Could not load DLL %s!\n", filename);
+      return false;
+    }
+
+  dll_info_t *info = (dll_info_t *)GetSymbol(handle, "dll_info");
+  if (!info)
+    {
+      I_Error("DLL %s exports no dll_info!\n", filename);
+      return false;
+    }
+
+  api_version = info->api_version;
+  version = info->version;
+  strcpy(name, info->name);
+  
+  return true;
+}
+
+
+void *LegacyDLL::FindSymbol(const char *symbol)
+{
+  if (handle)
+    return GetSymbol(handle, symbol);
+
+  return NULL;
 }

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,42 +18,33 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/07/13 20:23:37  smite-meister
+// Mod system basics
+//
 // Revision 1.2  2003/04/04 00:01:58  smite-meister
 // bugfixes, Hexen HUD
 //
 // Revision 1.1.1.1  2002/11/16 14:18:24  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//      Default Config File.
-//      PCX Screenshots.
-//      File i/o
-//      Common used routines
-//    
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Default configfile, screenshots, file I/O
 
 #ifndef m_misc_h
 #define m_misc_h 1
 
 #include "doomtype.h"
 
-//
-// MISC
-//
 //===========================================================================
 
-bool FIL_WriteFile(const char *name, void *source, int length);
-
-int  FIL_ReadFile(const char *name, byte **buffer);
-
-void FIL_DefaultExtension(char *path, char *extension);
-
-//added:11-01-98:now declared here for use by G_DoPlayDemo(), see there...
-void FIL_ExtractFileBase(char *path, char *dest);
-
-bool FIL_CheckExtension(const char *in);
+bool  FIL_WriteFile(const char *name, void *source, int length);
+int   FIL_ReadFile(const char *name, byte **buffer);
+void  FIL_DefaultExtension(char *path, char *extension);
+void  FIL_ExtractFileBase(char *path, char *dest);
+bool  FIL_CheckExtension(const char *in);
+const char *FIL_StripPath(const char *s);
 
 //===========================================================================
 

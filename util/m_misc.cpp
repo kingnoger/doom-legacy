@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/07/13 20:23:39  smite-meister
+// Mod system basics
+//
 // Revision 1.7  2004/07/11 14:32:02  smite-meister
 // Consvars updated, bugfixes
 //
@@ -33,14 +36,10 @@
 // Revision 1.3  2003/04/04 00:01:58  smite-meister
 // bugfixes, Hexen HUD
 //
-//
-// DESCRIPTION:
-//      Default Config File.
-//      PCX Screenshots.
-//      File i/o
-//      Common used routines
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Default configfile, screenshots, file I/O.
 
 #include <ctype.h>
 #include <stdarg.h>
@@ -176,6 +175,18 @@ bool FIL_CheckExtension(const char *in)
 
   return false;
 }
+
+
+// returns a pointer to the "filename-part" of a pathname
+const char *FIL_StripPath(const char *s)
+{
+  for (int j = strlen(s); j >= 0; j--)
+    if ((s[j] == '\\') || (s[j] == ':') || (s[j] == '/'))
+      return &s[j+1];
+
+  return s;
+}
+
 
 
 // ==========================================================================
@@ -470,18 +481,17 @@ void M_ScreenShot()
 // ==========================================================================
 
 
-//  Temporary varargs CONS_Printf
-//
+// Variable arguments handler for printing (sort of inline sprintf)
 char *va(char *format, ...)
 {
-  va_list      argptr;
-  static char  string[1024];
+  va_list ap;
+  static char temp[1024];
 
-  va_start(argptr, format);
-  vsprintf(string, format,argptr);
-  va_end(argptr);
+  va_start(ap, format);
+  vsprintf(temp, format, ap);
+  va_end(ap);
 
-  return string;
+  return temp;
 }
 
 

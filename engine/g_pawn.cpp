@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.34  2004/07/13 20:23:35  smite-meister
+// Mod system basics
+//
 // Revision 1.33  2004/07/07 17:27:19  smite-meister
 // bugfixes
 //
@@ -985,12 +988,12 @@ bool P_CheckKeys(Actor *mo, int lock)
       if (lock <= 11)
 	{
 	  sprintf(buf, "You need the %s\n",  text[TXT_KEY_STEEL + lock - 1]);
-	  p->player->message = buf;
+	  p->player->SetMessage(buf);
 	  S_StartSound(mo, SFX_DOOR_LOCKED);
 	}
       else
 	{
-	  p->player->message = text[TXT_PD_BLUEK + lock - 12];
+	  p->player->SetMessage(text[TXT_PD_BLUEK + lock - 12]);
 	  S_StartScreamSound(p, sfx_usefail);
 	}
 
@@ -1028,7 +1031,7 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
 	  !(keycards & it_yellowcard) &&
 	  !(keycards & it_yellowskull))
 	{
-	  player->message = PD_ANY;
+	  player->SetMessage(PD_ANY);
 	  ok = false;
 	}
       break;
@@ -1039,7 +1042,7 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
 	 (!skulliscard || !(keycards & it_redskull))
 	 )
 	{
-	  player->message = skulliscard? PD_REDK : PD_REDC;
+	  player->SetMessage(skulliscard? PD_REDK : PD_REDC);
 	  ok = false;
 	}
       break;
@@ -1050,7 +1053,7 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
 	 (!skulliscard || !(keycards & it_blueskull))
 	 )
 	{
-	  player->message = skulliscard? PD_BLUEK : PD_BLUEC;
+	  player->SetMessage(skulliscard? PD_BLUEK : PD_BLUEC);
 	  ok = false;
 	}
       break;
@@ -1061,7 +1064,7 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
 	 (!skulliscard || !(keycards & it_yellowskull))
 	 )
 	{
-	  player->message = skulliscard? PD_YELLOWK : PD_YELLOWC;
+	  player->SetMessage(skulliscard? PD_YELLOWK : PD_YELLOWC);
 	  ok = false;
 	}
       break;
@@ -1072,7 +1075,7 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
 	 (!skulliscard || !(keycards & it_redcard))
 	 )
 	{
-	  player->message = skulliscard? PD_REDK : PD_REDS;
+	  player->SetMessage(skulliscard? PD_REDK : PD_REDS);
 	  ok = false;
 	}
       break;
@@ -1083,7 +1086,7 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
 	 (!skulliscard || !(keycards & it_bluecard))
 	 )
 	{
-	  player->message = skulliscard? PD_BLUEK : PD_BLUES;
+	  player->SetMessage(skulliscard? PD_BLUEK : PD_BLUES);
 	  ok = false;
 	}
       break;
@@ -1094,7 +1097,7 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
 	 (!skulliscard || !(keycards & it_yellowcard))
 	 )
 	{
-	  player->message = skulliscard? PD_YELLOWK : PD_YELLOWS;
+	  player->SetMessage(skulliscard? PD_YELLOWK : PD_YELLOWS);
 	  ok = false;
 	}
       break;
@@ -1112,7 +1115,7 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
 	  )
 	 )
 	{
-	  player->message = PD_ALL6;
+	  player->SetMessage(PD_ALL6);
 	  ok = false;
 	}
       if
@@ -1128,7 +1131,7 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
 	  )
 	 )
 	{
-	  player->message = PD_ALL3;
+	  player->SetMessage(PD_ALL3);
 	  ok = false;
 	}
       break;
@@ -1139,8 +1142,7 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
 }
 
 
-//
-// was P_ProcessSpecialSector
+
 // Function that actually applies the sector special to the player.
 void PlayerPawn::ProcessSpecialSector(sector_t *sector, bool instantdamage)
 {
@@ -1169,10 +1171,8 @@ void PlayerPawn::ProcessSpecialSector(sector_t *sector, bool instantdamage)
     {
       // SECRET SECTOR
       player->secrets++;
+      player->SetMessage("\3You found a secret area!\n");
       sector->special &= ~SS_secret;
-
-      if (!cv_deathmatch.value && this == displayplayer->pawn)
-	CONS_Printf("\3You found a secret area!\n");
     }
 }
 
@@ -1472,7 +1472,7 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 	return false;
 
       // autosavers
-      if (damage >= health && ((game.skill == sk_baby) || cv_deathmatch.value) && !morphTics)
+      if (damage >= health && (game.skill == sk_baby) && !morphTics)
 	{ // Try to use some inventory health
 	  P_AutoUseHealth(this, damage-health+1);
 	}
@@ -1814,7 +1814,7 @@ bool PlayerPawn::GiveKey(keycard_t k)
   for (i = -1; j; i++)
     j >>= 1; // count the key number
     
-  player->message = text[TXT_KEY_STEEL + i];
+  player->SetMessage(text[TXT_KEY_STEEL + i]);
 
   p_sound = sfx_keyup;
   return true;
@@ -1893,7 +1893,7 @@ bool PlayerPawn::GiveArtifact(artitype_t arti, DActor *from)
       j = TXT_ARTIPUZZSKULL + arti - arti_firstpuzzitem;
       if (arti >= arti_puzzgear1)
 	j = TXT_ARTIPUZZGEAR;
-      player->SetMessage(text[j], true);
+      player->SetMessage(text[j], false);
       SetDormantArtifact(from);
       /*
 	if (!game.multiplayer || cv_deathmatch.value)

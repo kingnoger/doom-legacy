@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/07/13 20:23:37  smite-meister
+// Mod system basics
+//
 // Revision 1.2  2003/04/26 12:01:13  smite-meister
 // Bugfixes. Hexen maps work again.
 //
@@ -24,11 +27,10 @@
 // Now compiles with MinGW 2.0 / GCC 3.2.
 // Builder can choose between dynamic and static linkage.
 //
-//
-// DESCRIPTION:
-//   This zone is for loading and unloading of Doom Legacy DLL's only.
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief This zone is for loading and unloading of Doom Legacy DLLs only.
 
 #ifndef m_dll_h
 #define m_dll_h 1
@@ -40,21 +42,50 @@ typedef HINSTANCE dll_handle_t;
 typedef void* dll_handle_t;
 #endif
 
-struct dll_info_t
+// macros for exporting data and functions in a DLL
+#define DATAEXPORT __declspec(dllexport)
+#define EXPORT extern "C" __declspec(dllexport)
+
+
+/// \brief Handles all Doom Legacy DLL plugins
+///
+/// A Legacy DLL plugin exports usually just two symbols:
+/// dll_info, the dll_info_t struct of the DLL, and
+/// some way to get the actual function pointers to the DLL functions.
+
+class LegacyDLL
 {
-  int  interface_version; // the interface version of the dll
-  int  dll_version;  // dll version number
-  char dll_name[40]; // official dll name FIXME longer field!
+private:
+  dll_handle_t handle;
+
+public:
+  struct dll_info_t
+  {
+    int  api_version; ///< the interface version of the dll
+    int  version;     ///< dll version number
+    char name[64];    ///< official dll name
+  };
+
+  char name[64];
+  int  api_version;
+  int  version;
+
+
+  LegacyDLL();
+  ~LegacyDLL();
+
+  /// loads the DLL, imports and checks dll_info
+  bool  Open(const char *filename);
+
+  /// looks for an exported symbol in the DLL
+  void *FindSymbol(const char *symbol);
 };
+
 
 
 // common DLL interface
 dll_handle_t OpenDLL(const char *dllname);
 void  CloseDLL(dll_handle_t handle);
 void *GetSymbol(dll_handle_t handle, const char *symbol);
-
-// A Legacy DLL plugin exports usually just two symbols:
-//  dll_info, the dll_info_t struct of the DLL, and
-//  some way to get the actual function pointers to the DLL functions.
 
 #endif

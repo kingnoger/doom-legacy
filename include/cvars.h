@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2004/07/13 20:23:37  smite-meister
+// Mod system basics
+//
 // Revision 1.1  2004/06/25 15:18:37  smite-meister
 // CVar cleanup
 //
@@ -52,12 +55,13 @@ extern consvar_t cv_maxplayers;
 // server demo
 extern consvar_t cv_playdemospeed;
 
-// server map
+// server game
 extern consvar_t cv_deathmatch;
 extern consvar_t cv_teamplay;
 extern consvar_t cv_teamdamage;
-extern consvar_t cv_exitmode;
+extern consvar_t cv_hiddenplayers;
 
+extern consvar_t cv_exitmode;
 extern consvar_t cv_fraglimit;
 extern consvar_t cv_timelimit;
 

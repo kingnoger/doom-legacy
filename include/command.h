@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/07/13 20:23:37  smite-meister
+// Mod system basics
+//
 // Revision 1.3  2004/07/11 14:32:01  smite-meister
 // Consvars updated, bugfixes
 //
@@ -160,9 +163,9 @@ public:
   static void SaveVariables(FILE *f);
 
   /// save all CV_NETVAR variables into a buffer
-  static void SaveNetVars(TNL::BitStream *s);
+  static void SaveNetVars(TNL::BitStream &s);
   /// load all CV_NETVAR variables from a buffer
-  static void LoadNetVars(TNL::BitStream *s);
+  static void LoadNetVars(TNL::BitStream &s);
 };
 
 #endif

@@ -16,11 +16,10 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
-// DESCRIPTION:
-//   FileCache: Container of VFiles
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief FileCache: Container of VFiles
 
 #include <string>
 #include <vector>
@@ -224,36 +223,9 @@ const char *FileCache::Name(int i)
 }
 
 
-bool FileCache::GetNetworkInfo(int i, int *size, unsigned char *md5)
-{
-  return vfiles[i]->GetNetworkInfo(size, md5);
-}
-
-
 unsigned int FileCache::GetNumLumps(int filenum)
 {
   return vfiles[filenum]->numitems;
-}
-
-
-void FileCache::WriteFileHeaders(byte *p)
-{
-  unsigned int i;
-  char wadfilename[MAX_WADPATH];
-
-  int size;
-  unsigned char md5[16];
-  for(i=0; i<vfiles.size(); i++)
-    {
-      if (vfiles[i]->GetNetworkInfo(&size, md5))
-	{
-	  WRITEULONG(p, size);
-	  strcpy(wadfilename, vfiles[i]->filename.c_str());
-	  //nameonly(wadfilename);
-	  WRITESTRING(p, wadfilename);
-	  WRITEMEM(p, md5, 16);
-	}
-    }
 }
 
 

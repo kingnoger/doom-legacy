@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/07/13 20:23:39  smite-meister
+// Mod system basics
+//
 // Revision 1.3  2004/07/09 19:43:40  smite-meister
 // Netcode fixes
 //
@@ -568,11 +571,10 @@ void Command_RestartGame_f()
 // shuts down the current game
 void Command_Reset_f()
 {
-  /*
-  D_QuitNetGame();
-  CL_Reset();
-  game.StartIntro();
-  */
+  game.SV_Reset();
+
+  if (!dedicated)
+    game.StartIntro();
 }
 
 

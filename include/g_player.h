@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.16  2004/07/13 20:23:37  smite-meister
+// Mod system basics
+//
 // Revision 1.15  2004/07/09 19:43:40  smite-meister
 // Netcode fixes
 //
@@ -35,13 +38,15 @@
 #define g_player_h 1
 
 #include <map>
+#include <deque>
 #include <string>
+#include "tnl/tnlNetObject.h"
 #include "doomtype.h"
 #include "d_ticcmd.h"
 #include "d_items.h"
 
 using namespace std;
-
+using namespace TNL;
 
 
 /// Player states.
@@ -60,9 +65,16 @@ enum playerstate_t
 /// \brief One client-side player, either human or AI.
 ///
 /// Created when a player joins the game, deleted when he leaves.
-class PlayerInfo
+class PlayerInfo : public NetObject
 {
   friend class GameInfo;
+  typedef NetObject Parent;
+  TNL_DECLARE_CLASS(PlayerInfo);
+
+  virtual bool onGhostAdd(class GhostConnection *c);
+  virtual void onGhostRemove();
+  virtual U32 packUpdate(GhostConnection *c, U32 updateMask, class BitStream *s);
+  virtual void unpackUpdate(GhostConnection *c, BitStream *s);
 
 public:
   int    number;   ///< The player number.
@@ -88,8 +100,9 @@ public:
 
   int kills, items, secrets, time;
 
-  /// Hint messages.
-  const char *message;
+  /// Message queue
+  deque< pair<string, int> > messages;
+
 
   // weapon preferences
   char  weaponpref[NUMWEAPONS];
@@ -116,7 +129,9 @@ public:
   void ExitLevel(int nextmap, int ep);
   void Reset(bool resetpawn, bool resetfrags);  // resets the player (when starting a new level, for example)
 
-  void SetMessage(const char *msg, bool ultmsg = true);
+  void SetMessage(const char *msg, int priority = 0);
+  void SetMessage2(char *fmt, ...); // TEST
+
   void CalcViewHeight(bool onground); // update bobbing view height
 
   // in g_game.cpp

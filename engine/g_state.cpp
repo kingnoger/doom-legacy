@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.33  2004/07/13 20:23:36  smite-meister
+// Mod system basics
+//
 // Revision 1.32  2004/07/11 14:32:00  smite-meister
 // Consvars updated, bugfixes
 //
@@ -92,28 +95,6 @@ bool GameInfo::CheckScoreLimit()
   return false;
 }
 
-
-void GameInfo::UpdateScore(PlayerInfo *killer, PlayerInfo *victim)
-{
-  killer->Frags[victim->number]++;
-  
-  // scoring rule
-  if (killer->team == 0)
-    if (killer != victim)
-      killer->score++;
-    else
-      killer->score--;
-  else if (killer->team != victim->team)
-    {
-      teams[killer->team]->score++;
-      killer->score++;
-    }
-  else
-    {
-      teams[killer->team]->score--;
-      killer->score--;
-    }
-}
 
 
 int GameInfo::GetFrags(fragsort_t **fragtab, int type)

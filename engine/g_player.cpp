@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.24  2004/07/13 20:23:36  smite-meister
+// Mod system basics
+//
 // Revision 1.23  2004/07/09 19:43:39  smite-meister
 // Netcode fixes
 //
@@ -105,7 +108,7 @@ static char default_weaponpref[NUMWEAPONS] =
 };
 
 
-// TNL_IMPLEMENT_NETOBJECT(PlayerInfo);
+TNL_IMPLEMENT_NETOBJECT(PlayerInfo);
 
 PlayerInfo::PlayerInfo(const string & n)
 {
@@ -125,7 +128,6 @@ PlayerInfo::PlayerInfo(const string & n)
   requestmap = entrypoint = 0;
 
   viewz = viewheight = deltaviewheight = bob_amplitude = 0;
-  message = NULL;
 
   for (int i = 0; i<NUMWEAPONS; i++)
     weaponpref[i] = default_weaponpref[i];
@@ -139,23 +141,63 @@ PlayerInfo::PlayerInfo(const string & n)
   Reset(false, true);
 
   // net stuff
-  // mNetFlags.set(Ghostable);
+  mNetFlags.set(Ghostable);
 };
 
 
-
-static bool ultimatemsg;
-
-void PlayerInfo::SetMessage(const char *msg, bool ultmsg)
+bool PlayerInfo::onGhostAdd(class GhostConnection *theConnection)
 {
-  if ((ultimatemsg || !cv_showmessages.value) && !ultmsg)
-    return;
-    
-  message = msg;
-  //player->messageTics = MESSAGETICS;
-  //BorderTopRefresh = true;
-  if (ultmsg)
-    ultimatemsg = true;
+  CONS_Printf("added new player (%d)\n", number);
+  game.AddPlayer(this);
+  return true;
+}
+
+void PlayerInfo::onGhostRemove()
+{
+  CONS_Printf("removed player (%d)\n", number);
+  game.RemovePlayer(number);
+}
+
+
+U32 PlayerInfo::packUpdate(GhostConnection *connection, U32 mask, class BitStream *stream)
+{
+  if (isInitialUpdate())
+    mask = 0x1;
+
+  // check which states need to be updated, and write updates
+  if (stream->writeFlag(mask & 0x1))
+    {
+      CONS_Printf("--- pi stuff sent\n");
+      stream->write(number);
+      stream->writeString(name.c_str());
+    }
+
+  // the return value from packUpdate can set which states still
+  // need to be updated for this object.
+  return 0;
+}
+
+void PlayerInfo::unpackUpdate(GhostConnection *connection, BitStream *stream)
+{
+  char temp[256];
+
+  // the unpackUpdate function must be symmetrical to packUpdate
+  if (stream->readFlag())
+    {
+      CONS_Printf("--- pi stuff received\n");
+      stream->read(&number);
+      stream->readString(temp);
+      name = temp;
+    }
+}
+
+
+
+// put a new message into the queue, if there's room
+void PlayerInfo::SetMessage(const char *msg, int priority)
+{
+  if (messages.size() <= 20)
+    messages.push_back(pair<string, int>(string(msg), priority)); // makes a copy of msg, so we can use va() etc.
 }
 
 

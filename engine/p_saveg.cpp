@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.28  2004/07/13 20:23:36  smite-meister
+// Mod system basics
+//
 // Revision 1.27  2004/07/05 16:53:25  smite-meister
 // Netcode replaced
 //
@@ -1930,13 +1933,6 @@ int GameInfo::Serialize(LArchive &a)
 
 int GameInfo::Unserialize(LArchive &a)
 {
-  // FIXME all the containers should be emptied and old contents deleted somewhere. SV_Reset?
-  // ClearTeams();
-  ClearPlayers();
-  Clear_mapinfo_clusterdef();
-  P_ACSInitNewGame();
-  Z_FreeTags(PU_LEVEL, MAXINT);
-
   int i, n;
   // treat all enums as ints
   a << int(demoversion);
@@ -2054,6 +2050,8 @@ void GameInfo::LoadGame(int slot)
   automap.Close();
   hud.ST_Stop();
 
+  SV_Reset();
+
   // dearchive all the modifications
   if (Unserialize(a))
     {
@@ -2103,6 +2101,6 @@ void GameInfo::SaveGame(int savegameslot, char *description)
 
   Z_Free(buffer);
 
-  consoleplayer->message = text[TXT_GGSAVED];
+  consoleplayer->SetMessage(text[TXT_GGSAVED]);
   //R_FillBackScreen();  // draw the pattern into the back screen
 }

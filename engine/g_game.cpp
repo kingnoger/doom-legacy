@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.29  2004/07/13 20:23:35  smite-meister
+// Mod system basics
+//
 // Revision 1.28  2004/07/11 14:32:00  smite-meister
 // Consvars updated, bugfixes
 //
@@ -114,6 +117,7 @@
 #include "g_map.h"
 #include "g_pawn.h"
 #include "g_input.h"
+#include "g_type.h"
 
 #include "d_items.h"
 #include "d_main.h"
@@ -131,10 +135,7 @@
 #include "s_sound.h"
 #include "sounds.h"
 
-#include "m_misc.h" // File handling
 #include "m_menu.h"
-#include "m_argv.h" // remove this!
-
 #include "am_map.h"
 #include "hu_stuff.h"
 #include "wi_stuff.h"
@@ -177,6 +178,8 @@ GameInfo::GameInfo()
   net = NULL;
 
   time = tic = 0;
+
+  type = new GameType(); // TEST
 };
 
 
@@ -577,7 +580,7 @@ bool GameInfo::Responder(event_t* ev)
 {
   // allow spy mode changes even during the demo
   if (state == GS_LEVEL && ev->type == ev_keydown
-      && ev->data1 == KEY_F12 && (singledemo || !cv_deathmatch.value))
+      && ev->data1 == KEY_F12 && !cv_hiddenplayers.value)
     {
       // spy mode
       map<int, PlayerInfo *>::iterator i;

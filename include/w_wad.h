@@ -15,12 +15,10 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
-// DESCRIPTION:
-//   FileCache, a class for storing VFiles
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief FileCache, a class for storing VFiles
 
 #ifndef w_wad_h
 #define w_wad_h 1
@@ -31,40 +29,45 @@
 #include "doomtype.h"
 
 using namespace std;
+namespace TNL { class BitStream; };
 
 #define MAX_WADPATH   128
 #define MAX_WADFILES  32       // maximum of wad files used at the same time
                                // (there is a max of simultaneous open files
                                // anyway, and this should be plenty)
 
-
 //=========================================================================
-// class FileCache
-// A class for holding open VFiles and giving out information about them
-// This class also handles game dependent operations concerning wad files
+/// \brief First-level cache for data files
+///
+/// A class for holding open VFile objects and giving out information about them
+/// This class also handles game dependent operations concerning wad files.
+/// The data items (lumps) inside the files are numbered using a 16.16 scheme,
+/// where the first short is the file number and the second short the number of the lump
+/// inside the file.
 
 class FileCache
 {
 private:
-  string datapath; // absolute path for searching files
-  vector<class VFile *> vfiles; // open virtual files
+  string datapath;              ///< absolute path for searching files
+  vector<class VFile *> vfiles; ///< open virtual files
 
 public:
   ~FileCache();
 
-  void SetPath(const char *p);    // set file path
+  void SetPath(const char *p);        ///< set the default path
 
-  int  AddFile(const char *filename);  // opens a new vfile, returns -1 on error
-  // returns true if everything is OK, false if at least one file was missing
+  int  AddFile(const char *filename); ///< opens a new VFile, returns -1 on error
+
+  /// returns true if everything is OK, false if at least one file was missing
   bool InitMultipleFiles(const char *const*filenames);
 
   // info about open vfiles
-  int Size() { return vfiles.size(); }; // number of open VFiles
-  int LumpLength(int lump);
-  const char *Name(int i);
-  bool GetNetworkInfo(int filenum, int *size, unsigned char *md5);
-  unsigned int GetNumLumps(int filenum);
-  void WriteFileHeaders(byte *p);
+  int Size() { return vfiles.size(); };  ///< number of open VFiles
+  const char *Name(int i);               ///< returns the name of the VFile
+  unsigned int GetNumLumps(int filenum); ///< returns the number of lumps in the VFile
+  void WriteNetInfo(TNL::BitStream &s);
+
+  int LumpLength(int lump);              ///< length of a lump in bytes
 
   // searching: Find gives -1 if not found, Get gives an error.
   int FindNumForName(const char *name, bool scanforward = false);

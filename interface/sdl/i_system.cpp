@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/07/13 20:23:38  smite-meister
+// Mod system basics
+//
 // Revision 1.8  2004/07/11 14:32:01  smite-meister
 // Consvars updated, bugfixes
 //
@@ -707,12 +710,12 @@ void I_Quit()
   //        but sometimes we forget and use 'F10'.. so save here too.
   if (demorecording)
     game.CheckDemoStatus();
-  //game.net->QuitNetGame();
+  game.SV_Reset();
   I_ShutdownMusic();
   I_ShutdownSound();
   I_ShutdownCD();
-  // use this for 1.28 19990220 by Kin
-  M_SaveConfig (NULL);
+
+  M_SaveConfig(NULL);
   I_ShutdownGraphics();
   I_ShutdownSystem();
   printf("\r");

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2004/07/13 20:23:36  smite-meister
+// Mod system basics
+//
 // Revision 1.15  2004/07/11 14:32:00  smite-meister
 // Consvars updated, bugfixes
 //
@@ -427,23 +430,33 @@ void HUD::Ticker()
   // update widget data
   UpdateWidgets();
 
-  // display message if necessary
+  // display player messages
   PlayerInfo *pl = consoleplayer;
 
-  if (cv_showmessages.value && pl->message)
+  while (!pl->messages.empty())
     {
-      CONS_Printf ("%s\n", pl->message);
-      pl->message = NULL;
+      pair<string, int> &m = pl->messages.front();
+      // TODO message priorities: a message blocks lower-priority messages for n seconds
+
+      if (cv_showmessages.value || m.second >= 1)
+	CONS_Printf("%s\n", m.first.c_str());
+
+      pl->messages.pop_front();
     }
 
   // In splitscreen, display second player's messages
   if (cv_splitscreen.value)
     {
       pl = consoleplayer2;
-      if (cv_showmessages.value && pl && pl->message)
+      while (!pl->messages.empty())
 	{
-	  CONS_Printf ("\4%s\n", pl->message);
-	  pl->message = NULL;
+	  pair<string, int> &m = pl->messages.front();
+	  // TODO message priorities: a message blocks lower-priority messages for n seconds
+
+	  if (cv_showmessages2.value || m.second >= 1)
+	    CONS_Printf("\4%s\n", m.first.c_str());
+
+	  pl->messages.pop_front();
 	}
     }
 
@@ -492,7 +505,7 @@ void HU_queueChatChar(char c)
 {
   if (((head + 1) & (QUEUESIZE-1)) == tail)
     {
-      consoleplayer->message = HUSTR_MSGU;      //message not send
+      consoleplayer->SetMessage(HUSTR_MSGU);      //message not sent
     }
     else
     {
