@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2004/10/11 11:16:08  smite-meister
+// windows fix
+//
 // Revision 1.20  2004/09/24 11:34:00  smite-meister
 // fix
 //
@@ -230,8 +233,8 @@ static int xlatekey(SDLKey sym)
   return rc;
 }
 
-//! Translates a SDL joystick button to a doom key_input_e number.
 
+//! Translates a SDL joystick button to a doom key_input_e number.
 static int TranslateJoybutton(Uint8 which, Uint8 button)
 {
   int base;
@@ -242,12 +245,13 @@ static int TranslateJoybutton(Uint8 which, Uint8 button)
   if(button >= JOYBUTTONS)
     button = JOYBUTTONS-1;
 
-  switch(which) {
-  case 0 : base = KEY_JOY0BUT0; break;
-  case 1 : base = KEY_JOY1BUT0; break;
-  case 2 : base = KEY_JOY2BUT0; break;
-  case 3 : base = KEY_JOY3BUT0; break;
-  }
+  switch(which)
+    {
+    case 0:  base = KEY_JOY0BUT0; break;
+    case 1:  base = KEY_JOY1BUT0; break;
+    case 2:  base = KEY_JOY2BUT0; break;
+    default: base = KEY_JOY3BUT0; break;
+    }
   return base + button;
 }
 
@@ -775,7 +779,7 @@ char *I_GetUserName()
   char  *p;
 
 #ifdef __WIN32__
-  Uint32 i = MAXPLAYERNAME;
+  DWORD i = MAXPLAYERNAME;
 
   int ret = GetUserName(username, &i);
   if (!ret)
@@ -926,8 +930,8 @@ void I_GetDiskFreeSpace(long long *freespace)
   }
   else
     {
-      Uint32 SectorsPerCluster, BytesPerSector, NumberOfFreeClusters;
-      Uint32 TotalNumberOfClusters;
+      DWORD SectorsPerCluster, BytesPerSector, NumberOfFreeClusters;
+      DWORD TotalNumberOfClusters;
       GetDiskFreeSpace(NULL, &SectorsPerCluster, &BytesPerSector,
 		       &NumberOfFreeClusters, &TotalNumberOfClusters);
       *freespace = BytesPerSector*SectorsPerCluster*NumberOfFreeClusters;
