@@ -16,6 +16,9 @@
 // for more details.
 //
 // $Log$
+// Revision 1.9  2003/04/24 00:03:02  hurdler
+// Should fix compiling problem
+//
 // Revision 1.8  2003/04/23 21:12:02  hurdler
 // Do it again more properly
 //
@@ -51,6 +54,7 @@ rcsid[] = "$Id$";
 
 #include <math.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 #ifdef FREEBSD
 # include <SDL.h>
