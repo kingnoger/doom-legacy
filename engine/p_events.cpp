@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2004/09/06 19:58:03  smite-meister
+// Doom linedefs done!
+//
 // Revision 1.1  2004/09/03 16:30:14  smite-meister
 // file split
 //
@@ -45,17 +48,14 @@
 #include "z_zone.h"
 
 
-
 bool P_CheckKeys(Actor *mo, int lock);
 static int ZDoom_GenFloor(int target, int flags);
 static int ZDoom_GenCeiling(int target, int flags);
+static int ZDoom_GenLift(int target);
 
 
-
-// some Hexen linedeftype extensions we use
-const int LEGACY_EXT = 50;
+// some Legacy linedef extension subtypes we use
 const int LEGACY_FS = 128;
-
 
 
 void Map::UpdateSpecials()
@@ -445,13 +445,13 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
 	success = EV_DoDoor(tag, line, mo, vdoor_t::OwC, SPEED(args[1]), TICS(args[2]));
       break;
     case 20: // Floor Lower by Value
-      success = EV_DoFloor(tag, line, floor_t::RelHeight, SPEED(args[1]), 0, -HEIGHT(args[2]));
+      success = EV_DoFloor(tag, line, floor_t::RelHeight, -SPEED(args[1]), 0, -HEIGHT(args[2]));
       break;
     case 21: // Floor Lower to Lowest
-      success = EV_DoFloor(tag, line, floor_t::LnF, SPEED(args[1]), 0, 0);
+      success = EV_DoFloor(tag, line, floor_t::LnF, -SPEED(args[1]), 0, 0);
       break;
     case 22: // Floor Lower to Nearest
-      success = EV_DoFloor(tag, line, floor_t::DownNnF, SPEED(args[1]), 0, 0);
+      success = EV_DoFloor(tag, line, floor_t::DownNnF, -SPEED(args[1]), 0, 0);
       break;
     case 23: // Floor Raise by Value
       success = EV_DoFloor(tag, line, floor_t::RelHeight, SPEED(args[1]), 0, HEIGHT(args[2]));
@@ -487,10 +487,10 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       success = EV_DoFloor(tag, line, floor_t::RelHeight, SPEED(args[1]), 0, 8*HEIGHT(args[2]));
       break;
     case 36: // Lower Floor by Value Times 8
-      success = EV_DoFloor(tag, line, floor_t::RelHeight, SPEED(args[1]), 0, -8*HEIGHT(args[2]));
+      success = EV_DoFloor(tag, line, floor_t::RelHeight, -SPEED(args[1]), 0, -8*HEIGHT(args[2]));
       break;
     case 40: // Ceiling Lower by Value
-      success = EV_DoCeiling(tag, line, ceiling_t::RelHeight, SPEED(args[1]), 0, -HEIGHT(args[2]));
+      success = EV_DoCeiling(tag, line, ceiling_t::RelHeight, -SPEED(args[1]), 0, -HEIGHT(args[2]));
       break;
     case 41: // Ceiling Raise by Value
       success = EV_DoCeiling(tag, line, ceiling_t::RelHeight, SPEED(args[1]), 0, HEIGHT(args[2]));
@@ -500,7 +500,7 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
 			     args[3] ? SPEED(args[3]) : SPEED(args[1])/2, args[2], HEIGHT(8));
       break;
     case 43: // Ceiling Lower and Crush
-      success = EV_DoCeiling(tag, line, ceiling_t::Floor, SPEED(args[1]), args[2], HEIGHT(8));
+      success = EV_DoCeiling(tag, line, ceiling_t::Floor, -SPEED(args[1]), args[2], HEIGHT(8));
       break;
     case 44: // Ceiling Crush Stop
       success = EV_StopCeiling(tag);
@@ -532,7 +532,7 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       success = EV_DoPlat(tag, line, plat_t::RelHeight, SPEED(args[1]), TICS(args[2]), 8*HEIGHT(args[3]));
       break;
     case 66: // Floor Lower Instant * 8
-      success = EV_DoFloor(tag, line, floor_t::RelHeight, SPEED(16000), 0, -8*HEIGHT(args[2]));
+      success = EV_DoFloor(tag, line, floor_t::RelHeight, -SPEED(16000), 0, -8*HEIGHT(args[2]));
       break;
     case 67: // Floor Raise Instant * 8
       success = EV_DoFloor(tag, line, floor_t::RelHeight, SPEED(16000), 0, 8*HEIGHT(args[2]));
@@ -715,17 +715,29 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       // TODO other ZDoom Generic types?
 
     case 200: // ZDoom Generic_Floor
-      success = EV_DoFloor(tag, line, ZDoom_GenFloor(args[3], args[4]),
-			   (args[4] & 0x08) ? SPEED(args[1]) : -SPEED(args[1]),
-			   (args[4] & 0x10) ? 1 : 0, HEIGHT(args[2] - 128));
+      {
+	bool neg_height = args[4] & 0x20;
+	success = EV_DoFloor(tag, line, ZDoom_GenFloor(args[3], args[4]),
+			     args[4] & 0x08 ? SPEED(args[1]) : -SPEED(args[1]),
+			     (args[4] & 0x10) ? 20 : 0,
+			     neg_height ? -HEIGHT(args[2]) : HEIGHT(args[2]));
+      }
       break;
     case 201: // ZDoom Generic_Ceiling
-      success = EV_DoCeiling(tag, line, ZDoom_GenCeiling(args[3], args[4]), SPEED(args[1]),
-			     (args[4] & 0x10) ? 1 : 0, HEIGHT(args[2] - 128));
+      {
+	bool neg_height = args[4] & 0x20;
+	success = EV_DoCeiling(tag, line, ZDoom_GenCeiling(args[3], args[4]),
+			       args[4] & 0x08 ? SPEED(args[1]) : -SPEED(args[1]),
+			       (args[4] & 0x10) ? 20 : 0,
+			       neg_height ? -HEIGHT(args[2]) : HEIGHT(args[2]));
+      }
       break;
     case 202: // ZDoom Generic_Door
       if (P_CheckKeys(mo, args[4])) // TODO key order different from ZDoom
 	success = EV_DoDoor(tag, line, mo, args[2], SPEED(args[1]), OCTICS(args[3]));
+      break;
+    case 203: // ZDoom Generic_Lift
+      success = EV_DoPlat(tag, line, ZDoom_GenLift(args[3]), SPEED(args[1]), TICS(args[2]), HEIGHT(args[4]));
       break;
     case 217: // ZDoom Stairs_BuildUpDoom (TODO only partial implementation)
       success = EV_BuildStairs(tag, 0, SPEED(args[1]), HEIGHT(args[2]), 0);
@@ -863,7 +875,7 @@ static int ZDoom_GenFloor(int target, int flags)
 }
 
 
-
+/// interprets ZDoom linedeftype 201 fields
 static int ZDoom_GenCeiling(int target, int flags)
 {
   int type = 0;
@@ -912,6 +924,45 @@ static int ZDoom_GenCeiling(int target, int flags)
 
   if (flags & 0x04)
     type |= ceiling_t::NumericModel;
+
+  return type;
+}
+
+
+/// interprets ZDoom linedeftype 203 fields
+static int ZDoom_GenLift(int target)
+{
+  int type = 0;
+
+  switch (target & 0x0F)
+    {
+    case 0:
+      type = plat_t::RelHeight;
+      break;
+    case 1:
+      type = plat_t::LnF;
+      break;
+    case 2:
+      //type = plat_t::NLnF;
+      type = plat_t::NHnF;
+      break;
+    case 3:
+      type = plat_t::LnC;
+      break;
+    case 4:
+      type = plat_t::LHF;
+      break;
+    case 5: // extension
+      type = plat_t::CeilingToggle;
+      break;
+    }
+
+  // Extension: High bits used as flags!
+  if (target & 0x10)
+    type |= plat_t::SetTexture;
+
+  if (target & 0x20)
+    type |= plat_t::ZeroSpecial;
 
   return type;
 }

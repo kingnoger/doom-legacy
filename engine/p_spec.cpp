@@ -18,17 +18,9 @@
 //
 //
 // $Log$
-// Revision 1.33  2004/09/03 17:28:06  smite-meister
-// bugfixes
+// Revision 1.34  2004/09/06 19:58:03  smite-meister
+// Doom linedefs done!
 //
-// Revision 1.32  2004/09/03 16:28:50  smite-meister
-// bugfixes and ZDoom linedef types
-//
-// Revision 1.31  2004/08/30 18:59:50  smite-meister
-// door bugfix
-//
-// Revision 1.30  2004/08/29 20:48:48  smite-meister
-// bugfixes. wow.
 //
 // Revision 1.29  2004/08/15 18:08:28  smite-meister
 // palette-to-palette colormaps etc.
@@ -42,32 +34,11 @@
 // Revision 1.26  2004/04/25 16:26:50  smite-meister
 // Doxygen
 //
-// Revision 1.24  2004/01/02 14:25:01  smite-meister
-// cleanup
-//
 // Revision 1.23  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
 // Revision 1.22  2003/12/23 18:06:06  smite-meister
 // Hexen stairbuilders. Moving geometry done!
-//
-// Revision 1.21  2003/12/21 12:29:09  smite-meister
-// bugfixes
-//
-// Revision 1.20  2003/12/18 11:57:31  smite-meister
-// fixes / new bugs revealed
-//
-// Revision 1.19  2003/12/13 23:51:03  smite-meister
-// Hexen update
-//
-// Revision 1.18  2003/12/06 23:57:47  smite-meister
-// save-related bugfixes
-//
-// Revision 1.17  2003/11/30 00:09:47  smite-meister
-// bugfixes
-//
-// Revision 1.16  2003/11/23 00:41:55  smite-meister
-// bugfixes
 //
 // Revision 1.15  2003/11/12 11:07:23  smite-meister
 // Serialization done. Map progression.
@@ -81,9 +52,6 @@
 // Revision 1.12  2003/05/30 13:34:46  smite-meister
 // Cleanup, HUD improved, serialization
 //
-// Revision 1.11  2003/05/11 21:23:51  smite-meister
-// Hexen fixes
-//
 // Revision 1.10  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -92,9 +60,6 @@
 //
 // Revision 1.8  2003/04/14 08:58:27  smite-meister
 // Hexen maps load.
-//
-// Revision 1.7  2003/04/08 09:46:06  smite-meister
-// Bugfixes
 //
 // Revision 1.6  2003/04/04 00:01:56  smite-meister
 // bugfixes, Hexen HUD
@@ -142,9 +107,6 @@
 #include "m_random.h"
 #include "tables.h"
 #include "z_zone.h"
-
-
-const int LEGACY_EXT = 50; // must match the one in p_events.cpp 
 
 
 //SoM: Enable Boom features?

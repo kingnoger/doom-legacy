@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.26  2004/09/06 19:58:03  smite-meister
+// Doom linedefs done!
+//
 // Revision 1.25  2004/09/03 16:28:51  smite-meister
 // bugfixes and ZDoom linedef types
 //
@@ -110,31 +113,26 @@
 
 using namespace std;
 
-
 extern int boomsupport;
 
 
-// geom. info, independent of Map
-sector_t *getNextSector(line_t *line, sector_t *sec);
+/// linedef specials
+enum linedefspecial_e
+{
+  PO_LINE_START = 1,
+  PO_LINE_EXPLICIT = 5,
+  LEGACY_EXT = 150, // Legacy extensions to Hexen linedef system are under this type
+};
 
-fixed_t P_FindLowestFloorSurrounding(sector_t *sec);
-fixed_t P_FindHighestFloorSurrounding(sector_t *sec);
+/// mapthing specials
+enum mapthingspecial_e
+{
+  PO_ANCHOR_TYPE = 3000,
+  PO_SPAWN_TYPE,
+  PO_SPAWNCRUSH_TYPE
+};
 
-fixed_t P_FindNextLowestFloor(sector_t *sec, int currentheight);
-fixed_t P_FindNextHighestFloor(sector_t *sec, int currentheight);
-
-fixed_t P_FindLowestCeilingSurrounding(sector_t *sec);
-fixed_t P_FindHighestCeilingSurrounding(sector_t *sec);
-
-fixed_t P_FindNextLowestCeiling(sector_t *sec, int currentheight);
-fixed_t P_FindNextHighestCeiling(sector_t *sec, int currentheight);
-
-int P_FindMinSurroundingLight(sector_t *sector, int     max);
-
-int P_CheckTag(line_t *line);
-
-
-/// sector special effects
+/// ingame sector special effects
 enum sectorspecial_t
 {
   SS_none = 0,
@@ -168,7 +166,28 @@ enum sectorspecial_t
 
 
 
-// the result of a plane movement
+
+// geom. info, independent of Map
+sector_t *getNextSector(line_t *line, sector_t *sec);
+
+fixed_t P_FindLowestFloorSurrounding(sector_t *sec);
+fixed_t P_FindHighestFloorSurrounding(sector_t *sec);
+
+fixed_t P_FindNextLowestFloor(sector_t *sec, int currentheight);
+fixed_t P_FindNextHighestFloor(sector_t *sec, int currentheight);
+
+fixed_t P_FindLowestCeilingSurrounding(sector_t *sec);
+fixed_t P_FindHighestCeilingSurrounding(sector_t *sec);
+
+fixed_t P_FindNextLowestCeiling(sector_t *sec, int currentheight);
+fixed_t P_FindNextHighestCeiling(sector_t *sec, int currentheight);
+
+int P_FindMinSurroundingLight(sector_t *sector, int     max);
+
+
+
+
+/// the result of a plane movement
 enum planeresult_e
 {
   res_ok = 0,
@@ -296,16 +315,7 @@ public:
   virtual int  PushForce();
 };
 
-enum
-{
-  // linedef specials
-  PO_LINE_START = 1,
-  PO_LINE_EXPLICIT = 5,
-  // mapthing specials
-  PO_ANCHOR_TYPE = 3000,
-  PO_SPAWN_TYPE,
-  PO_SPAWNCRUSH_TYPE
-};
+
 
 //========================================================
 //  Sector effects
@@ -386,9 +396,9 @@ public:
 };
 
 
-//======================================
-///  Platforms/Lifts (complex moving floors)
-//======================================
+//======================================================
+///      Platforms/Lifts (complex moving floors)
+//======================================================
 
 class plat_t : public sectoreffect_t
 {
@@ -404,35 +414,36 @@ public:
     NLnF,
     NHnF,
     LnC,
-    LHF,
+    Perpetual = 0x8, // will not stop until stopped. Perpetual types follow.
+    LHF       = Perpetual,
     CeilingToggle,
     TMASK = 0xF,
+
     // flags
-    Returning = 0x10, // coming back, will stop
-    Perpetual = 0x20, // will not stop until stopped
-    SetTexture = 0x40,
+    Returning   = 0x10, // coming back, will stop
+    InStasis    = 0x20,
+    SetTexture  = 0x40,
+    ZeroSpecial = 0x80,
   };
 
   enum status_e
   {
     up,
     down,
-    waiting,
-    in_stasis
+    waiting
   };
 
 private:
-  int       type;
-  fixed_t   speed;
-  fixed_t   low, high;
-  int       wait, count;
-  byte      status, oldstatus; // status_e
-  int       tag;
+  byte     type;
+  byte     status;
+  fixed_t  speed;
+  fixed_t  low, high;
+  int      wait, count;
 
   list<plat_t *>::iterator li;
 
 public:
-  plat_t(Map *m, int type, sector_t *sec, int tag, fixed_t speed, int wait, fixed_t height);
+  plat_t(Map *m, int type, sector_t *sec, fixed_t speed, int wait, fixed_t height);
   
   virtual void Think();
 };
@@ -524,11 +535,11 @@ public:
 
 protected:
   int       type;
-  int       crush;
+  short     crush;
   fixed_t   speed;
 
   // ceiling changers
-  short     newspecial;
+  int       modelsec; ///< model sector number
   short     texture;
 
   list<ceiling_t *>::iterator li;
@@ -604,13 +615,12 @@ public:
 
 private:
   int       type;
-  int       crush;
+  short     crush;
+  fixed_t   speed; // sign denotes direction
 
   // floor changers
-  int       newspecial;
+  int       modelsec; ///< model sector number
   short     texture;
-
-  fixed_t   speed; // sign denotes direction
 
 public:
   fixed_t   destheight;

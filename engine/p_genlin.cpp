@@ -143,7 +143,7 @@ int Map::EV_DoGenFloor(line_t *line)
       floor->speed = Dirn ? speed : -speed;
 
       floor->texture = sec->floorpic;
-      floor->newspecial = sec->special;
+      floor->modelsec = secnum;
 
       // set texture/type change properties
       if (ChgT)   // if a texture change is indicated
@@ -160,11 +160,11 @@ int Map::EV_DoGenFloor(line_t *line)
 		  switch(ChgT)
 		    {
 		    case FChgZero:  // zero type
-		      floor->newspecial = 0;
+		      floor->modelsec = -1;
 		      floor->type |= floor_t::SetTxTy;
 		      break;
 		    case FChgTyp:   // copy type
-		      floor->newspecial = sec2->special;
+		      floor->modelsec = sec2 - sectors;
 		      floor->type |= floor_t::SetTxTy;
 		      break;
 		    case FChgTxt:   // leave type be
@@ -181,11 +181,11 @@ int Map::EV_DoGenFloor(line_t *line)
 	      switch (ChgT)
 		{
 		case FChgZero:    // zero type
-		  floor->newspecial = 0;
+		  floor->modelsec = -1;
 		  floor->type |= floor_t::SetTxTy;
 		  break;
 		case FChgTyp:     // copy type
-		  floor->newspecial = line->frontsector->special;
+		  floor->modelsec = line->frontsector - sectors;
 		  floor->type |= floor_t::SetTxTy;
 		  break;
 		case FChgTxt:     // leave type be
@@ -313,7 +313,7 @@ int Map::EV_DoGenCeiling(line_t *line)
       ceiling->speed = Dirn ? speed : -speed;
 
       ceiling->texture = sec->ceilingpic;
-      ceiling->newspecial = sec->special;
+      ceiling->modelsec = secnum;
 
       // set texture/type change properties
       if (ChgT)     // if a texture change is indicated
@@ -331,11 +331,11 @@ int Map::EV_DoGenCeiling(line_t *line)
 		  switch (ChgT)
 		    {
 		    case CChgZero:  // type is zeroed
-		      ceiling->newspecial = 0;
+		      ceiling->modelsec = -1;
 		      ceiling->type |= ceiling_t::SetTxTy;
 		      break;
 		    case CChgTyp:   // type is copied
-		      ceiling->newspecial = sec2->special;
+		      ceiling->modelsec = sec2 - sectors;
 		      ceiling->type |= ceiling_t::SetTxTy;
 		      break;
 		    case CChgTxt:   // type is left alone
@@ -352,11 +352,11 @@ int Map::EV_DoGenCeiling(line_t *line)
 	      switch (ChgT)
 		{
 		case CChgZero:    // type is zeroed
-		  ceiling->newspecial = 0;
+		  ceiling->modelsec = -1;
 		  ceiling->type |= ceiling_t::SetTxTy;
 		  break;
 		case CChgTyp:     // type is copied
-		  ceiling->newspecial = line->frontsector->special;
+		  ceiling->modelsec = line->frontsector - sectors;
 		  ceiling->type |= ceiling_t::SetTxTy;
 		  break;
 		case CChgTxt:     // type is left alone
@@ -382,9 +382,7 @@ int Map::EV_DoGenCeiling(line_t *line)
 int Map::EV_DoGenLift(line_t *line)
 {
   plat_t*         plat;
-  int             secnum;
   int             rtn;
-  bool         manual;
   sector_t*       sec;
   unsigned        value = (unsigned)line->special - GenLiftBase;
 
@@ -395,7 +393,7 @@ int Map::EV_DoGenLift(line_t *line)
   int Sped = (value & LiftSpeed) >> LiftSpeedShift;
   int Trig = (value & TriggerType) >> TriggerTypeShift;
 
-  secnum = -1;
+  int secnum = -1;
   rtn = 0;
 
   // Activate all <type> plats that are in_stasis
@@ -404,7 +402,7 @@ int Map::EV_DoGenLift(line_t *line)
     ActivateInStasisPlat(line->tag);
         
   // check if a manual trigger, if so do just the sector on the backside
-  manual = false;
+  bool manual = false;
   if (Trig==PushOnce || Trig==PushMany)
     {
       if (!(sec = line->backsector))
@@ -488,7 +486,7 @@ int Map::EV_DoGenLift(line_t *line)
 
       // Setup the plat thinker
       rtn++;
-      plat = new plat_t(this, type, sec, line->tag, speed, wait, 0);
+      plat = new plat_t(this, type, sec, speed, wait, 0);
       AddActivePlat(plat); // add this plat to the list of active plats
 
       if (manual)
@@ -729,7 +727,7 @@ int Map::EV_DoGenCrusher(line_t *line)
       crusher_t *crusher = new crusher_t(this, Slnt ? ceiling_t::Silent : 0, sec, speed, speed, 10, 8*FRACUNIT);
 
       crusher->texture = sec->ceilingpic;
-      crusher->newspecial = sec->special;
+      crusher->modelsec = secnum;
 
       AddActiveCeiling(crusher);  // add to list of active ceilings
       if (manual) return rtn;

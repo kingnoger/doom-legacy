@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/09/06 19:58:03  smite-meister
+// Doom linedefs done!
+//
 // Revision 1.12  2004/04/25 16:26:49  smite-meister
 // Doxygen
 //
@@ -54,12 +57,10 @@
 // Revision 1.1.1.1  2002/11/16 14:18:02  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//      Plats (i.e. elevator platforms) code, raising/lowering.
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Plats (i.e. elevator platforms) code, raising/lowering.
 
 #include "doomdef.h"
 #include "p_spec.h" // class definitions
@@ -74,11 +75,10 @@ IMPLEMENT_CLASS(plat_t, sectoreffect_t);
 plat_t::plat_t() {}
 
 // constructor
-plat_t::plat_t(Map *m, int ty, sector_t *sec, int t, fixed_t sp, int wt, fixed_t height)
+plat_t::plat_t(Map *m, int ty, sector_t *sec, fixed_t sp, int wt, fixed_t height)
   : sectoreffect_t(m, sec)
 {
   type = ty;
-  tag = t;
   speed = sp;
   wait = wt;
 
@@ -147,7 +147,6 @@ plat_t::plat_t(Map *m, int ty, sector_t *sec, int t, fixed_t sp, int wt, fixed_t
       break;
 
     case LHF:
-      type |= Perpetual;
       low = P_FindLowestFloorSurrounding(sec);
       if (low > fl)
 	low = fl;
@@ -158,7 +157,6 @@ plat_t::plat_t(Map *m, int ty, sector_t *sec, int t, fixed_t sp, int wt, fixed_t
       break;
 
     case CeilingToggle: // instant toggle (reversed targets!)
-      type |= Perpetual;
       low = sec->ceilingheight;
       high = sec->floorheight;
       status =  down;
@@ -176,6 +174,9 @@ plat_t::plat_t(Map *m, int ty, sector_t *sec, int t, fixed_t sp, int wt, fixed_t
 // Move a plat up and down
 void plat_t::Think()
 {
+  if (type & InStasis)
+    return; // in stasis
+
   int  res;
   int  crush = 0;
 
@@ -191,7 +192,8 @@ void plat_t::Think()
         {
 	  count = wait;
 	  status = down;
-	  mp->SN_StartSequence(&sector->soundorg, SEQ_PLAT + sector->seqType);
+	  //mp->SN_StopSequence(&sector->soundorg);
+	  //mp->SN_StartSequence(&sector->soundorg, SEQ_PLAT + sector->seqType);
         }
       else if (res == res_pastdest)
 	{
@@ -204,8 +206,8 @@ void plat_t::Think()
 	    {
 	    case CeilingToggle:
 	      // go into stasis awaiting next toggle activation
-	      oldstatus = status;
-	      status = in_stasis;
+	      status = down;
+	      type |= InStasis;
 	      break;
 
 	    default:
@@ -232,8 +234,8 @@ void plat_t::Think()
 	    {
 	    case CeilingToggle:
 	      // go into stasis awaiting next activation
-              oldstatus = status;  
-              status = in_stasis;      
+              status = up;
+	      type |= InStasis;  
 	      break;
 
 	    default:
@@ -260,7 +262,6 @@ void plat_t::Think()
 	  mp->SN_StartSequence(&sector->soundorg, SEQ_PLAT + sector->seqType);
         }
 
-    case in_stasis:
     default:
       break;
     }
@@ -287,34 +288,35 @@ int Map::EV_DoPlat(int tag, line_t *line, int type, fixed_t speed, int wait, fix
       if (sec->floordata)
 	return 0;
 
-      plat = new plat_t(this, type, sec, tag, speed, wait, height);
+      plat = new plat_t(this, type, sec, speed, wait, height);
 
       if (type & plat_t::SetTexture)
 	sec->floorpic = sides[line->sidenum[0]].sector->floorpic;
+      if (type & plat_t::ZeroSpecial)
+	sec->special = 0;
+
       AddActivePlat(plat);
       return 1;
     }
 
   //  Activate all <type> plats that are in_stasis
   if (type & plat_t::Perpetual)
-    {
-      ActivateInStasisPlat(tag);
-      rtn++;
-    }
+    rtn += ActivateInStasisPlat(tag);
 
   while ((secnum = FindSectorFromTag(tag, secnum)) >= 0)
     {
       sec = &sectors[secnum];
 
-      if (P_SectorActive(floor_special,sec)) //SoM: 3/7/2000: 
+      if (P_SectorActive(floor_special, sec))
 	continue;
 
-      // Find lowest & highest floors around sector
       rtn++;
-      plat_t *plat = new plat_t(this, type, sec, tag, speed, wait, height);
+      plat_t *plat = new plat_t(this, type, sec, speed, wait, height);
 
       if (type & plat_t::SetTexture)
 	sec->floorpic = sides[line->sidenum[0]].sector->floorpic;
+      if (type & plat_t::ZeroSpecial)
+	sec->special = 0;
 
       AddActivePlat(plat);
     }
@@ -323,20 +325,21 @@ int Map::EV_DoPlat(int tag, line_t *line, int type, fixed_t speed, int wait, fix
 
 
 
-void Map::ActivateInStasisPlat(int tag)
+int Map::ActivateInStasisPlat(int tag)
 {
+  int rtn = 0;
   list<plat_t *>::iterator i;
   for (i = activeplats.begin(); i != activeplats.end(); i++)
     {
       plat_t *plat = *i;
-      if (plat->tag == tag && plat->status == plat_t::in_stasis) 
+      if (plat->sector->tag == tag && plat->type & plat_t::InStasis)
 	{
-	  if (plat->type == plat_t::CeilingToggle)
-	    plat->status = plat->oldstatus == plat_t::up ? plat_t::down : plat_t::up;
-	  else
-	    plat->status = plat->oldstatus;
+	  SN_StartSequence(&plat->sector->soundorg, SEQ_PLAT + plat->sector->seqType);
+	  plat->type &= ~plat_t::InStasis;
+	  rtn++;
 	}
     }
+  return rtn;
 }
 
 
@@ -347,11 +350,11 @@ int Map::EV_StopPlat(int tag)
   for (i = activeplats.begin(); i != activeplats.end(); i++)
     {
       plat_t *plat = *i;
-      if (plat->status != plat_t::in_stasis && plat->tag == tag)
+      if (!(plat->type & plat_t::InStasis) && plat->sector->tag == tag)
 	{
+	  SN_StopSequence(&plat->sector->soundorg);
 	  TagFinished(plat->sector->tag);
-	  plat->oldstatus = plat->status;
-	  plat->status = plat_t::in_stasis;
+	  plat->type |= plat_t::InStasis;
 	  rtn++;
 	}
     }

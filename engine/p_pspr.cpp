@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2004/09/06 19:58:03  smite-meister
+// Doom linedefs done!
+//
 // Revision 1.17  2004/07/05 16:53:25  smite-meister
 // Netcode replaced
 //
@@ -313,7 +316,7 @@ bool PlayerPawn::CheckAmmo()
   ammotype_t at = weaponinfo[readyweapon].ammo;
 
   // Minimal amount for one shot varies.
-  int i, count = weaponinfo[readyweapon].ammopershoot;
+  int count = weaponinfo[readyweapon].ammopershoot;
 
   if (at == am_manaboth)
     if (ammo[am_mana1] >= count && ammo[am_mana2] >= count)

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/09/06 19:58:03  smite-meister
+// Doom linedefs done!
+//
 // Revision 1.12  2004/09/03 16:28:49  smite-meister
 // bugfixes and ZDoom linedef types
 //
@@ -67,6 +70,8 @@
 #include "z_zone.h"
 
 
+void P_CopySectorProperties(sector_t *sec, sector_t *model);
+
 //==========================================================================
 //                              CEILINGS
 //==========================================================================
@@ -80,7 +85,7 @@ ceiling_t::ceiling_t(Map *m, int ty, sector_t *sec, fixed_t sp, int cru, fixed_t
 {
   type = ty;
   crush = cru;
-  speed = sp; // default: up
+  speed = sp; // contains movement direction
   sec->ceilingdata = this;
 
   // target?
@@ -88,8 +93,7 @@ ceiling_t::ceiling_t(Map *m, int ty, sector_t *sec, fixed_t sp, int cru, fixed_t
     {
     case RelHeight:
       destheight = sec->ceilingheight + height;
-      if (height < 0)
-	speed = -speed;
+      // if (height < 0) speed = -speed;
       break;
 
     case AbsHeight:
@@ -100,7 +104,7 @@ ceiling_t::ceiling_t(Map *m, int ty, sector_t *sec, fixed_t sp, int cru, fixed_t
 
     case Floor:
       destheight = sec->floorheight + height;
-      speed = -speed;
+      //speed = -speed;
       break;
 
     case HnC:
@@ -113,17 +117,17 @@ ceiling_t::ceiling_t(Map *m, int ty, sector_t *sec, fixed_t sp, int cru, fixed_t
 
     case DownNnC:
       destheight = P_FindNextLowestCeiling(sec, sec->ceilingheight) + height;
-      speed = -speed;
+      //speed = -speed;
       break;
 
     case LnC:
       destheight = P_FindLowestCeilingSurrounding(sec) + height;
-      speed = -speed;
+      //speed = -speed;
       break;
 
     case HnF:
       destheight = P_FindHighestFloorSurrounding(sec) + height;
-      speed = -speed;
+      //speed = -speed;
       break;
 
     case UpSUT:
@@ -161,11 +165,16 @@ void ceiling_t::Think()
   if (res == res_pastdest)
     {
       // movers with texture/special change: change the texture then get removed
-      if (type & SetSpecial)
-	sector->special = newspecial;
-
       if (type & SetTexture)
 	sector->ceilingpic = texture;
+
+      if (type & SetSpecial)
+	{
+	  if (modelsec < 0)
+	    sector->special = 0; // just zero the type
+	  else
+	    P_CopySectorProperties(sector, &mp->sectors[modelsec]);	 
+	}
 
       if (type & Silent)
 	S_StartSound(&sector->soundorg, sfx_ceilstop);
@@ -224,29 +233,27 @@ int Map::EV_DoCeiling(int tag, line_t *line, int type, fixed_t speed, int crush,
 	{
 	  if (type & ceiling_t::NumericModel)
 	    {
+	      // make sure these get initialized even if no model sector can be found
 	      ceiling->texture = sec->ceilingpic;
-	      // jff 1/24/98 make sure newspecial gets initialized
-	      // in case no surrounding sector is at destheight
-	      // --> should not affect compatibility <--
-	      ceiling->newspecial = sec->special;
+	      ceiling->modelsec = sec - sectors;
 	      //jff 5/23/98 use model subroutine to unify fixes and handling
 	      // BP: heretic have change something here
 	      sec = FindModelCeilingSector(ceiling->destheight, sec);
 	      if (sec)
 		{
 		  ceiling->texture = sec->ceilingpic;
-		  ceiling->newspecial = sec->special;
+		  ceiling->modelsec = sec - sectors;
 		}
 	    }
 	  else
 	    {
 	      // "trigger model"
 	      ceiling->texture = line->frontsector->ceilingpic;
-	      ceiling->newspecial = line->frontsector->special;
+	      ceiling->modelsec = line->frontsector - sectors;
 	    }
 
 	  if (type & ceiling_t::ZeroSpecial)
-	    ceiling->newspecial = 0;
+	    ceiling->modelsec = -1;
 	}
 
       if (!tag)
@@ -268,7 +275,7 @@ crusher_t::crusher_t() {}
 
 // constructor
 crusher_t::crusher_t(Map *m, int ty, sector_t *sec, fixed_t upsp, fixed_t downsp, int cru, fixed_t height)
-  : ceiling_t(m, ceiling_t::Floor, sec, downspeed, cru, height)   // start by going down
+  : ceiling_t(m, ceiling_t::Floor, sec, -downspeed, cru, height)   // start by going down
 {
   type = ty;
   upspeed = upsp;

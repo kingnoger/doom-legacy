@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.32  2004/09/06 19:58:03  smite-meister
+// Doom linedefs done!
+//
 // Revision 1.31  2004/09/03 16:28:50  smite-meister
 // bugfixes and ZDoom linedef types
 //
@@ -257,7 +260,7 @@ int floor_t::Marshal(LArchive &a)
   if (!a.IsStoring())
     sector->floordata = this;
 
-  a << type << crush << newspecial << texture << speed << destheight;
+  a << type << crush << speed << modelsec << texture << destheight;
   return 0;
 }
 
@@ -300,8 +303,8 @@ int plat_t::Marshal(LArchive &a)
       mp->AddActivePlat(this);
     }
 
-  a << type << speed << low << high << wait << count << tag;
-  a << status << oldstatus;
+  a << type << status;
+  a << speed << low << high << wait << count;
   
   return 0;
 }
@@ -315,7 +318,7 @@ int ceiling_t::Marshal(LArchive &a)
       mp->AddActiveCeiling(this);
     }
 
-  a << type << crush << speed << destheight << newspecial << texture;
+  a << type << crush << speed << destheight << modelsec << texture;
 
   return 0;
 }

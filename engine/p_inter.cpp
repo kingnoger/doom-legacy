@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.34  2004/09/06 19:58:03  smite-meister
+// Doom linedefs done!
+//
 // Revision 1.33  2004/09/03 17:28:06  smite-meister
 // bugfixes
 //
@@ -934,8 +937,8 @@ void PlayerPawn::Die(Actor *inflictor, Actor *source)
       // count environment kills against you (you fragged yourself!)
       game.gtype->Frag(player, player);
     }
-  else
-    source->Killed(this, inflictor);
+  else if (!(flags & MF_CORPSE))
+    source->Killed(this, inflictor); // you can kill 'em only once!
 
   // dead guy attributes
   flags2 &= ~MF2_FLY;

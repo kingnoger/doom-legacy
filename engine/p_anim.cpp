@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/09/06 19:58:02  smite-meister
+// Doom linedefs done!
+//
 // Revision 1.7  2004/09/03 16:28:49  smite-meister
 // bugfixes and ZDoom linedef types
 //
@@ -273,7 +276,7 @@ int P_Read_ANIMATED(int lump)
       int n = last - base + 1; // number of frames
       if (n < 2 || n > MAX_FRAME_DEFS || base == -1 || last == -1)
 	{
-	  if (lump)
+	  if (lump >= 0)
 	    CONS_Printf("ANIMATED: Bad cycle from %s to %s", a->startname, a->endname);
 	  continue;
 	}

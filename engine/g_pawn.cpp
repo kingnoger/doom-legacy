@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.37  2004/09/06 19:58:02  smite-meister
+// Doom linedefs done!
+//
 // Revision 1.36  2004/09/03 17:28:05  smite-meister
 // bugfixes
 //
@@ -986,10 +989,6 @@ bool P_CheckKeys(Actor *mo, int lock)
 
   if (!(p->keycards & (1 << (lock-1))))
     {
-      if (lock >= it_bluecard) // skulls and cards are equivalent
-	if (p->keycards & (1 << (lock+2)))
-	  return true;
-
       static char buf[80];
       if (lock <= 11)
 	{
@@ -999,6 +998,10 @@ bool P_CheckKeys(Actor *mo, int lock)
 	}
       else
 	{
+	  // skulls and cards are equivalent
+	  if (p->keycards & (1 << (lock+2)))
+	    return true;
+
 	  p->player->SetMessage(text[TXT_PD_BLUEK + lock - 12]);
 	  S_StartScreamSound(p, sfx_usefail);
 	}
@@ -1009,16 +1012,11 @@ bool P_CheckKeys(Actor *mo, int lock)
 }
 
 
-//SoM: 3/7/2000
-//
-// was P_CanUnlockGenDoor()
-//
 // Passed a generalized locked door linedef and a player, returns whether
 // the player has the keys necessary to unlock that door.
 //
 // Note: The linedef passed MUST be a generalized locked door type
 //       or results are undefined.
-//
 //
 bool PlayerPawn::CanUnlockGenDoor(line_t *line)
 {

@@ -16,14 +16,8 @@
 // GNU General Public License for more details.
 //
 // $Log$
-// Revision 1.34  2004/09/03 16:28:51  smite-meister
-// bugfixes and ZDoom linedef types
-//
-// Revision 1.33  2004/08/29 20:48:49  smite-meister
-// bugfixes. wow.
-//
-// Revision 1.32  2004/08/29 13:50:07  hurdler
-// minor update
+// Revision 1.35  2004/09/06 19:58:03  smite-meister
+// Doom linedefs done!
 //
 // Revision 1.31  2004/08/12 18:30:29  smite-meister
 // cleaned startup
@@ -43,26 +37,11 @@
 // Revision 1.25  2003/12/18 11:57:31  smite-meister
 // fixes / new bugs revealed
 //
-// Revision 1.24  2003/12/13 23:51:03  smite-meister
-// Hexen update
-//
-// Revision 1.23  2003/12/06 23:57:47  smite-meister
-// save-related bugfixes
-//
-// Revision 1.22  2003/11/30 00:09:47  smite-meister
-// bugfixes
-//
-// Revision 1.21  2003/11/23 00:41:55  smite-meister
-// bugfixes
-//
 // Revision 1.20  2003/11/12 11:07:26  smite-meister
 // Serialization done. Map progression.
 //
 // Revision 1.19  2003/06/20 20:56:08  smite-meister
 // Presentation system tweaked
-//
-// Revision 1.18  2003/06/10 22:40:00  smite-meister
-// Bugfixes
 //
 // Revision 1.17  2003/06/08 16:19:21  smite-meister
 // Hexen lights.
@@ -84,9 +63,6 @@
 //
 // Revision 1.11  2003/04/14 08:58:30  smite-meister
 // Hexen maps load.
-//
-// Revision 1.10  2003/04/08 09:46:06  smite-meister
-// Bugfixes
 //
 // Revision 1.9  2003/04/04 00:01:57  smite-meister
 // bugfixes, Hexen HUD
@@ -443,7 +419,7 @@ public:
 
   // in p_plats.cpp
   void AddActivePlat(plat_t* plat);
-  void ActivateInStasisPlat(int tag);
+  int  ActivateInStasisPlat(int tag);
   void RemoveActivePlat(plat_t* plat);
   void RemoveAllActivePlats();
   int  EV_DoPlat(int tag, line_t *line, int type, fixed_t speed, int wait, fixed_t height);

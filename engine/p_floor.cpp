@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2004/09/06 19:58:03  smite-meister
+// Doom linedefs done!
+//
 // Revision 1.15  2004/09/03 16:28:49  smite-meister
 // bugfixes and ZDoom linedef types
 //
@@ -77,6 +80,14 @@
 #include "z_zone.h"
 #include "g_game.h"
 #include "g_map.h"
+
+// temp solution, copy certain sector properties. TODO "sector property" struct...
+void P_CopySectorProperties(sector_t *sec, sector_t *model)
+{
+  sec->special = model->special;
+  sec->damage = model->damage;
+  sec->damagetype = model->damagetype;
+}
 
 
 // Move a plane (floor or ceiling) and check for crushing
@@ -255,15 +266,14 @@ floor_t::floor_t(Map *m, int ty, sector_t *sec, fixed_t sp, int cru, fixed_t hei
 {
   type = ty;
   crush = cru;
-  speed = sp; // default: up
+  speed = sp; // contains movement direction
   sec->floordata = this;
 
   switch (ty & TMASK)
     {
     case RelHeight:
       destheight = sec->floorheight + height;
-      if (height < 0)
-	speed = -speed;
+      // if (height < 0) speed = -speed;
       break;
 
     case AbsHeight:
@@ -278,7 +288,7 @@ floor_t::floor_t(Map *m, int ty, sector_t *sec, fixed_t sp, int cru, fixed_t hei
 
     case LnF:
       destheight = P_FindLowestFloorSurrounding(sec) + height;
-      speed = -speed;
+      //speed = -speed;
       break;
 
     case UpNnF:
@@ -287,12 +297,12 @@ floor_t::floor_t(Map *m, int ty, sector_t *sec, fixed_t sp, int cru, fixed_t hei
 
     case DownNnF:
       destheight = P_FindNextLowestFloor(sec, sec->floorheight) + height;
-      speed = -speed;
+      //speed = -speed;
       break;
 
     case HnF:
       destheight = P_FindHighestFloorSurrounding(sec) + height;
-      speed = -speed; // TODO up/down?
+      //speed = -speed; // TODO up/down?
       break;
 
     case LnC:
@@ -336,7 +346,12 @@ void floor_t::Think()
 	sector->floorpic = texture;
 
       if (type & SetSpecial)
-	sector->special = newspecial;
+	{
+	  if (modelsec < 0)
+	    sector->special = 0; // just zero the type
+	  else
+	    P_CopySectorProperties(sector, &mp->sectors[modelsec]);
+	}
 
       mp->SN_StopSequence(&sector->soundorg);
       sector->floordata = NULL; // Clear up the thinker so others can use it
@@ -415,29 +430,27 @@ int Map::EV_DoFloor(int tag, line_t *line, int type, fixed_t speed, int crush, f
 	  // Boom extended linedefs do this for themselves in p_genlin.cpp
 	  if (type & floor_t::NumericModel)
 	    {
+	      // make sure these get initialized even if no model sector can be found
 	      floor->texture = sec->floorpic;
-	      // jff 1/24/98 make sure newspecial gets initialized
-	      // in case no surrounding sector is at destheight
-	      // --> should not affect compatibility <--
-	      floor->newspecial = sec->special;
+	      floor->modelsec = sec - sectors;
 	      //jff 5/23/98 use model subroutine to unify fixes and handling
 	      // BP: heretic have change something here
 	      sec = FindModelFloorSector(floor->destheight, sec);
 	      if (sec)
 		{
 		  floor->texture = sec->floorpic;
-		  floor->newspecial = sec->special;
+		  floor->modelsec = sec - sectors;
 		}
 	    }
 	  else
 	    {
 	      // "trigger model"
 	      floor->texture = line->frontsector->floorpic;
-	      floor->newspecial = line->frontsector->special;
+	      floor->modelsec = line->frontsector - sectors;
 	    }
 
 	  if (type & floor_t::ZeroSpecial)
-	    floor->newspecial = 0;
+	    floor->modelsec = -1;
 	}
 
       if (!tag)
@@ -810,7 +823,7 @@ int Map::EV_DoDonut(int tag, fixed_t pspeed, fixed_t sspeed)
 	  //  Spawn rising slime
 	  floor_t *floor = new floor_t(this, floor_t::AbsHeight | floor_t::SetTxTy, s2, sspeed, 0, s3->floorheight);
 	  floor->texture = s3->floorpic;
-	  floor->newspecial = 0;
+	  floor->modelsec = -1;
 
 	  //  Spawn lowering donut-hole pillar
 	  floor = new floor_t(this, floor_t::AbsHeight, s1, pspeed, 0, s3->floorheight);
