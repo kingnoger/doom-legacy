@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.31  2004/09/03 16:28:50  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.30  2004/08/12 18:30:24  smite-meister
 // cleaned startup
 //
@@ -312,9 +315,15 @@ int ceiling_t::Marshal(LArchive &a)
       mp->AddActiveCeiling(this);
     }
 
-  a << type << crush << newspecial << texture << upspeed << downspeed << oldspeed;
-  a << tag << olddirection << direction << bottomheight << topheight;
+  a << type << crush << speed << destheight << newspecial << texture;
 
+  return 0;
+}
+
+int crusher_t::Marshal(LArchive &a)
+{
+  ceiling_t::Marshal(a);
+  a << downspeed << upspeed << bottomheight << topheight;
   return 0;
 }
 
@@ -1094,9 +1103,9 @@ int Map::Serialize(LArchive &a)
 	  if (diff & SD_CEILHT)  a << ss->ceilingheight;
 
 	  if (diff & SD_FLOORPIC)
-	    a.Write((byte *)tc[ss->floorpic]->name, 8);
+	    a.Write((byte *)tc[ss->floorpic]->GetName(), 8);
 	  if (diff & SD_CEILPIC)
-	    a.Write((byte *)tc[ss->ceilingpic]->name, 8);
+	    a.Write((byte *)tc[ss->ceilingpic]->GetName(), 8);
 
 	  if (diff & SD_LIGHT)    a << ss->lightlevel;
 	  if (diff & SD_SPECIAL)  a << ss->special;

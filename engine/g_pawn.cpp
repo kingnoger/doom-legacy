@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.35  2004/09/03 16:28:49  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.34  2004/07/13 20:23:35  smite-meister
 // Mod system basics
 //
@@ -1148,7 +1151,7 @@ void PlayerPawn::ProcessSpecialSector(sector_t *sector, bool instantdamage)
 {
   if (instantdamage && sector->damage)
     {
-      if ((sector->special & SS_LIGHTMASK) == 11)
+      if ((sector->special & SS_SPECIALMASK) == SS_EndLevelHurt)
 	{
           // EXIT SUPER DAMAGE! (for E1M8 finale)
 	  cheats &= ~CF_GODMODE;

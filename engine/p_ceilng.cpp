@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/09/03 16:28:49  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.11  2004/04/25 16:26:49  smite-meister
 // Doxygen
 //
@@ -51,12 +54,10 @@
 // Revision 1.1.1.1  2002/11/16 14:17:54  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:  
-//      Ceiling aninmation (lowering, crushing, raising)
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Ceiling movement (lowering, crushing, raising)
 
 #include "doomdef.h"
 #include "g_game.h"
@@ -66,74 +67,81 @@
 #include "z_zone.h"
 
 
-// ==========================================================================
+//==========================================================================
 //                              CEILINGS
-// ==========================================================================
+//==========================================================================
 
 IMPLEMENT_CLASS(ceiling_t, sectoreffect_t);
 ceiling_t::ceiling_t() {}
 
 // constructor
-ceiling_t::ceiling_t(Map *m, int ty, sector_t *sec, fixed_t usp, fixed_t dsp, int cru, fixed_t height)
+ceiling_t::ceiling_t(Map *m, int ty, sector_t *sec, fixed_t sp, int cru, fixed_t height)
   : sectoreffect_t(m, sec)
 {
-  // normal ceilings and crushers could be two different classes, but...
   type = ty;
-  tag = sec->tag;
-  upspeed = usp;
-  oldspeed = downspeed = dsp;
   crush = cru;
+  speed = sp; // default: up
   sec->ceilingdata = this;
 
   // target?
   switch (type & TMASK)
     {
     case RelHeight:
-      topheight = bottomheight = sec->ceilingheight + height;
-      direction = (height > 0) ? 1 : -1;
+      destheight = sec->ceilingheight + height;
+      if (height < 0)
+	speed = -speed;
       break;
 
     case AbsHeight:
-      if (sec->ceilingheight <= height)
-	{
-	  direction = 1;
-	  topheight = height;	  
-	}
-      else
-	{
-	  direction = -1;
-	  bottomheight = height;
-	}
+      destheight = height;
+      if (sec->ceilingheight > height)
+	speed = -speed;
       break;
 
     case Floor:
-      bottomheight = sec->floorheight + height;
-      direction = -1;
+      destheight = sec->floorheight + height;
+      speed = -speed;
       break;
 
     case HnC:
-      topheight = P_FindHighestCeilingSurrounding(sec);
-      direction = 1;
+      destheight = P_FindHighestCeilingSurrounding(sec) + height;
+      break;
+
+    case UpNnC:
+      destheight = P_FindNextHighestCeiling(sec, sec->ceilingheight) + height;
+      break;
+
+    case DownNnC:
+      destheight = P_FindNextLowestCeiling(sec, sec->ceilingheight) + height;
+      speed = -speed;
       break;
 
     case LnC:
-      bottomheight = P_FindLowestCeilingSurrounding(sec);
-      direction = -1;
+      destheight = P_FindLowestCeilingSurrounding(sec) + height;
+      speed = -speed;
       break;
 
     case HnF:
-      bottomheight = P_FindHighestFloorSurrounding(sec);
-      direction = -1;
+      destheight = P_FindHighestFloorSurrounding(sec) + height;
+      speed = -speed;
       break;
 
-    case Crusher:
-    case CrushOnce:
-      topheight = sec->ceilingheight;
-      bottomheight = sec->floorheight + height;
-      direction = -1;
+    case UpSUT:
+    case DownSUT:
+      destheight = sector->ceilingheight + height;
+      if (type & TMASK == UpSUT)
+	destheight += mp->FindShortestUpperAround(sec);
+      else
+	destheight -= mp->FindShortestUpperAround(sec);
+
+      if (destheight < (-32000 << FRACBITS))
+	destheight = -32000 << FRACBITS;
+      else if (destheight > (32000 << FRACBITS))
+	destheight = 32000 << FRACBITS;
       break;
 
     default:
+      I_Error("Unknown ceiling target %d!\n", type);
       break;
     }
 
@@ -142,92 +150,29 @@ ceiling_t::ceiling_t(Map *m, int ty, sector_t *sec, fixed_t usp, fixed_t dsp, in
 }
 
 
+
 void ceiling_t::Think()
 {
-  int res;
+  if (type & InStasis)
+    return; // in stasis
 
-  switch (direction)
+  int res = mp->T_MovePlane(sector, speed, destheight, crush, 1);
+
+  if (res == res_pastdest)
     {
-    case 0:
-      // IN STASIS
-      break;
-    case 1:
-      // UP
-      res = mp->T_MovePlane(sector, upspeed, topheight, false, 1);
+      // movers with texture/special change: change the texture then get removed
+      if (type & SetSpecial)
+	sector->special = newspecial;
 
-      if (res == res_pastdest)
-        {
-	  if (type & Silent)
-	    S_StartSound(&sector->soundorg, sfx_ceilstop);
-	  else
-	    mp->SN_StopSequence(&sector->soundorg);
+      if (type & SetTexture)
+	sector->ceilingpic = texture;
 
-	  // movers with texture/special change: change the texture then get removed
-	  if (type & SetSpecial)
-	    sector->special = newspecial;
+      if (type & Silent)
+	S_StartSound(&sector->soundorg, sfx_ceilstop);
+      else
+	mp->SN_StopSequence(&sector->soundorg);
 
-	  if (type & SetTexture)
-	    sector->ceilingpic = texture;
-
-	  switch (type & TMASK)
-            {
-	    case Crusher:
-	      direction = -1;
-	      break;
-	      
-	    default:
-	      mp->RemoveActiveCeiling(this);
-	      break;
-            }
-        }
-      break;
-
-    case -1:
-      // DOWN
-      res = mp->T_MovePlane(sector, -downspeed, bottomheight, crush, 1);
-
-      if (res == res_pastdest)
-        {
-	  if (type & Silent)
-	    S_StartSound(&sector->soundorg, sfx_ceilstop);
-	  else
-	    mp->SN_StopSequence(&sector->soundorg);
-
-	  if (type & SetSpecial)
-	    sector->special = newspecial;
-
-	  if (type & SetTexture)
-	    sector->ceilingpic = texture;
-
-	  switch (type & TMASK)
-	    {
-	    case Crusher:
-	    case CrushOnce:
-	      downspeed = oldspeed; // reset downspeed
-	      direction = 1;
-	      break;
-
-              // all other cases, just remove the active ceiling
-	    default:
-	      mp->RemoveActiveCeiling(this);
-	      break;
-            }
-        }
-      else if (res == res_crushed)
-	{
-	  // slow down slow crushers on obstacle (unless they are really fast)
-	  switch (type & TMASK)
-	    {
-	    case Crusher:
-	    case CrushOnce:
-	      if (game.mode != gm_hexen && oldspeed < CEILSPEED*3)
-		downspeed = CEILSPEED / 8;
-	      
-	    default:
-	      break;
-	    }
-	}
-      break;
+      mp->RemoveActiveCeiling(this);
     }
 }
 
@@ -235,7 +180,152 @@ void ceiling_t::Think()
 //
 // Move a ceiling up/down and all around!
 //
-int Map::EV_DoCeiling(int tag, int type, fixed_t uspeed, fixed_t dspeed, int crush, fixed_t height)
+int Map::EV_DoCeiling(int tag, line_t *line, int type, fixed_t speed, int crush, fixed_t height)
+{
+  sector_t   *sec;
+
+  int secnum = -1;
+  int rtn = 0;
+
+  // manual ceiling?
+  if (!tag)
+    {
+      if (!line || !line->backsector)
+	return 0;
+
+      ActivateInStasisCeiling(0); // should do no harm (but affects all manual ceilings...)
+
+      sec = line->backsector;
+      if (P_SectorActive(ceiling_special, sec))
+	return 0;
+
+      goto manual_ceiling;
+    }
+
+  // Reactivate in-stasis ceilings...for certain types.
+  // TODO formerly only for crushers, is this wrong?
+  rtn += ActivateInStasisCeiling(tag);
+
+  while ((secnum = FindSectorFromTag(tag, secnum)) >= 0)
+    {
+      sec = &sectors[secnum];
+
+      if (P_SectorActive(ceiling_special, sec))
+	continue;
+
+    manual_ceiling:
+
+      // new ceiling thinker
+      rtn++;
+      ceiling_t *ceiling = new ceiling_t(this, type, sec, speed, crush, height);
+      AddActiveCeiling(ceiling);
+
+      if (type & ceiling_t::SetTxTy) // either one
+	{
+	  if (type & ceiling_t::NumericModel)
+	    {
+	      ceiling->texture = sec->ceilingpic;
+	      // jff 1/24/98 make sure newspecial gets initialized
+	      // in case no surrounding sector is at destheight
+	      // --> should not affect compatibility <--
+	      ceiling->newspecial = sec->special;
+	      //jff 5/23/98 use model subroutine to unify fixes and handling
+	      // BP: heretic have change something here
+	      sec = FindModelCeilingSector(ceiling->destheight, sec);
+	      if (sec)
+		{
+		  ceiling->texture = sec->ceilingpic;
+		  ceiling->newspecial = sec->special;
+		}
+	    }
+	  else
+	    {
+	      // "trigger model"
+	      ceiling->texture = line->frontsector->ceilingpic;
+	      ceiling->newspecial = line->frontsector->special;
+	    }
+
+	  if (type & ceiling_t::ZeroSpecial)
+	    ceiling->newspecial = 0;
+	}
+
+      if (!tag)
+	return rtn;
+    }
+  return rtn;
+}
+
+
+
+
+
+//==========================================================================
+//                               CRUSHERS
+//==========================================================================
+
+IMPLEMENT_CLASS(crusher_t, sectoreffect_t);
+crusher_t::crusher_t() {}
+
+// constructor
+crusher_t::crusher_t(Map *m, int ty, sector_t *sec, fixed_t upsp, fixed_t downsp, int cru, fixed_t height)
+  : ceiling_t(m, ceiling_t::Floor, sec, downspeed, cru, height)   // start by going down
+{
+  type = ty;
+  upspeed = upsp;
+  downspeed = downsp;
+
+  topheight = sec->ceilingheight;
+  bottomheight = sec->floorheight + height;
+}
+
+
+
+void crusher_t::Think()
+{
+  if (type & InStasis)
+    return; // in stasis
+
+  int res = mp->T_MovePlane(sector, speed, destheight, crush, 1);
+
+  if (res == res_pastdest)
+    {
+      if (speed >= 0) // going up
+	{
+	  if (type & CrushOnce)
+	    {
+	      if (type & Silent)
+		S_StartSound(&sector->soundorg, sfx_ceilstop);
+	      else
+		mp->SN_StopSequence(&sector->soundorg);
+
+	      mp->RemoveActiveCeiling(this); // cycle done
+	    }
+	  else
+	    {
+	      speed = -downspeed;
+	      destheight = bottomheight;
+	    }
+	}
+      else // going down
+	{
+	  speed = upspeed;
+	  destheight = topheight;
+	}
+
+      // normal crushers are never deleted, they can only be put into stasis (paused)
+    }
+  else if (res == res_crushed)
+    {
+      // slow down slow crushers on obstacle (unless they are really fast)
+      if (game.mode != gm_hexen && downspeed < CEILSPEED*3)
+	speed = -CEILSPEED / 8;
+    }
+}
+
+
+
+
+int Map::EV_DoCrusher(int tag, int type, fixed_t uspeed, fixed_t dspeed, int crush, fixed_t height)
 {
   sector_t   *sec;
 
@@ -243,33 +333,31 @@ int Map::EV_DoCeiling(int tag, int type, fixed_t uspeed, fixed_t dspeed, int cru
   int rtn = 0;
 
   if (!tag)
-    return false;
+    return 0;
 
-  //  Reactivate in-stasis ceilings...for certain types.
-  // This restarts a crusher after it has been stopped
-  switch (type & ceiling_t::TMASK)
-    {
-    case ceiling_t::Crusher:
-    case ceiling_t::CrushOnce:
-      rtn += ActivateInStasisCeiling(tag); //SoM: Return true if the crusher is activated
-    default:
-      break;
-    }
+  // activate stopped crushers
+  rtn += ActivateInStasisCeiling(tag);
 
   while ((secnum = FindSectorFromTag(tag, secnum)) >= 0)
     {
       sec = &sectors[secnum];
 
-      if (P_SectorActive(ceiling_special,sec))  //SoM: 3/6/2000
+      if (P_SectorActive(ceiling_special, sec))
 	continue;
 
       // new ceiling thinker
       rtn++;
-      ceiling_t *ceiling = new ceiling_t(this, type, sec, uspeed, dspeed, crush, height);
-      AddActiveCeiling(ceiling);
+      crusher_t *crusher = new crusher_t(this, type, sec, uspeed, dspeed, crush, height);
+      AddActiveCeiling(crusher);
     }
   return rtn;
 }
+
+
+
+//==========================================================================
+//                     Common ceiling_t utilities
+//==========================================================================
 
 
 
@@ -303,11 +391,11 @@ int Map::ActivateInStasisCeiling(int tag)
   for (i = activeceilings.begin(); i != activeceilings.end(); i++)
     {
       ceiling_t *ceil = *i;
-      if (ceil->tag == tag && ceil->direction == 0)
+      if (ceil->sector->tag == tag && ceil->type & ceiling_t::InStasis)
 	{
 	  SN_StartSequence(&ceil->sector->soundorg, SEQ_PLAT + ceil->sector->seqType);
-	  ceil->direction = ceil->olddirection;
 	  ceil->sector->ceilingdata = ceil; // TODO what if it is already in use?
+	  ceil->type &= ~ceiling_t::InStasis;
 	  rtn++;
 	}
     }
@@ -323,13 +411,12 @@ int Map::EV_StopCeiling(int tag)
   for (i = activeceilings.begin(); i != activeceilings.end(); i++)
     {
       ceiling_t *ceil = *i;
-      if (ceil->direction != 0 && ceil->tag == tag)
+      if (!(ceil->type & ceiling_t::InStasis) && ceil->sector->tag == tag)
 	{
 	  SN_StopSequence(&ceil->sector->soundorg);
-	  ceil->olddirection = ceil->direction;
-	  ceil->direction = 0;
 	  ceil->sector->ceilingdata = NULL;
 	  TagFinished(ceil->sector->tag);
+	  ceil->type |= ceiling_t::InStasis;
 	  rtn++;
 	}
     }

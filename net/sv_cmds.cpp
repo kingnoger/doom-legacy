@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/09/03 16:28:51  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.7  2004/08/18 14:35:22  smite-meister
 // PNG support!
 //
@@ -46,6 +49,7 @@
 #include "command.h"
 #include "cvars.h"
 #include "console.h"
+#include "parser.h"
 
 #include "n_interface.h"
 #include "n_connection.h"

@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.34  2004/09/03 16:28:51  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.33  2004/08/29 20:48:49  smite-meister
 // bugfixes. wow.
 //
@@ -432,7 +435,7 @@ public:
   // in p_lights.cpp
   void SpawnPhasedLightSequence(sector_t *sec, int indexStep);
   void SpawnStrobeLight(sector_t *sec, short brighttime, short darktime, bool inSync);
-  int  EV_StartLightStrobing(int tag);
+  int  EV_StartLightStrobing(int tag, short brighttime, short darktime);
   int  EV_FadeLight(int tag, int destvalue, int speed);
   int  EV_SpawnLight(int tag, int type, short maxl, short minl = 0, short maxt = 0, short mint = 0);
   int  EV_TurnTagLightsOff(int tag);
@@ -451,7 +454,8 @@ public:
   int  ActivateInStasisCeiling(int tag);
   void RemoveActiveCeiling(ceiling_t* ceiling);
   void RemoveAllActiveCeilings();
-  int  EV_DoCeiling(int tag, int type, fixed_t upspeed, fixed_t downspeed, int crush, fixed_t height);
+  int  EV_DoCeiling(int tag, line_t *line, int type, fixed_t speed, int crush, fixed_t height);
+  int  EV_DoCrusher(int tag, int type, fixed_t upspeed, fixed_t downspeed, int crush, fixed_t height);
   int  EV_StopCeiling(int tag);
 
   // in p_doors.cpp
@@ -466,7 +470,7 @@ public:
   int EV_DoChange(line_t *line, int changetype);
   int EV_BuildStairs(int tag, int type, fixed_t speed, fixed_t stepsize, int crush);
   int EV_BuildHexenStairs(int tag, int type, fixed_t speed, fixed_t stepdelta, int resetdelay, int stepdelay = 0);
-  int EV_DoDonut(int tag);
+  int EV_DoDonut(int tag, fixed_t pspeed, fixed_t sspeed);
   int EV_DoElevator(int tag, int type, fixed_t speed, fixed_t height_f, fixed_t height_c = 0, int crush = 0);
   int EV_DoFloorWaggle(int tag, fixed_t amp, angle_t freq, angle_t offset, int wait);
   int T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, int crush, int floorOrCeiling);

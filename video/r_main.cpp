@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2004/09/03 16:28:52  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.21  2004/08/29 20:48:50  smite-meister
 // bugfixes. wow.
 //
@@ -758,21 +761,7 @@ void R_ExecuteSetViewSize()
 
   setsizeneeded = false;
 
-  switch (game.mode)
-    {
-    case gm_hexen:
-      hud.stbarheight = ST_HEIGHT_HEXEN;
-      break;
-    case gm_heretic:
-      hud.stbarheight = ST_HEIGHT_HERETIC;
-      break;
-    default:
-      hud.stbarheight = ST_HEIGHT_DOOM;
-      break;
-    }
-
-  if (cv_scalestatusbar.value || cv_viewsize.value > 10)
-    hud.stbarheight = (int)(hud.stbarheight * (rendermode==render_soft) ? vid.dupy : vid.fdupy);
+  hud.ST_Recalc();
 
   //added 01-01-98: full screen view, without statusbar
   if (cv_viewsize.value > 10)
@@ -889,7 +878,6 @@ void R_ExecuteSetViewSize()
     HWR.SetViewSize(cv_viewsize.value);
 #endif
 
-  hud.ST_Recalc();
   automap.Resize();
 }
 

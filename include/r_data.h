@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/09/03 16:28:51  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.12  2004/08/29 20:48:49  smite-meister
 // bugfixes. wow.
 //
@@ -69,7 +72,7 @@ struct post_t
 {
   byte topdelta; ///< how many pixels to skip, -1 (0xff) means the column ends
   byte length;   ///< number of data bytes
-  byte crap;     ///< always 1?
+  byte crap;     ///< post border, should not be drawn
   byte data[0];  ///< data starts here, ends with another crap byte (not included in length)
 };
 
@@ -116,7 +119,7 @@ public:
   };
 
   int    id;  // TODO temp solution, replace with pointers?
-  char   name[9];
+  //char   name[9]; TEST
 
   short width, height;
   short leftoffset, topoffset;
@@ -238,28 +241,26 @@ public:
 
 /// \brief Doom Textures (which are built out of patches)
 ///
+/// All the patches are drawn back to front into the cached texture.
 /// In SW mode, the texture data is stored in column-major order (like patches)
 
 class DoomTexture : public Texture
 {
 public:
   // A single patch from a texture definition,
-  //  basically a rectangular area within
-  //  the texture rectangle.
+  // basically a rectangular area within the texture rectangle.
   struct texpatch_t
   {
-    // Block origin (always UL), which has already accounted
-    // for the internal origin of the patch.
-    int originx, originy; ///< 
-    int patch;
+    /// Block origin (always UL), which has already accounted for the internal origin of the patch.
+    int originx, originy;
+    /// lump number for the patch
+    int patchlump;
   };
 
   int         widthmask;
 
-  // All the patches[patchcount]
-  //  are drawn back to front into the cached texture.
-  short       patchcount;
-  texpatch_t *patches;
+  short       patchcount; ///< number of patches in the texture
+  texpatch_t *patches;    ///< array for the patch definitions
 
   int        *columnofs; ///< offsets from texdata to raw column data
   byte       *texdata;   ///< texture data
@@ -310,7 +311,11 @@ public:
   void Insert(class Texture *t); 
 
   /// returns the id of an existing Texture, or tries Caching it if nonexistant
-  int Get(const char *p, bool substitute = true);
+  inline int Get(const char *p, bool substitute = true)
+  {
+    Texture *t = GetPtr(p, substitute);
+    return t ? t->id : 0;
+  };
 
   /// like Get, but returns a pointer
   Texture *GetPtr(const char *p, bool substitute = true);

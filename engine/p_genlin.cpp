@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,13 +14,12 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
-//
-// DESCRIPTION:
-//  Generalized linedef type handlers
-//  Floors, Ceilings, Doors, Locked Doors, Lifts, Stairs, Crushers
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief BOOM generalized linedef types
+///
+///  Floors, Ceilings, Doors, Locked Doors, Lifts, Stairs, Crushers
 
 #include "doomdef.h"
 #include "g_game.h"
@@ -42,12 +41,9 @@
 //
 int Map::EV_DoGenFloor(line_t *line)
 {
-  int                   secnum;
-  int                   rtn;
-  bool               manual;
-  sector_t*             sec;
-  floor_t*          floor;
-  unsigned              value = (unsigned)line->special - GenFloorBase;
+  int       secnum;
+  sector_t *sec;
+  unsigned  value = unsigned(line->special - GenFloorBase);
 
   // parse the bit fields in the line's special type
 
@@ -59,10 +55,62 @@ int Map::EV_DoGenFloor(line_t *line)
   int Sped = (value & FloorSpeed) >> FloorSpeedShift;
   int Trig = (value & TriggerType) >> TriggerTypeShift;
 
-  rtn = 0;
+  int rtn = 0;
+
+  fixed_t speed; // set the speed of motion
+  switch (Sped)
+    {
+    case SpeedNormal:
+      speed = FLOORSPEED*2;
+      break;
+    case SpeedFast:
+      speed = FLOORSPEED*4;
+      break;
+    case SpeedTurbo:
+      speed = FLOORSPEED*8;
+      break;
+    case SpeedSlow:
+    default:
+      speed = FLOORSPEED;
+      break;
+    }
+
+  fixed_t height = 0;
+  int type;
+  switch (Targ)
+    {
+    case FtoHnF:
+      type = floor_t::HnF;
+      break;
+    case FtoLnF:
+      type = floor_t::LnF;
+      break;
+    case FtoNnF:
+      type = Dirn ? floor_t::UpNnF : floor_t::DownNnF;
+      break;
+    case FtoLnC:
+      type = floor_t::LnC;
+      break;
+    case FtoC:
+      type = floor_t::Ceiling;
+      break;
+    case FbyST:
+      type = Dirn ? floor_t::UpSLT : floor_t::DownSLT;
+      break;
+    case Fby24:
+      type = floor_t::RelHeight;
+      height = (Dirn ? 1 : -1) * 24 * FRACUNIT;
+      break;
+    case Fby32:
+      type = floor_t::RelHeight;
+      height = (Dirn ? 1 : -1) * 32 * FRACUNIT;
+      break;
+    default:
+      break;
+    }
 
   // check if a manual trigger, if so do just the sector on the backside
-  manual = false;
+  bool manual = false;
   if (Trig==PushOnce || Trig==PushMany)
     {
       if (!(sec = line->backsector))
@@ -88,86 +136,24 @@ int Map::EV_DoGenFloor(line_t *line)
 	    return rtn;
 	}
 
-      fixed_t speed;
-      // set the speed of motion
-      switch (Sped)
-	{
-	case SpeedNormal:
-	  speed = FLOORSPEED*2;
-	  break;
-	case SpeedFast:
-	  speed = FLOORSPEED*4;
-	  break;
-	case SpeedTurbo:
-	  speed = FLOORSPEED*8;
-	  break;
-	case SpeedSlow:
-	default:
-	  speed = FLOORSPEED;
-	  break;
-	}
-
       // new floor thinker
       rtn++;
-      floor = new floor_t(this, floor_t::RelHeight, sec, speed, Crsh ? 10 : 0, 0);
+      floor_t *floor = new floor_t(this, type, sec, speed, Crsh ? 10 : 0, height);
 
-      if (!Dirn)
-	floor->speed = -floor->speed;
+      floor->speed = Dirn ? speed : -speed;
+
       floor->texture = sec->floorpic;
       floor->newspecial = sec->special;
-
-      int direction = Dirn ? 1 : -1;
-      // set the destination height
-      switch(Targ)
-	{
-	case FtoHnF:
-	  floor->destheight = P_FindHighestFloorSurrounding(sec);
-	  break;
-	case FtoLnF:
-	  floor->destheight = P_FindLowestFloorSurrounding(sec);
-	  break;
-	case FtoNnF:
-	  floor->destheight = Dirn?
-	    P_FindNextHighestFloor(sec,sec->floorheight) :
-	      P_FindNextLowestFloor(sec,sec->floorheight);
-	  break;
-	case FtoLnC:
-	  floor->destheight = P_FindLowestCeilingSurrounding(sec);
-	  break;
-	case FtoC:
-	  floor->destheight = sec->ceilingheight;
-	  break;
-	case FbyST:
-	  floor->destheight = (floor->sector->floorheight>>FRACBITS) +
-	    direction * (FindShortestLowerAround(sec)>>FRACBITS);
-	  if (floor->destheight>32000)
-	    floor->destheight=32000;
-	  if (floor->destheight<-32000)
-	    floor->destheight=-32000;
-	  floor->destheight<<=FRACBITS;
-	  break;
-	case Fby24:
-	  floor->destheight = floor->sector->floorheight +
-	    direction * 24*FRACUNIT;
-	  break;
-	case Fby32:
-	  floor->destheight = floor->sector->floorheight +
-	    direction * 32*FRACUNIT;
-	  break;
-	default:
-	  break;
-	}
 
       // set texture/type change properties
       if (ChgT)   // if a texture change is indicated
 	{
 	  if (ChgM) // if a numeric model change
 	    {
-	      sector_t *sec2;
-
-	      sec2 = (Targ==FtoLnC || Targ==FtoC)?
+	      sector_t *sec2 = (Targ==FtoLnC || Targ==FtoC) ?
 		FindModelCeilingSector(floor->destheight,sec) :
 		FindModelFloorSector(floor->destheight,sec);
+
 	      if (sec2)
 		{
 		  floor->texture = sec2->floorpic;
@@ -223,13 +209,9 @@ int Map::EV_DoGenFloor(line_t *line)
 //
 int Map::EV_DoGenCeiling(line_t *line)
 {
-  int                   secnum;
-  int                   rtn;
-  bool               manual;
-  fixed_t               targheight;
-  sector_t*             sec;
-  ceiling_t*            ceiling;
-  unsigned              value = (unsigned)line->special - GenCeilingBase;
+  int       secnum;
+  sector_t *sec;
+  unsigned  value = unsigned(line->special) - GenCeilingBase;
 
   // parse the bit fields in the line's special type
 
@@ -241,10 +223,64 @@ int Map::EV_DoGenCeiling(line_t *line)
   int Sped = (value & CeilingSpeed) >> CeilingSpeedShift;
   int Trig = (value & TriggerType) >> TriggerTypeShift;
 
-  rtn = 0;
+  int rtn = 0;
+
+  fixed_t speed;
+  // set speed of motion
+  switch (Sped)
+    {
+    case SpeedNormal:
+      speed = CEILSPEED*2;
+      break;
+    case SpeedFast:
+      speed = CEILSPEED*4;
+      break;
+    case SpeedTurbo:
+      speed = CEILSPEED*8;
+      break;
+    case SpeedSlow:
+    default:
+      speed = CEILSPEED;
+      break;
+    }
+
+  fixed_t height = 0;
+  int type;
+  switch (Targ)
+    {
+    case CtoHnC:
+      type = ceiling_t::HnC;
+      break;
+    case CtoLnC:
+      type = ceiling_t::LnC;
+      break;
+    case CtoNnC:
+      type = Dirn ? ceiling_t::UpNnC : ceiling_t::DownNnC;
+      break;
+    case CtoHnF:
+      type = ceiling_t::HnF;
+      break;
+    case CtoF:
+      type = ceiling_t::Floor;
+      break;
+    case CbyST:
+      type = Dirn ? ceiling_t::UpSUT : ceiling_t::DownSUT;
+      break;
+    case Cby24:
+      type = ceiling_t::RelHeight;
+      height = (Dirn ? 1 : -1) * 24 * FRACUNIT;
+      break;
+    case Cby32:
+      type = ceiling_t::RelHeight;
+      height = (Dirn ? 1 : -1) * 32 * FRACUNIT;
+      break;
+    default:
+      break;
+    }
+
 
   // check if a manual trigger, if so do just the sector on the backside
-  manual = false;
+  bool manual = false;
   if (Trig==PushOnce || Trig==PushMany)
     {
       if (!(sec = line->backsector))
@@ -270,80 +306,14 @@ int Map::EV_DoGenCeiling(line_t *line)
 	    return rtn;
 	}
 
-      fixed_t speed;
-      // set speed of motion
-      switch (Sped)
-	{
-	case SpeedNormal:
-	  speed = CEILSPEED*2;
-	  break;
-	case SpeedFast:
-	  speed = CEILSPEED*4;
-	  break;
-	case SpeedTurbo:
-	  speed = CEILSPEED*8;
-	  break;
-	case SpeedSlow:
-	default:
-	  speed = CEILSPEED;
-	  break;
-	}
-
       // new ceiling thinker
       rtn++;
-      ceiling = new ceiling_t(this, ceiling_t::RelHeight, sec, speed, speed, Crsh ? 10 : 0, 0);
+      ceiling_t *ceiling = new ceiling_t(this, type, sec, speed, Crsh ? 10 : 0, height);
 
-      ceiling->direction = Dirn? 1 : -1;
+      ceiling->speed = Dirn ? speed : -speed;
+
       ceiling->texture = sec->ceilingpic;
       ceiling->newspecial = sec->special;
-
-      // set destination target height
-      targheight = sec->ceilingheight;
-      switch(Targ)
-	{
-	case CtoHnC:
-	  targheight = P_FindHighestCeilingSurrounding(sec);
-	  break;
-	case CtoLnC:
-	  targheight = P_FindLowestCeilingSurrounding(sec);
-	  break;
-	case CtoNnC:
-	  targheight = Dirn?
-	    P_FindNextHighestCeiling(sec,sec->ceilingheight) :
-	      P_FindNextLowestCeiling(sec,sec->ceilingheight);
-	  break;
-	case CtoHnF:
-	  targheight = P_FindHighestFloorSurrounding(sec);
-	  break;
-	case CtoF:
-	  targheight = sec->floorheight;
-	  break;
-	case CbyST:
-	  targheight = (ceiling->sector->ceilingheight>>FRACBITS) +
-	    ceiling->direction * (FindShortestUpperAround(sec)>>FRACBITS);
-	  if (targheight>32000)
-	    targheight=32000;
-	  if (targheight<-32000)
-	    targheight=-32000;
-	  targheight<<=FRACBITS;
-	  break;
-	case Cby24:
-	  targheight = ceiling->sector->ceilingheight +
-	    ceiling->direction * 24*FRACUNIT;
-	  break;
-	case Cby32:
-	  targheight = ceiling->sector->ceilingheight +
-	    ceiling->direction * 32*FRACUNIT;
-	  break;
-	default:
-	  break;
-	}
-      //that doesn't compile under windows
-      //Dirn? ceiling->topheight : ceiling->bottomheight = targheight;
-      if(Dirn)
-	ceiling->topheight = targheight;
-      else
-	ceiling->bottomheight = targheight;
 
       // set texture/type change properties
       if (ChgT)     // if a texture change is indicated
@@ -352,9 +322,9 @@ int Map::EV_DoGenCeiling(line_t *line)
 	    {
 	      sector_t *sec2;
 
-	      sec2 = (Targ==CtoHnF || Targ==CtoF)?         
-		FindModelFloorSector(targheight, sec) :
-		FindModelCeilingSector(targheight, sec);
+	      sec2 = (Targ==CtoHnF || Targ==CtoF) ?         
+		FindModelFloorSector(ceiling->destheight, sec) :
+		FindModelCeilingSector(ceiling->destheight, sec);
 	      if (sec2)
 		{
 		  ceiling->texture = sec2->ceilingpic;
@@ -696,12 +666,9 @@ int Map::EV_DoGenStairs(line_t *line)
 //
 int Map::EV_DoGenCrusher(line_t *line)
 {
-  int                   secnum;
-  int                   rtn;
-  bool               manual;
-  sector_t*             sec;
-  ceiling_t*            ceiling;
-  unsigned              value = (unsigned)line->special - GenCrusherBase;
+  int       secnum;
+  sector_t *sec;
+  unsigned  value = unsigned(line->special) - GenCrusherBase;
 
   // parse the bit fields in the line's special type
 
@@ -709,10 +676,29 @@ int Map::EV_DoGenCrusher(line_t *line)
   int Sped = (value & CrusherSpeed) >> CrusherSpeedShift;
   int Trig = (value & TriggerType) >> TriggerTypeShift;
 
-  rtn = ActivateInStasisCeiling(line->tag);
+  int rtn = ActivateInStasisCeiling(line->tag);
+
+  int speed;
+  // setup ceiling motion speed
+  switch (Sped)
+    {
+    case SpeedNormal:
+      speed = CEILSPEED*2;
+      break;
+    case SpeedFast:
+      speed = CEILSPEED*4;
+      break;
+    case SpeedTurbo:
+      speed = CEILSPEED*8;
+      break;
+    default:
+    case SpeedSlow:
+      speed = CEILSPEED;
+      break;
+    }
 
   // check if a manual trigger, if so do just the sector on the backside
-  manual = false;
+  bool manual = false;
   if (Trig==PushOnce || Trig==PushMany)
     {
       if (!(sec = line->backsector))
@@ -730,7 +716,7 @@ int Map::EV_DoGenCrusher(line_t *line)
 
     manual_crusher:                
       // Do not start another function if ceiling already moving
-      if (P_SectorActive(ceiling_special,sec))
+      if (P_SectorActive(ceiling_special, sec))
 	{
 	  if (!manual)
 	    continue;
@@ -738,35 +724,14 @@ int Map::EV_DoGenCrusher(line_t *line)
 	    return rtn;
 	}
 
-      int speed;
-      // setup ceiling motion speed
-      switch (Sped)
-	{
-	case SpeedNormal:
-	  speed = CEILSPEED*2;
-	  break;
-	case SpeedFast:
-	  speed = CEILSPEED*4;
-	  break;
-	case SpeedTurbo:
-	  speed = CEILSPEED*8;
-	  break;
-	default:
-	case SpeedSlow:
-	  speed = CEILSPEED;
-	  break;
-	}
+      // new crusher thinker
+      rtn++;
+      crusher_t *crusher = new crusher_t(this, Slnt ? ceiling_t::Silent : 0, sec, speed, speed, 10, 8*FRACUNIT);
 
-      // new ceiling thinker
-      rtn = 1;
-      ceiling = new ceiling_t(this, ceiling_t::Crusher, sec, speed, speed, 10, 8*FRACUNIT);
+      crusher->texture = sec->ceilingpic;
+      crusher->newspecial = sec->special;
 
-      ceiling->texture = sec->ceilingpic;
-      ceiling->newspecial = sec->special;
-      if (Slnt)
-	ceiling->type |= ceiling_t::Silent;
-
-      AddActiveCeiling(ceiling);  // add to list of active ceilings
+      AddActiveCeiling(crusher);  // add to list of active ceilings
       if (manual) return rtn;
     }
   return rtn;

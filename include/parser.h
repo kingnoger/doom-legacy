@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2003 by DooM Legacy Team.
+// Copyright (C) 2003-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,18 +17,19 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/09/03 16:28:51  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.2  2004/03/28 15:16:14  smite-meister
 // Texture cache.
 //
 // Revision 1.1  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
-//
-//
-// DESCRIPTION:  
-//   Simple parsing functions for plaintext script lumps
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Simple parsing functions for plaintext script lumps
 
 #ifndef parser_h
 #define parser_h 1
@@ -57,6 +58,7 @@ struct parsercmd_t
 };
 
 
+/// \brief Class for parsing plaintext lumps.
 class Parser
 {
 private:
@@ -95,7 +97,17 @@ public:
   void GoToNext(const char *str);
 };
 
+
 bool IsNumeric(const char *p);
 int  P_MatchString(const char *p, const char *strings[]);
+
+/// converts a c-string to upper case
+char *strupr(char *s);
+
+/// converts a c-string to lower case
+char *strlwr(char *s);
+
+/// converts up to n chars to upper case
+char *strnupr(char *s, int n);
 
 #endif

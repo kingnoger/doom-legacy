@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2004/09/03 16:28:49  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.15  2004/08/30 18:59:50  smite-meister
 // door bugfix
 //
@@ -315,9 +318,7 @@ int Map::EV_DoDoor(int tag, line_t *line, Actor *mo, byte type, fixed_t speed, i
   else
     {
       // tag == 0, door is on the other side of the linedef
-      //PlayerPawn *p = mo ? ((mo->Type() == Thinker::tt_ppawn) ? (PlayerPawn *)mo : NULL) : NULL;
       bool good = mo->flags & MF_NOTMONSTER;
-      vdoor_t*   door;
 
       // if the wrong side of door is pushed, give oof sound
       if (line->sidenum[1] == -1 && good)
@@ -332,7 +333,7 @@ int Map::EV_DoDoor(int tag, line_t *line, Actor *mo, byte type, fixed_t speed, i
       if (sec->ceilingdata) //SoM: 3/6/2000
 	{
 	  // FIXME dangerous and wrong, since it could be a ceiling_t for example, started using a script!
-	  door = (vdoor_t *)sec->ceilingdata; //SoM: 3/6/2000
+	  vdoor_t *door = (vdoor_t *)sec->ceilingdata; //SoM: 3/6/2000
 	  if (door->type & vdoor_t::TMASK == vdoor_t::OwC)
 	    {
 	      if (door->direction == -1)

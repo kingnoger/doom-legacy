@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.40  2004/09/03 16:28:49  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.39  2004/08/12 18:30:23  smite-meister
 // cleaned startup
 //
@@ -1097,7 +1100,7 @@ void Map::BossDeath(const DActor *mo)
       return;
 
     case MT_BABY:
-      EV_DoFloor(667, NULL,  floor_t::SLT, FLOORSPEED, 0, 0);
+      EV_DoFloor(667, NULL,  floor_t::UpSLT, FLOORSPEED, 0, 0);
       return;
 
     case MT_KEEN:

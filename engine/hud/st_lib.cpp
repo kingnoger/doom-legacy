@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/09/03 16:28:50  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.9  2004/08/12 18:30:27  smite-meister
 // cleaned startup
 //
@@ -42,11 +45,10 @@
 // Revision 1.2  2002/12/03 10:20:08  smite-meister
 // HUD rationalized
 //
-//
-// DESCRIPTION:
-//  Implementation of Hud Widgets
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Implementation of Hud Widgets
 
 #include "doomdef.h"
 #include "st_lib.h"
@@ -105,7 +107,7 @@ void HudNumber::Draw()
   if (lnum == 0)
     {
       // overlay: V_DrawScaledPatch(x - (w*vid.dupx), y, FG|V_NOSCALESTART, n[0]);
-      n[0]->Draw(dx - w, y, fgbuffer | V_SCALE);
+      n[0]->Draw(dx - w, y, fgbuffer);
       return;
     }
 
@@ -114,13 +116,13 @@ void HudNumber::Draw()
   while (lnum != 0 && digits--)
     {
       dx -= w; // overlay:  x -= (w * vid.dupx);
-      n[lnum % 10]->Draw(dx, y, fgbuffer | V_SCALE);
+      n[lnum % 10]->Draw(dx, y, fgbuffer);
       lnum /= 10;
     }
 
   // draw a minus sign if necessary
   if (neg)
-    n[10]->Draw(dx - 8, y, fgbuffer | V_SCALE);
+    n[10]->Draw(dx - 8, y, fgbuffer);
   // overlay:  sttminus->Draw(x - (8*vid.dupx), y, FG|V_NOSCALESTART);
 }
 
@@ -133,7 +135,7 @@ void HudPercent::Update(bool force)
     {
       // draw percent sign
       if (force)
-	p->Draw(x, y, fgbuffer | V_SCALE);
+	p->Draw(x, y, fgbuffer);
       // draw number
       if (oldnum != *num || force)
 	Draw();
@@ -165,7 +167,7 @@ void HudMultIcon::Draw()
     }
   int i = *inum;
   if (i >= 0 && p[i])
-    p[i]->Draw(x, y, fgbuffer | V_SCALE);
+    p[i]->Draw(x, y, fgbuffer);
   // FIXME! *inum might go beyond allowed limits!
   oldinum = i;
 }
@@ -183,9 +185,9 @@ void HudBinIcon::Draw()
   oldval = *val;
 
   if (*val == true)
-    p[1]->Draw(x, y, fgbuffer | V_SCALE);
+    p[1]->Draw(x, y, fgbuffer);
   else if (p[0] != NULL)
-    p[0]->Draw(x, y, fgbuffer | V_SCALE);
+    p[0]->Draw(x, y, fgbuffer);
   else if (!hud.overlayon && rendermode == render_soft)
     {
       int w, h;
@@ -277,11 +279,11 @@ void HudSlider::Draw()
   int pos = ((cval-minval)*256)/(maxval-minval);
 
   //int by = (cpos == CPawn->health) ? 0 : ChainWiggle;
-  p[0]->Draw(x, y, fgbuffer | V_SCALE);
-  p[1]->Draw(x+2 + (pos%17), y+1+by, fgbuffer | V_SCALE);
-  p[2]->Draw(x+17+pos, y+1+by, fgbuffer | V_SCALE);
-  p[3]->Draw(x, y, fgbuffer | V_SCALE);
-  p[4]->Draw(x+276, y, fgbuffer | V_SCALE);
+  p[0]->Draw(x, y, fgbuffer);
+  p[1]->Draw(x+2 + (pos%17), y+1+by, fgbuffer);
+  p[2]->Draw(x+17+pos, y+1+by, fgbuffer);
+  p[3]->Draw(x, y, fgbuffer);
+  p[4]->Draw(x+276, y, fgbuffer);
 
   //ShadeChain(x, y);
 }
@@ -300,8 +302,8 @@ void HudInventory::DrawNumber(int x, int y, int val)
   int w = n[0]->width; // was 4
     
   if (val > 9)
-    n[val/10]->Draw(x, y, fgbuffer | V_SCALE);
-  n[val%10]->Draw(x+w, y, fgbuffer | V_SCALE);
+    n[val/10]->Draw(x, y, fgbuffer);
+  n[val%10]->Draw(x+w, y, fgbuffer);
 }
 
 // was DrawInventoryBar
@@ -325,7 +327,7 @@ void HudInventory::Draw()
       // open inventory
       // background (7 slots) (not for overlay!)
       if (!overlay)
-	p[0]->Draw(x, y+1, fgbuffer | V_SCALE);
+	p[0]->Draw(x, y+1, fgbuffer);
 
       // draw stuff
       for(i = 0; i < 7; i++)
@@ -335,37 +337,37 @@ void HudInventory::Draw()
 	  //V_DrawScaledPatch(x+16+i*31, y+1, 0, W_CachePatchName("ARTIBOX", PU_CACHE));
 	  if (slots[i].type != arti_none)
 	    {
-	      items[slots[i].type]->Draw(x+16+i*31, y+1, fgbuffer | V_SCALE);
+	      items[slots[i].type]->Draw(x+16+i*31, y+1, fgbuffer);
 	      DrawNumber(x+35+i*31, y+23, slots[i].count);
 	    }
 	}
 
       // select box
-      p[2]->Draw(x+16 + sel*31, y+30, fgbuffer | V_SCALE);
+      p[2]->Draw(x+16 + sel*31, y+30, fgbuffer);
 
       // blinking arrowheads (using a hack slot. this is so embarassing.)
       if (slots[7].type)
-	(!(game.tic&4) ? p[3] : p[4])->Draw(x+4, y, fgbuffer | V_SCALE);
+	(!(game.tic&4) ? p[3] : p[4])->Draw(x+4, y, fgbuffer);
 
       if (slots[7].count)
-	(!(game.tic&4) ? p[5] : p[6])->Draw(x+235, y, fgbuffer | V_SCALE);
+	(!(game.tic&4) ? p[5] : p[6])->Draw(x+235, y, fgbuffer);
     }
   else
     {
       // closed inv.
       if (*itemuse > 0)
 	{
-	  p[7]->Draw(x, y, fgbuffer | V_SCALE);
-	  p[8 + (*itemuse) - 1]->Draw(x, y, fgbuffer | V_SCALE);
+	  p[7]->Draw(x, y, fgbuffer);
+	  p[8 + (*itemuse) - 1]->Draw(x, y, fgbuffer);
 	}
       else
 	{
 	  if (overlay)
 	    p[1]->Draw(x+100, y, fgbuffer | V_SLOC | V_TL);
-	  // p[7]->Draw(st_x+180, st_y+3, fgbuffer | V_SCALE);
+	  // p[7]->Draw(st_x+180, st_y+3, fgbuffer);
 	  if (slots[sel].type != arti_none)
 	    {
-	      items[slots[sel].type]->Draw(x+145, y, fgbuffer | V_SCALE);
+	      items[slots[sel].type]->Draw(x+145, y, fgbuffer);
 	      DrawNumber(x+145+19, y+22, slots[sel].count);
 	    }
 	}

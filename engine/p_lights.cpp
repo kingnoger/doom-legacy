@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/09/03 16:28:50  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.10  2004/04/25 16:26:49  smite-meister
 // Doxygen
 //
@@ -208,7 +211,7 @@ void Map::SpawnStrobeLight(sector_t *sec, short brighttime, short darktime, bool
 //
 // Start strobing lights (usually from a trigger)
 //
-int Map::EV_StartLightStrobing(int tag)
+int Map::EV_StartLightStrobing(int tag, short brighttime, short darktime)
 {
   int rtn = 0;
 
@@ -216,10 +219,10 @@ int Map::EV_StartLightStrobing(int tag)
     {
       rtn++;
       sector_t *sec = &sectors[i];
-      if (P_SectorActive(lighting_special,sec)) //SoM: 3/7/2000: New way to check thinker
+      if (P_SectorActive(lighting_special, sec))
 	continue;
 
-      SpawnStrobeLight(sec, STROBEBRIGHT, SLOWDARK, false);
+      SpawnStrobeLight(sec, brighttime, darktime, false);
     }
 
   return rtn;

@@ -14,11 +14,10 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
-// DESCRIPTION:
-//   Wad, Wad3 and Pak classes: datafile I/O
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Wad, Wad3 and Pak classes: datafile I/O
 
 #include <stdio.h>
 #include <sys/stat.h>
@@ -26,6 +25,7 @@
 #include "wad.h"
 
 #include "doomdef.h"
+#include "parser.h"
 #include "dehacked.h"
 #include "i_system.h"
 #include "z_zone.h"

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.34  2004/09/03 16:28:49  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.33  2004/08/15 18:08:28  smite-meister
 // palette-to-palette colormaps etc.
 //
@@ -376,18 +379,15 @@ void GameInfo::Display()
     }
 
 
-  bool screenwipe; // screen wipe in progress
+  bool screenwipe = false; // screen wipe in progress
 
   // save the current screen if about to wipe
   if (force_wipe && rendermode == render_soft)
     {
-      CONS_Printf("wipe forced, state = %d\n", state);
       force_wipe = false;
       screenwipe = true;
-      wipe_StartScreen(0, 0, vid.width, vid.height); // "before"
+      wipe_StartScreen(0, 0, vid.width, vid.height); // "before", s0->s2
     }
-  else
-    screenwipe = false;
 
   // draw buffered stuff to screen
   // BP: Used only by linux GGI version
@@ -408,7 +408,7 @@ void GameInfo::Display()
 
       // see if the border needs to be initially drawn
       if (oldgamestate != GS_LEVEL)
-        R_FillBackScreen();    // draw the pattern into the back screen
+        R_FillBackScreen();    // draw the pattern into the back screen  ->s1
 
       // draw either automap or game
       if (automap.active)
@@ -498,7 +498,7 @@ void GameInfo::Display()
       if (!cv_screenslink.value)
         return;
 
-      wipe_EndScreen(0, 0, vid.width, vid.height); // "after"
+      wipe_EndScreen(0, 0, vid.width, vid.height); // "after", s0->s3
 
       bool done;
       tic_t wipestart = I_GetTics() - 1;
@@ -629,9 +629,8 @@ bool GameInfo::Responder(event_t* ev)
   switch (state)
     {
     case GS_LEVEL:
-      if (!multiplayer) //FIXME! The _server_ CAN cheat in multiplayer (maybe using console only?)
-        if (cht_Responder (ev))
-          return true;
+      if (cht_Responder(ev))
+	return true;
       if (hud.Responder(ev))
         return true;        // HUD ate the event
       if (automap.Responder(ev))

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/09/03 16:28:52  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.2  2004/03/28 15:16:15  smite-meister
 // Texture cache.
 //
@@ -473,3 +476,11 @@ char *strlwr(char *s)
   return s;
 }
 
+
+char *strnupr(char *s, int n)
+{
+  for (int i=0; s[i] && i<n; i++)
+    s[i] = toupper(s[i]);
+
+  return s;
+}

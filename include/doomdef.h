@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/09/03 16:28:51  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.6  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
 //
@@ -53,8 +56,6 @@
 
 #if defined(LINUX)
 # define O_BINARY 0
-char *strupr(char *n); 
-char *strlwr(char *n); // in parser.cpp
 #endif
 
 

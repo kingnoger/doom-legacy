@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2004/09/03 16:28:49  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.14  2004/04/25 16:26:49  smite-meister
 // Doxygen
 //
@@ -60,12 +63,10 @@
 // Revision 1.1.1.1  2002/11/16 14:17:56  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//   Floor movement: floors, stairbuilders, donuts. Elevators, pillars.
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Floor movement: floors, stairbuilders, donuts. Elevators, pillars.
 
 #include "doomdef.h"
 #include "doomdata.h"
@@ -302,10 +303,18 @@ floor_t::floor_t(Map *m, int ty, sector_t *sec, fixed_t sp, int cru, fixed_t hei
       // TODO up/down?
       break;
 
-    case SLT:
-      destheight = sector->floorheight + mp->FindShortestLowerAround(sec) + height;
-      if (boomsupport && destheight > (32000 << FRACBITS))
-	destheight = 32000 << FRACBITS; //jff 3/13/98 do not allow height overflow
+    case UpSLT:
+    case DownSLT:
+      destheight = sector->floorheight + height;
+      if (type & TMASK == UpSLT)
+	destheight += mp->FindShortestLowerAround(sec);
+      else
+	destheight -= mp->FindShortestLowerAround(sec);
+
+      if (destheight < (-32000 << FRACBITS))
+	destheight = -32000 << FRACBITS;
+      else if (destheight > (32000 << FRACBITS))
+	destheight = 32000 << FRACBITS;
       break;
 
     default:
@@ -370,19 +379,31 @@ void floor_t::Think()
 
 int Map::EV_DoFloor(int tag, line_t *line, int type, fixed_t speed, int crush, fixed_t height)
 {
-  int  secnum = -1;
-  int  rtn = 0;
+  int secnum = -1;
+  sector_t *sec;
+  int rtn = 0;
 
+  // manual floor?
   if (!tag)
-    return false;
+    {
+      if (!line || !line->backsector)
+	return 0;
+
+      sec = line->backsector;
+      if (P_SectorActive(floor_special, sec))
+	return 0;
+      goto manual_floor;
+    }
 
   while ((secnum = FindSectorFromTag(tag, secnum)) >= 0)
     {
-      sector_t  *sec = &sectors[secnum];
+      sec = &sectors[secnum];
         
       // Don't start a second thinker on the same floor
       if (P_SectorActive(floor_special, sec)) //jff 2/23/98
 	continue;
+
+    manual_floor:
 
       // new floor thinker
       rtn++;
@@ -414,7 +435,13 @@ int Map::EV_DoFloor(int tag, line_t *line, int type, fixed_t speed, int crush, f
 	      floor->texture = line->frontsector->floorpic;
 	      floor->newspecial = line->frontsector->special;
 	    }
+
+	  if (type & floor_t::ZeroSpecial)
+	    floor->newspecial = 0;
 	}
+
+      if (!tag)
+	return rtn;
     }
   return rtn;
 }
@@ -729,14 +756,17 @@ int Map::EV_BuildHexenStairs(int tag, int type, fixed_t speed, fixed_t stepdelta
 }
 
 
-// ==========================================================================
-// Handle donut function: lower pillar, raise surrounding pool, both to height,
+
+//==========================================================================
+//     Donuts
+//==========================================================================
+
+// Handles donut function: lower pillar, raise surrounding pool, both to height,
 // texture and type of the sector surrounding the pool.
 //
-// Passed the linedef that triggered the donut
-// Returns whether a thinker was created
+// Returns number of Thinkers created
 
-int Map::EV_DoDonut(int tag)
+int Map::EV_DoDonut(int tag, fixed_t pspeed, fixed_t sspeed)
 {
   int       i;
   int secnum = -1;
@@ -778,17 +808,18 @@ int Map::EV_DoDonut(int tag)
 	  sector_t *s3 = s2->lines[i]->backsector; // s3 is model sector for changes
         
 	  //  Spawn rising slime
-	  floor_t *floor = new floor_t(this, floor_t::AbsHeight | floor_t::SetTxTy, s2, FLOORSPEED/2, 0, s3->floorheight);
+	  floor_t *floor = new floor_t(this, floor_t::AbsHeight | floor_t::SetTxTy, s2, sspeed, 0, s3->floorheight);
 	  floor->texture = s3->floorpic;
 	  floor->newspecial = 0;
 
 	  //  Spawn lowering donut-hole pillar
-	  floor = new floor_t(this, floor_t::AbsHeight, s1, FLOORSPEED/2, 0, s3->floorheight);
+	  floor = new floor_t(this, floor_t::AbsHeight, s1, pspeed, 0, s3->floorheight);
 	  break;
 	}
     }
   return rtn;
 }
+
 
 
 //=========================================================================

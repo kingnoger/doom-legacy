@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2004/09/03 16:28:52  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.22  2004/08/29 20:48:50  smite-meister
 // bugfixes. wow.
 //
@@ -660,7 +663,8 @@ void spritepres_t::Project(Actor *p)
 spritecache_t sprites(PU_SPRITE);
 
 
-sprite_t::sprite_t()
+sprite_t::sprite_t(const char *n)
+  : cacheitem_t(n)
 {
   iname = numframes = 0;
   spriteframes = NULL;
@@ -848,7 +852,7 @@ cacheitem_t *spritecache_t::Load(const char *p)
         break;
       }
 
-  sprite_t *t = new sprite_t;
+  sprite_t *t = new sprite_t(p);
 
   // allocate this sprite's frames
   t->iname = intname;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.45  2004/09/03 16:28:50  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.44  2004/08/29 20:48:48  smite-meister
 // bugfixes. wow.
 //
@@ -851,15 +854,8 @@ void Map::LoadSideDefs(int lump)
 void Map::LoadSideDefs2(int lump)
 {
   byte *data = (byte *)fc.CacheLumpNum(lump,PU_STATIC);
-  int  i;
 
-  // Texture names should be NUL-terminated.
-  // Also, they should be uppercase (e.g. Doom E1M2)
-  char ttex[9]; ttex[8] = '\0';
-  char mtex[9]; mtex[8] = '\0';
-  char btex[9]; btex[8] = '\0';
-
-  for (i=0; i<numsides; i++)
+  for (int i=0; i<numsides; i++)
     {
       mapsidedef_t *msd = (mapsidedef_t *) data + i;
       side_t *sd = sides + i;
@@ -868,9 +864,10 @@ void Map::LoadSideDefs2(int lump)
       sd->textureoffset = SHORT(msd->textureoffset)<<FRACBITS;
       sd->rowoffset = SHORT(msd->rowoffset)<<FRACBITS;
 
-      strncpy(ttex, msd->toptexture, 8); strupr(ttex);
-      strncpy(mtex, msd->midtexture, 8); strupr(mtex);
-      strncpy(btex, msd->bottomtexture, 8); strupr(btex);
+      // shorthand
+      char *ttex = msd->toptexture;
+      char *mtex = msd->midtexture;
+      char *btex = msd->bottomtexture;
 
       // refined to allow colormaps to work as wall
       // textures if invalid as colormaps but valid as textures.

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/09/03 16:28:51  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.8  2004/08/12 18:30:30  smite-meister
 // cleaned startup
 //
@@ -66,14 +69,20 @@ class cacheitem_t
 {
   friend class cache_t;
 protected:
+  char  name[9]; // TEST
   int   usefulness; ///< how many times has it been used?
   int   refcount;   ///< reference count, number of current users
 
 public:
 
-  cacheitem_t();
+  cacheitem_t(const char *name);
   virtual ~cacheitem_t();
-  bool  Release();  ///< releases the item by decrementing the refcount
+
+  /// releases the item by decrementing the refcount
+  bool  Release();
+
+  /// returns the name of the item
+  const char *GetName() { return name; };
 
   void *operator new(size_t size);
   void  operator delete(void *mem);
@@ -87,7 +96,7 @@ protected:
   // annoying namespace declarations, because hash_map is an extension...
 #if (__GNUC__ != 2)
   //typedef __gnu_cxx::hash_map<const char*, cacheitem_t*, __gnu_cxx::hash<const char *>, equal_cstring> c_map_t;
-  typedef __gnu_cxx::hash_map<const char*, cacheitem_t*, hash_cstring8, equal_cstring> c_map_t;
+  typedef __gnu_cxx::hash_map<const char*, cacheitem_t*, hash_cstring8, equal_cstring8> c_map_t;
 #else
   //typedef hash_map<const char*, cacheitem_t*, hash<const char *>, equal_cstring> c_map_t;
   typedef hash_map<const char*, cacheitem_t*, hash_cstring8, equal_cstring8> c_map_t;
@@ -110,7 +119,8 @@ public:
   /// Defines the default data item for the cache
   void SetDefaultItem(const char *defitem);
 
-  /// Caches and returns the requested data item
+  /// Caches and returns the requested data item.
+  /// NOTE! p's content must remain constant as long as the cacheitem lives!
   cacheitem_t *Cache(const char *p);
 
   /// Prints current cache contents

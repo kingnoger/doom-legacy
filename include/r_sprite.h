@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/09/03 16:28:51  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.13  2004/08/12 18:30:30  smite-meister
 // cleaned startup
 //
@@ -151,7 +154,7 @@ class sprite_t : public cacheitem_t
   friend class spritepres_t;
   //protected: // FIXME R_DrawPSprite() wants to use spriteframes directly.
 public:
-  sprite_t();
+  sprite_t(const char *name);
   virtual ~sprite_t();
 
   int  iname; // sprite name (4 chars) as an int

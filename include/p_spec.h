@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.25  2004/09/03 16:28:51  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.24  2004/08/29 20:48:49  smite-meister
 // bugfixes. wow.
 //
@@ -136,41 +139,31 @@ enum sectorspecial_t
 {
   SS_none = 0,
 
-  // light effects (1-31) (bits 0-4)
-  SS_LIGHTMASK    = 0x001F, // 0-31
-
-  SS_light_flicker   = 1,
-  SS_light_blinkfast = 2,
-  SS_light_blinkslow = 3,
-  SS_light_glow      = 8,
-  SS_light_syncfast  = 12,
-  SS_light_syncslow  = 13,
-  SS_light_fireflicker = 17,
-
-  // damage frequency (bits 5-6)
-  SS_DAMAGEMASK   = 0x0060, // 32+64
-
-  SS_damage_16 = 0x0020, // every 16 tics
-  SS_damage_32 = 0x0040,
-  SS_damage_XX = 0x0060,
-
-  // other Boom stuff
-  SS_secret   = 0x0080,
-  SS_friction = 0x0100,
-  SS_wind     = 0x0200,
-
-  // bits 10-15 are free
-
-  // Hexen: TODO a real mess
-  SS_Light_Phased = 1,
-  SS_LightSequence_Start = 2,
+  // low byte holds an individual sectorspecial number 0-255 (if needed)
+  SS_SPECIALMASK  = 0x00FF,  // bits 0-7
+  // Doom
+  SS_EndLevelHurt = 11,
+  // Hexen
   SS_LightSequence_1 = 3,
   SS_LightSequence_2 = 4,
   SS_Stairs_Special1 = 26,
   SS_Stairs_Special2 = 27,
-  SS_light_IndoorLightning1 = 198,
-  SS_light_IndoorLightning2 = 199,
-  SS_Sky2 = 200
+  SS_IndoorLightning1 = 198,
+  SS_IndoorLightning2 = 199,
+  SS_Sky2 = 200,
+
+  // the high byte holds flags (mostly remapped Boom flags)
+  SS_friction = 0x0100,
+  SS_wind     = 0x0200,
+  SS_secret   = 0x0400,
+
+  // damage frequency (bits 11-12)
+  SS_DAMAGEMASK = 0x1800,
+  SS_damage_16  = 0x0800, // every 16 tics
+  SS_damage_32  = 0x1000,
+  SS_damage_XX  = 0x1800,
+
+  // bits 13-15 are free
 };
 
 
@@ -496,7 +489,7 @@ public:
 
 
 //======================================
-///  Moving ceilings (also crushers)
+///  Moving ceilings (and crushers)
 //======================================
 
 class ceiling_t : public sectoreffect_t
@@ -512,39 +505,39 @@ public:
     AbsHeight,
     Floor,
     HnC,
-    //NnC,
+    UpNnC,
+    DownNnC,
     LnC,
     HnF,
-    CrushOnce,
-    Crusher,
+    UpSUT,
+    DownSUT,
     TMASK  = 0xF,
     // flags
-    Silent = 0x10,
-    SetTexture = 0x20,
-    SetSpecial = 0x40,
-    SetTxTy    = 0x20 + 0x40
+    SetTexture   = 0x010,
+    SetSpecial   = 0x020,
+    SetTxTy      = 0x010 + 0x20,
+    ZeroSpecial  = 0x040,
+    NumericModel = 0x080,
+    Silent       = 0x100,
+    InStasis     = 0x200
   };
 
-private:
+protected:
   int       type;
   int       crush;
+  fixed_t   speed;
 
   // ceiling changers
-  int       newspecial;
+  short     newspecial;
   short     texture;
 
-  fixed_t   upspeed, downspeed;
-  fixed_t   oldspeed;
-
-  int       tag;
-  char      olddirection;
   list<ceiling_t *>::iterator li;
 
 public:
-  char      direction;   // 1 = up, 0 = waiting, -1 = down
-  fixed_t   bottomheight, topheight;
+  fixed_t   destheight;
 
-  ceiling_t(Map *m, int ty, sector_t *sec, fixed_t usp, fixed_t dsp, int cru, fixed_t height);
+public:
+  ceiling_t(Map *m, int type, sector_t *sec, fixed_t speed, int crush, fixed_t height);
   
   virtual void Think();
 };
@@ -552,6 +545,30 @@ public:
 
 #define CEILSPEED               (FRACUNIT/NEWTICRATERATIO)
 #define CEILWAIT                150
+
+
+
+class crusher_t : public ceiling_t
+{
+  friend class Map;
+  DECLARE_CLASS(crusher_t)
+public:
+  enum crusher_e
+  {
+    // flags (also uses ceiling_t flags)
+    CrushOnce  = 0x01,
+  };
+
+private:
+  fixed_t downspeed, upspeed;
+  fixed_t bottomheight, topheight;
+
+public:
+  crusher_t(Map *m, int type, sector_t *sec, fixed_t downspeed, fixed_t upspeed, int crush, fixed_t height);
+  
+  virtual void Think();
+};
+
 
 
 //======================================
@@ -574,13 +591,15 @@ public:
     DownNnF,
     HnF,
     LnC,
-    SLT,
+    UpSLT,
+    DownSLT,
     TMASK = 0xF,
     // flags
     SetTexture = 0x10,
     SetSpecial = 0x20,
     SetTxTy    = 0x10 + 0x20,
-    NumericModel = 0x40 // otherwise assume "trigger model"
+    ZeroSpecial = 0x40, // extra attribute for SetSpecial
+    NumericModel = 0x80 // otherwise assume "trigger model"
   };
 
 private:

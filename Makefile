@@ -136,6 +136,7 @@ export engine_objects = \
 	$(objdir)/p_setup.o \
 	$(objdir)/p_saveg.o \
 	$(objdir)/p_spec.o \
+	$(objdir)/p_events.o \
 	$(objdir)/p_floor.o \
 	$(objdir)/p_plats.o \
 	$(objdir)/p_ceilng.o \

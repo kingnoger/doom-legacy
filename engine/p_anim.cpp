@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/09/03 16:28:49  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.6  2004/08/29 20:48:48  smite-meister
 // bugfixes. wow.
 //
@@ -152,7 +155,7 @@ ftypes[] =
 floortype_t P_GetFloorType(const char *pic)
 {
   for (int i=0; i<10; i++)
-    if (!strncmp(pic, ftypes[i].name, 8))
+    if (!strncasecmp(pic, ftypes[i].name, 8))
       return ftypes[i].type;
 
   return FLOOR_SOLID;
@@ -277,7 +280,7 @@ int P_Read_ANIMATED(int lump)
 
       AnimatedTexture *t = new AnimatedTexture(a->startname, n);
 
-      int tics = LONG(a->speed) * NEWTICRATERATIO; // duration of one frame in tics
+      int tics = ((lump >= 0) ? LONG(a->speed) : a->speed) * NEWTICRATERATIO; // duration of one frame in tics
       for (i = 0; i < n; i++)
 	{
 	  if (a->istexture)

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.28  2004/09/03 16:28:52  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.27  2004/08/29 20:48:50  smite-meister
 // bugfixes. wow.
 //
@@ -185,6 +188,7 @@
 #include "doomdef.h"
 #include "command.h"
 #include "cvars.h"
+#include "parser.h"
 
 #include "g_game.h"
 #include "g_map.h"
@@ -311,9 +315,12 @@ static void R_ColormapPatch(patch_t *p, byte *colormap)
 //==================================================================
 
 Texture::Texture(const char *n)
+  : cacheitem_t(n)
 {
+  /* TEST
   strncpy(name, n, 8);
   name[8] = '\0';
+  */
   width = height = 0;
   leftoffset = topoffset = 0;
   xscale = yscale = FRACUNIT;
@@ -579,11 +586,11 @@ byte *DoomTexture::Generate()
     {
       tp = patches;
 
-      blocksize = fc.LumpLength(tp->patch);
+      blocksize = fc.LumpLength(tp->patchlump);
       //CONS_Printf ("R_GenTex SINGLE %.8s size: %d\n",name,blocksize);
 
       Z_Malloc(blocksize, PU_TEXTURE, (void **)&data); // change tag at end of function
-      fc.ReadLump(tp->patch, data);
+      fc.ReadLump(tp->patchlump, data);
       p = (patch_t *)data; // TODO would it be possible to use just any lumptexture here?
 
       // use the patch's column lookup
@@ -620,7 +627,7 @@ byte *DoomTexture::Generate()
       // Composite the patches together.
       for (i=0, tp = patches; i<patchcount; i++, tp++)
         {
-          p = (patch_t *)fc.CacheLumpNum(tp->patch, PU_CACHE);
+          p = (patch_t *)fc.CacheLumpNum(tp->patchlump, PU_CACHE);
           int x1 = tp->originx;
           int x2 = x1 + SHORT(p->width);
 
@@ -776,21 +783,26 @@ int texturecache_t::GetTextureOrColormap(const char *name, int &colmap, bool tra
 
   if (t == default_item)
     CONS_Printf("Def. texture used for '%s'\n", name);
-    //I_Error("halt");
 
   colmap = -1;
   return t->id;
 }
 
 
-
+/*
 int texturecache_t::Get(const char *name, bool substitute)
 {
   // "NoTexture" marker.
   if (name[0] == '-')
     return 0;
 
-  Texture *t = (Texture *)Cache(name);
+  // unfortunate but necessary.
+  char name8[9];
+  strncpy(name8, name, 8);
+  name8[8] = '\0';
+  strupr(name8);
+
+  Texture *t = (Texture *)Cache(name8);
 
   // if substitute == true, cache replaces missing textures automatically
   if (!substitute && t == default_item)
@@ -798,10 +810,11 @@ int texturecache_t::Get(const char *name, bool substitute)
 
   if (t == default_item)
     CONS_Printf("Def. texture used for '%s'\n", name);
-    //I_Error("halt");
 
   return t->id;
 }
+*/
+
 
 
 Texture *texturecache_t::GetPtr(const char *name, bool substitute)
@@ -810,10 +823,31 @@ Texture *texturecache_t::GetPtr(const char *name, bool substitute)
   if (name[0] == '-')
     return NULL;
 
-  Texture *t = (Texture *)Cache(name);
+  // Unfortunate but necessary.
+  // Texture names should be NUL-terminated....
+  // Also, they should be uppercase (e.g. Doom E1M2)
+
+  char name8[9];
+  strncpy(name8, name, 8);
+  name8[8] = '\0';
+  strupr(name8);
+  // name8 = pointer to local var... content changes!!!
+
+  // FIXME but how is this possible????
+  Texture *t = (Texture *)Cache(name8);
+  /*
+  Texture *t2 = (Texture *)Cache(name);
+  if (t != t2)
+    CONS_Printf("!!!!! '%s', '%s'\n", name8, name);
+  */
 
   if (!substitute && t == default_item)
     return NULL;
+
+  /*
+  if (t == default_item)
+    CONS_Printf("Def. texture used for '%s'\n", name8);
+  */
 
   return t;
 }
@@ -870,14 +904,11 @@ cacheitem_t *texturecache_t::Load(const char *name)
       // it's a PNG
       t = new PNGTexture(name, lump);
     } // then try some common sizes for raw picture lumps
-  else if (size == 64*64)
+  else if (size ==  64*64 || // normal flats
+	   size ==  65*64 || // Damn you, Heretic animated flats!
+	   size == 128*64)   // TODO Some Hexen flats are different! Why?
     {
       // Flat is 64*64 bytes of raw paletted picture data in one lump
-      t = new LumpTexture(name, lump, 64, 64);
-    }
-  else if (size == 128*64)
-    {
-      // TODO Some Hexen flats are different! Why?
       t = new LumpTexture(name, lump, 64, 64);
     }
   else if (size == 320*200)
@@ -1010,8 +1041,8 @@ int texturecache_t::ReadTextures()
         {
           p->originx = SHORT(mp->originx);
           p->originy = SHORT(mp->originy);
-          p->patch = patchlookup[SHORT(mp->patch)];
-          if (p->patch == -1)
+          p->patchlump = patchlookup[SHORT(mp->patch)];
+          if (p->patchlump == -1)
             I_Error("R_InitTextures: Missing patch %d in texture %.8s (%d)\n",
                     SHORT(mp->patch), mtex->name, i);
         }

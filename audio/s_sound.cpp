@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.25  2004/09/03 16:28:49  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.24  2004/08/12 18:30:22  smite-meister
 // cleaned startup
 //
@@ -149,6 +152,11 @@ SoundSystem S;
 //  Sound cache
 //===========================================================
 
+sounditem_t::sounditem_t(const char *n)
+  : cacheitem_t(n)
+{
+}
+
 sounditem_t::~sounditem_t()
 {
   if (data)
@@ -184,16 +192,16 @@ cacheitem_t *soundcache_t::Load(const char *p)
   if (lump == -1)
     return NULL;
 
-  sounditem_t *t = new sounditem_t;
+  sounditem_t *t = new sounditem_t(p);
 
   t->lumpnum = lump;
   t->data = fc.CacheLumpNum(lump, tagtype);
   int size = fc.LumpLength(lump);
 
   doomsfx_t *ds = (doomsfx_t *)t->data;
-  // TODO: endianness conversion
+  // TODO: endianness conversion (currently not needed)
 
-  CONS_Printf(" Sound '%s', s = %d\n", p, ds->samples);
+  //CONS_Printf(" Sound '%s', s = %d\n", p, ds->samples);
   //CONS_Printf("m = %d, r = %d, s = %d, z = %d, length = %d\n", ds->magic, ds->rate, ds->samples, ds->zero, size);
 
   t->length = size - 8;  // 8 byte header
@@ -703,7 +711,7 @@ int SoundSystem::Start3DSound(sfxinfo_t *s, soundsource_t *source, float volume)
   // Check pitch and separation
   c->Adjust(listener);
 
-  c->si = (sounditem_t *)sc.Cache(s->lumpname);
+  c->si = sc.Get(s->lumpname);
 
   I_StartSound(c);
   //CONS_Printf("3D sound started, %d, %f\n", c->ovol, v1);

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/09/03 16:28:51  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.12  2004/08/12 18:30:30  smite-meister
 // cleaned startup
 //
@@ -135,6 +138,7 @@ protected:
   int   lumpnum; // lump number of data
 
 public:
+  sounditem_t(const char *name);
   virtual ~sounditem_t();
 
   void *data;    // unconverted data

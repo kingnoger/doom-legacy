@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.20  2004/09/03 16:28:51  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.19  2004/08/29 20:48:48  smite-meister
 // bugfixes. wow.
 //
@@ -1724,7 +1727,7 @@ void SF_MoveCeiling()
       if (P_SectorActive(ceiling_special,sec))
         continue;
 
-      ceiling = new ceiling_t(current_map, ceiling_t::AbsHeight, sec, platspeed, platspeed, 0, destheight);
+      ceiling = new ceiling_t(current_map, ceiling_t::AbsHeight, sec, platspeed, 0, destheight);
       current_map->AddActiveCeiling(ceiling);
     }
 }
@@ -1808,7 +1811,7 @@ void SF_FloorTexture()
     }
 
   t_return.type = svt_string;
-  t_return.value.s = Z_Strdup(tc[s->floorpic]->name, PU_STATIC, 0);
+  t_return.value.s = Z_Strdup(tc[s->floorpic]->GetName(), PU_STATIC, 0);
 }
 
 
@@ -1888,7 +1891,7 @@ void SF_CeilingTexture()
     }
 
   t_return.type = svt_string;
-  t_return.value.s = Z_Strdup(tc[s->ceilingpic]->name, PU_STATIC, 0);
+  t_return.value.s = Z_Strdup(tc[s->ceilingpic]->GetName(), PU_STATIC, 0);
 }
 
 

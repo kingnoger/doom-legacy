@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/09/03 16:28:52  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.7  2004/08/12 18:30:33  smite-meister
 // cleaned startup
 //
@@ -44,12 +47,13 @@
 /// \brief Abstract cache system with reference counting
 
 #include "doomdef.h"
-#include "w_wad.h"
 #include "z_cache.h"
 
 
-cacheitem_t::cacheitem_t()
+cacheitem_t::cacheitem_t(const char *n)
 {
+  strncpy(name, n, 8); // we make a copy so it stays intact as long as this cacheitem lives
+  name[8] = '\0';      // NUL-terminated to be safe
   usefulness = 0;
   refcount = 0;
 }
@@ -165,13 +169,13 @@ cacheitem_t *cache_t::Cache(const char *name)
 	  // not found
 	  t = Load(name);
 	  if (t)
-	    c_map.insert(c_map_t::value_type(name, t));
+	    c_map.insert(c_map_t::value_type(t->name, t));
 	  else
 	    {
 	      // TEST some nonexistant items are asked again and again.
 	      // what if I just bind them to the defaultitem for good?
 	      t = default_item;
-	      c_map.insert(c_map_t::value_type(name, t));
+	      c_map.insert(c_map_t::value_type(t->name, t));
 	    }
 	}
       else

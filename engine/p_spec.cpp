@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.32  2004/09/03 16:28:50  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.31  2004/08/30 18:59:50  smite-meister
 // door bugfix
 //
@@ -111,7 +114,7 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief LineDef and Sector special actions
+/// \brief Utilities, LineDef and Sector specials
 ///
 /// Map geometry utility functions
 /// Line tag hashing
@@ -119,40 +122,26 @@
 /// Sector specials
 /// Scrollers, friction, pushers
 
+
 #include "doomdef.h"
-#include "doomdata.h"
-#include "command.h"
-#include "cvars.h"
 
 #include "g_game.h"
-#include "g_mapinfo.h"
 #include "g_map.h"
 #include "g_actor.h"
 #include "g_pawn.h"
 
 #include "p_spec.h"
 #include "p_maputl.h"
+#include "r_data.h"
+#include "r_main.h"
 
 #include "m_bbox.h" // bounding boxes
 #include "m_random.h"
-
-#include "r_data.h"
-#include "r_main.h"
-#include "r_sky.h"
-
-#include "sounds.h"
-#include "p_acs.h"
-
-#include "hardware/hw3sound.h"
-
-#include "w_wad.h"
-#include "z_zone.h"
 #include "tables.h"
+#include "z_zone.h"
 
 
-// some Hexen linedeftype extensions we use
-const int LEGACY_EXT = 50;
-const int LEGACY_FS = 128;
+const int LEGACY_EXT = 50; // must match the one in p_events.cpp 
 
 
 //SoM: Enable Boom features?
@@ -530,12 +519,9 @@ fixed_t Map::FindShortestUpperAround(sector_t *sec)
 sector_t *Map::FindModelFloorSector(fixed_t floordestheight, sector_t *sec)
 {
   int i, secnum;
-  //sector_t *sec=NULL;
-  int linecount;
 
   secnum = sec-sectors;
-  //sec = &sectors[secnum];
-  linecount = sec->linecount;
+  int linecount = sec->linecount;
   for (i = 0; i < (!boomsupport && sec->linecount<linecount?
                    sec->linecount : linecount); i++)
     {
@@ -564,12 +550,9 @@ sector_t *Map::FindModelFloorSector(fixed_t floordestheight, sector_t *sec)
 sector_t *Map::FindModelCeilingSector(fixed_t ceildestheight, sector_t *sec)
 {
   int i, secnum;
-  //sector_t *sec=NULL;
-  int linecount;
 
   secnum = sec-sectors;
-  //sec = &sectors[secnum];
-  linecount = sec->linecount;
+  int linecount = sec->linecount;
   for (i = 0; i < (!boomsupport && sec->linecount<linecount?
                    sec->linecount : linecount); i++)
     {
@@ -724,586 +707,347 @@ bool P_SectorActive(special_e t, sector_t *sec)
 
 
 
-//============================================================================
-//
-// EVENTS
-// Events are operations triggered by using, crossing,
-// or shooting special lines, or by timed thinkers.
-//
-//============================================================================
+//====================================================================
+//                       Sector specials
+//====================================================================
 
-// New Hexen linedef system.
 
-bool Map::ActivateLine(line_t *line, Actor *thing, int side, int atype)
+/// We try to be as tolerant as possible here.
+/// Internally we use modified "generalized Boom sector types".
+/// The high byte is used for flags.
+int Map::SpawnSectorSpecial(int sp, sector_t *sec)
 {
-  // Things that should NOT trigger specials...
-  if (thing->flags & MF_NOTRIGGER)
-    return false;
+  enum
+  {
+    DOOM_Light_Flicker    = 1,
+    DOOM_Light_BlinkFast  = 2,
+    DOOM_Light_BlinkSlow  = 3,
+    DOOM_Light_StrobeHurt = 4,
+    DOOM_Damage_Hellslime = 5,
 
-  unsigned spec = unsigned(line->special);
-  bool p = (thing->Type() == &PlayerPawn::_type);
-  // flying blood or water does not activate anything
-  bool forceuse = (line->flags & ML_MONSTERS_CAN_ACTIVATE) && !(thing->flags & MF_NOSPLASH);
+    DOOM_Unused1,
+    DOOM_Damage_Nukage     = 7,
+    DOOM_Light_Glow        = 8,
+    DOOM_Secret            = 9,
+    DOOM_SpawnDoorClose30s = 10,
 
-  // Boom generalized types first
-  if (boomsupport && spec >= GenCrusherBase)
+    DOOM_Damage_EndLevel   = 11,
+    DOOM_Light_SyncFast    = 12,
+    DOOM_Light_SyncSlow    = 13,
+    DOOM_SpawnDoorOpen5min = 14,
+    DOOM_Unused2,
+
+    DOOM_DamageSuperHellslime = 16,
+    DOOM_Light_Fireflicker    = 17,
+
+    BOOM_LIGHTMASK    = 0x001F, // bits 0-4
+    BOOM_DAMAGEMASK   = 0x0060, // bits 5-6
+    BOOM_Secret       = 0x0080, // bit 7
+
+    HERETIC_Lava_FlowEast = 4,
+    HERETIC_Lava_Wimpy    = 5,
+    HERETIC_Damage_Sludge = 7,
+    HERETIC_Friction_Low  = 15,
+    HERETIC_Lava_Hefty    = 16,
+
+    HEXEN_Light_Phased = 1,
+    HEXEN_Light_SequenceStart = 2,
+  };
+
+
+  if (sp == 0)
     {
-      // consistency check
-      switch (spec & 6) // bits 1 and 2 of the trigger field ("once")
+      sec->special = 0;
+      return 0;
+    }
+
+  if (sp == DOOM_Secret)
+    {
+      secrets++;
+      sp &= ~SS_SPECIALMASK; // zero low byte
+      sp |= SS_secret;
+      sec->special = sp;
+      return sp;
+    }
+
+  const char HScrollDirs[4][2] = {{1,0}, {0,1}, {0,-1}, {-1,0}};
+  const char HScrollSpeeds[5] = { 5, 10, 25, 30, 35 };
+  const float d = 0.707;
+  const float XScrollDirs[8][2] = {{0,1}, {1,0}, {0,-1}, {-1,0}, {-d,d}, {d,d}, {d,-d}, {-d,-d}};
+
+  int temp;
+  if (hexen_format)
+    {
+      // Boom damage (and secret) bits cannot be interpreted 'cos they are used otherwise
+
+      temp = sp & SS_SPECIALMASK; // low byte
+
+      if (temp >= 40 && temp <= 51)
 	{
-	case WalkOnce:
-	  if (!(atype == SPAC_CROSS || atype == SPAC_MCROSS || atype == SPAC_PCROSS))
-	    return false;
+	  // Hexen winds (just like Heretic?)
+	  temp -= 40; // zero base
+
+	  fixed_t dx = HScrollDirs[temp/3][0]*HScrollSpeeds[temp%3]*2048;
+	  fixed_t dy = HScrollDirs[temp/3][1]*HScrollSpeeds[temp%3]*2048;
+	  
+	  AddThinker(new scroll_t(scroll_t::sc_wind, dx, dy, NULL, sec - sectors, false));
+	}
+      else if (temp >= 201 && temp <= 224)
+	{
+	  // Hexen scrollers
+	  temp -= 201; // zero base
+
+	  fixed_t dx = int(XScrollDirs[temp/3][0]*HScrollSpeeds[temp%3]*2048);
+	  fixed_t dy = int(XScrollDirs[temp/3][1]*HScrollSpeeds[temp%3]*2048);
+	  
+	  AddThinker(new scroll_t(scroll_t::sc_carry_floor, dx, dy, NULL, sec - sectors, false));
+	}
+      else switch (temp)
+	{
+	case HEXEN_Light_Phased:
+	  // Hardcoded base, use sector->lightlevel as the index
+	  new phasedlight_t(this, sec, 80, -1);
 	  break;
 
-	case SwitchOnce:
-	  if (!(atype == SPAC_USE || atype == SPAC_PASSUSE))
-	    return false;
+	case HEXEN_Light_SequenceStart:
+	  SpawnPhasedLightSequence(sec, 1);
 	  break;
 
-	case GunOnce:
-	  if (atype != SPAC_IMPACT)
-	    return false;
-	  break;
-
-	case PushOnce: // like opening a door, means using it
-	  if (!(atype == SPAC_USE || atype == SPAC_PASSUSE)) // yeah. SPAC_USE, not SPAC_PUSH.
-	    return false;
-	  break;
+	case SS_LightSequence_1:
+	case SS_LightSequence_2:
+	  // Phased light sequencing. Leave them be, they fit into the unused lightmask area.
+	case SS_Stairs_Special1:
+	case SS_Stairs_Special2:
+	  // Same with stair sequences.
+	case SS_IndoorLightning1:
+	case SS_IndoorLightning2:
+	case SS_Sky2:
+	  // and these.
+	  sec->special = sp;
+	  return sp;
 
 	default:
-	  I_Error("Boom generalized type logic breakdown!\n");
+	  break;
 	}
 
-      // pointer to line function is NULL by default, set non-null if
-      // line special is walkover generalized linedef type
-      int (Map::*linefunc)(line_t *line) = NULL;
-  
-      // check each range of generalized linedefs
-      if (spec >= GenFloorBase)
-	{
-	  if (!p && ((spec & FloorChange) || !(spec & FloorModel)) && !forceuse)
-	    return false;   // FloorModel is "Allow Monsters" if FloorChange is 0
-	  linefunc = &Map::EV_DoGenFloor;
-	}
-      else if (spec >= GenCeilingBase)
-	{
-	  if (!p && ((spec & CeilingChange) || !(spec & CeilingModel)) && !forceuse)
-	    return false;   // CeilingModel is "Allow Monsters" if CeilingChange is 0
-	  linefunc = &Map::EV_DoGenCeiling;
-	}
-      else if (spec >= GenDoorBase)
-	{
-	  if (!p && ((!(spec & DoorMonster) && !forceuse) || (line->flags & ML_SECRET)))
-	    // monsters disallowed from this door
-	    // they can't open secret doors either
-	    return false;
-	  linefunc = &Map::EV_DoGenDoor;
-	}
-      else if (spec >= GenLockedBase)
-	{
-	  if (!p || !((PlayerPawn *)thing)->CanUnlockGenDoor(line))
-	    return false;  // monsters disallowed from unlocking doors, players need key
-	  linefunc = &Map::EV_DoGenLockedDoor;
-	}
-      else if (spec >= GenLiftBase)
-	{
-	  if (!p && !(spec & LiftMonster) && !forceuse)
-	    return false; // monsters disallowed
-	  linefunc = &Map::EV_DoGenLift;
-	}
-      else if (spec >= GenStairsBase)
-	{
-	  if (!p && !(spec & StairMonster) && !forceuse)
-	    return false; // monsters disallowed
-	  linefunc = &Map::EV_DoGenStairs;
-	}
-      else // if (spec >= GenCrusherBase)
-	{
-	  if (!p && !(spec & CrusherMonster) && !forceuse)
-	    return false; // monsters disallowed
-	  linefunc = &Map::EV_DoGenCrusher;
-	}
+      sp &= ~SS_SPECIALMASK; // zero low byte
+      sec->special = sp;
+      return sp;
+    }
 
-      if (!linefunc)
-	return false; // should not happen
-  
-      if (!line->tag)
-	if ((spec & 6) != 6) // "door" types can be used without a tag
-	  return false;
+  // Hexen done, Doom/Boom/Heretic to go
 
-      switch ((spec & TriggerType) >> TriggerTypeShift)
+  if (sp & BOOM_Secret)
+    {
+      secrets++;
+      sp |= SS_secret;
+    }
+
+  if (game.mode == gm_heretic)
+    {
+      temp = sp & 0x3F; // six lowest bits
+      sp &= ~SS_SPECIALMASK; // zero low byte
+
+      if (temp < 20)
+	switch (temp)
+	  {
+	  case HERETIC_Damage_Sludge:
+	    sec->damage = 4;
+	    sec->damagetype = dt_corrosive;
+	    sp |= SS_damage_32;
+	    break;
+
+	  case HERETIC_Lava_FlowEast:
+	    AddThinker(new scroll_t(scroll_t::sc_carry_floor, 2048*28, 0, NULL, sec - sectors, false));
+	    // fallthru
+	  case HERETIC_Lava_Wimpy:
+	    sec->damage = 5;
+	    sec->damagetype = dt_heat;
+	    sp |= SS_damage_16;
+	    break;
+
+	  case HERETIC_Lava_Hefty:
+	    sec->damage = 8;
+	    sec->damagetype = dt_heat;
+	    sp |= SS_damage_16;
+	    break;
+
+	  case HERETIC_Friction_Low:
+	    sec->friction = 0.97266f;
+	    sec->movefactor = 0.25f;
+	    sp |= SS_friction;
+	    break;
+
+	  default:
+	    // all the rest of the specials are identical to Doom
+	    // so they are handled using the Doom code later on
+	    sp |= temp;
+	  }
+      else if (temp <= 39)
 	{
-	case WalkOnce:
-	case PushOnce:
-	  if ((this->*linefunc)(line))
-	    line->special = 0;  // clear special
-	  return true;
+	  // Heretic scrollers
+	  temp -= 20; // zero base
 
-	case WalkMany:
-	case PushMany:
-	  (this->*linefunc)(line);
-	  return true;
+	  fixed_t dx = HScrollDirs[temp/5][0]*HScrollSpeeds[temp%5]*2048;
+	  fixed_t dy = HScrollDirs[temp/5][1]*HScrollSpeeds[temp%5]*2048;
 
-	case SwitchOnce:
-	case GunOnce:
-	  if ((this->*linefunc)(line))
-	    ChangeSwitchTexture(line, 0);
-	  return true;
+	  // texture scrolls, actors are pushed
+	  AddThinker(new scroll_t(scroll_t::sc_floor | scroll_t::sc_carry_floor,
+				  dx, dy, NULL, sec - sectors, false));
+	}
+      else if (temp <= 51)
+	{
+	  // Heretic winds
+	  temp -= 40; // zero base
 
-	case SwitchMany:
-	case GunMany:
-	  if ((this->*linefunc)(line))
-	    ChangeSwitchTexture(line, 1);
-	  return true;
-
-	default:
-	  return false;
+	  fixed_t dx = HScrollDirs[temp/3][0]*HScrollSpeeds[temp%3]*2048;
+	  fixed_t dy = HScrollDirs[temp/3][1]*HScrollSpeeds[temp%3]*2048;
+	  
+	  AddThinker(new scroll_t(scroll_t::sc_carry_floor | scroll_t::sc_wind,
+				  dx, dy, NULL, sec - sectors, false));
 	}
     }
-  // Boom generalized types done
-
-  int act = GET_SPAC(line->flags);
-  if (act != atype)
-    return false;
-
-  // monsters can activate the MCROSS activation type, but never open secret doors
-  if (!p && !(thing->flags & MF_MISSILE) && !forceuse)
-    if (act != SPAC_MCROSS || line->flags & ML_SECRET)
-      return false;
-
-  bool repeat = line->flags & ML_REPEAT_SPECIAL;
-  bool success = ExecuteLineSpecial(spec, line->args, line, side, thing);
-
-  if (!repeat && success)
-    line->special = 0;    // clear the special on non-retriggerable lines
-
-  if ((act == SPAC_USE || act == SPAC_PASSUSE || act == SPAC_IMPACT) && success)
-    ChangeSwitchTexture(line, repeat); // check if texture needs to be changed
-
-  return true;
-}
-
-
-bool P_CheckKeys(Actor *mo, int lock);
-
-// 
-// Hexen linedefs
-//
-#define SPEED(a)  (((a)*FRACUNIT)/8)
-#define HEIGHT(a) ((a)*FRACUNIT)
-#define TICS(a)   (((a)*TICRATE)/35)
-#define OCTICS(a) (((a)*TICRATE)/8)
-#define ANGLE(a)  angle_t((a) << 24) // angle_t is 32-bit int, Hexen angle is a 8-bit byte
-
-bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int side, Actor *mo)
-{
-  bool success = false;
-  int lock;
-
-  // callers: ACS, thing death, thing pickup, line activation
-
-  // line->tag == line->args[0] and args[0] are not always same (scripts!)  FIXME which one should we use?
-  // we always have args, but line may be NULL
-
-  int tag = args[0];
-  if (line && tag == 255)
+  else
     {
-      // special case to handle converted Doom/Heretic linedefs
-      tag = line->tag;
+      const char BoomDamage[4] = {0, 5, 10, 20};
+      // in Heretic (and Hexen), Boom damage bits cannot be used because of winds and scrollers
+      // Boom damage flags
+      temp = (sp & BOOM_DAMAGEMASK) >> 5;
+      if (temp)
+	{
+	  sp |= SS_damage_32;
+	  sec->damage = BoomDamage[temp];
+	  sec->damagetype = dt_radiation; // could as well choose randomly?      
+	}
     }
-  
-  CONS_Printf("ExeSpecial (%d), tag %d (%d)\n", special, tag, args[0]);
-  switch (special)
+
+
+  // Doom / Boom / some Heretic types
+
+  temp = sp & BOOM_LIGHTMASK;
+  sp &= ~SS_SPECIALMASK; // zero low byte
+
+  int i, dam = 0;
+  lightfx_t *lfx = NULL;
+
+  const short ff_tics = 4;
+  const short glowspeed = 8;
+
+  switch (temp)
     {
-    case 0: // NOP
-      break;
-    case 1: // Poly Start Line
-      break;
-    case 2: // Poly Rotate Left
-      success = EV_RotatePoly(args, 1, false);
-      break;
-    case 3: // Poly Rotate Right
-      success = EV_RotatePoly(args, -1, false);
-      break;
-    case 4: // Poly Move
-      success = EV_MovePoly(args, false, false);
-      break;
-    case 5: // Poly Explicit Line:  Only used in initialization
-      break;
-    case 6: // Poly Move Times 8
-      success = EV_MovePoly(args, true, false);
-      break;
-    case 7: // Poly Door Swing
-      success = EV_OpenPolyDoor(args, polydoor_t::pd_swing);
-      break;
-    case 8: // Poly Door Slide
-      success = EV_OpenPolyDoor(args, polydoor_t::pd_slide);
-      break;
-    case 10: // Door Close
-      success = EV_DoDoor(tag, line, mo, vdoor_t::Close, SPEED(args[1]), TICS(args[2]));
-      break;
-    case 11: // Door Open
-      success = EV_DoDoor(tag, line, mo, vdoor_t::Open, SPEED(args[1]), TICS(args[2]));
-      break;
-    case 12: // Door Raise
-      success = EV_DoDoor(tag, line, mo, vdoor_t::OwC, SPEED(args[1]), TICS(args[2]));
-      break;
-    case 13: // Door Locked_Raise
-      if (P_CheckKeys(mo, args[3]))
-	success = EV_DoDoor(tag, line, mo, vdoor_t::OwC, SPEED(args[1]), TICS(args[2]));
-      break;
-    case 20: // Floor Lower by Value
-      success = EV_DoFloor(tag, line, floor_t::RelHeight, SPEED(args[1]), 0, -HEIGHT(args[2]));
-      break;
-    case 21: // Floor Lower to Lowest
-      success = EV_DoFloor(tag, line, floor_t::LnF, SPEED(args[1]), 0, 0);
-      break;
-    case 22: // Floor Lower to Nearest
-      success = EV_DoFloor(tag, line, floor_t::DownNnF, SPEED(args[1]), 0, 0);
-      break;
-    case 23: // Floor Raise by Value
-      success = EV_DoFloor(tag, line, floor_t::RelHeight, SPEED(args[1]), 0, HEIGHT(args[2]));
-      break;
-    case 24: // Floor Raise to Highest
-      success = EV_DoFloor(tag, line, floor_t::HnF, SPEED(args[1]), 0, 0);
-      break;
-    case 25: // Floor Raise to Nearest
-      success = EV_DoFloor(tag, line, floor_t::UpNnF, SPEED(args[1]), 0, 0);
-      break;
-    case 26: // Stairs Build Down Normal
-      success = EV_BuildHexenStairs(tag, stair_t::Normal, -SPEED(args[1]), -HEIGHT(args[2]), args[4], args[3]);
-      break;
-    case 27: // Build Stairs Up Normal
-      success = EV_BuildHexenStairs(tag, stair_t::Normal, SPEED(args[1]), HEIGHT(args[2]), args[4], args[3]);
-      break;
-    case 28: // Floor Raise and Crush
-      success = EV_DoFloor(tag, line, floor_t::Ceiling, SPEED(args[1]), args[2], -HEIGHT(8));
-      break;
-    case 29: // Build Pillar (no crushing)
-      success = EV_DoElevator(tag, elevator_t::ClosePillar, SPEED(args[1]), HEIGHT(args[2]), 0, 0);
-      break;
-    case 30: // Open Pillar
-      success = EV_DoElevator(tag, elevator_t::OpenPillar, SPEED(args[1]), HEIGHT(args[2]), HEIGHT(args[3]), 0);
-      break;
-    case 31: // Stairs Build Down Sync
-      success = EV_BuildHexenStairs(tag, stair_t::Sync, -SPEED(args[1]), -HEIGHT(args[2]), args[3], 0);
-      break;
-    case 32: // Build Stairs Up Sync
-      success = EV_BuildHexenStairs(tag, stair_t::Sync, SPEED(args[1]), HEIGHT(args[2]), args[3], 0);
-      break;
-    case 35: // Raise Floor by Value Times 8
-      success = EV_DoFloor(tag, line, floor_t::RelHeight, SPEED(args[1]), 0, 8*HEIGHT(args[2]));
-      break;
-    case 36: // Lower Floor by Value Times 8
-      success = EV_DoFloor(tag, line, floor_t::RelHeight, SPEED(args[1]), 0, -8*HEIGHT(args[2]));
-      break;
-    case 40: // Ceiling Lower by Value
-      success = EV_DoCeiling(tag, ceiling_t::RelHeight, SPEED(args[1]), 0, 0, -HEIGHT(args[2]));
-      break;
-    case 41: // Ceiling Raise by Value
-      success = EV_DoCeiling(tag, ceiling_t::RelHeight, SPEED(args[1]), 0, 0, HEIGHT(args[2]));
-      break;
-    case 42: // Ceiling Crush and Raise
-      success = EV_DoCeiling(tag, ceiling_t::Crusher, SPEED(args[1]), SPEED(args[1])/2, args[2], HEIGHT(8));
-      break;
-    case 43: // Ceiling Lower and Crush
-      success = EV_DoCeiling(tag, ceiling_t::Floor, SPEED(args[1]), 0, args[2], HEIGHT(8));
-      break;
-    case 44: // Ceiling Crush Stop
-      success = EV_StopCeiling(tag);
-      break;
-    case 45: // Ceiling Crush Raise and Stay
-      success = EV_DoCeiling(tag, ceiling_t::CrushOnce, SPEED(args[1]), SPEED(args[1])/2, args[2], HEIGHT(8));
-      break;
-      /*
-      case 46: // Floor Crush Stop TODO activefloors list or something
-      success = EV_FloorCrushStop(line, args);
-      break;
-      */
-    case 60: // Plat Perpetual Raise
-      success = EV_DoPlat(tag, line, plat_t::LHF, SPEED(args[1]), TICS(args[2]), 0);
-      break;
-    case 61: // Plat Stop
-      EV_StopPlat(tag);
-      break;
-    case 62: // Plat Down-Wait-Up-Stay
-      success = EV_DoPlat(tag, line, plat_t::LnF, SPEED(args[1]), TICS(args[2]), 0);
-      break;
-    case 63: // Plat Down-by-Value*8-Wait-Up-Stay
-      success = EV_DoPlat(tag, line, plat_t::RelHeight, SPEED(args[1]), TICS(args[2]), -8*HEIGHT(args[3]));
-      break;
-    case 64: // Plat Up-Wait-Down-Stay
-      success = EV_DoPlat(tag, line, plat_t::NHnF, SPEED(args[1]), TICS(args[2]), 0);
-      break;
-    case 65: // Plat Up-by-Value*8-Wait-Down-Stay
-      success = EV_DoPlat(tag, line, plat_t::RelHeight, SPEED(args[1]), TICS(args[2]), 8*HEIGHT(args[3]));
-      break;
-    case 66: // Floor Lower Instant * 8
-      success = EV_DoFloor(tag, line, floor_t::RelHeight, SPEED(16000), 0, -8*HEIGHT(args[2]));
-      break;
-    case 67: // Floor Raise Instant * 8
-      success = EV_DoFloor(tag, line, floor_t::RelHeight, SPEED(16000), 0, 8*HEIGHT(args[2]));
-      break;
-    case 68: // Floor Move to Value * 8
-      success = EV_DoFloor(tag, line, floor_t::AbsHeight, SPEED(args[1]), 0,
-			   (args[3] ? -1 : 1) * 8 * HEIGHT(args[2]));
-      break;
-    case 69: // Ceiling Move to Value * 8
-      success = EV_DoCeiling(tag, ceiling_t::AbsHeight, SPEED(args[1]), SPEED(args[1]), 0,
-			     (args[3] ? -1 : 1) * 8 * HEIGHT(args[2]));
-      break;
-    case 70: // Teleport
-      if (!side)
-	// Only teleport when crossing the front side of a line
-	success = EV_Teleport(tag, line, mo, args[1], args[2]);
-      break;
-    case 71: // Teleport, no fog (silent)
-      if (!side)
-	// Only teleport when crossing the front side of a line
-	success = EV_Teleport(tag, line, mo, 0, 2);
-      break;
-    case 72: // Thrust Mobj
-      if(!side) // Only thrust on side 0
-	{
-	  mo->Thrust(ANGLE(args[0]), args[1]<<FRACBITS);
-	  success = 1;
-	}
-      break;
-    case 73: // Damage Mobj
-      if (args[0])
-	mo->Damage(NULL, NULL, args[0]);
-      else
-	// If arg1 is zero, then guarantee a kill
-	mo->Damage(NULL, NULL, 10000, dt_always);
-      success = true;
-      break;
-    case 74: // Teleport_NewMap
-      if (!side)
-	{ // Only teleport when crossing the front side of a line
-	  if (mo->health > 0 && !(mo->flags & MF_CORPSE))
-	    {
-	      // Activator must be alive
-	      ExitMap(mo, args[0], args[1]);
-	      success = true;
-	    }
-	}
-      break;
-    case 75: // Teleport_EndGame
-      if (!side)
-	{ // Only teleport when crossing the front side of a line
-	  if (mo->health > 0 && !(mo->flags & MF_CORPSE))
-	    {
-	      if (cv_deathmatch.value)
-		ExitMap(mo, 1, 0);// Winning in deathmatch just goes back to map 1
-	      else
-		ExitMap(mo, -1, 0);
-
-	      success = true;
-	    }
-	}
-      break;
-    case 80: // ACS_Execute
-      if (args[1] && args[1] != info->mapnumber)
-	success = P_AddToACSStore(args[1], args[0], &args[2]);
-      else
-	success = StartACS(args[0], &args[2], mo, line, side);
-      break;
-    case 81: // ACS_Suspend
-      success = SuspendACS(args[0]);
-      break;
-    case 82: // ACS_Terminate
-      success = TerminateACS(args[0]);
-      break;
-    case 83: // ACS_LockedExecute
-      lock = args[4];
-      if (P_CheckKeys(mo, lock))
-	{
-	  args[4] = 0;
-	  if (args[1] && args[1] != info->mapnumber)
-	    success = P_AddToACSStore(args[1], args[0], &args[2]);
-	  else
-	    success = StartACS(args[0], &args[2], mo, line, side);
-	  args[4] = lock;
-	}
+    case DOOM_Damage_Nukage:  // nukage/slime
+      dam = 5;
       break;
 
-    case 90: // Poly Rotate Left Override
-      success = EV_RotatePoly(args, 1, true);
-      break;
-    case 91: // Poly Rotate Right Override
-      success = EV_RotatePoly(args, -1, true);
-      break;
-    case 92: // Poly Move Override
-      success = EV_MovePoly(args, false, true);
-      break;
-    case 93: // Poly Move Times 8 Override
-      success = EV_MovePoly(args, true, true);
-      break;
-    case 94: // Build Pillar Crush
-      success = EV_DoElevator(tag, elevator_t::ClosePillar, SPEED(args[1]), HEIGHT(args[2]), 0, args[3]);
-      break;
-    case 95: // Lower Floor and Ceiling
-      success = EV_DoElevator(tag, elevator_t::RelHeight, SPEED(args[1]), -HEIGHT(args[2]));
-      break;
-    case 96: // Raise Floor and Ceiling
-      success = EV_DoElevator(tag, elevator_t::RelHeight, SPEED(args[1]), HEIGHT(args[2]));
-      break;
-    case 109: // Force Lightning
-      success = true;
-      ForceLightning();
-      break;
-    case 110: // Light Raise by Value
-      success = EV_SpawnLight(tag, lightfx_t::RelChange, args[1]);
-      break;
-    case 111: // Light Lower by Value
-      success = EV_SpawnLight(tag, lightfx_t::RelChange, -args[1]);
-      break;
-    case 112: // Light Change to Value
-      success = EV_SpawnLight(tag, lightfx_t::AbsChange, args[1]);
-      break;
-    case 113: // Light Fade
-      success = EV_SpawnLight(tag, lightfx_t::Fade, args[1], 0, args[2]);
-      break;
-    case 114: // Light Glow
-      success = EV_SpawnLight(tag, lightfx_t::Glow, args[1], args[2], args[3]);
-      break;
-    case 115: // Light Flicker
-      success = EV_SpawnLight(tag, lightfx_t::Flicker, args[1], args[2], 32, 8);
-      break;
-    case 116: // Light Strobe
-      success = EV_SpawnLight(tag, lightfx_t::Strobe, args[1], args[2], args[3], args[4]);
-      break;
-    case 120: // Quake Tremor
-      success = EV_LocalQuake(args);
-      break;
-      /*
-    case 129: // UsePuzzleItem. Not needed, see P_UseArtifact()
-      success = EV_LineSearchForPuzzleItem(line, args, mo);
-      break;
-      */
-    case 130: // Thing_Activate
-      success = EV_ThingActivate(args[0]);
-      break;
-    case 131: // Thing_Deactivate
-      success = EV_ThingDeactivate(args[0]);
-      break;
-    case 132: // Thing_Remove
-      success = EV_ThingRemove(args[0]);
-      break;
-    case 133: // Thing_Destroy
-      success = EV_ThingDestroy(args[0]);
-      break;
-    case 134: // Thing_Projectile
-      success = EV_ThingProjectile(args, 0);
-      break;
-    case 135: // Thing_Spawn
-      success = EV_ThingSpawn(args, 1);
-      break;
-    case 136: // Thing_ProjectileGravity
-      success = EV_ThingProjectile(args, 1);
-      break;
-    case 137: // Thing_SpawnNoFog
-      success = EV_ThingSpawn(args, 0);
-      break;
-    case 138: // Floor_Waggle
-      success = EV_DoFloorWaggle(tag, args[1] << 13, angle_t(args[2] << 20), angle_t(args[3] << 26), args[4]*35);
-      break;
-    case 140: // Sector_SoundChange
-      success = EV_SectorSoundChange(args[0], args[1]);
+    case DOOM_Damage_Hellslime:
+      dam = 10;
       break;
 
-      // Line specials only processed during level initialization
-      // 100: Scroll_Texture_Left
-      // 101: Scroll_Texture_Right
-      // 102: Scroll_Texture_Up
-      // 103: Scroll_Texture_Down
-      // 121: Line_SetIdentification
-
-    case 200: // TODO ZDoom Generic_Floor
-    case 201: // TODO ZDoom Generic_Ceiling
-      //success = EV_DoCeiling(tag, type, SPEED(args[1]), SPEED(args[1]), crush, HEIGHT(args[2]));
-      break;
-      // TODO other ZDoom Generic types
-
-    case 245: // ZDoom Elevator_RaiseToNearest
-      success = EV_DoElevator(tag, elevator_t::Up, SPEED(args[1]), 0);
-      break;
-    case 246: // ZDoom Elevator_MoveToFloor
-      if (line)
-	success = EV_DoElevator(tag, elevator_t::Current, SPEED(args[1]), line->frontsector->floorheight);
-      else
-	success = false;
-      break;
-    case 247: // ZDoom Elevator_LowerToNearest
-      success = EV_DoElevator(tag, elevator_t::Down, SPEED(args[1]), 0);
+    case DOOM_Light_StrobeHurt:
+      SpawnStrobeLight(sec, STROBEBRIGHT, FASTDARK, false); // fallthru
+    case DOOM_DamageSuperHellslime:
+      dam = 20;
       break;
 
-
-    case LEGACY_EXT: // Legacy extensions to Hexen linedef namespace (all under this one type)
-
-      // different tag handling
-      if (line && line->tag) 
-	tag = line->tag; // Doom style
-      else
-	tag = args[3] + (args[4] << 8); // Hexen style
-
-      switch (args[0])
-	{
-	case LEGACY_FS:
-#ifdef FRAGGLESCRIPT
-	  if (side == 0 || args[1] == 0) // 1-sided?
-	    success = FS_RunScript(tag, mo);
-#endif
-	  break;
-
-	default:
-	  CONS_Printf("Unknown Legacy linedef extension %d.\n", args[0]);
-	}
+    case DOOM_Damage_EndLevel: // level end hurt need special handling
+      dam = 20;
+      sp |= 11; // FIXME
       break;
 
-      // Inert Line specials
+    case DOOM_SpawnDoorClose30s: // after 30 s, close door
+      SpawnDoorCloseIn30(sec);
+      break;
+
+    case DOOM_SpawnDoorOpen5min: // after 5 min, open door
+      SpawnDoorRaiseIn5Mins(sec);
+      break;
+
+    case DOOM_Light_Flicker:
+      i = P_FindMinSurroundingLight(sec, sec->lightlevel);
+      lfx = new lightfx_t(this, sec, lightfx_t::Flicker, sec->lightlevel, i, 64, 7);
+      lfx->count = (P_Random() & lfx->maxtime) + 1;
+      break;
+
+    case DOOM_Light_BlinkFast:
+      SpawnStrobeLight(sec, STROBEBRIGHT, FASTDARK, false);
+      break;
+
+    case DOOM_Light_BlinkSlow:
+      SpawnStrobeLight(sec, STROBEBRIGHT, SLOWDARK, false);
+      break;
+
+    case DOOM_Light_Glow:
+      i = P_FindMinSurroundingLight(sec, sec->lightlevel);
+      lfx = new lightfx_t(this, sec, lightfx_t::Glow, sec->lightlevel, i, -glowspeed);
+      break;
+
+    case DOOM_Light_SyncFast:
+      SpawnStrobeLight(sec, STROBEBRIGHT, FASTDARK, true);
+      break;
+
+    case DOOM_Light_SyncSlow:
+      SpawnStrobeLight(sec, STROBEBRIGHT, SLOWDARK, true);
+      break;
+
+    case DOOM_Light_Fireflicker:
+      i = P_FindMinSurroundingLight(sec, sec->lightlevel) + 16;
+      lfx = new lightfx_t(this, sec, lightfx_t::FireFlicker, sec->lightlevel, i, ff_tics);
+      lfx->count = ff_tics;
+      break;
+
     default:
-      CONS_Printf("Unhandled line special %d\n", special);
       break;
     }
 
-  return success;
-}
-
-
-int Map::EV_SectorSoundChange(int tag, int seq)
-{
-  if (!tag)
-    return false;
-
-  int secNum = -1;
-  int rtn = 0;
-  while ((secNum = FindSectorFromTag(tag, secNum)) >= 0)
+  if (dam)
     {
-      sectors[secNum].seqType = seq;
-      rtn++;
+      sp |= SS_damage_32;
+      sec->damage = dam;
+      sec->damagetype = dt_radiation; // could as well choose randomly?
     }
-  return rtn;
+
+  /*
+    // TODO support phased lighting with specials 21-24 ? (like ZDoom)
+    else if (temp < 40)
+    {
+    temp -= 20;
+    }
+  */
+
+  sec->special = sp;
+  return sp;
 }
 
 
-//
-// Animate textures etc.
-//
-void Map::UpdateSpecials()
-{
-  //  LEVEL TIMER
-  if (cv_timelimit.value && maptic > unsigned(cv_timelimit.value))
-    ExitMap(NULL, 0);
 
-  LightningFlash();
-}
 
+
+
+//====================================================================
+//         Clearable line specials (handled during Map setup)
+//====================================================================
 
 
 //SoM: 3/23/2000: Adds a sectors floor and ceiling to a sector's ffloor list
-void P_AddFFloor(sector_t* sec, ffloor_t* ffloor);
+static void P_AddFFloor(sector_t* sec, ffloor_t* ffloor)
+{
+  ffloor_t* rover;
+
+  if(!sec->ffloors)
+    {
+      sec->ffloors = ffloor;
+      ffloor->next = 0;
+      ffloor->prev = 0;
+      return;
+    }
+
+  for(rover = sec->ffloors; rover->next; rover = rover->next);
+
+  rover->next = ffloor;
+  ffloor->prev = rover;
+  ffloor->next = 0;
+}
+
 
 void Map::AddFakeFloor(sector_t* sec, sector_t* sec2, line_t* master, int flags)
 {
@@ -1349,291 +1093,6 @@ void Map::AddFakeFloor(sector_t* sec, sector_t* sec2, line_t* master, int flags)
     }
 
   P_AddFFloor(sec, ffloor);
-}
-
-
-
-void P_AddFFloor(sector_t* sec, ffloor_t* ffloor)
-{
-  ffloor_t* rover;
-
-  if(!sec->ffloors)
-    {
-      sec->ffloors = ffloor;
-      ffloor->next = 0;
-      ffloor->prev = 0;
-      return;
-    }
-
-  for(rover = sec->ffloors; rover->next; rover = rover->next);
-
-  rover->next = ffloor;
-  ffloor->prev = rover;
-  ffloor->next = 0;
-}
-
-
-
-
-int Map::SpawnSectorSpecial(int sp, sector_t *sec)
-{
-  // internally we use modified "generalized Boom sector types"
-  if (sp == 0)
-    {
-      sec->special = 0;
-      return 0;
-    }
-
-  if (sp == 9)
-    {
-      secrets++;
-      sec->special = SS_secret;
-      return SS_secret;
-    }
-
-  const char HScrollDirs[4][2] = {{1,0}, {0,1}, {0,-1}, {-1,0}};
-  const char HScrollSpeeds[5] = { 5, 10, 25, 30, 35 };
-  const float d = 0.707;
-  const float XScrollDirs[8][2] = {{0,1}, {1,0}, {0,-1}, {-1,0}, {-d,d}, {d,d}, {d,-d}, {-d,-d}};
-
-  int temp;
-  CONS_Printf("SS: %d =>", sp);
-  if (hexen_format)
-    {
-      // Boom damage (and secret) bits cannot be interpreted 'cos they are used otherwise
-
-      temp = sp & 0xFF; // eight lowest bits
-
-      if (temp >= 40 && temp <= 51)
-	{
-	  // Hexen winds (just like Heretic?)
-	  temp -= 40; // zero base
-
-	  fixed_t dx = HScrollDirs[temp/3][0]*HScrollSpeeds[temp%3]*2048;
-	  fixed_t dy = HScrollDirs[temp/3][1]*HScrollSpeeds[temp%3]*2048;
-	  
-	  AddThinker(new scroll_t(scroll_t::sc_wind, dx, dy, NULL, sec - sectors, false));
-	}
-      else if (temp >= 201 && temp <= 224)
-	{
-	  // Hexen scrollers
-	  temp -= 201; // zero base
-
-	  fixed_t dx = int(XScrollDirs[temp/3][0]*HScrollSpeeds[temp%3]*2048);
-	  fixed_t dy = int(XScrollDirs[temp/3][1]*HScrollSpeeds[temp%3]*2048);
-	  
-	  AddThinker(new scroll_t(scroll_t::sc_carry_floor, dx, dy, NULL, sec - sectors, false));
-	}
-      else switch (temp)
-	{
-	case 1: // Phased light
-	  // Hardcoded base, use sector->lightlevel as the index
-	  new phasedlight_t(this, sec, 80, -1);
-	  break;
-	case 2: // Phased light sequence start
-	  SpawnPhasedLightSequence(sec, 1);
-	  break;
-
-	case 3:
-	case 4:
-	  // Phased light sequencing. Leave them be, they fit into the unused lightmask area.
-	case 26: // Stairs_Special1
-	case 27: // Stairs_Special2
-	  // Same with stair sequences.
-	  sec->special = sp;
-	  CONS_Printf("%d\n", sp);
-	  return sp;
-
-	case 198: // Lightning Special
-	case 199: // Lightning Flash special
-	case 200: // Sky2
-	  // Used in (R_plane):R_Drawplanes
-	  break;
-	default:
-	  break;
-	}
-
-      sp &= ~0xFF; // zero eight lowest bits
-      sec->special = sp;
-      CONS_Printf("%d\n", sp);
-      return sp;
-    }
-
-  if (sp & SS_secret)
-    secrets++;
-
-  if (game.mode == gm_heretic)
-    {
-      temp = sp & 0x3F; // six lowest bits
-      sp &= ~0x3F; // zero it
-
-      if (temp < 20)
-	switch (temp)
-	  {
-	  case 7:  // sludge
-	    sec->damage = 4;
-	    sec->damagetype = dt_corrosive;
-	    sp |= SS_damage_32;
-	    break;
-
-	  case 4:  // lava_scroll_east
-	    AddThinker(new scroll_t(scroll_t::sc_carry_floor, 2048*28, 0, NULL, sec - sectors, false));
-	    // fallthru
-	  case 5:  // lava_wimpy
-	    sec->damage = 5;
-	    sec->damagetype = dt_heat;
-	    sp |= SS_damage_16;
-	    break;
-
-	  case 16: // lava_hefty
-	    sec->damage = 8;
-	    sec->damagetype = dt_heat;
-	    sp |= SS_damage_16;
-	    break;
-
-	  case 15: // low friction
-	    sec->friction = 0.97266f;
-	    sec->movefactor = 0.25f;
-	    sp |= SS_friction;
-	    break;
-
-	  default:
-	    sp |= temp; // put it back, handle later
-	  }
-      else if (temp <= 39)
-	{
-	  // Heretic scrollers
-	  temp -= 20; // zero base
-
-	  fixed_t dx = HScrollDirs[temp/5][0]*HScrollSpeeds[temp%5]*2048;
-	  fixed_t dy = HScrollDirs[temp/5][1]*HScrollSpeeds[temp%5]*2048;
-
-	  // texture scrolls, actors are pushed
-	  AddThinker(new scroll_t(scroll_t::sc_floor | scroll_t::sc_carry_floor,
-				  dx, dy, NULL, sec - sectors, false));
-	}
-      else if (temp <= 51)
-	{
-	  // Heretic winds
-	  temp -= 40; // zero base
-
-	  fixed_t dx = HScrollDirs[temp/3][0]*HScrollSpeeds[temp%3]*2048;
-	  fixed_t dy = HScrollDirs[temp/3][1]*HScrollSpeeds[temp%3]*2048;
-	  
-	  AddThinker(new scroll_t(scroll_t::sc_carry_floor | scroll_t::sc_wind,
-				  dx, dy, NULL, sec - sectors, false));
-	}
-    }
-  else
-    {
-      const char BoomDamage[4] = {0, 5, 10, 20};
-      // in Heretic and Hexen, Boom damage bits cannot be used because of winds and scrollers
-      // Boom damage flags
-      temp = (sp & SS_DAMAGEMASK) >> 5;
-      sp &= ~SS_DAMAGEMASK; // zero it
-      if (temp)
-	{
-	  sp |= SS_damage_32;
-	  sec->damage = BoomDamage[temp];
-	  sec->damagetype = dt_radiation; // could as well choose randomly?      
-	}
-    }
-
-
-  // Doom / Boom
-
-  temp = sp & SS_LIGHTMASK;
-  sp &= ~SS_LIGHTMASK; // zeroed "light" bits
-
-  int i, dam = 0;
-  lightfx_t *lfx = NULL;
-
-  const short ff_tics = 4;
-  const short glowspeed = 8;
-
-  switch (temp)
-    {
-    case 7:  // nukage/slime
-      dam = 5;
-      break;
-
-    case 5:  // hellslime
-      dam = 10;
-      break;
-
-    case 4:  // strobe hurt
-      SpawnStrobeLight(sec, STROBEBRIGHT, FASTDARK, false); // fallthru
-    case 16: // super hellslime
-      dam = 20;
-      break;
-
-    case 11: // level end hurt need special handling
-      dam = 20;
-      sp |= 11;
-      break;
-
-    case 10: // after 30 s, close door
-      SpawnDoorCloseIn30(sec);
-      break;
-
-    case 14: // after 5 min, open door
-      SpawnDoorRaiseIn5Mins(sec);
-      break;
-
-    case 1: // FLICKERING LIGHTS
-      i = P_FindMinSurroundingLight(sec, sec->lightlevel);
-      lfx = new lightfx_t(this, sec, lightfx_t::Flicker, sec->lightlevel, i, 64, 7);
-      lfx->count = (P_Random() & lfx->maxtime) + 1;
-      break;
-
-    case 2: // STROBE FAST
-      SpawnStrobeLight(sec, STROBEBRIGHT, FASTDARK, false);
-      break;
-
-    case 3: // STROBE SLOW
-      SpawnStrobeLight(sec, STROBEBRIGHT, SLOWDARK, false);
-      break;
-
-    case 8: // GLOWING LIGHT
-      i = P_FindMinSurroundingLight(sec, sec->lightlevel);
-      lfx = new lightfx_t(this, sec, lightfx_t::Glow, sec->lightlevel, i, -glowspeed);
-      break;
-
-    case 12: // SYNC STROBE SLOW
-      SpawnStrobeLight(sec, STROBEBRIGHT, SLOWDARK, true);
-      break;
-
-    case 13: // SYNC STROBE FAST
-      SpawnStrobeLight(sec, STROBEBRIGHT, FASTDARK, true);
-      break;
-
-    case 17:
-      i = P_FindMinSurroundingLight(sec, sec->lightlevel) + 16;
-      lfx = new lightfx_t(this, sec, lightfx_t::FireFlicker, sec->lightlevel, i, ff_tics);
-      lfx->count = ff_tics;
-      break;
-
-    default:
-      break;
-    }
-
-  if (dam)
-    {
-      sp |= SS_damage_32;
-      sec->damage = dam;
-      sec->damagetype = dt_radiation; // could as well choose randomly?
-    }
-
-  /*
-    // TODO support phased lighting with specials 21-24 ? (like ZDoom)
-    else if (temp < 40)
-    {
-    temp -= 20;
-    }
-  */
-
-  sec->special = sp;
-  return sp;
 }
 
 
@@ -1841,7 +1300,7 @@ void Map::SpawnLineSpecials()
 	  
 		  // Instant raise for ceilings SSNTails 06-13-2002
 		case 1:
-		  EV_DoCeiling(tag, ceiling_t::HnC, MAXINT/2, MAXINT/2, 0, 0);
+		  EV_DoCeiling(tag, l, ceiling_t::HnC, MAXINT/2, 0, 0);
 		  break;
 
 		default:
@@ -1896,149 +1355,7 @@ void Map::SpawnLineSpecials()
 
 
 
-//========================================================
-//  Hexen lightning effect
-//========================================================
 
-void Map::InitLightning()
-{
-  Flashcount = 0;
-
-  if (!info->lightning)
-    return;
-
-  int count = 0;
-  for (int i = 0; i < numsectors; i++)
-    {
-      if(sectors[i].ceilingpic == skyflatnum
-	 || sectors[i].special == SS_light_IndoorLightning1
-	 || sectors[i].special == SS_light_IndoorLightning2)
-	count++;
-    }
-
-  if (!count)
-    {
-      info->lightning = false; // no way to see the flashes
-      return;
-    }
-
-  LightningLightLevels = (int *)Z_Malloc(count * sizeof(int), PU_LEVEL, NULL);
-  NextLightningFlash = ((P_Random() & 15) + 5) * 35; // don't flash at level start
-}
-
-
-
-void Map::ForceLightning()
-{
-  NextLightningFlash = 0;
-}
-
-
-
-void Map::LightningFlash()
-{
-  int i;
-  sector_t *s;
-  int *lite;
-
-  if (!info->lightning)
-    return;
-
-  NextLightningFlash--;
-
-  if (Flashcount--)
-    {
-      if (Flashcount)
-	{
-	  // still flashing
-	  lite = LightningLightLevels;
-	  s = sectors;
-	  for (i = 0; i < numsectors; i++, s++)
-	    {
-	      if (s->ceilingpic == skyflatnum 
-		  || s->special == SS_light_IndoorLightning1
-		  || s->special == SS_light_IndoorLightning2)
-		{
-		  if (*lite < s->lightlevel - 4)
-		    s->lightlevel -= 4;
-
-		  lite++;
-		}
-	    }
-	}					
-      else
-	{
-	  // flash ends
-	  lite = LightningLightLevels;
-	  s = sectors;
-	  for (i = 0; i < numsectors; i++, s++)
-	    {
-	      if(s->ceilingpic == skyflatnum
-		 || s->special == SS_light_IndoorLightning1
-		 || s->special == SS_light_IndoorLightning2)
-		{
-		  s->lightlevel = *lite;
-		  lite++;
-		}
-	    }
-	  skytexture = tc.GetPtr(info->sky1.c_str()); // set alternate sky
-	}
-      return;
-    }
-
-
-  if (NextLightningFlash > 0)
-    return;
-
-  // new flash
-  Flashcount = (P_Random() & 7) + 8;
-  int flashlight = 200 + (P_Random() & 31);
-  s = sectors;
-  lite = LightningLightLevels;
-
-  for (i = 0; i < numsectors; i++, s++)
-    {
-      if (s->ceilingpic == skyflatnum
-	  || s->special == SS_light_IndoorLightning1
-	  || s->special == SS_light_IndoorLightning2)
-	{
-	  *lite = s->lightlevel;
-	  if (s->special == SS_light_IndoorLightning1)
-	    { 
-	      s->lightlevel += 64;
-	      if (s->lightlevel > flashlight)
-		s->lightlevel = flashlight;
-	    }
-	  else if (s->special == SS_light_IndoorLightning2)
-	    {
-	      s->lightlevel += 32;
-	      if (s->lightlevel > flashlight)
-		s->lightlevel = flashlight;
-	    }
-	  else
-	    s->lightlevel = flashlight;
-
-	  if (s->lightlevel < *lite)
-	    s->lightlevel = *lite;
-
-	  lite++;
-	}
-    }
-
-  skytexture = tc.GetPtr(info->sky2.c_str()); // set alternate sky
-  S_StartAmbSound(SFX_THUNDER_CRASH);
-
-  // Calculate the next lighting flash
-  if (P_Random() < 50)
-    NextLightningFlash = (P_Random()&15) + 16; // Immediate Quick flash
-  else
-    {
-      if (P_Random() < 128 && !(maptic & 32))
-	NextLightningFlash = ((P_Random()&7) + 2) * 35;
-      else
-	NextLightningFlash = ((P_Random()&15) + 5) * 35;
-    }
-}
 
 
 

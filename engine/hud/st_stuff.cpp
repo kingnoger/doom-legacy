@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2004/09/03 16:28:50  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.19  2004/07/25 20:19:21  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -1259,33 +1262,46 @@ void HUD::ST_DrawWidgets(bool r)
 
 void HUD::ST_Recalc()
 {
+  switch (game.mode)
+    {
+    case gm_hexen:
+      stbarheight = ST_HEIGHT_HEXEN;
+      break;
+    case gm_heretic:
+      stbarheight = ST_HEIGHT_HERETIC;
+      break;
+    default:
+      stbarheight = ST_HEIGHT_DOOM;
+      break;
+    }
+
   if (cv_scalestatusbar.value || cv_viewsize.value > 10)
     {
-      fgbuffer = FG | V_SLOC; // scale patch by default
-      //st_scalex = vid.dupx;
-      //st_scaley = vid.dupy;
+      fgbuffer = FG | V_SCALE; // scale patch by default
 
 #ifdef HWRENDER
       // TODO: Hurdler: see why we need to have a separate code here
       if (rendermode != render_soft)
         {
           st_x = 0;
-          st_y = BASEVIDHEIGHT - int(stbarheight/vid.fdupy);
+          st_y = BASEVIDHEIGHT - stbarheight;
+
+	  stbarheight = int(stbarheight * vid.fdupy); // real height
         }
       else
 #endif
         {
-          st_x = ((vid.width-ST_WIDTH*vid.dupx)>>1)/vid.dupx;
-          st_y = (vid.height - stbarheight)/vid.dupy;
+          st_x = (vid.width - ST_WIDTH * vid.dupx) / (2 * vid.dupx);
+          st_y = (vid.height - stbarheight * vid.dupy) / vid.dupy;
+
+	  stbarheight *= vid.dupy; // real height
         }
     }
   else
     {
-      //st_scalex = st_scaley = 1;
-
       fgbuffer = FG;
+      st_x = (vid.width - ST_WIDTH) >> 1;
       st_y = vid.height - stbarheight;
-      st_x = (vid.width-ST_WIDTH)>>1;
     }
 
   // TODO not good. When should the widgets be created?

@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2003 by Ville Bergholm 
+// Copyright (C) 2002-2004 by Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/09/03 16:28:51  smite-meister
+// bugfixes and ZDoom linedef types
+//
 // Revision 1.3  2004/08/12 18:30:30  smite-meister
 // cleaned startup
 //
@@ -26,12 +29,10 @@
 // Revision 1.1  2003/03/23 14:24:14  smite-meister
 // Polyobjects, MD3 models
 //
-//
-//
-// DESCRIPTION:
-//   Quake III MD3 model class for Doom Legacy
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Quake III MD3 model class for Doom Legacy
 
 #ifndef md3_h
 #define md3_h 1
@@ -189,6 +190,7 @@ protected:
   MD3_t legs, torso, head;
 
 public:
+  MD3_player(const char *n);
   virtual ~MD3_player();
 
   bool Load(const string & path, const string & skin);
