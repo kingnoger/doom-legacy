@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/10/31 22:22:13  smite-meister
+// Hasta la vista, pic_t!
+//
 // Revision 1.5  2004/10/14 19:35:52  smite-meister
 // automap, bbox_t
 //
@@ -888,7 +891,9 @@ Subsector::Subsector(int num, Poly *poly)
       CONS_Printf("I think this is strange, there are no segs but only planes: %d\n", num);
       sub = &R.subsectors[0];
       count = 0;
-      line = 0;
+      line = NULL;
+      prev_line = NULL;
+      next_line = NULL;
     }
 
   sector_t tempsec;

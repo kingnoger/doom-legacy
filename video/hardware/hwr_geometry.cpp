@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/10/31 22:22:13  smite-meister
+// Hasta la vista, pic_t!
+//
 // Revision 1.4  2004/07/23 22:18:42  hurdler
 // respect indent style and temporary (static, unoptimized and not correct) support for wall/floor/ceiling so I can actually work on texture support
 //
@@ -29,14 +32,20 @@
 // Revision 1.1  2004/06/02 21:05:55  hurdler
 // change the way polygons are managed (early implementation)
 //
-//
-// DESCRIPTION:
-//      manage OpenGL geometry
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Manage OpenGL geometry
+
+#include <GL/gl.h>
 
 #include "hardware/hwr_geometry.h"
 #include "doomdef.h"
+
+#ifdef __WIN32__
+# define glClientActiveTexture(x)
+# warning glClientActiveTexture must be fixed!
+#endif
 
 GLfloat *Geometry::last_vertex_array = 0;
 GLfloat *Geometry::last_tex_coord_arrays[State::MAX_TEXTURE_UNITS] = { 0, 0, 0, 0, 0, 0, 0, 0 };

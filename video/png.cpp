@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/10/31 22:22:13  smite-meister
+// Hasta la vista, pic_t!
+//
 // Revision 1.2  2004/09/14 21:41:57  hurdler
 // rename "data" to "pixels" (I think it's more appropriate and that's how SDL and OpenGL name such data after all)
 //
@@ -28,6 +31,7 @@
 /// \file
 /// \brief PNG Textures
 
+#include <malloc.h>
 #include <png.h>
 
 #include "doomdef.h"
@@ -68,13 +72,13 @@ static void PNG_reader(png_struct *png_p, png_byte *dest, png_size_t len)
 
 static void PNG_error(png_struct *png_p, const char *msg)
 {
-  CONS_Printf("PNG error: %s", msg);
+  I_Error("PNG error: %s", msg);
 }
 
 
 static void PNG_warning(png_struct *png_p, const char *msg)
 {
-  CONS_Printf("PNG warning: %s", msg);
+  I_Error("PNG warning: %s", msg);
 }
 
 
@@ -88,7 +92,6 @@ static void PNG_warning(png_struct *png_p, const char *msg)
 PNGTexture::PNGTexture(const char *n, int l)
   : LumpTexture(n, l, 0, 0)
 {
-  type = PNG;
   ReadData(false); // read the header (height, width)
 }
 
@@ -119,6 +122,12 @@ byte *PNGTexture::ReadData(bool read_image)
 
   byte *tmpdata; // for raw PNG data
 
+  // no unknown chunk callback or changes in default handling
+  // no row read callback
+
+  PNG_r.pos = tmpdata = static_cast<byte *>(fc.CacheLumpNum(lump, PU_TEXTURE));
+  PNG_r.remaining = fc.LumpLength(lump);
+
   // nasty longjmp error recovery
   if (setjmp(png_jmpbuf(png_p)))
     {
@@ -127,13 +136,7 @@ byte *PNGTexture::ReadData(bool read_image)
       goto fail;
     }
 
-  // no unknown chunk callback or changes in default handling
-  // no row read callback
-
-  PNG_r.pos = tmpdata = static_cast<byte *>(fc.CacheLumpNum(lump, PU_TEXTURE));
-  PNG_r.remaining = fc.LumpLength(lump);
   png_set_read_fn(png_p, &PNG_r, PNG_reader);
-
 
   // read the PNG info chunks
   png_read_info(png_p, info_p);
@@ -142,8 +145,7 @@ byte *PNGTexture::ReadData(bool read_image)
   int bit_depth, color_type;
   png_get_IHDR(png_p, info_p, &w, &h, &bit_depth, &color_type, NULL, NULL, NULL);
 
-  CONS_Printf("PNG header: %ld, %ld, %d, %d, %ld, chan:%d\n", w, h, bit_depth, color_type,
-              png_get_rowbytes(png_p, info_p), info_p->channels);
+  //I_OutputMsg("PNG header: %s: %ld, %ld, %d, %d, %ld, chan:%d\n", name, w, h, bit_depth, color_type, png_get_rowbytes(png_p, info_p), info_p->channels);
 
   width = w;
   height = h;

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/10/31 22:22:13  smite-meister
+// Hasta la vista, pic_t!
+//
 // Revision 1.9  2004/09/03 16:28:52  smite-meister
 // bugfixes and ZDoom linedef types
 //
@@ -54,6 +57,7 @@
 #include <math.h>
 
 #include <GL/gl.h>
+#include <GL/glext.h>
 #include <GL/glu.h>
 
 #include "g_actor.h"

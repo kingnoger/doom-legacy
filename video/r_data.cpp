@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.33  2004/10/31 22:22:13  smite-meister
+// Hasta la vista, pic_t!
+//
 // Revision 1.32  2004/10/27 17:37:11  smite-meister
 // netcode update
 //
@@ -370,8 +373,6 @@ LumpTexture::LumpTexture(const char *n, int l, int w, int h)
   lump = l;
   width = w;
   height = h;
-  type = Raw;
-  mode = PALETTE;
 }
 
 
@@ -389,10 +390,7 @@ byte *LumpTexture::Generate()
       // short pix16 = ((color8to16[*data++] & 0x7bde) + ((i<<9|j<<4) & 0x7bde))>>1;
     }
 
-  if (type == Pic)
-    return pixels + sizeof(pic_t);
-  else
-    return pixels;
+  return pixels;
 }
 
 
@@ -437,7 +435,7 @@ byte *PatchTexture::Generate()
         p->columnofs[i] = LONG(p->columnofs[i]);
 
       // do a palette conversion if needed
-      byte *colormap = tc.GetPalConv(lump >> 16);
+      byte *colormap = tc.GetPaletteConv(lump >> 16);
       if (colormap)
         R_ColormapPatch(p, colormap);
     }
@@ -902,34 +900,10 @@ cacheitem_t *texturecache_t::Load(const char *name)
     }
   else if (data[2] == 0 && data[6] == 0 && data[7] == 0)
     {
-      CONS_Printf(" !!! pic_t '%s' found!\n", name); // root 'em out!
+      I_Error(" !!! pic_t '%s' found!\n", name); // root 'em out!
       // likely a pic_t
       // TODO pic_t has an inadequate magic number.
       // pic_t's should be replaced with a better format
-      LumpTexture *tt = new LumpTexture(name, lump, 0, 0);
-
-      pic_t *p = (pic_t *)data;
-
-      tt->width = SHORT(p->width);
-      tt->height = SHORT(p->height);
-      tt->mode = p->mode;
-      tt->type = LumpTexture::Pic;
-      t = tt;
-
-      /*
-
-bool WritePCXfile( const char*         filename,
-                    byte*         data,
-                    int           width,
-                    int           height,
-		   byte*         palette );
-
-      string ugh = name;
-      ugh += ".pcx";
-      
-      WritePCXfile(ugh.c_str(), t->Generate(), t->width, t->height,
-		   (byte *)fc.CacheLumpName("PLAYPAL",PU_CACHE));
-      */
     }
   else
     {

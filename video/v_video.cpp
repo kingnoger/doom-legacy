@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2004/10/31 22:22:13  smite-meister
+// Hasta la vista, pic_t!
+//
 // Revision 1.14  2004/10/27 17:37:11  smite-meister
 // netcode update
 //
@@ -380,13 +383,6 @@ void PatchTexture::Draw(int x, int y, int scrn = 0)
 
 //======================================================================
 
-//
-// V_DrawRawScreen
-// V_DrawScalePic: CURRENTLY USED FOR StatusBarOverlay, scale pic but not starting coords
-// V_BlitScalePic
-// Always scaled in software...
-//
-
 void LumpTexture::Draw(int x, int y, int scrn = 0)
 {
   int flags = scrn & V_FLAGMASK;
@@ -399,12 +395,6 @@ void LumpTexture::Draw(int x, int y, int scrn = 0)
       return;
     }
 #endif
-
-  if (mode != PALETTE)
-    {
-      CONS_Printf("pic mode %d not supported in Software\n", mode);
-      return;
-    }
 
   byte *dest = vid.screens[scrn] + max(0, y*vid.width) + max(0, x);
 
@@ -473,10 +463,7 @@ void LumpTexture::DrawFill(int x, int y, int w, int h)
 
 //======================================================================
 
-//
-// V_DrawBlock
 // Draw a linear block of pixels into the view buffer.
-//
 void V_DrawBlock(int x, int y, int scrn, int width, int height, byte* src)
 {
 #ifdef RANGECHECK
