@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.29  2004/12/05 14:46:33  smite-meister
+// keybar
+//
 // Revision 1.28  2004/12/02 17:22:35  smite-meister
 // HUD fixed
 //
@@ -233,13 +236,13 @@ static int  st_readywp;
 static int  st_atype;
 static int  st_readywp_ammo;
 
-static int st_ammo[NUMAMMO];
-static int st_maxammo[NUMAMMO];
+static int  st_ammo[NUMAMMO];
+static int  st_maxammo[NUMAMMO];
 
 static int  st_faceindex = 0; // current marine face
 
-// holds key-type for each key box on bar
-static int  st_keyboxes[6];
+// owned keys
+static bool st_keyboxes[NUMKEYS];
 
 // number of frags so far in deathmatch
 static int  st_fragscount;
@@ -296,8 +299,7 @@ static Texture *PatchArmsBack; // arms background
 static Texture *PatchFaces[ST_NUMFACES]; // marine face patches
 static Texture *PatchFaceBack; // face background
 
-#define NUMCARDS 6
-static Texture *PatchKeys[NUMCARDS]; // 3 key-cards, 3 skulls
+static Texture *PatchKeys[NUMKEYS]; // 3 key-cards, 3 skulls
 static Texture *PatchSTATBAR;
 static Texture *PatchKEYBAR;
 
@@ -508,9 +510,9 @@ void ST_LoadHexenData()
   for (i=0; i < NUMAMMO; i++)
     PatchAmmoPic[i] = tc.GetPtr(DHAmmoPics[i]);
 
-  // keys TODO rest
+  // keys
   startLump = fc.GetNumForName("KEYSLOT1");
-  for (i=0; i<NUMCARDS; i++)
+  for (i=0; i<11; i++)
     PatchKeys[i] = tc.GetPtrNum(startLump+i);
 
   // numbers
@@ -605,9 +607,9 @@ void ST_LoadHereticData()
   sboarmor  = tc.GetPtr("SBOARMOR"); //"SHLDA0"
 
   // keys
-  PatchKeys[0] = PatchKeys[3] = tc.GetPtr("BKEYICON");
-  PatchKeys[1] = PatchKeys[4] = tc.GetPtr("YKEYICON");
-  PatchKeys[2] = PatchKeys[5] = tc.GetPtr("GKEYICON");
+  PatchKeys[11] = PatchKeys[14] = tc.GetPtr("BKEYICON");
+  PatchKeys[12] = PatchKeys[15] = tc.GetPtr("YKEYICON");
+  PatchKeys[13] = PatchKeys[16] = tc.GetPtr("GKEYICON");
 
   // health chain slider
   Patch_ChainSlider[0] = tc.GetPtr("CHAINBAC");
@@ -725,10 +727,10 @@ void ST_LoadDoomData()
   tallpercent = tc.GetPtr("STTPRCNT");
 
   // key cards
-  for (i=0;i<NUMCARDS;i++)
+  for (i=0; i<6; i++)
     {
       sprintf(namebuf, "STKEYS%d", i);
-      PatchKeys[i] = tc.GetPtr(namebuf);
+      PatchKeys[i+11] = tc.GetPtr(namebuf);
     }
 
   // arms background box
@@ -766,17 +768,11 @@ void ST_LoadDoomData()
 // made separate so that skins code can reload custom face graphics
 void ST_unloadFaceGraphics()
 {
-  int    i;
+  for (int i=0;i<ST_NUMFACES;i++)
+    PatchFaces[i]->Release();
 
-  //faB: GlidePatch_t are always purgeable
-  if (rendermode == render_soft)
-    {
-      for (i=0;i<ST_NUMFACES;i++)
-        Z_ChangeTag(PatchFaces[i], PU_CACHE);
-
-      // face background
-      Z_ChangeTag(PatchFaceBack, PU_CACHE);
-    }
+  // face background
+  PatchFaceBack->Release();
 }
 
 
@@ -785,31 +781,28 @@ void ST_unloadData()
 {
   int i;
 
-  //faB: GlidePatch_t are always purgeable
-  if (rendermode==render_soft)
+  // unload the numbers, tall and short
+  for (i=0;i<10;i++)
     {
-      // unload the numbers, tall and short
-      for (i=0;i<10;i++)
-        {
-          Z_ChangeTag(PatchBNum[i], PU_CACHE);
-          Z_ChangeTag(PatchSNum[i], PU_CACHE);
-        }
-      // unload tall percent
-      Z_ChangeTag(tallpercent, PU_CACHE);
-
-      // unload arms background
-      Z_ChangeTag(PatchArmsBack, PU_CACHE);
-
-      // unload gray #'s
-      for (i=0;i<6;i++)
-        Z_ChangeTag(PatchArms[i][0], PU_CACHE);
-
-      // unload the key cards
-      for (i=0;i<NUMCARDS;i++)
-        Z_ChangeTag(PatchKeys[i], PU_CACHE);
-
-      Z_ChangeTag(PatchSTATBAR, PU_CACHE);
+      PatchBNum[i]->Release();
+      PatchSNum[i]->Release();
     }
+  // unload tall percent
+  tallpercent->Release();
+
+  // unload arms background
+  PatchArmsBack->Release();
+
+  // unload gray #'s
+  for (i=0;i<6;i++)
+    PatchArms[i][0]->Release();
+
+  // unload the key cards
+  for (i=0;i<NUMKEYS;i++)
+    if (PatchKeys[i])
+      PatchKeys[i]->Release();
+
+  PatchSTATBAR->Release();
 
   ST_unloadFaceGraphics();
 }
@@ -1104,7 +1097,7 @@ void HUD::UpdateWidgets()
       else
         invopen = false;
 
-      mainbar_on = statusbar_on && !invopen;
+      mainbar_on = statusbar_on && !invopen && !automap.active;
 
       // inventory
       if (itemuse > 0)
@@ -1191,8 +1184,8 @@ void HUD::UpdateWidgets()
     st_readywp_ammo = st_pawn->ammo[st_atype];
 
   // update keycard multiple widgets
-  for (i=0;i<6;i++)
-    st_keyboxes[i] = (st_pawn->keycards & (1 << (i + 11))) ? i : -1;
+  for (i=0; i<NUMKEYS; i++)
+    st_keyboxes[i] = st_pawn->keycards & (1 << i);
 }
 
 // sets the new palette based upon current values of damagecount
@@ -1385,7 +1378,23 @@ void HUD::CreateHexenWidgets()
   statusbar.push_back(h);
 
   // TODO Weapon Pieces
-  // TODO entire Keybar (in map screen, keys and armor pieces)
+  int i;
+
+  // Keybar (in map screen, keys and armor pieces)
+  for (i=0; i<5; i++)
+    {
+      h = new HudBinIcon(st_x+46+i*20, st_y+3, &st_keyboxes[i], NULL, PatchKeys[i]);
+      keybar.push_back(h);
+    }
+
+  for (i=1; i<NUMARMOR; i++)
+    {
+      /*
+      // TODO fading icons: 0:nothing, <= ArmInc[cl][i]>>2:fuzz, <= ArmInc[cl][i]>>1:altfuzz, otherwise normal
+      h = new HudFadeIcon(st_x+119+i*31, st_y+3, &st_armorboxes[i], "ARMSLOT1"+i-1);
+      keybar.push_back(h);
+      */
+    }
 }
 
 
@@ -1435,7 +1444,7 @@ void HUD::CreateHereticWidgets()
   const int ST_KEYY[3] = {22, 6, 14};
   for (i=0; i<6; i++)
     {
-      h = new HudMultIcon(st_x + 153, st_y + ST_KEYY[i%3], &st_keyboxes[i], PatchKeys);
+      h = new HudBinIcon(st_x + 153, st_y + ST_KEYY[i%3], &st_keyboxes[i+11], NULL, PatchKeys[i+11]);
       mainbar.push_back(h);
     }
 
@@ -1527,7 +1536,7 @@ void HUD::CreateDoomWidgets()
   const int ST_KEYY[3] = {3, 13, 23};
   for (i=0; i<6; i++)
     {
-      h = new HudMultIcon(st_x+239+(i/3)*10, st_y + ST_KEYY[i%3], &st_keyboxes[i], PatchKeys);
+      h = new HudBinIcon(st_x+239+(i/3)*10, st_y + ST_KEYY[i%3], &st_keyboxes[i+11], NULL, PatchKeys[i+11]);
       statusbar.push_back(h);
     }
 }
@@ -1544,6 +1553,10 @@ void HUD::ST_CreateWidgets()
   for (int i = mainbar.size()-1; i>=0; i--)
     delete mainbar[i];
   mainbar.clear();
+
+  for (int i = keybar.size()-1; i>=0; i--)
+    delete keybar[i];
+  keybar.clear();
 
   switch (game.mode)
     {
@@ -1595,6 +1608,9 @@ void HUD::ST_Drawer(bool refresh)
       if (mainbar_on)
 	for (i = mainbar.size()-1; i>=0; i--)
 	  mainbar[i]->Update(st_refresh);
+      else if (automap.active)
+	for (i = keybar.size()-1; i>=0; i--)
+	  keybar[i]->Update(st_refresh);
 
       st_refresh = false;
     }
@@ -1711,9 +1727,10 @@ void HUD::CreateOverlayWidgets()
 	  break;
 
         case 'k': // draw keys
-          for (int i=0; i<6; i++)
+          for (int i=0; i<NUMKEYS; i++)
             {
-              h = new HudMultIcon(308-(i/3)*10, 190-(i%3)*10, &st_keyboxes[i], PatchKeys);
+              //h = new HudMultIcon(308-(i/3)*10, 190-(i%3)*10, &st_keyboxes[i], PatchKeys);
+	      h = new HudBinIcon(308-(i/3)*10, 190-(i%3)*10, &st_keyboxes[i], NULL, PatchKeys[i]);
               overlay.push_back(h);
             }
           break;

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/12/05 14:46:33  smite-meister
+// keybar
+//
 // Revision 1.4  2004/12/02 17:22:35  smite-meister
 // HUD fixed
 //
@@ -77,7 +80,8 @@ protected:
   bool drawscore; ///< should we draw frags instead of statusbar overlay?
 
   vector<class HudWidget *> statusbar; ///< status bar
-  vector<HudWidget *> mainbar; ///< the part of the status bar that is hidden by open inventory
+  vector<HudWidget *> mainbar; ///< part of the status bar that is hidden by open inventory
+  vector<HudWidget *> keybar;  ///< part of the status bar that is shown under automap
   vector<HudWidget *> overlay; ///< HUD overlay
 
   class PlayerInfo *st_player; ///< whose status is shown?

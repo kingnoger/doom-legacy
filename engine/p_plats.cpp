@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2004/12/05 14:46:32  smite-meister
+// keybar
+//
 // Revision 1.14  2004/11/09 20:38:50  smite-meister
 // added packing to I/O structs
 //
@@ -189,8 +192,9 @@ void plat_t::Think()
 
       if (res == res_crushed && !crush)
         {
-	  count = wait;
+	  // blocked, try again
 	  status = down;
+	  type &= ~Returning;
 	  //mp->SN_StopSequence(&sector->soundorg);
 	  //mp->SN_StartSequence(&sector->soundorg, SEQ_PLAT + sector->seqType);
         }

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2004/12/05 14:46:32  smite-meister
+// keybar
+//
 // Revision 1.22  2004/11/19 16:51:05  smite-meister
 // cleanup
 //
@@ -1444,8 +1447,8 @@ void AutoMap::Drawer()
   // mapname
   {
     const char *mapname = mp->info->nicename.c_str();
-    int y = vid.height - hud.stbarheight - 20;
-    hud_font->DrawString(20, y - hud_font->StringHeight(mapname), mapname, V_SSIZE);
+    int y = vid.height - hud.stbarheight - 30;
+    hud_font->DrawString(22*vid.dupx, y - hud_font->StringHeight(mapname), mapname, V_SSIZE);
   }
 
   //CONS_Printf("AM::Drawer n\n");
