@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2004/07/23 22:18:42  hurdler
+// respect indent style and temporary (static, unoptimized and not correct) support for wall/floor/ceiling so I can actually work on texture support
+//
 // Revision 1.1  2004/07/21 16:05:27  hurdler
 // early implementation of the new HWBsp class and of the Subsector class
 //
@@ -28,6 +31,7 @@
 //-----------------------------------------------------------------------------
 
 #include "hardware/hwr_bsp.h"
+#include "hardware/hwr_render.h"
 #include "console.h"
 #include "command.h"
 #include "cvars.h"
@@ -38,8 +42,6 @@
 #include "r_bsp.h"
 #include "i_video.h"
 #include <math.h>
-
-static const float crapmul = (1.0f / 65536.0f);
 
 HWBsp::HWBsp(int size, int bspnum) :
   num_planepolys(size)
@@ -62,17 +64,17 @@ HWBsp::HWBsp(int size, int bspnum) :
 
   Poly *rootp = AllocPoly(4);
   PolyVertex *rootpv = rootp->pts;
-  rootpv->x = (float)rootbbox[BOXLEFT  ] * crapmul;
-  rootpv->y = (float)rootbbox[BOXBOTTOM] * crapmul;
+  rootpv->x = (float)rootbbox[BOXLEFT  ] * fixedtofloat;
+  rootpv->y = (float)rootbbox[BOXBOTTOM] * fixedtofloat;
   rootpv++;
-  rootpv->x = (float)rootbbox[BOXLEFT  ] * crapmul;
-  rootpv->y = (float)rootbbox[BOXTOP   ] * crapmul;
+  rootpv->x = (float)rootbbox[BOXLEFT  ] * fixedtofloat;
+  rootpv->y = (float)rootbbox[BOXTOP   ] * fixedtofloat;
   rootpv++;
-  rootpv->x = (float)rootbbox[BOXRIGHT ] * crapmul;
-  rootpv->y = (float)rootbbox[BOXTOP   ] * crapmul;
+  rootpv->x = (float)rootbbox[BOXRIGHT ] * fixedtofloat;
+  rootpv->y = (float)rootbbox[BOXTOP   ] * fixedtofloat;
   rootpv++;
-  rootpv->x = (float)rootbbox[BOXRIGHT ] * crapmul;
-  rootpv->y = (float)rootbbox[BOXBOTTOM] * crapmul;
+  rootpv->x = (float)rootbbox[BOXRIGHT ] * fixedtofloat;
+  rootpv->y = (float)rootbbox[BOXBOTTOM] * fixedtofloat;
   rootpv++;
   Traverse(bspnum - 1, rootp, 0, rootbbox); // create sub-sectors
   if (cv_grsolvetjoin.value)
@@ -214,120 +216,6 @@ void HWBsp::Render(int bspnum)
     {
       Render(node->children[side^1]);
     }
-}
-
-// TO Finish
-Subsector::Subsector(int num, Poly *poly)
-{
-  if (num < R.numsubsectors)
-    {
-      CONS_Printf("found a sub sector: %d\n", num);
-      sub = &R.subsectors[num]; // subsector
-      /*
-      count = sub->numlines; // how many linedefs
-      line = &segs[sub->firstline]; // first line seg
-      */
-    }
-  else
-    {
-      CONS_Printf("I think this is strange, there are no segs but only planes: %d\n", num);
-      sub = &R.subsectors[0];
-      /*
-      count = 0;
-      line = NULL;
-      */
-    }
-
-  sector_t tempsec;
-  int floorlightlevel, ceilinglightlevel;
-  sector_t *frontsector = R.R_FakeFlat(sub->sector, &tempsec, &floorlightlevel, &ceilinglightlevel, false);
-
-  int locFloorHeight, locCeilingHeight;
-  if (frontsector->pseudoSector)
-    {
-      locFloorHeight   = frontsector->virtualFloorheight;
-      locCeilingHeight = frontsector->virtualCeilingheight;
-    }
-  else if (frontsector->virtualFloor)
-    {
-      locFloorHeight   = frontsector->virtualFloorheight;
-      locCeilingHeight = frontsector->virtualCeiling ? frontsector->virtualCeilingheight : frontsector->ceilingheight;
-    }
-  else if (frontsector->virtualCeiling)
-    {
-      locFloorHeight   = frontsector->floorheight;
-      locCeilingHeight = frontsector->virtualCeilingheight;
-    }
-  else
-    {
-      locFloorHeight   = frontsector->floorheight;
-      locCeilingHeight = frontsector->ceilingheight;
-    }
-
-  if (frontsector->ffloors)
-    {
-      if (frontsector->moved)
-        {
-          frontsector->numlights = sub->sector->numlights = 0;
-          R.R_Prep3DFloors(frontsector);
-          sub->sector->lightlist = frontsector->lightlist;
-          sub->sector->numlights = frontsector->numlights;
-          sub->sector->moved = frontsector->moved = false;
-        }
-      // Hurdler: humm, this is done a bit differently in the software renderer, why ?
-      floorlightlevel = *frontsector->lightlist[R_GetPlaneLight(frontsector, locFloorHeight, false)].lightlevel;
-      ceilinglightlevel = *frontsector->lightlist[R_GetPlaneLight(frontsector, locCeilingHeight, false)].lightlevel;
-    }
-
-  // We have now all the info we need to create the different arrays (colors, texcoords and vertices)
-
-  geometry = new Geometry();
-  state = new State();
-  if (poly->numpts > 2)
-    {
-      GLuint *primitive_length = new GLuint(poly->numpts);
-      GLuint *primitive_type = new GLuint(GL_TRIANGLE_FAN);
-      GLfloat *vertex_array = new GLfloat[3 * poly->numpts];
-      GLfloat *texcoord_array = new GLfloat[2 * poly->numpts];
-      GLushort *indices = new GLushort[poly->numpts];
-
-      float *pts = &poly->pts[0].x;
-      for (int i = 0; i < poly->numpts; i++)
-        {
-          vertex_array[i * 3 + 0] = *pts++;
-          vertex_array[i * 3 + 1] = locFloorHeight * crapmul;
-          vertex_array[i * 3 + 2] = *pts++;
-          texcoord_array[i * 2 + 0] = 0.0f;
-          texcoord_array[i * 2 + 1] = 0.0f;
-          indices[i] = i;
-          CONS_Printf("Geometry: %p %p | %d (%5.2f %5.2f %5.2f)\n", state, geometry, poly->numpts, vertex_array[i * 3 + 0], vertex_array[i * 3 + 1], vertex_array[i * 3 + 2]);
-        }
-      geometry->SetPrimitiveLength(primitive_length);
-      geometry->SetPrimitiveType(primitive_type);
-      geometry->SetNumPrimitives(1);
-      geometry->SetAttributes(Geometry::VERTEX_ARRAY, vertex_array);
-      geometry->SetAttributes(Geometry::TEXCOORD_ARRAY0, texcoord_array);
-      geometry->SetIndices(indices);
-    }
-  else
-    {
-      CONS_Printf("Error: this polyong has only %d points\n", poly->numpts);
-    }
-}
-
-Subsector::~Subsector()
-{
-}
-
-// TO Finish
-void Subsector::Render()
-{
-  float r = (rand() % 256) / 255.0f;
-  float g = (rand() % 256) / 255.0f;
-  float b = (rand() % 256) / 255.0f;
-  state->SetColor(r, g, b, 1.0f);
-  state->Apply();
-  geometry->Draw();
 }
 
 
@@ -617,10 +505,10 @@ Poly* HWBsp::CutOutSubsecPoly(seg_t* lseg, int count, Poly* poly)
     {
       //x, y, dx, dy (like a divline)
       line_t *line = lseg->linedef;
-      p1.x = (lseg->side?line->v2->x:line->v1->x)*crapmul;
-      p1.y = (lseg->side?line->v2->y:line->v1->y)*crapmul;
-      p2.x = (lseg->side?line->v1->x:line->v2->x)*crapmul;
-      p2.y = (lseg->side?line->v1->y:line->v2->y)*crapmul;
+      p1.x = (lseg->side?line->v2->x:line->v1->x)*fixedtofloat;
+      p1.y = (lseg->side?line->v2->y:line->v1->y)*fixedtofloat;
+      p2.x = (lseg->side?line->v1->x:line->v2->x)*fixedtofloat;
+      p2.y = (lseg->side?line->v1->y:line->v2->y)*fixedtofloat;
 
       cutseg.x = p1.x;
       cutseg.y = p1.y;
@@ -726,10 +614,10 @@ void HWBsp::SearchDivLine(node_t* bsp, DivLine *divline)
   // Hurdler: the code here has been removed (see the CVS and also CutOutSubsecPoly)
   // MAR - If you don't use the same partition line that the BSP uses, the front/back polys won't match the subsectors in the BSP!
 #endif
-  divline->x=bsp->x*crapmul;
-  divline->y=bsp->y*crapmul;
-  divline->dx=bsp->dx*crapmul;
-  divline->dy=bsp->dy*crapmul;
+  divline->x=bsp->x*fixedtofloat;
+  divline->y=bsp->y*fixedtofloat;
+  divline->dx=bsp->dx*fixedtofloat;
+  divline->dy=bsp->dy*fixedtofloat;
 }
 
 #define MAXDIST   (1.5f)
@@ -839,18 +727,18 @@ void HWBsp::SearchSegInBSP(int bspnum,PolyVertex *p,Poly *poly)
       return;
     }
 
-  if ((R.nodes[bspnum].bbox[0][BOXBOTTOM]*crapmul-MAXDIST<=p->y) &&
-      (R.nodes[bspnum].bbox[0][BOXTOP   ]*crapmul+MAXDIST>=p->y) &&
-      (R.nodes[bspnum].bbox[0][BOXLEFT  ]*crapmul-MAXDIST<=p->x) &&
-      (R.nodes[bspnum].bbox[0][BOXRIGHT ]*crapmul+MAXDIST>=p->x))
+  if ((R.nodes[bspnum].bbox[0][BOXBOTTOM]*fixedtofloat-MAXDIST<=p->y) &&
+      (R.nodes[bspnum].bbox[0][BOXTOP   ]*fixedtofloat+MAXDIST>=p->y) &&
+      (R.nodes[bspnum].bbox[0][BOXLEFT  ]*fixedtofloat-MAXDIST<=p->x) &&
+      (R.nodes[bspnum].bbox[0][BOXRIGHT ]*fixedtofloat+MAXDIST>=p->x))
     {
       SearchSegInBSP(R.nodes[bspnum].children[0],p,poly);
     }
 
-  if ((R.nodes[bspnum].bbox[1][BOXBOTTOM]*crapmul-MAXDIST<=p->y) &&
-      (R.nodes[bspnum].bbox[1][BOXTOP   ]*crapmul+MAXDIST>=p->y) &&
-      (R.nodes[bspnum].bbox[1][BOXLEFT  ]*crapmul-MAXDIST<=p->x) &&
-      (R.nodes[bspnum].bbox[1][BOXRIGHT ]*crapmul+MAXDIST>=p->x))
+  if ((R.nodes[bspnum].bbox[1][BOXBOTTOM]*fixedtofloat-MAXDIST<=p->y) &&
+      (R.nodes[bspnum].bbox[1][BOXTOP   ]*fixedtofloat+MAXDIST>=p->y) &&
+      (R.nodes[bspnum].bbox[1][BOXLEFT  ]*fixedtofloat-MAXDIST<=p->x) &&
+      (R.nodes[bspnum].bbox[1][BOXRIGHT ]*fixedtofloat+MAXDIST>=p->x))
     {
       SearchSegInBSP(R.nodes[bspnum].children[1],p,poly);
     }
@@ -905,8 +793,8 @@ void HWBsp::AdjustSegs()
           nearv1=nearv2=MYMAX;
           for(int j=0; j<p->numpts; j++)
             {
-              distv1 = p->pts[j].x - ((float)lseg->v1->x)*crapmul;
-              tmp    = p->pts[j].y - ((float)lseg->v1->y)*crapmul;
+              distv1 = p->pts[j].x - ((float)lseg->v1->x)*fixedtofloat;
+              tmp    = p->pts[j].y - ((float)lseg->v1->y)*fixedtofloat;
               distv1 = distv1*distv1+tmp*tmp;
               if (distv1 <= nearv1)
                 {
@@ -914,8 +802,8 @@ void HWBsp::AdjustSegs()
                   nearv1 = distv1;
                 }
               // the same with v2
-              distv2 = p->pts[j].x - ((float)lseg->v2->x)*crapmul;
-              tmp    = p->pts[j].y - ((float)lseg->v2->y)*crapmul;
+              distv2 = p->pts[j].x - ((float)lseg->v2->x)*fixedtofloat;
+              tmp    = p->pts[j].y - ((float)lseg->v2->y)*fixedtofloat;
               distv2 = distv2*distv2+tmp*tmp;
               if (distv2 <= nearv2)
                 {
@@ -936,8 +824,8 @@ void HWBsp::AdjustSegs()
 
               // convert fixed vertex to float vertex
               PolyVertex *p=AllocVertex();
-              p->x=lseg->v1->x*crapmul;
-              p->y=lseg->v1->y*crapmul;
+              p->x=lseg->v1->x*fixedtofloat;
+              p->y=lseg->v1->y*fixedtofloat;
               lseg->v1 = (vertex_t *)p; //Hurdler: geez, what a hack!
             }
           if (nearv2<=NEARDIST*NEARDIST)
@@ -947,18 +835,256 @@ void HWBsp::AdjustSegs()
           else
             {
               PolyVertex *p=AllocVertex();
-              p->x=lseg->v2->x*crapmul;
-              p->y=lseg->v2->y*crapmul;
+              p->x=lseg->v2->x*fixedtofloat;
+              p->y=lseg->v2->y*fixedtofloat;
               lseg->v2 = (vertex_t *)p; //Hurdler: geez, what a hack!
             }
 
           // recompute length
-          float x = ((PolyVertex *)lseg->v2)->x-((PolyVertex *)lseg->v1)->x+0.5*crapmul;
-          float y = ((PolyVertex *)lseg->v2)->y-((PolyVertex *)lseg->v1)->y+0.5*crapmul;
+          float x = ((PolyVertex *)lseg->v2)->x-((PolyVertex *)lseg->v1)->x+0.5*fixedtofloat;
+          float y = ((PolyVertex *)lseg->v2)->y-((PolyVertex *)lseg->v1)->y+0.5*fixedtofloat;
           lseg->length = sqrt(x*x+y*y)*FRACUNIT;
           // BP: debug see this kind of segs
           //if (nearv2>NEARDIST*NEARDIST || nearv1>NEARDIST*NEARDIST)
           //    lseg->length=1;
         }
+    }
+}
+
+
+// ============================================================================
+
+
+// TO Finish
+Subsector::Subsector(int num, Poly *poly)
+{
+  int count;
+  seg_t *line;
+
+  if (num < R.numsubsectors)
+    {
+      CONS_Printf("found a sub sector: %d\n", num);
+      sub = &R.subsectors[num]; // subsector
+      count = sub->numlines; // how many linedefs
+      line = &R.segs[sub->firstline]; // first line seg
+    }
+  else
+    {
+      CONS_Printf("I think this is strange, there are no segs but only planes: %d\n", num);
+      sub = &R.subsectors[0];
+      count = 0;
+      line = 0;
+    }
+
+  sector_t tempsec;
+  int floorlightlevel, ceilinglightlevel;
+  frontsector = R.R_FakeFlat(sub->sector, &tempsec, &floorlightlevel, &ceilinglightlevel, false);
+
+  int locFloorHeight, locCeilingHeight;
+  if (frontsector->pseudoSector)
+    {
+      locFloorHeight   = frontsector->virtualFloorheight;
+      locCeilingHeight = frontsector->virtualCeilingheight;
+    }
+  else if (frontsector->virtualFloor)
+    {
+      locFloorHeight   = frontsector->virtualFloorheight;
+      locCeilingHeight = frontsector->virtualCeiling ? frontsector->virtualCeilingheight : frontsector->ceilingheight;
+    }
+  else if (frontsector->virtualCeiling)
+    {
+      locFloorHeight   = frontsector->floorheight;
+      locCeilingHeight = frontsector->virtualCeilingheight;
+    }
+  else
+    {
+      locFloorHeight   = frontsector->floorheight;
+      locCeilingHeight = frontsector->ceilingheight;
+    }
+
+  if (frontsector->ffloors)
+    {
+      if (frontsector->moved)
+        {
+          frontsector->numlights = sub->sector->numlights = 0;
+          R.R_Prep3DFloors(frontsector);
+          sub->sector->lightlist = frontsector->lightlist;
+          sub->sector->numlights = frontsector->numlights;
+          sub->sector->moved = frontsector->moved = false;
+        }
+      // Hurdler: humm, this is done a bit differently in the software renderer, why ?
+      floorlightlevel = *frontsector->lightlist[R_GetPlaneLight(frontsector, locFloorHeight, false)].lightlevel;
+      ceilinglightlevel = *frontsector->lightlist[R_GetPlaneLight(frontsector, locCeilingHeight, false)].lightlevel;
+    }
+
+  // We have now all the info we need to create the different arrays (colors, texcoords and vertices)
+
+  if (poly->numpts > 2)
+    {
+      // -= FLOOR =-
+      Geometry *geometry = new Geometry();
+      State *state = new State();
+      state->SetColor((rand() % 256) / 255.0f, (rand() % 256) / 255.0f, (rand() % 256) / 255.0f, 1.0f);
+
+      GLuint *primitive_length = new GLuint(poly->numpts);
+      GLuint *primitive_type = new GLuint(GL_TRIANGLE_FAN);
+      GLfloat *vertex_array = new GLfloat[3 * poly->numpts];
+      GLfloat *texcoord_array = new GLfloat[2 * poly->numpts];
+      GLushort *indices = new GLushort[poly->numpts];
+
+      float *pts = &poly->pts[0].x;
+      for (int i = 0; i < poly->numpts; i++)
+        {
+          vertex_array[i * 3 + 0] = *pts++;
+          vertex_array[i * 3 + 1] = locFloorHeight * fixedtofloat;
+          vertex_array[i * 3 + 2] = *pts++;
+          texcoord_array[i * 2 + 0] = 0.0f;
+          texcoord_array[i * 2 + 1] = 0.0f;
+          indices[i] = i;
+        }
+      geometry->SetPrimitiveLength(primitive_length);
+      geometry->SetPrimitiveType(primitive_type);
+      geometry->SetNumPrimitives(1);
+      geometry->SetAttributes(Geometry::VERTEX_ARRAY, vertex_array);
+      geometry->SetAttributes(Geometry::TEXCOORD_ARRAY0, texcoord_array);
+      geometry->SetIndices(indices);
+      geometries.push_back(geometry);
+      states.push_back(state);
+
+      // -= CEILING =-
+      geometry = new Geometry();
+      state = new State();
+      state->SetColor((rand() % 256) / 255.0f, (rand() % 256) / 255.0f, (rand() % 256) / 255.0f, 1.0f);
+
+      primitive_length = new GLuint(poly->numpts);
+      primitive_type = new GLuint(GL_TRIANGLE_FAN);
+      vertex_array = new GLfloat[3 * poly->numpts];
+      texcoord_array = new GLfloat[2 * poly->numpts];
+      indices = new GLushort[poly->numpts];
+
+      pts = &poly->pts[0].x;
+      for (int i = 0; i < poly->numpts; i++)
+        {
+          vertex_array[i * 3 + 0] = *pts++;
+          vertex_array[i * 3 + 1] = locCeilingHeight * fixedtofloat;
+          vertex_array[i * 3 + 2] = *pts++;
+          texcoord_array[i * 2 + 0] = 0.0f;
+          texcoord_array[i * 2 + 1] = 0.0f;
+          indices[i] = i;
+        }
+      geometry->SetPrimitiveLength(primitive_length);
+      geometry->SetPrimitiveType(primitive_type);
+      geometry->SetNumPrimitives(1);
+      geometry->SetAttributes(Geometry::VERTEX_ARRAY, vertex_array);
+      geometry->SetAttributes(Geometry::TEXCOORD_ARRAY0, texcoord_array);
+      geometry->SetIndices(indices);
+      geometries.push_back(geometry);
+      states.push_back(state);
+    }
+  else
+    {
+      CONS_Printf("Error: this polyong has only %d points\n", poly->numpts);
+    }
+
+  // -= WALLS =-
+  if (line)
+    {
+      while (count--)
+        {
+          if (line->backsector)
+            {
+              if ((locFloorHeight < line->backsector->floorheight) && (locCeilingHeight > line->backsector->floorheight))
+                {
+                  AddWall(line, locFloorHeight, line->backsector->floorheight);
+                }
+              if ((locCeilingHeight > line->backsector->ceilingheight) && (locFloorHeight < line->backsector->ceilingheight))
+                {
+                  AddWall(line, line->backsector->ceilingheight, locCeilingHeight);
+                }
+            }
+          else
+            {
+              AddWall(line, locFloorHeight, locCeilingHeight);
+            }
+          line++;
+        }
+    }
+}
+
+void Subsector::AddWall(seg_t *line, fixed_t floor, fixed_t ceiling)
+{
+  Geometry *geometry = new Geometry();
+  State *state = new State();
+  state->SetColor((rand() % 256) / 255.0f, (rand() % 256) / 255.0f, (rand() % 256) / 255.0f, 1.0f);
+
+  GLuint *primitive_length = new GLuint(4);
+  GLuint *primitive_type = new GLuint(GL_TRIANGLE_FAN);
+  GLfloat *vertex_array = new GLfloat[3 * 4];
+  GLfloat *texcoord_array = new GLfloat[2 * 4];
+  GLushort *indices = new GLushort[4];
+
+  // 3--2
+  // | /|
+  // |/ |
+  // 0--1
+
+  int i = 0;
+  vertex_array[i * 3 + 0] = line->v1->x * fixedtofloat;
+  vertex_array[i * 3 + 1] = floor * fixedtofloat;
+  vertex_array[i * 3 + 2] = line->v1->y * fixedtofloat;
+  texcoord_array[i * 2 + 0] = 0.0f;
+  texcoord_array[i * 2 + 1] = 0.0f;
+  indices[i] = i;
+
+  i++;
+  vertex_array[i * 3 + 0] = line->v2->x * fixedtofloat;
+  vertex_array[i * 3 + 1] = floor * fixedtofloat;
+  vertex_array[i * 3 + 2] = line->v2->y * fixedtofloat;
+  texcoord_array[i * 2 + 0] = 0.0f;
+  texcoord_array[i * 2 + 1] = 0.0f;
+  indices[i] = i;
+
+  i++;
+  vertex_array[i * 3 + 0] = line->v2->x * fixedtofloat;
+  vertex_array[i * 3 + 1] = ceiling * fixedtofloat;
+  vertex_array[i * 3 + 2] = line->v2->y * fixedtofloat;
+  texcoord_array[i * 2 + 0] = 0.0f;
+  texcoord_array[i * 2 + 1] = 0.0f;
+  indices[i] = i;
+
+  i++;
+  vertex_array[i * 3 + 0] = line->v1->x * fixedtofloat;
+  vertex_array[i * 3 + 1] = ceiling * fixedtofloat;
+  vertex_array[i * 3 + 2] = line->v1->y * fixedtofloat;
+  texcoord_array[i * 2 + 0] = 0.0f;
+  texcoord_array[i * 2 + 1] = 0.0f;
+  indices[i] = i;
+
+  geometry->SetPrimitiveLength(primitive_length);
+  geometry->SetPrimitiveType(primitive_type);
+  geometry->SetNumPrimitives(1);
+  geometry->SetAttributes(Geometry::VERTEX_ARRAY, vertex_array);
+  geometry->SetAttributes(Geometry::TEXCOORD_ARRAY0, texcoord_array);
+  geometry->SetIndices(indices);
+  geometries.push_back(geometry);
+  states.push_back(state);
+}
+
+Subsector::~Subsector()
+{
+  geometries.clear();
+  states.clear();
+}
+
+// TO Finish
+void Subsector::Render()
+{
+  unsigned int n = geometries.size();
+  for (unsigned i = 0; i < n; i++)
+    {
+      // TODO: push that on a stack, then render by avoiding render state and render back to front
+      //       for translucent polygons and front to back for opaque one.
+      states[i]->Apply();
+      geometries[i]->Draw();
     }
 }

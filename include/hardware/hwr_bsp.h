@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2004/07/23 22:18:43  hurdler
+// respect indent style and temporary (static, unoptimized and not correct) support for wall/floor/ceiling so I can actually work on texture support
+//
 // Revision 1.1  2004/07/21 16:05:28  hurdler
 // early implementation of the new HWBsp class and of the Subsector class
 //
@@ -68,8 +71,10 @@ class Subsector
 {
 private:
   subsector_t *sub;  // pointer to the software structure
-  Geometry *geometry;
-  State *state;
+  std::vector<Geometry *> geometries;
+  std::vector<State *> states;
+
+  void AddWall(seg_t *line, fixed_t floor, fixed_t ceiling);
 
 public:
   Subsector(int num, Poly *poly);
