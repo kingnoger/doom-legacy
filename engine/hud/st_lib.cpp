@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/16 22:12:13  smite-meister
+// Actor/DActor separation done!
+//
 // Revision 1.2  2002/12/03 10:20:08  smite-meister
 // HUD rationalized
 //
@@ -78,15 +81,8 @@
 
 extern int fgbuffer; // in fact a HUD property, but...
 
-//#define DEBUG
-
-
-// FIXME! if you want to have several HUDs at once (i can't see why),
-// add a HUD *h to HudWidget class. Then replace hud. with h-> in the methods below.
-
 
 //---------------------------------------------------------------------------
-
 // was ST_drawOverlayNum: Draw a number fully, scaled, over the view
 // was DrINumber: Draws a three digit number, left aligned, w = 9
 // was DrBNumber: Draws positive left-aligned 3-digit number at x+6-w/2  (w = 12)
@@ -118,7 +114,6 @@ void HudNumber::Draw()
 #endif
 
   // dont clear background in overlay
-  //faB:current hardware mode always refresh the statusbar FIXME! what? no clearing background?
   if (!hud.overlayon && rendermode == render_soft)
     V_CopyRect(dx, y, BG, w*width, h, dx, y, fgbuffer);
 
@@ -286,6 +281,7 @@ static void ShadeLine(int x, int y, int height, int shade)
     }
 }
 
+/*
 static void ShadeChain(int x, int y)
 {
   int i;
@@ -299,6 +295,7 @@ static void ShadeChain(int x, int y)
       ShadeLine((x+19)*hud.st_scalex+i, y*hud.st_scaley, 10*hud.st_scaley, 7-(i/4));
     }
 }
+*/
 
 void HudSlider::Draw()
 {
@@ -318,7 +315,7 @@ void HudSlider::Draw()
   V_DrawScaledPatch(x, y, fgbuffer, p[3]);
   V_DrawScaledPatch(x+276, y, fgbuffer, p[4]);
 
-  ShadeChain(x, y);
+  //ShadeChain(x, y);
 }
 
 

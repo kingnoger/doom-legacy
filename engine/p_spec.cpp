@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:09  hurdler
-// Initial revision
+// Revision 1.2  2002/12/16 22:11:57  smite-meister
+// Actor/DActor separation done!
+//
+// Revision 1.1.1.1  2002/11/16 14:18:09  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.18  2002/09/17 14:26:26  vberghol
 // switch bug fixed
@@ -216,8 +219,7 @@ void P_FindAnimatedFlat (int i);
 //
 struct anim_t
 {
-  //    bool     istexture; FIXME! bool doesn't work, this can also take the value -1 !
-  char        istexture;
+  char        istexture; // bool doesn't work, this can also take the value -1 !
   int         picnum;
   int         basepic;
   int         numpics;
@@ -1162,10 +1164,10 @@ void Map::CrossSpecialLine(int linenum, int side, Actor *thing)
 // was P_ActivateCrossedLine
 void Map::ActivateCrossedLine(line_t *line, int side, Actor *thing)
 {
-  int         ok;
-  int         forceuse; //SoM: 4/26/2000: ALLTRIGGER should allow monsters to use generalized types too!
+  int  ok;
 
-  forceuse = line->flags & ML_ALLTRIGGER && thing->type != MT_BLOOD;
+  //SoM: 4/26/2000: ALLTRIGGER should allow monsters to use generalized types too!
+  bool forceuse = (line->flags & ML_ALLTRIGGER) && !(thing->flags & MF_NOSPLASH);
 
   // is thing a PlayerPawn?
   bool p = (thing->Type() == Thinker::tt_ppawn);
@@ -1174,6 +1176,9 @@ void Map::ActivateCrossedLine(line_t *line, int side, Actor *thing)
   if (!p && game.mode != heretic)
     {
       // Things that should NOT trigger specials...
+      if (thing->flags & MF_NOTRIGGER)
+	return;
+      /*
       switch(thing->type)
         {
 	case MT_ROCKET:
@@ -1187,6 +1192,7 @@ void Map::ActivateCrossedLine(line_t *line, int side, Actor *thing)
 
 	default: break;
         }
+      */
     }
 
   //int res;
@@ -2959,7 +2965,7 @@ void Map::SpawnFriction()
 // was Add_Pusher
 // constructor
 
-pusher_t::pusher_t(pusher_e t, int x_m, int y_m, Actor *src, int aff)
+pusher_t::pusher_t(pusher_e t, int x_m, int y_m, DActor *src, int aff)
 {
   source = src;
   type = t;
@@ -3146,7 +3152,7 @@ void pusher_t::Think()
 
 // was P_GetPushThing
 // Get pusher object.
-Actor *Map::GetPushThing(int s)
+DActor *Map::GetPushThing(int s)
 {
   Actor* thing;
   sector_t* sec;
@@ -3155,13 +3161,17 @@ Actor *Map::GetPushThing(int s)
   thing = sec->thinglist;
   while (thing)
     {
-      switch (thing->type)
+      if (thing->Type() == Thinker::tt_dactor)
 	{
-	case MT_PUSH:
-	case MT_PULL:
-	  return thing;
-	default:
-	  break;
+	  DActor *dp = (DActor *)thing;
+	  switch (dp->type)
+	    {
+	    case MT_PUSH:
+	    case MT_PULL:
+	      return dp;
+	    default:
+	      break;
+	    }
 	}
       thing = thing->snext;
     }
@@ -3175,7 +3185,6 @@ void Map::SpawnPushers()
   int i;
   line_t *l = lines;
   register int s;
-  Actor* thing;
 
   for (i = 0 ; i < numlines ; i++,l++)
     switch (l->special)
@@ -3191,7 +3200,8 @@ void Map::SpawnPushers()
       case 226: // push/pull
 	for (s = -1; (s = FindSectorFromLineTag(l,s)) >= 0 ; )
 	  {
-	    thing = GetPushThing(s);
+	    // TODO don't spawn push mapthings at all?
+	    DActor* thing = GetPushThing(s);
 	    if (thing) // No MT_P* means no effect
 	      AddThinker(new pusher_t(p_push, l->dx, l->dy, thing, s));
 	  }

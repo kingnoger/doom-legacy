@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/16 22:10:53  smite-meister
+// Actor/DActor separation done!
+//
 // Revision 1.2  2002/12/03 10:11:39  smite-meister
 // Blindness and missile clipping bugs fixed
 //
@@ -550,7 +553,7 @@ consvar_t cv_screenslink    = {"screenlink","2", CV_SAVE,screenslink_cons_t};
 void D_Display()
 {
   extern  int             scaledviewwidth;
-  static  bool             menuactivestate = false;
+  //static  bool             menuactivestate = false;
   static  gamestate_t         oldgamestate = GS_WIPE;
   static  int                 borderdrawcount;
   tic_t                       nowtime;
@@ -578,7 +581,6 @@ void D_Display()
       R_ExecuteSetViewSize();
       oldgamestate = GS_WIPE;                      // force background redraw
       borderdrawcount = 3;
-      redrawsbar = true;
     }
 
   // save the current screen if about to wipe
@@ -601,11 +603,11 @@ void D_Display()
       if (gametic)
 	{
 	  HU_Erase();
-	  if (wipe || menuactivestate
+	  if (wipe //|| menuactivestate
 #ifdef HWRENDER
 	      || rendermode != render_soft
 #endif
-	      || vid.recalc)
+	 )     //|| vid.recalc)
 	    redrawsbar = true;
 	}
       // clean up border stuff
@@ -625,7 +627,8 @@ void D_Display()
 	    {
 	      // the menu may draw over parts out of the view window,
 	      // which are refreshed only when needed
-	      if (Menu::active || menuactivestate || !viewactivestate)
+	      if (Menu::active //|| menuactivestate
+		  || !viewactivestate)
 		borderdrawcount = 3;
 	  
 	      if (borderdrawcount)
@@ -661,7 +664,7 @@ void D_Display()
   if (game.state != oldgamestate && game.state != GS_LEVEL) 
     vid.SetPalette(0);
 
-  menuactivestate = Menu::active;
+  //menuactivestate = Menu::active;
   oldgamestate = game.wipestate = game.state;
 
   // draw pause pic
@@ -678,7 +681,7 @@ void D_Display()
     }
 
   //added:24-01-98:vid size change is now finished if it was on...
-  vid.recalc = false;
+  //vid.recalc = false;
 
   //FIXME: draw either console or menu, not the two. Menu wins.
   CON_Drawer();
@@ -756,7 +759,6 @@ void D_Display()
 
   } while (!done && I_GetTime()<(unsigned)y);
   
-  hud.st_firsttime = true;
 }
 
 
@@ -1464,7 +1466,7 @@ void D_DoomMain()
   // HUD font, crosshairs, say commands
   CONS_Printf (text[HU_INIT_NUM]);
   CONS_Printf (text[ST_INIT_NUM]);
-  hud.Init();
+  hud.Startup();
 
   // add basic console commands (echo, exec etc.)
   COM_Init ();
@@ -1548,7 +1550,7 @@ void D_DoomMain()
 
   // setup menu
   CONS_Printf (text[M_INIT_NUM]);
-  Menu::Init();
+  Menu::Startup();
 
   // init renderer
   CONS_Printf (text[R_INIT_NUM]);

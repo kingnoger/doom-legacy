@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/16 22:12:06  smite-meister
+// Actor/DActor separation done!
+//
 // Revision 1.2  2002/12/03 10:15:29  smite-meister
 // Older update
 //
@@ -304,10 +307,10 @@ void F_TextWrite()
 	  continue;
         }
 
-      w =  (hu_font[c]->width);
+      w =  (hud.font[c]->width);
       if (cx+w > vid.width)
 	break;
-      V_DrawScaledPatch(cx, cy, 0, hu_font[c]);
+      V_DrawScaledPatch(cx, cy, 0, hud.font[c]);
       cx+=w;
     }
 

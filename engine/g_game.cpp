@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:08  hurdler
-// Initial revision
+// Revision 1.2  2002/12/16 22:11:00  smite-meister
+// Actor/DActor separation done!
+//
+// Revision 1.1.1.1  2002/11/16 14:18:08  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.24  2002/09/25 15:17:36  vberghol
 // Intermission fixed?
@@ -567,11 +570,13 @@ void G_BuildTiccmd(ticcmd_t* cmd, bool primary, int realtics)
     if (gamekeydown[gc[i][0]] ||
 	gamekeydown[gc[i][1]])
       {
-	cmd->buttons |= BT_CHANGE | BT_EXTRAWEAPON; // extra by default
+	cmd->buttons |= BT_CHANGE; //| BT_EXTRAWEAPON; // extra by default
 	cmd->buttons |= (i-gc_weapon1)<<BT_WEAPONSHIFT;
 	// already have extraweapon in hand switch to the normal one
+	/*
 	if (p->readyweapon == extraweapons[i-gc_weapon1])
 	  cmd->buttons &= ~BT_EXTRAWEAPON;
+	*/
 	break;
       }
 
@@ -918,10 +923,9 @@ bool GameInfo::Responder(event_t* ev)
 	{
 	  CONS_Printf("------ n pressed\n");
 	  consoleplayer->pawn->health += 50; 
-	  return true;
 	}
 #endif
-      if(!multiplayer) //FIXME! The _server_ CAN cheat in multiplayer (maybe using console only?)
+      if (!multiplayer) //FIXME! The _server_ CAN cheat in multiplayer (maybe using console only?)
 	if (cht_Responder (ev))
 	  return true;
       if (hud.Responder(ev))

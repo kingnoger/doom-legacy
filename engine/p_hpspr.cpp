@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:17:58  hurdler
-// Initial revision
+// Revision 1.2  2002/12/16 22:11:38  smite-meister
+// Actor/DActor separation done!
+//
+// Revision 1.1.1.1  2002/11/16 14:17:58  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.12  2002/09/20 22:41:30  vberghol
 // Sound system rewritten! And it workscvs update
@@ -314,7 +317,7 @@ weaponinfo_t wpnlev2info[NUMWEAPONS] =
 //
 //---------------------------------------------------------------------------
 
-void Map::RepositionMace(Actor *mo)
+void Map::RepositionMace(DActor *mo)
 {
   int spot;
 
@@ -350,7 +353,7 @@ void Map::PlaceWeapons()
   nx = MaceSpots[spot]->x << FRACBITS;
   ny = MaceSpots[spot]->y << FRACBITS;
 
-  SpawnActor(nx, ny, ONFLOORZ, MT_WMACE);
+  SpawnDActor(nx, ny, ONFLOORZ, MT_WMACE);
 }
 
 //---------------------------------------------------------------------------
@@ -407,7 +410,7 @@ void A_BeakReady(PlayerPawn *p, pspdef_t *psp)
   if (p->player->cmd.buttons & BT_ATTACK)
     { // Chicken beak attack
       p->attackdown = true;
-      p->SetState(S_CHICPLAY_ATK1);
+      //p->SetState(S_CHICPLAY_ATK1);
       if(p->powers[pw_weaponlevel2])
 	{
 	  p->SetPsprite(ps_weapon, S_BEAKATK2_1);
@@ -420,10 +423,12 @@ void A_BeakReady(PlayerPawn *p, pspdef_t *psp)
     }
   else
     {
+      /*
       if(p->state == &states[S_CHICPLAY_ATK1])
 	{ // Take out of attack state
-	  p->SetState(S_CHICPLAY);
+	  //p->SetState(S_CHICPLAY);
 	}
+      */
       p->attackdown = false;
     }
 }
@@ -537,15 +542,22 @@ void A_StaffAttackPL2(PlayerPawn *p, pspdef_t *psp)
   int damage;
   int slope;
 
-  // P_inter.c:P_DamageMobj() handles target momentums
   damage = 18+(P_Random()&63);
   angle = p->angle;
   angle += P_SignedRandom()<<18;
   slope = p->AimLineAttack(angle, MELEERANGE);
   PuffType = MT_STAFFPUFF2;
-  p->LineAttack(angle, MELEERANGE, slope, damage);
-  if(linetarget)
+
+  p->LineAttack(angle, MELEERANGE, slope, damage, dt_magic);
+  if (linetarget)
     {
+      linetarget->px += FixedMul(10*FRACUNIT, finecosine[angle]);
+      linetarget->py += FixedMul(10*FRACUNIT, finesine[angle]);
+      if (!(linetarget->flags & MF_NOGRAVITY))
+	{
+	  linetarget->pz += 5*FRACUNIT;
+	}
+
       //S_StartSound(p, sfx_stfpow);
       // turn to face target
       p->angle = R_PointToAngle2(p->x, p->y, linetarget->x, linetarget->y);
@@ -583,7 +595,7 @@ void A_FireBlasterPL1(PlayerPawn *p, pspdef_t *psp)
 //
 //----------------------------------------------------------------------------
 
-void Actor::BlasterMissileThink()
+void DActor::BlasterMissileThink()
 {
   int i;
   fixed_t xfrac;
@@ -631,7 +643,7 @@ void Actor::BlasterMissileThink()
 		{
 		  nz = floorz;
 		}
-	      mp->SpawnActor(x, y, nz, MT_BLASTERSMOKE);
+	      mp->SpawnDActor(x, y, nz, MT_BLASTERSMOKE);
 	    }
 	}
     }
@@ -725,7 +737,6 @@ void A_FireGoldWandPL2(PlayerPawn *p, pspdef_t *psp)
 
 void A_FireMacePL1B(PlayerPawn *p, pspdef_t *psp)
 {
-  Actor *ball;
   angle_t angle;
 
   if(p->ammo[am_mace] < USE_MACE_AMMO_1)
@@ -734,8 +745,8 @@ void A_FireMacePL1B(PlayerPawn *p, pspdef_t *psp)
     }
   p->ammo[am_mace] -= USE_MACE_AMMO_1;
 
-  ball = p->mp->SpawnActor(p->x, p->y, p->z+28*FRACUNIT
-			   - FOOTCLIPSIZE*((p->flags2&MF2_FEETARECLIPPED) != 0), MT_MACEFX2);
+  DActor *ball = p->mp->SpawnDActor(p->x, p->y,
+    p->z + 28*FRACUNIT - FOOTCLIPSIZE*((p->flags2&MF2_FEETARECLIPPED) != 0), MT_MACEFX2);
   ball->pz = 2*FRACUNIT+((p->aiming)<<(FRACBITS-5));
   angle = p->angle;
   ball->owner = p;
@@ -785,7 +796,7 @@ void A_FireMacePL1(PlayerPawn *p, pspdef_t *psp)
 //
 //----------------------------------------------------------------------------
 
-void A_MacePL1Check(Actor *ball)
+void A_MacePL1Check(DActor *ball)
 {
   angle_t angle;
 
@@ -812,7 +823,7 @@ void A_MacePL1Check(Actor *ball)
 //
 //----------------------------------------------------------------------------
 
-void A_MaceBallImpact(Actor *ball)
+void A_MaceBallImpact(DActor *ball)
 {
   if((ball->z <= ball->floorz) && (ball->HitFloor() != FLOOR_SOLID))
     { // Landed in some sort of liquid
@@ -842,7 +853,7 @@ void A_MaceBallImpact(Actor *ball)
 //
 //----------------------------------------------------------------------------
 
-void A_MaceBallImpact2(Actor *ball)
+void A_MaceBallImpact2(DActor *ball)
 {
   angle_t angle;
 
@@ -862,7 +873,7 @@ void A_MaceBallImpact2(Actor *ball)
       ball->pz = (ball->pz*192)>>8;
       ball->SetState(ball->info->spawnstate);
 
-      Actor *tiny = ball->mp->SpawnActor(ball->x, ball->y, ball->z, MT_MACEFX3);
+      DActor *tiny = ball->mp->SpawnDActor(ball->x, ball->y, ball->z, MT_MACEFX3);
       angle = ball->angle+ANG90;
       tiny->owner = ball->owner;
       tiny->angle = angle;
@@ -874,7 +885,7 @@ void A_MaceBallImpact2(Actor *ball)
       tiny->pz = ball->pz;
       tiny->CheckMissileSpawn();
 
-      tiny = ball->mp->SpawnActor(ball->x, ball->y, ball->z, MT_MACEFX3);
+      tiny = ball->mp->SpawnDActor(ball->x, ball->y, ball->z, MT_MACEFX3);
       angle = ball->angle-ANG90;
       tiny->owner = ball->owner;
       tiny->angle = angle;
@@ -898,7 +909,7 @@ void A_FireMacePL2(PlayerPawn *p, pspdef_t *psp)
 {
   p->ammo[am_mace] -= cv_deathmatch.value ? USE_MACE_AMMO_1 : USE_MACE_AMMO_2;
 
-  Actor *mo = p->SpawnPlayerMissile(MT_MACEFX4);
+  DActor *mo = p->SpawnPlayerMissile(MT_MACEFX4);
   if (mo)
     {
       mo->px += p->px;
@@ -918,7 +929,7 @@ void A_FireMacePL2(PlayerPawn *p, pspdef_t *psp)
 //
 //----------------------------------------------------------------------------
 
-void A_DeathBallImpact(Actor *ball)
+void A_DeathBallImpact(DActor *ball)
 {
   int i;
   angle_t angle = 0;
@@ -986,15 +997,15 @@ void A_DeathBallImpact(Actor *ball)
 //
 //----------------------------------------------------------------------------
 
-void A_SpawnRippers(Actor *actor)
+void A_SpawnRippers(DActor *actor)
 {
   int i;
   angle_t angle;
-  Actor *ripper;
+  DActor *ripper;
 
   for(i = 0; i < 8; i++)
     {
-      ripper = actor->mp->SpawnActor(actor->x, actor->y, actor->z, MT_RIPPER);
+      ripper = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_RIPPER);
       angle = i*ANG45;
       ripper->owner = actor->owner;
       ripper->angle = angle;
@@ -1041,13 +1052,13 @@ void A_FireCrossbowPL2(PlayerPawn *p, pspdef_t *psp)
 //
 //----------------------------------------------------------------------------
 
-void A_BoltSpark(Actor *bolt)
+void A_BoltSpark(DActor *bolt)
 {
-  Actor *spark;
+  DActor *spark;
     
   if(P_Random() > 50)
     {
-      spark = bolt->mp->SpawnActor(bolt->x, bolt->y, bolt->z, MT_CRBOWFX4);
+      spark = bolt->mp->SpawnDActor(bolt->x, bolt->y, bolt->z, MT_CRBOWFX4);
       spark->x += P_SignedRandom()<<10;
       spark->y += P_SignedRandom()<<10;
     }
@@ -1061,7 +1072,7 @@ void A_BoltSpark(Actor *bolt)
 
 void A_FireSkullRodPL1(PlayerPawn *p, pspdef_t *psp)
 {
-  Actor *mo;
+  DActor *mo;
 
   if(p->ammo[am_skullrod] < USE_SKRD_AMMO_1)
     {
@@ -1120,7 +1131,7 @@ void A_FireSkullRodPL2(PlayerPawn *p, pspdef_t *psp)
 //
 //----------------------------------------------------------------------------
 
-void A_SkullRodPL2Seek(Actor *actor)
+void A_SkullRodPL2Seek(DActor *actor)
 {
   actor->SeekerMissile(ANGLE_1*10, ANGLE_1*30);
 }
@@ -1131,7 +1142,7 @@ void A_SkullRodPL2Seek(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_AddPlayerRain(Actor *actor)
+void A_AddPlayerRain(DActor *actor)
 {
   /*
     int playerNum = game.multiplayer ? actor->special2 : 0;
@@ -1191,7 +1202,7 @@ void A_AddPlayerRain(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_SkullRodStorm(Actor *actor)
+void A_SkullRodStorm(DActor *actor)
 {
   fixed_t x, y;
   //int playerNum;
@@ -1233,7 +1244,7 @@ void A_SkullRodStorm(Actor *actor)
   x = actor->x+((P_Random()&127)-64)*FRACUNIT;
   y = actor->y+((P_Random()&127)-64)*FRACUNIT;
 
-  Actor *mo = actor->mp->SpawnActor(x, y, ONCEILINGZ, mobjtype_t(MT_RAINPLR1 + actor->special2 % 4));
+  DActor *mo = actor->mp->SpawnDActor(x, y, ONCEILINGZ, mobjtype_t(MT_RAINPLR1 + actor->special2 % 4));
   mo->target = actor->target;
   mo->owner = actor->owner;
   mo->px = 1; // Force collision detection
@@ -1253,7 +1264,7 @@ void A_SkullRodStorm(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_RainImpact(Actor *actor)
+void A_RainImpact(DActor *actor)
 {
   if (actor->z > actor->floorz)
     actor->SetState(statenum_t(S_RAINAIRXPLR1_1 + actor->special2 % 4));
@@ -1267,7 +1278,7 @@ void A_RainImpact(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_HideInCeiling(Actor *actor)
+void A_HideInCeiling(DActor *actor)
 {
   actor->z = actor->ceilingz+4*FRACUNIT;
 }
@@ -1297,19 +1308,19 @@ void A_FirePhoenixPL1(PlayerPawn *p, pspdef_t *psp)
 //
 //----------------------------------------------------------------------------
 
-void A_PhoenixPuff(Actor *actor)
+void A_PhoenixPuff(DActor *actor)
 {
-  Actor *puff;
+  DActor *puff;
   angle_t angle;
 
   actor->SeekerMissile(ANGLE_1*5, ANGLE_1*10);
-  puff = actor->mp->SpawnActor(actor->x, actor->y, actor->z, MT_PHOENIXPUFF);
+  puff = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_PHOENIXPUFF);
   angle = actor->angle+ANG90;
   angle >>= ANGLETOFINESHIFT;
   puff->px = FixedMul(FRACUNIT*1.3, finecosine[angle]);
   puff->py = FixedMul(FRACUNIT*1.3, finesine[angle]);
   puff->pz = 0;
-  puff = actor->mp->SpawnActor(actor->x, actor->y, actor->z, MT_PHOENIXPUFF);
+  puff = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_PHOENIXPUFF);
   angle = actor->angle-ANG90;
   angle >>= ANGLETOFINESHIFT;
   puff->px = FixedMul(FRACUNIT*1.3, finecosine[angle]);
@@ -1358,7 +1369,7 @@ void A_FirePhoenixPL2(PlayerPawn *p, pspdef_t *psp)
       z -= FOOTCLIPSIZE;
     }
   slope = AIMINGTOSLOPE(p->aiming);
-  Actor *mo = p->mp->SpawnActor(x, y, z, MT_PHOENIXFX2);
+  DActor *mo = p->mp->SpawnDActor(x, y, z, MT_PHOENIXFX2);
   mo->owner = p;
   mo->angle = angle;
   mo->px = p->px+FixedMul(mo->info->speed,
@@ -1390,7 +1401,7 @@ void A_ShutdownPhoenixPL2(PlayerPawn *p, pspdef_t *psp)
 //
 //----------------------------------------------------------------------------
 
-void A_FlameEnd(Actor *actor)
+void A_FlameEnd(DActor *actor)
 {
   actor->pz += 1.5*FRACUNIT;
 }
@@ -1401,7 +1412,7 @@ void A_FlameEnd(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_FloatPuff(Actor *puff)
+void A_FloatPuff(DActor *puff)
 {
   puff->pz += 1.8*FRACUNIT;
 }

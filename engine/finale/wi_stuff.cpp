@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/16 22:12:07  smite-meister
+// Actor/DActor separation done!
+//
 // Revision 1.2  2002/12/03 10:15:29  smite-meister
 // Older update
 //
@@ -1924,10 +1927,8 @@ void Intermission::Start(const LevelNode *l, const LevelNode *f)
   level = l;
   firstlevel = f;
 
-  // TODO this is a bit dirty. For original Doom/Heretic episodes, we assume that
-  // the levelnode structure is an array with levels in correct order.
-  last = level - firstlevel; // number of level just completed
-  next = level->exit[level->exittype] - firstlevel; // number of next level
+  last = level->number; //level - firstlevel; // number of level just completed
+  next = (level->exit[level->exittype])->number; // number of next level
 
   acceleratestage = false;
   count = bcount = 0;

@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:01  hurdler
-// Initial revision
+// Revision 1.2  2002/12/16 22:11:53  smite-meister
+// Actor/DActor separation done!
+//
+// Revision 1.1.1.1  2002/11/16 14:18:01  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.15  2002/09/06 17:18:33  vberghol
 // added most of the changes up to RC2
@@ -575,7 +578,7 @@ void Actor::SetPosition()
       sector_t *sec = ss->sector;
 #ifdef PARANOIA
       if (sprev != NULL || snext != NULL)
-	I_Error("Actor::SetPosition: thing (type %d) is already linked", type);
+	I_Error("Actor::SetPosition: thing at (%d, %d) is already linked", x, y);
 #endif
 
       sprev = NULL;

@@ -18,47 +18,15 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/16 22:12:10  smite-meister
+// Actor/DActor separation done!
+//
 // Revision 1.2  2002/12/03 10:20:08  smite-meister
 // HUD rationalized
 //
 // Revision 1.1.1.1  2002/11/16 14:18:15  hurdler
 // Initial C++ version of Doom Legacy
 //
-// Revision 1.16  2002/09/25 15:17:38  vberghol
-// Intermission fixed?
-//
-// Revision 1.13  2002/09/06 17:18:34  vberghol
-// added most of the changes up to RC2
-//
-// Revision 1.12  2002/09/05 14:12:16  vberghol
-// network code partly bypassed
-//
-// Revision 1.11  2002/08/20 13:56:59  vberghol
-// sdfgsd
-//
-// Revision 1.10  2002/08/17 16:02:04  vberghol
-// final compile for engine!
-//
-// Revision 1.9  2002/08/08 12:01:30  vberghol
-// pian engine on valmis!
-//
-// Revision 1.8  2002/08/06 13:14:26  vberghol
-// ...
-//
-// Revision 1.7  2002/07/15 20:52:40  vberghol
-// w_wad.cpp (FileCache class) finally fixed
-//
-// Revision 1.6  2002/07/13 17:55:54  vberghol
-// jäi kartan liikkuviin osiin... p_doors.cpp
-//
-// Revision 1.5  2002/07/12 19:21:39  vberghol
-// hop
-//
-// Revision 1.4  2002/07/01 21:00:37  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:01:55  vberghol
-// HUD alkaa olla kunnossa
 //
 // DESCRIPTION:
 //      heads up displays, cleaned up (hasta la vista hu_lib)
@@ -103,39 +71,20 @@
 #endif
 
 
+HUD hud;
+
+
 // coords are scaled
 #define HU_INPUTX       0
 #define HU_INPUTY       0
 
 
-HUD hud;
-
-
-
-// used for making messages go away
-//static int              st_msgcounter=0;
-// used when in chat
-//static st_chatstateenum_t       st_chatstate;
-// whether status bar chat is active
-//static bool          st_chat;
-// value of st_chat before message popped up
-//static bool          st_oldchat;
-// whether chat window has the cursor on
-//static bool          st_cursoron;
-
-
 //-------------------------------------------
 //              heads up font
 //-------------------------------------------
-patch_t*                hu_font[HU_FONTSIZE];
-
-
-static PlayerInfo*        plr;
 bool                 chat_on;
 
 static char             w_chat[HU_MAXMSGLEN];
-
-static bool          headsupactive = false;
 
 static char             hu_tick;
 
@@ -145,15 +94,16 @@ static char             hu_tick;
 
 consvar_t*   chat_macros[10];
 
-//added:16-02-98: crosshair 0=off, 1=cross, 2=angle, 3=point, see m_menu.c
-patch_t*           crosshair[3];     //3 precached crosshair graphics
+//added:16-02-98: crosshair 0=off, 1=cross, 2=angle, 3=point
+static patch_t* crosshair[HU_CROSSHAIRS]; // precached crosshair graphics
 
+static patch_t* PatchRankings;
 
 // -------
 // protos.
 // -------
-void   HU_drawDeathmatchRankings ();
-void   HU_drawCrosshair ();
+void   HU_drawDeathmatchRankings();
+void   HU_drawCrosshair();
 static void HU_DrawTip();
 
 
@@ -263,7 +213,7 @@ char ForeignTranslation(unsigned char ch)
 
 
 //======================================================================
-//                          HEADS UP INIT
+//                          HEADS UP DISPLAY
 //======================================================================
 
 HUD::HUD()
@@ -271,27 +221,18 @@ HUD::HUD()
   st_x = 0;
   st_y = BASEVIDHEIGHT - ST_HEIGHT;
   stbarheight = ST_HEIGHT;
-  st_stopped = true;
+  st_palette = 0;
+  st_active = false;
 };
 
 
-// just after
 void Command_Say_f();
 void Command_Sayto_f();
 void Command_Sayteam_f();
 void Got_Saycmd(char **p,int playernum);
 
-// Initialise Heads up
-// once at game startup.
-//
-void HU_Init()
+void HUD::Startup()
 {
-  int  i, j;
-  char buffer[9];
-
-  if (dedicated)
-    return;
-    
   COM_AddCommand ("say"    , Command_Say_f);
   COM_AddCommand ("sayto"  , Command_Sayto_f);
   COM_AddCommand ("sayteam", Command_Sayteam_f);
@@ -303,47 +244,194 @@ void HU_Init()
   else
     shiftxform = english_shiftxform;
 
-  // cache the heads-up font for entire game execution
-  // FIXME add legacy default font (in legacy.wad)
-  j = game.mode == heretic ? 1 : HU_FONTSTART;
+  // first initialization
+  Init();
+}
+
+
+//-------------------------------------------------------------------
+// was ST_Init, HU_Init
+//  Initializes the HUD
+//  sets the defaults border patch for the window borders.
+void ST_LoadHereticData();
+void ST_LoadDoomData();
+
+void HUD::Init()
+{
+  extern bool dedicated;
+
+  if (dedicated)
+    return;
+
+  int startlump;
+  int  i;
+
+  // cache the HUD font for entire game execution
+  // TODO add legacy default font (in legacy.wad)
+  if (game.mode == heretic)
+    startlump = fc.GetNumForName("FONTA01");
+  else
+    startlump = fc.GetNumForName("STCFN033");
+
+  // NOTE! Heretic FONTAxx ends with FONTA59, HU_FONTSIZE and STCFNxx are longer!
+  // Now it caches some FONTBxx letters in the end
   for (i=0; i<HU_FONTSIZE; i++)
+    font[i] = fc.CachePatchNum(startlump + i, PU_STATIC);
+
+  //----------- cache all legacy.wad stuff here
+
+  startlump = fc.GetNumForName("CROSHAI1");
+  for (i=0; i<HU_CROSSHAIRS; i++)
+    crosshair[i] = fc.CachePatchNum(startlump + i, PU_STATIC);
+
+  PatchRankings = fc.CachePatchName("RANKINGS", PU_STATIC);
+
+  //----------- legacy.wad stuff ends
+
+  // Damn! sbo* icons are in pic_t format, not patch_t!
+  // drawn using V_DrawScalePic()
+  // using doom.wad or heretic.wad sprites instead...
+
+  switch (game.mode)
     {
-      if (game.raven)
-	sprintf(buffer, "FONTA%.2d", j>59 ? 59 : j);
-      else
-	sprintf(buffer, "STCFN%.3d", j);
-      j++;
-      hu_font[i] = (patch_t *) fc.CachePatchName(buffer, PU_STATIC);
+    case heretic:
+      ST_LoadHereticData();
+      break;
+    case shareware:
+    case registered:
+    case retail:
+    case commercial:
+      ST_LoadDoomData();
+      break;
+    default:
+      break;
     }
 
-  // cache the crosshairs, dont bother to know which one is being used,
-  // just cache them 3 all, they're so small anyway.
-  for (i=0;i<HU_CROSSHAIRS;i++)
-    {
-      sprintf(buffer, "CROSHAI%c", '1'+i);
-      crosshair[i] = (patch_t *) fc.CachePatchName(buffer, PU_STATIC);
-    }
+  st_refresh = true;
 }
 
 
-void HU_Stop()
-{
-  headsupactive = false;
-}
+char HU_dequeueChatChar();
+void HU_queueChatChar(char c);
+bool HU_keyInChatString(char *s, char ch);
 
-// 
-// Reset Heads up when consoleplayer spawns
+//--------------------------------------
+//  Returns true if key eaten
 //
-void HU_Start()
+bool HUD::Responder(event_t *ev)
 {
-  if (headsupactive)
-    HU_Stop();
+  static bool shiftdown = false;
+  static bool altdown   = false;
 
-  plr = consoleplayer;
-  chat_on = false;
+  bool             eatkey = false;
+  char*               macromessage;
+  unsigned char       c;
 
-  headsupactive = true;
+
+  if (ev->data1 == KEY_SHIFT)
+    {
+      shiftdown = (ev->type == ev_keydown);
+      return false;
+    }
+  else if (ev->data1 == KEY_ALT)
+    {
+        altdown = (ev->type == ev_keydown);
+        return false;
+    }
+
+  if (ev->type != ev_keydown)
+    return false;
+
+  // only KeyDown events now...
+
+  if (!chat_on)
+    {
+      // enter chat mode
+      if (ev->data1==gamecontrol[gc_talkkey][0]
+	  || ev->data1==gamecontrol[gc_talkkey][1])
+        {
+	  eatkey = chat_on = true;
+	  w_chat[0] = 0;
+	  HU_queueChatChar(HU_BROADCAST);
+        }
+    }
+  else
+    {
+        c = ev->data1;
+
+        // use console translations
+        if (con_keymap==french)
+            c = ForeignTranslation(c);
+        if (shiftdown)
+            c = shiftxform[c];
+
+        // send a macro
+        if (altdown)
+        {
+            c = c - '0';
+            if (c > 9)
+                return false;
+
+            macromessage = chat_macros[c]->str;
+
+            // kill last message with a '\n'
+            HU_queueChatChar(KEY_ENTER); // DEBUG!!!
+
+            // send the macro message
+            while (*macromessage)
+                HU_queueChatChar(*macromessage++);
+            HU_queueChatChar(KEY_ENTER);
+
+            // leave chat mode and notify that it was sent
+            chat_on = false;
+            eatkey = true;
+        }
+        else
+        {
+            if (language==french)
+                c = ForeignTranslation(c);
+            if (shiftdown || (c >= 'a' && c <= 'z'))
+                c = shiftxform[c];
+            eatkey = HU_keyInChatString(w_chat,c);
+            if (eatkey)
+            {
+                // static unsigned char buf[20]; // DEBUG
+                HU_queueChatChar(c);
+
+                // sprintf(buf, "KEY: %d => %d", ev->data1, c);
+                //      plr->message = buf;
+            }
+            if (c == KEY_ENTER)
+            {
+                chat_on = false;
+            }
+            else if (c == KEY_ESCAPE)
+                chat_on = false;
+        }
+    }
+
+    if (eatkey) return true;
+
+    // ST_ part
+    if (ev->type == ev_keyup)
+      {
+	// Filter automap on/off : activates the statusbar while automap is active
+	if( (ev->data1 & 0xffff0000) == AM_MSGHEADER )
+	  {
+	    switch(ev->data1)
+	      {
+	      case AM_MSGENTERED:
+		st_refresh = true;        // force refresh of status bar
+		break;
+
+	      case AM_MSGEXITED:
+		break;
+	      }
+	  }
+      }
+    return false;
 }
+
 
 
 
@@ -470,8 +558,14 @@ bool HU_keyInChatString(char *s, char ch)
 
 void HUD::Ticker()
 {
-  if (st_stopped)
+  if (dedicated)
     return;
+
+  if (!st_active)
+    return;
+
+  hu_tick++;
+  hu_tick &= 7; // currently only to blink chat input cursor
 
   if (damagecount > 100)
     damagecount = 100;  // teleport stomp does 10k points...
@@ -481,36 +575,18 @@ void HUD::Ticker()
   if (bonuscount)
     bonuscount--;
 
-  int ChainWiggle; // not used now...
+  /*
+  if ((game.mode == heretic) && (gametic & 1))
+    ChainWiggle = M_Random()&1;
+  */  
 
-  if (game.mode == heretic)
-    {
-      if (gametic & 1) ChainWiggle = M_Random()&1;
-      return;
-    }
-  
-  //st_clock++; // if needed, use hu_tick
   st_randomnumber = M_Random();
 
-  //ST_updateWidgets();
+  // update widget data
   UpdateWidgets();
 
-  // get rid of chat window if up because of message
-  //if (!--st_msgcounter) st_chat = st_oldchat;
-
-  st_oldhealth = sbpawn->health;
-
-  // old HU_Ticker() begins
-
-  if(dedicated)
-    return;
-    
-  hu_tick++;
-  hu_tick &= 7;        //currently only to blink chat input cursor
-
   // display message if necessary
-  // (display the viewplayer's messages)
-  PlayerInfo *pl = displayplayer;
+  PlayerInfo *pl = consoleplayer;
 
   if (cv_showmessages.value && pl->message)
     {
@@ -518,11 +594,10 @@ void HUD::Ticker()
         pl->message = NULL;
     }
 
-
   // In splitscreen, display second player's messages
   if (cv_splitscreen.value)
     {
-      pl = displayplayer2;
+      pl = consoleplayer2;
       if (cv_showmessages.value && pl && pl->message)
 	{
 	  CONS_Printf ("\4%s\n", pl->message);
@@ -530,10 +605,7 @@ void HUD::Ticker()
 	}
     }
 
-  // FIXME the entire hud message system. Don't use the console if possible.
-  // FIXME splitscreenplayer should be an independent player, so he should get a separate
-  // frags roster when he's dead?
-  //deathmatch rankings overlay if press key or while in death view
+  // deathmatch rankings overlay if press key or while in death view
   if (cv_deathmatch.value)
     {
       if (gamekeydown[gamecontrol[gc_scores][0]] ||
@@ -576,9 +648,9 @@ char HU_dequeueChatChar()
 //
 void HU_queueChatChar(char c)
 {
-    if (((head + 1) & (QUEUESIZE-1)) == tail)
+  if (((head + 1) & (QUEUESIZE-1)) == tail)
     {
-        plr->message = HUSTR_MSGU;      //message not send
+      consoleplayer->message = HUSTR_MSGU;      //message not send
     }
     else
     {
@@ -611,123 +683,6 @@ void HU_queueChatChar(char c)
 
 extern int     con_keymap;
 
-//
-//  Returns true if key eaten
-//
-bool HUD::Responder(event_t *ev)
-{
-  static bool        shiftdown = false;
-  static bool        altdown   = false;
-
-  bool             eatkey = false;
-  char*               macromessage;
-  unsigned char       c;
-
-
-  if (ev->data1 == KEY_SHIFT)
-    {
-      shiftdown = (ev->type == ev_keydown);
-      return false;
-    }
-  else if (ev->data1 == KEY_ALT)
-    {
-        altdown = (ev->type == ev_keydown);
-        return false;
-    }
-
-  if (ev->type != ev_keydown)
-    return false;
-
-   // only KeyDown events now...
-
-  if (!chat_on)
-    {
-      // enter chat mode
-      if (ev->data1==gamecontrol[gc_talkkey][0]
-	  || ev->data1==gamecontrol[gc_talkkey][1])
-        {
-	  eatkey = chat_on = true;
-	  w_chat[0] = 0;
-	  HU_queueChatChar(HU_BROADCAST);
-        }
-    }
-  else
-    {
-        c = ev->data1;
-
-        // use console translations
-        if (con_keymap==french)
-            c = ForeignTranslation(c);
-        if (shiftdown)
-            c = shiftxform[c];
-
-        // send a macro
-        if (altdown)
-        {
-            c = c - '0';
-            if (c > 9)
-                return false;
-
-            macromessage = chat_macros[c]->str;
-
-            // kill last message with a '\n'
-            HU_queueChatChar(KEY_ENTER); // DEBUG!!!
-
-            // send the macro message
-            while (*macromessage)
-                HU_queueChatChar(*macromessage++);
-            HU_queueChatChar(KEY_ENTER);
-
-            // leave chat mode and notify that it was sent
-            chat_on = false;
-            eatkey = true;
-        }
-        else
-        {
-            if (language==french)
-                c = ForeignTranslation(c);
-            if (shiftdown || (c >= 'a' && c <= 'z'))
-                c = shiftxform[c];
-            eatkey = HU_keyInChatString(w_chat,c);
-            if (eatkey)
-            {
-                // static unsigned char buf[20]; // DEBUG
-                HU_queueChatChar(c);
-
-                // sprintf(buf, "KEY: %d => %d", ev->data1, c);
-                //      plr->message = buf;
-            }
-            if (c == KEY_ENTER)
-            {
-                chat_on = false;
-            }
-            else if (c == KEY_ESCAPE)
-                chat_on = false;
-        }
-    }
-
-    if (eatkey) return true;
-
-    // ST_ part
-    if (ev->type == ev_keyup)
-      {
-	// Filter automap on/off : activates the statusbar while automap is active
-	if( (ev->data1 & 0xffff0000) == AM_MSGHEADER )
-	  {
-	    switch(ev->data1)
-	      {
-	      case AM_MSGENTERED:
-		st_firsttime = true;        // force refresh of status bar
-		break;
-
-	      case AM_MSGEXITED:
-		break;
-	      }
-	  }
-      }
-    return false;
-}
-
 
 
 
@@ -737,7 +692,7 @@ bool HUD::Responder(event_t *ev)
 
 //  Draw chat input
 //
-static void HU_DrawChat ()
+static void HU_DrawChat()
 {
     int  i,c,y;
 
@@ -1170,29 +1125,13 @@ int HU_CreateTeamFragTbl(fragsort_t *fragtab,int dmtotals[],int fragtbl[MAXPLAYE
 //
 void HU_drawDeathmatchRankings()
 {
-  patch_t*     p;
   fragsort_t  *fragtab;
   int          scorelines;
   int          whiteplayer;
 
   // draw the ranking title panel
-  p = fc.CachePatchName("RANKINGS",PU_CACHE);
-  V_DrawScaledPatch ((BASEVIDWIDTH-p->width)/2,5,0,p);
+  V_DrawScaledPatch((BASEVIDWIDTH - PatchRankings->width)/2, 5, 0, PatchRankings);
 
-  // count frags for each present player
-  /*  scorelines = 0;
-  for (i=0; i<MAXPLAYERS; i++)
-    {
-      if (playeringame[i])
-        {
-	  fragtab[scorelines].count = ST_PlayerFrags(i);
-	  fragtab[scorelines].num   = i;
-	  fragtab[scorelines].color = players[i].skincolor;
-	  fragtab[scorelines].name  = player_names[i];
-	  scorelines++;
-        }
-    }
-  */
   scorelines = game.GetFrags(&fragtab, 0);
 
   //Fab:25-04-98: when you play, you quickly see your frags because your
@@ -1210,8 +1149,6 @@ void HU_drawDeathmatchRankings()
       // draw the frag to the right
       //        WI_drawRanking("Individual",170,70,fragtab,scorelines,true,whiteplayer);
 
-      // scorelines = HU_CreateTeamFragTbl(fragtab,NULL,NULL);
-
       // and the team frag to the left
       whiteplayer = game.players[whiteplayer]->team;
 
@@ -1222,8 +1159,6 @@ void HU_drawDeathmatchRankings()
 
 
 // draw the Crosshair, at the exact center of the view.
-//
-// Crosshairs are pre-cached at HU_Init
 
 #ifdef HWRENDER
 extern float gr_basewindowcentery;
@@ -1240,7 +1175,7 @@ void HU_drawCrosshair()
 
 #ifdef HWRENDER
   if (rendermode != render_soft) 
-    y = gr_basewindowcentery;
+    y = int(gr_basewindowcentery);
   else
 #endif
     y = viewwindowy+(viewheight>>1);
@@ -1254,7 +1189,7 @@ void HU_drawCrosshair()
     {
 #ifdef HWRENDER
       if ( rendermode != render_soft )
-	y += gr_viewheight;
+	y += int(gr_viewheight);
       else
 #endif
 	y += viewheight;

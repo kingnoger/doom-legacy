@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/16 22:11:29  smite-meister
+// Actor/DActor separation done!
+//
 // Revision 1.2  2002/12/03 10:11:39  smite-meister
 // Blindness and missile clipping bugs fixed
 //
@@ -83,25 +86,17 @@ consvar_t cv_translucency  = {"translucency" ,"1",CV_CALL|CV_SAVE,CV_OnOff, Tran
 //
 void A_SmokeTrailer (Actor *actor)
 {
-    Actor *th;
+  if (gametic % (4 * NEWTICRATERATIO))
+    return;
 
-    if (gametic % (4 * NEWTICRATERATIO))
-        return;
+  // add the smoke behind the rocket
+  DActor *th = actor->mp->SpawnDActor(actor->x - actor->px,
+    actor->y - actor->py, actor->z, MT_SMOK);
 
-    // spawn a puff of smoke behind the rocket
-    if (game.demoversion<125 && // rocket trails spawnpuff from v1.11 to v1.24
-        game.demoversion>=111) // skull trails since v1.25
-        actor->mp->SpawnPuff(actor->x, actor->y, actor->z);
-
-    // add the smoke behind the rocket
-    th = actor->mp->SpawnActor(actor->x-actor->px,
-			       actor->y-actor->py,
-			       actor->z, MT_SMOK);
-
-    th->pz = FRACUNIT;
-    th->tics -= P_Random()&3;
-    if (th->tics < 1)
-        th->tics = 1;
+  th->pz = FRACUNIT;
+  th->tics -= P_Random()&3;
+  if (th->tics < 1)
+    th->tics = 1;
 }
 
 

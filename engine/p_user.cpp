@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:04  hurdler
-// Initial revision
+// Revision 1.2  2002/12/16 22:12:03  smite-meister
+// Actor/DActor separation done!
+//
+// Revision 1.1.1.1  2002/11/16 14:18:04  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.17  2002/09/20 22:41:33  vberghol
 // Sound system rewritten! And it workscvs update
@@ -214,113 +217,91 @@ extern int ticruned,ticmiss;
 void PlayerPawn::Move()
 {
   extern int variable_friction;
-  ticcmd_t *cmd;
   int       movefactor = 2048; //For Boom friction
 
-  cmd = &player->cmd;
+  ticcmd_t *cmd = &player->cmd;
 
 #ifndef ABSOLUTEANGLE
   angle += (cmd->angleturn<<16);
 #else
-  if (game.demoversion < 125)
-    angle += (cmd->angleturn<<16);
-  else
-    angle = (cmd->angleturn<<16);
+  angle = (cmd->angleturn<<16);
 #endif
 
-  ticruned++;
+  aiming = cmd->aiming<<16;
 
+  ticruned++;
   if ((cmd->angleturn & TICCMD_RECEIVED) == 0)
     ticmiss++;
+
   // Do not let the player control movement
   //  if not onground.
   bool onground = (z <= floorz) || (cheats & CF_FLYAROUND)
     || (flags2 & (MF2_ONMOBJ|MF2_FLY));
 
-  if (game.demoversion < 128)
-    {
-      bool jumpover = cheats & CF_JUMPOVER;
-      if (cmd->forwardmove && (onground || jumpover))
-        {
-	  // dirty hack to let the player avatar walk over a small wall
-	  // while in the air
-	  if (jumpover && pz > 0)
-	    Thrust(angle, 5*2048);
-	  else if (!jumpover)
-	    Thrust(angle, cmd->forwardmove*2048);
-        }
-    
-      if (cmd->sidemove && onground)
-	Thrust(angle-ANG90, cmd->sidemove*2048);
+  fixed_t movepushforward = 0, movepushside = 0;
 
-      aiming = (signed char)cmd->aiming;
+  if (morphTics)
+    movefactor = 2500;
+  if (boomsupport && variable_friction)
+    {
+      //SoM: This seems to be buggy! Can anyone figure out why??
+      movefactor = GetMoveFactor();
+      //CONS_Printf("movefactor: %i\n", movefactor);
     }
-  else
+
+  if (cmd->forwardmove)
     {
-      fixed_t  movepushforward=0, movepushside=0;
-      aiming = cmd->aiming<<16;
-      if (morphTics)
-	movefactor = 2500;
-      if (boomsupport && variable_friction)
-        {
-          //SoM: This seems to be buggy! Can anyone figure out why??
-          movefactor = GetMoveFactor();
-          //CONS_Printf("movefactor: %i\n", movefactor);
-        }
-
-      if (cmd->forwardmove)
-        {
-	  movepushforward = cmd->forwardmove * movefactor;
-        
-	  if (eflags & MF_UNDERWATER)
-            {
-	      // half forward speed when waist under water
-	      // a little better grip if feets touch the ground
-	      if (!onground)
-		movepushforward >>= 1;
-	      else
-		movepushforward = movepushforward * 3/4;
-            }
-	  else
-            {
-	      // allow very small movement while in air for gameplay
-	      if (!onground)
-		movepushforward >>= 3;
-            }
-
-	  Thrust(angle, movepushforward);
-        }
-
-      if (cmd->sidemove)
-        {
-	  movepushside = cmd->sidemove * movefactor;
-	  if (eflags & MF_UNDERWATER)
-            {
-	      if (!onground)
-		movepushside >>= 1;
-	      else
-		movepushside = movepushside *3/4;
-            }
-	  else 
-	    if (!onground)
-	      movepushside >>= 3;
-
-	  Thrust(angle-ANG90, movepushside);
-        }
-
-      // mouselook swim when waist underwater
-      eflags &= ~MF_SWIMMING;
+      movepushforward = cmd->forwardmove * movefactor;
+      
       if (eflags & MF_UNDERWATER)
-        {
-	  fixed_t a;
-	  // swim up/down full move when forward full speed
-	  a = FixedMul(movepushforward*50, finesine[aiming >> ANGLETOFINESHIFT] >>5 );
-            
-	  if ( a != 0 ) {
-	    eflags |= MF_SWIMMING;
-	    pz += a;
-	  }
-        }
+	{
+	  // half forward speed when waist under water
+	  // a little better grip if feet touch the ground
+	  if (!onground)
+	    movepushforward >>= 1;
+	  else
+	    movepushforward *= 3/4;
+	}
+      else
+	{
+	  // allow very small movement while in air for gameplay
+	  if (!onground)
+	    movepushforward >>= 3;
+	}
+
+      Thrust(angle, movepushforward);
+    }
+
+  if (cmd->sidemove)
+    {
+      movepushside = cmd->sidemove * movefactor;
+      if (eflags & MF_UNDERWATER)
+	{
+	  if (!onground)
+	    movepushside >>= 1;
+	  else
+	    movepushside *= 3/4;
+	}
+      else 
+	if (!onground)
+	  movepushside >>= 3;
+
+      Thrust(angle-ANG90, movepushside);
+    }
+
+  // mouselook swim when waist underwater
+  eflags &= ~MF_SWIMMING;
+  if (eflags & MF_UNDERWATER)
+    {
+      fixed_t a;
+      // swim up/down full move when forward full speed
+      a = FixedMul(movepushforward*50, finesine[aiming >> ANGLETOFINESHIFT] >>5 );
+      
+      if ( a != 0 )
+	{
+	  eflags |= MF_SWIMMING;
+	  pz += a;
+	}
     }
 
   //added:22-02-98: jumping
@@ -331,7 +312,7 @@ void PlayerPawn::Move()
       else if (eflags & MF_UNDERWATER)
 	//TODO: goub gloub when push up in water
 	pz = JUMPGRAVITY/2;
-      else if (onground && !(jumpdown & 1)) 
+      else if (onground && !jumpdown) 
 	// can't jump while in air, can't jump while jumping
 	{
 	  pz = JUMPGRAVITY;
@@ -339,16 +320,17 @@ void PlayerPawn::Move()
 	    {
 	      S_StartScreamSound(this, sfx_jump);
 	      // keep jumping ok if FLY mode.
-	      jumpdown |= 1;
+	      jumpdown = true;
 	    }
 	}
     }
   else
-    jumpdown &= ~1;
-
+    jumpdown = false;
 
   if (cmd->forwardmove || cmd->sidemove)
     {
+      /*
+	// TODO set the running/walking state here...
       if (morphTics)
         {
 	  if (state == &states[S_CHICPLAY])
@@ -356,6 +338,7 @@ void PlayerPawn::Move()
         }
       else if (state == &states[S_PLAY])
 	SetState(S_PLAY_RUN1);
+      */
     }
 
   if (game.mode == heretic && (cmd->angleturn & BT_FLYDOWN))
@@ -624,8 +607,6 @@ void P_ArtiTele(PlayerPawn *p)
 
 bool P_UseArtifact(PlayerPawn *p, artitype_t arti)
 {
-  Actor *mo;
-    
   switch(arti)
     {
     case arti_invulnerability:
@@ -657,7 +638,7 @@ bool P_UseArtifact(PlayerPawn *p, artitype_t arti)
         { // Attempt to undo chicken
 	  if (p->UndoMorph() == false)
             { // Failed
-	      p->Damage(NULL, NULL, 10000);
+	      p->Damage(NULL, NULL, 10000, dt_always);
             }
 	  else
             { // Succeeded
@@ -690,9 +671,9 @@ bool P_UseArtifact(PlayerPawn *p, artitype_t arti)
     case arti_firebomb:
       {
 	angle_t ang = p->angle >> ANGLETOFINESHIFT;
-	mo = p->mp->SpawnActor(p->x+24*finecosine[ang], p->y+24*finesine[ang],
-			 p->z - 15*FRACUNIT*((p->flags2&MF2_FEETARECLIPPED) != 0), MT_FIREBOMB);
-	mo->target = p;
+	DActor *mo = p->mp->SpawnDActor(p->x+24*finecosine[ang], p->y+24*finesine[ang],
+	  p->z - 15*FRACUNIT*((p->flags2&MF2_FEETARECLIPPED) != 0), MT_FIREBOMB);
+	mo->owner = p;
       }
       break;
     case arti_egg:

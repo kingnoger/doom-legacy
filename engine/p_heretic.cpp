@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:17:58  hurdler
-// Initial revision
+// Revision 1.2  2002/12/16 22:11:35  smite-meister
+// Actor/DActor separation done!
+//
+// Revision 1.1.1.1  2002/11/16 14:17:58  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.13  2002/09/20 22:41:30  vberghol
 // Sound system rewritten! And it workscvs update
@@ -83,6 +86,7 @@
 #include "g_map.h"
 #include "g_player.h"
 
+#include "p_enemy.h"
 #include "p_maputl.h"
 #include "r_main.h"
 #include "r_state.h"
@@ -92,13 +96,67 @@
 #include "dstrings.h"
 #include "p_heretic.h"
 
+
+//---------------------------------------------------------------------------
+// P_MinotaurSlam
+
+void P_MinotaurSlam(Actor *source, Actor *target)
+{
+  angle_t angle;
+  fixed_t thrust;
+    
+  angle = R_PointToAngle2(source->x, source->y, target->x, target->y);
+  angle >>= ANGLETOFINESHIFT;
+  thrust = 16*FRACUNIT+(P_Random()<<10);
+  target->px += FixedMul(thrust, finecosine[angle]);
+  target->py += FixedMul(thrust, finesine[angle]);
+  target->Damage(NULL, NULL, HITDICE(6));
+
+  /*
+  if(target->player)
+    {
+      target->reactiontime = 14+(P_Random()&7);
+    }
+  */
+}
+
+//---------------------------------------------------------------------------
+// P_TouchWhirlwind
+
+bool P_TouchWhirlwind(Actor *target)
+{
+  int randVal;
+    
+  target->angle += P_SignedRandom()<<20;
+  target->px += P_SignedRandom()<<10;
+  target->py += P_SignedRandom()<<10;
+  if (target->mp->maptic & 16 && !(target->flags2 & MF2_BOSS))
+    {
+      randVal = P_Random();
+      if(randVal > 160)
+        {
+	  randVal = 160;
+        }
+      target->pz += randVal<<10;
+      if(target->pz > 12*FRACUNIT)
+        {
+	  target->pz = 12*FRACUNIT;
+        }
+    }
+  if(!(target->mp->maptic & 7))
+    {
+      return target->Damage(NULL, NULL, 3);
+    }
+  return false;
+}
+
 //---------------------------------------------------------------------------
 //
 // PROC A_ContMobjSound
 //
 //---------------------------------------------------------------------------
 
-void A_ContMobjSound(Actor *actor)
+void A_ContMobjSound(DActor *actor)
 {
   switch(actor->type)
     {
@@ -169,7 +227,7 @@ int P_FaceMobj(Actor *source, Actor *target, angle_t *delta)
 //
 //----------------------------------------------------------------------------
 
-bool Actor::SeekerMissile(angle_t thresh, angle_t turnMax)
+bool DActor::SeekerMissile(angle_t thresh, angle_t turnMax)
 {
   int dir;
   int dist;
@@ -224,12 +282,11 @@ bool Actor::SeekerMissile(angle_t thresh, angle_t turnMax)
 //
 //---------------------------------------------------------------------------
 
-Actor *Actor::SpawnMissileAngle(mobjtype_t type, angle_t angle, fixed_t momz)
+DActor *DActor::SpawnMissileAngle(mobjtype_t t, angle_t angle, fixed_t momz)
 {
   fixed_t mz;
-  Actor *mo;
 
-  switch(type)
+  switch(t)
     {
     case MT_MNTRFX1: // Minotaur swing attack missile
       mz = z+40*FRACUNIT;
@@ -247,7 +304,7 @@ Actor *Actor::SpawnMissileAngle(mobjtype_t type, angle_t angle, fixed_t momz)
   if (flags2 & MF2_FEETARECLIPPED)
     mz -= FOOTCLIPSIZE;
     
-  mo = mp->SpawnActor(x, y, mz, type);
+  DActor *mo = mp->SpawnDActor(x, y, mz, t);
   if (mo->info->seesound)
     S_StartSound(mo, mo->info->seesound);
 
@@ -574,7 +631,7 @@ void HereticPatchEngine()
   mobjinfo[MT_HMISC0].doomednum = 81;
 }
 
-static Actor *LavaInflictor;
+static DActor *LavaInflictor;
 
 //----------------------------------------------------------------------------
 //
@@ -584,8 +641,8 @@ static Actor *LavaInflictor;
 
 void P_InitLava()
 {
-  LavaInflictor = new Actor(MT_PHOENIXFX2);
-  memset(LavaInflictor, 0, sizeof(Actor));
+  LavaInflictor = new DActor(MT_PHOENIXFX2);
+  memset(LavaInflictor, 0, sizeof(DActor));
   LavaInflictor->type = MT_PHOENIXFX2;
   LavaInflictor->flags2 = MF2_FIREDAMAGE|MF2_NODMGTHRUST;
 }
@@ -689,13 +746,11 @@ void PlayerPawn::HerePlayerInSpecialSector()
     }
 }
 
-//---------------------------------------------------------------------------
-//
+
 // was P_GetThingFloorType
-//
-//---------------------------------------------------------------------------
-// FIXME this function is really unnecessary. Remove it...
+/*
 int Actor::GetThingFloorType()
 {
   return subsector->sector->floortype;
 }
+*/

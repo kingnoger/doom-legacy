@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/16 22:11:21  smite-meister
+// Actor/DActor separation done!
+//
 // Revision 1.2  2002/12/03 10:11:39  smite-meister
 // Blindness and missile clipping bugs fixed
 //
@@ -762,21 +765,23 @@ bool cht_Responder (event_t* ev)
   // what about splitscreen?
 
   // universal cheats first
-  for(i = 0; Basic_Cheats[i].func != NULL; i++)
+  for (i = 0; Basic_Cheats[i].func != NULL; i++)
     {
-      if(Basic_Cheats[i].AddKey(key, &eat))
+      if (Basic_Cheats[i].AddKey(key, &eat))
 	{
 	  Basic_Cheats[i].func(p, Basic_Cheats[i].args);
 	}
     }
 
   // use heretic cheats instead?
-  if (game.mode == heretic) cheats = Heretic_Cheats;
+  if (game.mode == heretic)
+    cheats = Heretic_Cheats;
 
-  for(i = 0; cheats[i].func != NULL; i++)
+  for (i = 0; cheats[i].func != NULL; i++)
     {
-      if(cheats[i].AddKey(key, &eat))
+      if (cheats[i].AddKey(key, &eat))
 	{
+	  CONS_Printf("Cheating, %d\n", i);
 	  cheats[i].func(p, cheats[i].args);
 	  if (game.mode == heretic)
 	    S_StartAmbSound(sfx_dorcls);
@@ -873,7 +878,6 @@ static void CheatGodFunc(PlayerPawn *p, const byte *arg)
       {
 	msg = TXT_CHEATGODOFF;
       }
-    hud.st_recalc = true;
   } else { // doom then
     if (p->cheats & CF_GODMODE)
       {
@@ -963,40 +967,37 @@ static void CheatWeaponsFunc(PlayerPawn *p, const byte *arg)
   p->armorpoints = idfa_armor;
   p->armortype = idfa_armor_class;
 
-  if (game.mode == heretic) {
-    // give backpack
-    if(!p->backpack)
-      {
-	for(i = 0; i < NUMAMMO; i++)
-	  {
-	    p->maxammo[i] *= 2;
-	  }
-	p->backpack = true;
-      }
-
-    for(i = 0; i < NUMWEAPONS-1; i++)
-      {
-	p->weaponowned[i] = true;
-      }
-
-    if(shareware)
-      {
-	p->weaponowned[wp_skullrod] = false;
-	p->weaponowned[wp_phoenixrod] = false;
-	p->weaponowned[wp_mace] = false;
-      }
-
-    msg = TXT_CHEATWEAPONS;
-  } else {
-    for (i=0;i<NUMWEAPONS;i++)
-      p->weaponowned[i] = true;
-    msg = STSTR_FAADDED;
-  }
-
-  for(i = 0; i < NUMAMMO; i++)
+  if (game.mode == heretic)
     {
-      p->ammo[i] = p->maxammo[i];
+      // give backpack
+      if (!p->backpack)
+	{
+	  for (i = 0; i < NUMAMMO; i++)
+	    p->maxammo[i] *= 2;
+	  p->backpack = true;
+	}
+
+      for (i = 0; i < NUMWEAPONS-1; i++)
+	p->weaponowned[i] = true;
+
+      if (shareware)
+	{
+	  p->weaponowned[wp_skullrod] = false;
+	  p->weaponowned[wp_phoenixrod] = false;
+	  p->weaponowned[wp_mace] = false;
+	}
+
+      msg = TXT_CHEATWEAPONS;
     }
+  else
+    {
+      for (i=0; i<NUMWEAPONS; i++)
+	p->weaponowned[i] = true;
+      msg = STSTR_FAADDED;
+    }
+
+  for (i = 0; i < NUMAMMO; i++)
+    p->ammo[i] = p->maxammo[i];
 
   p->SetMessage(msg, false);
 }
@@ -1020,14 +1021,15 @@ static void CheatPowerFunc(PlayerPawn *p, const byte *arg)
 static void CheatHealthFunc(PlayerPawn *p, const byte *arg)
 {
 #define MAXCHICKENHEALTH 30
+  /*
   if(p->morphTics)
     {
       p->health = MAXCHICKENHEALTH;
     }
   else
-    {
-      p->health = p->info->spawnhealth;//max_health; FIXME...
-    }
+  */
+    p->health = p->maxhealth;
+
   p->SetMessage(TXT_CHEATHEALTH, false);
 }
 
@@ -1203,6 +1205,6 @@ static void CheatIDKFAFunc(PlayerPawn *p, const byte *arg)
 
 static void CheatIDDQDFunc(PlayerPawn *p, const byte *arg)
 {
-  p->Damage(NULL, p, 10000);
+  p->Damage(p, p, 10000, dt_always);
   p->SetMessage(TXT_CHEATIDDQD, true);
 }

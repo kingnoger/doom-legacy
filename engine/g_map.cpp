@@ -51,17 +51,14 @@ Map::~Map()
 // SoM: Passing the Z height saves extra calculations...
 void Map::SpawnSplash(Actor *mo, fixed_t z)
 {
-  if (game.demoversion < 125)
-    return;
-
   // need to touch the surface because the splashes only appear at surface
   if (mo->z > z || mo->z + mo->height < z)
     return;
 
   // note pos +1 +1 so it doesn't eat the sound of the player..
-  Actor *th = SpawnActor(mo->x+1, mo->y+1, z, MT_SPLASH);
+  DActor *th = SpawnDActor(mo->x+1, mo->y+1, z, MT_SPLASH);
   //if( z - mo->subsector->sector->floorheight > 4*FRACUNIT)
-  S_StartSound (th, sfx_gloop);
+  S_StartSound(th, sfx_gloop);
   //else
   //    S_StartSound (th,sfx_splash);
   th->tics -= P_Random() & 3;
@@ -88,9 +85,10 @@ void Map::SpawnSplash(Actor *mo, fixed_t z)
 // ---------------------------------------
 
 static Actor   *bloodthing;
-static fixed_t  bloodspawnpointx, bloodspawnpointy;
 
 #ifdef WALLSPLATS
+static fixed_t  bloodspawnpointx, bloodspawnpointy;
+
 bool PTR_BloodTraverse (intercept_t *in)
 {
   line_t *li;
@@ -147,23 +145,17 @@ bool PTR_BloodTraverse (intercept_t *in)
 //
 void Map::SpawnBloodSplats(fixed_t x, fixed_t y, fixed_t z, int damage, fixed_t px, fixed_t py)
 {
+  // spawn the usual falling blood sprites at location
+  bloodthing = SpawnBlood(x,y,z,damage);
+
 #ifdef WALLSPLATS
-  //static int  counter =0;
   fixed_t x2,y2;
   angle_t angle, anglesplat;
   int     distance;
   angle_t anglemul=1;  
   int     numsplats;
   int     i;
-#endif
-  // spawn the usual falling blood sprites at location
-  bloodthing = SpawnBlood(x,y,z,damage);
-  //CONS_Printf ("spawned blood counter %d\n", counter++);
-  if (game.demoversion < 129)
-    return;
 
-
-#ifdef WALLSPLATS
   // traverse all linedefs and mobjs from the blockmap containing t1,
   // to the blockmap containing the dest. point.
   // Call the function for each mobj/line on the way,
@@ -214,10 +206,10 @@ void Map::SpawnBloodSplats(fixed_t x, fixed_t y, fixed_t z, int damage, fixed_t 
 // spawn a blood sprite with falling z movement, at location
 // the duration and first sprite frame depends on the damage level
 // the more damage, the longer is the sprite animation
-Actor *Map::SpawnBlood(fixed_t x, fixed_t y, fixed_t z, int damage)
+DActor *Map::SpawnBlood(fixed_t x, fixed_t y, fixed_t z, int damage)
 {
   z += P_SignedRandom() << 10;
-  Actor *th = SpawnActor(x,y,z, MT_BLOOD);
+  DActor *th = SpawnDActor(x,y,z, MT_BLOOD);
   if (game.demoversion >= 128)
     {
       th->px  = P_SignedRandom()<<12; //faB:19jan99
@@ -251,7 +243,7 @@ void Map::SpawnSmoke(fixed_t x, fixed_t y, fixed_t z)
   y = y - ((P_Random()&8) * FRACUNIT) - 4*FRACUNIT;
   z += (P_Random()&3) * FRACUNIT;
 
-  Actor *th = SpawnActor(x,y,z, MT_SMOK);
+  DActor *th = SpawnDActor(x,y,z, MT_SMOK);
   th->pz = FRACUNIT;
   th->tics -= P_Random() & 3;
 
@@ -260,14 +252,14 @@ void Map::SpawnSmoke(fixed_t x, fixed_t y, fixed_t z)
 }
 
 
-
-// adds an Actor to a Map
-Actor *Map::SpawnActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
+// adds a DActor to a Map
+DActor *Map::SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
 {
-  Actor *p = new Actor(nx, ny, nz, t);
+  DActor *p = new DActor(nx, ny, nz, t);
   AddThinker(p);
 
   CONS_Printf("Spawn, type: %d\n", t);
+
   // set subsector and/or block links
   p->SetPosition();
 
@@ -324,19 +316,17 @@ Actor *Map::SpawnActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
     }
   else
     {
-      //CONS_Printf("mobj spawned at z %d\n",z>>16);
       p->z = nz;
     }
 
-  if (p->flags2 & MF2_FOOTCLIP && p->GetThingFloorType() != FLOOR_SOLID
-      && p->floorz == p->subsector->sector->floorheight && game.mode == heretic )
+  if ((p->flags2 & MF2_FOOTCLIP) && (p->subsector->sector->floortype != FLOOR_SOLID)
+      && (p->floorz == p->subsector->sector->floorheight) && (game.mode == heretic))
     p->flags2 |= MF2_FEETARECLIPPED;
   else
     p->flags2 &= ~MF2_FEETARECLIPPED;
 
   return p;
 }
-
 
 
 extern byte weapontobutton[NUMWEAPONS];
@@ -609,7 +599,7 @@ void Map::SpawnMapThing(mapthing_t *mthing)
       nz = ONFLOORZ;
     }
 
-  Actor *p = SpawnActor(nx,ny,nz, mobjtype_t(i));
+  DActor *p = SpawnDActor(nx,ny,nz, mobjtype_t(i));
   p->spawnpoint = mthing;
 
   // Seed random starting index for bobbing motion
@@ -647,35 +637,16 @@ void Map::SpawnMapThing(mapthing_t *mthing)
 //
 bool Map::CheckRespawnSpot(PlayerInfo *p, mapthing_t *mthing)
 {
+  extern consvar_t cv_teamplay;
+
   if (mthing == NULL)
     return false;
 
-  extern consvar_t cv_teamplay;
   // has the spawn spot been used just recently?
   // (less stupid telefrag this way!)
   // damn short int! it's just 16 bits long! and signed too!
   if ((maptic & 0xFFFF) < (unsigned short)mthing->type)
     return false;
-  /*
-  // added 25-4-98 : maybe there is no player start
-  if (mthing == NULL || mthing->type<0)
-    return false;
-  */
-
-  /* fixed
-  int i;
-  if (!p->pawn)
-    {
-      // first spawn of level, before corpses
-      for (i=0 ; i<playernum ; i++)
-	// added 15-1-98 check if player is in game (mistake from id)
-	if (playeringame[i]
-	    && players[i].mo->x == mthing->x << FRACBITS
-	    && players[i].mo->y == mthing->y << FRACBITS)
-	  return false;
-      return true;
-    }
-  */
 
   fixed_t x, y;
   x = mthing->x << FRACBITS;
@@ -709,16 +680,9 @@ bool Map::DeathMatchRespawn(PlayerInfo *p)
   if (n == 0)
     I_Error("No deathmatch start in this map !");
 
-  /*
-  if (game.demoversion < 123)
-    n=20;
-  else
-    n=64;
-  */
-
   int i, j;
 
-  // even better: create a random n-permutation and use it!
+  // TODO  create a random n-permutation and use it!
   j = i = P_Random() % n;
   do {
     if (CheckRespawnSpot(p, dmstarts[j]))
@@ -733,31 +697,20 @@ bool Map::DeathMatchRespawn(PlayerInfo *p)
       j = 0;
   } while (j != i);
 
-  /*
-  if (demoversion<113)
-    {
-      // no good spot, so the player will probably get stuck
-      SpawnPlayer(p, playerstarts[playernum]);
-      return true;
-    }
-  */
   return false;
 }
 
-// was G_CoopSpawnPlayer
 
+// was G_CoopSpawnPlayer
 bool Map::CoopRespawn(PlayerInfo *p)
 {
   CONS_Printf("CoopRespawn, p = %p, pnum = %d\n", p, p->number - 1);
-  /*
-  // whose start it is?
-  int pnum = mthing->type - 1;
-  */
+
   int n = playerstarts.size();
   int i = p->number - 1;
   if (i < n)
     {
-      // his own start
+      // let's check his own start first
       if (CheckRespawnSpot(p, playerstarts[i]))
 	{
 	  // set the timer
@@ -783,9 +736,7 @@ bool Map::CoopRespawn(PlayerInfo *p)
 }
 
 
-//
 // was G_DoReborn
-//
 int Map::RespawnPlayers()
 {
   // Let's try to empty the respawnqueue!
@@ -886,13 +837,13 @@ void Map::Massacre()
   for (th = thinkercap.next; th != &thinkercap; th = th->next)
     {
       //if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-      if (th->Type() != Thinker::tt_actor)
+      if (th->Type() != Thinker::tt_dactor)
 	// Not an actor
 	continue;
 	
       mo = (Actor *)th;
       if ((mo->flags & MF_COUNTKILL) && (mo->health > 0))
-	mo->Damage(NULL, NULL, 10000);
+	mo->Damage(NULL, NULL, 10000, dt_always);
     }
 }
 
@@ -907,7 +858,7 @@ static state_t *P_FinalState(statenum_t state)
 }
 
 
-void Map::BossDeath(const Actor *mo)
+void Map::BossDeath(const DActor *mo)
 {
   extern consvar_t cv_allowexitlevel;
 
@@ -1038,7 +989,7 @@ void Map::BossDeath(const Actor *mo)
 
 
   Thinker *th;
-  Actor   *a;
+  DActor   *a;
   line_t   junk;
   const state_t *finalst = P_FinalState(mo->info->deathstate);
 
@@ -1047,10 +998,10 @@ void Map::BossDeath(const Actor *mo)
   for (th = thinkercap.next ; th != &thinkercap ; th=th->next)
     {
       //if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-      if (th->Type() != Thinker::tt_actor)
+      if (th->Type() != Thinker::tt_dactor)
 	continue;
 
-      a = (Actor *)th;
+      a = (DActor *)th;
       if (a != mo && a->type == mo->type
 	  // && a->health > 0           // the old one (doom original 1.9)
 	  // && !(a->flags & MF_CORPSE) // the Heretic one
@@ -1212,13 +1163,13 @@ void Map::RespawnSpecials()
       x = mthing->x << FRACBITS;
       y = mthing->y << FRACBITS;
 
-      Actor *mo;
+      DActor *mo;
 
       // spawn a teleport fog at the new spot
       if (game.mode != heretic)
 	{
 	  subsector_t *ss = R_PointInSubsector (x,y);
-	  mo = SpawnActor(x, y, ss->sector->floorheight, MT_IFOG);
+	  mo = SpawnDActor(x, y, ss->sector->floorheight, MT_IFOG);
 	  S_StartSound (mo, sfx_itmbk);
 	}
 
@@ -1235,7 +1186,7 @@ void Map::RespawnSpecials()
       else
 	z = ONFLOORZ;
 
-      mo = SpawnActor(x,y,z, mobjtype_t(i));
+      mo = SpawnDActor(x,y,z, mobjtype_t(i));
       mo->spawnpoint = mthing;
       mo->angle = ANG45 * (mthing->angle/45);
 
@@ -1303,7 +1254,7 @@ void Map::RespawnWeapons()
 
       // spawn a teleport fog at the new spot
       subsector_t *ss = R_PointInSubsector(x,y);
-      Actor *mo = SpawnActor(x, y, ss->sector->floorheight, MT_IFOG);
+      DActor *mo = SpawnDActor(x, y, ss->sector->floorheight, MT_IFOG);
       S_StartSound(mo, sfx_itmbk);
 
       // spawn it
@@ -1312,7 +1263,7 @@ void Map::RespawnWeapons()
       else
 	z = ONFLOORZ;
 
-      mo = SpawnActor(x,y,z, mobjtype_t(n));
+      mo = SpawnDActor(x,y,z, mobjtype_t(n));
       mo->spawnpoint = mthing;
       mo->angle = ANG45 * (mthing->angle/45);
       // here don't increment freeslot

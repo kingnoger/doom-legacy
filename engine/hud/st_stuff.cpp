@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/16 22:12:18  smite-meister
+// Actor/DActor separation done!
+//
 // Revision 1.2  2002/12/03 10:20:08  smite-meister
 // HUD rationalized
 //
@@ -215,62 +218,6 @@ int fgbuffer = FG;
 
 
 
-//faB: unused stuff from the Doom alpha version ?
-// pistol
-//#define ST_WEAPON0X           110
-//#define ST_WEAPON0Y           (st_y+4)
-// shotgun
-//#define ST_WEAPON1X           122
-//#define ST_WEAPON1Y           (st_y+4)
-// chain gun
-//#define ST_WEAPON2X           134
-//#define ST_WEAPON2Y           (st_y+4)
-// missile launcher
-//#define ST_WEAPON3X           110
-//#define ST_WEAPON3Y           (st_y+13)
-// plasma gun
-//#define ST_WEAPON4X           122
-//#define ST_WEAPON4Y           (st_y+13)
-// bfg
-//#define ST_WEAPON5X           134
-//#define ST_WEAPON5Y           (st_y+13)
-
-// WPNS title
-//#define ST_WPNSX              109
-//#define ST_WPNSY              (st_y+23)
-
- // DETH title
-//#define ST_DETHX              109
-//#define ST_DETHY              (st_y+23)
-
-//Incoming messages window location
-// #define ST_MSGTEXTX     (viewwindowx)
-// #define ST_MSGTEXTY     (viewwindowy+viewheight-18)
-//#define ST_MSGTEXTX             0
-//#define ST_MSGTEXTY             0     //added:08-01-98:unused
-// Dimensions given in characters.
-//#define ST_MSGWIDTH             52
-// Or shall I say, in lines?
-//#define ST_MSGHEIGHT            1
-
-//#define ST_OUTTEXTX             0
-//#define ST_OUTTEXTY             6
-
-// Width, in characters again.
-//#define ST_OUTWIDTH             52
-// Height, in lines.
-//#define ST_OUTHEIGHT            1
-
-//#define ST_MAPWIDTH (strlen(mapnames[(gameepisode-1)*9+(gamemap-1)]))
-
-//added:24-01-98:unused ?
-//#define ST_MAPTITLEX  (vid.width - ST_MAPWIDTH * ST_CHATFONTWIDTH)
-
-//#define ST_MAPTITLEY            0
-//#define ST_MAPHEIGHT            1
-
-
-
 //==================================
 //  Legacy status bar overlay
 //
@@ -278,7 +225,7 @@ int fgbuffer = FG;
 static patch_t *sbohealth;
 static patch_t *sbofrags;
 static patch_t *sboarmor;
-static patch_t *sboammo[NUMWEAPONS];
+static patch_t *PatchAmmoPic[7];
 
 //==================================
 // Doom status bar graphics
@@ -286,7 +233,7 @@ static patch_t *sboammo[NUMWEAPONS];
 
 // doom.wad number sets:
 // "AMMNUM0", small, thin, gray, no minus
-// "WINUM0", large, minus is base-2, '%' is base-1
+// "WINUM0", large, red, minus is base-2, '%' is base-1
 
 // "STTNUM0", large, red, minus is base-1, '%' is base+10
 static patch_t *tallnum[11]; // 0-9, tall numbers, STTMINUS
@@ -305,6 +252,19 @@ static patch_t *PatchFaceBack; // face background
 static patch_t *PatchKeys[NUMCARDS]; // 3 key-cards, 3 skulls
 static patch_t *PatchSTATBAR;
 
+// just for overlay
+static const char DoomAmmoPic[7][10] =
+{
+  {"CLIPA0"}, // no ammopic for fists
+  {"CLIPA0"},  // pistol
+  {"SHELA0"},  // shotgun
+  {"CLIPA0"},  // chaingun
+  {"ROCKA0"},  // rocket lauch
+  {"CELLA0"},  // plasma
+  {"CELLA0"}   // BFG
+};
+
+
 //==================================
 // Heretic status bar graphics
 //
@@ -318,13 +278,13 @@ static patch_t *PatchARMCLEAR;
 
 static patch_t *Patch_InvBar[13];
 static patch_t *PatchARTI[11];
-static patch_t *PatchAmmoPic[7];
 static patch_t *Patch_ChainSlider[5];
 
 // numbers
-patch_t *PatchSmNum[11];
-patch_t *PatchINum[11];
-patch_t *PatchBNum[11];
+patch_t *PatchSmNum[11]; // SMALLIN0, small yellow number
+patch_t *PatchINum[11];  // IN0, big yellow number
+patch_t *PatchBNum[11];  // FONTB16, big green numbers (of a font)
+// FONTA16, medium silver numbers (of a font)
 
 int playpalette;
 int spinbooklump; // frames 0-15
@@ -333,7 +293,19 @@ int spinflylump;
 patch_t *PatchFlight[16];
 patch_t *PatchBook[16];
 
-static void ST_LoadHereticData()
+// small ammopics
+static const char HereticAmmoPic[7][10] =
+{
+  {"BLACKSQ"}, // no ammopic for fists
+  {"INAMGLD"},
+  {"INAMBOW"},
+  {"INAMBST"},
+  {"INAMRAM"},
+  {"INAMPNX"},
+  {"INAMLOB"}
+};
+
+void ST_LoadHereticData()
 {
   const char patcharti[11][10] =
   {
@@ -348,18 +320,6 @@ static void ST_LoadHereticData()
     {"ARTIEGGC"},   // egg
     {"ARTISOAR"},   // fly
     {"ARTIATLP"}    // teleport
-  };
-
-  // small ammopics
-  const char ammopic[7][10] =
-  {
-    {"BLACKSQ"}, // no ammopic for fists
-    {"INAMGLD"},
-    {"INAMBOW"},
-    {"INAMBST"},
-    {"INAMRAM"},
-    {"INAMPNX"},
-    {"INAMLOB"}
   };
 
   int i;
@@ -398,7 +358,12 @@ static void ST_LoadHereticData()
   for (i=0; i < 11; i++) PatchARTI[i] = fc.CachePatchName(patcharti[i], PU_STATIC);
 
   // ammo pics
-  for (i=0; i < 7; i++) PatchAmmoPic[i] = fc.CachePatchName(ammopic[i], PU_STATIC);
+  for (i=0; i < 7; i++)
+    PatchAmmoPic[i] = fc.CachePatchName(HereticAmmoPic[i], PU_STATIC);
+
+  sbohealth = fc.CachePatchName("PTN2A0", PU_STATIC);  //SBOHEALT
+  sbofrags  = fc.CachePatchName("FACEB1", PU_STATIC);  //SBOFRAGS
+  sboarmor  = fc.CachePatchName("SHLDA0", PU_STATIC);  //SBOARMOR  
 
   // keys
   PatchKeys[0] = PatchKeys[3] = fc.CachePatchName("BKEYICON", PU_STATIC);
@@ -447,7 +412,7 @@ static void ST_LoadHereticData()
 }
 
 
-static void ST_LoadDoomData()
+void ST_LoadDoomData()
 {
   int  i;
   char namebuf[9];
@@ -495,6 +460,14 @@ static void ST_LoadDoomData()
 
   // the original Doom uses 'STF' as base name for all face graphics
   ST_loadFaceGraphics("STF");
+
+  // ammo pics
+  for (i=0; i < 7; i++)
+    PatchAmmoPic[i] = fc.CachePatchName(DoomAmmoPic[i], PU_STATIC);
+
+  sbohealth = fc.CachePatchName("STIMA0", PU_STATIC);  //SBOHEALT
+  sbofrags  = fc.CachePatchName("M_SKULL1", PU_STATIC);  //SBOFRAGS
+  sboarmor  = fc.CachePatchName("ARM1A0", PU_STATIC);  //SBOARMOR  
 }
 
 
@@ -552,7 +525,7 @@ void ST_loadFaceGraphics (char *facestr)
 
 }
 
-static void ST_unloadData()
+void ST_unloadData()
 {
   int i;
 
@@ -604,6 +577,8 @@ void ST_unloadFaceGraphics()
 
 
 
+
+
 // refresh the status bar background
 void HUD::ST_RefreshBackground()
 {
@@ -651,7 +626,7 @@ void HUD::ST_RefreshBackground()
 // inside the HUD class:
 // statusbaron, mainbaron, invopen
 
-static bool st_true = true; // for 
+static const bool st_true = true;
 
 static bool st_notdeathmatch;
 static bool st_armson; // !deathmatch && st_statusbaron
@@ -660,6 +635,8 @@ static bool st_fragson;  // deathmatch && st_statusbaron
 static bool st_godmode;
 
 static int  st_health;
+static int  st_oldhealth; // to get appopriately pained face
+
 static int  st_armor;
 static int  st_readywp;
 static int  st_readywp_ammo;
@@ -881,8 +858,8 @@ void HUD::ST_updateFaceWidget()
 // was ST_updateWidgets
 void HUD::UpdateWidgets()
 {
-  // TODO: put _all_ widget source variables here, so that we
-  // may lose sbpawn anytime. Update source variables here.
+  // TODO: either update _all_ widget source variables here, so that we
+  // may lose sbpawn anytime, or call functions that use sbpawn only here.
 
   const int largeammo = 1994; // means "n/a"
   int i;
@@ -931,16 +908,14 @@ void HUD::UpdateWidgets()
 
   // refresh everything if this is him coming back to life
   ST_updateFaceWidget();
+
+  st_oldhealth = st_health;
 }
 
-
-static int st_palette = 0;
-
+// was ST_doPaletteStuff
 // sets the new palette based upon current values of damagecount
 // and bonuscount
-
-// was ST_doPaletteStuff
-void HUD::ST_PaletteFlash()
+void HUD::PaletteFlash()
 {
   int palette;
   int cnt;
@@ -992,7 +967,7 @@ void HUD::ST_PaletteFlash()
     {
       st_palette = palette;
 
-#ifdef HWRENDER // not win32 only 19990829 by Kin
+#ifdef HWRENDER
       if ((rendermode == render_opengl) || (rendermode == render_d3d))
         
         //faB - NOW DO ONLY IN SOFTWARE MODE, LETS FIX THIS FOR GOOD OR NEVER
@@ -1001,7 +976,6 @@ void HUD::ST_PaletteFlash()
         //             than the palettes defined in the wad
 
         {
-	  //CONS_Printf("palette: %d\n", palette);
 	  switch (palette)
 	    {
 	    case 0x00: HWD.pfnSetSpecialState(HWD_SET_PALETTECOLOR, 0x0); break;  // pas de changement
@@ -1032,52 +1006,29 @@ void HUD::ST_PaletteFlash()
 }
 
 
-void HUD::ST_DrawWidgets(bool r, bool o)
+void HUD::ST_DrawOverlay()
 {
   int i;
-
-  if (sbpawn->invTics)
-    invopen = true;
-  else
-    invopen = false;
-
-  mainbaron = statusbaron && !invopen;
-
-  // when pawn is detached from player, no more update
-  if (sbpawn->player)
-    st_fragscount = sbpawn->player->score;
-
-  // used by w_arms[] widgets
-  st_armson = statusbaron && !cv_deathmatch.value;
-
-  // used by w_frags widget
-  st_fragson = cv_deathmatch.value && statusbaron;
-
-  // used by the w_armsbg widget
-  st_notdeathmatch = !cv_deathmatch.value;
-
-  // and draw them
-  if (o)
-    for (i = overlay.size()-1; i>=0; i--)
-      {
-	overlay[i]->Update(r);
-      }
-  else
-    for (i = widgets.size()-1; i>=0; i--)
-      {
-	widgets[i]->Update(r);
-      }
+  for (i = overlay.size()-1; i>=0; i--)
+    overlay[i]->Update(true);
 }
 
 
-
-void HUD::ST_CalcPos()
+void HUD::ST_DrawWidgets(bool r)
 {
-  if (cv_scalestatusbar.value || cv_viewsize.value >= 11)
+  int i;  
+  for (i = widgets.size()-1; i>=0; i--)
+    widgets[i]->Update(r);
+}
+
+
+void HUD::ST_Recalc()
+{
+  if (cv_scalestatusbar.value || cv_viewsize.value > 10)
     {
       fgbuffer = FG | V_SCALESTART; // scale patch by default
-      st_scalex = vid.dupx;
-      st_scaley = vid.dupy;
+      //st_scalex = vid.dupx;
+      //st_scaley = vid.dupy;
         
 #ifdef HWRENDER
       if (rendermode != render_soft)
@@ -1094,12 +1045,15 @@ void HUD::ST_CalcPos()
     }
   else
     {
-      st_scalex = st_scaley = 1;
+      //st_scalex = st_scaley = 1;
 
       fgbuffer = FG | V_NOSCALEPATCH | V_NOSCALESTART;
       st_y = vid.height - stbarheight;
       st_x = (vid.width-ST_WIDTH)>>1;
     }
+
+  // and renew the widgets
+  ST_CreateWidgets();
 }
 
 
@@ -1109,8 +1063,6 @@ void HUD::CreateHereticWidgets()
 
   int i;
   HudWidget *h;
-
-  CONS_Printf("HUD::CHW, widgets_size = %d\n", widgets.size());  
 
   h = new HudMultIcon(20, 17, &statusbaron, &st_flight, PatchFlight);
   widgets.push_back(h);
@@ -1187,9 +1139,6 @@ void HUD::CreateDoomWidgets()
   h = new HudNumber(st_x+44, st_y+3, &statusbaron, 3, &st_readywp_ammo, tallnum);
   widgets.push_back(h);
 
-  // the last weapon type
-  //w_ready->data = sbpawn->readyweapon;
-
   // frags
   h = new HudNumber(st_x+138, st_y+3, &st_fragson, 2, &st_fragscount, tallnum);
   widgets.push_back(h);
@@ -1243,8 +1192,6 @@ void HUD::CreateDoomWidgets()
 
 void HUD::ST_CreateWidgets()
 {
-  ST_CalcPos();
-
   CreateOverlayWidgets();
 
   for (int i = widgets.size()-1; i>=0; i--)
@@ -1260,76 +1207,90 @@ void HUD::ST_CreateWidgets()
       CreateDoomWidgets();
       break;
     }
+
+  st_refresh = true;
 }
 
 void HUD::ST_Drawer(bool refresh)
 {
-  statusbaron = (cv_viewsize.value<11) || automap.active;
+  if (!st_active)
+    return;
+
+  // now we must have a valid sbpawn!
+
+  // Do red-/gold-shifts from damage/items
+  PaletteFlash(); //FIXME! why not in hardware?
+
+  statusbaron = (cv_viewsize.value < 11) || automap.active;
 
   // status bar overlay at viewsize 11
   overlayon = (cv_viewsize.value == 11);
 
-  //added:30-01-98:force a set of the palette by doPaletteStuff()
-  if (vid.recalc)
-    st_palette = -1;
+  // is either statusbar or overlay on?
+  if (!(statusbaron || overlayon))
+    return;
 
-  // Do red-/gold-shifts from damage/items
-#ifdef HWRENDER
-//25/08/99: Hurdler: palette changes is done for all players,
-//                   not only player1 ! That's why this part 
-//                   of code is moved somewhere else.
-  if (rendermode==render_soft)
-#endif
-    ST_PaletteFlash(); //FIXME! why not in hardware?
+  if (sbpawn->invTics)
+    invopen = true;
+  else
+    invopen = false;
 
+  mainbaron = statusbaron && !invopen;
+
+  // when pawn is detached from player, no more update
+  if (sbpawn->player)
+    st_fragscount = sbpawn->player->score;
+
+  st_armson = statusbaron && !cv_deathmatch.value;
+  st_fragson = cv_deathmatch.value && statusbaron;
+  st_notdeathmatch = !cv_deathmatch.value;
+
+  // and draw them
   if (statusbaron)
     {
       // after ST_Start(), screen refresh needed, or vid mode change
-      if (refresh || st_recalc || st_firsttime)
+      if (refresh || st_refresh)
         {
+	  /*
 	  if (st_recalc)  //recalc widget coords after vid mode change
             {
 	      ST_CreateWidgets();
 	      st_recalc = false;
             }
-	  st_firsttime = false;
+	  */
+
 	  // draw status bar background to off-screen buff
 	  ST_RefreshBackground();
 	  // and refresh all widgets
-	  ST_DrawWidgets(true, false);
+	  ST_DrawWidgets(true);
+	  st_refresh = false;
 	}
       else
 	// Otherwise, update as little as possible
-	ST_DrawWidgets(false, false);
+	ST_DrawWidgets(false);
     }
-  else if (overlayon)
+  else
     {
       if (!drawscore || cv_splitscreen.value)
 	{
-	  //sbpawn = game.players[displayplayer];
-	  ST_DrawWidgets(true, true);
-	}
-
-      if (cv_splitscreen.value)
-	{
-	  //sbpawn = game.players[secondarydisplayplayer];
-	  //ST_DrawWidgets(true, true);
+	  ST_DrawOverlay();
 	}
     }
 }
 
 
 
-
+// stops the status bar, "detaches" it from a playerpawn
 
 void HUD::ST_Stop()
 {
-  if (st_stopped)
+  if (!st_active)
     return;
 
+  sbpawn = NULL;
   vid.SetPalette(0);
 
-  st_stopped = true;
+  st_active = false;
 }
 
 // was ST_Start
@@ -1344,25 +1305,14 @@ void HUD::ST_Start(PlayerPawn *p)
 
   sbpawn = p;
 
-  if (!st_stopped)
+  if (st_active)
     ST_Stop();
 
   ST_CreateWidgets();
 
   CONS_Printf("HUD::ST_Start, widgets_size = %d, overlay_size = %d\n", widgets.size(), overlay.size());
   
-  st_firsttime = true;
-
-  // used for timing
-  //static unsigned int st_clock = 0;
-  //st_chatstate = StartChatState;
-
-  statusbaron = true;
-  //st_oldchat = st_chat = false;
-  //st_cursoron = false;
-
   st_palette = -1;
-
 
   if (game.mode != heretic)
     {
@@ -1371,61 +1321,11 @@ void HUD::ST_Start(PlayerPawn *p)
 
       for (i=0;i<NUMWEAPONS;i++)
 	oldweaponsowned[i] = sbpawn->weaponowned[i];
-
-      //for (i=0;i<6;i++) keyboxes[i] = -1;
     }
-  st_stopped = false;
-  st_recalc = false;  //added:02-02-98: widgets coords have been setup
-  // see ST_drawer()
+
+  st_active = true;
 }
 
-//-------------------------------------------------------------------
-// was ST_Init
-//  Initializes the status bar,
-//  sets the defaults border patch for the window borders.
-//
-
-void HUD::Init()
-{
-  extern bool dedicated;
-
-  if (dedicated)
-    return;
-
-  HU_Init(); // temp solution, later combine hud and status bar...
-
-
-  // cache the status bar overlay icons  (fullscreen mode)
-  // legacy.wad stuff
-  // Damn! sbo* icons are in pic_t format, not patch_t!
-  // drawn using V_DrawScalePic()
-  // FIXME crashes here!
-  /*
-  sbohealth = fc.CachePatchName("SBOHEALT", PU_STATIC);
-  sbofrags  = fc.CachePatchName("SBOFRAGS", PU_STATIC);
-  sboarmor  = fc.CachePatchName("SBOARMOR", PU_STATIC);
-
-  int i;
-  for (i=0;i<NUMWEAPONS;i++)
-    {
-      if (i>0 && i!=7)
-	sboammo[i] = fc.CachePatchName(va("SBOAMMO%c",'0'+i), PU_STATIC);
-      else
-	sboammo[i] = NULL;
-      CONS_Printf("sbo: %d\n", i);
-    }
-  */
-  //added:26-01-98:screens[4] is allocated at videomode setup, and
-  //               set at V_Init(), the first time being at SCR_Recalc()
-
-  if (game.mode == heretic)
-    ST_LoadHereticData();
-  else
-    ST_LoadDoomData();
-
-  st_firsttime = true;
-
-}
 
 
 // =========================================================================
@@ -1479,14 +1379,12 @@ void HUD::CreateOverlayWidgets()
 
   HudWidget *h;
 
-  CONS_Printf("HUD::ST_CO\n");
+  if (sbpawn == NULL)
+    return;
 
   for (i = overlay.size()-1; i>=0; i--)
     delete overlay[i];
   overlay.clear();
-
-  if (sbpawn == NULL)
-    return;
 
   if (game.mode == heretic)
     {
@@ -1496,7 +1394,7 @@ void HUD::CreateOverlayWidgets()
   else
     {
       lnum = tallnum;
-      snum = tallnum; //...FIXME...
+      snum = shortnum;
     };
 
   for (c = *cmds++; c; c = *cmds++)
@@ -1516,8 +1414,8 @@ void HUD::CreateOverlayWidgets()
 	  //DrBNumber(CPawn->health, 5, st_y+22);
 	  h = new HudNumber(50, 198-16, &overlayon, 3, &st_health, lnum);
 	  overlay.push_back(h);
-	  //h = new HudBinIcon(52, 198-16, &overlayon, &st_true, NULL, sbohealth);
-	  //overlay.push_back(h);
+	  h = new HudBinIcon(62, 198, &overlayon, &st_true, NULL, sbohealth);
+	  overlay.push_back(h);
 	  break;
 
 	case 'f': // draw frags
@@ -1525,33 +1423,33 @@ void HUD::CreateOverlayWidgets()
 	  //DrINumber(temp, 45, st_y+27);	  
 	  h = new HudNumber(300, 2, &overlayon, 3, &st_fragscount, lnum);
 	  overlay.push_back(h);
-	  //h = new HudBinIcon(302, 2, &overlayon, &st_true, NULL, sbofrags);
-	  //overlay.push_back(h);
+	  h = new HudBinIcon(302, 2, &overlayon, &st_true, NULL, sbofrags);
+	  overlay.push_back(h);
 	  break;
 
 	case 'a': // draw ammo
 	  //ST_drawOverlayNum(SCX(234), SCY(198)-(16*vid.dupy), sbpawn->ammo[sbpawn->weaponinfo[sbpawn->readyweapon].ammo], tallnum,NULL);
-	  h = new HudNumber(234, 198-16, &overlayon, 3, &st_readywp_ammo, lnum);
+	  h = new HudNumber(198, 198-16, &overlayon, 3, &st_readywp_ammo, lnum);
 	  overlay.push_back(h);
-	  //h = new HudMultIcon(236, 198-16, &overlayon, &st_readywp, sboammo);
-	  //overlay.push_back(h);	  
+	  h = new HudMultIcon(210, 196, &overlayon, &st_readywp, PatchAmmoPic);
+	  overlay.push_back(h);	  
 	  break;
 
 	case 'k': // draw keys
 	  for (i=0; i<6; i++)
 	    {
 	      //V_DrawScaledPatch(SCX(318)-(c++)*(ST_KEY0WIDTH*vid.dupx), SCY(198)-((16+8)*vid.dupy), FG | V_NOSCALESTART, PatchKeys[i]);
-	      h = new HudMultIcon(318-(i/3)*10, 198-24-(i%3)*10, &overlayon, &st_keyboxes[i], PatchKeys);
+	      h = new HudMultIcon(308-(i/3)*10, 198-8-(i%3)*10, &overlayon, &st_keyboxes[i], PatchKeys);
 	      overlay.push_back(h);
 	    }
 	  break;
 
          case 'm': // draw armor
            //ST_drawOverlayNum(SCX(300), SCY(198)-(16*vid.dupy), sbpawn->armorpoints, tallnum,NULL);
-	   h = new HudNumber(300, 198-16, &overlayon, 3, &st_armor, lnum);
+	   h = new HudNumber(264, 198-16, &overlayon, 3, &st_armor, lnum);
 	   overlay.push_back(h);
-	   //h = new HudBinIcon(302, 198-16, &overlayon, &st_true, NULL, sboarmor);
-	   //overlay.push_back(h);
+	   h = new HudBinIcon(280, 198, &overlayon, &st_true, NULL, sboarmor);
+	   overlay.push_back(h);
            break;
 
 	default:

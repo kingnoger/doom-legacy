@@ -26,7 +26,7 @@
 // virtuals
 void Pawn::Think() {}
 bool Pawn::Morph() { return false; }
-bool Pawn::Damage(Actor *inflictor, Actor *source, int damage)
+bool Pawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 { return false; }
 
 // PlayerPawn methods
@@ -36,15 +36,36 @@ int PlayerPawn::Serialize(LArchive & a)
   return 0;
 }
 
-
 void P_UpdateBeak(PlayerPawn *p, pspdef_t *psp);
 void P_PostChickenWeapon(PlayerPawn *player, weapontype_t weapon);
-
 
 // added 2-2-98 for hacking with dehacked patch
 int initial_health=100; //MAXHEALTH;
 int initial_bullets=50;
 
+// creates a pawn based on a Doom/Heretic mobj
+Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, mobjtype_t t)
+  : Actor(x, y, z)
+{
+  mobjinfo_t *info = &mobjinfo[t];
+  mass   = info->mass;
+  radius = info->radius;
+  height = info->height;
+  flags  = info->flags;
+  flags2 = info->flags2;
+  health = info->spawnhealth;
+  maxhealth = 2*health;
+  reactiontime = info->reactiontime;
+
+  //FIXME remove this and just set the correct sprite/model here...  
+  /*
+  state = &states[info->spawnstate];
+  tics = state->tics;
+  */
+  state_t *state = &states[info->spawnstate];
+  sprite = state->sprite;
+  frame = state->frame; // FF_FRAMEMASK for frame, and other bits..
+}
 
 PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
   : Pawn(nx, ny, nz, t)
@@ -62,7 +83,10 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
   fixedcolormap = 0;
   invSlot = 0;
   inventory.resize(1, inventory_t(3,3)); // at least 1 empty slot // FIXME testing
-  flags |= MF_NOTMONSTER; // the playerpawn is not a monster. MT_PLAYER might be.
+  flags |= (MF_NOTMONSTER | MF_PICKUP | MF_SHOOTABLE | MF_DROPOFF);
+  flags &= ~MF_COUNTKILL;
+  // the playerpawn is not a monster. MT_PLAYER might be.
+  flags2 |= (MF2_WINDTHRUST | MF2_SLIDE | MF2_PASSMOBJ | MF2_TELESTOMP);
 
   usedown = attackdown = true;  // don't do anything immediately
 
@@ -89,6 +113,383 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
 }
 
 
+//--------------------------------------------------------
+// was P_PlayerThink
+
+#define BLINKTHRESHOLD  (4*32) // for powers
+
+// Index of the special effects (INVUL inverse) map.
+#define INVERSECOLORMAP  32
+
+void PlayerPawn::Think()
+{
+  weapontype_t        newweapon;
+  int                 waterz;
+
+  ticcmd_t* cmd = &player->cmd;
+
+  // a corpse, for example. Thinks just like an actor.
+  if (!player)
+    goto actor_think;
+
+  // inventory
+  if (invTics)
+    invTics--;
+
+  // Turn on required cheats
+  if (cheats & CF_NOCLIP)
+    flags |= MF_NOCLIP;
+  else
+    flags &= ~MF_NOCLIP;
+
+  // chain saw run forward
+  if (flags & MF_JUSTATTACKED)
+    {
+// added : now angle turn is a absolute value not relative
+#ifndef ABSOLUTEANGLE
+      cmd->angleturn = 0;
+#endif
+      cmd->forwardmove = 0xc800/512;
+      cmd->sidemove = 0;
+      flags &= ~MF_JUSTATTACKED;
+    }
+
+  //if (player->playerstate == PST_REBORN) I_Error("player %d is in PST_REBORN\n"); // debugging...
+
+  if (player->playerstate == PST_DEAD)
+    {
+      //Fab:25-04-98: show the dm rankings while dead, only in deathmatch
+      //if (player == displayplayer) playerdeadview = true;
+
+      DeathThink();
+      goto actor_think;
+    }
+
+  // morphed state?
+  if (morphTics)
+    MorphThink();
+
+  // CheckWater is also called at Actor::Think later...
+  CheckWater();
+
+  // Move around.
+  // Reactiontime is used to prevent movement
+  //  for a bit after a teleport.
+  if (reactiontime > 0)
+    reactiontime--;
+  else
+    Move();
+
+  //added:22-02-98: bob view only if looking by the marine's eyes
+#ifndef CLIENTPREDICTION2
+  if (!camera.chase)
+    CalcHeight(z <= floorz);
+#endif
+
+  // check special sectors : damage & secrets
+  PlayerInSpecialSector();
+
+  // water splashes
+  if (specialsector >= 887 && specialsector <= 888)
+    {
+      if ((px > (2*FRACUNIT) || px < (-2*FRACUNIT) ||
+	   py > (2*FRACUNIT) || py < (-2*FRACUNIT) ||
+	   pz >  (2*FRACUNIT)) &&  // jump out of water
+	  !(gametic % (32 * NEWTICRATERATIO)))
+        {
+	  //
+	  // make sure we disturb the surface of water (we touch it)
+	  //
+	  if (specialsector == 887)
+	    //FLAT TEXTURE 'FWATER'
+	    waterz = subsector->sector->floorheight + (FRACUNIT/4);
+	  else
+	    //FIXME: no hacks! faB's current water hack using negative sector tags
+	    waterz = - (subsector->sector->tag << FRACBITS);
+
+	  // half in the water
+	  if (eflags & MF_TOUCHWATER)
+            {
+	      if (z <= floorz) // onground
+                {
+		  fixed_t whater_height = waterz-subsector->sector->floorheight;
+
+		  if( whater_height<(height>>2 ))
+		    S_StartSound(this, sfx_splash);
+		  else
+		    S_StartSound(this, sfx_floush);
+                }
+	      else
+		S_StartSound(this, sfx_floush);
+            }                   
+        }
+    }
+
+  // Check for weapon change.
+  if (cmd->buttons & BT_CHANGE)
+    {
+      // The actual changing of the weapon is done
+      //  when the weapon psprite can do it
+      //  (read: not in the middle of an attack).
+      newweapon = weapontype_t((cmd->buttons & BT_WEAPONMASK) >> BT_WEAPONSHIFT);
+      //if (cmd->buttons & BT_EXTRAWEAPON)
+      switch (newweapon)
+	{
+	case wp_fist:
+	  if (weaponowned[wp_chainsaw] && (readyweapon == wp_fist))
+	    newweapon = wp_chainsaw;
+	  break;
+	case wp_shotgun: 
+	  if (game.mode == commercial && weaponowned[wp_supershotgun] && (readyweapon == wp_shotgun))
+	    newweapon = wp_supershotgun;
+	  break;
+	default:
+	  break;
+	}
+
+      if (weaponowned[newweapon] && (newweapon != readyweapon))
+        {
+	  // Do not go to plasma or BFG in shareware,
+	  //  even if cheated.
+	  if ((newweapon != wp_plasma && newweapon != wp_bfg)
+	      || (game.mode != shareware))
+	    pendingweapon = newweapon;
+        }
+    }
+
+  // check for use
+  if (cmd->buttons & BT_USE)
+    {
+      if (!usedown)
+        {
+	  UseLines();
+	  usedown = true;
+        }
+    }
+  else
+    usedown = false;
+
+  // morph counter
+  if (morphTics)
+    {
+      // Chicken attack counter
+      if (chickenPeck)
+	chickenPeck -= 3;
+      // Attempt to undo the chicken
+      if (--morphTics == 0)
+	UndoMorph();
+    }
+
+  // cycle psprites
+  MovePsprites();
+
+  // Counters, time dependend power ups.
+  // Strength counts up to diminish fade.
+  if (powers[pw_strength])
+    powers[pw_strength]++;
+
+  if (powers[pw_invulnerability])
+    powers[pw_invulnerability]--;
+
+  // the MF_SHADOW activates the tr_transhi translucency while it is set
+  // (it doesnt use a preset value through FF_TRANSMASK)
+  if (powers[pw_invisibility])
+    if (--powers[pw_invisibility] == 0)
+      flags &= ~MF_SHADOW;
+
+  if (powers[pw_infrared])
+    powers[pw_infrared]--;
+
+  if (powers[pw_ironfeet])
+    powers[pw_ironfeet]--;
+
+  if (powers[pw_flight])
+    {
+      if(--powers[pw_flight] == 0)
+	{
+	  flags2 &= ~MF2_FLY;
+	  flags &= ~MF_NOGRAVITY;
+	}
+    }
+
+  if(powers[pw_weaponlevel2])
+    {
+      if(--powers[pw_weaponlevel2] == 0)
+	{
+	  weaponinfo = wpnlev1info;
+	  // end of weaponlevel2 power
+	  if (readyweapon == wp_phoenixrod
+	      && (psprites[ps_weapon].state != &states[S_PHOENIXREADY])
+	      && (psprites[ps_weapon].state != &states[S_PHOENIXUP]))
+	    {
+	      SetPsprite(ps_weapon, S_PHOENIXREADY);
+	      ammo[am_phoenixrod] -= USE_PHRD_AMMO_2;
+	      refire = 0;
+	    }
+	  else if ((readyweapon == wp_gauntlets) || (readyweapon == wp_staff))
+	    pendingweapon = readyweapon;
+	}
+    }
+
+  // damage and bonus counts are now HUD properties and are ticked there
+
+  // Handling colormaps.
+  if (powers[pw_invulnerability])
+    {
+      if (powers[pw_invulnerability] > BLINKTHRESHOLD
+	  || (powers[pw_invulnerability] & 8))
+	fixedcolormap = INVERSECOLORMAP;
+      else
+	fixedcolormap = 0;
+    }
+  else if (powers[pw_infrared])
+    {
+      if (powers[pw_infrared] > BLINKTHRESHOLD
+	  || (powers[pw_infrared] & 8))
+        {
+	  // almost full bright
+	  fixedcolormap = 1;
+        }
+      else
+	fixedcolormap = 0;
+    }
+  else
+    fixedcolormap = 0;
+
+  // this is where the "actor part" of the thinking begins
+ actor_think:
+
+#ifdef CLIENTPREDICTION2
+  compiler_error_sentinel; // is clientprediction2 used at all
+  // move player mobj (not the spirit) to spirit position (sent by ticcmd)
+  if ((player->cmd.angleturn & (TICCMD_XY|TICCMD_RECEIVED) == TICCMD_XY|TICCMD_RECEIVED) && 
+      (player->playerstate == PST_LIVE))
+    {
+      int oldx = x, oldy = y;
+
+      if (oldx != player->cmd.x || oldy != player->cmd.y)
+        {
+	  eflags |= MF_NOZCHECKING;
+	  // cross special lines and pick up things
+	  if (!TryMove(player->cmd.x, player->cmd.y, true))
+            {
+	      // P_TryMove fail mean cannot change mobj position to requestied position
+	      // the mobj is blocked by something
+	      if (player == consoleplayer)
+                {
+		  // reset spirit possition
+		  CL_ResetSpiritPosition(mobj);
+
+		  //if(devparm)
+		  CONS_Printf("\2MissPrediction\n");
+                }
+            }
+	  eflags &= ~MF_NOZCHECKING;
+        }
+      XYFriction(oldx, oldy, false);
+    }
+  else
+#endif
+
+    // we call Actor::Think(), because a playerpawn is an actor too
+    Actor::Think();
+}
+
+
+//--------------------------------------------------------
+// was P_DeathThink
+// Fall on your face when dying.
+// Decrease POV height to floor height.
+//
+#define ANG5    (ANG90/18)
+
+//static bool onground;
+
+void PlayerPawn::DeathThink()
+{
+  MovePsprites();
+
+  // fall to the ground
+  if (player->viewheight > 6*FRACUNIT)
+    player->viewheight -= FRACUNIT;
+
+  if (player->viewheight < 6*FRACUNIT)
+    player->viewheight = 6*FRACUNIT;
+
+  player->deltaviewheight = 0;
+
+  CalcHeight(z <= floorz);
+
+  // watch my killer (if there is one)
+  if (attacker != NULL && attacker != this)
+    {
+      angle_t ang = R_PointToAngle2(x, y, attacker->x, attacker->y);
+      angle_t delta = ang - angle;
+
+      if (delta < ANG5 || delta > (unsigned)-ANG5)
+        {
+	  // Looking at killer,
+	  //  so fade damage flash down.
+	  angle = ang;
+        }
+      else if (delta < ANG180)
+	angle += ANG5;
+      else
+	angle -= ANG5;
+
+      // change aiming to look up or down at the attacker (DOESNT WORK)
+      // FIXME : the aiming returned seems to be too up or down...
+      //fixed_t dist = P_AproxDistance(attacker->x - x, attacker->y - y);
+      //if (dist)
+      //  pitch = FixedMul ((160<<FRACBITS), FixedDiv (attacker->z + (attacker->height>>1), dist)) >>FRACBITS;
+      //else pitch = 0;
+      int pitch = (attacker->z - z) >> 17;
+      aiming = G_ClipAimingPitch(&pitch);
+    }
+  
+  if (player->cmd.buttons & BT_USE)
+    {
+      mp->RebornPlayer(player);
+      special2 = 666;
+    }
+}
+
+
+
+//----------------------------------------------
+// was P_ChickenPlayerThink
+//
+
+void PlayerPawn::MorphThink()
+{
+  if (health > 0)
+    { // Handle beak movement
+      P_UpdateBeak(this, &psprites[ps_weapon]);
+    }
+
+  if (morphTics & 15)
+    return;
+
+  if (!(px+py) && P_Random() < 160)
+    { // Twitch view angle
+      angle += P_SignedRandom() << 19;
+    }
+  if ((z <= floorz) && (P_Random() < 32))
+    { // Jump and noise
+      pz += FRACUNIT;
+      // FIXME set pain state here...
+      // SetState(S_CHICPLAY_PAIN);
+      return;
+    }
+  if(P_Random() < 48)
+    { // Just noise
+      S_StartScreamSound(this, sfx_chicact);
+    }
+}
+
+
+//-----------------------------------------
+
 void PlayerPawn::XYMovement()
 {
   fixed_t oldx, oldy;
@@ -96,7 +497,6 @@ void PlayerPawn::XYMovement()
   oldy = y;
 
   Actor::XYMovement();
-
 
   // slow down
   if (cheats & CF_NOMOMENTUM)
@@ -107,7 +507,7 @@ void PlayerPawn::XYMovement()
     }
   else if ((cheats & CF_FLYAROUND) || (flags2 & MF2_FLY))
     {
-      XYFriction(oldx, oldy, true);
+      //XYFriction(oldx, oldy, true);
       return;
     }
   //        if (z <= subsector->sector->floorheight)
@@ -121,14 +521,14 @@ void PlayerPawn::ZMovement()
 #ifdef CLIENTPREDICTION2
   if (player && z < floorz && type != MT_PLAYER)
 #else
-    if (player && z < floorz && type != MT_SPIRIT)
+  if (player && (z < floorz)) //  && type != MT_SPIRIT)
 #endif
-      {
-        player->viewheight -= floorz - z;
+    {
+      player->viewheight -= floorz - z;
 
-        player->deltaviewheight
-	  = ((cv_viewheight.value<<FRACBITS) - player->viewheight)>>3;
-      }
+      player->deltaviewheight
+	= ((cv_viewheight.value<<FRACBITS) - player->viewheight)>>3;
+    }
 
   fixed_t oldz, oldpz;
   oldz = z;
@@ -136,7 +536,7 @@ void PlayerPawn::ZMovement()
 
   Actor::ZMovement();
 
-  if (oldz+oldpz <= floorz && oldpz < 0) // falling
+  if (oldz + oldpz <= floorz && (oldpz < 0)) // falling
     {
       if ((oldpz < -8*FRACUNIT) && !(flags2 & MF2_FLY))
 	{
@@ -152,41 +552,37 @@ void PlayerPawn::ZMovement()
   if (oldz+oldpz + height > ceilingz)
     {
       // player avatar hits his head on the ceiling, ouch!
-      if (game.demoversion >= 112
-	  && !(cheats & CF_FLYAROUND) 
-	  && !(flags2 & MF2_FLY) && pz > 8*FRACUNIT)
+      if (!(cheats & CF_FLYAROUND) && !(flags2 & MF2_FLY) && pz > 8*FRACUNIT)
 	S_StartSound(this, sfx_ouch);
     }
 }
 
+#define STOPSPEED               (0x1000/NEWTICRATERATIO)
+
 void PlayerPawn::XYFriction(fixed_t oldx, fixed_t oldy, bool oldfriction)
 {
-#define STOPSPEED               (0x1000/NEWTICRATERATIO)
-  if (player == NULL) return;
+  if (player == NULL)
+    return;
 
   if (px > -STOPSPEED && px < STOPSPEED && py > -STOPSPEED && py < STOPSPEED && 
       (player->cmd.forwardmove == 0 && player->cmd.sidemove == 0 ))
     {
       // if in a walking frame, stop moving
-      if (type != MT_SPIRIT)
-        {
-	  if (morphTics)
-            {
-	      if((unsigned)((state - states) -S_CHICPLAY_RUN1) < 4)
-		SetState(S_CHICPLAY);
-            }
-	  else
-            {
-	      if((unsigned)((state - states) -S_PLAY_RUN1) < 4)
-		SetState(S_PLAY);
-            }
-        }
+      // FIXME set states accordingly
+      if (morphTics)
+	{
+	  //if((unsigned)((state - states) -S_CHICPLAY_RUN1) < 4) SetState(S_CHICPLAY);
+	}
+      else
+	{
+	  //if((unsigned)((state - states) -S_PLAY_RUN1) < 4) SetState(S_PLAY);
+	}
+    
       px = 0;
       py = 0;
     }
-  else Actor::XYFriction(oldx, oldy, oldfriction);
+  else Actor::XYFriction(oldx, oldy);
 }
-
 
 
 
@@ -218,7 +614,7 @@ void PlayerPawn::FinishLevel()
   extralight = 0;                  // cancel gun flashes
   fixedcolormap = 0;               // cancel ir gogles
 
-  if(morphTics)
+  if (morphTics)
     {
       readyweapon = (weapontype_t)special1; // Restore weapon
       morphTics = 0;
@@ -226,8 +622,7 @@ void PlayerPawn::FinishLevel()
   rain1 = NULL; //FIXME! instead rain actor should have an owner playerpawn!
   rain2 = NULL;
 
-  // FIXME! why does UnsetPosition cause a crash later?
-  snext = sprev = NULL;//UnsetPosition();
+  snext = sprev = NULL;
   
   // save pawn for next level
   mp->DetachThinker(this);
@@ -301,10 +696,7 @@ void PlayerPawn::UseArtifact(artitype_t arti)
 #define WPNLEV2TICS     (40*TICRATE)
 #define FLIGHTTICS      (60*TICRATE)
 
-#define BLINKTHRESHOLD  (4*32) // for powers
 
-// Index of the special effects (INVUL inverse) map.
-#define INVERSECOLORMAP  32
 
 
 // was P_GivePower
@@ -386,64 +778,29 @@ bool PlayerPawn::GivePower(int /*powertype_t*/ power)
 // was P_GiveBody
 // Returns false if the body isn't needed at all
 //
-bool PlayerPawn::GiveBody(int num)
+bool Pawn::GiveBody(int num)
 {
-  int max;
-  //extern int max_health;
 #define MAXCHICKENHEALTH 30
 
-  max = info->spawnhealth; //was max_health, but what if we are not a marine?
-  if (morphTics) max = MAXCHICKENHEALTH; // FIXME
+  //if (morphTics) max = MAXCHICKENHEALTH; // FIXME maxhealth must be updated
 
-  if (health >= max)
+  if (health >= maxhealth)
     return false;
 
   health += num;
-  if (health > max)
-    health = max;
-  //plyr->health = health;
+  if (health > maxhealth)
+    health = maxhealth;
 
   return true;
 }
 
 
 //----------------------------------------------------------------------------
-// was P_ChickenPlayerThink
-//
-
-void PlayerPawn::MorphThink()
-{
-  if (health > 0)
-    { // Handle beak movement
-      P_UpdateBeak(this, &psprites[ps_weapon]);
-    }
-
-  if (morphTics & 15)
-    return;
-
-  if (!(px+py) && P_Random() < 160)
-    { // Twitch view angle
-      angle += P_SignedRandom() << 19;
-    }
-  if ((z <= floorz) && (P_Random() < 32))
-    { // Jump and noise
-      pz += FRACUNIT;
-      SetState(S_CHICPLAY_PAIN);
-      return;
-    }
-  if(P_Random() < 48)
-    { // Just noise
-      S_StartScreamSound(this, sfx_chicact);
-    }
-}
-
-//----------------------------------------------------------------------------
 // was P_UndoPlayerChicken
 
 bool PlayerPawn::UndoMorph()
 {
-  // FIXME! we should store the original Actor type somewhere, it may not be a MT_PLAYER
-  Actor *mo = mp->SpawnActor(x, y, z, MT_PLAYER);
+  DActor *mo = mp->SpawnDActor(x, y, z, mobjtype_t(player->pawntype));
 
   if (mo->TestLocation() == false)
     { // Didn't fit
@@ -452,6 +809,8 @@ bool PlayerPawn::UndoMorph()
       // some sound to indicate unsuccesful morph?
       return false;
     }
+
+  maxhealth = mo->health;
   mo->Remove(); // it is used just to check if a player fits here
 
   reactiontime = 18;
@@ -459,10 +818,10 @@ bool PlayerPawn::UndoMorph()
   powers[pw_weaponlevel2] = 0;
   //weapon = weapontype_t(special1);
   weaponinfo = wpnlev1info;
-  health = info->spawnhealth;//max_health;
+  health = maxhealth;
   angle_t ang = angle >> ANGLETOFINESHIFT;
-  Actor *fog = mp->SpawnActor(x+20*finecosine[ang], y+20*finesine[ang],
-			      z+TELEFOGHEIGHT, MT_TFOG);
+  DActor *fog = mp->SpawnDActor(x+20*finecosine[ang], y+20*finesine[ang],
+				z+TELEFOGHEIGHT, MT_TFOG);
   S_StartSound(fog, sfx_telept);
   P_PostChickenWeapon(this, weapontype_t(special1));
 
@@ -532,365 +891,7 @@ bool PlayerPawn::UndoMorph()
 
 
 
-//--------------------------------------------------------
-// was P_DeathThink
-// Fall on your face when dying.
-// Decrease POV height to floor height.
-//
-#define ANG5    (ANG90/18)
 
-bool onground;
-
-void PlayerPawn::DeathThink()
-{
-  //Actor *attacker;
-
-  MovePsprites();
-
-  // fall to the ground
-  if (player->viewheight > 6*FRACUNIT)
-    player->viewheight -= FRACUNIT;
-
-  if (player->viewheight < 6*FRACUNIT)
-    player->viewheight = 6*FRACUNIT;
-
-  player->deltaviewheight = 0;
-  onground = (z <= floorz);
-
-  CalcHeight();
-
-  //attacker = player->attacker;
-
-  // watch my killer (if there is one)
-  if (attacker != NULL && attacker != this)
-    {
-      angle_t ang = R_PointToAngle2(x, y, attacker->x, attacker->y);
-      angle_t delta = ang - angle;
-
-      if (delta < ANG5 || delta > (unsigned)-ANG5)
-        {
-	  // Looking at killer,
-	  //  so fade damage flash down.
-	  angle = ang;
-        }
-      else if (delta < ANG180)
-	angle += ANG5;
-      else
-	angle -= ANG5;
-
-      // change aiming to look up or down at the attacker (DOESNT WORK)
-      // FIXME : the aiming returned seems to be too up or down...
-      //fixed_t dist = P_AproxDistance(attacker->x - x, attacker->y - y);
-      //if (dist)
-      //  pitch = FixedMul ((160<<FRACBITS), FixedDiv (attacker->z + (attacker->height>>1), dist)) >>FRACBITS;
-      //else pitch = 0;
-      int pitch = (attacker->z - z) >> 17;
-      aiming = G_ClipAimingPitch(&pitch);
-    }
-  
-  if (player->cmd.buttons & BT_USE)
-    {
-      mp->RebornPlayer(player);
-      special2 = 666;
-    }
-}
-
-
-//--------------------------------------------------------
-// was P_PlayerThink
-
-void PlayerPawn::Think()
-{
-  ticcmd_t*           cmd;
-  weapontype_t        newweapon;
-  int                 waterz;
-
-  // TODO: make the Actor/DActor/PPawn distinction clear, separate the code
-  // a corpse, for example. Thinks just like an actor.
-  if (!player)
-    goto actor_think;
-
-  // inventory
-  // TODO: invTics should be a PlayerInfo or HUD property and ticked elsewhere? nah.
-  if (invTics) invTics--;
-
-  // Turn on required cheats
-  if (cheats & CF_NOCLIP)
-    flags |= MF_NOCLIP;
-  else
-    flags &= ~MF_NOCLIP;
-
-  // chain saw run forward
-  cmd = &player->cmd;
-  if (flags & MF_JUSTATTACKED)
-    {
-// added : now angle turn is a absolute value not relative
-#ifndef ABSOLUTEANGLE
-      cmd->angleturn = 0;
-#endif
-      cmd->forwardmove = 0xc800/512;
-      cmd->sidemove = 0;
-      flags &= ~MF_JUSTATTACKED;
-    }
-
-  //if (player->playerstate == PST_REBORN) I_Error("player %d is in PST_REBORN\n"); // debugging...
-
-  if (player->playerstate == PST_DEAD)
-    {
-      //Fab:25-04-98: show the dm rankings while dead, only in deathmatch
-      //if (player == displayplayer) playerdeadview = true;
-
-      DeathThink();
-      goto actor_think;
-    }
-  //else if (player == displayplayer) playerdeadview = false;
-
-  // morphed state?
-  if (morphTics) MorphThink();
-
-  // check water content, set stuff in mobj
-  // FIXME CheckWater is also called at Actor::Think later
-  CheckWater();
-
-  // Move around.
-  // Reactiontime is used to prevent movement
-  //  for a bit after a teleport.
-  if (reactiontime > 0)
-    reactiontime--;
-  else
-    Move();
-
-  //added:22-02-98: bob view only if looking by the marine's eyes
-#ifndef CLIENTPREDICTION2
-  if (!camera.chase) CalcHeight();
-#endif
-
-  // check special sectors : damage & secrets
-  PlayerInSpecialSector();
-
-  //
-  // water splashes
-  //
-  if (game.demoversion >= 125 && specialsector >= 887 &&
-      specialsector <= 888)
-    {
-      if ((px > (2*FRACUNIT) || px < (-2*FRACUNIT) ||
-	   py > (2*FRACUNIT) || py < (-2*FRACUNIT) ||
-	   pz >  (2*FRACUNIT)) &&  // jump out of water
-	  !(gametic % (32 * NEWTICRATERATIO)))
-        {
-	  //
-	  // make sure we disturb the surface of water (we touch it)
-	  //
-	  if (specialsector == 887)
-	    //FLAT TEXTURE 'FWATER'
-	    waterz = subsector->sector->floorheight + (FRACUNIT/4);
-	  else
-	    //FIXME: no hacks! faB's current water hack using negative sector tags
-	    waterz = - (subsector->sector->tag << FRACBITS);
-
-	  // half in the water
-	  if(eflags & MF_TOUCHWATER)
-            {
-	      if (z <= floorz) // onground
-                {
-		  fixed_t whater_height = waterz-subsector->sector->floorheight;
-
-		  if( whater_height<(height>>2 ))
-		    S_StartSound(this, sfx_splash);
-		  else
-		    S_StartSound(this, sfx_floush);
-                }
-	      else
-		S_StartSound(this, sfx_floush);
-            }                   
-        }
-    }
-
-  // Check for weapon change.
-  if (cmd->buttons & BT_CHANGE)
-    {
-      // The actual changing of the weapon is done
-      //  when the weapon psprite can do it
-      //  (read: not in the middle of an attack).
-      newweapon = weapontype_t((cmd->buttons & BT_WEAPONMASK) >> BT_WEAPONSHIFT);
-      if (game.demoversion < 128)
-        {
-	  if (newweapon == wp_fist && weaponowned[wp_chainsaw] &&
-	      !(readyweapon == wp_chainsaw && powers[pw_strength]))
-	    newweapon = wp_chainsaw;
-	  
-	  if (game.mode == commercial && newweapon == wp_shotgun
-	      && weaponowned[wp_supershotgun]
-	      && readyweapon != wp_supershotgun)
-	    newweapon = wp_supershotgun;
-        }
-      else
-        {
-	  if (cmd->buttons & BT_EXTRAWEAPON)
-	    switch (newweapon)
-	      {
-	      case wp_shotgun: 
-		if (game.mode == commercial && weaponowned[wp_supershotgun])
-		  newweapon = wp_supershotgun;
-		break;
-	      case wp_fist:
-		if (weaponowned[wp_chainsaw])
-		  newweapon = wp_chainsaw;
-		break;
-	      default:
-		break;
-	      }
-        }
-
-      if (weaponowned[newweapon]
-	  && newweapon != readyweapon)
-        {
-	  // Do not go to plasma or BFG in shareware,
-	  //  even if cheated.
-	  if ((newweapon != wp_plasma && newweapon != wp_bfg)
-	      || (game.mode != shareware))
-	    pendingweapon = newweapon;
-        }
-    }
-
-  // check for use
-  if (cmd->buttons & BT_USE)
-    {
-      if (!usedown)
-        {
-	  UseLines();
-	  usedown = true;
-        }
-    }
-  else usedown = false;
-
-  // morph counter
-  if (morphTics)
-    {
-      // Chicken attack counter
-      if (chickenPeck)
-	chickenPeck -= 3;
-      // Attempt to undo the chicken
-      if (--morphTics == 0)
-	UndoMorph();
-    }
-
-  // cycle psprites
-  MovePsprites();
-
-  // Counters, time dependend power ups.
-  // Strength counts up to diminish fade.
-  if (powers[pw_strength])
-    powers[pw_strength]++;
-
-  if (powers[pw_invulnerability])
-    powers[pw_invulnerability]--;
-
-  // the MF_SHADOW activates the tr_transhi translucency while it is set
-  // (it doesnt use a preset value through FF_TRANSMASK)
-  if (powers[pw_invisibility])
-    if (--powers[pw_invisibility] == 0)
-      flags &= ~MF_SHADOW;
-
-  if (powers[pw_infrared])
-    powers[pw_infrared]--;
-
-  if (powers[pw_ironfeet])
-    powers[pw_ironfeet]--;
-
-  if (powers[pw_flight]) {
-    if(--powers[pw_flight] == 0)
-      {
-	/* HERETODO
-	   if(z != floorz)
-	   centering = true; */            
-	flags2 &= ~MF2_FLY;
-	flags &= ~MF_NOGRAVITY;
-	// BorderTopRefresh = true; //make sure the sprite's cleared out
-      }
-  }
-
-  if(powers[pw_weaponlevel2]) {
-    if(--powers[pw_weaponlevel2] == 0) {
-      weaponinfo = wpnlev1info;
-      // end of weaponlevel2 power
-      if (readyweapon == wp_phoenixrod
-	  && (psprites[ps_weapon].state != &states[S_PHOENIXREADY])
-	  && (psprites[ps_weapon].state != &states[S_PHOENIXUP]))
-	{
-	  SetPsprite(ps_weapon, S_PHOENIXREADY);
-	  ammo[am_phoenixrod] -= USE_PHRD_AMMO_2;
-	  refire = 0;
-	}
-      else if ((readyweapon == wp_gauntlets) || (readyweapon == wp_staff))
-	pendingweapon = readyweapon;
-      //BorderTopRefresh = true;
-    }
-  }
-
-  // damage and bonus counts are now HUD properties and are ticked there
-
-  // Handling colormaps.
-  if (powers[pw_invulnerability])
-    {
-      if (powers[pw_invulnerability] > BLINKTHRESHOLD
-	  || (powers[pw_invulnerability] & 8))
-	fixedcolormap = INVERSECOLORMAP;
-      else
-	fixedcolormap = 0;
-    }
-  else if (powers[pw_infrared])
-    {
-      if (powers[pw_infrared] > BLINKTHRESHOLD
-	  || (powers[pw_infrared] & 8))
-        {
-	  // almost full bright
-	  fixedcolormap = 1;
-        }
-      else
-	fixedcolormap = 0;
-    }
-  else
-    fixedcolormap = 0;
-
-  // this is where the "actor part" of the thinking begins
- actor_think:
-
-#ifdef CLIENTPREDICTION2
-  compiler_error_sentinel; // is clientprediction2 used at all
-  // move player mobj (not the spirit) to spirit position (sent by ticcmd)
-  if ((player->cmd.angleturn & (TICCMD_XY|TICCMD_RECEIVED) == TICCMD_XY|TICCMD_RECEIVED) && 
-      (player->playerstate == PST_LIVE) && game.demoversion>130)
-    {
-      int oldx = x, oldy = y;
-
-      if (oldx != player->cmd.x || oldy != player->cmd.y)
-        {
-	  eflags |= MF_NOZCHECKING;
-	  // cross special lines and pick up things
-	  if (!TryMove(player->cmd.x, player->cmd.y, true))
-            {
-	      // P_TryMove fail mean cannot change mobj position to requestied position
-	      // the mobj is blocked by something
-	      if (player == consoleplayer)
-                {
-		  // reset spirit possition
-		  CL_ResetSpiritPosition(mobj);
-
-		  //if(devparm)
-		  CONS_Printf("\2MissPrediction\n");
-                }
-            }
-	  eflags &= ~MF_NOZCHECKING;
-        }
-      XYFriction(oldx, oldy, false);
-    }
-  else
-#endif
-    // we call Actor::Think(), because a playerpawn is an actor too
-    Actor::Think();
-}
 
 
 // 16 pixels of bob
@@ -900,11 +901,8 @@ void PlayerPawn::Think()
 // was P_CalcHeight
 // Calculate the walking / running height adjustment
 //
-void PlayerPawn::CalcHeight()
+void PlayerPawn::CalcHeight(bool onground)
 {
-  fixed_t     bob;
-  fixed_t     viewheight;
-
   // Regular movement bobbing
   // (needs to be calculated for gun swing
   // even if not on ground)
@@ -919,14 +917,15 @@ void PlayerPawn::CalcHeight()
     mo = p->spirit;
 #endif
 
-  if (flags2 & MF2_FLY && !onground)
+  if ((flags2 & MF2_FLY) && !onground)
     pl->bob = FRACUNIT/2;
-  else {
-    pl->bob = ((FixedMul(px,px) + FixedMul (py,py))*NEWTICRATERATIO) >> 2;
-    
-    if (pl->bob > MAXBOB)
-      pl->bob = MAXBOB;
-  }
+  else
+    {
+      pl->bob = ((FixedMul(px,px) + FixedMul (py,py))*NEWTICRATERATIO) >> 2;
+
+      if (pl->bob > MAXBOB)
+	pl->bob = MAXBOB;
+    }
 
   if ((cheats & CF_NOMOMENTUM) || z > floorz)
     {
@@ -939,17 +938,11 @@ void PlayerPawn::CalcHeight()
       return;
     }
 
-#ifdef CLIENTPREDICTION2
-  //extern  tic_t           localgametic;
-#else
-  //#define localgametic  cmap.leveltic
-#endif
-
   int ang = (FINEANGLES/20*gametic/NEWTICRATERATIO) & FINEMASK;
-  bob = FixedMul(pl->bob/2, finesine[ang]);
+  fixed_t bob = FixedMul(pl->bob/2, finesine[ang]);
 
   // move viewheight
-  viewheight = cv_viewheight.value << FRACBITS; // default eye view height
+  fixed_t viewheight = cv_viewheight.value << FRACBITS; // default eye view height
 
   if (pl->playerstate == PST_LIVE)
     {
@@ -996,7 +989,7 @@ void PlayerPawn::CalcHeight()
 // was P_SpawnPlayerMissile
 // Tries to aim at a nearby monster
 //
-Actor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
+DActor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
 {
   extern consvar_t cv_allowautoaim;
   extern Actor *linetarget;
@@ -1004,43 +997,32 @@ Actor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
   fixed_t  mx, my, mz;
   fixed_t  slope = 0;
 
-  // angle at which you fire, is player angle
-  angle_t an = ang;
-
-  //added:16-02-98: autoaim is now a toggle
   if (player->autoaim && cv_allowautoaim.value)
     {
       // see which target is to be aimed at
-      slope = AimLineAttack (an, 16*64*FRACUNIT);
+      slope = AimLineAttack (ang, 16*64*FRACUNIT);
 
       if (!linetarget)
         {
-	  an += 1<<26;
-	  slope = AimLineAttack (an, 16*64*FRACUNIT);
+	  ang += 1<<26;
+	  slope = AimLineAttack (ang, 16*64*FRACUNIT);
 
 	  if (!linetarget)
             {
-	      an -= 2<<26;
-	      slope = AimLineAttack (an, 16*64*FRACUNIT);
+	      ang -= 2<<26;
+	      slope = AimLineAttack (ang, 16*64*FRACUNIT);
             }
 
 	  if (!linetarget)
-            {
-	      an = ang;
-	      slope = 0;
-            }
+	    slope = 0;
         }
     }
 
   //added:18-02-98: if not autoaim, or if the autoaim didnt aim something,
   //                use the mouseaiming
-  if (!(player->autoaim && cv_allowautoaim.value)
-      || (!linetarget && game.demoversion>111))
+  if (!(player->autoaim && cv_allowautoaim.value) || !linetarget)
     {
-      if(game.demoversion>=128)
-	slope = AIMINGTOSLOPE(aiming);
-      else
-	slope = (aiming<<FRACBITS)/160;
+      slope = AIMINGTOSLOPE(aiming);
     }
 
   mx = x;
@@ -1049,25 +1031,23 @@ Actor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
   if (flags2 & MF2_FEETARECLIPPED)
     z -= FOOTCLIPSIZE;
 
-  Actor *th = mp->SpawnActor(mx,my,mz, type);
+  DActor *th = mp->SpawnDActor(mx, my, mz, type);
 
   if (th->info->seesound)
     S_StartSound(th, th->info->seesound);
 
   th->owner = this;
 
-  th->angle = an;
-  th->px = FixedMul( th->info->speed, finecosine[an>>ANGLETOFINESHIFT]);
-  th->py = FixedMul( th->info->speed, finesine[an>>ANGLETOFINESHIFT]);
+  th->angle = ang;
+  th->px = FixedMul(th->info->speed, finecosine[ang>>ANGLETOFINESHIFT]);
+  th->py = FixedMul(th->info->speed, finesine[ang>>ANGLETOFINESHIFT]);
     
-  if( game.demoversion>=128 )
-    {   // 1.28 fix, allow full aiming must be much precise
-      th->px = FixedMul(th->px,finecosine[aiming>>ANGLETOFINESHIFT]);
-      th->py = FixedMul(th->py,finecosine[aiming>>ANGLETOFINESHIFT]);
-    }
-  th->pz = FixedMul( th->info->speed, slope);
+  th->px = FixedMul(th->px, finecosine[aiming>>ANGLETOFINESHIFT]);
+  th->py = FixedMul(th->py, finecosine[aiming>>ANGLETOFINESHIFT]);
 
-  if(th->type == MT_BLASTERFX1)
+  th->pz = FixedMul(th->info->speed, slope);
+
+  if (th->type == MT_BLASTERFX1)
     { // Ultra-fast ripper spawning missile
       th->x += (th->px>>3)-(th->px>>1);
       th->y += (th->py>>3)-(th->py>>1);
@@ -1241,8 +1221,7 @@ void PlayerPawn::ProcessSpecialSector(sector_t *sector, bool instantdamage)
 
 		// spawn a puff of smoke
 		//CONS_Printf ("damage!\n"); //debug
-		if (game.demoversion >= 125)
-		  mp->SpawnSmoke(x, y, z);
+		mp->SpawnSmoke(x, y, z);
               }
           break;
 
@@ -1429,9 +1408,8 @@ void PlayerPawn::PlayerInSpecialSector()
     return;
 
   //Fab: jumping in lava/slime does instant damage (no jump cheat)
-  if (game.demoversion >= 125 &&
-      (eflags & MF_JUSTHITFLOOR) &&
-      sec->heightsec == -1 && (mp->maptic % (2*NEWTICRATERATIO))) //SoM: penalize jumping less.
+  if ((eflags & MF_JUSTHITFLOOR) &&
+      (sec->heightsec == -1) && (mp->maptic % (2*NEWTICRATERATIO))) //SoM: penalize jumping less.
     instantdamage = true;
   else
     instantdamage = !(mp->maptic % (32*NEWTICRATERATIO));

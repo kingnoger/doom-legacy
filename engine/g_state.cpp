@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/16 22:11:12  smite-meister
+// Actor/DActor separation done!
+//
 // Revision 1.2  2002/12/03 10:11:39  smite-meister
 // Blindness and missile clipping bugs fixed
 //
@@ -210,6 +213,7 @@ LevelNode *G_CreateClassicMapList(int episode)
       m = new LevelNode[32];
       for (i=0; i<32; i++)
 	{
+	  m[i].number = i;
 	  sprintf(name, "MAP%2.2d", i+1);
 	  m[i].mapname = name;
 	  m[i].levelname = text[base + i];
@@ -260,6 +264,7 @@ LevelNode *G_CreateClassicMapList(int episode)
       m = new LevelNode[9];
       for (i=0; i<9; i++)
 	{
+	  m[i].number = i;
 	  m[i].episode = episode;
 	  sprintf(name, "E%1.1dM%1.1d", episode, i+1);
 	  m[i].mapname = name;
@@ -287,6 +292,7 @@ LevelNode *G_CreateClassicMapList(int episode)
       m = new LevelNode[9];
       for (i=0; i<9; i++)
 	{
+	  m[i].number = i;
 	  m[i].episode = episode;
 	  sprintf(name, "E%1.1dM%1.1d", episode, i+1);
 	  m[i].mapname = name;
@@ -883,7 +889,6 @@ bool GameInfo::StartGame()
 
 void GameInfo::NewLevel(skill_t sk, LevelNode *n, bool resetplayer)
 {
-  //char gamemapname[MAX_WADPATH];      // an external wad filename
   currentlevel = n;
 
   automap.Close();
@@ -894,7 +899,8 @@ void GameInfo::NewLevel(skill_t sk, LevelNode *n, bool resetplayer)
     delete maps[i];
   maps.clear();
 
-  if (players[0]->pawn) CONS_Printf("- NL 2: pawn->health = %d\n", players[0]->pawn->health);
+  if (players[0]->pawn)
+    CONS_Printf("- NL 2: pawn->health = %d\n", players[0]->pawn->health);
   //added:27-02-98: disable selected features for compatibility with
   //                older demos, plus reset new features as default
   if (!Downgrade(demoversion))
@@ -968,13 +974,11 @@ void GameInfo::StartLevel(bool re, bool resetplayer)
 
   state = GS_LEVEL;
 
-  if (players[0]->pawn) CONS_Printf("- SL 1: pawn->health = %d\n", players[0]->pawn->health);
   int n = players.size();
   for (i=0 ; i<n ; i++)
     players[i]->Reset(resetplayer, cv_deathmatch.value ? false : true);
 
-  //if (players[0]->pawn) CONS_Printf("- SL 2: pawn->health = %d\n", players[0]->pawn->health);
-  Z_FreeTags(PU_LEVEL, PU_PURGELEVEL-1);
+  Z_FreeTags(PU_LEVEL, PU_PURGELEVEL-1); // destroys pawns if they are not Detached
 
   if (players[0]->pawn) CONS_Printf("- SL 3: pawn->health = %d\n", players[0]->pawn->health);
 
@@ -998,7 +1002,6 @@ void GameInfo::StartLevel(bool re, bool resetplayer)
       l->secrets += maps[i]->secrets;
     }
 
-  if (players[0]->pawn) CONS_Printf("- SL 4: pawn->health = %d\n", players[0]->pawn->health);
   //Fab:19-07-98:start cd music for this level (note: can be remapped)
   /*
     FIXME cd music
@@ -1024,7 +1027,6 @@ void GameInfo::StartLevel(bool re, bool resetplayer)
 
   action = ga_nothing;
 
-  if (players[0]->pawn) CONS_Printf("- SL 5: pawn->health = %d\n", players[0]->pawn->health);
 #ifdef PARANOIA
   Z_CheckHeap(-2);
 #endif
@@ -1034,7 +1036,6 @@ void GameInfo::StartLevel(bool re, bool resetplayer)
 
   //joyxmove = joyymove = 0;
   //mousex = mousey = 0;
-  if (players[0]->pawn) CONS_Printf("- SL 6: pawn->health = %d\n", players[0]->pawn->health);
 
   // clear hud messages remains (usually from game startup)
   CON_ClearHUD();

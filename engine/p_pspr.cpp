@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:02  hurdler
-// Initial revision
+// Revision 1.2  2002/12/16 22:11:55  smite-meister
+// Actor/DActor separation done!
+//
+// Revision 1.1.1.1  2002/11/16 14:18:02  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.11  2002/09/20 22:41:32  vberghol
 // Sound system rewritten! And it workscvs update
@@ -99,6 +102,7 @@
 #include "g_player.h"
 #include "g_input.h"
 
+#include "g_damage.h"
 #include "p_pspr.h"
 #include "p_enemy.h"
 #include "p_maputl.h"
@@ -116,6 +120,10 @@
 #define WEAPONBOTTOM            128*FRACUNIT
 #define WEAPONTOP               32*FRACUNIT
 
+// FIXME TESTING: play any creature!
+// changes: S_PLAY => info->spawnstate
+// S_PLAY_ATK1 => info->missilestate
+// S_PLAY_ATK2 => info->missilestate+1
 
 // was VerifFavoritWeapon
 // added by Boris : preferred weapons order
@@ -442,7 +450,8 @@ void PlayerPawn::FireWeapon()
 
   if (game.mode == heretic)
     {
-      SetState(S_PLAY_ATK2);
+      // FIXME go to shooting state
+      //SetState(statenum_t(info->missilestate + 1));
       newstate = refire ? weaponinfo[readyweapon].holdatkstate
 	: weaponinfo[readyweapon].atkstate;
 
@@ -452,7 +461,8 @@ void PlayerPawn::FireWeapon()
     }
   else
     {
-      SetState(S_PLAY_ATK1);
+      // FIXME go to shooting state
+      //SetState(info->missilestate);
       newstate = weaponinfo[readyweapon].atkstate;
     }
   SetPsprite(ps_weapon, newstate);
@@ -487,11 +497,13 @@ void A_WeaponReady(PlayerPawn *p, pspdef_t *psp)
     }
 
   // get out of attack state
-  if (p->state == &states[S_PLAY_ATK1]
-      || p->state == &states[S_PLAY_ATK2] )
+  /*
+  if (p->state == &states[p->info->missilestate]
+      || p->state == &states[p->info->missilestate + 1] )
     {
-      p->SetState(S_PLAY);
+      p->SetState(p->info->spawnstate);
     }
+  */
 
   if (p->readyweapon == wp_chainsaw
       && psp->state == &states[S_SAW])
@@ -665,7 +677,7 @@ void A_Raise(PlayerPawn *p, pspdef_t *psp)
 //
 void A_GunFlash(PlayerPawn *p, pspdef_t *psp)
 {
-  p->SetState(S_PLAY_ATK2);
+  //p->SetState(statenum_t(p->info->missilestate + 1));
   p->SetPsprite(ps_flash, p->weaponinfo[p->readyweapon].flashstate);
 }
 
@@ -722,7 +734,7 @@ void A_Saw(PlayerPawn *p, pspdef_t *psp)
 
   // use meleerange + 1 se the puff doesn't skip the flash
   slope = p->AimLineAttack(angle, MELEERANGE+1);
-  p->LineAttack(angle, MELEERANGE+1, slope, damage);
+  p->LineAttack(angle, MELEERANGE+1, slope, damage, dt_cutting); // no recoil!
 
   if (!linetarget)
     {
@@ -797,10 +809,10 @@ fixed_t bulletslope;
 //added:16-02-98: Fab comments: autoaim for the bullet-type weapons
 void P_BulletSlope(PlayerPawn *p)
 {
-  angle_t     an;
+  angle_t an;
 
   //added:18-02-98: if AUTOAIM, try to aim at something
-  if(!p->player->autoaim || !cv_allowautoaim.value || game.demoversion<=111)
+  if(!p->player->autoaim || !cv_allowautoaim.value)
     goto notargetfound;
 
   // see which target is to be aimed at
@@ -819,10 +831,7 @@ void P_BulletSlope(PlayerPawn *p)
       if(!linetarget)
         {
 	notargetfound:
-	  if (game.demoversion>=128)
-	    bulletslope = AIMINGTOSLOPE(p->aiming);
-	  else
-	    bulletslope = (p->aiming<<FRACBITS)/160;
+	  bulletslope = AIMINGTOSLOPE(p->aiming);
         }
     }
 }
@@ -858,7 +867,7 @@ void A_FirePistol(PlayerPawn *p, pspdef_t *psp)
 {
   S_StartAttackSound(p, sfx_pistol);
 
-  p->SetState(S_PLAY_ATK2);
+  //p->SetState(statenum_t(p->info->missilestate + 1));
   p->ammo[p->weaponinfo[p->readyweapon].ammo]--;
 
   p->SetPsprite(ps_flash, p->weaponinfo[p->readyweapon].flashstate);
@@ -876,7 +885,7 @@ void A_FireShotgun(PlayerPawn *p, pspdef_t *psp)
   int         i;
 
   S_StartAttackSound(p, sfx_shotgn);
-  p->SetState(S_PLAY_ATK2);
+  //p->SetState(statenum_t(p->info->missilestate + 1));
 
   p->ammo[p->weaponinfo[p->readyweapon].ammo]--;
   p->SetPsprite(ps_flash, p->weaponinfo[p->readyweapon].flashstate);
@@ -898,7 +907,7 @@ void A_FireShotgun2(PlayerPawn *p, pspdef_t *psp)
   int         damage;
 
   S_StartAttackSound(p, sfx_dshtgn);
-  p->SetState(S_PLAY_ATK2);
+  //p->SetState(statenum_t(p->info->missilestate + 1));
 
   p->ammo[p->weaponinfo[p->readyweapon].ammo]-=2;
 
@@ -926,7 +935,7 @@ void A_FireCGun(PlayerPawn *p, pspdef_t *psp)
   if (!p->ammo[p->weaponinfo[p->readyweapon].ammo])
     return;
 
-  p->SetState(S_PLAY_ATK2);
+  //p->SetState(statenum_t(p->info->missilestate + 1));
   p->ammo[p->weaponinfo[p->readyweapon].ammo]--;
 
   p->SetPsprite(ps_flash, statenum_t(p->weaponinfo[p->readyweapon].flashstate
@@ -960,7 +969,7 @@ void A_Light2 (PlayerPawn *p, pspdef_t *psp)
 // A_BFGSpray
 // Spawn a BFG explosion on every monster in view
 //
-void A_BFGSpray(Actor *mo)
+void A_BFGSpray(DActor *mo)
 {
   int     i;
   int     j;
@@ -979,7 +988,7 @@ void A_BFGSpray(Actor *mo)
       if (!linetarget)
 	continue;
 
-      Actor *extrabfg = mo->mp->SpawnActor(linetarget->x, linetarget->y,
+      DActor *extrabfg = mo->mp->SpawnDActor(linetarget->x, linetarget->y,
         linetarget->z + (linetarget->height>>2), MT_EXTRABFG);
       extrabfg->owner = mo->owner;
 

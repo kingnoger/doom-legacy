@@ -18,114 +18,15 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:17:59  hurdler
-// Initial revision
+// Revision 1.2  2002/12/16 22:11:40  smite-meister
+// Actor/DActor separation done!
 //
-// Revision 1.16  2002/09/20 22:41:31  vberghol
-// Sound system rewritten! And it workscvs update
-//
-// Revision 1.14  2002/09/06 17:18:33  vberghol
-// added most of the changes up to RC2
-//
-// Revision 1.13  2002/08/25 18:21:59  vberghol
-// little fixes
-//
-// Revision 1.12  2002/08/20 13:56:58  vberghol
-// sdfgsd
-//
-// Revision 1.11  2002/08/19 18:06:39  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.10  2002/08/13 19:47:42  vberghol
-// p_inter.cpp done
-//
-// Revision 1.9  2002/08/11 17:16:49  vberghol
-// ...
-//
-// Revision 1.8  2002/08/06 13:14:23  vberghol
-// ...
-//
-// Revision 1.7  2002/07/26 19:23:04  vberghol
-// a little something
-//
-// Revision 1.6  2002/07/18 19:16:38  vberghol
-// renamed a few files
-//
-// Revision 1.5  2002/07/12 19:21:38  vberghol
-// hop
-//
-// Revision 1.4  2002/07/08 20:46:33  vberghol
-// More files compile!
-//
-// Revision 1.3  2002/07/01 21:00:18  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:14  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.23  2001/12/26 22:46:01  hurdler
-// revert to beta 3 until it's fixed (there is at least a problem with saved game)
-//
-// Revision 1.22  2001/12/26 22:42:52  hurdler
-// revert to beta 3 until it's fixed (there is at least a problem with saved game)
-//
-// Revision 1.18  2001/06/10 21:16:01  bpereira
-// no message
-//
-// Revision 1.17  2001/05/27 13:42:47  bpereira
-// no message
-//
-// Revision 1.16  2001/05/16 21:21:14  bpereira
-// no message
-//
-// Revision 1.15  2001/05/14 19:02:58  metzgermeister
-//   * Fixed floor not moving up with player on E3M1
-//   * Fixed crash due to oversized string in screen message ... bad bug!
-//   * Corrected some typos
-//   * fixed sound bug in SDL
-//
-// Revision 1.14  2001/04/19 05:51:47  metzgermeister
-// fixed 10 shells instead of 4 - bug
-//
-// Revision 1.13  2001/03/30 17:12:50  bpereira
-// no message
-//
-// Revision 1.12  2001/02/24 13:35:20  bpereira
-// no message
-//
-// Revision 1.11  2001/01/25 22:15:43  bpereira
-// added heretic support
-//
-// Revision 1.10  2000/11/02 17:50:07  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.9  2000/10/02 18:25:45  bpereira
-// no message
-//
-// Revision 1.8  2000/10/01 10:18:17  bpereira
-// no message
-//
-// Revision 1.7  2000/09/28 20:57:16  bpereira
-// no message
-//
-// Revision 1.6  2000/08/31 14:30:55  bpereira
-// no message
-//
-// Revision 1.5  2000/04/16 18:38:07  bpereira
-// no message
-//
-// Revision 1.4  2000/04/04 00:32:46  stroggonmeth
-// Initial Boom compatability plus few misc changes all around.
-//
-// Revision 1.3  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.2  2000/02/26 00:28:42  hurdler
-// Mostly bug fix (see borislog.txt 23-2-2000, 24-2-2000)
+// Revision 1.1.1.1  2002/11/16 14:17:59  hurdler
+// Initial C++ version of Doom Legacy
 //
 //
 // DESCRIPTION:
-//      Handling interactions (i.e., collisions).
+//  Handling Actor interactions (i.e., collisions).
 //
 //-----------------------------------------------------------------------------
 
@@ -134,6 +35,8 @@
 #include "i_system.h"   //I_Tactile currently has no effect
 #include "am_map.h"
 #include "dstrings.h"
+#include "m_random.h"
+#include "g_damage.h"
 
 #include "g_game.h"
 #include "g_player.h"
@@ -141,8 +44,8 @@
 #include "g_actor.h"
 #include "g_pawn.h"
 
-#include "m_random.h"
 #include "p_enemy.h"
+#include "p_heretic.h"
 #include "s_sound.h"
 #include "sounds.h"
 #include "r_main.h"
@@ -162,7 +65,834 @@ consvar_t cv_fragsweaponfalling = {"fragsweaponfalling"   ,"0",CV_SAVE,CV_OnOff}
 
 // added 4-2-98 (Boris) for dehacked patch
 // (i don't like that but do you see another solution ?)
-int max_health = 100;
+//int max_health = 100;
+
+
+// was P_DeathMessages
+// Death messages relating to the target (dying) player
+static void P_DeathMessages(PlayerPawn* t, Actor *inflictor, Actor *source)
+{
+  char *str = NULL;
+
+  if (!source)
+    {
+      // environment kills
+      int w = t->specialsector;      //see p_spec.c
+
+      if (w==5)
+	str = text[DEATHMSG_HELLSLIME];
+      else if (w==7)
+	str = text[DEATHMSG_NUKE];
+      else if (w==16 || w==4)
+	str = text[DEATHMSG_SUPHELLSLIME];
+      else
+	str = text[DEATHMSG_SPECUNKNOW];
+      CONS_Printf(str, t->player->name.c_str());
+    }
+  else if (source->Type() == Thinker::tt_ppawn)
+    {
+      // player kill
+      PlayerPawn *s = (PlayerPawn *)source;
+
+      if (s->player == t->player)
+	{
+	  CONS_Printf(text[DEATHMSG_SUICIDE], t->player->name.c_str());
+	  // FIXME when console is rewritten to accept << >>
+	  //if (cv_splitscreen.value)
+	  // console << "\4" << t->player->name << text[DEATHMSG_SUICIDE];
+	}
+      else
+        {
+	  if (t->health < -9000) // telefrag !
+	    str = text[DEATHMSG_TELEFRAG];
+	  else
+            {
+	      int w = -1;
+	      if (inflictor && (inflictor->Type() == Thinker::tt_dactor))
+                {
+		  DActor *inf = (DActor *)inflictor;
+		  switch (inf->type)
+		    {
+		    case MT_BARREL:
+		      w = wp_barrel;
+		      break;
+		    case MT_ROCKET   :
+		      w = wp_missile;
+		      break;
+		    case MT_PLASMA   :
+		      w = wp_plasma;
+		      break;
+		    case MT_EXTRABFG :
+		    case MT_BFG      :
+		      w = wp_bfg;
+		      break;
+		    default :
+		      w = s->readyweapon;
+		      break;
+		    }
+                }
+
+	      switch(w)
+                {
+                case wp_fist:
+		  str = text[DEATHMSG_FIST];
+		  break;
+                case wp_pistol:
+		  str = text[DEATHMSG_GUN];
+		  break;
+                case wp_shotgun:
+		  str = text[DEATHMSG_SHOTGUN];
+		  break;
+                case wp_chaingun:
+		  str = text[DEATHMSG_MACHGUN];
+		  break;
+                case wp_missile:
+		  str = text[DEATHMSG_ROCKET];
+		  if (t->health < -t->maxhealth)
+		    str = text[DEATHMSG_GIBROCKET];
+		  break;
+                case wp_plasma:
+		  str = text[DEATHMSG_PLASMA];
+		  break;
+                case wp_bfg:
+		  str = text[DEATHMSG_BFGBALL];
+		  break;
+                case wp_chainsaw:
+		  str = text[DEATHMSG_CHAINSAW];
+		  break;
+                case wp_supershotgun:
+		  str = text[DEATHMSG_SUPSHOTGUN];
+		  break;
+		case wp_barrel:
+		  str = text[DEATHMSG_BARRELFRAG];
+		  break;
+                default:
+		  str = text[DEATHMSG_PLAYUNKNOW];
+		  break;
+                }
+            }
+	  CONS_Printf(str, t->player->name.c_str(),
+		      s->player->name.c_str());
+	  // FIXME when console is rewritten to accept << >>
+	  //if (cv_splitscreen.value)
+	  // console << "\4" << str...
+        }
+    }
+  else if (source->Type() == Thinker::tt_dactor)
+    {
+      // monster kill
+      DActor *so = (DActor *)source;
+      switch (so->type)
+	{
+	case MT_BARREL:    str = text[DEATHMSG_BARREL]; break;
+	case MT_POSSESSED: str = text[DEATHMSG_POSSESSED]; break;
+	case MT_SHOTGUY:   str = text[DEATHMSG_SHOTGUY];   break;
+	case MT_VILE:      str = text[DEATHMSG_VILE];      break;
+	case MT_FATSO:     str = text[DEATHMSG_FATSO];     break;
+	case MT_CHAINGUY:  str = text[DEATHMSG_CHAINGUY];  break;
+	case MT_TROOP:     str = text[DEATHMSG_TROOP];     break;
+	case MT_SERGEANT:  str = text[DEATHMSG_SERGEANT];  break;
+	case MT_SHADOWS:   str = text[DEATHMSG_SHADOWS];   break;
+	case MT_HEAD:      str = text[DEATHMSG_HEAD];      break;
+	case MT_BRUISER:   str = text[DEATHMSG_BRUISER];   break;
+	case MT_UNDEAD:    str = text[DEATHMSG_UNDEAD];    break;
+	case MT_KNIGHT:    str = text[DEATHMSG_KNIGHT];    break;
+	case MT_SKULL:     str = text[DEATHMSG_SKULL];     break;
+	case MT_SPIDER:    str = text[DEATHMSG_SPIDER];    break;
+	case MT_BABY:      str = text[DEATHMSG_BABY];      break;
+	case MT_CYBORG:    str = text[DEATHMSG_CYBORG];    break;
+	case MT_PAIN:      str = text[DEATHMSG_PAIN];      break;
+	case MT_WOLFSS:    str = text[DEATHMSG_WOLFSS];    break;
+	default:           str = text[DEATHMSG_DEAD];      break;
+	}
+    }
+  CONS_Printf(str, t->player->name.c_str());
+
+}
+
+//======================================================
+
+//---------------------------------------------
+// Called when two actors touch one another
+// Returns true if any interaction takes place.
+
+bool Actor::Touch(Actor *p)
+{
+
+  // missiles can hit other things
+  if (flags & MF_MISSILE)
+    {
+      // Check for passing through a ghost (heretic)
+      if ((p->flags & MF_SHADOW) && (flags2 & MF2_THRUGHOST))
+	return false;
+
+      // see if it went over / under
+      if (z > p->z + p->height)
+	return false; // overhead
+      if (z + height < p->z)
+	return false; // underneath
+
+      if (!(p->flags & MF_SHOOTABLE))
+        {
+	  // didn't do any damage
+	  return (p->flags & MF_SOLID);
+        }
+
+      // don't traverse any more
+      return true;
+    }
+
+
+  return (flags & MF_SOLID) && (p->flags & MF_SOLID);
+}
+
+
+bool DActor::Touch(Actor *p)
+{
+  extern int numspechit;
+  int damage;
+
+  // check for skulls slamming into things
+  if (flags & MF_SKULLFLY)
+    {
+      damage = ((P_Random()%8)+1) * info->damage;
+
+      p->Damage(this, this, damage);
+
+      flags &= ~MF_SKULLFLY;
+      px = py = pz = 0;
+
+      SetState(game.mode == heretic ? info->seestate : info->spawnstate);
+
+      return true; // stop moving
+    }
+
+  // missiles can hit other things
+  if (flags & MF_MISSILE)
+    {
+      // Check for passing through a ghost (heretic)
+      if ((p->flags & MF_SHADOW) && (flags2 & MF2_THRUGHOST))
+	return false;
+
+      // see if it went over / under
+      if (z > p->z + p->height)
+	return false; // overhead
+      if (z + height < p->z)
+	return false; // underneath
+
+      // Don't hit the originator.
+      if (p == owner)
+	return false;
+
+      // Don't damage the same species as the originator.
+      /*
+      if (owner && (owner->type == p->type ||
+		    (owner->type == MT_KNIGHT  && p->type == MT_BRUISER)||
+		    (owner->type == MT_BRUISER && p->type == MT_KNIGHT)))
+        {
+
+	  if (p->type != MT_PLAYER)
+            {
+	      // Explode, but do no damage.
+	      // Let players missile other players.
+	      return true;
+            }
+        }
+      */
+
+      if (!(p->flags & MF_SHOOTABLE))
+        {
+	  // didn't do any damage
+	  return (p->flags & MF_SOLID);
+        }
+
+      // more heretic stuff
+      if (flags2 & MF2_RIP)
+        {
+	  damage = ((P_Random () & 3) + 2) * info->damage;
+	  S_StartSound (this, sfx_ripslop);
+	  if (p->Damage(this, owner, damage))
+            {
+	      if (!(p->flags & MF_NOBLOOD))
+                { // Ok to spawn some blood
+		  mp->SpawnBlood(x, y, z, damage);
+		  //P_RipperBlood (this);
+                }
+            }
+
+	  if ((p->flags2 & MF2_PUSHABLE) && !(flags2 & MF2_CANNOTPUSH))
+            { // Push thing
+	      p->px += px >> 2;
+	      p->py += py >> 2;
+            }
+	  numspechit = 0;
+	  return false;
+        }
+
+      // damage / explode
+      damage = ((P_Random()%8)+1) * info->damage;
+      if (p->Damage(this, owner, damage) && !(p->flags & MF_NOBLOOD))
+	mp->SpawnBloodSplats(x,y,z, damage, p->px, p->py);
+
+      // don't traverse any more
+      return true;
+    }
+
+  if ((p->flags2 & MF2_PUSHABLE) && !(flags2 & MF2_CANNOTPUSH))
+    { // Push thing
+      p->px += px >> 2;
+      p->py += py >> 2;
+    }
+
+  // check for special pickup
+  if (p->flags & MF_SPECIAL)
+    {
+      if (flags & MF_PICKUP)
+        {
+	  // can remove thing
+	  // TODO: some beneficial effects for DActors too?
+	  p->Remove();
+        }
+      return p->flags & MF_SOLID;
+    }
+
+  /*
+  // check again for special pickup (Why?)
+  if (flags & MF_SPECIAL)
+    {
+      //if (p->flags & MF_PICKUP)
+      if (p->Type() == Thinker::tt_ppawn)
+        {
+	  // can remove thing
+	  ((PlayerPawn *)p)->TouchSpecialThing(this);
+        }
+      return flags & MF_SOLID;
+    }
+  */
+
+  //if (game.demoversion<112 ||game.demoversion>=132 || !(flags & MF_SOLID))
+
+  return (p->flags & MF_SOLID);
+
+  /*
+  //added:22-02-98: added z checking at last
+  //SoM: 3/10/2000: Treat noclip things as non-solid!
+  if ((p->flags & MF_SOLID) && (flags & MF_SOLID) &&
+      !(p->flags & MF_NOCLIP) && !(flags & MF_NOCLIP))
+    {
+      // pass under
+      tmtopz = z + height;
+
+      if (tmtopz < p->z)
+        {
+	  if (p->z < tmceilingz)
+	    tmceilingz = p->z;
+	  return false;
+        }
+
+      topz = p->z + p->height + FRACUNIT;
+
+      // block only when jumping not high enough,
+      // (dont climb max. 24units while already in air)
+      // if not in air, let P_TryMove() decide if its not too high
+      // FIXME why test player here
+      if (Type() == Thinker::tt_ppawn &&
+	  z < topz &&
+	  z > floorz)  // block while in air
+	return true;
+
+
+      if (topz > tmfloorz)
+        {
+	  tmfloorz = topz;
+	  tmfloorthing = p;       //thing we may stand on
+        }
+
+    }
+  // not solid not blocked
+  return false;
+  */
+}
+
+bool PlayerPawn::Touch(Actor *p)
+{
+  if ((p->flags2 & MF2_PUSHABLE) && !(flags2 & MF2_CANNOTPUSH))
+    {
+      // Push thing
+      p->px += px >> 2;
+      p->py += py >> 2;
+    }
+
+  // check for special pickup
+  if (p->flags & MF_SPECIAL)
+    {
+      if (flags & MF_PICKUP)
+        {
+	  // can remove thing
+	  if (p->Type() == Thinker::tt_dactor)
+	    {
+	      DActor *dp = (DActor *)p;
+	      TouchSpecialThing(dp);
+	    }
+	  p->Remove();
+	  return true;
+        }
+    }
+
+  return (p->flags & MF_SOLID);
+}
+
+// Gives damage to the Actor. If the damage is "stopped" (absorbed), returns true.
+// Damage comes directly from inflictor but is caused by source.
+bool Actor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
+{
+  if (!(flags & MF_SHOOTABLE))
+    return false;
+
+  // old recoil code
+  if (inflictor && !(flags & MF_NOCLIP) && (dtype & dt_oldrecoil)
+      && !(inflictor->flags2 & MF2_NODMGTHRUST))      
+    {
+      fixed_t apx, apy, apz = 0;
+      fixed_t thrust;  
+      extern consvar_t cv_allowrocketjump;
+
+      angle_t ang = R_PointToAngle2(inflictor->x, inflictor->y, x, y);
+
+      if (game.mode == heretic)
+	thrust = damage*(FRACUNIT>>3)*150/(mass+1);
+      else
+	thrust = damage*(FRACUNIT>>3)*100/(mass+1);
+
+      // sometimes a target shot down might fall off a ledge forwards
+      if (damage < 40 && damage > health
+	  && (z - inflictor->z) > 64*FRACUNIT && (P_Random() & 1))
+        {
+	  ang += ANG180;
+	  thrust *= 4;
+        }
+
+      ang >>= ANGLETOFINESHIFT;
+
+      apx = FixedMul (thrust, finecosine[ang]);
+      apy = FixedMul (thrust, finesine[ang]);
+      px += apx;
+      py += apy;
+            
+      // pz (do it better for explosions)
+      if (!cv_allowrocketjump.value)
+	{
+	  fixed_t dist, sx, sy, sz;
+
+	  sx = inflictor->x;
+	  sy = inflictor->y;
+	  sz = inflictor->z;
+
+	  dist = R_PointToDist2(sx, sy, x, y);
+                
+	  ang = R_PointToAngle2(0, sz, dist, z);
+                
+	  ang >>= ANGLETOFINESHIFT;
+	  apz = FixedMul(thrust, finesine[ang]);
+	}
+      else
+	{
+	  // rocket jump code
+	  fixed_t delta1 = abs(inflictor->z - z);
+	  fixed_t delta2 = abs(inflictor->z - (z + height));
+	  apz = (abs(apx) + abs(apy))>>1;
+	  
+	  if (delta1 >= delta2 && inflictor->pz < 0)
+	    apz = -apz;
+	}
+      pz += apz;
+    }
+  
+  // do the damage
+  health -= damage;
+  if (health <= 0)
+    {
+      special1 = damage;
+      Die(inflictor, source);
+    }
+
+  return true;
+}
+
+
+#define BASETHRESHOLD 100
+
+bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
+{
+  if (!(flags & MF_SHOOTABLE))
+    return false; // shouldn't happen...
+
+  if (dtype & dt_always)
+    {
+      return Actor::Damage(inflictor, source, damage, dtype);
+    }
+
+  if (health <= 0)
+    return false;
+
+  if (flags & MF_SKULLFLY)
+    {
+      // Minotaur is invulnerable during charge attack
+      if (type == MT_MINOTAUR)
+	return false;
+      px = py = pz = 0;
+    }
+
+  // Special damage types
+  if (inflictor && (inflictor->Type() == Thinker::tt_dactor))
+    {
+      DActor *inf = (DActor *)inflictor;
+      switch (inf->type)
+        {
+        case MT_EGGFX:
+	  Morph();
+	  return false; // Always return
+        case MT_WHIRLWIND:
+	  return P_TouchWhirlwind(this);
+        case MT_MINOTAUR:
+	  if (inflictor->flags & MF_SKULLFLY)
+            { // Slam only when in charge mode
+	      P_MinotaurSlam(inflictor, this);
+	      return true;
+            }
+	  break;
+        case MT_MACEFX4: // Death ball
+	  if ((flags2 & MF2_BOSS) || type == MT_HHEAD)
+	    // Don't allow cheap boss kills
+	    break;
+	  damage = 10000; // Something's gonna die
+	  break;
+        case MT_RAINPLR1: // Rain missiles
+        case MT_RAINPLR2:
+        case MT_RAINPLR3:
+        case MT_RAINPLR4:
+	  if (flags2 & MF2_BOSS)
+            { // Decrease damage for bosses
+	      damage = (P_Random()&7)+1;
+            }
+	  break;
+        case MT_HORNRODFX2:
+        case MT_PHOENIXFX1:
+	  if (type == MT_SORCERER2 && P_Random() < 96)
+            { // D'Sparil teleports away
+	      DSparilTeleport();
+	      return false;
+            }
+	  break;
+        case MT_BLASTERFX1:
+        case MT_RIPPER:
+	  if (type == MT_HHEAD)
+            { // Less damage to Ironlich bosses
+	      damage = P_Random()&1;
+	      if (!damage)
+		return false;
+            }
+	  break;
+        default:
+	  break;
+        }
+    }
+
+  unsigned    ang;
+  fixed_t     thrust;  
+
+  // Some close combat weapons should not
+  // inflict thrust and push the victim out of reach
+  if (inflictor && !(flags & MF_NOCLIP) && (dtype & dt_oldrecoil)
+      && !(inflictor->flags2 & MF2_NODMGTHRUST))      
+    {
+      fixed_t            apx, apy, apz = 0;//SoM: 3/28/2000
+      extern consvar_t   cv_allowrocketjump;
+
+      ang = R_PointToAngle2(inflictor->x, inflictor->y, x, y);
+
+      if (game.mode == heretic )
+	thrust = damage*(FRACUNIT>>3)*150/info->mass;
+      else
+	thrust = damage*(FRACUNIT>>3)*100/info->mass;
+
+      // sometimes a target shot down might fall off a ledge forwards
+      if (damage < 40 && damage > health
+	  && (z - inflictor->z) > 64*FRACUNIT && (P_Random() & 1))
+        {
+	  ang += ANG180;
+	  thrust *= 4;
+        }
+
+      ang >>= ANGLETOFINESHIFT;
+
+      apx = FixedMul (thrust, finecosine[ang]);
+      apy = FixedMul (thrust, finesine[ang]);
+      px += apx;
+      py += apy;
+            
+      // added pz (do it better for missiles explotion)
+      if (source && !cv_allowrocketjump.value)
+	{
+	  fixed_t dist, sx, sy, sz;
+
+	  sx = inflictor->x;
+	  sy = inflictor->y;
+	  sz = inflictor->z;
+
+	  dist = R_PointToDist2(sx, sy, x, y);
+                
+	  ang = R_PointToAngle2(0, sz, dist, z);
+                
+	  ang >>= ANGLETOFINESHIFT;
+	  apz = FixedMul (thrust, finesine[ang]);
+	}
+      else if (cv_allowrocketjump.value)
+	{
+	  fixed_t delta1 = abs(inflictor->z - z);
+	  fixed_t delta2 = abs(inflictor->z - (z + height));
+	  apz = (abs(apx) + abs(apy))>>1;
+	  
+	  if (delta1 >= delta2 && inflictor->pz < 0)
+	    apz = -apz;
+	}
+      pz += apz;
+
+#ifdef CLIENTPREDICTION2
+      if (p && p->spirit)
+	{
+	  p->spirit->px += apx;
+	  p->spirit->py += apy;
+	  p->spirit->pz += apz;
+	}
+#endif  
+    }
+
+  
+  // do the damage
+  health -= damage;
+  if (health <= 0)
+    {
+      special1 = damage;
+
+      Die(inflictor, source);
+      return true;
+    }
+
+  if ((P_Random () < info->painchance)
+       && !(flags & (MF_SKULLFLY|MF_CORPSE)) )
+    {
+      flags |= MF_JUSTHIT;    // fight back!
+      SetState(info->painstate);
+    }
+
+  // we're awake now...
+  reactiontime = 0;
+
+  // get angry
+  if ((!threshold || type == MT_VILE) && source && (source != target))
+      //&& source->type != MT_VILE
+      //&& !(source->flags2 & MF2_BOSS)
+      //&& !(type == MT_SORCERER2 && source->type == MT_WIZARD))
+    {
+      if (source->Type() == Thinker::tt_dactor)
+	{
+	  DActor *ds = (DActor *)source;
+	  
+	  // let's not get angry, after all
+	  if ((ds->type == MT_VILE) ||
+	      (ds->type == MT_WIZARD && type == MT_SORCERER2) ||
+	      (ds->type == MT_MINOTAUR && type == MT_MINOTAUR))
+	    return true;
+	}
+
+      // if not intent on another player,
+      // chase after this one
+      target = source;
+      threshold = BASETHRESHOLD;
+      if (state == &states[info->spawnstate]
+	  && info->seestate != S_NULL)
+	SetState(info->seestate);
+    }
+
+  return true;
+}
+
+
+
+// was P_KillMobj
+//
+// source is the killer
+
+void Actor::Die(Actor *inflictor, Actor *source)
+{
+  extern consvar_t cv_solidcorpse;
+
+  flags &= ~(MF_FLOAT|MF_SKULLFLY);
+
+  // dead target is no more shootable
+  if (!cv_solidcorpse.value)
+    {
+      flags &= ~(MF_SHOOTABLE | MF_SOLID);
+    }
+
+  // scream a corpse :)
+  if (flags & MF_CORPSE)
+    {
+      // FIXME turn it to gibs
+      //SetState(S_GIBS);
+
+      flags &= ~MF_SOLID;
+      height = 0;
+      radius<<= 1;
+
+      //added:22-02-98: lets have a neat 'crunch' sound!
+      S_StartSound (this, sfx_slop);
+      return;
+    }
+
+  // if killed by a player
+  if (flags & MF_COUNTKILL)
+    {
+      if (source && source->Type() == Thinker::tt_ppawn)
+	{
+	  PlayerPawn *s = (PlayerPawn *)source;
+	  // count for intermission
+	  s->player->kills++;    
+	}
+      else if (!game.multiplayer)
+	{
+	  // count all monster deaths,
+	  // even those caused by other monsters
+	  consoleplayer->kills++;
+	}
+    }
+}
+
+
+void DActor::Die(Actor *inflictor, Actor *source)
+{
+  Actor::Die(inflictor, source);
+
+  if (flags & MF_CORPSE)
+    return;
+
+  if (type != MT_SKULL)
+    flags &= ~MF_NOGRAVITY;
+
+  //added:22-02-98: remember who exploded the barrel, so that the guy who
+  //                shot the barrel which killed another guy, gets the frag!
+  //                (source is passed from barrel to barrel also!)
+  //                (only for multiplayer fun, does not remember monsters)
+  if ((type == MT_BARREL || type == MT_POD) && source)
+    owner = source;
+
+  if (((game.mode != heretic && health < -info->spawnhealth)
+       ||(game.mode == heretic && health < -(info->spawnhealth>>1)))
+      && info->xdeathstate)
+    {
+      SetState(info->xdeathstate);
+    }
+  else
+    SetState(info->deathstate);
+
+  tics -= P_Random()&3;
+
+  if (tics < 1)
+    tics = 1;
+
+  mobjtype_t item;
+  // Drop stuff.
+  // This determines the kind of object spawned
+  // during the death frame of a thing.
+  switch (type)
+    {
+    case MT_WOLFSS:
+    case MT_POSSESSED:
+      item = MT_CLIP;
+      break;
+
+    case MT_SHOTGUY:
+      item = MT_SHOTGUN;
+      break;
+
+    case MT_CHAINGUY:
+      item = MT_CHAINGUN;
+      break;
+
+    default:
+      return;
+    }
+
+  DActor *mo = mp->SpawnDActor(x, y, floorz, item);
+  mo->flags |= MF_DROPPED;    // special versions of items
+}
+
+
+//---------------------------------------------
+
+void PlayerPawn::Die(Actor *inflictor, Actor *source)
+{
+  Actor::Die(inflictor, source);
+
+  PlayerPawn *s = NULL;
+  if (source && source->Type() == Thinker::tt_ppawn)
+    s = (PlayerPawn *)source;
+
+  // show death messages, only if it concern the console player
+  // (be it an attacker or a target)
+  if (player == consoleplayer)
+    P_DeathMessages (this, inflictor, source);
+  else if (s && s->player == consoleplayer)
+    P_DeathMessages (this, inflictor, source);
+
+
+  // count frags if player killed player
+  if (s)
+    {
+      game.UpdateScore(s->player, player);
+      if( game.mode == heretic )
+	{
+	  if(s->player == displayplayer 
+	     || s->player == displayplayer2 )
+	    S_StartAmbSound(sfx_gfrag);
+
+	  // Make a super chicken
+	  if (s->morphTics)
+	    s->GivePower(pw_weaponlevel2);
+	}
+    }
+  // count environment kills against you (you fragged yourself!)
+  if (!source)
+    {
+      game.UpdateScore(player, player);
+    }
+
+  // dead guy attributes
+  flags2 &= ~MF2_FLY;
+  powers[pw_flight] = 0;
+  powers[pw_weaponlevel2] = 0;
+  DropWeapon();  // put weapon away
+
+  player->playerstate = PST_DEAD;
+
+  if (player == consoleplayer)
+    {
+      // don't die in auto map,
+      // switch view prior to dying
+      if (automap.active)
+	automap.Close();
+
+      // recenter view for next live...
+      localaiming = 0;
+    }
+  if (player == consoleplayer2)
+    {
+      // recenter view for next live...
+      localaiming2 = 0;
+    }
+}
+
 
 //--------------------------------------------------------------------------
 // was P_SetMessage
@@ -470,7 +1200,7 @@ bool PlayerPawn::GiveArtifact(artitype_t arti, Actor *from)
 //
 //---------------------------------------------------------------------------
 
-void P_SetDormantArtifact(Actor *arti)
+void P_SetDormantArtifact(DActor *arti)
 {
   arti->flags &= ~MF_SPECIAL;
   if(cv_deathmatch.value && (arti->type != MT_ARTIINVULNERABILITY)
@@ -491,7 +1221,7 @@ void P_SetDormantArtifact(Actor *arti)
 //
 //---------------------------------------------------------------------------
 
-void A_RestoreArtifact(Actor *arti)
+void A_RestoreArtifact(DActor *arti)
 {
   arti->flags |= MF_SPECIAL;
   arti->SetState(arti->info->spawnstate);
@@ -504,7 +1234,7 @@ void A_RestoreArtifact(Actor *arti)
 //
 //----------------------------------------------------------------------------
 
-void P_HideSpecialThing(Actor *thing)
+void P_HideSpecialThing(DActor *thing)
 {
   thing->flags &= ~MF_SPECIAL;
   thing->flags2 |= MF2_DONTDRAW;
@@ -519,9 +1249,9 @@ void P_HideSpecialThing(Actor *thing)
 //
 //---------------------------------------------------------------------------
 
-void A_RestoreSpecialThing1(Actor *thing)
+void A_RestoreSpecialThing1(DActor *thing)
 {
-  if(thing->type == MT_WMACE)
+  if (thing->type == MT_WMACE)
     { // Do random mace placement
       thing->mp->RepositionMace(thing);
     }
@@ -535,7 +1265,7 @@ void A_RestoreSpecialThing1(Actor *thing)
 //
 //---------------------------------------------------------------------------
 
-void A_RestoreSpecialThing2(Actor *thing)
+void A_RestoreSpecialThing2(DActor *thing)
 {
   thing->flags |= MF_SPECIAL;
   thing->SetState(thing->info->spawnstate);
@@ -548,7 +1278,7 @@ void A_RestoreSpecialThing2(Actor *thing)
 //
 //----------------------------------------------------------------------------
 
-void A_HideThing(Actor *actor)
+void A_HideThing(DActor *actor)
 {
   //P_UnsetThingPosition(actor);
   actor->flags2 |= MF2_DONTDRAW;
@@ -560,7 +1290,7 @@ void A_HideThing(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_UnHideThing(Actor *actor)
+void A_UnHideThing(DActor *actor)
 {
   //P_SetThingPosition(actor);
   actor->flags2 &= ~MF2_DONTDRAW;
@@ -570,7 +1300,7 @@ void A_UnHideThing(Actor *actor)
 //
 // was P_TouchSpecialThing
 //
-void PlayerPawn::TouchSpecialThing(Actor *special)
+void PlayerPawn::TouchSpecialThing(DActor *special)
 {                  
   int         i;
 
@@ -612,8 +1342,8 @@ void PlayerPawn::TouchSpecialThing(Actor *special)
       // bonus items
     case SPR_BON1:
       health++;               // can go over 100%
-      if (health > 2*max_health)
-	health = 2*max_health;
+      if (health > 2*maxhealth)
+	health = 2*maxhealth;
       if (cv_showmessages.value==1)
 	message = GOTHTHBONUS;
       break;
@@ -1158,7 +1888,7 @@ void PlayerPawn::TouchSpecialThing(Actor *special)
 }
 
 
-
+/*
 #ifdef thatsbuggycode
 //
 //  Tell each supported thing to check again its position,
@@ -1267,482 +1997,10 @@ void P_UnlinkFloorThing(Actor*   mobj)
     }
 }
 #endif
-
-// was P_DeathMessages
-// Death messages relating to the target (dying) player
-//
-static void P_DeathMessages(PlayerPawn* t, Actor *inflictor, Actor *source)
-{
-  char *str = NULL;
-
-  if (!source)
-    {
-      // environment kills
-      int w = t->specialsector;      //see p_spec.c
-
-      if (w==5)
-	str = text[DEATHMSG_HELLSLIME];
-      else if (w==7)
-	str = text[DEATHMSG_NUKE];
-      else if (w==16 || w==4)
-	str = text[DEATHMSG_SUPHELLSLIME];
-      else
-	str = text[DEATHMSG_SPECUNKNOW];
-      CONS_Printf(str, t->player->name.c_str());
-    }
-  else if (source->Type() == Thinker::tt_ppawn)
-    {
-      // player kill
-      PlayerPawn *s = (PlayerPawn *)source;
-
-      if (s->player == t->player)
-	{
-	  CONS_Printf(text[DEATHMSG_SUICIDE], t->player->name.c_str());
-	  // FIXME when console is rewritten to accept << >>
-	  //if (cv_splitscreen.value)
-	  // console << "\4" << t->player->name << text[DEATHMSG_SUICIDE];
-	}
-      else
-        {
-	  if (t->health < -9000) // telefrag !
-	    str = text[DEATHMSG_TELEFRAG];
-	  else
-            {
-	      int w = -1;
-	      if (inflictor)
-                {
-		  switch(inflictor->type) {
-		  case MT_BARREL:
-		    w = wp_barrel;
-		    break;
-		  case MT_ROCKET   :
-		    w = wp_missile;
-		    break;
-		  case MT_PLASMA   :
-		    w = wp_plasma;
-		    break;
-		  case MT_EXTRABFG :
-		  case MT_BFG      :
-		    w = wp_bfg;
-		    break;
-		  default :
-		    w = s->readyweapon;
-		    break;
-		  }
-                }
-
-	      switch(w)
-                {
-                case wp_fist:
-		  str = text[DEATHMSG_FIST];
-		  break;
-                case wp_pistol:
-		  str = text[DEATHMSG_GUN];
-		  break;
-                case wp_shotgun:
-		  str = text[DEATHMSG_SHOTGUN];
-		  break;
-                case wp_chaingun:
-		  str = text[DEATHMSG_MACHGUN];
-		  break;
-                case wp_missile:
-		  str = text[DEATHMSG_ROCKET];
-		  if (t->health < -t->info->spawnhealth &&
-		      t->info->xdeathstate)
-		    str = text[DEATHMSG_GIBROCKET];
-		  break;
-                case wp_plasma:
-		  str = text[DEATHMSG_PLASMA];
-		  break;
-                case wp_bfg:
-		  str = text[DEATHMSG_BFGBALL];
-		  break;
-                case wp_chainsaw:
-		  str = text[DEATHMSG_CHAINSAW];
-		  break;
-                case wp_supershotgun:
-		  str = text[DEATHMSG_SUPSHOTGUN];
-		  break;
-		case wp_barrel:
-		  str = text[DEATHMSG_BARRELFRAG];
-		  break;
-                default:
-		  str = text[DEATHMSG_PLAYUNKNOW];
-		  break;
-                }
-            }
-	  CONS_Printf(str, t->player->name.c_str(),
-		      s->player->name.c_str());
-	  // FIXME when console is rewritten to accept << >>
-	  //if (cv_splitscreen.value)
-	  // console << "\4" << str...
-        }
-    }
-  else
-    {
-      // monster kill
-      switch (source->type)
-	{
-	case MT_BARREL:    str = text[DEATHMSG_BARREL]; break;
-	case MT_POSSESSED: str = text[DEATHMSG_POSSESSED]; break;
-	case MT_SHOTGUY:   str = text[DEATHMSG_SHOTGUY];   break;
-	case MT_VILE:      str = text[DEATHMSG_VILE];      break;
-	case MT_FATSO:     str = text[DEATHMSG_FATSO];     break;
-	case MT_CHAINGUY:  str = text[DEATHMSG_CHAINGUY];  break;
-	case MT_TROOP:     str = text[DEATHMSG_TROOP];     break;
-	case MT_SERGEANT:  str = text[DEATHMSG_SERGEANT];  break;
-	case MT_SHADOWS:   str = text[DEATHMSG_SHADOWS];   break;
-	case MT_HEAD:      str = text[DEATHMSG_HEAD];      break;
-	case MT_BRUISER:   str = text[DEATHMSG_BRUISER];   break;
-	case MT_UNDEAD:    str = text[DEATHMSG_UNDEAD];    break;
-	case MT_KNIGHT:    str = text[DEATHMSG_KNIGHT];    break;
-	case MT_SKULL:     str = text[DEATHMSG_SKULL];     break;
-	case MT_SPIDER:    str = text[DEATHMSG_SPIDER];    break;
-	case MT_BABY:      str = text[DEATHMSG_BABY];      break;
-	case MT_CYBORG:    str = text[DEATHMSG_CYBORG];    break;
-	case MT_PAIN:      str = text[DEATHMSG_PAIN];      break;
-	case MT_WOLFSS:    str = text[DEATHMSG_WOLFSS];    break;
-	default:           str = text[DEATHMSG_DEAD];      break;
-	}
-    }
-  CONS_Printf(str, t->player->name.c_str());
-
-}
+*/
 
 
-void PlayerPawn::Kill(Actor *inflictor, Actor *source)
-{
-  Actor::Kill(inflictor, source);
 
-  PlayerPawn *s = NULL;
-  if (source && source->Type() == Thinker::tt_ppawn)
-    s = (PlayerPawn *)source;
-
-  // show death messages, only if it concern the console player
-  // (be it an attacker or a target)
-  if (player == consoleplayer)
-    P_DeathMessages (this, inflictor, source);
-  else if (s && s->player == consoleplayer)
-    P_DeathMessages (this, inflictor, source);
-
-
-  // count frags if player killed player
-  if (s)
-    {
-      game.UpdateScore(s->player, player);
-      if( game.mode == heretic )
-	{
-	  if(s->player == displayplayer 
-	     || s->player == displayplayer2 )
-	    S_StartAmbSound(sfx_gfrag);
-
-	  // Make a super chicken
-	  if (s->morphTics)
-	    s->GivePower(pw_weaponlevel2);
-	}
-    }
-  // count environment kills against you (you fragged yourself!)
-  if (!source)
-    {
-      game.UpdateScore(player, player);
-    }
-
-  // make corpse
-  flags &= ~MF_SOLID;                     // does not block
-  flags2 &= ~MF2_FLY;
-  powers[pw_flight] = 0;
-  powers[pw_weaponlevel2] = 0;
-  player->playerstate = PST_DEAD;
-  DropWeapon();  // put weapon away
-  if (player == consoleplayer)
-    {
-      // don't die in auto map,
-      // switch view prior to dying
-      if (automap.active)
-	automap.Close();
-
-      // recenter view for next live...
-      localaiming = 0;
-    }
-  if (player == consoleplayer2)
-    {
-      // recenter view for next live...
-      localaiming2 = 0;
-    }
-  /* HERE TODO
-     if(flags2&MF2_FIREDAMAGE)
-     { // Player flame death
-     SetState(S_PLAY_FDTH1);
-     //S_StartSound(this, sfx_hedat1); // Burn sound
-     return;
-     }
-  */  
-}
-// was P_KillMobj
-//
-//      source is the attacker,
-//      target is the 'target' of the attack, target dies...
-//                                          113
-void Actor::Kill(Actor *inflictor, Actor *source)
-{
-  extern consvar_t cv_solidcorpse;
-
-  // dead target is no more shootable
-  if (!cv_solidcorpse.value)
-    flags &= ~MF_SHOOTABLE;
-
-  flags &= ~(MF_FLOAT|MF_SKULLFLY);
-
-  if (type != MT_SKULL)
-    flags &= ~MF_NOGRAVITY;
-
-  // scream a corpse :)
-  if (flags & MF_CORPSE)
-    {
-      // turn it to gibs
-      SetState(S_GIBS);
-
-      flags &= ~MF_SOLID;
-      height = 0;
-      radius<<= 1;
-      //this->skin = 0;
-
-      //added:22-02-98: lets have a neat 'crunch' sound!
-      S_StartSound (this, sfx_slop);
-      return;
-    }
-
-  //added:22-02-98: remember who exploded the barrel, so that the guy who
-  //                shot the barrel which killed another guy, gets the frag!
-  //                (source is passed from barrel to barrel also!)
-  //                (only for multiplayer fun, does not remember monsters)
-  if ((type == MT_BARREL || type == MT_POD) && source)
-    owner = source;
-
-  if( game.demoversion < 131 )
-    {
-      // in version 131 and higer this is done later in a_fall 
-      // (this fix the stepping monster)
-      flags   |= MF_CORPSE|MF_DROPOFF;
-      height >>= 2;
-      if( game.demoversion>=112 )
-	radius -= (radius>>4);      //for solid corpses
-    }
-
-  // if killed by a player
-  if (flags & MF_COUNTKILL)
-    {
-      if (source && source->Type() == Thinker::tt_ppawn)
-	{
-	  PlayerPawn *s = (PlayerPawn *)source;
-	  // count for intermission
-	  s->player->kills++;    
-	}
-      else if (!game.multiplayer)
-	{
-	  // count all monster deaths,
-	  // even those caused by other monsters
-	  consoleplayer->kills++;
-	}
-    }
-
-  if (( (game.mode != heretic && health < -info->spawnhealth)
-        ||(game.mode == heretic && health < -(info->spawnhealth>>1)))
-      && info->xdeathstate)
-    {
-      SetState(info->xdeathstate);
-    }
-  else
-    SetState(info->deathstate);
-
-  tics -= P_Random()&3;
-
-  if (tics < 1)
-    tics = 1;
-
-  mobjtype_t item;
-  // Drop stuff.
-  // This determines the kind of object spawned
-  // during the death frame of a thing.
-  switch (type)
-    {
-    case MT_WOLFSS:
-    case MT_POSSESSED:
-      item = MT_CLIP;
-      break;
-
-    case MT_SHOTGUY:
-      item = MT_SHOTGUN;
-      break;
-
-    case MT_CHAINGUY:
-      item = MT_CHAINGUN;
-      break;
-
-    default:
-      return;
-    }
-
-  // SoM: Damnit! Why not use the target's floorz?
-  Actor *mo = mp->SpawnActor(x, y, game.demoversion<132 ? ONFLOORZ : floorz, item);
-  mo->flags |= MF_DROPPED;    // special versions of items
-}
-
-
-//---------------------------------------------------------------------------
-//
-// FUNC P_MinotaurSlam
-//
-//---------------------------------------------------------------------------
-
-void P_MinotaurSlam(Actor *source, Actor *target)
-{
-  angle_t angle;
-  fixed_t thrust;
-    
-  angle = R_PointToAngle2(source->x, source->y, target->x, target->y);
-  angle >>= ANGLETOFINESHIFT;
-  thrust = 16*FRACUNIT+(P_Random()<<10);
-  target->px += FixedMul(thrust, finecosine[angle]);
-  target->py += FixedMul(thrust, finesine[angle]);
-  target->Damage(NULL, NULL, HITDICE(6));
-
-  //if(target->player) FIXME... if necessary
-    {
-      target->reactiontime = 14+(P_Random()&7);
-    }
-}
-
-//---------------------------------------------------------------------------
-//
-// FUNC P_TouchWhirlwind
-//
-//---------------------------------------------------------------------------
-
-bool P_TouchWhirlwind(Actor *target)
-{
-  int randVal;
-    
-  target->angle += P_SignedRandom()<<20;
-  target->px += P_SignedRandom()<<10;
-  target->py += P_SignedRandom()<<10;
-  if (target->mp->maptic & 16 && !(target->flags2 & MF2_BOSS))
-    {
-      randVal = P_Random();
-      if(randVal > 160)
-        {
-	  randVal = 160;
-        }
-      target->pz += randVal<<10;
-      if(target->pz > 12*FRACUNIT)
-        {
-	  target->pz = 12*FRACUNIT;
-        }
-    }
-  if(!(target->mp->maptic & 7))
-    {
-      return target->Damage(NULL, NULL, 3);
-    }
-  return false;
-}
-
-//---------------------------------------------------------------------------
-// was P_ChickenMorphPlayer
-// Returns true if the player gets turned into a chicken.
-
-#define CHICKENTICS     (40*TICRATE)
-
-bool PlayerPawn::Morph()
-{
-  Actor *fog;
-  Actor *chicken;
-  
-  if (morphTics)
-    {
-      if ((morphTics < CHICKENTICS-TICRATE)
-	  && !powers[pw_weaponlevel2])
-        { // Make a super chicken
-	  GivePower(pw_weaponlevel2);
-        }
-      return false;
-    }
-  if (powers[pw_invulnerability])
-    { // Immune when invulnerable
-      return false;
-    }
-
-  // store x,y,z, angle, flags2
-  //SetState(S_FREETARGMOBJ);
-
-  fog = mp->SpawnActor(x, y, z+TELEFOGHEIGHT, MT_TFOG);
-  S_StartSound(fog, sfx_telept);
-
-  // FIXME again this Morph/FREETARGMOBJ problem...
-  chicken = mp->SpawnActor(x, y, z, MT_CHICPLAYER);
-  chicken->special1 = readyweapon;
-  chicken->angle = angle;
-  //chicken->player = player;
-  //chicken->health = MAXCHICKENHEALTH;
-  //player->mo = chicken;
-  armorpoints = armortype = 0;
-  powers[pw_invisibility] = 0;
-  powers[pw_weaponlevel2] = 0;
-  weaponinfo = wpnlev1info;
-  if (flags2 & MF2_FLY)
-    {
-      chicken->flags2 |= MF2_FLY;
-    }
-  morphTics = CHICKENTICS;
-  ActivateBeak();
-  return true;
-}
-
-//---------------------------------------------------------------------------
-//
-// was P_ChickenMorph
-//
-//---------------------------------------------------------------------------
-
-bool Actor::Morph()
-{
-  Actor  *fog;
-  Actor  *chicken;
-  Actor  *ntarget;
-  fixed_t nx, ny, nz;
-  angle_t ang;
-  int ghost;
-    
-  mobjtype_t moType = type;
-  switch(moType)
-    {
-    case MT_POD:
-    case MT_CHICKEN:
-    case MT_HHEAD:
-    case MT_MINOTAUR:
-    case MT_SORCERER1:
-    case MT_SORCERER2:
-      return false;
-    default:
-      break;
-    }
-  nx = x;
-  ny = y;
-  nz = z;
-  ang = angle;
-  ghost = flags & MF_SHADOW;
-  ntarget = target;
-  // FIXME again this freetargmobj...
-  SetState(S_FREETARGMOBJ);
-  fog = mp->SpawnActor(nx, ny, nz+TELEFOGHEIGHT, MT_TFOG);
-  S_StartSound(fog, sfx_telept);
-  chicken = mp->SpawnActor(nx, ny, nz, MT_CHICKEN);
-  chicken->special2 = moType;
-  chicken->special1 = CHICKENTICS+P_Random();
-  chicken->flags |= ghost;
-  chicken->target = ntarget;
-  chicken->angle = angle;
-  return true;
-}
 
 //---------------------------------------------------------------------------
 //
@@ -1821,9 +2079,8 @@ void P_AutoUseHealth(PlayerPawn *p, int saveHealth)
 }
 
 
-//
+//---------------------------------------------
 // was P_DamageMobj
-// Damages both enemies and players
 // "inflictor" is the thing that caused the damage
 //  creature or missile, can be NULL (slime, etc)
 // "source" is the thing to target after taking damage
@@ -1838,22 +2095,31 @@ void P_AutoUseHealth(PlayerPawn *p, int saveHealth)
 //    if (actor.mass == small) actor->Thrust()...
 // }
 
-bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage)
+bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 {
-  bool takedamage = true; // false on some case in teamplay
+  CONS_Printf("Ach, scheisse! %d damage, h %d =>\n", damage, health);
+
+  if (dtype & dt_always)
+    {
+      // unavoidable damage
+      // pain flash
+      if (player == displayplayer)
+	hud.damagecount += damage;
+      return Actor::Damage(inflictor, source, damage, dtype);
+    }
 
   if (game.skill == sk_baby)
     damage >>= 1;   // take half damage in trainer mode
   
-  if (inflictor)
+  if (inflictor && (inflictor->Type() == Thinker::tt_dactor))
     {
-      switch (inflictor->type)
+      DActor *d = (DActor *)inflictor;
+      switch (d->type)
 	{
 	case MT_MACEFX4: // Death ball
-	  // Player specific checks
 	  if (powers[pw_invulnerability])
 	    // Can't hurt invulnerable players
-	    takedamage = false;
+	    damage = 0;
 	    break;	  
 	  if (P_AutoUseChaosDevice(this))
 	    // Player was saved using chaos device
@@ -1871,23 +2137,22 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage)
 	}
     }
 
+  CONS_Printf("1\n");
+
   // player specific
   if (!(flags & MF_CORPSE))
     {
+      CONS_Printf("1.1\n");
       // end of game hell hack
       if (subsector->sector->special == 11 && damage >= health)
         {
 	  damage = health - 1;
         }
 
-      // Below certain threshold,
       // ignore damage in GOD mode, or with INVUL power.
-      if (damage < 1000 &&
-	  ((cheats & CF_GODMODE) || powers[pw_invulnerability]))
-        {
-	  return false;
-        }
-
+      if ((cheats & CF_GODMODE) || powers[pw_invulnerability])
+	return false;
+      
       if (armortype)
         {
 	  int saved;
@@ -1911,43 +2176,34 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage)
 	s = (PlayerPawn *)source;
 
       // added team play and teamdamage (view logboris at 13-8-98 to understand)
-      if (game.demoversion < 125   || // support old demoversion
-	  cv_teamdamage.value ||
-	  damage>1000         || // telefrag
-	  source == this || !source || !s)
-	//	||  (cv_deathmatch.value && (!cv_teamplay.value || !game.SameTeam(s, p))))
-        {
-	  // damage is done!
-	  if (damage >= health && ((game.skill == sk_baby) || cv_deathmatch.value)
-	      && !morphTics)
-            { // Try to use some inventory health
-	      P_AutoUseHealth(this, damage-health+1);
-            }
+      if (s && (s->player->team == player->team) && !cv_teamdamage.value && (s != this))
+	return false;
 
-	  //health -= damage;   // mirror mobj health here for Dave
+      // autosavers
+      if (damage >= health && ((game.skill == sk_baby) || cv_deathmatch.value) && !morphTics)
+	{ // Try to use some inventory health
+	  P_AutoUseHealth(this, damage-health+1);
+	}
 
-	  if (player == displayplayer)
-	    hud.damagecount += damage;  // add damage after armor / invuln
+      // pain flash
+      if (player == displayplayer)
+	hud.damagecount += damage;
 
-	  //added:22-02-98: force feedback ??? electro-shock???
-	  if (player == consoleplayer)
-	    I_Tactile (40,10,40+min(damage, 100)*2);
-        }
-      else
-	takedamage = false;
-
-      attacker = source;
+      //added:22-02-98: force feedback ??? electro-shock???
+      if (player == consoleplayer)
+	I_Tactile (40,10,40+min(damage, 100)*2);
     }
+  CONS_Printf("2\n");
 
-  // FIXME this entire function
-  if (takedamage)
-    takedamage = Actor::Damage(inflictor, source, damage);
-  else
-    return false;
+  attacker = source;
 
-  // TODO instead use damage types?
-  // kinetic, fire, drowning, acid etc.
-  if (health <= 0 && inflictor && !morphTics)
+  bool ret = Actor::Damage(inflictor, source, damage, dtype);
+  CONS_Printf(" => %d.\n", health);
+
+  return ret;
+
+  /* TODO
+     if (health <= 0 && inflictor && !morphTics)
     { // Check for flame death
       if ((inflictor->flags2 & MF2_FIREDAMAGE) ||
 	  ((inflictor->type == MT_PHOENIXFX1)
@@ -1957,225 +2213,102 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage)
 	}
     }
 
-  return takedamage;
+     if(flags2&MF2_FIREDAMAGE)
+     { // Player flame death
+     SetState(S_PLAY_FDTH1);
+     //S_StartSound(this, sfx_hedat1); // Burn sound
+     return;
+     }
+  */  
 }
 
 
-#define BASETHRESHOLD 100
 
-bool Actor::Damage(Actor *inflictor, Actor *source, int damage)
+
+//---------------------------------------------------------------------------
+// was P_ChickenMorphPlayer
+// Returns true if the player gets turned into a chicken.
+
+#define CHICKENTICS     (40*TICRATE)
+
+bool PlayerPawn::Morph()
 {
-  unsigned    ang;
-  fixed_t     thrust;
-
-  if (!(flags & MF_SHOOTABLE))
-    return false; // shouldn't happen...
-
-  if (health <= 0)
-    return false;
-
-  if (flags & MF_SKULLFLY)
+  if (morphTics)
     {
-      // Minotaur is invulnerable during charge attack
-      if (type == MT_MINOTAUR)
-	return false;
-      px = py = pz = 0;
-    }
-
-  // Special damage types
-  if (inflictor)
-    {
-      switch(inflictor->type)
-        {
-        case MT_EGGFX:
-	  Morph();
-	  return false; // Always return
-        case MT_WHIRLWIND:
-	  return P_TouchWhirlwind(this);
-        case MT_MINOTAUR:
-	  if (inflictor->flags & MF_SKULLFLY)
-            { // Slam only when in charge mode
-	      P_MinotaurSlam(inflictor, this);
-	      return true;
-            }
-	  break;
-        case MT_MACEFX4: // Death ball
-	  if ((flags2 & MF2_BOSS) || type == MT_HHEAD)
-	    // Don't allow cheap boss kills
-	    break;
-	  damage = 10000; // Something's gonna die
-	  break;
-        case MT_RAINPLR1: // Rain missiles
-        case MT_RAINPLR2:
-        case MT_RAINPLR3:
-        case MT_RAINPLR4:
-	  if (flags2 & MF2_BOSS)
-            { // Decrease damage for bosses
-	      damage = (P_Random()&7)+1;
-            }
-	  break;
-        case MT_HORNRODFX2:
-        case MT_PHOENIXFX1:
-	  if (type == MT_SORCERER2 && P_Random() < 96)
-            { // D'Sparil teleports away
-	      DSparilTeleport();
-	      return false;
-            }
-	  break;
-        case MT_BLASTERFX1:
-        case MT_RIPPER:
-	  if (type == MT_HHEAD)
-            { // Less damage to Ironlich bosses
-	      damage = P_Random()&1;
-	      if (!damage)
-		return false;
-            }
-	  break;
-        default:
-	  break;
+      if ((morphTics < CHICKENTICS-TICRATE)
+	  && !powers[pw_weaponlevel2])
+        { // Make a super chicken
+	  GivePower(pw_weaponlevel2);
         }
+      return false;
+    }
+  if (powers[pw_invulnerability])
+    { // Immune when invulnerable
+      return false;
     }
 
-  PlayerPawn *s = NULL;
-  if (source && source->Type() == Thinker::tt_ppawn)
-    s = (PlayerPawn *)source;
-  
-  // Some close combat weapons should not
-  // inflict thrust and push the victim out of reach,
-  // thus kick away unless using the chainsaw.
-  if (inflictor && !(flags & MF_NOCLIP) && !(inflictor->flags2 & MF2_NODMGTHRUST)
-      && (!source || !s || s->readyweapon != wp_chainsaw))
+  // store x,y,z, angle, flags2
+  //SetState(S_FREETARGMOBJ);
+
+  DActor *fog = mp->SpawnDActor(x, y, z+TELEFOGHEIGHT, MT_TFOG);
+  S_StartSound(fog, sfx_telept);
+
+  // FIXME again this Morph/FREETARGMOBJ problem...
+  // set chicken attributes here, change appearance.
+  // DActor *chicken = mp->SpawnDActor(x, y, z, MT_CHICPLAYER);
+  //chicken->special1 = readyweapon;
+  //chicken->angle = angle;
+  //chicken->player = player;
+  //chicken->health = MAXCHICKENHEALTH;
+  //player->mo = chicken;
+  armorpoints = armortype = 0;
+  powers[pw_invisibility] = 0;
+  powers[pw_weaponlevel2] = 0;
+  weaponinfo = wpnlev1info;
+  if (flags2 & MF2_FLY)
     {
-      fixed_t            apx, apy, apz = 0;//SoM: 3/28/2000
-      extern consvar_t   cv_allowrocketjump;
-
-      ang = R_PointToAngle2(inflictor->x, inflictor->y, x, y);
-
-      if (game.mode == heretic )
-	thrust = damage*(FRACUNIT>>3)*150/info->mass;
-      else
-	thrust = damage*(FRACUNIT>>3)*100/info->mass;
-
-      // sometimes a target shot down might fall off a ledge forwards
-      if (damage < 40 && damage > health
-	  && (z - inflictor->z) > 64*FRACUNIT && (P_Random() & 1))
-        {
-	  ang += ANG180;
-	  thrust *= 4;
-        }
-
-      ang >>= ANGLETOFINESHIFT;
-
-      if (game.mode == heretic && source && s && (source == inflictor)
-	  && s->powers[pw_weaponlevel2]
-	  && s->readyweapon == wp_staff)
-        {
-	  // Staff power level 2
-	  px += FixedMul(10*FRACUNIT, finecosine[ang]);
-	  py += FixedMul(10*FRACUNIT, finesine[ang]);
-	  if(!(flags&MF_NOGRAVITY))
-            {
-	      pz += 5*FRACUNIT;
-            }
-        }
-      else
-        {
-	  apx = FixedMul (thrust, finecosine[ang]);
-	  apy = FixedMul (thrust, finesine[ang]);
-	  px += apx;
-	  py += apy;
-            
-	  // added pz (do it better for missiles explotion)
-	  if (source && game.demoversion>=124 && (game.demoversion<129 || !cv_allowrocketjump.value))
-            {
-	      fixed_t dist, sx, sy, sz;
-	      if (source == this) // rocket in yourself (suicide)
-                {
-		  // FIXME we should use this always, thrust cannot come from the shooter direction
-		  // if an inflictor exists, right? With immediate LineAttack damage (pistol, for example)
-		  // source == inflictor, so no problem there either.
-		  //viewx=inflictor->x;
-		  //viewy=inflictor->y;
-		  sx = inflictor->x;
-		  sy = inflictor->y;
-		  sz = inflictor->z;
-                }
-	      else
-                {
-		  //viewx=source->x;
-		  //viewy=source->y;
-		  sx = source->x;
-		  sy = source->y;
-		  sz = source->z;
-                }
-	      //dist=R_PointToDist(x,y);
-	      dist = R_PointToDist2(sx, sy, x, y);
-                
-	      //viewx=0;
-	      //viewy=sz;
-	      //ang = R_PointToAngle(dist,z);
-	      ang = R_PointToAngle2(0, sz, dist, z);
-                
-	      ang >>= ANGLETOFINESHIFT;
-	      apz = FixedMul (thrust, finesine[ang]);
-            }
-	  else //SoM: 2/28/2000: Added new function.
-            if(game.demoversion >= 129 && cv_allowrocketjump.value)
-	      {
-                fixed_t delta1 = abs(inflictor->z - z);
-                fixed_t delta2 = abs(inflictor->z - (z + height));
-                apz = (abs(apx) + abs(apy))>>1;
-                
-                if(delta1 >= delta2 && inflictor->pz < 0)
-		  apz = -apz;
-	      }
-	  pz += apz;
-#ifdef CLIENTPREDICTION2
-	  if (p && p->spirit)
-	    {
-	      p->spirit->px += apx;
-	      p->spirit->py += apy;
-	      p->spirit->pz += apz;
-	    }
-#endif  
-        }
+      //chicken->flags2 |= MF2_FLY;
     }
+  morphTics = CHICKENTICS;
+  ActivateBeak();
+  return true;
+}
 
-  
-  // do the damage
-  health -= damage;
-  if (health <= 0)
+//---------------------------------------------------------------------------
+// was P_ChickenMorph
+
+bool Actor::Morph()
+{
+  return false;
+}
+
+bool DActor::Morph()
+{
+  switch (type)
     {
-      special1 = damage;
-
-      Kill(inflictor, source);
-      return true;
+    case MT_POD:
+    case MT_CHICKEN:
+    case MT_HHEAD:
+    case MT_MINOTAUR:
+    case MT_SORCERER1:
+    case MT_SORCERER2:
+      return false;
+    default:
+      break;
     }
 
-  if ( (P_Random () < info->painchance)
-       && !(flags & (MF_SKULLFLY|MF_CORPSE)) )
-    {
-      flags |= MF_JUSTHIT;    // fight back!
-      SetState(info->painstate);
-    }
+  // turn the original into a harmless invisible thingy
+  SetState(S_FREETARGMOBJ);
 
-  reactiontime = 0;           // we're awake now...
+  DActor *fog = mp->SpawnDActor(x, y, z + TELEFOGHEIGHT, MT_TFOG);
+  S_StartSound(fog, sfx_telept);
 
-
-  if ( (!threshold || type == MT_VILE)
-       && source && source != target
-       && source->type != MT_VILE
-       && !(source->flags2 & MF2_BOSS)
-       && !(type == MT_SORCERER2 && source->type == MT_WIZARD))
-    {
-      // if not intent on another player,
-      // chase after this one
-      target = source;
-      threshold = BASETHRESHOLD;
-      if (state == &states[info->spawnstate]
-	  && info->seestate != S_NULL)
-	SetState(info->seestate);
-    }
-
+  // make the chicken
+  DActor *chicken = mp->SpawnDActor(x, y, z, MT_CHICKEN);
+  chicken->special2 = type;
+  chicken->special1 = CHICKENTICS+P_Random();
+  chicken->flags |= (flags & MF_SHADOW);
+  chicken->target = target;
+  chicken->angle = angle;
   return true;
 }

@@ -18,110 +18,14 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/16 22:11:46  smite-meister
+// Actor/DActor separation done!
+//
 // Revision 1.2  2002/12/03 10:11:39  smite-meister
 // Blindness and missile clipping bugs fixed
 //
 // Revision 1.1.1.1  2002/11/16 14:18:01  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.17  2002/09/20 22:41:31  vberghol
-// Sound system rewritten! And it workscvs update
-//
-// Revision 1.16  2002/08/21 16:58:33  vberghol
-// Version 1.41 Experimental compiles and links!
-//
-// Revision 1.15  2002/08/20 13:56:58  vberghol
-// sdfgsd
-//
-// Revision 1.14  2002/08/19 18:30:13  vberghol
-// just netcode to go!
-//
-// Revision 1.13  2002/08/14 17:07:18  vberghol
-// p_map.cpp done... 3 to go
-//
-// Revision 1.12  2002/08/13 19:47:42  vberghol
-// p_inter.cpp done
-//
-// Revision 1.11  2002/08/11 17:16:49  vberghol
-// ...
-//
-// Revision 1.10  2002/08/08 12:01:27  vberghol
-// pian engine on valmis!
-//
-// Revision 1.9  2002/08/06 13:14:23  vberghol
-// ...
-//
-// Revision 1.8  2002/07/26 19:23:05  vberghol
-// a little something
-//
-// Revision 1.7  2002/07/23 19:21:42  vberghol
-// fixed up to p_enemy.cpp
-//
-// Revision 1.6  2002/07/13 17:55:54  vberghol
-// jäi kartan liikkuviin osiin... p_doors.cpp
-//
-// Revision 1.5  2002/07/12 19:21:38  vberghol
-// hop
-//
-// Revision 1.4  2002/07/10 19:57:00  vberghol
-// g_pawn.cpp tehty
-//
-// Revision 1.3  2002/07/01 21:00:19  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:14  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.26  2001/12/26 17:24:46  hurdler
-// Update Linux version
-//
-// Revision 1.25  2001/08/07 00:53:33  hurdler
-// lil' change
-//
-// Revision 1.24  2001/08/06 23:57:09  stroggonmeth
-// Removed portal code, improved 3D floors in hardware mode.
-//
-// Revision 1.20  2001/04/30 17:19:24  stroggonmeth
-// HW fix and misc. changes
-//
-// Revision 1.19  2001/04/01 17:35:06  bpereira
-// no message
-//
-// Revision 1.18  2001/03/30 17:12:50  bpereira
-// no message
-//
-// Revision 1.17  2001/03/19 18:52:01  hurdler
-// lil fix
-//
-// Revision 1.16  2001/03/13 22:14:19  stroggonmeth
-// Long time no commit. 3D floors, FraggleScript, portals, ect.
-//
-// Revision 1.15  2001/03/09 21:53:56  metzgermeister
-// *** empty log message ***
-//
-// Revision 1.14  2001/01/25 22:15:43  bpereira
-// added heretic support
-//
-// Revision 1.12  2000/11/02 17:50:08  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.11  2000/10/21 08:43:30  bpereira
-// no message
-//
-// Revision 1.5  2000/04/15 22:12:57  stroggonmeth
-// Minor bug fixes
-//
-// Revision 1.4  2000/04/11 19:07:24  stroggonmeth
-// Finished my logs, fixed a crashing bug.
-//
-// Revision 1.3  2000/04/04 00:32:47  stroggonmeth
-// Initial Boom compatability plus few misc changes all around.
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:33  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //
 // DESCRIPTION:
@@ -137,6 +41,7 @@
 #include "g_pawn.h"
 #include "g_map.h"
 
+#include "g_damage.h"
 #include "command.h"
 #include "p_maputl.h"
 #include "m_bbox.h"
@@ -153,12 +58,6 @@
 #include "r_splats.h"   //faB: testing
 
 #include "z_zone.h" //SoM: 3/15/2000
-
-
-// VB 3.12.2002 FIXME big bug source! Actor::  target <-> owner change for projectiles...
-// formerly the 'target' of a projectile was its shooter. tracer was the victim
-// now 'target' is the victim and 'owner' is the shooter.
-// Fixed in this file, may still manifest elsewhere!
 
 
 fixed_t   tmbbox[4];
@@ -241,7 +140,7 @@ static bool PIT_StompThing(Actor *thing)
   if (game.mode == heretic && !(tmthing->flags2 & MF2_TELESTOMP))
     return false;
 
-  thing->Damage(tmthing, tmthing, 10000);
+  thing->Damage(tmthing, tmthing, 10000, dt_telefrag | dt_always);
 
   return true;
 }
@@ -342,18 +241,7 @@ static void add_spechit(line_t *ld)
 // to which it may collide.
 static bool PIT_CheckThing(Actor *thing)
 {
-  fixed_t  blockdist;
-  bool     solid;
-  int      damage;
-
-  //added:22-02-98:
-  fixed_t  topz;
-  fixed_t  tmtopz;
-
-  //SoM: 3/15/2000: Moved to front.
-
   // don't clip against self
-
   if (thing == tmthing)
     return true;
 
@@ -366,195 +254,39 @@ static bool PIT_CheckThing(Actor *thing)
     return true;
 #endif
 
-  blockdist = thing->radius + tmthing->radius;
+  fixed_t blockdist = thing->radius + tmthing->radius;
 
-  if (abs(thing->x - tmx) >= blockdist ||
-       abs(thing->y - tmy) >= blockdist)
+  if (abs(thing->x - tmx) >= blockdist || abs(thing->y - tmy) >= blockdist)
     {
       // didn't hit it
       return true;
     }
 
+
   // heretic stuffs
-  if (tmthing->flags2 & MF2_PASSMOBJ)
+  if ((tmthing->flags2 & MF2_PASSMOBJ) && !(thing->flags & MF_SPECIAL))
     { // check if a mobj passed over/under another object
+      /*
       if ((tmthing->type == MT_IMP || tmthing->type == MT_WIZARD)
 	 && (thing->type == MT_IMP || thing->type == MT_WIZARD))
         { // don't let imps/wizards fly over other imps/wizards
+	// FIXME why not? it's much easier this way.
 	  return false;
         }
-      if (tmthing->z >= thing->z+thing->height
-	 && !(thing->flags&MF_SPECIAL))
+      */
+      if (tmthing->z >= thing->z + thing->height)
         {
+	  // over
 	  return true;
         }
-      else if (tmthing->z+tmthing->height < thing->z
-	      && !(thing->flags&MF_SPECIAL))
-        { // under thing
+      else if (tmthing->z + tmthing->height < thing->z)
+        {
+	  // under thing
 	  return true;
         }
     }
 
-  // check for skulls slamming into things
-  if (tmflags & MF_SKULLFLY)
-    {
-      damage = ((P_Random()%8)+1)*tmthing->info->damage;
-
-      thing->Damage(tmthing, tmthing, damage);
-
-      tmthing->flags &= ~MF_SKULLFLY;
-      tmthing->px = tmthing->py = tmthing->pz = 0;
-
-      tmthing->SetState(game.mode == heretic ? tmthing->info->seestate
-			: tmthing->info->spawnstate);
-
-      return false;           // stop moving
-    }
-
-
-  // missiles can hit other things
-  if (tmthing->flags & MF_MISSILE)
-    {
-      // Check for passing through a ghost (heretic)
-      if ((thing->flags & MF_SHADOW) && (tmthing->flags2 & MF2_THRUGHOST))
-	return true;
-
-      // see if it went over / under
-      if (tmthing->z > thing->z + thing->height)
-	return true; // overhead
-      if (tmthing->z + tmthing->height < thing->z)
-	return true; // underneath
-
-      if (tmthing->owner &&
-	  ((tmthing->owner->type == thing->type) ||
-	   (tmthing->owner->type == MT_KNIGHT  && thing->type == MT_BRUISER) ||
-	   (tmthing->owner->type == MT_BRUISER && thing->type == MT_KNIGHT)))
-        {
-	  // Don't hit same species as originator.
-	  if (thing == tmthing->owner)
-	    return true;
-
-	  if (thing->type != MT_PLAYER)
-            {
-	      // Explode, but do no damage.
-	      // Let players missile other players.
-	      return false;
-            }
-        }
-
-      if (!(thing->flags & MF_SHOOTABLE))
-        {
-	  // didn't do any damage
-	  return !(thing->flags & MF_SOLID);
-        }
-
-      // more heretic stuff
-      if (tmthing->flags2 & MF2_RIP)
-        {
-	  damage = ((P_Random () & 3) + 2) * tmthing->info->damage;
-	  S_StartSound (tmthing, sfx_ripslop);
-	  if (thing->Damage(tmthing, tmthing->owner, damage))
-            {
-	      if (!(thing->flags & MF_NOBLOOD))
-                {   // Ok to spawn some blood
-		  tmthing->mp->SpawnBlood(tmthing->x, tmthing->y, tmthing->z, damage);
-		  //P_RipperBlood (tmthing);
-                }
-            }
-	  if (thing->flags2 & MF2_PUSHABLE
-	      && !(tmthing->flags2 & MF2_CANNOTPUSH))
-            {             // Push thing
-	      thing->px += tmthing->px >> 2;
-	      thing->py += tmthing->py >> 2;
-            }
-	  numspechit = 0;
-	  return  true;
-        }
-
-      // damage / explode
-      damage = ((P_Random()%8)+1)*tmthing->info->damage;
-      if (thing->Damage(tmthing, tmthing->owner, damage) && 
-	  (thing->flags & MF_NOBLOOD)==0 && game.demoversion>=129)
-	tmthing->mp->SpawnBloodSplats(tmthing->x,tmthing->y,tmthing->z, damage, thing->px, thing->py);
-
-      // don't traverse any more
-      return false;
-    }
-  if (thing->flags2 & MF2_PUSHABLE && !(tmthing->flags2 & MF2_CANNOTPUSH))
-    {                         // Push thing
-      thing->px += tmthing->px >> 2;
-      thing->py += tmthing->py >> 2;
-    }
-
-  // check for special pickup
-  if (thing->flags & MF_SPECIAL)
-    {
-      solid = thing->flags & MF_SOLID;
-      // FIXME! this is not good
-      //if (tmflags & MF_PICKUP)
-      if (tmthing->Type() == Thinker::tt_ppawn)
-        {
-	  // can remove thing
-	  ((PlayerPawn *)tmthing)->TouchSpecialThing(thing);
-        }
-      return !solid;
-    }
-  // check again for special pickup
-  if (game.demoversion>=132 && tmthing->flags & MF_SPECIAL)
-    {
-      solid = tmthing->flags & MF_SOLID;
-      //if (thing->flags & MF_PICKUP)
-      if (thing->Type() == Thinker::tt_ppawn)
-        {
-	  // can remove thing
-	  ((PlayerPawn *)thing)->TouchSpecialThing(tmthing);
-        }
-      return !solid;
-    }
-
-
-  //added:24-02-98:compatibility with old demos, it used to return with...
-  //added:27-02-98:for version 112+, nonsolid things pass through other things
-  if (game.demoversion<112 || game.demoversion>=132 || !(tmthing->flags & MF_SOLID))
-    return !(thing->flags & MF_SOLID);
-
-  //added:22-02-98: added z checking at last
-  //SoM: 3/10/2000: Treat noclip things as non-solid!
-  if ((thing->flags & MF_SOLID) && (tmthing->flags & MF_SOLID) &&
-      !(thing->flags & MF_NOCLIP) && !(tmthing->flags & MF_NOCLIP))
-    {
-      // pass under
-      tmtopz = tmthing->z + tmthing->height;
-
-      if (tmtopz < thing->z)
-        {
-	  if (thing->z < tmceilingz)
-	    tmceilingz = thing->z;
-	  return true;
-        }
-
-      topz = thing->z + thing->height + FRACUNIT;
-
-      // block only when jumping not high enough,
-      // (dont climb max. 24units while already in air)
-      // if not in air, let P_TryMove() decide if its not too high
-      // FIXME why test player here
-      if (tmthing->Type() == Thinker::tt_ppawn &&
-	  tmthing->z < topz &&
-	  tmthing->z > tmthing->floorz)  // block while in air
-	return false;
-
-
-      if (topz > tmfloorz)
-        {
-	  tmfloorz = topz;
-	  tmfloorthing = thing;       //thing we may stand on
-        }
-
-    }
-
-  // not solid not blocked
-  return true;
+  return !(tmthing->Touch(thing));
 }
 
 // SoM: 3/15/2000
@@ -600,7 +332,7 @@ static bool PIT_CheckLine(line_t *ld)
       || tmbbox[BOXBOTTOM] >= ld->bbox[BOXTOP])
     return true;
 
-  if (P_BoxOnLineSide (tmbbox, ld) != -1)
+  if (P_BoxOnLineSide(tmbbox, ld) != -1)
     return true;
 
   // A line has been hit
@@ -619,15 +351,14 @@ static bool PIT_CheckLine(line_t *ld)
   blockingline = ld;
   if (!ld->backsector)
     {
-      if (game.demoversion>=132 && tmthing->flags & MF_MISSILE && ld->special)
+      if ((tmthing->flags & MF_MISSILE) && ld->special)
         add_spechit(ld);
 
       return false;           // one sided line
     }
 
-  // missil and Camera can cross uncrossable line
-  if (!(tmthing->flags & MF_MISSILE) &&
-      !(tmthing->type == MT_CHASECAM))
+  // missile and Camera can cross uncrossable lines with a backsector
+  if (!(tmthing->flags & MF_MISSILE)) // && !(tmthing->type == MT_CHASECAM))
     {
       if (ld->flags & ML_BLOCKING)
 	return false;       // explicitly blocking everything
@@ -638,7 +369,7 @@ static bool PIT_CheckLine(line_t *ld)
     }
 
   // set openrange, opentop, openbottom
-  P_LineOpening (ld);
+  P_LineOpening(ld);
 
   // adjust floor / ceiling heights
   if (opentop < tmceilingz)
@@ -663,23 +394,20 @@ static bool PIT_CheckLine(line_t *ld)
 
 
 
-//==========================================================================
-//
+//==================================================
 // CheckMissileImpact
-//
-//==========================================================================
+// Checks if a shootable linedef should be triggered
 
 void Actor::CheckMissileImpact()
 {
   int i;
     
-  if (!(flags & MF_MISSILE) || game.demoversion<132 || !numspechit || !owner)
+  if (!(flags & MF_MISSILE) || !numspechit || !owner)
     return;
 
-  //if (!target->player)
   // monsters don't shoot triggers
-  //  if (!(owner->flags & MF_NOTMONSTER))
-  if (owner->Type() != Thinker::tt_ppawn)
+  //if (owner->Type() != Thinker::tt_ppawn)
+  if (!(owner->flags & MF_NOTMONSTER))
     return;
 
   for(i = numspechit-1; i >= 0; i--)
@@ -702,7 +430,7 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
   if (!CheckPosition(nx, ny))
     {
       CheckMissileImpact();
-      return false;           // solid wall or thing
+      return false;       // solid wall or thing
     }
 #ifdef CLIENTPREDICTION2
   if (!(flags & MF_NOCLIP) && !(eflags & MF_NOZCHECKING))
@@ -714,21 +442,20 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 	if (tmceilingz - tmfloorz < height)
 	  {
 	    CheckMissileImpact();
-	    return false;       // doesn't fit
+	    return false; // doesn't fit in z direction
 	  }
 
 	floatok = true;
 
 	if (!(flags & MF_TELEPORT)
-	    && tmceilingz - z < height
-	    && !(flags2 & MF2_FLY))
+	    && (tmceilingz < z + height) && !(flags2 & MF2_FLY))
 	  {
 	    CheckMissileImpact();
-	    return false;       // mobj must lower itself to fit
+	    return false; // must lower itself to fit
 	  }
-	if(flags2 & MF2_FLY)
+	if (flags2 & MF2_FLY)
 	  {
-	    if (z+height > tmceilingz)
+	    if (z + height > tmceilingz)
 	      {
 		pz = -8*FRACUNIT;
 		return false;
@@ -742,42 +469,28 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 
         // jump out of water
         if ((eflags & (MF_UNDERWATER|MF_TOUCHWATER))==(MF_UNDERWATER|MF_TOUCHWATER))
-	  maxstep=37*FRACUNIT;
+	  maxstep = 37*FRACUNIT;
 
         if (!(flags & MF_TELEPORT) 
-             // The Minotaur floor fire (MT_MNTRFX2) can step up any amount
-             && type != MT_MNTRFX2
-             && (tmfloorz - z > maxstep))
+	    // The Minotaur floor fire (MT_MNTRFX2) can step up any amount
+	    // FIXME && type != MT_MNTRFX2
+	    && (tmfloorz - z > maxstep))
 	  {
             CheckMissileImpact();
             return false;       // too big a step up
 	  }
 
-        if ((flags&MF_MISSILE) && tmfloorz > z)
+        if ((flags & MF_MISSILE) && tmfloorz > z)
 	  CheckMissileImpact();
 
         if (!boomsupport || !allowdropoff)
-          if (!(flags&(MF_DROPOFF|MF_FLOAT))
-               && !tmfloorthing
-               && tmfloorz - tmdropoffz > MAXSTEPMOVE)
+          if (!(flags & (MF_DROPOFF|MF_FLOAT)) && !tmfloorthing
+	      && tmfloorz - tmdropoffz > MAXSTEPMOVE)
 	    return false;       // don't stand over a dropoff
       }
 
-  // the move is ok,
-  // so link the thing into its new position
+  // the move is ok, so link the thing into its new position
   UnsetPosition();
-
-  //added:28-02-98: gameplay hack : walk over a small wall while jumping
-  //                stop jumping it succeeded
-  // BP: removed in 1.28 because we can move in air now
-  /*
-    FIXME or remove altogether
-  if (game.demoversion >= 112 && game.demoversion < 128 && player && (player->cheats & CF_JUMPOVER))
-    {
-      if (tmfloorz > floorz + MAXSTEPMOVE)
-	pz >>= 2;
-    }
-  */
 
   oldx = x;
   oldy = y;
@@ -794,15 +507,14 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 
   SetPosition();
 
-  if ((flags2 & MF2_FOOTCLIP)
-      && (GetThingFloorType() != FLOOR_SOLID) && game.mode == heretic)
+  // Heretic fake water...
+  if ((flags2 & MF2_FOOTCLIP) && (subsector->sector->floortype != FLOOR_SOLID))
     flags2 |= MF2_FEETARECLIPPED;
-  else if (flags2 & MF2_FEETARECLIPPED)
+  else
     flags2 &= ~MF2_FEETARECLIPPED;
 
   // if any special lines were hit, do the effect
-  if (!(flags&(MF_TELEPORT|MF_NOCLIP)) &&
-       (type != MT_CHASECAM) && (type != MT_SPIRIT))
+  if (!(flags & (MF_TELEPORT|MF_NOCLIP|MF_NOTRIGGER)))
     {
       while (numspechit--)
         {
@@ -821,7 +533,6 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 
   return true;
 }
-
 
 //
 // P_ThingHeightClip
@@ -1128,6 +839,7 @@ fixed_t         shootz;
 fixed_t         lastz; //SoM: The last z height of the bullet when it crossed a line
 
 int             la_damage;
+int             la_dtype;
 fixed_t         attackrange;
 
 fixed_t         aimslope;
@@ -1139,14 +851,14 @@ fixed_t         aimslope;
 // 
 void Map::SpawnPuff(fixed_t x, fixed_t y, fixed_t z)
 {
-  Actor *puff;
+  DActor *puff;
   extern mobjtype_t PuffType;
 
   z += P_SignedRandom()<<10;
 
   if (game.mode == heretic)
     {
-      puff = SpawnActor(x, y, z, PuffType);
+      puff = SpawnDActor(x, y, z, PuffType);
       if(puff->info->attacksound)
         {
 	  S_StartSound(puff, puff->info->attacksound);
@@ -1159,14 +871,14 @@ void Map::SpawnPuff(fixed_t x, fixed_t y, fixed_t z)
 	  break;
 	case MT_GAUNTLETPUFF1:
 	case MT_GAUNTLETPUFF2:
-	  puff->pz = .8*FRACUNIT;
+	  puff->pz = int(.8*FRACUNIT);
 	default:
 	  break;
         }
     }
   else
     {        
-      puff = SpawnActor(x,y,z, MT_PUFF);
+      puff = SpawnDActor(x,y,z, MT_PUFF);
       puff->pz = FRACUNIT;
       puff->tics -= P_Random()&3;
         
@@ -1300,8 +1012,10 @@ static bool PTR_AimTraverse (intercept_t *in)
   if (th == shootthing)
     return true;                    // can't shoot self
 
-  if ((!(th->flags&MF_SHOOTABLE)) || (th->flags&MF_CORPSE) || (th->type == MT_POD))
-    return true;                    // corpse or something
+  // TODO pods should not be targeted it seems. Add a new flag?
+  // || (th->type == MT_POD))
+  if ((!(th->flags & MF_SHOOTABLE)) || (th->flags & MF_CORPSE))
+    return true; // corpse or something
 
   // check angles to see if the thing can be aimed at
   dist = FixedMul (attackrange, in->frac);
@@ -1532,7 +1246,7 @@ static bool PTR_ShootTraverse (intercept_t *in)
         }
       //SPLAT TEST ----------------------------------------------------------
 #ifdef WALLSPLATS
-      if (!hitplane && game.demoversion>=129)
+      if (!hitplane)
         {
 	  divline_t   divl;
 	  fixed_t     frac;
@@ -1555,11 +1269,13 @@ static bool PTR_ShootTraverse (intercept_t *in)
 	    return false;
 
 	  //added:24-02-98: compatibility with older demos
+	  /*
 	  if (game.demoversion<112)
             {
 	      diffheights = true;
 	      hitplane = false;
             }
+	  */
 
 	  // it's a sky hack wall
 	  if  ((!hitplane &&      //added:18-02-98:not for shots on planes
@@ -1645,48 +1361,37 @@ static bool PTR_ShootTraverse (intercept_t *in)
   y = trace.y + FixedMul (trace.dy, frac);
   z = shootz + FixedMul (aimslope, FixedMul(frac, attackrange));
 
-  if (game.demoversion<125)
-    {
-      // Spawn bullet puffs or blood spots,
-      // depending on target type.
-      if (in->d.thing->flags & MF_NOBLOOD)
-	m->SpawnPuff(x,y,z);
-      else
-	m->SpawnBlood(x,y,z, la_damage);
-    }
-
   if (la_damage)
-    hitplane = th->Damage(shootthing, shootthing, la_damage);
+    hitplane = th->Damage(shootthing, shootthing, la_damage, la_dtype);
   else
     hitplane = false;
 
-  if (game.demoversion>=125)
+  // who got hit?
+  linetarget = th;
+
+  // Spawn bullet puffs or blood spots,
+  // depending on target type.
+  if (in->d.thing->flags & MF_NOBLOOD && game.mode != heretic)
+    m->SpawnPuff (x,y,z);
+  else
     {
-      // Spawn bullet puffs or blood spots,
-      // depending on target type.
-      if (in->d.thing->flags & MF_NOBLOOD && game.mode != heretic)
-	m->SpawnPuff (x,y,z);
-      else
-        {
-	  if (game.mode == heretic)
-            {
-	      extern mobjtype_t PuffType;
-	      if (PuffType == MT_BLASTERPUFF1)
-		// Make blaster big puff
-		S_StartSound(m->SpawnActor(x, y, z, MT_BLASTERPUFF2), sfx_blshit);
-	      else
-		m->SpawnPuff(x, y, z);
-            }    
-	  if (hitplane) {
-	    m->SpawnBloodSplats (x,y,z, la_damage, trace.dx, trace.dy);
-	    return false;
-	  }
-        }
+      if (game.mode == heretic)
+	{
+	  extern mobjtype_t PuffType;
+	  if (PuffType == MT_BLASTERPUFF1)
+	    // Make blaster big puff
+	    S_StartSound(m->SpawnDActor(x, y, z, MT_BLASTERPUFF2), sfx_blshit);
+	  else
+	    m->SpawnPuff(x, y, z);
+	}    
+      if (hitplane)
+	{
+	  m->SpawnBloodSplats (x,y,z, la_damage, trace.dx, trace.dy);
+	  return false;
+	}
     }
 
-  // don't go any farther
   return false;
-
 }
 
 
@@ -1757,35 +1462,36 @@ fixed_t Actor::AimLineAttack(angle_t ang, fixed_t distance)
 // If damage == 0, it is just a test trace
 // that will leave linetarget set.
 //
-//added:16-02-98: Fab comments...
-//                ang    est l'angle de tir sur le plan x,y (orientation)
-//                distance est la port‚e maximale de la balle
-//                slope    est la pente vers la destination (up/down)
-//                damage   est les degats infliges par la balle
-void Actor::LineAttack(angle_t ang, fixed_t distance, fixed_t slope, int damage)
+// Shoots an insta-hit projectile from Actor to the direction determined by (yaw, pitch)
+// 'distance' is the max distance for the projectile
+// 'damage' is obvious, dtype is the damage type.
+// global variable 'linetarget' will point to the Actor who got hit.
+void Actor::LineAttack(angle_t yaw, fixed_t distance, fixed_t pitch, int damage, int dtype)
 {
   fixed_t     x2;
   fixed_t     y2;
 
-  ang >>= ANGLETOFINESHIFT;
+  yaw >>= ANGLETOFINESHIFT;
   shootthing = this;
   la_damage = damage;
+  la_dtype = dtype;
+  linetarget = NULL;
 
   // FIXME see AimLineAttack, same here
   // player autoaimed attack, 
   /*
-  if (game.demoversion<128 || !player)
+  if (!player)
     {   
-      x2 = x + (distance>>FRACBITS)*finecosine[ang]; 
-      y2 = y + (distance>>FRACBITS)*finesine[ang];   
+      x2 = x + (distance>>FRACBITS)*finecosine[yaw]; 
+      y2 = y + (distance>>FRACBITS)*finesine[yaw];   
     }
   else
   */
     {
       fixed_t cosangle = finecosine[aiming>>ANGLETOFINESHIFT];
 
-      x2 = x + FixedMul(FixedMul(distance,finecosine[ang]),cosangle);
-      y2 = y + FixedMul(FixedMul(distance,finesine[ang]),cosangle); 
+      x2 = x + FixedMul(FixedMul(distance,finecosine[yaw]),cosangle);
+      y2 = y + FixedMul(FixedMul(distance,finesine[yaw]),cosangle); 
     }
 
   shootz = lastz = z + (height>>1) + 8*FRACUNIT;
@@ -1793,13 +1499,13 @@ void Actor::LineAttack(angle_t ang, fixed_t distance, fixed_t slope, int damage)
     shootz -= FOOTCLIPSIZE;
 
   attackrange = distance;
-  aimslope = slope;
+  aimslope = pitch;
 
   tmthing = shootthing;
 
-  mp->PathTraverse (x, y, x2, y2,
-		  PT_ADDLINES|PT_ADDTHINGS,
-		  PTR_ShootTraverse);
+  mp->PathTraverse(x, y, x2, y2,
+		   PT_ADDLINES|PT_ADDTHINGS,
+		   PTR_ShootTraverse);
 }
 
 //
@@ -1874,6 +1580,7 @@ void PlayerPawn::UseLines()
 Actor *bombowner;
 Actor *bomb;
 int    bombdamage;
+int    bombdtype;
 
 
 //
@@ -1891,13 +1598,8 @@ static bool PIT_RadiusAttack (Actor *thing)
   if (!(thing->flags & MF_SHOOTABLE))
     return true;
 
-  // Boss spider and cyborg
-  // take no damage from concussion.
-  if (thing->type == MT_CYBORG
-      || thing->type == MT_SPIDER
-      || thing->type == MT_MINOTAUR 
-      || thing->type == MT_SORCERER1
-      || thing->type == MT_SORCERER2)
+  // Bosses take no damage from concussion.
+  if (thing->flags2 & MF2_BOSS)
     return true;
 
   dx = abs(thing->x - bomb->x);
@@ -1908,11 +1610,9 @@ static bool PIT_RadiusAttack (Actor *thing)
 
   //added:22-02-98: now checks also z dist for rockets exploding
   //                above yer head...
-  if (game.demoversion>=112)
-    {
-      dz = abs(thing->z+(thing->height>>1) - bomb->z);
-      dist = dist > dz ? dist : dz;
-    }
+  dz = abs(thing->z+(thing->height>>1) - bomb->z);
+  dist = dist > dz ? dist : dz;
+
   dist >>= FRACBITS;
 
   if (dist < 0)
@@ -1937,7 +1637,7 @@ static bool PIT_RadiusAttack (Actor *thing)
 	  apy = (thing->y - bomb->y)/dist;
         }
       // must be in direct path
-      if (thing->Damage(bomb, bombowner, damage) && (thing->flags & MF_NOBLOOD)==0 && game.demoversion>=129)
+      if (thing->Damage(bomb, bombowner, damage, bombdtype) && !(thing->flags & MF_NOBLOOD))
 	thing->mp->SpawnBloodSplats(thing->x,thing->y,thing->z, damage, apx, apy);
     }
 
@@ -1947,9 +1647,9 @@ static bool PIT_RadiusAttack (Actor *thing)
 
 //
 // was P_RadiusAttack
-// Source is the creature that caused the explosion at spot.
+// Culprit is the creature that caused the explosion.
 //
-void Actor::RadiusAttack(Actor *culprit, int damage)
+void Actor::RadiusAttack(Actor *culprit, int damage, int dtype)
 {
   int nx, ny;
 
@@ -1966,11 +1666,15 @@ void Actor::RadiusAttack(Actor *culprit, int damage)
   xh = (x + dist - mp->bmaporgx)>>MAPBLOCKSHIFT;
   xl = (x - dist - mp->bmaporgx)>>MAPBLOCKSHIFT;
   bomb = this;
+
+  /*
   if (type == MT_POD && owner)
     bombowner = owner;
   else
-    bombowner = culprit;
+  */
+  bombowner = culprit;
   bombdamage = damage;
+  bombdtype = dtype;
 
   for (ny=yl ; ny<=yh ; ny++)
     for (nx=xl ; nx<=xh ; nx++)
@@ -1999,7 +1703,7 @@ sector_t        *sectorchecked;
 //
 // PIT_ChangeSector
 //
-static bool PIT_ChangeSector (Actor *thing)
+static bool PIT_ChangeSector(Actor *thing)
 {
   if (P_ThingHeightClip (thing))
     {
@@ -2012,14 +1716,14 @@ static bool PIT_ChangeSector (Actor *thing)
     {
       if (!game.raven)
         {
-	  thing->SetState(S_GIBS);
+	  //thing->SetState(S_GIBS);
+	  thing->Damage(NULL, NULL, 1000, dt_crushing);
 	  thing->flags &= ~MF_SOLID;
-	  //added:22-02-98: lets have a neat 'crunch' sound!
+	  // lets have a neat 'crunch' sound!
 	  S_StartSound (thing, sfx_slop);
         }
       thing->height = 0;
       thing->radius = 0;
-      //thing->skin = 0;
 
       // keep checking
       return true;
@@ -2034,7 +1738,7 @@ static bool PIT_ChangeSector (Actor *thing)
       return true;
     }
 
-  if (! (thing->flags & MF_SHOOTABLE))
+  if (!(thing->flags & MF_SHOOTABLE))
     {
       // assume it is bloody gibs or something
       return true;
@@ -2050,7 +1754,7 @@ static bool PIT_ChangeSector (Actor *thing)
 			      !(thing->flags&MF_NOBLOOD)))
         {
 	  // spray blood in a random direction
-	  Actor *mo = thing->mp->SpawnActor(thing->x, thing->y,
+	  DActor *mo = thing->mp->SpawnDActor(thing->x, thing->y,
 	    thing->z + thing->height/2, MT_BLOOD);
             
 	  mo->px  = P_SignedRandom()<<12;
@@ -2216,7 +1920,7 @@ msecnode_t *P_AddSecnode(sector_t *s, Actor *thing, msecnode_t *nextnode)
   node = P_GetSecnode();
 
   //mark new nodes unvisited.
-  node->visited = 0;
+  node->visited = false;
 
   node->m_sector = s;       // sector
   node->m_thing  = thing;     // mobj
@@ -2442,6 +2146,8 @@ static bool PIT_CheckOnmobjZ(Actor *thing)
 
 void Actor::FakeZMovement()
 {
+  // TODO: get rid of this entire function. ZMovement should be enough.
+
   extern consvar_t cv_gravity;
   //
   // adjust height
@@ -2483,7 +2189,7 @@ void Actor::FakeZMovement()
 	{ // The skull slammed into something
 	  npz = -npz;
 	}
-      if (info->crashstate && (flags & MF_CORPSE))
+      if (flags & MF_CORPSE) // &&info->crashstate 
 	{
 	  z = nz;
 	  pz = npz;
@@ -2527,11 +2233,9 @@ Actor *Actor::CheckOnmobj()
 {
   int          xl,xh,yl,yh,bx,by;
   subsector_t *newsubsec;
-  //Actor oldmo;
     
   tmthing = this;
   tmflags = flags;
-  //oldmo = *thing; // save the old mobj before the fake zmovement
   fixed_t oldz = z;
   fixed_t oldpz = pz;
   tmthing->FakeZMovement();
@@ -2569,13 +2273,11 @@ Actor *Actor::CheckOnmobj()
     for (by=yl ; by<=yh ; by++)
       if (!mp->BlockThingsIterator(bx,by,PIT_CheckOnmobjZ))
 	{
-	  //*tmthing = oldmo;
 	  z = oldz;
 	  pz = oldpz;
 	  return onmobj;
 	}
 
-  //*tmthing = oldmo;
   z = oldz;
   pz = oldpz;
   return NULL;
@@ -2674,7 +2376,6 @@ bool Actor::CheckPosition(fixed_t nx, fixed_t ny)
   fixed_t bmox = mp->bmaporgx; 
   fixed_t bmoy = mp->bmaporgy; 
 
-  // BP: added MF_NOCLIPTHING :used by camera to not be blocked by things
   if (!(flags & MF_NOCLIPTHING))
     {
       xl = (tmbbox[BOXLEFT] - bmox - MAXRADIUS)>>MAPBLOCKSHIFT;

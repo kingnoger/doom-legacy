@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:04  hurdler
-// Initial revision
+// Revision 1.2  2002/12/16 22:12:00  smite-meister
+// Actor/DActor separation done!
+//
+// Revision 1.1.1.1  2002/11/16 14:18:04  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.7  2002/09/20 22:41:33  vberghol
 // Sound system rewritten! And it workscvs update
@@ -129,15 +132,14 @@ bool Actor::Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent = false
 	fogDelta = TELEFOGHEIGHT;
 
       // spawn teleport fog at source and destination
-      Actor *fog = mp->SpawnActor(oldx, oldy, oldz+fogDelta, MT_TFOG);
+      DActor *fog = mp->SpawnDActor(oldx, oldy, oldz+fogDelta, MT_TFOG);
       S_StartSound(fog, sfx_telept);
 
       unsigned an = nangle >> ANGLETOFINESHIFT;
-      fog = mp->SpawnActor(nx+20*finecosine[an], ny+20*finesine[an],
-			z + fogDelta, MT_TFOG);
+      fog = mp->SpawnDActor(nx+20*finecosine[an], ny+20*finesine[an], z + fogDelta, MT_TFOG);
       S_StartSound (fog, sfx_telept);
 
-      if (flags2 & MF2_FOOTCLIP && GetThingFloorType() != FLOOR_SOLID && game.mode == heretic )
+      if ((flags2 & MF2_FOOTCLIP) && (subsector->sector->floortype != FLOOR_SOLID) && (game.mode == heretic))
 	{
 	  flags2 |= MF2_FEETARECLIPPED;
 	}
@@ -148,8 +150,9 @@ bool Actor::Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent = false
 
       if (flags & MF_MISSILE)
 	{
-	  px = FixedMul(info->speed, finecosine[an]);
-	  py = FixedMul(info->speed, finesine[an]);
+	  fixed_t speed = P_AproxDistance(px, py);
+	  px = FixedMul(speed, finecosine[an]);
+	  py = FixedMul(speed, finesine[an]);
 	}
       else
 	px = py = pz = 0;
@@ -184,7 +187,6 @@ bool Map::EV_Teleport(line_t *line, int side, Actor *thing)
   int         i;
   Actor    *m;
 
-
   // don't teleport missiles
   if (((thing->flags & MF_MISSILE) && game.mode != heretic) 
       || (thing->flags2 & MF2_NOTELEPORT))
@@ -204,11 +206,14 @@ bool Map::EV_Teleport(line_t *line, int side, Actor *thing)
 	  // FIXME why search the entire Thinker list, why not just the sector's thinglist?
 	  for (m = sectors[i].thinglist; m != NULL; m = m->snext)
 	    {
+	      if (m->Type() != Thinker::tt_dactor)
+		continue;
+	      DActor *dm = (DActor *)m;
 	      // not a teleportman
-	      if (m->type != MT_TELEPORTMAN)
+	      if (dm->type != MT_TELEPORTMAN)
 		continue;
 
-	      /* is this even necessary?
+	      /*
 		 sector_t *sec = m->subsector->sector;
 	      // wrong sector
 	      if (sec-sectors != i )
@@ -253,8 +258,11 @@ bool Map::EV_SilentTeleport(line_t *line, int side, Actor *thing)
 
     for (m = sectors[i].thinglist; m != NULL; m = m->snext)
         {
+	  if (m->Type() != Thinker::tt_dactor)
+	    continue;
+	  DActor *dm = (DActor *)m;
 	  // not a teleportman
-	  if (m->type != MT_TELEPORTMAN)
+	  if (dm->type != MT_TELEPORTMAN)
 	    continue;
 
           // Get the angle between the exit thing and source linedef.

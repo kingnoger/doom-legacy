@@ -18,66 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:05  hurdler
-// Initial revision
+// Revision 1.2  2002/12/16 22:10:59  smite-meister
+// Actor/DActor separation done!
 //
-// Revision 1.20  2002/09/25 15:17:36  vberghol
-// Intermission fixed?
-//
-// Revision 1.16  2002/08/30 11:45:39  vberghol
-// players system modified
-//
-// Revision 1.15  2002/08/25 18:21:58  vberghol
-// little fixes
-//
-// Revision 1.14  2002/08/23 09:53:40  vberghol
-// fixed Actor:: target/owner/tracer
-//
-// Revision 1.13  2002/08/20 13:56:57  vberghol
-// sdfgsd
-//
-// Revision 1.12  2002/08/19 18:30:12  vberghol
-// just netcode to go!
-//
-// Revision 1.11  2002/08/17 16:02:02  vberghol
-// final compile for engine!
-//
-// Revision 1.10  2002/08/16 20:49:23  vberghol
-// engine ALMOST done!
-//
-// Revision 1.9  2002/08/14 17:07:18  vberghol
-// p_map.cpp done... 3 to go
-//
-// Revision 1.8  2002/08/13 19:47:39  vberghol
-// p_inter.cpp done
-//
-// Revision 1.7  2002/08/11 17:16:46  vberghol
-// ...
-//
-// Revision 1.6  2002/08/08 12:01:25  vberghol
-// pian engine on valmis!
-//
-// Revision 1.5  2002/08/06 13:14:19  vberghol
-// ...
-//
-// Revision 1.4  2002/08/02 20:14:48  vberghol
-// p_enemy.cpp done!
-//
-// Revision 1.3  2002/07/26 19:23:03  vberghol
-// a little something
-//
-// Revision 1.2  2002/07/18 19:16:35  vberghol
-// renamed a few files
-//
-// Revision 1.1  2002/07/10 19:56:58  vberghol
-// g_pawn.cpp tehty
-//
-// Revision 1.3  2002/07/01 21:00:19  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:15  vberghol
-// Version 133 Experimental!
-//
+// Revision 1.1.1.1  2002/11/16 14:18:05  hurdler
+// Initial C++ version of Doom Legacy
 //
 //
 // DESCRIPTION:
@@ -93,13 +38,13 @@
 #include "g_game.h"
 #include "g_map.h"
 #include "g_pawn.h"
-#include "g_player.h" // remove!
+#include "g_player.h"
 #include "g_input.h"
 #include "p_enemy.h" // #defines
 
 #include "hu_stuff.h"
 #include "p_maputl.h"
-#include "p_spec.h" // Friction
+
 #include "p_setup.h"    //levelflats to test if mobj in water sector
 #include "r_main.h"
 #include "r_state.h"
@@ -112,12 +57,9 @@
 #include "d_clisrv.h"
 
 
-#define VIEWHEIGHT               41
+#define VIEWHEIGHT  41
+#define MAXMOVE     (30*FRACUNIT/NEWTICRATERATIO)
 
-
-#define MAXMOVE         (30*FRACUNIT/NEWTICRATERATIO)
-
-// protos.
 CV_PossibleValue_t viewheight_cons_t[]={{16,"MIN"},{56,"MAX"},{0,NULL}};
 
 consvar_t cv_viewheight = {"viewheight", "41",0,viewheight_cons_t,NULL};
@@ -251,31 +193,56 @@ int Actor::Serialize(LArchive & a)
   return 0;
 }
 
+int DActor::Serialize(LArchive & a)
+{
+  return 0;
+}
+
 //----------------------------------------------
-// trick constructor
+// trick constructors
 //
-Actor::Actor(mobjtype_t t)
-  : Thinker()
+
+Actor::Actor()
 {
   snext = sprev = bnext = bprev = NULL;
+}
+
+
+DActor::DActor(mobjtype_t t)
+  : Actor()
+{
   type = t;
 }
 
 //----------------------------------------------
 // was P_SpawnMobj, see Map::SpawnActor
 //
-Actor::Actor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
+Actor::Actor(fixed_t nx, fixed_t ny, fixed_t nz)
   : Thinker()
 {
   // note! here Map *mp is not yet set! This means you can't call functions such as
   // SetPosition that have something to do with a map.
   snext = sprev = bnext = bprev = NULL;
-
-  type = t;
-  info = &mobjinfo[t];
   x = nx;
   y = ny;
-  z = nz; // might be dangerous...
+  z = nz;
+
+  touching_sectorlist = NULL;
+  friction = ORIG_FRICTION;
+  movefactor = ORIG_FRICTION_FACTOR;
+
+  //FIXME temporary exploding imp
+  sprite = spritenum_t(0);
+  frame = 15;
+}
+
+
+DActor::DActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
+  : Actor(nx, ny, nz)
+{
+  type = t;
+  info = &mobjinfo[t];
+  mass = info->mass;
   radius = info->radius;
   height = info->height;
   flags  = info->flags;
@@ -285,10 +252,7 @@ Actor::Actor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
   if (game.skill != sk_nightmare)
     reactiontime = info->reactiontime;
 
-  if (game.demoversion < 129 && type != MT_CHASECAM)
-    lastlook = P_Random () % game.players.size();
-  else
-    lastlook = -1;  // stuff moved in P_enemy.P_LookForPlayer
+  lastlook = -1;  // stuff moved in P_enemy.P_LookForPlayer
 
   // do not set the state with SetState,
   // because action routines can not be called yet
@@ -296,11 +260,6 @@ Actor::Actor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
   tics = state->tics;
   sprite = state->sprite;
   frame = state->frame; // FF_FRAMEMASK for frame, and other bits..
-
-  touching_sectorlist = NULL;
-  friction = ORIG_FRICTION;
-  // BP: SoM right ? if not ajust in p_saveg line 625 and 979
-  movefactor = ORIG_FRICTION_FACTOR;
 }
 
 
@@ -312,7 +271,6 @@ void Actor::Remove()
   extern msecnode_t *sector_list;
   // lazy deallocation/destruction: memory freed in P_RemoveThinker
 
-  // FIXME is this OK?
   if (mp == NULL)
     {
       // no Map, must be in transit between maps/levels
@@ -320,8 +278,7 @@ void Actor::Remove()
       return;
     }
 
-  if ((flags & MF_SPECIAL) && !(flags & MF_DROPPED)
-      && (type != MT_INV) && (type != MT_INS))
+  if ((flags & MF_SPECIAL) && !(flags & MF_DROPPED) && !(flags & MF_NORESPAWN))
     {
       mp->itemrespawnqueue.push_back(spawnpoint);
       mp->itemrespawntime.push_back(mp->maptic);
@@ -349,6 +306,8 @@ void Actor::Remove()
 //----------------------------------------
 // PlayerLandedOnThing, helper function
 //
+void P_NoiseAlert(Actor *target, Actor *emitter);
+
 static void PlayerLandedOnThing(PlayerPawn *p, Actor *onmobj)
 {
   p->player->deltaviewheight = p->pz >> 3;
@@ -364,131 +323,70 @@ static void PlayerLandedOnThing(PlayerPawn *p, Actor *onmobj)
 }
 
 
-//----------------------------------------------
-// was P_MobjThinker
-// divide this into general Actor::Think (movement etc.) and
-// DoomActor::Think (statechange, calls Actor::Think)
-//
 void BlasterMissileThink();
 
-void Actor::Think()
+//---------------------------------
+// Doom mobj_t statechange etc.
+void DActor::Think()
 {
-  extern fixed_t  tmceilingz;
-  extern Actor   *tmfloorthing;
-  //extern fixed_t          tmsectorceilingz;
-  bool   checkedpos = false;
-
-  PlayerPawn *p = NULL;
-  // FIXME this really sucks, we ought to separate Actor and PlayerPawn code better,
-  // that's what virtual methods are for!
-  if (Type() == Thinker::tt_ppawn)
-    p = (PlayerPawn *)this;
-  else if (type == MT_BLASTERFX1)
+  if (type == MT_BLASTERFX1)
     {
       BlasterMissileThink();
       return;
     }
 
-  // check mobj against possible water content, before movement code
-  CheckWater();
+  /*
+    - is it a ppawn
+    - checkwater
+    - jos on pxy tai MF_SKULLFLY, xymovement
+    - floatbob
+    - z movement, 3 koodia, MF_ONGROUND, MF2_PASSMOBJ, MF2_ONMOBJ
+    - state update
+    - nightmare respawn
+   */
+  int oldflags = flags;
+  
+  Actor::Think();
 
-  //
-  // momentum movement
-  //
-  if (px || py || flags & MF_SKULLFLY)
-    {
-      XYMovement();
-      checkedpos = true;
-    }
+  // must have hit something
+  if ((oldflags & MF_SKULLFLY) && !(flags & MF_SKULLFLY))
+    SetState(game.mode == heretic ? info->seestate : info->spawnstate);
+  
+  // must have exploded
+  if ((oldflags & MF_MISSILE) && !(flags & MF_MISSILE))
+    ExplodeMissile();
 
-  if (flags2 & MF2_FLOATBOB)
-    { // Floating item bobbing motion
-      z = floorz + FloatBobOffsets[(health++) & 63];
-    }
-  else if (!(eflags & MF_ONGROUND) || (z != floorz) || pz)
-    //added:28-02-98: always do the gravity bit now, that's simpler
-    //                BUT CheckPosition only if wasn't do before.
-    
+  // missiles hitting the floor
+  if ((flags & MF_MISSILE) && (eflags & MF_JUSTHITFLOOR))
     {
-      // BP: since version 1.31 we use heretic z-cheching code
-      //     kept old code for backward demo compatibility
-      if (game.demoversion < 131)
+      if (flags2 & MF2_FLOORBOUNCE)
 	{
-	  // if didnt check things Z while XYMovement, do the necessary now
-	  if (!checkedpos && (game.demoversion >= 112))
-	    {
-	      // FIXME : should check only with things, not lines
-	      CheckPosition(x, y);
-                
-	      floorz = tmfloorz;
-	      ceilingz = tmceilingz;
-	      if (tmfloorthing)
-		eflags &= ~MF_ONGROUND;  //not on real floor
-	      else
-		eflags |= MF_ONGROUND;
-                
-	      // now floorz should be the current sector's z floor
-	      // or a valid thing's top z
-	    }
-            
-	  ZMovement();
+	  FloorBounceMissile();
 	}
-      else if (flags2 & MF2_PASSMOBJ)
+      else if (type == MT_MNTRFX2)
+	{ // Minotaur floor fire can go up steps
+	}
+      else if (!(flags & MF_NOCLIP))
 	{
-	  Actor *onmo = CheckOnmobj();
-	  if (!onmo)
-	    {
-	      ZMovement();
-	      if (p && flags & MF2_ONMOBJ)
-		flags2 &= ~MF2_ONMOBJ;
-	    }
-	  else
-	    {
-	      if (p)
-		{
-		  if (pz < -8*FRACUNIT && !(flags2 & MF2_FLY))
-		    {
-		      PlayerLandedOnThing(p, onmo);
-		    }
-		  if(onmo->z+onmo->height-z <= 24*FRACUNIT)
-                        {
-			  p->player->viewheight -= onmo->z + onmo->height - z;
-			  p->player->deltaviewheight = 
-			    (VIEWHEIGHT - p->player->viewheight)>>3;
-			  z = onmo->z+onmo->height;
-			  flags2 |= MF2_ONMOBJ;
-			  pz = 0;
-                        }                               
-		      else
-                        { // hit the bottom of the blocking mobj
-			  pz = 0;
-                        }
-                    }
-                }
-            }
-	  else
-	    ZMovement();
-
+	  ExplodeMissile();
+	}
     }
-  else
-    eflags &= ~MF_JUSTHITFLOOR;
 
-  // SoM: Floorhuggers stay on the floor allways...
-  // BP: tested here but never set ?!
-  if (info->flags & MF_FLOORHUGGER)
+  // crashing to ground
+  if (info->crashstate && (flags & MF_CORPSE) && (eflags & MF_JUSTHITFLOOR))
     {
-      z = floorz;
+      SetState(info->crashstate);
+      flags &= ~MF_CORPSE;
     }
 
   // cycle through states,
   // calling action functions at transitions
   if (tics != -1)
     {
-      tics--;
       // you can cycle through multiple states in a tic
-      if (!tics)
+      if (--tics == 0)
 	if (!SetState(state->nextstate))
-	  return;         // freed itself
+	  return; // freed itself
     }
   else
     {
@@ -507,15 +405,93 @@ void Actor::Think()
       if (mp->maptic % (32*NEWTICRATERATIO))
 	return;
 
-      if (P_Random () > 4)
+      if (P_Random() > 4)
 	return;
 
       NightmareRespawn();
     }
 }
 
+//----------------------------------------------
+// was P_MobjThinker
+//
+void Actor::Think()
+{
+  PlayerPawn *p = NULL;
+  if (Type() == Thinker::tt_ppawn)
+    p = (PlayerPawn *)this;
 
-//SoM: Not unused. See p_user.c
+  // check possible sector water content, set a few eflags
+  CheckWater();
+
+  // XY movement
+  if (px || py)
+    XYMovement();
+  else if (flags & MF_SKULLFLY)
+    {
+      // the skull slammed into something
+      flags &= ~MF_SKULLFLY;
+      pz = 0;
+    }
+
+  // Z movement
+  eflags &= ~MF_JUSTHITFLOOR;
+
+  if (flags2 & MF2_FLOATBOB)
+    {
+      // Floating item bobbing motion (maybe move to DActor::Think ?)
+      z = floorz + FloatBobOffsets[(health++) & 63];
+    }
+  else if (!(eflags & MF_ONGROUND) || (z != floorz) || pz)
+    {
+      // time to fall...
+      if (flags2 & MF2_PASSMOBJ)
+	{
+	  // Heretic z code
+	  Actor *onmo = CheckOnmobj();
+	  if (!onmo)
+	    {
+	      ZMovement();
+	      flags2 &= ~MF2_ONMOBJ;
+	    }
+	  else
+	    {
+	      if (p) // FIXME is this ok? For all Actors?
+		{
+		  if (pz < -8*FRACUNIT && !(flags2 & MF2_FLY))
+		    {
+		      PlayerLandedOnThing(p, onmo);
+		    }
+
+		  if (onmo->z + onmo->height - z <= 24*FRACUNIT)
+		    {
+		      p->player->viewheight -= onmo->z + onmo->height - z;
+		      p->player->deltaviewheight = 
+			(VIEWHEIGHT - p->player->viewheight)>>3;
+		      z = onmo->z+onmo->height;
+		      flags2 |= MF2_ONMOBJ;
+		      pz = 0;
+		    }                               
+		  else
+		    { // hit the bottom of the blocking mobj
+		      pz = 0;
+		    }
+		}
+	    }
+	}
+      else
+	ZMovement();
+    }
+
+  // SoM: Floorhuggers stay on the floor allways...
+  // BP: tested here but never set ?!
+  if (flags & MF_FLOORHUGGER)
+    {
+      z = floorz;
+    }
+}
+
+
 // was P_GetMoveFactor()
 // returns the value by which the x,y
 // movements are multiplied to add to player movement.
@@ -527,7 +503,7 @@ int Actor::GetMoveFactor()
 
   // If the floor is icy or muddy, it's harder to get moving. This is where
   // the different friction factors are applied to 'trying to move'. In
-  // p_mobj.c, the friction factors are applied as you coast and slow down.
+  // Actor::XYFriction, the friction factors are applied as you coast and slow down.
 
   if (boomsupport && variable_friction &&
       !(flags & (MF_NOGRAVITY | MF_NOCLIP)))
@@ -563,13 +539,517 @@ int Actor::GetMoveFactor()
 }
 
 
+
+//-----------------------------------------
+// was P_XYMovement
+//
+
+void Actor::XYMovement()
+{
+  extern line_t *ceilingline;
+  extern int skyflatnum;
+
+  //when up against walls
+  static int windTab[3] = {2048*5, 2048*10, 2048*25};
+
+  // stupid heretic wind
+  if (flags2 & MF2_WINDTHRUST)
+    {
+      int special = subsector->sector->special;
+      switch(special)
+        {
+        case 40: case 41: case 42: // Wind_East
+	  Thrust(0, windTab[special-40]);
+	  break;
+        case 43: case 44: case 45: // Wind_North
+	  Thrust(ANG90, windTab[special-43]);
+	  break;
+        case 46: case 47: case 48: // Wind_South
+	  Thrust(ANG270, windTab[special-46]);
+	  break;
+        case 49: case 50: case 51: // Wind_West
+	  Thrust(ANG180, windTab[special-49]);
+	  break;
+        }
+    }
+
+  if (px > MAXMOVE)
+    px = MAXMOVE;
+  else if (px < -MAXMOVE)
+    px = -MAXMOVE;
+
+  if (py > MAXMOVE)
+    py = MAXMOVE;
+  else if (py < -MAXMOVE)
+    py = -MAXMOVE;
+
+  fixed_t xmove = px;
+  fixed_t ymove = py;
+
+  //reducing bobbing/momentum on ice
+  fixed_t oldx = x;
+  fixed_t oldy = y;
+
+  fixed_t ptryx, ptryy;
+
+  do
+    {
+      if (xmove > MAXMOVE/2 || ymove > MAXMOVE/2)
+        {
+	  ptryx = x + xmove/2;
+	  ptryy = y + ymove/2;
+	  xmove >>= 1;
+	  ymove >>= 1;
+        }
+      else
+        {
+	  ptryx = x + xmove;
+	  ptryy = y + ymove;
+	  xmove = ymove = 0;
+        }
+
+      if (!TryMove(ptryx, ptryy, true))
+        {
+	  // blocked move
+
+	  if (flags2 & MF2_SLIDE)
+            {   // try to slide along it
+	      mp->SlideMove(this);
+            }
+	  else if (flags & MF_MISSILE)
+            {
+	      // explode a missile
+	      if (ceilingline &&
+		  ceilingline->backsector &&
+		  ceilingline->backsector->ceilingpic == skyflatnum &&
+		  ceilingline->frontsector &&
+		  ceilingline->frontsector->ceilingpic == skyflatnum &&
+		  subsector->sector->ceilingheight == ceilingz)
+		if (!boomsupport ||
+                    z > ceilingline->backsector->ceilingheight)
+                  {
+                    // Hack to prevent missiles exploding
+                    // against the sky.
+                    // Does not handle sky floors.
+                    //SoM: 4/3/2000: Check frontsector as well..
+		    /*
+		    if (type == MT_BLOODYSKULL)
+                      {
+			px = py = 0;
+			pz = -FRACUNIT;
+                      }
+		    else
+		    */
+		      Remove();
+		    return;
+                  }
+
+#ifdef WALLSPLATS
+	      // draw damage on wall
+	      if (blockingline)   //set by last P_TryMove() that failed
+                {
+		  divline_t   divl;
+		  divline_t   misl;
+		  fixed_t     frac;
+
+		  P_MakeDivline (blockingline, &divl);
+		  misl.x = x;
+		  misl.y = y;
+		  misl.dx = px;
+		  misl.dy = py;
+		  frac = P_InterceptVector (&divl, &misl);
+		  R_AddWallSplat (blockingline, P_PointOnLineSide(x,y,blockingline)
+				  ,"A_DMG3", z, frac, SPLATDRAWMODE_SHADE);
+                }
+#endif
+
+	      flags &= ~MF_MISSILE;
+	      //ExplodeMissile();
+            }
+	  else
+	    px = py = 0;
+        }
+    } while (xmove || ymove);
+
+  // here some code was moved to PlayerPawn::XYMovement
+
+  // Friction.
+
+  // no friction for missiles ever
+  if (flags & (MF_MISSILE | MF_SKULLFLY))
+    return;
+
+  XYFriction(oldx, oldy);
+}
+
 //----------------------------------------------------------------------------
+// was P_XYFriction
+//
+// adds friction on the xy plane
+
+#define STOPSPEED            (0x1000/NEWTICRATERATIO)
+#define FRICTION_LOW          0xf900  // 0.973
+#define FRICTION_FLY          0xeb00
+#define FRICTION              0xe800  // 0.90625
+#define FRICTION_UNDERWATER  (FRICTION*3/4)
+
+void Actor::XYFriction(fixed_t oldx, fixed_t oldy)
+{
+  // slow down in water, not too much for playability issues
+  if (eflags & MF_UNDERWATER)
+    {
+      px = FixedMul (px, FRICTION_UNDERWATER);
+      py = FixedMul (py, FRICTION_UNDERWATER);
+      return;
+    }
+
+  // no friction when airborne
+  if (z > floorz && !(flags2 & MF2_FLY) && !(flags2 & MF2_ONMOBJ))
+    return;
+
+  if (flags & MF_CORPSE)
+    {
+      // do not stop sliding if halfway off a step with some momentum
+      if (px > FRACUNIT/4 || px < -FRACUNIT/4
+	  || py > FRACUNIT/4 || py < -FRACUNIT/4)
+        {
+	  if (floorz != subsector->sector->floorheight)
+	    return;
+        }
+    }
+
+  if (px > -STOPSPEED && px < STOPSPEED && py > -STOPSPEED && py < STOPSPEED)
+    {
+      px = 0;
+      py = 0;
+    }
+  else
+    {
+      if (game.mode == heretic)
+        {
+	  if ((flags2 & MF2_FLY) && (z > floorz)
+	     && !(flags2 & MF2_ONMOBJ))
+            {
+	      px = FixedMul(px, FRICTION_FLY);
+	      py = FixedMul(py, FRICTION_FLY);
+            }
+	  else if (subsector->sector->special == 15) // Friction_Low
+            {
+	      px = FixedMul(px, FRICTION_LOW);
+	      py = FixedMul(py, FRICTION_LOW);
+            }
+	  else
+            {
+	      px = FixedMul(px, FRICTION);
+	      py = FixedMul(py, FRICTION);
+            }
+        }
+      else
+	{
+	  //SoM: 3/28/2000: Use boom friction.
+	  if ((oldx == x) && (oldy == y)) // Did you go anywhere?
+	    {
+	      px = FixedMul(px, ORIG_FRICTION);
+	      py = FixedMul(py, ORIG_FRICTION);
+	    }
+	  else
+	    {
+	      px = FixedMul(px, friction);
+	      py = FixedMul(py, friction);
+	    }
+	  friction = ORIG_FRICTION;
+	}
+    }
+}
+
+
+//-----------------------------------------
+// was P_ZMovement
+//
+void Actor::ZMovement()
+{
+  extern int skyflatnum;
+  fixed_t     dist;
+  fixed_t     delta;
+
+  // adjust height
+  z += pz;
+
+  if ((flags & MF_FLOAT) && target)
+    {
+      // float down towards target if too close
+      if (!(flags & MF_SKULLFLY)
+	  && !(flags & MF_INFLOAT))
+        {
+	  dist = P_AproxDistance(x - target->x, y - target->y);
+	  delta = (target->z + (height>>1)) - z;
+
+	  if (delta < 0 && dist < -(delta*3) )
+	    z -= FLOATSPEED;
+	  else if (delta > 0 && dist < (delta*3) )
+	    z += FLOATSPEED;
+        }
+
+    }
+
+  // was only for PlayerPawns, but why?
+  if ((flags2 & MF2_FLY) && (z > floorz) && (mp->maptic & 2))
+    {
+      z += finesine[(FINEANGLES / 20 * mp->maptic >> 2) & FINEMASK];
+    }
+
+  // clip this movement
+
+  if (z <= floorz)
+    {
+      // hit the floor
+      if (flags & MF_MISSILE)
+        {
+	  z = floorz;
+	  eflags |= MF_JUSTHITFLOOR;
+	  return;
+	}
+        
+      // Did we actually fall to the ground?
+      if (z - pz > floorz)
+	{
+	  HitFloor();
+	  eflags |= MF_JUSTHITFLOOR;
+	}
+
+      z = floorz;
+
+      if (flags & MF_SKULLFLY)
+        {
+	  // the skull slammed into something
+	  pz = -pz;
+        }
+      else
+	pz = 0;
+
+    }
+  else if (flags2 & MF2_LOGRAV)
+    {
+      if (pz == 0)
+	pz = -(cv_gravity.value>>3)*2;
+      else
+	pz -= cv_gravity.value>>3;
+    }
+  else if (!(flags & MF_NOGRAVITY)) // Gravity!
+    {
+      fixed_t gravityadd = -cv_gravity.value/NEWTICRATERATIO;
+
+      // if waist under water, slow down the fall
+      if (eflags & MF_UNDERWATER)
+	{
+	  if (eflags & MF_SWIMMING)
+	    gravityadd = 0;     // gameplay: no gravity while swimming
+	  else
+	    gravityadd >>= 2;
+	}
+      else if (pz == 0)
+	// mobj at stop, no floor, so feel the push of gravity!
+	gravityadd <<= 1;
+
+      pz += gravityadd;
+    }
+
+  if (z + height > ceilingz)
+    {
+      z = ceilingz - height;
+
+      // hit the ceiling
+      if (pz > 0)
+	if (flags & MF_SKULLFLY)
+	  {       // the skull slammed into something
+	    pz = -pz;
+	  }
+	else
+	  pz = 0;
+
+      if (flags & MF_MISSILE)
+        {
+	  //SoM: 4/3/2000: Don't explode on the sky!
+	  if (subsector->sector->ceilingpic == skyflatnum &&
+	      subsector->sector->ceilingheight == ceilingz)
+            {
+	      Remove();
+	      return;
+            }
+
+	  eflags |= MF_JUSTHITFLOOR; // with missiles works also with ceiling hits
+	  return;
+        }
+    }
+
+  // no z friction for missiles and skulls
+  if (flags & (MF_MISSILE | MF_SKULLFLY))
+    return;
+
+  // z friction in water
+  if ((eflags & MF_TOUCHWATER) || (eflags & MF_UNDERWATER)) 
+    {
+      pz = FixedMul(pz, FRICTION_UNDERWATER);
+    }
+}
+
+
+
+//-------------------------------------------------
+//
+// was P_ThrustMobj
+//
+
+void Actor::Thrust(angle_t angle, fixed_t move)
+{
+  angle >>= ANGLETOFINESHIFT;
+  px += FixedMul(move, finecosine[angle]);
+  py += FixedMul(move, finesine[angle]);
+}
+
+
+
+//-------------------------------------------------
+// was P_MobjCheckWater
+// check for water in the sector, set MF_TOUCHWATER and MF_UNDERWATER
+// called by Actor::Think()
+void Actor::CheckWater()
+{
+  if (flags & MF_NOSPLASH)
+    return;
+
+  // see if we are in water, and set some flags for later
+  sector_t *sector = subsector->sector;
+  fixed_t fz = sector->floorheight;
+  int oldeflags = eflags;
+
+  //SoM: 3/28/2000: Only use 280 water type of water. Some boom levels get messed up.
+  if ((sector->heightsec > -1 && sector->altheightsec == 1) ||
+      (sector->floortype == FLOOR_WATER && sector->heightsec == -1))
+    {
+      if (sector->heightsec > -1)  //water hack
+	fz = (mp->sectors[sector->heightsec].floorheight);
+      else
+	fz = sector->floorheight + (FRACUNIT/4); // water texture
+
+      if (z <= fz && z+height > fz)
+	eflags |= MF_TOUCHWATER;
+      else
+	eflags &= ~MF_TOUCHWATER;
+
+      if (z+(height>>1) <= fz)
+	eflags |= MF_UNDERWATER;
+      else
+	eflags &= ~MF_UNDERWATER;
+    }
+  else if (sector->ffloors)
+    {
+      ffloor_t*  rover;
+
+      eflags &= ~(MF_UNDERWATER|MF_TOUCHWATER);
+
+      for (rover = sector->ffloors; rover; rover = rover->next)
+	{
+	  if (!(rover->flags & FF_SWIMMABLE) || rover->flags & FF_SOLID)
+	    continue;
+	  if (*rover->topheight <= z || *rover->bottomheight > (z + (height >> 1)))
+	    continue;
+
+	  if (z + height > *rover->topheight)
+            eflags |= MF_TOUCHWATER;
+	  else
+            eflags &= ~MF_TOUCHWATER;
+
+	  if (z + (height >> 1) < *rover->topheight)
+            eflags |= MF_UNDERWATER;
+	  else
+            eflags &= ~MF_UNDERWATER;
+
+	  if (!(oldeflags & (MF_TOUCHWATER|MF_UNDERWATER))
+	      && (eflags & (MF_TOUCHWATER|MF_UNDERWATER))) // && game.mode != heretic
+            mp->SpawnSplash(this, *rover->topheight);
+	}
+      return;
+    }
+  else
+    eflags &= ~(MF_UNDERWATER|MF_TOUCHWATER);
+
+  /*
+    if( (eflags ^ oldeflags) & MF_TOUCHWATER)
+    CONS_Printf("touchewater %d\n",eflags & MF_TOUCHWATER ? 1 : 0);
+    if( (eflags ^ oldeflags) & MF_UNDERWATER)
+    CONS_Printf("underwater %d\n",eflags & MF_UNDERWATER ? 1 : 0);
+  */
+}
+
+
+//---------------------------------------------------------------------------
+// was P_HitFloor
+// Creates a splash if needed and returns the floor type
+int Actor::HitFloor()
+{
+  if (floorz != subsector->sector->floorheight)
+    { // don't splash if landing on the edge above water/lava/etc....
+      return FLOOR_SOLID;
+    }
+
+  int floortype = subsector->sector->floortype;
+
+  if (flags & MF_NOSPLASH)
+    return floortype;
+
+  if (game.mode == heretic)
+    {
+      DActor *p;
+      switch (floortype)
+	{
+	case FLOOR_WATER:
+	  mp->SpawnDActor(x, y, ONFLOORZ, MT_SPLASHBASE);
+	  p = mp->SpawnDActor(x, y, ONFLOORZ, MT_HSPLASH);
+	  p->owner = this;
+	  p->px = P_SignedRandom()<<8;
+	  p->py = P_SignedRandom()<<8;
+	  p->pz = 2*FRACUNIT+(P_Random()<<8);
+	  S_StartSound(p, sfx_gloop);
+	  break;
+
+	case FLOOR_LAVA:
+	  mp->SpawnDActor(x, y, ONFLOORZ, MT_LAVASPLASH);
+	  p = mp->SpawnDActor(x, y, ONFLOORZ, MT_LAVASMOKE);
+	  p->pz = FRACUNIT+(P_Random()<<7);
+	  S_StartSound(p, sfx_burn);
+	  break;
+
+	case FLOOR_SLUDGE:
+	  mp->SpawnDActor(x, y, ONFLOORZ, MT_SLUDGESPLASH);
+	  p = mp->SpawnDActor(x, y, ONFLOORZ, MT_SLUDGECHUNK);
+	  p->owner = this;
+	  p->px = P_SignedRandom()<<8;
+	  p->py = P_SignedRandom()<<8;
+	  p->pz = FRACUNIT+(P_Random()<<8);
+	  break;
+	}
+      return floortype;
+    }
+  else if (floortype == FLOOR_WATER)
+    mp->SpawnSplash(this, floorz);
+
+  // do not down the viewpoint
+  return FLOOR_SOLID;
+}
+
+
+//==============================================================
+// DActor methods
+
+
+//---------------------------------------
 // was P_SetMobjState
 // was P_SetMobjStateNF
 // Returns true if the mobj is still present.
 //
 //SoM: 4/7/2000: Boom code...
-bool Actor::SetState(statenum_t ns, bool call = true)
+bool DActor::SetState(statenum_t ns, bool call = true)
 {
   state_t *st;
     
@@ -603,8 +1083,8 @@ bool Actor::SetState(statenum_t ns, bool call = true)
     
     // Modified handling.
     // Call action functions when the state is set
-    // FIXME is this function OK?
-    if (call == true && st->action.acp1) st->action.acp1(this);
+    if (call == true && st->action.acp1)
+      st->action.acp1(this);
         
     seenstate[ns] = statenum_t(1 + st->nextstate);   // killough 4/9/98
         
@@ -642,455 +1122,10 @@ bool P_SetMobjStateNF(Actor *mobj, statenum_t state)
 */
 
 
-//-----------------------------------------
-// was P_XYMovement
-//
-
-
-#define STOPSPEED               (0x1000/NEWTICRATERATIO)
-#define FRICTION                0xe800   //0.90625
-#define FRICTION_LOW            0xf900
-#define FRICTION_FLY            0xeb00
-
-void Actor::XYMovement()
-{
-  extern line_t *ceilingline;
-  extern int skyflatnum;
-
-  //when up against walls
-  static int windTab[3] = {2048*5, 2048*10, 2048*25};
-
-  //added:18-02-98: if it's stopped
-  if (!px && !py)
-    {
-      if (flags & MF_SKULLFLY)
-        {
-	  // the skull slammed into something
-	  flags &= ~MF_SKULLFLY;
-	  px = py = pz = 0;
-
-	  //added:18-02-98: comment: set in 'search new direction' state?
-	  SetState(game.mode == heretic ? info->seestate : info->spawnstate);
-        }
-      return;
-    }
-
-  if (flags2 & MF2_WINDTHRUST)
-    {
-      int special = subsector->sector->special;
-      switch(special)
-        {
-        case 40: case 41: case 42: // Wind_East
-	  Thrust(0, windTab[special-40]);
-	  break;
-        case 43: case 44: case 45: // Wind_North
-	  Thrust(ANG90, windTab[special-43]);
-	  break;
-        case 46: case 47: case 48: // Wind_South
-	  Thrust(ANG270, windTab[special-46]);
-	  break;
-        case 49: case 50: case 51: // Wind_West
-	  Thrust(ANG180, windTab[special-49]);
-	  break;
-        }
-    }
-
-
-  if (px > MAXMOVE)
-    px = MAXMOVE;
-  else if (px < -MAXMOVE)
-    px = -MAXMOVE;
-
-  if (py > MAXMOVE)
-    py = MAXMOVE;
-  else if (py < -MAXMOVE)
-    py = -MAXMOVE;
-
-  fixed_t     ptryx, ptryy;
-  fixed_t     xmove;
-  fixed_t     ymove;
-  fixed_t     oldx, oldy; //reducing bobbing/momentum on ice
-
-  xmove = px;
-  ymove = py;
-
-  oldx = x;
-  oldy = y;
-
-  do
-    {
-      if (xmove > MAXMOVE/2 || ymove > MAXMOVE/2)
-        {
-	  ptryx = x + xmove/2;
-	  ptryy = y + ymove/2;
-	  xmove >>= 1;
-	  ymove >>= 1;
-        }
-      else
-        {
-	  ptryx = x + xmove;
-	  ptryy = y + ymove;
-	  xmove = ymove = 0;
-        }
-
-      if (!TryMove(ptryx, ptryy, true)) //SoM: 4/10/2000
-        {
-	  // blocked move
-
-	  // gameplay issue : let the marine move forward while trying
-	  //                  to jump over a small wall
-	  //    (normally it can not 'walk' while in air)
-	  // BP:1.28 no more use Cf_JUMPOVER, but i leave it for backward lmps compatibility
-	  // FIXME,  I removed it for simplicity. This code is really mixed up.
-	  /*  
-	  if (player)
-            {
-	      if (tmfloorz - z > MAXSTEPMOVE)
-                {
-		  if (pz > 0)
-		    player->cheats |= CF_JUMPOVER;
-		  else
-		    player->cheats &= ~CF_JUMPOVER;
-		}
-	    }
-	  */
-
-	  if (flags2 & MF2_SLIDE)
-            {   // try to slide along it
-	      mp->SlideMove(this);
-            }
-	  else if (flags & MF_MISSILE)
-            {
-	      // explode a missile
-	      if (ceilingline &&
-		  ceilingline->backsector &&
-		  ceilingline->backsector->ceilingpic == skyflatnum &&
-		  ceilingline->frontsector &&
-		  ceilingline->frontsector->ceilingpic == skyflatnum &&
-		  subsector->sector->ceilingheight == ceilingz)
-		if (!boomsupport ||
-                    z > ceilingline->backsector->ceilingheight)//SoM: 4/7/2000: DEMO'S
-                  {
-                    // Hack to prevent missiles exploding
-                    // against the sky.
-                    // Does not handle sky floors.
-                    //SoM: 4/3/2000: Check frontsector as well..
-		    if (type == MT_BLOODYSKULL)
-                      {
-			px = py = 0;
-			pz = -FRACUNIT;
-                      }
-		    else
-		      Remove();
-		    return;
-                  }
-
-	      // draw damage on wall
-	      //SPLAT TEST ----------------------------------------------------------
-#ifdef WALLSPLATS
-	      if (blockingline && demoversion>=129)   //set by last P_TryMove() that failed
-                {
-		  divline_t   divl;
-		  divline_t   misl;
-		  fixed_t     frac;
-
-		  P_MakeDivline (blockingline, &divl);
-		  misl.x = x;
-		  misl.y = y;
-		  misl.dx = px;
-		  misl.dy = py;
-		  frac = P_InterceptVector (&divl, &misl);
-		  R_AddWallSplat (blockingline, P_PointOnLineSide(x,y,blockingline)
-				  ,"A_DMG3", z, frac, SPLATDRAWMODE_SHADE);
-                }
-#endif
-	      // --------------------------------------------------------- SPLAT TEST
-
-	      ExplodeMissile();
-            }
-	  else
-	    px = py = 0;
-        }
-      /*
-	// FIXME CF_JUMPOVER is no longer used, right?
-      else if (player)
-	// hack for playability : walk in-air to jump over a small wall
-	cheats &= ~CF_JUMPOVER;
-      */
-
-    } while (xmove || ymove);
-
-  // here some code was moved to PlayerPawn::XYMovement
-  // Friction.
-
-  if (flags & (MF_MISSILE | MF_SKULLFLY))
-    return;         // no friction for missiles ever
-
-  // slow down in water, not too much for playability issues
-  if (game.demoversion >= 128 && (eflags & MF_UNDERWATER))
-    {
-      px = FixedMul (px, FRICTION*3/4);
-      py = FixedMul (py, FRICTION*3/4);
-      return;
-    }
-
-  if (z > floorz && !(flags2 & MF2_FLY) && !(flags2 & MF2_ONMOBJ))
-    return;         // no friction when airborne
-
-  if (flags & MF_CORPSE)
-    {
-      // do not stop sliding
-      //  if halfway off a step with some momentum
-      if (px > FRACUNIT/4 || px < -FRACUNIT/4
-	  || py > FRACUNIT/4 || py < -FRACUNIT/4)
-        {
-	  if (floorz != subsector->sector->floorheight)
-	    return;
-        }
-    }
-  XYFriction(oldx, oldy, game.demoversion < 132);
-}
-
-//-----------------------------------------
-// was P_ZMovement
-//
-void Actor::ZMovement()
-{
-  extern int skyflatnum;
-  fixed_t     dist;
-  fixed_t     delta;
-
-  // adjust height
-  z += pz;
-
-  if (flags & MF_FLOAT && target)
-    {
-      // float down towards target if too close
-      if (!(flags & MF_SKULLFLY)
-	  && !(flags & MF_INFLOAT))
-        {
-	  dist = P_AproxDistance(x - target->x, y - target->y);
-	  delta = (target->z + (height>>1)) - z;
-
-	  if (delta < 0 && dist < -(delta*3) )
-	    z -= FLOATSPEED;
-	  else if (delta > 0 && dist < (delta*3) )
-	    z += FLOATSPEED;
-        }
-
-    }
-
-  // was only for PlayerPawns, but why?
-  if ((flags2 & MF2_FLY) && !(z <= floorz) && mp->maptic & 2)
-    {
-      z += finesine[(FINEANGLES / 20 * mp->maptic >> 2) & FINEMASK];
-    }
-
-  // clip this movement
-
-  if (z <= floorz)
-    {
-      // hit the floor
-      if (flags & MF_MISSILE)
-        {
-	  z = floorz;
-	  if (flags2 & MF2_FLOORBOUNCE)
-            {
-	      FloorBounceMissile();
-	      return;
-            }
-	  else if (type == MT_MNTRFX2)
-            { // Minotaur floor fire can go up steps
-	      return;
-            }
-	  else if (!(flags & MF_NOCLIP))
-	    {
-	      ExplodeMissile();
-	      return;
-	    }
-	}
-        
-      // Spawn splashes, etc.
-      if (z - pz > floorz)
-	HitFloor();
-
-      z = floorz;
-      // Note (id):
-      //  somebody left this after the setting pz to 0,
-      //  kinda useless there.
-      if (flags & MF_SKULLFLY)
-        {
-	  // the skull slammed into something
-	  pz = -pz;
-        }
-
-      if (pz < 0) // falling
-        {
-	  // set it once and not continuously
-	  if (z < floorz)
-	    eflags |= MF_JUSTHITFLOOR;
-
-	  pz = 0;
-        }
-
-      if (info->crashstate && (flags & MF_CORPSE))
-        {
-	  SetState(info->crashstate);
-	  flags &= ~MF_CORPSE;
-	  return;
-        }
-    }
-  else if (flags2 & MF2_LOGRAV)
-    {
-      if (pz == 0)
-	pz = -(cv_gravity.value>>3)*2;
-      else
-	pz -= cv_gravity.value>>3;
-    }
-  else if (!(flags & MF_NOGRAVITY)) // Gravity!
-    {
-      //Fab: NOT SURE WHETHER IT IS USEFUL, just put it here too
-      //     TO BE SURE there is no problem for the release..
-      //     (this is done in P_Mobjthinker below normally)
-      eflags &= ~MF_JUSTHITFLOOR;
-
-      fixed_t gravityadd = -cv_gravity.value/NEWTICRATERATIO;
-
-      // if waist under water, slow down the fall
-      if (eflags & MF_UNDERWATER)
-	{
-	  if (eflags & MF_SWIMMING)
-	    gravityadd = 0;     // gameplay: no gravity while swimming
-	  else
-	    gravityadd >>= 2;
-	}
-      else if (pz == 0)
-	// mobj at stop, no floor, so feel the push of gravity!
-	gravityadd <<= 1;
-
-      pz += gravityadd;
-    }
-
-  if (z + height > ceilingz)
-    {
-      z = ceilingz - height;
-
-      // hit the ceiling
-      if (pz > 0)
-	pz = 0;
-
-      if (flags & MF_SKULLFLY)
-        {       // the skull slammed into something
-	  pz = -pz;
-        }
-
-      if ((flags & MF_MISSILE)
-	  && !(flags & MF_NOCLIP) )
-        {
-	  //SoM: 4/3/2000: Don't explode on the sky!
-	  if(game.demoversion >= 129 && subsector->sector->ceilingpic == skyflatnum &&
-	     subsector->sector->ceilingheight == ceilingz)
-            {
-	      if (type == MT_BLOODYSKULL)
-                {
-		  px = py = 0;
-		  pz = -FRACUNIT;
-                }
-	      else
-		Remove();
-	      return;
-            }
-
-	  ExplodeMissile();
-	  return;
-        }
-    }
-
-  // z friction in water
-  if (game.demoversion >= 128 && 
-      ((eflags & MF_TOUCHWATER) || (eflags & MF_UNDERWATER)) && 
-      !(flags & (MF_MISSILE | MF_SKULLFLY)))
-    {
-      pz = FixedMul(pz, FRICTION*3/4);
-    }
-}
-
-
-//----------------------------------------------------------------------------
-// was P_XYFriction
-//
-// adds friction on the xy plane
-
-void Actor::XYFriction(fixed_t oldx, fixed_t oldy, bool oldfriction)
-{
-  if (px > -STOPSPEED && px < STOPSPEED && py > -STOPSPEED && py < STOPSPEED)
-    {
-      px = 0;
-      py = 0;
-    }
-  else
-    {
-      if (game.mode == heretic)
-        {
-	  if(flags2 & MF2_FLY && !(z <= floorz)
-	     && !(flags2 & MF2_ONMOBJ))
-            {
-	      px = FixedMul(px, FRICTION_FLY);
-	      py = FixedMul(py, FRICTION_FLY);
-            }
-	  else if (subsector->sector->special == 15) // Friction_Low
-            {
-	      px = FixedMul(px, FRICTION_LOW);
-	      py = FixedMul(py, FRICTION_LOW);
-            }
-	  else
-            {
-	      px = FixedMul(px, FRICTION);
-	      py = FixedMul(py, FRICTION);
-            }
-        }
-      else if (oldfriction)
-	{
-	  px = FixedMul (px, FRICTION);
-	  py = FixedMul (py, FRICTION);
-	}
-      else
-	{
-	  //SoM: 3/28/2000: Use boom friction.
-	  if ((oldx == x) && (oldy == y)) // Did you go anywhere?
-	    {
-	      px = FixedMul(px,ORIG_FRICTION);
-	      py = FixedMul(py,ORIG_FRICTION);
-	    }
-	  else
-	    {
-	      px = FixedMul(px,friction);
-	      py = FixedMul(py,friction);
-	    }
-	  friction = ORIG_FRICTION;
-	}
-    }
-}
-
-
-//-------------------------------------------------
-//
-// was P_ThrustMobj
-//
-
-void Actor::Thrust(angle_t angle, fixed_t move)
-{
-  angle >>= ANGLETOFINESHIFT;
-  px += FixedMul(move, finecosine[angle]);
-  py += FixedMul(move, finesine[angle]);
-}
-
-
-
 //-------------------------------------------------
 // was P_NightmareRespawn
 //
-void Actor::NightmareRespawn()
+void DActor::NightmareRespawn()
 {
   fixed_t  nx, ny, nz;
 
@@ -1103,15 +1138,15 @@ void Actor::NightmareRespawn()
 
   // spawn a teleport fog at old spot
   // because of removal of the body?
-  Actor *mo = mp->SpawnActor(x, y, subsector->sector->floorheight + 
-			  (game.mode == heretic ? TELEFOGHEIGHT : 0), MT_TFOG);
+  DActor *mo = mp->SpawnDActor(x, y, subsector->sector->floorheight + 
+			       (game.mode == heretic ? TELEFOGHEIGHT : 0), MT_TFOG);
   // initiate teleport sound
   S_StartSound(mo, sfx_telept);
 
   // spawn a teleport fog at the new spot
   subsector_t *ss = mp->R_PointInSubsector(nx, ny);
 
-  mo = mp->SpawnActor(nx, ny, ss->sector->floorheight +
+  mo = mp->SpawnDActor(nx, ny, ss->sector->floorheight +
 		   (game.mode == heretic ? TELEFOGHEIGHT : 0) , MT_TFOG);
   S_StartSound(mo, sfx_telept);
 
@@ -1125,7 +1160,7 @@ void Actor::NightmareRespawn()
     nz = ONFLOORZ;
 
   // inherit attributes from deceased one
-  mo = mp->SpawnActor(nx, ny, nz, type);
+  mo = mp->SpawnDActor(nx, ny, nz, type);
   mo->spawnpoint = spawnpoint;
   mo->angle = ANG45 * (mthing->angle/45);
 
@@ -1139,157 +1174,10 @@ void Actor::NightmareRespawn()
 }
 
 
-//-------------------------------------------------
-// was P_MobjCheckWater
-// check for water, set stuff in Actor struct for
-// movement code later, this is called by Actor::Think()
-void Actor::CheckWater()
-{
-  if (game.demoversion<128 || type==MT_SPLASH || type==MT_SPIRIT) // splash don't do splash
-    return;
-  //
-  // see if we are in water, and set some flags for later
-  //
-  sector_t *sector = subsector->sector;
-  fixed_t fz = sector->floorheight;
-  int oldeflags = eflags;
-
-  //SoM: 3/28/2000: Only use 280 water type of water. Some boom levels get messed up.
-  if ((sector->heightsec > -1 && sector->altheightsec == 1) ||
-      (sector->floortype == FLOOR_WATER && sector->heightsec == -1))
-    {
-      if (sector->heightsec > -1)  //water hack
-	fz = (mp->sectors[sector->heightsec].floorheight);
-      else
-	fz = sector->floorheight + (FRACUNIT/4); // water texture
-
-      if (z <= fz && z+height > fz)
-	eflags |= MF_TOUCHWATER;
-      else
-	eflags &= ~MF_TOUCHWATER;
-
-      if (z+(height>>1) <= fz)
-	eflags |= MF_UNDERWATER;
-      else
-	eflags &= ~MF_UNDERWATER;
-    }
-  else if(sector->ffloors)
-    {
-      ffloor_t*  rover;
-
-      eflags &= ~(MF_UNDERWATER|MF_TOUCHWATER);
-
-      for(rover = sector->ffloors; rover; rover = rover->next)
-	{
-	  if(!(rover->flags & FF_SWIMMABLE) || rover->flags & FF_SOLID)
-	    continue;
-	  if(*rover->topheight <= z || *rover->bottomheight > (z + (info->height >> 1)))
-	    continue;
-
-	  if(z + info->height > *rover->topheight)
-            eflags |= MF_TOUCHWATER;
-	  else
-            eflags &= ~MF_TOUCHWATER;
-
-	  if(z + (info->height >> 1) < *rover->topheight)
-            eflags |= MF_UNDERWATER;
-	  else
-            eflags &= ~MF_UNDERWATER;
-
-	  if(  !(oldeflags & (MF_TOUCHWATER|MF_UNDERWATER))
-	       && ((eflags & MF_TOUCHWATER) ||
-		   (eflags & MF_UNDERWATER)    )
-	       && type != MT_BLOOD 
-	       && game.mode!=heretic)
-            mp->SpawnSplash(this, *rover->topheight);
-	}
-      return;
-    }
-  else
-    eflags &= ~(MF_UNDERWATER|MF_TOUCHWATER);
-
-
-
-  /*
-    if( (eflags ^ oldeflags) & MF_TOUCHWATER)
-    CONS_Printf("touchewater %d\n",eflags & MF_TOUCHWATER ? 1 : 0);
-    if( (eflags ^ oldeflags) & MF_UNDERWATER)
-    CONS_Printf("underwater %d\n",eflags & MF_UNDERWATER ? 1 : 0);
-  */
-  // blood doesnt make noise when it falls in water
-  if(  !(oldeflags & (MF_TOUCHWATER|MF_UNDERWATER)) 
-       && ((eflags & MF_TOUCHWATER) || 
-           (eflags & MF_UNDERWATER)    )         
-       && type != MT_BLOOD
-       && game.demoversion<132 )
-    mp->SpawnSplash(this, fz); //SoM: 3/17/2000
-}
-
-
-//void P_MobjNullThinker (Actor* mobj) {}
-
-//---------------------------------------------------------------------------
-//
-// was P_HitFloor
-//
-//---------------------------------------------------------------------------
-
-int Actor::HitFloor()
-{
-  // this == thing
-  if (floorz != subsector->sector->floorheight)
-    { // don't splash if landing on the edge above water/lava/etc....
-      return FLOOR_SOLID;
-    }
-
-  int floortype = GetThingFloorType();
-
-  if (game.mode == heretic)
-    {
-      if (type != MT_BLOOD)
-	{
-	  Actor *p;
-	  switch (floortype)
-	    {
-	    case FLOOR_WATER:
-	      mp->SpawnActor(x, y, ONFLOORZ, MT_SPLASHBASE);
-	      p = mp->SpawnActor(x, y, ONFLOORZ, MT_HSPLASH);
-	      p->owner = this;
-	      p->px = P_SignedRandom()<<8;
-	      p->py = P_SignedRandom()<<8;
-	      p->pz = 2*FRACUNIT+(P_Random()<<8);
-	      S_StartSound(p, sfx_gloop);
-	      break;
-	    case FLOOR_LAVA:
-	      mp->SpawnActor(x, y, ONFLOORZ, MT_LAVASPLASH);
-	      p = mp->SpawnActor(x, y, ONFLOORZ, MT_LAVASMOKE);
-	      p->pz = FRACUNIT+(P_Random()<<7);
-	      S_StartSound(p, sfx_burn);
-	      break;
-	    case FLOOR_SLUDGE:
-	      mp->SpawnActor(x, y, ONFLOORZ, MT_SLUDGESPLASH);
-	      p = mp->SpawnActor(x, y, ONFLOORZ, MT_SLUDGECHUNK);
-	      p->owner = this;
-	      p->px = P_SignedRandom()<<8;
-	      p->py = P_SignedRandom()<<8;
-	      p->pz = FRACUNIT+(P_Random()<<8);
-	      break;
-	    }
-	}
-      return floortype;
-    }
-  else if (floortype == FLOOR_WATER)
-    mp->SpawnSplash(this, floorz);
-
-  // do not down the viewpoint
-  return FLOOR_SOLID;
-}
-
-
 //---------------------------------------------
 // was P_SpawnMissile
 //
-Actor *Actor::SpawnMissile(Actor *dest, mobjtype_t type)
+DActor *DActor::SpawnMissile(Actor *dest, mobjtype_t type)
 {
   fixed_t  mz;
 
@@ -1319,7 +1207,7 @@ Actor *Actor::SpawnMissile(Actor *dest, mobjtype_t type)
   if (flags2 & MF2_FEETARECLIPPED)
     mz -= FOOTCLIPSIZE;
 
-  Actor *th = mp->SpawnActor(x, y, mz, type);
+  DActor *th = mp->SpawnDActor(x, y, mz, type);
 
   if (th->info->seesound)
     S_StartSound(th, th->info->seesound);
@@ -1350,11 +1238,7 @@ Actor *Actor::SpawnMissile(Actor *dest, mobjtype_t type)
 
   th->pz = (dest->z - z) / dist;
 
-  dist = th->CheckMissileSpawn();
-  if (game.demoversion < 131)
-    return th;
-  else
-    return dist ? th : NULL;
+  return (th->CheckMissileSpawn()) ? th : NULL;
 }
 
 
@@ -1363,7 +1247,7 @@ Actor *Actor::SpawnMissile(Actor *dest, mobjtype_t type)
 // Moves the missile forward a bit
 //  and possibly explodes it right there.
 //
-bool Actor::CheckMissileSpawn()
+bool DActor::CheckMissileSpawn()
 {
   if (game.mode != heretic)
     {
@@ -1393,7 +1277,7 @@ bool Actor::CheckMissileSpawn()
 // was P_ExplodeMissile
 //
 
-void Actor::ExplodeMissile()
+void DActor::ExplodeMissile()
 {
   if (type == MT_WHIRLWIND)
     if (++special2 < 60)
@@ -1424,7 +1308,7 @@ void Actor::ExplodeMissile()
 // was P_FloorBounceMissile
 //
 
-void Actor::FloorBounceMissile()
+void DActor::FloorBounceMissile()
 {
   pz = -pz;
   SetState(mobjinfo[type].deathstate);

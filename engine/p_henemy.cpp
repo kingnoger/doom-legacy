@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:17:57  hurdler
-// Initial revision
+// Revision 1.2  2002/12/16 22:11:32  smite-meister
+// Actor/DActor separation done!
+//
+// Revision 1.1.1.1  2002/11/16 14:17:57  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.13  2002/09/20 22:41:30  vberghol
 // Sound system rewritten! And it workscvs update
@@ -104,15 +107,15 @@
 //
 //----------------------------------------------------------------------------
 
-void A_DripBlood(Actor *actor)
+void A_DripBlood(DActor *actor)
 {
-  Actor *mo;
+  DActor *mo;
   int r,s;
 
   // evaluation order isn't define in C
   r = P_SignedRandom();
   s = P_SignedRandom();
-  mo = actor->mp->SpawnActor(actor->x+(r<<11),
+  mo = actor->mp->SpawnDActor(actor->x+(r<<11),
 		   actor->y+(s<<11), actor->z, MT_BLOOD);
   mo->px = P_SignedRandom()<<10;
   mo->py = P_SignedRandom()<<10;
@@ -125,7 +128,7 @@ void A_DripBlood(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_KnightAttack(Actor *actor)
+void A_KnightAttack(DActor *actor)
 {
   if (!actor->target)
     {
@@ -154,15 +157,15 @@ void A_KnightAttack(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_ImpExplode(Actor *actor)
+void A_ImpExplode(DActor *actor)
 {
-  Actor *mo;
+  DActor *mo;
 
-  mo = actor->mp->SpawnActor(actor->x, actor->y, actor->z, MT_IMPCHUNK1);
+  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_IMPCHUNK1);
   mo->px = P_SignedRandom()<<10;
   mo->py = P_SignedRandom()<<10;
   mo->pz = 9*FRACUNIT;
-  mo = actor->mp->SpawnActor(actor->x, actor->y, actor->z, MT_IMPCHUNK2);
+  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_IMPCHUNK2);
   mo->px = P_SignedRandom()<<10;
   mo->py = P_SignedRandom()<<10;
   mo->pz = 9*FRACUNIT;
@@ -178,7 +181,7 @@ void A_ImpExplode(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_BeastPuff(Actor *actor)
+void A_BeastPuff(DActor *actor)
 {
   if(P_Random() > 64)
     {
@@ -187,7 +190,7 @@ void A_BeastPuff(Actor *actor)
       s = P_SignedRandom();
       t = P_SignedRandom();
         
-      actor->mp->SpawnActor(actor->x+(r<<10),
+      actor->mp->SpawnDActor(actor->x+(r<<10),
 		  actor->y+(s<<10),
 		  actor->z+(t<<10), MT_PUFFY);
     }
@@ -199,7 +202,7 @@ void A_BeastPuff(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_ImpMeAttack(Actor *actor)
+void A_ImpMeAttack(DActor *actor)
 {
   if(!actor->target)
     {
@@ -218,7 +221,7 @@ void A_ImpMeAttack(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_ImpMsAttack(Actor *actor)
+void A_ImpMsAttack(DActor *actor)
 {
   Actor *dest;
   angle_t an;
@@ -253,7 +256,7 @@ void A_ImpMsAttack(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_ImpMsAttack2(Actor *actor)
+void A_ImpMsAttack2(DActor *actor)
 {
   if(!actor->target)
     {
@@ -274,7 +277,7 @@ void A_ImpMsAttack2(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_ImpDeath(Actor *actor)
+void A_ImpDeath(DActor *actor)
 {
   actor->flags &= ~MF_SOLID;
   actor->flags2 |= MF2_FOOTCLIP;
@@ -296,7 +299,7 @@ void A_ImpDeath(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_ImpXDeath1(Actor *actor)
+void A_ImpXDeath1(DActor *actor)
 {
   actor->flags &= ~MF_SOLID;
   actor->flags |= MF_NOGRAVITY;
@@ -314,7 +317,7 @@ void A_ImpXDeath1(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_ImpXDeath2(Actor *actor)
+void A_ImpXDeath2(DActor *actor)
 {
   actor->flags &= ~MF_NOGRAVITY;
   if(actor->z <= actor->floorz)
@@ -333,7 +336,7 @@ void A_ImpXDeath2(Actor *actor)
 //----------------------------------------------------------------------------
 
 #define TELEFOGHEIGHT (32*FRACUNIT)
-bool Actor::UpdateMorph(int tics)
+bool DActor::UpdateMorph(int tics)
 {
   special1 -= tics;
   if (special1 > 0)
@@ -342,7 +345,7 @@ bool Actor::UpdateMorph(int tics)
   // undo the morph
   mobjtype_t moType = mobjtype_t(special2);
 
-  Actor *mo = mp->SpawnActor(x, y, z, moType);
+  DActor *mo = mp->SpawnDActor(x, y, z, moType);
   
   if (mo->TestLocation() == false)
     { // Didn't fit
@@ -350,50 +353,17 @@ bool Actor::UpdateMorph(int tics)
       special1 = 5*TICRATE; // Next try in 5 seconds
       return false;
     }
-  mo->Remove(); // just used to see if it fits
-  // FIXME! what is a freetargmobj?
-  // also repair everything else here;)
-  //mo->SetState(S_FREETARGMOBJ); //maybe?
-  type = moType;
-  info = &mobjinfo[type];
 
-  Actor *fog = mp->SpawnActor(x, y, z+TELEFOGHEIGHT, MT_TFOG);
+  // fits! remove the chicken
+  SetState(S_FREETARGMOBJ);
+
+  DActor *fog = mp->SpawnDActor(x, y, z+TELEFOGHEIGHT, MT_TFOG);
   S_StartSound(fog, sfx_telept);
+
+  mo->angle = angle;
+  mo->target = target;
 
   return true;
-  /*
-
-  fixed_t x, y, z;
-  Actor oldChicken;
-
-  this->special1 -= tics;
-  if (this->special1 > 0)
-    return false;
-
-  moType = mobjtype_t(this->special2);
-  x = this->x;
-  y = this->y;
-  z = this->z;
-  oldChicken = *this;
-  this->SetState(S_FREETARGMOBJ);
-  mo = P_SpawnMobj(x, y, z, moType);
-  if (mo->TestLocation() == false)
-    { // Didn't fit
-      mo->Remove();
-      mo = P_SpawnMobj(x, y, z, MT_CHICKEN);
-      mo->angle = oldChicken.angle;
-      mo->flags = oldChicken.flags;
-      mo->health = oldChicken.health;
-      mo->target = oldChicken.target;
-      mo->special1 = 5*TICRATE; // Next try in 5 seconds
-      mo->special2 = moType;
-      return false;
-    }
-  mo->angle = oldChicken.angle;
-  mo->target = oldChicken.target;
-  fog = P_SpawnMobj(x, y, z+TELEFOGHEIGHT, MT_TFOG);
-  S_StartSound(fog, sfx_telept);
-  */
 }
 
 //----------------------------------------------------------------------------
@@ -402,7 +372,7 @@ bool Actor::UpdateMorph(int tics)
 //
 //----------------------------------------------------------------------------
 
-void A_ChicAttack(Actor *actor)
+void A_ChicAttack(DActor *actor)
 {
   if (actor->UpdateMorph(18))
     return;
@@ -420,7 +390,7 @@ void A_ChicAttack(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_ChicLook(Actor *actor)
+void A_ChicLook(DActor *actor)
 {
   if (actor->UpdateMorph(10))
     {
@@ -435,7 +405,7 @@ void A_ChicLook(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_ChicChase(Actor *actor)
+void A_ChicChase(DActor *actor)
 {
   if (actor->UpdateMorph(3))
     {
@@ -450,7 +420,7 @@ void A_ChicChase(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_ChicPain(Actor *actor)
+void A_ChicPain(DActor *actor)
 {
   if(actor->UpdateMorph(10))
     {
@@ -465,11 +435,11 @@ void A_ChicPain(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_Feathers(Actor *actor)
+void A_Feathers(DActor *actor)
 {
   int i;
   int count;
-  Actor *mo;
+  DActor *mo;
 
   if(actor->health > 0)
     { // Pain
@@ -481,7 +451,7 @@ void A_Feathers(Actor *actor)
     }
   for(i = 0; i < count; i++)
     {
-      mo = actor->mp->SpawnActor(actor->x, actor->y, actor->z+20*FRACUNIT,
+      mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z+20*FRACUNIT,
 		       MT_FEATHER);
       mo->target = actor;
       mo->px = P_SignedRandom()<<8;
@@ -497,7 +467,7 @@ void A_Feathers(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_MummyAttack(Actor *actor)
+void A_MummyAttack(DActor *actor)
 {
   if(!actor->target)
     {
@@ -521,7 +491,7 @@ void A_MummyAttack(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_MummyAttack2(Actor *actor)
+void A_MummyAttack2(DActor *actor)
 {
   if (!actor->target)
     return;
@@ -532,7 +502,7 @@ void A_MummyAttack2(Actor *actor)
       actor->target->Damage(actor, actor, HITDICE(2));
       return;
     }
-  Actor *mo = actor->SpawnMissile(actor->target, MT_MUMMYFX1);
+  DActor *mo = actor->SpawnMissile(actor->target, MT_MUMMYFX1);
   //mo = actor->SpawnMissile(actor->target, MT_EGGFX);
   if (mo != NULL)
     mo->target = actor->target;
@@ -544,7 +514,7 @@ void A_MummyAttack2(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_MummyFX1Seek(Actor *actor)
+void A_MummyFX1Seek(DActor *actor)
 {
   actor->SeekerMissile(ANGLE_1*10, ANGLE_1*20);
 }
@@ -555,11 +525,11 @@ void A_MummyFX1Seek(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_MummySoul(Actor *mummy)
+void A_MummySoul(DActor *mummy)
 {
-  Actor *mo;
+  DActor *mo;
 
-  mo = mummy->mp->SpawnActor(mummy->x, mummy->y, mummy->z+10*FRACUNIT, MT_MUMMYSOUL);
+  mo = mummy->mp->SpawnDActor(mummy->x, mummy->y, mummy->z+10*FRACUNIT, MT_MUMMYSOUL);
   mo->pz = FRACUNIT;
 }
 
@@ -569,7 +539,7 @@ void A_MummySoul(Actor *mummy)
 //
 //----------------------------------------------------------------------------
 
-void A_Sor1Pain(Actor *actor)
+void A_Sor1Pain(DActor *actor)
 {
   actor->special1 = 20; // Number of steps to walk fast
   A_Pain(actor);
@@ -581,7 +551,7 @@ void A_Sor1Pain(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_Sor1Chase(Actor *actor)
+void A_Sor1Chase(DActor *actor)
 {
   if(actor->special1)
     {
@@ -599,9 +569,9 @@ void A_Sor1Chase(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_Srcr1Attack(Actor *actor)
+void A_Srcr1Attack(DActor *actor)
 {
-  Actor *mo;
+  DActor *mo;
   fixed_t pz;
   angle_t angle;
 
@@ -650,12 +620,12 @@ void A_Srcr1Attack(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_SorcererRise(Actor *actor)
+void A_SorcererRise(DActor *actor)
 {
-  Actor *mo;
+  DActor *mo;
 
   actor->flags &= ~MF_SOLID;
-  mo = actor->mp->SpawnActor(actor->x, actor->y, actor->z, MT_SORCERER2);
+  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_SORCERER2);
   mo->SetState(S_SOR2_RISE1);
   mo->angle = actor->angle;
   mo->target = actor->target;
@@ -667,12 +637,12 @@ void A_SorcererRise(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void Actor::DSparilTeleport()
+void DActor::DSparilTeleport()
 {
   int i, n;
   fixed_t nx, ny;
   fixed_t prevX, prevY, prevZ;
-  Actor *mo;
+  DActor *mo;
 
   n = mp->BossSpots.size(); 
   if (n == 0)
@@ -690,7 +660,7 @@ void Actor::DSparilTeleport()
   prevZ = z;
   if (TeleportMove(nx, ny))
     {
-      mo = mp->SpawnActor(prevX, prevY, prevZ, MT_SOR2TELEFADE);
+      mo = mp->SpawnDActor(prevX, prevY, prevZ, MT_SOR2TELEFADE);
       S_StartSound(mo, sfx_telept);
       SetState(S_SOR2_TELE1);
       S_StartSound(this, sfx_telept);
@@ -706,7 +676,7 @@ void Actor::DSparilTeleport()
 //
 //----------------------------------------------------------------------------
 
-void A_Srcr2Decide(Actor *actor)
+void A_Srcr2Decide(DActor *actor)
 {
   static int chance[] =
   {
@@ -729,7 +699,7 @@ void A_Srcr2Decide(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_Srcr2Attack(Actor *actor)
+void A_Srcr2Attack(DActor *actor)
 {
   int chance;
 
@@ -763,14 +733,14 @@ void A_Srcr2Attack(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_BlueSpark(Actor *actor)
+void A_BlueSpark(DActor *actor)
 {
   int i;
-  Actor *mo;
+  DActor *mo;
     
   for(i = 0; i < 2; i++)
     {
-      mo = actor->mp->SpawnActor(actor->x, actor->y, actor->z, MT_SOR2FXSPARK);
+      mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_SOR2FXSPARK);
       mo->px = P_SignedRandom()<<9;
       mo->py = P_SignedRandom()<<9;
       mo->pz = FRACUNIT+(P_Random()<<8);
@@ -783,12 +753,12 @@ void A_BlueSpark(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_GenWizard(Actor *actor)
+void A_GenWizard(DActor *actor)
 {
-  Actor *mo;
-  Actor *fog;
+  DActor *mo;
+  DActor *fog;
 
-  mo = actor->mp->SpawnActor(actor->x, actor->y,
+  mo = actor->mp->SpawnDActor(actor->x, actor->y,
 		   actor->z-mobjinfo[MT_WIZARD].height/2, MT_WIZARD);
   if(mo->TestLocation() == false)
     { // Didn't fit
@@ -798,7 +768,7 @@ void A_GenWizard(Actor *actor)
   actor->px = actor->py = actor->pz = 0;
   actor->SetState(mobjinfo[actor->type].deathstate);
   actor->flags &= ~MF_MISSILE;
-  fog = actor->mp->SpawnActor(actor->x, actor->y, actor->z, MT_TFOG);
+  fog = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_TFOG);
   S_StartSound(fog, sfx_telept);
 }
 
@@ -808,7 +778,7 @@ void A_GenWizard(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_Sor2DthInit(Actor *actor)
+void A_Sor2DthInit(DActor *actor)
 {
   actor->special1 = 7; // Animation loop counter
   actor->mp->Massacre(); // Kill monsters early
@@ -820,7 +790,7 @@ void A_Sor2DthInit(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_Sor2DthLoop(Actor *actor)
+void A_Sor2DthLoop(DActor *actor)
 {
   if(--actor->special1)
     // Need to loop
@@ -833,12 +803,12 @@ void A_Sor2DthLoop(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_SorZap(Actor *actor) {S_StartAmbSound(sfx_sorzap);}
-void A_SorRise(Actor *actor) {S_StartAmbSound(sfx_sorrise);}
-void A_SorDSph(Actor *actor) {S_StartAmbSound(sfx_sordsph);}
-void A_SorDExp(Actor *actor) {S_StartAmbSound(sfx_sordexp);}
-void A_SorDBon(Actor *actor) {S_StartAmbSound(sfx_sordbon);}
-void A_SorSightSnd(Actor *actor) {S_StartAmbSound(sfx_sorsit);}
+void A_SorZap(DActor *actor) {S_StartAmbSound(sfx_sorzap);}
+void A_SorRise(DActor *actor) {S_StartAmbSound(sfx_sorrise);}
+void A_SorDSph(DActor *actor) {S_StartAmbSound(sfx_sordsph);}
+void A_SorDExp(DActor *actor) {S_StartAmbSound(sfx_sordexp);}
+void A_SorDBon(DActor *actor) {S_StartAmbSound(sfx_sordbon);}
+void A_SorSightSnd(DActor *actor) {S_StartAmbSound(sfx_sorsit);}
 
 //----------------------------------------------------------------------------
 //
@@ -848,7 +818,7 @@ void A_SorSightSnd(Actor *actor) {S_StartAmbSound(sfx_sorsit);}
 //
 //----------------------------------------------------------------------------
 
-void A_MinotaurAtk1(Actor *actor)
+void A_MinotaurAtk1(DActor *actor)
 {
   Actor *t = actor->target;
 
@@ -877,7 +847,7 @@ void A_MinotaurAtk1(Actor *actor)
 
 #define MNTR_CHARGE_SPEED (13*FRACUNIT)
 
-void A_MinotaurDecide(Actor *actor)
+void A_MinotaurDecide(DActor *actor)
 {
   angle_t angle;
   Actor *target;
@@ -926,13 +896,13 @@ void A_MinotaurDecide(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_MinotaurCharge(Actor *actor)
+void A_MinotaurCharge(DActor *actor)
 {
-  Actor *puff;
+  DActor *puff;
 
   if(actor->special1)
     {
-      puff = actor->mp->SpawnActor(actor->x, actor->y, actor->z, MT_PHOENIXPUFF);
+      puff = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_PHOENIXPUFF);
       puff->pz = 2*FRACUNIT;
       actor->special1--;
     }
@@ -951,9 +921,9 @@ void A_MinotaurCharge(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_MinotaurAtk2(Actor *actor)
+void A_MinotaurAtk2(DActor *actor)
 {
-  Actor *mo;
+  DActor *mo;
   angle_t angle;
   fixed_t pz;
 
@@ -988,9 +958,9 @@ void A_MinotaurAtk2(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_MinotaurAtk3(Actor *actor)
+void A_MinotaurAtk3(DActor *actor)
 {
-  Actor *mo;
+  DActor *mo;
   Actor *t = actor->target;
 
   if (t == NULL)
@@ -1025,15 +995,15 @@ void A_MinotaurAtk3(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_MntrFloorFire(Actor *actor)
+void A_MntrFloorFire(DActor *actor)
 {
-  Actor *mo;
+  DActor *mo;
   int r,s;
     
   actor->z = actor->floorz;
   r = P_SignedRandom();
   s = P_SignedRandom();
-  mo = actor->mp->SpawnActor(actor->x+(r<<10),
+  mo = actor->mp->SpawnDActor(actor->x+(r<<10),
 		   actor->y+(s<<10), ONFLOORZ, MT_MNTRFX3);
   mo->target = actor->target;
   mo->px = 1; // Force block checking
@@ -1046,7 +1016,7 @@ void A_MntrFloorFire(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_BeastAttack(Actor *actor)
+void A_BeastAttack(DActor *actor)
 {
   if(!actor->target)
     {
@@ -1067,7 +1037,7 @@ void A_BeastAttack(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_HHeadAttack(Actor *actor)
+void A_HHeadAttack(DActor *actor)
 {
   int i;
   static int atkResolve1[] = { 50, 150 };
@@ -1098,13 +1068,13 @@ void A_HHeadAttack(Actor *actor)
     }
   else if(randAttack < atkResolve2[dist])
     { // Fire column
-      Actor *baseFire = actor->SpawnMissile(t, MT_HEADFX3);
+      DActor *baseFire = actor->SpawnMissile(t, MT_HEADFX3);
       if (baseFire != NULL)
 	{
 	  baseFire->SetState(S_HHEADFX3_4); // Don't grow
 	  for (i = 0; i < 5; i++)
 	    {
-	      Actor *fire = actor->mp->SpawnActor(baseFire->x, baseFire->y,
+	      DActor *fire = actor->mp->SpawnDActor(baseFire->x, baseFire->y,
 						  baseFire->z, MT_HEADFX3);
 	      if (i == 0)
 		S_StartSound(actor, sfx_hedat1);
@@ -1122,7 +1092,7 @@ void A_HHeadAttack(Actor *actor)
     }
   else
     { // Whirlwind
-      Actor *mo = actor->SpawnMissile(t, MT_WHIRLWIND);
+      DActor *mo = actor->SpawnMissile(t, MT_WHIRLWIND);
       if(mo != NULL)
 	{
 	  mo->z -= 32*FRACUNIT;
@@ -1140,7 +1110,7 @@ void A_HHeadAttack(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_WhirlwindSeek(Actor *actor)
+void A_WhirlwindSeek(DActor *actor)
 {
   actor->health -= 3;
   if(actor->health < 0)
@@ -1167,22 +1137,22 @@ void A_WhirlwindSeek(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_HeadIceImpact(Actor *ice)
+void A_HeadIceImpact(DActor *ice)
 {
   int i;
   angle_t angle;
-  Actor *shard;
+  DActor *shard;
 
   for(i = 0; i < 8; i++)
     {
-      shard = ice->mp->SpawnActor(ice->x, ice->y, ice->z, MT_HEADFX2);
+      shard = ice->mp->SpawnDActor(ice->x, ice->y, ice->z, MT_HEADFX2);
       angle = i*ANG45;
       shard->target = ice->target;
       shard->angle = angle;
       angle >>= ANGLETOFINESHIFT;
       shard->px = FixedMul(shard->info->speed, finecosine[angle]);
       shard->py = FixedMul(shard->info->speed, finesine[angle]);
-      shard->pz = -.6*FRACUNIT;
+      shard->pz = int(-0.6*FRACUNIT);
       shard->CheckMissileSpawn();
     }
 }
@@ -1193,7 +1163,7 @@ void A_HeadIceImpact(Actor *ice)
 //
 //----------------------------------------------------------------------------
 
-void A_HeadFireGrow(Actor *fire)
+void A_HeadFireGrow(DActor *fire)
 {
   fire->health--;
   fire->z += 9*FRACUNIT;
@@ -1210,7 +1180,7 @@ void A_HeadFireGrow(Actor *fire)
 //
 //----------------------------------------------------------------------------
 
-void A_SnakeAttack(Actor *actor)
+void A_SnakeAttack(DActor *actor)
 {
   if(!actor->target)
     {
@@ -1228,7 +1198,7 @@ void A_SnakeAttack(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_SnakeAttack2(Actor *actor)
+void A_SnakeAttack2(DActor *actor)
 {
   if(!actor->target)
     {
@@ -1246,7 +1216,7 @@ void A_SnakeAttack2(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_ClinkAttack(Actor *actor)
+void A_ClinkAttack(DActor *actor)
 {
   int damage;
 
@@ -1268,7 +1238,7 @@ void A_ClinkAttack(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_GhostOff(Actor *actor)
+void A_GhostOff(DActor *actor)
 {
   actor->flags &= ~MF_SHADOW;
 }
@@ -1279,7 +1249,7 @@ void A_GhostOff(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_WizAtk1(Actor *actor)
+void A_WizAtk1(DActor *actor)
 {
   A_FaceTarget(actor);
   actor->flags &= ~MF_SHADOW;
@@ -1291,7 +1261,7 @@ void A_WizAtk1(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_WizAtk2(Actor *actor)
+void A_WizAtk2(DActor *actor)
 {
   A_FaceTarget(actor);
   actor->flags |= MF_SHADOW;
@@ -1303,9 +1273,9 @@ void A_WizAtk2(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_WizAtk3(Actor *actor)
+void A_WizAtk3(DActor *actor)
 {
-  Actor *mo;
+  DActor *mo;
   angle_t angle;
   fixed_t pz;
 
@@ -1336,7 +1306,7 @@ void A_WizAtk3(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_HScream(Actor *actor)
+void A_HScream(DActor *actor)
 {
   switch(actor->type)
     {
@@ -1379,13 +1349,13 @@ void A_HScream(Actor *actor)
 
 void P_DropItem(Actor *source, mobjtype_t type, int special, int chance)
 {
-  Actor *mo;
+  DActor *mo;
 
   if(P_Random() > chance)
     {
       return;
     }
-  mo = source->mp->SpawnActor(source->x, source->y,
+  mo = source->mp->SpawnDActor(source->x, source->y,
 		   source->z+(source->height>>1), type);
   mo->px = P_SignedRandom()<<8;
   mo->py = P_SignedRandom()<<8;
@@ -1400,7 +1370,7 @@ void P_DropItem(Actor *source, mobjtype_t type, int special, int chance)
 //
 //----------------------------------------------------------------------------
 
-void A_NoBlocking(Actor *actor)
+void A_NoBlocking(DActor *actor)
 {
   A_Fall(actor);
   // Check for monsters dropping things
@@ -1448,12 +1418,12 @@ void A_NoBlocking(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_PodPain(Actor *actor)
+void A_PodPain(DActor *actor)
 {
   int i;
   int count;
   int chance;
-  Actor *goo;
+  DActor *goo;
     
   chance = P_Random();
   if(chance < 128)
@@ -1463,7 +1433,7 @@ void A_PodPain(Actor *actor)
   count = chance > 240 ? 2 : 1;
   for(i = 0; i < count; i++)
     {
-      goo = actor->mp->SpawnActor(actor->x, actor->y,
+      goo = actor->mp->SpawnDActor(actor->x, actor->y,
 			actor->z+48*FRACUNIT, MT_PODGOO);
       goo->target = actor;
       goo->px = P_SignedRandom()<<9;
@@ -1478,13 +1448,13 @@ void A_PodPain(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_RemovePod(Actor *actor)
+void A_RemovePod(DActor *actor)
 {
-  Actor *mo;
+  DActor *mo;
 
   if(actor->special2)
     {
-      mo = (Actor *)actor->special2;
+      mo = (DActor *)actor->special2;
       if(mo->special1 > 0)
 	{
 	  mo->special1--;
@@ -1500,7 +1470,7 @@ void A_RemovePod(Actor *actor)
 
 #define MAX_GEN_PODS 16
 
-void A_MakePod(Actor *actor)
+void A_MakePod(DActor *actor)
 {
   if (actor->special1 == MAX_GEN_PODS)
     // Too many generated pods
@@ -1511,7 +1481,7 @@ void A_MakePod(Actor *actor)
   x = actor->x;
   y = actor->y;
   z = actor->z;
-  Actor *mo = actor->mp->SpawnActor(x, y, ONFLOORZ, MT_POD);
+  DActor *mo = actor->mp->SpawnDActor(x, y, ONFLOORZ, MT_POD);
   if (mo->CheckPosition(x, y) == false)
     { // Didn't fit
       mo->Remove();
@@ -1534,7 +1504,7 @@ void A_MakePod(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_HBossDeath(Actor *actor)
+void A_HBossDeath(DActor *actor)
 {
   actor->mp->BossDeath(actor);
 }
@@ -1545,7 +1515,7 @@ void A_HBossDeath(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_ESound(Actor *mo)
+void A_ESound(DActor *mo)
 {
   int sound;
 
@@ -1570,14 +1540,14 @@ void A_ESound(Actor *mo)
 //
 //----------------------------------------------------------------------------
 
-void A_SpawnTeleGlitter(Actor *actor)
+void A_SpawnTeleGlitter(DActor *actor)
 {
-  Actor *mo;
+  DActor *mo;
   int r,s;
 
   r = P_Random();
   s = P_Random();
-  mo = actor->mp->SpawnActor(actor->x+((r&31)-16)*FRACUNIT,
+  mo = actor->mp->SpawnDActor(actor->x+((r&31)-16)*FRACUNIT,
 		   actor->y+((s&31)-16)*FRACUNIT,
 		   actor->subsector->sector->floorheight, MT_TELEGLITTER);
   mo->pz = FRACUNIT/4;
@@ -1589,14 +1559,14 @@ void A_SpawnTeleGlitter(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_SpawnTeleGlitter2(Actor *actor)
+void A_SpawnTeleGlitter2(DActor *actor)
 {
-  Actor *mo;
+  DActor *mo;
   int r,s;
 
   r = P_Random();
   s = P_Random();
-  mo = actor->mp->SpawnActor(actor->x+((r&31)-16)*FRACUNIT,
+  mo = actor->mp->SpawnDActor(actor->x+((r&31)-16)*FRACUNIT,
 		   actor->y+((s&31)-16)*FRACUNIT,
 		   actor->subsector->sector->floorheight, MT_TELEGLITTER2);
   mo->pz = FRACUNIT/4;
@@ -1608,7 +1578,7 @@ void A_SpawnTeleGlitter2(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_AccTeleGlitter(Actor *actor)
+void A_AccTeleGlitter(DActor *actor)
 {
   if(++actor->health > 35)
     {
@@ -1622,9 +1592,9 @@ void A_AccTeleGlitter(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_InitKeyGizmo(Actor *gizmo)
+void A_InitKeyGizmo(DActor *gizmo)
 {
-  Actor *mo;
+  DActor *mo;
   statenum_t state;
 
   switch(gizmo->type)
@@ -1642,7 +1612,7 @@ void A_InitKeyGizmo(Actor *gizmo)
       state = S_NULL;
       break;
     }
-  mo = gizmo->mp->SpawnActor(gizmo->x, gizmo->y, gizmo->z+60*FRACUNIT,
+  mo = gizmo->mp->SpawnDActor(gizmo->x, gizmo->y, gizmo->z+60*FRACUNIT,
 			     MT_KEYGIZMOFLOAT);
   mo->SetState(state);
 }
@@ -1653,7 +1623,7 @@ void A_InitKeyGizmo(Actor *gizmo)
 //
 //----------------------------------------------------------------------------
 
-void A_VolcanoSet(Actor *volcano)
+void A_VolcanoSet(DActor *volcano)
 {
   volcano->tics = 105+(P_Random()&127);
 }
@@ -1664,7 +1634,7 @@ void A_VolcanoSet(Actor *volcano)
 //
 //----------------------------------------------------------------------------
 
-void A_VolcanoBlast(Actor *volcano)
+void A_VolcanoBlast(DActor *volcano)
 {
   int i;
   int count;
@@ -1673,7 +1643,7 @@ void A_VolcanoBlast(Actor *volcano)
   count = 1+(P_Random()%3);
   for(i = 0; i < count; i++)
     {
-      Actor *blast = volcano->mp->SpawnActor(volcano->x, volcano->y,
+      DActor *blast = volcano->mp->SpawnDActor(volcano->x, volcano->y,
 	volcano->z+44*FRACUNIT, MT_VOLCANOBLAST); // MT_VOLCANOBLAST
       //blast->target = volcano;
       blast->owner = volcano;
@@ -1682,7 +1652,7 @@ void A_VolcanoBlast(Actor *volcano)
       angle >>= ANGLETOFINESHIFT;
       blast->px = FixedMul(1*FRACUNIT, finecosine[angle]);
       blast->py = FixedMul(1*FRACUNIT, finesine[angle]);
-      blast->pz = (2.5*FRACUNIT)+(P_Random()<<10);
+      blast->pz = int(2.5*FRACUNIT)+(P_Random()<<10);
       S_StartSound(blast, sfx_volsht);
       blast->CheckMissileSpawn();
     }
@@ -1694,10 +1664,10 @@ void A_VolcanoBlast(Actor *volcano)
 //
 //----------------------------------------------------------------------------
 
-void A_VolcBallImpact(Actor *ball)
+void A_VolcBallImpact(DActor *ball)
 {
   int i;
-  Actor *tiny;
+  DActor *tiny;
   angle_t angle;
 
   if(ball->z <= ball->floorz)
@@ -1710,7 +1680,7 @@ void A_VolcBallImpact(Actor *ball)
   ball->RadiusAttack(ball->owner, 25);
   for(i = 0; i < 4; i++)
     {
-      tiny = ball->mp->SpawnActor(ball->x, ball->y, ball->z, MT_VOLCANOTBLAST);
+      tiny = ball->mp->SpawnDActor(ball->x, ball->y, ball->z, MT_VOLCANOTBLAST);
       tiny->owner = ball;
       angle = i*ANG90;
       tiny->angle = angle;
@@ -1728,12 +1698,12 @@ void A_VolcBallImpact(Actor *ball)
 //
 //----------------------------------------------------------------------------
 /*
-void A_SkullPop(Actor *actor)
+void A_SkullPop(DActor *actor)
 {
   player_t *player;
 
   actor->flags &= ~MF_SOLID;
-  Actor *mo = actor->mp->SpawnActor(actor->x, actor->y, actor->z+48*FRACUNIT,
+  DActor *mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z+48*FRACUNIT,
 			  MT_BLOODYSKULL);
   //mo->target = actor;
   mo->px = P_SignedRandom()<<9;
@@ -1756,7 +1726,7 @@ void A_SkullPop(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_CheckSkullFloor(Actor *actor)
+void A_CheckSkullFloor(DActor *actor)
 {
   if(actor->z <= actor->floorz)
     {
@@ -1770,7 +1740,7 @@ void A_CheckSkullFloor(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_CheckSkullDone(Actor *actor)
+void A_CheckSkullDone(DActor *actor)
 {
   if(actor->special2 == 666)
     {
@@ -1784,7 +1754,7 @@ void A_CheckSkullDone(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_CheckBurnGone(Actor *actor)
+void A_CheckBurnGone(DActor *actor)
 {
   if(actor->special2 == 666)
     {
@@ -1798,7 +1768,7 @@ void A_CheckBurnGone(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_FreeTargMobj(Actor *mo)
+void A_FreeTargMobj(DActor *mo)
 {
   mo->px = mo->py = mo->pz = 0;
   mo->z = mo->ceilingz+4*FRACUNIT;
@@ -1816,6 +1786,7 @@ void A_FreeTargMobj(Actor *mo)
 
 void A_AddPlayerCorpse(Actor *actor)
 {
+  // unused function, see Map::RebornPlayer
   Map *m = actor->mp;
 
   if (m->bodyqueue.size() >= BODYQUESIZE)
@@ -1833,7 +1804,7 @@ void A_AddPlayerCorpse(Actor *actor)
 //
 //----------------------------------------------------------------------------
 
-void A_FlameSnd(Actor *actor)
+void A_FlameSnd(DActor *actor)
 {
   S_StartSound(actor, sfx_hedat1); // Burn sound
 }

@@ -28,7 +28,7 @@ PlayerInfo::PlayerInfo(const string & n = "")
   team = 0;
   playerstate = PST_WAITFORMAP;
   frags.resize(game.maxplayers);
-  pawntype = MT_PLAYER;
+  pawntype = MT_CHAINGUY; //MT_PLAYER;
 };
 
 
@@ -71,6 +71,7 @@ void PlayerInfo::Reset(bool resetpawn, bool resetfrags)
 	  pawn = NULL;
 	}
     }
+
 #ifdef CLIENTPREDICTION2
       spirit = NULL;
 #endif
