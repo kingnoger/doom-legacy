@@ -70,6 +70,7 @@ public:
   virtual bool GetNetworkInfo(int *size, unsigned char *md5) {return false;};
 
   // query data item properties
+  int GetNumItems() { return numitems; }
   virtual const char *GetItemName(int i) = 0;
   virtual int  GetItemSize(int i) = 0;
   virtual void ListItems() = 0;

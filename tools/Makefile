@@ -7,7 +7,7 @@ CFLAGS = $(CF) -I$(i)
 
 objdir := ../$(objdir)
 
-all	: ../d2h.exe
+all	: ../d2h.exe ../wadtool.exe
 
 
 ../d2h.exe: $(objdir)/d2h.o
@@ -15,6 +15,7 @@ all	: ../d2h.exe
 
 ../wadtool.exe: $(objdir)/wadtool.o
 	$(LD) $(LDFLAGS) $< -o $@
+
 
 depend	:
 	$(CC) -MM $(CFLAGS) *.cpp | sed -e 's/^\([^ ]\)/$$(objdir)\/\1/' > tools.dep
