@@ -18,17 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.9  2004/09/13 20:43:30  smite-meister
-// interface cleanup, sp map reset fixed
-//
-// Revision 1.8  2004/01/10 16:02:59  smite-meister
-// Cleanup and Hexen gameplay -related bugfixes
+// Revision 1.10  2004/10/11 11:23:46  smite-meister
+// map utils
 //
 // Revision 1.7  2003/11/12 11:07:22  smite-meister
 // Serialization done. Map progression.
-//
-// Revision 1.6  2003/06/10 22:39:57  smite-meister
-// Bugfixes
 //
 // Revision 1.5  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
@@ -48,11 +42,12 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Utility functions related to Map geometry, iterators, traces.
+/// \brief Map geometry utility functions, blockmap iterators, traces and intercepts.
 ///
 /// Geometric utility functions.
-/// BLOCKMAP iterator functions and some PIT_* functions to use for iteration.
+/// BLOCKMAP iterator functions and some central PIT_* functions to use for iteration.
 /// Intercepts and traces.
+/// Functions for manipulating msecnode_t threads.
 
 #include <vector>
 
@@ -67,6 +62,10 @@
 #include "p_maputl.h"
 
 
+//==========================================================================
+//  Simple map geometry utility functions
+//==========================================================================
+
 // Gives an estimation of distance (not exact)
 // Sort of octagonal norm.
 fixed_t P_AproxDistance(fixed_t dx, fixed_t dy)
@@ -77,7 +76,6 @@ fixed_t P_AproxDistance(fixed_t dx, fixed_t dy)
     return dx+dy-(dx>>1);
   return dx+dy-(dy>>1);
 }
-
 
 // Returns 0 or 1
 int P_PointOnLineSide(fixed_t x, fixed_t y, line_t *line)
@@ -109,10 +107,9 @@ int P_PointOnLineSide(fixed_t x, fixed_t y, line_t *line)
 }
 
 
-
 // Considers the line to be infinite
 // Returns side 0 or 1, -1 if box crosses the line.
-int P_BoxOnLineSide (fixed_t *tmbox, line_t *ld)
+int bbox_t::BoxOnLineSide(line_t *ld)
 {
   int         p1;
   int         p2;
@@ -120,8 +117,8 @@ int P_BoxOnLineSide (fixed_t *tmbox, line_t *ld)
   switch (ld->slopetype)
     {
     case ST_HORIZONTAL:
-      p1 = tmbox[BOXTOP] > ld->v1->y;
-      p2 = tmbox[BOXBOTTOM] > ld->v1->y;
+      p1 = box[BOXTOP] > ld->v1->y;
+      p2 = box[BOXBOTTOM] > ld->v1->y;
       if (ld->dx < 0)
         {
 	  p1 ^= 1;
@@ -130,8 +127,8 @@ int P_BoxOnLineSide (fixed_t *tmbox, line_t *ld)
       break;
 
     case ST_VERTICAL:
-      p1 = tmbox[BOXRIGHT] < ld->v1->x;
-      p2 = tmbox[BOXLEFT] < ld->v1->x;
+      p1 = box[BOXRIGHT] < ld->v1->x;
+      p2 = box[BOXLEFT] < ld->v1->x;
       if (ld->dy < 0)
         {
 	  p1 ^= 1;
@@ -140,13 +137,13 @@ int P_BoxOnLineSide (fixed_t *tmbox, line_t *ld)
       break;
 
     case ST_POSITIVE:
-      p1 = P_PointOnLineSide (tmbox[BOXLEFT], tmbox[BOXTOP], ld);
-      p2 = P_PointOnLineSide (tmbox[BOXRIGHT], tmbox[BOXBOTTOM], ld);
+      p1 = P_PointOnLineSide (box[BOXLEFT], box[BOXTOP], ld);
+      p2 = P_PointOnLineSide (box[BOXRIGHT], box[BOXBOTTOM], ld);
       break;
 
     case ST_NEGATIVE:
-      p1 = P_PointOnLineSide (tmbox[BOXRIGHT], tmbox[BOXTOP], ld);
-      p2 = P_PointOnLineSide (tmbox[BOXLEFT], tmbox[BOXBOTTOM], ld);
+      p1 = P_PointOnLineSide (box[BOXRIGHT], box[BOXTOP], ld);
+      p2 = P_PointOnLineSide (box[BOXLEFT], box[BOXBOTTOM], ld);
       break;
     default :
       I_Error("P_BoxOnLineSide: unknow slopetype %d\n",ld->slopetype);
@@ -200,8 +197,6 @@ int P_PointOnDivlineSide(fixed_t x, fixed_t y, divline_t *line)
     return 0;               // front side
   return 1;                   // back side
 }
-
-
 
 
 void P_MakeDivline(line_t *li, divline_t *dl)
@@ -406,27 +401,23 @@ void P_LineOpening(line_t *linedef)
 
 
 
-//
-// BLOCK MAP ITERATORS
+//==========================================================================
+//   Blockmap iterators
+//==========================================================================
+
 // For each line/thing in the given mapblock,
 // call the passed PIT_* function.
 // If the function returns false,
 // exit with false without checking anything else.
 //
-
-
-//
 // The validcount flags are used to avoid checking lines
 // that are marked in multiple mapblocks,
 // so increment validcount before the first call
-// to P_BlockLinesIterator, then make one or more calls
+// to BlockLinesIterator, then make one or more calls
 // to it.
-//
-bool Map::BlockLinesIterator(int x, int y, bool (*func)(line_t*))
+bool Map::BlockLinesIterator(int x, int y, line_iterator_t func)
 {
   int i;
-  short  *p;
-  line_t *ld;
 
   if (x<0 || y<0 || x>=bmapwidth || y>=bmapheight)
     return true;
@@ -435,7 +426,6 @@ bool Map::BlockLinesIterator(int x, int y, bool (*func)(line_t*))
   int offset = y*bmapwidth + x;
 
   polyblock_t *polyLink = PolyBlockMap[offset];
-  seg_t **tempSeg;
 
   while (polyLink)
     {
@@ -444,7 +434,7 @@ bool Map::BlockLinesIterator(int x, int y, bool (*func)(line_t*))
 	  if (polyLink->polyobj->validcount != validcount)
 	    {
 	      polyLink->polyobj->validcount = validcount;
-	      tempSeg = polyLink->polyobj->segs;
+	      seg_t **tempSeg = polyLink->polyobj->segs;
 	      for (i=0; i < polyLink->polyobj->numsegs; i++, tempSeg++)
 		{
 		  if ((*tempSeg)->linedef->validcount == validcount)
@@ -474,9 +464,9 @@ bool Map::BlockLinesIterator(int x, int y, bool (*func)(line_t*))
       return true;
     }
 
-  for (p = blockmaplump+offset ; *p != -1 ; p++)
+  for (short  *p = &blockmaplump[offset] ; *p != -1 ; p++)
     {
-      ld = &lines[*p];
+      line_t *ld = &lines[*p];
 
       if (ld->validcount == validcount)
 	continue;   // line has already been checked
@@ -490,9 +480,8 @@ bool Map::BlockLinesIterator(int x, int y, bool (*func)(line_t*))
 }
 
 
-
 // Same as previous, but iterates through things
-bool Map::BlockThingsIterator(int x, int y, bool(*func)(Actor*))
+bool Map::BlockThingsIterator(int x, int y, thing_iterator_t func)
 {
   Actor *mobj;
 
@@ -510,9 +499,12 @@ bool Map::BlockThingsIterator(int x, int y, bool(*func)(Actor*))
 }
 
 
+//==========================================================================
+//  Thinker iteration
+//==========================================================================
 
 // Iterates through all the Thinkers in the Map, calling 'func' for each.
-bool Map::IterateThinkers(bool (*func)(Thinker*))
+bool Map::IterateThinkers(thinker_iterator_t func)
 {
   Thinker *t, *n;
   for (t = thinkercap.next; t != &thinkercap; t = n)
@@ -525,15 +517,13 @@ bool Map::IterateThinkers(bool (*func)(Thinker*))
 }
 
 
-
-//
-// INTERCEPT ROUTINES
-//
+//==========================================================================
+//  Trace/intercept routines
+//==========================================================================
 
 static vector<intercept_t> intercepts;
 divline_t   trace;
 static bool earlyout;
-
 
 // Looks for lines in the given block
 // that intercept the given trace
@@ -653,7 +643,6 @@ static bool PIT_AddThingIntercepts(Actor *thing)
 }
 
 
-
 // Calls the traverser function on all intercept_t's in the
 // intercepts vector, in the nearness-of-intercept order.
 // Returns true if the traverser function returns true for all lines.
@@ -703,12 +692,9 @@ static bool P_TraverseIntercepts(traverser_t func, fixed_t maxfrac)
 }
 
 
-
-
-// Traces a line from x1,y1 to x2,y2,
-// calling the traverser function for each.
-// Returns true if the traverser function returns true
-// for all lines.
+// Traces a line from x1,y1 to x2,y2 by stepping through the blockmap,
+// adding line/thing intercepts and then calling the traverser function for each intercept.
+// Returns true if the traverser function returns true for all lines.
 bool Map::PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags, traverser_t trav)
 {
   fixed_t     xstep;
@@ -830,47 +816,9 @@ bool Map::PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags
 }
 
 
-// =========================================================================
-//                                                        BLOCKMAP ITERATORS
-// =========================================================================
-
-// blockmap iterator for all sorts of use
-// your routine must return FALSE to exit the loop earlier
-// returns FALSE if the loop exited early after a false return
-// value from your user function
-
-//abandoned, maybe I'll need it someday..  
-/*
-bool P_RadiusLinesCheck (fixed_t radius, fixed_t x, fixed_t y, bool (*func)(line_t*))
-{
-  int   xl, xh, yl, yh;
-  int   bx, by;
-
-  tmbbox[BOXTOP] = y + radius;
-  tmbbox[BOXBOTTOM] = y - radius;
-  tmbbox[BOXRIGHT] = x + radius;
-  tmbbox[BOXLEFT] = x - radius;
-    
-  // check lines
-  xl = (tmbbox[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
-  xh = (tmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
-  yl = (tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
-  yh = (tmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
-
-  for (bx=xl ; bx<=xh ; bx++)
-    for (by=yl ; by<=yh ; by++)
-      if (!P_BlockLinesIterator (bx,by,func))
-	return false;
-  return true;
-}
-*/
-
 
 
 //===========================================================================
-//
-// was P_RoughMonsterSearch
-//
 // Searches though the surrounding mapblocks for Actors.
 //		distance is in MAPBLOCKUNITS
 //===========================================================================
@@ -950,12 +898,8 @@ Actor *Map::RoughBlockSearch(Actor *center, Actor *master, int distance, int fla
   return NULL;	
 }
 
-//===========================================================================
-//
-// was RoughBlockCheck
-//
-//===========================================================================
 
+// TODO rewrite using blockmap iterators (-> PIT_...)
 Actor *Map::RoughBlockCheck(Actor *center, Actor *master, int index, int flags)
 {
   enum { friendly = 1, bloodsc = 2 }; // you could add more
@@ -991,4 +935,134 @@ Actor *Map::RoughBlockCheck(Actor *center, Actor *master, int index, int flags)
       }
 
   return NULL;
+}
+
+
+
+//==========================================================================
+//  Functions for manipulating msecnode_t threads
+//==========================================================================
+
+static msecnode_t *headsecnode = NULL; // freelist for secnodes
+
+void P_Initsecnode()
+{
+  headsecnode = NULL;
+}
+
+// Retrieves a node from the freelist. The calling routine
+// should make sure it sets all fields properly.
+msecnode_t *P_GetSecnode()
+{
+  msecnode_t *node;
+
+  if (headsecnode)
+    {
+      node = headsecnode;
+      headsecnode = headsecnode->m_snext;
+    }
+  else
+    node = (msecnode_t*)Z_Malloc(sizeof(*node), PU_LEVEL, NULL);
+  return(node);
+}
+
+// Returns a node to the freelist.
+void P_PutSecnode(msecnode_t *node)
+{
+  node->m_snext = headsecnode;
+  headsecnode = node;
+}
+
+// Searches the current list to see if this sector is
+// already there. If not, it adds a sector node at the head of the list of
+// sectors this object appears in. This is called when creating a list of
+// nodes that will get linked in later. Returns a pointer to the new node.
+msecnode_t *P_AddSecnode(sector_t *s, Actor *thing, msecnode_t *nextnode)
+{
+  msecnode_t *node = nextnode;
+  while (node)
+    {
+      if (node->m_sector == s)   // Already have a node for this sector?
+	{
+	  node->m_thing = thing; // Yes. Setting m_thing says 'keep it'.
+	  return(nextnode);
+	}
+      node = node->m_tnext;
+    }
+
+  // Couldn't find an existing node for this sector. Add one at the head
+  // of the list.
+
+  node = P_GetSecnode();
+
+  //mark new nodes unvisited.
+  node->visited = false;
+
+  node->m_sector = s;       // sector
+  node->m_thing  = thing;     // mobj
+  node->m_tprev  = NULL;    // prev node on Thing thread
+  node->m_tnext  = nextnode;  // next node on Thing thread
+  if (nextnode)
+    nextnode->m_tprev = node; // set back link on Thing
+
+  // Add new node at head of sector thread starting at s->touching_thinglist
+
+  node->m_sprev  = NULL;    // prev node on sector thread
+  node->m_snext  = s->touching_thinglist; // next node on sector thread
+  if (s->touching_thinglist)
+    node->m_snext->m_sprev = node;
+  s->touching_thinglist = node;
+  return(node);
+}
+
+
+// Deletes a sector node from the list of
+// sectors this object appears in. Returns a pointer to the next node
+// on the linked list, or NULL.
+msecnode_t *P_DelSecnode(msecnode_t *node)
+{
+  msecnode_t *tp;  // prev node on thing thread
+  msecnode_t *tn;  // next node on thing thread
+  msecnode_t *sp;  // prev node on sector thread
+  msecnode_t *sn;  // next node on sector thread
+
+  if (node)
+    {
+
+      // Unlink from the Thing thread. The Thing thread begins at
+      // sector_list and not from Actor->touching_sectorlist.
+
+      tp = node->m_tprev;
+      tn = node->m_tnext;
+      if (tp)
+	tp->m_tnext = tn;
+      if (tn)
+	tn->m_tprev = tp;
+
+      // Unlink from the sector thread. This thread begins at
+      // sector_t->touching_thinglist.
+
+      sp = node->m_sprev;
+      sn = node->m_snext;
+      if (sp)
+	sp->m_snext = sn;
+      else
+	node->m_sector->touching_thinglist = sn;
+      if (sn)
+	sn->m_sprev = sp;
+
+      // Return this node to the freelist
+
+      P_PutSecnode(node);
+      return(tn);
+    }
+  return NULL;
+}
+
+
+// Delete an entire sector list
+void P_DelSeclist(msecnode_t *node)
+{
+  while (node)
+    node = P_DelSecnode(node);
 }

@@ -18,32 +18,17 @@
 //
 //
 // $Log$
+// Revision 1.26  2004/10/11 11:23:46  smite-meister
+// map utils
+//
 // Revision 1.25  2004/09/13 20:43:30  smite-meister
 // interface cleanup, sp map reset fixed
-//
-// Revision 1.24  2004/08/29 20:48:48  smite-meister
-// bugfixes. wow.
-//
-// Revision 1.23  2004/08/12 18:30:24  smite-meister
-// cleaned startup
 //
 // Revision 1.22  2004/04/01 09:16:16  smite-meister
 // Texture system bugfixes
 //
-// Revision 1.21  2004/01/11 17:19:14  smite-meister
-// bugfixes
-//
-// Revision 1.20  2004/01/02 14:25:01  smite-meister
-// cleanup
-//
 // Revision 1.19  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
-//
-// Revision 1.18  2003/12/18 11:57:31  smite-meister
-// fixes / new bugs revealed
-//
-// Revision 1.17  2003/12/13 23:51:03  smite-meister
-// Hexen update
 //
 // Revision 1.16  2003/11/27 11:28:25  smite-meister
 // Doom/Heretic startup bug fixed
@@ -51,23 +36,14 @@
 // Revision 1.15  2003/11/12 11:07:22  smite-meister
 // Serialization done. Map progression.
 //
-// Revision 1.14  2003/06/10 22:39:56  smite-meister
-// Bugfixes
-//
 // Revision 1.13  2003/05/30 13:34:45  smite-meister
 // Cleanup, HUD improved, serialization
-//
-// Revision 1.12  2003/05/11 21:23:51  smite-meister
-// Hexen fixes
 //
 // Revision 1.11  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
 //
 // Revision 1.10  2003/04/24 20:30:12  hurdler
 // Remove lots of compiling warnings
-//
-// Revision 1.9  2003/04/08 09:46:06  smite-meister
-// Bugfixes
 //
 // Revision 1.8  2003/03/15 20:07:16  smite-meister
 // Initial Hexen compatibility!
@@ -127,8 +103,8 @@ extern int boomsupport;
 // TODO add z parameter to ALL movement/clipping functions (you can always use ONFLOORZ as a default)
 
 Actor    *tmthing;
-int       tmflags;
-fixed_t   tmx, tmy;
+static int tmflags; // useless? same as tmthing->flags?
+fixed_t tmx, tmy;
 
 // If "floatok" true, move would be ok
 // if within "tmfloorz - tmceilingz".
@@ -162,30 +138,40 @@ Actor *BlockingMobj; //thing that blocked position (NULL if not blocked, or bloc
 
 static msecnode_t *sector_list = NULL;
 
+bbox_t tmb[4]; // a bounding box
+
 
 //===========================================
-//        COMMON UTILITY FUNCTIONS
+//  Radius iteration
 //===========================================
 
-fixed_t   tmbbox[4];
-
-// set temp location and boundingbox
-static void P_SetBox(fixed_t x, fixed_t y, fixed_t r)
+// iterates the radius around (x,y) using func
+bool Map::RadiusLinesCheck(fixed_t x, fixed_t y, fixed_t radius, line_iterator_t func)
 {
-  tmx = x;
-  tmy = y;
+  int xl, xh, yl, yh, bx, by;
 
-  tmbbox[BOXTOP]    = y + r;
-  tmbbox[BOXBOTTOM] = y - r;
-  tmbbox[BOXRIGHT]  = x + r;
-  tmbbox[BOXLEFT]   = x - r;
+  tmb.Set(x, y, radius)
+
+  validcount++;
+ 
+  // check lines
+  xl = (tmb.box[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
+  xh = (tmb.box[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
+  yl = (tmb.box[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
+  yh = (tmb.box[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
+
+  for (bx=xl; bx<=xh; bx++)
+    for (by=yl; by<=yh; by++)
+      if (!BlockLinesIterator(bx, by, func))
+	return false;
+ 
+  return true;
 }
 
 
 //===========================================
-//       TELEPORT and SPIKE ITERATORS
+//    Teleportation
 //===========================================
-
 
 static bool PIT_StompThing(Actor *thing)
 {
@@ -215,6 +201,58 @@ static bool PIT_StompThing(Actor *thing)
   return true;
 }
 
+
+bool Actor::TeleportMove(fixed_t nx, fixed_t ny)
+{
+  int  xl, xh, yl, yh, bx, by;
+
+  // kill anything occupying the position
+  tmthing = this;
+  tmflags = flags;
+
+  P_SetBox(nx, ny, radius);
+
+  subsector_t *newsubsec = mp->R_PointInSubsector(nx,ny);
+  ceilingline = NULL;
+
+  // FIXME do a checkposition first
+
+  // The base floor/ceiling is from the subsector
+  // that contains the point.
+  // Any contacted lines the step closer together
+  // will adjust them.
+  tmfloorz = tmdropoffz = newsubsec->sector->floorheight;
+  tmceilingz = newsubsec->sector->ceilingheight;
+  tmfloorpic = newsubsec->sector->floorpic;
+
+  validcount++;
+  spechit.clear();
+
+  // stomp on any things contacted
+  xl = (tmb.box[BOXLEFT] - mp->bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
+  xh = (tmb.box[BOXRIGHT] - mp->bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
+  yl = (tmb.box[BOXBOTTOM] - mp->bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
+  yh = (tmb.box[BOXTOP] - mp->bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
+
+  for (bx=xl ; bx<=xh ; bx++)
+    for (by=yl ; by<=yh ; by++)
+      if (!mp->BlockThingsIterator(bx,by,PIT_StompThing))
+	return false;
+
+  // the move is ok,
+  // so link the thing into its new position
+  UnsetPosition();
+  x = nx;
+  y = ny;
+  SetPosition();
+
+  return true;
+}
+
+
+//===========================================
+//  Spikes
+//===========================================
 
 static bool PIT_ThrustStompThing(Actor *thing)
 {
@@ -246,10 +284,10 @@ void P_ThrustSpike(Actor *actor)
 
   P_SetBox(actor->x, actor->y, actor->radius);
 
-  xl = (tmbbox[BOXLEFT] - mp->bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
-  xh = (tmbbox[BOXRIGHT] - mp->bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
-  yl = (tmbbox[BOXBOTTOM] - mp->bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
-  yh = (tmbbox[BOXTOP] - mp->bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
+  xl = (tmb.box[BOXLEFT] - mp->bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
+  xh = (tmb.box[BOXRIGHT] - mp->bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
+  yl = (tmb.box[BOXBOTTOM] - mp->bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
+  yh = (tmb.box[BOXTOP] - mp->bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
 
   // stomp on any things contacted
   for (bx=xl ; bx<=xh ; bx++)
@@ -417,56 +455,6 @@ void Actor::SetPosition()
 }
 
 
-
-
-bool Actor::TeleportMove(fixed_t nx, fixed_t ny)
-{
-  int  xl, xh, yl, yh, bx, by;
-
-  // kill anything occupying the position
-  tmthing = this;
-  tmflags = flags;
-
-  P_SetBox(nx, ny, radius);
-
-  subsector_t *newsubsec = mp->R_PointInSubsector(nx,ny);
-  ceilingline = NULL;
-
-  // FIXME do a checkposition first
-
-  // The base floor/ceiling is from the subsector
-  // that contains the point.
-  // Any contacted lines the step closer together
-  // will adjust them.
-  tmfloorz = tmdropoffz = newsubsec->sector->floorheight;
-  tmceilingz = newsubsec->sector->ceilingheight;
-  tmfloorpic = newsubsec->sector->floorpic;
-
-  validcount++;
-  spechit.clear();
-
-  // stomp on any things contacted
-  xl = (tmbbox[BOXLEFT] - mp->bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
-  xh = (tmbbox[BOXRIGHT] - mp->bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
-  yl = (tmbbox[BOXBOTTOM] - mp->bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
-  yh = (tmbbox[BOXTOP] - mp->bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
-
-  for (bx=xl ; bx<=xh ; bx++)
-    for (by=yl ; by<=yh ; by++)
-      if (!mp->BlockThingsIterator(bx,by,PIT_StompThing))
-	return false;
-
-  // the move is ok,
-  // so link the thing into its new position
-  UnsetPosition();
-  x = nx;
-  y = ny;
-  SetPosition();
-
-  return true;
-}
-
-
 //===========================================
 //           MOVEMENT ITERATORS
 //===========================================
@@ -554,10 +542,10 @@ static bool PIT_CrossLine (line_t *ld)
 {
   if (!(ld->flags & ML_TWOSIDED) ||
       (ld->flags & (ML_BLOCKING|ML_BLOCKMONSTERS)))
-    if (!(tmbbox[BOXLEFT]   > ld->bbox[BOXRIGHT]  ||
-          tmbbox[BOXRIGHT]  < ld->bbox[BOXLEFT]   ||
-          tmbbox[BOXTOP]    < ld->bbox[BOXBOTTOM] ||
-          tmbbox[BOXBOTTOM] > ld->bbox[BOXTOP]))
+    if (!(tmb.box[BOXLEFT]   > ld->bbox[BOXRIGHT]  ||
+          tmb.box[BOXRIGHT]  < ld->bbox[BOXLEFT]   ||
+          tmb.box[BOXTOP]    < ld->bbox[BOXBOTTOM] ||
+          tmb.box[BOXBOTTOM] > ld->bbox[BOXTOP]))
       if (P_PointOnLineSide(pe_x,pe_y,ld) != P_PointOnLineSide(ls_x,ls_y,ld))
         return false;  // line blocks trajectory
   return true; // line doesn't block trajectory
@@ -567,16 +555,15 @@ static bool PIT_CrossLine (line_t *ld)
 
 // Iterator for Actor->Line collision checking
 // Adjusts tmfloorz and tmceilingz as lines are contacted
-//
 static bool PIT_CheckLine(line_t *ld)
 {
-  if (tmbbox[BOXRIGHT] <= ld->bbox[BOXLEFT]
-      || tmbbox[BOXLEFT] >= ld->bbox[BOXRIGHT]
-      || tmbbox[BOXTOP] <= ld->bbox[BOXBOTTOM]
-      || tmbbox[BOXBOTTOM] >= ld->bbox[BOXTOP])
+  if (tmb.box[BOXRIGHT] <= ld->bbox[BOXLEFT]
+      || tmb.box[BOXLEFT] >= ld->bbox[BOXRIGHT]
+      || tmb.box[BOXTOP] <= ld->bbox[BOXBOTTOM]
+      || tmb.box[BOXBOTTOM] >= ld->bbox[BOXTOP])
     return true;
 
-  if (P_BoxOnLineSide(tmbbox, ld) != -1)
+  if (tmb.BoxOnLineSide(ld) != -1)
     return true;
 
   // A line has been hit
@@ -859,10 +846,11 @@ bool P_ThingHeightClip(Actor *thing)
 
 
 
-//
-// SLIDE MOVE
+//==========================================================================
+// Sliding moves
 // Allows the player to slide along any angled walls.
-//
+//==========================================================================
+
 fixed_t         bestslidefrac;
 fixed_t         secondslidefrac;
 
@@ -875,13 +863,9 @@ fixed_t         tmxmove;
 fixed_t         tmymove;
 
 
-
-//
-// P_HitSlideLine
 // Adjusts the xmove / ymove
 // so that the next move will slide along the wall.
-//
-void P_HitSlideLine (line_t *ld)
+void P_HitSlideLine(line_t *ld)
 {
   int                 side;
 
@@ -930,23 +914,19 @@ void P_HitSlideLine (line_t *ld)
 }
 
 
-//
-// PTR_SlideTraverse
-//
-static bool PTR_SlideTraverse (intercept_t *in)
+/// tries sliding along the intercept
+static bool PTR_SlideTraverse(intercept_t *in)
 {
-  line_t *li;
-
 #ifdef PARANOIA
   if (!in->isaline)
     I_Error ("PTR_SlideTraverse: not a line?");
 #endif
 
-  li = in->line;
+  line_t *li = in->line;
 
-  if (! (li->flags & ML_TWOSIDED))
+  if (!(li->flags & ML_TWOSIDED))
     {
-      if (P_PointOnLineSide (slidemo->x, slidemo->y, li))
+      if (P_PointOnLineSide(slidemo->x, slidemo->y, li))
         {
 	  // don't hit the back side
 	  return true;
@@ -986,15 +966,12 @@ static bool PTR_SlideTraverse (intercept_t *in)
 
 
 
-//
-// was P_SlideMove
 // The px / py move is bad, so try to slide
 // along a wall.
 // Find the first line hit, move flush to it,
 // and slide along it
 //
 // This is a kludgy mess.
-//
 void Map::SlideMove(Actor *mo)
 {
   fixed_t             leadx;
@@ -1091,9 +1068,9 @@ void Map::SlideMove(Actor *mo)
 }
 
 
-//===========================================
-// Attack functions
-//===========================================
+//==========================================================================
+//   Autoaim, shooting with instahit weapons
+//==========================================================================
 
 Actor *linetarget;     // who got hit (or NULL)
 Actor *shootthing;
@@ -1155,14 +1132,9 @@ void Map::SpawnPuff(fixed_t x, fixed_t y, fixed_t z)
   PuffSpawned = puff;
 }
 
-//
-// PTR_AimTraverse
 // Sets linetarget and aimslope when a target is aimed at.
-//
-//added:15-02-98: comment
 // Returns true if the thing is not shootable, else continue through..
-//
-static bool PTR_AimTraverse (intercept_t *in)
+static bool PTR_AimTraverse(intercept_t *in)
 {
   line_t *li;
   Actor *th;
@@ -1308,12 +1280,9 @@ static bool PTR_AimTraverse (intercept_t *in)
 }
 
 
-//
-// PTR_ShootTraverse
-//
+// Firing instant-hit weapons
 //added:18-02-98: added clipping the shots on the floor and ceiling.
-//
-static bool PTR_ShootTraverse (intercept_t *in)
+static bool PTR_ShootTraverse(intercept_t *in)
 {
   fixed_t             x;
   fixed_t             y;
@@ -1648,9 +1617,7 @@ static bool PTR_ShootTraverse (intercept_t *in)
 }
 
 
-//
-// was P_AimLineAttack
-//
+// Actor tries to find a target
 fixed_t Actor::AimLineAttack(angle_t ang, fixed_t distance)
 {
   fixed_t     x2;
@@ -1758,8 +1725,9 @@ void Actor::LineAttack(angle_t yaw, fixed_t distance, fixed_t pitch, int damage,
 		   PTR_ShootTraverse);
 }
 
+
 //==========================================================================
-//  USE LINES
+//  Using linedefs
 //==========================================================================
 
 static PlayerPawn *usething;
@@ -1807,9 +1775,7 @@ static bool PTR_UseTraverse(intercept_t *in)
 }
 
 
-//
 // Looks for special lines in front of the player to activate.
-//
 void PlayerPawn::UseLines()
 {
   fixed_t  x1, y1, x2, y2;
@@ -1847,26 +1813,23 @@ static bool PTR_PuzzleItemTraverse(intercept_t *in)
 	  P_LineOpening(line);
 	  if (openrange <= 0)
 	    {
-	      if (PuzzleItemUser->player)
+	      int sound;
+	      switch (PuzzleItemUser->pclass)
 		{
-		  int sound;
-		  switch (PuzzleItemUser->pclass)
-		    {
-		    case PCLASS_FIGHTER:
-		      sound = SFX_PUZZLE_FAIL_FIGHTER;
-		      break;
-		    case PCLASS_CLERIC:
-		      sound = SFX_PUZZLE_FAIL_CLERIC;
-		      break;
-		    case PCLASS_MAGE:
-		      sound = SFX_PUZZLE_FAIL_MAGE;
-		      break;
-		    default:
-		      sound = SFX_PUZZLE_FAIL_FIGHTER;
-		      break;
-		    }
-		  S_StartSound(PuzzleItemUser, sound);
+		case PCLASS_FIGHTER:
+		  sound = SFX_PUZZLE_FAIL_FIGHTER;
+		  break;
+		case PCLASS_CLERIC:
+		  sound = SFX_PUZZLE_FAIL_CLERIC;
+		  break;
+		case PCLASS_MAGE:
+		  sound = SFX_PUZZLE_FAIL_MAGE;
+		  break;
+		default:
+		  sound = SFX_PUZZLE_FAIL_FIGHTER;
+		  break;
 		}
+	      S_StartSound(PuzzleItemUser, sound);
 	      return false; // can't use through a wall
 	    }
 	  return true; // Continue searching
@@ -1923,6 +1886,7 @@ bool PlayerPawn::UsePuzzleItem(int type)
 //==========================================================================
 // RADIUS ATTACK
 //==========================================================================
+
 Actor *bombowner;
 Actor *bomb;
 int    bombdamage;
@@ -1930,11 +1894,8 @@ int    bombdistance;
 int    bombdtype;
 bool   bomb_damage_owner;
 
-//
-// PIT_RadiusAttack
 // "bombowner" is the creature
 // that caused the explosion at "bomb".
-//
 static bool PIT_RadiusAttack(Actor *thing)
 {
   fixed_t  dx, dy, dz;
@@ -1993,10 +1954,7 @@ static bool PIT_RadiusAttack(Actor *thing)
 }
 
 
-//
-// was P_RadiusAttack
 // Culprit is the creature that caused the explosion.
-//
 void Actor::RadiusAttack(Actor *culprit, int damage, int distance, int dtype, bool downer)
 {
   int nx, ny;
@@ -2030,7 +1988,7 @@ void Actor::RadiusAttack(Actor *culprit, int damage, int distance, int dtype, bo
 
 
 
-//
+//==========================================================================
 // SECTOR HEIGHT CHANGING
 // After modifying a sectors floor or ceiling height,
 // call this routine to adjust the positions
@@ -2042,14 +2000,12 @@ void Actor::RadiusAttack(Actor *culprit, int damage, int distance, int dtype, bo
 // If Crunch is false, you should set the sector height back
 //  the way it was and call P_ChangeSector again
 //  to undo the changes.
-//
+//==========================================================================
 int         crushdamage;
 bool        nofit;
 sector_t   *sectorchecked;
 
-//
-// PIT_ChangeSector
-//
+// deals crush damage
 static bool PIT_ChangeSector(Actor *thing)
 {
   if (P_ThingHeightClip (thing))
@@ -2095,29 +2051,22 @@ static bool PIT_ChangeSector(Actor *thing)
 }
 
 
-
-//
-// was P_ChangeSector
-//
+// changes sector height, crushes things
 bool Map::ChangeSector(sector_t *sector, int crunch)
 {
-  int         x;
-  int         y;
-
   nofit = false;
   crushdamage = crunch;
   sectorchecked = sector;
 
   // re-check heights for all things near the moving sector
-  for (x=sector->blockbox[BOXLEFT] ; x<= sector->blockbox[BOXRIGHT] ; x++)
-    for (y=sector->blockbox[BOXBOTTOM];y<= sector->blockbox[BOXTOP] ; y++)
+  for (int x = sector->blockbox[BOXLEFT] ; x<= sector->blockbox[BOXRIGHT] ; x++)
+    for (int y = sector->blockbox[BOXBOTTOM];y<= sector->blockbox[BOXTOP] ; y++)
       BlockThingsIterator (x, y, PIT_ChangeSector);
-
 
   return nofit;
 }
 
-// was P_CheckSector
+
 //SoM: 3/15/2000: New function. Much faster.
 bool Map::CheckSector(sector_t *sector, int crunch)
 {
@@ -2184,159 +2133,23 @@ bool Map::CheckSector(sector_t *sector, int crunch)
 
 
 
+//==========================================================================
+//  Sector lists
+//==========================================================================
 
-/*
-  SoM: 3/15/2000
-  Lots of new Boom functions that work faster and add functionality.
-*/
-
-static msecnode_t *headsecnode = NULL;
-
-void P_Initsecnode()
-{
-  headsecnode = NULL;
-}
-
-// P_GetSecnode() retrieves a node from the freelist. The calling routine
-// should make sure it sets all fields properly.
-
-msecnode_t *P_GetSecnode()
-{
-  msecnode_t *node;
-
-  if (headsecnode)
-    {
-      node = headsecnode;
-      headsecnode = headsecnode->m_snext;
-    }
-  else
-    node = (msecnode_t*)Z_Malloc (sizeof(*node), PU_LEVEL, NULL);
-  return(node);
-}
-
-// P_PutSecnode() returns a node to the freelist.
-
-void P_PutSecnode(msecnode_t *node)
-{
-  node->m_snext = headsecnode;
-  headsecnode = node;
-}
-
-// P_AddSecnode() searches the current list to see if this sector is
-// already there. If not, it adds a sector node at the head of the list of
-// sectors this object appears in. This is called when creating a list of
-// nodes that will get linked in later. Returns a pointer to the new node.
-
-msecnode_t *P_AddSecnode(sector_t *s, Actor *thing, msecnode_t *nextnode)
-{
-  msecnode_t *node;
-
-  node = nextnode;
-  while (node)
-    {
-      if (node->m_sector == s)   // Already have a node for this sector?
-	{
-	  node->m_thing = thing; // Yes. Setting m_thing says 'keep it'.
-	  return(nextnode);
-	}
-      node = node->m_tnext;
-    }
-
-  // Couldn't find an existing node for this sector. Add one at the head
-  // of the list.
-
-  node = P_GetSecnode();
-
-  //mark new nodes unvisited.
-  node->visited = false;
-
-  node->m_sector = s;       // sector
-  node->m_thing  = thing;     // mobj
-  node->m_tprev  = NULL;    // prev node on Thing thread
-  node->m_tnext  = nextnode;  // next node on Thing thread
-  if (nextnode)
-    nextnode->m_tprev = node; // set back link on Thing
-
-  // Add new node at head of sector thread starting at s->touching_thinglist
-
-  node->m_sprev  = NULL;    // prev node on sector thread
-  node->m_snext  = s->touching_thinglist; // next node on sector thread
-  if (s->touching_thinglist)
-    node->m_snext->m_sprev = node;
-  s->touching_thinglist = node;
-  return(node);
-}
-
-
-// P_DelSecnode() deletes a sector node from the list of
-// sectors this object appears in. Returns a pointer to the next node
-// on the linked list, or NULL.
-
-msecnode_t *P_DelSecnode(msecnode_t *node)
-{
-  msecnode_t *tp;  // prev node on thing thread
-  msecnode_t *tn;  // next node on thing thread
-  msecnode_t *sp;  // prev node on sector thread
-  msecnode_t *sn;  // next node on sector thread
-
-  if (node)
-    {
-
-      // Unlink from the Thing thread. The Thing thread begins at
-      // sector_list and not from Actor->touching_sectorlist.
-
-      tp = node->m_tprev;
-      tn = node->m_tnext;
-      if (tp)
-	tp->m_tnext = tn;
-      if (tn)
-	tn->m_tprev = tp;
-
-      // Unlink from the sector thread. This thread begins at
-      // sector_t->touching_thinglist.
-
-      sp = node->m_sprev;
-      sn = node->m_snext;
-      if (sp)
-	sp->m_snext = sn;
-      else
-	node->m_sector->touching_thinglist = sn;
-      if (sn)
-	sn->m_sprev = sp;
-
-      // Return this node to the freelist
-
-      P_PutSecnode(node);
-      return(tn);
-    }
-  return(NULL);
-}
-
-// Delete an entire sector list
-
-void P_DelSeclist(msecnode_t *node)
-
-{
-  while (node)
-    node = P_DelSecnode(node);
-}
-
-
-// PIT_GetSectors
 // Locates all the sectors the object is in by looking at the lines that
 // cross through it. You have already decided that the object is allowed
 // at this location, so don't bother with checking impassable or
 // blocking lines.
-
 static bool PIT_GetSectors(line_t *ld)
 {
-  if (tmbbox[BOXRIGHT]  <= ld->bbox[BOXLEFT]   ||
-      tmbbox[BOXLEFT]   >= ld->bbox[BOXRIGHT]  ||
-      tmbbox[BOXTOP]    <= ld->bbox[BOXBOTTOM] ||
-      tmbbox[BOXBOTTOM] >= ld->bbox[BOXTOP])
+  if (tmb.box[BOXRIGHT]  <= ld->bbox[BOXLEFT]   ||
+      tmb.box[BOXLEFT]   >= ld->bbox[BOXRIGHT]  ||
+      tmb.box[BOXTOP]    <= ld->bbox[BOXBOTTOM] ||
+      tmb.box[BOXBOTTOM] >= ld->bbox[BOXTOP])
     return true;
 
-  if (P_BoxOnLineSide(tmbbox, ld) != -1)
+  if (tmb.BoxOnLineSide(ld) != -1)
     return true;
 
   // This line crosses through the object.
@@ -2361,18 +2174,11 @@ static bool PIT_GetSectors(line_t *ld)
 }
 
 
-// was P_CreateSecNodeList
 // alters/creates the sector_list that shows what sectors
 // the object resides in.
-
 void Map::CreateSecNodeList(Actor *thing, fixed_t x, fixed_t y)
 {
-  int xl;
-  int xh;
-  int yl;
-  int yh;
-  int bx;
-  int by;
+  int xl, xh, yl, yh, bx, by;
 
   // First, clear out the existing m_thing fields. As each node is
   // added or verified as needed, m_thing will be set properly. When
@@ -2390,14 +2196,14 @@ void Map::CreateSecNodeList(Actor *thing, fixed_t x, fixed_t y)
   tmthing = thing;
   tmflags = thing->flags;
 
-  P_SetBox(x, y, tmthing->radius);
+  tmb.Set(x, y, tmthing->radius);
 
   validcount++; // used to make sure we only process a line once
 
-  xl = (tmbbox[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
-  xh = (tmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
-  yl = (tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
-  yh = (tmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
+  xl = (tmb.box[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
+  xh = (tmb.box[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
+  yl = (tmb.box[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
+  yh = (tmb.box[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
 
   for (bx=xl ; bx<=xh ; bx++)
     for (by=yl ; by<=yh ; by++)
@@ -2428,12 +2234,10 @@ void Map::CreateSecNodeList(Actor *thing, fixed_t x, fixed_t y)
 }
 
 
-//=============================================================================
 
-//===========================================
-//   "STANDING ON ANOTHER ACTOR" ITERATOR
-//===========================================
-// heretic code
+//=============================================================================
+//  Z movement
+//=============================================================================
 
 Actor *onmobj; //generic global onmobj...used for landing on pods/players
 
@@ -2461,9 +2265,8 @@ static bool PIT_CheckOnmobjZ(Actor *thing)
 }
 
 
-// was P_FakeZMovement
-//              Fake the zmovement so that we can check if a move is legal
 
+// Fake the zmovement so that we can check if a move is legal
 void Actor::FakeZMovement()
 {
   // TODO: get rid of this entire function. ZMovement should be enough.
@@ -2555,10 +2358,10 @@ Actor *Actor::CheckOnmobj()
   tmflags = flags;
   fixed_t oldz = z;
   fixed_t oldpz = pz;
-  tmthing->FakeZMovement();
+  FakeZMovement();
   
   P_SetBox(x, y, tmthing->radius);
-    
+
   newsubsec = mp->R_PointInSubsector (x, y);
   ceilingline = NULL;
     
@@ -2582,10 +2385,10 @@ Actor *Actor::CheckOnmobj()
   // into mapblocks based on their origin point, and can overlap into adjacent
   // blocks by up to MAXRADIUS units
   //
-  xl = (tmbbox[BOXLEFT] - mp->bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
-  xh = (tmbbox[BOXRIGHT] - mp->bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
-  yl = (tmbbox[BOXBOTTOM] - mp->bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
-  yh = (tmbbox[BOXTOP] - mp->bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
+  xl = (tmb.box[BOXLEFT] - mp->bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
+  xh = (tmb.box[BOXRIGHT] - mp->bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
+  yl = (tmb.box[BOXBOTTOM] - mp->bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
+  yh = (tmb.box[BOXTOP] - mp->bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
     
   for (bx=xl ; bx<=xh ; bx++)
     for (by=yl ; by<=yh ; by++)
@@ -2694,10 +2497,10 @@ bool Actor::CheckPosition(fixed_t nx, fixed_t ny)
   if (!(flags & MF_NOCLIPTHING))
     {
       // check things
-      xl = (tmbbox[BOXLEFT] - bmox - MAXRADIUS)>>MAPBLOCKSHIFT;
-      xh = (tmbbox[BOXRIGHT] - bmox + MAXRADIUS)>>MAPBLOCKSHIFT;
-      yl = (tmbbox[BOXBOTTOM] - bmoy - MAXRADIUS)>>MAPBLOCKSHIFT;
-      yh = (tmbbox[BOXTOP] - bmoy + MAXRADIUS)>>MAPBLOCKSHIFT;
+      xl = (tmb.box[BOXLEFT] - bmox - MAXRADIUS)>>MAPBLOCKSHIFT;
+      xh = (tmb.box[BOXRIGHT] - bmox + MAXRADIUS)>>MAPBLOCKSHIFT;
+      yl = (tmb.box[BOXBOTTOM] - bmoy - MAXRADIUS)>>MAPBLOCKSHIFT;
+      yh = (tmb.box[BOXTOP] - bmoy + MAXRADIUS)>>MAPBLOCKSHIFT;
 
       BlockingMobj = NULL;        
       for (bx=xl ; bx<=xh ; bx++)
@@ -2711,10 +2514,10 @@ bool Actor::CheckPosition(fixed_t nx, fixed_t ny)
       // check lines
       BlockingMobj = NULL;
 
-      xl = (tmbbox[BOXLEFT] - bmox)>>MAPBLOCKSHIFT;
-      xh = (tmbbox[BOXRIGHT] - bmox)>>MAPBLOCKSHIFT;
-      yl = (tmbbox[BOXBOTTOM] - bmoy)>>MAPBLOCKSHIFT;
-      yh = (tmbbox[BOXTOP] - bmoy)>>MAPBLOCKSHIFT;
+      xl = (tmb.box[BOXLEFT] - bmox)>>MAPBLOCKSHIFT;
+      xh = (tmb.box[BOXRIGHT] - bmox)>>MAPBLOCKSHIFT;
+      yl = (tmb.box[BOXBOTTOM] - bmoy)>>MAPBLOCKSHIFT;
+      yh = (tmb.box[BOXTOP] - bmoy)>>MAPBLOCKSHIFT;
       for (bx=xl ; bx<=xh ; bx++)
 	for (by=yl ; by<=yh ; by++)
 	  if (!mp->BlockLinesIterator(bx,by,PIT_CheckLine))
@@ -2725,15 +2528,8 @@ bool Actor::CheckPosition(fixed_t nx, fixed_t ny)
 }
 
 
-//----------------------------------------------------------------------------
-//
-// was P_TestMobjLocation
-//
 // Returns true if the mobj is not blocked by anything at its current
 // location, otherwise returns false.
-//
-//----------------------------------------------------------------------------
-
 bool Actor::TestLocation()
 {
   int temp = flags;
