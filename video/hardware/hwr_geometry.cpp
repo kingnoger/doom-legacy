@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/12/08 16:47:16  segabor
+// Mac specific GL includes
+//
 // Revision 1.6  2004/11/21 12:51:07  hurdler
 // might fix "glClientActiveTexture" compilation error on some systems
 //
@@ -40,9 +43,14 @@
 /// \file
 /// \brief Manage OpenGL geometry
 
+#if defined(__MACOS__) || defined(__APPLE__)
+#include <OpenGL/gl.h>
+#include <OpenGL/glext.h>
+#else
 #define GL_GLEXT_PROTOTYPES
 #include <GL/gl.h>
 #include <GL/glext.h>
+#endif
 
 #include "hardware/hwr_geometry.h"
 #include "doomdef.h"

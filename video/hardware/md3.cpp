@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/12/08 16:47:16  segabor
+// Mac specific GL includes
+//
 // Revision 1.11  2004/11/19 16:51:07  smite-meister
 // cleanup
 //
@@ -59,9 +62,15 @@
 #include <string.h>
 #include <math.h>
 
+#if defined(__MACOS__) || defined(__APPLE__)
+#include <OpenGL/gl.h>
+#include <OpenGL/glext.h>
+#include <OpenGL/glu.h>
+#else
 #include <GL/gl.h>
 #include <GL/glext.h>
 #include <GL/glu.h>
+#endif
 
 #include "g_actor.h"
 #include "g_map.h"

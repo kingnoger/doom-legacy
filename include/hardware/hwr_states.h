@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/12/08 16:46:02  segabor
+// Mac specific GL includes
+//
 // Revision 1.4  2004/07/25 20:51:38  hurdler
 // oops
 //
@@ -36,8 +39,13 @@
 #define hwr_states_h 1
 
 #define GL_GLEXT_PROTOTYPES
+#if defined(__MACOS__) || defined(__APPLE__)
+#include <OpenGL/gl.h>
+#include <OpenGL/glu.h>
+#else
 #include <GL/gl.h>
 #include <GL/glu.h>
+#endif
 
 // undef CG_SHADER if you don't want to compile Legacy with Cg
 //#define CG_SHADER

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/12/08 16:46:02  segabor
+// Mac specific GL includes
+//
 // Revision 1.3  2004/07/25 20:18:16  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -32,8 +35,13 @@
 #define hwr_render_h 1
 
 #define GL_GLEXT_PROTOTYPES
+#if defined(__APPLE__) || defined(__MACOS__)
+#include <OpenGL/gl.h>
+#include <OpenGL/glu.h>
+#else
 #include <GL/gl.h>
 #include <GL/glu.h>
+#endif
 
 #include "../r_render.h"
 
