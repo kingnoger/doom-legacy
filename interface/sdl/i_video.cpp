@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/16 22:14:50  smite-meister
+// Video unit fix
+//
 // Revision 1.2  2002/12/03 10:24:47  smite-meister
 // Video system overhaul
 //
@@ -614,7 +617,7 @@ int I_SetVideoMode(int modeNum)
       SDL_WM_SetCaption("Legacy", "Legacy");
     }
 
-  vid.recalc = true;
+  //vid.recalc = true;
 
   if (rendermode == render_soft)
     {
@@ -694,7 +697,7 @@ bool I_StartupGraphics()
   vid.BitsPerPixel = 8;
   //highcolor = (vid.bpp == 2) ? true:false;
 
-  vid.recalc = true;
+  //vid.recalc = true;
   // default resolution
   vid.width = BASEVIDWIDTH;
   vid.height = BASEVIDHEIGHT;
