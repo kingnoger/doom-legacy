@@ -18,38 +18,14 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/23 23:22:47  smite-meister
+// WAD2+WAD3 support, MAPINFO parser added!
+//
 // Revision 1.2  2002/12/16 22:22:01  smite-meister
 // Actor/DActor separation
 //
 // Revision 1.1.1.1  2002/11/16 14:18:46  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.10  2002/09/08 14:38:09  vberghol
-// Now it works! Sorta.
-//
-// Revision 1.9  2002/09/05 14:12:19  vberghol
-// network code partly bypassed
-//
-// Revision 1.8  2002/09/01 20:53:52  vberghol
-// bugs are in renderer
-//
-// Revision 1.7  2002/08/21 16:58:39  vberghol
-// Version 1.41 Experimental compiles and links!
-//
-// Revision 1.6  2002/08/19 18:30:14  vberghol
-// just netcode to go!
-//
-// Revision 1.5  2002/08/19 18:06:47  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.4  2002/07/01 21:01:11  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:02:00  vberghol
-// HUD alkaa olla kunnossa
-//
-// Revision 1.25  2001/08/20 20:40:39  metzgermeister
-// *** empty log message ***
 //
 // Revision 1.24  2001/08/06 23:57:09  stroggonmeth
 // Removed portal code, improved 3D floors in hardware mode.
@@ -154,7 +130,7 @@
 # include "hardware/hw_main.h"
 #endif
 
-// FIXME temporary renderer object
+
 Rend R;
 
 
@@ -199,12 +175,6 @@ int                     sscount;
 int                     linecount;
 int                     loopcount;
 
-//fixed_t                 viewx;
-//fixed_t                 viewy;
-//fixed_t                 viewz;
-
-//angle_t                 viewangle;
-//angle_t                 aimingangle;
 
 fixed_t                 viewcos;
 fixed_t                 viewsin;
@@ -268,11 +238,11 @@ consvar_t cv_scalestatusbar = {"scalestatusbar","0",CV_SAVE|CV_CALL,CV_YesNo,R_S
 
 // added 16-6-98:splitscreen
 
-void SplitScreen_OnChange(void);
+void SplitScreen_OnChange();
 
 consvar_t cv_splitscreen = {"splitscreen","0",CV_CALL ,CV_OnOff,SplitScreen_OnChange};
 
-void SplitScreen_OnChange(void)
+void SplitScreen_OnChange()
 {
   // recompute screen size
   R_ExecuteSetViewSize();
@@ -680,7 +650,7 @@ void R_InitTables (void)
 //
 // R_InitTextureMapping
 //
-void R_InitTextureMapping (void)
+void R_InitTextureMapping()
 {
     int                 i;
     int                 x;
@@ -800,42 +770,24 @@ void R_SetViewSize()
 //
 // R_ExecuteSetViewSize
 //
-
-
 // now uses screen variables cv_viewsize, cv_detaillevel
 //
 void R_ExecuteSetViewSize()
 {
-  fixed_t     cosadj;
-  fixed_t     dy;
   int i, j;
-  int         level;
-  int         startmap;
-
-  int         aspectx;  //added:02-02-98:for aspect ratio calc. below...
     
   setsizeneeded = false;
+
   // no reduced view in splitscreen mode
   if (cv_splitscreen.value && cv_viewsize.value < 11)
     CV_SetValue(&cv_viewsize, 11);
 
-  // added by Hurdler
 #ifdef HWRENDER
-  if ((rendermode!=render_soft) && (cv_viewsize.value < 6))
-    CV_SetValue (&cv_viewsize, 6);
+  if ((rendermode != render_soft) && (cv_viewsize.value < 6))
+    CV_SetValue(&cv_viewsize, 6);
 #endif
 
-  int setdetail = cv_detaillevel.value;
-    
-  // clamp detail level (actually ignore it, keep it for later who knows)
-  if (setdetail)
-    {
-      setdetail = 0;
-      CONS_Printf ("lower detail mode n.a.\n");
-      CV_SetValue (&cv_detaillevel,setdetail);
-    }
-
-  hud.stbarheight = game.mode == heretic ? SBARHEIGHT : ST_HEIGHT; 
+  hud.stbarheight = (game.mode == heretic) ? SBARHEIGHT : ST_HEIGHT; 
     
   if (cv_scalestatusbar.value || cv_viewsize.value > 10)
     hud.stbarheight *= (rendermode==render_soft) ? vid.dupy : vid.fdupy;
@@ -849,109 +801,118 @@ void R_ExecuteSetViewSize()
   else
     {
       //added 01-01-98: always a multiple of eight
-      scaledviewwidth = (cv_viewsize.value*vid.width/10)&~7;
+      scaledviewwidth = (cv_viewsize.value * vid.width/10) & ~7;
       //added:05-02-98: make viewheight multiple of 2 because sometimes
       //                a line is not refreshed by R_DrawViewBorder()
-      viewheight = (cv_viewsize.value*(vid.height-hud.stbarheight)/10)&~1;
+      viewheight = (cv_viewsize.value*(vid.height-hud.stbarheight)/10) & ~1;
     }
 
   // added 16-6-98:splitscreen
   if (cv_splitscreen.value)
     viewheight >>= 1;
 
+  int setdetail = cv_detaillevel.value;
+  // clamp detail level (actually ignore it, keep it for later who knows)
+  if (setdetail)
+    {
+      setdetail = 0;
+      CONS_Printf("lower detail mode n.a.\n");
+      CV_SetValue(&cv_detaillevel,setdetail);
+    }
+
   detailshift = setdetail;
   viewwidth = scaledviewwidth>>detailshift;
 
-    centery = viewheight/2;
-    centerx = viewwidth/2;
-    centerxfrac = centerx<<FRACBITS;
-    centeryfrac = centery<<FRACBITS;
+  centery = viewheight/2;
+  centerx = viewwidth/2;
+  centerxfrac = centerx<<FRACBITS;
+  centeryfrac = centery<<FRACBITS;
 
-    //added:01-02-98:aspect ratio is now correct, added an 'projectiony'
-    //      since the scale is not always the same between horiz. & vert.
-    projection  = centerxfrac;
-    projectiony = (((vid.height*centerx*BASEVIDWIDTH)/BASEVIDHEIGHT)/vid.width)<<FRACBITS;
+  //added:01-02-98:aspect ratio is now correct, added an 'projectiony'
+  //      since the scale is not always the same between horiz. & vert.
+  projection  = centerxfrac;
+  projectiony = (((vid.height*centerx*BASEVIDWIDTH)/BASEVIDHEIGHT)/vid.width)<<FRACBITS;
 
-    //
-    // no more low detail mode, it used to setup the right drawer routines
-    // for either detail mode here
-    //
-    // if (!detailshift) ... else ...
+  //
+  // no more low detail mode, it used to setup the right drawer routines
+  // for either detail mode here
+  //
+  // if (!detailshift) ... else ...
 
-    R_InitViewBuffer (scaledviewwidth, viewheight);
+  R_InitViewBuffer(scaledviewwidth, viewheight);
 
-    R_InitTextureMapping ();
+  R_InitTextureMapping();
 
-#ifdef HWRENDER // not win32 only 19990829 by Kin
-    if (rendermode != render_soft)
-        HWR_InitTextureMapping ();
+#ifdef HWRENDER
+  if (rendermode != render_soft)
+    HWR_InitTextureMapping();
 #endif
 
-    // psprite scales
-    centerypsp = viewheight/2;  //added:06-02-98:psprite pos for freelook
+  // psprite scales
+  centerypsp = viewheight/2;  //added:06-02-98:psprite pos for freelook
 
-    pspritescale  = (viewwidth<<FRACBITS)/BASEVIDWIDTH;
-    pspriteiscale = (BASEVIDWIDTH<<FRACBITS)/viewwidth;   // x axis scale
-    //added:02-02-98:now aspect ratio correct for psprites
-    pspriteyscale = (((vid.height*viewwidth)/vid.width)<<FRACBITS)/BASEVIDHEIGHT;
+  pspritescale  = (viewwidth<<FRACBITS)/BASEVIDWIDTH;
+  pspriteiscale = (BASEVIDWIDTH<<FRACBITS)/viewwidth;   // x axis scale
+  //added:02-02-98:now aspect ratio correct for psprites
+  pspriteyscale = (((vid.height*viewwidth)/vid.width)<<FRACBITS)/BASEVIDHEIGHT;
 
-    // thing clipping
-    for (i=0 ; i<viewwidth ; i++)
-        screenheightarray[i] = viewheight;
+  // thing clipping
+  for (i=0 ; i<viewwidth ; i++)
+    screenheightarray[i] = viewheight;
 
-    // setup sky scaling for old/new skies (uses pspriteyscale)
-    R_SetSkyScale ();
+  // setup sky scaling for old/new skies (uses pspriteyscale)
+  R_SetSkyScale();
 
-    // planes
-    //added:02-02-98:now correct aspect ratio!
-    aspectx = (((vid.height*centerx*BASEVIDWIDTH)/BASEVIDHEIGHT)/vid.width);
+  // planes
+  //added:02-02-98:now correct aspect ratio!
+  int aspectx = (((vid.height*centerx*BASEVIDWIDTH)/BASEVIDHEIGHT)/vid.width);
 
-    if ( rendermode == render_soft ) {
-        // this is only used for planes rendering in software mode
-        j = viewheight*4;
-        for (i=0 ; i<j ; i++)
+  if (rendermode == render_soft)
+    {
+      // this is only used for planes rendering in software mode
+      j = viewheight*4;
+      for (i=0 ; i<j ; i++)
+	{
+	  //added:10-02-98:(i-centery) became (i-centery*2) and centery*2=viewheight
+	  fixed_t dy = ((i-viewheight*2)<<FRACBITS)+FRACUNIT/2;
+	  dy = abs(dy);
+	  yslopetab[i] = FixedDiv (aspectx*FRACUNIT, dy);
+	}
+    }
+
+  for (i=0 ; i<viewwidth ; i++)
+    {
+      fixed_t cosadj = abs(finecosine[xtoviewangle[i]>>ANGLETOFINESHIFT]);
+      distscale[i] = FixedDiv (FRACUNIT,cosadj);
+    }
+
+  // Calculate the light levels to use
+  //  for each level / scale combination.
+  for (i=0 ; i< LIGHTLEVELS ; i++)
+    {
+      int startmap = ((LIGHTLEVELS-1-i)*2)*NUMCOLORMAPS/LIGHTLEVELS;
+      for (j=0 ; j<MAXLIGHTSCALE ; j++)
         {
-            //added:10-02-98:(i-centery) became (i-centery*2) and centery*2=viewheight
-            dy = ((i-viewheight*2)<<FRACBITS)+FRACUNIT/2;
-            dy = abs(dy);
-            yslopetab[i] = FixedDiv (aspectx*FRACUNIT, dy);
+	  int level = startmap - j*vid.width/(viewwidth<<detailshift)/DISTMAP;
+
+	  if (level < 0)
+	    level = 0;
+
+	  if (level >= NUMCOLORMAPS)
+	    level = NUMCOLORMAPS-1;
+
+	  scalelight[i][j] = colormaps + level*256;
         }
     }
 
-    for (i=0 ; i<viewwidth ; i++)
-    {
-        cosadj = abs(finecosine[xtoviewangle[i]>>ANGLETOFINESHIFT]);
-        distscale[i] = FixedDiv (FRACUNIT,cosadj);
-    }
-
-    // Calculate the light levels to use
-    //  for each level / scale combination.
-    for (i=0 ; i< LIGHTLEVELS ; i++)
-    {
-        startmap = ((LIGHTLEVELS-1-i)*2)*NUMCOLORMAPS/LIGHTLEVELS;
-        for (j=0 ; j<MAXLIGHTSCALE ; j++)
-        {
-            level = startmap - j*vid.width/(viewwidth<<detailshift)/DISTMAP;
-
-            if (level < 0)
-                level = 0;
-
-            if (level >= NUMCOLORMAPS)
-                level = NUMCOLORMAPS-1;
-
-            scalelight[i][j] = colormaps + level*256;
-        }
-    }
-
-    //faB: continue to do the software setviewsize as long as we use
-    //     the reference software view
+  //faB: continue to do the software setviewsize as long as we use
+  //     the reference software view
 #ifdef HWRENDER // not win32 only 19990829 by Kin
-    if (rendermode!=render_soft)
-        HWR_SetViewSize (cv_viewsize.value);
+  if (rendermode!=render_soft)
+    HWR_SetViewSize(cv_viewsize.value);
 #endif
 
   hud.ST_Recalc();
-
   automap.Resize();
 }
 
@@ -1251,8 +1212,6 @@ void R_RotateBuffere (void)
 // I mean, there is a win16lock() or something that lasts all the rendering,
 // so maybe we should release screen lock before each netupdate below..?
 
-//extern consvar_t cv_grsoftwareview; //r_glide.c
-
 void Rend::R_RenderPlayerView(PlayerInfo *player)
 {
     R_SetupFrame (player);
@@ -1333,45 +1292,40 @@ void Rend::R_RenderPlayerView(PlayerInfo *player)
 //                    ENGINE COMMANDS & VARS
 // =========================================================================
 
-void R_RegisterEngineStuff (void)
+void R_RegisterEngineStuff()
 {
+  // Enough for ded. server
+  if (dedicated)
+    return;
 
-  //26-07-98
-  //CV_RegisterVar (&cv_gravity);
+  CV_RegisterVar (&cv_chasecam);
+  CV_RegisterVar (&cv_allowmlook);
+  CV_RegisterVar (&cv_cam_dist );
+  CV_RegisterVar (&cv_cam_height);
+  CV_RegisterVar (&cv_cam_speed );
+  CV_RegisterVar (&cv_viewsize);
+  CV_RegisterVar (&cv_psprites);
+  CV_RegisterVar (&cv_splitscreen);
+  // CV_RegisterVar (&cv_fov);
 
-    // Enough for ded. server
-    if(dedicated)
-	return;
-    
-    CV_RegisterVar (&cv_chasecam);
-    CV_RegisterVar (&cv_allowmlook);
-    CV_RegisterVar (&cv_cam_dist );
-    CV_RegisterVar (&cv_cam_height);
-    CV_RegisterVar (&cv_cam_speed );
+  // Default viewheight is changeable,
+  // initialized to standard viewheight
+  CV_RegisterVar (&cv_viewheight);
+  CV_RegisterVar (&cv_scalestatusbar);
 
-    CV_RegisterVar (&cv_viewsize);
-    CV_RegisterVar (&cv_psprites);
-    CV_RegisterVar (&cv_splitscreen);
-//    CV_RegisterVar (&cv_fov);
-
-    // Default viewheight is changeable,
-    // initialized to standard viewheight
-    CV_RegisterVar (&cv_viewheight);
-    CV_RegisterVar (&cv_scalestatusbar);
-
-    // unfinished, not for release
+  // unfinished, not for release
 #ifdef PERSPCORRECT
-    CV_RegisterVar (&cv_perspcorr);
+  CV_RegisterVar (&cv_perspcorr);
 #endif
 
-    // unfinished, not for release
+  // unfinished, not for release
 #ifdef TILTVIEW
-    CV_RegisterVar (&cv_tiltview);
+  CV_RegisterVar (&cv_tiltview);
 #endif
 
-//added by Hurdler
+  //added by Hurdler
 #ifdef HWRENDER // not win32 only 19990829 by Kin
-    if (rendermode != render_soft)
-        HWR_AddCommands ();
+  if (rendermode != render_soft)
+    HWR_AddCommands ();
 #endif
 }

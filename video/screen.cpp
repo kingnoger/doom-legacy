@@ -17,59 +17,14 @@
 //
 //
 // $Log$
+// Revision 1.4  2002/12/23 23:22:47  smite-meister
+// WAD2+WAD3 support, MAPINFO parser added!
+//
 // Revision 1.3  2002/12/16 22:22:04  smite-meister
 // Actor/DActor separation
 //
 // Revision 1.2  2002/12/03 10:07:13  smite-meister
 // Video unit overhaul begins
-//
-// Revision 1.8  2002/09/25 15:17:44  vberghol
-// Intermission fixed?
-//
-// Revision 1.5  2002/08/19 18:06:49  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.4  2002/07/01 21:01:13  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:02:00  vberghol
-// HUD alkaa olla kunnossa
-//
-// Revision 1.12  2001/08/20 20:40:39  metzgermeister
-// *** empty log message ***
-//
-// Revision 1.11  2001/05/16 21:21:14  bpereira
-// no message
-//
-// Revision 1.10  2001/03/13 22:14:20  stroggonmeth
-// Long time no commit. 3D floors, FraggleScript, portals, ect.
-//
-// Revision 1.9  2001/01/25 22:15:44  bpereira
-// added heretic support
-//
-// Revision 1.8  2000/11/02 19:49:37  bpereira
-// no message
-//
-// Revision 1.7  2000/08/31 14:30:56  bpereira
-// no message
-//
-// Revision 1.6  2000/08/11 19:10:13  metzgermeister
-// *** empty log message ***
-//
-// Revision 1.5  2000/08/03 17:57:42  bpereira
-// no message
-//
-// Revision 1.4  2000/04/22 20:27:35  metzgermeister
-// support for immediate fullscreen switching
-//
-// Revision 1.3  2000/04/16 18:38:07  bpereira
-// no message
-//
-// Revision 1.2  2000/02/27 00:42:11  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //
 // DESCRIPTION:
@@ -455,10 +410,9 @@ void Video::Recalc()
       int screensize = width * height * BytesPerPixel;
       buffer = (byte *)malloc(screensize * NUMSCREENS);
 
-      for (i=0 ; i<=NUMSCREENS ; i++)
+      for (i=0 ; i<NUMSCREENS ; i++)
         screens[i] = buffer + i*screensize;
 
-      // FIXME! screens[4] not allocated!
       //added:26-01-98: statusbar buffer
     }
 
@@ -592,7 +546,6 @@ void Video::SetPalette(int palettenum)
     // BP: yes
     //#endif
 #endif
-    // VB: FIXME! does win32 native need this to be called also in hardware rendering mode?
     I_SetPalette(&palette[palettenum*256]);
 }
 

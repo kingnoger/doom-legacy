@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2002/12/23 23:22:47  smite-meister
+// WAD2+WAD3 support, MAPINFO parser added!
+//
 // Revision 1.2  2002/12/16 22:22:02  smite-meister
 // Actor/DActor separation
 //
@@ -195,9 +198,13 @@
 //#include "sounds.h"             //skin sounds
 
 #include "w_wad.h"
+#include "wad.h" // ugly, but...
+
 #include "z_zone.h"
 
 #include "i_video.h"            //rendermode
+
+typedef waddir_t lumpinfo_t;
 
 static void R_InitSkins (void);
 
