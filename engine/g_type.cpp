@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/12/08 16:43:44  segabor
+// small type casting fix
+//
 // Revision 1.3  2004/10/27 17:37:06  smite-meister
 // netcode update
 //
@@ -56,7 +59,7 @@ void GameType::WriteServerQueryResponse(BitStream &s)
   s.write(game.demoversion);
   s.writeString(VERSIONSTRING);
   s.writeString(cv_servername.str);
-  s.write(game.Players.size());
+  s.write((int)game.Players.size());
   s.write(game.maxplayers);
   s.writeString(gt_name.c_str());
   s.write(gt_version);
