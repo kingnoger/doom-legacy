@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2003 by DooM Legacy Team.
+// Copyright (C) 2003-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,19 +17,19 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/09/30 11:08:22  smite-meister
+// small update
+//
 // Revision 1.2  2003/11/30 00:09:48  smite-meister
 // bugfixes
 //
 // Revision 1.1  2003/04/19 17:38:48  smite-meister
 // SNDSEQ support, tools, linedef system...
 //
-//
-//
-// DESCRIPTION:  
-//   Creates a binary Doom => Hexen linedef translation table
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Creates a binary Doom => Hexen linedef conversion table
 
 #include <stdio.h>
 #include <ctype.h>
@@ -40,17 +40,16 @@
 
 int main(int argc, char *argv[])
 {
-  if (argc != 2)
+  if (argc != 3)
     {
       printf("This program converts a tab-delimited Doom => Hexen linedef\n"
 	     "conversion table into a binary lump to be inserted into legacy.wad\n");
-      printf("Usage: d2h conversiontable.txt\n");
+      printf("Usage: d2h <conversiontable> <outfile>\n");
       return -1;
     }
 
-  FILE *input, *output;
 
-  input = fopen(argv[1], "rb");
+  FILE *input = fopen(argv[1], "rb");
   if (!input)
     {
       printf("File '%s' not found!\n", argv[1]);
@@ -63,7 +62,7 @@ int main(int argc, char *argv[])
   xtable_t t, zero;
   memset(&zero, 0, sizeof(xtable_t));
 
-  output = fopen("xtable.lmp", "wb");
+  FILE *output = fopen(argv[2], "wb");
 
   for (;;)
     {

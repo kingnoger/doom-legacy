@@ -1,5 +1,8 @@
+# Gnu Make makefile for Doom Legacy
+# Copyright (C) 2003-2004 by DooM Legacy Team.
+#
 # Auxiliary Makefile for Doom Legacy tools
-# Ville Bergholm 2003
+#
 
 i = ../include
 
@@ -7,13 +10,13 @@ CFLAGS = $(CF) -I$(i)
 
 objdir := ../$(objdir)
 
-all	: ../d2h.exe ../wadtool.exe
+all	: ../wad/d2h.exe ../wad/wadtool.exe
 
 
-../d2h.exe: $(objdir)/d2h.o
+../wad/d2h.exe: $(objdir)/d2h.o
 	$(LD) $(LDFLAGS) $^ -o $@
 
-../wadtool.exe: $(objdir)/wadtool.o $(objdir)/md5.o
+../wad/wadtool.exe: $(objdir)/wadtool.o $(objdir)/md5.o
 	$(LD) $(LDFLAGS) $^ -o $@
 
 

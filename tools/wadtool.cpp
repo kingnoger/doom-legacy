@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2004/09/30 11:08:22  smite-meister
+// small update
+//
 // Revision 1.1  2004/08/14 16:38:01  smite-meister
 // new tool for easy wad manipulation
 //
@@ -406,21 +409,25 @@ int ExtractWad(const char *wadname)
     {
       const char *name = w.GetItemName(i);
       strncpy(name8, name, 8);
+
+      string lfilename = name8;
+      lfilename += ".lmp";
+
       int size = w.GetItemSize(i);
 
-      printf(" %-8s: %10d bytes\n", name8, size);
+      printf(" %-12s: %10d bytes\n", name8, size);
       if (size == 0)
 	{
 	  fprintf(log, "-\t\t%s\n", name8);
 	  continue; // do not extract separator lumps...
 	}
       else
-	fprintf(log, "%-8s\t\t%s\n", name8, name8);
+	fprintf(log, "%-12s\t\t%s\n", lfilename.c_str(), name8);
 
       void *dest = malloc(size);
       w.ReadItemHeader(i, dest, 0);
 
-      FILE *output = fopen(name8, "wb");
+      FILE *output = fopen(lfilename.c_str(), "wb");
       fwrite(dest, size, 1, output);
       fclose(output);
 
