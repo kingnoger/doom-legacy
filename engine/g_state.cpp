@@ -17,6 +17,10 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/01/25 21:33:05  smite-meister
+// Now compiles with MinGW 2.0 / GCC 3.2.
+// Builder can choose between dynamic and static linkage.
+//
 // Revision 1.7  2003/01/18 20:17:41  smite-meister
 // HUD fixed, levelchange crash fixed.
 //
@@ -292,7 +296,7 @@ int GameInfo::GetFrags(fragsort_t **fragtab, int type)
 // An already constructed PI can be given in "in", if necessary.
 // Returns NULL if a new player cannot be added.
 
-PlayerInfo *GameInfo::AddPlayer(int pnum, PlayerInfo *in = NULL)
+PlayerInfo *GameInfo::AddPlayer(int pnum, PlayerInfo *in)
 {
   // a negative pnum just uses the first free slot
   int n = players.size();
@@ -493,7 +497,7 @@ void GameInfo::Ticker()
 	      break;
 	    case PST_REMOVE:
 	      // the player is removed from the game
-	      RemovePlayer(&players[i]);
+	      RemovePlayer(players.begin() + i);
 	      n--; // FIXME not good, use an iterator or sth...
 	      i--; // because the vector was shortened
 	      break;

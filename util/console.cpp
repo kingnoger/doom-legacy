@@ -17,6 +17,10 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/01/25 21:33:06  smite-meister
+// Now compiles with MinGW 2.0 / GCC 3.2.
+// Builder can choose between dynamic and static linkage.
+//
 // Revision 1.4  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -124,7 +128,6 @@
 #include "z_zone.h"
 #include "i_system.h"
 #include "d_main.h"
-#include "g_state.h"
 #include "w_wad.h"
 
 #ifdef WIN32_DIRECTX

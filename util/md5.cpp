@@ -26,9 +26,10 @@
 
 #include <sys/types.h>
 
+#include <string.h>
+
 #if STDC_HEADERS || defined _LIBC
 # include <stdlib.h>
-# include <string.h>
 #else
 # ifndef HAVE_MEMCPY
 #  ifndef __WIN32__

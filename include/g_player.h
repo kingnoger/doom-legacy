@@ -17,6 +17,10 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.3  2003/01/25 21:33:06  smite-meister
+// Now compiles with MinGW 2.0 / GCC 3.2.
+// Builder can choose between dynamic and static linkage.
+//
 // Revision 1.2  2003/01/18 20:17:41  smite-meister
 // HUD fixed, levelchange crash fixed.
 //
@@ -35,6 +39,8 @@
 #include <string>
 #include "d_items.h"
 #include "d_ticcmd.h"
+
+using namespace std;
 
 class PlayerPawn;
 typedef unsigned angle_t;

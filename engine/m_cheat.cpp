@@ -18,6 +18,10 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/01/25 21:33:05  smite-meister
+// Now compiles with MinGW 2.0 / GCC 3.2.
+// Builder can choose between dynamic and static linkage.
+//
 // Revision 1.6  2003/01/18 20:17:41  smite-meister
 // HUD fixed, levelchange crash fixed.
 //
@@ -55,7 +59,6 @@
 #include "s_sound.h"
 #include "hu_stuff.h"
 #include "w_wad.h"
-#include "g_state.h"
 #include "g_pawn.h"
 
 // ==========================================================================

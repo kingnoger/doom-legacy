@@ -18,53 +18,12 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:17:48  hurdler
-// Initial revision
+// Revision 1.2  2003/01/25 21:33:05  smite-meister
+// Now compiles with MinGW 2.0 / GCC 3.2.
+// Builder can choose between dynamic and static linkage.
 //
-// Revision 1.6  2002/09/20 22:41:26  vberghol
-// Sound system rewritten! And it workscvs update
-//
-// Revision 1.5  2002/08/21 16:58:28  vberghol
-// Version 1.41 Experimental compiles and links!
-//
-// Revision 1.4  2002/08/19 18:06:38  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.3  2002/07/01 20:59:48  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:09  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.10  2001/03/30 17:12:51  bpereira
-// no message
-//
-// Revision 1.9  2001/03/13 22:14:20  stroggonmeth
-// Long time no commit. 3D floors, FraggleScript, portals, ect.
-//
-// Revision 1.8  2001/02/24 13:35:21  bpereira
-// no message
-//
-// Revision 1.7  2001/01/25 22:15:44  bpereira
-// added heretic support
-//
-// Revision 1.6  2000/11/21 21:13:18  stroggonmeth
-// Optimised 3D floors and fixed crashing bug in high resolutions.
-//
-// Revision 1.5  2000/11/03 11:48:40  hurdler
-// Fix compiling problem under win32 with 3D-Floors and FragglScript (to verify!)
-//
-// Revision 1.4  2000/11/03 02:37:36  stroggonmeth
-// Fix a few warnings when compiling.
-//
-// Revision 1.3  2000/11/02 17:50:10  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.2  2000/02/27 00:42:11  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
+// Revision 1.1.1.1  2002/11/16 14:17:48  hurdler
+// Initial C++ version of Doom Legacy
 //
 //
 // DESCRIPTION:

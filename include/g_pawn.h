@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,10 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.6  2003/01/25 21:33:06  smite-meister
+// Now compiles with MinGW 2.0 / GCC 3.2.
+// Builder can choose between dynamic and static linkage.
+//
 // Revision 1.5  2003/01/18 20:17:41  smite-meister
 // HUD fixed, levelchange crash fixed.
 //
@@ -24,7 +28,6 @@
 //
 // DESCRIPTION:
 //    Pawn class. A Pawn is an Actor that has either AI or human control.
-//    Ville Bergholm
 //
 //-----------------------------------------------------------------------------
 
@@ -35,9 +38,10 @@
 #include <vector>
 
 #include "g_actor.h" // Actor class
-
 #include "d_items.h"
 #include "p_pspr.h" // 1st person weapon sprites
+
+using namespace std;
 
 //  max Z move up or down without jumping
 //  above this, a heigth difference is considered as a 'dropoff'

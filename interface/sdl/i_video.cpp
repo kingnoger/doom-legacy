@@ -3,7 +3,6 @@
 //
 // $Id$
 //
-// Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
@@ -18,6 +17,10 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/01/25 21:33:06  smite-meister
+// Now compiles with MinGW 2.0 / GCC 3.2.
+// Builder can choose between dynamic and static linkage.
+//
 // Revision 1.4  2003/01/12 12:56:42  smite-meister
 // Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
 //
@@ -51,21 +54,22 @@
 #include "m_menu.h"
 #include "d_main.h"
 #include "g_input.h"
-
-
-#include "hardware/hw_drv.h"
 #include "command.h"
-//#include "sdl/hwsym_sdl.h" // For dynamic referencing of HW rendering functions
+
+#include "m_dll.h"
 #include "hardware/r_opengl/r_opengl.h"
 #include "sdl/ogl_sdl.h"
 
+#ifndef STATIC_LINKAGE
+static dll_handle_t ogl_handle = NULL;
+static const dll_info_t *ogl_info = NULL;
+#endif
 
 // SDL vars
 static const SDL_VideoInfo *vidInfo = NULL;
 static SDL_Rect     **modeList = NULL;
 static SDL_Surface   *vidSurface = NULL;
 static SDL_Color      localPalette[256];
-//static Uint8          BitsPerPixel;
 
 //const static Uint32       surfaceFlags = SDL_HWSURFACE|SDL_HWPALETTE|SDL_DOUBLEBUF;
 // FIXME : VB: since fullscreen HW surfaces wont't work, we'll use a SW surface.
@@ -89,7 +93,6 @@ extern consvar_t cv_fullscreen; // for fullscreen support
 extern consvar_t cv_usemouse;
 
 rendermode_t    rendermode = render_soft;
-//bool highcolor = false;
 
 // synchronize page flipping with screen refresh
 // unused and for compatibility reason 
@@ -104,8 +107,8 @@ bool allow_fullscreen = false;
 // first entry in the modelist which is not bigger than 1024x768
 static int firstEntry = 0;
 
-// windowed video modes from which to choose from.
 
+// windowed video modes from which to choose from.
 static int windowedModes[MAXWINMODES][2] =
 {
   {MAXVIDWIDTH /*1024*/, MAXVIDHEIGHT/*768*/},
@@ -214,16 +217,16 @@ static int xlatekey(SDLKey sym)
 //
 void I_StartFrame()
 {
-    if(render_soft == rendermode)
+  if (render_soft == rendermode)
     {
-        if(SDL_MUSTLOCK(vidSurface))
+      if (SDL_MUSTLOCK(vidSurface))
         {
-            if(SDL_LockSurface(vidSurface) < 0)
-                return;
+	  if (SDL_LockSurface(vidSurface) < 0)
+	    return;
         }
     }
 
-    return;
+  return;
 }
 
 static int      lastmousex = 0;
@@ -588,7 +591,7 @@ int I_SetVideoMode(int modeNum)
       // VB: FIXME this stops execution at the latest
       *((Uint8 *)vidSurface->pixels) = 1;
     }
-  else // !(render_soft == rendermode)
+  else
     {
       if (!OglSdlSurface(vid.width, vid.height, cv_fullscreen.value))
 	I_Error("Could not set vidmode\n");
@@ -648,7 +651,6 @@ bool I_StartupGraphics()
   vid.BitsPerPixel = 8;
   //highcolor = (vid.bpp == 2) ? true:false;
 
-  //vid.recalc = true;
   // default resolution
   vid.width = BASEVIDWIDTH;
   vid.height = BASEVIDHEIGHT;
@@ -656,49 +658,28 @@ bool I_StartupGraphics()
   // Window title
   SDL_WM_SetCaption("Legacy", "Legacy");
   
-  if(M_CheckParm("-opengl")) 
+  if (M_CheckParm("-opengl")) 
     {
       rendermode = render_opengl;
-      /*
-      HWD.pfnInit             = hwSym("Init");
-      HWD.pfnFinishUpdate     = hwSym("FinishUpdate");
-      HWD.pfnDraw2DLine       = hwSym("Draw2DLine");
-      HWD.pfnDrawPolygon      = hwSym("DrawPolygon");
-      HWD.pfnSetBlend         = hwSym("SetBlend");
-      HWD.pfnClearBuffer      = hwSym("ClearBuffer");
-      HWD.pfnSetTexture       = hwSym("SetTexture");
-      HWD.pfnReadRect         = hwSym("ReadRect");
-      HWD.pfnGClipRect        = hwSym("GClipRect");
-      HWD.pfnClearMipMapCache = hwSym("ClearMipMapCache");
-      HWD.pfnSetSpecialState  = hwSym("SetSpecialState");
-      HWD.pfnSetPalette       = hwSym("SetPalette");
-      HWD.pfnGetTextureUsed   = hwSym("GetTextureUsed");
-      
-      HWD.pfnDrawMD2          = hwSym("DrawMD2");
-      HWD.pfnSetTransform     = hwSym("SetTransform");
-      HWD.pfnGetRenderVersion = hwSym("GetRenderVersion");
-      */
-      HWD.pfnInit             = &Init;
-      HWD.pfnFinishUpdate     = NULL;
-      HWD.pfnDraw2DLine       = &Draw2DLine;
-      HWD.pfnDrawPolygon      = &DrawPolygon;
-      HWD.pfnSetBlend         = &SetBlend;
-      HWD.pfnClearBuffer      = &ClearBuffer;
-      HWD.pfnSetTexture       = &SetTexture;
-      HWD.pfnReadRect         = &ReadRect;
-      HWD.pfnGClipRect        = &GClipRect;
-      HWD.pfnClearMipMapCache = &ClearMipMapCache;
-      HWD.pfnSetSpecialState  = &SetSpecialState;
-      HWD.pfnSetPalette       = &OglSdlSetPalette;
-      HWD.pfnGetTextureUsed   = &GetTextureUsed;
-      
-      HWD.pfnDrawMD2          = &DrawMD2;
-      HWD.pfnSetTransform     = &SetTransform;
-      HWD.pfnGetRenderVersion = &GetRenderVersion;
-      
-      // check gl renderer lib
-      if (HWD.pfnGetRenderVersion() != VERSION)
-	I_Error ("The version of the renderer doesn't match the version of the executable\nBe sure you have installed Doom Legacy properly.\n");
+
+#ifdef STATIC_LINKAGE
+      // static linkage
+      memcpy(&HWD, &r_export, sizeof(hw_renderer_export_t));
+#else
+      // dynamic linkage      
+      ogl_handle = OpenDLL("r_opengl.dll");
+      if (!ogl_handle)
+	I_Error("Could not load r_opengl.dll!\n");
+
+      ogl_info = (dll_info_t *)GetSymbol(ogl_handle, "dll_info");
+      if (ogl_info->interface_version != R_OPENGL_INTERFACE_VERSION)
+	I_Error("r_opengl.dll interface version does not match with Legacy.exe!\n"
+		"You must use the r_opengl.dll that came in the same distribution as your Legacy.exe.");
+
+      hw_renderer_export_t *temp = (hw_renderer_export_t *)GetSymbol(ogl_handle, "r_export");
+      memcpy(&HWD, temp, sizeof(hw_renderer_export_t));
+      CONS_Printf("%s loaded.\n", ogl_info->dll_name);
+#endif
 
       vid.width = 640; // hack to make voodoo cards work in 640x480
       vid.height = 480;
@@ -740,7 +721,13 @@ void I_ShutdownGraphics()
       // vidSurface should be automatically freed
     }
   else
-    OglSdlShutdown();
-    
+    {
+      OglSdlShutdown();
+
+#ifndef STATIC_LINKAGE
+      if (ogl_handle)
+	CloseDLL(ogl_handle);
+#endif
+    }
   SDL_Quit(); 
 }

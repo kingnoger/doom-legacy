@@ -18,6 +18,10 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/01/25 21:33:05  smite-meister
+// Now compiles with MinGW 2.0 / GCC 3.2.
+// Builder can choose between dynamic and static linkage.
+//
 // Revision 1.5  2003/01/18 20:17:41  smite-meister
 // HUD fixed, levelchange crash fixed.
 //
@@ -462,7 +466,7 @@ void Map::LoadSectors(int lump)
 
   //Fab:FIXME: allocate for whatever number of flats
   //           512 different flats per level should be plenty
-  foundflats = (levelflat_t *)alloca(sizeof(levelflat_t) * MAXLEVELFLATS);
+  foundflats = (levelflat_t *)Z_Malloc(sizeof(levelflat_t) * MAXLEVELFLATS, PU_STATIC, 0);
   if (!foundflats)
     I_Error ("P_LoadSectors: no mem\n");
   memset (foundflats, 0, sizeof(levelflat_t) * MAXLEVELFLATS);
@@ -546,9 +550,10 @@ void Map::LoadSectors(int lump)
   // copy table for global usage
   levelflats = (levelflat_t *)Z_Malloc (numlevelflats*sizeof(levelflat_t),PU_LEVEL,0);
   memcpy (levelflats, foundflats, numlevelflats*sizeof(levelflat_t));
+  Z_Free(foundflats);
 
   // search for animated flats and set up
-  P_SetupLevelFlatAnims ();
+  P_SetupLevelFlatAnims();
 }
 
 

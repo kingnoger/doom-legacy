@@ -5,6 +5,10 @@
 // Copyright (C) 2002-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.5  2003/01/25 21:33:05  smite-meister
+// Now compiles with MinGW 2.0 / GCC 3.2.
+// Builder can choose between dynamic and static linkage.
+//
 // Revision 1.4  2003/01/18 20:17:41  smite-meister
 // HUD fixed, levelchange crash fixed.
 //
@@ -35,7 +39,7 @@ PlayerInfo *displayplayer = NULL;   // view being displayed
 PlayerInfo *displayplayer2 = NULL;  // secondary view (splitscreen)
 
 
-PlayerInfo::PlayerInfo(const string & n = "")
+PlayerInfo::PlayerInfo(const string & n)
 {
   // TODO: finish initialization...
   name = n;

@@ -18,6 +18,10 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/01/25 21:33:05  smite-meister
+// Now compiles with MinGW 2.0 / GCC 3.2.
+// Builder can choose between dynamic and static linkage.
+//
 // Revision 1.5  2003/01/12 12:56:40  smite-meister
 // Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
 //
@@ -903,7 +907,7 @@ void PlayerPawn::Die(Actor *inflictor, Actor *source)
 
 bool ultimatemsg;
 
-void PlayerPawn::SetMessage(const char *msg, bool ultmsg = true)
+void PlayerPawn::SetMessage(const char *msg, bool ultmsg)
 {
   if ((ultimatemsg || !cv_showmessages.value) && !ultmsg)
     return;

@@ -212,7 +212,7 @@ void Wad::ListDir()
 // FindNumForName
 // Searches the wadfile for lump named 'name', returns the lump number
 // if not found, returns -1
-int Wad::FindNumForName(const char *name, int startlump = 0)
+int Wad::FindNumForName(const char *name, int startlump)
 {
   union {
     char s[9];
@@ -381,7 +381,7 @@ void Wad3::ListDir()
 // FindNumForName
 // Searches the wadfile for lump named 'name', returns the lump number
 // if not found, returns -1
-int Wad3::FindNumForName(const char *name, int startlump = 0)
+int Wad3::FindNumForName(const char *name, int startlump)
 {
   union
   {

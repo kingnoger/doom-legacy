@@ -18,6 +18,10 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/01/25 21:33:05  smite-meister
+// Now compiles with MinGW 2.0 / GCC 3.2.
+// Builder can choose between dynamic and static linkage.
+//
 // Revision 1.5  2003/01/18 20:17:41  smite-meister
 // HUD fixed, levelchange crash fixed.
 //
@@ -278,7 +282,6 @@ DActor::DActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
 //
 void Actor::Remove()
 {
-  extern msecnode_t *sector_list;
   extern consvar_t cv_itemrespawn;
   // lazy deallocation/destruction: memory freed next time it thinks.
 
@@ -301,7 +304,8 @@ void Actor::Remove()
 
   //SoM: 4/7/2000: Remove touching_sectorlist from mobj.
   /* t8
-  if (sector_list)
+     extern msecnode_t *sector_list;  
+     if (sector_list)
     {
       P_DelSeclist(sector_list);
       sector_list = NULL;
@@ -1069,7 +1073,7 @@ int Actor::HitFloor()
 // Returns true if the mobj is still present.
 //
 //SoM: 4/7/2000: Boom code...
-bool DActor::SetState(statenum_t ns, bool call = true)
+bool DActor::SetState(statenum_t ns, bool call)
 {
   state_t *st;
     

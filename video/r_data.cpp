@@ -18,6 +18,10 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/01/25 21:33:07  smite-meister
+// Now compiles with MinGW 2.0 / GCC 3.2.
+// Builder can choose between dynamic and static linkage.
+//
 // Revision 1.3  2002/12/16 22:21:58  smite-meister
 // Actor/DActor separation
 //
@@ -531,7 +535,8 @@ void R_LoadTextures (void)
     pnames = (char *)fc.CacheLumpName ("PNAMES", PU_STATIC);
     nummappatches = LONG ( *((int *)pnames) );
     name_p = pnames+4;
-    patchlookup = (int *)alloca(nummappatches*sizeof(*patchlookup));
+    //patchlookup = (int *)alloca(nummappatches*sizeof(*patchlookup));
+    patchlookup = (int *)Z_Malloc(nummappatches*sizeof(*patchlookup), PU_STATIC, 0);
 
     for (i=0 ; i<nummappatches ; i++)
     {
@@ -628,6 +633,7 @@ void R_LoadTextures (void)
         texturewidthmask[i] = j-1;
         textureheight[i] = texture->height<<FRACBITS;
     }
+    Z_Free(patchlookup);
 
     Z_Free (maptex1);
     if (maptex2)
@@ -1315,7 +1321,8 @@ void Map::PrecacheMap()
     //
     // no need to precache all software textures in 3D mode
     // (note they are still used with the reference software view)
-    texturepresent = (char *)alloca(numtextures);
+    //texturepresent = (char *)alloca(numtextures);
+    texturepresent = (char *)Z_Malloc(numtextures, PU_STATIC, 0);
     memset (texturepresent,0, numtextures);
 
     for (i=0 ; i<numsides ; i++)
@@ -1361,12 +1368,15 @@ void Map::PrecacheMap()
         //    fc.CacheLumpNum(lump , PU_CACHE);
         //}
     }
+    Z_Free(texturepresent);
+
     //CONS_Printf ("total mem for %d textures: %d k\n",numgenerated,texturememory>>10);
 
     //
     // Precache sprites.
     //
-    spritepresent = (char *)alloca(numsprites);
+    //spritepresent = (char *)alloca(numsprites);
+    spritepresent = (char *)Z_Malloc(numsprites, PU_STATIC, 0);
     memset (spritepresent,0, numsprites);
 
     Thinker *th;
@@ -1396,7 +1406,8 @@ void Map::PrecacheMap()
             }
         }
     }
-
+    Z_Free(spritepresent);
+    
     //FIXME: this is no more correct with glide render mode
     if (devparm)
     {

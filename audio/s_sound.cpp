@@ -18,6 +18,10 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/01/25 21:33:05  smite-meister
+// Now compiles with MinGW 2.0 / GCC 3.2.
+// Builder can choose between dynamic and static linkage.
+//
 // Revision 1.3  2003/01/12 12:56:40  smite-meister
 // Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
 //
@@ -1163,14 +1167,14 @@ void S_StartAmbSound(int sfx_id, int volume)
 }
 
 // wrapper
-void S_StartSound(mappoint_t *or, int sfx_id)
+void S_StartSound(mappoint_t *orig, int sfx_id)
 {
   soundsource_t s;
-  s.x = or->x;
-  s.y = or->y;
-  s.z = or->z;
+  s.x = orig->x;
+  s.y = orig->y;
+  s.z = orig->z;
   s.vx = s.vy = s.vz = 0;
-  s.origin = or;
+  s.origin = orig;
 
 #ifdef PARANOIA
   // check for bogus sound #
@@ -1190,16 +1194,16 @@ void S_StartSound(mappoint_t *or, int sfx_id)
 }
 
 // wrapper
-void S_StartSound(Actor *or, int sfx_id)
+void S_StartSound(Actor *orig, int sfx_id)
 {
   soundsource_t s;
-  s.x = or->x;
-  s.y = or->y;
-  s.z = or->z;
-  s.vx = or->px;
-  s.vy = or->py;
-  s.vz = or->pz;
-  s.origin = or;
+  s.x = orig->x;
+  s.y = orig->y;
+  s.z = orig->z;
+  s.vx = orig->px;
+  s.vy = orig->py;
+  s.vz = orig->pz;
+  s.origin = orig;
 
 #ifdef PARANOIA
   // check for bogus sound #
@@ -1220,7 +1224,7 @@ void S_StartSound(Actor *or, int sfx_id)
 
 #ifdef HW3SOUND
   if (hws_mode != HWS_DEFAULT_MODE)
-    HW3S_StartSound(or, sfx_id);
+    HW3S_StartSound(orig, sfx_id);
   else
 #endif
     S.Start3DSound(&s, sfx, 255);

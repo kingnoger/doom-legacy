@@ -18,6 +18,10 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/01/25 21:33:05  smite-meister
+// Now compiles with MinGW 2.0 / GCC 3.2.
+// Builder can choose between dynamic and static linkage.
+//
 // Revision 1.3  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -88,7 +92,7 @@
 
 // was P_Teleport
 
-bool Actor::Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent = false)
+bool Actor::Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent)
 {
   // silent means "Boom-style"
   fixed_t  oldx, oldy, oldz;

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,59 +18,12 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:27  hurdler
-// Initial revision
+// Revision 1.2  2003/01/25 21:33:06  smite-meister
+// Now compiles with MinGW 2.0 / GCC 3.2.
+// Builder can choose between dynamic and static linkage.
 //
-// Revision 1.10  2002/09/25 15:17:42  vberghol
-// Intermission fixed?
-//
-// Revision 1.7  2002/08/21 16:58:36  vberghol
-// Version 1.41 Experimental compiles and links!
-//
-// Revision 1.6  2002/08/19 18:06:43  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.5  2002/08/02 20:14:52  vberghol
-// p_enemy.cpp done!
-//
-// Revision 1.4  2002/07/01 21:00:56  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:01:58  vberghol
-// HUD alkaa olla kunnossa
-//
-// Revision 1.8  2001/04/17 22:26:07  calumr
-// Initial Mac add
-//
-// Revision 1.7  2001/02/24 13:35:21  bpereira
-// no message
-//
-// Revision 1.6  2000/11/02 17:50:10  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.5  2000/05/13 19:52:10  metzgermeister
-// cd vol jiggle
-//
-// Revision 1.4  2000/04/21 08:23:47  emanne
-// To have SDL working.
-// Makefile: made the hiding by "@" optional. See the CC variable at
-// the begining. Sorry, but I like to see what's going on while building
-//
-// qmus2mid.h: force include of qmus2mid_sdl.h when needed.
-// s_sound.c: ??!
-// s_sound.h: with it.
-// (sorry for s_sound.* : I had problems with cvs...)
-//
-// Revision 1.3  2000/03/12 23:21:10  linuxcub
-// Added consvars which hold the filenames and arguments which will be used
-// when running the soundserver and musicserver (under Linux). I hope I
-// didn't break anything ... Erling Jacobsen, linuxcub@email.dk
-//
-// Revision 1.2  2000/02/27 00:42:11  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
+// Revision 1.1.1.1  2002/11/16 14:18:27  hurdler
+// Initial C++ version of Doom Legacy
 //
 //
 // DESCRIPTION:
@@ -249,12 +202,11 @@ extern SoundSystem S;
 // returns a lumpnum, either of sfx or of a replacing sound
 int S_GetSfxLumpNum(sfxinfo_t* sfx);
 
-
 // wrappers
 // Start sound for thing at <origin>
 //  using <sound_id> from sounds.h
 void S_StartAmbSound(int sfx_id, int volume = 255);
-void S_StartSound(mappoint_t *or, int sfx_id);
+void S_StartSound(mappoint_t *origin, int sfx_id);
 void S_StartSound(Actor *origin, int sfx_id);
 
 

@@ -1,5 +1,5 @@
 # Gnu Make makefile for Doom Legacy / SDL / GCC
-# Ville Bergholm 2002
+# Ville Bergholm 2002-2003
 # This primary Makefile calls auxiliary Makefiles in subdirectories
 #
 # Use 'make OPT=1' to make optimized version, else you'll get debug info.
@@ -17,12 +17,21 @@ endif
 # Debugging info
 
 ifdef OPT
-DEBUGFLAGS = 
+DEBUGFLAGS =
 OPTFLAGS = -O
 else
 DEBUGFLAGS = -g 
-OPTFLAGS = 
+OPTFLAGS =
 endif
+
+# Dynamic or static linkage? I like static.
+
+ifdef DYNAMIC
+linkage =
+else
+linkage = -DSTATIC_LINKAGE
+endif
+
 
 # ----------- platform specific part begins
 ifdef LINUX
@@ -36,7 +45,8 @@ ifdef LINUX
  platform = -DLINUX
  interface = -DSDL
 # linker
- LIBS	= -L/usr/X11/lib -lSDLmain -lSDL -lSDL_mixer -lGL -lGLU
+ LIBS	= -L/usr/X11/lib -lSDLmain -lSDL -lSDL_mixer
+ OPENGLLIBS = -lGL -lGLU
 # -lm -lpthread ???
  LDFLAGS = -Wall
 # executable
@@ -54,7 +64,8 @@ else # assume WIN32 is defined
  interface = -DSDL
  EXTRAFLAGS = -mwindows
 # linker
- LIBS	= -lmingw32 -lSDLmain -lSDL SDL_mixer.lib -lopengl32 -lglu32 -lwsock32
+ LIBS	= -lmingw32 -lSDLmain -lSDL SDL_mixer.lib -lwsock32
+ OPENGLLIBS = -lopengl32 -lglu32
  LDFLAGS = -Wall -mwindows
 # executable
  exename = Legacy.exe
@@ -97,7 +108,7 @@ export CC = g++
 # ??? PURESDL, 
 # hmm. In Win98, -DUSEASM causes execution to stop (ASM_PatchRowBytes())
 
-defines := $(platform) $(interface) -DNDEBUG -DHWRENDER -DHW3SOUND -DDIRECTFULLSCREEN
+defines := $(platform) $(interface) $(linkage) -DNDEBUG -DHWRENDER -DHW3SOUND -DDIRECTFULLSCREEN
 export CF := $(DEBUGFLAGS) $(OPTFLAGS) -Wall $(EXTRAFLAGS) $(defines) #-ansi
 INCLUDES = -Iinclude
 CFLAGS = $(CF) $(INCLUDES)
@@ -172,6 +183,7 @@ export util_objects = \
 	$(objdir)/dehacked.o \
 	$(objdir)/m_argv.o \
 	$(objdir)/m_bbox.o \
+	$(objdir)/m_dll.o \
 	$(objdir)/m_fixed.o \
 	$(objdir)/m_misc.o \
 	$(objdir)/m_random.o \
@@ -234,15 +246,14 @@ export sdl_objects = \
 	$(objdir)/ogl_sdl.o \
 	$(objdir)/searchp.o
 
-#	$(objdir)/hwsym_sdl.o \
 
 asm_objects = $(objdir)/tmap.o
 # not used at the moment
 
 
 objects = $(engine_objects) $(util_objects) $(audio_objects) $(video_objects) \
-	$(net_objects) $(sdl_objects) $(objdir)/r_opengl.o # $(asm_objects)
-# note the r_opengl.o here!
+	$(net_objects) $(sdl_objects)
+# $(asm_objects)
 
 all	: $(exename)
 
@@ -280,8 +291,21 @@ sdl	:
 
 # explicit rules
 
+ifdef STATIC
+# all in one
 $(exename) : engine util audio video net sdl $(objdir)/r_opengl.o
+	$(LD) $(LDFLAGS) $(objects) $(objdir)/r_opengl.o $(LIBS) $(OPENGLLIBS) -o $@
+
+else
+# main program
+$(exename) : engine util audio video net sdl
 	$(LD) $(LDFLAGS) $(objects) $(LIBS) -o $@
+
+# OpenGL renderer
+r_opengl.dll: $(objdir)/r_opengl.o
+	$(LD) -shared $(LDFLAGS) $< $(OPENGLLIBS) -o $@
+
+endif
 
 $(objdir)/r_opengl.o : video/hardware/r_opengl/r_opengl.cpp include/hardware/r_opengl/r_opengl.h
 	$(CC) -c $(CFLAGS) $< -o $@

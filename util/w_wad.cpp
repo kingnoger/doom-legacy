@@ -290,7 +290,7 @@ void FileCache::WriteFileHeaders(byte *p)
 // scanforward: this is normally always false, so external pwads take precedence,
 // this is set true if W_GetNumForNameFirst() is called
 
-int FileCache::FindNumForName(const char* name, bool scanforward = false)
+int FileCache::FindNumForName(const char* name, bool scanforward)
 {
   int i, n = wadfiles.size();
   int res;
@@ -357,7 +357,7 @@ const char *FileCache::FindNameForNum(int lump)
 // was W_GetNumForName, W_GetNumForNameFirst (scanforw == true)
 // Calls FindNumForName, but bombs out if not found.
 
-int FileCache::GetNumForName(const char* name, bool scanforward = false)
+int FileCache::GetNumForName(const char* name, bool scanforward)
 {
   int i;
   

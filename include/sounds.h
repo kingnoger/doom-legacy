@@ -18,41 +18,12 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:28  hurdler
-// Initial revision
+// Revision 1.2  2003/01/25 21:33:06  smite-meister
+// Now compiles with MinGW 2.0 / GCC 3.2.
+// Builder can choose between dynamic and static linkage.
 //
-// Revision 1.7  2002/09/20 22:41:35  vberghol
-// Sound system rewritten! And it workscvs update
-//
-// Revision 1.6  2002/08/19 18:06:44  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.5  2002/07/13 17:56:59  vberghol
-// *** empty log message ***
-//
-// Revision 1.4  2002/07/01 21:00:56  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:01:58  vberghol
-// HUD alkaa olla kunnossa
-//
-// Revision 1.6  2001/04/17 22:26:07  calumr
-// Initial Mac add
-//
-// Revision 1.5  2001/02/24 13:35:21  bpereira
-// no message
-//
-// Revision 1.4  2001/01/25 22:15:44  bpereira
-// added heretic support
-//
-// Revision 1.3  2000/11/02 17:50:10  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.2  2000/02/27 00:42:11  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
+// Revision 1.1.1.1  2002/11/16 14:18:28  hurdler
+// Initial C++ version of Doom Legacy
 //
 //
 // DESCRIPTION:
