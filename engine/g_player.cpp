@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.19  2003/12/18 11:57:31  smite-meister
+// fixes / new bugs revealed
+//
 // Revision 1.18  2003/12/06 23:57:47  smite-meister
 // save-related bugfixes
 //
@@ -126,9 +129,13 @@ void PlayerInfo::SetMessage(const char *msg, bool ultmsg)
 }
 
 
-void PlayerInfo::ExitLevel(int nextmap, int ep, bool force)
+// Separates the player from her current map, sets the new destination, handles pawn detachment.
+// Does _not_ finish the map.
+// NOTE may invalidate Map::players iterators.
+void PlayerInfo::ExitLevel(int nextmap, int ep)
 {
-  if (!requestmap || force)
+  // if a player is already going somewhere, let him keep his destination:
+  if (!requestmap)
     {
       requestmap = nextmap;
       entrypoint = ep;
@@ -158,6 +165,9 @@ void PlayerInfo::ExitLevel(int nextmap, int ep, bool force)
       // PST_WAITFORMAP, PST_RESPAWN, meaning there is no pawn
       break;
     }
+
+  if (mp)
+    mp->RemovePlayer(this); // NOTE that this may invalidate iterators to Map::players!
 
   playerstate = PST_WAITFORMAP;
 }

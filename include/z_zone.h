@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/12/18 11:57:31  smite-meister
+// fixes / new bugs revealed
+//
 // Revision 1.5  2003/03/25 18:15:17  smite-meister
 // Memory debug
 //
@@ -50,7 +53,7 @@
 //
 // ZONE MEMORY
 // PU - purge tags.
-typedef enum
+enum memtag_t
 {
   // Tags < PU_PURGELEVEL are not overwritten until freed.
   PU_STATIC = 1,      // static entire execution time
@@ -60,6 +63,8 @@ typedef enum
 
   PU_HWRPATCHINFO      = 5,   // Hardware GlidePatch_t struct for OpenGl/Glide texture cache
   PU_HWRPATCHCOLMIPMAP = 6,   // Hardware GlideMipmap_t struct colromap variation of patch
+  PU_SPRITE,
+  PU_MODEL,
 
   // Tags >= PU_LEVEL are made purgable when a level is exited
   PU_LEVEL    = 50,   // static until level is exited
@@ -72,7 +77,7 @@ typedef enum
   PU_HWRCACHE   = 102  // 'second-level' cache for graphics
                        // stored in hardware format and downloaded as needed
   // TODO: remove PU_HWRCACHE, make a real 2nd level cache
-} memtag_t;
+};
 
 
 void    Z_Init();

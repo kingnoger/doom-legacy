@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.24  2003/12/18 11:57:31  smite-meister
+// fixes / new bugs revealed
+//
 // Revision 1.23  2003/12/13 23:51:03  smite-meister
 // Hexen update
 //
@@ -796,7 +799,7 @@ void Actor::Die(Actor *inflictor, Actor *source)
     }
 
   // thing death actions
-  if (special) // formerly also demanded MF_COUNTKILL, but why?
+  if (special) // formerly also demanded MF_COUNTKILL (MT_ZBELL!)
     {
       /*
 	if (type == MT_SORCBOSS) // FIXME

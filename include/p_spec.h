@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2003/12/18 11:57:31  smite-meister
+// fixes / new bugs revealed
+//
 // Revision 1.17  2003/12/13 23:51:03  smite-meister
 // Hexen update
 //
@@ -640,6 +643,34 @@ public:
 
 #define ELEVATORSPEED (FRACUNIT*4/NEWTICRATERATIO) //SoM: 3/6/2000
 #define FLOORSPEED    (FRACUNIT/NEWTICRATERATIO)
+
+//======================================
+//  Sine wave floorshake (Hexen)
+//======================================
+
+class floorwaggle_t : public sectoreffect_t
+{
+  friend class Map;
+  DECLARE_CLASS(floorwaggle_t);
+public:
+  enum floorwaggle_e
+  {
+    Expand = 0,
+    Stable,
+    Reduce
+  };
+
+private:
+  char    state;
+  angle_t phase, freq;
+  fixed_t baseheight, amp, maxamp, ampdelta;
+  int     wait;
+
+public:
+  floorwaggle_t(sector_t *sec, fixed_t a, angle_t f, angle_t ph, int w);
+  
+  virtual void Think();
+};
 
 
 //======================================

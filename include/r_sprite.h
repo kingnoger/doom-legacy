@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/12/18 11:57:31  smite-meister
+// fixes / new bugs revealed
+//
 // Revision 1.8  2003/06/20 20:56:08  smite-meister
 // Presentation system tweaked
 //
@@ -215,9 +218,13 @@ public:
   virtual void Project(class Actor *p) = 0; // This is hopefully a temporary hack.. it generates a vissprite
   virtual bool Draw(const Actor *p)    = 0; // Not sure how this works yet
   virtual spriteframe_t *GetFrame() { return NULL; }; // or this. Menu uses it.
+  virtual int Marshal(class LArchive &a) = 0;
 
   void *operator new(size_t size);
   void  operator delete(void *mem);
+
+  static int Serialize(presentation_t *p, LArchive &a);
+  static presentation_t *Unserialize(LArchive &a);
 };
 
 
@@ -241,6 +248,7 @@ public:
   virtual void Project(Actor *p);
   virtual bool Draw(const Actor *p);
   virtual spriteframe_t *GetFrame();
+  virtual int  Marshal(LArchive &a);
 };
 
 
@@ -269,6 +277,7 @@ public:
   virtual bool Update(int nowtic);
   virtual void Project(Actor *p);
   virtual bool Draw(const Actor *p);
+  virtual int  Marshal(LArchive &a);
 };
 
 

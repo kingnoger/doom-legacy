@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.11  2003/12/18 11:57:31  smite-meister
+// fixes / new bugs revealed
+//
 // Revision 1.10  2003/11/30 00:09:47  smite-meister
 // bugfixes
 //
@@ -131,9 +134,8 @@ public:
 
   int Serialize(class LArchive &a);
   int Unserialize(LArchive &a);
-  // resets the player (when starting a new level, for example)
-  void ExitLevel(int nextmap, int ep, bool force = false);
-  void Reset(bool resetpawn, bool resetfrags);
+  void ExitLevel(int nextmap, int ep);
+  void Reset(bool resetpawn, bool resetfrags);  // resets the player (when starting a new level, for example)
 
   void SetMessage(const char *msg, bool ultmsg = true);
 

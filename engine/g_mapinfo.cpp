@@ -22,6 +22,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.9  2003/12/18 11:57:31  smite-meister
+// fixes / new bugs revealed
+//
 // Revision 1.8  2003/12/09 01:02:00  smite-meister
 // Hexen mapchange works, keycodes fixed
 //
@@ -171,7 +174,7 @@ MapInfo::~MapInfo()
 // ticks the map forward, 
 void MapInfo::Ticker(bool hub)
 {
-  if (state == MAP_RUNNING || state == MAP_FINISHED)
+  if (me && state != MAP_INSTASIS)
     {
       me->Ticker();
 
@@ -179,8 +182,8 @@ void MapInfo::Ticker(bool hub)
 	{
 	  // check if it's time to stop
 	  bool players_remaining = false;
-	  int i, n = me->players.size();
-	  for (i=0; i<n; i++)
+	  int n = me->players.size();
+	  for (int i=0; i<n; i++)
 	    if (me->players[i]->playerstate != PST_DONE &&
 		me->players[i]->playerstate != PST_SPECTATOR)
 	      players_remaining = true;
@@ -188,8 +191,6 @@ void MapInfo::Ticker(bool hub)
 	  if (!players_remaining)
 	    {
 	      // TODO spectators have no destinations set, they should perhaps follow the last exiting player...
-	      KickPlayers(0, 0, false);
-
 	      if (hub)
 		HubSave();
 	      else
@@ -201,10 +202,9 @@ void MapInfo::Ticker(bool hub)
 
 
 // if this returns true, "me" must be valid
-bool MapInfo::Activate()
+bool MapInfo::Activate(PlayerInfo *p)
 {
   const char *temp;
-
   CONS_Printf("Activating map %d\n", mapnumber);
 
   switch (state)
@@ -228,7 +228,13 @@ bool MapInfo::Activate()
       me = new Map(this);
       if (me->Setup(gametic))
 	state = MAP_RUNNING;
-      break;
+      else
+	{
+	  delete me;
+	  me = NULL;
+	  I_Error("Error during map setup.\n");
+	  return false;
+	}
 
     case MAP_RUNNING:
     case MAP_FINISHED:
@@ -239,32 +245,26 @@ bool MapInfo::Activate()
       break;
 
     case MAP_SAVED:
-      return HubLoad();
-
+      if (!HubLoad())
+	return false;
     }
+
+  if (p)
+    me->AddPlayer(p);
   return true;
 }
 
 
-// throws out all the players, possibly resetting them also
-int MapInfo::KickPlayers(int next, int ep, bool reset)
+// throws out all the players from the map
+int MapInfo::EvictPlayers(int next, int ep)
 {
-  if (next == 0)
-    next = nextlevel; // zero means "normal exit"
+  if (!me)
+    return 0; // not active, no players
 
-  if (next == 100)
-    next = secretlevel; // 100 means "secret exit"
-
-  // kick out the players
-  int i, n = me->players.size();
-  for (i=0; i<n; i++)
-    {
-      me->players[i]->ExitLevel(next, ep, reset);
-      me->players[i]->mp = NULL;
-      if (reset)
-	me->players[i]->Reset(true, true);
-    }
-  me->players.clear();
+  // kick out the players (order matters, as they are removed from the vector!)
+  int n = me->players.size();
+  for (int i = n-1; i >= 0; i--)
+    me->players[i]->ExitLevel(next, ep);
 
   return n;
 }
@@ -273,8 +273,6 @@ int MapInfo::KickPlayers(int next, int ep, bool reset)
 // shuts the map down
 void MapInfo::Close()
 {
-  state = MAP_UNLOADED;
-
   // delete the save file
   if (!savename.empty())
     {
@@ -284,9 +282,11 @@ void MapInfo::Close()
 
   if (me)
     {
+      EvictPlayers(nextlevel, 0); // TODO where really? this concerns only specators...
       delete me; // and then the map goes
       me = NULL;
     }
+  state = MAP_UNLOADED;
 }
 
 
@@ -296,6 +296,7 @@ bool MapInfo::HubSave()
   if (!me)
     return false;
 
+  EvictPlayers(nextlevel, 0);
   CONS_Printf("Making a hubsave...");
 
   char fname[50];
@@ -330,7 +331,6 @@ bool MapInfo::HubLoad()
   CONS_Printf("Loading a hubsave...");
 
   byte *buffer;
-
   int length = FIL_ReadFile(savename.c_str(), &buffer);
   if (!length)
     {

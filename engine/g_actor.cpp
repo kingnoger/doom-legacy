@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.24  2003/12/18 11:57:31  smite-meister
+// fixes / new bugs revealed
+//
 // Revision 1.23  2003/12/03 10:49:49  smite-meister
 // Save/load bugfix, text strings updated
 //
@@ -1123,7 +1126,7 @@ bool DActor::SetState(statenum_t ns, bool call)
   do {
     if (ns == S_NULL)
       {
-	state = &states[S_NULL];
+	state = &states[S_NULL]; // was state = NULL;
 	Remove();
 	ret = false;
 	break;                 // killough 4/9/98
@@ -1142,7 +1145,8 @@ bool DActor::SetState(statenum_t ns, bool call)
     ns = state->nextstate;
   } while (!tics && !seenstate[ns]);   // killough 4/9/98
 
-  pres->SetFrame(state); // set the sprite frame (if pres is not a sprite, do nothing)
+  if (ret)
+    pres->SetFrame(state); // set the sprite frame (if pres is not a sprite, do nothing)
 
   if (ret && !tics)  // killough 4/9/98: detect state cycles
     CONS_Printf("Warning: State Cycle Detected");

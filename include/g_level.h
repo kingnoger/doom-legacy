@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/12/18 11:57:31  smite-meister
+// fixes / new bugs revealed
+//
 // Revision 1.10  2003/12/06 23:57:47  smite-meister
 // save-related bugfixes
 //
@@ -93,7 +96,7 @@ public:
   MapCluster(int n);
 
   void Ticker();
-  void Finish(int nextmap, int ep);
+  void Finish(); // shuts the cluster down, kicks out all players
 
   int Serialize(class LArchive &a);
   int Unserialize(LArchive &a);

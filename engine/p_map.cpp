@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2003/12/18 11:57:31  smite-meister
+// fixes / new bugs revealed
+//
 // Revision 1.17  2003/12/13 23:51:03  smite-meister
 // Hexen update
 //
@@ -1727,6 +1730,7 @@ static bool PTR_UseTraverse(intercept_t *in)
 {
   tmthing = NULL; // FIXME why? affects P_LineOpening
   line_t *line = in->d.line;
+  CONS_Printf("Line: s = %d, tag = %d\n", line->special, line->tag);
   if (!line->special)
     {
       P_LineOpening(line);

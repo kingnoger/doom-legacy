@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.4  2003/12/18 11:57:31  smite-meister
+// fixes / new bugs revealed
+//
 // Revision 1.3  2003/12/06 23:57:47  smite-meister
 // save-related bugfixes
 //
@@ -89,8 +92,8 @@ enum mapstate_e
   MAP_UNLOADED = 0, // not loaded, "me" should be NULL
   MAP_RUNNING,      // currently running, "me" is valid
   MAP_INSTASIS,     // presently halted, but "me" is still valid
-  MAP_FINISHED,     // (at least some) players have finished the map, but it is still running
-  MAP_SAVED         // "me" is not valid, instead the map is saved on disk
+  MAP_FINISHED,     // (at least some) players have finished the map, but it is still running, "me" is valid
+  MAP_SAVED         // "me" should be NULL, the map is saved on disk
 };
 
 
@@ -159,8 +162,8 @@ public:
   ~MapInfo();
 
   void Ticker(bool hub);
-  bool Activate();
-  int  KickPlayers(int n, int ep, bool force = false);
+  bool Activate(class PlayerInfo *p);
+  int  EvictPlayers(int n, int ep);
   void Close();
   bool HubSave();
   bool HubLoad();

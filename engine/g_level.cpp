@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.10  2003/12/18 11:57:31  smite-meister
+// fixes / new bugs revealed
+//
 // Revision 1.9  2003/12/09 01:02:00  smite-meister
 // Hexen mapchange works, keycodes fixed
 //
@@ -96,15 +99,12 @@ void MapCluster::Ticker()
 
 
 // called before moving on to a new cluster
-void MapCluster::Finish(int nextmap, int ep)
+void MapCluster::Finish()
 {
   CONS_Printf("Cluster %d finished!\n", number);
-  int i, n = maps.size();
-  for (i=0; i<n; i++)
-    {
-      maps[i]->KickPlayers(nextmap, ep, true);
-      maps[i]->Close();
-    }
+  int n = maps.size();
+  for (int i=0; i<n; i++)
+    maps[i]->Close();
 
   Z_FreeTags(PU_LEVEL, PU_PURGELEVEL-1); // destroys pawns if they are not Detached
 }

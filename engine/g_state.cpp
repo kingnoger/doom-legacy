@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.24  2003/12/18 11:57:31  smite-meister
+// fixes / new bugs revealed
+//
 // Revision 1.23  2003/12/09 01:02:00  smite-meister
 // Hexen mapchange works, keycodes fixed
 //
@@ -151,7 +154,6 @@ GameInfo::GameInfo()
   skill = sk_medium;
   maxplayers = 32;
   maxteams = 4;
-  //teams.resize(maxteams); // idiot!
   currentcluster = NULL;
   currentmap = NULL;
 };
@@ -508,8 +510,7 @@ void GameInfo::Ticker()
 	  if (p->playerstate == PST_REMOVE)
 	    {
 	      // the player is removed from the game (invalidates "old t")
-	      p->ExitLevel(0, 0, false);
-	      p->mp->RemovePlayer(p);
+	      p->ExitLevel(0, 0);
 	      RemovePlayer(p->number);
 	    }
 	}
@@ -529,13 +530,21 @@ void GameInfo::Ticker()
 	      
 	      // assign the player to a map
 	      m = FindMapInfo(p->requestmap);
-	      if (m == NULL)
+	      if (!m)
 		m = *currentcluster->maps.begin();
 
 	      if (currentcluster->number != m->cluster)
 		{
-		  // cluster change, everyone follows p!
-		  currentcluster->Finish(p->requestmap, p->entrypoint);
+		  // cluster change, _everyone_ follows p! (even if they already have destinations set!)
+		  // TODO this is a bit convoluted, but should work.
+		  for (player_iter_t s = Players.begin(); s != Players.end(); s++)
+		    {
+		      PlayerInfo *r = (*s).second;
+		      r->requestmap = p->requestmap;
+		      r->entrypoint = p->entrypoint;
+		      r->Reset(true, true); // everything goes.
+		    }
+		  currentcluster->Finish();
 		  currentcluster = FindCluster(m->cluster);
 
 		  //action = ga_intermission;
@@ -543,13 +552,11 @@ void GameInfo::Ticker()
 		}
 
 	      CONS_Printf("activating %d...", m->mapnumber);
+	      p->Reset(!currentcluster->keepstuff, true);
 
 	      // normal individual mapchange
-	      if (!m->Activate())
+	      if (!m->Activate(p))
 		I_Error("Darn!\n");
-
-	      p->Reset(!currentcluster->keepstuff, true);
-	      m->me->AddPlayer(p);
 	    }
 	}
     }
@@ -626,11 +633,9 @@ void GameInfo::Ticker()
 // starts a new local game
 bool GameInfo::DeferredNewGame(skill_t sk, bool splitscreen)
 {
-  CONS_Printf("Deferred:Starting a new game\n");
+  CONS_Printf("Deferred: Starting a new game\n");
   if (clustermap.empty())
     return false;
-
-  CONS_Printf("Deferred: really\n");
 
   // read these lumps _after_ MAPINFO but not separately for each map
   Read_SNDINFO(fc.FindNumForName("SNDINFO"));
@@ -675,16 +680,11 @@ void P_ACSInitNewGame();
 // starts or restarts the game.
 bool GameInfo::StartGame()
 {
-  CONS_Printf("Starting a new game, any time now\n");
-
   if (clustermap.empty() || mapinfo.empty())
     return false;
 
-  CONS_Printf("Starting a new game, %d clusters\n", clustermap.size());
-
   cluster_iter_t t = clustermap.begin();
   currentcluster = (*t).second; 
-  //currentmap = *currentcluster->maps.begin();
 
   automap.Close();  // TODO client-only stuff...
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2003/12/18 11:57:31  smite-meister
+// fixes / new bugs revealed
+//
 // Revision 1.11  2003/06/29 17:33:59  smite-meister
 // VFile system, PAK support, Hexen bugfixes
 //
@@ -150,9 +153,13 @@ spritepres_t::spritepres_t(const char *name, const mobjinfo_t *inf, int col)
 {
   color = col;
   animseq = Idle;
-  spr = sprites.Get(name);
+  spr = sprites.Get(name); // cache the sprite
   info = inf;
-  SetFrame(&states[info->spawnstate]); // corresponds to Idle animation
+
+  flags = 0;
+  lastupdate = -1;
+  state = &states[S_NULL]; // SetFrame or SetAnim fixes this
+  //SetFrame(&states[info->spawnstate]); // corresponds to Idle animation
 }
 
 
@@ -164,9 +171,11 @@ spritepres_t::~spritepres_t()
 
 void spritepres_t::SetFrame(const state_t *st)
 {
+  // FIXME for now the name of SPR_NONE is "NONE", fix it when we have the default sprite
+
   // some sprites change name during animation (!!!)
   char *name = sprnames[st->sprite]; 
-  // FIXME for now the name of SPR_NONE is "NONE", fix it when we have the default sprite
+
   if (spr->iname != *reinterpret_cast<int *>(name))
     {
       spr->Release();
@@ -272,7 +281,7 @@ spriteframe_t *spritepres_t::GetFrame()
 //
 // ==========================================================================
 
-spritecache_t sprites(PU_STATIC); // TODO: make a cool new PU_tag for sprites/models
+spritecache_t sprites(PU_SPRITE);
 
 
 // used when building a sprite from lumps

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/12/18 11:57:31  smite-meister
+// fixes / new bugs revealed
+//
 // Revision 1.6  2003/12/13 23:51:03  smite-meister
 // Hexen update
 //
@@ -428,6 +431,7 @@ phasedlight_t::phasedlight_t(sector_t *s, int b, int ind)
 
   base = b & 255;
   s->lightlevel = base + PhaseTable[index];
+  CONS_Printf("new phasedlight\n");
 }
 
 
@@ -436,6 +440,7 @@ phasedlight_t::phasedlight_t(sector_t *s, int b, int ind)
 //
 void Map::SpawnPhasedLightSequence(sector_t *sector, int indexStep)
 {
+  CONS_Printf("phasedlight sequence...\n");
   int i;
 
   sector_t *sec = sector;
@@ -454,6 +459,8 @@ void Map::SpawnPhasedLightSequence(sector_t *sector, int indexStep)
 	  if (!tempSec)
 	    continue;
 
+	  CONS_Printf("--spec = %d\n", tempSec->special);
+
 	  if (tempSec->special == seqSpecial)
 	    {
 	      if (seqSpecial == SS_LightSequence_1)
@@ -463,15 +470,15 @@ void Map::SpawnPhasedLightSequence(sector_t *sector, int indexStep)
 
 	      nextSec = tempSec;
 	      count++;
+	      CONS_Printf("continues...%d\n", count);
 	    }
 	}
       sec = nextSec;
     } while(sec);
   
   sec = sector;
-  count *= indexStep;
   fixed_t index = 0;
-  fixed_t indexDelta = FixedDiv(64*FRACUNIT, count*FRACUNIT);
+  fixed_t indexDelta = FixedDiv(64*FRACUNIT, count * indexStep * FRACUNIT);
   int base = sector->lightlevel;
   do
     {

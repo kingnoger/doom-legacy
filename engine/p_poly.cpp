@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/12/18 11:57:31  smite-meister
+// fixes / new bugs revealed
+//
 // Revision 1.10  2003/11/12 11:07:23  smite-meister
 // Serialization done. Map progression.
 //
@@ -1154,7 +1157,7 @@ void Map::SpawnPolyobj(int index, int tag, bool crush)
 	  PolySegCount = 1;
 	  PolyStartX = segs[i].v1->x;
 	  PolyStartY = segs[i].v1->y;
-      CONS_Printf(" xxx seg(%d) v1 = %d, line(%d) v1 = %d\n", i, segs[i].v1 - vertexes, segs[i].linedef - lines, segs[i].linedef->v1 - vertexes);
+	  //CONS_Printf(" xxx seg(%d) v1 = %d, line(%d) v1 = %d\n", i, segs[i].v1 - vertexes, segs[i].linedef - lines, segs[i].linedef->v1 - vertexes);
 	  IterFindPolySegs(segs[i].v2->x, segs[i].v2->y, NULL);
 
 	  polyobjs[index].numsegs = PolySegCount;
@@ -1164,7 +1167,7 @@ void Map::SpawnPolyobj(int index, int tag, bool crush)
 	  polyobjs[index].crush = crush;
 	  polyobjs[index].tag = tag;
 	  polyobjs[index].seqType = segs[i].linedef->args[2];
-	  CONS_Printf("--- %d\n", PolySegCount);
+	  //CONS_Printf("--- %d\n", PolySegCount);
 	  /*
 	    // not necessary
 	  if (polyobjs[index].seqType >= SEQTYPE_NUMSEQ)
@@ -1276,8 +1279,8 @@ void Map::TranslateToStartSpot(int tag, int originX, int originY)
   po->prevPts = (vertex_t *)Z_Malloc(po->numsegs*sizeof(vertex_t), PU_LEVEL, 0);
   int deltaX = originX-po->startSpot.x;
   int deltaY = originY-po->startSpot.y;
-  CONS_Printf("origin x,y = %d,%d \n", originX >> FRACBITS, originY >> FRACBITS);
-  CONS_Printf("delta x,y = %d,%d \n", deltaX >> FRACBITS, deltaY >> FRACBITS);
+  //CONS_Printf("origin x,y = %d,%d \n", originX >> FRACBITS, originY >> FRACBITS);
+  //CONS_Printf("delta x,y = %d,%d \n", deltaX >> FRACBITS, deltaY >> FRACBITS);
   seg_t **tempSeg = po->segs;
   seg_t **veryTempSeg;
   vertex_t *tempPt = po->originalPts;
@@ -1306,8 +1309,8 @@ void Map::TranslateToStartSpot(int tag, int originX, int originY)
 	  (*tempSeg)->v1->x -= deltaX;
 	  (*tempSeg)->v1->y -= deltaY;
 	}
-      CONS_Printf("tempseg x = %d, ", (*tempSeg)->v1->x>>FRACBITS);
-      CONS_Printf("tempseg y = %d\n", (*tempSeg)->v1->y>>FRACBITS);
+      //CONS_Printf("tempseg x = %d, ", (*tempSeg)->v1->x>>FRACBITS);
+      //CONS_Printf("tempseg y = %d\n", (*tempSeg)->v1->y>>FRACBITS);
       avg.x += (*tempSeg)->v1->x>>FRACBITS;
       avg.y += (*tempSeg)->v1->y>>FRACBITS;
       // the original Pts are based off the startSpot Pt, and are
@@ -1317,7 +1320,7 @@ void Map::TranslateToStartSpot(int tag, int originX, int originY)
     }
   avg.x /= po->numsegs;
   avg.y /= po->numsegs;
-  CONS_Printf("avg x,y = %d,%d\n", avg.x, avg.y);
+  //CONS_Printf("avg x,y = %d,%d\n", avg.x, avg.y);
   subsector_t *sub = R_PointInSubsector(avg.x<<FRACBITS, avg.y<<FRACBITS);
 
   // FIXME errors in polyobj spawning
@@ -1357,10 +1360,10 @@ void Map::InitPolyobjs()
 	  polyobjs[index].startSpot.x = mt->x << FRACBITS;
 	  polyobjs[index].startSpot.y = mt->y << FRACBITS;
 	  SpawnPolyobj(index, mt->angle, (mt->type == PO_SPAWNCRUSH_TYPE));
-	  CONS_Printf("Polyobj %d: tag = %d\n", index, mt->angle);
+	  //CONS_Printf("Polyobj %d: tag = %d\n", index, mt->angle);
 	  index++;
 	}
-      CONS_Printf(" xyz = (%d %d %d), angle = %d, tid = %d\n", mt->x, mt->y, mt->z, mt->angle, mt->tid);
+      //CONS_Printf(" xyz = (%d %d %d), angle = %d, tid = %d\n", mt->x, mt->y, mt->z, mt->angle, mt->tid);
     }
 
   for (i=0; i<n; i++)

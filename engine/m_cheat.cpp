@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2003/12/18 11:57:31  smite-meister
+// fixes / new bugs revealed
+//
 // Revision 1.14  2003/12/14 00:20:02  smite-meister
 // quick bugfix
 //
@@ -249,6 +252,17 @@ void Command_CheatGod_f()
     }
   else
     CONS_Printf ("%s\n", STSTR_DQDOFF);
+}
+
+void Command_Kill_f()
+{
+  extern bool server;
+  // TODO add usage: kill playername, kill playernum, kill me, kill monsters
+  if (server && consoleplayer)
+    {
+      int n = consoleplayer->mp->Massacre();
+      CONS_Printf("%d monsters killed.\n", n);
+    }
 }
 
 void Command_CheatGimme_f()

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/12/18 11:57:31  smite-meister
+// fixes / new bugs revealed
+//
 // Revision 1.4  2003/06/20 20:56:08  smite-meister
 // Presentation system tweaked
 //
@@ -49,7 +52,7 @@
 
 // TODO malloc->Z_Malloc
 
-modelcache_t models(PU_STATIC);
+modelcache_t models(PU_MODEL);
 
 
 const double pi = 3.1415926536; // M_PI;

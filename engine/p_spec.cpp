@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2003/12/18 11:57:31  smite-meister
+// fixes / new bugs revealed
+//
 // Revision 1.19  2003/12/13 23:51:03  smite-meister
 // Hexen update
 //
@@ -1117,7 +1120,7 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       tag = line->tag;
     }
   
-  //CONS_Printf("ExeSpecial (%d), tag %d (%d)\n", special, line->tag, args[0]);
+  CONS_Printf("ExeSpecial (%d), tag %d (%d)\n", special, line->tag, args[0]);
   switch (special)
     {
     case 0: // NOP
@@ -1422,12 +1425,9 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
     case 137: // Thing_SpawnNoFog
       success = EV_ThingSpawn(args, 0);
       break;
-      /*
     case 138: // Floor_Waggle
-      success = EV_StartFloorWaggle(args[0], args[1],
-					  args[2], args[3], args[4]);
+      success = EV_DoFloorWaggle(tag, args[1] << 13, angle_t(args[2] << 20), angle_t(args[3] << 26), args[4]*35);
       break;
-      */
     case 140: // Sector_SoundChange
       success = EV_SectorSoundChange(args[0], args[1]);
       break;
@@ -1622,13 +1622,12 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
   const float XScrollDirs[8][2] = {{0,1}, {1,0}, {0,-1}, {-1,0}, {-d,d}, {d,d}, {d,-d}, {-d,-d}};
 
   int temp;
-
+  CONS_Printf("SS: %d =>", sp);
   if (hexen_format)
     {
       // Boom damage (and secret) bits cannot be interpreted 'cos they are used otherwise
 
       temp = sp & 0xFF; // eight lowest bits
-      sp &= ~0xFF; // zero it
 
       if (temp >= 40 && temp <= 51)
 	{
@@ -1660,11 +1659,15 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
 	  SpawnPhasedLightSequence(sec, 1);
 	  break;
 
-	  //TODO hexen stairs etc.
+	case 3:
+	case 4:
+	  // Phased light sequencing. Leave them be, they fit into the unused lightmask area.
 	case 26: // Stairs_Special1
 	case 27: // Stairs_Special2
-	  // Used in (P_floor):ProcessStairSector
-	  break;
+	  // Same with stair sequences.
+	  sec->special = sp;
+	  CONS_Printf("%d\n", sp);
+	  return sp;
 
 	case 198: // Lightning Special
 	case 199: // Lightning Flash special
@@ -1675,7 +1678,9 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
 	  break;
 	}
 
+      sp &= ~0xFF; // zero eight lowest bits
       sec->special = sp;
+      CONS_Printf("%d\n", sp);
       return sp;
     }
 
@@ -1869,7 +1874,6 @@ void Map::SpawnLineSpecials()
   RemoveAllActiveCeilings();
   RemoveAllActivePlats();
 
-  InitTagLists();   //Create xref tables for tags
   SpawnScrollers(); //Add generalized scrollers
   SpawnFriction();  //New friction model using linedefs
   SpawnPushers();   //New pusher model using linedefs
@@ -1877,9 +1881,16 @@ void Map::SpawnLineSpecials()
   //  Init line EFFECTs
   for (i = 0;i < numlines; i++)
     {
-      switch(lines[i].special)
+      switch (lines[i].special)
         {
           int s, sec;
+	  // Hexen specials
+	case 121: // Line_SetIdentification
+	  lines[i].tag = lines[i].args[0];
+	  lines[i].special = 0;
+	  break;
+
+
 
           // support for drawn heights coming from different sector
 	case 242:
@@ -2001,6 +2012,8 @@ void Map::SpawnLineSpecials()
             }
         }
     }
+
+  InitTagLists();   //Create xref tables for tags
 }
 
 
@@ -2244,11 +2257,6 @@ void Map::SpawnScrollers()
 	  break;
 	case 103: // Scroll_Texture_Down
           AddThinker(new scroll_t(scroll_t::sc_side, -l->args[0], 0, NULL, l->sidenum[0], false));
-	  break;
-
-	case 121: // Line_SetIdentification
-	  l->tag = l->args[0];
-	  l->special = 0;
 	  break;
 
 	default:

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.29  2003/12/18 11:57:31  smite-meister
+// fixes / new bugs revealed
+//
 // Revision 1.28  2003/12/03 10:49:50  smite-meister
 // Save/load bugfix, text strings updated
 //
@@ -796,7 +799,7 @@ void Map::LoadLineDefs(int lump)
   else
     numlines = fc.LumpLength(lump)/sizeof(doom_maplinedef_t);
 
-  CONS_Printf("lines: %d, ", numlines);
+  CONS_Printf("lines: %d\n", numlines);
 
   lines = (line_t *)Z_Malloc(numlines*sizeof(line_t), PU_LEVEL, 0);
   memset(lines, 0, numlines*sizeof(line_t));
@@ -813,7 +816,7 @@ void Map::LoadLineDefs(int lump)
 	{
 	  ld->flags = SHORT(hld->flags);
 	  ld->special = hld->special;
-	  ld->tag = hld->args[0]; // 16-bit tags
+	  //ld->tag = hld->args[0]; // 16-bit tags
 	  
 	  for (j=0; j<5; j++)
 	    ld->args[j] = hld->args[j];

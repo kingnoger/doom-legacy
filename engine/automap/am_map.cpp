@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/12/18 11:57:31  smite-meister
+// fixes / new bugs revealed
+//
 // Revision 1.9  2003/11/12 11:07:25  smite-meister
 // Serialization done. Map progression.
 //
@@ -1490,7 +1493,7 @@ void AutoMap::Drawer()
   if (!active)
     return;
 
-  CONS_Printf("AM::Drawer\n");
+  //CONS_Printf("AM::Drawer\n");
   // Map *mp and PlayerPawn *mpawn must now be set!
 
   clearFB(BACKGROUND);
@@ -1513,6 +1516,6 @@ void AutoMap::Drawer()
     V_DrawString(20, y - V_StringHeight(mapname), V_NOSCALESTART, mapname);
   }
 
-  CONS_Printf("AM::Drawer n\n");
+  //CONS_Printf("AM::Drawer n\n");
   //V_MarkRect(f_x, f_y, f_w, f_h);
 }

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/12/18 11:57:31  smite-meister
+// fixes / new bugs revealed
+//
 // Revision 1.10  2003/12/13 23:51:03  smite-meister
 // Hexen update
 //
@@ -778,4 +781,87 @@ int Map::EV_DoElevator(int tag, int type, fixed_t speed, fixed_t height_f, fixed
     }
 
   return rtn;
+}
+
+
+
+//==========================================================================
+//  FloorWaggle (Hexen)
+//==========================================================================
+
+IMPLEMENT_CLASS(floorwaggle_t, "Floorwaggle");
+floorwaggle_t::floorwaggle_t() {}
+
+floorwaggle_t::floorwaggle_t(sector_t *sec, fixed_t a, angle_t f, angle_t ph, int w)
+  : sectoreffect_t(sec)
+{
+  sec->floordata = this;
+
+  baseheight = sector->floorheight;
+  phase = ph;
+  freq = f;
+  amp = 0;
+  maxamp = a;
+  ampdelta = a / (35 + ((3*35) * (a >> 13))/255);
+  wait = w ? w : -1;
+  state = Expand;
+}
+
+
+void floorwaggle_t::Think()
+{
+  switch (state)
+    {
+    case Expand:
+      if ((amp += ampdelta) >= maxamp)
+	{
+	  amp = maxamp;
+	  state = Stable;
+	}
+      break;
+
+    case Stable:
+      if (wait != -1)
+	{
+	  if (!--wait)
+	    state = Reduce;
+	}
+      break;
+
+    case Reduce:
+      if ((amp -= ampdelta) <= 0)
+	{
+	  sector->floorheight = baseheight;
+	  mp->CheckSector(sector, true);
+	  sector->floordata = NULL;
+	  mp->TagFinished(sector->tag);
+	  mp->RemoveThinker(this);
+	  return;
+	}
+      break;
+    }
+  // floatbob == 8*sin(x), 2*pi divided in 64 units
+  phase += freq;
+  sector->floorheight = baseheight + FixedMul(finesine[phase >> ANGLETOFINESHIFT], amp);
+  mp->CheckSector(sector, true);
+}
+
+  
+int Map::EV_DoFloorWaggle(int tag, fixed_t amp, angle_t freq, angle_t offset, int wait)
+{
+  int ret = 0;
+  int secnum = -1;
+
+  while ((secnum = FindSectorFromTag(tag, secnum)) >= 0)
+    {
+      sector_t *sec = &sectors[secnum];
+      if (sec->floordata)
+	continue;
+
+      floorwaggle_t *waggle = new floorwaggle_t(sec, amp, freq, offset, wait);
+      AddThinker(waggle);
+      ret++;
+    }
+
+  return ret;
 }

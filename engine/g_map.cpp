@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.27  2003/12/18 11:57:31  smite-meister
+// fixes / new bugs revealed
+//
 // Revision 1.26  2003/12/06 23:57:47  smite-meister
 // save-related bugfixes
 //
@@ -89,6 +92,7 @@
 
 #include "p_spec.h"
 #include "command.h"
+#include "console.h"
 
 #include "r_main.h"
 #include "hu_stuff.h"
@@ -742,6 +746,7 @@ int Map::RespawnPlayers()
   PlayerInfo *p;
 
   // TODO make me better sometime
+  // FIXME if the requested entrypoint does not exist, the player is never spawned!
   //deque<PlayerInfo *>::iterator i;
 
   bool ok;
@@ -1182,7 +1187,8 @@ void Map::RespawnWeapons()
 }
 
 
-// called when someone activates an exit
+// Called when a Map exit method is activated, such as:
+// exit teleporter, endgame teleporter, E1M8 sectordamage, bossdeath, timelimit
 void Map::ExitMap(Actor *activator, int next, int ep)
 {
   CONS_Printf("ExitMap => %d, %d\n", next, ep);
@@ -1198,32 +1204,27 @@ void Map::ExitMap(Actor *activator, int next, int ep)
   if (next == 100)
     next = info->secretlevel; // 100 means "secret exit"
 
-  // HACK FIXME
+  // HACK...
   PlayerInfo *quitter = (activator && activator->Type() == Thinker::tt_ppawn) ?
     ((PlayerPawn *)activator)->player : NULL;
 
   int mode = cv_exitmode.value;
   if (!quitter)
-    mode = 1; // timed exit etc., everyone leaves at once.
+    mode = 1; // timed exit / bossdeath, everyone leaves at once.
 
   switch (mode)
     {
     case 1: // first: all players exit the map when someone activates an exit
       {
 	int n = players.size();
-	for (int i=0; i<n; i++)
-	  {
-	    players[i]->ExitLevel(next, ep); // save the pawn if needed
-	    players[i]->mp = NULL;
-	  }
-	players.clear();
+	for (int i = n-1; i >= 0; i--)
+	  players[i]->ExitLevel(next, ep); // save the pawn if needed
       }
       break;
 
     case 2: // ind: players may exit individually
       // the new maps are launched immediately, the old map keeps running until it is empty.
       quitter->ExitLevel(next, ep);
-      RemovePlayer(quitter);
       break;
 
     case 3: // last: all players need to reach the exit, others have to wait for the last one
@@ -1298,4 +1299,98 @@ Actor *Map::FindFromTIDmap(int tid, int *pos)
       }
 
   return (*i).second;
+}
+
+
+//==========================================================================
+//  Map-related commands
+//==========================================================================
+
+//  Warp to a new map.
+//  Called either from map <mapname> console command, or idclev cheat.
+void Command_Map_f ()
+{
+  if (COM_Argc()<2 || COM_Argc()>7)
+    {
+      //CONS_Printf ("map <mapname[.wad]> [-skill <1..5>] [-monsters <0/1>] [-noresetplayers]: warp to map\n");
+      CONS_Printf ("map n: warp to map number n, entrypoint 0\n");
+      return;
+    }
+
+  extern bool server;
+  if (!server)
+    {
+      CONS_Printf ("Only the server can change the map\n");
+      return;
+    }
+
+  /*
+  char buf[MAX_WADPATH+3];
+#define MAPNAME &buf[2]
+
+  strncpy(MAPNAME,COM_Argv(1),MAX_WADPATH);
+  if (FIL_CheckExtension(MAPNAME))
+    {
+      // here check if file exist !!!
+      if( !findfile(MAPNAME,NULL,false) )
+        {
+	  CONS_Printf("\2File %s' not found\n",MAPNAME);
+	  return;
+        }
+    }
+  else
+    {
+      // internal wad lump
+      if(fc.FindNumForName(MAPNAME)==-1)
+        {
+	  CONS_Printf("\2Internal game map '%s' not found\n"
+		      "(use .wad extension for external maps)\n",MAPNAME);
+	  return;
+        }
+    }
+
+  if((i=COM_CheckParm("-skill"))!=0)
+    buf[0]=atoi(COM_Argv(i+1))-1;
+  else
+    buf[0]=game.skill;
+
+  if((i=COM_CheckParm("-monsters"))!=0)
+    buf[1]=(atoi(COM_Argv(i+1))==0);
+  else
+    buf[1]=(game.nomonsters!=0);
+
+  // use only one bit
+  if(buf[1])
+    buf[1]=1;
+
+  if(COM_CheckParm("-noresetplayers"))
+    buf[1]|=2;
+  */
+
+  // FIXME AWFUL HACK since netcode is disabled, the map is changed right here
+  if (!consoleplayer)
+    return;
+
+  // TODO what if we are given a lumpname instead of a mapnum?
+  int mapnum = atoi(COM_Argv(1));
+
+  CONS_Printf("Warping to map %d...\n", mapnum);
+  extern bool precache;
+  if (demoplayback && !timingdemo)
+    precache = false;
+
+  if (consoleplayer->mp)
+    consoleplayer->mp->info->state = MAP_FINISHED;
+  consoleplayer->requestmap = mapnum;
+  consoleplayer->ExitLevel(mapnum, 0);
+
+  if (demoplayback && !timingdemo)
+    precache = true;
+  CON_ToggleOff();
+
+  // spawn the server if needed
+  // reset players if there is a new one
+  //if (SV_SpawnServer()) buf[1]&=~2;
+
+  //SendNetXCmd(XD_MAP,buf,2+strlen(MAPNAME)+1);
 }

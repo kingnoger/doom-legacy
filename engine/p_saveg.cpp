@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2003/12/18 11:57:31  smite-meister
+// fixes / new bugs revealed
+//
 // Revision 1.17  2003/12/13 23:51:03  smite-meister
 // Hexen update
 //
@@ -98,6 +101,7 @@
 
 #include "p_acs.h"
 #include "r_data.h"
+#include "r_sprite.h"
 #include "d_netcmd.h"
 #include "t_vari.h"
 #include "t_script.h"
@@ -112,6 +116,10 @@
 
 #include "am_map.h"
 #include "hu_stuff.h"
+
+// NOTE! The Map *mp is not saved for Thinkers in general, because it can be deduced
+// from the context. However, some thinkers are not always associated with a Map.
+// Hence they must save the Map reference as well.
 
 extern  consvar_t  cv_deathmatch;
 
@@ -229,6 +237,16 @@ int elevator_t::Marshal(LArchive &a)
   return 0;
 }
 
+int floorwaggle_t::Marshal(LArchive &a)
+{
+  sectoreffect_t::Marshal(a);
+  if (!a.IsStoring())
+    sector->floordata = this;
+
+  a << state << phase << freq << baseheight << amp << maxamp << ampdelta << wait;
+  return 0;
+}
+
 int plat_t::Marshal(LArchive &a)
 {
   sectoreffect_t::Marshal(a);
@@ -343,9 +361,78 @@ int polydoor_t::Marshal(LArchive &a)
   return 0;
 }
 
+int presentation_t::Serialize(presentation_t *p, LArchive &a)
+{
+  // much simpler than the Thinker serialization.
+  short stemp;
+  CONS_Printf("serializing a presentation\n");
+  if (p)
+    p->Marshal(a); // handles the type id as well.
+  else
+    a << (stemp = 0);
+  return 0;
+}
+
+presentation_t *presentation_t::Unserialize(LArchive &a)
+{
+  presentation_t *p;
+  short stemp;
+  a << stemp; // read the type id
+  CONS_Printf("unserializing a presentation, %d\n", stemp);
+  if (stemp == 0)
+    return NULL;
+  else if (stemp == 1)      
+    p = new spritepres_t(NULL, NULL, 0);
+  else
+    p = new modelpres_t(NULL);
+
+  p->Marshal(a);
+
+  return p;
+}
+
+int spritepres_t::Marshal(LArchive &a)
+{
+  short stemp;
+  int temp;
+  if (a.IsStoring())
+    {
+      a << (stemp = 1); // type id
+      a << (temp = (info - mobjinfo));
+      a << (temp = (state - states));
+    }
+  else
+    {
+      a << temp;
+      info = mobjinfo + temp;
+      a << temp;
+      SetFrame(&states[temp]);
+    }
+
+  a << color << animseq;
+  return 0;
+}
+
+int modelpres_t::Marshal(LArchive &a)
+{
+  short stemp;
+  if (a.IsStoring())
+    {
+      a << (stemp = 2); // type id
+      // TODO store the model name
+    }
+  else
+    {
+      // and restore it: mdl = models.Get("xxx");
+    }
+
+  a << color << animseq;
+  return 0;
+}
 
 int Actor::Marshal(LArchive &a)
 {
+  short stemp;
   a << x << y << z;
   a << angle << aiming;
   a << px << py << pz;
@@ -360,11 +447,8 @@ int Actor::Marshal(LArchive &a)
 
   a << reactiontime << floorclip; 
 
-  short stemp;
-
   if (a.IsStoring())
     {
-      // TODO save presentation!?
       if (mp)
 	stemp = short(spawnpoint - mp->mapthings);
       else
@@ -373,7 +457,9 @@ int Actor::Marshal(LArchive &a)
 
       Thinker::Serialize(owner, a);
       Thinker::Serialize(target, a);
-   }
+
+      presentation_t::Serialize(pres, a);
+    }
   else
     {
       a << stemp;
@@ -385,6 +471,8 @@ int Actor::Marshal(LArchive &a)
 
       owner  = (Actor *)Thinker::Unserialize(a);
       target = (Actor *)Thinker::Unserialize(a);
+
+      pres = presentation_t::Unserialize(a);
 
       if (mp)
 	{
@@ -400,7 +488,6 @@ int Actor::Marshal(LArchive &a)
 int DActor::Marshal(LArchive &a)
 { 
   // NOTE is it really worth the effort to do this delta-coding?
-  // TODO save presentation!
 
   enum dactor_diff_e
   {
@@ -631,6 +718,10 @@ int DActor::Marshal(LArchive &a)
 
       if (!(diff & MD_Z))
 	z = floorz;
+
+      // TODO simplified presentation loading for DActors for now (only sprites)
+      pres = new spritepres_t(NULL, info, 0);
+      pres->SetFrame(state);
     }
 
   return 0;
@@ -1526,8 +1617,7 @@ int PlayerInfo::Serialize(LArchive &a)
       a << m << n;
     }
 
-  // the pawn is serialized by the map it is in, not here. mp?
-
+  // the pawn is serialized by the map it is in, not here. See PlayerPawn::Marshal()
   return 0;
 }
 
@@ -1557,8 +1647,7 @@ int PlayerInfo::Unserialize(LArchive &a)
       Frags.insert(pair<int, int>(t1, t2));
     }
 
-  // the pawn is unserialized by the map it is in, not here
-
+  // the pawn is unserialized by the map it is in, not here. See PlayerPawn::Marshal()
   return 0;
 }
 
