@@ -22,6 +22,9 @@ $Id$
 <li>cache data in machine native byte order, so that it only needs to be
   changed once. patches for example.
 
+<li>cache graphics/sound only when needed, ie. when a thing is
+Spawned, cache it's sprite etc.
+
 <li>a real class Camera : public Actor that could include chasecams,
   fixed cameras, target-following cams, IR cams etc.
 
@@ -61,15 +64,17 @@ $Id$
 
 <li>a common "graphic presentation" parent class (for sprites, models etc.)
 
-<li>support for WAD2, WAD3, PAK, PK3(== zip) file formats
+<li>support for PAK, PK3(== zip) file formats
 
 <li>turn Console into a modern iostream-based class that can print
   strings etc. ( console &lt;&lt; "Hello world!" &lt;&lt; endl; )
 
 <li>finish the Serialization system
 
-<li>turn basic data types (fixed_t, angle_t) into classes with
-  overloaded operators. A 3D vector template class? vect&lt;float&gt; p;?
+<li>turn basic data types (mainly fixed_t) into classes with
+  overloaded operators.
+
+<li>A 3D vector template class? vect&lt;float&gt; p;?
 
 <li>Advanced fault-resistant network code (like quake2, Unreal...)
 </ul>
