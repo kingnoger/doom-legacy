@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.28  2004/03/28 15:16:12  smite-meister
-// Texture cache.
+// Revision 1.29  2004/04/25 16:26:48  smite-meister
+// Doxygen
 //
 // Revision 1.27  2004/01/05 11:48:08  smite-meister
 // 7 bugfixes
@@ -113,6 +113,7 @@
 
 #include "doomdef.h"
 #include "doomdata.h"
+#include "command.h"
 
 #include "g_game.h"
 #include "g_map.h"
@@ -133,7 +134,7 @@
 #include "s_sound.h"
 
 #include "m_random.h"
-#include "d_clisrv.h"
+#include "tables.h"
 
 
 #define VIEWHEIGHT  41
@@ -149,8 +150,8 @@ consvar_t cv_respawnmonsterstime = {"respawnmonsterstime","12",CV_NETVAR,CV_Unsi
 extern fixed_t FloatBobOffsets[64];
 
 
-IMPLEMENT_CLASS(Actor,"Actor");
-IMPLEMENT_CLASS(DActor,"DActor");
+IMPLEMENT_CLASS(Actor, Thinker);
+IMPLEMENT_CLASS(DActor, Actor);
 
 Actor::~Actor()
 {
@@ -490,7 +491,7 @@ void DActor::Think()
 void Actor::Think()
 {
   PlayerPawn *p = NULL;
-  if (Type() == Thinker::tt_ppawn)
+  if (IsOf(PlayerPawn::_type))
     p = (PlayerPawn *)this;
 
   // check possible sector water content, set a few eflags
@@ -570,7 +571,7 @@ void Actor::Think()
 
 // returns the value by which the x,y
 // movements are multiplied to add to player movement.
-const float normal_friction = 0.90625f; // 0xE800
+float normal_friction = 0.90625f; // 0xE800
 
 float Actor::GetMoveFactor()
 {

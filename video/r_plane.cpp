@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/04/25 16:26:51  smite-meister
+// Doxygen
+//
 // Revision 1.2  2004/03/28 15:16:15  smite-meister
 // Texture cache.
 //
@@ -936,7 +939,7 @@ void Rend::R_DrawSinglePlane(visplane_t* pl, bool handlesource)
   currentplane = pl;
 
   if (handlesource)
-    ds_source = (byte *)R_GetTexture(pl->picnum)->Generate(); // FIXME
+    ds_source = (byte *)tc[pl->picnum]->Generate(); // FIXME
 
   xoffs = pl->xoffs;
   yoffs = pl->yoffs;

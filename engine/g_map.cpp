@@ -5,8 +5,8 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
-// Revision 1.35  2004/03/28 15:16:12  smite-meister
-// Texture cache.
+// Revision 1.36  2004/04/25 16:26:48  smite-meister
+// Doxygen
 //
 // Revision 1.34  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
@@ -940,21 +940,17 @@ void Map::QueueBody(Actor *p)
 }
 
 
-// Kills all monsters. Except skulls.
+/// Kills all monsters. Except skulls.
 int Map::Massacre()
 {
-  Actor   *mo;
-  Thinker *th;
   int count = 0;
 
-  for (th = thinkercap.next; th != &thinkercap; th = th->next)
+  for (Thinker *th = thinkercap.next; th != &thinkercap; th = th->next)
     {
-      //if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-      if (th->Type() != Thinker::tt_dactor)
-	// Not an actor
-	continue;
+      if (!th->IsOf(DActor::_type))
+	continue; // Not a dactor
 	
-      mo = (Actor *)th;
+      Actor *mo = (Actor *)th;
       if ((mo->flags & MF_COUNTKILL) && (mo->health > 0))
 	{
 	  mo->flags2 &= ~(MF2_NONSHOOTABLE + MF2_INVULNERABLE);
@@ -1048,7 +1044,7 @@ void Map::BossDeath(const DActor *mo)
   // if all bosses are dead
   for (th = thinkercap.next ; th != &thinkercap ; th=th->next)
     {
-      if (th->Type() != Thinker::tt_dactor)
+      if (!th->IsOf(DActor::_type))
 	continue;
 
       a = (DActor *)th;
@@ -1255,7 +1251,7 @@ void Map::ExitMap(Actor *activator, int next, int ep)
   if (!cv_exitmode.value)
     return; // exit not allowed
 
-  info->state = MAP_FINISHED;
+  info->state = MapInfo::MAP_FINISHED;
 
   if (next == 0)
     next = info->nextlevel; // zero means "normal exit"
@@ -1264,7 +1260,7 @@ void Map::ExitMap(Actor *activator, int next, int ep)
     next = info->secretlevel; // 100 means "secret exit"
 
   // HACK...
-  PlayerInfo *quitter = (activator && activator->Type() == Thinker::tt_ppawn) ?
+  PlayerInfo *quitter = (activator && activator->IsOf(PlayerPawn::_type)) ?
     ((PlayerPawn *)activator)->player : NULL;
 
   int mode = cv_exitmode.value;
@@ -1424,7 +1420,7 @@ void Command_Map_f ()
     precache = false;
 
   if (consoleplayer->mp)
-    consoleplayer->mp->info->state = MAP_FINISHED;
+    consoleplayer->mp->info->state = MapInfo::MAP_FINISHED;
   consoleplayer->requestmap = mapnum;
   consoleplayer->entrypoint = ept;
   consoleplayer->ExitLevel(mapnum, ept);

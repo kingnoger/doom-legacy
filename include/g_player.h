@@ -17,8 +17,8 @@
 // GNU General Public License for more details.
 //
 // $Log$
-// Revision 1.12  2004/03/28 15:16:14  smite-meister
-// Texture cache.
+// Revision 1.13  2004/04/25 16:26:51  smite-meister
+// Doxygen
 //
 // Revision 1.11  2003/12/18 11:57:31  smite-meister
 // fixes / new bugs revealed
@@ -51,12 +51,6 @@
 // Revision 1.2  2003/01/18 20:17:41  smite-meister
 // HUD fixed, levelchange crash fixed.
 //
-//
-//
-// DESCRIPTION:
-//   PlayerInfo class definition. It describes one client-side player,
-//   either human or AI.
-//
 //-----------------------------------------------------------------------------
 
 
@@ -71,10 +65,12 @@
 
 using namespace std;
 
+/// \file
+/// \brief PlayerInfo class definition.
 
-//
-// Player states.
-//
+
+
+/// Player states.
 enum playerstate_t
 {
   PST_WAITFORMAP, // waiting to be assigned to a map respawn queue (by GameInfo)
@@ -87,50 +83,53 @@ enum playerstate_t
 };
 
 
+
+/// PlayerInfo describes one client-side player, either human or AI.
+/// It is created when a player joins the game, deleted when he leaves.
 class PlayerInfo
 {
   friend class GameInfo;
 public:
-  int    number;   // The player number.
-  int    team;     // index into game.teams vector
+  int    number;   ///< The player number.
+  int    team;     ///< index into game.teams vector
   string name;
 
   // Can be changed during the game, takes effect at next respawn.
-  int ptype; // what kind of pawn are we playing?
-  int color; // skin color to be copied to each pawn
-  int skin;  // skin to be copied to each pawn
+  int ptype; ///< what kind of pawn are we playing?
+  int color; ///< skin color to be copied to each pawn
+  int skin;  ///< skin to be copied to each pawn
 
   bool spectator;
   playerstate_t playerstate;
   ticcmd_t  cmd;
 
-  int requestmap; // the map which we wish to enter
-  int entrypoint; // which spawning point to use
+  int requestmap; ///< the map which we wish to enter
+  int entrypoint; ///< which spawning point to use
 
   // Frags, kills of other players. (type was USHORT)
-  map<int, int> Frags; // player number -> frags
-  int score; // game-type dependent scoring based on frags, updated in real time
+  map<int, int> Frags; ///< player number -> frags
+  int score; ///< game-type dependent scoring based on frags, updated in real time
 
   int kills, items, secrets, time;
 
-  // Hint messages.
+  /// Hint messages.
   const char *message;
 
   // added by Boris : preferred weapons order stuff
   char  favoriteweapon[NUMWEAPONS];
   bool  originalweaponswitch;
 
-  bool autoaim; // using autoaim?
+  bool autoaim; ///< using autoaim?
 
-  class Map        *mp;   // the map with which the player is currently associated
-  class PlayerPawn *pawn; // the thing that is being controlled by this player (marine, imp, whatever)
-  class Actor      *view; // the POV of the player. usually same as pawn, but can also be a chasecam etc...
+  class Map        *mp;   ///< the map with which the player is currently associated
+  class PlayerPawn *pawn; ///< the thing that is being controlled by this player (marine, imp, whatever)
+  class Actor      *view; ///< the POV of the player. usually same as pawn, but can also be a chasecam etc...
 
   // POV height and bobbing during movement.
-  fixed_t  viewz;           // absolute viewpoint z coordinate
-  fixed_t  viewheight;      // distance from feet to eyes
-  fixed_t  deltaviewheight; // bob/squat speed.
-  fixed_t  bob_amplitude;   // basically pawn speed squared, affects weapon movement
+  fixed_t  viewz;           ///< absolute viewpoint z coordinate
+  fixed_t  viewheight;      ///< distance from feet to eyes
+  fixed_t  deltaviewheight; ///< bob/squat speed.
+  fixed_t  bob_amplitude;   ///< basically pawn speed squared, affects weapon movement
 
 public:
 
@@ -149,7 +148,7 @@ public:
 };
 
 
-// Locally controlled players
+/// Locally controlled players
 extern  PlayerInfo *consoleplayer;
 extern  PlayerInfo *consoleplayer2;
 // Players whose view is rendered on screen

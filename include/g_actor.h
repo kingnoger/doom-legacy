@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2004/04/25 16:26:50  smite-meister
+// Doxygen
+//
 // Revision 1.19  2004/03/28 15:16:14  smite-meister
 // Texture cache.
 //
@@ -75,10 +78,6 @@
 // Revision 1.1.1.1  2002/11/16 14:18:22  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//   Actor class definition
-//
 //-----------------------------------------------------------------------------
 
 
@@ -100,206 +99,205 @@
 #define TELEFOGHEIGHT  (32*FRACUNIT)
 #define FOOTCLIPSIZE   (10*FRACUNIT)
 
-//
-// NOTES: Actor
-//
-// Actors are used to tell the refresh where to draw an image,
-// tell the world simulation when objects are contacted,
-// and tell the sound driver how to position a sound.
-//
-// The refresh uses the next and prev links to follow
-// lists of things in sectors as they are being drawn.
-// The sprite, frame, and angle elements determine which patch_t
-// is used to draw the sprite if it is visible.
-// The sprite and frame values are allmost allways set
-// from state_t structures.
-// The statescr.exe utility generates the states.h and states.c
-// files that contain the sprite/frame numbers from the
-// statescr.txt source file.
-// The xyz origin point represents a point at the bottom middle
-// of the sprite (between the feet of a biped).
-// This is the default origin position for patch_ts grabbed
-// with lumpy.exe.
-// A walking creature will have its z equal to the floor
-// it is standing on.
-//
-// The sound code uses the x,y, and subsector fields
-// to do stereo positioning of any sound effited by the Actor.
-//
-// The play simulation uses the blocklinks, x,y,z, radius, height
-// to determine when Actors are touching each other,
-// touching lines in the map, or hit by trace lines (gunshots,
-// lines of sight, etc).
-// The Actor->flags element has various bit flags
-// used by the simulation.
-//
-// Every Actor is linked into a single sector
-// based on its origin coordinates.
-// The subsector_t is found with R_PointInSubsector(x,y),
-// and the sector_t can be found with subsector->sector.
-// The sector links are only used by the rendering code,
-// the play simulation does not care about them at all.
-//
-// Any Actor that needs to be acted upon by something else
-// in the play world (block movement, be shot, etc) will also
-// need to be linked into the blockmap.
-// If the thing has the MF_NOBLOCK flag set, it will not use
-// the block links. It can still interact with other things,
-// but only as the instigator (missiles will run into other
-// things, but nothing can run into a missile).
-// Each block in the grid is 128*128 units, and knows about
-// every line_t that it contains a piece of, and every
-// interactable Actor that has its origin contained.
-//
-// A valid Actor is a Actor that has the proper subsector_t
-// filled in for its xy coordinates and is linked into the
-// sector from which the subsector was made, or has the
-// MF_NOSECTOR flag set (the subsector_t needs to be valid
-// even if MF_NOSECTOR is set), and is linked into a blockmap
-// block or has the MF_NOBLOCKMAP flag set.
-// Links should only be modified by the P_[Un]SetThingPosition()
-// functions.
-// Do not change the MF_NO? flags while a thing is valid.
-//
-// Any questions?
-//
+/// \file
+/// \brief Actor class definition
+///
+/// Actors are used to tell the refresh where to draw an image,
+/// tell the world simulation when objects are contacted,
+/// and tell the sound driver how to position a sound.
+///
+/// The refresh uses the next and prev links to follow
+/// lists of things in sectors as they are being drawn.
+/// The sprite, frame, and angle elements determine which patch_t
+/// is used to draw the sprite if it is visible.
+/// The sprite and frame values are allmost allways set
+/// from state_t structures.
+/// The statescr.exe utility generates the states.h and states.c
+/// files that contain the sprite/frame numbers from the
+/// statescr.txt source file.
+/// The xyz origin point represents a point at the bottom middle
+/// of the sprite (between the feet of a biped).
+/// This is the default origin position for patch_ts grabbed
+/// with lumpy.exe.
+/// A walking creature will have its z equal to the floor
+/// it is standing on.
+///
+/// The sound code uses the x,y, and subsector fields
+/// to do stereo positioning of any sound effited by the Actor.
+///
+/// The play simulation uses the blocklinks, x,y,z, radius, height
+/// to determine when Actors are touching each other,
+/// touching lines in the map, or hit by trace lines (gunshots,
+/// lines of sight, etc).
+/// The Actor->flags element has various bit flags
+/// used by the simulation.
+///
+/// Every Actor is linked into a single sector
+/// based on its origin coordinates.
+/// The subsector_t is found with R_PointInSubsector(x,y),
+/// and the sector_t can be found with subsector->sector.
+/// The sector links are only used by the rendering code,
+/// the play simulation does not care about them at all.
+///
+/// Any Actor that needs to be acted upon by something else
+/// in the play world (block movement, be shot, etc) will also
+/// need to be linked into the blockmap.
+/// If the thing has the MF_NOBLOCK flag set, it will not use
+/// the block links. It can still interact with other things,
+/// but only as the instigator (missiles will run into other
+/// things, but nothing can run into a missile).
+/// Each block in the grid is 128*128 units, and knows about
+/// every line_t that it contains a piece of, and every
+/// interactable Actor that has its origin contained.
+///
+/// A valid Actor is a Actor that has the proper subsector_t
+/// filled in for its xy coordinates and is linked into the
+/// sector from which the subsector was made, or has the
+/// MF_NOSECTOR flag set (the subsector_t needs to be valid
+/// even if MF_NOSECTOR is set), and is linked into a blockmap
+/// block or has the MF_NOBLOCKMAP flag set.
+/// Links should only be modified by the P_[Un]SetThingPosition()
+/// functions.
+/// Do not change the MF_NO? flags while a thing is valid.
+///
+/// Any questions?
 
 
-// Actor flags. More or less permanent attributes of the Actor.
+/// Actor flags. More or less permanent attributes of the Actor.
 enum mobjflag_t
 {
   // physical properties
-  MF_NOSECTOR         = 0x0001, // Don't link to sector (invisible but touchable)
-  MF_NOBLOCKMAP       = 0x0002, // Don't link to blockmap (inert but visible)
-  MF_SOLID            = 0x0004, // Blocks
-  MF_SHOOTABLE        = 0x0008, // Can be hit
-  MF_NOCLIPLINE       = 0x0010, // Does not clip against lines (walls)
-  MF_NOCLIPTHING      = 0x0020, // Not blocked by other Actors. (chasecam, for example)
+  MF_NOSECTOR         = 0x0001, ///< Don't link to sector (invisible but touchable)
+  MF_NOBLOCKMAP       = 0x0002, ///< Don't link to blockmap (inert but visible)
+  MF_SOLID            = 0x0004, ///< Blocks
+  MF_SHOOTABLE        = 0x0008, ///< Can be hit
+  MF_NOCLIPLINE       = 0x0010, ///< Does not clip against lines (walls)
+  MF_NOCLIPTHING      = 0x0020, ///< Not blocked by other Actors. (chasecam, for example)
   // game mechanics
-  MF_NOGRAVITY        = 0x0040, // Does not feel gravity
-  MF_FLOAT            = 0x0080, // Active floater, can move freely in air (cacodemons etc.)
-  MF_NOTRIGGER        = 0x0100, // Can not trigger linedefs (mainly missiles, chasecam)
-  MF_DROPOFF          = 0x0200, // This allows jumps from high places.
+  MF_NOGRAVITY        = 0x0040, ///< Does not feel gravity
+  MF_FLOAT            = 0x0080, ///< Active floater, can move freely in air (cacodemons etc.)
+  MF_NOTRIGGER        = 0x0100, ///< Can not trigger linedefs (mainly missiles, chasecam)
+  MF_DROPOFF          = 0x0200, ///< This allows jumps from high places.
   // appearance
-  MF_SHADOW           = 0x0400, // Partial invisibility (spectre). Makes targeting harder.
-  MF_ALTSHADOW        = 0x0800, // Alternate fuzziness
-  MF_NOBLOOD          = 0x1000, // Don't bleed when shot (use puff) (furniture)
-  MF_NOSPLASH         = 0x2000, // Does not cause a splash when hitting water
+  MF_SHADOW           = 0x0400, ///< Partial invisibility (spectre). Makes targeting harder.
+  MF_ALTSHADOW        = 0x0800, ///< Alternate fuzziness
+  MF_NOBLOOD          = 0x1000, ///< Don't bleed when shot (use puff) (furniture)
+  MF_NOSPLASH         = 0x2000, ///< Does not cause a splash when hitting water
   // spawning
-  MF_SPAWNCEILING     = 0x4000, // Spawned hanging from the ceiling
-  MF_NOTDMATCH        = 0x8000, // Not spawned in DM (keycards etc.)
-  MF_COUNTKILL    = 0x00010000, // On kill, count this enemy object towards intermission kill total. Happy gathering.
-  MF_COUNTITEM    = 0x00020000, // On picking up, count this item object towards intermission item total.
-  MF_NORESPAWN    = 0x00040000, // Will not respawn after being picked up. Pretty similar to MF_DROPPED?
+  MF_SPAWNCEILING     = 0x4000, ///< Spawned hanging from the ceiling
+  MF_NOTDMATCH        = 0x8000, ///< Not spawned in DM (keycards etc.)
+  MF_COUNTKILL    = 0x00010000, ///< On kill, count this enemy object towards intermission kill total. Happy gathering.
+  MF_COUNTITEM    = 0x00020000, ///< On picking up, count this item object towards intermission item total.
+  MF_NORESPAWN    = 0x00040000, ///< Will not respawn after being picked up. Pretty similar to MF_DROPPED?
   // classification
-  MF_MISSILE      = 0x00080000, // Player missiles as well as fireballs. Don't hit same species, explode on block.
-  MF_PICKUP       = 0x00100000, // Can/will pick up items. (players)
-  MF_SPECIAL      = 0x00200000, // Call TouchSpecialThing when touched
-  MF_NOTMONSTER   = 0x00400000, // *Not affected by ML_BLOCKMONSTERS lines (PlayerPawns etc.)
+  MF_MISSILE      = 0x00080000, ///< Player missiles as well as fireballs. Don't hit same species, explode on block.
+  MF_PICKUP       = 0x00100000, ///< Can/will pick up items. (players)
+  MF_SPECIAL      = 0x00200000, ///< Call TouchSpecialThing when touched
+  MF_NOTMONSTER   = 0x00400000, ///< *Not affected by ML_BLOCKMONSTERS lines (PlayerPawns etc.)
   // misc (usually set just once)
-  MF_CORPSE       = 0x00800000, // *Acts like a corpse, falls down stairs etc.
-  MF_DROPPED      = 0x01000000, // *Dropped by a monster
-  MF_AMBUSH       = 0x02000000, // *Not to be activated by sound, deaf monster.
+  MF_CORPSE       = 0x00800000, ///< *Acts like a corpse, falls down stairs etc.
+  MF_DROPPED      = 0x01000000, ///< *Dropped by a monster
+  MF_AMBUSH       = 0x02000000, ///< *Not to be activated by sound, deaf monster.
 };
 
-// More semi-permanent flags. Mostly came with Heretic.
+/// More semi-permanent flags. Mostly came with Heretic.
 enum mobjflag2_t
 {
-  MF2_LOGRAV         =     0x00000001,      // alternate gravity setting
-  MF2_WINDTHRUST     =     0x00000002,      // gets pushed around by the wind specials
-  MF2_FLOORBOUNCE    =     0x00000004,      // bounces off the floor
-  MF2_THRUGHOST      =     0x00000008,      // missile will pass through ghosts
-  MF2_FLY            =     0x00000010,      // fly mode is active
-  MF2_FOOTCLIP       =     0x00000020,      // if feet are allowed to be clipped
-  MF2_SPAWNFLOAT     =     0x00000040,      // spawn random float z
-  MF2_NOTELEPORT     =     0x00000080,      // does not teleport
-  MF2_RIP            =     0x00000100,      // missile rips through solid targets
-  MF2_PUSHABLE       =     0x00000200,      // can be pushed by other moving mobjs
-  MF2_SLIDE          =     0x00000400,      // slides against walls
-  MF2_ONMOBJ         =     0x00000800,      // mobj is resting on top of another mobj
-  MF2_PASSMOBJ       =     0x00001000,      // Actor can move over/under other Actors 
-  MF2_CANNOTPUSH     =     0x00002000,      // cannot push other pushable mobjs
-  MF2_BOSS           =     0x00008000,      // mobj is a major boss
-  MF2_FIREDAMAGE     =     0x00010000,      // does fire damage
-  MF2_NODMGTHRUST    =     0x00020000,      // does not thrust target when damaging        
-  MF2_TELESTOMP      =     0x00040000,      // mobj can stomp another
-  MF2_FLOATBOB       =     0x00080000,      // use float bobbing z movement
-  MF2_DONTDRAW       =     0x00100000,      // don't generate a vissprite
-  MF2_IMPACT	     =     0x00200000,      // an MF_MISSILE mobj can activate SPAC_IMPACT
-  MF2_PUSHWALL	     =     0x00400000,      // mobj can push walls
-  MF2_MCROSS		 = 0x00800000,	    // can activate monster cross lines
-  MF2_PCROSS		 = 0x01000000,	    // can activate projectile cross lines
-  MF2_CANTLEAVEFLOORPIC  = 0x02000000,	    // stay within a certain floor type
-  MF2_NONSHOOTABLE	 = 0x04000000,      // mobj is totally non-shootable, but still considered solid
-  MF2_INVULNERABLE	 = 0x08000000,	    // mobj is invulnerable
-  MF2_DORMANT		 = 0x10000000,	    // thing is dormant
-  MF2_ICEDAMAGE		 = 0x20000000,	    // does ice damage
-  MF2_SEEKERMISSILE	 = 0x40000000,	    // is a seeker (for reflection)
-  MF2_REFLECTIVE	 = 0x80000000       // reflects missiles
+  MF2_LOGRAV         =     0x00000001,    ///< alternate gravity setting
+  MF2_WINDTHRUST     =     0x00000002,    ///< gets pushed around by the wind specials
+  MF2_FLOORBOUNCE    =     0x00000004,    ///< bounces off the floor
+  MF2_THRUGHOST      =     0x00000008,    ///< missile will pass through ghosts
+  MF2_FLY            =     0x00000010,    ///< fly mode is active
+  MF2_FOOTCLIP       =     0x00000020,    ///< if feet are allowed to be clipped
+  MF2_SPAWNFLOAT     =     0x00000040,    ///< spawn random float z
+  MF2_NOTELEPORT     =     0x00000080,    ///< does not teleport
+  MF2_RIP            =     0x00000100,    ///< missile rips through solid targets
+  MF2_PUSHABLE       =     0x00000200,    ///< can be pushed by other moving mobjs
+  MF2_SLIDE          =     0x00000400,    ///< slides against walls
+  MF2_ONMOBJ         =     0x00000800,    ///< mobj is resting on top of another mobj
+  MF2_PASSMOBJ       =     0x00001000,    ///< Actor can move over/under other Actors 
+  MF2_CANNOTPUSH     =     0x00002000,    ///< cannot push other pushable mobjs
+  MF2_BOSS           =     0x00008000,    ///< mobj is a major boss
+  MF2_FIREDAMAGE     =     0x00010000,    ///< does fire damage
+  MF2_NODMGTHRUST    =     0x00020000,    ///< does not thrust target when damaging        
+  MF2_TELESTOMP      =     0x00040000,    ///< mobj can stomp another
+  MF2_FLOATBOB       =     0x00080000,    ///< use float bobbing z movement
+  MF2_DONTDRAW       =     0x00100000,    ///< don't generate a vissprite
+  MF2_IMPACT	     =     0x00200000,    ///< an MF_MISSILE mobj can activate SPAC_IMPACT
+  MF2_PUSHWALL	     =     0x00400000,    ///< mobj can push walls
+  MF2_MCROSS		 = 0x00800000,	  ///< can activate monster cross lines
+  MF2_PCROSS		 = 0x01000000,	  ///< can activate projectile cross lines
+  MF2_CANTLEAVEFLOORPIC  = 0x02000000,	  ///< stay within a certain floor type
+  MF2_NONSHOOTABLE	 = 0x04000000,    ///< mobj is totally non-shootable, but still considered solid
+  MF2_INVULNERABLE	 = 0x08000000,	  ///< mobj is invulnerable
+  MF2_DORMANT		 = 0x10000000,	  ///< thing is dormant
+  MF2_ICEDAMAGE		 = 0x20000000,	  ///< does ice damage
+  MF2_SEEKERMISSILE	 = 0x40000000,	  ///< is a seeker (for reflection)
+  MF2_REFLECTIVE	 = 0x80000000     ///< reflects missiles
 };
 
-// Extra flags. They describe the transient state of the Actor.
+/// Extra flags. They describe the transient state of the Actor.
 enum mobjeflag_t
 {
   // location
-  MFE_ONGROUND      = 0x0001,  // The mobj stands on solid floor (not on another mobj or in air)
-  MFE_JUSTHITFLOOR  = 0x0002,  // just hit the floor while falling, cleared on next frame
+  MFE_ONGROUND      = 0x0001,  ///< The mobj stands on solid floor (not on another mobj or in air)
+  MFE_JUSTHITFLOOR  = 0x0002,  ///< just hit the floor while falling, cleared on next frame
   // (instant damage in lava/slime sectors to prevent jump cheat..)
-  MFE_TOUCHWATER    = 0x0004,  // touches water.
-  MFE_UNDERWATER    = 0x0008,  // waist below water surface (swimming is possible)
+  MFE_TOUCHWATER    = 0x0004,  ///< touches water.
+  MFE_UNDERWATER    = 0x0008,  ///< waist below water surface (swimming is possible)
   // active physics mode
-  MFE_SWIMMING      = 0x0010,  // swimming physics used (different gravity)
-  MFE_INFLOAT       = 0x0020,  // Floating move in progress, don't auto float to target's height.
-  MFE_SKULLFLY      = 0x0040,  // A charging skull.
-  MFE_BLASTED       = 0x0080,  // uncontrollably thrown by a blast wave
+  MFE_SWIMMING      = 0x0010,  ///< swimming physics used (different gravity)
+  MFE_INFLOAT       = 0x0020,  ///< Floating move in progress, don't auto float to target's height.
+  MFE_SKULLFLY      = 0x0040,  ///< A charging skull.
+  MFE_BLASTED       = 0x0080,  ///< uncontrollably thrown by a blast wave
 
   // combat
-  MFE_JUSTHIT       = 0x0100,  // Got hit, will try to attack right back.
-  MFE_JUSTATTACKED  = 0x0200,  // Will take at least one step before attacking again.
+  MFE_JUSTHIT       = 0x0100,  ///< Got hit, will try to attack right back.
+  MFE_JUSTATTACKED  = 0x0200,  ///< Will take at least one step before attacking again.
 
-  MFE_TELEPORT      = 0x1000,  // *Don't cross lines or check heights in teleport move. (unused?)
+  MFE_TELEPORT      = 0x1000,  ///< *Don't cross lines or check heights in teleport move. (unused?)
 
-  MFE_REMOVE    = 0x80000000   // Actor will be deleted after the tic
+  MFE_REMOVE    = 0x80000000   ///< Actor will be deleted after the tic
 };
 
 
 
-// Actor class. Basis class for all things.
+/// \brief Basis class for all Thinkers with a well-defined location.
 class Actor : public Thinker
 {
-  DECLARE_CLASS(Actor);
+  DECLARE_CLASS(Actor)
 public:
-  class presentation_t *pres;  // graphic presentation
+  class presentation_t *pres;  ///< graphic presentation
 
-  Actor *sprev, *snext;  // sector links
-  Actor *bprev, *bnext;  // blockmap links
+  Actor *sprev, *snext;  ///< sector links
+  Actor *bprev, *bnext;  ///< blockmap links
 
-  struct subsector_t *subsector; // location
+  struct subsector_t *subsector; ///< location
 
-  // The closest interval over all contacted Sectors (or Things).
+  /// The closest interval over all contacted Sectors (or Things).
   fixed_t floorz, ceilingz;
 
   // If == validcount, already checked.
   //int     validcount;
-  // a linked list of sectors where this object appears
+  /// a linked list of sectors where this object appears
   struct msecnode_t* touching_sectorlist;
 
-  // For nightmare and itemrespawn respawn.
+  /// For nightmare and itemrespawn respawn.
   struct mapthing_t *spawnpoint;
 
 public:
-  // position.
+  /// position
   fixed_t x, y, z;
 
   // was: angle_t angle, aiming, (nothing)
   // TODO will be angle_t roll, pitch, yaw; // Euler angles
-  angle_t  angle;  // orientation left-right
-  angle_t  aiming; // up-down, updated with cmd->aiming.
+  angle_t  angle;  ///< orientation left-right
+  angle_t  aiming; ///< up-down, updated with cmd->aiming.
 
-  // Momentums, used to update position. Actually velocities.
+  /// velocity, used to update position
   fixed_t px, py, pz;
 
-  // For movement checking.
+  /// For movement checking.
   fixed_t mass;
   fixed_t radius;
   fixed_t height;
@@ -311,33 +309,31 @@ public:
   int  eflags;
 
   // Hexen fields
-  short	tid;     // thing identifier
-  byte	special; // special type
-  byte	args[5]; // special arguments
+  short	tid;     ///< thing identifier
+  byte	special; ///< special type
+  byte	args[5]; ///< special arguments
 
-  Actor *owner;   // Owner of this Actor. For example, for missiles this is the shooter.
-  Actor *target;  // Thing being chased/attacked (or NULL), also the target for missiles.
+  Actor *owner;   ///< Owner of this Actor. For example, for missiles this is the shooter.
+  Actor *target;  ///< Thing being chased/attacked (or NULL), also the target for missiles.
 
-  int reactiontime; // time (in tics) before the thing can attack or move again
+  int reactiontime; ///< time (in tics) before the thing can attack or move again
 
-  fixed_t floorclip; // cut this amount from legs (deep water illusion) (Hexen)
+  fixed_t floorclip; ///< cut this amount from legs (deep water illusion) (Hexen)
 
-  short team; // see g_team.h
+  short team; ///< see g_team.h
 
 public:
-  virtual thinkertype_e Type() {return tt_actor;}; // "name-tag" function
-
   // in g_actor.cpp
-  Actor(fixed_t nx, fixed_t ny, fixed_t nz); // construct a new Actor
+  Actor(fixed_t nx, fixed_t ny, fixed_t nz); ///< construct a new Actor
   virtual ~Actor();
 
-  void Remove();  // delayed destruction
-  virtual void Detach();  // detaches the Actor from the Map
+  void Remove();  ///< delayed destruction
+  virtual void Detach();  ///< detaches the Actor from the Map
 
   virtual void Think();
   virtual void CheckPointers();
 
-  void CheckWater(); // set some eflags if sector contains water
+  void CheckWater(); ///< set some eflags if sector contains water
 
   float GetMoveFactor();
   virtual void XYMovement();
@@ -349,7 +345,7 @@ public:
   int  HitFloor();
 
   // in p_inter.cpp
-  virtual bool Touch(Actor *a); // Actor touches another Actor
+  virtual bool Touch(Actor *a); ///< Actor touches another Actor
   virtual void Die(Actor *inflictor, Actor *source);
   virtual void Killed(class PlayerPawn *victim, Actor *inflictor);
   virtual bool Morph(mobjtype_t form);
@@ -379,34 +375,34 @@ public:
 
 
 //========================================================
-// Doom Actor. An Actor with the standard Doom/Heretic AI
-// (uses the A_* routines and the states table in info.cpp)
+/// \brief Doom Actor.
+///
+/// An Actor with the standard Doom/Heretic AI
+/// (uses the A_* routines and the states table in info.cpp)
 class DActor : public Actor
 {
   DECLARE_CLASS(DActor);
 public:
-  mobjtype_t  type;       // what kind of thing is it?
-  const mobjinfo_t *info; // basic properties    
+  mobjtype_t  type;       ///< what kind of thing is it?
+  const mobjinfo_t *info; ///< basic properties    
 
   // state machine variables
-  const state_t *state;
-  int            tics;   // state tic counter
+  const state_t *state;   ///< current state
+  int            tics;    ///< state tic counter
 
   // Movement direction, movement generation (zig-zagging).
-  int  movedir;        // 0-7
-  int  movecount;      // when 0, select a new dir
+  int  movedir;    ///< 0-7
+  int  movecount;  ///< when 0, select a new dir
 
-  int  threshold;  // If >0, the target will be chased no matter what (even if shot)
-  int  lastlook;   // Player number last looked for.
+  int  threshold;  ///< If >0, the target will be chased no matter what (even if shot)
+  int  lastlook;   ///< Player number last looked for.
 
-  int  special1, special2; // general storage, type dependant
+  int  special1, special2; ///< type dependent general storage
 
 public:
-  virtual thinkertype_e Type() {return tt_dactor;}; // "name-tag" function
-
-  // create a nonfunctional special actor (LavaInflictor etc...)
+  /// create a nonfunctional special DActor (LavaInflictor etc...)
   DActor(mobjtype_t t);
-  // create a new DActor of type t
+  /// create a new DActor of mobjtype t
   DActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t);
 
   virtual void Think();

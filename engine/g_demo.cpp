@@ -362,9 +362,9 @@ void G_DeferedPlayDemo (char* name)
 //
 void GameInfo::PlayDemo(char *defdemoname)
 {
-#warning FIXME debug aid
+  // FIXME debug aid
   return;
-#if 0
+
   //  skill_t skill;
   int i, n, episode, level;
 
@@ -406,7 +406,6 @@ no_demo:
   Players.clear();
 
   demoplayback = true;
-#endif  
 }
 
 //
@@ -471,7 +470,8 @@ bool GameInfo::CheckDemoStatus()
 		   gametic, time, f1/TICRATE, f2/f1);
       if( restorecv_vidwait != cv_vidwait.value )
 	CV_SetValue(&cv_vidwait, restorecv_vidwait);
-      D_AdvanceDemo ();
+
+      pagetic = 0;
       return true;
     }
 
@@ -480,7 +480,7 @@ bool GameInfo::CheckDemoStatus()
       if (singledemo)
 	I_Quit ();
       StopDemo();
-      D_AdvanceDemo ();
+      pagetic = 0;
       return true;
     }
 

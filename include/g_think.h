@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/04/25 16:26:51  smite-meister
+// Doxygen
+//
 // Revision 1.8  2003/11/13 00:32:41  smite-meister
 // Static initialization order fiasco fixed
 //
@@ -41,15 +44,19 @@
 // Revision 1.1.1.1  2002/11/16 14:18:28  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//   TypeInfo. Thinkers. It starts.
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Definitions of the TypeInfo and Thinker classes
 
 #ifndef g_think_h
 #define g_think_h 1
+
+#include <map>
+#include <vector>
+
+using namespace std;
+
 
 //==========================================================
 // The information here applies to the original C code.
@@ -97,100 +104,105 @@
 // note also P_BlasterMobjThinker
 
 
-#include <map>
-#include <vector>
-
-using namespace std;
-
-class Thinker;
 
 //==========================================================
 // TypeInfo
-// A RTTI helper class for Thinkers, used in serialization.
 
-// When a Thinker class is implemented, the corresponding typeinfo object
-// should be (statically) constructed (which adds its code to the map etc.)
+/// \brief An RTTI helper class for Thinkers, used in serialization.
+///
+/// This class takes care of runtime type identification in Legacy.
+/// When a Thinker class is implemented, the corresponding typeinfo object
+/// should be (statically) constructed (which adds its code to the map etc.)
 
 class TypeInfo
 {
 private:
-  typedef Thinker* (*thinker_factory_t)();
-  static map<unsigned, TypeInfo*>& id_map(); // mapping from ID numbers to TypeInfo instances
+  typedef class Thinker* (*thinker_factory_t)();
+  static map<unsigned, TypeInfo*>& id_map(); ///< mapping from class ID numbers to TypeInfo instances
 
 public:
-  unsigned           type_id; // class/type ID number
-  const char        *name;    // a plaintext name for the class/type
-  thinker_factory_t  factory; // well, a factory for the class
+  unsigned           type_id; ///< class/type ID number
+  const char        *name;    ///< a plaintext name for the class/type
+  thinker_factory_t  factory; ///< well, a factory for the class
+  TypeInfo          *parent;  ///< parent class TypeInfo (or NULL)
   // could contain even more info about the class
 
-  TypeInfo(const char *n, thinker_factory_t f);
-  static TypeInfo *Find(unsigned code);
+  TypeInfo(const char *n, thinker_factory_t f, TypeInfo *par);
+  static TypeInfo *Find(unsigned code); ///< Searches the ID map for 'code'
 };
+
 
 class LArchive;
 
-// macro used in declaring Thinker classes (defines the TypeInfo/serialization related members)
+/// macro used in declaring Thinker classes (defines the TypeInfo/serialization related members)
 #define DECLARE_CLASS(cls) \
 protected: \
-  static TypeInfo _type; \
-  static inline Thinker *Create() { return new (cls); }; \
+  static inline Thinker *Create() { return new (cls); } \
 public: \
-  virtual TypeInfo *_Type() const { return &_type; }; \
+  static  TypeInfo _type; \
+  virtual TypeInfo *Type() const { return &_type; } \
+  virtual bool IsOf(const TypeInfo &t) const { return (&t == &_type); } \
   cls(); \
-  virtual int Marshal(LArchive &a)
+  virtual int Marshal(LArchive &a);
 
 
 
-// this macro implements the stuff declared in DECLARE_CLASS
-#define IMPLEMENT_CLASS(c,name) \
-TypeInfo c::_type((name), c::Create)
+
+/// this macro implements the stuff declared in DECLARE_CLASS
+#define IMPLEMENT_CLASS(c,par) \
+TypeInfo c::_type(#c, c::Create, &par::_type);
 
 
 
 //==========================================================
-// Thinker: All dynamic map elements, stored in a doubly linked list.
-// Base class for most game objects.
+// Thinker
+
+/// \brief Base class for most active game objects.
+///
+/// All dynamic map elements are Thinker descendants.
+/// The Map stores them in a doubly linked ring.
+
 class Thinker
 {
   friend class Map;
 
-  DECLARE_CLASS(Thinker);
+  DECLARE_CLASS(Thinker)
 
 private:
+  /// linked list pointers
   Thinker  *prev;
   Thinker  *next;
 
 public:
-  Map *mp; // the map where the thinker is situated
-
-  // a way to tell the actual class of a Thinker descendant
-  enum thinkertype_e
+  /// RTTI helper function
+  inline bool IsDescendantOf(const TypeInfo &ancestor) const
   {
-    tt_none = 0,
-    tt_thinker,
-    tt_actor,
-    tt_pawn,
-    tt_ppawn,
-    tt_dactor,
-    tt_other
-  };
-  // TODO should be replaced by _Type()
-  virtual thinkertype_e Type() {return tt_thinker;}; // "name-tag" function
+    TypeInfo *p = Type();
+    while (p)
+      {
+	if (p == &ancestor)
+	  return true;
+	p = p->parent;
+      }
+    return false;
+  }
 
-  // constructor and destructor
+  /// the map where the Thinker is situated
+  Map *mp;
+
   virtual ~Thinker();
 
-  // serialization (save/load)
+  /// serialization (save/load)
   static int Serialize(Thinker *p, LArchive &a);
   static Thinker *Unserialize(LArchive &a);
 
-  // what it actually does :)
+  /// what it actually does :)
   virtual void Think() {}
 
-  // pointer management
+  /// pointer management
   virtual void CheckPointers() {}
 
-  // memory management
+  /// memory management
   void *operator new(size_t size);
   void  operator delete(void *mem);
 };

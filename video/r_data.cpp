@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2004/04/25 16:26:51  smite-meister
+// Doxygen
+//
 // Revision 1.16  2004/04/17 12:53:42  hurdler
 // now compile with gcc 3.3.3 under Linux
 //
@@ -180,9 +183,6 @@
 int             firstwaterflat; //added:18-02-98:WATER!
 #endif
 
-//int             firstflat, lastflat, numflats;
-//int             firstpatch, lastpatch, numpatches;
-
 
 lighttable_t    *colormaps;
 
@@ -210,14 +210,6 @@ short*   hicolormaps;           // test a 32k colormap remaps high -> high
 //  will have new column_ts generated.
 //
 
-
-
-// two ways to add textures to cache:
-// Cache("name") (->Load("name"))creates a texture from a lump (flats...)
-// Insert(Texture*) inserts a finished texture to cache (anims, doomtextures)
-// Get("name") returns the handle of an existing texture, or tries Loading it if nonexistant
-
-//static vector<AnimatedTexture *> dynamic_textures;
 
 //==================================================================
 //  Textures
@@ -532,10 +524,8 @@ byte *DoomTexture::GetColumn(int col)
 
 texturecache_t tc(PU_TEXTURE);
 
-static map<unsigned, Texture *> texture_ids;
 
-// temporary wrapper for converting handles to pointers
-Texture *R_GetTexture(unsigned id)
+Texture *texturecache_t::operator[](unsigned id)
 {
   if (id >= texture_ids.size())
     I_Error("Invalid texture ID %d (max %d)!\n", id, texture_ids.size());
@@ -550,7 +540,9 @@ Texture *R_GetTexture(unsigned id)
 
 texturecache_t::texturecache_t(memtag_t tag)
   : L2cache_t(tag)
-{}
+{
+  texture_ids[0] = NULL; // "no texture" id
+}
 
 
 void texturecache_t::Clear()
@@ -577,7 +569,8 @@ int texturecache_t::Get(const char *name, bool substitute)
     return -1;
 
   if (t == default_item)
-    I_Error("halt");
+    CONS_Printf("Def. texture used for '%s'\n", name);
+    //I_Error("halt");
 
   return t->id;
 }
@@ -693,10 +686,9 @@ cacheitem_t *texturecache_t::Load(const char *name)
 
 
 
-//
-// Reads the texture definitions from the PNAMES, TEXTURE1 and TEXTURE2 lumps,
-// constructs the corresponding texture objects and inserts them into the cache.
-//
+/// Reads the texture definitions from the PNAMES, TEXTURE1 and TEXTURE2 lumps,
+/// constructs the corresponding texture objects and inserts them into the cache.
+
 int texturecache_t::ReadTextures()
 {
   int i;

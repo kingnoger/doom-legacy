@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.13  2004/03/28 15:16:13  smite-meister
-// Texture cache.
+// Revision 1.14  2004/04/25 16:26:50  smite-meister
+// Doxygen
 //
 // Revision 1.12  2004/01/02 14:25:01  smite-meister
 // cleanup
@@ -85,7 +85,7 @@
 #include "z_zone.h"
 
 
-IMPLEMENT_CLASS(button_t, "Button");
+IMPLEMENT_CLASS(button_t, Thinker);
 button_t::button_t() {}
 
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/04/25 16:26:50  smite-meister
+// Doxygen
+//
 // Revision 1.2  2003/05/11 21:23:52  smite-meister
 // Hexen fixes
 //
@@ -75,27 +78,20 @@ extern bool dedicated;
 void D_DoomLoop();
 
 //
-// D_DoomMain()
 // Not a globally visible function, just included for source reference,
 // calls all startup code, parses command line options.
 // If not overrided by user input, calls N_AdvanceDemo.
 //
 void D_DoomMain();
 
+
 // Called by IO functions when input is detected.
 void D_PostEvent(const struct event_t* ev);
 void D_PostEvent_end();    // delimiter for locking memory
-
 void D_ProcessEvents();
-void D_DoAdvanceDemo();
 
-//
-// BASE LEVEL
-//
-void D_PageTicker();
 // pagename is lumpname of a 320x200 patch to fill the screen
 void D_PageDrawer(char* pagename);
-void D_AdvanceDemo();
 
 
 #endif

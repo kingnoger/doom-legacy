@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/04/25 16:26:50  smite-meister
+// Doxygen
+//
 // Revision 1.3  2004/01/02 14:25:01  smite-meister
 // cleanup
 //
@@ -300,7 +303,7 @@ bool Map::EV_ThingActivate(int tid)
   int searcher = -1;
   while((mobj = FindFromTIDmap(tid, &searcher)) != NULL)
     {
-      if (mobj->Type() == Thinker::tt_dactor)
+      if (mobj->IsOf(DActor::_type))
 	if (((DActor *)mobj)->Activate())
 	  success = true;
     }
@@ -320,7 +323,7 @@ bool Map::EV_ThingDeactivate(int tid)
   int searcher = -1;
   while((mobj = FindFromTIDmap(tid, &searcher)) != NULL)
     {
-      if (mobj->Type() == Thinker::tt_dactor)
+      if (mobj->IsOf(DActor::_type))
 	if (((DActor *)mobj)->Deactivate())
 	  success = true;
     }

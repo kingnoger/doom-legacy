@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/04/25 16:26:49  smite-meister
+// Doxygen
+//
 // Revision 1.11  2004/01/02 14:25:01  smite-meister
 // cleanup
 //
@@ -825,7 +828,7 @@ void A_MinotaurAtk1(DActor *actor)
     {
       t->Damage(actor, actor, HITDICE(4));
 
-      if (t->Type() == Thinker::tt_ppawn) 
+      if (t->IsOf(PlayerPawn::_type)) 
 	{ // Squish the player
 	  ((PlayerPawn*)t)->player->deltaviewheight = -16*FRACUNIT;
 	}
@@ -964,7 +967,7 @@ void A_MinotaurAtk3(DActor *actor)
   if (actor->CheckMeleeRange())
     {
       actor->target->Damage(actor, actor, HITDICE(5));
-      if (t->Type() == Thinker::tt_ppawn)
+      if (t->IsOf(PlayerPawn::_type))
 	{ // Squish the player
 	  ((PlayerPawn *)t)->player->deltaviewheight = -16*FRACUNIT;
 	}
@@ -1686,7 +1689,7 @@ void A_VolcBallImpact(DActor *ball)
 
 void A_SkullPop(DActor *actor)
 {
-  if (actor->Type() != Thinker::tt_ppawn)
+  if (!actor->IsOf(PlayerPawn::_type))
     return;
 
   PlayerPawn *p = (PlayerPawn *)actor;

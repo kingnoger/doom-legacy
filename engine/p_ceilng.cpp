@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/04/25 16:26:49  smite-meister
+// Doxygen
+//
 // Revision 1.10  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -67,7 +70,7 @@
 //                              CEILINGS
 // ==========================================================================
 
-IMPLEMENT_CLASS(ceiling_t, "Ceiling");
+IMPLEMENT_CLASS(ceiling_t, sectoreffect_t);
 ceiling_t::ceiling_t() {}
 
 // constructor

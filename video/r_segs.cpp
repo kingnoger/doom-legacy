@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/04/25 16:26:51  smite-meister
+// Doxygen
+//
 // Revision 1.3  2004/04/01 09:16:16  smite-meister
 // Texture system bugfixes
 //
@@ -507,7 +510,7 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
   rw_scalestep = ds->scalestep;
   spryscale = ds->scale1 + (x1 - ds->x1)*rw_scalestep;
 
-  Texture *tex = R_GetTexture(curline->sidedef->midtexture);
+  Texture *tex = tc[curline->sidedef->midtexture];
 
   //faB: handle case where multipatch texture is drawn on a 2sided wall, multi-patch textures
   //     are not stored per-column with post info anymore in Doom Legacy
@@ -724,7 +727,7 @@ void Rend::R_RenderThickSideRange(drawseg_t *ds, int x1, int x2, ffloor_t *ffloo
 
     void (*colfunc_2s) (column_t*);
 
-    Texture *tex = R_GetTexture(sides[ffloor->master->sidenum[0]].midtexture);
+    Texture *tex = tc[sides[ffloor->master->sidenum[0]].midtexture];
 
     // Calculate light table.
     // Use different light tables
@@ -1277,7 +1280,7 @@ void Rend::R_RenderSegLoop()
           // draw the wall tiers
         if (midtexture)
         {
-	  tex = R_GetTexture(midtexture);
+	  tex = tc[midtexture];
 	  // single sided line
 	  dc_yl = yl;
 	  dc_yh = yh;
@@ -1322,7 +1325,7 @@ void Rend::R_RenderSegLoop()
                 
                 if (mid >= yl)
                 {
-		  tex = R_GetTexture(toptexture);
+		  tex = tc[toptexture];
 		  dc_yl = yl;
 		  dc_yh = mid;
 		  dc_texturemid = rw_toptexturemid;
@@ -1363,7 +1366,7 @@ void Rend::R_RenderSegLoop()
 
                 if (mid <= yh)
                 {
-		  tex = R_GetTexture(bottomtexture);
+		  tex = tc[bottomtexture];
 		  dc_yl = mid;
 		  dc_yh = yh;
 		  dc_texturemid = rw_bottomtexturemid;
@@ -1627,7 +1630,7 @@ void Rend::R_StoreWallRange(int start, int stop)
 
       if (linedef->flags & ML_DONTPEGBOTTOM && midtexture) // FIXME correct?
         {
-	  vtop = frontsector->floorheight + (R_GetTexture(midtexture)->height << FRACBITS);
+	  vtop = frontsector->floorheight + (tc[midtexture]->height << FRACBITS);
 	  // bottom of texture at bottom
 	  rw_midtexturemid = vtop - viewz;
         }
@@ -1798,7 +1801,7 @@ void Rend::R_StoreWallRange(int start, int stop)
             }
 	  else
             {
-	      vtop = backsector->ceilingheight + (R_GetTexture(toptexture)->height << FRACBITS);
+	      vtop = backsector->ceilingheight + (tc[toptexture]->height << FRACBITS);
 	      
 	      // bottom of texture
 	      rw_toptexturemid = vtop - viewz;

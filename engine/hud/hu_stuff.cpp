@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.12  2004/03/28 15:16:13  smite-meister
-// Texture cache.
+// Revision 1.13  2004/04/25 16:26:50  smite-meister
+// Doxygen
 //
 // Revision 1.11  2003/11/23 19:07:41  smite-meister
 // New startup order

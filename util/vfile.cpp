@@ -104,6 +104,15 @@ void *VFile::CacheItem(int item, int tag)
 //    Real directories
 //====================================
 
+#define MAX_VDIR_ITEM_NAME 64
+
+struct vdiritem_t
+{
+  int  size;  // item size in bytes
+  char name[MAX_VDIR_ITEM_NAME];  // item name c-string ('\0'-terminated)
+};
+
+
 VDir::VDir()
 {
   dstream = NULL;

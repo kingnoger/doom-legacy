@@ -15,11 +15,10 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
-// DESCRIPTION:
-//   Virtual Files. Base class for all persistent data sources
-//   like WADs, PAKs etc.
 //--------------------------------------------------------------
+
+/// \file
+/// \brief Virtual Files.
 
 #ifndef vfile_h
 #define vfile_h 1
@@ -41,6 +40,9 @@ typedef void* lumpcache_t;
 //  ABC for all VFiles
 //======================================
 
+/// Abstract base class for all persistent data sources
+/// like WADs, PAKs etc.
+
 class VFile
 {
   friend class FileCache;
@@ -48,11 +50,11 @@ class VFile
 protected:
   typedef multimap<const char*, int, less_cstring> nmap_t;
 
-  string filename;    // the name of the associated physical file
-  int    numitems;    // number of data items inside this VFile
+  string filename;    ///< the name of the associated physical file
+  int    numitems;    ///< number of data items inside this VFile
 
-  nmap_t       imap;  // mapping from item names to item numbers
-  lumpcache_t *cache; // from item numbers to item data (L1 cache)
+  nmap_t       imap;  ///< mapping from item names to item numbers
+  lumpcache_t *cache; ///< from item numbers to item data (L1 cache)
 
 public:
 
@@ -63,10 +65,10 @@ public:
   void *operator new(size_t size);
   void  operator delete(void *mem);
 
-  // open a new file (kinda like a constructor but returns false if not succesful)
+  /// open a new file (kinda like a constructor but returns false if not succesful)
   virtual bool Open(const char *fname) = 0;
 
-  // returns true and passes the asked data if the file can be transferred
+  /// returns true and passes the asked data if the file can be transferred
   virtual bool GetNetworkInfo(int *size, unsigned char *md5) {return false;};
 
   // query data item properties
@@ -85,24 +87,15 @@ public:
 
 
 
-//======================================
-//  class for physical directories
-//======================================
+//========================================================
 
-#define MAX_VDIR_ITEM_NAME 64
-
-struct vdiritem_t
-{
-  int  size;  // item size in bytes
-  char name[MAX_VDIR_ITEM_NAME];  // item name c-string ('\0'-terminated)
-};
-
+/// Class for physical directories
 
 class VDir : public VFile
 {
 protected:
-  DIR        *dstream;  // associated stream
-  vdiritem_t *contents; // mapping from numbers to item properties
+  DIR        *dstream;  ///< associated stream
+  struct vdiritem_t *contents; ///< mapping from numbers to item properties
 
 public:
   VDir();
@@ -124,9 +117,9 @@ public:
 
 
 
-//=============================================
-//  ABC for physical files (not directories!)
-//=============================================
+//========================================================
+
+///  ABC for physical files (not directories!)
 
 class VDataFile : public VFile
 {

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.26  2004/04/25 16:26:49  smite-meister
+// Doxygen
+//
 // Revision 1.25  2004/03/28 15:16:13  smite-meister
 // Texture cache.
 //
@@ -1022,9 +1025,9 @@ int Map::Serialize(LArchive &a)
 	  if (diff & SD_CEILHT)  a << ss->ceilingheight;
 
 	  if (diff & SD_FLOORPIC)
-	    a.Write((byte *)R_GetTexture(ss->floorpic)->name, 8);
+	    a.Write((byte *)tc[ss->floorpic]->name, 8);
 	  if (diff & SD_CEILPIC)
-	    a.Write((byte *)R_GetTexture(ss->ceilingpic)->name, 8);
+	    a.Write((byte *)tc[ss->ceilingpic]->name, 8);
 
 	  if (diff & SD_LIGHT)    a << ss->lightlevel;
 	  if (diff & SD_SPECIAL)  a << ss->special;

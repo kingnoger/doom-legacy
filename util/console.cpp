@@ -17,8 +17,8 @@
 //
 //
 // $Log$
-// Revision 1.11  2004/03/28 15:16:15  smite-meister
-// Texture cache.
+// Revision 1.12  2004/04/25 16:26:51  smite-meister
+// Doxygen
 //
 // Revision 1.10  2004/01/10 16:03:00  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
@@ -1265,7 +1265,7 @@ void CON_Drawer()
 
   if (con_curlines>0)
     CON_DrawConsole();
-  else if (game.state == GS_LEVEL)
+  else if (game.state == GameInfo::GS_LEVEL)
     CON_DrawHudlines();
 
   //hud.font['I'-HU_FONTSTART]->leftoffset = 0;

@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.5  2004/04/25 16:26:51  smite-meister
+// Doxygen
+//
 // Revision 1.4  2003/12/18 11:57:31  smite-meister
 // fixes / new bugs revealed
 //
@@ -61,8 +64,11 @@
 // Revision 1.1.1.1  2002/11/16 14:18:25  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
 //--------------------------------------------------------------------------
+
+/// \file
+/// \brief MapInfo class definition
+
 #ifndef g_mapinfo_h
 #define g_mapinfo_h 1
 
@@ -72,62 +78,68 @@
 
 using namespace std;
 
-// OK. Doom map format is (undestandably) primitive and has no place for
-// general information about maps. There are at least two ways to fix this:
-
-// 1)  MAPINFO lump (from Hexen and ZDoom)
-//     There can be one MAPINFO lump per wad. It is a text lump that consists of
-//     two kinds of blocks: MAP blocks and CLUSTERDEF blocks.
-
-// 2)  MapInfo lumps (Legacy, others?)
-//     There is one MapInfo lump per _map_. It is the same lump as the
-//     mapname "separator", i.e. MAP16, E6M2, MYOWNMAP... 
-//     MapInfo only contains info about the one map to which it belongs.
-//     It is a text lump that consists of blocks, such as [script], ...
-
-//     Internally, all the data for each map is combined into one class, MapInfo
-
-enum mapstate_e
-{
-  MAP_UNLOADED = 0, // not loaded, "me" should be NULL
-  MAP_RUNNING,      // currently running, "me" is valid
-  MAP_INSTASIS,     // presently halted, but "me" is still valid
-  MAP_FINISHED,     // (at least some) players have finished the map, but it is still running, "me" is valid
-  MAP_SAVED         // "me" should be NULL, the map is saved on disk
-};
-
+/// \brief Stores all kinds of metadata for an associated Map.
+///
+/// OK. Doom map format is (undestandably) primitive and has no place for
+/// general information about maps. There are at least two ways to fix this:
+///
+/// 1)  MAPINFO lump (from Hexen and ZDoom)
+///     There can be one MAPINFO lump per wad. It is a text lump that consists of
+///     two kinds of blocks: MAP blocks and CLUSTERDEF blocks.
+///
+/// 2)  MapInfo lumps (Legacy, others?)
+///     There is one MapInfo lump per Map. It is the same lump as the
+///     mapname "separator", i.e. MAP16, E6M2, MYOWNMAP... 
+///     MapInfo only contains info about the one map to which it belongs.
+///     It is a text lump that consists of blocks, such as [script], ...
+///
+/// Internally, all the data for each map is combined into one class, MapInfo.
+/// It contains all the information regarding a Map that doesn't directly affect
+/// gameplay but can be of interest to human players, such as the Map
+/// name, author, recommendation for # of players, hints, music that is
+/// played during the map, partime etc.
 
 class MapInfo
 {
   friend class Map;
 
 public:
-  mapstate_e   state;
-  Map         *me;    // the actual running Map instance corresponding to this MapInfo
+  /// current state of the corresponding Map
+  enum mapstate_e
+    {
+      MAP_UNLOADED = 0, ///< not loaded, "me" should be NULL
+      MAP_RUNNING,      ///< currently running, "me" is valid
+      MAP_INSTASIS,     ///< presently halted, but "me" is still valid
+      MAP_FINISHED,     ///< (at least some) players have finished the map, but it is still running, "me" is valid
+      MAP_SAVED         ///< "me" should be NULL, the Map is saved on disk
+    };
 
-  string lumpname;   // map lump name ("MAP04")
-  string nicename;   // map long nice name ("The Nuclear Plant")
-  string savename;   // name of the file the map is currently saved in
+  mapstate_e   state;
+  Map         *me;   ///< the actual running Map instance corresponding to this MapInfo
+
+  string lumpname;   ///< map lump name ("MAP04")
+  string nicename;   ///< map long nice name ("The Nuclear Plant")
+  string savename;   ///< name of the file the map is currently saved in
 
   int    cluster;
-  int    mapnumber;  // real map number, used with Teleport_NewMap
+  int    mapnumber;  ///< real map number, used with Teleport_NewMap
 
-  unsigned entrypoint;  // the requested entry point in this map
-  int    exitused, exitloc; // exit used when the level was last exited
+  unsigned entrypoint;  ///< the requested entry point in this map
+  int    exitused, exitloc; ///< exit used when the level was last exited
 
   //map<int, MapInfo *> exit;  // possible remapping of exit numbers
   // for now it's simple: exit 0 is the "normal exit", exit 100 is the "secret exit"
   // exit 255 means that the game ends here.
 
-  string version;   // map version string
-  string author;    // map creator
-  string hint;      // optional hint for the map
+  string version;   ///< map version string
+  string author;    ///< map creator
+  string hint;      ///< optional hint for the map
 
   // string previewpic; // preview picture lumpname
 
-  int   scripts; // how many FS scripts in the map?
-  int   partime; // in seconds
-  float gravity; // temporary, could be part of ZoneInfo or sector_t?
+  int   scripts; ///< how many FS scripts in the map?
+  int   partime; ///< in seconds
+  float gravity; ///< temporary, could be part of ZoneInfo or sector_t?
 
 
   // thing number mappings (experimental)
@@ -138,8 +150,8 @@ public:
   // less essential stuff (can be replaced with scripting or other more efficient means)
   string musiclump;
 
-  int    warptrans;      // a Hexen quirk, another map numbering for deathmatch
-  int    warpnext;       // this one uses warptrans numbers
+  int    warptrans;      ///< a Hexen quirk, another map numbering for deathmatch
+  int    warpnext;       ///< this one uses warptrans numbers
   //char  nextmaplump[17];
   //char  secretmaplump[17];
   int    nextlevel;
@@ -155,7 +167,7 @@ public:
   int    cdtrack;
   string fadetablelump;
 
-  int BossDeathKey;  // bit flags to see which bosses end the map when killed.
+  int BossDeathKey;  ///< bit flags to see which bosses end the map when killed.
 
 public:
   MapInfo();

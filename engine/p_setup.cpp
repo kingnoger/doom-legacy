@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.36  2004/04/01 09:16:16  smite-meister
-// Texture system bugfixes
+// Revision 1.37  2004/04/25 16:26:50  smite-meister
+// Doxygen
 //
 // Revision 1.34  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
@@ -303,6 +303,7 @@ floortype_t P_GetFloorType(const char *pic);
 
 void Map::LoadSectors2(int lump)
 {
+  extern float normal_friction; 
   int i;
   byte *data = (byte *)fc.CacheLumpNum(lump, PU_STATIC);
 

@@ -21,8 +21,8 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
-// Revision 1.14  2004/03/28 15:16:14  smite-meister
-// Texture cache.
+// Revision 1.15  2004/04/25 16:26:50  smite-meister
+// Doxygen
 //
 // Revision 1.13  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
@@ -321,7 +321,7 @@ void SF_Tip()
 
   // FIXME add player field in script_t ?
   /*
-  if (current_script->trigger->Type() != Thinker::tt_ppawn)
+  if (!current_script->trigger->IsOf(PlayerPawn::_type))
     return;
   PlayerPawn *p = (PlayerPawn *)current_script->trigger;
   if (p->player != displayplayer)
@@ -565,7 +565,7 @@ void SF_MobjIsPlayer()
   if(!mobj)
     t_return.value.i = 0;
   else
-    t_return.value.i = (mobj->Type() == Thinker::tt_ppawn) ? 1 : 0;
+    t_return.value.i = (mobj->IsOf(PlayerPawn::_type)) ? 1 : 0;
   return;
 }
 
@@ -586,7 +586,7 @@ void SF_PlayerKeys()
   if(t_argv[0].type == svt_actor)
     {
       Actor *a = t_argv[0].value.mobj;
-      if (a->Type() != Thinker::tt_ppawn)
+      if (!a->IsOf(PlayerPawn::_type))
 	{
 	  script_error("mobj not a player!\n");
 	  return;
@@ -646,7 +646,7 @@ void SF_PlayerAmmo()
   if (t_argv[0].type == svt_actor)
     {
       Actor *a = t_argv[0].value.mobj;
-      if (a->Type() != Thinker::tt_ppawn)
+      if (!a->IsOf(PlayerPawn::_type))
 	{
 	  script_error("mobj not a player!\n");
 	  return;
@@ -701,7 +701,7 @@ void SF_MaxPlayerAmmo()
   if (t_argv[0].type == svt_actor)
     {
       Actor *a = t_argv[0].value.mobj;
-      if (a->Type() != Thinker::tt_ppawn)
+      if (!a->IsOf(PlayerPawn::_type))
 	{
 	  script_error("mobj not a player!\n");
 	  return;
@@ -757,7 +757,7 @@ void SF_Player()
 
   if (mo)
     {
-      if (mo->Type() == Thinker::tt_ppawn)
+      if (mo->IsOf(PlayerPawn::_type))
 	t_return.value.i = ((PlayerPawn *)mo)->player->number - 1;
     }
   else
@@ -1779,7 +1779,7 @@ void SF_FloorTexture()
     }
 
   t_return.type = svt_string;
-  t_return.value.s = Z_Strdup(R_GetTexture(s->floorpic)->name, PU_STATIC, 0);
+  t_return.value.s = Z_Strdup(tc[s->floorpic]->name, PU_STATIC, 0);
 }
 
 
@@ -1857,7 +1857,7 @@ void SF_CeilingTexture()
     }
 
   t_return.type = svt_string;
-  t_return.value.s = Z_Strdup(R_GetTexture(s->ceilingpic)->name, PU_STATIC, 0);
+  t_return.value.s = Z_Strdup(tc[s->ceilingpic]->name, PU_STATIC, 0);
 }
 
 

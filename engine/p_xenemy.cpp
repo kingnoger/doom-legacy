@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/04/25 16:26:50  smite-meister
+// Doxygen
+//
 // Revision 1.13  2004/01/06 14:37:45  smite-meister
 // six bugfixes, cleanup
 //
@@ -716,7 +719,7 @@ void A_XMinotaurAtk3(DActor *actor)
   if(actor->CheckMeleeRange())
     {
       t->Damage(actor, actor, HITDICE(3));
-      if (t->Type() == Thinker::tt_ppawn)
+      if (t->IsOf(PlayerPawn::_type))
 	{ // Squish the player
 	  ((PlayerPawn *)t)->player->deltaviewheight = -16*FRACUNIT;
 	}

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/04/25 16:26:48  smite-meister
+// Doxygen
+//
 // Revision 1.12  2004/01/11 17:19:14  smite-meister
 // bugfixes
 //
@@ -840,7 +843,7 @@ void A_Summon(DActor *actor)
       else
 	{
 	  mo->owner = master;
-	  if (master->Type() == Thinker::tt_ppawn)
+	  if (master->IsOf(PlayerPawn::_type))
 	    ((PlayerPawn *)master)->GivePower(pw_minotaur);
 	}
 

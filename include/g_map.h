@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2003 by DooM Legacy Team.
+// Copyright (C) 2002-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -16,8 +16,8 @@
 // GNU General Public License for more details.
 //
 // $Log$
-// Revision 1.29  2004/03/28 15:16:14  smite-meister
-// Texture cache.
+// Revision 1.30  2004/04/25 16:26:51  smite-meister
+// Doxygen
 //
 // Revision 1.28  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
@@ -92,12 +92,10 @@
 // Now compiles with MinGW 2.0 / GCC 3.2.
 // Builder can choose between dynamic and static linkage.
 //
-//
-// DESCRIPTION:
-//    Map class. Describes one game map and all that's in it.
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Map class definition.
 
 #ifndef g_map_h
 #define g_map_h 1
@@ -119,13 +117,19 @@ using namespace std;
 
 typedef bool (*traverser_t) (struct intercept_t *in);
 
-// new class for maps
+
+/// \brief A single game map and all that's in it.
+///
+/// This class stores all gameplay-related information about one map,
+/// including geometry, BSP, blockmap, reject, mapthings, Thinker list,
+/// player list, ambient sounds, physics...
 
 class Map
 {
   friend class GameInfo;
 public:
-  class MapInfo *info; // see g_mapinfo.h
+  /// see g_mapinfo.h
+  class MapInfo *info;
 
   string lumpname;   // map lump name
   int    lumpnum;    // lumpnum of the separator beginning the map

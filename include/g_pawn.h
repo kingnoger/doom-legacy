@@ -17,8 +17,8 @@
 // GNU General Public License for more details.
 //
 // $Log$
-// Revision 1.19  2004/03/28 15:16:14  smite-meister
-// Texture cache.
+// Revision 1.20  2004/04/25 16:26:51  smite-meister
+// Doxygen
 //
 // Revision 1.18  2004/01/06 14:37:45  smite-meister
 // six bugfixes, cleanup
@@ -63,13 +63,10 @@
 // Revision 1.5  2003/01/18 20:17:41  smite-meister
 // HUD fixed, levelchange crash fixed.
 //
-//
-//
-// DESCRIPTION:
-//    Pawn class. A Pawn is an Actor that has either AI or human control.
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Pawn and PlayerPawn classes.
 
 #ifndef g_pawn_h
 #define g_pawn_h 1
@@ -85,9 +82,7 @@ using namespace std;
 #define JUMPSPEED (6*FRACUNIT/NEWTICRATERATIO)
 
 
-//
-// Player internal flags, for cheats and debug. Must fit into an int.
-//
+/// Player internal flags, for cheats and debug. Must fit into an int.
 enum cheat_t
 {
   CF_NOCLIP      = 1,  // No clipping, walk through barriers.
@@ -118,9 +113,10 @@ struct pawn_info_t
 };
 
 
+/// \brief An Actor that has active AI or human control.
 class Pawn : public Actor
 {
-  DECLARE_CLASS(Pawn);
+  DECLARE_CLASS(Pawn)
 private:
 
 
@@ -129,12 +125,12 @@ public:
   //int skin;
 
   int maxhealth;
-  float speed; // walking speed (units/tic), runspeed = 2*speed
+  float speed; ///< walking speed (units/tic), runspeed = 2*speed
   const struct pawn_info_t *pinfo;
 
-  int attackphase; // for the more complex weapons
-  // Who did damage (NULL for floors/ceilings).
-  Actor *attacker;
+  int attackphase; ///< counter for the more complex weapons
+
+  Actor *attacker; ///< who damaged the Pawn? (NULL for floors/ceilings).
 
 public:
   Pawn(fixed_t x, fixed_t y, fixed_t z, int type);
@@ -143,13 +139,17 @@ public:
   virtual void Think();
   virtual void CheckPointers();
 
-  virtual thinkertype_e Type() {return tt_pawn;}; // "name-tag" function
   virtual bool Morph(mobjtype_t form);
   virtual bool Damage(Actor *inflictor, Actor *source, int damage, int dtype = dt_normal);
 
   bool GiveBody(int num);
 };
 
+
+/// \brief A Pawn that represents a player avatar.
+///
+/// It takes orders from its player, which is represented
+/// by a PlayerInfo instance.
 
 class PlayerPawn : public Pawn
 {
@@ -209,8 +209,6 @@ public:
   int fly_zspeed; //  for smoothing the z motion while flying
 
 public:
-  virtual thinkertype_e Type() {return tt_ppawn;}; // "name-tag" function
-
   // in g_pawn.cpp
   PlayerPawn(fixed_t x, fixed_t y, fixed_t z, int type);
 

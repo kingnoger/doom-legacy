@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/04/25 16:26:49  smite-meister
+// Doxygen
+//
 // Revision 1.8  2004/01/02 14:21:21  smite-meister
 // save bugfix
 //
@@ -54,7 +57,7 @@ map<unsigned, TypeInfo*>& TypeInfo::id_map()
 } 
 
 
-TypeInfo::TypeInfo(const char *n, thinker_factory_t f)
+TypeInfo::TypeInfo(const char *n, thinker_factory_t f, TypeInfo *p)
 {
   static map<unsigned, TypeInfo*>& id_ref = TypeInfo::id_map();
 
@@ -62,6 +65,7 @@ TypeInfo::TypeInfo(const char *n, thinker_factory_t f)
   id_ref[type_id] = this;  // store the mapping
   name = n;
   factory = f;
+  parent = p;
 }
 
 
@@ -77,7 +81,9 @@ TypeInfo *TypeInfo::Find(unsigned c)
 }
 
 
-IMPLEMENT_CLASS(Thinker, "Thinker");
+// Since this class has no parent, we must implement it like this:
+TypeInfo Thinker::_type("Thinker", Thinker::Create, NULL);
+
 
 Thinker::Thinker()
 {
@@ -104,7 +110,7 @@ int Thinker::Serialize(Thinker *p, LArchive &a)
     }
 
   a << id;
-  a << p->_Type()->type_id; // hmm. basically an unnecessary call, but less trouble this way?
+  a << p->Type()->type_id; // hmm. basically an unnecessary call, but less trouble this way?
   p->Marshal(a);
   return id;
 }

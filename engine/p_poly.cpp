@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/04/25 16:26:49  smite-meister
+// Doxygen
+//
 // Revision 1.13  2004/01/06 14:37:45  smite-meister
 // six bugfixes, cleanup
 //
@@ -90,7 +93,7 @@ static void RotatePt(int an, fixed_t *x, fixed_t *y, fixed_t startSpotX, fixed_t
 
 //==========================================================================
 
-IMPLEMENT_CLASS(polyobject_t, "Polyobject rotator");
+IMPLEMENT_CLASS(polyobject_t, Thinker);
 polyobject_t::polyobject_t() {}
 
 polyobject_t::polyobject_t(int num)
@@ -201,7 +204,7 @@ bool Map::EV_RotatePoly(byte *args, int direction, bool overRide)
 
 //==========================================================================
 
-IMPLEMENT_CLASS(polymove_t, "Polyobject mover");
+IMPLEMENT_CLASS(polymove_t, polyobject_t);
 polymove_t::polymove_t() {}
 
 polymove_t::polymove_t(int num, byte *args, bool timesEight, bool mirror)
@@ -309,7 +312,7 @@ bool Map::EV_MovePoly(byte *args, bool timesEight, bool overRide)
 //
 //==========================================================================
 
-IMPLEMENT_CLASS(polydoor_t, "Polyobject door");
+IMPLEMENT_CLASS(polydoor_t, polyobject_t);
 polydoor_t::polydoor_t() {}
 
 int polydoor_t::PushForce() { return speed >> 3; }

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/04/25 16:26:49  smite-meister
+// Doxygen
+//
 // Revision 1.13  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -242,7 +245,7 @@ int Map::T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, int crush, i
 //  floor_t: Moving floors
 //==========================================================================
 
-IMPLEMENT_CLASS(floor_t, "Floor");
+IMPLEMENT_CLASS(floor_t, sectoreffect_t);
 floor_t::floor_t() {}
 
 // constructor
@@ -536,7 +539,7 @@ int Map::EV_BuildStairs(int tag, int type, fixed_t speed, fixed_t stepsize, int 
 //  stair_t: Stairbuilder steps
 //==========================================================================
 
-IMPLEMENT_CLASS(stair_t, "Stairbuilder");
+IMPLEMENT_CLASS(stair_t, sectoreffect_t);
 stair_t::stair_t() {}
 
 static fixed_t StartHeight, StepDelta; // small hacks...
@@ -792,7 +795,7 @@ int Map::EV_DoDonut(int tag)
 // Boom Elevators, Hexen Pillars
 //=========================================================================
 
-IMPLEMENT_CLASS(elevator_t, "Elevator");
+IMPLEMENT_CLASS(elevator_t, sectoreffect_t);
 elevator_t::elevator_t() {}
 
 // constructor
@@ -964,7 +967,7 @@ int Map::EV_DoElevator(int tag, int type, fixed_t speed, fixed_t height_f, fixed
 //  FloorWaggle (Hexen)
 //==========================================================================
 
-IMPLEMENT_CLASS(floorwaggle_t, "Floorwaggle");
+IMPLEMENT_CLASS(floorwaggle_t, sectoreffect_t);
 floorwaggle_t::floorwaggle_t() {}
 
 floorwaggle_t::floorwaggle_t(Map *m, sector_t *sec, fixed_t a, angle_t f, angle_t ph, int w)

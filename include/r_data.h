@@ -17,8 +17,8 @@
 //
 //
 // $Log$
-// Revision 1.5  2004/03/28 15:16:14  smite-meister
-// Texture cache.
+// Revision 1.6  2004/04/25 16:26:51  smite-meister
+// Doxygen
 //
 // Revision 1.4  2003/11/23 19:07:42  smite-meister
 // New startup order
@@ -32,20 +32,20 @@
 // Revision 1.1.1.1  2002/11/16 14:18:26  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//   Texture cache, texture data structures
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Texture cache, texture data structures
 
 #ifndef r_data_h
 #define r_data_h 1
 
+#include <map>
 #include "doomtype.h"
 #include "z_cache.h"
 
 
-// flags for drawing Textures
+/// flags for drawing Textures
 enum texture_draw_e
 {
   V_SLOC     =  0x10000,   // scale starting location
@@ -62,11 +62,12 @@ enum texture_draw_e
 };
 
 
-
-// Hasta la vista, old texture/flat system!
-// This ABC represents one logical texture at runtime.
-// It is usually built out of patch_t's and/or flats during loading.
-// It may be static, animated, fractal, procedural etc.
+/// \brief ABC for all 2D bitmaps.
+///
+/// Hasta la vista, old texture/flat system!
+/// This ABC represents one logical texture at runtime.
+/// It is usually built out of patch_t's and/or flats during loading.
+/// It may be static, animated, fractal, procedural etc.
 
 class Texture : public cacheitem_t
 {
@@ -74,11 +75,11 @@ class Texture : public cacheitem_t
 public:
   enum tex_storage_t
   {
-    PALETTE         = 0,  // 1 byte is the index in the doom palette (as usual)
-    INTENSITY       = 1,  // 1 byte intensity
-    INTENSITY_ALPHA = 2,  // 2 byte : alpha then intensity
-    RGB24           = 3,  // 24 bit rgb
-    RGBA32          = 4,  // 32 bit rgba
+    PALETTE         = 0,  ///< 1 byte is the index in the doom palette (as usual)
+    INTENSITY       = 1,  ///< 1 byte intensity
+    INTENSITY_ALPHA = 2,  ///< 2 byte : alpha then intensity
+    RGB24           = 3,  ///< 24 bit rgb
+    RGBA32          = 4,  ///< 32 bit rgba
   };
 
   int    id;  // TODO temp solution, replace with pointers?
@@ -110,8 +111,9 @@ public:
 
 
 
-// Class for row-major textures which reside in a single lump.
-// flat, raw, pic_t, png, jpeg...
+/// \brief Row-major Textures which reside in a single lump.
+/// flat, raw, pic_t, png, jpeg...
+
 class LumpTexture : public Texture
 {
 public:
@@ -137,7 +139,7 @@ public:
 
 
 
-// Class for patch_t's.
+/// \brief Class for patch_t's.
 class PatchTexture : public Texture
 {
   int lump;
@@ -157,7 +159,7 @@ public:
 
 
 
-// class for Doom textures (which are build out of patches)
+/// \brief Doom Textures (which are built out of patches)
 class DoomTexture : public Texture
 {
 public:
@@ -194,24 +196,45 @@ public:
 
 
 
+/// \brief Second-level cache for Textures
+///
+/// There are two ways to add Texture definitions to the cache:
+/// Cache("name") (->Load("name"))creates a texture from a lump (flats...)
+/// Insert(Texture*) inserts a finished texture to cache (anims, doomtextures)
 
 class texturecache_t : public L2cache_t
 {
 protected:
+  /// generates a Texture from a single data lump
   cacheitem_t *Load(const char *p);
+
+  /// mapping from Texture id's to pointers
+  map<unsigned, Texture *> texture_ids;
 
 public:
   texturecache_t(memtag_t tag);
 
+  /// empties the cache, deletes all Textures
   void Clear();
-  void Insert(class Texture *t); // insert a special texture into the cache (animation, doomtexture...)
+
+  /// insert a special Texture into the cache (animation, DoomTexture...)
+  void Insert(class Texture *t); 
+
+  /// returns the id of an existing Texture, or tries Caching it if nonexistant
   int Get(const char *p, bool substitute = true);
+
+  /// like Get, but returns a pointer
   Texture *GetPtr(const char *p, bool substitute = true);
+
+  /// like GetPtr, but takes a lump number instead of a name.
   Texture *GetPtrNum(int n);
 
+  /// returns the Texture with the corresponding id
+  Texture *operator[](unsigned id);
+
+  /// reads the PNAMES and TEXTUREn lumps, generates the corresponding Textures
   int ReadTextures();
 };
-
 
 
 extern texturecache_t tc;
@@ -219,10 +242,6 @@ extern texturecache_t tc;
 
 // I/O, setting up the stuff.
 void R_InitData();
-
-// TODO temp solution for handles
-Texture *R_GetTexture(unsigned handle);
-
 
 // colormap management
 void R_ClearColormaps();

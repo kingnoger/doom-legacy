@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.21  2004/03/28 15:16:14  smite-meister
-// Texture cache.
+// Revision 1.22  2004/04/25 16:26:51  smite-meister
+// Doxygen
 //
 // Revision 1.20  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
@@ -81,14 +81,14 @@
 // Revision 1.1.1.1  2002/11/16 14:18:26  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//      Implements special effects:
-//      Texture animation, height or lighting changes
-//       according to adjacent sectors, respective
-//       utility functions, etc.
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Dynamic geometry elements and related utilities defined.
+///
+/// Texture animation, height or lighting changes
+/// according to adjacent sectors, respective
+/// utility functions, etc.
 
 
 #ifndef p_spec_h
@@ -101,14 +101,8 @@
 
 using namespace std;
 
-class Actor;
-class DActor;
-class PlayerPawn;
 
 extern int boomsupport;
-
-//      Define values for map objects
-#define MO_TELEPORTMAN          14
 
 
 // geom. info, independent of Map
@@ -130,7 +124,8 @@ int P_FindMinSurroundingLight(sector_t *sector, int     max);
 
 int P_CheckTag(line_t *line);
 
-// sector special effects
+
+/// sector special effects
 enum sectorspecial_t
 {
   SS_none = 0,
@@ -199,15 +194,13 @@ enum change_e
 
 
 //======================================
-//  Timed buttons
+///  Timed buttons
 //======================================
-
-void P_InitSwitchList();
 
 class button_t : public Thinker
 {
   friend class Map;
-  DECLARE_CLASS(button_t);
+  DECLARE_CLASS(button_t)
 public:
   enum button_e
   {
@@ -232,6 +225,8 @@ public:
   virtual void Think();
 };
 
+void P_InitSwitchList();
+
 // 1 second, in ticks.
 #define BUTTONTIME      35
 
@@ -240,11 +235,11 @@ public:
 //   Polyobjects
 //======================================
 
-// rotator
+/// Polyobject Rotator
 class polyobject_t : public Thinker
 {
   friend class Map;
-  DECLARE_CLASS(polyobject_t);
+  DECLARE_CLASS(polyobject_t)
 protected:  
   int polyobj;
   int speed;
@@ -258,10 +253,11 @@ public:
   virtual int  PushForce();
 };
 
+/// Polyobject Mover
 class polymove_t : public polyobject_t
 {
   friend class Map;
-  DECLARE_CLASS(polymove_t);
+  DECLARE_CLASS(polymove_t)
 protected:
   int angle;
   fixed_t xs, ys;
@@ -274,10 +270,11 @@ public:
 };
 
 
+/// Polyobject Door
 class polydoor_t : public polyobject_t
 {
   friend class Map;
-  DECLARE_CLASS(polydoor_t);
+  DECLARE_CLASS(polydoor_t)
 public:
   enum podoor_e
   {
@@ -314,13 +311,14 @@ enum
 };
 
 //========================================================
-//  Sector effects: base class for most moving geometry
+//  Sector effects
 //========================================================
 
+/// Base class for most moving geometry
 class sectoreffect_t : public Thinker
 {
   friend class Map;
-  DECLARE_CLASS(sectoreffect_t);
+  DECLARE_CLASS(sectoreffect_t)
 
 protected:
   sector_t *sector;
@@ -328,13 +326,13 @@ protected:
 };
 
 //======================================
-//   Sector light effects
+///   Sector light effects
 //======================================
 
 class lightfx_t : public sectoreffect_t
 {
   friend class Map;
-  DECLARE_CLASS(lightfx_t);
+  DECLARE_CLASS(lightfx_t)
 
 protected:
   short     type;
@@ -374,10 +372,11 @@ public:
 #define SLOWDARK     35
 
 
+/// Sequential Hexen light effect
 class phasedlight_t: public sectoreffect_t
 {
   friend class Map;
-  DECLARE_CLASS(phasedlight_t);
+  DECLARE_CLASS(phasedlight_t)
 
 protected:
   short base;
@@ -391,13 +390,13 @@ public:
 
 
 //======================================
-//  Platforms/Lifts (complex moving floors)
+///  Platforms/Lifts (complex moving floors)
 //======================================
 
 class plat_t : public sectoreffect_t
 {
   friend class Map;
-  DECLARE_CLASS(plat_t);
+  DECLARE_CLASS(plat_t)
 public:
   enum plat_e
   {
@@ -447,14 +446,13 @@ public:
 
 
 //======================================
-//  Doors (complex moving ceilings)
+///  Doors (complex moving ceilings)
 //======================================
 
-// vertical door
 class vdoor_t : public sectoreffect_t
 {
   friend class Map;
-  DECLARE_CLASS(vdoor_t);
+  DECLARE_CLASS(vdoor_t)
 public:
   enum vdoor_e
   {
@@ -494,13 +492,13 @@ public:
 
 
 //======================================
-//  Moving ceilings (also crushers)
+///  Moving ceilings (also crushers)
 //======================================
 
 class ceiling_t : public sectoreffect_t
 {
   friend class Map;
-  DECLARE_CLASS(ceiling_t);
+  DECLARE_CLASS(ceiling_t)
 public:
 
   enum ceiling_e
@@ -553,21 +551,13 @@ public:
 
 
 //======================================
-//  Moving floors (also stairs, donuts)
+///  Moving floors (also stairs, donuts)
 //======================================
-
-enum stair_e
-{
-  STAIRS_NORMAL,
-  STAIRS_SYNC,
-  STAIRS_PHASED
-};
-
 
 class floor_t : public sectoreffect_t
 {
   friend class Map;
-  DECLARE_CLASS(floor_t);
+  DECLARE_CLASS(floor_t)
 public:
   enum floor_e
   {
@@ -608,15 +598,22 @@ public:
   virtual void Think();
 };
 
+enum stair_e
+{
+  STAIRS_NORMAL,
+  STAIRS_SYNC,
+  STAIRS_PHASED
+};
+
 
 //======================================
-//  Stairbuilders
+///  Stairbuilders
 //======================================
 
 class stair_t : public sectoreffect_t
 {
   friend class Map;
-  DECLARE_CLASS(stair_t);
+  DECLARE_CLASS(stair_t)
 public:
   enum stair_e
   {
@@ -645,14 +642,14 @@ public:
 };
 
 
-//======================================
-//  Moving floor and ceiling (elevators, pillars)
-//======================================
+//==================================================
+///  Moving floor and ceiling (elevators, pillars)
+//==================================================
 
 class elevator_t : public sectoreffect_t
 {
   friend class Map;
-  DECLARE_CLASS(elevator_t);
+  DECLARE_CLASS(elevator_t)
 public:
   enum elevator_e
   {
@@ -681,13 +678,13 @@ public:
 #define FLOORSPEED    (FRACUNIT/NEWTICRATERATIO)
 
 //======================================
-//  Sine wave floorshake (Hexen)
+///  Sine wave floorshake (Hexen)
 //======================================
 
 class floorwaggle_t : public sectoreffect_t
 {
   friend class Map;
-  DECLARE_CLASS(floorwaggle_t);
+  DECLARE_CLASS(floorwaggle_t)
 public:
   enum floorwaggle_e
   {
@@ -949,11 +946,12 @@ typedef enum
 
 
 //============================================
-// generalized scrollers
+/// Generalized scroller
+
 class scroll_t : public Thinker
 {
   friend class Map;
-  DECLARE_CLASS(scroll_t);
+  DECLARE_CLASS(scroll_t)
 public:
   enum scroll_e
   {
@@ -967,13 +965,13 @@ public:
   };
 
 private:
-  byte type; // scroll_e
-  fixed_t   vx, vy;    // scroll speeds
-  int       affectee;  // Number of affected sidedef, sector, tag, or whatever
-  sector_t *control;   // Control sector (NULL if none) used to control scrolling
-  fixed_t   last_height; // Last known height of control sector
-  bool      accel;     // Whether it's accelerative
-  fixed_t   vdx, vdy;  // Accumulated velocity if accelerative
+  byte type;
+  fixed_t   vx, vy;      ///< scroll speed
+  int       affectee;    ///< Number of affected sidedef, sector, tag, or whatever
+  sector_t *control;     ///< Control sector (NULL if none) used to control scrolling
+  fixed_t   last_height; ///< Last known height of control sector
+  bool      accel;       ///< Whether it's accelerative
+  fixed_t   vdx, vdy;    ///< Accumulated velocity if accelerative
 
 public:
 
@@ -984,29 +982,12 @@ public:
 
 
 //============================================
-//SoM: 3/8/2000: added new model of friction for ice/sludge effects
-class friction_t : public Thinker
-{
-  friend class Map;
-  DECLARE_CLASS(friction_t);
-private:
-  float friction;        // friction value (E800 = normal)
-  float movefactor;      // inertia factor when adding to momentum
-  int   affectee;        // Number of affected sector
-public:
-  friction_t(float fri, float mf, int aff);
-  
-  virtual void Think();
-};
+/// Boom push/pull effect
 
-extern const float normal_friction;
-
-//============================================
-//SoM: 3/8/2000: Model for Pushers for push/pull effects
 class pusher_t : public Thinker
 {
   friend class Map;
-  DECLARE_CLASS(pusher_t);
+  DECLARE_CLASS(pusher_t)
 public:
   enum pusher_e
   {
@@ -1019,20 +1000,20 @@ public:
   };
 
 private:
-  byte type; // pusher_e
-  DActor *source;     // Point source if point pusher
-  int x_mag, y_mag;   // X, Y Strength
-  int magnitude;      // Vector strength for point pusher
-  int radius;         // Effective radius for point pusher
-  int x, y;           // X, Y of point source if point pusher
-  int affectee;       // Number of affected sector
+  byte type;
+  class DActor *source;  ///< Point source if point pusher
+  int x_mag, y_mag;   ///< X, Y Strength
+  int magnitude;      ///< Vector strength for point pusher
+  int radius;         ///< Effective radius for point pusher
+  int x, y;           ///< X, Y of point source if point pusher
+  int affectee;       ///< Number of affected sector
 
 public:
   pusher_t(pusher_e t, int x_m, int y_m, DActor *src, int aff);
   
   virtual void Think();
 
-  friend bool PIT_PushThing(Actor *thing);
+  friend bool PIT_PushThing(class Actor *thing);
 };
 
 

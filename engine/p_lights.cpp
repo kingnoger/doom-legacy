@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/04/25 16:26:49  smite-meister
+// Doxygen
+//
 // Revision 1.9  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
@@ -63,7 +66,7 @@
 //                           Sector light effects
 // =========================================================================
 
-IMPLEMENT_CLASS(lightfx_t, "Light FX");
+IMPLEMENT_CLASS(lightfx_t, sectoreffect_t);
 lightfx_t::lightfx_t() {}
 
 lightfx_t::lightfx_t(Map *m, sector_t *s, lightfx_e t, short maxl, short minl, short maxt, short mint)
@@ -404,7 +407,7 @@ static int PhaseTable[64] =
   32, 32, 48, 64, 80, 96, 112, 128
 };
 
-IMPLEMENT_CLASS(phasedlight_t, "Phased light");
+IMPLEMENT_CLASS(phasedlight_t, sectoreffect_t);
 phasedlight_t::phasedlight_t() {}
 
 void phasedlight_t::Think()

@@ -5,8 +5,8 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
-// Revision 1.30  2004/03/28 15:16:12  smite-meister
-// Texture cache.
+// Revision 1.31  2004/04/25 16:26:48  smite-meister
+// Doxygen
 //
 // Revision 1.29  2004/01/11 17:19:14  smite-meister
 // bugfixes
@@ -176,8 +176,8 @@ pawn_info_t pawndata[] =
 //  Pawn and PlayerPawn classes
 //=====================================
 
-IMPLEMENT_CLASS(Pawn, "Pawn");
-IMPLEMENT_CLASS(PlayerPawn, "PlayerPawn");
+IMPLEMENT_CLASS(Pawn, Actor);
+IMPLEMENT_CLASS(PlayerPawn, Pawn);
 
 Pawn::Pawn()
   : Actor()
@@ -945,7 +945,7 @@ DActor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
 // checks if the player has the correct key for 'lock'
 bool P_CheckKeys(Actor *mo, int lock)
 {
-  PlayerPawn *p = (mo->Type() == Thinker::tt_ppawn) ? (PlayerPawn *)mo : NULL;
+  PlayerPawn *p = mo->IsOf(PlayerPawn::_type) ? (PlayerPawn *)mo : NULL;
 
   if (!p)
     return false;
@@ -1365,7 +1365,7 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
   if (game.skill == sk_baby)
     damage >>= 1;   // take half damage in trainer mode
   
-  if (inflictor && (inflictor->Type() == Thinker::tt_dactor))
+  if (inflictor && inflictor->IsOf(DActor::_type))
     {
       DActor *d = (DActor *)inflictor;
       switch (d->type)
@@ -1445,7 +1445,7 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 	}      
 
       PlayerPawn *s = NULL;
-      if (source && source->Type() == Thinker::tt_ppawn)
+      if (source && source->IsOf(PlayerPawn::_type))
 	s = (PlayerPawn *)source;
 
       // added team play and teamdamage (view logboris at 13-8-98 to understand)

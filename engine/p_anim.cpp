@@ -17,15 +17,16 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/04/25 16:26:49  smite-meister
+// Doxygen
+//
 // Revision 1.2  2004/04/01 09:16:16  smite-meister
 // Texture system bugfixes
 //
-//
-//
-// DESCRIPTION:
-//   Texture animation, ANIMDEFS / ANIMATED lumps
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Texture animation, parser for ANIMDEFS and ANIMATED lumps
 
 #include <string>
 
@@ -41,10 +42,9 @@
 
 extern tic_t gametic;
 
-//
-// template for the Boom ANIMATED lump entries
-// used for defining texture and flat animation sequences
-//
+
+/// template for the Boom ANIMATED lump entries
+/// used for defining texture and flat animation sequences
 struct ANIMATED_t
 {
   char        istexture;   // 0 means flat, -1 is a terminator
@@ -145,14 +145,11 @@ floortype_t P_GetFloorType(const char *pic)
 }
 
 
-
-
-
 #define MAX_ANIM_DEFS  20
 #define MAX_FRAME_DEFS 20
 
 
-// a metaclass for animated textures
+/// Metaclass for animated Textures
 class AnimatedTexture : public Texture
 {
 public:
@@ -248,9 +245,7 @@ void AnimatedTexture::HWR_Prepare()
 
 
 
-
-
-// reads and interprets the Boom ANIMATED lump
+/// Reads and interprets the Boom ANIMATED lump
 int P_Read_ANIMATED(int lump)
 {
   if (lump < 0)
@@ -264,12 +259,10 @@ int P_Read_ANIMATED(int lump)
 
   for (ANIMATED_t *a = anims; a->istexture != -1; a++)
     {
-      int base, last;
       // TODO problem with flats
       // check different episode ?
-      base = tc.Get(a->startname);
-      last = tc.Get(a->endname);
-
+      int base = fc.FindNumForName(a->startname);
+      int last = fc.FindNumForName(a->endname);
 
       int n = last - base + 1; // number of frames
       if (n < 2 || n > MAX_FRAME_DEFS)
@@ -280,7 +273,7 @@ int P_Read_ANIMATED(int lump)
       int tics = LONG(a->speed) * NEWTICRATERATIO; // duration of one frame in tics
       for (i = 0; i < n; i++)
 	{
-	  t->frames[i].tx = R_GetTexture(base + i);
+	  t->frames[i].tx = tc.GetPtrNum(base + i);
 	  t->frames[i].tics = tics;
 	}
 
@@ -310,7 +303,7 @@ int P_Read_ANIMATED(int lump)
 
 
 
-// parses the Hexen ANIMDEFS lump, creates the required animated textures
+/// Parses the Hexen ANIMDEFS lump, creates the required animated textures
 int P_Read_ANIMDEFS(int lump)
 {
   Parser p;
@@ -374,7 +367,7 @@ int P_Read_ANIMDEFS(int lump)
 		  if (state == PS_FLAT)
 		    fd.tx = tc.GetPtrNum(n);
 		  else
-		    fd.tx = R_GetTexture(n);
+		    fd.tx = tc[n];
 
 		  word = p.GetToken(" ");
 		  if (!strcasecmp(word, "tics"))

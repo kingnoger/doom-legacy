@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.27  2004/03/28 15:16:13  smite-meister
-// Texture cache.
+// Revision 1.28  2004/04/25 16:26:49  smite-meister
+// Doxygen
 //
 // Revision 1.26  2004/01/02 14:25:01  smite-meister
 // cleanup
@@ -212,7 +212,7 @@ void PlayerPawn::Killed(PlayerPawn *victim, Actor *inflictor)
   else
     {
       int w = -1;
-      if (inflictor && (inflictor->Type() == Thinker::tt_dactor))
+      if (inflictor && (inflictor->IsOf(DActor::_type)))
 	{
 	  DActor *inf = (DActor *)inflictor;
 	  switch (inf->type)
@@ -501,7 +501,7 @@ bool PlayerPawn::Touch(Actor *p)
       if (flags & MF_PICKUP)
         {
 	  // can remove thing
-	  if (p->Type() == Thinker::tt_dactor)
+	  if (p->IsOf(DActor::_type))
 	    {
 	      DActor *dp = (DActor *)p;
 	      TouchSpecialThing(dp); // this also Removes() the item
@@ -612,7 +612,7 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
     }
 
   // Special damage types
-  if (inflictor && (inflictor->Type() == Thinker::tt_dactor))
+  if (inflictor && (inflictor->IsOf(DActor::_type)))
     {
       DActor *inf = (DActor *)inflictor;
       switch (inf->type)
@@ -754,7 +754,7 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
       //&& !(source->flags2 & MF2_BOSS)
       //&& !(type == MT_SORCERER2 && source->type == MT_WIZARD))
     {
-      if (source->Type() == Thinker::tt_dactor)
+      if (source->IsOf(DActor::_type))
 	{
 	  DActor *ds = (DActor *)source;
 	  
@@ -808,7 +808,7 @@ void Actor::Die(Actor *inflictor, Actor *source)
   // if a player killed a monster, update kills
   if (flags & MF_COUNTKILL)
     {
-      if (source && source->Type() == Thinker::tt_ppawn)
+      if (source && source->IsOf(PlayerPawn::_type))
 	{
 	  PlayerPawn *s = (PlayerPawn *)source;
 	  // count for intermission

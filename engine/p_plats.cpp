@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/04/25 16:26:49  smite-meister
+// Doxygen
+//
 // Revision 1.11  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -67,7 +70,7 @@
 #include "g_map.h"
 
 
-IMPLEMENT_CLASS(plat_t, "Platform");
+IMPLEMENT_CLASS(plat_t, sectoreffect_t);
 plat_t::plat_t() {}
 
 // constructor

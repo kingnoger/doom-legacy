@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.19  2004/03/28 15:16:13  smite-meister
-// Texture cache.
+// Revision 1.20  2004/04/25 16:26:49  smite-meister
+// Doxygen
 //
 // Revision 1.18  2004/01/06 14:37:45  smite-meister
 // six bugfixes, cleanup
@@ -1380,7 +1380,7 @@ bool PIT_VileCheck(Actor *th)
   if (!(th->flags & MF_CORPSE) )
     return true;    // not a monster
 
-  if (th->Type() != Thinker::tt_dactor)
+  if (!th->IsOf(DActor::_type))
     return true;
 
   DActor *thing = (DActor *)th;

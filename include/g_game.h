@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.8  2004/03/28 15:16:14  smite-meister
-// Texture cache.
+// Revision 1.9  2004/04/25 16:26:50  smite-meister
+// Doxygen
 //
 // Revision 1.7  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
@@ -42,12 +42,10 @@
 // Revision 1.1.1.1  2002/11/16 14:18:23  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//   GameInfo class definition.
-// 
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief GameInfo class definition
 
 #ifndef g_game_h
 #define g_game_h 1
@@ -61,7 +59,8 @@
 
 using namespace std;
 
-// skill levels
+
+/// skill levels
 enum skill_t
 {
   sk_baby,
@@ -72,7 +71,7 @@ enum skill_t
 };
 
 
-// Game mode. For game-specific rules, IWAD dependent animations etc.
+/// Game mode. For game-specific rules, IWAD dependent animations etc.
 enum gamemode_t
 {
   gm_none,
@@ -85,36 +84,21 @@ enum gamemode_t
 };
 
 
-// the current state of the game
-enum gamestate_t
-{
-  GS_NULL = 0,                // at begin
-  GS_WAITINGPLAYERS,          // waiting players in a net game
-  GS_LEVEL,                   // we are playing
-  GS_INTERMISSION,            // gazing at the intermission screen
-  GS_FINALE,                  // game final animation
-  GS_DEMOSCREEN,              // looking at a demo
 
-  GS_DEDICATEDSERVER,         // new state for dedicated server
-};
-
-
-/*
-  GameInfo:  Info about the game, common to all players
-  Should this be different for clients and servers? Probably not.
-
-  Born: on a server when a new game is started, copied to joining clients?
-  Dies: when server ends the game
-*/
-
+/// \brief Game info common to all players.
+///
+/// There is only one instance in existence, called 'game'.
+/// It stores all relevant data concerning one game,
+/// including game state, flags, players, teams, maps etc.
 
 class GameInfo
 {
   friend class Intermission;
   friend class PlayerInfo;
   friend class NetCode; // kludge until netcode is rewritten
+
 private:
-  // gameaction: delayed game state changes
+  /// delayed game state changes
   enum gameaction_t
   {
     ga_nothing,
@@ -131,8 +115,24 @@ private:
     */
   };
 
-  gameaction_t  action; // delayed state changes
+  gameaction_t  action; ///< delayed state changes
+
 public:
+  /// current state of the game
+  enum gamestate_t
+    {
+      GS_NULL = 0,        ///< only used during game startup
+      GS_WAITINGPLAYERS,  ///< waiting for players
+      GS_LEVEL,           ///< we are playing
+      GS_INTERMISSION,    ///< gazing at the intermission screen
+      GS_FINALE,          ///< game final animation
+      GS_DEMOSCREEN,      ///< looking at a demo
+
+      GS_DEDICATEDSERVER, ///< new state for dedicated servers
+    };
+
+  gamestate_t   state;  ///< gamestate
+
   // demoversion is the 'dynamic' version number, this should be == game VERSION.
   // When playing back demos, 'demoversion' receives the version number of the
   // demo. At each change to the game play, demoversion is compared to
@@ -141,24 +141,26 @@ public:
 
   unsigned demoversion;
 
-  gamemode_t    mode;   // which game are we playing?
-  gamestate_t   state;  // gamestate
-  skill_t       skill;  // skill level
+  gamemode_t    mode;   ///< which game are we playing?
+  skill_t       skill;  ///< skill level
 
-  bool netgame;     // only true in a netgame (nonlocal players possible)
-  bool multiplayer; // Only true if >1 player. netgame => multiplayer but not (multiplayer=>netgame)
-  bool modified;    // an external modification-dll is in use
-  bool nomonsters;  // checkparm of -nomonsters
-  bool paused;      // Game Pause?
+  bool netgame;     ///< only true in a netgame (nonlocal players possible)
+  bool multiplayer; ///< Only true if >1 player. netgame => multiplayer but not (multiplayer=>netgame)
+  bool modified;    ///< an external modification-dll is in use
+  bool nomonsters;  ///< checkparm of -nomonsters
+  bool paused;      ///< Game Pause?
 
-  bool inventory;   // playerpawns have an inventory
+  bool inventory;   ///< playerpawns have an inventory
+
+  // Demo sequences
+  int pagetic; ///< how many tics left until demo is changed?
 
 protected:
-  int maxplayers; // max # of players allowed
-  int maxteams;   // max # of teams
+  int maxplayers; ///< max # of players allowed
+  int maxteams;   ///< max # of teams
 
   typedef map<int, class PlayerInfo*>::iterator player_iter_t;
-  map<int, PlayerInfo*> Players; // mapping from player number to Playerinfo*
+  map<int, PlayerInfo*> Players; ///< mapping from player number to Playerinfo*
 
   vector<class TeamInfo*> teams;
 
@@ -168,7 +170,7 @@ protected:
   typedef map<int, class MapCluster*>::iterator cluster_iter_t;
   map<int, MapCluster*> clustermap;
 
-  MapCluster *currentcluster; // in which MapCluster are we in the game
+  MapCluster *currentcluster; ///< in which MapCluster are we in the game
   MapCluster *nextcluster; // temp HACK
   MapInfo    *currentmap;     // this is used ONLY for time/scorelimit games
 
@@ -176,6 +178,10 @@ public:
 
   GameInfo();
   ~GameInfo();
+
+  void TryRunTics(tic_t realtics);
+  void DoAdvanceDemo();
+  void Display();
 
   int  Serialize(class LArchive &a);
   int  Unserialize(LArchive &a);

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/04/25 16:26:49  smite-meister
+// Doxygen
+//
 // Revision 1.13  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
@@ -82,7 +85,7 @@
 //                            VERTICAL DOORS
 // =========================================================================
 
-IMPLEMENT_CLASS(vdoor_t, "Door");
+IMPLEMENT_CLASS(vdoor_t, sectoreffect_t);
 vdoor_t::vdoor_t() {}
 
 // constructor

@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.23  2004/03/28 15:16:12  smite-meister
-// Texture cache.
+// Revision 1.24  2004/04/25 16:26:48  smite-meister
+// Doxygen
 //
 // Revision 1.22  2004/01/06 14:37:45  smite-meister
 // six bugfixes, cleanup
@@ -613,7 +613,7 @@ void GameInfo::StartIntro()
   displayplayer = consoleplayer = NULL;
   demosequence = -1;
   paused = false;
-  D_AdvanceDemo();
+  pagetic = 0;
   CON_ToggleOff();
 }
 

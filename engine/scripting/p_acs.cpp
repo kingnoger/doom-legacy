@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.16  2004/03/28 15:16:14  smite-meister
-// Texture cache.
+// Revision 1.17  2004/04/25 16:26:50  smite-meister
+// Doxygen
 //
 // Revision 1.15  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
@@ -635,7 +635,7 @@ int Map::GetACSIndex(int number)
 //  Thinker class for running AC scripts
 //=================================================
 
-IMPLEMENT_CLASS(acs_t, "AC script");
+IMPLEMENT_CLASS(acs_t, Thinker);
 acs_t::acs_t() {}
 
 
@@ -1234,7 +1234,7 @@ static mobjtype_t moType;
 static int thingCount;
 static bool IT_TypeCount(Thinker *th)
 {
-  if (th->Type() == Thinker::tt_dactor)
+  if (th->IsOf(DActor::_type))
     {
       DActor *m = (DActor *)th;
 
@@ -1268,7 +1268,7 @@ static void ThingCount(int type, int tid)
 	{
 	  if (type == 0)	    
 	    thingCount++; // Just count TIDs
-	  else if (mobj->Type() == Thinker::tt_dactor && moType == ((DActor *)mobj)->type)
+	  else if (mobj->IsOf(DActor::_type) && moType == ((DActor *)mobj)->type)
 	    {
 	      if (mobj->flags & MF_COUNTKILL && mobj->flags & MF_CORPSE)
 		continue; // Don't count dead monsters
@@ -1487,7 +1487,7 @@ static int CmdEndPrint()
 {
   PlayerPawn *p;
 
-  if (ACScript->activator && ACScript->activator->Type() == Thinker::tt_ppawn)
+  if (ACScript->activator && ACScript->activator->IsOf(PlayerPawn::_type))
     {
       p = (PlayerPawn *)ACScript->activator;
     }

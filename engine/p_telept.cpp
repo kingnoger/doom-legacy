@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/04/25 16:26:50  smite-meister
+// Doxygen
+//
 // Revision 1.13  2004/01/02 14:25:01  smite-meister
 // cleanup
 //
@@ -175,7 +178,7 @@ bool Map::EV_Teleport(int tag, line_t *line, Actor *thing, bool silent)
   for (i = -1; (i = FindSectorFromTag(tag, i)) >= 0;)
     for (m = sectors[i].thinglist; m != NULL; m = m->snext)
       {
-	if (m->Type() != Thinker::tt_dactor)
+	if (!m->IsOf(DActor::_type))
 	  continue;
 	DActor *dm = (DActor *)m;
 	// not a teleportman

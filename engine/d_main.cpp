@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.25  2004/03/28 15:16:12  smite-meister
-// Texture cache.
+// Revision 1.26  2004/04/25 16:26:48  smite-meister
+// Doxygen
 //
 // Revision 1.24  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
@@ -263,28 +263,13 @@ void D_ProcessEvents()
 
 
 int   demosequence;
-bool  advancedemo;
-static int   pagetic;
 static char *pagename = "TITLEPIC";
 
-//
-// D_AdvanceDemo
-// Called after each demo or intro demosequence finishes
-//
-void D_AdvanceDemo()
+
+/// This cycles through the demo sequences.
+void GameInfo::DoAdvanceDemo()
 {
-  advancedemo = true;
-}
-
-
-//
-// This cycles through the demo sequences.
-//
-void D_DoAdvanceDemo()
-{
-  advancedemo = false;
-
-  if (game.mode == gm_udoom)
+  if (mode == gm_udoom)
     demosequence = (demosequence+1)%7;
   else
     demosequence = (demosequence+1)%6;
@@ -293,7 +278,7 @@ void D_DoAdvanceDemo()
     {
     case 0:
       pagename = "TITLEPIC";
-      switch (game.mode)
+      switch (mode)
 	{
 	case gm_hexen:
 	  pagetic = 280;
@@ -314,7 +299,7 @@ void D_DoAdvanceDemo()
 	  S_StartMusic(mus_intro);
 	  break;
 	}
-      game.state = GS_DEMOSCREEN;
+      state = GS_DEMOSCREEN;
       break;
     case 1:
       G_DeferedPlayDemo("DEMO1");
@@ -322,7 +307,7 @@ void D_DoAdvanceDemo()
       break;
     case 2:
       pagetic = 200;
-      game.state = GS_DEMOSCREEN;
+      state = GS_DEMOSCREEN;
       pagename = "CREDIT";
       break;
     case 3:
@@ -330,9 +315,9 @@ void D_DoAdvanceDemo()
       pagetic = 9999999;
       break;
     case 4:
-      game.state = GS_DEMOSCREEN;
+      state = GS_DEMOSCREEN;
       pagetic = 200;
-      switch (game.mode)
+      switch (mode)
 	{
 	case gm_doom2:
 	  pagetic = TICRATE * 11;
@@ -340,7 +325,6 @@ void D_DoAdvanceDemo()
 	  S_StartMusic(mus_dm2ttl);
 	  break;
 	case gm_heretic:
-	  pagetic = 200;
 	  if (fc.FindNumForName("E2M1") == -1)
 	    pagename = "ORDER";
 	  else
@@ -371,18 +355,6 @@ void D_DoAdvanceDemo()
 
 
 //
-// D_PageTicker
-// Handles timing for warped projection
-//
-
-void D_PageTicker()
-{
-  if (--pagetic < 0)
-    D_AdvanceDemo();
-}
-
-
-//
 // D_PageDrawer : draw a patch supposed to fill the screen,
 //                fill the borders with a background pattern (a flat)
 //                if the patch doesn't fit all the screen.
@@ -406,7 +378,7 @@ void D_PageDrawer(char *lumpname)
   Texture *t = tc.GetPtr(lumpname);
   t->Draw(0, 0, V_SCALE);
 
-  if (game.mode >= gm_heretic && demosequence == 0 && pagetic <= 140)
+  if (game.mode >= gm_heretic && demosequence == 0 && game.pagetic <= 140)
     {
       t = tc.GetPtr("ADVISOR");
       t->Draw(4, 160, V_SCALE);
@@ -423,7 +395,7 @@ void D_PageDrawer(char *lumpname)
 bool force_wipe = false;
 
 
-void D_Display()
+void GameInfo::Display()
 {
   extern int scaledviewwidth;
 
@@ -452,7 +424,7 @@ void D_Display()
   // save the current screen if about to wipe
   if (force_wipe && rendermode == render_soft)
     {
-      CONS_Printf("wipe forced, state = %d\n", game.state);
+      CONS_Printf("wipe forced, state = %d\n", state);
       force_wipe = false;
       screenwipe = true;
       wipe_StartScreen(0, 0, vid.width, vid.height);
@@ -467,7 +439,7 @@ void D_Display()
   bool redrawsbar = false;
 
   // do buffered drawing
-  switch (game.state)
+  switch (state)
     {
     case GS_LEVEL:
       if (gametic)
@@ -504,7 +476,7 @@ void D_Display()
 		  borderdrawcount--;
 		}
 	    }
-	  game.Drawer();
+	  Drawer();
 	}
 
       hud.Draw(redrawsbar); // draw hud on top anyway
@@ -528,14 +500,14 @@ void D_Display()
     }
 
   // change gamma if needed
-  if (game.state != oldgamestate && game.state != GS_LEVEL) 
+  if (state != oldgamestate && state != GS_LEVEL) 
     vid.SetPalette(0);
 
-  oldgamestate = game.state;
+  oldgamestate = state;
 
 
   // draw pause pic
-  if (game.paused && !Menu::active)
+  if (paused && !Menu::active)
     {
       int y;
       if (automap.active)
@@ -665,7 +637,7 @@ void D_DoomLoop()
 #endif
 
       // process tics (but maybe not if elapsedtics==0), run tickers, advance game state
-      TryRunTics(elapsedtics);
+      game.TryRunTics(elapsedtics);
 
       if (singletics || gametic > rendergametic)
         {
@@ -676,13 +648,13 @@ void D_DoomLoop()
 	  // move positional sounds, adjust volumes
 	  S.UpdateSounds();
 	  // Update display, next frame, with current state.
-	  D_Display();
+	  game.Display();
         }
       else if (rendertimeout < nowtics )
 	{
 	  // otherwise render if enough real time has elapsed since last rendering
 	  // in case the server hang or netsplit
-	  D_Display();
+	  game.Display();
 	}
 
 	// FIXME! Doesn't look good.
@@ -1330,7 +1302,7 @@ void D_DoomMain()
         }
       //else G_TimeDemo(tmp);
 	
-      game.state = GS_NULL;
+      game.state = GameInfo::GS_NULL;
 
       return;         
     }
@@ -1343,7 +1315,7 @@ void D_DoomMain()
   else if (dedicated && server)
     {
       pagename = "TITLEPIC";
-      game.state = GS_DEDICATEDSERVER;
+      game.state = GameInfo::GS_DEDICATEDSERVER;
     }
   else if (autostart || game.netgame || M_CheckParm("+connect") || M_CheckParm("-connect"))
     {

@@ -17,8 +17,8 @@
 //
 //
 // $Log$
-// Revision 1.29  2004/03/28 15:16:12  smite-meister
-// Texture cache.
+// Revision 1.30  2004/04/25 16:26:49  smite-meister
+// Doxygen
 //
 //
 //
@@ -396,7 +396,6 @@ void GameInfo::ClearPlayers()
 }
 
 void F_Ticker();
-void D_PageTicker();
 
 // ticks the game forward in time
 void GameInfo::Ticker()
@@ -472,7 +471,7 @@ void GameInfo::Ticker()
       break;
 
     case GS_DEMOSCREEN:
-      D_PageTicker();
+      --pagetic;
       break;
       
     case GS_WAITINGPLAYERS:

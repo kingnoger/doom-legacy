@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.20  2004/03/28 15:16:13  smite-meister
-// Texture cache.
+// Revision 1.21  2004/04/25 16:26:50  smite-meister
+// Doxygen
 //
 // Revision 1.19  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
@@ -508,7 +508,7 @@ static bool   given;
 
 static bool IT_HealRadius(Thinker *th)
 {
-  if (th->Type() != Thinker::tt_ppawn)
+  if (!th->IsOf(PlayerPawn::_type))
     return true;
 	
   PlayerPawn *t = (PlayerPawn *)th;
@@ -629,10 +629,8 @@ static void P_BlastMobj(Actor *source, Actor *victim, fixed_t strength)
 
 static bool IT_BlastRadius(Thinker *th)
 {
-  // TODO: descendant_of(tt_actor)...
   Actor *a = NULL;
-
-  if (th->Type() == Thinker::tt_dactor)
+  if (th->IsOf(DActor::_type))
     {
       DActor *m = (DActor *)th;
 
@@ -665,7 +663,7 @@ static bool IT_BlastRadius(Thinker *th)
 
       a = m;
     }
-  else if (th->Type() == Thinker::tt_ppawn)
+  else if (th->IsDescendantOf(Actor::_type))
     a = (Actor *)th;
   else
     return true;

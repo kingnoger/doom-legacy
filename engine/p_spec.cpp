@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.25  2004/03/28 15:16:13  smite-meister
-// Texture cache.
+// Revision 1.26  2004/04/25 16:26:50  smite-meister
+// Doxygen
 //
 // Revision 1.24  2004/01/02 14:25:01  smite-meister
 // cleanup
@@ -145,7 +145,7 @@ int allow_pushers = 1;
 //  Sector effects: base class for most moving geometry
 //========================================================
 
-IMPLEMENT_CLASS(sectoreffect_t, "Sector effect");
+IMPLEMENT_CLASS(sectoreffect_t, Thinker);
 sectoreffect_t::sectoreffect_t() {}
 
 sectoreffect_t::sectoreffect_t(Map *m, sector_t *s)
@@ -457,12 +457,12 @@ fixed_t Map::FindShortestLowerAround(sector_t *sec)
 	{
 	  side_t *side = getSide(secnum,i,0);
 	  if (side->bottomtexture > 0)
-	    if (R_GetTexture(side->bottomtexture)->height < minsize)
-	      minsize = R_GetTexture(side->bottomtexture)->height;
+	    if (tc[side->bottomtexture]->height < minsize)
+	      minsize = tc[side->bottomtexture]->height;
 	  side = getSide(secnum,i,1);
 	  if (side->bottomtexture > 0)
-	    if (R_GetTexture(side->bottomtexture)->height < minsize)
-	      minsize = R_GetTexture(side->bottomtexture)->height;
+	    if (tc[side->bottomtexture]->height < minsize)
+	      minsize = tc[side->bottomtexture]->height;
 	}
     }
   return minsize << FRACBITS;
@@ -487,12 +487,12 @@ fixed_t Map::FindShortestUpperAround(sector_t *sec)
 	{
 	  side_t *side = getSide(secnum,i,0);
 	  if (side->toptexture > 0)
-	    if (R_GetTexture(side->toptexture)->height < minsize)
-	      minsize = R_GetTexture(side->toptexture)->height;
+	    if (tc[side->toptexture]->height < minsize)
+	      minsize = tc[side->toptexture]->height;
 	  side = getSide(secnum,i,1);
 	  if (side->toptexture > 0)
-	    if (R_GetTexture(side->toptexture)->height < minsize)
-	      minsize = R_GetTexture(side->toptexture)->height;
+	    if (tc[side->toptexture]->height < minsize)
+	      minsize = tc[side->toptexture]->height;
 	}
     }
   return minsize << FRACBITS;
@@ -721,7 +721,7 @@ bool Map::ActivateLine(line_t *line, Actor *thing, int side, int atype)
     return false;
 
   unsigned spec = unsigned(line->special);
-  bool p = (thing->Type() == Thinker::tt_ppawn);
+  bool p = (thing->Type() == &PlayerPawn::_type);
   // flying blood or water does not activate anything
   bool forceuse = (line->flags & ML_MONSTERS_CAN_ACTIVATE) && !(thing->flags & MF_NOSPLASH);
 
@@ -1904,7 +1904,7 @@ void Map::LightningFlash()
 //  Scrollers
 //==========================================================================
 
-IMPLEMENT_CLASS(scroll_t, "Scroller");
+IMPLEMENT_CLASS(scroll_t, Thinker);
 scroll_t::scroll_t() {}
 
 //
@@ -2154,7 +2154,28 @@ void Map::SpawnScrollers()
 //  Friction
 //==========================================================================
 
-IMPLEMENT_CLASS(friction_t, "Friction");
+
+
+//============================================
+//SoM: 3/8/2000: added new model of friction for ice/sludge effects
+// FIXME Do we even need a friction thinker?
+/*
+class friction_t : public Thinker
+{
+  friend class Map;
+  DECLARE_CLASS(friction_t)
+private:
+  float friction;        // friction value (E800 = normal)
+  float movefactor;      // inertia factor when adding to momentum
+  int   affectee;        // Number of affected sector
+public:
+  friction_t(float fri, float mf, int aff);
+  
+  virtual void Think();
+};
+
+
+IMPLEMENT_CLASS(friction_t, Thinker);
 friction_t::friction_t() {}
 
 // constructor
@@ -2174,8 +2195,6 @@ int friction_t::Marshal(LArchive & a)
 //Function to apply friction to all the things in a sector.
 void friction_t::Think()
 {
-  // FIXME Do we even need a friction thinker?
-  /*
   if (!boomsupport || !variable_friction)
     return;
 
@@ -2216,9 +2235,8 @@ void friction_t::Think()
 	}
       node = node->m_snext;
     }
-  */
 }
-
+*/
 
 //Spawn all friction.
 void Map::SpawnFriction()
@@ -2229,6 +2247,8 @@ void Map::SpawnFriction()
   float length;     // line length controls magnitude
   float friction;   // friction value to be applied during movement
   float movefactor; // applied to each player move to simulate inertia
+
+  extern float normal_friction;
 
   for (i = 0 ; i < numlines ; i++,l++)
     if (l->special == 223)
@@ -2279,7 +2299,7 @@ void Map::SpawnFriction()
 //  Pushers
 //==========================================================================
 
-IMPLEMENT_CLASS(pusher_t, "Pusher");
+IMPLEMENT_CLASS(pusher_t, Thinker);
 pusher_t::pusher_t() {}
 
 #define PUSH_FACTOR 7
@@ -2309,7 +2329,7 @@ static pusher_t *tmpusher; // pusher structure for blockmap searches
 
 bool PIT_PushThing(Actor* thing)
 {
-  if (thing->Type() == Thinker::tt_ppawn && !(thing->flags & (MF_NOGRAVITY | MF_NOCLIPLINE)))
+  if (thing->IsOf(PlayerPawn::_type) && !(thing->flags & (MF_NOGRAVITY | MF_NOCLIPLINE)))
     {
       angle_t pushangle;
       int dist;
@@ -2411,7 +2431,7 @@ void pusher_t::Think()
 	continue;
 
       // not a player? FIXME wind should also affect monsters....
-      if (thing->Type() != Thinker::tt_ppawn)
+      if (!thing->IsOf(PlayerPawn::_type))
 	continue;
 
       if (type == p_wind)
@@ -2477,7 +2497,7 @@ DActor *Map::GetPushThing(int s)
   thing = sec->thinglist;
   while (thing)
     {
-      if (thing->Type() == Thinker::tt_dactor)
+      if (thing->IsOf(DActor::_type))
 	{
 	  DActor *dp = (DActor *)thing;
 	  switch (dp->type)
