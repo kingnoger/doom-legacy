@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2003/12/03 10:49:49  smite-meister
+// Save/load bugfix, text strings updated
+//
 // Revision 1.13  2003/11/27 11:28:25  smite-meister
 // Doom/Heretic startup bug fixed
 //
@@ -90,7 +93,7 @@
 //-----------------------------------------------------------------------------
 
 #include "doomdef.h"
-#include "doomdata.h"
+#include "doomtype.h"
 #include "p_enemy.h"
 #include "command.h"
 #include "p_spec.h"

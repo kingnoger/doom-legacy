@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.28  2003/12/03 10:49:50  smite-meister
+// Save/load bugfix, text strings updated
+//
 // Revision 1.27  2003/11/30 00:09:46  smite-meister
 // bugfixes
 //
@@ -102,9 +105,9 @@
 //
 //
 // DESCRIPTION:
-//   part of Map class implementation
-//      Do all the WAD I/O, get map description,
-//             set up initial state and misc. LUTs.
+//   Part of Map class implementation.
+//   Loads the map lumps from the WAD, sets up the runtime structures,
+//   spawns static Thinkers and the initial Actors.
 //
 //-----------------------------------------------------------------------------
 
@@ -583,18 +586,18 @@ void Map::LoadThings(int lump)
 	fmode = MTF_GDEATHMATCH;
       else
 	fmode = MTF_GCOOP;
+      // TODO the class flags are ignored. If there are _any_ clerics in the game, MTF_CLERIC stuff should be spawned etc.
     }
   else
     {
       // Doom / Boom flags
       // multiplayer only thing flag
+      // "not deathmatch"/"not coop" thing flags
       if (!game.multiplayer)
 	ffail |= MTF_MULTIPLAYER;
-
-      // "not deathmatch"/"not coop" thing flags
-      if (game.netgame && cv_deathmatch.value)
+      else if (cv_deathmatch.value)
 	ffail |= MTF_NOT_IN_DM;
-      else if (game.netgame && !cv_deathmatch.value)
+      else
 	ffail |= MTF_NOT_IN_COOP;
     }
 
@@ -1351,19 +1354,10 @@ bool Map::Setup(tic_t start, bool spawnthings)
   I_FinishUpdate();              // page flip or blit buffer
 
   //Initialize sector node list.
-  P_Initsecnode();
+  P_Initsecnode(); // FIXME no good when multiple maps are running, free the nodes...
 
   // Make sure all sounds are stopped before Z_FreeTags.
   S.Stop3DSounds();
-
-#if 0 // UNUSED
-  if (debugfile)
-    {
-      Z_FreeTags (PU_LEVEL, MAXINT);
-      Z_FileDumpHeap (debugfile);
-    }
-  else
-#endif
 
 #ifdef WALLSPLATS
   // clear the splats from previous map

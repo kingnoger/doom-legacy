@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.7  2003/12/03 10:49:49  smite-meister
+// Save/load bugfix, text strings updated
+//
 // Revision 1.6  2003/11/30 00:09:42  smite-meister
 // bugfixes
 //
@@ -200,18 +203,18 @@ int GameInfo::Create_classic_game(int episode)
   switch (game.mode)
     {
     case gm_doom2:
-      base2 = C1TEXT_NUM;
+      base2 = TXT_C1TEXT;
       switch (game.mission)
 	{
 	case gmi_tnt:
-	  base = THUSTR_1_NUM;
-	  base2 = T1TEXT_NUM;
+	  base = TXT_THUSTR_1;
+	  base2 = TXT_T1TEXT;
 	  break;
 	case gmi_plut:
-	  base = PHUSTR_1_NUM;
+	  base = TXT_PHUSTR_1;
 	  break;
 	default:
-	  base = HUSTR_1_NUM;
+	  base = TXT_HUSTR_1;
 	}
 
       n = 32;
@@ -273,7 +276,7 @@ int GameInfo::Create_classic_game(int episode)
     case gm_udoom:
       if (episode < 1 || episode > 4) return 0;
 
-      base = HUSTR_E1M1_NUM;
+      base = TXT_HUSTR_E1M1;
 
       n = 9;
       for (i=0; i<n; i++)
@@ -300,7 +303,7 @@ int GameInfo::Create_classic_game(int episode)
 	mapinfo[6]->BossDeathKey = 4; // cyborg in E4M6...
 
       clustermap[1] = c = new MapCluster(1);
-      c->exittext = text[E1TEXT_NUM + episode-1];
+      c->exittext = text[TXT_E1TEXT + episode-1];
       c->finalepic = DoomFlat[episode-1];
       c->finalemusic = "D_VICTOR";
       c->episode = episode;
@@ -309,7 +312,7 @@ int GameInfo::Create_classic_game(int episode)
       break;
 
     case gm_heretic:
-      base = HERETIC_E1M1_NUM;
+      base = TXT_HERETIC_E1M1;
 
       n = 9;
       for (i=0; i<n; i++)
@@ -334,7 +337,7 @@ int GameInfo::Create_classic_game(int episode)
       mapinfo[8]->BossDeathKey = HereticBossKey[episode-1];
 
       clustermap[1] = c = new MapCluster(1);
-      c->exittext = text[HERETIC_E1TEXT + episode-1];
+      c->exittext = text[TXT_HERETIC_E1TEXT + episode-1];
       c->finalepic = HereticFlat[episode-1];
       c->finalemusic = "MUS_CPTD";
       c->episode = episode;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2003/12/03 10:49:50  smite-meister
+// Save/load bugfix, text strings updated
+//
 // Revision 1.11  2003/11/12 11:07:25  smite-meister
 // Serialization done. Map progression.
 //
@@ -364,7 +367,7 @@ void F_StartCast(int dummy)
   int i;
 
   for(i=0;i<17;i++)
-    castorder[i].name = text[CC_ZOMBIE_NUM+i];
+    castorder[i].name = text[TXT_CC_ZOMBIE + i];
 
   game.wipestate = GS_WIPE;         // force a screen wipe
   castnum = 0;

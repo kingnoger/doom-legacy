@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/12/03 10:49:49  smite-meister
+// Save/load bugfix, text strings updated
+//
 // Revision 1.7  2003/11/12 11:07:21  smite-meister
 // Serialization done. Map progression.
 //
@@ -72,7 +75,6 @@
 
 extern consvar_t  cv_deathmatch;
 extern mobjtype_t PuffType;
-extern fixed_t bulletslope; // this suck so badly.
 
 
 //---------------------------------------------------------------------------
@@ -336,18 +338,15 @@ void A_StaffAttackPL2(PlayerPawn *p, pspdef_t *psp)
 
 void A_FireBlasterPL1(PlayerPawn *p, pspdef_t *psp)
 {
-  angle_t angle;
-  int damage;
-    
   S_StartSound(p, sfx_gldhit);
   p->ammo[am_blaster] -= USE_BLSR_AMMO_1;
-  P_BulletSlope(p);
-  damage = HITDICE(4);
-  angle = p->angle;
+
+  int damage = HITDICE(4);
+  angle_t angle = p->angle;
   if (p->refire)
     angle += P_SignedRandom()<<18;
   PuffType = MT_BLASTERPUFF1;
-  p->LineAttack(angle, MISSILERANGE, bulletslope, damage);
+  p->LineAttack(angle, MISSILERANGE, P_BulletSlope(p), damage);
   S_StartSound(p, sfx_blssht);
 }
 
@@ -454,17 +453,14 @@ void A_FireBlasterPL2(PlayerPawn *p, pspdef_t *psp)
 
 void A_FireGoldWandPL1(PlayerPawn *p, pspdef_t *psp)
 {
-  angle_t angle;
-  int damage;
-
   p->ammo[am_goldwand] -= USE_GWND_AMMO_1;
-  P_BulletSlope(p);
-  damage = 7+(P_Random()&7);
-  angle = p->angle;
-  if(p->refire)
+
+  int damage = 7+(P_Random()&7);
+  angle_t angle = p->angle;
+  if (p->refire)
     angle += P_SignedRandom()<<18;
   PuffType = MT_GOLDWANDPUFF1;
-  p->LineAttack(angle, MISSILERANGE, bulletslope, damage);
+  p->LineAttack(angle, MISSILERANGE, P_BulletSlope(p), damage);
   S_StartSound(p, sfx_gldhit);
 }
 
@@ -476,22 +472,19 @@ void A_FireGoldWandPL1(PlayerPawn *p, pspdef_t *psp)
 
 void A_FireGoldWandPL2(PlayerPawn *p, pspdef_t *psp)
 {
-  int i;
-  angle_t angle;
-  int damage;
-
   p->ammo[am_goldwand] -= cv_deathmatch.value ? USE_GWND_AMMO_1 : USE_GWND_AMMO_2;
   PuffType = MT_GOLDWANDPUFF2;
-  P_BulletSlope(p);
-  // FIXME what is this?
-  // fixed_t pz = int(mobjinfo[MT_GOLDWANDFX2].speed * bulletslope);
-  //      P_SpawnMissileAngle(p, MT_GOLDWANDFX2, p->angle-(ANG45/8), pz);
-  //      P_SpawnMissileAngle(p, MT_GOLDWANDFX2, p->angle+(ANG45/8), pz);
-  angle = p->angle-(ANG45/8);
-  for(i = 0; i < 5; i++)
+
+  fixed_t slope = P_BulletSlope(p);
+  
+  p->SPMAngle(MT_GOLDWANDFX2, p->angle - (ANG45/8));
+  p->SPMAngle(MT_GOLDWANDFX2, p->angle + (ANG45/8));
+
+  angle_t angle = p->angle-(ANG45/8);
+  for (int i = 0; i < 5; i++)
     {
-      damage = 1+(P_Random()&7);
-      p->LineAttack(angle, MISSILERANGE, bulletslope, damage);
+      int damage = 1+(P_Random()&7);
+      p->LineAttack(angle, MISSILERANGE, slope, damage);
       angle += ((ANG45/8)*2)/4;
     }
   S_StartSound(p, sfx_gldhit);
@@ -505,17 +498,14 @@ void A_FireGoldWandPL2(PlayerPawn *p, pspdef_t *psp)
 
 void A_FireMacePL1B(PlayerPawn *p, pspdef_t *psp)
 {
-  angle_t angle;
+  if (p->ammo[am_mace] < USE_MACE_AMMO_1)
+    return;
 
-  if(p->ammo[am_mace] < USE_MACE_AMMO_1)
-    {
-      return;
-    }
   p->ammo[am_mace] -= USE_MACE_AMMO_1;
 
   DActor *ball = p->mp->SpawnDActor(p->x, p->y, p->z + 28*FRACUNIT - p->floorclip, MT_MACEFX2);
   ball->pz = 2*FRACUNIT+((p->aiming)<<(FRACBITS-5));
-  angle = p->angle;
+  angle_t angle = p->angle;
   ball->owner = p;
   ball->angle = angle;
   ball->z += (p->aiming)<<(FRACBITS-4);

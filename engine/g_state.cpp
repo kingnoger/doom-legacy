@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2003/12/03 10:49:49  smite-meister
+// Save/load bugfix, text strings updated
+//
 // Revision 1.20  2003/11/30 00:09:43  smite-meister
 // bugfixes
 //
@@ -131,7 +134,7 @@ GameInfo::GameInfo()
   skill = sk_medium;
   maxplayers = 32;
   maxteams = 4;
-  teams.resize(maxteams);
+  //teams.resize(maxteams); // idiot!
   currentcluster = NULL;
   currentmap = NULL;
 };
@@ -140,11 +143,9 @@ GameInfo::GameInfo()
 GameInfo::~GameInfo()
 {
   ClearPlayers();
-  // FIXME maps.clear();
 };
 
 
-// was P_CheckFragLimit
 // WARNING : check cv_fraglimit>0 before call this function !
 bool GameInfo::CheckScoreLimit()
 {

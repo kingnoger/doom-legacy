@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.22  2003/12/03 10:49:49  smite-meister
+// Save/load bugfix, text strings updated
+//
 // Revision 1.21  2003/11/30 00:09:43  smite-meister
 // bugfixes
 //
@@ -67,6 +70,7 @@
 #include "g_game.h"
 #include "g_map.h"
 
+#include "i_system.h"   //I_Tactile currently has no effect
 #include "d_netcmd.h" // consvars
 #include "dstrings.h"
 
@@ -81,6 +85,22 @@
 #include "r_main.h" // PointToAngle functions FIXME which do not belong there
 #include "r_sprite.h"
 #include "m_random.h"
+
+
+int green_armor_class, blue_armor_class, soul_health, mega_health;
+
+#define NUMCLASSES 5
+
+static int ArmorIncrement[NUMCLASSES][NUMARMOR] =
+{
+  { 0, 0, 0, 0, 0 },
+  { 0, 25, 20, 15, 5 },
+  { 0, 10, 25, 5, 20 },
+  { 0, 5, 15, 10, 25 },
+  { 0, 0, 0, 0, 0 }
+};
+
+int MaxArmor[NUMCLASSES] = { 200, 100, 90, 80, 5 };
 
 
 // lists of mobjtypes that can be played by humans!
@@ -845,101 +865,6 @@ void PlayerPawn::UseArtifact(artitype_t arti)
 }
 
 
-
-// was P_GivePower
-//
-bool PlayerPawn::GivePower(int /*powertype_t*/ power)
-{
-  switch (power)
-    {
-    case pw_invulnerability:
-      // Already have it?
-      if (powers[power] > BLINKTHRESHOLD)
-	return false;
-      powers[power] = INVULNTICS;
-      flags2 |= MF2_INVULNERABLE;
-      if (pclass == 3) flags2 |= MF2_REFLECTIVE; // Hexen mage
-      break;
-
-    case pw_weaponlevel2:
-      if (powers[power] > BLINKTHRESHOLD)
-	return false;
-      powers[power] = WPNLEV2TICS;
-      weaponinfo = wpnlev2info;
-      break;
-  
-    case pw_invisibility:
-      if (powers[power] > BLINKTHRESHOLD)
-	return false;
-      powers[power] = INVISTICS;
-      flags |= MF_SHADOW;
-      break;
-
-    case pw_flight:
-      if (powers[power] > BLINKTHRESHOLD)
-	return false;
-      powers[power] = FLIGHTTICS;
-      flags2 |= MF2_FLY;
-      flags |= MF_NOGRAVITY;
-      if (z <= floorz)
-	flyheight = 10; // thrust the player in the air a bit
-      break;
-
-    case pw_infrared:
-      if (powers[power] > BLINKTHRESHOLD)
-	return false;
-      powers[power] = INFRATICS;
-      break;
-
-    case pw_ironfeet:
-      powers[power] = IRONTICS;
-      break;
-
-    case pw_strength:
-      GiveBody(100);
-      powers[power] = 1;
-      break;
-
-    case pw_speed:
-      if (powers[power] > BLINKTHRESHOLD)
-	return false;
-      powers[power] = SPEEDTICS;
-      break;
-
-    case pw_minotaur:
-      powers[power] = MAULATORTICS;
-      break;
-
-    default:
-      if (powers[power] != 0)
-	return false;
-      powers[power] = 1;
-    }
-
-  return true;
-}
-
-
-// was P_GiveBody
-// Returns false if the body isn't needed at all
-//
-bool Pawn::GiveBody(int num)
-{
-#define MAXCHICKENHEALTH 30
-
-  //if (morphTics) max = MAXCHICKENHEALTH; // FIXME maxhealth must be updated
-
-  if (health >= maxhealth)
-    return false;
-
-  health += num;
-  if (health > maxhealth)
-    health = maxhealth;
-
-  return true;
-}
-
-
 //----------------------------------------------------------------------------
 // was P_UndoPlayerChicken
 
@@ -1092,30 +1017,29 @@ DActor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
   if (player->autoaim && cv_allowautoaim.value)
     {
       // see which target is to be aimed at
-      slope = AimLineAttack (ang, 16*64*FRACUNIT);
+      slope = AimLineAttack(ang, 16*64*FRACUNIT);
 
       if (!linetarget)
         {
 	  ang += 1<<26;
-	  slope = AimLineAttack (ang, 16*64*FRACUNIT);
+	  slope = AimLineAttack(ang, 16*64*FRACUNIT);
 
 	  if (!linetarget)
             {
 	      ang -= 2<<26;
-	      slope = AimLineAttack (ang, 16*64*FRACUNIT);
+	      slope = AimLineAttack(ang, 16*64*FRACUNIT);
             }
 
 	  if (!linetarget)
-	    slope = 0;
+	    slope = AIMINGTOSLOPE(aiming);
         }
     }
-
-  //added:18-02-98: if not autoaim, or if the autoaim didnt aim something,
-  //                use the mouseaiming
-  if (!(player->autoaim && cv_allowautoaim.value) || !linetarget)
+  else
     slope = AIMINGTOSLOPE(aiming);
 
-  fixed_t mz = z + 4*8*FRACUNIT - floorclip;
+  // if not autoaim, or if the autoaim didnt aim something, use the mouseaiming    
+
+  fixed_t mz = z + 32*FRACUNIT - floorclip;
 
   DActor *th = mp->SpawnDActor(x, y, mz, type);
 
@@ -1168,7 +1092,7 @@ bool P_CheckKeys(Actor *mo, int lock)
 	}
       else
 	{
-	  p->player->message = text[PD_BLUEK_NUM + lock - 12];
+	  p->player->message = text[TXT_PD_BLUEK + lock - 12];
 	  S_StartScreamSound(p, sfx_oof);
 	}
 
@@ -1458,3 +1382,645 @@ void PlayerPawn::PlayerInSpecialSector()
   ProcessSpecialSector(sec, instantdamage);
 }
 
+
+
+
+
+//---------------------------------------------------------------------------
+//
+// FUNC P_AutoUseChaosDevice
+//
+//---------------------------------------------------------------------------
+
+bool P_AutoUseChaosDevice(PlayerPawn *p)
+{
+  int i, n = p->inventory.size();
+    
+  for (i = 0; i < n; i++)
+    {
+      if (p->inventory[i].type == arti_teleport)
+        {
+	  p->UseArtifact(arti_teleport);
+	  p->health = (p->health + 1) / 2;
+	  return true;
+        }
+    }
+  return false;
+}
+
+//---------------------------------------------------------------------------
+//
+// PROC P_AutoUseHealth
+//
+//---------------------------------------------------------------------------
+
+void P_AutoUseHealth(PlayerPawn *p, int saveHealth)
+{
+  int i, n = p->inventory.size();
+  int count;
+  int normalCount;
+  int normalSlot;
+  int superCount;
+  int superSlot;
+    
+  normalCount = superCount = 0;
+  for(i = 0; i < n; i++)
+    {
+      if (p->inventory[i].type == arti_health)
+        {
+	  normalSlot = i;
+	  normalCount = p->inventory[i].count;
+        }
+      else if (p->inventory[i].type == arti_superhealth)
+        {
+	  superSlot = i;
+	  superCount = p->inventory[i].count;
+        }
+    }
+  if((game.skill == sk_baby) && (normalCount*25 >= saveHealth))
+    { // Use quartz flasks
+      count = (saveHealth+24)/25;
+      for(i = 0; i < count; i++)
+	p->UseArtifact(arti_health);
+    }
+  else if(superCount*100 >= saveHealth)
+    { // Use mystic urns
+      count = (saveHealth+99)/100;
+      for(i = 0; i < count; i++)
+	p->UseArtifact(arti_superhealth);
+    }
+  else if((game.skill == sk_baby) && (superCount*100+normalCount*25 >= saveHealth))
+    { // Use mystic urns and quartz flasks
+      count = (saveHealth+24)/25;
+      for(i = 0; i < count; i++)
+	p->UseArtifact(arti_health);
+
+      saveHealth -= count*25;
+      count = (saveHealth+99)/100;
+      for(i = 0; i < count; i++)
+	p->UseArtifact(arti_superhealth);
+    }
+}
+
+
+
+//---------------------------------------------
+// "inflictor" is the thing that caused the damage
+//  creature or missile, can be NULL (slime, etc)
+// "source" is the thing to target after taking damage
+//  creature or NULL
+// Source and inflictor are the same for melee attacks.
+// Source can be NULL for slime, barrel explosions
+// and other environmental stuff.
+
+bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
+{
+  if (dtype & dt_always)
+    {
+      // unavoidable damage
+      // pain flash
+      if (player == displayplayer)
+	hud.damagecount += damage;
+      return Actor::Damage(inflictor, source, damage, dtype);
+    }
+
+  if (game.skill == sk_baby)
+    damage >>= 1;   // take half damage in trainer mode
+  
+  if (inflictor && (inflictor->Type() == Thinker::tt_dactor))
+    {
+      DActor *d = (DActor *)inflictor;
+      switch (d->type)
+	{
+	case MT_MACEFX4: // Death ball
+	  if (powers[pw_invulnerability])
+	    // Can't hurt invulnerable players
+	    damage = 0;
+	    break;	  
+	  if (P_AutoUseChaosDevice(this))
+	    // Player was saved using chaos device
+	    return false;	
+	  damage = 10000; // Something's gonna die
+	  break;
+        case MT_PHOENIXFX2: // Flame thrower
+	  if (P_Random() < 128)
+            { // Freeze player for a bit
+	      reactiontime += 4;
+            }
+	  break;
+	default:
+	  break;
+	}
+    }
+
+  int i, temp;
+  // player specific
+  if (!(flags & MF_CORPSE))
+    {
+      // end of game hellslime hack
+      if (subsector->sector->special == 11 && damage >= health)
+	damage = health - 1;
+
+      // ignore damage in GOD mode, or with INVUL power.
+      if ((cheats & CF_GODMODE) || powers[pw_invulnerability])
+	return false;
+
+      // doom armor
+      temp = armorpoints[armor_field];
+      if (temp > 0)
+        {
+	  int saved = int(damage * armorfactor[armor_field]);
+
+	  if (temp <= saved)
+            {
+	      // armor is used up
+	      saved = temp;
+	      armorfactor[armor_field] = 0;
+            }
+	  armorpoints[armor_field] -= saved;
+	  damage -= saved;
+        }
+
+      // hexen armor
+      float save = toughness;
+      for (i = armor_armor; i < NUMARMOR; i++)
+	save += float(armorpoints[i])/100;
+      if (save > 0)
+	{
+	  // armor absorbed some damage
+	  if (save > 1)
+	    save = 1;
+
+	  // armor deteriorates
+	  for (i = armor_armor; i < NUMARMOR; i++)
+	    if (armorpoints[i])
+	      {
+		armorpoints[i] -= int(damage * ArmorIncrement[pclass][i] / (100 * armorfactor[i]));
+		if (armorpoints[i] <= 2)
+		  armorpoints[i] = 0;
+	      }
+
+	  int saved = int(damage * save);
+	  if (damage > 200)
+	    saved = int(200 * save);
+	  damage -= saved;
+	}      
+
+      PlayerPawn *s = NULL;
+      if (source && source->Type() == Thinker::tt_ppawn)
+	s = (PlayerPawn *)source;
+
+      // added team play and teamdamage (view logboris at 13-8-98 to understand)
+      if (s && (s->player->team == player->team) && !cv_teamdamage.value && (s != this))
+	return false;
+
+      // autosavers
+      if (damage >= health && ((game.skill == sk_baby) || cv_deathmatch.value) && !morphTics)
+	{ // Try to use some inventory health
+	  P_AutoUseHealth(this, damage-health+1);
+	}
+
+      // pain flash
+      if (player == displayplayer)
+	hud.damagecount += damage;
+
+      pres->SetAnim(presentation_t::Pain);
+
+      //added:22-02-98: force feedback ??? electro-shock???
+      if (player == consoleplayer)
+	I_Tactile (40,10,40 + min(damage, 100) * 2);
+    }
+
+  attacker = source;
+
+  bool ret = Actor::Damage(inflictor, source, damage, dtype);
+
+  return ret;
+}
+
+
+
+//===========================================================
+//   Giving playerpawns stuff
+//===========================================================
+
+extern int  p_sound;  // pickupsound
+extern bool p_remove; // should the stuff be removed?
+
+// Boris stuff : dehacked patches hack
+int maxsoul=200;
+
+// Returns false if the health isn't needed at all
+bool Pawn::GiveBody(int num)
+{
+#define MAXCHICKENHEALTH 30
+
+  //if (morphTics) max = MAXCHICKENHEALTH; // FIXME maxhealth must be updated
+
+  if (health >= maxhealth)
+    return false;
+
+  health += num;
+  if (health > maxhealth)
+    health = maxhealth;
+
+  return true;
+}
+
+
+bool PlayerPawn::GivePower(int power)
+{
+  switch (power)
+    {
+    case pw_invulnerability:
+      // Already have it?
+      if (powers[power] > BLINKTHRESHOLD)
+	return false;
+      powers[power] = INVULNTICS;
+      flags2 |= MF2_INVULNERABLE;
+      if (pclass == 3) flags2 |= MF2_REFLECTIVE; // Hexen mage
+      break;
+
+    case pw_weaponlevel2:
+      if (powers[power] > BLINKTHRESHOLD)
+	return false;
+      powers[power] = WPNLEV2TICS;
+      weaponinfo = wpnlev2info;
+      break;
+  
+    case pw_invisibility:
+      if (powers[power] > BLINKTHRESHOLD)
+	return false;
+      powers[power] = INVISTICS;
+      flags |= MF_SHADOW;
+      break;
+
+    case pw_flight:
+      if (powers[power] > BLINKTHRESHOLD)
+	return false;
+      powers[power] = FLIGHTTICS;
+      flags2 |= MF2_FLY;
+      flags |= MF_NOGRAVITY;
+      if (z <= floorz)
+	flyheight = 10; // thrust the player in the air a bit
+      break;
+
+    case pw_infrared:
+      if (powers[power] > BLINKTHRESHOLD)
+	return false;
+      powers[power] = INFRATICS;
+      break;
+
+    case pw_ironfeet:
+      powers[power] = IRONTICS;
+      break;
+
+    case pw_strength:
+      GiveBody(100);
+      powers[power] = 1;
+      break;
+
+    case pw_speed:
+      if (powers[power] > BLINKTHRESHOLD)
+	return false;
+      powers[power] = SPEEDTICS;
+      break;
+
+    case pw_minotaur:
+      powers[power] = MAULATORTICS;
+      break;
+
+    default:
+      if (powers[power] != 0)
+	return false;
+      powers[power] = 1;
+    }
+
+  p_sound = Actor::s_powerup;
+
+  return true;
+}
+
+
+// Num is the number of clip loads,
+// not the individual count (0= 1/2 clip).
+// Returns false if the ammo can't be picked up at all
+
+bool PlayerPawn::GiveAmmo(ammotype_t at, int count)
+{
+  static const weapontype_t GetAmmoChange[] =
+  {
+    wp_chaingun, wp_shotgun, wp_plasma, wp_missile,
+    wp_goldwand,
+    wp_crossbow,
+    wp_blaster,
+    wp_skullrod,
+    wp_phoenixrod,
+    wp_mace
+  };
+
+  if (at == am_noammo)
+    return false;
+
+  if (at == am_manaboth)
+    {
+      bool ret = GiveAmmo(am_mana1, count) || GiveAmmo(am_mana2, count);
+      return ret;
+    }
+
+  if (at < 0 || at >= NUMAMMO)
+    {
+      CONS_Printf ("\2P_GiveAmmo: bad type %i", at);
+      return false;
+    }
+
+  if (ammo[at] >= maxammo[at])
+    return false;
+
+  if (game.skill == sk_baby || game.skill == sk_nightmare)
+    {
+      if (game.mode == gm_heretic || game.mode == gm_hexen)
+	count += count>>1;
+      else
+	// give double ammo in trainer mode,
+	// you'll need it in nightmare
+	count <<= 1;
+    }
+  int oldammo = ammo[at];
+  ammo[at] += count;
+
+  if (ammo[at] > maxammo[at])
+    ammo[at] = maxammo[at];
+
+  // If non zero ammo,
+  // don't change up weapons,
+  // player was lower on purpose.
+  if (oldammo)
+    return true;
+
+  // We were down to zero,
+  // so select a new weapon.
+  // Preferences are not user selectable.
+
+  // Boris hack for preferred weapons order...
+  if (!player->originalweaponswitch)
+    {
+      if (ammo[weaponinfo[readyweapon].ammo]
+	  < weaponinfo[readyweapon].ammopershoot)
+	UseFavoriteWeapon();
+      return true;
+    }
+  else if (game.mode == gm_heretic)
+    {
+      if ((readyweapon == wp_staff || readyweapon == wp_gauntlets) 
+	  && weaponowned[GetAmmoChange[at]])
+	pendingweapon = GetAmmoChange[at];
+    }
+  else switch (at)
+    {
+    case am_clip:
+      if (readyweapon == wp_fist)
+        {
+	  if (weaponowned[wp_chaingun])
+	    pendingweapon = wp_chaingun;
+	  else
+	    pendingweapon = wp_pistol;
+        }
+      break;
+
+    case am_shell:
+      if (readyweapon == wp_fist
+	  || readyweapon == wp_pistol)
+        {
+	  if (weaponowned[wp_shotgun])
+	    pendingweapon = wp_shotgun;
+        }
+      break;
+
+    case am_cell:
+      if (readyweapon == wp_fist
+	  || readyweapon == wp_pistol)
+        {
+	  if (weaponowned[wp_plasma])
+	    pendingweapon = wp_plasma;
+        }
+      break;
+
+    case am_misl:
+      if (readyweapon == wp_fist)
+        {
+	  if (weaponowned[wp_missile])
+	    pendingweapon = wp_missile;
+        }
+    default:
+      break;
+    }
+
+  return true;
+}
+
+
+bool PlayerPawn::GiveWeapon(weapontype_t wt, bool dropped)
+{
+  bool     gaveammo;
+  bool     gaveweapon;
+
+  if (game.multiplayer && (cv_deathmatch.value != 2) && !dropped)
+    {
+      // leave placed weapons forever on net games
+      if (weaponowned[wt])
+	return false;
+
+      weaponowned[wt] = true;
+
+      if (cv_deathmatch.value)
+	GiveAmmo(weaponinfo[wt].ammo, 5*clipammo[weaponinfo[wt].ammo]);
+      else
+	GiveAmmo(weaponinfo[wt].ammo, weapondata[wt].getammo);
+
+      // Boris hack preferred weapons order...
+      if (player->originalweaponswitch
+	  || player->favoriteweapon[wt] > player->favoriteweapon[readyweapon])
+	pendingweapon = wt;     // do like Doom2 original
+
+      if (player == displayplayer || (cv_splitscreen.value && player == displayplayer2))
+	S_StartAmbSound(sfx_wpnup);
+      return false;
+    }
+
+  if (weaponinfo[wt].ammo != am_noammo)
+    {
+      // give one clip with a dropped weapon,
+      // two clips with a found weapon
+      if (dropped)
+	gaveammo = GiveAmmo(weaponinfo[wt].ammo, clipammo[weaponinfo[wt].ammo]);
+      else
+	gaveammo = GiveAmmo(weaponinfo[wt].ammo, weapondata[wt].getammo);
+    }
+  else
+    gaveammo = false;
+
+  if (weaponowned[wt])
+    gaveweapon = false;
+  else
+    {
+      gaveweapon = true;
+      weaponowned[wt] = true;
+      if (player->originalweaponswitch
+	  || player->favoriteweapon[wt] > player->favoriteweapon[readyweapon])
+	pendingweapon = wt;    // Doom2 original stuff
+    }
+
+  p_sound = Actor::s_weaponpickup;
+  return (gaveweapon || gaveammo);
+}
+
+
+// Returns false if the armor is worse
+// than the current armor.
+bool PlayerPawn::GiveArmor(armortype_t type, float factor, int points)
+{
+  // Kludgy mess. The correct way would be making each pickup-item a separate class
+  // with a Give method... same thing with weapons and artifacts
+  if (factor > 0)
+    {
+      // new piece of armor
+      if (points < 0) // means use standard Hexen armor increments
+	points = ArmorIncrement[pclass][type];
+
+      if (armorpoints[type] >= points)
+	return false; // don't pick up
+
+      armorfactor[type] = factor;
+      armorpoints[type] = points;
+    }
+  else
+    {
+      // negative factor means bonus to current armor
+      int i, total = int(100 * toughness);
+      for (i = 0; i < NUMARMOR; i++)
+	total += armorpoints[i];
+
+      if (total >= MaxArmor[pclass])
+	return false;
+
+      if (armorfactor[type] < -factor)
+	armorfactor[type] = -factor;
+      armorpoints[type] += points;
+    }
+
+  return true;
+}
+
+
+bool PlayerPawn::GiveKey(keycard_t k)
+{
+  if (keycards & k)
+    return false;
+
+  keycards |= k;
+
+  int i, j = k;
+  for (i = -1; j; i++)
+    j >>= 1; // count the key number
+    
+  player->message = text[TXT_KEY_STEEL + i];
+
+  p_sound = Actor::s_keypickup;
+
+  return true;
+}
+
+
+//---------------------------------------------------------------------------
+//
+// Removes the MF_SPECIAL flag, and initiates the artifact pickup
+// animation. The artifact is restored after a number of tics by an action function.
+//
+//---------------------------------------------------------------------------
+
+static void SetDormantArtifact(DActor *arti)
+{
+  arti->flags &= ~MF_SPECIAL;
+  if (cv_deathmatch.value && !(arti->flags & MF_DROPPED))
+    {
+      // respawn delay
+      if (arti->type == MT_XARTIINVULNERABILITY)
+	arti->SetState(S_DORMANTARTI3_1);
+      //else if (arti->type == MT_ARTIINVISIBILITY) 
+      else if (arti->type == MT_SUMMONMAULATOR || arti->type == MT_XARTIFLY)
+	arti->SetState(S_DORMANTARTI2_1);
+      else
+	arti->SetState(S_DORMANTARTI1_1);
+    }
+  else
+    arti->SetState(S_DEADARTI1); // Don't respawn
+
+  S_StartSound(arti, sfx_artiup);
+}
+
+
+void A_RestoreArtifact(DActor *arti)
+{
+  arti->flags |= MF_SPECIAL;
+  arti->SetState(arti->info->spawnstate);
+  S_StartSound(arti, Actor::s_respawn);
+}
+
+
+bool PlayerPawn::GiveArtifact(artitype_t arti, DActor *from)
+{
+  if (arti >= NUMARTIFACTS || arti <= arti_none)
+    return false;
+
+  vector<inventory_t>::iterator i = inventory.begin();
+
+  // find the right slot
+  while (i < inventory.end() && i->type != arti)
+    i++;
+
+  if (i == inventory.end())
+    // give one artifact
+    inventory.push_back(inventory_t(arti, 1));
+  else
+    {
+      // player already has some of these
+      if (i->count >= MAXARTECONT)
+	// Player already has 16 of this item
+	return false;
+      
+      i->count++; // one more
+    }
+
+  p_remove = false;
+
+  if (from && (from->flags & MF_COUNTITEM))
+    player->items++;
+
+  int j;
+  if (arti < arti_firstpuzzitem)
+    {
+      j = TXT_ARTIINVULNERABILITY - 1 + arti;
+      if (from->type == MT_XARTIINVULNERABILITY)
+	j = TXT_XARTIINVULNERABILITY;
+      player->SetMessage(text[TXT_ARTIINVULNERABILITY - 1 + arti], false);
+      SetDormantArtifact(from);
+      p_sound = Actor::s_artipickup;
+    }
+  else
+    {
+      // Puzzle item
+      j = TXT_ARTIPUZZSKULL - 1 + arti;
+      if (arti >= arti_puzzgear1)
+	j = TXT_ARTIPUZZGEAR;
+      player->SetMessage(text[j], true);
+      SetDormantArtifact(from);
+      /*
+      if (!game.multiplayer || deathmatch)
+        // Remove puzzle items if not cooperative netplay
+        P_RemoveMobj(artifact);
+      */
+    }
+
+  return true;
+}

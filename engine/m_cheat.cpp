@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2003/12/03 10:49:49  smite-meister
+// Save/load bugfix, text strings updated
+//
 // Revision 1.12  2003/06/20 20:56:07  smite-meister
 // Presentation system tweaked
 //
@@ -757,11 +760,11 @@ static void CheatGodFunc(PlayerPawn *p, const byte *arg)
   if (game.mode == gm_heretic) {
     if (p->cheats & CF_GODMODE)
       {
-	msg = TXT_CHEATGODON;
+	msg = CHEAT_GODON;
       }
     else
       {
-	msg = TXT_CHEATGODOFF;
+	msg = CHEAT_GODOFF;
       }
   } else { // doom then
     if (p->cheats & CF_GODMODE)
@@ -828,14 +831,14 @@ static void CheatNoClipFunc(PlayerPawn *p, const byte *arg)
   if (p->cheats & CF_NOCLIP)
     {
       if (game.mode == gm_heretic) 
-	msg = TXT_CHEATNOCLIPON;
+	msg = CHEAT_NOCLIPON;
       else
 	msg = STSTR_NCON;
     }
   else
     {
       if (game.mode == gm_heretic) 
-	msg = TXT_CHEATNOCLIPOFF;
+	msg = CHEAT_NOCLIPOFF;
       else
 	msg = STSTR_NCOFF;
     }
@@ -875,7 +878,7 @@ static void CheatWeaponsFunc(PlayerPawn *p, const byte *arg)
 	  p->weaponowned[wp_mace] = false;
 	}
 
-      msg = TXT_CHEATWEAPONS;
+      msg = CHEAT_WEAPONS;
     }
   else
     {
@@ -901,12 +904,12 @@ static void CheatPowerFunc(PlayerPawn *p, const byte *arg)
   if(p->powers[pw_weaponlevel2])
     {
       p->powers[pw_weaponlevel2] = 0;
-      p->player->SetMessage(TXT_CHEATPOWEROFF, false);
+      p->player->SetMessage(CHEAT_POWEROFF, false);
     }
   else
     {
       P_UseArtifact(p, arti_tomeofpower);
-      p->player->SetMessage(TXT_CHEATPOWERON, false);
+      p->player->SetMessage(CHEAT_POWERON, false);
     }
 }
 
@@ -922,13 +925,13 @@ static void CheatHealthFunc(PlayerPawn *p, const byte *arg)
   */
     p->health = p->maxhealth;
 
-  p->player->SetMessage(TXT_CHEATHEALTH, false);
+  p->player->SetMessage(CHEAT_HEALTH, false);
 }
 
 static void CheatKeysFunc(PlayerPawn *p, const byte *arg)
 {
   p->keycards |= it_allkeys;
-  p->player->SetMessage(TXT_CHEATKEYS, false);
+  p->player->SetMessage(CHEAT_KEYS, false);
 }
 
 static void CheatTickerFunc(PlayerPawn *p, const byte *arg)
@@ -938,23 +941,23 @@ static void CheatTickerFunc(PlayerPawn *p, const byte *arg)
   cv_ticrate.value = !cv_ticrate.value;
   if(cv_ticrate.value)
     {
-      p->player->SetMessage(TXT_CHEATTICKERON, false);
+      p->player->SetMessage(CHEAT_TICKERON, false);
     }
   else
     {
-      p->player->SetMessage(TXT_CHEATTICKEROFF, false);
+      p->player->SetMessage(CHEAT_TICKEROFF, false);
     }
   */
 }
 
 static void CheatArtifact1Func(PlayerPawn *p, const byte *arg)
 {
-  p->player->SetMessage(TXT_CHEATARTIFACTS1, false);
+  p->player->SetMessage(CHEAT_ARTIFACTS1, false);
 }
 
 static void CheatArtifact2Func(PlayerPawn *p, const byte *arg)
 {
-  p->player->SetMessage(TXT_CHEATARTIFACTS2, false);
+  p->player->SetMessage(CHEAT_ARTIFACTS2, false);
 }
 
 static void CheatArtifact3Func(PlayerPawn *p, const byte *arg)
@@ -980,25 +983,25 @@ static void CheatArtifact3Func(PlayerPawn *p, const byte *arg)
 	      p->GiveArtifact(artitype_t(i), NULL);
 	    }
 	}
-      p->player->SetMessage(TXT_CHEATARTIFACTS3, false);
+      p->player->SetMessage(CHEAT_ARTIFACTS3, false);
     }
   else if(type > arti_none && type < NUMARTIFACTS
 	  && count > 0 && count < 10)
     {
       if(shareware && (type == arti_superhealth || type == arti_teleport))
 	{
-	  p->player->SetMessage(TXT_CHEATARTIFACTSFAIL, false);
+	  p->player->SetMessage(CHEAT_ARTIFACTSFAIL, false);
 	  return;
 	}
       for(i = 0; i < count; i++)
 	{
 	  p->GiveArtifact(type, NULL);
 	}
-      p->player->SetMessage(TXT_CHEATARTIFACTS3, false);
+      p->player->SetMessage(CHEAT_ARTIFACTS3, false);
     }
   else
     { // Bad input
-      p->player->SetMessage(TXT_CHEATARTIFACTSFAIL, false);
+      p->player->SetMessage(CHEAT_ARTIFACTSFAIL, false);
     }
 }
 
@@ -1030,7 +1033,7 @@ static void CheatWarpFunc(PlayerPawn *p, const byte *arg)
     }
 
   if (game.mode == gm_heretic)
-    msg = TXT_CHEATWARP;
+    msg = CHEAT_WARP;
   else
     msg = STSTR_CLEV;
 
@@ -1044,19 +1047,19 @@ static void CheatChickenFunc(PlayerPawn *p, const byte *arg)
     {
       if (p->UndoMorph())
 	{
-	  p->player->SetMessage(TXT_CHEATCHICKENOFF, false);
+	  p->player->SetMessage(CHEAT_CHICKENOFF, false);
 	}
     }
   else if (p->Morph())
     {
-      p->player->SetMessage(TXT_CHEATCHICKENON, false);
+      p->player->SetMessage(CHEAT_CHICKENON, false);
     }
 }
 
 static void CheatMassacreFunc(PlayerPawn *p, const byte *arg)
 {
   p->mp->Massacre();
-  p->player->SetMessage(TXT_CHEATMASSACRE, false);
+  p->player->SetMessage(CHEAT_MASSACRE, false);
 }
 
 static void CheatIDKFAFunc(PlayerPawn *p, const byte *arg)
@@ -1074,7 +1077,7 @@ static void CheatIDKFAFunc(PlayerPawn *p, const byte *arg)
       p->weaponowned[wp_staff] = true;
       p->pendingweapon = wp_staff;
 
-      p->player->SetMessage(TXT_CHEATIDKFA, true);
+      p->player->SetMessage(CHEAT_IDKFA, true);
     }
   else
     {
@@ -1100,5 +1103,5 @@ static void CheatIDKFAFunc(PlayerPawn *p, const byte *arg)
 static void CheatIDDQDFunc(PlayerPawn *p, const byte *arg)
 {
   p->Damage(p, p, 10000, dt_always);
-  p->player->SetMessage(TXT_CHEATIDDQD, true);
+  p->player->SetMessage(CHEAT_IDDQD, true);
 }

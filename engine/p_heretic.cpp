@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2003/12/03 10:49:49  smite-meister
+// Save/load bugfix, text strings updated
+//
 // Revision 1.15  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -314,6 +317,7 @@ void DoomPatchEngine()
   Actor::s_keypickup = sfx_itemup;
   Actor::s_weaponpickup = sfx_wpnup;
   Actor::s_artipickup = sfx_itemup;
+  Actor::s_powerup  = sfx_getpow;
   Actor::s_teleport = sfx_telept;
   Actor::s_respawn  = sfx_itmbk;
   Actor::s_gibbed   = sfx_slop;
@@ -323,6 +327,8 @@ void DoomPatchEngine()
   else
     console_alert = sfx_tink;
 
+  // hacks: teleport fog, blood, gibs
+  mobjinfo[MT_TFOG].spawnstate = S_TFOG;
   sprnames[SPR_BLUD] = "BLUD";
   states[S_GIBS].sprite = SPR_POL5;
 }
@@ -343,35 +349,30 @@ void HereticPatchEngine()
   Actor::s_keypickup = sfx_keyup;
   Actor::s_weaponpickup = sfx_hwpnup;
   Actor::s_artipickup = sfx_hitemup;
+  Actor::s_powerup  = sfx_hitemup;
   Actor::s_teleport = sfx_htelept;
   Actor::s_respawn  = sfx_respawn;
   Actor::s_gibbed   = sfx_slop;
 
   console_alert = sfx_chat;
 
-  // teleport fog
+  // hacks
   mobjinfo[MT_TFOG].spawnstate = S_HTFOG1;
-  // guess
   sprnames[SPR_BLUD] = "BLOD";
+  states[S_GIBS].sprite = SPR_BLOD;
 
   // FIXME rationalize here. Above, good. Below, bad.
-
-  states[S_GIBS].sprite = SPR_BLOD;
 
   // instead of this, make a default skin (marine, heretic)
   // with appropriate sounds.
   strcpy(S_sfx[sfx_oof].lumpname, "PLROOF");
   S_sfx[sfx_oof].priority    = 32;
 
-  text[PD_REDK_NUM]    = "YOU NEED A GREEN KEY TO OPEN THIS DOOR";
+  text[TXT_PD_REDK] = "YOU NEED A GREEN KEY TO OPEN THIS DOOR";
 
-  text[GOTARMOR_NUM] = "SILVER SHIELD";
-  text[GOTMEGA_NUM ] = "ENCHANTED SHIELD";
-  text[GOTSTIM_NUM ] = "CRYSTAL VIAL";
-  text[GOTMAP_NUM  ] = "MAP SCROLL";
-  text[GOTBLUECARD_NUM] = "BLUE KEY";
-  text[GOTYELWCARD_NUM] = "YELLOW KEY";
-  text[GOTREDCARD_NUM ] = "GREEN KEY";
+  text[TXT_GOTBLUECARD] = "BLUE KEY";
+  text[TXT_GOTYELWCARD] = "YELLOW KEY";
+  text[TXT_GOTREDCARD] = "GREEN KEY";
 }
 
 void HexenPatchEngine()
@@ -388,15 +389,15 @@ void HexenPatchEngine()
   Actor::s_keypickup = SFX_PICKUP_KEY;
   Actor::s_weaponpickup = SFX_PICKUP_WEAPON;
   Actor::s_artipickup = SFX_PICKUP_ARTIFACT;
+  Actor::s_powerup  = SFX_PICKUP_ITEM;
   Actor::s_teleport = SFX_TELEPORT;
   Actor::s_respawn  = SFX_RESPAWN;
   Actor::s_gibbed   = SFX_PLAYER_FALLING_SPLAT;
 
   console_alert = SFX_CHAT;
 
-  // teleport fog
+  // hacks
   mobjinfo[MT_TFOG].spawnstate = S_HTFOG1;
-
   sprnames[SPR_BLUD] = "BLOD";
   states[S_GIBS].sprite = SPR_GIBS;
 }

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2003/12/03 10:49:50  smite-meister
+// Save/load bugfix, text strings updated
+//
 // Revision 1.11  2003/11/12 11:07:23  smite-meister
 // Serialization done. Map progression.
 //
@@ -680,8 +683,7 @@ void A_Punch(PlayerPawn *p, pspdef_t *psp)
     damage *= 10;
 
   angle = p->angle;
-  angle += (P_Random()<<18); // WARNING: don't put this in one line 
-  angle -= (P_Random()<<18); // else this expretion is ambiguous (evaluation order not diffined)
+  angle += P_SignedRandom() << 18;
 
   slope = p->AimLineAttack(angle, MELEERANGE);
   p->LineAttack(angle, MELEERANGE, slope, damage);
@@ -705,17 +707,11 @@ void A_Punch(PlayerPawn *p, pspdef_t *psp)
 //
 void A_Saw(PlayerPawn *p, pspdef_t *psp)
 {
-  angle_t     angle;
-  int         damage;
-  int         slope;
-
-  damage = 2*(P_Random ()%10+1);
-  angle = p->angle;
-  angle += (P_Random()<<18); // WARNING: don't put this in one line 
-  angle -= (P_Random()<<18); // else this expretion is ambiguous (evaluation order not diffined)
+  int damage = 2*(P_Random ()%10+1);
+  angle_t angle = p->angle + (P_SignedRandom() << 18);
 
   // use meleerange + 1 se the puff doesn't skip the flash
-  slope = p->AimLineAttack(angle, MELEERANGE+1);
+  int slope = p->AimLineAttack(angle, MELEERANGE+1);
   p->LineAttack(angle, MELEERANGE+1, slope, damage, dt_cutting); // no recoil!
 
   if (!linetarget)
@@ -786,36 +782,37 @@ void A_FirePlasma(PlayerPawn *p, pspdef_t *psp)
 // Sets a slope so a near miss is at aproximately
 // the height of the intended target
 //
-fixed_t bulletslope;
 
 //added:16-02-98: Fab comments: autoaim for the bullet-type weapons
-void P_BulletSlope(PlayerPawn *p)
+fixed_t P_BulletSlope(PlayerPawn *p)
 {
-  angle_t an;
+  fixed_t slope;
+  angle_t an = p->angle;
 
   //added:18-02-98: if AUTOAIM, try to aim at something
   if(!p->player->autoaim || !cv_allowautoaim.value)
     goto notargetfound;
 
   // see which target is to be aimed at
-  an = p->angle;
-  bulletslope = p->AimLineAttack(an, 16*64*FRACUNIT);
+  slope = p->AimLineAttack(an, AIMRANGE);
 
   if (!linetarget)
     {
       an += 1<<26;
-      bulletslope = p->AimLineAttack(an, 16*64*FRACUNIT);
+      slope = p->AimLineAttack(an, AIMRANGE);
       if (!linetarget)
         {
 	  an -= 2<<26;
-	  bulletslope = p->AimLineAttack(an, 16*64*FRACUNIT);
+	  slope = p->AimLineAttack(an, AIMRANGE);
         }
       if(!linetarget)
         {
 	notargetfound:
-	  bulletslope = AIMINGTOSLOPE(p->aiming);
+	  slope = AIMINGTOSLOPE(p->aiming);
         }
     }
+
+  return slope;
 }
 
 
@@ -824,21 +821,21 @@ void P_BulletSlope(PlayerPawn *p)
 //
 //added:16-02-98: used only for player (pistol,shotgun,chaingun)
 //                supershotgun use p_lineattack directely
-void P_GunShot(Actor *mo, bool accurate)
-{
-  angle_t     angle;
-  int         damage;
+static fixed_t bulletslope;
 
-  damage = 5*(P_Random ()%3+1);
-  angle = mo->angle;
+static void P_GunShot(PlayerPawn *p, bool accurate)
+{
+  int damage = 5*(P_Random()%3 + 1);
+  angle_t angle = p->angle;
+  fixed_t slope = bulletslope;
 
   if (!accurate)
     {
-      angle += (P_Random()<<18); // WARNING: don't put this in one line 
-      angle -= (P_Random()<<18); // else this expretion is ambiguous (evaluation order not diffined)
+      angle += P_SignedRandom() << 18;
+      slope += P_SignedRandom() << 4; // TEST vertical scatter
     }
 
-  mo->LineAttack(angle, MISSILERANGE, bulletslope, damage);
+  p->LineAttack(angle, MISSILERANGE, slope, damage);
 }
 
 
@@ -851,10 +848,9 @@ void A_FirePistol(PlayerPawn *p, pspdef_t *psp)
   p->pres->SetAnim(presentation_t::Shoot);
 
   p->ammo[p->weaponinfo[p->readyweapon].ammo]--;
-
   p->SetPsprite(ps_flash, p->weaponinfo[p->readyweapon].flashstate);
 
-  P_BulletSlope(p);
+  bulletslope = P_BulletSlope(p);
   P_GunShot(p, !p->refire);
 }
 
@@ -864,17 +860,15 @@ void A_FirePistol(PlayerPawn *p, pspdef_t *psp)
 //
 void A_FireShotgun(PlayerPawn *p, pspdef_t *psp)
 {
-  int         i;
-
   S_StartAttackSound(p, sfx_shotgn);
   p->pres->SetAnim(presentation_t::Shoot);
 
   p->ammo[p->weaponinfo[p->readyweapon].ammo]--;
   p->SetPsprite(ps_flash, p->weaponinfo[p->readyweapon].flashstate);
 
-  P_BulletSlope(p);
-  for (i=0 ; i<7 ; i++)
-    P_GunShot (p, false);
+  bulletslope = P_BulletSlope(p);
+  for (int i=0; i<7; i++)
+    P_GunShot(p, false);
 }
 
 
@@ -884,7 +878,6 @@ void A_FireShotgun(PlayerPawn *p, pspdef_t *psp)
 //
 void A_FireShotgun2(PlayerPawn *p, pspdef_t *psp)
 {
-  int         i;
   angle_t     angle;
   int         damage;
 
@@ -895,9 +888,9 @@ void A_FireShotgun2(PlayerPawn *p, pspdef_t *psp)
 
   p->SetPsprite(ps_flash, p->weaponinfo[p->readyweapon].flashstate);
 
-  P_BulletSlope (p);
+  bulletslope = P_BulletSlope(p);
 
-  for (i=0 ; i<20 ; i++)
+  for (int i=0 ; i<20 ; i++)
     {
       int slope = bulletslope + (P_SignedRandom()<<5);
       damage = 5*(P_Random ()%3+1);
@@ -922,8 +915,8 @@ void A_FireCGun(PlayerPawn *p, pspdef_t *psp)
 
   p->SetPsprite(ps_flash, weaponstatenum_t(p->weaponinfo[p->readyweapon].flashstate
 				     + psp->state - &weaponstates[S_CHAIN1]));
-  P_BulletSlope (p);
-  P_GunShot (p, !p->refire);
+  bulletslope = P_BulletSlope(p);
+  P_GunShot(p, !p->refire);
 }
 
 

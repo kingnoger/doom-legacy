@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/12/03 10:49:49  smite-meister
+// Save/load bugfix, text strings updated
+//
 // Revision 1.6  2003/11/23 00:41:54  smite-meister
 // bugfixes
 //
@@ -470,8 +473,8 @@ void A_LeafSpawn(DActor *actor)
 {
   for (int i = (P_Random()&3)+1; i; i--)
     {
-      DActor *mo = actor->mp->SpawnDActor(actor->x + ((P_Random()-P_Random())<<14), actor->y+
-		   ((P_Random()-P_Random())<<14), actor->z + (P_Random()<<14), 
+      DActor *mo = actor->mp->SpawnDActor(actor->x + (P_SignedRandom() << 14), actor->y +
+		   (P_SignedRandom() << 14), actor->z + (P_Random()<<14), 
 		   mobjtype_t(MT_LEAF1 + (P_Random() & 1)));
       if (mo)
 	{

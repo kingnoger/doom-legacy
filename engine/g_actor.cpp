@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2003/12/03 10:49:49  smite-meister
+// Save/load bugfix, text strings updated
+//
 // Revision 1.22  2003/11/27 11:28:25  smite-meister
 // Doom/Heretic startup bug fixed
 //
@@ -143,6 +146,7 @@ int Actor::s_pickup    = sfx_None;
 int Actor::s_keypickup = sfx_None;
 int Actor::s_weaponpickup = sfx_None;
 int Actor::s_artipickup = sfx_None;
+int Actor::s_powerup  = sfx_None;
 int Actor::s_teleport = sfx_None;
 int Actor::s_respawn  = sfx_None;
 int Actor::s_gibbed   = sfx_None;

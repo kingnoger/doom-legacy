@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/12/03 10:49:49  smite-meister
+// Save/load bugfix, text strings updated
+//
 // Revision 1.5  2003/05/11 21:23:49  smite-meister
 // Hexen fixes
 //
@@ -41,9 +44,15 @@
 
 #include "dstrings.h"
 
-char *text[NUMTEXT] = {
+char *text[NUMTEXT] =
+{   
+  //BP: here is special dehacked handling, include centring and version
+  "DOOM 2: Hell on Earth",
+  "The Ultimate DOOM Startup",
+  "DOOM Registered Startup",
+  "DOOM Shareware Startup",
+
   "Development mode ON.\n",
-  "CD-ROM Version: default.cfg from c:\\doomdata\n",
   "press a key.",
   "press y or n.",
   "only the server can do a load net game!\n\npress a key.",
@@ -52,15 +61,14 @@ char *text[NUMTEXT] = {
   "you can't save if you aren't playing!\n\npress a key.",
   "quicksave over your game named\n\n'%s'?\n\npress y or n.",
   "do you want to quickload the game named\n\n'%s'?\n\npress y or n.",
-  "you can't start a new game\n""while in a network game.\n\n",
+  "you can't start a new game\nwhile in a network game.\n\n",
   "are you sure? this skill level\nisn't even remotely fair.\n\npress y or n.",
   "this is the shareware version of doom.\n\nyou need to order the entire trilogy.\n\npress a key.",
   "Messages OFF",
   "Messages ON",
   "you can't end a netgame!\n\npress a key.",
   "are you sure you want to end the game?\n\npress y or n.",
-
-  "%s\n\n(press y to quit to dos.)",
+  "%s\n\n(press y to quit to OS.)",
 
   "High detail",
   "Low detail",
@@ -70,6 +78,8 @@ char *text[NUMTEXT] = {
   "Gamma correction level 3",
   "Gamma correction level 4",
   "empty slot",
+  "game saved.",
+
   "Picked up the armor.",
   "Picked up the MegaArmor!",
   "Picked up a health bonus.",
@@ -78,7 +88,6 @@ char *text[NUMTEXT] = {
   "Picked up a medikit that you REALLY need!",
   "Picked up a medikit.",
   "Supercharge!",
-
   "Invulnerability!",
   "Berserk!",
   "Partial Invisibility",
@@ -111,9 +120,6 @@ char *text[NUMTEXT] = {
   "You need a blue key to open this door",
   "You need a red key to open this door",
   "You need a yellow key to open this door",
-
-  "game saved.",
-  "[Message unsent]",
 
   "E1M1: Hangar",
   "E1M2: Nuclear Plant",
@@ -154,6 +160,7 @@ char *text[NUMTEXT] = {
   "E4M7: And Hell Followed",
   "E4M8: Unto The Cruel",
   "E4M9: Fear",
+
   "level 1: entryway",
   "level 2: underhalls",
   "level 3: the gantlet",
@@ -261,6 +268,7 @@ char *text[NUMTEXT] = {
 
   "level 31: pharaoh",
   "level 32: caribbean",
+
   "I'm ready to kick butt!",
   "I'm OK.",
   "I'm not looking too good!",
@@ -271,17 +279,16 @@ char *text[NUMTEXT] = {
   "I'll take care of it.",
   "Yes",
   "No",
-
   "You mumble to yourself",
   "Who's there?",
   "You scare yourself",
   "You start to rave",
   "You've lost it...",
-
+  "[Message unsent]",
   "[Message Sent]",
+
   "Follow Mode ON",
   "Follow Mode OFF",
-
   "Grid ON",
   "Grid OFF",
   "Marked Spot",
@@ -291,16 +298,12 @@ char *text[NUMTEXT] = {
   "IMPOSSIBLE SELECTION",
   "Degreelessness Mode On",
   "Degreelessness Mode Off",
-
   "Very Happy Ammo Added",
   "Ammo (no keys) Added",
-
   "No Clipping Mode ON",
   "No Clipping Mode OFF",
-
   "inVuln, Str, Inviso, Rad, Allmap, or Lite-amp",
   "Power-up Toggled",
-
   "... doesn't suck - GM",
   "Changing Level...",
 
@@ -542,22 +545,6 @@ char *text[NUMTEXT] = {
   "just leave. when you come\nback, i'll be waiting with a bat.",
   "you're lucky i don't smack\nyou for thinking about leaving.",
 
-  "FLOOR4_8",
-  "SFLR6_1",
-  "MFLR8_4",
-  "MFLR8_3",
-  "SLIME16",
-  "RROCK14",
-  "RROCK07",
-  "RROCK17",
-  "RROCK13",
-  "RROCK19",
-
-  "CREDIT",
-  "HELP2",
-  "VICTORY2",
-  "ENDPIC",
-
   "===========================================================================\n" \
   "ATTENTION:  This version of DOOM has been modified.  If you would like to\n"   \
   "get a copy of the original game, call 1-800-IDGAMES or see the readme file.\n" \
@@ -574,32 +561,6 @@ char *text[NUMTEXT] = {
   "         Please report software piracy to the SPA: 1-800-388-PIR8\n"           \
   "===========================================================================\n",
 
-  "Austin Virtual Gaming: Levels will end after 20 minutes\n",
-  "M_LoadDefaults: Load system defaults.\n",
-  "Z_Init: Init zone memory allocation daemon. \n",
-  "W_Init: Init WADfiles.\n",
-  "M_Init: Init miscellaneous info.\n",
-  "R_Init: Init DOOM refresh daemon - ",
-  "\nP_Init: Init Playloop state.\n",
-  "I_Init: Setting up machine state.\n",
-  "D_CheckNetGame: Checking network game status.\n",
-  "S_Init: Setting up sound.\n",
-  "HU_Init: Setting up heads up display.\n",
-  "ST_Init: Init status bar.\n",
-  "External statistics registered.\n",
-
-  "doom2.wad",
-  "doomu.wad",
-  "doom.wad",
-  "doom1.wad",
-
-  "c:\\doomdata",                         //UNUSED
-  "c:/doomdata/default.cfg",              //UNUSED
-  "c:\\doomdata\\"SAVEGAMENAME"%c.dsg",   //UNUSED
-  SAVEGAMENAME"%c.dsg",                   //UNUSED
-  "c:\\doomdata\\"SAVEGAMENAME"%d.dsg",
-  SAVEGAMENAME"%d.dsg",
-
   //SoM: 3/9/2000: Boom generic key messages:
   "You need a blue card to open this door",
   "You need a red card to open this door",
@@ -611,7 +572,7 @@ char *text[NUMTEXT] = {
   "You need all three keys to open this door",
   "You need all six keys to open this door",
 
-  // heretic strings
+  // heretic + hexen artifacts
   "RING OF INVINCIBILITY",
   "SHADOWSPHERE",
   "QUARTZ FLASK",
@@ -635,6 +596,7 @@ char *text[NUMTEXT] = {
 
   "ICON OF THE DEFENDER",
                                        
+  // heretic items
   "WAND CRYSTAL",                       
   "CRYSTAL GEODE",                      
   "MACE SPHERES",                       
@@ -654,9 +616,14 @@ char *text[NUMTEXT] = {
   "HELLSTAFF",                          
   "PHOENIX ROD",                        
   "GAUNTLETS OF THE NECROMANCER",       
-                                       
-  "BAG OF HOLDING",                     
-                                       
+
+  "CRYSTAL VIAL",
+  "BAG OF HOLDING",
+  "SILVER SHIELD",
+  "ENCHANTED SHIELD",
+  "MAP SCROLL",
+
+  // cheats
   "GOD MODE ON",                        
   "GOD MODE OFF",                       
   "NO CLIPPING ON",                     
@@ -836,7 +803,8 @@ char *text[NUMTEXT] = {
   "that it is not within you to\n"\
   "surrender without a fight. eyes\n"\
   "wide, you go to meet your fate.",
-  
+
+  // death messages
   "%s suicides\n",
   "%s was telefraged by %s\n",
   "%s was beaten to a pulp by %s\n",
@@ -875,14 +843,6 @@ char *text[NUMTEXT] = {
   "%s was killed by a Pain Elemental\n",
   "%s was killed by a WolfSS\n",
   "%s died\n",
-
-   
-  //BP: here is special dehacked handling, include centring and version
-
-  "DOOM 2: Hell on Earth",
-  "The Ultimate DOOM Startup",
-  "DOOM Registered Startup",
-  "DOOM Shareware Startup",
 
   // Hexen strings
   "BLUE MANA",
@@ -926,11 +886,6 @@ char *text[NUMTEXT] = {
   "YOU CANNOT USE THIS HERE",
 
   // Items
-  "CRYSTAL VIAL",
-  "BAG OF HOLDING",
-  "SILVER SHIELD",
-  "ENCHANTED SHIELD",
-  "MAP SCROLL",
   "MESH ARMOR",
   "FALCON SHIELD",
   "PLATINUM HELMET",

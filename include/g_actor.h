@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2003/12/03 10:49:50  smite-meister
+// Save/load bugfix, text strings updated
+//
 // Revision 1.14  2003/11/27 11:28:26  smite-meister
 // Doom/Heretic startup bug fixed
 //
@@ -322,7 +325,7 @@ public:
 
 public:
   // sounds TODO these could be replaced with SNDINFO
-  static int s_pickup, s_keypickup, s_weaponpickup, s_artipickup, s_teleport, s_respawn, s_gibbed;
+  static int s_pickup, s_keypickup, s_weaponpickup, s_artipickup, s_powerup, s_teleport, s_respawn, s_gibbed;
 
   virtual thinkertype_e Type() {return tt_actor;}; // "name-tag" function
 

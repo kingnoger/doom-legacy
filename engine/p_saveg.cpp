@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2003/12/03 10:49:50  smite-meister
+// Save/load bugfix, text strings updated
+//
 // Revision 1.13  2003/11/30 00:09:46  smite-meister
 // bugfixes
 //
@@ -817,6 +820,8 @@ int Map::Serialize(LArchive &a)
   //----------------------------------------------
   // record the changes in static geometry (as compared to wad)
   // "reload" the map to check for differences
+  // FIXME helluvalot of unneeded stuff is saved because of linedef/sector special mappings...
+  // Perhaps we should really fake-setup the comparison map... or perhaps we'll just live with it.
   int statsec = 0, statline = 0;
 
   byte diff, diff2;
@@ -849,6 +854,7 @@ int Map::Serialize(LArchive &a)
       if (ss->stairlock < 0)      diff2 |= SD_STAIRLOCK;
       if (ss->nextsec != -1)      diff2 |= SD_NEXTSEC;
       if (ss->prevsec != -1)      diff2 |= SD_PREVSEC;
+      // TODO seqtype
 
       if (diff2)
 	diff |= SD_DIFF2;
@@ -904,6 +910,7 @@ int Map::Serialize(LArchive &a)
 	    diff |= LD_FLAG;
 	  if (li->special != SHORT(hld->special))
 	    diff |= LD_SPECIAL;
+	  // FIXME save args!
 	  hld++;
 	}
       else
@@ -953,6 +960,7 @@ int Map::Serialize(LArchive &a)
       if (diff)
         {
 	  statline++;
+
 	  a << i;
 	  a << diff;
 	  if (diff & LD_DIFF2  )  a << diff2;
@@ -2013,7 +2021,10 @@ int GameInfo::Serialize(LArchive &a)
 
 int GameInfo::Unserialize(LArchive &a)
 {
-  // FIXME the containers should be emptied and old contents deleted somewhere
+  // FIXME all the containers should be emptied and old contents deleted somewhere
+  ClearPlayers();
+  Clear_mapinfo_clusterdef();
+  Z_FreeTags(PU_LEVEL, MAXINT);
 
   int i, n;
   // treat all enums as ints
@@ -2163,10 +2174,11 @@ void GameInfo::SaveGame(int savegameslot, char *description)
   char filename[256];
   sprintf(filename, savegamename, savegameslot);
 
+  //CONS_Printf("Simulated savegame: %d bytes\n", length);
   FIL_WriteFile(filename, buffer, length);
 
   Z_Free(buffer);
 
-  consoleplayer->message = text[GGSAVED_NUM];
+  consoleplayer->message = text[TXT_GGSAVED];
   //R_FillBackScreen();  // draw the pattern into the back screen
 }

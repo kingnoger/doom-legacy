@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2003/12/03 10:49:49  smite-meister
+// Save/load bugfix, text strings updated
+//
 // Revision 1.21  2003/11/23 19:07:41  smite-meister
 // New startup order
 //
@@ -350,10 +353,10 @@ void D_DoAdvanceDemo()
 	  pagename = "CREDIT";
 	  break;
 	case gm_udoom:
-	  pagename = text[CREDIT_NUM];
+	  pagename = "CREDIT";
 	  break;
 	default:
-	  pagename = text[HELP2_NUM];
+	  pagename = "HELP2";
         }
       break;
     case 5:
@@ -1132,7 +1135,7 @@ void D_DoomMain()
     CONS_Printf(D_DEVSTR);
   
   // default savegame
-  strcpy(savegamename, text[NORM_SAVEI_NUM]);
+  strcpy(savegamename, SAVEGAMENAME);
 
   {
     char *userhome, legacyhome[256];
@@ -1189,11 +1192,11 @@ void D_DoomMain()
   //  menu, renderer, sound, scripting.
 
   // init zone memory management
-  CONS_Printf(text[Z_INIT_NUM]);
+  CONS_Printf("Z_Init: Init zone memory allocation daemon.\n");
   Z_Init(); 
 
   // initialize file cache
-  CONS_Printf(text[W_INIT_NUM]);  
+  CONS_Printf("W_Init: Init WADfiles.\n");
   if (!fc.InitMultipleFiles(startupwadfiles))
     CONS_Error("A WAD file was not found\n");
 
@@ -1289,7 +1292,7 @@ void D_DoomMain()
 
   bool autostart = false;
   // init all NETWORK
-  CONS_Printf(text[D_CHECKNET_NUM]);
+  CONS_Printf("D_CheckNetGame: Checking network game status.\n");
   if (D_CheckNetGame())
     autostart = true;
 
@@ -1301,9 +1304,7 @@ void D_DoomMain()
       /*
         // for statistics driver
         extern  void*   statcopy;
-
         statcopy = (void*)atoi(myargv[p+1]);
-        CONS_Printf(text[STATREG_NUM]);
       */
     }
 
@@ -1350,12 +1351,12 @@ void D_DoomMain()
   switch (game.mode)
     {
     case gm_doom1s:
-      CONS_Printf(text[SHAREWARE_NUM]);
+      CONS_Printf(text[TXT_SHAREWARE]);
       break;
     case gm_doom1:
     case gm_udoom:
     case gm_doom2:
-      CONS_Printf(text[COMERCIAL_NUM]);
+      CONS_Printf(text[TXT_COMMERCIAL]);
       break;
     default:
       break;

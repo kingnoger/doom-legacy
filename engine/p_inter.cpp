@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2003/12/03 10:49:50  smite-meister
+// Save/load bugfix, text strings updated
+//
 // Revision 1.21  2003/11/27 11:28:25  smite-meister
 // Doom/Heretic startup bug fixed
 //
@@ -90,7 +93,6 @@
 
 #include "doomdef.h"
 #include "d_netcmd.h" // cvars
-#include "i_system.h"   //I_Tactile currently has no effect
 #include "am_map.h"
 #include "dstrings.h"
 #include "m_random.h"
@@ -139,26 +141,26 @@ void DActor::Killed(PlayerPawn *victim, Actor *inflictor)
   char *str = NULL;
   switch (type)
     {
-    case MT_BARREL:    str = text[DEATHMSG_BARREL]; break;
-    case MT_POSSESSED: str = text[DEATHMSG_POSSESSED]; break;
-    case MT_SHOTGUY:   str = text[DEATHMSG_SHOTGUY];   break;
-    case MT_VILE:      str = text[DEATHMSG_VILE];      break;
-    case MT_FATSO:     str = text[DEATHMSG_FATSO];     break;
-    case MT_CHAINGUY:  str = text[DEATHMSG_CHAINGUY];  break;
-    case MT_TROOP:     str = text[DEATHMSG_TROOP];     break;
-    case MT_SERGEANT:  str = text[DEATHMSG_SERGEANT];  break;
-    case MT_SHADOWS:   str = text[DEATHMSG_SHADOWS];   break;
-    case MT_HEAD:      str = text[DEATHMSG_HEAD];      break;
-    case MT_BRUISER:   str = text[DEATHMSG_BRUISER];   break;
-    case MT_UNDEAD:    str = text[DEATHMSG_UNDEAD];    break;
-    case MT_KNIGHT:    str = text[DEATHMSG_KNIGHT];    break;
-    case MT_SKULL:     str = text[DEATHMSG_SKULL];     break;
-    case MT_SPIDER:    str = text[DEATHMSG_SPIDER];    break;
-    case MT_BABY:      str = text[DEATHMSG_BABY];      break;
-    case MT_CYBORG:    str = text[DEATHMSG_CYBORG];    break;
-    case MT_PAIN:      str = text[DEATHMSG_PAIN];      break;
-    case MT_WOLFSS:    str = text[DEATHMSG_WOLFSS];    break;
-    default:           str = text[DEATHMSG_DEAD];      break;
+    case MT_BARREL:    str = text[TXT_DEATHMSG_BARREL]; break;
+    case MT_POSSESSED: str = text[TXT_DEATHMSG_POSSESSED]; break;
+    case MT_SHOTGUY:   str = text[TXT_DEATHMSG_SHOTGUY];   break;
+    case MT_VILE:      str = text[TXT_DEATHMSG_VILE];      break;
+    case MT_FATSO:     str = text[TXT_DEATHMSG_FATSO];     break;
+    case MT_CHAINGUY:  str = text[TXT_DEATHMSG_CHAINGUY];  break;
+    case MT_TROOP:     str = text[TXT_DEATHMSG_TROOP];     break;
+    case MT_SERGEANT:  str = text[TXT_DEATHMSG_SERGEANT];  break;
+    case MT_SHADOWS:   str = text[TXT_DEATHMSG_SHADOWS];   break;
+    case MT_HEAD:      str = text[TXT_DEATHMSG_HEAD];      break;
+    case MT_BRUISER:   str = text[TXT_DEATHMSG_BRUISER];   break;
+    case MT_UNDEAD:    str = text[TXT_DEATHMSG_UNDEAD];    break;
+    case MT_KNIGHT:    str = text[TXT_DEATHMSG_KNIGHT];    break;
+    case MT_SKULL:     str = text[TXT_DEATHMSG_SKULL];     break;
+    case MT_SPIDER:    str = text[TXT_DEATHMSG_SPIDER];    break;
+    case MT_BABY:      str = text[TXT_DEATHMSG_BABY];      break;
+    case MT_CYBORG:    str = text[TXT_DEATHMSG_CYBORG];    break;
+    case MT_PAIN:      str = text[TXT_DEATHMSG_PAIN];      break;
+    case MT_WOLFSS:    str = text[TXT_DEATHMSG_WOLFSS];    break;
+    default:           str = text[TXT_DEATHMSG_DEAD];      break;
     }
 
   CONS_Printf(str, victim->player->name.c_str());
@@ -189,15 +191,15 @@ void PlayerPawn::Killed(PlayerPawn *victim, Actor *inflictor)
 
   if (player == victim->player)
     {
-      CONS_Printf(text[DEATHMSG_SUICIDE], player->name.c_str());
+      CONS_Printf(text[TXT_DEATHMSG_SUICIDE], player->name.c_str());
       // FIXME when console is rewritten to accept << >>
       //if (cv_splitscreen.value)
-      // console << "\4" << t->player->name << text[DEATHMSG_SUICIDE];
+      // console << "\4" << t->player->name << text[TXT_DEATHMSG_SUICIDE];
       return;
     }
 
   if (victim->health < -9000) // telefrag !
-    str = text[DEATHMSG_TELEFRAG];
+    str = text[TXT_DEATHMSG_TELEFRAG];
   else
     {
       int w = -1;
@@ -228,39 +230,39 @@ void PlayerPawn::Killed(PlayerPawn *victim, Actor *inflictor)
       switch(w)
 	{
 	case wp_fist:
-	  str = text[DEATHMSG_FIST];
+	  str = text[TXT_DEATHMSG_FIST];
 	  break;
 	case wp_pistol:
-	  str = text[DEATHMSG_GUN];
+	  str = text[TXT_DEATHMSG_GUN];
 	  break;
 	case wp_shotgun:
-	  str = text[DEATHMSG_SHOTGUN];
+	  str = text[TXT_DEATHMSG_SHOTGUN];
 	  break;
 	case wp_chaingun:
-	  str = text[DEATHMSG_MACHGUN];
+	  str = text[TXT_DEATHMSG_MACHGUN];
 	  break;
 	case wp_missile:
-	  str = text[DEATHMSG_ROCKET];
+	  str = text[TXT_DEATHMSG_ROCKET];
 	  if (victim->health < -victim->maxhealth)
-	    str = text[DEATHMSG_GIBROCKET];
+	    str = text[TXT_DEATHMSG_GIBROCKET];
 	  break;
 	case wp_plasma:
-	  str = text[DEATHMSG_PLASMA];
+	  str = text[TXT_DEATHMSG_PLASMA];
 	  break;
 	case wp_bfg:
-	  str = text[DEATHMSG_BFGBALL];
+	  str = text[TXT_DEATHMSG_BFGBALL];
 	  break;
 	case wp_chainsaw:
-	  str = text[DEATHMSG_CHAINSAW];
+	  str = text[TXT_DEATHMSG_CHAINSAW];
 	  break;
 	case wp_supershotgun:
-	  str = text[DEATHMSG_SUPSHOTGUN];
+	  str = text[TXT_DEATHMSG_SUPSHOTGUN];
 	  break;
 	case wp_barrel:
-	  str = text[DEATHMSG_BARRELFRAG];
+	  str = text[TXT_DEATHMSG_BARRELFRAG];
 	  break;
 	default:
-	  str = text[DEATHMSG_PLAYUNKNOW];
+	  str = text[TXT_DEATHMSG_PLAYUNKNOW];
 	  break;
 	}
     }
@@ -890,13 +892,13 @@ void PlayerPawn::Die(Actor *inflictor, Actor *source)
       char *str;
 
       if (w == 5)
-	str = text[DEATHMSG_HELLSLIME];
+	str = text[TXT_DEATHMSG_HELLSLIME];
       else if (w == 7)
-	str = text[DEATHMSG_NUKE];
+	str = text[TXT_DEATHMSG_NUKE];
       else if (w == 16 || w == 4)
-	str = text[DEATHMSG_SUPHELLSLIME];
+	str = text[TXT_DEATHMSG_SUPHELLSLIME];
       else
-	str = text[DEATHMSG_SPECUNKNOW];
+	str = text[TXT_DEATHMSG_SPECUNKNOW];
 
       if (player == consoleplayer || player == consoleplayer2)
 	CONS_Printf(str, player->name.c_str());
@@ -937,386 +939,9 @@ void PlayerPawn::Die(Actor *inflictor, Actor *source)
 }
 
 
-//
-// GET STUFF
-//
 
-static int p_sound; // pickupsound
-static bool p_remove; // should the stuff be removed?
-
-//
-// was P_GiveAmmo
-// Num is the number of clip loads,
-// not the individual count (0= 1/2 clip).
-// Returns false if the ammo can't be picked up at all
-//
-
-bool PlayerPawn::GiveAmmo(ammotype_t at, int count)
-{
-  static const weapontype_t GetAmmoChange[] =
-  {
-    wp_chaingun, wp_shotgun, wp_plasma, wp_missile,
-    wp_goldwand,
-    wp_crossbow,
-    wp_blaster,
-    wp_skullrod,
-    wp_phoenixrod,
-    wp_mace
-  };
-
-  if (at == am_noammo)
-    return false;
-
-  if (at == am_manaboth)
-    {
-      bool ret = GiveAmmo(am_mana1, count) || GiveAmmo(am_mana2, count);
-      return ret;
-    }
-
-  if (at < 0 || at >= NUMAMMO)
-    {
-      CONS_Printf ("\2P_GiveAmmo: bad type %i", at);
-      return false;
-    }
-
-  if (ammo[at] >= maxammo[at])
-    return false;
-
-  if (game.skill == sk_baby || game.skill == sk_nightmare)
-    {
-      if (game.mode == gm_heretic || game.mode == gm_hexen)
-	count += count>>1;
-      else
-	// give double ammo in trainer mode,
-	// you'll need it in nightmare
-	count <<= 1;
-    }
-  int oldammo = ammo[at];
-  ammo[at] += count;
-
-  if (ammo[at] > maxammo[at])
-    ammo[at] = maxammo[at];
-
-  // If non zero ammo,
-  // don't change up weapons,
-  // player was lower on purpose.
-  if (oldammo)
-    return true;
-
-  // We were down to zero,
-  // so select a new weapon.
-  // Preferences are not user selectable.
-
-  // Boris hack for preferred weapons order...
-  if (!player->originalweaponswitch)
-    {
-      if (ammo[weaponinfo[readyweapon].ammo]
-	  < weaponinfo[readyweapon].ammopershoot)
-	UseFavoriteWeapon();
-      return true;
-    }
-  else if (game.mode == gm_heretic)
-    {
-      if ((readyweapon == wp_staff || readyweapon == wp_gauntlets) 
-	  && weaponowned[GetAmmoChange[at]])
-	pendingweapon = GetAmmoChange[at];
-    }
-  else switch (at)
-    {
-    case am_clip:
-      if (readyweapon == wp_fist)
-        {
-	  if (weaponowned[wp_chaingun])
-	    pendingweapon = wp_chaingun;
-	  else
-	    pendingweapon = wp_pistol;
-        }
-      break;
-
-    case am_shell:
-      if (readyweapon == wp_fist
-	  || readyweapon == wp_pistol)
-        {
-	  if (weaponowned[wp_shotgun])
-	    pendingweapon = wp_shotgun;
-        }
-      break;
-
-    case am_cell:
-      if (readyweapon == wp_fist
-	  || readyweapon == wp_pistol)
-        {
-	  if (weaponowned[wp_plasma])
-	    pendingweapon = wp_plasma;
-        }
-      break;
-
-    case am_misl:
-      if (readyweapon == wp_fist)
-        {
-	  if (weaponowned[wp_missile])
-	    pendingweapon = wp_missile;
-        }
-    default:
-      break;
-    }
-
-  return true;
-}
-
-
-//
-// was P_GiveWeapon
-//
-bool PlayerPawn::GiveWeapon(weapontype_t wt, bool dropped)
-{
-  bool     gaveammo;
-  bool     gaveweapon;
-
-  if (game.multiplayer && (cv_deathmatch.value != 2) && !dropped)
-    {
-      // leave placed weapons forever on net games
-      if (weaponowned[wt])
-	return false;
-
-      if (displayplayer == player)
-        hud.bonuscount += BONUSADD;
-      weaponowned[wt] = true;
-
-      if (cv_deathmatch.value)
-	GiveAmmo(weaponinfo[wt].ammo, 5*clipammo[weaponinfo[wt].ammo]);
-      else
-	GiveAmmo(weaponinfo[wt].ammo, weapondata[wt].getammo);
-
-      // Boris hack preferred weapons order...
-      if (player->originalweaponswitch
-	  || player->favoriteweapon[wt] > player->favoriteweapon[readyweapon])
-	pendingweapon = wt;     // do like Doom2 original
-
-      if (player == displayplayer || (cv_splitscreen.value && player == displayplayer2))
-	S_StartAmbSound(sfx_wpnup);
-      return false;
-    }
-
-  if (weaponinfo[wt].ammo != am_noammo)
-    {
-      // give one clip with a dropped weapon,
-      // two clips with a found weapon
-      if (dropped)
-	gaveammo = GiveAmmo(weaponinfo[wt].ammo, clipammo[weaponinfo[wt].ammo]);
-      else
-	gaveammo = GiveAmmo(weaponinfo[wt].ammo, weapondata[wt].getammo);
-    }
-  else
-    gaveammo = false;
-
-  if (weaponowned[wt])
-    gaveweapon = false;
-  else
-    {
-      gaveweapon = true;
-      weaponowned[wt] = true;
-      if (player->originalweaponswitch
-	  || player->favoriteweapon[wt] > player->favoriteweapon[readyweapon])
-	pendingweapon = wt;    // Doom2 original stuff
-    }
-
-  p_sound = Actor::s_weaponpickup;
-  return (gaveweapon || gaveammo);
-}
-
-
-int green_armor_class, blue_armor_class, soul_health, mega_health;
-
-#define NUMCLASSES 5
-
-static int ArmorIncrement[NUMCLASSES][NUMARMOR] =
-{
-  { 0, 0, 0, 0, 0 },
-  { 0, 25, 20, 15, 5 },
-  { 0, 10, 25, 5, 20 },
-  { 0, 5, 15, 10, 25 },
-  { 0, 0, 0, 0, 0 }
-};
-
-int MaxArmor[NUMCLASSES] = { 200, 100, 90, 80, 5 };
-
-//
-// was P_GiveArmor
-// Returns false if the armor is worse
-// than the current armor.
-//
-bool PlayerPawn::GiveArmor(armortype_t type, float factor, int points)
-{
-  // Kludgy mess. The correct way would be making each pickup-item a separate class
-  // with a Give method... same thing with weapons and artifacts
-  if (factor > 0)
-    {
-      // new piece of armor
-      if (points < 0) // means use standard Hexen armor increments
-	points = ArmorIncrement[pclass][type];
-
-      if (armorpoints[type] >= points)
-	return false; // don't pick up
-
-      armorfactor[type] = factor;
-      armorpoints[type] = points;
-    }
-  else
-    {
-      // negative factor means bonus to current armor
-      int i, total = int(100 * toughness);
-      for (i = 0; i < NUMARMOR; i++)
-	total += armorpoints[i];
-
-      if (total >= MaxArmor[pclass])
-	return false;
-
-      if (armorfactor[type] < -factor)
-	armorfactor[type] = -factor;
-      armorpoints[type] += points;
-    }
-
-  return true;
-}
-
-
-//
-// P_GiveCard
-//
-bool PlayerPawn::GiveKey(keycard_t k)
-{
-  if (keycards & k)
-    return false;
-
-  keycards |= k;
-
-  int i, j = k;
-  for (i = -1; j; i++)
-    j >>= 1; // count the key number
-    
-  player->message = text[TXT_KEY_STEEL + i];
-
-  if (displayplayer == player)
-    hud.bonuscount = BONUSADD;
-  p_sound = Actor::s_keypickup;
-
-  return true;
-}
-
-
-// Boris stuff : dehacked patches hack
-int maxsoul=200;
-
-
-//---------------------------------------------------------------------------
-//
-// Removes the MF_SPECIAL flag, and initiates the artifact pickup
-// animation. The artifact is restored after a number of tics.
-//
-//---------------------------------------------------------------------------
-
-static void SetDormantArtifact(DActor *arti)
-{
-  arti->flags &= ~MF_SPECIAL;
-  if (cv_deathmatch.value && !(arti->flags & MF_DROPPED))
-    {
-      // respawn delay
-      if (arti->type == MT_XARTIINVULNERABILITY)
-	arti->SetState(S_DORMANTARTI3_1);
-      //else if (arti->type == MT_ARTIINVISIBILITY) 
-      else if (arti->type == MT_SUMMONMAULATOR || arti->type == MT_XARTIFLY)
-	arti->SetState(S_DORMANTARTI2_1);
-      else
-	arti->SetState(S_DORMANTARTI1_1);
-    }
-  else
-    arti->SetState(S_DEADARTI1); // Don't respawn
-
-  S_StartSound(arti, sfx_artiup);
-}
-
-//---------------------------------------------------------------------------
-// was P_GiveArtifact
-//
-// Returns true if artifact accepted.
-
-bool PlayerPawn::GiveArtifact(artitype_t arti, DActor *from)
-{
-  if (arti >= NUMARTIFACTS || arti <= arti_none)
-    return false;
-
-  vector<inventory_t>::iterator i = inventory.begin();
-
-  // find the right slot
-  while (i < inventory.end() && i->type != arti)
-    i++;
-
-  if (i == inventory.end())
-    // give one artifact
-    inventory.push_back(inventory_t(arti, 1));
-  else
-    {
-      // player already has some of these
-      if (i->count >= MAXARTECONT)
-	// Player already has 16 of this item
-	return false;
-      
-      i->count++; // one more
-    }
-
-  p_remove = false;
-
-  if (from && (from->flags & MF_COUNTITEM))
-    player->items++;
-
-  int j;
-  if (arti < arti_firstpuzzitem)
-    {
-      j = TXT_ARTIINVULNERABILITY_NUM - 1 + arti;
-      if (from->type == MT_XARTIINVULNERABILITY)
-	j = TXT_XARTIINVULNERABILITY;
-      player->SetMessage(text[TXT_ARTIINVULNERABILITY_NUM - 1 + arti], false);
-      SetDormantArtifact(from);
-      p_sound = Actor::s_artipickup;
-    }
-  else
-    {
-      // Puzzle item
-      j = TXT_ARTIPUZZSKULL - 1 + arti;
-      if (arti >= arti_puzzgear1)
-	j = TXT_ARTIPUZZGEAR;
-      player->SetMessage(text[j], true);
-      SetDormantArtifact(from);
-      /*
-      if (!game.multiplayer || deathmatch)
-        // Remove puzzle items if not cooperative netplay
-        P_RemoveMobj(artifact);
-      */
-    }
-
-  return true;
-}
-
-
-//---------------------------------------------------------------------------
-//
-// PROC A_RestoreArtifact
-//
-//---------------------------------------------------------------------------
-
-void A_RestoreArtifact(DActor *arti)
-{
-  arti->flags |= MF_SPECIAL;
-  arti->SetState(arti->info->spawnstate);
-  S_StartSound(arti, Actor::s_respawn);
-}
-
-//----------------------------------------------------------------------------
-//
-// PROC P_HideSpecialThing
-//
-//----------------------------------------------------------------------------
+//============================================================
+//  The Heretic way of respawning items. Unused.
 
 void P_HideSpecialThing(DActor *thing)
 {
@@ -1325,14 +950,7 @@ void P_HideSpecialThing(DActor *thing)
   thing->SetState(S_HIDESPECIAL1);
 }
 
-//---------------------------------------------------------------------------
-//
-// PROC A_RestoreSpecialThing1
-//
 // Make a special thing visible again.
-//
-//---------------------------------------------------------------------------
-
 void A_RestoreSpecialThing1(DActor *thing)
 {
   if (thing->type == MT_WMACE)
@@ -1343,12 +961,6 @@ void A_RestoreSpecialThing1(DActor *thing)
   S_StartSound(thing, Actor::s_respawn);
 }
 
-//---------------------------------------------------------------------------
-//
-// PROC A_RestoreSpecialThing2
-//
-//---------------------------------------------------------------------------
-
 void A_RestoreSpecialThing2(DActor *thing)
 {
   thing->flags |= MF_SPECIAL;
@@ -1356,9 +968,11 @@ void A_RestoreSpecialThing2(DActor *thing)
 }
 
 
-//
-// was P_TouchSpecialThing
-//
+
+int  p_sound;  // pickupsound
+bool p_remove; // should the stuff be removed?
+
+// pickups.
 void PlayerPawn::TouchSpecialThing(DActor *special)
 {                  
   // Dead thing touching.
@@ -1369,8 +983,10 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
   p_remove = true; // should the item be removed from map?
   p_sound = s_pickup;
 
+  int stype = special->type;
+
   // Identify item
-  switch (special->type)
+  switch (stype)
     {
     case MT_ARMOR_1:
       if (!GiveArmor(armor_armor, 3.0, -1))
@@ -1394,17 +1010,17 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       break;
 
     case MT_ITEMSHIELD1:
-    case MT_GREENARMOR:
+    case MT_ITEMSHIELD2:
       if (!GiveArmor(armor_field, special->info->speed, special->health))
 	return;
-      player->message = GOTARMOR;
+      player->message = text[stype - MT_ITEMSHIELD1 + TXT_ITEMSHIELD1];
       break;
 
-    case MT_ITEMSHIELD2:
+    case MT_GREENARMOR:
     case MT_BLUEARMOR:
       if (!GiveArmor(armor_field, special->info->speed, special->health))
 	return;
-      player->message = GOTMEGA;
+      player->message = text[stype - MT_GREENARMOR + TXT_GOTARMOR];
       break;
 
     case MT_HEALTHBONUS:  // health bonus
@@ -1450,7 +1066,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
     case MT_KEY9:
     case MT_KEYA:
     case MT_KEYB:
-      if (!GiveKey(keycard_t(1 << (special->type - MT_KEY1))))
+      if (!GiveKey(keycard_t(1 << (stype - MT_KEY1))))
 	return;
       if (game.multiplayer) // Only remove keys in single player game
 	p_remove = false;
@@ -1508,14 +1124,17 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
     case MT_STIM:
       if (!GiveBody (10))
 	return;
-      if(cv_showmessages.value==1)
-	player->message = GOTSTIM;
+      if (cv_showmessages.value == 1)
+	if (stype == MT_STIM)
+	  player->message = GOTSTIM;
+	else
+	  player->message = text[TXT_ITEMHEALTH];
       break;
 
     case MT_MEDI:
       if (!GiveBody (25))
 	return;
-      if(cv_showmessages.value==1)
+      if (cv_showmessages.value == 1)
         {
 	  if (health < 25)
 	    player->message = GOTMEDINEED;
@@ -1627,55 +1246,51 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
     case MT_ARTIPUZZGEAR2:
     case MT_ARTIPUZZGEAR3:
     case MT_ARTIPUZZGEAR4:
-      if (!GiveArtifact(artitype_t(arti_puzzskull + special->type - MT_ARTIPUZZSKULL), special))
+      if (!GiveArtifact(artitype_t(arti_puzzskull + stype - MT_ARTIPUZZSKULL), special))
 	return;
       break;
 
       // power ups
     case MT_INV:
-      if (!GivePower (pw_invulnerability))
+      if (!GivePower(pw_invulnerability))
 	return;
       player->message = GOTINVUL;
-      p_sound = sfx_getpow;
       break;
 
     case MT_BERSERKPACK:
-      if (!GivePower (pw_strength))
+      if (!GivePower(pw_strength))
 	return;
       player->message = GOTBERSERK;
       if (readyweapon != wp_fist)
 	pendingweapon = wp_fist;
-      p_sound = sfx_getpow;
       break;
 
     case MT_INS:
-      if (!GivePower (pw_invisibility))
+      if (!GivePower(pw_invisibility))
 	return;
       player->message = GOTINVIS;
-      p_sound = sfx_getpow;
       break;
 
     case MT_RADSUIT:
-      if (!GivePower (pw_ironfeet))
+      if (!GivePower(pw_ironfeet))
 	return;
       player->message = GOTSUIT;
-      p_sound = sfx_getpow;
       break;
 
     case MT_MAPSCROLL:
     case MT_COMPUTERMAP:
-      if (!GivePower (pw_allmap))
+      if (!GivePower(pw_allmap))
 	return;
-      player->message = GOTMAP;
-      if( game.mode != gm_heretic )
-	p_sound = sfx_getpow;
+      if (stype == MT_MAPSCROLL)
+	player->message = text[TXT_ITEMSUPERMAP];
+      else
+	player->message = GOTMAP;
       break;
 
     case MT_IRVISOR:
       if (!GivePower (pw_infrared))
 	return;
       player->message = GOTVISOR;
-      p_sound = sfx_getpow;
       break;
 
       // Mana
@@ -1705,84 +1320,84 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       if(!GiveAmmo(am_goldwand, special->health))
 	return;
       if( cv_showmessages.value==1 )
-	player->SetMessage(TXT_AMMOGOLDWAND1, false);
+	player->SetMessage(GOT_AMMOGOLDWAND1, false);
       break;
 
     case MT_AMGWNDHEFTY:
       if(!GiveAmmo(am_goldwand, special->health))
 	return;
       if( cv_showmessages.value==1 )
-	player->SetMessage(TXT_AMMOGOLDWAND2, false);
+	player->SetMessage(GOT_AMMOGOLDWAND2, false);
       break;
 
     case MT_AMMACEWIMPY:
       if(!GiveAmmo(am_mace, special->health))
 	return;
       if( cv_showmessages.value==1 )
-	player->SetMessage(TXT_AMMOMACE1, false);
+	player->SetMessage(GOT_AMMOMACE1, false);
       break;
 
     case MT_AMMACEHEFTY:
       if(!GiveAmmo(am_mace, special->health))
 	return;
       if( cv_showmessages.value==1 )
-	player->SetMessage(TXT_AMMOMACE2, false);
+	player->SetMessage(GOT_AMMOMACE2, false);
       break;
 
     case MT_AMCBOWWIMPY:
       if(!GiveAmmo(am_crossbow, special->health))
 	return;
       if( cv_showmessages.value==1 )
-	player->SetMessage(TXT_AMMOCROSSBOW1, false);
+	player->SetMessage(GOT_AMMOCROSSBOW1, false);
       break;
 
     case MT_AMCBOWHEFTY:
       if(!GiveAmmo(am_crossbow, special->health))
 	return;
       if( cv_showmessages.value==1 )
-	player->SetMessage(TXT_AMMOCROSSBOW2, false);
+	player->SetMessage(GOT_AMMOCROSSBOW2, false);
       break;
 
     case MT_AMBLSRWIMPY:
       if(!GiveAmmo(am_blaster, special->health))
 	return;
       if( cv_showmessages.value==1 )
-	player->SetMessage(TXT_AMMOBLASTER1, false);
+	player->SetMessage(GOT_AMMOBLASTER1, false);
       break;
 
     case MT_AMBLSRHEFTY:
       if(!GiveAmmo(am_blaster, special->health))
 	return;
       if( cv_showmessages.value==1 )
-	player->SetMessage(TXT_AMMOBLASTER2, false);
+	player->SetMessage(GOT_AMMOBLASTER2, false);
       break;
 
     case MT_AMSKRDWIMPY:
       if(!GiveAmmo(am_skullrod, special->health))
 	return;
       if( cv_showmessages.value==1 )
-	player->SetMessage(TXT_AMMOSKULLROD1, false);
+	player->SetMessage(GOT_AMMOSKULLROD1, false);
       break;
 
     case MT_AMSKRDHEFTY:
       if(!GiveAmmo(am_skullrod, special->health))
 	return;
       if( cv_showmessages.value==1 )
-	player->SetMessage(TXT_AMMOSKULLROD2, false);
+	player->SetMessage(GOT_AMMOSKULLROD2, false);
       break;
 
     case MT_AMPHRDWIMPY:
       if(!GiveAmmo(am_phoenixrod, special->health))
 	return;
       if( cv_showmessages.value==1 )
-	player->SetMessage(TXT_AMMOPHOENIXROD1, false);
+	player->SetMessage(GOT_AMMOPHOENIXROD1, false);
       break;
 
     case MT_AMPHRDHEFTY:
       if(!GiveAmmo(am_phoenixrod, special->health))
 	return;
       if( cv_showmessages.value==1 )
-	player->SetMessage(TXT_AMMOPHOENIXROD2, false);
+	player->SetMessage(GOT_AMMOPHOENIXROD2, false);
       break;
 
       // ammo
@@ -1862,7 +1477,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       break;
 
     case MT_BAGOFHOLDING:
-      if(!backpack)
+      if (!backpack)
         {
 	  maxammo = maxammo2;
 	  backpack = true;
@@ -1872,7 +1487,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       GiveAmmo(am_crossbow, AMMO_CBOW_WIMPY);
       GiveAmmo(am_skullrod, AMMO_SKRD_WIMPY);
       GiveAmmo(am_phoenixrod, AMMO_PHRD_WIMPY);
-      player->SetMessage(TXT_ITEMBAGOFHOLDING, false);
+      player->SetMessage(text[TXT_ITEMBAGOFHOLDING], false);
       break;
 
         // weapons
@@ -1922,32 +1537,32 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
     case MT_WMACE:
       if(!GiveWeapon(wp_mace,false))
 	return;
-      player->SetMessage(TXT_WPNMACE, false);
+      player->SetMessage(GOT_WPNMACE, false);
       break;
     case MT_WCROSSBOW:
       if(!GiveWeapon(wp_crossbow,false))
 	return;
-      player->SetMessage(TXT_WPNCROSSBOW, false);
+      player->SetMessage(GOT_WPNCROSSBOW, false);
       break;
     case MT_WBLASTER:
       if(!GiveWeapon(wp_blaster,false))
 	return;
-      player->SetMessage(TXT_WPNBLASTER, false);
+      player->SetMessage(GOT_WPNBLASTER, false);
       break;
     case MT_WSKULLROD:
       if(!GiveWeapon(wp_skullrod, false))
 	return;
-      player->SetMessage(TXT_WPNSKULLROD, false);
+      player->SetMessage(GOT_WPNSKULLROD, false);
       break;
     case MT_WPHOENIXROD:
       if(!GiveWeapon(wp_phoenixrod, false))
 	return;
-      player->SetMessage(TXT_WPNPHOENIXROD, false);
+      player->SetMessage(GOT_WPNPHOENIXROD, false);
       break;
     case MT_WGAUNTLETS:
       if(!GiveWeapon(wp_gauntlets, false))
 	return;
-      player->SetMessage(TXT_WPNGAUNTLETS, false);
+      player->SetMessage(GOT_WPNGAUNTLETS, false);
       break;
 
       // Hexen weapons
@@ -2168,227 +1783,6 @@ void P_UnlinkFloorThing(Actor*   mobj)
 
 
 //---------------------------------------------------------------------------
-//
-// FUNC P_AutoUseChaosDevice
-//
-//---------------------------------------------------------------------------
-
-bool P_AutoUseChaosDevice(PlayerPawn *p)
-{
-  int i, n = p->inventory.size();
-    
-  for (i = 0; i < n; i++)
-    {
-      if (p->inventory[i].type == arti_teleport)
-        {
-	  p->UseArtifact(arti_teleport);
-	  p->health = (p->health + 1) / 2;
-	  return true;
-        }
-    }
-  return false;
-}
-
-//---------------------------------------------------------------------------
-//
-// PROC P_AutoUseHealth
-//
-//---------------------------------------------------------------------------
-
-void P_AutoUseHealth(PlayerPawn *p, int saveHealth)
-{
-  int i, n = p->inventory.size();
-  int count;
-  int normalCount;
-  int normalSlot;
-  int superCount;
-  int superSlot;
-    
-  normalCount = superCount = 0;
-  for(i = 0; i < n; i++)
-    {
-      if (p->inventory[i].type == arti_health)
-        {
-	  normalSlot = i;
-	  normalCount = p->inventory[i].count;
-        }
-      else if (p->inventory[i].type == arti_superhealth)
-        {
-	  superSlot = i;
-	  superCount = p->inventory[i].count;
-        }
-    }
-  if((game.skill == sk_baby) && (normalCount*25 >= saveHealth))
-    { // Use quartz flasks
-      count = (saveHealth+24)/25;
-      for(i = 0; i < count; i++)
-	p->UseArtifact(arti_health);
-    }
-  else if(superCount*100 >= saveHealth)
-    { // Use mystic urns
-      count = (saveHealth+99)/100;
-      for(i = 0; i < count; i++)
-	p->UseArtifact(arti_superhealth);
-    }
-  else if((game.skill == sk_baby) && (superCount*100+normalCount*25 >= saveHealth))
-    { // Use mystic urns and quartz flasks
-      count = (saveHealth+24)/25;
-      for(i = 0; i < count; i++)
-	p->UseArtifact(arti_health);
-
-      saveHealth -= count*25;
-      count = (saveHealth+99)/100;
-      for(i = 0; i < count; i++)
-	p->UseArtifact(arti_superhealth);
-    }
-}
-
-
-//---------------------------------------------
-// was P_DamageMobj
-// "inflictor" is the thing that caused the damage
-//  creature or missile, can be NULL (slime, etc)
-// "source" is the thing to target after taking damage
-//  creature or NULL
-// Source and inflictor are the same for melee attacks.
-// Source can be NULL for slime, barrel explosions
-// and other environmental stuff.
-//
-// TODO the damage/thrust logic should be changed altogether, using functions like
-// Staff::Hit(actor) {
-//    actor->Damage(2,this);
-//    if (actor.mass == small) actor->Thrust()...
-// }
-
-bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
-{
-  if (dtype & dt_always)
-    {
-      // unavoidable damage
-      // pain flash
-      if (player == displayplayer)
-	hud.damagecount += damage;
-      return Actor::Damage(inflictor, source, damage, dtype);
-    }
-
-  if (game.skill == sk_baby)
-    damage >>= 1;   // take half damage in trainer mode
-  
-  if (inflictor && (inflictor->Type() == Thinker::tt_dactor))
-    {
-      DActor *d = (DActor *)inflictor;
-      switch (d->type)
-	{
-	case MT_MACEFX4: // Death ball
-	  if (powers[pw_invulnerability])
-	    // Can't hurt invulnerable players
-	    damage = 0;
-	    break;	  
-	  if (P_AutoUseChaosDevice(this))
-	    // Player was saved using chaos device
-	    return false;	
-	  damage = 10000; // Something's gonna die
-	  break;
-        case MT_PHOENIXFX2: // Flame thrower
-	  if (P_Random() < 128)
-            { // Freeze player for a bit
-	      reactiontime += 4;
-            }
-	  break;
-	default:
-	  break;
-	}
-    }
-
-  int i, temp;
-  // player specific
-  if (!(flags & MF_CORPSE))
-    {
-      // end of game hellslime hack
-      if (subsector->sector->special == 11 && damage >= health)
-	damage = health - 1;
-
-      // ignore damage in GOD mode, or with INVUL power.
-      if ((cheats & CF_GODMODE) || powers[pw_invulnerability])
-	return false;
-
-      // doom armor
-      temp = armorpoints[armor_field];
-      if (temp > 0)
-        {
-	  int saved = int(damage * armorfactor[armor_field]);
-
-	  if (temp <= saved)
-            {
-	      // armor is used up
-	      saved = temp;
-	      armorfactor[armor_field] = 0;
-            }
-	  armorpoints[armor_field] -= saved;
-	  damage -= saved;
-        }
-
-      // hexen armor
-      float save = toughness;
-      for (i = armor_armor; i < NUMARMOR; i++)
-	save += float(armorpoints[i])/100;
-      if (save > 0)
-	{
-	  // armor absorbed some damage
-	  if (save > 1)
-	    save = 1;
-
-	  // armor deteriorates
-	  for (i = armor_armor; i < NUMARMOR; i++)
-	    if (armorpoints[i])
-	      {
-		armorpoints[i] -= int(damage * ArmorIncrement[pclass][i] / (100 * armorfactor[i]));
-		if (armorpoints[i] <= 2)
-		  armorpoints[i] = 0;
-	      }
-
-	  int saved = int(damage * save);
-	  if (damage > 200)
-	    saved = int(200 * save);
-	  damage -= saved;
-	}      
-
-      PlayerPawn *s = NULL;
-      if (source && source->Type() == Thinker::tt_ppawn)
-	s = (PlayerPawn *)source;
-
-      // added team play and teamdamage (view logboris at 13-8-98 to understand)
-      if (s && (s->player->team == player->team) && !cv_teamdamage.value && (s != this))
-	return false;
-
-      // autosavers
-      if (damage >= health && ((game.skill == sk_baby) || cv_deathmatch.value) && !morphTics)
-	{ // Try to use some inventory health
-	  P_AutoUseHealth(this, damage-health+1);
-	}
-
-      // pain flash
-      if (player == displayplayer)
-	hud.damagecount += damage;
-
-      pres->SetAnim(presentation_t::Pain);
-
-      //added:22-02-98: force feedback ??? electro-shock???
-      if (player == consoleplayer)
-	I_Tactile (40,10,40 + min(damage, 100) * 2);
-    }
-
-  attacker = source;
-
-  bool ret = Actor::Damage(inflictor, source, damage, dtype);
-
-  return ret;
-}
-
-
-
-
-//---------------------------------------------------------------------------
 // was P_ChickenMorphPlayer
 // Returns true if the player gets turned into a chicken.
 
@@ -2406,10 +1800,9 @@ bool PlayerPawn::Morph()
         }
       return false;
     }
+
   if (powers[pw_invulnerability])
-    { // Immune when invulnerable
-      return false;
-    }
+    return false; // Immune when invulnerable
 
   // store x,y,z, angle, flags2
   //SetState(S_FREETARGMOBJ);

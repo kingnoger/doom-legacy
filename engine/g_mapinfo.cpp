@@ -22,6 +22,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.6  2003/12/03 10:49:49  smite-meister
+// Save/load bugfix, text strings updated
+//
 // Revision 1.5  2003/11/30 00:09:43  smite-meister
 // bugfixes
 //
@@ -285,6 +288,7 @@ bool MapInfo::HubSave()
   byte *buffer;
   unsigned length = a.Compress(&buffer);
 
+  //CONS_Printf("Simulated hubsave: %d bytes\n", length);
   FIL_WriteFile(savename.c_str(), buffer, length);
   Z_Free(buffer);
 
@@ -642,8 +646,7 @@ char *MapInfo::Read(int lump)
   char *s, *p;
   s = p = ms;
 
-  //scriptblock.clear();
-  scriptblock = ""; // FIXME old GCC does not have string::clear() ! put it back...
+  scriptblock.clear();
 
   enum {PS_CLEAR, PS_MAPFORMAT, PS_SCRIPT, PS_INTERTEXT, PS_LEVELINFO} parsestate = PS_CLEAR;
 
@@ -745,8 +748,8 @@ char *MapInfo::Read(int lump)
 
   // FS script data TODO a bit clumsy
   s = Z_Strdup(scriptblock.c_str(), PU_LEVEL, NULL);
-  //scriptblock.clear();
-  scriptblock = ""; // FIXME old GCC does not have string::clear() ! put it back...
+  scriptblock.clear();
+
   return s;
 }
 
@@ -870,7 +873,7 @@ int GameInfo::Read_MAPINFO(int lump)
 
 		  case PS_MAP:
 		    if (!P_ParseCommand(b1, s, MAPINFO_MAP_commands, (char *)info))
-		      CONS_Printf("\nUnknown MAPINFO MAP command '%s' at char %d!", s, s - ms);
+		      CONS_Printf("Unknown MAPINFO MAP command '%s' at char %d!\n", s, s - ms);
 		    break;
 
 		  case PS_CLUSTERDEF:
