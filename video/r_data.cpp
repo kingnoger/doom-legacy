@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/03/23 14:24:14  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.6  2003/03/08 16:07:19  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -1269,7 +1272,6 @@ int P_PrecacheLevelFlats();
 // was R_PrecacheMap
 void Map::PrecacheMap()
 {
-//  char*               flatpresent; //SoM: 4/18/2000: No longer used
     char*               texturepresent;
     char*               spritepresent;
 
@@ -1278,7 +1280,7 @@ void Map::PrecacheMap()
     int                 k;
     int                 lump;
 
-    spriteframe_t*      sf;
+
 
     //int numgenerated;  //faB:debug
 
@@ -1394,6 +1396,7 @@ void Map::PrecacheMap()
 	spritepresent[((DActor *)th)->sprite] = 1;
     }
 
+    spriteframe_t*      sf;
     spritememory = 0;
     for (i=0 ; i<numsprites ; i++)
     {

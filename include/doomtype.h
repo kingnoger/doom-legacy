@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/03/23 14:24:13  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.2  2003/02/23 22:49:31  smite-meister
 // FS is back! L2 cache works.
 //
@@ -88,25 +91,18 @@ typedef unsigned short USHORT;
 # define stricmp strcmp
 # define strnicmp strncmp
 
-# define __BYTEBOOL__
-typedef unsigned char byte;
-
 # ifndef O_BINARY
 #  define O_BINARY 0
 # endif
 #endif //__MACOS__
 
 
-#ifndef __BYTEBOOL__
-# define __BYTEBOOL__
-// from now on, we use always C++ type bool as boolean
 typedef unsigned char byte;
-#endif
-
 typedef ULONG tic_t;
 typedef unsigned int angle_t;
 
-union FColorRGBA {
+union RGBA_t
+{
   ULONG rgba;
   struct {
     byte  red;
@@ -116,7 +112,6 @@ union FColorRGBA {
   } s;
 };
 
-typedef union FColorRGBA RGBA_t;
 
 // Predefined with some OS.
 #ifndef __WIN32__

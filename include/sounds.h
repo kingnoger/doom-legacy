@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/03/23 14:24:14  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.4  2003/03/15 20:07:21  smite-meister
 // Initial Hexen compatibility!
 //
@@ -60,14 +63,14 @@ struct doomsfx_t
 // hardwired sound info for original Doom/Heretic/Hexen sounds
 struct sfxinfo_t
 {
-  char  *tagname; // Hexen tricks
-  char  *lumpname;    // up to 8-character name 
-  bool   singularity; // Sfx singularity (only one at a time)
-  int    priority;    // Sfx priority
+  char *tagname;      // Hexen SNDINFO tags
+  char  lumpname[9];  // up to 8-character name (+ \0)
+  char  multiplicity; // how many instances of the sound can be heard simultaneously. 0 means not limited.
+  int   priority;     // bigger is better
 };
 
 
-// the complete set of Doom/Heretic sound effects
+// the complete set of Doom/Heretic/Hexen sound effects
 extern sfxinfo_t S_sfx[];
 
 // the complete set of music
@@ -361,10 +364,10 @@ typedef enum
   sfx_gntful,
   sfx_gnthit,
   sfx_gntpow,
-  sfx_gntact, //
+  sfx_gntact,
   sfx_gntuse,
-  sfx_phosht,
-  sfx_phohit, // 120
+  sfx_phosht, // 120
+  sfx_phohit,
   sfx_phopow,
   sfx_lobsht,
   sfx_lobhit,
@@ -373,8 +376,8 @@ typedef enum
   sfx_hrnhit,
   sfx_hrnpow,
   sfx_ramphit,
-  sfx_ramrain,
-  sfx_bowsht, // 130
+  sfx_ramrain, // 130
+  sfx_bowsht,
   sfx_stfhit,
   sfx_stfpow,
   sfx_stfcrk,
@@ -383,8 +386,8 @@ typedef enum
   sfx_impat2,
   sfx_impdth,
   sfx_impact,
-  sfx_imppai,
-  sfx_mumsit, // 140
+  sfx_imppai, // 140
+  sfx_mumsit,
   sfx_mumat1,
   sfx_mumat2,
   sfx_mumdth,
@@ -393,8 +396,8 @@ typedef enum
   sfx_mumhed,
   sfx_bstsit,
   sfx_bstatk,
-  sfx_bstdth,
-  sfx_bstact, // 150
+  sfx_bstdth, // 150
+  sfx_bstact,
   sfx_bstpai,
   sfx_clksit,
   sfx_clkatk,
@@ -403,8 +406,8 @@ typedef enum
   sfx_clkpai,
   sfx_snksit,
   sfx_snkatk,
-  sfx_snkdth,
-  sfx_snkact, // 160
+  sfx_snkdth, // 160
+  sfx_snkact,
   sfx_snkpai,
   sfx_kgtsit,
   sfx_kgtatk,
@@ -413,8 +416,8 @@ typedef enum
   sfx_kgtact,
   sfx_kgtpai,
   sfx_wizsit,
-  sfx_wizatk,
-  sfx_wizdth, // 170
+  sfx_wizatk, // 170
+  sfx_wizdth,
   sfx_wizact,
   sfx_wizpai,
   sfx_minsit,
@@ -423,8 +426,8 @@ typedef enum
   sfx_minat3,
   sfx_mindth,
   sfx_minact,
-  sfx_minpai,
-  sfx_hedsit, // 180
+  sfx_minpai, // 180
+  sfx_hedsit,
   sfx_hedat1,
   sfx_hedat2,
   sfx_hedat3,
@@ -433,8 +436,8 @@ typedef enum
   sfx_hedpai,
   sfx_sorzap,
   sfx_sorrise,
-  sfx_sorsit,
-  sfx_soratk, // 190
+  sfx_sorsit, // 190
+  sfx_soratk,
   sfx_soract,
   sfx_sorpai,
   sfx_sordsph,
@@ -443,68 +446,69 @@ typedef enum
   sfx_sbtsit,
   sfx_sbtatk,
   sfx_sbtdth,
-  sfx_sbtact,
-  sfx_sbtpai, // 200
-  sfx_plroof, //
+  sfx_sbtact, // 200
+  sfx_sbtpai,
+  sfx_plroof,
   sfx_plrpai,
-  sfx_plrdth,             // Normal
-  sfx_gibdth,             // Extreme
+  sfx_plrdth,     // Normal
+  sfx_gibdth,     // Extreme
   sfx_plrwdth,    // Wimpy
   sfx_plrcdth,    // Crazy
   sfx_hitemup,
   sfx_hwpnup,
-  sfx_htelept, //
+  sfx_htelept, // 210
   sfx_hdoropn,
   sfx_hdorcls,
-  sfx_dormov, // 210
+  sfx_dormov,
   sfx_artiup,
-  sfx_switch, //
+  sfx_switch,
   sfx_hpstart,
   sfx_hpstop,
   sfx_hstnmov,
   sfx_chicpai,
-  sfx_chicatk,
+  sfx_chicatk, // 220
   sfx_chicdth,
   sfx_chicact,
   sfx_chicpk1,
-  sfx_chicpk2, // 220
+  sfx_chicpk2,
   sfx_chicpk3,
   sfx_keyup,
   sfx_ripslop,
   sfx_newpod,
   sfx_podexp,
-  sfx_bounce,
+  sfx_bounce, // 230
   sfx_volsht,
   sfx_volhit,
   sfx_burn,
-  sfx_hsplash, // 230
+  sfx_hsplash,
   sfx_hgloop,
-  sfx_respawn, //
+  sfx_respawn,
   sfx_blssht,
   sfx_blshit,
-  sfx_chat, //
-  sfx_artiuse,
+  sfx_chat,
+  sfx_artiuse, // 240
   sfx_gfrag,
-  sfx_waterfl, // 236
+  sfx_waterfl,
 
   // Monophonic sounds
 
   sfx_wind,
   sfx_amb1,
   sfx_amb2,
-  sfx_amb3, // 240
+  sfx_amb3,
   sfx_amb4,
   sfx_amb5,
   sfx_amb6,
-  sfx_amb7,
+  sfx_amb7, // 250
   sfx_amb8,
   sfx_amb9,
   sfx_amb10,
-  sfx_amb11,
+  sfx_amb11, // 254
 
 
   // Hexen sounds
-  SFX_PLAYER_FIGHTER_NORMAL_DEATH,		// class specific death screams
+  sfx_Hexen, // 255
+  SFX_PLAYER_FIGHTER_NORMAL_DEATH = sfx_Hexen, // class specific death screams
   SFX_PLAYER_FIGHTER_CRAZY_DEATH,
   SFX_PLAYER_FIGHTER_EXTREME1_DEATH,
   SFX_PLAYER_FIGHTER_EXTREME2_DEATH,

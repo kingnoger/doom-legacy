@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/03/23 14:24:13  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.3  2003/03/08 16:07:14  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -112,11 +115,7 @@ struct hex_maplinedef_t
   short v1, v2;
   short flags;
   byte special;
-  byte arg1;
-  byte arg2;
-  byte arg3;
-  byte arg4;
-  byte arg5;
+  byte args[5];
   short sidenum[2]; // sidenum[1] will be -1 if one sided
 };
 
@@ -265,20 +264,20 @@ struct hex_mapthing_t
   short type;
   short flags;
   byte special;
-  byte arg1;
-  byte arg2;
-  byte arg3;
-  byte arg4;
-  byte arg5;
+  byte args[5];
 };
 
 // Legacy runtime mapthing
 struct mapthing_t
 {
+  short tid;
   short x, y, z;
   short angle;
   short type;
   short flags;
+  byte special;
+  byte args[5];
+
   class Actor *mobj;
 };
 

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/03/23 14:24:13  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.8  2003/03/15 20:07:15  smite-meister
 // Initial Hexen compatibility!
 //
@@ -87,7 +90,6 @@
 #include "g_player.h"
 
 #include "r_main.h"
-#include "r_state.h"
 #include "s_sound.h"
 #include "sounds.h"
 #include "m_random.h"

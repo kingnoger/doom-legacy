@@ -120,11 +120,12 @@ LD     	= $(CC)
 export objdir = objs
 
 export engine_objects = \
+	$(objdir)/p_poly.o \
 	$(objdir)/p_acs.o \
 	$(objdir)/a_action.o \
 	$(objdir)/p_xpspr.o \
 	$(objdir)/p_xenemy.o \
-	$(objdir)/info.o \
+	$(objdir)/info_s.o \
 	$(objdir)/info_m.o \
 	$(objdir)/t_oper.o \
 	$(objdir)/t_parse.o \
@@ -211,6 +212,7 @@ export audio_objects = \
 
 
 export video_objects = \
+	$(objdir)/md3.o \
 	$(objdir)/screen.o \
 	$(objdir)/v_video.o \
 	$(objdir)/r_render.o \

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/03/23 14:24:13  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.2  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -74,7 +77,6 @@
 #include "p_spec.h" // class definitions
 #include "s_sound.h"
 #include "sounds.h"
-#include "r_state.h"
 #include "z_zone.h"
 #include "m_random.h"
 #include "g_game.h"

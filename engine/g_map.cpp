@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.11  2003/03/23 14:24:13  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.10  2003/03/15 20:07:14  smite-meister
 // Initial Hexen compatibility!
 //
@@ -520,9 +523,10 @@ void Map::SpawnMapThing(mapthing_t *mt)
     nz = FLOATRANDZ;
   else
     {
-      // FIXME first think how the z spawning is supposed to work... really.
-      //mt->z = R_PointInSubsector(nx, ny)->sector->floorheight >> FRACBITS;
-      nz = ONFLOORZ;
+      // FIXME think how the z spawning is supposed to work... really.
+      mt->z += R_PointInSubsector(nx, ny)->sector->floorheight >> FRACBITS;
+      //nz = ONFLOORZ;
+      nz = mt->z << FRACBITS;
     }
 
   DActor *p = SpawnDActor(nx,ny,nz, mobjtype_t(t));
@@ -543,6 +547,14 @@ void Map::SpawnMapThing(mapthing_t *mt)
   p->angle = ANG45 * (mt->angle/45);
   if (mt->flags & MTF_AMBUSH)
     p->flags |= MF_AMBUSH;
+
+  if (hexen_format && mt->flags & MTF_DORMANT)
+    {
+      p->flags2 |= MF2_DORMANT;
+      if (t == MT_ICEGUY)
+	p->SetState(S_ICEGUY_DORMANT, true);
+      p->tics = -1;
+    }
 
   mt->mobj = p;
 }

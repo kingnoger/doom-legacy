@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/03/23 14:24:14  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.6  2003/03/15 20:07:22  smite-meister
 // Initial Hexen compatibility!
 //
@@ -36,76 +39,6 @@
 // Revision 1.1.1.1  2002/11/16 14:18:49  hurdler
 // Initial C++ version of Doom Legacy
 //
-// Revision 1.40  2001/08/06 23:57:09  stroggonmeth
-// Removed portal code, improved 3D floors in hardware mode.
-//
-// Revision 1.36  2001/05/30 04:00:52  stroggonmeth
-// Fixed crashing bugs in software with 3D floors.
-//
-// Revision 1.35  2001/05/22 14:22:23  hurdler
-// show 3d-floors bug + hack for filesearch with vc++
-//
-// Revision 1.32  2001/04/17 21:12:08  stroggonmeth
-// Little commit. Re-enables colormaps for trans columns in C and fixes some sprite bugs.
-//
-// Revision 1.30  2001/03/21 18:24:56  stroggonmeth
-// Misc changes and fixes. Code cleanup
-//
-// Revision 1.29  2001/03/13 22:14:20  stroggonmeth
-// Long time no commit. 3D floors, FraggleScript, portals, ect.
-//
-// Revision 1.27  2001/01/25 22:15:44  bpereira
-// added heretic support
-//
-// Revision 1.26  2000/11/21 21:13:18  stroggonmeth
-// Optimised 3D floors and fixed crashing bug in high resolutions.
-//
-// Revision 1.25  2000/11/12 14:15:46  hurdler
-// Removed unecessary code
-//
-// Revision 1.24  2000/11/09 17:56:20  stroggonmeth
-// Hopefully fixed a few bugs and did a few optimizations.
-//
-// Revision 1.23  2000/11/03 02:37:36  stroggonmeth
-// Fix a few warnings when compiling.
-//
-// Revision 1.22  2000/11/02 17:50:10  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.21  2000/10/04 16:19:24  hurdler
-// Change all those "3dfx names" to more appropriate names
-//
-// Revision 1.14  2000/08/11 21:37:17  hurdler
-// fix win32 compilation problem
-//
-// Revision 1.13  2000/08/11 19:10:13  metzgermeister
-// *** empty log message ***
-//
-// Revision 1.9  2000/04/18 17:39:40  stroggonmeth
-// Bug fixes and performance tuning.
-//
-// Revision 1.8  2000/04/11 19:07:25  stroggonmeth
-// Finished my logs, fixed a crashing bug.
-//
-// Revision 1.7  2000/04/09 02:30:57  stroggonmeth
-// Fixed missing sprite def
-//
-// Revision 1.5  2000/04/06 21:06:20  stroggonmeth
-// Optimized extra_colormap code...
-// Added #ifdefs for older water code.
-//
-// Revision 1.4  2000/04/04 19:28:43  stroggonmeth
-// Global colormaps working. Added a new linedef type 272.
-//
-// Revision 1.3  2000/04/04 00:32:48  stroggonmeth
-// Initial Boom compatability plus few misc changes all around.
-//
-// Revision 1.2  2000/02/27 00:42:11  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
-//
 //
 // DESCRIPTION:
 //      Refresh of things, i.e. objects represented by sprites.
@@ -123,6 +56,7 @@
 #include "r_render.h"
 #include "r_local.h"
 #include "r_state.h"
+#include "r_sprite.h"
 
 #include "p_pspr.h"
 
@@ -134,8 +68,6 @@
 
 #include "i_video.h"            //rendermode
 
-
-static void R_InitSkins (void);
 
 #define MINZ                  (FRACUNIT*4)
 #define BASEYCENTER           (BASEVIDHEIGHT/2)
@@ -187,9 +119,33 @@ short           negonearray[MAXVIDWIDTH];
 short           screenheightarray[MAXVIDWIDTH];
 
 
-//
-// INITIALIZATION FUNCTIONS
-//
+
+void *presentation_t::operator new(size_t size)
+{
+  return Z_Malloc(size, PU_LEVSPEC, NULL); // same tag as with thinkers
+}
+
+void presentation_t::operator delete(void *mem)
+{
+  Z_Free(mem);
+}
+
+spritepres_t::spritepres_t(const char *name, int startframe, int col)
+{
+  color = col;
+  spr = sprites.Get(name);
+  frame = startframe;
+}
+
+void spritepres_t::SetFrame(int fr)
+{
+  frame = fr;
+}
+
+void spritepres_t::SetAnim(int fr)
+{
+  // do nothing
+}
 
 
 // ==========================================================================
@@ -199,6 +155,9 @@ short           screenheightarray[MAXVIDWIDTH];
 //  sprite, add sprites at run-time, add wads at run-time.
 //
 // ==========================================================================
+
+spritecache_t sprites(PU_STATIC); // TODO: make a cool new PU_tag for sprites/models
+
 
 // used when building a sprite from lumps
 static spriteframe_t sprtemp[29];
@@ -382,9 +341,9 @@ cacheitem_t *spritecache_t::Load(const char *p, cacheitem_t *r)
     t = new sprite_t;
 
   // allocate this sprite's frames
-  t->spr.numframes = maxframe;
-  t->spr.spriteframes = (spriteframe_t *)Z_Malloc(maxframe*sizeof(spriteframe_t), PU_STATIC, NULL);
-  memcpy(t->spr.spriteframes, sprtemp, maxframe*sizeof(spriteframe_t));
+  t->numframes = maxframe;
+  t->spriteframes = (spriteframe_t *)Z_Malloc(maxframe*sizeof(spriteframe_t), PU_STATIC, NULL);
+  memcpy(t->spriteframes, sprtemp, maxframe*sizeof(spriteframe_t));
 
   CONS_Printf("frames = %d\n", maxframe);
 
@@ -396,23 +355,17 @@ void spritecache_t::Free(cacheitem_t *r)
 {
   sprite_t *t = (sprite_t *)r;
   /*
-  int i, j;
-  for (i = 0; i < t->spr.numframes; i++)
+  int i;
+  for (i = 0; i < t->numframes; i++)
     {
-      spriteframe_t *frame = &t->spr.spriteframes[i];
+      spriteframe_t *frame = &t->spriteframes[i];
       // TODO release textures of each frame...
     }
   */
-  Z_Free(t->spr.spriteframes);
+  Z_Free(t->spriteframes);
 }
 
 
-spritecache_t sprites(PU_STATIC); // TODO: make a cool new PU_tag for sprites/models
-
-
-void spritedef_t::Draw(const Actor *p)
-{
-}
 
 // Install a single sprite, given its identifying name (4 chars)
 //
@@ -644,58 +597,31 @@ static void R_AddSpriteDefs (char** namelist, int wadnum)
 static vissprite_t  vissprites[MAXVISSPRITES];
 static vissprite_t *vissprite_p;
 
-
+static void R_InitSkins();
 //
 // R_InitSprites
 // Called at program start.
 //
-void R_InitSprites (char** namelist)
+void R_InitSprites(char** namelist)
 {
   int         i;
-  char**      check;
 
   for (i=0 ; i<MAXVIDWIDTH ; i++)
     negonearray[i] = -1;
 
   sprites.SetDefaultItem("PLAY");
+  //models.SetDefaultItem("models/sarge/");
+  //MD3_InitNormLookup();
 
   //
-  // count the number of sprite names, and allocate sprites table
+  // now check for sprite skins
   //
-  int nwads = fc.Size();
-  /*
-  check = namelist;
-  while (*check != NULL)
-    check++;
-  numsprites = check - namelist;
-
-  if (!numsprites)
-    I_Error ("R_AddSpriteDefs: no sprites in namelist\n");
-
-  //sprites = (spritedef_t *)Z_Malloc(numsprites * sizeof(*sprites), PU_STATIC, NULL);
-  //memset (sprites, 0, numsprites * sizeof(*sprites));
-
-  // find sprites in each -file added pwad
-  for (i=0; i<nwads; i++)
-    R_AddSpriteDefs (namelist, i);
-  */
-    //
-    // now check for skins
-    //
 
   // it can be is do before loading config for skin cvar possible value
-  R_InitSkins ();
+  int nwads = fc.Size();
+  R_InitSkins();
   for (i=0; i<nwads; i++)
-    R_AddSkins (i);
-
-    //
-    // check if all sprites have frames
-    //
-    /*
-    for (i=0; i<numsprites; i++)
-         if (sprites[i].numframes<1)
-             CONS_Printf ("R_InitSprites: sprite %s has no frames at all\n", sprnames[i]);
-    */
+    R_AddSkins(i);
 }
 
 
@@ -715,13 +641,13 @@ void R_ClearSprites()
 //
 static vissprite_t     overflowsprite;
 
-static vissprite_t* R_NewVisSprite (void)
+static vissprite_t* R_NewVisSprite()
 {
-    if (vissprite_p == &vissprites[MAXVISSPRITES])
-        return &overflowsprite;
+  if (vissprite_p == &vissprites[MAXVISSPRITES])
+    return &overflowsprite;
 
-    vissprite_p++;
-    return vissprite_p-1;
+  vissprite_p++;
+  return vissprite_p-1;
 }
 
 
@@ -937,7 +863,7 @@ void Rend::R_SplitSprite(vissprite_t* sprite, Actor* thing)
 
       newsprite->extra_colormap = sector->lightlist[i].extra_colormap;
 
-      if (thing->frame & FF_SMOKESHADE)
+      if (thing->pres->frame & FF_SMOKESHADE)
         ;
       else
       {
@@ -948,7 +874,7 @@ void Rend::R_SplitSprite(vissprite_t* sprite, Actor* thing)
 
         if (fixedcolormap )
           ;
-        else if ((thing->frame & (FF_FULLBRIGHT|FF_TRANSMASK) || thing->flags & MF_SHADOW) && (!newsprite->extra_colormap || !newsprite->extra_colormap->fog))
+        else if ((thing->pres->frame & (FF_FULLBRIGHT|FF_TRANSMASK) || thing->flags & MF_SHADOW) && (!newsprite->extra_colormap || !newsprite->extra_colormap->fog))
           ;
         else
         {
@@ -976,10 +902,7 @@ void Rend::R_ProjectSprite(Actor* thing)
   fixed_t  tr_x = thing->x - viewx;
   fixed_t  tr_y = thing->y - viewy;
 
-  fixed_t  gxt = FixedMul(tr_x,viewcos);
-  fixed_t  gyt = -FixedMul(tr_y,viewsin);
-
-  fixed_t  tz = gxt - gyt;
+  fixed_t  tz = FixedMul(tr_x,viewcos) + FixedMul(tr_y,viewsin);
 
   // thing is behind view plane?
   if (tz < MINZ)
@@ -989,36 +912,23 @@ void Rend::R_ProjectSprite(Actor* thing)
   fixed_t  xscale = FixedDiv(projection, tz);
   fixed_t  yscale = FixedDiv(projectiony, tz); //added:02-02-98:aaargll..if I were a math-guy!!!
 
-  gxt = -FixedMul(tr_x,viewsin);
-  gyt = FixedMul(tr_y,viewcos);
-  fixed_t  tx = -gyt - gxt;
+  fixed_t  tx = FixedMul(tr_x,viewsin) - FixedMul(tr_y,viewcos);
 
   // too far off the side?
   if (abs(tx) > (tz << 2))
     return;
 
-  // FIXME HERE the new presentation system!
-
+  int frame = thing->pres->frame;
   // decide which patch to use for sprite relative to player
-#ifdef RANGECHECK
-  if ((unsigned)thing->sprite >= numsprites)
-    I_Error ("R_ProjectSprite: invalid sprite number %i ",
-	     thing->sprite);
-#endif
-
-  spritedef_t *sprdef = (spritedef_t *)thing->pres;
+  // FIXME remove cast
+  sprite_t *sprdef = ((spritepres_t *)thing->pres)->spr;
 
 #ifdef RANGECHECK
   if ( (thing->frame&FF_FRAMEMASK) >= sprdef->numframes )
     I_Error ("R_ProjectSprite: invalid sprite frame %i : %i for %s",
-	     thing->sprite, thing->frame, sprnames[thing->sprite]);
+	     thing->sprite, frame, sprnames[thing->sprite]);
 #endif
-  spriteframe_t *sprframe = &sprdef->spriteframes[ thing->frame & FF_FRAMEMASK];
-
-#ifdef PARANOIA
-  //heretic hack
-  //if( !sprframe ) I_Error("sprframes NULL for sprite %d\n", thing->sprite);
-#endif
+  spriteframe_t *sprframe = &sprdef->spriteframes[ frame & FF_FRAMEMASK];
 
   angle_t   ang;
   unsigned  rot;
@@ -1032,14 +942,14 @@ void Rend::R_ProjectSprite(Actor* thing)
         rot = (ang-thing->angle+(unsigned)(ANG45/2)*9)>>29;
         //Fab: lumpid is the index for spritewidth,spriteoffset... tables
         lump = sprframe->lumpid[rot];
-        flip = (bool)sprframe->flip[rot];
+        flip = sprframe->flip[rot];
     }
   else
     {
         // use single rotation for all views
         rot = 0;                        //Fab: for vis->patch below
         lump = sprframe->lumpid[0];     //Fab: see note above
-        flip = (bool)sprframe->flip[0];
+        flip = sprframe->flip[0];
     }
 
   // calculate edges of the shape
@@ -1151,14 +1061,14 @@ void Rend::R_ProjectSprite(Actor* thing)
   vis->transmap = NULL;
     
   // specific translucency
-  if (thing->frame & FF_SMOKESHADE)
+  if (frame & FF_SMOKESHADE)
     // not realy a colormap ... see R_DrawVisSprite
     //vis->colormap = VIS_SMOKESHADE; 
     vis->transmap = VIS_SMOKESHADE; 
   else
     {
-      if (thing->frame & FF_TRANSMASK)
-	vis->transmap = (thing->frame & FF_TRANSMASK) - 0x10000 + transtables;
+      if (frame & FF_TRANSMASK)
+	vis->transmap = (frame & FF_TRANSMASK) - 0x10000 + transtables;
       else if (thing->flags & MF_SHADOW)
 	// actually only the player should use this (temporary invisibility)
 	// because now the translucency is set through FF_TRANSMASK
@@ -1170,7 +1080,7 @@ void Rend::R_ProjectSprite(Actor* thing)
 	  //  eg: negative effect of invulnerability
 	  vis->colormap = fixedcolormap;
         }
-      else if (((thing->frame & (FF_FULLBRIGHT|FF_TRANSMASK)) || (thing->flags & MF_SHADOW)) && (!vis->extra_colormap || !vis->extra_colormap->fog))
+      else if (((frame & (FF_FULLBRIGHT|FF_TRANSMASK)) || (thing->flags & MF_SHADOW)) && (!vis->extra_colormap || !vis->extra_colormap->fog))
         {
 	  // full bright : goggles
 	  vis->colormap = colormaps;
@@ -1187,13 +1097,10 @@ void Rend::R_ProjectSprite(Actor* thing)
         }
     }
 
-  /*
-    FIXME color translation
-  if (thing->color != 0)
-    vis->colormap = translationtables + ((thing->color - 1) << 8);
+  if (thing->pres->color != 0)
+    vis->colormap = translationtables + ((thing->pres->color - 1) << 8);
   else
     vis->colormap = colormaps;
-  */
 
   if (thing->subsector->sector->numlights)
     R_SplitSprite(vis, thing);
@@ -1277,7 +1184,7 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
         I_Error ("R_ProjectSprite: invalid sprite number %i ",
                  psp->state->sprite);
 #endif
-    spritedef_t *sprdef = sprites.Get(sprnames[psp->state->sprite]);
+    sprite_t *sprdef = sprites.Get(sprnames[psp->state->sprite]);
 #ifdef RANGECHECK
     if ( (psp->state->frame & FF_FRAMEMASK)  >= sprdef->numframes)
         I_Error ("R_ProjectSprite: invalid sprite frame %i : %i for %s",
@@ -1293,7 +1200,7 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
 
     //Fab: see the notes in R_ProjectSprite about lumpid,lumppat
     lump = sprframe->lumpid[0];
-    flip = (bool)sprframe->flip[0];
+    flip = sprframe->flip[0];
 
     // calculate edges of the shape
 
@@ -2038,7 +1945,6 @@ CV_PossibleValue_t skin_cons_t[MAXSKINS+1];
 
 void Sk_SetDefaultValue(skin_t *skin)
 {
-    int   i;
     //
     // setup the 'marine' as default skin
     //
@@ -2047,19 +1953,19 @@ void Sk_SetDefaultValue(skin_t *skin)
     strcpy (skin->faceprefix, "STF");
     /*
       // FIXME skin sounds must be stored with the skins, not in S_Sfx
-    for (i=0;i<sfx_freeslot0;i++)
+    for (int i=0;i<sfx_freeslot0;i++)
         if (S_sfx[i].skinsound!=-1)
         {
             skin->soundsid[S_sfx[i].skinsound] = i;
         }
     */
-    memcpy(&skins[0].spritedef, sprites.Get("PLAY"), sizeof(spritedef_t));
+    memcpy(&skins[0].spritedef, sprites.Get("PLAY"), sizeof(sprite_t));
 }
 
 //
 // Initialize the basic skins
 //
-void R_InitSkins (void)
+void R_InitSkins()
 {
 #ifdef SKINVALUES
     int i;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/03/23 14:24:13  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.3  2003/03/15 20:07:21  smite-meister
 // Initial Hexen compatibility!
 //
@@ -470,11 +473,7 @@ struct line_t
   short       special;
   short       tag;
   // hexen args
-  byte arg1;
-  byte arg2;
-  byte arg3;
-  byte arg4;
-  byte arg5;
+  byte args[5];
 
   // Visual appearance: SideDefs.
   //  sidenum[1] will be -1 if one sided
@@ -527,7 +526,9 @@ struct subsector_t
   // floorsplat_t list
   void*       splats;
   //Hurdler: added for optimized mlook in hw mode
-  int         validcount; 
+  int         validcount;
+
+  struct polyobj_t *poly;
 };
 
 

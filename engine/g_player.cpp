@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.10  2003/03/23 14:24:13  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.9  2003/03/15 20:07:14  smite-meister
 // Initial Hexen compatibility!
 //
@@ -92,7 +95,11 @@ pawn_info_t pawndata[] =
   {MT_KNIGHTGHOST, wp_nochange, 0, MT_REDAXE},
   {MT_SORCERER1, wp_nochange, 0, MT_SRCRFX1},
   {MT_SORCERER2, wp_nochange, 0, MT_SOR2FX1},
-  {MT_MINOTAUR,  wp_nochange, 0, MT_MNTRFX1} // 36
+  {MT_MINOTAUR,  wp_nochange, 0, MT_MNTRFX1}, // 36
+
+  {MT_PLAYER_FIGHTER, wp_fpunch, 0, MT_NONE},
+  {MT_PLAYER_CLERIC, wp_cmace, 0, MT_NONE},
+  {MT_PLAYER_MAGE, wp_mwand, 0, MT_NONE}
 };
 
 

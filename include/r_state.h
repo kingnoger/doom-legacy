@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/03/23 14:24:14  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.2  2003/03/08 16:07:16  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -69,7 +72,6 @@
 
 // Need data structure definitions.
 
-#include "r_sprite.h"
 #include "r_defs.h"
 #include "tables.h"
 

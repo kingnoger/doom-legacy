@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/03/23 14:24:13  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.4  2003/01/25 21:33:05  smite-meister
 // Now compiles with MinGW 2.0 / GCC 3.2.
 // Builder can choose between dynamic and static linkage.
@@ -30,48 +33,6 @@
 //
 // Revision 1.1.1.1  2002/11/16 14:18:04  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.7  2002/09/20 22:41:33  vberghol
-// Sound system rewritten! And it workscvs update
-//
-// Revision 1.6  2002/08/17 21:21:53  vberghol
-// Only scripting to be fixed in engine!
-//
-// Revision 1.5  2002/08/08 12:01:29  vberghol
-// pian engine on valmis!
-//
-// Revision 1.4  2002/07/23 19:21:44  vberghol
-// fixed up to p_enemy.cpp
-//
-// Revision 1.3  2002/07/01 21:00:22  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:16  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.8  2001/08/06 23:57:09  stroggonmeth
-// Removed portal code, improved 3D floors in hardware mode.
-//
-// Revision 1.7  2001/03/13 22:14:19  stroggonmeth
-// Long time no commit. 3D floors, FraggleScript, portals, ect.
-//
-// Revision 1.6  2001/01/25 22:15:44  bpereira
-// added heretic support
-//
-// Revision 1.5  2000/11/04 16:23:43  bpereira
-// no message
-//
-// Revision 1.4  2000/11/02 17:50:09  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.3  2000/04/04 00:32:47  stroggonmeth
-// Initial Boom compatability plus few misc changes all around.
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //
 // DESCRIPTION:

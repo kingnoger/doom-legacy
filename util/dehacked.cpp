@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/03/23 14:24:14  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.5  2003/03/15 20:07:21  smite-meister
 // Initial Hexen compatibility!
 //
@@ -313,12 +316,12 @@ static void readsound(MYFILE* f,int num,char *savesfxnames[])
 	    else value=(value+8)/8;
 
 	    if(value>=-1 && value < NUMSFX-1)
-	      S_sfx[num].lumpname=savesfxnames[value+1];
+	      strcpy(S_sfx[num].lumpname, savesfxnames[value+1]);
 	    else
 	      deh_error("Sound %d : offset out of bound\n",num);
 	  }
 	else if(!strcmp(word,"Zero/One"))
-	  S_sfx[num].singularity=value;
+	  S_sfx[num].multiplicity = value;
 	else if(!strcmp(word,"Value"))
 	  S_sfx[num].priority   =value;
 	else

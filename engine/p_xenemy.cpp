@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2003/03/23 14:24:13  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.1  2003/03/15 20:07:18  smite-meister
 // Initial Hexen compatibility!
 //
@@ -2396,7 +2399,7 @@ void A_FiredSpawnRock(DActor *actor)
     case 3:
       rtype = MT_FIREDEMON_FX4;
       break;
-    case 4:
+    default:
       rtype = MT_FIREDEMON_FX5;
       break;
     }

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/03/23 14:24:13  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.10  2003/03/15 20:07:17  smite-meister
 // Initial Hexen compatibility!
 //
@@ -48,126 +51,6 @@
 //
 // Revision 1.1.1.1  2002/11/16 14:18:11  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.38  2001/08/13 16:27:44  hurdler
-// Added translucency to linedef 300 and colormap to 3d-floors
-//
-// Revision 1.37  2001/08/12 22:08:40  hurdler
-// Add alpha value for 3d water
-//
-// Revision 1.36  2001/08/12 17:57:15  hurdler
-// Beter support of sector coloured lighting in hw mode
-//
-// Revision 1.35  2001/08/11 15:18:02  hurdler
-// Add sector colormap in hw mode (first attempt)
-//
-// Revision 1.34  2001/08/08 20:34:43  hurdler
-// Big TANDL update
-//
-// Revision 1.33  2001/08/06 23:57:09  stroggonmeth
-// Removed portal code, improved 3D floors in hardware mode.
-//
-// Revision 1.32  2001/07/28 16:18:37  bpereira
-// no message
-//
-// Revision 1.31  2001/06/16 08:07:55  bpereira
-// no message
-//
-// Revision 1.30  2001/05/27 13:42:48  bpereira
-// no message
-//
-// Revision 1.29  2001/05/14 19:02:58  metzgermeister
-//   * Fixed floor not moving up with player on E3M1
-//   * Fixed crash due to oversized string in screen message ... bad bug!
-//   * Corrected some typos
-//   * fixed sound bug in SDL
-//
-// Revision 1.28  2001/04/30 17:19:24  stroggonmeth
-// HW fix and misc. changes
-//
-// Revision 1.27  2001/03/30 17:12:51  bpereira
-// no message
-//
-// Revision 1.26  2001/03/19 21:18:48  metzgermeister
-//   * missing textures in HW mode are replaced by default texture
-//   * fixed crash bug with P_SpawnMissile(.) returning NULL
-//   * deep water trick and other nasty thing work now in HW mode (tested with tnt/map02 eternal/map02)
-//   * added cvar gr_correcttricks
-//
-// Revision 1.25  2001/03/13 22:14:19  stroggonmeth
-// Long time no commit. 3D floors, FraggleScript, portals, ect.
-//
-// Revision 1.24  2001/01/25 22:15:43  bpereira
-// added heretic support
-//
-// Revision 1.23  2000/11/04 16:23:43  bpereira
-// no message
-//
-// Revision 1.22  2000/11/03 03:27:17  stroggonmeth
-// Again with the bug fixing...
-//
-// Revision 1.21  2000/11/02 19:49:36  bpereira
-// no message
-//
-// Revision 1.20  2000/11/02 17:50:08  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.19  2000/10/02 18:25:45  bpereira
-// no message
-//
-// Revision 1.18  2000/08/31 14:30:56  bpereira
-// no message
-//
-// Revision 1.17  2000/08/11 21:37:17  hurdler
-// fix win32 compilation problem
-//
-// Revision 1.16  2000/08/11 19:10:13  metzgermeister
-// *** empty log message ***
-//
-// Revision 1.15  2000/05/23 15:22:34  stroggonmeth
-// Not much. A graphic bug fixed.
-//
-// Revision 1.14  2000/05/03 23:51:00  stroggonmeth
-// A few, quick, changes.
-//
-// Revision 1.13  2000/04/19 15:21:02  hurdler
-// add SDL midi support
-//
-// Revision 1.12  2000/04/18 12:55:39  hurdler
-// join with Boris' code
-//
-// Revision 1.11  2000/04/16 18:38:07  bpereira
-// no message
-//
-// Revision 1.10  2000/04/15 22:12:57  stroggonmeth
-// Minor bug fixes
-//
-// Revision 1.9  2000/04/13 23:47:47  stroggonmeth
-// See logs
-//
-// Revision 1.8  2000/04/12 16:01:59  hurdler
-// ready for T&L code and true static lighting
-//
-// Revision 1.7  2000/04/11 19:07:24  stroggonmeth
-// Finished my logs, fixed a crashing bug.
-//
-// Revision 1.6  2000/04/08 11:27:29  hurdler
-// fix some boom stuffs
-//
-// Revision 1.5  2000/04/06 20:40:22  hurdler
-// Mostly remove warnings under windows
-//
-// Revision 1.4  2000/04/04 19:28:43  stroggonmeth
-// Global colormaps working. Added a new linedef type 272.
-//
-// Revision 1.3  2000/04/04 00:32:47  stroggonmeth
-// Initial Boom compatability plus few misc changes all around.
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:33  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //
 // DESCRIPTION:
@@ -626,26 +509,41 @@ void Map::LoadThings(int lump)
   mapthing_t *t = mapthings;
 
   int ffail = 0;
-  // multiplayer only thing flag
-  if (!game.multiplayer)
-    ffail |= MTF_MULTIPLAYER;
-
+  int fskill = 0;
+  int fmode = -1; // all bits on
   extern consvar_t cv_deathmatch;
 
-  // "not deathmatch"/"not coop" thing flags
-  if (game.netgame && cv_deathmatch.value)
-    ffail |= MTF_NOT_IN_DM;
-  else if (game.netgame && !cv_deathmatch.value)
-    ffail |= MTF_NOT_IN_COOP;
-
   // check skill
-  int skillbit;
   if (game.skill == sk_baby)
-    skillbit = 1;
+    fskill = 1;
   else if (game.skill == sk_nightmare)
-    skillbit = 4;
+    fskill = 4;
   else
-    skillbit = 1 << (game.skill-1);
+    fskill = 1 << (game.skill-1);
+
+  if (hexen_format)
+    {
+      // Hexen flags
+      if (!game.multiplayer)
+	fmode = MTF_GSINGLE;
+      else if (cv_deathmatch.value)
+	fmode = MTF_GDEATHMATCH;
+      else
+	fmode = MTF_GCOOP;
+    }
+  else
+    {
+      // Doom / Boom flags
+      // multiplayer only thing flag
+      if (!game.multiplayer)
+	ffail |= MTF_MULTIPLAYER;
+
+      // "not deathmatch"/"not coop" thing flags
+      if (game.netgame && cv_deathmatch.value)
+	ffail |= MTF_NOT_IN_DM;
+      else if (game.netgame && !cv_deathmatch.value)
+	ffail |= MTF_NOT_IN_COOP;
+    }
 
 
   int i, n, low, high, ednum;
@@ -653,28 +551,38 @@ void Map::LoadThings(int lump)
     {
       if (hexen_format)
 	{
-	  // TODO add TID
+	  t->tid = SHORT(ht->tid);
 	  t->x = SHORT(ht->x);
 	  t->y = SHORT(ht->y);
-	  //t->height = SHORT(ht->height);
+	  t->z = SHORT(ht->height); // temp
 	  t->angle  = SHORT(ht->angle);
 	  ednum     = SHORT(ht->type);
 	  t->flags  = SHORT(ht->flags);
+
+	  t->special = ht->special;
+	  for (int j=0; j<5; j++)
+	    t->args[j] = ht->args[j];
 	  ht++;
 	}
       else
 	{
+	  t->tid = 0;
 	  t->x = SHORT(mt->x);
 	  t->y = SHORT(mt->y);
+	  t->z = 0;
 	  t->angle = SHORT(mt->angle);
 	  ednum    = SHORT(mt->type);
 	  t->flags = SHORT(mt->flags);
+
+	  t->special = 0;
+	  for (int j=0; j<5; j++)
+	    t->args[j] = 0;
 	  mt++;
 	}
       t->mobj = NULL;
 
       // wrong flags?
-      if ((t->flags & ffail) || !(t->flags & skillbit))
+      if ((t->flags & ffail) || !(t->flags & fskill) || !(t->flags & fmode))
 	continue;
 
       // convert editor number to mobjtype_t number right now
@@ -705,17 +613,10 @@ void Map::LoadThings(int lump)
 	  continue;
 	}
 
-      // Ambient sound sequences
-      if (ednum >= 1200 && ednum < 1300)
-	{
-	  AddAmbientSfx(ednum - 1200);
-	  continue;
-	}
-
       if (ednum == 14)
 	{
 	  // ugly HACK
-	  // same with doom and heretic, but only one mobjtype_t
+	  // same with doom / heretic / hexen, but only one mobjtype_t
 	  t->type = MT_TELEPORTMAN;
 	  SpawnMapThing(t);
 	  continue;
@@ -725,6 +626,7 @@ void Map::LoadThings(int lump)
       high = 0;
 
       // find which type to spawn
+      // this is because the ednum ranges normally overlap in different games
       if (ednum >= info->doom_offs[0] && ednum <= info->doom_offs[1])
 	{
 	  ednum -= info->doom_offs[0];
@@ -741,6 +643,13 @@ void Map::LoadThings(int lump)
 	  low = MT_HERETIC;
 	  high = MT_HERETIC_END;
 
+	  // Ambient sound sequences
+	  if (ednum >= 1200 && ednum < 1300)
+	    {
+	      AddAmbientSfx(ednum - 1200);
+	      continue;
+	    }
+
 	  // D'Sparil teleport spot (no Actor spawned)
 	  if (ednum == 56)
 	    {
@@ -752,6 +661,45 @@ void Map::LoadThings(int lump)
 	  if (ednum == 2002)
 	    {
 	      MaceSpots.push_back(t);
+	      continue;
+	    }
+	}
+      else if (ednum >= info->hexen_offs[0] && ednum <= info->hexen_offs[1])
+	{
+	  ednum -= info->hexen_offs[0];
+	  low = MT_HEXEN;
+	  high = MT_HEXEN_END;
+
+	  extern vector<mapthing_t *> polyspawn;
+	  // The polyobject system is pretty stupid, since the mapthings are not always in
+	  // any particular order. Polyobjects have to be picked apart
+	  // from other things  => polyspawn vector
+	  if (ednum == PO_ANCHOR_TYPE || ednum == PO_SPAWN_TYPE || ednum == PO_SPAWNCRUSH_TYPE)
+	    {
+	      t->type = ednum;
+	      polyspawn.push_back(t);
+	      if (ednum != PO_ANCHOR_TYPE)
+		// a polyobj marker
+		NumPolyobjs++;
+	      continue;
+	    }
+
+	  // Check for player starts 5 to 8
+	  if (ednum >= 9100 && ednum <= 9103)
+	    {
+	      ednum = 5 + ednum - 9100;
+
+	      if (playerstarts.size() < ednum)
+		playerstarts.resize(ednum);
+	      playerstarts[ednum - 1] = t;
+	      t->type = 0;
+	      continue;
+	    }
+
+	  if(ednum >= 1400 && ednum < 1410)
+	    {
+	      // FIXME soundseqs
+	      //R_PointInSubsector(t->x << FRACBITS, t->y << FRACBITS)->sector->seqType = ednum - 1400;
 	      continue;
 	    }
 	}
@@ -783,7 +731,7 @@ void Map::LoadThings(int lump)
 //
 void Map::LoadLineDefs(int lump)
 {
-  int                 i;
+  int i, j;
 
   vertex_t *v1, *v2;
 
@@ -806,15 +754,11 @@ void Map::LoadLineDefs(int lump)
       if (hexen_format)
 	{
 	  ld->flags = SHORT(hld->flags);
-
-	  // New line special info ...
 	  ld->special = hld->special;
-
-	  ld->arg1 = hld->arg1;
-	  ld->arg2 = hld->arg2;
-	  ld->arg3 = hld->arg3;
-	  ld->arg4 = hld->arg4;
-	  ld->arg5 = hld->arg5;
+	  ld->tag = 0;
+	  
+	  for (j=0; j<5; j++)
+	    ld->args[j] = hld->args[j];
 
 	  v1 = ld->v1 = &vertexes[SHORT(hld->v1)];
 	  v2 = ld->v2 = &vertexes[SHORT(hld->v2)];
@@ -828,6 +772,9 @@ void Map::LoadLineDefs(int lump)
 	  ld->flags = SHORT(mld->flags);
 	  ld->special = SHORT(mld->special);
 	  ld->tag = SHORT(mld->tag);
+	  for (j=0; j<5; j++)
+	    ld->args[j] = 0;
+
 	  v1 = ld->v1 = &vertexes[SHORT(mld->v1)];
 	  v2 = ld->v2 = &vertexes[SHORT(mld->v2)];
 
@@ -1337,7 +1284,7 @@ extern int numtextures;
 //int        lastloadedmaplumpnum; // for comparative savegame
 
 void P_Initsecnode();
-
+void S_Read_SNDINFO(int lump);
 //
 // was P_SetupLevel
 //
@@ -1377,32 +1324,15 @@ bool Map::Setup(tic_t start)
 
   HU_ClearTips();
 
-  // UNUSED fc.Profile ();
-    
   InitThinkers();
 
   //
   //  load the map from internal game resource or external wad file
   //
-  /*if (wadname)
-    {
-    char *firstmap=NULL;
 
-    // go back to title screen if no map is loaded
-    if (!P_AddWadFile (wadname,&firstmap) ||
-    firstmap==NULL)            // no maps were found
-    {
-    return false;
-    }
-
-    // P_AddWadFile() sets lumpname
-    lumpnum = fc.GetNumForName(firstmap);
-    maplumpname = firstmap;
-    } else
-  */
   // internal game map
   lumpnum = fc.GetNumForName(mapname.c_str());
-	
+
   // textures are needed first
   //    R_LoadTextures ();
   //    R_FlushTextureCache();
@@ -1419,9 +1349,13 @@ bool Map::Setup(tic_t start)
 
   // is the map in Hexen format?
   if (!strncmp(fc.FindNameForNum(lumpnum + ML_BEHAVIOR), "BEHAVIOR", 8))
-    hexen_format = true;
+    {
+      hexen_format = true;
+      S_Read_SNDINFO(fc.GetNumForName("SNDINFO"));
+    }
   else
     hexen_format = false;
+
 
 #ifdef FRAGGLESCRIPT
   T_PreprocessScripts();        // preprocess FraggleScript scripts (needs already added players)
@@ -1475,10 +1409,10 @@ bool Map::Setup(tic_t start)
 #endif
 
   InitAmbientSound();
-  LoadThings (lumpnum+ML_THINGS);
+  LoadThings(lumpnum + ML_THINGS);
   PlaceWeapons(); // Heretic mace
 
-  // polyobjs here
+  InitPolyobjs();
   LoadACScripts(lumpnum+ML_BEHAVIOR);
 
   // set up world state

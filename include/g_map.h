@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.8  2003/03/23 14:24:13  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.7  2003/03/15 20:07:20  smite-meister
 // Initial Hexen compatibility!
 //
@@ -47,32 +50,27 @@
 
 using namespace std;
 
-class MapInfo;
-class LevelNode;
 class DActor;
 class Pawn;
 class PlayerPawn;
 class PlayerInfo;
-struct mapthing_t;
+
 struct intercept_t; 
 typedef bool (*traverser_t) (intercept_t *in);
 
-struct script_t;
 struct runningscript_t;
 
-struct acsInfo_t;
 
 // new class for maps
-// note! a map doesn't need to know where it fits in the larger game! so no last, next pointers
 
 class Map
 {
   friend class GameInfo;
 public:
-  LevelNode *level;         // the level in which this Map belongs
+  class LevelNode *level;   // the level in which this Map belongs
   string filename, mapname; // name of the map file, map lump
   int lumpnum;              // lumpnum of the separator beginning the map
-  MapInfo *info;
+  class MapInfo *info;
 
   bool hexen_format;
 
@@ -98,37 +96,39 @@ public:
   int             numsides;
   side_t*         sides;
 
-  int             nummapthings;
-  mapthing_t*     mapthings;
+  int                nummapthings;
+  struct mapthing_t *mapthings;
+
+  // polyobjects
+  int               NumPolyobjs;
+  struct polyobj_t* polyobjs;
+  struct polyblock_t **PolyBlockMap;
+
 
   // the mother of all FS scripts (in the map)
-  script_t *levelscript;
+  struct script_t *levelscript;
 
   // ACS script data
   int   ACScriptCount;
   byte *ActionCodeBase;
-  acsInfo_t *ACSInfo;
+  struct acsInfo_t *ACSInfo;
   int ACStringCount;
   char **ACStrings;
 
 
   // BLOCKMAP
-  // Created from axis aligned bounding box
-  // of the map, a rectangular array of
+  // Created from axis aligned bounding box of the map, a rectangular array of
   // blocks of size ...
-  // Used to speed up collision detection
-  // by spatial subdivision in 2D.
+  // Used to speed up collision detection by spatial subdivision in 2D.
 
-  // mapblocks are used to check movement
-  // against lines and things
+  // mapblocks are used to check movement against lines and things
 #define MAPBLOCKUNITS   128
 #define MAPBLOCKSIZE    (MAPBLOCKUNITS*FRACUNIT)
 #define MAPBLOCKSHIFT   (FRACBITS+7)
 #define MAPBMASK        (MAPBLOCKSIZE-1)
 #define MAPBTOFRAC      (MAPBLOCKSHIFT-FRACBITS)
   // MAXRADIUS is for precalculated sector block boxes
-  // the spider demon is larger,
-  // but we do not have any moving sectors nearby
+  // the spider demon is larger, but we do not have any moving sectors nearby
 #define MAXRADIUS       (32*FRACUNIT)
 
   // Blockmap size.
@@ -379,6 +379,27 @@ public:
   subsector_t *R_PointInSubsector(fixed_t x, fixed_t y);
   subsector_t* R_IsPointInSubsector(fixed_t x, fixed_t y);
   void HWR_SearchLightsInMobjs();
+
+  // in p_poly.cpp
+  void InitPolyobjs();
+  void IterFindPolySegs(int x, int y, seg_t **segList);
+  void SpawnPolyobj(int index, int tag, bool crush);
+  void TranslateToStartSpot(int tag, int originX, int originY);
+  void InitPolyBlockMap();
+
+  polyobj_t *GetPolyobj(int num);
+  int  GetPolyobjMirror(int num);
+
+  void LinkPolyobj(polyobj_t *po);
+  void UnLinkPolyobj(polyobj_t *po);
+  bool PO_CheckBlockingActors(seg_t *seg, polyobj_t *po);
+  bool PO_MovePolyobj(int num, int x, int y);
+  bool PO_RotatePolyobj(int num, angle_t angle);
+  bool PO_Busy(int num);
+
+  bool EV_RotatePoly(line_t *line, byte *args, int direction, bool overRide);
+  bool EV_MovePoly(line_t *line, byte *args, bool timesEight, bool overRide);
+  bool EV_OpenPolyDoor(line_t *line, byte *args, podoortype_e type);
 
   // ACS scripting
   void StartOpenACS(int number, int infoIndex, int *address);

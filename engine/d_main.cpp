@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2003/03/23 14:24:13  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.11  2003/03/08 16:06:59  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -882,7 +885,6 @@ void D_IdentifyVersion()
 
   // external Legacy data file
   D_AddFile("legacy.wad");
-  D_AddFile("doom.wad"); // FIXME testing hexen
 
   // Specify the name of an IWAD file to use.
   // Internally the game makes no difference between IWADs and PWADs.
@@ -1413,11 +1415,13 @@ void D_DoomMain()
       COM_BufAddText(va("timelimit %s\n",s ));
     }
 
+  /*
   if (M_CheckParm ("-avg"))
     {
       COM_BufAddText("timelimit 20\n");
       CONS_Printf(text[AUSTIN_NUM]);
     }
+  */
 
   // push all "+" parameter at the command buffer
   M_PushSpecialParameters();

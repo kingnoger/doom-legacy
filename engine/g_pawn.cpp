@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2002 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.10  2003/03/23 14:24:13  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.9  2003/03/15 20:07:14  smite-meister
 // Initial Hexen compatibility!
 //
@@ -55,6 +58,11 @@ bool Pawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 
 // PlayerPawn methods
 
+PlayerPawn::~PlayerPawn()
+{
+  delete pres; // delete the presentation object too
+}
+
 int PlayerPawn::Serialize(LArchive & a)
 {
   return 0;
@@ -82,9 +90,9 @@ Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, const pawn_info_t *t)
   reactiontime = info->reactiontime;
   speed = info->speed;
 
+  color = 0;
   state_t *state = &states[info->spawnstate];
-  pres = sprites.Get(sprnames[state->sprite]);
-  frame = state->frame; // FF_FRAMEMASK for frame, and other bits..
+  pres = new spritepres_t(sprnames[state->sprite], state->frame, 0);
 }
 
 PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, const pawn_info_t *t)
@@ -113,23 +121,10 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, const pawn_info_t *t)
   maxammo = maxammo1;
 
   if (game.mode == gm_heretic)
-    {
-      weaponowned[wp_staff] = true;
-      /*
-      readyweapon = pendingweapon = wp_goldwand;
-      weaponowned[wp_goldwand] = true;
-      ammo[am_goldwand] = initial_bullets;
-      */
-    }
+    weaponowned[wp_staff] = true;
   else
-    {
-      weaponowned[wp_fist] = true;
-      /*
-      readyweapon = pendingweapon = wp_pistol;
-      weaponowned[wp_pistol] = true;
-      ammo[am_clip] = initial_bullets;
-      */
-    }
+    weaponowned[wp_fist] = true;
+
   weapontype_t w = pinfo->bweapon;
   if (w != wp_nochange)
     {
@@ -507,31 +502,51 @@ void PlayerPawn::DeathThink()
 
 void PlayerPawn::MorphThink()
 {
-  if (health > 0)
-    { // Handle beak movement
-      P_UpdateBeak(this, &psprites[ps_weapon]);
-    }
+  if (game.mode == gm_heretic)
+    {
+      if (health > 0)
+	// Handle beak movement
+	P_UpdateBeak(this, &psprites[ps_weapon]);
 
-  if (morphTics & 15)
-    return;
+      if (morphTics & 15)
+	return;
 
-  if (!(px+py) && P_Random() < 160)
-    { // Twitch view angle
-      angle += P_SignedRandom() << 19;
+      if (!(px+py) && P_Random() < 160)
+	{ // Twitch view angle
+	  angle += P_SignedRandom() << 19;
+	}
+      if ((z <= floorz) && (P_Random() < 32))
+	{ // Jump and noise
+	  pz += FRACUNIT;
+	  // FIXME set pain state here...
+	  // SetState(S_CHICPLAY_PAIN);
+	  return;
+	}
+      if(P_Random() < 48)
+	{ // Just noise
+	  S_StartScreamSound(this, sfx_chicact);
+	}
     }
-  if ((z <= floorz) && (P_Random() < 32))
-    { // Jump and noise
-      pz += FRACUNIT;
-      // FIXME set pain state here...
-      // SetState(S_CHICPLAY_PAIN);
-      return;
-    }
-  if(P_Random() < 48)
-    { // Just noise
-      S_StartScreamSound(this, sfx_chicact);
+  else if (game.mode == gm_hexen)
+    {
+      if (morphTics & 15)
+	return;
+
+      if (!(px+py) && P_Random() < 64)
+	{ // Snout sniff
+	  SetPsprite(ps_weapon, S_SNOUTATK2, false);
+	  S_StartSound(this, SFX_PIG_ACTIVE1); // snort
+	  return;
+	}
+      if (P_Random() < 48)
+	{
+	  if(P_Random() < 128)
+	    S_StartSound(this, SFX_PIG_ACTIVE1);
+	  else
+	    S_StartSound(this, SFX_PIG_ACTIVE2);
+	}
     }
 }
-
 
 //-----------------------------------------
 
@@ -667,6 +682,8 @@ void PlayerPawn::FinishLevel()
 
   // save pawn for next level
   mp->DetachActor(this);
+  // save the presentation too
+  Z_ChangeTag(pres, PU_STATIC);
 }
 
 
@@ -742,74 +759,72 @@ void PlayerPawn::UseArtifact(artitype_t arti)
 //
 bool PlayerPawn::GivePower(int /*powertype_t*/ power)
 {
-  if (power == pw_invulnerability)
+  switch (power)
     {
-      // Already have it
-      if (game.inventory && powers[power] > BLINKTHRESHOLD)
+    case pw_invulnerability:
+      // Already have it?
+      if (powers[power] > BLINKTHRESHOLD)
 	return false;
-
       powers[power] = INVULNTICS;
-      return true;
-    }
-  if(power == pw_weaponlevel2)
-    {
-      // Already have it
-      if (game.inventory && powers[power] > BLINKTHRESHOLD)
-	return false;
+      flags2 |= MF2_INVULNERABLE;
+      //if (class == PCLASS_MAGE) flags2 |= MF2_REFLECTIVE;
+      break;
 
+    case pw_weaponlevel2:
+      if (powers[power] > BLINKTHRESHOLD)
+	return false;
       powers[power] = WPNLEV2TICS;
       weaponinfo = wpnlev2info;
-      return true;
-    }
-  if (power == pw_invisibility)
-    {
-      // Already have it
-      if (game.inventory && powers[power] > BLINKTHRESHOLD)
+      break;
+  
+    case pw_invisibility:
+      if (powers[power] > BLINKTHRESHOLD)
 	return false;
-
       powers[power] = INVISTICS;
       flags |= MF_SHADOW;
-      return true;
-    }
-  if (power == pw_flight)
-    {
-      // Already have it
+      break;
+
+    case pw_flight:
       if (powers[power] > BLINKTHRESHOLD)
-	return(false);
+	return false;
       powers[power] = FLIGHTTICS;
       flags2 |= MF2_FLY;
       flags |= MF_NOGRAVITY;
-      if(z <= floorz)
+      if (z <= floorz)
 	flyheight = 10; // thrust the player in the air a bit
-      return(true);
-    }
-  if (power == pw_infrared)
-    {
-      // Already have it
-      if(powers[power] > BLINKTHRESHOLD)
-	return(false);
+      break;
 
+    case pw_infrared:
+      if (powers[power] > BLINKTHRESHOLD)
+	return false;
       powers[power] = INFRATICS;
-      return true;
-    }
+      break;
 
-  if (power == pw_ironfeet)
-    {
+    case pw_ironfeet:
       powers[power] = IRONTICS;
-      return true;
-    }
+      break;
 
-  if (power == pw_strength)
-    {
+    case pw_strength:
       GiveBody(100);
       powers[power] = 1;
-      return true;
+      break;
+
+    case pw_speed:
+      if (powers[power] > BLINKTHRESHOLD)
+	return false;
+      powers[power] = SPEEDTICS;
+      break;
+
+    case pw_minotaur:
+      powers[power] = MAULATORTICS;
+      break;
+
+    default:
+      if (powers[power] != 0)
+	return false;
+      powers[power] = 1;
     }
 
-  if (powers[power] != 0)
-    return false;   // already got it
-
-  powers[power] = 1;
   return true;
 }
 

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/03/23 14:24:13  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.5  2003/03/08 16:07:16  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -77,9 +80,9 @@ DEATH_FALLBACK     The model dying while falling backwards (death shot from the 
 DEATH_FALLFORWARD  The model dying while falling forwards (death shot from the back)
 DEATH_FALLBACKSLOW The model dying while falling backwards slowly
 */
-/*
-Quake III player sequences
-enum
+
+
+enum MD3_animseq_e
 {
   BOTH_DEATH1 = 0,
   BOTH_DEAD1  = 1,
@@ -110,39 +113,11 @@ enum
   LEGS_TURN     = 24,
   MAX_ANIMATIONS = 25
 };
-*/
-
-/*
-// this struct describes one animation sequence
-struct animation_t
-{
-  int firstframe; // lastframe = firstframe + numframes - 1
-  int numframes;
-  int loopingframes;
-  fixed_t fps; // frames per second (not always used)
-  // (in principle each frame can have its own duration
-  //  independently of others in the sequence)
-};
-*/
-
-class Actor;
-
-// Idea: Game entities have a pointer to a graphic presentation, frame, nextframe,
-// current sequence and location/rotation information stored in them.
-// The actual implementation of the "graphic presentation" can be a sprite, md3 or anything.
-
-// abstract base class
-class presentation_t
-{
-protected:
-  //vector<animation_t> anim; // all known animation sequences
-  
-public:
-
-  virtual void Draw(const Actor *p) = 0;
-};
 
 
+//================================
+//           Sprites
+//================================
 
 // Doom sprites in wads are patches with a special naming convention
 //  so they can be recognized by R_InitSprites.
@@ -169,30 +144,18 @@ struct spriteframe_t
   int    lumppat[8];   // lump number 16:16 wad:lump
   short  lumpid[8];    // id in the spriteoffset,spritewidth.. tables
 
-  // Flip bit (1 = flip) to use for view angles 0-7.
-  byte   flip[8];
-};
-
-
-//
-// A sprite definition:  a number of animation frames.
-//
-
-class spritedef_t : public presentation_t
-{
-public:
-  int            numframes;
-  spriteframe_t *spriteframes;
-
-  virtual void Draw(const Actor *p);
+  bool   flip[8];   // Flip bit to use for view angles 0-7.
 };
 
 
 class sprite_t : public cacheitem_t
 {
   friend class spritecache_t;
+  friend class spritepres_t;
+  //protected: // FIXME some old code wants to use spriteframes directly. Fix the old code...
 public:
-  spritedef_t spr;
+  int            numframes;
+  spriteframe_t *spriteframes;
 };
 
 
@@ -204,16 +167,89 @@ protected:
 public:
   spritecache_t(memtag_t tag);
 
-  spritedef_t *Get(const char *p)
-  {
-    return &((sprite_t *)Cache(p))->spr;
-  };
+  inline sprite_t *Get(const char *p) { return (sprite_t *)Cache(p); };
 };
 
 
 extern spritecache_t sprites;
 
 extern int numspritelumps;
+
+
+//================================
+//        Presentations
+//================================
+
+class Actor;
+
+// Idea: Game entities have a pointer to a graphic presentation.
+// The animation data is stored in the presentation object.
+// The actual implementation of the "graphic presentation" can be a sprite, md3 or anything.
+
+// abstract base class
+class presentation_t
+{
+protected:
+  //vector<animation_t> anim; // all known animation sequences
+public:
+  char color;
+  int  frame; // temp solution, for flags
+
+  virtual void SetFrame(int fr) = 0; // bad
+  virtual void SetAnim(int seq) = 0; // good
+
+  // this is hopefully a temporary hack.. it generates a vissprite
+  virtual void Project(Actor *p) = 0;
+  virtual bool Draw(const Actor *p) = 0;
+
+  void *operator new(size_t size);
+  void  operator delete(void *mem);
+};
+
+
+class spritepres_t : public presentation_t
+{
+  //protected:
+public: // for sw renderer, FIXME
+  sprite_t *spr;
+
+public:
+  spritepres_t(const char *name, int startframe, int col);
+
+  virtual void SetFrame(int fr);
+  virtual void SetAnim(int seq);
+  virtual void Project(Actor *p);
+  virtual bool Draw(const Actor *p);
+};
+
+
+struct MD3_animstate
+{
+  MD3_animseq_e seq; // current animation sequence
+  float interp;      // [0, 1) interpolation phase between frame and nextframe
+  int   frame, nextframe;
+};
+
+
+class modelpres_t : public presentation_t
+{
+  class MD3_player *mdl;
+
+  fixed_t lastupdate; // time it was last updated
+  MD3_animstate st[3]; // legs, torso, head
+
+public:
+
+  modelpres_t(const char *mname, int col = 0, const char *skin = "default");
+
+  virtual void SetFrame(int fr);
+  void SetAnim(int seq);
+  virtual void Project(Actor *p);
+  virtual bool Draw(const Actor *p);
+};
+
+
+
 
 // -----------
 // SKINS STUFF
@@ -240,7 +276,7 @@ typedef enum {
 struct skin_t
 {
   char        name[SKINNAMESIZE+1];   // short descriptive name of the skin
-  spritedef_t spritedef;
+  sprite_t    spritedef;
   char        faceprefix[4];          // 3 chars+'\0', default is "STF"
 
   // specific sounds per skin

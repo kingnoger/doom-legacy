@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/03/23 14:24:13  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.7  2003/03/15 20:07:20  smite-meister
 // Initial Hexen compatibility!
 //
@@ -246,9 +249,6 @@ class Actor : public Thinker
 public:
   // graphic presentation
   class presentation_t *pres;
-  int   frame;  // frame number and bit flags
-  float interp;
-  char  color; // may be defined by team membership. See PlayerInfo class.
 
   // sector links
   Actor *snext;

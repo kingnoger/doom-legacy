@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/03/23 14:24:13  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.7  2003/03/15 20:07:16  smite-meister
 // Initial Hexen compatibility!
 //
@@ -55,7 +58,6 @@
 #include "p_enemy.h"
 #include "p_maputl.h"
 #include "r_main.h"
-#include "r_state.h"
 #include "s_sound.h"
 #include "sounds.h"
 #include "m_random.h"
@@ -269,6 +271,9 @@ DActor *DActor::SpawnMissileAngle(mobjtype_t t, angle_t angle, fixed_t momz)
 }
 
 
+
+extern int item_pickup_sound;
+
 void DoomPatchEngine()
 {
   Intermission::s_count = sfx_pistol;
@@ -276,6 +281,21 @@ void DoomPatchEngine()
   vldoor_t::doorclosesound = sfx_dorcls;
   button_t::buttonsound = sfx_swtchn;
   game.inventory = false;
+
+  item_pickup_sound = sfx_itemup;
+}
+
+void HexenPatchEngine()
+{
+  // FIXME sounds
+  Intermission::s_count = SFX_SWITCH1;
+  ceiling_t::ceilmovesound = SFX_SWITCH1;
+  vldoor_t::doorclosesound = SFX_SWITCH1;
+  button_t::buttonsound = SFX_SWITCH1;
+  game.inventory = true;
+
+  item_pickup_sound = SFX_PICKUP_ITEM;
+
 }
 
 void HereticPatchEngine()
@@ -286,13 +306,13 @@ void HereticPatchEngine()
   button_t::buttonsound = sfx_switch;
   game.inventory = true;
 
+  item_pickup_sound = sfx_hitemup;
   // FIXME rationalize here. Above, good. Below, bad.
 
   // instead of this, make a default skin (marine, heretic)
   // with appropriate sounds.
-  S_sfx[sfx_oof].lumpname    = "plroof";
+  strcpy(S_sfx[sfx_oof].lumpname, "plroof");
   S_sfx[sfx_oof].priority    = 32;
-
 
   text[PD_BLUEK_NUM]   = "YOU NEED A BLUE KEY TO OPEN THIS DOOR";
   text[PD_YELLOWK_NUM] = "YOU NEED A YELLOW KEY TO OPEN THIS DOOR";
@@ -306,18 +326,18 @@ void HereticPatchEngine()
   text[GOTYELWCARD_NUM] = "YELLOW KEY";
   text[GOTREDCARD_NUM ] = "GREEN KEY";
 
-  S_sfx[sfx_swtchn].lumpname = "switch";
+  strcpy(S_sfx[sfx_swtchn].lumpname, "switch");
   S_sfx[sfx_swtchn].priority = 40;
-  S_sfx[sfx_swtchx].lumpname = "switch";
+  strcpy(S_sfx[sfx_swtchx].lumpname, "switch");
   S_sfx[sfx_swtchx].priority = 40;
   S_sfx[sfx_telept].priority = 50;
 
 
   // console alert
-  S_sfx[sfx_tink].lumpname = "chat";
+  strcpy(S_sfx[sfx_tink].lumpname, "chat");
   S_sfx[sfx_tink].priority = 100;
   // item respawns
-  S_sfx[sfx_itmbk].lumpname = "respawn";
+  strcpy(S_sfx[sfx_itmbk].lumpname, "respawn");
   S_sfx[sfx_itmbk].priority = 10;
 
   // teleport fog

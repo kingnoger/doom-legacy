@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/03/23 14:24:13  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.9  2003/03/15 20:07:13  smite-meister
 // Initial Hexen compatibility!
 //
@@ -70,7 +73,8 @@
 
 #include "p_setup.h"    //levelflats to test if mobj in water sector
 #include "r_main.h"
-#include "r_state.h"
+
+#include "r_sprite.h"
 
 #include "r_things.h"
 #include "s_sound.h"
@@ -239,8 +243,6 @@ Actor::Actor(fixed_t nx, fixed_t ny, fixed_t nz)
   movefactor = 1.0f;
 
   pres = NULL;
-  frame = 0;
-  color = 0;
 }
 
 
@@ -265,12 +267,17 @@ DActor::DActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
   // because action routines can not be called yet
   state = &states[info->spawnstate];
   tics = state->tics;
-  pres = sprites.Get(sprnames[state->sprite]);
-  frame = state->frame; // FF_FRAMEMASK for frame, and other bits..
+
   // FIXME color testing
   static byte cc = 0;
   cc++;
-  color = cc % 11;
+
+  /*
+  if (t == MT_SHOTGUY)
+    pres = new modelpres_t("models/sarge/");
+  else
+  */
+    pres = new spritepres_t(sprnames[state->sprite], state->frame, cc % 11);
 }
 
 
@@ -1090,7 +1097,7 @@ bool DActor::SetState(statenum_t ns, bool call)
     state = st;
     tics = st->tics;
     // FIXME spritetest   sprite = st->sprite;
-    frame = st->frame;
+    pres->SetFrame(st->frame);
     
     // Modified handling.
     // Call action functions when the state is set

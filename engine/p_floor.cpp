@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,74 +18,14 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/03/23 14:24:13  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.2  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
 // Revision 1.1.1.1  2002/11/16 14:17:56  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.11  2002/09/20 22:41:29  vberghol
-// Sound system rewritten! And it workscvs update
-//
-// Revision 1.9  2002/09/06 17:18:32  vberghol
-// added most of the changes up to RC2
-//
-// Revision 1.8  2002/08/21 16:58:32  vberghol
-// Version 1.41 Experimental compiles and links!
-//
-// Revision 1.7  2002/08/17 21:21:46  vberghol
-// Only scripting to be fixed in engine!
-//
-// Revision 1.6  2002/08/06 13:14:21  vberghol
-// ...
-//
-// Revision 1.5  2002/07/23 19:21:40  vberghol
-// fixed up to p_enemy.cpp
-//
-// Revision 1.4  2002/07/18 19:16:37  vberghol
-// renamed a few files
-//
-// Revision 1.3  2002/07/01 21:00:16  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:12  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.12  2001/03/30 17:12:50  bpereira
-// no message
-//
-// Revision 1.11  2001/01/25 22:15:43  bpereira
-// added heretic support
-//
-// Revision 1.10  2000/11/02 17:50:07  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.9  2000/10/21 08:43:30  bpereira
-// no message
-//
-// Revision 1.8  2000/09/28 20:57:16  bpereira
-// no message
-//
-// Revision 1.7  2000/07/01 09:23:49  bpereira
-// no message
-//
-// Revision 1.6  2000/05/23 15:22:34  stroggonmeth
-// Not much. A graphic bug fixed.
-//
-// Revision 1.5  2000/04/16 18:38:07  bpereira
-// no message
-//
-// Revision 1.4  2000/04/08 17:29:24  stroggonmeth
-// no message
-//
-// Revision 1.3  2000/04/04 00:32:46  stroggonmeth
-// Initial Boom compatability plus few misc changes all around.
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //
 // DESCRIPTION:

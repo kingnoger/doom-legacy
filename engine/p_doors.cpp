@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/03/23 14:24:13  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.3  2003/03/15 20:07:15  smite-meister
 // Initial Hexen compatibility!
 //
@@ -26,78 +29,6 @@
 //
 // Revision 1.1.1.1  2002/11/16 14:17:54  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.14  2002/09/20 22:41:29  vberghol
-// Sound system rewritten! And it workscvs update
-//
-// Revision 1.12  2002/08/21 16:58:31  vberghol
-// Version 1.41 Experimental compiles and links!
-//
-// Revision 1.11  2002/08/17 21:21:45  vberghol
-// Only scripting to be fixed in engine!
-//
-// Revision 1.10  2002/08/08 12:01:26  vberghol
-// pian engine on valmis!
-//
-// Revision 1.9  2002/08/06 13:14:21  vberghol
-// ...
-//
-// Revision 1.8  2002/07/26 19:23:03  vberghol
-// a little something
-//
-// Revision 1.7  2002/07/23 19:21:39  vberghol
-// fixed up to p_enemy.cpp
-//
-// Revision 1.6  2002/07/18 19:16:37  vberghol
-// renamed a few files
-//
-// Revision 1.5  2002/07/16 19:16:20  vberghol
-// Hardware sound interface again somewhat fixed
-//
-// Revision 1.4  2002/07/13 17:55:54  vberghol
-// jäi kartan liikkuviin osiin... p_doors.cpp
-//
-// Revision 1.3  2002/07/01 21:00:16  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:12  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.12  2001/08/02 19:15:59  bpereira
-// fix player reset in secret level of doom2
-//
-// Revision 1.11  2001/05/27 13:42:47  bpereira
-// no message
-//
-// Revision 1.10  2001/04/04 20:24:21  judgecutor
-// Added support for the 3D Sound
-//
-// Revision 1.9  2001/02/24 13:35:20  bpereira
-// no message
-//
-// Revision 1.8  2001/01/25 22:15:43  bpereira
-// added heretic support
-//
-// Revision 1.7  2000/11/02 17:50:07  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.6  2000/09/28 20:57:16  bpereira
-// no message
-//
-// Revision 1.5  2000/04/16 18:38:07  bpereira
-// no message
-//
-// Revision 1.4  2000/04/11 19:07:24  stroggonmeth
-// Finished my logs, fixed a crashing bug.
-//
-// Revision 1.3  2000/04/04 00:32:46  stroggonmeth
-// Initial Boom compatability plus few misc changes all around.
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //
 // DESCRIPTION: 
@@ -123,19 +54,6 @@
 
 #include "hardware/hw3sound.h"
 
-
-#if 0
-//
-// Sliding door frame information
-//
-slidename_t     slideFrameNames[MAXSLIDEDOORS] =
-{
-  {"GDOORF1","GDOORF2","GDOORF3","GDOORF4",   // front
-   "GDOORB1","GDOORB2","GDOORB3","GDOORB4"},  // back
-
-  {"\0","\0","\0","\0"}
-};
-#endif
 
 
 // =========================================================================
@@ -749,214 +667,5 @@ void Map::SpawnDoorRaiseIn5Mins(sector_t *sec, int secnum)
 
 
 // ==========================================================================
-//                        SLIDE DOORS, UNUSED
+//  SLIDE DOORS, ABANDONED TO THE MISTS OF TIME!!!
 // ==========================================================================
-
-#if 0           // ABANDONED TO THE MISTS OF TIME!!!
-//
-// EV_SlidingDoor : slide a door horizontally
-// (animate midtexture, then set noblocking line)
-//
-
-
-/*slideframe_t slideFrames[MAXSLIDEDOORS];
-
-void P_InitSlidingDoorFrames(void)
-{
-    int         i;
-    int         f1;
-    int         f2;
-    int         f3;
-    int         f4;
-
-    // DOOM II ONLY...
-    if ( game.mode != commercial)
-        return;
-
-    for (i = 0;i < MAXSLIDEDOORS; i++)
-    {
-        if (!slideFrameNames[i].frontFrame1[0])
-            break;
-
-        f1 = R_TextureNumForName(slideFrameNames[i].frontFrame1);
-        f2 = R_TextureNumForName(slideFrameNames[i].frontFrame2);
-        f3 = R_TextureNumForName(slideFrameNames[i].frontFrame3);
-        f4 = R_TextureNumForName(slideFrameNames[i].frontFrame4);
-
-        slideFrames[i].frontFrames[0] = f1;
-        slideFrames[i].frontFrames[1] = f2;
-        slideFrames[i].frontFrames[2] = f3;
-        slideFrames[i].frontFrames[3] = f4;
-
-        f1 = R_TextureNumForName(slideFrameNames[i].backFrame1);
-        f2 = R_TextureNumForName(slideFrameNames[i].backFrame2);
-        f3 = R_TextureNumForName(slideFrameNames[i].backFrame3);
-        f4 = R_TextureNumForName(slideFrameNames[i].backFrame4);
-
-        slideFrames[i].backFrames[0] = f1;
-        slideFrames[i].backFrames[1] = f2;
-        slideFrames[i].backFrames[2] = f3;
-        slideFrames[i].backFrames[3] = f4;
-    }
-}
-
-
-//
-// Return index into "slideFrames" array
-// for which door type to use
-//
-int P_FindSlidingDoorType(line_t*       line)
-{
-    int         i;
-    int         val;
-
-    for (i = 0;i < MAXSLIDEDOORS;i++)
-    {
-        val = sides[line->sidenum[0]].midtexture;
-        if (val == slideFrames[i].frontFrames[0])
-            return i;
-    }
-
-    return -1;
-}
-
-void T_SlidingDoor (slidedoor_t*        door)
-{
-    switch(door->status)
-    {
-      case sd_opening:
-        if (!door->timer--)
-        {
-            if (++door->frame == SNUMFRAMES)
-            {
-                // IF DOOR IS DONE OPENING...
-                sides[door->line->sidenum[0]].midtexture = 0;
-                sides[door->line->sidenum[1]].midtexture = 0;
-                door->line->flags &= ML_BLOCKING^0xff;
-
-                if (door->type == sdt_openOnly)
-                {
-                    door->frontsector->ceilingdata = NULL;
-                    mp->RemoveThinker (&door->thinker);
-                    break;
-                }
-
-                door->timer = SDOORWAIT;
-                door->status = sd_waiting;
-            }
-            else
-            {
-                // IF DOOR NEEDS TO ANIMATE TO NEXT FRAME...
-                door->timer = SWAITTICS;
-
-                sides[door->line->sidenum[0]].midtexture =
-                    slideFrames[door->whichDoorIndex].
-                    frontFrames[door->frame];
-                sides[door->line->sidenum[1]].midtexture =
-                    slideFrames[door->whichDoorIndex].
-                    backFrames[door->frame];
-            }
-        }
-        break;
-
-      case sd_waiting:
-        // IF DOOR IS DONE WAITING...
-        if (!door->timer--)
-        {
-            // CAN DOOR CLOSE?
-            if (door->frontsector->thinglist != NULL ||
-                door->backsector->thinglist != NULL)
-            {
-                door->timer = SDOORWAIT;
-                break;
-            }
-
-            //door->frame = SNUMFRAMES-1;
-            door->status = sd_closing;
-            door->timer = SWAITTICS;
-        }
-        break;
-
-      case sd_closing:
-        if (!door->timer--)
-        {
-            if (--door->frame < 0)
-            {
-                // IF DOOR IS DONE CLOSING...
-                door->line->flags |= ML_BLOCKING;
-                door->frontsector->specialdata = NULL;
-                mp->RemoveThinker (&door->thinker);
-                break;
-            }
-            else
-            {
-                // IF DOOR NEEDS TO ANIMATE TO NEXT FRAME...
-                door->timer = SWAITTICS;
-
-                sides[door->line->sidenum[0]].midtexture =
-                    slideFrames[door->whichDoorIndex].
-                    frontFrames[door->frame];
-                sides[door->line->sidenum[1]].midtexture =
-                    slideFrames[door->whichDoorIndex].
-                    backFrames[door->frame];
-            }
-        }
-        break;
-    }
-}
-
-
-
-void
-EV_SlidingDoor
-( line_t*       line,
-  Actor*       thing )
-{
-    sector_t*           sec;
-    slidedoor_t*        door;
-
-    // DOOM II ONLY...
-    if (game.mode != commercial)
-        return;
-
-    // Make sure door isn't already being animated
-    sec = line->frontsector;
-    door = NULL;
-    if (sec->specialdata)
-    {
-        if (!thing->player)
-            return;
-
-        door = sec->specialdata;
-        if (door->type == sdt_openAndClose)
-        {
-            if (door->status == sd_waiting)
-                door->status = sd_closing;
-        }
-        else
-            return;
-    }
-
-    // Init sliding door vars
-    if (!door)
-    {
-        door = Z_Malloc (sizeof(*door), PU_LEVSPEC, 0);
-        P_AddThinker (&door->thinker);
-        sec->specialdata = door;
-
-        door->type = sdt_openAndClose;
-        door->status = sd_opening;
-        door->whichDoorIndex = P_FindSlidingDoorType(line);
-
-        if (door->whichDoorIndex < 0)
-            I_Error("EV_SlidingDoor: Can't use texture for sliding door!");
-
-        door->frontsector = sec;
-        door->backsector = line->backsector;
-        door->thinker.function = T_SlidingDoor;
-        door->timer = SWAITTICS;
-        door->frame = 0;
-        door->line = line;
-    }
-}*/
-#endif

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -26,7 +26,6 @@
 #include "g_game.h"
 #include "g_map.h"
 #include "r_data.h"
-#include "r_state.h"
 #include "p_spec.h" // geometry-related thinker classes
 #include "m_random.h"
 #include "s_sound.h"

@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.10  2003/03/23 14:24:13  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.9  2003/03/15 20:07:20  smite-meister
 // Initial Hexen compatibility!
 //
@@ -103,6 +106,8 @@ private:
 
 
 public:
+  int color; // stupid extra color value (mostly teamcolor...)
+
   int maxhealth;
   float speed; // walking speed (units/tic), runspeed = 2*speed
   const pawn_info_t *pinfo;
@@ -158,6 +163,7 @@ public:
   int ammo[NUMAMMO];
   const int *maxammo;
 
+  float toughness; // natural armor
   byte armortype;   // Armor type is 0-2.
   int  armorpoints;
 
@@ -188,6 +194,7 @@ public:
 
   // in g_pawn.cpp
   PlayerPawn(fixed_t x, fixed_t y, fixed_t z, const pawn_info_t *t);
+  virtual ~PlayerPawn();
 
   virtual int  Serialize(LArchive & a);
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/03/23 14:24:13  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.3  2003/03/15 20:07:21  smite-meister
 // Initial Hexen compatibility!
 //
@@ -202,12 +205,12 @@ private:
 
 public:
   // sounds
-  static int s_fail;   // disappointment
-  static int s_adjust; // a slider moves or a consvar is changed
-  static int s_move;   // move up/down in a menu
-  static int s_choose; // a choice is made
-  static int s_open;   // start something
-  static int s_close;  // exit or end something
+  static char *s_fail;   // disappointment
+  static char *s_adjust; // a slider moves or a consvar is changed
+  static char *s_move;   // move up/down in a menu
+  static char *s_choose; // a choice is made
+  static char *s_open;   // start something
+  static char *s_close;  // exit or end something
 
 
   static bool active; // menu is currently open
@@ -245,8 +248,9 @@ public:
   void DrawGenericMenu();
 
   void HereticMainMenuDrawer();
+  void HexenMainMenuDrawer();
+  void DrawClassMenu();
   void DrawConnectMenu();
-  void DrawNewGame();
   void DrawSetupPlayerMenu();
   void DrawVideoMode();
   void DrawReadThis1();

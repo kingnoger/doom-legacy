@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/03/23 14:24:13  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.7  2003/03/08 16:07:10  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -451,7 +454,7 @@ void F_CastPrint (char* text)
 //
 void F_CastDrawer()
 {
-  spritedef_t*        sprdef;
+  sprite_t*        sprdef;
   spriteframe_t*      sprframe;
   int                 lump;
   bool             flip;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/03/23 14:24:13  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.3  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -48,6 +51,7 @@
 #include "keys.h"
 #include "r_draw.h"
 #include "r_main.h"
+#include "r_sprite.h"
 #include "p_info.h"
 #include "d_main.h"
 
@@ -1395,10 +1399,10 @@ void AutoMap::drawPlayers()
 
       if (p->powers[pw_invisibility])
 	color = 246; // *close* to black
-      else if(p->color == 0)
+      else if(p->pres->color == 0)
 	color = GREENS;
       else
-	color = *(translationtables + ((p->color-1)<<8) +GREENS+8);
+	color = *(translationtables + ((p->pres->color-1)<<8) +GREENS+8);
 
       AM_drawLineCharacter
 	(player_arrow, NUMPLYRLINES, 0, p->angle,

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2003/03/23 14:24:13  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.1  2003/03/15 20:07:20  smite-meister
 // Initial Hexen compatibility!
 //
@@ -96,8 +99,7 @@ struct acsstore_t
   byte args[4];	// Padded to 4 for alignment
 };
 
-void P_TagFinished(int tag);
-void P_PolyobjFinished(int po);
+
 void P_ACSInitNewGame();
 void P_CheckACSStore();
 
@@ -696,12 +698,9 @@ void Map::PolyobjFinished(int po)
 {
   int i;
 
-  /* FIXME when polyobjects work...
-  if(PO_Busy(po) == true)
-    {
-      return;
-    }
-  */
+  if (PO_Busy(po) == true)
+    return;
+
   for(i = 0; i < ACScriptCount; i++)
     {
       if(ACSInfo[i].state == ACS_waitforpoly

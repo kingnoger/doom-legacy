@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/03/23 14:24:14  smite-meister
+// Polyobjects, MD3 models
+//
 // Revision 1.6  2003/03/08 16:07:19  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -933,7 +936,7 @@ void R_ExecuteSetViewSize()
 //
 
 
-void R_Init (void)
+void R_Init()
 {
     if(dedicated)
 	return;
