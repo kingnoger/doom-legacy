@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2004/10/14 19:35:46  smite-meister
+// automap, bbox_t
+//
 // Revision 1.20  2004/09/24 11:34:00  smite-meister
 // fix
 //
@@ -226,7 +229,7 @@ void HUD::Init()
   else
     {
       startlump = fc.FindNumForName("FONTB01");
-      endlump   = fc.GetNumForName("FONTB59");
+      endlump   = fc.GetNumForName("FONTB58");
       big_font = new font_t(startlump, endlump);
     }
 

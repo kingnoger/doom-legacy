@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/10/14 19:35:51  smite-meister
+// automap, bbox_t
+//
 // Revision 1.9  2004/09/23 23:21:19  smite-meister
 // HUD updated
 //
@@ -66,6 +69,7 @@
 #include "console.h"
 #include "hud.h"
 #include "m_menu.h"
+#include "am_map.h"
 #include "s_sound.h"
 #include "sounds.h"
 #include "r_main.h"
@@ -77,8 +81,11 @@
 #include "i_video.h"
 
 
-void  Command_Setcontrol_f();
-void  Command_Setcontrol2_f();
+void Command_Setcontrol_f();
+void Command_Setcontrol2_f();
+void Command_BindJoyaxis_f();
+void Command_UnbindJoyaxis_f();
+
 
 void Command_Water_f();
 
@@ -172,6 +179,8 @@ void CL_Init()
   CONS_Printf("M_Init: Init menu.\n");
   Menu::Startup();
 
+  automap.Startup();
+
   // init renderer
   CONS_Printf("R_Init: Init DOOM refresh daemon.\n");
   R_Init();
@@ -187,6 +196,9 @@ void CL_Init()
 
   COM_AddCommand("setcontrol", Command_Setcontrol_f);
   COM_AddCommand("setcontrol2", Command_Setcontrol2_f);
+  COM_AddCommand("bindjoyaxis", Command_BindJoyaxis_f);
+  COM_AddCommand("unbindjoyaxis", Command_UnbindJoyaxis_f);
+
   COM_AddCommand("screenshot",M_ScreenShot);
 
   // FIXME WATER HACK TEST UNTIL FULLY FINISHED

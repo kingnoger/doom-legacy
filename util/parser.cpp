@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/10/14 19:35:51  smite-meister
+// automap, bbox_t
+//
 // Revision 1.3  2004/09/03 16:28:52  smite-meister
 // bugfixes and ZDoom linedef types
 //
@@ -306,7 +309,7 @@ void Parser::GoToNext(const char *str)
 
 // Parses one command line. cmd contains the command name itself.
 // Returns true if succesful. Modifies appropriate fields in var.
-bool Parser::ParseCmd(const parsercmd_t *commands, char *var)
+bool Parser::ParseCmd(const parsercmd_t *commands, char *base)
 {
   char cmd[31];
   GetString(cmd, 30);
@@ -325,8 +328,9 @@ bool Parser::ParseCmd(const parsercmd_t *commands, char *var)
   if (s >= me)
     return false; // lump ends
 
-  var += commands->offset; // this is the location of the correct field
-  int i, j;
+  void *var  = base + commands->offset1; // this is the location of the first field
+  void *var2 = base + commands->offset2; // this is the location of the second field
+  int i, j, k;
   float f;
 
   switch (commands->type)
@@ -341,12 +345,10 @@ bool Parser::ParseCmd(const parsercmd_t *commands, char *var)
       break;
 
     case P_ITEM_INT_INT:
-      if (sscanf(s, "%d %d", &i, &j) == 2)
-	{
-	  int *temp = (int *)var;
-	  temp[0] = i;
-	  temp[1] = j;
-	}
+      k = sscanf(s, "%d %d", &i, &j);
+      *(int *)var = i;
+      if (k == 2)
+	*(int *)var2 = j;
       break;
 
     case P_ITEM_FLOAT:
@@ -398,16 +400,16 @@ bool Parser::ParseCmd(const parsercmd_t *commands, char *var)
       break;
 
     case P_ITEM_STR16:
-      sscanf(s, "%16s", var);
+      sscanf(s, "%16s", (char *)var);
       break;
 
     case P_ITEM_STR16_FLOAT:
       {
-	char ccc[17];
-	sscanf(s, "%16s %f", ccc, &f);
-	string& temp = *(string *)var;
-	temp = ccc;
-	*(float *)(var + sizeof(string)) = f;
+	char temp[17];
+	i = sscanf(s, "%16s %f", temp, &f);
+	*(string *)var = temp;
+	if (i == 2)
+	  *(float *)var2 = f;
       }
       break;
 

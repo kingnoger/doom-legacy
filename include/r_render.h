@@ -8,6 +8,9 @@
 // Renderer is a friend class of Map
 //
 // $Log$
+// Revision 1.7  2004/10/14 19:35:50  smite-meister
+// automap, bbox_t
+//
 // Revision 1.6  2004/07/25 20:18:47  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -105,7 +108,7 @@ public:
 
   // r_bsp.cpp
   void R_AddLine(seg_t *line);
-  bool R_CheckBBox(fixed_t *bspcoord);
+  bool R_CheckBBox(struct bbox_t &bbox);
   void R_ClipSolidWallSegment(int first, int last);
   void R_ClipPassWallSegment(int first, int last);
 

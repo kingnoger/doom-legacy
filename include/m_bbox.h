@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/10/14 19:35:50  smite-meister
+// automap, bbox_t
+//
 // Revision 1.2  2004/10/11 11:13:42  smite-meister
 // map utils
 //
@@ -36,7 +39,7 @@
 
 
 /// Bounding box coordinate order.
-enum
+enum bbox_e
 {
   BOXTOP,
   BOXBOTTOM,
@@ -46,18 +49,29 @@ enum
 
 
 /// \brief A rectangular axis-aligned bounding box
-class bbox_t
+///
+/// NOTE! Must remain a Plain Old Datatype (no vtable!)
+struct bbox_t
 {
-public:
   fixed_t box[4];
 
   void Clear();
   void Add(fixed_t x, fixed_t y);
   void Set(fixed_t x, fixed_t y, fixed_t r);
+  void Move(fixed_t x, fixed_t y);
+
+  inline bbox_t operator=(const bbox_t &other)
+  {
+    for (int i=0; i<4; i++)
+      box[i] = other.box[i];
+    return *this;
+  };
+  inline fixed_t operator[](bbox_e side) const { return box[side]; };
 
   bool PointInBox(fixed_t x, fixed_t y);
   bool CircleTouchBox(fixed_t x, fixed_t y, fixed_t radius);
-  int  BoxOnLineSide(struct line_t *ld);
+  bool BoxTouchBox(const bbox_t &other);
+  int  BoxOnLineSide(const struct line_t *ld);
 };
 
 #endif

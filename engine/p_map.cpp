@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.27  2004/10/14 19:35:30  smite-meister
+// automap, bbox_t
+//
 // Revision 1.26  2004/10/11 11:23:46  smite-meister
 // map utils
 //
@@ -137,8 +140,10 @@ line_t *blockingline;
 Actor *BlockingMobj; //thing that blocked position (NULL if not blocked, or blocked by a line)
 
 static msecnode_t *sector_list = NULL;
+msecnode_t *P_AddSecnode(sector_t *s, Actor *thing, msecnode_t *nextnode);
+msecnode_t *P_DelSecnode(msecnode_t *node);
 
-bbox_t tmb[4]; // a bounding box
+bbox_t tmb; // a bounding box
 
 
 //===========================================
@@ -150,15 +155,15 @@ bool Map::RadiusLinesCheck(fixed_t x, fixed_t y, fixed_t radius, line_iterator_t
 {
   int xl, xh, yl, yh, bx, by;
 
-  tmb.Set(x, y, radius)
+  tmb.Set(x, y, radius);
 
   validcount++;
  
   // check lines
-  xl = (tmb.box[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
-  xh = (tmb.box[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
-  yl = (tmb.box[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
-  yh = (tmb.box[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
+  xl = (tmb[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
+  xh = (tmb[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
+  yl = (tmb[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
+  yh = (tmb[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
 
   for (bx=xl; bx<=xh; bx++)
     for (by=yl; by<=yh; by++)
@@ -210,7 +215,7 @@ bool Actor::TeleportMove(fixed_t nx, fixed_t ny)
   tmthing = this;
   tmflags = flags;
 
-  P_SetBox(nx, ny, radius);
+  tmb.Set(nx, ny, radius);
 
   subsector_t *newsubsec = mp->R_PointInSubsector(nx,ny);
   ceilingline = NULL;
@@ -229,10 +234,10 @@ bool Actor::TeleportMove(fixed_t nx, fixed_t ny)
   spechit.clear();
 
   // stomp on any things contacted
-  xl = (tmb.box[BOXLEFT] - mp->bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
-  xh = (tmb.box[BOXRIGHT] - mp->bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
-  yl = (tmb.box[BOXBOTTOM] - mp->bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
-  yh = (tmb.box[BOXTOP] - mp->bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
+  xl = (tmb[BOXLEFT] - mp->bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
+  xh = (tmb[BOXRIGHT] - mp->bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
+  yl = (tmb[BOXBOTTOM] - mp->bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
+  yh = (tmb[BOXTOP] - mp->bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
 
   for (bx=xl ; bx<=xh ; bx++)
     for (by=yl ; by<=yh ; by++)
@@ -282,12 +287,12 @@ void P_ThrustSpike(Actor *actor)
   tmthing = actor;
   Map *mp = actor->mp;
 
-  P_SetBox(actor->x, actor->y, actor->radius);
+  tmb.Set(actor->x, actor->y, actor->radius);
 
-  xl = (tmb.box[BOXLEFT] - mp->bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
-  xh = (tmb.box[BOXRIGHT] - mp->bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
-  yl = (tmb.box[BOXBOTTOM] - mp->bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
-  yh = (tmb.box[BOXTOP] - mp->bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
+  xl = (tmb[BOXLEFT] - mp->bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
+  xh = (tmb[BOXRIGHT] - mp->bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
+  yl = (tmb[BOXBOTTOM] - mp->bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
+  yh = (tmb[BOXTOP] - mp->bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
 
   // stomp on any things contacted
   for (bx=xl ; bx<=xh ; bx++)
@@ -542,10 +547,7 @@ static bool PIT_CrossLine (line_t *ld)
 {
   if (!(ld->flags & ML_TWOSIDED) ||
       (ld->flags & (ML_BLOCKING|ML_BLOCKMONSTERS)))
-    if (!(tmb.box[BOXLEFT]   > ld->bbox[BOXRIGHT]  ||
-          tmb.box[BOXRIGHT]  < ld->bbox[BOXLEFT]   ||
-          tmb.box[BOXTOP]    < ld->bbox[BOXBOTTOM] ||
-          tmb.box[BOXBOTTOM] > ld->bbox[BOXTOP]))
+    if (tmb.BoxTouchBoxbox(ld->bbox))
       if (P_PointOnLineSide(pe_x,pe_y,ld) != P_PointOnLineSide(ls_x,ls_y,ld))
         return false;  // line blocks trajectory
   return true; // line doesn't block trajectory
@@ -557,10 +559,7 @@ static bool PIT_CrossLine (line_t *ld)
 // Adjusts tmfloorz and tmceilingz as lines are contacted
 static bool PIT_CheckLine(line_t *ld)
 {
-  if (tmb.box[BOXRIGHT] <= ld->bbox[BOXLEFT]
-      || tmb.box[BOXLEFT] >= ld->bbox[BOXRIGHT]
-      || tmb.box[BOXTOP] <= ld->bbox[BOXBOTTOM]
-      || tmb.box[BOXBOTTOM] >= ld->bbox[BOXTOP])
+  if (!tmb.BoxTouchBox(ld->bbox))
     return true;
 
   if (tmb.BoxOnLineSide(ld) != -1)
@@ -2143,10 +2142,7 @@ bool Map::CheckSector(sector_t *sector, int crunch)
 // blocking lines.
 static bool PIT_GetSectors(line_t *ld)
 {
-  if (tmb.box[BOXRIGHT]  <= ld->bbox[BOXLEFT]   ||
-      tmb.box[BOXLEFT]   >= ld->bbox[BOXRIGHT]  ||
-      tmb.box[BOXTOP]    <= ld->bbox[BOXBOTTOM] ||
-      tmb.box[BOXBOTTOM] >= ld->bbox[BOXTOP])
+  if (!tmb.BoxTouchBox(ld->bbox))
     return true;
 
   if (tmb.BoxOnLineSide(ld) != -1)
@@ -2200,10 +2196,10 @@ void Map::CreateSecNodeList(Actor *thing, fixed_t x, fixed_t y)
 
   validcount++; // used to make sure we only process a line once
 
-  xl = (tmb.box[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
-  xh = (tmb.box[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
-  yl = (tmb.box[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
-  yh = (tmb.box[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
+  xl = (tmb[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
+  xh = (tmb[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
+  yl = (tmb[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
+  yh = (tmb[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
 
   for (bx=xl ; bx<=xh ; bx++)
     for (by=yl ; by<=yh ; by++)
@@ -2360,7 +2356,7 @@ Actor *Actor::CheckOnmobj()
   fixed_t oldpz = pz;
   FakeZMovement();
   
-  P_SetBox(x, y, tmthing->radius);
+  tmb.Set(x, y, tmthing->radius);
 
   newsubsec = mp->R_PointInSubsector (x, y);
   ceilingline = NULL;
@@ -2385,10 +2381,10 @@ Actor *Actor::CheckOnmobj()
   // into mapblocks based on their origin point, and can overlap into adjacent
   // blocks by up to MAXRADIUS units
   //
-  xl = (tmb.box[BOXLEFT] - mp->bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
-  xh = (tmb.box[BOXRIGHT] - mp->bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
-  yl = (tmb.box[BOXBOTTOM] - mp->bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
-  yh = (tmb.box[BOXTOP] - mp->bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
+  xl = (tmb[BOXLEFT] - mp->bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
+  xh = (tmb[BOXRIGHT] - mp->bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
+  yl = (tmb[BOXBOTTOM] - mp->bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
+  yh = (tmb[BOXTOP] - mp->bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
     
   for (bx=xl ; bx<=xh ; bx++)
     for (by=yl ; by<=yh ; by++)
@@ -2445,7 +2441,7 @@ bool Actor::CheckPosition(fixed_t nx, fixed_t ny)
   tmthing = this;
   tmflags = flags;
 
-  P_SetBox(nx, ny, radius);
+  tmb.Set(nx, ny, radius);
 
   subsector_t *newsubsec = mp->R_PointInSubsector(nx,ny);
   ceilingline = blockingline = NULL;
@@ -2497,10 +2493,10 @@ bool Actor::CheckPosition(fixed_t nx, fixed_t ny)
   if (!(flags & MF_NOCLIPTHING))
     {
       // check things
-      xl = (tmb.box[BOXLEFT] - bmox - MAXRADIUS)>>MAPBLOCKSHIFT;
-      xh = (tmb.box[BOXRIGHT] - bmox + MAXRADIUS)>>MAPBLOCKSHIFT;
-      yl = (tmb.box[BOXBOTTOM] - bmoy - MAXRADIUS)>>MAPBLOCKSHIFT;
-      yh = (tmb.box[BOXTOP] - bmoy + MAXRADIUS)>>MAPBLOCKSHIFT;
+      xl = (tmb[BOXLEFT] - bmox - MAXRADIUS)>>MAPBLOCKSHIFT;
+      xh = (tmb[BOXRIGHT] - bmox + MAXRADIUS)>>MAPBLOCKSHIFT;
+      yl = (tmb[BOXBOTTOM] - bmoy - MAXRADIUS)>>MAPBLOCKSHIFT;
+      yh = (tmb[BOXTOP] - bmoy + MAXRADIUS)>>MAPBLOCKSHIFT;
 
       BlockingMobj = NULL;        
       for (bx=xl ; bx<=xh ; bx++)
@@ -2514,10 +2510,10 @@ bool Actor::CheckPosition(fixed_t nx, fixed_t ny)
       // check lines
       BlockingMobj = NULL;
 
-      xl = (tmb.box[BOXLEFT] - bmox)>>MAPBLOCKSHIFT;
-      xh = (tmb.box[BOXRIGHT] - bmox)>>MAPBLOCKSHIFT;
-      yl = (tmb.box[BOXBOTTOM] - bmoy)>>MAPBLOCKSHIFT;
-      yh = (tmb.box[BOXTOP] - bmoy)>>MAPBLOCKSHIFT;
+      xl = (tmb[BOXLEFT] - bmox)>>MAPBLOCKSHIFT;
+      xh = (tmb[BOXRIGHT] - bmox)>>MAPBLOCKSHIFT;
+      yl = (tmb[BOXBOTTOM] - bmoy)>>MAPBLOCKSHIFT;
+      yh = (tmb[BOXTOP] - bmoy)>>MAPBLOCKSHIFT;
       for (bx=xl ; bx<=xh ; bx++)
 	for (by=yl ; by<=yh ; by++)
 	  if (!mp->BlockLinesIterator(bx,by,PIT_CheckLine))

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/10/14 19:35:51  smite-meister
+// automap, bbox_t
+//
 // Revision 1.2  2004/10/11 11:14:51  smite-meister
 // map utils
 //
@@ -32,19 +35,13 @@
 #include "doomtype.h"
 #include "m_bbox.h"
 
-// faB: getting sick of windows includes errors,
-//     I'm supposed to clean that up later.. sure
-#ifdef __WIN32__
-#define MAXINT    ((int)0x7fffffff)
-#define MININT    ((int)0x80000000)
-#endif
-
 
 void bbox_t::Clear()
 {
   box[BOXTOP] = box[BOXRIGHT] = MININT;
   box[BOXBOTTOM] = box[BOXLEFT] = MAXINT;
 }
+
 
 void bbox_t::Add(fixed_t x, fixed_t y)
 {
@@ -55,22 +52,45 @@ void bbox_t::Add(fixed_t x, fixed_t y)
   if (y>box[BOXTOP   ])   box[BOXTOP   ] = y;
 }
 
+
+void bbox_t::Move(fixed_t x, fixed_t y)
+{
+  box[BOXLEFT] += x;
+  box[BOXRIGHT] += x;
+
+  box[BOXTOP] += y;
+  box[BOXBOTTOM] += y;
+}
+
+
+
 bool bbox_t::PointInBox(fixed_t x, fixed_t y)
 {
-  if (x<box[BOXLEFT]  ) return false;
-  if (x>box[BOXRIGHT] ) return false;
-  if (y<box[BOXBOTTOM]) return false;
-  if (y>box[BOXTOP]   ) return false;
+  if (x < box[BOXLEFT]   || x > box[BOXRIGHT] ||
+      y < box[BOXBOTTOM] || y > box[BOXTOP])
+    return false;
 
   return true;
 }
 
 bool bbox_t::CircleTouchBox(fixed_t x, fixed_t y, fixed_t radius)
 {
-  if (box[BOXLEFT  ]-radius > x) return false;
-  if (box[BOXRIGHT ]+radius < x) return false;
-  if (box[BOXBOTTOM]-radius > y) return false;
-  if (box[BOXTOP   ]+radius < y) return false;
+  if (box[BOXLEFT  ]-radius > x ||
+      box[BOXRIGHT ]+radius < x ||
+      box[BOXBOTTOM]-radius > y ||
+      box[BOXTOP   ]+radius < y)
+    return false;
+
+  return true;
+}
+
+bool bbox_t::BoxTouchBox(const bbox_t &other)
+{
+  if (box[BOXRIGHT] <= other[BOXLEFT]
+      || box[BOXLEFT] >= other[BOXRIGHT]
+      || box[BOXTOP] <= other[BOXBOTTOM]
+      || box[BOXBOTTOM] >= other[BOXTOP])
+    return false;
 
   return true;
 }

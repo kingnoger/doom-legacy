@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/10/14 19:35:50  smite-meister
+// automap, bbox_t
+//
 // Revision 1.4  2004/09/23 23:21:19  smite-meister
 // HUD updated
 //
@@ -57,7 +60,7 @@ struct parsercmd_t
 {
   parseritem_t type;
   char   *name;
-  size_t  offset;
+  size_t  offset1, offset2;
 };
 
 

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/10/14 19:35:52  smite-meister
+// automap, bbox_t
+//
 // Revision 1.4  2004/08/29 13:50:23  hurdler
 // minor update
 //
@@ -60,12 +63,13 @@ HWBsp::HWBsp(int size, int bspnum) :
   planepolys.resize(size, 0);
 
   // TODO: this is already done somewhere in the software renderer, maybe we should keep that value instead of recomputing it
-  fixed_t rootbbox[4];
-  M_ClearBox(rootbbox);
+  //NOTE now also found in Map class
+  bbox_t rootbbox;
+  rootbbox.Clear();
   // find min/max boundaries of map
   for (int i = 0; i < R.numvertexes; i++)
     {
-      M_AddToBox(rootbbox, R.vertexes[i].x, R.vertexes[i].y);
+      rootbbox.Add(R.vertexes[i].x, R.vertexes[i].y);
     }
 
   Poly *rootp = AllocPoly(4);
@@ -128,7 +132,7 @@ void HWBsp::AddSubsector(unsigned int num, Poly *poly)
     }
 }
 
-void HWBsp::Traverse(int bspnum, Poly* poly, unsigned short* leafnode, fixed_t *bbox)
+void HWBsp::Traverse(int bspnum, Poly* poly, unsigned short* leafnode, bbox_t &bbox)
 {
   if (bspnum & NF_SUBSECTOR) // found a subsector?
     {
@@ -152,12 +156,12 @@ void HWBsp::Traverse(int bspnum, Poly* poly, unsigned short* leafnode, fixed_t *
         {
           AddSubsector(bspnum&(~NF_SUBSECTOR), poly);
         }
-      M_ClearBox(bbox);
+      bbox.Clear();
       poly = planepolys[bspnum&~NF_SUBSECTOR];
       PolyVertex *pt = poly->pts;
       for (int i=0; i<poly->numpts; i++)
         {
-          M_AddToBox(bbox, (fixed_t)(pt->x * FRACUNIT), (fixed_t)(pt->y * FRACUNIT));
+          bbox.Add(fixed_t(pt->x * FRACUNIT), fixed_t(pt->y * FRACUNIT));
           ++pt;
         }
     }
@@ -174,7 +178,8 @@ void HWBsp::Traverse(int bspnum, Poly* poly, unsigned short* leafnode, fixed_t *
         {
           Traverse(bsp->children[0], frontpoly, &bsp->children[0], bsp->bbox[0]);
           // copy child bbox
-          memcpy(bbox, bsp->bbox[0], 4*sizeof(fixed_t));
+          //memcpy(bbox, bsp->bbox[0], sizeof(bbox_t));
+	  bbox = bsp->bbox[0];
         }
       else
         {
@@ -186,8 +191,8 @@ void HWBsp::Traverse(int bspnum, Poly* poly, unsigned short* leafnode, fixed_t *
           // Correct back bbox to include floor/ceiling convex polygon
           Traverse(bsp->children[1], backpoly, &bsp->children[1], bsp->bbox[1]);
           // enlarge bbox with seconde child
-          M_AddToBox(bbox, bsp->bbox[1][BOXLEFT  ], bsp->bbox[1][BOXTOP   ]);
-          M_AddToBox(bbox, bsp->bbox[1][BOXRIGHT ], bsp->bbox[1][BOXBOTTOM]);
+          bbox.Add(bsp->bbox[1][BOXLEFT  ], bsp->bbox[1][BOXTOP   ]);
+          bbox.Add(bsp->bbox[1][BOXRIGHT ], bsp->bbox[1][BOXBOTTOM]);
         }
     }
 }

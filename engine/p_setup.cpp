@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.48  2004/10/14 19:35:30  smite-meister
+// automap, bbox_t
+//
 // Revision 1.47  2004/09/24 21:19:59  jussip
 // Joystick axis unbinding.
 //
@@ -178,10 +181,7 @@
 
 void Map::LoadVertexes(int lump)
 {
-  int i;
-
-  // Determine number of lumps:
-  //  total lump length / vertex record length.
+  // Determine number of lumps: total lump length / vertex record length.
   numvertexes = fc.LumpLength(lump) / sizeof(mapvertex_t);
   CONS_Printf("vertices: %d, ", numvertexes);
 
@@ -193,13 +193,15 @@ void Map::LoadVertexes(int lump)
 
   mapvertex_t *mv = (mapvertex_t *)data;
   vertex_t *v = vertexes;
+  root_bbox.Clear(); // we also build the root bounding box here
 
   // Copy and convert vertex coordinates,
   // internal representation as fixed.
-  for (i=0 ; i<numvertexes ; i++, v++, mv++)
+  for (int i=0 ; i<numvertexes ; i++, v++, mv++)
     {
       v->x = SHORT(mv->x)<<FRACBITS;
       v->y = SHORT(mv->y)<<FRACBITS;
+      root_bbox.Add(v->x, v->y);
     }
 
   // Free buffer memory.
@@ -381,35 +383,28 @@ void Map::LoadSectors2(int lump)
 
 void Map::LoadNodes(int lump)
 {
-  byte*       data;
-  int         i;
-  int         j;
-  int         k;
-  mapnode_t*  mn;
-  node_t*     no;
-
   numnodes = fc.LumpLength (lump) / sizeof(mapnode_t);
   nodes = (node_t *)Z_Malloc(numnodes*sizeof(node_t),PU_LEVEL,0);
-  data = (byte*)fc.CacheLumpNum (lump,PU_STATIC);
+  byte *data = (byte*)fc.CacheLumpNum (lump,PU_STATIC);
 
-  mn = (mapnode_t *)data;
-  no = nodes;
+  mapnode_t *mn = (mapnode_t *)data;
+  node_t *no = nodes;
 
-  for (i=0 ; i<numnodes ; i++, no++, mn++)
+  for (int i=0 ; i<numnodes ; i++, no++, mn++)
     {
       no->x = SHORT(mn->x)<<FRACBITS;
       no->y = SHORT(mn->y)<<FRACBITS;
       no->dx = SHORT(mn->dx)<<FRACBITS;
       no->dy = SHORT(mn->dy)<<FRACBITS;
-      for (j=0 ; j<2 ; j++)
+      for (int j=0 ; j<2 ; j++)
         {
           no->children[j] = SHORT(mn->children[j]);
-          for (k=0 ; k<4 ; k++)
-            no->bbox[j][k] = SHORT(mn->bbox[j][k])<<FRACBITS;
+          for (int k=0 ; k<4 ; k++)
+            no->bbox[j].box[k] = SHORT(mn->bbox[j][k]) << FRACBITS;
         }
     }
 
-  Z_Free (data);
+  Z_Free(data);
 }
 
 
@@ -744,26 +739,29 @@ void Map::LoadLineDefs(int lump)
             ld->slopetype = ST_NEGATIVE;
         }
 
+      //ld->bbox.Add(v1->x, v1->y);
+      //ld->bbox.Add(v2->x, v2->y);
+
       if (v1->x < v2->x)
         {
-          ld->bbox[BOXLEFT] = v1->x;
-          ld->bbox[BOXRIGHT] = v2->x;
+          ld->bbox.box[BOXLEFT] = v1->x;
+          ld->bbox.box[BOXRIGHT] = v2->x;
         }
       else
         {
-          ld->bbox[BOXLEFT] = v2->x;
-          ld->bbox[BOXRIGHT] = v1->x;
+          ld->bbox.box[BOXLEFT] = v2->x;
+          ld->bbox.box[BOXRIGHT] = v1->x;
         }
 
       if (v1->y < v2->y)
         {
-          ld->bbox[BOXBOTTOM] = v1->y;
-          ld->bbox[BOXTOP] = v2->y;
+          ld->bbox.box[BOXBOTTOM] = v1->y;
+          ld->bbox.box[BOXTOP] = v2->y;
         }
       else
         {
-          ld->bbox[BOXBOTTOM] = v2->y;
-          ld->bbox[BOXTOP] = v1->y;
+          ld->bbox.box[BOXBOTTOM] = v2->y;
+          ld->bbox.box[BOXTOP] = v1->y;
         }
 
       ld->transmap = -1; // no transmap by default
@@ -976,7 +974,6 @@ void Map::LoadBlockMap(int lump)
 void Map::GroupLines()
 {
   int i, j;
-  fixed_t             bbox[4];
 
   // look up sector number for each subsector
   subsector_t *ss = subsectors;
@@ -1006,7 +1003,9 @@ void Map::GroupLines()
   sector_t *sector = sectors;
   for (i=0 ; i<numsectors ; i++, sector++)
     {
-      M_ClearBox(bbox);
+      bbox_t bb; // temporary bounding box
+      bb.Clear();
+
       sector->lines = lb;
       li = lines;
       for (j=0 ; j<numlines ; j++, li++)
@@ -1014,32 +1013,32 @@ void Map::GroupLines()
           if (li->frontsector == sector || li->backsector == sector)
             {
               *lb++ = li;
-              M_AddToBox(bbox, li->v1->x, li->v1->y);
-              M_AddToBox(bbox, li->v2->x, li->v2->y);
+              bb.Add(li->v1->x, li->v1->y);
+              bb.Add(li->v2->x, li->v2->y);
             }
         }
       if (lb - sector->lines != sector->linecount)
         I_Error("Map::GroupLines: miscounted");
 
       // set the degenmobj_t to the middle of the bounding box
-      sector->soundorg.x = (bbox[BOXRIGHT]+bbox[BOXLEFT])/2;
-      sector->soundorg.y = (bbox[BOXTOP]+bbox[BOXBOTTOM])/2;
+      sector->soundorg.x = (bb[BOXRIGHT]+bb[BOXLEFT])/2;
+      sector->soundorg.y = (bb[BOXTOP]+bb[BOXBOTTOM])/2;
       sector->soundorg.z = sector->floorheight-10;
 
       // adjust bounding box to map blocks
-      int block = (bbox[BOXTOP]-bmaporgy+MAXRADIUS)>>MAPBLOCKSHIFT;
+      int block = (bb[BOXTOP]-bmaporgy+MAXRADIUS)>>MAPBLOCKSHIFT;
       block = block >= bmapheight ? bmapheight-1 : block;
       sector->blockbox[BOXTOP]=block;
 
-      block = (bbox[BOXBOTTOM]-bmaporgy-MAXRADIUS)>>MAPBLOCKSHIFT;
+      block = (bb[BOXBOTTOM]-bmaporgy-MAXRADIUS)>>MAPBLOCKSHIFT;
       block = block < 0 ? 0 : block;
       sector->blockbox[BOXBOTTOM]=block;
 
-      block = (bbox[BOXRIGHT]-bmaporgx+MAXRADIUS)>>MAPBLOCKSHIFT;
+      block = (bb[BOXRIGHT]-bmaporgx+MAXRADIUS)>>MAPBLOCKSHIFT;
       block = block >= bmapwidth ? bmapwidth-1 : block;
       sector->blockbox[BOXRIGHT]=block;
 
-      block = (bbox[BOXLEFT]-bmaporgx-MAXRADIUS)>>MAPBLOCKSHIFT;
+      block = (bb[BOXLEFT]-bmaporgx-MAXRADIUS)>>MAPBLOCKSHIFT;
       block = block < 0 ? 0 : block;
       sector->blockbox[BOXLEFT]=block;
     }
@@ -1170,10 +1169,6 @@ bool Map::Setup(tic_t start, bool spawnthings)
       hexen_format = false;
     }
 
-#ifdef FRAGGLESCRIPT
-  FS_PreprocessScripts();        // preprocess FraggleScript scripts (needs already added players)
-#endif
-
   // If the map defines its music in MapInfo_t, use it.
   if (!info->musiclump.empty())
     S.StartMusic(info->musiclump.c_str(),  true);
@@ -1232,10 +1227,15 @@ bool Map::Setup(tic_t start, bool spawnthings)
       PlaceWeapons(); // Heretic mace
     }
 
+  SpawnLineSpecials(); // spawn Thinkers created by linedefs (also does some mandatory initializations!)
+
   if (hexen_format)
     LoadACScripts(lumpnum + ML_BEHAVIOR);
 
-  SpawnLineSpecials(); // spawn Thinkers created by linedefs (also does some mandatory initializations!)
+#ifdef FRAGGLESCRIPT
+  FS_PreprocessScripts();        // preprocess FraggleScript scripts (needs already added players)
+#endif
+
   InitLightning(); // Hexen lightning effect
 
   if (precache)

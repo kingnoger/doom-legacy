@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/10/14 19:35:52  smite-meister
+// automap, bbox_t
+//
 // Revision 1.11  2004/09/23 23:21:20  smite-meister
 // HUD updated
 //
@@ -130,7 +133,6 @@
 #include "hud.h"
 #include "i_video.h"
 #include "v_video.h"
-//#include "console.h" //Som: Until I get buffering finished
 
 #include "w_wad.h"
 #include "z_zone.h"
@@ -522,7 +524,6 @@ void R_InitViewBorder()
 
 
 //
-// R_FillBackScreen
 // Fills the back screen with a pattern for variable screen sizes
 // Also draws a beveled edge.
 //
@@ -531,8 +532,8 @@ void R_FillBackScreen()
   int  x, y;
   int  step, boff;
 
-  //faB: quickfix, don't cache lumps in both modes
-  if (rendermode!=render_soft)
+  // HW draws everything directly
+  if (rendermode != render_soft)
     return;
 
   //added:08-01-98:draw pattern around the status bar too (when hires),
@@ -582,83 +583,53 @@ void R_FillBackScreen()
 
 
 //
-// Copy a screen buffer.
+// Blit part of back buffer to visible screen
 //
-void R_VideoErase (unsigned ofs, int count)
+void R_VideoErase(unsigned ofs, int count)
 {
-    // LFB copy.
-    // This might not be a good idea if memcpy
-    //  is not optiomal, e.g. byte by byte on
-    //  a 32bit CPU, as GNU GCC/Linux libc did
-    //  at one point.
-    memcpy (vid.screens[0]+ofs, vid.screens[1]+ofs, count);
+  // LFB copy.
+  // This might not be a good idea if memcpy
+  //  is not optiomal, e.g. byte by byte on
+  //  a 32bit CPU, as GNU GCC/Linux libc did
+  //  at one point.
+  memcpy(vid.screens[0]+ofs, vid.screens[1]+ofs, count);
 }
 
 
 //
-// R_DrawViewBorder
-// Draws the border around the view
-//  for different size windows?
+// Blits the view border from backbuffer to visible screen.
 //
 void R_DrawViewBorder()
 {
-    int         top;
-    int         side;
-    int         ofs;
-
 #ifdef HWRENDER
-    if (rendermode != render_soft)
+  if (rendermode != render_soft)
     {
       HWR.DrawViewBorder();
       return;
     }
 #endif
 
+  if (scaledviewwidth == vid.width)
+    return;
 
-#ifdef DEBUG
-    fprintf(stderr,"RDVB: vidwidth %d vidheight %d scaledviewwidth %d viewheight %d\n",
-             vid.width,vid.height,scaledviewwidth,viewheight);
-#endif
+  R_VideoErase(0, (vid.height - hud.stbarheight)*vid.width);
+  /*
+  int top  = (vid.height -hud.stbarheight -viewheight) >> 1;
+  int side = (vid.width - scaledviewwidth) >> 1;
 
-     //added:08-01-98: draw the backtile pattern around the status bar too
-    //                 (when statusbar width is shorter than vid.width)
-    /*
-    if( (vid.width>ST_WIDTH) && (vid.height!=viewheight) )
-    {
-        ofs  = (vid.height-stbarheight)*vid.width;
-        side = (vid.width-ST_WIDTH)>>1;
-        R_VideoErase(ofs,side);
+  // copy top and one line of left side
+  R_VideoErase(0, top*vid.width + side);
 
-        ofs += (vid.width-side);
-        for (i=1;i<stbarheight;i++)
-        {
-            R_VideoErase(ofs,side<<1);  //wraparound right to left border
-            ofs += vid.width;
-        }
-        R_VideoErase(ofs,side);
-    }*/
+  // copy one line of right side and bottom
+  int ofs = (viewheight + top)*vid.width - side;
+  R_VideoErase(ofs, top*vid.width + side);
 
-    if (scaledviewwidth == vid.width)
-        return;
+  // copy sides using wraparound
+  ofs = top*vid.width + vid.width-side;
+  side <<= 1;
 
-    top  = (vid.height-hud.stbarheight-viewheight) >>1;
-    side = (vid.width-scaledviewwidth) >>1;
-
-    // copy top and one line of left side
-    R_VideoErase (0, top*vid.width+side);
-
-    // copy one line of right side and bottom
-    ofs = (viewheight+top)*vid.width-side;
-    R_VideoErase (ofs, top*vid.width+side);
-
-    // copy sides using wraparound
-    ofs = top*vid.width + vid.width-side;
-    side <<= 1;
-
-    //added:05-02-98:simpler using our new VID_Blit routine
-    VID_BlitLinearScreen(vid.screens[1]+ofs, vid.screens[0]+ofs,
-                         side, viewheight-1, vid.width, vid.width);
-
-    // useless, old dirty rectangle stuff
-    //V_MarkRect (0,0,vid.width, vid.height-hud.stbarheight);
+  //added:05-02-98:simpler using our new VID_Blit routine
+  VID_BlitLinearScreen(vid.screens[1]+ofs, vid.screens[0]+ofs,
+		       side, viewheight-1, vid.width, vid.width);
+  */
 }

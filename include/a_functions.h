@@ -17,17 +17,19 @@
 //
 //
 // $Log$
+// Revision 1.2  2004/10/14 19:35:50  smite-meister
+// automap, bbox_t
+//
 // Revision 1.1  2004/03/28 15:16:14  smite-meister
 // Texture cache.
 //
-//
-// DESCRIPTION:
-//   Action function prototypes.
-//
 //-----------------------------------------------------------------------------
 
-// This is a special header file that is meant to be included several times,
-// with different definitions for the macros WEAPON and DACTOR.
+/// \file
+/// \brief Action function prototypes.
+///
+/// This is a special header file that is meant to be included several times,
+/// with different definitions for the macros WEAPON and DACTOR.
 
 // Basic use: prototyping
 #ifndef WEAPON

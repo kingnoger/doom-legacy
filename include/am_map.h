@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/10/14 19:35:50  smite-meister
+// automap, bbox_t
+//
 // Revision 1.6  2004/09/23 23:21:19  smite-meister
 // HUD updated
 //
@@ -79,45 +82,44 @@ private:
   const class Map *mp;     // currently seen Map
   const class PlayerPawn *mpawn; // the pawn represented by an arrow
 
-  class Texture *marknums[10]; // numbers used for marking by the automap
+  bool am_recalc;   ///< screen size has changed...
+
+  class Texture *mapback; ///< possible automap background
+
+  Texture *marknums[10]; // numbers used for marking by the automap
 
   static const int AM_NUMMARKPOINTS = 10;
   mpoint_t markpoints[AM_NUMMARKPOINTS];   // where the points are
   int markpointnum;                    // next point to be assigned
-  byte *mapback; // pointer to the raw data for the automap background.
 
 public:
-  bool active;
+  bool active;      ///< is the AutoMap currently open?
   bool translucent; // draw overlaid on 3D view?
-  bool am_recalc;   // true if screen size changes
+
   int  am_cheating; // AutoMap cheats
 
   AutoMap();
 
-  // Called by main loop.
-  void Ticker();
-  void doFollowPlayer();
+  void Startup();
 
-  // eats events
-  bool Responder(struct event_t *ev);
+  void Ticker();
+  bool Responder(struct event_t *ev); ///< eats control events
+
+  void Resize();        ///< called after a vidmode change
+  void InitVariables();
+
+  void Open(const PlayerPawn *p);
+  void Close();
+
+  // called after a map change
+  //void Reset(const PlayerPawn *p);
+
+
+
   void addMark();
   void clearMarks();
   void restoreScaleAndLoc();
   void changeWindowLoc();
-
-  // called after a vidmode change
-  void Resize();
-
-  // opens the map, sets mpawn and mp.
-  void Open(const PlayerPawn *p);
-  void loadPics();
-  void InitVariables();
-
-  // called after a map change
-  void Reset(const PlayerPawn *p);
-
-  void Close();
-  void unloadPics();
 
   // drawing
   void Drawer();
@@ -127,7 +129,6 @@ public:
   void drawPlayers();
   void drawThings(int colors, int colorrange);
   void drawMarks();
-  void updateLightLev();
 };
 
 extern AutoMap automap;

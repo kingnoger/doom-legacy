@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,26 +18,14 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/10/14 19:35:52  smite-meister
+// automap, bbox_t
+//
 // Revision 1.2  2004/07/25 20:16:43  hurdler
 // Remove old hardware renderer and add part of the new one
 //
 // Revision 1.1.1.1  2002/11/16 14:18:44  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.6  2002/09/05 14:12:19  vberghol
-// network code partly bypassed
-//
-// Revision 1.5  2002/08/19 18:06:46  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.4  2002/08/11 17:16:52  vberghol
-// ...
-//
-// Revision 1.3  2002/07/01 21:01:10  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:38  vberghol
-// Version 133 Experimental!
 //
 // Revision 1.22  2001/08/06 23:57:09  stroggonmeth
 // Removed portal code, improved 3D floors in hardware mode.
@@ -106,11 +94,10 @@
 // Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
 // Initial import into CVS (v1.29 pr3)
 //
-//
-// DESCRIPTION:
-//      BSP traversal, handling of LineSegs for rendering.
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief BSP traversal, handling of LineSegs for rendering.
 
 #include "doomdef.h"
 #include "doomdata.h"
@@ -695,7 +682,7 @@ void Rend::R_AddLine (seg_t*  line)
 // 0 | 0 | 1 | 2
 // 1 | 4 | 5 | 6
 // 2 | 8 | 9 | A
-int     checkcoord[12][4] =
+int checkcoord[12][4] =
 {
     {3,0,2,1},
     {3,0,2,0},
@@ -711,8 +698,7 @@ int     checkcoord[12][4] =
 };
 
 
-// was R_CheckBBox
-bool Rend::R_CheckBBox(fixed_t *bspcoord)
+bool Rend::R_CheckBBox(bbox_t &bbox)
 {
     int                 boxpos;
 
@@ -733,16 +719,16 @@ bool Rend::R_CheckBBox(fixed_t *bspcoord)
 
     // Find the corners of the box
     // that define the edges from current viewpoint.
-    if (viewx <= bspcoord[BOXLEFT])
+    if (viewx <= bbox[BOXLEFT])
         boxpos = 0;
-    else if (viewx < bspcoord[BOXRIGHT])
+    else if (viewx < bbox[BOXRIGHT])
         boxpos = 1;
     else
         boxpos = 2;
 
-    if (viewy >= bspcoord[BOXTOP])
+    if (viewy >= bbox[BOXTOP])
         boxpos |= 0;
-    else if (viewy > bspcoord[BOXBOTTOM])
+    else if (viewy > bbox[BOXBOTTOM])
         boxpos |= 1<<2;
     else
         boxpos |= 2<<2;
@@ -750,10 +736,10 @@ bool Rend::R_CheckBBox(fixed_t *bspcoord)
     if (boxpos == 5)
         return true;
 
-    x1 = bspcoord[checkcoord[boxpos][0]];
-    y1 = bspcoord[checkcoord[boxpos][1]];
-    x2 = bspcoord[checkcoord[boxpos][2]];
-    y2 = bspcoord[checkcoord[boxpos][3]];
+    x1 = bbox[bbox_e(checkcoord[boxpos][0])];
+    y1 = bbox[bbox_e(checkcoord[boxpos][1])];
+    x2 = bbox[bbox_e(checkcoord[boxpos][2])];
+    y2 = bbox[bbox_e(checkcoord[boxpos][3])];
 
     // check clip list for an open space
     angle1 = R_PointToAngle (x1, y1) - viewangle;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/10/14 19:35:30  smite-meister
+// automap, bbox_t
+//
 // Revision 1.10  2004/10/11 11:23:46  smite-meister
 // map utils
 //
@@ -61,6 +64,8 @@
 #include "r_state.h"
 #include "p_maputl.h"
 
+#include "z_zone.h"
+
 
 //==========================================================================
 //  Simple map geometry utility functions
@@ -78,7 +83,7 @@ fixed_t P_AproxDistance(fixed_t dx, fixed_t dy)
 }
 
 // Returns 0 or 1
-int P_PointOnLineSide(fixed_t x, fixed_t y, line_t *line)
+int P_PointOnLineSide(fixed_t x, fixed_t y, const line_t *line)
 {
   if (!line->dx)
     {
@@ -109,7 +114,7 @@ int P_PointOnLineSide(fixed_t x, fixed_t y, line_t *line)
 
 // Considers the line to be infinite
 // Returns side 0 or 1, -1 if box crosses the line.
-int bbox_t::BoxOnLineSide(line_t *ld)
+int bbox_t::BoxOnLineSide(const line_t *ld)
 {
   int         p1;
   int         p2;

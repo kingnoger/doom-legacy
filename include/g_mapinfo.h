@@ -3,8 +3,7 @@
 //
 // $Id$
 //
-// Portions Copyright(C) 2000 Simon Howard
-// Copyright (C) 2002-2003 by Doom Legacy Team
+// Copyright (C) 2002-2004 by Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,35 +20,14 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
-// Revision 1.8  2004/09/13 20:43:31  smite-meister
-// interface cleanup, sp map reset fixed
-//
-// Revision 1.7  2004/08/12 18:30:29  smite-meister
-// cleaned startup
-//
-// Revision 1.6  2004/07/14 16:13:13  smite-meister
-// cleanup, commands
+// Revision 1.9  2004/10/14 19:35:50  smite-meister
+// automap, bbox_t
 //
 // Revision 1.5  2004/04/25 16:26:51  smite-meister
 // Doxygen
 //
-// Revision 1.4  2003/12/18 11:57:31  smite-meister
-// fixes / new bugs revealed
-//
-// Revision 1.3  2003/12/06 23:57:47  smite-meister
-// save-related bugfixes
-//
-// Revision 1.2  2003/11/30 00:09:47  smite-meister
-// bugfixes
-//
 // Revision 1.1  2003/11/12 11:07:27  smite-meister
 // Serialization done. Map progression.
-//
-// Revision 1.9  2003/06/10 22:40:01  smite-meister
-// Bugfixes
-//
-// Revision 1.8  2003/05/11 21:23:52  smite-meister
-// Hexen fixes
 //
 // Revision 1.7  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
@@ -96,10 +74,10 @@ using namespace std;
 ///     There can be one MAPINFO lump per wad. It is a text lump that consists of
 ///     two kinds of blocks: MAP blocks and CLUSTERDEF blocks.
 ///
-/// 2)  MapInfo lumps (Legacy, others?)
-///     There is one MapInfo lump per Map. It is the same lump as the
+/// 2)  LevelInfo lumps (Legacy, others?)
+///     There is one LevelInfo lump per Map. It is the same lump as the
 ///     mapname "separator", i.e. MAP16, E6M2, MYOWNMAP... 
-///     MapInfo only contains info about the one map to which it belongs.
+///     LevelInfo only contains info about the one map to which it belongs.
 ///     It is a text lump that consists of blocks, such as [script], ...
 ///
 /// Internally, all the data for each map is combined into one class, MapInfo.
@@ -153,15 +131,13 @@ public:
   // less essential stuff (can be replaced with scripting or other more efficient means)
   string musiclump;
 
-  int    warptrans;      ///< a Hexen quirk, another map numbering for deathmatch
-  int    warpnext;       ///< this one uses warptrans numbers
-  //char  nextmaplump[17];
-  //char  secretmaplump[17];
-  int    nextlevel;
-  int    secretlevel;
+  int    warptrans;    ///< a Hexen quirk, another map numbering for deathmatch
+  int    warpnext;     ///< this one uses warptrans numbers
+  int    nextlevel;    ///< next map number (normal Doom exit)
+  int    secretlevel;  ///< next map number (Doom secret exit)
+
   bool   doublesky;
   bool   lightning;
-  // ordering matters here!
   string sky1;
   float  sky1sp;
   string sky2;

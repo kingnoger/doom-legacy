@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.31  2004/10/14 19:35:52  smite-meister
+// automap, bbox_t
+//
 // Revision 1.30  2004/09/23 23:21:20  smite-meister
 // HUD updated
 //
@@ -323,10 +326,6 @@ static void R_ColormapPatch(patch_t *p, byte *colormap)
 Texture::Texture(const char *n)
   : cacheitem_t(n)
 {
-  /* TEST
-  strncpy(name, n, 8);
-  name[8] = '\0';
-  */
   width = height = 0;
   leftoffset = topoffset = 0;
   xscale = yscale = FRACUNIT;

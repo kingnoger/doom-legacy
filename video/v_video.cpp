@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/10/14 19:35:52  smite-meister
+// automap, bbox_t
+//
 // Revision 1.12  2004/09/23 23:21:20  smite-meister
 // HUD updated
 //
@@ -165,9 +168,7 @@
 byte *current_colormap; // for applying colormaps to Drawn Textures
 
 
-//
-// V_CopyRect
-//
+/// Copies a rectangular area from one screen buffer to another
 void V_CopyRect(int srcx, int srcy, int srcscrn,
                 int width, int height,
                 int destx, int desty, int destscrn)
@@ -199,14 +200,6 @@ void V_CopyRect(int srcx, int srcy, int srcscrn,
              srcscrn, width, height, destx, desty, destscrn);
 #endif
 
-
-#ifdef DEBUG
-  CONS_Printf("V_CopyRect: vidwidth %d screen[%d]=%x to screen[%d]=%x\n",
-              vid.width,srcscrn,vid.screens[srcscrn],destscrn,vid.screens[destscrn]);
-  CONS_Printf("..........: srcx %d srcy %d width %d height %d destx %d desty %d\n",
-              srcx,srcy,width,height,destx,desty);
-#endif
-
   byte *src = vid.screens[srcscrn]+vid.width*srcy+srcx;
   byte *dest = vid.screens[destscrn]+vid.width*desty+destx;
 
@@ -219,30 +212,25 @@ void V_CopyRect(int srcx, int srcy, int srcscrn,
 }
 
 
-
-#if !defined(USEASM) || defined(WIN32)
 // --------------------------------------------------------------------------
 // Copy a rectangular area from one bitmap to another (8bpp)
-// srcPitch, destPitch : width of source and destination bitmaps
 // --------------------------------------------------------------------------
-void VID_BlitLinearScreen(byte* srcptr, byte* destptr,
-                          int width, int height,
+void VID_BlitLinearScreen(byte *src, byte *dest, int width, int height,
                           int srcrowbytes, int destrowbytes)
 {
-  if (srcrowbytes==destrowbytes)
-    memcpy(destptr, srcptr, srcrowbytes * height);
+  if (srcrowbytes == destrowbytes)
+    memcpy(dest, src, srcrowbytes * height);
   else
     {
       while (height--)
         {
-          memcpy(destptr, srcptr, width);
+          memcpy(dest, src, width);
 
-          destptr += destrowbytes;
-          srcptr += srcrowbytes;
+          dest += destrowbytes;
+          src += srcrowbytes;
         }
     }
 }
-#endif
 
 
 
@@ -790,7 +778,8 @@ void font_t::DrawString(int x, int y, const char *str, int flags)
       if (c == '\n')
         {
           cx = x;
-          cy += 12*dupy;
+          //cy += 12*dupy;
+	  cy += rowheight*dupy;
           continue;
         }
 

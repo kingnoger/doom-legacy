@@ -1,8 +1,9 @@
 # Gnu Make makefile for Doom Legacy
 # Copyright (C) 2002-2004 by DooM Legacy Team.
 #
-# This primary Makefile calls auxiliary Makefiles in subdirectories
+# $Id$
 #
+# This primary Makefile calls auxiliary Makefiles in subdirectories.
 # Use 'make OPT=1' to make optimized version, else you'll get debug info.
 
 # Platform autodetect.
@@ -49,7 +50,6 @@ ifdef LINUX
  LIBS	= -L/usr/X11/lib -lSDLmain -lSDL -lSDL_mixer -lpng -lz -L. -ltnl -ltomcrypt
  OPENGLLIBS = -lGL -lGLU
 # OPENGLLIBS = -lGL -lGLU -lCg -lCgGL
-# -lm -lpthread ???
  LDFLAGS = -Wall
 # executable
  exename = Legacy
@@ -112,6 +112,10 @@ CFLAGS = $(CF) $(INCLUDES)
 export LD = $(CC)
 
 export objdir = objs
+
+#	$(objdir)/acbot.o \
+#	$(objdir)/b_bot.o \
+#	$(objdir)/b_node.o \
 
 export engine_objects = \
 	$(objdir)/g_game.o \
@@ -210,9 +214,6 @@ export audio_objects = \
 	$(objdir)/s_sound.o \
 	$(objdir)/s_sndseq.o \
 	$(objdir)/sounds.o
-
-#	$(objdir)/hw3sound.o \
-
 
 export video_objects = \
 	$(objdir)/md3.o \

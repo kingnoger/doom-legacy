@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.36  2004/10/14 19:35:30  smite-meister
+// automap, bbox_t
+//
 // Revision 1.35  2004/09/23 23:21:16  smite-meister
 // HUD updated
 //
@@ -416,7 +419,9 @@ void GameInfo::Display()
 
       // draw either automap or game
       if (automap.active)
-        automap.Drawer();
+	{
+	  automap.Drawer();
+	}
       else
         {
           // see if the border needs to be updated to the screen

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.35  2004/10/14 19:35:30  smite-meister
+// automap, bbox_t
+//
 // Revision 1.34  2004/09/06 19:58:03  smite-meister
 // Doom linedefs done!
 //
@@ -1832,15 +1835,12 @@ void pusher_t::Think()
       // point pusher. Crosses sectors, so use blockmap.
 
       tmpusher = this; // MT_PUSH/MT_PULL point source
-      tmbbox[BOXTOP]    = y + radius;
-      tmbbox[BOXBOTTOM] = y - radius;
-      tmbbox[BOXRIGHT]  = x + radius;
-      tmbbox[BOXLEFT]   = x - radius;
+      tmb.Set(x, y, radius);
 
-      xl = (tmbbox[BOXLEFT] - mp->bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
-      xh = (tmbbox[BOXRIGHT] - mp->bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
-      yl = (tmbbox[BOXBOTTOM] - mp->bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
-      yh = (tmbbox[BOXTOP] - mp->bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
+      xl = (tmb[BOXLEFT] - mp->bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
+      xh = (tmb[BOXRIGHT] - mp->bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
+      yl = (tmb[BOXBOTTOM] - mp->bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
+      yh = (tmb[BOXTOP] - mp->bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
       for (bx=xl ; bx<=xh ; bx++)
 	for (by=yl ; by<=yh ; by++)
 	  mp->BlockThingsIterator(bx,by,PIT_PushThing);

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,11 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.11  2004/08/29 20:48:49  smite-meister
-// bugfixes. wow.
-//
-// Revision 1.10  2004/08/19 19:42:42  smite-meister
-// bugfixes
+// Revision 1.12  2004/10/14 19:35:50  smite-meister
+// automap, bbox_t
 //
 // Revision 1.9  2004/08/18 14:35:20  smite-meister
 // PNG support!
@@ -162,6 +159,7 @@
 // Some more or less basic data types
 // we depend on.
 #include "m_fixed.h"
+#include "m_bbox.h"
 #include "screen.h"     //added:26-01-98:MAXVIDWIDTH, MAXVIDHEIGHT
 
 
@@ -493,9 +491,8 @@ struct line_t
   //  sidenum[1] will be -1 if one sided
   short       sidenum[2];
 
-    // Neat. Another bounding box, for the extent
-    //  of the LineDef.
-  fixed_t     bbox[4];
+  /// Neat. Another bounding box, for the extent of the LineDef.
+  bbox_t     bbox;
 
   // To aid move clipping.
   slopetype_t slopetype;
@@ -647,7 +644,7 @@ struct node_t
   fixed_t     dy;
 
   // Bounding box for each child.
-  fixed_t     bbox[2][4];
+  bbox_t     bbox[2];
 
   // If NF_SUBSECTOR its a subsector.
   unsigned short children[2];

@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.19  2004/10/14 19:35:30  smite-meister
+// automap, bbox_t
+//
 // Revision 1.18  2004/09/13 20:43:29  smite-meister
 // interface cleanup, sp map reset fixed
 //
@@ -389,9 +392,9 @@ static parsercmd_t MapInfo_commands[]=
     {P_ITEM_STR,    "defaultweapons",&info_weapons},
   */
   // {IVT_CONSOLECMD,"consolecmd",    NULL},
-  {P_ITEM_INT_INT, "doom_thingoffset", MI_offset(doom_offs)},
-  {P_ITEM_INT_INT, "heretic_thingoffset", MI_offset(heretic_offs)},
-  {P_ITEM_INT_INT, "hexen_thingoffset", MI_offset(hexen_offs)},
+  {P_ITEM_INT_INT, "doom_thingoffset", MI_offset(doom_offs), MI_offset(doom_offs) + sizeof(int)},
+  {P_ITEM_INT_INT, "heretic_thingoffset", MI_offset(heretic_offs), MI_offset(heretic_offs) + sizeof(int)},
+  {P_ITEM_INT_INT, "hexen_thingoffset", MI_offset(hexen_offs), MI_offset(hexen_offs) + sizeof(int)},
   {P_ITEM_IGNORE, NULL, 0} // terminator
 };
 
@@ -405,16 +408,17 @@ static parsercmd_t MAPINFO_MAP_commands[] =
 
   {P_ITEM_INT, "warptrans", MI_offset(warptrans)}, // Damnation!
   {P_ITEM_INT, "next", MI_offset(warpnext)}, // Hexen 'next' refers to warptrans numbers, not levelnums!
-  //{P_ITEM_STR16, "next", MI_offset(nextmaplump)}, // TODO implement ZDoom lumpname-fields?
+
+  // TODO implement ZDoom lumpname-fields?
+  //{P_ITEM_STR16, "next", MI_offset(nextmaplump)},
   //{P_ITEM_STR16, "secretnext", MI_offset(secretmaplump)},
 
   // our own solution (because the Hexen way SUCKS and ZDoom is not much better :)
-  {P_ITEM_INT, "nextlevel", MI_offset(nextlevel)}, // always refer to levelnums
-  {P_ITEM_INT, "secretlevel", MI_offset(secretlevel)},
+  {P_ITEM_INT_INT, "nextlevel", MI_offset(nextlevel), MI_offset(secretlevel)}, // refers to levelnums
 
   {P_ITEM_BOOL, "doublesky", MI_offset(doublesky)},
-  {P_ITEM_STR16_FLOAT, "sky1", MI_offset(sky1)},
-  {P_ITEM_STR16_FLOAT, "sky2", MI_offset(sky2)},
+  {P_ITEM_STR16_FLOAT, "sky1", MI_offset(sky1), MI_offset(sky1sp)},
+  {P_ITEM_STR16_FLOAT, "sky2", MI_offset(sky2), MI_offset(sky2sp)},
   {P_ITEM_BOOL, "lightning", MI_offset(lightning)},
   {P_ITEM_STR, "fadetable", MI_offset(fadetablelump)},
   {P_ITEM_INT, "cdtrack", MI_offset(cdtrack)},

@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.37  2004/10/14 19:35:50  smite-meister
+// automap, bbox_t
+//
 // Revision 1.36  2004/10/11 11:13:42  smite-meister
 // map utils
 //
@@ -101,6 +104,7 @@
 #include "doomtype.h"
 #include "g_think.h"
 #include "m_fixed.h"
+#include "m_bbox.h"
 #include "info.h" // mobjtype_t
 
 using namespace std;
@@ -132,9 +136,9 @@ public:
   bool hexen_format;
 
   //------------ Geometry ------------
-  fixed_t root_bbox[4];
   int              numvertexes;
   struct vertex_t* vertexes;
+  bbox_t           root_bbox;
 
   int              numsegs;
   struct seg_t*    segs;
@@ -470,9 +474,9 @@ public:
 
   // in p_poly.cpp
   void InitPolyobjs();
-  void IterFindPolySegs(int x, int y, seg_t **segList);
+  void IterFindPolySegs(fixed_t x, fixed_t y, seg_t **segList);
   void SpawnPolyobj(int index, int tag, bool crush);
-  void TranslateToStartSpot(int tag, int originX, int originY);
+  void TranslateToStartSpot(int tag, fixed_t originX, fixed_t originY);
   void InitPolyBlockMap();
 
   polyobj_t *GetPolyobj(int num);
@@ -481,7 +485,7 @@ public:
   void LinkPolyobj(polyobj_t *po);
   void UnLinkPolyobj(polyobj_t *po);
   bool PO_CheckBlockingActors(seg_t *seg, polyobj_t *po);
-  bool PO_MovePolyobj(int num, int x, int y);
+  bool PO_MovePolyobj(int num, fixed_t x, fixed_t y);
   bool PO_RotatePolyobj(int num, angle_t angle);
   bool PO_Busy(int num);
 

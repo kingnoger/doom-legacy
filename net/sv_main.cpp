@@ -17,14 +17,11 @@
 //
 //
 // $Log$
-// Revision 1.13  2004/09/24 21:19:59  jussip
-// Joystick axis unbinding.
+// Revision 1.14  2004/10/14 19:35:51  smite-meister
+// automap, bbox_t
 //
 // Revision 1.12  2004/09/23 23:21:19  smite-meister
 // HUD updated
-//
-// Revision 1.11  2004/09/20 22:42:49  jussip
-// Joystick axis binding works. New joystick code ready for use.
 //
 // Revision 1.10  2004/09/13 20:43:31  smite-meister
 // interface cleanup, sp map reset fixed
@@ -561,8 +558,6 @@ void Command_Listserv_f() {}
 void Command_Clear_f();
 void Command_Keymap_f();
 void Command_Bind_f();
-void Command_BindJoyaxis_f();
-void Command_UnbindJoyaxis_f();
 
 void Command_SaveConfig_f();
 void Command_LoadConfig_f();
@@ -644,8 +639,6 @@ void SV_Init()
   COM_AddCommand("cls", Command_Clear_f);
   COM_AddCommand("keymap", Command_Keymap_f);
   COM_AddCommand("bind", Command_Bind_f);
-  COM_AddCommand("bindjoyaxis", Command_BindJoyaxis_f);
-  COM_AddCommand("unbindjoyaxis", Command_UnbindJoyaxis_f);
 
   // config file management  
   COM_AddCommand("saveconfig", Command_SaveConfig_f);

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/10/14 19:35:30  smite-meister
+// automap, bbox_t
+//
 // Revision 1.10  2004/09/23 23:21:16  smite-meister
 // HUD updated
 //
@@ -349,12 +352,13 @@ int P_Read_ANIMDEFS(int lump)
   enum p_state_e {PS_NONE, PS_FLAT, PS_TEX};
   p_state_e state = PS_NONE;
   int base = 0;
+  char *name = NULL;
   while (p.NewLine())
     {
       // texture/flat <name>
       // pic <n> tics <t>
       // pic <n> rand <min> <max>
-      char *word, *name = NULL;
+      char *word;
 
       if (state != PS_NONE)
 	{

@@ -131,17 +131,14 @@ teleporters.
 Sets the cluster in which the map belongs.
 </td></tr>
 
-<tr><td>nextlevel &lt;n&gt;</td>
+<tr><td>nextlevel &lt;normal&gt; [secret] </td>
 <td>
-Sets the mapnumber where the normal Doom exits take the players from
+Sets the mapnumber where the Doom-type exits take the players from
 this map. A value of -1 means that the game ends here.
+Optionally, you can also set the destination for Doom secret exits.<br/>
 This command is not necessary in Hexen maps, because the
 Hexen exit teleporters always carry the destination map number.
-</td></tr>
 
-<tr><td>secretlevel &lt;n&gt;</td>
-<td>
-Same as the previous one, but for Doom secret exits.
 </td></tr>
 
 <tr><td class="note" colspan="2">
@@ -154,7 +151,7 @@ All their functionality is better implemented using either
 
 <tr><td>bossdeath &lt;code&gt;</td>
 <td>
-<b>Deprecated</b>. Implements the end-of-level boss death hacks of original Doom and
+Implements the end-of-level boss death hacks of original Doom and
 Heretic. Scripting is a much better way to do this kind of stuff.
 </td></tr>
 
@@ -921,16 +918,55 @@ automagically. The names of the music lumps can be freely chosen.
 <hr />
 <h2><a name="dehacked">DeHackEd support</a></h2>
 
+<p>
 Legacy supports the most important DeHackEd and BEX features.... TODO
+</p>
 
-<h3>New codepointers</h3>
+<p>
+A few words about nomenclature: Unfortunately the DeHackEd terminology is
+quite different from the Doom source code terminology. In the
+following, the source code terms are written in <b>bold</b>,
+followed by the corresponding DeHackEd terms (in parentheses).
+</p>
+
+<h3>Frames and codepointers</h3>
+
+<p>
+In Doom, the mapthing AI is basically a finite state machine.
+The behavior (and animation) of the things is controlled by a
+<b>state table</b> (frame table), which is an array of <b>states</b>
+(frames). Each state consists of the following data fields:
+<b>sprite</b> number, <b>frame</b> number (sprite subnumber),
+duration in <b>tics</b>, <b>nextstate</b> number (next frame)
+and <b>action function</b> pointer (codepointer).
+</p>
+
+<p>
+The sprite and frame numbers determine the graphical presentation
+associated with this state (what it looks like).
+Duration is self-explanatory. Nextstate is the number of the state the
+thing will move into next. The action function pointer points to an
+<b>action function</b> that will be called on the thing each time it enters
+the state. The pointer can also be NULL, in which case no function is
+called.
+</p>
+
+<p>
+The preferred way to change the codepointers is to use the BEX
+[CODEPTR] block. The complete list of mnemonics for the Doom, Heretic
+and Hexen action functions available can be found in the source file
+<a href="../include/a_functions.h">a_functions.h</a>. Remember that
+you can use the mnemonic <b>NULL</b> to clear a codepointer.<br />
+Legacy also has introduced a few new action functions, which can only
+be accessed using the [CODEPTR] block:
+</p>
 
 <table class="def">
 <tr><th>BEX mnemonic</th><th>effect</th></tr>
 
 <tr><td>StartFS</td>
 <td>
-Starts an FS script, using <i>tics</i> for the script number.
+Starts an FS script, using <b>tics</b> for the script number.
 </td></tr>
 
 <tr><td>StartWeaponFS</td>
@@ -940,8 +976,8 @@ Same thing, but for weapon frames.
 
 <tr><td>StartACS</td>
 <td>
-Starts an ACS script, using <i>tics</i> for the script number,
-<i>sprite subnumber</i>
+Starts an ACS script, using <b>tics</b> for the script number,
+<b>frame</b>
 for the args??? TODO
 </td></tr>
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2004/10/14 19:35:46  smite-meister
+// automap, bbox_t
+//
 // Revision 1.17  2004/09/23 23:21:17  smite-meister
 // HUD updated
 //
@@ -36,23 +39,8 @@
 // Revision 1.12  2004/03/28 15:16:13  smite-meister
 // Texture cache.
 //
-// Revision 1.11  2004/01/06 14:37:45  smite-meister
-// six bugfixes, cleanup
-//
-// Revision 1.10  2003/12/18 11:57:31  smite-meister
-// fixes / new bugs revealed
-//
 // Revision 1.9  2003/11/12 11:07:25  smite-meister
 // Serialization done. Map progression.
-//
-// Revision 1.8  2003/06/10 22:39:58  smite-meister
-// Bugfixes
-//
-// Revision 1.7  2003/05/11 21:23:51  smite-meister
-// Hexen fixes
-//
-// Revision 1.6  2003/04/24 20:30:22  hurdler
-// Remove lots of compiling warnings
 //
 // Revision 1.5  2003/04/19 17:38:47  smite-meister
 // SNDSEQ support, tools, linedef system...
@@ -62,9 +50,6 @@
 //
 // Revision 1.3  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
-//
-// Revision 1.2  2002/12/03 10:16:49  smite-meister
-// Older update
 //
 //-----------------------------------------------------------------------------
 
@@ -94,9 +79,7 @@
 #include "r_draw.h"
 #include "v_video.h"
 
-#include "d_main.h"
-
-#include "p_maputl.h"
+#include "m_bbox.h"
 
 #include "w_wad.h"
 #include "z_zone.h"
@@ -110,11 +93,17 @@
 #endif
 
 
-// TODO the automap needs a complete rewrite when the renderer is done.
-
 // the only AutoMap instance in the game
 AutoMap automap;
 
+
+struct mline_t
+{
+  mpoint_t a, b;
+};
+
+
+byte *fb; // pseudo-frame buffer
 
 // player radius used only in am_map.c
 #define PLAYERRADIUS    (16*FRACUNIT)
@@ -136,6 +125,11 @@ static byte YELLOWRANGE =    1;
 static byte DBLACK      =    0;
 static byte DWHITE      =    (256-47);
 
+static byte BLUEKEYCOLOR;
+static byte YELLOWKEYCOLOR;
+static byte REDKEYCOLOR;
+
+
 // Automap colors
 #define BACKGROUND      DBLACK
 #define YOURCOLORS      DWHITE
@@ -156,9 +150,7 @@ static byte DWHITE      =    (256-47);
 #define GRIDRANGE       0
 #define XHAIRCOLORS     GRAYS
 
-// drawing stuff
-#define FB              0
-
+// keys
 #define AM_PANDOWNKEY   KEY_DOWNARROW
 #define AM_PANUPKEY     KEY_UPARROW
 #define AM_PANRIGHTKEY  KEY_RIGHTARROW
@@ -174,8 +166,6 @@ static byte DWHITE      =    (256-47);
 #define AM_CLEARMARKKEY 'c'
 
 
-// scale on entry
-#define INITSCALEMTOF (.2*FRACUNIT)
 // how much the automap moves window per tic in frame-buffer coordinates
 // moves 140 pixels in 1 second
 #define F_PANINC        4
@@ -194,24 +184,14 @@ static byte DWHITE      =    (256-47);
 #define CYMTOF(y)  (f_y + (f_h - MTOF((y)-m_y)))
 
 
-struct mline_t
-{
-  mpoint_t a, b;
-};
-
-struct islope_t
-{
-  fixed_t slp, islp;
-};
-
-
 //
 // The vector graphics for the automap.
 //  A line drawing of the player pointing right,
 //   starting from the middle.
 //
 #define R ((8*PLAYERRADIUS)/7)
-mline_t player_arrow[] = {
+mline_t player_arrow[] =
+{
   { { -R+R/8, 0 }, { R, 0 } }, // -----
   { { R, 0 }, { R-R/2, R/4 } },  // ----->
   { { R, 0 }, { R-R/2, -R/4 } },
@@ -220,11 +200,10 @@ mline_t player_arrow[] = {
   { { -R+3*R/8, 0 }, { -R+R/8, R/4 } }, // >>--->
   { { -R+3*R/8, 0 }, { -R+R/8, -R/4 } }
 };
-#undef R
-#define NUMPLYRLINES (sizeof(player_arrow)/sizeof(mline_t))
+static const int NUMPLYRLINES = sizeof(player_arrow)/sizeof(mline_t);
 
-#define R ((8*PLAYERRADIUS)/7)
-mline_t cheat_player_arrow[] = {
+mline_t cheat_player_arrow[] =
+{
   { { -R+R/8, 0 }, { R, 0 } }, // -----
   { { R, 0 }, { R-R/2, R/6 } },  // ----->
   { { R, 0 }, { R-R/2, -R/6 } },
@@ -243,16 +222,17 @@ mline_t cheat_player_arrow[] = {
   { { R/6+R/32, -R/7-R/32 }, { R/6+R/10, -R/7 } }
 };
 #undef R
-#define NUMCHEATPLYRLINES (sizeof(cheat_player_arrow)/sizeof(mline_t))
+static const int NUMCHEATPLYRLINES = sizeof(cheat_player_arrow)/sizeof(mline_t);
 
 #define R (FRACUNIT)
-mline_t triangle_guy[] = {
+mline_t triangle_guy[] =
+{
   { { (fixed_t)-.867*R, (fixed_t)-.5*R }, { (fixed_t) .867*R, (fixed_t)-.5*R } },
   { { (fixed_t) .867*R, (fixed_t)-.5*R }, { (fixed_t)      0, (fixed_t)    R } },
   { { (fixed_t)      0, (fixed_t)    R }, { (fixed_t)-.867*R, (fixed_t)-.5*R } }
 };
 #undef R
-#define NUMTRIANGLEGUYLINES (sizeof(triangle_guy)/sizeof(mline_t))
+static const int NUMTRIANGLEGUYLINES = sizeof(triangle_guy)/sizeof(mline_t);
 
 #define R (FRACUNIT)
 mline_t thintriangle_guy[] = {
@@ -261,7 +241,8 @@ mline_t thintriangle_guy[] = {
   { { (fixed_t)-.5*R, (fixed_t) .7*R }, { (fixed_t)-.5*R, (fixed_t)-.7*R } }
 };
 #undef R
-#define NUMTHINTRIANGLEGUYLINES (sizeof(thintriangle_guy)/sizeof(mline_t))
+static const int NUMTHINTRIANGLEGUYLINES = sizeof(thintriangle_guy)/sizeof(mline_t);
+
 
 
 // location of window on screen
@@ -274,35 +255,26 @@ static int      f_h;
 
 static int      lightlev;               // used for funky strobing effect
 
+
 static mpoint_t m_paninc; // how far the window pans each tic (map coords)
 static fixed_t  mtof_zoommul; // how far the window zooms in each tic (map coords)
 static fixed_t  ftom_zoommul; // how far the window zooms in each tic (fb coords)
 
-static fixed_t  m_x, m_y;   // LL x,y where the window is on the map (map coords)
-static fixed_t  m_x2, m_y2; // UR x,y where the window is on the map (map coords)
 
-//
 // width/height of window on map (map coords)
-//
 static fixed_t  m_w;
 static fixed_t  m_h;
 
-// based on level size
-static fixed_t  min_x;
-static fixed_t  min_y;
-static fixed_t  max_x;
-static fixed_t  max_y;
-
-static fixed_t  max_w; // max_x-min_x,
-static fixed_t  max_h; // max_y-min_y
-
-// based on player size
-static fixed_t  min_w;
-static fixed_t  min_h;
+static fixed_t  m_x, m_y;   // LL x,y where the window is on the map (map coords)
+static fixed_t  m_x2, m_y2; // UR x,y where the window is on the map (map coords)
 
 
-static fixed_t  min_scale_mtof; // used to tell when to stop zooming out
-static fixed_t  max_scale_mtof; // used to tell when to stop zooming in
+// zoom
+static fixed_t min_scale_mtof; // used to tell when to stop zooming out
+static fixed_t max_scale_mtof; // used to tell when to stop zooming in
+static fixed_t scale_mtof; // used by MTOF to scale from map-to-frame-buffer coords
+static fixed_t scale_ftom; // used by FTOM to scale from frame-buffer-to-map coords (=1/scale_mtof)
+
 
 // old stuff for recovery later
 static fixed_t old_m_w, old_m_h;
@@ -311,22 +283,17 @@ static fixed_t old_m_x, old_m_y;
 // old location used by the Follower routine
 static mpoint_t f_oldloc;
 
-// used by MTOF to scale from map-to-frame-buffer coords
-static fixed_t scale_mtof = (fixed_t)INITSCALEMTOF;
-// used by FTOM to scale from frame-buffer-to-map coords (=1/scale_mtof)
-static fixed_t scale_ftom;
-
-
-
-static byte BLUEKEYCOLOR;
-static byte YELLOWKEYCOLOR;
-static byte REDKEYCOLOR;
 
 
 // Calculates the slope and slope according to the x-axis of a line
 // segment in map coordinates (with the upright y-axis n' all) so
 // that it can be used with the brain-dead drawing stuff.
 /*
+struct islope_t
+{
+  fixed_t slp, islp;
+};
+
 TODO
 static void AM_getIslope(mline_t *ml, islope_t *is)
 {
@@ -357,140 +324,124 @@ AutoMap::AutoMap()
   translucent = false;
   am_recalc = true;
   am_cheating = 0;
+
 }
 
-
-//
-//
-//
-void AM_activateNewScale()
+void AutoMap::Startup()
 {
-  m_x += m_w/2;
-  m_y += m_h/2;
-  m_w = FTOM(f_w);
-  m_h = FTOM(f_h);
-  m_x -= m_w/2;
-  m_y -= m_h/2;
-  m_x2 = m_x + m_w;
-  m_y2 = m_y + m_h;
-}
-
-//
-//
-//
-void AM_saveScaleAndLoc()
-{
-  old_m_x = m_x;
-  old_m_y = m_y;
-  old_m_w = m_w;
-  old_m_h = m_h;
-}
-
-//
-// was AM_restoreScaleAndLoc
-//
-void AutoMap::restoreScaleAndLoc()
-{
-  m_w = old_m_w;
-  m_h = old_m_h;
-  if (!followplayer)
+  int i;
+  if ((i = fc.FindNumForName("AUTOPAGE")) >= 0)
     {
-      m_x = old_m_x;
-      m_y = old_m_y;
-    } else {
-      m_x = mpawn->x - m_w/2;
-      m_y = mpawn->y - m_h/2;
-    }
-  m_x2 = m_x + m_w;
-  m_y2 = m_y + m_h;
+      int size = fc.LumpLength(i);
+      if (size % 320)
+	I_Error("Size of AUTOPAGE (%d bytes) must be a multiple of 320!\n", size);
 
-  // Change the scaling multipliers
-  scale_mtof = FixedDiv(f_w<<FRACBITS, m_w);
+      mapback = new LumpTexture("AUTOPAGE", i, 320, size/320);
+      tc.Insert(mapback);
+    }
+  else
+    mapback = NULL;
+}
+
+
+// opens the automap, centered on p
+void AutoMap::Open(const PlayerPawn *p)
+{
+  if (active)
+    return;
+  CONS_Printf("AM::Open, pawn = %p, map = %p\n", p, p->mp);
+  mpawn = p;
+  mp = p->mp;
+
+  // just in case...
+  if (mp == NULL)
+    return;
+
+  // if AutoMap is active(open), it MUST have a valid mp and mpawn
+  active = true;
+  bigstate = false;
+
+  // FIXME Reset() must also be called if a new map is loaded
+  if (am_recalc) // screen size changed
+    {
+      am_recalc = false;
+      Resize();
+    }
+
+  InitVariables();
+
+  // prepare textures
+  for (int i=0;i<10;i++)
+    {
+      char namebuf[9];
+      sprintf(namebuf, "AMMNUM%d", i);
+      marknums[i] = tc.GetPtr(namebuf);
+    }
+}
+
+
+// shuts down the automap
+void AutoMap::Close()
+{
+  if (!active)
+    return;
+
+  mp = NULL;
+  mpawn = NULL;
+  active = false;
+}
+
+
+// should be called after a new map is started
+/*
+void AutoMap::Reset(const PlayerPawn *p)
+{
+  CONS_Printf("AM::Reset\n");
+  mpawn = p;
+  mp = p->mp;
+  if (mp == NULL)
+    return;
+
+  clearMarks();
+  Resize();
+}
+*/
+
+
+// should be called after any vidmode change
+void AutoMap::Resize()
+{
+  if (!active)
+    {
+      // delay it until opened
+      am_recalc = true;
+      return;
+    }
+
+  CONS_Printf("AM::Resize\n");
+
+  fb = vid.screens[0];
+
+  f_x = f_y = 0;
+  f_w = vid.width;
+  f_h = vid.height - hud.stbarheight;
+
+  // sets global variables controlling zoom range.
+  fixed_t w = FixedDiv(f_w << FRACBITS, mp->root_bbox.box[BOXRIGHT] - mp->root_bbox.box[BOXLEFT]);
+  fixed_t h = FixedDiv(f_h << FRACBITS, mp->root_bbox.box[BOXTOP] - mp->root_bbox.box[BOXBOTTOM]);
+
+  min_scale_mtof = w < h ? w : h; // min zoom
+  max_scale_mtof = FixedDiv(f_h<<FRACBITS, 2*PLAYERRADIUS);
+
+  scale_mtof = FixedDiv(min_scale_mtof, int(0.7 * FRACUNIT));
+  if (scale_mtof > max_scale_mtof)
+    scale_mtof = min_scale_mtof;
   scale_ftom = FixedDiv(FRACUNIT, scale_mtof);
 }
 
-// was AM_addMark
-// adds a marker at the current location
-//
-void AutoMap::addMark()
-{
-  markpoints[markpointnum].x = m_x + m_w/2;
-  markpoints[markpointnum].y = m_y + m_h/2;
-  markpointnum = (markpointnum + 1) % AM_NUMMARKPOINTS;
-}
-
-//
-// Determines bounding box of all vertices,
-// sets global variables controlling zoom range.
-//
-void AM_findMinMaxBoundaries(const Map *m)
-{
-  int i;
-  fixed_t a;
-  fixed_t b;
-
-  min_x = min_y =  MAXINT;
-  max_x = max_y = -MAXINT;
-
-  for (i=0; i < m->numvertexes;i++)
-    {
-      if (m->vertexes[i].x < min_x)
-        min_x = m->vertexes[i].x;
-      else if (m->vertexes[i].x > max_x)
-        max_x = m->vertexes[i].x;
-
-      if (m->vertexes[i].y < min_y)
-        min_y = m->vertexes[i].y;
-      else if (m->vertexes[i].y > max_y)
-        max_y = m->vertexes[i].y;
-    }
-
-  max_w = max_x - min_x;
-  max_h = max_y - min_y;
-
-  min_w = 2*PLAYERRADIUS; // const? never changed?
-  min_h = 2*PLAYERRADIUS;
-
-  a = FixedDiv(f_w<<FRACBITS, max_w);
-  b = FixedDiv(f_h<<FRACBITS, max_h);
-
-  min_scale_mtof = a < b ? a : b;
-  max_scale_mtof = FixedDiv(f_h<<FRACBITS, 2*PLAYERRADIUS);
-}
 
 
-//
-// was AM_changeWindowLoc
-//
-void AutoMap::changeWindowLoc()
-{
-  if (m_paninc.x || m_paninc.y)
-    {
-      followplayer = false;
-      f_oldloc.x = MAXINT;
-    }
-
-  m_x += m_paninc.x;
-  m_y += m_paninc.y;
-
-  if (m_x + m_w/2 > max_x)
-    m_x = max_x - m_w/2;
-  else if (m_x + m_w/2 < min_x)
-    m_x = min_x - m_w/2;
-
-  if (m_y + m_h/2 > max_y)
-    m_y = max_y - m_h/2;
-  else if (m_y + m_h/2 < min_y)
-    m_y = min_y - m_h/2;
-
-  m_x2 = m_x + m_w;
-  m_y2 = m_y + m_h;
-}
-
-
-//
-// was AM_initVariables
-//
+// initializes the map window location, panning, zoom, colors etc.
 void AutoMap::InitVariables()
 {
   f_oldloc.x = MAXINT;
@@ -501,6 +452,7 @@ void AutoMap::InitVariables()
   ftom_zoommul = FRACUNIT;
   mtof_zoommul = FRACUNIT;
 
+  // which part of the map is visible?
   m_w = FTOM(f_w);
   m_h = FTOM(f_h);
 
@@ -514,7 +466,7 @@ void AutoMap::InitVariables()
   old_m_w = m_w;
   old_m_h = m_h;
 
-  if( game.mode == gm_heretic )
+  if (game.mode >= gm_heretic)
     {
       REDS       = 12*8;
       REDRANGE   = 1;
@@ -541,157 +493,103 @@ void AutoMap::InitVariables()
       YELLOWKEYCOLOR = 231;
       REDKEYCOLOR = 176;
     }
+
   // inform the status bar of the change
   hud.st_refresh = true;
 }
 
 
-//
-// was AM_loadPics()
-//
-void AutoMap::loadPics()
+// pans and clips the "map window" location on the actual Map
+void AutoMap::changeWindowLoc()
 {
-  int  i;
-  char namebuf[9];
-
-  for (i=0;i<10;i++)
+  if (m_paninc.x || m_paninc.y)
     {
-      sprintf(namebuf, "AMMNUM%d", i);
-      marknums[i] = tc.GetPtr(namebuf);
+      followplayer = false;
+      f_oldloc.x = MAXINT;
     }
-  if (fc.FindNumForName("AUTOPAGE") >= 0)
-    mapback = (byte *)fc.CacheLumpName("AUTOPAGE", PU_STATIC);
-  else
-    mapback = NULL;
-}
 
-// was AM_unloadPics
+  m_x += m_paninc.x;
+  m_y += m_paninc.y;
 
-void AutoMap::unloadPics()
-{
-  int i;
-  //faB: GlidePatch_t are always purgeable
-  if (rendermode == render_soft)
-    {
-      for (i=0;i<10;i++)
-        Z_ChangeTag(marknums[i], PU_CACHE);
-      if (mapback)
-        Z_ChangeTag(mapback, PU_CACHE);
-    }
+  if (m_x + m_w/2 > mp->root_bbox.box[BOXRIGHT])
+    m_x = mp->root_bbox.box[BOXRIGHT] - m_w/2;
+  else if (m_x + m_w/2 < mp->root_bbox.box[BOXLEFT])
+    m_x = mp->root_bbox.box[BOXLEFT] - m_w/2;
+
+  if (m_y + m_h/2 > mp->root_bbox.box[BOXTOP])
+    m_y = mp->root_bbox.box[BOXTOP] - m_h/2;
+  else if (m_y + m_h/2 < mp->root_bbox.box[BOXBOTTOM])
+    m_y = mp->root_bbox.box[BOXBOTTOM] - m_h/2;
+
+  m_x2 = m_x + m_w;
+  m_y2 = m_y + m_h;
 }
 
 
-// was AM_clearMarks
+
+
+
+// zooms the map window to a new scale
+static void AM_activateNewScale()
+{
+  m_x += m_w/2;
+  m_y += m_h/2;
+  m_w = FTOM(f_w);
+  m_h = FTOM(f_h);
+  m_x -= m_w/2;
+  m_y -= m_h/2;
+  m_x2 = m_x + m_w;
+  m_y2 = m_y + m_h;
+}
+
+
+void AM_saveScaleAndLoc()
+{
+  old_m_x = m_x;
+  old_m_y = m_y;
+  old_m_w = m_w;
+  old_m_h = m_h;
+}
+
+
+void AutoMap::restoreScaleAndLoc()
+{
+  m_w = old_m_w;
+  m_h = old_m_h;
+  if (!followplayer)
+    {
+      m_x = old_m_x;
+      m_y = old_m_y;
+    } else {
+      m_x = mpawn->x - m_w/2;
+      m_y = mpawn->y - m_h/2;
+    }
+  m_x2 = m_x + m_w;
+  m_y2 = m_y + m_h;
+
+  // Change the scaling multipliers
+  scale_mtof = FixedDiv(f_w<<FRACBITS, m_w);
+  scale_ftom = FixedDiv(FRACUNIT, scale_mtof);
+}
+
+
+/// adds a marker at the current location
+void AutoMap::addMark()
+{
+  markpoints[markpointnum].x = m_x + m_w/2;
+  markpoints[markpointnum].y = m_y + m_h/2;
+  markpointnum = (markpointnum + 1) % AM_NUMMARKPOINTS;
+}
+
+
+
 void AutoMap::clearMarks()
 {
-  int i;
-
-  for (i=0;i<AM_NUMMARKPOINTS;i++)
+  for (int i=0; i<AM_NUMMARKPOINTS; i++)
     markpoints[i].x = -1; // means empty
   markpointnum = 0;
 }
 
-
-byte *fb; // pseudo-frame buffer
-
-// function for drawing lines, depends on rendermode
-typedef void (*AMDRAWFLINEFUNC) (fline_t* fl, int color);
-static AMDRAWFLINEFUNC AM_drawFline;
-
-static void AM_drawFline_soft(fline_t* fl, int color);
-
-// was AM_LevelInit
-// should be called after any vidmode change
-//
-void AutoMap::Resize()
-{
-  if (!active)
-    {
-      // delay it until opened
-      am_recalc = true;
-      return;
-    }
-
-  CONS_Printf("AM::Resize\n");
-
-  fb = vid.screens[0];
-
-  f_x = f_y = 0;
-  f_w = vid.width;
-  f_h = vid.height - hud.stbarheight;
-
-#ifdef HWRENDER
-  if (rendermode != render_soft)
-    AM_drawFline = (AMDRAWFLINEFUNC) HWRend::DrawAMline;
-  else
-#endif
-    AM_drawFline = AM_drawFline_soft;
-
-  AM_findMinMaxBoundaries(mp);
-  scale_mtof = FixedDiv(min_scale_mtof, (int) (0.7*FRACUNIT));
-  if (scale_mtof > max_scale_mtof)
-    scale_mtof = min_scale_mtof;
-  scale_ftom = FixedDiv(FRACUNIT, scale_mtof);
-}
-
-// should be called after a new map is started
-void AutoMap::Reset(const PlayerPawn *p)
-{
-  CONS_Printf("AM::Reset\n");
-  mpawn = p;
-  mp = p->mp;
-  if (mp == NULL)
-    return;
-
-  clearMarks();
-  Resize();
-}
-
-
-//
-void AutoMap::Close()
-{
-  if (!active)
-    return;
-
-  unloadPics();
-  mp = NULL;
-  mpawn = NULL;
-  active = false;
-  // stopped = true;
-}
-
-
-//
-void AutoMap::Open(const PlayerPawn *p)
-{
-  if (active)
-    return;
-  CONS_Printf("AM::Open, pawn = %p, map = %p\n", p, p->mp);
-  mpawn = p;
-  mp = p->mp;
-
-  // just in case...
-  if (mp == NULL)
-    return;
-
-  // if AutoMap is active(open), it MUST have a valid mp and mpawn
-  active = true;
-
-  //  if (!stopped) Close();
-  //stopped = false;
-
-  bigstate = false;
-
-  // FIXME Reset() must also be called if a new map is loaded
-  if (am_recalc) // screen size changed
-    {
-      am_recalc = false;
-      Resize();
-    }
-  InitVariables();
-  loadPics();
-}
 
 //
 // set the window scale to the maximum size
@@ -714,16 +612,14 @@ void AM_maxOutWindowScale()
 }
 
 
-// was AM_Responder
+
 // Handle events (user inputs) in automap mode
-//
 bool AutoMap::Responder(event_t *ev)
 {
-  bool rc;
   static int cheatstate=0;
   static char buffer[20];
 
-  rc = false;
+  bool rc = false;
 
   if (!active)
     {
@@ -731,7 +627,7 @@ bool AutoMap::Responder(event_t *ev)
         {
           //faB: prevent alt-tab in win32 version to activate automap just before minimizing the app
           //     doesn't do any harm to the DOS version
-          if (!gamekeydown[KEY_ALT])
+          if (!altdown)
             {
               if (displayplayer->pawn)
                 Open(displayplayer->pawn);
@@ -778,7 +674,8 @@ bool AutoMap::Responder(event_t *ev)
               AM_saveScaleAndLoc();
               AM_minOutWindowScale();
             }
-          else restoreScaleAndLoc();
+          else
+	    restoreScaleAndLoc();
           break;
 
           // messages are given to consoleplayer, because he's pressing the keys
@@ -805,7 +702,6 @@ bool AutoMap::Responder(event_t *ev)
           rc = false;
         }
     }
-
   else if (ev->type == ev_keyup)
     {
       rc = false;
@@ -854,12 +750,17 @@ void AM_changeWindowScale()
 }
 
 
-//
-// was AM_doFollowPlayer
-//
-void AutoMap::doFollowPlayer()
+
+// Updates on Game Tick
+void AutoMap::Ticker()
 {
-  if (f_oldloc.x != mpawn->x || f_oldloc.y != mpawn->y)
+  if (dedicated)
+    return;
+
+  if (!active)
+    return;
+
+  if (followplayer && (f_oldloc.x != mpawn->x || f_oldloc.y != mpawn->y))
     {
       m_x = FTOM(MTOF(mpawn->x)) - m_w/2;
       m_y = FTOM(MTOF(mpawn->y)) - m_h/2;
@@ -872,43 +773,7 @@ void AutoMap::doFollowPlayer()
       //  m_y = FTOM(MTOF(mpawn->y - m_h/2));
       //  m_x = mpawn->x - m_w/2;
       //  m_y = mpawn->y - m_h/2;
-
     }
-}
-
-//
-// was AM_updateLightLev
-//
-void AutoMap::updateLightLev()
-{
-  static int nexttic = 0;
-  //static int litelevels[] = { 0, 3, 5, 6, 6, 7, 7, 7 };
-  static int litelevels[] = { 0, 4, 7, 10, 12, 14, 15, 15 };
-  static int litelevelscnt = 0;
-
-  // Change light level
-  if (amclock>nexttic)
-    {
-      lightlev = litelevels[litelevelscnt++];
-      if (litelevelscnt == sizeof(litelevels)/sizeof(int)) litelevelscnt = 0;
-      nexttic = amclock + 6 - (amclock % 6);
-    }
-}
-
-
-// Updates on Game Tick
-void AutoMap::Ticker()
-{
-  if (dedicated)
-    return;
-
-  if (!active)
-    return;
-
-  amclock++;
-
-  if (followplayer)
-    doFollowPlayer();
 
   // Change the zoom if necessary
   if (ftom_zoommul != FRACUNIT)
@@ -919,8 +784,20 @@ void AutoMap::Ticker()
     changeWindowLoc();
 
   // Update light level
-  // AM_updateLightLev();
+  /*
+  static int nexttic = 0;
+  const int litelevels[] = { 0, 4, 7, 10, 12, 14, 15, 15 };
+  static int index = 0;
 
+  // Change light level
+  if (++amclock > nexttic)
+    {
+      lightlev = litelevels[index++];
+      if (index == sizeof(litelevels)/sizeof(int))
+	index = 0;
+      nexttic = amclock + 6 - (amclock % 6);
+    }
+  */
 }
 
 
@@ -928,34 +805,28 @@ void AutoMap::Ticker()
 // Clear automap frame buffer.
 void AutoMap::clearFB(int color)
 {
-#ifdef HWRENDER
-  if (rendermode != render_soft)
-    {
-      HWR.ClearAutomap();
-      return;
-    }
-#endif
-
   if (!mapback)
     {
-      memset(fb, color, f_w*f_h*vid.BytesPerPixel);
+#ifdef HWRENDER
+      if (rendermode != render_soft)
+	HWR.ClearAutomap();
+      else
+#endif
+	memset(fb, color, f_w*f_h*vid.BytesPerPixel);
     }
   else
     {
-      int i,y;
-      int dmapx;
-      int dmapy;
+      /*
       static int mapxstart;
       static int mapystart;
-      byte *dest = vid.screens[0],*src;
-#define MAPLUMPHEIGHT (vid.height - hud.stbarheight)
+      int MAPLUMPHEIGHT = f_h;
 
-      if(followplayer)
+      if (followplayer)
         {
           static vertex_t oldplr;
 
-          dmapx = (MTOF(mpawn->x)-MTOF(oldplr.x)); //fixed point
-          dmapy = (MTOF(oldplr.y)-MTOF(mpawn->y));
+          int dmapx = (MTOF(mpawn->x)-MTOF(oldplr.x)); //fixed point
+          int dmapy = (MTOF(oldplr.y)-MTOF(mpawn->y));
 
           oldplr.x = mpawn->x;
           oldplr.y = mpawn->y;
@@ -985,17 +856,28 @@ void AutoMap::clearFB(int color)
             mapystart += MAPLUMPHEIGHT;
         }
 
+      fixed_t colfrac = FixedDiv(FRACUNIT, vid.dupx << FRACBITS);
+      fixed_t rowfrac = FixedDiv(FRACUNIT, vid.dupy << FRACBITS);
+
       //blit the automap background to the screen.
-      for (y=0 ; y<f_h ; y++)
+      byte *dest = vid.screens[0];
+      int orig = mapxstart + mapystart*320;
+      fixed_t row = 0;
+      for (int y=0; y < f_h; y++)
         {
-          src = mapback + mapxstart + (y+mapystart)*320;
-          for (i=0 ; i<320*vid.dupx ; i++)
+	  fixed_t col = 0;
+	  int base = orig + (row >> FRACBITS)*320;
+          for (int x=0; x < f_w; x++)
             {
-              while( src>mapback+320*MAPLUMPHEIGHT ) src-=320*MAPLUMPHEIGHT;
-              *dest++ = *src++;
+	      int i = base + (col >> FRACBITS);
+              *dest++ = mapback[i % (320*(200-65))];
+	      col += colfrac;
             }
-          dest += vid.width-vid.dupx*320;
+	  row += rowfrac;
         }
+      */
+
+      mapback->DrawFill(0, 0, f_w, f_h);
     }
 }
 
@@ -1218,14 +1100,20 @@ static void AM_drawMline(mline_t* ml, int color)
   static fline_t fl;
 
   if (AM_clipMline(ml, &fl))
-    AM_drawFline(&fl, color); // draws it on frame buffer using fb coords
+    {
+#ifdef HWRENDER
+      if (rendermode != render_soft)
+	HWRend::DrawAMline(&fl, color);
+      else
+#endif
+	AM_drawFline_soft(&fl, color); // draws it on frame buffer using fb coords
+    }
 }
 
 
 
-// was AM_drawGrid
-// Draws flat (floor/ceiling tile) aligned grid lines.
-//
+
+/// Draws flat (floor/ceiling tile) aligned grid lines.
 void AutoMap::drawGrid(int color)
 {
   fixed_t x, y;
@@ -1274,6 +1162,7 @@ void AutoMap::drawWalls()
 {
   int i;
   static mline_t l;
+  // TODO polyobjs
 
   for (i=0; i < mp->numlines; i++)
     {
@@ -1291,41 +1180,44 @@ void AutoMap::drawWalls()
             }
           else
             {
-              switch (mp->lines[i].special) {
-              case 39 :
-                // teleporters
-                AM_drawMline(&l, WALLCOLORS+WALLRANGE/2);
-                break;
-              case 26:
-              case 32:
-                AM_drawMline(&l, BLUEKEYCOLOR);
-                break;
-              case 27:
-              case 34:
-                AM_drawMline(&l, YELLOWKEYCOLOR);
-                break;
-              case 28:
-              case 33:
-                AM_drawMline(&l, REDKEYCOLOR); // green for heretic
-                break;
-              default :
-                if (mp->lines[i].flags & ML_SECRET) // secret door
-                  {
-                    if (am_cheating) AM_drawMline(&l, SECRETWALLCOLORS + lightlev);
-                    else AM_drawMline(&l, WALLCOLORS+lightlev);
-                  }
-                else if (mp->lines[i].backsector->floorheight
-                         != mp->lines[i].frontsector->floorheight) {
-                  AM_drawMline(&l, FDWALLCOLORS + lightlev); // floor level change
-                }
-                else if (mp->lines[i].backsector->ceilingheight
-                         != mp->lines[i].frontsector->ceilingheight) {
-                  AM_drawMline(&l, CDWALLCOLORS+lightlev); // ceiling level change
-                }
-                else if (am_cheating) {
-                  AM_drawMline(&l, TSWALLCOLORS+lightlev);
-                }
-              }
+              switch (mp->lines[i].special)
+		{
+		case 70: // teleporters
+		  AM_drawMline(&l, WALLCOLORS+WALLRANGE/2);
+		  break;
+		case 13: // locked doors
+		  // mp->lines[i].args[3] = lock type
+		  AM_drawMline(&l, BLUEKEYCOLOR);
+		  //AM_drawMline(&l, YELLOWKEYCOLOR);
+		  //AM_drawMline(&l, REDKEYCOLOR);
+		  break;
+		case 83: // ACS_Locked_Execute
+		  AM_drawMline(&l, REDKEYCOLOR);
+		  break;
+
+		default :
+		  if (mp->lines[i].flags & ML_SECRET) // secret door
+		    {
+		      if (am_cheating)
+			AM_drawMline(&l, SECRETWALLCOLORS + lightlev);
+		      else
+			AM_drawMline(&l, WALLCOLORS + lightlev);
+		    }
+		  else if (mp->lines[i].backsector->floorheight
+			   != mp->lines[i].frontsector->floorheight)
+		    {
+		      AM_drawMline(&l, FDWALLCOLORS + lightlev); // floor level change
+		    }
+		  else if (mp->lines[i].backsector->ceilingheight
+			   != mp->lines[i].frontsector->ceilingheight)
+		    {
+		      AM_drawMline(&l, CDWALLCOLORS+lightlev); // ceiling level change
+		    }
+		  else if (am_cheating)
+		    {
+		      AM_drawMline(&l, TSWALLCOLORS+lightlev);
+		    }
+		}
             }
         }
       else if (mpawn->powers[pw_allmap])
@@ -1342,9 +1234,7 @@ void AutoMap::drawWalls()
 //
 void AM_rotate(fixed_t *x, fixed_t *y, angle_t a)
 {
-  fixed_t tmpx;
-
-  tmpx =
+  fixed_t tmpx =
     FixedMul(*x,finecosine[a>>ANGLETOFINESHIFT])
     - FixedMul(*y,finesine[a>>ANGLETOFINESHIFT]);
 
@@ -1441,9 +1331,8 @@ void AutoMap::drawPlayers()
     }
 }
 
-//
-// was AM_drawThings
-//
+
+
 void AutoMap::drawThings(int colors, int colorrange)
 {
   int    i;
@@ -1461,7 +1350,7 @@ void AutoMap::drawThings(int colors, int colorrange)
     }
 }
 
-// was AM_drawMarks
+
 void AutoMap::drawMarks()
 {
   int i, fx, fy, w, h;
@@ -1477,10 +1366,11 @@ void AutoMap::drawMarks()
           fx = CXMTOF(markpoints[i].x);
           fy = CYMTOF(markpoints[i].y);
           if (fx >= f_x && fx <= f_w - w && fy >= f_y && fy <= f_h - h)
-            marknums[i]->Draw(fx, fy, FB);
+            marknums[i]->Draw(fx, fy, 0);
         }
     }
 }
+
 
 void AM_drawCrosshair(int color)
 {
@@ -1497,7 +1387,7 @@ void AM_drawCrosshair(int color)
 }
 
 
-// draws the Automap for Pawn p, usually p == displayplayer->pawn.
+// draws the Automap
 void AutoMap::Drawer()
 {
   if (!active)
@@ -1520,9 +1410,8 @@ void AutoMap::Drawer()
 
   // mapname
   {
-    int y;
     const char *mapname = mp->info->nicename.c_str();
-    y = vid.height - hud.stbarheight - 1;
+    int y = vid.height - hud.stbarheight - 20;
     hud_font->DrawString(20, y - hud_font->StringHeight(mapname), mapname, V_SSIZE);
   }
 

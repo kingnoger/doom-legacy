@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2004/10/14 19:35:46  smite-meister
+// automap, bbox_t
+//
 // Revision 1.22  2004/09/23 23:21:18  smite-meister
 // HUD updated
 //
@@ -1548,24 +1551,21 @@ void HUD::ST_Drawer(bool refresh)
   // and draw them
   if (statusbar_on)
     {
-      bool fresh = false;
       // after ST_Start(), screen refresh needed, or vid mode change
       if (st_refresh)
         {
           // draw status bar background to off-screen buff
           ST_RefreshBackground();
-
-          // and refresh all widgets
-	  fresh = true;
-          st_refresh = false;
         }
 
       for (i = statusbar.size()-1; i>=0; i--)
-	statusbar[i]->Update(fresh);
+	statusbar[i]->Update(st_refresh);
 
       if (mainbar_on)
 	for (i = mainbar.size()-1; i>=0; i--)
-	  mainbar[i]->Update(fresh);
+	  mainbar[i]->Update(st_refresh);
+
+      st_refresh = false;
     }
   else
     {

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2004/10/14 19:35:51  smite-meister
+// automap, bbox_t
+//
 // Revision 1.21  2004/10/11 11:16:08  smite-meister
 // windows fix
 //
@@ -252,6 +255,7 @@ static int TranslateJoybutton(Uint8 which, Uint8 button)
     case 2:  base = KEY_JOY2BUT0; break;
     default: base = KEY_JOY3BUT0; break;
     }
+
   return base + button;
 }
 
@@ -930,8 +934,8 @@ void I_GetDiskFreeSpace(long long *freespace)
   }
   else
     {
-      DWORD SectorsPerCluster, BytesPerSector, NumberOfFreeClusters;
-      DWORD TotalNumberOfClusters;
+      DWORD SectorsPerCluster, BytesPerSector, NumberOfFreeClusters, TotalNumberOfClusters;
+
       GetDiskFreeSpace(NULL, &SectorsPerCluster, &BytesPerSector,
 		       &NumberOfFreeClusters, &TotalNumberOfClusters);
       *freespace = BytesPerSector*SectorsPerCluster*NumberOfFreeClusters;
