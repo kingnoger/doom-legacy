@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2003/06/20 20:56:07  smite-meister
+// Presentation system tweaked
+//
 // Revision 1.18  2003/06/10 22:39:53  smite-meister
 // Bugfixes
 //
@@ -327,7 +330,7 @@ DActor::DActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
     pres = new modelpres_t("models/sarge/");
   else
   */
-    pres = new spritepres_t(sprnames[state->sprite], state->frame, 0);
+    pres = new spritepres_t(sprnames[state->sprite], info, 0);
 }
 
 
@@ -1147,16 +1150,6 @@ bool DActor::SetState(statenum_t ns, bool call)
         
     state = st = &states[ns];
     tics = st->tics;
-    if (pres->IsSprite())
-      {
-	// kludge to fix those sprites that change name during animation (!!!) TODO make a better fix
-	if (((spritepres_t *)pres)->spr->iname != *(int *)(sprnames[state->sprite]))
-	  {
-	    delete pres;
-	    pres = new spritepres_t(sprnames[state->sprite], state->frame, 0); 
-	  }
-	pres->SetFrame(st->frame);	
-      }
     
     // Modified handling.
     // Call action functions when the state is set
@@ -1167,7 +1160,9 @@ bool DActor::SetState(statenum_t ns, bool call)
         
     ns = st->nextstate;
   } while (!tics && !seenstate[ns]);   // killough 4/9/98
-    
+
+  pres->SetFrame(state); // set the sprite frame (if pres is not a sprite, do nothing)
+
   if (ret && !tics)  // killough 4/9/98: detect state cycles
     CONS_Printf("Warning: State Cycle Detected");
     

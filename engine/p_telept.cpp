@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/06/20 20:56:07  smite-meister
+// Presentation system tweaked
+//
 // Revision 1.9  2003/05/11 21:23:51  smite-meister
 // Hexen fixes
 //
@@ -140,6 +143,8 @@ bool Actor::Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent)
 // was EV_SilentTeleport
 bool Map::EV_Teleport(line_t *line, Actor *thing, bool silent)
 {
+  if (!line)
+    return false;
   // don't teleport missiles
   // TODO give all Doom missiles the MF2_NOTELEPORT flag....simpler
   // Don't teleport if hit back of line,
@@ -198,13 +203,15 @@ bool Map::EV_Teleport(line_t *line, Actor *thing, bool silent)
 // maximum fixed_t units to move object to avoid hiccups
 #define FUDGEFACTOR 10
 
-int Map::EV_SilentLineTeleport(line_t *line, int side, Actor *thing, bool reverse)
+bool Map::EV_SilentLineTeleport(line_t *line, int side, Actor *thing, bool reverse)
 {
   int i;
   line_t *l;
+  if (!line)
+    return false;
 
   if (side || thing->flags & MF_MISSILE)
-    return 0;
+    return false;
 
   for (i = -1; (l = FindLineFromTag(line->tag, &i)) != NULL;)
     if (l != line && l->backsector)
@@ -279,6 +286,6 @@ int Map::EV_SilentLineTeleport(line_t *line, int side, Actor *thing, bool revers
 
         return true;
       }
-  return 0;
+  return false;
 }
 

@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.15  2003/06/20 20:56:07  smite-meister
+// Presentation system tweaked
+//
 // Revision 1.14  2003/06/01 18:56:29  smite-meister
 // zlib compression, partial polyobj fix
 //
@@ -120,7 +123,7 @@ PlayerInfo::PlayerInfo(const string & n)
   name = n;
   number = 0;
   team = 0;
-  pawntype = 0;
+  pawntype = NULL;
   pclass = 0;
   color = 0;
   skin = 0;

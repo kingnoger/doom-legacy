@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2003/06/20 20:56:07  smite-meister
+// Presentation system tweaked
+//
 // Revision 1.11  2003/05/30 13:34:44  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -565,7 +568,8 @@ static byte CheatIDDQDSeq[] =
 // Cheat lists _must_ be ended with a TCheat(NULL, ...) terminator for now
 
 // universal cheats which work in every game mode (begin with id...)
-static TCheat Basic_Cheats[] = {
+static TCheat Basic_Cheats[] =
+{
   TCheat(CheatFlyFunc, cheat_fly_around_seq),
   TCheat(CheatCDFunc, cheat_cd_seq),
   TCheat(CheatMyPosFunc, cheat_mypos_seq),
@@ -573,7 +577,8 @@ static TCheat Basic_Cheats[] = {
 };
 
 // original Doom cheats
-static TCheat Doom_Cheats[] = {
+static TCheat Doom_Cheats[] =
+{
   TCheat(CheatAMFunc, cheat_amap_seq),
   TCheat(CheatMusFunc, cheat_mus_seq),
   TCheat(CheatGodFunc, cheat_god_seq),
@@ -589,7 +594,8 @@ static TCheat Doom_Cheats[] = {
 };
 
 // original Heretic cheats
-static TCheat Heretic_Cheats[] = {
+static TCheat Heretic_Cheats[] =
+{
   TCheat(CheatGodFunc, CheatGodSeq),
   TCheat(CheatNoClipFunc, CheatNoClipSeq),
   TCheat(CheatWeaponsFunc, CheatWeaponsSeq),
@@ -653,6 +659,8 @@ bool cht_Responder (event_t* ev)
   // use heretic cheats instead?
   if (game.mode == gm_heretic)
     cheats = Heretic_Cheats;
+  else if (game.mode == gm_hexen)
+    return eat; // TODO no Hexen cheats yet
 
   for (i = 0; cheats[i].func != NULL; i++)
     {

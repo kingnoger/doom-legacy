@@ -8,6 +8,9 @@
 // Renderer is a friend class of Map
 //
 // $Log$
+// Revision 1.4  2003/06/20 20:56:08  smite-meister
+// Presentation system tweaked
+//
 // Revision 1.3  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -23,7 +26,6 @@
 #include "m_fixed.h"
 #include "hardware/hw_defs.h"
 
-class Map;
 class PlayerInfo;
 class PlayerPawn;
 class Actor;
@@ -48,12 +50,15 @@ struct extracolormap_t;
 
 class Rend
 {
+  friend class spritepres_t; // this is a HACK too, for software renderer
 private:
-  static Map *m; // currently rendered Map
+  const class Map *m; // currently rendered Map
 
   // FIXME temporary this is the dirtiest HACK ever
   // temporarily we have here COPIES of, or pointers to certain Map data members (geometry).
   // these MUST be set every time before rendering begins
+
+  // when the renderer is rewritten, this can be done in a better way (the Map* should be enough) 
 
   int             numvertexes;
   vertex_t*       vertexes;
@@ -139,7 +144,8 @@ public:
 		      fixed_t  wallfrac,
 		      int      flags);
 
-  void R_ProjectSprite (Actor* thing);
+  void R_AddSprites(sector_t *sec, int lightlevel);
+  //void R_ProjectSprite (Actor* thing);
   void R_DrawSprite (vissprite_t* spr);
 
   // hardware renderer
@@ -150,7 +156,7 @@ public:
   void HWR_DrawPlayerSprites();
   bool HWR_CheckBBox(fixed_t *bspcoord);
   void HWR_DrawSkyBackground(PlayerPawn *player);
-  void HWR_ProjectSprite(Actor *thing);
+  //void HWR_ProjectSprite(Actor *thing);
   void HWR_AddSprites(sector_t *sec);
   float HWR_ClipViewSegment(int x, polyvertex_t* v1, polyvertex_t* v2);
   void HWR_ClipPassWallSegment(int first, int last);

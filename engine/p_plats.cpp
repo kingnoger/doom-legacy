@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/06/20 20:56:07  smite-meister
+// Presentation system tweaked
+//
 // Revision 1.5  2003/05/30 13:34:46  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -322,14 +325,14 @@ void Map::ActivateInStasisPlat(int tag)
 
 // was EV_StopPlat
 //SoM: 3/7/2000: use Boom code insted.
-int Map::EV_StopPlat(line_t* line)
+int Map::EV_StopPlat(int tag)
 {
   int rtn = 0;
   list<plat_t *>::iterator i;
   for (i = activeplats.begin(); i != activeplats.end(); i++)
     {
       plat_t *plat = *i;
-      if (plat->status != plat_t::in_stasis && plat->tag == line->tag)
+      if (plat->status != plat_t::in_stasis && plat->tag == tag)
 	{
 	  TagFinished(plat->sector->tag);
 	  plat->oldstatus = plat->status;

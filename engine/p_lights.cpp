@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/06/20 20:56:07  smite-meister
+// Presentation system tweaked
+//
 // Revision 1.2  2003/06/08 16:19:21  smite-meister
 // Hexen lights.
 //
@@ -192,11 +195,11 @@ void Map::SpawnStrobeLight(sector_t *sec, short brighttime, short darktime, bool
 //
 // Start strobing lights (usually from a trigger)
 //
-int Map::EV_StartLightStrobing(line_t *line)
+int Map::EV_StartLightStrobing(int tag)
 {
   int rtn = 0;
 
-  for (int i = -1; (i = FindSectorFromLineTag(line,i)) >= 0; )
+  for (int i = -1; (i = FindSectorFromTag(tag,i)) >= 0; )
     {
       rtn++;
       sector_t *sec = &sectors[i];
@@ -214,7 +217,7 @@ int Map::EV_StartLightStrobing(line_t *line)
 //
 // TURN LINE'S TAG LIGHTS OFF
 //
-int Map::EV_TurnTagLightsOff(line_t* line)
+int Map::EV_TurnTagLightsOff(int tag)
 {
   int                 i;
   int                 j;
@@ -227,7 +230,7 @@ int Map::EV_TurnTagLightsOff(line_t* line)
 
   for (j = 0;j < numsectors; j++, sector++)
     {
-      if (sector->tag == line->tag)
+      if (sector->tag == tag)
         {
 	  min = sector->lightlevel;
 	  for (i = 0;i < sector->linecount; i++)
@@ -249,7 +252,7 @@ int Map::EV_TurnTagLightsOff(line_t* line)
 //
 // TURN LINE'S TAG LIGHTS ON
 //
-int Map::EV_LightTurnOn(line_t *line, int bright)
+int Map::EV_LightTurnOn(int tag, int bright)
 {
   int         i;
   int         j;
@@ -262,7 +265,7 @@ int Map::EV_LightTurnOn(line_t *line, int bright)
   for (i=0;i<numsectors;i++, sector++)
     {
       int tbright = bright; //SoM: 3/7/2000: Search for maximum per sector
-      if (sector->tag == line->tag)
+      if (sector->tag == tag)
         {
 	  // bright = 0 means to search
 	  // for highest light level

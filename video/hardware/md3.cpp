@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/06/20 20:56:08  smite-meister
+// Presentation system tweaked
+//
 // Revision 1.3  2003/04/24 20:30:44  hurdler
 // Remove lots of compiling warnings
 //
@@ -584,11 +587,6 @@ modelpres_t::~modelpres_t()
 }
 
 
-void modelpres_t::SetFrame(int fr)
-{
-  // do nothing
-}
-
 // set a new animation sequence for the player
 void modelpres_t::SetAnim(int seq)
 {
@@ -615,14 +613,12 @@ void modelpres_t::SetAnim(int seq)
 }
 
 
-// update and draw the player model
-bool modelpres_t::Draw(const Actor *p)
+bool modelpres_t::Update(int nowtic)
 {
-  fixed_t time = int(p->mp->maptic * FRACUNIT / 35.0); // seconds
+  fixed_t time = int(nowtic * FRACUNIT / 35.0); // seconds
 
-  int i;
   // For some reason head is never animated? Always frame 0 for head.
-  for (i=0; i<2; i++)
+  for (int i=0; i<2; i++)
     {
       MD3_anim *a = &mdl->anim[st[i].seq];
 
@@ -643,6 +639,14 @@ bool modelpres_t::Draw(const Actor *p)
       st[i].interp = in; // remainder
     }
   lastupdate = time;
+  return true;
+}
+
+
+// update and draw the player model
+bool modelpres_t::Draw(const Actor *p)
+{
+  Update(p->mp->maptic);
   /*
     // TODO T&L for models
   glPushMatrix();

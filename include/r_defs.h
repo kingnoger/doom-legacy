@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/06/20 20:56:08  smite-meister
+// Presentation system tweaked
+//
 // Revision 1.5  2003/04/14 08:58:31  smite-meister
 // Hexen maps load.
 //
@@ -148,8 +151,6 @@
 #include "m_fixed.h"
 #include "screen.h"     //added:26-01-98:MAXVIDWIDTH, MAXVIDHEIGHT
 
-class Thinker;
-
 
 // Silhouette, needed for clipping Segs (mainly)
 // and sprites representing things.
@@ -205,9 +206,6 @@ struct vertex_t
 };
 
 
-// Forward of LineDefs, for Sectors.
-struct line_t;
-struct sector_t;
 
 // Each sector has a mappoint_t in its center
 //  for sound origin purposes.
@@ -265,9 +263,9 @@ struct ffloor_t
 
   int              secnum;
   ffloortype_e     flags;
-  line_t*   master;
+  struct line_t*   master;
 
-  sector_t* target;
+  struct sector_t* target;
 
   ffloor_t* next;
   ffloor_t* prev;
@@ -303,15 +301,6 @@ struct r_lightlist_t
 };
 
 
-typedef enum {
-  FLOOR_SOLID,
-  FLOOR_ICE,
-  FLOOR_LIQUID,
-  FLOOR_WATER,
-  FLOOR_LAVA,
-  FLOOR_SLUDGE
-} floortype_t;
-
 // ----- for special tricks with HW renderer -----
 
 //
@@ -325,49 +314,47 @@ struct  linechain_t
 // ----- end special tricks -----
 
 
+enum floortype_t
+{
+  FLOOR_SOLID,
+  FLOOR_ICE,
+  FLOOR_LIQUID,
+  FLOOR_WATER,
+  FLOOR_LAVA,
+  FLOOR_SLUDGE
+};
+
 //
 // The SECTORS record, at runtime.
 // Stores things/mobjs.
 //
-class Actor;
-struct msecnode_t;
 
 struct sector_t
 {
-  fixed_t     floorheight;
-  fixed_t     ceilingheight;
-  short       floorpic;
-  short       ceilingpic;
-  short       lightlevel;
-  short       special;
-  short       oldspecial;      //SoM: 3/6/2000: Remember if a sector was secret (for automap)
-  short       tag;
-  int nexttag,firsttag;        //SoM: 3/6/2000: by killough: improves searches for tags.
+  fixed_t  floorheight, ceilingheight;
+  short    floorpic, ceilingpic;
+  short    lightlevel;
+  short    special, tag;
+  int     nexttag, firsttag; //SoM: 3/6/2000: by killough: improves searches for tags.
 
-  // 0 = untraversed, 1,2 = sndlines -1
-  short       soundtraversed;
-  short       floortype;  // see floortype_t beffor 
+  short     soundtraversed; // 0 = untraversed, 1,2 = sndlines -1
+  class Actor* soundtarget; // thing that made a sound (or null)
 
-  // thing that made a sound (or null)
-  Actor*     soundtarget;
+  short      seqType;   // sector sound sequence
+  mappoint_t soundorg;  // origin for any sounds played by the sector
 
-  // mapblock bounding box for height changes
-  int         blockbox[4];
+  short  floortype;   // see floortype_t
 
-  // origin for any sounds played by the sector
-  mappoint_t soundorg;
+  int    blockbox[4]; // mapblock bounding box for height changes
 
-  // if == validcount, already checked
-  int         validcount;
-
-  // list of mobjs in sector
-  Actor*     thinglist;
+  int     validcount; // if == validcount, already checked
+  Actor*  thinglist;  // list of mobjs in sector
 
   //SoM: 3/6/2000: Start boom extra stuff
-  // thinker_t for reversable actions
-  void *floordata;    // make thinkers on
-  void *ceilingdata;  // floors, ceilings, lighting,
-  void *lightingdata; // independent of one another
+  // Thinker for reversable actions
+  class Thinker *floordata; // make thinkers on
+  Thinker *ceilingdata;  // floors, ceilings, lighting,
+  Thinker *lightingdata; // independent of one another
   
   // lockout machinery for stairbuilding
   int stairlock;   // -2 on first locked -1 after thinker done 0 normally
@@ -384,23 +371,21 @@ struct sector_t
   int floorlightsec, ceilinglightsec;
   int teamstartsec;
 
-  // TEST
-  short damage, damagetype; // given according to damage bits in 'special'
-
-  float gravity;
-
-  // friction belongs here, not in Actor
-  float friction, movefactor;
+  // TODO this could be replaced with a pointer to a sectorinfo struct
+  // (to save space, since most sectors have default values for these...)
+  short damage, damagetype; // TEST given according to damage bits in 'special'
+  float gravity;  // TEST
+  float friction, movefactor;  // friction belongs here, not in Actor
 
   int bottommap, midmap, topmap; // dynamic colormaps
   
   // list of mobjs that are at least partially in the sector
   // thinglist is a subset of touching_thinglist
-  msecnode_t *touching_thinglist;               // phares 3/14/98  
+  struct msecnode_t *touching_thinglist;               // phares 3/14/98  
   //SoM: 3/6/2000: end stuff...
 
-  int                 linecount;
-  line_t**     lines;  // [linecount] size
+  int       linecount;
+  line_t**  lines;  // [linecount] size
 
   //SoM: 2/23/2000: Improved fake floor hack
   ffloor_t*                  ffloors;
@@ -663,11 +648,6 @@ struct node_t
 #define MAXFFLOORS    40
 #endif
 
-//
-// ?
-//
-struct visplane_t;
-
 struct drawseg_t
 {
   seg_t*              curline;
@@ -693,7 +673,7 @@ struct drawseg_t
   short*              sprbottomclip;
   short*              maskedtexturecol;
 
-  visplane_t*  ffloorplanes[MAXFFLOORS];
+  struct visplane_t*  ffloorplanes[MAXFFLOORS];
   int                 numffloorplanes;
   ffloor_t*    thicksides[MAXFFLOORS];
   short*              thicksidecol;

@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.21  2003/06/20 20:56:07  smite-meister
+// Presentation system tweaked
+//
 // Revision 1.20  2003/06/10 22:39:54  smite-meister
 // Bugfixes
 //
@@ -436,13 +439,12 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
   PlayerPawn *p;
   CONS_Printf("SpawnPlayer: pawn == %p\n", pi->pawn);
 
-  extern vector<pawn_info_t *> allowed_pawns;
   // the player may have his old pawn from the previous level
   if (!pi->pawn)
     {
       const float AutoArmorSave[] = { 0.0, 0.15, 0.10, 0.05, 0.0 };
 
-      p = new PlayerPawn(nx, ny, nz, allowed_pawns[pi->pawntype]);
+      p = new PlayerPawn(nx, ny, nz, pi->pawntype);
       p->player = pi;
       pi->pawn  = p;
       p->pclass = pi->pclass;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2003/06/20 20:56:07  smite-meister
+// Presentation system tweaked
+//
 // Revision 1.13  2003/06/08 16:19:21  smite-meister
 // Hexen lights.
 //
@@ -1075,18 +1078,6 @@ static bool P_CheckKeys(Actor *mo, int lock)
   return true;
 }
 
-//
-// P_WasSecret()
-//
-// Passed a sector, returns if the sector secret type is was active, i.e.
-// secret type was set and the secret has been obtained already.
-//
-/*
-bool P_WasSecret(sector_t *sec)
-{
-  return (sec->oldspecial==9 || (sec->oldspecial&SECRET_MASK));
-}
-*/
 
 //============================================================================
 //
@@ -1262,13 +1253,21 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
 {
   bool success = false;
   int lock;
-  // temporary kludge so that I don't have to change the EV_ function interfaces yet
+
+  // quite a good kludge
   // line->tag and args[0] are not always same (scripts!)  
-  int temptag;
-  if (line && args[0])
+  int temptag = -1;
+  int tag = args[0];
+  if (line)
     {
-      temptag = line->tag;
-      line->tag = args[0];
+      if (tag)
+	{
+	  temptag = line->tag;
+	  line->tag = tag; // TODO this would not be necessary if some EV_ functions
+	  // took line and tag as separate parameters
+	}
+      else
+	tag = line->tag;
     }
   
   //CONS_Printf("ExeSpecial (%d), tag %d (%d)\n", special, line->tag, args[0]);
@@ -1277,24 +1276,24 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
     case 1: // Poly Start Line
       break;
     case 2: // Poly Rotate Left
-      success = EV_RotatePoly(line, args, 1, false);
+      success = EV_RotatePoly(args, 1, false);
       break;
     case 3: // Poly Rotate Right
-      success = EV_RotatePoly(line, args, -1, false);
+      success = EV_RotatePoly(args, -1, false);
       break;
     case 4: // Poly Move
-      success = EV_MovePoly(line, args, false, false);
+      success = EV_MovePoly(args, false, false);
       break;
     case 5: // Poly Explicit Line:  Only used in initialization
       break;
     case 6: // Poly Move Times 8
-      success = EV_MovePoly(line, args, true, false);
+      success = EV_MovePoly(args, true, false);
       break;
     case 7: // Poly Door Swing
-      success = EV_OpenPolyDoor(line, args, polydoor_t::pd_swing);
+      success = EV_OpenPolyDoor(args, polydoor_t::pd_swing);
       break;
     case 8: // Poly Door Slide
-      success = EV_OpenPolyDoor(line, args, polydoor_t::pd_slide);
+      success = EV_OpenPolyDoor(args, polydoor_t::pd_slide);
       break;
     case 10: // Door Close
       success = EV_DoDoor(line, mo, vdoor_t::Close, SPEED(args[1]), TICS(args[2]));
@@ -1359,22 +1358,22 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       success = EV_DoFloor(line, floor_t::RelHeight, SPEED(args[1]), 0, -8*HEIGHT(args[2]));
       break;
     case 40: // Ceiling Lower by Value
-      success = EV_DoCeiling(line, ceiling_t::RelHeight, SPEED(args[1]), 0, 0, -HEIGHT(args[2]));
+      success = EV_DoCeiling(tag, ceiling_t::RelHeight, SPEED(args[1]), 0, 0, -HEIGHT(args[2]));
       break;
     case 41: // Ceiling Raise by Value
-      success = EV_DoCeiling(line, ceiling_t::RelHeight, SPEED(args[1]), 0, 0, HEIGHT(args[2]));
+      success = EV_DoCeiling(tag, ceiling_t::RelHeight, SPEED(args[1]), 0, 0, HEIGHT(args[2]));
       break;
     case 42: // Ceiling Crush and Raise
-      success = EV_DoCeiling(line, ceiling_t::Crusher, SPEED(args[1]), SPEED(args[1])/2, args[2], HEIGHT(8));
+      success = EV_DoCeiling(tag, ceiling_t::Crusher, SPEED(args[1]), SPEED(args[1])/2, args[2], HEIGHT(8));
       break;
     case 43: // Ceiling Lower and Crush
-      success = EV_DoCeiling(line, ceiling_t::Floor, SPEED(args[1]), 0, args[2], HEIGHT(8));
+      success = EV_DoCeiling(tag, ceiling_t::Floor, SPEED(args[1]), 0, args[2], HEIGHT(8));
       break;
     case 44: // Ceiling Crush Stop
-      success = EV_StopCeiling(line);
+      success = EV_StopCeiling(tag);
       break;
     case 45: // Ceiling Crush Raise and Stay
-      success = EV_DoCeiling(line, ceiling_t::CrushOnce, SPEED(args[1]), SPEED(args[1])/2, args[2], HEIGHT(8));
+      success = EV_DoCeiling(tag, ceiling_t::CrushOnce, SPEED(args[1]), SPEED(args[1])/2, args[2], HEIGHT(8));
       break;
       /*
       case 46: // Floor Crush Stop TODO activefloors list or something
@@ -1385,7 +1384,7 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       success = EV_DoPlat(line, plat_t::LHF, SPEED(args[1]), TICS(args[2]), 0);
       break;
     case 61: // Plat Stop
-      EV_StopPlat(line);
+      EV_StopPlat(tag);
       break;
     case 62: // Plat Down-Wait-Up-Stay
       success = EV_DoPlat(line, plat_t::LnF, SPEED(args[1]), TICS(args[2]), 0);
@@ -1410,7 +1409,7 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
 			   (args[3] ? -1 : 1) * 8 * HEIGHT(args[2]));
       break;
     case 69: // Ceiling Move to Value * 8
-      success = EV_DoCeiling(line, ceiling_t::AbsHeight, SPEED(args[1]), SPEED(args[1]), 0,
+      success = EV_DoCeiling(tag, ceiling_t::AbsHeight, SPEED(args[1]), SPEED(args[1]), 0,
 			     (args[3] ? -1 : 1) * 8 * HEIGHT(args[2]));
       break;
     case 70: // Teleport
@@ -1493,16 +1492,16 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
 	}
       break;
     case 90: // Poly Rotate Left Override
-      success = EV_RotatePoly(line, args, 1, true);
+      success = EV_RotatePoly(args, 1, true);
       break;
     case 91: // Poly Rotate Right Override
-      success = EV_RotatePoly(line, args, -1, true);
+      success = EV_RotatePoly(args, -1, true);
       break;
     case 92: // Poly Move Override
-      success = EV_MovePoly(line, args, false, true);
+      success = EV_MovePoly(args, false, true);
       break;
     case 93: // Poly Move Times 8 Override
-      success = EV_MovePoly(line, args, true, true);
+      success = EV_MovePoly(args, true, true);
       break;
       /*
     case 94: // Build Pillar Crush 
@@ -1520,25 +1519,25 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       break;
       */
     case 110: // Light Raise by Value
-      success = EV_SpawnLight(args[0], lightfx_t::RelChange, args[1]);
+      success = EV_SpawnLight(line->tag, lightfx_t::RelChange, args[1]);
       break;
     case 111: // Light Lower by Value
-      success = EV_SpawnLight(args[0], lightfx_t::RelChange, -args[1]);
+      success = EV_SpawnLight(line->tag, lightfx_t::RelChange, -args[1]);
       break;
     case 112: // Light Change to Value
-      success = EV_SpawnLight(args[0], lightfx_t::AbsChange, args[1]);
+      success = EV_SpawnLight(line->tag, lightfx_t::AbsChange, args[1]);
       break;
     case 113: // Light Fade
-      success = EV_SpawnLight(args[0], lightfx_t::Fade, args[1], 0, args[2]);
+      success = EV_SpawnLight(line->tag, lightfx_t::Fade, args[1], 0, args[2]);
       break;
     case 114: // Light Glow
-      success = EV_SpawnLight(args[0], lightfx_t::Glow, args[1], args[2], args[3]);
+      success = EV_SpawnLight(line->tag, lightfx_t::Glow, args[1], args[2], args[3]);
       break;
     case 115: // Light Flicker
-      success = EV_SpawnLight(args[0], lightfx_t::Flicker, args[1], args[2], 32, 8);
+      success = EV_SpawnLight(line->tag, lightfx_t::Flicker, args[1], args[2], 32, 8);
       break;
     case 116: // Light Strobe
-      success = EV_SpawnLight(args[0], lightfx_t::Strobe, args[1], args[2], args[3], args[4]);
+      success = EV_SpawnLight(line->tag, lightfx_t::Strobe, args[1], args[2], args[3], args[4]);
       break;
       /*
     case 120: // Quake Tremor
@@ -1577,10 +1576,11 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       success = EV_StartFloorWaggle(args[0], args[1],
 					  args[2], args[3], args[4]);
       break;
-    case 140: // Sector_SoundChange
-      success = EV_SectorSoundChange(args);
-      break;
       */
+    case 140: // Sector_SoundChange
+      success = EV_SectorSoundChange(args[0], args[1]);
+      break;
+
       // Line specials only processed during level initialization
       // 100: Scroll_Texture_Left
       // 101: Scroll_Texture_Right
@@ -1593,10 +1593,26 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       break;
     }
 
-  if (line)
+  if (temptag != -1)
     line->tag = temptag;
 
   return success;
+}
+
+
+int Map::EV_SectorSoundChange(int tag, int seq)
+{
+  if (!tag)
+    return false;
+
+  int secNum = -1;
+  int rtn = 0;
+  while ((secNum = FindSectorFromTag(tag, secNum)) >= 0)
+    {
+      sectors[secNum].seqType = seq;
+      rtn++;
+    }
+  return rtn;
 }
 
 
@@ -3197,10 +3213,11 @@ void Map::SpawnSpecials()
 	  
 	  // Instant raise for ceilings SSNTails 06-13-2002
 	case 291:
-	  EV_DoCeiling(&lines[i], ceiling_t::HnC, MAXINT/2, MAXINT/2, 0, 0);
+	  EV_DoCeiling(lines[i].tag, ceiling_t::HnC, MAXINT/2, MAXINT/2, 0, 0);
 	  break;
 
 	default:
+	  // TODO is this used? if not, replace it with a thing...
 	  if (lines[i].special>=1000 && lines[i].special<1032)
             {
 	      for (s = -1; (s = FindSectorFromLineTag(lines+i,s)) >= 0;)

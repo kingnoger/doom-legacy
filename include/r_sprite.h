@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/06/20 20:56:08  smite-meister
+// Presentation system tweaked
+//
 // Revision 1.7  2003/04/04 00:01:58  smite-meister
 // bugfixes, Hexen HUD
 //
@@ -48,20 +51,6 @@
 #include "doomtype.h"
 #include "z_cache.h"
 
-/*
-  Doom "sequences"
-  spawnstate  // stand idle
-  seestate    // run
-  painstate   // pain
-  meleestate   // melee attack (1)
-  missilestate // missile attack (2)
-
-  deathstate   // die (1)
-  xdeathstate  // explode, die (2)
-  crashstate   // one more way to die (3) (heretic/hexen imps)
-
-  raisestate   // being raised by an arch-vile (extra 1)
- */
 
 /*
 MD2 sequences?
@@ -155,7 +144,7 @@ class sprite_t : public cacheitem_t
 {
   friend class spritecache_t;
   friend class spritepres_t;
-  //protected: // FIXME some old code wants to use spriteframes directly. Fix the old code...
+  //protected: // FIXME R_DrawPSprite() wants to use spriteframes directly.
 public:
   int  iname; // sprite name (4 chars) as an int
   int            numframes;
@@ -184,8 +173,6 @@ extern int numspritelumps;
 //        Presentations
 //================================
 
-class Actor;
-
 // Idea: Game entities have a pointer to a graphic presentation.
 // The animation data is stored in the presentation object.
 // The actual implementation of the "graphic presentation" can be a sprite, md3 or anything.
@@ -196,40 +183,64 @@ class presentation_t
 protected:
   //vector<animation_t> anim; // all known animation sequences
 public:
-  char color;
-  int  frame; // temp solution, for flags
+  enum animseq_e
+  {
+    // Legacy "animation sequences"
+    Idle = 0, // spawnstate
+    Run,      // seestate
+    Pain,     // painstate
+    Melee,    // meleestate (attack 1)
+    Shoot,    // missilestate (attack 2)
+    
+    Death1,   // deathstate
+    Death2,   // xdeathstate (explode, die)
+    Death3,   // crashstate, one more way to die (heretic/hexen imps)
+
+    Raise,    // raisestate, being raised from death by an arch-vile
+    Other
+  };
+
+  char  color;    // well.
+  char  animseq;  // current animation sequence
+  int   flags;    // Effects. Translucency, fullbright etc.
+  int   lastupdate; // in tics
 
   virtual ~presentation_t() = 0;
 
-  virtual bool IsSprite() {return false;}; // damn Doom sprites.
+  virtual void SetFrame(const struct state_t *st) = 0; // Only used by DActors with sprites
+  virtual void SetAnim(int seq) = 0;  // starts a requested animation sequence
+  int GetAnim() { return animseq; };
 
-  virtual void SetFrame(int fr) = 0; // bad
-  virtual void SetAnim(int seq) = 0; // good
-
-  // this is hopefully a temporary hack.. it generates a vissprite
-  virtual void Project(Actor *p) = 0;
-  virtual bool Draw(const Actor *p) = 0;
+  virtual bool Update(int nowtic)      = 0; // Updates the animation, called before drawing
+  virtual void Project(class Actor *p) = 0; // This is hopefully a temporary hack.. it generates a vissprite
+  virtual bool Draw(const Actor *p)    = 0; // Not sure how this works yet
+  virtual spriteframe_t *GetFrame() { return NULL; }; // or this. Menu uses it.
 
   void *operator new(size_t size);
   void  operator delete(void *mem);
 };
 
 
+// Sprites can be animated in two ways, either using SetAnim or SetFrame.
+// Both use the states table.
 class spritepres_t : public presentation_t
 {
-  //protected:
-public: // for sw renderer, FIXME
+protected:
   sprite_t *spr;
+  const struct mobjinfo_t *info; // this is used to know which sequence corresponds to which state
+  const state_t *state; // the animation frames are tied to the states table
 
 public:
-  spritepres_t(const char *name, int startframe, int col);
+  spritepres_t(const char *name, const mobjinfo_t *inf, int col = 0);
   virtual ~spritepres_t();
 
-  virtual bool IsSprite() {return true;}; 
-  virtual void SetFrame(int fr);
+  virtual void SetFrame(const state_t *st); // Only used by DActors with sprites
   virtual void SetAnim(int seq);
+
+  virtual bool Update(int nowtic);
   virtual void Project(Actor *p);
   virtual bool Draw(const Actor *p);
+  virtual spriteframe_t *GetFrame();
 };
 
 
@@ -245,7 +256,6 @@ class modelpres_t : public presentation_t
 {
   class MD3_player *mdl;
 
-  fixed_t lastupdate; // time it was last updated
   MD3_animstate st[3]; // legs, torso, head
 
 public:
@@ -253,8 +263,10 @@ public:
   modelpres_t(const char *mname, int col = 0, const char *skin = "default");
   virtual ~modelpres_t();
 
-  virtual void SetFrame(int fr);
+  virtual void SetFrame(const state_t *st) {}; // do nothing
   virtual void SetAnim(int seq);
+
+  virtual bool Update(int nowtic);
   virtual void Project(Actor *p);
   virtual bool Draw(const Actor *p);
 };

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.24  2003/06/20 20:56:07  smite-meister
+// Presentation system tweaked
+//
 // Revision 1.23  2003/06/10 22:39:57  smite-meister
 // Bugfixes
 //
@@ -802,7 +805,7 @@ void Map::LoadLineDefs(int lump)
 	{
 	  ld->flags = SHORT(hld->flags);
 	  ld->special = hld->special;
-	  ld->tag = hld->args[0]; // FIXME kludge for current EV_* functions
+	  ld->tag = hld->args[0]; // 16-bit tags
 	  
 	  for (j=0; j<5; j++)
 	    ld->args[j] = hld->args[j];
@@ -1415,7 +1418,6 @@ bool Map::Setup(tic_t start)
 #endif
 
   // If the map defines its music in MapInfo_t, use it.
-  CONS_Printf("--->  %s\n", info->musiclump.c_str());
   if (!info->musiclump.empty())
     S.StartMusic(info->musiclump.c_str());
 
@@ -1527,7 +1529,8 @@ void Map::ConvertLineDefs()
 	  trig = p->trigger;
 
 	  if (ld->args[0] == 255)
-	    ld->args[0] = ld->tag; // or we could just use 'tag' in the EV functions?
+	    //ld->args[0] = ld->tag; // nope, a byte is not enough
+	    ld->args[0] = 0; // now ExecuteLineSpecial() uses 'tag'
 
 	  // time to put the flags back
 	  ld->flags |= (trig & 0x0f) << (ML_SPAC_SHIFT-1); // activation and repeat

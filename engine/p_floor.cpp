@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/06/20 20:56:07  smite-meister
+// Presentation system tweaked
+//
 // Revision 1.5  2003/05/30 13:34:45  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -333,10 +336,7 @@ void floor_t::Think()
 	sector->floorpic = texture;
 
       if (type & SetSpecial)
-	{
-	  sector->special = newspecial;
-	  sector->oldspecial = oldspecial;
-	}
+	sector->special = newspecial;
 
       // TODO replace with sound sequence
       //if ((type == buildStair && game.mode == gm_heretic) || game.mode != gm_heretic)
@@ -410,7 +410,6 @@ int Map::EV_DoFloor(line_t *line, int type, fixed_t speed, int crush, fixed_t he
 	      // in case no surrounding sector is at destheight
 	      // --> should not affect compatibility <--
 	      floor->newspecial = sec->special;
-	      floor->oldspecial = sec->oldspecial;
 	      //jff 5/23/98 use model subroutine to unify fixes and handling
 	      // BP: heretic have change something here
 	      sec = FindModelFloorSector(floor->destheight, sec);
@@ -418,7 +417,6 @@ int Map::EV_DoFloor(line_t *line, int type, fixed_t speed, int crush, fixed_t he
 		{
 		  floor->texture = sec->floorpic;
 		  floor->newspecial = sec->special;
-		  floor->oldspecial = sec->oldspecial;
 		}
 	    }
 	  else
@@ -426,7 +424,6 @@ int Map::EV_DoFloor(line_t *line, int type, fixed_t speed, int crush, fixed_t he
 	      // "trigger model"
 	      floor->texture = line->frontsector->floorpic;
 	      floor->newspecial = line->frontsector->special;
-	      floor->oldspecial = line->frontsector->oldspecial;
 	    }
 	}
     }
@@ -460,7 +457,6 @@ int Map::EV_DoChange(line_t *line, int changetype)
 	case trigChangeOnly:
 	  sec->floorpic = line->frontsector->floorpic;
 	  sec->special = line->frontsector->special;
-	  sec->oldspecial = line->frontsector->oldspecial;
 	  break;
 	case numChangeOnly:
 	  secm = FindModelFloorSector(sec->floorheight, sec);
@@ -468,7 +464,6 @@ int Map::EV_DoChange(line_t *line, int changetype)
 	    {
 	      sec->floorpic = secm->floorpic;
 	      sec->special = secm->special;
-	      sec->oldspecial = secm->oldspecial;
 	    }
 	  break;
 	default:
@@ -484,7 +479,7 @@ int Map::EV_DoChange(line_t *line, int changetype)
 //
 
 // SoM: 3/6/2000: Use the Boom version of this function.
-int Map::EV_BuildStairs(line_t *line, int type, fixed_t speed, fixed_t stepsize, int crush)
+int Map::EV_BuildStairs(int tag, int type, fixed_t speed, fixed_t stepsize, int crush)
 {
   // TODO Hexen compatibility (a new stairbuilding method...)
   int                   i;
@@ -493,7 +488,7 @@ int Map::EV_BuildStairs(line_t *line, int type, fixed_t speed, fixed_t stepsize,
   int rtn = 0;
 
   // start a stair at each sector tagged the same as the linedef
-  while ((secnum = FindSectorFromLineTag(line,secnum)) >= 0)
+  while ((secnum = FindSectorFromTag(tag, secnum)) >= 0)
     {
       sector_t *sec = &sectors[secnum];
       
@@ -569,15 +564,13 @@ int Map::EV_BuildStairs(line_t *line, int type, fixed_t speed, fixed_t stepsize,
 // Passed the linedef that triggered the donut
 // Returns whether a thinker was created
 //
-int Map::EV_DoDonut(line_t *line)
+int Map::EV_DoDonut(int tag)
 {
   int       i;
-
-
   int secnum = -1;
   int rtn = 0;
   // do function on all sectors with same tag as linedef
-  while ((secnum = FindSectorFromLineTag(line,secnum)) >= 0)
+  while ((secnum = FindSectorFromTag(tag, secnum)) >= 0)
     {
       sector_t *s1 = &sectors[secnum];  // s1 is pillar's sector
               

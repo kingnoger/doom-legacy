@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.17  2003/06/20 20:56:07  smite-meister
+// Presentation system tweaked
+//
 // Revision 1.16  2003/05/30 13:34:43  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -118,7 +121,7 @@ Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, const pawn_info_t *t)
 
   color = 0;
   state_t *state = &states[info->spawnstate];
-  pres = new spritepres_t(sprnames[state->sprite], state->frame, 0);
+  pres = new spritepres_t(sprnames[state->sprite], info, 0);
 }
 
 
@@ -863,23 +866,30 @@ bool Pawn::GiveBody(int num)
 
 bool PlayerPawn::UndoMorph()
 {
-  DActor *mo = mp->SpawnDActor(x, y, z, mobjtype_t(player->pawntype));
+  // store the current values
+  fixed_t r = radius;
+  fixed_t h = height;
 
-  if (mo->TestLocation() == false)
-    { // Didn't fit
-      mo->Remove();
+  mobjinfo_t *i = &mobjinfo[player->pawntype->mt];
+
+  radius = i->radius;
+  height = i->height;
+
+  if (TestLocation() == false)
+    {
+      // Didn't fit, continue morph
       morphTics = 2*35;
+      radius = r;
+      height = h;
       // some sound to indicate unsuccesful morph?
       return false;
     }
 
-  maxhealth = mo->health;
-  mo->Remove(); // it is used just to check if a player fits here
-
-  reactiontime = 18;
   morphTics = 0;
+
+  maxhealth = 2 * i->spawnhealth;
+  reactiontime = 18;
   powers[pw_weaponlevel2] = 0;
-  //weapon = weapontype_t(special1);
   weaponinfo = wpnlev1info;
   health = maxhealth;
   angle_t ang = angle >> ANGLETOFINESHIFT;
@@ -889,65 +899,11 @@ bool PlayerPawn::UndoMorph()
   PostMorphWeapon(weapontype_t(special1));
 
   /*
-  Actor *mo, *pmo;
-  fixed_t x, y, z;
-  angle_t angle;
-  int playerNum;
-  weapontype_t weapon;
-  int oldFlags;
-  int oldFlags2;
-
-  pmo = this;
-  x = pmo->x;
-  y = pmo->y;
-  z = pmo->z;
-  angle = pmo->angle;
-  weapon = weapontype_t(pmo->special1);
-  oldFlags = pmo->flags;
-  oldFlags2 = pmo->flags2;
-
-  pmo->SetState(S_FREETARGMOBJ); //FIXME! what's a freetargmobj?
-  // can't i just change the chicken into a marine?
-  mo = P_SpawnMobj(x, y, z, MT_PLAYER);
-
-  if (P_TestMobjLocation(mo) == false)
-    { // Didn't fit
-      mo->Remove();
-      mo = mp->SpawnActor(x, y, z, MT_CHICPLAYER);
-      mo->angle = angle;
-      mo->health = player->health;
-      mo->special1 = weapon;
-      mo->player = player;
-      mo->flags = oldFlags;
-      mo->flags2 = oldFlags2;
-      player->mo = mo;
-      player->morphTics = 2*35;
-      return(false);
-    }
-
-  playerNum = player-players;
-  if(playerNum != 0)
-    { // Set color translation
-      mo->flags |= playerNum<<MF_TRANSSHIFT;
-    }
-  mo->angle = angle;
-  mo->player = player;
-  mo->reactiontime = 18;
   if(oldFlags2 & MF2_FLY)
     {
       mo->flags2 |= MF2_FLY;
       mo->flags |= MF_NOGRAVITY;
     }
-  player->morphTics = 0;
-  player->powers[pw_weaponlevel2] = 0;
-  player->weaponinfo = wpnlev1info;
-  player->health = mo->health = max_health;
-  player->mo = mo;
-  angle >>= ANGLETOFINESHIFT;
-  Actor *fog = P_SpawnMobj(x+20*finecosine[angle], y+20*finesine[angle],
-			   z+TELEFOGHEIGHT, MT_TFOG);
-  S_StartSound(fog, sfx_telept);
-  P_PostChickenWeapon(player, weapon);
   */
   return true;
 }

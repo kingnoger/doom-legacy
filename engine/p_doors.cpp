@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/06/20 20:56:07  smite-meister
+// Presentation system tweaked
+//
 // Revision 1.8  2003/05/30 13:34:45  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -219,16 +222,13 @@ void vdoor_t::Think()
 	  if (boomsupport && line && line->tag)
             {
               if (line->special > GenLockedBase && (line->special & 6) == 6)
-                mp->EV_TurnTagLightsOff(line);
+                mp->EV_TurnTagLightsOff(line->tag);
               else switch (line->special)
                 {
-		case 1: case 31:
-		case 26:
-		case 27: case 28:
-		case 32: case 33:
-		case 34: case 117:
-		case 118:
-		  mp->EV_TurnTagLightsOff(line);
+		case 10: case 12: case 13: // doors that close (they also should be manual P* doors)
+		  // FIXME this does not work. If you give a door with a nonzero tag,
+		  // it is interpreted as a Hexenlike door...
+		  mp->EV_TurnTagLightsOff(line->tag);
 		default:
                   break;
                 }
@@ -272,17 +272,12 @@ void vdoor_t::Think()
 	  if (boomsupport && line && line->tag)
             {
               if (line->special > GenLockedBase && (line->special&6)==6)     //jff 3/9/98 all manual doors
-                mp->EV_LightTurnOn(line,0);
+                mp->EV_LightTurnOn(line->tag, 0);
               else
                 switch (line->special)
                 {
-		case 1: case 31:
-		case 26:
-		case 27: case 28:
-		case 32: case 33:
-		case 34: case 117:
-		case 118:
-		  mp->EV_LightTurnOn(line,0);
+		case 10: case 12: case 13: // doors that close (they also should be manual P* doors)
+		  mp->EV_LightTurnOn(line->tag, 0);
 		default:
 		  break;
                 }

@@ -120,7 +120,6 @@ int Map::EV_DoGenFloor(line_t *line)
       floor->direction = Dirn? 1 : -1;
       floor->texture = sec->floorpic;
       floor->newspecial = sec->special;
-      floor->oldspecial = sec->oldspecial;
 
       // set the destination height
       switch(Targ)
@@ -180,12 +179,10 @@ int Map::EV_DoGenFloor(line_t *line)
 		    {
 		    case FChgZero:  // zero type
 		      floor->newspecial = 0;
-		      floor->oldspecial = 0;
 		      floor->type |= floor_t::SetTxTy;
 		      break;
 		    case FChgTyp:   // copy type
 		      floor->newspecial = sec2->special;
-		      floor->oldspecial = sec2->oldspecial;
 		      floor->type |= floor_t::SetTxTy;
 		      break;
 		    case FChgTxt:   // leave type be
@@ -203,12 +200,10 @@ int Map::EV_DoGenFloor(line_t *line)
 		{
 		case FChgZero:    // zero type
 		  floor->newspecial = 0;
-		  floor->oldspecial = 0;
 		  floor->type |= floor_t::SetTxTy;
 		  break;
 		case FChgTyp:     // copy type
 		  floor->newspecial = line->frontsector->special;
-		  floor->oldspecial = line->frontsector->oldspecial;
 		  floor->type |= floor_t::SetTxTy;
 		  break;
 		case FChgTxt:     // leave type be
@@ -308,7 +303,6 @@ int Map::EV_DoGenCeiling(line_t *line)
       ceiling->direction = Dirn? 1 : -1;
       ceiling->texture = sec->ceilingpic;
       ceiling->newspecial = sec->special;
-      ceiling->oldspecial = sec->oldspecial;
 
       // set destination target height
       targheight = sec->ceilingheight;
@@ -375,12 +369,10 @@ int Map::EV_DoGenCeiling(line_t *line)
 		    {
 		    case CChgZero:  // type is zeroed
 		      ceiling->newspecial = 0;
-		      ceiling->oldspecial = 0;
 		      ceiling->type |= ceiling_t::SetTxTy;
 		      break;
 		    case CChgTyp:   // type is copied
 		      ceiling->newspecial = sec2->special;
-		      ceiling->oldspecial = sec2->oldspecial;
 		      ceiling->type |= ceiling_t::SetTxTy;
 		      break;
 		    case CChgTxt:   // type is left alone
@@ -398,12 +390,10 @@ int Map::EV_DoGenCeiling(line_t *line)
 		{
 		case CChgZero:    // type is zeroed
 		  ceiling->newspecial = 0;
-		  ceiling->oldspecial = 0;
 		  ceiling->type |= ceiling_t::SetTxTy;
 		  break;
 		case CChgTyp:     // type is copied
 		  ceiling->newspecial = line->frontsector->special;
-		  ceiling->oldspecial = line->frontsector->oldspecial;
 		  ceiling->type |= ceiling_t::SetTxTy;
 		  break;
 		case CChgTxt:     // type is left alone
@@ -735,7 +725,7 @@ int Map::EV_DoGenCrusher(line_t *line)
   int Sped = (value & CrusherSpeed) >> CrusherSpeedShift;
   int Trig = (value & TriggerType) >> TriggerTypeShift;
 
-  rtn = ActivateInStasisCeiling(line);
+  rtn = ActivateInStasisCeiling(line->tag);
 
   // check if a manual trigger, if so do just the sector on the backside
   manual = false;

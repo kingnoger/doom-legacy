@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/06/20 20:56:07  smite-meister
+// Presentation system tweaked
+//
 // Revision 1.8  2003/06/10 22:39:57  smite-meister
 // Bugfixes
 //
@@ -144,7 +147,7 @@ void polyobject_t::Think()
 //
 //==========================================================================
 
-bool Map::EV_RotatePoly(line_t *line, byte *args, int direction, bool overRide)
+bool Map::EV_RotatePoly(byte *args, int direction, bool overRide)
 {
   int polynum = args[0];
   polyobj_t *poly = GetPolyobj(polynum);
@@ -259,7 +262,7 @@ void polymove_t::Think()
 //
 //==========================================================================
 
-bool Map::EV_MovePoly(line_t *line, byte *args, bool timesEight, bool overRide)
+bool Map::EV_MovePoly(byte *args, bool timesEight, bool overRide)
 {
   int mirror;
 
@@ -476,7 +479,7 @@ polydoor_t::polydoor_t(int num, int t, byte *args, bool mirror)
 //
 //==========================================================================
 
-bool Map::EV_OpenPolyDoor(line_t *line, byte *args, int type)
+bool Map::EV_OpenPolyDoor(byte *args, int type)
 {
   int mirror;
   int polynum;

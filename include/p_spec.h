@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2003/06/20 20:56:08  smite-meister
+// Presentation system tweaked
+//
 // Revision 1.12  2003/06/08 16:19:21  smite-meister
 // Hexen lights.
 //
@@ -493,7 +496,7 @@ private:
   int       crush;
 
   // ceiling changers
-  int       oldspecial, newspecial;
+  int       newspecial;
   short     texture;
 
   fixed_t   upspeed, downspeed;
@@ -562,7 +565,7 @@ private:
   int       crush;
 
   // floor changers
-  int       oldspecial, newspecial;
+  int       newspecial;
   short     texture;
 
   fixed_t   speed;

@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.19  2003/06/20 20:56:08  smite-meister
+// Presentation system tweaked
+//
 // Revision 1.18  2003/06/10 22:40:00  smite-meister
 // Bugfixes
 //
@@ -323,7 +326,7 @@ public:
 
   // in p_telept.cpp
   bool EV_Teleport(line_t *line, Actor *thing, bool silent = false);
-  int  EV_SilentLineTeleport(line_t *line, int side, Actor *thing, bool reverse);
+  bool EV_SilentLineTeleport(line_t *line, int side, Actor *thing, bool reverse);
 
   // in p_spec.cpp
   side_t   *getSide(int sec, int line, int side);
@@ -344,8 +347,6 @@ public:
   bool ActivateLine(line_t *line, Actor *thing, int side, int activationType);
   bool ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int side, Actor *mo);
 
-  //void ActivateCrossedLine(line_t *line, int side, Actor *thing);
-  //void ShootSpecialLine(Actor *thing, line_t *line);
   void UpdateSpecials();
 
   int  SpawnSectorSpecial(int sp, sector_t *sec);
@@ -354,10 +355,11 @@ public:
   void SpawnFriction();
   void SpawnPushers();
   DActor *GetPushThing(int s);
+  // some event functions that fit nowhere else
+  int  EV_SectorSoundChange(int tag, int seq);
 
   // in p_switch.cpp
   void ChangeSwitchTexture(line_t *line, int useAgain);
-  //bool UseSpecialLine(Actor *thing, line_t *line, int side);
 
   // in p_genlin.cpp
   int EV_DoGenFloor(line_t* line);
@@ -371,11 +373,11 @@ public:
   // in p_lights.cpp
   void SpawnPhasedLightSequence(sector_t *sec, int indexStep);
   void SpawnStrobeLight(sector_t *sec, short brighttime, short darktime, bool inSync);
-  int  EV_StartLightStrobing(line_t *line);
+  int  EV_StartLightStrobing(int tag);
   int  EV_FadeLight(int tag, int destvalue, int speed);
   int  EV_SpawnLight(int tag, int type, short maxl, short minl = 0, short maxt = 0, short mint = 0);
-  int  EV_TurnTagLightsOff(line_t* line);
-  int  EV_LightTurnOn(line_t *line, int bright);
+  int  EV_TurnTagLightsOff(int tag);
+  int  EV_LightTurnOn(int tag, int bright);
 
   // in p_plats.cpp
   void AddActivePlat(plat_t* plat);
@@ -383,15 +385,15 @@ public:
   void RemoveActivePlat(plat_t* plat);
   void RemoveAllActivePlats();
   int  EV_DoPlat(line_t *line, int type, fixed_t speed, int wait, fixed_t height);
-  int  EV_StopPlat(line_t* line);
+  int  EV_StopPlat(int tag);
 
   // in p_ceiling.cpp
   void AddActiveCeiling(ceiling_t* ceiling);
-  int  ActivateInStasisCeiling(line_t *line);
+  int  ActivateInStasisCeiling(int tag);
   void RemoveActiveCeiling(ceiling_t* ceiling);
   void RemoveAllActiveCeilings();
-  int  EV_DoCeiling(line_t *line, int type, fixed_t upspeed, fixed_t downspeed, int crush, fixed_t height);
-  int  EV_StopCeiling(line_t *line);
+  int  EV_DoCeiling(int tag, int type, fixed_t upspeed, fixed_t downspeed, int crush, fixed_t height);
+  int  EV_StopCeiling(int tag);
 
   // in p_doors.cpp
   void EV_OpenDoor(int sectag, int speed, int wait_time);
@@ -403,8 +405,8 @@ public:
   // in p_floor.cpp
   int EV_DoFloor(line_t *line, int type, fixed_t speed, int crush, fixed_t height);
   int EV_DoChange(line_t *line, int changetype);
-  int EV_BuildStairs(line_t *line, int type, fixed_t speed, fixed_t stepsize, int crush);
-  int EV_DoDonut(line_t *line);
+  int EV_BuildStairs(int tag, int type, fixed_t speed, fixed_t stepsize, int crush);
+  int EV_DoDonut(int tag);
   int EV_DoElevator(line_t* line, int type);
   int T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, int crush, int floorOrCeiling, int direction);
 
@@ -439,9 +441,9 @@ public:
   bool PO_RotatePolyobj(int num, angle_t angle);
   bool PO_Busy(int num);
 
-  bool EV_RotatePoly(line_t *line, byte *args, int direction, bool overRide);
-  bool EV_MovePoly(line_t *line, byte *args, bool timesEight, bool overRide);
-  bool EV_OpenPolyDoor(line_t *line, byte *args, int type);
+  bool EV_RotatePoly(byte *args, int direction, bool overRide);
+  bool EV_MovePoly(byte *args, bool timesEight, bool overRide);
+  bool EV_OpenPolyDoor(byte *args, int type);
 
   // in p_things.cpp
   bool EV_ThingProjectile(byte *args, bool gravity);

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2003/06/20 20:56:08  smite-meister
+// Presentation system tweaked
+//
 // Revision 1.11  2003/05/30 13:34:49  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -949,16 +952,117 @@ void R_ExecuteSetViewSize()
 // R_Init
 //
 
+static void TestAnims()
+{
+  // This function can be used to test the integrity of the mobj states (sort of)
+
+  int i, j, k, l, spr;
+  mobjinfo_t *info;
+  state_t *s, *n;
+
+  const statenum_t mobjinfo_t::*seqptr[9] =
+  {
+    &mobjinfo_t::spawnstate,
+    &mobjinfo_t::seestate,
+    &mobjinfo_t::painstate,
+    &mobjinfo_t::meleestate,
+    &mobjinfo_t::missilestate,
+    &mobjinfo_t::deathstate,
+    &mobjinfo_t::xdeathstate,
+    &mobjinfo_t::crashstate,
+    &mobjinfo_t::raisestate
+  };
+  const char *snames[9] =
+  {
+    "spawn  ",
+    "see    ",
+    "pain   ",
+    "melee  ",
+    "missile",
+    "death  ",
+    "xdeath ",
+    "crash  ",
+    "raise  "
+  };
+
+  state_t *seq[9];
+
+  for (i=0; i<NUMMOBJTYPES; i++)
+    {
+      info = &mobjinfo[i];
+
+      s = &states[info->spawnstate];
+      spr = s->sprite;
+      printf("\n%d: %s\n", i, sprnames[spr]);
+
+      for (j = 0; j<9; j++)
+	seq[j] = &states[info->*seqptr[j]];;
+
+      for (j = 0; j<9; j++)
+	{
+	  s = n = seq[j];
+	  printf(" %s: ", snames[j]);
+	  if (n == &states[S_NULL])
+	    {
+	      printf("(none)\n");
+	      continue;
+	    }
+
+	  for (k = 0; k < 40; k++)
+	    {
+	      if (n == &states[S_NULL])
+		{
+		  printf("S_NULL, %d\n", k);
+		  break;
+		}
+
+	      if (n->sprite != spr)
+		{
+		  printf("! name: %s: ", sprnames[n->sprite]);
+		  spr = n->sprite;
+		}
+
+	      if (n->tics < 0)
+		{
+		  printf("hold, %d\n", k+1);
+		  break;
+		}
+
+	      n = &states[n->nextstate];
+	      if (n == s)
+		{
+		  printf("loop, %d\n", k+1);
+		  break;
+		}
+	      else for (l=0; l<9; l++)
+		if (n == seq[l] && n != &states[S_NULL])
+		  break;
+
+	      if (l < 9)
+		{
+		  printf("6-loop to %s, %d+\n", snames[l], k+1);
+		  break;
+		}
+	    }
+	  if (k == 40)
+	    printf("l >= 40 !!!\n");
+	}
+    }
+
+  I_Error("\n ... done.\n");
+}
+
 
 void R_Init()
 {
-    if(dedicated)
-	return;
+  //TestAnims();
+  if (dedicated)
+    return;
     
-    //added:24-01-98: screensize independent
-    if(devparm)
-        CONS_Printf ("\nR_InitData");
-    R_InitData ();
+  //added:24-01-98: screensize independent
+  if(devparm)
+    CONS_Printf ("\nR_InitData");
+  R_InitData();
 
     if(devparm)
         CONS_Printf ("\nR_InitPointToAngle");

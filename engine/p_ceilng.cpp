@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/06/20 20:56:07  smite-meister
+// Presentation system tweaked
+//
 // Revision 1.5  2003/05/30 13:34:44  smite-meister
 // Cleanup, HUD improved, serialization
 //
@@ -153,10 +156,7 @@ void ceiling_t::Think()
         {
 	  // movers with texture/special change: change the texture then get removed
 	  if (type & SetSpecial)
-	    {
-	      sector->special = newspecial;
-	      sector->oldspecial = oldspecial;
-	    }
+	    sector->special = newspecial;
 
 	  if (type & SetTexture)
 	    sector->ceilingpic = texture;
@@ -190,10 +190,7 @@ void ceiling_t::Think()
       if (res == res_pastdest)
         {
 	  if (type & SetSpecial)
-	    {
-	      sector->special = newspecial;
-	      sector->oldspecial = oldspecial;
-	    }
+	    sector->special = newspecial;
 
 	  if (type & SetTexture)
 	    sector->ceilingpic = texture;
@@ -239,7 +236,7 @@ void ceiling_t::Think()
 // was EV_DoCeiling
 // Move a ceiling up/down and all around!
 //
-int Map::EV_DoCeiling(line_t *line, int type, fixed_t uspeed, fixed_t dspeed, int crush, fixed_t height)
+int Map::EV_DoCeiling(int tag, int type, fixed_t uspeed, fixed_t dspeed, int crush, fixed_t height)
 {
   sector_t   *sec;
 
@@ -252,12 +249,12 @@ int Map::EV_DoCeiling(line_t *line, int type, fixed_t uspeed, fixed_t dspeed, in
     {
     case ceiling_t::Crusher:
     case ceiling_t::CrushOnce:
-      rtn += ActivateInStasisCeiling(line); //SoM: Return true if the crusher is activated
+      rtn += ActivateInStasisCeiling(tag); //SoM: Return true if the crusher is activated
     default:
       break;
     }
 
-  while ((secnum = FindSectorFromLineTag(line,secnum)) >= 0)
+  while ((secnum = FindSectorFromTag(tag, secnum)) >= 0)
     {
       sec = &sectors[secnum];
 
@@ -303,14 +300,14 @@ void Map::RemoveActiveCeiling(ceiling_t *ceiling)
 //
 // Restart a ceiling that's in-stasis
 //
-int Map::ActivateInStasisCeiling(line_t *line)
+int Map::ActivateInStasisCeiling(int tag)
 {
   int rtn = 0;
   list<ceiling_t *>::iterator i;
   for (i = activeceilings.begin(); i != activeceilings.end(); i++)
     {
       ceiling_t *ceil = *i;
-      if (ceil->tag == line->tag && ceil->direction == 0)
+      if (ceil->tag == tag && ceil->direction == 0)
 	{
 	  ceil->direction = ceil->olddirection;
 	  ceil->sector->ceilingdata = ceil; // what if it is already in use?
@@ -326,14 +323,14 @@ int Map::ActivateInStasisCeiling(line_t *line)
 // EV_CeilingCrushStop
 // Stop a ceiling from crushing!
 //
-int Map::EV_StopCeiling(line_t *line)
+int Map::EV_StopCeiling(int tag)
 {
   int rtn = 0;
   list<ceiling_t *>::iterator i;
   for (i = activeceilings.begin(); i != activeceilings.end(); i++)
     {
       ceiling_t *ceil = *i;
-      if (ceil->direction != 0 && ceil->tag == line->tag)
+      if (ceil->direction != 0 && ceil->tag == tag)
 	{
 	  //SN_StopSequence((mobj_t*)&ceil->sector->soundorg);
 	  ceil->olddirection = ceil->direction;

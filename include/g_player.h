@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.8  2003/06/20 20:56:08  smite-meister
+// Presentation system tweaked
+//
 // Revision 1.7  2003/05/11 21:23:52  smite-meister
 // Hexen fixes
 //
@@ -78,7 +81,7 @@ public:
   int number;   // The player number.
   int team;     // index into game.teams vector
 
-  int pawntype; // what kind of pawn are we playing?
+  struct pawn_info_t *pawntype; // what kind of pawn are we playing?
   byte pclass;  // pawn class
 
   // Can be changed during the game, takes effect at next respawn.
