@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/02/16 16:54:50  smite-meister
+// L2 sound cache done
+//
 // Revision 1.2  2002/12/23 23:15:41  smite-meister
 // Weapon groups, MAPINFO parser added!
 //
@@ -36,10 +39,11 @@
 #include "info.h"
 #include "d_items.h"
 
-int weapongroup[NUMWEAPONS] =
+// "static" weapon data
+weapondata_t weapondata[NUMWEAPONS] =
 {
-  0,1,2,3,4,5,6,0,2, // Doom
-  0,1,2,3,5,4,6,0,7  // Heretic
+  {0, 0}, {1, 20}, {2, 8}, {3, 20}, {4, 2}, {5, 40}, {6, 40}, {0, 0}, {2, 8}, // Doom
+  {0, 0}, {1, 25}, {2, 10}, {3, 30}, {5, 50}, {4, 2}, {6, 50}, {0, 0}, {7, 0}  // Heretic
 };
 
 
@@ -76,30 +80,6 @@ int clipammo[NUMAMMO] =
   5, 2, 6, 10, 1, 10  // Heretic // used in deathmatch 1 & 3 mul by 5 (P_GiveWeapon)
 };
 
-// ammo get with the weapon
-int GetWeaponAmmo[NUMWEAPONS] =
-{
-  0,  // fist
-  20, // pistol
-  8,  // shotgun
-  20, // chaingun
-  2,  // missile    
-  40, // plasma     
-  40, // bfg        
-  0,  // chainsaw   
-  8,  // supershotgun
-
-  // Heretic
-  0,  // staff
-  25, // gold wand
-  10, // crossbow
-  30, // blaster
-  50, // skull rod
-  2,  // phoenix rod
-  50, // mace
-  0,  // gauntlets
-  0   // beak
-};
 
 //
 // PSPRITE ACTIONS for weapons.

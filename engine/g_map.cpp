@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2002 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.7  2003/02/16 16:54:50  smite-meister
+// L2 sound cache done
+//
 // Revision 1.6  2003/01/18 20:17:41  smite-meister
 // HUD fixed, levelchange crash fixed.
 //
@@ -400,10 +403,11 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
   PlayerPawn *p;
   CONS_Printf("SpawnPlayer: pawn == %p\n", pi->pawn);
 
+  extern vector<pawn_info_t *> allowed_pawns;
   // the player may have his old pawn from the previous level
   if (!pi->pawn)
     {
-      p = new PlayerPawn(nx, ny, nz, mobjtype_t(pi->pawntype));
+      p = new PlayerPawn(nx, ny, nz, allowed_pawns[pi->pawntype]);
       p->player = pi;
       pi->pawn  = p;
       CONS_Printf("-- new pawn, health == %d\n", p->health);

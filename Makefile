@@ -108,7 +108,7 @@ export CC = g++
 # ??? PURESDL, 
 # hmm. In Win98, -DUSEASM causes execution to stop (ASM_PatchRowBytes())
 
-defines := $(platform) $(interface) $(linkage) -DNDEBUG -DHWRENDER -DHW3SOUND -DDIRECTFULLSCREEN
+defines := $(platform) $(interface) $(linkage) -DNDEBUG -DHWRENDER -DDIRECTFULLSCREEN
 export CF := $(DEBUGFLAGS) $(OPTFLAGS) -Wall $(EXTRAFLAGS) $(defines) #-ansi
 INCLUDES = -Iinclude
 CFLAGS = $(CF) $(INCLUDES)
@@ -192,14 +192,17 @@ export util_objects = \
 	$(objdir)/tables.o \
 	$(objdir)/wad.o \
 	$(objdir)/w_wad.o \
+	$(objdir)/z_cache.o \
 	$(objdir)/z_zone.o
 
 export audio_objects = \
-	$(objdir)/hw3sound.o \
 	$(objdir)/qmus2mid.o \
 	$(objdir)/s_amb.o \
 	$(objdir)/s_sound.o \
 	$(objdir)/sounds.o
+
+#	$(objdir)/hw3sound.o \
+
 
 export video_objects = \
 	$(objdir)/screen.o \

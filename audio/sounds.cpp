@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/02/16 16:54:49  smite-meister
+// L2 sound cache done
+//
 // Revision 1.2  2003/01/25 21:33:05  smite-meister
 // Now compiles with MinGW 2.0 / GCC 3.2.
 // Builder can choose between dynamic and static linkage.
@@ -474,6 +477,7 @@ sfxinfo_t S_sfx[NUMSFX] =
 };
 
 
+/*
 // Prepare free sfx slots to add sfx at run time
 void S_InitRuntimeSounds()
 {
@@ -527,4 +531,4 @@ void S_RemoveSoundFx (int id)
         I_FreeSfx(&S_sfx[id]);
     }
 }
-
+*/

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/02/16 16:54:51  smite-meister
+// L2 sound cache done
+//
 // Revision 1.7  2003/02/08 21:43:50  smite-meister
 // New Memzone system. Choose your pawntype! Cyberdemon OK.
 //
@@ -1072,7 +1075,7 @@ bool PlayerPawn::GiveWeapon(weapontype_t wt, bool dropped)
       if (cv_deathmatch.value)
 	GiveAmmo(weaponinfo[wt].ammo, 5*clipammo[weaponinfo[wt].ammo]);
       else
-	GiveAmmo(weaponinfo[wt].ammo, GetWeaponAmmo[wt]);
+	GiveAmmo(weaponinfo[wt].ammo, weapondata[wt].getammo);
 
       // Boris hack preferred weapons order...
       if (player->originalweaponswitch
@@ -1091,7 +1094,7 @@ bool PlayerPawn::GiveWeapon(weapontype_t wt, bool dropped)
       if (dropped)
 	gaveammo = GiveAmmo(weaponinfo[wt].ammo, clipammo[weaponinfo[wt].ammo]);
       else
-	gaveammo = GiveAmmo(weaponinfo[wt].ammo, GetWeaponAmmo[wt]);
+	gaveammo = GiveAmmo(weaponinfo[wt].ammo, weapondata[wt].getammo);
     }
   else
     gaveammo = false;
@@ -1321,7 +1324,11 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
   if (health <= 0 || flags & MF_CORPSE)
     return;
 
-  int sound = sfx_itemup;
+  int sound;
+  if (game.mode == gm_heretic)
+    sound = sfx_hitemup;
+  else
+    sound = sfx_itemup;
 
   // Identify by sprite.
   switch (special->sprite)
@@ -1827,7 +1834,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	  return;
 	}
       SetMessage(TXT_WPNMACE, false);
-      sound = sfx_wpnup;
+      sound = sfx_hwpnup;
       break;
     case SPR_WBOW: // Weapon_Crossbow
       if(!GiveWeapon(wp_crossbow,false))
@@ -1835,7 +1842,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	  return;
 	}
       SetMessage(TXT_WPNCROSSBOW, false);
-      sound = sfx_wpnup;
+      sound = sfx_hwpnup;
       break;
     case SPR_WBLS: // Weapon_Blaster
       if(!GiveWeapon(wp_blaster,false))
@@ -1843,7 +1850,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	  return;
 	}
       SetMessage(TXT_WPNBLASTER, false);
-      sound = sfx_wpnup;
+      sound = sfx_hwpnup;
       break;
     case SPR_WSKL: // Weapon_SkullRod
       if(!GiveWeapon(wp_skullrod, false))
@@ -1851,7 +1858,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	  return;
 	}
       SetMessage(TXT_WPNSKULLROD, false);
-      sound = sfx_wpnup;
+      sound = sfx_hwpnup;
       break;
     case SPR_WPHX: // Weapon_PhoenixRod
       if(!GiveWeapon(wp_phoenixrod, false))
@@ -1859,7 +1866,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	  return;
 	}
       SetMessage(TXT_WPNPHOENIXROD, false);
-      sound = sfx_wpnup;
+      sound = sfx_hwpnup;
       break;
     case SPR_WGNT: // Weapon_Gauntlets
       if(!GiveWeapon(wp_gauntlets, false))
@@ -1867,7 +1874,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	  return;
 	}
       SetMessage(TXT_WPNGAUNTLETS, false);
-      sound = sfx_wpnup;
+      sound = sfx_hwpnup;
       break;
 
     default:

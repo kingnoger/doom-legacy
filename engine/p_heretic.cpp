@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/02/16 16:54:51  smite-meister
+// L2 sound cache done
+//
 // Revision 1.4  2003/01/12 12:56:40  smite-meister
 // Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
 //
@@ -337,6 +340,9 @@ void HereticPatchEngine()
 
   // conflicting number for doomednum
   // so desable doom mobjs and enabled heretic's one
+
+  // no longer necessary, info.cpp fixed
+  /*
   mobjinfo[MT_SHOTGUY].doomednum = -1;
   mobjinfo[MT_MINOTAUR].doomednum = 9;
 
@@ -561,6 +567,7 @@ void HereticPatchEngine()
 
   mobjinfo[MT_MISC86].doomednum = -1;
   mobjinfo[MT_HMISC0].doomednum = 81;
+  */
 }
 
 static DActor *LavaInflictor;

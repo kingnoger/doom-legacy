@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/02/16 16:54:52  smite-meister
+// L2 sound cache done
+//
 // Revision 1.2  2003/01/12 12:56:42  smite-meister
 // Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
 //
@@ -2563,7 +2566,8 @@ extern char *sprnames[NUMSPRITES+1];
 
 
 typedef enum {
-  MT_DOOM,
+  MT_NONE = -1, // like NULL
+  MT_DOOM = 0,
     MT_PLAYER = MT_DOOM,
     MT_POSSESSED,
     MT_SHOTGUY,
@@ -2812,7 +2816,7 @@ MT_CRBOWFX3,
 MT_CRBOWFX4,
 //MT_HBLOOD,
 MT_BLOODSPLATTER,
-//MT_PLAYER,
+MT_HPLAYER,
 MT_BLOODYSKULL,
 MT_CHICPLAYER,
 MT_CHICKEN,
@@ -2878,8 +2882,7 @@ MT_SOUNDWIND,
 MT_SOUNDWATERFALL,
   MT_HERETIC_END = MT_SOUNDWATERFALL,
 
-    NUMMOBJTYPES
-
+  NUMMOBJTYPES
 } mobjtype_t;
 
 struct mobjinfo_t

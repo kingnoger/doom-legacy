@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/02/16 16:54:51  smite-meister
+// L2 sound cache done
+//
 // Revision 1.5  2003/01/12 12:56:40  smite-meister
 // Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
 //
@@ -153,7 +156,7 @@ void F_Ticker()
 		finalestage = 1;
 		game.wipestate = GS_WIPE;             // force a wipe
 		if (!game.raven && gameepisode == 3)
-		  S.StartMusic(mus_bunny);
+		  S.StartMusic("D_BUNNY");
 	      }
 	    }
 	  else
@@ -298,7 +301,7 @@ void F_StartCast()
   castframes = 0;
   castonmelee = 0;
   castattacking = false;
-  S.StartMusic(mus_evil, true);
+  S.StartMusic("D_EVIL", true);
 }
 
 

@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.7  2003/02/16 16:54:52  smite-meister
+// L2 sound cache done
+//
 // Revision 1.6  2003/01/25 21:33:06  smite-meister
 // Now compiles with MinGW 2.0 / GCC 3.2.
 // Builder can choose between dynamic and static linkage.
@@ -75,6 +78,19 @@ typedef enum
 
 } cheat_t;
 
+
+// TODO testing, this is a hack...
+struct pawn_info_t
+{
+  mobjtype_t mt;
+  weapontype_t bweapon; // beginning weapon (besides fist/staff)
+  int bammo;            // ammo for bweapon
+  mobjtype_t nproj;     // natural projectile, if any
+  // TODO nproj should be replaced with a function pointer.
+  // Somebody should then write these shooting functions...
+};
+
+
 class Pawn : public Actor
 {
 private:
@@ -82,12 +98,13 @@ private:
 
 public:
   int maxhealth;
+  const pawn_info_t *pinfo;
 
   // Who did damage (NULL for floors/ceilings).
   Actor *attacker;
 
 public:
-  Pawn(fixed_t x, fixed_t y, fixed_t z, mobjtype_t t);
+  Pawn(fixed_t x, fixed_t y, fixed_t z, const pawn_info_t *t);
 
   virtual void Think();
   virtual thinkertype_e Type() {return tt_pawn;}; // "name-tag" function
@@ -115,7 +132,6 @@ public:
   int invTics; // when >0 show inventory in hud
   vector<inventory_t> inventory;
   int invSlot;   // active inventory slot is inventory[invSlot]
-  //int st_curpos; // position of inventory scroll (move to hud module?)
 
   // Power ups. invinc and invis are tic counters.
   int powers[NUMPOWERS];
@@ -137,7 +153,6 @@ public:
   bool         weaponowned[NUMWEAPONS];
 
   int ammo[NUMAMMO];
-  //int maxammo[NUMAMMO];
   const int *maxammo;
 
   byte armortype;   // Armor type is 0-2.
@@ -169,7 +184,7 @@ public:
   virtual thinkertype_e Type() {return tt_ppawn;}; // "name-tag" function
 
   // in g_pawn.cpp
-  PlayerPawn(fixed_t x, fixed_t y, fixed_t z, mobjtype_t t);
+  PlayerPawn(fixed_t x, fixed_t y, fixed_t z, const pawn_info_t *t);
 
   virtual int  Serialize(LArchive & a);
 

@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2002 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.7  2003/02/16 16:54:50  smite-meister
+// L2 sound cache done
+//
 // Revision 1.6  2003/01/18 20:17:41  smite-meister
 // HUD fixed, levelchange crash fixed.
 //
@@ -58,10 +61,11 @@ int initial_health=100; //MAXHEALTH;
 int initial_bullets=50;
 
 // creates a pawn based on a Doom/Heretic mobj
-Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, mobjtype_t t)
+Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, const pawn_info_t *t)
   : Actor(x, y, z)
 {
-  mobjinfo_t *info = &mobjinfo[t];
+  pinfo = t;
+  const mobjinfo_t *info = &mobjinfo[t->mt];
   mass   = info->mass;
   radius = info->radius;
   height = info->height;
@@ -81,7 +85,7 @@ Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, mobjtype_t t)
   frame = state->frame; // FF_FRAMEMASK for frame, and other bits..
 }
 
-PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
+PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, const pawn_info_t *t)
   : Pawn(nx, ny, nz, t)
 {
   // note! here Map *mp is not yet set! This means you can't call functions such as
@@ -97,7 +101,6 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
   fixedcolormap = 0;
   invSlot = 0;
   inventory.resize(2, inventory_t(3,2)); // at least 1 empty slot
-  //inventory.push_back(inventory_t(4,2)); // FIXME testing
   flags |= (MF_NOTMONSTER | MF_PICKUP | MF_SHOOTABLE | MF_DROPOFF);
   flags &= ~MF_COUNTKILL;
   // the playerpawn is not a monster. MT_PLAYER might be.
@@ -110,17 +113,30 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
 
   if (game.mode == gm_heretic)
     {
-      readyweapon = pendingweapon = wp_goldwand;
       weaponowned[wp_staff] = true;
+      /*
+      readyweapon = pendingweapon = wp_goldwand;
       weaponowned[wp_goldwand] = true;
       ammo[am_goldwand] = initial_bullets;
+      */
     }
   else
     {
-      readyweapon = pendingweapon = wp_pistol;
       weaponowned[wp_fist] = true;
+      /*
+      readyweapon = pendingweapon = wp_pistol;
       weaponowned[wp_pistol] = true;
       ammo[am_clip] = initial_bullets;
+      */
+    }
+  weapontype_t w = pinfo->bweapon;
+  if (w != wp_nochange)
+    {
+      weaponowned[w] = true;
+      readyweapon = pendingweapon = w;
+      ammotype_t a = wpnlev1info[w].ammo;
+      if (a != am_noammo)
+	ammo[a] = pinfo->bammo;
     }
 }
 
@@ -169,9 +185,6 @@ void PlayerPawn::Think()
 
   if (player->playerstate == PST_DEAD)
     {
-      //Fab:25-04-98: show the dm rankings while dead, only in deathmatch
-      //if (player == displayplayer) playerdeadview = true;
-
       DeathThink();
       goto actor_think;
     }
@@ -245,7 +258,7 @@ void PlayerPawn::Think()
       int wg = (cmd->buttons & BT_WEAPONMASK) >> BT_WEAPONSHIFT;
       weapontype_t newweapon;
       int i, j;
-      if (weapongroup[readyweapon] == wg)
+      if (weapondata[readyweapon].group == wg)
 	{
 	  for (i=0; i<4; i++) // find next weapon in the group
 	    if (wgroups[wg][i] == readyweapon)

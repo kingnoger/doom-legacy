@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/02/16 16:54:51  smite-meister
+// L2 sound cache done
+//
 // Revision 1.5  2003/02/08 21:43:50  smite-meister
 // New Memzone system. Choose your pawntype! Cyberdemon OK.
 //
@@ -722,15 +725,11 @@ void A_Punch(PlayerPawn *p, pspdef_t *psp)
       S_StartAttackSound(p, sfx_punch);
       p->angle = R_PointToAngle2(p->x, p->y, linetarget->x, linetarget->y);
     }
-  /*
-    else if (p->natural_ammo)
+  else if (p->pinfo->nproj != MT_NONE)
     {
-    // this way e.g. revenants can both hit and shoot...
-    // TODO "natural weapons"
-    p->SpawnPlayerMissile(natural_ammo);
-    // maybe playerpawn should just have one field in which the "natural ammo" type is defined? 
+      // this way e.g. revenants can both hit and shoot...
+      p->SpawnPlayerMissile(p->pinfo->nproj);
     }
-  */
 }
 
 

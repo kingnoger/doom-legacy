@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/02/16 16:54:51  smite-meister
+// L2 sound cache done
+//
 // Revision 1.3  2003/01/18 20:17:41  smite-meister
 // HUD fixed, levelchange crash fixed.
 //
@@ -26,27 +29,6 @@
 //
 // Revision 1.1.1.1  2002/11/16 14:18:22  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.6  2002/08/16 20:49:26  vberghol
-// engine ALMOST done!
-//
-// Revision 1.5  2002/08/13 19:47:44  vberghol
-// p_inter.cpp done
-//
-// Revision 1.4  2002/07/01 21:00:43  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.3  2002/07/01 15:01:56  vberghol
-// HUD alkaa olla kunnossa
-//
-// Revision 1.3  2001/01/25 22:15:41  bpereira
-// added heretic support
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //
 // DESCRIPTION:
@@ -238,7 +220,7 @@ typedef enum
 } ammotype_t;
 
 
-// Weapon info: sprite frames, ammunition use.
+// "volatile" weapon info (tome of power etc...): sprite frames, ammunition use.
 struct weaponinfo_t
 {
   ammotype_t ammo;
@@ -251,8 +233,14 @@ struct weaponinfo_t
   statenum_t flashstate;
 };
 
+// "static" weapon info
+struct weapondata_t
+{
+  int group;   // in which group it resides
+  int getammo; // how much ammo does a discarded weapon contain?
+};
 
-extern int weapongroup[NUMWEAPONS];
+extern weapondata_t weapondata[NUMWEAPONS];
 extern weapontype_t wgroups[8][4];
 
 //extern weaponinfo_t doomweaponinfo[NUMWEAPONS];
@@ -265,6 +253,5 @@ extern int maxammo1[NUMAMMO];
 extern int maxammo2[NUMAMMO];
 
 extern int clipammo[NUMAMMO];
-extern int GetWeaponAmmo[NUMWEAPONS];
 
 #endif

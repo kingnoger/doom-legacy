@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/02/16 16:54:50  smite-meister
+// L2 sound cache done
+//
 // Revision 1.8  2003/02/08 21:43:50  smite-meister
 // New Memzone system. Choose your pawntype! Cyberdemon OK.
 //
@@ -141,6 +144,7 @@
 #include "r_local.h"
 
 #include "s_sound.h"
+#include "sounds.h"
 #include "t_script.h"
 #include "v_video.h"
 
@@ -258,15 +262,15 @@ void D_DoAdvanceDemo()
         case gm_heretic :
             pagetic = 210+140;
             pagename = "TITLE";
-            S.StartMusic(mus_htitl);
+            S_StartMusic(mus_htitl);
             break;
         case gm_doom2 :
             pagetic = TICRATE * 11;
-            S.StartMusic(mus_dm2ttl);
+            S_StartMusic(mus_dm2ttl);
             break;
         default :
             pagetic = 170;
-            S.StartMusic (mus_intro);
+            S_StartMusic (mus_intro);
             break;
         }
         game.state = GS_DEMOSCREEN;
@@ -290,7 +294,7 @@ void D_DoAdvanceDemo()
         {
             pagetic = TICRATE * 11;
             pagename = "TITLEPIC";
-            S.StartMusic(mus_dm2ttl);
+            S_StartMusic(mus_dm2ttl);
         }
         else
         if (game.mode == gm_heretic)
@@ -1205,14 +1209,14 @@ void D_DoomMain()
       
 	// can't use sprintf since there is %d in savegamename
 	strcatbf(savegamename, legacyhome, "/");
-	I_mkdir(legacyhome, 0700);
+	I_mkdir(legacyhome, S_IRWXU);
       }
   }
 
   if (M_CheckParm("-cdrom"))
     {
       CONS_Printf(D_CDROM);
-      I_mkdir("c:\\doomdata",700); // VB: FIXME! octal 0700?
+      I_mkdir("c:\\doomdata", S_IRWXU);
       strcpy (configfile,"c:/doomdata/"CONFIGFILENAME);
       strcpy (savegamename,text[CDROM_SAVEI_NUM]);
     }
@@ -1233,13 +1237,17 @@ void D_DoomMain()
   p = M_CheckParm ("-dehacked");
   if (!p)
     p = M_CheckParm ("-deh");
-  if(p!=0)
+  if (p != 0)
     {
       while (M_IsNextParm())
 	D_AddFile (M_GetNextParm());
     }
 
   // ----------- start subsystem initializations
+  // order: memory, engine patching, L1 cache,
+  //  video, HUD, console (now consvars can be registered), read config file,
+  //  menu, renderer, sound, scripting.
+
 
   // init zone memory management
   CONS_Printf (text[Z_INIT_NUM]);
@@ -1416,15 +1424,11 @@ void D_DoomMain()
   CONS_Printf (text[R_INIT_NUM]);
   R_Init ();
  
-  // set up sound
+  // set up sound and music
   CONS_Printf (text[S_SETSOUND_NUM]);
   nosound = M_CheckParm("-nosound");
-  nomusic = M_CheckParm("-nomusic"); // WARNING: DOS version initmusic in I_StartupSound
-  // start sound system, cache sound data
-  I_StartupSound();
-  I_InitMusic();  // setup music buffer for quick mus2mid
-
-  S_Init(cv_soundvolume.value, cv_musicvolume.value);
+  nomusic = M_CheckParm("-nomusic");
+  S.Startup();
 
 #ifdef FRAGGLESCRIPT
   ////////////////////////////////

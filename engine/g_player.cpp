@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.7  2003/02/16 16:54:50  smite-meister
+// L2 sound cache done
+//
 // Revision 1.6  2003/02/08 21:43:50  smite-meister
 // New Memzone system. Choose your pawntype! Cyberdemon OK.
 //
@@ -41,28 +44,51 @@ PlayerInfo *consoleplayer2 = NULL;   // secondary player taking events
 PlayerInfo *displayplayer = NULL;   // view being displayed
 PlayerInfo *displayplayer2 = NULL;  // secondary view (splitscreen)
 
+
 // lists of mobjtypes that can be played by humans!
-mobjtype_t Doom_Pawns[] = {
-  MT_PLAYER, MT_POSSESSED, MT_SHOTGUY, MT_TROOP, MT_SERGEANT, MT_SHADOWS,
-  MT_SKULL, MT_HEAD, MT_BRUISER, MT_SPIDER, MT_CYBORG, mobjtype_t(-1)
+pawn_info_t pawndata[] = 
+{
+  {MT_PLAYER,   wp_pistol,  50, MT_NONE}, // 0
+  {MT_POSSESSED, wp_pistol,  20, MT_NONE},
+  {MT_SHOTGUY,  wp_shotgun,  8, MT_NONE},
+  {MT_TROOP,    wp_nochange, 0, MT_TROOPSHOT},
+  {MT_SERGEANT, wp_nochange, 0, MT_NONE},
+  {MT_SHADOWS,  wp_nochange, 0, MT_NONE},
+  {MT_SKULL,    wp_nochange, 0, MT_NONE},
+  {MT_HEAD,     wp_nochange, 0, MT_HEADSHOT},
+  {MT_BRUISER,  wp_nochange, 0, MT_BRUISERSHOT},
+  {MT_SPIDER,   wp_chaingun, 100, MT_NONE},
+  {MT_CYBORG,   wp_missile,  20,  MT_NONE}, //10
+
+  {MT_WOLFSS,   wp_chaingun, 50, MT_NONE},
+  {MT_CHAINGUY, wp_chaingun, 50, MT_NONE},
+  {MT_KNIGHT,   wp_nochange, 0,  MT_BRUISERSHOT},
+  {MT_BABY,     wp_plasma,  50,  MT_ARACHPLAZ},
+  {MT_PAIN,     wp_nochange, 0,  MT_SKULL},
+  {MT_UNDEAD,   wp_nochange, 0,  MT_TRACER},
+  {MT_FATSO,    wp_nochange, 0,  MT_FATSHOT},
+  {MT_VILE,     wp_nochange, 0,  MT_FIRE}, // 18
+
+  {MT_HPLAYER,  wp_goldwand, 50, MT_NONE},
+  {MT_CHICKEN,  wp_beak,      0, MT_NONE},
+  {MT_MUMMY,    wp_nochange, 0, MT_NONE},
+  {MT_MUMMYLEADER, wp_nochange, 0, MT_MUMMYFX1},
+  {MT_MUMMYGHOST,  wp_nochange, 0, MT_NONE},
+  {MT_MUMMYLEADERGHOST, wp_nochange, 0, MT_MUMMYFX1},
+  {MT_BEAST,    wp_nochange, 0, MT_BEASTBALL},
+  {MT_SNAKE,    wp_nochange, 0, MT_SNAKEPRO_A},
+  {MT_HHEAD,    wp_nochange, 0, MT_HEADFX1},
+  {MT_CLINK,    wp_nochange, 0, MT_NONE},
+  {MT_WIZARD,   wp_nochange, 0, MT_WIZFX1},
+  {MT_IMP,      wp_nochange, 0, MT_NONE},
+  {MT_IMPLEADER,wp_nochange, 0, MT_IMPBALL},
+  {MT_HKNIGHT,  wp_nochange, 0, MT_KNIGHTAXE},
+  {MT_KNIGHTGHOST, wp_nochange, 0, MT_REDAXE},
+  {MT_SORCERER1, wp_nochange, 0, MT_SRCRFX1},
+  {MT_SORCERER2, wp_nochange, 0, MT_SOR2FX1},
+  {MT_MINOTAUR,  wp_nochange, 0, MT_MNTRFX1} // 36
 };
 
-mobjtype_t Doom2_Pawns[] = {
-  MT_PLAYER, MT_POSSESSED, MT_SHOTGUY, MT_CHAINGUY, MT_TROOP, MT_SERGEANT, MT_SHADOWS,
-  MT_SKULL, MT_HEAD, MT_KNIGHT, MT_BRUISER, MT_BABY, MT_PAIN, MT_UNDEAD, MT_FATSO,
-  MT_VILE, MT_SPIDER, MT_CYBORG, MT_WOLFSS, mobjtype_t(-1)
-};
-
-mobjtype_t Heretic_Pawns[] = {
-  MT_PLAYER, //FIXME to a real heretic
-  MT_CHICKEN,
-  MT_MUMMY, MT_MUMMYLEADER, MT_MUMMYGHOST, MT_MUMMYLEADERGHOST,
-  MT_BEAST, MT_SNAKE, MT_HHEAD, MT_CLINK, MT_WIZARD,
-  MT_IMP, MT_IMPLEADER, MT_HKNIGHT, MT_KNIGHTGHOST,
-  MT_SORCERER1, MT_SORCERER2, MT_MINOTAUR, mobjtype_t(-1)
-};
-
-vector<mobjtype_t> allowed_pawns; // FIXME temporary solution
 
 PlayerInfo::PlayerInfo(const string & n)
 {
@@ -72,7 +98,7 @@ PlayerInfo::PlayerInfo(const string & n)
   team = 0;
   playerstate = PST_WAITFORMAP;
   frags.resize(game.maxplayers);
-  pawntype = MT_PLAYER;
+  pawntype = 0;
 };
 
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/02/16 16:54:52  smite-meister
+// L2 sound cache done
+//
 // Revision 1.4  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -293,11 +296,6 @@ public:
   int  flags;
   int  eflags; //added:28-02-98: extra flags see above
   int  flags2; // heretic stuff
-
-                                   // secondary used when player die and
-                                   // play the die sound problem is he is
-                                   // already respawn and the corps play
-                                   // the sound !!! (he yeah it happens :\)
 
   int  special1;
   int  special2;

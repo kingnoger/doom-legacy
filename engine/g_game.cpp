@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/02/16 16:54:50  smite-meister
+// L2 sound cache done
+//
 // Revision 1.5  2003/01/18 20:17:41  smite-meister
 // HUD fixed, levelchange crash fixed.
 //
@@ -51,6 +54,7 @@
 #include "g_map.h"
 #include "g_pawn.h"
 
+#include "d_items.h"
 #include "g_input.h"
 #include "d_main.h"
 
@@ -237,7 +241,6 @@ static byte nextweaponorder[NUMWEAPONS] =
 
 static byte NextWeapon(PlayerPawn *player, int step)
 {
-  extern int weapongroup[NUMWEAPONS];
   int    i;
 
   for (i=0; i<NUMWEAPONS; i++)
@@ -269,7 +272,7 @@ static byte NextWeapon(PlayerPawn *player, int step)
 	    return (BT_CHANGE | BT_EXTRAWEAPON | (wp_shotgun<<BT_WEAPONSHIFT));
 	  */
 	  //return (BT_CHANGE | (w<<BT_WEAPONSHIFT));
-	  return BT_CHANGE | (weapongroup[w] << BT_WEAPONSHIFT);
+	  return BT_CHANGE | (weapondata[w].group << BT_WEAPONSHIFT);
         }
     }
   return 0;

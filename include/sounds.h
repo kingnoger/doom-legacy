@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Portions Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/02/16 16:54:52  smite-meister
+// L2 sound cache done
+//
 // Revision 1.2  2003/01/25 21:33:06  smite-meister
 // Now compiles with MinGW 2.0 / GCC 3.2.
 // Builder can choose between dynamic and static linkage.
@@ -53,7 +56,7 @@ struct doomsfx_t
 //
 // SoundFX struct.
 //
-
+/*
 struct sfxinfo_t
 {
   char*      name;        // up to 8-character name 
@@ -76,7 +79,18 @@ struct sfxinfo_t
   int         refcount;
   int         lumpnum;   // lump number of sfx
 };
+*/
 
+// hardwired sound info for original Doom/Heretic sounds
+struct sfxinfo_t
+{
+  char*      name;        // up to 8-character name 
+  bool       singularity; // Sfx singularity (only one at a time)
+  int        priority;    // Sfx priority
+  sfxinfo_t* link;        // referenced sound if a link
+  int        pitch;       // pitch if a link
+  int        volume;      // volume if a link
+};
 
 
 // the complete set of Doom/Heretic sound effects
@@ -84,12 +98,12 @@ extern sfxinfo_t S_sfx[];
 
 // the complete set of music
 extern char* MusicNames[];
-//#define NUMMUSICFREESLOTS  64
+
 
 //
 // Identifiers for all music in game.
 //
-// note! Some musics are really reused in Doom and Heretic.
+// note! Some pieces are really reused in Doom and Heretic.
 
 typedef enum
 {
@@ -238,11 +252,6 @@ typedef enum
   mus_hintr,
   mus_hcptd,
             
-  /*            
-  mus_firstfreeslot,
-  // 64 free slots here
-  mus_lastfreeslot = mus_firstfreeslot + NUMMUSICFREESLOTS - 1,
-  */
   NUMMUSIC
 } musicenum_t;
 
@@ -519,21 +528,13 @@ typedef enum
   sfx_amb10,
   sfx_amb11,
 
-  // free slots for S_AddSoundFx() at run-time --------------------
-  sfx_freeslot0,
-  //
-  // ... 60 free sounds here ...
-  //
-  //sfx_lastfreeslot = (sfx_freeslot0+NUMSFXFREESLOTS-1),
-  sfx_lastfreeslot = (sfx_freeslot0+320-1), // temp...
-  // end of freeslots ---------------------------------------------
-
   NUMSFX
 } sfxenum_t;
 
-
+/*
 void   S_InitRuntimeSounds();
 int    S_AddSoundFx(const char *name,int singularity);
 void   S_RemoveSoundFx(int id);
+*/
 
 #endif

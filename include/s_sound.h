@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/02/16 16:54:52  smite-meister
+// L2 sound cache done
+//
 // Revision 1.2  2003/01/25 21:33:06  smite-meister
 // Now compiles with MinGW 2.0 / GCC 3.2.
 // Builder can choose between dynamic and static linkage.
@@ -37,10 +40,9 @@
 
 #include <vector>
 #include "m_fixed.h"
+#include "z_cache.h"
 
 using namespace std;
-// killough 4/25/98: mask used to indicate sound origin is player item pickup
-//#define PICKUP_SOUND (0x8000)
 
 struct consvar_t;
 struct CV_PossibleValue_t;
@@ -91,13 +93,6 @@ extern consvar_t  play_mode;
 void S_RegisterSoundStuff();
 
 
-// Initializes sound stuff, including volume
-// Sets channels, SFX and music volume,
-//  allocates channel buffer, sets S_sfx lookup.
-void S_Init(int sfxVolume, int musicVolume);
-
-
-
 //
 // MusicInfo struct.
 //
@@ -110,82 +105,99 @@ struct musicinfo_t
   int   handle;    // music handle once registered
 };
 
-// defines a moving 3D sound source
+
+// defines a 3D sound source. We can't just use an Actor* because of
+// sounds originating from mappoint_t's. A bit clumsy but works.
 struct soundsource_t
 {
-  fixed_t x, y, z;
-  fixed_t vx, vy, vz;
-  void* origin; // pointer to the game object making the sound (Actor etc.)
+  fixed_t     x, y, z;
+  mappoint_t *mpoint; // either this
+  Actor      *origin; // or this must be NULL
 };
+
+
+class scacheitem_t : public cacheitem_t
+{
+  friend class soundcache_t;
+public:
+  void *sdata; // raw converted sound data
+};
+
 
 // normal "static" mono(stereo) sound channel
 struct channel_t
 {
-  // sound information (if NULL, channel is unused)
-  sfxinfo_t *sfxinfo;
-  // handle of the sound being played
-  int handle;  
+  int volume;
+  int pitch;
+  int priority;
+
+  // observed variables
+  int ovol;
+  int opitch;
+  int osep; // left/right x^2 separation. 128 is front, 0 is totally left, 256 is totally right
+
+  scacheitem_t *cip;
+
+  bool playing;
 };
 
 // 3D sound channel
 struct channel3D_t : public channel_t
 {
-  // origin of sound
-  soundsource_t source;
+  soundsource_t source;  // origin of sound
 };
 
 class SoundSystem
 {
 private:
   // sound effects
+
   // the set of channels available
   vector<channel_t>   channels; // static stereo or mono sounds
   vector<channel3D_t> channel3Ds; // dynamic 3D positional sounds
 
-  int sfxvolume;
+  int soundvolume;
 
   // music
-  int musicvolume;
-
-  // whether music is paused
-  bool mus_paused;
-
-  // music currently being played
-  musicinfo_t *mus_playing;
+  int  musicvolume;  
+  bool mus_paused; // whether music is paused
+  musicinfo_t *mus_playing;   // music currently being played
 
   // gametic when to do cleanup
   int nextcleanup;
 
-  channel_t   *GetChannel(sfxinfo_t *sfx);
-  channel3D_t *Get3DChannel(sfxinfo_t *sfx);
+  // these are only used internally, user can change them using consvars
+  void SetSoundVolume(int volume);
+  void SetMusicVolume(int volume);
+  void ResetChannels(int stereo, int dynamic);
+
+  int   GetChannel(int pri);
+  int Get3DChannel(int pri);
+
   void StopChannel(int cnum);
   void Stop3DChannel(int cnum);
 
 public:
   SoundSystem();
 
-  void SetSfxVolume(int volume);
-  void SetMusicVolume(int volume);
+  void Startup(); // initialization when game starts
 
-  // sound
-  void ResetChannels(int stereo, int dynamic);
+  // --------- sound
 
   // normal mono/stereo sound
-  void StartAmbSound(sfxinfo_t *sfx, int volume = 255);
+  void StartAmbSound(const char *name, int volume = 255, int separation = 128, int pitch = 128, int pri = 64);
   // positional 3D sound
-  void Start3DSound(soundsource_t *source, sfxinfo_t *sfx, int volume = 255);
+  void Start3DSound(const char *name, soundsource_t *source, int volume = 255, int pitch = 128, int pri = 64);
 
   void Stop3DSounds();
   void Stop3DSound(void *origin);
 
-  // music
+  // --------- music
   void PauseMusic();
   void ResumeMusic();
 
   // caches music lump "name", starts playing it
   bool StartMusic(const char *name, bool looping = false);
-  // same for old Doom/Heretic musics. See sounds.h.
-  bool StartMusic(int music_id, bool looping = false);
 
   // Stops the music fer sure.
   void StopMusic();
@@ -193,14 +205,10 @@ public:
 
   // Updates music & sounds
   void UpdateSounds();
-
 };
 
 extern SoundSystem S;
 
-
-// returns a lumpnum, either of sfx or of a replacing sound
-int S_GetSfxLumpNum(sfxinfo_t* sfx);
 
 // wrappers
 // Start sound for thing at <origin>
@@ -209,9 +217,8 @@ void S_StartAmbSound(int sfx_id, int volume = 255);
 void S_StartSound(mappoint_t *origin, int sfx_id);
 void S_StartSound(Actor *origin, int sfx_id);
 
-
-//void S_StartSoundName(Actor *mo, const char *soundname);
-//int S_SoundPlaying(void *origin, int id);
+// for old Doom/Heretic musics. See sounds.h.
+bool S_StartMusic(int music_id, bool looping = false);
 
 
 #endif

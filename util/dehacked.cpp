@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/02/16 16:54:52  smite-meister
+// L2 sound cache done
+//
 // Revision 1.3  2002/12/23 23:20:57  smite-meister
 // WAD2+WAD3 support added!
 //
@@ -336,7 +339,7 @@ static void readsound(MYFILE* f,int num,char *savesfxnames[])
 	      value=(value+4)/8;
 	    else value=(value+8)/8;
 
-	    if(value>=-1 && value<sfx_freeslot0-1)
+	    if(value>=-1 && value < NUMSFX-1)
 	      S_sfx[num].name=savesfxnames[value+1];
 	    else
 	      deh_error("Sound %d : offset out of bound\n",num);
@@ -369,7 +372,7 @@ static void readtext(MYFILE* f,int len1,int len2,char *savesfxname[],char *saves
   {
     s[len1+len2]='\0';
     // sound table
-    for(i=0;i<sfx_freeslot0;i++)
+    for(i=0;i<NUMSFX;i++)
       if(!strncmp(savesfxname[i],s,len1))
       {
         strncpy(S_sfx[i].name,&(s[len1]),len2);
@@ -492,8 +495,6 @@ Max ammo = 400
 Per ammo = 40
 */
 
-extern int clipammo[];
-extern int GetWeaponAmmo[];
 
 static void readammo(MYFILE *f,int num)
 {
@@ -513,10 +514,10 @@ static void readammo(MYFILE *f,int num)
 	else if(!strcmp(word,"Per"))
 	  {
 	    clipammo[num]=value;
-	    GetWeaponAmmo[num] = 2*value;
+	    weapondata[num].getammo = 2*value; // only works for Doom
 	  }
 	else if(!strcmp(word,"Perweapon"))
-	  GetWeaponAmmo[num] = 2*value; 
+	  weapondata[num].getammo = 2*value; 
 	else
 	  deh_error("Ammo %d : unknow word '%s'\n",num,word);
       }

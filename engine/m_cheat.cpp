@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/02/16 16:54:50  smite-meister
+// L2 sound cache done
+//
 // Revision 1.7  2003/01/25 21:33:05  smite-meister
 // Now compiles with MinGW 2.0 / GCC 3.2.
 // Builder can choose between dynamic and static linkage.
@@ -56,6 +59,7 @@
 #include "m_cheat.h"
 #include "am_map.h"
 #include "i_sound.h" // for I_PlayCD()
+#include "sounds.h"
 #include "s_sound.h"
 #include "hu_stuff.h"
 #include "w_wad.h"
@@ -699,7 +703,7 @@ void CheatMusFunc(PlayerPawn *p, const byte *arg)
       if (musnum < 1 || musnum > 35)
 	msg = STSTR_NOMUS;
       else
-	S.StartMusic(musnum + mus_runnin - 1, true);
+	S_StartMusic(musnum + mus_runnin - 1, true);
     }
   else
     {
@@ -708,7 +712,7 @@ void CheatMusFunc(PlayerPawn *p, const byte *arg)
       if (musnum < 0 || musnum > 31)
 	msg = STSTR_NOMUS;
       else
-	S.StartMusic(musnum + mus_e1m1, true);
+	S_StartMusic(musnum + mus_e1m1, true);
     }
   p->SetMessage(msg, false);
 }

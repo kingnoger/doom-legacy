@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2003/02/16 16:54:52  smite-meister
+// L2 sound cache done
+//
 // Revision 1.2  2003/02/08 21:43:50  smite-meister
 // New Memzone system. Choose your pawntype! Cyberdemon OK.
 //
@@ -41,23 +44,30 @@
 //
 // ZONE MEMORY
 // PU - purge tags.
-// Tags < PU_PURGELEVEL are not overwritten until freed.
-#define PU_STATIC               1      // static entire execution time
-#define PU_SOUND                2      // static while playing
-#define PU_MUSIC                3      // static while playing
-#define PU_DAVE                 4      // anything else Dave wants static
+typedef enum
+{
+  // Tags < PU_PURGELEVEL are not overwritten until freed.
+  PU_STATIC = 1,      // static entire execution time
+  PU_SOUND  = 2,      // static while playing
+  PU_MUSIC  = 3,      // static while playing
+  PU_DAVE   = 4,      // anything else Dave wants static
 
-#define PU_HWRPATCHINFO         5      // Hardware GlidePatch_t struct for OpenGl/Glide texture cache
-#define PU_HWRPATCHCOLMIPMAP    6      // Hardware GlideMipmap_t struct colromap variation of patch
+  PU_HWRPATCHINFO      = 5,   // Hardware GlidePatch_t struct for OpenGl/Glide texture cache
+  PU_HWRPATCHCOLMIPMAP = 6,   // Hardware GlideMipmap_t struct colromap variation of patch
 
-#define PU_LEVEL               50      // static until level exited
-#define PU_LEVSPEC             51      // a special thinker in a level
-#define PU_HWRPLANE            52
-// Tags >= PU_PURGELEVEL are automatically purgable whenever needed.
-#define PU_PURGELEVEL         100
-#define PU_CACHE              101
-#define PU_HWRCACHE           102      // 'second-level' cache for graphics
-                                       // stored in hardware format and downloaded as needed
+  // Tags >= PU_LEVEL are made purgable when a level is exited
+  PU_LEVEL    = 50,   // static until level is exited
+  PU_LEVSPEC  = 51,   // a special thinker in a level
+  PU_HWRPLANE = 52,
+
+  // Tags >= PU_PURGELEVEL are automatically purgable whenever needed.
+  PU_PURGELEVEL = 100,
+  PU_CACHE      = 101,
+  PU_HWRCACHE   = 102  // 'second-level' cache for graphics
+                       // stored in hardware format and downloaded as needed
+  // TODO: remove PU_HWRCACHE, make a real 2nd level cache
+} memtag_t;
+
 
 void    Z_Init();
 void    Z_FreeTags (int lowtag, int hightag);

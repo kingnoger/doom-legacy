@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/02/16 16:54:51  smite-meister
+// L2 sound cache done
+//
 // Revision 1.4  2002/12/29 18:57:03  smite-meister
 // MAPINFO implemented, Actor deaths handled better
 //
@@ -1826,7 +1829,7 @@ void Intermission::Ticker()
           mus = mus_inter;
 	  break;
 	}
-      S.StartMusic(mus, true);
+      S_StartMusic(mus, true);
     }
 
   //WI_checkForAccelerate();

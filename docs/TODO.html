@@ -19,23 +19,22 @@ $Id$
 <h3>Ideas</h3>
 
 <ul>
-<li>cache data in machine native byte order, so that it only needs to be
+<li>L2 caches (base L2cache class is done!)
+ <ul>
+ <li>cache data in machine native byte order, so that it only needs to be
   changed once. patches for example.
-
-<li>cache graphics/sound only when needed, ie. when a thing is
-Spawned, cache it's sprite etc.
+ <li>cache graphics/sound only when needed, ie. when a thing is
+  Spawned, cache it's sprite etc.
+ <li>Texture/patch/flat -L2 cache that treats them all in the same way,
+  using a Texture class, reference counting, SDL_surface?
+ <li>Sprite/model L2 cache (right now _all_ known sprites are cached)
+ <li>Run the cache system in a separate thread;)
+ </ul>
 
 <li>a real class Camera : public Actor that could include chasecams,
   fixed cameras, target-following cams, IR cams etc.
 
-<li>Texture/patch/flat -L2 cache that treats them all in the same way,
-  using a Texture class, reference counting, SDL_surface?
-
 <li>a Texture class (static, animating, fractal, multitexturing...)
-
-<li>Music/sounds L2 cache
-
-<li>Sprite/model L2 cache (right now _all_ known sprites are cached)
 
 <li>legacy.wad (former doom3.wad) contents:
  <ul>
@@ -80,8 +79,16 @@ Spawned, cache it's sprite etc.
 
 <li>Some über-cool chasecam crosshair to make chasecam usable
 
-<li>Natural attacks for each Pawntype (when Marines punch, Imps either
+<li>Other pawntypes besides Marine and Heretic
+ <ul>
+ <li>Natural attacks (and sounds) for each Pawntype (when Marines punch, Imps either
 claw or shoot fireballs)
+ <li>Viewheight depending on pawn height
+ <li>Maximum speed likewise
+ </ul>
+
+<li>Rewrite the awful movement/friction code
+
 </ul>
 
 </body>

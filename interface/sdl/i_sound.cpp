@@ -16,6 +16,9 @@
 // for more details.
 //
 // $Log$
+// Revision 1.4  2003/02/16 16:54:52  smite-meister
+// L2 sound cache done
+//
 // Revision 1.3  2003/01/12 12:56:42  smite-meister
 // Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
 //
@@ -51,6 +54,7 @@ rcsid[] = "$Id$";
 #include "m_swap.h"
 #include "i_system.h"
 #include "i_sound.h"
+#include "s_sound.h"
 #include "m_argv.h"
 #include "m_misc.h"
 #include "w_wad.h"
@@ -66,22 +70,14 @@ rcsid[] = "$Id$";
 
 extern tic_t gametic;
 
-//#define PIPE_CHECK(fh) if (broken_pipe) { fclose(fh); fh = NULL; broken_pipe = 0; }
-
 #define MIDBUFFERSIZE   128*1024
+#define SAMPLERATE      11025   // Hz
 
-// The number of internal mixing channels,
-//  the samples calculated for each mixing step,
-//  the size of the 16bit, 2 hardware channel (stereo)
-//  mixing buffer, and the samplerate of the raw data.
-
-// Needed for calling the actual sound output.
-#define NUM_CHANNELS            8
-
-#define SAMPLERATE              11025   // Hz
-
-struct chan_t
+class chan_t
 {
+public:
+  channel_t *ch; // the corresponding SoundSystem channel
+
   // The channel data pointers, start and end.
   Uint8* data;
   Uint8* end;
@@ -90,27 +86,17 @@ struct chan_t
   Uint32 step;          // The channel step amount...
   Uint32 stepremainder; // ... and a 0.16 bit remainder of last step.
 
-  // Time/gametic that the channel started playing,
-  //  used to determine oldest, which automatically
-  //  has lowest priority.
-  int starttic;
-
-  // The sound handle, determined on registration,
-  // used to unregister/stop/modify,
-  int handle;
-
-  // SFX id of the playing sound effect.
-  // Used to catch duplicates (like chainsaw).
-  //int id;
-
   // Hardware left and right channel volume lookup.
   int*  leftvol_lookup;
   int*  rightvol_lookup;
+
+  // calculate sound parameters using ch
+  void CalculateParams();
 };
 
-static chan_t channels[NUM_CHANNELS];
+static vector<chan_t> channels;
 
-const int samplecount = 512; // requested audio buffer size
+const int samplecount = 512; // requested audio buffer size (about 46 ms at 11 kHz)
 
 // Pitch to stepping lookup. 64 pitch units = 1 octave
 //  0 = 0.25x, 128 = 1x, 256 = 4x
@@ -122,7 +108,6 @@ static int vol_lookup[128*256];
 // Buffer for MIDI
 static char* musicbuffer;
 
-static const char *MIDI_tmpfilename;
 
 // Flags for the -nosound and -nomusic options
 extern bool nosound;
@@ -131,9 +116,6 @@ extern bool nomusic;
 static bool musicStarted = false;
 static bool soundStarted = false;
 
-
-// Well... To keep compatibility with legacy doom, I have to call this in
-// I_InitSound since it is not called in S_Init... (emanne@absysteme.fr)
 
 static void I_SetChannels()
 {
@@ -154,6 +136,7 @@ static void I_SetChannels()
       vol_lookup[i*256+j] = (i*(j-128)*256)/127;
 }
 
+/*
 static int FindChannel(int handle)
 {
   int i;
@@ -165,82 +148,7 @@ static int FindChannel(int handle)
   // not found
   return -1;
 }
-
-//----------------------------------------------
-// This function loads the sound data from the WAD lump,
-//  for a single sound and sets up sfx fields.
-//  sfx must be a valid pointer.
-// We assume that the sound is in Doom sound format (for now).
-// TODO: Make it recognize other formats as well!
-
-void *I_GetSfx(sfxinfo_t* sfx)
-{
-  // we must set up data, length and lumpnum
-
-  if (sfx->link)
-    {
-      // recursive handling of links!
-      if (!sfx->link->data)
-	I_GetSfx(sfx->link);
-
-      sfx->data = sfx->link->data;
-      sfx->length = sfx->link->length;
-      return sfx->data;
-    }
-
-  // now Heretic works fine
-  if (sfx->lumpnum < 0)
-    sfx->lumpnum = S_GetSfxLumpNum(sfx);
-
-#ifdef HW3SOUND
-  if (hws_mode != HWS_DEFAULT_MODE)
-    {
-      sfx->data = fc.CacheLumpNum(sfx->lumpnum, PU_SOUND);
-      return sfx->data;
-    }
-#endif
-
-  Uint8 *data = (Uint8 *)fc.CacheLumpNum(sfx->lumpnum, PU_SOUND);
-  int size = fc.LumpLength(sfx->lumpnum);
-
-  doomsfx_t *ds = (doomsfx_t *)data;
-  // TODO: endianness conversion
-
-  CONS_Printf(" Sound: %s, m = %d, r = %d, s = %d, z = %d, length = %d\n",
-	      sfx->name, ds->magic, ds->rate, ds->samples, ds->zero, size);
-
-  // Pads the sound effect out to the mixing buffer size.
-  // The original realloc would interfere with zone memory.
-  //int paddedsize = ((size-8 + (samplecount-1)) / samplecount) * samplecount;
-  // Allocate from zone memory.
-  //Uint8 *paddeddata = (unsigned char*)Z_Malloc(paddedsize + 8, PU_STATIC, 0);
-  // This should interfere with zone memory handling,
-  //  which does not kick in in the soundserver.
-
-  //int i;
-
-  // Now copy and pad.
-  //memcpy(paddeddata, data, size);
-  //for (i=size ; i<paddedsize+8 ; i++)
-  //  paddeddata[i] = 128;
-
-  // Remove the cached lump.
-  //Z_Free(data);
-
-  // Preserve padded length.
-  //*len = paddedsize;
-  sfx->length = size - 8;  // 8 byte header
-  sfx->data = &ds->data;
-  // Return allocated padded data.
-  return sfx->data;//(paddeddata + 8)
-}
-
-// FIXME: handle links gracefully
-void I_FreeSfx(sfxinfo_t* sfx)
-{
-  sfx->data = NULL;
-  sfx->length = 0;
-}
+*/
 
 
 //
@@ -258,21 +166,21 @@ void I_SetSfxVolume(int volume)
   //  the mixing.
   // Since the variable is cv_soundvolume,
   // nothing needs to be done.
-  //CV_SetValue(&cv_soundvolume, volume);
 }
 
-// used to (re)calculate channel params based on vol, sep, pitch
-static void I_SetChannelParams(chan_t *c, int vol, int sep, int pitch)
+// used to (re)calculate channel params
+void chan_t::CalculateParams()
 {
-  c->step = steptable[pitch];
+  step = steptable[ch->opitch];
 
   // x^2 separation, that is, orientation/stereo.
   //  range is: 0 (left) - 255 (right)
 
   // Volume arrives in range 0..255 and it must be in 0..cv_soundvolume...
-  vol = (vol * cv_soundvolume.value) >> 7;
+  int vol = (ch->ovol * cv_soundvolume.value) >> 7;
   // note: >> 6 would use almost the entire dynamical range, but
   // then there would be no "dynamical room" for other sounds :-/
+  int sep = ch->osep;
 
   int leftvol  = vol - ((vol*sep*sep) >> 16); ///(256*256);
   sep = 255 - sep;
@@ -287,8 +195,8 @@ static void I_SetChannelParams(chan_t *c, int vol, int sep, int pitch)
 
   // Get the proper lookup table piece
   //  for this volume level???
-  c->leftvol_lookup = &vol_lookup[leftvol*256];
-  c->rightvol_lookup = &vol_lookup[rightvol*256];
+  leftvol_lookup = &vol_lookup[leftvol*256];
+  rightvol_lookup = &vol_lookup[rightvol*256];
 }
 
 //----------------------------------------------
@@ -297,19 +205,13 @@ static void I_SetChannelParams(chan_t *c, int vol, int sep, int pitch)
 //  list of currently active sounds,
 //  which is maintained as a given number
 //  (eight, usually) of internal channels.
-// Returns a handle.
-// Pitching (that is, increased speed of playback)
-//  is set, but currently not used by mixing.
 
-int I_StartSound(sfxinfo_t *sfx, int vol, int sep, int pitch)
+int I_StartSound(channel_t *s_channel)
 {
-  // int sfxid 
   if (nosound)
     return 0;
 
   SDL_LockAudio();
-
-  int i;
 
   // Chainsaw troubles.
   // Play these sound effects only one at a time.
@@ -338,51 +240,31 @@ int I_StartSound(sfxinfo_t *sfx, int vol, int sep, int pitch)
     }
   */
 
-  int oldest = gametic;
-  int oldestnum = 0;
-
-  // Loop all channels to find a free channel / the oldest SFX.
-  for (i=0; i<NUM_CHANNELS; i++)
-    {
-      if (!channels[i].data)
-	break;
-      if (channels[i].starttic < oldest)
-	{
-	  oldestnum = i;
-	  oldest = channels[i].starttic;
-	}
-    }
+  int n = channels.size();
+  //CONS_Printf("SDL channels: %d\n", n);
 
   // Tales from the cryptic.
-  // If we found a free channel, fine.
-  // If not, we simply overwrite the oldest one.
-
-  if (i == NUM_CHANNELS)
-    i = oldestnum;
-  
-  chan_t *c = &channels[i]; 
-
-  // Okay, in the less recent channel,
-  //  we will handle the new SFX.
+  // Because SoundSystem class takes care of channel management,
+  // we know that a new channel can be created.
+  channels.resize(n+1);
+  chan_t *c = &channels[n];
+  c->ch = s_channel;
 
   // Set pointer to raw data.
-  c->data = (Uint8 *)sfx->data;
+  c->data = (Uint8 *)s_channel->cip->sdata;
   // Set pointer to end of raw data.
-  c->end = c->data + sfx->length;
+  c->end = c->data + s_channel->cip->length;
   
-  // Should be gametic, I presume.
-  c->starttic = gametic;
   c->stepremainder = 0;
 
   // Set pitch, volume and separation
-  I_SetChannelParams(c, vol, sep, pitch);
+  c->CalculateParams();
 
-  // Preserve sound SFX id,
-  //  e.g. for avoiding duplicates of chainsaw.
-  //channelids[slot] = sfxid;
+  s_channel->playing = true;
 
   SDL_UnlockAudio();
 
+  /*
   // Assign current handle number.
   static unsigned short handlenum = 100;
   c->handle = handlenum--;
@@ -392,25 +274,29 @@ int I_StartSound(sfxinfo_t *sfx, int vol, int sep, int pitch)
     handlenum = 100;
 
   return c->handle;
+  */
+  return 1;
 }
 
 
-void I_StopSound(int handle)
+void I_StopSound(channel_t *c)
 {
-  int i = FindChannel(handle);
-  if (i >= 0)
-    {
-      channels[i].data = NULL;
-      channels[i].handle = -1;
-    }
+  vector<chan_t>::iterator i;
+
+  for (i = channels.begin(); i != channels.end(); i++)
+    if ((*i).ch == c)
+      break;
+ 
+  if (i != channels.end())
+    channels.erase(i);
 }
 
-
+/*
 bool I_SoundIsPlaying(int handle)
 {
   return (FindChannel(handle) < 0);
 }
-
+*/
 
 // Not used by SDL version
 //void I_SubmitSound() {}
@@ -460,7 +346,6 @@ static void I_UpdateSound_sdl(void *unused, Uint8 *stream, int len)
 
   // Determine end, for left channel only
   //  (right channel is implicit).
-  //Sint16 *leftend = leftout + samplecount*step;
   Sint16 *leftend = leftout + len/step;
 
   // Mix sounds into the mixing buffer.
@@ -474,8 +359,8 @@ static void I_UpdateSound_sdl(void *unused, Uint8 *stream, int len)
       // Love thy L2 chache - made this a loop.
       // Now more channels could be set at compile time
       //  as well. Thus loop those  channels.
-      int i;
-      for (i = 0; i < NUM_CHANNELS; i++)
+      int i, n = channels.size();
+      for (i = 0; i < n; i++)
         {
 	  chan_t *c = &channels[i];
 	  // Check if channel is active.
@@ -499,7 +384,7 @@ static void I_UpdateSound_sdl(void *unused, Uint8 *stream, int len)
 	      if (c->data >= c->end)
 		{
 		  c->data = NULL;
-		  c->handle = -1;
+		  c->ch->playing = false; // notify SoundSystem
 		}
             }
         }
@@ -526,7 +411,7 @@ static void I_UpdateSound_sdl(void *unused, Uint8 *stream, int len)
     }
 }
 
-
+/*
 bool I_UpdateSoundParams(int handle, int vol, int sep, int pitch)
 {
   // Would be using the handle to identify
@@ -545,6 +430,7 @@ bool I_UpdateSoundParams(int handle, int vol, int sep, int pitch)
     }
   return false;
 }
+*/
 
 void I_ShutdownSound()
 {
@@ -602,30 +488,6 @@ void I_StartupSound()
     soundStarted = true;
   */
 
-  // Initialize external data (all sounds) at start, keep static.
-  //CONS_Printf("I_InitSound: (%d sfx)", NUMSFX);
-
-  /*
-  int i;
-  for (i=1 ; i<NUMSFX ; i++)
-    {
-      // Alias? Example is the chaingun sound linked to pistol.
-      if (S_sfx[i].name)
-	if (!S_sfx[i].link)
-	  {
-	    // Load data from WAD file.
-	    S_sfx[i].data = getsfx(&S_sfx[i], &lengths[i]);
-	  } 
-	else
-	  {
-	    // Previously loaded already?
-	    S_sfx[i].data = S_sfx[i].link->data;
-	    lengths[i] = lengths[(S_sfx[i].link - S_sfx)/sizeof(sfxinfo_t)];
-	  }
-    }
-    CONS_Printf(" pre-cached all sound data\n"); 
-  */
-
   I_SetChannels();
   // Finished initialization.
   CONS_Printf("I_InitSound: sound module ready\n");
@@ -643,7 +505,6 @@ static Mix_Music *music[2] = { NULL, NULL };
 
 void I_ShutdownMusic()
 {
-  /* Should this be exposed in mixer.h? */
   if (nomusic)
     return;
 
@@ -722,15 +583,18 @@ void I_StopSong(int handle)
   Mix_FadeOutMusic(500);
 }
 
+static const char *MIDI_tmpfilename;
+
 void I_UnRegisterSong(int handle)
 {
   if (nomusic)
     return;
 
-  if ( music[handle] ) {
-    Mix_FreeMusic(music[handle]);
-    music[handle] = NULL;
-  }
+  if (music[handle])
+    {
+      Mix_FreeMusic(music[handle]);
+      music[handle] = NULL;
+    }
   unlink(MIDI_tmpfilename);
 }
 
@@ -744,7 +608,6 @@ int I_RegisterSong(void* data, int len)
   if (nomusic)
     return 0;
 
-  // This isn't necessarily POSIX, pal! // midfile = fopen(MIDI_TMPFILE, "wb");
   MIDI_tmpfilename = tmpnam(NULL); // create an unused name
   midfile = fopen(MIDI_tmpfilename, "wb");
   if (midfile == NULL)
