@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/12/19 23:37:59  smite-meister
+// oops
+//
 // Revision 1.6  2004/12/19 23:30:18  smite-meister
 // More BEX support
 //
@@ -43,7 +46,7 @@
 #ifndef parser_h
 #define parser_h 1
 
-#include "stddef.h"
+#include <stddef.h>
 
 
 enum parseritem_t
