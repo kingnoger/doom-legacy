@@ -80,7 +80,7 @@ The source can be found <a href="http://sourceforge.net/projects/doomlegacy/">he
 
 <ul>
 <li><a href="../compiling.html">compiling.html</a> Compiling instructions</li>
-<li><a href="../coding.html">coding.html</a> What you should know about the source</li>
+<li><a href="../source.html">source.html</a> What you should know about the source</li>
 <li><a href="../elements.html">elements.html</a> Game subsystem definitions and progress indicators</li>
 <li><a href="../TODO.html">TODO.html</a> Todo list</li>
 <li><a href="../BUGS.html">BUGS.html</a> Bugs list</li>

@@ -7,18 +7,29 @@
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
 <meta name="description" content="New, even better Doom Legacy" />
 <meta name="keywords" lang="en" content="doom, legacy, fps, heretic, hexen" />
-<link rel="stylesheet" href="http://www.w3.org/StyleSheets/Core/Midnight" type="text/css" />
+<link rel="stylesheet" href="legacy.css" type="text/css" />
 <title>Doom Legacy TODO list</title>
 </head>
 
-<body text="#70f070" bgcolor="#000000" link="#f0f070" vlink="#f04040" alink="#7070f0">
+<!-- $Id$ -->
+<body>
 
-$Id$
 <h1>Doom Legacy TODO list</h1>
 
 In order of decreasing importance:
 
 <ul>
+<li>Finish new network code, based on OpenTNL
+ <ul>
+ <li>game object ghosting
+ <li>client input transmission (ticcmds)
+ <li>miscellaneous RPCs which replace most old XCMDs (chat etc.)
+ <li>client interpolation and extrapolation (makes the game smoother and more
+responsive, but is not strictly necessary)
+ <li>file transfers
+ <li>master server functionality
+ </ul>
+
 <li>Finish Hexen support. Intermission, polyobj renderer, extra
 physics.
 
@@ -40,8 +51,6 @@ physics.
  <li>"Legacy demo" map in case someone decides to use it as an iwad
  + MAPINFO lump to handle it.
  </ul>
-
-<li>Advanced fault-resistant network code (like Quake2, Unreal...)
 
 <li>Finish the OGG/MP3 music support
 
@@ -83,8 +92,6 @@ claw or shoot fireballs)
 <li>class Camera : public Actor could include chasecams,
   fixed cameras, target-following cams, IR cams etc.,
   some über-cool chasecam crosshair to make chasecam usable
-
-<li>Enable cheating (for server only) in multiplayer games
 
 <li>Sprite skin support, skin sounds
 
