@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:17:55  hurdler
-// Initial revision
+// Revision 1.2  2002/12/03 10:11:39  smite-meister
+// Blindness and missile clipping bugs fixed
+//
+// Revision 1.1.1.1  2002/11/16 14:17:55  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.14  2002/09/20 22:41:29  vberghol
 // Sound system rewritten! And it workscvs update
@@ -618,7 +621,6 @@ static void P_NewChaseDir(Actor *actor)
 //
 bool Actor::LookForPlayers(bool allaround)
 {
-  int         c, stop;
   PlayerPawn *p;
   angle_t     an;
   fixed_t     dist;
@@ -629,29 +631,27 @@ bool Actor::LookForPlayers(bool allaround)
   //  return LookForMonsters();
 
   //sector_t *sector = subsector->sector;
-  // FIXME bug why is n == 0 ?
   int n = mp->players.size();
   if (n == 0)
     return false;
+
   // BP: first time init, this allow minimum lastlook changes
   if (lastlook < 0 && game.demoversion >= 129)
     lastlook = P_Random () % n;
 
-  c = 0;
-  stop = (lastlook - 1) % n;
+  //int stop = (lastlook - 1) % n;
 
-  for ( ; ; lastlook = lastlook+1 )
+  for (int c = 0; c < n; c++, lastlook++)
     {
-      if (lastlook >= n) lastlook = 0;
+      if (lastlook >= n)
+	lastlook = 0;
 
-      // done looking
-      if (lastlook == stop)
+      // check max. 2 players/turn
+      if (c >= 2)
 	return false;
 
       //if (!playeringame[lastlook]) continue;
-
-      if (c++ == 2)
-	return false;
+      //if (c++ == 2) return false;
 
       p = mp->players[lastlook]->pawn;
 
@@ -688,6 +688,7 @@ bool Actor::LookForPlayers(bool allaround)
         }
 
       target = p;
+      CONS_Printf("+++++ got target!\n");
       return true;
     }
 

@@ -17,8 +17,8 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:05  hurdler
-// Initial revision
+// Revision 1.2  2002/12/03 10:11:39  smite-meister
+// Blindness and missile clipping bugs fixed
 //
 // Revision 1.31  2002/09/27 08:18:41  vberghol
 // intermission fixed.
@@ -792,7 +792,8 @@ void GameInfo::Ticker()
     case GS_LEVEL:
       //IO_Color(0,255,0,0);
       // FIXME !paused should be enough, menu should put the game on pause if possible
-      if (!paused && !(Menu::active && !netgame && !demoplayback))
+      // if (!paused && !(Menu::active && !netgame && !demoplayback))
+      if (!paused)
 	{
 	  // FIXME just one map for now
 	  maps[0]->Ticker(); // tic the maps

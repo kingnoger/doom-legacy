@@ -17,8 +17,8 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:17:55  hurdler
-// Initial revision
+// Revision 1.2  2002/12/03 10:11:39  smite-meister
+// Blindness and missile clipping bugs fixed
 //
 // Revision 1.8  2002/08/23 18:05:38  vberghol
 // idiotic segfaults fixed
@@ -217,11 +217,11 @@ void P_SetTranslucencies()
 
 void Translucency_OnChange()
 {
-    if( cv_translucency.value==0 )
-        resettrans = true;
-    if (!fuzzymode)
-        P_SetTranslucencies();
-    resettrans = false;
+  if (cv_translucency.value == 0)
+    resettrans = true;
+  if (cv_fuzzymode.value == 0)
+    P_SetTranslucencies();
+  resettrans = false;
 }
 
 

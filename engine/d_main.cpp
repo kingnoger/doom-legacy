@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:07  hurdler
-// Initial revision
+// Revision 1.2  2002/12/03 10:11:39  smite-meister
+// Blindness and missile clipping bugs fixed
 //
 // Revision 1.20  2002/09/25 15:17:35  vberghol
 // Intermission fixed?
@@ -300,10 +300,6 @@ bool devparm;        // started game with -devparm
 bool singletics = false; // timedemo
 
 
-//char            wadfile[1024];          // primary wad file
-//char            mapdir[1024];           // directory of development maps
-
-
 //------------------------------------------
 //
 // EVENT HANDLING
@@ -497,7 +493,7 @@ void D_PageDrawer(char *lumpname)
       if ((vid.width>BASEVIDWIDTH) || (vid.height>BASEVIDHEIGHT) )
         {
 	  src  = scr_borderpatch;
-	  dest = screens[0];
+	  dest = vid.screens[0];
 	  
 	  for (y=0; y<vid.height; y++)
             {
@@ -573,17 +569,13 @@ void D_Display()
   bool redrawsbar = false;
 
   //added:21-01-98: check for change of screen size (video mode)
-  if (setmodeneeded)
-    SCR_SetMode();  // change video mode
-
-  if (vid.recalc)
-    //added:26-01-98: NOTE! setsizeneeded is set by SCR_Recalc()
-    SCR_Recalc();
+  if (vid.setmodeneeded)
+    vid.SetMode();  // change video mode, set setsizeneeded
 
   // change the view size if needed
   if (setsizeneeded)
     {
-      R_ExecuteSetViewSize ();
+      R_ExecuteSetViewSize();
       oldgamestate = GS_WIPE;                      // force background redraw
       borderdrawcount = 3;
       redrawsbar = true;
@@ -667,7 +659,7 @@ void D_Display()
 
   // change gamma if needed
   if (game.state != oldgamestate && game.state != GS_LEVEL) 
-    V_SetPalette(0);
+    vid.SetPalette(0);
 
   menuactivestate = Menu::active;
   oldgamestate = game.wipestate = game.state;
@@ -686,7 +678,7 @@ void D_Display()
     }
 
   //added:24-01-98:vid size change is now finished if it was on...
-  vid.recalc = 0;
+  vid.recalc = false;
 
   //FIXME: draw either console or menu, not the two. Menu wins.
   CON_Drawer();
@@ -719,15 +711,14 @@ void D_Display()
 	  cv_tiltview.value &&
 	  players[displayplayer].playerstate==PST_DEAD )
         {
-	  V_DrawTiltView (screens[0]);
+	  V_DrawTiltView(vid.screens[0]);
         }
       else
 #endif
 #ifdef PERSPCORRECT
-        if (gamestate == GS_LEVEL &&
-	    cv_perspcorr.value )
+        if (gamestate == GS_LEVEL && cv_perspcorr.value)
 	  {
-            V_DrawPerspView (screens[0], players[displayplayer].aiming);
+            V_DrawPerspView(vid.screens[0], players[displayplayer].aiming);
 	  }
         else
 #endif
@@ -805,10 +796,8 @@ void D_DoomLoop()
   oldtics = I_GetTime ();
 
   // make sure to do a d_display to init mode _before_ load a level
-  CONS_Printf ("SCR_SetMode...\n");
-  SCR_SetMode();  // change video mode
-  CONS_Printf ("SCR_Recalc...\n");
-  SCR_Recalc();
+  vid.SetMode();  // change video mode if needed, recalculate...
+
   while (1) // main game loop
     {
 
@@ -1450,8 +1439,8 @@ void D_DoomMain()
     }
   */
 
-  // init cheat_xlate_table
-  cht_Init(); 
+  // init cheat_xlate_table (not necessary)
+  //cht_Init(); 
 
   CONS_Printf("I_StartupTimer...\n");
   I_StartupTimer(); // does nothing in SDL
@@ -1467,13 +1456,9 @@ void D_DoomMain()
   // we need to check for dedicated before initialization of some subsystems
   dedicated = M_CheckParm("-dedicated") != 0;
 
-  // set the video mode and video info
-  CONS_Printf("I_StartupGraphics...\n");
-  I_StartupGraphics();
-
-  // setup graphics scaling properties, load palette
-  CONS_Printf("SCR_Startup...\n");
-  SCR_Startup();
+  // set the video mode, graphics scaling properties, load palette
+  CONS_Printf("Video Startup...\n");
+  vid.Startup();
 
   // we need the font of the console
   // HUD font, crosshairs, say commands
@@ -1576,7 +1561,7 @@ void D_DoomMain()
   // start sound system, cache sound data
   I_StartupSound();
   I_InitMusic();  // setup music buffer for quick mus2mid
-  // setup volume etc. FIXME! interferes with I_StartupSound()
+
   S_Init(cv_soundvolume.value, cv_musicvolume.value);
 
 #ifdef FRAGGLESCRIPT

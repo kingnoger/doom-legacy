@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:17:54  hurdler
-// Initial revision
+// Revision 1.2  2002/12/03 10:11:39  smite-meister
+// Blindness and missile clipping bugs fixed
 //
 // Revision 1.16  2002/09/20 22:41:28  vberghol
 // Sound system rewritten! And it workscvs update
@@ -1039,6 +1039,8 @@ static void CheatKeysFunc(PlayerPawn *p, const byte *arg)
 
 static void CheatTickerFunc(PlayerPawn *p, const byte *arg)
 {
+  // FIXME what is this?
+  /*
   cv_ticrate.value = !cv_ticrate.value;
   if(cv_ticrate.value)
     {
@@ -1048,6 +1050,7 @@ static void CheatTickerFunc(PlayerPawn *p, const byte *arg)
     {
       p->SetMessage(TXT_CHEATTICKEROFF, false);
     }
+  */
 }
 
 static void CheatArtifact1Func(PlayerPawn *p, const byte *arg)

@@ -18,8 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:01  hurdler
-// Initial revision
+// Revision 1.2  2002/12/03 10:11:39  smite-meister
+// Blindness and missile clipping bugs fixed
+//
+// Revision 1.1.1.1  2002/11/16 14:18:01  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.17  2002/09/20 22:41:31  vberghol
 // Sound system rewritten! And it workscvs update
@@ -150,6 +153,12 @@
 #include "r_splats.h"   //faB: testing
 
 #include "z_zone.h" //SoM: 3/15/2000
+
+
+// VB 3.12.2002 FIXME big bug source! Actor::  target <-> owner change for projectiles...
+// formerly the 'target' of a projectile was its shooter. tracer was the victim
+// now 'target' is the victim and 'owner' is the shooter.
+// Fixed in this file, may still manifest elsewhere!
 
 
 fixed_t   tmbbox[4];
@@ -328,15 +337,18 @@ static void add_spechit(line_t *ld)
 //
 // PIT_CheckThing
 //
-static bool PIT_CheckThing (Actor *thing)
+// Iterator function for Actor->Actor collision checks. Global variable 'tmthing'
+// is the active object whose collisions are checked. 'thing' is any other object
+// to which it may collide.
+static bool PIT_CheckThing(Actor *thing)
 {
-  fixed_t             blockdist;
-  bool             solid;
-  int                 damage;
+  fixed_t  blockdist;
+  bool     solid;
+  int      damage;
 
   //added:22-02-98:
-  fixed_t             topz;
-  fixed_t             tmtopz;
+  fixed_t  topz;
+  fixed_t  tmtopz;
 
   //SoM: 3/15/2000: Moved to front.
 
@@ -364,7 +376,7 @@ static bool PIT_CheckThing (Actor *thing)
     }
 
   // heretic stuffs
-  if (tmthing->flags2&MF2_PASSMOBJ)
+  if (tmthing->flags2 & MF2_PASSMOBJ)
     { // check if a mobj passed over/under another object
       if ((tmthing->type == MT_IMP || tmthing->type == MT_WIZARD)
 	 && (thing->type == MT_IMP || thing->type == MT_WIZARD))
@@ -409,17 +421,17 @@ static bool PIT_CheckThing (Actor *thing)
 
       // see if it went over / under
       if (tmthing->z > thing->z + thing->height)
-	return true;                // overhead
-      if (tmthing->z+tmthing->height < thing->z)
-	return true;                // underneath
+	return true; // overhead
+      if (tmthing->z + tmthing->height < thing->z)
+	return true; // underneath
 
-      if (tmthing->target && (
-			      tmthing->target->type == thing->type ||
-			      (tmthing->target->type == MT_KNIGHT  && thing->type == MT_BRUISER)||
-			      (tmthing->target->type == MT_BRUISER && thing->type == MT_KNIGHT)))
+      if (tmthing->owner &&
+	  ((tmthing->owner->type == thing->type) ||
+	   (tmthing->owner->type == MT_KNIGHT  && thing->type == MT_BRUISER) ||
+	   (tmthing->owner->type == MT_BRUISER && thing->type == MT_KNIGHT)))
         {
 	  // Don't hit same species as originator.
-	  if (thing == tmthing->target)
+	  if (thing == tmthing->owner)
 	    return true;
 
 	  if (thing->type != MT_PLAYER)
@@ -430,7 +442,7 @@ static bool PIT_CheckThing (Actor *thing)
             }
         }
 
-      if (! (thing->flags & MF_SHOOTABLE))
+      if (!(thing->flags & MF_SHOOTABLE))
         {
 	  // didn't do any damage
 	  return !(thing->flags & MF_SOLID);
@@ -441,7 +453,7 @@ static bool PIT_CheckThing (Actor *thing)
         {
 	  damage = ((P_Random () & 3) + 2) * tmthing->info->damage;
 	  S_StartSound (tmthing, sfx_ripslop);
-	  if (thing->Damage(tmthing, tmthing->target, damage))
+	  if (thing->Damage(tmthing, tmthing->owner, damage))
             {
 	      if (!(thing->flags & MF_NOBLOOD))
                 {   // Ok to spawn some blood
@@ -461,7 +473,7 @@ static bool PIT_CheckThing (Actor *thing)
 
       // damage / explode
       damage = ((P_Random()%8)+1)*tmthing->info->damage;
-      if (thing->Damage(tmthing, tmthing->target, damage) && 
+      if (thing->Damage(tmthing, tmthing->owner, damage) && 
 	  (thing->flags & MF_NOBLOOD)==0 && game.demoversion>=129)
 	tmthing->mp->SpawnBloodSplats(tmthing->x,tmthing->y,tmthing->z, damage, thing->px, thing->py);
 
@@ -661,7 +673,7 @@ void Actor::CheckMissileImpact()
 {
   int i;
     
-  if (!(flags & MF_MISSILE) || game.demoversion<132 || !numspechit || !target)
+  if (!(flags & MF_MISSILE) || game.demoversion<132 || !numspechit || !owner)
     return;
 
   //if (!target->player)
@@ -671,7 +683,7 @@ void Actor::CheckMissileImpact()
     return;
 
   for(i = numspechit-1; i >= 0; i--)
-    mp->ShootSpecialLine(target, spechit[i]);
+    mp->ShootSpecialLine(owner, spechit[i]);
 }
 
 //
