@@ -1,0 +1,62 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<meta name="description" content="New, even better Doom Legacy" />
+<meta name="keywords" lang="en" content="doom, legacy, fps, heretic, hexen" />
+<link rel="stylesheet" href="http://www.w3.org/StyleSheets/Core/Midnight" type="text/css" />
+<title>Doom Legacy subsystems</title>
+</head>
+
+<body bgcolor="white" text="blue" link="green" vlink="navy">
+
+$Id$
+<h1>Progress indicators for Doom Legacy subsystems</h1>
+
+
+<table cellspacing="2">
+<tr><th>Subsystem<th>Status<th>Location
+<tr><td><br />
+<tr><td><b>Fundamentals</b>
+<tr><td>Basic data classes<td><font color="#F00000">Starting</font><td>util/
+<tr><td>Event system<td><font color="#606060">Unmodified</font><td>engine/
+<tr><td>Cache<td><font color="#2060D0">Works</font><td> util/
+<tr><td>Menu<td><font color="#2060D0">Works</font><td>engine/menu/
+<tr><td>Console<td><font color="#606060">Unmodified</font><td>util/
+<tr><td><br />
+<tr><td><b>Game simulation</b>
+<tr><td>World object class hierarchy<td><font color="#C0C000">Modified</font><td>include/g_*.h
+<tr><td>Object serialization/persistence<td><font color="#F00000">Starting</font><td>engine/g_save.cpp
+<tr><td>World subdivision (bsp-tree, octree, lists)<td><font color="#606060">Unmodified</font><td>engine/
+<tr><td>Physics engine<td><font color="#F00000">Starting</font><td>engine/
+<tr><td>AI<td><font color="#F00000">Starting</font><td>engine/
+<tr><td>Scripting<td><font color="#606060">Unmodified</font><td>engine/scripting/
+<tr><td>DLL interface<td><font color="#F00000">Starting</font><td>
+<tr><td>Network code<td><font color="#F00000">Starting</font><td>net/
+<tr><td><br />
+<tr><td><b>Extra stuff</b>
+<tr><td>HUD<td><font color="#C0C000">Modified</font><td>engine/HUD/
+<tr><td>Automap<td><font
+color="#2060D0">Works</font><td>engine/automap/
+<tr><td>Intermission/Finale<td><font
+color="#2060D0">Works</font><td>engine/animation/
+<tr><td>Cheating<td><font
+color="#00F000">Done</font><td>engine/m_cheat.cpp
+<tr><td><br />
+<tr><td><b>Video</b>
+<tr><td>Texture class<td><font color="#606060">Unmodified</font><td>video/
+<tr><td>2D sprite/billboard/decal class<td><font color="#F00000">Starting</font><td>video/
+<tr><td>3D model class<td><font color="#606060">Unmodified</font><td>video/
+<tr><td>Video renderer<td><font
+color="#F00000">Starting</font><td>video/
+<tr><td><br />
+<tr><td><b>Audio</b>
+<tr><td>Sound renderer<td><font color="#2060D0">Works</font><td>audio/
+<tr><td>Music<td><font color="#2060D0">Works</font><td>audio/
+</table>
+
+</body>
+</html>

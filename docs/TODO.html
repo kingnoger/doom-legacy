@@ -1,0 +1,78 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<meta name="description" content="New, even better Doom Legacy" />
+<meta name="keywords" lang="en" content="doom, legacy, fps, heretic, hexen" />
+<link rel="stylesheet" href="http://www.w3.org/StyleSheets/Core/Midnight" type="text/css" />
+<title>Doom Legacy TODO list</title>
+</head>
+
+<body bgcolor="white" text="blue" link="green" vlink="navy">
+
+$Id$
+<h1>Doom Legacy TODO list</h1>
+
+<h3>Ideas</h3>
+
+<ul>
+<li>cache data in machine native byte order, so that it only needs to be
+  changed once. patches for example.
+
+<li>a real class Camera : public Actor that could include chasecams,
+  fixed cameras, target-following cams, IR cams etc.
+
+<li>Texture/patch/flat -L2 cache that treats them all in the same way,
+  using a Texture class, reference counting?
+
+<li>a Texture class (static, animating, fractal, multitexturing...)
+
+<li>Music/sounds L2 cache
+
+<li>Sprite/model L2 cache
+
+<li>legacy.wad (former doom3.wad) contents:
+ <ul>
+ <li>version string
+ <li>a complete font
+ <li>title pictures, consback pictures
+ <li>FS definition
+ <li>a standard replacement texture, sound, music, sprite and model
+ <li>overlay graphics, menu graphics
+ <li>a small "informational" map in case someone decides to use it as
+    an iwad
+ </ul>
+
+<li>Game modifications using dll's. Standard interface. CTF, Doom
+  Fortress...
+
+<li>Turn the Menu into a widget-based browser, including a levelgraph
+  editor etc. Maybe replace the launcher altogether?
+
+<li>a 2D sprite class
+
+<li>a 3D skeleton-animated model class, Quake III MD3?
+
+<li>support for WAD2 file format? PAK?
+
+<li>class DActor : public Actor, for former Doom/Heretic mobj_t's. Clean
+  up Actor class so it becomes more general and useful for inheritance
+
+<li>turn Console into a modern iostream-based class that can print
+  strings etc. ( console &lt;&lt; "Hello world!" &lt;&lt; endl; )
+
+<li>finish the Serialization system
+
+<li>turn basic data types (fixed_t, angle_t) into classes with
+  overloaded operators. A 3D vector template class? vect&lt;float&gt; p;?
+
+<li>Better skins? How?
+
+<li>Advanced fault-resistant network code (like quake2, Unreal...)
+</ul>
+
+</body>
+</html>
