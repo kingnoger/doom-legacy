@@ -72,7 +72,7 @@ public:
   // searching: Find gives -1 if not found, Get gives an error.
   int FindNumForName(const char *name, bool scanforward = false);
   int GetNumForName(const char *name, bool scanforward = false);
-  int FindNumForNameFile(const char *name, unsigned filenum, int startlump);
+  int FindNumForNameFile(const char *name, unsigned filenum, int startlump = 0);
   const char *FindNameForNum(int lump);
   int FindPartialName(int iname, unsigned filenum, int startlump, const char **fullname);
 

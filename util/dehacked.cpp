@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.7  2003/04/08 09:46:07  smite-meister
 // Bugfixes
 //
@@ -309,6 +312,7 @@ static void readsound(MYFILE* f,int num,char *savesfxnames[])
 	if(s[0]=='\n') break;
 	value=searchvalue(s);
 	word=strtok(s," ");
+	/*
 	if(!strcmp(word,"Offset"))
 	  {
 	    value -= 150360;
@@ -329,6 +333,7 @@ static void readsound(MYFILE* f,int num,char *savesfxnames[])
 	  S_sfx[num].priority   =value;
 	else
 	  deh_error("Sound %d : unknow word '%s'\n",num,word);
+	*/
       }
   } while(s[0]!='\n' && !myfeof(f));
 }
@@ -351,6 +356,7 @@ static void readtext(MYFILE* f,int len1,int len2,char *savesfxname[],char *saves
   {
     s[len1+len2]='\0';
     // sound table
+    /*
     for(i=0;i<NUMSFX;i++)
       if(!strncmp(savesfxname[i],s,len1))
       {
@@ -358,6 +364,7 @@ static void readtext(MYFILE* f,int len1,int len2,char *savesfxname[],char *saves
         S_sfx[i].lumpname[len2]='\0';
         return;
       }
+    */
     // sprite table
     for(i=0;i<NUMSPRITES;i++)
       if(!strncmp(savesprnames[i],s,len1))
@@ -683,8 +690,10 @@ void DEH_LoadDehackedFile(MYFILE* f)
       saveactions[i]=states[i].action;
   for(i=0;i<NUMSPRITES;i++)
       savesprnames[i]=sprnames[i];
+  /*
   for(i=0;i<NUMSFX;i++)
       savesfxnames[i]=S_sfx[i].lumpname;
+  */
 
   // it don't test the version of doom
   // and version of dehacked file

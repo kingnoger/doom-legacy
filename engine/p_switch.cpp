@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.10  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -91,77 +94,77 @@ struct switchdef_t
 switchdef_t DoomSwitchList[] =
 {
   // Doom shareware episode 1 switches
-  {"SW1BRCOM","SW2BRCOM", sfx_swtchn, 1},
-  {"SW1BRN1", "SW2BRN1",  sfx_swtchn, 1},
-  {"SW1BRN2", "SW2BRN2",  sfx_swtchn, 1},
-  {"SW1BRNGN","SW2BRNGN", sfx_swtchn, 1},
-  {"SW1BROWN","SW2BROWN", sfx_swtchn, 1},
-  {"SW1COMM", "SW2COMM",  sfx_swtchn, 1},
-  {"SW1COMP", "SW2COMP",  sfx_swtchn, 1},
-  {"SW1DIRT", "SW2DIRT",  sfx_swtchn, 1},
-  {"SW1EXIT", "SW2EXIT",  sfx_swtchn, 1},
-  {"SW1GRAY", "SW2GRAY",  sfx_swtchn, 1},
-  {"SW1GRAY1","SW2GRAY1", sfx_swtchn, 1},
-  {"SW1METAL","SW2METAL", sfx_swtchn, 1},
-  {"SW1PIPE", "SW2PIPE",  sfx_swtchn, 1},
-  {"SW1SLAD", "SW2SLAD",  sfx_swtchn, 1},
-  {"SW1STARG","SW2STARG", sfx_swtchn, 1},
-  {"SW1STON1","SW2STON1", sfx_swtchn, 1},
-  {"SW1STON2","SW2STON2", sfx_swtchn, 1},
-  {"SW1STONE","SW2STONE", sfx_swtchn, 1},
-  {"SW1STRTN","SW2STRTN", sfx_swtchn, 1},
+  {"SW1BRCOM","SW2BRCOM", sfx_switchon, 1},
+  {"SW1BRN1", "SW2BRN1",  sfx_switchon, 1},
+  {"SW1BRN2", "SW2BRN2",  sfx_switchon, 1},
+  {"SW1BRNGN","SW2BRNGN", sfx_switchon, 1},
+  {"SW1BROWN","SW2BROWN", sfx_switchon, 1},
+  {"SW1COMM", "SW2COMM",  sfx_switchon, 1},
+  {"SW1COMP", "SW2COMP",  sfx_switchon, 1},
+  {"SW1DIRT", "SW2DIRT",  sfx_switchon, 1},
+  {"SW1EXIT", "SW2EXIT",  sfx_switchon, 1},
+  {"SW1GRAY", "SW2GRAY",  sfx_switchon, 1},
+  {"SW1GRAY1","SW2GRAY1", sfx_switchon, 1},
+  {"SW1METAL","SW2METAL", sfx_switchon, 1},
+  {"SW1PIPE", "SW2PIPE",  sfx_switchon, 1},
+  {"SW1SLAD", "SW2SLAD",  sfx_switchon, 1},
+  {"SW1STARG","SW2STARG", sfx_switchon, 1},
+  {"SW1STON1","SW2STON1", sfx_switchon, 1},
+  {"SW1STON2","SW2STON2", sfx_switchon, 1},
+  {"SW1STONE","SW2STONE", sfx_switchon, 1},
+  {"SW1STRTN","SW2STRTN", sfx_switchon, 1},
 
   // Doom registered episodes 2&3 switches
-  {"SW1BLUE", "SW2BLUE",  sfx_swtchn, 2},
-  {"SW1CMT",  "SW2CMT",   sfx_swtchn, 2},
-  {"SW1GARG", "SW2GARG",  sfx_swtchn, 2},
-  {"SW1GSTON","SW2GSTON", sfx_swtchn, 2},
-  {"SW1HOT",  "SW2HOT",   sfx_swtchn, 2},
-  {"SW1LION", "SW2LION",  sfx_swtchn, 2},
-  {"SW1SATYR","SW2SATYR", sfx_swtchn, 2},
-  {"SW1SKIN", "SW2SKIN",  sfx_swtchn, 2},
-  {"SW1VINE", "SW2VINE",  sfx_swtchn, 2},
-  {"SW1WOOD", "SW2WOOD",  sfx_swtchn, 2},
+  {"SW1BLUE", "SW2BLUE",  sfx_switchon, 2},
+  {"SW1CMT",  "SW2CMT",   sfx_switchon, 2},
+  {"SW1GARG", "SW2GARG",  sfx_switchon, 2},
+  {"SW1GSTON","SW2GSTON", sfx_switchon, 2},
+  {"SW1HOT",  "SW2HOT",   sfx_switchon, 2},
+  {"SW1LION", "SW2LION",  sfx_switchon, 2},
+  {"SW1SATYR","SW2SATYR", sfx_switchon, 2},
+  {"SW1SKIN", "SW2SKIN",  sfx_switchon, 2},
+  {"SW1VINE", "SW2VINE",  sfx_switchon, 2},
+  {"SW1WOOD", "SW2WOOD",  sfx_switchon, 2},
 
     // Doom II switches
-  {"SW1PANEL","SW2PANEL", sfx_swtchn, 3},
-  {"SW1ROCK", "SW2ROCK",  sfx_swtchn, 3},
-  {"SW1MET2", "SW2MET2",  sfx_swtchn, 3},
-  {"SW1WDMET","SW2WDMET", sfx_swtchn, 3},
-  {"SW1BRIK", "SW2BRIK",  sfx_swtchn, 3},
-  {"SW1MOD1", "SW2MOD1",  sfx_swtchn, 3},
-  {"SW1ZIM",  "SW2ZIM",   sfx_swtchn, 3},
-  {"SW1STON6","SW2STON6", sfx_swtchn, 3},
-  {"SW1TEK",  "SW2TEK",   sfx_swtchn, 3},
-  {"SW1MARB", "SW2MARB",  sfx_swtchn, 3},
-  {"SW1SKULL","SW2SKULL", sfx_swtchn, 3},
+  {"SW1PANEL","SW2PANEL", sfx_switchon, 3},
+  {"SW1ROCK", "SW2ROCK",  sfx_switchon, 3},
+  {"SW1MET2", "SW2MET2",  sfx_switchon, 3},
+  {"SW1WDMET","SW2WDMET", sfx_switchon, 3},
+  {"SW1BRIK", "SW2BRIK",  sfx_switchon, 3},
+  {"SW1MOD1", "SW2MOD1",  sfx_switchon, 3},
+  {"SW1ZIM",  "SW2ZIM",   sfx_switchon, 3},
+  {"SW1STON6","SW2STON6", sfx_switchon, 3},
+  {"SW1TEK",  "SW2TEK",   sfx_switchon, 3},
+  {"SW1MARB", "SW2MARB",  sfx_switchon, 3},
+  {"SW1SKULL","SW2SKULL", sfx_switchon, 3},
 
-  {"\0",      "\0",       sfx_swtchn, 0}
+  {"\0",      "\0",       sfx_switchon, 0}
 };
 
 switchdef_t HereticSwitchList[] =
 {
   // heretic
-  {"SW1OFF",  "SW1ON", sfx_switch, 1},
-  {"SW2OFF",  "SW2ON", sfx_switch, 1},
+  {"SW1OFF",  "SW1ON", sfx_switchon, 1},
+  {"SW2OFF",  "SW2ON", sfx_switchon, 1},
 
-  {"\0",      "\0",    sfx_switch, 0}
+  {"\0",      "\0",    sfx_switchon, 0}
 };
 
 // TODO Hexen switch sounds
 switchdef_t HexenSwitchList[] =
 {
-  {"SW_1_UP",  "SW_1_DN", SFX_SWITCH1, 1},
-  {"SW_2_UP",  "SW_2_DN", SFX_SWITCH1, 1},
+  {"SW_1_UP",  "SW_1_DN", sfx_switchon, 1},
+  {"SW_2_UP",  "SW_2_DN", sfx_switchon, 1},
   {"VALVE1",   "VALVE2",  SFX_VALVE_TURN, 1},
-  {"SW51_OFF", "SW51_ON", SFX_SWITCH2, 1},
-  {"SW52_OFF", "SW52_ON", SFX_SWITCH2, 1},
+  {"SW51_OFF", "SW51_ON", sfx_switchoff, 1},
+  {"SW52_OFF", "SW52_ON", sfx_switchoff, 1},
   {"SW53_UP",  "SW53_DN", SFX_ROPE_PULL, 1},
-  {"PUZZLE5",  "PUZZLE9", SFX_SWITCH1, 1},
-  {"PUZZLE6",  "PUZZLE10", SFX_SWITCH1, 1},
-  {"PUZZLE7",  "PUZZLE11", SFX_SWITCH1, 1},
-  {"PUZZLE8",  "PUZZLE12", SFX_SWITCH1, 1},
-  {"\0",       "\0",       SFX_SWITCH1, 0}
+  {"PUZZLE5",  "PUZZLE9", sfx_switchon, 1},
+  {"PUZZLE6",  "PUZZLE10", sfx_switchon, 1},
+  {"PUZZLE7",  "PUZZLE11", sfx_switchon, 1},
+  {"PUZZLE8",  "PUZZLE12", sfx_switchon, 1},
+  {"\0",       "\0",       sfx_switchon, 0}
 };
 
 
@@ -349,7 +352,7 @@ void Map::ChangeSwitchTexture(line_t *line, int useAgain)
     {
       // EXIT SWITCH?
       if (line->special == 11)
-	S_StartSound(&line->frontsector->soundorg, sfx_swtchx);
+	S_StartSound(&line->frontsector->soundorg, sfx_switchoff);
       else
 	S_StartSound(&line->frontsector->soundorg, switchlist[i].sound);
 

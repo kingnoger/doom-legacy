@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.31  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.30  2003/12/21 12:29:09  smite-meister
 // bugfixes
 //
@@ -119,7 +122,6 @@
 
 #include "doomdef.h"
 #include "doomdata.h"
-#include "byteptr.h"
 
 #include "g_game.h"
 #include "g_map.h"
@@ -699,10 +701,7 @@ void Map::LoadThings(int lump)
 	  // Ambient sound sequences
 	  if (ednum >= 1200 && ednum < 1210)
 	    {
-	      if (SoundSeqs.find(ednum - 1200) != SoundSeqs.end())
-	        AmbientSeqs.push_back(SoundSeqs[ednum - 1200]);
-	      else
-		CONS_Printf("WARNING: Ambient sequence %d not defined!\n", ednum - 1200);
+	      AmbientSeqs.push_back(ednum - 1200);
 	      t->type = 0;
 	      continue;
 	    }
@@ -1401,8 +1400,6 @@ bool Map::Setup(tic_t start, bool spawnthings)
   else
     {
       hexen_format = false;
-      // TODO cumulative SNDSEQ reading? First-to-last order.
-      //S_Read_SNDSEQ(fc.FindNumForNamePwad("SNDSEQ", 0, 0)); // Doom and Heretic sequences in legacy.wad
     }
 
 #ifdef FRAGGLESCRIPT

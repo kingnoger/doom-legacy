@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by Raven Software, Corp.
-// Portions Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.8  2003/12/03 10:49:49  smite-meister
 // Save/load bugfix, text strings updated
 //
@@ -44,8 +47,7 @@
 //
 //
 // DESCRIPTION:
-//   this file is include by P_pspr.c
-//   it contain all heretic player sprite specific
+//   Heretic player sprite action functions (Heretic weapons)
 //
 //-----------------------------------------------------------------------------
 
@@ -56,14 +58,14 @@
 #include "g_actor.h"
 #include "g_pawn.h"
 #include "g_player.h" // remove this somehow!
-#include "g_map.h" // this too!
+#include "g_map.h"
 
 #include "command.h"
 #include "info.h"
-#include "d_items.h"
+
 #include "p_enemy.h"
-#include "p_maputl.h"
 #include "r_main.h"
+#include "r_sprite.h"
 #include "s_sound.h"
 #include "sounds.h"
 #include "m_random.h"
@@ -75,21 +77,7 @@
 
 extern consvar_t  cv_deathmatch;
 extern mobjtype_t PuffType;
-
-
-//---------------------------------------------------------------------------
-//
-// was P_OpenWeapons
-//
-// Called at level load before things are loaded.
-//
-//---------------------------------------------------------------------------
-
-//void P_OpenWeapons() { MaceSpotCount = 0; }
-
-//---------------------------------------------------------------------------
-// here was P_AddMaceSpot
-
+extern Actor *linetarget;
 
 //---------------------------------------------------------------------------
 //
@@ -101,10 +89,8 @@ extern mobjtype_t PuffType;
 
 void Map::RepositionMace(DActor *mo)
 {
-  int spot;
-
   mo->UnsetPosition();
-  spot = P_Random() % MaceSpots.size();
+  int spot = P_Random() % MaceSpots.size();
   mo->x = MaceSpots[spot]->x << FRACBITS;
   mo->y = MaceSpots[spot]->y << FRACBITS;
   mo->SetPosition();
@@ -175,27 +161,18 @@ void PlayerPawn::PostMorphWeapon(weapontype_t weapon)
 void A_BeakReady(PlayerPawn *p, pspdef_t *psp)
 {
   if (p->player->cmd.buttons & BT_ATTACK)
-    { // Chicken beak attack
+    {
+      // Chicken beak attack
       p->attackdown = true;
-      //p->SetState(S_CHICPLAY_ATK1);
-      if(p->powers[pw_weaponlevel2])
-	{
-	  p->SetPsprite(ps_weapon, S_BEAKATK2_1);
-	}
-      else
-	{
-	  p->SetPsprite(ps_weapon, S_BEAKATK1_1);
-	}
-      P_NoiseAlert(p, p);
+      p->FireWeapon();
     }
   else
     {
-      /*
-      if(p->state == &states[S_CHICPLAY_ATK1])
-	{ // Take out of attack state
-	  //p->SetState(S_CHICPLAY);
-	}
-      */
+      // get out of attack state
+      int anim = p->pres->GetAnim();
+      if (anim == presentation_t::Shoot || anim == presentation_t::Melee)
+	p->pres->SetAnim(presentation_t::Idle);
+
       p->attackdown = false;
     }
 }
@@ -734,7 +711,7 @@ void A_DeathBallImpact(DActor *ball)
 	  ball->py = int(ball->info->speed * finesine[angle]);
 	}
       ball->SetState(ball->info->spawnstate);
-      S_StartSound(ball, sfx_pstop);
+      S_StartSound(ball, sfx_platstop);
     }
   else
     { // Explode

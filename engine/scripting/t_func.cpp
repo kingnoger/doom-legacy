@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.12  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.11  2003/12/13 23:51:03  smite-meister
 // Hexen update
 //
@@ -97,6 +100,7 @@
 #include "r_state.h"
 #include "r_segs.h"
 
+#include "sounds.h"
 #include "s_sound.h"
 #include "w_wad.h"
 #include "z_zone.h"
@@ -1493,7 +1497,10 @@ void SF_StartSound()
   s.isactor = true;
   s.act = mo;
 
-  S.Start3DSound(t_argv[1].value.s, &s);
+  sfxinfo_t temp("FS sound", -1);
+  strncpy(temp.lumpname, t_argv[1].value.s, 8);
+
+  S.Start3DSound(&temp, &s);
 }
 
 
@@ -1514,6 +1521,9 @@ void SF_StartSectorSound()
   if (secnum < 0)
     { script_error("sector not found with tagnum %i\n", tagnum); return;}
 
+  sfxinfo_t temp("FS sound", -1);
+  strncpy(temp.lumpname, t_argv[1].value.s, 8);
+
   secnum = -1;
   while ((secnum = current_map->FindSectorFromTag(tagnum, secnum)) >= 0)
   {
@@ -1522,7 +1532,7 @@ void SF_StartSectorSound()
     s.isactor = false;
     s.mpt = p;
 
-    S.Start3DSound(t_argv[1].value.s, &s);
+    S.Start3DSound(&temp, &s);
   }
 }
 
@@ -1534,7 +1544,10 @@ void SF_AmbientSound()
   if(t_argv[0].type != svt_string)
     { script_error("sound lump argument not a string!\n"); return;}
 
-  S.StartAmbSound(t_argv[0].value.s);
+  sfxinfo_t temp("FS sound", -1);
+  strncpy(temp.lumpname, t_argv[0].value.s, 8);
+
+  S.StartAmbSound(&temp);
 }
 
 
@@ -1604,8 +1617,7 @@ void SF_MoveFloor()
       if (P_SectorActive(floor_special,sec))
         continue;
 
-      floor_t *floor = new floor_t(floor_t::AbsHeight, sec, platspeed, 0, destheight);
-      current_map->AddThinker(floor);
+      new floor_t(current_map, floor_t::AbsHeight, sec, platspeed, 0, destheight);
     }
 }
 
@@ -1677,8 +1689,7 @@ void SF_MoveCeiling()
       if (P_SectorActive(ceiling_special,sec))
         continue;
 
-      ceiling = new ceiling_t(ceiling_t::AbsHeight, sec, platspeed, platspeed, 0, destheight);
-      current_map->AddThinker(ceiling);
+      ceiling = new ceiling_t(current_map, ceiling_t::AbsHeight, sec, platspeed, platspeed, 0, destheight);
       current_map->AddActiveCeiling(ceiling);
     }
 }

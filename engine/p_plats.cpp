@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.10  2003/12/13 23:51:03  smite-meister
 // Hexen update
 //
@@ -57,7 +60,6 @@
 
 #include "doomdef.h"
 #include "p_spec.h" // class definitions
-#include "s_sound.h"
 #include "sounds.h"
 #include "z_zone.h"
 #include "m_random.h"
@@ -69,8 +71,8 @@ IMPLEMENT_CLASS(plat_t, "Platform");
 plat_t::plat_t() {}
 
 // constructor
-plat_t::plat_t(int ty, sector_t *sec, int t, fixed_t sp, int wt, fixed_t height)
-  : sectoreffect_t(sec)
+plat_t::plat_t(Map *m, int ty, sector_t *sec, int t, fixed_t sp, int wt, fixed_t height)
+  : sectoreffect_t(m, sec)
 {
   type = ty;
   tag = t;
@@ -157,22 +159,18 @@ plat_t::plat_t(int ty, sector_t *sec, int t, fixed_t sp, int wt, fixed_t height)
       low = sec->ceilingheight;
       high = sec->floorheight;
       status =  down;
-      break;
+      return;
 
     default:
       I_Error("Unknown plat_t target %d!\n", ty);
       break;
     }
 
-  // TODO sound sequences
-  S_StartSound(&sec->soundorg,sfx_stnmov);
-  //S_StartSound(&sec->soundorg,sfx_pstart);
+  mp->SN_StartSequence(&sec->soundorg, SEQ_PLAT + sec->seqType);
 }
 
 
-// was T_PlatRaise
 // Move a plat up and down
-//
 void plat_t::Think()
 {
   int  res;
@@ -186,29 +184,17 @@ void plat_t::Think()
     case up:
       res = mp->T_MovePlane(sector, speed, high, crush, 0);
 
-      // TODO sequences...
-      /*
-      if (game.mode == gm_heretic && !(mp->maptic % (32*NEWTICRATERATIO)))
-	S_StartSound ( & sector->soundorg, sfx_stnmov);
-
-      if (type == raiseAndChange || type == raiseToNearestAndChange)
-        {
-	  if (!(mp->maptic % (8*NEWTICRATERATIO)))
-	    S_StartSound(&sector->soundorg, sfx_stnmov);
-        }
-      */
-
       if (res == res_crushed && !crush)
         {
 	  count = wait;
 	  status = down;
-	  S_StartSound(&sector->soundorg, sfx_pstart);
+	  mp->SN_StartSequence(&sector->soundorg, SEQ_PLAT + sector->seqType);
         }
       else if (res == res_pastdest)
 	{
 	  if (type & Returning)
 	    {
-              S_StartSound(&sector->soundorg,sfx_pstop);
+	      mp->SN_StopSequence(&sector->soundorg);
 	      mp->RemoveActivePlat(this); // done
 	    }
 	  else switch (type & TMASK)
@@ -223,7 +209,7 @@ void plat_t::Think()
 	      // wait before going back down
 	      count = wait;
 	      status = waiting;
-	      S_StartSound(&sector->soundorg, sfx_pstop);
+	      mp->SN_StopSequence(&sector->soundorg);
 	      break;
 	    }
         }
@@ -236,7 +222,7 @@ void plat_t::Think()
         {
 	  if (type & Returning)
 	    {
-              S_StartSound(&sector->soundorg,sfx_pstop);
+	      mp->SN_StopSequence(&sector->soundorg);
 	      mp->RemoveActivePlat(this); // done
 	    }
 	  else switch (type & TMASK)
@@ -251,12 +237,10 @@ void plat_t::Think()
 	      // start waiting, make plat stop sound
               count = wait;
               status = waiting;
-              S_StartSound(&sector->soundorg,sfx_pstop);
+	      mp->SN_StopSequence(&sector->soundorg);
 	      break;
 	    }
         }
-      else if (game.mode == gm_heretic && !(mp->maptic & 31))
-	S_StartSound ( & sector->soundorg, sfx_stnmov);
       break;
 
     case waiting:
@@ -269,7 +253,8 @@ void plat_t::Think()
 
 	  if (!(type & Perpetual))
 	    type |= Returning;
-	  S_StartSound(&sector->soundorg,sfx_pstart);
+
+	  mp->SN_StartSequence(&sector->soundorg, SEQ_PLAT + sector->seqType);
         }
 
     case in_stasis:
@@ -299,8 +284,8 @@ int Map::EV_DoPlat(int tag, line_t *line, int type, fixed_t speed, int wait, fix
       if (sec->floordata)
 	return 0;
 
-      plat = new plat_t(type, sec, tag, speed, wait, height);
-      AddThinker(plat);
+      plat = new plat_t(this, type, sec, tag, speed, wait, height);
+
       if (type & plat_t::SetTexture)
 	sec->floorpic = sides[line->sidenum[0]].sector->floorpic;
       AddActivePlat(plat);
@@ -323,8 +308,7 @@ int Map::EV_DoPlat(int tag, line_t *line, int type, fixed_t speed, int wait, fix
 
       // Find lowest & highest floors around sector
       rtn++;
-      plat_t *plat = new plat_t(type, sec, tag, speed, wait, height);
-      AddThinker(plat);
+      plat_t *plat = new plat_t(this, type, sec, tag, speed, wait, height);
 
       if (type & plat_t::SetTexture)
 	sec->floorpic = sides[line->sidenum[0]].sector->floorpic;
@@ -334,8 +318,8 @@ int Map::EV_DoPlat(int tag, line_t *line, int type, fixed_t speed, int wait, fix
   return rtn;
 }
 
-// was P_ActivateInStasis
-//SoM: 3/7/2000: Use boom limit removal
+
+
 void Map::ActivateInStasisPlat(int tag)
 {
   list<plat_t *>::iterator i;
@@ -352,8 +336,7 @@ void Map::ActivateInStasisPlat(int tag)
     }
 }
 
-// was EV_StopPlat
-//SoM: 3/7/2000: use Boom code insted.
+
 int Map::EV_StopPlat(int tag)
 {
   int rtn = 0;
@@ -372,7 +355,7 @@ int Map::EV_StopPlat(int tag)
   return rtn;
 }
 
-// was P_AddActivePlat
+
 void Map::AddActivePlat(plat_t *plat)
 {
   activeplats.push_front(plat);
@@ -380,7 +363,7 @@ void Map::AddActivePlat(plat_t *plat)
   // list iterators are not invalidated until erased
 }
 
-// was P_RemoveActivePlat
+
 void Map::RemoveActivePlat(plat_t* plat)
 {
   activeplats.erase(plat->li); // remove the pointer from list
@@ -389,8 +372,7 @@ void Map::RemoveActivePlat(plat_t* plat)
   RemoveThinker(plat);
 }
 
-// was P_RemoveAllActivePlats
-//SoM: 3/7/2000: Removes all active plats.
+
 void Map::RemoveAllActivePlats()
 {
   activeplats.clear();

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.12  2003/12/23 18:06:06  smite-meister
 // Hexen stairbuilders. Moving geometry done!
 //
@@ -66,11 +69,9 @@
 
 #include "p_spec.h"
 #include "r_state.h"
-#include "s_sound.h"
 #include "sounds.h"
 #include "z_zone.h"
 #include "g_game.h"
-
 #include "g_map.h"
 
 
@@ -92,7 +93,7 @@ int Map::T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, int crush, i
 	    {
 	      if((sector->floorheight - speed) < sectors[sector->heightsec].floorheight
 		 && sector->floorheight > sectors[sector->heightsec].floorheight)
-		S_StartSound(&sector->soundorg, sfx_gloop);
+		S_StartSound(&sector->soundorg, sfx_splash);
 	    }
 
           if (sector->floorheight + speed < dest)
@@ -124,7 +125,7 @@ int Map::T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, int crush, i
 	    {
 	      if((sector->floorheight + speed) > sectors[sector->heightsec].floorheight
 		 && sector->floorheight < sectors[sector->heightsec].floorheight)
-		S_StartSound(&sector->soundorg, sfx_gloop);
+		S_StartSound(&sector->soundorg, sfx_splash);
 	    }
           // keep floor from moving thru ceilings
           destheight = (!boomsupport || dest < sector->ceilingheight)?
@@ -168,7 +169,7 @@ int Map::T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, int crush, i
 	    {
 	      if((sector->ceilingheight - speed) < sectors[sector->heightsec].floorheight
 		 && sector->ceilingheight > sectors[sector->heightsec].floorheight)
-		S_StartSound(&sector->soundorg, sfx_gloop);
+		S_StartSound(&sector->soundorg, sfx_splash);
 	    }
           // moving a ceiling down
           // keep ceiling from moving thru floors
@@ -207,7 +208,7 @@ int Map::T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, int crush, i
 	    {
 	      if((sector->ceilingheight + speed) > sectors[sector->heightsec].floorheight
 		 && sector->ceilingheight < sectors[sector->heightsec].floorheight)
-		S_StartSound(&sector->soundorg, sfx_gloop);
+		S_StartSound(&sector->soundorg, sfx_splash);
 	    }
           if (sector->ceilingheight + speed > dest)
 	    {
@@ -245,8 +246,8 @@ IMPLEMENT_CLASS(floor_t, "Floor");
 floor_t::floor_t() {}
 
 // constructor
-floor_t::floor_t(int ty, sector_t *sec, fixed_t sp, int cru, fixed_t height)
-  : sectoreffect_t(sec)
+floor_t::floor_t(Map *m, int ty, sector_t *sec, fixed_t sp, int cru, fixed_t height)
+  : sectoreffect_t(m, sec)
 {
   type = ty;
   crush = cru;
@@ -309,16 +310,13 @@ floor_t::floor_t(int ty, sector_t *sec, fixed_t sp, int cru, fixed_t height)
       break;
     }
 
-  //SN_StartSequence((mobj_t *)&sector->soundorg, SEQ_PLATFORM+floor->sector->seqType);
+  mp->SN_StartSequence(&sec->soundorg, SEQ_PLAT + sec->seqType);
 }
 
 
 void floor_t::Think()
 {
   int res = mp->T_MovePlane(sector, speed, destheight, crush, 0);
-
-  if (!(mp->maptic % (8*NEWTICRATERATIO)))
-    S_StartSound(&sector->soundorg, ceiling_t::ceilmovesound);
 
   if (res == res_pastdest)
     {
@@ -328,10 +326,7 @@ void floor_t::Think()
       if (type & SetSpecial)
 	sector->special = newspecial;
 
-      // TODO replace with sound sequence
-      //if ((type == buildStair && game.mode == gm_heretic) || game.mode != gm_heretic)
-      S_StartSound(&sector->soundorg, sfx_pstop);
-      //SN_StopSequence((mobj_t *)&floor->sector->soundorg);
+      mp->SN_StopSequence(&sector->soundorg);
       sector->floordata = NULL; // Clear up the thinker so others can use it
       mp->TagFinished(sector->tag);
       mp->RemoveThinker(this);  // unlink and free
@@ -388,8 +383,7 @@ int Map::EV_DoFloor(int tag, line_t *line, int type, fixed_t speed, int crush, f
 
       // new floor thinker
       rtn++;
-      floor_t *floor = new floor_t(type, sec, speed, crush, height);
-      AddThinker(floor);
+      floor_t *floor = new floor_t(this, type, sec, speed, crush, height);
 
       if (type & floor_t::SetTxTy) // either one
 	{
@@ -469,9 +463,6 @@ int Map::EV_DoChange(line_t *line, int changetype)
 
 int Map::EV_BuildStairs(int tag, int type, fixed_t speed, fixed_t stepsize, int crush)
 {
-  // TODO Hexen compatibility (a new stairbuilding method...)
-  int                   i;
-
   int secnum = -1;
   int rtn = 0;
 
@@ -487,8 +478,7 @@ int Map::EV_BuildStairs(int tag, int type, fixed_t speed, fixed_t stepsize, int 
       fixed_t height = sec->floorheight + stepsize;      
       // create new floor thinker for first step
       rtn++;
-      floor_t *floor = new floor_t(floor_t::AbsHeight, sec, speed, crush, height);
-      AddThinker(floor);
+      floor_t *floor = new floor_t(this, floor_t::AbsHeight, sec, speed, crush, height);
 
       int texture = sec->floorpic;
       int osecnum = secnum;           //jff 3/4/98 preserve loop index
@@ -501,7 +491,7 @@ int Map::EV_BuildStairs(int tag, int type, fixed_t speed, fixed_t stepsize, int 
       do
 	{
 	  ok = false;
-	  for (i = 0;i < sec->linecount;i++)
+	  for (int i = 0;i < sec->linecount;i++)
 	    {
 	      if ( !((sec->lines[i])->flags & ML_TWOSIDED) )
 		continue;
@@ -529,8 +519,7 @@ int Map::EV_BuildStairs(int tag, int type, fixed_t speed, fixed_t stepsize, int 
 	      secnum = newsecnum;
 
 	      // create and initialize a thinker for the next step
-	      floor = new floor_t(floor_t::AbsHeight, sec, speed, crush, height);
-	      AddThinker(floor);
+	      floor = new floor_t(this, floor_t::AbsHeight, sec, speed, crush, height);
 
 	      ok = true;
 	      break;
@@ -552,8 +541,8 @@ stair_t::stair_t() {}
 
 static fixed_t StartHeight, StepDelta; // small hacks...
 
-stair_t::stair_t(int ty, sector_t *sec, fixed_t h, fixed_t sp, int rcount, int sdelay)
-  : sectoreffect_t(sec)
+stair_t::stair_t(Map *m, int ty, sector_t *sec, fixed_t h, fixed_t sp, int rcount, int sdelay)
+  : sectoreffect_t(m, sec)
 {
   sec->floordata = this;
 
@@ -587,7 +576,7 @@ stair_t::stair_t(int ty, sector_t *sec, fixed_t h, fixed_t sp, int rcount, int s
       break;
     }
 
-  //SN_StartSequence((mobj_t *)&sec->soundorg, SEQ_PLATFORM + sec->seqType);
+  mp->SN_StartSequence(&sec->soundorg, SEQ_PLAT + sec->seqType);
 }
 
 
@@ -601,7 +590,7 @@ void stair_t::Think()
 	speed = -speed;
 	state = Moving;
 	stepdelay = 0; // no more delays on the way back
-	//SN_StartSequence((mobj_t *)&sec->soundorg, SEQ_PLATFORM + sec->seqType);
+	mp->SN_StartSequence(&sector->soundorg, SEQ_PLAT + sector->seqType);
       }
 
   int res;
@@ -618,7 +607,7 @@ void stair_t::Think()
 
       if (res == res_pastdest)
 	{
-	  //SN_StopSequence((mobj_t *)&sector->soundorg);
+	  mp->SN_StopSequence(&sector->soundorg);
 	  if (resetcount)
 	    {
 	      state = Done;
@@ -697,8 +686,7 @@ int Map::EV_BuildHexenStairs(int tag, int type, fixed_t speed, fixed_t stepdelta
 
       s.height += stepdelta;
 
-      stair_t *stair = new stair_t(type, sec, s.height, speed, resetdelay, stepdelay);
-      AddThinker(stair);
+      new stair_t(this, type, sec, s.height, speed, resetdelay, stepdelay);
       ret++;
 
       // Find the next step (alternating phase!)
@@ -787,14 +775,12 @@ int Map::EV_DoDonut(int tag)
 	  sector_t *s3 = s2->lines[i]->backsector; // s3 is model sector for changes
         
 	  //  Spawn rising slime
-	  floor_t *floor = new floor_t(floor_t::AbsHeight | floor_t::SetTxTy, s2, FLOORSPEED/2, 0, s3->floorheight);
-	  AddThinker(floor);
+	  floor_t *floor = new floor_t(this, floor_t::AbsHeight | floor_t::SetTxTy, s2, FLOORSPEED/2, 0, s3->floorheight);
 	  floor->texture = s3->floorpic;
 	  floor->newspecial = 0;
 
 	  //  Spawn lowering donut-hole pillar
-	  floor = new floor_t(floor_t::AbsHeight, s1, FLOORSPEED/2, 0, s3->floorheight);
-	  AddThinker(floor);
+	  floor = new floor_t(this, floor_t::AbsHeight, s1, FLOORSPEED/2, 0, s3->floorheight);
 	  break;
 	}
     }
@@ -810,8 +796,8 @@ IMPLEMENT_CLASS(elevator_t, "Elevator");
 elevator_t::elevator_t() {}
 
 // constructor
-elevator_t::elevator_t(int ty, sector_t *sec, fixed_t sp, fixed_t height_f, fixed_t height_c, int cr)
-  : sectoreffect_t(sec)
+elevator_t::elevator_t(Map *m, int ty, sector_t *sec, fixed_t sp, fixed_t height_f, fixed_t height_c, int cr)
+  : sectoreffect_t(m, sec)
 {
   type = ty;
   crush = cr;
@@ -868,8 +854,7 @@ elevator_t::elevator_t(int ty, sector_t *sec, fixed_t sp, fixed_t height_f, fixe
 	  floorspeed = FixedMul(floordest - sec->floorheight, FixedDiv(sp, sec->ceilingheight - ceilingdest));
 	  ceilingspeed = -sp;
 	}
-
-      // SN_StartSequence((mobj_t *)&sec->soundorg, SEQ_PLATFORM+sec->seqType); // TODO
+      mp->SN_StartSequence(&sec->soundorg, SEQ_PLAT + sec->seqType);
       return;
 
     case OpenPillar:
@@ -894,7 +879,7 @@ elevator_t::elevator_t(int ty, sector_t *sec, fixed_t sp, fixed_t height_f, fixe
 	  ceilingspeed = sp;
 	}
 
-      //SN_StartSequence((mobj_t *)&sector->soundorg, SEQ_PLATFORM+sec->seqType);
+      mp->SN_StartSequence(&sec->soundorg, SEQ_PLAT + sec->seqType);
       return;
 
     default:
@@ -902,6 +887,7 @@ elevator_t::elevator_t(int ty, sector_t *sec, fixed_t sp, fixed_t height_f, fixe
       break;
     }
 
+  mp->SN_StartSequence(&sec->soundorg, SEQ_PLAT + sec->seqType);
   floorspeed = ceilingspeed = sp;
 }
 
@@ -934,18 +920,11 @@ void elevator_t::Think()
     {
       sector->floordata = NULL;
       sector->ceilingdata = NULL;
-      mp->RemoveThinker(this);
-
+      mp->SN_StopSequence(&sector->soundorg);
       mp->TagFinished(sector->tag);
-
-      // make floor stop sound
-      S_StartSound(&sector->soundorg, sfx_pstop);
-      //SN_StopSequence((mobj_t *)&sector->soundorg); // TODO
+      mp->RemoveThinker(this);
       return;
     }
-
-  // make floor move sound
-  //if (!(mp->maptic % (8*NEWTICRATERATIO)))  S_StartSound(&sector->soundorg, sfx_stnmov);
 }
 
 
@@ -972,8 +951,7 @@ int Map::EV_DoElevator(int tag, int type, fixed_t speed, fixed_t height_f, fixed
 	  continue;  // pillar isn't closed
 
       // create and initialize new elevator thinker
-      elevator_t *elevator = new elevator_t(type, sec, speed, height_f, height_c, crush);
-      AddThinker(elevator);
+      new elevator_t(this, type, sec, speed, height_f, height_c, crush);
       rtn++;
     }
 
@@ -989,8 +967,8 @@ int Map::EV_DoElevator(int tag, int type, fixed_t speed, fixed_t height_f, fixed
 IMPLEMENT_CLASS(floorwaggle_t, "Floorwaggle");
 floorwaggle_t::floorwaggle_t() {}
 
-floorwaggle_t::floorwaggle_t(sector_t *sec, fixed_t a, angle_t f, angle_t ph, int w)
-  : sectoreffect_t(sec)
+floorwaggle_t::floorwaggle_t(Map *m, sector_t *sec, fixed_t a, angle_t f, angle_t ph, int w)
+  : sectoreffect_t(m, sec)
 {
   sec->floordata = this;
 
@@ -1055,8 +1033,7 @@ int Map::EV_DoFloorWaggle(int tag, fixed_t amp, angle_t freq, angle_t offset, in
       if (sec->floordata)
 	continue;
 
-      floorwaggle_t *waggle = new floorwaggle_t(sec, amp, freq, offset, wait);
-      AddThinker(waggle);
+      new floorwaggle_t(this, sec, amp, freq, offset, wait);
       ret++;
     }
 

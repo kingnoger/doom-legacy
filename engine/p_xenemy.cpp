@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.10  2003/12/13 23:51:03  smite-meister
 // Hexen update
 //
@@ -747,53 +750,6 @@ void A_MntrFloorFire(DActor *actor)
 }
 */
 
-//----------------------------------------------------------------------------
-//
-// PROC A_HexScream
-//
-//----------------------------------------------------------------------------
-
-void A_HexScream(DActor *actor)
-{
-  int sound = 0, i = 0;
-
-  S.Stop3DSound(actor);
-
-  /*
-  // Handle the different player death screams
-  if (actor->pz <= -39*FRACUNIT)
-    sound = SFX_PLAYER_FALLING_SPLAT; // Falling splat
-  */
-
-  if (actor->type == MT_PLAYER_FIGHTER ||
-      actor->type == MT_PLAYER_CLERIC  ||
-      actor->type == MT_PLAYER_MAGE)
-    {
-      if (actor->health > -50)
-	i = 0;
-      else if(actor->health > -100)
-	i = 1; // Crazy death sound
-      else
-	i = 2 + P_Random() % 3; // Three different extreme deaths
-    }
-
-  switch (actor->type)
-    {
-    case MT_PLAYER_FIGHTER:
-      sound = SFX_PLAYER_FIGHTER_NORMAL_DEATH + i;
-      break;
-    case MT_PLAYER_CLERIC:
-      sound = SFX_PLAYER_CLERIC_NORMAL_DEATH + i;
-      break;
-    case MT_PLAYER_MAGE:
-      sound = SFX_PLAYER_MAGE_NORMAL_DEATH + i;
-      break;
-    default:
-      sound = actor->info->deathsound;
-    }
-
-  S_StartSound(actor, sound);
-}
 
 //---------------------------------------------------------------------------
 //
@@ -2709,10 +2665,6 @@ void A_IceGuyMissileExplode(DActor *actor)
 
 
 
-
-
-
-
 //============================================================================
 //
 //	Sorcerer stuff
@@ -2734,10 +2686,10 @@ void A_IceGuyMissileExplode(DActor *actor)
 #define SORCBALL_INITIAL_SPEED 		7
 #define SORCBALL_TERMINAL_SPEED		25
 #define SORCBALL_SPEED_ROTATIONS 	5
-#define SORC_DEFENSE_TIME			255
-#define SORC_DEFENSE_HEIGHT			45
-#define BOUNCE_TIME_UNIT			(35/2)
-#define SORCFX4_RAPIDFIRE_TIME		(6*3)		// 3 seconds
+#define SORC_DEFENSE_TIME	       	255
+#define SORC_DEFENSE_HEIGHT             45
+#define BOUNCE_TIME_UNIT		(35/2)
+#define SORCFX4_RAPIDFIRE_TIME		(6*3)  // 3 seconds
 #define SORCFX4_SPREAD_ANGLE		20
 
 #define SORC_DECELERATE		0
@@ -2745,7 +2697,7 @@ void A_IceGuyMissileExplode(DActor *actor)
 #define SORC_STOPPING		2
 #define SORC_FIRESPELL		3
 #define SORC_STOPPED		4
-#define SORC_NORMAL			5
+#define SORC_NORMAL		5
 #define SORC_FIRING_SPELL	6
 
 #define BALL1_ANGLEOFFSET	0
@@ -3349,7 +3301,6 @@ void A_SorcBallPop(DActor *actor)
 }
 
 
-
 void A_BounceCheck(DActor *actor)
 {
   if (actor->args[4]-- <= 0)
@@ -3378,6 +3329,18 @@ void A_BounceCheck(DActor *actor)
     }
 }
 
+
+// This is a hack to counter the hack in original Hexen
+void A_SorcDeath(DActor *actor)
+{
+  // Before the sorcerer death action is executed, we must fix the args:
+  actor->args[0] = actor->special; // script number to execute
+  actor->args[1] = 0; // in the current Map
+  actor->args[2] = actor->args[3] = actor->args[4] = 0; // with zero args
+
+  actor->special = 80; // ACS_Execute
+  // NOTE that as the sorcerer's args are reset, the remaining balls may act funny!
+}
 
 
 

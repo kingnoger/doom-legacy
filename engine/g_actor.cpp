@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.25  2003/12/31 18:32:49  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.24  2003/12/18 11:57:31  smite-meister
 // fixes / new bugs revealed
 //
@@ -142,17 +145,14 @@ consvar_t cv_respawnmonsterstime = {"respawnmonsterstime","12",CV_NETVAR,CV_Unsi
 
 extern fixed_t FloatBobOffsets[64];
 
+
 IMPLEMENT_CLASS(Actor,"Actor");
 IMPLEMENT_CLASS(DActor,"DActor");
 
-int Actor::s_pickup    = sfx_None;
-int Actor::s_keypickup = sfx_None;
-int Actor::s_weaponpickup = sfx_None;
-int Actor::s_artipickup = sfx_None;
-int Actor::s_powerup  = sfx_None;
-int Actor::s_teleport = sfx_None;
-int Actor::s_respawn  = sfx_None;
-int Actor::s_gibbed   = sfx_None;
+Actor::~Actor()
+{
+  delete pres; // delete the presentation object too
+}
 
 
 //----------------------------------------------
@@ -373,7 +373,7 @@ static void PlayerLandedOnThing(PlayerPawn *p, Actor *onmobj)
     }
   else if (p->pz < -8*FRACUNIT && !p->morphTics)
     {
-      S_StartSound(p, sfx_oof);
+      S_StartSound(p, sfx_grunt);
     }
 }
 
@@ -1069,7 +1069,7 @@ int Actor::HitFloor()
 	  p->px = P_SignedRandom()<<8;
 	  p->py = P_SignedRandom()<<8;
 	  p->pz = 2*FRACUNIT+(P_Random()<<8);
-	  S_StartSound(p, sfx_gloop);
+	  S_StartSound(p, sfx_splash);
 	  break;
 
 	case FLOOR_LAVA:
@@ -1198,14 +1198,14 @@ void DActor::NightmareRespawn()
   DActor *mo = mp->SpawnDActor(x, y, subsector->sector->floorheight + 
 			       (game.mode == gm_heretic ? TELEFOGHEIGHT : 0), MT_TFOG);
   // initiate teleport sound
-  S_StartSound(mo, sfx_telept);
+  S_StartSound(mo, sfx_teleport);
 
   // spawn a teleport fog at the new spot
   subsector_t *ss = mp->R_PointInSubsector(nx, ny);
 
   mo = mp->SpawnDActor(nx, ny, ss->sector->floorheight +
 		   (game.mode == gm_heretic ? TELEFOGHEIGHT : 0) , MT_TFOG);
-  S_StartSound(mo, sfx_telept);
+  S_StartSound(mo, sfx_teleport);
 
   // spawn the new monster
   mapthing_t *mthing = spawnpoint;

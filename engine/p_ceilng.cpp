@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.9  2003/12/13 23:51:03  smite-meister
 // Hexen update
 //
@@ -56,7 +59,6 @@
 #include "g_game.h"
 #include "g_map.h" // Map class
 #include "p_spec.h"
-#include "s_sound.h"
 #include "sounds.h"
 #include "z_zone.h"
 
@@ -68,11 +70,9 @@
 IMPLEMENT_CLASS(ceiling_t, "Ceiling");
 ceiling_t::ceiling_t() {}
 
-int ceiling_t::ceilmovesound = 0;
-
 // constructor
-ceiling_t::ceiling_t(int ty, sector_t *sec, fixed_t usp, fixed_t dsp, int cru, fixed_t height)
-  : sectoreffect_t(sec)
+ceiling_t::ceiling_t(Map *m, int ty, sector_t *sec, fixed_t usp, fixed_t dsp, int cru, fixed_t height)
+  : sectoreffect_t(m, sec)
 {
   // normal ceilings and crushers could be two different classes, but...
   type = ty;
@@ -133,12 +133,12 @@ ceiling_t::ceiling_t(int ty, sector_t *sec, fixed_t usp, fixed_t dsp, int cru, f
     default:
       break;
     }
+
+  if (!(type & Silent))
+    mp->SN_StartSequence(&sec->soundorg, SEQ_PLAT + sec->seqType);
 }
 
 
-//
-// was T_MoveCeiling
-//
 void ceiling_t::Think()
 {
   int res;
@@ -152,15 +152,13 @@ void ceiling_t::Think()
       // UP
       res = mp->T_MovePlane(sector, upspeed, topheight, false, 1);
 
-      if (!(mp->maptic % (8*NEWTICRATERATIO)))
-        {
-	  // TODO replace with sound sequences
-	  if (!(type & Silent))
-	    S_StartSound(&sector->soundorg, ceilmovesound);
-        }
-
       if (res == res_pastdest)
         {
+	  if (type & Silent)
+	    S_StartSound(&sector->soundorg, sfx_ceilstop);
+	  else
+	    mp->SN_StopSequence(&sector->soundorg);
+
 	  // movers with texture/special change: change the texture then get removed
 	  if (type & SetSpecial)
 	    sector->special = newspecial;
@@ -171,13 +169,10 @@ void ceiling_t::Think()
 	  switch (type & TMASK)
             {
 	    case Crusher:
-	      if (type & Silent)
-		S_StartSound(&sector->soundorg, sfx_pstop);
 	      direction = -1;
 	      break;
 	      
 	    default:
-	      //SN_StopSequence((mobj_t *)&ceiling->sector->soundorg);
 	      mp->RemoveActiveCeiling(this);
 	      break;
             }
@@ -188,14 +183,13 @@ void ceiling_t::Think()
       // DOWN
       res = mp->T_MovePlane(sector, -downspeed, bottomheight, crush, 1);
 
-      if (!(mp->maptic % (8*NEWTICRATERATIO)))
-        {
-	  if (!(type & Silent))
-	    S_StartSound(&sector->soundorg, ceilmovesound);
-        }
-
       if (res == res_pastdest)
         {
+	  if (type & Silent)
+	    S_StartSound(&sector->soundorg, sfx_ceilstop);
+	  else
+	    mp->SN_StopSequence(&sector->soundorg);
+
 	  if (type & SetSpecial)
 	    sector->special = newspecial;
 
@@ -206,16 +200,12 @@ void ceiling_t::Think()
 	    {
 	    case Crusher:
 	    case CrushOnce:
-	      if (type & Silent)
-		S_StartSound(&sector->soundorg, sfx_pstop);
-
 	      downspeed = oldspeed; // reset downspeed
 	      direction = 1;
 	      break;
 
               // all other cases, just remove the active ceiling
 	    default:
-	      //SN_StopSequence((mobj_t *)&ceiling->sector->soundorg);
 	      mp->RemoveActiveCeiling(this);
 	      break;
             }
@@ -240,7 +230,6 @@ void ceiling_t::Think()
 
 
 //
-// was EV_DoCeiling
 // Move a ceiling up/down and all around!
 //
 int Map::EV_DoCeiling(int tag, int type, fixed_t uspeed, fixed_t dspeed, int crush, fixed_t height)
@@ -273,9 +262,7 @@ int Map::EV_DoCeiling(int tag, int type, fixed_t uspeed, fixed_t dspeed, int cru
 
       // new ceiling thinker
       rtn++;
-      ceiling_t *ceiling = new ceiling_t(type, sec, uspeed, dspeed, crush, height);
-
-      AddThinker(ceiling);
+      ceiling_t *ceiling = new ceiling_t(this, type, sec, uspeed, dspeed, crush, height);
       AddActiveCeiling(ceiling);
     }
   return rtn;
@@ -283,9 +270,7 @@ int Map::EV_DoCeiling(int tag, int type, fixed_t uspeed, fixed_t dspeed, int cru
 
 
 
-// was P_AddActiveCeiling
 // Add an active ceiling
-//
 void Map::AddActiveCeiling(ceiling_t *ceiling)
 {
   activeceilings.push_front(ceiling);
@@ -295,9 +280,7 @@ void Map::AddActiveCeiling(ceiling_t *ceiling)
 
 
 
-// was P_RemoveActiveCeiling
 // Remove a ceiling's thinker
-//
 void Map::RemoveActiveCeiling(ceiling_t *ceiling)
 {
   activeceilings.erase(ceiling->li); // remove the pointer from list
@@ -319,8 +302,9 @@ int Map::ActivateInStasisCeiling(int tag)
       ceiling_t *ceil = *i;
       if (ceil->tag == tag && ceil->direction == 0)
 	{
+	  SN_StartSequence(&ceil->sector->soundorg, SEQ_PLAT + ceil->sector->seqType);
 	  ceil->direction = ceil->olddirection;
-	  ceil->sector->ceilingdata = ceil; // what if it is already in use?
+	  ceil->sector->ceilingdata = ceil; // TODO what if it is already in use?
 	  rtn++;
 	}
     }
@@ -328,11 +312,7 @@ int Map::ActivateInStasisCeiling(int tag)
 }
 
 
-
-//
-// EV_CeilingCrushStop
 // Stop a ceiling from crushing!
-//
 int Map::EV_StopCeiling(int tag)
 {
   int rtn = 0;
@@ -342,7 +322,7 @@ int Map::EV_StopCeiling(int tag)
       ceiling_t *ceil = *i;
       if (ceil->direction != 0 && ceil->tag == tag)
 	{
-	  //SN_StopSequence((mobj_t*)&ceil->sector->soundorg);
+	  SN_StopSequence(&ceil->sector->soundorg);
 	  ceil->olddirection = ceil->direction;
 	  ceil->direction = 0;
 	  ceil->sector->ceilingdata = NULL;
@@ -354,11 +334,7 @@ int Map::EV_StopCeiling(int tag)
 }
 
 
-
-//
-// P_RemoveAllActiveCeilings()
 // Removes all ceilings from the active ceiling list
-// 
 void Map::RemoveAllActiveCeilings()
 {
   activeceilings.clear();

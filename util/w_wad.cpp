@@ -30,23 +30,17 @@
 #endif
 
 #include "d_netfil.h" // nameonly()
-#include "z_zone.h"
-#include "i_video.h" //rendermode
 #include "byteptr.h"
+#include "i_video.h" //rendermode
 
 #ifdef HWRENDER
 # include "hardware/hw_main.h"
 #endif
 
-#ifdef LINUX // prototypes, hopefully correct
-char *strupr(char *n); // from dosstr.c
-char *strlwr(char *n); // from dosstr.c
-#endif
-
 #include "vfile.h" // VFile class
 #include "wad.h"
 #include "w_wad.h"
-
+#include "z_zone.h"
 
 
 // ====================================================================

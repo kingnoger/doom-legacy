@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.26  2003/12/31 18:32:49  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.25  2003/12/23 18:06:06  smite-meister
 // Hexen stairbuilders. Moving geometry done!
 //
@@ -128,8 +131,6 @@
 
 // Here's for the german edition.
 // IF NO WOLF3D LEVELS, NO SECRET EXIT!
-
-void S_Read_SNDINFO(int lump);
 
 
 language_t   language = la_english;            // Language.
@@ -639,8 +640,23 @@ bool GameInfo::DeferredNewGame(skill_t sk, bool splitscreen)
     return false;
 
   // read these lumps _after_ MAPINFO but not separately for each map
-  Read_SNDINFO(fc.FindNumForName("SNDINFO"));
-  //S_Read_SNDSEQ(fc.FindNumForName("SNDSEQ"));
+  extern bool nosound;
+  if (!nosound)
+    {
+      S_ClearSounds();
+      int n = fc.Size();
+      for (int i = 0; i < n; i++)
+	{
+	  // cumulative reading
+	  S_Read_SNDINFO(fc.FindNumForNameFile("SNDINFO", i));
+	  S_Read_SNDSEQ(fc.FindNumForNameFile("SNDSEQ", i));
+	}
+
+      /*
+      if (M_CheckParm("-precachesound") || cv_precachesound.value))
+	S_PrecacheSounds();
+      */
+    }
 
   Downgrade(VERSION);
   paused = false;

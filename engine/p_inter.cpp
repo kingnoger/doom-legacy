@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.25  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.24  2003/12/18 11:57:31  smite-meister
 // fixes / new bugs revealed
 //
@@ -178,11 +181,11 @@ void PlayerPawn::Killed(PlayerPawn *victim, Actor *inflictor)
   // player killer
   game.UpdateScore(player, victim->player);
 
+  if (player == displayplayer || player == displayplayer2)
+    S_StartAmbSound(sfx_frag);
+
   if (game.mode == gm_heretic)
     {
-      if (player == displayplayer || player == displayplayer2)
-	S_StartAmbSound(sfx_gfrag);
-
       // Make a super chicken
       if (morphTics)
 	GivePower(pw_weaponlevel2);
@@ -800,17 +803,7 @@ void Actor::Die(Actor *inflictor, Actor *source)
 
   // thing death actions
   if (special) // formerly also demanded MF_COUNTKILL (MT_ZBELL!)
-    {
-      /*
-	if (type == MT_SORCBOSS) // FIXME
-	{
-	  int dummyargs = 0;
-	  mp->StartACS(target->special, (byte *)&dummyargs, this, NULL, 0);
-	}
-	else
-      */
-      mp->ExecuteLineSpecial(special, args, NULL, 0, this);
-    }
+    mp->ExecuteLineSpecial(special, args, NULL, 0, this);
 
   // if a player killed a monster, update kills
   if (flags & MF_COUNTKILL)
@@ -838,8 +831,6 @@ void DActor::Die(Actor *inflictor, Actor *source)
   if (!inflictor)
     inflictor = source;
 
-  Actor::Die(inflictor, source);
-
   if (flags & MF_CORPSE)
     {
       if (flags & MF_NOBLOOD)
@@ -847,7 +838,7 @@ void DActor::Die(Actor *inflictor, Actor *source)
       else
 	{
 	  SetState(S_GIBS);
-	  S_StartSound(this, s_gibbed); // lets have a neat 'crunch' sound!
+	  S_StartSound(this, sfx_gib); // lets have a neat 'crunch' sound!
 	}
       return;
     }
@@ -878,9 +869,7 @@ void DActor::Die(Actor *inflictor, Actor *source)
   if (((game.mode != gm_heretic && health < -info->spawnhealth)
        ||(game.mode == gm_heretic && health < -(info->spawnhealth>>1)))
       && info->xdeathstate)
-    {
-      SetState(info->xdeathstate);
-    }
+    SetState(info->xdeathstate);
   else
     SetState(info->deathstate);
   // Normally, A_Fall or A_NoBlocking follow the deathstate and make the thing a nonsolid corpse
@@ -889,6 +878,8 @@ void DActor::Die(Actor *inflictor, Actor *source)
 
   if (tics < 1)
     tics = 1;
+
+  Actor::Die(inflictor, source);
 }
 
 
@@ -903,6 +894,8 @@ void PlayerPawn::Die(Actor *inflictor, Actor *source)
     pres->SetAnim(presentation_t::Death2);
   else
     pres->SetAnim(presentation_t::Death1);
+
+  // TODO the player death sounds!
 
   if (!source)
     {
@@ -977,7 +970,7 @@ void A_RestoreSpecialThing1(DActor *thing)
       thing->mp->RepositionMace(thing);
     }
   thing->flags2 &= ~MF2_DONTDRAW;
-  S_StartSound(thing, Actor::s_respawn);
+  S_StartSound(thing, sfx_itemrespawn);
 }
 
 void A_RestoreSpecialThing2(DActor *thing)
@@ -1000,7 +993,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
     return;
 
   p_remove = true; // should the item be removed from map?
-  p_sound = s_pickup;
+  p_sound = sfx_itemup;
 
   int stype = special->type;
 
@@ -1061,7 +1054,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       if (health > 2*maxhealth)
 	health = 2*maxhealth;
       player->message = GOTSUPER;
-      p_sound = sfx_getpow;
+      p_sound = sfx_powerup;
       break;
 
     case MT_MEGA:
@@ -1070,7 +1063,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 	health = 2*maxhealth;
       GiveArmor(armor_field, 0.5, special->health);
       player->message = GOTMSPHERE;
-      p_sound = sfx_getpow;
+      p_sound = sfx_powerup;
       break;
 
       // keys
@@ -1827,7 +1820,7 @@ bool PlayerPawn::Morph()
   //SetState(S_FREETARGMOBJ);
 
   DActor *fog = mp->SpawnDActor(x, y, z+TELEFOGHEIGHT, MT_TFOG);
-  S_StartSound(fog, sfx_telept);
+  S_StartSound(fog, sfx_teleport);
 
   // FIXME again this Morph/FREETARGMOBJ problem...
   // set chicken attributes here, change appearance.
@@ -1877,7 +1870,7 @@ bool DActor::Morph()
   SetState(S_FREETARGMOBJ);
 
   DActor *fog = mp->SpawnDActor(x, y, z + TELEFOGHEIGHT, MT_TFOG);
-  S_StartSound(fog, sfx_telept);
+  S_StartSound(fog, sfx_teleport);
 
   // make the chicken
   DActor *chicken = mp->SpawnDActor(x, y, z, MT_CHICKEN);

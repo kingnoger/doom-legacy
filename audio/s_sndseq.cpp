@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/12/31 18:32:49  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.5  2003/06/10 22:39:52  smite-meister
 // Bugfixes
 //
@@ -44,58 +47,69 @@
 #include <string.h>
 
 #include "m_random.h"
+#include "parser.h"
 
 #include "g_map.h"
 #include "s_sound.h"
 #include "sounds.h"
-#include "s_sndseq.h"
 #include "w_wad.h"
 #include "z_zone.h"
 
 using namespace std;
 
-/*
-typedef enum
+
+
+void sndseq_t::clear()
 {
-  SEQTYPE_STONE,
-  SEQTYPE_HEAVY,
-  SEQTYPE_METAL,
-  SEQTYPE_CREAK,
-  SEQTYPE_SILENCE,
-  SEQTYPE_LAVA,
-  SEQTYPE_WATER,
-  SEQTYPE_ICE,
-  SEQTYPE_EARTH,
-  SEQTYPE_METAL2,
-  SEQTYPE_NUMSEQ
-} seqtype_t;
-*/
+  number  = 0;
+  stopsound = 0;
+  name.clear();
+  data.clear();
+}
 
 
+map<int, sndseq_t*> SoundSeqs; // this is where the sequence definitions are stored
+typedef map<int, sndseq_t*>::iterator sndseq_iter_t;
+
+
+//===========================================
 // This sucks, but is necessary for Hexen
+//===========================================
+
 struct hexen_seq_t
 {
   const char *tag;
   int seq[3]; // max 3 are needed
 };
 
+// flexible sequence mappings
+#define PLAT_S(x) (x + SEQ_PLAT)
+#define DOOR_S(x) (x + SEQ_DOOR)
+#define ENV_S(x) (x + SEQ_ENV)
+const int NUMSEQ = 14;
 hexen_seq_t HexenSeqs[NUMSEQ] =
 {
-  { "Platform", {0, 1, 3}}, // 'heavy' and 'creak' platforms are just platforms
-  { "PlatformMetal", {2, -1, -1}},
-  { "Silence", {4, 14, -1}},
-  { "Lava",    {5, 15, -1}},
-  { "Water",   {6, 16, -1}},
-  { "Ice",     {7, 17, -1}},
-  { "Earth",   {8, 18, -1}},
-  { "PlatformMetal2", {9, -1, -1}},
-  { "DoorNormal", {10, -1, -1}},
-  { "DoorHeavy",  {11, -1, -1}},
-  { "DoorMetal",  {12, -1, -1}},
-  { "DoorCreak",  {13, -1, -1}},
-  { "DoorMetal2", {19, -1, -1}},
-  { "Wind", {20, -1, -1}}
+  { "Platform", {PLAT_S(0), PLAT_S(1), PLAT_S(3)}}, // 'stone', 'heavy' and 'creak' platforms are all alike
+  { "PlatformMetal", {PLAT_S(2), -1, -1}},
+  { "Silence", {PLAT_S(4), DOOR_S(4), -1}},
+  { "Lava",    {PLAT_S(5), DOOR_S(5), -1}},
+  { "Water",   {PLAT_S(6), DOOR_S(6), -1}},
+  { "Ice",     {PLAT_S(7), DOOR_S(7), -1}},
+  { "Earth",   {PLAT_S(8), DOOR_S(8), -1}},
+  { "PlatformMetal2", {PLAT_S(9), -1, -1}},
+  { "DoorNormal", {DOOR_S(0), -1, -1}},
+  { "DoorHeavy",  {DOOR_S(1), -1, -1}},
+  { "DoorMetal",  {DOOR_S(2), -1, -1}},
+  { "DoorCreak",  {DOOR_S(3), -1, -1}},
+  { "DoorMetal2", {DOOR_S(9), -1, -1}},
+  { "Wind", {ENV_S(0), -1, -1}}
 };
+
+
+
+//===========================================
+//  SNDSEQ parser
+//===========================================
 
 // both an index to SOUNDSEQ_cmds and the actual token used in sequence
 enum soundseq_cmd_t
@@ -153,37 +167,196 @@ static const char *SOUNDSEQ_cmds[SSEQ_NUMCMDS + 1] =
   NULL
 };
 
-// static data
-struct sndseq_t
+
+// reads the SNDINFO lump
+int S_Read_SNDSEQ(int lump)
 {
-  int  number;
-  char name[28];
-  int  stopsound;
-  int  length; // instructions
-  int  seq[0]; // data begins here
+  Parser p;
+  sndseq_t temp;
+  sndseq_t *ss;
 
-public:
-  void clear()
-  {
-    number  = 0;
-    name[0] = '\0';
-    stopsound = 0;
-    length = 0;
-  };
-};
+  temp.number = -1;
+  int i, n, hseq = -1;
 
-// dynamic data
+  if (!p.Open(lump))
+    return -1;
+
+  CONS_Printf("Reading SNDSEQ...\n");
+
+  p.RemoveComments(';');
+  while (p.NewLine())
+    {
+      char line[33];
+
+      n = p.GetString(line, 32);
+      if (n > 0)
+	{
+	  if (line[0] == ':')
+	    {
+	      if (temp.number >= 0)
+		CONS_Printf("Nested sequence in sequence %d.\n", temp.number);
+	      else
+		{
+		  // new sequence
+		  temp.clear();
+		  temp.name = &line[1]; // omitting the colon
+
+		  if (p.MustGetInt(&i))
+		    temp.number = i; // Legacy format, :SeqName <number>
+		  else
+		    {
+		      // old Hexen style kludge
+		      for (i=0; i<NUMSEQ; i++)
+			if (!strcasecmp(HexenSeqs[i].tag, line+1))
+			  break;
+		      if (i == NUMSEQ)
+			{
+			  CONS_Printf("No sequence number given for '%s'.\n", line);
+			  temp.number = -2;
+			  continue;
+			}
+		      else
+			{
+			  temp.number = HexenSeqs[i].seq[0];
+			  hseq = i;
+			}
+		    }
+		  CONS_Printf(" starting seq %d, '%s'\n", temp.number, temp.name.c_str());
+		}
+	    }
+	  else if (temp.number >= 0)
+	    switch (P_MatchString(line, SOUNDSEQ_cmds))
+	      {
+	      case SSEQ_PLAY:
+		if (p.GetString(line, 32))
+		  {
+		    temp.data.push_back(SSEQ_PLAY);
+		    temp.data.push_back(S_GetSoundID(line));
+		  }
+		break;
+
+	      case SSEQ_PLAYUNTILDONE:
+		if (p.GetString(line, 32))
+		  {
+		    temp.data.push_back(SSEQ_PLAY);
+		    temp.data.push_back(S_GetSoundID(line));
+		    temp.data.push_back(SSEQ_WAITUNTILDONE);
+		  }
+		break;
+
+	      case SSEQ_PLAYTIME:
+		if (p.GetString(line, 32))
+		  {
+		    temp.data.push_back(SSEQ_PLAY);
+		    temp.data.push_back(S_GetSoundID(line));
+		    temp.data.push_back(SSEQ_DELAY);
+		    temp.data.push_back(p.GetInt());
+		  }
+
+	      case SSEQ_PLAYREPEAT:
+		if (p.GetString(line, 32))
+		  {
+		    temp.data.push_back(SSEQ_PLAYREPEAT);
+		    temp.data.push_back(S_GetSoundID(line));
+		  }
+		break;
+
+	      case SSEQ_DELAY:
+		temp.data.push_back(SSEQ_DELAY);
+		temp.data.push_back(p.GetInt());
+		break;
+
+	      case SSEQ_DELAYRAND:
+		temp.data.push_back(SSEQ_DELAYRAND);
+		temp.data.push_back(p.GetInt());
+		temp.data.push_back(p.GetInt());
+		break;
+
+	      case SSEQ_VOLUME:
+		temp.data.push_back(SSEQ_VOLUME);
+		temp.data.push_back(p.GetInt());
+		break;
+
+	      case SSEQ_STOPSOUND:
+		if (p.GetString(line, 32))
+		  {
+		    temp.data.push_back(SSEQ_STOPSOUND);
+		    temp.stopsound = S_GetSoundID(line);
+		  }
+		break;
+
+	      case SSEQ_END:
+		temp.data.push_back(SSEQ_END);
+
+		// create and store the sequence
+		if (SoundSeqs.count(temp.number)) // already there
+		  {
+		    CONS_Printf("Warning: Sequence %d defined more than once!\n", temp.number);
+		    delete SoundSeqs[temp.number]; // later one takes precedence
+		  }
+
+		ss = new sndseq_t(temp); // make a copy
+		SoundSeqs[ss->number] = ss; // insert into the map
+
+		CONS_Printf(" seq %d done\n", ss->number);
+
+		if (hseq >= 0)
+		  { // other half of the Hexen kludge:
+		    // some sequences need to be copied
+		    for (n=1; n<3; n++)
+		      if (HexenSeqs[hseq].seq[n] != -1)
+			{
+			  ss = new sndseq_t(temp);
+			  ss->number = HexenSeqs[hseq].seq[n];
+			  SoundSeqs[ss->number] = ss;
+			  CONS_Printf(" seq %d done\n", ss->number);
+			}
+		    
+		    hseq = -1;
+		  }
+
+		temp.number = -1;
+		break;
+
+	      case SSEQ_VOLUMERAND:
+		temp.data.push_back(SSEQ_VOLUMERAND);
+		temp.data.push_back(p.GetInt());
+		temp.data.push_back(p.GetInt());
+		break;
+
+	      case SSEQ_CHVOL:
+		temp.data.push_back(SSEQ_CHVOL);
+		temp.data.push_back(p.GetInt());
+		break;
+
+	      default:
+		CONS_Printf("Unknown command '%s'.\n", line);
+		break;
+	      }
+	}
+    }
+
+  CONS_Printf(" done. %d sequences.\n", SoundSeqs.size());
+  return SoundSeqs.size();
+}
+
+
+
+//===========================================
+//  Active sequences
+//===========================================
+
+
+// dynamic data (could also be a Thinker... maybe not)
 class ActiveSndSeq
 {
   friend class Map;
 
-  const sndseq_t *sequence;
-  const int *ip;
+  const sndseq_t *seq;
+  int   ip;
   int   delay;
   float volume;
-  int   currentsound;
   int   channel;
-  int   stopsound;
   bool  isactor;
   union
   { // the sound origin. if NULL, the sound is ambient
@@ -192,45 +365,44 @@ class ActiveSndSeq
   };
 
 public:
-
-  ActiveSndSeq(sndseq_t *s, Actor *orig)
-  {
-    channel = -1;
-    sequence = s;
-    ip = s->seq;
-    delay = 0;
-    volume = 1.0f;
-    currentsound = 0;
-    stopsound = s->stopsound;
-    act = orig;
-    isactor = true;
-  };
-
-  ActiveSndSeq(sndseq_t *s, mappoint_t *orig)
-  {
-    channel = -1;
-    sequence = s;
-    ip = s->seq;
-    delay = 0;
-    volume = 1.0f;
-    currentsound = 0;
-    stopsound = s->stopsound;
-    mpt = orig;
-    isactor = false;
-  };
+  ActiveSndSeq(sndseq_t *s, Actor *orig);
+  ActiveSndSeq(sndseq_t *s, mappoint_t *orig);
 
   bool Update();
   void StartSnd(int snd);
-  void Stop();
+  void Stop(bool quiet);
 
   void *operator new(size_t size) { return Z_Malloc(size, PU_LEVSPEC, NULL); };
   void  operator delete(void *mem) { Z_Free(mem); };
 };
 
 
+ActiveSndSeq::ActiveSndSeq(sndseq_t *s, Actor *orig)
+{
+  channel = -1;
+  seq = s;
+  ip = 0;
+  delay = 0;
+  volume = 1.0f;
+  act = orig;
+  isactor = true;
+}
+
+
+ActiveSndSeq::ActiveSndSeq(sndseq_t *s, mappoint_t *orig)
+{
+  channel = -1;
+  seq = s;
+  ip = 0;
+  delay = 0;
+  volume = 1.0f;
+  mpt = orig;
+  isactor = false;
+}
+
+
 void ActiveSndSeq::StartSnd(int snd)
 {
-  // TODO for now, sequences can only use sounds that are in S_sfx
   if (act)
     {
       if (isactor)
@@ -239,19 +411,105 @@ void ActiveSndSeq::StartSnd(int snd)
 	channel = S_StartSound(mpt, snd, volume);
     }
   else
-    channel = S.StartAmbSound(S_sfx[snd].lumpname, volume);
+    channel = S_StartAmbSound(snd, volume);
 }
 
-void ActiveSndSeq::Stop()
+
+void ActiveSndSeq::Stop(bool quiet)
 {
   S.StopChannel(channel);
-  if (stopsound)
-    StartSnd(stopsound);
+
+  if (!quiet && seq->stopsound)
+    StartSnd(seq->stopsound);
 }
 
-bool Map::SN_StartSequence(Actor *a, unsigned s)
+
+bool ActiveSndSeq::Update()
 {
-  map<unsigned, struct sndseq_t*>::iterator i = SoundSeqs.find(s);
+  if (delay > 0)
+    {
+      delay--;
+      return false;
+    }
+
+  if (ip >= seq->data.size())
+    {
+      CONS_Printf("Sound sequence overrun!\n");
+      return true;
+    }
+
+  bool playing = S.ChannelPlaying(channel);
+
+  switch (seq->data[ip])
+    {
+    case SSEQ_PLAY:
+      if (!playing)
+	StartSnd(seq->data[ip + 1]);
+      ip += 2;
+      break;
+
+    case SSEQ_WAITUNTILDONE:
+      if (!playing)
+	ip++;
+      break;
+
+    case SSEQ_PLAYREPEAT:
+      if (!playing)
+	StartSnd(seq->data[ip + 1]); // TODO should make looping sound
+      break;
+
+    case SSEQ_DELAY:
+      delay = seq->data[ip + 1];
+      ip += 2;
+      break;
+
+    case SSEQ_DELAYRAND:
+      delay = seq->data[ip + 1] + P_Random() % (seq->data[ip + 2] - seq->data[ip + 1] + 1);
+      ip += 3;
+      break;
+
+    case SSEQ_VOLUME:
+      // volume is in range 0..100
+      volume = float(seq->data[ip + 1])/100;
+      ip += 2;
+      break;
+
+    case SSEQ_STOPSOUND:
+      // Wait until something else stops the sequence
+      break;
+
+    case SSEQ_END:
+      S.StopChannel(channel);
+      return true;
+
+    case SSEQ_VOLUMERAND:
+      volume = float(seq->data[ip + 1] + P_Random() % (seq->data[ip + 2] - seq->data[ip + 1] + 1))/100;
+      ip += 3;
+      break;
+
+    case SSEQ_CHVOL:
+      volume += float(seq->data[ip + 1])/100;
+      ip += 2;
+      break;
+
+    default:	
+      break;
+    }
+
+  return false;
+}
+
+
+
+
+
+//===========================================
+//  Map soundsequence methods
+//===========================================
+
+bool Map::SN_StartSequence(Actor *a, int s)
+{
+  sndseq_iter_t i = SoundSeqs.find(s);
 
   if (i == SoundSeqs.end())
     return false;
@@ -262,14 +520,14 @@ bool Map::SN_StartSequence(Actor *a, unsigned s)
   return true;
 }
 
-bool Map::SN_StartSequence(mappoint_t *m, unsigned s)
+bool Map::SN_StartSequence(mappoint_t *m, int s)
 {
-  map<unsigned, struct sndseq_t*>::iterator i = SoundSeqs.find(s);
+  sndseq_iter_t i = SoundSeqs.find(s);
 
   if (i == SoundSeqs.end())
     return false;
 
-  SN_StopSequence(m); // Stop any previous sequence
+  SN_StopSequence(m, true); // Stop any previous sequence
   ActiveSndSeq *temp = new ActiveSndSeq((*i).second, m);
   ActiveSeqs.push_back(temp);
 
@@ -277,15 +535,14 @@ bool Map::SN_StartSequence(mappoint_t *m, unsigned s)
 }
 
 
-bool Map::SN_StartSequenceName(Actor *a, const char *name)
+bool Map::SN_StartSequenceName(mappoint_t *m, const char *n)
 {
-  map<unsigned, struct sndseq_t*>::iterator i;
-
+  sndseq_iter_t i;
   for (i = SoundSeqs.begin(); i != SoundSeqs.end(); i++)
     {
-      if (!strcmp(name, (*i).second->name))
+      if (!(*i).second->name.compare(n))
 	{
-	  SN_StartSequence(a, (*i).first);
+	  SN_StartSequence(m, (*i).first);
 	  return true;
 	}
     }
@@ -293,7 +550,7 @@ bool Map::SN_StartSequenceName(Actor *a, const char *name)
 }
 
 
-bool Map::SN_StopSequence(void *origin)
+bool Map::SN_StopSequence(void *origin, bool quiet)
 {
   list<ActiveSndSeq*>::iterator i;
 
@@ -301,7 +558,7 @@ bool Map::SN_StopSequence(void *origin)
     {
       if ((*i)->act == origin)
 	{
-	  (*i)->Stop();
+	  (*i)->Stop(quiet);
 	  delete *i;
 	  ActiveSeqs.erase(i);
 	  return true;
@@ -344,323 +601,19 @@ void Map::UpdateSoundSequences()
 	}
     }
   else
-    ActiveAmbientSeq = new ActiveSndSeq(AmbientSeqs[P_Random()%n], (Actor *)NULL);
-}
-
-
-bool ActiveSndSeq::Update()
-{
-  if (delay > 0)
     {
-      delay--;
-      return false;
-    }
-
-  bool playing = S.ChannelPlaying(channel);
-
-  switch (*ip)
-    {
-    case SSEQ_PLAY:
-      if (!playing)
+      n = P_Random() % n;
+      int s = AmbientSeqs[n] + 1000;
+      sndseq_iter_t i = SoundSeqs.find(s);
+      if (i == SoundSeqs.end())
 	{
-	  currentsound = ip[1];
-	  StartSnd(currentsound);
+	  CONS_Printf("WARNING: Ambient sequence %d not defined!\n", s - 1000);
+	  AmbientSeqs.erase(AmbientSeqs.begin() + n);
+	  return;
 	}
-      ip += 2;
-      break;
 
-    case SSEQ_WAITUNTILDONE:
-      if (!playing)
-	{
-	  currentsound = 0;
-	  ip++;
-	}
-      break;
-
-    case SSEQ_PLAYREPEAT:
-      if (!playing)
-	{
-	  currentsound = ip[1];
-	  StartSnd(currentsound); // TODO should make looping sound
-	}
-      break;
-
-    case SSEQ_DELAY:
-      delay = ip[1];
-      ip += 2;
-      currentsound = 0;
-      break;
-
-    case SSEQ_DELAYRAND:
-      delay = ip[1] + P_Random() % (ip[2] - ip[1] + 1);
-      ip += 3;
-      currentsound = 0;
-      break;
-
-    case SSEQ_VOLUME:
-      // volume is in range 0..100
-      volume = float(ip[1])/100;
-      ip += 2;
-      break;
-
-    case SSEQ_STOPSOUND:
-      // Wait until something else stops the sequence
-      break;
-
-    case SSEQ_END:
-      S.StopChannel(channel);
-      return true;
-
-    case SSEQ_VOLUMERAND:
-      volume = float(ip[1] + P_Random() % (ip[2] - ip[1] + 1))/100;
-      ip += 3;
-      break;
-
-    case SSEQ_CHVOL:
-      volume += float(ip[1])/100;
-      ip += 2;
-      break;
-
-
-    default:	
-      break;
+      ActiveAmbientSeq = new ActiveSndSeq((*i).second, (Actor *)NULL);
     }
-
-  return false;
 }
 
 
-static int P_MatchString(const char *p, const char *strings[])
-{
-  int i;
-  for (i=0; strings[i]; i++)
-    if (!strcasecmp(p, strings[i]))
-      return i;
-
-  return -1;
-}
-
-static int P_GetString(char **ptr, char *buf)
-{
-  char *p = *ptr;
-  // get a max. 40 character string, ignoring starting whitespace
-  while (isspace(*p))
-    p++;
-
-  int i = 0;
-  while (*p && !isspace(*p) && i < 40)
-    {
-      *buf = *p;
-      buf++, p++, i++;
-    }
-  *buf = '\0';
-  *ptr = p;
-  return i;
-}
-
-static int P_GetInt(char **ptr)
-{
-  char *p = *ptr;
-  char *tail = NULL;
-  int val = strtol(p, &tail, 0);
-  if (tail == p)
-    {
-      CONS_Printf("SNDSEQ: Expected an integer, got '%s'.\n", p);
-      return 0;
-    }
-
-  *ptr = tail;
-  return val;
-}
-
-
-
-// reads the SNDINFO lump
-void Map::S_Read_SNDSEQ(int lump)
-{
-  if (lump < 0)
-    return;
-
-  CONS_Printf("Reading SNDSEQ...\n");
-
-  int length = fc.LumpLength(lump);
-  char *ms = (char *)fc.CacheLumpNum(lump, PU_STATIC);
-  char *me = ms + length; // past-the-end pointer
-
-  char *s, *p;
-  s = p = ms;
-
-  vector<int> script;
-  sndseq_t temp;
-  temp.number = -1;
-  int i, n, hseq = -1;;
-
-  char line[45];
-
-  while (p < me)
-    {
-      if (*p == '\n') // line ends
-	{
-	  if (p > s)
-	    {
-	      // parse the line from s to p
-	      *p = '\0';  // mark the line end
-
-	      n = P_GetString(&s, line);
-	      if (n > 0 && line[0] != ';') // not a blank line or comment
-		{
-		  if (line[0] == ':')
-		    {
-		      if (temp.number != -1)
-			CONS_Printf("SNDSEQ: Nested sequence in sequence %d.\n", temp.number);
-		      else
-			{
-			  // new sequence
-			  script.clear();
-			  temp.clear();
-			  strncpy(temp.name, line, 25);
-			  temp.name[25] = '\0'; // to be sure
-
-			  if (n >= 2)
-			    temp.number = P_GetInt(&s);
-			  else
-			    {
-			      // old Hexen style kludge
-			      for (i=0; i<NUMSEQ; i++)
-				if (!strcasecmp(HexenSeqs[i].tag, line+1))
-				  break;
-			      if (i == NUMSEQ)
-				{
-				  CONS_Printf("SNDSEQ: No sequence number given for '%s'.\n", line);
-				  temp.number = -2;
-				}
-			      else
-				{
-				  temp.number = HexenSeqs[i].seq[0];
-				  hseq = i;
-				}
-			    }
-			}
-		    }
-		  else if (temp.number != -1)
-		    switch (P_MatchString(line, SOUNDSEQ_cmds))
-		      {
-		      case SSEQ_PLAY:
-			if (P_GetString(&s, line))
-			  {
-			    script.push_back(SSEQ_PLAY);
-			    script.push_back(S_GetSoundID(line));
-			  }
-			break;
-
-		      case SSEQ_PLAYUNTILDONE:
-			if (P_GetString(&s, line))
-			  {
-			    script.push_back(SSEQ_PLAY);
-			    script.push_back(S_GetSoundID(line));
-			    script.push_back(SSEQ_WAITUNTILDONE);
-			  }
-			break;
-
-		      case SSEQ_PLAYTIME:
-			if (P_GetString(&s, line))
-			  {
-			    script.push_back(SSEQ_PLAY);
-			    script.push_back(S_GetSoundID(line));
-			    script.push_back(SSEQ_DELAY);
-			    script.push_back(P_GetInt(&s));
-			  }
-
-		      case SSEQ_PLAYREPEAT:
-			if (P_GetString(&s, line))
-			  {
-			    script.push_back(SSEQ_PLAYREPEAT);
-			    script.push_back(S_GetSoundID(line));
-			  }
-			break;
-
-		      case SSEQ_DELAY:
-			script.push_back(SSEQ_DELAY);
-			script.push_back(P_GetInt(&s));
-			break;
-
-
-		      case SSEQ_DELAYRAND:
-			script.push_back(SSEQ_DELAYRAND);
-			script.push_back(P_GetInt(&s));
-			script.push_back(P_GetInt(&s));
-			break;
-
-		      case SSEQ_VOLUME:
-			script.push_back(SSEQ_VOLUME);
-			script.push_back(P_GetInt(&s));
-			break;
-
-		      case SSEQ_STOPSOUND:
-			if (P_GetString(&s, line))
-			  {
-			    script.push_back(SSEQ_STOPSOUND);
-			    temp.stopsound = S_GetSoundID(line);
-			  }
-			break;
-
-		      case SSEQ_END:
-			script.push_back(SSEQ_END);
-			if (temp.number >= 0)
-			  {
-			    // create and store the sequence
-			    temp.length = script.size();
-			    CONS_Printf("crash\n");
-			    sndseq_t *tempseq = (sndseq_t *)Z_Malloc(sizeof(sndseq_t) + script.size(), PU_STATIC, NULL);
-			    CONS_Printf("neverseen\n");
-			    *tempseq = temp; // copy the fields
-
-			    for (n=0; n < (int)script.size(); n++)
-			      tempseq->seq[n] = script[n];
-
-			    if (SoundSeqs.count(temp.number)) // already there
-			      {
-				CONS_Printf("SNDSEQ: Sequence %d defined more than once!\n", temp.number);
-				Z_Free(SoundSeqs[temp.number]); // later one takes precedence
-			      }
-			    SoundSeqs[temp.number] = tempseq; // insert into the map
-
-			    if (hseq >= 0)
-			      { // other half of the Hexen kludge:
-				// some sequences need to be copied
-				for (n=1; n<3; n++)
-				  if (HexenSeqs[hseq].seq[n] != -1)
-				    SoundSeqs[HexenSeqs[hseq].seq[n]] = tempseq;
-
-				hseq = -1;
-			      }
-			  }
-
-			temp.number = -1;
-			break;
-
-		      case SSEQ_VOLUMERAND:
-			script.push_back(SSEQ_VOLUMERAND);
-			script.push_back(P_GetInt(&s));
-			script.push_back(P_GetInt(&s));
-			break;
-
-		      case SSEQ_CHVOL:
-			script.push_back(SSEQ_CHVOL);
-			script.push_back(P_GetInt(&s));
-			break;
-
-		      default:
-			CONS_Printf("SNDSEQ: Unknown command '%s'.\n", line);
-			break;
-		      }
-		}
-	    }
-	  s = p + 1;  // pass the line
-	}
-      p++;      
-    }
-
-  Z_Free(ms);
-  CONS_Printf("done. %d sequences.\n", SoundSeqs.size());
-}

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.6  2003/11/12 11:07:26  smite-meister
 // Serialization done. Map progression.
 //
@@ -221,7 +224,6 @@ public:
 
   // ----- level-related stuff -----
   // in g_level.cpp
-  int  Read_SNDINFO(int lump);
   int  Read_MAPINFO(int lump);
   void Clear_mapinfo_clusterdef();
   MapCluster *FindCluster(int c);

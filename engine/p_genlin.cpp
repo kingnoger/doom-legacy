@@ -28,17 +28,12 @@
 #include "r_data.h"
 #include "p_spec.h" // geometry-related thinker classes
 #include "m_random.h"
-#include "s_sound.h"
-#include "sounds.h"
-#include "z_zone.h"
 
 /*
   SoM: 3/9/2000: Copied this entire file from Boom sources to Legacy sources.
   This file contains all routiens for Generalized linedef types.
 */
 
-//
-// was EV_DoGenFloor()
 //
 // Handle generalized floor types
 //
@@ -114,8 +109,7 @@ int Map::EV_DoGenFloor(line_t *line)
 
       // new floor thinker
       rtn++;
-      floor = new floor_t(floor_t::RelHeight, sec, speed, Crsh ? 10 : 0, 0);
-      AddThinker(floor);
+      floor = new floor_t(this, floor_t::RelHeight, sec, speed, Crsh ? 10 : 0, 0);
 
       if (!Dirn)
 	floor->speed = -floor->speed;
@@ -222,8 +216,6 @@ int Map::EV_DoGenFloor(line_t *line)
 
 
 //
-// was EV_DoGenCeiling()
-//
 // Handle generalized ceiling types
 //
 // Passed the linedef activating the ceiling function
@@ -299,8 +291,7 @@ int Map::EV_DoGenCeiling(line_t *line)
 
       // new ceiling thinker
       rtn++;
-      ceiling = new ceiling_t(ceiling_t::RelHeight, sec, speed, speed, Crsh ? 10 : 0, 0);
-      AddThinker(ceiling);
+      ceiling = new ceiling_t(this, ceiling_t::RelHeight, sec, speed, speed, Crsh ? 10 : 0, 0);
 
       ceiling->direction = Dirn? 1 : -1;
       ceiling->texture = sec->ceilingpic;
@@ -412,8 +403,6 @@ int Map::EV_DoGenCeiling(line_t *line)
   return rtn;
 }
 
-//
-// was EV_DoGenLift()
 //
 // Handle generalized lift types
 //
@@ -529,8 +518,7 @@ int Map::EV_DoGenLift(line_t *line)
 
       // Setup the plat thinker
       rtn++;
-      plat = new plat_t(type, sec, line->tag, speed, wait, 0);
-      AddThinker(plat);
+      plat = new plat_t(this, type, sec, line->tag, speed, wait, 0);
       AddActivePlat(plat); // add this plat to the list of active plats
 
       if (manual)
@@ -539,8 +527,6 @@ int Map::EV_DoGenLift(line_t *line)
   return rtn;
 }
 
-//
-// EV_DoGenStairs()
 //
 // Handle generalized stair building
 //
@@ -638,8 +624,7 @@ int Map::EV_DoGenStairs(line_t *line)
 
       // new floor thinker
       rtn++;
-      floor_t *floor = new floor_t(floor_t::AbsHeight, sec, speed, 0, height);
-      AddThinker(floor);
+      floor_t *floor = new floor_t(this, floor_t::AbsHeight, sec, speed, 0, height);
 
       int texture = sec->floorpic;
 
@@ -687,10 +672,7 @@ int Map::EV_DoGenStairs(line_t *line)
 	      sec = tsec;
 	      secnum = newsecnum;
 
-	      floor = new floor_t(floor_t::AbsHeight, sec, speed, 0, height);
-	      AddThinker(floor);
-
-	      //floor->direction = Dirn? 1 : -1;
+	      floor = new floor_t(this, floor_t::AbsHeight, sec, speed, 0, height);
 
 	      ok = true;
 	      break;
@@ -706,8 +688,6 @@ int Map::EV_DoGenStairs(line_t *line)
   return rtn;
 }
 
-//
-// EV_DoGenCrusher()
 //
 // Handle generalized crusher types
 //
@@ -779,8 +759,7 @@ int Map::EV_DoGenCrusher(line_t *line)
 
       // new ceiling thinker
       rtn = 1;
-      ceiling = new ceiling_t(ceiling_t::Crusher, sec, speed, speed, 10, 8*FRACUNIT);
-      AddThinker(ceiling);
+      ceiling = new ceiling_t(this, ceiling_t::Crusher, sec, speed, speed, 10, 8*FRACUNIT);
 
       ceiling->texture = sec->ceilingpic;
       ceiling->newspecial = sec->special;
@@ -794,8 +773,6 @@ int Map::EV_DoGenCrusher(line_t *line)
 }
 
 //
-// was EV_DoGenLockedDoor()
-//
 // Handle generalized locked door types
 //
 // Passed the linedef activating the generalized locked door
@@ -805,7 +782,6 @@ int Map::EV_DoGenLockedDoor(line_t *line)
 {
   int   secnum;
   sector_t* sec;
-  vdoor_t* door;
   unsigned  value = unsigned(line->special) - GenLockedBase;
 
   // parse the bit fields in the line's special type
@@ -845,41 +821,31 @@ int Map::EV_DoGenLockedDoor(line_t *line)
 	}
   
       // new door thinker
-      rtn = 1;
-      door = new vdoor_t(vdoor_t::OwC, sec, 0, VDOORWAIT);
-      AddThinker(door);
+      rtn++;
 
-      door->topheight = P_FindLowestCeilingSurrounding(sec);
-      door->topheight -= 4*FRACUNIT;
-      door->direction = 1;
-
-      door->type = Kind? vdoor_t::Open : vdoor_t::OwC;
+      fixed_t speed;
+      int type = Kind ? vdoor_t::Open : vdoor_t::OwC;
       // setup speed of door motion
-      switch(Sped)
+      switch (Sped)
 	{
 	default:
 	case SpeedSlow:
-	  door->speed = VDOORSPEED;
+	  speed = VDOORSPEED;
 	  break;
 	case SpeedNormal:
-	  door->speed = VDOORSPEED*2;
+	  speed = VDOORSPEED*2;
 	  break;
 	case SpeedFast:
-	  door->type |= vdoor_t::Blazing;
-	  door->speed = VDOORSPEED*4;
+	  type |= vdoor_t::Blazing;
+	  speed = VDOORSPEED*4;
 	  break;
 	case SpeedTurbo:
-	  door->type |= vdoor_t::Blazing;
-	  door->speed = VDOORSPEED*8;
-
+	  type |= vdoor_t::Blazing;
+	  speed = VDOORSPEED*8;
 	  break;
 	}
 
-      // killough 4/15/98: fix generalized door opening sounds
-      // (previously they always had the blazing door close sound)
-
-      S_StartSound(&door->sector->soundorg,   // killough 4/15/98
-		   door->speed >= VDOORSPEED*4 ? sfx_bdopn : sfx_doropn);
+      vdoor_t *door = new vdoor_t(this, type, sec, speed, VDOORWAIT);
 
       if (manual)
 	{
@@ -891,8 +857,6 @@ int Map::EV_DoGenLockedDoor(line_t *line)
 }
 
 //
-// EV_DoGenDoor()
-//
 // Handle generalized door types
 //
 // Passed the linedef activating the generalized door
@@ -902,7 +866,6 @@ int Map::EV_DoGenDoor(line_t *line)
 {
   int   secnum;
   sector_t* sec;
-  vdoor_t* door;
   unsigned  value = unsigned(line->special) - GenDoorBase;
 
   // parse the bit fields in the line's special type
@@ -944,85 +907,71 @@ int Map::EV_DoGenDoor(line_t *line)
 	}
   
       // new door thinker
-      rtn = 1;
-      door = new vdoor_t(vdoor_t::Delayed, sec, 0, VDOORWAIT);
-      AddThinker(door);
+      rtn++;
 
-      // setup delay for door remaining open/closed
-      switch(Dely)
+      int type;
+      // set kind of door, whether it opens then close, opens, closes etc.
+      // assign target heights accordingly
+      switch (Kind)
 	{
 	default:
-	case 0:
-	  door->topwait = 35;
+	case OdCDoor:
+	  type = vdoor_t::OwC;
 	  break;
-	case 1:
-	  door->topwait = VDOORWAIT;
+	case ODoor:
+	  type = vdoor_t::Open;
 	  break;
-	case 2:
-	  door->topwait = 2*VDOORWAIT;
+	case CdODoor:
+	  type = vdoor_t::CwO;
 	  break;
-	case 3:
-	  door->topwait = 7*VDOORWAIT;
+	case CDoor:
+	  type = vdoor_t::Close;
 	  break;
 	}
 
+      fixed_t speed;
       // setup speed of door motion
       switch(Sped)
 	{
 	default:
 	case SpeedSlow:
-	  door->speed = VDOORSPEED;
+	  speed = VDOORSPEED;
 	  break;
 	case SpeedNormal:
-	  door->speed = VDOORSPEED*2;
+	  speed = VDOORSPEED*2;
 	  break;
 	case SpeedFast:
-	  door->speed = VDOORSPEED*4;
+	  type |= vdoor_t::Blazing;
+	  speed = VDOORSPEED*4;
 	  break;
 	case SpeedTurbo:
-	  door->speed = VDOORSPEED*8;
+	  type |= vdoor_t::Blazing;
+	  speed = VDOORSPEED*8;
 	  break;
 	}
 
-      // set kind of door, whether it opens then close, opens, closes etc.
-      // assign target heights accordingly
-      switch(Kind)
+      type |= vdoor_t::Delayed;
+
+      int wait;
+      // setup delay for door remaining open/closed
+      switch(Dely)
 	{
-	case OdCDoor:
-	  door->direction = 1;
-	  door->topheight = P_FindLowestCeilingSurrounding(sec);
-	  door->topheight -= 4*FRACUNIT;
-	  if (door->topheight != sec->ceilingheight)
-	    S_StartSound(&door->sector->soundorg,sfx_bdopn);
-	  door->type = vdoor_t::OwC;
-	  break;
-	case ODoor:
-	  door->direction = 1;
-	  door->topheight = P_FindLowestCeilingSurrounding(sec);
-	  door->topheight -= 4*FRACUNIT;
-	  if (door->topheight != sec->ceilingheight)
-	    S_StartSound(&door->sector->soundorg,sfx_bdopn);
-	  door->type = vdoor_t::Open;
-	  break;
-	case CdODoor:
-	  door->topheight = sec->ceilingheight;
-	  door->direction = -1;
-	  S_StartSound(&door->sector->soundorg,sfx_dorcls);
-	  door->type = vdoor_t::CwO;
-	  break;
-	case CDoor:
-	  door->topheight = P_FindLowestCeilingSurrounding(sec);
-	  door->topheight -= 4*FRACUNIT;
-	  door->direction = -1;
-	  S_StartSound(&door->sector->soundorg,sfx_dorcls);
-	  door->type = vdoor_t::Close;
-	  break;
 	default:
+	case 0:
+	  wait = 35;
+	  break;
+	case 1:
+	  wait = VDOORWAIT;
+	  break;
+	case 2:
+	  wait = 2*VDOORWAIT;
+	  break;
+	case 3:
+	  wait = 7*VDOORWAIT;
 	  break;
 	}
 
-      if (Sped >= SpeedFast)
-	door->type |= vdoor_t::Blazing;
+      vdoor_t *door = new vdoor_t(this, type, sec, speed, wait);
 
       if (manual)
 	{

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.22  2003/12/23 18:06:06  smite-meister
 // Hexen stairbuilders. Moving geometry done!
 //
@@ -140,8 +143,9 @@ int allow_pushers = 1;
 IMPLEMENT_CLASS(sectoreffect_t, "Sector effect");
 sectoreffect_t::sectoreffect_t() {}
 
-sectoreffect_t::sectoreffect_t(sector_t *s)
+sectoreffect_t::sectoreffect_t(Map *m, sector_t *s)
 {
+  m->AddThinker(this); // when a sectoreffect is constructed, it is immediately added to the Thinker list.
   sector = s;
 }
 
@@ -1258,8 +1262,6 @@ void P_InitPicAnims() {}
 //
 void Map::UpdateSpecials()
 {
-  int i;
-
   //  LEVEL TIMER
   if (cv_timelimit.value && maptic > unsigned(cv_timelimit.value))
     ExitMap(NULL, 0);
@@ -1422,7 +1424,7 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
 	{
 	case 1: // Phased light
 	  // Hardcoded base, use sector->lightlevel as the index
-	  AddThinker(new phasedlight_t(sec, 80, -1));
+	  new phasedlight_t(this, sec, 80, -1);
 	  break;
 	case 2: // Phased light sequence start
 	  SpawnPhasedLightSequence(sec, 1);
@@ -1574,7 +1576,7 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
 
     case 1: // FLICKERING LIGHTS
       i = P_FindMinSurroundingLight(sec, sec->lightlevel);
-      lfx = new lightfx_t(sec, lightfx_t::Flicker, sec->lightlevel, i, 64, 7);
+      lfx = new lightfx_t(this, sec, lightfx_t::Flicker, sec->lightlevel, i, 64, 7);
       lfx->count = (P_Random() & lfx->maxtime) + 1;
       break;
 
@@ -1588,7 +1590,7 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
 
     case 8: // GLOWING LIGHT
       i = P_FindMinSurroundingLight(sec, sec->lightlevel);
-      lfx = new lightfx_t(sec, lightfx_t::Glow, sec->lightlevel, i, -glowspeed);
+      lfx = new lightfx_t(this, sec, lightfx_t::Glow, sec->lightlevel, i, -glowspeed);
       break;
 
     case 12: // SYNC STROBE SLOW
@@ -1601,16 +1603,13 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
 
     case 17:
       i = P_FindMinSurroundingLight(sec, sec->lightlevel) + 16;
-      lfx = new lightfx_t(sec, lightfx_t::FireFlicker, sec->lightlevel, i, ff_tics);
+      lfx = new lightfx_t(this, sec, lightfx_t::FireFlicker, sec->lightlevel, i, ff_tics);
       lfx->count = ff_tics;
       break;
 
     default:
       break;
     }
-
-  if (lfx)
-    AddThinker(lfx);
 
   if (dam)
     {

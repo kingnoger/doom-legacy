@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.5  2003/04/21 15:58:33  hurdler
 // Fix compiling problem with gcc 3.x under Linux
 //
@@ -48,9 +51,11 @@
 # include <hash_map>
 #endif
 #include <string.h>
+#include "functors.h"
 #include "z_zone.h"
 
 using namespace std;
+
 
 class cacheitem_t
 {
@@ -62,19 +67,12 @@ protected:
 public:
 
   cacheitem_t();
-
   bool  Release();
 
   void *operator new(size_t size);
   void  operator delete(void *mem);
 };
 
-// c-string comparison functor
-struct compare_strings
-{
-  bool operator()(const char* s1, const char* s2) const
-  { return strcmp(s1, s2) == 0; }
-};
 
 class L2cache_t
 {
@@ -84,9 +82,9 @@ protected:
   // is okay but default key comparison function compares pointers, not c-strings!
 #if (__GNUC__ != 2)
   typedef __gnu_cxx::hash_map<const char*, cacheitem_t*,
-    __gnu_cxx::hash<const char *>, compare_strings> c_map_t;
+    __gnu_cxx::hash<const char *>, equal_cstring> c_map_t;
 #else
-  typedef hash_map<const char*, cacheitem_t*, hash<const char *>, compare_strings> c_map_t;
+  typedef hash_map<const char*, cacheitem_t*, hash<const char *>, equal_cstring> c_map_t;
 #endif
 
   typedef c_map_t::iterator c_iter_t;

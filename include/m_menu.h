@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.4  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
 //
@@ -42,17 +45,9 @@
 
 #include "doomtype.h"
 
-//
-// MENUS
-//
-
-struct consvar_t;
-struct event_t;
-struct patch_t;
-struct sfxinfo_t;
 
 // flags for items in the menu
-typedef enum
+enum menuflag_t
 {
   // Group 1, 4 bits: menuitem action (what we do when a key is pressed)
   IT_SPACE          = 0x00,  // no handling
@@ -99,20 +94,19 @@ typedef enum
   IT_CVARMAX     = IT_CVAR  + IT_CV_NOMOD,
   IT_DISABLED    = IT_SPACE + IT_GRAYPATCH,
   IT_CONTROLSTR  = IT_CONTROL + IT_STRING2
-} menuflag_t;
+};
 
-
-class Menu;
 
 typedef void (*menufunc_t)(int choice);
 
 
 union itemaction_t
 {
-  consvar_t  *cvar;     // IT_CVAR
-  Menu       *submenu;  // IT_SUBMENU
+  struct consvar_t *cvar; // IT_CVAR
+  class Menu *submenu;   // IT_SUBMENU
   menufunc_t  routine;  // IT_CALL, IT_KEYHANDLER, IT_ARROWS
 };
+
 
 struct menuitem_t
 {
@@ -131,16 +125,15 @@ struct menuitem_t
 };
 
 
-
-typedef enum 
+enum menumessage_t
 {
   MM_NOTHING = 0,   // is just displayed until the user do someting
   MM_YESNO,         // routine is called with only 'y' or 'n' in param
   MM_EVENTHANDLER   // the same of above but without 'y' or 'n' restriction
                     // and routine is void routine(event_t *) (ex: set control)
-} menumessage_t;
+};
 
-typedef bool (* eventhandler_t)(event_t *ev);
+typedef bool (* eventhandler_t)(struct event_t *ev);
 
 class MsgBox
 {
@@ -176,7 +169,7 @@ private:
   // video and audio resources
   // FIXME make a real font system, fix v_video.cpp (text output)
   static int     menufontbase;
-  static patch_t **smallfont;
+  static struct patch_t **smallfont;
 
   static short AnimCount;  // skull animation counter
   static short whichSkull; // which skull to draw
@@ -204,15 +197,6 @@ private:
   quitfunc_t   quitroutine; // called before quit a menu return true if we can
 
 public:
-  // sounds
-  static char *s_fail;   // disappointment
-  static char *s_adjust; // a slider moves or a consvar is changed
-  static char *s_move;   // move up/down in a menu
-  static char *s_choose; // a choice is made
-  static char *s_open;   // start something
-  static char *s_close;  // exit or end something
-
-
   static bool active; // menu is currently open
 
   Menu(const char *tp, const char *t, int ni, Menu *up,

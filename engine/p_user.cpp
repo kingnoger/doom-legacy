@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.16  2003/12/13 23:51:03  smite-meister
 // Hexen update
 //
@@ -280,49 +283,107 @@ void PlayerPawn::Move()
 
 
 
-//----------------------------------------------------------------------------
-//
-// PROC P_ArtiTele
-//
-//----------------------------------------------------------------------------
+//============================================================
+//  Artifacts
+//============================================================
 
+// Chaos Device, teleports the player back to a playerstart
 void P_ArtiTele(PlayerPawn *p)
 {
-  fixed_t destX;
-  fixed_t destY;
-  angle_t destAngle;
   extern  consvar_t  cv_deathmatch;
-  int i;
+  int n;
+  mapthing_t *m = NULL;
 
-  mapthing_t *m;
   if (cv_deathmatch.value)
     {
-      int n = p->mp->dmstarts.size();
-      i = P_Random() % n;
-      m = p->mp->dmstarts[i];
+      n = p->mp->dmstarts.size();
+      n = P_Random() % n;
+      m = p->mp->dmstarts[n];
     }
   else
     {
-      multimap<int, mapthing_t *>::iterator s;
-      s = p->mp->playerstarts.begin(); // TODO probably not the smartest possible behavior
-      m = (*s).second;
-    }
-  destX = m->x << FRACBITS;
-  destY = m->y << FRACBITS;
-  destAngle = ANG45*(m->angle/45);
+      multimap<int, mapthing_t *>::iterator s, t;
+      n = p->player->number;
+      s = p->mp->playerstarts.lower_bound(n);
+      t = p->mp->playerstarts.upper_bound(n);
+      for ( ; s != t; s++)
+	{
+	  m = (*s).second;
+	  if (m->args[0] == p->player->entrypoint)
+	    break;
+	}
 
-  p->Teleport(destX, destY, destAngle);
-  S_StartAmbSound(sfx_wpnup); // Full volume laugh
+      if (s == t)
+	m = (*p->mp->playerstarts.begin()).second;
+    }
+
+  p->Teleport(m->x << FRACBITS, m->y << FRACBITS, ANG45 * (m->angle / 45));
+  S_StartAmbSound(sfx_weaponup); // Full volume laugh
 }
 
 
-//----------------------------------------------------------------------------
-//
-// FUNC P_UseArtifact
-//
-// Returns true if artifact was used.
-//
-//----------------------------------------------------------------------------
+// Mystic Ambit Incantation, class specific effect for everyone in radius
+bool P_HealRadius(Actor *p)
+{
+  const fixed_t HEAL_RADIUS_DIST = 255*FRACUNIT;
+
+  bool given = false;
+  int amount;
+  /*
+    // TODO thinker iteration!
+  Thinker *th;
+  Thinker &thinkercap = p->mp->thinkercap;
+  for (th = thinkercap.next; th != &thinkercap; th = th->next)
+    {
+      if (th->Type() != Thinker::tt_ppawn)
+	continue;
+	
+      PlayerPawn *t = (PlayerPawn *)th;
+      if (t->health <= 0)
+	continue;
+		
+      fixed_t dist = P_AproxDistance(p->x - t->x, p->y - t->y);
+      if (dist > HEAL_RADIUS_DIST)
+	continue;
+
+      switch (t->pclass)
+	{
+	case PCLASS_FIGHTER: // armor boost
+	  if (t->GiveArmor(armor_armor, -3, 1)  || t->GiveArmor(armor_shield, -3, 1) ||
+	      t->GiveArmor(armor_helmet, -3, 1) || t->GiveArmor(armor_amulet, -3, 1))
+	    {
+	      given = true;
+	      S_StartSound(t, SFX_MYSTICINCANT);
+	    }
+	  break;
+
+	case PCLASS_CLERIC: // heal
+	  if (t->GiveBody(50 + P_Random() % 50))
+	    {
+	      given = true;
+	      S_StartSound(t, SFX_MYSTICINCANT);
+	    }
+	  break;
+
+	case PCLASS_MAGE: // mana boost
+	  amount = 50 + (P_Random()%50);
+	  if (t->GiveAmmo(am_mana1, amount) || t->GiveAmmo(am_mana2, amount))
+	    {
+	      given = true;
+	      S_StartSound(t, SFX_MYSTICINCANT);
+	    }
+	  break;
+
+	default:
+	  break;
+	}
+    }
+  */
+  return given;
+}
+
+
+
 
 bool P_UseArtifact(PlayerPawn *p, artitype_t arti)
 {
@@ -354,7 +415,7 @@ bool P_UseArtifact(PlayerPawn *p, artitype_t arti)
 	  else
             { // Succeeded
 	      p->morphTics = 0;
-	      S_StartScreamSound(p, sfx_wpnup);
+	      S_StartScreamSound(p, sfx_weaponup);
             }
         }
       else
@@ -394,8 +455,7 @@ bool P_UseArtifact(PlayerPawn *p, artitype_t arti)
       break;
 
     case arti_healingradius:
-      //return P_HealRadius(p);
-      break;
+      return P_HealRadius(p);
 
     case arti_summon:
       mo = p->SpawnPlayerMissile(MT_SUMMON_FX);

@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.25  2003/12/31 18:32:49  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.24  2003/12/21 12:29:09  smite-meister
 // bugfixes
 //
@@ -204,13 +207,6 @@ bool Pawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 { return false; }
 
 // PlayerPawn methods
-
-PlayerPawn::~PlayerPawn()
-{
-  delete pres; // delete the presentation object too
-}
-
-
 
 // added 2-2-98 for hacking with dehacked patch
 int initial_health=100; //MAXHEALTH;
@@ -417,13 +413,13 @@ void PlayerPawn::Think()
                 {
 		  fixed_t whater_height = waterz-subsector->sector->floorheight;
 
-		  if( whater_height<(height>>2 ))
-		    S_StartSound(this, sfx_splash);
+		  if (whater_height < (height >> 2))
+		    S_StartSound(this, sfx_enterwater);
 		  else
-		    S_StartSound(this, sfx_floush);
+		    S_StartSound(this, sfx_exitwater);
                 }
 	      else
-		S_StartSound(this, sfx_floush);
+		S_StartSound(this, sfx_exitwater);
             }                   
         }
     }
@@ -736,7 +732,7 @@ void PlayerPawn::ZMovement()
 	  // after hitting the ground (hard),
 	  // and utter appropriate sound.
 	  player->deltaviewheight = oldpz>>3;
-	  S_StartSound(this, sfx_ouch); // sfx_oof...
+	  S_StartSound(this, sfx_grunt);
 	}
     }
 
@@ -744,7 +740,7 @@ void PlayerPawn::ZMovement()
     {
       // player avatar hits his head on the ceiling, ouch!
       if (!(cheats & CF_FLYAROUND) && !(flags2 & MF2_FLY) && pz > 8*FRACUNIT)
-	S_StartSound(this, sfx_ouch);
+	S_StartSound(this, sfx_grunt);
     }
 }
 
@@ -903,7 +899,7 @@ bool PlayerPawn::UndoMorph()
   angle_t ang = angle >> ANGLETOFINESHIFT;
   DActor *fog = mp->SpawnDActor(x+20*finecosine[ang], y+20*finesine[ang],
 				z+TELEFOGHEIGHT, MT_TFOG);
-  S_StartSound(fog, sfx_telept);
+  S_StartSound(fog, sfx_teleport);
   PostMorphWeapon(weapontype_t(attackphase));
 
   /*
@@ -1097,7 +1093,7 @@ bool P_CheckKeys(Actor *mo, int lock)
       else
 	{
 	  p->player->message = text[TXT_PD_BLUEK + lock - 12];
-	  S_StartScreamSound(p, sfx_oof);
+	  S_StartScreamSound(p, sfx_usefail);
 	}
 
       return false; // no ticket!
@@ -1239,7 +1235,7 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
 	}
       break;
     }
-  if (ok == false) S_StartScreamSound(this, sfx_oof);
+  if (ok == false) S_StartScreamSound(this, sfx_usefail);
 
   return ok;
 }
@@ -1700,7 +1696,7 @@ bool PlayerPawn::GivePower(int power)
       powers[power] = 1;
     }
 
-  p_sound = Actor::s_powerup;
+  p_sound = sfx_powerup;
 
   return true;
 }
@@ -1848,7 +1844,7 @@ bool PlayerPawn::GiveWeapon(weapontype_t wt, bool dropped)
 	pendingweapon = wt;     // do like Doom2 original
 
       if (player == displayplayer || (cv_splitscreen.value && player == displayplayer2))
-	S_StartAmbSound(sfx_wpnup);
+	S_StartAmbSound(sfx_weaponup);
       return false;
     }
 
@@ -1875,7 +1871,7 @@ bool PlayerPawn::GiveWeapon(weapontype_t wt, bool dropped)
 	pendingweapon = wt;    // Doom2 original stuff
     }
 
-  p_sound = Actor::s_weaponpickup;
+  p_sound = sfx_weaponup;
   return (gaveweapon || gaveammo);
 }
 
@@ -1930,8 +1926,7 @@ bool PlayerPawn::GiveKey(keycard_t k)
     
   player->message = text[TXT_KEY_STEEL + i];
 
-  p_sound = Actor::s_keypickup;
-
+  p_sound = sfx_keyup;
   return true;
 }
 
@@ -1968,7 +1963,7 @@ void A_RestoreArtifact(DActor *arti)
 {
   arti->flags |= MF_SPECIAL;
   arti->SetState(arti->info->spawnstate);
-  S_StartSound(arti, Actor::s_respawn);
+  S_StartSound(arti, sfx_itemrespawn);
 }
 
 
@@ -2009,7 +2004,7 @@ bool PlayerPawn::GiveArtifact(artitype_t arti, DActor *from)
 	j = TXT_XARTIINVULNERABILITY; // TODO make it a different item
       player->SetMessage(text[TXT_ARTIINVULNERABILITY - 1 + arti], false);
       SetDormantArtifact(from);
-      p_sound = Actor::s_artipickup;
+      p_sound = sfx_artiup;
     }
   else
     {

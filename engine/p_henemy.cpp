@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.9  2003/11/30 00:09:44  smite-meister
 // bugfixes
 //
@@ -344,7 +347,7 @@ bool DActor::UpdateMorph(int tics)
   SetState(S_FREETARGMOBJ);
 
   DActor *fog = mp->SpawnDActor(x, y, z+TELEFOGHEIGHT, MT_TFOG);
-  S_StartSound(fog, sfx_telept);
+  S_StartSound(fog, sfx_teleport);
 
   mo->angle = angle;
   mo->target = target;
@@ -651,9 +654,9 @@ void DActor::DSparilTeleport()
   if (TeleportMove(nx, ny))
     {
       mo = mp->SpawnDActor(prevX, prevY, prevZ, MT_SOR2TELEFADE);
-      S_StartSound(mo, sfx_telept);
+      S_StartSound(mo, sfx_teleport);
       SetState(S_SOR2_TELE1);
-      S_StartSound(this, sfx_telept);
+      S_StartSound(this, sfx_teleport);
       z = floorz;
       angle = ANG45 * (mp->BossSpots[i%n]->angle/45);
       px = py = pz = 0;
@@ -759,7 +762,7 @@ void A_GenWizard(DActor *actor)
   actor->SetState(mobjinfo[actor->type].deathstate);
   actor->flags &= ~MF_MISSILE;
   fog = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_TFOG);
-  S_StartSound(fog, sfx_telept);
+  S_StartSound(fog, sfx_teleport);
 }
 
 //----------------------------------------------------------------------------
@@ -1306,7 +1309,7 @@ void A_HScream(DActor *actor)
       // Make boss death sounds full volume
       S_StartAmbSound(actor->info->deathsound);
       break;
-    case MT_PLAYER:
+    case MT_HPLAYER:
       // Handle the different player death screams
       if(actor->special1 < 10)
 	{ // Wimpy death sound

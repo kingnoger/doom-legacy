@@ -195,6 +195,7 @@ export util_objects = \
 	$(objdir)/m_random.o \
 	$(objdir)/m_swap.o \
 	$(objdir)/md5.o \
+	$(objdir)/parser.o \
 	$(objdir)/tables.o \
 	$(objdir)/vfile.o \
 	$(objdir)/wad.o \
@@ -208,7 +209,6 @@ export audio_objects = \
 	$(objdir)/s_sndseq.o \
 	$(objdir)/sounds.o
 
-#	$(objdir)/s_amb.o \
 #	$(objdir)/hw3sound.o \
 
 
@@ -246,7 +246,6 @@ export net_objects = \
 	$(objdir)/mserv.o
 
 export sdl_objects = \
-	$(objdir)/dosstr.o \
 	$(objdir)/endtxt.o \
 	$(objdir)/filesrch.o \
 	$(objdir)/i_cdmus.o \

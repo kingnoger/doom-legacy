@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.12  2003/12/13 23:51:03  smite-meister
 // Hexen update
 //
@@ -75,7 +78,7 @@
 #include "m_random.h"
 #include "r_defs.h"
 #include "r_data.h"
-#include "s_sound.h"
+#include "sounds.h"
 
 #include "w_wad.h"
 #include "z_zone.h"
@@ -1649,7 +1652,7 @@ static int CmdSoundSequence()
     {
       orig = &ACScript->line->frontsector->soundorg;
     }
-  // FIXME ACMap->SN_StartSequenceName(orig, ACMap->ACStrings[Pop()]);
+  ACMap->SN_StartSequenceName(orig, ACMap->ACStrings[Pop()]);
   return SCRIPT_CONTINUE;
 }
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/12/31 18:32:49  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.8  2003/12/23 18:06:06  smite-meister
 // Hexen stairbuilders. Moving geometry done!
 //
@@ -759,7 +762,7 @@ void A_ContMobjSound(DActor *actor)
       S_StartSound(actor, SFX_FIGHTER_HAMMER_CONTINUOUS);
       break;
     case MT_QUAKE_FOCUS:
-      S_StartSound(actor, SFX_EARTHQUAKE);
+      S_StartSound(actor, sfx_quake);
       break;
       // Heretic
     case MT_KNIGHTAXE:
@@ -786,7 +789,10 @@ void A_ESound(DActor *mo)
   switch(mo->type)
     {
     case MT_SOUNDWATERFALL:
-      sound = sfx_waterfl;
+      sound = sfx_waterfall;
+      break;
+    case MT_XSOUNDWATERFALL:
+      sound = SFX_WATER_MOVE;
       break;
     case MT_SOUNDWIND:
       sound = sfx_wind;

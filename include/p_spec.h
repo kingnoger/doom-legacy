@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.19  2003/12/23 18:06:06  smite-meister
 // Hexen stairbuilders. Moving geometry done!
 //
@@ -323,7 +326,7 @@ class sectoreffect_t : public Thinker
 
 protected:
   sector_t *sector;
-  sectoreffect_t(sector_t *s);
+  sectoreffect_t(Map *m, sector_t *s);
 };
 
 //======================================
@@ -362,7 +365,7 @@ public:
     FireFlicker  // square wave with more randomness
   };
 
-  lightfx_t(sector_t *sec, lightfx_e type, short maxlight, short minlight = 0, short maxtime = 0, short mintime = 0);
+  lightfx_t(Map *m, sector_t *sec, lightfx_e type, short maxlight, short minlight = 0, short maxtime = 0, short mintime = 0);
   
   virtual void Think();
 };
@@ -383,7 +386,7 @@ protected:
   short index;
 
 public:
-  phasedlight_t(sector_t *sec, int base, int index);
+  phasedlight_t(Map *m, sector_t *sec, int base, int index);
   
   virtual void Think();
 };
@@ -435,7 +438,7 @@ private:
   list<plat_t *>::iterator li;
 
 public:
-  plat_t(int type, sector_t *sec, int tag, fixed_t speed, int wait, fixed_t height);
+  plat_t(Map *m, int type, sector_t *sec, int tag, fixed_t speed, int wait, fixed_t height);
   
   virtual void Think();
 };
@@ -478,9 +481,7 @@ private:
   short     boomlighttag; // for Boom push-door light effect
 
 public:
-  static int s_close, s_bclose, s_open, s_bopen; // sounds
-
-  vdoor_t(byte type, sector_t *sec, fixed_t speed, int delay);
+  vdoor_t(Map *m, byte type, sector_t *sec, fixed_t speed, int delay);
   
   virtual void Think();
   void MakeSound(bool open) const;
@@ -543,9 +544,7 @@ public:
   char      direction;   // 1 = up, 0 = waiting, -1 = down
   fixed_t   bottomheight, topheight;
 
-  static int ceilmovesound;
-
-  ceiling_t(int ty, sector_t *sec, fixed_t usp, fixed_t dsp, int cru, fixed_t height);
+  ceiling_t(Map *m, int ty, sector_t *sec, fixed_t usp, fixed_t dsp, int cru, fixed_t height);
   
   virtual void Think();
 };
@@ -606,7 +605,7 @@ public:
   fixed_t   destheight;
 
 public:
-  floor_t(int type, sector_t *sec, fixed_t speed, int crush, fixed_t height);
+  floor_t(Map *m, int type, sector_t *sec, fixed_t speed, int crush, fixed_t height);
   
   virtual void Think();
 };
@@ -642,7 +641,7 @@ private:
   fixed_t delayheight, stepdelta;
 
 public:
-  stair_t(int ty, sector_t *sec, fixed_t h, fixed_t sp, int rcount, int sdelay);
+  stair_t(Map *m, int ty, sector_t *sec, fixed_t h, fixed_t sp, int rcount, int sdelay);
   
   virtual void Think();
 };
@@ -674,7 +673,7 @@ private:
   fixed_t floorspeed, ceilingspeed;
 
 public:
-  elevator_t(int type, sector_t *s, fixed_t speed, fixed_t height_f, fixed_t height_c, int crush);
+  elevator_t(Map *m, int type, sector_t *s, fixed_t speed, fixed_t height_f, fixed_t height_c, int crush);
   
   virtual void Think();
 };
@@ -706,7 +705,7 @@ private:
   int     wait;
 
 public:
-  floorwaggle_t(sector_t *sec, fixed_t a, angle_t f, angle_t ph, int w);
+  floorwaggle_t(Map *m, sector_t *sec, fixed_t a, angle_t f, angle_t ph, int w);
   
   virtual void Think();
 };

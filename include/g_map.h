@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.27  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.26  2003/12/23 18:06:06  smite-meister
 // Hexen stairbuilders. Moving geometry done!
 //
@@ -245,10 +248,9 @@ public:
 
   //------------ Sound sequences ------------
 
-  map<unsigned, struct sndseq_t*> SoundSeqs;
   list<class ActiveSndSeq*> ActiveSeqs;
-  vector<sndseq_t*>         AmbientSeqs;
-  ActiveSndSeq             *ActiveAmbientSeq;
+  vector<int>   AmbientSeqs;
+  ActiveSndSeq *ActiveAmbientSeq;
 
   //------------------------------------
   // TODO: from this line on it's badly designed stuff to be fixed someday
@@ -444,11 +446,10 @@ public:
   int T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, int crush, int floorOrCeiling);
 
   // in s_sndseq.cpp
-  void S_Read_SNDSEQ(int lump);
-  bool SN_StartSequence(struct mappoint_t *m, unsigned seq);
-  bool SN_StartSequence(Actor *a, unsigned seq);
-  bool SN_StartSequenceName(Actor *m, const char *name);
-  bool SN_StopSequence(void *origin);
+  bool SN_StartSequence(struct mappoint_t *m, int seq);
+  bool SN_StartSequence(Actor *a, int seq);
+  bool SN_StartSequenceName(mappoint_t *m, const char *name);
+  bool SN_StopSequence(void *origin, bool quiet = false);
   void UpdateSoundSequences();
 
   // elsewhere, usually former R_* functions

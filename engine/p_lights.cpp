@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.7  2003/12/18 11:57:31  smite-meister
 // fixes / new bugs revealed
 //
@@ -60,8 +63,8 @@
 IMPLEMENT_CLASS(lightfx_t, "Light FX");
 lightfx_t::lightfx_t() {}
 
-lightfx_t::lightfx_t(sector_t *s, lightfx_e t, short maxl, short minl, short maxt, short mint)
-  : sectoreffect_t(s)
+lightfx_t::lightfx_t(Map *m, sector_t *s, lightfx_e t, short maxl, short minl, short maxt, short mint)
+  : sectoreffect_t(m, s)
 {
   type = t;
   count = 0;
@@ -189,9 +192,7 @@ void Map::SpawnStrobeLight(sector_t *sec, short brighttime, short darktime, bool
   if (minlight == maxlight)
     minlight = 0;
 
-  lightfx_t *lfx = new lightfx_t(sec, lightfx_t::Strobe, maxlight, minlight, brighttime, darktime);
-
-  AddThinker(lfx);
+  lightfx_t *lfx = new lightfx_t(this, sec, lightfx_t::Strobe, maxlight, minlight, brighttime, darktime);
 
   if (!inSync)
     lfx->count = (P_Random() & 7) + 1;
@@ -312,8 +313,7 @@ int Map::EV_FadeLight(int tag, int destvalue, int speed)
       rtn++;
       sector_t *sec = &sectors[i];
 
-      lightfx_t *lfx = new lightfx_t(sec, lightfx_t::Fade, destvalue, 0, speed << 6, -1);
-      AddThinker(lfx);
+      new lightfx_t(this, sec, lightfx_t::Fade, destvalue, 0, speed << 6, -1);
   }
 
   return rtn;
@@ -335,7 +335,6 @@ int Map::EV_SpawnLight(int tag, int type, short maxl, short minl, short maxt, sh
   for (int i = -1; (i = FindSectorFromTag(tag, i)) >= 0; )
     {
       rtn++;
-      lfx = NULL;
       sector_t *sec = &sectors[i];
 
       switch (type)
@@ -358,23 +357,23 @@ int Map::EV_SpawnLight(int tag, int type, short maxl, short minl, short maxt, sh
 
 	case lightfx_t::Fade:
 	  speed = FixedDiv((maxl - sec->lightlevel) << FRACBITS, maxt << FRACBITS);
-	  lfx = new lightfx_t(sec, lightfx_t::Fade, maxl, 0, speed >> 10, -1); // use a custom 10.6 fixed point
+	  new lightfx_t(this, sec, lightfx_t::Fade, maxl, 0, speed >> 10, -1); // use a custom 10.6 fixed point
 	  break;
 
 	case lightfx_t::Glow:
 	  speed = FixedDiv((maxl - minl) << FRACBITS, maxt << FRACBITS);
-	  lfx = new lightfx_t(sec, lightfx_t::Glow, maxl, minl, speed >> 10, -1); // use a custom 10.6 fixed point
+	  new lightfx_t(this, sec, lightfx_t::Glow, maxl, minl, speed >> 10, -1); // use a custom 10.6 fixed point
 	  break;
 
 	case lightfx_t::Flicker:
 	  sec->lightlevel = maxl;
-	  lfx = new lightfx_t(sec, lightfx_t::Flicker, maxl, minl, maxt, mint);
+	  lfx = new lightfx_t(this, sec, lightfx_t::Flicker, maxl, minl, maxt, mint);
 	  lfx->count = (P_Random() & 64) + 1;
 	  break;
 
 	case lightfx_t::Strobe:
 	  sec->lightlevel = maxl;
-	  lfx = new lightfx_t(sec, lightfx_t::Strobe, maxl, minl, maxt, mint);
+	  lfx = new lightfx_t(this, sec, lightfx_t::Strobe, maxl, minl, maxt, mint);
 	  lfx->count = maxt;
 	  break;
 
@@ -382,9 +381,6 @@ int Map::EV_SpawnLight(int tag, int type, short maxl, short minl, short maxt, sh
 	  rtn = false;
 	  break;
 	}
-
-      if (lfx)
-	AddThinker(lfx);
     }
   return rtn;
 }
@@ -419,8 +415,8 @@ void phasedlight_t::Think()
 }
 
 
-phasedlight_t::phasedlight_t(sector_t *s, int b, int ind)
-  : sectoreffect_t(s)
+phasedlight_t::phasedlight_t(Map *m, sector_t *s, int b, int ind)
+  : sectoreffect_t(m, s)
 {
   s->lightingdata = this;
 
@@ -485,7 +481,7 @@ void Map::SpawnPhasedLightSequence(sector_t *sector, int indexStep)
       nextSec = NULL;
       if (sec->lightlevel)
 	base = sec->lightlevel;
-      AddThinker(new phasedlight_t(sec, base, index >> FRACBITS));
+      new phasedlight_t(this, sec, base, index >> FRACBITS);
       index += indexDelta;
       for (i = 0; i < sec->linecount; i++)
 	{

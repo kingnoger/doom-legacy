@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.11  2003/11/23 00:41:55  smite-meister
 // bugfixes
 //
@@ -99,11 +102,11 @@ bool Actor::Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent)
 
       // spawn teleport fog at source and destination
       DActor *fog = mp->SpawnDActor(oldx, oldy, oldz+fogDelta, MT_TFOG);
-      S_StartSound(fog, Actor::s_teleport);
+      S_StartSound(fog, sfx_teleport);
 
       unsigned an = nangle >> ANGLETOFINESHIFT;
       fog = mp->SpawnDActor(nx+20*finecosine[an], ny+20*finesine[an], z + fogDelta, MT_TFOG);
-      S_StartSound (fog, Actor::s_teleport);
+      S_StartSound (fog, sfx_teleport);
 
       if ((flags2 & MF2_FOOTCLIP) && (subsector->sector->floortype >= FLOOR_LIQUID))
 	floorclip = FOOTCLIPSIZE;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.18  2003/12/18 11:57:31  smite-meister
 // fixes / new bugs revealed
 //
@@ -1737,9 +1740,7 @@ static bool PTR_UseTraverse(intercept_t *in)
       // TEST: use through a hole only if you can reach it
       if (openrange <= 0 || opentop < usething->z || openbottom > usething->z + usething->height)
         {
-	  // TODO skinsound: failed use
-	  if (game.mode != gm_heretic)
-	    S_StartSound(usething, sfx_noway);
+	  S_StartSound(usething, sfx_usefail);
 
 	  // can't use through a wall
 	  return false;

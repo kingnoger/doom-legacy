@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.17  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.16  2003/12/13 23:51:03  smite-meister
 // Hexen update
 //
@@ -204,7 +207,6 @@ public:
 
   // in g_pawn.cpp
   PlayerPawn(fixed_t x, fixed_t y, fixed_t z, int type);
-  virtual ~PlayerPawn();
 
   virtual void XYMovement();
   virtual void ZMovement();

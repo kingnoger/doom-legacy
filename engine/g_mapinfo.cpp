@@ -22,6 +22,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.10  2003/12/31 18:32:49  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.9  2003/12/18 11:57:31  smite-meister
 // fixes / new bugs revealed
 //
@@ -49,48 +52,6 @@
 // Revision 1.1  2003/11/12 11:07:17  smite-meister
 // Serialization done. Map progression.
 //
-// Revision 1.15  2003/06/10 22:39:56  smite-meister
-// Bugfixes
-//
-// Revision 1.14  2003/06/08 16:19:21  smite-meister
-// Hexen lights.
-//
-// Revision 1.13  2003/06/01 18:56:30  smite-meister
-// zlib compression, partial polyobj fix
-//
-// Revision 1.12  2003/05/11 21:23:50  smite-meister
-// Hexen fixes
-//
-// Revision 1.11  2003/04/24 20:58:38  hurdler
-// Remove lots of compiling warnings
-//
-// Revision 1.10  2003/04/24 20:30:07  hurdler
-// Remove lots of compiling warnings
-//
-// Revision 1.9  2003/04/20 16:45:50  smite-meister
-// partial SNDSEQ fix
-//
-// Revision 1.8  2003/04/04 00:01:56  smite-meister
-// bugfixes, Hexen HUD
-//
-// Revision 1.7  2003/03/23 14:24:13  smite-meister
-// Polyobjects, MD3 models
-//
-// Revision 1.6  2003/03/08 16:07:08  smite-meister
-// Lots of stuff. Sprite cache. Movement+friction fix.
-//
-// Revision 1.5  2003/02/23 22:49:30  smite-meister
-// FS is back! L2 cache works.
-//
-// Revision 1.4  2003/01/12 12:56:40  smite-meister
-// Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
-//
-// Revision 1.3  2002/12/29 18:57:03  smite-meister
-// MAPINFO implemented, Actor deaths handled better
-//
-// Revision 1.2  2002/12/23 23:15:41  smite-meister
-// Weapon groups, MAPINFO parser added!
-//
 // Revision 1.1.1.1  2002/11/16 14:17:59  hurdler
 // Initial C++ version of Doom Legacy
 //
@@ -101,20 +62,20 @@
 //-----------------------------------------------------------------------------
 
 #include <stdio.h>
-#include <stdlib.h>
 
 #ifdef LINUX
 # include <unistd.h>
 #endif
 
 #include "doomdef.h"
+#include "command.h"
+#include "parser.h"
+
 #include "g_mapinfo.h"
 #include "g_level.h"
 
-#include "command.h"
-
-#include "dstrings.h"
-#include "sounds.h"
+//#include "dstrings.h"
+//#include "sounds.h"
 
 #include "g_game.h"
 #include "g_map.h"
@@ -356,196 +317,6 @@ bool MapInfo::HubLoad()
 }
 
 
-//=================================
-// Helper functions
-
-// string contains only digits?
-static bool IsNumeric(const char *p)
-{
-  for ( ; *p; p++)
-    if (*p < '0' || *p > '9')
-      return false;
-  return true;
-}
-
-// converts 'line' to lower case
-static void P_LowerCase(char *line)
-{
-  for ( ; *line; line++)
-    *line = tolower(*line);
-}
-
-// replaces tailing spaces with NUL chars
-static void P_StripSpaces(char *line)
-{
-  char *temp = line+strlen(line)-1;
-
-  while (*temp == ' ')
-    {
-      *temp = '\0';
-      temp--;
-    }
-}
-
-// removes //-style comments from 'line'
-static void P_RemoveComments(char *line)
-{
-  for ( ; *line; line++)
-    {
-      if (line[0] == '/' && line[1] == '/')
-        {
-          *line = '\0';
-	  return;
-        }
-    }
-}
-
-// replace 'target' chars with spaces until '\0' is encountered
-static void P_RemoveChars(char *p, char target)
-{
-  for ( ; *p; p++)
-    if (*p == target)
-      *p = ' ';
-}
-
-static inline char *P_PassWhitespace(char *p)
-{
-  while (isspace(*p))
-    p++;
-  return p;
-}
-
-//=================================
-// Parser
-
-typedef enum
-{
-  P_ITEM_IGNORE = 0,
-  P_ITEM_BOOL, // bool. true if it item exists.
-  P_ITEM_INT,
-  P_ITEM_INT_INT, // two ints separated by whitespace
-  P_ITEM_FLOAT,
-  P_ITEM_STR,   // STL string
-  P_ITEM_STR16, // 16 chars
-  P_ITEM_STR16_FLOAT // max 16 char string and float
-} parseritem_t;
-
-struct parsercmd_t
-{
-  parseritem_t type;
-  char   *name;
-  size_t  offset;
-};
-
-
-// Parses one command line, stored in str. cmd contains the command name itself.
-// Returns true if succesful. Modifies appropriate fields in var.
-static bool P_ParseCommand(const char *cmd, char *str, const parsercmd_t *commands, char *var)
-{
-  for ( ; commands->name != NULL; commands++)
-    if (!strcasecmp(cmd, commands->name))
-      break;
-
-  if (commands->name == NULL)
-    return false; // not found
-
-  str += strlen(cmd); // pass the command itself to get to the args
-  while (isspace(*str))
-    str++;
-
-  size_t offs = commands->offset;
-  int i, j;
-  float f;
-  char s[17];
-
-  switch (commands->type)
-    {
-    case P_ITEM_BOOL:
-      *(bool *)(var+offs) = true;
-      break;
-
-    case P_ITEM_INT:
-      i = atoi(str);
-      *(int *)(var+offs) = i;
-      break;
-
-    case P_ITEM_INT_INT:
-      if (sscanf(str, "%d %d", &i, &j) == 2)
-	{
-	  int *temp = (int *)(var + offs);
-	  temp[0] = i;
-	  temp[1] = j;
-	}
-      break;
-
-    case P_ITEM_FLOAT:
-      f = atof(str);
-      *(float *)(var+offs) = f;
-      break;
-
-    case P_ITEM_STR:
-      {
-	string& result = *(string *)(var+offs);
-	result = "";
-	// get rid of surrounding quotation marks
-	if (*str == '"')
-	  {
-	    int end = strlen(str) - 1;
-	    if (str[end] == '"')
-	      {
-		str[end] = '\0';
-		str++;
-	      }
-	  }
-
-	char *temp = str;
-	while (*temp)
-	  {
-	    // handle quotations with backslash
-	    if (temp[0] == '\\')
-	      {
-		char r = 0;
-		switch (temp[1])
-		  {
-		  case '\\': r = '\\'; break;
-		  case 'n':  r = '\n'; break;
-		  case '"':  r = '"'; break;
-		  }
-
-		if (r)
-		  {
-		    result.append(str, temp);
-		    result += r;
-		    str = temp = temp + 2;
-		    continue;
-		  }
-	      }
-	    temp++;
-	  }
-	result.append(str, temp);
-      }
-      break;
-
-    case P_ITEM_STR16:
-      sscanf(str, "%16s", var+offs);
-      break;
-
-    case P_ITEM_STR16_FLOAT:
-      {
-	sscanf(str, "%16s %f", s, &f);
-	string & temp = *(string *)(var+offs);
-	temp = s;
-	*(float *)(var+offs+sizeof(string)) = f;
-      }
-      break;
-
-    default:
-      break;
-    }
-
-  return true;
-}
-
 
 //=================================
 // Legacy MapInfo parser
@@ -633,116 +404,70 @@ static parsercmd_t MAPINFO_MAP_commands[] =
 #undef MI_offset
 
 
-
-//----------------------------------------------------------------------------
-//
-// P_ParseScriptLine
-//
-// FraggleScript: if we are reading in script lines, we add the new lines
-// into the levelscript
-//
-
-static string scriptblock;
-
-static void P_ParseScriptLine(char *line)
-{
-  P_RemoveComments(line);
-  scriptblock += line;  // add the new line to the current data
-}
-
-
 //====================================
 // Reads a MapInfo lump for a map.
 
 char *MapInfo::Read(int lump)
 {
-  if (lump == -1)
+  Parser p;
+
+  if (!p.Open(lump))
     return NULL;
 
-  int length = fc.LumpLength(lump);
-  char *ms = (char *)fc.CacheLumpNum(lump, PU_STATIC);
-  char *me = ms + length; // past-the-end pointer
-
-  char *s, *p;
-  s = p = ms;
-
-  scriptblock.clear();
+  CONS_Printf("Reading MapInfo...\n");
 
   enum {PS_CLEAR, PS_MAPFORMAT, PS_SCRIPT, PS_INTERTEXT, PS_LEVELINFO} parsestate = PS_CLEAR;
 
-  while (p < me)
+  string scriptblock;
+  char line[40];
+
+  p.RemoveComments('/'); // TODO can we also remove other types of comments?
+  while (p.NewLine())
     {
-      if (*p == '\n') // line ends
+      if (parsestate != PS_SCRIPT) // not for scripts
+	p.LineReplaceChars('=', ' ');
+      // unprintable chars to whitespace?
+
+      if (p.Peek() == '[')  // a new section seperator
 	{
-	  if (p > s)
+	  p.GetStringN(line, 12);
+	  if (!strncasecmp(line, "[level info]", 12))
+	    parsestate = PS_LEVELINFO;
+	  else if (!strncasecmp(line, "[scripts]", 9))
 	    {
-	      // parse the line from s to p
-	      *p = '\0';  // mark the line end
-	      P_RemoveChars(s, '\r'); // damn carriage returns
-	      s = P_PassWhitespace(s);
-
-	      if (parsestate != PS_SCRIPT) // removenot for scripts
-		{
-		  if (s[0] == ';' || s[0] == '#' || s[0] == '\0' ||
-		      (s[0] == '/' && s[1] == '/')) // comment or line end
-		    s = p;
-		  else
-		    P_RemoveChars(s, '=');
-		  // !(isprint(*p) || *p == '{' || *p == '}') // unprintable chars to whitespace?
-		}
-
-	      if (*s == '[')  // a new section seperator
-		{
-		  s++;
-		  if (!strncasecmp(s, "level info", 10))
-		    parsestate = PS_LEVELINFO;
-		  else if (!strncasecmp(s, "scripts", 7))
-		    {
-		      parsestate = PS_SCRIPT;
-		      scripts++; // has scripts
-		    }
-		  else if(!strncasecmp(s, "intertext", 9))
-		    parsestate = PS_INTERTEXT;
-		  else if(!strncasecmp(s, "map format", 10))
-		    parsestate = PS_MAPFORMAT;
-		}
-	      else switch (parsestate)
-		{
-		  char buf[31]; // read in max. 30 character strings
-		case PS_LEVELINFO:
-		  sscanf(s, "%30s", buf);
-		  if (!P_ParseCommand(buf, s, MapInfo_commands, (char *)this))
-		    CONS_Printf("Unknown MapInfo command '%s' at char %d!\n", s, s - ms);
-		  break;
-
-		case PS_SCRIPT:
-#ifdef FRAGGLESCRIPT
-		  P_ParseScriptLine(s);
-#endif
-		  break;
-
-		case PS_INTERTEXT:
-		  //intertext += '\n';
-		  //intertext += s;
-		  break;
-
-		case PS_MAPFORMAT:
-		  sscanf(s, "%30s", buf);
-		  if (!P_ParseCommand(buf, s, MapFormat_commands, (char *)this))
-		    CONS_Printf("Unknown Map Format command '%s' at char %d!\n", s, s - ms);
-		  break;
-		  break;
-
-		case PS_CLEAR:
-		  break;
-		}
+	      parsestate = PS_SCRIPT;
+	      scripts++; // has scripts
 	    }
-	  s = p + 1;  // pass the line
+	  else if(!strncasecmp(line, "[intertext]", 11))
+	    parsestate = PS_INTERTEXT;
+	  else if(!strncasecmp(line, "[map format]", 12))
+	    parsestate = PS_MAPFORMAT;
 	}
-      p++;
+      else switch (parsestate)
+	{
+	case PS_LEVELINFO:
+	  p.ParseCmd(MapInfo_commands, (char *)this);
+	  break;
+
+	case PS_SCRIPT:
+#ifdef FRAGGLESCRIPT
+	  scriptblock += p.Pointer(); // add the new (NUL-terminated!) line to the current data
+#endif
+	  break;
+
+	case PS_INTERTEXT:
+	  //intertext += '\n';
+	  //intertext += s;
+	  break;
+
+	case PS_MAPFORMAT:
+	  p.ParseCmd(MapFormat_commands, (char *)this);
+	  break;
+
+	case PS_CLEAR:
+	  break;
+	}
     }
-  
-  Z_Free(ms);
 
   if (doom_offs[1] == 0 && heretic_offs[1] == 0 && hexen_offs[1] == 0)
     // none was given, original behavior
@@ -766,11 +491,8 @@ char *MapInfo::Read(int lump)
 
   COM_BufExecute(); //Hurdler: flush the command buffer
 
-  // FS script data TODO a bit clumsy
-  s = Z_Strdup(scriptblock.c_str(), PU_LEVEL, NULL);
-  scriptblock.clear();
-
-  return s;
+  // FS script data
+  return Z_Strdup(scriptblock.c_str(), PU_LEVEL, NULL);
 }
 
 
@@ -799,129 +521,106 @@ static parsercmd_t MAPINFO_CLUSTERDEF_commands[] =
 // Reads the MAPINFO lump, filling mapinfo and clusterdef maps with data
 int GameInfo::Read_MAPINFO(int lump)
 {
-  int i, j;
+  CONS_Printf("Reading MAPINFO...\n");
+  Parser p;
 
-  if (lump < 0)
+  if (!p.Open(lump))
     return -1;
-
-  vector<MapInfo *> tempinfo;
 
   Clear_mapinfo_clusterdef();
 
-  MapCluster *cl = NULL;
-
-  MapInfo  def; // default map
-  MapInfo *info;
-
-  int length = fc.LumpLength(lump);
-  char *ms = (char *)fc.CacheLumpNum(lump, PU_STATIC);
-  char *me = ms + length; // past-the-end pointer
-
-  char *s, *p;
-  s = p = ms;
-
   enum {PS_CLEAR, PS_MAP, PS_CLUSTERDEF} parsestate = PS_CLEAR;
+  int i, n;
+  vector<MapInfo *> tempinfo;
 
-  while (p < me)
+  MapCluster *cl = NULL;
+  MapInfo  *info = NULL;
+  MapInfo   def; // default map
+
+  p.RemoveComments(';');
+  while (p.NewLine())
     {
-      if (*p == '\n') // line ends
+      char line[61], ln[17]; // read in max. 60 (16) character strings
+      char *start = p.Pointer(); // small hack, store location
+      i = p.GetString(line, 30); // pass whitespace, read first word
+
+      // block starters?
+      if (!strcasecmp(line, "DEFAULTMAP"))
 	{
-	  if (p > s)
-	    {
-	      // parse the line from s to p
-	      *p = '\0';  // mark the line end
-	      P_RemoveChars(s, '\r'); // damn carriage returns
-	      s = P_PassWhitespace(s);
-
-	      char b1[61], b2[17]; // read in max. 60 (16) character strings
-
-	      i = sscanf(s, "%30s", b1); // pass whitespace, read first word
-	      if (i != EOF && !(b1[0] == ';' || b1[0] == '#' || (b1[0] == '/' && b1[1] == '/')))
-		// not a blank line or comment
-		// block starters?
-		if (!strcasecmp(b1, "DEFAULTMAP"))
-		  {
-		    // default map definition block begins
-		    parsestate = PS_MAP;
-		    info = &def;
-		  }
-		else if (!strcasecmp(b1, "MAP"))
-		  {
-		    // map definition block begins
-		    parsestate = PS_MAP;
-		    i = sscanf(s, "%*30s %16s \"%60[^\"]\"", b2, b1);
-		    info = new MapInfo(def); // copy construction
-		    tempinfo.push_back(info);
-
-		    if (IsNumeric(b2))
-		      {
-			// assume Hexen
-			j = atoi(b2);
-			char temp[17];
-			if (j >= 0 && j <= 99)
-			  {
-			    sprintf(temp, "MAP%02d", j);
-			    info->lumpname = temp;
-			    info->mapnumber = j;
-			  }
-		      }
-		    else
-		      // ZDoom
-		      info->lumpname = b2;
-
-		    info->nicename = b1;
-		    //CONS_Printf(" %s\n", b1);
-		  }
-		else if (!strcasecmp(b1, "CLUSTERDEF"))
-		  {
-		    // cluster definition block begins (ZDoom)
-		    parsestate = PS_CLUSTERDEF;
-		    i = sscanf(s, "%*30s %d", &j);
-		    if (clustermap.count(j))
-		      {
-			CONS_Printf("MAPINFO: Cluster number %d defined more than once!\n", j);
-			cl = clustermap[j]; // already there, update the existing cluster
-		      }
-		    else
-		      clustermap[j] = cl = new MapCluster(j);
-		  }
-		else switch (parsestate)
-		  {
-		  case PS_CLEAR:
-		    CONS_Printf("Unknown MAPINFO block at char %d!\n", s - ms);
-		    break;
-
-		  case PS_MAP:
-		    if (!P_ParseCommand(b1, s, MAPINFO_MAP_commands, (char *)info))
-		      CONS_Printf("Unknown MAPINFO MAP command '%s' at char %d!\n", s, s - ms);
-		    break;
-
-		  case PS_CLUSTERDEF:
-		    if (!P_ParseCommand(b1, s, MAPINFO_CLUSTERDEF_commands, (char *)cl))
-		      CONS_Printf("Unknown MAPINFO CLUSTERDEF command '%s' at char %d!\n", s, s - ms);
-		    break;
-		  }
-	    }
-	  s = p + 1;  // pass the line
+	  // default map definition block begins
+	  parsestate = PS_MAP;
+	  info = &def;
 	}
-      else if (*p == '=') 
-	*p = ' ';
+      else if (!strcasecmp(line, "MAP"))
+	{
+	  // map definition block begins
+	  parsestate = PS_MAP;
+	  i = sscanf(p.Pointer(), "%16s \"%60[^\"]\"", ln, line);
 
-      p++;      
+	  info = new MapInfo(def); // copy construction
+	  tempinfo.push_back(info);
+
+	  if (IsNumeric(ln))
+	    {
+	      // assume Hexen
+	      n = atoi(ln);
+	      char temp[10];
+	      if (n >= 0 && n <= 99)
+		{
+		  sprintf(temp, "MAP%02d", n);
+		  info->lumpname = temp;
+		  info->mapnumber = n;
+		}
+	    }
+	  else
+	    // ZDoom style
+	    info->lumpname = ln;
+
+	  info->nicename = line;
+	}
+      else if (!strcasecmp(line, "CLUSTERDEF"))
+	{
+	  // cluster definition block begins (ZDoom)
+	  parsestate = PS_CLUSTERDEF;
+	  n = p.GetInt();
+
+	  if (clustermap.count(n))
+	    {
+	      CONS_Printf("Cluster number %d defined more than once!\n", n);
+	      cl = clustermap[n]; // already there, update the existing cluster
+	    }
+	  else
+	    clustermap[n] = cl = new MapCluster(n);
+	}
+      else switch (parsestate)
+	{
+	case PS_CLEAR:
+	  CONS_Printf("Unknown MAPINFO block at char %d!\n", p.Location());
+	  break;
+
+	case PS_MAP:
+	  p.SetPointer(start);
+	  p.ParseCmd(MAPINFO_MAP_commands, (char *)info);
+	  break;
+
+	case PS_CLUSTERDEF:
+	  p.SetPointer(start);
+	  p.ParseCmd(MAPINFO_CLUSTERDEF_commands, (char *)cl);
+	  break;
+	}
     }
 
-  Z_Free(ms);
 
   // now "remap" tempinfo into mapinfo
-  int n = tempinfo.size();
+  n = tempinfo.size();
   for (i=0; i<n; i++)
     {
       info = tempinfo[i];
-      j = info->mapnumber;
+      int j = info->mapnumber;
 
       if (mapinfo.count(j)) // already there
 	{
-	  CONS_Printf("MAPINFO: Map number %d found more than once!\n", j);
+	  CONS_Printf("Map number %d found more than once!\n", j);
 	  delete mapinfo[j]; // later one takes precedence
 	}
 
@@ -935,7 +634,7 @@ int GameInfo::Read_MAPINFO(int lump)
       n = info->cluster;
       if (!clustermap.count(n))
 	{
-	  CONS_Printf("new cluster %d (map %d)\n", n, info->mapnumber);
+	  CONS_Printf(" new cluster %d (map %d)\n", n, info->mapnumber);
 	  // create the cluster
 	  cl = clustermap[n] = new MapCluster(n);
 	  cl->hub = cl->keepstuff = true; // for original Hexen
@@ -947,8 +646,11 @@ int GameInfo::Read_MAPINFO(int lump)
     }
 
   // and then check that all clusters have at least one map
-  for (cluster_iter_t t = clustermap.begin(); t != clustermap.end(); t++)
+  cluster_iter_t t, s;
+  for (s = clustermap.begin(); s != clustermap.end(); )
     {
+      t = s++; // erase will invalidate t
+
       cl = (*t).second;
       if (cl->maps.empty())
 	{
@@ -958,7 +660,10 @@ int GameInfo::Read_MAPINFO(int lump)
 	}
     }
 
-  return mapinfo.size();
+  n = mapinfo.size();
+  CONS_Printf("...done. %d maps.\n", n);
+
+  return n;
 }
 
 

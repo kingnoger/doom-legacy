@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.15  2003/12/13 23:51:03  smite-meister
 // Hexen update
 //
@@ -1437,7 +1440,7 @@ void A_VileChase(DActor *actor)
 		  actor->target = temp;
 
 		  actor->SetState(S_VILE_HEAL1);
-		  S_StartSound (corpsehit, sfx_slop);
+		  S_StartSound (corpsehit, sfx_gib);
 		  info = corpsehit->info;
 
 		  corpsehit->SetState(info->raisestate);
@@ -1769,7 +1772,7 @@ void A_PainDie(DActor *actor)
 
 void A_Scream(DActor *actor)
 {
-  int         sound;
+  int sound;
 
   switch (actor->info->deathsound)
     {
@@ -1793,12 +1796,8 @@ void A_Scream(DActor *actor)
     }
 
   // Check for bosses.
-  if (actor->type==MT_SPIDER
-      || actor->type == MT_CYBORG)
-    {
-      // full volume
-      S_StartAmbSound(sound);
-    }
+  if (actor->flags2 & MF2_BOSS)
+    S_StartAmbSound(sound); // full volume
   else
     S_StartScreamSound(actor, sound);
 }
@@ -1806,7 +1805,7 @@ void A_Scream(DActor *actor)
 
 void A_XScream(DActor *actor)
 {
-  S_StartScreamSound(actor, sfx_slop);
+  S_StartScreamSound(actor, sfx_gib);
 }
 
 
@@ -2044,23 +2043,19 @@ void A_SpawnSound(DActor *mo)
 
 void A_SpawnFly(DActor *mo)
 {
-  DActor *newmobj;
-  DActor *fog;
-  Actor *targ;
-  int         r;
   mobjtype_t  type;
 
   if (--mo->reactiontime)
     return; // still flying
 
-  targ = mo->target;
+  Actor *targ = mo->target;
 
   // First spawn teleport fog.
-  fog = mo->mp->SpawnDActor(targ->x, targ->y, targ->z, MT_SPAWNFIRE);
-  S_StartSound (fog, sfx_telept);
+  DActor *fog = mo->mp->SpawnDActor(targ->x, targ->y, targ->z, MT_SPAWNFIRE);
+  S_StartSound (fog, sfx_teleport);
 
   // Randomly select monster to spawn.
-  r = P_Random ();
+  int r = P_Random ();
 
   // Probability distribution (kind of :),
   // decreasing likelihood.
@@ -2087,7 +2082,7 @@ void A_SpawnFly(DActor *mo)
   else
     type = MT_BRUISER;
 
-  newmobj = mo->mp->SpawnDActor(targ->x, targ->y, targ->z, type);
+  DActor *newmobj = mo->mp->SpawnDActor(targ->x, targ->y, targ->z, type);
 
   if (newmobj->LookForPlayers(true))
     newmobj->SetState(newmobj->info->seestate);
@@ -2100,16 +2095,50 @@ void A_SpawnFly(DActor *mo)
 }
 
 
-void A_PlayerScream(DActor *mo)
+void A_PlayerScream(DActor *actor)
 {
   // Default death sound.
-  int         sound = sfx_pldeth;
+  int sound = 0, i = 0;
+  S.Stop3DSound(actor);
 
-  if ((game.mode == gm_doom2) && (mo->health < -50))
+  // Handle the different player death screams
+  /*
+  if (actor->pz <= -39*FRACUNIT)
+    sound = SFX_PLAYER_FALLING_SPLAT; // TODO Falling splat
+  */
+
+  if (actor->type == MT_PLAYER_FIGHTER ||
+      actor->type == MT_PLAYER_CLERIC  ||
+      actor->type == MT_PLAYER_MAGE)
     {
-      // IF THE PLAYER DIES
-      // LESS THAN -50% WITHOUT GIBBING
-      sound = sfx_pdiehi;
+      if (actor->health > -50)
+	i = 0;
+      else if(actor->health > -100)
+	i = 1; // Crazy death sound
+      else
+	i = 2 + P_Random() % 3; // Three different extreme deaths
     }
-  S_StartScreamSound(mo, sound);
+
+  switch (actor->type)
+    {
+    case MT_PLAYER:
+      if (actor->health > -50)
+	sound = sfx_pldeth;
+      else
+	sound = sfx_pdiehi;
+      break;
+    case MT_PLAYER_FIGHTER:
+      sound = SFX_PLAYER_FIGHTER_NORMAL_DEATH + i;
+      break;
+    case MT_PLAYER_CLERIC:
+      sound = SFX_PLAYER_CLERIC_NORMAL_DEATH + i;
+      break;
+    case MT_PLAYER_MAGE:
+      sound = SFX_PLAYER_MAGE_NORMAL_DEATH + i;
+      break;
+    default:
+      sound = actor->info->deathsound;
+    }
+
+  S_StartScreamSound(actor, sound);
 }

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.10  2003/11/12 11:07:25  smite-meister
 // Serialization done. Map progression.
 //
@@ -851,7 +854,7 @@ void Intermission::UpdateDMStats()
 
   if (--count <= 0)
     {
-      S_StartAmbSound(sfx_slop);
+      S_StartAmbSound(sfx_gib);
       InitNoState();
     }
 }

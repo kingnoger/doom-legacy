@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.8  2003/12/09 01:02:02  smite-meister
 // Hexen mapchange works, keycodes fixed
 //
@@ -60,7 +63,6 @@
 #include "r_defs.h"
 #include "sounds.h"
 
-#include "s_sound.h"
 #include "v_video.h"
 #include "i_video.h"
 #include "z_zone.h"
@@ -894,7 +896,6 @@ static void CON_Linefeed(int player2_message)
 //  Outputs text into the console text buffer
 //
 //TODO: fix this mess!!
-int console_alert = sfx_tink;
 
 void CON_Print (char *msg)
 {
@@ -910,7 +911,7 @@ void CON_Print (char *msg)
       else if (*msg=='\3')
 	{
           mask = 128;                         // white text + sound
-	  S_StartAmbSound(console_alert);
+	  S_StartAmbSound(sfx_message);
 	}
       else if (*msg == '\4') //Splitscreen: This message is for the second player
 	p2 = 1;

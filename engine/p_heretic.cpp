@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.17  2003/12/06 23:57:47  smite-meister
 // save-related bugfixes
 //
@@ -301,34 +304,26 @@ DActor *DActor::SpawnMissileAngle(mobjtype_t t, angle_t angle, fixed_t momz)
 
 
 
-extern int console_alert;
+//----------------------------------------------------------------------------
+
+static DActor *LavaInflictor;
+
+void P_InitLava()
+{
+  LavaInflictor = new DActor(MT_PHOENIXFX2);
+  LavaInflictor->flags =  MF_NOBLOCKMAP | MF_NOGRAVITY;
+  LavaInflictor->flags2 = MF2_FIREDAMAGE|MF2_NODMGTHRUST;
+}
+
+//----------------------------------------------------------------------------
+
 
 void DoomPatchEngine()
 {
   Intermission::s_count = sfx_pistol;
-  ceiling_t::ceilmovesound = sfx_stnmov;
+  button_t::buttonsound = sfx_switchon;
 
-  vdoor_t::s_open = sfx_doropn;
-  vdoor_t::s_bopen = sfx_bdopn;
-  vdoor_t::s_close = sfx_dorcls;
-  vdoor_t::s_bclose = sfx_bdcls;
-
-  button_t::buttonsound = sfx_swtchn;
   game.inventory = false;
-
-  Actor::s_pickup   = sfx_itemup;
-  Actor::s_keypickup = sfx_itemup;
-  Actor::s_weaponpickup = sfx_wpnup;
-  Actor::s_artipickup = sfx_itemup;
-  Actor::s_powerup  = sfx_getpow;
-  Actor::s_teleport = sfx_telept;
-  Actor::s_respawn  = sfx_itmbk;
-  Actor::s_gibbed   = sfx_slop;
-
-  if (game.mode == gm_doom2)
-    console_alert = sfx_radio;
-  else
-    console_alert = sfx_tink;
 
   // hacks: teleport fog, blood, gibs
   mobjinfo[MT_TFOG].spawnstate = S_TFOG;
@@ -340,37 +335,16 @@ void DoomPatchEngine()
 void HereticPatchEngine()
 {
   Intermission::s_count = sfx_keyup;
-  ceiling_t::ceilmovesound = sfx_dormov;
-  // these sounds don't really work, startsound and stopsound would be better. TODO sequences...
-  vdoor_t::s_open = vdoor_t::s_bopen = sfx_hdoropn;
-  vdoor_t::s_close = vdoor_t::s_bclose = sfx_hdorcls;
+  button_t::buttonsound = sfx_switchon;
 
-  button_t::buttonsound = sfx_switch;
   game.inventory = true;
-
-  Actor::s_pickup   = sfx_hitemup;
-  Actor::s_keypickup = sfx_keyup;
-  Actor::s_weaponpickup = sfx_hwpnup;
-  Actor::s_artipickup = sfx_hitemup;
-  Actor::s_powerup  = sfx_hitemup;
-  Actor::s_teleport = sfx_htelept;
-  Actor::s_respawn  = sfx_respawn;
-  Actor::s_gibbed   = sfx_slop;
-
-  console_alert = sfx_chat;
 
   // hacks
   mobjinfo[MT_TFOG].spawnstate = S_HTFOG1;
   sprnames[SPR_BLUD] = "BLOD";
   states[S_GIBS].sprite = SPR_BLOD;
 
-  // FIXME rationalize here. Above, good. Below, bad.
-
-  // instead of this, make a default skin (marine, heretic)
-  // with appropriate sounds.
-  strcpy(S_sfx[sfx_oof].lumpname, "PLROOF");
-  S_sfx[sfx_oof].priority    = 32;
-
+  // Above, good. Below, bad.
   text[TXT_PD_REDK] = "YOU NEED A GREEN KEY TO OPEN THIS DOOR";
 
   text[TXT_GOTBLUECARD] = "BLUE KEY";
@@ -381,42 +355,13 @@ void HereticPatchEngine()
 void HexenPatchEngine()
 {
   // FIXME sounds
-  Intermission::s_count = SFX_SWITCH1;
-  ceiling_t::ceilmovesound = SFX_SWITCH1;
-  vdoor_t::s_open = vdoor_t::s_bopen = SFX_SWITCH1;
-  vdoor_t::s_close = vdoor_t::s_bclose = SFX_SWITCH1;
-  button_t::buttonsound = SFX_SWITCH1;
+  Intermission::s_count = sfx_switchon;
+  button_t::buttonsound = sfx_switchon;
+
   game.inventory = true;
-
-  Actor::s_pickup   = SFX_PICKUP_ITEM;
-  Actor::s_keypickup = SFX_PICKUP_KEY;
-  Actor::s_weaponpickup = SFX_PICKUP_WEAPON;
-  Actor::s_artipickup = SFX_PICKUP_ARTIFACT;
-  Actor::s_powerup  = SFX_PICKUP_ITEM;
-  Actor::s_teleport = SFX_TELEPORT;
-  Actor::s_respawn  = SFX_RESPAWN;
-  Actor::s_gibbed   = SFX_PLAYER_FALLING_SPLAT;
-
-  console_alert = SFX_CHAT;
 
   // hacks
   mobjinfo[MT_TFOG].spawnstate = S_HTFOG1;
   sprnames[SPR_BLUD] = "BLOD";
   states[S_GIBS].sprite = SPR_GIBS;
-}
-
-
-static DActor *LavaInflictor;
-
-//----------------------------------------------------------------------------
-//
-// PROC P_InitLava
-//
-//----------------------------------------------------------------------------
-
-void P_InitLava()
-{
-  LavaInflictor = new DActor(MT_PHOENIXFX2);
-  LavaInflictor->flags =  MF_NOBLOCKMAP | MF_NOGRAVITY;
-  LavaInflictor->flags2 = MF2_FIREDAMAGE|MF2_NODMGTHRUST;
 }

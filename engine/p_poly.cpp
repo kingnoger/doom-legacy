@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.11  2003/12/18 11:57:31  smite-meister
 // fixes / new bugs revealed
 //
@@ -71,7 +74,7 @@
 #include "r_main.h"
 #include "m_bbox.h"
 #include "tables.h"
-#include "s_sndseq.h"
+#include "sounds.h"
 #include "z_zone.h"
 
 #define PO_MAXPOLYSEGS 64

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.6  2003/12/14 00:20:02  smite-meister
 // quick bugfix
 //
@@ -1154,7 +1157,7 @@ void A_CFlameMissile(DActor *actor)
 	  if(mo)
 	    {
 	      mo->angle = an<<ANGLETOFINESHIFT;
-	      mo->target = actor->target;
+	      mo->owner = actor->owner;
 	      mo->px = mo->special1 = FixedMul(FLAMESPEED, finecosine[an]);
 	      mo->py = mo->special2 = FixedMul(FLAMESPEED, finesine[an]);
 	      mo->tics -= P_Random()&3;
@@ -1165,7 +1168,7 @@ void A_CFlameMissile(DActor *actor)
 	  if(mo)
 	    {
 	      mo->angle = ANG180+(an<<ANGLETOFINESHIFT);
-	      mo->target = actor->target;
+	      mo->owner = actor->owner;
 	      mo->px = mo->special1 = FixedMul(-FLAMESPEED, 
 						 finecosine[an]);
 	      mo->py = mo->special2 = FixedMul(-FLAMESPEED, finesine[an]);
@@ -1718,7 +1721,6 @@ void A_FireConePL1(PlayerPawn *player, pspdef_t *psp)
 	  mo->special1 = SHARDSPAWN_LEFT|SHARDSPAWN_DOWN|SHARDSPAWN_UP
 	    |SHARDSPAWN_RIGHT;
 	  mo->special2 = 3; // Set sperm count (levels of reproductivity)
-	  mo->target = player;
 	  mo->args[0] = 3;		// Mark Initial shard as super damage
 	}
     }
@@ -1730,7 +1732,8 @@ void A_ShedShard(DActor *actor)
   int spawndir = actor->special1;
   int spermcount = actor->special2;
 
-  if (spermcount <= 0) return;				// No sperm left
+  if (spermcount <= 0)
+    return; // No sperm left
   actor->special2 = 0;
   spermcount--;
 
@@ -1746,7 +1749,7 @@ void A_ShedShard(DActor *actor)
 	  mo->special1 = SHARDSPAWN_LEFT;
 	  mo->special2 = spermcount;
 	  mo->pz = actor->pz;
-	  mo->target = actor->target;
+	  mo->owner = actor->owner;
 	  mo->args[0] = (spermcount==3)?2:0;
 	}
     }
@@ -1761,7 +1764,7 @@ void A_ShedShard(DActor *actor)
 	  mo->special1 = SHARDSPAWN_RIGHT;
 	  mo->special2 = spermcount;
 	  mo->pz = actor->pz;
-	  mo->target = actor->target;
+	  mo->owner = actor->owner;
 	  mo->args[0] = (spermcount==3)?2:0;
 	}
     }
@@ -1780,7 +1783,7 @@ void A_ShedShard(DActor *actor)
 	  else
 	    mo->special1 = SHARDSPAWN_UP;
 	  mo->special2 = spermcount;
-	  mo->target = actor->target;
+	  mo->owner = actor->owner;
 	  mo->args[0] = (spermcount==3)?2:0;
 	}
     }
@@ -1799,7 +1802,7 @@ void A_ShedShard(DActor *actor)
 	  else
 	    mo->special1 = SHARDSPAWN_DOWN;
 	  mo->special2 = spermcount;
-	  mo->target = actor->target;
+	  mo->owner = actor->owner;
 	  mo->args[0] = (spermcount==3)?2:0;
 	}
     }

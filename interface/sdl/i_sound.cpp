@@ -16,6 +16,9 @@
 // for more details.
 //
 // $Log$
+// Revision 1.12  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.11  2003/12/21 18:35:15  jussip
 // Minor cleanup.
 //
@@ -234,33 +237,6 @@ int I_StartSound(channel_t *s_channel)
     return 0;
 
   SDL_LockAudio();
-
-  // Chainsaw troubles.
-  // Play these sound effects only one at a time.
-  /*
-  if ( sfxid == sfx_sawup
-       || sfxid == sfx_sawidl
-       || sfxid == sfx_sawful
-       || sfxid == sfx_sawhit
-       || sfxid == sfx_stnmov
-       || sfxid == sfx_pistol )
-    {
-      // Loop all channels, check.
-      for (i=0 ; i<NUM_CHANNELS ; i++)
-	{
-	  // Active, and using the same SFX?
-	  if ( (channels[i])
-	       && (channelids[i] == sfxid) )
-	    {
-	      // Reset.
-	      channels[i] = 0;
-	      // We are sure that iff,
-	      //  there will only be one.
-	      break;
-	    }
-	}
-    }
-  */
 
   int n = channels.size();
   //CONS_Printf("SDL channels: %d\n", n);

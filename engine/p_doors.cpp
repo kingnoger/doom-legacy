@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.12  2003/12/13 23:51:03  smite-meister
 // Hexen update
 //
@@ -71,30 +74,20 @@
 #include "g_map.h"
 
 #include "dstrings.h"
-#include "s_sound.h"
 #include "sounds.h"
 #include "z_zone.h"
-
-
-#include "hardware/hw3sound.h"
-
 
 
 // =========================================================================
 //                            VERTICAL DOORS
 // =========================================================================
 
-int vdoor_t::s_open = 0;
-int vdoor_t::s_bopen = 0;
-int vdoor_t::s_close = 0;
-int vdoor_t::s_bclose = 0;
-
 IMPLEMENT_CLASS(vdoor_t, "Door");
 vdoor_t::vdoor_t() {}
 
 // constructor
-vdoor_t::vdoor_t(byte t, sector_t *s, fixed_t sp, int delay)
-  : sectoreffect_t(s)
+vdoor_t::vdoor_t(Map *m, byte t, sector_t *s, fixed_t sp, int delay)
+  : sectoreffect_t(m, s)
 {
   type = t;
   speed = sp;
@@ -111,14 +104,9 @@ vdoor_t::vdoor_t(byte t, sector_t *s, fixed_t sp, int delay)
   switch (type & TMASK)
     {
     case Close:
-      direction = -1;
-      topheight = P_FindLowestCeilingSurrounding(s) - 4*FRACUNIT;
-      MakeSound(false);
-      break;
-
     case CwO:
       direction = -1;
-      topheight = s->ceilingheight; // why different?
+      topheight = s->ceilingheight;
       MakeSound(false);
       break;
 
@@ -136,9 +124,6 @@ vdoor_t::vdoor_t(byte t, sector_t *s, fixed_t sp, int delay)
 }
 
 
-//
-// was T_VerticalDoor
-//
 void vdoor_t::Think()
 {
   int res;
@@ -174,14 +159,9 @@ void vdoor_t::Think()
 	  switch (type & TMASK)
 	    {
 	    case Close:
-	      direction = -1;
-	      topheight = P_FindLowestCeilingSurrounding(sector) - 4*FRACUNIT;
-	      MakeSound(false);
-	      break;
-
 	    case CwO:
 	      direction = -1;
-	      topheight = sector->ceilingheight; // why different?
+	      topheight = sector->ceilingheight;
 	      MakeSound(false);
 	      break;
 
@@ -204,15 +184,14 @@ void vdoor_t::Think()
       res = mp->T_MovePlane(sector, -speed, sector->floorheight, false, 1);
       if (res == res_pastdest)
         {
+	  mp->SN_StopSequence(&sector->soundorg);
 	  switch (type & TMASK)
             {
 	    case OwC:
 	    case Close:
-	      sector->ceilingdata = NULL;  // SoM: 3/6/2000
+	      sector->ceilingdata = NULL;
 	      mp->TagFinished(sector->tag);
 	      mp->RemoveThinker(this);  // unlink and free
-	      if (boomsupport) //SoM: Removes the double closing sound of doors.
-		MakeSound(false);
 	      break;
 
 	    case CwO:
@@ -244,6 +223,7 @@ void vdoor_t::Think()
 
       if (res == res_pastdest)
         {
+	  mp->SN_StopSequence(&sector->soundorg);
 	  switch(type & TMASK)
             {
 	    case OwC:
@@ -274,21 +254,32 @@ void vdoor_t::Think()
 
 void vdoor_t::MakeSound(bool open) const
 {
-  // TODO sound sequences (makes more sense in Heretic too...)
+  int seq = sector->seqType;
+
+  if ((game.mode == gm_hexen || game.mode == gm_heretic) && seq >= 0)
+    {
+      // TODO this is a nasty kludge which disables door sequences in Doom.
+      mp->SN_StartSequence(&sector->soundorg, SEQ_DOOR + seq);
+      return;
+    }
+
+  int s;
   if (open)
     {
       if (type & Blazing)
-	S_StartSound(&sector->soundorg, s_bopen);
+	s = sfx_bdopn;
       else
-	S_StartSound(&sector->soundorg, s_open);
+	s = sfx_doropn;
     }
   else
     {
       if (type & Blazing)
-	S_StartSound(&sector->soundorg, s_bclose);
+	s = sfx_bdcls;
       else
-	S_StartSound(&sector->soundorg, s_close);
+	s = sfx_dorcls;
     }
+
+  S_StartSound(&sector->soundorg, s);
 }
 
 
@@ -296,10 +287,11 @@ void vdoor_t::MakeSound(bool open) const
 int Map::EV_DoDoor(int tag, line_t *line, Actor *mo, byte type, fixed_t speed, int delay)
 {
   sector_t*  sec;
-  vdoor_t*   door;
-
   int secnum = -1;
   int rtn = 0;
+
+  if (speed >= 8*FRACUNIT)
+    type |= vdoor_t::Blazing;
 
   if (tag)
     {
@@ -311,8 +303,7 @@ int Map::EV_DoDoor(int tag, line_t *line, Actor *mo, byte type, fixed_t speed, i
 
 	  // new door thinker
 	  rtn++;
-	  door = new vdoor_t(type, sec, speed, delay);
-	  AddThinker(door);
+	  new vdoor_t(this, type, sec, speed, delay);
 	}
       return rtn;
     }
@@ -323,11 +314,10 @@ int Map::EV_DoDoor(int tag, line_t *line, Actor *mo, byte type, fixed_t speed, i
       bool good = mo->flags & MF_NOTMONSTER;
       vdoor_t*   door;
 
-      //SoM: 3/6/2000
       // if the wrong side of door is pushed, give oof sound
       if (line->sidenum[1] == -1 && good)
 	{
-	  S_StartScreamSound(mo, sfx_oof);    // killough 3/20/98
+	  S_StartSound(mo, sfx_usefail);
 	  return 0;
 	}
 
@@ -353,8 +343,7 @@ int Map::EV_DoDoor(int tag, line_t *line, Actor *mo, byte type, fixed_t speed, i
 	    }
 	}      
       // new door thinker
-      door = new vdoor_t(type, sec, speed, delay);
-      AddThinker(door);
+      new vdoor_t(this, type, sec, speed, delay);
 
       return 1;
     }
@@ -365,28 +354,20 @@ int Map::EV_DoDoor(int tag, line_t *line, Actor *mo, byte type, fixed_t speed, i
 // Generic function to open a door (used by FraggleScript)
 void Map::EV_OpenDoor(int sectag, int speed, int wait_time)
 {
-  byte door_type;
+  int type;
   int secnum = -1;
-  vdoor_t *door;
 
   if (speed < 1) speed = 1;
   
   // find out door type first
 
   if (wait_time)               // door closes afterward
-    {
-      if(speed >= 4)              // Blazing ?
-        door_type = vdoor_t::OwC | vdoor_t::Blazing;
-      else
-        door_type = vdoor_t::OwC;
-    }
+    type = vdoor_t::OwC;
   else
-    {
-      if(speed >= 4)              // Blazing ?
-        door_type = vdoor_t::Open | vdoor_t::Blazing;
-      else
-        door_type = vdoor_t::Open;
-    }
+    type = vdoor_t::Open;
+
+  if (speed >= 4)
+    type |= vdoor_t::Blazing;
 
   // open door in all the sectors with the specified tag
 
@@ -398,8 +379,7 @@ void Map::EV_OpenDoor(int sectag, int speed, int wait_time)
         continue;
 
       // new door thinker
-      door = new vdoor_t(door_type, sec, VDOORSPEED*speed, wait_time);
-      AddThinker(door);
+      new vdoor_t(this, type, sec, VDOORSPEED*speed, wait_time);
     }
 }
 
@@ -407,18 +387,14 @@ void Map::EV_OpenDoor(int sectag, int speed, int wait_time)
 // Used by FraggleScript
 void Map::EV_CloseDoor(int sectag, int speed)
 {
-  byte door_type;
   int secnum = -1;
-  vdoor_t *door;
 
-  if(speed < 1) speed = 1;
+  if (speed < 1) speed = 1;
   
   // find out door type first
-
-  if(speed >= 4)              // Blazing ?
-    door_type = vdoor_t::Close | vdoor_t::Blazing;
-  else
-    door_type = vdoor_t::Close;
+  int type = vdoor_t::Close;
+  if (speed >= 4)
+    type |= vdoor_t::Blazing;
   
   // open door in all the sectors with the specified tag
 
@@ -430,33 +406,24 @@ void Map::EV_CloseDoor(int sectag, int speed)
         continue;
 
       // new door thinker
-      door = new vdoor_t(door_type, sec, VDOORSPEED*speed, 0);
-      AddThinker(door);
+      new vdoor_t(this, type, sec, VDOORSPEED*speed, 0);
     }  
 }
 
 
-// was P_SpawnDoorCloseIn30
 // Spawn a door that closes after 30 seconds
-//
 void Map::SpawnDoorCloseIn30(sector_t* sec)
 {
-  vdoor_t *door = new vdoor_t(vdoor_t::Close | vdoor_t::Delayed, sec, VDOORSPEED, VDOORWAIT);
+  vdoor_t *door = new vdoor_t(this, vdoor_t::Close | vdoor_t::Delayed, sec, VDOORSPEED, VDOORWAIT);
   door->topcount = 30 * 35;
-  AddThinker(door);
-
   sec->special = 0;
 }
 
-// P_SpawnDoorRaiseIn5Mins
 // Spawn a door that opens after 5 minutes
-//
 void Map::SpawnDoorRaiseIn5Mins(sector_t *sec)
 {
-  vdoor_t *door = new vdoor_t(vdoor_t::Open | vdoor_t::Delayed, sec, VDOORSPEED, VDOORWAIT);
+  vdoor_t *door = new vdoor_t(this, vdoor_t::Open | vdoor_t::Delayed, sec, VDOORSPEED, VDOORWAIT);
   door->topcount = 5 * 60 * 35;
-  AddThinker(door);
-
   sec->special = 0;
 }
 

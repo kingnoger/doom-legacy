@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.7  2003/04/19 17:38:47  smite-meister
 // SNDSEQ support, tools, linedef system...
 //
@@ -51,6 +54,7 @@
 #define s_sound_h 1
 
 #include <vector>
+#include <string>
 #include "m_fixed.h"
 #include "z_cache.h"
 
@@ -58,55 +62,18 @@ using namespace std;
 
 struct consvar_t;
 struct CV_PossibleValue_t;
-class Actor;
-struct mappoint_t;
-struct sfxinfo_t;
 
 extern consvar_t stereoreverse;
 extern consvar_t cv_soundvolume;
 extern consvar_t cv_musicvolume;
 extern consvar_t cv_numChannels;
-
-// FIXME move these to linux_x interface
-/*
-#ifdef SNDSERV
- extern consvar_t sndserver_cmd;
- extern consvar_t sndserver_arg;
-#endif
-#ifdef MUSSERV
- extern consvar_t musserver_cmd;
- extern consvar_t musserver_arg;
-#endif
-
-#ifdef LINUX_X11
-extern consvar_t cv_jigglecdvol;
-#endif
-*/
-
-extern CV_PossibleValue_t soundvolume_cons_t[];
-//part of i_cdmus.c
 extern consvar_t cd_volume;
 extern consvar_t cdUpdate;
-
-
-#ifdef __MACOS__
-typedef enum
-{
-    music_normal,
-    playlist_random,
-    playlist_normal
-} playmode_t;
-
-extern consvar_t  play_mode;
-#endif
-
-
-// register sound vars and commands at game startup
-void S_RegisterSoundStuff();
+extern CV_PossibleValue_t soundvolume_cons_t[];
 
 
 //
-// MusicInfo struct.
+// A playing piece of music
 //
 struct musicinfo_t
 {
@@ -115,6 +82,51 @@ struct musicinfo_t
   int   length;    // lump length in bytes
   void* data;      // music data
   int   handle;    // music handle once registered
+};
+
+
+// struct for Doom native sound format:
+// first a 8-byte header composed of 4 unsigned (16-bit) short integers (LE/BE ?),
+// then the data (8-bit 11 kHz mono sound)
+// max # of samples = 65535 = about 6 seconds of sound
+struct doomsfx_t
+{
+  unsigned short magic; // always 3
+  unsigned short rate;  // always 11025
+  unsigned short samples; // number of 1-byte samples
+  unsigned short zero; // always 0
+  byte data[0]; // actual data begins here
+};
+
+
+#define S_TAGLEN 32 // change with care
+
+// describes an abstract sound effect
+class sfxinfo_t
+{
+public:
+  char  tag[S_TAGLEN + 1]; // SNDINFO tag (+ \0)
+  int   number;       // internal sound number
+  char  lumpname[9];  // up to 8-character name (+ \0)
+  byte  multiplicity; // how many instances of the sound can be heard simultaneously. 0 means not limited.
+  byte  priority;     // bigger is better
+  byte  pitch;        // 128 means unchanged, 64 pitch units = 1 octave
+
+public:
+  sfxinfo_t(const char *t, int n);
+};
+
+
+// sound sequence definition
+struct sndseq_t
+{
+  int    number;
+  int    stopsound;
+  string name;
+  vector<int> data; // the sequence script
+
+public:
+  void clear();
 };
 
 
@@ -127,8 +139,8 @@ struct soundsource_t
   bool     isactor; // is origin an Actor (or a mappoint_t)?
   union
   { // the sound origin
-    mappoint_t *mpt;
-    Actor      *act;
+    struct mappoint_t *mpt;
+    class  Actor      *act;
   };
 
 public:
@@ -170,24 +182,13 @@ public:
   int Adjust(Actor *listener);
 };
 
-/*
-// 3D sound channel
-struct channel3D_t : public channel_t
-{
-  soundsource_t source;  // origin of sound
-};
-*/
 
 class SoundSystem
 {
 private:
-  // sound effects
-
-  // the set of channels available
-  vector<channel_t>   channels; // static stereo or mono sounds
-  //vector<channel3D_t> channel3Ds; // dynamic 3D positional sounds
-
+  // sound
   int soundvolume;
+  vector<channel_t> channels;   // the set of channels available
 
   // music
   int  musicvolume;  
@@ -202,8 +203,7 @@ private:
   void SetMusicVolume(int volume);
   void ResetChannels(int num);
 
-  int   GetChannel(int pri);
-  //int Get3DChannel(int pri);
+  int  GetChannel(int pri);
 
 public:
   SoundSystem();
@@ -213,15 +213,14 @@ public:
   // --------- sound
 
   // normal mono/stereo sound
-  int StartAmbSound(const char *name, float volume = 1.0, int separation = 128, int pitch = 128, int pri = 64);
+  int StartAmbSound(sfxinfo_t *s, float volume = 1.0, int separation = 128);
   // positional 3D sound
-  int Start3DSound(const char *name, soundsource_t *source, float volume = 1.0, int pitch = 128, int pri = 64);
+  int Start3DSound(sfxinfo_t *s, soundsource_t *source, float volume = 1.0);
 
   void Stop3DSounds();
   void Stop3DSound(void *origin);
 
   void StopChannel(unsigned cnum);
-  //void Stop3DChannel(int cnum);
   bool ChannelPlaying(unsigned cnum);
 
   // --------- music
@@ -241,17 +240,6 @@ public:
 
 extern SoundSystem S;
 
-int S_GetSoundID(const char *tag);
-
-// wrappers
-// Start sound for thing at <origin>
-//  using <sound_id> from sounds.h
-int S_StartAmbSound(int sfx_id, float volume = 1.0);
-int S_StartSound(mappoint_t *origin, int sfx_id, float volume = 1.0);
-int S_StartSound(Actor *origin, int sfx_id, float volume = 1.0);
-
-// for old Doom/Heretic musics. See sounds.h.
-bool S_StartMusic(int music_id, bool looping = false);
 
 
 #endif

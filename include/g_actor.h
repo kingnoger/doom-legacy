@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.15  2003/12/03 10:49:50  smite-meister
 // Save/load bugfix, text strings updated
 //
@@ -324,13 +327,11 @@ public:
   fixed_t floorclip; // cut this amount from legs (deep water illusion) (Hexen)
 
 public:
-  // sounds TODO these could be replaced with SNDINFO
-  static int s_pickup, s_keypickup, s_weaponpickup, s_artipickup, s_powerup, s_teleport, s_respawn, s_gibbed;
-
   virtual thinkertype_e Type() {return tt_actor;}; // "name-tag" function
 
   // in g_actor.cpp
   Actor(fixed_t nx, fixed_t ny, fixed_t nz); // construct a new Actor
+  virtual ~Actor();
 
   void Remove();  // delayed destruction
   void Detach();  // detaches the Actor from the Map

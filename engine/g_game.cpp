@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2003/12/31 18:32:49  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.18  2003/12/13 23:51:03  smite-meister
 // Hexen update
 //
@@ -124,7 +127,6 @@
 #include "z_zone.h"
 
 #include "i_video.h" // rendermode! fix!
-#include "byteptr.h" // shouldn't be here
 
 #include "i_joy.h" // move input processing somewhere else
 
@@ -817,12 +819,12 @@ bool GameInfo::Responder(event_t* ev)
 	  
 	case KEY_MINUS:     // Screen size down
 	  CV_SetValue (&cv_viewsize, cv_viewsize.value-1);
-	  S_StartAmbSound(sfx_stnmov);
+	  S_StartAmbSound(sfx_menu_adjust);
 	  return true;
 
 	case KEY_EQUALS:    // Screen size up
 	  CV_SetValue (&cv_viewsize, cv_viewsize.value+1);
-	  S_StartAmbSound(sfx_stnmov);
+	  S_StartAmbSound(sfx_menu_adjust);
 	  return true;
 	}
 

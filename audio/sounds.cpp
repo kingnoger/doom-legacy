@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2003/12/31 18:32:49  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.14  2003/11/24 19:42:56  jussip
 // Removed braces from struct initialization
 //
@@ -63,19 +66,22 @@
 //
 //
 // DESCRIPTION:
-//      music/sound tables, and related sound routines
+//   High-level audio interface, SNDINFO parser
 //
 // Note: the tables were originally created by a sound utility at Id,
 //       kept as a sample, DOOM2 sounds.
 //
 //-----------------------------------------------------------------------------
 
-
+#include "parser.h"
+#include "functors.h"
 #include "sounds.h"
-#include "z_zone.h"
-#include "w_wad.h"
+#include "s_sound.h"
 #include "g_game.h"
 #include "g_mapinfo.h"
+
+#include "z_zone.h"
+#include "w_wad.h"
 
 
 // Doom/Heretic music names corresponding to musicenum_t
@@ -227,10 +233,8 @@ char* MusicNames[NUMMUSIC] =
 };
 
 
-//
-// Information about all the sfx
-//
-
+/*
+// Information about all the sfx. Kept here to see if the priority info is needed (see resources/SNDINFO.lmp)
 sfxinfo_t S_sfx[NUMSFX] =
 {
   // S_sfx[0] needs to be a dummy for odd reasons.
@@ -798,102 +802,386 @@ sfxinfo_t S_sfx[NUMSFX] =
   { "PuppyBeat", "\0", 2, 30},
   { "MysticIncant", "\0", 4, 32} // 498
 };
+*/
 
 
+//=========================================================
+//  Sound utilities
+//=========================================================
 
-// parses the Hexen SNDINFO lump
-int GameInfo::Read_SNDINFO(int lump)
+static vector<sfxinfo_t*> SoundStore;  // keeps track of allocated sfx for deleting
+
+static int  soundnumber = 1;
+static byte def_multi = 0;
+static byte def_priority = 64;
+static int  def_pitch = 128;
+
+// Sound mappings
+static  map<const char*, sfxinfo_t*, less_cstring> SoundInfo; // tag => sound
+static  map<int, sfxinfo_t*> SoundID;  // ID-number => sound
+
+typedef map<const char*, sfxinfo_t*, less_cstring>::iterator sound_iter_t;
+typedef map<int, sfxinfo_t*>::iterator soundID_iter_t;
+
+
+sfxinfo_t::sfxinfo_t(const char *t, int n)
 {
-  if (lump < 0)
-    return 0;
+  strncpy(tag, t, S_TAGLEN);
+  number = n;
+  lumpname[0] = lumpname[8] = '\0';
 
-  int i, j, n;
+  multiplicity = def_multi;
+  priority = def_priority;
+  pitch = def_pitch;
+}
 
-  int length = fc.LumpLength(lump);
-  char *ms = (char *)fc.CacheLumpNum(lump, PU_STATIC);
-  char *me = ms + length; // past-the-end pointer
 
-  char *s, *p;
-  s = p = ms;
-  char tag[41], lname[17];
+// deletes all SNDINFO/SNDSEQ data
+void S_ClearSounds()
+{
+  // There is no reason to stop currently playing sounds,
+  // because they should be independent of the definitions.
 
-  while (p < me)
-    {
-      if (*p == '\n') // line ends
-	{
-	  if (p > s)
-	    {
-	      // parse the line from s to p
-	      *p = '\0';  // mark the line end
+  extern map<int, struct sndseq_t*> SoundSeqs;
+  map<int, sndseq_t*>::iterator t;
+  for (t = SoundSeqs.begin(); t != SoundSeqs.end(); t++)
+    delete (*t).second;
+  SoundSeqs.clear();
 
-	      i = sscanf(s, "%40s", tag); // pass whitespace, read first word
-	      if (i != EOF && tag[0] != ';')
-		// not a blank line or comment
-		if (tag[0] == '$')
-		  {
-		    if (!strcmp(tag, "$MAP"))
-		      {
-			i = sscanf(s, "%*40s %d %16s", &j, lname);
-			if (i == 2  && j >= 1 && j <= 99)
-			  {
-			    // store the map music
-			    strupr(lname);
-			    MapInfo *t = FindMapInfo(j);
-			    if (t)
-			      t->musiclump = lname;
-			  }
-		      }
-		    // $ARCHIVEPATH ignored
-		  }
-		else
-		  {
-		    // must be a tagname => lumpname mapping
-		    for (i = sfx_amb1; i < NUMSFX; i++) // TODO give all sounds tags
-		      if (!strcmp(S_sfx[i].tagname, tag))
-			{
-			  n = sscanf(s, "%*40s%16s", lname);
-			  if (n == 1)
-			    {
-			      strupr(lname);
-			      if (lname[0] == '?')
-				strcpy(S_sfx[i].lumpname, "default");
-			      else
-				strncpy(S_sfx[i].lumpname, lname, 8);
-			    }
-			  break;
-			}
-		  }
-	    }
-	  s = p + 1;  // pass the line
-	}
-      p++;      
-    }
+  int n = SoundStore.size();
+  for (int i=0; i<n; i++)
+    delete SoundStore[i];
 
-  Z_Free(ms);
+  SoundStore.clear();
+  SoundInfo.clear();
+  SoundID.clear();
 
-  // unmapped tags get the default sound
-  for (i = sfx_Hexen; i < NUMSFX; i++)
-    if (!S_sfx[i].lumpname[0])
-      {
-	CONS_Printf("SNDINFO: Missing tag %s\n", S_sfx[i].tagname);
-	strcpy(S_sfx[i].lumpname, "default");
-      }
-  return 1;
+  soundnumber = 1;
+  def_multi = 0;
+  def_priority = 64;
+  def_pitch = 128;
+}
+
+
+void S_PrecacheSounds()
+{
+  // Initialize external data (all sounds) at start, keep static.
+  CONS_Printf("Precaching sounds... "); // TODO
+      /*
+      for (int i=1 ; i<NUMSFX ; i++)
+        {
+	  if (S_sfx[i].lumpname)
+	    sc.Cache(S_sfx[i].lumpname); // one extra reference => never released
+        }
+      */
+  CONS_Printf(" pre-cached all sound data\n");
 }
 
 
 int S_GetSoundID(const char *tag)
 {
-  int i;
-
-  for (i = NUMSFX - 1; i >= 0; i--)
+  sound_iter_t i = SoundInfo.find(tag);
+  if (i == SoundInfo.end())
     {
-      if (!S_sfx[i].tagname)
-	continue; // FIXME temp hack, all should have tagnames too
-      if (!strcmp(S_sfx[i].tagname, tag))
-	return i;
+      CONS_Printf("S_GetSoundID: Tag '%s' not found.\n", tag);
+      return -1;
     }
 
-  CONS_Printf("S_GetSoundID: Tag '%s' not found.\n", tag);
-  return 0;
+  return (*i).second->number;
+}
+
+
+//======================================
+//  SNDINFO parser
+//======================================
+
+enum SNDINFO_cmd_t
+{
+  SI_Map,
+  SI_IFDoom,
+  SI_IFHeretic,
+  SI_IFHexen,
+  SI_Multi,
+  SI_Priority,
+  SI_Pitch,
+  SI_NUM
+};
+
+static const char *SNDINFO_cmds[SI_NUM + 1] =
+{
+  "$map",
+  "$ifdoom",
+  "$ifheretic",
+  "$ifhexen",
+  "$multiplicity",
+  "$priority",
+  "$pitch",
+  NULL
+};
+
+// parses the SNDINFO lump
+int S_Read_SNDINFO(int lump)
+{
+  Parser p;
+  int i, n;
+  char c;
+
+  if (!p.Open(lump))
+    return -1;
+
+  CONS_Printf("Reading SNDINFO...\n");
+
+  p.RemoveComments(';');
+  while (p.NewLine())
+    {
+      char tag[50], lname[9];
+      
+      if (!p.GetString(tag, S_TAGLEN))
+	{
+	  CONS_Printf("Crap in the SNDINFO lump!\n");
+	  continue;
+	}
+
+      if (tag[0] == '$')
+	{
+	  // it's a command.
+	  switch (P_MatchString(tag, SNDINFO_cmds))
+	    {
+	    case SI_Map:
+	      n = p.GetInt();
+	      i = p.GetString(lname, 8);
+	      if (i >= 1  && n >= 1 && n <= 99)
+		{
+		  // store the map music
+		  strupr(lname);
+		  MapInfo *t = game.FindMapInfo(n);
+		  if (t)
+		    t->musiclump = lname;
+		}
+	      break;
+	    case SI_IFDoom:
+	      if (game.mode == gm_heretic || game.mode == gm_hexen)
+		p.GoToNext("$endif");
+	      break;
+	    case SI_IFHeretic:
+	      if (game.mode != gm_heretic)
+		p.GoToNext("$endif");
+	      break;
+	    case SI_IFHexen:
+	      if (game.mode != gm_hexen)
+		p.GoToNext("$endif");
+	      break;
+	    case SI_Multi:
+	      def_multi = p.GetInt();
+	      break;
+	    case SI_Priority:
+	      def_priority = p.GetInt();
+	      break;
+	    case SI_Pitch:
+	      def_pitch = 128 + p.GetInt();
+	      break;
+
+	    default:
+	      // $ARCHIVEPATH ignored
+	      break;
+	    }
+	}
+      else
+	{
+	  // must be a tagname mapping
+	  // if tag is found, update, if not, create
+	  sfxinfo_t *info;
+	  sound_iter_t t = SoundInfo.find(tag);
+	  if (t == SoundInfo.end())
+	    {
+	      info = new sfxinfo_t(tag, soundnumber++);
+	      SoundStore.push_back(info); // to make deleting easy (the maps are many-to-one!)
+	      SoundInfo[info->tag] = info; // NOTE that we need a static copy of the tag c-string for the map to work!
+	      SoundID[info->number] = info;
+	    }
+	  else
+	    info = (*t).second;
+
+	  CONS_Printf("  sound '%s'", tag);
+
+	  if (!(n = p.GetString(tag, 30)))
+	    {
+	      CONS_Printf("SNDINFO: bad lumpname\n");
+	      continue;
+	    }
+
+	  // TODO random sounds
+	  if (n == 1 && tag[0] == '=')
+	    {
+	      // alias (hence no sound lumpname may be a plain "=")
+	      p.GetString(tag, S_TAGLEN);
+	      CONS_Printf(" alias '%s', #%d\n", tag, info->number);
+
+	      sfxinfo_t *al;
+	      t = SoundInfo.find(tag); // is the alias already there?
+	      if (t == SoundInfo.end())
+		{
+		  al = new sfxinfo_t(tag, -1); // 'al' only exists to provide static storage for the tag of the alias
+		  SoundStore.push_back(al); // to make deleting easy
+		}
+	      else
+		{
+		  CONS_Printf("Warning: Alias sound '%s' already defined!\n", tag);
+		  // it loses its tag mapping, but the number mapping remains.
+		  al = (*t).second;
+		}
+
+	      SoundInfo[al->tag] = info; // info contains all the real data
+	      continue;
+	    }
+	  else
+	    {
+	      // lumpname
+	      if (n > 8)
+		CONS_Printf("Warning: Long lumpname '%s'\n", tag);
+	      CONS_Printf(" => '%s', #%d\n", tag, info->number);
+	      //strupr(tag);
+	      strncpy(info->lumpname, tag, 8);
+	    }
+
+	  // read attributes
+	  while (p.GetChar(&c))
+	    switch (c)
+	      {
+	      case 'm':
+		info->multiplicity = p.GetInt();
+		break;
+	      case 'r':
+		info->priority = p.GetInt();
+		break;
+	      case 'p':
+		info->pitch = 128 + p.GetInt();
+		break;
+	      default:
+		CONS_Printf("Unknown sound attribute '%c'\n", c);
+	      }
+	}
+    }
+
+  CONS_Printf("%d sounds found.\n", soundnumber - 1);
+  return (soundnumber - 1);
+}
+
+
+
+
+//=========================================================
+// wrappers
+//=========================================================
+
+// Starts some music with the music id found in sounds.h.
+bool S_StartMusic(int m_id, bool loop)
+{
+  if (m_id > mus_None && m_id < NUMMUSIC)
+    return S.StartMusic(MusicNames[m_id], loop);
+  else
+    I_Error("Bad music id: %d\n", m_id);
+
+  return false;
+}
+
+#define NORM_SEP 128
+
+int S_StartAmbSound(int sfx_id, float volume)
+{
+#ifdef PARANOIA
+  // check for bogus sound #
+  if (sfx_id < 1 || sfx_id >= NUMSFX)
+    I_Error("Bad sfx number: %d\n", sfx_id);
+#endif
+
+#ifdef HW3SOUND
+  if (hws_mode != HWS_DEFAULT_MODE)
+    {
+      volume += 0.1;
+      if (volume > 1)
+	volume = 1;
+      HW3S_StartSoundTypeAtVolume(NULL, sfx_id, CT_AMBIENT, volume);
+      return -1;
+    }
+#endif
+
+  if (volume < 0.0)
+    return -1;
+
+  soundID_iter_t i = SoundID.find(sfx_id);
+  if (i == SoundID.end())
+    {
+      CONS_Printf("Sound ID %d not found!\n", sfx_id);
+      return -1;
+    }
+
+  return S.StartAmbSound((*i).second, volume, NORM_SEP);
+}
+
+
+int S_StartSound(mappoint_t *m, int sfx_id, float vol)
+{
+#ifdef PARANOIA
+  // check for bogus sound #
+  if (sfx_id < 1 || sfx_id >= NUMSFX)
+    I_Error("Bad sfx number: %d\n", sfx_id);
+#endif
+
+  soundsource_t s;
+  s.isactor = false;
+  s.mpt = m;
+
+#ifdef HW3SOUND
+  if (hws_mode != HWS_DEFAULT_MODE)
+    HW3S_StartSound(NULL, sfx_id);
+  else;
+#endif
+
+  soundID_iter_t i = SoundID.find(sfx_id);
+  if (i == SoundID.end())
+    {
+      CONS_Printf("Sound ID %d not found!\n", sfx_id);
+      return -1;
+    }
+
+  return S.Start3DSound((*i).second, &s, vol);
+}
+
+
+int S_StartSound(Actor *a, int sfx_id, float vol)
+{
+#ifdef PARANOIA
+  // check for bogus sound #
+  if (sfx_id < 1 || sfx_id >= NUMSFX)
+    I_Error("Bad sfx number: %d\n", sfx_id);
+#endif
+
+  soundsource_t s;
+  s.isactor = true;
+  s.act = a;
+
+  /* FIXME skins are temporarily removed until a better system is made
+    if (sfx->skinsound!=-1 && origin && origin->skin)
+    {
+    // it redirect player sound to the sound in the skin table
+    sfx_id = ((skin_t *)origin->skin)->soundsid[sfx->skinsound];
+    sfx    = &S_sfx[sfx_id];
+    }
+  */
+
+#ifdef HW3SOUND
+  if (hws_mode != HWS_DEFAULT_MODE)
+    HW3S_StartSound(a, sfx_id);
+  else;
+#endif
+
+  soundID_iter_t i = SoundID.find(sfx_id);
+  if (i == SoundID.end())
+    {
+      CONS_Printf("Sound ID %d not found!\n", sfx_id);
+      return -1;
+    }
+
+  return S.Start3DSound((*i).second, &s, vol);
 }

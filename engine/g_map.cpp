@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2003 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.30  2003/12/31 18:32:49  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.29  2003/12/23 18:06:06  smite-meister
 // Hexen stairbuilders. Moving geometry done!
 //
@@ -104,7 +107,6 @@
 #include "hu_stuff.h"
 #include "p_camera.h"
 #include "m_random.h"
-#include "s_sound.h"
 #include "sounds.h"
 #include "z_zone.h"
 #include "tables.h"
@@ -225,7 +227,7 @@ void Map::SpawnSplash(Actor *mo, fixed_t z)
   // note pos +1 +1 so it doesn't eat the sound of the player..
   DActor *th = SpawnDActor(mo->x+1, mo->y+1, z, MT_SPLASH);
   //if( z - mo->subsector->sector->floorheight > 4*FRACUNIT)
-  S_StartSound(th, sfx_gloop);
+  S_StartSound(th, sfx_splash);
   //else
   //    S_StartSound (th,sfx_splash);
   th->tics -= P_Random() & 3;
@@ -1120,7 +1122,7 @@ void Map::RespawnSpecials()
 	{
 	  subsector_t *ss = R_PointInSubsector (x,y);
 	  mo = SpawnDActor(x, y, ss->sector->floorheight, MT_IFOG);
-	  S_StartSound (mo, Actor::s_respawn);
+	  S_StartSound (mo, sfx_itemrespawn);
 	}
 
       int t = mthing->type;
@@ -1136,7 +1138,7 @@ void Map::RespawnSpecials()
       mo->angle = ANG45 * (mthing->angle/45);
 
       if (game.mode == gm_heretic)
-	S_StartSound (mo, Actor::s_respawn);
+	S_StartSound (mo, sfx_itemrespawn);
     }
   // pull it from the queue anyway
   //iquetail = (iquetail+1)&(ITEMQUESIZE-1);
@@ -1196,7 +1198,7 @@ void Map::RespawnWeapons()
       // spawn a teleport fog at the new spot
       subsector_t *ss = R_PointInSubsector(x,y);
       DActor *mo = SpawnDActor(x, y, ss->sector->floorheight, MT_IFOG);
-      S_StartSound(mo, Actor::s_respawn);
+      S_StartSound(mo, sfx_itemrespawn);
 
       // spawn it
       if (mobjinfo[n].flags & MF_SPAWNCEILING)

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.2  2003/12/31 18:32:50  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.1  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
 //
@@ -269,7 +272,7 @@ bool Map::EV_ThingSpawn(byte *args, bool fog)
 	  if (fog)
 	    {	      
 	      DActor *fogMobj = SpawnDActor(mobj->x, mobj->y, mobj->z+TELEFOGHEIGHT, MT_TFOG);
-	      S_StartSound(fogMobj, SFX_TELEPORT);
+	      S_StartSound(fogMobj, sfx_teleport);
 	    }
 
 	  newMobj->flags |= MF_DROPPED; // Don't respawn

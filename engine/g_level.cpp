@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.12  2003/12/31 18:32:49  smite-meister
+// Last commit of the year? Sound works.
+//
 // Revision 1.11  2003/12/21 12:29:09  smite-meister
 // bugfixes
 //
@@ -121,8 +124,6 @@ int GameInfo::Create_MAPINFO_game(int lump)
   if (lump < 0)
     return -1;
 
-  CONS_Printf("Reading MAPINFO lump...\n");
-
   int num;
   int n = Read_MAPINFO(lump);
   if (n <= 0)
@@ -150,8 +151,6 @@ int GameInfo::Create_MAPINFO_game(int lump)
       if (m->nextlevel < 0 && m->warpnext > 0)
 	m->nextlevel = warptransmap[m->warpnext]->mapnumber;
     }
-
-  CONS_Printf("...done. %d maps.\n", n);
 
   return n;
 }
