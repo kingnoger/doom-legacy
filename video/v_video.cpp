@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2004/12/02 17:22:36  smite-meister
+// HUD fixed
+//
 // Revision 1.19  2004/11/28 18:02:25  smite-meister
 // RPCs finally work!
 //
@@ -69,93 +72,6 @@
 // Revision 1.2  2002/12/03 10:07:13  smite-meister
 // Video unit overhaul begins
 //
-// Revision 1.29  2001/12/15 18:41:35  hurdler
-// small commit, mainly splitscreen fix
-//
-// Revision 1.28  2001/07/28 16:18:37  bpereira
-// no message
-//
-// Revision 1.27  2001/05/16 21:21:14  bpereira
-// no message
-//
-// Revision 1.26  2001/04/28 14:33:41  metzgermeister
-// *** empty log message ***
-//
-// Revision 1.25  2001/04/17 22:30:40  hurdler
-// fix some (strange!) problems
-//
-// Revision 1.24  2001/04/09 20:20:46  metzgermeister
-// fixed crash bug
-//
-// Revision 1.23  2001/04/01 17:35:07  bpereira
-// no message
-//
-// Revision 1.22  2001/03/30 17:12:51  bpereira
-// no message
-//
-// Revision 1.21  2001/03/13 22:14:20  stroggonmeth
-// Long time no commit. 3D floors, FraggleScript, portals, ect.
-//
-// Revision 1.20  2001/02/28 17:50:55  bpereira
-// no message
-//
-// Revision 1.19  2001/02/24 13:35:21  bpereira
-// no message
-//
-// Revision 1.18  2001/02/19 17:40:34  hurdler
-// Fix a bug with "chat on" in hw mode
-//
-// Revision 1.17  2001/02/10 13:05:45  hurdler
-// no message
-//
-// Revision 1.16  2001/01/31 17:14:08  hurdler
-// Add cv_scalestatusbar in hardware mode
-//
-// Revision 1.15  2001/01/25 22:15:44  bpereira
-// added heretic support
-//
-// Revision 1.14  2000/11/06 20:52:16  bpereira
-// no message
-//
-// Revision 1.13  2000/11/04 16:23:44  bpereira
-// no message
-//
-// Revision 1.12  2000/11/02 19:49:37  bpereira
-// no message
-//
-// Revision 1.11  2000/10/04 16:19:24  hurdler
-// Change all those "3dfx names" to more appropriate names
-//
-// Revision 1.10  2000/08/31 14:30:56  bpereira
-// no message
-//
-// Revision 1.9  2000/04/27 17:43:19  hurdler
-// colormap code in hardware mode is now the default
-//
-// Revision 1.8  2000/04/24 20:24:38  bpereira
-// no message
-//
-// Revision 1.7  2000/04/24 15:10:57  hurdler
-// Support colormap for text
-//
-// Revision 1.6  2000/04/22 21:12:15  hurdler
-// I like it better like that
-//
-// Revision 1.5  2000/04/06 20:47:08  hurdler
-// add Boris' changes for coronas in doom3.wad
-//
-// Revision 1.4  2000/03/29 20:10:50  hurdler
-// your fix didn't work under windows, find another solution
-//
-// Revision 1.3  2000/03/12 23:16:41  linuxcub
-// Fixed definition of VID_BlitLinearScreen (Well, it now compiles under RH61)
-//
-// Revision 1.2  2000/02/27 00:42:11  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:33  hurdler
-// Initial import into CVS (v1.29 pr3)
-//
 //-----------------------------------------------------------------------------
 
 /// \file
@@ -184,6 +100,9 @@
 
 byte *current_colormap; // for applying colormaps to Drawn Textures
 
+//=================================================================
+//                         Blitting
+//=================================================================
 
 /// Copies a rectangular area from one screen buffer to another
 void V_CopyRect(int srcx, int srcy, int srcscrn,
@@ -229,9 +148,7 @@ void V_CopyRect(int srcx, int srcy, int srcscrn,
 }
 
 
-// --------------------------------------------------------------------------
 // Copy a rectangular area from one bitmap to another (8bpp)
-// --------------------------------------------------------------------------
 void VID_BlitLinearScreen(byte *src, byte *dest, int width, int height,
                           int srcrowbytes, int destrowbytes)
 {
@@ -251,7 +168,9 @@ void VID_BlitLinearScreen(byte *src, byte *dest, int width, int height,
 
 
 
-//======================================================================
+//=================================================================
+//                    2D Drawing of Textures
+//=================================================================
 
 void PatchTexture::Draw(int x, int y, int scrn = 0)
 {
@@ -341,7 +260,7 @@ void PatchTexture::Draw(int x, int y, int scrn = 0)
             byte *dest   = desttop + post->topdelta*vid.dupy*vid.width;
             int count  = post->length*vid.dupy;
 
-            int row = 0;
+            fixed_t row = 0;
             while (count--)
               {
                 byte pixel = source[row >> FRACBITS];
@@ -392,7 +311,6 @@ void PatchTexture::Draw(int x, int y, int scrn = 0)
 }
 
 
-//======================================================================
 
 void LumpTexture::Draw(int x, int y, int scrn = 0)
 {
@@ -407,31 +325,88 @@ void LumpTexture::Draw(int x, int y, int scrn = 0)
     }
 #endif
 
-  byte *dest = vid.screens[scrn] + max(0, y*vid.width) + max(0, x);
+  // scaling
+  if (flags & V_SLOC)
+    {
+      x *= vid.dupx;
+      y *= vid.dupy;
+      //dest += vid.scaledofs;
+    }
 
-  // y clipping to the screen
-  //  if (y + height*vid.dupy >= vid.height)
-  //  mheight = (vid.height - y) / vid.dupy - 1;
-  // TODO WARNING no x clipping (not needed for the moment)
+  if (flags & V_SSIZE)
+    {
+      x -= leftoffset * vid.dupx;
+      y -= topoffset * vid.dupy;
+    }
+  else
+    {
+      x -= leftoffset;
+      y -= topoffset;
+    }
+
+
+  byte *dest_left = vid.screens[scrn] + max(0, y*vid.width) + max(0, x);
+  byte *destend;
+  fixed_t rowfrac, colfrac;
+
+  // clipping (TODO left and top clips are not completely correct...)
+  int visible_width = min(width*vid.dupx, vid.width - x);
+  int visible_height = min(height*vid.dupy, vid.height - y);
+
+  if (flags & V_SSIZE)
+    {
+      colfrac = FixedDiv(FRACUNIT, vid.dupx<<FRACBITS);
+      rowfrac = FixedDiv(FRACUNIT, vid.dupy<<FRACBITS);
+      destend = dest_left + visible_height*vid.width;
+    }
+  else
+    {
+      colfrac = rowfrac = 1;
+      destend = dest_left + height*vid.width;
+    }
 
   byte *base = Generate();
 
-  // TODO crap
-  for (int i=0; i<height; i++)
-    {
-      for (int dupy = vid.dupy; dupy; dupy--)
-        {
-          byte *src = base;
-          for (int j=0; j<width; j++)
-            {
-              for (int dupx = vid.dupx; dupx; dupx--)
-                *dest++ = *src;
-              src++;
-            }
-          dest += vid.width - vid.dupx*width;
-        }
-      base += width;
-    }
+  if (flags & V_SSIZE)
+    for (fixed_t row = 0; dest_left < destend; row += rowfrac, dest_left += vid.width)
+      {
+	byte *source = base + width*(row >> FRACBITS);
+	byte *dest_right = dest_left + visible_width;
+	fixed_t col = 0;
+	for (byte *dest = dest_left; dest < dest_right; col += colfrac, dest++)
+	  {
+	    byte pixel = source[col >> FRACBITS];
+
+	    // the compiler is supposed to optimize the ifs out of the loop
+	    if (flags & V_MAP)
+	      pixel = current_colormap[pixel];
+
+	    if (flags & V_TL)
+	      pixel = transtables[(pixel << 8) + *dest];
+
+	    *dest = pixel;
+	  }
+      }
+  else // unscaled, perhaps a bit faster?
+    for (int row = 0; dest_left < destend; row++, dest_left += vid.width)
+      {
+	byte *dest_right = dest_left + visible_width;
+	int col = 0;
+	for (byte *dest = dest_left; dest < dest_right; col++, dest++)
+	  {
+	    byte pixel = base[col];
+
+	    // the compiler is supposed to optimize the ifs out of the loop
+	    if (flags & V_MAP)
+	      pixel = current_colormap[pixel];
+
+	    if (flags & V_TL)
+	      pixel = transtables[(pixel << 8) + *dest];
+
+	    *dest = pixel;
+	  }
+        base += width;
+      }
 }
 
 
@@ -472,6 +447,10 @@ void LumpTexture::DrawFill(int x, int y, int w, int h)
 }
 
 
+
+
+//======================================================================
+//                     Misc. drawing stuff
 //======================================================================
 
 // Draw a linear block of pixels into the view buffer.
@@ -495,10 +474,7 @@ void V_DrawBlock(int x, int y, int scrn, int width, int height, byte* src)
 
 
 
-//
-// V_GetBlock
 // Gets a linear block of pixels from the view buffer.
-//
 void V_GetBlock(int x, int y, int scrn, int width, int height, byte *dest)
 {
   if (rendermode!=render_soft)
@@ -522,10 +498,7 @@ void V_GetBlock(int x, int y, int scrn, int width, int height, byte *dest)
 
 
 
-//
 //  Fills a box of pixels with a single color, NOTE: scaled to screen size
-//
-//added:05-02-98:
 void V_DrawFill(int x, int y, int w, int h, int c)
 {
 #ifdef HWRENDER

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/12/02 17:22:35  smite-meister
+// HUD fixed
+//
 // Revision 1.12  2004/11/28 18:02:22  smite-meister
 // RPCs finally work!
 //
@@ -334,15 +337,16 @@ static void ShadeChain(int x, int y)
 void HudSlider::Draw()
 {
   oldval = cval;
+  // Heretic: x = st_x, y = st_y+32
   // textures: chainback, chain, marker, ltface, rtface
-  // FIXME! use actual texture sizes below...
 
   int pos = ((cval - minval)*256)/(maxval - minval);
 
   int by = 0;
   //int by = (cpos == CPawn->health) ? 0 : ChainWiggle;
+
   tex[0]->Draw(x, y, fgbuffer);
-  tex[1]->Draw(x+2 + (pos%17), y+1+by, fgbuffer);
+  tex[1]->Draw(x+2 + (pos % 17), y+1+by, fgbuffer);
   tex[2]->Draw(x+17+pos, y+1+by, fgbuffer);
   tex[3]->Draw(x, y, fgbuffer);
   tex[4]->Draw(x+276, y, fgbuffer);
@@ -350,6 +354,20 @@ void HudSlider::Draw()
   //ShadeChain(x, y);
 }
 
+
+void HexenHudSlider::Draw()
+{
+  oldval = cval;
+  // Hexen: x = st_x, y = st_y+58
+  // textures: NULL, chain, marker, ltface, rtface
+
+  int pos = ((cval - minval)*220)/(maxval - minval);
+
+  tex[1]->Draw(x+28 + (pos % 9), y, fgbuffer);
+  tex[2]->Draw(x+7+pos, y, fgbuffer);
+  tex[3]->Draw(x, y, fgbuffer);
+  tex[4]->Draw(x+277, y, fgbuffer);
+}
 
 
 //===================================================================================
@@ -381,14 +399,15 @@ void HudInventory::DrawNumber(int x, int y, int val)
   nums[val%10]->Draw(x+w, y, fgbuffer);
 }
 
-   
+
+
 void HudInventory::Draw()
 {
   int i;
   // selected (selectbox) refers to the same logical slot as invSlot
   // (it is the selected slot in the visible part of inventory (0-6))
 
-  // x = st_x + 34, y = st_y + 1
+  // heretic: x = st_x + 34, y = st_y + 1
   // two guiding bools: *open and overlay
   // textures: inv_background, artibox (also items[0]), selectbox,
   // 4 inv_gems, blacksq, 5 artiflash frames
@@ -405,7 +424,7 @@ void HudInventory::Draw()
       for (i = 0; i < 7; i++)
 	{
 	  // draw artibox
-	  tex[1]->Draw(x+16+i*31, y+1, fgbuffer);
+	  //tex[1]->Draw(x+16+i*31, y+1, fgbuffer);
 
 	  if (slots[i].type != arti_none)
 	    {
@@ -430,23 +449,86 @@ void HudInventory::Draw()
       if (*itemuse > 0)
 	{
 	  // black square
-	  tex[7]->Draw(x, y, fgbuffer);
+	  tex[7]->Draw(x+146, y+2, fgbuffer);
 	  // item use animation
-	  tex[8 + (*itemuse) - 1]->Draw(x, y, fgbuffer);
+	  tex[8 + (*itemuse) - 1]->Draw(x+148, y+2, fgbuffer);
 	}
       else
 	{
 	  // just a single item in a box
 	  //tex[1]->Draw(x+100, y, fgbuffer);
-	  // tex[7]->Draw(st_x+180, st_y+3, fgbuffer);
+	  //tex[7]->Draw(x+146, y+2, fgbuffer);
 	  if (slots[sel].type != arti_none)
 	    {
-	      items[slots[sel].type]->Draw(x+145, y, fgbuffer);
-	      DrawNumber(x+145+19, y+22, slots[sel].count);
+	      items[slots[sel].type]->Draw(x+145, y+1, fgbuffer);
+	      DrawNumber(x+145+22, y+23, slots[sel].count);
 	    }
 	}
     }
 }
+
+
+// Slightly different offsets from Heretic inventory
+void HexenHudInventory::Draw()
+{
+  int i;
+  // hexen: x = st_x + 38, y = st_y + 25
+
+  int sel = *selected;
+
+  if (*open == true)
+    {
+      // open inventory
+      // background (7 slots) (not for overlay!)
+      tex[0]->Draw(x, y+2, fgbuffer);
+
+      // draw items
+      for (i = 0; i < 7; i++)
+	{
+	  // draw artibox
+	  //tex[1]->Draw(x+12+i*31, y, fgbuffer);
+
+	  if (slots[i].type != arti_none)
+	    {
+	      items[slots[i].type]->Draw(x+12+i*31, y+3, fgbuffer);
+	      DrawNumber(x+30+i*31, y+25, slots[i].count);
+	    }
+	}
+
+      // draw select box
+      tex[2]->Draw(x+12 + sel*31, y+3, fgbuffer);
+
+      // blinking arrowheads (using a hack slot. this is so embarassing.)
+      if (slots[7].type)
+	(!(game.tic&4) ? tex[3] : tex[4])->Draw(x+4, y+3, fgbuffer);
+
+      if (slots[7].count)
+	(!(game.tic&4) ? tex[5] : tex[6])->Draw(x+231, y+3, fgbuffer);
+    }
+  else
+    {
+      // closed inventory
+      if (*itemuse > 0)
+	{
+	  // black square
+	  tex[7]->Draw(x+106, y, fgbuffer);
+	  // item use animation
+	  tex[8 + (*itemuse) - 1]->Draw(x+110, y+4, fgbuffer);
+	}
+      else
+	{
+	  // just a single item in a box
+	  //tex[1]->Draw(x+100, y, fgbuffer);
+	  //tex[7]->Draw(x+106, y, fgbuffer);
+	  if (slots[sel].type != arti_none)
+	    {
+	      items[slots[sel].type]->Draw(x+105, y+3, fgbuffer);
+	      DrawNumber(x+124, y+24, slots[sel].count);
+	    }
+	}
+    }
+}
+
 
 
 void HudInventory::Update(bool force)

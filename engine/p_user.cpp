@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.29  2004/12/02 17:22:34  smite-meister
+// HUD fixed
+//
 // Revision 1.28  2004/11/28 18:02:21  smite-meister
 // RPCs finally work!
 //
@@ -846,7 +849,7 @@ void PlayerPawn::UseArtifact(artitype_t arti)
   int n;
   vector<inventory_t>::iterator i;
 
-  for(i = inventory.begin(); i < inventory.end(); i++) 
+  for (i = inventory.begin(); i < inventory.end(); i++) 
     if (i->type == arti)
       {
 	// Found match - try to use
@@ -873,7 +876,7 @@ void PlayerPawn::UseArtifact(artitype_t arti)
 	      }
 
 	    S_StartSound(this, sfx_artiuse);
-	    player->itemuse = 4;
+	    player->itemuse = true;
 	  }
 	else
 	  { // Unable to use artifact, advance pointer
@@ -909,7 +912,7 @@ bool PlayerPawn::InventoryResponder(short (*gc)[2], event_t *ev)
         {
           if (invTics)
             {
-              if (--(invSlot) < 0)
+              if (--invSlot < 0)
                 invSlot = 0;
               else if (--st_curpos < 0)
                 st_curpos = 0;
@@ -923,7 +926,7 @@ bool PlayerPawn::InventoryResponder(short (*gc)[2], event_t *ev)
 
           if (invTics)
             {
-              if (++(invSlot) >= n)
+              if (++invSlot >= n)
                 invSlot = n-1;
               else if (++st_curpos > 6)
                 st_curpos = 6;

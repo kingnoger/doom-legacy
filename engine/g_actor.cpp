@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.38  2004/12/02 17:22:31  smite-meister
+// HUD fixed
+//
 // Revision 1.37  2004/11/18 20:30:07  smite-meister
 // tnt, plutonia
 //
@@ -349,7 +352,7 @@ void Actor::Think()
   if (flags2 & MF2_FLOATBOB)
     {
       // Floating item bobbing motion (maybe move to DActor::Think ?)
-      z = floorz + FloatBobOffsets[(health++) & 63];
+      z = floorz + FloatBobOffsets[(reactiontime++) & 63];
     }
   else if (!(eflags & MFE_ONGROUND) || (z != floorz) || pz)
     {

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2004/12/02 17:22:35  smite-meister
+// HUD fixed
+//
 // Revision 1.6  2004/09/23 23:21:19  smite-meister
 // HUD updated
 //
@@ -138,10 +141,10 @@ public:
 
 
 
-/// \brief Horizontal "slow" slider widget (Heretic health bar etc.)
+/// \brief Horizontal "slow" slider widget (Heretic health bar)
 class HudSlider : public HudWidget
 {
-private:
+protected:
   int minval, maxval; ///< min and max values
   int   oldval, cval; ///< old and current values
   const int     *val; ///< pointer to current value
@@ -155,13 +158,25 @@ public:
 };
 
 
+/// \brief Horizontal "slow" slider widget (Hexen health bar)
+class HexenHudSlider : public HudSlider
+{
+protected:
+  virtual void Draw();
 
-/// \brief Inventory widget
+public:
+  HexenHudSlider(int x, int y, const int *v, int mi, int ma, Texture **t)
+    : HudSlider(x, y, v, mi, ma, t) {};
+};
+
+
+
+/// \brief Inventory widget for Heretic
 ///
 /// A set of 7 multicons plus a little extra.
 class HudInventory : public HudWidget
 {
-private:
+protected:
   const bool    *open; ///< show expanded inventory or just one slot?
   const int  *itemuse; ///< counter for the item use animation
   const struct inventory_t *slots;
@@ -177,6 +192,21 @@ public:
   HudInventory(int x, int y, const bool *op, const int *iu, const inventory_t *vals,
 	       const int *sel, Texture **nn, Texture **it, Texture **t);
   virtual void Update(bool force);
+};
+
+
+/// \brief Inventory widget for Hexen
+///
+/// Exactly like a Heretic inventory, but with different internal drawing offsets.
+class HexenHudInventory : public HudInventory
+{
+protected:
+  virtual void Draw();
+
+public:
+  HexenHudInventory(int x, int y, const bool *op, const int *iu, const inventory_t *vals,
+		    const int *sel, Texture **nn, Texture **it, Texture **t)
+    : HudInventory(x, y, op, iu, vals, sel, nn, it, t) {};
 };
 
 #endif

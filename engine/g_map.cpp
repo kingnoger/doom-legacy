@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.51  2004/12/02 17:22:31  smite-meister
+// HUD fixed
+//
 // Revision 1.50  2004/11/19 16:51:04  smite-meister
 // cleanup
 //
@@ -605,7 +608,7 @@ void Map::SpawnMapThing(mapthing_t *mt)
 
   // Seed random starting index for bobbing motion
   if(p->flags2 & MF2_FLOATBOB)
-    p->health = P_Random();
+    p->reactiontime = P_Random();
 
   if (p->tics > 0)
     p->tics = 1 + (P_Random () % p->tics);

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/12/02 17:22:34  smite-meister
+// HUD fixed
+//
 // Revision 1.13  2004/11/19 16:51:04  smite-meister
 // cleanup
 //
@@ -67,6 +70,8 @@
 #include "g_player.h"
 #include "g_pawn.h"
 #include "z_zone.h"
+
+#include "r_defs.h"
 
 
 // Resets the Thinker list
@@ -133,6 +138,11 @@ void Map::RunThinkers()
 
   for (t = thinkercap.next; t != &thinkercap; t = t->next)
     t->CheckPointers();
+
+  // FIXME unfortunate HACK (the entire sound alert system is unrealistic!)
+  for (int i=0 ; i<numsectors ; i++)
+    if (sectors[i].soundtarget && (sectors[i].soundtarget->eflags & MFE_REMOVE))
+      sectors[i].soundtarget = NULL;
 
   force_pointercheck = false;
 

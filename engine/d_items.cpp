@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/12/02 17:22:31  smite-meister
+// HUD fixed
+//
 // Revision 1.9  2004/11/18 20:30:06  smite-meister
 // tnt, plutonia
 //
@@ -259,6 +262,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
   p_sound = sfx_itemup;
 
   int stype = special->type;
+  int amount = special->health; // item amounts are stored in health
 
   // Identify item
   switch (stype)
@@ -286,14 +290,14 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 
     case MT_ITEMSHIELD1:
     case MT_ITEMSHIELD2:
-      if (!GiveArmor(armor_field, special->info->speed, special->health))
+      if (!GiveArmor(armor_field, special->info->speed, amount))
 	return;
       player->SetMessage(text[stype - MT_ITEMSHIELD1 + TXT_ITEMSHIELD1]);
       break;
 
     case MT_GREENARMOR:
     case MT_BLUEARMOR:
-      if (!GiveArmor(armor_field, special->info->speed, special->health))
+      if (!GiveArmor(armor_field, special->info->speed, amount))
 	return;
       player->SetMessage(text[stype - MT_GREENARMOR + TXT_GOTARMOR]);
       break;
@@ -311,7 +315,7 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       break;
 
     case MT_SOULSPHERE:
-      health += special->health;
+      health += amount;
       if (health > 2*maxhealth)
 	health = 2*maxhealth;
       player->SetMessage(GOTSUPER);
@@ -319,10 +323,10 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
       break;
 
     case MT_MEGA:
-      health += special->health;
+      health += amount;
       if (health > 2*maxhealth)
 	health = 2*maxhealth;
-      GiveArmor(armor_field, 0.5, special->health);
+      GiveArmor(armor_field, 0.5, amount);
       player->SetMessage(GOTMSPHERE);
       p_sound = sfx_powerup;
       break;
@@ -552,144 +556,144 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 
       // Mana
     case MT_MANA1:
-      if (!GiveAmmo(am_mana1, 15)) // cannot use health because of MF2_FLOATBOB!
+      if (!GiveAmmo(am_mana1, amount))
 	return;
       player->SetMessage(text[TXT_MANA_1]);
       break;
     case MT_MANA2:
-      if (!GiveAmmo(am_mana2, 15))
+      if (!GiveAmmo(am_mana2, amount))
 	return;
       player->SetMessage(text[TXT_MANA_2]);
       break;
     case MT_MANA3:
-      if (GiveAmmo(am_mana1, 20))
+      if (GiveAmmo(am_mana1, amount))
 	{
-	  if (!GiveAmmo(am_mana2, 20))
+	  if (!GiveAmmo(am_mana2, amount))
 	    return;
 	}
       else
-	GiveAmmo(am_mana2, 20);
+	GiveAmmo(am_mana2, amount);
       player->SetMessage(text[TXT_MANA_BOTH]);
       break;
 
       // heretic Ammo
     case MT_AMGWNDWIMPY:
-      if (!GiveAmmo(am_goldwand, special->health))
+      if (!GiveAmmo(am_goldwand, amount))
 	return;
       player->SetMessage(GOT_AMMOGOLDWAND1, 1);
       break;
 
     case MT_AMGWNDHEFTY:
-      if (!GiveAmmo(am_goldwand, special->health))
+      if (!GiveAmmo(am_goldwand, amount))
 	return;
       player->SetMessage(GOT_AMMOGOLDWAND2, 1);
       break;
 
     case MT_AMMACEWIMPY:
-      if (!GiveAmmo(am_mace, special->health))
+      if (!GiveAmmo(am_mace, amount))
 	return;
       player->SetMessage(GOT_AMMOMACE1, 1);
       break;
 
     case MT_AMMACEHEFTY:
-      if (!GiveAmmo(am_mace, special->health))
+      if (!GiveAmmo(am_mace, amount))
 	return;
       player->SetMessage(GOT_AMMOMACE2, 1);
       break;
 
     case MT_AMCBOWWIMPY:
-      if (!GiveAmmo(am_crossbow, special->health))
+      if (!GiveAmmo(am_crossbow, amount))
 	return;
       player->SetMessage(GOT_AMMOCROSSBOW1, 1);
       break;
 
     case MT_AMCBOWHEFTY:
-      if (!GiveAmmo(am_crossbow, special->health))
+      if (!GiveAmmo(am_crossbow, amount))
 	return;
       player->SetMessage(GOT_AMMOCROSSBOW2, 1);
       break;
 
     case MT_AMBLSRWIMPY:
-      if (!GiveAmmo(am_blaster, special->health))
+      if (!GiveAmmo(am_blaster, amount))
 	return;
       player->SetMessage(GOT_AMMOBLASTER1, 1);
       break;
 
     case MT_AMBLSRHEFTY:
-      if (!GiveAmmo(am_blaster, special->health))
+      if (!GiveAmmo(am_blaster, amount))
 	return;
       player->SetMessage(GOT_AMMOBLASTER2, 1);
       break;
 
     case MT_AMSKRDWIMPY:
-      if (!GiveAmmo(am_skullrod, special->health))
+      if (!GiveAmmo(am_skullrod, amount))
 	return;
       player->SetMessage(GOT_AMMOSKULLROD1, 1);
       break;
 
     case MT_AMSKRDHEFTY:
-      if (!GiveAmmo(am_skullrod, special->health))
+      if (!GiveAmmo(am_skullrod, amount))
 	return;
       player->SetMessage(GOT_AMMOSKULLROD2, 1);
       break;
 
     case MT_AMPHRDWIMPY:
-      if (!GiveAmmo(am_phoenixrod, special->health))
+      if (!GiveAmmo(am_phoenixrod, amount))
 	return;
       player->SetMessage(GOT_AMMOPHOENIXROD1, 1);
       break;
 
     case MT_AMPHRDHEFTY:
-      if (!GiveAmmo(am_phoenixrod, special->health))
+      if (!GiveAmmo(am_phoenixrod, amount))
 	return;
       player->SetMessage(GOT_AMMOPHOENIXROD2, 1);
       break;
 
       // doom ammo
     case MT_CLIP:
-      if (!GiveAmmo(am_clip, special->health))
+      if (!GiveAmmo(am_clip, amount))
 	return;
       player->SetMessage(GOTCLIP, 1);
       break;
 
     case MT_AMMOBOX:
-      if (!GiveAmmo(am_clip, special->health))
+      if (!GiveAmmo(am_clip, amount))
 	return;
       player->SetMessage(GOTCLIPBOX, 1);
       break;
 
     case MT_ROCKETAMMO:
-      if (!GiveAmmo(am_misl, special->health))
+      if (!GiveAmmo(am_misl, amount))
 	return;
       player->SetMessage(GOTROCKET, 1);
       break;
 
     case MT_ROCKETBOX:
-      if (!GiveAmmo(am_misl, special->health))
+      if (!GiveAmmo(am_misl, amount))
 	return;
       player->SetMessage(GOTROCKBOX, 1);
       break;
 
     case MT_CELL:
-      if (!GiveAmmo(am_cell, special->health))
+      if (!GiveAmmo(am_cell, amount))
 	return;
       player->SetMessage(GOTCELL, 1);
       break;
 
     case MT_CELLPACK:
-      if (!GiveAmmo(am_cell, special->health))
+      if (!GiveAmmo(am_cell, amount))
 	return;
       player->SetMessage(GOTCELLBOX, 1);
       break;
 
     case MT_SHELL:
-      if (!GiveAmmo(am_shell, special->health))
+      if (!GiveAmmo(am_shell, amount))
 	return;
       player->SetMessage(GOTSHELLS, 1);
       break;
 
     case MT_SHELLBOX:
-      if (!GiveAmmo(am_shell, special->health))
+      if (!GiveAmmo(am_shell, amount))
 	return;
       player->SetMessage(GOTSHELLBOX, 1);
       break;
@@ -723,101 +727,101 @@ void PlayerPawn::TouchSpecialThing(DActor *special)
 
         // weapons
     case MT_BFG9000:
-      if (!GiveWeapon(wp_bfg, special->health, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_bfg, amount, special->flags & MF_DROPPED))
 	return;
       player->SetMessage(GOTBFG9000);
       break;
     case MT_CHAINGUN:
-      if (!GiveWeapon(wp_chaingun, special->health, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_chaingun, amount, special->flags & MF_DROPPED))
 	return;
       player->SetMessage(GOTCHAINGUN);
       break;
     case MT_SHAINSAW:
-      if (!GiveWeapon(wp_chainsaw, special->health, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_chainsaw, amount, special->flags & MF_DROPPED))
 	return;
       player->SetMessage(GOTCHAINSAW);
       break;
     case MT_ROCKETLAUNCH:
-      if (!GiveWeapon(wp_missile, special->health, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_missile, amount, special->flags & MF_DROPPED))
 	return;
       player->SetMessage(GOTLAUNCHER);
       break;
     case MT_PLASMAGUN:
-      if (!GiveWeapon(wp_plasma, special->health, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_plasma, amount, special->flags & MF_DROPPED))
 	return;
       player->SetMessage(GOTPLASMA);
       break;
     case MT_SHOTGUN:
-      if (!GiveWeapon(wp_shotgun, special->health, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_shotgun, amount, special->flags & MF_DROPPED))
 	return;
       player->SetMessage(GOTSHOTGUN);
       break;
     case MT_SUPERSHOTGUN:
-      if (!GiveWeapon(wp_supershotgun, special->health, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_supershotgun, amount, special->flags & MF_DROPPED))
 	return;
       player->SetMessage(GOTSHOTGUN2);
       break;
 
       // heretic weapons
     case MT_WMACE:
-      if (!GiveWeapon(wp_mace, special->health, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_mace, amount, special->flags & MF_DROPPED))
 	return;
       player->SetMessage(GOT_WPNMACE);
       break;
     case MT_WCROSSBOW:
-      if (!GiveWeapon(wp_crossbow, special->health, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_crossbow, amount, special->flags & MF_DROPPED))
 	return;
       player->SetMessage(GOT_WPNCROSSBOW);
       break;
     case MT_WBLASTER:
-      if (!GiveWeapon(wp_blaster, special->health, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_blaster, amount, special->flags & MF_DROPPED))
 	return;
       player->SetMessage(GOT_WPNBLASTER);
       break;
     case MT_WSKULLROD:
-      if (!GiveWeapon(wp_skullrod, special->health, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_skullrod, amount, special->flags & MF_DROPPED))
 	return;
       player->SetMessage(GOT_WPNSKULLROD);
       break;
     case MT_WPHOENIXROD:
-      if (!GiveWeapon(wp_phoenixrod, special->health, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_phoenixrod, amount, special->flags & MF_DROPPED))
 	return;
       player->SetMessage(GOT_WPNPHOENIXROD);
       break;
     case MT_WGAUNTLETS:
-      if (!GiveWeapon(wp_gauntlets, special->health, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_gauntlets, amount, special->flags & MF_DROPPED))
 	return;
       player->SetMessage(GOT_WPNGAUNTLETS);
       break;
 
       // Hexen weapons
     case MT_MW_CONE:
-      if (!GiveWeapon(wp_cone_of_shards, special->health, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_cone_of_shards, amount, special->flags & MF_DROPPED))
 	return;
       player->SetMessage(text[TXT_WEAPON_M2]);
       break;
     case MT_MW_LIGHTNING:
-      if (!GiveWeapon(wp_arc_of_death, special->health, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_arc_of_death, amount, special->flags & MF_DROPPED))
 	return;
       player->SetMessage(text[TXT_WEAPON_M3]);
       break;
     case MT_FW_AXE:
-      if (!GiveWeapon(wp_timons_axe, special->health, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_timons_axe, amount, special->flags & MF_DROPPED))
 	return;
       player->SetMessage(text[TXT_WEAPON_F2]);
       break;
     case MT_FW_HAMMER:
-      if (!GiveWeapon(wp_hammer_of_retribution, special->health, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_hammer_of_retribution, amount, special->flags & MF_DROPPED))
 	return;
       player->SetMessage(text[TXT_WEAPON_F3]);
       break;
     case MT_CW_SERPSTAFF:
-      if (!GiveWeapon(wp_serpent_staff, special->health, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_serpent_staff, amount, special->flags & MF_DROPPED))
 	return;
       player->SetMessage(text[TXT_WEAPON_C2]);
       break;
     case MT_CW_FLAME:
-      if (!GiveWeapon(wp_firestorm, special->health, special->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_firestorm, amount, special->flags & MF_DROPPED))
 	return;
       player->SetMessage(text[TXT_WEAPON_C3]);
       break;

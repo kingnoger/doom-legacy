@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.46  2004/12/02 17:22:31  smite-meister
+// HUD fixed
+//
 // Revision 1.45  2004/11/28 18:02:19  smite-meister
 // RPCs finally work!
 //
@@ -17,12 +20,6 @@
 // Revision 1.42  2004/11/04 21:12:52  smite-meister
 // save/load fixed
 //
-// Revision 1.41  2004/10/31 22:30:53  smite-meister
-// cleanup
-//
-// Revision 1.40  2004/10/27 17:37:06  smite-meister
-// netcode update
-//
 // Revision 1.39  2004/09/23 23:21:16  smite-meister
 // HUD updated
 //
@@ -32,17 +29,11 @@
 // Revision 1.37  2004/09/06 19:58:02  smite-meister
 // Doom linedefs done!
 //
-// Revision 1.36  2004/09/03 17:28:05  smite-meister
-// bugfixes
-//
 // Revision 1.35  2004/09/03 16:28:49  smite-meister
 // bugfixes and ZDoom linedef types
 //
 // Revision 1.34  2004/07/13 20:23:35  smite-meister
 // Mod system basics
-//
-// Revision 1.33  2004/07/07 17:27:19  smite-meister
-// bugfixes
 //
 // Revision 1.32  2004/07/05 16:53:24  smite-meister
 // Netcode replaced
@@ -50,35 +41,14 @@
 // Revision 1.31  2004/04/25 16:26:48  smite-meister
 // Doxygen
 //
-// Revision 1.29  2004/01/11 17:19:14  smite-meister
-// bugfixes
-//
-// Revision 1.28  2004/01/06 14:37:45  smite-meister
-// six bugfixes, cleanup
-//
-// Revision 1.27  2004/01/05 11:48:08  smite-meister
-// 7 bugfixes
-//
-// Revision 1.26  2004/01/02 14:25:01  smite-meister
-// cleanup
-//
 // Revision 1.25  2003/12/31 18:32:49  smite-meister
 // Last commit of the year? Sound works.
-//
-// Revision 1.24  2003/12/21 12:29:09  smite-meister
-// bugfixes
 //
 // Revision 1.23  2003/12/13 23:51:03  smite-meister
 // Hexen update
 //
 // Revision 1.22  2003/12/03 10:49:49  smite-meister
 // Save/load bugfix, text strings updated
-//
-// Revision 1.21  2003/11/30 00:09:43  smite-meister
-// bugfixes
-//
-// Revision 1.20  2003/11/23 00:41:55  smite-meister
-// bugfixes
 //
 // Revision 1.19  2003/11/12 11:07:18  smite-meister
 // Serialization done. Map progression.
@@ -100,9 +70,6 @@
 //
 // Revision 1.13  2003/04/14 08:58:26  smite-meister
 // Hexen maps load.
-//
-// Revision 1.12  2003/04/08 09:46:05  smite-meister
-// Bugfixes
 //
 // Revision 1.11  2003/04/04 00:01:54  smite-meister
 // bugfixes, Hexen HUD
@@ -344,6 +311,7 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, int type)
   morphTics = 0;
 
   invSlot = invTics = 0;
+  inventory.resize(1, inventory_t(arti_none, 0)); // at least 1 empty slot
 
   usedown = attackdown = jumpdown = true;  // don't do anything immediately
   refire = 0;

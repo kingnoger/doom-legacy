@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2004/12/02 17:22:35  smite-meister
+// HUD fixed
+//
 // Revision 1.3  2004/11/13 22:38:59  smite-meister
 // intermission works
 //
@@ -54,11 +57,6 @@ struct fragsort_t
 void HU_DrawRanking(const char *title, int x, int y, fragsort_t *fragtable,
 		    int scorelines, bool large, int white);
 
-// Size of statusbar.
-#define ST_HEIGHT_DOOM    32
-#define ST_HEIGHT_HERETIC 42
-#define ST_HEIGHT_HEXEN   65
-#define ST_WIDTH         320
 
 
 /// \brief Heads Up Display

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.28  2004/12/02 17:22:35  smite-meister
+// HUD fixed
+//
 // Revision 1.27  2004/11/13 22:38:43  smite-meister
 // intermission works
 //
@@ -140,6 +143,14 @@
 
 // buffer for drawing status bar
 int fgbuffer = FG;
+
+
+// Size of statusbar.
+#define ST_HEIGHT_DOOM    32
+#define ST_HEIGHT_HERETIC 42
+#define ST_HEIGHT_HEXEN   39
+#define ST_WIDTH         320
+
 
 // Palette indices.
 // For damage/bonus red-/gold-shifts
@@ -353,6 +364,7 @@ Texture *PatchMinotaur[16];
 
 // Hexen extras
 static Texture *PatchH2BAR;
+static Texture *PatchH2TOP;
 static Texture *PatchMana1[2];
 static Texture *PatchMana2[2];
 static Texture *PatchKILLS;
@@ -416,17 +428,18 @@ static void ST_SetClassData(int num, int cls)
 {
   if (game.mode == gm_hexen)
     {
+      int base;
       /*
-        PatchWEAPONSLOT = fc.CacheLumpNum(fc.GetNumForName("WPSLOT0") + cls, PU_STATIC);
-        PatchWEAPONFULL = fc.CacheLumpNum(fc.GetNumForName("WPFULL0") + cls, PU_STATIC);
-        PatchPIECE1     = fc.CacheLumpNum(fc.GetNumForName("WPIECEF1") + cls, PU_STATIC);
-        PatchPIECE2     = fc.CacheLumpNum(fc.GetNumForName("WPIECEF2") + cls, PU_STATIC);
-        PatchPIECE3     = fc.CacheLumpNum(fc.GetNumForName("WPIECEF3") + cls, PU_STATIC);
+        PatchWEAPONSLOT = tc.CachePtrNum(fc.GetNumForName("WPSLOT0") + cls);
+        PatchWEAPONFULL = tc.CachePtrNum(fc.GetNumForName("WPFULL0") + cls);
+        PatchPIECE1     = tc.CachePtrNum(fc.GetNumForName("WPIECEF1") + cls);
+        PatchPIECE2     = tc.CachePtrNum(fc.GetNumForName("WPIECEF2") + cls);
+        PatchPIECE3     = tc.CachePtrNum(fc.GetNumForName("WPIECEF3") + cls);
       */
 
       Patch_ChainSlider[1] = tc.GetPtrNum(fc.GetNumForName("CHAIN") + cls);
 
-      int base = fc.GetNumForName("LIFEGEM");
+      base = fc.GetNumForName("LIFEGEM");
       if (!game.multiplayer)
         // single player game uses red life gem
         Patch_ChainSlider[2] = tc.GetPtrNum(base + 4*cls + 1);
@@ -451,7 +464,7 @@ void ST_LoadHexenData()
   int startLump;
 
   PatchH2BAR = tc.GetPtr("H2BAR");
-  //PatchH2TOP = tc.GetPtr("H2TOP");
+  PatchH2TOP = tc.GetPtr("H2TOP");
 
   PatchSTATBAR = tc.GetPtr("STATBAR");
   PatchKEYBAR = tc.GetPtr("KEYBAR");
@@ -500,7 +513,7 @@ void ST_LoadHexenData()
   for (i=0; i<NUMCARDS; i++)
     PatchKeys[i] = tc.GetPtrNum(startLump+i);
 
-  //    PatchCHAINBACK = tc.GetPtr("CHAINBACK");
+  // numbers
   startLump = fc.GetNumForName("IN0");
   for (i = 0; i < 10; i++)
     PatchINum[i] = tc.GetPtrNum(startLump+i);
@@ -536,7 +549,7 @@ void ST_LoadHexenData()
   PatchKILLS = tc.GetPtr("KILLS");
 
   // health chain slider
-  Patch_ChainSlider[0] = tc.GetPtr("CHAINBACK");
+  Patch_ChainSlider[0] = NULL;
   Patch_ChainSlider[3] = tc.GetPtr("LFEDGE");
   Patch_ChainSlider[4] = tc.GetPtr("RTEDGE");
   ST_SetClassData(0, 0);
@@ -597,7 +610,7 @@ void ST_LoadHereticData()
   PatchKeys[2] = PatchKeys[5] = tc.GetPtr("GKEYICON");
 
   // health chain slider
-  Patch_ChainSlider[0] = tc.GetPtr("CHAINBACK");
+  Patch_ChainSlider[0] = tc.GetPtr("CHAINBAC");
   Patch_ChainSlider[1] = tc.GetPtr("CHAIN");
   Patch_ChainSlider[3] = tc.GetPtr("LTFACE");
   Patch_ChainSlider[4] = tc.GetPtr("RTFACE");
@@ -813,11 +826,11 @@ void HUD::ST_RefreshBackground()
 
   if (game.mode == gm_hexen)
     {
-      PatchH2BAR->Draw(st_x, st_y-1, flags); // x=0, y = 134
+      PatchH2BAR->Draw(st_x, st_y-27, flags); // x=0, y = 134
       if (!automap.active)
-	PatchSTATBAR->Draw(st_x+38, st_y-135+162, flags);
+	PatchSTATBAR->Draw(st_x+38, st_y+1, flags); // x=38, y=162
       else
-	PatchKEYBAR->Draw(st_x+38, st_y-135+162, flags);
+	PatchKEYBAR->Draw(st_x+38, st_y+1, flags);
     }
   else if (game.mode == gm_heretic)
     {
@@ -825,8 +838,6 @@ void HUD::ST_RefreshBackground()
       PatchSTATBAR->Draw(st_x+34, st_y+2, flags);
       //V_DrawScaledPatch(st_x+34, st_y+2, flags, PatchINVBAR);
       // background:
-      PatchLTFCTOP->Draw(st_x, st_y-10, flags);
-      PatchRTFCTOP->Draw(st_x+290, st_y-10, flags);
       //main
       PatchARMCLEAR->Draw(st_x+57, st_y+13, flags);
       //V_DrawScaledPatch(st_x+108, st_y+3, flags, PatchBLACKSQ);
@@ -1334,41 +1345,43 @@ void HUD::CreateHexenWidgets()
   h = new HudMultIcon(st_x+300, 19, &st_minotaur, PatchMinotaur);
   statusbar.push_back(h);
 
-  // H2TOP ?
+  // gargoyle wings
+  h = new HudBinIcon(st_x, st_y-27, &st_true, NULL, PatchH2TOP);
+  statusbar.push_back(h);
 
   // health slider
-  h = new HudSlider(st_x, st_y+57, &st_health, 0, 100, Patch_ChainSlider);
+  h = new HexenHudSlider(st_x, st_y+32, &st_health, 0, 100, Patch_ChainSlider);
   statusbar.push_back(h);
 
   // mainbar (closed inventory shown)
   // frags / health
   if (cv_deathmatch.value)
     //V_DrawPatch(38, 162, PatchKILLS);
-    h = new HudNumber(st_x+50, st_y+42, 3, &st_fragscount, PatchINum);
+    h = new HudNumber(st_x+50, st_y+16, 3, &st_fragscount, PatchINum);
   else
     // TODO: use red numbers if health is low
-    h = new HudNumber(st_x+65, st_y+42, 3, &st_health, PatchINum);
+    h = new HudNumber(st_x+65, st_y+16, 3, &st_health, PatchINum);
   mainbar.push_back(h);
 
   // mana
-  h = new HudNumber(st_x+92, st_y+47, 3, &st_mana1, PatchSNum);
+  h = new HudNumber(st_x+92, st_y+21, 3, &st_mana1, PatchSNum);
   mainbar.push_back(h);
-  h = new HudBinIcon(st_x+77, st_y+30, &st_mana1icon, PatchMana1[0], PatchMana1[1]);
+  h = new HudBinIcon(st_x+77, st_y+4, &st_mana1icon, PatchMana1[0], PatchMana1[1]);
   mainbar.push_back(h);
 
-  h = new HudNumber(st_x+124, st_y+47, 3, &st_mana2, PatchSNum);
+  h = new HudNumber(st_x+124, st_y+21, 3, &st_mana2, PatchSNum);
   mainbar.push_back(h);
-  h = new HudBinIcon(st_x+110, st_y+30, &st_mana2icon, PatchMana2[0], PatchMana2[1]);
+  h = new HudBinIcon(st_x+110, st_y+4, &st_mana2icon, PatchMana2[0], PatchMana2[1]);
   mainbar.push_back(h);
   // TODO mana vials (new widget type?)
 
   // armor
-  h = new HudNumber(st_x+275, st_y+42, 3, &st_armor, PatchINum);
+  h = new HudNumber(st_x+275, st_y+16, 3, &st_armor, PatchINum);
   mainbar.push_back(h);
 
   // inventory system
-  h = new HudInventory(st_x+38, st_y, &invopen, &itemuse, st_invslots, &st_curpos,
-		       PatchSNum, PatchARTI, Patch_InvBar);
+  h = new HexenHudInventory(st_x+38, st_y-1, &invopen, &itemuse, st_invslots, &st_curpos,
+			    PatchSNum, PatchARTI, Patch_InvBar);
   statusbar.push_back(h);
 
   // TODO Weapon Pieces
@@ -1395,12 +1408,18 @@ void HUD::CreateHereticWidgets()
   h = new HudBinIcon(st_x+287, st_y+9, &st_godmode, NULL, PatchGod[1]);
   statusbar.push_back(h);
 
+  // gargoyle horns
+  h = new HudBinIcon(st_x, st_y-10, &st_true, NULL, PatchLTFCTOP);
+  statusbar.push_back(h);
+  h = new HudBinIcon(st_x+290, st_y-10, &st_true, NULL, PatchRTFCTOP);
+  statusbar.push_back(h);
+
   // health slider
   h = new HudSlider(st_x, st_y+32, &st_health, 0, 100, Patch_ChainSlider);
   statusbar.push_back(h);
 
   // inventory system
-  h = new HudInventory(st_x+34, st_y, &invopen, &itemuse, st_invslots, &st_curpos,
+  h = new HudInventory(st_x+34, st_y+1, &invopen, &itemuse, st_invslots, &st_curpos,
                        PatchSNum, PatchARTI, Patch_InvBar);
   statusbar.push_back(h);
 
@@ -1642,25 +1661,22 @@ void HUD::ST_Start(PlayerInfo *p)
 
 
 
-// =========================================================================
+//=========================================================================
 //                         STATUS BAR OVERLAY
-// =========================================================================
+//=========================================================================
 
 
 // recreates the overlay widget set based on the consvar
 void HUD::CreateOverlayWidgets()
 {
   const char *cmds = cv_stbaroverlay.str;
-  char   c;
-  int    i;
-
   HudWidget *h;
 
-  for (i = overlay.size()-1; i>=0; i--)
+  for (int i = overlay.size()-1; i>=0; i--)
     delete overlay[i];
   overlay.clear();
 
-  for (c = *cmds++; c; c = *cmds++)
+  for (char c = *cmds++; c; c = *cmds++)
     {
       if (c >= 'A' && c <= 'Z')
         c = c + 'a' - 'A';
@@ -1674,10 +1690,32 @@ void HUD::CreateOverlayWidgets()
           break;
 
         case 'h': // draw health
-          h = new HudNumber(50, 198-16, 3, &st_health, PatchBNum);
+          h = new HudNumber(70, 182, 3, &st_health, PatchBNum);
           overlay.push_back(h);
-          h = new HudBinIcon(62, 198, &st_true, NULL, sbohealth);
+          h = new HudBinIcon(72, 182, &st_true, NULL, sbohealth);
           overlay.push_back(h);
+          break;
+
+        case 'a': // draw ammo
+          h = new HudNumber(170, 182, 3, &st_readywp_ammo, PatchBNum);
+          overlay.push_back(h);
+          h = new HudMultIcon(172, 182, &st_atype, PatchAmmoPic);
+          overlay.push_back(h);
+          break;
+
+	case 'm': // draw armor
+	  h = new HudNumber(270, 182, 3, &st_armor, PatchBNum);
+	  overlay.push_back(h);
+	  h = new HudBinIcon(272, 182, &st_true, NULL, sboarmor);
+	  overlay.push_back(h);
+	  break;
+
+        case 'k': // draw keys
+          for (int i=0; i<6; i++)
+            {
+              h = new HudMultIcon(308-(i/3)*10, 190-(i%3)*10, &st_keyboxes[i], PatchKeys);
+              overlay.push_back(h);
+            }
           break;
 
         case 'f': // draw frags
@@ -1687,27 +1725,6 @@ void HUD::CreateOverlayWidgets()
           overlay.push_back(h);
           break;
 
-        case 'a': // draw ammo
-          h = new HudNumber(198, 198-16, 3, &st_readywp_ammo, PatchBNum);
-          overlay.push_back(h);
-          h = new HudMultIcon(210, 196, &st_atype, PatchAmmoPic);
-          overlay.push_back(h);
-          break;
-
-        case 'k': // draw keys
-          for (i=0; i<6; i++)
-            {
-              h = new HudMultIcon(308-(i/3)*10, 198-8-(i%3)*10, &st_keyboxes[i], PatchKeys);
-              overlay.push_back(h);
-            }
-          break;
-
-         case 'm': // draw armor
-           h = new HudNumber(264, 198-16, 3, &st_armor, PatchBNum);
-           overlay.push_back(h);
-           h = new HudBinIcon(280, 198, &st_true, NULL, sboarmor);
-           overlay.push_back(h);
-           break;
 
         default:
           break;

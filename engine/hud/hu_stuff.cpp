@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.28  2004/12/02 17:22:35  smite-meister
+// HUD fixed
+//
 // Revision 1.27  2004/11/19 16:51:05  smite-meister
 // cleanup
 //
@@ -185,8 +188,8 @@ static Texture* PatchRankings;
 HUD::HUD()
 {
   st_x = 0;
-  st_y = BASEVIDHEIGHT - ST_HEIGHT_DOOM;
-  stbarheight = ST_HEIGHT_DOOM;
+  st_y = BASEVIDHEIGHT;
+  stbarheight = 0;
   st_palette = 0;
   st_active = false;
   st_player = NULL;
@@ -381,7 +384,12 @@ void HUD::Ticker()
 	  bonuscount += pl->bonuscount;
 	  pl->damagecount = pl->bonuscount = 0;
 	}
-
+      
+      if (pl->itemuse)
+	{
+	  itemuse = 4; // number of animation frames
+	  pl->itemuse = false;
+	}
 
       // display player messages
       while (!pl->messages.empty())

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.24  2004/12/02 17:22:34  smite-meister
+// HUD fixed
+//
 // Revision 1.23  2004/11/13 22:38:42  smite-meister
 // intermission works
 //
@@ -84,7 +87,7 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Heretic/Hexen specific extra game routines, gametype patching
+/// \brief Heretic/Hexen specific extra game routines, gametype patching.
 
 #include "command.h"
 #include "cvars.h"
@@ -106,49 +109,37 @@
 
 void P_MinotaurSlam(Actor *source, Actor *target)
 {
-  angle_t angle;
-  fixed_t thrust;
-    
-  angle = R_PointToAngle2(source->x, source->y, target->x, target->y);
+  angle_t angle = R_PointToAngle2(source->x, source->y, target->x, target->y);
   angle >>= ANGLETOFINESHIFT;
-  thrust = 16*FRACUNIT+(P_Random()<<10);
+  fixed_t thrust = 16*FRACUNIT+(P_Random()<<10);
   target->px += FixedMul(thrust, finecosine[angle]);
   target->py += FixedMul(thrust, finesine[angle]);
   target->Damage(NULL, NULL, HITDICE(6));
 
-  /*
-  if(target->player)
-    {
-      target->reactiontime = 14+(P_Random()&7);
-    }
-  */
+  //if(target->player)
+  target->reactiontime = 14 + (P_Random()&7);
 }
 
 
 bool P_TouchWhirlwind(Actor *target)
 {
-  int randVal;
-    
   target->angle += P_SignedRandom()<<20;
   target->px += P_SignedRandom()<<10;
   target->py += P_SignedRandom()<<10;
   if (target->mp->maptic & 16 && !(target->flags2 & MF2_BOSS))
     {
-      randVal = P_Random();
-      if(randVal > 160)
-        {
-	  randVal = 160;
-        }
+      int randVal = P_Random();
+      if (randVal > 160)
+	randVal = 160;
+
       target->pz += randVal<<10;
-      if(target->pz > 12*FRACUNIT)
-        {
-	  target->pz = 12*FRACUNIT;
-        }
+      if (target->pz > 12*FRACUNIT)
+	target->pz = 12*FRACUNIT;
     }
-  if(!(target->mp->maptic & 7))
-    {
-      return target->Damage(NULL, NULL, 3);
-    }
+
+  if (!(target->mp->maptic & 7))
+    return target->Damage(NULL, NULL, 3);
+
   return false;
 }
 
@@ -161,12 +152,9 @@ bool P_TouchWhirlwind(Actor *target)
 int P_FaceMobj(Actor *source, Actor *target, angle_t *delta)
 {
   angle_t diff;
-  angle_t angle1;
-  angle_t angle2;
-
-  angle1 = source->angle;
-  angle2 = R_PointToAngle2(source->x, source->y, target->x, target->y);
-  if(angle2 > angle1)
+  angle_t angle1 = source->angle;
+  angle_t angle2 = R_PointToAngle2(source->x, source->y, target->x, target->y);
+  if (angle2 > angle1)
     {
       diff = angle2-angle1;
       if(diff > ANG180)

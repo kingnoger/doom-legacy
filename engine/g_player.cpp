@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.31  2004/12/02 17:22:32  smite-meister
+// HUD fixed
+//
 // Revision 1.30  2004/11/18 20:30:07  smite-meister
 // tnt, plutonia
 //
@@ -148,7 +151,7 @@ PlayerInfo::PlayerInfo(const string & n)
   viewz = viewheight = deltaviewheight = bob_amplitude = 0;
   palette = -1;
   damagecount = bonuscount = 0;
-  itemuse = 0;
+  itemuse = false;
 
   Reset(false, true);
 
@@ -205,9 +208,8 @@ U32 PlayerInfo::packUpdate(GhostConnection *c, U32 mask, class BitStream *stream
       damagecount = bonuscount = 0;
     }
 
-  if (stream->writeFlag(itemuse))
-    stream->write(itemuse);
-  itemuse = 0;
+    stream->writeFlag(itemuse);
+    itemuse = false;
   */
 
 
@@ -242,8 +244,7 @@ void PlayerInfo::unpackUpdate(GhostConnection *connection, BitStream *stream)
 	stream->read(&bonuscount);
     }
 
-  if (stream->readFlag())
-    stream->read(&itemuse);
+    itemuse = stream->readFlag();
   */
 }
 

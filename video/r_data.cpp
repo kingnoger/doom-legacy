@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.38  2004/12/02 17:22:36  smite-meister
+// HUD fixed
+//
 // Revision 1.37  2004/11/28 18:02:24  smite-meister
 // RPCs finally work!
 //
@@ -710,12 +713,6 @@ Texture *texturecache_t::GetPtr(const char *name, bool substitute)
   strupr(name8);
 
   Texture *t = (Texture *)Cache(name8);
-  /*
-    FIXME remove! should be already fixed!
-  Texture *t2 = (Texture *)Cache(name);
-  if (t != t2)
-    CONS_Printf("!!!!! '%s', '%s'\n", name8, name);
-  */
 
   if (!substitute && t == default_item)
     return NULL;
