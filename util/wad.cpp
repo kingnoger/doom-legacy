@@ -147,6 +147,20 @@ bool Wad::Load(const char *fname, FILE *str, int num)
     {
       p->offset = LONG(p->offset);
       p->size   = LONG(p->size);
+      // TEST padding of lumpnames
+      int j;
+      for (j=0; j<8; j++)
+	if (p->name[j] == 0)
+	  {
+	    for (j++; j<8; j++)
+	      if (p->name[j] != 0)
+		{
+		  CONS_Printf("Warning: Lumpname %s not padded with zeros!\n", p->name);
+		  p->name[j] = 0; // fix it
+		  break;
+		}
+	    break;
+	  }
     }
     
 #ifdef HWRENDER
@@ -215,13 +229,6 @@ void Wad::ListDir()
 // FindNumForName
 // Searches the wadfile for lump named 'name', returns the lump number
 // if not found, returns -1
-#if 0
-/* Hurdler: FIXME:
- this function doesn't work (and it seems normal since name8 is not fully
- initialized (only the "strlen(name)" first bytes are initialized), and
- it's probably the same with p->name). I wonder how that thing was working
- with the C version (just because we were lucky ?)
-*/
 int Wad::FindNumForName(const char *name, int startlump)
 {
   union {
@@ -238,7 +245,7 @@ int Wad::FindNumForName(const char *name, int startlump)
   // in case the name was a fill 8 chars
   name8.s[8] = 0;
 
-  // case insensitive
+  // case insensitive TODO make it case sensitive if possible
   strupr(name8.s);
 
   v1 = name8.x[0];
@@ -253,7 +260,8 @@ int Wad::FindNumForName(const char *name, int startlump)
   // not found
   return -1;
 }
-#else
+/*
+// slower alternative, not needed because lumpnames are now always zero-padded
 int Wad::FindNumForName(const char *name, int startlump)
 {
   waddir_t *p = directory + startlump;
@@ -267,7 +275,7 @@ int Wad::FindNumForName(const char *name, int startlump)
   // not found
   return -1;
 }
-#endif
+*/
 
 
 // -----------------------------------------------------
