@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2003/03/15 20:15:49  smite-meister
+// Fixed namespace problem
+//
 // Revision 1.3  2003/03/08 16:07:17  smite-meister
 // Lots of stuff. Sprite cache. Movement+friction fix.
 //
@@ -36,9 +39,15 @@
 #ifndef z_cache_h
 #define z_cache_h 1
 
-#include <ext/hash_map>
+#ifdef __WIN32__
+# include <ext/hash_map>
+#else
+# include <hash_map>
+#endif
 #include <string.h>
 #include "z_zone.h"
+
+using namespace std;
 
 class cacheitem_t
 {
@@ -70,8 +79,13 @@ protected:
   // annoying namespace declarations, because hash_map is an extension...
   // Arrr, matey! STL designers be cursed with scurvy and lice! The default hash function
   // is okay but default key comparison function compares pointers, not c-strings!
+#ifdef __WIN32__
   typedef __gnu_cxx::hash_map<const char*, cacheitem_t*,
     __gnu_cxx::hash<const char *>, compare_strings> c_map_t;
+#else
+  typedef hash_map<const char*, cacheitem_t*, hash<const char *>, compare_strings> c_map_t;
+#endif
+
   typedef c_map_t::iterator c_iter_t;
   c_map_t c_map;
 
