@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/09/09 17:15:20  jussip
+// Cleared out old joystick crap in preparation for brand new code.
+//
 // Revision 1.5  2004/08/12 18:30:29  smite-meister
 // cleaned startup
 //
@@ -135,10 +138,6 @@ extern consvar_t   cv_mouse2port;
 
 extern consvar_t cv_usejoystick;
 extern consvar_t cv_joystickfreelook;
-#ifdef LJOYSTICK
- extern consvar_t cv_joyport;
- extern consvar_t cv_joyscale;
-#endif
 
 
 // client console (console.cpp)

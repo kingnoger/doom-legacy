@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2004/09/09 17:15:20  jussip
+// Cleared out old joystick crap in preparation for brand new code.
+//
 // Revision 1.14  2004/09/06 22:28:54  jussip
 // Beginnings of new joystick code.
 //
@@ -90,14 +93,6 @@
 #include <termios.h>
 #endif
 
-#ifdef LJOYSTICK // linux joystick 1.x
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/ioctl.h>
-#include <fcntl.h>
-#include <linux/joystick.h>
-#endif
-
 #include "doomdef.h"
 #include "command.h"
 #include "cvars.h"
@@ -117,13 +112,7 @@
 
 #include "sdl/endtxt.h"
 
-
-#ifdef LJOYSTICK
-static int joyfd = -1;
-static int joyaxes = 0;
-static int joystick_started = 0;
-static int joy_scale = 1;
-#endif
+// FIXME is this necessary?
 JoyType_t Joystick;
 
 #ifdef LMOUSE2
@@ -235,9 +224,6 @@ void I_GetEvent()
   SDL_Event inputEvent;
   event_t event;    
 
-#ifdef LJOYSTICK
-  I_GetJoyEvent();
-#endif
 #ifdef LMOUSE2
   I_GetMouse2Event();
 #endif
@@ -402,144 +388,8 @@ void I_Tactile(int on, int off, int total)
 // FIXME remove, obsoleted.
 void I_InitJoystick()
 {
-#ifdef LJOYSTICK
-  I_ShutdownJoystick();
-  if(!strcmp(cv_usejoystick.string,"0"))
-    return;
-  if(!joy_open(cv_joyport.string)) return;
-  joystick_started = 1;
-  return;
-#endif
 }
 
-
-#ifdef LJOYSTICK
-void I_JoyScale()
-{
-  joy_scale = (cv_joyscale.value==0)?1:cv_joyscale.value;
-}
-
-
-void I_GetJoyEvent()
-{
-  struct js_event jdata;
-  static event_t event = {0,0,0,0};
-  static int buttons = 0;
-  if (!joystick_started)
-    return;
-  while (read(joyfd,&jdata,sizeof(jdata))!=-1)
-    {
-      switch (jdata.type)
-	{
-	case JS_EVENT_AXIS:
-	  event.type = ev_joystick;
-	  event.data1 = 0;
-	  switch (jdata.number)
-	    {
-	    case 0:
-	      event.data2 = ((jdata.value >> 5)/joy_scale)*joy_scale;
-	      D_PostEvent(&event);
-	      break;
-	    case 1:
-	      event.data3 = ((jdata.value >> 5)/joy_scale)*joy_scale;
-	      D_PostEvent(&event);
-	    default:
-	      break;
-	    }
-	  break;
-
-	case JS_EVENT_BUTTON:
-	  if (jdata.number<JOYBUTTONS)
-	    {
-	      if (jdata.value)
-		{
-		  if (!((buttons >> jdata.number)&1))
-		    {
-		      buttons |= 1 << jdata.number;
-		      event.type = ev_keydown;
-		      event.data1 = KEY_JOY1+jdata.number;
-		      D_PostEvent(&event);
-		    }
-		}
-	      else
-		{
-		  if ((buttons>>jdata.number)&1)
-		    {
-		      buttons ^= 1 << jdata.number;
-		      event.type = ev_keyup;
-		      event.data1 = KEY_JOY1+jdata.number;
-		      D_PostEvent(&event);
-		    }
-		}
-	    }
-	  break;
-	}
-    }
-}
-
-// FIXME remove this obsoleted Linux-only hack.
-#if 0
-void I_ShutdownJoystick()
-{
-  if (joyfd != -1)
-    {
-      close(joyfd);
-      joyfd = -1;
-    }
-  joyaxes = 0;
-  joystick_started = 0;
-}
-#endif
-
-int joy_open(char *fname)
-{
-  joyfd = open(fname,O_RDONLY|O_NONBLOCK);
-  if (joyfd == -1)
-    {
-      CONS_Printf("Error opening %s!\n",fname);
-      return 0;
-    }
-  ioctl(joyfd,JSIOCGAXES,&joyaxes);
-  if (joyaxes<2)
-    {
-      CONS_Printf("Not enought axes?\n");
-      joyaxes = 0;
-      joyfd = -1;
-      close(joyfd);
-      return 0;
-    }
-  return joyaxes;
-}
-/*int joy_waitb(int fd, int *xpos,int *ypos,int *hxpos,int *hypos) {
-  int i,xps,yps,hxps,hyps;
-  struct js_event jdata;
-  for(i=0;i<1000;i++) {
-    while(read(fd,&jdata,sizeof(jdata))!=-1) {
-      switch(jdata.type) {
-      case JS_EVENT_AXIS:
-        switch(jdata.number) {
-        case 0: // x
-          xps = jdata.value;
-          break;
-        case 1: // y
-          yps = jdata.value;
-          break;
-        case 3: // hat x
-          hxps = jdata.value;
-          break;
-        case 4: // hat y
-          hyps = jdata.value;
-        default:
-          break;
-        }
-        break;
-      case JS_EVENT_BUTTON:
-        break;
-      }
-    }
-  }
-  }*/
-#endif // LJOYSTICK
 
 #ifdef LMOUSE2
 void I_GetMouse2Event()

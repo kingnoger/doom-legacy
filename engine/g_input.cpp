@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2004/09/09 17:15:18  jussip
+// Cleared out old joystick crap in preparation for brand new code.
+//
 // Revision 1.10  2004/08/18 14:35:20  smite-meister
 // PNG support!
 //
@@ -108,13 +111,6 @@ consvar_t cv_mousesensy2  = {"mousesensy2","10",CV_SAVE,mousesens_cons_t};
 
 consvar_t cv_usejoystick = {"use_joystick", "0", CV_SAVE | CV_CALL, NULL, I_InitJoystick};
 consvar_t cv_joystickfreelook = {"joystickfreelook" ,"0",CV_SAVE,CV_OnOff};
-
-#ifdef LJOYSTICK
- CV_PossibleValue_t joyport_cons_t[]={{1,"/dev/js0"},{2,"/dev/js1"},{3,"/dev/js2"},{4,"/dev/js3"},{0,NULL}};
- extern void I_JoyScale();
- consvar_t cv_joyport = {"joyport","/dev/js0", CV_SAVE, joyport_cons_t};
- consvar_t cv_joyscale = {"joyscale","0",CV_SAVE | CV_CALL,NULL,I_JoyScale};
-#endif
 
 
 //========================================================================
