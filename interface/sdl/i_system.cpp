@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/07/14 16:13:13  smite-meister
+// cleanup, commands
+//
 // Revision 1.9  2004/07/13 20:23:38  smite-meister
 // Mod system basics
 //
@@ -690,8 +693,11 @@ void I_SysInit()
       I_Quit();
     }
 
+  char title[30];
+  sprintf(title, "Doom Legacy %d.%d %s", VERSION/100, VERSION%100, VERSIONSTRING);
+
   // Window title
-  SDL_WM_SetCaption("Doom Legacy", "Doom Legacy");
+  SDL_WM_SetCaption(title, "Doom Legacy");
 
   I_StartupGraphics(); // we need a window for grabbing input!
 }

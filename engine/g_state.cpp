@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.34  2004/07/14 16:13:13  smite-meister
+// cleanup, commands
+//
 // Revision 1.33  2004/07/13 20:23:36  smite-meister
 // Mod system basics
 //
@@ -365,16 +368,8 @@ void GameInfo::Ticker()
 
 	      if (currentcluster->number != m->cluster)
 		{
-		  // cluster change, _everyone_ follows p! (even if they already have destinations set!)
-		  // TODO this is a bit convoluted, but should work.
-		  for (player_iter_t s = Players.begin(); s != Players.end(); s++)
-		    {
-		      PlayerInfo *r = (*s).second;
-		      r->requestmap = p->requestmap;
-		      r->entrypoint = p->entrypoint;
-		      r->Reset(true, true); // everything goes.
-		    }
-		  currentcluster->Finish();
+		  // cluster change!
+		  currentcluster->Finish(p->requestmap, p->entrypoint);
 		  currentcluster = FindCluster(m->cluster);
 
 		  //action = ga_intermission;

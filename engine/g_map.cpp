@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.38  2004/07/14 16:13:13  smite-meister
+// cleanup, commands
+//
 // Revision 1.37  2004/07/05 16:53:24  smite-meister
 // Netcode replaced
 //
@@ -603,7 +606,7 @@ void Map::SpawnMapThing(mapthing_t *mt)
     return;
 
   // don't spawn any monsters if -nomonsters
-  if (game.nomonsters && (t == MT_SKULL || (mobjinfo[t].flags & MF_COUNTKILL)))
+  if (cv_nomonsters.value && (t == MT_SKULL || (mobjinfo[t].flags & MF_COUNTKILL)))
     return;
 
   fixed_t nx, ny, nz;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2004/07/14 16:13:12  smite-meister
+// cleanup, commands
+//
 // Revision 1.14  2004/07/05 16:53:24  smite-meister
 // Netcode replaced
 //
@@ -60,12 +63,13 @@
 // Revision 1.1  2003/03/15 20:07:13  smite-meister
 // Initial Hexen compatibility!
 //
-//
-//
-// DESCRIPTION:
-//   Hexen Actor AI
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Hexen action functions
+
+#include "command.h"
+#include "cvars.h"
 
 #include "g_actor.h"
 #include "g_pawn.h"
@@ -371,11 +375,8 @@ void A_PotteryExplode(DActor *actor)
   S_StartSound(mo, SFX_POTTERY_EXPLODE);
   if(actor->args[0])
     { // Spawn an item
-      if(!game.nomonsters || !(mobjinfo[TranslateThingType[actor->args[0]]].flags & MF_COUNTKILL))
-	{ // Only spawn monsters if not -nomonsters
-	  actor->mp->SpawnDActor(actor->x, actor->y, actor->z,
-				 TranslateThingType[actor->args[0]]);
-	}
+      if (!(cv_nomonsters.value && mobjinfo[TranslateThingType[actor->args[0]]].flags & MF_COUNTKILL))
+	actor->mp->SpawnDActor(actor->x, actor->y, actor->z, TranslateThingType[actor->args[0]]);
     }
   actor->Remove();
 }
@@ -1348,12 +1349,8 @@ void A_SoAExplode(DActor *actor)
     }
   if(actor->args[0])
     { // Spawn an item
-      if(!game.nomonsters 
-	 || !(mobjinfo[TranslateThingType[actor->args[0]]].flags&MF_COUNTKILL))
-	{ // Only spawn monsters if not -nomonsters
-	  actor->mp->SpawnDActor(actor->x, actor->y, actor->z,
-		      TranslateThingType[actor->args[0]]);
-	}
+      if (!(cv_nomonsters.value && mobjinfo[TranslateThingType[actor->args[0]]].flags & MF_COUNTKILL))
+	actor->mp->SpawnDActor(actor->x, actor->y, actor->z, TranslateThingType[actor->args[0]]);
     }
   S_StartSound(mo, SFX_SUITOFARMOR_BREAK);
   actor->Remove();

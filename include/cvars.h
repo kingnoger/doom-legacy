@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2004/07/14 16:13:13  smite-meister
+// cleanup, commands
+//
 // Revision 1.2  2004/07/13 20:23:37  smite-meister
 // Mod system basics
 //
@@ -77,6 +80,7 @@ extern consvar_t cv_respawnmonsterstime;
 extern consvar_t cv_fragsweaponfalling;
 
 extern consvar_t cv_gravity;
+extern consvar_t cv_nomonsters;
 extern consvar_t cv_fastmonsters;
 extern consvar_t cv_solidcorpse;
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.30  2004/07/14 16:13:13  smite-meister
+// cleanup, commands
+//
 // Revision 1.29  2004/07/13 20:23:35  smite-meister
 // Mod system basics
 //
@@ -174,7 +177,7 @@ GameInfo::GameInfo()
 
   server = true;
   netgame = multiplayer = false;
-  modified = nomonsters = paused = inventory = false;
+  modified = paused = inventory = false;
   net = NULL;
 
   time = tic = 0;

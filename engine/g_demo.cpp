@@ -320,7 +320,7 @@ void GameInfo::BeginRecording()
   *demo_p++ = cv_deathmatch.value;     // just to be compatible with old demo (no more used)
   *demo_p++ = cv_respawnmonsters.value;// just to be compatible with old demo (no more used)
   *demo_p++ = cv_fastmonsters.value;   // just to be compatible with old demo (no more used)
-  *demo_p++ = nomonsters;
+  *demo_p++ = cv_nomonsters.value;
   *demo_p++ = consoleplayer->number;
   *demo_p++ = cv_timelimit.value;      // just to be compatible with old demo (no more used)
   *demo_p++ = multiplayer;             // 1.31

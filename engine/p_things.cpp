@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/07/14 16:13:13  smite-meister
+// cleanup, commands
+//
 // Revision 1.4  2004/04/25 16:26:50  smite-meister
 // Doxygen
 //
@@ -30,15 +33,13 @@
 // Revision 1.1  2003/05/05 00:24:49  smite-meister
 // Hexen linedef system. Pickups.
 //
-//
-//
-// DESCRIPTION:
-//   Mapthing-related event functions
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Mapthing-related event functions
 
-#include "g_game.h"
+#include "command.h"
+#include "cvars.h"
 #include "g_actor.h"
 #include "g_map.h"
 
@@ -211,8 +212,8 @@ bool Map::EV_ThingProjectile(byte *args, bool gravity)
   int searcher = -1;
   int tid = args[0];
   mobjtype_t moType = TranslateThingType[args[1]];
-  if (game.nomonsters && (mobjinfo[moType].flags & MF_COUNTKILL))   
-    return false; // Don't spawn monsters if -nomonsters
+  if (cv_nomonsters.value && (mobjinfo[moType].flags & MF_COUNTKILL))   
+    return false;
     
   angle_t angle = int(args[2] << 24);
   int fineAngle = angle >> ANGLETOFINESHIFT;
@@ -257,8 +258,8 @@ bool Map::EV_ThingSpawn(byte *args, bool fog)
   int searcher = -1;
   int tid = args[0];
   mobjtype_t moType = TranslateThingType[args[1]];
-  if (game.nomonsters && (mobjinfo[moType].flags & MF_COUNTKILL))
-    return false; // Don't spawn monsters if -nomonsters
+  if (cv_nomonsters.value && (mobjinfo[moType].flags & MF_COUNTKILL))
+    return false;
 
   angle_t angle = int(args[2] << 24);
   while ((mobj = FindFromTIDmap(tid, &searcher)) != NULL)

@@ -22,6 +22,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.15  2004/07/14 16:13:13  smite-meister
+// cleanup, commands
+//
 // Revision 1.14  2004/07/05 16:53:24  smite-meister
 // Netcode replaced
 //
@@ -134,7 +137,7 @@ MapInfo::MapInfo()
 // destructor
 MapInfo::~MapInfo()
 {
-  Close();
+  Close(-1);
 }
 
 
@@ -161,7 +164,7 @@ void MapInfo::Ticker(bool hub)
 	      if (hub)
 		HubSave();
 	      else
-		Close();
+		Close(-1);
 	    }
 	}
     }
@@ -217,22 +220,34 @@ bool MapInfo::Activate(PlayerInfo *p)
 
 
 // throws out all the players from the map
-int MapInfo::EvictPlayers(int next, int ep)
+int MapInfo::EvictPlayers(int next, int ep, bool force)
 {
   if (!me)
     return 0; // not active, no players
 
+  if (next < 0)
+    next = nextlevel;
+
   // kick out the players (order matters, as they are removed from the vector!)
   int n = me->players.size();
   for (int i = n-1; i >= 0; i--)
-    me->players[i]->ExitLevel(next, ep);
+    {
+      PlayerInfo *p = me->players[i];
+      if (force)
+	{
+	  p->requestmap = 0;
+	  p->Reset(true, true); // and everything goes.
+	}
+
+      p->ExitLevel(next, ep);
+    }
 
   return n;
 }
 
 
 // shuts the map down
-void MapInfo::Close()
+void MapInfo::Close(int next, int ep, bool force)
 {
   // delete the save file
   if (!savename.empty())
@@ -243,7 +258,7 @@ void MapInfo::Close()
 
   if (me)
     {
-      EvictPlayers(nextlevel, 0); // TODO where really? this concerns only specators...
+      EvictPlayers(next, ep, force);
       delete me; // and then the map goes
       me = NULL;
     }
@@ -257,7 +272,7 @@ bool MapInfo::HubSave()
   if (!me)
     return false;
 
-  EvictPlayers(nextlevel, 0);
+  EvictPlayers(-1);
   CONS_Printf("Making a hubsave...");
 
   char fname[50];
@@ -697,6 +712,7 @@ MapCluster *GameInfo::FindCluster(int c)
   return (*i).second;
 }
 
+
 MapInfo *GameInfo::FindMapInfo(int c)
 {
   mapinfo_iter_t i = mapinfo.find(c);
@@ -704,4 +720,20 @@ MapInfo *GameInfo::FindMapInfo(int c)
     return NULL;
 
   return (*i).second;
+}
+
+
+MapInfo *GameInfo::FindMapInfo(const char *name)
+{
+  char *tail;
+  int n = strtol(name, &tail, 0);
+
+  if (tail != name)
+    return FindMapInfo(n); // by number
+
+  for (mapinfo_iter_t i = mapinfo.begin(); i != mapinfo.end(); i++)
+    if ((*i).second->lumpname == name)
+      return (*i).second;
+
+  return NULL;
 }

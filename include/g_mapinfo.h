@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.6  2004/07/14 16:13:13  smite-meister
+// cleanup, commands
+//
 // Revision 1.5  2004/04/25 16:26:51  smite-meister
 // Doxygen
 //
@@ -175,8 +178,8 @@ public:
 
   void Ticker(bool hub);
   bool Activate(class PlayerInfo *p);
-  int  EvictPlayers(int n, int ep);
-  void Close();
+  int  EvictPlayers(int next, int ep = 0, bool force = false);
+  void Close(int next, int ep = 0, bool force = false);
   bool HubSave();
   bool HubLoad();
 

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2004/07/14 16:13:13  smite-meister
+// cleanup, commands
+//
 // Revision 1.12  2004/04/25 16:26:50  smite-meister
 // Doxygen
 //
@@ -100,8 +103,10 @@ public:
   MapCluster();
   MapCluster(int n);
 
+  /// ticks all the active MapInfo's in the cluster
   void Ticker();
-  void Finish(); ///< shuts the cluster down, kicks out all players
+  /// shuts the cluster down, kicks out all players
+  void Finish(int nextmap, int entrypoint = 0); 
 
   int Serialize(class LArchive &a);
   int Unserialize(LArchive &a);

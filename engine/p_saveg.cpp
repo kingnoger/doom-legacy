@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.29  2004/07/14 16:13:13  smite-meister
+// cleanup, commands
+//
 // Revision 1.28  2004/07/13 20:23:36  smite-meister
 // Mod system basics
 //
@@ -1870,7 +1873,7 @@ int GameInfo::Serialize(LArchive &a)
   a << int(skill);
 
   // flags
-  a << netgame << multiplayer << modified << nomonsters << paused << inventory;
+  a << netgame << multiplayer << modified << paused << inventory;
 
   a << maxteams;
   a << maxplayers;
@@ -1941,7 +1944,7 @@ int GameInfo::Unserialize(LArchive &a)
   a << int(skill);
 
   // flags
-  a << netgame << multiplayer << modified << nomonsters << paused << inventory;
+  a << netgame << multiplayer << modified << paused << inventory;
 
   a << maxteams;
   a << maxplayers;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2004/07/14 16:13:13  smite-meister
+// cleanup, commands
+//
 // Revision 1.11  2004/07/13 20:23:37  smite-meister
 // Mod system basics
 //
@@ -151,11 +154,10 @@ public:
   gamemode_t    mode;   ///< which game are we playing?
   skill_t       skill;  ///< skill level
 
-  bool server;      ///< are we running a game locally?
+  bool server;      ///< are we the game authority?
   bool netgame;     ///< only true in a netgame (nonlocal players possible)
   bool multiplayer; ///< only true if >1 players. netgame => multiplayer but not (multiplayer => netgame)
   bool modified;    ///< an external modification-dll is in use
-  bool nomonsters;  ///< checkparm of -nomonsters
   bool paused;      ///< is the game currently paused?
 
   bool inventory;   ///< PlayerPawns have an inventory
@@ -164,27 +166,27 @@ public:
   LNetInterface  *net; ///< our network interface (contains th enetstate)
 
   // Demo sequences
-  int pagetic; ///< how many tics left until demo is changed?
+  int pagetic;    ///< how many tics left until demo is changed?
 
-  unsigned time; ///< how long (in ms) has the game been running?
-  unsigned tic;  ///< how many times has the game been ticked?   
+  unsigned time;  ///< how long (in ms) has the game been running?
+  unsigned tic;   ///< how many times has the game been ticked?   
 
 public:
   int maxplayers; ///< max # of players allowed
   int maxteams;   ///< max # of teams
 
   typedef map<int, class PlayerInfo*>::iterator player_iter_t;
-  map<int, PlayerInfo*> Players; ///< mapping from player number to Playerinfo*
+  map<int, PlayerInfo*> Players;     ///< mapping from player number to PlayerInfo
 
-  vector<class TeamInfo*> teams;
+  vector<class TeamInfo*> teams;     ///< the teams in the game
 
   typedef map<int, class MapInfo*>::iterator mapinfo_iter_t;
-  map<int, MapInfo*> mapinfo;
+  map<int, MapInfo*> mapinfo;        ///< all the maps of the current game
 
   typedef map<int, class MapCluster*>::iterator cluster_iter_t;
-  map<int, MapCluster*> clustermap;
+  map<int, MapCluster*> clustermap;  ///< map clusters or hubs of the current game
 
-  MapCluster *currentcluster; ///< in which MapCluster are we in the game
+  MapCluster *currentcluster;  ///< currently active MapCluster
   MapCluster *nextcluster; // temp HACK
   MapInfo    *currentmap;     // this is used ONLY for time/scorelimit games
 
@@ -229,11 +231,12 @@ public:
   int  GetFrags(struct fragsort_t **fs, int type);
   bool CheckScoreLimit();
 
-  // in g_level.cpp
+  // in g_mapinfo.cpp
   int  Read_MAPINFO(int lump);
   void Clear_mapinfo_clusterdef();
-  MapCluster *FindCluster(int c);
-  MapInfo *FindMapInfo(int c);
+  MapCluster *FindCluster(int number);
+  MapInfo *FindMapInfo(int number);
+  MapInfo *FindMapInfo(const char *name);
 
   int Create_MAPINFO_game(int lump);
   int Create_classic_game(int episode);

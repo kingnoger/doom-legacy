@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2004/07/14 16:13:13  smite-meister
+// cleanup, commands
+//
 // Revision 1.4  2004/07/13 20:23:39  smite-meister
 // Mod system basics
 //
@@ -75,15 +78,34 @@ void Command_GameInfo_f()  // TODO
 }
 
 
-// prints info about consoleplayer's current map
-void Command_MapInfo_f() // TODO
+// prints info about a map
+void Command_MapInfo_f()
 {
-  if (!consoleplayer || !consoleplayer->mp)
-    return;
+  MapInfo *m;
+  if (COM_Argc() > 1)
+    {
+      m = game.FindMapInfo(strupr(COM_Argv(1)));
+      if (!m)
+	{
+	  CONS_Printf("No such map.\n");
+	  return;
+	}
+    }
+  else
+    {
+      if (!consoleplayer || !consoleplayer->mp)
+	return;
+      m = consoleplayer->mp->info;
+    }
 
-  Map *m = consoleplayer->mp;
-  CONS_Printf("%s\n", m->info->nicename.c_str());
-  CONS_Printf("%s\n", m->info->author.c_str());
+  CONS_Printf("Map %d: %s (%s)\n", m->mapnumber, m->nicename.c_str(), m->lumpname.c_str());
+  if (!m->version.empty())
+    CONS_Printf("Version: %s\n", m->version.c_str());
+  CONS_Printf("Par: %d s\n", m->partime);
+  if (!m->author.empty())
+    CONS_Printf("Author: %s\n", m->author.c_str());
+  if (!m->hint.empty())
+    CONS_Printf("%s\n", m->hint.c_str());
 }
 
 
@@ -470,54 +492,40 @@ void Command_Addfile_f() // TODO
 
 
 
-//  Warp to a new map.
-//  Called either from map <mapname> console command, or idclev cheat.
-void Command_Map_f() // TODO
+/// Warp to a new map.
+/// Called either from map <mapname> console command, or idclev cheat.
+void Command_Map_f()
 {
   if (COM_Argc() < 2 || COM_Argc() > 3)
     {
-      //CONS_Printf ("map <mapname[.wad]> [-skill <1..5>] [-monsters <0/1>] [-noresetplayers]: warp to map\n");
-      CONS_Printf("Usage: map <mapnumber> [<entrypoint>]: warp to map.\n");
+      CONS_Printf("Usage: map <number|name> [<entrypoint>]: warp players to a map.\n");
       return;
     }
 
   if (!game.server)
     {
-      CONS_Printf ("Only the server can change the map\n");
+      CONS_Printf("Only the server can change the map.\n");
       return;
     }
 
-  if (!consoleplayer)
-    return;
+  if (!game.currentcluster)
+    {
+      CONS_Printf("No game running.\n");
+      return;
+    }
 
-  // TODO what if we are given a mapname instead of a mapnum?
-  int mapnum = atoi(COM_Argv(1));
-  int ept = atoi(COM_Argv(2));
-  /*
-  CONS_Printf("Warping to map %d...\n", mapnum);
-  p->requestmap = mapnum;
-  p->entrypoint = ept;
-  p->ExitLevel(mapnum, ept);
+  MapInfo *m = game.FindMapInfo(COM_Argv(1));
+  if (!m)
+    {
+      CONS_Printf("No such map.\n");
+      return;
+    }
 
-  game.currentcluster->Finish(); // TODO now set new maps and entrypoints!
-  */
-  // spawn the server if needed
-  // reset players if there is a new one
+  int ep = atoi(COM_Argv(2));
+
+  CONS_Printf("Warping to %s (%s)...\n", m->nicename.c_str(), m->lumpname.c_str());
+  game.currentcluster->Finish(m->mapnumber, ep);
 }
-
-
-
-/*
-void Got_Mapcmd(char **cp,int playernum)
-{
-  CONS_Printf ("Warping to map...%s, %d, %d\n", mapname, resetplayer, game.nomonsters);
-
-  game.currentlevel->maplump = mapname;
-  // and reload the level
-  game.NewLevel(skill, game.currentlevel, resetplayer);
-}
-*/
-
 
 
 

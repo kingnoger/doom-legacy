@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2004/07/14 16:13:13  smite-meister
+// cleanup, commands
+//
 // Revision 1.5  2004/07/13 20:23:39  smite-meister
 // Mod system basics
 //
@@ -206,6 +209,7 @@ consvar_t cv_respawnmonsterstime = {"respawnmonsterstime","12",CV_NETVAR,CV_Unsi
 consvar_t cv_fragsweaponfalling  = {"fragsweaponfalling","0", CV_SAVE | CV_NETVAR, CV_OnOff};
 
 consvar_t cv_gravity = {"gravity","1", CV_NETVAR | CV_FLOAT | CV_ANNOUNCE};
+consvar_t cv_nomonsters = {"nomonsters","0", CV_NETVAR, CV_OnOff};
 consvar_t cv_fastmonsters = {"fastmonsters","0", CV_NETVAR | CV_CALL,CV_OnOff,FastMonster_OnChange};
 consvar_t cv_solidcorpse  = {"solidcorpse","0", CV_NETVAR | CV_SAVE,CV_OnOff};
 
@@ -658,6 +662,7 @@ void SV_Init()
   cv_fragsweaponfalling.Reg();
 
   cv_gravity.Reg();
+  cv_nomonsters.Reg();
   cv_fastmonsters.Reg();
   cv_solidcorpse.Reg();
 

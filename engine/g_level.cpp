@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.14  2004/07/14 16:13:13  smite-meister
+// cleanup, commands
+//
 // Revision 1.13  2004/03/28 15:16:12  smite-meister
 // Texture cache.
 //
@@ -108,12 +111,12 @@ void MapCluster::Ticker()
 
 
 // called before moving on to a new cluster
-void MapCluster::Finish()
+void MapCluster::Finish(int nextmap, int ep)
 {
   CONS_Printf("Cluster %d finished!\n", number);
   int n = maps.size();
   for (int i=0; i<n; i++)
-    maps[i]->Close();
+    maps[i]->Close(nextmap, ep, true);
 
   // Z_FreeTags(PU_LEVEL, PU_PURGELEVEL-1); // destroys pawns if they are not Detached
   // P_Initsecnode();  // re-initialize sector node list (the old nodes were just freed)

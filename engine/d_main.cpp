@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.29  2004/07/14 16:13:13  smite-meister
+// cleanup, commands
+//
 // Revision 1.28  2004/07/11 14:32:00  smite-meister
 // Consvars updated, bugfixes
 //
@@ -155,8 +158,9 @@
 
 #include "w_wad.h"
 #include "z_zone.h"
-//#include "d_main.h"
 
+
+#define _MAX_PATH   MAX_WADPATH
 
 
 void SV_Init();
@@ -343,12 +347,9 @@ static void D_AddFile(const char *file)
 }
 
 
-#ifdef __WIN32__
-# define F_OK    0  // F_OK: file exists, R_OK: read permission to file                    
-# define R_OK    4  //faB: win32 does not have R_OK in includes..
-#elif !defined( __OS2__)
-# define _MAX_PATH   MAX_WADPATH
-#endif
+
+
+
 
 
 // ==========================================================================
@@ -373,7 +374,7 @@ static gamemode_t D_GetDoomType(const char *wadname)
 
 
 // identifies the iwad used
-void D_IdentifyVersion()
+static void D_IdentifyVersion()
 {
   char  pathtemp[_MAX_PATH];
 
@@ -548,31 +549,29 @@ void D_Titlebar(char *title1, char *title2)
 //
 //  Center the title string, then add the date and time of compilation.
 //
-void D_MakeTitleString(char *s)
+static const char *D_MakeTitleString(const char *s)
 {
-  char  temp[82];
-  char *t;
-  char *u;
-  int   i;
+  static char banner[81];
+  memset(banner, ' ', sizeof(banner));
 
-  for(i=0,t=temp;i<82;i++)
-    *t++=' ';
+  int i;
 
-  for(t=temp+(80-strlen(s))/2,u=s;*u!='\0';)
-    *t++ = *u++;
+  for (i = (80 - strlen(s)) / 2; *s; )
+    banner[i++] = *s++;
 
-  u=__DATE__;
-  for(t=temp+1,i=11;i--;)
-    *t++=*u++;
-  u=__TIME__;
-  for(t=temp+71,i=8;i--;)
-    *t++=*u++;
+  char *u = __DATE__;
+  for (i = 0; i < 11; i++)
+    banner[i + 1] = u[i]; 
 
-  temp[80]='\0';
-  strcpy(s,temp);
+  u = __TIME__;
+  for (i = 0; i < 8; i++)
+    banner[i + 71] = u[i];
+
+  banner[80] = '\0';
+  return banner;
 }
 
-void D_CheckWadVersion()
+static void D_CheckWadVersion()
 {
   // check version of legacy.wad using version lump
   int wadversion = 0;
@@ -620,14 +619,8 @@ void D_DoomMain()
   // adds parameters found within file to myargc, myargv.
   M_FindResponseFile();
 
-  // title banner
-  char legacy[82];
-  // center the string, add compilation time and date.
-  sprintf(legacy, "Doom Legacy %d.%d %s", VERSION/100, VERSION%100, VERSIONSTRING);
-  D_MakeTitleString(legacy);
-
   // identify the main IWAD file to use (if any),
-  // set game.mode, game.mission, devparm accordingly
+  // set game.mode, game.mission accordingly
   D_IdentifyVersion();
 
   setbuf(stdout, NULL);      // non-buffered output
@@ -661,19 +654,12 @@ void D_DoomMain()
       title = "Doom Legacy Startup"; break;
     }
 
-#ifdef PC_DOS
-  D_Titlebar(legacy,title);
-#else
-  CONS_Printf ("%s\n%s\n\n", legacy, title);
-#endif
 
-#ifdef __OS2__
-  // FIXME do this in the OS2 interface, not here
-  // set PM window title
-  snprintf(pmData->title, sizeof( pmData->title), 
-	   "Doom LEGACY %d.%d %s: %s",
-	   VERSION/100, VERSION%100, VERSIONSTRING, title);
-#endif
+  char banner[81];
+  sprintf(banner, "Doom Legacy %d.%d %s", VERSION/100, VERSION%100, VERSIONSTRING);
+
+  // start console output by the banner line and game title
+  CONS_Printf("%s\n%s\n\n", D_MakeTitleString(banner), title);
 
   // "developement parameter"
   devparm = M_CheckParm("-devparm");
@@ -721,9 +707,8 @@ void D_DoomMain()
 	D_AddFile(M_GetNextParm());
     }
 
-  int p;
   // load dehacked files
-  p = M_CheckParm("-dehacked");
+  int p = M_CheckParm("-dehacked");
   if (!p)
     p = M_CheckParm("-deh");
   if (p != 0)
@@ -782,7 +767,7 @@ void D_DoomMain()
   if (!dedicated) 
     CL_Init();
 
-  // FIXME should all the consvars be registered by now?
+  // all consvars are now registered
   //------------------------------------- CONFIG.CFG
   // loads and executes config file
   M_FirstLoadConfig(); // WARNING : this does a "COM_BufExecute()"
@@ -817,7 +802,8 @@ void D_DoomMain()
   if (M_CheckParm("-fast"))
     COM_BufAddText("fastmonsters 1\n");
 
-  game.nomonsters = M_CheckParm("-nomonsters");
+  if (M_CheckParm("-nomonsters"))
+    cv_nomonsters.Set(1); 
 
   if (M_CheckParm("-timer"))
     {
