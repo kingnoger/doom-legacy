@@ -18,11 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.32  2004/08/29 20:48:47  smite-meister
-// bugfixes. wow.
-//
-// Revision 1.31  2004/08/19 19:42:40  smite-meister
-// bugfixes
+// Revision 1.33  2004/09/13 20:43:29  smite-meister
+// interface cleanup, sp map reset fixed
 //
 // Revision 1.30  2004/07/05 16:53:24  smite-meister
 // Netcode replaced
@@ -30,26 +27,11 @@
 // Revision 1.29  2004/04/25 16:26:48  smite-meister
 // Doxygen
 //
-// Revision 1.27  2004/01/05 11:48:08  smite-meister
-// 7 bugfixes
-//
-// Revision 1.26  2004/01/02 14:21:21  smite-meister
-// save bugfix
-//
 // Revision 1.25  2003/12/31 18:32:49  smite-meister
 // Last commit of the year? Sound works.
 //
-// Revision 1.24  2003/12/18 11:57:31  smite-meister
-// fixes / new bugs revealed
-//
-// Revision 1.23  2003/12/03 10:49:49  smite-meister
-// Save/load bugfix, text strings updated
-//
 // Revision 1.22  2003/11/27 11:28:25  smite-meister
 // Doom/Heretic startup bug fixed
-//
-// Revision 1.21  2003/11/23 00:41:54  smite-meister
-// bugfixes
 //
 // Revision 1.20  2003/11/12 11:07:16  smite-meister
 // Serialization done. Map progression.
@@ -57,20 +39,11 @@
 // Revision 1.19  2003/06/20 20:56:07  smite-meister
 // Presentation system tweaked
 //
-// Revision 1.18  2003/06/10 22:39:53  smite-meister
-// Bugfixes
-//
 // Revision 1.17  2003/06/01 18:56:29  smite-meister
 // zlib compression, partial polyobj fix
 //
-// Revision 1.16  2003/05/11 21:23:49  smite-meister
-// Hexen fixes
-//
 // Revision 1.15  2003/05/05 00:24:48  smite-meister
 // Hexen linedef system. Pickups.
-//
-// Revision 1.14  2003/04/26 12:01:12  smite-meister
-// Bugfixes. Hexen maps work again.
 //
 // Revision 1.13  2003/04/19 17:38:46  smite-meister
 // SNDSEQ support, tools, linedef system...
@@ -112,11 +85,10 @@
 // Revision 1.1.1.1  2002/11/16 14:18:05  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//   Actor class implementation.
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Actor class implementation.
 
 #include "g_actor.h"
 
@@ -153,9 +125,11 @@
 extern fixed_t FloatBobOffsets[64];
 
 
+//===========================================================
+//             Actor class implementation
+//===========================================================
 
 IMPLEMENT_CLASS(Actor, Thinker);
-IMPLEMENT_CLASS(DActor, Actor);
 
 Actor::~Actor()
 {
@@ -164,9 +138,7 @@ Actor::~Actor()
 }
 
 
-//----------------------------------------------
-// trick constructors
-
+// trick constructor
 Actor::Actor()
 {
   mp = NULL;
@@ -195,26 +167,8 @@ Actor::Actor()
   team = 0;
 }
 
-DActor::DActor()
-  : Actor()
-{
-  type = MT_NONE;
-  info = NULL;
-  state = NULL;
-  tics = movedir = movecount = threshold = 0;
-  lastlook = -1;
-  special1 = special2 = 0;
-}
 
-DActor::DActor(mobjtype_t t)
-  : Actor()
-{
-  type = t;
-}
-
-//----------------------------------------------
-//  Normal constructors
-
+//  Normal constructor
 Actor::Actor(fixed_t nx, fixed_t ny, fixed_t nz)
   : Thinker()
 {
@@ -244,41 +198,6 @@ Actor::Actor(fixed_t nx, fixed_t ny, fixed_t nz)
   reactiontime = 0;
   floorclip = 0;
   team = 0;
-}
-
-
-DActor::DActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
-  : Actor(nx, ny, nz)
-{
-  type = t;
-  info = &mobjinfo[t];
-
-  mass = info->mass;
-  radius = info->radius;
-  height = info->height;
-  health = info->spawnhealth;
-
-  flags  = info->flags;
-  flags2 = info->flags2;
-
-  if (game.skill != sk_nightmare)
-    reactiontime = info->reactiontime;
-
-  movedir = movecount = threshold = 0;
-  lastlook = -1;
-  special1 = special2 = 0;
-
-  // do not set the state with SetState,
-  // because action routines can not be called yet
-  state = &states[info->spawnstate];
-  tics = state->tics;
-
-  /*
-  if (t == MT_SHOTGUY)
-    pres = new modelpres_t("models/sarge/");
-  else
-  */
-    pres = new spritepres_t(sprnames[state->sprite], info, 0);
 }
 
 
@@ -324,14 +243,10 @@ void Actor::Detach()
 }
 
 
-
-//----------------------------------------------
-
+// Lazy delete: Memory freed only after pointers to this object
+// have been NULLed in Map::RunThinkers()
 void Actor::Remove()
 {
-  // Lazy deallocation: Memory freed only after pointers to this object
-  // have been NULLed in Map::RunThinkers()
-
   if (mp == NULL)
     {
       // should not happen
@@ -372,11 +287,7 @@ void Actor::Remove()
 
 
 
-//----------------------------------------
-// PlayerLandedOnThing, helper function
-//
 void P_NoiseAlert(Actor *target, Actor *emitter);
-
 static void PlayerLandedOnThing(PlayerPawn *p, Actor *onmobj)
 {
   p->player->deltaviewheight = p->pz >> 3;
@@ -392,105 +303,7 @@ static void PlayerLandedOnThing(PlayerPawn *p, Actor *onmobj)
 }
 
 
-void BlasterMissileThink();
 
-//---------------------------------
-// Doom mobj_t statechange etc.
-void DActor::Think()
-{
-  if (type == MT_BLASTERFX1)
-    {
-      BlasterMissileThink();
-      return;
-    }
-
-  if (type == MT_MWAND_MISSILE || type == MT_CFLAME_MISSILE)
-    {
-      XBlasterMissileThink();
-      return;
-    }
-
-  /*
-    - is it a ppawn
-    - checkwater
-    - if pxy or MF_SKULLFLY, xymovement
-    - floatbob
-    - z movement, 3 codes, MF_ONGROUND, MF2_PASSMOBJ, MF2_ONMOBJ
-    - state update
-    - nightmare respawn
-   */
-  int oldflags = flags;
-  int oldeflags = eflags;
-  
-  Actor::Think();
-
-  // must have hit something
-  if ((oldeflags & MFE_SKULLFLY) && !(eflags & MFE_SKULLFLY))
-    SetState(game.mode == gm_heretic ? info->seestate : info->spawnstate);
-  
-  // must have exploded
-  if ((oldflags & MF_MISSILE) && !(flags & MF_MISSILE))
-    ExplodeMissile();
-
-  // missiles hitting the floor
-  if ((flags & MF_MISSILE) && (eflags & MFE_JUSTHITFLOOR))
-    {
-      if (flags2 & MF2_FLOORBOUNCE)
-	{
-	  FloorBounceMissile();
-	}
-      else if (type == MT_MNTRFX2)
-	{ // Minotaur floor fire can go up steps
-	}
-      else if (!(flags & MF_NOCLIPLINE))
-	{
-	  ExplodeMissile();
-	}
-    }
-
-  // crashing to ground
-  if (info->crashstate && (flags & MF_CORPSE) && (eflags & MFE_JUSTHITFLOOR))
-    {
-      SetState(info->crashstate);
-      flags &= ~MF_CORPSE;
-    }
-
-  // cycle through states,
-  // calling action functions at transitions
-  if (tics != -1)
-    {
-      // you can cycle through multiple states in a tic
-      if (--tics == 0)
-	if (!SetState(state->nextstate))
-	  return; // freed itself
-    }
-  else
-    {
-      // check for nightmare respawn
-      if (!cv_respawnmonsters.value)
-	return;
-
-      if (!(flags & MF_COUNTKILL))
-	return;
-
-      movecount++;
-
-      if (movecount < cv_respawnmonsterstime.value*TICRATE)
-	return;
-
-      if (mp->maptic % (32*NEWTICRATERATIO))
-	return;
-
-      if (P_Random() > 4)
-	return;
-
-      NightmareRespawn();
-    }
-}
-
-//----------------------------------------------
-// was P_MobjThinker
-//
 void Actor::Think()
 {
   PlayerPawn *p = NULL;
@@ -539,13 +352,13 @@ void Actor::Think()
 	  if (!onmo)
 	    {
 	      ZMovement();
-	      flags2 &= ~MF2_ONMOBJ;
+	      eflags &= ~MFE_ONMOBJ;
 	    }
 	  else
 	    {
 	      if (p) // FIXME is this ok? For all Actors?
 		{
-		  if (pz < -8*FRACUNIT && !(flags2 & MF2_FLY))
+		  if (pz < -8*FRACUNIT && !(eflags & MFE_FLY))
 		    {
 		      PlayerLandedOnThing(p, onmo);
 		    }
@@ -556,7 +369,7 @@ void Actor::Think()
 		      p->player->deltaviewheight = 
 			(VIEWHEIGHT - p->player->viewheight)>>3;
 		      z = onmo->z+onmo->height;
-		      flags2 |= MF2_ONMOBJ;
+		      eflags |= MFE_ONMOBJ;
 		      pz = 0;
 		    }                               
 		  else
@@ -572,6 +385,7 @@ void Actor::Think()
 }
 
 
+
 // returns the value by which the x,y
 // movements are multiplied to add to player movement.
 float normal_friction = 0.90625f; // 0xE800
@@ -582,7 +396,7 @@ float Actor::GetMoveFactor()
   float mf  = 1.0f;
 
   // less control if not onground.
-  bool onground = (z <= floorz) || (flags2 & (MF2_ONMOBJ | MF2_FLY));
+  bool onground = (z <= floorz) || (eflags & (MFE_ONMOBJ | MFE_FLY));
 
   if (boomsupport && variable_friction && onground && !(flags & (MF_NOGRAVITY | MF_NOCLIPLINE)))
     {
@@ -643,8 +457,7 @@ float Actor::GetMoveFactor()
 
 
 
-//-----------------------------------------
-
+// handles horizontal movement
 void Actor::XYMovement()
 {
   extern line_t *ceilingline;
@@ -759,10 +572,8 @@ void Actor::XYMovement()
   XYFriction(oldx, oldy);
 }
 
-//----------------------------------------------------------------------------
-// was P_XYFriction
-//
-// adds friction on the xy plane
+
+// friction on the xy plane
 
 #define STOPSPEED            (0x1000/NEWTICRATERATIO)
 #define FRICTION_LOW          0xf900  // 0.973
@@ -782,7 +593,7 @@ void Actor::XYFriction(fixed_t oldx, fixed_t oldy)
     }
 
   // no friction when airborne
-  if (z > floorz && !(flags2 & MF2_FLY) && !(flags2 & MF2_ONMOBJ))
+  if (z > floorz && !(eflags & (MFE_FLY | MFE_ONMOBJ)))
     return;
 
   if (flags & MF_CORPSE)
@@ -809,7 +620,7 @@ void Actor::XYFriction(fixed_t oldx, fixed_t oldy)
     ;
   else if ((oldx == x) && (oldy == y)) // Did you go anywhere?
     ;
-  else if ((flags2 & MF2_FLY) && (z > floorz) && !(flags2 & MF2_ONMOBJ))
+  else if ((eflags & MFE_FLY) && (z > floorz) && !(eflags & MFE_ONMOBJ))
     fri = friction_fly;
   else
     {
@@ -835,9 +646,8 @@ void Actor::XYFriction(fixed_t oldx, fixed_t oldy)
 }
 
 
-//-----------------------------------------
-// was P_ZMovement
-//
+
+// vertical movement
 void Actor::ZMovement()
 {
   extern int skyflatnum;
@@ -865,7 +675,7 @@ void Actor::ZMovement()
     }
 
   // was only for PlayerPawns, but why?
-  if ((flags2 & MF2_FLY) && (z > floorz) && (mp->maptic & 2))
+  if ((eflags & MFE_FLY) && (z > floorz) && (mp->maptic & 2))
     {
       z += finesine[(FINEANGLES / 20 * mp->maptic >> 2) & FINEMASK];
     }
@@ -968,9 +778,7 @@ void Actor::ZMovement()
 
 
 
-//-------------------------------------------------
 // Gives the actor a velocity impulse along a given angle.
-
 void Actor::Thrust(angle_t angle, fixed_t move)
 {
   angle >>= ANGLETOFINESHIFT;
@@ -980,9 +788,7 @@ void Actor::Thrust(angle_t angle, fixed_t move)
 
 
 
-//-------------------------------------------------
 // check for water in the sector, set MFE_TOUCHWATER and MFE_UNDERWATER
-// called by Actor::Think()
 void Actor::CheckWater()
 {
   if (flags & MF_NOSPLASH)
@@ -1053,8 +859,7 @@ void Actor::CheckWater()
 }
 
 
-//---------------------------------------------------------------------------
-// was P_HitFloor
+
 // Creates a splash if needed and returns the floor type
 int Actor::HitFloor()
 {
@@ -1109,13 +914,170 @@ int Actor::HitFloor()
 }
 
 
+
+
 //==============================================================
-// DActor methods
+//              DActor class implementation
+//==============================================================
+
+IMPLEMENT_CLASS(DActor, Actor);
 
 
-//---------------------------------------
+// trick constructor
+DActor::DActor()
+  : Actor()
+{
+  type = MT_NONE;
+  info = NULL;
+  state = NULL;
+  tics = movedir = movecount = threshold = 0;
+  lastlook = -1;
+  special1 = special2 = 0;
+}
+
+
+// trick constructor
+DActor::DActor(mobjtype_t t)
+  : Actor()
+{
+  type = t;
+}
+
+
+// normal constructor
+DActor::DActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
+  : Actor(nx, ny, nz)
+{
+  type = t;
+  info = &mobjinfo[t];
+
+  mass = info->mass;
+  radius = info->radius;
+  height = info->height;
+  health = info->spawnhealth;
+
+  flags  = info->flags;
+  flags2 = info->flags2;
+
+  if (game.skill != sk_nightmare)
+    reactiontime = info->reactiontime;
+
+  movedir = movecount = threshold = 0;
+  lastlook = -1;
+  special1 = special2 = 0;
+
+  // do not set the state with SetState,
+  // because action routines can not be called yet
+  state = &states[info->spawnstate];
+  tics = state->tics;
+
+  /*
+  if (t == MT_SHOTGUY)
+    pres = new modelpres_t("models/sarge/");
+  else
+  */
+    pres = new spritepres_t(sprnames[state->sprite], info, 0);
+}
+
+
+
+void BlasterMissileThink();
+
+void DActor::Think()
+{
+  if (type == MT_BLASTERFX1)
+    {
+      BlasterMissileThink();
+      return;
+    }
+
+  if (type == MT_MWAND_MISSILE || type == MT_CFLAME_MISSILE)
+    {
+      XBlasterMissileThink();
+      return;
+    }
+
+  /*
+    - is it a ppawn
+    - checkwater
+    - if pxy or MF_SKULLFLY, xymovement
+    - floatbob
+    - z movement, 3 codes, MF_ONGROUND, MF2_PASSMOBJ, MF2_ONMOBJ
+    - state update
+    - nightmare respawn
+   */
+  int oldflags = flags;
+  int oldeflags = eflags;
+  
+  Actor::Think();
+
+  // must have hit something
+  if ((oldeflags & MFE_SKULLFLY) && !(eflags & MFE_SKULLFLY))
+    SetState(game.mode == gm_heretic ? info->seestate : info->spawnstate);
+  
+  // must have exploded
+  if ((oldflags & MF_MISSILE) && !(flags & MF_MISSILE))
+    ExplodeMissile();
+
+  // missiles hitting the floor
+  if ((flags & MF_MISSILE) && (eflags & MFE_JUSTHITFLOOR))
+    {
+      if (flags2 & MF2_FLOORBOUNCE)
+	{
+	  FloorBounceMissile();
+	}
+      else if (type == MT_MNTRFX2)
+	{ // Minotaur floor fire can go up steps
+	}
+      else if (!(flags & MF_NOCLIPLINE))
+	{
+	  ExplodeMissile();
+	}
+    }
+
+  // crashing to ground
+  if (info->crashstate && (flags & MF_CORPSE) && (eflags & MFE_JUSTHITFLOOR))
+    {
+      SetState(info->crashstate);
+      flags &= ~MF_CORPSE;
+    }
+
+  // cycle through states,
+  // calling action functions at transitions
+  if (tics != -1)
+    {
+      // you can cycle through multiple states in a tic
+      if (--tics == 0)
+	if (!SetState(state->nextstate))
+	  return; // freed itself
+    }
+  else
+    {
+      // check for nightmare respawn
+      if (!cv_respawnmonsters.value)
+	return;
+
+      if (!(flags & MF_COUNTKILL))
+	return;
+
+      movecount++;
+
+      if (movecount < cv_respawnmonsterstime.value*TICRATE)
+	return;
+
+      if (mp->maptic % (32*NEWTICRATERATIO))
+	return;
+
+      if (P_Random() > 4)
+	return;
+
+      NightmareRespawn();
+    }
+}
+
+
+/*
 // Returns true if the mobj is still present.
-
 bool DActor::SetState(statenum_t ns, bool call)
 {
   //remember states seen, to detect cycles:    
@@ -1153,7 +1115,7 @@ bool DActor::SetState(statenum_t ns, bool call)
     ns = state->nextstate;
   } while (!tics && !seenstate[ns]);   // killough 4/9/98
 
-  if (ret)
+  if (state != &states[S_NULL])
     pres->SetFrame(state); // set the sprite frame (if pres is not a sprite, do nothing)
 
   if (ret && !tics)  // killough 4/9/98: detect state cycles
@@ -1165,30 +1127,41 @@ bool DActor::SetState(statenum_t ns, bool call)
         
   return ret;
 }
-
-
-/*
-bool P_SetMobjStateNF(Actor *mobj, statenum_t state)
-{
-  state_t *st;
-    
-  if (state == S_NULL)
-    { // Remove mobj
-      P_RemoveMobj(mobj);
-      return(false);
-    }
-  st = &states[state];
-  mobj->state = st;
-  mobj->tics = st->tics;
-  mobj->sprite = st->sprite;
-  mobj->frame = st->frame;
-  return(true);
-}
 */
 
 
-//-------------------------------------------------
+// DActors are basically finite state machines. This changes the state.
+// Returns true if the mobj is still present.
+bool DActor::SetState(statenum_t ns, bool call)
+{
+  do {
+    if (ns == S_NULL)
+      {
+	state = &states[S_NULL]; // was state = NULL;
+	Remove(); // does not Think after this
+	return false;
+      }
+        
+    state = &states[ns];
+    tics = state->tics;
 
+    // Call action functions when the state is set
+    if (call && state->action)
+      state->action(this); // NOTE that the action function can in turn call SetState...
+        
+    ns = state->nextstate;
+  } while (!tics);
+
+  if (state == &states[S_NULL])
+    return false;
+
+  pres->SetFrame(state); // set the sprite frame (if pres is not a sprite, do nothing)
+  return true;
+}
+
+
+
+// The old corpse is removed, a new monster appears at the old one's spawnpoint
 void DActor::NightmareRespawn()
 {
   fixed_t  nx, ny, nz;
@@ -1238,8 +1211,8 @@ void DActor::NightmareRespawn()
 }
 
 
-//---------------------------------------------
 
+// send a missile towards another Actor
 DActor *DActor::SpawnMissile(Actor *dest, mobjtype_t type)
 {
   fixed_t  mz;
@@ -1305,10 +1278,8 @@ DActor *DActor::SpawnMissile(Actor *dest, mobjtype_t type)
 }
 
 
-//---------------------------------------------
-// Moves the missile forward a bit
-//  and possibly explodes it right there.
 
+// Moves the missile forward a bit and possibly explodes it right there.
 bool DActor::CheckMissileSpawn()
 {
   if (game.mode != gm_heretic && game.mode != gm_hexen)
@@ -1334,8 +1305,7 @@ bool DActor::CheckMissileSpawn()
 
 
 
-//---------------------------------------------
-
+// kaboom.
 void DActor::ExplodeMissile()
 {
   if (type == MT_WHIRLWIND)
@@ -1362,8 +1332,7 @@ void DActor::ExplodeMissile()
 
 
 
-//----------------------------------------------
-
+// some (player) missiles are bouncy
 void DActor::FloorBounceMissile()
 {
   pz = -pz;

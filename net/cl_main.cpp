@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/09/13 20:43:31  smite-meister
+// interface cleanup, sp map reset fixed
+//
 // Revision 1.7  2004/08/18 14:35:22  smite-meister
 // PNG support!
 //
@@ -233,13 +236,8 @@ void CL_Init()
   cv_mouse2opt.Reg();
 #endif
 
-  cv_usejoystick.Reg();
-  cv_joystickfreelook.Reg();
-#ifdef LJOYSTICK
-  cv_joyport.Reg();
-  cv_joyscale.Reg();
-#endif
-
+  //cv_usejoystick.Reg();
+  //cv_joystickfreelook.Reg();
 
   // client renderer
   cv_viewheight.Reg();

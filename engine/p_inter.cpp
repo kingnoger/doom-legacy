@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.35  2004/09/13 20:43:30  smite-meister
+// interface cleanup, sp map reset fixed
+//
 // Revision 1.34  2004/09/06 19:58:03  smite-meister
 // Doom linedefs done!
 //
@@ -941,7 +944,7 @@ void PlayerPawn::Die(Actor *inflictor, Actor *source)
     source->Killed(this, inflictor); // you can kill 'em only once!
 
   // dead guy attributes
-  flags2 &= ~MF2_FLY;
+  eflags &= ~MFE_FLY;
   powers[pw_flight] = 0;
   powers[pw_weaponlevel2] = 0;
   DropWeapon();  // put weapon away

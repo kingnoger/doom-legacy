@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2004/09/13 20:43:30  smite-meister
+// interface cleanup, sp map reset fixed
+//
 // Revision 1.22  2004/07/05 16:53:26  smite-meister
 // Netcode replaced
 //
@@ -191,12 +194,12 @@ void PlayerPawn::Move()
 	}
     }
 
-  bool onground = (z <= floorz) || (flags2 & (MF2_ONMOBJ | MF2_FLY)) || (cheats & CF_FLYAROUND);
+  bool onground = (z <= floorz) || (eflags & (MFE_ONMOBJ | MFE_FLY)) || (cheats & CF_FLYAROUND);
 
   // jumping
   if (cmd->buttons & ticcmd_t::BT_JUMP)
     {
-      if (flags2 & MF2_FLY)
+      if (eflags & MFE_FLY)
 	fly_zspeed = 10;
       else if (eflags & MFE_UNDERWATER)
 	//TODO: goub gloub when push up in water
@@ -223,7 +226,7 @@ void PlayerPawn::Move()
 	pres->SetAnim(presentation_t::Run);
     }
 
-  if (flags2 & MF2_FLY)
+  if (eflags & MFE_FLY)
     {
       if (cmd->buttons & ticcmd_t::BT_FLYDOWN)
 	fly_zspeed = -10;

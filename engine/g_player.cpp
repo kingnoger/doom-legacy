@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.26  2004/09/13 20:43:29  smite-meister
+// interface cleanup, sp map reset fixed
+//
 // Revision 1.25  2004/08/12 18:30:23  smite-meister
 // cleaned startup
 //
@@ -315,7 +318,7 @@ void PlayerInfo::CalcViewHeight(bool onground)
   // OPTIMIZE: tablify angle
   // Note: a LUT allows for effects like a ramp with low health.
 
-  if ((pawn->flags2 & MF2_FLY) && !onground)
+  if ((pawn->eflags & MFE_FLY) && !onground)
     bob_amplitude = FRACUNIT/2;
   else
     {

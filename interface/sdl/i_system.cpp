@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2004/09/13 20:43:31  smite-meister
+// interface cleanup, sp map reset fixed
+//
 // Revision 1.17  2004/09/10 19:59:15  jussip
 // Joystick code almost ready for use.
 //
@@ -104,13 +107,13 @@
 #include "cvars.h"
 
 #include "d_event.h"
+#include "d_ticcmd.h"
 #include "d_main.h"
 #include "m_misc.h"
 
 #include "i_video.h"
 #include "i_sound.h"
 #include "i_system.h"
-#include "i_joy.h"
 
 #include "screen.h"
 #include "g_game.h"
@@ -118,10 +121,10 @@
 
 #include "sdl/endtxt.h"
 
+
+
 vector<SDL_Joystick*> joysticks;
 
-// FIXME is this necessary?
-JoyType_t Joystick;
 
 #ifdef LMOUSE2
 static int fdmouse2 = -1;
@@ -131,9 +134,6 @@ static bool mouse2_started = false;
 static int lastmousex = 0;
 static int lastmousey = 0;
 
-
-void I_StartupKeyboard () {}
-void I_StartupTimer    () {}
 
 
 //
@@ -227,7 +227,8 @@ static int xlatekey(SDLKey sym)
 
 //! Translates a SDL joystick button to a doom key_input_e number.
 
-static int TranslateJoybutton(Uint8 which, Uint8 button) {
+static int TranslateJoybutton(Uint8 which, Uint8 button)
+{
   int base;
 
   if(which >= MAXJOYSTICKS) 
@@ -384,9 +385,8 @@ void I_StartupMouse()
   return;
 }
 
-//
-//I_OutputMsg
-//
+
+
 void I_OutputMsg(char *fmt, ...) 
 {
   va_list     argptr;
@@ -417,20 +417,6 @@ int I_GetKey()
   return rc;
 }
 
-
-//
-// I_Tactile
-//
-void I_Tactile(int on, int off, int total)
-{
-  // UNUSED.
-  on = off = total = 0;
-}
-
-// FIXME remove, obsoleted.
-void I_InitJoystick()
-{
-}
 
 
 #ifdef LMOUSE2
@@ -581,7 +567,8 @@ unsigned int I_GetTime()
   return SDL_GetTicks();
 }
 
-///
+
+/// sleeps for a while, giving CPU time to other processes
 void I_Sleep(unsigned int ms)
 {
   SDL_Delay(ms);
@@ -607,8 +594,10 @@ void I_SysInit()
   I_StartupGraphics(); // we need a window for grabbing input!
 }
 
+
 /// Initialize joysticks and print information.
-void I_JoystickInit() {
+void I_JoystickInit()
+{
   int numjoysticks, i;
   SDL_Joystick *joy;
 
@@ -633,9 +622,10 @@ void I_JoystickInit() {
   }
 }
 
-// Close all joysticks.
 
-void I_ShutdownJoystick() {
+/// Close all joysticks.
+void I_ShutdownJoystick()
+{
   int i;
 
   CONS_Printf("Shutting down joysticks.\n");
@@ -647,9 +637,67 @@ void I_ShutdownJoystick() {
   CONS_Printf("Joystick subsystem closed cleanly.\n");
 }
 
+
+
+#define MAX_QUIT_FUNCS     16
+typedef void (*quitfuncptr)();
+static quitfuncptr quit_funcs[MAX_QUIT_FUNCS] =
+{
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+};
+
+
+//  Adds a function to the list that need to be called by I_SystemShutdown().
+void I_AddExitFunc(void (*func)())
+{
+  for (int c = 0; c<MAX_QUIT_FUNCS; c++)
+    {
+      if (!quit_funcs[c])
+	{
+	  quit_funcs[c] = func;
+	  break;
+	}
+    }
+}
+
+
+//  Removes a function from the list that need to be called by
+//   I_SystemShutdown().
+void I_RemoveExitFunc(void (*func)())
+{
+  for (int c=0; c<MAX_QUIT_FUNCS; c++)
+    {
+      if (quit_funcs[c] == func)
+	{
+	  while (c<MAX_QUIT_FUNCS-1)
+	    {
+	      quit_funcs[c] = quit_funcs[c+1];
+	      c++;
+	    }
+	  quit_funcs[MAX_QUIT_FUNCS-1] = NULL;
+	  break;
+	}
+    }
+}
+
+
+//  Closes down everything. This includes restoring the initial
+//  palette and video mode, and removing whatever mouse, keyboard, and
+//  timer routines have been installed.
 //
-// I_Quit
-//
+//  NOTE : Shutdown user funcs. are effectively called in reverse order.
+void I_ShutdownSystem()
+{
+  for (int c = MAX_QUIT_FUNCS-1; c>=0; c--)
+    if (quit_funcs[c])
+      (*quit_funcs[c])();
+
+}
+
+
+
+/// quits the game.
 void I_Quit()
 {
   static bool quitting = false; // prevent recursive I_Quit()
@@ -674,32 +722,7 @@ void I_Quit()
   exit(0);
 }
 
-void I_WaitVBL(int count)
-{
-  SDL_Delay(1);
-}
 
-void I_BeginRead()
-{
-}
-
-void I_EndRead()
-{
-}
-
-byte* I_AllocLow(int length)
-{
-  byte*       mem;
-
-  mem = (byte *)malloc (length);
-  memset (mem,0,length);
-  return mem;
-}
-
-
-//
-// I_Error
-//
 extern bool demorecording;
 
 void I_Error(char *error, ...)
@@ -739,64 +762,128 @@ void I_Error(char *error, ...)
   exit(-1);
 }
 
-#define MAX_QUIT_FUNCS     16
-typedef void (*quitfuncptr)();
-static quitfuncptr quit_funcs[MAX_QUIT_FUNCS] =
+
+
+char *I_GetUserName()
 {
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
-};
-//
-//  Adds a function to the list that need to be called by I_SystemShutdown().
-//
-void I_AddExitFunc(void (*func)())
-{
-  for (int c = 0; c<MAX_QUIT_FUNCS; c++)
+  static char username[MAXPLAYERNAME];
+  char  *p;
+
+#ifdef __WIN32__
+  Uint32 i = MAXPLAYERNAME;
+
+  int ret = GetUserName(username, &i);
+  if (!ret)
     {
-      if (!quit_funcs[c])
-	{
-	  quit_funcs[c] = func;
-	  break;
-	}
+#endif
+  if (!(p = getenv("USER")))
+    if (!(p = getenv("user")))
+      if (!(p = getenv("USERNAME")))
+	if (!(p = getenv("username")))
+	  return NULL;
+  strncpy(username, p, MAXPLAYERNAME);
+#ifdef __WIN32__
     }
+#endif
+
+  if (strcmp(username, "") == 0)
+    return NULL;
+  return username;
 }
 
 
-//
-//  Removes a function from the list that need to be called by
-//   I_SystemShutdown().
-//
-void I_RemoveExitFunc(void (*func)())
+
+int I_mkdir(const char *dirname, int unixright)
 {
-  for (int c=0; c<MAX_QUIT_FUNCS; c++)
+#ifdef __WIN32__
+  return mkdir(dirname);
+#else
+  return mkdir(dirname, unixright);
+#endif
+}
+
+
+/// returns the path to the default wadfile location (usually the current working directory)
+char *I_GetWadPath()
+{
+  static char temp[256];
+
+  // get the current directory (possible problem on NT with "." as current dir)
+  if (getcwd(temp, 255))
     {
-      if (quit_funcs[c] == func)
-	{
-	  while (c<MAX_QUIT_FUNCS-1)
-	    {
-	      quit_funcs[c] = quit_funcs[c+1];
-	      c++;
-	    }
-	  quit_funcs[MAX_QUIT_FUNCS-1] = NULL;
-	  break;
-	}
+#ifdef __MACOS__
+      // cwd is always "/" when app is dbl-clicked
+      if (!strcmp(temp, "/"))
+	return I_GetWadDir();
+#endif
+
+      return temp;
     }
+  else
+    return ".";
 }
 
-//
-//  Closes down everything. This includes restoring the initial
-//  palette and video mode, and removing whatever mouse, keyboard, and
-//  timer routines have been installed.
-//
-//  NOTE : Shutdown user funcs. are effectively called in reverse order.
-//
-void I_ShutdownSystem()
+
+
+#ifdef LINUX
+# define MEMINFO_FILE "/proc/meminfo"
+# define MEMTOTAL "MemTotal:"
+# define MEMFREE "MemFree:"
+#endif
+
+
+Uint32 I_GetFreeMem(Uint32 *total)
 {
-  for (int c = MAX_QUIT_FUNCS-1; c>=0; c--)
-    if (quit_funcs[c])
-      (*quit_funcs[c])();
+#ifdef LINUX
+  char buf[1024];    
+  char *memTag;
+  Uint32 freeKBytes;
+  Uint32 totalKBytes;
+  int n;
+  int meminfo_fd = -1;
 
+  meminfo_fd = open(MEMINFO_FILE, O_RDONLY);
+  n = read(meminfo_fd, buf, 1023);
+  close(meminfo_fd);
+    
+  if(n<0)
+    {
+      // Error
+      *total = 0L;
+      return 0;
+    }
+    
+  buf[n] = '\0';
+  if(NULL == (memTag = strstr(buf, MEMTOTAL)))
+    {
+      // Error
+      *total = 0L;
+      return 0;
+    }
+        
+  memTag += sizeof(MEMTOTAL);
+  totalKBytes = atoi(memTag);
+    
+  if(NULL == (memTag = strstr(buf, MEMFREE)))
+    {
+      // Error
+      *total = 0L;
+      return 0;
+    }
+        
+  memTag += sizeof(MEMFREE);
+  freeKBytes = atoi(memTag);
+    
+  *total = totalKBytes << 10;
+  return freeKBytes << 10;
+    
+#else
+  *total = 16<<20;
+  return 16<<20;
+#endif
 }
+
+
 
 void I_GetDiskFreeSpace(long long *freespace)
 {
@@ -846,140 +933,5 @@ void I_GetDiskFreeSpace(long long *freespace)
 #if !defined (LINUX) && !defined (__WIN32__)
   // Dummy for platform independent; 1GB should be enough
   *freespace = 1024*1024*1024;
-#endif
-}
-
-char *I_GetUserName()
-{
-#ifdef LINUX
-
-  static char username[MAXPLAYERNAME];
-  char  *p;
-  if((p=getenv("USER"))==NULL)
-    if((p=getenv("user"))==NULL)
-      if((p=getenv("USERNAME"))==NULL)
-	if((p=getenv("username"))==NULL)
-	  return NULL;
-  strncpy(username,p,MAXPLAYERNAME);
-  if( strcmp(username,"")==0 )
-    return NULL;
-  return username;
-
-#endif
-
-#ifdef __WIN32__
-
-  static char username[MAXPLAYERNAME];
-  char  *p;
-  int   ret;
-  Uint32 i=MAXPLAYERNAME;
-
-  ret = GetUserName(username,&i);
-  if(!ret)
-    {
-      if((p=getenv("USER"))==NULL)
-	if((p=getenv("user"))==NULL)
-	  if((p=getenv("USERNAME"))==NULL)
-	    if((p=getenv("username"))==NULL)
-	      return NULL;
-      strncpy(username,p,MAXPLAYERNAME);
-    }
-  if( strcmp(username,"")==0 )
-    return NULL;
-  return username;
-
-#endif
-
-#if !defined (LINUX) && !defined (__WIN32__)
-
-  // dummy for platform independent version
-  return NULL;
-#endif
-}
-
-int I_mkdir(const char *dirname, int unixright)
-{
-#ifdef __WIN32__
-  return mkdir(dirname);
-#else
-  return mkdir(dirname, unixright);
-#endif
-}
-
-/// returns the path to the default wadfile location (usually the current working directory)
-char *I_GetWadPath()
-{
-  static char temp[256];
-
-  // get the current directory (possible problem on NT with "." as current dir)
-  if (getcwd(temp, 255))
-    {
-#ifdef __MACOS__
-      // cwd is always "/" when app is dbl-clicked
-      if (!strcmp(temp, "/"))
-	return I_GetWadDir();
-#endif
-
-      return temp;
-    }
-  else
-    return ".";
-}
-
-#ifdef LINUX
-# define MEMINFO_FILE "/proc/meminfo"
-# define MEMTOTAL "MemTotal:"
-# define MEMFREE "MemFree:"
-#endif
-
-// quick fix for compil
-Uint32 I_GetFreeMem(Uint32 *total)
-{
-#ifdef LINUX
-  char buf[1024];    
-  char *memTag;
-  Uint32 freeKBytes;
-  Uint32 totalKBytes;
-  int n;
-  int meminfo_fd = -1;
-
-  meminfo_fd = open(MEMINFO_FILE, O_RDONLY);
-  n = read(meminfo_fd, buf, 1023);
-  close(meminfo_fd);
-    
-  if(n<0)
-    {
-      // Error
-      *total = 0L;
-      return 0;
-    }
-    
-  buf[n] = '\0';
-  if(NULL == (memTag = strstr(buf, MEMTOTAL)))
-    {
-      // Error
-      *total = 0L;
-      return 0;
-    }
-        
-  memTag += sizeof(MEMTOTAL);
-  totalKBytes = atoi(memTag);
-    
-  if(NULL == (memTag = strstr(buf, MEMFREE)))
-    {
-      // Error
-      *total = 0L;
-      return 0;
-    }
-        
-  memTag += sizeof(MEMFREE);
-  freeKBytes = atoi(memTag);
-    
-  *total = totalKBytes << 10;
-  return freeKBytes << 10;
-    
-#else
-  *total = 16<<20;
-  return 16<<20;
 #endif
 }

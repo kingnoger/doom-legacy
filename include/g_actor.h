@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2004/09/13 20:43:31  smite-meister
+// interface cleanup, sp map reset fixed
+//
 // Revision 1.20  2004/04/25 16:26:50  smite-meister
 // Doxygen
 //
@@ -173,89 +176,96 @@ enum mobjflag_t
   MF_SHOOTABLE        = 0x0008, ///< Can be hit
   MF_NOCLIPLINE       = 0x0010, ///< Does not clip against lines (walls)
   MF_NOCLIPTHING      = 0x0020, ///< Not blocked by other Actors. (chasecam, for example)
-  // game mechanics
   MF_NOGRAVITY        = 0x0040, ///< Does not feel gravity
-  MF_FLOAT            = 0x0080, ///< Active floater, can move freely in air (cacodemons etc.)
-  MF_NOTRIGGER        = 0x0100, ///< Can not trigger linedefs (mainly missiles, chasecam)
-  MF_DROPOFF          = 0x0200, ///< This allows jumps from high places.
-  // appearance
-  MF_SHADOW           = 0x0400, ///< Partial invisibility (spectre). Makes targeting harder.
-  MF_ALTSHADOW        = 0x0800, ///< Alternate fuzziness
-  MF_NOBLOOD          = 0x1000, ///< Don't bleed when shot (use puff) (furniture)
+  // game mechanics
+  MF_NOTRIGGER        = 0x0080, ///< Can not trigger linedefs (mainly missiles, chasecam)
+  MF_NOTMONSTER       = 0x0100, ///< *Not affected by ML_BLOCKMONSTERS lines (PlayerPawns etc.)
+  MF_PICKUP           = 0x0200, ///< Can/will pick up items. (players)
+  MF_FLOAT            = 0x0400, ///< Active floater, can move freely in air (cacodemons etc.)
+  MF_DROPOFF          = 0x0800, ///< Can jump/drop from high places
+  MF_AMBUSH           = 0x1000, ///< *Not to be activated by sound, deaf monster.
   MF_NOSPLASH         = 0x2000, ///< Does not cause a splash when hitting water
+  // appearance
+  MF_SHADOW           = 0x4000, ///< Partial invisibility (spectre). Makes targeting harder.
+  MF_ALTSHADOW        = 0x8000, ///< Alternate fuzziness
+  MF_NOBLOOD         = 0x10000, ///< Does not bleed when shot (furniture)
   // spawning
-  MF_SPAWNCEILING     = 0x4000, ///< Spawned hanging from the ceiling
-  MF_NOTDMATCH        = 0x8000, ///< Not spawned in DM (keycards etc.)
-  MF_COUNTKILL    = 0x00010000, ///< On kill, count this enemy object towards intermission kill total. Happy gathering.
-  MF_COUNTITEM    = 0x00020000, ///< On picking up, count this item object towards intermission item total.
-  MF_NORESPAWN    = 0x00040000, ///< Will not respawn after being picked up. Pretty similar to MF_DROPPED?
+  MF_SPAWNCEILING = 0x00020000, ///< Spawned hanging from the ceiling
+  MF_SPAWNFLOAT   = 0x00040000, ///< Spawned at random height
+  MF_NOTDMATCH    = 0x00080000, ///< Not spawned in DM (keycards etc.)
+  MF_NORESPAWN    = 0x00100000, ///< Will not respawn after being picked up. Pretty similar to MF_DROPPED?
   // classification
-  MF_MISSILE      = 0x00080000, ///< Player missiles as well as fireballs. Don't hit same species, explode on block.
-  MF_PICKUP       = 0x00100000, ///< Can/will pick up items. (players)
-  MF_SPECIAL      = 0x00200000, ///< Call TouchSpecialThing when touched
-  MF_NOTMONSTER   = 0x00400000, ///< *Not affected by ML_BLOCKMONSTERS lines (PlayerPawns etc.)
-  // misc (usually set just once)
-  MF_CORPSE       = 0x00800000, ///< *Acts like a corpse, falls down stairs etc.
+  MF_COUNTKILL    = 0x00200000, ///< On kill, count this enemy object towards intermission kill total. Happy gathering.
+  MF_COUNTITEM    = 0x00400000, ///< On picking up, count this item object towards intermission item total.
+  MF_SPECIAL      = 0x00800000, ///< Call TouchSpecialThing when touched. Mostly items you can pick up.
   MF_DROPPED      = 0x01000000, ///< *Dropped by a monster
-  MF_AMBUSH       = 0x02000000, ///< *Not to be activated by sound, deaf monster.
+  MF_MISSILE      = 0x02000000, ///< Player missiles as well as fireballs. Don't hit same species, explode on block.
+  MF_CORPSE       = 0x04000000, ///< *Acts like a corpse, falls down stairs etc.
+  // 5 bits free
 };
+
 
 /// More semi-permanent flags. Mostly came with Heretic.
 enum mobjflag2_t
 {
-  MF2_LOGRAV         =     0x00000001,    ///< alternate gravity setting
-  MF2_WINDTHRUST     =     0x00000002,    ///< gets pushed around by the wind specials
-  MF2_FLOORBOUNCE    =     0x00000004,    ///< bounces off the floor
-  MF2_THRUGHOST      =     0x00000008,    ///< missile will pass through ghosts
-  MF2_FLY            =     0x00000010,    ///< fly mode is active
-  MF2_FOOTCLIP       =     0x00000020,    ///< if feet are allowed to be clipped
-  MF2_SPAWNFLOAT     =     0x00000040,    ///< spawn random float z
-  MF2_NOTELEPORT     =     0x00000080,    ///< does not teleport
-  MF2_RIP            =     0x00000100,    ///< missile rips through solid targets
-  MF2_PUSHABLE       =     0x00000200,    ///< can be pushed by other moving mobjs
-  MF2_SLIDE          =     0x00000400,    ///< slides against walls
-  MF2_ONMOBJ         =     0x00000800,    ///< mobj is resting on top of another mobj
-  MF2_PASSMOBJ       =     0x00001000,    ///< Actor can move over/under other Actors 
-  MF2_CANNOTPUSH     =     0x00002000,    ///< cannot push other pushable mobjs
-  MF2_BOSS           =     0x00008000,    ///< mobj is a major boss
-  MF2_FIREDAMAGE     =     0x00010000,    ///< does fire damage
-  MF2_NODMGTHRUST    =     0x00020000,    ///< does not thrust target when damaging        
-  MF2_TELESTOMP      =     0x00040000,    ///< mobj can stomp another
-  MF2_FLOATBOB       =     0x00080000,    ///< use float bobbing z movement
-  MF2_DONTDRAW       =     0x00100000,    ///< don't generate a vissprite
-  MF2_IMPACT	     =     0x00200000,    ///< an MF_MISSILE mobj can activate SPAC_IMPACT
-  MF2_PUSHWALL	     =     0x00400000,    ///< mobj can push walls
-  MF2_MCROSS		 = 0x00800000,	  ///< can activate monster cross lines
-  MF2_PCROSS		 = 0x01000000,	  ///< can activate projectile cross lines
-  MF2_CANTLEAVEFLOORPIC  = 0x02000000,	  ///< stay within a certain floor type
-  MF2_NONSHOOTABLE	 = 0x04000000,    ///< mobj is totally non-shootable, but still considered solid
-  MF2_INVULNERABLE	 = 0x08000000,	  ///< mobj is invulnerable
-  MF2_DORMANT		 = 0x10000000,	  ///< thing is dormant
-  MF2_ICEDAMAGE		 = 0x20000000,	  ///< does ice damage
-  MF2_SEEKERMISSILE	 = 0x40000000,	  ///< is a seeker (for reflection)
-  MF2_REFLECTIVE	 = 0x80000000     ///< reflects missiles
+  // physical properties
+  MF2_LOGRAV         =     0x0001,    ///< Experiences only 1/8 gravity
+  MF2_WINDTHRUST     =     0x0002,    ///< Is affected by wind
+  MF2_FLOORBOUNCE    =     0x0004,    ///< Bounces off the floor
+  MF2_SLIDE          =     0x0008,    ///< Slides against walls
+  MF2_PUSHABLE       =     0x0010,    ///< Can be pushed by other moving actors
+  MF2_CANNOTPUSH     =     0x0020,    ///< Cannot push other pushable actors
+  // game mechanics
+  MF2_FLOATBOB       =     0x0040,    ///< Bobs up and down in the air (item)
+  MF2_THRUGHOST      =     0x0080,    ///< Will pass through ghosts (missile)
+  MF2_RIP            =     0x0100,    ///< Rips through solid targets (missile)
+  MF2_PASSMOBJ       =     0x0200,    ///< Can move over/under other Actors 
+  MF2_NOTELEPORT     =     0x0400,    ///< Does not teleport
+  MF2_NONSHOOTABLE   =     0x0800,    ///< Transparent to MF_MISSILEs
+  MF2_INVULNERABLE   =     0x1000,    ///< Does not take damage
+  MF2_DORMANT	     =     0x2000,    ///< Cannot be damaged, is not noticed by seekers
+  MF2_CANTLEAVEFLOORPIC  = 0x4000,    ///< Stays within a certain floor texture
+  MF2_BOSS           =     0x8000,    ///< Is a major boss, not as easy to kill
+  MF2_SEEKERMISSILE  = 0x00010000,    ///< Is a seeker (for reflection)
+  MF2_REFLECTIVE     = 0x00020000,    ///< Reflects missiles
+  // rendering
+  MF2_FOOTCLIP       = 0x00040000,    ///< Feet may be be clipped
+  MF2_DONTDRAW       = 0x00080000,    ///< Invisible (does not generate a vissprite)
+  // giving hurt
+  MF2_FIREDAMAGE     = 0x00100000,    ///< Does fire damage
+  MF2_ICEDAMAGE	     = 0x00200000,    ///< Does ice damage
+  MF2_NODMGTHRUST    = 0x00400000,    ///< Does not thrust target when damaging        
+  MF2_TELESTOMP      = 0x00800000,    ///< Can telefrag another Actor
+  // 4 bits free (more damage types?)
+  // activation
+  MF2_IMPACT	     = 0x10000000,    ///< Can activate SPAC_IMPACT
+  MF2_PUSHWALL	     = 0x20000000,    ///< Can activate SPAC_PUSH
+  MF2_MCROSS	     = 0x40000000,    ///< Can activate SPAC_MCROSS
+  MF2_PCROSS	     = 0x80000000,    ///< Can activate SPAC_PCROSS
 };
+
 
 /// Extra flags. They describe the transient state of the Actor.
 enum mobjeflag_t
 {
   // location
-  MFE_ONGROUND      = 0x0001,  ///< The mobj stands on solid floor (not on another mobj or in air)
-  MFE_JUSTHITFLOOR  = 0x0002,  ///< just hit the floor while falling, cleared on next frame
+  MFE_ONGROUND      = 0x0001,  ///< Stands on solid floor (not on another Actor or in air)
+  MFE_ONMOBJ        = 0x0002,  ///< Stands on top of another Actor
   // (instant damage in lava/slime sectors to prevent jump cheat..)
-  MFE_TOUCHWATER    = 0x0004,  ///< touches water.
-  MFE_UNDERWATER    = 0x0008,  ///< waist below water surface (swimming is possible)
+  MFE_JUSTHITFLOOR  = 0x0004,  ///< Just hit the floor while falling, cleared on next frame
+
+  MFE_TOUCHWATER    = 0x0010,  ///< Touches water
+  MFE_UNDERWATER    = 0x0020,  ///< Waist below water surface (swimming is possible)
   // active physics mode
-  MFE_SWIMMING      = 0x0010,  ///< swimming physics used (different gravity)
-  MFE_INFLOAT       = 0x0020,  ///< Floating move in progress, don't auto float to target's height.
-  MFE_SKULLFLY      = 0x0040,  ///< A charging skull.
-  MFE_BLASTED       = 0x0080,  ///< uncontrollably thrown by a blast wave
+  MFE_SWIMMING      = 0x0040,  ///< Swimming physics used (different gravity)
+  MFE_FLY           = 0x0080,  ///< Well, flying. No gravity, some bobbing.
+  MFE_INFLOAT       = 0x0100,  ///< Floating move in progress, don't auto float to target's height.
+  MFE_SKULLFLY      = 0x0200,  ///< A charging skull or minotaur.
+  MFE_BLASTED       = 0x0400,  ///< Uncontrollably thrown by a blast wave
 
   // combat
-  MFE_JUSTHIT       = 0x0100,  ///< Got hit, will try to attack right back.
-  MFE_JUSTATTACKED  = 0x0200,  ///< Will take at least one step before attacking again.
-
-  MFE_TELEPORT      = 0x1000,  ///< *Don't cross lines or check heights in teleport move. (unused?)
+  MFE_JUSTHIT       = 0x1000,  ///< Got hit, will try to attack right back.
+  MFE_JUSTATTACKED  = 0x2000,  ///< Will take at least one step before attacking again.
 
   MFE_REMOVE    = 0x80000000   ///< Actor will be deleted after the tic
 };
@@ -277,8 +287,6 @@ public:
   /// The closest interval over all contacted Sectors (or Things).
   fixed_t floorz, ceilingz;
 
-  // If == validcount, already checked.
-  //int     validcount;
   /// a linked list of sectors where this object appears
   struct msecnode_t* touching_sectorlist;
 

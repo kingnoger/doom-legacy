@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.38  2004/09/13 20:43:29  smite-meister
+// interface cleanup, sp map reset fixed
+//
 // Revision 1.37  2004/09/06 19:58:02  smite-meister
 // Doom linedefs done!
 //
@@ -116,7 +119,6 @@
 #include "cvars.h"
 
 #include "d_ticcmd.h"
-#include "i_system.h"   //I_Tactile currently has no effect
 #include "dstrings.h"
 
 #include "p_camera.h" // camera
@@ -549,7 +551,7 @@ void PlayerPawn::Think()
     {
       if(--powers[pw_flight] == 0)
 	{
-	  flags2 &= ~MF2_FLY;
+	  eflags &= ~MFE_FLY;
 	  flags &= ~MF_NOGRAVITY;
 	}
     }
@@ -724,7 +726,7 @@ void PlayerPawn::XYMovement()
       px = py = 0;
       return;
     }
-  else if ((cheats & CF_FLYAROUND) || (flags2 & MF2_FLY))
+  else if ((cheats & CF_FLYAROUND) || (eflags & MFE_FLY))
     {
       //XYFriction(oldx, oldy, true);
       return;
@@ -753,7 +755,7 @@ void PlayerPawn::ZMovement()
 
   if (oldz + oldpz <= floorz && (oldpz < 0)) // falling
     {
-      if ((oldpz < -8*FRACUNIT) && !(flags2 & MF2_FLY))
+      if ((oldpz < -8*FRACUNIT) && !(eflags & MFE_FLY))
 	{
 	  // Squat down.
 	  // Decrease viewheight for a moment
@@ -767,7 +769,7 @@ void PlayerPawn::ZMovement()
   if (oldz+oldpz + height > ceilingz)
     {
       // player avatar hits his head on the ceiling, ouch!
-      if (!(cheats & CF_FLYAROUND) && !(flags2 & MF2_FLY) && pz > 8*FRACUNIT)
+      if (!(cheats & CF_FLYAROUND) && !(eflags & MFE_FLY) && pz > 8*FRACUNIT)
 	S_StartSound(this, sfx_grunt);
     }
 }
@@ -1484,10 +1486,6 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 	hud.damagecount += damage;
 
       pres->SetAnim(presentation_t::Pain);
-
-      //added:22-02-98: force feedback ??? electro-shock???
-      if (player == consoleplayer)
-	I_Tactile (40,10,40 + min(damage, 100) * 2);
     }
 
   attacker = source;
@@ -1551,7 +1549,7 @@ bool PlayerPawn::GivePower(int power)
       if (powers[power] > BLINKTHRESHOLD)
 	return false;
       powers[power] = FLIGHTTICS;
-      flags2 |= MF2_FLY;
+      eflags |= MFE_FLY;
       flags |= MF_NOGRAVITY;
       if (z <= floorz)
 	fly_zspeed = 10; // thrust the player in the air a bit

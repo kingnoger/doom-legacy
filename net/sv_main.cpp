@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2004/09/13 20:43:31  smite-meister
+// interface cleanup, sp map reset fixed
+//
 // Revision 1.9  2004/08/15 18:08:29  smite-meister
 // palette-to-palette colormaps etc.
 //
@@ -325,7 +328,6 @@ void GameInfo::TryRunTics(tic_t elapsed)
     COM_BufExecute(); // process command buffer
 
   I_GetEvent();
-  D_ProcessEvents(); // read control events, feed them to responders
 
 
   if (!dedicated)
@@ -339,6 +341,8 @@ void GameInfo::TryRunTics(tic_t elapsed)
       if (consoleplayer2)
 	consoleplayer2->cmd.Build(false, elapsed);
     }
+
+  D_ProcessEvents(); // read control events, feed them to responders
 
   // get packets? (maybe connection is lost...)
 

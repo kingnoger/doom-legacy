@@ -115,10 +115,6 @@ bool VoodooDoll::Touch(Actor *a)
 
 void VoodooDoll::Think()
 {
-  // a corpse, for example. Thinks just like an actor.
-  //  if (!player || player->playerstate == PST_DEAD)
-  //  goto actor_think;
-
   if (!victim || victim->health <= 0 || victim->flags & MF_CORPSE)
     {
       Remove(); // deleted when its victim is deleted or just dead
@@ -148,13 +144,12 @@ void VoodooDoll::Think()
     {
       if(--powers[pw_flight] == 0)
 	{
-	  flags2 &= ~MF2_FLY;
+	  eflags &= ~MFE_FLY;
 	  flags &= ~MF_NOGRAVITY;
 	}
     }
 
 
- actor_think:
   // this is where the "actor part" of the thinking begins
   // we call Actor::Think(), because a playerpawn is an actor too
   Actor::Think();

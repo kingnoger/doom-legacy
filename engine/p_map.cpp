@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.25  2004/09/13 20:43:30  smite-meister
+// interface cleanup, sp map reset fixed
+//
 // Revision 1.24  2004/08/29 20:48:48  smite-meister
 // bugfixes. wow.
 //
@@ -90,12 +93,10 @@
 // Revision 1.1.1.1  2002/11/16 14:18:01  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//      Movement, collision handling.
-//      Shooting and aiming.
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Movement, collision handling. Shooting and aiming.
 
 #include "doomdef.h"
 #include "doomdata.h"
@@ -136,6 +137,7 @@ bool     floatok;
 fixed_t  tmfloorz;
 fixed_t  tmceilingz;
 fixed_t  tmdropoffz;
+int      tmfloorpic;
 
 // keep track of special lines as they are hit,
 // but don't process them until the move is proven valid
@@ -158,8 +160,8 @@ line_t *blockingline;
 
 Actor *BlockingMobj; //thing that blocked position (NULL if not blocked, or blocked by a line)
 
-//SoM: 3/15/2000
 static msecnode_t *sector_list = NULL;
+
 
 //===========================================
 //        COMMON UTILITY FUNCTIONS
@@ -256,16 +258,16 @@ void P_ThrustSpike(Actor *actor)
 }
 
 
-//===========================================
-// Actor position checking and setting
-//===========================================
 
-//
+//=====================================================================
+//              Actor position checking and setting
+//=====================================================================
+
 // Unlinks a thing from block map and sectors.
 // On each position change, BLOCKMAP and other
 // lookups maintaining lists ot things inside
 // these structures need to be updated.
-//
+
 void Actor::UnsetPosition()
 {
   //extern msecnode_t *sector_list;
@@ -417,10 +419,6 @@ void Actor::SetPosition()
 
 
 
-
-//
-// was P_TeleportMove
-//
 bool Actor::TeleportMove(fixed_t nx, fixed_t ny)
 {
   int  xl, xh, yl, yh, bx, by;
@@ -442,6 +440,7 @@ bool Actor::TeleportMove(fixed_t nx, fixed_t ny)
   // will adjust them.
   tmfloorz = tmdropoffz = newsubsec->sector->floorheight;
   tmceilingz = newsubsec->sector->ceilingheight;
+  tmfloorpic = newsubsec->sector->floorpic;
 
   validcount++;
   spechit.clear();
@@ -673,10 +672,9 @@ void Actor::CheckMissileImpact()
 }
 
 
-//
+
 // Attempt to move to a new position,
-// crossing special lines unless MF_TELEPORT is set.
-//
+// crossing special lines in the way.
 bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 {
   //  max Z move up or down without jumping
@@ -706,14 +704,13 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 
       floatok = true;
 
-      if (!(eflags & MFE_TELEPORT)
-	  && (tmceilingz < z + height) && !(flags2 & MF2_FLY))
+      if (tmceilingz < z + height && !(eflags & MFE_FLY))
 	{
 	  CheckMissileImpact();
 	  return false; // must lower itself to fit
 	}
 
-      if (flags2 & MF2_FLY)
+      if (eflags & MFE_FLY)
 	{
 	  if (z + height > tmceilingz)
 	    {
@@ -731,10 +728,9 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
       if ((eflags & (MFE_UNDERWATER|MFE_TOUCHWATER)) == (MFE_UNDERWATER|MFE_TOUCHWATER))
 	maxstep = 37*FRACUNIT;
 
-      if (!(eflags & MFE_TELEPORT) 
-	  // The Minotaur floor fire (MT_MNTRFX2) can step up any amount
-	  // FIXME && type != MT_MNTRFX2
-	  && (tmfloorz - z > maxstep))
+      if (tmfloorz - z > maxstep)
+	// The Minotaur floor fire (MT_MNTRFX2) can step up any amount
+	// FIXME && type != MT_MNTRFX2
 	{
 	  CheckMissileImpact();
 	  return false;       // too big a step up
@@ -744,9 +740,15 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 	CheckMissileImpact();
 
       if (!boomsupport || !allowdropoff)
-	if (!(flags & (MF_DROPOFF|MF_FLOAT)) && !tmfloorthing
-	    && tmfloorz - tmdropoffz > MAXSTEPMOVE)
-	  return false;       // don't stand over a dropoff
+	if (!(flags & (MF_DROPOFF | MF_FLOAT)) && !tmfloorthing
+	    && tmfloorz - tmdropoffz > MAXSTEPMOVE
+	    && !(eflags & MFE_BLASTED))
+	  return false;       // don't go over a dropoff (unless blasted)
+
+      if (flags2 & MF2_CANTLEAVEFLOORPIC
+	  && (tmfloorpic != subsector->sector->floorpic || tmfloorz != z))
+	// must stay within a sector of a certain floor type
+	return false;
     }
 
   // the move is ok, so link the thing into its new position
@@ -772,7 +774,7 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
     floorclip = 0;
 
   // if any special lines were hit, do the effect
-  if (!(flags & (MF_NOCLIPLINE|MF_NOTRIGGER) || eflags & MFE_TELEPORT))
+  if (!(flags & (MF_NOCLIPLINE | MF_NOTRIGGER)))
     {
       while (spechit.size())
         {
@@ -800,8 +802,7 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
   return true;
 }
 
-//
-// P_ThingHeightClip
+
 // Takes a valid thing and adjusts the thing->floorz,
 // thing->ceilingz, and possibly thing->z.
 // This is called for all nearby monsters
@@ -809,12 +810,9 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 // If the thing doesn't fit,
 // the z will be set to the lowest value
 // and false will be returned.
-//
-bool P_ThingHeightClip (Actor *thing)
+bool P_ThingHeightClip(Actor *thing)
 {
-  bool             onfloor;
-
-  onfloor = (thing->z <= thing->floorz);
+  bool onfloor = (thing->z <= thing->floorz);
 
   thing->CheckPosition(thing->x, thing->y);
 
@@ -944,7 +942,7 @@ static bool PTR_SlideTraverse (intercept_t *in)
     I_Error ("PTR_SlideTraverse: not a line?");
 #endif
 
-  li = in->d.line;
+  li = in->line;
 
   if (! (li->flags & ML_TWOSIDED))
     {
@@ -1178,7 +1176,7 @@ static bool PTR_AimTraverse (intercept_t *in)
 
   if (in->isaline)
     {
-      li = in->d.line;
+      li = in->line;
 
       if (!(li->flags & ML_TWOSIDED))
 	return false;               // stop
@@ -1273,7 +1271,7 @@ static bool PTR_AimTraverse (intercept_t *in)
     }
 
   // shoot a thing
-  th = in->d.thing;
+  th = in->thing;
   if (th == shootthing)
     return true;                    // can't shoot self
 
@@ -1357,7 +1355,7 @@ static bool PTR_ShootTraverse (intercept_t *in)
       //shut up compiler, otherwise it's only used when TWOSIDED
       diffheights = false;
 
-      li = in->d.line;
+      li = in->line;
 
       if (li->special)
 	m->ActivateLine(li, shootthing, 0, SPAC_IMPACT);
@@ -1558,7 +1556,7 @@ static bool PTR_ShootTraverse (intercept_t *in)
     }
 
   // shoot a thing
-  Actor *th = in->d.thing;
+  Actor *th = in->thing;
   if (th == shootthing)
     return true;            // can't shoot self
 
@@ -1632,7 +1630,7 @@ static bool PTR_ShootTraverse (intercept_t *in)
   if (PuffType == MT_BLASTERPUFF1)   
     PuffType = MT_BLASTERPUFF2;  // Make blaster big puff
 
-  if (in->d.thing->flags & MF_NOBLOOD)
+  if (in->thing->flags & MF_NOBLOOD)
     m->SpawnPuff (x,y,z);
   else
     {
@@ -1769,7 +1767,7 @@ static PlayerPawn *usething;
 static bool PTR_UseTraverse(intercept_t *in)
 {
   tmthing = NULL; // FIXME why? affects P_LineOpening
-  line_t *line = in->d.line;
+  line_t *line = in->line;
   CONS_Printf("Line: s = %d, tag = %d\n", line->special, line->tag);
   if (!line->special)
     {
@@ -1843,7 +1841,7 @@ static bool PTR_PuzzleItemTraverse(intercept_t *in)
 
   if (in->isaline)
     { // Check line
-      line_t *line = in->d.line;
+      line_t *line = in->line;
       if (line->special != USE_PUZZLE_ITEM_SPECIAL)
 	{
 	  P_LineOpening(line);
@@ -1887,7 +1885,7 @@ static bool PTR_PuzzleItemTraverse(intercept_t *in)
     }
 
   // Check thing
-  Actor *p = in->d.thing;
+  Actor *p = in->thing;
   if (p->special != USE_PUZZLE_ITEM_SPECIAL)
     return true; // Wrong special
 
@@ -2488,8 +2486,7 @@ void Actor::FakeZMovement()
 	    nz += FLOATSPEED;
 	}
     }
-  if ((flags2 & MF2_FLY) && !(nz <= floorz)
-      && mp->maptic & 2)
+  if ((eflags & MFE_FLY) && !(nz <= floorz) && mp->maptic & 2)
     {
       nz += finesine[(FINEANGLES/20*mp->maptic>>2) & FINEMASK];
     }
@@ -2548,9 +2545,7 @@ void Actor::FakeZMovement()
 }
 
 
-// was P_CheckOnmobj
 // Checks if the new Z position is legal
-
 Actor *Actor::CheckOnmobj()
 {
   int          xl,xh,yl,yh,bx,by;
@@ -2573,7 +2568,8 @@ Actor *Actor::CheckOnmobj()
   //
   tmfloorz = tmdropoffz = newsubsec->sector->floorheight;
   tmceilingz = newsubsec->sector->ceilingheight;
-    
+  tmfloorpic = newsubsec->sector->floorpic; 
+   
   validcount++;
   spechit.clear();
     
@@ -2657,6 +2653,7 @@ bool Actor::CheckPosition(fixed_t nx, fixed_t ny)
   // will adjust them.
   tmfloorz = tmsectorfloorz = tmdropoffz = newsubsec->sector->floorheight;
   tmceilingz = tmsectorceilingz = newsubsec->sector->ceilingheight;
+  tmfloorpic = newsubsec->sector->floorpic;
 
   //SoM: 3/23/2000: Check list of fake floors and see if
   //tmfloorz/tmceilingz need to be altered.

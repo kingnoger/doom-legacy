@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2004/09/13 20:43:29  smite-meister
+// interface cleanup, sp map reset fixed
+//
 // Revision 1.13  2004/09/10 19:59:15  jussip
 // Joystick code almost ready for use.
 //
@@ -76,7 +79,6 @@
 #include "g_pawn.h"
 
 #include "i_system.h"
-#include "i_joy.h"
 #include "i_video.h"
 
 #include "tables.h"
@@ -119,8 +121,7 @@ consvar_t cv_mousesensy2  = {"mousesensy2","10",CV_SAVE,mousesens_cons_t};
 #endif
 
 
-consvar_t cv_usejoystick = {"use_joystick", "0", CV_SAVE | CV_CALL, NULL, I_InitJoystick};
-consvar_t cv_joystickfreelook = {"joystickfreelook" ,"0",CV_SAVE,CV_OnOff};
+//consvar_t cv_joystickfreelook = {"joystickfreelook" ,"0",CV_SAVE,CV_OnOff};
 
 
 //========================================================================
@@ -221,34 +222,17 @@ void ticcmd_t::Build(bool primary, int realtics)
 
 
   int  speed = (gamekeydown[gc[gc_speed][0]] || gamekeydown[gc[gc_speed][1]]) ^ i;
-
+  bool mouseaiming = (gamekeydown[gc[gc_mouseaiming][0]] || gamekeydown[gc[gc_mouseaiming][1]]) ^ j;
   bool strafe = gamekeydown[gc[gc_strafe][0]] || gamekeydown[gc[gc_strafe][1]];
+
   bool turnright = gamekeydown[gc[gc_turnright][0]] || gamekeydown[gc[gc_turnright][1]];
   bool turnleft  = gamekeydown[gc[gc_turnleft][0]] || gamekeydown[gc[gc_turnleft][1]];
-
-  bool mouseaiming = (gamekeydown[gc[gc_mouseaiming][0]]
-		      || gamekeydown[gc[gc_mouseaiming][1]]) ^ j;
-
-  bool analogjoystickmove, gamepadjoystickmove;
-
-  if (primary) {
-    analogjoystickmove  = cv_usejoystick.value && !Joystick.bGamepadStyle && !cv_splitscreen.value;
-    gamepadjoystickmove = cv_usejoystick.value &&  Joystick.bGamepadStyle && !cv_splitscreen.value;
-  } else {
-    analogjoystickmove  = cv_usejoystick.value && !Joystick.bGamepadStyle;
-    gamepadjoystickmove = cv_usejoystick.value &&  Joystick.bGamepadStyle;
-  }
-
-  if (gamepadjoystickmove)
-    {
-      turnright = turnright || (joyxmove > 0);
-      turnleft  = turnleft  || (joyxmove < 0);
-    }
 
 
   // initialization
   //memcpy(this, I_BaseTiccmd(), sizeof(ticcmd_t)); // FIXME dangerous
   buttons = 0;
+  item = 0;
   forward = side = 0;
   yaw = pitch = 0;
   if (p)
@@ -258,67 +242,69 @@ void ticcmd_t::Build(bool primary, int realtics)
     }
 
 
-  // use two stage accelerative turning
-  // on the keyboard and joystick
+  // use two stage accelerative turning on the keyboard (and joystick)
   static int turnheld[2]; // for accelerative turning
 
-  if (turnleft || turnright)
-    turnheld[k] += realtics;
-  else
-    turnheld[k] = 0;
-
-  int tspeed;
-  if (turnheld[k] < SLOWTURNTICS)
-    tspeed = 2;             // slow turn
-  else
-    tspeed = speed;
-
-  // let movement keys cancel each other out
+  // strafing and yaw
   if (strafe)
     {
       if (turnright)
         side += sidespeed[speed];
       if (turnleft)
         side -= sidespeed[speed];
+    }
+  else
+    {
+      if (turnleft || turnright)
+	turnheld[k] += realtics;
+      else
+	turnheld[k] = 0;
+
+      int tspeed;
+      if (turnheld[k] < SLOWTURNTICS)
+	tspeed = 2;             // slow turn
+      else
+	tspeed = speed;
+
+      if (turnright)
+        yaw -= angleturn[tspeed];
+      if (turnleft)
+        yaw += angleturn[tspeed];
+    }
+
+  /*
+  if (joyymove && analogjoystickmove && !cv_joystickfreelook.value)
+    forward -= ( (joyymove * forwardspeed[1]) >> 10 );
+
+    if (cv_usejoystick.value && analogjoystickmove && cv_joystickfreelook.value)
+      pitch += joyymove<<16;
 
       if (analogjoystickmove)
         {
           //faB: JOYAXISRANGE is supposed to be 1023 ( divide by 1024)
           side += ( (joyxmove * sidespeed[1]) >> 10 );
         }
-    }
-  else
-    {
-      if (turnright)
-        yaw -= angleturn[tspeed];
-      //else
-      if (turnleft)
-        yaw += angleturn[tspeed];
-      if (joyxmove && analogjoystickmove) {
+      if (joyxmove && analogjoystickmove)
+      {
         //faB: JOYAXISRANGE should be 1023 ( divide by 1024)
         yaw -= ( (joyxmove * angleturn[1]) >> 10 );        // ANALOG!
-        //CONS_Printf ("joyxmove %d  angleturn %d\n", joyxmove, yaw);
       }
-    }
+
+
+  */
+
 
   // forwards/backwards, strafing
 
-  if (gamekeydown[gc[gc_forward][0]] || gamekeydown[gc[gc_forward][1]] ||
-      (joyymove < 0 && gamepadjoystickmove && !cv_joystickfreelook.value))
-    {
-      forward += forwardspeed[speed];
-    }
-  if (gamekeydown[gc[gc_backward][0]] || gamekeydown[gc[gc_backward][1]] ||
-      (joyymove > 0 && gamepadjoystickmove && !cv_joystickfreelook.value))
-    {
-      forward -= forwardspeed[speed];
-    }
+  if (gamekeydown[gc[gc_forward][0]] || gamekeydown[gc[gc_forward][1]])
+    forward += forwardspeed[speed];
 
-  if (joyymove && analogjoystickmove && !cv_joystickfreelook.value)
-    forward -= ( (joyymove * forwardspeed[1]) >> 10 );
+  if (gamekeydown[gc[gc_backward][0]] || gamekeydown[gc[gc_backward][1]])
+    forward -= forwardspeed[speed];
 
   if (gamekeydown[gc[gc_straferight][0]] || gamekeydown[gc[gc_straferight][1]])
     side += sidespeed[speed];
+
   if (gamekeydown[gc[gc_strafeleft][0]] || gamekeydown[gc[gc_strafeleft][1]])
     side -= sidespeed[speed];
 
@@ -337,119 +323,92 @@ void ticcmd_t::Build(bool primary, int realtics)
   if (gamekeydown[gc[gc_flydown][0]] || gamekeydown[gc[gc_flydown][1]])
     buttons |= BT_FLYDOWN;
 
-  if (p == NULL)
-    return;
+  if (p)
+    {
+      if (gamekeydown[gc[gc_nextweapon][0]] || gamekeydown[gc[gc_nextweapon][1]])
+	buttons |= (NextWeapon(p, 1) << WEAPONSHIFT);
+      else if (gamekeydown[gc[gc_prevweapon][0]] || gamekeydown[gc[gc_prevweapon][1]])
+	buttons |= (NextWeapon(p, -1) << WEAPONSHIFT);
+      else for (i = gc_weapon1; i <= gc_weapon8; i++)
+	if (gamekeydown[gc[i][0]] || gamekeydown[gc[i][1]])
+	  {
+	    buttons |= ((p->FindWeapon(i - gc_weapon1) + 1) << WEAPONSHIFT);
+	    break;
+	  }
+    }
 
-  if (gamekeydown[gc[gc_nextweapon][0]] || gamekeydown[gc[gc_nextweapon][1]])
-    buttons |= (NextWeapon(p, 1) << WEAPONSHIFT);
-  else if (gamekeydown[gc[gc_prevweapon][0]] || gamekeydown[gc[gc_prevweapon][1]])
-    buttons |= (NextWeapon(p, -1) << WEAPONSHIFT);
-  else for (i = gc_weapon1; i <= gc_weapon8; i++)
-    if (gamekeydown[gc[i][0]] || gamekeydown[gc[i][1]])
-      {
-	buttons |= ((p->FindWeapon(i - gc_weapon1) + 1) << WEAPONSHIFT);
-        break;
-      }
 
+  // pitch
 
   static bool keyboard_look[2];      // true if lookup/down using keyboard
 
-  if (primary) {
-    // mouse look stuff (mouse look is not the same as mouse aim)
-    if (mouseaiming)
-      {
-        keyboard_look[0] = false;
+  // spring back if not using keyboard neither mouselookin'
+  if (!keyboard_look[k] && !mouseaiming)
+    pitch = 0;
 
-        // looking up/down
-        if (cv_invertmouse.value)
-          pitch -= mousey << 3;
-        else
-          pitch += mousey << 3;
-      }
-    if (cv_usejoystick.value && analogjoystickmove && cv_joystickfreelook.value)
-      pitch += joyymove<<16;
-
-    // spring back if not using keyboard neither mouselookin'
-    if (!keyboard_look && !cv_joystickfreelook.value && !mouseaiming)
+  if (gamekeydown[gc[gc_lookup][0]] || gamekeydown[gc[gc_lookup][1]])
+    {
+      pitch += KB_LOOKSPEED;
+      keyboard_look[k] = true;
+    }
+  else if (gamekeydown[gc[gc_lookdown][0]] || gamekeydown[gc[gc_lookdown][1]])
+    {
+      pitch -= KB_LOOKSPEED;
+      keyboard_look[k] = true;
+    }
+  else if (gamekeydown[gc[gc_centerview][0]] || gamekeydown[gc[gc_centerview][1]])
+    {
       pitch = 0;
+      keyboard_look[k] = false;
+    }
 
-    if (gamekeydown[gc[gc_lookup][0]] || gamekeydown[gc[gc_lookup][1]])
-      {
-        pitch += KB_LOOKSPEED;
-        keyboard_look[0] = true;
-      }
-    else if (gamekeydown[gc[gc_lookdown][0]] || gamekeydown[gc[gc_lookdown][1]])
-      {
-        pitch -= KB_LOOKSPEED;
-        keyboard_look[0] = true;
-      }
-    else if (gamekeydown[gc[gc_centerview][0]] || gamekeydown[gc[gc_centerview][1]])
-      pitch = 0;
 
-    //26/02/2000: added by Hurdler: accept no mlook for network games
-    if (!cv_allowmlook.value)
-      pitch = 0;
+  // mouse
 
-    if (!mouseaiming && cv_mousemove.value)
-      forward += mousey;
+  if (primary)
+    {
+      if (mouseaiming)
+	{
+	  keyboard_look[0] = false;
 
-    if (strafe)
-      side += mousex << 1;
-    else
-      yaw -= mousex << 3;
+	  // looking up/down
+	  if (cv_invertmouse.value)
+	    pitch -= mousey << 3;
+	  else
+	    pitch += mousey << 3;
+	}
+      else if (cv_mousemove.value)
+	forward += mousey;
 
-    mousex = mousey = 0;
+      if (strafe)
+	side += mousex << 1;
+      else
+	yaw -= mousex << 3;
 
-  } else {
+      mousex = mousey = 0;
+    }
+  else
+    {
+      if (mouseaiming)
+	{
+	  keyboard_look[1] = false;
 
-    // mouse look stuff (mouse look is not the same as mouse aim)
-    if (mouseaiming)
-      {
-        keyboard_look[1] = false;
+	  // looking up/down
+	  if (cv_invertmouse2.value)
+	    pitch -= mouse2y << 3;
+	  else
+	    pitch += mouse2y << 3;
+	}
+      else if (cv_mousemove2.value)
+	forward += mouse2y;
 
-        // looking up/down
-        if (cv_invertmouse2.value)
-          pitch -= mouse2y << 3;
-        else
-          pitch += mouse2y << 3;
-      }
+      if (strafe)
+	side += mouse2x*2;
+      else
+	yaw -= mouse2x*8;
 
-    if (analogjoystickmove && cv_joystickfreelook.value)
-      pitch += joyymove<<16;
-    // spring back if not using keyboard neither mouselookin'
-    if (!keyboard_look && !cv_joystickfreelook.value && !mouseaiming)
-      pitch = 0;
-
-    if (gamekeydown[gamecontrol2[gc_lookup][0]] ||
-        gamekeydown[gamecontrol2[gc_lookup][1]])
-      {
-        pitch += KB_LOOKSPEED;
-        keyboard_look[1] = true;
-      }
-    else if (gamekeydown[gamecontrol2[gc_lookdown][0]] ||
-             gamekeydown[gamecontrol2[gc_lookdown][1]])
-      {
-        pitch -= KB_LOOKSPEED;
-        keyboard_look[1] = true;
-      }
-    else if (gamekeydown[gamecontrol2[gc_centerview][0]] ||
-             gamekeydown[gamecontrol2[gc_centerview][1]])
-      pitch = 0;
-
-    //26/02/2000: added by Hurdler: accept no mlook for network games
-    if (!cv_allowmlook.value)
-      pitch = 0;
-
-    if (!mouseaiming && cv_mousemove2.value)
-      forward += mouse2y;
-
-    if (strafe)
-      side += mouse2x*2;
-    else
-      yaw -= mouse2x*8;
-
-    mouse2x = mouse2y = 0;
-  }
+      mouse2x = mouse2y = 0;
+    }
 
   if (forward > MAXPLMOVE)
     forward = MAXPLMOVE;
@@ -460,7 +419,11 @@ void ticcmd_t::Build(bool primary, int realtics)
   else if (side < -MAXPLMOVE)
     side = -MAXPLMOVE;
 
-  pitch = G_ClipAimingPitch(pitch << 16) >> 16;
+  //26/02/2000: added by Hurdler: accept no mlook for network games
+  if (!cv_allowmlook.value)
+    pitch = 0;
+  else
+    pitch = G_ClipAimingPitch(pitch << 16) >> 16;
   //CONS_Printf("Move: %d, %d, %d\n", yaw, pitch, buttons);
 }
 

@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.41  2004/09/13 20:43:29  smite-meister
+// interface cleanup, sp map reset fixed
+//
 // Revision 1.40  2004/09/03 16:28:49  smite-meister
 // bugfixes and ZDoom linedef types
 //
@@ -623,7 +626,7 @@ void Map::SpawnMapThing(mapthing_t *mt)
 
   if (mobjinfo[t].flags & MF_SPAWNCEILING)
     nz = ONCEILINGZ;
-  else if (mobjinfo[t].flags2 & MF2_SPAWNFLOAT)
+  else if (mobjinfo[t].flags & MF_SPAWNFLOAT)
     nz = FLOATRANDZ;
   else
     {
@@ -676,7 +679,6 @@ void Map::SpawnMapThing(mapthing_t *mt)
 
 
 //
-// was G_CheckSpot
 // Returns false if the player p cannot be respawned
 // at the given mapthing_t spot
 // because something is occupying it
@@ -750,25 +752,28 @@ bool Map::CoopRespawn(PlayerInfo *p)
 
   int i = p->number;
   multimap<int, mapthing_t *>::iterator s, t;
-  mapthing_t *m;
 
   // let's check his own start first
   s = playerstarts.lower_bound(i);
   t = playerstarts.upper_bound(i);
-  for ( ; s != t; s++)
+  for ( ; s != t--; )
     {
-      m = (*s).second;
+      mapthing_t *m = t->second;
+      // the pawn is spawned at the last playerstart
       if (CheckRespawnSpot(p, m))
 	{
 	  SpawnPlayer(p, m);
 
+	  // spawn voodoo dolls in all other playerstarts
 	  if (cv_voodoodolls.value)
-	    for ( ; s != t; s++)
-	      {
-		m = (*s).second;
-		if (CheckRespawnSpot(p, m))
-		  VoodooDoll::Spawn(p, m);
-	      }
+	    {
+	      for ( ; s != t; s++)
+		{
+		  m = s->second;
+		  if (CheckRespawnSpot(p, m))
+		    VoodooDoll::Spawn(p, m);
+		}
+	    }
 
 	  return true;
 	}
@@ -779,7 +784,7 @@ bool Map::CoopRespawn(PlayerInfo *p)
   t = playerstarts.end();
   for ( ; s != t; s++)
     {
-      m = (*s).second;
+      mapthing_t *m = s->second;
       if (CheckRespawnSpot(p, m))
 	{
 	  SpawnPlayer(p, m);
@@ -799,10 +804,6 @@ int Map::RespawnPlayers()
 
   int count = 0;
   PlayerInfo *p;
-
-  // TODO make me better sometime
-  // FIXME if the requested entrypoint does not exist, the player is never spawned!
-  //deque<PlayerInfo *>::iterator i;
 
   bool ok;
   do {
@@ -826,19 +827,31 @@ int Map::RespawnPlayers()
 	respawnqueue.pop_front();
 	count++;
       }
-    else if (p->time++ > 10)
+    else
       {
-	multimap<int, mapthing_t *>::iterator s, t;
+	// check that the requested entrypoint even exists
+	multimap<int, mapthing_t *>::iterator s, t;	
 	s = playerstarts.begin();
 	t = playerstarts.end();
 	for ( ; s != t; s++)
 	  {
-	    mapthing_t *m = (*s).second;
-	    CONS_Printf("start pl %d, ep %d\n", (*s).first, m->args[0]);
+	    mapthing_t *m = s->second;
+	    if (m->args[0] == p->entrypoint)
+	      break;
 	  }
-	I_Error("Could not respawn player %d to entrypoint %d\n", p->number, p->entrypoint);
-      }
 
+	if (s == t)
+	  {
+	    CONS_Printf("Nonexistant entrypoint (%d) requested!\n", p->entrypoint);
+	    p->entrypoint = 0;
+	  }
+
+	if (p->time++ > 10)
+	  {
+	    // this player has already waited for respawn for 10 ticks!
+	    I_Error("Could not respawn player %d to entrypoint %d\n", p->number, p->entrypoint);
+	  }
+      }
   } while (ok && !respawnqueue.empty());
 
   return count;
@@ -874,11 +887,19 @@ void Map::RebornPlayer(PlayerInfo *p)
   //  S_StartSound(mo, sfx_telept);  // don't start sound on first frame
 
   if (!game.multiplayer)
-    ; // FIXME restart level / load hubsave
-
-  respawnqueue.push_back(p);
-  p->time = 0; // respawn delay counter
-  p->playerstate = PST_RESPAWN;
+    {
+      // in single player games, the map is reset after death
+      info->state = MapInfo::MAP_RESET;
+      RemovePlayer(p);
+      p->requestmap = info->mapnumber; // get back here after the reset...
+      p->playerstate = PST_NEEDMAP;
+    }
+  else
+    {
+      respawnqueue.push_back(p);
+      p->time = 0; // respawn delay counter
+      p->playerstate = PST_RESPAWN;
+    }
 }
 
 

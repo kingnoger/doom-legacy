@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2004 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2004/09/13 20:43:30  smite-meister
+// interface cleanup, sp map reset fixed
+//
 // Revision 1.8  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
@@ -42,14 +45,16 @@
 // Revision 1.1.1.1  2002/11/16 14:18:01  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//      Movement/collision utility functions,
-//      as used by function in p_map.c.
-//      BLOCKMAP Iterator functions,
-//      and some PIT_* functions to use for iteration.
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Utility functions related to Map geometry, iterators, traces.
+///
+/// Geometric utility functions.
+/// BLOCKMAP iterator functions and some PIT_* functions to use for iteration.
+/// Intercepts and traces.
+
+#include <vector>
 
 #include "doomdef.h"
 #include "g_actor.h"
@@ -61,11 +66,9 @@
 #include "r_state.h"
 #include "p_maputl.h"
 
-//
-// P_AproxDistance
-// Gives an estimation of distance (not exact)
-//
 
+// Gives an estimation of distance (not exact)
+// Sort of octagonal norm.
 fixed_t P_AproxDistance(fixed_t dx, fixed_t dy)
 {
   dx = abs(dx);
@@ -76,10 +79,7 @@ fixed_t P_AproxDistance(fixed_t dx, fixed_t dy)
 }
 
 
-//
-// P_PointOnLineSide
 // Returns 0 or 1
-//
 int P_PointOnLineSide(fixed_t x, fixed_t y, line_t *line)
 {
   if (!line->dx)
@@ -110,11 +110,8 @@ int P_PointOnLineSide(fixed_t x, fixed_t y, line_t *line)
 
 
 
-//
-// P_BoxOnLineSide
 // Considers the line to be infinite
 // Returns side 0 or 1, -1 if box crosses the line.
-//
 int P_BoxOnLineSide (fixed_t *tmbox, line_t *ld)
 {
   int         p1;
@@ -162,10 +159,7 @@ int P_BoxOnLineSide (fixed_t *tmbox, line_t *ld)
 }
 
 
-//
-// P_PointOnDivlineSide
 // Returns 0 or 1.
-//
 int P_PointOnDivlineSide(fixed_t x, fixed_t y, divline_t *line)
 {
   fixed_t     dx;
@@ -209,10 +203,8 @@ int P_PointOnDivlineSide(fixed_t x, fixed_t y, divline_t *line)
 
 
 
-//
-// P_MakeDivline
-//
-void P_MakeDivline (line_t *li, divline_t *dl)
+
+void P_MakeDivline(line_t *li, divline_t *dl)
 {
   dl->x = li->v1->x;
   dl->y = li->v1->y;
@@ -223,7 +215,6 @@ void P_MakeDivline (line_t *li, divline_t *dl)
 
 
 //
-// P_InterceptVector
 // Returns the fractional intercept point
 // along the first divline.
 // This is only called by the addthings
@@ -275,22 +266,18 @@ fixed_t P_InterceptVector(divline_t *v2, divline_t *v1)
 }
 
 
-//
-// P_LineOpening
+
 // Sets opentop and openbottom to the window
 // through a two sided line.
 // OPTIMIZE: keep this precalculated
-//
+
 fixed_t opentop;
 fixed_t openbottom;
 fixed_t openrange;
 fixed_t lowfloor;
 
-
-void P_LineOpening (line_t *linedef)
+void P_LineOpening(line_t *linedef)
 {
-  sector_t *front;
-  sector_t *back;
   extern Actor *tmthing;
 
   if (linedef->sidenum[1] == -1)
@@ -300,8 +287,8 @@ void P_LineOpening (line_t *linedef)
       return;
     }
 
-  front = linedef->frontsector;
-  back = linedef->backsector;
+  sector_t *front = linedef->frontsector;
+  sector_t *back  = linedef->backsector;
 #ifdef PARANOIA
   if(!front)
     I_Error("lindef without front");
@@ -503,6 +490,7 @@ bool Map::BlockLinesIterator(int x, int y, bool (*func)(line_t*))
 }
 
 
+
 // Same as previous, but iterates through things
 bool Map::BlockThingsIterator(int x, int y, bool(*func)(Actor*))
 {
@@ -522,6 +510,7 @@ bool Map::BlockThingsIterator(int x, int y, bool(*func)(Actor*))
 }
 
 
+
 // Iterates through all the Thinkers in the Map, calling 'func' for each.
 bool Map::IterateThinkers(bool (*func)(Thinker*))
 {
@@ -536,42 +525,16 @@ bool Map::IterateThinkers(bool (*func)(Thinker*))
 }
 
 
+
 //
 // INTERCEPT ROUTINES
 //
 
-// FIXME ? should the intercepts belong in Map class?
-
-//SoM: 4/6/2000: Limit removal
-intercept_t *intercepts = NULL;
-intercept_t *intercept_p = NULL;
-
-divline_t       trace;
-bool         earlyout;
-int             ptflags;
+static vector<intercept_t> intercepts;
+divline_t   trace;
+static bool earlyout;
 
 
-// TODO replace with STL vector
-//SoM: 4/6/2000: Remove limit on intercepts.
-void P_CheckIntercepts()
-{
-  static int max_intercepts = 0;
-  int count = intercept_p - intercepts;
-
-  if(max_intercepts <= count)
-    {
-      if(!max_intercepts)
-	max_intercepts = 128;
-      else
-	max_intercepts = max_intercepts * 2;
-
-      intercepts = (intercept_t*)realloc(intercepts, sizeof(intercept_t) * max_intercepts);
-      intercept_p = intercepts + count;
-    }
-}
-
-//
-// PIT_AddLineIntercepts.
 // Looks for lines in the given block
 // that intercept the given trace
 // to add to the intercepts list.
@@ -579,10 +542,10 @@ void P_CheckIntercepts()
 // A line is crossed if its endpoints
 // are on opposite sides of the trace.
 // Returns true if earlyout and a solid line hit.
-//
+
 static Map *tempMap;
 
-static bool PIT_AddLineIntercepts (line_t *ld)
+static bool PIT_AddLineIntercepts(line_t *ld)
 {
   int                 s1;
   int                 s2;
@@ -624,40 +587,25 @@ static bool PIT_AddLineIntercepts (line_t *ld)
       return false;   // stop checking
     }
 
-  //SoM: 4/6/2000: Limit removal
-  P_CheckIntercepts();
-
-  intercept_p->m = tempMap;
-  intercept_p->frac = frac;
-  intercept_p->isaline = true;
-  intercept_p->d.line = ld;
-  intercept_p++;
+  intercept_t in;
+  in.m = tempMap;
+  in.frac = frac;
+  in.isaline = true;
+  in.line = ld;
+  intercepts.push_back(in);
 
   return true;        // continue
 }
 
 
 
-//
-// PIT_AddThingIntercepts
-//
-static bool PIT_AddThingIntercepts (Actor *thing)
+// iteration function to see if an Actor intercepts a given line (trace)
+static bool PIT_AddThingIntercepts(Actor *thing)
 {
-  fixed_t             x1;
-  fixed_t             y1;
-  fixed_t             x2;
-  fixed_t             y2;
+  fixed_t  x1, y1, x2, y2;
+  int      s1, s2;
 
-  int                 s1;
-  int                 s2;
-
-  bool             tracepositive;
-
-  divline_t           dl;
-
-  fixed_t             frac;
-
-  tracepositive = (trace.dx ^ trace.dy)>0;
+  bool tracepositive = (trace.dx ^ trace.dy) > 0;
 
   // check a corner to corner crossection for hit
   if (tracepositive)
@@ -683,55 +631,51 @@ static bool PIT_AddThingIntercepts (Actor *thing)
   if (s1 == s2)
     return true;            // line isn't crossed
 
+  divline_t dl;
   dl.x = x1;
   dl.y = y1;
   dl.dx = x2-x1;
   dl.dy = y2-y1;
 
-  frac = P_InterceptVector (&trace, &dl);
+  fixed_t frac = P_InterceptVector (&trace, &dl);
 
   if (frac < 0)
     return true;            // behind source
 
-  P_CheckIntercepts();
-
-  intercept_p->m = tempMap;
-  intercept_p->frac = frac;
-  intercept_p->isaline = false;
-  intercept_p->d.thing = thing;
-  intercept_p++;
+  intercept_t in;
+  in.m = tempMap;
+  in.frac = frac;
+  in.isaline = false;
+  in.thing = thing;
+  intercepts.push_back(in);
 
   return true;                // keep going
 }
 
 
-//
-// P_TraverseIntercepts
-// Returns true if the traverser function returns true
-// for all lines.
-//
-static bool P_TraverseIntercepts (traverser_t func, fixed_t maxfrac)
+
+// Calls the traverser function on all intercept_t's in the
+// intercepts vector, in the nearness-of-intercept order.
+// Returns true if the traverser function returns true for all lines.
+static bool P_TraverseIntercepts(traverser_t func, fixed_t maxfrac)
 {
-  int                 count;
-  fixed_t             dist;
-  intercept_t *scan;
-  intercept_t *in;
+  int count = intercepts.size();
+  int i = count;
 
-  count = intercept_p - intercepts;
-
-  in = 0;                     // shut up compiler warning
-
-  while (count--)
+  intercept_t *in = NULL;
+  while (i--)
     {
-      dist = MAXINT;
-      for (scan = intercepts ; scan<intercept_p ; scan++)
-        {
+      fixed_t dist = MAXINT;
+
+      for (int j = 0; j < count; j++)
+	{
+	  intercept_t *scan = &intercepts[j];
 	  if (scan->frac < dist)
-            {
+	    {
 	      dist = scan->frac;
 	      in = scan;
-            }
-        }
+	    }
+	}
 
       if (dist > maxfrac)
 	return true;        // checked everything in range
@@ -748,54 +692,36 @@ static bool P_TraverseIntercepts (traverser_t func, fixed_t maxfrac)
       }
 #endif
 
-      // appelle la fonction en commencant par l' intercept_t le plus
-      // proche
-      if (!func (in))
-	return false;       // don't bother going farther
+      // call the traverser function on the closest intercept_t
+      if (!func(in))
+	return false; // don't bother going farther
 
-      in->frac = MAXINT;
+      in->frac = MAXINT; // make sure this intercept is not chosen again
     }
 
-  return true;                // everything was traversed
+  return true; // everything was traversed
 }
 
 
 
 
-//
-// was P_PathTraverse
 // Traces a line from x1,y1 to x2,y2,
 // calling the traverser function for each.
 // Returns true if the traverser function returns true
 // for all lines.
-//
 bool Map::PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags, traverser_t trav)
 {
-  fixed_t     xt1;
-  fixed_t     yt1;
-  fixed_t     xt2;
-  fixed_t     yt2;
-
   fixed_t     xstep;
   fixed_t     ystep;
 
   fixed_t     partial;
-
-  fixed_t     xintercept;
-  fixed_t     yintercept;
-
-  int         mapx;
-  int         mapy;
-
   int         mapxstep;
   int         mapystep;
-
-  int         count;
 
   earlyout = flags & PT_EARLYOUT;
 
   validcount++;
-  intercept_p = intercepts;
+  intercepts.clear();
 
   if (((x1-bmaporgx)&(MAPBLOCKSIZE-1)) == 0)
     x1 += FRACUNIT; // don't side exactly on a line
@@ -810,13 +736,13 @@ bool Map::PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags
 
   x1 -= bmaporgx;
   y1 -= bmaporgy;
-  xt1 = x1>>MAPBLOCKSHIFT;
-  yt1 = y1>>MAPBLOCKSHIFT;
+  fixed_t xt1 = x1>>MAPBLOCKSHIFT;
+  fixed_t yt1 = y1>>MAPBLOCKSHIFT;
 
   x2 -= bmaporgx;
   y2 -= bmaporgy;
-  xt2 = x2>>MAPBLOCKSHIFT;
-  yt2 = y2>>MAPBLOCKSHIFT;
+  fixed_t xt2 = x2>>MAPBLOCKSHIFT;
+  fixed_t yt2 = y2>>MAPBLOCKSHIFT;
 
   if (xt2 > xt1)
     {
@@ -837,7 +763,7 @@ bool Map::PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags
       ystep = 256*FRACUNIT;
     }
 
-  yintercept = (y1>>MAPBTOFRAC) + FixedMul (partial, ystep);
+  fixed_t yintercept = (y1>>MAPBTOFRAC) + FixedMul (partial, ystep);
 
 
   if (yt2 > yt1)
@@ -858,19 +784,19 @@ bool Map::PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags
       partial = FRACUNIT;
       xstep = 256*FRACUNIT;
     }
-  xintercept = (x1>>MAPBTOFRAC) + FixedMul (partial, xstep);
+  fixed_t xintercept = (x1>>MAPBTOFRAC) + FixedMul (partial, xstep);
 
   // Step through map blocks.
   // Count is present to prevent a round off error
   // from skipping the break.
-  mapx = xt1;
-  mapy = yt1;
+  int mapx = xt1;
+  int mapy = yt1;
 
   // argh. FIXME. I couldn't think of anything else.
   // this is for PIT_AddLineIntercepts so it knows the right Map.
   tempMap = this;
 
-  for (count = 0 ; count < 64 ; count++)
+  for (int count = 0 ; count < 64 ; count++)
     {
       if (flags & PT_ADDLINES)
         {
@@ -884,11 +810,8 @@ bool Map::PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags
 	    return false;   // early out
         }
 
-      if (mapx == xt2
-	  && mapy == yt2)
-        {
-	  break;
-        }
+      if (mapx == xt2 && mapy == yt2)
+	break;
 
       if ((yintercept >> FRACBITS) == mapy)
         {

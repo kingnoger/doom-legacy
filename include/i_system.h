@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2004/09/13 20:43:31  smite-meister
+// interface cleanup, sp map reset fixed
+//
 // Revision 1.7  2004/09/06 22:28:53  jussip
 // Beginnings of new joystick code.
 //
@@ -44,36 +47,10 @@
 #ifndef i_system_h
 #define i_system_h 1
 
-#include "d_ticcmd.h"
+#include "doomtype.h"
 
-
-// See Shutdown_xxx() routines.
-//extern byte graphics_started;
-extern byte keyboard_started;
-extern byte sound_started;
-
-#ifdef PC_DOS
-/* flag for 'win-friendly' mode used by interface code */
-extern int i_love_bill;
-#endif
-
-extern volatile tic_t ticcount;
-
-#ifdef WIN32_DIRECTX
-extern boolean winnt;
-extern BOOL   bDX0300;
-#endif
-
-// basic system initialization
+/// basic system initialization
 void I_SysInit();
-
-// Joystick init and cleanup.
-void I_JoystickInit();
-void I_ShutdownJoystick();
-
-// return free and total physical memory in the system
-Uint32 I_GetFreeMem(Uint32 *total);
-
 
 /// returns current time in 1/TICRATE second tics
 tic_t I_GetTics();
@@ -84,23 +61,33 @@ unsigned int I_GetTime();
 /// sleeps for a given amount of ms (accurate to about 10 ms)
 void I_Sleep(unsigned int ms);
 
+/// quits the game
+void I_Quit();
 
-void I_GetEvent ();
+/// quits the game and prints an error message
+void I_Error (char *error, ...);
+
+/// writes a message to stdout
+void I_OutputMsg(char *error, ...);
+
+/// creates a new directory
+int  I_mkdir(const char *dirname, int unixright);
+
+/// returns the free space on disk in bytes
+void I_GetDiskFreeSpace(INT64 *freespace);
+
+/// return free and total physical memory in the system
+Uint32 I_GetFreeMem(Uint32 *total);
 
 
-//
-// Called by D_DoomLoop,
+
 // called before processing any tics in a frame
 // (just after displaying a frame).
 // Time consuming syncronous operations
 // are performed here (joystick reading).
 // Can call D_PostEvent.
-//
-void I_StartFrame ();
+void I_StartFrame();
 
-
-//
-// Called by D_DoomLoop,
 // called before processing each tic in a frame.
 // Quick syncronous operations are performed here.
 // Can call D_PostEvent.
@@ -110,52 +97,55 @@ void I_OsPolling ();
 // that are read by the synchronous functions
 // to be converted into events.
 
-// Either returns a null ticcmd,
-// or calls a loadable driver to build it.
-// This ticcmd will then be modified by the gameloop
-// for normal input.
-ticcmd_t* I_BaseTiccmd ();
-
-
-// Called by M_Responder when quit is selected, return code 0.
-void I_Quit ();
-
-void I_Error (char *error, ...);
-
-// Allocates from low memory under dos,
-// just mallocs under unix
-byte* I_AllocLow (int length);
-
-void I_Tactile (int on, int off, int total);
-
-//added:18-02-98: write a message to stderr (use before I_Quit)
-//                for when you need to quit with a msg, but need
-//                the return code 0 of I_Quit();
-void I_OutputMsg (char *error, ...);
-
-void I_InitJoystick();
-void I_StartupMouse();
-void I_StartupMouse2();
-
-// setup timer irq and user timer routine.
-void I_TimerISR ();      //timer callback routine.
-void I_StartupTimer ();
-
-/* list of functions to call at program cleanup */
-void I_AddExitFunc (void (*func)());
-void I_RemoveExitFunc (void (*func)());
-
-// Setup signal handler, plus stuff for trapping errors and cleanly exit.
-int  I_StartupSystem ();
-void I_ShutdownSystem ();
-
-void I_GetDiskFreeSpace(INT64 *freespace);
+/// returns the username of the current user (or NULL)
 char *I_GetUserName();
-int  I_mkdir(const char *dirname, int unixright);
-
 
 /// returns the path to the default wadfile location (usually the current working directory)
 char *I_GetWadPath();
 
+
+
+//===========================================
+//               User input
+//===========================================
+
+/// polls input events and pushes them to the Legacy event queue
+void I_GetEvent();
+
+
+/// Joystick init and cleanup.
+void I_JoystickInit();
+void I_ShutdownJoystick();
+
+void I_StartupMouse();
+void I_StartupMouse2();
+
+// Either returns a null ticcmd,
+// or calls a loadable driver to build it.
+// This ticcmd will then be modified by the gameloop
+// for normal input.
+struct ticcmd_t *I_BaseTiccmd();
+
+
+
+//=================================================================
+// Some old stuff I like to keep here for the nostalgia value:)
+//=================================================================
+
+/*
+// Allocates from low memory under dos, just mallocs under unix
+byte* I_AllocLow (int length);
+
+//added:22-02-98: force feedback ??? electro-shock???
+void I_Tactile(int on, int off, int total);
+
+// setup timer irq and user timer routine.
+void I_TimerISR();      //timer callback routine.
+void I_StartupTimer();
+
+// list of functions to call at program cleanup
+void I_AddExitFunc(void (*func)());
+void I_RemoveExitFunc(void (*func)());
+*/
 
 #endif

@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.18  2004/09/13 20:43:29  smite-meister
+// interface cleanup, sp map reset fixed
+//
 // Revision 1.17  2004/08/29 20:48:47  smite-meister
 // bugfixes. wow.
 //
@@ -165,6 +168,17 @@ void MapInfo::Ticker(bool hub)
 	  else
 	    Close(-1);
 	}
+      else if (state == MAP_RESET)
+	{
+	  if (!savename.empty())
+	    {
+	      delete me; // the current map goes
+	      state = MAP_SAVED;
+	      HubLoad(); // revert to last hubsave
+	    }
+	  else
+	    Close(-1);
+	}
     }
 }
 
@@ -198,6 +212,7 @@ bool MapInfo::Activate(PlayerInfo *p)
       break;
 
     case MAP_RUNNING:
+    case MAP_RESET:
     case MAP_FINISHED:
       break;
 

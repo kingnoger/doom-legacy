@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.8  2004/09/13 20:43:31  smite-meister
+// interface cleanup, sp map reset fixed
+//
 // Revision 1.7  2004/08/12 18:30:29  smite-meister
 // cleaned startup
 //
@@ -116,6 +119,7 @@ public:
       MAP_UNLOADED = 0, ///< not loaded, "me" should be NULL
       MAP_RUNNING,      ///< currently running, "me" is valid
       MAP_INSTASIS,     ///< presently halted, but "me" is still valid
+      MAP_RESET,        ///< (single player) player has died, the map should be reset
       MAP_FINISHED,     ///< (at least some) players have finished the map, but it is still running, "me" is valid
       MAP_SAVED         ///< "me" should be NULL, the Map is saved on disk
     };
