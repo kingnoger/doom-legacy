@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.27  2005/04/17 17:47:54  smite-meister
+// netcode
+//
 // Revision 1.26  2004/12/31 16:19:40  smite-meister
 // alpha fixes
 //
@@ -172,11 +175,8 @@ public:
   /// First person sprites (weapon and muzzle flash)
   pspdef_t psprites[NUMPSPRITES];
 
-
   /// Inventory
   vector<inventory_t> inventory;
-  int invTics;  ///< When >0, show inventory in HUD
-  int invSlot;  ///< Active inventory slot is inventory[invSlot]
 
   int  keycards; ///< Bit field, see the definition of keycard_t
   bool backpack;
@@ -248,7 +248,6 @@ public:
   bool UndoMorph();
 
   void UseArtifact(artitype_t arti);
-  bool InventoryResponder(short (*gc)[2], struct event_t *ev);
 
   // in p_map.cpp
   void UseLines();

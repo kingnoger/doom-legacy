@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.20  2005/04/17 17:47:54  smite-meister
+// netcode
+//
 // Revision 1.19  2004/11/04 21:12:54  smite-meister
 // save/load fixed
 //
@@ -71,6 +74,64 @@ enum playerstate_t
 };
 
 
+/// \brief Network player options and preferences.
+///
+/// Things about your avatar that can be changed locally,
+/// and which you can setup _before_ entering a game.
+/// The server may override any of these when you join a game.
+/// Also, you may be given new choices (team etc.) after joining.
+class PlayerOptions
+{
+public:
+  /// requested playername
+  string name;
+  
+  // Pawn preferences. Can be changed during the game, take effect at next respawn.
+  int ptype; ///< what kind of pawn are we playing?
+  int color; ///< skin color to be copied to each pawn
+  int skin;  ///< skin to be copied to each pawn
+
+  // Weapon preferences
+  bool autoaim;                 ///< using autoaim?
+  bool originalweaponswitch;    ///<
+  unsigned char weaponpref[NUMWEAPONS];  ///< 
+
+  // Message preferences
+  int  messagefilter; ///< minimum message priority the player wants to receive
+
+  // TODO chasecam prefs
+
+public:
+  PlayerOptions(const string &n = "");
+
+  int Serialize(class LArchive &a);
+  int Unserialize(LArchive &a);
+
+  void Write(BitStream *stream);
+  void Read(BitStream *stream);
+};
+
+
+/// \brief Player options and preferences.
+///
+/// This class adds the purely local options which are never sent to server.
+class LocalPlayerInfo : public PlayerOptions
+{
+public:
+  int  controlkeyset;
+  bool autorun;
+  int  crosshair; // TODO problem
+
+  int  pnumber;  ///< player number the server sent during joining
+  class PlayerInfo *info; ///< Pointer to the corresponding (ghosted) PlayerInfo object.
+  class BotAI *ai;        ///< possible bot AI controlling the player
+
+public:
+  LocalPlayerInfo(const string &n = "bot", int keyset = 0);
+  void GetInput(int elapsed);
+};
+
+
 /// \brief Describes a single player, either human or AI.
 ///
 /// Created when a player joins the game, deleted when he leaves.
@@ -87,33 +148,29 @@ class PlayerInfo : public NetObject
   virtual void unpackUpdate(GhostConnection *c, BitStream *s);
 
 public:
-  int    number;   ///< player number
-  int    team;     ///< index into game.teams vector
   string name;     ///< name of the player
+  int    number;   ///< player number
+  int    team;     ///< player's team
 
   class LConnection *connection; ///< network connection
   unsigned client_hash;          ///< hash of the client network address
 
   playerstate_t playerstate;
-  bool spectator;  ///< ghost spectator in a map?
+  bool spectator;     ///< ghost spectator in a map?
   bool map_completed; ///< TEST has finished the map, but continues playing
 
   int requestmap;  ///< the map which we wish to enter
   int entrypoint;  ///< which spawning point to use
 
-  ticcmd_t  cmd;   ///< current state of the player's controls
-
   class Map        *mp;   ///< the map with which the player is currently associated
   class PlayerPawn *pawn; ///< the thing that is being controlled by this player (marine, imp, whatever)
   class Actor      *pov;  ///< the POV of the player. usually same as pawn, but can also be a chasecam etc...
-
 
   //============ Score ============
 
   map<int, int> Frags; ///< mapping from player number to how many times you have fragged him
   int score;           ///< game-type dependent scoring based on frags, updated in real time
   int kills, items, secrets, time; ///< accomplishments in the current Map
-
 
   //============ Messages ============
 
@@ -130,22 +187,7 @@ public:
     string msg;
   };
 
-  int messagefilter; ///< minimum message priority the player wants to receive
   deque<message_t> messages; ///< local message queue
-
-
-  //============ Preferences ============
-
-  // Weapon preferences
-  char weaponpref[NUMWEAPONS];  ///< 
-  bool originalweaponswitch;    ///< 
-  bool autoaim;                 ///< using autoaim?
-
-  // Pawn preferences. Can be changed during the game, take effect at next respawn.
-  int ptype; ///< what kind of pawn are we playing?
-  int color; ///< skin color to be copied to each pawn
-  int skin;  ///< skin to be copied to each pawn
-
 
   //============ Feedback ============
 
@@ -153,37 +195,57 @@ public:
   fixed_t  viewz;           ///< absolute viewpoint z coordinate
   fixed_t  viewheight;      ///< distance from feet to eyes
   fixed_t  deltaviewheight; ///< bob/squat speed.
-  fixed_t  bob_amplitude;   ///< basically pawn speed squared, affects weapon movement
 
   // HUD flashes
   int palette;
   int damagecount;
   int bonuscount;
   //int poisoncount;
-  int itemuse;
+  bool itemuse;
+
+  //============ Options ============
+
+  PlayerOptions options;
+
+  //============ Control ============
+
+  ticcmd_t    cmd;  ///< current state of the player's controls
+  int invTics;  ///< When >0, show inventory in HUD
+  int invSlot;  ///< Active inventory slot is pawn->inventory[invSlot]
 
 
 public:
-  PlayerInfo(const string & n = "");
+  PlayerInfo(const string &n = "");
 
   int Serialize(class LArchive &a);
   int Unserialize(LArchive &a);
 
-  virtual void GetInput(int localpnum, int elapsed) { cmd.Build(localpnum, elapsed); }
+  bool InventoryResponder(short (*gc)[2], struct event_t *ev);
+
   void ExitLevel(int nextmap, int ep);
   void Reset(bool resetpawn, bool resetfrags);  // resets the player (when starting a new level, for example)
 
   virtual void SetMessage(const char *msg, int priority = 0, int type = M_CONSOLE);
 
-  void CalcViewHeight(bool onground); // update bobbing view height
+  /// Client: Calculate the walking / running viewpoint bobbing and weapon swing
+  void CalcViewHeight();
 };
 
 
+// TEMP
+enum
+{
+  NUM_LOCALHUMANS = 2,
+  NUM_LOCALBOTS = 10,
+  NUM_LOCALPLAYERS = NUM_LOCALHUMANS + NUM_LOCALBOTS
+};
 
-// model PI's for both local players
-extern PlayerInfo localplayer;
-extern PlayerInfo localplayer2;
+/// Local human players, then local bot players
+extern LocalPlayerInfo LocalPlayers[NUM_LOCALPLAYERS];
 
-extern vector<PlayerInfo *> Consoleplayer;  // local players
+/// Observed players (multiple viewports...)
+extern vector<PlayerInfo *> ViewPlayers;
+
+bool G_RemoveLocalPlayer(PlayerInfo *p);
 
 #endif

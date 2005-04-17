@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2005/04/17 17:49:43  smite-meister
+// netcode
+//
 // Revision 1.20  2005/04/01 14:47:38  smite-meister
 // dehacked works
 //
@@ -859,7 +862,7 @@ void S_ClearSounds()
   extern map<int, struct sndseq_t*> SoundSeqs;
   map<int, sndseq_t*>::iterator t;
   for (t = SoundSeqs.begin(); t != SoundSeqs.end(); t++)
-    delete (*t).second;
+    delete t->second;
   SoundSeqs.clear();
 
   int n = SoundStore.size();
@@ -886,7 +889,7 @@ int S_GetSoundID(const char *tag)
       return -1;
     }
 
-  return (*i).second->number;
+  return i->second->number;
 }
 
 
@@ -999,7 +1002,7 @@ int S_Read_SNDINFO(int lump)
 	      SoundID[info->number] = info;
 	    }
 	  else
-	    info = (*t).second;
+	    info = t->second;
 
 	  //CONS_Printf("  sound '%s'", tag);
 
@@ -1027,7 +1030,7 @@ int S_Read_SNDINFO(int lump)
 		{
 		  CONS_Printf("Warning: Alias sound '%s' already defined!\n", tag);
 		  // it loses its tag mapping, but the number mapping remains.
-		  al = (*t).second;
+		  al = t->second;
 		}
 
 	      SoundInfo[al->tag] = info; // info contains all the real data

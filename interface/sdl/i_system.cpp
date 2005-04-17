@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,32 +17,20 @@
 //
 //
 // $Log$
+// Revision 1.29  2005/04/17 17:46:21  smite-meister
+// netcode
+//
 // Revision 1.28  2005/04/01 11:06:49  segabor
 // Disabled EndTxt on Mac OS X
 //
-// Revision 1.27  2005/03/21 17:44:18  smite-meister
-// fixes
-//
-// Revision 1.26  2005/01/25 18:29:16  smite-meister
-// preparing for alpha
-//
 // Revision 1.25  2004/12/08 16:58:10  segabor
 // Small Mac related fixes
-//
-// Revision 1.24  2004/11/19 16:51:06  smite-meister
-// cleanup
 //
 // Revision 1.23  2004/10/27 17:37:10  smite-meister
 // netcode update
 //
 // Revision 1.22  2004/10/14 19:35:51  smite-meister
 // automap, bbox_t
-//
-// Revision 1.21  2004/10/11 11:16:08  smite-meister
-// windows fix
-//
-// Revision 1.20  2004/09/24 11:34:00  smite-meister
-// fix
 //
 // Revision 1.19  2004/09/20 22:42:49  jussip
 // Joystick axis binding works. New joystick code ready for use.
@@ -62,26 +50,14 @@
 // Revision 1.14  2004/09/06 22:28:54  jussip
 // Beginnings of new joystick code.
 //
-// Revision 1.13  2004/08/29 20:48:49  smite-meister
-// bugfixes. wow.
-//
 // Revision 1.12  2004/08/18 14:35:21  smite-meister
 // PNG support!
-//
-// Revision 1.11  2004/08/12 18:30:31  smite-meister
-// cleaned startup
-//
-// Revision 1.10  2004/07/14 16:13:13  smite-meister
-// cleanup, commands
 //
 // Revision 1.9  2004/07/13 20:23:38  smite-meister
 // Mod system basics
 //
 // Revision 1.8  2004/07/11 14:32:01  smite-meister
 // Consvars updated, bugfixes
-//
-// Revision 1.7  2004/07/05 16:53:29  smite-meister
-// Netcode replaced
 //
 // Revision 1.6  2004/01/10 16:03:00  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
@@ -91,9 +67,6 @@
 //
 // Revision 1.4  2003/11/23 19:07:42  smite-meister
 // New startup order
-//
-// Revision 1.3  2003/11/23 00:41:55  smite-meister
-// bugfixes
 //
 // Revision 1.2  2003/02/08 21:43:50  smite-meister
 // New Memzone system. Choose your pawntype! Cyberdemon OK.
@@ -262,7 +235,7 @@ void I_GetEvent()
 	  D_PostEvent(&event);
 	  break;
         case SDL_MOUSEMOTION:
-	  if (cv_usemouse.value)
+	  if (cv_usemouse[0].value)
             {
 	      // If the event is from warping the pointer back to middle
 	      // of the screen then ignore it.
@@ -298,7 +271,7 @@ void I_GetEvent()
 	  break;
         case SDL_MOUSEBUTTONDOWN:
         case SDL_MOUSEBUTTONUP:
-	  if (cv_usemouse.value)
+	  if (cv_usemouse[0].value)
             {
 	      if (inputEvent.type == SDL_MOUSEBUTTONDOWN)
 		event.type = ev_keydown;

@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004 by DooM Legacy Team.
+// Copyright (C) 2004-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2005/04/17 17:44:37  smite-meister
+// netcode
+//
 // Revision 1.11  2005/03/24 16:58:21  smite-meister
 // upgrade to OpenTNL 1.5
 //
@@ -26,26 +29,11 @@
 // Revision 1.9  2004/11/09 20:38:52  smite-meister
 // added packing to I/O structs
 //
-// Revision 1.8  2004/11/04 21:12:54  smite-meister
-// save/load fixed
-//
-// Revision 1.7  2004/10/27 17:37:10  smite-meister
-// netcode update
-//
-// Revision 1.6  2004/08/12 18:30:31  smite-meister
-// cleaned startup
-//
-// Revision 1.5  2004/08/06 18:54:39  smite-meister
-// netcode update
-//
 // Revision 1.4  2004/07/13 20:23:38  smite-meister
 // Mod system basics
 //
 // Revision 1.3  2004/07/11 14:32:01  smite-meister
 // Consvars updated, bugfixes
-//
-// Revision 1.2  2004/07/09 19:43:40  smite-meister
-// Netcode fixes
 //
 // Revision 1.1  2004/07/05 16:53:30  smite-meister
 // Netcode replaced
@@ -68,6 +56,8 @@
 #include "g_pawn.h"
 
 
+extern unsigned num_bots;
+
 /*
 More serverside stuff:
 
@@ -83,6 +73,7 @@ bool isGhosting()
   virtual F32  getUpdatePriority (NetObject *scopeObject, U32 updateMask, S32 updateSkips)
 */
 
+list<class LocalPlayerInfo *> LConnection::joining_players;
 
 
 TNL_IMPLEMENT_NETCONNECTION(LConnection, NetClassGroupGame, true);
@@ -96,26 +87,38 @@ LConnection::LConnection()
 }
 
 
-
 // client
 void LConnection::writeConnectRequest(BitStream *stream)
 {
-   Parent::writeConnectRequest(stream);
+  Parent::writeConnectRequest(stream);
 
-   stream->write(VERSION);
-   stream->writeString(VERSIONSTRING);
+  stream->write(VERSION);
+  stream->writeString(VERSIONSTRING);
 
-   // send local player data
-   byte n = cv_splitscreen.value ? 2 : 1; // number of local players
-   stream->write(n);
+  joining_players.clear();
 
-   stream->writeString(localplayer.name.c_str());
+  // send local player data
+  unsigned n = 1+cv_splitscreen.value; // number of local human players
+  stream->write(n + num_bots);
 
-   if (n == 2)
-     {
-       stream->writeString(localplayer2.name.c_str());
-     }
+  LocalPlayerInfo *p;
+  // first humans
+  for (unsigned i = 0; i < n; i++)
+    {
+      p = &LocalPlayers[i];
+      p->Write(stream);
+      joining_players.push_back(p);
+    }
+
+  // then bots
+  for (unsigned i = 0; i < num_bots; i++)
+    {
+      p = &LocalPlayers[NUM_LOCALHUMANS + i];
+      p->Write(stream);
+      joining_players.push_back(p);
+    }
 }
+
 
 
 // server
@@ -145,31 +148,31 @@ bool LConnection::readConnectRequest(BitStream *stream, const char **errorString
     }
 
   // how many players want to get in?
-  byte n;
+  unsigned n;
   stream->read(&n);
-
 
   LNetInterface *net = (LNetInterface *)getInterface();
 
   if (net->netstate == LNetInterface::SV_Running)
     {
-      if (game.Players.size() + n > unsigned(cv_maxplayers.value))
+      if (game.Players.size() >= unsigned(cv_maxplayers.value))
 	{
 	  sprintf(temp, "Maximum number of players reached (%d).", cv_maxplayers.value);
 	  return false;
 	}
 
-      // read playerdata
-      for (int i = 0; i<n; i++)
-	{
-	  stream->readString(temp);
-	  temp[32] = '\0'; // limit name length
+      n = min(n, cv_maxplayers.value - game.Players.size()); // this many fit in
 
-	  PlayerInfo *p = new PlayerInfo(temp);
+      // read joining players' preferences
+      for (unsigned i = 0; i < n; i++)
+	{
+	  PlayerInfo *p = new PlayerInfo();
+	  p->options.Read(stream);
 	  p->connection = this;
 	  p->client_hash = getNetAddress().hash();
 
 	  // TODO check that name is unique, change if necessary
+	  p->name = p->options.name;
 
 	  player.push_back(p);
 	  if (!game.AddPlayer(p))
@@ -190,40 +193,50 @@ void LConnection::writeConnectAccept(BitStream *stream)
 {
   Parent::writeConnectAccept(stream);
 
-  byte n = player.size();
+  unsigned n = player.size();
   stream->write(n);                   // how many players were accepted?
-  for (int i = 0; i < n; i++)
+  for (unsigned i = 0; i < n; i++)
     stream->write(player[i]->number); // send pnums
 
-  game.gtype->WriteServerInfo(*stream);
+  serverinfo_t::Write(*stream); // first send basic server info (including the gametype!)
+  game.gtype->WriteServerInfo(*stream); // then gametype dependent stuff: netvars, resource file info...
 }
 
 
 // client
 bool LConnection::readConnectAccept(BitStream *stream, const char **errorString)
 {
-  if(!Parent::readConnectAccept(stream, errorString))
+  if (!Parent::readConnectAccept(stream, errorString))
     return false;
 
-  byte n;
-  stream->read(&n);
-  if (n > 2 || n == 0)
+  unsigned n;
+  stream->read(&n); // number of players accepted
+  if (n == 0 || n > joining_players.size())
     return false;
 
-  stream->read(&localplayer.number);
-  if (n == 2)
-    stream->read(&localplayer2.number);
+  CONS_Printf("Server accepts %d players.\n", n);
+  joining_players.resize(n); // humans have precedence over bots
+
+  list<class LocalPlayerInfo *>::iterator t = joining_players.begin();
+  for ( ; t != joining_players.end(); t++)
+    stream->read(&(*t)->pnumber); // read pnums
 
   // read server properties
   LNetInterface *net = (LNetInterface *)getInterface();
 
   serverinfo_t *s = net->SL_FindServer(getNetAddress());
   if (!s)
-    s = net->SL_AddServer(getNetAddress());
+    s = new serverinfo_t(getNetAddress()); 
 
   s->Read(*stream);
 
-  consvar_t::LoadNetVars(*stream);
+  // TODO check if we have the correct gametype DLL!
+  game.gtype->ReadServerInfo(*stream);
+  /*
+  if (!game.FindGametypeDLL(*stream))
+    return false; // no suitable DLL found, must disconnect
+  */
+
   // FIXME read needed files, check them, download them...
 
   return true;
@@ -272,12 +285,11 @@ void LConnection::onConnectionEstablished()
       for (int i = 0; i<k; i++)
 	{
 	  CONS_Printf("%s entered the game (player %d)\n", player[i]->name.c_str(), player[i]->number);
-	  // TODO multicast/RPC playerinfo to other players?
 	}
       setScopeObject(game.gtype);
       setGhostFrom(true);
       setGhostTo(false);
-      activateGhosting();
+      activateGhosting(); // soon, the new PlayerInfos will be ghosted to everyone
     }
 }
 
@@ -309,7 +321,7 @@ void LConnection::ConnectionTerminated(bool established)
 	      player[i]->playerstate = PST_REMOVE;
 	    }
 	  resetGhosting();
-	  // TODO inform others, remove client_con member
+	  ((LNetInterface *)getInterface())->SV_RemoveConnection(this);
 	}
       else
 	{
@@ -336,6 +348,9 @@ void LConnection::onEndGhosting()
 
 //========================================================
 //            Remote Procedure Calls
+//
+// Functions that are called at one end of the
+// connection and executed at the other. Neat.
 //========================================================
 
 LCONNECTION_RPC(rpcTest, (U8 num), (num), RPCGuaranteedOrdered, RPCDirClientToServer, 0)
@@ -394,11 +409,10 @@ LCONNECTION_RPC(rpcChat, (S8 from, S8 to, StringPtr msg), (from, to, msg),
 LCONNECTION_RPC(rpcMessage_s2c, (S32 pnum, StringPtr msg, S8 priority, S8 type), (pnum, msg, priority, type),
 		RPCGuaranteedOrdered, RPCDirServerToClient, 0)
 {
-  int n = Consoleplayer.size();
-  for (int i=0; i<n; i++)
-    if (Consoleplayer[i]->number == pnum)
+  for (int i=0; i<NUM_LOCALPLAYERS; i++)
+    if (LocalPlayers[i].info && LocalPlayers[i].info->number == pnum)
       {
-	Consoleplayer[i]->SetMessage(msg, priority, type);
+	LocalPlayers[i].info->SetMessage(msg, priority, type);
 	return;
       }
 
@@ -452,4 +466,15 @@ LCONNECTION_RPC(rpcRequestPOVchange_c2s, (S32 pnum), (pnum),
     }
 
   // TODO client should start HUD on the new pov...
+}
+
+
+LCONNECTION_RPC(rpcSuicide_c2s, (U8 pnum), (pnum),
+		RPCGuaranteedOrdered, RPCDirClientToServer, 0)
+{
+  void Kill_pawn(Actor *v, Actor *k);
+
+  PlayerInfo *p = game.FindPlayer(pnum);
+  if (p->connection == this)
+    Kill_pawn(p->pawn, p->pawn);
 }

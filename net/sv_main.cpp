@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2005/04/17 17:44:37  smite-meister
+// netcode
+//
 // Revision 1.22  2005/03/16 21:16:09  smite-meister
 // menu cleanup, bugfixes
 //
@@ -232,12 +235,12 @@ consvar_t cv_itemrespawn     ={"respawnitem"    , "0", CV_NETVAR, CV_OnOff};
 consvar_t cv_itemrespawntime ={"respawnitemtime", "30", CV_NETVAR, CV_Unsigned};
 consvar_t cv_respawnmonsters = {"respawnmonsters", "0", CV_NETVAR, CV_OnOff};
 consvar_t cv_respawnmonsterstime = {"respawnmonsterstime", "12", CV_NETVAR, CV_Unsigned};
-consvar_t cv_fragsweaponfalling  = {"fragsweaponfalling", "0", CV_SAVE | CV_NETVAR, CV_OnOff};
+consvar_t cv_fragsweaponfalling  = {"fragsweaponfalling", "0", CV_NETVAR, CV_OnOff};
 
 consvar_t cv_gravity = {"gravity", "1", CV_NETVAR | CV_FLOAT | CV_ANNOUNCE};
 consvar_t cv_nomonsters = {"nomonsters", "0", CV_NETVAR, CV_OnOff};
 consvar_t cv_fastmonsters = {"fastmonsters", "0", CV_NETVAR | CV_CALL, CV_OnOff,FastMonster_OnChange};
-consvar_t cv_solidcorpse  = {"solidcorpse", "0", CV_NETVAR | CV_SAVE, CV_OnOff};
+consvar_t cv_solidcorpse  = {"solidcorpse", "0", CV_NETVAR, CV_OnOff};
 consvar_t cv_voodoodolls  = {"voodoodolls", "1", CV_NETVAR, CV_OnOff};
 
 
@@ -348,9 +351,8 @@ void GameInfo::TryRunTics(tic_t elapsed)
       con.Ticker();
 
       // translate inputs (keyboard/mouse/joystick) into a ticcmd
-      int n = Consoleplayer.size();
-      for (int i=0; i<n; i++)
-	Consoleplayer[i]->GetInput(i, elapsed);
+      for (int i=0; i < NUM_LOCALPLAYERS; i++)
+	LocalPlayers[i].GetInput(elapsed);
     }
 
   D_ProcessEvents(); // read control events, feed them to responders
@@ -361,7 +363,6 @@ void GameInfo::TryRunTics(tic_t elapsed)
   // try resending them a few times until we get confirmation of arrival from server
 
   // run client simulation/server simulation
-
 
   net->Update();
 

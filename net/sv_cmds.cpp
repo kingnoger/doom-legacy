@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,11 +17,11 @@
 //
 //
 // $Log$
+// Revision 1.15  2005/04/17 17:44:37  smite-meister
+// netcode
+//
 // Revision 1.14  2005/03/24 16:58:22  smite-meister
 // upgrade to OpenTNL 1.5
-//
-// Revision 1.13  2005/01/25 18:29:16  smite-meister
-// preparing for alpha
 //
 // Revision 1.12  2004/11/28 18:02:23  smite-meister
 // RPCs finally work!
@@ -139,7 +139,7 @@ void Command_Players_f()
   CONS_Printf("Num             Name Score Ping\n");
   for (GameInfo::player_iter_t t = game.Players.begin(); t != game.Players.end(); t++)
     {
-      PlayerInfo *p = (*t).second;
+      PlayerInfo *p = t->second;
       // TODO highlight serverplayers
       CONS_Printf("%3d %16s  %4d %4d\n", p->number, p->name.c_str(), 1, 20);
     }
@@ -406,7 +406,7 @@ void Command_Connect_f()
   if (COM_Argc() < 2)
     {
       CONS_Printf("connect <serveraddress> : connect to a server\n"
-		  "connect ANY : connect to the first lan server found\n");
+		  "connect ANY : connect to the first LAN server found\n");
       return;
     }
 
@@ -559,7 +559,7 @@ void Command_NewGame_f()
 {
   if (COM_Argc() < 3 || COM_Argc() > 5)
     {
-      CONS_Printf("Usage: newgame <MAPINFOlump> local | server [episode] [skill]\n");
+      CONS_Printf("Usage: newgame <MAPINFO lump> (local | server) [episode] [skill]\n");
       return;
     }
 
@@ -598,11 +598,16 @@ void Command_NewGame_f()
   if (!game.dedicated)
     {
       // add local players
-      Consoleplayer.push_back(game.AddPlayer(new PlayerInfo(localplayer)));
-      if (cv_splitscreen.value)
-	Consoleplayer.push_back(game.AddPlayer(new PlayerInfo(localplayer2)));
+      int n = 1 + cv_splitscreen.value;
+      for (int i=0; i<n; i++)
+	LocalPlayers[i].info = game.AddPlayer(new PlayerInfo(LocalPlayers[i].name));
 
-      hud.ST_Start(Consoleplayer[0]);
+      // TODO add bots
+
+      for (int i=0; i < n; i++)
+	ViewPlayers.push_back(LocalPlayers[i].info);
+
+      hud.ST_Start(LocalPlayers[0].info);
     }
 
   game.StartGame(skill_t(sk), epi);
@@ -736,7 +741,7 @@ void Got_KickCmd(char **p,int playernum)
 
 
 // helper function for Command_Kill_f
-static void Kill_pawn(Actor *v, Actor *k)
+void Kill_pawn(Actor *v, Actor *k)
 {
   if (v && v->health > 0)
     {
@@ -761,9 +766,9 @@ void Command_Kill_f()
     {
       // client players can only commit suicide
       if (COM_Argc() > 2 || strcmp(COM_Argv(1), "me"))
-	CONS_Printf("Only the server can kill others thru console!\n");
-      else if (com_player)
-	Kill_pawn(com_player->pawn, com_player->pawn);
+	CONS_Printf("Only the server can kill others thru the console!\n");
+      else if (com_player && game.net->server_con)
+	game.net->server_con->rpcSuicide_c2s(com_player->number);
       return;
     }
 

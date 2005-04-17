@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,14 +18,14 @@
 //
 //
 // $Log$
+// Revision 1.8  2005/04/17 17:47:54  smite-meister
+// netcode
+//
 // Revision 1.7  2004/10/27 17:37:09  smite-meister
 // netcode update
 //
 // Revision 1.6  2004/09/13 20:43:31  smite-meister
 // interface cleanup, sp map reset fixed
-//
-// Revision 1.5  2004/07/07 17:27:19  smite-meister
-// bugfixes
 //
 // Revision 1.4  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
@@ -87,7 +87,7 @@ struct ticcmd_t
   void Clear();
 
   /// Fills the ticcmd_t with local input data.
-  void Build(int playernumber, int elapsedtics);
+  void Build(class LocalPlayerInfo *info, int elapsedtics);
 };
 
 #endif

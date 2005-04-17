@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2005/04/17 17:44:37  smite-meister
+// netcode
+//
 // Revision 1.12  2004/11/28 18:02:23  smite-meister
 // RPCs finally work!
 //
@@ -79,7 +82,9 @@
 using namespace TNL;
 
 
-
+//===================================================================
+//    Server lists
+//===================================================================
 
 serverinfo_t::serverinfo_t(const Address &a)
 {
@@ -90,7 +95,7 @@ serverinfo_t::serverinfo_t(const Address &a)
   gt_version = 0;
 }
 
-
+/// reads server information from a packet
 void serverinfo_t::Read(BitStream &s)
 {
   char temp[256];
@@ -110,6 +115,59 @@ void serverinfo_t::Read(BitStream &s)
   s.read(&gt_version);
 }
 
+/// writes the current server information from to a packet
+void serverinfo_t::Write(BitStream &s)
+{
+  s.write(game.demoversion);
+  s.writeString(VERSIONSTRING);
+  s.writeString(cv_servername.str);
+  s.write(game.Players.size());
+  s.write(game.maxplayers);
+  s.writeString(game.gtype->gt_name.c_str());
+  s.write(game.gtype->gt_version);
+  // TODO more basic info? current mapname? server load?
+}
+
+
+serverinfo_t *LNetInterface::SL_FindServer(const Address &a)
+{
+  int n = serverlist.size();
+  for (int i = 0; i<n; i++)
+    if (serverlist[i]->addr == a)
+      return serverlist[i];
+  
+  return NULL;
+}
+
+
+serverinfo_t *LNetInterface::SL_AddServer(const Address &a)
+{
+  if (serverlist.size() >= 50)
+    return NULL; // no more room
+
+  serverinfo_t *s = new serverinfo_t(a);
+  serverlist.push_back(s);
+  return s;
+}
+
+
+void LNetInterface::SL_Clear()
+{
+  int n = serverlist.size();
+  for (int i = 0; i<n; i++)
+    delete serverlist[i];
+
+  serverlist.clear();
+}
+
+
+void LNetInterface::SL_Update()
+{
+  int n = serverlist.size();
+  for (int i = 0; i<n; i++)
+    if (serverlist[i]->nextquery <= nowtime)
+      SendQuery(serverlist[i]);
+}
 
 
 //===================================================================
@@ -293,8 +351,8 @@ void LNetInterface::handleInfoPacket(const Address &address, U8 packetType, BitS
 	      out.write(U8(PT_QueryResponse));
 	      cn.write(&out);
 
-	      game.gtype->WriteServerQueryResponse(out);
-
+	      // send over the server info
+	      serverinfo_t::Write(out);
 	      out.sendto(mSocket, address);
 	    }	  
 	}
@@ -331,54 +389,6 @@ void LNetInterface::handleInfoPacket(const Address &address, U8 packetType, BitS
 
 
 
-serverinfo_t *LNetInterface::SL_FindServer(const Address &a)
-{
-  int n = serverlist.size();
-  for (int i = 0; i<n; i++)
-    if (serverlist[i]->addr == a)
-      return serverlist[i];
-  
-  return NULL;
-}
-
-
-serverinfo_t *LNetInterface::SL_AddServer(const Address &a)
-{
-  if (serverlist.size() >= 50)
-    return NULL; // no more room
-
-  serverinfo_t *s = new serverinfo_t(a);
-  serverlist.push_back(s);
-  return s;
-}
-
-
-void LNetInterface::SL_Clear()
-{
-  int n = serverlist.size();
-  for (int i = 0; i<n; i++)
-    delete serverlist[i];
-
-  serverlist.clear();
-}
-
-
-void LNetInterface::SL_Update()
-{
-  int n = serverlist.size();
-  for (int i = 0; i<n; i++)
-    if (serverlist[i]->nextquery <= nowtime)
-      SendQuery(serverlist[i]);
-}
-
-
-
-
-
-
-
-
-
 // client making a connection
 void LNetInterface::CL_Connect(const Address &a)
 {
@@ -390,7 +400,7 @@ void LNetInterface::CL_Connect(const Address &a)
 
   // Set player info
 
-  // TODO if (local) s->connectLocal(net, net);
+  // If we had separate server and client progs, we could use  'if (local) s->connectLocal(net, net)';
   server_con->connect(this, a);
   netstate = CL_Connecting;
 }
@@ -429,6 +439,21 @@ void LNetInterface::SV_Close()
   netstate = SV_WaitingClients;
 }
 */
+
+
+bool LNetInterface::SV_RemoveConnection(LConnection *c)
+{
+  vector<LConnection *>::iterator t = client_con.begin();
+  for ( ; t != client_con.end(); t++)
+    if (*t == c)
+      {
+	client_con.erase(t);
+	return true;
+      }
+
+  return false; // not found
+}
+
 
 
 class MasterConnection : public LConnection {};

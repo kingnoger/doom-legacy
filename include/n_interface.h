@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2005/04/17 17:47:54  smite-meister
+// netcode
+//
 // Revision 1.8  2004/11/28 18:02:23  smite-meister
 // RPCs finally work!
 //
@@ -153,6 +156,9 @@ public:
   /// Opens a server to the world
   void SV_Open(bool waitforplayers = false);
 
+  /// Removes the given connection from the client_con vector
+  bool SV_RemoveConnection(LConnection *c);
+
   /// Closes all connections, disallows new connections
   void SV_Reset();
 
@@ -187,6 +193,7 @@ public:
   serverinfo_t(const Address &a);
   void Draw(int x, int y);
   void Read(TNL::BitStream &s);
+  static void Write(TNL::BitStream &s);
 };
 
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.34  2005/04/17 17:49:43  smite-meister
+// netcode
+//
 // Revision 1.33  2005/03/19 13:51:28  smite-meister
 // sound samplerate fix
 //
@@ -700,10 +703,10 @@ int SoundSystem::Start3DSound(sfxinfo_t *s, soundsource_t *source, float volume)
   Actor *listener = NULL;
   float vmax = -1;
 
-  int n = Consoleplayer.size();
+  int n = ViewPlayers.size();
   for (int i=0; i<n; i++)
     {
-      Actor *temp = Consoleplayer[i]->pawn;    
+      Actor *temp = ViewPlayers[i]->pawn;    
       float v = S_ObservedVolume(temp, source);
 
       if (v > vmax)
@@ -871,7 +874,7 @@ void SoundSystem::UpdateSounds()
 
   // 3D sound channels
 
-  int n = Consoleplayer.size();
+  int n = ViewPlayers.size();
 
   // static sound channels
   int nchan = channels.size();
@@ -892,7 +895,7 @@ void SoundSystem::UpdateSounds()
 
 	  for (int i=0; i<n; i++)
 	    {
-	      Actor *temp = Consoleplayer[i]->pawn;    
+	      Actor *temp = ViewPlayers[i]->pawn;    
 	      float v = S_ObservedVolume(temp, &c->source);
 	      
 	      if (v > vmax)

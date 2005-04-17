@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004 by DooM Legacy Team.
+// Copyright (C) 2004-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2005/04/17 17:44:37  smite-meister
+// netcode
+//
 // Revision 1.14  2004/11/28 18:02:23  smite-meister
 // RPCs finally work!
 //
@@ -87,46 +90,10 @@
 #include "i_video.h"
 
 
-void Command_Setcontrol_f();
-void Command_BindJoyaxis_f();
-void Command_UnbindJoyaxis_f();
-
-
-void Command_Water_f();
-
-void SendWeaponPref();
-void SendNameAndColor();
-void SendNameAndColor2();
-
-
 
 //=========================================================================
 //        Client consvars
 //=========================================================================
-
-
-CV_PossibleValue_t Color_cons_t[] =
-{
-  {0,"green"}, {1,"gray"}, {2,"brown"}, {3,"red"}, {4,"light gray"},
-  {5,"light brown"}, {6,"light red"}, {7,"light blue"}, {8,"blue"}, {9,"yellow"},
-  {10,"beige"}, {0,NULL}
-};
-#define DEFAULTSKIN "marine"   // name of the standard doom marine as skin
-
-// player info and preferences
-consvar_t cv_playername  = {"name"      ,"gi joe"   ,CV_SAVE | CV_CALL | CV_NOINIT,NULL,SendNameAndColor};
-consvar_t cv_playercolor = {"color"     ,"0"        ,CV_SAVE | CV_CALL | CV_NOINIT,Color_cons_t,SendNameAndColor};
-consvar_t cv_skin        = {"skin"      ,DEFAULTSKIN,CV_SAVE | CV_CALL | CV_NOINIT,NULL,SendNameAndColor};
-consvar_t cv_autoaim     = {"autoaim"   ,"1"        ,CV_SAVE | CV_CALL | CV_NOINIT,CV_OnOff,SendWeaponPref};
-consvar_t cv_originalweaponswitch = {"originalweaponswitch","0",CV_SAVE | CV_CALL | CV_NOINIT,CV_OnOff,SendWeaponPref};
-consvar_t cv_weaponpref  = {"weaponpref","014576328",CV_SAVE | CV_CALL | CV_NOINIT,NULL,SendWeaponPref};
-
-// secondary player for splitscreen mode
-consvar_t cv_playername2  = {"name2"    ,"big b"    ,CV_SAVE | CV_CALL | CV_NOINIT,NULL,SendNameAndColor2};
-consvar_t cv_playercolor2 = {"color2"   ,"1"        ,CV_SAVE | CV_CALL | CV_NOINIT,Color_cons_t,SendNameAndColor2};
-consvar_t cv_skin2        = {"skin2"    ,DEFAULTSKIN,CV_SAVE | CV_CALL | CV_NOINIT,NULL /*skin_cons_t*/,SendNameAndColor2};
-consvar_t cv_autoaim2     = {"autoaim2" ,"1"        ,CV_SAVE | CV_CALL | CV_NOINIT,CV_OnOff,SendWeaponPref};
-
 
 void SplitScreen_OnChange()
 {
@@ -159,10 +126,32 @@ consvar_t cv_splitscreen = {"splitscreen", "0", CV_CALL, CV_OnOff, SplitScreen_O
 
 
 
+//=========================================================================
+//        Client commands
+//=========================================================================
 
-// =========================================================================
+void Command_Setcontrol_f();
+void Command_BindJoyaxis_f();
+void Command_UnbindJoyaxis_f();
+
+void Command_Water_f();
+
+
+/// Used for setting player properties.
+void Command_Player_f()
+{
+  if (COM_Argc() < 2)
+    {
+      CONS_Printf("player <number> [<attribute> <value>]\n");
+      return;
+    }
+
+  int n = atoi(COM_Argv(1));
+}
+
+//=========================================================================
 //                           CLIENT INIT
-// =========================================================================
+//=========================================================================
 
 void CL_Init()
 {
@@ -199,7 +188,7 @@ void CL_Init()
   S_Read_SNDINFO(fc.FindNumForNameFile("SNDINFO", 0));
   S_Read_SNDSEQ(fc.FindNumForNameFile("SNDSEQ", 0));
 
-
+  COM_AddCommand("player", Command_Player_f);
   COM_AddCommand("setcontrol", Command_Setcontrol_f);
   COM_AddCommand("bindjoyaxis", Command_BindJoyaxis_f);
   COM_AddCommand("unbindjoyaxis", Command_UnbindJoyaxis_f);
@@ -209,46 +198,13 @@ void CL_Init()
   // FIXME WATER HACK TEST UNTIL FULLY FINISHED
   COM_AddCommand("dev_water", Command_Water_f);
 
-
   // client info
   char *temp = I_GetUserName();
   if (temp)
-    cv_playername.defaultvalue = temp;
-
-  cv_playername.Reg();
-  cv_playercolor.Reg();
-  cv_skin.Reg();
-  cv_autoaim.Reg();
-  cv_originalweaponswitch.Reg();
-  cv_weaponpref.Reg();
-
-  // secondary player
-  cv_playername2.Reg();
-  cv_playercolor2.Reg();
-  cv_skin2.Reg();
-  cv_autoaim2.Reg();
-  //cv_originalweaponswitch2.Reg();
-  //cv_weaponpref2.Reg();
-
+    LocalPlayers[0].name = temp;
 
   // client input
   cv_controlperkey.Reg();
-
-  cv_autorun.Reg();
-  cv_automlook.Reg();
-  cv_usemouse.Reg();
-  cv_invertmouse.Reg();
-  cv_mousemove.Reg();
-  cv_mousesensx.Reg();
-  cv_mousesensy.Reg();
-
-  cv_autorun2.Reg();
-  cv_automlook2.Reg();
-  cv_usemouse2.Reg();
-  cv_invertmouse2.Reg();
-  cv_mousemove2.Reg();
-  cv_mousesensx2.Reg();
-  cv_mousesensy2.Reg();
 
   // WARNING : the order is important when initing mouse2, we need the mouse2port
   cv_mouse2port.Reg();
@@ -256,15 +212,19 @@ void CL_Init()
   cv_mouse2opt.Reg();
 #endif
 
-  //cv_usejoystick.Reg();
-  //cv_joystickfreelook.Reg();
+  // we currently support two mice
+  for (int i=0; i<2; i++)
+    {
+      cv_usemouse[i].Reg();
+      cv_mousesensx[i].Reg();
+      cv_mousesensy[i].Reg();
+      cv_automlook[i].Reg();
+      cv_mousemove[i].Reg();
+      cv_invertmouse[i].Reg();
+    }
 
   // client renderer
   cv_viewheight.Reg();
-  cv_chasecam.Reg();
-  cv_cam_dist.Reg();
-  cv_cam_height.Reg();
-  cv_cam_speed.Reg();
 
   cv_scr_width.Reg();
   cv_scr_height.Reg();
@@ -352,55 +312,6 @@ void Got_NameAndcolor(char **cp,int playernum)
   p->autoaim = *(*cp)++;
   */
 }
-
-
-void SendWeaponPref()
-{
-  // TODO remove not needed
-}
-
-void Got_WeaponPref(char **cp,int playernum)
-{
-  // TODO remove not needed
-}
-
-
-void D_SendPlayerConfig()
-{
-  SendNameAndColor();
-  if(cv_splitscreen.value)
-    SendNameAndColor2();
-  SendWeaponPref();
-}
-
-
-
-/*
-void CL_RemovePlayer(int playernum)
-{
-  if( server && !demoplayback )
-    {
-      int node = playernode[playernum];
-      playerpernode[node]--;
-      if( playerpernode[node]<=0 )
-        {
-          nodeingame[playernode[playernum]] = false;
-          Net_CloseConnection(playernode[playernum]);
-          ResetNode(node);
-        }
-    }
-
-  // player is scheduled for removal
-  PlayerInfo *p = game.FindPlayer(playernum);
-  if (p)
-    p->playerstate = PST_REMOVE;
-
-  playernode[playernum] = 255;
-  //while (playeringame[doomcom->numplayers-1]==0 && doomcom->numplayers>1) doomcom->numplayers--;
-  while (playernode[doomcom->numplayers-1] == 255 && doomcom->numplayers>1) doomcom->numplayers--;
-}
-
-*/
 
 
 

@@ -47,7 +47,7 @@ class GameType : public NetObject
   typedef NetObject Parent;
 
   TNL_DECLARE_CLASS(GameType);
-protected:
+public:
   string     gt_name; ///< name unique to this GameType
   U32     gt_version;
 
@@ -57,17 +57,13 @@ protected:
 public:
   GameType();
 
-  /// writes a response to a server query
-  void WriteServerQueryResponse(BitStream &s);
-
-
   // These polymorphic methods are the engine-to-dll interface
 
   //----- before game -----
 
   /// called when server accepts client connection
   virtual void WriteServerInfo(BitStream &s);
-
+  virtual void ReadServerInfo(BitStream &s);
 
   //----- in game -----
 

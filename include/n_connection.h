@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2005/04/17 17:47:54  smite-meister
+// netcode
+//
 // Revision 1.10  2005/03/24 16:59:17  smite-meister
 // upgrade to OpenTNL 1.5
 //
@@ -41,6 +44,7 @@
 #define n_connection_h 1
 
 #include <vector>
+#include <list>
 #include "tnl/tnlGhostConnection.h"
 
 using namespace TNL;
@@ -48,14 +52,17 @@ using namespace TNL;
 
 /// \brief TNL GhostConnection between a server and a client
 ///
-/// Does connection housekeeping, RPC's etc.
+/// Does connection housekeeping, ghosting, RPC's etc.
 
 class LConnection : public GhostConnection
 {
   typedef GhostConnection Parent;
 
 public:
-  std::vector<class PlayerInfo *> player; ///< players beyond this connection
+  std::vector<class PlayerInfo *> player; ///< Serverside: Players beyond this connection.
+
+  /// Clientside: Local players that wish to join a remote game.
+  static std::list<class LocalPlayerInfo *> joining_players;
 
 public:
   LConnection();
@@ -140,9 +147,6 @@ Shooting and artifact use should be guaranteed...
   /// When the server changes a netvar during the game, this rpc notifies the clients.
   TNL_DECLARE_RPC(rpcSendNetVar, (U16 netid, StringPtr str));
 
-  /// server starts a positional sound on the client
-  //TNL_DECLARE_RPC(rpcStartSound_s2c, (origin, sfx_id, volume));
-
   /// server asks client to load a map
   //TNL_DECLARE_RPC(rpcStartMap_c2s, (U8 pnum));
 
@@ -154,11 +158,13 @@ Shooting and artifact use should be guaranteed...
   /// client asks for a new POV ("spy mode")
   TNL_DECLARE_RPC(rpcRequestPOVchange_c2s, (S32 pnum));
 
+  /// client requests a suicide
+  TNL_DECLARE_RPC(rpcSuicide_c2s, (U8 pnum));
+
   /// server tells client to play a sound
-  // TODO how to make a client stop a sound? pseudorandom sound netIDs?
   //TNL_DECLARE_RPC(rpcStartAmbSound_s2c, (U8 pnum));
   //TNL_DECLARE_RPC(rpcStart3DSound_s2c, (U8 pnum));
-
+  //TNL_DECLARE_RPC(rpcStop3DSound_s2c, (U8 pnum));
 
 
   /// Makes this a valid connection class to the TNL network system.

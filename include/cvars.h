@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004 by DooM Legacy Team.
+// Copyright (C) 2004-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2005/04/17 17:47:54  smite-meister
+// netcode
+//
 // Revision 1.9  2005/03/16 21:16:08  smite-meister
 // menu cleanup, bugfixes
 //
@@ -90,51 +93,21 @@ extern consvar_t cv_fastmonsters;
 extern consvar_t cv_solidcorpse;
 extern consvar_t cv_voodoodolls;
 
-
 // client info (server needs to know)
-extern consvar_t cv_playername;
-extern consvar_t cv_playercolor;
-extern consvar_t cv_skin;
-extern consvar_t cv_autoaim;
-extern consvar_t cv_originalweaponswitch;
-extern consvar_t cv_weaponpref;
-
 extern consvar_t cv_splitscreen;
-
-extern consvar_t cv_playername2;
-extern consvar_t cv_playercolor2;
-extern consvar_t cv_skin2;
-extern consvar_t cv_autoaim2;
-//extern consvar_t cv_originalweaponswitch2;
-//extern consvar_t cv_weaponpref2;
-
 
 // client input (g_input.cpp)
 extern consvar_t cv_controlperkey;
-
-extern consvar_t cv_autorun;
-extern consvar_t cv_automlook;
-extern consvar_t cv_usemouse;
-extern consvar_t cv_invertmouse;
-extern consvar_t cv_mousemove;
-extern consvar_t cv_mousesensx;
-extern consvar_t cv_mousesensy;
-
-extern consvar_t cv_autorun2;
-extern consvar_t cv_automlook2;
-extern consvar_t cv_usemouse2;
-extern consvar_t cv_invertmouse2;
-extern consvar_t cv_mousemove2;
-extern consvar_t cv_mousesensx2;
-extern consvar_t cv_mousesensy2;
-extern consvar_t   cv_mouse2port;
+extern consvar_t cv_usemouse[2];
+extern consvar_t cv_mousesensx[2];
+extern consvar_t cv_mousesensy[2];
+extern consvar_t cv_automlook[2];
+extern consvar_t cv_mousemove[2];
+extern consvar_t cv_invertmouse[2];
+extern consvar_t cv_mouse2port;
 #ifdef LMOUSE2
  extern consvar_t cv_mouse2opt;
 #endif
-
-extern consvar_t cv_usejoystick;
-extern consvar_t cv_joystickfreelook;
-
 
 // client console (console.cpp)
 extern consvar_t cons_msgtimeout;
@@ -143,12 +116,7 @@ extern consvar_t cons_height;
 extern consvar_t cons_backpic;
 
 // client hud (hu_stuff.cpp)
-extern consvar_t cv_crosshair;
-extern consvar_t cv_crosshair2;
-extern consvar_t cv_showmessages;
-extern consvar_t cv_showmessages2;
 extern consvar_t cv_stbaroverlay;
-//extern consvar_t cv_crosshairscale;
 
 // client chat (hu_stuff.cpp)
 extern consvar_t cv_chatmacro1;
@@ -174,10 +142,6 @@ extern consvar_t cv_precachesound;
 
 // client renderer
 extern consvar_t cv_viewheight;
-extern consvar_t cv_chasecam;
-extern consvar_t cv_cam_dist;
-extern consvar_t cv_cam_height;
-extern consvar_t cv_cam_speed;
 
 extern consvar_t cv_scr_width;
 extern consvar_t cv_scr_height;
