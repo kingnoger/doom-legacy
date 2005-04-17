@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004 by DooM Legacy Team.
+// Copyright (C) 2004-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2005/04/17 17:59:00  smite-meister
+// netcode
+//
 // Revision 1.2  2004/10/27 17:37:08  smite-meister
 // netcode update
 //
@@ -31,20 +34,24 @@
 #ifndef b_bot_h
 #define b_bot_h 1
 
-#include "m_fixed.h"
-#include "g_player.h"
 
-
-/// \brief ABC for AI-controlled playerpawns (bots!)
-class BotPlayer : public PlayerInfo
+/// \brief ABC for PlayerInfo AI (a client-side bot)
+class BotAI
 {
-public:
-  BotPlayer(const string &n) : PlayerInfo(n) {};
+protected:
+  class  PlayerInfo *subject; ///< the player the AI is controlling
+  class  PlayerPawn *pawn;    ///< shorthand for subject->pawn
+  class  Map        *mp;      ///< shorthand for subject->mp
+  struct ticcmd_t   *cmd;     ///< shorthand for *subject->cmd
 
-  virtual void GetInput(int lpnum, int elapsed) = 0;
-  virtual void SetMessage(const char *msg, int priority = 0, int type = M_CONSOLE) {}
+public:
+  BotAI();
+
+  virtual void BuildInput(PlayerInfo *p, int elapsed_tics) = 0;
 };
 
+
+extern unsigned num_bots;
 
 void Command_AddBot();
 

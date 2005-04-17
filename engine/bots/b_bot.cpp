@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2005/04/17 17:59:00  smite-meister
+// netcode
+//
 // Revision 1.3  2004/11/09 20:38:51  smite-meister
 // added packing to I/O structs
 //
@@ -82,20 +85,31 @@ static char *botnames[] =
 
 const int NUMBOTNAMES = sizeof(botnames)/sizeof(char *);
 
+unsigned num_bots = 0; // TEMP
+
+BotAI::BotAI()
+{
+  subject = NULL;
+  pawn = NULL;
+  mp = NULL;
+  cmd = NULL;
+};
+
 
 /*
- katsotaan bots-hakemiston dll:t
- avataan ne, luetaan nimet taulukkoon (jos versio ok)
- addbot <nimi> xxx yyy ... : etsit‰‰n <nimi> taulukosta,
-   ladataan dll uudestaan jos syyt‰, vaihdetaan interfacet,
-   luodaan botti:  dll->interf->CreateBot(...).
-   dll osaa hakea loput parametrit komentopuskurilta (xxx, yyy ...)
+  find the dlls in the bots directory
+  open them, store the bot types into a vector (if the dll version is ok)
+  addbot <type> x y z... : find <type> in the vector, re-load the dll if necessary,
+    exchange interfaces, create the bot: dll->interf->CreateBot(...).
+    The dll can get the parameters x,y,z... directly from the command buffer.
  */
+
 
 
 // add bots to game
 void Command_AddBot_f()
 {
+  /* TODO addbot command
   if (!game.server)
     {
       CONS_Printf("Only the server can add a bot\n");
@@ -124,4 +138,5 @@ void Command_AddBot_f()
     }
   else
     Consoleplayer.push_back(p); // FIXME TEST
+  */
 }

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2005/04/17 17:59:00  smite-meister
+// netcode
+//
 // Revision 1.2  2004/10/27 17:37:08  smite-meister
 // netcode update
 //
@@ -37,7 +40,7 @@
 
 
 /// \brief ACBot by tonyd, changes by rellik and smite-meister.
-class ACBot : public BotPlayer
+class ACBot : public BotAI
 {
 protected:
   int skill; ///< skill level of the bot
@@ -55,13 +58,14 @@ protected:
   class Actor *lastTarget; // last moving target, either enemy or teammate
   fixed_t lastTargetX, lastTargetY; // where the last target was last seen
 
-  list<struct SearchNode_t *> path; //path to the best item on the map
+  std::list<struct SearchNode_t *> path; //path to the best item on the map
   SearchNode_t *destination;   //the closest node to where wants to go 
 
 public:
-  ACBot(const string &name, int skill);
+  ACBot(int skill);
+  virtual ~ACBot() {}; // shut up compiler
 
-  virtual void GetInput(int lpnum, int elapsed);
+  virtual void BuildInput(PlayerInfo *p, int elapsed_tics);
   void ClearPath();
 
   void AvoidMissile(const Actor *missile);
