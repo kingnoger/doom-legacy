@@ -17,8 +17,8 @@
 //
 //
 // $Log$
-// Revision 1.22  2005/03/21 17:44:10  smite-meister
-// fixes
+// Revision 1.23  2005/04/17 18:36:32  smite-meister
+// netcode
 //
 // Revision 1.21  2005/03/16 21:16:05  smite-meister
 // menu cleanup, bugfixes
@@ -49,9 +49,6 @@
 //
 // Revision 1.11  2004/09/09 17:15:18  jussip
 // Cleared out old joystick crap in preparation for brand new code.
-//
-// Revision 1.10  2004/08/18 14:35:20  smite-meister
-// PNG support!
 //
 // Revision 1.7  2004/07/05 16:53:24  smite-meister
 // Netcode replaced
@@ -99,35 +96,33 @@
 
 #include "tables.h"
 
-#include<SDL/SDL.h>
+#include <SDL/SDL.h>
 
 extern vector<SDL_Joystick*> joysticks;
 vector<joybinding_t> joybindings;
 
 
-#define MAXMOUSESENSITIVITY 40 // sensitivity steps
-
 CV_PossibleValue_t onecontrolperkey_cons_t[]={{1,"One"},{2,"Several"},{0,NULL}};
 CV_PossibleValue_t usemouse_cons_t[]={{0,"Off"},{1,"On"},{2,"Force"},{0,NULL}};
+
+consvar_t cv_controlperkey = {"controlperkey","1",CV_SAVE,onecontrolperkey_cons_t};
+
+consvar_t cv_usemouse[2] = {{"use_mouse","1", CV_SAVE | CV_CALL,usemouse_cons_t,I_StartupMouse},
+			    {"use_mouse2","0", CV_SAVE | CV_CALL,usemouse_cons_t,I_StartupMouse2}};
+
+#define MAXMOUSESENSITIVITY 40 // sensitivity steps
 CV_PossibleValue_t mousesens_cons_t[]={{1,"MIN"},{MAXMOUSESENSITIVITY,"MAX"},{0,NULL}};
 
-consvar_t  cv_controlperkey = {"controlperkey","1",CV_SAVE,onecontrolperkey_cons_t};
-
-consvar_t cv_autorun     = {"autorun","0",CV_SAVE,CV_OnOff};
-consvar_t cv_automlook   = {"automlook","0",CV_SAVE,CV_OnOff};
-consvar_t cv_usemouse    = {"use_mouse","1", CV_SAVE | CV_CALL,usemouse_cons_t,I_StartupMouse};
-consvar_t cv_invertmouse = {"invertmouse","0",CV_SAVE,CV_OnOff};
-consvar_t cv_mousemove   = {"mousemove","1",CV_SAVE,CV_OnOff};
-consvar_t cv_mousesensx  = {"mousesensx","10",CV_SAVE,mousesens_cons_t};
-consvar_t cv_mousesensy  = {"mousesensy","10",CV_SAVE,mousesens_cons_t};
-
-consvar_t cv_autorun2     = {"autorun2","0",CV_SAVE,CV_OnOff};
-consvar_t cv_automlook2   = {"automlook2","0",CV_SAVE,CV_OnOff};
-consvar_t cv_usemouse2    = {"use_mouse2","0", CV_SAVE | CV_CALL,usemouse_cons_t,I_StartupMouse2};
-consvar_t cv_invertmouse2 = {"invertmouse2","0",CV_SAVE,CV_OnOff};
-consvar_t cv_mousemove2   = {"mousemove2","1",CV_SAVE,CV_OnOff};
-consvar_t cv_mousesensx2  = {"mousesensx2","10",CV_SAVE,mousesens_cons_t};
-consvar_t cv_mousesensy2  = {"mousesensy2","10",CV_SAVE,mousesens_cons_t};
+consvar_t cv_mousesensx[2]  = {{"mousesensx","10",  CV_SAVE, mousesens_cons_t},
+			       {"mousesensx2","10", CV_SAVE, mousesens_cons_t}};
+consvar_t cv_mousesensy[2]  = {{"mousesensy","10",  CV_SAVE, mousesens_cons_t},
+			       {"mousesensy2","10", CV_SAVE, mousesens_cons_t}};
+consvar_t cv_automlook[2]   = {{"automlook",  "0",   CV_SAVE, CV_OnOff},
+			       {"automlook2", "0",   CV_SAVE, CV_OnOff}};
+consvar_t cv_mousemove[2]   = {{"mousemove",  "1",   CV_SAVE, CV_OnOff},
+			       {"mousemove2", "1",   CV_SAVE, CV_OnOff}};
+consvar_t cv_invertmouse[2] = {{"invertmouse",  "0", CV_SAVE, CV_OnOff},
+			       {"invertmouse2", "0", CV_SAVE, CV_OnOff}};
 
 #ifdef LMOUSE2
  CV_PossibleValue_t mouse2port_cons_t[]={{0,"/dev/gpmdata"},{1,"/dev/ttyS0"},{2,"/dev/ttyS1"},{3,"/dev/ttyS2"},{4,"/dev/ttyS3"},{0,NULL}};
@@ -140,13 +135,15 @@ consvar_t cv_mousesensy2  = {"mousesensy2","10",CV_SAVE,mousesens_cons_t};
 
 
 //========================================================================
+//   Input status
+//========================================================================
 
-static int mousex, mousey, mouse2x, mouse2y;
+static int mousex[2], mousey[2];
 
-// current state of the keys : true if down
+/// current state of the keys : true if down
 bool gamekeydown[NUMINPUTS];
 
-// releases all game keys
+/// Releases all game keys.
 void G_ReleaseKeys()
 {
   for (int i=0; i<NUMINPUTS; i++)
@@ -154,10 +151,10 @@ void G_ReleaseKeys()
 }
 
 
-// two key (or virtual key) codes per game control
+/// Two key (or virtual key) codes per game control
 short gamecontrol[2][num_gamecontrols][2];
 
-// control keys common to all local players (talk, console etc)
+/// Control keys common to all local players (talk, console etc)
 short commoncontrols[num_commoncontrols][2];
 
 //========================================================================
@@ -225,55 +222,35 @@ void ticcmd_t::Clear()
 
 
 //! Builds a ticcmd from all of the available inputs
-void ticcmd_t::Build(int lpnum, int realtics)
+void ticcmd_t::Build(LocalPlayerInfo *pref, int realtics)
 {
 #define KB_LOOKSPEED    (1<<25)
 #define SLOWTURNTICS    (6*NEWTICRATERATIO)
 
-  int  i, j, k;
-  short (*gc)[2];
-  PlayerPawn *p = NULL;
+  int i;
+  int c = pref->controlkeyset; // atm must be 0 or 1
+  short (*gc)[2]   = gamecontrol[c];
+  PlayerPawn *pawn = pref->info ? pref->info->pawn : NULL;
 
-  if (lpnum == 0)
-    {
-      gc = gamecontrol[0];
-      i = cv_autorun.value;
-      j = cv_automlook.value;
-      k = 0;
-    }
-  else
-    {
-      // TODO not OK if there are more than two local players...
-      gc = gamecontrol[1];
-      i = cv_autorun2.value;
-      j = cv_automlook2.value;
-      k = 1;
-    }
-
-  p = Consoleplayer[lpnum]->pawn;
-
-
-  int  speed = (gamekeydown[gc[gc_speed][0]] || gamekeydown[gc[gc_speed][1]]) ^ i;
-  bool mouseaiming = (gamekeydown[gc[gc_mouseaiming][0]] || gamekeydown[gc[gc_mouseaiming][1]]) ^ j;
+  int  speed = (gamekeydown[gc[gc_speed][0]] || gamekeydown[gc[gc_speed][1]]) ^ pref->autorun;
+  bool mouseaiming = (gamekeydown[gc[gc_mouseaiming][0]] || gamekeydown[gc[gc_mouseaiming][1]]) ^ cv_automlook[c].value;
   bool strafe = gamekeydown[gc[gc_strafe][0]] || gamekeydown[gc[gc_strafe][1]];
 
   bool turnright = gamekeydown[gc[gc_turnright][0]] || gamekeydown[gc[gc_turnright][1]];
   bool turnleft  = gamekeydown[gc[gc_turnleft][0]] || gamekeydown[gc[gc_turnleft][1]];
 
-
   // initialization
   //memcpy(this, I_BaseTiccmd(), sizeof(ticcmd_t)); // FIXME dangerous
   Clear();
 
-  if (p)
+  if (pawn)
     {
-      yaw   = p->angle >> 16;
-      pitch = p->aiming >> 16;
+      yaw   = pawn->angle >> 16;
+      pitch = pawn->aiming >> 16;
     }
 
-
   // use two stage accelerative turning on the keyboard (and joystick)
-  static int turnheld[2]; // for accelerative turning
+  static int turnheld[NUM_LOCALHUMANS]; // for accelerative turning
 
   // strafing and yaw
   if (strafe)
@@ -286,12 +263,12 @@ void ticcmd_t::Build(int lpnum, int realtics)
   else
     {
       if (turnleft || turnright)
-	turnheld[k] += realtics;
+	turnheld[c] += realtics;
       else
-	turnheld[k] = 0;
+	turnheld[c] = 0;
 
       int tspeed;
-      if (turnheld[k] < SLOWTURNTICS)
+      if (turnheld[c] < SLOWTURNTICS)
 	tspeed = 2;             // slow turn
       else
 	tspeed = speed;
@@ -301,27 +278,6 @@ void ticcmd_t::Build(int lpnum, int realtics)
       if (turnleft)
         yaw += angleturn[tspeed];
     }
-
-  /*
-  if (joyymove && analogjoystickmove && !cv_joystickfreelook.value)
-    forward -= ( (joyymove * forwardspeed[1]) >> 10 );
-
-    if (cv_usejoystick.value && analogjoystickmove && cv_joystickfreelook.value)
-      pitch += joyymove<<16;
-
-      if (analogjoystickmove)
-        {
-          //faB: JOYAXISRANGE is supposed to be 1023 ( divide by 1024)
-          side += ( (joyxmove * sidespeed[1]) >> 10 );
-        }
-      if (joyxmove && analogjoystickmove)
-      {
-        //faB: JOYAXISRANGE should be 1023 ( divide by 1024)
-        yaw -= ( (joyxmove * angleturn[1]) >> 10 );        // ANALOG!
-      }
-
-
-  */
 
 
   // forwards/backwards, strafing
@@ -353,100 +309,74 @@ void ticcmd_t::Build(int lpnum, int realtics)
   if (gamekeydown[gc[gc_flydown][0]] || gamekeydown[gc[gc_flydown][1]])
     buttons |= BT_FLYDOWN;
 
-  if (p)
+  if (pawn)
     {
       // impulse-type controls
       if (gamekeydown[gc[gc_nextweapon][0]] || gamekeydown[gc[gc_nextweapon][1]])
-	buttons |= ((NextWeapon(p, 1) + 1) << WEAPONSHIFT);
+	buttons |= ((NextWeapon(pawn, 1) + 1) << WEAPONSHIFT);
       else if (gamekeydown[gc[gc_prevweapon][0]] || gamekeydown[gc[gc_prevweapon][1]])
-	buttons |= ((NextWeapon(p, -1) + 1) << WEAPONSHIFT);
+	buttons |= ((NextWeapon(pawn, -1) + 1) << WEAPONSHIFT);
       else for (i = gc_weapon1; i <= gc_weapon8; i++)
 	if (gamekeydown[gc[i][0]] || gamekeydown[gc[i][1]])
 	  {
-	    buttons |= ((p->FindWeapon(i - gc_weapon1) + 1) << WEAPONSHIFT);
+	    buttons |= ((pawn->FindWeapon(i - gc_weapon1) + 1) << WEAPONSHIFT);
 	    break;
 	  }
     }
 
-
   // pitch
-
-  static bool keyboard_look[2];      // true if lookup/down using keyboard
+  static bool keyboard_look[NUM_LOCALHUMANS]; // true if lookup/down using keyboard
 
   // spring back if not using keyboard neither mouselookin'
-  if (!keyboard_look[k] && !mouseaiming)
+  if (!keyboard_look[c] && !mouseaiming)
     pitch = 0;
 
   if (gamekeydown[gc[gc_lookup][0]] || gamekeydown[gc[gc_lookup][1]])
     {
       pitch += KB_LOOKSPEED;
-      keyboard_look[k] = true;
+      keyboard_look[c] = true;
     }
   else if (gamekeydown[gc[gc_lookdown][0]] || gamekeydown[gc[gc_lookdown][1]])
     {
       pitch -= KB_LOOKSPEED;
-      keyboard_look[k] = true;
+      keyboard_look[c] = true;
     }
   else if (gamekeydown[gc[gc_centerview][0]] || gamekeydown[gc[gc_centerview][1]])
     {
       pitch = 0;
-      keyboard_look[k] = false;
+      keyboard_look[c] = false;
     }
 
-
-  // mouse
-
-  if (lpnum == 0)
+  // Mice. Only two supported for now:)
+  if (c < 2)
     {
       if (mouseaiming)
 	{
-	  keyboard_look[0] = false;
+	  keyboard_look[c] = false;
 
 	  // looking up/down
-	  if (cv_invertmouse.value)
-	    pitch -= mousey << 3;
+	  if (cv_invertmouse[c].value)
+	    pitch -= mousey[c] << 3;
 	  else
-	    pitch += mousey << 3;
+	    pitch += mousey[c] << 3;
 	}
-      else if (cv_mousemove.value)
-	forward += mousey;
+      else if (cv_mousemove[c].value)
+	forward += mousey[c];
 
       if (strafe)
-	side += mousex << 1;
+	side += mousex[c] << 1;
       else
-	yaw -= mousex << 3;
+	yaw -= mousex[c] << 3;
 
-      mousex = mousey = 0;
-    }
-  else if (lpnum == 1)
-    {
-      if (mouseaiming)
-	{
-	  keyboard_look[1] = false;
-
-	  // looking up/down
-	  if (cv_invertmouse2.value)
-	    pitch -= mouse2y << 3;
-	  else
-	    pitch += mouse2y << 3;
-	}
-      else if (cv_mousemove2.value)
-	forward += mouse2y;
-
-      if (strafe)
-	side += mouse2x*2;
-      else
-	yaw -= mouse2x*8;
-
-      mouse2x = mouse2y = 0;
+      mousex[c] = mousey[c] = 0;
     }
 
-  // Finally the joystick.
+  // Finally the joysticks.
   for (i=0; i < int(joybindings.size()); i++)
     {
       joybinding_t &j = joybindings[i];
 
-      if (j.playnum != lpnum)
+      if (j.playnum != c)
 	continue;
 
       int value = int(j.scale * SDL_JoystickGetAxis(joysticks[j.joynum], j.axisnum));
@@ -534,9 +464,9 @@ static bool G_CheckDoubleClick(int state, dclick_t *dt)
 bool G_MapEventsToControls(event_t *ev)
 {
   if (game.inventory)
-    for (unsigned i=0; i < Consoleplayer.size(); i++)
-      if (Consoleplayer[i]->pawn &&
-	  Consoleplayer[i]->pawn->InventoryResponder(gamecontrol[i % 2], ev))
+    for (unsigned i=0; i < NUM_LOCALHUMANS; i++)
+      if (LocalPlayers[i].info &&
+	  LocalPlayers[i].info->InventoryResponder(gamecontrol[LocalPlayers[i].controlkeyset], ev))
 	return true;
 
   switch (ev->type)
@@ -567,13 +497,13 @@ bool G_MapEventsToControls(event_t *ev)
       break;
 
     case ev_mouse:           // buttons are virtual keys
-      mousex = int(ev->data2*((cv_mousesensx.value*cv_mousesensx.value)/110.0f + 0.1));
-      mousey = int(ev->data3*((cv_mousesensy.value*cv_mousesensy.value)/110.0f + 0.1));
+      mousex[0] = int(ev->data2*((cv_mousesensx[0].value*cv_mousesensx[0].value)/110.0f + 0.1));
+      mousey[0] = int(ev->data3*((cv_mousesensy[0].value*cv_mousesensy[0].value)/110.0f + 0.1));
       break;
 
     case ev_mouse2:           // buttons are virtual keys
-      mouse2x = int(ev->data2*((cv_mousesensx2.value*cv_mousesensx2.value)/110.0f + 0.1));
-      mouse2y = int(ev->data3*((cv_mousesensy2.value*cv_mousesensy2.value)/110.0f + 0.1));
+      mousex[1] = int(ev->data2*((cv_mousesensx[1].value*cv_mousesensx[1].value)/110.0f + 0.1));
+      mousey[1] = int(ev->data3*((cv_mousesensy[1].value*cv_mousesensy[1].value)/110.0f + 0.1));
       break;
 
     default:

@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004 by DooM Legacy Team.
+// Copyright (C) 2004-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2005/04/17 18:36:33  smite-meister
+// netcode
+//
 // Revision 1.4  2004/12/08 16:43:44  segabor
 // small type casting fix
 //
@@ -31,6 +34,7 @@
 #include "tnl/tnlBitStream.h"
 #include "tnl/tnlGhostConnection.h"
 
+#include "n_interface.h"
 #include "n_connection.h"
 
 #include "command.h"
@@ -54,28 +58,18 @@ GameType::GameType()
 }
 
 
-void GameType::WriteServerQueryResponse(BitStream &s)
-{
-  s.write(game.demoversion);
-  s.writeString(VERSIONSTRING);
-  s.writeString(cv_servername.str);
-  s.write((int)game.Players.size());
-  s.write(game.maxplayers);
-  s.writeString(gt_name.c_str());
-  s.write(gt_version);
-
-  // TODO more basic info? current mapname? server load?
-}
-
-
 void GameType::WriteServerInfo(BitStream &s)
 {
-  WriteServerQueryResponse(s); // first some basic data
-
   consvar_t::SaveNetVars(s);
   fc.WriteNetInfo(s); // file names, sizes and md5 sums
 
   // TODO how long it has been running, how long to go,  gamestate, tick, serverplayer?
+}
+
+void GameType::ReadServerInfo(BitStream &s)
+{
+  consvar_t::LoadNetVars(s);
+  //fc.WriteNetInfo(s); // file names, sizes and md5 sums
 }
 
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.24  2005/04/17 18:36:34  smite-meister
+// netcode
+//
 // Revision 1.23  2004/12/05 14:46:32  smite-meister
 // keybar
 //
@@ -657,8 +660,8 @@ bool AutoMap::Responder(event_t *ev)
         {
           //faB: prevent alt-tab in win32 version to activate automap just before minimizing the app
           //     doesn't do any harm to the DOS version
-	  if (Consoleplayer[0]->pawn)
-	    Open(Consoleplayer[0]->pawn);
+	  if (ViewPlayers.size() && ViewPlayers[0]->pawn)
+	    Open(ViewPlayers[0]->pawn);
 	  rc = true;
         }
     }

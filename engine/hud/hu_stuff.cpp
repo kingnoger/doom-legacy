@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.31  2005/04/17 18:36:34  smite-meister
+// netcode
+//
 // Revision 1.30  2005/03/21 17:44:13  smite-meister
 // fixes
 //
@@ -141,27 +144,13 @@
 //        HUD-related consvars
 //======================================================================
 
-void ShowMessage_OnChange()
-{
-  if (!cv_showmessages.value)
-    CONS_Printf("%s\n",MSGOFF);
-  else
-    CONS_Printf("%s\n",MSGON);
-}
-
 void ST_Overlay_OnChange()
 {
   hud.CreateOverlayWidgets();
 }
 
 
-CV_PossibleValue_t crosshair_cons_t[]   ={{0,"Off"},{1,"Cross"},{2,"Angle"},{3,"Point"},{0,NULL}};
-consvar_t cv_crosshair        = {"crosshair"   ,"0",CV_SAVE,crosshair_cons_t};
-consvar_t cv_crosshair2       = {"crosshair2"  ,"0",CV_SAVE,crosshair_cons_t};
 consvar_t cv_stbaroverlay     = {"hud_overlay", "kahmf", CV_SAVE|CV_CALL, NULL, ST_Overlay_OnChange};
-CV_PossibleValue_t showmessages_cons_t[]={{0,"Off"},{1,"Important"},{2,"All"},{0,NULL}};
-consvar_t cv_showmessages     = {"showmessages","1",CV_SAVE | CV_CALL | CV_NOINIT,showmessages_cons_t,ShowMessage_OnChange};
-consvar_t cv_showmessages2    = {"showmessages2","1",CV_SAVE | CV_CALL | CV_NOINIT,showmessages_cons_t,ShowMessage_OnChange};
 consvar_t *chat_macros[10];
 
 
@@ -205,10 +194,6 @@ HUD::HUD()
 void HUD::Startup()
 {
   // client hud
-  cv_crosshair.Reg();
-  cv_crosshair2.Reg();
-  cv_showmessages.Reg();
-  cv_showmessages2.Reg();
   cv_stbaroverlay.Reg();
 
   // first initialization
@@ -373,10 +358,10 @@ void HUD::Ticker()
   // update widget data
   UpdateWidgets();
 
-  int n = Consoleplayer.size();
+  int n = ViewPlayers.size();
   for (int i=0; i<n; i++)
     {
-      PlayerInfo *pl = Consoleplayer[i];
+      PlayerInfo *pl = ViewPlayers[i];
 
       if (pl->palette >= 0)
 	{
@@ -403,16 +388,15 @@ void HUD::Ticker()
 	  PlayerInfo::message_t &m = pl->messages.front();
 	  // TODO message priorities: a message blocks lower-priority messages for n seconds
 
-	  if (m.priority <= pl->messagefilter)
-	    switch (m.type)
-	      {
-	      case PlayerInfo::M_CONSOLE:
-		CONS_Printf("%s\n", m.msg.c_str());
-		break;
-	      case PlayerInfo::M_HUD:
-		tips.push_back(new HudTip(m.msg, 150));
-		break;
-	      }
+	  switch (m.type)
+	    {
+	    case PlayerInfo::M_CONSOLE:
+	      CONS_Printf("%s\n", m.msg.c_str());
+	      break;
+	    case PlayerInfo::M_HUD:
+	      tips.push_back(new HudTip(m.msg, 150));
+	      break;
+	    }
 
 	  pl->messages.pop_front();
 	}
@@ -462,26 +446,6 @@ void HUD::SendChat()
 //======================================================================
 //                         HEADS UP DRAWING
 //======================================================================
-
-
-// draw the Crosshair, at the exact center of the view.
-static void HU_drawCrosshair()
-{
-#warning  FIXME: Hurdler, must be replaced by something compatible with the new renderer
-  int i = cv_crosshair.value & 3;
-  if (!i)
-    return;
-
-  int y = viewwindowy + (viewheight>>1);
-
-  crosshair[i-1]->Draw(vid.width >> 1, y, V_TL | V_SSIZE);
-
-  if (cv_splitscreen.value)
-    {
-      y += viewheight;
-      crosshair[i-1]->Draw(vid.width >> 1, y, V_TL | V_SSIZE);
-    }
-}
 
 
 // Draw a column of rankings stored in fragtable
@@ -542,7 +506,7 @@ void HU_drawDeathmatchRankings()
   //Fab:25-04-98: when you play, you quickly see your frags because your
   //  name is displayed white, when playback demo, you quicly see who's the
   //  view.
-  PlayerInfo *whiteplayer = Consoleplayer[0];
+  PlayerInfo *whiteplayer = ViewPlayers[0];
 
   if (scorelines > 9)
     scorelines = 9; //dont draw past bottom of screen, show the best only
@@ -582,8 +546,21 @@ void HUD::Draw(bool redrawsbar)
     HU_drawDeathmatchRankings();
 
   // draw the crosshair, not with chasecam
-  if (!automap.active && cv_crosshair.value && !cv_chasecam.value)
-    HU_drawCrosshair();
+#warning  FIXME: Hurdler, must be replaced by something compatible with the new renderer
+  if (!automap.active)
+    {
+      // (cv_splitscreen.value) FIXME viewports!
+      int y = viewwindowy + (viewheight>>1);
+      for (int i=0; i<2; i++)
+	{
+	  if (LocalPlayers[i].crosshair) // && !LocalPlayers[i].chasecam)
+	    {
+	      int c = LocalPlayers[i].crosshair & 3;
+	      crosshair[c-1]->Draw(vid.width >> 1, y, V_TL | V_SSIZE);
+	    }
+	  y += viewheight;
+	}
+    }
 
   DrawTips();
   DrawPics();

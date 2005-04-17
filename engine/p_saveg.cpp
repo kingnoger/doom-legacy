@@ -18,17 +18,11 @@
 //
 //
 // $Log$
+// Revision 1.41  2005/04/17 18:36:33  smite-meister
+// netcode
+//
 // Revision 1.40  2005/01/04 18:32:41  smite-meister
 // better colormap handling
-//
-// Revision 1.39  2004/12/31 16:19:38  smite-meister
-// alpha fixes
-//
-// Revision 1.38  2004/11/19 16:51:04  smite-meister
-// cleanup
-//
-// Revision 1.37  2004/11/13 22:38:43  smite-meister
-// intermission works
 //
 // Revision 1.36  2004/11/09 20:38:50  smite-meister
 // added packing to I/O structs
@@ -815,7 +809,6 @@ int PlayerPawn::Marshal(LArchive &a)
 	}
 
       // inventory is closed.
-      a << invSlot;
       a << (n = inventory.size());
       for (i=0; i<n; i++)
 	a << inventory[i].type << inventory[i].count;
@@ -861,7 +854,6 @@ int PlayerPawn::Marshal(LArchive &a)
 	  a << psprites[i].tics << psprites[i].sx << psprites[i].sy;
 	}
 
-      a << invSlot;
       a << n;
       inventory.resize(n);
       for (i=0; i<n; i++)
@@ -1611,95 +1603,6 @@ int Map::Unserialize(LArchive &a)
 
 
 
-//==============================================
-//  PlayerInfo serialization
-//==============================================
-
-int PlayerInfo::Serialize(LArchive &a)
-{
-  unsigned i;
-  a << number << team << name;
-  a << client_hash;
-
-  a << int(playerstate);
-  a << spectator << map_completed;
-
-  a << requestmap << entrypoint;
-
-  // cmd can be ignored
-
-  // scoring
-  a << (i = Frags.size());
-  map<int, int>::iterator t;
-  for (t = Frags.begin(); t != Frags.end(); t++)
-    {
-      int m = t->first;
-      int n = t->second;
-      a << m << n;
-    }
-  a << score << kills << items << secrets << time;
-
-  // messages are lost
-  a << messagefilter;
-
-  // preferences
-  for (i=0; i<NUMWEAPONS; i++)
-    a << weaponpref[i];
-  a << originalweaponswitch << autoaim;
-
-  a << ptype << color << skin;
-
-  // current feedback is lost
-
-  // mp is handled through the pawn
-  // players are serialized after maps, so pawn may already be stored
-  Thinker::Serialize(pawn, a); 
-  Thinker::Serialize(pov, a); 
-
-  return 0;
-}
-
-int PlayerInfo::Unserialize(LArchive &a)
-{
-  int i, n;
-  a << number << team << name;
-  a << client_hash; // so we can recognize the clients after loading
-
-  a << n; playerstate = playerstate_t(n);
-  a << spectator << map_completed;
-
-  a << requestmap << entrypoint;
-
-  a << n;
-  for (i=0; i<n; i++)
-    {
-      int t1, t2;
-      a << t1 << t2;
-      Frags.insert(pair<int, int>(t1, t2));
-    }
-  a << score << kills << items << secrets << time;
-
-  a << messagefilter;
-
-  // preferences
-  for (i=0; i<NUMWEAPONS; i++)
-    a << weaponpref[i];
-  a << originalweaponswitch << autoaim;
-
-  a << ptype << color << skin;
-
-  pawn = static_cast<PlayerPawn*>(Thinker::Unserialize(a));
-  pov = static_cast<PlayerPawn*>(Thinker::Unserialize(a));
-  if (pawn)
-    {
-      mp = pawn->mp;
-      pawn->player = this;
-    }
-
-  return 0;
-}
-
-
 int MapCluster::Serialize(LArchive &a)
 {
   a << number;
@@ -1833,6 +1736,110 @@ int MapInfo::Unserialize(LArchive &a)
 }
 
 
+
+//==============================================
+//  Player serialization
+//==============================================
+
+int PlayerInfo::Serialize(LArchive &a)
+{
+  unsigned i;
+  a << number << team << name;
+  a << client_hash;
+
+  a << int(playerstate);
+  a << spectator << map_completed;
+
+  a << requestmap << entrypoint;
+
+  // cmd can be ignored
+
+  // scoring
+  a << (i = Frags.size());
+  map<int, int>::iterator t;
+  for (t = Frags.begin(); t != Frags.end(); t++)
+    {
+      int m = t->first;
+      int n = t->second;
+      a << m << n;
+    }
+  a << score << kills << items << secrets << time;
+
+  options.Serialize(a);
+
+  // current feedback is lost
+
+  // mp is handled through the pawn
+  // players are serialized after maps, so pawn may already be stored
+  Thinker::Serialize(pawn, a); 
+  Thinker::Serialize(pov, a); 
+
+  return 0;
+}
+
+int PlayerInfo::Unserialize(LArchive &a)
+{
+  int i, n;
+  a << number << team << name;
+  a << client_hash; // so we can recognize the clients after loading
+
+  a << n; playerstate = playerstate_t(n);
+  a << spectator << map_completed;
+
+  a << requestmap << entrypoint;
+
+  a << n;
+  for (i=0; i<n; i++)
+    {
+      int t1, t2;
+      a << t1 << t2;
+      Frags.insert(pair<int, int>(t1, t2));
+    }
+  a << score << kills << items << secrets << time;
+
+  options.Unserialize(a);
+
+  pawn = static_cast<PlayerPawn*>(Thinker::Unserialize(a));
+  pov = static_cast<PlayerPawn*>(Thinker::Unserialize(a));
+  if (pawn)
+    {
+      mp = pawn->mp;
+      pawn->player = this;
+    }
+
+  return 0;
+}
+
+
+int PlayerOptions::Serialize(LArchive &a)
+{
+  a << ptype << color << skin;
+
+  a << autoaim << originalweaponswitch;
+  for (int i=0; i<NUMWEAPONS; i++)
+    a << weaponpref[i];
+
+  a << messagefilter;
+  return 0;
+}
+
+int PlayerOptions::Unserialize(LArchive &a)
+{
+  a << ptype << color << skin;
+
+  a << autoaim << originalweaponswitch;
+  for (int i=0; i<NUMWEAPONS; i++)
+    a << weaponpref[i];
+
+  a << messagefilter;
+  return 0;
+}
+
+
+//==============================================
+//  Game serialization
+//==============================================
+
 int TeamInfo::Serialize(LArchive &a)
 {
   a << name << color << score << resources;
@@ -1909,10 +1916,10 @@ int GameInfo::Serialize(LArchive &a)
 
   a.Marker(MARK_GROUP);
 
-  // misc shit
-  a << (n = Consoleplayer.size());
+  // client stuff
+  a << (n = NUM_LOCALPLAYERS);
   for (i = 0; i < n; i++)
-    a << Consoleplayer[i]->number;
+    a << (n = LocalPlayers[i].info ? LocalPlayers[i].info->number : -1);
 
   // TODO how to save net info???
 
@@ -2016,13 +2023,16 @@ int GameInfo::Unserialize(LArchive &a)
   if (!a.Marker(MARK_GROUP))
     return -1;
 
-  // misc shit
+  // client stuff
   a << n;
   for (i = 0; i < n; i++)
     {
       int num;
       a << num;
-      Consoleplayer.push_back(FindPlayer(num));
+      if (num == -1)
+	LocalPlayers[i].info = NULL;
+      else
+	LocalPlayers[i].info = FindPlayer(num);
     }
 
   // misc shit
@@ -2074,9 +2084,14 @@ void GameInfo::LoadGame(int slot)
 
   paused = false;
 
+  // view the local human players by default
+  for (int i=0; i < NUM_LOCALHUMANS; i++)
+    if (LocalPlayers[i].info)
+      ViewPlayers.push_back(LocalPlayers[i].info);
+
   // TODO have other playerinfos waiting for clients to rejoin
-  if (Consoleplayer.size())
-    hud.ST_Start(Consoleplayer[0]);
+  if (ViewPlayers.size())
+    hud.ST_Start(ViewPlayers[0]);
   // done
   /*
   if (setsizeneeded)

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.30  2005/04/17 18:36:33  smite-meister
+// netcode
+//
 // Revision 1.29  2004/12/02 17:22:34  smite-meister
 // HUD fixed
 //
@@ -842,14 +845,10 @@ bool P_UseArtifact(PlayerPawn *p, artitype_t arti)
 
 
 
-// called by the server
+/// called by the server
 void PlayerPawn::UseArtifact(artitype_t arti)
 {
-  extern int st_curpos;
-  int n;
-  vector<inventory_t>::iterator i;
-
-  for (i = inventory.begin(); i < inventory.end(); i++) 
+  for (vector<inventory_t>::iterator i = inventory.begin(); i < inventory.end(); i++) 
     if (i->type == arti)
       {
 	// Found match - try to use
@@ -862,14 +861,6 @@ void PlayerPawn::UseArtifact(artitype_t arti)
 		  {
 		    // Used last of a type - compact the artifact list
 		    inventory.erase(i);
-		    // Set position markers and get next readyArtifact
-		    if (--invSlot < 6)
-		      if (--st_curpos < 0) st_curpos = 0;
-		    n = inventory.size();
-		    if (invSlot >= n)
-		      invSlot = n - 1; // necessary?
-		    if (invSlot < 0)
-		      invSlot = 0;
 		  }
 		else
 		  i->type = arti_none; // leave always 1 empty slot
@@ -879,29 +870,19 @@ void PlayerPawn::UseArtifact(artitype_t arti)
 	    player->itemuse = true;
 	  }
 	else
-	  { // Unable to use artifact, advance pointer
-	    n = inventory.size();
-	    if (--invSlot < 6)
-	      if (--st_curpos < 0) st_curpos = 0;
-	      
-	    if (invSlot < 0)
-	      {
-		invSlot = n-1;
-		if (invSlot < 6)
-		  st_curpos = invSlot;
-		else
-		  st_curpos = 6;
-	      }
+	  { // Unable to use artifact
 	  }
 	break;
       }
 }
 
 
-
-
-bool PlayerPawn::InventoryResponder(short (*gc)[2], event_t *ev)
+/// called by the client
+bool PlayerInfo::InventoryResponder(short (*gc)[2], event_t *ev)
 {
+  if (!pawn)
+    return false;
+
   //gc is a pointer to array[num_gamecontrols][2]
   extern int st_curpos; // TODO: what about splitscreenplayer??
 
@@ -922,7 +903,7 @@ bool PlayerPawn::InventoryResponder(short (*gc)[2], event_t *ev)
         }
       else if (ev->data1 == gc[gc_invnext][0] || ev->data1 == gc[gc_invnext][1])
         {
-          int n = inventory.size();
+          int n = pawn->inventory.size();
 
           if (invTics)
             {
@@ -936,10 +917,12 @@ bool PlayerPawn::InventoryResponder(short (*gc)[2], event_t *ev)
         }
       else if (ev->data1 == gc[gc_invuse ][0] || ev->data1 == gc[gc_invuse ][1])
         {
+          int n = pawn->inventory.size();
+
           if (invTics)
             invTics = 0;
-          else if (invSlot < int(inventory.size()) && inventory[invSlot].count > 0)
-	    player->cmd.item = inventory[invSlot].type + 1;
+          else if (invSlot < n && pawn->inventory[invSlot].count > 0)
+	    cmd.item = pawn->inventory[invSlot].type + 1;
 
           return true;
         }

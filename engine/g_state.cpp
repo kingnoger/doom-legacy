@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,11 +17,8 @@
 //
 //
 // $Log$
-// Revision 1.40  2005/03/21 17:44:11  smite-meister
-// fixes
-//
-// Revision 1.39  2004/11/19 16:51:04  smite-meister
-// cleanup
+// Revision 1.41  2005/04/17 18:36:33  smite-meister
+// netcode
 //
 // Revision 1.38  2004/11/13 22:38:42  smite-meister
 // intermission works
@@ -34,9 +31,6 @@
 //
 // Revision 1.35  2004/08/12 18:30:23  smite-meister
 // cleaned startup
-//
-// Revision 1.34  2004/07/14 16:13:13  smite-meister
-// cleanup, commands
 //
 // Revision 1.33  2004/07/13 20:23:36  smite-meister
 // Mod system basics
@@ -459,17 +453,19 @@ void GameInfo::StartIntermission()
 }
 
 
-// should send an rpc ending the intermission (or maybe we ghost PlayerInfos both ways?)
+// TODO should send an rpc ending the intermission.
 void GameInfo::EndIntermission()
 {
   state = GS_LEVEL;
 
-  int n = Consoleplayer.size();
-  for (int i = 0; i < n; i++)
+  if (server)
     {
-      PlayerInfo *p = Consoleplayer[i];
-      if (p->playerstate == PST_INTERMISSION)
-	p->playerstate = PST_NEEDMAP;
+      for (int i = 0; i < NUM_LOCALPLAYERS; i++)
+	{
+	  PlayerInfo *p = LocalPlayers[i].info;
+	  if (p && p->playerstate == PST_INTERMISSION)
+	    p->playerstate = PST_NEEDMAP;
+	}
     }
 }
 

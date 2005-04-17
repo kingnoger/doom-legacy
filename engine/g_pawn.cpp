@@ -2,17 +2,14 @@
 //-----------------------------------------------------------------------------
 //  $Id$
 //
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.49  2005/04/17 18:36:33  smite-meister
+// netcode
+//
 // Revision 1.48  2005/01/04 18:32:40  smite-meister
 // better colormap handling
-//
-// Revision 1.47  2004/12/31 16:19:37  smite-meister
-// alpha fixes
-//
-// Revision 1.46  2004/12/02 17:22:31  smite-meister
-// HUD fixed
 //
 // Revision 1.45  2004/11/28 18:02:19  smite-meister
 // RPCs finally work!
@@ -22,9 +19,6 @@
 //
 // Revision 1.43  2004/11/13 22:38:42  smite-meister
 // intermission works
-//
-// Revision 1.42  2004/11/04 21:12:52  smite-meister
-// save/load fixed
 //
 // Revision 1.39  2004/09/23 23:21:16  smite-meister
 // HUD updated
@@ -224,7 +218,7 @@ PlayerPawn::PlayerPawn()
     powers[i] = 0;
 
   cheats = refire = 0;
-  invTics = morphTics = 0;
+  morphTics = 0;
 }
 
 
@@ -316,7 +310,6 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, int type)
 
   morphTics = 0;
 
-  invSlot = invTics = 0;
   inventory.resize(1, inventory_t(arti_none, 0)); // at least 1 empty slot
 
   usedown = attackdown = jumpdown = true;  // don't do anything immediately
@@ -381,10 +374,6 @@ void PlayerPawn::Think()
   if (!player)
     goto actor_think;
 
-  // inventory
-  if (invTics)
-    invTics--;
-
   // Turn on required cheats
   if (cheats & CF_NOCLIP)
     flags |= (MF_NOCLIPLINE|MF_NOCLIPTHING);
@@ -419,9 +408,6 @@ void PlayerPawn::Think()
     reactiontime--;
   else
     Move();
-
-  // bob the view
-  player->CalcViewHeight(z <= floorz);
 
   // check special sectors : damage & secrets
   PlayerInSpecialSector();
@@ -602,8 +588,6 @@ void PlayerPawn::DeathThink()
     player->viewheight = 6*FRACUNIT;
 
   player->deltaviewheight = 0;
-
-  player->CalcViewHeight(z <= floorz);
 
   // watch my killer (if there is one)
   if (attacker != NULL && attacker != this)
@@ -957,7 +941,7 @@ DActor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
 
   fixed_t  slope = 0;
 
-  if (player->autoaim && cv_allowautoaim.value)
+  if (player->options.autoaim && cv_allowautoaim.value)
     {
       // see which target is to be aimed at
       slope = AimLineAttack(ang, 16*64*FRACUNIT);
@@ -1472,7 +1456,7 @@ bool PlayerPawn::GiveAmmo(ammotype_t at, int count)
   // Preferences are not user selectable.
 
   // Boris hack for preferred weapons order...
-  if (!player->originalweaponswitch)
+  if (!player->options.originalweaponswitch)
     {
       if (ammo[weaponinfo[readyweapon].ammo]
 	  < weaponinfo[readyweapon].ammopershoot)
@@ -1547,8 +1531,8 @@ bool PlayerPawn::GiveWeapon(weapontype_t wt, int ammocontent, bool dropped)
       GiveAmmo(at, ammocontent);
 
       // Boris hack preferred weapons order...
-      if (player->originalweaponswitch ||
-	  player->weaponpref[wt] > player->weaponpref[readyweapon])
+      if (player->options.originalweaponswitch ||
+	  player->options.weaponpref[wt] > player->options.weaponpref[readyweapon])
 	pendingweapon = wt; // do like Doom2 original
 
       S_StartAmbSound(player, sfx_weaponup);
@@ -1565,8 +1549,8 @@ bool PlayerPawn::GiveWeapon(weapontype_t wt, int ammocontent, bool dropped)
     {
       gaveweapon = true;
       weaponowned[wt] = true;
-      if (player->originalweaponswitch ||
-	  player->weaponpref[wt] > player->weaponpref[readyweapon])
+      if (player->options.originalweaponswitch ||
+	  player->options.weaponpref[wt] > player->options.weaponpref[readyweapon])
 	pendingweapon = wt;    // Doom2 original stuff
     }
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2005/04/17 18:36:33  smite-meister
+// netcode
+//
 // Revision 1.20  2005/03/29 17:20:45  smite-meister
 // state and mobjinfo tables fixed
 //
@@ -32,12 +35,6 @@
 //
 // Revision 1.16  2004/03/28 15:16:13  smite-meister
 // Texture cache.
-//
-// Revision 1.15  2004/01/05 11:48:08  smite-meister
-// 7 bugfixes
-//
-// Revision 1.14  2004/01/02 14:25:01  smite-meister
-// cleanup
 //
 // Revision 1.13  2003/12/13 23:51:03  smite-meister
 // Hexen update
@@ -125,7 +122,7 @@ void PlayerPawn::UseFavoriteWeapon()
   int priority = -1;
 
   for (int i=0; i<NUMWEAPONS; i++)
-    if (weaponowned[i] && player->weaponpref[i] > priority)
+    if (weaponowned[i] && player->options.weaponpref[i] > priority)
       {
 	int c;
 	if (weaponinfo[i].ammo == am_manaboth) // damn!
@@ -136,7 +133,7 @@ void PlayerPawn::UseFavoriteWeapon()
 	if (c >= weaponinfo[i].ammopershoot)
 	  {
 	    pendingweapon = weapontype_t(i);
-	    priority = player->weaponpref[i];
+	    priority = player->options.weaponpref[i];
 	  }
       }
 
@@ -424,31 +421,6 @@ void A_WeaponReady(PlayerPawn *p, pspdef_t *psp)
     }
   else
     p->attackdown = false;
-
-  // bob the weapon based on movement speed
-  int angle = (128*p->mp->maptic / NEWTICRATERATIO) & FINEMASK;
-  psp->sx = FRACUNIT + FixedMul(p->player->bob_amplitude, finecosine[angle]);
-  angle &= FINEANGLES/2-1;
-  psp->sy = WEAPONTOP + FixedMul(p->player->bob_amplitude, finesine[angle]);
-}
-
-
-// client prediction stuff
-void A_TicWeapon(PlayerPawn *p, pspdef_t *psp)
-{
-  if (psp->state->action == A_WeaponReady &&
-      psp->tics == psp->state->tics)
-    {
-      int         ang;
-        
-#define localgametic  p->mp->maptic
-
-      // bob the weapon based on movement speed
-      ang = (128*localgametic/NEWTICRATERATIO)&FINEMASK;
-      psp->sx = FRACUNIT + FixedMul(p->player->bob_amplitude, finecosine[ang]);
-      ang &= FINEANGLES/2-1;
-      psp->sy = WEAPONTOP + FixedMul(p->player->bob_amplitude, finesine[ang]);
-    }
 }
 
 
@@ -687,7 +659,7 @@ fixed_t P_BulletSlope(PlayerPawn *p)
   angle_t an = p->angle;
 
   //added:18-02-98: if AUTOAIM, try to aim at something
-  if(!p->player->autoaim || !cv_allowautoaim.value)
+  if(!p->player->options.autoaim || !cv_allowautoaim.value)
     goto notargetfound;
 
   // see which target is to be aimed at

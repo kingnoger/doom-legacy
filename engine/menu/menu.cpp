@@ -18,17 +18,14 @@
 //
 //
 // $Log$
+// Revision 1.5  2005/04/17 18:36:35  smite-meister
+// netcode
+//
 // Revision 1.4  2005/04/01 14:47:45  smite-meister
 // dehacked works
 //
-// Revision 1.3  2005/03/21 17:44:17  smite-meister
-// fixes
-//
 // Revision 1.2  2005/03/19 13:51:29  smite-meister
 // sound samplerate fix
-//
-// Revision 1.1  2005/03/16 21:16:07  smite-meister
-// menu cleanup, bugfixes
 //
 // Revision 1.42  2004/12/08 16:52:06  segabor
 // Missing devparm reference added; (Mac only) Input Sprockets conf temporarily(?) disabled
@@ -39,26 +36,11 @@
 // Revision 1.39  2004/11/13 22:38:44  smite-meister
 // intermission works
 //
-// Revision 1.38  2004/11/04 21:12:53  smite-meister
-// save/load fixed
-//
-// Revision 1.37  2004/10/27 17:37:09  smite-meister
-// netcode update
-//
-// Revision 1.36  2004/09/23 23:21:18  smite-meister
-// HUD updated
-//
 // Revision 1.35  2004/09/09 22:04:38  jussip
 // New joy code a bit more finished. Button binding works.
 //
 // Revision 1.33  2004/08/15 18:08:28  smite-meister
 // palette-to-palette colormaps etc.
-//
-// Revision 1.32  2004/08/13 18:25:10  smite-meister
-// sw renderer fix
-//
-// Revision 1.31  2004/08/12 18:30:27  smite-meister
-// cleaned startup
 //
 // Revision 1.30  2004/07/25 20:19:21  hurdler
 // Remove old hardware renderer and add part of the new one
@@ -81,12 +63,6 @@
 // Revision 1.22  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
-// Revision 1.21  2003/12/06 23:57:47  smite-meister
-// save-related bugfixes
-//
-// Revision 1.20  2003/12/03 10:49:50  smite-meister
-// Save/load bugfix, text strings updated
-//
 // Revision 1.19  2003/11/27 11:28:26  smite-meister
 // Doom/Heretic startup bug fixed
 //
@@ -104,9 +80,6 @@
 //
 // Revision 1.12  2003/04/14 08:58:29  smite-meister
 // Hexen maps load.
-//
-// Revision 1.11  2003/04/04 00:01:57  smite-meister
-// bugfixes, Hexen HUD
 //
 // Revision 1.10  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
@@ -180,7 +153,7 @@
 #include "n_interface.h"
 
 
-// This is a shorthand macro for constructing menus.
+/// This is a shorthand macro for constructing menus.
 #define ITEMS(x) (sizeof(x)/sizeof(menuitem_t)), (x)
 
 
@@ -244,9 +217,9 @@ enum menuflag_t
   IT_COLORMAP_MASK  = IT_WHITE | IT_GRAY,
 
   // in short for some common uses
-  IT_OFF_BIG     = IT_NONE       | IT_PATCH  | IT_DISABLED | IT_GRAY,
+  IT_OFF_BIG     = IT_NONE       | IT_PATCH   | IT_DISABLED | IT_GRAY,
   IT_OFF         = IT_NONE       | IT_CSTRING | IT_DISABLED | IT_GRAY,
-  IT_LINK        = IT_SUBMENU    | IT_STRING | IT_WHITE,
+  IT_LINK        = IT_SUBMENU    | IT_STRING  | IT_WHITE,
   IT_ACT         = IT_CALL       | IT_PATCH,
   IT_CONTROLSTR  = IT_CONTROL    | IT_CSTRING,
   IT_CVAR        = IT_CV         | IT_STRING,
@@ -1161,7 +1134,7 @@ void M_Class(int choice)
       break;
     }
 
-  localplayer.ptype = choice + 37;
+  LocalPlayers[0].ptype = choice + 37;
 
   Menu::SetupNextMenu(&SkillDef);
 }
@@ -1286,11 +1259,9 @@ void M_VerifyNightmare(int ch)
 
 void M_ChooseSkill(int choice)
 {
-  if (localplayer.ptype < 0)
-    localplayer.ptype = allowed_pawntypes[0];
-
-  if (localplayer2.ptype < 0)
-    localplayer2.ptype = allowed_pawntypes[0];
+  for (int i=0; i<NUM_LOCALHUMANS; i++)
+    if (LocalPlayers[i].ptype < 0)
+      LocalPlayers[i].ptype = allowed_pawntypes[0];
 
   if (choice == MI_nightmare)
     {
@@ -1549,6 +1520,19 @@ void M_Splitscreen(int choice)
 }
 
 
+// called at splitscreen changes
+void M_SwitchSplitscreen()
+{
+  // activate setup for player 2
+  if (cv_splitscreen.value)
+    MultiPlayer_MI[MI_setupplayer2].flags = IT_ACT;
+  else
+    MultiPlayer_MI[MI_setupplayer2].flags = IT_OFF_BIG;
+
+  //if (MultiPlayerDef.lastOn==MI_setupplayer2) MultiPlayerDef.lastOn= MI_setupplayer1;
+}
+
+
 //===========================================================================
 //                             OPTIONS MENU
 //===========================================================================
@@ -1566,15 +1550,44 @@ void M_GameOption(int choice)
 
 static void M_SetupControlsMenu(int choice);
 
+// Hidden menu consvars for player options.
+CV_PossibleValue_t Color_cons_t[] =
+{
+  {0,"green"}, {1,"gray"}, {2,"brown"}, {3,"red"}, {4,"light gray"},
+  {5,"light brown"}, {6,"light red"}, {7,"light blue"}, {8,"blue"}, {9,"yellow"},
+  {10,"beige"}, {0,NULL}
+};
+
+static consvar_t cv_menu_playername  = {"name", "gorak",  CV_HIDDEN, NULL};
+//static consvar_t cv_menu_pawntype    = {"pawntype", "0",  CV_HIDDEN, CV_Unsigned};
+static consvar_t cv_menu_playercolor = {"color", "0", CV_HIDDEN, Color_cons_t};
+//static consvar_t cv_menu_skin        = {"skin", "marine", CV_HIDDEN, NULL};
+static consvar_t cv_menu_autoaim = {"autoaim", "1", CV_HIDDEN, CV_OnOff};
+
+static consvar_t cv_menu_owswitch = {"originalweaponswitch", "0", CV_HIDDEN, CV_OnOff};
+static consvar_t cv_menu_weaponpref  = {"weaponpref", "1567392481457839602224446660000", CV_HIDDEN, NULL};
+CV_PossibleValue_t showmessages_cons_t[] = {{0,"None"}, {1,"Important"}, {2,"All"}, {0,NULL}};
+static consvar_t cv_menu_showmessages = {"showmessages", "1", CV_HIDDEN, showmessages_cons_t};
+
+static consvar_t cv_menu_autorun     = {"autorun", "0",     CV_HIDDEN, CV_OnOff};
+CV_PossibleValue_t crosshair_cons_t[] = {{0,"Off"}, {1,"Cross"}, {2,"Angle"}, {3,"Point"}, {0,NULL}};
+static consvar_t cv_menu_crosshair = {"crosshair", "0", CV_HIDDEN, crosshair_cons_t};
+/*
+static consvar_t cv_menu_chasecam   = {"chasecam", "0",     CV_HIDDEN, CV_OnOff};
+static consvar_t cv_menu_cam_dist   = {"cam_dist", "128",   CV_HIDDEN | CV_FLOAT, NULL};
+static consvar_t cv_menu_cam_height = {"cam_height", "20",  CV_HIDDEN | CV_FLOAT, NULL};
+static consvar_t cv_menu_cam_speed  = {"cam_speed", "0.25", CV_HIDDEN | CV_FLOAT, NULL};
+*/
+
 
 // note: alphaKey member is the y offset
 static menuitem_t Options_MI[] =
 {
-  {IT_CVAR, NULL, "Messages:"       ,{&cv_showmessages}    ,0},
-  {IT_CVAR, NULL, "Always Run"      ,{&cv_autorun}         ,0},
-  {IT_CVAR, NULL, "Crosshair"       ,{&cv_crosshair}       ,0},
+  {IT_CVAR, NULL, "Messages:"       ,{&cv_menu_showmessages}    ,0},
+  {IT_CVAR, NULL, "Always Run"      ,{&cv_menu_autorun}         ,0},
+  {IT_CVAR, NULL, "Crosshair"       ,{&cv_menu_crosshair}       ,0},
 //{IT_CVAR, NULL, "Crosshair scale" ,{&cv_crosshairscale}  ,0},
-  {IT_CVAR, NULL, "Autoaim"         ,{&cv_autoaim}         ,0},
+  {IT_CVAR, NULL, "Autoaim"         ,{&cv_menu_autoaim}         ,0},
   {IT_CVAR, NULL, "Control per key" ,{&cv_controlperkey}   ,0},
 
   {IT_NONE | IT_STRING | IT_DISABLED | IT_WHITE | IT_DY, NULL, "Shared controls:" ,{NULL}, 4},
@@ -1693,13 +1706,13 @@ void M_Connect(int choice)
 
 void M_Refresh(int choice)
 {
-  //  CL_UpdateServerList();
+  //  CL_UpdateServerList(); TODO
 }
 
 static menuitem_t Connect_MI[] =
 {
   {IT_CVAR , NULL, "Search the",{(consvar_t *)&cv_menu_serversearch}, 0},
-  {IT_CALL | IT_STRING, NULL, "Refresh",  {(consvar_t *)M_Refresh},0},
+  {IT_CALL | IT_STRING, NULL, "Refresh",  {(consvar_t *)M_Refresh}, 0},
   {IT_NONE | IT_STRING | IT_WHITE, NULL, "Server Name                    ping   plys type", {NULL}, 0},
   {IT_NONE | IT_STRING, NULL, "",{(consvar_t *)M_Connect}   ,0},
   {IT_NONE | IT_STRING, NULL, "",{(consvar_t *)M_Connect}   ,0},
@@ -1778,185 +1791,9 @@ void M_ConnectMenu(int choice)
 //                          PLAYER SETUP MENUS
 //===========================================================================
 
-// this is set before entering the MultiPlayer setup menu,
-// for either player 1 or 2
-static  PlayerInfo *setupm_player;
-static presentation_t *multi_pres;
-
-static consvar_t cv_menu_playername =  {"m_playername", "gorak", CV_HIDDEN, NULL};
-//static consvar_t cv_menu_playercolor = {"m_playercolor", "0", CV_HIDDEN, Color_cons_t};
-
-static bool M_QuitSetupPlayerMenu()
-{
-  setupm_player->name = cv_menu_playername.str;
-
-  if (multi_pres)
-    {
-      // delete the animated guy
-      delete multi_pres;
-      multi_pres = NULL;
-    }
-
-  return true;
-}
-
-
-static menuitem_t SetupPlayer_MI[] =
-{
-  {IT_TEXTBOX | IT_DY, NULL, "Your name",  {&cv_menu_playername}, 8},
-  {IT_CVAR,    NULL, "Your color", {&cv_playercolor}, 0},
-  // FIXME
-  //{IT_ARROWS | IT_STRING, NULL, "Your skin" , {(consvar_t *)M_HandleSetupPlayerSkin}, 32},
-  //{IT_ARROWS | IT_STRING          , NULL, "Your species" , {(consvar_t *)M_HandleSetupPlayerClass}, 32},
-  {IT_CVAR, NULL, "Messages:"       ,{&cv_showmessages}, 0},
-  {IT_CVAR, NULL, "Always Run"      ,{&cv_autorun}     , 0},
-  {IT_CVAR, NULL, "Crosshair"       ,{&cv_crosshair}   , 0},
-  //{IT_CVAR, NULL, "Crosshair scale" ,{&cv_crosshairscale}  ,0},
-  {IT_CVAR, NULL, "Autoaim"         ,{&cv_autoaim}         ,0},
-  {IT_CALL | IT_STRING | IT_WHITE,    0, "Setup Controls...", {(consvar_t *)M_SetupControlsMenu}, 0},
-  {IT_LINK, NULL, "Mouse config...",  {(consvar_t *)&MouseOptionsDef}, 0}
-};
-
-enum setupplayer_e
-{
-  setupplayer_name,
-  setupplayer_color,
-  //setupplayer_skin,
-  setupplayer_messages,
-  setupplayer_alwaysrun,
-  setupplayer_crosshair,
-  setupplayer_autoaim,
-  setupplayer_controls,
-  setupplayer_mouse
-};
-
-
-Menu  SetupPlayerDef("M_MULTI", "Multiplayer", &MultiPlayerDef, ITEMS(SetupPlayer_MI), 20, 30,
-		     0, &Menu::DrawSetupPlayer, M_QuitSetupPlayerMenu);
-
-
-
-static  bool setupcontrols_player2;
-
-// setup the local player(s)
-void M_SetupPlayer(int choice)
-{
-  int n = Consoleplayer.size();
-  if (choice == MI_setupplayer1) // First local player
-    {
-      if (n >= 1)
-        setupm_player = Consoleplayer[0];
-      else
-        setupm_player = &localplayer;
-
-      setupcontrols_player2 = false;
-
-      // set up menu for player 1
-      //setupm_cvskin = &cv_skin;
-
-      SetupPlayer_MI[setupplayer_color].use.cvar = &cv_playercolor;
-      SetupPlayer_MI[setupplayer_messages].use.cvar = &cv_showmessages;
-      SetupPlayer_MI[setupplayer_alwaysrun].use.cvar = &cv_autorun;
-      SetupPlayer_MI[setupplayer_crosshair].use.cvar = &cv_crosshair;
-      SetupPlayer_MI[setupplayer_autoaim].use.cvar = &cv_autoaim;
-      SetupPlayer_MI[setupplayer_mouse].use.submenu = &MouseOptionsDef;
-    }
-  else
-    {
-      if (n >= 2)
-        setupm_player = Consoleplayer[1];
-      else
-        setupm_player = &localplayer2;
-
-      setupcontrols_player2 = true;
-
-      // set up menu for player 2
-      //setupm_cvskin = &cv_skin2;
-
-      SetupPlayer_MI[setupplayer_color].use.cvar = &cv_playercolor2;
-      SetupPlayer_MI[setupplayer_messages].use.cvar = &cv_showmessages2;
-      SetupPlayer_MI[setupplayer_alwaysrun].use.cvar = &cv_autorun2;
-      SetupPlayer_MI[setupplayer_crosshair].use.cvar = &cv_crosshair2;
-      SetupPlayer_MI[setupplayer_autoaim].use.cvar = &cv_autoaim2;
-      SetupPlayer_MI[setupplayer_mouse].use.submenu = &Mouse2OptionsDef;
-    }
-
-  cv_menu_playername.Set(setupm_player->name.c_str());
-
-  if (setupm_player->ptype < 0)
-    setupm_player->ptype = allowed_pawntypes[0];
-
-  multi_pres = NULL;
-
-  Menu::SetupNextMenu(&SetupPlayerDef);
-}
-
-
-// called at splitscreen changes
-void M_SwitchSplitscreen()
-{
-  // activate setup for player 2
-  if (cv_splitscreen.value)
-    MultiPlayer_MI[MI_setupplayer2].flags = IT_ACT;
-  else
-    MultiPlayer_MI[MI_setupplayer2].flags = IT_OFF_BIG;
-
-  //if (MultiPlayerDef.lastOn==MI_setupplayer2) MultiPlayerDef.lastOn= MI_setupplayer1;
-}
-
-
-
-//  Draw the multi player setup menu, had some fun with player anim
-#define PLBOXW    8
-#define PLBOXH    9
-void Menu::DrawSetupPlayer()
-{
-  // TODO team selection, draw a team symbol...
-
-  // draw name string
-  //M_DrawTextBox(x+90,y-8,MAXPLAYERNAME,1);
-  //hud_font->DrawString(x+98, y, setupm_player->name.c_str());
-
-  // draw text cursor for name
-  //if (itemOn == 0 && AnimCount < 4)   //blink cursor
-  //  hud_font->DrawCharacter(x+98+hud_font->StringWidth(setupm_player->name.c_str()),y,'_' | 0x80, V_SCALE);
-
-  // draw box around guy
-  M_DrawTextBox(4, y+44, PLBOXW, PLBOXH);
-  M_DrawTextBox(236, y+44, PLBOXW, PLBOXH);
-
-  // draw skin string
-  // TODO draw pawntype name? draw pawntype stats like Hexen?
-  //hud_font->DrawString(20, y+120, setupm_cvskin->str);
-
-  if (!multi_pres)
-    {
-      // if the presentation does not exist (or needed to be changed), create it anew
-      multi_pres = new spritepres_t("NONE", &mobjinfo[pawndata[setupm_player->ptype].mt], setupm_player->color);
-      multi_pres->SetAnim(presentation_t::Run);
-    }
-
-  // animate the player in the box
-  multi_pres->Update(1);
-
-  // skin 0 is default player sprite
-  //spritedef_t *sprdef = &skins[R_SkinAvailable(setupm_cvskin->str)].spritedef;
-  spriteframe_t *sprframe  = multi_pres->GetFrame();
-
-  int color = items[setupplayer_color].use.cvar->value;
-  if (color == 0)
-    current_colormap = colormaps;
-  else
-    current_colormap = (byte *)translationtables - 256 + (color << 8);
-
-  // draw player sprites
-  sprframe->tex[0]->Draw(12 +(PLBOXW*8/2),y+44+(PLBOXH*8), V_SCALE | V_MAP);
-  sprframe->tex[2]->Draw(244+(PLBOXW*8/2),y+44+(PLBOXH*8), V_SCALE | V_MAP);
-
-  // TODO it would be easier to draw menus if menuitems had an optional x coord as well...
-  // use generic drawer for cursor, items and title
-  DrawMenu();
-}
+static int setup_player; // is set before entering the MultiPlayer setup menu
+static presentation_t *multi_pres = NULL;
+static bool setupcontrols_player2 = false;
 
 
 static void M_HandleSetupPlayerClass(int val)
@@ -1976,13 +1813,14 @@ static void M_HandleSetupPlayerClass(int val)
     }
 
   int ptype = allowed_pawntypes[i];
-  setupm_player->ptype = ptype;
+  LocalPlayers[setup_player].ptype = ptype;
   if (multi_pres)
     {
       delete multi_pres;
       multi_pres = NULL;
     }
 }
+
 
 /*
 static void M_HandleSetupPlayerSkin(int val)
@@ -2005,6 +1843,160 @@ static void M_HandleSetupPlayerSkin(int val)
     COM_BufAddText(va("%s \"%s\"",setupm_cvskin->name ,skins[myskin].name));
 }
 */
+
+
+static bool M_QuitSetupPlayerMenu()
+{
+  LocalPlayerInfo &p = LocalPlayers[setup_player];
+
+  p.name = cv_menu_playername.str;
+  p.color = cv_menu_playercolor.value;
+  p.autoaim = cv_menu_autoaim.value;
+  p.originalweaponswitch = cv_menu_owswitch.value;
+  int n = min(int(strlen(cv_menu_weaponpref.str)), int(NUMWEAPONS));
+  for (int i=0; i<n; i++)
+    p.weaponpref[i] = cv_menu_weaponpref.str[i];
+
+  p.messagefilter = cv_menu_showmessages.value;
+
+  if (multi_pres)
+    {
+      // delete the animated guy
+      delete multi_pres;
+      multi_pres = NULL;
+    }
+
+  if (game.server)
+    p.info->options = p;
+  else
+    ; // TODO send RPC to server!
+
+  return true;
+}
+
+
+static menuitem_t SetupPlayer_MI[] =
+{
+  {IT_TEXTBOX, NULL, "Your name",  {&cv_menu_playername}, 0},
+  {IT_ARROWS | IT_STRING, NULL, "Your species" , {(consvar_t *)M_HandleSetupPlayerClass}},
+  {IT_CVAR, NULL, "Your color",    {&cv_menu_playercolor}, 0},
+  //{IT_ARROWS | IT_STRING, NULL, "Your skin" , {(consvar_t *)M_HandleSetupPlayerSkin}},
+  {IT_CVAR, NULL, "Autoaim",              {&cv_menu_autoaim}, 0},
+  {IT_CVAR, NULL, "Orig. weapon switch",  {&cv_menu_owswitch}, 0},
+  //{IT_TEXTBOX, NULL, "Weapon preference", {&cv_menu_weaponpref}, 0},
+  {IT_CVAR, NULL, "Messages:",        {&cv_menu_showmessages}, 0},
+  {IT_CVAR, NULL, "Always Run",      {&cv_menu_autorun}, 0},
+  {IT_CVAR, NULL, "Crosshair",       {&cv_menu_crosshair}, 0},
+  //{IT_CVAR, NULL, "Crosshair scale" ,{&cv_crosshairscale}, 0},
+  // TODO chasecam
+  {IT_CALL | IT_STRING | IT_WHITE,    0, "Setup Controls...", {(consvar_t *)M_SetupControlsMenu}, 0},
+  {IT_LINK, NULL, "Mouse config...",  {(consvar_t *)&MouseOptionsDef}, 0}
+};
+
+enum setupplayer_e
+{
+  setupplayer_mouse = 8
+};
+
+
+Menu  SetupPlayerDef("M_MULTI", "Multiplayer", &MultiPlayerDef, ITEMS(SetupPlayer_MI), 20, 30,
+		     0, &Menu::DrawSetupPlayer, M_QuitSetupPlayerMenu);
+
+
+
+// setup the local player(s)
+void M_SetupPlayer(int choice)
+{
+  if (choice == MI_setupplayer1) // First local player
+    {
+      setup_player = 0;
+      setupcontrols_player2 = false;
+
+      SetupPlayer_MI[setupplayer_mouse].use.submenu = &MouseOptionsDef;
+    }
+  else
+    {
+      setup_player = 1;
+      setupcontrols_player2 = true;
+
+      SetupPlayer_MI[setupplayer_mouse].use.submenu = &Mouse2OptionsDef;
+    }
+
+  LocalPlayerInfo &p = LocalPlayers[setup_player];
+
+  cv_menu_playername.Set(p.name.c_str());
+  cv_menu_playercolor.Set(p.color);
+  cv_menu_autoaim.Set(p.autoaim);
+  cv_menu_owswitch.Set(p.originalweaponswitch);
+  char temp[40];
+  for (int i=0; i<NUMWEAPONS; i++)
+    temp[i] = p.weaponpref[i] + '0';
+  temp[NUMWEAPONS] = '\0';
+  cv_menu_weaponpref.Set(temp);
+  cv_menu_showmessages.Set(p.messagefilter);
+
+  if (p.ptype < 0)
+    p.ptype = allowed_pawntypes[0];
+
+  multi_pres = NULL;
+
+  Menu::SetupNextMenu(&SetupPlayerDef);
+}
+
+
+
+//  Draw the multi player setup menu, had some fun with player anim
+#define PLBOXW    8
+#define PLBOXH    9
+void Menu::DrawSetupPlayer()
+{
+  LocalPlayerInfo &p = LocalPlayers[setup_player];
+  // TODO team selection, draw a team symbol...
+
+  // draw name string
+  //M_DrawTextBox(x+90,y-8,MAXPLAYERNAME,1);
+  //hud_font->DrawString(x+98, y, setupm_player->name.c_str());
+
+  // draw text cursor for name
+  //if (itemOn == 0 && AnimCount < 4)   //blink cursor
+  //  hud_font->DrawCharacter(x+98+hud_font->StringWidth(setupm_player->name.c_str()),y,'_' | 0x80, V_SCALE);
+
+  // draw box around guy
+  M_DrawTextBox(4, y+44, PLBOXW, PLBOXH);
+  M_DrawTextBox(236, y+44, PLBOXW, PLBOXH);
+
+  // draw skin string
+  // TODO draw pawntype name? draw pawntype stats like Hexen?
+  //hud_font->DrawString(20, y+120, setupm_cvskin->str);
+
+  if (!multi_pres)
+    {
+      // if the presentation does not exist (or needed to be changed), create it anew
+      multi_pres = new spritepres_t("NONE", &mobjinfo[pawndata[p.ptype].mt], cv_menu_playercolor.value);
+      multi_pres->SetAnim(presentation_t::Run);
+    }
+
+  // animate the player in the box
+  multi_pres->Update(1);
+
+  // skin 0 is default player sprite
+  //spritedef_t *sprdef = &skins[R_SkinAvailable(setupm_cvskin->str)].spritedef;
+  spriteframe_t *sprframe  = multi_pres->GetFrame();
+
+  int color = cv_menu_playercolor.value;
+  if (color == 0)
+    current_colormap = colormaps;
+  else
+    current_colormap = (byte *)translationtables - 256 + (color << 8);
+
+  // draw player sprites
+  sprframe->tex[0]->Draw(12 +(PLBOXW*8/2),y+44+(PLBOXH*8), V_SCALE | V_MAP);
+  sprframe->tex[2]->Draw(244+(PLBOXW*8/2),y+44+(PLBOXH*8), V_SCALE | V_MAP);
+
+  // TODO it would be easier to draw menus if menuitems had an optional x coord as well...
+  // use generic drawer for cursor, items and title
+  DrawMenu();
+}
 
 
 //===========================================================================
@@ -2365,12 +2357,12 @@ void M_HandleVideoMode(int key)
 //added:24-03-00: note: alphaKey member is the y offset
 static menuitem_t MouseOptions_MI[]=
 {
-  {IT_CVAR, NULL, "Use Mouse",        {&cv_usemouse}        ,0},
-  {IT_CVAR, NULL, "Always MouseLook", {&cv_automlook}       ,0},
-  {IT_CVAR, NULL, "Mouse Move"      , {&cv_mousemove}       ,0},
-  {IT_CVAR, NULL, "Invert Mouse"    , {&cv_invertmouse}     ,0},
-  {IT_CV_SLIDER | IT_STRING, NULL, "Mouse x-speed", {&cv_mousesensx}       ,0},
-  {IT_CV_SLIDER | IT_STRING, NULL, "Mouse y-speed", {&cv_mousesensy}       ,0}
+  {IT_CVAR, NULL, "Use Mouse",        {&cv_usemouse[0]}        ,0},
+  {IT_CVAR, NULL, "Always MouseLook", {&cv_automlook[0]}       ,0},
+  {IT_CVAR, NULL, "Mouse Move"      , {&cv_mousemove[0]}       ,0},
+  {IT_CVAR, NULL, "Invert Mouse"    , {&cv_invertmouse[0]}     ,0},
+  {IT_CV_SLIDER | IT_STRING, NULL, "Mouse x-speed", {&cv_mousesensx[0]}       ,0},
+  {IT_CV_SLIDER | IT_STRING, NULL, "Mouse y-speed", {&cv_mousesensy[0]}       ,0}
   // #ifdef __MACOS__
   //  ,{IT_CALL | IT_STRING | IT_WHITE, NULL, "Configure Input Sprocket..."  , {(consvar_t *)macConfigureInput}, 60}
   //#endif
@@ -2386,12 +2378,12 @@ Menu  MouseOptionsDef("M_OPTTTL", "OPTIONS", &OptionsDef, ITEMS(MouseOptions_MI)
 static menuitem_t  Mouse2Options_MI[] =
 {
   {IT_CVAR, NULL, "Second Mouse Serial Port", {&cv_mouse2port}, 0},
-  {IT_CVAR, NULL, "Use Mouse 2"     , {&cv_usemouse2}      , 0},
-  {IT_CVAR, NULL, "Always MouseLook", {&cv_automlook2}, 0},
-  {IT_CVAR, NULL, "Mouse Move",       {&cv_mousemove2}     , 0},
-  {IT_CVAR, NULL, "Invert Mouse",     {&cv_invertmouse2}   , 0},
-  {IT_CV_SLIDER | IT_STRING, NULL, "Mouse x-speed", {&cv_mousesensx2}, 0},
-  {IT_CV_SLIDER | IT_STRING, NULL, "Mouse y-speed", {&cv_mousesensy2}, 0}
+  {IT_CVAR, NULL, "Use Mouse 2"     , {&cv_usemouse[1]}      , 0},
+  {IT_CVAR, NULL, "Always MouseLook", {&cv_automlook[1]}     , 0},
+  {IT_CVAR, NULL, "Mouse Move",       {&cv_mousemove[1]}     , 0},
+  {IT_CVAR, NULL, "Invert Mouse",     {&cv_invertmouse[1]}   , 0},
+  {IT_CV_SLIDER | IT_STRING, NULL, "Mouse x-speed", {&cv_mousesensx[1]}, 0},
+  {IT_CV_SLIDER | IT_STRING, NULL, "Mouse y-speed", {&cv_mousesensy[1]}, 0}
 };
 
 Menu  Mouse2OptionsDef("M_OPTTTL", "OPTIONS", &SetupPlayerDef, ITEMS(Mouse2Options_MI), 60, 40);
@@ -2830,7 +2822,7 @@ bool Menu::Responder(event_t *ev)
 	  break;
 
         case KEY_F8:            // Toggle messages
-          cv_showmessages.AddValue(1);
+          //cv_showmessages.AddValue(1); TODO replace
 	  break;
 
         case KEY_F9:            // Quickload

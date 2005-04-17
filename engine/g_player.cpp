@@ -2,14 +2,11 @@
 //-----------------------------------------------------------------------------
 //  $Id$
 //
-// Copyright (C) 2002-2004 by DooM Legacy Team.
+// Copyright (C) 2002-2005 by DooM Legacy Team.
 //
 // $Log$
-// Revision 1.32  2005/03/16 21:16:06  smite-meister
-// menu cleanup, bugfixes
-//
-// Revision 1.31  2004/12/02 17:22:32  smite-meister
-// HUD fixed
+// Revision 1.33  2005/04/17 18:36:33  smite-meister
+// netcode
 //
 // Revision 1.30  2004/11/18 20:30:07  smite-meister
 // tnt, plutonia
@@ -20,17 +17,8 @@
 // Revision 1.28  2004/11/04 21:12:52  smite-meister
 // save/load fixed
 //
-// Revision 1.27  2004/10/27 17:37:06  smite-meister
-// netcode update
-//
-// Revision 1.26  2004/09/13 20:43:29  smite-meister
-// interface cleanup, sp map reset fixed
-//
 // Revision 1.24  2004/07/13 20:23:36  smite-meister
 // Mod system basics
-//
-// Revision 1.23  2004/07/09 19:43:39  smite-meister
-// Netcode fixes
 //
 // Revision 1.21  2004/07/05 16:53:24  smite-meister
 // Netcode replaced
@@ -49,9 +37,6 @@
 //
 // Revision 1.13  2003/05/30 13:34:43  smite-meister
 // Cleanup, HUD improved, serialization
-//
-// Revision 1.11  2003/04/04 00:01:54  smite-meister
-// bugfixes, Hexen HUD
 //
 // Revision 1.10  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
@@ -72,8 +57,6 @@
 // Now compiles with MinGW 2.0 / GCC 3.2.
 // Builder can choose between dynamic and static linkage.
 //
-// Revision 1.4  2003/01/18 20:17:41  smite-meister
-// HUD fixed, levelchange crash fixed.
 //-----------------------------------------------------------------------------
 
 /// \file
@@ -89,41 +72,165 @@
 #include "g_actor.h"
 #include "g_pawn.h"
 
+#include "a_functions.h"
+#include "bots/b_bot.h"
+
 #include "n_connection.h"
 
 #include "wi_stuff.h"
 #include "tables.h"
 
 
-//===================================
-//           global data
-//===================================
+//============================================================
+//           Global (nonstatic) client data
+//============================================================
 
-// PI's for both local players. Used by menu to setup their properties.
-// These are only "models" for local players, the actual PI's
-// that are added to a game are copy constructed from these.
-PlayerInfo localplayer("Batman");
-PlayerInfo localplayer2("Robin");
+/// Local human players, then local bot player
+LocalPlayerInfo LocalPlayers[NUM_LOCALPLAYERS] =
+{
+  LocalPlayerInfo("Batman", 0), LocalPlayerInfo("Robin", 1)
+};
 
-vector<PlayerInfo *> Consoleplayer;  // local players
+/// Locally observed players (multiple viewports...)
+vector<PlayerInfo *> ViewPlayers;
 
 
+bool G_RemoveLocalPlayer(PlayerInfo *p)
+{
+  if (p)
+    {
+      // remove the given player
+      for (int k=0; k < NUM_LOCALPLAYERS; k++)
+	if (LocalPlayers[k].info == p)
+	  {
+	    LocalPlayers[k].info = NULL;
+	    return true;
+	  }
+
+      return false;
+    }
+
+  // remove all players
+  for (int k=0; k < NUM_LOCALPLAYERS; k++)
+    LocalPlayers[k].info = NULL;
+
+  return true;
+}
+
+
+//============================================================
+//   PlayerOptions class
+//============================================================
 
 static char default_weaponpref[NUMWEAPONS] =
 {
-  1,4,5,6,8,7,3,9,2,  // Doom
+  1,5,6,7,3,9,2,4,8,  // Doom
   1,4,5,7,8,3,9,6,0,  // Heretic
   2,2,2,4,4,4,6,6,6,0,0,0,0 // Hexen
 };
 
 
+PlayerOptions::PlayerOptions(const string &n)
+{
+  name = n;
+
+  ptype = -1;
+  color = 0;
+  skin  = 0; // "marine"?
+
+  autoaim = true;
+  originalweaponswitch = true;
+  for (int i=0; i<NUMWEAPONS; i++)
+    weaponpref[i] = default_weaponpref[i];
+
+  messagefilter = 10;
+}
+
+
+/// Sends the player preferences to the server.
+void PlayerOptions::Write(BitStream *stream)
+{
+  stream->writeString(name.c_str());
+  stream->write(ptype);
+  stream->write(color);
+  stream->write(skin);
+
+  stream->write(autoaim);
+  stream->write(originalweaponswitch);
+  for (int i=0; i<NUMWEAPONS; i++)
+    stream->write(weaponpref[i]);
+
+  stream->write(messagefilter);
+}
+
+/// server reads remote player preferences sent by client
+void PlayerOptions::Read(BitStream *stream)
+{
+  char temp[256];
+
+  stream->readString(temp);
+  temp[32] = '\0'; // limit name length
+  name = temp;
+
+  stream->read(&ptype);
+  stream->read(&color);
+  stream->read(&skin);
+
+  stream->read(&autoaim);
+  stream->read(&originalweaponswitch);
+  for (int i=0; i<NUMWEAPONS; i++)
+    stream->read(&weaponpref[i]);
+
+  stream->read(&messagefilter);
+}
+
+
+
+//============================================================
+//   LocalPlayerInfo class
+//============================================================
+
+LocalPlayerInfo::LocalPlayerInfo(const string &n, int keyset)
+  : PlayerOptions(n)
+{
+  controlkeyset = keyset;
+  autorun = false;
+  crosshair = 0;
+
+  info = NULL;
+  ai = NULL;
+}
+
+
+/// Builds the control struct (ticcmd) based on human input or AI decisions
+void LocalPlayerInfo::GetInput(int elapsed)
+{
+  if (!info)
+    return;
+
+  // inventory timer (TODO does it belong here?)
+  if (info->invTics)
+    info->invTics--;
+
+  if (ai)
+    ai->BuildInput(info, elapsed);
+  else
+    info->cmd.Build(this, elapsed);
+}
+
+
+
+//============================================================
+//   PlayerInfo class
+//============================================================
+
 TNL_IMPLEMENT_NETOBJECT(PlayerInfo);
 
-PlayerInfo::PlayerInfo(const string & n)
+PlayerInfo::PlayerInfo(const string &n)
 {
+  name = n;
   number = 0;
   team = 0;
-  name = n;
 
   connection = NULL;
   client_hash = 0;
@@ -134,74 +241,116 @@ PlayerInfo::PlayerInfo(const string & n)
 
   requestmap = entrypoint = 0;
 
-  cmd.Clear();
-
   mp = NULL;
   pawn = NULL;
   pov = NULL;
 
-  messagefilter = 10;
-
-  ptype = -1;
-  color = 0;
-  skin  = 0;
-
-  for (int i = 0; i<NUMWEAPONS; i++)
-    weaponpref[i] = default_weaponpref[i];
-  originalweaponswitch = true;
-  autoaim = false;
-
-  viewz = viewheight = deltaviewheight = bob_amplitude = 0;
+  viewz = viewheight = deltaviewheight = 0;
   palette = -1;
   damagecount = bonuscount = 0;
   itemuse = false;
 
-  Reset(false, true);
+  Reset(false, true);  // clear score, frags...
+
+  cmd.Clear();
+  invTics = invSlot = 0;
 
   // net stuff
   mNetFlags.set(Ghostable);
 };
 
 
-bool PlayerInfo::onGhostAdd(class GhostConnection *theConnection)
+/// This is called on clients when a new player joins
+bool PlayerInfo::onGhostAdd(class GhostConnection *c)
 {
-  CONS_Printf("added new player (%d)\n", number);
+  CONS_Printf("%s has joined the game (player %d)\n", name.c_str(), number);
   game.AddPlayer(this);
+
+  if (!LConnection::joining_players.empty())
+    {
+      list<LocalPlayerInfo *>::iterator t = LConnection::joining_players.begin();
+      for ( ; t != LConnection::joining_players.end(); t++)
+	{
+	  LocalPlayerInfo *p = *t;
+	  if (p->pnumber == number)
+	    {
+	      if (p->info)
+		I_Error("Multiple ghostadds!\n");
+
+	      p->info = this;
+	      LConnection::joining_players.erase(t); // the PlayerInfo found its owner
+	      break;
+	    }
+	}
+    }
+
   return true;
 }
 
+
+/// This is called on clients when a player leaves
 void PlayerInfo::onGhostRemove()
 {
-  CONS_Printf("removed player (%d)\n", number);
+  CONS_Printf("%s has left the game.\n", name.c_str());
   game.RemovePlayer(number);
 }
 
 
+enum mask_e
+{
+  M_IDENTITY   = BIT(1),
+  M_STATE      = BIT(2),
+  M_SCORE      = BIT(3),
+  M_PALETTE    = BIT(4),
+  M_HUDFLASH   = BIT(5),
+  M_EVERYTHING = 0xFFFFFFFF,
+};
+
+/// This is the function the server uses to ghost PlayerInfo data to clients.
 U32 PlayerInfo::packUpdate(GhostConnection *c, U32 mask, class BitStream *stream)
 {
   if (isInitialUpdate())
-    mask = 0x1;
+    mask = M_EVERYTHING;
 
   // check which states need to be updated, and write updates
-  if (stream->writeFlag(mask & 0x1))
+  if (stream->writeFlag(mask & M_IDENTITY))
     {
       CONS_Printf("--- pi stuff sent\n");
-      stream->write(number);
       stream->writeString(name.c_str());
+      stream->write(number);
+      stream->write(team);
     }
 
+  if (stream->writeFlag(mask & M_STATE))
+    {
+      U8 temp = playerstate;
+      stream->write(temp);
+    }
 
-  if (c != connection)
-    return 0;
+  if (stream->writeFlag(mask & M_SCORE))
+    {
+      stream->write(score);
+    }
+
+  // TODO: mp, pawn, pov?
 
   // feedback (goes only to the owner)
-  /*
-  if (stream->writeFlag(palette >= 0))
+  if (c != connection)
+    {
+      stream->writeFlag(false); // nothing further for others
+      return 0;
+    }
+  else
+    stream->writeFlag(true);
+
+
+  if (stream->writeFlag(mask & M_PALETTE))
     {
       stream->write(palette);
       palette = -1;
     }
-  else
+
+  if (stream->writeFlag(mask & M_HUDFLASH))
     {
       // palette change overrides flashes
       if (stream->writeFlag(damagecount))
@@ -211,9 +360,8 @@ U32 PlayerInfo::packUpdate(GhostConnection *c, U32 mask, class BitStream *stream
       damagecount = bonuscount = 0;
     }
 
-    stream->writeFlag(itemuse);
-    itemuse = false;
-  */
+  stream->writeFlag(itemuse);
+  itemuse = false;
 
 
   // the return value from packUpdate can set which states still
@@ -221,24 +369,41 @@ U32 PlayerInfo::packUpdate(GhostConnection *c, U32 mask, class BitStream *stream
   return 0;
 }
 
+
+///
 void PlayerInfo::unpackUpdate(GhostConnection *connection, BitStream *stream)
 {
   char temp[256];
 
-  // the unpackUpdate function must be symmetrical to packUpdate
+  // NOTE: the unpackUpdate function must be symmetrical to packUpdate
   if (stream->readFlag())
     {
       CONS_Printf("--- pi stuff received\n");
-      stream->read(&number);
       stream->readString(temp);
       name = temp;
+      stream->read(&number);
+      stream->read(&team);
     }
 
+  if (stream->readFlag())
+    {
+      U8 temp;
+      stream->read(&temp);
+      playerstate = playerstate_t(temp);
+    }
+
+  if (stream->readFlag())
+    stream->read(&score);
+
+  if (!stream->readFlag())
+    return; // nothing more
+
   // feedback
-  /*
+
   if (stream->readFlag())
     stream->read(&palette);
-  else
+
+  if (stream->readFlag())
     {
       // palette change overrides flashes
       if (stream->readFlag())
@@ -247,8 +412,7 @@ void PlayerInfo::unpackUpdate(GhostConnection *connection, BitStream *stream)
 	stream->read(&bonuscount);
     }
 
-    itemuse = stream->readFlag();
-  */
+  itemuse = stream->readFlag();
 }
 
 
@@ -256,7 +420,7 @@ void PlayerInfo::unpackUpdate(GhostConnection *connection, BitStream *stream)
 // send a message to the player
 void PlayerInfo::SetMessage(const char *msg, int priority, int type)
 {
-  if (priority > messagefilter)
+  if (priority > options.messagefilter)
     return;  // not interested (lesser is more important!)
 
   if (connection)
@@ -368,24 +532,27 @@ void PlayerInfo::Reset(bool rpawn, bool rfrags)
 
 
 
-//
-// Calculate the walking / running height adjustment
-//
-void PlayerInfo::CalcViewHeight(bool onground)
+
+/// Client: Calculate the walking / running viewpoint bobbing and weapon swing
+void PlayerInfo::CalcViewHeight()
 {
+  if (!pawn)
+    return;
+
+  bool onground = (pawn->z <= pawn->floorz);
+
   // 16 pixels of bob
-#define MAXBOB  0x100000
+  const fixed_t MAXBOB = 16*FRACUNIT;
 
   // Regular movement bobbing
-  // (needs to be calculated for gun swing even if not on ground)
-  // OPTIMIZE: tablify angle
-  // Note: a LUT allows for effects like a ramp with low health.
+  // basically pawn speed squared, affects weapon swing
+  fixed_t bob_amplitude; 
 
   if ((pawn->eflags & MFE_FLY) && !onground)
     bob_amplitude = FRACUNIT/2;
   else
     {
-      bob_amplitude = ((FixedMul(pawn->px,pawn->px) + FixedMul(pawn->py,pawn->py))*NEWTICRATERATIO) >> 2;
+      bob_amplitude = (FixedMul(pawn->px, pawn->px) + FixedMul(pawn->py, pawn->py)) >> 2;
 
       if (bob_amplitude > MAXBOB)
 	bob_amplitude = MAXBOB;
@@ -400,7 +567,7 @@ void PlayerInfo::CalcViewHeight(bool onground)
     }
   else
     {
-      int phase = (FINEANGLES/20*game.tic/NEWTICRATERATIO) & FINEMASK;
+      int phase = (FINEANGLES/20 * game.tic) & FINEMASK;
       fixed_t bob = FixedMul(bob_amplitude/2, finesine[phase]);
 
       if (playerstate == PST_ALIVE)
@@ -436,4 +603,22 @@ void PlayerInfo::CalcViewHeight(bool onground)
 
   if (viewz > pawn->ceilingz - 4*FRACUNIT)
     viewz = pawn->ceilingz - 4*FRACUNIT;
+
+
+  // server decides the rising/lowering of weapons (sy coord),
+  // but client does the bobbing independently
+
+  pspdef_t *psp = pawn->psprites;
+
+  if (psp[ps_weapon].state->action == A_WeaponReady)
+    {
+      // bob the weapon based on movement speed
+      int angle = (128 * game.tic) & FINEMASK;
+      psp[ps_weapon].sx = FRACUNIT + FixedMul(bob_amplitude, finecosine[angle]);
+      angle &= FINEANGLES/2-1;
+      psp[ps_weapon].sy = WEAPONTOP + FixedMul(bob_amplitude, finesine[angle]);
+
+      psp[ps_flash].sx = psp[ps_weapon].sx;
+      psp[ps_flash].sy = psp[ps_weapon].sy;
+    }
 }

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.27  2005/04/17 18:36:33  smite-meister
+// netcode
+//
 // Revision 1.26  2005/03/29 17:20:45  smite-meister
 // state and mobjinfo tables fixed
 //
@@ -857,12 +860,12 @@ bool cht_Responder(event_t* ev)
   if (ev->type != ev_keydown)
     return false;
 
-  if (!game.server || game.skill == sk_nightmare || Consoleplayer.empty())
+  if (!game.server || game.skill == sk_nightmare || !LocalPlayers[0].info)
     { // Can't cheat in a net-game, or in nightmare mode
       return false;
     }
 
-  PlayerPawn *p = Consoleplayer[0]->pawn;
+  PlayerPawn *p = LocalPlayers[0].info->pawn;
 
   if (p == NULL || p->health <= 0)
     { // Dead players can't cheat

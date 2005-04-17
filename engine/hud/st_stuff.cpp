@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.33  2005/04/17 18:36:34  smite-meister
+// netcode
+//
 // Revision 1.32  2005/03/21 17:44:13  smite-meister
 // fixes
 //
@@ -1101,7 +1104,7 @@ void HUD::UpdateWidgets()
 
   if (game.mode == gm_heretic || game.mode == gm_hexen)
     {
-      if (st_pawn->invTics)
+      if (st_player->invTics)
         invopen = true;
       else
         invopen = false;
@@ -1113,7 +1116,7 @@ void HUD::UpdateWidgets()
         itemuse--;
 
       int n = st_pawn->inventory.size();
-      int left = st_pawn->invSlot - st_curpos; // how many slots are there left of the first visible slot?
+      int left = st_player->invSlot - st_curpos; // how many slots are there left of the first visible slot?
       for (i=0; i<7; i++)
         if (i+left < n && st_pawn->inventory[left+i].type != arti_none)
           st_invslots[i] = st_pawn->inventory[left+i];

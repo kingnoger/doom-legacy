@@ -18,11 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.42  2005/03/21 17:44:08  smite-meister
-// fixes
-//
-// Revision 1.41  2005/03/19 13:51:29  smite-meister
-// sound samplerate fix
+// Revision 1.43  2005/04/17 18:36:32  smite-meister
+// netcode
 //
 // Revision 1.40  2005/03/17 21:42:50  smite-meister
 // Exl bugfixes
@@ -53,9 +50,6 @@
 //
 // Revision 1.24  2004/04/25 16:26:48  smite-meister
 // Doxygen
-//
-// Revision 1.20  2004/01/02 14:22:58  smite-meister
-// items work
 //
 // Revision 1.19  2003/12/31 18:32:49  smite-meister
 // Last commit of the year? Sound works.
@@ -517,14 +511,18 @@ void GameInfo::Drawer()
 {
   // draw the player views
 
-  int n = Consoleplayer.size();
+  int n = ViewPlayers.size();
   n = min(n, cv_splitscreen.value+1);
 
   for (int i = 0; i < n; i++)
     {
-      PlayerInfo *p = Consoleplayer[i];
+      PlayerInfo *p = ViewPlayers[i];
+
       if (p->pov && p->mp)
-	R.R_RenderPlayerView(i, p);
+	{
+	  p->CalcViewHeight(); // bob the view
+	  R.R_RenderPlayerView(i, p);
+	}
     }
 
   //CONS_Printf("GI::Draw done\n");
@@ -537,13 +535,15 @@ void GameInfo::Drawer()
 //
 bool GameInfo::Responder(event_t* ev)
 {
-  // allow spy mode changes even during the demo
+  // TODO allow spy mode changes even during the demo
+  /*
   if (state == GS_LEVEL && ev->type == ev_keydown
       && ev->data1 == KEY_F12 && !cv_hiddenplayers.value)
     {
       Consoleplayer[0]->connection->rpcRequestPOVchange_c2s(-1);
       return true;
     }
+  */
 
   switch (state)
     {
@@ -629,7 +629,7 @@ PlayerInfo *GameInfo::FindPlayer(int num)
 {
   player_iter_t i = Players.find(num);
   if (i != Players.end())
-    return (*i).second;
+    return i->second;
 
   return NULL;
 }
@@ -645,8 +645,8 @@ PlayerInfo *GameInfo::FindPlayer(const char *name)
     return FindPlayer(n); // by number
 
   for (player_iter_t i = Players.begin(); i != Players.end(); i++)
-    if ((*i).second->name == name)
-      return (*i).second;
+    if (i->second->name == name)
+      return i->second;
 
   return NULL;
 }
@@ -717,17 +717,17 @@ bool GameInfo::RemovePlayer(int num)
     {
       // must be local
       vector<PlayerInfo *>::iterator j;
-      for (j = Consoleplayer.begin(); j != Consoleplayer.end(); j++)
+      for (j = ViewPlayers.begin(); j != ViewPlayers.end(); j++)
 	if (*j == p)
 	  {
-	    Consoleplayer.erase(j);
+	    ViewPlayers.erase(j);
 	    break;
 	  }
+
+      G_RemoveLocalPlayer(p);
     }
 
-  delete p;
-  // NOTE! because PI's are deleted, even local PI's must be dynamically
-  // allocated, using a copy constructor: new PlayerInfo(localplayer).
+  delete p; // NOTE! because PI's are deleted, even local PI's must be dynamically allocated.
   Players.erase(i);
   return true;
 }
@@ -736,12 +736,9 @@ bool GameInfo::RemovePlayer(int num)
 /// Removes all players from a game.
 void GameInfo::ClearPlayers()
 {
-  player_iter_t i;
-  PlayerInfo *p;
-
-  for (i = Players.begin(); i != Players.end(); i++)
+  for (player_iter_t i = Players.begin(); i != Players.end(); i++)
     {
-      p = (*i).second;
+      PlayerInfo *p = i->second;
       // remove avatar of player
       if (p->pawn)
         {
@@ -751,7 +748,8 @@ void GameInfo::ClearPlayers()
       delete p;
     }
 
+  G_RemoveLocalPlayer(NULL);
   Players.clear();
-  Consoleplayer.clear();
+  ViewPlayers.clear();
   hud.ST_Stop();
 }

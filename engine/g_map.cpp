@@ -5,14 +5,8 @@
 // Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // $Log$
-// Revision 1.53  2005/04/05 16:15:13  smite-meister
-// valgrind fixes
-//
-// Revision 1.52  2005/03/17 21:42:50  smite-meister
-// Exl bugfixes
-//
-// Revision 1.51  2004/12/02 17:22:31  smite-meister
-// HUD fixed
+// Revision 1.54  2005/04/17 18:36:32  smite-meister
+// netcode
 //
 // Revision 1.49  2004/11/18 20:30:07  smite-meister
 // tnt, plutonia
@@ -22,9 +16,6 @@
 //
 // Revision 1.47  2004/11/09 20:38:50  smite-meister
 // added packing to I/O structs
-//
-// Revision 1.46  2004/11/04 21:12:51  smite-meister
-// save/load fixed
 //
 // Revision 1.44  2004/10/27 17:37:06  smite-meister
 // netcode update
@@ -510,7 +501,7 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
   // the player may have his old pawn from the previous level
   if (!pi->pawn)
     {
-      p = new PlayerPawn(nx, ny, nz, pi->ptype);
+      p = new PlayerPawn(nx, ny, nz, pi->options.ptype);
       p->player = pi;
       p->team = pi->team;
       pi->pawn  = p;
@@ -530,7 +521,7 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
   p->SetPosition();
 
   // Boris stuff
-  if (!pi->originalweaponswitch)
+  if (!pi->options.originalweaponswitch)
     p->UseFavoriteWeapon();
 
   p->eflags |= MFE_ONGROUND;
@@ -540,7 +531,7 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
 
   // FIXME set skin sprite here
   // set color translations for player sprites
-  p->color = pi->color;
+  p->color = pi->options.color;
 
   p->angle = ANG45 * (mthing->angle/45);
 

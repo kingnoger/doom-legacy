@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.25  2005/04/17 18:36:34  smite-meister
+// netcode
+//
 // Revision 1.24  2005/03/19 13:51:29  smite-meister
 // sound samplerate fix
 //
@@ -775,8 +778,8 @@ void Intermission::DrawDMStats()
   //  name is displayed white, when playback demo, you quicly see who's the view.
   // TODO: splitscreen... another color?
 
-  if (Consoleplayer.size())
-    white = cv_teamplay.value ? Consoleplayer[0]->team : Consoleplayer[0]->number;
+  if (ViewPlayers.size())
+    white = cv_teamplay.value ? ViewPlayers[0]->team : ViewPlayers[0]->number;
 
   // count frags for each present player
   HU_DrawRanking("Frags", 5, RANKINGY, dm_score[0], nplayers, false, white);
@@ -1125,12 +1128,13 @@ void Intermission::DrawCoopStats()
       extern byte *current_colormap;
       int i, n = plrs.size();
       int pwidth = percent->width;
+      int you = ViewPlayers.size() ? ViewPlayers[0]->number : 0;
 
       for (i=0 ; i<n ; i++)
         {
           // TODO draw names too, use a smaller font?
           // draw face
-          int color = plrs[i]->color;
+          int color = plrs[i]->options.color;
 
           x = NG_STATSX - (i & 1) ? 10 : 0;
           if (color == 0)
@@ -1141,7 +1145,7 @@ void Intermission::DrawCoopStats()
           stpb->Draw(x - stpb->width, y, FB | V_MAP);
 
           // TODO splitscreen
-          if (plrs[i]->number == Consoleplayer[0]->number)
+          if (plrs[i]->number == you)
             star->Draw(x-stpb->width, y, FB);
 
           // draw stats
