@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2005/04/17 17:24:44  smite-meister
+// netcode
+//
 // Revision 1.14  2005/03/21 17:44:19  smite-meister
 // fixes
 //
@@ -549,7 +552,12 @@ static void COM_ExecuteString(char *text)
     return;     // no tokens
 
   // try to find the player "using" the command buffer
-  com_player = Consoleplayer.empty() ? NULL : Consoleplayer[0];
+  for (int i=0; i<NUM_LOCALPLAYERS; i++)
+    {
+      com_player = LocalPlayers[0].info;
+      if (com_player)
+	break;
+    }
 
   // check functions
   for (cmd=com_commands ; cmd ; cmd=cmd->next)
