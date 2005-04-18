@@ -135,7 +135,7 @@ Sets the cluster in which the map belongs.
 Sets the mapnumber where the Doom-type exits take the players from
 this map. A value of -1 means that the game ends here.
 Optionally, you can also set the destination for Doom secret exits.<br/>
-This command is not necessary in Hexen maps, because the
+This command is not necessary in Hexen-format maps, because the
 Hexen exit teleporters always carry the destination map number.
 
 </td></tr>
@@ -950,14 +950,19 @@ use them since there is a better way to achieve the same effect.
 
 <table class="def">
 <tr><th>Feature</th><th>Support status</th><th>Notes</th></tr>
-<tr><td>Mapthings</td><td>full</td><td>BEX flag mnemonics are supported.</td></tr>
-<tr><td>Frame table</td><td>full</td></tr>
-<tr><td>Weapons</td><td>full</td></tr>
-<tr><td>Sprites</td><td>full</td></tr>
+<tr><td>Thing</td><td>full</td><td>BEX flag mnemonics are
+supported.<br/>Extension: Heretic and Hexen flags can be set using
+"bits2 &lt;mnemonic1&gt; &lt;mnemonic2&gt;...".</td></tr>
+<tr><td>Frame</td><td>full</td><td>Extension: Codepointer can be set using "codep &lt;codepointer_mnemonic&gt;".</td></tr>
+<tr><td>Weapon</td><td>full</td></tr>
+<tr><td>Ammo</td><td>full</td></tr>
+<tr><td>Sprite</td><td>full</td></tr>
 <tr><td>Misc</td><td>partial</td></tr>
-<tr><td>Cheats</td><td>partial</td></tr>
-<tr><td>Sounds</td><td>deprecated</td><td>Use <a href="#sound">SNDINFO</a> instead.</td></tr>
-<tr><td>Text strings</td><td>deprecated</td><td>Use [STRINGS] or
+<tr><td>Cheat</td><td>partial</td></tr>
+<tr><td>Pointer</td><td>deprecated</td><td>Use [CODEPTR] or the Frame
+extension instead.</td></tr>
+<tr><td>Sound</td><td>deprecated</td><td>Use <a href="#sound">SNDINFO</a> instead.</td></tr>
+<tr><td>Text</td><td>deprecated</td><td>Use [STRINGS] or
 <a href="#MAPINFO">MAPINFO</a> instead.</td></tr>
 <tr><td>[CODEPTR]</td><td>full</td><td>Extended with a few
 Legacy-specific codepointers.</td></tr>
@@ -998,7 +1003,8 @@ called.
 
 <p>
 The preferred way to change the codepointers is to use the BEX
-[CODEPTR] block. The complete list of mnemonics for the Doom, Heretic
+mnemonics.
+The complete list of mnemonics for the Doom, Heretic
 and Hexen action functions available can be found in the source file
 <a href="../include/a_functions.h">a_functions.h</a>. Remember that
 you can use the mnemonic <b>NULL</b> to clear a codepointer.<br />
@@ -1039,7 +1045,7 @@ Same as above, but for weapon frames.
 
 <p>
 If a mapthing has the flag <b>SPECIAL</b>, the player may pick it up.
-Unlike in the original Doom, Legacy does not determine the type of a
+Unlike the original Doom, Legacy does not determine the type of a
 mapthing by its sprite, but rather by its mobjtype number.
 The effects of the basic Doom/Heretic/Hexen pickups are hardcoded.
 However, the pickup system has been made more flexible in some
@@ -1050,26 +1056,27 @@ or ammo.
 </p>
 
 <p>
-TODO examples (an example DEH file!)
-</p>
-
-<p>
 You can also create new types of pickups by combining DeHackEd with scripting...TODO
 </p>
 
-<table class="def">
+<!-- table class="def">
 <tr><th>DeHackEd field</th><th>Suggested usage</th><th>May not be used with...</th></tr>
 <tr><td>Hit points*</td><td>An integer amount. (Health/armor/ammo...)</td><td>SHOOTABLE</td></tr>
 <tr><td>Reaction time*</td><td>A counter.</td><td>FLOATBOB</td></tr>
 <tr><td>Pain chance</td><td>A probability (0-255)</td><td>SHOOTABLE</td></tr>
 <tr><td>Speed</td><td>Fixed point quantity, quality (armor factor...)</td><td>MISSILE</td></tr>
 <tr><td>Missile damage</td><td>An integer amount</td><td>MISSILE, SKULLFLY</td></tr>
-</table>
+</table -->
 
 <p>
 TODO more howtos: creating a new weapon with scripting, new pickups,
 new monsters...
 </p>
+
+<p>
+Here is an <a href="example.deh">example DEH file</a> which illustrates the new features.
+</p>
+
 
 <hr />
 <h2><a name="legacy.wad">Legacy.wad contents</a></h2>
