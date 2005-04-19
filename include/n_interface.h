@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2005/04/19 18:28:33  smite-meister
+// new RPCs
+//
 // Revision 1.9  2005/04/17 17:47:54  smite-meister
 // netcode
 //
@@ -163,8 +166,15 @@ public:
   void SV_Reset();
 
   //================================================
+  //  RPC callers
+  //================================================
 
+  void SendChat(int from, int to, const char *msg);
+  void Pause(int pnum, bool on);
   void SendNetVar(U16 netid, const char *str);
+  void SendPlayerOptions(int pnum, class LocalPlayerInfo &p);
+  void RequestSuicide(int pnum);
+  void Kick(class PlayerInfo *p);
 };
 
 

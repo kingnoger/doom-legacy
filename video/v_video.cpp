@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.24  2005/04/19 18:28:43  smite-meister
+// new RPCs
+//
 // Revision 1.23  2005/04/05 16:15:13  smite-meister
 // valgrind fixes
 //
@@ -313,34 +316,42 @@ void LumpTexture::Draw(int x, int y, int scrn = 0)
     }
 #endif
 
+  byte *dest_left = vid.screens[scrn];
+
   // location scaling
   if (flags & V_SLOC)
     {
       x *= vid.dupx;
       y *= vid.dupy;
-      //dest += vid.scaledofs;
+      dest_left += vid.scaledofs;
     }
 
-  // size scaling, clipping to LFB
-  fixed_t rowfrac, colfrac;
-  int x2, y2; // clipped past-the-end coordinates of the lower right corner
+  // size scaling
+  fixed_t rowfrac = xscale;
+  fixed_t colfrac = yscale;
+
+  // visible (LFB) width after scaling
+  int vis_width = int((width << FRACBITS) / float(xscale));
+  int vis_height = int((height << FRACBITS) / float(yscale));
+
+  // clipping to LFB
+  int x2, y2; // clipped past-the-end coordinates of the lower right corner in LFB
 
   if (flags & V_SSIZE)
     {
       x -= leftoffset * vid.dupx;
       y -= topoffset * vid.dupy;
-      x2 = min(x + width*vid.dupx, vid.width);
-      y2 = min(y + height*vid.dupy, vid.height);
-      colfrac = FixedDiv(FRACUNIT, vid.dupx << FRACBITS);
-      rowfrac = FixedDiv(FRACUNIT, vid.dupy << FRACBITS);
+      x2 = min(x + vis_width*vid.dupx, vid.width);
+      y2 = min(y + vis_height*vid.dupy, vid.height);
+      colfrac = FixedDiv(colfrac, vid.dupx << FRACBITS);
+      rowfrac = FixedDiv(rowfrac, vid.dupy << FRACBITS);
     }
   else
     {
       x -= leftoffset;
       y -= topoffset;
-      x2 = min(x + width, vid.width);
-      y2 = min(y + height, vid.height);
-      colfrac = rowfrac = 1;
+      x2 = min(x + vis_width, vid.width);
+      y2 = min(y + vis_height, vid.height);
     }
 
   // clipped upper left corner
@@ -348,8 +359,8 @@ void LumpTexture::Draw(int x, int y, int scrn = 0)
   int y1 = max(y, 0);
 
   // starting location in texture space
-  fixed_t startcol = (x1 - x) << FRACBITS;
-  fixed_t startrow = (y1 - y) << FRACBITS;
+  fixed_t startcol = (x1 - x)*xscale;
+  fixed_t startrow = (y1 - y)*yscale;
 
   if (flags & V_SSIZE)
     {
@@ -357,7 +368,7 @@ void LumpTexture::Draw(int x, int y, int scrn = 0)
       startrow = FixedDiv(startrow, vid.dupy << FRACBITS);
     }
 
-  byte *dest_left = vid.screens[scrn] + y1*vid.width + x1; // top left
+  dest_left += y1*vid.width + x1; // top left
   byte *dest_end = dest_left + (y2-y1)*vid.width; // lower left, past-the-end
 
   byte *base = Generate();

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2005/04/19 18:28:34  smite-meister
+// new RPCs
+//
 // Revision 1.15  2005/04/17 17:44:37  smite-meister
 // netcode
 //
@@ -64,7 +67,6 @@
 #include "parser.h"
 
 #include "n_interface.h"
-#include "n_connection.h"
 
 #include "g_game.h"
 #include "g_level.h"
@@ -212,7 +214,7 @@ void Command_Say_f()
     return;
 
   PasteMsg(buf, 1);
-  game.SendChat(com_player->number, 0, buf);
+  game.net->SendChat(com_player->number, 0, buf);
 }
 
 
@@ -234,7 +236,7 @@ void Command_Sayto_f()
     return;
 
   PasteMsg(buf, 2);
-  game.SendChat(com_player->number, p->number, buf);
+  game.net->SendChat(com_player->number, p->number, buf);
 }
 
 
@@ -252,52 +254,10 @@ void Command_Sayteam_f()
     return;
 
   PasteMsg(buf, 1);
-  game.SendChat(com_player->number, -com_player->team, buf);
+  game.net->SendChat(com_player->number, -com_player->team, buf);
 }
 
 
-// the chat message "router"
-void GameInfo::SendChat(int from, int to, const char *msg)
-{
-  if (!netgame)
-    return;
-
-  if (from == 0 && com_player)
-    from = com_player->number;
-
-  PlayerInfo *sender = FindPlayer(from);
-  if (!sender)
-    return;
-
-  if (server)
-    {
-      int n = net->client_con.size();
-      for (int i = 0; i < n; i++)
-	{
-	  LConnection *c = net->client_con[i];
-	  int np = c->player.size();
-	  for (int j = 0; j < np; j++)
-	    {
-	      PlayerInfo *p = c->player[j];
-	      if (to == 0 || p->number == to || p->team == -to)
-		{
-		  // We could also use PlayerInfo::SetMessage to trasmit chat messages from server to client,
-		  // but it is mainly for messages which can easily use TNL::StringTableEntry.
-		  c->rpcChat(from, to, msg);
-		  if (p->number == to)
-		    return; // nobody else should get it
-
-		  break; // one rpc per connection
-		}
-	    }
-	}
-
-      // TODO how to handle messages for local (server) players?
-      CONS_Printf("\3%s: %s\n", sender->name.c_str(), msg);
-    }
-  else if (net->server_con)
-    net->server_con->rpcChat(from, to, msg);
-}
 
 
 
@@ -322,75 +282,9 @@ void Command_Pause_f()
   else
     on = !game.paused;
 
-  game.Pause(on, 0);
+  game.net->Pause(0, on);
 }
 
-
-static void PauseMsg(bool on, int pnum)
-{
-  const char *guilty = "server";
-  if (pnum > 0)
-    {
-      PlayerInfo *p = game.FindPlayer(pnum);
-      if (p)
-	guilty = p->name.c_str();
-    }
-
-  if (on)
-    CONS_Printf("Game paused by %s.\n", guilty);
-  else
-    CONS_Printf("Game unpaused by %s.\n", guilty);
-}
-
-
-/// pauses or unpauses the game
-void GameInfo::Pause(bool on, int playernum)
-{
-  if (server)
-    {
-      // server can pause the game anytime
-      paused = on;
-
-      // send rpc event to all clients
-      if (netgame && net->client_con.size())
-	{
-	  int n = net->client_con.size();
-	  NetEvent *e = TNL_RPC_CONSTRUCT_NETEVENT(net->client_con[0], rpcPause, (on, playernum));
-
-	  for (int i = 0; i < n; i++)
-	    net->client_con[i]->postNetEvent(e);
-	}
-
-      PauseMsg(on, playernum);
-    }
-  else if (net->server_con)
-    {
-      // client must request a pause from the server
-      net->server_con->rpcPause(on, 0);
-
-      if (on)
-	CONS_Printf("Pause request sent.\n");
-      else
-	CONS_Printf("Unpause request sent.\n");
-    }
-}
-
-
-LCONNECTION_RPC(rpcPause, (bool on, U8 playernum), (on, playernum),
-		RPCGuaranteedOrdered, RPCDirAny, 0)
-{
-  if (isConnectionToServer())
-    {
-      // server orders a pause
-      game.paused = on;
-      PauseMsg(on, playernum);
-    }
-  else if (cv_allowpause.value)
-    {
-      // got a pause request from a client
-      game.Pause(on, player[0]->number);
-    }
-}
 
 
 // quit the game immediately
@@ -600,7 +494,7 @@ void Command_NewGame_f()
       // add local players
       int n = 1 + cv_splitscreen.value;
       for (int i=0; i<n; i++)
-	LocalPlayers[i].info = game.AddPlayer(new PlayerInfo(LocalPlayers[i].name));
+	LocalPlayers[i].info = game.AddPlayer(new PlayerInfo(&LocalPlayers[i]));
 
       // TODO add bots
 
@@ -688,7 +582,7 @@ void Command_Kick_f()
 {
   if (COM_Argc() != 2)
     {
-      CONS_Printf("kick <playername> or <playernum> : kick a player\n");
+      CONS_Printf("kick <playername> | <playernum> : kick a player from the game.\n");
       return;
     }
 
@@ -697,46 +591,12 @@ void Command_Kick_f()
       PlayerInfo *p = game.FindPlayer(COM_Argv(1));
       if (!p)
 	CONS_Printf("there is no player with that name/number\n");
-      // TODO kick him! inform others so they can remove him.
+      else
+	p->playerstate = PST_REMOVE;
     }
   else
-    CONS_Printf("You are not the server\n");
+    CONS_Printf("You are not the server.\n");
 }
-
-
-
-/*
-void Got_KickCmd(char **p,int playernum)
-{
-  CONS_Printf("\2%s ", game.FindPlayer(pnum)->name.c_str());
-  
-  switch(msg)
-    {
-    case KICK_MSG_GO_AWAY:
-      CONS_Printf("has been kicked (Go away)\n");
-      break;
-    case KICK_MSG_CON_FAIL:
-      CONS_Printf("has been kicked (Consistency failure)\n");
-      break;
-    case KICK_MSG_TIMEOUT:
-      CONS_Printf("left the game (Connection timeout)\n");
-      break;
-    case KICK_MSG_PLAYER_QUIT:
-      CONS_Printf("left the game\n");
-      break;
-    }
-  if(pnum == consoleplayer->number - 1)
-    {
-      CL_Reset();
-      game.StartIntro();
-      M_StartMessage("You have been kicked by the server\n\nPress ESC\n",NULL,MM_NOTHING);
-    }
-  else
-    CL_RemovePlayer(pnum);
-}
-*/
-
-
 
 
 
@@ -767,8 +627,9 @@ void Command_Kill_f()
       // client players can only commit suicide
       if (COM_Argc() > 2 || strcmp(COM_Argv(1), "me"))
 	CONS_Printf("Only the server can kill others thru the console!\n");
-      else if (com_player && game.net->server_con)
-	game.net->server_con->rpcSuicide_c2s(com_player->number);
+      else if (com_player)
+	game.net->RequestSuicide(com_player->number);
+
       return;
     }
 

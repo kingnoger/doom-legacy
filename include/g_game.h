@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2005/04/19 18:28:31  smite-meister
+// new RPCs
+//
 // Revision 1.18  2004/11/28 18:02:23  smite-meister
 // RPCs finally work!
 //
@@ -238,10 +241,6 @@ public:
   void WriteDemoTiccmd(ticcmd_t* cmd, int playernum);
   void StopDemo();
   bool CheckDemoStatus();
-
-  // network commands
-  void Pause(bool on, int playernum);
-  void SendChat(int from, int to, const char *msg);
 };
 
 

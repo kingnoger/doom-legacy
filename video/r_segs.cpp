@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,26 +18,17 @@
 //
 //
 // $Log$
+// Revision 1.13  2005/04/19 18:28:40  smite-meister
+// new RPCs
+//
 // Revision 1.12  2005/01/04 18:32:46  smite-meister
 // better colormap handling
-//
-// Revision 1.11  2004/12/31 16:19:41  smite-meister
-// alpha fixes
 //
 // Revision 1.10  2004/11/18 20:30:15  smite-meister
 // tnt, plutonia
 //
 // Revision 1.9  2004/11/09 20:38:53  smite-meister
 // added packing to I/O structs
-//
-// Revision 1.8  2004/08/29 20:48:50  smite-meister
-// bugfixes. wow.
-//
-// Revision 1.7  2004/08/19 19:42:42  smite-meister
-// bugfixes
-//
-// Revision 1.6  2004/08/13 18:25:11  smite-meister
-// sw renderer fix
 //
 // Revision 1.5  2004/07/05 16:53:31  smite-meister
 // Netcode replaced
@@ -1629,6 +1620,9 @@ void Rend::R_StoreWallRange(int start, int stop)
         ffloor[i].f_pos = ffloor[i].height - viewz;
     }
 
+  ds_p->bsilheight = MAXINT;
+  ds_p->tsilheight = MININT;
+
   if (!backsector)
     {
       // single sided line
@@ -1660,8 +1654,6 @@ void Rend::R_StoreWallRange(int start, int stop)
       ds_p->silhouette = SIL_BOTH;
       ds_p->sprtopclip = screenheightarray;
       ds_p->sprbottomclip = negonearray;
-      ds_p->bsilheight = MAXINT;
-      ds_p->tsilheight = MININT;
     }
   else
     {

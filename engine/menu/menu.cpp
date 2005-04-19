@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2005/04/19 18:28:29  smite-meister
+// new RPCs
+//
 // Revision 1.5  2005/04/17 18:36:35  smite-meister
 // netcode
 //
@@ -970,13 +973,15 @@ void M_QuitDOOM(int choice)
 //                                MAIN MENU
 //===========================================================================
 
+void M_SetupPlayer(int choice);
+
 static menuitem_t Main_MI[]=
 {
-  {IT_SUBMENU | IT_PATCH, "M_SINGLE", "SINGLE PLAYER", {(consvar_t *)&SinglePlayerDef} ,'s'},
-  {IT_SUBMENU | IT_PATCH, "M_MULTI" , "MULTIPLAYER", {(consvar_t *)&MultiPlayerDef} ,'m'},
-  {IT_SUBMENU | IT_PATCH, "M_OPTION", "OPTIONS", {(consvar_t *)&OptionsDef}  ,'o'},
-  {IT_SUBMENU | IT_PATCH, "M_RDTHIS", "INFO", {(consvar_t *)&ReadDef1}     ,'r'},
-  {IT_ACT, "M_QUITG" , "QUIT GAME", {(consvar_t *)M_QuitDOOM} ,'q'}
+  {IT_SUBMENU | IT_PATCH, "M_SINGLE", "SINGLE PLAYER", {(consvar_t *)&SinglePlayerDef}, 's'},
+  {IT_SUBMENU | IT_PATCH, "M_MULTI" , "MULTIPLAYER", {(consvar_t *)&MultiPlayerDef}, 'm'},
+  {IT_ACT, "M_OPTION", "OPTIONS", {(consvar_t *)M_SetupPlayer}, 'o'},
+  {IT_SUBMENU | IT_PATCH, "M_RDTHIS", "INFO", {(consvar_t *)&ReadDef1}, 'r'},
+  {IT_ACT, "M_QUITG" , "QUIT GAME", {(consvar_t *)M_QuitDOOM}, 'q'}
 };
 
 // The main menu.
@@ -1490,7 +1495,6 @@ void M_SaveGame(int choice)
 void M_StartServerMenu(int choice);
 void M_ConnectMenu(int choice);
 void M_Splitscreen(int choice);
-void M_SetupPlayer(int choice);
 void M_NetOption(int choice);
 
 enum multiplayer_e
@@ -1549,6 +1553,7 @@ void M_GameOption(int choice)
 
 
 static void M_SetupControlsMenu(int choice);
+static bool M_QuitSetupPlayerMenu();
 
 // Hidden menu consvars for player options.
 CV_PossibleValue_t Color_cons_t[] =
@@ -1580,7 +1585,6 @@ static consvar_t cv_menu_cam_speed  = {"cam_speed", "0.25", CV_HIDDEN | CV_FLOAT
 */
 
 
-// note: alphaKey member is the y offset
 static menuitem_t Options_MI[] =
 {
   {IT_CVAR, NULL, "Messages:"       ,{&cv_menu_showmessages}    ,0},
@@ -1604,8 +1608,8 @@ static menuitem_t Options_MI[] =
   {IT_CALL | IT_STRING | IT_WHITE, NULL, "Setup Controls...",{(consvar_t *)M_SetupControlsMenu},0}
 };
 
-Menu OptionsDef("M_OPTTTL", "OPTIONS", &MainMenuDef, ITEMS(Options_MI), 60, 30);
-
+Menu OptionsDef("M_OPTTTL", "OPTIONS", &MainMenuDef, ITEMS(Options_MI), 60, 30,
+		0, NULL, M_QuitSetupPlayerMenu);
 
 
 //===========================================================================
@@ -1859,6 +1863,9 @@ static bool M_QuitSetupPlayerMenu()
 
   p.messagefilter = cv_menu_showmessages.value;
 
+  p.autorun = cv_menu_autorun.value;
+  p.crosshair = cv_menu_crosshair.value;
+
   if (multi_pres)
     {
       // delete the animated guy
@@ -1866,10 +1873,17 @@ static bool M_QuitSetupPlayerMenu()
       multi_pres = NULL;
     }
 
+  if (!p.info)
+    return true; // nothing else to do if we have no PlayerInfo yet
+
   if (game.server)
-    p.info->options = p;
+    {
+      p.info->options = p;
+      p.info->name = p.name;
+      p.info->setMaskBits(0x1); // TODO enum
+    }
   else
-    ; // TODO send RPC to server!
+    game.net->SendPlayerOptions(p.info->number, p);
 
   return true;
 }
@@ -1907,7 +1921,7 @@ Menu  SetupPlayerDef("M_MULTI", "Multiplayer", &MultiPlayerDef, ITEMS(SetupPlaye
 // setup the local player(s)
 void M_SetupPlayer(int choice)
 {
-  if (choice == MI_setupplayer1) // First local player
+  if (choice == MI_setupplayer1 || choice == 2) // First local player
     {
       setup_player = 0;
       setupcontrols_player2 = false;
@@ -1935,12 +1949,18 @@ void M_SetupPlayer(int choice)
   cv_menu_weaponpref.Set(temp);
   cv_menu_showmessages.Set(p.messagefilter);
 
+  cv_menu_autorun.Set(p.autorun);
+  cv_menu_crosshair.Set(p.crosshair);
+
   if (p.ptype < 0)
     p.ptype = allowed_pawntypes[0];
 
   multi_pres = NULL;
 
-  Menu::SetupNextMenu(&SetupPlayerDef);
+  if (choice == 2)
+    Menu::SetupNextMenu(&OptionsDef);
+  else
+    Menu::SetupNextMenu(&SetupPlayerDef);
 }
 
 
@@ -3201,7 +3221,15 @@ void Menu::Startup()
   cv_menu_skill.Reg();
   cv_menu_startmap.Reg();
   cv_menu_serversearch.Reg();
+
   cv_menu_playername.Reg();
+  cv_menu_playercolor.Reg();
+  cv_menu_autoaim.Reg();
+  cv_menu_owswitch.Reg();
+  cv_menu_weaponpref.Reg();
+  cv_menu_showmessages.Reg();
+  cv_menu_autorun.Reg();
+  cv_menu_crosshair.Reg();
 
   active = false;
   AnimCount  = 10;

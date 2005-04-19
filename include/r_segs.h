@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,35 +18,17 @@
 //
 //
 // $Log$
+// Revision 1.3  2005/04/19 18:28:34  smite-meister
+// new RPCs
+//
 // Revision 1.2  2004/11/09 20:38:52  smite-meister
 // added packing to I/O structs
 //
 // Revision 1.1.1.1  2002/11/16 14:18:26  hurdler
 // Initial C++ version of Doom Legacy
 //
-// Revision 1.5  2002/09/05 14:12:18  vberghol
-// network code partly bypassed
-//
-// Revision 1.4  2002/08/19 18:06:43  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.3  2002/07/01 21:00:55  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:28  vberghol
-// Version 133 Experimental!
-//
 // Revision 1.5  2001/03/13 22:14:20  stroggonmeth
 // Long time no commit. 3D floors, FraggleScript, portals, ect.
-//
-// Revision 1.4  2000/11/03 02:37:36  stroggonmeth
-// Fix a few warnings when compiling.
-//
-// Revision 1.3  2000/11/02 19:49:36  bpereira
-// no message
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
 //
 // Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
 // Initial import into CVS (v1.29 pr3)
@@ -54,7 +36,7 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Software render, drawing LineSegs from BSP.
+/// \brief Software renderer, drawing LineSegs from BSP.
 
 #ifndef r_segs_h
 #define r_segs_h 1
@@ -65,7 +47,7 @@
 #endif
 
 /// Silhouette, needed for clipping Segs (mainly) and sprites representing things.
-enum
+enum silhouette_e
 {
   SIL_NONE   = 0,
   SIL_BOTTOM = 1,
@@ -73,6 +55,8 @@ enum
   SIL_BOTH   = 3
 };
 
+
+/// \brief 
 struct drawseg_t
 {
   seg_t*              curline;
@@ -86,10 +70,10 @@ struct drawseg_t
   // 0=none, 1=bottom, 2=top, 3=both
   int                 silhouette;
 
-  // do not clip sprites above this
+  /// do not clip sprites above this
   fixed_t             bsilheight;
 
-  // do not clip sprites below this
+  /// do not clip sprites below this
   fixed_t             tsilheight;
 
   // Pointers to lists for sprite clipping,

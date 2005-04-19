@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2005/04/19 18:28:34  smite-meister
+// new RPCs
+//
 // Revision 1.12  2005/04/17 17:44:37  smite-meister
 // netcode
 //
@@ -353,27 +356,69 @@ void LConnection::onEndGhosting()
 // connection and executed at the other. Neat.
 //========================================================
 
+  /*
+TODO RPC's from server to client:
+ - map change/load
+
+Player ticcmd contains both guaranteed_ordered and unguaranteed elements.
+Shooting and artifact use should be guaranteed...
+
+    XD_MAP,
+    XD_EXITLEVEL,
+    XD_LOADGAME,
+    XD_SAVEGAME,
+    XD_ADDPLAYER,
+    XD_USEARTEFACT,
+  */
+
+
+
+
 LCONNECTION_RPC(rpcTest, (U8 num), (num), RPCGuaranteedOrdered, RPCDirClientToServer, 0)
 {
   CONS_Printf("client sent this: %d\n", num);
 };
 
 
-void LNetInterface::SendNetVar(U16 netid, const char *str)
+// the chat message "router"
+void LNetInterface::SendChat(int from, int to, const char *msg)
 {
-  // send netvar as an rpc event to all clients
-  int n = client_con.size();
-  for (int i = 0; i < n; i++)
-    client_con[i]->rpcSendNetVar(netid, str);
+  if (!game.netgame)
+    return;
+
+  PlayerInfo *sender = game.FindPlayer(from);
+  if (!sender)
+    return;
+
+  if (game.server)
+    {
+      int n = client_con.size();
+      for (int i = 0; i < n; i++)
+	{
+	  LConnection *c = client_con[i];
+	  int np = c->player.size();
+	  for (int j = 0; j < np; j++)
+	    {
+	      PlayerInfo *p = c->player[j];
+	      if (to == 0 || p->number == to || p->team == -to)
+		{
+		  // We could also use PlayerInfo::SetMessage to trasmit chat messages from server to client,
+		  // but it is mainly for messages which can easily use TNL::StringTableEntry.
+		  c->rpcChat(from, to, msg);
+		  if (p->number == to)
+		    return; // nobody else should get it
+
+		  break; // one rpc per connection
+		}
+	    }
+	}
+
+      // TODO how to handle messages for local (server) players?
+      CONS_Printf("\3%s: %s\n", sender->name.c_str(), msg);
+    }
+  else if (server_con)
+    server_con->rpcChat(from, to, msg);
 }
-
-LCONNECTION_RPC(rpcSendNetVar, (U16 netid, StringPtr s), (netid, s),
-		RPCGuaranteed, RPCDirServerToClient, 0)
-{
-  consvar_t::GotNetVar(netid, s);
-}
-
-
 
 // to: 0 means everyone, positive numbers are players, negative numbers are teams
 LCONNECTION_RPC(rpcChat, (S8 from, S8 to, StringPtr msg), (from, to, msg),
@@ -397,16 +442,79 @@ LCONNECTION_RPC(rpcChat, (S8 from, S8 to, StringPtr msg), (from, to, msg),
 	  return;
 	}
 
-      game.SendChat(from, to, msg);
+      static_cast<LNetInterface *>(getInterface())->SendChat(from, to, msg);
     }
 };
 
 
 
+static void PauseMsg(bool on, int pnum)
+{
+  const char *guilty = "server";
+  if (pnum > 0)
+    {
+      PlayerInfo *p = game.FindPlayer(pnum);
+      if (p)
+	guilty = p->name.c_str();
+    }
+
+  if (on)
+    CONS_Printf("Game paused by %s.\n", guilty);
+  else
+    CONS_Printf("Game unpaused by %s.\n", guilty);
+}
+
+/// pauses or unpauses the game
+void LNetInterface::Pause(int pnum, bool on)
+{
+  if (game.server)
+    {
+      // server can pause the game anytime
+      game.paused = on;
+
+      // send rpc event to all clients
+      if (game.netgame && client_con.size())
+	{
+	  int n = client_con.size();
+	  NetEvent *e = TNL_RPC_CONSTRUCT_NETEVENT(client_con[0], rpcPause, (pnum, on));
+
+	  for (int i = 0; i < n; i++)
+	    client_con[i]->postNetEvent(e);
+	}
+
+      PauseMsg(on, pnum);
+    }
+  else if (server_con)
+    {
+      // client must request a pause from the server
+      server_con->rpcPause(0, on);
+
+      if (on)
+	CONS_Printf("Pause request sent.\n");
+      else
+	CONS_Printf("Unpause request sent.\n");
+    }
+}
+
+LCONNECTION_RPC(rpcPause, (U8 pnum, bool on), (pnum, on),
+		RPCGuaranteedOrdered, RPCDirAny, 0)
+{
+  if (isConnectionToServer())
+    {
+      // server orders a pause
+      game.paused = on;
+      PauseMsg(on, pnum);
+    }
+  else if (cv_allowpause.value)
+    {
+      // got a pause request from a client
+      static_cast<LNetInterface *>(getInterface())->Pause(player[0]->number, on);
+    }
+}
 
 
 
-LCONNECTION_RPC(rpcMessage_s2c, (S32 pnum, StringPtr msg, S8 priority, S8 type), (pnum, msg, priority, type),
+LCONNECTION_RPC(rpcMessage_s2c, (S8 pnum, StringPtr msg, S8 priority, S8 type), (pnum, msg, priority, type),
 		RPCGuaranteedOrdered, RPCDirServerToClient, 0)
 {
   for (int i=0; i<NUM_LOCALPLAYERS; i++)
@@ -420,6 +528,23 @@ LCONNECTION_RPC(rpcMessage_s2c, (S32 pnum, StringPtr msg, S8 priority, S8 type),
 }
 
 
+
+void LNetInterface::SendNetVar(U16 netid, const char *str)
+{
+  // send netvar as an rpc event to all clients
+  int n = client_con.size();
+  for (int i = 0; i < n; i++)
+    client_con[i]->rpcSendNetVar_s2c(netid, str);
+}
+
+LCONNECTION_RPC(rpcSendNetVar_s2c, (U16 netid, StringPtr s), (netid, s),
+		RPCGuaranteed, RPCDirServerToClient, 0)
+{
+  consvar_t::GotNetVar(netid, s);
+}
+
+
+
 LCONNECTION_RPC(rpcStartIntermission_s2c, (), (),
 		RPCGuaranteedOrdered, RPCDirServerToClient, 0)
 {
@@ -427,11 +552,106 @@ LCONNECTION_RPC(rpcStartIntermission_s2c, (), (),
 }
 
 
+
+
+/// only called on a server
+void LNetInterface::Kick(PlayerInfo *p)
+{
+  LConnection *c = p->connection;
+  if (c)
+    {
+      c->rpcKick_s2c(p->number, "Get lost!");
+
+      if (c->player.size() == 1)
+	{
+	  disconnect(c, NetConnection::ReasonSelfDisconnect, "You were kicked by the server.\n");
+	}
+      else
+	{
+	  // just kick the one
+	}
+    }
+
+  CONS_Printf("\2%s kicked from the game.\n", p->name.c_str());
+}
+
+LCONNECTION_RPC(rpcKick_s2c, (U8 pnum, StringPtr str), (pnum, str),
+		RPCGuaranteedOrdered, RPCDirServerToClient, 0)
+{
+  // TODO
+  CONS_Printf("\2You were kicked from the game: %s.\n", str);
+/*
+  if(pnum == consoleplayer->number - 1)
+    {
+      CL_Reset();
+      game.StartIntro();
+      M_StartMessage("You have been kicked by the server\n\nPress ESC\n",NULL,MM_NOTHING);
+    }
+  else
+    CL_RemovePlayer(pnum);
+*/
+}
+
+
+
+void LNetInterface::SendPlayerOptions(int pnum, LocalPlayerInfo &p)
+{
+  if (!server_con)
+    return;
+
+  BitStream s;
+  p.Write(&s);
+  server_con->rpcSendOptions_c2s(pnum, &s);
+}
+
+LCONNECTION_RPC(rpcSendOptions_c2s, (U8 pnum, ByteBufferPtr buf), (pnum, buf),
+		RPCGuaranteedOrdered, RPCDirClientToServer, 0)
+{
+  PlayerInfo *p = game.FindPlayer(pnum);
+
+  if (!p || p->connection != this || buf->getBufferSize() > 100)
+    {
+      // since we receive a variable-length bytebuffer, we better be careful...
+      CONS_Printf("Bogus PlayerOptions RPC!\n");
+      return;
+    }
+
+  BitStream s(buf->getBuffer(), buf->getBufferSize());
+  p->options.Read(&s);
+
+  // put a limit on the name length
+  if (p->options.name.size() > MAXPLAYERNAME)
+    p->options.name.resize(MAXPLAYERNAME);
+
+  p->name = p->options.name;
+}
+
+
+
+void LNetInterface::RequestSuicide(int pnum)
+{
+  if (server_con)
+    server_con->rpcSuicide_c2s(pnum);
+}
+
+LCONNECTION_RPC(rpcSuicide_c2s, (U8 pnum), (pnum),
+		RPCGuaranteedOrdered, RPCDirClientToServer, 0)
+{
+  void Kill_pawn(Actor *v, Actor *k);
+
+  PlayerInfo *p = game.FindPlayer(pnum);
+  if (p->connection == this)
+    Kill_pawn(p->pawn, p->pawn);
+}
+
+
+
 LCONNECTION_RPC(rpcIntermissionDone_c2s, (), (),
 		RPCGuaranteedOrdered, RPCDirClientToServer, 0)
 {
   //player[0]->playerstate = PST_NEEDMAP; 
 }
+
 
 
 LCONNECTION_RPC(rpcRequestPOVchange_c2s, (S32 pnum), (pnum),
@@ -466,15 +686,4 @@ LCONNECTION_RPC(rpcRequestPOVchange_c2s, (S32 pnum), (pnum),
     }
 
   // TODO client should start HUD on the new pov...
-}
-
-
-LCONNECTION_RPC(rpcSuicide_c2s, (U8 pnum), (pnum),
-		RPCGuaranteedOrdered, RPCDirClientToServer, 0)
-{
-  void Kill_pawn(Actor *v, Actor *k);
-
-  PlayerInfo *p = game.FindPlayer(pnum);
-  if (p->connection == this)
-    Kill_pawn(p->pawn, p->pawn);
 }

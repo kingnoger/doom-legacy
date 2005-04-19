@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,17 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.30  2005/03/24 17:00:40  smite-meister
-// alpha fixes
-//
-// Revision 1.29  2005/01/25 18:29:18  smite-meister
-// preparing for alpha
+// Revision 1.31  2005/04/19 18:28:42  smite-meister
+// new RPCs
 //
 // Revision 1.28  2005/01/04 18:32:48  smite-meister
 // better colormap handling
-//
-// Revision 1.27  2004/12/31 16:19:41  smite-meister
-// alpha fixes
 //
 // Revision 1.26  2004/12/08 16:52:45  segabor
 // Missing devparm reference added
@@ -1379,58 +1373,52 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
 
 
 
-//
-// was R_DrawPlayerSprites
-//
+/// Renders the first person (weapon) sprites
 void Rend::R_DrawPlayerSprites()
 {
-    int         i = 0;
-    int         lightnum;
-    int         light = 0;
-    pspdef_t*   psp;
+  int         lightnum;
+  int         light = 0;
 
-    int kikhak;
+  if (rendermode != render_soft)
+    return;
 
-    if (rendermode != render_soft)
-        return;
-
-    // get light level
-    if(viewplayer->subsector->sector->numlights)
+  // get light level
+  if (viewplayer->subsector->sector->numlights)
     {
-      light = R_GetPlaneLight(viewplayer->subsector->sector, viewplayer->z + viewplayer->height, false);
-      lightnum = (*viewplayer->subsector->sector->lightlist[i].lightlevel >> LIGHTSEGSHIFT) + extralight;
+      light = R_GetPlaneLight(viewplayer->subsector->sector,
+			      viewplayer->z + viewplayer->height, false);
+      lightnum = (*viewplayer->subsector->sector->lightlist[0].lightlevel >> LIGHTSEGSHIFT) + extralight;
     }
-    else
-      lightnum = (viewplayer->subsector->sector->lightlevel >> LIGHTSEGSHIFT) + extralight;
+  else
+    lightnum = (viewplayer->subsector->sector->lightlevel >> LIGHTSEGSHIFT) + extralight;
 
-    if (lightnum < 0)
-        spritelights = scalelight[0];
-    else if (lightnum >= LIGHTLEVELS)
-        spritelights = scalelight[LIGHTLEVELS-1];
-    else
-        spritelights = scalelight[lightnum];
+  if (lightnum < 0)
+    spritelights = scalelight[0];
+  else if (lightnum >= LIGHTLEVELS)
+    spritelights = scalelight[LIGHTLEVELS-1];
+  else
+    spritelights = scalelight[lightnum];
 
     // clip to screen bounds
-    mfloorclip = screenheightarray;
-    mceilingclip = negonearray;
+  mfloorclip = screenheightarray;
+  mceilingclip = negonearray;
 
     //added:06-02-98: quickie fix for psprite pos because of freelook
-    kikhak = centery;
-    centery = centerypsp;             //for R_DrawColumn
-    centeryfrac = centery<<FRACBITS;  //for R_DrawVisSprite
+  int kikhak = centery;
+  centery = centerypsp;             //for R_DrawColumn
+  centeryfrac = centery<<FRACBITS;  //for R_DrawVisSprite
 
-    // add all active psprites
-    for (i=0, psp=viewplayer->psprites;
-         i<NUMPSPRITES;
-         i++,psp++)
+  // add all active psprites
+  pspdef_t *psp = viewplayer->psprites;
+  for (int i=0; i<NUMPSPRITES; i++, psp++)
     {
-        if (psp->state)
-            R_DrawPSprite (psp);
+      if (psp->state)
+	R_DrawPSprite(psp);
     }
 
-    //added:06-02-98: oooo dirty boy
-    centery = kikhak;
-    centeryfrac = centery<<FRACBITS;
+  //added:06-02-98: oooo dirty boy
+  centery = kikhak;
+  centeryfrac = centery<<FRACBITS;
 }
 
 
@@ -1492,220 +1480,217 @@ void R_SortVisSprites (void)
 
 
 
-//
-// R_CreateDrawNodes
-// Creates and sorts a list of drawnodes for the scene being rendered.
-static drawnode_t*    R_CreateDrawNode (drawnode_t* link);
+//=============================================================================
+//    Drawnodes
+//=============================================================================
 
-static drawnode_t     nodebankhead;
-static drawnode_t     nodehead;
+static drawnode_t *R_CreateDrawNode(drawnode_t *link);
+static drawnode_t  nodebankhead;
+static drawnode_t  nodehead;
 
+/// Creates and sorts a list of drawnodes for the scene being rendered.
 void Rend::R_CreateDrawNodes()
 {
   drawnode_t*   entry;
-  drawseg_t*    ds;
-  int           i, p, best, x1, x2;
-  fixed_t       bestdelta, delta;
-  vissprite_t*  rover;
-  drawnode_t*   r2;
-  visplane_t*   plane;
-  int           sintersect;
+  int           i, p, x1, x2;
+  
+
+
   fixed_t       gzm;
   fixed_t       scale;
 
-    // Add the 3D floors, thicksides, and masked textures...
-    for(ds = ds_p; ds-- > drawsegs;)
+  // Add the 3D floors, thicksides, and masked textures...
+  for (drawseg_t *ds = ds_p; ds-- > drawsegs;)
     {
-      if(ds->numthicksides)
-      {
-        for(i = 0; i < ds->numthicksides; i++)
-        {
-          entry = R_CreateDrawNode(&nodehead);
-          entry->thickseg = ds;
-          entry->ffloor = ds->thicksides[i];
-        }
-      }
-      if(ds->maskedtexturecol)
-      {
-        entry = R_CreateDrawNode(&nodehead);
-        entry->seg = ds;
-      }
-      if(ds->numffloorplanes)
-      {
-        for(i = 0; i < ds->numffloorplanes; i++)
-        {
-          best = -1;
-          bestdelta = 0;
-          for(p = 0; p < ds->numffloorplanes; p++)
-          {
-            if(!ds->ffloorplanes[p])
-              continue;
-            plane = ds->ffloorplanes[p];
-            R_PlaneBounds(plane);
-            if(plane->low < con_clipviewtop || plane->high > vid.height || plane->high > plane->low)
-            {
-              ds->ffloorplanes[p] = NULL;
-              continue;
-            }
+      if (ds->numthicksides)
+	{
+	  for (i = 0; i < ds->numthicksides; i++)
+	    {
+	      entry = R_CreateDrawNode(&nodehead);
+	      entry->thickseg = ds;
+	      entry->ffloor = ds->thicksides[i];
+	    }
+	}
+      if (ds->maskedtexturecol)
+	{
+	  entry = R_CreateDrawNode(&nodehead);
+	  entry->seg = ds;
+	}
+      if (ds->numffloorplanes)
+	{
+	  for(i = 0; i < ds->numffloorplanes; i++)
+	    {
+	      int best = -1;
+	      fixed_t bestdelta = 0;
+	      for(p = 0; p < ds->numffloorplanes; p++)
+		{
+		  if (!ds->ffloorplanes[p])
+		    continue;
+		  visplane_t *plane = ds->ffloorplanes[p];
+		  R_PlaneBounds(plane);
+		  if (plane->low < con_clipviewtop || plane->high > vid.height || plane->high > plane->low)
+		    {
+		      ds->ffloorplanes[p] = NULL;
+		      continue;
+		    }
 
-            delta = abs(plane->height - viewz);
-            if(delta > bestdelta)
-            {
-              best = p;
-              bestdelta = delta;
-            }
-          }
-          if(best != -1)
-          {
-            entry = R_CreateDrawNode(&nodehead);
-            entry->plane = ds->ffloorplanes[best];
-            entry->seg = ds;
-            ds->ffloorplanes[best] = NULL;
-          }
-          else
-            break;
-        }
-      }
+		  fixed_t delta = abs(plane->height - viewz);
+		  if (delta > bestdelta)
+		    {
+		      best = p;
+		      bestdelta = delta;
+		    }
+		}
+	      if (best != -1)
+		{
+		  entry = R_CreateDrawNode(&nodehead);
+		  entry->plane = ds->ffloorplanes[best];
+		  entry->seg = ds;
+		  ds->ffloorplanes[best] = NULL;
+		}
+	      else
+		break;
+	    }
+	}
     }
 
-    if(vissprite_p == vissprites)
-      return;
+  if (vissprite_p == vissprites)
+    return;
 
-    R_SortVisSprites();
-    for(rover = vsprsortedhead.prev; rover != &vsprsortedhead; rover = rover->prev)
+  R_SortVisSprites();
+  for (vissprite_t *rover = vsprsortedhead.prev; rover != &vsprsortedhead; rover = rover->prev)
     {
-      if(rover->szt > vid.height || rover->sz < 0)
+      if (rover->szt > vid.height || rover->sz < 0)
         continue;
 
-      sintersect = (rover->x1 + rover->x2) / 2;
+      int sintersect = (rover->x1 + rover->x2) / 2;
       gzm = (rover->gz + rover->gzt) / 2;
 
-      for(r2 = nodehead.next; r2 != &nodehead; r2 = r2->next)
-      {
-        if(r2->plane)
-        {
-          if(r2->plane->minx > rover->x2 || r2->plane->maxx < rover->x1)
-            continue;
-          if(rover->szt > r2->plane->low || rover->sz < r2->plane->high)
-            continue;
+      drawnode_t *r2;
+      for (r2 = nodehead.next; r2 != &nodehead; r2 = r2->next)
+	{
+	  if (r2->plane)
+	    {
+	      if (r2->plane->minx > rover->x2 || r2->plane->maxx < rover->x1)
+		continue;
+	      if (rover->szt > r2->plane->low || rover->sz < r2->plane->high)
+		continue;
 
-          if((r2->plane->height < viewz && rover->pz < r2->plane->height) ||
-            (r2->plane->height > viewz && rover->pzt > r2->plane->height))
-          {
-            // SoM: NOTE: Because a visplane's shape and scale is not directly
-            // bound to any single lindef, a simple poll of it's frontscale is
-            // not adiquate. We must check the entire frontscale array for any
-            // part that is in front of the sprite.
+	      if ((r2->plane->height < viewz && rover->pz < r2->plane->height) ||
+		  (r2->plane->height > viewz && rover->pzt > r2->plane->height))
+		{
+		  // SoM: NOTE: Because a visplane's shape and scale is not directly
+		  // bound to any single lindef, a simple poll of it's frontscale is
+		  // not adiquate. We must check the entire frontscale array for any
+		  // part that is in front of the sprite.
 
-            x1 = rover->x1;
-            x2 = rover->x2;
-            if(x1 < r2->plane->minx) x1 = r2->plane->minx;
-            if(x2 > r2->plane->maxx) x2 = r2->plane->maxx;
+		  x1 = rover->x1;
+		  x2 = rover->x2;
+		  if (x1 < r2->plane->minx) x1 = r2->plane->minx;
+		  if (x2 > r2->plane->maxx) x2 = r2->plane->maxx;
 
-            for(i = x1; i <= x2; i++)
-            {
-              if(r2->seg->frontscale[i] > rover->scale)
-                break;
-            }
-            if(i > x2)
-              continue;
+		  for(i = x1; i <= x2; i++)
+		    {
+		      if (r2->seg->frontscale[i] > rover->scale)
+			break;
+		    }
+		  if (i > x2)
+		    continue;
 
-            entry = R_CreateDrawNode(NULL);
-            (entry->prev = r2->prev)->next = entry;
-            (entry->next = r2)->prev = entry;
-            entry->sprite = rover;
-            break;
-          }
-        }
-        else if(r2->thickseg)
-        {
-          if(rover->x1 > r2->thickseg->x2 || rover->x2 < r2->thickseg->x1)
-            continue;
+		  entry = R_CreateDrawNode(NULL);
+		  (entry->prev = r2->prev)->next = entry;
+		  (entry->next = r2)->prev = entry;
+		  entry->sprite = rover;
+		  break;
+		}
+	    }
+	  else if (r2->thickseg)
+	    {
+	      if (rover->x1 > r2->thickseg->x2 || rover->x2 < r2->thickseg->x1)
+		continue;
 
-          scale = r2->thickseg->scale1 > r2->thickseg->scale2 ? r2->thickseg->scale1 : r2->thickseg->scale2;
-          if(scale <= rover->scale)
-            continue;
-          scale = r2->thickseg->scale1 + (r2->thickseg->scalestep * (sintersect - r2->thickseg->x1));
-          if(scale <= rover->scale)
-            continue;
+	      scale = r2->thickseg->scale1 > r2->thickseg->scale2 ? r2->thickseg->scale1 : r2->thickseg->scale2;
+	      if (scale <= rover->scale)
+		continue;
+	      scale = r2->thickseg->scale1 + (r2->thickseg->scalestep * (sintersect - r2->thickseg->x1));
+	      if (scale <= rover->scale)
+		continue;
 
-          if((*r2->ffloor->topheight > viewz && *r2->ffloor->bottomheight < viewz) ||
-            (*r2->ffloor->topheight < viewz && rover->gzt < *r2->ffloor->topheight) ||
-            (*r2->ffloor->bottomheight > viewz && rover->gz > *r2->ffloor->bottomheight))
-          {
-            entry = R_CreateDrawNode(NULL);
-            (entry->prev = r2->prev)->next = entry;
-            (entry->next = r2)->prev = entry;
-            entry->sprite = rover;
-            break;
-          }
-        }
-        else if(r2->seg)
-        {
-          if(rover->x1 > r2->seg->x2 || rover->x2 < r2->seg->x1)
-            continue;
+	      if ((*r2->ffloor->topheight > viewz && *r2->ffloor->bottomheight < viewz) ||
+		  (*r2->ffloor->topheight < viewz && rover->gzt < *r2->ffloor->topheight) ||
+		  (*r2->ffloor->bottomheight > viewz && rover->gz > *r2->ffloor->bottomheight))
+		{
+		  entry = R_CreateDrawNode(NULL);
+		  (entry->prev = r2->prev)->next = entry;
+		  (entry->next = r2)->prev = entry;
+		  entry->sprite = rover;
+		  break;
+		}
+	    }
+	  else if (r2->seg)
+	    {
+	      if (rover->x1 > r2->seg->x2 || rover->x2 < r2->seg->x1)
+		continue;
 
-          scale = r2->seg->scale1 > r2->seg->scale2 ? r2->seg->scale1 : r2->seg->scale2;
-          if(scale <= rover->scale)
-            continue;
-          scale = r2->seg->scale1 + (r2->seg->scalestep * (sintersect - r2->seg->x1));
+	      scale = r2->seg->scale1 > r2->seg->scale2 ? r2->seg->scale1 : r2->seg->scale2;
+	      if (scale <= rover->scale)
+		continue;
+	      scale = r2->seg->scale1 + (r2->seg->scalestep * (sintersect - r2->seg->x1));
 
-          if(rover->scale < scale)
-          {
-            entry = R_CreateDrawNode(NULL);
-            (entry->prev = r2->prev)->next = entry;
-            (entry->next = r2)->prev = entry;
-            entry->sprite = rover;
-            break;
-          }
-        }
-        else if(r2->sprite)
-        {
-          if(r2->sprite->x1 > rover->x2 || r2->sprite->x2 < rover->x1)
-            continue;
-          if(r2->sprite->szt > rover->sz || r2->sprite->sz < rover->szt)
-            continue;
+	      if (rover->scale < scale)
+		{
+		  entry = R_CreateDrawNode(NULL);
+		  (entry->prev = r2->prev)->next = entry;
+		  (entry->next = r2)->prev = entry;
+		  entry->sprite = rover;
+		  break;
+		}
+	    }
+	  else if (r2->sprite)
+	    {
+	      if (r2->sprite->x1 > rover->x2 || r2->sprite->x2 < rover->x1)
+		continue;
+	      if (r2->sprite->szt > rover->sz || r2->sprite->sz < rover->szt)
+		continue;
 
-          if(r2->sprite->scale > rover->scale)
-          {
-            entry = R_CreateDrawNode(NULL);
-            (entry->prev = r2->prev)->next = entry;
-            (entry->next = r2)->prev = entry;
-            entry->sprite = rover;
-            break;
-          }
-        }
-      }
-      if(r2 == &nodehead)
-      {
-        entry = R_CreateDrawNode(&nodehead);
-        entry->sprite = rover;
-      }
+	      if (r2->sprite->scale > rover->scale)
+		{
+		  entry = R_CreateDrawNode(NULL);
+		  (entry->prev = r2->prev)->next = entry;
+		  (entry->next = r2)->prev = entry;
+		  entry->sprite = rover;
+		  break;
+		}
+	    }
+	}
+      if (r2 == &nodehead)
+	{
+	  entry = R_CreateDrawNode(&nodehead);
+	  entry->sprite = rover;
+	}
     }
 }
 
 
 
 
-static drawnode_t* R_CreateDrawNode (drawnode_t* link)
+static drawnode_t *R_CreateDrawNode(drawnode_t *link)
 {
-  drawnode_t* node;
-
-  node = nodebankhead.next;
-  if(node == &nodebankhead)
-  {
-    node = (drawnode_t *)malloc(sizeof(drawnode_t));
-  }
+  drawnode_t *node = nodebankhead.next;
+  if (node == &nodebankhead)
+    {
+      node = (drawnode_t *)malloc(sizeof(drawnode_t));
+    }
   else
     (nodebankhead.next = node->next)->prev = &nodebankhead;
 
-  if(link)
-  {
-    node->next = link;
-    node->prev = link->prev;
-    link->prev->next = node;
-    link->prev = node;
-  }
+  if (link)
+    {
+      node->next = link;
+      node->prev = link->prev;
+      link->prev->next = node;
+      link->prev = node;
+    }
 
   node->plane = NULL;
   node->seg = NULL;
@@ -1717,7 +1702,7 @@ static drawnode_t* R_CreateDrawNode (drawnode_t* link)
 
 
 
-static void R_DoneWithNode(drawnode_t* node)
+static void R_DoneWithNode(drawnode_t *node)
 {
   (node->next->prev = node->prev)->next = node->next;
   (node->next = nodebankhead.next)->prev = node;
@@ -1728,15 +1713,12 @@ static void R_DoneWithNode(drawnode_t* node)
 
 static void R_ClearDrawNodes()
 {
-  drawnode_t* rover;
-  drawnode_t* next;
-
-  for(rover = nodehead.next; rover != &nodehead; )
-  {
-    next = rover->next;
-    R_DoneWithNode(rover);
-    rover = next;
-  }
+  for (drawnode_t *rover = nodehead.next; rover != &nodehead; )
+    {
+      drawnode_t *next = rover->next;
+      R_DoneWithNode(rover);
+      rover = next;
+    }
 
   nodehead.next = nodehead.prev = &nodehead;
 }
@@ -1751,124 +1733,115 @@ void R_InitDrawNodes()
 
 
 
-//
-// R_DrawSprite
-//
-//Fab:26-04-98:
 // NOTE : uses con_clipviewtop, so that when console is on,
 //        don't draw the part of sprites hidden under the console
-void Rend::R_DrawSprite (vissprite_t* spr)
+void Rend::R_DrawSprite(vissprite_t *spr)
 {
-    drawseg_t*          ds;
-    short               clipbot[MAXVIDWIDTH];
-    short               cliptop[MAXVIDWIDTH];
-    int                 x;
-    int                 r1;
-    int                 r2;
-    fixed_t             scale;
-    fixed_t             lowscale;
-    int                 silhouette;
+  short               clipbot[MAXVIDWIDTH];
+  short               cliptop[MAXVIDWIDTH];
+  int                 x;
 
-    for (x = spr->x1 ; x<=spr->x2 ; x++)
-        clipbot[x] = cliptop[x] = -2;
+  for (x = spr->x1 ; x<=spr->x2 ; x++)
+    clipbot[x] = cliptop[x] = -2;
 
-    // Scan drawsegs from end to start for obscuring segs.
-    // The first drawseg that has a greater scale
-    //  is the clip seg.
-    //SoM: 4/8/2000:
-    // Pointer check was originally nonportable
-    // and buggy, by going past LEFT end of array:
+  // Scan drawsegs from end to start for obscuring segs.
+  // The first drawseg that has a greater scale
+  //  is the clip seg.
+  //SoM: 4/8/2000:
+  // Pointer check was originally nonportable
+  // and buggy, by going past LEFT end of array:
 
-    //    for (ds=ds_p-1 ; ds >= drawsegs ; ds--)    old buggy code
-    for (ds=ds_p ; ds-- > drawsegs ; )
+  //    for (ds=ds_p-1 ; ds >= drawsegs ; ds--)    old buggy code
+  for (drawseg_t *ds = ds_p; ds-- > drawsegs; )
     {
 
-        // determine if the drawseg obscures the sprite
-        if (ds->x1 > spr->x2
-         || ds->x2 < spr->x1
-         || (!ds->silhouette
-             && !ds->maskedtexturecol) )
+      // determine if the drawseg obscures the sprite
+      if (ds->x1 > spr->x2
+	  || ds->x2 < spr->x1
+	  || (!ds->silhouette && !ds->maskedtexturecol))
         {
-            // does not cover sprite
-            continue;
+	  // does not cover sprite
+	  continue;
         }
 
-        r1 = ds->x1 < spr->x1 ? spr->x1 : ds->x1;
-        r2 = ds->x2 > spr->x2 ? spr->x2 : ds->x2;
+      int r1 = ds->x1 < spr->x1 ? spr->x1 : ds->x1;
+      int r2 = ds->x2 > spr->x2 ? spr->x2 : ds->x2;
 
-        if (ds->scale1 > ds->scale2)
-        {
-            lowscale = ds->scale2;
-            scale = ds->scale1;
-        }
-        else
-        {
-            lowscale = ds->scale1;
-            scale = ds->scale2;
-        }
+      fixed_t scale, lowscale;
 
-        if (scale < spr->scale
-            || ( lowscale < spr->scale
-                 && !R_PointOnSegSide (spr->gx, spr->gy, ds->curline) ) )
+      if (ds->scale1 > ds->scale2)
         {
-            // masked mid texture?
-            /*if (ds->maskedtexturecol)
-                R_RenderMaskedSegRange (ds, r1, r2);*/
-            // seg is behind sprite
-            continue;
+	  lowscale = ds->scale2;
+	  scale = ds->scale1;
+        }
+      else
+        {
+	  lowscale = ds->scale1;
+	  scale = ds->scale2;
         }
 
-        // clip this piece of the sprite
-        silhouette = ds->silhouette;
-
-        if (spr->gz >= ds->bsilheight)
-            silhouette &= ~SIL_BOTTOM;
-
-        if (spr->gzt <= ds->tsilheight)
-            silhouette &= ~SIL_TOP;
-
-        if (silhouette == 1)
+      if (scale < spr->scale
+	  || ( lowscale < spr->scale
+	       && !R_PointOnSegSide (spr->gx, spr->gy, ds->curline) ) )
         {
-            // bottom sil
-            for (x=r1 ; x<=r2 ; x++)
-                if (clipbot[x] == -2)
-                    clipbot[x] = ds->sprbottomclip[x];
+	  // masked mid texture?
+	  /*if (ds->maskedtexturecol)
+	    R_RenderMaskedSegRange (ds, r1, r2);*/
+	  // seg is behind sprite
+	  continue;
         }
-        else if (silhouette == 2)
+
+      // clip this piece of the sprite
+      int silhouette = ds->silhouette;
+
+      if (spr->gz >= ds->bsilheight)
+	silhouette &= ~SIL_BOTTOM;
+
+      if (spr->gzt <= ds->tsilheight)
+	silhouette &= ~SIL_TOP;
+
+      if (silhouette == SIL_BOTTOM)
         {
-            // top sil
-            for (x=r1 ; x<=r2 ; x++)
-                if (cliptop[x] == -2)
-                    cliptop[x] = ds->sprtopclip[x];
+	  // bottom sil
+	  for (x=r1 ; x<=r2 ; x++)
+	    if (clipbot[x] == -2)
+	      clipbot[x] = ds->sprbottomclip[x];
         }
-        else if (silhouette == 3)
+      else if (silhouette == SIL_TOP)
         {
-            // both
-            for (x=r1 ; x<=r2 ; x++)
+	  // top sil
+	  for (x=r1 ; x<=r2 ; x++)
+	    if (cliptop[x] == -2)
+	      cliptop[x] = ds->sprtopclip[x];
+        }
+      else if (silhouette == SIL_BOTH)
+        {
+	  // both
+	  for (x=r1 ; x<=r2 ; x++)
             {
-                if (clipbot[x] == -2)
-                    clipbot[x] = ds->sprbottomclip[x];
-                if (cliptop[x] == -2)
-                    cliptop[x] = ds->sprtopclip[x];
+	      if (clipbot[x] == -2)
+		clipbot[x] = ds->sprbottomclip[x];
+	      if (cliptop[x] == -2)
+		cliptop[x] = ds->sprtopclip[x];
             }
         }
     }
-    //SoM: 3/17/2000: Clip sprites in water.
-    if (spr->heightsec != -1)  // only things in specially marked sectors
+  //SoM: 3/17/2000: Clip sprites in water.
+  if (spr->heightsec != -1)  // only things in specially marked sectors
     {
-        fixed_t h,mh;
-        int phs = viewplayer->subsector->sector->heightsec;
-        if ((mh = sectors[spr->heightsec].floorheight) > spr->gz &&
-           (h = centeryfrac - FixedMul(mh-=viewz, spr->scale)) >= 0 &&
-           (h >>= FRACBITS) < viewheight)
+      fixed_t h,mh;
+      int phs = viewplayer->subsector->sector->heightsec;
+      if ((mh = sectors[spr->heightsec].floorheight) > spr->gz &&
+	  (h = centeryfrac - FixedMul(mh-=viewz, spr->scale)) >= 0 &&
+	  (h >>= FRACBITS) < viewheight)
         {
-            if (mh <= 0 || (phs != -1 && viewz > sectors[phs].floorheight))
+	  if (mh <= 0 || (phs != -1 && viewz > sectors[phs].floorheight))
             {                          // clip bottom
               for (x=spr->x1 ; x<=spr->x2 ; x++)
                 if (clipbot[x] == -2 || h < clipbot[x])
                   clipbot[x] = h;
             }
-            else                        // clip top
+	  else                        // clip top
             {
               for (x=spr->x1 ; x<=spr->x2 ; x++)
                 if (cliptop[x] == -2 || h > cliptop[x])
@@ -1876,17 +1849,17 @@ void Rend::R_DrawSprite (vissprite_t* spr)
             }
         }
 
-        if ((mh = sectors[spr->heightsec].ceilingheight) < spr->gzt &&
-           (h = centeryfrac - FixedMul(mh-viewz, spr->scale)) >= 0 &&
-           (h >>= FRACBITS) < viewheight)
+      if ((mh = sectors[spr->heightsec].ceilingheight) < spr->gzt &&
+	  (h = centeryfrac - FixedMul(mh-viewz, spr->scale)) >= 0 &&
+	  (h >>= FRACBITS) < viewheight)
         {
-            if (phs != -1 && viewz >= sectors[phs].ceilingheight)
+	  if (phs != -1 && viewz >= sectors[phs].ceilingheight)
             {                         // clip bottom
               for (x=spr->x1 ; x<=spr->x2 ; x++)
                 if (clipbot[x] == -2 || h < clipbot[x])
                   clipbot[x] = h;
             }
-            else                       // clip top
+	  else                       // clip top
             {
               for (x=spr->x1 ; x<=spr->x2 ; x++)
                 if (cliptop[x] == -2 || h > cliptop[x])
@@ -1894,57 +1867,57 @@ void Rend::R_DrawSprite (vissprite_t* spr)
             }
         }
     }
-    if(spr->cut & vissprite_t::SC_TOP && spr->cut & vissprite_t::SC_BOTTOM)
+  if(spr->cut & vissprite_t::SC_TOP && spr->cut & vissprite_t::SC_BOTTOM)
     {
       fixed_t   h;
       for(x = spr->x1; x <= spr->x2; x++)
-      {
-        h = spr->szt;
-        if(cliptop[x] == -2 || h > cliptop[x])
-          cliptop[x] = h;
+	{
+	  h = spr->szt;
+	  if(cliptop[x] == -2 || h > cliptop[x])
+	    cliptop[x] = h;
 
-        h = spr->sz;
-        if(clipbot[x] == -2 || h < clipbot[x])
-          clipbot[x] = h;
-      }
+	  h = spr->sz;
+	  if(clipbot[x] == -2 || h < clipbot[x])
+	    clipbot[x] = h;
+	}
     }
-    else if(spr->cut & vissprite_t::SC_TOP)
+  else if(spr->cut & vissprite_t::SC_TOP)
     {
       fixed_t   h;
       for(x = spr->x1; x <= spr->x2; x++)
-      {
-        h = spr->szt;
-        if(cliptop[x] == -2 || h > cliptop[x])
-          cliptop[x] = h;
-      }
+	{
+	  h = spr->szt;
+	  if(cliptop[x] == -2 || h > cliptop[x])
+	    cliptop[x] = h;
+	}
     }
-    else if(spr->cut & vissprite_t::SC_BOTTOM)
+  else if(spr->cut & vissprite_t::SC_BOTTOM)
     {
       fixed_t   h;
       for(x = spr->x1; x <= spr->x2; x++)
-      {
-        h = spr->sz;
-        if(clipbot[x] == -2 || h < clipbot[x])
-          clipbot[x] = h;
-      }
+	{
+	  h = spr->sz;
+	  if(clipbot[x] == -2 || h < clipbot[x])
+	    clipbot[x] = h;
+	}
     }
 
-    // all clipping has been performed, so draw the sprite
+  // all clipping has been performed, so draw the sprite
 
     // check for unclipped columns
-    for (x = spr->x1 ; x<=spr->x2 ; x++)
+  for (x = spr->x1 ; x<=spr->x2 ; x++)
     {
-        if (clipbot[x] == -2)
-            clipbot[x] = viewheight;
+      if (clipbot[x] == -2)
+	clipbot[x] = viewheight;
 
-        if (cliptop[x] == -2)
-            //Fab:26-04-98: was -1, now clips against console bottom
-            cliptop[x] = con_clipviewtop;
+      if (cliptop[x] == -2)
+	//Fab:26-04-98: was -1, now clips against console bottom
+	cliptop[x] = con_clipviewtop;
     }
 
-    mfloorclip = clipbot;
-    mceilingclip = cliptop;
-    spr->DrawVisSprite();
+  mfloorclip = clipbot;
+  mceilingclip = cliptop;
+  spr->DrawVisSprite();
 }
 
 

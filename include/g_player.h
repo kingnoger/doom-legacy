@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.21  2005/04/19 18:28:32  smite-meister
+// new RPCs
+//
 // Revision 1.20  2005/04/17 17:47:54  smite-meister
 // netcode
 //
@@ -215,7 +218,7 @@ public:
 
 
 public:
-  PlayerInfo(const string &n = "");
+  PlayerInfo(const LocalPlayerInfo *p = NULL);
 
   int Serialize(class LArchive &a);
   int Unserialize(LArchive &a);

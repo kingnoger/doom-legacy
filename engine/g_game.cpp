@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.44  2005/04/19 18:28:13  smite-meister
+// new RPCs
+//
 // Revision 1.43  2005/04/17 18:36:32  smite-meister
 // netcode
 //
@@ -107,6 +110,7 @@
 #include "g_input.h"
 #include "g_type.h"
 
+#include "n_interface.h"
 #include "n_connection.h"
 
 #include "d_event.h"
@@ -711,8 +715,10 @@ bool GameInfo::RemovePlayer(int num)
       p->pawn->Remove();
     }
 
+  // NOTE the player has already been removed from any Maps
+
   if (p->connection)
-    ; // TODO send kick message
+    net->Kick(p);
   else
     {
       // must be local

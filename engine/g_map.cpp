@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.55  2005/04/19 18:28:14  smite-meister
+// new RPCs
+//
 // Revision 1.54  2005/04/17 18:36:32  smite-meister
 // netcode
 //
@@ -1068,7 +1071,9 @@ void Map::BossDeath(const DActor *mo)
       return;
 
     case MT_BABY:
-      EV_DoFloor(667, NULL,  floor_t::UpSLT, FLOORSPEED, 0, 0);
+      // FIXME HACK for Doom2 map07, not correct elsewhere...
+      EV_DoFloor(667, NULL, floor_t::RelHeight, FLOORSPEED, 0, 16*FRACUNIT);
+      //EV_DoFloor(667, NULL,  floor_t::UpSLT, FLOORSPEED, 0, 0); // correct
       return;
 
     case MT_KEEN:

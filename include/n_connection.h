@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004 by DooM Legacy Team.
+// Copyright (C) 2004-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2005/04/19 18:28:33  smite-meister
+// new RPCs
+//
 // Revision 1.11  2005/04/17 17:47:54  smite-meister
 // netcode
 //
@@ -80,7 +83,6 @@ public:
   virtual bool readConnectAccept(BitStream *stream, const char **errorString);
 
 
-
   /// Called when a pending connection is terminated
   virtual void onConnectTerminated(TerminationReason r, const char *reason); 
 
@@ -103,68 +105,48 @@ public:
 
   //============ RPCs =============== 
 
-  /*
-RPC's from server to client:
- - startsound/stopsound/sequence/music
- - HUD colormap and other effects?
- - pause
- - console/HUD message (unicast/multicast)
- - map change/load
-
-
-Player ticcmd contains both guaranteed_ordered and unguaranteed elements.
-Shooting and artifact use should be guaranteed...
-
-    XD_NAMEANDCOLOR=1,
-    XD_WEAPONPREF,
-    XD_NETVAR,
-    XD_SAY,
-    XD_MAP,
-    XD_EXITLEVEL,
-    XD_LOADGAME,
-    XD_SAVEGAME,
-    XD_PAUSE,
-    XD_ADDPLAYER,
-    XD_USEARTEFACT,
-  */
-
-  /// client updates his player info (or asks the server to add a new local player?)
-  //TNL_DECLARE_RPC(rpcUpdatePlayerInfo_c2s, (U8 pnum, StringPtr name, U8 color, U8 team));
-
   TNL_DECLARE_RPC(rpcTest, (U8 num));
-
-
 
   /// Transmits chat messages between client and server.
   TNL_DECLARE_RPC(rpcChat, (S8 from, S8 to, StringPtr msg));
 
-  /// server prints a message on client's console/HUD
-  TNL_DECLARE_RPC(rpcMessage_s2c, (S32 pnum, StringPtr msg, S8 priority, S8 type));
-
   /// Pauses/unpauses the game, or, when used by a client, requests this from the server.
-  TNL_DECLARE_RPC(rpcPause, (bool on, U8 playernum));
+  TNL_DECLARE_RPC(rpcPause, (U8 pnum, bool on));
 
-  /// When the server changes a netvar during the game, this rpc notifies the clients.
-  TNL_DECLARE_RPC(rpcSendNetVar, (U16 netid, StringPtr str));
 
-  /// server asks client to load a map
-  //TNL_DECLARE_RPC(rpcStartMap_c2s, (U8 pnum));
+  /// Server prints a message on client's console/HUD
+  TNL_DECLARE_RPC(rpcMessage_s2c, (S8 pnum, StringPtr msg, S8 priority, S8 type));
 
-  /// server tells the client to start intermission
-  TNL_DECLARE_RPC(rpcStartIntermission_s2c, ());
-  /// client tells server that it has finished playing the intermission
-  TNL_DECLARE_RPC(rpcIntermissionDone_c2s, ());
+  /// When the server changes a netvar during the game, this RPC notifies the clients.
+  TNL_DECLARE_RPC(rpcSendNetVar_s2c, (U16 netid, StringPtr str));
 
-  /// client asks for a new POV ("spy mode")
-  TNL_DECLARE_RPC(rpcRequestPOVchange_c2s, (S32 pnum));
+  /// Server asks client to load a map
+  //TNL_DECLARE_RPC(rpcStartMap_s2c, (U8 pnum));
 
-  /// client requests a suicide
-  TNL_DECLARE_RPC(rpcSuicide_c2s, (U8 pnum));
-
-  /// server tells client to play a sound
+  /// server tells client to play a sound/music/sequence
   //TNL_DECLARE_RPC(rpcStartAmbSound_s2c, (U8 pnum));
   //TNL_DECLARE_RPC(rpcStart3DSound_s2c, (U8 pnum));
   //TNL_DECLARE_RPC(rpcStop3DSound_s2c, (U8 pnum));
+
+  /// Server tells the client to start the intermission.
+  TNL_DECLARE_RPC(rpcStartIntermission_s2c, ());
+
+  /// Server kicks a player away.
+  TNL_DECLARE_RPC(rpcKick_s2c, (U8 pnum, StringPtr str));
+
+
+  /// Client updates his player info.
+  TNL_DECLARE_RPC(rpcSendOptions_c2s, (U8 pnum, ByteBufferPtr buf));
+
+  /// Client requests a suicide.
+  TNL_DECLARE_RPC(rpcSuicide_c2s, (U8 pnum));
+
+  /// Client tells server that it has finished playing the intermission.
+  TNL_DECLARE_RPC(rpcIntermissionDone_c2s, ());
+
+  /// Client asks for a new POV ("spy mode").
+  TNL_DECLARE_RPC(rpcRequestPOVchange_c2s, (S32 pnum));
+
 
 
   /// Makes this a valid connection class to the TNL network system.

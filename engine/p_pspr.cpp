@@ -18,14 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.21  2005/04/17 18:36:33  smite-meister
-// netcode
+// Revision 1.22  2005/04/19 18:28:28  smite-meister
+// new RPCs
 //
 // Revision 1.20  2005/03/29 17:20:45  smite-meister
 // state and mobjinfo tables fixed
-//
-// Revision 1.19  2004/11/04 21:12:52  smite-meister
-// save/load fixed
 //
 // Revision 1.18  2004/09/06 19:58:03  smite-meister
 // Doom linedefs done!
@@ -35,9 +32,6 @@
 //
 // Revision 1.16  2004/03/28 15:16:13  smite-meister
 // Texture cache.
-//
-// Revision 1.13  2003/12/13 23:51:03  smite-meister
-// Hexen update
 //
 // Revision 1.12  2003/12/03 10:49:50  smite-meister
 // Save/load bugfix, text strings updated
@@ -50,9 +44,6 @@
 //
 // Revision 1.9  2003/05/30 13:34:46  smite-meister
 // Cleanup, HUD improved, serialization
-//
-// Revision 1.8  2003/04/04 00:01:56  smite-meister
-// bugfixes, Hexen HUD
 //
 // Revision 1.7  2003/03/15 20:07:16  smite-meister
 // Initial Hexen compatibility!
@@ -106,8 +97,7 @@
 #include "hardware/hw3sound.h"
 
 
-
-// FIXME TESTING: play any creature!
+// TESTING: play any creature!
 // changes: S_PLAY => info->spawnstate
 // S_PLAY_ATK1 => info->missilestate
 // S_PLAY_ATK2 => info->missilestate+1
@@ -147,11 +137,14 @@ void PlayerPawn::UseFavoriteWeapon()
 //
 void PlayerPawn::SetupPsprites()
 {
-  int i;
-
   // remove all psprites
-  for (i=0 ; i<NUMPSPRITES ; i++)
-    psprites[i].state = NULL;
+  for (int i=0 ; i<NUMPSPRITES ; i++)
+    {
+      psprites[i].state = NULL;
+      psprites[i].tics = 0;
+      psprites[i].sx = 0;
+      psprites[i].sy = WEAPONBOTTOM;
+    }
 
   // spawn the gun
   pendingweapon = readyweapon;

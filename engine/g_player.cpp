@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2005 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.34  2005/04/19 18:28:16  smite-meister
+// new RPCs
+//
 // Revision 1.33  2005/04/17 18:36:33  smite-meister
 // netcode
 //
@@ -143,7 +146,7 @@ PlayerOptions::PlayerOptions(const string &n)
   for (int i=0; i<NUMWEAPONS; i++)
     weaponpref[i] = default_weaponpref[i];
 
-  messagefilter = 10;
+  messagefilter = 2;
 }
 
 
@@ -226,9 +229,14 @@ void LocalPlayerInfo::GetInput(int elapsed)
 
 TNL_IMPLEMENT_NETOBJECT(PlayerInfo);
 
-PlayerInfo::PlayerInfo(const string &n)
+PlayerInfo::PlayerInfo(const LocalPlayerInfo *p)
 {
-  name = n;
+  if (p)
+    {
+      options = *p;
+      name = options.name;
+    }
+
   number = 0;
   team = 0;
 
@@ -292,7 +300,8 @@ bool PlayerInfo::onGhostAdd(class GhostConnection *c)
 void PlayerInfo::onGhostRemove()
 {
   CONS_Printf("%s has left the game.\n", name.c_str());
-  game.RemovePlayer(number);
+  //game.RemovePlayer(number);
+  playerstate = PST_REMOVE;
 }
 
 
