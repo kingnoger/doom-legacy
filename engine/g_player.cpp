@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2005 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.35  2005/04/22 19:44:49  smite-meister
+// bugs fixed
+//
 // Revision 1.34  2005/04/19 18:28:16  smite-meister
 // new RPCs
 //
@@ -138,6 +141,7 @@ PlayerOptions::PlayerOptions(const string &n)
   name = n;
 
   ptype = -1;
+  pclass = PCLASS_NONE;
   color = 0;
   skin  = 0; // "marine"?
 
@@ -155,6 +159,7 @@ void PlayerOptions::Write(BitStream *stream)
 {
   stream->writeString(name.c_str());
   stream->write(ptype);
+  stream->write(pclass);
   stream->write(color);
   stream->write(skin);
 
@@ -176,6 +181,7 @@ void PlayerOptions::Read(BitStream *stream)
   name = temp;
 
   stream->read(&ptype);
+  stream->read(&pclass);
   stream->read(&color);
   stream->read(&skin);
 

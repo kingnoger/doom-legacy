@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,29 +17,17 @@
 //
 //
 // $Log$
+// Revision 1.3  2005/04/22 19:44:50  smite-meister
+// bugs fixed
+//
 // Revision 1.2  2004/08/02 20:54:48  jussip
 // Minor compilation fix.
 //
 // Revision 1.1.1.1  2002/11/16 14:18:46  hurdler
 // Initial C++ version of Doom Legacy
 //
-// Revision 1.4  2002/08/19 18:06:47  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.3  2002/07/01 21:01:11  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:38  vberghol
-// Version 133 Experimental!
-//
 // Revision 1.20  2001/08/06 23:57:09  stroggonmeth
 // Removed portal code, improved 3D floors in hardware mode.
-//
-// Revision 1.19  2001/04/02 18:54:32  bpereira
-// no message
-//
-// Revision 1.18  2001/04/01 17:35:07  bpereira
-// no message
 //
 // Revision 1.17  2001/03/21 18:24:39  stroggonmeth
 // Misc changes and fixes. Code cleanup
@@ -53,26 +41,11 @@
 // Revision 1.14  2000/11/21 21:13:18  stroggonmeth
 // Optimised 3D floors and fixed crashing bug in high resolutions.
 //
-// Revision 1.13  2000/11/06 20:52:16  bpereira
-// no message
-//
 // Revision 1.12  2000/11/02 17:50:09  stroggonmeth
 // Big 3Dfloors & FraggleScript commit!!
 //
-// Revision 1.11  2000/09/28 20:57:17  bpereira
-// no message
-//
-// Revision 1.10  2000/04/30 10:30:10  bpereira
-// no message
-//
-// Revision 1.9  2000/04/24 20:24:38  bpereira
-// no message
-//
 // Revision 1.8  2000/04/18 17:39:39  stroggonmeth
 // Bug fixes and performance tuning.
-//
-// Revision 1.7  2000/04/08 17:29:25  stroggonmeth
-// no message
 //
 // Revision 1.6  2000/04/06 21:06:19  stroggonmeth
 // Optimized extra_colormap code...
@@ -93,19 +66,17 @@
 // Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
 // Initial import into CVS (v1.29 pr3)
 //
-//
-// DESCRIPTION:
-//      8bpp span/column drawer functions
-//
-//  NOTE: no includes because this is included as part of r_draw.c
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief 8bpp span/column drawer functions.
 
 #include "doomtype.h"
 
 #include "r_local.h"
 #include "r_state.h"
 
+#define USEBOOMFUNC
 
 // ==========================================================================
 // COLUMNS
@@ -114,11 +85,10 @@
 //  A column is a vertical slice/span of a wall texture that uses
 //  a has a constant z depth from top to bottom.
 //
-#define USEBOOMFUNC
 
 #ifndef USEASM
 #ifndef USEBOOMFUNC
-void R_DrawColumn_8 (void)
+void R_DrawColumn_8()
 {
     register int     count;
     register byte*   dest;
@@ -164,22 +134,15 @@ void R_DrawColumn_8 (void)
 }
 #else //USEBOOMFUNC
 // SoM: Experiment to make software go faster. Taken from the Boom source
-void R_DrawColumn_8 (void)
-{ 
-  int              count, ccount;
-  register byte    *dest;
-  register fixed_t frac;
-  fixed_t          fracstep;     
-
-  count = dc_yh - dc_yl + 1; 
+void R_DrawColumn_8()
+{
+  int count = dc_yh - dc_yl + 1; 
 
   if (count <= 0)    // Zero length, column does not exceed a pixel.
     return;
-
-  ccount = count;
                                  
 #ifdef RANGECHECK 
-  if ((unsigned)dc_x >= vid.width
+  if (dc_x >= vid.width
       || dc_yl < 0
       || dc_yh >= vid.height) 
     I_Error ("R_DrawColumn: %i to %i at %i", dc_yl, dc_yh, dc_x); 
@@ -187,14 +150,12 @@ void R_DrawColumn_8 (void)
 
   // Framebuffer destination address.
   // Use ylookup LUT to avoid multiply with ScreenWidth.
-  // Use columnofs LUT for subwindows? 
-
-  dest = ylookup[dc_yl] + columnofs[dc_x];
+  // Use columnofs LUT for subwindows?
+  register byte *dest = ylookup[dc_yl] + columnofs[dc_x];
 
   // Determine scaling, which is the only mapping to be done.
-
-  fracstep = dc_iscale; 
-  frac = dc_texturemid + (dc_yl-centery)*fracstep; 
+  fixed_t fracstep = dc_iscale; 
+  register fixed_t frac = dc_texturemid + (dc_yl-centery)*fracstep; 
 
   // Inner loop that does the actual texture mapping,
   //  e.g. a DDA-lile scaling.
@@ -249,7 +210,7 @@ void R_DrawColumn_8 (void)
 
 #ifndef USEASM
 #ifndef USEBOOMFUNC
-void R_DrawSkyColumn_8 (void)
+void R_DrawSkyColumn_8()
 {
     register int     count;
     register byte*   dest;
@@ -294,14 +255,9 @@ void R_DrawSkyColumn_8 (void)
     } while (count--);
 }
 #else
-void R_DrawSkyColumn_8 (void)
+void R_DrawSkyColumn_8()
 {
-  int              count; 
-  register byte    *dest;
-  register fixed_t frac;
-  fixed_t          fracstep;     
-
-  count = dc_yh - dc_yl + 1; 
+  int count = dc_yh - dc_yl + 1; 
 
   if (count <= 0)    // Zero length, column does not exceed a pixel.
     return; 
@@ -315,14 +271,12 @@ void R_DrawSkyColumn_8 (void)
 
   // Framebuffer destination address.
   // Use ylookup LUT to avoid multiply with ScreenWidth.
-  // Use columnofs LUT for subwindows? 
-
-  dest = ylookup[dc_yl] + columnofs[dc_x];  
+  // Use columnofs LUT for subwindows?
+  register byte *dest = ylookup[dc_yl] + columnofs[dc_x];  
 
   // Determine scaling, which is the only mapping to be done.
-
-  fracstep = dc_iscale; 
-  frac = dc_texturemid + (dc_yl-centery)*fracstep; 
+  fixed_t fracstep = dc_iscale; 
+  register fixed_t frac = dc_texturemid + (dc_yl-centery)*fracstep; 
 
   // Inner loop that does the actual texture mapping,
   //  e.g. a DDA-lile scaling.
@@ -379,7 +333,7 @@ void R_DrawSkyColumn_8 (void)
 //  originally used for spectres and when picking up the blur sphere
 //
 //#ifndef USEASM // NOT IN ASSEMBLER, TO DO.. IF WORTH IT
-void R_DrawFuzzColumn_8 (void)
+void R_DrawFuzzColumn_8()
 {
     register int     count;
     register byte*   dest;
@@ -440,12 +394,12 @@ void R_DrawFuzzColumn_8 (void)
 
 #ifndef USEASM
 // used in tiltview, but never called for now, but who know...
-void R_DrawSpanNoWrap (void)
+void R_DrawSpanNoWrap()
 {}
 #endif
 
 #ifndef USEASM
-void R_DrawShadeColumn_8 (void)
+void R_DrawShadeColumn_8()
 {
     register int     count;
     register byte*   dest;
@@ -498,7 +452,7 @@ void R_DrawShadeColumn_8 (void)
 //
 #ifndef USEASM
 #ifndef USEBOOMFUNC
-void R_DrawTranslucentColumn_8 (void)
+void R_DrawTranslucentColumn_8()
 {
     register int     count;
     register byte*   dest;
@@ -542,7 +496,7 @@ void R_DrawTranslucentColumn_8 (void)
     } while (count--);
 }
 #else
-void R_DrawTranslucentColumn_8 (void)
+void R_DrawTranslucentColumn_8()
 {
   register int     count; 
   register byte    *dest;
@@ -628,7 +582,7 @@ void R_DrawTranslucentColumn_8 (void)
 //  Draw columns upto 128high but remap the green ramp to other colors
 //
 //#ifndef USEASM        // STILL NOT IN ASM, TO DO..
-void R_DrawTranslatedColumn_8 (void)
+void R_DrawTranslatedColumn_8()
 {
     register int     count;
     register byte*   dest;
@@ -683,7 +637,7 @@ void R_DrawTranslatedColumn_8 (void)
 //
 #ifndef USEASM
 #ifndef USEBOOMFUNC
-void R_DrawSpan_8 (void)
+void R_DrawSpan_8()
 {
     register ULONG     xfrac;
     register ULONG     yfrac;
@@ -723,7 +677,7 @@ void R_DrawSpan_8 (void)
     } while (count--);
 }
 #else
-void R_DrawSpan_8 (void)
+void R_DrawSpan_8()
 { 
   register unsigned position;
   unsigned step;
@@ -795,7 +749,7 @@ void R_DrawSpan_8 (void)
 #endif
 
 
-void R_DrawTranslucentSpan_8 (void)
+void R_DrawTranslucentSpan_8()
 { 
   register unsigned position;
   unsigned step;
@@ -867,7 +821,7 @@ void R_DrawTranslucentSpan_8 (void)
 }
 
 
-void R_DrawFogSpan_8 (void)
+void R_DrawFogSpan_8()
 {
   byte *colormap;
   byte *transmap;
@@ -903,7 +857,7 @@ void R_DrawFogSpan_8 (void)
 
 
 //SoM: Fog wall.
-void R_DrawFogColumn_8 (void)
+void R_DrawFogColumn_8()
 {
     int                 count;
     byte*               dest;
@@ -943,7 +897,7 @@ void R_DrawFogColumn_8 (void)
 // SoM: This is for 3D floors that cast shadows on walls.
 // This function just cuts the column up into sections and calls
 // R_DrawColumn_8
-void R_DrawColumnShadowed_8 (void)
+void R_DrawColumnShadowed_8()
 {
     int                 count;
     int                 realyh, realyl;

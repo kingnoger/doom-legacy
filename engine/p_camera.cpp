@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.11  2005/04/22 19:44:49  smite-meister
+// bugs fixed
+//
 // Revision 1.10  2004/11/04 21:12:52  smite-meister
 // save/load fixed
 //
@@ -76,6 +79,9 @@ Camera::Camera()
 
   x = y = z = 0;
 
+  viewheight = 0;
+  startangle = 0;
+  fixedcolormap = 0;
   chase = false;
 }
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2005/04/22 19:44:50  smite-meister
+// bugs fixed
+//
 // Revision 1.15  2005/01/25 18:29:18  smite-meister
 // preparing for alpha
 //
@@ -136,6 +139,7 @@ int             viewwindowx;
 int             viewwindowy;
 
 // pointer to the start of each line of the screen,
+// these tables convert viewport coords into LFB offsets
 byte**          ylookup;
 byte*           ylookup1[MAXVIDHEIGHT]; // for view1 (splitscreen)
 byte*           ylookup2[MAXVIDHEIGHT]; // for view2 (splitscreen)
@@ -155,9 +159,8 @@ int             hcolumnofs[MAXVIDHEIGHT];
 // =========================================================================
 
 lighttable_t*           dc_colormap;
-int                     dc_x;
-int                     dc_yl;
-int                     dc_yh;
+int                     dc_x;         // viewport x coordinate of the column
+int                     dc_yl, dc_yh; // low and high y limits of the column in viewport coords
 
 //Hurdler: 04/06/2000: asm code still use it
 //#ifdef OLDWATER

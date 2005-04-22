@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.26  2005/04/22 19:44:49  smite-meister
+// bugs fixed
+//
 // Revision 1.25  2005/03/04 16:23:07  smite-meister
 // mp3, sector_t
 //
@@ -1304,25 +1307,22 @@ void SF_PointToDist()
 
 /************* Camera functions ***************/
 
-Camera *script_camera;
-bool    script_camera_on = false;
+static Camera *script_camera;
 
 
 // setcamera(obj, [angle], [viewheight], [aiming])
 void SF_SetCamera()
 {
-  Actor     *mo;
-  angle_t    angle;
-
   // FIXME all the camera functions, now that we have a real camera class
-  if(t_argc < 1)
+  if (t_argc < 1)
     {
       script_error("insufficient arguments to function\n");
       return;
     }
 
-  mo = MobjForSvalue(t_argv[0]);
-  if(!mo) return;         // nullptr check
+  Actor *mo = MobjForSvalue(t_argv[0]);
+  if (!mo)
+    return;
 
   if (mo != script_camera)
     {
@@ -1330,12 +1330,12 @@ void SF_SetCamera()
       script_camera->startangle = mo->angle;
     }
 
-  angle = t_argc < 2 ? mo->angle : FixedToAngle(fixedvalue(t_argv[1]));
+  angle_t angle = (t_argc < 2) ? mo->angle : FixedToAngle(fixedvalue(t_argv[1]));
 
   script_camera->angle = angle;
   script_camera->z = t_argc < 3 ? (mo->subsector->sector->floorheight + (41 << FRACBITS)) : fixedvalue(t_argv[2]);
   script_camera->aiming = t_argc < 4 ? 0 : fixedvalue(t_argv[3]);
-  script_camera_on = true;
+  //script_camera_on = true; // FIXME: spawn the camera, make it the POV for all players
 }
 
 
@@ -1343,7 +1343,7 @@ void SF_SetCamera()
 
 void SF_ClearCamera()
 {
-  script_camera_on = false;
+  //script_camera_on = false; // FIXME return the original POVs for all players
 
   if (!script_camera)
   {

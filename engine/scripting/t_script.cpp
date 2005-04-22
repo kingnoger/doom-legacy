@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.14  2005/04/22 19:44:49  smite-meister
+// bugs fixed
+//
 // Revision 1.13  2004/11/09 20:38:52  smite-meister
 // added packing to I/O structs
 //
@@ -331,7 +334,6 @@ void FS_Init()
 // called at level start, clears all scripts
 void Map::FS_ClearScripts()
 {
-  script_camera_on = false;
   FS_ClearRunningScripts(); // TODO better to do this when map ends!
 
   if (!levelscript)

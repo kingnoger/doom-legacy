@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.22  2005/04/22 19:44:50  smite-meister
+// bugs fixed
+//
 // Revision 1.21  2005/04/19 18:28:32  smite-meister
 // new RPCs
 //
@@ -90,7 +93,8 @@ public:
   string name;
   
   // Pawn preferences. Can be changed during the game, take effect at next respawn.
-  int ptype; ///< what kind of pawn are we playing?
+  int ptype;  ///< what kind of pawn are we playing?
+  int pclass; ///< pawn class (from Hexen)
   int color; ///< skin color to be copied to each pawn
   int skin;  ///< skin to be copied to each pawn
 

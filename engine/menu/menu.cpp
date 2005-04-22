@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2005/04/22 19:44:49  smite-meister
+// bugs fixed
+//
 // Revision 1.6  2005/04/19 18:28:29  smite-meister
 // new RPCs
 //
@@ -1140,6 +1143,7 @@ void M_Class(int choice)
     }
 
   LocalPlayers[0].ptype = choice + 37;
+  LocalPlayers[0].pclass = choice + PCLASS_FIGHTER;
 
   Menu::SetupNextMenu(&SkillDef);
 }

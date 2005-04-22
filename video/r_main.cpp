@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.31  2005/04/22 19:44:50  smite-meister
+// bugs fixed
+//
 // Revision 1.30  2005/01/25 18:29:18  smite-meister
 // preparing for alpha
 //
@@ -240,7 +243,7 @@ long long mytotal = 0;
 extern bool devparm;			//in d_main.cpp
 
 
-int                     viewangleoffset;
+int                     viewangleoffset = 0; // obsolete, for multiscreen setup...
 
 // increment every time a check is made
 int                     validcount = 1;
@@ -1004,45 +1007,32 @@ subsector_t* Map::R_IsPointInSubsector(fixed_t x, fixed_t y)
 //
 // R_SetupFrame
 //
+bool drawPsprites; // FIXME HACK
 
 // WARNING : a should be unsigned but to add with 2048, it isn't !
 #define AIMINGTODY(a) ((finetangent[(2048+(((int)a)>>ANGLETOFINESHIFT)) & FINEMASK]*160)>>FRACBITS)
 
 void Rend::R_SetupFrame(PlayerInfo *player)
 {
-  int         i;
-  int         fixedcolormap_setup;
-  int         dy=0; //added:10-02-98:
-
   extralight = player->pawn->extralight;
 
-  if (script_camera_on)
-    {
-      viewactor = script_camera;
+  viewplayer = player->pawn; // for colormap effects due to IR visor etc.
+  viewactor  = player->pov; // the point of view for this player (usually same as pawn, but may be a camera too)
 
-      viewz = viewactor->z;
-      viewangle = viewactor->angle;
-      aimingangle = viewactor->aiming;
-      fixedcolormap_setup = script_camera->fixedcolormap;
-    }
-  else
-    {
-      // use the player's eyes view
-      viewactor = player->pawn;
-      viewz = player->viewz;
-
-      fixedcolormap_setup = player->pawn->fixedcolormap;
-      aimingangle = viewactor->aiming;
-      viewangle = viewactor->angle+viewangleoffset;
-    }
-
-#ifdef PARANOIA
-  if (!viewactor)
-    I_Error("R_Setupframe : viewactor null (player %d)",player->number);
-#endif
-  viewplayer = player->pawn;
   viewx = viewactor->x;
   viewy = viewactor->y;
+
+  drawPsprites = (viewactor == viewplayer);
+  if (drawPsprites)
+    viewz = player->viewz; // enable bobbing
+  else
+    viewz = viewactor->z;
+
+  int fixedcolormap_setup = player->pawn->fixedcolormap;
+  //fixedcolormap_setup = script_camera->fixedcolormap;
+
+  viewangle = viewactor->angle + viewangleoffset;
+  aimingangle = viewactor->aiming;
 
   viewsin = finesine[viewangle>>ANGLETOFINESHIFT];
   viewcos = finecosine[viewangle>>ANGLETOFINESHIFT];
@@ -1053,7 +1043,7 @@ void Rend::R_SetupFrame(PlayerInfo *player)
 
       walllights = scalelightfixed;
 
-      for (i=0 ; i<MAXLIGHTSCALE ; i++)
+      for (int i=0 ; i<MAXLIGHTSCALE ; i++)
         scalelightfixed[i] = fixedcolormap;
     }
   else
@@ -1062,6 +1052,8 @@ void Rend::R_SetupFrame(PlayerInfo *player)
   //added:06-02-98:recalc necessary stuff for mouseaiming
   //               slopes are already calculated for the full
   //               possible view (which is 4*viewheight).
+
+  int dy = 0;
 
   if ( rendermode == render_soft )
     {
@@ -1224,7 +1216,7 @@ void Rend::R_RenderPlayerView(int viewport, PlayerInfo *player)
 
   // draw the psprites on top of everything
   //  but does not draw on side views
-  if (!viewangleoffset && cv_psprites.value && !script_camera_on)
+  if (!viewangleoffset && cv_psprites.value && drawPsprites)
     R_DrawPlayerSprites();
 
   // Check for new console commands.

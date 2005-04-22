@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.55  2005/04/22 19:44:49  smite-meister
+// bugs fixed
+//
 // Revision 1.54  2005/01/04 18:32:41  smite-meister
 // better colormap handling
 //
@@ -155,6 +158,7 @@
 #include "console.h"
 
 #include "g_game.h"
+#include "g_player.h"
 #include "g_pawn.h"
 #include "g_map.h"
 #include "g_mapinfo.h"
@@ -461,10 +465,10 @@ void Map::LoadThings(int lump)
         fmode = MTF_GCOOP;
 
       // If there are _any_ clerics in the game, MTF_CLERIC stuff should be spawned etc.
-      fclass = (MTF_FIGHTER | MTF_CLERIC | MTF_MAGE); // 0;
-      /*
-      for (player_iter_t k = game.Players.begin(); k != game.Players.end(); k++)
-        switch ((*k)->pclass)
+      //fclass = (MTF_FIGHTER | MTF_CLERIC | MTF_MAGE);
+      fclass = 0;
+      for (GameInfo::player_iter_t k = game.Players.begin(); k != game.Players.end(); k++)
+        switch (k->second->options.pclass)
           {
           case PCLASS_FIGHTER:
             fclass |= MTF_FIGHTER;
@@ -479,7 +483,6 @@ void Map::LoadThings(int lump)
             fclass |= (MTF_FIGHTER | MTF_CLERIC | MTF_MAGE);
             break;
           }
-      */
     }
   else
     {

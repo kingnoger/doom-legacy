@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2005/04/22 19:44:50  smite-meister
+// bugs fixed
+//
 // Revision 1.9  2004/12/31 16:19:40  smite-meister
 // alpha fixes
 //
@@ -85,11 +88,8 @@ extern int              hcolumnofs[MAXVIDHEIGHT];
 // -------------------------
 
 extern lighttable_t*    dc_colormap;
-extern lighttable_t*    dc_wcolormap;   //added:24-02-98:WATER!
 extern int              dc_x;
-extern int              dc_yl;
-extern int              dc_yh;
-extern int              dc_yw;          //added:24-02-98:WATER!
+extern int              dc_yl, dc_yh;
 extern fixed_t          dc_iscale;
 extern fixed_t          dc_texturemid;
 

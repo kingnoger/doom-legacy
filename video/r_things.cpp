@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.32  2005/04/22 19:44:50  smite-meister
+// bugs fixed
+//
 // Revision 1.31  2005/04/19 18:28:42  smite-meister
 // new RPCs
 //
@@ -425,8 +428,6 @@ fixed_t proj_tz, proj_tx;
 /// this does the actual work of drawing the sprite in the SW renderer
 void spritepres_t::Project(Actor *p)
 {
-  Update(1); // FIXME not here
-
   int frame = state->frame & TFF_FRAMEMASK;
 
   if (frame >= spr->numframes)

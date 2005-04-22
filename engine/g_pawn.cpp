@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.50  2005/04/22 19:44:48  smite-meister
+// bugs fixed
+//
 // Revision 1.49  2005/04/17 18:36:33  smite-meister
 // netcode
 //
@@ -292,12 +295,12 @@ Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, int type)
 // PlayerPawn methods
 //=====================================
 
-PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, int type)
+PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, int type, int pcl)
   : Pawn(nx, ny, nz, type)
 {
   // TODO fix this kludge when you feel like adding toughness to pawndata array...
   const float AutoArmorSave[] = { 0.0, 0.15, 0.10, 0.05, 0.0 };
-  pclass = pinfo->pclass;
+  pclass = pcl; //pinfo->pclass;
   toughness = AutoArmorSave[pclass];
 
   // note! here Map *mp is not yet set! This means you can't call functions such as

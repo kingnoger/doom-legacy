@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.45  2005/04/22 19:44:48  smite-meister
+// bugs fixed
+//
 // Revision 1.44  2005/04/19 18:28:13  smite-meister
 // new RPCs
 //
@@ -524,7 +527,8 @@ void GameInfo::Drawer()
 
       if (p->pov && p->mp)
 	{
-	  p->CalcViewHeight(); // bob the view
+	  if (!paused)
+	    p->CalcViewHeight(); // bob the view
 	  R.R_RenderPlayerView(i, p);
 	}
     }

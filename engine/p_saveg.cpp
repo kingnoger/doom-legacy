@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.42  2005/04/22 19:44:49  smite-meister
+// bugs fixed
+//
 // Revision 1.41  2005/04/17 18:36:33  smite-meister
 // netcode
 //
@@ -1813,7 +1816,7 @@ int PlayerInfo::Unserialize(LArchive &a)
 
 int PlayerOptions::Serialize(LArchive &a)
 {
-  a << ptype << color << skin;
+  a << ptype << pclass << color << skin;
 
   a << autoaim << originalweaponswitch;
   for (int i=0; i<NUMWEAPONS; i++)
@@ -1825,7 +1828,7 @@ int PlayerOptions::Serialize(LArchive &a)
 
 int PlayerOptions::Unserialize(LArchive &a)
 {
-  a << ptype << color << skin;
+  a << ptype << pclass << color << skin;
 
   a << autoaim << originalweaponswitch;
   for (int i=0; i<NUMWEAPONS; i++)

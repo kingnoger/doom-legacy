@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2005/04/22 19:44:49  smite-meister
+// bugs fixed
+//
 // Revision 1.21  2005/03/16 21:16:07  smite-meister
 // menu cleanup, bugfixes
 //
@@ -1260,13 +1263,16 @@ static bool IT_TypeCount(Thinker *th)
 static void ThingCount(int type, int tid)
 {
   if (!(type + tid))
-    return; // Nothing to count TODO messes stack up, need to Push something
+    {
+      Push(0); // Nothing to count (we need to Push something or the stack gets messed up)
+      return; 
+    }
 
   extern mobjtype_t TranslateThingType[];
   moType = TranslateThingType[type];
   thingCount = 0;
 
-  CONS_Printf("looking for tid %d, type %d...", tid, type);
+  CONS_Printf("Looking for tid %d, type %d...", tid, type);
   int searcher = -1;
   if (tid)
     {
@@ -1276,18 +1282,22 @@ static void ThingCount(int type, int tid)
 	{
 	  if (type == 0)	    
 	    thingCount++; // Just count TIDs
-	  else if (mobj->IsOf(DActor::_type) && moType == ((DActor *)mobj)->type)
+	  else if (mobj->IsOf(DActor::_type))
 	    {
-	      if (mobj->flags & MF_COUNTKILL && mobj->flags & MF_CORPSE)
-		continue; // Don't count dead monsters
-	      thingCount++;
+	      DActor *da = (DActor *)mobj;
+	      if (moType == da->type)
+		{
+		  if ((mobj->health <= 0) || (mobj->flags & MF_CORPSE)) // NOTE: had && mobj->flags & MF_COUNTKILL, but why?
+		    continue; // Don't count dead monsters or corpses (which is what dead monsters become when they stop moving!)
+		  thingCount++;
+		}
 	    }
 	}
     }
   else
     ACMap->IterateThinkers(IT_TypeCount); // Count only types
 
-  CONS_Printf("found %d objects.\n", thingCount);
+  CONS_Printf(" found %d objects.\n", thingCount);
   Push(thingCount);
 }
 

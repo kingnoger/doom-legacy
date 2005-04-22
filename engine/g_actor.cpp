@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.39  2005/04/22 19:44:48  smite-meister
+// bugs fixed
+//
 // Revision 1.38  2004/12/02 17:22:31  smite-meister
 // HUD fixed
 //
@@ -1038,7 +1041,7 @@ void DActor::Think()
   if (info->crashstate && (flags & MF_CORPSE) && (eflags & MFE_JUSTHITFLOOR))
     {
       SetState(info->crashstate);
-      flags &= ~MF_CORPSE;
+      //flags &= ~MF_CORPSE; // FIXME why?
     }
 
   // cycle through states,

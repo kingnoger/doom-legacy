@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.28  2005/04/22 19:44:50  smite-meister
+// bugs fixed
+//
 // Revision 1.27  2005/04/17 17:47:54  smite-meister
 // netcode
 //
@@ -213,7 +216,7 @@ public:
 
 public:
   // in g_pawn.cpp
-  PlayerPawn(fixed_t x, fixed_t y, fixed_t z, int type);
+  PlayerPawn(fixed_t x, fixed_t y, fixed_t z, int type, int pclass = PCLASS_NONE);
 
   virtual void Think();
   void DeathThink();

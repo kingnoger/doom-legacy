@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.56  2005/04/22 19:44:48  smite-meister
+// bugs fixed
+//
 // Revision 1.55  2005/04/19 18:28:14  smite-meister
 // new RPCs
 //
@@ -504,7 +507,7 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
   // the player may have his old pawn from the previous level
   if (!pi->pawn)
     {
-      p = new PlayerPawn(nx, ny, nz, pi->options.ptype);
+      p = new PlayerPawn(nx, ny, nz, pi->options.ptype, pi->options.pclass);
       p->player = pi;
       p->team = pi->team;
       pi->pawn  = p;
@@ -1303,7 +1306,7 @@ void Map::RemoveFromTIDmap(Actor *p)
   j = TIDmap.upper_bound(tid);
 
   for ( ; i != j; ++i)
-    if ((*i).second == p)
+    if (i->second == p)
       {
 	TIDmap.erase(i);
 	return;
@@ -1317,6 +1320,21 @@ Actor *Map::FindFromTIDmap(int tid, int *pos)
   multimap<short, Actor*>::iterator i, j;
   i = TIDmap.lower_bound(tid);
   j = TIDmap.upper_bound(tid);
+
+  ++(*pos); // this is how many entries we must pass
+
+  for (int k = 0; k < *pos; k++)
+    {
+      if (i == j)
+	{
+	  // ran out of entries
+	  *pos = -1;
+	  return NULL;
+	}
+      i++; // pass it
+    }
+
+  // do we have anything left?
   if (i == j)
     {
       // not found
@@ -1324,14 +1342,5 @@ Actor *Map::FindFromTIDmap(int tid, int *pos)
       return NULL;
     }
 
-  ++(*pos);
-  for (int k = 0; k < *pos; ++i, ++k)
-    if (i == j)
-      {
-	// not found
-	*pos = -1;
-	return NULL;
-      }
-
-  return (*i).second;
+  return i->second;
 }

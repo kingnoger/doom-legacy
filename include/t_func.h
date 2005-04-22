@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright(C) 2000 Simon Howard
-// Copyright(C) 2001-2003 Doom Legacy Team
+// Copyright(C) 2001-2005 Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.5  2005/04/22 19:44:50  smite-meister
+// bugs fixed
+//
 // Revision 1.4  2004/08/12 18:30:30  smite-meister
 // cleaned startup
 //
@@ -33,15 +36,11 @@
 // Revision 1.1.1.1  2002/11/16 14:18:28  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
 //--------------------------------------------------------------------------
 
 
 #ifndef t_func_h
 #define t_func_h 1
-
-extern class Camera *script_camera;
-extern bool    script_camera_on;
 
 #define AngleToFixed(x)  fixed_t((double(x) / (double(ANG45)/45)) * FRACUNIT)
 #define FixedToAngle(x)  angle_t((double(x) / FRACUNIT) * ANG45/45)
