@@ -16,6 +16,9 @@
 // for more details.
 //
 // $Log$
+// Revision 1.25  2005/05/17 13:57:49  smite-meister
+// little fixes
+//
 // Revision 1.24  2005/03/19 13:51:30  smite-meister
 // sound samplerate fix
 //
@@ -31,26 +34,17 @@
 // Revision 1.20  2004/12/09 06:16:16  segabor
 // fixed SDL headers for Mac
 //
-// Revision 1.19  2004/08/29 20:48:49  smite-meister
-// bugfixes. wow.
-//
 // Revision 1.18  2004/08/18 14:35:21  smite-meister
 // PNG support!
 //
 // Revision 1.17  2004/07/13 20:23:38  smite-meister
 // Mod system basics
 //
-// Revision 1.16  2004/07/07 17:27:20  smite-meister
-// bugfixes
-//
 // Revision 1.15  2004/07/05 16:53:29  smite-meister
 // Netcode replaced
 //
 // Revision 1.14  2004/03/28 15:16:14  smite-meister
 // Texture cache.
-//
-// Revision 1.13  2004/01/02 14:25:02  smite-meister
-// cleanup
 //
 // Revision 1.12  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
@@ -88,10 +82,10 @@
 // Revision 1.1.1.1  2002/11/16 14:18:31  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//   SDL system interface for sound.
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief SDL interface for sound and music.
 
 #include <math.h>
 #include <unistd.h>
@@ -131,6 +125,7 @@
 
 #define MIDBUFFERSIZE   128*1024
 #define SAMPLERATE      22050 //11025   // Hz
+#define SAMPLECOUNT     512 // requested audio buffer size (about 46 ms at 11 kHz)
 
 class chan_t
 {
@@ -157,8 +152,6 @@ public:
 
 
 static vector<chan_t> channels;
-
-const int samplecount = 512; // requested audio buffer size (about 46 ms at 11 kHz)
 
 // Pitch to stepping lookup in 16.16 fixed point. 64 pitch units = 1 octave
 //  0 = 0.25x, 128 = 1x, 256 = 4x
@@ -235,7 +228,7 @@ void I_SetSfxVolume(int volume)
 void chan_t::CalculateParams()
 {
   // how fast should the sound sample be played?
-  step = int(steptable[ch->opitch] * (double(ch->si->rate) / SAMPLERATE));
+  step = int(steptable[ch->opitch] * (double(ch->si->rate) / audio.freq));
 
   // x^2 separation, that is, orientation/stereo.
   //  range is: 0 (left) - 255 (right)
@@ -320,7 +313,7 @@ void I_StopSound(channel_t *c)
   vector<chan_t>::iterator i;
 
   for (i = channels.begin(); i != channels.end(); i++)
-    if ((*i).ch == c)
+    if (i->ch == c)
       break;
  
   if (i != channels.end())
@@ -479,12 +472,12 @@ void I_StartupSound()
   // Configure sound device
   if (SDL_Init(SDL_INIT_AUDIO) < 0)
     {
-      CONS_Printf("Couldn't initialize SDL Audio: %s\n",SDL_GetError());
+      CONS_Printf(" Couldn't initialize SDL Audio: %s\n", SDL_GetError());
       nosound = true;
       return;
     }
 
-  // Open the audio device
+  // audio device parameters
   audio.freq = SAMPLERATE;
 #if ( SDL_BYTEORDER == SDL_BIG_ENDIAN )
   audio.format = AUDIO_S16MSB;
@@ -492,14 +485,12 @@ void I_StartupSound()
   audio.format = AUDIO_S16LSB;
 #endif
   audio.channels = 2;
-  audio.samples = samplecount;
+  audio.samples = SAMPLECOUNT;
   audio.callback = I_UpdateSound_sdl;
 
   // SDL_mixer controls the audio device, see I_InitMusic.
 
   I_SetChannels();
-  // Finished initialization.
-  CONS_Printf("I_InitSound: sound module ready\n");
 }
 
 
@@ -523,9 +514,17 @@ void I_InitMusic()
       return;
     }
 
+  int temp; // aargh!
+  if (!Mix_QuerySpec(&audio.freq, &audio.format, &temp))
+    {
+      CONS_Printf(" Mix_QuerySpec: %s\n", Mix_GetError());
+      nosound = nomusic = true;
+      return;
+    }
+
   Mix_SetPostMix(audio.callback, NULL);  // after mixing music, add sound effects
 
-  CONS_Printf(" Configured audio device with %d samples/slice\n", samplecount);
+  CONS_Printf(" Audio device initialized: %d Hz, %d samples/slice.\n", audio.freq, audio.samples);
   //SDL_PauseAudio(0);
   Mix_Resume(-1); // start all sound channels (although they are not used)
 
@@ -536,7 +535,7 @@ void I_InitMusic()
 
   Mix_ResumeMusic();  // start music playback
   musicbuffer = (byte *)Z_Malloc(MIDBUFFERSIZE, PU_MUSIC, NULL); // FIXME: catch return value
-  CONS_Printf("I_InitMusic: music initialized\n");
+  CONS_Printf(" Music initialized.\n");
   musicStarted = true;
 }
 
@@ -576,7 +575,7 @@ void I_PlaySong(int handle, int looping)
     }
 }
 
-void I_PauseSong (int handle)
+void I_PauseSong(int handle)
 {
   if (nomusic)
     return;
@@ -584,7 +583,7 @@ void I_PauseSong (int handle)
   I_StopSong(handle);
 }
 
-void I_ResumeSong (int handle)
+void I_ResumeSong(int handle)
 {
   if (nomusic)
     return;
@@ -636,7 +635,7 @@ int I_RegisterSong(void* data, int len)
 
   byte *bdata = static_cast<byte *>(data);
 
-  if (memcmp(data,"MUS",3) == 0)
+  if (memcmp(data, MUSMAGIC, 4) == 0)
     {
       int err;
       Uint32 midlength;
@@ -645,13 +644,13 @@ int I_RegisterSong(void* data, int len)
       // convert mus to mid and load it in memory
       if ((err = qmus2mid(bdata, musicbuffer, 89, 64, 0, len, MIDBUFFERSIZE, &midlength)) != 0)
 	{
-	  CONS_Printf("Cannot convert mus to mid, converterror :%d\n",err);
+	  CONS_Printf("Cannot convert MUS to MIDI: error %d.\n", err);
 	  return 0;
 	}
       fwrite(musicbuffer, 1, midlength, midfile);
     }
   else
-  //  else if (memcmp(data,"MThd", 4) == 0 || memcmp(data, "Ogg", 3) == 0 ||
+  //  else if (memcmp(data,"MThd", 4) == 0 || memcmp(data, "OggS", 4) == 0 ||
   // (memcmp(data,"ID3", 3) == 0 || (bdata[0] == 255 && (bdata[1] & 0xe0 == 0xe0))))
     // Damn, MP3 has no real header! This code only recognizes ID3 tags
     // or the 11 bits long frame sync block which is all ones!
