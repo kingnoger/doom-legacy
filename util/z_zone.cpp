@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2005/05/25 17:48:10  jussip
+// Replaced memcpy with memmove for possibly overlapping areas.
+//
 // Revision 1.9  2004/08/18 14:35:23  smite-meister
 // PNG support!
 //
@@ -491,7 +494,7 @@ void* memzone_t::Malloc(int size, int tag, void **user, int alignbits)
           base->prev->next = newbase;
           base->next->prev = newbase;
           base->size -= sizediff;
-          memcpy(newbase, base, sizeof(memblock_t));
+          memmove(newbase, base, sizeof(memblock_t));
         }
       base = newbase;
     }
