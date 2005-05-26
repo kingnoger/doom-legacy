@@ -63,10 +63,12 @@ else # assume WIN32 is defined
  nasmformat = win32
 # compiler
  platform = -D__WIN32__
- interface = -DSDL
+# FIXME when SDL_mixer works properly, put it back
+ interface = -DSDL -DNOMIXER
  EXTRAFLAGS = -mwindows
 # linker
- LIBS	= -lmingw32 -lSDLmain -lSDL SDL_mixer.lib -lz -lpng -L. -ltnl -ltomcrypt -lwsock32
+# LIBS	= -lmingw32 -lSDLmain -lSDL SDL_mixer.lib -lz -lpng -L. -ltnl -ltomcrypt -lwsock32
+ LIBS	= -lmingw32 -lSDLmain -lSDL -lz -lpng -L. -ltnl -ltomcrypt -lwsock32
  OPENGLLIBS = -lopengl32 -lglu32
  LDFLAGS = -Wall -mwindows
 # executable

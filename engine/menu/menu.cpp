@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2005/05/26 17:22:51  smite-meister
+// windows alpha fix
+//
 // Revision 1.7  2005/04/22 19:44:49  smite-meister
 // bugs fixed
 //
@@ -2995,6 +2998,7 @@ bool Menu::Responder(event_t *ev)
     case IT_CALL:
       if (ch == KEY_ENTER)
 	{
+	  currentMenu->lastOn = itemOn;
 	  routine(itemOn);
 	  S_StartLocalAmbSound(sfx_menu_choose);
 	  return true;
@@ -3005,7 +3009,7 @@ bool Menu::Responder(event_t *ev)
       if (ch == KEY_LEFTARROW || ch == KEY_RIGHTARROW)
 	{
 	  routine(ch == KEY_RIGHTARROW);
-	  S_StartLocalAmbSound(sfx_menu_choose);
+	  S_StartLocalAmbSound(sfx_menu_adjust);
 	  return true;
 	}
       break;

@@ -16,6 +16,9 @@
 // for more details.
 //
 // $Log$
+// Revision 1.26  2005/05/26 17:22:51  smite-meister
+// windows alpha fix
+//
 // Revision 1.25  2005/05/17 13:57:49  smite-meister
 // little fixes
 //
@@ -124,7 +127,7 @@
 
 
 #define MIDBUFFERSIZE   128*1024
-#define SAMPLERATE      22050 //11025   // Hz
+#define SAMPLERATE      22050   // Hz
 #define SAMPLECOUNT     512 // requested audio buffer size (about 46 ms at 11 kHz)
 
 class chan_t
@@ -267,7 +270,9 @@ int I_StartSound(channel_t *s_channel)
   if (nosound)
     return 0;
 
-  //SDL_LockAudio();
+#ifdef NOMIXER
+  SDL_LockAudio();
+#endif
 
   int n = channels.size();
   //CONS_Printf("SDL channels: %d\n", n);
@@ -291,7 +296,9 @@ int I_StartSound(channel_t *s_channel)
 
   s_channel->playing = true;
 
-  //SDL_UnlockAudio();
+#ifdef NOMIXER
+  SDL_UnlockAudio();
+#endif
 
   /*
   // Assign current handle number.
@@ -488,9 +495,15 @@ void I_StartupSound()
   audio.samples = SAMPLECOUNT;
   audio.callback = I_UpdateSound_sdl;
 
-  // SDL_mixer controls the audio device, see I_InitMusic.
-
   I_SetChannels();
+
+  // SDL_mixer controls the audio device, see I_InitMusic.
+#ifdef NOMIXER
+  SDL_OpenAudio(&audio, NULL);
+  CONS_Printf(" Audio device initialized: %d Hz, %d samples/slice.\n", audio.freq, audio.samples);
+  SDL_PauseAudio(0);
+  soundStarted = true;
+#endif
 }
 
 
@@ -506,6 +519,9 @@ void I_InitMusic()
       return;
     }
 
+#ifdef NOMIXER
+  nomusic = true;
+#else
   // because we use SDL_mixer, audio is opened here.
   if (Mix_OpenAudio(audio.freq, audio.format, audio.channels, audio.samples) < 0)
     {
@@ -523,9 +539,7 @@ void I_InitMusic()
     }
 
   Mix_SetPostMix(audio.callback, NULL);  // after mixing music, add sound effects
-
   CONS_Printf(" Audio device initialized: %d Hz, %d samples/slice.\n", audio.freq, audio.samples);
-  //SDL_PauseAudio(0);
   Mix_Resume(-1); // start all sound channels (although they are not used)
 
   soundStarted = true;
@@ -537,6 +551,7 @@ void I_InitMusic()
   musicbuffer = (byte *)Z_Malloc(MIDBUFFERSIZE, PU_MUSIC, NULL); // FIXME: catch return value
   CONS_Printf(" Music initialized.\n");
   musicStarted = true;
+#endif
 }
 
 
@@ -548,8 +563,12 @@ void I_ShutdownSound()
     return;
     
   CONS_Printf("I_ShutdownSound: ");
+
+#ifdef NOMIXER
+  SDL_CloseAudio();
+#else
   Mix_CloseAudio();
-  //SDL_CloseAudio();
+#endif
 
   CONS_Printf("shut down\n");
   soundStarted = false;
@@ -566,6 +585,7 @@ void I_ShutdownSound()
 
 void I_PlaySong(int handle, int looping)
 {
+#ifndef NOMIXER
   if (nomusic)
     return;
 
@@ -573,6 +593,7 @@ void I_PlaySong(int handle, int looping)
     {
       Mix_FadeInMusic(music[handle], looping ? -1 : 0, 500);
     }
+#endif
 }
 
 void I_PauseSong(int handle)
@@ -593,15 +614,19 @@ void I_ResumeSong(int handle)
 
 void I_StopSong(int handle)
 {
+#ifndef NOMIXER
   if (nomusic)
     return;
+
   Mix_FadeOutMusic(500);
+#endif
 }
 
 static char *TempMusicFileName = NULL;
 
 void I_UnRegisterSong(int handle)
 {
+#ifndef NOMIXER
   if (nomusic)
     return;
 
@@ -616,11 +641,13 @@ void I_UnRegisterSong(int handle)
       unlink(TempMusicFileName);
       TempMusicFileName = NULL;
     }
+#endif
 }
 
 
 int I_RegisterSong(void* data, int len)
 {
+#ifndef NOMIXER
   if (nomusic)
     return 0;
 
@@ -681,14 +708,18 @@ int I_RegisterSong(void* data, int len)
     {
       CONS_Printf("Couldn't load music from tempfile %s: %s\n", TempMusicFileName, Mix_GetError());
     }
+#endif
+
   return 0;
 }
 
 void I_SetMusicVolume(int volume)
 {
+#ifndef NOMIXER
   if (nomusic)
     return;
 
   // acceptable volume range : 0-128
   Mix_VolumeMusic(volume*2);
+#endif
 }

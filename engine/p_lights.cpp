@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2005/05/26 17:22:50  smite-meister
+// windows alpha fix
+//
 // Revision 1.13  2005/03/04 16:23:07  smite-meister
 // mp3, sector_t
 //
@@ -80,7 +83,12 @@ lightfx_t::lightfx_t(Map *m, sector_t *s, lightfx_e t, short maxl, short minl, s
   minlight = minl;
   maxtime = maxt;
   if (mint < 0)
-    currentlight = s->lightlevel << 6; // 10.6 fixed point
+    {
+      // use 10.6 fixed point (we assume that rate is already given in this format)
+      currentlight = s->lightlevel << 6;
+      maxlight <<= 6;
+      minlight <<= 6;
+    }
   else
     mintime = mint;
 
@@ -92,8 +100,11 @@ void lightfx_t::Think()
 {
   int i;
 
-  if (count-- > 0)
-    return;
+  if (count > 0)
+    {
+      count--;
+      return;
+    }
 
   switch (type)
     {
@@ -102,49 +113,51 @@ void lightfx_t::Think()
 	// formerly "lightlevel", the only effect that ends by itself
 	bool finish = false;
 	currentlight += rate;
-	sector->lightlevel = currentlight >> 6;
 
 	if (rate >= 0)
 	  {
-	    if (sector->lightlevel >= maxlight)
+	    if (currentlight >= maxlight)
 	      finish = true;
 	  }
 	else
 	  {
-	    if (sector->lightlevel <= maxlight)
+	    if (currentlight <= maxlight)
 	      finish = true;
 	  }
 
 	if (finish)
 	  {
-	    sector->lightlevel = maxlight;  // set to dest lightlevel
+	    sector->lightlevel = maxlight >> 6;  // set to dest lightlevel
 	    sector->lightingdata = NULL;    // clear lightingdata
 	    mp->RemoveThinker(this);     // remove thinker       
 	  }
+	else
+	  sector->lightlevel = currentlight >> 6;
       }
       break;
 
     case Glow:
       currentlight += rate;
-      sector->lightlevel = currentlight >> 6;
       if (rate > 0)
 	{
-	  if (sector->lightlevel > maxlight)
+	  if (currentlight > maxlight)
 	    {
-	      sector->lightlevel = 2*maxlight - sector->lightlevel;
-	      currentlight = sector->lightlevel << 6;
+	      //currentlight = 2*maxlight - currentlight;
+	      // this reflection, although basically correct, causes unstable oscillations if rate is too high!
+	      currentlight = maxlight;
 	      rate = -rate; // reverse direction
 	    }
 	}
       else
 	{
-	  if (sector->lightlevel < minlight)
+	  if (currentlight < minlight)
 	    {
-	      sector->lightlevel = 2*minlight - sector->lightlevel;
-	      currentlight = sector->lightlevel << 6;
+	      //currentlight = 2*minlight - currentlight;
+	      currentlight = minlight;
 	      rate = -rate; // reverse direction
 	    }
 	}
+      sector->lightlevel = currentlight >> 6;
       break;
 
     case Strobe:

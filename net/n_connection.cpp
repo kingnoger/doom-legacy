@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2005/05/26 17:22:52  smite-meister
+// windows alpha fix
+//
 // Revision 1.13  2005/04/19 18:28:34  smite-meister
 // new RPCs
 //
@@ -579,7 +582,8 @@ LCONNECTION_RPC(rpcKick_s2c, (U8 pnum, StringPtr str), (pnum, str),
 		RPCGuaranteedOrdered, RPCDirServerToClient, 0)
 {
   // TODO
-  CONS_Printf("\2You were kicked from the game: %s.\n", str);
+  const char *s = str;
+  CONS_Printf("\2You were kicked from the game: %s.\n", s);
 /*
   if(pnum == consoleplayer->number - 1)
     {

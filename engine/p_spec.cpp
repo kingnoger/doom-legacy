@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.42  2005/05/26 17:22:50  smite-meister
+// windows alpha fix
+//
 // Revision 1.41  2005/03/04 16:23:07  smite-meister
 // mp3, sector_t
 //
@@ -906,7 +909,8 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
 
     case DOOM_Light_Glow:
       i = sec->FindMinSurroundingLight(sec->lightlevel);
-      lfx = new lightfx_t(this, sec, lightfx_t::Glow, sec->lightlevel, i, -glowspeed);
+      if (i < sec->lightlevel)
+	lfx = new lightfx_t(this, sec, lightfx_t::Glow, sec->lightlevel, i, -glowspeed << 6, -1);
       break;
 
     case DOOM_Light_SyncFast:

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.43  2005/05/26 17:22:50  smite-meister
+// windows alpha fix
+//
 // Revision 1.42  2005/03/17 21:42:50  smite-meister
 // Exl bugfixes
 //
@@ -159,7 +162,7 @@ void CL_Init();
 // Version number: major.minor.subversion
 const int  VERSION = 199;  // major*100 + minor
 const int  SUBVERSION = 0; // for bugfix releases, should not affect compatibility
-const char VERSIONSTRING[] = "alpha1";
+const char VERSIONSTRING[] = "alpha2";
 
 // Name of local directory for config files and savegames
 #ifdef LINUX 
@@ -493,10 +496,10 @@ static void D_IdentifyVersion()
 	}
       else
 	{
-	  I_Error("Main IWAD file not found\n"
+	  I_Error("Main IWAD file not found.\n"
 		  "You need either doom.wad, doom1.wad, doomu.wad, doom2.wad,\n"
 		  "tnt.wad, plutonia.wad, heretic.wad, heretic1.wad or hexen.wad\n"
-	          "from any sharware or commercial version of Doom, Heretic or Hexen!\n");
+	          "from any shareware or commercial version of Doom, Heretic or Hexen!\n");
 	}
     }
 
@@ -679,8 +682,8 @@ void D_DoomMain()
     "No game mode chosen.",
     "DOOM Shareware Startup",
     "DOOM Registered Startup",
-    "DOOM 2: Hell on Earth",
     "The Ultimate DOOM Startup",
+    "DOOM 2: Hell on Earth",
     "Heretic: Shadow of the Serpent Riders",
     "Hexen: Beyond Heretic"
   };
