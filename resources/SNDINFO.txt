@@ -27,7 +27,7 @@ menu/fail		.
 menu/adjust		.
 
 player/jump		DSJUMP
-player/land		.
+player/land		DSOUCH
 player/grunt		DSOUCH
 player/usefail		DSOUCH	m1
 player/itemup		.	m1
@@ -78,11 +78,12 @@ menu/adjust		DSSTNMOV
 
 ; Player sounds
 player/grunt		DSOOF
-player/usefail		DSNOWAY		m1
-player/itemup		DSITEMUP	m1
-player/weaponup		DSWPNUP		m1
-player/powerup		DSGETPOW	m1
-
+player/usefail		DSNOWAY
+player/itemup		DSITEMUP
+player/keyup		DSITEMUP
+player/weaponup		DSWPNUP
+player/powerup		DSGETPOW
+player/secret		DSTINK
 
 ; World sounds
 world/teleport		DSTELEPT
@@ -283,8 +284,10 @@ player/itemup		ITEMUP
 player/keyup		KEYUP
 player/weaponup		WPNUP 
 player/artiup		ARTIUP
+player/powerup		WPNUP
 player/artiuse		ARTIUSE
 ; player/frag		GFRAG  ; not present in heretic.wad!
+player/secret		CHAT
 
 ; World sounds
 world/teleport		TELEPT
@@ -484,6 +487,7 @@ player/weaponup		= PickupWeapon
 player/artiup		= PickupArtifact
 player/powerup		= PickupPiece
 player/artiuse		= UseArtifact
+player/secret		= Chat
 
 world/splash		= WaterSplash
 world/quake		= Earthquake
