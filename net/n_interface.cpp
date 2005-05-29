@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2005/05/29 11:30:43  segabor
+// Fixed __APPLE directive__ to __APPLE_CC__ on Mac OS X, new 'Doom Legacy' Xcode project target
+//
 // Revision 1.13  2005/04/17 17:44:37  smite-meister
 // netcode
 //
@@ -121,7 +124,7 @@ void serverinfo_t::Write(BitStream &s)
   s.write(game.demoversion);
   s.writeString(VERSIONSTRING);
   s.writeString(cv_servername.str);
-  s.write(game.Players.size());
+  s.write((unsigned int)game.Players.size());
   s.write(game.maxplayers);
   s.writeString(game.gtype->gt_name.c_str());
   s.write(game.gtype->gt_version);

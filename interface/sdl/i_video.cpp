@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2005/05/29 11:30:43  segabor
+// Fixed __APPLE directive__ to __APPLE_CC__ on Mac OS X, new 'Doom Legacy' Xcode project target
+//
 // Revision 1.19  2005/03/21 17:44:19  smite-meister
 // fixes
 //
@@ -121,11 +124,11 @@ static char vidModeName[33][32]; // allow 33 different modes
 
 
 // maximum number of windowed modes (see windowedModes[][])
-#if !defined(__MACOS__) && !defined(__APPLE)
+#if !defined(__MACOS__) && !defined(__APPLE_CC__)
 #define MAXWINMODES (8)
 #else
 // [segabor]: Macs don't need such a small resolutions .. 
-#define MAXWINMODES (5)
+#define MAXWINMODES (9)
 #endif
 
 //Hudler: 16/10/99: added for OpenGL gamma correction
@@ -148,12 +151,22 @@ static int firstEntry = 0;
 // windowed video modes from which to choose from.
 static int windowedModes[MAXWINMODES][2] =
 {
+#ifdef __APPLE_CC__
+  {MAXVIDWIDTH /*1600*/, MAXVIDHEIGHT/*1200*/},
+  {1440, 900},	/* iMac G5 native res */
+  {1280, 1024},
+  {1152, 720},	/* iMac G5 native res */
+  {1024, 768},
+  {1024, 640},
+  {800, 600},
+  {800, 500},
+  {640, 480}
+#else
   {MAXVIDWIDTH /*1600*/, MAXVIDHEIGHT/*1200*/},
   {1280, 1024},
   {1024, 768},
   {800, 600},
   {640, 480},
-#if !defined(__MACOS__) && !defined(__APPLE)
   {512, 384},
   {400, 300},
   {320, 200}
@@ -419,7 +432,7 @@ bool I_StartupGraphics()
   //CONS_Printf("Bpp = %d, bpp = %d\n", vidInfo->vfmt->BytesPerPixel, vidInfo->vfmt->BitsPerPixel);
 
   // list all available video modes corresponding to the "best" pixelformat
-  modeList = SDL_ListModes(NULL, SDL_FULLSCREEN | surfaceFlags);
+  modeList = (NULL, SDL_FULLSCREEN | surfaceFlags);
 
   numVidModes = 0;
   if (modeList == NULL)
@@ -441,7 +454,7 @@ bool I_StartupGraphics()
   // so lets force 8 bit (software mode only)
   // TODO why not use hicolor in sw mode too? it must work...
   // Set color depth; either 1=256pseudocolor or 2=hicolor
-#if defined(__APPLE__) || defined(__MACOS__)
+#if defined(__APPLE_CC__) || defined(__MACOS__)
   vid.BytesPerPixel	= vidInfo->vfmt->BytesPerPixel;
   vid.BitsPerPixel	= vidInfo->vfmt->BitsPerPixel;
   if (!M_CheckParm("-opengl")) {
@@ -456,9 +469,15 @@ bool I_StartupGraphics()
   //highcolor = (vid.bpp == 2) ? true:false;
 
   // default resolution
+#ifdef __APPLE_CC__
+  extern unsigned int mac_scr_width, mac_scr_height;
+  //FIXME: experimental!
+  vid.width = mac_scr_width;
+  vid.height = mac_scr_height;
+#else
   vid.width = BASEVIDWIDTH;
   vid.height = BASEVIDHEIGHT;
-
+#endif
   if (M_CheckParm("-opengl"))
     {
       rendermode = render_opengl;

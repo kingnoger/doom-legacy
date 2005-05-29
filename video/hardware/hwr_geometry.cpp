@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2005/05/29 11:30:44  segabor
+// Fixed __APPLE directive__ to __APPLE_CC__ on Mac OS X, new 'Doom Legacy' Xcode project target
+//
 // Revision 1.7  2004/12/08 16:47:16  segabor
 // Mac specific GL includes
 //
@@ -43,7 +46,7 @@
 /// \file
 /// \brief Manage OpenGL geometry
 
-#if defined(__MACOS__) || defined(__APPLE__)
+#if defined(__MACOS__) || defined(__APPLE_CC__)
 #include <OpenGL/gl.h>
 #include <OpenGL/glext.h>
 #else

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.44  2005/05/29 11:30:41  segabor
+// Fixed __APPLE directive__ to __APPLE_CC__ on Mac OS X, new 'Doom Legacy' Xcode project target
+//
 // Revision 1.43  2005/05/26 17:22:50  smite-meister
 // windows alpha fix
 //
@@ -167,7 +170,7 @@ const char VERSIONSTRING[] = "alpha2";
 // Name of local directory for config files and savegames
 #ifdef LINUX 
 # define DEFAULTDIR "/.legacy"
-#elif defined(__MACOS__) || defined(__APPLE__)
+#elif defined(__MACOS__) || defined(__APPLE_CC__)
 # define DEFAULTDIR "/Library/Application Support/DooMLegacy"
 #else
 # define DEFAULTDIR "/legacy"
@@ -572,7 +575,7 @@ static void D_CheckWadVersion()
     }
 
   if (wadversion != VERSION)
-    I_Error("Your legacy.wad file is version %d.%d, you need version %d.%d\n"
+	  I_Error("Your legacy.wad file is version %d.%d, you need version %d.%d\n"
 	    "Use the legacy.wad coming from the same zip file as this executable\n"
 	    "\n"
 	    "Use -noversioncheck to remove this check,\n"
@@ -651,8 +654,11 @@ void D_DoomMain()
   //if (setvbuf(stderr,NULL,_IOFBF,1000)) CONS_Printf("setvbuf didnt work\n");
   if (!game.dedicated)
     {
+	  //FIXME: these files should be placed in ~/Library/Logs/ as Legacy_%s.log
+#ifndef __APPLE_CC__
       if (freopen("stdout.txt", "w", stdout) == NULL) CONS_Printf("freopen didnt work\n");
       if (freopen("stderr.txt", "w", stderr) == NULL) CONS_Printf("freopen didnt work\n");
+#endif
     }
 
   setbuf(stdout, NULL);      // non-buffered output

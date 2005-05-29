@@ -16,6 +16,9 @@
 // for more details.
 //
 // $Log$
+// Revision 1.27  2005/05/29 11:30:42  segabor
+// Fixed __APPLE directive__ to __APPLE_CC__ on Mac OS X, new 'Doom Legacy' Xcode project target
+//
 // Revision 1.26  2005/05/26 17:22:51  smite-meister
 // windows alpha fix
 //
@@ -94,7 +97,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#if defined(FREEBSD) || defined(__APPLE__) || defined(__MACOS__)
+#if defined(FREEBSD) || defined(__APPLE_CC__) || defined(__MACOS__)
 # include <SDL.h>
 # include <SDL_mixer.h>
 #else

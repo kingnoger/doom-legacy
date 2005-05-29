@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.30  2005/05/29 11:30:42  segabor
+// Fixed __APPLE directive__ to __APPLE_CC__ on Mac OS X, new 'Doom Legacy' Xcode project target
+//
 // Revision 1.29  2005/04/17 17:46:21  smite-meister
 // netcode
 //
@@ -101,7 +104,7 @@
 # endif
 #endif
 
-#ifdef __APPLE__
+#ifdef __APPLE_CC__
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/param.h>
@@ -670,7 +673,7 @@ void I_Quit()
   I_ShutdownGraphics();
   I_ShutdownSystem();
   printf("\r");
-#ifndef __APPLE__
+#ifndef __APPLE_CC__
   // on Mac OS X it's pointless
   ShowEndTxt();
 #endif
@@ -764,7 +767,7 @@ char *I_GetWadPath()
 #warning FIX it Later!
 
 	  /*
-#if defined (__MACOS__) || defined(__APPLE__)
+#if defined (__MACOS__) || defined(__APPLE_CC__)
       // cwd is always "/" when app is dbl-clicked
       if (!strcmp(temp, "/"))
 	return I_GetWadDir();
@@ -841,7 +844,7 @@ Uint32 I_GetFreeMem(Uint32 *total)
 
 void I_GetDiskFreeSpace(long long *freespace)
 {
-#if defined (LINUX) || defined (__MACOS__) || defined(__APPLE__)
+#if defined (LINUX) || defined (__MACOS__) || defined(__APPLE_CC__)
   struct statfs stfs;
   if (statfs(".",&stfs)==-1)
     {

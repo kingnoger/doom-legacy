@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.35  2005/05/29 11:30:40  segabor
+// Fixed __APPLE directive__ to __APPLE_CC__ on Mac OS X, new 'Doom Legacy' Xcode project target
+//
 // Revision 1.34  2005/04/17 17:49:43  smite-meister
 // netcode
 //
@@ -537,7 +540,7 @@ bool SoundSystem::StartMusic(const char *name, bool loop)
   m->data = (void *)fc.CacheLumpNum(musiclump, PU_MUSIC);
   m->length = fc.LumpLength(musiclump);
 
-#if defined(__APPLE__) || defined(__MACOS__)
+#if defined(__APPLE_CC__) || defined(__MACOS__)
   // FIXME make Mac interface similar to the other interfaces
   // m->handle = I_RegisterSong(music_num);
   // FIXME /Mac OS X/ sound part of Legacy should be taken from version 1.42

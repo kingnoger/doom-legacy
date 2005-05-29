@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2005/05/29 11:30:43  segabor
+// Fixed __APPLE directive__ to __APPLE_CC__ on Mac OS X, new 'Doom Legacy' Xcode project target
+//
 // Revision 1.14  2005/05/26 17:22:52  smite-meister
 // windows alpha fix
 //
@@ -61,6 +64,9 @@
 #include "g_player.h"
 #include "g_pawn.h"
 
+#ifndef min
+#define min(x,y) ( ((x)<(y)) ? (x) : (y) )
+#endif
 
 extern unsigned num_bots;
 

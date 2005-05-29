@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2005/05/29 11:30:44  segabor
+// Fixed __APPLE directive__ to __APPLE_CC__ on Mac OS X, new 'Doom Legacy' Xcode project target
+//
 // Revision 1.4  2004/12/08 16:39:44  segabor
 // Exclude malloc.h in MacOS X
 //
@@ -34,7 +37,7 @@
 /// \file
 /// \brief PNG Textures
 
-#ifndef __APPLE__
+#ifndef __APPLE_CC__
 #include <malloc.h>
 #endif
 #include <png.h>
