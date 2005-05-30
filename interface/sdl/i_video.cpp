@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2005/05/30 12:01:30  segabor
+// Mac: set ver. to 1.99.0 a2
+//
 // Revision 1.20  2005/05/29 11:30:43  segabor
 // Fixed __APPLE directive__ to __APPLE_CC__ on Mac OS X, new 'Doom Legacy' Xcode project target
 //
@@ -127,8 +130,7 @@ static char vidModeName[33][32]; // allow 33 different modes
 #if !defined(__MACOS__) && !defined(__APPLE_CC__)
 #define MAXWINMODES (8)
 #else
-// [segabor]: Macs don't need such a small resolutions .. 
-#define MAXWINMODES (9)
+#define MAXWINMODES (12)
 #endif
 
 //Hudler: 16/10/99: added for OpenGL gamma correction
@@ -160,7 +162,10 @@ static int windowedModes[MAXWINMODES][2] =
   {1024, 640},
   {800, 600},
   {800, 500},
-  {640, 480}
+  {640, 480},
+  {512, 384},
+  {400, 300},
+  {320, 200}
 #else
   {MAXVIDWIDTH /*1600*/, MAXVIDHEIGHT/*1200*/},
   {1280, 1024},
@@ -470,14 +475,13 @@ bool I_StartupGraphics()
 
   // default resolution
 #ifdef __APPLE_CC__
-  extern unsigned int mac_scr_width, mac_scr_height;
   //FIXME: experimental!
-  vid.width = mac_scr_width;
-  vid.height = mac_scr_height;
-#else
+  // extern unsigned int mac_scr_width, mac_scr_height;
+  // vid.width = mac_scr_width;
+  // vid.height = mac_scr_height;
+#endif
   vid.width = BASEVIDWIDTH;
   vid.height = BASEVIDHEIGHT;
-#endif
   if (M_CheckParm("-opengl"))
     {
       rendermode = render_opengl;
