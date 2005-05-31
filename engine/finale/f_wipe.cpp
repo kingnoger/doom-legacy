@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.8  2004/12/31 16:19:38  smite-meister
-// alpha fixes
+// Revision 1.9  2005/05/31 18:04:21  smite-meister
+// screenslink crash fixed
 //
 // Revision 1.7  2004/11/09 20:38:51  smite-meister
 // added packing to I/O structs
@@ -27,17 +27,8 @@
 // Revision 1.6  2004/09/23 23:21:17  smite-meister
 // HUD updated
 //
-// Revision 1.5  2004/08/19 19:42:41  smite-meister
-// bugfixes
-//
 // Revision 1.4  2004/03/28 15:16:13  smite-meister
 // Texture cache.
-//
-// Revision 1.3  2004/01/10 16:02:59  smite-meister
-// Cleanup and Hexen gameplay -related bugfixes
-//
-// Revision 1.2  2002/12/03 10:15:29  smite-meister
-// Older update
 //
 // Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
 // Initial import into CVS (v1.29 pr3)
@@ -68,20 +59,20 @@ consvar_t cv_screenslink = {"screenlink","2", CV_SAVE,screenslink_cons_t};
 
 struct wipe_t
 {
-  void (*init)(int width, int height, int ticks);
+  void (*init)(int width, int height);
   bool (*perform)(int width, int height, int ticks);
-  void (*exit)(int width, int height, int ticks);
+  void (*exit)();
 };
 
 
 
-static byte *wipe_scr_start;
-static byte *wipe_scr_end;
-static byte *wipe_scr;
+static byte *wipe_scr_start = NULL;
+static byte *wipe_scr_end = NULL;
+static byte *wipe_scr = NULL;
 
 
 // transposes an array
-void wipe_shittyColMajorXform(short *array, int width, int height)
+static void wipe_shittyColMajorXform(short *array, int width, int height)
 {
   int x, y;
   short *dest = (short*)Z_Malloc(width*height*sizeof(short), PU_STATIC, 0);
@@ -96,7 +87,7 @@ void wipe_shittyColMajorXform(short *array, int width, int height)
 }
 
 
-void wipe_initColorXForm(int width, int height, int ticks)
+static void wipe_initColorXForm(int width, int height)
 {
   memcpy(wipe_scr, wipe_scr_start, width*height*vid.BytesPerPixel);
 }
@@ -145,7 +136,7 @@ int wipe_doColorXForm(int width, int height, int ticks)
 
 
 
-bool wipe_doColorXForm(int width, int height, int ticks)
+static bool wipe_doColorXForm(int width, int height, int ticks)
 {
   static int slowdown = 0;
 
@@ -185,8 +176,9 @@ bool wipe_doColorXForm(int width, int height, int ticks)
 }
 
 
-void wipe_exitColorXForm(int width, int height, int ticks) {}
-
+static void wipe_exitColorXForm()
+{
+}
 
 
 
@@ -194,7 +186,7 @@ void wipe_exitColorXForm(int width, int height, int ticks) {}
 static int *column_y; // the y coordinate of the melt for each column
 
 
-void wipe_initMelt(int width, int height, int ticks)
+static void wipe_initMelt(int width, int height)
 {
   int i, r;
 
@@ -226,7 +218,7 @@ void wipe_initMelt(int width, int height, int ticks)
 
 
 
-bool wipe_doMelt(int width, int height, int ticks)
+static bool wipe_doMelt(int width, int height, int ticks)
 {
   int  i, j;
   bool done = true;
@@ -276,64 +268,72 @@ bool wipe_doMelt(int width, int height, int ticks)
 }
 
 
-void wipe_exitMelt(int width, int height, int ticks)
+static void wipe_exitMelt()
 {
   Z_Free(column_y);
 }
 
 
 
+static wipe_t wipes[] =
+{
+  {wipe_initColorXForm, wipe_doColorXForm, wipe_exitColorXForm},
+  {wipe_initMelt, wipe_doMelt, wipe_exitMelt}
+};
+
 
 
 // save the 'before' screen of the wipe (the one that melts down)
-void wipe_StartScreen(int x, int y, int width, int height)
+bool wipe_StartScreen()
 {
-  wipe_scr_start = vid.screens[2];
-  I_ReadScreen(wipe_scr_start);
+  if (cv_screenslink.value == 0)
+    return false; // no wipes required
+
+  wipe_scr_start = (byte *)calloc(vid.height * vid.rowbytes, 1);
+  if (wipe_scr_start)
+    {
+      I_ReadScreen(wipe_scr_start);
+      return true;
+    }
+
+  return false; // no memory
 }
 
 
 // save the 'after' screen of the wipe (the one that show behind the melt)
-void wipe_EndScreen(int x, int y, int width, int height)
+bool wipe_EndScreen()
 {
-  wipe_scr_end = vid.screens[3];
-  I_ReadScreen(wipe_scr_end);
-  V_DrawBlock(x, y, 0, width, height, wipe_scr_start); // restore start scr.
+  wipe_scr_end = (byte *)calloc(vid.height * vid.rowbytes, 1);
+  if (wipe_scr_end)
+    {
+      I_ReadScreen(wipe_scr_end);
+
+      // initialize the wipe algorithm
+      wipe_scr = vid.screens[0];
+      wipes[cv_screenslink.value - 1].init(vid.width, vid.height);
+      return true;
+    }
+
+  free(wipe_scr_start); // no memory, no wipe
+  return false;
 }
 
 
 
-bool wipe_ScreenWipe(int x, int y, int width, int height, int ticks)
+bool wipe_ScreenWipe(int ticks)
 {
-  static wipe_t wipes[] =
-    {
-      {wipe_initColorXForm, wipe_doColorXForm, wipe_exitColorXForm},
-      {wipe_initMelt, wipe_doMelt, wipe_exitMelt}
-    };
-
   int i = cv_screenslink.value - 1;
 
-  // when false, stop the wipe
-  static bool go = false;
-
-  // initial stuff
-  if (!go)
-    {
-      go = true;
-      // wipe_scr = (byte *) Z_Malloc(width*height*vid.BytesPerPixel, PU_STATIC, 0); // DEBUG
-      wipe_scr = vid.screens[0];
-      wipes[i].init(width, height, ticks);
-    }
-
   // do a piece of wipe-in
-  bool rc = wipes[i].perform(width, height, ticks);
-
-  // final stuff
-  if (rc)
+  if (ticks < 0 || wipes[i].perform(vid.width, vid.height, ticks))
     {
-      go = false;
-      wipes[i].exit(width, height, ticks);
+      // finish the wipe
+      wipes[i].exit();
+      free(wipe_scr_start);
+      free(wipe_scr_end);
+      wipe_scr_start = wipe_scr_end = wipe_scr = NULL;
+      return true;
     }
 
-  return !go;
+  return false;
 }

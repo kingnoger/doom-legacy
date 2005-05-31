@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.46  2005/05/31 18:04:21  smite-meister
+// screenslink crash fixed
+//
 // Revision 1.45  2005/04/22 19:44:48  smite-meister
 // bugs fixed
 //
@@ -344,24 +347,27 @@ void GameInfo::Display()
   I_StartFrame();
 
 
-  // check for change of screen size (video mode)
-  if (vid.setmodeneeded)
-    vid.SetMode();  // change video mode, set setsizeneeded
-
-  // change the view size if needed
-  if (setsizeneeded)
+  if (!screenwipe)
     {
-      R_ExecuteSetViewSize();
-      force_wipe = true;
-      borderdrawcount = 3;
-    }
+      // check for change of screen size (video mode)
+      if (vid.setmodeneeded)
+	vid.SetMode();  // change video mode, set setsizeneeded
 
-  // save the current screen if about to wipe
-  if (force_wipe && cv_screenslink.value && rendermode == render_soft)
-    {
-      force_wipe = false;
-      screenwipe = 1;
-      wipe_StartScreen(0, 0, vid.width, vid.height); // "before", s0->s2
+      // change the view size if needed
+      if (setsizeneeded)
+	{
+	  R_ExecuteSetViewSize();
+	  force_wipe = true;
+	  borderdrawcount = 3;
+	}
+
+      // save the current screen if about to wipe
+      if (force_wipe && rendermode == render_soft)
+	{
+	  force_wipe = false;
+	  if (wipe_StartScreen()) // save "before" view
+	    screenwipe = 1;
+	}
     }
 
   // draw buffered stuff to screen
@@ -479,8 +485,11 @@ void GameInfo::Display()
     }
   else if (screenwipe++ == 2) // we must wait until the "after" screen is rendered
     {
-      // wipe update
-      wipe_EndScreen(0, 0, vid.width, vid.height); // "after", s0->s3
+      if (!wipe_EndScreen()) // save "after" view
+	{
+	  screenwipe = 0;
+	  return;
+	}
 
       bool done;
       tic_t wipestart = I_GetTics() - 1;
@@ -498,14 +507,18 @@ void GameInfo::Display()
             }
           while (!tics);
           wipestart = nowtime;
-          done = wipe_ScreenWipe(0, 0, vid.width, vid.height, tics);
+
+	  if (nowtime < wipe_end)
+	    done = wipe_ScreenWipe(tics); // we still have time for the wipe
+	  else
+	    done = wipe_ScreenWipe(-1); // note the wipe algorithm that time's out.
+
           I_OsPolling();
           I_UpdateNoBlit();
           Menu::Drawer();            // menu is drawn even on top of wipes
           I_FinishUpdate();      // page flip or blit buffer
-
         }
-      while (!done && I_GetTics() < wipe_end);
+      while (!done);
       screenwipe = 0;
     }
 }

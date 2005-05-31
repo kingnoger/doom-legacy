@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,24 +18,25 @@
 //
 //
 // $Log$
+// Revision 1.3  2005/05/31 18:04:21  smite-meister
+// screenslink crash fixed
+//
 // Revision 1.2  2004/03/28 15:16:14  smite-meister
 // Texture cache.
 //
 // Revision 1.1.1.1  2002/11/16 14:18:23  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//      Mission start screen wipe/melt, special effects.
-//      
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Mission start screen wipe/melt special effects.
 
 #ifndef f_wipe_h
 #define f_wipe_h 1
 
-void wipe_StartScreen(int x, int y, int width, int height);
-void wipe_EndScreen(int x, int y, int width, int height);
-bool wipe_ScreenWipe(int x, int y, int width, int height, int ticks);
+bool wipe_StartScreen();
+bool wipe_EndScreen();
+bool wipe_ScreenWipe(int ticks);
 
 #endif

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2005/05/31 18:04:22  smite-meister
+// screenslink crash fixed
+//
 // Revision 1.14  2004/11/19 16:51:06  smite-meister
 // cleanup
 //
@@ -355,28 +358,23 @@ void M_SaveConfig(char *filename)
 
 struct pcx_t
 {
-    char                manufacturer;
-    char                version;
-    char                encoding;
-    char                bits_per_pixel;
+  char                manufacturer;
+  char                version;
+  char                encoding;
+  char                bits_per_pixel;
 
-    unsigned short      xmin;
-    unsigned short      ymin;
-    unsigned short      xmax;
-    unsigned short      ymax;
+  unsigned short      xmin, ymin, xmax, ymax;
+  unsigned short      hres, vres;
 
-    unsigned short      hres;
-    unsigned short      vres;
+  unsigned char       palette[48];
 
-    unsigned char       palette[48];
+  char                reserved;
+  char                color_planes;
+  unsigned short      bytes_per_line;
+  unsigned short      palette_type;
 
-    char                reserved;
-    char                color_planes;
-    unsigned short      bytes_per_line;
-    unsigned short      palette_type;
-
-    char                filler[58];
-    unsigned char       data;           // unbounded
+  char                filler[58];
+  unsigned char       data;           // unbounded
 };
 
 
@@ -389,55 +387,51 @@ bool WritePCXfile(const char*   filename,
                   int           height,
                   byte*         palette)
 {
-    int         i;
-    int         length;
-    pcx_t*      pcx;
-    byte*       pack;
+  pcx_t *pcx = (pcx_t *)Z_Malloc(width*height*2+1000, PU_STATIC, NULL);
 
-    pcx = (pcx_t *)Z_Malloc(width*height*2+1000, PU_STATIC, NULL);
-
-    pcx->manufacturer = 0x0a;           // PCX id
-    pcx->version = 5;                   // 256 color
-    pcx->encoding = 1;                  // uncompressed
-    pcx->bits_per_pixel = 8;            // 256 color
-    pcx->xmin = 0;
-    pcx->ymin = 0;
-    pcx->xmax = SHORT(width-1);
-    pcx->ymax = SHORT(height-1);
-    pcx->hres = SHORT(width);
-    pcx->vres = SHORT(height);
-    memset(pcx->palette,0,sizeof(pcx->palette));
-    pcx->color_planes = 1;              // chunky image
-    pcx->bytes_per_line = SHORT(width);
-    pcx->palette_type = SHORT(1);       // not a grey scale
-    memset(pcx->filler,0,sizeof(pcx->filler));
+  pcx->manufacturer = 0x0a;           // PCX id
+  pcx->version = 5;                   // 256 color
+  pcx->encoding = 1;                  // uncompressed
+  pcx->bits_per_pixel = 8;            // 256 color
+  pcx->xmin = 0;
+  pcx->ymin = 0;
+  pcx->xmax = SHORT(width-1);
+  pcx->ymax = SHORT(height-1);
+  pcx->hres = SHORT(width);
+  pcx->vres = SHORT(height);
+  memset(pcx->palette, 0, sizeof(pcx->palette));
+  pcx->color_planes = 1;              // chunky image
+  pcx->bytes_per_line = SHORT(width);
+  pcx->palette_type = SHORT(1);       // not a grey scale
+  memset(pcx->filler, 0, sizeof(pcx->filler));
 
 
-    // pack the image
-    pack = &pcx->data;
+  // pack the image
+  byte *pack = &pcx->data;
 
-    for (i=0 ; i<width*height ; i++)
+  int i;
+  for (i=0; i < width*height; i++)
     {
-        if ( (*data & 0xc0) != 0xc0)
-            *pack++ = *data++;
-        else
+      if ((*data & 0xc0) != 0xc0)
+           *pack++ = *data++;
+      else
         {
-            *pack++ = 0xc1;
-            *pack++ = *data++;
+	  *pack++ = 0xc1;
+	  *pack++ = *data++;
         }
     }
 
-    // write the palette
-    *pack++ = 0x0c;     // palette ID byte
-    for (i=0 ; i<768 ; i++)
-        *pack++ = *palette++;
+  // write the palette
+  *pack++ = 0x0c;     // palette ID byte
+  for (i=0; i < 768; i++)
+    *pack++ = *palette++;
 
-    // write output file
-    length = pack - (byte *)pcx;
-    i = FIL_WriteFile(filename, pcx, length);
+  // write output file
+  int length = pack - (byte *)pcx;
+  i = FIL_WriteFile(filename, pcx, length);
 
-    Z_Free(pcx);
-    return i;
+  Z_Free(pcx);
+  return i;
 }
 
 
@@ -446,46 +440,42 @@ bool WritePCXfile(const char*   filename,
 //
 void M_ScreenShot()
 {
-  int         i;
-  byte*       linear;
-  char        lbmname[MAX_CONFIGNAME];
-  bool     ret = false;
+  char lbmname[MAX_CONFIGNAME];
+  bool ret = false;
 
 #ifdef HWRENDER
   if (rendermode!=render_soft)
-  {
-    ret = HWR.Screenshot(lbmname);
-  }
+    {
+      ret = HWR.Screenshot(lbmname);
+    }
   else
 #endif
     {
-      // munge planar buffer to linear
-      linear = vid.screens[2];
-      I_ReadScreen(linear);
+      // this should be a LFB
+      byte *linear = vid.screens[0];
 
       // find a file name to save it to
-      strcpy(lbmname,"DOOM000.pcx");
+      strcpy(lbmname, "DOOM000.pcx");
 
-      for (i=0 ; i<=999 ; i++)
+      for (int i=0; i <= 999; i++)
         {
           lbmname[4] = i/100 + '0';
           lbmname[5] = i/10  + '0';
           lbmname[6] = i%10  + '0';
-          if (access(lbmname,0) == -1)
-            break;      // file doesn't exist
-        }
-      if (i<1000)
-        {
-          // save the pcx file
-          ret = WritePCXfile(lbmname, linear, vid.width, vid.height,
-                             (byte *)fc.CacheLumpName("PLAYPAL",PU_CACHE));
-        }
+          if (access(lbmname, F_OK) == -1)
+	    {
+	      // file doesn't exist, save the pcx
+	      ret = WritePCXfile(lbmname, linear, vid.width, vid.height,
+				 (byte *)fc.CacheLumpName("PLAYPAL", PU_CACHE));
+	      break;
+	    }
+	}
     }
 
-  if( ret )
-    CONS_Printf("screen shot %s saved\n", lbmname);
+  if (ret)
+    CONS_Printf("Screen shot %s saved.\n", lbmname);
   else
-    CONS_Printf("Couldn't create screen shot\n");
+    CONS_Printf("Couldn't create a screen shot.\n");
 }
 
 

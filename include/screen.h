@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2005/05/31 18:04:21  smite-meister
+// screenslink crash fixed
+//
 // Revision 1.8  2004/08/15 18:08:29  smite-meister
 // palette-to-palette colormaps etc.
 //
@@ -48,7 +51,7 @@
 #include "doomtype.h"
 
 
-#define NUMSCREENS 4
+#define NUMSCREENS 2
 
 // Screen 0 is the screen updated by I_Update screen.
 // Screen 1 is an extra buffer.
