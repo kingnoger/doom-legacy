@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2005/05/31 09:10:31  smite-meister
+// fixed fullscreen modes
+//
 // Revision 1.21  2005/05/30 12:01:30  segabor
 // Mac: set ver. to 1.99.0 a2
 //
@@ -437,7 +440,7 @@ bool I_StartupGraphics()
   //CONS_Printf("Bpp = %d, bpp = %d\n", vidInfo->vfmt->BytesPerPixel, vidInfo->vfmt->BitsPerPixel);
 
   // list all available video modes corresponding to the "best" pixelformat
-  modeList = (NULL, SDL_FULLSCREEN | surfaceFlags);
+  modeList = SDL_ListModes(NULL, SDL_FULLSCREEN | surfaceFlags);
 
   numVidModes = 0;
   if (modeList == NULL)
