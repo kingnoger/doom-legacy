@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2005/06/05 19:32:27  smite-meister
+// unsigned map structures
+//
 // Revision 1.13  2005/04/19 18:28:40  smite-meister
 // new RPCs
 //
@@ -734,7 +737,7 @@ void Rend::R_RenderThickSideRange(drawseg_t *ds, int x1, int x2, ffloor_t *ffloo
 
     void (*colfunc_2s) (column_t*);
 
-    Texture *tex = tc[sides[ffloor->master->sidenum[0]].midtexture];
+    Texture *tex = tc[ffloor->master->sideptr[0]->midtexture];
 
     // Calculate light table.
     // Use different light tables
@@ -835,7 +838,7 @@ void Rend::R_RenderThickSideRange(drawseg_t *ds, int x1, int x2, ffloor_t *ffloo
 
     dc_texturemid = *ffloor->topheight - viewz;
 
-    offsetvalue = sides[ffloor->master->sidenum[0]].rowoffset;
+    offsetvalue = ffloor->master->sideptr[0]->rowoffset;
     if(curline->linedef->flags & ML_DONTPEGBOTTOM)
       offsetvalue -= *ffloor->topheight - *ffloor->bottomheight;
 

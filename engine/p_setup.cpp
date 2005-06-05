@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,20 +18,14 @@
 //
 //
 // $Log$
-// Revision 1.55  2005/04/22 19:44:49  smite-meister
-// bugs fixed
+// Revision 1.56  2005/06/05 19:32:25  smite-meister
+// unsigned map structures
 //
 // Revision 1.54  2005/01/04 18:32:41  smite-meister
 // better colormap handling
 //
-// Revision 1.53  2004/12/31 16:19:38  smite-meister
-// alpha fixes
-//
 // Revision 1.52  2004/11/28 18:02:21  smite-meister
 // RPCs finally work!
-//
-// Revision 1.51  2004/11/19 16:51:04  smite-meister
-// cleanup
 //
 // Revision 1.50  2004/11/18 20:30:11  smite-meister
 // tnt, plutonia
@@ -53,9 +47,6 @@
 //
 // Revision 1.42  2004/08/15 18:08:28  smite-meister
 // palette-to-palette colormaps etc.
-//
-// Revision 1.41  2004/08/12 18:30:24  smite-meister
-// cleaned startup
 //
 // Revision 1.40  2004/07/25 20:19:21  hurdler
 // Remove old hardware renderer and add part of the new one
@@ -190,6 +181,7 @@
 #endif
 
 
+
 void Map::LoadVertexes(int lump)
 {
   // Determine number of lumps: total lump length / vertex record length.
@@ -225,12 +217,9 @@ void Map::LoadVertexes(int lump)
 //
 float P_SegLength(seg_t *seg)
 {
-  //const double crapmul = 1.0 / 65536.0;
-  double dx, dy;
-
   // make a vector (start at origin)
-  dx = (seg->v2->x - seg->v1->x)*fixedtofloat;
-  dy = (seg->v2->y - seg->v1->y)*fixedtofloat;
+  double dx = (seg->v2->x - seg->v1->x)*fixedtofloat;
+  double dy = (seg->v2->y - seg->v1->y)*fixedtofloat;
 
   return sqrt(dx*dx+dy*dy)*FRACUNIT;
 }
@@ -243,40 +232,40 @@ void Map::LoadSegs(int lump)
   memset(segs, 0, numsegs*sizeof(seg_t));
   byte *data = (byte *)fc.CacheLumpNum(lump, PU_STATIC);
 
-  mapseg_t *ml = (mapseg_t *)data;
-  seg_t    *li = segs;
-  for (int i = 0; i < numsegs; i++, li++, ml++)
+  mapseg_t *ms = (mapseg_t *)data;
+  seg_t    *seg = segs;
+  for (int i = 0; i < numsegs; i++, seg++, ms++)
     {
-      li->v1 = &vertexes[SHORT(ml->v1)];
-      li->v2 = &vertexes[SHORT(ml->v2)];
+      seg->v1 = &vertexes[SHORT(ms->v1)];
+      seg->v2 = &vertexes[SHORT(ms->v2)];
 
 #if 0 //FIXME: Hurdler: put it back when new renderer is OK
 #ifdef HWRENDER
       // used for the hardware render
       if (rendermode != render_soft)
         {
-          li->length = P_SegLength (li);
+          seg->length = P_SegLength(seg);
           //Hurdler: 04/12/2000: for now, only used in hardware mode
-          li->lightmaps = NULL; // list of static lightmap for this seg
+          seg->lightmaps = NULL; // list of static lightmap for this seg
         }
 #endif
 #endif
 
-      li->angle = (SHORT(ml->angle))<<16;
-      li->offset = (SHORT(ml->offset))<<16;
-      int linedef = SHORT(ml->linedef);
-      line_t *ldef = &lines[linedef];
-      li->linedef = ldef;
-      li->side = SHORT(ml->side);
-      li->sidedef = &sides[ldef->sidenum[li->side]];
-      li->frontsector = sides[ldef->sidenum[li->side]].sector;
-      if (ldef-> flags & ML_TWOSIDED)
-        li->backsector = sides[ldef->sidenum[li->side^1]].sector;
-      else
-        li->backsector = 0;
+      seg->angle = (SHORT(ms->angle))<<16;
+      seg->offset = (SHORT(ms->offset))<<16;
+      line_t *ldef = &lines[SHORT(ms->linedef)];
+      seg->linedef = ldef;
+      seg->side = SHORT(ms->side);
+      seg->sidedef = ldef->sideptr[seg->side];
 
-      li->numlights = 0;
-      li->rlights = NULL;
+      seg->frontsector = ldef->sideptr[seg->side]->sector;
+      if (ldef->flags & ML_TWOSIDED)
+        seg->backsector = ldef->sideptr[seg->side^1]->sector;
+      else
+        seg->backsector = NULL;
+
+      seg->numlights = 0;
+      seg->rlights = NULL;
     }
 
   Z_Free(data);
@@ -286,21 +275,21 @@ void Map::LoadSegs(int lump)
 
 void Map::LoadSubsectors(int lump)
 {
-  numsubsectors = fc.LumpLength (lump) / sizeof(mapsubsector_t);
+  numsubsectors = fc.LumpLength(lump) / sizeof(mapsubsector_t);
   subsectors = (subsector_t *)Z_Malloc(numsubsectors*sizeof(subsector_t), PU_LEVEL, 0);
   byte *data = (byte *)fc.CacheLumpNum(lump, PU_STATIC);
 
-  mapsubsector_t *ms = (mapsubsector_t *)data;
-  memset (subsectors,0, numsubsectors*sizeof(subsector_t));
+  mapsubsector_t *mss = (mapsubsector_t *)data;
+  memset(subsectors, 0, numsubsectors*sizeof(subsector_t));
   subsector_t *ss = subsectors;
 
-  for (int i=0; i<numsubsectors; i++, ss++, ms++)
+  for (int i=0; i<numsubsectors; i++, ss++, mss++)
     {
-      ss->numlines = SHORT(ms->numsegs);
-      ss->firstline = SHORT(ms->firstseg);
+      ss->numlines = SHORT(mss->numsegs);
+      ss->firstline = SHORT(mss->firstseg);
     }
 
-  Z_Free (data);
+  Z_Free(data);
 }
 
 
@@ -319,12 +308,11 @@ floortype_t P_GetFloorType(const char *pic);
 void Map::LoadSectors2(int lump)
 {
   extern float normal_friction;
-  int i;
   byte *data = (byte *)fc.CacheLumpNum(lump, PU_STATIC);
 
   mapsector_t *ms = (mapsector_t *)data;
   sector_t *ss = sectors;
-  for (i=0 ; i<numsectors ; i++, ss++, ms++)
+  for (int i=0; i < numsectors; i++, ss++, ms++)
     {
       ss->floorheight = SHORT(ms->floorheight)<<FRACBITS;
       ss->ceilingheight = SHORT(ms->ceilingheight)<<FRACBITS;
@@ -337,10 +325,6 @@ void Map::LoadSectors2(int lump)
       ss->lightlevel = SHORT(ms->lightlevel);
 
       ss->tag = SHORT(ms->tag);
-
-      //added:31-03-98: quick hack to test water with DCK
-      /*        if (ss->tag < 0)
-                CONS_Printf("Level uses dck-water-hack\n");*/
 
       ss->thinglist = NULL;
       ss->touching_thinglist = NULL; //SoM: 4/7/2000
@@ -378,25 +362,19 @@ void Map::LoadSectors2(int lump)
       ss->special = SHORT(ms->special);
     }
 
-  Z_Free (data);
+  Z_Free(data);
 
   // whoa! there is usually no more than 25 different flats used per level!!
-  //CONS_Printf ("%d flats found\n", numlevelflats);
-
-  // set the sky flat num
-  if (game.mode == gm_hexen)
-    skyflatnum = tc.Get("F_SKY");
-  else
-    skyflatnum = tc.Get("F_SKY1");
+  //CONS_Printf("%d flats found\n", numlevelflats);
 }
 
 
 
 void Map::LoadNodes(int lump)
 {
-  numnodes = fc.LumpLength (lump) / sizeof(mapnode_t);
+  numnodes = fc.LumpLength(lump) / sizeof(mapnode_t);
   nodes = (node_t *)Z_Malloc(numnodes*sizeof(node_t),PU_LEVEL,0);
-  byte *data = (byte*)fc.CacheLumpNum (lump,PU_STATIC);
+  byte *data = (byte*)fc.CacheLumpNum(lump,PU_STATIC);
 
   mapnode_t *mn = (mapnode_t *)data;
   node_t *no = nodes;
@@ -698,6 +676,7 @@ void Map::LoadLineDefs(int lump)
 
   for (i=0 ; i<numlines ; i++, ld++)
     {
+      int temp[2];
       if (hexen_format)
         {
           ld->flags = SHORT(hld->flags);
@@ -710,13 +689,15 @@ void Map::LoadLineDefs(int lump)
           v1 = ld->v1 = &vertexes[SHORT(hld->v1)];
           v2 = ld->v2 = &vertexes[SHORT(hld->v2)];
 
+	  /*
           if (SHORT(hld->v1) > numvertexes)
             CONS_Printf("v1 > numverts: %d\n", SHORT(hld->v1));
           if (SHORT(hld->v2) > numvertexes)
             CONS_Printf("v2 > numverts: %d\n", SHORT(hld->v2));
+	  */
 
-          ld->sidenum[0] = SHORT(hld->sidenum[0]);
-          ld->sidenum[1] = SHORT(hld->sidenum[1]);
+	  temp[0] = SHORT(hld->sidenum[0]);
+	  temp[1] = SHORT(hld->sidenum[1]);
           hld++;
         }
       else
@@ -729,10 +710,14 @@ void Map::LoadLineDefs(int lump)
           v1 = ld->v1 = &vertexes[SHORT(mld->v1)];
           v2 = ld->v2 = &vertexes[SHORT(mld->v2)];
 
-          ld->sidenum[0] = SHORT(mld->sidenum[0]);
-          ld->sidenum[1] = SHORT(mld->sidenum[1]);
+	  temp[0] = SHORT(mld->sidenum[0]);
+	  temp[1] = SHORT(mld->sidenum[1]);
           mld++;
         }
+
+      // index -1 means no sidedef
+      ld->sideptr[0] = (temp[0] == NULL_INDEX) ? NULL : &sides[temp[0]];
+      ld->sideptr[1] = (temp[1] == NULL_INDEX) ? NULL : &sides[temp[1]];
 
       ld->dx = v2->x - v1->x;
       ld->dy = v2->y - v1->y;
@@ -743,7 +728,7 @@ void Map::LoadLineDefs(int lump)
         ld->slopetype = ST_HORIZONTAL;
       else
         {
-          if (FixedDiv (ld->dy , ld->dx) > 0)
+          if (FixedDiv(ld->dy , ld->dx) > 0)
             ld->slopetype = ST_POSITIVE;
           else
             ld->slopetype = ST_NEGATIVE;
@@ -775,49 +760,48 @@ void Map::LoadLineDefs(int lump)
         }
 
       // set line references to the sidedefs
-      if (ld->sidenum[0] != -1)
-        sides[ld->sidenum[0]].line = ld;
-      if (ld->sidenum[1] != -1)
-	sides[ld->sidenum[1]].line = ld;
+      if (ld->sideptr[0])
+        ld->sideptr[0]->line = ld;
+      if (ld->sideptr[1])
+        ld->sideptr[1]->line = ld;
 
       ld->transmap = -1; // no transmap by default
     }
 
-  Z_Free (data);
+  Z_Free(data);
 }
 
 
 void Map::LoadLineDefs2()
 {
-  int i;
   line_t* ld = lines;
-  for(i = 0; i < numlines; i++, ld++)
+  for (int i=0; i < numlines; i++, ld++)
     {
-      if (ld->sidenum[0] != -1)
-        ld->frontsector = sides[ld->sidenum[0]].sector;
+      if (ld->sideptr[0])
+        ld->frontsector = ld->sideptr[0]->sector;
       else
-        ld->frontsector = 0;
+        ld->frontsector = NULL;
 
-      if (ld->sidenum[1] != -1)
-        ld->backsector = sides[ld->sidenum[1]].sector;
+      if (ld->sideptr[1])
+        ld->backsector = ld->sideptr[1]->sector;
       else
-        ld->backsector = 0;
+        ld->backsector = NULL;
     }
 }
 
 
 /*
-void P_LoadSideDefs (int lump)
+void P_LoadSideDefs(int lump)
   {
   byte*               data;
   int                 i;
   mapsidedef_t*       msd;
   side_t*             sd;
 
-  numsides = fc.LumpLength (lump) / sizeof(mapsidedef_t);
-  sides = Z_Malloc (numsides*sizeof(side_t),PU_LEVEL,0);
+  numsides = fc.LumpLength(lump) / sizeof(mapsidedef_t);
+  sides = Z_Malloc(numsides*sizeof(side_t),PU_LEVEL,0);
   memset (sides, 0, numsides*sizeof(side_t));
-  data = fc.CacheLumpNum (lump,PU_STATIC);
+  data = fc.CacheLumpNum(lump,PU_STATIC);
 
   msd = (mapsidedef_t *)data;
   sd = sides;
@@ -832,7 +816,7 @@ void P_LoadSideDefs (int lump)
   sd->sector = &sectors[SHORT(msd->sector)];
   }
 
-  Z_Free (data);
+  Z_Free(data);
   }
 */
 
@@ -840,7 +824,7 @@ void P_LoadSideDefs (int lump)
 void Map::LoadSideDefs(int lump)
 {
   numsides = fc.LumpLength(lump) / sizeof(mapsidedef_t);
-  sides = (side_t *)Z_Malloc(numsides*sizeof(side_t),PU_LEVEL,0);
+  sides = (side_t *)Z_Malloc(numsides*sizeof(side_t), PU_LEVEL, 0);
   memset(sides, 0, numsides*sizeof(side_t));
 }
 
@@ -851,7 +835,7 @@ void Map::LoadSideDefs2(int lump)
 
   for (int i=0; i<numsides; i++)
     {
-      mapsidedef_t *msd = (mapsidedef_t *) data + i;
+      mapsidedef_t *msd = (mapsidedef_t *)data + i;
       side_t *sd = sides + i;
       sector_t *sec;
 
@@ -943,28 +927,30 @@ void Map::LoadSideDefs2(int lump)
 
 void Map::LoadBlockMap(int lump)
 {
-  int         i;
-  int         count;
+  blockmaplump = (Uint16 *)fc.CacheLumpNum(lump, PU_LEVEL);
+  blockmap = blockmaplump+4; // the offsets array
 
-  blockmaplump = (short int *)fc.CacheLumpNum(lump, PU_LEVEL);
-  blockmap = blockmaplump+4;
-  count = fc.LumpLength(lump)/2;
-
-  for (i=0 ; i<count ; i++)
+  // Endianness: everything in blockmap is expressed in 2-byte shorts
+  int count = fc.LumpLength(lump)/2;
+  for (int i=0; i < count; i++)
     blockmaplump[i] = SHORT(blockmaplump[i]);
 
-  bmaporgx = blockmaplump[0]<<FRACBITS;
-  bmaporgy = blockmaplump[1]<<FRACBITS;
-  bmapwidth = blockmaplump[2];
-  bmapheight = blockmaplump[3];
+  // read the header
+  blockmapheader_t *bm = (blockmapheader_t *)blockmaplump;
+  bmaporgx = bm->origin_x << FRACBITS;
+  bmaporgy = bm->origin_y << FRACBITS;
+  bmapwidth = bm->width;
+  bmapheight = bm->height;
 
-  // clear out mobj chains
-  count = sizeof(*blocklinks)* bmapwidth*bmapheight;
+  // init the mobj chains
+  count = bmapwidth*bmapheight*sizeof(Actor *);
   blocklinks = (Actor **)Z_Malloc(count, PU_LEVEL, 0);
   memset(blocklinks, 0, count);
 
-  PolyBlockMap = (polyblock_t **)Z_Malloc(bmapwidth*bmapheight*sizeof(polyblock_t *), PU_LEVEL, 0);
-  memset(PolyBlockMap, 0, bmapwidth*bmapheight*sizeof(polyblock_t *));
+  // init the polyblockmap
+  count = bmapwidth*bmapheight*sizeof(polyblock_t *);
+  PolyBlockMap = (polyblock_t **)Z_Malloc(count, PU_LEVEL, 0);
+  memset(PolyBlockMap, 0, count);
 }
 
 
@@ -1109,6 +1095,12 @@ void Map::SetupSky()
 
   // scale up the old skies, if needed
   R_SetupSkyDraw();
+
+  // set the sky flat num
+  if (hexen_format)
+    skyflatnum = tc.Get("F_SKY");
+  else
+    skyflatnum = tc.Get("F_SKY1");
 }
 
 
@@ -1159,11 +1151,11 @@ bool Map::Setup(tic_t start, bool spawnthings)
   SetupSky();
 
   // note: most of this ordering is important
-  LoadBlockMap (lumpnum+LUMP_BLOCKMAP);
-  LoadVertexes (lumpnum+LUMP_VERTEXES);
-  LoadSectors1 (lumpnum+LUMP_SECTORS);
-  LoadSideDefs (lumpnum+LUMP_SIDEDEFS);
-  LoadLineDefs (lumpnum+LUMP_LINEDEFS);
+  LoadBlockMap(lumpnum+LUMP_BLOCKMAP);
+  LoadVertexes(lumpnum+LUMP_VERTEXES);
+  LoadSectors1(lumpnum+LUMP_SECTORS);
+  LoadSideDefs(lumpnum+LUMP_SIDEDEFS);
+  LoadLineDefs(lumpnum+LUMP_LINEDEFS);
 
   if (!hexen_format)
     ConvertLineDefs(); // Doom => Hexen conversion
@@ -1173,7 +1165,7 @@ bool Map::Setup(tic_t start, bool spawnthings)
 
   LoadSubsectors(lumpnum+LUMP_SSECTORS);
   LoadNodes(lumpnum+LUMP_NODES);
-  LoadSegs (lumpnum+LUMP_SEGS);
+  LoadSegs(lumpnum+LUMP_SEGS);
   LoadSectors2(lumpnum+LUMP_SECTORS);
   rejectmatrix = (byte *)fc.CacheLumpNum(lumpnum+LUMP_REJECT,PU_LEVEL);
   GroupLines();

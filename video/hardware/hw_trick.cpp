@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2005/06/05 19:32:28  smite-meister
+// unsigned map structures
+//
 // Revision 1.7  2004/11/09 20:38:54  smite-meister
 // added packing to I/O structs
 //
@@ -599,8 +602,8 @@ bool Rend::areToptexturesMissing(sector_t *thisSector)
             continue;
         }
 
-        sdr = &sides[thisElem->line->sidenum[0]];
-        sdl = &sides[thisElem->line->sidenum[1]];
+        sdr = thisElem->line->sideptr[0];
+        sdl = thisElem->line->sideptr[1];
 
         if(backSector->ceilingheight < frontSector->ceilingheight)
         {
@@ -655,8 +658,8 @@ bool Rend::areBottomtexturesMissing(sector_t *thisSector)
         {
             continue;
         }
-        sdr = &sides[thisElem->line->sidenum[0]];
-        sdl = &sides[thisElem->line->sidenum[1]];
+        sdr = thisElem->line->sideptr[0];
+        sdl = thisElem->line->sideptr[1];
 
         if(backSector->floorheight > frontSector->floorheight)
         {
@@ -972,11 +975,8 @@ void Rend::HWR_CorrectSWTricks()
     for(i=0; i<numlines; i++)
     {
         ld = &lines[i];
-        sdr = &sides[ld->sidenum[0]];
-        if(ld->sidenum[1] >= 0)
-        {
-            sdl = &sides[ld->sidenum[1]];
-        }
+        sdr = ld->sideptr[0];
+	sdl = ld->sideptr[1];
 
         secr = ld->frontsector;
         secl = ld->backsector;

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.32  2005/06/05 19:32:24  smite-meister
+// unsigned map structures
+//
 // Revision 1.31  2004/11/18 20:30:10  smite-meister
 // tnt, plutonia
 //
@@ -1436,9 +1439,9 @@ static bool PTR_ShootTraverse(intercept_t *in)
       // BP:13-3-99: fix the side usage
       hitplane = false;
       sectorside=P_PointOnLineSide(shootthing->x,shootthing->y,li);
-      if (li->sidenum[sectorside] != -1) // can happen in nocliping mode
+      if (li->sideptr[sectorside] != NULL) // can happen in nocliping mode
         {
-	  sector = m->sides[li->sidenum[sectorside]].sector;
+	  sector = li->sideptr[sectorside]->sector;
 	  floorz = sector->floorheight;
 	  ceilingz = sector->ceilingheight;
 	  if (sector->ffloors)

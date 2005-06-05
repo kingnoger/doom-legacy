@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2005/06/05 19:32:25  smite-meister
+// unsigned map structures
+//
 // Revision 1.16  2005/03/04 16:23:07  smite-meister
 // mp3, sector_t
 //
@@ -286,10 +289,10 @@ int Map::EV_DoPlat(int tag, line_t *line, int type, fixed_t speed, int wait, fix
   if (!tag)
     {
       // tag == 0, plat is on the other side of the linedef
-      if (line->sidenum[1] == -1)
+      if (!line->sideptr[1])
 	return 0;
 
-      sec = sides[line->sidenum[1]].sector;
+      sec = line->sideptr[1]->sector;
 
       if (sec->floordata)
 	return 0;
@@ -297,7 +300,7 @@ int Map::EV_DoPlat(int tag, line_t *line, int type, fixed_t speed, int wait, fix
       plat = new plat_t(this, type, sec, speed, wait, height);
 
       if (type & plat_t::SetTexture)
-	sec->floorpic = sides[line->sidenum[0]].sector->floorpic;
+	sec->floorpic = line->sideptr[0]->sector->floorpic;
       if (type & plat_t::ZeroSpecial)
 	sec->special = 0;
 
@@ -320,7 +323,7 @@ int Map::EV_DoPlat(int tag, line_t *line, int type, fixed_t speed, int wait, fix
       plat_t *plat = new plat_t(this, type, sec, speed, wait, height);
 
       if (type & plat_t::SetTexture)
-	sec->floorpic = sides[line->sidenum[0]].sector->floorpic;
+	sec->floorpic = line->sideptr[0]->sector->floorpic;
       if (type & plat_t::ZeroSpecial)
 	sec->special = 0;
 

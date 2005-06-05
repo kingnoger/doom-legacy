@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.43  2005/06/05 19:32:25  smite-meister
+// unsigned map structures
+//
 // Revision 1.42  2005/04/22 19:44:49  smite-meister
 // bugs fixed
 //
@@ -1130,31 +1133,35 @@ int Map::Serialize(LArchive &a)
 	  mld++;
 	}
 
-      if (li->sidenum[0] != -1)
+      if (li->sideptr[0])
         {
-	  si = &sides[li->sidenum[0]];
-	  if (si->textureoffset != SHORT(msd[li->sidenum[0]].textureoffset)<<FRACBITS)
+	  si = li->sideptr[0];
+	  temp = si - sides; // sidedef number
+
+	  if (si->textureoffset != SHORT(msd[temp].textureoffset)<<FRACBITS)
 	    diff |= LD_S1TEXOFF;
 
 	  // do texture diffing by comparing names to be sure
-	  if (si->toptexture && strncmp(tc[si->toptexture]->GetName(), msd[li->sidenum[0]].toptexture, 8))
+	  if (si->toptexture && strncmp(tc[si->toptexture]->GetName(), msd[temp].toptexture, 8))
 	    diff |= LD_S1TOPTEX;
-	  if (si->bottomtexture && strncmp(tc[si->bottomtexture]->GetName(), msd[li->sidenum[0]].bottomtexture, 8))
+	  if (si->bottomtexture && strncmp(tc[si->bottomtexture]->GetName(), msd[temp].bottomtexture, 8))
 	    diff |= LD_S1BOTTEX;
-	  if (si->midtexture && strncmp(tc[si->midtexture]->GetName(), msd[li->sidenum[0]].midtexture, 8))
+	  if (si->midtexture && strncmp(tc[si->midtexture]->GetName(), msd[temp].midtexture, 8))
 	    diff |= LD_S1MIDTEX;
         }
-      if (li->sidenum[1] != -1)
+      if (li->sideptr[1])
         {
-	  si = &sides[li->sidenum[1]];
-	  if (si->textureoffset != SHORT(msd[li->sidenum[1]].textureoffset)<<FRACBITS)
+	  si = li->sideptr[1];
+	  temp = si - sides; // sidedef number
+
+	  if (si->textureoffset != SHORT(msd[temp].textureoffset)<<FRACBITS)
 	    diff2 |= LD_S2TEXOFF;
 
-	  if (si->toptexture && strncmp(tc[si->toptexture]->GetName(), msd[li->sidenum[1]].toptexture, 8))
+	  if (si->toptexture && strncmp(tc[si->toptexture]->GetName(), msd[temp].toptexture, 8))
 	    diff2 |= LD_S2TOPTEX;
-	  if (si->bottomtexture && strncmp(tc[si->bottomtexture]->GetName(), msd[li->sidenum[1]].bottomtexture, 8))
+	  if (si->bottomtexture && strncmp(tc[si->bottomtexture]->GetName(), msd[temp].bottomtexture, 8))
 	    diff2 |= LD_S2BOTTEX;
-	  if (si->midtexture && strncmp(tc[si->midtexture]->GetName(), msd[li->sidenum[1]].midtexture, 8))
+	  if (si->midtexture && strncmp(tc[si->midtexture]->GetName(), msd[temp].midtexture, 8))
 	    diff2 |= LD_S2MIDTEX;
 
 	  if (diff2)
@@ -1174,13 +1181,13 @@ int Map::Serialize(LArchive &a)
 	    for (j=0; j<5; j++)
 	      a << li->args[j];
 
-	  si = &sides[li->sidenum[0]];
+	  si = li->sideptr[0];
 	  if (diff & LD_S1TEXOFF) a << si->textureoffset;
 	  if (diff & LD_S1TOPTEX) a << si->toptexture;
 	  if (diff & LD_S1BOTTEX) a << si->bottomtexture;
 	  if (diff & LD_S1MIDTEX) a << si->midtexture;
 
-	  si = &sides[li->sidenum[1]];
+	  si = li->sideptr[1];
 	  if (diff2 & LD_S2TEXOFF) a << si->textureoffset;
 	  if (diff2 & LD_S2TOPTEX) a << si->toptexture;
 	  if (diff2 & LD_S2BOTTEX) a << si->bottomtexture;
@@ -1437,13 +1444,13 @@ int Map::Unserialize(LArchive &a)
 	for (i=0; i<5; i++)
 	  a << li->args[i];
 
-      si = &sides[li->sidenum[0]];
+      si = li->sideptr[0];
       if (diff & LD_S1TEXOFF) a << si->textureoffset;
       if (diff & LD_S1TOPTEX) a << si->toptexture;
       if (diff & LD_S1BOTTEX) a << si->bottomtexture;
       if (diff & LD_S1MIDTEX) a << si->midtexture;
 
-      si = &sides[li->sidenum[1]];
+      si = li->sideptr[1];
       if (diff2 & LD_S2TEXOFF) a << si->textureoffset;
       if (diff2 & LD_S2TOPTEX) a << si->toptexture;
       if (diff2 & LD_S2BOTTEX) a << si->bottomtexture;

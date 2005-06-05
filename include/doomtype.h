@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,14 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.6  2004/11/19 16:51:06  smite-meister
-// cleanup
+// Revision 1.7  2005/06/05 19:32:26  smite-meister
+// unsigned map structures
 //
 // Revision 1.5  2004/08/18 14:35:20  smite-meister
 // PNG support!
-//
-// Revision 1.4  2003/11/23 00:41:55  smite-meister
-// bugfixes
 //
 // Revision 1.3  2003/03/23 14:24:13  smite-meister
 // Polyobjects, MD3 models
@@ -79,18 +76,22 @@
 // Basic typedefs.
 // Throughout the code, we assume that int = 32 bits, short = 16 bits
 
+typedef signed char  Sint8;
+typedef signed short Sint16;
+typedef signed int   Sint32;
 #ifdef __WIN32__
-typedef __int64 INT64;
+typedef __int64 Sint64;
 #else
-typedef long long INT64;
+typedef signed long long Sint64;
 #endif
 
 typedef unsigned char  byte;
-typedef unsigned int   Uint32;
+typedef unsigned char  Uint8;
 typedef unsigned short Uint16;
+typedef unsigned int   Uint32;
 
-typedef unsigned int   tic_t;
-typedef unsigned int   angle_t;
+typedef Uint32 tic_t;
+typedef Uint32 angle_t;
 
 
 struct RGB_t
@@ -101,7 +102,7 @@ struct RGB_t
 
 union RGBA_t
 {
-  unsigned int rgba;
+  Uint32 rgba;
   struct
   {
     byte  red;

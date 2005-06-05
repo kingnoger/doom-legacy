@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2005/06/05 19:32:25  smite-meister
+// unsigned map structures
+//
 // Revision 1.15  2004/11/18 20:30:11  smite-meister
 // tnt, plutonia
 //
@@ -287,7 +290,7 @@ line_opening_t *P_LineOpening(line_t *linedef)
 {
   extern Actor *tmthing;
 
-  if (linedef->sidenum[1] == -1)
+  if (linedef->sideptr[1] == NULL)
     {
       // single sided line
       Opening.range = 0;
@@ -446,20 +449,7 @@ bool Map::BlockLinesIterator(int x, int y, line_iterator_t func)
 
   offset = blockmap[offset];
 
-  //Hurdler: FIXME: this a temporary "fix" for the bug with phobia...
-  //                ... but it's not correct!!!!! 
-  if (offset < 0)
-    {
-      static int first = 1;
-      if (first)
-	{
-	  CONS_Printf("Warning: this map has reached a limit of the doom engine.\n");
-	  first = 0;
-	}
-      return true;
-    }
-
-  for (short  *p = &blockmaplump[offset] ; *p != -1 ; p++)
+  for (Uint16 *p = &blockmaplump[offset+1]; *p != MAPBLOCK_END; p++) // skip the initial zero marker
     {
       line_t *ld = &lines[*p];
 

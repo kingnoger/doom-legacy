@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.29  2005/06/05 19:32:24  smite-meister
+// unsigned map structures
+//
 // Revision 1.28  2004/11/28 18:02:21  smite-meister
 // RPCs finally work!
 //
@@ -328,7 +331,7 @@ bool P_CheckSpecialDeath(DActor *m, int dtype)
 
 static Actor   *soundtarget;
 
-static void P_RecursiveSound(const Map *m, sector_t *sec, int soundblocks)
+static void P_RecursiveSound(sector_t *sec, int soundblocks)
 {
   // wake up all monsters in this sector
   if (sec->validcount == validcount && sec->soundtraversed <= soundblocks+1)
@@ -351,18 +354,18 @@ static void P_RecursiveSound(const Map *m, sector_t *sec, int soundblocks)
 
       sector_t *other;
 
-      if (m->sides[ check->sidenum[0] ].sector == sec)
-	other = m->sides[ check->sidenum[1] ].sector;
+      if (check->sideptr[0]->sector == sec)
+	other = check->sideptr[1]->sector;
       else
-	other = m->sides[ check->sidenum[0] ].sector;
+	other = check->sideptr[0]->sector;
 
       if (check->flags & ML_SOUNDBLOCK)
         {
 	  if (!soundblocks)
-	    P_RecursiveSound(m, other, 1);
+	    P_RecursiveSound(other, 1);
         }
       else
-	P_RecursiveSound(m, other, soundblocks);
+	P_RecursiveSound(other, soundblocks);
     }
 }
 
@@ -374,7 +377,7 @@ void P_NoiseAlert(Actor *target, Actor *emitter)
 {
   soundtarget = target;
   validcount++;
-  P_RecursiveSound(emitter->mp, emitter->subsector->sector, 0);
+  P_RecursiveSound(emitter->subsector->sector, 0);
 }
 
 

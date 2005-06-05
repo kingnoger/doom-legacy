@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2005/06/05 19:32:25  smite-meister
+// unsigned map structures
+//
 // Revision 1.20  2004/11/28 18:02:21  smite-meister
 // RPCs finally work!
 //
@@ -275,15 +278,15 @@ void button_t::Think()
       switch (where)
 	{
 	case top:
-	  mp->sides[line->sidenum[0]].toptexture = texture;
+	  line->sideptr[0]->toptexture = texture;
 	  break;
 
 	case middle:
-	  mp->sides[line->sidenum[0]].midtexture = texture;
+	  line->sideptr[0]->midtexture = texture;
 	  break;
 
 	case bottom:
-	  mp->sides[line->sidenum[0]].bottomtexture = texture;
+	  line->sideptr[0]->bottomtexture = texture;
 	  break;
 	default:
 	  break;
@@ -306,27 +309,27 @@ void Map::ChangeSwitchTexture(line_t *line, int useAgain)
   if (!useAgain)
     line->special = 0;
 
-  texTop = sides[line->sidenum[0]].toptexture;
-  texMid = sides[line->sidenum[0]].midtexture;
-  texBot = sides[line->sidenum[0]].bottomtexture;
+  texTop = line->sideptr[0]->toptexture;
+  texMid = line->sideptr[0]->midtexture;
+  texBot = line->sideptr[0]->bottomtexture;
 
   for (i = 0; i < n; i++)
     {
       if (switchlist[i].tex == texTop)
         {
-	  sides[line->sidenum[0]].toptexture = switchlist[i^1].tex; // clever...
+	  line->sideptr[0]->toptexture = switchlist[i^1].tex; // clever...
 	  loc = button_t::top;
 	  break;
         }
       else if (switchlist[i].tex == texMid)
 	{
-	  sides[line->sidenum[0]].midtexture = switchlist[i^1].tex;
+	  line->sideptr[0]->midtexture = switchlist[i^1].tex;
 	  loc = button_t::middle;
 	  break;
 	}
       else if (switchlist[i].tex == texBot)
 	{
-	  sides[line->sidenum[0]].bottomtexture = switchlist[i^1].tex;
+	  line->sideptr[0]->bottomtexture = switchlist[i^1].tex;
 	  loc = button_t::bottom;
 	  break;
 	}

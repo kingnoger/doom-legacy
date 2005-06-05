@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2004 by DooM Legacy Team.
+// Copyright (C) 2002-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.40  2005/06/05 19:32:26  smite-meister
+// unsigned map structures
+//
 // Revision 1.39  2004/11/18 20:30:14  smite-meister
 // tnt, plutonia
 //
@@ -31,23 +34,11 @@
 // Revision 1.35  2004/09/06 19:58:03  smite-meister
 // Doom linedefs done!
 //
-// Revision 1.31  2004/08/12 18:30:29  smite-meister
-// cleaned startup
-//
 // Revision 1.30  2004/04/25 16:26:51  smite-meister
 // Doxygen
 //
-// Revision 1.28  2004/01/10 16:02:59  smite-meister
-// Cleanup and Hexen gameplay -related bugfixes
-//
-// Revision 1.27  2003/12/31 18:32:50  smite-meister
-// Last commit of the year? Sound works.
-//
 // Revision 1.26  2003/12/23 18:06:06  smite-meister
 // Hexen stairbuilders. Moving geometry done!
-//
-// Revision 1.25  2003/12/18 11:57:31  smite-meister
-// fixes / new bugs revealed
 //
 // Revision 1.20  2003/11/12 11:07:26  smite-meister
 // Serialization done. Map progression.
@@ -60,9 +51,6 @@
 //
 // Revision 1.16  2003/05/30 13:34:48  smite-meister
 // Cleanup, HUD improved, serialization
-//
-// Revision 1.15  2003/05/11 21:23:52  smite-meister
-// Hexen fixes
 //
 // Revision 1.14  2003/05/05 00:24:50  smite-meister
 // Hexen linedef system. Pickups.
@@ -120,8 +108,9 @@ typedef bool (*line_iterator_t)(struct line_t *l);
 typedef bool (*thing_iterator_t)(class Actor *a);
 typedef bool (*thinker_iterator_t)(Thinker *t);
 
-/// \brief A single game map and all that's in it.
+/// \brief A single game map and all the stuff it contains.
 ///
+/// \nosubgrouping
 /// This class stores all gameplay-related information about one map,
 /// including geometry, BSP, blockmap, reject, mapthings, Thinker list,
 /// player list, ambient sounds, physics...
@@ -130,52 +119,54 @@ class Map
 {
   friend class GameInfo;
 public:
-  /// see g_mapinfo.h
-  class MapInfo *info;
+  /// \name Essentials
+  //@{
+  class MapInfo *info; ///< the controlling MapInfo struct for this map
 
-  string lumpname;   // map lump name
-  int    lumpnum;    // lumpnum of the separator beginning the map
+  string lumpname;   ///< map lumpname
+  int    lumpnum;    ///< lumpnum of the separator beginning the map
 
-  tic_t starttic, maptic;   // number of tics the map has played
-  int   kills, items, secrets;  // map totals
+  tic_t starttic, maptic;      ///< number of tics the map has played
+  int   kills, items, secrets; ///< map totals
 
-  bool hexen_format;
+  bool hexen_format; ///< is this map stored in the Hexen format?
+  //@}
 
-  //------------ Geometry ------------
-  int              numvertexes;
-  struct vertex_t* vertexes;
-  bbox_t           root_bbox;
+  /// \name Geometry
+  //@{
+  int                 numvertexes;
+  struct vertex_t    *vertexes;
+  bbox_t              root_bbox; ///< bounding box for all the vertices in the map
 
-  int              numsegs;
-  struct seg_t*    segs;
+  int                 numlines;
+  struct line_t      *lines;
 
-  int              numsectors;
-  struct sector_t *sectors;
+  int                 numsides;
+  struct side_t      *sides;
 
-  int              numsubsectors;
+  int                 numsectors;
+  struct sector_t    *sectors;
+  line_t            **linebuffer; ///< combining sectors and lines
+
+  int                 numsubsectors;
   struct subsector_t *subsectors;
 
-  int             numnodes;
-  struct node_t*  nodes;
+  int                 numnodes;
+  struct node_t      *nodes;
 
-  int             numlines;
-  struct line_t*  lines;
+  int                 numsegs;
+  struct seg_t       *segs;
 
-  int             numsides;
-  struct side_t*  sides;
+  int                 NumPolyobjs;
+  struct polyobj_t   *polyobjs;
+  //@}
 
-  int               NumPolyobjs;
-  struct polyobj_t* polyobjs;
-  struct polyblock_t **PolyBlockMap;
 
-  line_t **linebuffer; // combining sectors and lines
-
-  //------------ BLOCKMAP ------------
-  // Created from axis aligned bounding box of the map, a rectangular array of
-  // blocks of size ...
-  // Used to speed up collision detection by spatial subdivision in 2D.
-
-  // mapblocks are used to check movement against lines and things
+  /// \name Blockmap
+  /// Created from axis aligned bounding box of the map, a rectangular array of
+  /// blocks of size 128 map units square. See blockmapheader_t.
+  /// Used to speed up collision detection agains lines and things by a spatial subdivision in 2D.
+  //@{
 #define MAPBLOCKUNITS   128
 #define MAPBLOCKSIZE    (MAPBLOCKUNITS*FRACUNIT)
 #define MAPBLOCKSHIFT   (FRACBITS+7)
@@ -184,85 +175,86 @@ public:
   // MAXRADIUS is for precalculated sector block boxes
   // the spider demon is larger, but we do not have any moving sectors nearby
 #define MAXRADIUS       (32*FRACUNIT)
+#define MAPBLOCK_END    0xFFFF ///< terminator for a blocklist
 
-  // Blockmap size.
-  int    bmapwidth, bmapheight;  // size in mapblocks
-  short *blockmap;       // int for large maps?
-  short *blockmaplump;   // offsets in blockmap are from here
+  fixed_t bmaporgx, bmaporgy;    ///< origin (lower left corner) of block map in map coordinates
+  int     bmapwidth, bmapheight; ///< size of the blockmap in mapblocks
 
-  // origin of block map
-  fixed_t bmaporgx, bmaporgy;
+  Uint16 *blockmap;         ///< width*height array of offsets to the blocklists
+  Uint16 *blockmaplump;     ///< blocklists are situated at blockmaplump[offset]
+  class  Actor       **blocklinks;   ///< width*height array of thing chains
+  struct polyblock_t **PolyBlockMap; ///< width*height array of polyblock chains
+  //@}
 
-  // for thing chains
-  class Actor **blocklinks;
 
-  //------------ REJECT ------------
-  // For fast sight rejection.
-  // Speeds up enemy AI by skipping detailed
-  //  LineOf Sight calculation.
-  // Without special effect, this could be
-  //  used as a PVS lookup as well.
-  //
+  /// \name Reject
+  /// For fast sight rejection.
+  /// Speeds up enemy AI by skipping detailed LineOf Sight calculation.
+  /// Without the "Reject special effects" hacks in some PWADs, this could be used as a PVS lookup as well.
+  //@{
   byte *rejectmatrix;
+  //@}
 
-  //------------ Scripting ------------
 
-  // the mother of all FS scripts (in the map)
-  struct script_t *levelscript;
+  /// \name Scripting
+  //@{
+  // FS
+  struct script_t        *levelscript;    ///< the mother of all FS scripts in this map
+  struct runningscript_t *runningscripts; ///< linked list of currently active FS scripts
 
-  // currently active FS scripts
-  struct runningscript_t *runningscripts; // linked list
-
-  // ACS data
+  // ACS
 #define MAX_ACS_MAP_VARS 32
+  byte   *ActionCodeBase;    ///< the raw BEHAVIOR lump, base for offsets
+  int     ACScriptCount;     ///< number of different AC scripts in this map
+  struct acsInfo_t *ACSInfo; ///< properties of the scripts
+  int     ACStringCount;     ///< number of ACS strings in this map
+  char  **ACStrings;         ///< array of the ACS strings
+  int     ACMapVars[MAX_ACS_MAP_VARS]; ///< ACS map variables
+  //@}
 
-  struct acsInfo_t *ACSInfo;
-  int     ACScriptCount;
-  byte   *ActionCodeBase;
-  int     ACStringCount;
-  char  **ACStrings;
-  int     ACMapVars[MAX_ACS_MAP_VARS];
 
-  //------------ Mapthings and Thinkers ------------
-
+  /// \name Mapthings and Thinkers
+  //@{
   int                nummapthings;
   struct mapthing_t *mapthings;
 
-  // Thinkers in the map
-  // Both the head and tail of the thinker list.
-  Thinker thinkercap;
+  Thinker thinkercap; ///< Linked list of Thinkers in the map. The head and tail of the thinker list.
 
-  bool force_pointercheck;
-  vector<Thinker *> DeletionList; // Thinkers to be deleted are kept here
+  bool        force_pointercheck; ///< force a Thinker pointer cleanup
+  vector<Thinker *> DeletionList; ///< Thinkers to be deleted are stored here
 
-  deque<mapthing_t *> itemrespawnqueue;
-  deque<tic_t>        itemrespawntime; // this could be combined to the previous, but...
+  deque<mapthing_t *> itemrespawnqueue; ///< for respawning items
+  deque<tic_t>        itemrespawntime;  ///< this could be combined to the previous one, but...
 
   static const unsigned BODYQUESIZE = 32;
-  deque<Actor *> bodyqueue;
+  deque<Actor *> bodyqueue; ///< queue for player corpses
 
-  multimap<short, Actor *> TIDmap; // Thing ID, for grouping things
+  multimap<short, Actor *> TIDmap; ///< Thing ID, a system for grouping things.
 
-  //------------ Specialized Thinkers ------------
-
-  // currently active dynamic geometry elements, based on BOOM code
+  /// Currently active dynamic geometry elements, based on BOOM code.
   list<class ceiling_t *> activeceilings;
   list<class plat_t *>    activeplats;
+  //@}
 
-  //------------ Players ------------
 
-  vector<class PlayerInfo *> players;
-  deque<PlayerInfo *>  respawnqueue;  // for players queuing to be respawned
+  /// \name Players
+  //@{
+  vector<class PlayerInfo *> players; ///< players currently in the map
+  deque<PlayerInfo *>   respawnqueue; ///< players queuing to be respawned
 
-  multimap<int, mapthing_t *> playerstarts; // playerstart args[0] has the location code
+  multimap<int, mapthing_t *> playerstarts; ///< Mapping from player number to playerstart. args[0] holds the entrypoint number.
   static const unsigned MAX_DM_STARTS = 32;
-  vector<mapthing_t *> dmstarts;
+  vector<mapthing_t *> dmstarts; ///< DeathMatch starts
+  //@}
 
-  //------------ Sound sequences ------------
 
+  /// \name Sound sequences
+  //@{
   list<class ActiveSndSeq*> ActiveSeqs;
   vector<int>   AmbientSeqs;
   ActiveSndSeq *ActiveAmbientSeq;
+  //@}
+
 
   //------------ Misc. ambiance -------------
 
@@ -386,7 +378,7 @@ public:
   // in p_spec.cpp
   side_t   *getSide(int sec, int line, int side);
   sector_t *getSector(int sec, int line, int side);
-  int       twoSided(int sec, int line);
+  bool      twoSided(int sec, int line);
   fixed_t   FindShortestUpperAround(sector_t *sec);
   fixed_t   FindShortestLowerAround(sector_t *sec);
 
@@ -543,7 +535,6 @@ protected:
   bool FS_wait_finished(runningscript_t *script);
 
 public:
-  // TESTing
   void R_AddWallSplat(line_t *line, int side, char *name, fixed_t top, fixed_t wallfrac, int flags);
 };
 

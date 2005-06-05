@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.16  2005/03/04 16:23:07  smite-meister
-// mp3, sector_t
+// Revision 1.17  2005/06/05 19:32:27  smite-meister
+// unsigned map structures
 //
 // Revision 1.15  2005/01/04 18:32:44  smite-meister
 // better colormap handling
@@ -162,25 +162,25 @@ struct mappoint_t
 /// "Fake floor" types
 enum ffloortype_e
 {
-  FF_EXISTS            = 0x1,    //MAKE SURE IT'S VALID
-  FF_SOLID             = 0x2,    //Does it clip things?
-  FF_RENDERSIDES       = 0x4,    //Render the sides?
-  FF_RENDERPLANES      = 0x8,    //Render the floor/ceiling?
-  FF_RENDERALL         = 0xC,    //Render everything?
-  FF_SWIMMABLE         = 0x10,   //Can we swim?
-  FF_NOSHADE           = 0x20,   //Does it mess with the lighting?
-  FF_CUTSOLIDS         = 0x40,   //Does it cut out hidden solid pixles?
-  FF_CUTEXTRA          = 0x80,   //Does it cut out hidden translucent pixles?
-  FF_CUTLEVEL          = 0xC0,   //Does it cut out all hidden pixles?
-  FF_CUTSPRITES        = 0x100,  //Final Step in 3D water
-  FF_BOTHPLANES        = 0x200,  //Render both planes all the time?
-  FF_EXTRA             = 0x400,  //Does it get cut by FF_CUTEXTRAS?
-  FF_TRANSLUCENT       = 0x800,  //See through!
-  FF_FOG               = 0x1000, //Fog "brush"?
-  FF_INVERTPLANES      = 0x2000, //Reverse the plane visibility rules?
-  FF_ALLSIDES          = 0x4000, //Render inside and outside sides?
-  FF_INVERTSIDES       = 0x8000, //Only render inside sides?
-  FF_DOUBLESHADOW      = 0x10000,//Make two lightlist entries to reset light?
+  FF_EXISTS            = 0x1,    ///< MAKE SURE IT'S VALID
+  FF_SOLID             = 0x2,    ///< Does it clip things?
+  FF_RENDERSIDES       = 0x4,    ///< Render the sides?
+  FF_RENDERPLANES      = 0x8,    ///< Render the floor/ceiling?
+  FF_RENDERALL         = 0xC,    ///< Render everything?
+  FF_SWIMMABLE         = 0x10,   ///< Can we swim?
+  FF_NOSHADE           = 0x20,   ///< Does it mess with the lighting?
+  FF_CUTSOLIDS         = 0x40,   ///< Does it cut out hidden solid pixles?
+  FF_CUTEXTRA          = 0x80,   ///< Does it cut out hidden translucent pixles?
+  FF_CUTLEVEL          = 0xC0,   ///< Does it cut out all hidden pixles?
+  FF_CUTSPRITES        = 0x100,  ///< Final Step in 3D water
+  FF_BOTHPLANES        = 0x200,  ///< Render both planes all the time?
+  FF_EXTRA             = 0x400,  ///< Does it get cut by FF_CUTEXTRAS?
+  FF_TRANSLUCENT       = 0x800,  ///< See through!
+  FF_FOG               = 0x1000, ///< Fog "brush"?
+  FF_INVERTPLANES      = 0x2000, ///< Reverse the plane visibility rules?
+  FF_ALLSIDES          = 0x4000, ///< Render inside and outside sides?
+  FF_INVERTSIDES       = 0x8000, ///< Only render inside sides?
+  FF_DOUBLESHADOW      = 0x10000,///< Make two lightlist entries to reset light?
 };
 
 
@@ -459,17 +459,17 @@ struct line_t
   /// hexen args
   byte args[5];
 
-  /// Visual appearance: SideDefs. sidenum[1] will be -1 if one sided
-  short  sidenum[2];
+  /// To aid move clipping.
+  byte slopetype;
+
+  /// Visual appearance: SideDefs. sideptr[1] will be NULL if one-sided.
+  side_t *sideptr[2];
 
   /// Neat. Another bounding box, for the extent of the LineDef.
   bbox_t bbox;
 
-  /// To aid move clipping.
-  slopetype_t slopetype;
-
   /// Front and back sector.
-  // Note: redundant? Can be retrieved from SideDefs.
+  // NOTE: redundant? Can be retrieved from SideDefs.
   sector_t *frontsector;
   sector_t *backsector;
 
@@ -490,20 +490,19 @@ struct line_t
 
 /// \brief SubSector
 ///
-/// References a Sector.
-/// Basically, this is a list of LineSegs,
-///  indicating the visible walls that define
-///  (all or some) sides of a convex BSP leaf.
+/// Each sector is divided into one or more convex subsectors during BSP nodebuilding.
+/// Basically, this is a list of LineSegs, indicating the visible walls that define
+/// (all or some) sides of a convex BSP leaf.
 struct subsector_t
 {
-  sector_t*   sector;
-  short       numlines;
-  short       firstline;
-  void*       splats;  // floorsplat_t list
-  //Hurdler: added for optimized mlook in hw mode
-  int         validcount;
+  sector_t *sector;    ///< to which sector does this subsector belong?
+  Uint16    numlines;  ///< number of linesegs surrounding this subsector
+  Uint16    firstline; ///< index into the segs array
 
-  struct polyobj_t *poly;
+  int       validcount;  // Hurdler: added for optimized mlook in hw mode
+
+  struct floorsplat_t *splats; ///< floorsplat list
+  struct polyobj_t    *poly;
 };
 
 
@@ -570,10 +569,10 @@ struct node_t
   fixed_t  dx, dy;
 
   /// Bounding box for each child.
-  bbox_t   bbox[2];
+  bbox_t bbox[2];
 
 #define NF_SUBSECTOR    0x8000 ///< Indicates a BSP leaf == subsector.
-  unsigned short children[2];
+  Uint16 children[2];
 };
 
 
@@ -583,12 +582,12 @@ struct node_t
 struct mapthing_t
 {
   short tid;      ///< Thing ID (from Hexen)
-  short x, y, z;
-  short angle;
-  short type;
+  short x, y, z;  ///< coordinates
+  short angle;    ///< orientation
+  short type;     ///< DoomEd number
   short flags;
-  byte special;
-  byte args[5];
+  byte special;   ///< thing action
+  byte args[5];   ///< arguments for the thing action
 
   class Actor *mobj;
 };

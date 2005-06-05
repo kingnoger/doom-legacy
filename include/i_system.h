@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2005/06/05 19:32:27  smite-meister
+// unsigned map structures
+//
 // Revision 1.8  2004/09/13 20:43:31  smite-meister
 // interface cleanup, sp map reset fixed
 //
@@ -74,7 +77,7 @@ void I_OutputMsg(char *error, ...);
 int  I_mkdir(const char *dirname, int unixright);
 
 /// returns the free space on disk in bytes
-void I_GetDiskFreeSpace(INT64 *freespace);
+void I_GetDiskFreeSpace(Sint64 *freespace);
 
 /// return free and total physical memory in the system
 Uint32 I_GetFreeMem(Uint32 *total);

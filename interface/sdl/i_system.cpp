@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.31  2005/06/05 19:32:27  smite-meister
+// unsigned map structures
+//
 // Revision 1.30  2005/05/29 11:30:42  segabor
 // Fixed __APPLE directive__ to __APPLE_CC__ on Mac OS X, new 'Doom Legacy' Xcode project target
 //
@@ -842,11 +845,11 @@ Uint32 I_GetFreeMem(Uint32 *total)
 
 
 
-void I_GetDiskFreeSpace(long long *freespace)
+void I_GetDiskFreeSpace(Sint64 *freespace)
 {
 #if defined (LINUX) || defined (__MACOS__) || defined(__APPLE_CC__)
   struct statfs stfs;
-  if (statfs(".",&stfs)==-1)
+  if (statfs(".", &stfs) == -1)
     {
       *freespace = MAXINT;
       return;
@@ -855,27 +858,29 @@ void I_GetDiskFreeSpace(long long *freespace)
 #endif
 
 #ifdef __WIN32__
-  // VB: added this definition from win32/win_sys.c
   typedef BOOL (WINAPI *MyFunc)(LPCSTR RootName, PULARGE_INTEGER pulA, PULARGE_INTEGER pulB, PULARGE_INTEGER pulFreeBytes); 
   static MyFunc pfnGetDiskFreeSpaceEx=NULL;
   static bool testwin95 = false;
 
   INT64 usedbytes;
 
-  if(!testwin95)
+  if (!testwin95)
     {
       HINSTANCE h = LoadLibraryA("kernel32.dll");
 
-      if (h) {
-	pfnGetDiskFreeSpaceEx = (MyFunc)GetProcAddress(h,"GetDiskFreeSpaceExA");
-	FreeLibrary(h);
-      }
+      if (h)
+	{
+	  pfnGetDiskFreeSpaceEx = (MyFunc)GetProcAddress(h, "GetDiskFreeSpaceExA");
+	  FreeLibrary(h);
+	}
       testwin95 = true;
     }
-  if (pfnGetDiskFreeSpaceEx) {
-    if (!pfnGetDiskFreeSpaceEx(NULL,(PULARGE_INTEGER)freespace,(PULARGE_INTEGER)&usedbytes,NULL))
-      *freespace = MAXINT;
-  }
+
+  if (pfnGetDiskFreeSpaceEx)
+    {
+      if (!pfnGetDiskFreeSpaceEx(NULL, (PULARGE_INTEGER)freespace, (PULARGE_INTEGER)&usedbytes, NULL))
+	*freespace = MAXINT;
+    }
   else
     {
       DWORD SectorsPerCluster, BytesPerSector, NumberOfFreeClusters, TotalNumberOfClusters;

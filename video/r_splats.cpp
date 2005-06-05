@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2005/06/05 19:32:28  smite-meister
+// unsigned map structures
+//
 // Revision 1.5  2004/12/19 23:54:08  smite-meister
 // small fixes
 //
@@ -123,9 +126,9 @@ void Map::R_AddWallSplat(line_t *line, int side, char *name, fixed_t top, fixed_
   side ^= 1;
  
   sector_t *backsector = NULL;
-  if (line->sidenum[side] != -1)
+  if (line->sideptr[side])
     {
-      backsector = sides[line->sidenum[side]].sector;
+      backsector = line->sideptr[side]->sector;
 
       if (top < backsector->floorheight)
         {

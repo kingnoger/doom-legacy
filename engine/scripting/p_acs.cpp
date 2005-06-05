@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2005/06/05 19:32:26  smite-meister
+// unsigned map structures
+//
 // Revision 1.22  2005/04/22 19:44:49  smite-meister
 // bugs fixed
 //
@@ -1658,15 +1661,15 @@ static int CmdSetLineTexture()
     {
       if (position == TEXTURE_MIDDLE)
 	{
-	  ACMap->sides[line->sidenum[side]].midtexture = texture;
+	  line->sideptr[side]->midtexture = texture;
 	}
       else if (position == TEXTURE_BOTTOM)
 	{
-	  ACMap->sides[line->sidenum[side]].bottomtexture = texture;
+	  line->sideptr[side]->bottomtexture = texture;
 	}
       else
 	{ // TEXTURE_TOP
-	  ACMap->sides[line->sidenum[side]].toptexture = texture;
+	  line->sideptr[side]->toptexture = texture;
 	}
     }
 

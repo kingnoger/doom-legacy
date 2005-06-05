@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2005/06/05 19:32:24  smite-meister
+// unsigned map structures
+//
 // Revision 1.19  2005/03/17 21:42:50  smite-meister
 // Exl bugfixes
 //
@@ -328,14 +331,14 @@ int Map::EV_DoDoor(int tag, line_t *line, Actor *mo, byte type, fixed_t speed, i
       bool good = mo->flags & MF_NOTMONSTER;
 
       // if the wrong side of door is pushed, give oof sound
-      if (line->sidenum[1] == -1 && good)
+      if (!line->sideptr[1] && good)
 	{
 	  S_StartSound(mo, sfx_usefail);
 	  return 0;
 	}
 
       // if the sector has an active thinker, use it
-      sec = sides[line->sidenum[1]].sector;
+      sec = line->sideptr[1]->sector;
 
       if (sec->ceilingdata) //SoM: 3/6/2000
 	{

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.43  2005/06/05 19:32:25  smite-meister
+// unsigned map structures
+//
 // Revision 1.42  2005/05/26 17:22:50  smite-meister
 // windows alpha fix
 //
@@ -160,7 +163,7 @@ sectoreffect_t::sectoreffect_t(Map *m, sector_t *s)
 ///  the line number, and the side (0/1) that you want.
 side_t *Map::getSide(int sec, int line, int side)
 {
-  return &sides[ (sectors[sec].lines[line])->sidenum[side] ];
+  return (sectors[sec].lines[line])->sideptr[side];
 }
 
 
@@ -168,16 +171,16 @@ side_t *Map::getSide(int sec, int line, int side)
 /// the line number and the side (0/1) that you want.
 sector_t *Map::getSector(int sec, int line, int side)
 {
-  return sides[ (sectors[sec].lines[line])->sidenum[side] ].sector;
+  return (sectors[sec].lines[line])->sideptr[side]->sector;
 }
 
 
 /// Given the sector number and the line number,
 /// it will tell you whether the line is two-sided or not.
-int Map::twoSided(int sec, int line)
+bool Map::twoSided(int sec, int line)
 {
   return boomsupport ?
-    ((sectors[sec].lines[line])->sidenum[1] != -1)
+    ((sectors[sec].lines[line])->sideptr[1] != NULL)
     :
     ((sectors[sec].lines[line])->flags & ML_TWOSIDED);
 }
@@ -388,7 +391,7 @@ fixed_t sector_t::FindNextHighestCeiling(int currentheight)
 // linedef bounding the sector.
 //
 // TODO in this and FindShortestUpperAround: replace all indices with pointers
-// (in line_t, replace sidenum with side_t *)
+
 fixed_t Map::FindShortestLowerAround(sector_t *sec)
 {
   int minsize = MAXINT;
@@ -1003,15 +1006,15 @@ void Map::AddFakeFloor(sector_t* sec, sector_t* sec2, line_t* master, int flags)
   ffloor->flags = ffloortype_e(flags);
   ffloor->master = master;
 
-  if(flags & FF_TRANSLUCENT)
+  if (flags & FF_TRANSLUCENT)
     {
-      if(sides[master->sidenum[0]].toptexture > 0)
-	ffloor->alpha = sides[master->sidenum[0]].toptexture;
+      if (master->sideptr[0]->toptexture > 0)
+	ffloor->alpha = master->sideptr[0]->toptexture;
       else
 	ffloor->alpha = 0x70;
     }
 
-  if(sec2->numattached == 0)
+  if (sec2->numattached == 0)
     {
       sec2->attached = (int *)malloc(sizeof(int));
       sec2->attached[0] = sec - sectors;
@@ -1066,7 +1069,7 @@ void Map::SpawnLineSpecials()
 	  if (!tag)
 	    tag = l->args[3] + 256 * l->args[4]; // Hexen format: get the tag from args[3-4]
 
-	  int sec = sides[*l->sidenum].sector - sectors;
+	  int sec = l->sideptr[0]->sector - sectors;
 	  int kind = l->args[1];
 
 
@@ -1249,16 +1252,16 @@ void Map::SpawnLineSpecials()
         {
 	  // Hexen
 	case 100: // Scroll_Texture_Left
-          AddThinker(new scroll_t(scroll_t::sc_side, l->args[0] << 10, 0, NULL, l->sidenum[0], false));
+          AddThinker(new scroll_t(scroll_t::sc_side, l->args[0] << 10, 0, NULL, l->sideptr[0] - sides, false));
 	  break;
 	case 101: // Scroll_Texture_Right
-          AddThinker(new scroll_t(scroll_t::sc_side, -l->args[0] << 10, 0, NULL, l->sidenum[0], false));
+          AddThinker(new scroll_t(scroll_t::sc_side, -l->args[0] << 10, 0, NULL, l->sideptr[0] - sides, false));
 	  break;
 	case 102: // Scroll_Texture_Up
-          AddThinker(new scroll_t(scroll_t::sc_side, 0, l->args[0] << 10, NULL, l->sidenum[0], false));
+          AddThinker(new scroll_t(scroll_t::sc_side, 0, l->args[0] << 10, NULL, l->sideptr[0] - sides, false));
 	  break;
 	case 103: // Scroll_Texture_Down
-          AddThinker(new scroll_t(scroll_t::sc_side, 0, -l->args[0] << 10, NULL, l->sidenum[0], false));
+          AddThinker(new scroll_t(scroll_t::sc_side, 0, -l->args[0] << 10, NULL, l->sideptr[0] - sides, false));
 	  break;
 
 	default:
@@ -1413,23 +1416,6 @@ scroll_t::scroll_t(short t, fixed_t dx, fixed_t dy, sector_t *csec, int aff, boo
     last_height = control->floorheight + control->ceilingheight;
 }
 
-// Adds wall scroller. Scroll amount is rotated with respect to wall's
-// linedef first, so that scrolling towards the wall in a perpendicular
-// direction is translated into vertical motion, while scrolling along
-// the wall in a parallel direction is translated into horizontal motion.
-
-static scroll_t *Add_WallScroller(fixed_t dx, fixed_t dy, const line_t *l,
-				  sector_t *control, int accel)
-{
-  fixed_t x = abs(l->dx), y = abs(l->dy), d;
-  if (y > x)
-    d = x, x = y, y = d;
-  d = FixedDiv(x, finesine[(tantoangle[FixedDiv(y,x) >> DBITS] + ANG90)
-                          >> ANGLETOFINESHIFT]);
-  x = -FixedDiv(FixedMul(dy, l->dy) + FixedMul(dx, l->dx), d);
-  y = -FixedDiv(FixedMul(dx, l->dy) - FixedMul(dy, l->dx), d);
-  return new scroll_t(scroll_t::sc_side, x, y, control, *l->sidenum, accel);
-}
 
 // Amount (dx,dy) vector linedef is shifted right to get scroll amount
 #define SCROLL_SHIFT 5
@@ -1518,7 +1504,7 @@ void Map::SpawnScrollers()
 /// spawns Boom wall, floor and ceiling scrollers
 void Map::SpawnScroller(line_t *l, int tag, int type, int control)
 {
-  int s = l->sidenum[0];
+  int s = l->sideptr[0] - sides;
   line_t *l2;
   fixed_t dx = l->dx >> SCROLL_SHIFT;  // direction and speed of scrolling
   fixed_t dy = l->dy >> SCROLL_SHIFT;
@@ -1537,7 +1523,21 @@ void Map::SpawnScroller(line_t *l, int tag, int type, int control)
       else
 	for (s = -1; (l2 = FindLineFromTag(tag, &s)) != NULL; )
 	  if (l2 != l)
-	    AddThinker(Add_WallScroller(dx, dy, l2, csec, accel));
+	    {
+	      // Adds wall scroller. Scroll amount is rotated with respect to wall's
+	      // linedef first, so that scrolling towards the wall in a perpendicular
+	      // direction is translated into vertical motion, while scrolling along
+	      // the wall in a parallel direction is translated into horizontal motion.
+
+	      fixed_t x = abs(l2->dx), y = abs(l2->dy), d;
+	      if (y > x)
+		d = x, x = y, y = d;
+	      d = FixedDiv(x, finesine[(tantoangle[FixedDiv(y,x) >> DBITS] + ANG90)
+				      >> ANGLETOFINESHIFT]);
+	      x = -FixedDiv(FixedMul(dy, l2->dy) + FixedMul(dx, l2->dx), d);
+	      y = -FixedDiv(FixedMul(dx, l2->dy) - FixedMul(dy, l2->dx), d);
+	      AddThinker(new scroll_t(scroll_t::sc_side, x, y, csec, l2->sideptr[0] - sides, accel));
+	    }
       return;
     }
 

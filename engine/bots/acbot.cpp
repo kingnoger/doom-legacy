@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2005/06/05 19:32:26  smite-meister
+// unsigned map structures
+//
 // Revision 1.6  2005/04/17 17:59:00  smite-meister
 // netcode
 //
@@ -610,7 +613,7 @@ bool ACBot::LookForSpecialLine(fixed_t *x, fixed_t *y)
 
 	      return true;
 	    }
-	  else if (edge->sidenum[1] >= 0) //if its a double sided sector
+	  else if (edge->sideptr[1]) //if its a double sided sector
 	    {
 	      sector_t *sector;
 	      if (edge->frontsector == sec)

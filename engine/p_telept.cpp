@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2005/06/05 19:32:25  smite-meister
+// unsigned map structures
+//
 // Revision 1.16  2004/11/04 21:12:53  smite-meister
 // save/load fixed
 //
@@ -63,6 +66,7 @@
 #include "doomdef.h"
 #include "g_game.h"
 #include "g_actor.h"
+#include "g_pawn.h"
 #include "g_map.h"
 
 #include "m_random.h"
@@ -148,20 +152,22 @@ bool Map::EV_Teleport(int tag, line_t *line, Actor *thing, int type, int flags)
 {
   if (!line)
     return false;
+
   // don't teleport missiles
   // TODO give all Doom missiles the MF2_NOTELEPORT flag....simpler
-  // Don't teleport if hit back of line,
-  //  so you can get out of teleporter.
   if (thing->flags2 & MF2_NOTELEPORT)
     return false;
 
   Actor *m;
   int i;
 
-  bool noplayer = flags & 0x1; // TODO
+  bool noplayer = flags & 0x1;
   bool silent   = flags & 0x2;
   bool reldir   = flags & 0x4;
   bool reverse  = flags & 0x8;
+
+  if (noplayer && thing->IsOf(PlayerPawn::_type))
+    return false;
 
   if (type == 0) // go to thing with correct TID (Hexen system)
     {
@@ -296,7 +302,7 @@ bool Map::EV_SilentLineTeleport(int tag, line_t *line, Actor *thing, bool revers
         // Adjust z position to be same height above ground as before.
         // Ground level at the exit is measured as the higher of the
         // two floor heights at the exit linedef.
-        thing->z = z + sides[l->sidenum[stepdown]].sector->floorheight;
+        thing->z = z + l->sideptr[stepdown]->sector->floorheight;
 
         return true;
       }
