@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright(C) 2000 Simon Howard
-// Copyright(C) 2001-2004 Doom Legacy Team
+// Copyright(C) 2001-2005 Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,8 +21,8 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
-// Revision 1.26  2005/04/22 19:44:49  smite-meister
-// bugs fixed
+// Revision 1.27  2005/06/08 17:29:39  smite-meister
+// FS bugfixes
 //
 // Revision 1.25  2005/03/04 16:23:07  smite-meister
 // mp3, sector_t
@@ -42,12 +42,6 @@
 // Revision 1.20  2004/09/03 16:28:51  smite-meister
 // bugfixes and ZDoom linedef types
 //
-// Revision 1.19  2004/08/29 20:48:48  smite-meister
-// bugfixes. wow.
-//
-// Revision 1.18  2004/08/12 18:30:28  smite-meister
-// cleaned startup
-//
 // Revision 1.17  2004/07/25 20:19:22  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -66,14 +60,8 @@
 // Revision 1.11  2003/12/13 23:51:03  smite-meister
 // Hexen update
 //
-// Revision 1.10  2003/11/23 00:41:55  smite-meister
-// bugfixes
-//
 // Revision 1.9  2003/11/12 11:07:26  smite-meister
 // Serialization done. Map progression.
-//
-// Revision 1.8  2003/06/10 22:39:58  smite-meister
-// Bugfixes
 //
 // Revision 1.7  2003/06/08 16:19:21  smite-meister
 // Hexen lights.
@@ -175,11 +163,10 @@ int find_operator(int start, int stop, char *value);
 
 void SF_Print()
 {
-  int i;
+  if (!t_argc)
+    return;
 
-  if(!t_argc) return;
-
-  for(i=0; i<t_argc; i++)
+  for (int i=0; i<t_argc; i++)
     {
       CONS_Printf("%s", stringvalue(t_argv[i]));
     }
@@ -206,11 +193,8 @@ fs_section_t *looping_section()
 {
   fs_section_t *best = NULL;         // highest level loop we're in
                                   // that has been found so far
-  int n;
-
   // check thru all the hashchains
-
-  for(n=0; n<SECTIONSLOTS; n++)
+  for (int n=0; n<SECTIONSLOTS; n++)
     {
       fs_section_t *current = current_script->sections[n];
 
@@ -401,7 +385,7 @@ void SF_Tip()
   for (i=0; i<t_argc; i++)
     sprintf(tempstr, "%s%s", tempstr, stringvalue(t_argv[i]));
 
-  trigger_player->SetMessage(tempstr, 53, PlayerInfo::M_HUD);
+  trigger_player->SetMessage(tempstr, 1, PlayerInfo::M_HUD);
   Z_Free(tempstr);
 }
 
@@ -431,7 +415,7 @@ void SF_TimedTip()
   for (i=1; i<t_argc; i++)
     sprintf(tempstr, "%s%s", tempstr, stringvalue(t_argv[i]));
 
-  trigger_player->SetMessage(tempstr, tiptime, PlayerInfo::M_HUD);
+  trigger_player->SetMessage(tempstr, 1, PlayerInfo::M_HUD); // TODO tiptime
   Z_Free(tempstr);
 }
 
@@ -442,8 +426,7 @@ void SF_PlayerTip()
   if (!t_argc)
     { script_error("player not specified\n"); return; }
 
-  int plnum = intvalue(t_argv[0]) + 1;
-  PlayerInfo *p = current_map->FindPlayer(plnum);
+  PlayerInfo *p = current_map->FindPlayer(intvalue(t_argv[0]) + 1);
 
   if (!p)
     return;
@@ -459,7 +442,7 @@ void SF_PlayerTip()
   for (i=1; i<t_argc; i++)
     sprintf(tempstr, "%s%s", tempstr, stringvalue(t_argv[i]));
 
-  p->SetMessage(tempstr, 53, PlayerInfo::M_HUD);
+  p->SetMessage(tempstr, 1, PlayerInfo::M_HUD);
   Z_Free(tempstr);
 }
 
@@ -490,13 +473,13 @@ void SF_Message()
 void SF_GameMode()
 {
   t_return.type = svt_int;
-  if(cv_deathmatch.value) // Deathmatch!
+
+  if (cv_deathmatch.value) // Deathmatch!
     t_return.value.i = 2;
-  else if(game.netgame || game.multiplayer) // Cooperative
+  else if (game.multiplayer) // Cooperative
     t_return.value.i = 1;
   else // Single Player
     t_return.value.i = 0;
-  return;
 }
 
 
@@ -506,8 +489,7 @@ void SF_PlayerMsg()
   if (!t_argc)
     { script_error("player not specified\n"); return; }
 
-  int plnum = intvalue(t_argv[0]) + 1;
-  PlayerInfo *p = current_map->FindPlayer(plnum);
+  PlayerInfo *p = current_map->FindPlayer(intvalue(t_argv[0]) + 1);
 
   if (!p)
     return;
@@ -531,13 +513,12 @@ void SF_PlayerMsg()
 
 void SF_PlayerInGame()
 {
-  if(!t_argc)
-    { script_error("player not specified\n"); return;}
-
   t_return.type = svt_int;
 
-  int i = intvalue(t_argv[0]);
-  if (!current_map->FindPlayer(i))
+  if (!t_argc)
+    { script_error("player not specified\n"); return;}
+
+  if (!current_map->FindPlayer(intvalue(t_argv[0]) + 1))
     t_return.value.i = false;
   else
     t_return.value.i = true;
@@ -548,56 +529,44 @@ void SF_PlayerInGame()
 
 void SF_PlayerName()
 {
-  int plnum;
-  PlayerInfo *pl;
-
   t_return.type = svt_string;
+  t_return.value.s = NULL;
 
-  if(!t_argc)
+  if (t_argc == 0)
     {
-      pl = trigger_player;
-      if (pl)
-        t_return.value.s = pl->name.c_str();
+      if (trigger_player)
+        t_return.value.s = trigger_player->name.c_str();
       else
         {
           script_error("script not started by player\n");
         }
       return;
     }
-  else
-    plnum = intvalue(t_argv[0]);
 
-  t_return.type = svt_string;
-
-  pl = current_map->FindPlayer(plnum);
+  PlayerInfo *pl = current_map->FindPlayer(intvalue(t_argv[0]) + 1);
 
   if (pl)
     t_return.value.s = pl->name.c_str();
 }
 
-        // object being controlled by player
+// returns the object being controlled by player number n (or NULL)
 void SF_PlayerObj()
 {
-  int plnum;
-  PlayerInfo *pl;
+  t_return.type = svt_actor;
+  t_return.value.mobj = NULL;
 
-  if(!t_argc)
+  if (t_argc == 0)
     {
-      pl = trigger_player;
-      if (pl) //plnum = pl - players;
-        t_return.value.mobj = pl->pawn;
+      if (trigger_player)
+        t_return.value.mobj = trigger_player->pawn;
       else
         {
           script_error("script not started by player\n");
         }
       return;
     }
-  else
-    plnum = intvalue(t_argv[0]);
 
-  t_return.type = svt_actor;
-
-  pl = current_map->FindPlayer(plnum);
+  PlayerInfo *pl = current_map->FindPlayer(intvalue(t_argv[0]) + 1);
 
   if (pl)
     t_return.value.mobj = pl->pawn;
@@ -606,29 +575,52 @@ void SF_PlayerObj()
 
 void SF_MobjIsPlayer()
 {
+  t_return.type = svt_int;
+
   if (t_argc == 0)
     {
-      t_return.type = svt_int;
       t_return.value.i = trigger_player ? 1 : 0;
       return;
     }
 
-  Actor* mobj = MobjForSvalue(t_argv[0]);
-  t_return.type = svt_int;
-  if(!mobj)
+  Actor *mobj = MobjForSvalue(t_argv[0]);
+  if (!mobj)
     t_return.value.i = 0;
   else
     t_return.value.i = mobj->IsOf(PlayerPawn::_type) ? 1 : 0;
-  return;
+}
+
+
+// returns a valid playerpawn or generates an error
+static PlayerPawn *GetPawn(svalue_t &s)
+{
+  if (s.type == svt_actor)
+    {
+      Actor *a = s.value.mobj;
+      if (!a || !a->IsOf(PlayerPawn::_type))
+        {
+          script_error("mobj not a player!\n");
+          return NULL;
+        }
+      return (PlayerPawn *)a;
+    }
+  else
+    {
+      int playernum = intvalue(t_argv[0]);
+      PlayerInfo *pi = current_map->FindPlayer(playernum + 1);
+      if (!pi || !pi->pawn)
+        {
+          script_error("player %i not in game\n", playernum);
+          return NULL;
+        }
+      return pi->pawn;
+    }
 }
 
 
 void SF_PlayerKeys()
 {
-  int  playernum;
-  int  keynum;
-  int  givetake = 0;
-  PlayerPawn *p;
+  t_return.type = svt_int;
 
   if (t_argc < 2)
     {
@@ -636,46 +628,23 @@ void SF_PlayerKeys()
       return;
     }
 
-  if(t_argv[0].type == svt_actor)
-    {
-      Actor *a = t_argv[0].value.mobj;
-      if (!a->IsOf(PlayerPawn::_type))
-        {
-          script_error("mobj not a player!\n");
-          return;
-        }
-      p = (PlayerPawn *)a;
-    }
-  else
-    {
-      playernum = intvalue(t_argv[0]);
-      PlayerInfo *pi = current_map->FindPlayer(playernum);
-      if (!pi)
-        {
-          script_error("player %i not in game\n", playernum);
-          return;
-        }
-      p = pi->pawn;
-    }
-  keynum = intvalue(t_argv[1]);
+  PlayerPawn *p = GetPawn(t_argv[0]);
 
-  if(keynum > 5)
+  int keynum = intvalue(t_argv[1]);
+  if (keynum > 5)
     {
       script_error("keynum out of range! %s\n", keynum);
       return;
     }
-
-  t_return.type = svt_int;
+  keynum += 11; // bypass the Hexen keys...
 
   if (t_argc == 3)
     {
-      givetake = intvalue(t_argv[2]);
+      int givetake = intvalue(t_argv[2]);
       if (givetake)
         p->keycards |= (1 << keynum);
       else
         p->keycards &= ~(1 << keynum);
-      t_return.value.i = 0;
-      return;
     }
 
   t_return.value.i = p->keycards & (1 << keynum);
@@ -685,10 +654,7 @@ void SF_PlayerKeys()
 
 void SF_PlayerAmmo()
 {
-  int  playernum;
-  int  ammonum;
-  int  newammo = 0;
-  PlayerPawn *p;
+  t_return.type = svt_int;
 
   if (t_argc < 2)
     {
@@ -696,43 +662,22 @@ void SF_PlayerAmmo()
       return;
     }
 
-  if (t_argv[0].type == svt_actor)
-    {
-      Actor *a = t_argv[0].value.mobj;
-      if (!a->IsOf(PlayerPawn::_type))
-        {
-          script_error("mobj not a player!\n");
-          return;
-        }
-      p = (PlayerPawn *)a;
-    }
-  else
-    {
-      playernum = intvalue(t_argv[0]);
-      PlayerInfo *pi = current_map->FindPlayer(playernum);
-      if (!pi)
-        {
-          script_error("player %i not in game\n", playernum);
-          return;
-        }
-      p = pi->pawn;
-    }
+  PlayerPawn *p = GetPawn(t_argv[0]);
 
-  ammonum = intvalue(t_argv[1]);
+  int ammonum = intvalue(t_argv[1]);
   if (ammonum >= NUMAMMO || ammonum < 0)
     {
       script_error("ammonum out of range! %s\n", ammonum);
       return;
     }
 
-  if(t_argc == 3)
+  if (t_argc == 3)
     {
-      newammo = intvalue(t_argv[2]);
+      int newammo = intvalue(t_argv[2]);
       newammo = newammo > p->maxammo[ammonum] ? p->maxammo[ammonum] : newammo;
       p->ammo[ammonum] = newammo;
     }
 
-  t_return.type = svt_int;
   t_return.value.i = p->ammo[ammonum];
 }
 
@@ -740,40 +685,17 @@ void SF_PlayerAmmo()
 
 void SF_MaxPlayerAmmo()
 {
-  int  playernum;
-  int  ammonum;
-  int  newmax;
-  PlayerPawn *p;
+  t_return.type = svt_int;
 
   if (t_argc < 2)
-  {
-    script_error("missing parameters for maxplayerammo\n");
-    return;
-  }
-
-  if (t_argv[0].type == svt_actor)
     {
-      Actor *a = t_argv[0].value.mobj;
-      if (!a->IsOf(PlayerPawn::_type))
-        {
-          script_error("mobj not a player!\n");
-          return;
-        }
-      p = (PlayerPawn *)a;
-    }
-  else
-    {
-      playernum = intvalue(t_argv[0]);
-      PlayerInfo *pi = current_map->FindPlayer(playernum);
-      if (!pi)
-        {
-          script_error("player %i not in game\n", playernum);
-          return;
-        }
-      p = pi->pawn;
+      script_error("missing parameters for maxplayerammo\n");
+      return;
     }
 
-  ammonum = intvalue(t_argv[1]);
+  PlayerPawn *p = GetPawn(t_argv[0]);
+
+  int ammonum = intvalue(t_argv[1]);
   if (ammonum >= NUMAMMO || ammonum < 0)
     {
       script_error("maxammonum out of range! %i\n", ammonum);
@@ -782,12 +704,11 @@ void SF_MaxPlayerAmmo()
 
   if (t_argc == 3)
     {
-      newmax = intvalue(t_argv[2]);
+      int newmax = intvalue(t_argv[2]);
       // FIXME make maxammo again changeable
       //p->maxammo[ammonum] = newmax;
     }
 
-  t_return.type = svt_int;
   t_return.value.i = p->maxammo[ammonum];
 }
 
@@ -801,10 +722,10 @@ extern void SF_ScriptRunning();
 
 void SF_Player()
 {
+  t_return.type = svt_int;
+
   Actor *mo = t_argc ? MobjForSvalue(t_argv[0]) :
     current_script->trigger;
-
-  t_return.type = svt_int;
 
   if (mo)
     {
@@ -815,69 +736,69 @@ void SF_Player()
     t_return.value.i = -1;
 }
 
-// spawn an object: type, x, y, [angle]
+// spawn an object: type, x, y, [angle], [z]
 void SF_Spawn()
 {
-  int x, y, z, objtype;
-  angle_t angle = 0;
+  t_return.type = svt_actor;
 
-  if(t_argc < 3)
+  if (t_argc < 3)
     { script_error("insufficient arguments to function\n"); return; }
 
-  objtype = intvalue(t_argv[0]);
+  mobjtype_t objtype = mobjtype_t(intvalue(t_argv[0]));
+
+  fixed_t x, y, z;
   x = intvalue(t_argv[1]) << FRACBITS;
   y = intvalue(t_argv[2]) << FRACBITS;
-  if(t_argc >= 5)
+  if (t_argc >= 5)
     z = intvalue(t_argv[4]) << FRACBITS;
   else
-  {
-    // SoM: Check thing flags for spawn-on-ceiling types...
-    z = current_map->R_PointInSubsector(x, y)->sector->floorheight;
-  }
+    {
+      // SoM: Check thing flags for spawn-on-ceiling types...
+      z = current_map->R_PointInSubsector(x, y)->sector->floorheight;
+    }
 
-  if(t_argc >= 4)
+  angle_t angle = 0;
+  if (t_argc >= 4)
     angle = intvalue(t_argv[3]) * (ANG45 / 45);
 
   // invalid object to spawn
-  if(objtype < 0 || objtype >= NUMMOBJTYPES)
+  if (objtype < 0 || objtype >= NUMMOBJTYPES)
     { script_error("unknown object type: %i\n", objtype); return; }
 
-  t_return.type = svt_actor;
-  t_return.value.mobj = current_map->SpawnDActor(x,y,z, (mobjtype_t)objtype);
+  t_return.value.mobj = current_map->SpawnDActor(x,y,z, objtype);
   t_return.value.mobj->angle = angle;
 }
 
 
 void SF_SpawnExplosion()
 {
-  int       type;
-  fixed_t   x, y, z;
-  DActor*   spawn;
+  t_return.type = svt_int;
 
-  if(t_argc < 3)
-  {
-    script_error("SpawnExplosion: Missing arguments\n");
-    return;
-  }
+  if (t_argc < 3)
+    {
+      script_error("SpawnExplosion: Missing arguments\n");
+      return;
+    }
 
-  type = intvalue(t_argv[0]);
-  if(type < 0 || type >= NUMMOBJTYPES)
-  {
-    script_error("SpawnExplosion: Invalud type number\n");
-    return;
-  }
+  mobjtype_t type = mobjtype_t(intvalue(t_argv[0]));
+  if (type < 0 || type >= NUMMOBJTYPES)
+    {
+      script_error("SpawnExplosion: Invalud type number\n");
+      return;
+    }
 
+  fixed_t x, y, z;
   x = fixedvalue(t_argv[1]);
   y = fixedvalue(t_argv[2]);
-  if(t_argc > 3)
+  if (t_argc > 3)
     z = fixedvalue(t_argv[3]);
   else
     z = current_map->R_PointInSubsector(x, y)->sector->floorheight;
 
-  spawn = current_map->SpawnDActor(x, y, z, (mobjtype_t)type);
-  t_return.type = svt_int;
+  DActor *spawn = current_map->SpawnDActor(x, y, z, type);
+
   t_return.value.i = spawn->SetState(spawn->info->deathstate);
-  if(spawn->info->deathsound)
+  if (spawn->info->deathsound)
     S_StartSound(spawn, spawn->info->deathsound);
 }
 
@@ -885,24 +806,19 @@ void SF_SpawnExplosion()
 
 void SF_RemoveObj()
 {
-  if(!t_argc)
+  if (!t_argc)
     { script_error("insufficient arguments to function\n"); return; }
 
   Actor *mo = MobjForSvalue(t_argv[0]);
-  if(mo)  // nullptr check
+  if (mo)
     mo->Remove();
 }
 
 void SF_KillObj()
 {
-  Actor *mo;
+  Actor *mo = t_argc ? MobjForSvalue(t_argv[0]) : current_script->trigger;
 
-  if(t_argc)
-    mo = MobjForSvalue(t_argv[0]);
-  else
-    mo = current_script->trigger;  // default to trigger object
-
-  if(mo)  // nullptr check
+  if (mo)
     mo->Die(NULL, current_script->trigger);         // kill it
 }
 
@@ -947,12 +863,13 @@ void SF_Teleport()
   line_t line;    // dummy line for teleport function
   Actor *mo;
 
-  if(t_argc==0)   // no arguments
+  if (t_argc == 0)   // no arguments
     {
       script_error("insufficient arguments to function\n");
       return;
     }
-  else if(t_argc == 1)    // 1 argument: sector tag
+
+  if (t_argc == 1)    // 1 argument: sector tag
     {
       mo = current_script->trigger;   // default to trigger
       line.tag = intvalue(t_argv[0]);
@@ -963,7 +880,7 @@ void SF_Teleport()
       line.tag = intvalue(t_argv[1]);
     }
 
-  if(mo)
+  if (mo)
     current_map->EV_Teleport(line.tag, &line, mo, 1, 0);
 }
 
@@ -974,12 +891,13 @@ void SF_SilentTeleport()
   line_t line;    // dummy line for teleport function
   Actor *mo;
 
-  if(t_argc==0)   // no arguments
+  if (t_argc == 0)   // no arguments
     {
       script_error("insufficient arguments to function\n");
       return;
     }
-  else if(t_argc == 1)    // 1 argument: sector tag
+
+  if (t_argc == 1)    // 1 argument: sector tag
     {
       mo = current_script->trigger;   // default to trigger
       line.tag = intvalue(t_argv[0]);
@@ -990,7 +908,7 @@ void SF_SilentTeleport()
       line.tag = intvalue(t_argv[1]);
     }
 
-  if(mo)
+  if (mo)
     current_map->EV_Teleport(line.tag, &line, mo, 1, 0x2);
 }
 
@@ -1001,12 +919,13 @@ void SF_DamageObj()
   Actor *mo;
   int damageamount;
 
-  if(t_argc==0)   // no arguments
+  if (t_argc == 0)   // no arguments
     {
       script_error("insufficient arguments to function\n");
       return;
     }
-  else if(t_argc == 1)    // 1 argument: damage trigger by amount
+
+  if (t_argc == 1)    // 1 argument: damage trigger by amount
     {
       mo = current_script->trigger;   // default to trigger
       damageamount = intvalue(t_argv[0]);
@@ -1047,7 +966,7 @@ void SF_ObjDead()
   Actor *mo = t_argc ? MobjForSvalue(t_argv[0]) : current_script->trigger;
 
   t_return.type = svt_int;
-  if(mo && (mo->health <= 0 || mo->flags & MF_CORPSE))
+  if (mo && (mo->health <= 0 || mo->flags & MF_CORPSE))
     t_return.value.i = 1;
   else
     t_return.value.i = 0;
@@ -1056,6 +975,8 @@ void SF_ObjDead()
 
 void SF_ObjFlag()
 {
+  t_return.type = svt_int;
+
   // FIXME this function is crap, and should be defined differently. And fixed.
   Actor *mo;
   int f;
@@ -1065,7 +986,8 @@ void SF_ObjFlag()
       script_error("no arguments for function\n");
       return;
     }
-  else if (t_argc == 1)
+
+  if (t_argc == 1)
     {
       // query flags of trigger object:
       mo = current_script->trigger;
@@ -1094,7 +1016,6 @@ void SF_ObjFlag()
 	}
     }
 
-  t_return.type = svt_int;
   // nullptr check:
   t_return.value.i = mo ? !!(mo->flags & (1 << f)) : 0;
 }
@@ -1104,22 +1025,19 @@ void SF_ObjFlag()
         // apply momentum to a thing
 void SF_PushThing()
 {
-  Actor *mo;
-  angle_t angle;
-  fixed_t force;
-
-  if(t_argc<3)   // missing arguments
+  if (t_argc < 3)   // missing arguments
     {
       script_error("insufficient arguments for function\n");
       return;
     }
 
-  mo = MobjForSvalue(t_argv[0]);
+  Actor *mo = MobjForSvalue(t_argv[0]);
 
-  if(!mo) return;
+  if (!mo)
+    return;
 
-  angle = FixedToAngle(fixedvalue(t_argv[1]));
-  force = fixedvalue(t_argv[2]);
+  angle_t angle = FixedToAngle(fixedvalue(t_argv[1]));
+  fixed_t force = fixedvalue(t_argv[2]);
 
   mo->px += FixedMul(finecosine[angle >> ANGLETOFINESHIFT], force);
   mo->py += FixedMul(finesine[angle >> ANGLETOFINESHIFT], force);
@@ -1129,23 +1047,24 @@ void SF_PushThing()
 
 void SF_ReactionTime()
 {
-  Actor *mo;
+  t_return.type = svt_int;
+  t_return.value.i = 0;
 
-  if(t_argc < 1)
+  if (t_argc < 1)
   {
     script_error("no arguments for function\n");
     return;
   }
 
-  mo = MobjForSvalue(t_argv[0]);
-  if(!mo) return;
+  Actor *mo = MobjForSvalue(t_argv[0]);
+  if (!mo)
+    return;
 
-  if(t_argc > 1)
-  {
-    mo->reactiontime = (intvalue(t_argv[1]) * 35) / 100;
-  }
+  if (t_argc > 1)
+    {
+      mo->reactiontime = (intvalue(t_argv[1]) * 35) / 100;
+    }
 
-  t_return.type = svt_int;
   t_return.value.i = mo->reactiontime;
 }
 
@@ -1153,129 +1072,128 @@ void SF_ReactionTime()
 // Sets a mobj's Target! >:)
 void SF_MobjTarget()
 {
-  Actor*  mo;
-  Actor*  target;
-
-  if(t_argc < 1)
-  {
-    script_error("Missing parameters!\n");
-    return;
-  }
-
-  mo = MobjForSvalue(t_argv[0]);
-  if(!mo)
-    return;
-
-  if(t_argc >= 2)
-  {
-    if(t_argv[1].type != svt_actor && intvalue(t_argv[1]) == -1)
-    {
-      // Set target to NULL
-      mo->target = NULL;
-      //mo->SetState(mo->info->spawnstate);
-    }
-    else
-    {
-      target = MobjForSvalue(t_argv[1]);
-      mo->target = target;
-      //mo->SetState(mo->info->seestate);
-    }
-  }
-
   t_return.type = svt_actor;
+  t_return.value.mobj = NULL;
+
+  if (t_argc < 1)
+    {
+      script_error("Missing parameters!\n");
+      return;
+    }
+
+  Actor *mo = MobjForSvalue(t_argv[0]);
+  if (!mo)
+    return;
+
+  if (t_argc >= 2)
+    {
+      if (t_argv[1].type != svt_actor && intvalue(t_argv[1]) == -1)
+	{
+	  // Set target to NULL
+	  mo->target = NULL;
+	  //mo->SetState(mo->info->spawnstate);
+	}
+      else
+	{
+	  mo->target = MobjForSvalue(t_argv[1]);
+	  //mo->SetState(mo->info->seestate);
+	}
+    }
+
   t_return.value.mobj = mo->target;
 }
 
 
 void SF_MobjMomx()
 {
-  Actor*   mo;
-
-  if(t_argc < 1)
-  {
-    script_error("missing parameters\n");
-    return;
-  }
-
-  mo = MobjForSvalue(t_argv[0]);
-  if(t_argc > 1)
-  {
-    if(!mo)
-      return;
-    mo->px = fixedvalue(t_argv[1]);
-  }
-
   t_return.type = svt_fixed;
-  t_return.value.f = mo ? mo->px : 0;
+  t_return.value.f = 0;
+
+  if (t_argc < 1)
+    {
+      script_error("missing parameters\n");
+      return;
+    }
+
+  Actor *mo = MobjForSvalue(t_argv[0]);
+  if (!mo)
+    return;
+
+  if (t_argc > 1)
+    {
+      mo->px = fixedvalue(t_argv[1]);
+    }
+
+  t_return.value.f = mo->px;
 }
 
 
 void SF_MobjMomy()
 {
-  Actor*   mo;
-
-  if(t_argc < 1)
-  {
-    script_error("missing parameters\n");
-    return;
-  }
-
-  mo = MobjForSvalue(t_argv[0]);
-  if(t_argc > 1)
-  {
-    if(!mo)
-      return;
-    mo->py = fixedvalue(t_argv[1]);
-  }
-
   t_return.type = svt_fixed;
-  t_return.value.f = mo ? mo->py : 0;
+  t_return.value.f = 0;
+
+  if (t_argc < 1)
+    {
+      script_error("missing parameters\n");
+      return;
+    }
+
+  Actor *mo = MobjForSvalue(t_argv[0]);
+  if (!mo)
+    return;
+
+  if (t_argc > 1)
+    {
+      mo->py = fixedvalue(t_argv[1]);
+    }
+
+  t_return.value.f = mo->py;
 }
 
 
 void SF_MobjMomz()
 {
-  Actor*   mo;
-
-  if(t_argc < 1)
-  {
-    script_error("missing parameters\n");
-    return;
-  }
-
-  mo = MobjForSvalue(t_argv[0]);
-  if(t_argc > 1)
-  {
-    if(!mo)
-      return;
-    mo->pz = fixedvalue(t_argv[1]);
-  }
-
   t_return.type = svt_fixed;
-  t_return.value.f = mo ? mo->pz : 0;
+  t_return.value.f = 0;
+
+  if (t_argc < 1)
+    {
+      script_error("missing parameters\n");
+      return;
+    }
+
+  Actor *mo = MobjForSvalue(t_argv[0]);
+  if (!mo)
+    return;
+
+  if (t_argc > 1)
+    {
+      mo->pz = fixedvalue(t_argv[1]);
+    }
+
+  t_return.value.f = mo->pz;
 }
 
 /****************** Trig *********************/
 
 void SF_PointToAngle()
 {
-  angle_t angle;
-  int x1, y1, x2, y2;
+  t_return.type = svt_fixed;
 
-  if(t_argc<4)
+  if (t_argc < 4)
     {
       script_error("insufficient arguments to function\n");
       return;
     }
 
+  fixed_t x1, y1, x2, y2;
   x1 = intvalue(t_argv[0]) << FRACBITS;
   y1 = intvalue(t_argv[1]) << FRACBITS;
   x2 = intvalue(t_argv[2]) << FRACBITS;
   y2 = intvalue(t_argv[3]) << FRACBITS;
 
-  angle = R_PointToAngle2(x1, y1, x2, y2);
-
-  t_return.type = svt_fixed;
+  angle_t angle = R_PointToAngle2(x1, y1, x2, y2);
   t_return.value.f = AngleToFixed(angle);
 }
 
@@ -1283,23 +1201,21 @@ void SF_PointToAngle()
 
 void SF_PointToDist()
 {
-  int dist;
-  int x1, x2, y1, y2;
-
-  if(t_argc<4)
+  t_return.type = svt_fixed;
+  
+  if (t_argc < 4)
     {
       script_error("insufficient arguments to function\n");
       return;
     }
 
+  fixed_t x1, x2, y1, y2;
   x1 = intvalue(t_argv[0]) << FRACBITS;
   y1 = intvalue(t_argv[1]) << FRACBITS;
   x2 = intvalue(t_argv[2]) << FRACBITS;
   y2 = intvalue(t_argv[3]) << FRACBITS;
 
-  dist = R_PointToDist2(x1, y1, x2, y2);
-  t_return.type = svt_fixed;
-  t_return.value.f = dist;
+  t_return.value.f = R_PointToDist2(x1, y1, x2, y2);
 }
 
 
@@ -1603,7 +1519,7 @@ void SF_AmbientSound()
         // floor height of sector
 void SF_FloorHeight()
 {
-  int returnval = 1;
+  t_return.type = svt_int;
 
   if (!t_argc)
     { script_error("insufficient arguments to function\n"); return; }
@@ -1618,24 +1534,26 @@ void SF_FloorHeight()
 
   sector_t *s = &current_map->sectors[secnum];
 
+  int returnval = 1;
+
   if (t_argc > 1)          // > 1: set floorheight
     {
       int i = -1;
-      bool crush = t_argc == 3 ? intvalue(t_argv[2]) : false;
+      int crush = (t_argc == 3) ? intvalue(t_argv[2]) : 0;
 
       // set all sectors with tag
       while ((i = current_map->FindSectorFromTag(tagnum, i)) >= 0)
         {
           s = &current_map->sectors[i];
-          if (current_map->T_MovePlane(s, fixedvalue(t_argv[1]) - s->floorheight, fixedvalue(t_argv[1]),
-                                       crush, 0) == res_crushed)
+          if (current_map->T_MovePlane(s, fixedvalue(t_argv[1]) - s->floorheight, fixedvalue(t_argv[1]), crush, 0)
+	      == res_crushed)
             returnval = 0;
         }
     }
   else
     returnval = s->floorheight >> FRACBITS;
 
-  t_return.type = svt_int;
+
   t_return.value.i = returnval;
 }
 
@@ -1673,7 +1591,7 @@ void SF_MoveFloor()
         // ceiling height of sector
 void SF_CeilingHeight()
 {
-  int returnval = 1;
+  t_return.type = svt_int;
 
   if (!t_argc)
     { script_error("insufficient arguments to function\n"); return; }
@@ -1688,17 +1606,19 @@ void SF_CeilingHeight()
 
   sector_t *s = &current_map->sectors[secnum];
 
+  int returnval = 1;
+
   if (t_argc > 1)          // > 1: set ceilheight
     {
       int i = -1;
-      bool crush = t_argc == 3 ? intvalue(t_argv[2]) : false;
+      int crush = (t_argc == 3) ? intvalue(t_argv[2]) : 0;
 
       // set all sectors with tag
       while ((i = current_map->FindSectorFromTag(tagnum, i)) >= 0)
         {
           s = &current_map->sectors[i];
-          if (current_map->T_MovePlane(s, fixedvalue(t_argv[1]) - s->ceilingheight, fixedvalue(t_argv[1]),
-                                       crush, 1) == res_crushed)
+          if (current_map->T_MovePlane(s, fixedvalue(t_argv[1]) - s->ceilingheight, fixedvalue(t_argv[1]), crush, 1)
+	      == res_crushed)
             returnval = 0;
         }
     }
@@ -1706,7 +1626,6 @@ void SF_CeilingHeight()
     returnval = s->ceilingheight >> FRACBITS;
 
   // return floorheight
-  t_return.type = svt_int;
   t_return.value.i = returnval;
 }
 
@@ -2050,24 +1969,26 @@ void SF_RunCommand()
 
 
 // any linedef type
+void ConvertLineDef(line_t *ld);
 
 void SF_LineTrigger()
 {
-  line_t junk;
-
-  if(!t_argc)
+  if (!t_argc)
     {
       script_error("need line trigger type\n");
       return;
     }
 
+  line_t junk;
+
   junk.special = intvalue(t_argv[0]);
-  junk.tag = t_argc < 2 ? 0 : intvalue(t_argv[1]);
+  junk.tag = (t_argc < 2) ? 0 : intvalue(t_argv[1]);
 
   //current_map->UseSpecialLine(t_trigger, &junk, 0);    // Try using it
   //current_map->ActivateCrossedLine(&junk, 0, t_trigger);   // Try crossing it
 
-  // FIXME this function does not yet work as expected, because the special type needs to be translated to a Hexen special
+  ConvertLineDef(&junk); // to corresponding Hexen linedef
+
   current_map->ActivateLine(&junk, trigger_obj, 0, SPAC_USE);
   current_map->ActivateLine(&junk, trigger_obj, 0, SPAC_CROSS);
 }
@@ -2075,17 +1996,17 @@ void SF_LineTrigger()
 
 void SF_LineFlag()
 {
-  int      linenum;
-  int      flagnum;
+  t_return.type = svt_int;
 
-  if(t_argc < 2)
+  if (t_argc < 2)
   {
     script_error("LineFlag: missing parameters\n");
     return;
   }
 
-  linenum = intvalue(t_argv[0]);
-  if(linenum < 0 || linenum > current_map->numlines)
+  int linenum = intvalue(t_argv[0]);
+
+  if (linenum < 0 || linenum > current_map->numlines)
   {
     script_error("LineFlag: Invalid line number.\n");
     return;
@@ -2093,21 +2014,20 @@ void SF_LineFlag()
 
   line_t *line = current_map->lines + linenum;
 
-  flagnum = intvalue(t_argv[1]);
-  if(flagnum < 0 || flagnum > 32)
+  int flagnum = intvalue(t_argv[1]);
+  if (flagnum < 0 || flagnum > 31)
   {
     script_error("LineFlag: Invalid flag number.\n");
     return;
   }
 
-  if(t_argc > 2)
+  if (t_argc > 2)
   {
     line->flags &= ~(1 << flagnum);
-    if(intvalue(t_argv[2]))
+    if (intvalue(t_argv[2]))
       line->flags |= (1 << flagnum);
   }
 
-  t_return.type = svt_int;
   t_return.value.i = line->flags & (1 << flagnum);
 }
 

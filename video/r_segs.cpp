@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2005/06/08 17:29:40  smite-meister
+// FS bugfixes
+//
 // Revision 1.14  2005/06/05 19:32:27  smite-meister
 // unsigned map structures
 //
@@ -515,16 +518,14 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
 
   //faB: handle case where multipatch texture is drawn on a 2sided wall, multi-patch textures
   //     are not stored per-column with post info anymore in Doom Legacy
-  bool masked = true;
-  if (tex->Masked())
+  bool masked = tex->Masked();
+  if (masked)
     colfunc_2s = R_DrawMaskedColumn;   //render the usual 2sided single-patch packed texture
   else
     {
-      masked = false;
       colfunc_2s = R_Render2sidedMultiPatchColumn;        //render multipatch with no holes (no post_t info)
       column2s_length = tex->height;
     }
-
 
   dc_numlights = 0;
   int lightnum;
@@ -725,85 +726,84 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
 // Renders all the thick sides in the given range.
 void Rend::R_RenderThickSideRange(drawseg_t *ds, int x1, int x2, ffloor_t *ffloor)
 {
-    unsigned        index;
-    column_t*       col;
-    int             lightnum;
-    sector_t        tempsec;
-    int             templight;
-    int             i;
-    fixed_t         bottombounds = viewheight << FRACBITS;
-    fixed_t         topbounds = (con_clipviewtop - 1) << FRACBITS;
-    fixed_t         offsetvalue = 0;
+  unsigned        index;
+  int             lightnum;
+  sector_t        tempsec;
+  int             templight;
+  int             i;
+  fixed_t         bottombounds = viewheight << FRACBITS;
+  fixed_t         topbounds = (con_clipviewtop - 1) << FRACBITS;
+  fixed_t         offsetvalue = 0;
 
-    void (*colfunc_2s) (column_t*);
+  void (*colfunc_2s) (column_t*);
 
-    Texture *tex = tc[ffloor->master->sideptr[0]->midtexture];
+  Texture *tex = tc[ffloor->master->sideptr[0]->midtexture];
 
     // Calculate light table.
     // Use different light tables
     //   for horizontal / vertical / diagonal. Diagonal?
     // OPTIMIZE: get rid of LIGHTSEGSHIFT globally
 
-    curline = ds->curline;
-    backsector = ffloor->target;
-    frontsector = curline->frontsector == ffloor->target ? curline->backsector : curline->frontsector;
+  curline = ds->curline;
+  backsector = ffloor->target;
+  frontsector = curline->frontsector == ffloor->target ? curline->backsector : curline->frontsector;
 
-    colfunc = basecolfunc;
+  colfunc = basecolfunc;
 
-    if(ffloor->flags & FF_TRANSLUCENT)
+  if(ffloor->flags & FF_TRANSLUCENT)
     {
       dc_transmap = transtables[0];   // get first transtable 50/50
       colfunc = fuzzcolfunc;
     }
-    else if(ffloor->flags & FF_FOG)
-      colfunc = R_DrawFogColumn_8;
+  else if(ffloor->flags & FF_FOG)
+    colfunc = R_DrawFogColumn_8;
 
     //SoM: Moved these up here so they are available for my lightlist calculations
-    rw_scalestep = ds->scalestep;
-    spryscale = ds->scale1 + (x1 - ds->x1)*rw_scalestep;
+  rw_scalestep = ds->scalestep;
+  spryscale = ds->scale1 + (x1 - ds->x1)*rw_scalestep;
 
-    dc_numlights = 0;
-    if(frontsector->numlights && frontsector == curline->backsector)
+  dc_numlights = 0;
+  if(frontsector->numlights && frontsector == curline->backsector)
     {
       dc_numlights = frontsector->numlights;
       if(dc_numlights > dc_maxlights)
-      {
-        dc_maxlights = dc_numlights;
-        dc_lightlist = (r_lightlist_t *)realloc(dc_lightlist, sizeof(r_lightlist_t) * dc_maxlights);
-      }
+	{
+	  dc_maxlights = dc_numlights;
+	  dc_lightlist = (r_lightlist_t *)realloc(dc_lightlist, sizeof(r_lightlist_t) * dc_maxlights);
+	}
 
       for(i = 0; i < dc_numlights; i++)
-      {
-        dc_lightlist[i].heightstep = -FixedMul (rw_scalestep, (frontsector->lightlist[i].height - viewz));
-        dc_lightlist[i].height = (centeryfrac) - FixedMul((frontsector->lightlist[i].height - viewz), spryscale) - dc_lightlist[i].heightstep;
-        if(frontsector->lightlist[i].caster)
-        {
-          if(frontsector->lightlist[i].caster->flags & FF_CUTLEVEL)
-          {
-            dc_lightlist[i].botheightstep = -FixedMul (rw_scalestep, (*frontsector->lightlist[i].caster->bottomheight - viewz));
-            dc_lightlist[i].botheight = (centeryfrac) - FixedMul((*frontsector->lightlist[i].caster->bottomheight - viewz), spryscale) - dc_lightlist[i].botheightstep;
-          }
-          dc_lightlist[i].flags = frontsector->lightlist[i].caster->flags;
-        }
-        else
-          dc_lightlist[i].flags = 0;
+	{
+	  dc_lightlist[i].heightstep = -FixedMul (rw_scalestep, (frontsector->lightlist[i].height - viewz));
+	  dc_lightlist[i].height = (centeryfrac) - FixedMul((frontsector->lightlist[i].height - viewz), spryscale) - dc_lightlist[i].heightstep;
+	  if(frontsector->lightlist[i].caster)
+	    {
+	      if(frontsector->lightlist[i].caster->flags & FF_CUTLEVEL)
+		{
+		  dc_lightlist[i].botheightstep = -FixedMul (rw_scalestep, (*frontsector->lightlist[i].caster->bottomheight - viewz));
+		  dc_lightlist[i].botheight = (centeryfrac) - FixedMul((*frontsector->lightlist[i].caster->bottomheight - viewz), spryscale) - dc_lightlist[i].botheightstep;
+		}
+	      dc_lightlist[i].flags = frontsector->lightlist[i].caster->flags;
+	    }
+	  else
+	    dc_lightlist[i].flags = 0;
 
-        dc_lightlist[i].lightlevel = *frontsector->lightlist[i].lightlevel;
-        dc_lightlist[i].extra_colormap = frontsector->lightlist[i].extra_colormap;
-      }
+	  dc_lightlist[i].lightlevel = *frontsector->lightlist[i].lightlevel;
+	  dc_lightlist[i].extra_colormap = frontsector->lightlist[i].extra_colormap;
+	}
     }
-    else if(frontsector == curline->frontsector && curline->numlights)
+  else if(frontsector == curline->frontsector && curline->numlights)
     {
       dc_numlights = curline->numlights;
       if(dc_numlights > dc_maxlights)
-      {
-        dc_maxlights = dc_numlights;
-        dc_lightlist = (r_lightlist_t *)realloc(dc_lightlist, sizeof(r_lightlist_t) * dc_maxlights);
-      }
+	{
+	  dc_maxlights = dc_numlights;
+	  dc_lightlist = (r_lightlist_t *)realloc(dc_lightlist, sizeof(r_lightlist_t) * dc_maxlights);
+	}
 
       memcpy(dc_lightlist, curline->rlights, sizeof(r_lightlist_t) * dc_numlights);
     }
-    else
+  else
     {
       //SoM: Get correct light level!
       if((frontsector->extra_colormap && frontsector->extra_colormap->fog))
@@ -818,222 +818,227 @@ void Rend::R_RenderThickSideRange(drawseg_t *ds, int x1, int x2, ffloor_t *ffloo
 
       if (ffloor->flags & FF_FOG || (frontsector->extra_colormap && frontsector->extra_colormap->fog));
       else if (curline->v1->y == curline->v2->y)
-          lightnum--;
+	lightnum--;
       else if (curline->v1->x == curline->v2->x)
-          lightnum++;
+	lightnum++;
 
       if (lightnum < 0)
-          walllights = scalelight[0];
+	walllights = scalelight[0];
       else if (lightnum >= LIGHTLEVELS)
-          walllights = scalelight[LIGHTLEVELS-1];
+	walllights = scalelight[LIGHTLEVELS-1];
       else
-          walllights = scalelight[lightnum];
+	walllights = scalelight[lightnum];
     }
 
-    maskedtexturecol = ds->thicksidecol;
+  maskedtexturecol = ds->thicksidecol;
 
-    mfloorclip = ds->sprbottomclip;
-    mceilingclip = ds->sprtopclip;
-    dc_texheight = tex->height;
+  mfloorclip = ds->sprbottomclip;
+  mceilingclip = ds->sprtopclip;
+  dc_texheight = tex->height;
 
-    dc_texturemid = *ffloor->topheight - viewz;
+  dc_texturemid = *ffloor->topheight - viewz;
 
-    offsetvalue = ffloor->master->sideptr[0]->rowoffset;
-    if(curline->linedef->flags & ML_DONTPEGBOTTOM)
-      offsetvalue -= *ffloor->topheight - *ffloor->bottomheight;
+  offsetvalue = ffloor->master->sideptr[0]->rowoffset;
+  if(curline->linedef->flags & ML_DONTPEGBOTTOM)
+    offsetvalue -= *ffloor->topheight - *ffloor->bottomheight;
 
-    dc_texturemid += offsetvalue;
+  dc_texturemid += offsetvalue;
 
-    if (fixedcolormap)
-        dc_colormap = fixedcolormap;
+  if (fixedcolormap)
+    dc_colormap = fixedcolormap;
 
     //faB: handle case where multipatch texture is drawn on a 2sided wall, multi-patch textures
     //     are not stored per-column with post info anymore in Doom Legacy
-    if (tex->Masked())
-        colfunc_2s = R_DrawMaskedColumn;                    //render the usual 2sided single-patch packed texture
-    else {
-        colfunc_2s = R_Render2sidedMultiPatchColumn;        //render multipatch with no holes (no post_t info)
-        column2s_length = tex->height;
+  bool masked = tex->Masked();
+  if (masked)
+    colfunc_2s = R_DrawMaskedColumn;                    //render the usual 2sided single-patch packed texture
+  else
+    {
+      colfunc_2s = R_Render2sidedMultiPatchColumn;        //render multipatch with no holes (no post_t info)
+      column2s_length = tex->height;
     }
 
-    // draw the columns
-    for (dc_x = x1 ; dc_x <= x2 ; dc_x++)
+  // draw the columns
+  for (dc_x = x1 ; dc_x <= x2 ; dc_x++)
     {
       if(maskedtexturecol[dc_x] != MAXSHORT)
-      {
-        // SoM: New code does not rely on r_drawColumnShadowed_8 which
-        // will (hopefully) put less strain on the stack.
-        if(dc_numlights)
-        {
-          lighttable_t** xwalllights;
-          fixed_t        height;
-          fixed_t        bheight = 0;
-          int            solid = 0;
-          int            lighteffect = 0;
+	{
+	  column_t *col;
+	  if (masked)
+	    col = tex->GetMaskedColumn(maskedtexturecol[dc_x]);
+	  else
+	    col = (column_t *)tex->GetColumn(maskedtexturecol[dc_x]); // HACK
 
-          sprtopscreen = windowtop = (centeryfrac - FixedMul((dc_texturemid - offsetvalue), spryscale));
-          sprbotscreen = windowbottom = FixedMul(*ffloor->topheight - *ffloor->bottomheight, spryscale) + sprtopscreen;
+	  // SoM: New code does not rely on r_drawColumnShadowed_8 which
+	  // will (hopefully) put less strain on the stack.
+	  if (dc_numlights)
+	    {
+	      lighttable_t** xwalllights;
+	      fixed_t        height;
+	      fixed_t        bheight = 0;
+	      int            solid = 0;
+	      int            lighteffect = 0;
 
-          // SoM: If column is out of range, why bother with it??
-          if(windowbottom < topbounds || windowtop > bottombounds)
-          {
-            for(i = 0; i < dc_numlights; i++)
-            {
-              dc_lightlist[i].height += dc_lightlist[i].heightstep;
-              if(dc_lightlist[i].flags & FF_CUTLEVEL)
-                dc_lightlist[i].botheight += dc_lightlist[i].botheightstep;
-            }
-            spryscale += rw_scalestep;
-            continue;
-          }
+	      sprtopscreen = windowtop = (centeryfrac - FixedMul((dc_texturemid - offsetvalue), spryscale));
+	      sprbotscreen = windowbottom = FixedMul(*ffloor->topheight - *ffloor->bottomheight, spryscale) + sprtopscreen;
 
-          dc_iscale = 0xffffffffu / (unsigned)spryscale;
-            
-          // draw the texture
-          col = tex->GetMaskedColumn(maskedtexturecol[dc_x]);
+	      // SoM: If column is out of range, why bother with it??
+	      if(windowbottom < topbounds || windowtop > bottombounds)
+		{
+		  for(i = 0; i < dc_numlights; i++)
+		    {
+		      dc_lightlist[i].height += dc_lightlist[i].heightstep;
+		      if(dc_lightlist[i].flags & FF_CUTLEVEL)
+			dc_lightlist[i].botheight += dc_lightlist[i].botheightstep;
+		    }
+		  spryscale += rw_scalestep;
+		  continue;
+		}
 
-          for(i = 0; i < dc_numlights; i++)
-          {
-            int lightnum;
+	      dc_iscale = 0xffffffffu / (unsigned)spryscale;
 
-            // Check if the current light effects the colormap/lightlevel
-            lighteffect = !(dc_lightlist[i].flags & FF_NOSHADE);
-            if(lighteffect)
-            {
-              if(ffloor->flags & FF_FOG || dc_lightlist[i].flags & FF_FOG || (dc_lightlist[i].extra_colormap && dc_lightlist[i].extra_colormap->fog))
-                lightnum = (ffloor->master->frontsector->lightlevel >> LIGHTSEGSHIFT);
-              else
-                lightnum = (dc_lightlist[i].lightlevel >> LIGHTSEGSHIFT)+extralight;
+	      // draw the texture
 
-              if(ffloor->flags & FF_FOG || dc_lightlist[i].flags & FF_FOG || (dc_lightlist[i].extra_colormap && dc_lightlist[i].extra_colormap->fog));
-              else if (curline->v1->y == curline->v2->y)
-                  lightnum--;
-              else if (curline->v1->x == curline->v2->x)
-                  lightnum++;
+	      for(i = 0; i < dc_numlights; i++)
+		{
+		  int lightnum;
 
-              if (lightnum < 0)
-                  xwalllights = scalelight[0];
-              else if (lightnum >= LIGHTLEVELS)
-                  xwalllights = scalelight[LIGHTLEVELS-1];
-              else
-                  xwalllights = scalelight[lightnum];
+		  // Check if the current light effects the colormap/lightlevel
+		  lighteffect = !(dc_lightlist[i].flags & FF_NOSHADE);
+		  if(lighteffect)
+		    {
+		      if(ffloor->flags & FF_FOG || dc_lightlist[i].flags & FF_FOG || (dc_lightlist[i].extra_colormap && dc_lightlist[i].extra_colormap->fog))
+			lightnum = (ffloor->master->frontsector->lightlevel >> LIGHTSEGSHIFT);
+		      else
+			lightnum = (dc_lightlist[i].lightlevel >> LIGHTSEGSHIFT)+extralight;
 
-              index = spryscale>>LIGHTSCALESHIFT;
+		      if(ffloor->flags & FF_FOG || dc_lightlist[i].flags & FF_FOG || (dc_lightlist[i].extra_colormap && dc_lightlist[i].extra_colormap->fog));
+		      else if (curline->v1->y == curline->v2->y)
+			lightnum--;
+		      else if (curline->v1->x == curline->v2->x)
+			lightnum++;
 
-              if (index >=  MAXLIGHTSCALE )
-                  index = MAXLIGHTSCALE-1;
+		      if (lightnum < 0)
+			xwalllights = scalelight[0];
+		      else if (lightnum >= LIGHTLEVELS)
+			xwalllights = scalelight[LIGHTLEVELS-1];
+		      else
+			xwalllights = scalelight[lightnum];
 
-              if(ffloor->flags & FF_FOG)
-              {
-                if(ffloor->master->frontsector->extra_colormap && !fixedcolormap)
-                  dc_lightlist[i].rcolormap = ffloor->master->frontsector->extra_colormap->colormap + (xwalllights[index] - colormaps);
-                else if(!fixedcolormap)
-                  dc_lightlist[i].rcolormap = xwalllights[index];
-              }
-              else
-              {
-                if(dc_lightlist[i].extra_colormap && !fixedcolormap)
-                  dc_lightlist[i].rcolormap = dc_lightlist[i].extra_colormap->colormap + (xwalllights[index] - colormaps);
-                else if(!fixedcolormap)
-                  dc_lightlist[i].rcolormap = xwalllights[index];
-              }
+		      index = spryscale>>LIGHTSCALESHIFT;
 
-              if(fixedcolormap)
-                dc_lightlist[i].rcolormap = fixedcolormap;
-            }
+		      if (index >=  MAXLIGHTSCALE )
+			index = MAXLIGHTSCALE-1;
 
-            // Check if the current light can cut the current 3D floor.
-            if(dc_lightlist[i].flags & FF_CUTSOLIDS && !(ffloor->flags & FF_EXTRA))
-              solid = 1;
-            else if(dc_lightlist[i].flags & FF_CUTEXTRA && ffloor->flags & FF_EXTRA)
-            {
-              if(dc_lightlist[i].flags & FF_EXTRA)
-              {
-                // The light is from an extra 3D floor... Check the flags so
-                // there are no undesired cuts.
-                if((dc_lightlist[i].flags & (FF_TRANSLUCENT|FF_FOG)) == (ffloor->flags & (FF_TRANSLUCENT|FF_FOG)))
-                  solid = 1;
-              }
-              else
-                solid = 1;
-            }
-            else
-              solid = 0;
+		      if(ffloor->flags & FF_FOG)
+			{
+			  if(ffloor->master->frontsector->extra_colormap && !fixedcolormap)
+			    dc_lightlist[i].rcolormap = ffloor->master->frontsector->extra_colormap->colormap + (xwalllights[index] - colormaps);
+			  else if(!fixedcolormap)
+			    dc_lightlist[i].rcolormap = xwalllights[index];
+			}
+		      else
+			{
+			  if(dc_lightlist[i].extra_colormap && !fixedcolormap)
+			    dc_lightlist[i].rcolormap = dc_lightlist[i].extra_colormap->colormap + (xwalllights[index] - colormaps);
+			  else if(!fixedcolormap)
+			    dc_lightlist[i].rcolormap = xwalllights[index];
+			}
 
-            dc_lightlist[i].height += dc_lightlist[i].heightstep;
-            height = dc_lightlist[i].height;
+		      if(fixedcolormap)
+			dc_lightlist[i].rcolormap = fixedcolormap;
+		    }
 
-            if(solid)
-            {
-              dc_lightlist[i].botheight += dc_lightlist[i].botheightstep;
-              bheight = dc_lightlist[i].botheight - (FRACUNIT >> 1);
-            }
+		  // Check if the current light can cut the current 3D floor.
+		  if(dc_lightlist[i].flags & FF_CUTSOLIDS && !(ffloor->flags & FF_EXTRA))
+		    solid = 1;
+		  else if(dc_lightlist[i].flags & FF_CUTEXTRA && ffloor->flags & FF_EXTRA)
+		    {
+		      if(dc_lightlist[i].flags & FF_EXTRA)
+			{
+			  // The light is from an extra 3D floor... Check the flags so
+			  // there are no undesired cuts.
+			  if((dc_lightlist[i].flags & (FF_TRANSLUCENT|FF_FOG)) == (ffloor->flags & (FF_TRANSLUCENT|FF_FOG)))
+			    solid = 1;
+			}
+		      else
+			solid = 1;
+		    }
+		  else
+		    solid = 0;
 
-            if(height <= windowtop)
-            {
-              if(lighteffect)
-                dc_colormap = dc_lightlist[i].rcolormap;
-              if(solid && windowtop < bheight)
-                windowtop = bheight;
-              continue;
-            }
+		  dc_lightlist[i].height += dc_lightlist[i].heightstep;
+		  height = dc_lightlist[i].height;
 
-            windowbottom = height;
-            if(windowbottom >= sprbotscreen)
-            {
-              windowbottom = sprbotscreen;
-              colfunc_2s (col);
-              for(i++ ; i < dc_numlights; i++)
-              {
-                dc_lightlist[i].height += dc_lightlist[i].heightstep;
-                if(dc_lightlist[i].flags & FF_CUTLEVEL)
-                  dc_lightlist[i].botheight += dc_lightlist[i].botheightstep;
-              }
-              continue;
-            }
-            colfunc_2s (col);
-            if(solid)
-              windowtop = bheight;
-            else
-              windowtop = windowbottom + 1;
-            if(lighteffect)
-              dc_colormap = dc_lightlist[i].rcolormap;
-          }
-          windowbottom = sprbotscreen;
-          if(windowtop < windowbottom)
-            colfunc_2s (col);
+		  if(solid)
+		    {
+		      dc_lightlist[i].botheight += dc_lightlist[i].botheightstep;
+		      bheight = dc_lightlist[i].botheight - (FRACUNIT >> 1);
+		    }
 
-          spryscale += rw_scalestep;
-          continue;
-        }
+		  if(height <= windowtop)
+		    {
+		      if(lighteffect)
+			dc_colormap = dc_lightlist[i].rcolormap;
+		      if(solid && windowtop < bheight)
+			windowtop = bheight;
+		      continue;
+		    }
 
-        // calculate lighting
-        if (!fixedcolormap)
-        {
-            index = spryscale>>LIGHTSCALESHIFT;
+		  windowbottom = height;
+		  if(windowbottom >= sprbotscreen)
+		    {
+		      windowbottom = sprbotscreen;
+		      colfunc_2s (col);
+		      for(i++ ; i < dc_numlights; i++)
+			{
+			  dc_lightlist[i].height += dc_lightlist[i].heightstep;
+			  if(dc_lightlist[i].flags & FF_CUTLEVEL)
+			    dc_lightlist[i].botheight += dc_lightlist[i].botheightstep;
+			}
+		      continue;
+		    }
+		  colfunc_2s (col);
+		  if(solid)
+		    windowtop = bheight;
+		  else
+		    windowtop = windowbottom + 1;
+		  if(lighteffect)
+		    dc_colormap = dc_lightlist[i].rcolormap;
+		}
+	      windowbottom = sprbotscreen;
+	      if(windowtop < windowbottom)
+		colfunc_2s (col);
 
-            if (index >=  MAXLIGHTSCALE )
+	      spryscale += rw_scalestep;
+	      continue;
+	    }
+
+	  // calculate lighting
+	  if (!fixedcolormap)
+	    {
+	      index = spryscale>>LIGHTSCALESHIFT;
+
+	      if (index >=  MAXLIGHTSCALE )
                 index = MAXLIGHTSCALE-1;
                 
-            dc_colormap = walllights[index];
-            if(frontsector->extra_colormap)
+	      dc_colormap = walllights[index];
+	      if(frontsector->extra_colormap)
                 dc_colormap = frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
-            if(ffloor->flags & FF_FOG && ffloor->master->frontsector->extra_colormap)
+	      if(ffloor->flags & FF_FOG && ffloor->master->frontsector->extra_colormap)
                 dc_colormap = ffloor->master->frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
-        }
+	    }
 
-        sprtopscreen = windowtop = (centeryfrac - FixedMul((dc_texturemid - offsetvalue), spryscale));
-        sprbotscreen = windowbottom = FixedMul(*ffloor->topheight - *ffloor->bottomheight, spryscale) + sprtopscreen;
-        dc_iscale = 0xffffffffu / (unsigned)spryscale;
+	  sprtopscreen = windowtop = (centeryfrac - FixedMul((dc_texturemid - offsetvalue), spryscale));
+	  sprbotscreen = windowbottom = FixedMul(*ffloor->topheight - *ffloor->bottomheight, spryscale) + sprtopscreen;
+	  dc_iscale = 0xffffffffu / (unsigned)spryscale;
             
-        // draw the texture
-        col = tex->GetMaskedColumn(maskedtexturecol[dc_x]);
-            
-        colfunc_2s (col);
-        spryscale += rw_scalestep;
-      }
+	  // draw the texture
+	  colfunc_2s (col);
+	  spryscale += rw_scalestep;
+	}
     }
-    colfunc = basecolfunc;
+  colfunc = basecolfunc;
 }
 
 

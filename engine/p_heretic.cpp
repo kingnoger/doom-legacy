@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.27  2005/06/08 17:29:38  smite-meister
+// FS bugfixes
+//
 // Revision 1.26  2005/03/29 17:20:45  smite-meister
 // state and mobjinfo tables fixed
 //
@@ -95,6 +98,7 @@
 
 #include "p_enemy.h"
 #include "p_maputl.h"
+#include "p_setup.h"
 
 #include "sounds.h"
 #include "m_random.h"
@@ -102,6 +106,8 @@
 
 #include "tables.h"
 
+#include "w_wad.h"
+#include "z_zone.h"
 
 
 void P_MinotaurSlam(Actor *source, Actor *target)
@@ -297,6 +303,11 @@ void DoomPatchEngine()
   mobjinfo[MT_TFOG].spawnstate = S_TFOG;
   sprnames[SPR_BLUD] = "BLUD";
   states[S_GIBS].sprite = SPR_POL5;
+
+  // linedef conversions
+  int lump = fc.GetNumForName("XDOOM");
+  linedef_xtable = (xtable_t *)fc.CacheLumpNum(lump, PU_STATIC);
+  linedef_xtable_size = fc.LumpLength(lump) / sizeof(xtable_t);
 }
 
 
@@ -308,6 +319,10 @@ void HereticPatchEngine()
   mobjinfo[MT_TFOG].spawnstate = S_HTFOG1;
   sprnames[SPR_BLUD] = "BLOD";
   states[S_GIBS].sprite = SPR_BLOD;
+
+  int lump = fc.GetNumForName("XHERETIC");
+  linedef_xtable = (xtable_t *)fc.CacheLumpNum(lump, PU_STATIC);
+  linedef_xtable_size = fc.LumpLength(lump) / sizeof(xtable_t);
 
   // Above, good. Below, bad.
   text[TXT_PD_REDK] = "YOU NEED A GREEN KEY TO OPEN THIS DOOR";

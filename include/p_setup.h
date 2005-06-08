@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2005/06/08 17:29:40  smite-meister
+// FS bugfixes
+//
 // Revision 1.5  2004/03/28 15:16:14  smite-meister
 // Texture cache.
 //
@@ -32,12 +35,10 @@
 // Revision 1.1.1.1  2002/11/16 14:18:25  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//   Linedef conversion to Hexen system
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Linedef conversion to Hexen system
 
 #ifndef p_setup_h
 #define p_setup_h 1
@@ -75,5 +76,8 @@ enum trigger_e
   //T_TAG_1 = 0x20 // bit 5
 };
 
+
+extern xtable_t *linedef_xtable;
+extern int  linedef_xtable_size;
 
 #endif

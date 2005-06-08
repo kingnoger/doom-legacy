@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.57  2005/06/08 17:29:38  smite-meister
+// FS bugfixes
+//
 // Revision 1.56  2005/06/05 19:32:25  smite-meister
 // unsigned map structures
 //
@@ -1158,7 +1161,7 @@ bool Map::Setup(tic_t start, bool spawnthings)
   LoadLineDefs(lumpnum+LUMP_LINEDEFS);
 
   if (!hexen_format)
-    ConvertLineDefs(); // Doom => Hexen conversion
+    ConvertLineDefs();
 
   LoadSideDefs2(lumpnum+LUMP_SIDEDEFS); // also processes some linedef specials
   LoadLineDefs2();
@@ -1215,63 +1218,61 @@ bool Map::Setup(tic_t start, bool spawnthings)
 }
 
 
+// TEMP linedef conversion tables
+xtable_t *linedef_xtable = NULL;
+int  linedef_xtable_size = 0;
 
-// does the Doom => Hexen linedef type conversion
-void Map::ConvertLineDefs()
+/// Does the Doom => Hexen linedef type conversion for the given linedef.
+void ConvertLineDef(line_t *ld)
 {
-  // we use a pregenerated binary lookup table in legacy.wad
+  int j, trig;
+  bool passuse = ld->flags & ML_PASSUSE;
+  bool alltrigger = ld->flags & ML_ALLTRIGGER;
+  ld->flags &= 0x1ff; // only basic Doom flags are kept
 
-  int lump;
-  if (game.mode == gm_heretic)
-    lump = fc.GetNumForName("XHERETIC");
-  else
-    lump = fc.GetNumForName("XDOOM");
-
-  xtable_t *p, *xt = (xtable_t *)fc.CacheLumpNum(lump, PU_CACHE);
-  int n = fc.LumpLength(lump) / sizeof(xtable_t);
-
-  int i, j, trig;
-  line_t *ld = lines;
-  for (i=0; i<numlines; i++, ld++)
+  if (ld->special < linedef_xtable_size)
     {
-      bool passuse = ld->flags & ML_PASSUSE;
-      bool alltrigger = ld->flags & ML_ALLTRIGGER;
-      ld->flags &= 0x1ff; // only basic Doom flags are kept
+      // we use a pregenerated binary lookup table in legacy.wad
+      xtable_t *p = &linedef_xtable[ld->special];
 
-      if (ld->special < n)
-        {
-          p = &xt[ld->special];
+      if (p->type)
+	ld->special = p->type; // some specials are unaffected
 
-          if (p->type)
-            ld->special = p->type; // some specials are unaffected
+      for (j=0; j<5; j++)
+	ld->args[j] = p->args[j];
 
-          for (j=0; j<5; j++)
-            ld->args[j] = p->args[j];
+      trig = p->trigger;
 
-          trig = p->trigger;
+      // flags
+      ld->flags |= (trig & 0x0f) << (ML_SPAC_SHIFT-1); // activation and repeat
 
-          // flags
-          ld->flags |= (trig & 0x0f) << (ML_SPAC_SHIFT-1); // activation and repeat
-
-          if (passuse && (GET_SPAC(ld->flags) == SPAC_USE))
-            {
-              ld->flags &= ~ML_SPAC_MASK;
-              ld->flags |= SPAC_PASSUSE << ML_SPAC_SHIFT;
-            }
-
-          if (trig & T_ALLOWMONSTER)
-            ld->flags |= ML_MONSTERS_CAN_ACTIVATE;
-        }
-      else if (ld->special >= GenCrusherBase)
+      if (passuse && (GET_SPAC(ld->flags) == SPAC_USE))
 	{
-	  // Boom generalized linedefs
-	  ld->flags |= ML_BOOM_GENERALIZED;
-	  if (passuse)
-	    ld->flags |= SPAC_PASSUSE << ML_SPAC_SHIFT;
+	  ld->flags &= ~ML_SPAC_MASK;
+	  ld->flags |= SPAC_PASSUSE << ML_SPAC_SHIFT;
 	}
 
-      // put flags back
-      if (alltrigger)
+      if (trig & T_ALLOWMONSTER)
 	ld->flags |= ML_MONSTERS_CAN_ACTIVATE;
     }
+  else if (ld->special >= GenCrusherBase)
+    {
+      // Boom generalized linedefs
+      ld->flags |= ML_BOOM_GENERALIZED;
+      if (passuse)
+	ld->flags |= SPAC_PASSUSE << ML_SPAC_SHIFT;
+    }
+
+  // put flags back
+  if (alltrigger)
+    ld->flags |= ML_MONSTERS_CAN_ACTIVATE;
+
+}
+
+
+/// Converts all linedefs in the map using the conversion table.
+void Map::ConvertLineDefs()
+{
+  for (int i=0; i<numlines; i++)
+    ConvertLineDef(&lines[i]); // Doom => Hexen conversion
 }
