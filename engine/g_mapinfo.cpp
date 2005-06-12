@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.26  2005/06/12 16:26:26  smite-meister
+// alpha2 bugfixes
+//
 // Revision 1.25  2005/03/16 21:16:05  smite-meister
 // menu cleanup, bugfixes
 //
@@ -135,6 +138,7 @@ MapInfo::MapInfo()
 {
   state = MAP_UNLOADED;
   me = NULL;
+  found = false;
   nicename = "Unnamed Map";
 
   mapnumber = 0;
@@ -157,6 +161,8 @@ MapInfo::MapInfo()
 
   cdtrack = 1;
   BossDeathKey = 0;
+
+  interpic = "INTERPIC"; // fallback for lazy map authors
 }
 
 
@@ -392,7 +398,7 @@ static parsercmd_t MapInfo_commands[]=
   {P_ITEM_STR, "version",    MI_offset(version)},
   {P_ITEM_STR, "creator",    MI_offset(author)},
   {P_ITEM_STR, "author",     MI_offset(author)},
-  {P_ITEM_STR, "hint",       MI_offset(hint)},
+  {P_ITEM_STR, "description", MI_offset(description)},
   {P_ITEM_INT, "partime",    MI_offset(partime)},
   {P_ITEM_STR, "music",      MI_offset(musiclump)},
 
@@ -401,13 +407,16 @@ static parsercmd_t MapInfo_commands[]=
 
   //{P_ITEM_STR, "nextlevel",  MI_offset(nextlevel)},
   //{P_ITEM_STR, "nextsecret", MI_offset(nextsecret)},
+
+  {P_ITEM_STR, "interpic", MI_offset(interpic)},
+  {P_ITEM_STR, "intermusic", MI_offset(intermusic)},
   /*
     {P_ITEM_STR,    "levelpic",     &info_levelpic},
-    {P_ITEM_STR,    "interpic",     &info_interpic},
     {P_ITEM_STR,    "inter-backdrop",&info_backdrop},
     {P_ITEM_STR,    "defaultweapons",&info_weapons},
   */
-  // {IVT_CONSOLECMD,"consolecmd",    NULL},
+  {P_ITEM_IGNORE, "consolecmd", 0}, // TODO at least for now
+
   {P_ITEM_INT_INT, "doom_thingoffset", MI_offset(doom_offs), MI_offset(doom_offs) + sizeof(int)},
   {P_ITEM_INT_INT, "heretic_thingoffset", MI_offset(heretic_offs), MI_offset(heretic_offs) + sizeof(int)},
   {P_ITEM_INT_INT, "hexen_thingoffset", MI_offset(hexen_offs), MI_offset(hexen_offs) + sizeof(int)},
@@ -441,6 +450,9 @@ static parsercmd_t MAPINFO_MAP_commands[] =
   {P_ITEM_STR, "music", MI_offset(musiclump)},
   {P_ITEM_INT, "par", MI_offset(partime)},
   {P_ITEM_INT, "bossdeath", MI_offset(BossDeathKey)},
+
+  {P_ITEM_STR, "interpic", MI_offset(interpic)},
+  {P_ITEM_STR, "intermusic", MI_offset(intermusic)},
 
   {P_ITEM_IGNORE, "cd_start_track", 0},
   {P_ITEM_IGNORE, "cd_end1_track", 0},
@@ -546,9 +558,6 @@ char *MapInfo::Read(int lump)
 // ZDoom clusterdef commands
 static parsercmd_t MAPINFO_CLUSTERDEF_commands[] =
 {
-  {P_ITEM_STR, "interpic", CD_offset(interpic)},
-  {P_ITEM_STR, "intermusic", CD_offset(intermusic)},
-
   {P_ITEM_INT, "finale", CD_offset(episode)},
   {P_ITEM_STR, "entertext", CD_offset(entertext)},
   {P_ITEM_STR, "exittext", CD_offset(exittext)},
@@ -623,6 +632,15 @@ int GameInfo::Read_MAPINFO(int lump)
 	    info->lumpname = ln;
 
 	  info->nicename = line;
+
+	  // check that the map can be found
+	  const char *temp = info->lumpname.c_str();
+	  if (fc.FindNumForName(temp) == -1)
+	    {
+	      CONS_Printf("Map '%s' not present!\n", temp);
+	    }
+	  else
+	    info->found = true;
 	}
       else if (!strcasecmp(line, "CLUSTERDEF"))
 	{
@@ -685,6 +703,9 @@ int GameInfo::Read_MAPINFO(int lump)
       info = r->second;
       if (info->mapnumber <= 0)
 	I_Error("Map numbers must be positive (%s)!\n", info->lumpname.c_str());
+
+      if (!info->found)
+	continue; // non-present maps are not assigned to clusters
 
       n = info->cluster;
       if (!clustermap.count(n))
@@ -786,7 +807,7 @@ MapInfo *GameInfo::FindMapInfo(int c)
 MapInfo *GameInfo::FindMapInfo(const char *name)
 {
   char *tail;
-  int n = strtol(name, &tail, 0);
+  int n = strtol(name, &tail, 10);
 
   if (tail != name)
     return FindMapInfo(n); // by number

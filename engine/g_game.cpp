@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.47  2005/06/12 16:26:26  smite-meister
+// alpha2 bugfixes
+//
 // Revision 1.46  2005/05/31 18:04:21  smite-meister
 // screenslink crash fixed
 //
@@ -660,7 +663,7 @@ PlayerInfo *GameInfo::FindPlayer(int num)
 PlayerInfo *GameInfo::FindPlayer(const char *name)
 {
   char *tail;
-  int n = strtol(name, &tail, 0);
+  int n = strtol(name, &tail, 10);
 
   if (tail != name)
     return FindPlayer(n); // by number

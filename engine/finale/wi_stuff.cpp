@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.26  2005/06/12 16:26:27  smite-meister
+// alpha2 bugfixes
+//
 // Revision 1.25  2005/04/17 18:36:34  smite-meister
 // netcode
 //
@@ -1520,8 +1523,8 @@ void Intermission::Start(const Map *m, const MapInfo *n)
 
   MapCluster *cl = game.FindCluster(m->info->cluster);
   episode = cl->episode;
-  interpic = cl->interpic.c_str();
-  intermusic = cl->intermusic.c_str();
+  interpic = m->info->interpic.c_str();
+  intermusic = m->info->intermusic.c_str();
 
   acceleratestage = false;
   count = bcount = 0;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.45  2005/06/12 16:26:21  smite-meister
+// alpha2 bugfixes
+//
 // Revision 1.44  2005/05/29 11:30:41  segabor
 // Fixed __APPLE directive__ to __APPLE_CC__ on Mac OS X, new 'Doom Legacy' Xcode project target
 //
@@ -165,7 +168,7 @@ void CL_Init();
 // Version number: major.minor.subversion
 const int  VERSION = 199;  // major*100 + minor
 const int  SUBVERSION = 0; // for bugfix releases, should not affect compatibility
-const char VERSIONSTRING[] = "alpha2";
+const char VERSIONSTRING[] = "alpha3";
 
 // Name of local directory for config files and savegames
 #ifdef LINUX 

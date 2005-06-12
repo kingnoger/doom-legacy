@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2005/06/12 16:26:28  smite-meister
+// alpha2 bugfixes
+//
 // Revision 1.16  2005/04/19 18:28:34  smite-meister
 // new RPCs
 //
@@ -130,8 +133,8 @@ void Command_MapInfo_f()
   CONS_Printf("Par: %d s\n", m->partime);
   if (!m->author.empty())
     CONS_Printf("Author: %s\n", m->author.c_str());
-  if (!m->hint.empty())
-    CONS_Printf("%s\n", m->hint.c_str());
+  if (!m->description.empty())
+    CONS_Printf("%s\n", m->description.c_str());
 }
 
 
@@ -545,12 +548,18 @@ void Command_Map_f()
       return;
     }
 
-  MapInfo *m = game.FindMapInfo(COM_Argv(1));
+  MapInfo *m = game.FindMapInfo(strupr(COM_Argv(1)));
   if (!m)
     {
       CONS_Printf("No such map.\n");
       return;
     }
+
+  if (!m->found)
+    {
+      CONS_Printf("Map %s cannot be found.\n", m->lumpname.c_str());
+      return;
+    }    
 
   int ep = atoi(COM_Argv(2));
 

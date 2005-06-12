@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2005 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.36  2005/06/12 16:26:26  smite-meister
+// alpha2 bugfixes
+//
 // Revision 1.35  2005/04/22 19:44:49  smite-meister
 // bugs fixed
 //
@@ -625,7 +628,7 @@ void PlayerInfo::CalcViewHeight()
 
   pspdef_t *psp = pawn->psprites;
 
-  if (psp[ps_weapon].state->action == A_WeaponReady)
+  if (psp[ps_weapon].state && psp[ps_weapon].state->action == A_WeaponReady)
     {
       // bob the weapon based on movement speed
       int angle = (128 * game.tic) & FINEMASK;

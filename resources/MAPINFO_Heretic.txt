@@ -6,8 +6,6 @@
 ; Episode 1
 
 clusterdef 1 "City of the Damned"
-interpic MAPE1
-intermusic MUS_INTR
 finale 1
 music MUS_CPTD
 flat FLOOR25
@@ -16,6 +14,8 @@ exittext "With the destruction of the iron\nliches and their minions, the last\n
 defaultmap
 cluster 1
 sky1 SKY1 0
+interpic MAPE1
+intermusic MUS_INTR
 
 map E1M1 "E1M1: The Docks"
 levelnum 1
@@ -79,8 +79,6 @@ music MUS_E1M9
 ; Episode 2
 
 clusterdef 2 "Hell's Maw"
-interpic MAPE2
-intermusic MUS_INTR
 finale 2
 music MUS_CPTD
 flat FLATHUH1
@@ -89,6 +87,8 @@ exittext "The mighty maulotaurs have proved\nto be no match for you, and as\nthe
 defaultmap
 cluster 2
 sky1 SKY2 0
+interpic MAPE2
+intermusic MUS_INTR
 
 map E2M1 "E2M1: The Crater"
 levelnum 11
@@ -152,8 +152,6 @@ music MUS_E2M9
 ; Episode 3
 
 clusterdef 3 "The Dome of D'Sparil"
-interpic MAPE3
-intermusic MUS_INTR
 finale 3
 music MUS_CPTD
 flat FLTWAWA2
@@ -162,6 +160,8 @@ exittext "The death of D'Sparil has loosed\nthe magical bonds holding his\ncreat
 defaultmap
 cluster 3
 sky1 SKY3 0
+interpic MAPE3
+intermusic MUS_INTR
 
 map E3M1 "E3M1: The Storehouse"
 levelnum 21
@@ -225,8 +225,6 @@ music MUS_E2M6
 ; Episode 4
 
 clusterdef 4 "The Ossuary"
-interpic MAPE1
-intermusic MUS_INTR
 finale 4
 music MUS_CPTD
 flat FLOOR28
@@ -235,6 +233,8 @@ exittext "You thought you would return to your\nown world after D'Sparil died, b
 defaultmap
 cluster 4
 sky1 SKY1 0
+interpic MAPE1
+intermusic MUS_INTR
 
 map E4M1 "E4M1: Catafalque"
 levelnum 31
@@ -298,8 +298,6 @@ music MUS_E1M9
 ; Episode 5
 
 clusterdef 5 "The Stagnant Demesne"
-interpic MAPE2
-intermusic MUS_INTR
 finale 5
 music MUS_CPTD
 flat FLOOR08
@@ -308,6 +306,8 @@ exittext "As the final maulotaur bellows his\ndeath-agony, you realize that you\
 defaultmap
 cluster 5
 sky1 SKY3 0
+interpic MAPE2
+intermusic MUS_INTR
 
 MAP E5M1 "E5M1: Ochre Cliffs"
 levelnum 41
@@ -371,15 +371,16 @@ music MUS_E2M9
 ; Episode 6 has only three maps...
 
 clusterdef 6 "Unfinished Episode"
-interpic MAPE3
-intermusic MUS_INTR
 finale 6
 music MUS_CPTD
 flat FLOOR25
+entertext "You have entered the Unfinished\nEpisode of Heretic: Shadow of the\nSerpent Riders."
 
 defaultmap
 cluster 6
 sky1 SKY2 0
+interpic MAPE3
+intermusic MUS_INTR
 
 map E6M1 "E6M1:"
 levelnum 51

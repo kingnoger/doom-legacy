@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.42  2005/06/12 16:26:26  smite-meister
+// alpha2 bugfixes
+//
 // Revision 1.41  2005/04/17 18:36:33  smite-meister
 // netcode
 //
@@ -339,15 +342,27 @@ void GameInfo::Ticker()
 	    }
 	  else if (p->playerstate == PST_NEEDMAP)
 	    {
+	      // assign the player to a map
 	      CONS_Printf("Map request..");
 
-	      // assign the player to a map
 	      if (p->requestmap == 0)
 		m = currentcluster->maps[0]; // first map in cluster
 	      else
-		m = FindMapInfo(p->requestmap);
+		{
+		  m = FindMapInfo(p->requestmap);
+		  if (!m)
+		    {
+		      // game ends
+		      currentcluster->Finish(p->requestmap, p->entrypoint);
+		      StartFinale(NULL);
+		      break;
+		    }
+		  else if (!m->found)
+		    m = currentcluster->maps[0];
+		}
 
-	      if (!m || currentcluster->number != m->cluster)
+	      // cluster change?
+	      if (currentcluster->number != m->cluster)
 		{
 		  // TODO minor thing: if several players exit maps on the same tick,
 		  // and someone besides the first one causes a cluster change, some
@@ -356,17 +371,9 @@ void GameInfo::Ticker()
 		  // cluster change!
 		  currentcluster->Finish(p->requestmap, p->entrypoint);
 
-		  if (m)
-		    {
-		      MapCluster *next = FindCluster(m->cluster);
-		      StartFinale(next);
-		      currentcluster = next;
-		    }
-		  else
-		    {
-		      // game ends here
-		      StartFinale(NULL);
-		    }
+		  MapCluster *next = FindCluster(m->cluster);
+		  StartFinale(next);
+		  currentcluster = next;
 
 		  break; // this is important! no need to check the other players.
 		}

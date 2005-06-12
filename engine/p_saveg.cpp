@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.44  2005/06/12 16:26:27  smite-meister
+// alpha2 bugfixes
+//
 // Revision 1.43  2005/06/05 19:32:25  smite-meister
 // unsigned map structures
 //
@@ -1620,8 +1623,6 @@ int MapCluster::Serialize(LArchive &a)
   a << hub << keepstuff;
 
   a << time << partime;
-
-  a << interpic << intermusic;
   a << entertext << exittext << finalepic << finalemusic << episode;
 
   int n;
@@ -1639,8 +1640,6 @@ int MapCluster::Unserialize(LArchive &a)
   a << hub << keepstuff;
 
   a << time << partime;
-
-  a << interpic << intermusic;
   a << entertext << exittext << finalepic << finalemusic << episode;
 
   int n, temp;
@@ -1673,6 +1672,8 @@ int MapInfo::Serialize(LArchive &a)
   a << sky1 << sky1sp << sky2 << sky2sp;
   a << cdtrack << fadetablelump;
   a << BossDeathKey;
+
+  a << interpic << intermusic;
 
   if (state == MAP_SAVED)
     {
@@ -1721,6 +1722,8 @@ int MapInfo::Unserialize(LArchive &a)
   a << sky1 << sky1sp << sky2 << sky2sp;
   a << cdtrack << fadetablelump;
   a << BossDeathKey;
+
+  a << interpic << intermusic;
 
   a << temp;
   if (temp == 2)

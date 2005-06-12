@@ -5,8 +5,6 @@
 ; Episode 1
 
 clusterdef 1 "Knee-deep in the Dead"
-interpic WIMAP0
-intermusic D_INTER
 finale 1
 music D_VICTOR
 flat FLOOR4_8
@@ -15,6 +13,8 @@ exittext "Once you beat the big badasses and\nclean out the moon base you're sup
 defaultmap
 cluster 1
 sky1 SKY1 0
+interpic WIMAP0
+intermusic D_INTER
 
 map E1M1 "E1M1: Hangar"
 levelnum 1
@@ -78,8 +78,6 @@ music D_E1M9
 ; Episode 2
 
 clusterdef 2 "The Shores of Hell"
-interpic WIMAP1
-intermusic D_INTER
 finale 2
 music D_VICTOR
 flat SFLR6_1
@@ -88,6 +86,8 @@ exittext "You've done it! The hideous cyber-\ndemon lord that ruled the lost Dei
 defaultmap
 cluster 2
 sky1 SKY2 0
+interpic WIMAP1
+intermusic D_INTER
 
 map E2M1 "E2M1: Deimos Anomaly"
 levelnum 11
@@ -151,8 +151,6 @@ music D_E2M9
 ; Episode 3
 
 clusterdef 3 "Inferno"
-interpic WIMAP2
-intermusic D_INTER
 finale 3
 music D_VICTOR
 flat MFLR8_4
@@ -161,6 +159,8 @@ exittext "The loathsome spiderdemon that\nmasterminded the invasion of the moon\
 defaultmap
 cluster 3
 sky1 SKY3 0
+interpic WIMAP2
+intermusic D_INTER
 
 map E3M1 "E3M1: Hell Keep"
 levelnum 21
@@ -224,8 +224,6 @@ music D_E3M9
 ; Episode 4
 
 clusterdef 4 "Thy Flesh Consumed"
-interpic WIMAP0
-intermusic D_INTER
 finale 4
 music D_VICTOR
 flat MFLR8_3
@@ -234,6 +232,8 @@ exittext "The spider mastermind must have sent forth\nits legions of hellspawn b
 defaultmap
 cluster 4
 sky1 SKY4 0
+interpic WIMAP0
+intermusic D_INTER
 
 map E4M1 "E4M1: Hell Beneath"
 levelnum 31

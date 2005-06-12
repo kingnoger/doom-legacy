@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.28  2005/06/12 16:26:27  smite-meister
+// alpha2 bugfixes
+//
 // Revision 1.27  2005/04/17 18:36:33  smite-meister
 // netcode
 //
@@ -639,7 +642,6 @@ static void CheatWarpFunc(PlayerPawn *p, const byte *arg)
   char *msg;
 
   // "idclev" or "engage" change-level cheat
-  char name[9];
 
   switch (game.mode)
     {
@@ -648,7 +650,6 @@ static void CheatWarpFunc(PlayerPawn *p, const byte *arg)
       mapnum = (arg[0] - '0')*10 + arg[1] - '0';
       if (mapnum < 1 || mapnum > 99)
 	return;
-      sprintf(name, "%2d", mapnum);
       break;
 
     default:
@@ -657,7 +658,7 @@ static void CheatWarpFunc(PlayerPawn *p, const byte *arg)
       mapnum = arg[1] - '0';
       if (episode < 1 || episode > 9 || mapnum < 1 || mapnum > 9)
 	return;
-      sprintf(name, "%1d%1d", episode-1, mapnum);
+      mapnum = (episode-1)*10 + mapnum; // our current map numbering system
     }
 
   if (game.mode == gm_heretic)
@@ -666,7 +667,7 @@ static void CheatWarpFunc(PlayerPawn *p, const byte *arg)
     msg = STSTR_CLEV;
 
   p->player->SetMessage(msg, false);
-  COM_BufAddText(va("map %s\n", name));
+  COM_BufAddText(va("map %d\n", mapnum));
 }
 
 static void CheatChickenFunc(PlayerPawn *p, const byte *arg)

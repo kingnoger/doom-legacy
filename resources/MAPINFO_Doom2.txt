@@ -5,8 +5,6 @@
 ; Starport (maps 1-6)
 
 clusterdef 1 "The Starport"
-interpic INTERPIC
-intermusic D_DM2INT
 music D_READ_M
 flat SLIME16
 exittext "You have entered deeply into the infested\nstarport. But something is wrong. The\nmonsters have brought their own reality\nwith them, and the starport's technology\nis being subverted by their presence.\n\nAhead, you see an outpost of Hell, a\nfortified zone. If you can get past it,\nyou can penetrate into the haunted heart\nof the starbase and find the controlling\nswitch which holds Earth's population\nhostage."
@@ -14,6 +12,8 @@ exittext "You have entered deeply into the infested\nstarport. But something is 
 defaultmap
 cluster 1
 sky1 SKY1 0
+interpic INTERPIC
+intermusic D_DM2INT
 
 map MAP01 "level 1: entryway"
 levelnum 1
@@ -57,8 +57,6 @@ music D_THE_DA
 ; Starbase (maps 7-11)
 
 clusterdef 2 "The Starbase"
-interpic INTERPIC
-intermusic D_DM2INT
 music D_READ_M
 flat RROCK14
 exittext "You have won! Your victory has enabled\nhumankind to evacuate Earth and escape\nthe nightmare.  Now you are the only\nhuman left on the face of the planet.\nCannibal mutations, carnivorous aliens,\nand evil spirits are your only neighbors.\nyou sit back and wait for death, content\nthat you have saved your species.\n\nBut then, Earth Control beams down a\nmessage from space: \"Sensors have located\nthe source of the alien invasion. if you\ngo there, you may be able to block their\nentry.  The alien base is in the heart of\nyour own home city, not far from the\nstarport.\" Slowly and painfully you get\nup and return to the fray."
@@ -66,6 +64,8 @@ exittext "You have won! Your victory has enabled\nhumankind to evacuate Earth an
 defaultmap
 cluster 2
 sky1 SKY1 0
+interpic INTERPIC
+intermusic D_DM2INT
 
 map MAP07 "level 7: dead simple"
 levelnum 7
@@ -105,8 +105,6 @@ music D_STLKS2
 ; City (maps 12-20)
 
 clusterdef 3 "The City"
-interpic INTERPIC
-intermusic D_DM2INT
 music D_READ_M
 flat RROCK07
 exittext "You are at the corrupt heart of the city,\nsurrounded by the corpses of your enemies.\nYou see no way to destroy the creatures'\nentryway on this side, so you clench your\nteeth and plunge through it.\n\nThere must be a way to close it on the\nother side. What do you care if you've\ngot to go through Hell to get to it?"
@@ -114,6 +112,8 @@ exittext "You are at the corrupt heart of the city,\nsurrounded by the corpses o
 defaultmap
 cluster 3
 sky1 SKY2 0
+interpic INTERPIC
+intermusic D_DM2INT
 
 map MAP12 "level 12: the factory"
 levelnum 12
@@ -174,8 +174,6 @@ music D_MESSAG
 ; Hell (maps 21-30)
 
 clusterdef 4 "Hell"
-interpic INTERPIC
-intermusic D_DM2INT
 music D_READ_M
 flat RROCK17
 exittext "The horrendous visage of the biggest\ndemon you've ever seen crumbles before\nyou, after you pump your rockets into\nhis exposed brain. The monster shrivels\nup and dies, its thrashing limbs\ndevastating untold miles of Hell's\nsurface.\n\nyou've done it. The invasion is over.\nEarth is saved. Hell is a wreck. You\nwonder where bad folks will go when they\ndie, now. Wiping the sweat from your\nforehead you begin the long trek back\nhome. Rebuilding Earth ought to be a\nlot more fun than ruining it was."
@@ -183,6 +181,8 @@ exittext "The horrendous visage of the biggest\ndemon you've ever seen crumbles 
 defaultmap
 cluster 4
 sky1 SKY3 0
+interpic INTERPIC
+intermusic D_DM2INT
 
 map MAP21 "level 21: nirvana"
 levelnum 21
@@ -252,8 +252,6 @@ bossdeath 256
 ; Secret level
 
 clusterdef 5 "Secret"
-interpic INTERPIC
-intermusic D_DM2INT
 music D_READ_M
 flat RROCK13
 entertext "Congratulations, you've found the secret\nlevel! Looks like it's been built by\nhumans, rather than demons. You wonder\nwho the inmates of this corner of Hell\nwill be."
@@ -265,14 +263,14 @@ nextlevel 16 32
 par 120
 music D_EVIL
 sky1 SKY3 0
+interpic INTERPIC
+intermusic D_DM2INT
 
 
 ;------------------------------------------
 ; Super secret level
 
 clusterdef 6 "Super secret"
-interpic INTERPIC
-intermusic D_DM2INT
 music D_READ_M
 flat RROCK19
 entertext "Congratulations, you've found the\nsuper secret level!  You'd better\nblaze through this one!"
@@ -286,3 +284,5 @@ music D_ULTIMA
 ; keen
 bossdeath 128
 sky1 SKY3 0
+interpic INTERPIC
+intermusic D_DM2INT

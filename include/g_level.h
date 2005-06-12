@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2005/06/12 16:26:27  smite-meister
+// alpha2 bugfixes
+//
 // Revision 1.14  2004/08/12 18:30:29  smite-meister
 // cleaned startup
 //
@@ -70,7 +73,6 @@ using namespace std;
 
 /// \brief MapCluster class is used to group maps together into hubs or episodes.
 ///
-/// All maps within a cluster share the same intermission.
 /// When a cluster is entered/exited, a finale may
 /// take place. Clusters are also used for hubs.
 /// They roughly correspond to Hexen/ZDoom clusters and Doom/Heretic episodes.
@@ -90,10 +92,6 @@ public:
   vector<class MapInfo *> maps; ///< the maps which make up this level
 
   int time, partime; ///< the time it took to complete cluster, partime (in s)
-
-  // intermission data
-  string interpic;   ///< intermission background picture lumpname
-  string intermusic; ///< intermission music lumpname
 
   // finale data
   string entertext;

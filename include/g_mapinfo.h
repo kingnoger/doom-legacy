@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.10  2005/06/12 16:26:27  smite-meister
+// alpha2 bugfixes
+//
 // Revision 1.9  2004/10/14 19:35:50  smite-meister
 // automap, bbox_t
 //
@@ -103,7 +106,8 @@ public:
     };
 
   mapstate_e   state;
-  Map         *me;   ///< the actual running Map instance corresponding to this MapInfo
+  Map         *me;    ///< the actual running Map instance corresponding to this MapInfo
+  bool         found; ///< present in the resource pool (WAD files etc.)
 
   string lumpname;   ///< map lump name ("MAP04")
   string nicename;   ///< map long nice name ("The Nuclear Plant")
@@ -112,9 +116,9 @@ public:
   int    cluster;    ///< in which cluster does this map belong?
   int    mapnumber;  ///< real map number, used with Teleport_NewMap
 
-  string version;   ///< map version string
-  string author;    ///< map creator
-  string hint;      ///< optional hint for the map
+  string version;     ///< map version string
+  string author;      ///< map creator
+  string description; ///< optional map description
 
   // string previewpic; // preview picture lumpname
 
@@ -147,6 +151,10 @@ public:
   string fadetablelump;
 
   int BossDeathKey;  ///< bit flags to see which bosses end the map when killed.
+
+  // intermission data
+  string interpic;   ///< intermission background picture lumpname
+  string intermusic; ///< intermission music lumpname
 
 public:
   MapInfo();
