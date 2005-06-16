@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2004 by DooM Legacy Team.
+// Copyright (C) 2002-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2005/06/16 18:18:11  smite-meister
+// bugfixes
+//
 // Revision 1.6  2004/10/27 17:37:09  smite-meister
 // netcode update
 //
@@ -48,17 +51,10 @@
 /// \brief Chasecam, FS cameras.
 class Camera : public Actor
 {
-public:
-
-  //SoM: Things used by FS cameras.
-  fixed_t  viewheight;
-  angle_t  startangle;
-
+  DECLARE_CLASS(Camera);
 public:
   int  fixedcolormap;
   bool chase;
-
-  Camera();
 
   void ClearCamera();
   void ResetCamera(Actor *p);

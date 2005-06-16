@@ -17,8 +17,8 @@
 //
 //
 // $Log$
-// Revision 1.18  2005/04/01 18:03:08  smite-meister
-// fix
+// Revision 1.19  2005/06/16 18:18:11  smite-meister
+// bugfixes
 //
 // Revision 1.17  2005/04/01 14:47:46  smite-meister
 // dehacked works
@@ -851,7 +851,7 @@ void dehacked_t::Read_Frame(const char *str)
 		  continue;
 		}
 
-	      wstate->nextstate = weaponstatenum_t(value);
+	      wstate->nextstate = weaponstatenum_t(-value);
 	    }
 	  else if (!strcasecmp(word,"Codep"))
 	    {

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2005/06/16 18:18:12  smite-meister
+// bugfixes
+//
 // Revision 1.7  2005/03/22 16:59:32  smite-meister
 // dehacked fix
 //
@@ -411,6 +414,14 @@ bool Parser::ParseCmd(const parsercmd_t *commands, char *base)
       *(int *)var = i;
       if (k == 2)
 	*(int *)var2 = j;
+      break;
+
+    case P_ITEM_PERCENT_FLOAT:
+      if (strchr(s, '.'))
+	f = atof(s); // floating point number
+      else
+	f = atoi(s) / 100.0f; // percentile
+      *(float *)var = f;
       break;
 
     case P_ITEM_FLOAT:

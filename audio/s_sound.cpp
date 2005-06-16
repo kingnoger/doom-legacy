@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.36  2005/06/16 18:18:07  smite-meister
+// bugfixes
+//
 // Revision 1.35  2005/05/29 11:30:40  segabor
 // Fixed __APPLE directive__ to __APPLE_CC__ on Mac OS X, new 'Doom Legacy' Xcode project target
 //
@@ -32,9 +35,6 @@
 //
 // Revision 1.31  2004/11/28 18:02:18  smite-meister
 // RPCs finally work!
-//
-// Revision 1.30  2004/11/19 16:51:03  smite-meister
-// cleanup
 //
 // Revision 1.29  2004/11/09 20:38:49  smite-meister
 // added packing to I/O structs
@@ -62,9 +62,6 @@
 //
 // Revision 1.21  2004/03/28 15:16:12  smite-meister
 // Texture cache.
-//
-// Revision 1.20  2004/01/02 14:25:01  smite-meister
-// cleanup
 //
 // Revision 1.19  2003/12/31 18:32:49  smite-meister
 // Last commit of the year? Sound works.
@@ -95,9 +92,6 @@
 //
 // Revision 1.10  2003/04/14 08:58:22  smite-meister
 // Hexen maps load.
-//
-// Revision 1.9  2003/04/08 09:46:04  smite-meister
-// Bugfixes
 //
 // Revision 1.8  2003/03/15 20:07:12  smite-meister
 // Initial Hexen compatibility!
@@ -475,10 +469,23 @@ void SoundSystem::SetSoundVolume(int vol)
 //=================================================================
 // Music
 
+musicinfo_t::musicinfo_t()
+{
+  lumpnum = 0;
+  length = 0;
+  data = NULL;
+  handle = 0;
+}
+
+static musicinfo_t mu;
+
 
 // Stop and resume music, during game PAUSE.
 void SoundSystem::PauseMusic()
 {
+  if (game.dedicated || nomusic)
+    return;
+
   if (mus_playing && !mus_paused)
     {
       I_PauseSong(mus_playing->handle);
@@ -492,6 +499,9 @@ void SoundSystem::PauseMusic()
 
 void SoundSystem::ResumeMusic()
 {
+  if (game.dedicated || nomusic)
+    return;
+
   if (mus_playing && mus_paused)
     {
       I_ResumeSong(mus_playing->handle);
@@ -503,17 +513,11 @@ void SoundSystem::ResumeMusic()
 }
 
 
-static musicinfo_t mu = {"\0", 0, 0, NULL, 0};
-
-
 // caches music lump "name", starts playing it
 // returns true if succesful
 bool SoundSystem::StartMusic(const char *name, bool loop)
 {
-  if (game.dedicated || nomusic)
-    return false;
-
-  if (mus_playing && !strcmp(mus_playing->name, name))
+  if (mus_playing && mus_playing->name == name)
     return true;
 
   CONS_Printf("StartMusic: %s\n", name);
@@ -523,7 +527,7 @@ bool SoundSystem::StartMusic(const char *name, bool loop)
   // TODO: add several music channels, crossfade;)
   StopMusic();
 
-  // FIXME temp hack: no 2nd level music cache, just one music plays at a time.
+  // TODO: no 2nd level music cache, just one music plays at a time.
   // here we would check if the music 'name' already is in the 2nd level cache.
   // if not, cache it:
   int musiclump = fc.FindNumForName(name);
@@ -535,10 +539,15 @@ bool SoundSystem::StartMusic(const char *name, bool loop)
     }
 
   musicinfo_t *m = &mu;
-  strcpy(m->name, name);
+  m->name = name;
   m->lumpnum = musiclump;
   m->data = (void *)fc.CacheLumpNum(musiclump, PU_MUSIC);
   m->length = fc.LumpLength(musiclump);
+
+  mus_playing = m;
+
+  if (game.dedicated || nomusic)
+    return true;
 
 #if defined(__APPLE_CC__) || defined(__MACOS__)
   // FIXME make Mac interface similar to the other interfaces
@@ -552,31 +561,19 @@ bool SoundSystem::StartMusic(const char *name, bool loop)
   m->handle = I_RegisterSong(m->data, m->length);
 #endif
 
-  // FIXME move to linux_x interface
-  /*
-#ifdef MUSSERV
-  if (msg_id != -1) {
-    struct musmsg msg_buffer;
-
-    msg_buffer.msg_type=6;
-    memset(msg_buffer.msg_text,0,sizeof(msg_buffer.msg_text));
-    sprintf(msg_buffer.msg_text,"%s", music->name);
-    msgsnd(msg_id,(struct msgbuf *)&msg_buffer,sizeof(msg_buffer.msg_text),IPC_NOWAIT);
-  }
-#endif
-  */
-
   // play it
   I_PlaySong(m->handle, loop);
-
   mus_paused = false;
-  mus_playing = m;
+
   return true;
 }
 
 
 void SoundSystem::StopMusic()
 {
+  if (game.dedicated || nomusic)
+    return;
+
   if (mus_playing)
     {
       if (mus_paused)

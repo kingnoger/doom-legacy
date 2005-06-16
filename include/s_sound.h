@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2005/06/16 18:18:11  smite-meister
+// bugfixes
+//
 // Revision 1.15  2005/03/19 13:51:29  smite-meister
 // sound samplerate fix
 //
@@ -73,11 +76,14 @@ using namespace std;
 /// \brief A playing piece of music
 struct musicinfo_t
 {
-  char  name[9];   ///< up to 8-character lumpname
-  int   lumpnum;   ///< lump number of music
-  int   length;    ///< lump length in bytes
-  void *data;      ///< music data
-  int   handle;    ///< music handle once registered
+  string name;      ///< music lumpname
+  int    lumpnum;   ///< lump number of music
+  int    length;    ///< lump length in bytes
+  void  *data;      ///< music data
+  int    handle;    ///< music handle once registered
+
+public:
+  musicinfo_t();
 };
 
 
@@ -225,10 +231,12 @@ public:
   void PauseMusic();
   void ResumeMusic();
 
-  /// caches music lump "name", starts playing it.
+  /// Caches music lump "name", starts playing it.
   bool StartMusic(const char *name, bool looping = false);
   /// Stops the music fer sure.
   void StopMusic();
+  /// Returns the lumpname of the currently playing piece of music (or NULL if none).
+  const char *GetMusic() const { return mus_playing ? mus_playing->name.c_str() : NULL; }
 
 
   /// Updates music & sounds.

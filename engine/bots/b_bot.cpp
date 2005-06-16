@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004 by DooM Legacy Team.
+// Copyright (C) 2004-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2005/06/16 18:18:10  smite-meister
+// bugfixes
+//
 // Revision 1.4  2005/04/17 17:59:00  smite-meister
 // netcode
 //
@@ -38,6 +41,7 @@
 #include "command.h"
 
 #include "g_game.h"
+#include "g_player.h"
 #include "g_map.h"
 #include "g_mapinfo.h"
 
@@ -109,34 +113,45 @@ BotAI::BotAI()
 // add bots to game
 void Command_AddBot_f()
 {
-  /* TODO addbot command
-  if (!game.server)
-    {
-      CONS_Printf("Only the server can add a bot\n");
-      return;
-    }
+  // TODO addbot command
 
   // TODO syntax: "addbot [bottype] [team] [parameters]..."
   // default: ACBot
+  int n, i;
 
-  int n = COM_Argc();
-  int i = P_Random() % NUMBOTNAMES;
-  PlayerInfo *p = new ACBot(botnames[i], game.skill);
+  for (i=0; i<NUM_LOCALBOTS; i++)
+    if (LocalPlayers[NUM_LOCALHUMANS + i].ai == NULL)
+      break;
+
+  if (i == NUM_LOCALBOTS)
+    {
+      CONS_Printf("Only %d bots per client.\n", NUM_LOCALBOTS);
+      return;
+    }
+
+  LocalPlayerInfo *p = &LocalPlayers[NUM_LOCALHUMANS + i];
+
+  //n = COM_Argc(); TODO read params
+
+  p->name = botnames[P_Random() % NUMBOTNAMES];
+  p->ai = new ACBot(game.skill);
 
   Map *m = com_player ? com_player->mp : NULL;
-
-  p->requestmap = m->info->mapnumber;
+  if (!m)
+    return;
+  //p->requestmap = m->info->mapnumber;
 
   if (!m->botnodes)
     m->botnodes = new BotNodes(m);
 
-  if (!game.AddPlayer(p)) 
+  if (game.server)
     {
-      CONS_Printf("Cannot add any more players.\n");
-      delete p;
-      return; 
+      p->info = game.AddPlayer(new PlayerInfo(p));
+      if (!p->info) 
+	{
+	  CONS_Printf("Cannot add any more players.\n");
+	  return; 
+	}
     }
-  else
-    Consoleplayer.push_back(p); // FIXME TEST
-  */
+  // TODO otherwise ask server to add a new player...
 }

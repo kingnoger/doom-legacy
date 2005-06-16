@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2004 by Doom Legacy Team
+// Copyright (C) 2002-2005 by Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,26 +20,11 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
-// Revision 1.26  2005/06/12 16:26:26  smite-meister
-// alpha2 bugfixes
-//
-// Revision 1.25  2005/03/16 21:16:05  smite-meister
-// menu cleanup, bugfixes
-//
-// Revision 1.24  2005/01/25 18:29:13  smite-meister
-// preparing for alpha
-//
-// Revision 1.23  2004/11/19 16:51:04  smite-meister
-// cleanup
-//
-// Revision 1.22  2004/11/13 22:38:42  smite-meister
-// intermission works
+// Revision 1.27  2005/06/16 18:18:08  smite-meister
+// bugfixes
 //
 // Revision 1.21  2004/11/04 21:12:52  smite-meister
 // save/load fixed
-//
-// Revision 1.20  2004/10/17 02:00:16  smite-meister
-// mingw fixes
 //
 // Revision 1.19  2004/10/14 19:35:30  smite-meister
 // automap, bbox_t
@@ -47,53 +32,26 @@
 // Revision 1.18  2004/09/13 20:43:29  smite-meister
 // interface cleanup, sp map reset fixed
 //
-// Revision 1.17  2004/08/29 20:48:47  smite-meister
-// bugfixes. wow.
-//
-// Revision 1.16  2004/08/12 18:30:23  smite-meister
-// cleaned startup
-//
-// Revision 1.15  2004/07/14 16:13:13  smite-meister
-// cleanup, commands
-//
 // Revision 1.14  2004/07/05 16:53:24  smite-meister
 // Netcode replaced
 //
 // Revision 1.13  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
-// Revision 1.12  2004/01/05 11:48:08  smite-meister
-// 7 bugfixes
-//
-// Revision 1.11  2004/01/02 14:25:01  smite-meister
-// cleanup
-//
 // Revision 1.10  2003/12/31 18:32:49  smite-meister
 // Last commit of the year? Sound works.
-//
-// Revision 1.9  2003/12/18 11:57:31  smite-meister
-// fixes / new bugs revealed
 //
 // Revision 1.8  2003/12/09 01:02:00  smite-meister
 // Hexen mapchange works, keycodes fixed
 //
-// Revision 1.7  2003/12/06 23:57:47  smite-meister
-// save-related bugfixes
-//
 // Revision 1.6  2003/12/03 10:49:49  smite-meister
 // Save/load bugfix, text strings updated
-//
-// Revision 1.5  2003/11/30 00:09:43  smite-meister
-// bugfixes
 //
 // Revision 1.4  2003/11/23 19:54:10  hurdler
 // Remove warning and error at compile time
 //
 // Revision 1.3  2003/11/23 19:07:41  smite-meister
 // New startup order
-//
-// Revision 1.2  2003/11/23 00:41:55  smite-meister
-// bugfixes
 //
 // Revision 1.1  2003/11/12 11:07:17  smite-meister
 // Serialization done. Map progression.
@@ -402,7 +360,7 @@ static parsercmd_t MapInfo_commands[]=
   {P_ITEM_INT, "partime",    MI_offset(partime)},
   {P_ITEM_STR, "music",      MI_offset(musiclump)},
 
-  {P_ITEM_FLOAT, "gravity",  MI_offset(gravity)}, 
+  {P_ITEM_PERCENT_FLOAT, "gravity",  MI_offset(gravity)}, 
   {P_ITEM_STR, "skyname",    MI_offset(sky1)},
 
   //{P_ITEM_STR, "nextlevel",  MI_offset(nextlevel)},
@@ -509,7 +467,7 @@ char *MapInfo::Read(int lump)
 	      scriptblock += p.Pointer(); // add the new (NUL-terminated!) line to the current data
 	      break;
 
-	    case PS_INTERTEXT:
+	    case PS_INTERTEXT: // TODO
 	      //intertext += '\n';
 	      //intertext += s;
 	      break;
@@ -532,15 +490,7 @@ char *MapInfo::Read(int lump)
   CONS_Printf("doom offsets: %d, %d\n", doom_offs[0], doom_offs[1]);
   CONS_Printf("heretic offsets: %d, %d\n", heretic_offs[0], heretic_offs[1]);
   CONS_Printf("hexen offsets: %d, %d\n", hexen_offs[0], hexen_offs[1]);
-  //P_InitWeapons();
 
-  //Set the gravity for the level!
-  extern  consvar_t cv_gravity;
-  fixed_t grav = int(gravity * FRACUNIT);
-  if (cv_gravity.value != grav)
-    COM_BufAddText(va("gravity %f\n", gravity));
-
-  COM_BufExecute(); //Hurdler: flush the command buffer
 
   // FS script data
   return (scriptblock.size() > 0) ? Z_Strdup(scriptblock.c_str(), PU_LEVEL, NULL) : NULL;

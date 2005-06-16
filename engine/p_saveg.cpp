@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,14 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.44  2005/06/12 16:26:27  smite-meister
-// alpha2 bugfixes
+// Revision 1.45  2005/06/16 18:18:08  smite-meister
+// bugfixes
 //
 // Revision 1.43  2005/06/05 19:32:25  smite-meister
 // unsigned map structures
-//
-// Revision 1.42  2005/04/22 19:44:49  smite-meister
-// bugs fixed
 //
 // Revision 1.41  2005/04/17 18:36:33  smite-meister
 // netcode
@@ -148,6 +145,7 @@
 #include "m_swap.h"
 #include "m_menu.h"
 
+#include "s_sound.h"
 #include "w_wad.h"
 #include "z_zone.h"
 #include "tables.h"
@@ -1928,15 +1926,28 @@ int GameInfo::Serialize(LArchive &a)
   // TODO FS hub_script, global_script...
 
   a.Marker(MARK_GROUP);
+  {
+    // client stuff
+    int temp = NUM_LOCALPLAYERS;
+    a << temp;
+    for (i = 0; i < temp; i++)
+      a << (n = LocalPlayers[i].info ? LocalPlayers[i].info->number : -1);
 
-  // client stuff
-  a << (n = NUM_LOCALPLAYERS);
-  for (i = 0; i < n; i++)
-    a << (n = LocalPlayers[i].info ? LocalPlayers[i].info->number : -1);
+    // TODO how to save net info???
+  }
 
-  // TODO how to save net info???
+  a.Marker(MARK_GROUP);
+  {
+    a << (n = P_GetRandIndex());
 
-  a << (n = P_GetRandIndex());
+    const char *temp = S.GetMusic();
+    string mus;
+    if (temp)
+      mus = temp;
+    else
+      mus = "";
+    a << mus;
+  }
 
   //CV_SaveNetVars((char**)&save_p);
   //CV_LoadNetVars((char**)&save_p);
@@ -2048,10 +2059,16 @@ int GameInfo::Unserialize(LArchive &a)
 	LocalPlayers[i].info = FindPlayer(num);
     }
 
+  if (!a.Marker(MARK_GROUP))
+    return -1;
   // misc shit
 
   a << n;
   P_SetRandIndex(n);
+
+  string mus;
+  a << mus;
+  S.StartMusic(mus.c_str(), true);
 
   return 0;
 }

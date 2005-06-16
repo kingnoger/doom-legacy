@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.58  2005/06/16 18:18:10  smite-meister
+// bugfixes
+//
 // Revision 1.57  2005/06/08 17:29:38  smite-meister
 // FS bugfixes
 //
@@ -150,6 +153,7 @@
 #include "doomdata.h"
 #include "command.h"
 #include "console.h"
+#include "cvars.h"
 
 #include "g_game.h"
 #include "g_player.h"
@@ -425,7 +429,6 @@ void Map::LoadThings(int lump)
   int fskill;
   int fmode  = -1; // all bits on
   int fclass = -1;
-  extern consvar_t cv_deathmatch;
 
   // check skill
   if (game.skill == sk_baby)
@@ -934,8 +937,8 @@ void Map::LoadBlockMap(int lump)
   blockmap = blockmaplump+4; // the offsets array
 
   // Endianness: everything in blockmap is expressed in 2-byte shorts
-  int count = fc.LumpLength(lump)/2;
-  for (int i=0; i < count; i++)
+  int size = fc.LumpLength(lump)/2;
+  for (int i=0; i < size; i++)
     blockmaplump[i] = SHORT(blockmaplump[i]);
 
   // read the header
@@ -944,6 +947,48 @@ void Map::LoadBlockMap(int lump)
   bmaporgy = bm->origin_y << FRACBITS;
   bmapwidth = bm->width;
   bmapheight = bm->height;
+
+  // check the blockmap for errors
+  int errors = 0;
+  int first = 4 + bmapwidth*bmapheight; // first possible blocklist offset (in shorts)
+
+  if (size < first+2) // one empty blocklist (two shorts) is the minimal size
+    {
+      CONS_Printf(" Blockmap lump is too small!\n");
+      errors++;
+    }
+
+  if (size > 0x10000+1) // largest, always fully addressable blockmap
+    CONS_Printf(" Warning: Blockmap may be too large.\n");
+
+  int count = bmapwidth*bmapheight;
+  for (int i=0; i < count && errors < 50; i++)
+    if (blockmap[i] < first)
+      {
+	CONS_Printf(" Invalid blocklist offset for cell %d: %d\n", i, blockmap[i]);
+	errors++;
+      }
+    else
+      {
+	int offs = blockmap[i];
+	if (blockmaplump[offs] != 0x0000)
+	  {
+	    CONS_Printf(" Blocklist %d does not start with zero!\n", i);
+	    errors++;
+	  }
+
+	while (offs < size && blockmaplump[offs] != 0xFFFF)
+	  offs++;
+
+	if (offs >= size)
+	  {
+	    CONS_Printf(" Blocklist %d extends beyond the lump size!\n", i);
+	    errors++;
+	  }
+      }
+
+  if (errors)
+    I_Error("Blockmap (%dx%d cells, %d bytes) had some errors.\n", bmapwidth, bmapheight, 2*size);
 
   // init the mobj chains
   count = bmapwidth*bmapheight*sizeof(Actor *);
@@ -1145,12 +1190,16 @@ bool Map::Setup(tic_t start, bool spawnthings)
 
   // If the map defines its music in MapInfo_t, use it.
   if (!info->musiclump.empty())
-    S.StartMusic(info->musiclump.c_str(),  true);
+    S.StartMusic(info->musiclump.c_str(), true);
   // I_PlayCD(info->mapnumber, true);  // FIXME cd music
 
+  // Set the gravity for the level
+  if (cv_gravity.value != int(info->gravity * FRACUNIT))
+    {
+      COM_BufAddText(va("gravity %f\n", info->gravity));
+      COM_BufExecute();
+    }
 
-  //faB: now part of level loading since in future each level may have
-  //     its own anim texture sequences, switches etc.
   SetupSky();
 
   // note: most of this ordering is important

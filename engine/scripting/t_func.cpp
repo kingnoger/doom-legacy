@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.28  2005/06/16 18:18:11  smite-meister
+// bugfixes
+//
 // Revision 1.27  2005/06/08 17:29:39  smite-meister
 // FS bugfixes
 //
@@ -1223,56 +1226,82 @@ void SF_PointToDist()
 
 /************* Camera functions ***************/
 
-static Camera *script_camera;
+angle_t G_ClipAimingPitch(angle_t pitch);
 
 
-// setcamera(obj, [angle], [viewheight], [aiming])
+/// setcamera(obj, [angle], [viewheight], [aiming])
+/// Activates and orients a camera.
 void SF_SetCamera()
 {
-  // FIXME all the camera functions, now that we have a real camera class
+  t_return.type = svt_fixed;
+
+  // The camera system uses special mapthings (DoomEd number 5003) as markers for
+  // initial camera locations, and later as anchorpoints for the camera Actors.
+
   if (t_argc < 1)
     {
-      script_error("insufficient arguments to function\n");
+      script_error("insufficient arguments for SetCamera.\n");
       return;
     }
 
-  Actor *mo = MobjForSvalue(t_argv[0]);
-  if (!mo)
-    return;
-
-  if (mo != script_camera)
+  if (t_argv[0].type == svt_actor)
     {
-      script_camera->angle = script_camera->startangle;
-      script_camera->startangle = mo->angle;
+      script_error("Using a custom mobj as a camera.\n"); // TODO should this be allowed?
+      return;
     }
 
-  angle_t angle = (t_argc < 2) ? mo->angle : FixedToAngle(fixedvalue(t_argv[1]));
+  // We use the intvalue as the thing number of a thing in the level.
+  int intval = intvalue(t_argv[0]);
+  if (intval < 0 || intval >= current_map->nummapthings)
+    {
+      script_error("No mapthing %i.\n", intval);
+      return;
+    }
 
-  script_camera->angle = angle;
-  script_camera->z = t_argc < 3 ? (mo->subsector->sector->floorheight + (41 << FRACBITS)) : fixedvalue(t_argv[2]);
-  script_camera->aiming = t_argc < 4 ? 0 : fixedvalue(t_argv[3]);
-  //script_camera_on = true; // FIXME: spawn the camera, make it the POV for all players
+  mapthing_t *mt = &current_map->mapthings[intval];
+  Actor *cam = mt->mobj;
+
+  if (cam && !cam->IsOf(Camera::_type))
+    {
+      cam->Remove(); // TODO HACK we could use a NOSPAWN flag...
+      cam = new Camera();
+      mt->mobj = cam; // anchor it to the mapthing
+      current_map->SpawnActor(cam);
+    }
+
+  // Why do we reset the angle but not the position?
+  cam->angle = (t_argc < 2) ? ANG45*(mt->angle/45) : FixedToAngle(fixedvalue(t_argv[1]));
+
+  // Why an absolute height value and not height above floor?
+  cam->z = (t_argc < 3) ? (cam->subsector->sector->floorheight + 41*FRACUNIT) : fixedvalue(t_argv[2]);
+
+  angle_t aiming = (t_argc < 4) ? 0 : FixedToAngle(fixedvalue(t_argv[3]));
+  cam->aiming = G_ClipAimingPitch(aiming);
+
+  // Camera has been created and oriented. Now use it as POV for players:
+
+  int n = current_map->players.size();
+  for (int i=0; i<n; i++)
+    current_map->players[i]->pov = cam; // FIXME loses personal chasecams!
+
+  t_return.value.f = cam->aiming;
 }
 
 
-
-
+/// Shuts down all cameras in the Map.
 void SF_ClearCamera()
 {
-  //script_camera_on = false; // FIXME return the original POVs for all players
-
-  if (!script_camera)
-  {
-    script_error("Clearcamera: called without setcamera.\n");
-    return;
-  }
-
-  script_camera->angle = script_camera->startangle;
+  int n = current_map->players.size();
+  for (int i=0; i<n; i++)
+    current_map->players[i]->pov = current_map->players[i]->pawn; // FIXME return the original POVs for all players (chasecams!)
 }
+
 
 // movecamera(cameraobj, targetobj, targetheight, movespeed, targetangle, anglespeed)
 void SF_MoveCamera()
 {
+  t_return.type = svt_int;
+
   fixed_t    x, y, z;
   fixed_t    xdist, ydist, zdist, xydist, movespeed;
   fixed_t    xstep, ystep, zstep, targetheight;
@@ -1286,11 +1315,11 @@ void SF_MoveCamera()
   int        moved = 0;
   int        quad1, quad2;
 
-  if(t_argc < 6)
-  {
-    script_error("movecamera: insufficient arguments to function\n");
-    return;
-  }
+  if (t_argc < 6)
+    {
+      script_error("movecamera: insufficient arguments to function\n");
+      return;
+    }
 
   camera = MobjForSvalue(t_argv[0]);
   target = MobjForSvalue(t_argv[1]);
@@ -1428,7 +1457,7 @@ void SF_MoveCamera()
   }
   camera->z = z;
 
-  t_return.type = svt_int;
+
   t_return.value.i = moved;
 }
 
@@ -1500,7 +1529,23 @@ void SF_StartSectorSound()
 }
 
 
+// backwards compatibility (sound name automatically prefixed with "ds")
 void SF_AmbientSound()
+{
+  if (t_argc != 1)
+    { script_error("insufficient arguments to function\n"); return; }
+  if (t_argv[0].type != svt_string)
+    { script_error("sound lump argument not a string!\n"); return;}
+
+  sfxinfo_t temp("FS sound", -1);
+  strncpy(temp.lumpname, "ds", 2);
+  strncpy(&temp.lumpname[2], t_argv[0].value.s, 6);
+
+  S.StartAmbSound(&temp);
+}
+
+
+void SF_StartAmbientSound()
 {
   if(t_argc != 1)
     { script_error("insufficient arguments to function\n"); return; }
@@ -1979,7 +2024,8 @@ void SF_LineTrigger()
       return;
     }
 
-  line_t junk;
+  line_t junk; // FIXME very dangerous (contains pointers which are not initialized!)
+  memset(&junk, 0, sizeof(line_t));
 
   junk.special = intvalue(t_argv[0]);
   junk.tag = (t_argc < 2) ? 0 : intvalue(t_argv[1]);
@@ -2523,7 +2569,8 @@ void FS_init_functions()
   // sound functions
   new_function("startsound", SF_StartSound);
   new_function("startsectorsound", SF_StartSectorSound);
-  new_function("startambientsound", SF_AmbientSound);
+  new_function("startambientsound", SF_StartAmbientSound);
+  new_function("startambiantsound", SF_AmbientSound); // b comp., misspelled...
   new_function("ambientsound", SF_AmbientSound); // b comp.
   new_function("changemusic", SF_ChangeMusic);
 

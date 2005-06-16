@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2005/06/16 18:18:11  smite-meister
+// bugfixes
+//
 // Revision 1.8  2005/03/22 16:58:57  smite-meister
 // dehacked fix
 //
@@ -54,14 +57,15 @@
 
 enum parseritem_t
 {
-  P_ITEM_IGNORE = 0,
-  P_ITEM_BOOL, // bool. true if it item exists.
-  P_ITEM_INT,
-  P_ITEM_INT_INT, // two ints separated by whitespace
-  P_ITEM_FLOAT,
-  P_ITEM_STR,   // STL string
-  P_ITEM_STR16, // 16 chars
-  P_ITEM_STR16_FLOAT // max 16 char string and float
+  P_ITEM_IGNORE = 0, ///< completely ignored
+  P_ITEM_BOOL,       ///< bool. true if it item exists.
+  P_ITEM_INT,        ///< one integer
+  P_ITEM_INT_INT,    ///< two ints separated by whitespace
+  P_ITEM_PERCENT_FLOAT, ///< HACK for supporting the old gravity command
+  P_ITEM_FLOAT,      ///< one float
+  P_ITEM_STR,        ///< STL string
+  P_ITEM_STR16,      ///< 16 chars
+  P_ITEM_STR16_FLOAT ///< max 16 char string and float
 };
 
 

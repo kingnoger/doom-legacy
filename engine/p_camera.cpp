@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.12  2005/06/16 18:18:08  smite-meister
+// bugfixes
+//
 // Revision 1.11  2005/04/22 19:44:49  smite-meister
 // bugs fixed
 //
@@ -57,6 +60,8 @@
 #include "p_camera.h"
 #include "r_defs.h"
 
+#include "m_archive.h"
+
 #include "tables.h"
 
 
@@ -66,6 +71,7 @@ consvar_t cv_cam_height = {"cam_height", "20"   ,CV_FLOAT,NULL};
 consvar_t cv_cam_speed  = {"cam_speed" ,  "0.25",CV_FLOAT,NULL};
 
 
+IMPLEMENT_CLASS(Camera, Actor);
 
 Camera::Camera()
 {
@@ -79,10 +85,17 @@ Camera::Camera()
 
   x = y = z = 0;
 
-  viewheight = 0;
-  startangle = 0;
   fixedcolormap = 0;
   chase = false;
+}
+
+
+int Camera::Marshal(LArchive &a)
+{
+  Actor::Marshal(a);
+  a << fixedcolormap << chase;
+
+  return 0;
 }
 
 
