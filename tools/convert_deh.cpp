@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2005/06/22 20:44:31  smite-meister
+// alpha3 bugfixes
+//
 // Revision 1.2  2005/04/01 18:03:07  smite-meister
 // fix
 //
@@ -648,7 +651,9 @@ int dehacked_t::ReadFlags(flag_mnemonic_t *mnemonics)
       word = p.GetToken("+| \t"); // next token
     }
 
-  for (i=0; i<32; i++)
+  if (value == 0)
+    fputs("0", out);
+  else for (i=0; i<32; i++)
     if (value & mnemonics[i].flag)
       fprintf(out, "%s ", mnemonics[i].name);
 

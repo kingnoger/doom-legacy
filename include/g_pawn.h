@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.29  2005/06/22 20:44:31  smite-meister
+// alpha3 bugfixes
+//
 // Revision 1.28  2005/04/22 19:44:50  smite-meister
 // bugs fixed
 //
@@ -182,7 +185,6 @@ public:
   vector<inventory_t> inventory;
 
   int  keycards; ///< Bit field, see the definition of keycard_t
-  bool backpack;
 
   weapontype_t readyweapon;   ///< Current weapon
   weapontype_t pendingweapon; ///< Weapon we are changing to or wp_nochange
@@ -191,7 +193,7 @@ public:
   const weaponinfo_t *weaponinfo; ///< Changed when using level2 weapons (Heretic)
 
   int ammo[NUMAMMO];
-  const int *maxammo;
+  int maxammo[NUMAMMO];
 
   float toughness; ///< Natural armor, depends on class.
   float armorfactor[NUMARMOR];

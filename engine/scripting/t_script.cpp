@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.15  2005/06/22 20:44:31  smite-meister
+// alpha3 bugfixes
+//
 // Revision 1.14  2005/04/22 19:44:49  smite-meister
 // bugs fixed
 //
@@ -420,7 +423,10 @@ bool Map::FS_RunScript(int n, Actor *trig)
   // use the level's child script script n
   script_t *script = levelscript->children[n];
   if (!script)
-    return false;
+    {
+      CONS_Printf("FS_RunScript: script %d does not exist.\n", n);
+      return false;
+    }
  
   current_map = this; // this must always be set before we start processing FS scripts...
 

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2005/06/22 20:44:29  smite-meister
+// alpha3 bugfixes
+//
 // Revision 1.12  2005/03/24 17:00:39  smite-meister
 // alpha fixes
 //
@@ -709,11 +712,9 @@ void PlayerPawn::TouchSpecialThing(DActor *thing)
       break;
 
     case MT_BACKPACK:
-      if (!backpack)
-        {
-	  maxammo = maxammo2;
-	  backpack = true;
-        }
+      for (int j=0; j<NUMAMMO; j++)
+	maxammo[j] = max(maxammo[j], maxammo2[j]);
+
       GiveAmmo(am_clip, mobjinfo[MT_CLIP].spawnhealth);
       GiveAmmo(am_shell, mobjinfo[MT_SHELL].spawnhealth);
       GiveAmmo(am_cell, mobjinfo[MT_CELL].spawnhealth);
@@ -722,11 +723,9 @@ void PlayerPawn::TouchSpecialThing(DActor *thing)
       break;
 
     case MT_BAGOFHOLDING:
-      if (!backpack)
-        {
-	  maxammo = maxammo2;
-	  backpack = true;
-        }
+      for (int j=0; j<NUMAMMO; j++)
+	maxammo[j] = max(maxammo[j], maxammo2[j]);
+
       GiveAmmo(am_goldwand, mobjinfo[MT_AMGWNDWIMPY].spawnhealth);
       GiveAmmo(am_blaster, mobjinfo[MT_AMBLSRWIMPY].spawnhealth);
       GiveAmmo(am_crossbow, mobjinfo[MT_AMCBOWWIMPY].spawnhealth);

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.29  2005/06/22 20:44:30  smite-meister
+// alpha3 bugfixes
+//
 // Revision 1.28  2005/06/12 16:26:27  smite-meister
 // alpha2 bugfixes
 //
@@ -543,11 +546,8 @@ static void CheatWeaponsFunc(PlayerPawn *p, const byte *arg)
   if (game.mode == gm_heretic)
     {
       // give backpack
-      if (!p->backpack)
-	{
-	  p->maxammo = maxammo2;
-	  p->backpack = true;
-	}
+      for (i = 0; i < NUMAMMO; i++)
+	p->maxammo[i] = maxammo2[i];
 
       for (i = wp_heretic; i <= wp_gauntlets; i++)
 	p->weaponowned[i] = true;

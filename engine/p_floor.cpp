@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2005/06/22 20:44:30  smite-meister
+// alpha3 bugfixes
+//
 // Revision 1.19  2005/03/17 21:42:50  smite-meister
 // Exl bugfixes
 //
@@ -112,11 +115,11 @@ int Map::T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, int crush, i
       if (speed < 0)
 	{
 	  // floor going down
-          //SoM: 3/20/2000: Make splash when platform floor hits water
-          if(boomsupport && sector->heightsec != -1 && sector->altheightsec == 1)
+          if (boomsupport && sector->heightsec != -1 && sector->altheightsec == 1)
 	    {
-	      if((sector->floorheight - speed) < sectors[sector->heightsec].floorheight
-		 && sector->floorheight > sectors[sector->heightsec].floorheight)
+	      // Make a splash sound when the floor submerges
+	      if (sector->floorheight + speed < sectors[sector->heightsec].floorheight &&
+		  sector->floorheight >= sectors[sector->heightsec].floorheight)
 		S_StartSound(&sector->soundorg, sfx_splash);
 	    }
 
@@ -144,16 +147,15 @@ int Map::T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, int crush, i
       else
 	{
 	  // floor going up
-          //SoM: 3/20/2000: Make splash when platform floor hits water
-          if(boomsupport && sector->heightsec != -1 && sector->altheightsec == 1)
+          if (boomsupport && sector->heightsec != -1 && sector->altheightsec == 1)
 	    {
-	      if((sector->floorheight + speed) > sectors[sector->heightsec].floorheight
-		 && sector->floorheight < sectors[sector->heightsec].floorheight)
+	      // Make a splash sound when the floor surfaces
+	      if (sector->floorheight + speed > sectors[sector->heightsec].floorheight &&
+		  sector->floorheight <= sectors[sector->heightsec].floorheight)
 		S_StartSound(&sector->soundorg, sfx_splash);
 	    }
           // keep floor from moving thru ceilings
-          destheight = (!boomsupport || dest < sector->ceilingheight)?
-	    dest : sector->ceilingheight;
+          destheight = (!boomsupport || dest < sector->ceilingheight) ? dest : sector->ceilingheight;
 
           if (sector->floorheight + speed > destheight)
 	    {
@@ -173,7 +175,7 @@ int Map::T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, int crush, i
 		{
 		  if (!boomsupport)
 		    {
-		      if (crush == true)
+		      if (crush)
 			return res_crushed;
 		    }
 		  sector->floorheight = lastpos;
@@ -189,18 +191,17 @@ int Map::T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, int crush, i
       if (speed < 0)
 	{
 	  // ceiling going down
-          if(boomsupport && sector->heightsec != -1 && sector->altheightsec == 1)
+          if (boomsupport && sector->heightsec != -1 && sector->altheightsec == 1)
 	    {
-	      if((sector->ceilingheight - speed) < sectors[sector->heightsec].floorheight
-		 && sector->ceilingheight > sectors[sector->heightsec].floorheight)
+	      // Make a splash sound when the ceiling enters water
+	      if (sector->ceilingheight + speed < sectors[sector->heightsec].floorheight &&
+		  sector->ceilingheight >= sectors[sector->heightsec].floorheight)
 		S_StartSound(&sector->soundorg, sfx_splash);
 	    }
-          // moving a ceiling down
-          // keep ceiling from moving thru floors
-          destheight = (!boomsupport || dest>sector->floorheight)?
-	    dest : sector->floorheight;
 
-	  lastpos = sector->ceilingheight;
+          // keep ceiling from moving thru floors
+          destheight = (!boomsupport || dest > sector->floorheight) ? dest : sector->floorheight;
+
           if (sector->ceilingheight + speed < destheight)
 	    {
 	      sector->ceilingheight = destheight;
@@ -217,7 +218,7 @@ int Map::T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, int crush, i
 	      sector->ceilingheight += speed;
 	      if (CheckSector(sector, crush))
 		{
-		  if (crush == true)
+		  if (crush)
 		    return res_crushed;
 		  sector->ceilingheight = lastpos;
 		  CheckSector(sector, crush);
@@ -228,12 +229,14 @@ int Map::T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, int crush, i
       else
 	{
           // ceiling going up
-          if(boomsupport && sector->heightsec != -1 && sector->altheightsec == 1)
+          if (boomsupport && sector->heightsec != -1 && sector->altheightsec == 1)
 	    {
-	      if((sector->ceilingheight + speed) > sectors[sector->heightsec].floorheight
-		 && sector->ceilingheight < sectors[sector->heightsec].floorheight)
+	      // Make a splash sound when the ceiling leaves water
+	      if (sector->ceilingheight + speed > sectors[sector->heightsec].floorheight &&
+		  sector->ceilingheight <= sectors[sector->heightsec].floorheight)
 		S_StartSound(&sector->soundorg, sfx_splash);
 	    }
+
           if (sector->ceilingheight + speed > dest)
 	    {
 	      sector->ceilingheight = dest;
@@ -256,7 +259,6 @@ int Map::T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, int crush, i
 	    }
 	}
       break;
-
     }
   return res_ok;
 }

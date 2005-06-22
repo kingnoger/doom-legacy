@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.46  2005/06/22 20:44:30  smite-meister
+// alpha3 bugfixes
+//
 // Revision 1.45  2005/06/16 18:18:08  smite-meister
 // bugfixes
 //
@@ -796,15 +799,14 @@ int PlayerPawn::Marshal(LArchive &a)
   enum player_diff
   {
     PD_POWERS       = 0x0001,
-    PD_PMASK        = 0x0FFF, // 12 powers now in total
+    PD_PMASK        = 0xFFFF, // 12 powers now in total (room for 16)
 
-    PD_REFIRE      = 0x01000,
-    PD_MORPHTICS   = 0x02000,
+    PD_REFIRE      = 0x010000,
+    PD_MORPHTICS   = 0x020000,
 
-    PD_BACKPACK   = 0x020000,
-    PD_ATTACKDWN  = 0x040000,
-    PD_USEDWN     = 0x080000,
-    PD_JMPDWN     = 0x100000
+    PD_ATTACKDWN   = 0x100000,
+    PD_USEDWN      = 0x200000,
+    PD_JMPDWN      = 0x400000
   };
 
   if (a.IsStoring())
@@ -835,7 +837,6 @@ int PlayerPawn::Marshal(LArchive &a)
       if (morphTics)   diff |= PD_MORPHTICS;
 
       // booleans
-      if (backpack)   diff |= PD_BACKPACK;
       if (attackdown) diff |= PD_ATTACKDWN;
       if (usedown)    diff |= PD_USEDWN;
       if (jumpdown)   diff |= PD_JMPDWN;
@@ -878,13 +879,11 @@ int PlayerPawn::Marshal(LArchive &a)
       if (diff & PD_REFIRE) a << refire;
       if (diff & PD_MORPHTICS) a << morphTics;
 
-      backpack     = diff & PD_BACKPACK;
       attackdown   = diff & PD_ATTACKDWN;
       usedown      = diff & PD_USEDWN;
       jumpdown     = diff & PD_JMPDWN;
 
       weaponinfo = (powers[pw_weaponlevel2] ? wpnlev2info : wpnlev1info);
-      maxammo = (backpack ? maxammo2 : maxammo1);
 
       a << n; pendingweapon = weapontype_t(n);
       a << n; readyweapon = weapontype_t(n);
@@ -897,7 +896,10 @@ int PlayerPawn::Marshal(LArchive &a)
   a << cheats;
 
   for (i=0; i<NUMAMMO; i++)
-    a << ammo[i];
+    {
+      a << ammo[i];
+      a << maxammo[i];
+    }
 
   a << toughness;
   for (i=0; i<NUMARMOR; i++)
@@ -1655,6 +1657,7 @@ int MapInfo::Serialize(LArchive &a)
 {
   int temp;
   a << int(state);
+  a << found;
 
   a << lumpname << nicename << savename;
   a << cluster << mapnumber;
@@ -1705,6 +1708,7 @@ int MapInfo::Unserialize(LArchive &a)
 {
   int temp;
   a << temp; state = mapstate_e(temp);
+  a << found;
 
   a << lumpname << nicename << savename;
   a << cluster << mapnumber;
@@ -1754,7 +1758,7 @@ int MapInfo::Unserialize(LArchive &a)
 
 int PlayerInfo::Serialize(LArchive &a)
 {
-  unsigned i;
+  int n;
   a << number << team << name;
   a << client_hash;
 
@@ -1766,7 +1770,7 @@ int PlayerInfo::Serialize(LArchive &a)
   // cmd can be ignored
 
   // scoring
-  a << (i = Frags.size());
+  a << (n = Frags.size());
   map<int, int>::iterator t;
   for (t = Frags.begin(); t != Frags.end(); t++)
     {

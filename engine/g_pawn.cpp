@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.51  2005/06/22 20:44:30  smite-meister
+// alpha3 bugfixes
+//
 // Revision 1.50  2005/04/22 19:44:48  smite-meister
 // bugs fixed
 //
@@ -215,7 +218,6 @@ PlayerPawn::PlayerPawn()
   // NOTE! This constructor is only used when Unserializing, so not everything is initialized!
   player = NULL;
   weaponinfo = NULL;
-  maxammo = NULL;
 
   for (int i=0; i<NUMPOWERS; i++)
     powers[i] = 0;
@@ -325,13 +327,14 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, int type, int pcl)
     powers[i] = 0;
 
   keycards = 0;
-  backpack = false;
 
   weaponinfo = wpnlev1info;
-  maxammo = maxammo1;
 
   for (i=0; i<NUMAMMO; i++)
-    ammo[i] = 0;
+    {
+      ammo[i] = 0;
+      maxammo[i] = maxammo1[i];
+    }
 
   for (i=0; i<NUMWEAPONS; i++)
     weaponowned[i] = false;

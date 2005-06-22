@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2005/06/22 20:44:30  smite-meister
+// alpha3 bugfixes
+//
 // Revision 1.16  2005/03/17 21:42:50  smite-meister
 // Exl bugfixes
 //
@@ -285,7 +288,7 @@ crusher_t::crusher_t() {}
 
 // constructor
 crusher_t::crusher_t(Map *m, int ty, sector_t *sec, fixed_t upsp, fixed_t downsp, int cru, fixed_t height)
-  : ceiling_t(m, ceiling_t::Floor, sec, -downspeed, cru, height)   // start by going down
+  : ceiling_t(m, ceiling_t::Floor, sec, -downsp, cru, height)   // start by going down
 {
   type = ty;
   upspeed = upsp;

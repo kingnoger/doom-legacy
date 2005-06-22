@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2005/06/22 20:44:30  smite-meister
+// alpha3 bugfixes
+//
 // Revision 1.21  2005/06/05 19:32:25  smite-meister
 // unsigned map structures
 //
@@ -302,6 +305,9 @@ void button_t::Think()
 // Tell it if switch is ok to use again (1=yes, it's a button).
 void Map::ChangeSwitchTexture(line_t *line, int useAgain)
 {
+  if (!line->sideptr[0])
+    return; // to be safe (and for scripts executing line specials with junk linedefs)
+
   int     texTop, texMid, texBot;
   int     i, n = switchlist.size();
   button_t::button_e loc = button_t::none;

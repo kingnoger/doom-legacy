@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2005/06/22 20:44:31  smite-meister
+// alpha3 bugfixes
+//
 // Revision 1.19  2005/06/16 18:18:11  smite-meister
 // bugfixes
 //
@@ -1490,6 +1493,9 @@ bool dehacked_t::LoadDehackedLump(const char *buf, int len)
 
   loaded = true;
   p.Clear();
+
+  // HACK fix for phobia.wad
+  mobjinfo[MT_TELEPORTMAN].flags &= ~MF_NOSECTOR; // teleport destinations must have sector links!
 
   return true;
 }

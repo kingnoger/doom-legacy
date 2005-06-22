@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2005/06/22 20:44:32  smite-meister
+// alpha3 bugfixes
+//
 // Revision 1.8  2005/06/16 18:18:12  smite-meister
 // bugfixes
 //
@@ -210,6 +213,9 @@ int Parser::ReadChars(char *to, int n)
 // Returns false if the lump ends.
 bool Parser::NewLine(bool pass_ws)
 {
+  if (e >= me)
+    return false;
+
   // end passes any whitespace
   if (pass_ws)
     while (e < me && isspace(*e))
@@ -221,8 +227,10 @@ bool Parser::NewLine(bool pass_ws)
   while (e < me && (*e != '\n'))
     e++;
 
-  if (e < me)
+  if (e <= me)
     {
+      // Gets the last line even if it has no ending newline.
+      // me is a past-the-end pointer for the actual data, but it's still valid to write at.
       *e = '\0';  // mark the line end
       e++; // past-the-end
       return true;
