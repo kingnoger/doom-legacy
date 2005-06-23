@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1996 by Raven Software, Corp.
-// Copyright (C) 2003 by DooM Legacy Team.
+// Copyright (C) 2003-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,11 +18,11 @@
 //
 //
 // $Log$
+// Revision 1.24  2005/06/23 19:42:15  smite-meister
+// obscure Hexen bugs fixed
+//
 // Revision 1.23  2005/06/05 19:32:26  smite-meister
 // unsigned map structures
-//
-// Revision 1.22  2005/04/22 19:44:49  smite-meister
-// bugs fixed
 //
 // Revision 1.21  2005/03/16 21:16:07  smite-meister
 // menu cleanup, bugfixes
@@ -42,20 +42,11 @@
 // Revision 1.15  2004/01/10 16:02:59  smite-meister
 // Cleanup and Hexen gameplay -related bugfixes
 //
-// Revision 1.14  2004/01/05 11:48:08  smite-meister
-// 7 bugfixes
-//
 // Revision 1.13  2003/12/31 18:32:50  smite-meister
 // Last commit of the year? Sound works.
 //
 // Revision 1.12  2003/12/13 23:51:03  smite-meister
 // Hexen update
-//
-// Revision 1.11  2003/11/30 00:09:47  smite-meister
-// bugfixes
-//
-// Revision 1.10  2003/11/23 00:41:55  smite-meister
-// bugfixes
 //
 // Revision 1.9  2003/11/12 11:07:26  smite-meister
 // Serialization done. Map progression.
@@ -152,6 +143,8 @@ bool P_AddToACSStore(int tmap, int number, byte *args)
 //  static stuff and prototypes
 //=================================
 
+typedef int (*acsfunc_t)();
+
 #define SCRIPT_CONTINUE 0
 #define SCRIPT_STOP 1
 #define SCRIPT_TERMINATE 2
@@ -171,7 +164,11 @@ bool P_AddToACSStore(int tmap, int number, byte *args)
 static acs_t *ACScript; // script being interpreted
 static Map   *ACMap;    // where it runs (shorthand)
 static int   *PCodePtr;
-static byte   SpecArgs[8];
+static union
+{
+  byte SpecArgs[8];
+  int  SpecArgsInt[2];
+};
 static char   PrintBuffer[PRINT_BUFFER_SIZE];
 static acs_t *NewScript;
 
@@ -288,7 +285,7 @@ static void ThingCount(int type, int tid);
 
 
 // pcode-to-function table
-static int (*PCodeCmds[])() =
+static acsfunc_t PCodeCmds[] =
 {
   CmdNOP,
   CmdTerminate,
@@ -394,6 +391,7 @@ static int (*PCodeCmds[])() =
   CmdEndPrintBold
 };
 
+static unsigned num_acsfuncs = sizeof(PCodeCmds)/sizeof(acsfunc_t);
 
 
 //=================================================
@@ -671,13 +669,11 @@ acs_t::acs_t(int num, int ii, int *addr)
 
 void acs_t::Think()
 {
-  int cmd;
-  int action;
-
   if (mp->ACSInfo[infoIndex].state == ACS_terminating)
     {
       mp->ACSInfo[infoIndex].state = ACS_inactive;
-      mp->ScriptFinished(ACScript->number);
+      //mp->ScriptFinished(ACScript->number); // FIXME how can this be correct? ACScript is not yet initialized...
+      mp->ScriptFinished(number);
       mp->RemoveThinker(this);
       return;
     }
@@ -694,17 +690,31 @@ void acs_t::Think()
   ACScript = this;
   ACMap = mp;
 
-  PCodePtr = ACScript->ip;
+  int action;
+
+  PCodePtr = ip;
   do
     {
-      cmd = *PCodePtr++;
-      action = PCodeCmds[cmd]();
+      // We have extended some linedef types and hence cannot trust stock ACC to generate
+      // fully correct pcodes for them.
+      SpecArgsInt[0] = SpecArgsInt[1] = 0; // to be safe
+
+      unsigned cmd = *PCodePtr++;
+      if (cmd >= num_acsfuncs)
+	{
+	  CONS_Printf("ACS script %d: unknown pcode %d.\n", number, cmd);
+	  action = SCRIPT_TERMINATE;
+	}
+      else
+	action = PCodeCmds[cmd]();
     } while (action == SCRIPT_CONTINUE);
-  ACScript->ip = PCodePtr;
+
+  ip = PCodePtr;
+
   if (action == SCRIPT_TERMINATE)
     {
       mp->ACSInfo[infoIndex].state = ACS_inactive;
-      mp->ScriptFinished(ACScript->number);
+      mp->ScriptFinished(number);
       mp->RemoveThinker(this);
     }
 }

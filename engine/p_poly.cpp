@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1996 by Raven Software, Corp.
-// Copyright (C) 2003-2004 by DooM Legacy Team.
+// Copyright (C) 2003-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.19  2005/03/16 21:16:06  smite-meister
-// menu cleanup, bugfixes
+// Revision 1.20  2005/06/23 19:42:15  smite-meister
+// obscure Hexen bugs fixed
 //
 // Revision 1.18  2005/03/10 22:28:43  smite-meister
 // poly renderer
@@ -951,8 +951,6 @@ bool Map::PO_CheckBlockingActors(seg_t *seg, polyobj_t *po)
   right = right < 0 ? 0 : right;
   right = right >= bmapwidth ?  bmapwidth-1 : right;
 
-  bbox_t tmbbox;
-
   for (j = bottom*bmapwidth; j <= top*bmapwidth; j += bmapwidth)
     {
       for (i = left; i <= right; i++)
@@ -961,7 +959,7 @@ bool Map::PO_CheckBlockingActors(seg_t *seg, polyobj_t *po)
 	    {
 	      if (mobj->flags & MF_SOLID)
 		{
-		  tmbbox.Set(mobj->x, mobj->y, mobj->radius); 
+		  tmb.Set(mobj->x, mobj->y, mobj->radius); 
 
 		  if (!tmb.BoxTouchBox(ld->bbox))
 		    continue;
