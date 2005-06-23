@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004 by DooM Legacy Team.
+// Copyright (C) 2004-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.24  2005/06/23 17:25:39  smite-meister
+// map conversion command added
+//
 // Revision 1.23  2005/04/17 17:44:37  smite-meister
 // netcode
 //
@@ -607,6 +610,8 @@ void FS_Init();
 
 void Command_AddBot_f();
 
+void Command_ConvertMap_f();
+
 // set chatmacros cvars point the original or dehacked texts, before config.cfg is executed !!
 void HU_HackChatmacros();
 
@@ -695,6 +700,9 @@ void SV_Init()
   //Added by Hurdler for master server connection
   cv_masterserver.Reg();
   COM_AddCommand("listserv", Command_Listserv_f);
+
+  // misc
+  COM_AddCommand("convertmap", Command_ConvertMap_f);
 
   // register console variables
   cv_publicserver.Reg();

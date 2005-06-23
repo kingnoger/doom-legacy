@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2005/06/23 17:25:39  smite-meister
+// map conversion command added
+//
 // Revision 1.17  2005/06/12 16:26:28  smite-meister
 // alpha2 bugfixes
 //
@@ -180,6 +183,34 @@ void Command_Frags_f() // TODO
     */
 }
 
+
+
+//========================================================================
+//    Utilities
+//========================================================================
+
+bool ConvertMapToHexen(int lumpnum);
+
+/// Converts the relevant parts of a Doom/Heretic map to Hexen format,
+/// writes the lumps on disk.
+void Command_ConvertMap_f()
+{
+  if (COM_Argc() < 2)
+    {
+      CONS_Printf("Usage: convertmap <maplumpname>\n");
+      return;
+    }
+
+  const char *temp = strupr(COM_Argv(1));
+  int lump = fc.FindNumForName(temp);
+  if (lump == -1)
+    {
+      CONS_Printf("Map %s cannot be found.\n", temp);
+      return;
+    }
+
+  ConvertMapToHexen(lump);
+}
 
 
 

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2005/06/23 17:25:40  smite-meister
+// map conversion command added
+//
 // Revision 1.3  2005/06/22 20:44:31  smite-meister
 // alpha3 bugfixes
 //
@@ -810,13 +813,10 @@ void dehacked_t::Read_Frame(const char *str)
 	    {
 	      fprintf(out, "Next frame = %s\n", ExpandStateNum(value));
 	    }
-	  /*
 	  else if (!strcasecmp(word,"Codep"))
 	    {
-	      word = p.GetToken(" =");
-	      SetAction(s, word);
+	      fprintf(out, "Codep = %s\n", ExpandStateNum(value));
 	    }
-	  */
 	  else error("Frame %d : Unknown field '%s'\n", num, word);
     }
 

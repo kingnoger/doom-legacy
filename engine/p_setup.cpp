@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.59  2005/06/23 17:25:37  smite-meister
+// map conversion command added
+//
 // Revision 1.58  2005/06/16 18:18:10  smite-meister
 // bugfixes
 //
@@ -166,6 +169,7 @@
 #include "p_spec.h"
 #include "m_bbox.h"
 #include "m_swap.h"
+#include "m_misc.h"
 
 #include "i_sound.h" //for I_PlayCD()..
 #include "r_sky.h"
@@ -1324,4 +1328,145 @@ void Map::ConvertLineDefs()
 {
   for (int i=0; i<numlines; i++)
     ConvertLineDef(&lines[i]); // Doom => Hexen conversion
+}
+
+
+
+/// Converts the relevant parts of a Doom/Heretic map to Hexen format,
+/// writes the lumps on disk.
+bool ConvertMapToHexen(int lumpnum)
+{
+  const char *maplumpname = fc.FindNameForNum(lumpnum);
+
+  if (!maplumpname)
+    return false;
+
+  CONS_Printf("Converting map %s to Hexen format...\n", maplumpname);
+
+  // is it a map?
+  const char *lumpname = fc.FindNameForNum(lumpnum+LUMP_THINGS);
+  if (!lumpname || strncmp(lumpname, "THINGS", 8))
+    {
+      CONS_Printf(" No THINGS lump found!\n");
+      return false;
+    }
+
+  lumpname = fc.FindNameForNum(lumpnum+LUMP_LINEDEFS);
+  if (!lumpname || strncmp(lumpname, "LINEDEFS", 8))
+    {
+      CONS_Printf(" No LINEDEFS lump found!\n");
+      return false;
+    }
+
+  // is the map in Hexen format?
+  lumpname = fc.FindNameForNum(lumpnum+LUMP_BEHAVIOR);
+  if (lumpname && !strncmp(lumpname, "BEHAVIOR", 8))
+    {
+      CONS_Printf(" Map already is in Hexen format!\n");
+      return false;
+    }
+
+  // first convert THINGS
+
+  int lump = lumpnum + LUMP_THINGS;
+  int numthings = fc.LumpLength(lump)/sizeof(doom_mapthing_t);
+
+  byte *data = (byte *)fc.CacheLumpNum(lump, PU_STATIC);
+  doom_mapthing_t *t = (doom_mapthing_t *)data;
+
+  int length = numthings * sizeof(hex_mapthing_t);
+  hex_mapthing_t *ht = (hex_mapthing_t *)Z_Malloc(length, PU_STATIC, NULL);
+  memset(ht, 0, length); // no TID, height, special or args
+
+  int bflags = MTF_FIGHTER | MTF_CLERIC | MTF_MAGE;
+
+  for (int i=0; i < numthings; i++, t++)
+    {
+      ht[i].x = t->x;
+      ht[i].y = t->y;
+      ht[i].angle = t->angle;
+      ht[i].type = t->type;
+
+      int dflags = SHORT(t->flags); // since we use this data, it must be of correct endianness
+
+      ht[i].flags = bflags | (dflags & 0xF); // lowest four flags are the same
+
+      if (!(dflags & MTF_MULTIPLAYER))
+	ht[i].flags |= MTF_GSINGLE;
+
+      if (!(dflags & MTF_NOT_IN_COOP))
+	ht[i].flags |= MTF_GCOOP;
+
+      if (!(dflags & MTF_NOT_IN_DM))
+	ht[i].flags |= MTF_GDEATHMATCH;
+
+      ht[i].flags = SHORT(ht[i].flags); // and back to little-endian
+    }
+
+  Z_Free(data);
+
+  string outfilename = string(maplumpname) + "_THINGS.lmp";
+  FIL_WriteFile(outfilename.c_str(), ht, length);
+  Z_Free(ht);
+
+  // then convert LINEDEFS
+
+  lump = lumpnum + LUMP_LINEDEFS;
+  int numlines = fc.LumpLength(lump)/sizeof(doom_maplinedef_t);
+
+  data = (byte *)fc.CacheLumpNum(lump, PU_STATIC);
+  doom_maplinedef_t *ld = (doom_maplinedef_t *)data;
+
+  length = numlines * sizeof(hex_maplinedef_t);
+  hex_maplinedef_t *hld = (hex_maplinedef_t *)Z_Malloc(length, PU_STATIC, NULL);
+
+  for (int i=0; i < numlines; i++, ld++)
+    {
+      // trivialities
+      hld[i].v1 = ld->v1;
+      hld[i].v2 = ld->v2;
+      hld[i].sidenum[0] = ld->sidenum[0];
+      hld[i].sidenum[1] = ld->sidenum[1];
+
+      // flags, special, args
+      line_t temp;
+
+      temp.flags = SHORT(ld->flags);
+      temp.special = SHORT(ld->special);
+      ConvertLineDef(&temp);
+
+      hld[i].flags = SHORT(temp.flags);
+      hld[i].special = temp.special;
+      for (int j=0; j<5; j++)
+	hld[i].args[j] = temp.args[j];
+
+      // tag
+      int tag = SHORT(ld->tag);
+
+      if (hld[i].special == LEGACY_EXT) // different tag handling (full 16-bit tag stored)
+	{
+	  hld[i].args[3] = tag & 0xFF;
+	  hld[i].args[4] = tag >> 8;
+	}
+      else
+	{
+	  // we must make do with 8-bit tags
+	  if (tag > 255)
+	    {
+	      CONS_Printf(" Warning: Linedef %d: tag (%d) is above 255, set to zero.\n.", i, tag);
+	      hld[i].args[0] = 0;
+	    }
+	  else
+	    hld[i].args[0] = tag;
+	}
+    }
+
+  Z_Free(data);
+
+  outfilename = string(maplumpname) + "_LINEDEFS.lmp";
+  FIL_WriteFile(outfilename.c_str(), hld, length);
+  Z_Free(hld);
+
+  CONS_Printf(" done. %d THINGS and %d LINEDEFS.\n", numthings, numlines);
+  return true;
 }
