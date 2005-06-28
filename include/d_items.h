@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2005/06/28 17:05:00  smite-meister
+// item respawning cleaned up
+//
 // Revision 1.14  2005/03/24 17:00:39  smite-meister
 // alpha fixes
 //
@@ -139,6 +142,7 @@ enum artitype_t
   arti_speed,
   arti_boostmana,
   arti_boostarmor,
+  arti_xinvulnerability,
 
   // Puzzle artifacts
   arti_firstpuzzitem,

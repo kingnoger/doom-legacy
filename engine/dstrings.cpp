@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,11 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.9  2005/06/28 16:53:56  smite-meister
+// Revision 1.10  2005/06/28 17:04:59  smite-meister
 // item respawning cleaned up
-//
-// Revision 1.8  2004/10/31 22:30:53  smite-meister
-// cleanup
 //
 // Revision 1.7  2004/03/28 15:16:12  smite-meister
 // Texture cache.

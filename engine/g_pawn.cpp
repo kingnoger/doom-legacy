@@ -5,11 +5,8 @@
 // Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // $Log$
-// Revision 1.51  2005/06/22 20:44:30  smite-meister
-// alpha3 bugfixes
-//
-// Revision 1.50  2005/04/22 19:44:48  smite-meister
-// bugs fixed
+// Revision 1.52  2005/06/28 17:05:00  smite-meister
+// item respawning cleaned up
 //
 // Revision 1.49  2005/04/17 18:36:33  smite-meister
 // netcode
@@ -1623,38 +1620,7 @@ bool PlayerPawn::GiveKey(keycard_t k)
 }
 
 
-
-//---------------------------------------------------------------------------
-// The Hexen artifact respawn system.
-// The artifact is restored after a number of tics by an action function.
-//---------------------------------------------------------------------------
-
-static void SetDormantArtifact(DActor *arti)
-{
-  arti->flags &= ~MF_SPECIAL;
-  if (cv_deathmatch.value && !(arti->flags & MF_DROPPED))
-    {
-      // respawn delay
-      if (arti->type == MT_XARTIINVULNERABILITY)
-	arti->SetState(S_DORMANTARTI3_1);
-      //else if (arti->type == MT_ARTIINVISIBILITY) 
-      else if (arti->type == MT_SUMMONMAULATOR || arti->type == MT_XARTIFLY)
-	arti->SetState(S_DORMANTARTI2_1);
-      else
-	arti->SetState(S_DORMANTARTI1_1);
-    }
-  else
-    arti->SetState(S_DEADARTI1); // Don't respawn
-}
-
-
-void A_RestoreArtifact(DActor *arti)
-{
-  arti->flags |= MF_SPECIAL;
-  arti->SetState(arti->info->spawnstate);
-  S_StartSound(arti, sfx_itemrespawn);
-}
-
+void P_SetDormantArtifact(DActor *arti);
 
 bool PlayerPawn::GiveArtifact(artitype_t arti, DActor *from)
 {
@@ -1676,24 +1642,13 @@ bool PlayerPawn::GiveArtifact(artitype_t arti, DActor *from)
 
   p_remove = false;  // TODO we could just as well remove the artifacts (they will respawn in dm!)
 
-  int j;
-  if (arti < arti_firstpuzzitem)
+  if (arti < arti_fsword1)
     {
-      j = TXT_ARTIINVULNERABILITY - 1 + arti;
-      if (from->type == MT_XARTIINVULNERABILITY)
-	j = TXT_XARTIINVULNERABILITY; // TODO make it a different item
-      player->SetMessage(text[TXT_ARTIINVULNERABILITY - 1 + arti], false);
-      SetDormantArtifact(from);
-      p_sound = sfx_artiup;
-    }
-  else if (arti < arti_fsword1)
-    {
-      // Puzzle item
-      j = TXT_ARTIPUZZSKULL + arti - arti_firstpuzzitem;
-      if (arti >= arti_puzzgear1)
-	j = TXT_ARTIPUZZGEAR;
+      // artifact or puzzle artifact
+      int j = TXT_ARTIINVULNERABILITY - arti_invulnerability + arti;
+
       player->SetMessage(text[j], false);
-      SetDormantArtifact(from);
+      P_SetDormantArtifact(from);
       p_sound = sfx_artiup;
       /*
 	if (!game.multiplayer || cv_deathmatch.value)
@@ -1749,10 +1704,22 @@ bool PlayerPawn::GiveArtifact(artitype_t arti, DActor *from)
 
       if (!gave_piece)
 	return true;
+
+      // Automatically check if we have all pieces... For now you have to assemble the weapons yourself.
+      /*
+      if (all_pieces)
+	{
+	  int wp = wp_quietus + wclass - 1;
+	  weaponowned[wp] = true;
+	  pendingweapon = wp;
+
+	  player->SetMessage(..., false);
+	  // Play the build-sound full volume for all players
+	  S_StartAmbSound(NULL, SFX_WEAPON_BUILD);
+	}
+      */
     }
 
-  if (from && (from->flags & MF_COUNTITEM))
-    player->items++;
 
   if (i == inventory.end())
     {

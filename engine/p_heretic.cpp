@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.28  2005/06/28 17:05:00  smite-meister
+// item respawning cleaned up
+//
 // Revision 1.27  2005/06/08 17:29:38  smite-meister
 // FS bugfixes
 //
@@ -301,6 +304,7 @@ void DoomPatchEngine()
 
   // hacks: teleport fog, blood, gibs
   mobjinfo[MT_TFOG].spawnstate = S_TFOG;
+  mobjinfo[MT_IFOG].spawnstate = S_IFOG;
   sprnames[SPR_BLUD] = "BLUD";
   states[S_GIBS].sprite = SPR_POL5;
 
@@ -317,6 +321,7 @@ void HereticPatchEngine()
 
   // hacks
   mobjinfo[MT_TFOG].spawnstate = S_HTFOG1;
+  mobjinfo[MT_IFOG].spawnstate = S_HTFOG1;
   sprnames[SPR_BLUD] = "BLOD";
   states[S_GIBS].sprite = SPR_BLOD;
 
@@ -338,6 +343,7 @@ void HexenPatchEngine()
 
   // hacks
   mobjinfo[MT_TFOG].spawnstate = S_XTFOG1;
+  mobjinfo[MT_IFOG].spawnstate = S_XTFOG1;
   sprnames[SPR_BLUD] = "BLOD";
   states[S_GIBS].sprite = SPR_GIBS;
 }

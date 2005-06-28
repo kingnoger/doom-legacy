@@ -5,8 +5,8 @@
 // Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // $Log$
-// Revision 1.56  2005/04/22 19:44:48  smite-meister
-// bugs fixed
+// Revision 1.57  2005/06/28 17:04:59  smite-meister
+// item respawning cleaned up
 //
 // Revision 1.55  2005/04/19 18:28:14  smite-meister
 // new RPCs
@@ -562,19 +562,18 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
 
 
 
-// The fields of the mapthing should
-// already be in host byte order.
-void Map::SpawnMapThing(mapthing_t *mt)
+// The fields of the mapthing are already in host byte order.
+DActor *Map::SpawnMapThing(mapthing_t *mt, bool initial)
 {
   int t = mt->type;
 
-  // don't spawn keycards and players in deathmatch
+  // don't spawn keycards in deathmatch
   if (cv_deathmatch.value && mobjinfo[t].flags & MF_NOTDMATCH)
-    return;
+    return NULL;
 
   // don't spawn any monsters if -nomonsters
   if (cv_nomonsters.value && (t == MT_SKULL || (mobjinfo[t].flags & MF_COUNTKILL)))
-    return;
+    return NULL;
 
   fixed_t nx, ny, nz;
   // spawn it
@@ -588,9 +587,8 @@ void Map::SpawnMapThing(mapthing_t *mt)
   else
     {
       // FIXME think how the z spawning is supposed to work... really.
-      mt->z += R_PointInSubsector(nx, ny)->sector->floorheight >> FRACBITS;
+      nz = mt->z << FRACBITS + R_PointInSubsector(nx, ny)->sector->floorheight;
       //nz = ONFLOORZ;
-      nz = mt->z << FRACBITS;
     }
 
   DActor *p = SpawnDActor(nx,ny,nz, mobjtype_t(t));
@@ -608,16 +606,25 @@ void Map::SpawnMapThing(mapthing_t *mt)
     InsertIntoTIDmap(p, p->tid);
 
   // Seed random starting index for bobbing motion
-  if(p->flags2 & MF2_FLOATBOB)
+  if (p->flags2 & MF2_FLOATBOB)
     p->reactiontime = P_Random();
 
   if (p->tics > 0)
     p->tics = 1 + (P_Random () % p->tics);
 
-  if (p->flags & MF_COUNTKILL)
-    kills++;
-  if (p->flags & MF_COUNTITEM)
-    items++;
+  if (initial)
+    {
+      if (p->flags & MF_COUNTKILL)
+	kills++;
+      if (p->flags & MF_COUNTITEM)
+	items++;
+    }
+  else
+    {
+      // spawn teleport fog (not in Heretic?)
+      Actor *fog = SpawnDActor(nx, ny, nz, MT_IFOG);
+      S_StartSound(fog, sfx_itemrespawn);
+    }
 
   p->angle = ANG45 * (mt->angle/45);
   if (mt->flags & MTF_AMBUSH)
@@ -632,6 +639,8 @@ void Map::SpawnMapThing(mapthing_t *mt)
     }
 
   mt->mobj = p;
+
+  return p;
 }
 
 
@@ -1111,49 +1120,18 @@ void Map::BossDeath(const DActor *mo)
 void Map::RespawnSpecials()
 {
   // nothing left to respawn?
-  if (itemrespawnqueue.empty()) //(iquehead == iquetail)
+  if (itemrespawnqueue.empty())
     return;
 
   // the first item in the queue is the first to respawn
-  if (maptic - itemrespawntime.front() < (tic_t)cv_itemrespawntime.value*TICRATE)
+  if (maptic - itemrespawntime.front() < tic_t(cv_itemrespawntime.value)*TICRATE)
     return;
 
   mapthing_t *mthing = itemrespawnqueue.front();
   if (mthing != NULL)
-    {
-      // TODO somewhat redundant code, see SpawnMapThing()
-      fixed_t x, y, z;
+    SpawnMapThing(mthing, false);
 
-      x = mthing->x << FRACBITS;
-      y = mthing->y << FRACBITS;
-
-      DActor *mo;
-
-      // spawn a teleport fog at the new spot
-      if (game.mode != gm_heretic)
-	{
-	  subsector_t *ss = R_PointInSubsector (x,y);
-	  mo = SpawnDActor(x, y, ss->sector->floorheight, MT_IFOG);
-	  S_StartSound (mo, sfx_itemrespawn);
-	}
-
-      int t = mthing->type;
-
-      // spawn it
-      if (mobjinfo[t].flags & MF_SPAWNCEILING)
-	z = ONCEILINGZ;
-      else
-	z = ONFLOORZ;
-
-      mo = SpawnDActor(x,y,z, mobjtype_t(t));
-      mo->spawnpoint = mthing;
-      mo->angle = ANG45 * (mthing->angle/45);
-
-      if (game.mode == gm_heretic)
-	S_StartSound (mo, sfx_itemrespawn);
-    }
   // pull it from the queue anyway
-  //iquetail = (iquetail+1)&(ITEMQUESIZE-1);
   itemrespawnqueue.pop_front();
   itemrespawntime.pop_front();
 }
@@ -1163,64 +1141,53 @@ void Map::RespawnSpecials()
 // picks out all weapons from itemrespawnqueue and respawns them
 void Map::RespawnWeapons()
 {
-  fixed_t x, y, z;
-
   deque<mapthing_t *>::iterator i = itemrespawnqueue.begin();
-  deque<tic_t>::iterator j = itemrespawntime.begin();
 
-  for( ; i != itemrespawnqueue.end() ; i++, j++)
+  for ( ; i != itemrespawnqueue.end(); i++)
     {
       mapthing_t *mthing = *i;
+      if (!mthing)
+	continue;
 
-      int n = 0;
-      switch(mthing->type)
+      switch (mthing->type)
 	{
-	case 2001 : //mobjinfo[MT_SHOTGUN].doomednum  :
-	  n=MT_SHOTGUN;
+	case MT_SHAINSAW:
+	case MT_SHOTGUN:
+	case MT_SUPERSHOTGUN:
+	case MT_CHAINGUN:
+	case MT_ROCKETLAUNCH:
+	case MT_PLASMAGUN:
+	case MT_BFG9000:
+	case MT_WGAUNTLETS:
+	case MT_WCROSSBOW:
+	case MT_WBLASTER:
+	case MT_WPHOENIXROD:
+	case MT_WSKULLROD:
+	case MT_WMACE:
+	case MT_FW_AXE:
+	case MT_CW_SERPSTAFF:
+	case MT_MW_CONE:
+	case MT_FW_HAMMER:
+	case MT_CW_FLAME:
+	case MT_MW_LIGHTNING:
+	case MT_FW_SWORD1:
+	case MT_FW_SWORD2:
+	case MT_FW_SWORD3:
+	case MT_CW_HOLY1:
+	case MT_CW_HOLY2:
+	case MT_CW_HOLY3:
+	case MT_MW_STAFF1:
+	case MT_MW_STAFF2:
+	case MT_MW_STAFF3:
+	  // it's a weapon, remove it from queue and respawn it!
+	  *i = NULL; // stays in sync with itemrespawntime...
+	  SpawnMapThing(mthing, false);
 	  break;
-	case 82   : //mobjinfo[MT_SUPERSHOTGUN].doomednum :
-	  n=MT_SUPERSHOTGUN;
-	  break;
-	case 2002 : //mobjinfo[MT_CHAINGUN].doomednum :
-	  n=MT_CHAINGUN;
-	  break;
-	case 2006 : //mobjinfo[MT_BFG9000].doomednum   : // bfg9000
-	  n=MT_BFG9000;
-	  break;
-	case 2004 : //mobjinfo[MT_PLASMAGUN].doomednum   : // plasma launcher
-	  n=MT_PLASMAGUN;
-	  break;
-	case 2003 : //mobjinfo[MT_ROCKETLAUNCH].doomednum   : // rocket launcher
-	  n=MT_ROCKETLAUNCH;
-	  break;
-	case 2005 : //mobjinfo[MT_SHAINSAW].doomednum   : // shainsaw
-	  n=MT_SHAINSAW;
-	  break;
+
 	default:
 	  // not a weapon, continue search
-	  continue;
+	  break;
 	}
-      // it's a weapon, remove it from queue!
-      *i = NULL;
-
-      // and respawn it
-      x = mthing->x << FRACBITS;
-      y = mthing->y << FRACBITS;
-
-      // spawn a teleport fog at the new spot
-      subsector_t *ss = R_PointInSubsector(x,y);
-      DActor *mo = SpawnDActor(x, y, ss->sector->floorheight, MT_IFOG);
-      S_StartSound(mo, sfx_itemrespawn);
-
-      // spawn it
-      if (mobjinfo[n].flags & MF_SPAWNCEILING)
-	z = ONCEILINGZ;
-      else
-	z = ONFLOORZ;
-
-      mo = SpawnDActor(x,y,z, mobjtype_t(n));
-      mo->spawnpoint = mthing;
-      mo->angle = ANG45 * (mthing->angle/45);
     }
 }
 

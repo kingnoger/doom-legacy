@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.39  2005/04/22 19:44:48  smite-meister
-// bugs fixed
+// Revision 1.40  2005/06/28 17:04:59  smite-meister
+// item respawning cleaned up
 //
 // Revision 1.38  2004/12/02 17:22:31  smite-meister
 // HUD fixed
@@ -274,13 +274,6 @@ void Actor::Remove()
 
   eflags |= MFE_REMOVE;
 
-  if ((flags & MF_SPECIAL) && !(flags & MF_DROPPED) &&
-      !(flags & MF_NORESPAWN) && cv_itemrespawn.value)
-    {
-      mp->itemrespawnqueue.push_back(spawnpoint);
-      mp->itemrespawntime.push_back(mp->maptic);
-    }
-
   if (tid)
     mp->RemoveFromTIDmap(this);
 
@@ -292,6 +285,10 @@ void Actor::Remove()
       P_DelSeclist(touching_sectorlist);
       touching_sectorlist = NULL;
     }
+
+  // free up the spawnpoint
+  if (spawnpoint && spawnpoint->mobj == this)
+    spawnpoint->mobj = NULL;
 
   // stop any playing sound
   S.Stop3DSound(this);

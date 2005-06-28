@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.25  2005/06/28 17:05:01  smite-meister
+// item respawning cleaned up
+//
 // Revision 1.24  2005/06/23 17:25:39  smite-meister
 // map conversion command added
 //
@@ -171,7 +174,11 @@ Have polymorphed class GameType which creates these into GameInfo containers
 #include "d_main.h"
 
 #include "g_game.h"
+#include "g_mapinfo.h"
+#include "g_map.h"
 #include "g_player.h"
+#include "g_pawn.h"
+
 #include "n_interface.h"
 
 #include "m_menu.h"
@@ -249,6 +256,8 @@ consvar_t cv_voodoodolls  = {"voodoodolls", "1", CV_NETVAR, CV_OnOff};
 
 void TeamPlay_OnChange()
 {
+  int value = cv_teamplay.value;
+
   // Change the name of the teams
   /*
   game.teams.resize(game.maxteams);
@@ -279,25 +288,38 @@ void TeamPlay_OnChange()
 
 void Deathmatch_OnChange()
 {
-  if (game.server)
-    {
-      if (cv_deathmatch.value >= 2)
-	cv_itemrespawn.Set(1);
-      else
-	cv_itemrespawn.Set(0);
-    }
-  // FIXME, deathmatch_onchange
-  //if (cv_deathmatch.value == 1 || cv_deathmatch.value == 3) P_RespawnWeapons();
+  int value = cv_deathmatch.value;
 
-  // give all keys to the players
-  if (cv_deathmatch.value)
+  // dm 1: original weapons are respawned at start, stay when picked up, yield 2.5*ammo (because ammo does not respawn...)
+  // dm 2: items respawn, also original weapons are removed when picked up
+  // dm 3: items respawn, original weapons are respawned at start, stay when picked up
+
+  // give all keys to all players
+  if (value)
     {
-      /*
-      int n = game.players.size();
-      for(j=0;j<n;j++)
-	if (game.FindPlayer(j))
-	  game.FindPlayer(j)->pawn->cards = it_allkeys;
-      */
+      GameInfo::player_iter_t t = game.Players.begin();
+      for ( ; t != game.Players.end(); t++)
+	{
+	  PlayerInfo *p = t->second;
+	  if (p && p->pawn)
+	    p->pawn->keycards = it_allkeys;
+	}
+    }
+
+  if (value >= 2)
+    cv_itemrespawn.Set(1);
+  else
+    cv_itemrespawn.Set(0);
+
+  if (value == 1 || value == 3)
+    {
+      GameInfo::mapinfo_iter_t t = game.mapinfo.begin();
+      for ( ; t != game.mapinfo.end(); t++)
+	{
+	  MapInfo *p = t->second;
+	  if (p && p->me)
+	    p->me->RespawnWeapons();
+	}
     }
 }
 

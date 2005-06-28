@@ -18,7 +18,7 @@
 //
 //
 // $Log$
-// Revision 1.14  2005/06/28 16:53:56  smite-meister
+// Revision 1.15  2005/06/28 17:04:59  smite-meister
 // item respawning cleaned up
 //
 // Revision 1.9  2004/11/18 20:30:06  smite-meister
@@ -311,6 +311,7 @@ void PlayerPawn::TouchSpecialThing(DActor *thing)
   int stype = thing->type;
   int amount = thing->health; // item amounts are stored in health
   float quality = thing->info->speed; // "quality" is stored in speed
+  bool dropped = thing->flags & MF_DROPPED;
 
   // Identify item
   switch (stype)
@@ -774,101 +775,101 @@ void PlayerPawn::TouchSpecialThing(DActor *thing)
 
         // weapons
     case MT_BFG9000:
-      if (!GiveWeapon(wp_bfg, amount, thing->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_bfg, amount, dropped))
 	return;
       player->SetMessage(GOTBFG9000);
       break;
     case MT_CHAINGUN:
-      if (!GiveWeapon(wp_chaingun, amount, thing->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_chaingun, amount, dropped))
 	return;
       player->SetMessage(GOTCHAINGUN);
       break;
     case MT_SHAINSAW:
-      if (!GiveWeapon(wp_chainsaw, amount, thing->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_chainsaw, amount, dropped))
 	return;
       player->SetMessage(GOTCHAINSAW);
       break;
     case MT_ROCKETLAUNCH:
-      if (!GiveWeapon(wp_missile, amount, thing->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_missile, amount, dropped))
 	return;
       player->SetMessage(GOTLAUNCHER);
       break;
     case MT_PLASMAGUN:
-      if (!GiveWeapon(wp_plasma, amount, thing->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_plasma, amount, dropped))
 	return;
       player->SetMessage(GOTPLASMA);
       break;
     case MT_SHOTGUN:
-      if (!GiveWeapon(wp_shotgun, amount, thing->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_shotgun, amount, dropped))
 	return;
       player->SetMessage(GOTSHOTGUN);
       break;
     case MT_SUPERSHOTGUN:
-      if (!GiveWeapon(wp_supershotgun, amount, thing->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_supershotgun, amount, dropped))
 	return;
       player->SetMessage(GOTSHOTGUN2);
       break;
 
       // heretic weapons
     case MT_WMACE:
-      if (!GiveWeapon(wp_mace, amount, thing->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_mace, amount, dropped))
 	return;
       player->SetMessage(GOT_WPNMACE);
       break;
     case MT_WCROSSBOW:
-      if (!GiveWeapon(wp_crossbow, amount, thing->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_crossbow, amount, dropped))
 	return;
       player->SetMessage(GOT_WPNCROSSBOW);
       break;
     case MT_WBLASTER:
-      if (!GiveWeapon(wp_blaster, amount, thing->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_blaster, amount, dropped))
 	return;
       player->SetMessage(GOT_WPNBLASTER);
       break;
     case MT_WSKULLROD:
-      if (!GiveWeapon(wp_skullrod, amount, thing->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_skullrod, amount, dropped))
 	return;
       player->SetMessage(GOT_WPNSKULLROD);
       break;
     case MT_WPHOENIXROD:
-      if (!GiveWeapon(wp_phoenixrod, amount, thing->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_phoenixrod, amount, dropped))
 	return;
       player->SetMessage(GOT_WPNPHOENIXROD);
       break;
     case MT_WGAUNTLETS:
-      if (!GiveWeapon(wp_gauntlets, amount, thing->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_gauntlets, amount, dropped))
 	return;
       player->SetMessage(GOT_WPNGAUNTLETS);
       break;
 
       // Hexen weapons
     case MT_MW_CONE:
-      if (!GiveWeapon(wp_cone_of_shards, amount, thing->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_cone_of_shards, amount, dropped))
 	return;
       player->SetMessage(text[TXT_WEAPON_M2]);
       break;
     case MT_MW_LIGHTNING:
-      if (!GiveWeapon(wp_arc_of_death, amount, thing->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_arc_of_death, amount, dropped))
 	return;
       player->SetMessage(text[TXT_WEAPON_M3]);
       break;
     case MT_FW_AXE:
-      if (!GiveWeapon(wp_timons_axe, amount, thing->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_timons_axe, amount, dropped))
 	return;
       player->SetMessage(text[TXT_WEAPON_F2]);
       break;
     case MT_FW_HAMMER:
-      if (!GiveWeapon(wp_hammer_of_retribution, amount, thing->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_hammer_of_retribution, amount, dropped))
 	return;
       player->SetMessage(text[TXT_WEAPON_F3]);
       break;
     case MT_CW_SERPSTAFF:
-      if (!GiveWeapon(wp_serpent_staff, amount, thing->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_serpent_staff, amount, dropped))
 	return;
       player->SetMessage(text[TXT_WEAPON_C2]);
       break;
     case MT_CW_FLAME:
-      if (!GiveWeapon(wp_firestorm, amount, thing->flags & MF_DROPPED))
+      if (!GiveWeapon(wp_firestorm, amount, dropped))
 	return;
       player->SetMessage(text[TXT_WEAPON_C3]);
       break;
@@ -916,5 +917,14 @@ void PlayerPawn::TouchSpecialThing(DActor *thing)
     }
 
   if (p_remove)
-    thing->Remove();
+    {
+      // respawning items (actually their spawnpoints) are added to queue
+      if (!dropped && !(thing->flags & MF_NORESPAWN) && cv_itemrespawn.value)
+	{
+	  mp->itemrespawnqueue.push_back(thing->spawnpoint);
+	  mp->itemrespawntime.push_back(mp->maptic);
+	}
+
+      thing->Remove();
+    }
 }

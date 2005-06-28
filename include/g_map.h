@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.41  2005/06/28 17:05:00  smite-meister
+// item respawning cleaned up
+//
 // Revision 1.40  2005/06/05 19:32:26  smite-meister
 // unsigned map structures
 //
@@ -315,7 +318,7 @@ public:
   void SpawnActor(Actor *p);
   DActor *SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t);
   void SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing);
-  void SpawnMapThing(mapthing_t *mthing);
+  DActor *SpawnMapThing(mapthing_t *mthing, bool initial = true);
   void SpawnSplash(Actor *mo, fixed_t z);
   DActor *SpawnBlood(fixed_t x, fixed_t y, fixed_t z, int damage);
   void SpawnBloodSplats(fixed_t x, fixed_t y, fixed_t z, int damage, fixed_t px, fixed_t py);
