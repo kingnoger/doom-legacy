@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2005/06/28 16:53:56  smite-meister
+// item respawning cleaned up
+//
 // Revision 1.8  2004/10/31 22:30:53  smite-meister
 // cleanup
 //
@@ -233,6 +236,26 @@ char *text[NUMTEXT] =
   "KRATER OF MIGHT",
   "DRAGONSKIN BRACERS",
   "ICON OF THE DEFENDER",
+
+  // Puzzle artifacts
+  "YORICK'S SKULL",
+  "HEART OF D'SPARIL",
+  "RUBY PLANET",
+  "EMERALD PLANET",
+  "EMERALD PLANET",
+  "SAPPHIRE PLANET",
+  "SAPPHIRE PLANET",
+  "DAEMON CODEX",
+  "LIBER OSCURA",
+  "FLAME MASK",
+  "GLAIVE SEAL",
+  "HOLY RELIC",
+  "SIGIL OF THE MAGUS",
+  "CLOCK GEAR",
+  "CLOCK GEAR",
+  "CLOCK GEAR",
+  "CLOCK GEAR",
+  "YOU CANNOT USE THIS HERE",
                                        
   // heretic items
   "WAND CRYSTAL",                       
@@ -352,23 +375,6 @@ char *text[NUMTEXT] =
   "Picked up a blue skull key.",
   "Picked up a yellow skull key.",
   "Picked up a red skull key.",
-  
-  // Puzzle artifacts
-  "YORICK'S SKULL",
-  "HEART OF D'SPARIL",
-  "RUBY PLANET",
-  "EMERALD PLANET",
-  "EMERALD PLANET",
-  "SAPPHIRE PLANET",
-  "SAPPHIRE PLANET",
-  "DAEMON CODEX",
-  "LIBER OSCURA",
-  "FLAME MASK",
-  "GLAIVE SEAL",
-  "HOLY RELIC",
-  "SIGIL OF THE MAGUS",
-  "CLOCK GEAR",
-  "YOU CANNOT USE THIS HERE",
 
   // Items
   "MESH ARMOR",

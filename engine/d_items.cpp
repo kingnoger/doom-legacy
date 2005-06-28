@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,17 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.13  2005/06/22 20:44:29  smite-meister
-// alpha3 bugfixes
-//
-// Revision 1.12  2005/03/24 17:00:39  smite-meister
-// alpha fixes
-//
-// Revision 1.11  2004/12/31 16:19:29  smite-meister
-// alpha fixes
-//
-// Revision 1.10  2004/12/02 17:22:31  smite-meister
-// HUD fixed
+// Revision 1.14  2005/06/28 16:53:56  smite-meister
+// item respawning cleaned up
 //
 // Revision 1.9  2004/11/18 20:30:06  smite-meister
 // tnt, plutonia
@@ -61,6 +52,8 @@
 /// \file
 /// \brief Game items and pickups: keys, armor, artifacts, weapons, ammo.
 
+#include "command.h"
+#include "cvars.h"
 #include "dstrings.h"
 #include "d_items.h"
 
@@ -77,7 +70,6 @@
 
 
 // TODO add first weapons as THINGs: goldwand 25 ammo, pistol 20 ammo, hexen first weapons 0 ammo
-// TODO FLOATBOB to use something else than health as phase index, hexen mana to use health
 
 
 //======================================================
@@ -231,8 +223,50 @@ weaponinfo_t wpnlev2info[NUMWEAPONS] =
 //======================================================
 
 
-//  The Heretic way of respawning items. Unused.
+//---------------------------------------------------------------------------
+// The Heretic/Hexen artifact and item respawn system.
+// The artifact is restored after a number of tics by an action function.
+//---------------------------------------------------------------------------
 
+void P_SetDormantArtifact(DActor *arti)
+{
+  arti->flags &= ~MF_SPECIAL; // can no longer be picked up
+  if (cv_deathmatch.value && !(arti->flags & MF_DROPPED))
+    {
+      // three different respawn delays
+      switch (arti->type)
+	{
+	case MT_ARTIINVULNERABILITY: // In Heretic, these two did not respawn at all...
+	case MT_ARTIINVISIBILITY:
+
+	case MT_XARTIINVULNERABILITY:
+	  arti->SetState(S_DORMANTARTI3_1); // 600 s.
+	  break;
+	  
+	case MT_SUMMONMAULATOR:
+	case MT_XARTIFLY:
+	  arti->SetState(S_DORMANTARTI2_1); // 120 s.
+	  break;
+
+	default:
+	  arti->SetState(S_DORMANTARTI1_1); // 40 s. Identical to the Heretic state sequence S_DORMANTARTI1.
+	  break;
+	}
+    }
+  else
+    arti->SetState(S_XDEADARTI1); // Don't respawn at all. Identical to Heretic sequence S_DEADARTI1.
+}
+
+
+void A_RestoreArtifact(DActor *arti)
+{
+  arti->flags |= MF_SPECIAL;
+  arti->SetState(arti->info->spawnstate);
+  S_StartSound(arti, sfx_itemrespawn);
+}
+
+
+//  The Heretic way of respawning items. Unused.
 void P_HideSpecialThing(DActor *thing)
 {
   thing->flags &= ~MF_SPECIAL;
@@ -251,6 +285,7 @@ void A_RestoreSpecialThing1(DActor *thing)
   S_StartSound(thing, sfx_itemrespawn);
 }
 
+// And finally make it a pickup again.
 void A_RestoreSpecialThing2(DActor *thing)
 {
   thing->flags |= MF_SPECIAL;
@@ -428,7 +463,6 @@ void PlayerPawn::TouchSpecialThing(DActor *thing)
       if (!GiveArtifact(arti_fly, thing))
 	return;
       break;
-    case MT_XARTIINVULNERABILITY:
     case MT_ARTIINVULNERABILITY:
       if (!GiveArtifact(arti_invulnerability, thing))
 	return;
@@ -499,6 +533,10 @@ void PlayerPawn::TouchSpecialThing(DActor *thing)
       break;
     case MT_BLASTRADIUS:
       if (!GiveArtifact(arti_blastradius, thing))
+	return;
+      break;
+    case MT_XARTIINVULNERABILITY:
+      if (!GiveArtifact(arti_xinvulnerability, thing))
 	return;
       break;
 
