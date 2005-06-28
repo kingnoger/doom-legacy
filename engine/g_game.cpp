@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.48  2005/06/28 18:11:41  smite-meister
+// fixed menu scaling
+//
 // Revision 1.47  2005/06/12 16:26:26  smite-meister
 // alpha2 bugfixes
 //
@@ -214,7 +217,7 @@ void GameInfo::StartIntro()
 void D_PageDrawer(char *lumpname)
 {
   // software mode which uses generally lower resolutions doesn't look
-  // good when the pic is scaled, so it fills space aorund with a pattern,
+  // good when the pic is scaled, so it fills space around with a pattern,
   // and the pic is only scaled to integer multiples (x2, x3...)
   if (rendermode == render_soft)
     {
@@ -226,7 +229,7 @@ void D_PageDrawer(char *lumpname)
         }
     }
 
-
+  vid.scaledofs = vid.centerofs; // centering the scaled picture 
   Texture *t = tc.GetPtr(lumpname);
   t->Draw(0, 0, V_SCALE);
 
@@ -235,6 +238,7 @@ void D_PageDrawer(char *lumpname)
       t = tc.GetPtr("ADVISOR");
       t->Draw(4, 160, V_SCALE);
     }
+  vid.scaledofs = 0;
 }
 
 

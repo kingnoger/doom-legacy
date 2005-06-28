@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.25  2005/06/28 18:11:42  smite-meister
+// fixed menu scaling
+//
 // Revision 1.24  2005/04/19 18:28:43  smite-meister
 // new RPCs
 //
@@ -729,7 +732,7 @@ void font_t::DrawString(int x, int y, const char *str, int flags)
     }
     
   // cursor coordinates
-  int cx = x;
+  int cx = x + vid.scaledofs % vid.width;
   int cy = y + vid.scaledofs / vid.width;
   int rowheight = (height + 1) * dupy;
 
