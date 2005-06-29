@@ -17,14 +17,8 @@
 //
 //
 // $Log$
-// Revision 1.20  2005/06/22 20:44:31  smite-meister
-// alpha3 bugfixes
-//
-// Revision 1.19  2005/06/16 18:18:11  smite-meister
-// bugfixes
-//
-// Revision 1.17  2005/04/01 14:47:46  smite-meister
-// dehacked works
+// Revision 1.21  2005/06/29 14:26:40  smite-meister
+// valgrind pays off
 //
 // Revision 1.14  2004/12/19 23:43:20  smite-meister
 // more BEX support
@@ -121,7 +115,7 @@ struct weapon_mnemonic_t
   actionf_p2  ptr;
 };
 
-weapon_mnemonic_t BEX_WeaponMnemonics[] = 
+static weapon_mnemonic_t BEX_WeaponMnemonics[] = 
 {
 #define WEAPON(x) {#x, A_ ## x},
 #define DACTOR(x)
@@ -130,7 +124,7 @@ weapon_mnemonic_t BEX_WeaponMnemonics[] =
   {NULL, NULL}
 };
 
-dactor_mnemonic_t BEX_DActorMnemonics[] = 
+static dactor_mnemonic_t BEX_DActorMnemonics[] = 
 {
 #define WEAPON(x)
 #define DACTOR(x) {#x, A_ ## x},
@@ -147,7 +141,7 @@ struct flag_mnemonic_t
   int flag;
 };
 
-flag_mnemonic_t BEX_FlagMnemonics[32] =
+static flag_mnemonic_t BEX_FlagMnemonics[32] =
 {
   {"SPECIAL",         0x0001, MF_SPECIAL},   // Call TouchSpecialThing when touched.
   {"SOLID",           0x0002, MF_SOLID},     // Blocks
@@ -184,7 +178,7 @@ flag_mnemonic_t BEX_FlagMnemonics[32] =
 };
 
 
-flag_mnemonic_t BEX_Flag2Mnemonics[32] =
+static flag_mnemonic_t BEX_Flag2Mnemonics[32] =
 {
   {"LOGRAV",           0x0001, MF2_LOGRAV},       // Experiences only 1/8 gravity
   {"WINDTHRUST",       0x0002, MF2_WINDTHRUST},   // Is affected by wind
@@ -229,7 +223,7 @@ struct string_mnemonic_t
 };
 
 #define BEX_STR(x) {#x, TXT_ ## x},
-string_mnemonic_t BEX_StringMnemonics[] =
+static string_mnemonic_t BEX_StringMnemonics[] =
 {
   BEX_STR(GOTARMOR)
   BEX_STR(GOTMEGA)
@@ -306,7 +300,7 @@ string_mnemonic_t BEX_StringMnemonics[] =
 
 
 //========================================================================
-//  The DeHackEd class
+//  Mappings for various tables
 //========================================================================
 
 enum
@@ -391,7 +385,7 @@ static int StateMap(int num)
     {
       if (num < NUM_DOOM_STATES)
 	{
-	  stategap_t Doom_gaps[] =
+	  static stategap_t Doom_gaps[] =
 	  {
 	    {S_NULL, S_LIGHTDONE},
 	    {S_DOOM_END, S_HLIGHTDONE},
@@ -416,7 +410,7 @@ static int StateMap(int num)
 	  num += S_HERETIC - OFS_HERETIC;
 
 	  // Heretic: 9 separate groups of weapon states
- 	  stategap_t Heretic_gaps[] =
+ 	  static stategap_t Heretic_gaps[] =
 	  {
 	    {S_HTFOG13, S_HLIGHTDONE},
 	    {S_STAFFPUFF2_6, S_BEAKREADY},
@@ -442,7 +436,7 @@ static int StateMap(int num)
       num += S_HEXEN - OFS_HEXEN;
 
       // Hexen: 13 separate groups of weapon states 
-      stategap_t Hexen_gaps[] =
+      static stategap_t Hexen_gaps[] =
       {
 	{S_TELESMOKE26, S_XLIGHTDONE},
 	{S_AXE, S_FAXEREADY},
@@ -484,6 +478,139 @@ static int StateMap(int num)
   return S_DEFAULT_STATE;
 }
 
+
+
+// Mapping for Doom sound id's.
+static int SoundMap(int id)
+{
+  // The original sound id enum from Doom, used as a mapping.
+  // Not quite perfect, since we have splitted some sounds
+  // (and this table only covers one of them).
+  static int doom_sounds[] =
+  {
+    sfx_None,
+    sfx_pistol,
+    sfx_shotgn,
+    sfx_sgcock,
+    sfx_dshtgn,
+    sfx_dbopn,
+    sfx_dbcls,
+    sfx_dbload,
+    sfx_plasma,
+    sfx_bfg,
+    sfx_sawup,
+    sfx_sawidl,
+    sfx_sawful,
+    sfx_sawhit,
+    sfx_rlaunc,
+    sfx_rxplod,
+    sfx_firsht,
+    sfx_firxpl,
+    sfx_platstart, //sfx_pstart,
+    sfx_platstop,  //sfx_pstop,
+    sfx_doropn,
+    sfx_dorcls,
+    sfx_floormove, //sfx_stnmov,
+    sfx_switchon,  //sfx_swtchn,
+    sfx_switchoff, //sfx_swtchx,
+    sfx_plpain,
+    sfx_dmpain,
+    sfx_popain,
+    sfx_vipain,
+    sfx_mnpain,
+    sfx_pepain,
+    sfx_gib, //sfx_slop,
+    sfx_itemup,
+    sfx_weaponup, //sfx_wpnup,
+    sfx_grunt,    //sfx_oof,
+    sfx_teleport, //sfx_telept,
+    sfx_posit1,
+    sfx_posit2,
+    sfx_posit3,
+    sfx_bgsit1,
+    sfx_bgsit2,
+    sfx_sgtsit,
+    sfx_cacsit,
+    sfx_brssit,
+    sfx_cybsit,
+    sfx_spisit,
+    sfx_bspsit,
+    sfx_kntsit,
+    sfx_vilsit,
+    sfx_mansit,
+    sfx_pesit,
+    sfx_sklatk,
+    sfx_sgtatk,
+    sfx_skepch,
+    sfx_vilatk,
+    sfx_claw,
+    sfx_skeswg,
+    sfx_pldeth,
+    sfx_pdiehi,
+    sfx_podth1,
+    sfx_podth2,
+    sfx_podth3,
+    sfx_bgdth1,
+    sfx_bgdth2,
+    sfx_sgtdth,
+    sfx_cacdth,
+    sfx_usefail, //sfx_skldth,
+    sfx_brsdth,
+    sfx_cybdth,
+    sfx_spidth,
+    sfx_bspdth,
+    sfx_vildth,
+    sfx_kntdth,
+    sfx_pedth,
+    sfx_skedth,
+    sfx_posact,
+    sfx_bgact,
+    sfx_dmact,
+    sfx_bspact,
+    sfx_bspwlk,
+    sfx_vilact,
+    sfx_usefail, //sfx_noway,
+    sfx_barexp,
+    sfx_punch,
+    sfx_hoof,
+    sfx_metal,
+    sfx_chgun,
+    sfx_message, //sfx_tink,
+    sfx_bdopn,
+    sfx_bdcls,
+    sfx_itemrespawn, //sfx_itmbk,
+    sfx_flame,
+    sfx_flamst,
+    sfx_powerup, //sfx_getpow,
+    sfx_bospit,
+    sfx_boscub,
+    sfx_bossit,
+    sfx_bospn,
+    sfx_bosdth,
+    sfx_manatk,
+    sfx_mandth,
+    sfx_sssit,
+    sfx_ssdth,
+    sfx_keenpn,
+    sfx_keendt,
+    sfx_skeact,
+    sfx_skesit,
+    sfx_skeatk,
+    sfx_message, //sfx_radio
+  };
+
+  if (id >= 0 && id <= 108)
+    return doom_sounds[id];
+
+  DEH.error("Sound id %d doesn't exist.\n", id);
+  return sfx_None;
+}
+
+
+
+//========================================================================
+//  The DeHackEd class
+//========================================================================
 
 
 dehacked_t::dehacked_t()
@@ -725,14 +852,14 @@ void dehacked_t::Read_Thing(const char *str)
       // set the value in appropriate field
       if (!strcasecmp(word, "ID"))            mobjinfo[t].doomednum    = value;
       else if (!strcasecmp(word,"Hit"))       mobjinfo[t].spawnhealth  = value;
-      else if (!strcasecmp(word,"Alert"))     mobjinfo[t].seesound     = value;
+      else if (!strcasecmp(word,"Alert"))     mobjinfo[t].seesound     = SoundMap(value);
       else if (!strcasecmp(word,"Reaction"))  mobjinfo[t].reactiontime = value;
-      else if (!strcasecmp(word,"Attack"))    mobjinfo[t].attacksound  = value;
+      else if (!strcasecmp(word,"Attack"))    mobjinfo[t].attacksound  = SoundMap(value);
       else if (!strcasecmp(word,"Pain"))
 	{
 	  word = p.GetToken(" \t");
 	  if (!strcasecmp(word,"chance"))     mobjinfo[t].painchance = value;
-	  else if (!strcasecmp(word,"sound")) mobjinfo[t].painsound  = value;
+	  else if (!strcasecmp(word,"sound")) mobjinfo[t].painsound  = SoundMap(value);
 	}
       else if (!strcasecmp(word,"Death"))
 	{
@@ -747,14 +874,14 @@ void dehacked_t::Read_Thing(const char *str)
 		}
 	      mobjinfo[t].deathstate  = statenum_t(value);
 	    }
-	  else if (!strcasecmp(word,"sound")) mobjinfo[t].deathsound  = value;
+	  else if (!strcasecmp(word,"sound")) mobjinfo[t].deathsound  = SoundMap(value);
 	}
       else if (!strcasecmp(word,"Speed"))     mobjinfo[t].speed       = float(value)/FRACUNIT;
       else if (!strcasecmp(word,"Width"))     mobjinfo[t].radius      = value;
       else if (!strcasecmp(word,"Height"))    mobjinfo[t].height      = value;
       else if (!strcasecmp(word,"Mass"))      mobjinfo[t].mass        = value;
       else if (!strcasecmp(word,"Missile"))   mobjinfo[t].damage      = value;
-      else if (!strcasecmp(word,"Action"))    mobjinfo[t].activesound = value;
+      else if (!strcasecmp(word,"Action"))    mobjinfo[t].activesound = SoundMap(value);
       else
 	{
 	  value = FindState();
@@ -870,7 +997,7 @@ void dehacked_t::Read_Frame(const char *str)
 // deprecated
 void dehacked_t::Read_Sound(int num)
 {
-  error("Sound command currently unsupported\n");
+  error("Sound command has been deprecated. Use SNDINFO.\n");
   return;
 
   if (num >= NUMSFX || num < 0)
@@ -949,15 +1076,17 @@ void dehacked_t::Read_Text(int len1, int len2)
       }
   */
 
-  // sprite table TODO we should enforce length 4 for the names...
-  for (i=0; i<NUMSPRITES; i++)
-    if (!strncmp(savesprnames[i], s, len1))
-      {
-        strncpy(sprnames[i], &s[len1], len2);
-        sprnames[i][len2] = '\0';
-        return;
-      }
-
+  // sprite table
+  if (len1 == 4 && len2 == 4)
+    {
+      for (i=0; i<NUMSPRITES; i++)
+	if (!strncmp(savesprnames[i], s, len1))
+	  {
+	    strncpy(sprnames[i], &s[len1], len2);
+	    sprnames[i][len2] = '\0';
+	    return;
+	  }
+    }
 
   // music table
   for (i=1; i<NUMMUSIC; i++)

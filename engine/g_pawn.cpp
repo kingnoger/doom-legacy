@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.53  2005/06/29 14:26:39  smite-meister
+// valgrind pays off
+//
 // Revision 1.52  2005/06/28 17:05:00  smite-meister
 // item respawning cleaned up
 //
@@ -367,6 +370,12 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, int type, int pcl)
   fly_zspeed = 0;
 }
 
+
+PlayerPawn::~PlayerPawn()
+{
+  if (player)
+    player->pawn = NULL;
+}
 
 
 void PlayerPawn::Think()

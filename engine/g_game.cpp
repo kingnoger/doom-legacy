@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.49  2005/06/29 14:26:39  smite-meister
+// valgrind pays off
+//
 // Revision 1.48  2005/06/28 18:11:41  smite-meister
 // fixed menu scaling
 //
@@ -769,7 +772,12 @@ void GameInfo::ClearPlayers()
   for (player_iter_t i = Players.begin(); i != Players.end(); i++)
     {
       PlayerInfo *p = i->second;
-      // remove avatar of player
+
+      // remove the player from the map
+      if (p->mp)
+	p->mp->RemovePlayer(p);
+
+      // remove the player's avatar
       if (p->pawn)
         {
           p->pawn->player = NULL;

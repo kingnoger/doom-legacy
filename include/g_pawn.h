@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.30  2005/06/29 14:26:39  smite-meister
+// valgrind pays off
+//
 // Revision 1.29  2005/06/22 20:44:31  smite-meister
 // alpha3 bugfixes
 //
@@ -219,6 +222,7 @@ public:
 public:
   // in g_pawn.cpp
   PlayerPawn(fixed_t x, fixed_t y, fixed_t z, int type, int pclass = PCLASS_NONE);
+  ~PlayerPawn();
 
   virtual void Think();
   void DeathThink();

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.26  2005/06/29 14:26:40  smite-meister
+// valgrind pays off
+//
 // Revision 1.25  2005/06/28 17:05:01  smite-meister
 // item respawning cleaned up
 //
@@ -418,8 +421,9 @@ void GameInfo::SV_Reset()
 {
   net->SV_Reset(); // disconnect clients etc.
 
-  Clear_mapinfo_clustermap();
   ClearPlayers();
+  Clear_mapinfo_clustermap();
+
   // clear teams?
   P_ACSInitNewGame(); // TODO clear FS global/hub data
 
