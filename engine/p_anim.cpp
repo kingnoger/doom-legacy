@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2005/06/30 18:16:57  smite-meister
+// texture anims fixed
+//
 // Revision 1.15  2005/01/25 18:29:13  smite-meister
 // preparing for alpha
 //
@@ -181,6 +184,7 @@ public:
   int      numframes; ///< number of frames
   int   currentframe; ///< current frame index
   tic_t    changetic; ///< when will the current frame end?
+  bool        master; ///< master copy (the one which owns (and deletes) the frames)
 
 protected:
   Texture *Update();
@@ -189,7 +193,17 @@ protected:
 
 public:
   AnimatedTexture(const char *p, int n);
+  AnimatedTexture(const AnimatedTexture &a, int frame); // for constructing the slave copies
   ~AnimatedTexture();
+
+  /// Shorthand. To be called after the frames are set, and before the texture is used.
+  void SetDims()
+  {
+    width = frames[0].tx->width;
+    height = frames[0].tx->height;
+    xscale = frames[0].tx->xscale;
+    yscale = frames[0].tx->yscale;
+  };
 
   virtual bool Masked() { return Update()->Masked(); };
   virtual byte *GetColumn(int col) { return Update()->GetColumn(col); }
@@ -210,12 +224,28 @@ AnimatedTexture::AnimatedTexture(const char *p, int n)
   changetic = game.tic;
   
   frames = (framedef_t *)Z_Malloc(n*sizeof(framedef_t), PU_TEXTURE, NULL);
+  master = true;
+}
+
+
+AnimatedTexture::AnimatedTexture(const AnimatedTexture &m, int f)
+  : Texture(m.frames[f].tx->GetName())
+{
+  // copy most fields from the master
+  numframes = m.numframes;
+  currentframe = f; // starts from a different frame
+  changetic = game.tic;
+
+  frames = m.frames;
+  master = false; // does not own the frames
+
+  SetDims();
 }
 
 
 AnimatedTexture::~AnimatedTexture()
 {
-  if (frames)
+  if (master && frames)
     Z_Free(frames);
 }
 
@@ -292,24 +322,13 @@ int P_Read_ANIMATED(int lump)
 
 	  t->frames[i].tics = tics;
 	}
+
+      t->SetDims();
       tc.Insert(t);
 
-
-      // small-time HACK, create one instance for each frame of animation
+      // create one slave instance for each frame of animation
       for (i=1; i<n; i++)
-	{
-	  AnimatedTexture *r = new AnimatedTexture(t->frames[i].tx->GetName(), n);
-
-	  // copy the frames from t
-	  for (int j=0; j<n; j++)
-	    {
-	      r->frames[j].tx = t->frames[j].tx;
-	      r->frames[j].tics = tics;
-	    }
-
-	  r->currentframe = i; // but use a different start frame
-	  tc.Insert(r);
-	}
+	tc.Insert(new AnimatedTexture(*t, i));
 
       count++;
     }
@@ -367,12 +386,17 @@ int P_Read_ANIMDEFS(int lump)
 	      // 1st frame, which is thus overwritten from tc map)
 	      // TODO This is a problem if several animations share the frame!
 	      AnimatedTexture *t = new AnimatedTexture(name, n);
-	      tc.Insert(t);
-	      count++;
-
 	      for (i=0; i<n; i++)
 		t->frames[i] = frames[i];
 
+	      t->SetDims();
+	      tc.Insert(t);
+
+	      // create one slave instance for each frame of animation
+	      for (i=1; i<n; i++)
+		tc.Insert(new AnimatedTexture(*t, i));
+
+	      count++;
 	      frames.clear();
 	    }
 	  else

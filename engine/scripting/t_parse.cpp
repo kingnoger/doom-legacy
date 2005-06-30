@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.7  2005/06/30 18:16:58  smite-meister
+// texture anims fixed
+//
 // Revision 1.6  2004/10/27 17:37:09  smite-meister
 // netcode update
 //
@@ -411,12 +414,8 @@ void parse_data(char *data, char *end)
   
   prev_section = NULL;  // clear it
   
-  while(*rover)   // go through the script executing each statement
+  while (rover <= end && *rover)   // go through the script executing each statement
     {
-      // past end of script?
-      if(rover > end)
-        break;
-      
       // reset the tokens before getting the next line
       tokens[0].v = token_alloc;
       

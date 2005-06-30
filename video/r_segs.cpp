@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2005/06/30 18:16:58  smite-meister
+// texture anims fixed
+//
 // Revision 1.15  2005/06/08 17:29:40  smite-meister
 // FS bugfixes
 //
@@ -153,7 +156,6 @@
 #include "r_state.h"
 #include "r_sky.h"
 #include "r_splats.h"
-#include "v_video.h" // patch_t
 
 #include "p_spec.h" // linedef special types
 

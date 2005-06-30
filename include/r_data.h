@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2005/06/30 18:16:58  smite-meister
+// texture anims fixed
+//
 // Revision 1.18  2005/01/04 18:32:44  smite-meister
 // better colormap handling
 //
@@ -73,6 +76,22 @@
 #include "z_cache.h"
 
 
+/// \brief patch_t, the strange Doom graphics format.
+///
+/// A patch holds one or more columns, which consist of posts separated by holes.
+/// A post is a vertical run of pixels.
+/// Patches are used for sprites and all masked pictures,
+/// and we compose textures from the TEXTURE1/2 lists of patches.
+struct patch_t
+{
+  Uint16 width;         /// bounding box size
+  Uint16 height;
+  Sint16 leftoffset;    /// pixels to the left of origin
+  Sint16 topoffset;     /// pixels below the origin
+  Uint32 columnofs[0];  /// [width] byte offsets to the columns
+} __attribute__((packed));
+
+
 /// posts are vertical runs of nonmasked source pixels in a patch_t
 struct post_t
 {
@@ -82,10 +101,39 @@ struct post_t
   byte data[0];  ///< data starts here, ends with another crap byte (not included in length)
 } __attribute__((packed));
 
+
 /// column_t is a list of 0 or more post_t, (byte)-1 terminated
 typedef post_t column_t;
 
 
+
+/// \brief pic_t, a graphics format native to Legacy. Deprecated.
+///
+/// a pic is an unmasked block of pixels, stored in horizontal way
+/*
+struct pic_t
+{
+  enum pic_mode_t
+  {
+    PALETTE         = 0,  // 1 byte is the index in the doom palette (as usual)
+    INTENSITY       = 1,  // 1 byte intensity
+    INTENSITY_ALPHA = 2,  // 2 byte : alpha then intensity
+    RGB24           = 3,  // 24 bit rgb
+    RGBA32          = 4,  // 32 bit rgba
+  };
+
+  short  width;
+  byte   zero;   // set to 0 allow autodetection of pic_t 
+                   // mode instead of patch or raw
+  byte   mode;   // see pic_mode_t above
+  short  height;
+  short  reserved1;  // set to 0
+  byte   data[0];
+};
+*/
+
+
+//===============================================================================
 
 /// \brief ABC for all 2D bitmaps.
 ///
@@ -232,7 +280,7 @@ public:
   short       patchcount; ///< number of patches in the texture
   texpatch_t *patches;    ///< array for the patch definitions
 
-  int        *columnofs; ///< offsets from texdata to raw column data
+  Uint32     *columnofs; ///< offsets from texdata to raw column data
   byte       *texdata;   ///< texture data
 
 protected:
@@ -322,6 +370,7 @@ public:
 extern texturecache_t tc;
 
 
+// Quantizes an RGB color into current palette
 byte NearestColor(byte r, byte g, byte b);
 
 // initializes the part of the renderer that even a dedicated server needs

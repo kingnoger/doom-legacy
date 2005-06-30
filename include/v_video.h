@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2005/06/30 18:16:58  smite-meister
+// texture anims fixed
+//
 // Revision 1.10  2005/03/16 21:16:08  smite-meister
 // menu cleanup, bugfixes
 //
@@ -56,51 +59,6 @@
 #include "doomdef.h"
 #include "doomtype.h"
 
-
-// patch_t, the strange Doom graphics format.
-// A patch holds one or more columns,
-// which consist of posts separated by holes.
-// A post is a vertical run of pixels.
-// Patches are used for sprites and all masked pictures,
-// and we compose textures from the TEXTURE1/2 lists
-// of patches.
-
-struct patch_t
-{
-  short               width;          // bounding box size
-  short               height;
-  short               leftoffset;     // pixels to the left of origin
-  short               topoffset;      // pixels below the origin
-  int                 columnofs[0];   // only [width] used
-  // the [0] is &columnofs[width]
-} __attribute__((packed));
-
-
-//======================================================================
-// pic_t, another graphics format native to Legacy. Deprecated.
-// a pic is an unmasked block of pixels, stored in horizontal way
-/*
-struct pic_t
-{
-  enum pic_mode_t
-  {
-    PALETTE         = 0,  // 1 byte is the index in the doom palette (as usual)
-    INTENSITY       = 1,  // 1 byte intensity
-    INTENSITY_ALPHA = 2,  // 2 byte : alpha then intensity
-    RGB24           = 3,  // 24 bit rgb
-    RGBA32          = 4,  // 32 bit rgba
-  };
-
-  short  width;
-  byte   zero;   // set to 0 allow autodetection of pic_t 
-                   // mode instead of patch or raw
-  byte   mode;   // see pic_mode_t above
-  short  height;
-  short  reserved1;  // set to 0
-  byte   data[0];
-};
-*/
-//======================================================================
 
 /// flags for drawing Textures
 enum texture_draw_e

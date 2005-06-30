@@ -18,11 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.44  2005/03/24 17:00:40  smite-meister
-// alpha fixes
-//
-// Revision 1.43  2005/01/25 18:29:17  smite-meister
-// preparing for alpha
+// Revision 1.45  2005/06/30 18:16:58  smite-meister
+// texture anims fixed
 //
 // Revision 1.42  2005/01/04 18:32:45  smite-meister
 // better colormap handling
@@ -120,7 +117,6 @@
 #include "r_main.h"
 #include "r_draw.h"
 #include "m_swap.h"
-#include "v_video.h"
 
 #include "w_wad.h"
 #include "z_zone.h"
@@ -343,12 +339,15 @@ PatchTexture::PatchTexture(const char *n, int l)
   : Texture(n)
 {
   lump = l;
-  patch_t *p = (patch_t *)fc.CacheLumpNum(lump, PU_CACHE);
 
-  width = SHORT(p->width);
-  height = SHORT(p->height);
-  leftoffset = SHORT(p->leftoffset);
-  topoffset = SHORT(p->topoffset);
+  patch_t p;
+  fc.ReadLumpHeader(lump, &p, sizeof(patch_t));
+  width = SHORT(p.width);
+  height = SHORT(p.height);
+  leftoffset = SHORT(p.leftoffset);
+  topoffset = SHORT(p.topoffset);
+
+  // nothing more is needed until the texture is Generated.
 
   if (fc.LumpLength(lump) <= width*4 + 8)
     I_Error("PatchTexture: lump %d (%s) is invalid\n", l, n);
@@ -534,7 +533,7 @@ byte *DoomTexture::Generate()
       Z_Malloc(blocksize, PU_TEXTURE, (void **)&pixels);
 
       // columns lookup table
-      columnofs = (int *)pixels;
+      columnofs = (Uint32 *)pixels;
       // texture data after the lookup table
       texdata = pixels + (width * sizeof(int));
 
@@ -820,21 +819,30 @@ int texturecache_t::ReadTextures()
 {
   int i;
   char name[9];
+  name[8] = 0; // NUL-terminated
 
-  // Load the patch names from PNAMES
-  name[8] = 0;
+  // Load the patch names from the PNAMES lump
+  struct pnames_t
+  {
+    Uint32 count;
+    char names[][8]; // list of 8-byte patch names
+  } __attribute__((packed));
+
   int lump = fc.GetNumForName("PNAMES");
-  char *pnames = (char *)fc.CacheLumpNum(lump, PU_STATIC);
-  int nummappatches = LONG(*((int *)pnames)); // sizeof(int) better be 4
+  pnames_t *pnames = (pnames_t *)fc.CacheLumpNum(lump, PU_STATIC);
+  int numpatches = LONG(pnames->count);
+
   if (devparm)
-    CONS_Printf("PNAMES: lump %d:%d, %d patches\n", lump >> 16, lump & 0xffff, nummappatches);
+    CONS_Printf("PNAMES: lump %d:%d, %d patches\n", lump >> 16, lump & 0xffff, numpatches);
 
-  char *name_p = pnames + 4;
-  vector<int> patchlookup(nummappatches); // mapping from patchnumber to lumpnumber
+  if (fc.LumpLength(lump) != 4 + 8*numpatches)
+    I_Error("Corrupted PNAMES lump.\n");
 
-  for (i=0 ; i<nummappatches ; i++)
+  vector<int> patchlookup(numpatches); // mapping from patchnumber to lumpnumber
+
+  for (i=0 ; i<numpatches ; i++)
     {
-      strncpy(name, name_p + i*8, 8);
+      strncpy(name, pnames->names[i], 8);
       patchlookup[i] = fc.FindNumForName(name);
       if (patchlookup[i] < 0)
         CONS_Printf("patch '%s' (%d) not found!\n", name, i);
