@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.29  2005/07/01 16:45:13  smite-meister
+// FS cameras work
+//
 // Revision 1.28  2005/06/16 18:18:11  smite-meister
 // bugfixes
 //
@@ -1244,33 +1247,15 @@ void SF_SetCamera()
       return;
     }
 
-  if (t_argv[0].type == svt_actor)
+  Actor *cam = MobjForSvalue(t_argv[0]);
+  if (!cam)
     {
-      script_error("Using a custom mobj as a camera.\n"); // TODO should this be allowed?
+      script_error("SetCamera: No camera object found.\n");
       return;
-    }
-
-  // We use the intvalue as the thing number of a thing in the level.
-  int intval = intvalue(t_argv[0]);
-  if (intval < 0 || intval >= current_map->nummapthings)
-    {
-      script_error("No mapthing %i.\n", intval);
-      return;
-    }
-
-  mapthing_t *mt = &current_map->mapthings[intval];
-  Actor *cam = mt->mobj;
-
-  if (cam && !cam->IsOf(Camera::_type))
-    {
-      cam->Remove(); // TODO HACK we could use a NOSPAWN flag...
-      cam = new Camera();
-      mt->mobj = cam; // anchor it to the mapthing
-      current_map->SpawnActor(cam);
     }
 
   // Why do we reset the angle but not the position?
-  cam->angle = (t_argc < 2) ? ANG45*(mt->angle/45) : FixedToAngle(fixedvalue(t_argv[1]));
+  cam->angle = (t_argc < 2) ? ANG45*(cam->spawnpoint->angle/45) : FixedToAngle(fixedvalue(t_argv[1]));
 
   // Why an absolute height value and not height above floor?
   cam->z = (t_argc < 3) ? (cam->subsector->sector->floorheight + 41*FRACUNIT) : fixedvalue(t_argv[2]);

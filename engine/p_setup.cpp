@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.60  2005/07/01 16:45:12  smite-meister
+// FS cameras work
+//
 // Revision 1.59  2005/06/23 17:25:37  smite-meister
 // map conversion command added
 //
@@ -167,6 +170,7 @@
 
 #include "p_setup.h"
 #include "p_spec.h"
+#include "p_camera.h"
 #include "m_bbox.h"
 #include "m_swap.h"
 #include "m_misc.h"
@@ -552,6 +556,14 @@ void Map::LoadThings(int lump)
           t->type = MT_TELEPORTMAN;
           continue;
         }
+
+      // cameras
+      if (ednum == 5003)
+	{
+	  SpawnActor(new Camera(t));
+	  t->type = 0;
+	  continue;
+	}
 
       low = 0;
       high = 0;

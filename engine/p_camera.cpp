@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.13  2005/07/01 16:45:12  smite-meister
+// FS cameras work
+//
 // Revision 1.12  2005/06/16 18:18:08  smite-meister
 // bugfixes
 //
@@ -74,6 +77,7 @@ consvar_t cv_cam_speed  = {"cam_speed" ,  "0.25",CV_FLOAT,NULL};
 IMPLEMENT_CLASS(Camera, Actor);
 
 Camera::Camera()
+  : Actor()
 {
   flags = MF_NOBLOCKMAP|MF_NOSECTOR|MF_NOGRAVITY| MF_NOTRIGGER | MF_NOCLIPTHING | MF_NOTMONSTER | MF_FLOAT;
   flags2 = MF2_SLIDE | MF2_DONTDRAW;
@@ -83,7 +87,30 @@ Camera::Camera()
   radius = 20*FRACUNIT;
   height = 16*FRACUNIT;
 
-  x = y = z = 0;
+  //x = y = z = 0;
+
+  fixedcolormap = 0;
+  chase = false;
+}
+
+
+Camera::Camera(mapthing_t *mt)
+  : Actor()
+{
+  flags = MF_NOBLOCKMAP|MF_NOSECTOR|MF_NOGRAVITY| MF_NOTRIGGER | MF_NOCLIPTHING | MF_NOTMONSTER | MF_FLOAT;
+  flags2 = MF2_SLIDE | MF2_DONTDRAW;
+
+  health = 1000;
+  mass = 10*FRACUNIT;
+  radius = 20*FRACUNIT;
+  height = 16*FRACUNIT;
+
+  x = mt->x << FRACBITS;
+  y = mt->y << FRACBITS;
+  angle = ANG45 * (mt->angle/45);
+
+  spawnpoint = mt;
+  mt->mobj = this;
 
   fixedcolormap = 0;
   chase = false;

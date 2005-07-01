@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2005/07/01 16:45:13  smite-meister
+// FS cameras work
+//
 // Revision 1.7  2005/06/16 18:18:11  smite-meister
 // bugfixes
 //
@@ -55,6 +58,8 @@ class Camera : public Actor
 public:
   int  fixedcolormap;
   bool chase;
+
+  Camera(struct mapthing_t *mt);
 
   void ClearCamera();
   void ResetCamera(Actor *p);
