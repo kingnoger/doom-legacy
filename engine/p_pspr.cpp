@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.24  2005/07/05 18:29:05  smite-meister
+// damage types
+//
 // Revision 1.23  2005/07/05 17:36:42  smite-meister
 // small fixes
 //
@@ -579,7 +582,7 @@ void A_Saw(PlayerPawn *p, pspdef_t *psp)
 
   // use meleerange + 1 se the puff doesn't skip the flash
   int slope = p->AimLineAttack(angle, MELEERANGE+1);
-  p->LineAttack(angle, MELEERANGE+1, slope, damage, dt_cutting); // no recoil!
+  p->LineAttack(angle, MELEERANGE+1, slope, damage, dt_cutting | dt_norecoil);
 
   if (!linetarget)
     {

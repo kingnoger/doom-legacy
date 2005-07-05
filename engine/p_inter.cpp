@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.43  2005/07/05 18:29:05  smite-meister
+// damage types
+//
 // Revision 1.42  2004/12/31 16:19:37  smite-meister
 // alpha fixes
 //
@@ -551,10 +554,9 @@ bool Actor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
     return false; // only damage living things with poison
 
   // old recoil code
-  // TODO Some close combat weapons should not
-  // inflict thrust and push the victim out of reach
-  if (inflictor && !(flags & MF_NOCLIPTHING) && (dtype & dt_oldrecoil)
-      && !(inflictor->flags2 & MF2_NODMGTHRUST))      
+  // Some close combat weapons do not inflict thrust and push the victim out of reach
+  if (inflictor && !(flags & MF_NOCLIPTHING) && !(dtype & dt_norecoil) &&
+      !(inflictor->flags2 & MF2_NODMGTHRUST))      
     {
       fixed_t apx, apy, apz = 0;
       fixed_t thrust;  

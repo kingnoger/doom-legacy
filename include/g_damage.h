@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2004 by DooM Legacy Team.
+// Copyright (C) 2002-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2005/07/05 18:29:06  smite-meister
+// damage types
+//
 // Revision 1.3  2004/11/18 20:30:14  smite-meister
 // tnt, plutonia
 //
@@ -57,9 +60,9 @@ enum damage_t
   dt_telefrag   = 0xD0000, ///< telefrag
   dt_TYPEMASK   = 0xF0000,
 
-  // other effects (bit of a hack)
-  dt_oldrecoil  = 0x100000, // target is pushed by an amount based on the damage given
-  dt_always     = 0x200000, // cannot be avoided, even if in god mode
+  // flags: other effects (bit of a hack)
+  dt_norecoil   = 0x100000, ///< no recoil momentum is given to the target
+  dt_always     = 0x200000, ///< cannot be avoided, even if in god mode
   dt_OTHERMASK  = 0xF00000,
 
   /*
@@ -72,7 +75,7 @@ enum damage_t
   dt_breathed,
   */
 
-  dt_normal = dt_kinetic + dt_oldrecoil
+  dt_normal = dt_kinetic
 };
 
 #endif
