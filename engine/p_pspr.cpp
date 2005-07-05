@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2005/07/05 17:36:42  smite-meister
+// small fixes
+//
 // Revision 1.22  2005/04/19 18:28:28  smite-meister
 // new RPCs
 //
@@ -310,13 +313,15 @@ bool PlayerPawn::CheckAmmo()
   // Minimal amount for one shot varies.
   int count = weaponinfo[readyweapon].ammopershoot;
 
-  if (at == am_manaboth)
-    if (ammo[am_mana1] >= count && ammo[am_mana2] >= count)
-      return true;
-
   // Some do not need ammunition anyway.
   // Return if current ammunition sufficient.
-  if (at == am_noammo || ammo[at] >= count)
+  if (at == am_manaboth)
+    {
+      // ugly special case...
+      if (ammo[am_mana1] >= count && ammo[am_mana2] >= count)
+	return true;
+    }
+  else if (at == am_noammo || ammo[at] >= count)
     return true;
 
   // Out of ammo, pick a weapon to change to.

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2005/07/05 17:36:41  smite-meister
+// small fixes
+//
 // Revision 1.15  2005/06/28 17:04:59  smite-meister
 // item respawning cleaned up
 //
@@ -314,7 +317,14 @@ void PlayerPawn::TouchSpecialThing(DActor *thing)
   bool dropped = thing->flags & MF_DROPPED;
 
   // Identify item
-  switch (stype)
+
+  int script = thing->info->damage; // this field holds the script number
+  if (script)
+    {
+      // TEST: New gettable things with scripting! These override any original behavior.
+      mp->FS_RunScript(script, this); // too bad FS can't use parameters, maybe we should use ACS instead...
+    }
+  else switch (stype)
     {
     case MT_ARMOR_1:
       if (!GiveArmor(armor_armor, 3.0, -1))
@@ -890,15 +900,8 @@ void PlayerPawn::TouchSpecialThing(DActor *thing)
 
     default:
       {
-	// TEST: New gettable things with scripting!
-	int script = thing->info->damage; // this field holds the script number
-	if (script)
-	  mp->FS_RunScript(script, this); // too bad FS can't use parameters, maybe we should use ACS instead...
-	else
-	  {
-	    CONS_Printf("\2TouchSpecialThing: Unknown pickup type (%d)!\n", stype);
-	    return;
-	  }
+	CONS_Printf("\2TouchSpecialThing: Unknown pickup type (%d)!\n", stype);
+	return;
       }
     }
 

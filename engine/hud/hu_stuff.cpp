@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.32  2005/07/05 17:36:43  smite-meister
+// small fixes
+//
 // Revision 1.31  2005/04/17 18:36:34  smite-meister
 // netcode
 //
@@ -355,9 +358,6 @@ void HUD::Ticker()
     ChainWiggle = M_Random()&1;
   */
 
-  // update widget data
-  UpdateWidgets();
-
   int n = ViewPlayers.size();
   for (int i=0; i<n; i++)
     {
@@ -405,6 +405,9 @@ void HUD::Ticker()
       if (cv_deathmatch.value)
 	drawscore = (pl->playerstate == PST_DEAD);
     }
+
+  // update widget data
+  UpdateWidgets();
 
   if (damagecount > 100)
     damagecount = 100;  // teleport stomp does 10k points...

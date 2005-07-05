@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2005/07/05 17:36:42  smite-meister
+// small fixes
+//
 // Revision 1.7  2005/06/05 19:32:26  smite-meister
 // unsigned map structures
 //
@@ -201,6 +204,8 @@ ACBot::ACBot(int sk)
 {
   skill = sk;
   num_weapons = 0;
+
+  straferight = false;
 
   avoidtimer = 0;
   blockedcount = 0;

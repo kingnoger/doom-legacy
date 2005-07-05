@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.34  2005/07/05 17:36:43  smite-meister
+// small fixes
+//
 // Revision 1.33  2005/04/17 18:36:34  smite-meister
 // netcode
 //
@@ -543,7 +546,7 @@ void ST_LoadHexenData()
   startLump = fc.GetNumForName("SMALLIN0");
   for (i = 0; i < 10; i++)
     PatchSNum[i] = tc.GetPtrNum(startLump+i);
-  // no minus
+  PatchSNum[10] = PatchSNum[0]; // no minus available
 
   playpalette = fc.GetNumForName("PLAYPAL");
 
@@ -647,7 +650,7 @@ void ST_LoadHereticData()
   startLump = fc.GetNumForName("SMALLIN0");
   for (i = 0; i < 10; i++)
     PatchSNum[i] = tc.GetPtrNum(startLump+i);
-  // no minus
+  PatchSNum[10] = PatchSNum[0]; // no minus available
 
   playpalette = fc.GetNumForName("PLAYPAL");
   SpinBookLump = fc.GetNumForName("SPINBK0");
@@ -899,7 +902,6 @@ void HUD::ST_updateFaceWidget(const PlayerPawn *st_pawn)
   angle_t     diffang;
   static int  lastattackdown = -1;
   static int  priority = 0;
-  bool     doevilgrin;
 
   // count until face changes
   static int  st_facecount = 0;
@@ -920,16 +922,15 @@ void HUD::ST_updateFaceWidget(const PlayerPawn *st_pawn)
       if (bonuscount)
         {
           // picking up bonus
-          doevilgrin = false;
+	  bool doevilgrin = false;
 
           for (i=0;i<NUMWEAPONS;i++)
-            {
-              if (st_oldweaponsowned[i] != st_pawn->weaponowned[i])
-                {
-                  doevilgrin = true;
-                  st_oldweaponsowned[i] = st_pawn->weaponowned[i];
-                }
-            }
+	    if (st_oldweaponsowned[i] != st_pawn->weaponowned[i])
+	      {
+		doevilgrin = true;
+		break;
+	      }
+
           if (doevilgrin)
             {
               // evil grin if just picked up weapon
@@ -1175,6 +1176,9 @@ void HUD::UpdateWidgets()
 
       // refresh everything if this is him coming back to life
       ST_updateFaceWidget(st_pawn); // updates st_oldweaponsowned
+      for (i=0; i<NUMWEAPONS; i++)
+	st_oldweaponsowned[i] = st_pawn->weaponowned[i];
+
       st_oldhealth = st_health;
     }
 
@@ -1516,10 +1520,6 @@ void HUD::CreateDoomWidgets()
   statusbar.push_back(h);
 
   // Weapons
-  // arms background
-  h = new HudBinIcon(st_x+104, st_y, &st_notdeathmatch, NULL, PatchArmsBack);
-  statusbar.push_back(h);
-
 
   if (cv_deathmatch.value)
     {
@@ -1539,6 +1539,10 @@ void HUD::CreateDoomWidgets()
 	  statusbar.push_back(h);
 	}
     }
+
+  // arms background
+  h = new HudBinIcon(st_x+104, st_y, &st_notdeathmatch, NULL, PatchArmsBack);
+  statusbar.push_back(h);
 
   // face
   h = new HudMultIcon(st_x+143, st_y, &st_faceindex, PatchFaces);
