@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.42  2005/07/11 16:58:56  smite-meister
+// msecnode_t bug fixed
+//
 // Revision 1.41  2005/06/28 17:05:00  smite-meister
 // item respawning cleaned up
 //
@@ -303,6 +306,8 @@ public:
   void RebornPlayer(PlayerInfo *p); // adds a player to respawnqueue, gets rid of corpse
   PlayerInfo *FindPlayer(int number); // returns player 'number' if he is in the map, otherwise NULL
   int  RespawnPlayers();
+  int  HandlePlayers();
+
   bool DeathMatchRespawn(PlayerInfo *p);
   bool CoopRespawn(PlayerInfo *p);
   bool CheckRespawnSpot(PlayerInfo *p, mapthing_t *mthing);

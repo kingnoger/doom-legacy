@@ -5,11 +5,8 @@
 // Copyright (C) 2002-2005 by DooM Legacy Team.
 //
 // $Log$
-// Revision 1.36  2005/06/12 16:26:26  smite-meister
-// alpha2 bugfixes
-//
-// Revision 1.35  2005/04/22 19:44:49  smite-meister
-// bugs fixed
+// Revision 1.37  2005/07/11 16:58:33  smite-meister
+// msecnode_t bug fixed
 //
 // Revision 1.34  2005/04/19 18:28:16  smite-meister
 // new RPCs
@@ -255,6 +252,7 @@ PlayerInfo::PlayerInfo(const LocalPlayerInfo *p)
   playerstate = PST_NEEDMAP;
   spectator = false;
   map_completed = false;
+  leaving_map = false;
 
   requestmap = entrypoint = 0;
 
@@ -457,9 +455,7 @@ void PlayerInfo::SetMessage(const char *msg, int priority, int type)
 }
 
 
-// Separates the player from her current map, sets the new destination, handles pawn detachment.
-// Does _not_ finish the map.
-// NOTE may invalidate Map::players iterators.
+// Sets the new destination Map for the player. Does _not_ finish the current Map.
 void PlayerInfo::ExitLevel(int nextmap, int ep)
 {
   // if a player is already going somewhere, let him keep his destination:
@@ -469,55 +465,37 @@ void PlayerInfo::ExitLevel(int nextmap, int ep)
       entrypoint = ep;
     }
 
-  switch (playerstate) 
-    {
-    case PST_ALIVE:
-      // save pawn for next level
-      pawn->Detach();
-      break;
-
-    case PST_DEAD:
-      // drop the pawn
-      pawn->player = NULL;
-      mp->QueueBody(pawn);
-      pawn = NULL;
-      break;
-
-    case PST_REMOVE:
-      if (pawn)
-	pawn->Remove();
-      pawn = NULL;
-      break;
-
-    default:
-      // PST_NEEDMAP, PST_RESPAWN, PST_INTERMISSION,
-      // meaning the possible pawn is not connected to any Map
-      break;
-    }
-
-  if (playerstate != PST_REMOVE)  // you will still be removed!
-    {
-      MapInfo *info = game.FindMapInfo(nextmap); // do we need an intermission?
-
-      if (info) // TODO disable intermissions server option?
-	{
-	  if (connection)
-	    connection->rpcStartIntermission_s2c(); // nonlocal players need intermission data
-	  else
-	    {
-	      // for locals, the intermission is started
-	      wi.Start(mp, info);
-	      game.StartIntermission();
-	    }
-	  playerstate = PST_INTERMISSION; // rpc_end_intermission resets this
-	}
-      else
-	playerstate = PST_NEEDMAP;
-    }
-
-  if (mp)
-    mp->RemovePlayer(this); // NOTE that this may invalidate iterators to Map::players!
+  leaving_map = true;
 }
+
+
+// Starts an intermission for the player if appropriate.
+bool PlayerInfo::CheckIntermission(const Map *m)
+{
+  if (playerstate == PST_REMOVE)
+    return false; // no intermission for you!
+
+  MapInfo *info = game.FindMapInfo(requestmap); // do we need an intermission?
+
+  if (info) // TODO disable intermissions server option?
+    {
+      if (connection)
+	connection->rpcStartIntermission_s2c(); // nonlocal players need intermission data
+      else
+	{
+	  // for locals, the intermission is started
+	  wi.Start(m, info);
+	  game.StartIntermission();
+	}
+      playerstate = PST_INTERMISSION; // rpc_end_intermission resets this
+      return true;
+    }
+  else
+    playerstate = PST_NEEDMAP;
+
+  return false;
+}
+
 
 
 // Reset players between levels

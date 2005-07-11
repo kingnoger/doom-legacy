@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.28  2005/07/11 16:58:33  smite-meister
+// msecnode_t bug fixed
+//
 // Revision 1.27  2005/06/16 18:18:08  smite-meister
 // bugfixes
 //
@@ -226,9 +229,9 @@ int MapInfo::EvictPlayers(int next, int ep, bool force)
   if (next < 0)
     next = nextlevel;
 
-  // kick out the players (order matters, as they are removed from the vector!)
+  // kick out the players
   int n = me->players.size();
-  for (int i = n-1; i >= 0; i--)
+  for (int i = 0; i < n; i++)
     {
       PlayerInfo *p = me->players[i];
       if (force)
@@ -239,6 +242,8 @@ int MapInfo::EvictPlayers(int next, int ep, bool force)
 
       p->ExitLevel(next, ep);
     }
+
+  me->HandlePlayers();
 
   return n;
 }

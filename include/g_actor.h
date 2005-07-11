@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2005/07/11 16:58:41  smite-meister
+// msecnode_t bug fixed
+//
 // Revision 1.21  2004/09/13 20:43:31  smite-meister
 // interface cleanup, sp map reset fixed
 //
@@ -189,6 +192,7 @@ enum mobjflag_t
   MF_SHADOW           = 0x4000, ///< Partial invisibility (spectre). Makes targeting harder.
   MF_ALTSHADOW        = 0x8000, ///< Alternate fuzziness
   MF_NOBLOOD         = 0x10000, ///< Does not bleed when shot (furniture)
+  MF_NOSCORCH     = MF_NOBLOOD, ///< TEST flag double use for MF_MISSILEs, which cannot be hit (and thus cannot bleed)
   // spawning
   MF_SPAWNCEILING = 0x00020000, ///< Spawned hanging from the ceiling
   MF_SPAWNFLOAT   = 0x00040000, ///< Spawned at random height

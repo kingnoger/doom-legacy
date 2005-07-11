@@ -453,8 +453,9 @@ with a middle texture.
 <tr><td>284-288</td>
 <td>
 <b>Software translucency:</b><br/>
-These linedefs each apply a different transmap to the middle
-texture. The corresponding transmaps are stored in legacy.wad.<br/>
+These linedefs each apply a different translucency map to the middle
+texture. The corresponding <a href="#transmap">translucency maps</a> are
+stored in <a href="#legacy_transmaps">legacy.wad</a>.<br/>
 <br/>
 284 - Brightens everything behind the line. Turns things kinda green though<br/>
 285 - Less brightness with allot less green.<br/>
@@ -766,7 +767,33 @@ Don't you? Well, you should.
 </p>
 
 
-<h3>Colormaps and transmaps</h3>
+<h3>Colormaps, translation tables and translucency maps</h3>
+
+<p>
+A <b>colormap</b> is a 256-byte array used to remap the
+colors inside a palette:<br/>
+newcolor = colormap[oldcolor].<br/>
+The Doom software renderer uses 32 different colormaps
+(stored in the COLORMAP lump) to simulate different light levels.
+</p>
+
+<p>
+A <b>translation table</b> is a special kind of colormap which usually
+only remaps a narrow range of colors inside a palette. Translation
+tables are used i.a. to generate differently colored versions of the
+sprites (in the case of the Doom marine, this happens by remapping the
+green color range in the palette to something else).
+</p>
+
+<p>
+A <b><a name="transmap">translucency map</a></b> is a 256-by-256 byte array used for
+selective software translucency, where a background color is seen
+through a translucent foreground:<br/>
+newcolor = transmap[fg_color][bg_color].<br/>
+You can visualize it as a set of 256 colormaps, one for each
+foreground color. Boom (and hence Legacy) uses the lump TRANSMAP as
+the default translucency map.
+</p>
 
 <p>TODO, C_START, C_END</p>
 
@@ -939,13 +966,16 @@ automagically. The names of the music lumps can be
 <b>chosen freely</b>, they do not have to start with "D_".
 </p>
 
+
 <hr />
 <h2><a name="dehacked">DeHackEd and BEX</a></h2>
 
 <p>
-Legacy supports the most important DeHackEd and BEX features.
+Legacy supports the most important DeHackEd and BEX (Boom EXtensions
+to DeHackEd) features.
 Some of the features are <b>deprecated</b>, which means that you should not
 use them since there is a better way to achieve the same effect.
+We may also stop supporting them in future releases.
 </p>
 
 <table class="def">
@@ -1056,7 +1086,12 @@ or ammo.
 </p>
 
 <p>
-You can also create new types of pickups by combining DeHackEd with scripting...TODO
+You can also create completely new types of pickups by combining DeHackEd with
+scripting. If a mapthing has both the SPECIAL flag and a nonzero
+<b>missile damage</b>, it becomes a scripted pickup. When the player
+touches it, the game runs the FS script whose number corresponds to
+the missile damage of the mapthing. Original hardcoded behavior, if
+any, is completely bypassed.
 </p>
 
 <!-- table class="def">
@@ -1069,8 +1104,30 @@ You can also create new types of pickups by combining DeHackEd with scripting...
 </table -->
 
 <p>
-TODO more howtos: creating a new weapon with scripting, new pickups,
-new monsters...
+TODO more howtos: creating a new weapon with scripting, new monsters...
+</p>
+
+
+<h3>DeHackEd with Heretic and Hexen frames</h3>
+
+<p>
+The Heretic and Hexen frame tables are also included in Legacy. They
+are always available, even in pure Doom games. One can refer to the
+Heretic frames using the letter <b>H</b> as a prefix to the frame
+number. Similarly, the Hexen states are referred to using the letter
+<b>X</b> as a prefix. This has a twofold motive: Now you can modify
+Heretic and Hexen games using DeHackEd, but you can also simply use
+the extra states for creating more complex mapthing behavior.
+</p>
+
+<h3>Caveat</h3>
+<p>DeHackEd, even when improved with BEX, is somewhat
+clumsy, convoluted and unappealing to novice map authors.
+Since most "oldskool" map authors like it and plenty of WADs with
+DeHackEd content are available, we'll try to support it in future
+releases as well.<br/>
+However, eventually we intend to add support for DECORATE lumps
+or something similar, which will hopefully obsolete DeHackEd altogether.
 </p>
 
 <p>
@@ -1176,14 +1233,14 @@ Default texture
 
 
 <tr><td class="note" colspan="2">
-Color- and transmaps
+Color- and translucency maps
 </td></tr>
 
 <tr><td>
 WATERMAP
 </td>
 <td>
-Boom underwater colormap
+Boom underwater colormap.
 </td></tr>
 
 <tr><td>
@@ -1194,7 +1251,7 @@ TRANSFIR
 TRANSFX1
 </td>
 <td>
-Transmaps
+<a name="legacy_transmaps">Maps</a> for default software translucency.
 </td></tr>
 
 

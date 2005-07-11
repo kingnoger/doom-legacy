@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1996 by Raven Software, Corp.
-// Copyright (C) 2003 by DooM Legacy Team.
+// Copyright (C) 2003-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2005/07/11 16:58:40  smite-meister
+// msecnode_t bug fixed
+//
 // Revision 1.5  2004/07/14 16:13:13  smite-meister
 // cleanup, commands
 //
@@ -252,7 +255,6 @@ bool Map::EV_ThingProjectile(byte *args, bool gravity)
 bool Map::EV_ThingSpawn(byte *args, bool fog)
 {
   Actor *mobj;
-  fixed_t z;
 
   bool success = false;
   int searcher = -1;
@@ -264,12 +266,8 @@ bool Map::EV_ThingSpawn(byte *args, bool fog)
   angle_t angle = int(args[2] << 24);
   while ((mobj = FindFromTIDmap(tid, &searcher)) != NULL)
     {
-      if (mobjinfo[moType].flags2 & MF2_FLOATBOB)
-	z = mobj->z - mobj->floorz;
-      else
-	z = mobj->z;
+      DActor *newMobj = SpawnDActor(mobj->x, mobj->y, mobj->z, moType);
 
-      DActor *newMobj = SpawnDActor(mobj->x, mobj->y, z, moType);
       if (!newMobj->TestLocation())
 	newMobj->Remove(); // Didn't fit
       else

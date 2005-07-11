@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.33  2005/07/11 16:58:40  smite-meister
+// msecnode_t bug fixed
+//
 // Revision 1.32  2005/06/05 19:32:24  smite-meister
 // unsigned map structures
 //
@@ -1620,27 +1623,22 @@ static bool PTR_ShootTraverse(intercept_t *in)
 // Actor tries to find a target
 fixed_t Actor::AimLineAttack(angle_t ang, fixed_t distance)
 {
-  fixed_t     x2;
-  fixed_t     y2;
   extern fixed_t bottomslope, topslope;
 
   ang >>= ANGLETOFINESHIFT;
   shootthing = this;
 
-  // FIXME since monsters shouldn't change their "aiming" angle,
+  // Since monsters shouldn't change their "aiming" angle,
   // why not use the same routine for them also?
-  // if ((Type() == Thinker::tt_ppawn) && game.demoversion>=128)
-    {
-      fixed_t cosineaiming = finecosine[aiming>>ANGLETOFINESHIFT];
-      int aim = ((int)aiming)>>ANGLETOFINESHIFT;
-      x2 = x + FixedMul(FixedMul(distance,finecosine[ang]),cosineaiming);
-      y2 = y + FixedMul(FixedMul(distance,finesine[ang]),cosineaiming); 
+  fixed_t cosineaiming = finecosine[aiming >> ANGLETOFINESHIFT];
+  int aim = int(aiming) >> ANGLETOFINESHIFT;
+  fixed_t x2 = x + FixedMul(FixedMul(distance,finecosine[ang]), cosineaiming);
+  fixed_t y2 = y + FixedMul(FixedMul(distance,finesine[ang]), cosineaiming); 
 
-      topslope    =  100*FRACUNIT/160+finetangent[(2048+aim) & FINEMASK];
-      bottomslope = -100*FRACUNIT/160+finetangent[(2048+aim) & FINEMASK];
-    }
+  topslope    =  100*FRACUNIT/160+finetangent[(2048+aim) & FINEMASK];
+  bottomslope = -100*FRACUNIT/160+finetangent[(2048+aim) & FINEMASK];
+
     /*
-  else
     {
       x2 = x + (distance>>FRACBITS)*finecosine[ang];
       y2 = y + (distance>>FRACBITS)*finesine[ang];
@@ -2406,8 +2404,7 @@ Actor *Actor::CheckOnmobj()
 // =========================================================================
 
 //
-// This is purely informative, nothing is modified
-// (except things picked up).
+// This is NOT purely informative, it i.a. generates collisions between things.
 //
 // in:
 //  a Actor (can be valid or invalid)

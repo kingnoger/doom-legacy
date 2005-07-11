@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.58  2005/07/11 16:58:32  smite-meister
+// msecnode_t bug fixed
+//
 // Revision 1.57  2005/06/28 17:04:59  smite-meister
 // item respawning cleaned up
 //
@@ -466,10 +469,10 @@ DActor *Map::SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
       p->z = p->floorz;
     }
   else if (nz == ONCEILINGZ)
-    p->z = p->ceilingz - p->info->height;
+    p->z = p->ceilingz - p->height;
   else if (nz == FLOATRANDZ)
     {
-      fixed_t space = p->ceilingz - p->info->height - p->floorz;
+      fixed_t space = p->ceilingz - p->height - p->floorz;
       if (space > 48*FRACUNIT)
         {
 	  space -= 40*FRACUNIT;
@@ -586,14 +589,17 @@ DActor *Map::SpawnMapThing(mapthing_t *mt, bool initial)
     nz = FLOATRANDZ;
   else
     {
-      // FIXME think how the z spawning is supposed to work... really.
-      nz = mt->z << FRACBITS + R_PointInSubsector(nx, ny)->sector->floorheight;
-      //nz = ONFLOORZ;
+      //nz = mt->z << FRACBITS + R_PointInSubsector(nx, ny)->sector->floorheight;
+      nz = ONFLOORZ;
     }
 
-  DActor *p = SpawnDActor(nx,ny,nz, mobjtype_t(t));
-  p->spawnpoint = mt;
+  DActor *p = SpawnDActor(nx, ny, nz, mobjtype_t(t));
+  if (nz == ONFLOORZ)
+    p->z += mt->z << FRACBITS;
+  else if (nz == ONCEILINGZ)
+    p->z -= mt->z << FRACBITS;
 
+  p->spawnpoint = mt;
   p->tid = mt->tid;
   p->special = mt->special;
   p->args[0] = mt->args[0];
@@ -607,7 +613,10 @@ DActor *Map::SpawnMapThing(mapthing_t *mt, bool initial)
 
   // Seed random starting index for bobbing motion
   if (p->flags2 & MF2_FLOATBOB)
-    p->reactiontime = P_Random();
+    {
+      p->reactiontime = P_Random();
+      //p->special1 = mt->z << FRACBITS; // TODO floating height
+    }
 
   if (p->tics > 0)
     p->tics = 1 + (P_Random () % p->tics);
@@ -773,6 +782,14 @@ int Map::RespawnPlayers()
   do {
     //CONS_Printf("RespawnPlayers: %d, count = %d\n", respawnqueue.size(), count);
     p = respawnqueue.front();
+    if (p == NULL)
+      {
+	// player has been removed while in respawn queue
+	respawnqueue.pop_front();
+	ok = true;
+	continue;
+      }
+
     ok = false;
 
     // spawn at random spot if in death match
@@ -875,6 +892,7 @@ void Map::AddPlayer(PlayerInfo *p)
   p->time = 0; // respawn delay counter
   p->playerstate = PST_RESPAWN;
   p->requestmap = 0;
+  p->leaving_map = false;
   // TODO if (p->spectator) spawn PST_SPECTATOR
 
   if (p->pawn)
@@ -899,6 +917,70 @@ bool Map::RemovePlayer(PlayerInfo *p)
 	return true;
       }
   return false;
+}
+
+
+// post-tick:
+// Check if any players are leaving, handle the pawns properly, remove the players from the map.
+int Map::HandlePlayers()
+{
+  // Clean respawnqueue from removed players
+  int n = respawnqueue.size();
+  for (int i=0; i<n; i++)
+    if (respawnqueue[i]->playerstate == PST_REMOVE)
+      respawnqueue[i] = NULL;
+
+  int r = 0;
+
+  // we iterate the vector in reversed order since we may have to delete some items on the way
+  vector<PlayerInfo *>::iterator t;
+  for (t = players.end(); t != players.begin(); )
+    {
+      --t; // since t was not equal to begin(), this must be valid
+
+      PlayerInfo *p = *t;
+
+      if (p->leaving_map || p->playerstate == PST_REMOVE)
+	{
+	  //CONS_Printf(" Map:: Removing player %s.\n", p->name.c_str());
+	  r++;
+	  players.erase(t);
+	  p->mp = NULL;
+
+	  // handle the pawn
+	  PlayerPawn *w = p->pawn;
+	  if (w)
+	    switch (p->playerstate) 
+	      {
+	      case PST_ALIVE:
+		// save pawn for next level
+		w->Detach();
+		break;
+
+	      case PST_DEAD:
+		// drop the pawn
+		w->player = NULL;
+		QueueBody(w);
+		p->pawn = NULL;
+		break;
+
+	      case PST_REMOVE:
+		w->Remove();
+		p->pawn = NULL;
+		break;
+
+	      default:
+		// PST_NEEDMAP, PST_RESPAWN, PST_INTERMISSION,
+		// meaning the possible pawn is not connected to any Map
+		break;
+	      }
+
+	  // intermission?
+	  p->CheckIntermission(this);
+	}
+    }
+
+  return r;
 }
 
 
@@ -1222,7 +1304,7 @@ void Map::ExitMap(Actor *activator, int next, int ep)
     case 1: // first: all players exit the map when someone activates an exit
       {
 	int n = players.size();
-	for (int i = n-1; i >= 0; i--)
+	for (int i = 0; i<n; i++)
 	  players[i]->ExitLevel(next, ep); // save the pawn if needed
       }
       break;

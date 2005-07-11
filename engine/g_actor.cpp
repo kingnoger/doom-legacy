@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.41  2005/07/11 16:58:32  smite-meister
+// msecnode_t bug fixed
+//
 // Revision 1.40  2005/06/28 17:04:59  smite-meister
 // item respawning cleaned up
 //
@@ -245,15 +248,24 @@ void Actor::Detach()
       P_DelSeclist(touching_sectorlist);
       touching_sectorlist = NULL;
     }
-  spawnpoint = NULL;
+
+  // free up the spawnpoint
+  if (spawnpoint && spawnpoint->mobj == this)
+    {
+      spawnpoint->mobj = NULL;
+      spawnpoint = NULL;
+    }
+
   owner = target = NULL;
 
-  eflags |= MFE_REMOVE; // so that pointers to it will be NULLed
+  // stop any playing sound
+  S.Stop3DSound(this);
 
   // save the presentation too
   if (pres)
     Z_ChangeTag(pres, PU_STATIC);
 
+  eflags |= MFE_REMOVE; // so that pointers to it will be NULLed
   mp->DetachThinker(this);
 }
 
@@ -271,8 +283,6 @@ void Actor::Remove()
 
   if (eflags & MFE_REMOVE)
     return; // already marked for removal
-
-  eflags |= MFE_REMOVE;
 
   if (tid)
     mp->RemoveFromTIDmap(this);
@@ -294,6 +304,7 @@ void Actor::Remove()
   S.Stop3DSound(this);
 
   // remove it from active Thinker list, add it to the removal list
+  eflags |= MFE_REMOVE;
   mp->RemoveThinker(this);
 }
 
@@ -537,7 +548,7 @@ void Actor::XYMovement()
                   }
 
 	      // draw damage on wall
-	      if (Blocking.line)  // set by last TryMove() that failed
+	      if (Blocking.line && !(flags & MF_NOSCORCH))  // set by last TryMove() that failed
                 {
 		  divline_t   divl;
 		  divline_t   misl;

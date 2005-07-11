@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2005/07/11 16:58:40  smite-meister
+// msecnode_t bug fixed
+//
 // Revision 1.16  2005/06/05 19:32:25  smite-meister
 // unsigned map structures
 //
@@ -948,7 +951,8 @@ msecnode_t *P_GetSecnode()
     }
   else
     node = (msecnode_t*)Z_Malloc(sizeof(*node), PU_LEVEL, NULL);
-  return(node);
+
+  return node;
 }
 
 // Returns a node to the freelist.
@@ -970,14 +974,12 @@ msecnode_t *P_AddSecnode(sector_t *s, Actor *thing, msecnode_t *nextnode)
       if (node->m_sector == s)   // Already have a node for this sector?
 	{
 	  node->m_thing = thing; // Yes. Setting m_thing says 'keep it'.
-	  return(nextnode);
+	  return nextnode;
 	}
       node = node->m_tnext;
     }
 
-  // Couldn't find an existing node for this sector. Add one at the head
-  // of the list.
-
+  // Couldn't find an existing node for this sector. Add one at the head of the list.
   node = P_GetSecnode();
 
   //mark new nodes unvisited.
@@ -997,7 +999,8 @@ msecnode_t *P_AddSecnode(sector_t *s, Actor *thing, msecnode_t *nextnode)
   if (s->touching_thinglist)
     node->m_snext->m_sprev = node;
   s->touching_thinglist = node;
-  return(node);
+
+  return node;
 }
 
 
@@ -1013,7 +1016,6 @@ msecnode_t *P_DelSecnode(msecnode_t *node)
 
   if (node)
     {
-
       // Unlink from the Thing thread. The Thing thread begins at
       // sector_list and not from Actor->touching_sectorlist.
 
@@ -1033,14 +1035,16 @@ msecnode_t *P_DelSecnode(msecnode_t *node)
 	sp->m_snext = sn;
       else
 	node->m_sector->touching_thinglist = sn;
+
       if (sn)
 	sn->m_sprev = sp;
 
       // Return this node to the freelist
 
       P_PutSecnode(node);
-      return(tn);
+      return tn;
     }
+
   return NULL;
 }
 

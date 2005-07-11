@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.43  2005/07/11 16:58:33  smite-meister
+// msecnode_t bug fixed
+//
 // Revision 1.42  2005/06/12 16:26:26  smite-meister
 // alpha2 bugfixes
 //
@@ -335,8 +338,9 @@ void GameInfo::Ticker()
 	  if (p->playerstate == PST_REMOVE)
 	    {
 	      // the player is removed from the game (invalidates "old t")
-	      p->ExitLevel(0, 0);
-	      RemovePlayer(p->number);
+	      if (!p->mp)
+		RemovePlayer(p->number); // first the maps throw out the removed player, then the game proper.
+
 	      // TODO purge the removed players from the frag maps of other players?
 	      continue;
 	    }

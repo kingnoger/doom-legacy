@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,17 +18,11 @@
 //
 //
 // $Log$
+// Revision 1.15  2005/07/11 16:58:40  smite-meister
+// msecnode_t bug fixed
+//
 // Revision 1.14  2004/12/02 17:22:34  smite-meister
 // HUD fixed
-//
-// Revision 1.13  2004/11/19 16:51:04  smite-meister
-// cleanup
-//
-// Revision 1.12  2004/08/12 18:30:25  smite-meister
-// cleaned startup
-//
-// Revision 1.11  2003/12/21 12:29:09  smite-meister
-// bugfixes
 //
 // Revision 1.10  2003/12/13 23:51:03  smite-meister
 // Hexen update
@@ -97,10 +91,11 @@ void Map::AddThinker(Thinker *t)
 // Removes a Thinker from the Map without deleting it
 void Map::DetachThinker(Thinker *t)
 {
-  //t->mp = NULL; // NO! a PlayerPawn often exits the Map while still Thinking! We need this still!
+  t->mp = NULL; // TEST a PlayerPawn often exits the Map while still Thinking! We need this still!
   t->next->prev = t->prev;
   t->prev->next = t->next;
   t->prev = t->next = NULL;
+
   Z_ChangeTag(t, PU_STATIC);
 
   force_pointercheck = true;
@@ -112,7 +107,6 @@ void Map::RemoveThinker(Thinker *t)
 {
   t->next->prev = t->prev;
   t->prev->next = t->next;
-  //t->prev = t->next = NULL;
 
   // Most Thinkers could be deleted right away (it is assumed that there will be
   // no dangling pointers, or that they have already been taken care of.)
@@ -174,11 +168,13 @@ void Map::Ticker()
   //CONS_Printf("sound sequences..");
   UpdateSoundSequences();
 
-  // for par times etc.
-  maptic++;
-
   //CONS_Printf("FS..");
   FS_DelayedScripts();
+
+  HandlePlayers();
+
+  // for par times etc.
+  maptic++;
 
   //CONS_Printf("tick done\n");
 }

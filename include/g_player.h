@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.23  2005/07/11 16:58:57  smite-meister
+// msecnode_t bug fixed
+//
 // Revision 1.22  2005/04/22 19:44:50  smite-meister
 // bugs fixed
 //
@@ -165,6 +168,7 @@ public:
   playerstate_t playerstate;
   bool spectator;     ///< ghost spectator in a map?
   bool map_completed; ///< TEST has finished the map, but continues playing
+  bool leaving_map;   ///< TEST
 
   int requestmap;  ///< the map which we wish to enter
   int entrypoint;  ///< which spawning point to use
@@ -230,6 +234,7 @@ public:
   bool InventoryResponder(short (*gc)[2], struct event_t *ev);
 
   void ExitLevel(int nextmap, int ep);
+  bool CheckIntermission(const Map *m);
   void Reset(bool resetpawn, bool resetfrags);  // resets the player (when starting a new level, for example)
 
   virtual void SetMessage(const char *msg, int priority = 0, int type = M_CONSOLE);
