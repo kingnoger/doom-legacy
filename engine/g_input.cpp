@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.24  2005/07/12 18:55:21  smite-meister
+// inventory and player preferences fixed
+//
 // Revision 1.23  2005/04/17 18:36:32  smite-meister
 // netcode
 //
@@ -844,6 +847,25 @@ void G_Controldefault()
   commoncontrols[gk_talk][0]    = 't';
   commoncontrols[gk_console][0] = KEY_CONSOLE;
   commoncontrols[gk_scores][0]  = 'f';
+}
+
+
+/// Saves the local player preferences to the configfile. Must reflect Command_Player_f.
+void G_SavePlayerPrefs(FILE *f)
+{
+  for (int i=0; i < NUM_LOCALHUMANS; i++)
+    {
+      LocalPlayerInfo *p = &LocalPlayers[i];
+
+      // TODO skin, weaponpref, originalweaponswitch, chasecam...
+      fprintf(f, "player %d name \"%s\"\n", i, p->name.c_str());
+      fprintf(f, "player %d color %d\n", i, p->color); // TODO replace with color name
+      fprintf(f, "player %d autoaim %d\n", i, p->autoaim);
+      fprintf(f, "player %d messages %d\n", i, p->messagefilter);
+      fprintf(f, "player %d autorun %d\n", i, p->autorun);
+      fprintf(f, "player %d crosshair %d\n", i, p->crosshair);
+      //fprintf(f, "player %d \n", i, p->);
+    }
 }
 
 

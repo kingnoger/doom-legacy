@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.31  2005/07/12 18:55:23  smite-meister
+// inventory and player preferences fixed
+//
 // Revision 1.30  2005/04/17 18:36:33  smite-meister
 // netcode
 //
@@ -857,13 +860,8 @@ void PlayerPawn::UseArtifact(artitype_t arti)
 	    // Artifact was used - remove it from inventory
 	    if (--(i->count) == 0)
 	      {
-		if (inventory.size() > 1)
-		  {
-		    // Used last of a type - compact the artifact list
-		    inventory.erase(i);
-		  }
-		else
-		  i->type = arti_none; // leave always 1 empty slot
+		// Used last of a type - compact the artifact list
+		inventory.erase(i);
 	      }
 
 	    S_StartSound(this, sfx_artiuse);
@@ -905,7 +903,7 @@ bool PlayerInfo::InventoryResponder(short (*gc)[2], event_t *ev)
         {
           int n = pawn->inventory.size();
 
-          if (invTics)
+          if (invTics && n > 0)
             {
               if (++invSlot >= n)
                 invSlot = n-1;

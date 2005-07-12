@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2005/07/12 18:55:24  smite-meister
+// inventory and player preferences fixed
+//
 // Revision 1.15  2005/04/17 17:44:37  smite-meister
 // netcode
 //
@@ -136,18 +139,42 @@ void Command_UnbindJoyaxis_f();
 
 void Command_Water_f();
 
-
 /// Used for setting player properties.
 void Command_Player_f()
 {
-  if (COM_Argc() < 2)
+  if (COM_Argc() != 4)
     {
-      CONS_Printf("player <number> [<attribute> <value>]\n");
+      CONS_Printf("player <number> <attribute> <value>\n");
       return;
     }
 
   int n = atoi(COM_Argv(1));
+  if (n >= NUM_LOCALHUMANS)
+    {
+      CONS_Printf("Only %d local players supported.\n", NUM_LOCALHUMANS);
+      return;
+    }
+  LocalPlayerInfo *p = &LocalPlayers[n];
+
+  const char *attr = COM_Argv(2);
+  const char *val  = COM_Argv(3);
+
+  if (!strcasecmp(attr, "name"))
+    p->name = val;
+  else if (!strcasecmp(attr, "color"))
+    p->color = atoi(val);
+  else if (!strcasecmp(attr, "autoaim"))
+    p->autoaim = atoi(val);
+  else if (!strcasecmp(attr, "messages"))
+    p->messagefilter = atoi(val);
+  else if (!strcasecmp(attr, "autorun"))
+    p->autorun = atoi(val);
+  else if (!strcasecmp(attr, "crosshair"))
+    p->crosshair = atoi(val);
+  else
+    CONS_Printf("Unknown player attribute '%s'.\n", attr);
 }
+
 
 //=========================================================================
 //                           CLIENT INIT

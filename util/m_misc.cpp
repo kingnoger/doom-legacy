@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2005/07/12 18:55:24  smite-meister
+// inventory and player preferences fixed
+//
 // Revision 1.15  2005/05/31 18:04:22  smite-meister
 // screenslink crash fixed
 //
@@ -83,7 +86,7 @@
 #include "z_zone.h"
 
 #ifdef HWRENDER
-#include "hardware/hwr_render.h"
+# include "hardware/hwr_render.h"
 #endif
 
 
@@ -300,6 +303,7 @@ void M_FirstLoadConfig()
 }
 
 
+void G_SavePlayerPrefs(FILE *f);
 void G_SaveKeySetting(FILE *f);
 void G_SaveJoyAxisBindings(FILE *f);
 
@@ -307,46 +311,47 @@ void G_SaveJoyAxisBindings(FILE *f);
 //
 void M_SaveConfig(char *filename)
 {
-    FILE    *f;
+  FILE *f;
 
-    // make sure not to write back the config until
-    //  it's been correctly loaded
-    if (!gameconfig_loaded)
-        return;
+  // make sure not to write back the config until
+  //  it's been correctly loaded
+  if (!gameconfig_loaded)
+    return;
 
-    // can change the file name
-    if(filename)
+  // can change the file name
+  if (filename)
     {
-        f = fopen(filename, "w");
-        // change it only if valide
-        if(f)
-            strcpy(configfile,filename);
-        else
+      f = fopen(filename, "w");
+      // change it only if valide
+      if (f)
+	strcpy(configfile,filename);
+      else
         {
-            CONS_Printf("Couldn't save game config file %s\n",filename);
-            return;
+	  CONS_Printf("Couldn't save game config file %s\n",filename);
+	  return;
         }
     }
-    else
+  else
     {
-        f = fopen(configfile, "w");
-        if (!f)
+      f = fopen(configfile, "w");
+      if (!f)
         {
-            CONS_Printf("Couldn't save game config file %s\n",configfile);
-            return;
+	  CONS_Printf("Couldn't save game config file %s\n",configfile);
+	  return;
         }
     }
 
-    // header message
-    fprintf(f, "// Doom Legacy configuration file.\n");
+  // header message
+  fprintf(f, "// Doom Legacy configuration file.\n");
 
-    //FIXME: save key aliases if ever implemented..
+  //FIXME: save key aliases if ever implemented..
 
-    consvar_t::SaveVariables(f);
-    G_SaveKeySetting(f);
-    G_SaveJoyAxisBindings(f);
+  consvar_t::SaveVariables(f);
+  G_SavePlayerPrefs(f);
+  G_SaveKeySetting(f);
+  G_SaveJoyAxisBindings(f);
 
-    fclose(f);
+  fclose(f);
 }
 
 

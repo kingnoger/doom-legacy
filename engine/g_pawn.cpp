@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.54  2005/07/12 18:55:22  smite-meister
+// inventory and player preferences fixed
+//
 // Revision 1.53  2005/06/29 14:26:39  smite-meister
 // valgrind pays off
 //
@@ -315,7 +318,7 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, int type, int pcl)
 
   morphTics = 0;
 
-  inventory.resize(1, inventory_t(arti_none, 0)); // at least 1 empty slot
+  //inventory.resize(1, inventory_t(arti_none, 0)); // at least 1 empty slot
 
   usedown = attackdown = jumpdown = true;  // don't do anything immediately
   refire = 0;
