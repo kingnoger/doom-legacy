@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2005/07/18 12:31:22  smite-meister
+// cross-cluster mapchanges
+//
 // Revision 1.8  2004/11/13 22:38:59  smite-meister
 // intermission works
 //
@@ -106,7 +109,8 @@ private:
   bool acceleratestage;
 
   /// What animation, if any, do we show? Applicable in Doom1 and Heretic, otherwise zero.
-  int episode;
+  int  episode;
+  bool show_yah;
 
   const char *interpic;
   const char *lastlevelname;

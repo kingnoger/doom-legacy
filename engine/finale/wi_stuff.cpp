@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.27  2005/07/18 12:31:23  smite-meister
+// cross-cluster mapchanges
+//
 // Revision 1.26  2005/06/12 16:26:27  smite-meister
 // alpha2 bugfixes
 //
@@ -1215,41 +1218,39 @@ void Intermission::LoadData()
     case gm_udoom:
       // Doom 1 intermission animations
       anim_t *a;
-      if (episode >= 1)
+      if (episode >= 1 && episode <= 3)
         {
-          if (episode <= 3)
-            for (j = 0; j < NUMANIMS[episode-1]; j++)
-              {
-                a = &anims[episode-1][j];
-                for (i = 0; i < a->nanims; i++)
-                  {
-                    // MONDO HACK! There is no special picture of the
-                    // Tower of Babel for the secret level of Doom 1 ep. 2.
-                    if (episode == 2 && j == 8)
-                      {
-                        // HACK ALERT!
-                        a->p[i] = anims[1][4].p[i];
-                      }
-                    else
-                      {
-                        // animations
-                        sprintf(name, "WIA%d%.2d%.2d", episode-1, j, i);
-                        a->p[i] = tc.GetPtr(name);
-                      }
-                  }
-              }
-
+	  for (j = 0; j < NUMANIMS[episode-1]; j++)
+	    {
+	      a = &anims[episode-1][j];
+	      for (i = 0; i < a->nanims; i++)
+		{
+		  // MONDO HACK! There is no special picture of the
+		  // Tower of Babel for the secret level of Doom 1 ep. 2.
+		  if (episode == 2 && j == 8)
+		    {
+		      // HACK ALERT!
+		      a->p[i] = anims[1][4].p[i];
+		    }
+		  else
+		    {
+		      // animations
+		      sprintf(name, "WIA%d%.2d%.2d", episode-1, j, i);
+		      a->p[i] = tc.GetPtr(name);
+		    }
+		}
+	    }
+	}
           // level name patches
-	  sprintf(name, "WILV%d%d", episode-1, last % 10);
-	  lastname_tex = tc.GetPtr(name);
+      sprintf(name, "WILV%d%d", last / 10, last % 10); // our current map number encoding
+      lastname_tex = tc.GetPtr(name);
 
-	  sprintf(name, "WILV%d%d", episode-1, next % 10);
-	  nextname_tex = tc.GetPtr(name);
+      sprintf(name, "WILV%d%d", next / 10, next % 10);
+      nextname_tex = tc.GetPtr(name);
 
-	  yah[0] = tc.GetPtr("WIURH0");
-	  yah[1] = tc.GetPtr("WIURH1");
-	  splat = tc.GetPtr("WISPLAT");
-        }
+      yah[0] = tc.GetPtr("WIURH0");
+      yah[1] = tc.GetPtr("WIURH1");
+      splat = tc.GetPtr("WISPLAT");
       break;
 
     case gm_heretic:
@@ -1365,7 +1366,7 @@ void Intermission::UnloadData()
       lastname_tex->Release();
       nextname_tex->Release();
 
-      if (episode <= 3)
+      if (episode >= 1 && episode <= 3)
 	{
 	  for (j=0;j<NUMANIMS[episode-1];j++)
 	    {
@@ -1375,6 +1376,7 @@ void Intermission::UnloadData()
 	    }
 	}
 
+      yah[1]->Release();
       // fallthru
     case gm_heretic:
       yah[0]->Release();
@@ -1439,7 +1441,7 @@ void Intermission::Drawer()
       if (count <= 0)  // all removed no draw !!!
         return;
 
-      if (episode >= 1 && episode <= 3)
+      if (episode >= 1 && episode <= 3 && show_yah)
         DrawYAH();
 
       // draws which level you are entering..
@@ -1521,8 +1523,10 @@ void Intermission::Start(const Map *m, const MapInfo *n)
   next = n->mapnumber - 1; // number of next level
   nextlevelname = n->nicename.c_str();
 
-  MapCluster *cl = game.FindCluster(m->info->cluster);
-  episode = cl->episode;
+  // current and next clusters: show yah only if clusters belong to same episode
+  episode = game.FindCluster(m->info->cluster)->episode;
+  show_yah = (game.FindCluster(n->cluster)->episode == episode);
+
   interpic = m->info->interpic.c_str();
   intermusic = m->info->intermusic.c_str();
 
