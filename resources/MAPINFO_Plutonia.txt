@@ -11,6 +11,7 @@ exittext "You gloat over the steaming carcass of the\nGuardian.  With its death,
 
 defaultmap
 cluster 1
+nextlevel -1 31
 sky1 SKY1 0
 interpic INTERPIC
 intermusic D_DM2INT
@@ -133,7 +134,7 @@ music D_DDTBL2
 
 map MAP15 "level 15: the twilight"
 levelnum 15
-nextlevel 16 31
+nextlevel 16
 par 210
 music D_RUNNI2
 

@@ -11,6 +11,7 @@ exittext "You've fought your way out of the infested\nexperimental labs.   It se
 
 defaultmap
 cluster 1
+nextlevel -1 31
 sky1 SKY1 0
 interpic INTERPIC
 intermusic D_DM2INT
@@ -133,7 +134,7 @@ music D_DDTBL2
 
 map MAP15 "level 15: dead zone"
 levelnum 15
-nextlevel 16 31
+nextlevel 16
 par 210
 music D_RUNNI2
 

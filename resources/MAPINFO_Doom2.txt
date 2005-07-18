@@ -11,6 +11,7 @@ exittext "You have entered deeply into the infested\nstarport. But something is 
 
 defaultmap
 cluster 1
+nextlevel -1 31
 sky1 SKY1 0
 interpic INTERPIC
 intermusic D_DM2INT
@@ -135,7 +136,7 @@ music D_DDTBL2
 
 map MAP15 "level 15: industrial zone"
 levelnum 15
-nextlevel 16 31
+nextlevel 16
 par 210
 music D_RUNNI2
 

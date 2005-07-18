@@ -13,6 +13,7 @@ exittext "With the destruction of the iron\nliches and their minions, the last\n
 
 defaultmap
 cluster 1
+nextlevel -1 9
 sky1 SKY1 0
 interpic MAPE1
 intermusic MUS_INTR
@@ -49,7 +50,7 @@ music MUS_E1M5
 
 map E1M6 "E1M6: The Cathedral"
 levelnum 6
-nextlevel 7 9
+nextlevel 7
 par 100
 music MUS_E1M6
 
@@ -86,6 +87,7 @@ exittext "The mighty maulotaurs have proved\nto be no match for you, and as\nthe
 
 defaultmap
 cluster 2
+nextlevel -1 19
 sky1 SKY2 0
 interpic MAPE2
 intermusic MUS_INTR
@@ -110,7 +112,7 @@ music MUS_E2M3
 
 map E2M4 "E2M4: The Ice Grotto"
 levelnum 14
-nextlevel 15 19
+nextlevel 15
 par 99
 music MUS_E2M4
 
@@ -159,6 +161,7 @@ exittext "The death of D'Sparil has loosed\nthe magical bonds holding his\ncreat
 
 defaultmap
 cluster 3
+nextlevel -1 29
 sky1 SKY3 0
 interpic MAPE3
 intermusic MUS_INTR
@@ -183,7 +186,7 @@ music MUS_E3M3
 
 map E3M4 "E3M4: The Azure Fortress"
 levelnum 24
-nextlevel 25 29
+nextlevel 25
 par 109
 music MUS_E1M6
 
@@ -232,6 +235,7 @@ exittext "You thought you would return to your\nown world after D'Sparil died, b
 
 defaultmap
 cluster 4
+nextlevel -1 39
 sky1 SKY1 0
 interpic MAPE1
 intermusic MUS_INTR
@@ -256,7 +260,7 @@ music MUS_E1M3
 
 map E4M4 "E4M4: Sepulcher"
 levelnum 34
-nextlevel 35 39
+nextlevel 35
 par 58
 music MUS_E1M4
 
@@ -305,6 +309,7 @@ exittext "As the final maulotaur bellows his\ndeath-agony, you realize that you\
 
 defaultmap
 cluster 5
+nextlevel -1 49
 sky1 SKY3 0
 interpic MAPE2
 intermusic MUS_INTR
@@ -323,7 +328,7 @@ music MUS_E2M2
 
 MAP E5M3 "E5M3: Quay"
 levelnum 43
-nextlevel 44 49
+nextlevel 44
 par 71
 music MUS_E2M3
 
