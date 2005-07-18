@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2005/07/18 12:32:45  smite-meister
+// fix
+//
 // Revision 1.21  2005/06/29 14:26:40  smite-meister
 // valgrind pays off
 //
@@ -341,8 +344,10 @@ static int ReadTableIndex(const char *p)
 
 
 // Our mobj tables have no gaps!
-static int ThingMap(int num)
+static int ThingMap(const char *thref)
 {
+  int num = ReadTableIndex(thref) - 1; // stupid DEH thing numbering starts with 1 and not 0
+
   if (num < 0)
     goto err;
 
@@ -367,8 +372,16 @@ static int ThingMap(int num)
 
 // Our state tables have lots of gaps due to the mobj/weaponstate separation:(
 // State number remapping: weapon states get negated numbers.
-static int StateMap(int num)
+static int StateMap(const char *stref)
 {
+  if (!stref)
+    {
+      DEH.error("Missing state reference\n");
+      return 0;
+    }
+
+  int num = ReadTableIndex(stref);
+
   /// Describes one gap in our state table.
   struct stategap_t
   {
@@ -690,18 +703,9 @@ int dehacked_t::FindState()
     }
 
   res = p.GetToken(" \t");
-
-  int value = 0;
-  if (!res)
-    {
-      error("No value found\n");
-    }
-  else
-    value = ReadTableIndex(res);
-
   p.SetPointer(temp); // restore parser
 
-  return StateMap(value);
+  return StateMap(res);
 }
 
 
@@ -755,20 +759,20 @@ int dehacked_t::ReadFlags(flag_mnemonic_t *mnemonics)
 // The 'to' state must already be mapped.
 static void SetAction(int to, const char *mnemonic)
 {
-  if (isdigit(mnemonic[1]))
+  if (isdigit(mnemonic[0]) || isdigit(mnemonic[1])) // no mnemonic has a digit as the first or second char
     {
       // this must also handle strings like H111
-      int from = StateMap(ReadTableIndex(mnemonic));
+      int from = StateMap(mnemonic);
       if (to > 0)
 	if (from > 0)
 	  states[to].action = d_actions[from];
 	else
-	  DEH.error("Tried to use a weapon codepointer in a thing frame!\n");
+	  DEH.error("Tried to use a weapon codepointer '%s' in a thing frame!\n", mnemonic);
       else
 	if (from < 0)
 	  weaponstates[-to].action = w_actions[-from];
 	else
-	  DEH.error("Tried to use a thing codepointer in a weapon frame!\n");
+	  DEH.error("Tried to use a thing codepointer '%s' in a weapon frame!\n", mnemonic);
 
       return;
     }
@@ -827,7 +831,7 @@ Respawn frame = 32       S_NULL          // raisestate
 
 void dehacked_t::Read_Thing(const char *str)
 {
-  int t = ThingMap(ReadTableIndex(str) - 1);
+  int t = ThingMap(str);
 
   while (p.NewLine(false))
     {
@@ -915,7 +919,7 @@ Codep = 111 // Legacy addition
 
 void dehacked_t::Read_Frame(const char *str)
 {
-  int s = StateMap(ReadTableIndex(str));
+  int s = StateMap(str);
 
   if (s == 0)
     {
@@ -1391,7 +1395,7 @@ void dehacked_t::Read_CODEPTR()
 	}
 
       // the "to" state number
-      int s = StateMap(ReadTableIndex(p.GetToken(" \t=")));
+      int s = StateMap(p.GetToken(" \t="));
 
       if (s == 0)
 	{
@@ -1520,7 +1524,7 @@ bool dehacked_t::LoadDehackedLump(const char *buf, int len)
 	      p.GetToken(" \t"); // get rid of "(frame"
 	      if ((word1 = p.GetToken(")")))
 		{
-		  int s = atoi(word1);
+		  int s = StateMap(word1);
 		  if (p.NewLine())
 		    {
 		      p.GetToken(" \t");
