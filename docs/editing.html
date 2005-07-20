@@ -23,9 +23,11 @@
 <li><a href="#MAPINFO">The MAPINFO lump</a></li>
 <li><a href="#levelinfo">LevelInfo lumps</a></li>
 <li><a href="#scripting">Scripting</a></li>
-<li><a href="#linedef">New linedef types</a></li>
+<li><a href="#thing">New THING types</a></li>
+<li><a href="#linedef">New LINEDEF types</a></li>
 <li><a href="#3dfloors">3D floors and water</a></li>
 <li><a href="#graphics">Graphics</a></li>
+<li><a href="#anim">Animated textures</a></li>
 <li><a href="#sound">Sound</a></li>
 <li><a href="#music">Music</a></li>
 <li><a href="#dehacked">DeHackEd and BEX</a></li>
@@ -42,7 +44,7 @@ the 8 character lumpnames and the lack of internal directory structure
 or compression.
 These shortcomings have been remedied in the WAD2/WAD3 and PAK file formats.
 In Legacy, you can use any of these formats to hold your data.
-However, because the resource names in the Doom/Hexen map format are
+However, because most resource names in the Doom/Hexen map format are
 limited to 8 characters, this feature is only of limited use.
 </p>
 
@@ -61,7 +63,7 @@ several lumps in a very specific order) from them.
 
 <p>
 Legacy understands both Doom and Hexen map formats.
-If a map has a BEHAVIOR lump, it is assumed to be in Hexen format.
+If a map has a BEHAVIOR lump (even an empty one), it is assumed to be in Hexen format.
 You can freely mix the formats in a map WAD, i.e. have some of the maps
 in Doom format and others in Hexen format.
 </p>
@@ -76,9 +78,10 @@ used.
 <hr />
 <h2><a name="MAPINFO">The MAPINFO lump</a></h2>
 
+<p>TODO: JDS specification</p>
 
 <p>
-MAPINFO is a special plaintext lump, introduced in Hexen, extended in
+MAPINFO is a special plaintext lump, introduced in Hexen, extended by
 ZDoom, that fixes many shortcomings of the map format and can be used
 <i>inter alia</i> to create custom map orderings within the WAD.
 MAPINFO may contain two types of entries:
@@ -100,7 +103,9 @@ all things related to map ordering, finales and hubs.
 There should be only one MAPINFO lump per wad, containing entries for
 each map and cluster in the game.<br/>
 For examples of MAPINFO lumps, see the <b>MI_*</b> lumps
-in legacy.wad.
+in legacy.wad. For instance, <a
+href="../resources/MAPINFO_Doom.txt">this lump</a> recreates the
+original Doom episodes.
 </p>
 
 <table class="def">
@@ -367,21 +372,67 @@ compiled into bytecode using <b>ACC</b>, the ACS compiler.
 </p>
 
 
+<hr />
+<h2><a name="thing">New THING types</a></h2>
+
+<p>
+The Doom (and Hexen) map format refers to different types of THINGs
+(a.k.a. mapthings, map objects, mobjs) by unsigned 16-bit codes,
+known as DoomEd numbers. Doom, Heretic and Hexen all use
+different numberings, with the number ranges overlapping in some
+places.
+The situation has been made even more complicated by the different
+Doom source ports introducing their own, often conflicting, special THING types.
+</p>
+
+<p>
+Legacy tries to honor the most common "new" thing types, especially
+those introduced by BOOM and SMMU.
+<!-- TODO skyboxes, teamstarts, sound sequences  (ambient/local/sector action) 4000-7999 -->
+</p>
+
+<table class="def">
+<tr><th>THING type</th><th>description</th></tr>
+<tr><td>4001-4028</td>
+<td>Playerstarts for players 5-32.</td>
+</tr>
+
+<tr><td>5001, 5002</td>
+<td>Point push and pull effects (BOOM)</td>
+</tr>
+
+<tr><td>5003</td>
+<td>Camera location (SMMU)</td>
+</tr>
+
+<tr><td>5004</td>
+<td>Path node</td>
+</tr>
+
+<tr><td>9300</td>
+<td>Polyobj anchor</td>
+</tr>
+
+<tr><td>9301</td>
+<td>Polyobj spawn spot</td>
+</tr>
+
+<tr><td>9302</td>
+<td>Crushing polyobj spawn spot</td>
+</tr>
+</table>
+
 
 
 
 <hr />
-<h2><a name="linedef">New linedef types</a></h2>
-
-<p>
-TODO new things: 4001-4060 playerstarts in doom namespace
-</p>
+<h2><a name="linedef">New LINEDEF types</a></h2>
 
 
 <h3>Visual effects</h3>
 
 <table class="def">
-<tr><th>linedef type</th><th>effect</th></tr>
+<tr><th>LINEDEF type</th><th>effect</th></tr>
 
 <tr><td>280</td>
 <td>
@@ -722,10 +773,60 @@ simple will help reduce rendering times.
 <h2><a name="graphics">Graphics</a></h2>
 
 <p>
-Any and all of the sprites, textures and flats in the IWAD can be replaced
+Any and all of the sprites, patches, textures and flats in the IWAD can be replaced
 using PWADs. In addition to the patch and flat formats, you can also use
-the PNG and (soon, TODO) JPEG formats for the texture lumps.
+the PNG and (soon, TODO) JPEG formats for the graphics. In the
+following, we use the word "texture" for all graphics, not just the
+ones defined in the TEXTUREx lumps.
 </p>
+
+<p>
+The Legacy texture system is somewhat involved, which is caused by two main
+reasons: The original Doom graphics formats have no "magic numbers" by
+which they could be reliably identified, and there are certain nasty
+texture namespace overlaps in the original IWADs.
+</p>
+
+
+<h3>Advanced Textures</h3>
+
+<p>
+These are single-lump textures which must have magic numbers and reside
+between TX_START and TX_END markers. Currently Legacy supports just
+the PNG format here. TODO JPEG
+</p>
+
+
+<h3>Doom Textures</h3>
+
+<p>
+These are the textures defined in the TEXTUREx and PNAMES lumps.
+TODO... explain scaling, hi-res textures
+</p>
+
+<table class="def">
+<caption>The maptexture_t struct</caption>
+<tr><th>field</th><th>description</th></tr>
+<tr><td>char[8]</td><td>texture name</td></tr>
+<tr><td>Uint16</td><td>bit flags (currently unused, zero)</td></tr>
+<tr><td>2 * Uint8</td><td>x scale, y scale in 5.3 fixed point
+format. If zero, scale is 1.</td></tr>
+<tr><td>2 * Uint16</td><td>texture width, height in pixels</td></tr>
+<tr><td>Uint32</td><td>unused, zero</td></tr>
+<tr><td>Uint16</td><td>patchcount</td></tr>
+</table>
+
+
+
+<h3>Flats</h3>
+
+<p>
+Flats are raw paletted textures stored in a single lump. They contain no
+magic numbers and hence have to reside between the F_START and F_END
+(or FF_START and FF_END) markers. The supported flat sizes are 64*64,
+128*64 and 128*128. Flats cannot be used as parts of a sprite.
+</p>
+
 
 <h3>Sprites</h3>
 
@@ -741,29 +842,21 @@ Without the markers, for example the PLAYPAL lump could be taken as a
 part of the PLAYxxxx sprite, which would cause some confusing error messages.
 </p>
 
+<p>
+When the spriteframe lumps are loaded, Legacy first looks for an Advanced
+Texture by that name, then a Doom Texture, and finally a patch (which
+normally is stored in that very spriteframe lump).
+That's right, you can leave the spriteframe lumps empty if you supply
+the corresponding textures somewhere else. The lumps are only needed to
+declare the existence of the particular frames.
+</p>
+
+
 <h3>Models</h3>
 
 <p>
 Legacy will support MD3 models as soon as the new OpenGL renderer is
 done. Yes, the ones from Quake III Arena.
-</p>
-
-<h3>Textures</h3>
-
-<p>
-TODO... explain scaling, hi-res textures, ANIMDEFS lump
-</p>
-
-<h3>Flats</h3>
-
-<p>
-Flats are basically single-lump textures, and this is how Legacy
-handles them. If a requested texture/flat name is not found in the TEXTUREx
-lumps, it is interpreted as a single-lump texture. There is no need to
-use the F_START and F_END markers, but you might want to use them
-nevertheless, for the benefit of other Doom source ports that still
-require them. You want your map to run on all source ports, don't you?
-Don't you? Well, you should.
 </p>
 
 
@@ -773,7 +866,7 @@ Don't you? Well, you should.
 A <b>colormap</b> is a 256-byte array used to remap the
 colors inside a palette:<br/>
 newcolor = colormap[oldcolor].<br/>
-The Doom software renderer uses 32 different colormaps
+The Doom software renderer uses 34 different colormaps
 (stored in the COLORMAP lump) to simulate different light levels.
 </p>
 
@@ -796,6 +889,23 @@ the default translucency map.
 </p>
 
 <p>TODO, C_START, C_END</p>
+
+
+<hr />
+<h2><a name="anim">Animated textures</a></h2>
+
+<h3>ANIMDEFS lump</h3>
+
+<p>
+TODO explain
+</p>
+
+<h3>ANIMATED lump</h3>
+
+<p>
+TODO this too
+</p>
+
 
 
 <hr />

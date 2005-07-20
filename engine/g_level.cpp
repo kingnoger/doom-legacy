@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.16  2005/07/20 20:27:19  smite-meister
+// adv. texture cache
+//
 // Revision 1.15  2004/08/12 18:30:23  smite-meister
 // cleaned startup
 //
@@ -107,7 +110,7 @@ void MapCluster::Ticker()
 {
   int i, n = maps.size();
   for (i=0; i<n; i++)
-    maps[i]->Ticker(hub);
+    maps[i]->Ticker();
 }
 
 

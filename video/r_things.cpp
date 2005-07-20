@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.33  2005/07/20 20:27:23  smite-meister
+// adv. texture cache
+//
 // Revision 1.32  2005/04/22 19:44:50  smite-meister
 // bugs fixed
 //
@@ -694,7 +697,7 @@ static void R_InstallSpriteLump(const char *name, int frame, int rot, bool flip)
   if (frame > maxframe)
     maxframe = frame;
 
-  Texture *t = tc.GetPtr(name, 1); // FIXME HACK coerce cache to skip flats. Damn!
+  Texture *t = tc.GetPtr(name, TEX_noflat); // skip flats
 
 #ifdef HWRENDER
   //BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer

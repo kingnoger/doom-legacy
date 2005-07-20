@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.46  2005/07/20 20:27:19  smite-meister
+// adv. texture cache
+//
 // Revision 1.45  2005/06/12 16:26:21  smite-meister
 // alpha2 bugfixes
 //
@@ -168,7 +171,7 @@ void CL_Init();
 // Version number: major.minor.subversion
 const int  VERSION = 199;  // major*100 + minor
 const int  SUBVERSION = 0; // for bugfix releases, should not affect compatibility
-const char VERSIONSTRING[] = "alpha3";
+const char VERSIONSTRING[] = "alpha4";
 
 // Name of local directory for config files and savegames
 #ifdef LINUX 

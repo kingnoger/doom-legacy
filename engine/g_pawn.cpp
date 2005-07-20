@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.55  2005/07/20 20:27:19  smite-meister
+// adv. texture cache
+//
 // Revision 1.54  2005/07/12 18:55:22  smite-meister
 // inventory and player preferences fixed
 //
@@ -263,6 +266,7 @@ bool Pawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, int type)
   : Actor(x, y, z)
 {
+  /*
   if (type < 0)
     {
       if (game.mode == gm_hexen)
@@ -272,6 +276,7 @@ Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, int type)
       else
 	type = 0;
     }
+  */
 
   pinfo = &pawndata[type];
   const mobjinfo_t *info = &mobjinfo[pinfo->mt];

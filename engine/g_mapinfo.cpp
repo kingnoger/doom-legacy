@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.29  2005/07/20 20:27:19  smite-meister
+// adv. texture cache
+//
 // Revision 1.28  2005/07/11 16:58:33  smite-meister
 // msecnode_t bug fixed
 //
@@ -104,6 +107,8 @@ MapInfo::MapInfo()
 
   mapnumber = 0;
   cluster = 100; // this is so that maps with no cluster are placed in a cluster of their own
+  hub = false;
+
   scripts = 0;
   partime = 0;
   gravity = 1.0f;
@@ -124,6 +129,7 @@ MapInfo::MapInfo()
   BossDeathKey = 0;
 
   interpic = "INTERPIC"; // fallback for lazy map authors
+  intermusic = "-";
 }
 
 
@@ -135,7 +141,7 @@ MapInfo::~MapInfo()
 
 
 /// ticks the map forward
-void MapInfo::Ticker(bool hub)
+void MapInfo::Ticker()
 {
   if (me && state != MAP_INSTASIS)
     {
@@ -214,8 +220,11 @@ bool MapInfo::Activate(PlayerInfo *p)
     }
 
   me->CheckACSStore(); // execute waiting scripts
-  if (p)
-    me->AddPlayer(p);
+
+  if (!p)
+    return true; // map activated without players
+
+  me->AddPlayer(p);
   return true;
 }
 
@@ -443,6 +452,7 @@ char *MapInfo::Read(int lump)
       char line[40];
 
       p.RemoveComments('/'); // TODO can we also remove other types of comments?
+      p.DeleteChars('\r');
       while (p.NewLine())
 	{
 	  if (parsestate != PS_SCRIPT) // not for scripts
@@ -548,6 +558,7 @@ int GameInfo::Read_MAPINFO(int lump)
   MapInfo   def; // default map
 
   p.RemoveComments(';');
+  p.DeleteChars('\r');
   while (p.NewLine())
     {
       char line[61], ln[17]; // read in max. 60 (16) character strings
@@ -674,6 +685,7 @@ int GameInfo::Read_MAPINFO(int lump)
 	cl = clustermap[n];
 
       cl->maps.push_back(info);
+      info->hub = cl->hub; // TEST copy the hub info to MapInfos
     }
 
   // and then check that all clusters have at least one map

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.32  2005/07/20 20:27:21  smite-meister
+// adv. texture cache
+//
 // Revision 1.31  2005/07/12 18:55:23  smite-meister
 // inventory and player preferences fixed
 //
@@ -882,7 +885,6 @@ bool PlayerInfo::InventoryResponder(short (*gc)[2], event_t *ev)
     return false;
 
   //gc is a pointer to array[num_gamecontrols][2]
-  extern int st_curpos; // TODO: what about splitscreenplayer??
 
   switch (ev->type)
     {
@@ -893,8 +895,8 @@ bool PlayerInfo::InventoryResponder(short (*gc)[2], event_t *ev)
             {
               if (--invSlot < 0)
                 invSlot = 0;
-              else if (--st_curpos < 0)
-                st_curpos = 0;
+              else if (--invPos < 0)
+                invPos = 0;
             }
           invTics = 5*TICRATE;
           return true;
@@ -907,8 +909,8 @@ bool PlayerInfo::InventoryResponder(short (*gc)[2], event_t *ev)
             {
               if (++invSlot >= n)
                 invSlot = n-1;
-              else if (++st_curpos > 6)
-                st_curpos = 6;
+              else if (++invPos > 6)
+                invPos = 6;
             }
           invTics = 5*TICRATE;
           return true;

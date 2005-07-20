@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.61  2005/07/20 20:27:21  smite-meister
+// adv. texture cache
+//
 // Revision 1.60  2005/07/01 16:45:12  smite-meister
 // FS cameras work
 //
@@ -196,6 +199,8 @@
 #endif
 
 
+extern vector<mapthing_t *> polyspawn; // for spawning polyobjects
+
 
 void Map::LoadVertexes(int lump)
 {
@@ -334,8 +339,8 @@ void Map::LoadSectors2(int lump)
 
       ss->floortype = P_GetFloorType(ms->floorpic);
 
-      ss->floorpic = tc.Get(ms->floorpic);
-      ss->ceilingpic = tc.Get(ms->ceilingpic);
+      ss->floorpic = tc.GetID(ms->floorpic, TEX_flat);
+      ss->ceilingpic = tc.GetID(ms->ceilingpic, TEX_flat);
 
       ss->lightlevel = SHORT(ms->lightlevel);
 
@@ -423,6 +428,8 @@ void Map::LoadThings(int lump)
     nummapthings = fc.LumpLength(lump)/sizeof(doom_mapthing_t);
 
   mapthings    = (mapthing_t *)Z_Malloc(nummapthings*sizeof(mapthing_t), PU_LEVEL, NULL);
+  memset(mapthings, 0, nummapthings*sizeof(mapthing_t));
+
   NumPolyobjs  = 0;
 
   char *data   = (char *)fc.CacheLumpNum(lump, PU_STATIC);
@@ -490,7 +497,7 @@ void Map::LoadThings(int lump)
     }
 
 
-  int i, n, low, high, ednum;
+  int i, n, ednum;
   for (i=0 ; i<nummapthings ; i++, t++)
     {
       if (hexen_format)
@@ -510,31 +517,35 @@ void Map::LoadThings(int lump)
         }
       else
         {
-          t->tid = 0;
+          //t->tid = 0;
           t->x = SHORT(mt->x);
           t->y = SHORT(mt->y);
-          t->z = 0;
+          //t->z = 0;
           t->angle = SHORT(mt->angle);
           ednum    = SHORT(mt->type);
           t->flags = SHORT(mt->flags);
 
+	  /*
           t->special = 0;
           for (int j=0; j<5; j++)
             t->args[j] = 0;
+	  */
           mt++;
         }
       t->mobj = NULL;
+      int orig_ednum = ednum;
 
       // convert editor number to mobjtype_t number right now
       if (!ednum)
         continue; // Ignore type-0 things as NOPs
+
+      //======== first we spawn common THING types not affected by spawning flags ========
 
       // deathmatch start positions
       if (ednum == 11)
         {
           if (dmstarts.size() < MAX_DM_STARTS)
             dmstarts.push_back(t);
-          t->type = 0;
           continue;
         }
 
@@ -545,7 +556,7 @@ void Map::LoadThings(int lump)
             ednum -= 4001 - 5;
 
           playerstarts.insert(pair<int, mapthing_t *>(ednum, t));
-          t->type = 0; // t->type is used as a timer
+          // t->type is used as a timer
           continue;
         }
 
@@ -561,12 +572,24 @@ void Map::LoadThings(int lump)
       if (ednum == 5003)
 	{
 	  SpawnActor(new Camera(t));
-	  t->type = 0;
 	  continue;
 	}
 
-      low = 0;
-      high = 0;
+      // common polyobjects
+#define PO_BASE 9300-3000 // currently ZDoom compatible
+      if (ednum == PO_BASE+PO_ANCHOR_TYPE || ednum == PO_BASE+PO_SPAWN_TYPE || ednum == PO_BASE+PO_SPAWNCRUSH_TYPE)
+	{
+	  t->type = ednum - PO_BASE; // internally we use Hexen numbers
+	  polyspawn.push_back(t);
+	  if (ednum != PO_BASE+PO_ANCHOR_TYPE)
+	    NumPolyobjs++; // a polyobj spawn spot
+	  continue;
+	}
+
+      //======== then game-specific things not affected by spawning flags ========
+
+      int low = 0;
+      int high = 0;
 
       // find which type to spawn
       // this is because the ednum ranges normally overlap in different games
@@ -590,7 +613,6 @@ void Map::LoadThings(int lump)
           if (ednum >= 1200 && ednum < 1210)
             {
               AmbientSeqs.push_back(ednum - 1200);
-              t->type = 0;
               continue;
             }
 
@@ -598,7 +620,6 @@ void Map::LoadThings(int lump)
           if (ednum == 56)
             {
               BossSpots.push_back(t);
-              t->type = 0;
               continue;
             }
 
@@ -606,7 +627,6 @@ void Map::LoadThings(int lump)
           if (ednum == 2002)
             {
               MaceSpots.push_back(t);
-              t->type = 0;
               continue;
             }
         }
@@ -616,7 +636,6 @@ void Map::LoadThings(int lump)
           low = MT_HEXEN;
           high = MT_HEXEN_END;
 
-          extern vector<mapthing_t *> polyspawn;
           // The polyobject system is pretty stupid, since the mapthings are not always in
           // any particular order. Polyobjects have to be picked apart
           // from other things  => polyspawn vector
@@ -625,8 +644,7 @@ void Map::LoadThings(int lump)
               t->type = ednum;
               polyspawn.push_back(t);
               if (ednum != PO_ANCHOR_TYPE)
-                // a polyobj marker
-                NumPolyobjs++;
+                NumPolyobjs++; // a polyobj spawn spot
               continue;
             }
 
@@ -635,7 +653,6 @@ void Map::LoadThings(int lump)
             {
               ednum = 5 + ednum - 9100;
               playerstarts.insert(pair<int, mapthing_t *>(ednum, t));
-              t->type = 0;
               continue;
             }
 
@@ -643,7 +660,6 @@ void Map::LoadThings(int lump)
           if (ednum >= 1400 && ednum < 1410)
             {
               R_PointInSubsector(t->x << FRACBITS, t->y << FRACBITS)->sector->seqType = ednum - 1400;
-              t->type = 0;
               continue;
             }
         }
@@ -651,23 +667,31 @@ void Map::LoadThings(int lump)
       // Spawning flags don't apply to playerstarts, teleport exits or polyobjs! Why, pray, is that?
       // wrong flags?
       if ((t->flags & ffail) || !(t->flags & fskill) || !(t->flags & fmode) || !(t->flags & fclass))
-        {
-          t->type = 0;
-          continue;
-        }
+	continue;
+
+      //======== now common things affected by spawning flags ========
+
+      for (n = MT_LEGACY; n <= MT_LEGACY_END; n++)
+        if (orig_ednum == mobjinfo[n].doomednum)
+	  {
+	    t->type = mobjtype_t(n);
+	    break;
+	  }
+
+      if (n <= MT_LEGACY_END)
+	continue; // was found
+
+      //======== finally game-specific things affected by spawning flags ========
 
       for (n = low; n <= high; n++)
         if (ednum == mobjinfo[n].doomednum)
-          break;
+	  {
+	    t->type = mobjtype_t(n);
+	    break;
+	  }
 
       if (n > high)
-        {
-          CONS_Printf("\2Map::LoadThings: Unknown type %i at (%i, %i)\n", ednum, t->x, t->y);
-          t->type = 0;
-          continue;
-        }
-
-      t->type = mobjtype_t(n);
+	CONS_Printf("\2Map::LoadThings: Unknown type %d at (%d, %d)\n", orig_ednum, t->x, t->y);
     }
 
   Z_Free(data);
@@ -889,9 +913,9 @@ void Map::LoadSideDefs2(int lump)
 		break;
 
 	      case 2: // BOOM: 260 make middle texture translucent
-		sd->toptexture = tc.Get(ttex);
+		sd->toptexture = tc.GetID(ttex);
 		sd->midtexture = tc.GetTextureOrColormap(mtex, ld->transmap, true); // can also be a transmap lumpname
-		sd->bottomtexture = tc.Get(btex);
+		sd->bottomtexture = tc.GetID(btex);
 		break;
 
 	      case 4: // Legacy: create a colormap
@@ -905,9 +929,9 @@ void Map::LoadSideDefs2(int lump)
 		  }
 		else
 		  {
-		    sd->toptexture = tc.Get(ttex);
-		    sd->midtexture = tc.Get(mtex);
-		    sd->bottomtexture = tc.Get(btex);
+		    sd->toptexture = tc.GetID(ttex);
+		    sd->midtexture = tc.GetID(mtex);
+		    sd->bottomtexture = tc.GetID(btex);
 		  }
 		break;
 
@@ -924,7 +948,7 @@ void Map::LoadSideDefs2(int lump)
 		  sd->toptexture = sd->bottomtexture = ((ttex[1] - '0')*100 + (ttex[2] - '0')*10 + ttex[3] - '0') + 1;
 		else
 		  sd->toptexture = sd->bottomtexture = 0;
-		sd->midtexture = tc.Get(mtex);
+		sd->midtexture = tc.GetID(mtex);
 		break;
 
 	      default:
@@ -937,9 +961,9 @@ void Map::LoadSideDefs2(int lump)
 	{
 	normal:
 	  // normal texture names
-          sd->toptexture = tc.Get(ttex);
-          sd->midtexture = tc.Get(mtex);
-          sd->bottomtexture = tc.Get(btex);
+          sd->toptexture = tc.GetID(ttex);
+          sd->midtexture = tc.GetID(mtex);
+          sd->bottomtexture = tc.GetID(btex);
         }
     }
 
@@ -1162,9 +1186,9 @@ void Map::SetupSky()
 
   // set the sky flat num
   if (hexen_format)
-    skyflatnum = tc.Get("F_SKY");
+    skyflatnum = tc.GetID("F_SKY", TEX_flat);
   else
-    skyflatnum = tc.Get("F_SKY1");
+    skyflatnum = tc.GetID("F_SKY1", TEX_flat);
 }
 
 
@@ -1243,6 +1267,10 @@ bool Map::Setup(tic_t start, bool spawnthings)
 
   // fix renderer to this map
   R.SetMap(this);
+  if (!info->fadetablelump.empty())
+    R_SetFadetable(info->fadetablelump.c_str());
+  else
+    R_SetFadetable("COLORMAP");
 
 #ifdef HWRENDER
   if (rendermode != render_soft)
@@ -1253,8 +1281,8 @@ bool Map::Setup(tic_t start, bool spawnthings)
 
   LoadThings(lumpnum + LUMP_THINGS);
 
-  if (hexen_format)
-    InitPolyobjs(); // create the polyobjs, clear their mapthings
+  if (!polyspawn.empty())
+    InitPolyobjs(); // create the polyobjs, clear their mapthings (before spawning other things!)
 
   // spawn the THINGS (Actors) if needed
   if (spawnthings)

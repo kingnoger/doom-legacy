@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.59  2005/07/20 20:27:19  smite-meister
+// adv. texture cache
+//
 // Revision 1.58  2005/07/11 16:58:32  smite-meister
 // msecnode_t bug fixed
 //
@@ -561,6 +564,13 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
   p->spawnpoint = mthing;
   // set the timer
   mthing->type = short((maptic + 20) & 0xFFFF);
+
+  // TODO spawn a teleport fog?
+  /*
+    unsigned an = ( ANG45 * (mthing->angle/45) ) >> ANGLETOFINESHIFT;
+    Actor *fog = SpawnDActor(nx+20*finecosine[an], ny+20*finesine[an], nz, MT_TFOG);
+    S_StartSound(fog, sfx_telept); // don't start sound on first frame?
+  */
 }
 
 
@@ -855,16 +865,6 @@ void Map::RebornPlayer(PlayerInfo *p)
 
   p->pov = NULL;
 
-  // spawn a teleport fog
-  /*
-  unsigned an = ( ANG45 * (mthing->angle/45) ) >> ANGLETOFINESHIFT;
-
-  Actor *mo = SpawnActor(x+20*finecosine[an], y+20*finesine[an]
-		    , ss->sector->floorheight
-		    , MT_TFOG);
-  */
-  //  S_StartSound(mo, sfx_telept);  // don't start sound on first frame
-
   if (!game.multiplayer)
     {
       // in single player games, the map is reset after death
@@ -879,6 +879,10 @@ void Map::RebornPlayer(PlayerInfo *p)
       p->time = 0; // respawn delay counter
       p->playerstate = PST_RESPAWN;
     }
+
+  // should we load a saved playerpawn?  
+  if (info->hub)
+    p->LoadPawn();
 }
 
 
@@ -901,6 +905,10 @@ void Map::AddPlayer(PlayerInfo *p)
       Z_ChangeTag(p->pawn, PU_LEVSPEC);
       if (p->pawn->pres)
 	Z_ChangeTag(p->pawn->pres, PU_LEVSPEC);
+
+      // save the playerpawns as they enter the map
+      if (info->hub)
+	p->SavePawn();
     }
 }
 
@@ -1165,9 +1173,7 @@ void Map::BossDeath(const DActor *mo)
       return;
 
     case MT_BABY:
-      // FIXME HACK for Doom2 map07, not correct elsewhere...
-      EV_DoFloor(667, NULL, floor_t::RelHeight, FLOORSPEED, 0, 16*FRACUNIT);
-      //EV_DoFloor(667, NULL,  floor_t::UpSLT, FLOORSPEED, 0, 0); // correct
+      EV_DoFloor(667, NULL,  floor_t::UpSLT, FLOORSPEED, 0, 0); // correct
       return;
 
     case MT_KEEN:

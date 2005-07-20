@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.37  2005/07/20 20:27:18  smite-meister
+// adv. texture cache
+//
 // Revision 1.36  2005/06/16 18:18:07  smite-meister
 // bugfixes
 //
@@ -254,7 +257,7 @@ void S_PrecacheSounds()
   CONS_Printf("Precaching sounds... ");
   soundID_iter_t i;
   for (i = SoundID.begin(); i != SoundID.end(); i++)
-    sc.Cache((*i).second->lumpname); // one extra reference => never released
+    sc.Get(i->second->lumpname); // one extra reference => never released
 
   CONS_Printf("done.\n");
 }
@@ -519,6 +522,12 @@ bool SoundSystem::StartMusic(const char *name, bool loop)
 {
   if (mus_playing && mus_playing->name == name)
     return true;
+
+  if (name[0] == '-')
+    {
+      StopMusic();
+      return true;
+    }
 
   CONS_Printf("StartMusic: %s\n", name);
   // so music needs to be changed.

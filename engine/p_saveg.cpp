@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.47  2005/07/20 20:27:21  smite-meister
+// adv. texture cache
+//
 // Revision 1.46  2005/06/22 20:44:30  smite-meister
 // alpha3 bugfixes
 //
@@ -1050,9 +1053,9 @@ int Map::Serialize(LArchive &a)
       if (ss->ceilingheight != SHORT(ms->ceilingheight)<<FRACBITS)
 	diff |= SD_CEILHT;
 
-      if (ss->floorpic != tc.Get(ms->floorpic))
+      if (ss->floorpic != tc.GetID(ms->floorpic, TEX_flat))
 	diff |= SD_FLOORPIC;
-      if (ss->ceilingpic != tc.Get(ms->ceilingpic))
+      if (ss->ceilingpic != tc.GetID(ms->ceilingpic, TEX_flat))
 	diff |= SD_CEILPIC;
 
       if (ss->lightlevel != SHORT(ms->lightlevel)) diff |= SD_LIGHT;
@@ -1404,12 +1407,12 @@ int Map::Unserialize(LArchive &a)
       if (diff & SD_FLOORPIC)
         {
 	  a.Read((byte *)picname, 8);
-	  sectors[i].floorpic = tc.Get(picname);
+	  sectors[i].floorpic = tc.GetID(picname, TEX_flat);
         }
       if (diff & SD_CEILPIC)
         {
 	  a.Read((byte *)picname, 8);
-	  sectors[i].ceilingpic = tc.Get(picname);
+	  sectors[i].ceilingpic = tc.GetID(picname, TEX_flat);
         }
       if (diff & SD_LIGHT)    a << sectors[i].lightlevel;
       if (diff & SD_SPECIAL)  a << sectors[i].special;
@@ -1788,6 +1791,7 @@ int PlayerInfo::Serialize(LArchive &a)
   // players are serialized after maps, so pawn may already be stored
   Thinker::Serialize(pawn, a); 
   Thinker::Serialize(pov, a); 
+  Thinker::Serialize(hubsavepawn, a); 
 
   return 0;
 }
@@ -1815,7 +1819,9 @@ int PlayerInfo::Unserialize(LArchive &a)
   options.Unserialize(a);
 
   pawn = static_cast<PlayerPawn*>(Thinker::Unserialize(a));
-  pov = static_cast<PlayerPawn*>(Thinker::Unserialize(a));
+  pov = static_cast<Actor*>(Thinker::Unserialize(a));
+  hubsavepawn = static_cast<PlayerPawn*>(Thinker::Unserialize(a));
+
   if (pawn)
     {
       mp = pawn->mp;

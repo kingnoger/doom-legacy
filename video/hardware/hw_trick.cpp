@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2005/07/20 20:27:24  smite-meister
+// adv. texture cache
+//
 // Revision 1.8  2005/06/05 19:32:28  smite-meister
 // unsigned map structures
 //
@@ -996,7 +999,7 @@ void Rend::HWR_CorrectSWTricks()
                     if(sdr->bottomtexture == 0)
                     {
                         if(sdr->midtexture == 0)
-                            sdr->bottomtexture = tc.Get("STONE2");
+                            sdr->bottomtexture = tc.GetID("STONE2");
                         else
                             sdr->bottomtexture = sdr->midtexture;
                     }
@@ -1007,7 +1010,7 @@ void Rend::HWR_CorrectSWTricks()
                     if(sdl->bottomtexture == 0)
                     {
                         if(sdl->midtexture == 0)
-                            sdl->bottomtexture = tc.Get("STONE2");
+                            sdl->bottomtexture = tc.GetID("STONE2");
                         else
                             sdl->bottomtexture = sdl->midtexture;
                     }
@@ -1022,7 +1025,7 @@ void Rend::HWR_CorrectSWTricks()
                     if(sdr->toptexture == 0)
                     {
                         if(sdr->midtexture == 0)
-                            sdr->toptexture = tc.Get("STONE2");
+                            sdr->toptexture = tc.GetID("STONE2");
                         else
                             sdr->toptexture = sdr->midtexture;
                     }
@@ -1033,7 +1036,7 @@ void Rend::HWR_CorrectSWTricks()
                     if(sdl->toptexture == 0)
                     {
                     if(sdl->midtexture == 0)
-                        sdl->toptexture = tc.Get("STONE2");
+                        sdl->toptexture = tc.GetID("STONE2");
                     else
                         sdl->toptexture = sdl->midtexture;
 

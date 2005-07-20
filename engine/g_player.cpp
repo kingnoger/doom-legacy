@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2005 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.38  2005/07/20 20:27:19  smite-meister
+// adv. texture cache
+//
 // Revision 1.37  2005/07/11 16:58:33  smite-meister
 // msecnode_t bug fixed
 //
@@ -83,8 +86,10 @@
 
 #include "n_connection.h"
 
+#include "r_sprite.h"
 #include "wi_stuff.h"
 #include "tables.h"
+#include "z_zone.h"
 
 
 //============================================================
@@ -259,6 +264,7 @@ PlayerInfo::PlayerInfo(const LocalPlayerInfo *p)
   mp = NULL;
   pawn = NULL;
   pov = NULL;
+  hubsavepawn = NULL;
 
   viewz = viewheight = deltaviewheight = 0;
   palette = -1;
@@ -268,7 +274,7 @@ PlayerInfo::PlayerInfo(const LocalPlayerInfo *p)
   Reset(false, true);  // clear score, frags...
 
   cmd.Clear();
-  invTics = invSlot = 0;
+  invTics = invSlot = invPos = 0;
 
   // net stuff
   mNetFlags.set(Ghostable);
@@ -617,4 +623,35 @@ void PlayerInfo::CalcViewHeight()
       psp[ps_flash].sx = psp[ps_weapon].sx;
       psp[ps_flash].sy = psp[ps_weapon].sy;
     }
+}
+
+
+
+
+/// Makes a copy of the pawn (when the player enters a map)
+void PlayerInfo::SavePawn()
+{
+  if (hubsavepawn)
+    delete hubsavepawn;
+
+  if (pawn)
+    {
+      hubsavepawn = new PlayerPawn(*pawn);
+      hubsavepawn->player = NULL; // to avoid conflicts with the real pawn... ok, it's bad design:)
+      hubsavepawn->pres = NULL;
+    }
+  else
+    hubsavepawn = NULL;
+}
+
+
+/// Copies the saved pawn as the actual pawn
+void PlayerInfo::LoadPawn()
+{
+  pawn = new PlayerPawn(*hubsavepawn);
+  pawn->player = this;
+
+  // and a new presentation
+  const mobjinfo_t *info = &mobjinfo[pawn->pinfo->mt];
+  pawn->pres = new spritepres_t(sprnames[states[info->spawnstate].sprite], info, 0);
 }

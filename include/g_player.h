@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.24  2005/07/20 20:27:22  smite-meister
+// adv. texture cache
+//
 // Revision 1.23  2005/07/11 16:58:57  smite-meister
 // msecnode_t bug fixed
 //
@@ -177,6 +180,7 @@ public:
   class PlayerPawn *pawn; ///< the thing that is being controlled by this player (marine, imp, whatever)
   class Actor      *pov;  ///< the POV of the player. usually same as pawn, but can also be a chasecam etc...
 
+  PlayerPawn *hubsavepawn; ///< copy of the pawn made when entering a map within a hub
   //============ Score ============
 
   map<int, int> Frags; ///< mapping from player number to how many times you have fragged him
@@ -223,13 +227,16 @@ public:
   ticcmd_t    cmd;  ///< current state of the player's controls
   int invTics;  ///< When >0, show inventory in HUD
   int invSlot;  ///< Active inventory slot is pawn->inventory[invSlot]
-
+  int invPos;   ///< Position of the active slot on HUD, always 0-6
 
 public:
   PlayerInfo(const LocalPlayerInfo *p = NULL);
 
   int Serialize(class LArchive &a);
   int Unserialize(LArchive &a);
+
+  void SavePawn();
+  void LoadPawn();
 
   bool InventoryResponder(short (*gc)[2], struct event_t *ev);
 

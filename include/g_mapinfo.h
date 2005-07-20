@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2004 by Doom Legacy Team
+// Copyright (C) 2002-2005 by Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,8 +20,8 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
-// Revision 1.10  2005/06/12 16:26:27  smite-meister
-// alpha2 bugfixes
+// Revision 1.11  2005/07/20 20:27:22  smite-meister
+// adv. texture cache
 //
 // Revision 1.9  2004/10/14 19:35:50  smite-meister
 // automap, bbox_t
@@ -115,6 +115,7 @@ public:
 
   int    cluster;    ///< in which cluster does this map belong?
   int    mapnumber;  ///< real map number, used with Teleport_NewMap
+  bool   hub;        ///< same as cluster.hub
 
   string version;     ///< map version string
   string author;      ///< map creator
@@ -160,13 +161,25 @@ public:
   MapInfo();
   ~MapInfo();
 
-  void Ticker(bool hub);
+  /// Ticks the map forward in time.
+  void Ticker();
+
+  /// Inserts a player into the map and activates it if necessary.
   bool Activate(class PlayerInfo *p);
+
+  /// Throws out all players in the map.
   int  EvictPlayers(int next, int ep = 0, bool force = false);
+
+  /// Shuts down the map, throws out the players, deletes the hubsave.
   void Close(int next, int ep = 0, bool force = false);
+
+  /// Saves the map into a hubsave file
   bool HubSave();
+
+  /// Loads a hubsave
   bool HubLoad();
 
+  /// Reads data from a LevelInfo lump.
   char *Read(int lumpnum);
 
   int Serialize(class LArchive &a);

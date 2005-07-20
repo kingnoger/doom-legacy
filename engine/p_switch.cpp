@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2005/07/20 20:27:21  smite-meister
+// adv. texture cache
+//
 // Revision 1.22  2005/06/22 20:44:30  smite-meister
 // alpha3 bugfixes
 //
@@ -228,11 +231,11 @@ void P_InitSwitchList()
 	  if (n > nameset)
 	    continue;
 
-	  temp.tex = tc.Get(ss[i].name1);
+	  temp.tex = tc.GetID(ss[i].name1);
 	  temp.sound = sfx_switchon; // default
 	  switchlist.push_back(temp);
 
-	  temp.tex = tc.Get(ss[i].name2);
+	  temp.tex = tc.GetID(ss[i].name2);
 	  temp.sound = sfx_switchon; // default
 	  switchlist.push_back(temp);
 	}
@@ -245,11 +248,11 @@ void P_InitSwitchList()
       if (sd[i].episode > nameset)
 	continue;
 
-      temp.tex = tc.Get(sd[i].name1);
+      temp.tex = tc.GetID(sd[i].name1);
       temp.sound = sd[i].sound;
       switchlist.push_back(temp);
 
-      temp.tex = tc.Get(sd[i].name2);
+      temp.tex = tc.GetID(sd[i].name2);
       temp.sound = sd[i].sound; // could have different on/off sounds
       switchlist.push_back(temp);
     }

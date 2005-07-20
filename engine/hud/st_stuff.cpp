@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.35  2005/07/20 20:27:22  smite-meister
+// adv. texture cache
+//
 // Revision 1.34  2005/07/05 17:36:43  smite-meister
 // small fixes
 //
@@ -1117,6 +1120,15 @@ void HUD::UpdateWidgets()
         itemuse--;
 
       int n = st_pawn->inventory.size();
+
+      // kind of a HACK
+      if (st_player->invSlot >= n)
+	st_player->invSlot = 0;
+
+      if (st_player->invSlot < st_player->invPos)
+	st_player->invPos = st_player->invSlot;
+
+      st_curpos = st_player->invPos;
       int left = st_player->invSlot - st_curpos; // how many slots are there left of the first visible slot?
       for (i=0; i<7; i++)
         if (i+left < n && st_pawn->inventory[left+i].type != arti_none)

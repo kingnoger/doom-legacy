@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.25  2005/07/20 20:27:22  smite-meister
+// adv. texture cache
+//
 // Revision 1.24  2005/04/17 18:36:34  smite-meister
 // netcode
 //
@@ -372,7 +375,7 @@ void AutoMap::Startup()
 	I_Error("Size of AUTOPAGE (%d bytes) must be a multiple of 320!\n", size);
 
       mapback = new LumpTexture("AUTOPAGE", i, 320, size/320);
-      tc.Insert(mapback);
+      tc.InsertFlat(mapback);
     }
   else
     mapback = NULL;

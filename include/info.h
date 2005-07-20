@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2005/07/20 20:27:22  smite-meister
+// adv. texture cache
+//
 // Revision 1.11  2005/04/01 14:47:45  smite-meister
 // dehacked works
 //
@@ -5824,8 +5827,7 @@ extern char *sprnames[NUMSPRITES+1];
 enum mobjtype_t
 {
   MT_NONE = -1, // like NULL
-  MT_DOOM = 0,
-  MT_PLAYER = MT_DOOM,
+  MT_DOOM = 0, MT_PLAYER = MT_DOOM,
   MT_POSSESSED,
   MT_SHOTGUY,
   MT_VILE,
@@ -5961,10 +5963,10 @@ enum mobjtype_t
   MT_MISC83,
   MT_MISC84,
   MT_MISC85,
-  MT_MISC86,
+  MT_MISC86, MT_DOOM_END = MT_MISC86,
 
-  MT_LEGACY,
-  MT_DEFAULT_THING = MT_LEGACY,
+  // common thing types
+  MT_LEGACY, MT_DEFAULT_THING = MT_LEGACY,
   MT_CHASECAM,
   MT_SPIRIT,
   MT_SMOK,        // test lave/slime damage smoke
@@ -5975,15 +5977,12 @@ enum mobjtype_t
   MT_PLASMA1, //SoM: Hold the place.
   MT_PLASMA2, //SoM: Hold the place.
   MT_CAMERA,  //SoM: SMMU Camera objects.
-  MT_NODE,    //SoM: Level nodes...
-  MT_DOOM_END = MT_NODE,
-
+  MT_NODE, MT_LEGACY_END = MT_NODE, //SoM: Level nodes...
 
   // heretic stuff
   // names that are common with doom have an extra H in them
   // like MT_MISC0 -> MT_HMISC0
-  MT_HERETIC,
-  MT_HPLAYER = MT_HERETIC,
+  MT_HERETIC, MT_HPLAYER = MT_HERETIC,
   MT_HEALINGBOTTLE,
   MT_ITEMSHIELD1,
   MT_ITEMSHIELD2,
@@ -6144,15 +6143,13 @@ enum mobjtype_t
   MT_AMBLSRWIMPY,
   MT_AMBLSRHEFTY,
   MT_SOUNDWIND,
-  MT_SOUNDWATERFALL,
-  MT_HERETIC_END = MT_SOUNDWATERFALL,
+  MT_SOUNDWATERFALL, MT_HERETIC_END = MT_SOUNDWATERFALL,
 
 
   // Hexen
   // names that are common with doom or heretic have an extra X in them
   // like MT_MISC0 -> MT_XMISC0
-  MT_HEXEN,
-  MT_MAPSPOT = MT_HEXEN,
+  MT_HEXEN, MT_MAPSPOT = MT_HEXEN,
   MT_MAPSPOTGRAVITY,
   MT_FIREBALL1,
   MT_ARROW,
@@ -6549,8 +6546,7 @@ enum mobjtype_t
   MT_CENTAUR_MASH,
   MT_KORAX_BOLT,
   MT_BAT_SPAWNER,
-  MT_BAT,
-  MT_HEXEN_END = MT_BAT,
+  MT_BAT, MT_HEXEN_END = MT_BAT,
 
   NUMMOBJTYPES
 };

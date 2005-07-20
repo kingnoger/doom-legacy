@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2005/07/20 20:27:21  smite-meister
+// adv. texture cache
+//
 // Revision 1.16  2005/06/30 18:16:57  smite-meister
 // texture anims fixed
 //
@@ -324,11 +327,23 @@ int P_Read_ANIMATED(int lump)
 	}
 
       t->SetDims();
-      tc.Insert(t);
 
-      // create one slave instance for each frame of animation
-      for (i=1; i<n; i++)
-	tc.Insert(new AnimatedTexture(*t, i));
+      if (a->istexture)
+	{
+	  tc.InsertDoomTex(t);
+
+	  // create one slave instance for each frame of animation
+	  for (i=1; i<n; i++)
+	    tc.InsertDoomTex(new AnimatedTexture(*t, i));
+	}
+      else
+	{
+	  tc.InsertFlat(t);
+
+	  // create one slave instance for each frame of animation
+	  for (i=1; i<n; i++)
+	    tc.InsertFlat(new AnimatedTexture(*t, i));
+	}
 
       count++;
     }
@@ -376,7 +391,6 @@ int P_Read_ANIMDEFS(int lump)
 	  if (temp != 'p' && temp != 'P')
 	    {
 	      // record just ended
-	      state = PS_NONE;
 
 	      n = frames.size();
 	      if (n < 2)
@@ -390,14 +404,28 @@ int P_Read_ANIMDEFS(int lump)
 		t->frames[i] = frames[i];
 
 	      t->SetDims();
-	      tc.Insert(t);
 
-	      // create one slave instance for each frame of animation
-	      for (i=1; i<n; i++)
-		tc.Insert(new AnimatedTexture(*t, i));
+	      if (state == PS_FLAT)
+		{
+		  tc.InsertFlat(t);
+
+		  // create one slave instance for each frame of animation
+		  for (i=1; i<n; i++)
+		    tc.InsertFlat(new AnimatedTexture(*t, i));
+		}
+	      else
+		{
+		  tc.InsertDoomTex(t);
+
+		  // create one slave instance for each frame of animation
+		  for (i=1; i<n; i++)
+		    tc.InsertDoomTex(new AnimatedTexture(*t, i));
+		}
 
 	      count++;
 	      frames.clear();
+
+	      state = PS_NONE;
 	    }
 	  else
 	    {
@@ -455,7 +483,7 @@ int P_Read_ANIMDEFS(int lump)
 	}
       else if (!strcasecmp(word, "texture"))
 	{
-	  base = tc.Get(strupr(name)); // texture number
+	  base = tc.GetNoSubstitute(strupr(name)); // texture number
 	  if (base > 0)
 	    state = PS_TEX;
 	}

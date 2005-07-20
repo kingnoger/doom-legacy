@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.46  2005/07/20 20:27:23  smite-meister
+// adv. texture cache
+//
 // Revision 1.45  2005/06/30 18:16:58  smite-meister
 // texture anims fixed
 //
@@ -257,8 +260,9 @@ static void R_ColormapPatch(patch_t *p, byte *colormap)
 }
 
 
+
 //==================================================================
-//  Textures
+//  Texture
 //==================================================================
 
 Texture::Texture(const char *n)
@@ -286,10 +290,12 @@ void *Texture::operator new(size_t size)
   return Z_Malloc(size, PU_TEXTURE, NULL);
 }
 
+
 void Texture::operator delete(void *mem)
 {
   Z_Free(mem);
 }
+
 
 
 //==================================================================
@@ -329,6 +335,7 @@ byte *LumpTexture::GetColumn(int col)
 {
   return Generate(); // TODO not correct but better than nothing?
 }
+
 
 
 //==================================================================
@@ -417,6 +424,7 @@ byte *PatchTexture::GetData()
 }
 
 
+
 //==================================================================
 //  DoomTexture
 //==================================================================
@@ -434,8 +442,7 @@ DoomTexture::DoomTexture(const maptexture_t *mtex)
   yscale = mtex->yscale ? mtex->yscale << (FRACBITS - 3) : FRACUNIT;
 
   int j = 1;
-  while (j*2 <= width)
-    j <<= 1;
+  for ( ; j*2 <= width; j <<= 1);
   widthmask = j-1;
 }
 
@@ -518,7 +525,13 @@ byte *DoomTexture::Generate()
 
       // FIXME should use patch width here? texture may be wider!
       if (width > SHORT(p->width))
-        I_Error("masked tex too wide\n"); // FIXME TEMP behavior
+	{
+	  CONS_Printf("masked tex '%s' too wide\n", name); // FIXME TEMP behavior
+	  width = SHORT(p->width);
+	  int j = 1;
+	  for ( ; j*2 <= width; j <<= 1);
+	  widthmask = j-1;
+	}
 
       for (i=0; i<width; i++)
         columnofs[i] = LONG(columnofs[i]) + 3; // skip post_t info by default
@@ -618,22 +631,110 @@ Texture *texturecache_t::operator[](unsigned id)
 }
 
 
+
 texturecache_t::texturecache_t(memtag_t tag)
-  : cache_t(tag)
 {
+  tagtype = tag;
+  default_item = NULL;
   texture_ids[0] = NULL; // "no texture" id
 }
+
+
+void texturecache_t::SetDefaultItem(const char *name)
+{
+  if (default_item)
+    CONS_Printf("Texturecache: Replacing default_item!\n");
+
+  default_item = Load(name);
+  if (!default_item)
+    I_Error("Texturecache: New default_item '%s' not found!\n", name);
+  // TODO delete the old default item?
+}
+
 
 
 void texturecache_t::Clear()
 {
-  for (c_iter_t t = c_map.begin(); t != c_map.end(); t++)
-    delete t->second;
+  main.Clear();
+  doomtex.Clear();
+  flat.Clear();
 
-  c_map.clear();
   texture_ids.clear();
   texture_ids[0] = NULL; // "no texture" id
 }
+
+
+
+/// Tries loading a texture on demand from a single lump, deducing the format.
+Texture *texturecache_t::Load(const char *name)
+{
+  int lump = fc.FindNumForName(name);
+
+  if (lump < 0)
+    return NULL;
+
+  // Because Doom datatypes contain no magic numbers, we have to rely on heuristics to deduce the format...
+
+  Texture *t;
+
+  byte data[8];
+  fc.ReadLumpHeader(lump, &data, sizeof(data));
+  int size = fc.LumpLength(lump);
+
+  // first check possible magic numbers!
+  if (!png_sig_cmp(data, 0, sizeof(data)))
+    {
+      // it's a PNG
+      t = new PNGTexture(name, lump);
+    } // then try some common sizes for raw picture lumps
+  else if (size == 320*200)
+    {
+      // Heretic/Hexen fullscreen picture
+      t = new LumpTexture(name, lump, 320, 200);
+    }
+  else if (size == 4)
+    {
+      // God-damn-it! Heretic "F_SKY1" tries to be funny!
+      t = new LumpTexture(name, lump, 2, 2);
+    }
+  else if (data[2] == 0 && data[6] == 0 && data[7] == 0)
+    {
+      // likely a pic_t (the magic number is inadequate)
+      CONS_Printf("A pic_t image '%s' was found, but this format is no longer supported.\n", name); // root 'em out!
+      return NULL;
+    }
+  else
+    {
+      // finally assume a patch_t
+      t = new PatchTexture(name, lump);
+    }
+
+  return t;
+}
+
+
+
+/// inserts a Texture into the given source
+void texturecache_t::Insert(Texture *t, cachesource_t &s)
+{
+  t->id = texture_ids.size(); // First texture gets the id 1, 'cos zero maps to NULL
+  texture_ids[t->id] = t;
+
+  Texture *old = (Texture *)s.Find(t->name);
+
+  if (old)
+    {
+      //CONS_Printf("Texture %s replaced!\n", old->name);
+      // A Texture of that name is already there, so the old Texture
+      // needs to be renamed and reinserted to the map.
+      // Happens when generating animated textures.
+      old->name[0] = '!';
+      s.Insert(old);
+    }
+
+  s.Insert(t);
+}
+
 
 
 void texturecache_t::InitPaletteConversion()
@@ -653,14 +754,101 @@ void texturecache_t::InitPaletteConversion()
 
 
 
+/// Returns pointer to an existing Texture, or tries creating it if nonexistant.
+Texture *texturecache_t::GetPtr(const char *name, texture_class_t mode)
+{
+  // "No texture" marker.
+  if (name[0] == '-')
+    return NULL;
+
+  // TODO unfortunate, could be avoided if we used a non-case-sensitive string comparison functor...
+  char name8[9];
+  strncpy(name8, name, 8);
+  name8[8] = '\0';
+  strupr(name8);
+
+  cacheitem_t *t = main.Find(name8); // always try advanced textures first
+
+  if (!t)
+    {
+      switch (mode)
+	{
+	case TEX_any: // 2D graphics, walls
+	  t = doomtex.Find(name8);
+	  if (!t)
+	    t = flat.Find(name8);
+	  break;
+
+	case TEX_noflat: // sprite frames
+	  t = doomtex.Find(name8);
+	  break;
+
+	case TEX_flat: // floor/ceiling textures
+	  t = flat.Find(name8);
+	  if (!t)
+	    t = doomtex.Find(name8);
+	  break;
+	}
+
+      if (!t)
+	{
+	  // Not found there either, try loading on demand (patches, raw pages):
+	  Texture *temp = Load(name8);
+	  t = temp;
+	  if (temp)
+	    Insert(temp, doomtex);
+	}
+
+      if (!t)
+	{
+	  // Item not found at all.
+	  // Some nonexistant items are asked again and again.
+	  // We use a special cacheitem_t to link their names to the default item.
+	  t = new cacheitem_t(name8);
+	  t->usefulness = -1; // negative usefulness marks them as links
+
+	  main.Insert(t); // insertion to cachesource only, not to id-map
+	}
+    }
+
+  if (t->usefulness < 0)
+    {
+      // a "link" to default_item
+      t->refcount++;
+      t->usefulness--; // negated
+
+      default_item->refcount++;
+      default_item->usefulness++;
+
+      // CONS_Printf("Def. texture used for '%s'\n", name8);
+      return default_item;
+    }
+  else
+    {
+      t->refcount++;
+      t->usefulness++;
+      return reinterpret_cast<Texture *>(t); // should be safe
+    }
+}
+
+
+
+///
+Texture *texturecache_t::GetPtrNum(int n)
+{
+  return GetPtr(fc.FindNameForNum(n));
+}
+
+
+
 // semi-hack for linedeftype 242 and the like, where the
 // "texture name" field can hold a colormap or a transmap name instead.
-int texturecache_t::GetTextureOrColormap(const char *name, int &colmap, bool transmap)
+int texturecache_t::GetTextureOrColormap(const char *name, int &map_num, bool transmap)
 {
   // "NoTexture" marker. No texture, no colormap.
   if (name[0] == '-')
     {
-      colmap = -1;
+      map_num = -1;
       return 0;
     }
 
@@ -677,7 +865,7 @@ int texturecache_t::GetTextureOrColormap(const char *name, int &colmap, bool tra
       if (temp >= 0)
         {
           // it is a trans/colormap lumpname, not a texture
-          colmap = temp;
+          map_num = temp;
           return 0;
         }
 #ifdef HWRENDER
@@ -685,257 +873,255 @@ int texturecache_t::GetTextureOrColormap(const char *name, int &colmap, bool tra
 #endif
 
   // it could be a texture, let's check
-  Texture *t = (Texture *)Cache(name);
+  Texture *t = GetPtr(name, TEX_noflat);
 
+  // FIXME
   if (t == default_item)
     CONS_Printf("Def. texture used for '%s'\n", name);
 
-  colmap = -1;
+  map_num = -1;
   return t->id;
 }
 
 
-static int tex_coercion;
-
-Texture *texturecache_t::GetPtr(const char *name, int coerce)
-{
-  // "NoTexture" marker.
-  if (name[0] == '-')
-    return NULL;
-
-  tex_coercion = coerce;
-
-  // Unfortunate but necessary.
-  // Texture names should be NUL-terminated....
-  // Also, they should be uppercase (e.g. Doom E1M2)
-
-  char name8[9];
-  strncpy(name8, name, 8);
-  name8[8] = '\0';
-  strupr(name8);
-
-  Texture *t = (Texture *)Cache(name8);
-
-  /*
-  if (t == default_item)
-    CONS_Printf("Def. texture used for '%s'\n", name8);
-  */
-
-  return t;
-}
-
-
-Texture *texturecache_t::GetPtrNum(int n)
-{
-  return GetPtr(fc.FindNameForNum(n));
-}
-
-
-void texturecache_t::Insert(Texture *t)
-{
-  t->id = texture_ids.size(); // First texture gets the id 1, 'cos zero maps to NULL
-  texture_ids[t->id] = t;
-
-  c_iter_t i = c_map.find(t->name);
-  if (i != c_map.end())
-    {
-      Texture *old = (Texture *)i->second;
-      //CONS_Printf("Texture %s replaced!\n", old->name);
-      // A Texture of that name is already there, so the old Texture
-      // needs to be renamed and reinserted to the map.
-      // Happens when generating animated textures.
-      old->name[0] = '!';
-      c_map.insert(c_map_t::value_type(old->name, old));
-    }
-
-  c_map.insert(c_map_t::value_type(t->name, t));
-}
 
 
 
-cacheitem_t *texturecache_t::Load(const char *name)
-{
-  int lump = fc.FindNumForName(name);
-
-  if (lump < 0)
-    return NULL;
-
-  // Since there is no texture definition present, we must assume
-  // that the user meant a single-lump texture.
-  // Because Doom datatypes contain no magic numbers, we have to rely on heuristics...
-
-  Texture *t;
-
-  byte data[8];
-  fc.ReadLumpHeader(lump, &data, sizeof(data));
-  int size = fc.LumpLength(lump);
-
-  // first check possible magic numbers!
-  if (!png_sig_cmp(data, 0, sizeof(data)))
-    {
-      // it's a PNG
-      t = new PNGTexture(name, lump);
-    } // then try some common sizes for raw picture lumps
-  else if ((size ==  64*64 || // normal flats
-	    size ==  65*64 || // Damn you, Heretic animated flats!
-	    size == 128*64) && !tex_coercion)   // TODO Some Hexen flats (X_001-X_011) are larger! Why?
-    {
-      // Flat is 64*64 bytes of raw paletted picture data in one lump
-      t = new LumpTexture(name, lump, 64, 64);
-    }
-  else if (size == 320*200)
-    {
-      // Heretic/Hexen fullscreen picture
-      t = new LumpTexture(name, lump, 320, 200);
-    }
-  else if (size == 4)
-    {
-      // God-damn-it! Heretic "F_SKY1" tries to be funny!
-      t = new LumpTexture(name, lump, 2, 2);
-    }
-  else if (data[2] == 0 && data[6] == 0 && data[7] == 0)
-    {
-      // likely a pic_t (the magic number is inadequate)
-      CONS_Printf("A pic_t image '%s' was found, but this format is no longer supported.\n", name); // root 'em out!
-      return default_item;
-    }
-  else
-    {
-      // finally assume a patch_t
-      t = new PatchTexture(name, lump);
-    }
-
-  t->id = texture_ids.size(); // unique id (used instead of pointers)
-  texture_ids[t->id] = t;
-  return t;
-}
-
-
-
-/// Reads the texture definitions from the PNAMES, TEXTURE1 and TEXTURE2 lumps,
-/// constructs the corresponding texture objects and inserts them into the cache.
-
+/// Initializes the texture cache.
+/// First constructs the textures between TX_START and TX_END markers.
+/// Then reads the texture definitions from the PNAMES, TEXTURE1 and TEXTURE2 lumps,
+/// constructs the corresponding texture objects.
+/// Then reads the flats from between F_START and F_END markers.
 int texturecache_t::ReadTextures()
 {
-  int i;
-  char name[9];
-  name[8] = 0; // NUL-terminated
+  int i, lump;
+  int num_textures = 0;
 
-  // Load the patch names from the PNAMES lump
-  struct pnames_t
+  int nwads = fc.Size();
+  // First TX_START
+
+  // later files override earlier ones
+  for (i = nwads-1; i >= 0; i--)
+    {
+      int lump = fc.FindNumForNameFile("TX_START", i, 0);
+      if (lump == -1)
+	continue;
+      else
+        lump++;
+
+      int end = fc.FindNumForNameFile("TX_END", i, 0);
+      if (end == -1)
+	{
+	  CONS_Printf(" TX_END missing in file '%s'.\n", fc.Name(i));
+	  continue; // no TX_END, nothing accepted
+	}
+
+      for ( ; lump < end; lump++)
+	{
+	  const char *name = fc.FindNameForNum(lump); // not always NUL-terminated!
+	  if (main.Find(name))
+	    continue; // already defined
+
+	  byte data[8];
+	  fc.ReadLumpHeader(lump, &data, sizeof(data));
+
+	  Texture *t;
+	  // all these textures must have magic numbers
+	  if (!png_sig_cmp(data, 0, sizeof(data)))
+	    {
+	      // it's a PNG
+	      t = new PNGTexture(name, lump);
+	    }
+	  else
+	    {
+	      CONS_Printf(" Unknown texture format: lump '%8s' in the file '%s'.\n", name, fc.Name(i));
+	      continue;
+	    }
+
+	  Insert(t, main);
+	  num_textures++;
+	}
+    }
+
+
+
+  // then TEXTUREx/PNAMES:
   {
-    Uint32 count;
-    char names[][8]; // list of 8-byte patch names
-  } __attribute__((packed));
+    char name8[9];
+    name8[8] = 0; // NUL-terminated
 
-  int lump = fc.GetNumForName("PNAMES");
-  pnames_t *pnames = (pnames_t *)fc.CacheLumpNum(lump, PU_STATIC);
-  int numpatches = LONG(pnames->count);
-
-  if (devparm)
-    CONS_Printf("PNAMES: lump %d:%d, %d patches\n", lump >> 16, lump & 0xffff, numpatches);
-
-  if (fc.LumpLength(lump) != 4 + 8*numpatches)
-    I_Error("Corrupted PNAMES lump.\n");
-
-  vector<int> patchlookup(numpatches); // mapping from patchnumber to lumpnumber
-
-  for (i=0 ; i<numpatches ; i++)
+    // Load the patch names from the PNAMES lump
+    struct pnames_t
     {
-      strncpy(name, pnames->names[i], 8);
-      patchlookup[i] = fc.FindNumForName(name);
-      if (patchlookup[i] < 0)
-        CONS_Printf("patch '%s' (%d) not found!\n", name, i);
-    }
-  Z_Free(pnames);
+      Uint32 count;
+      char names[][8]; // list of 8-byte patch names
+    } __attribute__((packed));
+
+    lump = fc.GetNumForName("PNAMES");
+    pnames_t *pnames = (pnames_t *)fc.CacheLumpNum(lump, PU_STATIC);
+    int numpatches = LONG(pnames->count);
+
+    if (devparm)
+      CONS_Printf(" PNAMES: lump %d:%d, %d patches\n", lump >> 16, lump & 0xffff, numpatches);
+
+    if (fc.LumpLength(lump) != 4 + 8*numpatches)
+      I_Error("Corrupted PNAMES lump.\n");
+
+    vector<int> patchlookup(numpatches); // mapping from patchnumber to lumpnumber
+
+    for (i=0 ; i<numpatches ; i++)
+      {
+	strncpy(name8, pnames->names[i], 8);
+	patchlookup[i] = fc.FindNumForName(name8);
+	if (patchlookup[i] < 0)
+	  CONS_Printf(" Patch '%s' (%d) not found!\n", name8, i);
+      }
+    Z_Free(pnames);
+
+    // Load the map texture definitions from textures.lmp.
+    // The data is contained in one or two lumps,
+    //  TEXTURE1 for shareware, plus TEXTURE2 for commercial.
+    int  *maptex, *maptex1, *maptex2;
+
+    lump = fc.GetNumForName("TEXTURE1");
+    maptex = maptex1 = (int *)fc.CacheLumpNum(lump, PU_STATIC);
+    int numtextures1 = LONG(*maptex);
+    int maxoff = fc.LumpLength(lump);
+    if (devparm)
+      CONS_Printf(" TEXTURE1: lump %d:%d, %d textures\n", lump >> 16, lump & 0xffff, numtextures1);
+    int *directory = maptex+1;
+
+    int numtextures2, maxoff2;
+    if (fc.FindNumForName ("TEXTURE2") != -1)
+      {
+	lump = fc.GetNumForName("TEXTURE2");
+	maptex2 = (int *)fc.CacheLumpNum(lump, PU_STATIC);
+	numtextures2 = LONG(*maptex2);
+	maxoff2 = fc.LumpLength(lump);
+	if (devparm)
+	  CONS_Printf(" TEXTURE2: lump %d:%d, %d textures\n", lump >> 16, lump & 0xffff, numtextures2);
+      }
+    else
+      {
+	maptex2 = NULL;
+	numtextures2 = 0;
+	maxoff2 = 0;
+      }
+
+    int numtextures = numtextures1 + numtextures2;
+
+    for (i=0 ; i<numtextures ; i++, directory++)
+      {
+	//only during game startup
+	//if (!(i&63))
+	//    CONS_Printf (".");
+
+	if (i == numtextures1)
+	  {
+	    // Start looking in second texture file.
+	    maptex = maptex2;
+	    maxoff = maxoff2;
+	    directory = maptex+1;
+	  }
+
+	// offset to the current texture in TEXTURESn lump
+	int offset = LONG(*directory);
+
+	if (offset > maxoff)
+	  I_Error("LoadTextures: bad texture directory");
+
+	// maptexture describes texture name, size, and
+	// used patches in z order from bottom to top
+	maptexture_t *mtex = (maptexture_t *)((byte *)maptex + offset);
+	// TODO here allow the introduction of advanced textures somehow too! patchcount == 0?
+	DoomTexture *tex = new DoomTexture(mtex);
+
+	mappatch_t *mp = mtex->patches;
+	DoomTexture::texpatch_t *p = tex->patches;
+
+	for (int j=0 ; j < tex->patchcount ; j++, mp++, p++)
+	  {
+	    p->originx = SHORT(mp->originx);
+	    p->originy = SHORT(mp->originy);
+	    p->patchlump = patchlookup[SHORT(mp->patch)];
+	    if (p->patchlump == -1)
+	      I_Error("LoadTextures: Missing patch %d in texture %.8s (%d)\n",
+		      SHORT(mp->patch), mtex->name, i);
+	  }
+
+	Insert(tex, doomtex);
+      }
+
+    Z_Free(maptex1);
+    if (maptex2)
+      Z_Free(maptex2);
+
+    num_textures += numtextures;
+  }
 
 
-  // Load the map texture definitions from textures.lmp.
-  // The data is contained in one or two lumps,
-  //  TEXTURE1 for shareware, plus TEXTURE2 for commercial.
-  int  *maptex, *maptex1, *maptex2;
 
-  lump = fc.GetNumForName("TEXTURE1");
-  maptex = maptex1 = (int *)fc.CacheLumpNum(lump, PU_STATIC);
-  int numtextures1 = LONG(*maptex);
-  int maxoff = fc.LumpLength(lump);
-  if (devparm)
-    CONS_Printf("TEXTURE1: lump %d:%d, %d textures\n", lump >> 16, lump & 0xffff, numtextures1);
-  int *directory = maptex+1;
-
-  int numtextures2, maxoff2;
-  if (fc.FindNumForName ("TEXTURE2") != -1)
+  // then F_START, FF_START
+  for (i = nwads-1; i >= 0; i--)
     {
-      lump = fc.GetNumForName("TEXTURE2");
-      maptex2 = (int *)fc.CacheLumpNum(lump, PU_STATIC);
-      numtextures2 = LONG(*maptex2);
-      maxoff2 = fc.LumpLength(lump);
-      if (devparm)
-	CONS_Printf("TEXTURE2: lump %d:%d, %d textures\n", lump >> 16, lump & 0xffff, numtextures2);
-    }
-  else
-    {
-      maptex2 = NULL;
-      numtextures2 = 0;
-      maxoff2 = 0;
-    }
+      // Only accept flats between F(F)_START and F(F)_END
 
-  int numtextures = numtextures1 + numtextures2;
+      int lump = fc.FindNumForNameFile("F_START", i, 0);
+      if (lump == -1)
+        lump = fc.FindNumForNameFile("FF_START", i, 0); //deutex compatib.
 
+      if (lump == -1)
+	continue; // no flats in this wad
+      else
+        lump++;  // just after S_START
 
-  for (i=0 ; i<numtextures ; i++, directory++)
-    {
-      //only during game startup
-      //if (!(i&63))
-      //    CONS_Printf (".");
+      int end = fc.FindNumForNameFile("F_END", i, 0);
+      if (end == -1)
+        end = fc.FindNumForNameFile("FF_END", i, 0);     //deutex compatib.
 
-      if (i == numtextures1)
-        {
-          // Start looking in second texture file.
-          maptex = maptex2;
-          maxoff = maxoff2;
-          directory = maptex+1;
-        }
+      if (end == -1)
+	{
+	  CONS_Printf(" F_END missing in file '%s'.\n", fc.Name(i));
+	  continue; // no F_END, no flats accepted
+	}
 
-      // offset to the current texture in TEXTURESn lump
-      int offset = LONG(*directory);
+      for ( ; lump < end; lump++)
+	{
+	  LumpTexture *t;
 
-      if (offset > maxoff)
-        I_Error("R_LoadTextures: bad texture directory");
+	  const char *name = fc.FindNameForNum(lump); // not always NUL-terminated!
+	  if (flat.Find(name))
+	    continue; // already defined
 
-      // maptexture describes texture name, size, and
-      // used patches in z order from bottom to top
-      maptexture_t *mtex = (maptexture_t *)((byte *)maptex + offset);
-      DoomTexture *tex = new DoomTexture(mtex);
+	  int size = fc.LumpLength(lump);
+	    
+	  if (size ==  64*64 || // normal flats
+	      size ==  65*64)   // Damn you, Heretic animated flats!
+	    {
+	      // Flat is 64*64 bytes of raw paletted picture data in one lump
+	      t = new LumpTexture(name, lump, 64, 64);
+	    }
+	  else if (size == 128*64) // Some Hexen flats (X_001-X_011) are larger! Why?
+	    {
+	      t = new LumpTexture(name, lump, 128, 64); // TEST
+	    }
+	  else if (size == 128*128)
+	    {
+	      t = new LumpTexture(name, lump, 128, 128); // TEST
+	    }
+	  else
+	    {
+	      if (size != 0) // markers are OK
+		CONS_Printf(" Unknown flat type: lump '%8s' in the file '%s'.\n", name, fc.Name(i));
+	      continue;
+	    }
 
-      mappatch_t *mp = mtex->patches;
-      DoomTexture::texpatch_t *p = tex->patches;
-
-      for (int j=0 ; j < tex->patchcount ; j++, mp++, p++)
-        {
-          p->originx = SHORT(mp->originx);
-          p->originy = SHORT(mp->originy);
-          p->patchlump = patchlookup[SHORT(mp->patch)];
-          if (p->patchlump == -1)
-            I_Error("R_InitTextures: Missing patch %d in texture %.8s (%d)\n",
-                    SHORT(mp->patch), mtex->name, i);
-        }
-
-      Insert(tex);
-    }
-
-  Z_Free(maptex1);
-  if (maptex2)
-    Z_Free(maptex2);
-
-  // this is a HACK for "fixing" a nasty Doom1/2 texture/flat namespace overlap.
-  if (game.mode < gm_heretic)
-    {
-      Insert(new LumpTexture("STEP1", fc.FindNumForName("STEP1"), 64, 64));
-      Insert(new LumpTexture("STEP2", fc.FindNumForName("STEP2"), 64, 64));
+	  Insert(t, flat);
+	  num_textures++;
+	}
     }
 
-  return numtextures;
+  return num_textures;
 }
 
 
@@ -946,7 +1132,8 @@ int texturecache_t::ReadTextures()
 //==================================================================
 
 
-/// lightlevel colormaps from COLORMAP lump
+/// 32 lightlevel colormaps from COLORMAP lump, also called a fadetable
+// FIXME TODO should be map-specific.
 lighttable_t *colormaps;
 
 /// extra boom colormaps
@@ -959,14 +1146,14 @@ static lumplist_t *colormaplumps;
 
 
 
-/// called in R_Init
+/// Called in R_Init, prepares the lightlevel colormaps and Boom extra colormaps.
 void R_InitColormaps()
 {
   // Load in the lightlevel colormaps, now 64k aligned for smokie...
 
   int lump = fc.GetNumForName("COLORMAP");
-  colormaps = (lighttable_t *)Z_MallocAlign(fc.LumpLength(lump), PU_STATIC, 0, 16);
-  fc.ReadLump(lump, colormaps);
+  colormaps = (lighttable_t *)Z_MallocAlign(34*256, PU_STATIC, 0, 16);
+  fc.ReadLumpHeader(lump, colormaps, 34*256);
 
   //SoM: 3/30/2000: Init Boom colormaps.
   R_ClearColormaps();
@@ -975,32 +1162,41 @@ void R_InitColormaps()
   numcolormaplumps = 0;
   colormaplumps = NULL;
 
-  int clump = 0;
   int nwads = fc.Size();
-
-  for (int cfile = 0; cfile < nwads; cfile++, clump = 0)
+  for (int file = 0; file < nwads; file++)
     {
-      int startnum = fc.FindNumForNameFile("C_START", cfile, clump);
-      if (startnum == -1)
+      int start = fc.FindNumForNameFile("C_START", file, 0);
+      if (start == -1)
         continue; // required
 
-      int endnum = fc.FindNumForNameFile("C_END", cfile, clump);
-      if (endnum == -1)
-        I_Error("R_InitColormaps: C_START without C_END\n");
-
-      if ((startnum >> 16) != (endnum >> 16))
-        I_Error("R_InitColormaps: C_START and C_END in different wad files!\n"); // cannot happen...
+      int end = fc.FindNumForNameFile("C_END", file, 0);
+      if (end == -1)
+	{
+	  CONS_Printf("R_InitColormaps: C_START without C_END in file '%s'!\n", fc.Name(file));
+	  continue;
+	}
 
       colormaplumps = (lumplist_t *)realloc(colormaplumps, sizeof(lumplist_t) * (numcolormaplumps + 1));
-      colormaplumps[numcolormaplumps].wadfile = startnum >> 16;
-      colormaplumps[numcolormaplumps].firstlump = (startnum & 0xFFFF) + 1; // after C_START
-      colormaplumps[numcolormaplumps].numlumps = endnum - (startnum + 1);
+      colormaplumps[numcolormaplumps].wadfile = start >> 16;
+      colormaplumps[numcolormaplumps].firstlump = (start & 0xFFFF) + 1; // after C_START
+      colormaplumps[numcolormaplumps].numlumps = end - (start + 1);
       numcolormaplumps++;
     }
-
-  // TODO Hexen maps can have custom lightmaps ("fadetable" MAPINFO command)... just a note.
 }
 
+
+/// Replaces the lighlevel colormaps used by the software renderer
+void R_SetFadetable(const char *name)
+{
+  int lump = fc.FindNumForName(name);
+  if (lump < 0)
+    {
+      CONS_Printf("R_SetFadetable: Fadetable '%s' not found!\n", name);
+      return;
+    }
+
+  fc.ReadLumpHeader(lump, colormaps, 34*256);
+}
 
 
 /// Clears out all extra colormaps.

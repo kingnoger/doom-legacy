@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2005/07/20 20:27:23  smite-meister
+// adv. texture cache
+//
 // Revision 1.19  2005/06/30 18:16:58  smite-meister
 // texture anims fixed
 //
@@ -301,62 +304,89 @@ public:
 
 //===============================================================================
 
+/// Texture priorities.
+enum texture_class_t
+{
+  TEX_any = 0,
+  TEX_noflat,
+  TEX_flat
+};
+
+
 /// \brief Second-level cache for Textures
 ///
 /// There are two ways to add Texture definitions to the cache:
 /// Cache("name") (->Load("name"))creates a texture from a lump (flats...)
 /// Insert(Texture*) inserts a finished texture to cache (anims, doomtextures)
 
-class texturecache_t : public cache_t
+class texturecache_t
 {
 protected:
-  /// generates a Texture from a single data lump
-  cacheitem_t *Load(const char *p);
+  cachesource_t main;     ///< advanced textures, TX_START/TX_END
+  cachesource_t flat;     ///< stuff between F_START/F_END
+  cachesource_t doomtex;  ///< stuff defined in TEXTUREx/PNAMES
 
-  /// mapping from Texture id's to pointers
-  map<unsigned, Texture *> texture_ids;
+  memtag_t      tagtype;      ///< memory tag used for the cached data
+  Texture      *default_item; ///< the default data item
+
+  /// Mapping from Texture id's to pointers.
+  std::map<unsigned, Texture *> texture_ids;
 
   /// sw renderer: colormaps for palette conversions (one for each resource file)
-  vector<byte *> palette_conversion;
+  std::vector<byte *> palette_conversion;
+
+  /// generates a Texture from a single data lump
+  Texture *Load(const char *p);
+
+  /// inserts a Texture into the given source
+  void Insert(Texture *t, cachesource_t &s);
+
 
 public:
   texturecache_t(memtag_t tag);
 
+  /// sets the default Texture
+  void SetDefaultItem(const char *name);
+
   /// empties the cache, deletes all Textures
   void Clear();
 
-  /// insert a special Texture into the cache (animation, DoomTexture...)
-  void Insert(class Texture *t);
+  /// insert a Texture into the flat source
+  inline void InsertFlat(Texture *t) { Insert(t, flat); };
 
-  /// returns the id of an existing Texture, or tries Caching it if nonexistant
-  inline int Get(const char *p)
+  /// insert a Texture into the doomtex source
+  inline void InsertDoomTex(Texture *t) { Insert(t, doomtex); };
+
+  /// Returns pointer to an existing Texture, or tries creating it if nonexistant.
+  Texture *GetPtr(const char *name, texture_class_t mode = TEX_any);
+
+  /// like GetPtr, but takes a lump number instead of a name.
+  Texture *GetPtrNum(int n);
+
+  /// Returns the id of an existing Texture, or tries creating it if nonexistant.
+  inline int GetID(const char *name, texture_class_t mode = TEX_any)
   {
-    Texture *t = GetPtr(p);
+    Texture *t = GetPtr(name, mode);
     return t ? t->id : 0;
   };
 
+  /// For animated textures only
   inline int GetNoSubstitute(const char *p)
   {
-    Texture *t = GetPtr(p);
+    Texture *t = GetPtr(p, TEX_noflat);
     if (t == default_item)
       return 0;
 
     return t ? t->id : 0;
   };
 
-  /// like Get, but returns a pointer
-  Texture *GetPtr(const char *p, int coerce = 0);
-
-  /// like GetPtr, but takes a lump number instead of a name.
-  Texture *GetPtrNum(int n);
-
   /// returns the Texture with the corresponding id
   Texture *operator[](unsigned id);
 
-  /// First checks if the lump is a valid colormap (or transmap). If not, acts like Get.
-  int GetTextureOrColormap(const char *name, int &colmap, bool transmap = false);
+  /// First checks if the lump is a valid colormap (or transmap). If not, acts like GetID.
+  int GetTextureOrColormap(const char *name, int &map_num, bool transmap = false);
 
-  /// reads the PNAMES and TEXTUREn lumps, generates the corresponding Textures
+  /// Reads the TEXTUREn/PNAMES lumps and F_START lists, generates the corresponding Textures
   int ReadTextures();
 
   /// creates the palette conversion colormaps
@@ -378,6 +408,7 @@ void R_ServerInit();
 
 // colormap management
 void R_InitColormaps();
+void R_SetFadetable(const char *name);
 void R_ClearColormaps();
 int  R_ColormapNumForName(const char *name);
 const char *R_ColormapNameForNum(int num);

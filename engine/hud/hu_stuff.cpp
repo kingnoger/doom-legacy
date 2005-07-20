@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.33  2005/07/20 20:27:22  smite-meister
+// adv. texture cache
+//
 // Revision 1.32  2005/07/05 17:36:43  smite-meister
 // small fixes
 //
@@ -646,7 +649,7 @@ void HUD::DrawTips()
 
       if (h->time > 0)
 	{
-	  h->Draw(16, cy);
+	  h->Draw(8, cy);
 	  cy += h->lines * 8;
 	}
       else

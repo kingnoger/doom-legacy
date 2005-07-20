@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.26  2005/07/20 20:27:23  smite-meister
+// adv. texture cache
+//
 // Revision 1.25  2005/06/28 18:11:42  smite-meister
 // fixed menu scaling
 //
@@ -91,6 +94,7 @@
 #include "hardware/hwr_render.h"
 #endif
 
+using namespace std;
 
 byte *current_colormap; // for applying colormaps to Drawn Textures
 

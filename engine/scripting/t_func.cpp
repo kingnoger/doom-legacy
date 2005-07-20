@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.30  2005/07/20 20:27:22  smite-meister
+// adv. texture cache
+//
 // Revision 1.29  2005/07/01 16:45:13  smite-meister
 // FS cameras work
 //
@@ -366,11 +369,36 @@ void SF_ScriptWait()
 
 
 
-    /**************** doom stuff ****************/
-
+/**************** doom stuff ****************/
 void SF_ExitLevel()
 {
-  current_map->ExitMap(NULL, 0, 0); // TODO! lots of ways to exit!
+  // syntax: exitlevel([nextmap, entrypoint, who]) 
+  int ep = 0;
+  int next = 0;
+  Actor *who = NULL; // by default everyone exits
+
+  if (t_argc >= 2)
+    {
+      next = intvalue(t_argv[1]);
+
+      if (t_argc >= 3)
+	{
+	  ep = intvalue(t_argv[2]);
+
+	  if (t_argc >= 4)
+	    {
+	      int n = intvalue(t_argv[3]);
+	      PlayerInfo *p = current_map->FindPlayer(n);
+	      if (!p)
+		p = trigger_player;
+
+	      if (p)
+		who = p->pawn;
+	    }
+	}
+    }
+
+  current_map->ExitMap(who, next, ep);
 }
 
 
@@ -1761,7 +1789,7 @@ void SF_FloorTexture()
   if(t_argc > 1)
     {
       int i = -1;
-      int picnum = tc.Get(t_argv[1].value.s);
+      int picnum = tc.GetID(t_argv[1].value.s, TEX_flat);
 
       // set all sectors with tag
       while ((i = current_map->FindSectorFromTag(tagnum, i)) >= 0)
@@ -1841,7 +1869,7 @@ void SF_CeilingTexture()
   if (t_argc > 1)
     {
       int i = -1;
-      int picnum = tc.Get(t_argv[1].value.s);
+      int picnum = tc.GetID(t_argv[1].value.s, TEX_flat);
 
       // set all sectors with tag
       while ((i = current_map->FindSectorFromTag(tagnum, i)) >= 0)

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2005/07/20 20:27:23  smite-meister
+// adv. texture cache
+//
 // Revision 1.9  2005/06/22 20:44:32  smite-meister
 // alpha3 bugfixes
 //
@@ -439,24 +442,24 @@ bool Parser::ParseCmd(const parsercmd_t *commands, char *base)
 
     case P_ITEM_STR:
       {
+	char *temp = s;
+
 	string& result = *(string *)var;
 	result = "";
-	// get rid of surrounding quotation marks
-	if (*s == '"')
+	bool quoted = false;
+	if (*temp == '"') // handle quotes
 	  {
-	    int end = strlen(s) - 1;
-	    if (s[end] == '"')
-	      {
-		s[end] = '\0';
-		s++;
-	      }
+	    quoted = true;
+	    temp++;
 	  }
-
-	char *temp = s;
+	  
 	while (*temp)
 	  {
-	    // handle quotations with backslash
-	    if (temp[0] == '\\')
+	    char c = *temp;
+
+	    if (c == '"' || (isspace(c) && !quoted)) // handle quotes
+	      break;
+	    else if (c == '\\') // handle escape sequences
 	      {
 		char r = 0;
 		switch (temp[1])
@@ -467,16 +470,14 @@ bool Parser::ParseCmd(const parsercmd_t *commands, char *base)
 		  }
 
 		if (r)
-		  {
-		    result.append(s, temp);
-		    result += r;
-		    s = temp = temp + 2;
-		    continue;
-		  }
+		  result += r;
+		temp += 2;
 	      }
+	    else
+	      result += c;
+
 	    temp++;
 	  }
-	result.append(s, temp);
       }
       break;
 

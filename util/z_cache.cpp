@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2003-2004 by DooM Legacy Team.
+// Copyright (C) 2003-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2005/07/20 20:27:23  smite-meister
+// adv. texture cache
+//
 // Revision 1.9  2004/11/28 18:02:24  smite-meister
 // RPCs finally work!
 //
@@ -53,6 +56,8 @@
 #include "z_cache.h"
 
 
+//=================================================================================
+
 cacheitem_t::cacheitem_t(const char *n)
 {
   strncpy(name, n, 8); // we make a copy so it stays intact as long as this cacheitem lives
@@ -86,7 +91,53 @@ bool cacheitem_t::Release()
 }
 
 
-//==========================================================
+//=================================================================================
+
+/// Lists contents.
+void cachesource_t::Inventory()
+{
+  for (c_iter_t s = c_map.begin(); s != c_map.end(); s++)
+    {
+      cacheitem_t *p = s->second;
+      CONS_Printf("- %s, rc = %d, use = %d\n", p->name, p->refcount, p->usefulness);
+    }
+}
+
+
+/// Erases unused items (refcount == 0) and makes
+/// their data purgable (it _may_ still remain in the filecache)
+int cachesource_t::Cleanup()
+{
+  int k = 0;
+  for (c_iter_t s = c_map.begin(); s != c_map.end(); )
+    {
+      cacheitem_t *p = s->second;
+      c_iter_t t = s++; // first copy s to t, then increment s
+
+      if (p->refcount == 0)
+	{
+	  c_map.erase(t); // erase it from the hash_map
+	  // Once an iterator is erased, it becomes invalid
+	  // and cannot be incremented! Therefore we have both s and t.
+	  delete p; // delete the cacheitem itself
+	  k++;
+	}
+    }
+  return k;
+}
+
+
+/// Erases all cacheitems.
+void cachesource_t::Clear()
+{
+  for (c_iter_t t = c_map.begin(); t != c_map.end(); t++)
+    delete t->second;
+
+  c_map.clear();
+}
+
+//=================================================================================
+
 
 /// Pure virtual, renew. This is a sample implementation.
 /*
@@ -138,51 +189,33 @@ void cache_t::SetDefaultItem(const char *name)
 
 
 
-/// If 'name' is found, creates a new cacheitem and inserts it to the map.
-/// Otherwise creates a link from 'name' to the defaultitem.
-/// Always retuns a valid pointer.
-cacheitem_t *cache_t::CreateItem(const char *name)
-{
-  cacheitem_t *p = Load(name);
-  if (!p)
-    {
-      // TEST some nonexistant items are asked again and again.
-      // We use a special cacheitem_t to link their names to the default item.
-      p = new cacheitem_t(name);
-      p->usefulness = -1; // negative usefulness marks them as links
-    }
-
-  Insert(p);
-  return p;
-}
-
-
-
 /// Checks if item is already in cache. If so, increments refcount and returns it.
-/// If not, tries to cache and convert it. If succesful, returns the item.
-/// If not, returns the defaultitem.
+/// If not, tries to load (and convert) it. If succesful, returns the item.
+/// If not, returns a link to the defaultitem.
 cacheitem_t *cache_t::Cache(const char *name)
 {
-  // NOTE Data used through a cache must not be used anywhere
-  // else, because z_free and z_changetag will cause problems.
-
   cacheitem_t *p;
 
   if (name == NULL)
     p = default_item;
   else
-    { 
-      c_iter_t s = c_map.find(name);
+    {
+      p = source.Find(name);
 
-      if (s == c_map.end())
+      if (!p)
 	{
-	  //CONS_Printf("--- cache miss, %s, %p\n", name, name);
-	  p = CreateItem(name);
-	}
-      else
-	{
-	  //CONS_Printf("+++ cache hit, %s, %p\n", name, name);
-	  p = s->second;
+	  // Not found in source.
+	  p = Load(name);
+	  if (!p)
+	    {
+	      // Item not found at all.
+	      // Some nonexistant items are asked again and again.
+	      // We use a special cacheitem_t to link their names to the default item.
+	      p = new cacheitem_t(name);
+	      p->usefulness = -1; // negative usefulness marks them as links
+	    }
+
+	  source.Insert(p);
 	}
     }
 
@@ -199,8 +232,9 @@ cacheitem_t *cache_t::Cache(const char *name)
 
   p->refcount++;
   p->usefulness++;
-  return p;
+  return p;  
 }
+
 
 
 /// Lists the contents of the cache.
@@ -210,36 +244,11 @@ void cache_t::Inventory()
 
   if (p)
     CONS_Printf("Defitem %s, rc = %d, use = %d\n", p->name, p->refcount, p->usefulness);
- 
-  for (c_iter_t s = c_map.begin(); s != c_map.end(); s++)
-    {
-      p = s->second;
-      CONS_Printf("- %s, rc = %d, use = %d\n", p->name, p->refcount, p->usefulness);
-    }
+
+  source.Inventory();
 }
 
 
-// Erases unused items (refcount == 0) from cache and makes
-// their data purgable (it _may_ still remain in the filecache)
-int cache_t::Cleanup()
-{
-  int k = 0;
-  for (c_iter_t s = c_map.begin(); s != c_map.end(); )
-    {
-      cacheitem_t *p = s->second;
-      c_iter_t t = s++; // first copy s to t, then increment s
-
-      if (p->refcount == 0)
-	{
-	  c_map.erase(t); // erase it from the hash_map
-	  // Once an iterator is erased, it becomes invalid
-	  // and cannot be incremented! Therefore we have both s and t.
-	  delete p; // delete the cacheitem itself
-	  k++;
-	}
-    }
-  return k;
-}
 
 
 /// Recaches and converts every item in cache using their names.
