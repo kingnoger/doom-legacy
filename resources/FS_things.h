@@ -11,12 +11,14 @@ const REVENANT = 5;
 const REVENANTMISL = 6;
 const SMOKE = 7;                   // Revenant fireball trail
 const MANCUBUS = 8;
+const MANCUBUSSHOT = 9;
 const CHAINGUY = 10;
 const IMP = 11;
 const DEMON = 12;
 const SPECTRE = 13;
 const CACODEMON = 14;
 const BARONOFHELL = 15;
+const BARONSHOT = 16;
 const HELLKNIGHT = 17;
 const LOSTSOUL = 18;
 const SPIDERBOSS = 19;
@@ -28,37 +30,34 @@ const KEEN = 24;
 const BOSSBRAIN = 25;
 const BOSSSPIT = 26;
 const BOSSTARGET = 27;
+const SPAWNSHOT = 28;
+const SPAWNFIRE = 29;
+const BARREL = 30;
 const IMPSHOT = 31;
 const CACOSHOT = 32;
 const FLYINGROCKET = 33;
 const FLYINGPLASMA = 34;
 const FLYINGBFG = 35;
 const ARACHPLAZ = 36;
-const MANCUBUSSHOT = 9;
-const BARONSHOT = 16;
-const SPAWNSHOT = 28;
 const PUFF = 37;                   // Bullet puff
 const BLOOD = 38;
 const TFOG = 39;                   // Teleport fog
 const IFOG = 40;                   // Item respawn fog
 const TELEPORTMAN = 41;
 const EXTRABFG = 42;
-const VILEFIRE = 4;
-const SMOKE = 7;
-const SPAWNFIRE = 29;
-const PARTICLE = 145;
+
 const GREENARMOR = 43;
 const BLUEARMOR = 44;
 const HEALTHPOTION = 45;
 const ARMORHELMET = 46;
-const STIMPACK = 53;
-const MEDIKIT = 54;
 const BLUEKEYCARD = 47;
 const REDKEYCARD = 48;
 const YELLOWKEYCARD = 49;
 const YELLOWSKULLKEY = 50;
 const REDSKULLKEY = 51;
 const BLUESKULLKEY = 52;
+const STIMPACK = 53;
+const MEDIKIT = 54;
 const SUPERCHARGE = 55;
 const INVULNERABILITY = 56;
 const BESERKPACK = 57;
@@ -83,7 +82,7 @@ const RLAUNCHER = 75;
 const PLASMAGUN = 76;
 const SHOTGUN = 77;
 const SUPERSHOTGUN = 78;
-const BARREL = 30;
+
 const TALLTECHLAMP = 79;
 const SHORTTECHLAMP = 80;
 const FLOORLAMP = 81;
@@ -106,10 +105,7 @@ const STALAGMITE = 97;
 const TALLTECHPILLAR = 98;
 const CANDLE = 99;
 const CANDELABRA = 100;
-const TREE = 126;
-const BURNINGBARREL = 127;
 const TWITCHCORPSE1 = 101;
-const TWITCHCORPSE2 = 110;
 const HANGINGMAN1 = 102;
 const HANGINGMAN2 = 103;
 const HANGINGMAN3 = 104;
@@ -118,12 +114,7 @@ const HANGINGMAN5 = 106;
 const HANGINGMAN6 = 107;
 const HANGINGMAN7 = 108;
 const HANGINGMAN8 = 109;
-const HANGINGMAN9 = 128;
-const HANGINGMAN10 = 129;
-const HANGINGMAN11 = 130;
-const HANGINGMAN12 = 131;
-const HANGINGMAN13 = 132;
-const HANGINGMAN14 = 133;
+const TWITCHCORPSE2 = 110;
 const DEADCACO = 111;
 const DEADPLAYER = 112;
 const DEADTROOPER = 113;
@@ -134,24 +125,70 @@ const DEADSERGEANT = 117;
 const SLOP = 118;
 const SLOP2 = 119;
 const SKULLPOLE1 = 120;
-const SKULLPOLE2 = 122;
 const BLOODPOOL1 = 121;
+const SKULLPOLE2 = 122;
 const SKULLPILE = 123;
+const DEADCORPSE1 = 124;
+const TWITCHCORPSE3 = 125;
+const TREE = 126;
+const BURNINGBARREL = 127;
+const HANGINGMAN9 = 128;
+const HANGINGMAN10 = 129;
+const HANGINGMAN11 = 130;
+const HANGINGMAN12 = 131;
+const HANGINGMAN13 = 132;
+const HANGINGMAN14 = 133;
 const BLOODPOOL2 = 134;
 const BLOODPOOL3 = 135;
 const BLOODPOOL4 = 136;
-const DEADCORPSE1 = 124;
-const TWITCHCORPSE3 = 125;
-const PUSH = 137;
-const PULL = 138;
-const DOGS = 139;
-const CAMERA = 144;
-const PLASMA1 = 140;
-const PLASMA2 = 141;
-const SCEPTRE = 142;
-const BIBLE = 143;
 
-// Thing flags FIXME
+const PUSH = 142;
+const PULL = 143;
+const CAMERA = 147;
+const NODE = 148;
+
+const HERETIC_THINGS = 149; // Heretic things start here
+const HEXEN_THINGS = 309;   // Hexen things start here
+
+
+// Property constants, for use with the set/getobjproperty() functions
+const RADIUS = 0;
+const HEIGHT = 1;
+const MASS = 2;
+const HEALTH = 3;
+const DAMAGE = 4;
+const SPEED = 5;
+const PAINCHANCE = 6;
+const REACTIONTIME = 7;
+const SPAWNSTATE = 8;
+const SEESTATE = 9;
+const MELEESTATE = 10;
+const MISSILESTATE = 11;
+const PAINSTATE = 12;
+const DEATHSTATE = 13;
+const XDEATHSTATE = 14;
+const CRASHSTATE = 15;
+const RAISESTATE  = 16;
+const SEESOUND = 17;
+const ACTIVESOUND = 18;
+const ATTACKSOUND = 19;
+const PAINSOUND = 20;
+const DEATHSOUND = 21;
+
+
+// State constants, for use with the objstate() function
+const ST_SPAWNSTATE = 0;
+const ST_SEESTATE = 1;
+const ST_MELEESTATE = 2;
+const ST_MISSILESTATE = 3;
+const ST_PAINSTATE = 4;
+const ST_DEATHSTATE = 5;
+const ST_XDEATHSTATE = 6;
+const ST_CRASHSTATE = 7;
+const ST_RAISESTATE = 8;
+
+
+// Thing flags (objflag)
 const MF_NOSECTOR = 0;
 const MF_NOBLOCKMAP = 1;
 const MF_SOLID = 2;
@@ -171,7 +208,7 @@ const MF_SHADOW = 14;
 const MF_ALTSHADOW = 15;
 const MF_NOBLOOD = 16;
 const MF_SPAWNCEILING = 17;
-const MF_SPAWNFLOAT = 18;
+const MF_SPAWNFLOAT = 18;      // Spawn at random z
 const MF_NOTDMATCH = 19;
 const MF_NORESPAWN = 20;
 const MF_COUNTKILL = 21;
@@ -181,6 +218,77 @@ const MF_DROPPED = 24;
 const MF_MISSILE = 25;
 const MF_CORPSE = 26;
 
+
+// Heretic thing flags (objflag2)
+const MF2_LOGRAV = 0;          // Alternate gravity setting
+const MF2_WINDTHRUST = 1;      // Gets pushed around by the wind specials
+const MF2_FLOORBOUNCE = 2;     // Bounces off the floor
+const MF2_SLIDE = 3;           // Slides against walls
+const MF2_PUSHABLE = 4;        // Can be pushed by other moving mobjs
+const MF2_CANNOTPUSH = 5;      // Cannot push other pushable mobjs
+const MF2_FLOATBOB = 6;        // Use float bobbing z movement
+const MF2_THRUGHOST = 7;       // Missile will pass through ghosts
+const MF2_RIP = 8;             // Missile rips through solid targets
+const MF2_PASSMOBJ = 9;        // Enable z block checking
+const MF2_NOTELEPORT = 10;     // Does not teleport
+const MF2_NONSHOOTABLE = 11;
+const MF2_INVULNERABLE = 12;
+const MF2_DORMANT = 13;
+const MF2_CANTLEAVEFLOORPIC = 14;
+const MF2_BOSS = 15;           // Mobj is a major boss
+const MF2_SEEKERMISSILE = 16;
+const MF2_REFLECTIVE = 17;
+const MF2_FOOTCLIP = 18;       // If feet are allowed to be clipped
+const MF2_DONTDRAW = 19;       // Don't generate a vissprite
+const MF2_FIREDAMAGE = 20;     // Does fire damage
+const MF2_ICEDAMAGE = 21;
+const MF2_NODMGTHRUST = 22;    // Does not thrust target when damaging
+const MF2_TELESTOMP = 23;      // Mobj can telefrag another
+// 4 free bits here
+const MF2_IMPACT = 28;         // Can activate SPAC_IMPACT
+const MF2_PUSHWALL = 29;       // Can activate SPAC_PUSH
+const MF2_MCROSS = 30;         // Can activate SPAC_MCROSS
+const MF2_PCROSS = 31;         // Can activate SPAC_PCROSS
+
+
+// Extra flags
+const MFE_ONGROUND = 0;         // The mobj stands on solid floor (not on another mobj or in air)
+const MFE_ONMOBJ = 1;           // Mobj is resting on top of another mobj
+const MFE_JUSTHITFLOOR = 2;     // The mobj just hit the floor while falling, this is cleared on next frame
+const MFE_TOUCHWATER = 3;       // The mobj stands in a sector with water, and touches the surface
+const MFE_UNDERWATER = 4;       // The mobj stands in a sector with water, and his waist is BELOW the water surface
+const MFE_SWIMMING = 5;         // Set by P_MovePlayer() to disable gravity add in P_MobjThinker()
+const MFE_FLY = 6;              // Fly mode is active
+const MFE_INFLOAT = 7;
+const MFE_SKULLFLY = 8;
+const MFE_BLASTED = 9;
+const MFE_JUSTHIT = 10;
+const MFE_JUSTATTACKED = 11;
+const MFE_IGNOREPLAYER = 12;    // TODO "Friendly"; the mobj ignores players
+
+
+// Player property types
+const PROP_SPEED = 0;
+const PROP_JUMPHEIGHT = 1;
+const PROP_LOCKED = 2;
+
+
+// Line flags
+const ML_BLOCKING = 0;        // Solid, blocks things
+const ML_BLOCKMONSTERS = 1;   // Blocks monsters
+const ML_TWOSIDED = 2;        // Is two sided
+const ML_DONTPEGTOP = 3;      // Is upper-unpegged
+const ML_DONTPEGBOTTOM = 4;   // Is lower-unpegged
+const ML_SECRET = 5;          // Is secret
+const ML_SOUNDBLOCK = 6;      // Blocks sound
+const ML_DONTDRAW = 7;        // Don't draw on the automap at all.
+const ML_MAPPED = 8;          // Set if already seen, thus drawn in automap.
+const ML_REPEAT_SPECIAL = 9;  // Special is repeatable
+// TODO SPAC takes 3 bits here 
+const ML_ALLTRIGGER = 13;     // If flag is set, anything can trigger the line.
+
+
+// Corona or dynamic light numbers for use with setcorona
 const PLASMA_L = 1;
 const PLASMAEXP_L = 2;
 const ROCKET_L = 3;
@@ -201,15 +309,27 @@ const CANDLEABRE_L = 17;
 const REDBALL_L = 18;
 const GREENBALL_L = 19;
 const ROCKET2_L = 20;
+const FX03_L = 21;  // Shows up for sprite no. 224
+const FX17_L = 22;  // Shows up for sprite no. 204
+const FX00_L = 23;  // Shows up for sprite no. 210
+const FX08_L = 24;  // 220
+const FX04_L = 25;  // 219
+const FX02_L = 26;  // 207
+const WTRH_L = 27;  // 182
+const SRTC_L = 28;  // 171
+const CHDL_L = 29;  // 170
+const KFR1_L = 30;  // 177
 
+// Setcorona constants
 const CORONA_TYPE = 0;
 const CORONA_OFFX = 1;
 const CORONA_OFFY = 2;
 const CORONA_COLOR = 3;
 const CORONA_SIZE = 4;
-
 const LIGHT_COLOR = 5;
 const LIGHT_RADIUS = 6;
+
+// Corona sprites, for use with the CORONA_TYPE function
 const UNDEFINED_SPR = 0;
 const CORONA_SPR = 1;
 const DYNLIGHT_SPR = 2;
