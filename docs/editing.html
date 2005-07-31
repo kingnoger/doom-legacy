@@ -14,6 +14,7 @@
 <body>
 
 <h1>Doom Legacy Map Author's Reference</h1>
+<h1 class="tagline">Version 2.0</h1>
 
 <h2>Contents</h2>
 
@@ -69,7 +70,23 @@ in Doom format and others in Hexen format.
 </p>
 
 <p>
-Boom and Heretic maps basically follow the Doom map format, only some
+The only difference between Doom and Hexen map formats is in the
+THINGS and LINEDEFS lumps, which have a different structure and
+content in the Hexen format.<br/>
+Legacy includes a utility console command
+for converting Doom-format maps to Hexen format:
+<div class="example">
+convertmap &lt;maplumpname&gt;
+</div>
+The converted lumps are written on disk with the names
+&lt;maplumpname&gt;_THINGS.lmp and
+&lt;maplumpname&gt;_LINEDEFS.lmp.<br/>
+You can then replace the original THINGS and LINEDEFS lumps in the WAD
+with the converted versions using almost any WAD editor.
+</p>
+
+<p>
+Boom and Heretic maps follow the Doom map format, only some
 THING and LINEDEF numbers have new meanings. Legacy's default
 interpretation of the THING and LINEDEF numbers depends on the IWAD
 used.
@@ -387,8 +404,8 @@ Doom source ports introducing their own, often conflicting, special THING types.
 
 <p>
 Legacy tries to honor the most common "new" thing types, especially
-those introduced by BOOM and SMMU.
-<!-- TODO skyboxes, teamstarts, sound sequences  (ambient/local/sector action) 4000-7999 -->
+those introduced by Boom and SMMU.
+<!-- TODO skyboxes (ZDoom uses 9080, 9081, 9082), teamstarts, sound sequences  (ambient/local/sector action) 4000-7999 -->
 </p>
 
 <table class="def">
@@ -398,7 +415,7 @@ those introduced by BOOM and SMMU.
 </tr>
 
 <tr><td>5001, 5002</td>
-<td>Point push and pull effects (BOOM)</td>
+<td>Point push and pull effects (Boom)</td>
 </tr>
 
 <tr><td>5003</td>
@@ -428,6 +445,47 @@ those introduced by BOOM and SMMU.
 <hr />
 <h2><a name="linedef">New LINEDEF types</a></h2>
 
+<p>
+Legacy supports all Boom linedef types. For the details, see
+the <a href="boomref.html">Boom reference</a>.<br/>
+Additionally, we have introduced a number of our own additions to the
+Doom linedef system.
+</p>
+
+<p>
+TODO how these are used in Hexen mode
+</p>
+
+<h3>FraggleScript triggers</h3>
+
+<table class="def">
+<tr><th>LINEDEF type</th><th>effect</th></tr>
+<tr><td>272</td>
+<td>Start FS script (tagnumber), WR
+</td></tr>
+<tr><td>273</td>
+<td>Start FS script (tagnumber), WR, 1-sided
+</td></tr>
+<tr><td>274</td>
+<td>Start FS script (tagnumber), W1
+</td></tr>
+<tr><td>275</td>
+<td>Start FS script (tagnumber), W1, 1-sided
+</td></tr>
+<tr><td>276</td>
+<td>Start FS script (tagnumber), SR
+</td></tr>
+<tr><td>277</td>
+<td>Start FS script (tagnumber), S1
+</td></tr>
+<tr><td>278</td>
+<td>Start FS script (tagnumber), GR
+</td></tr>
+<tr><td>279</td>
+<td>Start FS script (tagnumber), G1
+</td></tr>
+</table>
+
 
 <h3>Visual effects</h3>
 
@@ -435,7 +493,7 @@ those introduced by BOOM and SMMU.
 <tr><th>LINEDEF type</th><th>effect</th></tr>
 
 <tr><td>280</td>
-<td>
+<td><b>Swimmable Boom water:</b><br/>
 <p>
 This type works like Boom's 242 type but with major differences. 280's
 water is swimmable (using the Legacy swimming code), and it operates
@@ -454,14 +512,14 @@ have that lightlevel.
 <p>
 280 also puts colormaps in the targeted sectors, based on the
 upper/lower/middle textures.
-NOTE: 280 will also create a fake ceiling if the controll ceiling is
+NOTE: 280 will also create a fake ceiling if the control ceiling is
 lower than the target ceiling (this is usually not desired).
 </p>
 </td></tr>
 
 
 <tr><td>282</td>
-<td>
+<td><b>Easy colormap effect:</b><br/>
 This type sets the colormaps of all tagged sectors as described
 below, without changing the floor/ceiling or light values. This is
 nice for putting colored lighting in many different sectors of
@@ -487,15 +545,17 @@ color will be reached. (not yet supported in hardware mode)
 (not yet supported in hardware mode)
 </td></tr>
 </table>
-
 </td></tr>
 
 
 <tr><td>283</td>
-<td>
-This type will render what is best discribed as a "sheet" over the
-linedef. This can be used to make a better fog effect by patching up
-the "holes" in fog sectors. Because you usually will not want this
+<td><b>Fog sheet:</b><br/>
+The middle texture will be rendered as if fully
+transparent, only applying the relevant colormap to anything that is
+seen through it.
+This can be used to make a better fog effect by applying it to the
+linedefs connecting sectors with different &quot;fogginess&quot;.
+Because you usually will not want this
 effect on both sides of the line, this linedef will only effect sides
 with a middle texture.
 </td></tr>
@@ -508,44 +568,57 @@ These linedefs each apply a different translucency map to the middle
 texture. The corresponding <a href="#transmap">translucency maps</a> are
 stored in <a href="#legacy_transmaps">legacy.wad</a>.<br/>
 <br/>
-284 - Brightens everything behind the line. Turns things kinda green though<br/>
-285 - Less brightness with allot less green.<br/>
-286 - Darkens a little with no green tint.<br/>
-287 - Brightens but with no green tint.<br/>
-288 - Selective translucency. Only certain colors are translucent.<br/>
+284 - TRANSMED: Brightens everything behind the line. Turns things kinda green though.<br/>
+285 - TRANSMOR: Less brightness with a lot less green.<br/>
+286 - TRANSHI: Darkens a little with no green tint.<br/>
+287 - TRANSFIR: Brightens but with no green tint.<br/>
+288 - TRANSFX1: Selective translucency. Only certain colors are translucent.<br/>
 </td></tr>
 </table>
 
 
 
-<h3>Fake floors</h3>
+<h3>Fake floors, aka 3D floors</h3>
 
 <p>
-Also known as 3D floors, these are one of Doom Legacy's most
-interesting features. Each sector can contain multiple fake floors.
+These are one of Doom Legacy's most interesting features.
+Despite the name, they are quite real parts of the map geometry.
+Each sector can contain multiple fake floors.
 A fake floor is defined by its bottom and top heights, the horizontal
 dimensions of the sector it is in, and its type.
 The volume inside the fake floor can be filled with solid, swimmable
 water, fog etc.
 </p>
+<p>
+A fake floor is created using a <b>control sector</b>.
+It is (usually) a simple small triangular sector which is not connected to
+the rest of the map. One of the linedefs surrounding the control
+sector is then tagged and given a specific type from the list below.
+This causes all sectors equipped with the same tag to contain a fake
+floor which will conform to the shape of the sector it is in.
+</p>
+<p>
+The bottom and top heights of the fake floor are determined by the
+floor and ceiling heights of the control sector. Likewise,
+The bottom and top textures of the fake floor are the floor and
+ceiling textures of the control sector.
+The middle texture of the linedef creating the fake floor is used 
+for the texture along the sides.
+Furthermore, the lightlevel and colormap <i>under</i> the fake floor
+correspond to the lightlevel and colormap of the control sector.
+Note that the shape of the control sector has no effect on the fake floor.
+</p>
 
 <table class="def">
 <tr><th>linedef type</th><th>effect</th></tr>
-
 <tr><td>281</td>
 <td>
-Creates a solid opaque fake floor in all tagged sectors. The block
-will conform to the shape of the target sector(s) thus creating a 3D
-floor. The ceilingheight and ceiling texture are used for the top of
-this block, the floorheight/texture are used for the bottom, and the
-middletexture of the line is used for the texture along the sides. The
-lightlevel and colormap under the 3D floor is changed to the
-lightlevel and colormap of the control sector.
+Solid opaque 3D floor.
 </td></tr>
 
 <tr><td>289</td>
 <td>
-Like 281 except it does not affect the light below it.
+Like 281 except it does not change the lighting conditions below it.
 </td></tr>
 
 <tr><td>300</td>
@@ -570,12 +643,12 @@ Volumetric fog.
 
 <tr><td>303</td>
 <td>
-Light effect???
+Light effect TODO
 </td></tr>
 
 <tr><td>305</td>
 <td>
-Double light effect?
+Double light effect TODO
 </td></tr>
 
 </table>
@@ -775,7 +848,7 @@ simple will help reduce rendering times.
 <p>
 Any and all of the sprites, patches, textures and flats in the IWAD can be replaced
 using PWADs. In addition to the patch and flat formats, you can also use
-the PNG and (soon, TODO) JPEG formats for the graphics. In the
+the <b>PNG</b> and (soon, TODO) <b>JPEG</b> formats for the graphics. In the
 following, we use the word "texture" for all graphics, not just the
 ones defined in the TEXTUREx lumps.
 </p>
@@ -792,7 +865,7 @@ texture namespace overlaps in the original IWADs.
 
 <p>
 These are single-lump textures which must have magic numbers and reside
-between TX_START and TX_END markers. Currently Legacy supports just
+between <b>TX_START</b> and <b>TX_END</b> markers. Currently Legacy supports just
 the PNG format here. TODO JPEG
 </p>
 
@@ -822,7 +895,8 @@ format. If zero, scale is 1.</td></tr>
 
 <p>
 Flats are raw paletted textures stored in a single lump. They contain no
-magic numbers and hence have to reside between the F_START and F_END
+magic numbers and hence have to reside between the <b>F_START</b> and
+<b>F_END</b>
 (or FF_START and FF_END) markers. The supported flat sizes are 64*64,
 128*64 and 128*128. Flats cannot be used as parts of a sprite.
 </p>
@@ -831,8 +905,8 @@ magic numbers and hence have to reside between the F_START and F_END
 <h3>Sprites</h3>
 
 <p>
-All the sprite replacement lumps should be between the S_START and
-S_END (or SS_START and SS_END) markers.
+All the sprite replacement lumps should be between the <b>S_START</b> and
+<b>S_END</b> (or SS_START and SS_END) markers.
 The marker lumps are not always necessary, but will make the sprite
 loading faster.
 Even more importantly, they prevent nasty errors stemming from the
