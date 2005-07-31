@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2005/07/31 14:50:25  smite-meister
+// thing spawning fix
+//
 // Revision 1.17  2005/06/05 19:32:27  smite-meister
 // unsigned map structures
 //
@@ -334,6 +337,8 @@ public:
     lighting_special,
   };
   bool Active(special_e t);
+
+  void SetFloorType(const char *floorpic);
 };
 
 

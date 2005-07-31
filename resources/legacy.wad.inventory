@@ -7,8 +7,6 @@ MAPINFO_Heretic.txt	MI_HTIC
 SNDINFO.txt		SNDINFO
 SNDSEQ.txt		SNDSEQ
 FS_things.h		THINGS.H
-DEF_texture.png		DEF_TEX
-DEF_sound.lmp		DEF_SND
 ENDOOM.lmp  		ENDOOM
 XDOOM.lmp		XDOOM
 XHERETIC.lmp		XHERETIC
@@ -20,11 +18,14 @@ TRANSMOR.lmp		TRANSMOR
 TRANSHI.lmp 		TRANSHI
 TRANSFX1.lmp		TRANSFX1
 TRANSMED.lmp		TRANSMED
+DEF_sound.lmp		DEF_SND
 DSOUCH.lmp  		DSOUCH
 DSJUMP.lmp  		DSJUMP
 DSFLOUSH.lmp		DSFLOUSH
 DSGLOOP.lmp 		DSGLOOP
 DSSPLASH.lmp		DSSPLASH
+-		TX_START
+DEF_texture.png		DEF_TEX
 CON_background.png	CONSBACK
 CON_left.png		CBLEFT
 CON_right.png		CBRIGHT
@@ -35,6 +36,7 @@ SBO_ammo_clip.png	SBOAMMO1
 SBO_ammo_shell.png	SBOAMMO2
 SBO_ammo_cell.png	SBOAMMO3
 SBO_ammo_rocket.png	SBOAMMO4
+-		TX_END
 -		SS_START
 BLUDA0.lmp  		BLUDA0
 BLUDB0.lmp  		BLUDB0

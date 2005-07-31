@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2005/07/31 14:50:25  smite-meister
+// thing spawning fix
+//
 // Revision 1.12  2005/07/20 20:27:22  smite-meister
 // adv. texture cache
 //
@@ -5969,15 +5972,17 @@ enum mobjtype_t
   MT_LEGACY, MT_DEFAULT_THING = MT_LEGACY,
   MT_CHASECAM,
   MT_SPIRIT,
-  MT_SMOK,        // test lave/slime damage smoke
-  MT_SPLASH,      // test water splash
-  MT_PUSH,    //SoM: 3/8/2000: controls push source
-  MT_PULL,    //SoM: 3/8/2000: controls pull source
-  MT_DOGS,    //SoM: ToDo!
+  MT_SMOK,    // lave/slime damage smoke
+  MT_SPLASH,  // water splash
+  MT_PUSH,    // Boom point push source
+  MT_PULL,    // Boom point pull source
+  MT_DOGS,    // MBF helper dogs... unimplemented
   MT_PLASMA1, //SoM: Hold the place.
-  MT_PLASMA2, //SoM: Hold the place.
-  MT_CAMERA,  //SoM: SMMU Camera objects.
-  MT_NODE, MT_LEGACY_END = MT_NODE, //SoM: Level nodes...
+  MT_PLASMA2,  MT_LEGACY_END = MT_PLASMA2, //SoM: Hold the place.
+
+  // common things that are always spawned, regardless of flags
+  MT_LEGACY_S, MT_CAMERA = MT_LEGACY_S,  // SMMU camera object
+  MT_NODE, MT_LEGACY_S_END = MT_NODE,    // level nodes
 
   // heretic stuff
   // names that are common with doom have an extra H in them

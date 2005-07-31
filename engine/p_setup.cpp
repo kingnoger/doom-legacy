@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.62  2005/07/31 14:50:24  smite-meister
+// thing spawning fix
+//
 // Revision 1.61  2005/07/20 20:27:21  smite-meister
 // adv. texture cache
 //
@@ -323,11 +326,9 @@ void Map::LoadSectors1(int lump)
 }
 
 
-floortype_t P_GetFloorType(const char *pic);
 
 void Map::LoadSectors2(int lump)
 {
-  extern float normal_friction;
   byte *data = (byte *)fc.CacheLumpNum(lump, PU_STATIC);
 
   mapsector_t *ms = (mapsector_t *)data;
@@ -336,8 +337,6 @@ void Map::LoadSectors2(int lump)
     {
       ss->floorheight = SHORT(ms->floorheight)<<FRACBITS;
       ss->ceilingheight = SHORT(ms->ceilingheight)<<FRACBITS;
-
-      ss->floortype = P_GetFloorType(ms->floorpic);
 
       ss->floorpic = tc.GetID(ms->floorpic, TEX_flat);
       ss->ceilingpic = tc.GetID(ms->ceilingpic, TEX_flat);
@@ -375,9 +374,9 @@ void Map::LoadSectors2(int lump)
       ss->lineoutLength = -1.0;
       // ----- end special tricks -----
 
-      // TEST
-      ss->friction = normal_friction;
-      ss->movefactor = 1.0f;
+      // set floortype-dependent attributes
+      ss->SetFloorType(ms->floorpic);
+
       ss->gravity = 1.0f;
       ss->special = SHORT(ms->special);
     }
@@ -428,6 +427,7 @@ void Map::LoadThings(int lump)
     nummapthings = fc.LumpLength(lump)/sizeof(doom_mapthing_t);
 
   mapthings    = (mapthing_t *)Z_Malloc(nummapthings*sizeof(mapthing_t), PU_LEVEL, NULL);
+  // this memset is crucial, it initializes the mapthings to all zeroes.
   memset(mapthings, 0, nummapthings*sizeof(mapthing_t));
 
   NumPolyobjs  = 0;
@@ -517,23 +517,14 @@ void Map::LoadThings(int lump)
         }
       else
         {
-          //t->tid = 0;
           t->x = SHORT(mt->x);
           t->y = SHORT(mt->y);
-          //t->z = 0;
           t->angle = SHORT(mt->angle);
           ednum    = SHORT(mt->type);
           t->flags = SHORT(mt->flags);
-
-	  /*
-          t->special = 0;
-          for (int j=0; j<5; j++)
-            t->args[j] = 0;
-	  */
           mt++;
         }
-      t->mobj = NULL;
-      int orig_ednum = ednum;
+
 
       // convert editor number to mobjtype_t number right now
       if (!ednum)
@@ -568,13 +559,6 @@ void Map::LoadThings(int lump)
           continue;
         }
 
-      // cameras
-      if (ednum == 5003)
-	{
-	  SpawnActor(new Camera(t));
-	  continue;
-	}
-
       // common polyobjects
 #define PO_BASE 9300-3000 // currently ZDoom compatible
       if (ednum == PO_BASE+PO_ANCHOR_TYPE || ednum == PO_BASE+PO_SPAWN_TYPE || ednum == PO_BASE+PO_SPAWNCRUSH_TYPE)
@@ -586,8 +570,20 @@ void Map::LoadThings(int lump)
 	  continue;
 	}
 
+      // cameras etc.
+      for (n = MT_LEGACY_S; n <= MT_LEGACY_S_END; n++)
+        if (ednum == mobjinfo[n].doomednum)
+	  {
+	    t->type = mobjtype_t(n);
+	    break;
+	  }
+
+      if (t->type)
+	continue; // was found
+
       //======== then game-specific things not affected by spawning flags ========
 
+      int orig_ednum = ednum;
       int low = 0;
       int high = 0;
 
@@ -678,7 +674,7 @@ void Map::LoadThings(int lump)
 	    break;
 	  }
 
-      if (n <= MT_LEGACY_END)
+      if (t->type)
 	continue; // was found
 
       //======== finally game-specific things affected by spawning flags ========
@@ -690,7 +686,7 @@ void Map::LoadThings(int lump)
 	    break;
 	  }
 
-      if (n > high)
+      if (!t->type)
 	CONS_Printf("\2Map::LoadThings: Unknown type %d at (%d, %d)\n", orig_ednum, t->x, t->y);
     }
 

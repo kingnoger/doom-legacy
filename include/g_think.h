@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2003 by DooM Legacy Team.
+// Copyright (C) 2002-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,11 +17,11 @@
 //
 //
 // $Log$
+// Revision 1.12  2005/07/31 14:50:25  smite-meister
+// thing spawning fix
+//
 // Revision 1.11  2004/10/16 12:43:49  smite-meister
 // iteration
-//
-// Revision 1.10  2004/08/12 18:30:29  smite-meister
-// cleaned startup
 //
 // Revision 1.9  2004/04/25 16:26:51  smite-meister
 // Doxygen
@@ -34,9 +34,6 @@
 //
 // Revision 1.6  2003/05/30 13:34:49  smite-meister
 // Cleanup, HUD improved, serialization
-//
-// Revision 1.5  2003/04/04 00:01:57  smite-meister
-// bugfixes, Hexen HUD
 //
 // Revision 1.4  2003/03/15 20:07:21  smite-meister
 // Initial Hexen compatibility!
@@ -200,7 +197,7 @@ public:
   }
 
   /// the map where the Thinker is situated
-  Map *mp;
+  class Map *mp;
 
   virtual ~Thinker();
 

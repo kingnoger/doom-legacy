@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2005/07/31 14:50:24  smite-meister
+// thing spawning fix
+//
 // Revision 1.17  2005/07/20 20:27:21  smite-meister
 // adv. texture cache
 //
@@ -158,14 +161,32 @@ ftypes[] =
 };
 
 
-// Ohhhh... This sucks so much... FIXME
-floortype_t P_GetFloorType(const char *pic)
+/// Sets some floortype-dependent attributes depending on the floor texture.
+void sector_t::SetFloorType(const char *pic)
 {
+  // Ohhhh... This sucks so much... FIXME, TERRAIN lump?
   for (int i=0; i<10; i++)
     if (!strncasecmp(pic, ftypes[i].name, 8))
-      return ftypes[i].type;
+      {
+	floortype = ftypes[i].type;
+	break;
+      }
 
-  return FLOOR_SOLID;
+  extern float normal_friction;
+  const float friction_low = 0.973f; // 0xf900
+
+  switch (floortype)
+    {
+    case FLOOR_ICE:
+      friction = friction_low;
+      movefactor = 0.5f;
+      break;
+
+    default:
+      friction = normal_friction;
+      movefactor = 1.0f;
+      break;
+    }
 }
 
 

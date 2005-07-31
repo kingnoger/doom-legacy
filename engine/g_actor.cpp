@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.42  2005/07/31 14:50:24  smite-meister
+// thing spawning fix
+//
 // Revision 1.41  2005/07/11 16:58:32  smite-meister
 // msecnode_t bug fixed
 //
@@ -583,22 +586,19 @@ void Actor::XYMovement()
 }
 
 
-// friction on the xy plane
+const float friction_underwater = 0.75 * normal_friction;
 
-#define STOPSPEED            (0x1000/NEWTICRATERATIO)
-#define FRICTION_LOW          0xf900  // 0.973
-const float friction_fly = 0.918f;
-#define FRICTION_FLY          0xeb00  // 0.918
-#define FRICTION              0xe800  // 0.90625
-#define FRICTION_UNDERWATER  (FRICTION*3/4)
-
+/// Friction on the xy plane
 void Actor::XYFriction(fixed_t oldx, fixed_t oldy)
 {
+  const fixed_t STOPSPEED = 0x1000;
+  const float friction_fly = 0.918; // 0xeb00
+
   // slow down in water, not too much for playability issues
   if (eflags & MFE_UNDERWATER)
     {
-      px = FixedMul (px, FRICTION_UNDERWATER);
-      py = FixedMul (py, FRICTION_UNDERWATER);
+      px = int(px * friction_underwater);
+      py = int(py * friction_underwater);
       return;
     }
 
@@ -651,8 +651,6 @@ void Actor::XYFriction(fixed_t oldx, fixed_t oldy)
 
   px = int(px * fri);
   py = int(py * fri);
-
-  //friction = normal_friction;
 }
 
 
@@ -782,7 +780,7 @@ void Actor::ZMovement()
   // z friction in water
   if ((eflags & MFE_TOUCHWATER) || (eflags & MFE_UNDERWATER)) 
     {
-      pz = FixedMul(pz, FRICTION_UNDERWATER);
+      pz = int(pz * friction_underwater);
     }
 }
 

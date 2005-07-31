@@ -17,26 +17,14 @@
 //
 //
 // $Log$
+// Revision 1.25  2005/07/31 14:50:24  smite-meister
+// thing spawning fix
+//
 // Revision 1.24  2005/07/12 18:55:21  smite-meister
 // inventory and player preferences fixed
 //
-// Revision 1.23  2005/04/17 18:36:32  smite-meister
-// netcode
-//
-// Revision 1.21  2005/03/16 21:16:05  smite-meister
-// menu cleanup, bugfixes
-//
-// Revision 1.20  2004/11/04 21:12:51  smite-meister
-// save/load fixed
-//
-// Revision 1.19  2004/10/27 17:37:06  smite-meister
-// netcode update
-//
 // Revision 1.18  2004/09/24 21:19:59  jussip
 // Joystick axis unbinding.
-//
-// Revision 1.16  2004/09/23 23:21:16  smite-meister
-// HUD updated
 //
 // Revision 1.15  2004/09/20 22:42:48  jussip
 // Joystick axis binding works. New joystick code ready for use.
@@ -252,6 +240,8 @@ void ticcmd_t::Build(LocalPlayerInfo *pref, int realtics)
       pitch = pawn->aiming >> 16;
     }
 
+  int fw = 0, sd = 0; // these must not wrap around, so we need bigger ranges than chars
+
   // use two stage accelerative turning on the keyboard (and joystick)
   static int turnheld[NUM_LOCALHUMANS]; // for accelerative turning
 
@@ -259,9 +249,9 @@ void ticcmd_t::Build(LocalPlayerInfo *pref, int realtics)
   if (strafe)
     {
       if (turnright)
-        side += sidespeed[speed];
+        sd += sidespeed[speed];
       if (turnleft)
-        side -= sidespeed[speed];
+        sd -= sidespeed[speed];
     }
   else
     {
@@ -286,16 +276,16 @@ void ticcmd_t::Build(LocalPlayerInfo *pref, int realtics)
   // forwards/backwards, strafing
 
   if (gamekeydown[gc[gc_forward][0]] || gamekeydown[gc[gc_forward][1]])
-    forward += forwardspeed[speed];
+    fw += forwardspeed[speed];
 
   if (gamekeydown[gc[gc_backward][0]] || gamekeydown[gc[gc_backward][1]])
-    forward -= forwardspeed[speed];
+    fw -= forwardspeed[speed];
 
   if (gamekeydown[gc[gc_straferight][0]] || gamekeydown[gc[gc_straferight][1]])
-    side += sidespeed[speed];
+    sd += sidespeed[speed];
 
   if (gamekeydown[gc[gc_strafeleft][0]] || gamekeydown[gc[gc_strafeleft][1]])
-    side -= sidespeed[speed];
+    sd -= sidespeed[speed];
 
 
   // buttons
@@ -364,10 +354,10 @@ void ticcmd_t::Build(LocalPlayerInfo *pref, int realtics)
 	    pitch += mousey[c] << 3;
 	}
       else if (cv_mousemove[c].value)
-	forward += mousey[c];
+	fw += mousey[c];
 
       if (strafe)
-	side += mousex[c] << 1;
+	sd += mousex[c] << 1;
       else
 	yaw -= mousex[c] << 3;
 
@@ -386,22 +376,25 @@ void ticcmd_t::Build(LocalPlayerInfo *pref, int realtics)
       switch (j.action)
 	{
 	case ja_pitch  : pitch = value; break;
-	case ja_move   : forward += value; break;
+	case ja_move   : fw += value; break;
 	case ja_turn   : yaw += value; break;
-	case ja_strafe : side += value; break;
+	case ja_strafe : sd += value; break;
 	default: break;
 	}
     }
 
 
-  if (forward > MAXPLMOVE)
-    forward = MAXPLMOVE;
-  else if (forward < -MAXPLMOVE)
-    forward = -MAXPLMOVE;
-  if (side > MAXPLMOVE)
-    side = MAXPLMOVE;
-  else if (side < -MAXPLMOVE)
-    side = -MAXPLMOVE;
+  if (fw > MAXPLMOVE)
+    fw = MAXPLMOVE;
+  else if (fw < -MAXPLMOVE)
+    fw = -MAXPLMOVE;
+  if (sd > MAXPLMOVE)
+    sd = MAXPLMOVE;
+  else if (sd < -MAXPLMOVE)
+    sd = -MAXPLMOVE;
+
+  forward = fw;
+  side = sd;
 
   //26/02/2000: added by Hurdler: accept no mlook for network games
   if (!cv_allowmlook.value)
@@ -500,13 +493,13 @@ bool G_MapEventsToControls(event_t *ev)
       break;
 
     case ev_mouse:           // buttons are virtual keys
-      mousex[0] = int(ev->data2*((cv_mousesensx[0].value*cv_mousesensx[0].value)/110.0f + 0.1));
-      mousey[0] = int(ev->data3*((cv_mousesensy[0].value*cv_mousesensy[0].value)/110.0f + 0.1));
+      mousex[0] += int(ev->data2*((cv_mousesensx[0].value*cv_mousesensx[0].value)/110.0f + 0.1));
+      mousey[0] += int(ev->data3*((cv_mousesensy[0].value*cv_mousesensy[0].value)/110.0f + 0.1));
       break;
 
     case ev_mouse2:           // buttons are virtual keys
-      mousex[1] = int(ev->data2*((cv_mousesensx[1].value*cv_mousesensx[1].value)/110.0f + 0.1));
-      mousey[1] = int(ev->data3*((cv_mousesensy[1].value*cv_mousesensy[1].value)/110.0f + 0.1));
+      mousex[1] += int(ev->data2*((cv_mousesensx[1].value*cv_mousesensx[1].value)/110.0f + 0.1));
+      mousey[1] += int(ev->data3*((cv_mousesensy[1].value*cv_mousesensy[1].value)/110.0f + 0.1));
       break;
 
     default:
