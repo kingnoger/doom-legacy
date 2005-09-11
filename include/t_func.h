@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.6  2005/09/11 16:23:25  smite-meister
+// template classes
+//
 // Revision 1.5  2005/04/22 19:44:50  smite-meister
 // bugs fixed
 //
@@ -42,7 +45,7 @@
 #ifndef t_func_h
 #define t_func_h 1
 
-#define AngleToFixed(x)  fixed_t((double(x) / (double(ANG45)/45)) * FRACUNIT)
-#define FixedToAngle(x)  angle_t((double(x) / FRACUNIT) * ANG45/45)
+#define AngleToFixed(x)  fixed_t(float(x) / (ANG45 / 45.0f))
+#define FixedToAngle(x)  angle_t((x).Float() * (ANG45 / 45.0f))
 
 #endif

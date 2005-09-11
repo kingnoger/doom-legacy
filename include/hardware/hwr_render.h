@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2005/09/11 16:23:25  smite-meister
+// template classes
+//
 // Revision 1.5  2005/05/29 11:30:42  segabor
 // Fixed __APPLE directive__ to __APPLE_CC__ on Mac OS X, new 'Doom Legacy' Xcode project target
 //
@@ -50,7 +53,6 @@
 
 class HWBsp;
 
-extern const float fixedtofloat;
 
 /**
   \brief Handles the new hardware rendering code.

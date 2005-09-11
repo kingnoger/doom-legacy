@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2005/09/11 16:23:25  smite-meister
+// template classes
+//
 // Revision 1.8  2005/03/16 21:16:08  smite-meister
 // menu cleanup, bugfixes
 //
@@ -135,8 +138,6 @@ struct consvar_t
   unsigned short netid;    ///< unique network id for CV_NETVARs
 
   consvar_t *next;         ///< linked list
-
-
 
   static consvar_t *cvar_list; ///< list of registered console variables
 

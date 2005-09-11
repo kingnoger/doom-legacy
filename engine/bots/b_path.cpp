@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.3  2004/11/09 20:38:51  smite-meister
 // added packing to I/O structs
 //
@@ -101,10 +104,10 @@ void SearchNode_t::PushSuccessors(priorityQ_t *q, int destgx, int destgy)
       if (dir[angle])
 	{
 	  SearchNode_t *node = dir[angle];
-	  int n_cost = costDir[angle] + cost;
-	  int n_heuristic = P_AproxDistance(destgx - node->gx, destgy - node->gy) * 10000;
+	  fixed_t n_cost = costDir[angle] + cost;
+	  fixed_t n_heuristic = P_AproxDistance(destgx - node->gx, destgy - node->gy) * 10000;
 	  //CONS_Printf("got heuristic of %d\n", node->heuristic);
-	  int n_f = n_cost + n_heuristic;
+	  fixed_t n_f = n_cost + n_heuristic;
 
 	  if (node->visited && (node->f <= n_f))
 	    continue;  //if already been looked at before, and before look was better
@@ -193,7 +196,7 @@ SearchNode_t *priorityQ_t::RemoveNode(SearchNode_t *node)
 //   BotNodes class
 //====================================================
 
-static int botteledestx, botteledesty;
+static fixed_t botteledestx, botteledesty;
 static bool botteledestfound = false;
 static fixed_t pawn_height;
 static sector_t *last_sector;
@@ -287,8 +290,8 @@ static bool PTR_BotPath(intercept_t *in)
 	      {
 		if (ceilingheight - floorheight < pawn_height && !s->tag)
 		  return false; // can't fit
-		if (floorheight > last_sector->floorheight + 45*FRACUNIT ||
-		    (floorheight > last_sector->floorheight + 37*FRACUNIT && last_sector->floortype == FLOOR_WATER))
+		if (floorheight > last_sector->floorheight + 45 ||
+		    (floorheight > last_sector->floorheight + 37 && last_sector->floortype == FLOOR_WATER))
 		  return false; // can't jump or reach there
 	      }
 	  }
@@ -354,7 +357,7 @@ bool BotNodes::DirectlyReachable(Actor *mo, fixed_t x, fixed_t y, fixed_t destx,
 	}
       else
 	{
-	  pawn_height = 56*FRACUNIT;
+	  pawn_height = 56;
 	  return mp->PathTraverse(x, y, destx, desty, PT_ADDLINES, PTR_BotPath);
 	}
     }
@@ -373,8 +376,9 @@ SearchNode_t *BotNodes::FindClosestNode(fixed_t x, fixed_t y)
   botdirtype_t dir = BDI_SOUTH;
   SearchNode_t *closest = NULL;
 
-  int i = x = x2PosX(x);
-  int j = y = y2PosY(y);
+  int xx, yy;
+  int i = xx = x2PosX(x);
+  int j = yy = y2PosY(y);
 
   while (!closest && (depth < 50))
     {
@@ -387,28 +391,28 @@ SearchNode_t *BotNodes::FindClosestNode(fixed_t x, fixed_t y)
       switch (dir)
 	{
 	case (BDI_EAST):
-	  if (++i > x + depth)
+	  if (++i > xx + depth)
 	    {
 	      i--; //change it back
 	      dir = BDI_NORTH; //go in the new direction
 	    }
 	  break;
 	case (BDI_NORTH):
-	  if (++j > y + depth)
+	  if (++j > yy + depth)
 	    {
 	      j--; //change it back
 	      dir = BDI_WEST;
 	    }
 	  break;
 	case (BDI_WEST):
-	  if (--i < x - depth)
+	  if (--i < xx - depth)
 	    {
 	      i++; //change it back
 	      dir = BDI_SOUTH;
 	    }
 	  break;
 	case (BDI_SOUTH):
-	  if (--j < y - depth)
+	  if (--j < yy - depth)
 	    {
 	      j++; //change it back
 	      dir = BDI_EAST;
@@ -456,17 +460,17 @@ SearchNode_t *BotNodes::GetClosestReachableNode(fixed_t x, fixed_t y)
 
 
 /// Like above, but checks the path FROM the node TO (x,y). Also, does not call FindClosestNode.
-SearchNode_t *BotNodes::GetNodeAt(fixed_t x, fixed_t y)
+SearchNode_t *BotNodes::GetNodeAt(const vec_t<fixed_t>& r)
 {
   SearchNode_t *temp = NULL;
 
-  int nx = x2PosX(x);
-  int ny = y2PosY(y);
+  int nx = x2PosX(r.x);
+  int ny = y2PosY(r.y);
 
   if ((nx >= 0) && (nx < xSize) && (ny >= 0) && (ny < ySize))
     {
       temp = botNodeArray[nx][ny];
-      if (temp && DirectlyReachable(NULL, temp->mx, temp->my, x, y))
+      if (temp && DirectlyReachable(NULL, temp->mx, temp->my, r.x, r.y))
 	return temp;
     }
 
@@ -475,7 +479,7 @@ SearchNode_t *BotNodes::GetNodeAt(fixed_t x, fixed_t y)
       if ((i >= 0) && (i < xSize) && (j >= 0) && (j < ySize) && ((i != nx) && (j != ny)))
 	{
 	  temp = botNodeArray[i][j];
-	  if (temp && DirectlyReachable(NULL, temp->mx, temp->my, x, y))
+	  if (temp && DirectlyReachable(NULL, temp->mx, temp->my, r.x, r.y))
 	    return temp;
 	}
 
@@ -544,7 +548,9 @@ bool BotNodes::FindPath(list<SearchNode_t *> &path, SearchNode_t *start, SearchN
 	  while (best->pprevious) // backtrack the route, store the nodes in the path list
 	    {
 #ifdef SHOWBOTPATH
-	      best->marker = SpawnMobj(posX2x(best->x), posY2y(best->y), R_PointInSubsector(posX2x(best->x), posY2y(best->y))->sector->floorheight, MT_MISC49);
+	      fixed_t x = posX2x(best->gx);
+	      fixed_t y = posY2y(best->gy);
+	      best->marker = mp->SpawnDActor(x, y, ONFLOORZ, MT_MISC49);
 #endif
 	      path.push_front(best);
 	      best = best->pprevious;
@@ -706,8 +712,8 @@ BotNodes::BotNodes(Map *m)
   for (t = m->playerstarts.begin(); t != m->playerstarts.end(); t++)
     {
       mapthing_t *mt = t->second;
-      px = x2PosX(mt->x << FRACBITS);
-      py = y2PosY(mt->y << FRACBITS);
+      px = x2PosX(mt->x);
+      py = y2PosY(mt->y);
       if (((px >= 0) && (px < xSize) && (py >= 0) && (py < ySize)) && (!botNodeArray[px][py]))
 	{
 	  temp = botNodeArray[px][py] = new SearchNode_t(px, py, posX2x(px), posY2y(py));
@@ -719,8 +725,8 @@ BotNodes::BotNodes(Map *m)
   int n = m->dmstarts.size();
   for (int i = 0; i < n; i++)
     {
-      px = x2PosX(m->dmstarts[i]->x << FRACBITS);
-      py = y2PosY(m->dmstarts[i]->y << FRACBITS);
+      px = x2PosX(m->dmstarts[i]->x);
+      py = y2PosY(m->dmstarts[i]->y);
       if (((px >= 0) && (px < xSize) && (py >= 0) && (py < ySize)) && (!botNodeArray[px][py]))
 	{
 	  temp =  botNodeArray[px][py] = new SearchNode_t(px, py, posX2x(px), posY2y(py));

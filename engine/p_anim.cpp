@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.18  2005/07/31 14:50:24  smite-meister
 // thing spawning fix
 //
@@ -334,7 +337,7 @@ int P_Read_ANIMATED(int lump)
 	  continue;
 	}
 
-      int tics = ((lump >= 0) ? LONG(a->speed) : a->speed) * NEWTICRATERATIO; // duration of one frame in tics
+      int tics = (lump >= 0) ? LONG(a->speed) : a->speed; // duration of one frame in tics
 
       AnimatedTexture *t = new AnimatedTexture(a->startname, n);
       for (i=0; i<n; i++)

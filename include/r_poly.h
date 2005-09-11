@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1996 by Raven Software, Corp.
-// Copyright (C) 2003 by DooM Legacy Team.
+// Copyright (C) 2003-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2005/09/11 16:23:25  smite-meister
+// template classes
+//
 // Revision 1.3  2004/07/25 20:18:47  hurdler
 // Remove old hardware renderer and add part of the new one
 //
@@ -48,7 +51,7 @@ struct polyobj_t
   vertex_t *prevPts;            // use to restore the old point values
   angle_t angle;
   int tag;                      // reference tag assigned in HereticEd
-  int bbox[4];
+  int bbox[4];      ///< bounding box in blockmap coordinates
   int validcount;
   bool crush;                   // should the polyobj attempt to crush mobjs?
   unsigned seqType;

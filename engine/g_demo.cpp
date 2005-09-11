@@ -87,14 +87,14 @@ bool GameInfo::Downgrade(int version)
 
   if( version<130 )
     {
-      mobjinfo[MT_BLOOD].radius = 20*FRACUNIT;
-      mobjinfo[MT_BLOOD].height = 16*FRACUNIT;
+      mobjinfo[MT_BLOOD].radius = 20;
+      mobjinfo[MT_BLOOD].height = 16;
       mobjinfo[MT_BLOOD].flags  = MF_NOBLOCKMAP;
     }
   else
     {
-      mobjinfo[MT_BLOOD].radius = 3*FRACUNIT;
-      mobjinfo[MT_BLOOD].height = 0*FRACUNIT;
+      mobjinfo[MT_BLOOD].radius = 3;
+      mobjinfo[MT_BLOOD].height = 0;
       mobjinfo[MT_BLOOD].flags  = 0;
     }
 

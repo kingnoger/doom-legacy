@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.29  2005/09/11 16:23:25  smite-meister
+// template classes
+//
 // Revision 1.28  2005/03/04 16:23:07  smite-meister
 // mp3, sector_t
 //
@@ -218,76 +221,111 @@ public:
 
 void P_InitSwitchList();
 
-// 1 second, in ticks.
-#define BUTTONTIME      35
+// 1 second, in tics.
+const int BUTTONTIME = 35;
+
 
 
 //======================================
 //   Polyobjects
 //======================================
 
-/// Polyobject Rotator
+/// Polyobject ABC
 class polyobject_t : public Thinker
 {
   friend class Map;
   DECLARE_CLASS(polyobject_t)
 protected:  
   int polyobj;
-  int speed;
-  int dist;
 
 public:
-  polyobject_t(int num);
-  polyobject_t(int num, byte *args, int dir);
-  
-  virtual void Think();
-  virtual int  PushForce();
-};
+  inline polyobject_t(int num) { polyobj = num; }
 
-/// Polyobject Mover
-class polymove_t : public polyobject_t
-{
-  friend class Map;
-  DECLARE_CLASS(polymove_t)
-protected:
-  int angle;
-  fixed_t xs, ys;
+  virtual void    Think();
+  virtual fixed_t PushForce();
 
-public:
-  polymove_t(int num, byte *args, bool timesEight, bool mirror);
-  
-  virtual void Think();
-  virtual int  PushForce();
-};
-
-
-/// Polyobject Door
-class polydoor_t : public polyobject_t
-{
-  friend class Map;
-  DECLARE_CLASS(polydoor_t)
-public:
   enum podoor_e
   {
-    pd_none,
     pd_slide,
     pd_swing,
-  }; 
+  };
+};
 
-protected:
-  int totalDist;
-  int direction;
-  fixed_t xs, ys;
-  int tics;
-  int waitTics;
-  byte type; // podoor_e
-  bool close;
+
+/// Polyobject Rotator
+class polyrotator_t : public polyobject_t
+{
+  friend class Map;
+  DECLARE_CLASS(polyrotator_t)
+protected:  
+  int  speed;     ///< angular velocity (in fineangle units)
+  int  dist;  ///< remaining angle to turn (in fineangle units)
 
 public:
-  polydoor_t(int num, int type, byte *args, bool mirror);
+  polyrotator_t(int num, byte *args, int dir);
   
+  virtual void    Think();
+  virtual fixed_t PushForce();
+};
+
+
+/// Polyobject Mover
+class polymover_t : public polyobject_t
+{
+  friend class Map;
+  DECLARE_CLASS(polymover_t)
+protected:
+  fixed_t speed;
+  fixed_t dist;
+  angle_t ang;
+  fixed_t xs, ys;
+
+public:
+  polymover_t(int num, byte *args, bool timesEight, bool mirror);
+  
+  virtual void    Think();
+  virtual fixed_t PushForce();
+};
+
+
+
+/// \brief Polyobject Rotating Door
+///
+/// A timed polyrotator.
+class polydoor_rot_t : public polyrotator_t
+{
+  friend class Map;
+  DECLARE_CLASS(polydoor_rot_t)
+public:
+
+protected:
+  bool    closing;
+  int     tics, waitTics;
+  int     totalDist; ///< in fineangle units
+
+public:
+  polydoor_rot_t(int num, byte *args, bool mirror);
   virtual void Think();
-  virtual int  PushForce();
+};
+
+
+/// \brief Polyobject Sliding Door
+///
+/// A polymover with a timer.
+class polydoor_slide_t : public polymover_t
+{
+  friend class Map;
+  DECLARE_CLASS(polydoor_slide_t)
+public:
+
+protected:
+  bool    closing;
+  int     tics, waitTics;
+  fixed_t totalDist;
+
+public:
+  polydoor_slide_t(int num, byte *args, bool mirror);
+  virtual void Think();
 };
 
 
@@ -348,10 +386,10 @@ public:
   virtual void Think();
 };
 
-// strobe light timings
-#define STROBEBRIGHT  5
-#define FASTDARK     15
-#define SLOWDARK     35
+// strobe light timings (tics)
+const int STROBEBRIGHT = 5;
+const int FASTDARK     = 15;
+const int SLOWDARK     = 35;
 
 
 /// Sequential Hexen light effect
@@ -424,8 +462,8 @@ public:
 };
 
 
-#define PLATWAIT                3
-#define PLATSPEED               (FRACUNIT/NEWTICRATERATIO)
+const int PLATWAIT = 3;
+const float PLATSPEED = 1;
 
 
 //======================================
@@ -467,8 +505,8 @@ public:
 };
 
 
-#define VDOORSPEED    (FRACUNIT*2/NEWTICRATERATIO)
-#define VDOORWAIT     150
+const float VDOORSPEED = 2;
+const int VDOORWAIT = 150;
 
 
 // Sliding doors removed
@@ -529,8 +567,8 @@ public:
 };
 
 
-#define CEILSPEED               (FRACUNIT/NEWTICRATERATIO)
-#define CEILWAIT                150
+const float CEILSPEED = 1;
+const int CEILWAIT = 150;
 
 
 
@@ -682,8 +720,8 @@ public:
 };
 
 
-#define ELEVATORSPEED (FRACUNIT*4/NEWTICRATERATIO) //SoM: 3/6/2000
-#define FLOORSPEED    (FRACUNIT/NEWTICRATERATIO)
+const float ELEVATORSPEED = 4;
+const float FLOORSPEED    = 1;
 
 //======================================
 ///  Sine wave floorshake (Hexen)
@@ -978,6 +1016,9 @@ public:
     sc_displacement = 0x1,
     sc_accelerative = 0x2,
     sc_offsets      = 0x4,
+
+    /// Amount the linedef length is shifted right to get scroll amount
+    SCROLL_SHIFT = 5
   };
 
 private:
@@ -1011,20 +1052,22 @@ public:
     p_current     = 1,
     p_point       = 2,
     p_upcurrent,
-    p_downcurrent
+    p_downcurrent,
+
+    PUSH_FACTOR = 7
   };
 
 private:
   byte type;
   class DActor *source;  ///< Point source if point pusher
-  int x_mag, y_mag;   ///< X, Y Strength
-  int magnitude;      ///< Vector strength for point pusher
-  int radius;         ///< Effective radius for point pusher
-  int x, y;           ///< X, Y of point source if point pusher
-  int affectee;       ///< Number of affected sector
+  fixed_t x_mag, y_mag;  ///< X, Y Strength
+  fixed_t magnitude;     ///< Vector strength for point pusher
+  fixed_t radius;        ///< Effective radius for point pusher
+  fixed_t x, y;          ///< X, Y of point source if point pusher
+  int affectee;          ///< Number of affected sector
 
 public:
-  pusher_t(pusher_e t, int x_m, int y_m, DActor *src, int aff);
+  pusher_t(pusher_e t, fixed_t x_m, fixed_t y_m, DActor *src, int aff);
   
   virtual void Think();
 

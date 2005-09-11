@@ -17,6 +17,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.31  2005/09/11 16:23:25  smite-meister
+// template classes
+//
 // Revision 1.30  2005/06/29 14:26:39  smite-meister
 // valgrind pays off
 //
@@ -237,7 +240,7 @@ public:
   void Reset();
   weapontype_t FindWeapon(int g);
 
-  inline DActor *SpawnPlayerMissile(mobjtype_t type) { return SPMAngle(type, angle); }
+  inline DActor *SpawnPlayerMissile(mobjtype_t type) { return SPMAngle(type, yaw); }
   DActor *SPMAngle(mobjtype_t type, angle_t ang);
 
   bool CanUnlockGenDoor(struct line_t *line);

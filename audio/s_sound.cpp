@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.38  2005/09/11 16:23:45  smite-meister
+// template classes
+//
 // Revision 1.37  2005/07/20 20:27:18  smite-meister
 // adv. texture cache
 //
@@ -167,8 +170,8 @@ consvar_t cv_surround = {"surround", "0", CV_SAVE, CV_OnOff};
 consvar_t cv_precachesound = {"precachesound","0",CV_SAVE ,CV_OnOff};
 
 
-#define SURROUND_SEP            -128
-#define S_STEREO_SWING          (96*0x10000)
+const int SURROUND_SEP   = -128;
+const int S_STEREO_SWING = 96;
 
 bool  nomusic = false, nosound = false;
 
@@ -271,18 +274,12 @@ void soundsource_t::Update()
 {
   if (isactor)
     {
-      x = act->x;
-      y = act->y;
-      z = act->z;
-      vx = act->px;
-      vy = act->py;
-      vz = act->pz;
+      pos = act->pos;
+      vel = act->vel;
     }
   else
     {
-      x = mpt->x;
-      y = mpt->y;
-      z = mpt->z;
+      pos.Set(mpt->x, mpt->y, mpt->z);
     }
 }
 
@@ -308,15 +305,18 @@ static float S_ObservedVolume(Actor *listener, soundsource_t *source)
 
   // calculate the distance to sound origin
   //  and clip it if necessary
-  fixed_t adx = abs(listener->x - source->x);
-  fixed_t ady = abs(listener->y - source->y);
-  fixed_t adz = abs(listener->z - source->z);
+  vec_t<fixed_t> d = listener->pos - source->pos;
 
   // From _GG1_ p.428. Approx. euclidean distance fast.
+  /*
+  fixed_t adx = abs(listener->x - source->x);    
+  fixed_t ady = abs(listener->y - source->y);
+  fixed_t adz = abs(listener->z - source->z);
   fixed_t dist = adx + ady - ((adx < ady ? adx : ady)>>1);
   dist = dist + adz - ((dist < adz ? dist : adz)>>1);
+  */
 
-  dist >>= FRACBITS;
+  float dist = sqrt(d.Norm2().Float());
 
   if (dist > S_CLIPPING_DIST)
     return 0.0f;
@@ -347,12 +347,12 @@ int channel_t::Adjust(Actor *l)
   source.Update();
   
   // angle of source to listener
-  angle_t angle = R_PointToAngle2(l->x, l->y, source.x, source.y);
+  angle_t angle = R_PointToAngle2(l->pos.x, l->pos.y, source.pos.x, source.pos.y);
 
-  if (angle > l->angle)
-    angle -= l->angle;
+  if (angle > l->yaw)
+    angle -= l->yaw;
   else
-    angle += (0xffffffff - l->angle);
+    angle += (ANGLE_MAX - l->yaw);
 
   int sep;
 
@@ -364,7 +364,7 @@ int channel_t::Adjust(Actor *l)
       angle >>= ANGLETOFINESHIFT;
 
       // stereo separation
-      sep = 128 - (FixedMul(S_STEREO_SWING,finesine[angle])>>FRACBITS);
+      sep = 128 - (finesine[angle] * S_STEREO_SWING).floor();
 
       if (cv_stereoreverse.value)
 	sep = (~sep) & 255;

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2005/09/11 16:23:25  smite-meister
+// template classes
+//
 // Revision 1.20  2005/07/20 20:27:23  smite-meister
 // adv. texture cache
 //
@@ -384,7 +387,8 @@ public:
   Texture *operator[](unsigned id);
 
   /// First checks if the lump is a valid colormap (or transmap). If not, acts like GetID.
-  int GetTextureOrColormap(const char *name, int &map_num, bool transmap = false);
+  int GetTextureOrColormap(const char *name, class fadetable_t*& cmap);
+  int GetTextureOrTransmap(const char *name, int& map_num);
 
   /// Reads the TEXTUREn/PNAMES lumps and F_START lists, generates the corresponding Textures
   int ReadTextures();
@@ -400,6 +404,34 @@ public:
 extern texturecache_t tc;
 
 
+/// \brief Set of 34 lightlevel colormaps from COLORMAP lump, also called a fadetable.
+///
+/// Used also for "colored lighting" colormaps from Boom etc.
+class fadetable_t
+{
+  typedef byte lighttable_t;
+public:
+  int             lump; ///< the lump number of the colormap
+  lighttable_t   *colormap;
+
+  // GL emulation for the fadetable
+  unsigned short  maskcolor;
+  unsigned short  fadecolor;
+  double          maskamt;
+  unsigned short  fadestart, fadeend;
+  int             fog;
+
+  //Hurdler: rgba is used in hw mode for coloured sector lighting
+  int             rgba; // similar to maskcolor in sw mode
+
+public:
+  fadetable_t();
+  fadetable_t(int lumpnum);
+  ~fadetable_t();
+};
+
+
+
 // Quantizes an RGB color into current palette
 byte NearestColor(byte r, byte g, byte b);
 
@@ -408,10 +440,10 @@ void R_ServerInit();
 
 // colormap management
 void R_InitColormaps();
-void R_SetFadetable(const char *name);
 void R_ClearColormaps();
-int  R_ColormapNumForName(const char *name);
-const char *R_ColormapNameForNum(int num);
-int  R_CreateColormap(char *p1, char *p2, char *p3);
+fadetable_t *R_GetFadetable(unsigned n);
+fadetable_t *R_FindColormap(const char *name);
+fadetable_t *R_CreateColormap(char *p1, char *p2, char *p3);
+const char *R_ColormapNameForNum(const fadetable_t *p);
 
 #endif

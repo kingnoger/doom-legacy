@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.6  2005/07/11 16:58:40  smite-meister
 // msecnode_t bug fixed
 //
@@ -224,15 +227,15 @@ bool Map::EV_ThingProjectile(byte *args, bool gravity)
   fixed_t vspeed = int(args[4] << 13);
   while ((mobj = FindFromTIDmap(tid, &searcher)) != NULL)
     {
-      DActor *newMobj = SpawnDActor(mobj->x, mobj->y, mobj->z, moType);
+      DActor *newMobj = SpawnDActor(mobj->pos.x, mobj->pos.y, mobj->pos.z, moType);
       if (newMobj->info->seesound)
 	S_StartSound(newMobj, newMobj->info->seesound);
 
       newMobj->owner = mobj; // Originator
-      newMobj->angle = angle;
-      newMobj->px = FixedMul(speed, finecosine[fineAngle]);
-      newMobj->py = FixedMul(speed, finesine[fineAngle]);
-      newMobj->pz = vspeed;
+      newMobj->yaw   = angle;
+      newMobj->vel.x = speed * finecosine[fineAngle];
+      newMobj->vel.y = speed * finesine[fineAngle];
+      newMobj->vel.z = vspeed;
       newMobj->flags |= MF_DROPPED; // Don't respawn
       if (gravity)
 	{
@@ -266,22 +269,22 @@ bool Map::EV_ThingSpawn(byte *args, bool fog)
   angle_t angle = int(args[2] << 24);
   while ((mobj = FindFromTIDmap(tid, &searcher)) != NULL)
     {
-      DActor *newMobj = SpawnDActor(mobj->x, mobj->y, mobj->z, moType);
+      DActor *newMobj = SpawnDActor(mobj->pos.x, mobj->pos.y, mobj->pos.z, moType);
 
       if (!newMobj->TestLocation())
 	newMobj->Remove(); // Didn't fit
       else
 	{
-	  newMobj->angle = angle;
+	  newMobj->yaw = angle;
 	  if (fog)
 	    {	      
-	      DActor *fogMobj = SpawnDActor(mobj->x, mobj->y, mobj->z+TELEFOGHEIGHT, MT_TFOG);
+	      DActor *fogMobj = SpawnDActor(mobj->pos.x, mobj->pos.y, mobj->pos.z + TELEFOGHEIGHT, MT_TFOG);
 	      S_StartSound(fogMobj, sfx_teleport);
 	    }
 
 	  newMobj->flags |= MF_DROPPED; // Don't respawn
 	  if (newMobj->flags2 & MF2_FLOATBOB)
-	    newMobj->special1 = newMobj->z - newMobj->floorz;
+	    newMobj->special1 = (newMobj->pos.z - newMobj->floorz).floor();
 
 	  success = true;
 	}

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.20  2005/06/22 20:44:30  smite-meister
 // alpha3 bugfixes
 //
@@ -332,10 +335,10 @@ floor_t::floor_t(Map *m, int ty, sector_t *sec, fixed_t sp, int cru, fixed_t hei
       else
 	destheight -= mp->FindShortestLowerAround(sec);
 
-      if (destheight < (-32000 << FRACBITS))
-	destheight = -32000 << FRACBITS;
-      else if (destheight > (32000 << FRACBITS))
-	destheight = 32000 << FRACBITS;
+      if (destheight < -32000)
+	destheight = -32000;
+      else if (destheight > 32000)
+	destheight = 32000;
       break;
 
     default:
@@ -629,7 +632,7 @@ stair_t::stair_t(Map *m, int ty, sector_t *sec, fixed_t h, fixed_t sp, int rcoun
       break;
 
     case Sync:
-      speed = FixedMul(sp, FixedDiv(h - StartHeight, StepDelta));
+      speed = sp * ((h - StartHeight) / StepDelta);
       break;
 
     default:
@@ -911,11 +914,11 @@ elevator_t::elevator_t(Map *m, int ty, sector_t *sec, fixed_t sp, fixed_t height
       if (floordest - sec->floorheight >= sec->ceilingheight - ceilingdest)
 	{
 	  floorspeed = sp;
-	  ceilingspeed = -FixedMul(sec->ceilingheight - ceilingdest, FixedDiv(sp, floordest - sec->floorheight));
+	  ceilingspeed = -(sec->ceilingheight - ceilingdest) * (sp / (floordest - sec->floorheight));
 	}
       else
 	{
-	  floorspeed = FixedMul(floordest - sec->floorheight, FixedDiv(sp, sec->ceilingheight - ceilingdest));
+	  floorspeed = (floordest - sec->floorheight) * (sp / (sec->ceilingheight - ceilingdest));
 	  ceilingspeed = -sp;
 	}
       mp->SN_StartSequence(&sec->soundorg, SEQ_PLAT + sec->seqType);
@@ -935,11 +938,11 @@ elevator_t::elevator_t(Map *m, int ty, sector_t *sec, fixed_t sp, fixed_t height
       if (sec->floorheight - floordest >= ceilingdest - sec->ceilingheight)
 	{
 	  floorspeed = -sp;
-	  ceilingspeed = FixedMul(sec->ceilingheight - ceilingdest, FixedDiv(sp, floordest - sec->floorheight));
+	  ceilingspeed = (sec->ceilingheight - ceilingdest) * (sp / (floordest - sec->floorheight));
 	}
       else
 	{
-	  floorspeed = -FixedMul(floordest - sec->floorheight, FixedDiv(sp, sec->ceilingheight - ceilingdest));
+	  floorspeed = -(floordest - sec->floorheight) * (sp / (sec->ceilingheight - ceilingdest));
 	  ceilingspeed = sp;
 	}
 
@@ -1081,7 +1084,7 @@ void floorwaggle_t::Think()
     }
   // floatbob == 8*sin(x), 2*pi divided in 64 units
   phase += freq;
-  sector->floorheight = baseheight + FixedMul(finesine[phase >> ANGLETOFINESHIFT], amp);
+  sector->floorheight = baseheight + finesine[phase >> ANGLETOFINESHIFT] * amp;
   mp->CheckSector(sector, true);
 }
 

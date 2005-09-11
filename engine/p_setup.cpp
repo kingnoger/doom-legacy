@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.63  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.62  2005/07/31 14:50:24  smite-meister
 // thing spawning fix
 //
@@ -225,8 +228,8 @@ void Map::LoadVertexes(int lump)
   // internal representation as fixed.
   for (int i=0 ; i<numvertexes ; i++, v++, mv++)
     {
-      v->x = SHORT(mv->x)<<FRACBITS;
-      v->y = SHORT(mv->y)<<FRACBITS;
+      v->x = SHORT(mv->x);
+      v->y = SHORT(mv->y);
       root_bbox.Add(v->x, v->y);
     }
 
@@ -238,14 +241,16 @@ void Map::LoadVertexes(int lump)
 //
 // Computes the line length in frac units, the glide render needs this
 //
+/*
 float P_SegLength(seg_t *seg)
 {
   // make a vector (start at origin)
-  double dx = (seg->v2->x - seg->v1->x)*fixedtofloat;
-  double dy = (seg->v2->y - seg->v1->y)*fixedtofloat;
+  double dx = (seg->v2->x - seg->v1->x).Float();
+  double dy = (seg->v2->y - seg->v1->y).Float();
 
   return sqrt(dx*dx+dy*dy)*FRACUNIT;
 }
+*/
 
 
 void Map::LoadSegs(int lump)
@@ -335,8 +340,8 @@ void Map::LoadSectors2(int lump)
   sector_t *ss = sectors;
   for (int i=0; i < numsectors; i++, ss++, ms++)
     {
-      ss->floorheight = SHORT(ms->floorheight)<<FRACBITS;
-      ss->ceilingheight = SHORT(ms->ceilingheight)<<FRACBITS;
+      ss->floorheight = SHORT(ms->floorheight);
+      ss->ceilingheight = SHORT(ms->ceilingheight);
 
       ss->floorpic = tc.GetID(ms->floorpic, TEX_flat);
       ss->ceilingpic = tc.GetID(ms->ceilingpic, TEX_flat);
@@ -363,7 +368,7 @@ void Map::LoadSectors2(int lump)
       ss->numattached = 0;
       ss->moved = true;
       ss->floor_xoffs = ss->ceiling_xoffs = ss->floor_yoffs = ss->ceiling_yoffs = 0;
-      ss->bottommap = ss->midmap = ss->topmap = -1;
+      ss->bottommap = ss->midmap = ss->topmap = NULL;
 
       // ----- for special tricks with HW renderer -----
       ss->pseudoSector = false;
@@ -400,15 +405,15 @@ void Map::LoadNodes(int lump)
 
   for (int i=0 ; i<numnodes ; i++, no++, mn++)
     {
-      no->x = SHORT(mn->x)<<FRACBITS;
-      no->y = SHORT(mn->y)<<FRACBITS;
-      no->dx = SHORT(mn->dx)<<FRACBITS;
-      no->dy = SHORT(mn->dy)<<FRACBITS;
+      no->x = SHORT(mn->x);
+      no->y = SHORT(mn->y);
+      no->dx = SHORT(mn->dx);
+      no->dy = SHORT(mn->dy);
       for (int j=0 ; j<2 ; j++)
         {
           no->children[j] = SHORT(mn->children[j]);
           for (int k=0 ; k<4 ; k++)
-            no->bbox[j].box[k] = SHORT(mn->bbox[j][k]) << FRACBITS;
+            no->bbox[j].box[k] = SHORT(mn->bbox[j][k]);
         }
     }
 
@@ -655,7 +660,7 @@ void Map::LoadThings(int lump)
           // sector sound sequences
           if (ednum >= 1400 && ednum < 1410)
             {
-              R_PointInSubsector(t->x << FRACBITS, t->y << FRACBITS)->sector->seqType = ednum - 1400;
+              R_PointInSubsector(t->x, t->y)->sector->seqType = ednum - 1400;
               continue;
             }
         }
@@ -770,7 +775,7 @@ void Map::LoadLineDefs(int lump)
         ld->slopetype = ST_HORIZONTAL;
       else
         {
-          if (FixedDiv(ld->dy , ld->dx) > 0)
+          if (ld->dy / ld->dx > 0)
             ld->slopetype = ST_POSITIVE;
           else
             ld->slopetype = ST_NEGATIVE;
@@ -881,8 +886,8 @@ void Map::LoadSideDefs2(int lump)
       side_t *sd = sides + i;
       sector_t *sec;
 
-      sd->textureoffset = SHORT(msd->textureoffset)<<FRACBITS;
-      sd->rowoffset = SHORT(msd->rowoffset)<<FRACBITS;
+      sd->textureoffset = SHORT(msd->textureoffset);
+      sd->rowoffset = SHORT(msd->rowoffset);
 
       // shorthand
       char *ttex = msd->toptexture;
@@ -910,7 +915,7 @@ void Map::LoadSideDefs2(int lump)
 
 	      case 2: // BOOM: 260 make middle texture translucent
 		sd->toptexture = tc.GetID(ttex);
-		sd->midtexture = tc.GetTextureOrColormap(mtex, ld->transmap, true); // can also be a transmap lumpname
+		sd->midtexture = tc.GetTextureOrTransmap(mtex, ld->transmap); // can also be a transmap lumpname
 		sd->bottomtexture = tc.GetID(btex);
 		break;
 
@@ -921,7 +926,7 @@ void Map::LoadSideDefs2(int lump)
 		    sd->toptexture = sd->bottomtexture = 0;
 		    
 		    if (rendermode != render_soft) // FIXME is this necessary?
-		      sec->extra_colormap = &extra_colormaps[sec->midmap];
+		      sec->extra_colormap = sec->midmap;
 		  }
 		else
 		  {
@@ -979,8 +984,8 @@ void Map::LoadBlockMap(int lump)
 
   // read the header
   blockmapheader_t *bm = (blockmapheader_t *)blockmaplump;
-  bmaporgx = bm->origin_x << FRACBITS;
-  bmaporgy = bm->origin_y << FRACBITS;
+  bmaporgx = bm->origin_x;
+  bmaporgy = bm->origin_y;
   bmapwidth = bm->width;
   bmapheight = bm->height;
 
@@ -1097,19 +1102,19 @@ void Map::GroupLines()
       sector->soundorg.z = sector->floorheight-10;
 
       // adjust bounding box to map blocks
-      int block = (bb[BOXTOP]-bmaporgy+MAXRADIUS)>>MAPBLOCKSHIFT;
+      int block = (bb[BOXTOP]-bmaporgy+MAXRADIUS).floor() >> MAPBLOCKBITS;
       block = block >= bmapheight ? bmapheight-1 : block;
       sector->blockbox[BOXTOP]=block;
 
-      block = (bb[BOXBOTTOM]-bmaporgy-MAXRADIUS)>>MAPBLOCKSHIFT;
+      block = (bb[BOXBOTTOM]-bmaporgy-MAXRADIUS).floor() >> MAPBLOCKBITS;
       block = block < 0 ? 0 : block;
       sector->blockbox[BOXBOTTOM]=block;
 
-      block = (bb[BOXRIGHT]-bmaporgx+MAXRADIUS)>>MAPBLOCKSHIFT;
+      block = (bb[BOXRIGHT]-bmaporgx+MAXRADIUS).floor() >> MAPBLOCKBITS;
       block = block >= bmapwidth ? bmapwidth-1 : block;
       sector->blockbox[BOXRIGHT]=block;
 
-      block = (bb[BOXLEFT]-bmaporgx-MAXRADIUS)>>MAPBLOCKSHIFT;
+      block = (bb[BOXLEFT]-bmaporgx-MAXRADIUS).floor() >> MAPBLOCKBITS;
       block = block < 0 ? 0 : block;
       sector->blockbox[BOXLEFT]=block;
     }
@@ -1230,7 +1235,7 @@ bool Map::Setup(tic_t start, bool spawnthings)
   // I_PlayCD(info->mapnumber, true);  // FIXME cd music
 
   // Set the gravity for the level
-  if (cv_gravity.value != int(info->gravity * FRACUNIT))
+  if (cv_gravity.value != int(info->gravity * fixed_t::UNIT))
     {
       COM_BufAddText(va("gravity %f\n", info->gravity));
       COM_BufExecute();

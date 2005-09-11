@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2005/09/11 16:23:09  smite-meister
+// template classes
+//
 // Revision 1.4  2004/11/04 21:12:54  smite-meister
 // save/load fixed
 //
@@ -59,12 +62,11 @@
 // unfortunatly methode 1 and 2 get demos outof sync
 #define METHODE 0
 #if METHODE==0
-int SlopeDiv (unsigned num, unsigned den)
+int SlopeDiv(const fixed_t& num, const fixed_t& den)
 {
-  unsigned ans;
-  if (den < 512)
+  if (den.value() < 512)
     return SLOPERANGE;
-  ans = (num<<3)/(den>>8);
+  unsigned ans = (num.value() << 3) / (den.value() >> 8);
   return ans <= SLOPERANGE ? ans : SLOPERANGE;
 }
 #else
@@ -99,6 +101,8 @@ int SlopeDiv (unsigned  num, unsigned den)
 # endif
 #endif
 
+
+extern angle_t tantoangle[SLOPERANGE+1];
 
 // To get a global angle from cartesian coordinates,
 //  the coordinates are flipped until they are in
@@ -192,7 +196,7 @@ fixed_t R_PointToDist2(fixed_t x2, fixed_t y2, fixed_t x1, fixed_t y1)
 
   if (dy > dx)
     {
-      fixed_t temp = dx;
+      fixed_t temp(dx);
       dx = dy;
       dy = temp;
     }
@@ -200,16 +204,13 @@ fixed_t R_PointToDist2(fixed_t x2, fixed_t y2, fixed_t x1, fixed_t y1)
   if (dy == 0)
     return dx;
 
-  int angle = tantoangle[FixedDiv(dy,dx) >> DBITS] >> ANGLETOFINESHIFT;
+  int angle = ArcTan(dy / dx) >> ANGLETOFINESHIFT;
 
-  return FixedDiv(dx, finecosine[angle]);
+  return dx/finecosine[angle];
 }
 
 
-
-fixed_t *finecosine = &finesine[FINEANGLES/4];
-
-fixed_t finetangent[4096] =
+static int finetangent_int[4096] =
 {
     -170910304,-56965752,-34178904,-24413316,-18988036,-15535599,-13145455,-11392683,
     -10052327,-8994149,-8137527,-7429880,-6835455,-6329090,-5892567,-5512368,
@@ -726,7 +727,7 @@ fixed_t finetangent[4096] =
 };
 
 
-fixed_t finesine[10240] =
+static int finesine_int[10240] =
 {
     25,75,125,175,226,276,326,376,
     427,477,527,578,628,678,728,779,
@@ -2272,3 +2273,9 @@ angle_t tantoangle[2049] =
     535533216,535700704,535868128,536035456,536202720,536369888,536536992,536704000,
     536870912
 };
+
+
+
+fixed_t *finesine    = reinterpret_cast<fixed_t *>(finesine_int);
+fixed_t *finecosine  = reinterpret_cast<fixed_t *>(&finesine_int[FINEANGLES/4]);
+fixed_t *finetangent = reinterpret_cast<fixed_t *>(finetangent_int);

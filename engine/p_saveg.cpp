@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.48  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.47  2005/07/20 20:27:21  smite-meister
 // adv. texture cache
 //
@@ -381,26 +384,41 @@ int pusher_t::Marshal(LArchive &a)
   return 0;
 }
 
+
 int polyobject_t::Marshal(LArchive &a)
 {
-  a << polyobj << speed << dist;
+  a << polyobj;
   return 0;
 }
 
-int polymove_t::Marshal(LArchive &a)
+int polyrotator_t::Marshal(LArchive &a)
 {
   polyobject_t::Marshal(a);
-  a << angle << xs << ys;
+  a << speed << dist;
   return 0;
 }
 
-int polydoor_t::Marshal(LArchive &a)
+int polymover_t::Marshal(LArchive &a)
 {
   polyobject_t::Marshal(a);
-  a << type << totalDist << direction << xs << ys;
-  a << tics << waitTics << close;
+  a << speed << dist << ang << xs << ys;
   return 0;
 }
+
+int polydoor_rot_t::Marshal(LArchive &a)
+{
+  polyrotator_t::Marshal(a);
+  a << closing << tics << waitTics << totalDist;
+  return 0;
+}
+
+int polydoor_slide_t::Marshal(LArchive &a)
+{
+  polymover_t::Marshal(a);
+  a << closing << tics << waitTics << totalDist;
+  return 0;
+}
+
 
 int presentation_t::Serialize(presentation_t *p, LArchive &a)
 {
@@ -473,9 +491,8 @@ int modelpres_t::Marshal(LArchive &a)
 int Actor::Marshal(LArchive &a)
 {
   int temp;
-  a << x << y << z;
-  a << angle << aiming;
-  a << px << py << pz;
+  a << pos << vel;
+  a << yaw << pitch;
   a << mass << radius << height;
   a << health;
 
@@ -508,7 +525,7 @@ int Actor::Marshal(LArchive &a)
 	{
 	  if (spawnpoint)
 	    spawnpoint->mobj = this;
-	  CheckPosition(x, y);
+	  CheckPosition(pos.x, pos.y);
 	  SetPosition();
 	}
     }
@@ -568,8 +585,8 @@ int DActor::Marshal(LArchive &a)
 	{
 	  diff = MD_SPAWNPOINT;
     
-	  if ((x != spawnpoint->x << FRACBITS) || (y != spawnpoint->y << FRACBITS) ||
-	      (angle != unsigned(ANG45 * (spawnpoint->angle/45))))
+	  if ((pos.x != spawnpoint->x) || (pos.y != spawnpoint->y) ||
+	      (yaw != unsigned(ANG45 * (spawnpoint->angle/45))))
 	    diff |= MD_XY;
 
 	  if (type != spawnpoint->type)
@@ -582,8 +599,8 @@ int DActor::Marshal(LArchive &a)
 	}
 
       // not the default but the most probable
-      if (z != floorz)                 diff |= MD_Z;
-      if (px || py || pz)              diff |= MD_MOM;
+      if (pos.z != floorz)             diff |= MD_Z;
+      if (vel != vec_t<fixed_t>(0,0,0)) diff |= MD_MOM;
       if (mass   != info->mass)        diff |= MD_MASS;
       if (radius != info->radius)      diff |= MD_RADIUS;
       if (height != info->height)      diff |= MD_HEIGHT;
@@ -595,7 +612,7 @@ int DActor::Marshal(LArchive &a)
       if (tid)       diff |= MD_TID;
       if (special)   diff |= MD_SPECIAL;
       if (reactiontime != info->reactiontime) diff |= MD_RTIME;
-      if (floorclip) diff |= MD_FLOORCLIP;
+      if (floorclip != 0) diff |= MD_FLOORCLIP;
       if (team) diff |= MD_TEAM;
 
       if (state-states != info->spawnstate)   diff |= MD_STATE;
@@ -620,9 +637,9 @@ int DActor::Marshal(LArchive &a)
 	}
 
       if (diff & MD_TYPE) a << short(type);
-      if (diff & MD_XY)   a << x << y << angle;
-      if (diff & MD_Z)    a << z;
-      if (diff & MD_MOM)  a << px << py << pz;
+      if (diff & MD_XY)   a << pos.x << pos.y << yaw;
+      if (diff & MD_Z)    a << pos.z;
+      if (diff & MD_MOM)  a << vel;
       if (diff & MD_MASS)   a << mass;
       if (diff & MD_RADIUS) a << radius;
       if (diff & MD_HEIGHT) a << height;
@@ -694,19 +711,19 @@ int DActor::Marshal(LArchive &a)
       }
 
       if (diff & MD_XY)
-	a << x << y << angle;
+	a << pos.x << pos.y << yaw;
       else
 	{
-	  x     = spawnpoint->x << FRACBITS;
-	  y     = spawnpoint->y << FRACBITS;
-	  angle = ANG45 * (spawnpoint->angle/45);
+	  pos.x = spawnpoint->x;
+	  pos.y = spawnpoint->y;
+	  yaw = ANG45 * (spawnpoint->angle/45);
 	}
 
       if (diff & MD_Z)
-	a << z;
+	a << pos.z;
 
       if (diff & MD_MOM)
-	a << px << py << pz; // else zero (by constructor)
+	a << vel; // else zero (by constructor)
 
       if (diff & MD_MASS)   a << mass;
       if (diff & MD_RADIUS) a << radius;
@@ -751,12 +768,12 @@ int DActor::Marshal(LArchive &a)
       // set sprev, snext, bprev, bnext, subsector
       if (mp)
 	{
-	  CheckPosition(x, y); // TEST, sets tmfloorz, tmceilingz
+	  CheckPosition(pos.x, pos.y); // TEST, sets tmfloorz, tmceilingz
 	  SetPosition();
 	}
 
       if (!(diff & MD_Z))
-	z = floorz;
+	pos.z = floorz;
 
       // TODO simplified presentation loading for DActors for now (only sprites)
       pres = new spritepres_t(NULL, info, 0);
@@ -930,13 +947,11 @@ int svariable_t::Serialize(LArchive &a)
       a << value.s;
       break;
     case svt_int:
+    case svt_fixed:
       a << value.i;
       break;
     case svt_actor:
       Thinker::Serialize(value.mobj, a);
-      break;
-    case svt_fixed:
-      a << value.fixed;
       break;
     }
 
@@ -956,13 +971,11 @@ int svariable_t::Unserialize(LArchive &a)
       Z_ChangeTag(value.s, PU_LEVEL);
       break;
     case svt_int:
+    case svt_fixed:
       a << value.i;
       break;
     case svt_actor:
       value.mobj = (Actor *)Thinker::Unserialize(a);
-      break;
-    case svt_fixed:
-      a << value.fixed;
       break;
     }
 
@@ -1048,9 +1061,9 @@ int Map::Serialize(LArchive &a)
   for (i = 0; i<numsectors ; i++, ss++, ms++)
     {
       diff = diff2 = 0;
-      if (ss->floorheight != SHORT(ms->floorheight)<<FRACBITS)
+      if (ss->floorheight != SHORT(ms->floorheight))
 	diff |= SD_FLOORHT;
-      if (ss->ceilingheight != SHORT(ms->ceilingheight)<<FRACBITS)
+      if (ss->ceilingheight != SHORT(ms->ceilingheight))
 	diff |= SD_CEILHT;
 
       if (ss->floorpic != tc.GetID(ms->floorpic, TEX_flat))
@@ -1144,7 +1157,7 @@ int Map::Serialize(LArchive &a)
 	  si = li->sideptr[0];
 	  temp = si - sides; // sidedef number
 
-	  if (si->textureoffset != SHORT(msd[temp].textureoffset)<<FRACBITS)
+	  if (si->textureoffset != SHORT(msd[temp].textureoffset))
 	    diff |= LD_S1TEXOFF;
 
 	  // do texture diffing by comparing names to be sure
@@ -1160,7 +1173,7 @@ int Map::Serialize(LArchive &a)
 	  si = li->sideptr[1];
 	  temp = si - sides; // sidedef number
 
-	  if (si->textureoffset != SHORT(msd[temp].textureoffset)<<FRACBITS)
+	  if (si->textureoffset != SHORT(msd[temp].textureoffset))
 	    diff2 |= LD_S2TEXOFF;
 
 	  if (si->toptexture && strncmp(tc[si->toptexture]->GetName(), msd[temp].toptexture, 8))

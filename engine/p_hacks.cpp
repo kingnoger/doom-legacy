@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004 by DooM Legacy Team.
+// Copyright (C) 2004-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -72,9 +72,9 @@ void VoodooDoll::Spawn(PlayerInfo *p, mapthing_t *mthing)
 {
   VoodooDoll *d = new VoodooDoll(*p->pawn); // a copy of the real pawn
 
-  d->x = mthing->x << FRACBITS;
-  d->y = mthing->y << FRACBITS;
-  d->z = ONFLOORZ;
+  d->pos.x = mthing->x;
+  d->pos.y = mthing->y;
+  d->pos.z = ONFLOORZ;
 
   // set player, team?
   d->victim = p->pawn;
@@ -86,7 +86,7 @@ void VoodooDoll::Spawn(PlayerInfo *p, mapthing_t *mthing)
 
 
   d->eflags |= MFE_ONGROUND;
-  d->z = d->floorz;
+  d->pos.z = d->floorz;
 
   //d->angle = ANG45 * (mthing->angle/45);
 

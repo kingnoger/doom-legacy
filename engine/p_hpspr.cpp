@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by Raven Software, Corp.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.15  2004/11/18 20:30:10  smite-meister
 // tnt, plutonia
 //
@@ -81,6 +84,12 @@
 
 #define FLAME_THROWER_TICS      (10*TICRATE)
 
+
+inline angle_t R_PointToAngle2(vec_t<fixed_t>& a, vec_t<fixed_t>& b)
+{
+  return R_PointToAngle2(a.x, a.y, b.x, b.y);
+}
+
 extern consvar_t  cv_deathmatch;
 extern mobjtype_t PuffType;
 extern Actor *linetarget;
@@ -97,10 +106,10 @@ void Map::RepositionMace(DActor *mo)
 {
   mo->UnsetPosition();
   int spot = P_Random() % MaceSpots.size();
-  mo->x = MaceSpots[spot]->x << FRACBITS;
-  mo->y = MaceSpots[spot]->y << FRACBITS;
+  mo->pos.x = MaceSpots[spot]->x;
+  mo->pos.y = MaceSpots[spot]->y;
   mo->SetPosition();
-  mo->z = mo->floorz;
+  mo->pos.z = mo->floorz;
 }
 
 //---------------------------------------------------------------------------
@@ -124,8 +133,8 @@ void Map::PlaceWeapons()
     }
   int spot = P_Random() % MaceSpots.size();
   fixed_t nx, ny;
-  nx = MaceSpots[spot]->x << FRACBITS;
-  ny = MaceSpots[spot]->y << FRACBITS;
+  nx = MaceSpots[spot]->x;
+  ny = MaceSpots[spot]->y;
 
   SpawnDActor(nx, ny, ONFLOORZ, MT_WMACE);
 }
@@ -209,18 +218,14 @@ void A_BeakRaise(PlayerPawn *p, pspdef_t *psp)
 
 void A_BeakAttackPL1(PlayerPawn *p, pspdef_t *psp)
 {
-  angle_t angle;
-  int damage;
-  int slope;
-
-  damage = 1+(P_Random()&3);
-  angle = p->angle;
-  slope = p->AimLineAttack(angle, MELEERANGE);
+  int damage = 1+(P_Random()&3);
+  angle_t angle = p->yaw;
+  fixed_t slope = p->AimLineAttack(angle, MELEERANGE);
   PuffType = MT_BEAKPUFF;
   p->LineAttack(angle, MELEERANGE, slope, damage);
   if(linetarget)
     {
-      p->angle = R_PointToAngle2(p->x, p->y, linetarget->x, linetarget->y);
+      p->yaw = R_PointToAngle2(p->pos, linetarget->pos);
     }
   S_StartSound(p, sfx_chicpk1+(P_Random()%3));
   p->attackphase = 12;
@@ -235,18 +240,14 @@ void A_BeakAttackPL1(PlayerPawn *p, pspdef_t *psp)
 
 void A_BeakAttackPL2(PlayerPawn *p, pspdef_t *psp)
 {
-  angle_t angle;
-  int damage;
-  int slope;
-
-  damage = HITDICE(4);
-  angle = p->angle;
-  slope = p->AimLineAttack(angle, MELEERANGE);
+  int damage = HITDICE(4);
+  angle_t angle = p->yaw;
+  fixed_t slope = p->AimLineAttack(angle, MELEERANGE);
   PuffType = MT_BEAKPUFF;
   p->LineAttack(angle, MELEERANGE, slope, damage);
   if(linetarget)
     {
-      p->angle = R_PointToAngle2(p->x, p->y, linetarget->x, linetarget->y);
+      p->yaw = R_PointToAngle2(p->pos, linetarget->pos);
     }
   S_StartSound(p, sfx_chicpk1+(P_Random()%3));
   p->attackphase = 12;
@@ -261,21 +262,17 @@ void A_BeakAttackPL2(PlayerPawn *p, pspdef_t *psp)
 
 void A_StaffAttackPL1(PlayerPawn *p, pspdef_t *psp)
 {
-  angle_t angle;
-  int damage;
-  int slope;
-
-  damage = 5+(P_Random()&15);
-  angle = p->angle;
+  int damage = 5+(P_Random()&15);
+  angle_t angle = p->yaw;
   angle += P_SignedRandom()<<18;
-  slope = p->AimLineAttack(angle, MELEERANGE);
+  fixed_t slope = p->AimLineAttack(angle, MELEERANGE);
   PuffType = MT_STAFFPUFF;
   p->LineAttack(angle, MELEERANGE, slope, damage);
   if(linetarget)
     {
       //S_StartSound(p, sfx_stfhit);
       // turn to face target
-      p->angle = R_PointToAngle2(p->x, p->y, linetarget->x, linetarget->y);
+      p->yaw = R_PointToAngle2(p->pos, linetarget->pos);
     }
 }
 
@@ -287,29 +284,25 @@ void A_StaffAttackPL1(PlayerPawn *p, pspdef_t *psp)
 
 void A_StaffAttackPL2(PlayerPawn *p, pspdef_t *psp)
 {
-  angle_t angle;
-  int damage;
-  int slope;
-
-  damage = 18+(P_Random()&63);
-  angle = p->angle;
+  int damage = 18+(P_Random()&63);
+  angle_t angle = p->yaw;
   angle += P_SignedRandom()<<18;
-  slope = p->AimLineAttack(angle, MELEERANGE);
+  fixed_t slope = p->AimLineAttack(angle, MELEERANGE);
   PuffType = MT_STAFFPUFF2;
 
   p->LineAttack(angle, MELEERANGE, slope, damage, dt_magic);
   if (linetarget)
     {
-      linetarget->px += FixedMul(10*FRACUNIT, finecosine[angle]);
-      linetarget->py += FixedMul(10*FRACUNIT, finesine[angle]);
+      linetarget->vel.x += 10 * finecosine[angle];
+      linetarget->vel.y += 10 * finesine[angle];
       if (!(linetarget->flags & MF_NOGRAVITY))
 	{
-	  linetarget->pz += 5*FRACUNIT;
+	  linetarget->vel.z += 5;
 	}
 
       //S_StartSound(p, sfx_stfpow);
       // turn to face target
-      p->angle = R_PointToAngle2(p->x, p->y, linetarget->x, linetarget->y);
+      p->yaw = R_PointToAngle2(p->pos, linetarget->pos);
     }
 }
 
@@ -325,7 +318,7 @@ void A_FireBlasterPL1(PlayerPawn *p, pspdef_t *psp)
   p->ammo[am_blaster] -= wpnlev1info[wp_blaster].ammopershoot;
 
   int damage = HITDICE(4);
-  angle_t angle = p->angle;
+  angle_t angle = p->yaw;
   if (p->refire)
     angle += P_SignedRandom()<<18;
   PuffType = MT_BLASTERPUFF1;
@@ -343,53 +336,44 @@ void A_FireBlasterPL1(PlayerPawn *p, pspdef_t *psp)
 
 void DActor::BlasterMissileThink()
 {
-  int i;
-  fixed_t xfrac;
-  fixed_t yfrac;
-  fixed_t zfrac;
-  fixed_t nz;
-  bool changexy;
-
   // Handle movement
-  if(px || py ||
-     (z != floorz) || pz)
+  if (vel.x != 0 || vel.y != 0 || pos.z != floorz || vel.z != 0)
     {
-      xfrac = px>>3;
-      yfrac = py>>3;
-      zfrac = pz>>3;
-      changexy = xfrac || yfrac;
-      for(i = 0; i < 8; i++)
+      vec_t<fixed_t> frac = vel >> 3;
+
+      bool changexy = frac.x != 0 || frac.y != 0;
+      for (int i = 0; i < 8; i++)
 	{
-	  if(changexy)
+	  if (changexy)
 	    {
-	      if(!TryMove(x+xfrac, y+yfrac, true))
+	      if(!TryMove(pos.x + frac.x, pos.y + frac.y, true))
 		{ // Blocked move
 		  ExplodeMissile();
 		  return;
 		}
 	    }
-	  z += zfrac;
-	  if(z <= floorz)
+	  pos.z += frac.z;
+	  if(pos.z <= floorz)
 	    { // Hit the floor
-	      z = floorz;
+	      pos.z = floorz;
 	      HitFloor();
 	      ExplodeMissile();
 	      return;
 	    }
-	  if(z+height > ceilingz)
+	  if (Top() > ceilingz)
 	    { // Hit the ceiling
-	      z = ceilingz-height;
+	      pos.z = ceilingz-height;
 	      ExplodeMissile();
 	      return;
 	    }
-	  if(changexy && (P_Random() < 64))
+	  if (changexy && (P_Random() < 64))
 	    {
-	      nz = z - 8*FRACUNIT;
+	      fixed_t nz = pos.z - 8;
 	      if (nz < floorz)
 		{
 		  nz = floorz;
 		}
-	      mp->SpawnDActor(x, y, nz, MT_BLASTERSMOKE);
+	      mp->SpawnDActor(pos.x, pos.y, nz, MT_BLASTERSMOKE);
 	    }
 	}
     }
@@ -421,9 +405,8 @@ void A_FireBlasterPL2(PlayerPawn *p, pspdef_t *psp)
   DActor *m = p->SpawnPlayerMissile(MT_BLASTERFX1);
   if (m)
     { // Ultra-fast ripper spawning missile
-      m->x += (m->px>>3)-(m->px>>1);
-      m->y += (m->py>>3)-(m->py>>1);
-      m->z += (m->pz>>3)-(m->pz>>1);
+      m->pos += m->vel >> 3;
+      m->pos -= m->vel >> 1;
     }
 
   S_StartSound(p, sfx_blssht);
@@ -440,7 +423,7 @@ void A_FireGoldWandPL1(PlayerPawn *p, pspdef_t *psp)
   p->ammo[am_goldwand] -= wpnlev1info[wp_goldwand].ammopershoot;
 
   int damage = 7+(P_Random()&7);
-  angle_t angle = p->angle;
+  angle_t angle = p->yaw;
   if (p->refire)
     angle += P_SignedRandom()<<18;
   PuffType = MT_GOLDWANDPUFF1;
@@ -463,10 +446,10 @@ void A_FireGoldWandPL2(PlayerPawn *p, pspdef_t *psp)
 
   fixed_t slope = P_BulletSlope(p);
   
-  p->SPMAngle(MT_GOLDWANDFX2, p->angle - (ANG45/8));
-  p->SPMAngle(MT_GOLDWANDFX2, p->angle + (ANG45/8));
+  p->SPMAngle(MT_GOLDWANDFX2, p->yaw - (ANG45/8));
+  p->SPMAngle(MT_GOLDWANDFX2, p->yaw + (ANG45/8));
 
-  angle_t angle = p->angle-(ANG45/8);
+  angle_t angle = p->yaw-(ANG45/8);
   for (int i = 0; i < 5; i++)
     {
       int damage = 1+(P_Random()&7);
@@ -489,17 +472,15 @@ void A_FireMacePL1B(PlayerPawn *p, pspdef_t *psp)
 
   p->ammo[am_mace] -= wpnlev1info[wp_mace].ammopershoot;
 
-  DActor *ball = p->mp->SpawnDActor(p->x, p->y, p->z + 28*FRACUNIT - p->floorclip, MT_MACEFX2);
-  ball->pz = 2*FRACUNIT+((p->aiming)<<(FRACBITS-5));
-  angle_t angle = p->angle;
+  DActor *ball = p->mp->SpawnDActor(p->pos.x, p->pos.y, p->pos.z + 28 - p->floorclip, MT_MACEFX2);
+  ball->vel.z = 2 + (fixed_t(int(p->pitch)) >> 5);
+  angle_t angle = p->yaw;
   ball->owner = p;
-  ball->angle = angle;
-  ball->z += (p->aiming)<<(FRACBITS-4);
+  ball->yaw = angle;
+  ball->pos.z += fixed_t(int(p->pitch)) >> 4;
   angle >>= ANGLETOFINESHIFT;
-  ball->px = (p->px>>1)
-    + int(ball->info->speed * finecosine[angle]);
-  ball->py = (p->py>>1)
-    + int(ball->info->speed * finesine[angle]);
+  ball->vel.x = (p->vel.x >> 1) + ball->info->speed * finecosine[angle];
+  ball->vel.y = (p->vel.y >> 1) + ball->info->speed * finesine[angle];
   S_StartSound(ball, sfx_lobsht);
   ball->CheckMissileSpawn();
 }
@@ -521,9 +502,9 @@ void A_FireMacePL1(PlayerPawn *p, pspdef_t *psp)
     return;
 
   p->ammo[am_mace] -= wpnlev1info[wp_mace].ammopershoot;
-  psp->sx = ((P_Random()&3)-2)*FRACUNIT;
-  psp->sy = WEAPONTOP+(P_Random()&3)*FRACUNIT;
-  DActor *ball = p->SPMAngle(MT_MACEFX1, p->angle +(((P_Random()&7)-4)<<24));
+  psp->sx = (P_Random()&3)-2;
+  psp->sy = WEAPONTOP + (P_Random() & 3);
+  DActor *ball = p->SPMAngle(MT_MACEFX1, p->yaw +(((P_Random()&7)-4)<<24));
   if (ball)
     ball->special1 = 16; // tics till dropoff
 }
@@ -549,10 +530,10 @@ void A_MacePL1Check(DActor *ball)
     }
   ball->special1 = 0;
   ball->flags2 |= MF2_LOGRAV;
-  angle = ball->angle>>ANGLETOFINESHIFT;
-  ball->px = FixedMul(7*FRACUNIT, finecosine[angle]);
-  ball->py = FixedMul(7*FRACUNIT, finesine[angle]);
-  ball->pz -= ball->pz>>1;
+  angle = ball->yaw>>ANGLETOFINESHIFT;
+  ball->vel.x = 7 * finecosine[angle];
+  ball->vel.y = 7 * finesine[angle];
+  ball->vel.z -= ball->vel.z >> 1;
 }
 
 //----------------------------------------------------------------------------
@@ -564,16 +545,15 @@ void A_MacePL1Check(DActor *ball)
 
 void A_MaceBallImpact(DActor *ball)
 {
-  if((ball->z <= ball->floorz) && (ball->HitFloor() != FLOOR_SOLID))
+  if ((ball->pos.z <= ball->floorz) && (ball->HitFloor() != FLOOR_SOLID))
     { // Landed in some sort of liquid
       ball->Remove();
       return;
     }
-  if((ball->health != MAGIC_JUNK) && (ball->z <= ball->floorz)
-     && ball->pz)
+  if ((ball->health != MAGIC_JUNK) && (ball->pos.z <= ball->floorz) && ball->vel.z != 0)
     { // Bounce
       ball->health = MAGIC_JUNK;
-      ball->pz = (ball->pz*192)>>8;
+      ball->vel.z *= 0.75f;
       ball->flags2 &= ~MF2_FLOORBOUNCE;
       ball->SetState(ball->info->spawnstate);
       S_StartSound(ball, sfx_bounce);
@@ -596,44 +576,40 @@ void A_MaceBallImpact2(DActor *ball)
 {
   angle_t angle;
 
-  if((ball->z <= ball->floorz) && (ball->HitFloor() != FLOOR_SOLID))
+  if((ball->pos.z <= ball->floorz) && (ball->HitFloor() != FLOOR_SOLID))
     { // Landed in some sort of liquid
       ball->Remove();
       return;
     }
-  if((ball->z != ball->floorz) || (ball->pz < 2*FRACUNIT))
+  if((ball->pos.z != ball->floorz) || (ball->vel.z < 2))
     { // Explode
-      ball->px = ball->py = ball->pz = 0;
+      ball->vel.Set(0,0,0);
       ball->flags |= MF_NOGRAVITY;
       ball->flags2 &= ~(MF2_LOGRAV|MF2_FLOORBOUNCE);
     }
   else
     { // Bounce
-      ball->pz = (ball->pz*192)>>8;
+      ball->vel.z *= 0.75f;
       ball->SetState(ball->info->spawnstate);
 
-      DActor *tiny = ball->mp->SpawnDActor(ball->x, ball->y, ball->z, MT_MACEFX3);
-      angle = ball->angle+ANG90;
+      DActor *tiny = ball->mp->SpawnDActor(ball->pos, MT_MACEFX3);
+      angle = ball->yaw+ANG90;
       tiny->owner = ball->owner;
-      tiny->angle = angle;
+      tiny->yaw = angle;
       angle >>= ANGLETOFINESHIFT;
-      tiny->px = (ball->px>>1)+FixedMul(ball->pz-FRACUNIT,
-					    finecosine[angle]);
-      tiny->py = (ball->py>>1)+FixedMul(ball->pz-FRACUNIT,
-					    finesine[angle]);
-      tiny->pz = ball->pz;
+      tiny->vel.x = (ball->vel.x>>1) + (ball->vel.z - 1) * finecosine[angle];
+      tiny->vel.y = (ball->vel.y>>1) + (ball->vel.z - 1) * finesine[angle];
+      tiny->vel.z = ball->vel.z;
       tiny->CheckMissileSpawn();
 
-      tiny = ball->mp->SpawnDActor(ball->x, ball->y, ball->z, MT_MACEFX3);
-      angle = ball->angle-ANG90;
+      tiny = ball->mp->SpawnDActor(ball->pos, MT_MACEFX3);
+      angle = ball->yaw-ANG90;
       tiny->owner = ball->owner;
-      tiny->angle = angle;
+      tiny->yaw = angle;
       angle >>= ANGLETOFINESHIFT;
-      tiny->px = (ball->px>>1)+FixedMul(ball->pz-FRACUNIT,
-					    finecosine[angle]);
-      tiny->py = (ball->py>>1)+FixedMul(ball->pz-FRACUNIT,
-					    finesine[angle]);
-      tiny->pz = ball->pz;
+      tiny->vel.x = (ball->vel.x>>1) + (ball->vel.z - 1) * finecosine[angle];
+      tiny->vel.y = (ball->vel.y>>1) + (ball->vel.z - 1) * finesine[angle];
+      tiny->vel.z = ball->vel.z;
       tiny->CheckMissileSpawn();
     }
 }
@@ -652,13 +628,11 @@ void A_FireMacePL2(PlayerPawn *p, pspdef_t *psp)
   DActor *mo = p->SpawnPlayerMissile(MT_MACEFX4);
   if (mo)
     {
-      mo->px += p->px;
-      mo->py += p->py;
-      mo->pz = 2*FRACUNIT+((p->aiming)<<(FRACBITS-5));
+      mo->vel.x += p->vel.x;
+      mo->vel.y += p->vel.y;
+      mo->vel.z = 2 + (fixed_t(int(p->pitch)) >> 5);
       if (linetarget)
-	{
-	  mo->target = linetarget;
-	}
+	mo->target = linetarget;
     }
   S_StartSound(p, sfx_lobsht);
 }
@@ -675,12 +649,12 @@ void A_DeathBallImpact(DActor *ball)
   angle_t angle = 0;
   bool newAngle;
 
-  if ((ball->z <= ball->floorz) && (ball->HitFloor() != FLOOR_SOLID))
+  if ((ball->pos.z <= ball->floorz) && (ball->HitFloor() != FLOOR_SOLID))
     { // Landed in some sort of liquid
       ball->Remove();
       return;
     }
-  if ((ball->z <= ball->floorz) && ball->pz)
+  if ((ball->pos.z <= ball->floorz) && ball->vel.z != 0)
     { // Bounce
       newAngle = false;
       Actor *t = ball->target;
@@ -692,8 +666,7 @@ void A_DeathBallImpact(DActor *ball)
 	    }
 	  else
 	    { // Seek
-	      angle = R_PointToAngle2(ball->x, ball->y,
-				      t->x, t->y);
+	      angle = R_PointToAngle2(ball->pos, t->pos);
 	      newAngle = true;
 	    }
 	}
@@ -701,12 +674,11 @@ void A_DeathBallImpact(DActor *ball)
 	{ // Find new target
 	  for(i = 0; i < 16; i++)
 	    {
-	      ball->AimLineAttack(angle, 10*64*FRACUNIT);
+	      ball->AimLineAttack(angle, 10*64);
 	      if(linetarget && ball->owner != linetarget)
 		{
 		  ball->target = linetarget;
-		  angle = R_PointToAngle2(ball->x, ball->y,
-					  linetarget->x, linetarget->y);
+		  angle = R_PointToAngle2(ball->pos, linetarget->pos);
 		  newAngle = true;
 		  break;
 		}
@@ -715,10 +687,10 @@ void A_DeathBallImpact(DActor *ball)
 	}
       if(newAngle)
 	{
-	  ball->angle = angle;
+	  ball->yaw = angle;
 	  angle >>= ANGLETOFINESHIFT;
-	  ball->px = int(ball->info->speed * finecosine[angle]);
-	  ball->py = int(ball->info->speed * finesine[angle]);
+	  ball->vel.x = ball->info->speed * finecosine[angle];
+	  ball->vel.y = ball->info->speed * finesine[angle];
 	}
       ball->SetState(ball->info->spawnstate);
       S_StartSound(ball, sfx_platstop);
@@ -739,19 +711,15 @@ void A_DeathBallImpact(DActor *ball)
 
 void A_SpawnRippers(DActor *actor)
 {
-  int i;
-  angle_t angle;
-  DActor *ripper;
-
-  for(i = 0; i < 8; i++)
+  for (int i = 0; i < 8; i++)
     {
-      ripper = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_RIPPER);
-      angle = i*ANG45;
+      DActor *ripper = actor->mp->SpawnDActor(actor->pos, MT_RIPPER);
+      angle_t angle = i*ANG45;
       ripper->owner = actor->owner;
-      ripper->angle = angle;
+      ripper->yaw = angle;
       angle >>= ANGLETOFINESHIFT;
-      ripper->px = int(ripper->info->speed * finecosine[angle]);
-      ripper->py = int(ripper->info->speed * finesine[angle]);
+      ripper->vel.x = ripper->info->speed * finecosine[angle];
+      ripper->vel.y = ripper->info->speed * finesine[angle];
       ripper->CheckMissileSpawn();
     }
 }
@@ -766,8 +734,8 @@ void A_FireCrossbowPL1(PlayerPawn *p, pspdef_t *psp)
 {
   p->ammo[am_crossbow] -= wpnlev1info[wp_crossbow].ammopershoot;
   p->SpawnPlayerMissile(MT_CRBOWFX1);
-  p->SPMAngle(MT_CRBOWFX3, p->angle-(ANG45/10));
-  p->SPMAngle(MT_CRBOWFX3, p->angle+(ANG45/10));
+  p->SPMAngle(MT_CRBOWFX3, p->yaw-(ANG45/10));
+  p->SPMAngle(MT_CRBOWFX3, p->yaw+(ANG45/10));
 }
 
 //----------------------------------------------------------------------------
@@ -781,10 +749,10 @@ void A_FireCrossbowPL2(PlayerPawn *p, pspdef_t *psp)
   p->ammo[am_crossbow] -= cv_deathmatch.value ? wpnlev1info[wp_crossbow].ammopershoot
     : wpnlev2info[wp_crossbow].ammopershoot;
   p->SpawnPlayerMissile(MT_CRBOWFX2);
-  p->SPMAngle(MT_CRBOWFX2, p->angle-(ANG45/10));
-  p->SPMAngle(MT_CRBOWFX2, p->angle+(ANG45/10));
-  p->SPMAngle(MT_CRBOWFX3, p->angle-(ANG45/5));
-  p->SPMAngle(MT_CRBOWFX3, p->angle+(ANG45/5));
+  p->SPMAngle(MT_CRBOWFX2, p->yaw-(ANG45/10));
+  p->SPMAngle(MT_CRBOWFX2, p->yaw+(ANG45/10));
+  p->SPMAngle(MT_CRBOWFX3, p->yaw-(ANG45/5));
+  p->SPMAngle(MT_CRBOWFX3, p->yaw+(ANG45/5));
 }
 
 //----------------------------------------------------------------------------
@@ -799,9 +767,9 @@ void A_BoltSpark(DActor *bolt)
     
   if(P_Random() > 50)
     {
-      spark = bolt->mp->SpawnDActor(bolt->x, bolt->y, bolt->z, MT_CRBOWFX4);
-      spark->x += P_SignedRandom()<<10;
-      spark->y += P_SignedRandom()<<10;
+      spark = bolt->mp->SpawnDActor(bolt->pos, MT_CRBOWFX4);
+      spark->pos.x += P_SignedFRandom(6);
+      spark->pos.y += P_SignedFRandom(6);
     }
 }
 
@@ -966,14 +934,14 @@ void A_SkullRodStorm(DActor *actor)
     // Fudge rain frequency
     return;
     
-  x = actor->x+((P_Random()&127)-64)*FRACUNIT;
-  y = actor->y+((P_Random()&127)-64)*FRACUNIT;
+  x = actor->pos.x + ((P_Random()&127)-64);
+  y = actor->pos.y + ((P_Random()&127)-64);
 
   DActor *mo = actor->mp->SpawnDActor(x, y, ONCEILINGZ, mobjtype_t(MT_RAINPLR1 + actor->special2 % 4));
   mo->target = actor->target;
   mo->owner = actor->owner;
-  mo->px = 1; // Force collision detection
-  mo->pz = -int(mo->info->speed * FRACUNIT);
+  mo->vel.x = 1; // Force collision detection
+  mo->vel.z = -mo->info->speed;
   mo->special2 = actor->special2; // Transfer player number
   mo->CheckMissileSpawn();
   if(!(actor->special1 & 31))
@@ -991,7 +959,7 @@ void A_SkullRodStorm(DActor *actor)
 
 void A_RainImpact(DActor *actor)
 {
-  if (actor->z > actor->floorz)
+  if (actor->pos.z > actor->floorz)
     actor->SetState(statenum_t(S_RAINAIRXPLR1_1 + actor->special2 % 4));
   else if(P_Random() < 40)
     actor->HitFloor();
@@ -1005,7 +973,7 @@ void A_RainImpact(DActor *actor)
 
 void A_HideInCeiling(DActor *actor)
 {
-  actor->z = actor->ceilingz+4*FRACUNIT;
+  actor->pos.z = actor->ceilingz + 4;
 }
 
 //----------------------------------------------------------------------------
@@ -1020,10 +988,10 @@ void A_FirePhoenixPL1(PlayerPawn *p, pspdef_t *psp)
   p->SpawnPlayerMissile(MT_PHOENIXFX1);
   //p->SpawnPlayerMissile(MT_MNTRFX2);
 
-  angle_t angle = p->angle+ANG180;
+  angle_t angle = p->yaw+ANG180;
   angle >>= ANGLETOFINESHIFT;
-  p->px += FixedMul(4*FRACUNIT, finecosine[angle]);
-  p->py += FixedMul(4*FRACUNIT, finesine[angle]);
+  p->vel.x += 4 * finecosine[angle];
+  p->vel.y += 4 * finesine[angle];
 }
 
 //----------------------------------------------------------------------------
@@ -1038,18 +1006,18 @@ void A_PhoenixPuff(DActor *actor)
   angle_t angle;
 
   actor->SeekerMissile(ANGLE_1*5, ANGLE_1*10);
-  puff = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_PHOENIXPUFF);
-  angle = actor->angle+ANG90;
+  puff = actor->mp->SpawnDActor(actor->pos, MT_PHOENIXPUFF);
+  angle = actor->yaw+ANG90;
   angle >>= ANGLETOFINESHIFT;
-  puff->px = int(1.3 * finecosine[angle]);
-  puff->py = int(1.3 * finesine[angle]);
-  puff->pz = 0;
-  puff = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_PHOENIXPUFF);
-  angle = actor->angle-ANG90;
+  puff->vel.x = 1.3f * finecosine[angle];
+  puff->vel.y = 1.3f * finesine[angle];
+  puff->vel.z = 0;
+  puff = actor->mp->SpawnDActor(actor->pos, MT_PHOENIXPUFF);
+  angle = actor->yaw-ANG90;
   angle >>= ANGLETOFINESHIFT;
-  puff->px = int(1.3 * finecosine[angle]);
-  puff->py = int(1.3 * finesine[angle]);
-  puff->pz = 0;
+  puff->vel.x = 1.3f * finecosine[angle];
+  puff->vel.y = 1.3f * finesine[angle];
+  puff->vel.z = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -1073,29 +1041,26 @@ void A_InitPhoenixPL2(PlayerPawn *p, pspdef_t *psp)
 
 void A_FirePhoenixPL2(PlayerPawn *p, pspdef_t *psp)
 {
-  angle_t angle;
-  fixed_t x, y, z;
-  fixed_t slope;
-
-  if(--p->attackphase == 0)
+  if (--p->attackphase == 0)
     { // Out of flame
       p->SetPsprite(ps_weapon, S_PHOENIXATK2_4);
       p->refire = 0;
       return;
     }
 
-  angle = p->angle;
-  x = p->x+(P_SignedRandom()<<9);
-  y = p->y+(P_SignedRandom()<<9);
-  z = p->z + 26*FRACUNIT + ((p->aiming)<<FRACBITS)/173 - p->floorclip;
+  angle_t angle = p->yaw;
+  fixed_t x = P_SignedFRandom(7);
+  fixed_t y = P_SignedFRandom(7);
+  vec_t<fixed_t> r(x, y, 26 + fixed_t(int(p->pitch))/173 - p->floorclip);
+  r += p->pos;
 
-  slope = AIMINGTOSLOPE(p->aiming);
-  DActor *mo = p->mp->SpawnDActor(x, y, z, MT_PHOENIXFX2);
+  fixed_t slope = AIMINGTOSLOPE(p->pitch);
+  DActor *mo = p->mp->SpawnDActor(r, MT_PHOENIXFX2);
   mo->owner = p;
-  mo->angle = angle;
-  mo->px = p->px + int(mo->info->speed * finecosine[angle>>ANGLETOFINESHIFT]);
-  mo->py = p->py + int(mo->info->speed * finesine[angle>>ANGLETOFINESHIFT]);
-  mo->pz = int(mo->info->speed * slope);
+  mo->yaw = angle;
+  mo->vel.x = p->vel.x + mo->info->speed * finecosine[angle>>ANGLETOFINESHIFT];
+  mo->vel.y = p->vel.y + mo->info->speed * finesine[angle>>ANGLETOFINESHIFT];
+  mo->vel.z = mo->info->speed * slope;
   if(!p->refire || !(p->mp->maptic % 38))
     {
       S_StartSound(p, sfx_phopow);
@@ -1122,7 +1087,7 @@ void A_ShutdownPhoenixPL2(PlayerPawn *p, pspdef_t *psp)
 
 void A_FlameEnd(DActor *actor)
 {
-  actor->pz += int(1.5*FRACUNIT);
+  actor->vel.z += 1.5f;
 }
 
 //----------------------------------------------------------------------------
@@ -1133,7 +1098,7 @@ void A_FlameEnd(DActor *actor)
 
 void A_FloatPuff(DActor *puff)
 {
-  puff->pz += int(1.8*FRACUNIT);
+  puff->vel.z += 1.8f;
 }
 
 //---------------------------------------------------------------------------
@@ -1146,13 +1111,13 @@ void A_GauntletAttack(PlayerPawn *p, pspdef_t *psp)
 {
   angle_t angle;
   int damage;
-  int slope;
+  fixed_t slope;
   int randVal;
   fixed_t dist;
 
-  psp->sx = ((P_Random() & 3) - 2)*FRACUNIT;
-  psp->sy = WEAPONTOP + (P_Random() & 3)*FRACUNIT;
-  angle = p->angle;
+  psp->sx = (P_Random() & 3) - 2;
+  psp->sy = WEAPONTOP + (P_Random() & 3);
+  angle = p->yaw;
   if (p->powers[pw_weaponlevel2])
     {
       damage = HITDICE(2);
@@ -1202,20 +1167,20 @@ void A_GauntletAttack(PlayerPawn *p, pspdef_t *psp)
       S_StartSound(p, sfx_gnthit);
     }
   // turn to face target
-  angle = R_PointToAngle2(p->x, p->y, linetarget->x, linetarget->y);
-  if (angle - p->angle > ANG180)
+  angle = R_PointToAngle2(p->pos, linetarget->pos);
+  if (angle - p->yaw > ANG180)
     {
-      if (angle - p->angle < -ANG90/20)
-	p->angle = angle+ANG90/21;
+      if (angle - p->yaw < -ANG90/20)
+	p->yaw = angle+ANG90/21;
       else
-	p->angle -= ANG90/20;
+	p->yaw -= ANG90/20;
     }
   else
     {
-      if (angle - p->angle > ANG90/20)
-	p->angle = angle-ANG90/21;
+      if (angle - p->yaw > ANG90/20)
+	p->yaw = angle-ANG90/21;
       else
-	p->angle += ANG90/20;
+	p->yaw += ANG90/20;
     }
   p->eflags |= MFE_JUSTATTACKED;
 }

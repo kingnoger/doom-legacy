@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.56  2005/09/11 16:22:53  smite-meister
+// template classes
+//
 // Revision 1.55  2005/07/20 20:27:19  smite-meister
 // adv. texture cache
 //
@@ -134,7 +137,7 @@
 
 #define BLINKTHRESHOLD  (4*32) // for powers
 #define INVERSECOLORMAP  32    // special effects (INVUL inverse) colormap.
-#define STOPSPEED (0x1000/NEWTICRATERATIO)  // friction
+
 
 int ArmorIncrement[NUMCLASSES][NUMARMOR] =
 {
@@ -432,7 +435,8 @@ void PlayerPawn::Think()
   // check special sectors : damage & secrets
   PlayerInSpecialSector();
 
-  // water splashes
+  // old water splashes
+  /*
   if (specialsector >= 887 && specialsector <= 888)
     {
       if ((px > (2*FRACUNIT) || px < (-2*FRACUNIT) ||
@@ -468,6 +472,7 @@ void PlayerPawn::Think()
             }                   
         }
     }
+  */
 
   int w;
 
@@ -601,30 +606,30 @@ void PlayerPawn::DeathThink()
   MovePsprites();
 
   // fall to the ground
-  if (player->viewheight > 6*FRACUNIT)
-    player->viewheight -= FRACUNIT;
+  if (player->viewheight > 6)
+    player->viewheight -= 1;
 
-  if (player->viewheight < 6*FRACUNIT)
-    player->viewheight = 6*FRACUNIT;
+  if (player->viewheight < 6)
+    player->viewheight = 6;
 
   player->deltaviewheight = 0;
 
   // watch my killer (if there is one)
   if (attacker != NULL && attacker != this)
     {
-      angle_t ang = R_PointToAngle2(x, y, attacker->x, attacker->y);
-      angle_t delta = ang - angle;
+      angle_t ang = R_PointToAngle2(pos.x, pos.y, attacker->pos.x, attacker->pos.y);
+      angle_t delta = ang - yaw;
 
       if (delta < ANG5 || delta > (unsigned)-ANG5)
         {
 	  // Looking at killer,
 	  //  so fade damage flash down.
-	  angle = ang;
+	  yaw = ang;
         }
       else if (delta < ANG180)
-	angle += ANG5;
+	yaw += ANG5;
       else
-	angle -= ANG5;
+	yaw -= ANG5;
 
       // change aiming to look up or down at the attacker (DOESNT WORK)
       // FIXME : the aiming returned seems to be too up or down...
@@ -632,7 +637,7 @@ void PlayerPawn::DeathThink()
       //if (dist)
       //  pitch = FixedMul ((160<<FRACBITS), FixedDiv (attacker->z + (attacker->height>>1), dist)) >>FRACBITS;
       //else pitch = 0;
-      aiming = (attacker->z - z) >> 17;
+      pitch = (attacker->pos.z - pos.z).value() >> 17;
     }
 
   if (player->cmd.buttons & ticcmd_t::BT_USE)
@@ -647,18 +652,18 @@ void PlayerPawn::MorphThink()
     {
       if (health > 0)
 	// Handle beak movement
-	psprites[ps_weapon].sy = WEAPONTOP + (attackphase << (FRACBITS-1));
+	psprites[ps_weapon].sy = WEAPONTOP + fixed_t(attackphase) >> 1;
 
       if (morphTics & 15)
 	return;
 
-      if (!(px+py) && P_Random() < 160)
+      if ((vel.x == 0 && vel.y == 0) && P_Random() < 160)
 	{ // Twitch view angle
-	  angle += P_SignedRandom() << 19;
+	  yaw += P_SignedRandom() << 19;
 	}
-      if ((z <= floorz) && (P_Random() < 32))
+      if ((pos.z <= floorz) && (P_Random() < 32))
 	{ // Jump and noise
-	  pz += FRACUNIT;
+	  vel.z += 1;
 	  pres->SetAnim(presentation_t::Pain);
 	  return;
 	}
@@ -672,7 +677,7 @@ void PlayerPawn::MorphThink()
       if (morphTics & 15)
 	return;
 
-      if (!(px+py) && P_Random() < 64)
+      if ((vel.x == 0 && vel.y == 0) && P_Random() < 64)
 	{ // Snout sniff
 	  SetPsprite(ps_weapon, S_SNOUTATK2, false);
 	  S_StartSound(this, SFX_PIG_ACTIVE1); // snort
@@ -698,8 +703,8 @@ void PlayerPawn::Move()
 {
   ticcmd_t *cmd = &player->cmd;
 
-  angle = cmd->yaw << 16;
-  aiming = cmd->pitch << 16;
+  yaw = cmd->yaw << 16;
+  pitch = cmd->pitch << 16;
 
   fixed_t movepushforward = 0, movepushside = 0;
 
@@ -708,37 +713,36 @@ void PlayerPawn::Move()
   float mf = GetMoveFactor();
 
   // limit speed = push/(1-friction) => multiplier = 2*(1-friction) = 0.1875
-  float magic = 0.1875 * FRACUNIT * speed * mf;
+  float magic = 0.1875f * speed * mf;
 
   if (cmd->forward)
     {
       //CONS_Printf("::m %d, %f, magic = %f\n", cmd->forwardmove, mf, magic);
-      movepushforward = int(magic * cmd->forward/100);
-      Thrust(angle, movepushforward);
+      movepushforward = magic * cmd->forward/100.0f;
+      Thrust(yaw, movepushforward);
     }
 
   if (cmd->side)
     {
-      movepushside = int(magic * cmd->side/100);
-      Thrust(angle-ANG90, movepushside);
+      movepushside = magic * cmd->side/100.0f;
+      Thrust(yaw-ANG90, movepushside);
     }
 
   // mouselook swim when waist underwater
   eflags &= ~MFE_SWIMMING;
   if (eflags & MFE_UNDERWATER)
     {
-      fixed_t a;
       // swim up/down full move when forward full speed
-      a = FixedMul(movepushforward*50, finesine[aiming >> ANGLETOFINESHIFT] >>5 );
+      fixed_t a = (movepushforward * finesine[pitch >> ANGLETOFINESHIFT] * 50) >> 5;
       
       if ( a != 0 )
 	{
 	  eflags |= MFE_SWIMMING;
-	  pz += a;
+	  vel.z += a;
 	}
     }
 
-  bool onground = (z <= floorz) || (eflags & (MFE_ONMOBJ | MFE_FLY)) || (cheats & CF_FLYAROUND);
+  bool onground = (pos.z <= floorz) || (eflags & (MFE_ONMOBJ | MFE_FLY)) || (cheats & CF_FLYAROUND);
 
   // jumping
   if (cmd->buttons & ticcmd_t::BT_JUMP)
@@ -747,10 +751,10 @@ void PlayerPawn::Move()
 	fly_zspeed = 10;
       else if (eflags & MFE_UNDERWATER)
 	//TODO: goub gloub when push up in water
-	pz = FRACUNIT/2;
+	vel.z = 0.5f;
       else if (onground && !jumpdown && cv_jumpspeed.value) // can't jump while in air or while jumping
 	{
-	  pz = cv_jumpspeed.value;
+	  vel.z = cv_jumpspeed.value;
 	  if (!(cheats & CF_FLYAROUND))
 	    {
 	      S_StartScreamSound(this, sfx_jump);
@@ -775,7 +779,7 @@ void PlayerPawn::Move()
       if (cmd->buttons & ticcmd_t::BT_FLYDOWN)
 	fly_zspeed = -10;
 
-      pz = fly_zspeed*FRACUNIT;
+      vel.z = fly_zspeed;
       if (fly_zspeed)
 	fly_zspeed /= 2;
     }
@@ -786,8 +790,8 @@ void PlayerPawn::Move()
 void PlayerPawn::XYMovement()
 {
   fixed_t oldx, oldy;
-  oldx = x;
-  oldy = y;
+  oldx = pos.x;
+  oldy = pos.y;
 
   Actor::XYMovement();
 
@@ -795,7 +799,7 @@ void PlayerPawn::XYMovement()
   if (cheats & CF_NOMOMENTUM)
     {
       // debug option for no sliding at all
-      px = py = 0;
+      vel.x = vel.y = 0;
       return;
     }
   else if ((cheats & CF_FLYAROUND) || (eflags & MFE_FLY))
@@ -813,23 +817,21 @@ void PlayerPawn::XYMovement()
 void PlayerPawn::ZMovement()
 {
   // check for smooth step up
-  if (player && (z < floorz))
+  if (player && (pos.z < floorz))
     {
-      player->viewheight -= floorz - z;
-
-      player->deltaviewheight
-	= ((cv_viewheight.value<<FRACBITS) - player->viewheight)>>3;
+      player->viewheight -= floorz - pos.z;
+      player->deltaviewheight = (cv_viewheight.value - player->viewheight) >> 3;
     }
 
   fixed_t oldz, oldpz;
-  oldz = z;
-  oldpz = pz;
+  oldz = pos.z;
+  oldpz = vel.z;
 
   Actor::ZMovement();
 
   if (oldz + oldpz <= floorz && (oldpz < 0)) // falling
     {
-      if ((oldpz < -8*FRACUNIT) && !(eflags & MFE_FLY))
+      if ((oldpz < -8) && !(eflags & MFE_FLY))
 	{
 	  // Squat down.
 	  // Decrease viewheight for a moment
@@ -843,7 +845,7 @@ void PlayerPawn::ZMovement()
   if (oldz+oldpz + height > ceilingz)
     {
       // player avatar hits his head on the ceiling, ouch!
-      if (!(cheats & CF_FLYAROUND) && !(eflags & MFE_FLY) && pz > 8*FRACUNIT)
+      if (!(cheats & CF_FLYAROUND) && !(eflags & MFE_FLY) && vel.z > 8)
 	S_StartSound(this, sfx_grunt);
     }
 }
@@ -855,7 +857,9 @@ void PlayerPawn::XYFriction(fixed_t oldx, fixed_t oldy, bool oldfriction)
   if (player == NULL)
     return;
 
-  if (px > -STOPSPEED && px < STOPSPEED && py > -STOPSPEED && py < STOPSPEED && 
+  const fixed_t STOPSPEED  = 0.0625f;
+
+  if (vel.x > -STOPSPEED && vel.x < STOPSPEED && vel.y > -STOPSPEED && vel.y < STOPSPEED && 
       (player->cmd.forward == 0 && player->cmd.side == 0 ))
     {
       // if in a walking frame, stop moving
@@ -863,8 +867,8 @@ void PlayerPawn::XYFriction(fixed_t oldx, fixed_t oldy, bool oldfriction)
       if (anim == presentation_t::Run)
 	pres->SetAnim(presentation_t::Idle);
     
-      px = 0;
-      py = 0;
+      vel.x = 0;
+      vel.y = 0;
     }
   else Actor::XYFriction(oldx, oldy);
 }
@@ -959,50 +963,46 @@ DActor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
 {
   extern Actor *linetarget;
 
-  fixed_t  slope = 0;
+  fixed_t  slope = 0; // == sin(pitch)
 
   if (player->options.autoaim && cv_allowautoaim.value)
     {
-      // see which target is to be aimed at
-      slope = AimLineAttack(ang, 16*64*FRACUNIT);
+      // see which target is to be aimed at TODO use AIMRANGE
+      slope = AimLineAttack(ang, 16*64);
 
       if (!linetarget)
         {
 	  ang += 1<<26;
-	  slope = AimLineAttack(ang, 16*64*FRACUNIT);
+	  slope = AimLineAttack(ang, 16*64);
 
 	  if (!linetarget)
             {
 	      ang -= 2<<26;
-	      slope = AimLineAttack(ang, 16*64*FRACUNIT);
+	      slope = AimLineAttack(ang, 16*64);
             }
 
 	  if (!linetarget)
-	    slope = AIMINGTOSLOPE(aiming);
+	    slope = AIMINGTOSLOPE(pitch);
         }
     }
   else
-    slope = AIMINGTOSLOPE(aiming);
+    slope = AIMINGTOSLOPE(pitch);
 
   // if not autoaim, or if the autoaim didnt aim something, use the mouseaiming    
 
-  fixed_t mz = z + 32*FRACUNIT - floorclip;
+  fixed_t mz = pos.z - floorclip + 32;
 
-  DActor *th = mp->SpawnDActor(x, y, mz, type);
+  DActor *th = mp->SpawnDActor(pos.x, pos.y, mz, type);
 
   if (th->info->seesound)
     S_StartSound(th, th->info->seesound);
 
   th->owner = this;
 
-  th->angle = ang;
-  th->px = int(th->info->speed * finecosine[ang>>ANGLETOFINESHIFT]);
-  th->py = int(th->info->speed * finesine[ang>>ANGLETOFINESHIFT]);
-    
-  th->px = FixedMul(th->px, finecosine[aiming>>ANGLETOFINESHIFT]);
-  th->py = FixedMul(th->py, finecosine[aiming>>ANGLETOFINESHIFT]);
+  th->yaw = ang;
 
-  th->pz = int(th->info->speed * slope);
+  th->Thrust(ang, finecosine[pitch >> ANGLETOFINESHIFT] * th->info->speed);
+  th->vel.z = slope * th->info->speed;
 
   return (th->CheckMissileSpawn()) ? th : NULL;
 }
@@ -1204,7 +1204,7 @@ void PlayerPawn::ProcessSpecialSector(sector_t *sector, bool instantdamage)
       else if (!powers[pw_ironfeet] || P_Random() < 5)
 	Damage(NULL, NULL, sector->damage, sector->damagetype);
       
-      mp->SpawnSmoke(x, y, z);
+      mp->SpawnSmoke(pos.x, pos.y, pos.z);
     }
 
   if (sector->special & SS_secret)
@@ -1238,21 +1238,21 @@ void PlayerPawn::PlayerOnSpecial3DFloor()
       if (rover->flags & FF_SOLID)
 	{
 	  // Player must be on top of the floor to be affected...
-	  if (z != *rover->topheight)
+	  if (pos.z != *rover->topheight)
 	    continue;
 
 	  if ((eflags & MFE_JUSTHITFLOOR) &&
-	      sec->heightsec == -1 && (mp->maptic % (2*NEWTICRATERATIO))) //SoM: penalize jumping less.
+	      sec->heightsec == -1 && (mp->maptic & 1)) //SoM: penalize jumping less.
 	    instantdamage = true;
 	  else
-	    instantdamage = !(mp->maptic % (32*NEWTICRATERATIO));
+	    instantdamage = !(mp->maptic & 31);
 	}
       else
 	{
 	  //Water and DEATH FOG!!! heh
-	  if(z > *rover->topheight || (z + height) < *rover->bottomheight)
+	  if (Feet() > *rover->topheight || Top() < *rover->bottomheight)
 	    continue;
-	  instantdamage = !(mp->maptic % (32*NEWTICRATERATIO));
+	  instantdamage = !(mp->maptic & 31);
 	}
 
       ProcessSpecialSector(rover->master->frontsector, instantdamage);
@@ -1296,10 +1296,10 @@ void PlayerPawn::PlayerInSpecialSector()
   //SoM: 3/17/2000: Damage if in slimey water!
   if (sec->heightsec != -1)
     {
-      if(z > mp->sectors[sec->heightsec].floorheight)
+      if (pos.z > mp->sectors[sec->heightsec].floorheight)
 	return;
     }
-  else if (z != sec->floorheight)
+  else if (pos.z != sec->floorheight)
     return;
 
   int temp = specialsector & SS_DAMAGEMASK;
@@ -1374,7 +1374,7 @@ bool PlayerPawn::GivePower(int power)
       powers[power] = FLIGHTTICS;
       eflags |= MFE_FLY;
       flags |= MF_NOGRAVITY;
-      if (z <= floorz)
+      if (pos.z <= floorz)
 	fly_zspeed = 10; // thrust the player in the air a bit
       break;
 

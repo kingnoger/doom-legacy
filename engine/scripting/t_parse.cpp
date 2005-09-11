@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright(C) 2000 Simon Howard
-// Copyright(C) 2001-2004 Doom Legacy Team
+// Copyright(C) 2001-2005 Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.8  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.7  2005/06/30 18:16:58  smite-meister
 // texture anims fixed
 //
@@ -586,7 +589,7 @@ static svalue_t simple_evaluate(int n)
       if(strchr(tokens[n].v, '.'))
         {
           returnvar.type = svt_fixed;
-          returnvar.value.f = fixed_t(atof(tokens[n].v) * FRACUNIT);
+          returnvar.value.i = fixed_t(float(atof(tokens[n].v))).value();
         }
       else
         {

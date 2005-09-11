@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2005/09/11 16:23:25  smite-meister
+// template classes
+//
 // Revision 1.4  2004/11/18 20:30:14  smite-meister
 // tnt, plutonia
 //
@@ -62,7 +65,7 @@ struct wallsplat_t
   fixed_t     top;
   fixed_t     offset;  ///< offset in columns<<FRACBITS from start of linedef to start of splat
   int         flags;
-  int        *yoffset;
+  fixed_t    *yoffset;
   //short       xofs, yofs;
   //int         tictime;
   line_t      *line;  ///< parent line of the splat seg

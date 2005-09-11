@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.33  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.32  2005/07/20 20:27:21  smite-meister
 // adv. texture cache
 //
@@ -166,17 +169,17 @@ bool DActor::Morph(mobjtype_t form)
   int oldtid = tid;
   Remove(); // zeroes tid
 
-  DActor *fog = mp->SpawnDActor(x, y, z + TELEFOGHEIGHT, MT_TFOG);
+  DActor *fog = mp->SpawnDActor(pos.x, pos.y, pos.z + TELEFOGHEIGHT, MT_TFOG);
   S_StartSound(fog, sfx_teleport);
 
   // create the morphed monster
-  DActor *monster = mp->SpawnDActor(x, y, z, form);
+  DActor *monster = mp->SpawnDActor(pos, form);
   monster->special2 = type;
   monster->special1 = MORPHTICS + P_Random();
   monster->flags |= (flags & MF_SHADOW);
   monster->owner = owner;
   monster->target = target;
-  monster->angle = angle;
+  monster->yaw = yaw;
 
   monster->tid = oldtid;
   mp->InsertIntoTIDmap(monster, oldtid);
@@ -203,7 +206,7 @@ bool PlayerPawn::Morph(mobjtype_t form)
   if (powers[pw_invulnerability])
     return false; // Immune when invulnerable
 
-  DActor *fog = mp->SpawnDActor(x, y, z+TELEFOGHEIGHT, MT_TFOG);
+  DActor *fog = mp->SpawnDActor(pos.x, pos.y, pos.z+TELEFOGHEIGHT, MT_TFOG);
   S_StartSound(fog, sfx_teleport);
 
   const mobjinfo_t *i = &mobjinfo[form];
@@ -261,9 +264,9 @@ bool PlayerPawn::UndoMorph()
   powers[pw_weaponlevel2] = 0;
   weaponinfo = wpnlev1info;
 
-  angle_t ang = angle >> ANGLETOFINESHIFT;
-  DActor *fog = mp->SpawnDActor(x+20*finecosine[ang], y+20*finesine[ang],
-				z+TELEFOGHEIGHT, MT_TFOG);
+  int ang = yaw >> ANGLETOFINESHIFT;
+  DActor *fog = mp->SpawnDActor(pos.x+20*finecosine[ang], pos.y+20*finesine[ang],
+				pos.z+TELEFOGHEIGHT, MT_TFOG);
   S_StartSound(fog, sfx_teleport);
   PostMorphWeapon(weapontype_t(attackphase));
 
@@ -356,7 +359,7 @@ static void P_TeleportToPlayerStarts(Actor *v, int n, int ep)
   if (s == t)
     mt = (*m->playerstarts.begin()).second;
 
-  v->Teleport(mt->x << FRACBITS, mt->y << FRACBITS, ANG45 * (mt->angle / 45));
+  v->Teleport(mt->x, mt->y, ANG45 * (mt->angle / 45));
 }
 
 
@@ -368,7 +371,7 @@ static bool P_TeleportToDeathmatchStarts(Actor *v)
 
   n = P_Random() % n;
   mapthing_t *m = v->mp->dmstarts[n];
-  return v->Teleport(m->x << FRACBITS, m->y << FRACBITS, ANG45 * (m->angle / 45));
+  return v->Teleport(m->x, m->y, ANG45 * (m->angle / 45));
 }
 
 
@@ -457,8 +460,8 @@ static bool IT_HealRadius(Thinker *th)
   if (t->health <= 0)
     return true;
 		
-  fixed_t dist = P_AproxDistance(caster->x - t->x, caster->y - t->y);
-  const fixed_t HEAL_RADIUS_DIST = 255*FRACUNIT;
+  fixed_t dist = P_XYdist(caster->pos, t->pos);
+  const fixed_t HEAL_RADIUS_DIST = 255;
 
   if (dist > HEAL_RADIUS_DIST)
     return true;
@@ -512,19 +515,19 @@ bool P_HealRadius(Actor *p)
 //============================================================
 // Disc of Repulsion
 
-static const fixed_t BLAST_SPEED = 20*FRACUNIT;
+static const fixed_t BLAST_SPEED = 20;
 static const fixed_t BLAST_FULLSTRENGTH = 255;
 
 static void P_BlastMobj(Actor *source, Actor *victim, fixed_t strength)
 {
-  angle_t angle = R_PointToAngle2(source->x, source->y, victim->x, victim->y);
+  angle_t angle = R_PointToAngle2(source->pos, victim->pos);
   angle_t ang = (angle + ANG180) >> ANGLETOFINESHIFT;
   angle >>= ANGLETOFINESHIFT;
 
   if (strength < BLAST_FULLSTRENGTH)
     {
-      victim->px = FixedMul(strength, finecosine[angle]);
-      victim->py = FixedMul(strength, finesine[angle]);
+      victim->vel.x = strength * finecosine[angle];
+      victim->vel.y = strength * finesine[angle];
     }
   else // full strength blast from artifact
     {
@@ -538,29 +541,29 @@ static void P_BlastMobj(Actor *source, Actor *victim, fixed_t strength)
 	    }
 	}
 
-      victim->px = FixedMul(BLAST_SPEED, finecosine[angle]);
-      victim->py = FixedMul(BLAST_SPEED, finesine[angle]);
+      victim->vel.x = BLAST_SPEED * finecosine[angle];
+      victim->vel.y = BLAST_SPEED * finesine[angle];
 
       // Spawn blast puff
       fixed_t x, y, z;
-      x = victim->x + FixedMul(victim->radius+FRACUNIT, finecosine[ang]);
-      y = victim->y + FixedMul(victim->radius+FRACUNIT, finesine[ang]);
-      z = victim->z - victim->floorclip + (victim->height>>1);
+      x = victim->pos.x + (victim->radius + 1) * finecosine[ang];
+      y = victim->pos.y + (victim->radius + 1) * finesine[ang];
+      z = victim->Center() - victim->floorclip;
 
       DActor *m = victim->mp->SpawnDActor(x, y, z, MT_BLASTEFFECT);
       if (m)
 	{
-	  m->px = victim->px;
-	  m->py = victim->py;
+	  m->vel.x = victim->vel.x;
+	  m->vel.y = victim->vel.y;
 	}
 
       if (victim->flags & MF_MISSILE)
 	{
-	  victim->pz = 8*FRACUNIT;
-	  m->pz = victim->pz;
+	  victim->vel.z = 8;
+	  m->vel.z = victim->vel.z;
 	}
       else
-	victim->pz = (1000 / victim->mass) << FRACBITS;
+	victim->vel.z = 1000 / victim->mass;
     }
 
 
@@ -611,8 +614,8 @@ static bool IT_BlastRadius(Thinker *th)
     return true;
 
   // dactors and playerpawns are blasted
-  fixed_t dist = P_AproxDistance(caster->x - a->x, caster->y - a->y);
-  if (dist > 255*FRACUNIT)
+  fixed_t dist = P_XYdist(caster->pos, a->pos);
+  if (dist > 255)
     return true; // Out of range
 
   P_BlastMobj(caster, a, BLAST_FULLSTRENGTH);
@@ -683,17 +686,18 @@ bool P_UseArtifact(PlayerPawn *p, artitype_t arti)
       return p->GivePower(pw_infrared);
 
     case arti_firebomb:
-      ang = p->angle >> ANGLETOFINESHIFT;
-      mo = p->mp->SpawnDActor(p->x+24*finecosine[ang], p->y+24*finesine[ang], p->z - p->floorclip, MT_FIREBOMB);
+      ang = p->yaw >> ANGLETOFINESHIFT;
+      mo = p->mp->SpawnDActor(p->pos.x+24*finecosine[ang], p->pos.y+24*finesine[ang],
+			      p->pos.z - p->floorclip, MT_FIREBOMB);
       mo->owner = p;
       break;
 
     case arti_egg:
       p->SpawnPlayerMissile(MT_EGGFX);
-      p->SPMAngle(MT_EGGFX, p->angle-(ANG45/6));
-      p->SPMAngle(MT_EGGFX, p->angle+(ANG45/6));
-      p->SPMAngle(MT_EGGFX, p->angle-(ANG45/3));
-      p->SPMAngle(MT_EGGFX, p->angle+(ANG45/3));
+      p->SPMAngle(MT_EGGFX, p->yaw-(ANG45/6));
+      p->SPMAngle(MT_EGGFX, p->yaw+(ANG45/6));
+      p->SPMAngle(MT_EGGFX, p->yaw-(ANG45/3));
+      p->SPMAngle(MT_EGGFX, p->yaw+(ANG45/3));
       break;
 
     case arti_fly:
@@ -711,16 +715,16 @@ bool P_UseArtifact(PlayerPawn *p, artitype_t arti)
       if (mo)
 	{
 	  mo->owner = p;
-	  mo->pz = 5*FRACUNIT;
+	  mo->vel.z = 5;
 	}
       break;
 
     case arti_pork:
       p->SpawnPlayerMissile(MT_XEGGFX);
-      p->SPMAngle(MT_XEGGFX, p->angle-(ANG45/6));
-      p->SPMAngle(MT_XEGGFX, p->angle+(ANG45/6));
-      p->SPMAngle(MT_XEGGFX, p->angle-(ANG45/3));
-      p->SPMAngle(MT_XEGGFX, p->angle+(ANG45/3));
+      p->SPMAngle(MT_XEGGFX, p->yaw-(ANG45/6));
+      p->SPMAngle(MT_XEGGFX, p->yaw+(ANG45/6));
+      p->SPMAngle(MT_XEGGFX, p->yaw-(ANG45/3));
+      p->SPMAngle(MT_XEGGFX, p->yaw+(ANG45/3));
       break;
 
     case arti_blastradius:
@@ -728,30 +732,30 @@ bool P_UseArtifact(PlayerPawn *p, artitype_t arti)
       break;
 
     case arti_poisonbag:
-      ang = p->angle >> ANGLETOFINESHIFT;
+      ang = p->yaw >> ANGLETOFINESHIFT;
       if (p->pclass == PCLASS_CLERIC)
 	{
-	  mo = p->mp->SpawnDActor(p->x + 16*finecosine[ang], p->y + 24*finesine[ang],
-				  p->z - p->floorclip + 8*FRACUNIT, MT_POISONBAG);
+	  mo = p->mp->SpawnDActor(p->pos.x + 16*finecosine[ang], p->pos.y + 24*finesine[ang],
+				  p->pos.z - p->floorclip + 8, MT_POISONBAG);
 	}
       else if (p->pclass == PCLASS_MAGE)
 	{
-	  mo = p->mp->SpawnDActor(p->x + 16*finecosine[ang], p->y + 24*finesine[ang],
-				  p->z - p->floorclip + 8*FRACUNIT, MT_FIREBOMB);
+	  mo = p->mp->SpawnDActor(p->pos.x + 16*finecosine[ang], p->pos.y + 24*finesine[ang],
+				  p->pos.z - p->floorclip + 8, MT_FIREBOMB);
 	}			
       else // others
 	{
-	  mo = p->mp->SpawnDActor(p->x, p->y, p->z - p->floorclip + 35*FRACUNIT, MT_THROWINGBOMB);
+	  mo = p->mp->SpawnDActor(p->pos.x, p->pos.y, p->pos.z - p->floorclip + 35, MT_THROWINGBOMB);
 	  if (mo)
 	    {
 	      mo->owner = p;
-	      mo->angle = p->angle + (((P_Random() & 7)-4) << 24);
-	      ang = p->aiming >> ANGLETOFINESHIFT;
+	      mo->yaw = p->yaw + (((P_Random() & 7)-4) << 24);
+	      ang = p->pitch >> ANGLETOFINESHIFT;
 	      float sp = mo->info->speed;
-	      mo->Thrust(mo->angle, int(sp * finecosine[ang]));
-	      mo->pz = 4*FRACUNIT + int(sp * finesine[ang]);
-	      mo->px += p->px >> 1;
-	      mo->py += p->py >> 1;
+	      mo->Thrust(mo->yaw, sp * finecosine[ang]);
+	      mo->vel.z = 4 + sp * finesine[ang];
+	      mo->vel.x += p->vel.x >> 1;
+	      mo->vel.y += p->vel.y >> 1;
 	      mo->tics -= P_Random() & 3;
 	      mo->CheckMissileSpawn();
 	    }

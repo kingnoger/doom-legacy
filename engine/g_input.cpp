@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.26  2005/09/11 16:22:53  smite-meister
+// template classes
+//
 // Revision 1.25  2005/07/31 14:50:24  smite-meister
 // thing spawning fix
 //
@@ -161,7 +164,7 @@ static char sidespeed[2]    = {48, 80};
 // Otherwise OK, but fighter should also run sideways almost as fast as forward,
 // (59/60) instead of (80/100). Weird. Affects straferunning.
 
-static fixed_t angleturn[3] = {640, 1280, 320};  // + slow turn
+static short angleturn[3] = {640, 1280, 320};  // + slow turn
 
 //========================================================================
 
@@ -216,7 +219,7 @@ void ticcmd_t::Clear()
 void ticcmd_t::Build(LocalPlayerInfo *pref, int realtics)
 {
 #define KB_LOOKSPEED    (1<<25)
-#define SLOWTURNTICS    (6*NEWTICRATERATIO)
+#define SLOWTURNTICS    6
 
   int i;
   int c = pref->controlkeyset; // atm must be 0 or 1
@@ -236,8 +239,8 @@ void ticcmd_t::Build(LocalPlayerInfo *pref, int realtics)
 
   if (pawn)
     {
-      yaw   = pawn->angle >> 16;
-      pitch = pawn->aiming >> 16;
+      yaw   = pawn->yaw >> 16;
+      pitch = pawn->pitch >> 16;
     }
 
   int fw = 0, sd = 0; // these must not wrap around, so we need bigger ranges than chars

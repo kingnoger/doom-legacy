@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1996 by Raven Software, Corp.
-// Copyright (C) 2003-2004 by DooM Legacy Team.
+// Copyright (C) 2003-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.17  2004/11/04 21:12:53  smite-meister
 // save/load fixed
 //
@@ -72,6 +75,7 @@
 
 #include "sounds.h"
 #include "tables.h"
+
 
 extern fixed_t FloatBobOffsets[64];
 
@@ -162,7 +166,7 @@ bool P_CheckMeleeRange2(DActor *actor)
       return(false);
     }
   mo = actor->target;
-  dist = P_AproxDistance(mo->x-actor->x, mo->y-actor->y);
+  dist = P_XYdist(mo->pos, actor->pos);
   if(dist >= MELEERANGE*2 || dist < MELEERANGE)
     {
       return(false);
@@ -171,11 +175,11 @@ bool P_CheckMeleeRange2(DActor *actor)
     {
       return(false);
     }
-  if(mo->z > actor->z+actor->height)
+  if(mo->Feet() > actor->Top())
     { // Target is higher than the attacker
       return(false);
     }
-  else if(actor->z > mo->z+mo->height)
+  else if(actor->Feet() > mo->Top())
     { // Attacker is higher
       return(false);
     }
@@ -189,28 +193,28 @@ static void FaceMovementDirection(DActor *actor)
   switch (actor->movedir)
     {
     case DI_EAST:
-      actor->angle = 0<<24;
+      actor->yaw = 0<<24;
       break;
     case DI_NORTHEAST:
-      actor->angle = 32<<24;
+      actor->yaw = 32<<24;
       break;
     case DI_NORTH:
-      actor->angle = 64<<24;
+      actor->yaw = 64<<24;
       break;
     case DI_NORTHWEST:
-      actor->angle = 96<<24;
+      actor->yaw = 96<<24;
       break;
     case DI_WEST:
-      actor->angle = 128<<24;
+      actor->yaw = 128<<24;
       break;
     case DI_SOUTHWEST:
-      actor->angle = 160<<24;
+      actor->yaw = 160<<24;
       break;
     case DI_SOUTH:
-      actor->angle = 192<<24;
+      actor->yaw = 192<<24;
       break;
     case DI_SOUTHEAST:
-      actor->angle = 224<<24;
+      actor->yaw = 224<<24;
       break;
     }
 }
@@ -341,10 +345,8 @@ void A_PigAttack(DActor *actor)
 void A_PigPain(DActor *actor)
 {
   A_Pain(actor);
-  if(actor->z <= actor->floorz)
-    {
-      actor->pz = int(3.5*FRACUNIT);
-    }
+  if (actor->pos.z <= actor->floorz)
+    actor->vel.z = 3.5f;
 }
 
 
@@ -432,14 +434,40 @@ void A_MinotaurRoam(DActor *actor)
 //
 // Look for enemy of player
 //----------------------------------------------------------------------------
-#define MINOTAUR_LOOK_DIST		(16*54*FRACUNIT)
+#define MINOTAUR_LOOK_DIST		(16*54)
+
+static Actor *mino_master, *mino;
+
+static bool IT_XMinotaur(Thinker *t)
+{
+  if (!t->IsOf(DActor::_type))
+    return true; // continue iteration
+
+  DActor *mo = (DActor *)t;
+  // must be monster, alive and shootable
+  if (!(mo->flags & MF_COUNTKILL)
+      || mo->health <= 0
+      || !(mo->flags & MF_SHOOTABLE))
+    return true;
+  fixed_t dist = P_XYdist(mino->pos, mo->pos);
+  // must be near, not master or the minotaur itself, or another of master's pets
+  // (formely respected only minotaur pets, mo->type == MT_XMINOTAUR)
+  if (dist > MINOTAUR_LOOK_DIST
+      || mo == mino_master || mo == mino
+      || mo->owner == mino_master)
+    return true;
+
+  mino->target = mo; // Found mobj to attack
+  return false; // stop iteration
+}
+
 
 void A_MinotaurLook(DActor *actor)
 {
-  Actor *mo = NULL;
-  fixed_t dist;
   int i;
-  Actor *master = actor->owner;
+  mino_master = actor->owner;
+  mino = actor;
+  Actor *mo = NULL;
 
   actor->target = NULL;
   if (cv_deathmatch.value)  // Quick search for players
@@ -448,11 +476,11 @@ void A_MinotaurLook(DActor *actor)
       for (i=0; i<n; i++)
 	{
 	  mo = actor->mp->players[i]->pawn;
-	  if (!mo || mo == master)
+	  if (!mo || mo == mino_master)
 	    continue;
 	  if (mo->health <= 0)
 	    continue;
-	  dist = P_AproxDistance(actor->x - mo->x, actor->y - mo->y);
+	  fixed_t dist = P_XYdist(actor->pos, mo->pos);
 	  if (dist > MINOTAUR_LOOK_DIST)
 	    continue;
 	  actor->target = mo;
@@ -462,43 +490,21 @@ void A_MinotaurLook(DActor *actor)
 
   if (!actor->target) // Near player monster search
     {
-      if (master && (master->health > 0))
-	mo = actor->mp->RoughBlockSearch(master, master, 20, 1);
+      if (mino_master && (mino_master->health > 0))
+	mo = actor->mp->RoughBlockSearch(mino_master, mino_master, 20, 1);
       else
-	mo = actor->mp->RoughBlockSearch(actor, master, 20, 1);
+	mo = actor->mp->RoughBlockSearch(actor, mino_master, 20, 1);
       actor->target = mo;
     }
 
+
   if (!actor->target) // Normal monster search
-    {
-      /*
-	// FIXME add a thinkerlist iterator function to p_map.cpp?
-      for(think = thinkercap.next; think != &thinkercap; think = think->next)
-	{
-	  if(think->function != P_MobjThinker) continue;
-	  mo = (Actor *)think;
-	  if (!(mo->flags&MF_COUNTKILL)) continue;
-	  if (mo->health <= 0) continue;
-	  if (!(mo->flags&MF_SHOOTABLE)) continue;
-	  dist = P_AproxDistance(actor->x - mo->x, actor->y - mo->y);
-	  if (dist > MINOTAUR_LOOK_DIST) continue;
-	  if ((mo == master) || (mo == actor)) continue;
-	  if ((mo->type == MT_XMINOTAUR) &&
-	  (mo->owner == actor->owner)) continue;
-	  actor->target = mo;
-	  break;			// Found mobj to attack
-	}
-      */
-    }
+    actor->mp->IterateThinkers(IT_XMinotaur);
 
   if (actor->target)
-    {
-      actor->SetState(S_XMNTR_WALK1, false);
-    }
+    actor->SetState(S_XMNTR_WALK1, false);
   else
-    {
-      actor->SetState(S_XMNTR_ROAM1, false);
-    }
+    actor->SetState(S_XMNTR_ROAM1, false);
 }
 
 
@@ -590,34 +596,33 @@ void A_XMinotaurAtk1(DActor *actor)
 //
 //----------------------------------------------------------------------------
 
-#define MNTR_CHARGE_SPEED (23*FRACUNIT)
+#define MNTR_CHARGE_SPEED (23)
 
 void A_XMinotaurDecide(DActor *actor)
 {
   angle_t angle;
   Actor *target = actor->target;
-  int dist;
 
   if (!target) return;
-  dist = P_AproxDistance(actor->x-target->x, actor->y-target->y);
+  fixed_t dist = P_XYdist(actor->pos, target->pos);
 
-  if(target->z+target->height > actor->z
-     && target->z+target->height < actor->z+actor->height
-     && dist < 16*64*FRACUNIT
-     && dist > 1*64*FRACUNIT
-     && P_Random() < 230)
+  if (target->Top() > actor->Feet()
+      && target->Top() < actor->Top()
+      && dist < 16*64
+      && dist > 1*64
+      && P_Random() < 230)
     { // Charge attack
       // Don't call the state function right away
       actor->SetState(S_XMNTR_ATK4_1, false);
       actor->eflags |= MFE_SKULLFLY;
       A_FaceTarget(actor);
-      angle = actor->angle>>ANGLETOFINESHIFT;
-      actor->px = FixedMul(MNTR_CHARGE_SPEED, finecosine[angle]);
-      actor->py = FixedMul(MNTR_CHARGE_SPEED, finesine[angle]);
+      angle = actor->yaw>>ANGLETOFINESHIFT;
+      actor->vel.x = MNTR_CHARGE_SPEED * finecosine[angle];
+      actor->vel.y = MNTR_CHARGE_SPEED * finesine[angle];
       actor->args[4] = 35/2; // Charge duration
     }
-  else if(target->z == target->floorz
-	  && dist < 9*64*FRACUNIT
+  else if(target->pos.z == target->floorz
+	  && dist < 9*64
 	  && P_Random() < 100)
     { // Floor fire attack
       actor->SetState(S_XMNTR_ATK3_1);
@@ -645,8 +650,8 @@ void A_XMinotaurCharge(DActor *actor)
 
   if(actor->args[4] > 0)
     {
-      puff = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_PUNCHPUFF);
-      puff->pz = 2*FRACUNIT;
+      puff = actor->mp->SpawnDActor(actor->pos, MT_PUNCHPUFF);
+      puff->vel.z = 2;
       actor->args[4]--;
     }
   else
@@ -682,8 +687,8 @@ void A_XMinotaurAtk2(DActor *actor)
   if(mo)
     {
       //S_StartSound(mo, sfx_minat2);
-      momz = mo->pz;
-      angle = mo->angle;
+      momz = mo->vel.z;
+      angle = mo->yaw;
       actor->SpawnMissileAngle(MT_MNTRFX1, angle-(ANG45/8), momz);
       actor->SpawnMissileAngle(MT_MNTRFX1, angle+(ANG45/8), momz);
       actor->SpawnMissileAngle(MT_MNTRFX1, angle-(ANG45/16), momz);
@@ -710,7 +715,7 @@ void A_XMinotaurAtk3(DActor *actor)
       t->Damage(actor, actor, HITDICE(3));
       if (t->IsOf(PlayerPawn::_type))
 	{ // Squish the player
-	  ((PlayerPawn *)t)->player->deltaviewheight = -16*FRACUNIT;
+	  ((PlayerPawn *)t)->player->deltaviewheight = -16;
 	}
     }
   else
@@ -738,11 +743,11 @@ void A_MntrFloorFire(DActor *actor)
 {
   DActor *mo;
 
-  actor->z = actor->floorz;
-  mo = actor->mp->SpawnDActor(actor->x+((P_Random()-P_Random())<<10),
-		   actor->y+((P_Random()-P_Random())<<10), ONFLOORZ, MT_MNTRFX3);
+  actor->pos.z = actor->floorz;
+  mo = actor->mp->SpawnDActor(actor->pos.x + P_SignedFRandom(6),
+		   actor->pos.y + P_SignedFRandom(6), ONFLOORZ, MT_MNTRFX3);
   mo->target = actor->target;
-  mo->px = 1; // Force block checking
+  mo->vel.x = 1; // Force block checking
   mo->CheckMissileSpawn();
 }
 */
@@ -763,11 +768,11 @@ void P_DropItem(DActor *source, mobjtype_t type, int special, int chance)
 	{
 		return;
 	}
-	mo = P_SpawnMobj(source->x, source->y,
-		source->z+(source->height>>1), type);
-	mo->px = (P_Random()-P_Random())<<8;
-	mo->py = (P_Random()-P_Random())<<8;
-	mo->pz = FRACUNIT*5+(P_Random()<<10);
+	mo = P_SpawnMobj(source->pos.x, source->pos.y,
+		source->pos.z+(source->height>>1), type);
+	mo->vel.x = P_SignedFRandom(8);
+	mo->vel.y = P_SignedFRandom(8);
+	mo->vel.z = 5+(P_Random()<<10);
 	mo->flags2 |= MF2_DROPPED;
 	mo->health = special;
 }
@@ -784,7 +789,7 @@ void P_DropItem(DActor *source, mobjtype_t type, int special, int chance)
 void A_SerpentUnHide(DActor *actor)
 {
   actor->flags2 &= ~MF2_DONTDRAW;
-  actor->floorclip = 24*FRACUNIT;
+  actor->floorclip = 24;
 }
 
 //============================================================================
@@ -807,7 +812,7 @@ void A_SerpentHide(DActor *actor)
 void A_SerpentChase(DActor *actor)
 {
   int delta;
-  int oldX, oldY, oldFloor;
+  fixed_t oldX, oldY, oldFloor;
 
   if(actor->reactiontime)
     {
@@ -834,15 +839,15 @@ void A_SerpentChase(DActor *actor)
   //
   if(actor->movedir < 8)
     {
-      actor->angle &= (7<<29);
-      delta = actor->angle-(actor->movedir << 29);
+      actor->yaw &= (7<<29);
+      delta = actor->yaw-(actor->movedir << 29);
       if(delta > 0)
 	{
-	  actor->angle -= ANG90/2;
+	  actor->yaw -= ANG90/2;
 	}
       else if(delta < 0)
 	{
-	  actor->angle += ANG90/2;
+	  actor->yaw += ANG90/2;
 	}
     }
 
@@ -892,8 +897,8 @@ void A_SerpentChase(DActor *actor)
   //
   // chase towards player
   //
-  oldX = actor->x;
-  oldY = actor->y;
+  oldX = actor->pos.x;
+  oldY = actor->pos.y;
   oldFloor = actor->subsector->sector->floorpic;
   if (--actor->movecount<0 || !actor->P_Move())
     {
@@ -923,7 +928,7 @@ void A_SerpentChase(DActor *actor)
 
 void A_SerpentRaiseHump(DActor *actor)
 {
-  actor->floorclip -= 4*FRACUNIT;
+  actor->floorclip -= 4;
 }
 
 //============================================================================
@@ -934,7 +939,7 @@ void A_SerpentRaiseHump(DActor *actor)
 
 void A_SerpentLowerHump(DActor *actor)
 {
-  actor->floorclip += 4*FRACUNIT;
+  actor->floorclip += 4;
 }
 
 //============================================================================
@@ -1035,15 +1040,15 @@ void A_SerpentWalk(DActor *actor)
   //
   if(actor->movedir < 8)
     {
-      actor->angle &= (7<<29);
-      delta = actor->angle-(actor->movedir << 29);
+      actor->yaw &= (7<<29);
+      delta = actor->yaw-(actor->movedir << 29);
       if(delta > 0)
 	{
-	  actor->angle -= ANG90/2;
+	  actor->yaw -= ANG90/2;
 	}
       else if(delta < 0)
 	{
-	  actor->angle += ANG90/2;
+	  actor->yaw += ANG90/2;
 	}
     }
 
@@ -1201,7 +1206,7 @@ void A_SerpentMissileAttack(DActor *actor)
 
 void A_SerpentHeadPop(DActor *actor)
 {
-  actor->mp->SpawnDActor(actor->x, actor->y, actor->z+45*FRACUNIT, MT_SERPENT_HEAD);
+  actor->mp->SpawnDActor(actor->pos.x, actor->pos.y, actor->pos.z+45, MT_SERPENT_HEAD);
 }
 
 //============================================================================
@@ -1214,32 +1219,32 @@ void A_SerpentSpawnGibs(DActor *actor)
 {
   DActor *mo;
 
-  mo = actor->mp->SpawnDActor(actor->x+((P_Random()-128)<<12), 
-		   actor->y+((P_Random()-128)<<12), actor->floorz+FRACUNIT,
+  mo = actor->mp->SpawnDActor(actor->pos.x+P_SFRandom(4), 
+		   actor->pos.y+P_SFRandom(4), actor->floorz+1,
 		   MT_SERPENT_GIB1);	
   if(mo)
     {
-      mo->px = (P_Random()-128)<<6;
-      mo->py = (P_Random()-128)<<6;
-      mo->floorclip = 6*FRACUNIT;
+      mo->vel.x = P_SFRandom(10);
+      mo->vel.y = P_SFRandom(10);
+      mo->floorclip = 6;
     }
-  mo = actor->mp->SpawnDActor(actor->x+((P_Random()-128)<<12), 
-		   actor->y+((P_Random()-128)<<12), actor->floorz+FRACUNIT,
+  mo = actor->mp->SpawnDActor(actor->pos.x+P_SFRandom(4), 
+		   actor->pos.y+P_SFRandom(4), actor->floorz+1,
 		   MT_SERPENT_GIB2);	
   if(mo)
     {
-      mo->px = (P_Random()-128)<<6;
-      mo->py = (P_Random()-128)<<6;
-      mo->floorclip = 6*FRACUNIT;
+      mo->vel.x = P_SFRandom(10);
+      mo->vel.y = P_SFRandom(10);
+      mo->floorclip = 6;
     }
-  mo = actor->mp->SpawnDActor(actor->x+((P_Random()-128)<<12), 
-		   actor->y+((P_Random()-128)<<12), actor->floorz+FRACUNIT,
+  mo = actor->mp->SpawnDActor(actor->pos.x+P_SFRandom(4), 
+		   actor->pos.y+P_SFRandom(4), actor->floorz+1,
 		   MT_SERPENT_GIB3);	
   if(mo)
     {
-      mo->px = (P_Random()-128)<<6;
-      mo->py = (P_Random()-128)<<6;
-      mo->floorclip = 6*FRACUNIT;
+      mo->vel.x = P_SFRandom(10);
+      mo->vel.y = P_SFRandom(10);
+      mo->floorclip = 6;
     }
 }
 
@@ -1251,7 +1256,7 @@ void A_SerpentSpawnGibs(DActor *actor)
 
 void A_FloatGib(DActor *actor)
 {
-  actor->floorclip -= FRACUNIT;
+  actor->floorclip -= 1;
 }
 
 //============================================================================
@@ -1262,7 +1267,7 @@ void A_FloatGib(DActor *actor)
 
 void A_SinkGib(DActor *actor)
 {
-  actor->floorclip += FRACUNIT;
+  actor->floorclip += 1;
 }
 
 //============================================================================
@@ -1284,7 +1289,7 @@ void A_DelayGib(DActor *actor)
 
 void A_SerpentHeadCheck(DActor *actor)
 {
-  if (actor->z <= actor->floorz)
+  if (actor->pos.z <= actor->floorz)
     {
       if (actor->subsector->sector->floortype >= FLOOR_LIQUID)
 	{
@@ -1343,29 +1348,25 @@ void A_CentaurDropStuff(DActor *actor)
   DActor *mo;
   angle_t angle;
 
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z+45*FRACUNIT, 
+  mo = actor->mp->SpawnDActor(actor->pos.x, actor->pos.y, actor->pos.z+45, 
 		   MT_CENTAUR_SHIELD);
   if(mo)
     {
-      angle = actor->angle+ANG90;
-      mo->pz = FRACUNIT*8+(P_Random()<<10);
-      mo->px = FixedMul(((P_Random()-128)<<11)+FRACUNIT,
-			  finecosine[angle>>ANGLETOFINESHIFT]);
-      mo->py = FixedMul(((P_Random()-128)<<11)+FRACUNIT, 
-			  finesine[angle>>ANGLETOFINESHIFT]);
-      mo->target = actor;
+      angle = actor->yaw+ANG90;
+      mo->vel.z = 8 + P_FRandom(6);
+      mo->vel.x = (P_SFRandom(5)+1) * finecosine[angle>>ANGLETOFINESHIFT];
+      mo->vel.y = (P_SFRandom(5)+1) * finesine[angle>>ANGLETOFINESHIFT];
+      mo->owner = actor;
     }
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z+45*FRACUNIT, 
+  mo = actor->mp->SpawnDActor(actor->pos.x, actor->pos.y, actor->pos.z+45, 
 		   MT_CENTAUR_SWORD);
   if(mo)
     {
-      angle = actor->angle-ANG90;
-      mo->pz = FRACUNIT*8+(P_Random()<<10);
-      mo->px = FixedMul(((P_Random()-128)<<11)+FRACUNIT,
-			  finecosine[angle>>ANGLETOFINESHIFT]);
-      mo->py = FixedMul(((P_Random()-128)<<11)+FRACUNIT, 
-			  finesine[angle>>ANGLETOFINESHIFT]);
-      mo->target = actor;
+      angle = actor->yaw-ANG90;
+      mo->vel.z = 8+P_FRandom(6);
+      mo->vel.x = (P_SFRandom(5)+1) * finecosine[angle>>ANGLETOFINESHIFT];
+      mo->vel.y = (P_SFRandom(5)+1) * finesine[angle>>ANGLETOFINESHIFT];
+      mo->owner = actor;
     }
 }
 
@@ -1445,20 +1446,16 @@ void A_BishopMissileWeave(DActor *actor)
 
   weaveXY = actor->special2>>16;
   weaveZ = actor->special2&0xFFFF;
-  angle = (actor->angle+ANG90)>>ANGLETOFINESHIFT;
-  newX = actor->x-FixedMul(finecosine[angle], 
-			   FloatBobOffsets[weaveXY]<<1);
-  newY = actor->y-FixedMul(finesine[angle],
-			   FloatBobOffsets[weaveXY]<<1);
+  angle = (actor->yaw+ANG90)>>ANGLETOFINESHIFT;
+  newX = actor->pos.x - finecosine[angle] * (FloatBobOffsets[weaveXY] << 1);
+  newY = actor->pos.y - finesine[angle] * (FloatBobOffsets[weaveXY] << 1);
   weaveXY = (weaveXY+2)&63;
-  newX += FixedMul(finecosine[angle], 
-		   FloatBobOffsets[weaveXY]<<1);
-  newY += FixedMul(finesine[angle], 
-		   FloatBobOffsets[weaveXY]<<1);
+  newX += finecosine[angle] * (FloatBobOffsets[weaveXY] << 1);
+  newY += finesine[angle] * (FloatBobOffsets[weaveXY] << 1);
   actor->TryMove(newX, newY, true);
-  actor->z -= FloatBobOffsets[weaveZ];
+  actor->pos.z -= FloatBobOffsets[weaveZ];
   weaveZ = (weaveZ+2)&63;
-  actor->z += FloatBobOffsets[weaveZ];	
+  actor->pos.z += FloatBobOffsets[weaveZ];	
   actor->special2 = weaveZ+(weaveXY<<16);
 }
 
@@ -1502,15 +1499,15 @@ void A_BishopDoBlur(DActor *actor)
   actor->special1 = (P_Random()&3)+3; // Random number of blurs
   if(P_Random() < 120)
     {
-      actor->Thrust(actor->angle+ANG90, 11*FRACUNIT);
+      actor->Thrust(actor->yaw+ANG90, 11);
     }
   else if(P_Random() > 125)
     {
-      actor->Thrust(actor->angle-ANG90, 11*FRACUNIT);
+      actor->Thrust(actor->yaw-ANG90, 11);
     }
   else
     { // Thrust forward
-      actor->Thrust(actor->angle, 11*FRACUNIT);
+      actor->Thrust(actor->yaw, 11);
     }
   S_StartSound(actor, SFX_BISHOP_BLUR);
 }
@@ -1527,8 +1524,8 @@ void A_BishopSpawnBlur(DActor *actor)
 
   if(!--actor->special1)
     {
-      actor->px = 0;
-      actor->py = 0;
+      actor->vel.x = 0;
+      actor->vel.y = 0;
       if(P_Random() > 96)
 	{
 	  actor->SetState(S_BISHOP_WALK1);
@@ -1538,10 +1535,10 @@ void A_BishopSpawnBlur(DActor *actor)
 	  actor->SetState(S_BISHOP_ATK1);
 	}
     }
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_BISHOPBLUR);
+  mo = actor->mp->SpawnDActor(actor->pos, MT_BISHOPBLUR);
   if(mo)
     {
-      mo->angle = actor->angle;
+      mo->yaw = actor->yaw;
     }
 }
 
@@ -1553,9 +1550,9 @@ void A_BishopSpawnBlur(DActor *actor)
 
 void A_BishopChase(DActor *actor)
 {
-  actor->z -= FloatBobOffsets[actor->special2]>>1;
+  actor->pos.z -= FloatBobOffsets[actor->special2]>>1;
   actor->special2 = (actor->special2+4)&63;
-  actor->z += FloatBobOffsets[actor->special2]>>1;
+  actor->pos.z += FloatBobOffsets[actor->special2]>>1;
 }
 
 //============================================================================
@@ -1568,11 +1565,11 @@ void A_BishopPuff(DActor *actor)
 {
   DActor *mo;
 
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z+40*FRACUNIT, 	
+  mo = actor->mp->SpawnDActor(actor->pos.x, actor->pos.y, actor->pos.z+40, 	
 		   MT_BISHOP_PUFF);
   if(mo)
     {
-      mo->pz = FRACUNIT/2;
+      mo->vel.z = 0.5f;
     }
 }
 
@@ -1591,12 +1588,13 @@ void A_BishopPainBlur(DActor *actor)
       actor->SetState(S_BISHOP_BLUR1);
       return;
     }
-  mo = actor->mp->SpawnDActor(actor->x+((P_Random()-P_Random())<<12), actor->y
-		   +((P_Random()-P_Random())<<12), actor->z+((P_Random()-P_Random())<<11),
-		   MT_BISHOPPAINBLUR);
+  mo = actor->mp->SpawnDActor(actor->pos.x+P_SignedFRandom(4),
+			      actor->pos.y+P_SignedFRandom(4),
+			      actor->pos.z+P_SignedFRandom(5),
+			      MT_BISHOPPAINBLUR);
   if(mo)
     {
-      mo->angle = actor->angle;
+      mo->yaw = actor->yaw;
     }
 }
 
@@ -1624,35 +1622,28 @@ static void DragonSeek(DActor *actor, angle_t thresh, angle_t turnMax)
     }
 
   if (dir)
-    actor->angle += delta; // Turn clockwise
+    actor->yaw += delta; // Turn clockwise
   else
-    actor->angle -= delta; // Turn counter clockwise
+    actor->yaw -= delta; // Turn counter clockwise
 
-  angle_t an = actor->angle >> ANGLETOFINESHIFT;
-  actor->px = int(actor->info->speed * finecosine[an]);
-  actor->py = int(actor->info->speed * finesine[an]);
+  angle_t an = actor->yaw >> ANGLETOFINESHIFT;
+  actor->vel.x = actor->info->speed * finecosine[an];
+  actor->vel.y = actor->info->speed * finesine[an];
 
-  int dist;
-  if (actor->z + actor->height < t->z || t->z + t->height < actor->z)
+  int dist = (P_XYdist(t->pos, actor->pos) / actor->info->speed).floor();
+  if (actor->Top() < t->Feet() || t->Top() < actor->Feet())
     {
-      dist = P_AproxDistance(t->x - actor->x, t->y - actor->y);
-      dist = dist/int(actor->info->speed * FRACUNIT);
       if (dist < 1)
 	dist = 1;
 
-      actor->pz = (t->z-actor->z)/dist;
-    }
-  else
-    {
-      dist = P_AproxDistance(t->x-actor->x, t->y-actor->y);
-      dist = dist/int(actor->info->speed * FRACUNIT);
+      actor->vel.z = (t->pos.z-actor->pos.z)/dist;
     }
 
   if (t->flags & MF_SHOOTABLE && P_Random() < 64)
     { // attack the destination mobj if it's attackable
       Actor *oldTarget;
 	
-      if (abs(actor->angle - R_PointToAngle2(actor->x, actor->y, t->x, t->y)) < ANG45/2)
+      if (abs(actor->yaw - R_PointToAngle2(actor->pos, t->pos)) < ANG45/2)
 	{
 	  oldTarget = actor->target;
 	  actor->target = t;
@@ -1678,7 +1669,7 @@ static void DragonSeek(DActor *actor, angle_t thresh, angle_t turnMax)
 	  int bestArg = -1;
 	  angle_t bestAngle = ANGLE_MAX;
 	  angle_t angleToSpot;
-	  angle_t angleToTarget = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
+	  angle_t angleToTarget = R_PointToAngle2(actor->pos, actor->target->pos);
 	  for (i = 0; i < 5; i++)
 	    {
 	      if (!t->args[i])
@@ -1687,7 +1678,7 @@ static void DragonSeek(DActor *actor, angle_t thresh, angle_t turnMax)
 	      search = -1;
 
 	      Actor *mo = actor->mp->FindFromTIDmap(t->args[i], &search);
-	      angleToSpot = R_PointToAngle2(actor->x, actor->y, mo->x, mo->y);
+	      angleToSpot = R_PointToAngle2(actor->pos, mo->pos);
 	      if (abs(angleToSpot-angleToTarget) < bestAngle)
 		{
 		  bestAngle = abs(angleToSpot-angleToTarget);
@@ -1751,13 +1742,13 @@ void A_DragonFlight(DActor *actor)
 	  return;
 	}
 
-      angle_t an = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
-      if (abs(actor->angle - an) < ANG45/2 && actor->CheckMeleeRange())
+      angle_t an = R_PointToAngle2(actor->pos, actor->target->pos);
+      if (abs(actor->yaw - an) < ANG45/2 && actor->CheckMeleeRange())
 	{
 	  actor->target->Damage(actor, actor, HITDICE(8));
 	  S_StartSound(actor, SFX_DRAGON_ATTACK);
 	}
-      else if(abs(actor->angle - an) <= ANGLE_1*20)
+      else if(abs(actor->yaw - an) <= ANGLE_1*20)
 	{
 	  actor->SetState(actor->info->missilestate);
 	  S_StartSound(actor, SFX_DRAGON_ATTACK);
@@ -1805,8 +1796,8 @@ void A_DragonFX2(DActor *actor)
 
   for (int i = 1 + (P_Random()&3); i; i--)
     {
-      DActor *mo = actor->mp->SpawnDActor(actor->x + ((P_Random()-128)<<14), 
-	actor->y + ((P_Random()-128)<<14), actor->z + ((P_Random()-128)<<12), MT_DRAGON_FX2);
+      DActor *mo = actor->mp->SpawnDActor(actor->pos.x + P_SFRandom(2), 
+	actor->pos.y + P_SFRandom(2), actor->pos.z + P_SFRandom(4), MT_DRAGON_FX2);
 
       if (mo)
 	{
@@ -1840,7 +1831,7 @@ void A_DragonPain(DActor *actor)
 
 void A_DragonCheckCrash(DActor *actor)
 {
-  if (actor->z <= actor->floorz)
+  if (actor->pos.z <= actor->floorz)
     actor->SetState(S_DRAGON_CRASH1);
 }
 
@@ -1879,7 +1870,7 @@ void A_DemonAttack2(DActor *actor)
   mo = actor->SpawnMissile(actor->target, fireBall);
   if (mo)
     {
-      mo->z += 30*FRACUNIT;
+      mo->pos.z += 30;
       S_StartSound(actor, SFX_DEMON_MISSILE_FIRE);
     }
 }
@@ -1892,66 +1883,53 @@ void A_DemonDeath(DActor *actor)
 {
   DActor *mo;
   angle_t angle;
+  vec_t<fixed_t> pp = actor->pos;
+  pp.z += 45;
 
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z+45*FRACUNIT, 
-		   MT_DEMONCHUNK1);
+  mo = actor->mp->SpawnDActor(pp, MT_DEMONCHUNK1);
   if(mo)
     {
-      angle = actor->angle+ANG90;
-      mo->pz = 8*FRACUNIT;
-      mo->px = FixedMul((P_Random()<<10)+FRACUNIT,
-			  finecosine[angle>>ANGLETOFINESHIFT]);
-      mo->py = FixedMul((P_Random()<<10)+FRACUNIT, 
-			  finesine[angle>>ANGLETOFINESHIFT]);
-      mo->target = actor;
+      angle = actor->yaw+ANG90;
+      mo->vel.z = 8;
+      mo->vel.x = (P_FRandom(6)+1) * finecosine[angle>>ANGLETOFINESHIFT];
+      mo->vel.y = (P_FRandom(6)+1) * finesine[angle>>ANGLETOFINESHIFT];
+      mo->owner = actor;
     }
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z+45*FRACUNIT, 
-		   MT_DEMONCHUNK2);
+  mo = actor->mp->SpawnDActor(pp, MT_DEMONCHUNK2);
   if(mo)
     {
-      angle = actor->angle-ANG90;
-      mo->pz = 8*FRACUNIT;
-      mo->px = FixedMul((P_Random()<<10)+FRACUNIT,
-			  finecosine[angle>>ANGLETOFINESHIFT]);
-      mo->py = FixedMul((P_Random()<<10)+FRACUNIT, 
-			  finesine[angle>>ANGLETOFINESHIFT]);
-      mo->target = actor;
+      angle = actor->yaw-ANG90;
+      mo->vel.z = 8;
+      mo->vel.x = (P_FRandom(6)+1) * finecosine[angle>>ANGLETOFINESHIFT];
+      mo->vel.y = (P_FRandom(6)+1) * finesine[angle>>ANGLETOFINESHIFT];
+      mo->owner = actor;
     }
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z+45*FRACUNIT, 
-		   MT_DEMONCHUNK3);
+  mo = actor->mp->SpawnDActor(pp, MT_DEMONCHUNK3);
   if(mo)
     {
-      angle = actor->angle-ANG90;
-      mo->pz = 8*FRACUNIT;
-      mo->px = FixedMul((P_Random()<<10)+FRACUNIT,
-			  finecosine[angle>>ANGLETOFINESHIFT]);
-      mo->py = FixedMul((P_Random()<<10)+FRACUNIT, 
-			  finesine[angle>>ANGLETOFINESHIFT]);
-      mo->target = actor;
+      angle = actor->yaw-ANG90;
+      mo->vel.z = 8;
+      mo->vel.x = (P_FRandom(6)+1) * finecosine[angle>>ANGLETOFINESHIFT];
+      mo->vel.y = (P_FRandom(6)+1) * finesine[angle>>ANGLETOFINESHIFT];
+      mo->owner = actor;
     }
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z+45*FRACUNIT, 
-		   MT_DEMONCHUNK4);
+  mo = actor->mp->SpawnDActor(pp, MT_DEMONCHUNK4);
   if(mo)
     {
-      angle = actor->angle-ANG90;
-      mo->pz = 8*FRACUNIT;
-      mo->px = FixedMul((P_Random()<<10)+FRACUNIT,
-			  finecosine[angle>>ANGLETOFINESHIFT]);
-      mo->py = FixedMul((P_Random()<<10)+FRACUNIT, 
-			  finesine[angle>>ANGLETOFINESHIFT]);
-      mo->target = actor;
+      angle = actor->yaw-ANG90;
+      mo->vel.z = 8;
+      mo->vel.x = (P_FRandom(6)+1) * finecosine[angle>>ANGLETOFINESHIFT];
+      mo->vel.y = (P_FRandom(6)+1) * finesine[angle>>ANGLETOFINESHIFT];
+      mo->owner = actor;
     }
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z+45*FRACUNIT, 
-		   MT_DEMONCHUNK5);
+  mo = actor->mp->SpawnDActor(pp, MT_DEMONCHUNK5);
   if(mo)
     {
-      angle = actor->angle-ANG90;
-      mo->pz = 8*FRACUNIT;
-      mo->px = FixedMul((P_Random()<<10)+FRACUNIT,
-			  finecosine[angle>>ANGLETOFINESHIFT]);
-      mo->py = FixedMul((P_Random()<<10)+FRACUNIT, 
-			  finesine[angle>>ANGLETOFINESHIFT]);
-      mo->target = actor;
+      angle = actor->yaw-ANG90;
+      mo->vel.z = 8;
+      mo->vel.x = (P_FRandom(6)+1) * finecosine[angle>>ANGLETOFINESHIFT];
+      mo->vel.y = (P_FRandom(6)+1) * finesine[angle>>ANGLETOFINESHIFT];
+      mo->owner = actor;
     }
 }
 
@@ -1965,66 +1943,53 @@ void A_Demon2Death(DActor *actor)
 {
   DActor *mo;
   angle_t angle;
+  vec_t<fixed_t> pp = actor->pos;
+  pp.z += 45;
 
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z+45*FRACUNIT, 
-		   MT_DEMON2CHUNK1);
+  mo = actor->mp->SpawnDActor(pp, MT_DEMON2CHUNK1);
   if(mo)
     {
-      angle = actor->angle+ANG90;
-      mo->pz = 8*FRACUNIT;
-      mo->px = FixedMul((P_Random()<<10)+FRACUNIT,
-			  finecosine[angle>>ANGLETOFINESHIFT]);
-      mo->py = FixedMul((P_Random()<<10)+FRACUNIT, 
-			  finesine[angle>>ANGLETOFINESHIFT]);
-      mo->target = actor;
+      angle = actor->yaw+ANG90;
+      mo->vel.z = 8;
+      mo->vel.x = (P_FRandom(6)+1) * finecosine[angle>>ANGLETOFINESHIFT];
+      mo->vel.y = (P_FRandom(6)+1) * finesine[angle>>ANGLETOFINESHIFT];
+      mo->owner = actor;
     }
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z+45*FRACUNIT, 
-		   MT_DEMON2CHUNK2);
+  mo = actor->mp->SpawnDActor(pp, MT_DEMON2CHUNK2);
   if(mo)
     {
-      angle = actor->angle-ANG90;
-      mo->pz = 8*FRACUNIT;
-      mo->px = FixedMul((P_Random()<<10)+FRACUNIT,
-			  finecosine[angle>>ANGLETOFINESHIFT]);
-      mo->py = FixedMul((P_Random()<<10)+FRACUNIT, 
-			  finesine[angle>>ANGLETOFINESHIFT]);
-      mo->target = actor;
+      angle = actor->yaw-ANG90;
+      mo->vel.z = 8;
+      mo->vel.x = (P_FRandom(6)+1) * finecosine[angle>>ANGLETOFINESHIFT];
+      mo->vel.y = (P_FRandom(6)+1) * finesine[angle>>ANGLETOFINESHIFT];
+      mo->owner = actor;
     }
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z+45*FRACUNIT, 
-		   MT_DEMON2CHUNK3);
+  mo = actor->mp->SpawnDActor(pp, MT_DEMON2CHUNK3);
   if(mo)
     {
-      angle = actor->angle-ANG90;
-      mo->pz = 8*FRACUNIT;
-      mo->px = FixedMul((P_Random()<<10)+FRACUNIT,
-			  finecosine[angle>>ANGLETOFINESHIFT]);
-      mo->py = FixedMul((P_Random()<<10)+FRACUNIT, 
-			  finesine[angle>>ANGLETOFINESHIFT]);
-      mo->target = actor;
+      angle = actor->yaw-ANG90;
+      mo->vel.z = 8;
+      mo->vel.x = (P_FRandom(6)+1) * finecosine[angle>>ANGLETOFINESHIFT];
+      mo->vel.y = (P_FRandom(6)+1) * finesine[angle>>ANGLETOFINESHIFT];
+      mo->owner = actor;
     }
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z+45*FRACUNIT, 
-		   MT_DEMON2CHUNK4);
+  mo = actor->mp->SpawnDActor(pp, MT_DEMON2CHUNK4);
   if(mo)
     {
-      angle = actor->angle-ANG90;
-      mo->pz = 8*FRACUNIT;
-      mo->px = FixedMul((P_Random()<<10)+FRACUNIT,
-			  finecosine[angle>>ANGLETOFINESHIFT]);
-      mo->py = FixedMul((P_Random()<<10)+FRACUNIT, 
-			  finesine[angle>>ANGLETOFINESHIFT]);
-      mo->target = actor;
+      angle = actor->yaw-ANG90;
+      mo->vel.z = 8;
+      mo->vel.x = (P_FRandom(6)+1) * finecosine[angle>>ANGLETOFINESHIFT];
+      mo->vel.y = (P_FRandom(6)+1) * finesine[angle>>ANGLETOFINESHIFT];
+      mo->owner = actor;
     }
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z+45*FRACUNIT, 
-		   MT_DEMON2CHUNK5);
+  mo = actor->mp->SpawnDActor(pp, MT_DEMON2CHUNK5);
   if(mo)
     {
-      angle = actor->angle-ANG90;
-      mo->pz = 8*FRACUNIT;
-      mo->px = FixedMul((P_Random()<<10)+FRACUNIT,
-			  finecosine[angle>>ANGLETOFINESHIFT]);
-      mo->py = FixedMul((P_Random()<<10)+FRACUNIT, 
-			  finesine[angle>>ANGLETOFINESHIFT]);
-      mo->target = actor;
+      angle = actor->yaw-ANG90;
+      mo->vel.z = 8;
+      mo->vel.x = (P_FRandom(6)+1) * finecosine[angle>>ANGLETOFINESHIFT];
+      mo->vel.y = (P_FRandom(6)+1) * finesine[angle>>ANGLETOFINESHIFT];
+      mo->owner = actor;
     }
 }
 
@@ -2043,10 +2008,10 @@ bool A_SinkMobj(DActor *actor)
 	{
 	case MT_THRUSTFLOOR_DOWN:
 	case MT_THRUSTFLOOR_UP:
-	  actor->floorclip += 6*FRACUNIT;
+	  actor->floorclip += 6;
 	  break;
 	default:
-	  actor->floorclip += FRACUNIT;
+	  actor->floorclip += 1;
 	  break;
 	}
       return false;
@@ -2069,14 +2034,14 @@ bool A_RaiseMobj(DActor *actor)
       switch(actor->type)
 	{
 	case MT_WRAITHB:
-	  actor->floorclip -= 2*FRACUNIT;
+	  actor->floorclip -= 2;
 	  break;
 	case MT_THRUSTFLOOR_DOWN:
 	case MT_THRUSTFLOOR_UP:
-	  actor->floorclip -= actor->special2*FRACUNIT;
+	  actor->floorclip -= actor->special2;
 	  break;
 	default:
-	  actor->floorclip -= 2*FRACUNIT;
+	  actor->floorclip -= 2;
 	  break;
 	}
       if (actor->floorclip <= 0)
@@ -2106,7 +2071,7 @@ bool A_RaiseMobj(DActor *actor)
 
 void A_WraithInit(DActor *actor)
 {
-  actor->z += 48<<FRACBITS;
+  actor->pos.z += 48;
   actor->special1 = 0;			// index into floatbob
 }
 
@@ -2167,24 +2132,22 @@ void A_WraithFX2(DActor *actor)
 
   for (i=0; i<2; i++)
     {
-      mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_WRAITHFX2);
+      mo = actor->mp->SpawnDActor(actor->pos, MT_WRAITHFX2);
       if(mo)
 	{
 	  if (P_Random()<128)
 	    {
-	      angle = actor->angle+(P_Random()<<22);
+	      angle = actor->yaw+(P_Random()<<22);
 	    }
 	  else
 	    {
-	      angle = actor->angle-(P_Random()<<22);
+	      angle = actor->yaw-(P_Random()<<22);
 	    }
-	  mo->pz = 0;
-	  mo->px = FixedMul((P_Random()<<7)+FRACUNIT,
-			      finecosine[angle>>ANGLETOFINESHIFT]);
-	  mo->py = FixedMul((P_Random()<<7)+FRACUNIT, 
-			      finesine[angle>>ANGLETOFINESHIFT]);
-	  mo->target = actor;
-	  mo->floorclip = 10*FRACUNIT;
+	  mo->vel.z = 0;
+	  mo->vel.x = (P_FRandom(9)+1) * finecosine[angle>>ANGLETOFINESHIFT];
+	  mo->vel.y = (P_FRandom(9)+1) * finesine[angle>>ANGLETOFINESHIFT];
+	  mo->owner = actor;
+	  mo->floorclip = 10;
 	}
     }
 }
@@ -2199,13 +2162,13 @@ void A_WraithFX3(DActor *actor)
 
   for (i=0; i<numdropped; i++)
     {
-      mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_WRAITHFX3);
+      mo = actor->mp->SpawnDActor(actor->pos, MT_WRAITHFX3);
       if(mo)
 	{
-	  mo->x += (P_Random()-128)<<11;
-	  mo->y += (P_Random()-128)<<11;
-	  mo->z += (P_Random()<<10);
-	  mo->target = actor;
+	  mo->pos.x += P_SFRandom(5);
+	  mo->pos.y += P_SFRandom(5);
+	  mo->pos.z += P_FRandom(6);
+	  mo->owner = actor;
 	}
     }
 }
@@ -2240,24 +2203,24 @@ void A_WraithFX4(DActor *actor)
 
   if (spawn4)
     {
-      mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_WRAITHFX4);
+      mo = actor->mp->SpawnDActor(actor->pos, MT_WRAITHFX4);
       if(mo)
 	{
-	  mo->x += (P_Random()-128)<<12;
-	  mo->y += (P_Random()-128)<<12;
-	  mo->z += (P_Random()<<10);
-	  mo->target = actor;
+	  mo->pos.x += P_SFRandom(4);
+	  mo->pos.y += P_SFRandom(4);
+	  mo->pos.z += P_FRandom(6);
+	  mo->owner = actor;
 	}
     }
   if (spawn5)
     {
-      mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_WRAITHFX5);
+      mo = actor->mp->SpawnDActor(actor->pos, MT_WRAITHFX5);
       if(mo)
 	{
-	  mo->x += (P_Random()-128)<<11;
-	  mo->y += (P_Random()-128)<<11;
-	  mo->z += (P_Random()<<10);
-	  mo->target = actor;
+	  mo->pos.x += P_SFRandom(5);
+	  mo->pos.y += P_SFRandom(5);
+	  mo->pos.z += P_FRandom(6);
+	  mo->owner = actor;
 	}
     }
 }
@@ -2273,7 +2236,7 @@ void A_WraithLook(DActor *actor)
 void A_WraithChase(DActor *actor)
 {
   int weaveindex = actor->special1;
-  actor->z += FloatBobOffsets[weaveindex];
+  actor->pos.z += FloatBobOffsets[weaveindex];
   actor->special1 = (weaveindex+2)&63;
   //	if (actor->floorclip > 0)
   //	{
@@ -2303,14 +2266,14 @@ void A_DropMace(DActor *actor)
 {
   DActor *mo;
 
-  mo = actor->mp->SpawnDActor(actor->x, actor->y,
-		   actor->z+(actor->height>>1), MT_ETTIN_MACE);
+  mo = actor->mp->SpawnDActor(actor->pos.x, actor->pos.y,
+			      actor->Center(), MT_ETTIN_MACE);
   if (mo)
     {
-      mo->px = (P_Random()-128)<<11;
-      mo->py = (P_Random()-128)<<11;
-      mo->pz = FRACUNIT*10+(P_Random()<<10);
-      mo->target = actor;
+      mo->vel.x = P_SFRandom(5);
+      mo->vel.y = P_SFRandom(5);
+      mo->vel.z = 10+P_FRandom(6);
+      mo->owner = actor;
     }
 }
 
@@ -2325,7 +2288,7 @@ void A_DropMace(DActor *actor)
 void A_FiredSpawnRock(DActor *actor)
 {
   DActor *mo;
-  int x,y,z;
+  fixed_t x,y,z;
   mobjtype_t rtype;
 
   switch(P_Random()%5)
@@ -2347,16 +2310,16 @@ void A_FiredSpawnRock(DActor *actor)
       break;
     }
 
-  x = actor->x + ((P_Random()-128) << 12);
-  y = actor->y + ((P_Random()-128) << 12);
-  z = actor->z + ((P_Random()) << 11);
+  x = actor->pos.x + P_SFRandom(4);
+  y = actor->pos.y + P_SFRandom(4);
+  z = actor->pos.z + P_FRandom(5);
   mo = actor->mp->SpawnDActor(x,y,z,rtype);
   if (mo)
     {
-      mo->target = actor;
-      mo->px = (P_Random()-128)<<10;
-      mo->py = (P_Random()-128)<<10;
-      mo->pz = (P_Random()<<10);
+      mo->owner = actor;
+      mo->vel.x = P_SFRandom(6);
+      mo->vel.y = P_SFRandom(6);
+      mo->vel.z = P_FRandom(6);
       mo->special1 = 2;		// Number bounces
     }
 
@@ -2384,14 +2347,14 @@ void A_FiredAttack(DActor *actor)
 void A_SmBounce(DActor *actor)
 {
   // give some more momentum (x,y,&z)
-  actor->z = actor->floorz + FRACUNIT;
-  actor->pz = (2*FRACUNIT) + (P_Random()<<10);
-  actor->px = P_Random()%3<<FRACBITS;
-  actor->py = P_Random()%3<<FRACBITS;
+  actor->pos.z = actor->floorz + 1;
+  actor->vel.z = 2 + P_FRandom(6);
+  actor->vel.x = P_Random() % 3;
+  actor->vel.y = P_Random() % 3;
 }
 
 
-#define FIREDEMON_ATTACK_RANGE	64*8*FRACUNIT
+#define FIREDEMON_ATTACK_RANGE	64*8
 
 void A_FiredChase(DActor *actor)
 {
@@ -2404,13 +2367,13 @@ void A_FiredChase(DActor *actor)
   if(actor->threshold) actor->threshold--;
 
   // Float up and down
-  actor->z += FloatBobOffsets[weaveindex];
+  actor->pos.z += FloatBobOffsets[weaveindex];
   actor->special1 = (weaveindex+2)&63;
 
   // Insure it stays above certain height
-  if (actor->z < actor->floorz + (64*FRACUNIT))
+  if (actor->pos.z < actor->floorz + 64)
     {
-      actor->z += 2*FRACUNIT;
+      actor->pos.z += 2;
     }
 
   if(!t || !(t->flags&MF_SHOOTABLE))
@@ -2427,20 +2390,20 @@ void A_FiredChase(DActor *actor)
   else
     {
       actor->special2 = 0;
-      actor->px = actor->py = 0;
-      dist = P_AproxDistance(actor->x - t->x, actor->y - t->y);
+      actor->vel.x = actor->vel.y = 0;
+      dist = P_XYdist(actor->pos, t->pos);
       if (dist < FIREDEMON_ATTACK_RANGE)
 	{
 	  if (P_Random()<30)
 	    {
-	      ang = R_PointToAngle2(actor->x, actor->y, t->x, t->y);
+	      ang = R_PointToAngle2(actor->pos, t->pos);
 	      if (P_Random()<128)
 		ang += ANG90;
 	      else
 		ang -= ANG90;
 	      ang>>=ANGLETOFINESHIFT;
-	      actor->px = FixedMul(8*FRACUNIT, finecosine[ang]);
-	      actor->py = FixedMul(8*FRACUNIT, finesine[ang]);
+	      actor->vel.x = 8 * finecosine[ang];
+	      actor->vel.y = 8 * finesine[ang];
 	      actor->special2 = 3;		// strafe time
 	    }
 	}
@@ -2483,19 +2446,19 @@ void A_FiredSplotch(DActor *actor)
 {
   DActor *mo;
 
-  mo = actor->mp->SpawnDActor(actor->x,actor->y,actor->z, MT_FIREDEMON_SPLOTCH1);
+  mo = actor->mp->SpawnDActor(actor->pos, MT_FIREDEMON_SPLOTCH1);
   if (mo)
     {
-      mo->px = (P_Random()-128)<<11;
-      mo->py = (P_Random()-128)<<11;
-      mo->pz = FRACUNIT*3 + (P_Random()<<10);
+      mo->vel.x = P_SFRandom(5);
+      mo->vel.y = P_SFRandom(5);
+      mo->vel.z = 3 + P_FRandom(6);
     }
-  mo = actor->mp->SpawnDActor(actor->x,actor->y,actor->z, MT_FIREDEMON_SPLOTCH2);
+  mo = actor->mp->SpawnDActor(actor->pos, MT_FIREDEMON_SPLOTCH2);
   if (mo)
     {
-      mo->px = (P_Random()-128)<<11;
-      mo->py = (P_Random()-128)<<11;
-      mo->pz = FRACUNIT*3 + (P_Random()<<10);
+      mo->vel.x = P_SFRandom(5);
+      mo->vel.y = P_SFRandom(5);
+      mo->vel.z = 3 + P_FRandom(6);
     }
 }
 
@@ -2508,18 +2471,16 @@ void A_FiredSplotch(DActor *actor)
 
 void A_IceGuyLook(DActor *actor)
 {
-  fixed_t dist;
-  fixed_t an;
-
   A_Look(actor);
   if(P_Random() < 64)
     {
-      dist = ((P_Random()-128)*actor->radius)>>7;
-      an = (actor->angle+ANG90)>>ANGLETOFINESHIFT;
+      fixed_t dist = ((P_Random()-128)*actor->radius) >> 7;
+      int an = (actor->yaw+ANG90)>>ANGLETOFINESHIFT;
 
-      actor->mp->SpawnDActor(actor->x+FixedMul(dist, finecosine[an]),
-		  actor->y+FixedMul(dist, finesine[an]), actor->z+60*FRACUNIT,
-	          mobjtype_t(MT_ICEGUY_WISP1 + (P_Random() & 1)));
+      actor->mp->SpawnDActor(actor->pos.x + dist * finecosine[an],
+			     actor->pos.y + dist * finesine[an],
+			     actor->pos.z+60,
+			     mobjtype_t(MT_ICEGUY_WISP1 + (P_Random() & 1)));
     }
 }
 
@@ -2531,25 +2492,22 @@ void A_IceGuyLook(DActor *actor)
 
 void A_IceGuyChase(DActor *actor)
 {
-  fixed_t dist;
-  fixed_t an;
   DActor *mo;
 
   A_Chase(actor);
   if(P_Random() < 128)
     {
-      dist = ((P_Random()-128)*actor->radius)>>7;
-      an = (actor->angle+ANG90)>>ANGLETOFINESHIFT;
+      fixed_t dist = ((P_Random()-128)*actor->radius)>>7;
+      int an = (actor->yaw+ANG90)>>ANGLETOFINESHIFT;
 
-      mo = actor->mp->SpawnDActor(actor->x+FixedMul(dist, finecosine[an]),
-		       actor->y+FixedMul(dist, finesine[an]), actor->z+60*FRACUNIT,
-		       mobjtype_t(MT_ICEGUY_WISP1 + (P_Random()&1)));
+      mo = actor->mp->SpawnDActor(actor->pos.x + dist * finecosine[an],
+				  actor->pos.y + dist * finesine[an],
+				  actor->pos.z+60,
+				  mobjtype_t(MT_ICEGUY_WISP1 + (P_Random()&1)));
       if(mo)
 	{
-	  mo->px = actor->px;
-	  mo->py = actor->py;
-	  mo->pz = actor->pz;
-	  mo->target = actor;
+	  mo->vel = actor->vel;
+	  mo->owner = actor;
 	}
     }
 }
@@ -2573,22 +2531,20 @@ static DActor *P_SpawnMissileXYZ(fixed_t x, fixed_t y, fixed_t z,
       S_StartSound(th, th->info->seesound);
     }
   th->owner = source; // Originator
-  an = R_PointToAngle2(source->x, source->y, dest->x, dest->y);
+  an = R_PointToAngle2(source->pos, dest->pos);
   if (dest->flags & MF_SHADOW)
     { // Invisible target
-      an += (P_Random()-P_Random())<<21;
+      an += P_SignedRandom()<<21;
     }
-  th->angle = an;
+  th->yaw = an;
   an >>= ANGLETOFINESHIFT;
-  th->px = int(th->info->speed * finecosine[an]);
-  th->py = int(th->info->speed * finesine[an]);
-  dist = P_AproxDistance(dest->x - source->x, dest->y - source->y);
-  dist = dist/int(th->info->speed * FRACUNIT);
+  th->vel.x = th->info->speed * finecosine[an];
+  th->vel.y = th->info->speed * finesine[an];
+  dist = (P_XYdist(dest->pos, source->pos) / th->info->speed).floor();
   if(dist < 1)
-    {
-      dist = 1;
-    }
-  th->pz = (dest->z-source->z)/dist;
+    dist = 1;
+
+  th->vel.z = (dest->pos.z - source->pos.z) / dist;
   return (th->CheckMissileSpawn() ? th : NULL);
 }
 
@@ -2597,14 +2553,14 @@ void A_IceGuyAttack(DActor *actor)
   if (!actor->target) 
     return;
 
-  fixed_t an = (actor->angle+ANG90)>>ANGLETOFINESHIFT;
-  P_SpawnMissileXYZ(actor->x + FixedMul(actor->radius>>1, finecosine[an]),
-		    actor->y + FixedMul(actor->radius>>1, finesine[an]),
-		    actor->z + 40*FRACUNIT, actor, actor->target, MT_ICEGUY_FX);
-  an = (actor->angle-ANG90)>>ANGLETOFINESHIFT;
-  P_SpawnMissileXYZ(actor->x + FixedMul(actor->radius>>1, finecosine[an]),
-		    actor->y + FixedMul(actor->radius>>1, finesine[an]),
-		    actor->z + 40*FRACUNIT, actor, actor->target, MT_ICEGUY_FX);
+  int an = (actor->yaw+ANG90)>>ANGLETOFINESHIFT;
+  P_SpawnMissileXYZ(actor->pos.x + (actor->radius>>1) * finecosine[an],
+		    actor->pos.y + (actor->radius>>1) * finesine[an],
+		    actor->pos.z + 40, actor, actor->target, MT_ICEGUY_FX);
+  an = (actor->yaw-ANG90)>>ANGLETOFINESHIFT;
+  P_SpawnMissileXYZ(actor->pos.x + (actor->radius>>1) * finecosine[an],
+		    actor->pos.y + (actor->radius>>1) * finesine[an],
+		    actor->pos.z + 40, actor, actor->target, MT_ICEGUY_FX);
   S_StartSound(actor, actor->info->attacksound);
 }
 
@@ -2617,7 +2573,7 @@ void A_IceGuyAttack(DActor *actor)
 void A_IceGuyMissilePuff(DActor *actor)
 {
   DActor *mo;
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z+2*FRACUNIT, MT_ICEFX_PUFF);
+  mo = actor->mp->SpawnDActor(actor->pos.x, actor->pos.y, actor->pos.z+2, MT_ICEFX_PUFF);
 }
 
 //============================================================================
@@ -2630,9 +2586,7 @@ void A_IceGuyDie(DActor *actor)
 {
   void A_FreezeDeathChunks(DActor *actor);
 
-  actor->px = 0;
-  actor->py = 0;
-  actor->pz = 0;
+  actor->vel.Set(0,0,0);
   actor->height <<= 2;
   A_FreezeDeathChunks(actor);
 }
@@ -2650,7 +2604,7 @@ void A_IceGuyMissileExplode(DActor *actor)
 
   for(i = 0; i < 8; i++)
     {
-      mo = actor->SpawnMissileAngle(MT_ICEGUY_FX2, i*ANG45, int(-0.3*FRACUNIT));
+      mo = actor->SpawnMissileAngle(MT_ICEGUY_FX2, i*ANG45, -0.3f);
       if(mo)
 	{
 	  mo->target = actor->target;
@@ -2729,17 +2683,17 @@ void A_SorcSpinBalls(DActor *actor)
   actor->args[3] = SORC_NORMAL;
   actor->args[4] = SORCBALL_INITIAL_SPEED;		// Initial orbit speed
   actor->special1 = ANGLE_1;
-  z = actor->z - actor->floorclip + actor->info->height;
+  z = actor->pos.z - actor->floorclip + actor->info->height;
 	
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, z, MT_SORCBALL1);
+  mo = actor->mp->SpawnDActor(actor->pos.x, actor->pos.y, z, MT_SORCBALL1);
   if (mo)
     {
       mo->owner = actor;
       mo->special2 = SORCFX4_RAPIDFIRE_TIME;
     }
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, z, MT_SORCBALL2);
+  mo = actor->mp->SpawnDActor(actor->pos.x, actor->pos.y, z, MT_SORCBALL2);
   if (mo) mo->owner = actor;
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, z, MT_SORCBALL3);
+  mo = actor->mp->SpawnDActor(actor->pos.x, actor->pos.y, z, MT_SORCBALL3);
   if (mo) mo->owner = actor;
 }
 
@@ -2750,11 +2704,10 @@ void A_SorcSpinBalls(DActor *actor)
 
 void A_SorcBallOrbit(DActor *actor)
 {
-  int x,y;
   angle_t angle = 0, baseangle;
   int mode = actor->owner->args[3];
   DActor *parent = (DActor *)actor->owner;
-  int dist = parent->radius - (actor->radius<<1);
+  fixed_t dist = parent->radius - (actor->radius<<1);
   angle_t prevangle = actor->special1;
 	
   if (parent->health <= 0)
@@ -2776,7 +2729,7 @@ void A_SorcBallOrbit(DActor *actor)
       I_Error("corrupted sorcerer");
       break;
     }
-  actor->angle = angle;
+  actor->yaw = angle;
   angle >>= ANGLETOFINESHIFT;
 
   switch(mode)
@@ -2795,7 +2748,7 @@ void A_SorcBallOrbit(DActor *actor)
     case SORC_STOPPING:			// Balls stopping
       if ((parent->special2 == actor->type) &&
 	  (parent->args[1] > SORCBALL_SPEED_ROTATIONS) &&
-	  (abs(angle - (parent->angle>>ANGLETOFINESHIFT)) < (30<<5)))
+	  (abs(angle - (parent->yaw>>ANGLETOFINESHIFT)) < (30<<5)))
 	{
 				// Can stop now
 	  parent->args[3] = SORC_FIRESPELL;
@@ -2804,16 +2757,13 @@ void A_SorcBallOrbit(DActor *actor)
 	  switch(actor->type)
 	    {
 	    case MT_SORCBALL1:
-	      parent->special1 = (int)(parent->angle -
-				       BALL1_ANGLEOFFSET);
+	      parent->special1 = int(parent->yaw - BALL1_ANGLEOFFSET);
 	      break;
 	    case MT_SORCBALL2:
-	      parent->special1 = (int)(parent->angle -
-				       BALL2_ANGLEOFFSET);
+	      parent->special1 = int(parent->yaw - BALL2_ANGLEOFFSET);
 	      break;
 	    case MT_SORCBALL3:
-	      parent->special1 = (int)(parent->angle -
-				       BALL3_ANGLEOFFSET);
+	      parent->special1 = int(parent->yaw - BALL3_ANGLEOFFSET);
 	      break;
 	    default:
 	      break;
@@ -2875,11 +2825,11 @@ void A_SorcBallOrbit(DActor *actor)
       S_StartSound(actor, SFX_SORCERER_BALLWOOSH);
     }
   actor->special1 = angle;		// Set previous angle
-  x = parent->x + FixedMul(dist, finecosine[angle]);
-  y = parent->y + FixedMul(dist, finesine[angle]);
-  actor->x = x;
-  actor->y = y;
-  actor->z = parent->z - parent->floorclip + parent->info->height;
+
+  actor->pos = parent->pos;
+  actor->pos.x += dist * finecosine[angle];
+  actor->pos.y += dist * finesine[angle];
+  actor->pos.z += -parent->floorclip + parent->info->height;
 }
 
 
@@ -3001,26 +2951,26 @@ void A_CastSorcererSpell(DActor *actor)
       A_SorcOffense1(actor);
       break;
     case MT_SORCBALL2:				// Defensive
-      z = parent->z - parent->floorclip + 
-	SORC_DEFENSE_HEIGHT*FRACUNIT;
-      mo = actor->mp->SpawnDActor(actor->x, actor->y, z, MT_SORCFX2);
+      z = parent->pos.z - parent->floorclip + 
+	SORC_DEFENSE_HEIGHT;
+      mo = actor->mp->SpawnDActor(actor->pos.x, actor->pos.y, z, MT_SORCFX2);
       parent->flags2 |= MF2_REFLECTIVE|MF2_INVULNERABLE;
       parent->args[0] = SORC_DEFENSE_TIME;
       if (mo) mo->owner = parent;
       break;
     case MT_SORCBALL3:				// Reinforcements
-      ang1 = actor->angle - ANG45;
-      ang2 = actor->angle + ANG45;
+      ang1 = actor->yaw - ANG45;
+      ang2 = actor->yaw + ANG45;
       if(actor->health < (actor->info->spawnhealth/3))
 	{	// Spawn 2 at a time
-	  mo = parent->SpawnMissileAngle(MT_SORCFX3, ang1, 4*FRACUNIT);
-	  mo = parent->SpawnMissileAngle(MT_SORCFX3, ang2, 4*FRACUNIT);
+	  mo = parent->SpawnMissileAngle(MT_SORCFX3, ang1, 4);
+	  mo = parent->SpawnMissileAngle(MT_SORCFX3, ang2, 4);
 	}			
       else
 	{
 	  if (P_Random() < 128)
 	    ang1 = ang2;
-	  mo = parent->SpawnMissileAngle(MT_SORCFX3, ang1, 4*FRACUNIT);
+	  mo = parent->SpawnMissileAngle(MT_SORCFX3, ang1, 4);
 	}
       break;
     default:
@@ -3036,7 +2986,7 @@ void A_SpawnReinforcements(DActor *actor)
 	angle_t ang;
 
 	ang = ANGLE_1 * P_Random();
-	mo = actor->SpawnMissileAngle(MT_SORCFX3, ang, 5*FRACUNIT);
+	mo = actor->SpawnMissileAngle(MT_SORCFX3, ang, 5);
 }
 */
 
@@ -3047,12 +2997,12 @@ void A_SorcOffense1(DActor *actor)
   angle_t ang1,ang2;
   DActor *parent = (DActor *)actor->owner;
 
-  ang1 = actor->angle + ANGLE_1*70;
-  ang2 = actor->angle - ANGLE_1*70;
+  ang1 = actor->yaw + ANGLE_1*70;
+  ang2 = actor->yaw - ANGLE_1*70;
   mo = parent->SpawnMissileAngle(MT_SORCFX1, ang1, 0);
   if (mo)
     {
-      mo->target = parent->target;
+      mo->target = parent->target; // seeker missiles...
       mo->args[4] = BOUNCE_TIME_UNIT;
       mo->args[3] = 15;				// Bounce time in seconds
     }
@@ -3069,26 +3019,22 @@ void A_SorcOffense1(DActor *actor)
 // DActor is ball
 void A_SorcOffense2(DActor *actor)
 {
-  angle_t ang1;
   DActor *mo;
   int delta, index;
   DActor *parent = (DActor *)actor->owner;
   Actor *dest = parent->target;
-  int dist;
 
   index = actor->args[4] << 5;
   actor->args[4] += 15;
-  delta = (finesine[index])*SORCFX4_SPREAD_ANGLE;
-  delta = (delta>>FRACBITS)*ANGLE_1;
-  ang1 = actor->angle + delta;
+  delta = (SORCFX4_SPREAD_ANGLE * finesine[index]).floor() * ANGLE_1;
+  angle_t ang1 = actor->yaw + delta;
   mo = parent->SpawnMissileAngle(MT_SORCFX4, ang1, 0);
   if (mo)
     {
       mo->special2 = 35*5/2;		// 5 seconds
-      dist = P_AproxDistance(dest->x - mo->x, dest->y - mo->y);
-      dist = dist/int(mo->info->speed * FRACUNIT);
-      if(dist < 1) dist = 1;
-      mo->pz = (dest->z-mo->z)/dist;
+      int dist = (P_XYdist(dest->pos, mo->pos) / mo->info->speed).floor();
+      if (dist < 1) dist = 1;
+      mo->vel.z = (dest->pos.z - mo->pos.z) / dist;
     }
 }
 
@@ -3105,25 +3051,25 @@ void A_SorcBossAttack(DActor *actor)
 void A_SpawnFizzle(DActor *actor)
 {
   fixed_t x,y,z;
-  fixed_t dist = 5*FRACUNIT;
-  angle_t angle = actor->angle >> ANGLETOFINESHIFT;
+  fixed_t dist = 5;
+  angle_t angle = actor->yaw >> ANGLETOFINESHIFT;
   int speed = int(actor->info->speed);
   angle_t rangle;
   DActor *mo;
   int ix;
 
-  x = actor->x + FixedMul(dist,finecosine[angle]);
-  y = actor->y + FixedMul(dist,finesine[angle]);
-  z = actor->z - actor->floorclip + (actor->height>>1);
+  x = actor->pos.x + dist * finecosine[angle];
+  y = actor->pos.y + dist * finesine[angle];
+  z = actor->pos.z - actor->floorclip + (actor->height>>1);
   for (ix=0; ix<5; ix++)
     {
       mo = actor->mp->SpawnDActor(x,y,z,MT_SORCSPARK1);
       if (mo)
 	{
 	  rangle = angle + ((P_Random()%5) << 1);
-	  mo->px = FixedMul(P_Random()%speed,finecosine[rangle]);
-	  mo->py = FixedMul(P_Random()%speed,finesine[rangle]);
-	  mo->pz = FRACUNIT*2;
+	  mo->vel.x = (P_Random()%speed) * finecosine[rangle];
+	  mo->vel.y = (P_Random()%speed) * finesine[rangle];
+	  mo->vel.z = 2;
 	}
     }
 }
@@ -3156,20 +3102,20 @@ void A_SorcFX2Split(DActor *actor)
 {
   DActor *mo;
 
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_SORCFX2);
+  mo = actor->mp->SpawnDActor(actor->pos, MT_SORCFX2);
   if (mo)
     {
       mo->owner = actor->owner;
       mo->args[0] = 0;									// CW
-      mo->special1 = actor->angle;					// Set angle
+      mo->special1 = actor->yaw;					// Set angle
       mo->SetState(S_SORCFX2_ORBIT1, false);
     }
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_SORCFX2);
+  mo = actor->mp->SpawnDActor(actor->pos, MT_SORCFX2);
   if (mo)
     {
       mo->owner = actor->owner;
       mo->args[0] = 1;									// CCW
-      mo->special1 = actor->angle;					// Set angle
+      mo->special1 = actor->yaw;					// Set angle
       mo->SetState(S_SORCFX2_ORBIT1, false);
     }
   actor->SetState(S_NULL, false);
@@ -3205,10 +3151,10 @@ void A_SorcFX2Orbit(DActor *actor)
     {
       actor->special1 += ANGLE_1*10;
       angle = ((angle_t)actor->special1) >> ANGLETOFINESHIFT;
-      x = parent->x + FixedMul(dist, finecosine[angle]);
-      y = parent->y + FixedMul(dist, finesine[angle]);
-      z = parent->z - parent->floorclip + SORC_DEFENSE_HEIGHT*FRACUNIT;
-      z += FixedMul(15*FRACUNIT,finecosine[angle]);
+      x = parent->pos.x + dist * finecosine[angle];
+      y = parent->pos.y + dist * finesine[angle];
+      z = parent->pos.z - parent->floorclip + SORC_DEFENSE_HEIGHT;
+      z += 15 * finecosine[angle];
       // Spawn trailer
       actor->mp->SpawnDActor(x,y,z, MT_SORCFX2_T1);
     }
@@ -3216,17 +3162,17 @@ void A_SorcFX2Orbit(DActor *actor)
     {
       actor->special1 -= ANGLE_1*10;
       angle = ((angle_t)actor->special1) >> ANGLETOFINESHIFT;
-      x = parent->x + FixedMul(dist, finecosine[angle]);
-      y = parent->y + FixedMul(dist, finesine[angle]);
-      z = parent->z - parent->floorclip + SORC_DEFENSE_HEIGHT*FRACUNIT;
-      z += FixedMul(20*FRACUNIT,finesine[angle]);
+      x = parent->pos.x + dist * finecosine[angle];
+      y = parent->pos.y + dist * finesine[angle];
+      z = parent->pos.z - parent->floorclip + SORC_DEFENSE_HEIGHT;
+      z += 20 * finesine[angle];
       // Spawn trailer
       actor->mp->SpawnDActor(x,y,z, MT_SORCFX2_T1);
     }
 
-  actor->x = x;
-  actor->y = y;
-  actor->z = z;
+  actor->pos.x = x;
+  actor->pos.y = y;
+  actor->pos.z = z;
 }
 
 
@@ -3238,7 +3184,7 @@ void A_SorcFX2Orbit(DActor *actor)
 void A_SpawnBishop(DActor *actor)
 {
   DActor *mo;
-  mo=actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_BISHOP);
+  mo=actor->mp->SpawnDActor(actor->pos, MT_BISHOP);
   if(mo)
     {
       if(!mo->TestLocation())
@@ -3252,18 +3198,18 @@ void A_SpawnBishop(DActor *actor)
 /*
 void A_SmokePuffEntry(DActor *actor)
 {
-	actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_MNTRSMOKE);
+	actor->mp->SpawnDActor(actor->pos, MT_MNTRSMOKE);
 }
 */
 
 void A_SmokePuffExit(DActor *actor)
 {
-  actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_MNTRSMOKEEXIT);
+  actor->mp->SpawnDActor(actor->pos, MT_MNTRSMOKEEXIT);
 }
 
 void A_SorcererBishopEntry(DActor *actor)
 {
-  actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_SORCFX3_EXPLOSION);
+  actor->mp->SpawnDActor(actor->pos, MT_SORCFX3_EXPLOSION);
   S_StartSound(actor, actor->info->seesound);
 }
 
@@ -3289,10 +3235,10 @@ void A_SorcBallPop(DActor *actor)
   S_StartAmbSound(NULL, SFX_SORCERER_BALLPOP);
   actor->flags &= ~MF_NOGRAVITY;
   actor->flags2 |= MF2_LOGRAV;
-  actor->px = ((P_Random()%10)-5) << FRACBITS;
-  actor->py = ((P_Random()%10)-5) << FRACBITS;
-  actor->pz = (2+(P_Random()%3)) << FRACBITS;
-  actor->special2 = 4*FRACUNIT;		// Initial bounce factor
+  actor->vel.x = (P_Random()%10)-5;
+  actor->vel.y = (P_Random()%10)-5;
+  actor->vel.z = 2 + (P_Random()%3);
+  actor->special2 = 4; //4*FRACUNIT;		// Initial bounce factor
   actor->args[4] = BOUNCE_TIME_UNIT;	// Bounce time unit
   actor->args[3] = 5;					// Bounce time in seconds
 }
@@ -3344,7 +3290,7 @@ void A_SorcDeath(DActor *actor)
 //============================================================================
 // Class Bosses
 //============================================================================
-#define CLASS_BOSS_STRAFE_RANGE	64*10*FRACUNIT
+#define CLASS_BOSS_STRAFE_RANGE	64*10
 
 void A_FastChase(DActor *actor)
 {
@@ -3378,15 +3324,15 @@ void A_FastChase(DActor *actor)
   //
   if(actor->movedir < 8)
     {
-      actor->angle &= (7<<29);
-      delta = actor->angle-(actor->movedir << 29);
+      actor->yaw &= (7<<29);
+      delta = actor->yaw-(actor->movedir << 29);
       if(delta > 0)
 	{
-	  actor->angle -= ANG90/2;
+	  actor->yaw -= ANG90/2;
 	}
       else if(delta < 0)
 	{
-	  actor->angle += ANG90/2;
+	  actor->yaw += ANG90/2;
 	}
     }
 
@@ -3420,22 +3366,20 @@ void A_FastChase(DActor *actor)
     {
       target = actor->target;
       actor->special2 = 0;
-      actor->px = actor->py = 0;
-      dist=P_AproxDistance(actor->x - target->x,
-			   actor->y - target->y);
+      actor->vel.x = actor->vel.y = 0;
+      dist=P_XYdist(actor->pos, target->pos);
       if (dist < CLASS_BOSS_STRAFE_RANGE)
 	{
 	  if (P_Random()<100)
 	    {
-	      ang = R_PointToAngle2(actor->x, actor->y,
-				    target->x, target->y);
+	      ang = R_PointToAngle2(actor->pos, target->pos);
 	      if (P_Random()<128)
 		ang += ANG90;
 	      else
 		ang -= ANG90;
 	      ang>>=ANGLETOFINESHIFT;
-	      actor->px = FixedMul(13*FRACUNIT, finecosine[ang]);
-	      actor->py = FixedMul(13*FRACUNIT, finesine[ang]);
+	      actor->vel.x = 13 * finecosine[ang];
+	      actor->vel.y = 13 * finesine[ang];
 	      actor->special2 = 3;		// strafe time
 	    }
 	}
@@ -3526,9 +3470,9 @@ void A_ClassBossHealth(DActor *actor)
 
 void A_CheckFloor(DActor *actor)
 {
-  if(actor->z <= actor->floorz)
+  if(actor->pos.z <= actor->floorz)
     {
-      actor->z = actor->floorz;
+      actor->pos.z = actor->floorz;
       actor->flags2 &= ~MF2_LOGRAV;
       actor->SetState(actor->info->deathstate);
     }
@@ -3610,7 +3554,7 @@ void A_FreezeDeathChunks(DActor *actor)
   int i;
   DActor *mo;
 	
-  if(actor->px || actor->py || actor->pz)
+  if (actor->vel != vec_t<fixed_t>(0,0,0))
     {
       actor->tics = 105;
       return;
@@ -3619,46 +3563,46 @@ void A_FreezeDeathChunks(DActor *actor)
 
   for(i = 12+(P_Random()&15); i >= 0; i--)
     {
-      mo = actor->mp->SpawnDActor(actor->x+(((P_Random()-128)*actor->radius)>>7), 
-		       actor->y+(((P_Random()-128)*actor->radius)>>7), 
-		       actor->z+(P_Random()*actor->height/255), MT_ICECHUNK);
+      mo = actor->mp->SpawnDActor(actor->pos.x+(((P_Random()-128)*actor->radius)>>7), 
+		       actor->pos.y+(((P_Random()-128)*actor->radius)>>7), 
+		       actor->pos.z+(P_Random()*actor->height/255), MT_ICECHUNK);
       mo->SetState(statenum_t(mo->info->spawnstate + P_Random()%3));
       if(mo)
 	{
-	  mo->pz = FixedDiv(mo->z-actor->z, actor->height)<<2;
-	  mo->px = (P_Random()-P_Random())<<(FRACBITS-7);
-	  mo->py = (P_Random()-P_Random())<<(FRACBITS-7);
+	  mo->vel.z = ((mo->pos.z - actor->pos.z) / actor->height) << 2;
+	  mo->vel.x = P_SignedFRandom(7);
+	  mo->vel.y = P_SignedFRandom(7);
 	  A_IceSetTics(mo); // set a random tic wait
 	}
     }
   for(i = 12+(P_Random()&15); i >= 0; i--)
     {
-      mo = actor->mp->SpawnDActor(actor->x+(((P_Random()-128)*actor->radius)>>7), 
-		       actor->y+(((P_Random()-128)*actor->radius)>>7), 
-		       actor->z+(P_Random()*actor->height/255), MT_ICECHUNK);
+      mo = actor->mp->SpawnDActor(actor->pos.x+(((P_Random()-128)*actor->radius)>>7), 
+		       actor->pos.y+(((P_Random()-128)*actor->radius)>>7), 
+		       actor->pos.z+(P_Random()*actor->height/255), MT_ICECHUNK);
       mo->SetState(statenum_t(mo->info->spawnstate + P_Random()%3));
       if(mo)
 	{
-	  mo->pz = FixedDiv(mo->z-actor->z, actor->height)<<2;
-	  mo->px = (P_Random()-P_Random())<<(FRACBITS-7);
-	  mo->py = (P_Random()-P_Random())<<(FRACBITS-7);
+	  mo->vel.z = ((mo->pos.z-actor->pos.z) / actor->height) << 2;
+	  mo->vel.x = P_SignedFRandom(7);
+	  mo->vel.y = P_SignedFRandom(7);
 	  A_IceSetTics(mo); // set a random tic wait
 	}
     }
   /*
   if(actor->player)
     { // attach the player's view to a chunk of ice
-      mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z+VIEWHEIGHT, MT_ICECHUNK);
+      mo = actor->mp->SpawnDActor(actor->pos.x, actor->pos.y, actor->pos.z+VIEWHEIGHT, MT_ICECHUNK);
       mo->SetState(S_ICECHUNK_HEAD);
-      mo->pz = FixedDiv(mo->z-actor->z, actor->height)<<2;
-      mo->px = (P_Random()-P_Random())<<(FRACBITS-7);
-      mo->py = (P_Random()-P_Random())<<(FRACBITS-7);
+      mo->vel.z = FixedDiv(mo->pos.z-actor->pos.z, actor->height)<<2;
+      mo->vel.x = P_SignedFRandom(7);
+      mo->vel.y = P_SignedFRandom(7);
       mo->flags2 |= MF2_ICEDAMAGE; // used to force blue palette
       mo->flags2 &= ~MF2_FLOORCLIP;
       mo->player = actor->player;
       actor->player = NULL;
       mo->health = actor->health;
-      mo->angle = actor->angle;
+      mo->yaw = actor->yaw;
       mo->player->mo = mo;
       mo->player->lookdir = 0;
     }
@@ -3686,8 +3630,8 @@ void A_FreezeDeathChunks(DActor *actor)
 //	255		For use in death script (spawn spots)
 //===========================================================================
 #define KORAX_SPIRIT_LIFETIME	(5*(35/5))	// 5 seconds
-#define KORAX_COMMAND_HEIGHT	(120*FRACUNIT)
-#define KORAX_COMMAND_OFFSET	(27*FRACUNIT)
+#define KORAX_COMMAND_HEIGHT	(120)
+#define KORAX_COMMAND_OFFSET	(27)
 
 void KoraxFire1(DActor *actor, mobjtype_t type);
 void KoraxFire2(DActor *actor, mobjtype_t type);
@@ -3714,7 +3658,7 @@ void A_KoraxChase(DActor *actor)
       spot = actor->mp->FindFromTIDmap(KORAX_FIRST_TELEPORT_TID, &lastfound);
       if (spot)
 	{
-	  actor->Teleport(spot->x, spot->y, spot->angle, false);
+	  actor->Teleport(spot->pos.x, spot->pos.y, spot->yaw, false);
 	}
 
       actor->mp->StartACS(249, args, actor, NULL, 0);
@@ -3743,7 +3687,7 @@ void A_KoraxChase(DActor *actor)
 	  actor->special1 = lastfound;
 	  if (spot)
 	    {
-	      actor->Teleport(spot->x, spot->y, spot->angle, false);
+	      actor->Teleport(spot->pos.x, spot->pos.y, spot->yaw, false);
 	    }
 	}
     }
@@ -3767,20 +3711,20 @@ void A_KoraxBonePop(DActor *actor)
   byte args[5];
 
   args[0]=args[1]=args[2]=args[3]=args[4]=0;
-  x=actor->x, y=actor->y, z=actor->z;
+  x=actor->pos.x, y=actor->pos.y, z=actor->pos.z;
 
   // Spawn 6 spirits equalangularly
-  mo = actor->SpawnMissileAngle(MT_KORAX_SPIRIT1, ANGLE_60*0, 5*FRACUNIT);
+  mo = actor->SpawnMissileAngle(MT_KORAX_SPIRIT1, ANGLE_60*0, 5);
   if (mo) KSpiritInit(mo,actor);
-  mo = actor->SpawnMissileAngle(MT_KORAX_SPIRIT2, ANGLE_60*1, 5*FRACUNIT);
+  mo = actor->SpawnMissileAngle(MT_KORAX_SPIRIT2, ANGLE_60*1, 5);
   if (mo) KSpiritInit(mo,actor);
-  mo = actor->SpawnMissileAngle(MT_KORAX_SPIRIT3, ANGLE_60*2, 5*FRACUNIT);
+  mo = actor->SpawnMissileAngle(MT_KORAX_SPIRIT3, ANGLE_60*2, 5);
   if (mo) KSpiritInit(mo,actor);
-  mo = actor->SpawnMissileAngle(MT_KORAX_SPIRIT4, ANGLE_60*3, 5*FRACUNIT);
+  mo = actor->SpawnMissileAngle(MT_KORAX_SPIRIT4, ANGLE_60*3, 5);
   if (mo) KSpiritInit(mo,actor);
-  mo = actor->SpawnMissileAngle(MT_KORAX_SPIRIT5, ANGLE_60*4, 5*FRACUNIT);
+  mo = actor->SpawnMissileAngle(MT_KORAX_SPIRIT5, ANGLE_60*4, 5);
   if (mo) KSpiritInit(mo,actor);
-  mo = actor->SpawnMissileAngle(MT_KORAX_SPIRIT6, ANGLE_60*5, 5*FRACUNIT);
+  mo = actor->SpawnMissileAngle(MT_KORAX_SPIRIT6, ANGLE_60*5, 5);
   if (mo) KSpiritInit(mo,actor);
 
   actor->mp->StartACS(255, args, actor, NULL, 0);		// Death script
@@ -3799,11 +3743,11 @@ void KSpiritInit(DActor *spirit, DActor *korax)
   spirit->args[1] = 0; 						// initial look angle
 
   // Spawn a tail for spirit
-  tail = spirit->mp->SpawnDActor(spirit->x, spirit->y, spirit->z, MT_HOLY_TAIL);
+  tail = spirit->mp->SpawnDActor(spirit->pos, MT_HOLY_TAIL);
   tail->owner = spirit; // parent
   for(i = 1; i < 3; i++)
     {
-      next = spirit->mp->SpawnDActor(spirit->x, spirit->y, spirit->z, MT_HOLY_TAIL);
+      next = spirit->mp->SpawnDActor(spirit->pos, MT_HOLY_TAIL);
       next->SetState(statenum_t(next->info->spawnstate + 1));
       tail->target = next;
       tail = next;
@@ -3882,10 +3826,10 @@ void A_KoraxCommand(DActor *actor)
   S_StartSound(actor, SFX_KORAX_COMMAND);
 
   // Shoot stream of lightning to ceiling
-  ang = (actor->angle - ANG90) >> ANGLETOFINESHIFT;
-  x=actor->x + FixedMul(KORAX_COMMAND_OFFSET,finecosine[ang]);
-  y=actor->y + FixedMul(KORAX_COMMAND_OFFSET,finesine[ang]);
-  z=actor->z + KORAX_COMMAND_HEIGHT;
+  ang = (actor->yaw - ANG90) >> ANGLETOFINESHIFT;
+  x=actor->pos.x + KORAX_COMMAND_OFFSET * finecosine[ang];
+  y=actor->pos.y + KORAX_COMMAND_OFFSET * finesine[ang];
+  z=actor->pos.z + KORAX_COMMAND_HEIGHT;
   actor->mp->SpawnDActor(x,y,z, MT_KORAX_BOLT);
 
   args[0]=args[1]=args[2]=args[3]=args[4]=0;
@@ -3923,15 +3867,15 @@ void A_KoraxCommand(DActor *actor)
 
 
 #define KORAX_DELTAANGLE			(85*ANGLE_1)
-#define KORAX_ARM_EXTENSION_SHORT	(40*FRACUNIT)
-#define KORAX_ARM_EXTENSION_LONG	(55*FRACUNIT)
+#define KORAX_ARM_EXTENSION_SHORT	(40)
+#define KORAX_ARM_EXTENSION_LONG	(55)
 
-#define KORAX_ARM1_HEIGHT			(108*FRACUNIT)
-#define KORAX_ARM2_HEIGHT			(82*FRACUNIT)
-#define KORAX_ARM3_HEIGHT			(54*FRACUNIT)
-#define KORAX_ARM4_HEIGHT			(104*FRACUNIT)
-#define KORAX_ARM5_HEIGHT			(86*FRACUNIT)
-#define KORAX_ARM6_HEIGHT			(53*FRACUNIT)
+#define KORAX_ARM1_HEIGHT			(108)
+#define KORAX_ARM2_HEIGHT			(82)
+#define KORAX_ARM3_HEIGHT			(54)
+#define KORAX_ARM4_HEIGHT			(104)
+#define KORAX_ARM5_HEIGHT			(86)
+#define KORAX_ARM6_HEIGHT			(53)
 
 
 DActor *P_SpawnKoraxMissile(fixed_t x, fixed_t y, fixed_t z,
@@ -3946,21 +3890,20 @@ DActor *P_SpawnKoraxMissile(fixed_t x, fixed_t y, fixed_t z,
     S_StartSound(th, th->info->seesound);
 
   th->owner = source; // Originator
-  an = R_PointToAngle2(x, y, dest->x, dest->y);
+  an = R_PointToAngle2(x, y, dest->pos.x, dest->pos.y);
   if (dest->flags & MF_SHADOW)
     { // Invisible target
-      an += (P_Random()-P_Random())<<21;
+      an += P_SignedRandom()<<21;
     }
-  th->angle = an;
+  th->yaw = an;
   an >>= ANGLETOFINESHIFT;
-  th->px = int(th->info->speed * finecosine[an]);
-  th->py = int(th->info->speed * finesine[an]);
-  dist = P_AproxDistance(dest->x - x, dest->y - y);
-  dist = dist/int(th->info->speed * FRACUNIT);
+  th->vel.x = th->info->speed * finecosine[an];
+  th->vel.y = th->info->speed * finesine[an];
+  dist = (P_AproxDistance(dest->pos.x - x, dest->pos.y - y) / th->info->speed).floor();
   if (dist < 1)
     dist = 1;
 
-  th->pz = (dest->z-z+(30*FRACUNIT))/dist;
+  th->vel.z = (dest->pos.z - z + 30) / dist;
   return (th->CheckMissileSpawn() ? th : NULL);
 }
 
@@ -3982,10 +3925,10 @@ void KoraxFire1(DActor *actor, mobjtype_t type)
   angle_t ang;
   fixed_t x,y,z;
 
-  ang = (actor->angle - KORAX_DELTAANGLE) >> ANGLETOFINESHIFT;
-  x = actor->x + FixedMul(KORAX_ARM_EXTENSION_SHORT, finecosine[ang]);
-  y = actor->y + FixedMul(KORAX_ARM_EXTENSION_SHORT, finesine[ang]);
-  z = actor->z - actor->floorclip + KORAX_ARM1_HEIGHT;
+  ang = (actor->yaw - KORAX_DELTAANGLE) >> ANGLETOFINESHIFT;
+  x = actor->pos.x + KORAX_ARM_EXTENSION_SHORT * finecosine[ang];
+  y = actor->pos.y + KORAX_ARM_EXTENSION_SHORT * finesine[ang];
+  z = actor->pos.z - actor->floorclip + KORAX_ARM1_HEIGHT;
   mo = P_SpawnKoraxMissile(x,y,z,actor, actor->target, type);
 }
 
@@ -3997,10 +3940,10 @@ void KoraxFire2(DActor *actor, mobjtype_t type)
   angle_t ang;
   fixed_t x,y,z;
 
-  ang = (actor->angle - KORAX_DELTAANGLE) >> ANGLETOFINESHIFT;
-  x = actor->x + FixedMul(KORAX_ARM_EXTENSION_LONG, finecosine[ang]);
-  y = actor->y + FixedMul(KORAX_ARM_EXTENSION_LONG, finesine[ang]);
-  z = actor->z - actor->floorclip + KORAX_ARM2_HEIGHT;
+  ang = (actor->yaw - KORAX_DELTAANGLE) >> ANGLETOFINESHIFT;
+  x = actor->pos.x + KORAX_ARM_EXTENSION_LONG * finecosine[ang];
+  y = actor->pos.y + KORAX_ARM_EXTENSION_LONG * finesine[ang];
+  z = actor->pos.z - actor->floorclip + KORAX_ARM2_HEIGHT;
   mo = P_SpawnKoraxMissile(x,y,z,actor, actor->target, type);
 }
 
@@ -4011,10 +3954,10 @@ void KoraxFire3(DActor *actor, mobjtype_t type)
   angle_t ang;
   fixed_t x,y,z;
 
-  ang = (actor->angle - KORAX_DELTAANGLE) >> ANGLETOFINESHIFT;
-  x = actor->x + FixedMul(KORAX_ARM_EXTENSION_LONG, finecosine[ang]);
-  y = actor->y + FixedMul(KORAX_ARM_EXTENSION_LONG, finesine[ang]);
-  z = actor->z - actor->floorclip + KORAX_ARM3_HEIGHT;
+  ang = (actor->yaw - KORAX_DELTAANGLE) >> ANGLETOFINESHIFT;
+  x = actor->pos.x + KORAX_ARM_EXTENSION_LONG * finecosine[ang];
+  y = actor->pos.y + KORAX_ARM_EXTENSION_LONG * finesine[ang];
+  z = actor->pos.z - actor->floorclip + KORAX_ARM3_HEIGHT;
   mo = P_SpawnKoraxMissile(x,y,z,actor, actor->target, type);
 }
 
@@ -4025,10 +3968,10 @@ void KoraxFire4(DActor *actor, mobjtype_t type)
   angle_t ang;
   fixed_t x,y,z;
 
-  ang = (actor->angle + KORAX_DELTAANGLE) >> ANGLETOFINESHIFT;
-  x = actor->x + FixedMul(KORAX_ARM_EXTENSION_SHORT, finecosine[ang]);
-  y = actor->y + FixedMul(KORAX_ARM_EXTENSION_SHORT, finesine[ang]);
-  z = actor->z - actor->floorclip + KORAX_ARM4_HEIGHT;
+  ang = (actor->yaw + KORAX_DELTAANGLE) >> ANGLETOFINESHIFT;
+  x = actor->pos.x + KORAX_ARM_EXTENSION_SHORT * finecosine[ang];
+  y = actor->pos.y + KORAX_ARM_EXTENSION_SHORT * finesine[ang];
+  z = actor->pos.z - actor->floorclip + KORAX_ARM4_HEIGHT;
   mo = P_SpawnKoraxMissile(x,y,z,actor, actor->target, type);
 }
 
@@ -4039,10 +3982,10 @@ void KoraxFire5(DActor *actor, mobjtype_t type)
   angle_t ang;
   fixed_t x,y,z;
 
-  ang = (actor->angle + KORAX_DELTAANGLE) >> ANGLETOFINESHIFT;
-  x = actor->x + FixedMul(KORAX_ARM_EXTENSION_LONG, finecosine[ang]);
-  y = actor->y + FixedMul(KORAX_ARM_EXTENSION_LONG, finesine[ang]);
-  z = actor->z - actor->floorclip + KORAX_ARM5_HEIGHT;
+  ang = (actor->yaw + KORAX_DELTAANGLE) >> ANGLETOFINESHIFT;
+  x = actor->pos.x + KORAX_ARM_EXTENSION_LONG * finecosine[ang];
+  y = actor->pos.y + KORAX_ARM_EXTENSION_LONG * finesine[ang];
+  z = actor->pos.z - actor->floorclip + KORAX_ARM5_HEIGHT;
   mo = P_SpawnKoraxMissile(x,y,z,actor, actor->target, type);
 }
 
@@ -4053,10 +3996,10 @@ void KoraxFire6(DActor *actor, mobjtype_t type)
   angle_t ang;
   fixed_t x,y,z;
 
-  ang = (actor->angle + KORAX_DELTAANGLE) >> ANGLETOFINESHIFT;
-  x = actor->x + FixedMul(KORAX_ARM_EXTENSION_LONG, finecosine[ang]);
-  y = actor->y + FixedMul(KORAX_ARM_EXTENSION_LONG, finesine[ang]);
-  z = actor->z - actor->floorclip + KORAX_ARM6_HEIGHT;
+  ang = (actor->yaw + KORAX_DELTAANGLE) >> ANGLETOFINESHIFT;
+  x = actor->pos.x + KORAX_ARM_EXTENSION_LONG * finecosine[ang];
+  y = actor->pos.y + KORAX_ARM_EXTENSION_LONG * finesine[ang];
+  z = actor->pos.z - actor->floorclip + KORAX_ARM6_HEIGHT;
   mo = P_SpawnKoraxMissile(x,y,z,actor, actor->target, type);
 }
 
@@ -4069,20 +4012,16 @@ void A_KSpiritWeave(DActor *actor)
 
   weaveXY = actor->special2>>16;
   weaveZ = actor->special2&0xFFFF;
-  angle = (actor->angle+ANG90)>>ANGLETOFINESHIFT;
-  newX = actor->x-FixedMul(finecosine[angle], 
-			   FloatBobOffsets[weaveXY]<<2);
-  newY = actor->y-FixedMul(finesine[angle],
-			   FloatBobOffsets[weaveXY]<<2);
+  angle = (actor->yaw+ANG90)>>ANGLETOFINESHIFT;
+  newX = actor->pos.x - finecosine[angle] * (FloatBobOffsets[weaveXY]<<2);
+  newY = actor->pos.y - finesine[angle] * (FloatBobOffsets[weaveXY]<<2);
   weaveXY = (weaveXY+(P_Random()%5))&63;
-  newX += FixedMul(finecosine[angle], 
-		   FloatBobOffsets[weaveXY]<<2);
-  newY += FixedMul(finesine[angle], 
-		   FloatBobOffsets[weaveXY]<<2);
+  newX += finecosine[angle] * (FloatBobOffsets[weaveXY]<<2);
+  newY += finesine[angle] * (FloatBobOffsets[weaveXY]<<2);
   actor->TryMove(newX, newY, true);
-  actor->z -= FloatBobOffsets[weaveZ]<<1;
+  actor->pos.z -= FloatBobOffsets[weaveZ]<<1;
   weaveZ = (weaveZ+(P_Random()%5))&63;
-  actor->z += FloatBobOffsets[weaveZ]<<1;	
+  actor->pos.z += FloatBobOffsets[weaveZ]<<1;	
   actor->special2 = weaveZ+(weaveXY<<16);
 }
 
@@ -4109,40 +4048,38 @@ void A_KSpiritSeeker(DActor *actor, angle_t thresh, angle_t turnMax)
     }
   if(dir)
     { // Turn clockwise
-      actor->angle += delta;
+      actor->yaw += delta;
     }
   else
     { // Turn counter clockwise
-      actor->angle -= delta;
+      actor->yaw -= delta;
     }
-  angle = actor->angle>>ANGLETOFINESHIFT;
-  actor->px = int(actor->info->speed * finecosine[angle]);
-  actor->py = int(actor->info->speed * finesine[angle]);
+  angle = actor->yaw>>ANGLETOFINESHIFT;
+  actor->vel.x = actor->info->speed * finecosine[angle];
+  actor->vel.y = actor->info->speed * finesine[angle];
 
   if(!(game.tic & 15) 
-     || actor->z > target->z+(target->info->height)
-     || actor->z+actor->height < target->z)
+     || actor->Feet() > target->Top()
+     || actor->Top() < target->Feet())
     {
-      newZ = target->z+((P_Random()*target->info->height)>>8);
-      deltaZ = newZ-actor->z;
-      if(abs(deltaZ) > 15*FRACUNIT)
+      newZ = target->pos.z + ((P_Random()*target->info->height)>>8);
+      deltaZ = newZ - actor->pos.z;
+      if(abs(deltaZ) > 15)
 	{
 	  if(deltaZ > 0)
 	    {
-	      deltaZ = 15*FRACUNIT;
+	      deltaZ = 15;
 	    }
 	  else
 	    {
-	      deltaZ = -15*FRACUNIT;
+	      deltaZ = -15;
 	    }
 	}
-      float dist = P_AproxDistance(target->x-actor->x, target->y-actor->y);
-      dist = dist/actor->info->speed;
-      if(dist < 1)
-	{
-	  dist = 1;
-	}
-      actor->pz = int(deltaZ/dist);
+      fixed_t dist = P_XYdist(target->pos, actor->pos) / actor->info->speed;
+      if (dist < 1)
+	dist = 1;
+
+      actor->vel.z = deltaZ / dist;
     }
   return;
 }
@@ -4180,7 +4117,7 @@ void A_KBolt(DActor *actor)
 }
 
 
-#define KORAX_BOLT_HEIGHT		48*FRACUNIT
+#define KORAX_BOLT_HEIGHT		48
 #define KORAX_BOLT_LIFETIME		3
 
 void A_KBoltRaise(DActor *actor)
@@ -4189,11 +4126,11 @@ void A_KBoltRaise(DActor *actor)
   fixed_t z;
 
   // Spawn a child upward
-  z = actor->z + KORAX_BOLT_HEIGHT;
+  z = actor->pos.z + KORAX_BOLT_HEIGHT;
 
   if ((z + KORAX_BOLT_HEIGHT) < actor->ceilingz)
     {
-      mo = actor->mp->SpawnDActor(actor->x, actor->y, z, MT_KORAX_BOLT);
+      mo = actor->mp->SpawnDActor(actor->pos.x, actor->pos.y, z, MT_KORAX_BOLT);
       if (mo)
 	{
 	  mo->special1 = KORAX_BOLT_LIFETIME;

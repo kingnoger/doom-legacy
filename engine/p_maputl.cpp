@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.17  2005/07/11 16:58:40  smite-meister
 // msecnode_t bug fixed
 //
@@ -99,7 +102,7 @@ fixed_t P_AproxDistance(fixed_t dx, fixed_t dy)
   return dx+dy-(dy>>1);
 }
 
-// Returns 0 or 1
+/// On which side of a line the point is? Returns 0 or 1.
 int P_PointOnLineSide(fixed_t x, fixed_t y, const line_t *line)
 {
   if (!line->dx)
@@ -117,11 +120,16 @@ int P_PointOnLineSide(fixed_t x, fixed_t y, const line_t *line)
       return line->dx > 0;
     }
 
-  fixed_t dx = (x - line->v1->x);
-  fixed_t dy = (y - line->v1->y);
+  fixed_t dx = x - line->v1->x;
+  fixed_t dy = y - line->v1->y;
 
-  fixed_t left = FixedMul (line->dy>>FRACBITS , dx);
-  fixed_t right = FixedMul (dy , line->dx>>FRACBITS);
+#if 0
+  fixed_t left = (line->dy >> 16) * dx;  // shift so that it always fits in 32 bits
+  fixed_t right = dy * (line->dx >> 16);
+#else
+  Sint64 left = line->dy.value() * dx.value();
+  Sint64 right = dy.value() * line->dx.value();
+#endif
 
   if (right < left)
     return 0;               // front side
@@ -181,11 +189,6 @@ int bbox_t::BoxOnLineSide(const line_t *ld)
 // Returns 0 or 1.
 int P_PointOnDivlineSide(fixed_t x, fixed_t y, divline_t *line)
 {
-  fixed_t     dx;
-  fixed_t     dy;
-  fixed_t     left;
-  fixed_t     right;
-
   if (!line->dx)
     {
       if (x <= line->x)
@@ -201,19 +204,24 @@ int P_PointOnDivlineSide(fixed_t x, fixed_t y, divline_t *line)
       return line->dx > 0;
     }
 
-  dx = (x - line->x);
-  dy = (y - line->y);
+  fixed_t dx = x - line->x;
+  fixed_t dy = y - line->y;
 
   // try to quickly decide by looking at sign bits
-  if ((line->dy ^ line->dx ^ dx ^ dy)&0x80000000)
+  if ((line->dy.value() ^ line->dx.value() ^ dx.value() ^ dy.value())&0x80000000)
     {
-      if ((line->dy ^ dx) & 0x80000000)
+      if ((line->dy.value() ^ dx.value()) & 0x80000000)
 	return 1;           // (left is negative)
       return 0;
     }
 
-  left = FixedMul (line->dy>>8, dx>>8);
-  right = FixedMul (dy>>8 , line->dx>>8);
+#if 0
+  fixed_t left = (line->dy >> 8) * (dx >> 8); // shift so result always fits in 32 bits
+  fixed_t right = (dy >> 8) * (line->dx >> 8);
+#else
+  Sint64 left = line->dy.value() * dx.value();
+  Sint64 right = dy.value() * line->dx.value();
+#endif
 
   if (right < left)
     return 0;               // front side
@@ -240,6 +248,20 @@ void P_MakeDivline(line_t *li, divline_t *dl)
 fixed_t P_InterceptVector(divline_t *v2, divline_t *v1)
 {
 #if 1
+  // TEST, new version, more accurate
+  Sint64 den = v1->dy.value() * v2->dx.value() - v1->dx.value() * v2->dy.value();
+  den >>= fixed_t::FBITS;
+  if (den == 0)
+    return 0; // parallel lines
+
+  Sint64 num = (v2->y.value() - v1->y.value()) * v1->dx.value()
+    -(v2->x.value() - v1->x.value()) * v1->dy.value();
+
+  fixed_t res;
+  res.setvalue(num / den);
+  return res;
+
+#elif 1
   fixed_t     frac;
   fixed_t     num;
   fixed_t     den;
@@ -329,7 +351,7 @@ line_opening_t *P_LineOpening(line_t *linedef)
     {
       //SoM: 3/27/2000: Check for fake floors in the sector.
 
-      fixed_t thingbot = tmthing->z;
+      fixed_t thingbot = tmthing->Feet();
       fixed_t thingtop = thingbot + tmthing->height;
 
       fixed_t lowestceiling = Opening.top;
@@ -531,10 +553,8 @@ static bool PIT_AddLineIntercepts(line_t *ld)
   divline_t           dl;
 
   // avoid precision problems with two routines
-  if (trace.dx > FRACUNIT*16
-       || trace.dy > FRACUNIT*16
-       || trace.dx < -FRACUNIT*16
-       || trace.dy < -FRACUNIT*16)
+  if (trace.dx > 16 || trace.dy > 16
+      || trace.dx < -16 || trace.dy < -16)
     {
       //Hurdler: crash here with phobia when you shoot on the door next the stone bridge
       //stack overflow???
@@ -558,9 +578,7 @@ static bool PIT_AddLineIntercepts(line_t *ld)
     return true;    // behind source
 
   // try to early out the check
-  if (earlyout
-      && frac < FRACUNIT
-      && !ld->backsector)
+  if (earlyout && frac < 1 && !ld->backsector)
     {
       return false;   // stop checking
     }
@@ -583,24 +601,24 @@ static bool PIT_AddThingIntercepts(Actor *thing)
   fixed_t  x1, y1, x2, y2;
   int      s1, s2;
 
-  bool tracepositive = (trace.dx ^ trace.dy) > 0;
+  bool tracepositive = (trace.dx.value() ^ trace.dy.value()) > 0;
 
   // check a corner to corner crossection for hit
   if (tracepositive)
     {
-      x1 = thing->x - thing->radius;
-      y1 = thing->y + thing->radius;
+      x1 = thing->pos.x - thing->radius;
+      y1 = thing->pos.y + thing->radius;
 
-      x2 = thing->x + thing->radius;
-      y2 = thing->y - thing->radius;
+      x2 = thing->pos.x + thing->radius;
+      y2 = thing->pos.y - thing->radius;
     }
   else
     {
-      x1 = thing->x - thing->radius;
-      y1 = thing->y - thing->radius;
+      x1 = thing->pos.x - thing->radius;
+      y1 = thing->pos.y - thing->radius;
 
-      x2 = thing->x + thing->radius;
-      y2 = thing->y + thing->radius;
+      x2 = thing->pos.x + thing->radius;
+      y2 = thing->pos.y + thing->radius;
     }
 
   s1 = P_PointOnDivlineSide (x1, y1, &trace);
@@ -685,23 +703,18 @@ static bool P_TraverseIntercepts(traverser_t func, fixed_t maxfrac)
 // Returns true if the traverser function returns true for all lines.
 bool Map::PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags, traverser_t trav)
 {
-  fixed_t     xstep;
-  fixed_t     ystep;
-
-  fixed_t     partial;
-  int         mapxstep;
-  int         mapystep;
-
   earlyout = flags & PT_EARLYOUT;
 
   validcount++;
   intercepts.clear();
 
-  if (((x1-bmaporgx)&(MAPBLOCKSIZE-1)) == 0)
-    x1 += FRACUNIT; // don't side exactly on a line
+#define MAPBLOCKSIZE (MAPBLOCKUNITS * fixed_t::UNIT)
 
-  if (((y1-bmaporgy)&(MAPBLOCKSIZE-1)) == 0)
-    y1 += FRACUNIT; // don't side exactly on a line
+  if (((x1-bmaporgx).value() & (MAPBLOCKSIZE-1)) == 0)
+    x1 += 1; // don't side exactly on a line
+
+  if (((y1-bmaporgy).value() & (MAPBLOCKSIZE-1)) == 0)
+    y1 += 1; // don't side exactly on a line
 
   trace.x = x1;
   trace.y = y1;
@@ -710,55 +723,59 @@ bool Map::PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags
 
   x1 -= bmaporgx;
   y1 -= bmaporgy;
-  fixed_t xt1 = x1>>MAPBLOCKSHIFT;
-  fixed_t yt1 = y1>>MAPBLOCKSHIFT;
+  int xt1 = x1.floor() >> MAPBLOCKBITS;
+  int yt1 = y1.floor() >> MAPBLOCKBITS;
 
   x2 -= bmaporgx;
   y2 -= bmaporgy;
-  fixed_t xt2 = x2>>MAPBLOCKSHIFT;
-  fixed_t yt2 = y2>>MAPBLOCKSHIFT;
+  int xt2 = x2.floor() >> MAPBLOCKBITS;
+  int yt2 = y2.floor() >> MAPBLOCKBITS;
+
+  fixed_t     xstep, ystep;
+  fixed_t     partial;
+  int         mapxstep, mapystep;
 
   if (xt2 > xt1)
     {
       mapxstep = 1;
-      partial = FRACUNIT - ((x1>>MAPBTOFRAC)&(FRACUNIT-1));
-      ystep = FixedDiv (y2-y1,abs(x2-x1));
+      partial = 1 - (x1 >> MAPBLOCKBITS).frac();
+      ystep = (y2-y1) / abs(x2-x1);
     }
   else if (xt2 < xt1)
     {
       mapxstep = -1;
-      partial = (x1>>MAPBTOFRAC)&(FRACUNIT-1);
-      ystep = FixedDiv (y2-y1,abs(x2-x1));
+      partial = (x1 >> MAPBLOCKBITS).frac();
+      ystep = (y2-y1) / abs(x2-x1);
     }
   else
     {
       mapxstep = 0;
-      partial = FRACUNIT;
-      ystep = 256*FRACUNIT;
+      partial = 1;
+      ystep = 256;
     }
 
-  fixed_t yintercept = (y1>>MAPBTOFRAC) + FixedMul (partial, ystep);
-
+  fixed_t yintercept = (y1 >> MAPBLOCKBITS) + (partial * ystep);
 
   if (yt2 > yt1)
     {
       mapystep = 1;
-      partial = FRACUNIT - ((y1>>MAPBTOFRAC)&(FRACUNIT-1));
-      xstep = FixedDiv (x2-x1,abs(y2-y1));
+      partial = 1 - (y1 >> MAPBLOCKBITS).frac();
+      xstep = (x2-x1) / abs(y2-y1);
     }
   else if (yt2 < yt1)
     {
       mapystep = -1;
-      partial = (y1>>MAPBTOFRAC)&(FRACUNIT-1);
-      xstep = FixedDiv (x2-x1,abs(y2-y1));
+      partial = (y1 >> MAPBLOCKBITS).frac();
+      xstep = (x2-x1) / abs(y2-y1);
     }
   else
     {
       mapystep = 0;
-      partial = FRACUNIT;
-      xstep = 256*FRACUNIT;
+      partial = 1;
+      xstep = 256;
     }
-  fixed_t xintercept = (x1>>MAPBTOFRAC) + FixedMul (partial, xstep);
+
+  fixed_t xintercept = (x1 >> MAPBLOCKBITS) + (partial * xstep);
 
   // Step through map blocks.
   // Count is present to prevent a round off error
@@ -774,25 +791,25 @@ bool Map::PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags
     {
       if (flags & PT_ADDLINES)
         {
-	  if (!BlockLinesIterator (mapx, mapy,PIT_AddLineIntercepts))
+	  if (!BlockLinesIterator (mapx, mapy, PIT_AddLineIntercepts))
 	    return false;   // early out
         }
 
       if (flags & PT_ADDTHINGS)
         {
-	  if (!BlockThingsIterator (mapx, mapy,PIT_AddThingIntercepts))
+	  if (!BlockThingsIterator (mapx, mapy, PIT_AddThingIntercepts))
 	    return false;   // early out
         }
 
       if (mapx == xt2 && mapy == yt2)
 	break;
 
-      if ((yintercept >> FRACBITS) == mapy)
+      if (yintercept.floor() == mapy)
         {
 	  yintercept += ystep;
 	  mapx += mapxstep;
         }
-      else if ((xintercept >> FRACBITS) == mapx)
+      else if (xintercept.floor() == mapx)
         {
 	  xintercept += xstep;
 	  mapy += mapystep;
@@ -800,7 +817,7 @@ bool Map::PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags
 
     }
   // go through the sorted list
-  return P_TraverseIntercepts (trav, FRACUNIT);
+  return P_TraverseIntercepts(trav, 1);
 }
 
 
@@ -817,8 +834,8 @@ Actor *Map::RoughBlockSearch(Actor *center, Actor *master, int distance, int fla
   int count;
   Actor *target;
 
-  int startX = (center->x - bmaporgx)>>MAPBLOCKSHIFT;
-  int startY = (center->y - bmaporgy)>>MAPBLOCKSHIFT;
+  int startX = (center->pos.x - bmaporgx).floor() >> MAPBLOCKBITS;
+  int startY = (center->pos.y - bmaporgy).floor() >> MAPBLOCKBITS;
 	
   if (startX >= 0 && startX < bmapwidth && startY >= 0 && startY < bmapheight)
     {
@@ -909,7 +926,7 @@ Actor *Map::RoughBlockCheck(Actor *center, Actor *master, int index, int flags)
 	  {
 	    if (CheckSight(center, link))
 	      {
-		angle_t angle = R_PointToAngle2(master->x, master->y, link->x, link->y) - master->angle;
+		angle_t angle = R_PointToAngle2(master->pos.x, master->pos.y, link->pos.x, link->pos.y) - master->yaw;
 		angle >>= 24;
 		if (angle>226 || angle<30)
 		  return link;

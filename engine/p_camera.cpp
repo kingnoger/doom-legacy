@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2003-2004 by DooM Legacy Team.
+// Copyright (C) 2003-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.14  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.13  2005/07/01 16:45:12  smite-meister
 // FS cameras work
 //
@@ -83,9 +86,9 @@ Camera::Camera()
   flags2 = MF2_SLIDE | MF2_DONTDRAW;
 
   health = 1000;
-  mass = 10*FRACUNIT;
-  radius = 20*FRACUNIT;
-  height = 16*FRACUNIT;
+  mass = 10;
+  radius = 20;
+  height = 16;
 
   //x = y = z = 0;
 
@@ -101,13 +104,13 @@ Camera::Camera(mapthing_t *mt)
   flags2 = MF2_SLIDE | MF2_DONTDRAW;
 
   health = 1000;
-  mass = 10*FRACUNIT;
-  radius = 20*FRACUNIT;
-  height = 16*FRACUNIT;
+  mass = 10;
+  radius = 20;
+  height = 16;
 
-  x = mt->x << FRACBITS;
-  y = mt->y << FRACBITS;
-  angle = ANG45 * (mt->angle/45);
+  pos.x = mt->x;
+  pos.y = mt->y;
+  yaw = ANG45 * (mt->angle/45);
 
   spawnpoint = mt;
   mt->mobj = this;
@@ -145,62 +148,57 @@ void Camera::Think()
   //ResetCamera(p);
   // chasecam is reset when 1) target respawns, 2) target teleports, 3) chasecam is first turned on
 
-  angle_t ang = target->angle;
-  fixed_t tx, ty, tz;
+  angle_t ang = target->yaw;
 
   // sets ideal cam pos
   fixed_t dist = cv_cam_dist.value;
-  tx = target->x - FixedMul( finecosine[(ang>>ANGLETOFINESHIFT) & FINEMASK], dist);
-  ty = target->y - FixedMul(   finesine[(ang>>ANGLETOFINESHIFT) & FINEMASK], dist);
-  tz = target->z + (cv_viewheight.value << FRACBITS) + cv_cam_height.value;
+  vec_t<fixed_t> t = target->pos;
+  t.x -= Cos(ang) * dist;
+  t.y -= Sin(ang) * dist;
+  t.z += cv_viewheight.value + cv_cam_height.value;
 
   // P_PathTraverse ( target->x, target->y, x, y, PT_ADDLINES, PTR_UseTraverse );
 
   // move camera down to move under lower ceilings
-  subsector_t *newsubsec = mp->R_IsPointInSubsector((target->x + tx) >> 1, (target->y + ty) >> 1);
+  subsector_t *newsubsec = mp->R_IsPointInSubsector((target->pos.x + t.x) >> 1, (target->pos.y + t.y) >> 1);
               
   if (!newsubsec)
     {
       // use player sector 
-      if (target->subsector->sector->ceilingheight - height < tz)
-	tz = target->subsector->sector->ceilingheight - height - 11*FRACUNIT;
+      if (target->subsector->sector->ceilingheight - height < t.z)
+	t.z = target->subsector->sector->ceilingheight - height - 11;
       // don't be blocked by a opened door
     }
-  else if (newsubsec->sector->ceilingheight - height < tz)
+  else if (newsubsec->sector->ceilingheight - height < t.z)
     // no fit
-    tz = newsubsec->sector->ceilingheight - height-11*FRACUNIT;
+    t.z = newsubsec->sector->ceilingheight - height - 11;
 
   // is the camera fit is there own sector
-  newsubsec = mp->R_PointInSubsector(tx, ty);
-  if (newsubsec->sector->ceilingheight - height < tz)
-    tz = newsubsec->sector->ceilingheight - height - 11*FRACUNIT;
+  newsubsec = mp->R_PointInSubsector(t.x, t.y);
+  if (newsubsec->sector->ceilingheight - height < t.z)
+    t.z = newsubsec->sector->ceilingheight - height - 11;
 
 
   // point viewed by the camera
   // this point is just 64 unit forward the player
-  dist = 64 << FRACBITS;
+  dist = 64;
   fixed_t viewpointx, viewpointy;
 
-  viewpointx = target->x + FixedMul( finecosine[(ang>>ANGLETOFINESHIFT) & FINEMASK], dist);
-  viewpointy = target->y + FixedMul( finesine[(ang>>ANGLETOFINESHIFT) & FINEMASK], dist);
+  viewpointx = target->pos.x + Cos(ang) * dist;
+  viewpointy = target->pos.y + Sin(ang) * dist;
 
-  angle = R_PointToAngle2(tx, ty, viewpointx, viewpointy);
+  yaw = R_PointToAngle2(t.x, t.y, viewpointx, viewpointy);
 
   // follow the player
-  px = FixedMul(tx - x, cv_cam_speed.value);
-  py = FixedMul(ty - y, cv_cam_speed.value);
-  pz = FixedMul(tz - z, cv_cam_speed.value);
+  vel = (t-pos) * cv_cam_speed.value;
 
   // compute aiming to look the viewed point
-  float f1, f2;
-  f1 = FIXED_TO_FLOAT(viewpointx - x);
-  f2 = FIXED_TO_FLOAT(viewpointy - y);
-  dist = int(sqrt(f1*f1+f2*f2)*FRACUNIT);
-  ang = R_PointToAngle2(0, z, dist, target->z + (target->height>>1)
-			+ finesine[(target->aiming>>ANGLETOFINESHIFT) & FINEMASK] * 64);
+  float f1 = (viewpointx - pos.x).Float();
+  float f2 = (viewpointy - pos.y).Float();
+  dist = sqrtf(f1*f1 + f2*f2);
 
-  dist = aiming - ang;
-  aiming -= (dist >> 3);
+  angle_t temp = pitch - R_PointToAngle2(0, pos.z, dist, target->Center() + Sin(target->pitch) * 64);
+  pitch -= (temp >> 3);
 
   Actor::Think();
 }
@@ -214,9 +212,8 @@ void Camera::ResetCamera(Actor *p)
   chase = true;
   target = p;
 
-  x = p->x;
-  y = p->y;
-  z = p->z + (cv_viewheight.value << FRACBITS);
+  pos = p->pos;
+  pos.z += cv_viewheight.value;
 
   if (mp != p->mp)
     {
@@ -228,8 +225,8 @@ void Camera::ResetCamera(Actor *p)
       //cam = p->mp->SpawnActor(x,y,z, MT_CHASECAM);
     }
 
-  angle = p->angle;
-  aiming = 0;
+  yaw = p->yaw;
+  pitch = 0;
 
   // hey we should make sure that the sounds are heard from the camera
   // instead of the marine's head : TODO

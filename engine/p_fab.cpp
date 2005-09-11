@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.12  2004/11/09 20:38:50  smite-meister
 // added packing to I/O structs
 //
@@ -120,14 +123,14 @@ void A_StartWeaponACS(PlayerPawn *p, pspdef_t *psp)
 //
 void A_SmokeTrailer(DActor *actor)
 {
-  if (game.tic % (4 * NEWTICRATERATIO))
+  if (game.tic % 4)
     return;
 
   // add the smoke behind the rocket
-  DActor *th = actor->mp->SpawnDActor(actor->x - actor->px,
-    actor->y - actor->py, actor->z, MT_SMOK);
+  DActor *th = actor->mp->SpawnDActor(actor->pos.x - actor->vel.x,
+				      actor->pos.y - actor->vel.y, actor->pos.z, MT_SMOK);
 
-  th->pz = FRACUNIT;
+  th->vel.z = 1;
   th->tics -= P_Random()&3;
   if (th->tics < 1)
     th->tics = 1;

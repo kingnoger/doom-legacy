@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2005/09/11 16:23:09  smite-meister
+// template classes
+//
 // Revision 1.15  2005/04/17 17:24:44  smite-meister
 // netcode
 //
@@ -975,7 +978,7 @@ void consvar_t::Setvalue(const char *s)
   str = Z_StrDup(s);
 
   if (flags & CV_FLOAT)
-    value = int(atof(str) * FRACUNIT);
+    value = int(atof(str) * fixed_t::UNIT);
   else
     value = atoi(str);
 

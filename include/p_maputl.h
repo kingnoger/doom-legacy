@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2005/09/11 16:23:25  smite-meister
+// template classes
+//
 // Revision 1.9  2004/11/18 20:30:14  smite-meister
 // tnt, plutonia
 //
@@ -53,10 +56,12 @@
 #define p_maputl_h 1
 
 #include <vector>
+#include "vect.h"
 #include "m_fixed.h"
+#include "tables.h"
 
 
-#define USERANGE (64*FRACUNIT)
+#define USERANGE 64
 
 
 extern int validcount;
@@ -124,5 +129,18 @@ line_opening_t *P_LineOpening(line_t *linedef);
 
 extern divline_t trace;
 extern class bbox_t tmb;
+
+
+
+
+inline angle_t R_PointToAngle2(const vec_t<fixed_t>& a, const vec_t<fixed_t>& b)
+{
+  return R_PointToAngle2(a.x, a.y, b.x, b.y);
+}
+
+inline fixed_t P_XYdist(const vec_t<fixed_t>& a, const vec_t<fixed_t>& b)
+{
+  return P_AproxDistance(a.x - b.x, a.y - b.y);
+}
 
 #endif

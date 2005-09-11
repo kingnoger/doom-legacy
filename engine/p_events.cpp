@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004 by DooM Legacy Team.
+// Copyright (C) 2004-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.6  2005/03/04 16:23:07  smite-meister
 // mp3, sector_t
 //
@@ -387,8 +390,8 @@ bool Map::ActivateLine(line_t *line, Actor *thing, int side, int atype)
 // 
 // Hexen linedefs
 //
-#define SPEED(a)  (((a)*FRACUNIT)/8)
-#define HEIGHT(a) ((a)*FRACUNIT)
+#define SPEED(a)  (fixed_t(a)/8)
+#define HEIGHT(a) (fixed_t(a))
 #define TICS(a)   (((a)*TICRATE)/35)
 #define OCTICS(a) (((a)*TICRATE)/8)
 #define ANGLE(a)  angle_t((a) << 24) // angle_t is 32-bit int, Hexen angle is a 8-bit byte
@@ -433,10 +436,10 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       success = EV_MovePoly(args, true, false);
       break;
     case 7: // Poly Door Swing
-      success = EV_OpenPolyDoor(args, polydoor_t::pd_swing);
+      success = EV_OpenPolyDoor(args, polyobject_t::pd_swing);
       break;
     case 8: // Poly Door Slide
-      success = EV_OpenPolyDoor(args, polydoor_t::pd_slide);
+      success = EV_OpenPolyDoor(args, polyobject_t::pd_slide);
       break;
     case 10: // Door Close
       success = EV_DoDoor(tag, line, mo, vdoor_t::Close, SPEED(args[1]), TICS(args[2]));
@@ -565,7 +568,7 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
     case 72: // Thrust Mobj
       if(!side) // Only thrust on side 0
 	{
-	  mo->Thrust(ANGLE(args[0]), args[1]<<FRACBITS);
+	  mo->Thrust(ANGLE(args[0]), fixed_t(args[1]));
 	  success = 1;
 	}
       break;

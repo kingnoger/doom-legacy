@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2005/09/11 16:23:25  smite-meister
+// template classes
+//
 // Revision 1.13  2005/07/31 14:50:25  smite-meister
 // thing spawning fix
 //
@@ -63,6 +66,8 @@
 
 #ifndef info_h
 #define info_h 1
+
+#include "m_fixed.h"
 
 
 void P_PatchInfoTables();
@@ -6578,9 +6583,9 @@ struct mobjinfo_t
   statenum_t xdeathstate;
   int deathsound;
   float speed;
-  int radius;
-  int height;
-  int mass;
+  fixed_t radius;
+  fixed_t height;
+  float   mass;
   int damage;
   int activesound;
   int flags;

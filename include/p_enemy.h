@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2005/09/11 16:23:25  smite-meister
+// template classes
+//
 // Revision 1.6  2004/11/09 20:38:52  smite-meister
 // added packing to I/O structs
 //
@@ -42,11 +45,11 @@
 
 #define HITDICE(a) ((1+(P_Random() & 7))*(a))
 
-#define MELEERANGE      (64*FRACUNIT)
-#define AIMRANGE        (16*64*FRACUNIT)
-#define MISSILERANGE    (32*64*FRACUNIT)
+const fixed_t MELEERANGE   = 64;
+const fixed_t AIMRANGE     = 16*64;
+const fixed_t MISSILERANGE = 32*64;
 
-#define FLOATSPEED      (FRACUNIT*4)
+const float   FLOATSPEED = 4;
 
 enum dirtype_t
 {

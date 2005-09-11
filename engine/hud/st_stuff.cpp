@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,23 +18,14 @@
 //
 //
 // $Log$
+// Revision 1.36  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.35  2005/07/20 20:27:22  smite-meister
 // adv. texture cache
 //
-// Revision 1.34  2005/07/05 17:36:43  smite-meister
-// small fixes
-//
 // Revision 1.33  2005/04/17 18:36:34  smite-meister
 // netcode
-//
-// Revision 1.32  2005/03/21 17:44:13  smite-meister
-// fixes
-//
-// Revision 1.31  2005/01/25 18:29:14  smite-meister
-// preparing for alpha
-//
-// Revision 1.30  2004/12/31 16:19:38  smite-meister
-// alpha fixes
 //
 // Revision 1.29  2004/12/05 14:46:33  smite-meister
 // keybar
@@ -48,9 +39,6 @@
 // Revision 1.26  2004/11/04 21:12:53  smite-meister
 // save/load fixed
 //
-// Revision 1.25  2004/10/31 22:30:54  smite-meister
-// cleanup
-//
 // Revision 1.24  2004/10/27 17:37:08  smite-meister
 // netcode update
 //
@@ -59,9 +47,6 @@
 //
 // Revision 1.22  2004/09/23 23:21:18  smite-meister
 // HUD updated
-//
-// Revision 1.21  2004/09/15 19:23:59  smite-meister
-// bugfixes
 //
 // Revision 1.20  2004/09/03 16:28:50  smite-meister
 // bugfixes and ZDoom linedef types
@@ -74,9 +59,6 @@
 //
 // Revision 1.17  2004/03/28 15:16:13  smite-meister
 // Texture cache.
-//
-// Revision 1.16  2004/01/02 14:25:02  smite-meister
-// cleanup
 //
 // Revision 1.15  2003/12/09 01:02:01  smite-meister
 // Hexen mapchange works, keycodes fixed
@@ -142,7 +124,6 @@
 
 #include "screen.h"
 #include "r_main.h"
-#include "r_state.h"
 #include "r_data.h"
 
 #include "m_random.h"
@@ -151,6 +132,7 @@
 #include "st_lib.h"
 #include "i_video.h"
 #include "v_video.h"
+#include "tables.h"
 
 #include "w_wad.h"
 #include "z_zone.h"
@@ -831,8 +813,6 @@ void ST_unloadData()
 // refresh the status bar background
 void HUD::ST_RefreshBackground()
 {
-  extern byte *translationtables;
-  extern byte *current_colormap;
   int flags = (fgbuffer & V_FLAGMASK) | BG;
 
   if (game.mode == gm_hexen)
@@ -861,11 +841,7 @@ void HUD::ST_RefreshBackground()
       PatchSTATBAR->Draw(st_x, st_y, flags);
 
       // draw the faceback for the statusbarplayer
-      if (st_pawncolor == 0)
-        current_colormap = colormaps;
-      else
-        current_colormap = translationtables - 256 + (st_pawncolor << 8);
-
+      current_colormap = translationtables[st_pawncolor];
       PatchFaceBack->Draw(st_x+143, st_y, flags | V_MAP);
     }
 
@@ -958,20 +934,20 @@ void HUD::ST_updateFaceWidget(const PlayerPawn *st_pawn)
             }
           else
             {
-              badguyangle = R_PointToAngle2(st_pawn->x, st_pawn->y,
-                                            st_pawn->attacker->x,
-                                            st_pawn->attacker->y);
+              badguyangle = R_PointToAngle2(st_pawn->pos.x, st_pawn->pos.y,
+                                            st_pawn->attacker->pos.x,
+                                            st_pawn->attacker->pos.y);
 
-              if (badguyangle > st_pawn->angle)
+              if (badguyangle > st_pawn->yaw)
                 {
                   // whether right or left
-                  diffang = badguyangle - st_pawn->angle;
+                  diffang = badguyangle - st_pawn->yaw;
                   i = diffang > ANG180;
                 }
               else
                 {
                   // whether left or right
-                  diffang = st_pawn->angle - badguyangle;
+                  diffang = st_pawn->yaw - badguyangle;
                   i = diffang <= ANG180;
                 } // confusing, aint it?
 

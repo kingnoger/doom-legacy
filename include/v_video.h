@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2005/09/11 16:23:25  smite-meister
+// template classes
+//
 // Revision 1.11  2005/06/30 18:16:58  smite-meister
 // texture anims fixed
 //
@@ -97,6 +100,8 @@ public:
   int  StringHeight(const char *str);
 };
 
+/// color translation
+extern byte    translationtables[MAXSKINCOLORS][256];
 extern byte   *current_colormap; // for applying colormaps to Drawn Textures
 extern font_t *hud_font;
 extern font_t *big_font;

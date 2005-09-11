@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright(C) 2000 Simon Howard
-// Copyright(C) 2001-2004 Doom Legacy Team
+// Copyright(C) 2001-2005 Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.4  2005/09/11 16:23:25  smite-meister
+// template classes
+//
 // Revision 1.3  2004/08/12 18:30:30  smite-meister
 // cleaned startup
 //
@@ -57,6 +60,9 @@ enum svartype_t
 };
 
 
+#define FIXED_TO_FLOAT(x) (float(x) / 65536.0f)
+
+
 /// \brief Value of an FS variable
 struct svalue_t
 {
@@ -64,8 +70,7 @@ struct svalue_t
   union
   {
     const char *s;
-    int i;
-    fixed_t f;
+    int i; // also fixed
     class Actor *mobj;
     char *labelptr; // goto() label
   } value;
@@ -76,16 +81,26 @@ extern svalue_t nullvar;
 
 inline int intvalue(svalue_t v)
 {
-  return v.type == svt_string ? atoi(v.value.s) :
-    v.type == svt_fixed ? (v.value.f / FRACUNIT) :
-    v.type == svt_actor ? (v.value.mobj ? 1 : 0) : v.value.i;
+  return (v.type == svt_string) ? atoi(v.value.s) :
+    (v.type == svt_fixed) ? (v.value.i >> fixed_t::FBITS) :
+    (v.type == svt_actor) ? (v.value.mobj ? 1 : 0) :
+    v.value.i;
 }
 
 inline fixed_t fixedvalue(svalue_t v)
 {
-  return v.type == svt_fixed ? v.value.f :
-    v.type == svt_string ? fixed_t(atof(v.value.s) * FRACUNIT) :
-    intvalue(v) * FRACUNIT;
+  fixed_t res;
+
+  if (v.type == svt_fixed)
+    res.setvalue(v.value.i);
+  else if (v.type == svt_string)
+    res = float(atof(v.value.s));
+  else if (v.type == svt_actor)
+    res = v.value.mobj ? 1 : 0;
+  else
+    res = v.value.i;
+
+  return res;
 }
 
 const char *stringvalue(svalue_t v);
@@ -100,8 +115,7 @@ struct svariable_t
   union
   {
     char    *s;
-    int      i;
-    fixed_t  fixed;
+    int      i; // also fixed
     Actor   *mobj;
     // pointers to the same
     char    **pS;

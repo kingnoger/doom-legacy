@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.43  2005/09/11 16:23:25  smite-meister
+// template classes
+//
 // Revision 1.42  2005/07/11 16:58:56  smite-meister
 // msecnode_t bug fixed
 //
@@ -103,6 +106,7 @@
 #include "doomdef.h"
 #include "doomtype.h"
 #include "g_think.h"
+#include "vect.h"
 #include "m_fixed.h"
 #include "m_bbox.h"
 #include "info.h" // mobjtype_t
@@ -167,6 +171,12 @@ public:
   struct polyobj_t   *polyobjs;
   //@}
 
+  /// \name Rendering
+  /// Map-specific stuff only the renderer uses.
+  //@{
+  class fadetable_t *fadetable; ///< colormaps the software renderer uses to simulate light levels
+  bool R_SetFadetable(const char *name);
+  //@}
 
   /// \name Blockmap
   /// Created from axis aligned bounding box of the map, a rectangular array of
@@ -174,13 +184,14 @@ public:
   /// Used to speed up collision detection agains lines and things by a spatial subdivision in 2D.
   //@{
 #define MAPBLOCKUNITS   128
-#define MAPBLOCKSIZE    (MAPBLOCKUNITS*FRACUNIT)
-#define MAPBLOCKSHIFT   (FRACBITS+7)
-#define MAPBMASK        (MAPBLOCKSIZE-1)
-#define MAPBTOFRAC      (MAPBLOCKSHIFT-FRACBITS)
+#define MAPBLOCKBITS    7
+  //#define MAPBLOCKSIZE    (MAPBLOCKUNITS*FRACUNIT)
+  //#define MAPBLOCKSHIFT   (FRACBITS+7)
+  //#define MAPBMASK        (MAPBLOCKSIZE-1)
+  //#define MAPBTOFRAC      (MAPBLOCKSHIFT-FRACBITS)
   // MAXRADIUS is for precalculated sector block boxes
   // the spider demon is larger, but we do not have any moving sectors nearby
-#define MAXRADIUS       (32*FRACUNIT)
+#define MAXRADIUS       32
 #define MAPBLOCK_END    0xFFFF ///< terminator for a blocklist
 
   fixed_t bmaporgx, bmaporgy;    ///< origin (lower left corner) of block map in map coordinates
@@ -322,12 +333,15 @@ public:
 
   void SpawnActor(Actor *p);
   DActor *SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t);
+  inline DActor *SpawnDActor(const vec_t<fixed_t>& r, mobjtype_t t) { return SpawnDActor(r.x, r.y, r.z, t); }
   void SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing);
   DActor *SpawnMapThing(mapthing_t *mthing, bool initial = true);
-  void SpawnSplash(Actor *mo, fixed_t z);
-  DActor *SpawnBlood(fixed_t x, fixed_t y, fixed_t z, int damage);
-  void SpawnBloodSplats(fixed_t x, fixed_t y, fixed_t z, int damage, fixed_t px, fixed_t py);
+  DActor *SpawnSplash(const vec_t<fixed_t>& pos, fixed_t z, int sound, mobjtype_t base,
+		      mobjtype_t chunk = MT_NONE, bool randtics = true); 
+  DActor *SpawnBlood(const vec_t<fixed_t>& r, int damage);
+  void SpawnBloodSplats(const vec_t<fixed_t>& r, int damage, fixed_t px, fixed_t py);
   void SpawnPuff(fixed_t nx, fixed_t ny, fixed_t nz);
+  inline void SpawnPuff(const vec_t<fixed_t>& r) { SpawnPuff(r.x, r.y, r.z); }
   void SpawnSmoke(fixed_t x, fixed_t y, fixed_t z);
 
   void InsertIntoTIDmap(Actor *p, int tid);

@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.7  2005/09/11 16:23:09  smite-meister
+// template classes
+//
 // Revision 1.6  2005/03/16 21:16:09  smite-meister
 // menu cleanup, bugfixes
 //
@@ -270,7 +273,7 @@ int LArchive::Read(byte *dest, size_t length)
 }
 
 
-LArchive & LArchive::operator<<(byte &c)
+LArchive & LArchive::operator<<(byte& c)
 {
   if (storing)
     m_sbuf.push_back(c);
@@ -280,41 +283,62 @@ LArchive & LArchive::operator<<(byte &c)
   return *this;
 }
 
-LArchive & LArchive::operator<<(unsigned short &c)
+LArchive & LArchive::operator<<(Uint16& c)
 {
-  unsigned short temp = 0;
+  Uint16 temp = 0;
 
   if (storing)
     {
       temp = SHORT(c);
-      Write(reinterpret_cast<byte *>(&temp), sizeof(unsigned short));
+      Write(reinterpret_cast<byte *>(&temp), sizeof(Uint16));
     }
   else
     {
-      Read(reinterpret_cast<byte *>(&temp), sizeof(unsigned short));
+      Read(reinterpret_cast<byte *>(&temp), sizeof(Uint16));
       c = SHORT(temp);
     }
 
   return *this;
 }
 
-LArchive & LArchive::operator<<(unsigned int &c)
+LArchive & LArchive::operator<<(Uint32& c)
 {
-  unsigned int temp = 0;
+  Uint32 temp = 0;
 
   if (storing)
     {
       temp = LONG(c);
-      Write(reinterpret_cast<byte *>(&temp), sizeof(unsigned int));
+      Write(reinterpret_cast<byte *>(&temp), sizeof(Uint32));
     }
   else
     {
-      Read(reinterpret_cast<byte *>(&temp), sizeof(unsigned int));
+      Read(reinterpret_cast<byte *>(&temp), sizeof(Uint32));
       c = LONG(temp);
     }
 
   return *this;
 }
+
+
+LArchive& LArchive::operator<<(fixed_t& c)
+{
+  Uint32 temp = 0;
+
+  if (storing)
+    {
+      temp = LONG(c.value());
+      Write(reinterpret_cast<byte *>(&temp), sizeof(Uint32));
+    }
+  else
+    {
+      Read(reinterpret_cast<byte *>(&temp), sizeof(Uint32));
+      c.setvalue(LONG(temp));
+    }
+
+  return *this;
+}
+
+
 
 LArchive & LArchive::operator<<(string &s)
 {

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.17  2005/03/29 17:20:45  smite-meister
 // state and mobjinfo tables fixed
 //
@@ -78,7 +81,6 @@
 #include "tables.h"
 
 
-
 //=========================================
 //   ACTION ROUTINES
 //=========================================
@@ -94,15 +96,13 @@ void A_AddPlayerCorpse(DActor *actor) {}
 void A_DripBlood(DActor *actor)
 {
   DActor *mo;
-  int r,s;
+  fixed_t r,s;
 
-  // evaluation order isn't define in C
-  r = P_SignedRandom();
-  s = P_SignedRandom();
-  mo = actor->mp->SpawnDActor(actor->x+(r<<11),
-		   actor->y+(s<<11), actor->z, MT_BLOOD);
-  mo->px = P_SignedRandom()<<10;
-  mo->py = P_SignedRandom()<<10;
+  r = P_SignedRandom() >> 5;
+  s = P_SignedRandom() >> 5;
+  mo = actor->mp->SpawnDActor(actor->pos.x + r, actor->pos.y + s, actor->pos.z, MT_BLOOD);
+  mo->vel.x = P_SignedFRandom(6);
+  mo->vel.y = P_SignedFRandom(6);
   mo->flags2 |= MF2_LOGRAV;
 }
 
@@ -145,14 +145,14 @@ void A_ImpExplode(DActor *actor)
 {
   DActor *mo;
 
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_IMPCHUNK1);
-  mo->px = P_SignedRandom()<<10;
-  mo->py = P_SignedRandom()<<10;
-  mo->pz = 9*FRACUNIT;
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_IMPCHUNK2);
-  mo->px = P_SignedRandom()<<10;
-  mo->py = P_SignedRandom()<<10;
-  mo->pz = 9*FRACUNIT;
+  mo = actor->mp->SpawnDActor(actor->pos, MT_IMPCHUNK1);
+  mo->vel.x = P_SignedFRandom(6);
+  mo->vel.y = P_SignedFRandom(6);
+  mo->vel.z = 9;
+  mo = actor->mp->SpawnDActor(actor->pos, MT_IMPCHUNK2);
+  mo->vel.x = P_SignedFRandom(6);
+  mo->vel.y = P_SignedFRandom(6);
+  mo->vel.z = 9;
   if (actor->special1 == 666)
     { // Extreme death crash
       actor->SetState(S_IMP_XCRASH1);
@@ -169,14 +169,12 @@ void A_BeastPuff(DActor *actor)
 {
   if(P_Random() > 64)
     {
-      int r,s,t;
-      r = P_SignedRandom();
-      s = P_SignedRandom();
-      t = P_SignedRandom();
+      fixed_t r,s,t;
+      r = P_SignedFRandom(6);
+      s = P_SignedFRandom(6);
+      t = P_SignedFRandom(6);
         
-      actor->mp->SpawnDActor(actor->x+(r<<10),
-		  actor->y+(s<<10),
-		  actor->z+(t<<10), MT_PUFFY);
+      actor->mp->SpawnDActor(actor->pos + vec_t<fixed_t>(r,s,t), MT_PUFFY);
     }
 }
 
@@ -209,7 +207,6 @@ void A_ImpMsAttack(DActor *actor)
 {
   Actor *dest;
   angle_t an;
-  int dist;
 
   if(!actor->target || P_Random() > 64)
     {
@@ -220,16 +217,15 @@ void A_ImpMsAttack(DActor *actor)
   actor->eflags |= MFE_SKULLFLY;
   S_StartSound(actor, actor->info->attacksound);
   A_FaceTarget(actor);
-  an = actor->angle >> ANGLETOFINESHIFT;
-  actor->px = FixedMul(12*FRACUNIT, finecosine[an]);
-  actor->py = FixedMul(12*FRACUNIT, finesine[an]);
-  dist = P_AproxDistance(dest->x-actor->x, dest->y-actor->y);
-  dist = dist/(12*FRACUNIT);
+  an = actor->yaw >> ANGLETOFINESHIFT;
+  actor->vel.x = 12 * finecosine[an];
+  actor->vel.y = 12 * finesine[an];
+  int dist = (P_XYdist(dest->pos, actor->pos) / 12).floor();
   if(dist < 1)
     {
       dist = 1;
     }
-  actor->pz = (dest->z+(dest->height>>1)-actor->z)/dist;
+  actor->vel.z = (dest->Center() - actor->pos.z) / dist;
 }
 
 //----------------------------------------------------------------------------
@@ -270,7 +266,7 @@ void A_ImpDeath(DActor *actor)
   actor->height >>= 2;
   actor->radius -= (actor->radius>>4);      //for solid corpses
 
-  if(actor->z <= actor->floorz)
+  if(actor->pos.z <= actor->floorz)
     {
       actor->SetState(S_IMP_CRASH1);
       actor->flags &= ~MF_CORPSE;
@@ -304,7 +300,7 @@ void A_ImpXDeath1(DActor *actor)
 void A_ImpXDeath2(DActor *actor)
 {
   actor->flags &= ~MF_NOGRAVITY;
-  if(actor->z <= actor->floorz)
+  if(actor->pos.z <= actor->floorz)
     {
       actor->SetState(S_IMP_CRASH1);
       actor->flags &= ~MF_CORPSE;
@@ -313,7 +309,7 @@ void A_ImpXDeath2(DActor *actor)
 
 
 // Returns true if the monster morphs back.
-#define TELEFOGHEIGHT (32*FRACUNIT)
+#define TELEFOGHEIGHT (32)
 bool DActor::UpdateMorph(int tics)
 {
   special1 -= tics;
@@ -334,7 +330,7 @@ bool DActor::UpdateMorph(int tics)
       break;
     }
 
-  DActor *mo = mp->SpawnDActor(x, y, z, moType);
+  DActor *mo = mp->SpawnDActor(pos, moType);
   
   if (mo->TestLocation() == false)
     { // Didn't fit
@@ -346,10 +342,10 @@ bool DActor::UpdateMorph(int tics)
   // fits! remove the morph
   SetState(S_FREETARGMOBJ);
 
-  DActor *fog = mp->SpawnDActor(x, y, z+TELEFOGHEIGHT, MT_TFOG);
+  DActor *fog = mp->SpawnDActor(pos.x, pos.y, pos.z+TELEFOGHEIGHT, MT_TFOG);
   S_StartSound(fog, sfx_teleport);
 
-  mo->angle = angle;
+  mo->yaw = yaw;
   mo->target = target;
   //memcpy(mo->args, args, 5);
   //P_InsertMobjIntoTIDList(mo, oldMonster.tid);
@@ -444,12 +440,11 @@ void A_Feathers(DActor *actor)
     }
   for(i = 0; i < count; i++)
     {
-      mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z+20*FRACUNIT,
-		       MT_FEATHER);
+      mo = actor->mp->SpawnDActor(actor->pos.x, actor->pos.y, actor->pos.z+20, MT_FEATHER);
       mo->target = actor;
-      mo->px = P_SignedRandom()<<8;
-      mo->py = P_SignedRandom()<<8;
-      mo->pz = FRACUNIT+(P_Random()<<9);
+      mo->vel.x = P_SignedFRandom(8);
+      mo->vel.y = P_SignedFRandom(8);
+      mo->vel.z = 1 + P_FRandom(7);
       mo->SetState(statenum_t(S_FEATHER1+(P_Random()&7)));
     }
 }
@@ -522,8 +517,8 @@ void A_MummySoul(DActor *mummy)
 {
   DActor *mo;
 
-  mo = mummy->mp->SpawnDActor(mummy->x, mummy->y, mummy->z+10*FRACUNIT, MT_MUMMYSOUL);
-  mo->pz = FRACUNIT;
+  mo = mummy->mp->SpawnDActor(mummy->pos.x, mummy->pos.y, mummy->pos.z+10, MT_MUMMYSOUL);
+  mo->vel.z = 1;
 }
 
 //----------------------------------------------------------------------------
@@ -587,8 +582,8 @@ void A_Srcr1Attack(DActor *actor)
       mo = actor->SpawnMissile(actor->target, MT_SRCRFX1);
       if(mo)
 	{
-	  pz = mo->pz;
-	  angle = mo->angle;
+	  pz = mo->vel.z;
+	  angle = mo->yaw;
 	  actor->SpawnMissileAngle(MT_SRCRFX1, angle-ANGLE_1*3, pz);
 	  actor->SpawnMissileAngle(MT_SRCRFX1, angle+ANGLE_1*3, pz);
 	}
@@ -618,9 +613,9 @@ void A_SorcererRise(DActor *actor)
   DActor *mo;
 
   actor->flags &= ~MF_SOLID;
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_SORCERER2);
+  mo = actor->mp->SpawnDActor(actor->pos, MT_SORCERER2);
   mo->SetState(S_SOR2_RISE1);
-  mo->angle = actor->angle;
+  mo->yaw = actor->yaw;
   mo->target = actor->target;
 }
 
@@ -628,34 +623,31 @@ void A_SorcererRise(DActor *actor)
 
 void DActor::DSparilTeleport()
 {
-  int i, n;
   fixed_t nx, ny;
-  fixed_t prevX, prevY, prevZ;
-  DActor *mo;
 
-  n = mp->BossSpots.size(); 
+  int n = mp->BossSpots.size(); 
   if (n == 0)
     { // No spots
       return;
     }
-  i = P_Random();
+  int i = P_Random();
   do {
     i++;
-    nx = mp->BossSpots[i%n]->x << FRACBITS;;
-    ny = mp->BossSpots[i%n]->y << FRACBITS;;
-  } while(P_AproxDistance(x-nx, y-ny) < 128*FRACUNIT);
-  prevX = x;
-  prevY = y;
-  prevZ = z;
+    nx = mp->BossSpots[i%n]->x;
+    ny = mp->BossSpots[i%n]->y;
+  } while (P_AproxDistance(pos.x - nx, pos.y - ny) < 128);
+
+  vec_t<fixed_t> prev_pos(pos);
+
   if (TeleportMove(nx, ny))
     {
-      mo = mp->SpawnDActor(prevX, prevY, prevZ, MT_SOR2TELEFADE);
+      DActor *mo = mp->SpawnDActor(prev_pos, MT_SOR2TELEFADE);
       S_StartSound(mo, sfx_teleport);
       SetState(S_SOR2_TELE1);
       S_StartSound(this, sfx_teleport);
-      z = floorz;
-      angle = ANG45 * (mp->BossSpots[i%n]->angle/45);
-      px = py = pz = 0;
+      pos.z = floorz;
+      yaw = ANG45 * (mp->BossSpots[i%n]->angle/45);
+      vel.Set(0,0,0);
     }
 }
 
@@ -705,10 +697,8 @@ void A_Srcr2Attack(DActor *actor)
   chance = actor->health < actor->info->spawnhealth/2 ? 96 : 48;
   if(P_Random() < chance)
     { // Wizard spawners
-      actor->SpawnMissileAngle(MT_SOR2FX2,
-			  actor->angle-ANG45, FRACUNIT/2);
-      actor->SpawnMissileAngle(MT_SOR2FX2,
-			  actor->angle+ANG45, FRACUNIT/2);
+      actor->SpawnMissileAngle(MT_SOR2FX2, actor->yaw-ANG45, 0.5f);
+      actor->SpawnMissileAngle(MT_SOR2FX2, actor->yaw+ANG45, 0.5f);
     }
   else
     { // Blue bolt
@@ -729,10 +719,10 @@ void A_BlueSpark(DActor *actor)
     
   for(i = 0; i < 2; i++)
     {
-      mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_SOR2FXSPARK);
-      mo->px = P_SignedRandom()<<9;
-      mo->py = P_SignedRandom()<<9;
-      mo->pz = FRACUNIT+(P_Random()<<8);
+      mo = actor->mp->SpawnDActor(actor->pos, MT_SOR2FXSPARK);
+      mo->vel.x = P_SignedFRandom(7);
+      mo->vel.y = P_SignedFRandom(7);
+      mo->vel.z = 1 + P_FRandom(8);
     }
 }
 
@@ -744,20 +734,17 @@ void A_BlueSpark(DActor *actor)
 
 void A_GenWizard(DActor *actor)
 {
-  DActor *mo;
-  DActor *fog;
-
-  mo = actor->mp->SpawnDActor(actor->x, actor->y,
-		   actor->z-mobjinfo[MT_WIZARD].height/2, MT_WIZARD);
-  if(mo->TestLocation() == false)
+  DActor *mo = actor->mp->SpawnDActor(actor->pos.x, actor->pos.y,
+				      actor->pos.z - mobjinfo[MT_WIZARD].height/2, MT_WIZARD);
+  if (!mo->TestLocation())
     { // Didn't fit
       mo->Remove();
       return;
     }
-  actor->px = actor->py = actor->pz = 0;
+  actor->vel.Set(0,0,0);
   actor->SetState(mobjinfo[actor->type].deathstate);
   actor->flags &= ~MF_MISSILE;
-  fog = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_TFOG);
+  DActor *fog = actor->mp->SpawnDActor(actor->pos, MT_TFOG);
   S_StartSound(fog, sfx_teleport);
 }
 
@@ -821,7 +808,7 @@ void A_MinotaurAtk1(DActor *actor)
 
       if (t->IsOf(PlayerPawn::_type)) 
 	{ // Squish the player
-	  ((PlayerPawn*)t)->player->deltaviewheight = -16*FRACUNIT;
+	  ((PlayerPawn*)t)->player->deltaviewheight = -16;
 	}
     }
 }
@@ -834,38 +821,32 @@ void A_MinotaurAtk1(DActor *actor)
 //
 //----------------------------------------------------------------------------
 
-#define MNTR_CHARGE_SPEED (13*FRACUNIT)
+#define MNTR_CHARGE_SPEED (13)
 
 void A_MinotaurDecide(DActor *actor)
 {
   angle_t angle;
-  Actor *target;
-  int dist;
-
-  target = actor->target;
-  if(!target)
-    {
+  Actor *target = actor->target;
+  if (!target)
       return;
-    }
+
   S_StartSound(actor, sfx_minsit);
-  dist = P_AproxDistance(actor->x-target->x, actor->y-target->y);
-  if(target->z+target->height > actor->z
-     && target->z+target->height < actor->z+actor->height
-     && dist < 8*64*FRACUNIT
-     && dist > 1*64*FRACUNIT
-     && P_Random() < 150)
+  fixed_t dist = P_XYdist(actor->pos, target->pos);
+  if (target->Top() > actor->Feet() && target->Top() < actor->Top()
+      && dist < 8*64 && dist > 1*64
+      && P_Random() < 150)
     { // Charge attack
       // Don't call the state function right away
       actor->SetState(S_MNTR_ATK4_1, false);
       actor->eflags |= MFE_SKULLFLY;
       A_FaceTarget(actor);
-      angle = actor->angle>>ANGLETOFINESHIFT;
-      actor->px = FixedMul(MNTR_CHARGE_SPEED, finecosine[angle]);
-      actor->py = FixedMul(MNTR_CHARGE_SPEED, finesine[angle]);
+      angle = actor->yaw>>ANGLETOFINESHIFT;
+      actor->vel.x = MNTR_CHARGE_SPEED * finecosine[angle];
+      actor->vel.y = MNTR_CHARGE_SPEED * finesine[angle];
       actor->special1 = TICRATE/2; // Charge duration
     }
-  else if(target->z == target->floorz
-	  && dist < 9*64*FRACUNIT
+  else if(target->pos.z == target->floorz
+	  && dist < 9*64
 	  && P_Random() < 220)
     { // Floor fire attack
       actor->SetState(S_MNTR_ATK3_1);
@@ -891,8 +872,8 @@ void A_MinotaurCharge(DActor *actor)
 
   if(actor->special1)
     {
-      puff = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_PHOENIXPUFF);
-      puff->pz = 2*FRACUNIT;
+      puff = actor->mp->SpawnDActor(actor->pos, MT_PHOENIXPUFF);
+      puff->vel.z = 2;
       actor->special1--;
     }
   else
@@ -930,8 +911,8 @@ void A_MinotaurAtk2(DActor *actor)
   if(mo)
     {
       S_StartSound(mo, sfx_minat2);
-      pz = mo->pz;
-      angle = mo->angle;
+      pz = mo->vel.z;
+      angle = mo->yaw;
       actor->SpawnMissileAngle(MT_MNTRFX1, angle-(ANG45/8), pz);
       actor->SpawnMissileAngle(MT_MNTRFX1, angle+(ANG45/8), pz);
       actor->SpawnMissileAngle(MT_MNTRFX1, angle-(ANG45/16), pz);
@@ -960,7 +941,7 @@ void A_MinotaurAtk3(DActor *actor)
       actor->target->Damage(actor, actor, HITDICE(5));
       if (t->IsOf(PlayerPawn::_type))
 	{ // Squish the player
-	  ((PlayerPawn *)t)->player->deltaviewheight = -16*FRACUNIT;
+	  ((PlayerPawn *)t)->player->deltaviewheight = -16;
 	}
     }
   else
@@ -987,15 +968,14 @@ void A_MinotaurAtk3(DActor *actor)
 void A_MntrFloorFire(DActor *actor)
 {
   DActor *mo;
-  int r,s;
+  fixed_t r,s;
     
-  actor->z = actor->floorz;
-  r = P_SignedRandom();
-  s = P_SignedRandom();
-  mo = actor->mp->SpawnDActor(actor->x+(r<<10),
-		   actor->y+(s<<10), ONFLOORZ, MT_MNTRFX3);
+  actor->pos.z = actor->floorz;
+  r = P_SignedFRandom(6);
+  s = P_SignedFRandom(6);
+  mo = actor->mp->SpawnDActor(actor->pos.x + r, actor->pos.y + s, ONFLOORZ, MT_MNTRFX3);
   mo->target = actor->target;
-  mo->px = 1; // Force block checking
+  mo->vel.x = 1; // Force block checking
   mo->CheckMissileSpawn();
 }
 
@@ -1048,7 +1028,7 @@ void A_HHeadAttack(DActor *actor)
       return;
     }
 
-  int dist = P_AproxDistance(actor->x - t->x, actor->y - t->y) > 8*64*FRACUNIT;
+  int dist = P_XYdist(actor->pos, t->pos) > 8*64;
   int randAttack = P_Random();
   if (randAttack < atkResolve1[dist])
     { // Ice ball
@@ -1063,16 +1043,13 @@ void A_HHeadAttack(DActor *actor)
 	  baseFire->SetState(S_HHEADFX3_4); // Don't grow
 	  for (i = 0; i < 5; i++)
 	    {
-	      DActor *fire = actor->mp->SpawnDActor(baseFire->x, baseFire->y,
-						  baseFire->z, MT_HEADFX3);
+	      DActor *fire = actor->mp->SpawnDActor(baseFire->pos, MT_HEADFX3);
 	      if (i == 0)
 		S_StartSound(actor, sfx_hedat1);
 
 	      fire->owner = baseFire->owner;
-	      fire->angle = baseFire->angle;
-	      fire->px = baseFire->px;
-	      fire->py = baseFire->py;
-	      fire->pz = baseFire->pz;
+	      fire->yaw = baseFire->yaw;
+	      fire->vel = baseFire->vel;
                                 //fire->damage = 0;
 	      fire->health = (i+1)*2;
 	      fire->CheckMissileSpawn();
@@ -1084,7 +1061,7 @@ void A_HHeadAttack(DActor *actor)
       DActor *mo = actor->SpawnMissile(t, MT_WHIRLWIND);
       if(mo != NULL)
 	{
-	  mo->z -= 32*FRACUNIT;
+	  mo->pos.z -= 32;
 	  mo->target = t;
 	  mo->special2 = 50; // Timer for active sound
 	  mo->health = 20*TICRATE; // Duration
@@ -1104,7 +1081,7 @@ void A_WhirlwindSeek(DActor *actor)
   actor->health -= 3;
   if(actor->health < 0)
     {
-      actor->px = actor->py = actor->pz = 0;
+      actor->vel.Set(0,0,0);
       actor->SetState(mobjinfo[actor->type].deathstate);
       actor->flags &= ~MF_MISSILE;
       return;
@@ -1134,14 +1111,14 @@ void A_HeadIceImpact(DActor *ice)
 
   for(i = 0; i < 8; i++)
     {
-      shard = ice->mp->SpawnDActor(ice->x, ice->y, ice->z, MT_HEADFX2);
+      shard = ice->mp->SpawnDActor(ice->pos, MT_HEADFX2);
       angle = i*ANG45;
-      shard->target = ice->target;
-      shard->angle = angle;
+      shard->owner = ice->owner;
+      shard->yaw = angle;
       angle >>= ANGLETOFINESHIFT;
-      shard->px = int(shard->info->speed * finecosine[angle]);
-      shard->py = int(shard->info->speed * finesine[angle]);
-      shard->pz = int(-0.6*FRACUNIT);
+      shard->vel.x = shard->info->speed * finecosine[angle];
+      shard->vel.y = shard->info->speed * finesine[angle];
+      shard->vel.z = -0.6f;
       shard->CheckMissileSpawn();
     }
 }
@@ -1155,7 +1132,7 @@ void A_HeadIceImpact(DActor *ice)
 void A_HeadFireGrow(DActor *fire)
 {
   fire->health--;
-  fire->z += 9*FRACUNIT;
+  fire->pos.z += 9;
   if(fire->health == 0)
     {
       //fire->damage = fire->info->damage;
@@ -1282,8 +1259,8 @@ void A_WizAtk3(DActor *actor)
   mo = actor->SpawnMissile(actor->target, MT_WIZFX1);
   if(mo)
     {
-      pz = mo->pz;
-      angle = mo->angle;
+      pz = mo->vel.z;
+      angle = mo->yaw;
       actor->SpawnMissileAngle(MT_WIZFX1, angle-(ANG45/8), pz);
       actor->SpawnMissileAngle(MT_WIZFX1, angle+(ANG45/8), pz);
     }
@@ -1341,18 +1318,18 @@ void P_DropItem(Actor *source, mobjtype_t type, int amount, int chance, bool onf
   if (P_Random() > chance)
     return;
 
-  fixed_t z = source->z;
+  fixed_t z = source->pos.z;
 
   if (!onfloor)
     z += source->height >> 1;
 
-  DActor *mo = source->mp->SpawnDActor(source->x, source->y, z, type);
+  DActor *mo = source->mp->SpawnDActor(source->pos.x, source->pos.y, z, type);
 
   if (!onfloor)
     {
-      mo->px = P_SignedRandom()<<8;
-      mo->py = P_SignedRandom()<<8;
-      mo->pz = FRACUNIT*5+(P_Random()<<10);
+      mo->vel.x = P_SignedFRandom(8);
+      mo->vel.y = P_SignedFRandom(8);
+      mo->vel.z = 5 + P_FRandom(6);
     }
 
   mo->flags |= MF_DROPPED;
@@ -1438,12 +1415,12 @@ void A_PodPain(DActor *actor)
   count = chance > 240 ? 2 : 1;
   for(i = 0; i < count; i++)
     {
-      goo = actor->mp->SpawnDActor(actor->x, actor->y,
-			actor->z+48*FRACUNIT, MT_PODGOO);
+      goo = actor->mp->SpawnDActor(actor->pos.x, actor->pos.y,
+			actor->pos.z+48, MT_PODGOO);
       goo->target = actor;
-      goo->px = P_SignedRandom()<<9;
-      goo->py = P_SignedRandom()<<9;
-      goo->pz = FRACUNIT/2+(P_Random()<<9);
+      goo->vel.x = P_SignedFRandom(7);
+      goo->vel.y = P_SignedFRandom(7);
+      goo->vel.z = 0.5f + P_FRandom(7);
     }
 }
 
@@ -1477,11 +1454,9 @@ void A_MakePod(DActor *actor)
     // Too many generated pods
     return;
 
-  fixed_t  x, y, z;
-    
-  x = actor->x;
-  y = actor->y;
-  z = actor->z;
+  fixed_t x = actor->pos.x;
+  fixed_t y = actor->pos.y;
+
   DActor *mo = actor->mp->SpawnDActor(x, y, ONFLOORZ, MT_POD);
   if (mo->CheckPosition(x, y) == false)
     { // Didn't fit
@@ -1489,7 +1464,7 @@ void A_MakePod(DActor *actor)
       return;
     }
   mo->SetState(S_POD_GROW1);
-  mo->Thrust(P_Random()<<24, (fixed_t)(4.5*FRACUNIT));
+  mo->Thrust(P_Random() << 24, 4.5f);
   S_StartSound(mo, sfx_newpod);
   actor->special1++; // Increment generated pod count
   mo->owner = actor; // Link the pod to the generator
@@ -1523,10 +1498,10 @@ void A_SpawnTeleGlitter(DActor *actor)
 
   r = P_Random();
   s = P_Random();
-  mo = actor->mp->SpawnDActor(actor->x+((r&31)-16)*FRACUNIT,
-		   actor->y+((s&31)-16)*FRACUNIT,
+  mo = actor->mp->SpawnDActor(actor->pos.x+((r&31)-16),
+		   actor->pos.y+((s&31)-16),
 		   actor->subsector->sector->floorheight, MT_TELEGLITTER);
-  mo->pz = FRACUNIT/4;
+  mo->vel.z = 0.25f;
 }
 
 //----------------------------------------------------------------------------
@@ -1542,10 +1517,10 @@ void A_SpawnTeleGlitter2(DActor *actor)
 
   r = P_Random();
   s = P_Random();
-  mo = actor->mp->SpawnDActor(actor->x+((r&31)-16)*FRACUNIT,
-		   actor->y+((s&31)-16)*FRACUNIT,
+  mo = actor->mp->SpawnDActor(actor->pos.x+((r&31)-16),
+		   actor->pos.y+((s&31)-16),
 		   actor->subsector->sector->floorheight, MT_TELEGLITTER2);
-  mo->pz = FRACUNIT/4;
+  mo->vel.z = 0.25f;
 }
 
 //----------------------------------------------------------------------------
@@ -1558,7 +1533,7 @@ void A_AccTeleGlitter(DActor *actor)
 {
   if(++actor->health > 35)
     {
-      actor->pz += actor->pz/2;
+      actor->vel.z += actor->vel.z/2;
     }
 }
 
@@ -1588,7 +1563,7 @@ void A_InitKeyGizmo(DActor *gizmo)
       state = S_NULL;
       break;
     }
-  mo = gizmo->mp->SpawnDActor(gizmo->x, gizmo->y, gizmo->z+60*FRACUNIT,
+  mo = gizmo->mp->SpawnDActor(gizmo->pos.x, gizmo->pos.y, gizmo->pos.z+60,
 			     MT_KEYGIZMOFLOAT);
   mo->SetState(state);
 }
@@ -1619,16 +1594,16 @@ void A_VolcanoBlast(DActor *volcano)
   count = 1+(P_Random()%3);
   for(i = 0; i < count; i++)
     {
-      DActor *blast = volcano->mp->SpawnDActor(volcano->x, volcano->y,
-	volcano->z+44*FRACUNIT, MT_VOLCANOBLAST); // MT_VOLCANOBLAST
+      DActor *blast = volcano->mp->SpawnDActor(volcano->pos.x, volcano->pos.y,
+	volcano->pos.z+44, MT_VOLCANOBLAST); // MT_VOLCANOBLAST
       //blast->target = volcano;
       blast->owner = volcano;
       angle = P_Random()<<24;
-      blast->angle = angle;
+      blast->yaw = angle;
       angle >>= ANGLETOFINESHIFT;
-      blast->px = FixedMul(1*FRACUNIT, finecosine[angle]);
-      blast->py = FixedMul(1*FRACUNIT, finesine[angle]);
-      blast->pz = int(2.5*FRACUNIT)+(P_Random()<<10);
+      blast->vel.x = finecosine[angle];
+      blast->vel.y = finesine[angle];
+      blast->vel.z = 2.5f + P_FRandom(6);
       S_StartSound(blast, sfx_volsht);
       blast->CheckMissileSpawn();
     }
@@ -1646,24 +1621,24 @@ void A_VolcBallImpact(DActor *ball)
   DActor *tiny;
   angle_t angle;
 
-  if(ball->z <= ball->floorz)
+  if(ball->pos.z <= ball->floorz)
     {
       ball->flags |= MF_NOGRAVITY;
       ball->flags2 &= ~MF2_LOGRAV;
-      ball->z += 28*FRACUNIT;
-      //ball->pz = 3*FRACUNIT;
+      ball->pos.z += 28;
+      //ball->vel.z = 3;
     }
   ball->RadiusAttack(ball->owner, 25);
   for(i = 0; i < 4; i++)
     {
-      tiny = ball->mp->SpawnDActor(ball->x, ball->y, ball->z, MT_VOLCANOTBLAST);
+      tiny = ball->mp->SpawnDActor(ball->pos, MT_VOLCANOTBLAST);
       tiny->owner = ball;
       angle = i*ANG90;
-      tiny->angle = angle;
+      tiny->yaw = angle;
       angle >>= ANGLETOFINESHIFT;
-      tiny->px = int(0.7 * finecosine[angle]);
-      tiny->py = int(0.7 * finesine[angle]);
-      tiny->pz = FRACUNIT+(P_Random()<<9);
+      tiny->vel.x = 0.7f * finecosine[angle];
+      tiny->vel.y = 0.7f * finesine[angle];
+      tiny->vel.z = 1 + P_FRandom(7);
       tiny->CheckMissileSpawn();
     }
 }
@@ -1682,12 +1657,12 @@ void A_SkullPop(DActor *actor)
   PlayerPawn *p = (PlayerPawn *)actor;
 
   p->flags &= ~MF_SOLID;
-  DActor *mo = p->mp->SpawnDActor(p->x, p->y, p->z+48*FRACUNIT, MT_BLOODYSKULL);
+  DActor *mo = p->mp->SpawnDActor(p->pos.x, p->pos.y, p->pos.z+48, MT_BLOODYSKULL);
 
   mo->owner = p;
-  mo->px = P_SignedRandom()<<9;
-  mo->py = P_SignedRandom()<<9;
-  mo->pz = FRACUNIT*2+(P_Random()<<6);
+  mo->vel.x = P_SignedFRandom(7);
+  mo->vel.y = P_SignedFRandom(7);
+  mo->vel.z = 2 + P_FRandom(10);
 
   // Attach player mobj to bloody skull
   // Nope.
@@ -1697,7 +1672,7 @@ void A_SkullPop(DActor *actor)
   p->special1 = player->class;
   mo->player = player;
   mo->health = p->health;
-  mo->angle = p->angle;
+  mo->yaw = p->yaw;
   player->mo = mo;
   player->aiming = 0;
   player->damagecount = 32;
@@ -1712,7 +1687,7 @@ void A_SkullPop(DActor *actor)
 
 void A_CheckSkullFloor(DActor *actor)
 {
-  if(actor->z <= actor->floorz)
+  if(actor->pos.z <= actor->floorz)
     {
       actor->SetState(S_BLOODYSKULLX1);
       //S_StartSound(actor, SFX_DRIP);
@@ -1757,8 +1732,8 @@ void A_FreeTargMobj(DActor *mo)
 {
   // FIXME TODO since we now have a pointer tracking system for Actors, maybe we should delete the DActor here.
 
-  mo->px = mo->py = mo->pz = 0;
-  mo->z = mo->ceilingz+4*FRACUNIT;
+  mo->vel.Set(0,0,0);
+  mo->pos.z = mo->ceilingz+4;
   mo->flags &= ~(MF_SHOOTABLE|MF_FLOAT|MF_SOLID|MF_COUNTKILL);
   mo->flags |= MF_CORPSE|MF_DROPOFF|MF_NOGRAVITY;
   mo->flags2 &= ~(MF2_PASSMOBJ|MF2_LOGRAV);

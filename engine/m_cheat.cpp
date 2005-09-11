@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.30  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.29  2005/06/22 20:44:30  smite-meister
 // alpha3 bugfixes
 //
@@ -430,8 +433,7 @@ void CheatMyPosFunc(PlayerPawn *p, const byte *arg)
   // 'mypos' for player position
   //extern int statusbarplayer; // FIXME! show statbarpl. coordinates, not consolepl.
 
-  CONS_Printf(va("ang=%i;x,y=(%i,%i)\n", p->angle / ANGLE_1, p->x >> FRACBITS,
-		 p->y >> FRACBITS));
+  CONS_Printf(va("ang=%i;x,y=(%i,%i)\n", p->yaw / ANGLE_1, p->pos.x.floor(), p->pos.y.floor()));
 }
 
 static void CheatAMFunc(PlayerPawn *p, const byte *arg)

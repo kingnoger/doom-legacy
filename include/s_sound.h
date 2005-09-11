@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2005/09/11 16:23:25  smite-meister
+// template classes
+//
 // Revision 1.16  2005/06/16 18:18:11  smite-meister
 // bugfixes
 //
@@ -67,6 +70,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include "vect.h"
 #include "m_fixed.h"
 #include "z_cache.h"
 
@@ -145,8 +149,9 @@ public:
 /// sounds originating from mappoint_t's. A bit clumsy but works.
 struct soundsource_t
 {
-  fixed_t x, y, z;
-  fixed_t vx, vy, vz;
+  vec_t<fixed_t> pos;
+  vec_t<fixed_t> vel;
+
   bool     isactor; ///< is origin an Actor (or a mappoint_t)?
   union
   { // the sound origin

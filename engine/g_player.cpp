@@ -5,6 +5,9 @@
 // Copyright (C) 2002-2005 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.39  2005/09/11 16:22:53  smite-meister
+// template classes
+//
 // Revision 1.38  2005/07/20 20:27:19  smite-meister
 // adv. texture cache
 //
@@ -541,20 +544,20 @@ void PlayerInfo::CalcViewHeight()
   if (!pawn)
     return;
 
-  bool onground = (pawn->z <= pawn->floorz);
+  bool onground = (pawn->pos.z <= pawn->floorz);
 
-  // 16 pixels of bob
-  const fixed_t MAXBOB = 16*FRACUNIT;
+  const fixed_t MAXBOB = 16; // 16 pixels of bob
+  const fixed_t FLYBOB = 0.5f;
 
   // Regular movement bobbing
   // basically pawn speed squared, affects weapon swing
   fixed_t bob_amplitude; 
 
   if ((pawn->eflags & MFE_FLY) && !onground)
-    bob_amplitude = FRACUNIT/2;
+    bob_amplitude = FLYBOB;
   else
     {
-      bob_amplitude = (FixedMul(pawn->px, pawn->px) + FixedMul(pawn->py, pawn->py)) >> 2;
+      bob_amplitude = pawn->vel.XYNorm2() >> 2;
 
       if (bob_amplitude > MAXBOB)
 	bob_amplitude = MAXBOB;
@@ -565,12 +568,12 @@ void PlayerInfo::CalcViewHeight()
   if ((pawn->cheats & CF_NOMOMENTUM) || !onground)
     {
       viewheight = eyes;
-      viewz = pawn->z + eyes;
+      viewz = pawn->pos.z + eyes;
     }
   else
     {
       int phase = (FINEANGLES/20 * game.tic) & FINEMASK;
-      fixed_t bob = FixedMul(bob_amplitude/2, finesine[phase]);
+      fixed_t bob = (bob_amplitude/2) * finesine[phase];
 
       if (playerstate == PST_ALIVE)
 	{
@@ -589,22 +592,22 @@ void PlayerInfo::CalcViewHeight()
 		deltaviewheight = 1;
 	    }
 
-	  if (deltaviewheight)
+	  if (deltaviewheight != 0)
 	    {
-	      deltaviewheight += FRACUNIT/4;
+	      deltaviewheight += 0.25f;
 	      if (!deltaviewheight)
 		deltaviewheight = 1;
 	    }
 	}
 
-      viewz = pawn->z + viewheight + bob - pawn->floorclip;
+      viewz = pawn->pos.z + viewheight + bob - pawn->floorclip;
 
-      if (viewz < pawn->floorz + 4*FRACUNIT)
-	viewz = pawn->floorz + 4*FRACUNIT;
+      if (viewz < pawn->floorz + 4)
+	viewz = pawn->floorz + 4;
     }
 
-  if (viewz > pawn->ceilingz - 4*FRACUNIT)
-    viewz = pawn->ceilingz - 4*FRACUNIT;
+  if (viewz > pawn->ceilingz - 4)
+    viewz = pawn->ceilingz - 4;
 
 
   // server decides the rising/lowering of weapons (sy coord),
@@ -616,9 +619,9 @@ void PlayerInfo::CalcViewHeight()
     {
       // bob the weapon based on movement speed
       int angle = (128 * game.tic) & FINEMASK;
-      psp[ps_weapon].sx = FRACUNIT + FixedMul(bob_amplitude, finecosine[angle]);
+      psp[ps_weapon].sx = 1 + bob_amplitude*finecosine[angle];
       angle &= FINEANGLES/2-1;
-      psp[ps_weapon].sy = WEAPONTOP + FixedMul(bob_amplitude, finesine[angle]);
+      psp[ps_weapon].sy = WEAPONTOP + bob_amplitude*finesine[angle];
 
       psp[ps_flash].sx = psp[ps_weapon].sx;
       psp[ps_flash].sy = psp[ps_weapon].sy;

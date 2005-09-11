@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.29  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.28  2005/06/28 17:05:00  smite-meister
 // item respawning cleaned up
 //
@@ -113,13 +116,14 @@
 #include "z_zone.h"
 
 
+
 void P_MinotaurSlam(Actor *source, Actor *target)
 {
-  angle_t angle = R_PointToAngle2(source->x, source->y, target->x, target->y);
+  angle_t angle = R_PointToAngle2(source->pos, target->pos);
   angle >>= ANGLETOFINESHIFT;
-  fixed_t thrust = 16*FRACUNIT+(P_Random()<<10);
-  target->px += FixedMul(thrust, finecosine[angle]);
-  target->py += FixedMul(thrust, finesine[angle]);
+  fixed_t thrust = 16 + P_FRandom(6);
+  target->vel.x += thrust * finecosine[angle];
+  target->vel.y += thrust * finesine[angle];
   target->Damage(NULL, NULL, HITDICE(6));
 
   //if(target->player)
@@ -129,18 +133,18 @@ void P_MinotaurSlam(Actor *source, Actor *target)
 
 bool P_TouchWhirlwind(Actor *target)
 {
-  target->angle += P_SignedRandom()<<20;
-  target->px += P_SignedRandom()<<10;
-  target->py += P_SignedRandom()<<10;
+  target->yaw += P_SignedRandom()<<20;
+  target->vel.x += P_SignedFRandom(6);
+  target->vel.y += P_SignedFRandom(6);
   if (target->mp->maptic & 16 && !(target->flags2 & MF2_BOSS))
     {
-      int randVal = P_Random();
+      fixed_t randVal = P_Random();
       if (randVal > 160)
 	randVal = 160;
 
-      target->pz += randVal<<10;
-      if (target->pz > 12*FRACUNIT)
-	target->pz = 12*FRACUNIT;
+      target->vel.z += randVal >> 6;
+      if (target->vel.z > 12)
+	target->vel.z = 12;
     }
 
   if (!(target->mp->maptic & 7))
@@ -158,8 +162,8 @@ bool P_TouchWhirlwind(Actor *target)
 int P_FaceMobj(Actor *source, Actor *target, angle_t *delta)
 {
   angle_t diff;
-  angle_t angle1 = source->angle;
-  angle_t angle2 = R_PointToAngle2(source->x, source->y, target->x, target->y);
+  angle_t angle1 = source->yaw;
+  angle_t angle2 = R_PointToAngle2(source->pos, target->pos);
   if (angle2 > angle1)
     {
       diff = angle2-angle1;
@@ -194,10 +198,6 @@ int P_FaceMobj(Actor *source, Actor *target, angle_t *delta)
 // Returns true if target was tracked, false if not.
 bool DActor::SeekerMissile(angle_t thresh, angle_t turnMax)
 {
-  int dir;
-  angle_t delta;
-  angle_t ang;
-
   Actor *t = target;
 
   if (t == NULL)
@@ -208,7 +208,9 @@ bool DActor::SeekerMissile(angle_t thresh, angle_t turnMax)
       target = NULL;
       return false;
     }
-  dir = P_FaceMobj(this, t, &delta);
+
+  angle_t delta;
+  int dir = P_FaceMobj(this, t, &delta);
   if (delta > thresh)
     {
       delta >>= 1;
@@ -217,22 +219,22 @@ bool DActor::SeekerMissile(angle_t thresh, angle_t turnMax)
     }
   if (dir)
     { // Turn clockwise
-      angle += delta;
+      yaw += delta;
     }
   else
     { // Turn counter clockwise
-      angle -= delta;
+      yaw -= delta;
     }
-  ang = angle>>ANGLETOFINESHIFT;
-  px = int(info->speed * finecosine[ang]);
-  py = int(info->speed * finesine[ang]);
-  if (z+height < t->z || t->z+t->height < z)
+  int ang = yaw >> ANGLETOFINESHIFT;
+  vel.x = info->speed * finecosine[ang];
+  vel.y = info->speed * finesine[ang];
+
+  if (Top() < t->Feet() || t->Top() < Feet())
     { // Need to seek vertically
-      int dist = P_AproxDistance(t->x-x, t->y-y);
-      dist = dist / int(info->speed * FRACUNIT);
+      int dist = (P_XYdist(t->pos, pos) / info->speed).floor();
       if (dist < 1)
 	dist = 1;
-      pz = (t->z+(t->height>>1) - (z+(height>>1))) / dist;
+      vel.z = (t->Center() - Center()) / dist;
     }
   return true;
 }
@@ -244,42 +246,42 @@ DActor *DActor::SpawnMissileAngle(mobjtype_t t, angle_t angle, fixed_t momz)
 {
   fixed_t mz;
 
-  switch(t)
+  switch (t)
     {
     case MT_MNTRFX1: // Minotaur swing attack missile
-      mz = z+40*FRACUNIT;
+      mz = pos.z+40;
       break;
     case MT_MNTRFX2: // Minotaur floor fire missile
       mz = ONFLOORZ; // +floorclip; 
       break;
     case MT_SRCRFX1: // Sorcerer Demon fireball
-      mz = z+48*FRACUNIT;
+      mz = pos.z+48;
       break;
     case MT_ICEGUY_FX2: // Secondary Projectiles of the Ice Guy
-      mz = z+3*FRACUNIT;
+      mz = pos.z+3;
       break;
     case MT_MSTAFF_FX2:
-      mz = z+40*FRACUNIT;
+      mz = pos.z+40;
       break;
     default:
-      mz = z+32*FRACUNIT;
+      mz = pos.z+32;
       break;
 
     }
 
   mz -= floorclip;
     
-  DActor *mo = mp->SpawnDActor(x, y, mz, t);
+  DActor *mo = mp->SpawnDActor(pos.x, pos.y, mz, t);
   if (mo->info->seesound)
     S_StartSound(mo, mo->info->seesound);
 
   mo->owner = this; // Originator
-  mo->angle = angle;
+  mo->yaw = angle;
   angle >>= ANGLETOFINESHIFT;
-  mo->px = int(mo->info->speed * finecosine[angle]);
-  mo->py = int(mo->info->speed * finesine[angle]);
-  mo->pz = momz;
-  return (mo->CheckMissileSpawn() ? mo : NULL);
+  mo->vel.x = mo->info->speed * finecosine[angle];
+  mo->vel.y = mo->info->speed * finesine[angle];
+  mo->vel.z = momz;
+  return mo->CheckMissileSpawn() ? mo : NULL;
 }
 
 

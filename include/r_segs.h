@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2005/09/11 16:23:25  smite-meister
+// template classes
+//
 // Revision 1.3  2005/04/19 18:28:34  smite-meister
 // new RPCs
 //
@@ -92,7 +95,8 @@ struct drawseg_t
 
 
 
-extern lighttable_t**   walllights;
+//extern lighttable_t**   walllights;
+extern int *walllights;
 
 //void R_RenderMaskedSegRange( drawseg_t*    ds, int  x1, int x2);
 

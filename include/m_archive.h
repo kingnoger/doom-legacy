@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.7  2005/09/11 16:23:25  smite-meister
+// template classes
+//
 // Revision 1.6  2005/06/16 18:18:11  smite-meister
 // bugfixes
 //
@@ -61,6 +64,8 @@
 #include <map>
 
 #include "doomtype.h"
+#include "vect.h"
+#include "m_fixed.h"
 
 using namespace std;
 
@@ -150,10 +155,19 @@ public:
 
   //inline LArchive &operator<<(tic_t &t) { return operator<<(reinterpret_cast<Uint32 &>(t)); }
 
+  LArchive &operator<<(fixed_t& c);
+
+  template<typename U>
+  LArchive &operator<<(vec_t<U>& v)
+  {
+    operator<<(v.x);
+    operator<<(v.y);
+    operator<<(v.z);
+    return *this;
+  }
+
   /*
   LArchive &operator << (double c);
-  LArchive &operator << (fixed_t c);
-  LArchive &operator << (vect v);
   */
 
   LArchive &operator<<(string &s);

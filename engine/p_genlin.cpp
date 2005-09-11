@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -102,12 +102,12 @@ int Map::EV_DoGenFloor(line_t *line)
       break;
     case Fby24:
       type = floor_t::RelHeight;
-      height = (Dirn ? 1 : -1) * 24 * FRACUNIT;
+      height = (Dirn ? 1 : -1) * 24;
       break;
     case Fby32:
     default:
       type = floor_t::RelHeight;
-      height = (Dirn ? 1 : -1) * 32 * FRACUNIT;
+      height = (Dirn ? 1 : -1) * 32;
       break;
     }
 
@@ -270,12 +270,12 @@ int Map::EV_DoGenCeiling(line_t *line)
       break;
     case Cby24:
       type = ceiling_t::RelHeight;
-      height = (Dirn ? 1 : -1) * 24 * FRACUNIT;
+      height = (Dirn ? 1 : -1) * 24;
       break;
     case Cby32:
     default:
       type = ceiling_t::RelHeight;
-      height = (Dirn ? 1 : -1) * 32 * FRACUNIT;
+      height = (Dirn ? 1 : -1) * 32;
       break;
     }
 
@@ -574,16 +574,16 @@ int Map::EV_DoGenStairs(line_t *line)
 	{
 	default:
 	case 0:
-	  stairsize = 4*FRACUNIT;
+	  stairsize = 4;
 	  break;
 	case 1:
-	  stairsize = 8*FRACUNIT;
+	  stairsize = 8;
 	  break;
 	case 2:
-	  stairsize = 16*FRACUNIT;
+	  stairsize = 16;
 	  break;
 	case 3:
-	  stairsize = 24*FRACUNIT;
+	  stairsize = 24;
 	  break;
 	}
       if (!Dirn)
@@ -677,7 +677,7 @@ int Map::EV_DoGenCrusher(line_t *line)
 
   int rtn = ActivateInStasisCeiling(line->tag);
 
-  int speed;
+  fixed_t speed;
   // setup ceiling motion speed
   switch (Sped)
     {
@@ -725,7 +725,7 @@ int Map::EV_DoGenCrusher(line_t *line)
 
       // new crusher thinker
       rtn++;
-      crusher_t *crusher = new crusher_t(this, Slnt ? ceiling_t::Silent : 0, sec, speed, speed, 10, 8*FRACUNIT);
+      crusher_t *crusher = new crusher_t(this, Slnt ? ceiling_t::Silent : 0, sec, speed, speed, 10, 8);
 
       crusher->texture = sec->ceilingpic;
       crusher->modelsec = secnum;

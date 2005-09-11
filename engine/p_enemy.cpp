@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.30  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.29  2005/06/05 19:32:24  smite-meister
 // unsigned map structures
 //
@@ -154,6 +157,7 @@
 #include "hardware/hw3sound.h"
 
 
+
 //
 // P_NewChaseDir related LUT.
 //
@@ -248,7 +252,7 @@ bool P_CheckSpecialDeath(DActor *m, int dtype)
 	  break;
 	case MT_TREEDESTRUCTIBLE:
 	  m->SetState(S_ZTREEDES_X1);
-	  m->height = 24*FRACUNIT;
+	  m->height = 24;
 	  S_StartSound(m, SFX_TREE_EXPLODE);
 	  break;
 	default:
@@ -386,19 +390,18 @@ void P_NoiseAlert(Actor *target, Actor *emitter)
 bool DActor::CheckMeleeRange()
 {
   Actor *pl = target;
-  fixed_t     dist;
 
   if (pl == NULL)
     return false;
 
-  dist = P_AproxDistance(pl->x - x, pl->y - y);
+  fixed_t dist = P_XYdist(pl->pos, pos);
 
-  if (dist >= MELEERANGE - 20*FRACUNIT + pl->radius)
+  if (dist >= MELEERANGE - 20 + pl->radius)
     return false;
 
   //added:19-03-98: check height now, so that damn imps cant attack
   //                you if you stand on a higher ledge.
-  if ((pl->z > z+height) || (z > pl->z + pl->height))
+  if (pl->Feet() > Top() || Feet() > pl->Top())
     return false;
 
   if (!mp->CheckSight(this, target))
@@ -428,7 +431,7 @@ bool DActor::CheckMissileRange()
   Actor *t = target;
 
   // OPTIMIZE: get this from a global checksight
-  int dist = (P_AproxDistance(x - t->x, y - t->y) >> 16) - 64;
+  int dist = P_XYdist(pos, t->pos).floor() - 64;
 
   if (!info->meleestate)
     dist -= 128;   // no melee attack, so fire more
@@ -473,8 +476,9 @@ bool DActor::CheckMissileRange()
 // Move non-player  in the current direction,
 // returns false if the move is blocked.
 //
-static const fixed_t xspeed[8] = {FRACUNIT,47000,0,-47000,-FRACUNIT,-47000,0,47000};
-static const fixed_t yspeed[8] = {0,47000,FRACUNIT,47000,0,-47000,-FRACUNIT,-47000};
+static const float fff = 47000.0 / 65536.0; // roughly 1/sqrt(2)
+static const fixed_t xspeed[8] = {1, fff, 0, -fff, -1, -fff, 0, fff};
+static const fixed_t yspeed[8] = {0, fff, 1, fff, 0, -fff, -1, -fff};
 
 bool DActor::P_Move()
 {
@@ -488,8 +492,8 @@ bool DActor::P_Move()
     I_Error ("Weird movedir!");
 #endif
 
-  fixed_t tryx = x + fixed_t(info->speed * xspeed[movedir]);
-  fixed_t tryy = y + fixed_t(info->speed * yspeed[movedir]);
+  fixed_t tryx = pos.x + info->speed * xspeed[movedir];
+  fixed_t tryy = pos.y + info->speed * yspeed[movedir];
 
   if (!TryMove(tryx, tryy, false))
     {
@@ -497,10 +501,10 @@ bool DActor::P_Move()
       if (flags & MF_FLOAT && floatok)
         {
 	  // must adjust height
-	  if (z < tmfloorz)
-	    z += FLOATSPEED;
+	  if (pos.z < tmfloorz)
+	    pos.z += FLOATSPEED;
 	  else
-	    z -= FLOATSPEED;
+	    pos.z -= FLOATSPEED;
 
 	  eflags |= MFE_INFLOAT;
 	  return true;
@@ -534,9 +538,9 @@ bool DActor::P_Move()
 
   if (!(flags & MF_FLOAT))
     {
-      if (z > floorz)
+      if (pos.z > floorz)
 	HitFloor();
-      z = floorz;
+      pos.z = floorz;
     }
   return true;
 }
@@ -574,19 +578,19 @@ void DActor::P_NewChaseDir()
   int olddir = movedir;
   dirtype_t turnaround = opposite[olddir];
 
-  deltax = target->x - x;
-  deltay = target->y - y;
+  deltax = target->pos.x - pos.x;
+  deltay = target->pos.y - pos.y;
 
-  if (deltax > 10*FRACUNIT)
+  if (deltax > 10)
     d[1]= DI_EAST;
-  else if (deltax < -10*FRACUNIT)
+  else if (deltax < -10)
     d[1]= DI_WEST;
   else
     d[1]= DI_NODIR;
 
-  if (deltay < -10*FRACUNIT)
+  if (deltay < -10)
     d[2]= DI_SOUTH;
-  else if (deltay > 10*FRACUNIT)
+  else if (deltay > 10)
     d[2]= DI_NORTH;
   else
     d[2]= DI_NODIR;
@@ -687,9 +691,6 @@ void DActor::P_NewChaseDir()
 // Armies of monsters fighting against each other!
 bool DActor::LookForPlayers(bool allaround)
 {
-  angle_t     an;
-  fixed_t     dist;
-
   // FIXME removed until LookForMonsters is fixed
   //if (!game.multiplayer && consoleplayer->pawn->health <= 0 && game.mode == gm_heretic)
   //  // Single player game and player is dead, look for monsters
@@ -729,11 +730,11 @@ bool DActor::LookForPlayers(bool allaround)
 
       if (!allaround)
         {
-	  an = R_PointToAngle2(x, y, p->x, p->y) - angle;
+	  angle_t an = R_PointToAngle2(pos.x, pos.y, p->pos.x, p->pos.y) - yaw;
 
 	  if (an > ANG90 && an < ANG270)
             {
-	      dist = P_AproxDistance(p->x - x, p->y - y);
+	      fixed_t dist = P_XYdist(p->pos, pos);
 	      // if real close, react anyway
 	      if (dist > MELEERANGE)
 		continue;   // behind back
@@ -742,8 +743,7 @@ bool DActor::LookForPlayers(bool allaround)
 
       if (p->flags & MF_SHADOW)
         { // Player is invisible
-	  if ((P_AproxDistance(p->x - x, p->y - y) > 2*MELEERANGE)
-	      && P_AproxDistance(p->px, p->py) < 5*FRACUNIT)
+	  if (P_XYdist(p->pos, pos) > 2*MELEERANGE && P_AproxDistance(p->vel.x, p->vel.y) < 5)
             { // Player is sneaking - can't detect
 	      return false;
             }
@@ -762,7 +762,7 @@ bool DActor::LookForPlayers(bool allaround)
 }
 
 // was P_LookForMonsters
-#define MONS_LOOK_RANGE (20*64*FRACUNIT)
+#define MONS_LOOK_RANGE (20*64)
 #define MONS_LOOK_LIMIT 64
 /*
 bool DActor::LookForMonsters()
@@ -787,7 +787,7 @@ bool DActor::LookForMonsters()
 	{ // Not a valid monster
 	  continue;
 	}
-      if (P_AproxDistance(x - mo->x, y - mo->y) > MONS_LOOK_RANGE)
+      if (P_XYdist(pos, mo->pos) > MONS_LOOK_RANGE)
 	{ // Out of range
 	  continue;
 	}
@@ -920,13 +920,13 @@ void A_Chase(DActor *actor)
   // turn towards movement direction if not there yet
   if (actor->movedir < 8)
     {
-      actor->angle &= (7<<29);
-      delta = actor->angle - (actor->movedir << 29);
+      actor->yaw &= (7<<29);
+      delta = actor->yaw - (actor->movedir << 29);
 
       if (delta > 0)
-	actor->angle -= ANG90/2;
+	actor->yaw -= ANG90/2;
       else if (delta < 0)
-	actor->angle += ANG90/2;
+	actor->yaw += ANG90/2;
     }
 
   if (!actor->target || !(actor->target->flags & MF_SHOOTABLE))
@@ -1007,14 +1007,14 @@ void A_FaceTarget(DActor *actor)
   if (!actor->target)
     return;
 
+  Actor *t = actor->target;
+
   actor->flags &= ~MF_AMBUSH;
 
-  actor->angle = R_PointToAngle2(actor->x, actor->y,
-				 actor->target->x,
-				 actor->target->y);
+  actor->yaw = R_PointToAngle2(actor->pos.x, actor->pos.y, t->pos.x, t->pos.y);
 
-  if (actor->target->flags & MF_SHADOW)
-    actor->angle += P_SignedRandom()<<21;
+  if (t->flags & MF_SHADOW)
+    actor->yaw += P_SignedRandom()<<21;
 }
 
 //
@@ -1055,14 +1055,13 @@ void A_PosAttack(DActor *actor)
 {
   int         angle;
   int         damage;
-  int         slope;
 
   if (!actor->target)
     return;
 
   A_FaceTarget (actor);
-  angle = actor->angle;
-  slope = actor->AimLineAttack(angle, MISSILERANGE);
+  angle = actor->yaw;
+  fixed_t slope = actor->AimLineAttack(angle, MISSILERANGE);
   S_StartAttackSound(actor, sfx_pistol);
   angle += P_SignedRandom()<<20;
   damage = ((P_Random()%5)+1)*3;
@@ -1075,14 +1074,13 @@ void A_SPosAttack(DActor *actor)
   int         angle;
   int         bangle;
   int         damage;
-  int         slope;
 
   if (!actor->target)
     return;
   S_StartAttackSound(actor, sfx_shotgn);
   A_FaceTarget (actor);
-  bangle = actor->angle;
-  slope = actor->AimLineAttack(bangle, MISSILERANGE);
+  bangle = actor->yaw;
+  fixed_t slope = actor->AimLineAttack(bangle, MISSILERANGE);
 
   for (i=0 ; i<3 ; i++)
     {
@@ -1097,14 +1095,13 @@ void A_CPosAttack(DActor *actor)
   int         angle;
   int         bangle;
   int         damage;
-  int         slope;
 
   if (!actor->target)
     return;
   S_StartAttackSound(actor, sfx_shotgn);
   A_FaceTarget (actor);
-  bangle = actor->angle;
-  slope = actor->AimLineAttack(bangle, MISSILERANGE);
+  bangle = actor->yaw;
+  fixed_t slope = actor->AimLineAttack(bangle, MISSILERANGE);
 
   angle  = (P_SignedRandom()<<20)+bangle;
 
@@ -1258,14 +1255,14 @@ void A_SkelMissile(DActor *actor)
     return;
 
   A_FaceTarget (actor);
-  actor->z += 16*FRACUNIT;    // so missile spawns higher
+  actor->pos.z += 16;    // so missile spawns higher
   mo = actor->SpawnMissile(actor->target, MT_TRACER);
-  actor->z -= 16*FRACUNIT;    // back to normal
+  actor->pos.z -= 16;    // back to normal
 
   if(mo)
     {
-      mo->x += mo->px;
-      mo->y += mo->py;
+      mo->pos.x += mo->vel.x;
+      mo->pos.y += mo->vel.y;
       mo->target = actor->target;
     }
 }
@@ -1277,16 +1274,15 @@ void A_Tracer(DActor *actor)
 {
   Map *m = actor->mp;
 
-  if (m->maptic % (4 * NEWTICRATERATIO))
+  if (m->maptic % 4)
     return;
 
   // spawn a puff of smoke behind the rocket
-  m->SpawnPuff(actor->x, actor->y, actor->z);
+  m->SpawnPuff(actor->pos);
 
-  DActor *th = m->SpawnDActor(actor->x-actor->px,
-    actor->y-actor->py, actor->z, MT_SMOKE);
+  DActor *th = m->SpawnDActor(actor->pos.x - actor->vel.x, actor->pos.y - actor->vel.y, actor->pos.z, MT_SMOKE);
 
-  th->pz = FRACUNIT;
+  th->vel.z = 1;
   th->tics -= P_Random()&3;
   if (th->tics < 1)
     th->tics = 1;
@@ -1298,40 +1294,39 @@ void A_Tracer(DActor *actor)
     return;
 
   // change angle
-  angle_t exact = R_PointToAngle2(actor->x, actor->y, dest->x, dest->y);
+  angle_t exact = R_PointToAngle2(actor->pos.x, actor->pos.y, dest->pos.x, dest->pos.y);
 
-  if (exact != actor->angle)
+  if (exact != actor->yaw)
     {
-      if (exact - actor->angle > 0x80000000)
+      if (exact - actor->yaw > 0x80000000)
         {
-	  actor->angle -= TRACEANGLE;
-	  if (exact - actor->angle < 0x80000000)
-	    actor->angle = exact;
+	  actor->yaw -= TRACEANGLE;
+	  if (exact - actor->yaw < 0x80000000)
+	    actor->yaw = exact;
         }
       else
         {
-	  actor->angle += TRACEANGLE;
-	  if (exact - actor->angle > 0x80000000)
-	    actor->angle = exact;
+	  actor->yaw += TRACEANGLE;
+	  if (exact - actor->yaw > 0x80000000)
+	    actor->yaw = exact;
         }
     }
 
-  exact = actor->angle>>ANGLETOFINESHIFT;
-  actor->px = int(actor->info->speed * finecosine[exact]);
-  actor->py = int(actor->info->speed * finesine[exact]);
+  exact = actor->yaw>>ANGLETOFINESHIFT;
+  actor->vel.x = actor->info->speed * finecosine[exact];
+  actor->vel.y = actor->info->speed * finesine[exact];
 
   // change slope
-  int dist = P_AproxDistance(dest->x - actor->x, dest->y - actor->y);
-  dist = dist / int(actor->info->speed * FRACUNIT);
+  int dist = (P_XYdist(dest->pos, actor->pos) / actor->info->speed).floor();
 
   if (dist < 1)
     dist = 1;
-  fixed_t slope = (dest->z+40*FRACUNIT - actor->z) / dist;
+  fixed_t slope = (dest->pos.z + 40 - actor->pos.z) / dist;
 
-  if (slope < actor->pz)
-    actor->pz -= FRACUNIT/8;
+  if (slope < actor->vel.z)
+    actor->vel.z -= 0.125f;
   else
-    actor->pz += FRACUNIT/8;
+    actor->vel.z += 0.125f;
 }
 
 
@@ -1373,9 +1368,6 @@ static fixed_t  viletryx, viletryy;
 
 bool PIT_VileCheck(Actor *th)
 {
-  int  maxdist;
-  bool check;
-
   if (!(th->flags & MF_CORPSE) )
     return true;    // not a monster
 
@@ -1390,16 +1382,16 @@ bool PIT_VileCheck(Actor *th)
   if (thing->info->raisestate == S_NULL)
     return true;    // monster doesn't have a raise state
 
-  maxdist = thing->info->radius + mobjinfo[MT_VILE].radius;
+  fixed_t maxdist = thing->info->radius + mobjinfo[MT_VILE].radius;
 
-  if ( abs(thing->x - viletryx) > maxdist
-       || abs(thing->y - viletryy) > maxdist )
+  if (abs(thing->pos.x - viletryx) > maxdist ||
+      abs(thing->pos.y - viletryy) > maxdist)
     return true;            // not actually touching
 
   corpsehit = thing;
-  corpsehit->px = corpsehit->py = 0;
+  corpsehit->vel.x = corpsehit->vel.y = 0;
   corpsehit->height <<= 2;
-  check = corpsehit->CheckPosition(corpsehit->x, corpsehit->y);
+  bool check = corpsehit->CheckPosition(corpsehit->pos.x, corpsehit->pos.y);
   corpsehit->height >>= 2;
 
   if (!check)
@@ -1425,13 +1417,13 @@ void A_VileChase(DActor *actor)
   if (actor->movedir != DI_NODIR)
     {
       // check for corpses to raise
-      viletryx = actor->x + fixed_t(actor->info->speed*xspeed[actor->movedir]);
-      viletryy = actor->y + fixed_t(actor->info->speed*yspeed[actor->movedir]);
+      viletryx = actor->pos.x + actor->info->speed*xspeed[actor->movedir];
+      viletryy = actor->pos.y + actor->info->speed*yspeed[actor->movedir];
 
-      xl = (viletryx - m->bmaporgx - MAXRADIUS*2)>>MAPBLOCKSHIFT;
-      xh = (viletryx - m->bmaporgx + MAXRADIUS*2)>>MAPBLOCKSHIFT;
-      yl = (viletryy - m->bmaporgy - MAXRADIUS*2)>>MAPBLOCKSHIFT;
-      yh = (viletryy - m->bmaporgy + MAXRADIUS*2)>>MAPBLOCKSHIFT;
+      xl = ((viletryx - m->bmaporgx).floor() - MAXRADIUS*2) >> MAPBLOCKBITS;
+      xh = ((viletryx - m->bmaporgx).floor() + MAXRADIUS*2) >> MAPBLOCKBITS;
+      yl = ((viletryy - m->bmaporgy).floor() - MAXRADIUS*2) >> MAPBLOCKBITS;
+      yh = ((viletryy - m->bmaporgy).floor() + MAXRADIUS*2) >> MAPBLOCKBITS;
 
       vileobj = actor;
       for (bx=xl ; bx<=xh ; bx++)
@@ -1512,12 +1504,10 @@ void A_Fire(DActor *actor)
   if (!actor->mp->CheckSight(actor->owner, dest))
     return;
 
-  an = dest->angle >> ANGLETOFINESHIFT;
+  an = dest->yaw >> ANGLETOFINESHIFT;
 
   actor->UnsetPosition();
-  actor->x = dest->x + FixedMul (24*FRACUNIT, finecosine[an]);
-  actor->y = dest->y + FixedMul (24*FRACUNIT, finesine[an]);
-  actor->z = dest->z;
+  actor->pos = dest->pos + vec_t<fixed_t>(24 * finecosine[an], 24 * finesine[an], 0);
   actor->SetPosition();
 }
 
@@ -1534,8 +1524,7 @@ void A_VileTarget(DActor *actor)
 
   A_FaceTarget(actor);
 
-  DActor *fire = actor->mp->SpawnDActor(actor->target->x,
-    actor->target->x, actor->target->z, MT_FIRE);
+  DActor *fire = actor->mp->SpawnDActor(actor->target->pos, MT_FIRE); // was x,x,z
   actor->owner = fire; // TODO slight misuse of owner!
   fire->owner = actor;
   fire->target = actor->target;
@@ -1562,9 +1551,9 @@ void A_VileAttack(DActor *actor)
 
   S_StartSound (actor, sfx_barexp);
   actor->target->Damage(actor, actor, 20);
-  actor->target->pz = 1000*FRACUNIT/actor->target->mass;
+  actor->target->vel.z = 1000 / actor->target->mass;
 
-  an = actor->angle >> ANGLETOFINESHIFT;
+  an = actor->yaw >> ANGLETOFINESHIFT;
 
   Actor *fire = actor->owner; // TODO misuse of owner...
 
@@ -1572,8 +1561,8 @@ void A_VileAttack(DActor *actor)
     return;
 
   // move the fire between the vile and the player
-  fire->x = actor->target->x - FixedMul (24*FRACUNIT, finecosine[an]);
-  fire->y = actor->target->y - FixedMul (24*FRACUNIT, finesine[an]);
+  fire->pos.x = actor->target->pos.x - 24 * finecosine[an];
+  fire->pos.y = actor->target->pos.y - 24 * finesine[an];
   fire->RadiusAttack(actor, 70);
 }
 
@@ -1602,16 +1591,16 @@ void A_FatAttack1(DActor *actor)
 
   A_FaceTarget(actor);
   // Change direction  to ...
-  actor->angle += FATSPREAD;
+  actor->yaw += FATSPREAD;
   actor->SpawnMissile(actor->target, MT_FATSHOT);
 
   mo = actor->SpawnMissile(actor->target, MT_FATSHOT);
   if (mo)
     {
-      mo->angle += FATSPREAD;
-      an = mo->angle >> ANGLETOFINESHIFT;
-      mo->px = int(mo->info->speed * finecosine[an]);
-      mo->py = int(mo->info->speed * finesine[an]);
+      mo->yaw += FATSPREAD;
+      an = mo->yaw >> ANGLETOFINESHIFT;
+      mo->vel.x = mo->info->speed * finecosine[an];
+      mo->vel.y = mo->info->speed * finesine[an];
     }
 }
 
@@ -1622,16 +1611,16 @@ void A_FatAttack2(DActor *actor)
 
   A_FaceTarget (actor);
   // Now here choose opposite deviation.
-  actor->angle -= FATSPREAD;
+  actor->yaw -= FATSPREAD;
   actor->SpawnMissile(actor->target, MT_FATSHOT);
 
   mo = actor->SpawnMissile(actor->target, MT_FATSHOT);
   if(mo)
     {
-      mo->angle -= FATSPREAD*2;
-      an = mo->angle >> ANGLETOFINESHIFT;
-      mo->px = int(mo->info->speed * finecosine[an]);
-      mo->py = int(mo->info->speed * finesine[an]);
+      mo->yaw -= FATSPREAD*2;
+      an = mo->yaw >> ANGLETOFINESHIFT;
+      mo->vel.x = mo->info->speed * finecosine[an];
+      mo->vel.y = mo->info->speed * finesine[an];
     }
 }
 
@@ -1645,19 +1634,19 @@ void A_FatAttack3(DActor *actor)
   mo = actor->SpawnMissile(actor->target, MT_FATSHOT);
   if(mo)
     {
-      mo->angle -= FATSPREAD/2;
-      an = mo->angle >> ANGLETOFINESHIFT;
-      mo->px = int(mo->info->speed * finecosine[an]);
-      mo->py = int(mo->info->speed * finesine[an]);
+      mo->yaw -= FATSPREAD/2;
+      an = mo->yaw >> ANGLETOFINESHIFT;
+      mo->vel.x = mo->info->speed * finecosine[an];
+      mo->vel.y = mo->info->speed * finesine[an];
     }
     
   mo = actor->SpawnMissile(actor->target, MT_FATSHOT);
   if(mo)
     {
-      mo->angle += FATSPREAD/2;
-      an = mo->angle >> ANGLETOFINESHIFT;
-      mo->px = int(mo->info->speed * finecosine[an]);
-      mo->py = int(mo->info->speed * finesine[an]);
+      mo->yaw += FATSPREAD/2;
+      an = mo->yaw >> ANGLETOFINESHIFT;
+      mo->vel.x = mo->info->speed * finecosine[an];
+      mo->vel.y = mo->info->speed * finesine[an];
     }
 }
 
@@ -1666,30 +1655,25 @@ void A_FatAttack3(DActor *actor)
 // SkullAttack
 // Fly at the player like a missile.
 //
-#define SKULLSPEED              (20*FRACUNIT)
+#define SKULLSPEED              (20)
 
 void A_SkullAttack(DActor *actor)
 {
-  Actor *dest;
-  angle_t             an;
-  int                 dist;
-
   if (!actor->target)
     return;
 
-  dest = actor->target;
+  Actor *dest = actor->target;
   actor->eflags |= MFE_SKULLFLY;
   S_StartScreamSound(actor, actor->info->attacksound);
   A_FaceTarget (actor);
-  an = actor->angle >> ANGLETOFINESHIFT;
-  actor->px = FixedMul (SKULLSPEED, finecosine[an]);
-  actor->py = FixedMul (SKULLSPEED, finesine[an]);
-  dist = P_AproxDistance (dest->x - actor->x, dest->y - actor->y);
-  dist = dist / SKULLSPEED;
+  angle_t an = actor->yaw >> ANGLETOFINESHIFT;
+  actor->vel.x = SKULLSPEED * finecosine[an];
+  actor->vel.y = SKULLSPEED * finesine[an];
+  int dist = (P_XYdist(dest->pos, actor->pos) / SKULLSPEED).floor();
 
   if (dist < 1)
     dist = 1;
-  actor->pz = (dest->z+(dest->height>>1) - actor->z) / dist;
+  actor->vel.z = (dest->Center() - actor->pos.z) / dist;
 }
 
 
@@ -1705,8 +1689,6 @@ void A_PainShootSkull(DActor *actor, angle_t angle)
 
   DActor *newmobj;
   angle_t     an;
-  int         prestep;
-
 
   /*  --------------- SKULL LIMITE CODE -----------------
       int         count;
@@ -1734,18 +1716,16 @@ void A_PainShootSkull(DActor *actor, angle_t angle)
   // okay, there's place for another one
   an = angle >> ANGLETOFINESHIFT;
 
-  prestep =
-    4*FRACUNIT
-    + 3*(actor->info->radius + mobjinfo[MT_SKULL].radius)/2;
+  fixed_t prestep = 4 + 3*(actor->info->radius + mobjinfo[MT_SKULL].radius)/2;
 
-  x = actor->x + FixedMul (prestep, finecosine[an]);
-  y = actor->y + FixedMul (prestep, finesine[an]);
-  z = actor->z + 8*FRACUNIT;
+  x = actor->pos.x + prestep * finecosine[an];
+  y = actor->pos.y + prestep * finesine[an];
+  z = actor->pos.z + 8;
 
   newmobj = actor->mp->SpawnDActor(x, y, z, MT_SKULL);
 
   // Check for movements.
-  if (!newmobj->TryMove(newmobj->x, newmobj->y, false))
+  if (!newmobj->TryMove(newmobj->pos.x, newmobj->pos.y, false))
     {
       // kill it immediately
       newmobj->Damage(actor,actor,10000);
@@ -1767,16 +1747,16 @@ void A_PainAttack(DActor *actor)
     return;
 
   A_FaceTarget (actor);
-  A_PainShootSkull (actor, actor->angle);
+  A_PainShootSkull (actor, actor->yaw);
 }
 
 
 void A_PainDie(DActor *actor)
 {
   A_Fall (actor);
-  A_PainShootSkull (actor, actor->angle+ANG90);
-  A_PainShootSkull (actor, actor->angle+ANG180);
-  A_PainShootSkull (actor, actor->angle+ANG270);
+  A_PainShootSkull (actor, actor->yaw+ANG90);
+  A_PainShootSkull (actor, actor->yaw+ANG180);
+  A_PainShootSkull (actor, actor->yaw+ANG270);
 }
 
 
@@ -1834,7 +1814,7 @@ void A_Explode(DActor *actor)
       damage = 80 + (P_Random() & 31);
       break;
     case MT_FIREBOMB: // Time Bombs
-      actor->z += 32*FRACUNIT;
+      actor->pos.z += 32;
       actor->flags &= ~MF_SHADOW;
       break;
     case MT_MNTRFX2: // Minotaur floor fire
@@ -1900,7 +1880,7 @@ void A_Explode(DActor *actor)
 
   actor->RadiusAttack(actor->owner, damage, distance, dt_normal, damageSelf);
 
-  if (actor->z <= actor->floorz + (distance<<FRACBITS) && actor->type != MT_POISONCLOUD)
+  if (actor->pos.z <= actor->floorz + distance && actor->type != MT_POISONCLOUD)
     actor->HitFloor();
 }
 
@@ -1958,17 +1938,13 @@ void A_BrainPain(DActor *mo)
 
 void A_BrainScream(DActor *mo)
 {
-  int         x;
-  int         y;
-  int         z;
-  DActor *th;
-
-  for (x=mo->x - 196*FRACUNIT ; x< mo->x + 320*FRACUNIT ; x+= FRACUNIT*8)
+  fixed_t x, y, z;
+  for (x = mo->pos.x - 196; x < mo->pos.x + 320; x += 8)
     {
-      y = mo->y - 320*FRACUNIT;
-      z = 128 + P_Random()*2*FRACUNIT;
-      th = mo->mp->SpawnDActor(x,y,z, MT_ROCKET);
-      th->pz = P_Random()*512;
+      y = mo->pos.y - 320;
+      z = 128 + P_Random()*2;
+      DActor *th = mo->mp->SpawnDActor(x,y,z, MT_ROCKET);
+      th->vel.z = P_FRandom(7); // max 2
 
       th->SetState(S_BRAINEXPLODE1);
 
@@ -1984,16 +1960,13 @@ void A_BrainScream(DActor *mo)
 
 void A_BrainExplode(DActor *mo)
 {
-  int         x;
-  int         y;
-  int         z;
-  DActor *th;
+  fixed_t x, y, z;
 
-  x = (P_SignedRandom()<<11)+mo->x;
-  y = mo->y;
-  z = 128 + P_Random()*2*FRACUNIT;
-  th = mo->mp->SpawnDActor(x,y,z, MT_ROCKET);
-  th->pz = P_Random()*512;
+  x = P_SignedFRandom(5) + mo->pos.x;
+  y = mo->pos.y;
+  z = 128 + P_Random()*2;
+  DActor *th = mo->mp->SpawnDActor(x,y,z, MT_ROCKET);
+  th->vel.z = P_FRandom(7); // max 2
 
   th->SetState(S_BRAINEXPLODE1);
 
@@ -2010,11 +1983,9 @@ void A_BrainDie(DActor *mo)
 
 void A_BrainSpit(DActor *mo)
 {
-  Actor *targ;
-  DActor *newmobj;
   Map *m = mo->mp;
 
-  static int  easy = 0;
+  static int easy = 0;
 
   easy ^= 1;
   if (game.skill <= sk_easy && (!easy))
@@ -2024,16 +1995,16 @@ void A_BrainSpit(DActor *mo)
   if (n > 0) 
     {
       // shoot a cube at current target
-      targ = m->braintargets[m->braintargeton]->mobj;
+      Actor *targ = m->braintargets[m->braintargeton]->mobj;
       m->braintargeton = (m->braintargeton+1) % n;
         
       // spawn brain missile
-      newmobj = mo->SpawnMissile(targ, MT_SPAWNSHOT);
+      DActor *newmobj = mo->SpawnMissile(targ, MT_SPAWNSHOT);
       if (newmobj)
         {
 	  newmobj->target = targ;
-	  newmobj->reactiontime =
-	    ((targ->y - mo->y)/newmobj->py) / newmobj->state->tics;
+	  newmobj->reactiontime = ((targ->pos.y - mo->pos.y) / newmobj->vel.y).floor()
+	    / newmobj->state->tics;
         }
 
       S_StartAmbSound(NULL, sfx_bospit);
@@ -2061,7 +2032,7 @@ void A_SpawnFly(DActor *mo)
   Actor *targ = mo->target;
 
   // First spawn teleport fog.
-  DActor *fog = mo->mp->SpawnDActor(targ->x, targ->y, targ->z, MT_SPAWNFIRE);
+  DActor *fog = mo->mp->SpawnDActor(targ->pos, MT_SPAWNFIRE);
   S_StartSound (fog, sfx_teleport);
 
   // Randomly select monster to spawn.
@@ -2092,13 +2063,13 @@ void A_SpawnFly(DActor *mo)
   else
     type = MT_BRUISER;
 
-  DActor *newmobj = mo->mp->SpawnDActor(targ->x, targ->y, targ->z, type);
+  DActor *newmobj = mo->mp->SpawnDActor(targ->pos, type);
 
   if (newmobj->LookForPlayers(true))
     newmobj->SetState(newmobj->info->seestate);
 
   // telefrag anything in this spot
-  newmobj->TeleportMove(newmobj->x, newmobj->y);
+  newmobj->TeleportMove(newmobj->pos.x, newmobj->pos.y);
 
   // remove self (i.e., cube).
   mo->Remove();
@@ -2112,7 +2083,7 @@ void A_PlayerScream(DActor *actor)
 
   // Handle the different player death screams
   /*
-  if (actor->pz <= -39*FRACUNIT)
+  if (actor->vel.z <= -39)
     sound = SFX_PLAYER_FALLING_SPLAT; // TODO Falling splat
   */
 

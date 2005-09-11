@@ -8,6 +8,9 @@
 // Renderer is a friend class of Map
 //
 // $Log$
+// Revision 1.9  2005/09/11 16:23:25  smite-meister
+// template classes
+//
 // Revision 1.8  2004/10/27 17:37:09  smite-meister
 // netcode update
 //
@@ -48,6 +51,8 @@ struct node_t;
 struct side_t;
 struct line_t;
 
+class fadetable_t;
+
 struct poly_t;
 struct drawseg_t;
 struct ffloor_t;
@@ -57,7 +62,6 @@ struct extrasubsector_t;
 struct gr_vissprite_t;
 struct pspdef_t;
 struct visplane_t;
-struct extracolormap_t;
 
 class Rend
 {
@@ -123,7 +127,7 @@ public:
 
   // r_plane.cpp
   void R_ClearPlanes(int tag);
-  visplane_t *R_FindPlane(fixed_t height, int picnum, int lightlevel, fixed_t xoff, fixed_t yoff, extracolormap_t* planecolormap, ffloor_t* ffloor);
+  visplane_t *R_FindPlane(fixed_t height, int picnum, int lightlevel, fixed_t xoff, fixed_t yoff, fadetable_t* planecolormap, ffloor_t* ffloor);
   void R_DrawPlanes();
   void R_DrawSinglePlane(visplane_t* pl, bool handlesource);
 

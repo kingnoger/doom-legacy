@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.43  2005/09/11 16:22:53  smite-meister
+// template classes
+//
 // Revision 1.42  2005/07/31 14:50:24  smite-meister
 // thing spawning fix
 //
@@ -140,7 +143,6 @@
 
 
 #define VIEWHEIGHT  41
-#define MAXMOVE     (30*FRACUNIT/NEWTICRATERATIO)
 
 
 extern fixed_t FloatBobOffsets[64];
@@ -172,9 +174,7 @@ Actor::Actor()
   touching_sectorlist = NULL;
   spawnpoint = NULL;
 
-  x = y = z = 0;
-  angle = aiming = 0;
-  px = py = pz = 0;
+  yaw = pitch = 0;
 
   flags = flags2 = eflags = 0;
 
@@ -191,7 +191,7 @@ Actor::Actor()
 
 //  Normal constructor
 Actor::Actor(fixed_t nx, fixed_t ny, fixed_t nz)
-  : Thinker()
+  : Thinker(), pos(nx, ny, nz)
 {
   // note! here Map *mp is not yet set! This means you can't call functions such as
   // SetPosition that have something to do with a map.
@@ -202,11 +202,7 @@ Actor::Actor(fixed_t nx, fixed_t ny, fixed_t nz)
   touching_sectorlist = NULL;
   spawnpoint = NULL;
 
-  x = nx;
-  y = ny;
-  z = nz;
-  angle = aiming = 0;
-  px = py = pz = 0;
+  yaw = pitch = 0;
 
   // NOTE some attributes left uninitialized here!
   flags = flags2 = eflags = 0;
@@ -316,13 +312,13 @@ void Actor::Remove()
 void P_NoiseAlert(Actor *target, Actor *emitter);
 static void PlayerLandedOnThing(PlayerPawn *p, Actor *onmobj)
 {
-  p->player->deltaviewheight = p->pz >> 3;
-  if (p->pz < -23*FRACUNIT)
+  p->player->deltaviewheight = p->vel.z >> 3;
+  if (p->vel.z < -23)
     {
       //P_FallingDamage(mo->player);
       P_NoiseAlert(p, p);
     }
-  else if (p->pz < -8*FRACUNIT && !p->morphTics)
+  else if (p->vel.z < -8 && !p->morphTics)
     {
       S_StartSound(p, sfx_grunt);
     }
@@ -340,7 +336,7 @@ void Actor::Think()
   CheckWater();
 
   // XY movement
-  if (px || py)
+  if (vel.x != 0 || vel.y != 0)
     XYMovement();
   else
     {
@@ -356,7 +352,7 @@ void Actor::Think()
 	{
 	  // the skull slammed into something
 	  eflags &= ~MFE_SKULLFLY;
-	  pz = 0;
+	  vel.z = 0;
 	}
     }
 
@@ -366,9 +362,9 @@ void Actor::Think()
   if (flags2 & MF2_FLOATBOB)
     {
       // Floating item bobbing motion (maybe move to DActor::Think ?)
-      z = floorz + FloatBobOffsets[(reactiontime++) & 63];
+      pos.z += floorz + FloatBobOffsets[(reactiontime++) & 63];
     }
-  else if (!(eflags & MFE_ONGROUND) || (z != floorz) || pz)
+  else if (!(eflags & MFE_ONGROUND) || (pos.z != floorz) || vel.z != 0)
     {
       // time to fall...
       if (flags2 & MF2_PASSMOBJ)
@@ -384,23 +380,23 @@ void Actor::Think()
 	    {
 	      if (p) // FIXME is this ok? For all Actors?
 		{
-		  if (pz < -8*FRACUNIT && !(eflags & MFE_FLY))
+		  if (vel.z < -8 && !(eflags & MFE_FLY))
 		    {
 		      PlayerLandedOnThing(p, onmo);
 		    }
 
-		  if (onmo->z + onmo->height - z <= 24*FRACUNIT)
+		  if (onmo->Top() - pos.z <= 24)
 		    {
-		      p->player->viewheight -= onmo->z + onmo->height - z;
+		      p->player->viewheight -= onmo->Top() - pos.z;
 		      p->player->deltaviewheight = 
 			(VIEWHEIGHT - p->player->viewheight)>>3;
-		      z = onmo->z+onmo->height;
+		      pos.z = onmo->Top();
 		      eflags |= MFE_ONMOBJ;
-		      pz = 0;
+		      vel.z = 0;
 		    }                               
 		  else
 		    { // hit the bottom of the blocking mobj
-		      pz = 0;
+		      vel.z = 0;
 		    }
 		}
 	    }
@@ -422,7 +418,7 @@ float Actor::GetMoveFactor()
   float mf  = 1.0f;
 
   // less control if not onground.
-  bool onground = (z <= floorz) || (eflags & (MFE_ONMOBJ | MFE_FLY));
+  bool onground = (pos.z <= floorz) || (eflags & (MFE_ONMOBJ | MFE_FLY));
 
   if (boomsupport && variable_friction && onground && !(flags & (MF_NOGRAVITY | MF_NOCLIPLINE)))
     {
@@ -432,7 +428,7 @@ float Actor::GetMoveFactor()
       while (node)
 	{
 	  sec = node->m_sector;
-	  if ((sec->special & SS_friction) && (z <= sec->floorheight))
+	  if ((sec->special & SS_friction) && (pos.z <= sec->floorheight))
 	    if (frict == normal_friction || frict > sec->friction)
 	      {
 		frict = sec->friction;
@@ -451,7 +447,7 @@ float Actor::GetMoveFactor()
           // you get better footing
 #define MORE_FRICTION_MOMENTUM 15000       // mud factor based on momentum
 
-          fixed_t momentum = P_AproxDistance(px,py);
+          fixed_t momentum = P_AproxDistance(vel.x, vel.y);
 
 	  if (momentum < MORE_FRICTION_MOMENTUM)
 	    mf *= 0.125;
@@ -487,23 +483,24 @@ float Actor::GetMoveFactor()
 void Actor::XYMovement()
 {
   extern int skyflatnum;
+  const fixed_t MAXMOVE = 30;
 
-  if (px > MAXMOVE)
-    px = MAXMOVE;
-  else if (px < -MAXMOVE)
-    px = -MAXMOVE;
+  if (vel.x > MAXMOVE)
+    vel.x = MAXMOVE;
+  else if (vel.x < -MAXMOVE)
+    vel.x = -MAXMOVE;
 
-  if (py > MAXMOVE)
-    py = MAXMOVE;
-  else if (py < -MAXMOVE)
-    py = -MAXMOVE;
+  if (vel.y > MAXMOVE)
+    vel.y = MAXMOVE;
+  else if (vel.y < -MAXMOVE)
+    vel.y = -MAXMOVE;
 
-  fixed_t xmove = px;
-  fixed_t ymove = py;
+  fixed_t xmove = vel.x;
+  fixed_t ymove = vel.y;
 
   //reducing bobbing/momentum on ice
-  fixed_t oldx = x;
-  fixed_t oldy = y;
+  fixed_t oldx = pos.x;
+  fixed_t oldy = pos.y;
 
   fixed_t ptryx, ptryy;
 
@@ -511,15 +508,15 @@ void Actor::XYMovement()
     {
       if (xmove > MAXMOVE/2 || ymove > MAXMOVE/2)
         {
-	  ptryx = x + xmove/2;
-	  ptryy = y + ymove/2;
+	  ptryx = pos.x + xmove/2;
+	  ptryy = pos.y + ymove/2;
 	  xmove >>= 1;
 	  ymove >>= 1;
         }
       else
         {
-	  ptryx = x + xmove;
-	  ptryy = y + ymove;
+	  ptryx = pos.x + xmove;
+	  ptryy = pos.y + ymove;
 	  xmove = ymove = 0;
         }
 
@@ -541,7 +538,7 @@ void Actor::XYMovement()
 		  ceilingline->frontsector->ceilingpic == skyflatnum &&
 		  subsector->sector->ceilingheight == ceilingz)
 		if (!boomsupport ||
-                    z > ceilingline->backsector->ceilingheight)
+                    pos.z > ceilingline->backsector->ceilingheight)
                   {
                     // Hack to prevent missiles exploding
                     // against the sky.
@@ -557,22 +554,22 @@ void Actor::XYMovement()
 		  divline_t   misl;
 
 		  P_MakeDivline(Blocking.line, &divl);
-		  misl.x = x;
-		  misl.y = y;
-		  misl.dx = px;
-		  misl.dy = py;
+		  misl.x = pos.x;
+		  misl.y = pos.y;
+		  misl.dx = vel.x;
+		  misl.dy = vel.y;
 		  fixed_t frac = P_InterceptVector(&divl, &misl);
-		  mp->R_AddWallSplat(Blocking.line, P_PointOnLineSide(x, y, Blocking.line),
-				     "A_DMG3", z, frac, SPLATDRAWMODE_SHADE);
+		  mp->R_AddWallSplat(Blocking.line, P_PointOnLineSide(pos.x, pos.y, Blocking.line),
+				     "A_DMG3", pos.z, frac, SPLATDRAWMODE_SHADE);
                 }
 
 	      flags &= ~MF_MISSILE;
 	      //ExplodeMissile();
             }
 	  else
-	    px = py = 0;
+	    vel.x = vel.y = 0;
         }
-    } while (xmove || ymove);
+    } while (xmove != 0 || ymove != 0);
 
   // here some code was moved to PlayerPawn::XYMovement
 
@@ -591,34 +588,35 @@ const float friction_underwater = 0.75 * normal_friction;
 /// Friction on the xy plane
 void Actor::XYFriction(fixed_t oldx, fixed_t oldy)
 {
-  const fixed_t STOPSPEED = 0x1000;
-  const float friction_fly = 0.918; // 0xeb00
+  const fixed_t STOPSPEED  = 0.0625f; // 0x1000
+  const fixed_t SLIDESPEED = 0.25f;
+  const float friction_fly = 0.918f;  // 0xeb00
 
   // slow down in water, not too much for playability issues
   if (eflags & MFE_UNDERWATER)
     {
-      px = int(px * friction_underwater);
-      py = int(py * friction_underwater);
+      vel.x *= friction_underwater;
+      vel.y *= friction_underwater;
       return;
     }
 
   // no friction when airborne
-  if (z > floorz && !(eflags & (MFE_FLY | MFE_ONMOBJ)))
+  if (pos.z > floorz && !(eflags & (MFE_FLY | MFE_ONMOBJ)))
     return;
 
   if (flags & MF_CORPSE)
     {
       // do not stop sliding if halfway off a step with some momentum
-      if (px > FRACUNIT/4 || px < -FRACUNIT/4 || py > FRACUNIT/4 || py < -FRACUNIT/4)
+      if (vel.x > SLIDESPEED || vel.x < -SLIDESPEED || vel.y > SLIDESPEED || vel.y < -SLIDESPEED)
         {
 	  if (floorz != subsector->sector->floorheight)
 	    return;
         }
     }
 
-  if (px > -STOPSPEED && px < STOPSPEED && py > -STOPSPEED && py < STOPSPEED)
+  if (vel.x > -STOPSPEED && vel.x < STOPSPEED && vel.y > -STOPSPEED && vel.y < STOPSPEED)
     {
-      px = py = 0;
+      vel.x = vel.y = 0;
       return;
     }
 
@@ -628,9 +626,9 @@ void Actor::XYFriction(fixed_t oldx, fixed_t oldy)
   if (flags & (MF_NOGRAVITY | MF_NOCLIPLINE))
     //if (thing->Type() != Thinker::tt_ppawn)
     ;
-  else if ((oldx == x) && (oldy == y)) // Did you go anywhere?
+  else if ((oldx == pos.x) && (oldy == pos.y)) // Did you go anywhere?
     ;
-  else if ((eflags & MFE_FLY) && (z > floorz) && !(eflags & MFE_ONMOBJ))
+  else if ((eflags & MFE_FLY) && (pos.z > floorz) && !(eflags & MFE_ONMOBJ))
     fri = friction_fly;
   else
     {
@@ -639,7 +637,7 @@ void Actor::XYFriction(fixed_t oldx, fixed_t oldy)
 	{
 	  sec = node->m_sector;
 
-	  if ((sec->special & SS_friction) && (z <= sec->floorheight))
+	  if ((sec->special & SS_friction) && (pos.z <= sec->floorheight))
 	    if (fri == normal_friction || fri > sec->friction)
 	      {
 		fri = sec->friction;
@@ -649,8 +647,8 @@ void Actor::XYFriction(fixed_t oldx, fixed_t oldy)
 	}
     }
 
-  px = int(px * fri);
-  py = int(py * fri);
+  vel.x *= fri;
+  vel.y *= fri;
 }
 
 
@@ -659,76 +657,70 @@ void Actor::XYFriction(fixed_t oldx, fixed_t oldy)
 void Actor::ZMovement()
 {
   extern int skyflatnum;
-  fixed_t     dist;
-  fixed_t     delta;
 
   // adjust height
-  z += pz;
+  pos.z += vel.z;
 
   if ((flags & MF_FLOAT) && target)
     {
       // float down towards target if too close
-      if (!(eflags & MFE_SKULLFLY)
-	  && !(eflags & MFE_INFLOAT))
+      if (!(eflags & MFE_SKULLFLY) && !(eflags & MFE_INFLOAT))
         {
-	  dist = P_AproxDistance(x - target->x, y - target->y);
-	  delta = (target->z + (height>>1)) - z;
+	  fixed_t dist = P_AproxDistance(pos.x - target->pos.x, pos.y - target->pos.y);
+	  fixed_t delta = (target->pos.z + (height>>1)) - pos.z; // TODO why not target->height?
 
 	  if (delta < 0 && dist < -(delta*3) )
-	    z -= FLOATSPEED;
+	    pos.z -= FLOATSPEED;
 	  else if (delta > 0 && dist < (delta*3) )
-	    z += FLOATSPEED;
+	    pos.z += FLOATSPEED;
         }
 
     }
 
   // was only for PlayerPawns, but why?
-  if ((eflags & MFE_FLY) && (z > floorz) && (mp->maptic & 2))
+  if ((eflags & MFE_FLY) && (pos.z > floorz) && (mp->maptic & 2))
     {
-      z += finesine[(FINEANGLES / 20 * mp->maptic >> 2) & FINEMASK];
+      pos.z += finesine[(FINEANGLES / 20 * mp->maptic >> 2) & FINEMASK];
     }
 
   // clip this movement
 
-  if (z <= floorz)
+  if (pos.z <= floorz)
     {
       // hit the floor
       if (flags & MF_MISSILE)
         {
-	  z = floorz;
+	  pos.z = floorz;
 	  eflags |= MFE_JUSTHITFLOOR;
 	  return;
 	}
         
       // Did we actually fall to the ground?
-      if (z - pz > floorz)
+      if (pos.z - vel.z > floorz)
 	{
 	  HitFloor();
 	  eflags |= MFE_JUSTHITFLOOR;
 	}
 
-      z = floorz;
+      pos.z = floorz;
 
       if (eflags & MFE_SKULLFLY)
         {
 	  // the skull slammed into something
-	  pz = -pz;
+	  vel.z = -vel.z;
         }
       else
-	pz = 0;
+	vel.z = 0;
 
-    }
-  else if (flags2 & MF2_LOGRAV)
-    {
-      // TODO sector gravity
-      if (pz == 0)
-	pz = -(cv_gravity.value>>3)*2;
-      else
-	pz -= cv_gravity.value>>3;
     }
   else if (!(flags & MF_NOGRAVITY)) // Gravity!
     {
-      fixed_t gravityadd = -cv_gravity.value/NEWTICRATERATIO;
+      // TODO per-sector gravity
+      fixed_t gravityadd;
+      gravityadd.setvalue(-cv_gravity.value);
+
+      if (flags2 & MF2_LOGRAV)
+	gravityadd >> 3; // feels just one-eight gravity
 
       // if waist under water, slow down the fall
       if (eflags & MFE_UNDERWATER)
@@ -738,25 +730,25 @@ void Actor::ZMovement()
 	  else
 	    gravityadd >>= 2;
 	}
-      else if (pz == 0)
+      else if (vel.z == 0)
 	// mobj at stop, no floor, so feel the push of gravity!
 	gravityadd <<= 1;
 
-      pz += gravityadd;
+      vel.z += gravityadd;
     }
 
-  if (z + height > ceilingz)
+  if (Top() > ceilingz)
     {
-      z = ceilingz - height;
+      pos.z = ceilingz - height;
 
       // hit the ceiling
-      if (pz > 0)
+      if (vel.z > 0)
 	if (eflags & MFE_SKULLFLY)
 	  {       // the skull slammed into something
-	    pz = -pz;
+	    vel.z = -vel.z;
 	  }
 	else
-	  pz = 0;
+	  vel.z = 0;
 
       if (flags & MF_MISSILE)
         {
@@ -779,9 +771,7 @@ void Actor::ZMovement()
 
   // z friction in water
   if ((eflags & MFE_TOUCHWATER) || (eflags & MFE_UNDERWATER)) 
-    {
-      pz = int(pz * friction_underwater);
-    }
+    vel.z *= friction_underwater;
 }
 
 
@@ -790,8 +780,8 @@ void Actor::ZMovement()
 void Actor::Thrust(angle_t angle, fixed_t move)
 {
   angle >>= ANGLETOFINESHIFT;
-  px += FixedMul(move, finecosine[angle]);
-  py += FixedMul(move, finesine[angle]);
+  vel.x += move * finecosine[angle];
+  vel.y += move * finesine[angle];
 }
 
 
@@ -814,44 +804,42 @@ void Actor::CheckWater()
       if (sector->heightsec > -1)  //water hack
 	fz = (mp->sectors[sector->heightsec].floorheight);
       else
-	fz = sector->floorheight + (FRACUNIT/4); // water texture
+	fz = sector->floorheight + 0.25f; // water texture
 
-      if (z <= fz && z+height > fz)
+      if (Feet() <= fz && Top() > fz)
 	eflags |= MFE_TOUCHWATER;
       else
 	eflags &= ~MFE_TOUCHWATER;
 
-      if (z+(height>>1) <= fz)
+      if (Center() <= fz)
 	eflags |= MFE_UNDERWATER;
       else
 	eflags &= ~MFE_UNDERWATER;
     }
   else if (sector->ffloors)
     {
-      ffloor_t*  rover;
-
       eflags &= ~(MFE_UNDERWATER|MFE_TOUCHWATER);
 
-      for (rover = sector->ffloors; rover; rover = rover->next)
+      for (ffloor_t *rover = sector->ffloors; rover; rover = rover->next)
 	{
 	  if (!(rover->flags & FF_SWIMMABLE) || rover->flags & FF_SOLID)
 	    continue;
-	  if (*rover->topheight <= z || *rover->bottomheight > (z + (height >> 1)))
+	  if (*rover->topheight <= Feet() || *rover->bottomheight > Center())
 	    continue;
 
-	  if (z + height > *rover->topheight)
+	  if (Top() > *rover->topheight)
             eflags |= MFE_TOUCHWATER;
 	  else
             eflags &= ~MFE_TOUCHWATER;
 
-	  if (z + (height >> 1) < *rover->topheight)
+	  if (Center() < *rover->topheight)
             eflags |= MFE_UNDERWATER;
 	  else
             eflags &= ~MFE_UNDERWATER;
 
 	  if (!(oldeflags & (MFE_TOUCHWATER|MFE_UNDERWATER))
 	      && (eflags & (MFE_TOUCHWATER|MFE_UNDERWATER))) // && game.mode != gm_heretic
-            mp->SpawnSplash(this, *rover->topheight);
+	    mp->SpawnSplash(pos, *rover->topheight, sfx_splash, MT_SPLASH);
 	}
       return;
     }
@@ -876,49 +864,119 @@ int Actor::HitFloor()
       return FLOOR_SOLID;
     }
 
+  // need to touch the surface because the splashes only appear at surface
+  //if (pos.z > z || pos.z + mo->height < z)  return;
+
   int floortype = subsector->sector->floortype;
 
   if (flags & MF_NOSPLASH)
     return floortype;
 
-  if (game.mode == gm_heretic)
+  // get rough idea of speed
+  /*
+    thrust = (mo->px + mo->py) >> FRACBITS+1;
+
+    if (thrust >= 2 && thrust<=3)
+    th->SetState(S_SPLASH2);
+    else
+    if (thrust < 2)
+    th->SetState(S_SPLASH3);
+  */
+
+  // TODO send noise alerts if this is a player and splash is big?
+
+  DActor *p;
+
+  if (game.mode == gm_hexen)
     {
-      DActor *p;
+      const fixed_t SMALLSPLASHCLIP = 12;
+      int smallsplash = false;
+
+      // Small splash for small masses
+      if (mass < 10)
+	smallsplash = true;
+
       switch (floortype)
 	{
 	case FLOOR_WATER:
-	  mp->SpawnDActor(x, y, ONFLOORZ, MT_SPLASHBASE);
-	  p = mp->SpawnDActor(x, y, ONFLOORZ, MT_HSPLASH);
-	  p->owner = this;
-	  p->px = P_SignedRandom()<<8;
-	  p->py = P_SignedRandom()<<8;
-	  p->pz = 2*FRACUNIT+(P_Random()<<8);
-	  S_StartSound(p, sfx_splash);
+	  if (smallsplash)
+	    {
+	      p = mp->SpawnSplash(pos, floorz, SFX_AMBIENT10, MT_XSPLASHBASE, MT_NONE, false);
+	      if (p)
+		p->floorclip += SMALLSPLASHCLIP;
+	    }
+	  else
+	    {
+	      p = mp->SpawnSplash(pos, floorz, sfx_splash, MT_XSPLASHBASE, MT_XSPLASH, false);
+	      if (p)
+		p->vel.Set(P_SignedFRandom(8), P_SignedFRandom(8), 2 + P_FRandom(8));
+	    }
 	  break;
 
 	case FLOOR_LAVA:
-	  mp->SpawnDActor(x, y, ONFLOORZ, MT_LAVASPLASH);
-	  p = mp->SpawnDActor(x, y, ONFLOORZ, MT_LAVASMOKE);
-	  p->pz = FRACUNIT+(P_Random()<<7);
-	  S_StartSound(p, sfx_burn);
+	  if (smallsplash)
+	    {
+	      p = mp->SpawnSplash(pos, floorz, SFX_LAVA_SIZZLE, MT_XLAVASPLASH, MT_NONE, false);
+	      if (p)
+		p->floorclip += SMALLSPLASHCLIP;
+	    }
+	  else
+	    {
+	      p = mp->SpawnSplash(pos, floorz, SFX_LAVA_SIZZLE, MT_XLAVASPLASH, MT_XLAVASMOKE, false);
+	      if (p)
+		p->vel.z = 1 + P_FRandom(9);
+	    }
+
+	  // FIXME Hexen lava damage
+	  /*
+	  if (thing->player && leveltime&31)
+	    P_DamageMobj(thing, &LavaInflictor, NULL, 5);
+	  */
 	  break;
 
 	case FLOOR_SLUDGE:
-	  mp->SpawnDActor(x, y, ONFLOORZ, MT_SLUDGESPLASH);
-	  p = mp->SpawnDActor(x, y, ONFLOORZ, MT_SLUDGECHUNK);
-	  p->owner = this;
-	  p->px = P_SignedRandom()<<8;
-	  p->py = P_SignedRandom()<<8;
-	  p->pz = FRACUNIT+(P_Random()<<8);
+	  if (smallsplash)
+	    {
+	      p = mp->SpawnSplash(pos, floorz, SFX_SLUDGE_GLOOP, MT_XSLUDGESPLASH, MT_NONE, false);
+	      if (p)
+		p->floorclip += SMALLSPLASHCLIP;
+	    }
+	  else
+	    {
+	      p = mp->SpawnSplash(pos, floorz, SFX_SLUDGE_GLOOP, MT_XSLUDGESPLASH, MT_XSLUDGECHUNK, false);
+	      if (p)
+		p->vel.Set(P_SignedFRandom(8), P_SignedFRandom(8), 1 + P_FRandom(8));
+	    }
 	  break;
 	}
-      return floortype;
+    }
+  else if (game.mode == gm_heretic)
+    {
+      switch (floortype)
+	{
+	case FLOOR_WATER:
+	  p = mp->SpawnSplash(pos, floorz, sfx_splash, MT_SPLASHBASE, MT_HSPLASH, false);
+	  if (p)
+	    p->vel.Set(P_SignedFRandom(8), P_SignedFRandom(8), 2 + P_FRandom(8));
+	  break;
+
+	case FLOOR_LAVA:
+	  p = mp->SpawnSplash(pos, floorz, sfx_burn, MT_LAVASPLASH, MT_LAVASMOKE, false);
+	  if (p)
+	    p->vel.z = 1 + P_FRandom(9);
+	  break;
+
+	case FLOOR_SLUDGE:
+	  p = mp->SpawnSplash(pos, floorz, sfx_splash, MT_SLUDGESPLASH, MT_SLUDGECHUNK, false);
+	  if (p)
+	  p->vel.Set(P_SignedFRandom(8), P_SignedFRandom(8), 1 + P_FRandom(8));
+	  break;
+	}
     }
   else if (floortype == FLOOR_WATER)
-    mp->SpawnSplash(this, floorz);
+    mp->SpawnSplash(pos, floorz, sfx_splash, MT_SPLASH);
 
-  // do not down the viewpoint
-  return FLOOR_SOLID;
+  return floortype;
 }
 
 
@@ -1042,6 +1100,10 @@ void DActor::Think()
 	  ExplodeMissile();
 	}
     }
+  else if (flags2 & MF2_FLOATBOB)
+    {
+      pos.z += special1; // floating height
+    }
 
   // crashing to ground
   if (info->crashstate && (flags & MF_CORPSE) && (eflags & MFE_JUSTHITFLOOR))
@@ -1073,7 +1135,7 @@ void DActor::Think()
       if (movecount < cv_respawnmonsterstime.value*TICRATE)
 	return;
 
-      if (mp->maptic % (32*NEWTICRATERATIO))
+      if (mp->maptic & 31)
 	return;
 
       if (P_Random() > 4)
@@ -1174,8 +1236,8 @@ void DActor::NightmareRespawn()
 {
   fixed_t  nx, ny, nz;
 
-  nx = spawnpoint->x << FRACBITS;
-  ny = spawnpoint->y << FRACBITS;
+  nx = spawnpoint->x;
+  ny = spawnpoint->y;
 
   // somthing is occupying it's position?
   if (!CheckPosition(nx, ny))
@@ -1183,7 +1245,7 @@ void DActor::NightmareRespawn()
 
   // spawn a teleport fog at old spot
   // because of removal of the body?
-  DActor *mo = mp->SpawnDActor(x, y, subsector->sector->floorheight + 
+  DActor *mo = mp->SpawnDActor(pos.x, pos.y, subsector->sector->floorheight + 
 			       (game.mode == gm_heretic ? TELEFOGHEIGHT : 0), MT_TFOG);
   // initiate teleport sound
   S_StartSound(mo, sfx_teleport);
@@ -1207,7 +1269,7 @@ void DActor::NightmareRespawn()
   // inherit attributes from deceased one
   mo = mp->SpawnDActor(nx, ny, nz, type);
   mo->spawnpoint = spawnpoint;
-  mo->angle = ANG45 * (mthing->angle/45);
+  mo->yaw = ANG45 * (mthing->angle/45);
 
   if (mthing->flags & MTF_AMBUSH)
     mo->flags |= MF_AMBUSH;
@@ -1223,7 +1285,7 @@ void DActor::NightmareRespawn()
 // send a missile towards another Actor
 DActor *DActor::SpawnMissile(Actor *dest, mobjtype_t type)
 {
-  fixed_t  mz;
+  fixed_t mz = pos.z;
 
 #ifdef PARANOIA
   if (!dest)
@@ -1232,33 +1294,33 @@ DActor *DActor::SpawnMissile(Actor *dest, mobjtype_t type)
   switch (type)
     {
     case MT_MNTRFX1: // Minotaur swing attack missile
-      mz = z+40*FRACUNIT;
+      mz += 40;
       break;
     case MT_MNTRFX2: // Minotaur floor fire missile
       mz = ONFLOORZ;
       break;
     case MT_SRCRFX1: // Sorcerer Demon fireball
-      mz = z+48*FRACUNIT;
+      mz += 48;
       break;
     case MT_KNIGHTAXE: // Knight normal axe
     case MT_REDAXE: // Knight red power axe
-      mz = z+36*FRACUNIT;
+      mz += 36;
       break;
     default:
-      mz = z+32*FRACUNIT;
+      mz += 32;
       break;
     }
 
   mz -= floorclip;
 
-  DActor *th = mp->SpawnDActor(x, y, mz, type);
+  DActor *th = mp->SpawnDActor(pos.x, pos.y, mz, type);
 
   if (th->info->seesound)
     S_StartSound(th, th->info->seesound);
 
   th->owner = this; // where it came from
 
-  angle_t an = R_PointToAngle2(x, y, dest->x, dest->y);
+  angle_t an = R_PointToAngle2(pos.x, pos.y, dest->pos.x, dest->pos.y);
 
   // fuzzy player
   if (dest->flags & MF_SHADOW)
@@ -1269,18 +1331,15 @@ DActor *DActor::SpawnMissile(Actor *dest, mobjtype_t type)
 	an += P_SignedRandom()<<20;
     }
 
-  th->angle = an;
-  an >>= ANGLETOFINESHIFT;
-  th->px = int(th->info->speed * finecosine[an]);
-  th->py = int(th->info->speed * finesine[an]);
+  th->yaw = an;
+  th->Thrust(an, th->info->speed);
 
-  int dist = P_AproxDistance(dest->x - x, dest->y - y);
-  dist = dist / int(th->info->speed * FRACUNIT);
+  int dist = int(P_AproxDistance(dest->pos.x - pos.x, dest->pos.y - pos.y).Float() / th->info->speed);
 
   if (dist < 1)
     dist = 1;
 
-  th->pz = (dest->z - z) / dist;
+  th->vel.z = (dest->pos.z - pos.z) / dist;
 
   return (th->CheckMissileSpawn()) ? th : NULL;
 }
@@ -1299,11 +1358,9 @@ bool DActor::CheckMissileSpawn()
 
   // move a little forward so an angle can
   // be computed if it immediately explodes
-  x += (px>>1);
-  y += (py>>1);
-  z += (pz>>1);
+  pos += vel >> 1;
 
-  if (!TryMove(x, y, false))
+  if (!TryMove(pos.x, pos.y, false))
     {
       ExplodeMissile();
       return false;
@@ -1320,7 +1377,7 @@ void DActor::ExplodeMissile()
     if (++special2 < 60)
       return;
 
-  px = py = pz = 0;
+  vel.Set(0, 0, 0);
 
   SetState(mobjinfo[type].deathstate);
 
@@ -1343,6 +1400,6 @@ void DActor::ExplodeMissile()
 // some (player) missiles are bouncy
 void DActor::FloorBounceMissile()
 {
-  pz = -pz;
+  vel.z = -vel.z;
   SetState(mobjinfo[type].deathstate);
 }

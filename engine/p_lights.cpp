@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.14  2005/05/26 17:22:50  smite-meister
 // windows alpha fix
 //
@@ -375,13 +378,13 @@ int Map::EV_SpawnLight(int tag, int type, short maxl, short minl, short maxt, sh
 	  break;
 
 	case lightfx_t::Fade:
-	  speed = FixedDiv((maxl - sec->lightlevel) << FRACBITS, maxt << FRACBITS);
-	  new lightfx_t(this, sec, lightfx_t::Fade, maxl, 0, speed >> 10, -1); // use a custom 10.6 fixed point
+	  speed = fixed_t(maxl - sec->lightlevel) / fixed_t(maxt);
+	  new lightfx_t(this, sec, lightfx_t::Fade, maxl, 0, speed.value() >> 10, -1); // use a custom 10.6 fixed point
 	  break;
 
 	case lightfx_t::Glow:
-	  speed = FixedDiv((maxl - minl) << FRACBITS, maxt << FRACBITS);
-	  new lightfx_t(this, sec, lightfx_t::Glow, maxl, minl, speed >> 10, -1); // use a custom 10.6 fixed point
+	  speed = fixed_t(maxl - minl) / fixed_t(maxt);
+	  new lightfx_t(this, sec, lightfx_t::Glow, maxl, minl, speed.value() >> 10, -1); // use a custom 10.6 fixed point
 	  break;
 
 	case lightfx_t::Flicker:
@@ -486,7 +489,7 @@ void Map::SpawnPhasedLightSequence(sector_t *sector, int indexStep)
     }
 
   fixed_t index = 0;
-  fixed_t indexDelta = FixedDiv(64*FRACUNIT, run.size() * indexStep * FRACUNIT);
+  fixed_t indexDelta = fixed_t(64) / fixed_t(indexStep * int(run.size()));
   int base = sector->lightlevel;
 
   while (!run.empty())
@@ -496,7 +499,7 @@ void Map::SpawnPhasedLightSequence(sector_t *sector, int indexStep)
 
       if (sec->lightlevel)
 	base = sec->lightlevel;
-      new phasedlight_t(this, sec, base, index >> FRACBITS);
+      new phasedlight_t(this, sec, base, index.floor());
       index += indexDelta;
     }
 }

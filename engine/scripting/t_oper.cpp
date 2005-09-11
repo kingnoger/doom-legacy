@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright(C) 2000 Simon Howard
-// Copyright(C) 2001-2004 Doom Legacy Team
+// Copyright(C) 2001-2005 Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.5  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.4  2004/08/12 18:30:28  smite-meister
 // cleaned startup
 //
@@ -293,7 +296,7 @@ svalue_t OPplus(int start, int n, int stop)
       else if (right.type == svt_fixed)
 	{
 	  tmp = (char *)Z_Malloc(strlen(left.value.s) + 12, PU_LEVEL, 0);
-	  sprintf(tmp, "%s%4.4f\n", left.value.s, FIXED_TO_FLOAT(right.value.f));
+	  sprintf(tmp, "%s%4.4f\n", left.value.s, FIXED_TO_FLOAT(right.value.i));
 	}
       else
 	{
@@ -303,10 +306,10 @@ svalue_t OPplus(int start, int n, int stop)
       returnvar.type = svt_string;
       returnvar.value.s = tmp;
     }
-  else if(left.type == svt_fixed || right.type == svt_fixed)
+  else if (left.type == svt_fixed || right.type == svt_fixed)
     {
       returnvar.type = svt_fixed;
-      returnvar.value.f = fixedvalue(left) + fixedvalue(right);
+      returnvar.value.i = (fixedvalue(left) + fixedvalue(right)).value();
     }
   else
     {
@@ -335,7 +338,7 @@ svalue_t OPminus(int start, int n, int stop)
   if(left.type == svt_fixed || right.type == svt_fixed)
     {
       returnvar.type = svt_fixed;
-      returnvar.value.f = fixedvalue(left) - fixedvalue(right);
+      returnvar.value.i = (fixedvalue(left) - fixedvalue(right)).value();
     }
   else
     {
@@ -355,7 +358,7 @@ svalue_t OPmultiply(int start, int n, int stop)
   if(left.type == svt_fixed || right.type == svt_fixed)
     {
       returnvar.type = svt_fixed;
-      returnvar.value.f = FixedMul(fixedvalue(left), fixedvalue(right));
+      returnvar.value.i = (fixedvalue(left) * fixedvalue(right)).value();
     }
   else
     {
@@ -381,7 +384,7 @@ svalue_t OPdivide(int start, int n, int stop)
       else
 	{
           returnvar.type = svt_fixed;
-          returnvar.value.f = FixedDiv(fixedvalue(left), fr);
+          returnvar.value.i = (fixedvalue(left) / fr).value();
 	}
     }
 /*  else

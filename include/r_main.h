@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2005/09/11 16:23:25  smite-meister
+// template classes
+//
 // Revision 1.6  2004/12/31 16:19:40  smite-meister
 // alpha fixes
 //
@@ -112,22 +115,6 @@ extern int      framecount;
 typedef byte lighttable_t;
 
 
-/// Used for "colored lighting" colormaps from Boom etc.
-struct extracolormap_t
-{
-  int             lump; ///< the lump number of the colormap
-  unsigned short  maskcolor;
-  unsigned short  fadecolor;
-  double          maskamt;
-  unsigned short  fadestart, fadeend;
-  int             fog;
-
-  //Hurdler: rgba is used in hw mode for coloured sector lighting
-  int             rgba; // similar to maskcolor in sw mode
-
-  lighttable_t *colormap;
-};
-
 
 //Hurdler: 04/12/2000: for now, only used in hardware mode
 //                     maybe later for software as well?
@@ -163,7 +150,7 @@ struct lightlist_t
 {
   fixed_t           height;
   short            *lightlevel;
-  extracolormap_t  *extra_colormap;
+  fadetable_t      *extra_colormap;
   struct ffloor_t  *caster;
 };
 
@@ -176,7 +163,7 @@ struct r_lightlist_t
   fixed_t           botheight;
   fixed_t           botheightstep;
   short             lightlevel;
-  extracolormap_t  *extra_colormap;
+  fadetable_t      *extra_colormap;
   lighttable_t     *rcolormap;
   int               flags;
 };
@@ -184,13 +171,9 @@ struct r_lightlist_t
 
 
 
-extern lighttable_t *colormaps;
-
 //SoM: 3/30/2000: Boom colormaps.
 //SoM: 4/7/2000: Had to put a limit on colormaps :(
 #define                 MAXCOLORMAPS 30
-extern int                 num_extra_colormaps;
-extern extracolormap_t     extra_colormaps[MAXCOLORMAPS];
 
 
 // Lighting LUT.
@@ -203,16 +186,21 @@ extern extracolormap_t     extra_colormaps[MAXCOLORMAPS];
 #define LIGHTSEGSHIFT            4
 
 #define MAXLIGHTSCALE           48
-#define LIGHTSCALESHIFT         12
+#define LIGHTSCALESHIFT         4 // was 12
 #define MAXLIGHTZ              128
-#define LIGHTZSHIFT             20
+#define LIGHTZSHIFT              4 // without any fixed_t stuff
 
-extern lighttable_t*    scalelight[LIGHTLEVELS][MAXLIGHTSCALE];
-extern lighttable_t*    scalelightfixed[MAXLIGHTSCALE];
-extern lighttable_t*    zlight[LIGHTLEVELS][MAXLIGHTZ];
+/// Currently used fadetable
+extern lighttable_t *base_colormap;
+
+/// Precalculated fadetable offsets
+extern int  scalelight[LIGHTLEVELS][MAXLIGHTSCALE];
+extern int  scalelightfixed[MAXLIGHTSCALE];
+extern int  zlight[LIGHTLEVELS][MAXLIGHTZ];
+extern int  fixedcolormap;
 
 extern int              extralight;
-extern lighttable_t*    fixedcolormap;
+
 
 // Number of diminishing brightness levels.
 // There a 0-31, i.e. 32 LUT in the COLORMAP lump.

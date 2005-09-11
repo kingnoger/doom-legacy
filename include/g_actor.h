@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2005/09/11 16:23:25  smite-meister
+// template classes
+//
 // Revision 1.22  2005/07/11 16:58:41  smite-meister
 // msecnode_t bug fixed
 //
@@ -91,19 +94,16 @@
 #define g_actor_h 1
 
 #include "m_fixed.h"  // Basics.
+#include "vect.h"
 #include "g_think.h"  // We need the Thinker stuff.
 #include "g_damage.h" // and damage types
+#include "info.h"     // stuff for DActor
 
-// States are tied to finite states are
-//  tied to animation frames.
-// Needs precompiled tables/data structures.
-#include "info.h"
+const fixed_t ONFLOORZ   = fixed_t::FMIN;
+const fixed_t ONCEILINGZ = fixed_t::FMAX;
 
-#define ONFLOORZ        MININT
-#define ONCEILINGZ      MAXINT
-
-#define TELEFOGHEIGHT  (32*FRACUNIT)
-#define FOOTCLIPSIZE   (10*FRACUNIT)
+const fixed_t TELEFOGHEIGHT = 32;
+const fixed_t FOOTCLIPSIZE  = 10;
 
 /// \file
 /// \brief Actor class definition
@@ -299,20 +299,23 @@ public:
 
 public:
   /// position
-  fixed_t x, y, z;
-
-  // was: angle_t angle, aiming, (nothing)
-  // TODO will be angle_t roll, pitch, yaw; // Euler angles
-  angle_t  angle;  ///< orientation left-right
-  angle_t  aiming; ///< up-down, updated with cmd->aiming.
+  vec_t<fixed_t> pos;
 
   /// velocity, used to update position
-  fixed_t px, py, pz;
+  vec_t<fixed_t> vel;
+
+  /// orientation using Euler angles: yaw is left-right, pitch is up-down, roll is "around"
+  angle_t yaw, pitch; //, roll;
 
   /// For movement checking.
-  fixed_t mass;
+  float   mass;
   fixed_t radius;
   fixed_t height;
+
+  /// quick z positions
+  inline fixed_t Top() { return pos.z + height; }
+  inline fixed_t Center() { return pos.z + height >> 1; }
+  inline fixed_t Feet() { return pos.z; }
 
   int  health;
 

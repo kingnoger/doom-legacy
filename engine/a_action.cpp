@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2005/09/11 16:22:53  smite-meister
+// template classes
+//
 // Revision 1.18  2004/11/28 18:02:19  smite-meister
 // RPCs finally work!
 //
@@ -101,7 +104,7 @@ void P_ThrustSpike(Actor *actor);
 
 // PUBLIC DATA DEFINITIONS -------------------------------------------------
 
-fixed_t FloatBobOffsets[64] =
+static int FloatBobOffsets_int[64] =
 {
   0, 51389, 102283, 152192,
   200636, 247147, 291278, 332604,
@@ -121,78 +124,7 @@ fixed_t FloatBobOffsets[64] =
   -200637, -152193, -102284, -51389
 };
 
-
-int orbitTableX[256]=
-{
-  983025, 982725, 981825, 980340, 978255, 975600, 972330, 968490,
-  964065, 959070, 953475, 947325, 940590, 933300, 925440, 917025,
-  908055, 898545, 888495, 877905, 866775, 855135, 842985, 830310,
-  817155, 803490, 789360, 774735, 759660, 744120, 728130, 711690,
-  694845, 677565, 659880, 641805, 623340, 604500, 585285, 565725,
-  545820, 525600, 505050, 484200, 463065, 441645, 419955, 398010,
-  375840, 353430, 330810, 307995, 285000, 261825, 238485, 215010,
-  191400, 167685, 143865, 119955, 95970, 71940, 47850, 23745,
-  -375, -24495, -48600, -72690, -96720, -120705, -144600, -168420,
-  -192150, -215745, -239220, -262545, -285720, -308715, -331530, -354135,
-  -376530, -398700, -420630, -442320, -463725, -484860, -505695, -526230,
-  -546450, -566340, -585885, -605085, -623925, -642375, -660435, -678105,
-  -695370, -712215, -728625, -744600, -760125, -775200, -789795, -803925,
-  -817575, -830715, -843375, -855510, -867135, -878235, -888810, -898845,
-  -908340, -917295, -925695, -933540, -940815, -947520, -953670, -959235,
-  -964215, -968625, -972450, -975690, -978330, -980400, -981870, -982740,
-  -983025, -982725, -981825, -980340, -978255, -975600, -972330, -968490,
-  -964065, -959070, -953475, -947325, -940590, -933300, -925440, -917025,
-  -908055, -898545, -888495, -877905, -866775, -855135, -842985, -830310,
-  -817155, -803490, -789360, -774735, -759660, -744120, -728130, -711690,
-  -694845, -677565, -659880, -641805, -623340, -604485, -585285, -565725,
-  -545820, -525600, -505050, -484200, -463065, -441645, -419955, -398010,
-  -375840, -353430, -330810, -307995, -285000, -261825, -238485, -215010,
-  -191400, -167685, -143865, -119955, -95970, -71940, -47850, -23745,
-  375, 24495, 48600, 72690, 96720, 120705, 144600, 168420,
-  192150, 215745, 239220, 262545, 285720, 308715, 331530, 354135,
-  376530, 398700, 420630, 442320, 463725, 484860, 505695, 526230,
-  546450, 566340, 585885, 605085, 623925, 642375, 660435, 678105,
-  695370, 712215, 728625, 744600, 760125, 775200, 789795, 803925,
-  817575, 830715, 843375, 855510, 867135, 878235, 888810, 898845,
-  908340, 917295, 925695, 933540, 940815, 947520, 953670, 959235,
-  964215, 968625, 972450, 975690, 978330, 980400, 981870, 982740
-};
-
-int orbitTableY[256]=
-{
-  375, 24495, 48600, 72690, 96720, 120705, 144600, 168420,
-  192150, 215745, 239220, 262545, 285720, 308715, 331530, 354135,
-  376530, 398700, 420630, 442320, 463725, 484860, 505695, 526230,
-  546450, 566340, 585885, 605085, 623925, 642375, 660435, 678105,
-  695370, 712215, 728625, 744600, 760125, 775200, 789795, 803925,
-  817575, 830715, 843375, 855510, 867135, 878235, 888810, 898845,
-  908340, 917295, 925695, 933540, 940815, 947520, 953670, 959235,
-  964215, 968625, 972450, 975690, 978330, 980400, 981870, 982740,
-  983025, 982725, 981825, 980340, 978255, 975600, 972330, 968490,
-  964065, 959070, 953475, 947325, 940590, 933300, 925440, 917025,
-  908055, 898545, 888495, 877905, 866775, 855135, 842985, 830310,
-  817155, 803490, 789360, 774735, 759660, 744120, 728130, 711690,
-  694845, 677565, 659880, 641805, 623340, 604500, 585285, 565725,
-  545820, 525600, 505050, 484200, 463065, 441645, 419955, 398010,
-  375840, 353430, 330810, 307995, 285000, 261825, 238485, 215010,
-  191400, 167685, 143865, 119955, 95970, 71940, 47850, 23745,
-  -375, -24495, -48600, -72690, -96720, -120705, -144600, -168420,
-  -192150, -215745, -239220, -262545, -285720, -308715, -331530, -354135,
-  -376530, -398700, -420630, -442320, -463725, -484860, -505695, -526230,
-  -546450, -566340, -585885, -605085, -623925, -642375, -660435, -678105,
-  -695370, -712215, -728625, -744600, -760125, -775200, -789795, -803925,
-  -817575, -830715, -843375, -855510, -867135, -878235, -888810, -898845,
-  -908340, -917295, -925695, -933540, -940815, -947520, -953670, -959235,
-  -964215, -968625, -972450, -975690, -978330, -980400, -981870, -982740,
-  -983025, -982725, -981825, -980340, -978255, -975600, -972330, -968490,
-  -964065, -959070, -953475, -947325, -940590, -933300, -925440, -917025,
-  -908055, -898545, -888495, -877905, -866775, -855135, -842985, -830310,
-  -817155, -803490, -789360, -774735, -759660, -744120, -728130, -711690,
-  -694845, -677565, -659880, -641805, -623340, -604485, -585285, -565725,
-  -545820, -525600, -505050, -484200, -463065, -441645, -419955, -398010,
-  -375840, -353430, -330810, -307995, -285000, -261825, -238485, -215010,
-  -191400, -167685, -143865, -119955, -95970, -71940, -47850, -23745
-};
+fixed_t *FloatBobOffsets = reinterpret_cast<fixed_t *>(FloatBobOffsets_int);
 
 
 // A Hexen hack to store a mobjtype number into one byte
@@ -371,20 +303,20 @@ void A_PotteryExplode(DActor *actor)
 
   for(i = (P_Random()&3)+3; i; i--)
     {
-      mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_POTTERYBIT1);
+      mo = actor->mp->SpawnDActor(actor->pos, MT_POTTERYBIT1);
       mo->SetState(statenum_t(mo->info->spawnstate + P_Random() % 5));
-      if(mo)
+      if (mo)
 	{
-	  mo->pz = ((P_Random()&7)+5)*(3*FRACUNIT/4);
-	  mo->px = (P_Random()-P_Random())<<(FRACBITS-6);
-	  mo->py = (P_Random()-P_Random())<<(FRACBITS-6);
+	  mo->vel = vec_t<fixed_t>(((P_Random() & 7) + 5)*0.75f,
+				   P_SignedFRandom(6),
+				   P_SignedFRandom(6));
 	}
     }
   S_StartSound(mo, SFX_POTTERY_EXPLODE);
   if(actor->args[0])
     { // Spawn an item
       if (!(cv_nomonsters.value && mobjinfo[TranslateThingType[actor->args[0]]].flags & MF_COUNTKILL))
-	actor->mp->SpawnDActor(actor->x, actor->y, actor->z, TranslateThingType[actor->args[0]]);
+	actor->mp->SpawnDActor(actor->pos, TranslateThingType[actor->args[0]]);
     }
   actor->Remove();
 }
@@ -415,7 +347,7 @@ void A_PotteryCheck(DActor *actor)
     {
       Actor *pmo = m->players[i]->pawn;
       if (m->CheckSight(actor, pmo) &&
-	  (abs(R_PointToAngle2(pmo->x, pmo->y, actor->x, actor->y)-pmo->angle) <= ANG45))
+	  (abs(R_PointToAngle2(pmo->pos.x, pmo->pos.y, actor->pos.x, actor->pos.y)-pmo->yaw) <= ANG45))
 	{
 	  // Previous state (pottery bit waiting state)
 	  actor->SetState(statenum_t(actor->state - &states[0] - 1));
@@ -432,12 +364,11 @@ void A_PotteryCheck(DActor *actor)
 
 void A_CorpseBloodDrip(DActor *actor)
 {
-  if(P_Random() > 128)
-    {
-      return;
-    }
-  actor->mp->SpawnDActor(actor->x, actor->y, actor->z+actor->height/2, 
-	      MT_CORPSEBLOODDRIP);
+  if (P_Random() > 128)
+    return;
+
+  actor->mp->SpawnDActor(actor->pos.x, actor->pos.y, actor->pos.z + actor->height/2, 
+			 MT_CORPSEBLOODDRIP);
 }
 
 //============================================================================
@@ -453,23 +384,23 @@ void A_CorpseExplode(DActor *actor)
 
   for(i = (P_Random()&3)+3; i; i--)
     {
-      mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_CORPSEBIT);
+      mo = actor->mp->SpawnDActor(actor->pos, MT_CORPSEBIT);
       mo->SetState(statenum_t(mo->info->spawnstate + P_Random() % 3));
-      if(mo)
+      if (mo)
 	{
-	  mo->pz = ((P_Random()&7)+5)*(3*FRACUNIT/4);
-	  mo->px = (P_Random()-P_Random())<<(FRACBITS-6);
-	  mo->py = (P_Random()-P_Random())<<(FRACBITS-6);
+	  mo->vel = vec_t<fixed_t>(((P_Random()&7) + 5)*0.75f,
+				   P_SignedFRandom(6),
+				   P_SignedFRandom(6));
 	}
     }
   // Spawn a skull
-  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_CORPSEBIT);
+  mo = actor->mp->SpawnDActor(actor->pos, MT_CORPSEBIT);
   mo->SetState(S_CORPSEBIT_4);
   if(mo)
     {
-      mo->pz = ((P_Random()&7)+5)*(3*FRACUNIT/4);
-      mo->px = (P_Random()-P_Random())<<(FRACBITS-6);
-      mo->py = (P_Random()-P_Random())<<(FRACBITS-6);
+      mo->vel = vec_t<fixed_t>(((P_Random()&7) + 5)*0.75f,
+			       P_SignedFRandom(6),
+			       P_SignedFRandom(6));
       S_StartSound(mo, SFX_FIRED_DEATH);
     }
   actor->Remove();
@@ -485,12 +416,13 @@ void A_LeafSpawn(DActor *actor)
 {
   for (int i = (P_Random()&3)+1; i; i--)
     {
-      DActor *mo = actor->mp->SpawnDActor(actor->x + (P_SignedRandom() << 14), actor->y +
-		   (P_SignedRandom() << 14), actor->z + (P_Random()<<14), 
-		   mobjtype_t(MT_LEAF1 + (P_Random() & 1)));
+      vec_t<fixed_t> temp(P_SignedRandom(), P_SignedRandom(), P_Random());
+      temp >>= 2;
+      temp += actor->pos;
+      DActor *mo = actor->mp->SpawnDActor(temp, mobjtype_t(MT_LEAF1 + (P_Random() & 1)));
       if (mo)
 	{
-	  mo->Thrust(actor->angle, (P_Random()<<9)+3*FRACUNIT);
+	  mo->Thrust(actor->yaw, P_FRandom(7) + 3);
 	  mo->owner = actor;
 	  mo->special1 = 0;
 	}
@@ -508,7 +440,7 @@ void A_LeafThrust(DActor *actor)
   if (P_Random() > 96)
     return;
 
-  actor->pz += (P_Random()<<9)+FRACUNIT;
+  actor->vel.z += P_FRandom(7) + 1;
 }
 
 //============================================================================
@@ -528,13 +460,13 @@ void A_LeafCheck(DActor *actor)
 
   if (P_Random() > 64)
     {
-      if (!actor->px && !actor->py)
-	actor->Thrust(actor->owner->angle, (P_Random()<<9)+FRACUNIT);
+      if (!actor->vel.x && !actor->vel.y)
+	actor->Thrust(actor->owner->yaw, P_FRandom(7) + 1);
       return;
     }
   actor->SetState(S_LEAF1_8);
-  actor->pz = (P_Random()<<9)+FRACUNIT;
-  actor->Thrust(actor->owner->angle, (P_Random()<<9)+2*FRACUNIT);
+  actor->vel.z = P_FRandom(7) + 1;
+  actor->Thrust(actor->owner->yaw, P_FRandom(7) + 2);
   actor->flags |= MF_MISSILE;
 }
 
@@ -598,37 +530,33 @@ void A_BridgeOrbit(DActor *actor)
       return;
     }
 
-  actor->args[0] += 3;
-  actor->x = actor->owner->x + orbitTableX[actor->args[0]];
-  actor->y = actor->owner->y + orbitTableY[actor->args[0]];
-  actor->z = actor->owner->z;
+  actor->args[0] += 3; // phase advances (and wraps)
+  int temp = actor->args[0] << 5;
+
+  actor->pos = actor->owner->pos + vec_t<fixed_t>(15*finecosine[temp], 15*finesine[temp], 0);
 }
 
 
 void A_BridgeInit(DActor *actor)
 {
-  byte startangle;
   DActor *ball1, *ball2, *ball3;
-  fixed_t cx,cy,cz;
+  vec_t<fixed_t> c(actor->pos);
 
   //	GenerateOrbitTable();
 
-  cx = actor->x;
-  cy = actor->y;
-  cz = actor->z;
-  startangle = P_Random();
+  byte startangle = P_Random();
   actor->special1 = 0;
 
   // Spawn triad into world
-  ball1 = actor->mp->SpawnDActor(cx, cy, cz, MT_BRIDGEBALL);
+  ball1 = actor->mp->SpawnDActor(c, MT_BRIDGEBALL);
   ball1->args[0] = startangle;
   ball1->owner = actor;
 
-  ball2 = actor->mp->SpawnDActor(cx, cy, cz, MT_BRIDGEBALL);
+  ball2 = actor->mp->SpawnDActor(c, MT_BRIDGEBALL);
   ball2->args[0] = (startangle+85)&255;
   ball2->owner = actor;
 
-  ball3 = actor->mp->SpawnDActor(cx, cy, cz, MT_BRIDGEBALL);
+  ball3 = actor->mp->SpawnDActor(c, MT_BRIDGEBALL);
   ball3->args[0] = (startangle+170)&255;
   ball3->owner = actor;
 
@@ -820,13 +748,13 @@ void A_ESound(DActor *mo)
 
 void A_Summon(DActor *actor)
 {
-  DActor *mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_XMINOTAUR);
+  DActor *mo = actor->mp->SpawnDActor(actor->pos, MT_XMINOTAUR);
   if (mo)
     {
       if (mo->TestLocation() == false || !actor->owner)
 	{ // Didn't fit - change back to artifact
 	  mo->SetState(S_NULL);
-	  mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_SUMMONMAULATOR);
+	  mo = actor->mp->SpawnDActor(actor->pos, MT_SUMMONMAULATOR);
 	  if (mo) mo->flags |= MF_DROPPED;
 	  return;
 	}
@@ -843,7 +771,7 @@ void A_Summon(DActor *actor)
 	}
 
       // Make smoke puff
-      actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_MNTRSMOKE);
+      actor->mp->SpawnDActor(actor->pos, MT_MNTRSMOKE);
       S_StartSound(actor, SFX_MAULATOR_ACTIVE);
     }
 }
@@ -875,13 +803,13 @@ void A_FogSpawn(DActor *actor)
   switch(P_Random()%3)
     {
     case 0:
-      mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_FOGPATCHS);
+      mo = actor->mp->SpawnDActor(actor->pos, MT_FOGPATCHS);
       break;
     case 1:
-      mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_FOGPATCHM);
+      mo = actor->mp->SpawnDActor(actor->pos, MT_FOGPATCHM);
       break;
     case 2:
-      mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_FOGPATCHL);
+      mo = actor->mp->SpawnDActor(actor->pos, MT_FOGPATCHL);
       break;
     }
 
@@ -889,7 +817,7 @@ void A_FogSpawn(DActor *actor)
     {
       delta = actor->args[1];
       if (delta==0) delta=1;
-      mo->angle = actor->angle + (((P_Random()%delta)-(delta>>1))<<24);
+      mo->yaw = actor->yaw + (((P_Random()%delta)-(delta>>1))<<24);
       mo->owner = actor;
       if (actor->args[0] < 1) actor->args[0] = 1;
       mo->args[0] = (P_Random() % (actor->args[0])) + 1; // Random speed
@@ -902,8 +830,7 @@ void A_FogSpawn(DActor *actor)
 
 void A_FogMove(DActor *actor)
 {
-  int speed = actor->args[0]<<FRACBITS;
-  angle_t angle;
+  fixed_t speed = actor->args[0];
   int weaveindex;
 
   if (!(actor->args[4])) return;
@@ -917,13 +844,13 @@ void A_FogMove(DActor *actor)
   if ((actor->args[3] % 4) == 0)
     {
       weaveindex = actor->special2;
-      actor->z += FloatBobOffsets[weaveindex]>>1;
+      actor->pos.z += FloatBobOffsets[weaveindex]>>1;
       actor->special2 = (weaveindex+1)&63;
     }
 
-  angle = actor->angle>>ANGLETOFINESHIFT;
-  actor->px = FixedMul(speed, finecosine[angle]);
-  actor->py = FixedMul(speed, finesine[angle]);
+  int angle = actor->yaw >> ANGLETOFINESHIFT;
+  actor->vel.x = speed * finecosine[angle];
+  actor->vel.y = speed * finesine[angle];
 }
 
 //===========================================================================
@@ -934,16 +861,16 @@ void A_FogMove(DActor *actor)
 
 void A_PoisonBagInit(DActor *actor)
 {
-  DActor *mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z+28*FRACUNIT, MT_POISONCLOUD);
+  DActor *mo = actor->mp->SpawnDActor(actor->pos.x, actor->pos.y, actor->pos.z + 28, MT_POISONCLOUD);
   if (!mo)
     return;
 
-  mo->px = 1; // missile objects must move to impact other objects
+  mo->vel.x = 1; // missile objects must move to impact other objects
   mo->special1 = 24+(P_Random()&7);
   mo->special2 = 0;
   mo->target = actor->target;
-  mo->radius = 20*FRACUNIT;
-  mo->height = 30*FRACUNIT;
+  mo->radius = 20;
+  mo->height = 30;
   mo->flags &= ~(MF_NOCLIPLINE | MF_NOCLIPTHING);
 }
 
@@ -980,7 +907,7 @@ void A_PoisonBagDamage(DActor *actor)
   A_Explode(actor);	
 
   bobIndex = actor->special2;
-  actor->z += FloatBobOffsets[bobIndex]>>4;
+  actor->pos.z += FloatBobOffsets[bobIndex]>>4;
   actor->special2 = (bobIndex+1)&63;
 }
 
@@ -1003,13 +930,12 @@ void A_PoisonShroom(DActor *actor)
 
 void A_CheckThrowBomb(DActor *actor)
 {
-  if(abs(actor->px) < 1.5*FRACUNIT && abs(actor->py) < 1.5*FRACUNIT
-     && actor->pz < 2*FRACUNIT
-     && actor->state == &states[S_THROWINGBOMB6])
+  if (abs(actor->vel.x) < 1.5f && abs(actor->vel.y) < 1.5f && actor->vel.z < 2
+      && actor->state == &states[S_THROWINGBOMB6])
     {
       actor->SetState(S_THROWINGBOMB7);
-      actor->z = actor->floorz;
-      actor->pz = 0;
+      actor->pos.z = actor->floorz;
+      actor->vel.z = 0;
       actor->flags2 &= ~MF2_FLOORBOUNCE;
       actor->flags &= ~MF_MISSILE;
     }
@@ -1045,7 +971,7 @@ bool Map::EV_LocalQuake(byte *args)
   Actor *target;
   while ((target = FindFromTIDmap(args[4], &lastfound)) != NULL)
     {
-      Actor *focus = SpawnDActor(target->x, target->y, target->z, MT_QUAKE_FOCUS);
+      Actor *focus = SpawnDActor(target->pos, MT_QUAKE_FOCUS);
       if (focus)
 	{
 	  focus->args[0] = args[0];
@@ -1082,22 +1008,22 @@ void A_Quake(DActor *actor)
 	  if (!victim)
 	    continue;
 
-	  fixed_t dist = P_AproxDistance(actor->x - victim->x, actor->y - victim->y) >> (FRACBITS+6);
+	  int dist = P_AproxDistance(actor->pos.x - victim->pos.x, actor->pos.y - victim->pos.y).floor() >> 6;
 	  // Tested in tile units (64 pixels)
 	  if (dist < actor->args[3])		// In tremor radius
 	    {
 	      // FIXME do the shaking somehow  localQuakeHappening[i] = richters;
 	    }
 	  // Check if in damage radius
-	  if ((dist < actor->args[2]) && (victim->z <= victim->floorz))
+	  if ((dist < actor->args[2]) && (victim->pos.z <= victim->floorz))
 	    {
 	      if (P_Random() < 50)
 		{
 		  victim->Damage(NULL, NULL, HITDICE(1));
 		}
 				// Thrust player around
-	      angle_t an = victim->angle + ANGLE_1*P_Random();
-	      victim->Thrust(an, richters<<(FRACBITS-1));
+	      angle_t an = victim->yaw + ANGLE_1*P_Random();
+	      victim->Thrust(an, fixed_t(richters) >> 1);
 	    }
 	}
     }
@@ -1124,57 +1050,49 @@ void A_Quake(DActor *actor)
 
 void A_TeloSpawnA(DActor *actor)
 {
-  DActor *mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_TELOTHER_FX2);
+  DActor *mo = actor->mp->SpawnDActor(actor->pos, MT_TELOTHER_FX2);
   if (mo)
     {
       mo->special1 = TELEPORT_LIFE;			// Lifetime countdown
-      mo->angle = actor->angle;
+      mo->yaw = actor->yaw;
       mo->target = actor->target;
-      mo->px = actor->px>>1;
-      mo->py = actor->py>>1;
-      mo->pz = actor->pz>>1;
+      mo->vel = actor->vel >> 1;
     }
 }
 
 void A_TeloSpawnB(DActor *actor)
 {
-  DActor *mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_TELOTHER_FX3);
+  DActor *mo = actor->mp->SpawnDActor(actor->pos, MT_TELOTHER_FX3);
   if (mo)
     {
       mo->special1 = TELEPORT_LIFE;			// Lifetime countdown
-      mo->angle = actor->angle;
+      mo->yaw = actor->yaw;
       mo->target = actor->target;
-      mo->px = actor->px>>1;
-      mo->py = actor->py>>1;
-      mo->pz = actor->pz>>1;
+      mo->vel = actor->vel >> 1;
     }
 }
 
 void A_TeloSpawnC(DActor *actor)
 {
-  DActor *mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_TELOTHER_FX4);
+  DActor *mo = actor->mp->SpawnDActor(actor->pos, MT_TELOTHER_FX4);
   if (mo)
     {
       mo->special1 = TELEPORT_LIFE;			// Lifetime countdown
-      mo->angle = actor->angle;
+      mo->yaw = actor->yaw;
       mo->target = actor->target;
-      mo->px = actor->px>>1;
-      mo->py = actor->py>>1;
-      mo->pz = actor->pz>>1;
+      mo->vel = actor->vel >> 1;
     }
 }
 
 void A_TeloSpawnD(DActor *actor)
 {
-  DActor *mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_TELOTHER_FX5);
+  DActor *mo = actor->mp->SpawnDActor(actor->pos, MT_TELOTHER_FX5);
   if (mo)
     {
       mo->special1 = TELEPORT_LIFE;			// Lifetime countdown
-      mo->angle = actor->angle;
+      mo->yaw = actor->yaw;
       mo->target = actor->target;
-      mo->px = actor->px>>1;
-      mo->py = actor->py>>1;
-      mo->pz = actor->pz>>1;
+      mo->vel = actor->vel >> 1;
     }
 }
 
@@ -1193,17 +1111,13 @@ void A_CheckTeleRing(DActor *actor)
 
 void P_SpawnDirt(DActor *actor, fixed_t radius)
 {
-  fixed_t x,y,z;
-  mobjtype_t dtype = MT_DIRT1;
-  Actor *mo;
-  angle_t angle;
-
-  angle = P_Random()<<5;		// <<24 >>19
-  x = actor->x + FixedMul(radius,finecosine[angle]);
-  y = actor->y + FixedMul(radius,finesine[angle]);
+  angle_t angle = P_Random()<<5;		// <<24 >>19
+  vec_t<fixed_t> r(actor->pos);
+  r += vec_t<fixed_t>(radius*finecosine[angle], radius*finesine[angle], P_FRandom(7) + 1);
   //	x = actor->x + ((P_Random()-P_Random())%radius)<<FRACBITS;
   //	y = actor->y + ((P_Random()-P_Random()<<FRACBITS)%radius);
-  z = actor->z + (P_Random()<<9) + FRACUNIT;
+
+  mobjtype_t dtype = MT_DIRT1;
   switch(P_Random()%6)
     {
     case 0:
@@ -1225,11 +1139,9 @@ void P_SpawnDirt(DActor *actor, fixed_t radius)
       dtype = MT_DIRT6;
       break;
     }
-  mo = actor->mp->SpawnDActor(x,y,z,dtype);
+  Actor *mo = actor->mp->SpawnDActor(r, dtype);
   if (mo)
-    {
-      mo->pz = P_Random()<<10;
-    }
+    mo->vel.z = P_FRandom(6);
 }
 
 
@@ -1263,7 +1175,7 @@ void A_ThrustInitDn(DActor *actor)
   actor->floorclip = actor->info->height;
   actor->flags = 0;
   actor->flags2 = MF2_NOTELEPORT|MF2_FOOTCLIP|MF2_DONTDRAW;
-  actor->target = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_DIRTCLUMP);
+  actor->target = actor->mp->SpawnDActor(actor->pos, MT_DIRTCLUMP);
 }
 
 
@@ -1323,25 +1235,22 @@ void A_ThrustImpale(DActor *actor)
 void A_SoAExplode(DActor *actor)
 {
   DActor *mo;
-  int i;
-
-  for(i = 0; i < 10; i++)
+  for (int i = 0; i < 10; i++)
     {
-      mo = actor->mp->SpawnDActor(actor->x+((P_Random()-128)<<12), 
-		       actor->y+((P_Random()-128)<<12), 
-		       actor->z+(P_Random()*actor->height/256), MT_ZARMORCHUNK);
+      fixed_t x = P_SFRandom(4);
+      fixed_t y = P_SFRandom(4);
+      vec_t<fixed_t> temp(x, y, (P_Random()*actor->height) >> 8);
+      temp += actor->pos;
+      mo = actor->mp->SpawnDActor(temp, MT_ZARMORCHUNK);
       mo->SetState(statenum_t(mo->info->spawnstate + i));
-      if(mo)
-	{
-	  mo->pz = ((P_Random()&7)+5)*FRACUNIT;
-	  mo->px = (P_Random()-P_Random())<<(FRACBITS-6);
-	  mo->py = (P_Random()-P_Random())<<(FRACBITS-6);
-	}
+      if (mo)
+	mo->vel = vec_t<fixed_t>((P_Random() & 7) + 5, P_SignedFRandom(6), P_SignedFRandom(6));
     }
-  if(actor->args[0])
+
+  if (actor->args[0])
     { // Spawn an item
       if (!(cv_nomonsters.value && mobjinfo[TranslateThingType[actor->args[0]]].flags & MF_COUNTKILL))
-	actor->mp->SpawnDActor(actor->x, actor->y, actor->z, TranslateThingType[actor->args[0]]);
+	actor->mp->SpawnDActor(actor->pos, TranslateThingType[actor->args[0]]);
     }
   S_StartSound(mo, SFX_SUITOFARMOR_BREAK);
   actor->Remove();
@@ -1414,7 +1323,7 @@ void A_BatSpawn(DActor *actor)
 
   int delta = actor->args[1];
   if (delta==0) delta=1;
-  angle_t angle = actor->angle + (((P_Random()%delta)-(delta>>1))<<24);
+  angle_t angle = actor->yaw + (((P_Random()%delta)-(delta>>1))<<24);
   DActor *mo = actor->SpawnMissileAngle(MT_BAT, angle, 0);
   if (mo)
     {
@@ -1429,7 +1338,7 @@ void A_BatSpawn(DActor *actor)
 void A_BatMove(DActor *actor)
 {
   angle_t newangle;
-  fixed_t speed;
+
 
   if (actor->special2 < 0)
     {
@@ -1439,24 +1348,25 @@ void A_BatMove(DActor *actor)
 
   if (P_Random()<128)
     {
-      newangle = actor->angle + ANGLE_1*actor->args[4];
+      newangle = actor->yaw + ANGLE_1*actor->args[4];
     }
   else
     {
-      newangle = actor->angle - ANGLE_1*actor->args[4];
+      newangle = actor->yaw - ANGLE_1*actor->args[4];
     }
 
   // Adjust momentum vector to new direction
   newangle >>= ANGLETOFINESHIFT;
-  speed = int(actor->info->speed * (P_Random()<<10));
-  actor->px = FixedMul(speed, finecosine[newangle]);
-  actor->py = FixedMul(speed, finesine[newangle]);
+
+  fixed_t speed = actor->info->speed * P_Random() / 64.0f;
+  actor->vel.x = speed * finecosine[newangle];
+  actor->vel.y = speed * finesine[newangle];
 
   if (P_Random()<15)
     S_StartSound(actor, SFX_BAT_SCREAM);
 
   // Handle Z movement
-  actor->z = actor->owner->z + 2*FloatBobOffsets[actor->args[0]];
+  actor->pos.z = actor->owner->pos.z + 2*FloatBobOffsets[actor->args[0]];
   actor->args[0] = (actor->args[0]+3)&63;	
 }
 
@@ -1470,7 +1380,7 @@ void A_TreeDeath(DActor *actor)
 {
   if (actor->type == MT_TREEDESTRUCTIBLE)
     {
-      actor->height = 24*FRACUNIT;
+      actor->height = 24;
       return;
     }
 

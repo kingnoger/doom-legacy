@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.2  2004/11/09 20:38:51  smite-meister
 // added packing to I/O structs
 //
@@ -39,6 +42,7 @@
 
 #include <vector>
 #include <list>
+#include "vect.h"
 #include "m_fixed.h"
 
 //#define SHOWBOTPATH //show the path the bot is taking in game?
@@ -74,15 +78,16 @@ protected:
   SearchNode_t *dir[NUMBOTDIRS]; ///< neighbor nodes
   fixed_t   costDir[NUMBOTDIRS]; ///< the cost of going from this node to a neighboring one
 
-#ifdef SHOWBOTPATH
-  class Actor *marker; ///< visible path marker for debugging
-#endif
 public:
   /// grid coordinates of the node
   int gx, gy;
 
   /// map coordinates of the node
   fixed_t mx, my; 
+
+#ifdef SHOWBOTPATH
+  class Actor *marker; ///< visible path marker for debugging
+#endif
 
 public:
   SearchNode_t(int gx, int gy, fixed_t mx, fixed_t my);
@@ -99,9 +104,6 @@ public:
 /// \brief BotNode structure for Maps
 class BotNodes
 {
-#define BOTNODEGRIDSHIFT (FRACBITS + 5)
-#define BOTNODEGRIDSIZE  (1 << BOTNODEGRIDSHIFT)  // 32*FRACUNIT
-
   class Map *mp;
 
   // node grid
@@ -112,6 +114,12 @@ class BotNodes
   SearchNode_t ***botNodeArray;
 
 public:
+  enum
+  {
+    GRIDBITS = 5,
+    GRIDSIZE = (1 << GRIDBITS) // 32 units
+  };
+
   BotNodes(Map *m);
 
   void BuildNodes(SearchNode_t *node);
@@ -120,18 +128,18 @@ public:
 
   SearchNode_t *FindClosestNode(fixed_t x, fixed_t y);
   SearchNode_t *GetClosestReachableNode(fixed_t x, fixed_t y);
-  SearchNode_t *GetNodeAt(fixed_t x, fixed_t y);
+  SearchNode_t *GetNodeAt(const vec_t<fixed_t>& r);
 
   bool FindPath(std::list<SearchNode_t *> &path, SearchNode_t *start, SearchNode_t *dest);
 
   // nodes lie at the middle of their grid cell
   // map coordinates into grid coordinates
-  inline int x2PosX(fixed_t x) { return (x - xOrigin) >> BOTNODEGRIDSHIFT; };
-  inline int y2PosY(fixed_t y) { return (y - yOrigin) >> BOTNODEGRIDSHIFT; };
+  inline int x2PosX(fixed_t x) { return (x - xOrigin).floor() >> GRIDBITS; };
+  inline int y2PosY(fixed_t y) { return (y - yOrigin).floor() >> GRIDBITS; };
 
   // grid coordinates into map coordinates
-  inline fixed_t posX2x(int nx) { return (nx << BOTNODEGRIDSHIFT) + xOrigin + BOTNODEGRIDSIZE/2; };
-  inline fixed_t posY2y(int ny) { return (ny << BOTNODEGRIDSHIFT) + yOrigin + BOTNODEGRIDSIZE/2; };
+  inline fixed_t posX2x(int nx) { return fixed_t((nx << GRIDBITS) + GRIDSIZE/2) + xOrigin; };
+  inline fixed_t posY2y(int ny) { return fixed_t((ny << GRIDBITS) + GRIDSIZE/2) + yOrigin; };
 };
 
 

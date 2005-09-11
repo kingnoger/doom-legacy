@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.26  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.25  2005/07/20 20:27:22  smite-meister
 // adv. texture cache
 //
@@ -126,7 +129,7 @@ struct mline_t
 byte *fb; // pseudo-frame buffer
 
 // player radius used only in am_map.c
-#define PLAYERRADIUS    (16*FRACUNIT)
+#define PLAYERRADIUS    16
 
 // For use if I do walls with outsides/insides
 static byte REDS        = 256-5*16;
@@ -209,17 +212,11 @@ static byte *AMcolor = NULL;
 #define F_PANINC        4
 // how much zoom-in per tic
 // goes to 2x in 1 second
-#define M_ZOOMIN        (int(1.02*FRACUNIT))
+#define M_ZOOMIN        1.02f
 // how much zoom-out per tic
 // pulls out to 0.5x in 1 second
-#define M_ZOOMOUT       (int(FRACUNIT/1.02))
+#define M_ZOOMOUT       (1/1.02f)
 
-// translates between frame-buffer and map distances
-#define FTOM(x) FixedMul(((x)<<16),scale_ftom)
-#define MTOF(x) (FixedMul((x),scale_mtof)>>16)
-// translates between frame-buffer and map coordinates
-#define CXMTOF(x)  (f_x + MTOF((x)-m_x))
-#define CYMTOF(y)  (f_y + (f_h - MTOF((y)-m_y)))
 
 
 //
@@ -227,7 +224,7 @@ static byte *AMcolor = NULL;
 //  A line drawing of the player pointing right,
 //   starting from the middle.
 //
-#define R ((8*PLAYERRADIUS)/7)
+#define R ((8.0f*PLAYERRADIUS)/7)
 mline_t player_arrow[] =
 {
   { { -R+R/8, 0 }, { R, 0 } }, // -----
@@ -262,21 +259,21 @@ mline_t cheat_player_arrow[] =
 #undef R
 static const int NUMCHEATPLYRLINES = sizeof(cheat_player_arrow)/sizeof(mline_t);
 
-#define R (FRACUNIT)
+#define R 1.0f
 mline_t triangle_guy[] =
 {
-  { { (fixed_t)-.867*R, (fixed_t)-.5*R }, { (fixed_t) .867*R, (fixed_t)-.5*R } },
-  { { (fixed_t) .867*R, (fixed_t)-.5*R }, { (fixed_t)      0, (fixed_t)    R } },
-  { { (fixed_t)      0, (fixed_t)    R }, { (fixed_t)-.867*R, (fixed_t)-.5*R } }
+  { { -.867f*R, -.5f*R }, {  .867f*R, -.5f*R } },
+  { {  .867f*R, -.5f*R }, {       0,     R } },
+  { {       0,     R }, { -.867f*R, -.5f*R } }
 };
 #undef R
 static const int NUMTRIANGLEGUYLINES = sizeof(triangle_guy)/sizeof(mline_t);
 
-#define R (FRACUNIT)
+#define R 1.0f
 mline_t thintriangle_guy[] = {
-  { { (fixed_t)-.5*R, (fixed_t)-.7*R }, { (fixed_t)    R, (fixed_t)    0 } },
-  { { (fixed_t)    R, (fixed_t)    0 }, { (fixed_t)-.5*R, (fixed_t) .7*R } },
-  { { (fixed_t)-.5*R, (fixed_t) .7*R }, { (fixed_t)-.5*R, (fixed_t)-.7*R } }
+  { { -.5f*R, -.7f*R }, {     R,     0 } },
+  { {     R,     0 }, { -.5f*R,  .7f*R } },
+  { { -.5f*R,  .7f*R }, { -.5f*R, -.7f*R } }
 };
 #undef R
 static const int NUMTHINTRIANGLEGUYLINES = sizeof(thintriangle_guy)/sizeof(mline_t);
@@ -312,6 +309,13 @@ static fixed_t min_scale_mtof; // used to tell when to stop zooming out
 static fixed_t max_scale_mtof; // used to tell when to stop zooming in
 static fixed_t scale_mtof; // used by MTOF to scale from map-to-frame-buffer coords
 static fixed_t scale_ftom; // used by FTOM to scale from frame-buffer-to-map coords (=1/scale_mtof)
+
+// translates between frame-buffer and map distances
+inline fixed_t FTOM(int x) { return x * scale_ftom; }
+inline int MTOF(fixed_t x) { return (x * scale_mtof).floor(); }
+// translates between frame-buffer and map coordinates
+#define CXMTOF(x)  (f_x + MTOF((x)-m_x))
+#define CYMTOF(y)  (f_y + (f_h - MTOF((y)-m_y)))
 
 
 // old stuff for recovery later
@@ -465,16 +469,16 @@ void AutoMap::Resize()
   f_h = vid.height - hud.stbarheight;
 
   // sets global variables controlling zoom range.
-  fixed_t w = FixedDiv(f_w << FRACBITS, mp->root_bbox.box[BOXRIGHT] - mp->root_bbox.box[BOXLEFT]);
-  fixed_t h = FixedDiv(f_h << FRACBITS, mp->root_bbox.box[BOXTOP] - mp->root_bbox.box[BOXBOTTOM]);
+  fixed_t w = f_w / (mp->root_bbox.box[BOXRIGHT] - mp->root_bbox.box[BOXLEFT]);
+  fixed_t h = f_h / (mp->root_bbox.box[BOXTOP] - mp->root_bbox.box[BOXBOTTOM]);
 
   min_scale_mtof = w < h ? w : h; // min zoom
-  max_scale_mtof = FixedDiv(f_h<<FRACBITS, 2*PLAYERRADIUS);
+  max_scale_mtof = fixed_t(f_h) / (2*PLAYERRADIUS);
 
-  scale_mtof = FixedDiv(min_scale_mtof, int(0.7 * FRACUNIT));
+  scale_mtof = min_scale_mtof / 0.7f;
   if (scale_mtof > max_scale_mtof)
     scale_mtof = min_scale_mtof;
-  scale_ftom = FixedDiv(FRACUNIT, scale_mtof);
+  scale_ftom = 1 / scale_mtof;
 }
 
 
@@ -486,15 +490,15 @@ void AutoMap::InitVariables()
   lightlev = 0;
 
   m_paninc.x = m_paninc.y = 0;
-  ftom_zoommul = FRACUNIT;
-  mtof_zoommul = FRACUNIT;
+  ftom_zoommul = 1;
+  mtof_zoommul = 1;
 
   // which part of the map is visible?
   m_w = FTOM(f_w);
   m_h = FTOM(f_h);
 
-  m_x = mpawn->x - m_w/2;
-  m_y = mpawn->y - m_h/2;
+  m_x = mpawn->pos.x - m_w/2;
+  m_y = mpawn->pos.y - m_h/2;
   changeWindowLoc();
 
   // for saving & restoring
@@ -538,7 +542,7 @@ void AutoMap::InitVariables()
 // pans and clips the "map window" location on the actual Map
 void AutoMap::changeWindowLoc()
 {
-  if (m_paninc.x || m_paninc.y)
+  if (m_paninc.x != 0 || m_paninc.y != 0)
     {
       followplayer = false;
       f_oldloc.x = MAXINT;
@@ -597,15 +601,15 @@ void AutoMap::restoreScaleAndLoc()
       m_x = old_m_x;
       m_y = old_m_y;
     } else {
-      m_x = mpawn->x - m_w/2;
-      m_y = mpawn->y - m_h/2;
+      m_x = mpawn->pos.x - m_w/2;
+      m_y = mpawn->pos.y - m_h/2;
     }
   m_x2 = m_x + m_w;
   m_y2 = m_y + m_h;
 
   // Change the scaling multipliers
-  scale_mtof = FixedDiv(f_w<<FRACBITS, m_w);
-  scale_ftom = FixedDiv(FRACUNIT, scale_mtof);
+  scale_mtof = f_w / m_w;
+  scale_ftom = 1 / scale_mtof;
 }
 
 
@@ -633,7 +637,7 @@ void AutoMap::clearMarks()
 void AM_minOutWindowScale()
 {
   scale_mtof = min_scale_mtof;
-  scale_ftom = FixedDiv(FRACUNIT, scale_mtof);
+  scale_ftom = 1 / scale_mtof;
   AM_activateNewScale();
 }
 
@@ -643,7 +647,7 @@ void AM_minOutWindowScale()
 void AM_maxOutWindowScale()
 {
   scale_mtof = max_scale_mtof;
-  scale_ftom = FixedDiv(FRACUNIT, scale_mtof);
+  scale_ftom = 1 / scale_mtof;
   AM_activateNewScale();
 }
 
@@ -754,8 +758,8 @@ bool AutoMap::Responder(event_t *ev)
           break;
         case AM_ZOOMOUTKEY:
         case AM_ZOOMINKEY:
-          mtof_zoommul = FRACUNIT;
-          ftom_zoommul = FRACUNIT;
+          mtof_zoommul = 1;
+          ftom_zoommul = 1;
           break;
         }
     }
@@ -771,8 +775,8 @@ void AM_changeWindowScale()
 {
 
   // Change the scaling multipliers
-  scale_mtof = FixedMul(scale_mtof, mtof_zoommul);
-  scale_ftom = FixedDiv(FRACUNIT, scale_mtof);
+  scale_mtof = scale_mtof * mtof_zoommul;
+  scale_ftom = 1 / scale_mtof;
 
   if (scale_mtof < min_scale_mtof)
     AM_minOutWindowScale();
@@ -797,27 +801,27 @@ void AutoMap::Ticker()
       return;
     }
 
-  if (followplayer && (f_oldloc.x != mpawn->x || f_oldloc.y != mpawn->y))
+  if (followplayer && (f_oldloc.x != mpawn->pos.x || f_oldloc.y != mpawn->pos.y))
     {
-      m_x = FTOM(MTOF(mpawn->x)) - m_w/2;
-      m_y = FTOM(MTOF(mpawn->y)) - m_h/2;
+      m_x = FTOM(MTOF(mpawn->pos.x)) - m_w/2;
+      m_y = FTOM(MTOF(mpawn->pos.y)) - m_h/2;
       m_x2 = m_x + m_w;
       m_y2 = m_y + m_h;
-      f_oldloc.x = mpawn->x;
-      f_oldloc.y = mpawn->y;
+      f_oldloc.x = mpawn->pos.x;
+      f_oldloc.y = mpawn->pos.y;
 
-      //  m_x = FTOM(MTOF(mpawn->x - m_w/2));
-      //  m_y = FTOM(MTOF(mpawn->y - m_h/2));
-      //  m_x = mpawn->x - m_w/2;
-      //  m_y = mpawn->y - m_h/2;
+      //  m_x = FTOM(MTOF(mpawn->pos.x - m_w/2));
+      //  m_y = FTOM(MTOF(mpawn->pos.y - m_h/2));
+      //  m_x = mpawn->pos.x - m_w/2;
+      //  m_y = mpawn->pos.y - m_h/2;
     }
 
   // Change the zoom if necessary
-  if (ftom_zoommul != FRACUNIT)
+  if (ftom_zoommul != 1)
     AM_changeWindowScale();
 
   // Change x,y location
-  if (m_paninc.x || m_paninc.y)
+  if (m_paninc.x != 0 || m_paninc.y != 0)
     changeWindowLoc();
 
   // Update light level
@@ -862,11 +866,11 @@ void AutoMap::clearFB(int color)
         {
           static vertex_t oldplr;
 
-          int dmapx = (MTOF(mpawn->x)-MTOF(oldplr.x)); //fixed point
-          int dmapy = (MTOF(oldplr.y)-MTOF(mpawn->y));
+          int dmapx = (MTOF(mpawn->pos.x)-MTOF(oldplr.x)); //fixed point
+          int dmapy = (MTOF(oldplr.y)-MTOF(mpawn->pos.y));
 
-          oldplr.x = mpawn->x;
-          oldplr.y = mpawn->y;
+          oldplr.x = mpawn->pos.x;
+          oldplr.y = mpawn->pos.y;
           mapxstart += dmapx>>1;
           mapystart += dmapy>>1;
 
@@ -1159,15 +1163,14 @@ void AutoMap::drawGrid(int color)
 
   // Figure out start of vertical gridlines
   start = m_x;
-  if ((start - mp->bmaporgx)%(MAPBLOCKUNITS<<FRACBITS))
-    start += (MAPBLOCKUNITS<<FRACBITS)
-      - ((start - mp->bmaporgx)%(MAPBLOCKUNITS<<FRACBITS));
+  if ((start - mp->bmaporgx) % MAPBLOCKUNITS != 0)
+    start += MAPBLOCKUNITS - ((start - mp->bmaporgx) % MAPBLOCKUNITS);
   end = m_x + m_w;
 
   // draw vertical gridlines
   ml.a.y = m_y;
   ml.b.y = m_y+m_h;
-  for (x=start; x<end; x+=(MAPBLOCKUNITS<<FRACBITS))
+  for (x=start; x<end; x += MAPBLOCKUNITS)
     {
       ml.a.x = x;
       ml.b.x = x;
@@ -1176,15 +1179,14 @@ void AutoMap::drawGrid(int color)
 
   // Figure out start of horizontal gridlines
   start = m_y;
-  if ((start - mp->bmaporgy)%(MAPBLOCKUNITS<<FRACBITS))
-    start += (MAPBLOCKUNITS<<FRACBITS)
-      - ((start - mp->bmaporgy)%(MAPBLOCKUNITS<<FRACBITS));
+  if ((start - mp->bmaporgy) % MAPBLOCKUNITS != 0)
+    start += MAPBLOCKUNITS - ((start - mp->bmaporgy) % MAPBLOCKUNITS);
   end = m_y + m_h;
 
   // draw horizontal gridlines
   ml.a.x = m_x;
   ml.b.x = m_x + m_w;
-  for (y=start; y<end; y+=(MAPBLOCKUNITS<<FRACBITS))
+  for (y=start; y<end; y += MAPBLOCKUNITS)
     {
       ml.a.y = y;
       ml.b.y = y;
@@ -1276,14 +1278,8 @@ void AutoMap::drawWalls()
 //
 void AM_rotate(fixed_t *x, fixed_t *y, angle_t a)
 {
-  fixed_t tmpx =
-    FixedMul(*x,finecosine[a>>ANGLETOFINESHIFT])
-    - FixedMul(*y,finesine[a>>ANGLETOFINESHIFT]);
-
-  *y   =
-    FixedMul(*x,finesine[a>>ANGLETOFINESHIFT])
-    + FixedMul(*y,finecosine[a>>ANGLETOFINESHIFT]);
-
+  fixed_t tmpx = *x * Cos(a) - *y * Sin(a);
+  *y = *x * Sin(a) + *y * Cos(a);
   *x = tmpx;
 }
 
@@ -1304,10 +1300,10 @@ static void AM_drawLineCharacter(mline_t*    lineguy,
       l.a.x = lineguy[i].a.x;
       l.a.y = lineguy[i].a.y;
 
-      if (scale)
+      if (scale != 0)
         {
-          l.a.x = FixedMul(scale, l.a.x);
-          l.a.y = FixedMul(scale, l.a.y);
+          l.a.x = scale * l.a.x;
+          l.a.y = scale * l.a.y;
         }
 
       if (angle)
@@ -1319,10 +1315,10 @@ static void AM_drawLineCharacter(mline_t*    lineguy,
       l.b.x = lineguy[i].b.x;
       l.b.y = lineguy[i].b.y;
 
-      if (scale)
+      if (scale != 0)
         {
-          l.b.x = FixedMul(scale, l.b.x);
-          l.b.y = FixedMul(scale, l.b.y);
+          l.b.x = scale * l.b.x;
+          l.b.y = scale * l.b.y;
         }
 
       if (angle)
@@ -1351,10 +1347,10 @@ void AutoMap::drawPlayers()
         {
           if (am_cheating)
             AM_drawLineCharacter(cheat_player_arrow, NUMCHEATPLYRLINES, 0,
-                                 p->angle, DWHITE, p->x, p->y);
+                                 p->yaw, DWHITE, p->pos.x, p->pos.y);
           else
             AM_drawLineCharacter(player_arrow, NUMPLYRLINES, 0,
-                                 p->angle, DWHITE, p->x, p->y);
+                                 p->yaw, DWHITE, p->pos.x, p->pos.y);
         }
       else
         {
@@ -1365,10 +1361,10 @@ void AutoMap::drawPlayers()
           else if (p->pres->color == 0)
             color = GREENS;
           else
-            color = *(translationtables + ((p->pres->color-1)<<8) +GREENS+8);
+            color = translationtables[p->pres->color][GREENS + 8];
 
-          AM_drawLineCharacter(player_arrow, NUMPLYRLINES, 0, p->angle,
-                               color, p->x, p->y);
+          AM_drawLineCharacter(player_arrow, NUMPLYRLINES, 0, p->yaw,
+                               color, p->pos.x, p->pos.y);
         }
     }
 }
@@ -1377,16 +1373,13 @@ void AutoMap::drawPlayers()
 
 void AutoMap::drawThings(int colors, int colorrange)
 {
-  int    i;
-  Actor *t;
-
-  for (i=0; i < mp->numsectors; i++)
+  for (int i=0; i < mp->numsectors; i++)
     {
-      t = mp->sectors[i].thinglist;
+      Actor *t = mp->sectors[i].thinglist;
       while (t)
         {
           AM_drawLineCharacter(thintriangle_guy, NUMTHINTRIANGLEGUYLINES,
-                               16<<FRACBITS, t->angle, colors+lightlev, t->x, t->y);
+                               16, t->yaw, colors+lightlev, t->pos.x, t->pos.y);
           t = t->snext;
         }
     }

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.34  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.33  2005/07/20 20:27:22  smite-meister
 // adv. texture cache
 //
@@ -469,17 +472,10 @@ void HU_DrawRanking(const char *title, int x, int y, fragsort_t *fragtable, int 
     hud_font->DrawString(x, y-14, title);
 
   // draw rankings
-  extern byte *translationtables;
-  extern byte *colormaps;
-
   for (int i=0; i<scorelines; i++)
     {
       // draw color background
-      int color = fragtable[i].color;
-      if (!color)
-        color = *((byte *)colormaps + colornum);
-      else
-        color = *((byte *)translationtables - 256 + (color<<8) + colornum);
+      int color = translationtables[fragtable[i].color][colornum];
       V_DrawFill(x-1, y-1, large ? 40 : 26, 9, color);
 
       // draw frags count

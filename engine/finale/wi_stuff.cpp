@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.28  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.27  2005/07/18 12:31:23  smite-meister
 // cross-cluster mapchanges
 //
@@ -823,10 +826,7 @@ static void WI_ddrawDeathmatchStats()
     {
         if (playeringame[i])
         {
-            if (players[i].skincolor==0)
-                colormap = colormaps;
-            else
-                colormap = (byte *) translationtables - 256 + (players[i].skincolor<<8);
+	  colormap = translationtables[players[i].skincolor];
 
 		V_DrawMappedPatch(x-stpb->width/2,
                         DM_MATRIXY - WI_SPACINGY,
@@ -1130,8 +1130,6 @@ void Intermission::DrawCoopStats()
           y = NG_STATSY + kills->height;
         }
       // draw stats
-      extern byte *translationtables;
-      extern byte *current_colormap;
       int i, n = plrs.size();
       int pwidth = percent->width;
       int you = ViewPlayers.size() ? ViewPlayers[0]->number : 0;
@@ -1143,10 +1141,7 @@ void Intermission::DrawCoopStats()
           int color = plrs[i]->options.color;
 
           x = NG_STATSX - (i & 1) ? 10 : 0;
-          if (color == 0)
-            current_colormap = colormaps; //no translation table for green guy
-          else
-            current_colormap = (byte *)translationtables - 256 + (color << 8);
+	  current_colormap = translationtables[color];
 
           stpb->Draw(x - stpb->width, y, FB | V_MAP);
 

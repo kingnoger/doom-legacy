@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.34  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.33  2005/07/11 16:58:40  smite-meister
 // msecnode_t bug fixed
 //
@@ -176,10 +179,10 @@ bool Map::RadiusLinesCheck(fixed_t x, fixed_t y, fixed_t radius, line_iterator_t
   validcount++;
  
   // check lines
-  xl = (tmb[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
-  xh = (tmb[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
-  yl = (tmb[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
-  yh = (tmb[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
+  xl = (tmb[BOXLEFT] - bmaporgx).floor() >> MAPBLOCKBITS;
+  xh = (tmb[BOXRIGHT] - bmaporgx).floor() >> MAPBLOCKBITS;
+  yl = (tmb[BOXBOTTOM] - bmaporgy).floor() >> MAPBLOCKBITS;
+  yh = (tmb[BOXTOP] - bmaporgy).floor() >> MAPBLOCKBITS;
 
   for (bx=xl; bx<=xh; bx++)
     for (by=yl; by<=yh; by++)
@@ -205,7 +208,7 @@ static bool PIT_StompThing(Actor *thing)
 
   fixed_t blockdist = thing->radius + tmthing->radius;
 
-  if (abs(thing->x - tmx) >= blockdist || abs(thing->y - tmy) >= blockdist)
+  if (abs(thing->pos.x - tmx) >= blockdist || abs(thing->pos.y - tmy) >= blockdist)
     return true; // didn't hit it
 
   // monsters don't stomp things except on boss level
@@ -249,10 +252,10 @@ bool Actor::TeleportMove(fixed_t nx, fixed_t ny)
   spechit.clear();
 
   // stomp on any things contacted
-  xl = (tmb[BOXLEFT] - mp->bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
-  xh = (tmb[BOXRIGHT] - mp->bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
-  yl = (tmb[BOXBOTTOM] - mp->bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
-  yh = (tmb[BOXTOP] - mp->bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
+  xl = ((tmb[BOXLEFT] - mp->bmaporgx).floor() - MAXRADIUS) >> MAPBLOCKBITS;
+  xh = ((tmb[BOXRIGHT] - mp->bmaporgx).floor() + MAXRADIUS) >> MAPBLOCKBITS;
+  yl = ((tmb[BOXBOTTOM] - mp->bmaporgy).floor() - MAXRADIUS) >> MAPBLOCKBITS;
+  yh = ((tmb[BOXTOP] - mp->bmaporgy).floor() + MAXRADIUS) >> MAPBLOCKBITS;
 
   for (bx=xl ; bx<=xh ; bx++)
     for (by=yl ; by<=yh ; by++)
@@ -262,8 +265,8 @@ bool Actor::TeleportMove(fixed_t nx, fixed_t ny)
   // the move is ok,
   // so link the thing into its new position
   UnsetPosition();
-  x = nx;
-  y = ny;
+  pos.x = nx;
+  pos.y = ny;
   SetPosition();
 
   return true;
@@ -280,9 +283,9 @@ static bool PIT_ThrustStompThing(Actor *thing)
     return true;
 
   fixed_t blockdist = thing->radius + tmthing->radius;
-  if (abs(thing->x - tmthing->x) >= blockdist || 
-      abs(thing->y - tmthing->y) >= blockdist ||
-      (thing->z > tmthing->z + tmthing->height))
+  if (abs(thing->pos.x - tmthing->pos.x) >= blockdist || 
+      abs(thing->pos.y - tmthing->pos.y) >= blockdist ||
+      thing->Feet() > tmthing->Top())
     return true;   // didn't hit it
 
   if (thing == tmthing)
@@ -302,12 +305,12 @@ void P_ThrustSpike(Actor *actor)
   tmthing = actor;
   Map *mp = actor->mp;
 
-  tmb.Set(actor->x, actor->y, actor->radius);
+  tmb.Set(actor->pos.x, actor->pos.y, actor->radius);
 
-  xl = (tmb[BOXLEFT] - mp->bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
-  xh = (tmb[BOXRIGHT] - mp->bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
-  yl = (tmb[BOXBOTTOM] - mp->bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
-  yh = (tmb[BOXTOP] - mp->bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
+  xl = ((tmb[BOXLEFT] - mp->bmaporgx).floor() - MAXRADIUS) >> MAPBLOCKBITS;
+  xh = ((tmb[BOXRIGHT] - mp->bmaporgx).floor() + MAXRADIUS) >> MAPBLOCKBITS;
+  yl = ((tmb[BOXBOTTOM] - mp->bmaporgy).floor() - MAXRADIUS) >> MAPBLOCKBITS;
+  yh = ((tmb[BOXTOP] - mp->bmaporgy).floor() + MAXRADIUS) >> MAPBLOCKBITS;
 
   // stomp on any things contacted
   for (bx=xl ; bx<=xh ; bx++)
@@ -373,8 +376,8 @@ void Actor::UnsetPosition()
 	bprev->bnext = bnext;
       else
         {
-	  blockx = (x - mp->bmaporgx)>>MAPBLOCKSHIFT;
-	  blocky = (y - mp->bmaporgy)>>MAPBLOCKSHIFT;
+	  blockx = (pos.x - mp->bmaporgx).floor() >> MAPBLOCKBITS;
+	  blocky = (pos.y - mp->bmaporgy).floor() >> MAPBLOCKBITS;
 
 	  if (blockx>=0 && blockx < mp->bmapwidth && blocky>=0 && blocky < mp->bmapheight)
 	    mp->blocklinks[blocky * mp->bmapwidth + blockx] = bnext;
@@ -407,7 +410,7 @@ void Actor::SetPosition()
   ceilingz = tmceilingz;
 
   // link into subsector
-  subsector_t *ss = mp->R_PointInSubsector(x,y);
+  subsector_t *ss = mp->R_PointInSubsector(pos.x, pos.y);
   subsector = ss;
 
   if (!(flags & MF_NOSECTOR))
@@ -416,7 +419,7 @@ void Actor::SetPosition()
       sector_t *sec = ss->sector;
 #ifdef PARANOIA
       if (sprev != NULL || snext != NULL)
-	I_Error("Actor::SetPosition: thing at (%d, %d) is already linked", x, y);
+	I_Error("Actor::SetPosition: thing at (%d, %d) is already linked", pos.x.floor(), pos.y.floor());
 #endif
 
       sprev = NULL;
@@ -440,7 +443,7 @@ void Actor::SetPosition()
         // at sector_t->touching_thinglist) are broken. When a node is
         // added, new sector links are created.
 
-      mp->CreateSecNodeList(this,x,y);
+      mp->CreateSecNodeList(this, pos.x, pos.y);
     }
 
   int blockx, blocky;
@@ -450,8 +453,8 @@ void Actor::SetPosition()
   if (! (flags & MF_NOBLOCKMAP))
     {
       // inert things don't need to be in blockmap
-      blockx = (x - mp->bmaporgx)>>MAPBLOCKSHIFT;
-      blocky = (y - mp->bmaporgy)>>MAPBLOCKSHIFT;
+      blockx = (pos.x - mp->bmaporgx).floor() >> MAPBLOCKBITS;
+      blocky = (pos.y - mp->bmaporgy).floor() >> MAPBLOCKBITS;
 
       if (blockx>=0
 	  && blockx < mp->bmapwidth
@@ -507,7 +510,7 @@ static bool PIT_CheckThing(Actor *thing)
 
   fixed_t blockdist = thing->radius + tmthing->radius;
 
-  if (abs(thing->x - tmx) >= blockdist || abs(thing->y - tmy) >= blockdist)
+  if (abs(thing->pos.x - tmx) >= blockdist || abs(thing->pos.y - tmy) >= blockdist)
     {
       // didn't hit it
       return true;
@@ -525,12 +528,12 @@ static bool PIT_CheckThing(Actor *thing)
 	  return false;
         }
       */
-      if (tmthing->z >= thing->z + thing->height)
+      if (tmthing->Feet() >= thing->Top())
         {
 	  // over
 	  return true;
         }
-      else if (tmthing->z + tmthing->height < thing->z)
+      else if (tmthing->Top() < thing->Feet())
         {
 	  // under thing
 	  return true;
@@ -623,7 +626,7 @@ static bool PIT_CheckLine(line_t *ld)
     {
       // take damage from impact
       if (tmthing->eflags & MFE_BLASTED)
-	tmthing->Damage(NULL, NULL, tmthing->mass >> 5);
+	tmthing->Damage(NULL, NULL, int(tmthing->mass / 32.0f));
 
       if (push)
 	CheckForPushSpecial(ld, 0, tmthing);
@@ -680,7 +683,7 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 {
   //  max Z move up or down without jumping
   //  above this, a heigth difference is considered as a 'dropoff'
-  const fixed_t MAXSTEPMOVE = 24 * FRACUNIT;
+  const fixed_t MAXSTEPMOVE = 24;
 
   fixed_t oldx, oldy;
   int     side;
@@ -705,7 +708,7 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 
       floatok = true;
 
-      if (tmceilingz < z + height && !(eflags & MFE_FLY))
+      if (tmceilingz < Top() && !(eflags & MFE_FLY))
 	{
 	  CheckMissileImpact();
 	  return false; // must lower itself to fit
@@ -713,23 +716,23 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 
       if (eflags & MFE_FLY)
 	{
-	  if (z + height > tmceilingz)
+	  if (Top() > tmceilingz)
 	    {
-	      pz = -8*FRACUNIT;
+	      vel.z = -8;
 	      return false;
 	    }
-	  else if (z < tmfloorz && tmfloorz-tmdropoffz > 24*FRACUNIT)
+	  else if (pos.z < tmfloorz && tmfloorz-tmdropoffz > 24)
 	    {
-	      pz = 8*FRACUNIT;
+	      vel.z = 8;
 	      return false;
 	    }
 	}
 
       // jump out of water
       if ((eflags & (MFE_UNDERWATER|MFE_TOUCHWATER)) == (MFE_UNDERWATER|MFE_TOUCHWATER))
-	maxstep = 37*FRACUNIT;
+	maxstep = 37;
 
-      if (tmfloorz - z > maxstep)
+      if (tmfloorz - pos.z > maxstep)
 	// The Minotaur floor fire (MT_MNTRFX2) can step up any amount
 	// FIXME && type != MT_MNTRFX2
 	{
@@ -737,7 +740,7 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 	  return false;       // too big a step up
 	}
 
-      if ((flags & MF_MISSILE) && tmfloorz > z)
+      if ((flags & MF_MISSILE) && tmfloorz > pos.z)
 	CheckMissileImpact();
 
       if (!boomsupport || !allowdropoff)
@@ -747,7 +750,7 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 	  return false;       // don't go over a dropoff (unless blasted)
 
       if (flags2 & MF2_CANTLEAVEFLOORPIC
-	  && (tmfloorpic != subsector->sector->floorpic || tmfloorz != z))
+	  && (tmfloorpic != subsector->sector->floorpic || tmfloorz != pos.z))
 	// must stay within a sector of a certain floor type
 	return false;
     }
@@ -755,10 +758,10 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
   // the move is ok, so link the thing into its new position
   UnsetPosition();
 
-  oldx = x;
-  oldy = y;
-  x = nx;
-  y = ny;
+  oldx = pos.x;
+  oldy = pos.y;
+  pos.x = nx;
+  pos.y = ny;
 
   //added:28-02-98:
   if (tmfloorthing)
@@ -783,8 +786,8 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 	  line_t *ld = spechit.back();
 	  spechit.pop_back();
 
-	  side = P_PointOnLineSide (x, y, ld);
-	  oldside = P_PointOnLineSide (oldx, oldy, ld);
+	  side = P_PointOnLineSide(pos.x, pos.y, ld);
+	  oldside = P_PointOnLineSide(oldx, oldy, ld);
 	  if (side != oldside)
             {
 	      if (ld->special)
@@ -813,9 +816,9 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 // and false will be returned.
 bool P_ThingHeightClip(Actor *thing)
 {
-  bool onfloor = (thing->z <= thing->floorz);
+  bool onfloor = (thing->pos.z <= thing->floorz);
 
-  thing->CheckPosition(thing->x, thing->y);
+  thing->CheckPosition(thing->pos.x, thing->pos.y);
 
   // what about stranding a monster partially off an edge?
 
@@ -825,15 +828,15 @@ bool P_ThingHeightClip(Actor *thing)
   if (!tmfloorthing && onfloor && !(thing->flags & MF_NOGRAVITY))
     {
       // walking monsters rise and fall with the floor
-      thing->z = thing->floorz;
+      thing->pos.z = thing->floorz;
     }
   else
     {
       // don't adjust a floating monster unless forced to
       //added:18-04-98:test onfloor
       if (!onfloor)                    //was tmsectorceilingz
-	if (thing->z+thing->height > tmceilingz)
-	  thing->z = thing->ceilingz - thing->height;
+	if (thing->Top() > tmceilingz)
+	  thing->pos.z = thing->ceilingz - thing->height;
 
       //thing->eflags &= ~MFE_ONGROUND;
     }
@@ -852,7 +855,7 @@ bool P_ThingHeightClip(Actor *thing)
       // lot of problem, mainly this is implementation of the stepping 
       // for mobj (walk on solid corpse without jumping or fake 3d bridge)
       // problem is imp into imp at map01 and monster going at top of others
-      && thing->z >= thing->floorz)
+      && thing->pos.z >= thing->floorz)
     return false;
 
   return true;
@@ -903,7 +906,7 @@ void P_HitSlideLine(line_t *ld)
       return;
     }
 
-  side = P_PointOnLineSide (slidemo->x, slidemo->y, ld);
+  side = P_PointOnLineSide (slidemo->pos.x, slidemo->pos.y, ld);
 
   lineangle = R_PointToAngle2 (0,0, ld->dx, ld->dy);
 
@@ -921,10 +924,10 @@ void P_HitSlideLine(line_t *ld)
   deltaangle >>= ANGLETOFINESHIFT;
 
   movelen = P_AproxDistance (tmxmove, tmymove);
-  newlen = FixedMul (movelen, finecosine[deltaangle]);
+  newlen = movelen * finecosine[deltaangle];
 
-  tmxmove = FixedMul (newlen, finecosine[lineangle]);
-  tmymove = FixedMul (newlen, finesine[lineangle]);
+  tmxmove = newlen * finecosine[lineangle];
+  tmymove = newlen * finesine[lineangle];
 }
 
 
@@ -940,7 +943,7 @@ static bool PTR_SlideTraverse(intercept_t *in)
 
   if (!(li->flags & ML_TWOSIDED))
     {
-      if (P_PointOnLineSide(slidemo->x, slidemo->y, li))
+      if (P_PointOnLineSide(slidemo->pos.x, slidemo->pos.y, li))
         {
 	  // don't hit the back side
 	  return true;
@@ -951,8 +954,8 @@ static bool PTR_SlideTraverse(intercept_t *in)
       line_opening_t *open = P_LineOpening(li);
 
       if (!(open->range < slidemo->height ||
-	    open->top - slidemo->z < slidemo->height || 
-	    open->bottom - slidemo->z > 24*FRACUNIT))
+	    open->top - slidemo->pos.z < slidemo->height || 
+	    open->bottom - slidemo->pos.z > 24))
 	return true; // this line doesn't block movement
     }
 
@@ -978,6 +981,7 @@ static bool PTR_SlideTraverse(intercept_t *in)
 // and slide along it
 //
 // This is a kludgy mess.
+
 void Map::SlideMove(Actor *mo)
 {
   fixed_t             leadx;
@@ -991,83 +995,88 @@ void Map::SlideMove(Actor *mo)
   slidemo = mo;
   hitcount = 0;
 
+  fixed_t unit_plus_epsilon;   // FIXME find a better way
+  unit_plus_epsilon.setvalue(fixed_t::UNIT + 1);
+  fixed_t fudge;   // FIXME find a better way
+  fudge.setvalue(0x800);
+
  retry:
   if (++hitcount == 3)
     goto stairstep;         // don't loop forever
 
 
   // trace along the three leading corners
-  if (mo->px > 0)
+  if (mo->vel.x > 0)
     {
-      leadx = mo->x + mo->radius;
-      trailx = mo->x - mo->radius;
+      leadx = mo->pos.x + mo->radius;
+      trailx = mo->pos.x - mo->radius;
     }
   else
     {
-      leadx = mo->x - mo->radius;
-      trailx = mo->x + mo->radius;
+      leadx = mo->pos.x - mo->radius;
+      trailx = mo->pos.x + mo->radius;
     }
 
-  if (mo->py > 0)
+  if (mo->vel.y > 0)
     {
-      leady = mo->y + mo->radius;
-      traily = mo->y - mo->radius;
+      leady = mo->pos.y + mo->radius;
+      traily = mo->pos.y - mo->radius;
     }
   else
     {
-      leady = mo->y - mo->radius;
-      traily = mo->y + mo->radius;
+      leady = mo->pos.y - mo->radius;
+      traily = mo->pos.y + mo->radius;
     }
 
-  bestslidefrac = FRACUNIT+1;
+  bestslidefrac = unit_plus_epsilon;
 
-  PathTraverse (leadx, leady, leadx+mo->px, leady+mo->py,
+  PathTraverse (leadx, leady, leadx+mo->vel.x, leady+mo->vel.y,
 		   PT_ADDLINES, PTR_SlideTraverse);
-  PathTraverse (trailx, leady, trailx+mo->px, leady+mo->py,
+  PathTraverse (trailx, leady, trailx+mo->vel.x, leady+mo->vel.y,
 		   PT_ADDLINES, PTR_SlideTraverse);
-  PathTraverse (leadx, traily, leadx+mo->px, traily+mo->py,
+  PathTraverse (leadx, traily, leadx+mo->vel.x, traily+mo->vel.y,
 		   PT_ADDLINES, PTR_SlideTraverse);
 
   // move up to the wall
-  if (bestslidefrac == FRACUNIT+1)
+  if (bestslidefrac == unit_plus_epsilon)
     {
       // the move most have hit the middle, so stairstep
     stairstep:
-      if (!mo->TryMove(mo->x, mo->y + mo->py, true)) //SoM: 4/10/2000
-	mo->TryMove (mo->x + mo->px, mo->y, true);  //Allow things to
+      if (!mo->TryMove(mo->pos.x, mo->pos.y + mo->vel.y, true)) //SoM: 4/10/2000
+	mo->TryMove (mo->pos.x + mo->vel.x, mo->pos.y, true);  //Allow things to
       return;                                             //drop off.
     }
 
   // fudge a bit to make sure it doesn't hit
-  bestslidefrac -= 0x800;
+  bestslidefrac -= fudge;
   if (bestslidefrac > 0)
     {
-      newx = FixedMul (mo->px, bestslidefrac);
-      newy = FixedMul (mo->py, bestslidefrac);
+      newx = mo->vel.x * bestslidefrac;
+      newy = mo->vel.y * bestslidefrac;
 
-      if (!mo->TryMove(mo->x+newx, mo->y+newy, true))
+      if (!mo->TryMove(mo->pos.x+newx, mo->pos.y+newy, true))
 	goto stairstep;
     }
 
   // Now continue along the wall.
   // First calculate remainder.
-  bestslidefrac = FRACUNIT-(bestslidefrac+0x800);
+  bestslidefrac = 1 - (bestslidefrac + fudge);
 
-  if (bestslidefrac > FRACUNIT)
-    bestslidefrac = FRACUNIT;
+  if (bestslidefrac > 1)
+    bestslidefrac = 1;
 
   if (bestslidefrac <= 0)
     return;
 
-  tmxmove = FixedMul (mo->px, bestslidefrac);
-  tmymove = FixedMul (mo->py, bestslidefrac);
+  tmxmove = mo->vel.x * bestslidefrac;
+  tmymove = mo->vel.y * bestslidefrac;
 
   P_HitSlideLine (bestslideline);     // clip the moves
 
-  mo->px = tmxmove;
-  mo->py = tmymove;
+  mo->vel.x = tmxmove;
+  mo->vel.y = tmymove;
 
-  if (!mo->TryMove(mo->x+tmxmove, mo->y+tmymove, true))
+  if (!mo->TryMove(mo->pos.x+tmxmove, mo->pos.y+tmymove, true))
     {
       goto retry;
     }
@@ -1125,12 +1134,12 @@ void Map::SpawnPuff(fixed_t x, fixed_t y, fixed_t z)
     case MT_PUNCHPUFF:
     case MT_BEAKPUFF:
     case MT_STAFFPUFF:
-      puff->pz = FRACUNIT;
+      puff->vel.z = 1;
       break;
     case MT_HAMMERPUFF:
     case MT_GAUNTLETPUFF1:
     case MT_GAUNTLETPUFF2:
-      puff->pz = int(.8*FRACUNIT);
+      puff->vel.z = 0.8f;
       break;
     default:
       break;
@@ -1168,18 +1177,18 @@ static bool PTR_AimTraverse(intercept_t *in)
       if (open->range <= 0)
 	return false;               // stop
 
-      dist = FixedMul (attackrange, in->frac);
+      dist = attackrange * in->frac;
 
       if (li->frontsector->floorheight != li->backsector->floorheight)
         {
-	  slope = FixedDiv (open->bottom - shootz , dist);
+	  slope = (open->bottom - shootz) / dist;
 	  if (slope > bottomslope)
 	    bottomslope = slope;
         }
 
       if (li->frontsector->ceilingheight != li->backsector->ceilingheight)
         {
-	  slope = FixedDiv (open->top - shootz , dist);
+	  slope = (open->top - shootz) / dist;
 	  if (slope < topslope)
 	    topslope = slope;
         }
@@ -1193,7 +1202,7 @@ static bool PTR_AimTraverse(intercept_t *in)
 
           dir = aimslope > 0 ? 1 : aimslope < 0 ? -1 : 0;
 
-          frontflag = P_PointOnLineSide(shootthing->x, shootthing->y, li);
+          frontflag = P_PointOnLineSide(shootthing->pos.x, shootthing->pos.y, li);
 
           //SoM: Check 3D FLOORS!
           if (li->frontsector->ffloors)
@@ -1205,8 +1214,8 @@ static bool PTR_AimTraverse(intercept_t *in)
 		{
 		  if (!(rover->flags & FF_SOLID) || !(rover->flags & FF_EXISTS)) continue;
 
-		  highslope = FixedDiv (*rover->topheight - shootz, dist);
-		  lowslope = FixedDiv (*rover->bottomheight - shootz, dist);
+		  highslope = (*rover->topheight - shootz) / dist;
+		  lowslope = (*rover->bottomheight - shootz) / dist;
 		  if ((aimslope >= lowslope && aimslope <= highslope))
 		    return false;
 
@@ -1227,8 +1236,8 @@ static bool PTR_AimTraverse(intercept_t *in)
 		{
 		  if (!(rover->flags & FF_SOLID) || !(rover->flags & FF_EXISTS)) continue;
 
-		  highslope = FixedDiv (*rover->topheight - shootz, dist);
-		  lowslope = FixedDiv (*rover->bottomheight - shootz, dist);
+		  highslope = (*rover->topheight - shootz) / dist;
+		  lowslope = (*rover->bottomheight - shootz) / dist;
 		  if ((aimslope >= lowslope && aimslope <= highslope))
 		    return false;
 
@@ -1243,7 +1252,7 @@ static bool PTR_AimTraverse(intercept_t *in)
             return false;
         }
 
-      lastz = FixedMul (aimslope, dist) + shootz;
+      lastz = aimslope * dist + shootz;
 
       return true;                    // shot continues
     }
@@ -1259,14 +1268,14 @@ static bool PTR_AimTraverse(intercept_t *in)
     return true; // corpse or something
 
   // check angles to see if the thing can be aimed at
-  dist = FixedMul (attackrange, in->frac);
-  thingtopslope = FixedDiv (th->z+th->height - shootz , dist);
+  dist = attackrange * in->frac;
+  thingtopslope = (th->Top() - shootz ) / dist;
 
   //added:15-02-98: bottomslope is negative!
   if (thingtopslope < bottomslope)
     return true;                    // shot over the thing
 
-  thingbottomslope = FixedDiv (th->z - shootz, dist);
+  thingbottomslope = (th->pos.z - shootz) / dist;
 
   if (thingbottomslope > topslope)
     return true;                    // shot under the thing
@@ -1344,14 +1353,14 @@ static bool PTR_ShootTraverse(intercept_t *in)
 	tmthing = NULL;
 	line_opening_t *open = P_LineOpening(li);
 
-	dist = FixedMul (attackrange, in->frac);
+	dist = attackrange * in->frac;
 
 	// hit lower texture ?
 	if (li->frontsector->floorheight != li->backsector->floorheight)
 	  {
 	    //added:18-02-98: comments :
 	    // find the slope aiming on the border between the two floors
-	    slope = FixedDiv (open->bottom - shootz , dist);
+	    slope = (open->bottom - shootz ) / dist;
 	    if (slope > aimslope)
 	      goto hitline;
 	  }
@@ -1362,7 +1371,7 @@ static bool PTR_ShootTraverse(intercept_t *in)
 	    //added:18-02-98: remember : diff ceil heights
 	    diffheights = true;
 
-	    slope = FixedDiv (open->top - shootz , dist);
+	    slope = (open->top - shootz ) / dist;
 	    if (slope < aimslope)
 	      goto hitline;
 	  }
@@ -1372,7 +1381,7 @@ static bool PTR_ShootTraverse(intercept_t *in)
         {
           int  frontflag;
 
-          frontflag = P_PointOnLineSide(shootthing->x, shootthing->y, li);
+          frontflag = P_PointOnLineSide(shootthing->pos.x, shootthing->pos.y, li);
 
           //SoM: Check 3D FLOORS!
           if (li->frontsector->ffloors)
@@ -1384,8 +1393,8 @@ static bool PTR_ShootTraverse(intercept_t *in)
 		{
 		  if (!(rover->flags & FF_SOLID) || !(rover->flags & FF_EXISTS)) continue;
 
-		  highslope = FixedDiv (*rover->topheight - shootz, dist);
-		  lowslope = FixedDiv (*rover->bottomheight - shootz, dist);
+		  highslope = (*rover->topheight - shootz) / dist;
+		  lowslope = (*rover->bottomheight - shootz) / dist;
 		  if ((aimslope >= lowslope && aimslope <= highslope))
 		    goto hitline;
 
@@ -1406,8 +1415,8 @@ static bool PTR_ShootTraverse(intercept_t *in)
 		{
 		  if (!(rover->flags & FF_SOLID) || !(rover->flags & FF_EXISTS)) continue;
 
-		  highslope = FixedDiv (*rover->topheight - shootz, dist);
-		  lowslope = FixedDiv (*rover->bottomheight - shootz, dist);
+		  highslope = (*rover->topheight - shootz) / dist;
+		  lowslope = (*rover->bottomheight - shootz) / dist;
 		  if ((aimslope >= lowslope && aimslope <= highslope))
 		    goto hitline;
 
@@ -1421,7 +1430,7 @@ static bool PTR_ShootTraverse(intercept_t *in)
           if ((!(frontflag & 0x1) && frontflag & 0x2) || (frontflag & 0x1 && frontflag & 0x4))
             goto hitline;
         }
-      lastz = FixedMul (aimslope, dist) + shootz;
+      lastz = aimslope * dist + shootz;
 
       // shot continues
       return true;
@@ -1431,17 +1440,17 @@ static bool PTR_ShootTraverse(intercept_t *in)
     hitline:
 
       // position a bit closer
-      frac = in->frac - FixedDiv (4*FRACUNIT,attackrange);
-      dist = FixedMul (frac, attackrange);    //dist to hit on line
+      frac = in->frac - 4 / attackrange;
+      dist = frac * attackrange;    //dist to hit on line
 
-      distz = FixedMul (aimslope, dist);      //z add between gun z and hit z
+      distz = aimslope * dist;      //z add between gun z and hit z
       z = shootz + distz;                     // hit z on wall
 
       //added:17-02-98: clip shots on floor and ceiling
       //                use a simple triangle stuff a/b = c/d ...
       // BP:13-3-99: fix the side usage
       hitplane = false;
-      sectorside=P_PointOnLineSide(shootthing->x,shootthing->y,li);
+      sectorside=P_PointOnLineSide(shootthing->pos.x,shootthing->pos.y,li);
       if (li->sideptr[sectorside] != NULL) // can happen in nocliping mode
         {
 	  sector = li->sideptr[sectorside]->sector;
@@ -1461,17 +1470,17 @@ static bool PTR_ShootTraverse(intercept_t *in)
 		}
             }
 
-	  if ((z > ceilingz) && distz)
+	  if ((z > ceilingz) && distz != 0)
             {
 	      clipz = ceilingz - shootz;
-	      frac = FixedDiv(FixedMul(frac,clipz), distz);
+	      frac = (frac *clipz) / distz;
 	      hitplane = true;
             }
 	  else
-	    if ((z < floorz) && distz)
+	    if ((z < floorz) && distz != 0)
 	      {
 		clipz = shootz - floorz;
-		frac = -FixedDiv(FixedMul(frac,clipz), distz);
+		frac = -(frac * clipz) / distz;
 		hitplane = true;
 	      }
 	  if (sector->ffloors)
@@ -1495,8 +1504,8 @@ static bool PTR_ShootTraverse(intercept_t *in)
         }
 
 
-      x = trace.x + FixedMul (trace.dx, frac);
-      y = trace.y + FixedMul (trace.dy, frac);
+      x = trace.x + trace.dx * frac;
+      y = trace.y + trace.dy * frac;
 
       if (li->frontsector->ceilingpic == skyflatnum)
         {
@@ -1515,13 +1524,13 @@ static bool PTR_ShootTraverse(intercept_t *in)
 
       if (sector && sector->ffloors)
         {
-          if (dir == 1 && z + (16 << FRACBITS) > ceilingz)
-            z = ceilingz - (16 << FRACBITS);
+          if (dir == 1 && z + 16 > ceilingz)
+            z = ceilingz - 16;
           if (dir == -1 && z < floorz)
             z = floorz;
         }
       // Spawn bullet puffs.
-      m->SpawnPuff (x,y,z);
+      m->SpawnPuff(x,y,z);
 
       // don't go any farther
       return false;
@@ -1546,13 +1555,13 @@ static bool PTR_ShootTraverse(intercept_t *in)
   */
 
   // check angles to see if the thing can be aimed at
-  dist = FixedMul (attackrange, in->frac);
-  thingtopslope = FixedDiv (th->z+th->height - shootz , dist);
+  dist = attackrange * in->frac;
+  thingtopslope = (th->Top() - shootz) / dist;
 
   if (thingtopslope < aimslope)
     return true;            // shot over the thing
 
-  thingbottomslope = FixedDiv (th->z - shootz, dist);
+  thingbottomslope = (th->pos.z - shootz) / dist;
 
   if (thingbottomslope > aimslope)
     return true;            // shot under the thing
@@ -1573,20 +1582,20 @@ static bool PTR_ShootTraverse(intercept_t *in)
 	  if (!(rover->flags & FF_SOLID))
 	    continue;
 
-	  if (dir == -1 && *rover->topheight < lastz && *rover->topheight > th->z + th->height)
+	  if (dir == -1 && *rover->topheight < lastz && *rover->topheight > th->Top())
 	    return true;
-	  if (dir == 1 && *rover->bottomheight > lastz && *rover->bottomheight < th->z)
+	  if (dir == 1 && *rover->bottomheight > lastz && *rover->bottomheight < th->Feet())
 	    return true;
 	}
     }
 
   // hit thing
   // position a bit closer
-  frac = in->frac - FixedDiv (10*FRACUNIT,attackrange);
+  frac = in->frac - 10 / attackrange;
 
-  x = trace.x + FixedMul (trace.dx, frac);
-  y = trace.y + FixedMul (trace.dy, frac);
-  z = shootz + FixedMul (aimslope, FixedMul(frac, attackrange));
+  x = trace.x + (trace.dx * frac);
+  y = trace.y + (trace.dy * frac);
+  z = shootz + aimslope * (frac * attackrange);
 
   if (la_damage)
     hitplane = th->Damage(shootthing, shootthing, la_damage, la_dtype);
@@ -1611,7 +1620,7 @@ static bool PTR_ShootTraverse(intercept_t *in)
 
       if (hitplane)
 	{
-	  m->SpawnBloodSplats (x,y,z, la_damage, trace.dx, trace.dy);
+	  m->SpawnBloodSplats(vec_t<fixed_t>(x,y,z), la_damage, trace.dx, trace.dy);
 	  return false;
 	}
     }
@@ -1625,18 +1634,18 @@ fixed_t Actor::AimLineAttack(angle_t ang, fixed_t distance)
 {
   extern fixed_t bottomslope, topslope;
 
-  ang >>= ANGLETOFINESHIFT;
   shootthing = this;
 
-  // Since monsters shouldn't change their "aiming" angle,
+  // Since monsters shouldn't change their "pitch" angle,
   // why not use the same routine for them also?
-  fixed_t cosineaiming = finecosine[aiming >> ANGLETOFINESHIFT];
-  int aim = int(aiming) >> ANGLETOFINESHIFT;
-  fixed_t x2 = x + FixedMul(FixedMul(distance,finecosine[ang]), cosineaiming);
-  fixed_t y2 = y + FixedMul(FixedMul(distance,finesine[ang]), cosineaiming); 
+  fixed_t temp = distance * Cos(pitch);
+  fixed_t x2 = pos.x + temp * Cos(ang);
+  fixed_t y2 = pos.y + temp * Sin(ang);
 
-  topslope    =  100*FRACUNIT/160+finetangent[(2048+aim) & FINEMASK];
-  bottomslope = -100*FRACUNIT/160+finetangent[(2048+aim) & FINEMASK];
+  const fixed_t ds = 10.0f/16;
+  fixed_t aimslope = Tan(pitch);
+  topslope    = aimslope + ds;
+  bottomslope = aimslope - ds;
 
     /*
     {
@@ -1650,7 +1659,7 @@ fixed_t Actor::AimLineAttack(angle_t ang, fixed_t distance)
       bottomslope = -100*FRACUNIT/160;
     }
     */
-  shootz = lastz = z + (height>>1) + 8*FRACUNIT;
+  shootz = lastz = Center() + 8;
 
   // can't shoot outside view angles
 
@@ -1663,9 +1672,9 @@ fixed_t Actor::AimLineAttack(angle_t ang, fixed_t distance)
   // to the blockmap containing the dest. point.
   // Call the function for each mobj/line on the way,
   // starting with the mobj/linedef at the shortest distance...
-  mp->PathTraverse (x, y, x2, y2,
-		  PT_ADDLINES|PT_ADDTHINGS,
-		  PTR_AimTraverse);
+  mp->PathTraverse(pos.x, pos.y, x2, y2,
+		   PT_ADDLINES|PT_ADDTHINGS,
+		   PTR_AimTraverse);
 
   //added:15-02-98: linetarget is only for mobjs, not for linedefs
   if (linetarget)
@@ -1683,42 +1692,42 @@ fixed_t Actor::AimLineAttack(angle_t ang, fixed_t distance)
 // 'damage' is obvious, dtype is the damage type.
 // global variable 'linetarget' will point to the Actor who got hit.
 
-void Actor::LineAttack(angle_t yaw, fixed_t distance, fixed_t pitch, int damage, int dtype)
+void Actor::LineAttack(angle_t ang, fixed_t distance, fixed_t slope, int damage, int dtype)
 {
   fixed_t     x2;
   fixed_t     y2;
 
-  yaw >>= ANGLETOFINESHIFT;
   shootthing = this;
   la_damage = damage;
   la_dtype = dtype;
   linetarget = NULL;
 
-  // FIXME see AimLineAttack, same here
+  // NOTE see AimLineAttack, same here
   // player autoaimed attack, 
   /*
   if (!player)
     {   
-      x2 = x + (distance>>FRACBITS)*finecosine[yaw]; 
-      y2 = y + (distance>>FRACBITS)*finesine[yaw];   
+      x2 = x + (distance>>FRACBITS)*finecosine[ang]; 
+      y2 = y + (distance>>FRACBITS)*finesine[ang];   
     }
   else
   */
     {
-      fixed_t cosangle = finecosine[aiming>>ANGLETOFINESHIFT];
+      // TODO should be   fixed_t temp = distance * Cos(ArcTan(slope));
+      fixed_t temp = distance * Cos(pitch);
 
-      x2 = x + FixedMul(FixedMul(distance,finecosine[yaw]),cosangle);
-      y2 = y + FixedMul(FixedMul(distance,finesine[yaw]),cosangle); 
+      x2 = pos.x + temp * Cos(ang);
+      y2 = pos.y + temp * Sin(ang);
     }
 
-  shootz = lastz = z + (height>>1) + 8*FRACUNIT - floorclip;
+  shootz = lastz = Center() + 8 - floorclip;
 
   attackrange = distance;
-  aimslope = pitch;
+  aimslope = slope;
 
   tmthing = shootthing;
 
-  mp->PathTraverse(x, y, x2, y2,
+  mp->PathTraverse(pos.x, pos.y, x2, y2,
 		   PT_ADDLINES|PT_ADDTHINGS,
 		   PTR_ShootTraverse);
 }
@@ -1739,7 +1748,7 @@ static bool PTR_UseTraverse(intercept_t *in)
     {
       line_opening_t *open = P_LineOpening(line);
       // TEST: use through a hole only if you can reach it
-      if (open->range <= 0 || open->top < usething->z || open->bottom > usething->z + usething->height)
+      if (open->range <= 0 || open->top < usething->Feet() || open->bottom > usething->Top())
         {
 	  S_StartSound(usething, sfx_usefail);
 
@@ -1752,7 +1761,7 @@ static bool PTR_UseTraverse(intercept_t *in)
     }
 
   // can't use backsides of lines
-  int side = P_PointOnLineSide(usething->x, usething->y, line);
+  int side = P_PointOnLineSide(usething->pos.x, usething->pos.y, line);
   if (side != 0)
     return false;
 
@@ -1780,12 +1789,12 @@ void PlayerPawn::UseLines()
 
   usething = this;
 
-  int ang = angle >> ANGLETOFINESHIFT;
+  int ang = yaw >> ANGLETOFINESHIFT;
 
-  x1 = x;
-  y1 = y;
-  x2 = x1 + (USERANGE>>FRACBITS)*finecosine[ang];
-  y2 = y1 + (USERANGE>>FRACBITS)*finesine[ang];
+  x1 = pos.x;
+  y1 = pos.y;
+  x2 = x1 + USERANGE * finecosine[ang];
+  y2 = y1 + USERANGE * finesine[ang];
 
   mp->PathTraverse(x1, y1, x2, y2, PT_ADDLINES, PTR_UseTraverse);
 }
@@ -1833,7 +1842,7 @@ static bool PTR_PuzzleItemTraverse(intercept_t *in)
 	  return true; // Continue searching
 	}
 
-      if (P_PointOnLineSide(PuzzleItemUser->x, PuzzleItemUser->y, line) == 1)
+      if (P_PointOnLineSide(PuzzleItemUser->pos.x, PuzzleItemUser->pos.y, line) == 1)
 	return false; // Don't use back sides
 
       if (PuzzleItemType != line->args[0])
@@ -1870,11 +1879,11 @@ bool PlayerPawn::UsePuzzleItem(int type)
   PuzzleItemType = type;
   PuzzleActivated = false;
 
-  int angle = angle >> ANGLETOFINESHIFT;
-  x1 = x;
-  y1 = y;
-  x2 = x1 + (USERANGE>>FRACBITS)*finecosine[angle];
-  y2 = y1 + (USERANGE>>FRACBITS)*finesine[angle];
+  int ang = yaw >> ANGLETOFINESHIFT;
+  x1 = pos.x;
+  y1 = pos.y;
+  x2 = x1 + USERANGE * finecosine[ang];
+  y2 = y1 + USERANGE * finesine[ang];
   mp->PathTraverse(x1, y1, x2, y2, PT_ADDLINES|PT_ADDTHINGS, PTR_PuzzleItemTraverse);
 
   return PuzzleActivated;
@@ -1908,16 +1917,16 @@ static bool PIT_RadiusAttack(Actor *thing)
   // Bosses take no damage from concussion.
   // if (thing->flags2 & MF2_BOSS) return true;
 
-  dx = abs(thing->x - bomb->x);
-  dy = abs(thing->y - bomb->y);
+  dx = abs(thing->pos.x - bomb->pos.x);
+  dy = abs(thing->pos.y - bomb->pos.y);
 
   dist = dx>dy ? dx : dy;
   dist -= thing->radius;
 
   //added:22-02-98: now checks also z dist for rockets exploding
   //                above yer head...
-  dz = abs(thing->z+(thing->height>>1) - bomb->z);
-  int d = (dist > dz ? dist : dz) >> FRACBITS;
+  dz = abs(thing->Center() - bomb->pos.z);
+  int d = (dist > dz ? dist : dz).floor();
 
   if (d < 0)
     d = 0;
@@ -1926,9 +1935,9 @@ static bool PIT_RadiusAttack(Actor *thing)
     return true;    // out of range
 
   // geometry blocks the blast?
-  if (thing->floorz > bomb->z && bomb->ceilingz < thing->z)
+  if (thing->floorz > bomb->pos.z && bomb->ceilingz < thing->pos.z)
     return true;
-  if (thing->ceilingz < bomb->z && bomb->floorz > thing->z)
+  if (thing->ceilingz < bomb->pos.z && bomb->floorz > thing->pos.z)
     return true;
 
   if (thing->mp->CheckSight(thing, bomb))
@@ -1937,15 +1946,15 @@ static bool PIT_RadiusAttack(Actor *thing)
 
       // Hexen: if(thing->player) damage >>= 2;
 
-      int apx = 0, apy = 0;
-      if (dist)
+      fixed_t apx = 0, apy = 0;
+      if (dist != 0)
         {
-	  apx = (thing->x - bomb->x) / (d+1);
-	  apy = (thing->y - bomb->y) / (d+1);
+	  apx = (thing->pos.x - bomb->pos.x) / (d+1);
+	  apy = (thing->pos.y - bomb->pos.y) / (d+1);
         }
       // must be in direct path
       if (thing->Damage(bomb, bombowner, damage, bombdtype) && !(thing->flags & MF_NOBLOOD))
-	thing->mp->SpawnBloodSplats(thing->x,thing->y,thing->z, damage, apx, apy);
+	thing->mp->SpawnBloodSplats(thing->pos, damage, apx, apy);
     }
 
   return true;
@@ -1967,11 +1976,11 @@ void Actor::RadiusAttack(Actor *culprit, int damage, int distance, int dtype, bo
   else
     bombdistance = distance;
 
-  fixed_t dist = (bombdistance + MAXRADIUS) << FRACBITS;
-  yh = (y + dist - mp->bmaporgy)>>MAPBLOCKSHIFT;
-  yl = (y - dist - mp->bmaporgy)>>MAPBLOCKSHIFT;
-  xh = (x + dist - mp->bmaporgx)>>MAPBLOCKSHIFT;
-  xl = (x - dist - mp->bmaporgx)>>MAPBLOCKSHIFT;
+  fixed_t dist = bombdistance + MAXRADIUS;
+  yh = (pos.y + dist - mp->bmaporgy).floor() >> MAPBLOCKBITS;
+  yl = (pos.y - dist - mp->bmaporgy).floor() >> MAPBLOCKBITS;
+  xh = (pos.x + dist - mp->bmaporgx).floor() >> MAPBLOCKBITS;
+  xl = (pos.x - dist - mp->bmaporgx).floor() >> MAPBLOCKBITS;
 
   bomb = this;
   bombowner = culprit;
@@ -2029,18 +2038,17 @@ static bool PIT_ChangeSector(Actor *thing)
 
   nofit = true;
 
-  if (crushdamage && !(thing->mp->maptic % (4*NEWTICRATERATIO)))
+  if (crushdamage && !(thing->mp->maptic % 4))
     {
       thing->Damage(NULL, NULL, crushdamage, dt_crushing); // was 10
 
-      if ((!(thing->mp->maptic % (16*NEWTICRATERATIO)) && !(thing->flags&MF_NOBLOOD)))
+      if ((!(thing->mp->maptic % 16) && !(thing->flags & MF_NOBLOOD)))
         {
 	  // spray blood in a random direction
-	  DActor *mo = thing->mp->SpawnDActor(thing->x, thing->y,
-	    thing->z + thing->height/2, MT_BLOOD);
+	  DActor *mo = thing->mp->SpawnDActor(thing->pos.x, thing->pos.y, thing->Center(), MT_BLOOD);
             
-	  mo->px  = P_SignedRandom()<<12;
-	  mo->py  = P_SignedRandom()<<12;
+	  mo->vel.x  = P_SignedFRandom(4);
+	  mo->vel.y  = P_SignedFRandom(4);
         }
     }
 
@@ -2195,10 +2203,10 @@ void Map::CreateSecNodeList(Actor *thing, fixed_t x, fixed_t y)
 
   validcount++; // used to make sure we only process a line once
 
-  xl = (tmb[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
-  xh = (tmb[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
-  yl = (tmb[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
-  yh = (tmb[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
+  xl = (tmb[BOXLEFT] - bmaporgx).floor() >> MAPBLOCKBITS;
+  xh = (tmb[BOXRIGHT] - bmaporgx).floor() >> MAPBLOCKBITS;
+  yl = (tmb[BOXBOTTOM] - bmaporgy).floor() >> MAPBLOCKBITS;
+  yh = (tmb[BOXTOP] - bmaporgy).floor() >> MAPBLOCKBITS;
 
   for (bx=xl ; bx<=xh ; bx++)
     for (by=yl ; by<=yh ; by++)
@@ -2242,15 +2250,15 @@ static bool PIT_CheckOnmobjZ(Actor *thing)
     return true; // Can't hit thing
     
   fixed_t blockdist = thing->radius + tmthing->radius;
-  if (abs(thing->x-tmx) >= blockdist || abs(thing->y-tmy) >= blockdist)    
+  if (abs(thing->pos.x-tmx) >= blockdist || abs(thing->pos.y-tmy) >= blockdist)    
     return true; // Didn't hit thing
 
   if (thing == tmthing)
     return true; // Don't clip against self
 
-  if (tmthing->z > thing->z + thing->height)
+  if (tmthing->Feet() > thing->Top())
     return true; // over
-  else if (tmthing->z + tmthing->height < thing->z)    
+  else if (tmthing->Top() < thing->Feet())
     return true; // under thing
 
   if (thing->flags & MF_SOLID)
@@ -2271,16 +2279,16 @@ void Actor::FakeZMovement()
   // adjust height
   //
   // z += pz;
-  fixed_t nz = z + pz;
+  fixed_t nz = pos.z + vel.z;
   if ((flags & MF_FLOAT) && target)
     {       // float down towards target if too close
       if (!(eflags & (MFE_SKULLFLY | MFE_INFLOAT)))
 	{
-	  int dist = P_AproxDistance(x - target->x, y - target->y);
-	  int delta = target->z + (height>>1) - nz;
-	  if (delta < 0 && dist < -(delta*3))
+	  fixed_t dist = P_AproxDistance(pos.x - target->pos.x, pos.y - target->pos.y);
+	  fixed_t delta = target->pos.z + (height>>1) - nz;
+	  if (delta < 0 && dist < -(3*delta))
 	    nz -= FLOATSPEED;
-	  else if (delta > 0 && dist < (delta*3))
+	  else if (delta > 0 && dist < (3*delta))
 	    nz += FLOATSPEED;
 	}
     }
@@ -2291,7 +2299,7 @@ void Actor::FakeZMovement()
 
   // FIXME it would be better if we didn't need to actually change the Actor
   // this is a fake movement after all...
-  int npz = pz;
+  fixed_t npz = vel.z;
   //
   // clip movement
   //
@@ -2308,8 +2316,8 @@ void Actor::FakeZMovement()
 	}
       if (flags & MF_CORPSE) // &&info->crashstate 
 	{
-	  z = nz;
-	  pz = npz;
+	  pos.z = nz;
+	  vel.z = npz;
 	  return;
 	}
     }
@@ -2338,8 +2346,8 @@ void Actor::FakeZMovement()
 	  npz = -npz;
 	}
     }
-  z = nz;
-  pz = npz;
+  pos.z = nz;
+  vel.z = npz;
 }
 
 
@@ -2351,13 +2359,13 @@ Actor *Actor::CheckOnmobj()
     
   tmthing = this;
   tmflags = flags;
-  fixed_t oldz = z;
-  fixed_t oldpz = pz;
+  fixed_t oldz = pos.z;
+  fixed_t oldpz = vel.z;
   FakeZMovement();
   
-  tmb.Set(x, y, tmthing->radius);
+  tmb.Set(pos.x, pos.y, radius);
 
-  newsubsec = mp->R_PointInSubsector(x, y);
+  newsubsec = mp->R_PointInSubsector(pos.x, pos.y);
     
   //
   // the base floor / ceiling is from the subsector that contains the
@@ -2379,22 +2387,22 @@ Actor *Actor::CheckOnmobj()
   // into mapblocks based on their origin point, and can overlap into adjacent
   // blocks by up to MAXRADIUS units
   //
-  xl = (tmb[BOXLEFT] - mp->bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
-  xh = (tmb[BOXRIGHT] - mp->bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
-  yl = (tmb[BOXBOTTOM] - mp->bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
-  yh = (tmb[BOXTOP] - mp->bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
+  xl = ((tmb[BOXLEFT] - mp->bmaporgx).floor() - MAXRADIUS) >> MAPBLOCKBITS;
+  xh = ((tmb[BOXRIGHT] - mp->bmaporgx).floor() + MAXRADIUS) >> MAPBLOCKBITS;
+  yl = ((tmb[BOXBOTTOM] - mp->bmaporgy).floor() - MAXRADIUS) >> MAPBLOCKBITS;
+  yh = ((tmb[BOXTOP] - mp->bmaporgy).floor() + MAXRADIUS) >> MAPBLOCKBITS;
     
   for (bx=xl ; bx<=xh ; bx++)
     for (by=yl ; by<=yh ; by++)
       if (!mp->BlockThingsIterator(bx,by,PIT_CheckOnmobjZ))
 	{
-	  z = oldz;
-	  pz = oldpz;
+	  pos.z = oldz;
+	  vel.z = oldpz;
 	  return onmobj;
 	}
 
-  z = oldz;
-  pz = oldpz;
+  pos.z = oldz;
+  vel.z = oldpz;
   return NULL;
 }
 
@@ -2453,13 +2461,13 @@ bool Actor::CheckPosition(fixed_t nx, fixed_t ny)
   // Check list of fake floors and see if tmfloorz/tmceilingz need to be altered.
   if (newsubsec->sector->ffloors)
     {
-      int thingtop = z + height;
+      fixed_t thingtop = Top();
 
       for (ffloor_t *rover = newsubsec->sector->ffloors; rover; rover = rover->next)
 	{
 	  if (!(rover->flags & FF_SOLID) || !(rover->flags & FF_EXISTS))
 	    continue;
-	  fixed_t delta1 = z - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2));
+	  fixed_t delta1 = Feet() - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2));
 	  fixed_t delta2 = thingtop - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2));
 	  if (*rover->topheight > tmfloorz && abs(delta1) < abs(delta2))
 	    tmfloorz = tmdropoffz = *rover->topheight;
@@ -2489,10 +2497,10 @@ bool Actor::CheckPosition(fixed_t nx, fixed_t ny)
   if (!(flags & MF_NOCLIPTHING))
     {
       // check things
-      xl = (tmb[BOXLEFT] - bmox - MAXRADIUS)>>MAPBLOCKSHIFT;
-      xh = (tmb[BOXRIGHT] - bmox + MAXRADIUS)>>MAPBLOCKSHIFT;
-      yl = (tmb[BOXBOTTOM] - bmoy - MAXRADIUS)>>MAPBLOCKSHIFT;
-      yh = (tmb[BOXTOP] - bmoy + MAXRADIUS)>>MAPBLOCKSHIFT;
+      xl = ((tmb[BOXLEFT] - bmox).floor() - MAXRADIUS) >> MAPBLOCKBITS;
+      xh = ((tmb[BOXRIGHT] - bmox).floor() + MAXRADIUS) >> MAPBLOCKBITS;
+      yl = ((tmb[BOXBOTTOM] - bmoy).floor() - MAXRADIUS) >> MAPBLOCKBITS;
+      yh = ((tmb[BOXTOP] - bmoy).floor() + MAXRADIUS) >> MAPBLOCKBITS;
 
       for (bx=xl ; bx<=xh ; bx++)
 	for (by=yl ; by<=yh ; by++)
@@ -2503,10 +2511,10 @@ bool Actor::CheckPosition(fixed_t nx, fixed_t ny)
   if (!(flags & MF_NOCLIPLINE))
     {
       // check lines
-      xl = (tmb[BOXLEFT] - bmox)>>MAPBLOCKSHIFT;
-      xh = (tmb[BOXRIGHT] - bmox)>>MAPBLOCKSHIFT;
-      yl = (tmb[BOXBOTTOM] - bmoy)>>MAPBLOCKSHIFT;
-      yh = (tmb[BOXTOP] - bmoy)>>MAPBLOCKSHIFT;
+      xl = (tmb[BOXLEFT] - bmox).floor() >> MAPBLOCKBITS;
+      xh = (tmb[BOXRIGHT] - bmox).floor() >> MAPBLOCKBITS;
+      yl = (tmb[BOXBOTTOM] - bmoy).floor() >> MAPBLOCKBITS;
+      yh = (tmb[BOXTOP] - bmoy).floor() >> MAPBLOCKBITS;
       for (bx=xl ; bx<=xh ; bx++)
 	for (by=yl ; by<=yh ; by++)
 	  if (!mp->BlockLinesIterator(bx,by,PIT_CheckLine))
@@ -2524,10 +2532,10 @@ bool Actor::TestLocation()
   int temp = flags;
 
   flags &= ~MF_PICKUP;
-  if (CheckPosition(x, y))
+  if (CheckPosition(pos.x, pos.y))
     { // XY is ok, now check Z
       flags = temp;
-      if ((z < floorz) || (z+height > ceilingz))
+      if ((Feet() < floorz) || (Top() > ceilingz))
 	return false; // bad z
       return true;
     }

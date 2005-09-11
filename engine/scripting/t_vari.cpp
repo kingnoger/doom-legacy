@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright(C) 2000 Simon Howard
-// Copyright(C) 2001-2004 Doom Legacy Team
+// Copyright(C) 2001-2005 Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.4  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.3  2004/08/12 18:30:29  smite-meister
 // cleaned startup
 //
@@ -81,7 +84,7 @@ const char *stringvalue(svalue_t v)
 
       case svt_fixed:
         {
-          double val = ((double)v.value.f / FRACUNIT);
+          float val = FIXED_TO_FLOAT(v.value.i);
           sprintf(buffer, "%g", val);
           return buffer;
         }
@@ -212,7 +215,7 @@ svalue_t svariable_t::getvalue()
   else if(type == svt_pFixed)
     {
       returnvar.type = svt_fixed;
-      returnvar.value.f = *value.pFixed;
+      returnvar.value.i = (*value.pFixed).value();
     }
   else if(type == svt_pActor)
     {
@@ -254,7 +257,7 @@ void svariable_t::setvalue(svalue_t newvalue)
       strcpy(value.s, stringvalue(newvalue));
       break;
     case svt_fixed:
-      value.fixed = fixedvalue(newvalue);
+      value.i = fixedvalue(newvalue).value();
       break;
     case svt_actor:
       value.mobj = MobjForSvalue(newvalue);

@@ -18,8 +18,8 @@
 //
 //
 // $Log$
-// Revision 1.8  2005/03/22 17:02:19  smite-meister
-// fix
+// Revision 1.9  2005/09/11 16:22:54  smite-meister
+// template classes
 //
 // Revision 1.7  2004/11/09 20:38:50  smite-meister
 // added packing to I/O structs
@@ -70,8 +70,6 @@ static int       sightcounts[2];
 /// Returns side 0 (front), 1 (back), or 2 (on).
 static int P_DivlineSide(fixed_t x, fixed_t y, divline_t* node)
 {
-  fixed_t dx, dy, left, right;
-
   if (!node->dx)
     {
       if (x==node->x)
@@ -94,11 +92,16 @@ static int P_DivlineSide(fixed_t x, fixed_t y, divline_t* node)
       return node->dx > 0;
     }
 
-  dx = (x - node->x);
-  dy = (y - node->y);
+  fixed_t dx = x - node->x;
+  fixed_t dy = y - node->y;
 
-  left =  (node->dy>>FRACBITS) * (dx>>FRACBITS);
-  right = (dy>>FRACBITS) * (node->dx>>FRACBITS);
+#if 0
+  fixed_t left =  (node->dy>>FRACBITS) * (dx>>FRACBITS); // shift so result always fits in 32 bits
+  fixed_t right = (dy>>FRACBITS) * (node->dx>>FRACBITS);
+#else
+  Sint64 left = node->dy.value() * dx.value(); // TEST sharper sight
+  Sint64 right = dy.value() * node->dx.value();
+#endif
 
   if (right < left)
     return 0;       // front side
@@ -114,16 +117,15 @@ static int P_DivlineSide(fixed_t x, fixed_t y, divline_t* node)
 // This is only called by the addthings and addlines traversers.
 static fixed_t P_InterceptVector2(divline_t *v2, divline_t *v1)
 {
-  fixed_t den = FixedMul (v1->dy>>8,v2->dx) - FixedMul(v1->dx>>8,v2->dy);
+  fixed_t den = (v1->dy>>8) * v2->dx - (v1->dx>>8) * v2->dy;
 
   if (den == 0)
     return 0;
   //  I_Error ("P_InterceptVector: parallel");
 
-  fixed_t num = FixedMul((v1->x - v2->x) >> 8, v1->dy) + FixedMul((v2->y - v1->y) >> 8, v1->dx);
-  fixed_t frac = FixedDiv (num , den);
+  fixed_t num = ((v1->x - v2->x) >> 8) * v1->dy + ((v2->y - v1->y) >> 8) * v1->dx;
 
-  return frac;
+  return num / den;
 }
 
 
@@ -210,14 +212,14 @@ bool Map::CrossSubsector(int num)
 
       if (front->floorheight != back->floorheight)
         {
-          fixed_t slope = FixedDiv(openbottom - sightzstart , frac);
+          fixed_t slope = (openbottom - sightzstart) / frac;
           if (slope > bottomslope)
             bottomslope = slope;
         }
 
       if (front->ceilingheight != back->ceilingheight)
         {
-          fixed_t slope = FixedDiv (opentop - sightzstart , frac);
+          fixed_t slope = (opentop - sightzstart) / frac;
           if (slope < topslope)
             topslope = slope;
         }
@@ -308,16 +310,16 @@ bool Map::CheckSight(Actor *t1, Actor *t2)
 
   validcount++;
 
-  sightzstart = t1->z + t1->height - (t1->height>>2);
-  topslope = (t2->z+t2->height) - sightzstart;
-  bottomslope = (t2->z) - sightzstart;
+  sightzstart = t1->Top() - (t1->height >> 2);
+  topslope = t2->Top() - sightzstart;
+  bottomslope = t2->Feet() - sightzstart;
 
-  strace.x = t1->x;
-  strace.y = t1->y;
-  t2x = t2->x;
-  t2y = t2->y;
-  strace.dx = t2->x - t1->x;
-  strace.dy = t2->y - t1->y;
+  strace.x = t1->pos.x;
+  strace.y = t1->pos.y;
+  t2x = t2->pos.x;
+  t2y = t2->pos.y;
+  strace.dx = t2->pos.x - t1->pos.x;
+  strace.dy = t2->pos.y - t1->pos.y;
 
   // the head node is the last node output
   return CrossBSPNode(numnodes-1);

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.44  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.43  2005/06/05 19:32:25  smite-meister
 // unsigned map structures
 //
@@ -229,7 +232,7 @@ fixed_t sector_t::FindLowestFloorSurrounding()
 /// Find the highest floor height in the surrounding sectors, not including this sector.
 fixed_t sector_t::FindHighestFloorSurrounding()
 {
-  fixed_t h = -500*FRACUNIT; // why?
+  fixed_t h = -500; // why?
   bool foundsector = false;
 
   for (int i=0; i < linecount; i++)
@@ -252,11 +255,11 @@ fixed_t sector_t::FindHighestFloorSurrounding()
 /// Find the lowest ceiling height in the surrounding sectors, not including this sector.
 fixed_t sector_t::FindLowestCeilingSurrounding()
 {
-  fixed_t h = MAXINT;
+  fixed_t h = fixed_t::FMAX;
   bool foundsector = false;
 
   if (boomsupport)
-    h = 32000*FRACUNIT; //SoM: 3/7/2000: Remove ovf
+    h = 32000; //SoM: 3/7/2000: Remove ovf
                                               
   for (int i=0; i < linecount; i++)
     {
@@ -300,15 +303,14 @@ fixed_t sector_t::FindHighestCeilingSurrounding()
 
 /// Finds the highest floor in the surrounding sectors lower than currentheight.
 /// If no such sectors exist, returns currentheight.
-fixed_t sector_t::FindNextLowestFloor(int currentheight)
+fixed_t sector_t::FindNextLowestFloor(fixed_t currentheight)
 {
   sector_t *other;
 
   for (int i=0; i < linecount; i++)
-    if ((other = getNextSector(lines[i], this)) &&
-	other->floorheight < currentheight)
+    if ((other = getNextSector(lines[i], this)) && other->floorheight < currentheight)
       {
-	int h = other->floorheight;
+	fixed_t h = other->floorheight;
 	while (++i < linecount)
 	  if ((other = getNextSector(lines[i], this)) &&
 	      other->floorheight > h &&
@@ -323,15 +325,14 @@ fixed_t sector_t::FindNextLowestFloor(int currentheight)
 /// Finds the lowest floor in the surrounding sectors higher than currentheight.
 /// If no such sectors exist, returns currentheight.
 // Rewritten by Lee Killough to avoid fixed array and to be faster
-fixed_t sector_t::FindNextHighestFloor(int currentheight)
+fixed_t sector_t::FindNextHighestFloor(fixed_t currentheight)
 {
   sector_t *other;
 
   for (int i=0; i < linecount; i++)
-    if ((other = getNextSector(lines[i], this)) &&
-	other->floorheight > currentheight)
+    if ((other = getNextSector(lines[i], this)) && other->floorheight > currentheight)
       {
-	int h = other->floorheight;
+	fixed_t h = other->floorheight;
 	while (++i < linecount)
 	  if ((other = getNextSector(lines[i], this)) &&
 	      other->floorheight < h &&
@@ -345,15 +346,14 @@ fixed_t sector_t::FindNextHighestFloor(int currentheight)
 
 /// Finds the highest ceiling in the surrounding sectors lower than currentheight.
 /// If no such sectors exist, returns currentheight.
-fixed_t sector_t::FindNextLowestCeiling(int currentheight)
+fixed_t sector_t::FindNextLowestCeiling(fixed_t currentheight)
 {
   sector_t *other;
 
   for (int i=0; i < linecount; i++)
-    if ((other = getNextSector(lines[i], this)) &&
-        other->ceilingheight < currentheight)
+    if ((other = getNextSector(lines[i], this)) && other->ceilingheight < currentheight)
       {
-	int h = other->ceilingheight;
+	fixed_t h = other->ceilingheight;
 	while (++i < linecount)
 	  if ((other = getNextSector(lines[i], this)) &&
 	      other->ceilingheight > h &&
@@ -367,15 +367,14 @@ fixed_t sector_t::FindNextLowestCeiling(int currentheight)
 
 /// Finds the lowest ceiling in the surrounding sectors higher than currentheight.
 /// If no such sectors exist, returns currentheight.
-fixed_t sector_t::FindNextHighestCeiling(int currentheight)
+fixed_t sector_t::FindNextHighestCeiling(fixed_t currentheight)
 {
   sector_t *other;
 
   for (int i=0; i < linecount; i++)
-    if ((other = getNextSector(lines[i], this)) &&
-	other->ceilingheight > currentheight)
+    if ((other = getNextSector(lines[i], this)) && other->ceilingheight > currentheight)
       {
-	int h = other->ceilingheight;
+	fixed_t h = other->ceilingheight;
 	while (++i < linecount)
 	  if ((other = getNextSector(lines[i], this)) &&
 	      other->ceilingheight < h &&
@@ -414,7 +413,7 @@ fixed_t Map::FindShortestLowerAround(sector_t *sec)
 	      minsize = tc[side->bottomtexture]->height;
 	}
     }
-  return minsize << FRACBITS;
+  return minsize;
 }
 
 
@@ -444,7 +443,7 @@ fixed_t Map::FindShortestUpperAround(sector_t *sec)
 	      minsize = tc[side->toptexture]->height;
 	}
     }
-  return minsize << FRACBITS;
+  return minsize;
 }
 
 
@@ -1224,12 +1223,12 @@ void Map::SpawnLineSpecials()
 		{
 		  // Instant lower for floor SSNTails 06-13-2002
 		case 0:
-		  EV_DoFloor(tag, l, floor_t::LnF, MAXINT/2, 0, 0);
+		  EV_DoFloor(tag, l, floor_t::LnF, fixed_t::FMAX/2, 0, 0);
 		  break;
 	  
 		  // Instant raise for ceilings SSNTails 06-13-2002
 		case 1:
-		  EV_DoCeiling(tag, l, ceiling_t::HnC, MAXINT/2, 0, 0);
+		  EV_DoCeiling(tag, l, ceiling_t::HnC, fixed_t::FMAX/2, 0, 0);
 		  break;
 
 		default:
@@ -1318,8 +1317,8 @@ void scroll_t::Think()
       fixed_t height = control->floorheight + control->ceilingheight;
       fixed_t delta = height - last_height;
       last_height = height;
-      tdx = FixedMul(tdx, delta);
-      tdy = FixedMul(tdy, delta);
+      tdx *= delta;
+      tdy *= delta;
     }
 
   if (accel)
@@ -1328,7 +1327,7 @@ void scroll_t::Think()
       vdy = tdy += vdy;
     }
 
-  if (!(tdx | tdy))                   // no-op if both (x,y) offsets 0
+  if (!tdx && !tdy)                   // no-op if both (x,y) offsets 0
     return;
 
   if (type == sc_side)  //Scroll wall texture
@@ -1356,17 +1355,17 @@ void scroll_t::Think()
 
   // Factor to scale scrolling effect into mobj-carrying properties = 3/32.
   // (This is so scrolling floors and objects on them can move at same speed.)
-  const fixed_t CARRYFACTOR = fixed_t(FRACUNIT * 0.09375);
+  const fixed_t CARRYFACTOR = 0.09375f;
 
   if (type & sc_carry_floor)
     {
-      tdx = -FixedMul(tdx, CARRYFACTOR); // it seems texture offsets go the other way?
-      tdy = FixedMul(tdy, CARRYFACTOR);
+      tdx *= -CARRYFACTOR; // it seems texture offsets go the other way?
+      tdy *=  CARRYFACTOR;
 
       fixed_t height = sec->floorheight;
       fixed_t waterheight = sec->heightsec != -1 &&
         mp->sectors[sec->heightsec].floorheight > height ?
-        mp->sectors[sec->heightsec].floorheight : MININT;
+        mp->sectors[sec->heightsec].floorheight : fixed_t::FMIN;
 
       for (msecnode_t *node = sec->touching_thinglist; node; node = node->m_snext)
 	{
@@ -1376,13 +1375,13 @@ void scroll_t::Think()
 	    continue;
 
 	  if (!(thing->flags & MF_NOCLIPLINE) &&
-            (!(thing->flags & MF_NOGRAVITY || thing->z > height) ||
-             thing->z < waterheight))
+	      (!(thing->flags & MF_NOGRAVITY || thing->Feet() > height) ||
+	       thing->Feet() < waterheight))
           {
             // Move objects only if on floor or underwater,
             // non-floating, and clipped.
-            thing->px += tdx;
-            thing->py += tdy;
+            thing->vel.x += tdx;
+            thing->vel.y += tdy;
           }
 	}
     }
@@ -1417,8 +1416,6 @@ scroll_t::scroll_t(short t, fixed_t dx, fixed_t dy, sector_t *csec, int aff, boo
 }
 
 
-// Amount (dx,dy) vector linedef is shifted right to get scroll amount
-#define SCROLL_SHIFT 5
 
 
 // Initialize the scrollers
@@ -1506,8 +1503,8 @@ void Map::SpawnScroller(line_t *l, int tag, int type, int control)
 {
   int s = l->sideptr[0] - sides;
   line_t *l2;
-  fixed_t dx = l->dx >> SCROLL_SHIFT;  // direction and speed of scrolling
-  fixed_t dy = l->dy >> SCROLL_SHIFT;
+  fixed_t dx = l->dx >> scroll_t::SCROLL_SHIFT;  // direction and speed of scrolling
+  fixed_t dy = l->dy >> scroll_t::SCROLL_SHIFT;
 
   // possible control sector
   sector_t *csec = (control & scroll_t::sc_displacement) ? sides[s].sector : NULL;
@@ -1532,10 +1529,9 @@ void Map::SpawnScroller(line_t *l, int tag, int type, int control)
 	      fixed_t x = abs(l2->dx), y = abs(l2->dy), d;
 	      if (y > x)
 		d = x, x = y, y = d;
-	      d = FixedDiv(x, finesine[(tantoangle[FixedDiv(y,x) >> DBITS] + ANG90)
-				      >> ANGLETOFINESHIFT]);
-	      x = -FixedDiv(FixedMul(dy, l2->dy) + FixedMul(dx, l2->dx), d);
-	      y = -FixedDiv(FixedMul(dx, l2->dy) - FixedMul(dy, l2->dx), d);
+	      d = x / finesine[(ArcTan(y / x) + ANG90) >> ANGLETOFINESHIFT];
+	      x = -((dy * l2->dy) + (dx * l2->dx)) / d;
+	      y = -((dx * l2->dy) - (dy * l2->dx)) / d;
 	      AddThinker(new scroll_t(scroll_t::sc_side, x, y, csec, l2->sideptr[0] - sides, accel));
 	    }
       return;
@@ -1643,7 +1639,7 @@ void Map::SpawnFriction(line_t *l, int tag)
   extern float normal_friction;
 
   // line length controls magnitude
-  float length = P_AproxDistance(l->dx,l->dy) >> FRACBITS;
+  float length = P_AproxDistance(l->dx,l->dy).Float();
 
   // l = 200 gives 1, l = 100 gives the original, l = 0 gives 0.8125
 
@@ -1693,21 +1689,20 @@ void Map::SpawnFriction(line_t *l, int tag)
 IMPLEMENT_CLASS(pusher_t, Thinker);
 pusher_t::pusher_t() {}
 
-#define PUSH_FACTOR 7
 
 // constructor
-pusher_t::pusher_t(pusher_e t, int x_m, int y_m, DActor *src, int aff)
+pusher_t::pusher_t(pusher_e t, fixed_t x_m, fixed_t y_m, DActor *src, int aff)
 {
   source = src;
   type = t;
-  x_mag = x_m >> FRACBITS;
-  y_mag = y_m >> FRACBITS;
+  x_mag = x_m;
+  y_mag = y_m;
   magnitude = P_AproxDistance(x_mag, y_mag);
   if (source) // point source exist?
     {
-      radius = (magnitude) << (FRACBITS+1); // where force goes to zero
-      x = src->x;
-      y = src->y;
+      radius = magnitude << 1; // where force goes to zero
+      x = src->pos.x;
+      y = src->pos.y;
     }
   affectee = aff;
 }
@@ -1722,28 +1717,22 @@ bool PIT_PushThing(Actor* thing)
 {
   if (thing->IsOf(PlayerPawn::_type) && !(thing->flags & (MF_NOGRAVITY | MF_NOCLIPLINE)))
     {
-      angle_t pushangle;
-      int dist;
-      int speed;
-      int sx,sy;
-
-      sx = tmpusher->x;
-      sy = tmpusher->y;
-      dist = P_AproxDistance(thing->x - sx,thing->y - sy);
-      speed = (tmpusher->magnitude -
-	       ((dist>>FRACBITS)>>1))<<(FRACBITS-PUSH_FACTOR-1);
+      fixed_t sx = tmpusher->x;
+      fixed_t sy = tmpusher->y;
+      fixed_t dist = P_AproxDistance(thing->pos.x - sx, thing->pos.y - sy);
+      fixed_t speed = (tmpusher->magnitude - (dist >> 1)) >> (pusher_t::PUSH_FACTOR + 1);
 
       // If speed <= 0, you're outside the effective radius. You also have
       // to be able to see the push/pull source point.
 
       if ((speed > 0) && (thing->mp->CheckSight(thing, tmpusher->source)))
 	{
-	  pushangle = R_PointToAngle2(thing->x,thing->y,sx,sy);
+	  angle_t pushangle = R_PointToAngle2(thing->pos.x, thing->pos.y, sx, sy);
 	  if (tmpusher->source->type == MT_PUSH)
 	    pushangle += ANG180;    // away
 	  pushangle >>= ANGLETOFINESHIFT;
-	  thing->px += FixedMul(speed,finecosine[pushangle]);
-	  thing->py += FixedMul(speed,finesine[pushangle]);
+	  thing->vel.x += speed * finecosine[pushangle];
+	  thing->vel.y += speed * finesine[pushangle];
 	}
     }
   return true;
@@ -1792,10 +1781,10 @@ void pusher_t::Think()
       tmpusher = this; // MT_PUSH/MT_PULL point source
       tmb.Set(x, y, radius);
 
-      xl = (tmb[BOXLEFT] - mp->bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
-      xh = (tmb[BOXRIGHT] - mp->bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
-      yl = (tmb[BOXBOTTOM] - mp->bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
-      yh = (tmb[BOXTOP] - mp->bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
+      xl = ((tmb[BOXLEFT] - mp->bmaporgx).floor() - MAXRADIUS) >> MAPBLOCKBITS;
+      xh = ((tmb[BOXRIGHT] - mp->bmaporgx).floor() + MAXRADIUS) >> MAPBLOCKBITS;
+      yl = ((tmb[BOXBOTTOM] - mp->bmaporgy).floor() - MAXRADIUS) >> MAPBLOCKBITS;
+      yh = ((tmb[BOXTOP] - mp->bmaporgy).floor() + MAXRADIUS) >> MAPBLOCKBITS;
       for (bx=xl ; bx<=xh ; bx++)
 	for (by=yl ; by<=yh ; by++)
 	  mp->BlockThingsIterator(bx,by,PIT_PushThing);
@@ -1803,18 +1792,16 @@ void pusher_t::Think()
     }
 
   // constant pushers p_wind and p_current
-  int ht = 0;
+  fixed_t ht = 0;
 
   if (sec->heightsec != -1) // special water sector?
     ht = mp->sectors[sec->heightsec].floorheight;
 
-  Actor   *thing;
-  int xspeed, yspeed;
   msecnode_t *node = sec->touching_thinglist; // things touching this sector
 
   for ( ; node ; node = node->m_snext)
     {
-      thing = node->m_thing;
+      Actor *thing = node->m_thing;
       if (thing->flags & (MF_NOGRAVITY | MF_NOCLIPLINE))
 	continue;
 
@@ -1822,10 +1809,12 @@ void pusher_t::Think()
       if (!thing->IsOf(PlayerPawn::_type))
 	continue;
 
+      fixed_t xspeed, yspeed;
+
       if (type == p_wind)
 	{
 	  if (sec->heightsec == -1) // NOT special water sector
-	    if (thing->z > thing->floorz) // above ground
+	    if (thing->Feet() > thing->floorz) // above ground
 	      {
 		xspeed = x_mag; // full force
 		yspeed = y_mag;
@@ -1837,12 +1826,12 @@ void pusher_t::Think()
 	      }
 	  else // special water sector
 	    {
-	      if (thing->z > ht) // above ground
+	      if (thing->Feet() > ht) // above ground
 		{
 		  xspeed = x_mag; // full force
 		  yspeed = y_mag;
 		}
-	      else if (thing->z + thing->height < ht) // underwater
+	      else if (thing->Top() < ht) // underwater
 		xspeed = yspeed = 0; // no force
 	      else // wading in water
 		{
@@ -1854,7 +1843,7 @@ void pusher_t::Think()
       else // p_current
 	{
 	  if (sec->heightsec == -1) // NOT special water sector
-	    if (thing->z > sec->floorheight) // above ground
+	    if (thing->Feet() > sec->floorheight) // above ground
 	      xspeed = yspeed = 0; // no force
 	    else // on ground
 	      {
@@ -1862,7 +1851,7 @@ void pusher_t::Think()
 		yspeed = y_mag;
 	      }
 	  else // special water sector
-	    if (thing->z > ht) // above ground
+	    if (thing->Feet() > ht) // above ground
 	      xspeed = yspeed = 0; // no force
 	    else // underwater
 	      {
@@ -1870,8 +1859,8 @@ void pusher_t::Think()
 		yspeed = y_mag;
 	      }
 	}
-      thing->px += xspeed<<(FRACBITS-PUSH_FACTOR);
-      thing->py += yspeed<<(FRACBITS-PUSH_FACTOR);
+      thing->vel.x += xspeed >> PUSH_FACTOR;
+      thing->vel.y += yspeed >> PUSH_FACTOR;
     }
 }
 

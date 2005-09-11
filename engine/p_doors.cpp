@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.20  2005/06/05 19:32:24  smite-meister
 // unsigned map structures
 //
@@ -131,7 +134,7 @@ vdoor_t::vdoor_t(Map *m, byte t, sector_t *s, fixed_t sp, int delay)
     case Open:
     case OwC:
       direction = 1;
-      topheight = s->FindLowestCeilingSurrounding() - 4*FRACUNIT;
+      topheight = s->FindLowestCeilingSurrounding() - 4;
       if (topheight != s->ceilingheight)
 	MakeSound(true);
       break;
@@ -186,7 +189,7 @@ void vdoor_t::Think()
 	    case Open:
 	    case OwC:
 	      direction = 1;
-	      topheight = sector->FindLowestCeilingSurrounding() - 4*FRACUNIT;
+	      topheight = sector->FindLowestCeilingSurrounding() - 4;
 	      if (topheight != sector->ceilingheight)
 		MakeSound(true);
 	      break;
@@ -308,7 +311,7 @@ int Map::EV_DoDoor(int tag, line_t *line, Actor *mo, byte type, fixed_t speed, i
   int secnum = -1;
   int rtn = 0;
 
-  if (speed >= 8*FRACUNIT)
+  if (speed >= 8)
     type |= vdoor_t::Blazing;
 
   if (tag)

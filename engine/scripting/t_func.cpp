@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.31  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.30  2005/07/20 20:27:22  smite-meister
 // adv. texture cache
 //
@@ -125,6 +128,7 @@
 #include "m_random.h"
 
 #include "p_spec.h"
+#include "p_maputl.h"
 
 #include "r_data.h"
 #include "r_main.h"
@@ -781,10 +785,10 @@ void SF_Spawn()
   mobjtype_t objtype = mobjtype_t(intvalue(t_argv[0]));
 
   fixed_t x, y, z;
-  x = intvalue(t_argv[1]) << FRACBITS;
-  y = intvalue(t_argv[2]) << FRACBITS;
+  x = intvalue(t_argv[1]);
+  y = intvalue(t_argv[2]);
   if (t_argc >= 5)
-    z = intvalue(t_argv[4]) << FRACBITS;
+    z = intvalue(t_argv[4]);
   else
     {
       // SoM: Check thing flags for spawn-on-ceiling types...
@@ -800,7 +804,7 @@ void SF_Spawn()
     { script_error("unknown object type: %i\n", objtype); return; }
 
   t_return.value.mobj = current_map->SpawnDActor(x,y,z, objtype);
-  t_return.value.mobj->angle = angle;
+  t_return.value.mobj->yaw = angle;
 }
 
 
@@ -862,7 +866,7 @@ void SF_ObjX()
   Actor *mo = t_argc ? MobjForSvalue(t_argv[0]) : current_script->trigger;
 
   t_return.type = svt_fixed;
-  t_return.value.f = mo ? mo->x : 0;   // null ptr check
+  t_return.value.i = mo ? mo->pos.x.value() : 0;   // null ptr check
 }
 
 void SF_ObjY()
@@ -870,7 +874,7 @@ void SF_ObjY()
   Actor *mo = t_argc ? MobjForSvalue(t_argv[0]) : current_script->trigger;
 
   t_return.type = svt_fixed;
-  t_return.value.f = mo ? mo->y : 0; // null ptr check
+  t_return.value.i = mo ? mo->pos.y.value() : 0; // null ptr check
 }
 
 void SF_ObjZ()
@@ -878,7 +882,7 @@ void SF_ObjZ()
   Actor *mo = t_argc ? MobjForSvalue(t_argv[0]) : current_script->trigger;
 
   t_return.type = svt_fixed;
-  t_return.value.f = mo ? mo->z : 0; // null ptr check
+  t_return.value.i = mo ? mo->pos.z.value() : 0; // null ptr check
 }
 
         // mobj angle
@@ -887,7 +891,7 @@ void SF_ObjAngle()
   Actor *mo = t_argc ? MobjForSvalue(t_argv[0]) : current_script->trigger;
 
   t_return.type = svt_fixed;
-  t_return.value.f = mo ? AngleToFixed(mo->angle) : 0;   // null ptr check
+  t_return.value.i = mo ? AngleToFixed(mo->yaw).value() : 0;   // null ptr check
 }
 
 
@@ -1073,8 +1077,8 @@ void SF_PushThing()
   angle_t angle = FixedToAngle(fixedvalue(t_argv[1]));
   fixed_t force = fixedvalue(t_argv[2]);
 
-  mo->px += FixedMul(finecosine[angle >> ANGLETOFINESHIFT], force);
-  mo->py += FixedMul(finesine[angle >> ANGLETOFINESHIFT], force);
+  mo->vel.x += Cos(angle) * force;
+  mo->vel.y += Sin(angle) * force;
 }
 
 
@@ -1141,7 +1145,7 @@ void SF_MobjTarget()
 void SF_MobjMomx()
 {
   t_return.type = svt_fixed;
-  t_return.value.f = 0;
+  t_return.value.i = 0;
 
   if (t_argc < 1)
     {
@@ -1155,17 +1159,17 @@ void SF_MobjMomx()
 
   if (t_argc > 1)
     {
-      mo->px = fixedvalue(t_argv[1]);
+      mo->vel.x = fixedvalue(t_argv[1]);
     }
 
-  t_return.value.f = mo->px;
+  t_return.value.i = mo->vel.x.value();
 }
 
 
 void SF_MobjMomy()
 {
   t_return.type = svt_fixed;
-  t_return.value.f = 0;
+  t_return.value.i = 0;
 
   if (t_argc < 1)
     {
@@ -1179,17 +1183,17 @@ void SF_MobjMomy()
 
   if (t_argc > 1)
     {
-      mo->py = fixedvalue(t_argv[1]);
+      mo->vel.y = fixedvalue(t_argv[1]);
     }
 
-  t_return.value.f = mo->py;
+  t_return.value.i = mo->vel.y.value();
 }
 
 
 void SF_MobjMomz()
 {
   t_return.type = svt_fixed;
-  t_return.value.f = 0;
+  t_return.value.i = 0;
 
   if (t_argc < 1)
     {
@@ -1203,10 +1207,10 @@ void SF_MobjMomz()
 
   if (t_argc > 1)
     {
-      mo->pz = fixedvalue(t_argv[1]);
+      mo->vel.z = fixedvalue(t_argv[1]);
     }
 
-  t_return.value.f = mo->pz;
+  t_return.value.i = mo->vel.z.value();
 }
 
 /****************** Trig *********************/
@@ -1222,13 +1226,13 @@ void SF_PointToAngle()
     }
 
   fixed_t x1, y1, x2, y2;
-  x1 = intvalue(t_argv[0]) << FRACBITS;
-  y1 = intvalue(t_argv[1]) << FRACBITS;
-  x2 = intvalue(t_argv[2]) << FRACBITS;
-  y2 = intvalue(t_argv[3]) << FRACBITS;
+  x1 = intvalue(t_argv[0]);
+  y1 = intvalue(t_argv[1]);
+  x2 = intvalue(t_argv[2]);
+  y2 = intvalue(t_argv[3]);
 
   angle_t angle = R_PointToAngle2(x1, y1, x2, y2);
-  t_return.value.f = AngleToFixed(angle);
+  t_return.value.i = AngleToFixed(angle).value();
 }
 
 
@@ -1244,12 +1248,12 @@ void SF_PointToDist()
     }
 
   fixed_t x1, x2, y1, y2;
-  x1 = intvalue(t_argv[0]) << FRACBITS;
-  y1 = intvalue(t_argv[1]) << FRACBITS;
-  x2 = intvalue(t_argv[2]) << FRACBITS;
-  y2 = intvalue(t_argv[3]) << FRACBITS;
+  x1 = intvalue(t_argv[0]);
+  y1 = intvalue(t_argv[1]);
+  x2 = intvalue(t_argv[2]);
+  y2 = intvalue(t_argv[3]);
 
-  t_return.value.f = R_PointToDist2(x1, y1, x2, y2);
+  t_return.value.i = R_PointToDist2(x1, y1, x2, y2).value();
 }
 
 
@@ -1283,13 +1287,13 @@ void SF_SetCamera()
     }
 
   // Why do we reset the angle but not the position?
-  cam->angle = (t_argc < 2) ? ANG45*(cam->spawnpoint->angle/45) : FixedToAngle(fixedvalue(t_argv[1]));
+  cam->yaw = (t_argc < 2) ? ANG45*(cam->spawnpoint->angle/45) : FixedToAngle(fixedvalue(t_argv[1]));
 
   // Why an absolute height value and not height above floor?
-  cam->z = (t_argc < 3) ? (cam->subsector->sector->floorheight + 41*FRACUNIT) : fixedvalue(t_argv[2]);
+  cam->pos.z = (t_argc < 3) ? (cam->subsector->sector->floorheight + 41) : fixedvalue(t_argv[2]);
 
   angle_t aiming = (t_argc < 4) ? 0 : FixedToAngle(fixedvalue(t_argv[3]));
-  cam->aiming = G_ClipAimingPitch(aiming);
+  cam->pitch = G_ClipAimingPitch(aiming);
 
   // Camera has been created and oriented. Now use it as POV for players:
 
@@ -1297,7 +1301,7 @@ void SF_SetCamera()
   for (int i=0; i<n; i++)
     current_map->players[i]->pov = cam; // FIXME loses personal chasecams!
 
-  t_return.value.f = cam->aiming;
+  t_return.value.i = cam->pitch;
 }
 
 
@@ -1342,9 +1346,9 @@ void SF_MoveCamera()
   anglespeed = FixedToAngle(fixedvalue(t_argv[5]));
 
   // Figure out how big the step will be
-  xdist = target->x - camera->x;
-  ydist = target->y - camera->y;
-  zdist = targetheight - camera->z;
+  xdist = target->pos.x - camera->pos.x;
+  ydist = target->pos.y - camera->pos.y;
+  zdist = targetheight - camera->pos.z;
 
   // Angle checking...
   //    90
@@ -1353,13 +1357,13 @@ void SF_MoveCamera()
   //   Q2|Q3
   //    270
   quad1 = targetangle / ANG90;
-  quad2 = camera->angle / ANG90;
-  bigangle = targetangle > camera->angle ? targetangle : camera->angle;
-  smallangle = targetangle < camera->angle ? targetangle : camera->angle;
+  quad2 = camera->yaw / ANG90;
+  bigangle = targetangle > camera->yaw ? targetangle : camera->yaw;
+  smallangle = targetangle < camera->yaw ? targetangle : camera->yaw;
   if((quad1 > quad2 && quad1 - 1 == quad2) || (quad2 > quad1 && quad2 - 1 == quad1) || quad1 == quad2)
   {
     angledist = bigangle - smallangle;
-    angledir = targetangle > camera->angle ? 1 : -1;
+    angledir = targetangle > camera->yaw ? 1 : -1;
   }
   else
   {
@@ -1379,31 +1383,31 @@ void SF_MoveCamera()
       if(angledist > ANG180)
       {
         angledist = (bigangle + ANG180) - (smallangle + ANG180);
-        angledir = targetangle > camera->angle ? -1 : 1;
+        angledir = targetangle > camera->yaw ? -1 : 1;
       }
       else
-        angledir = targetangle > camera->angle ? 1 : -1;
+        angledir = targetangle > camera->yaw ? 1 : -1;
     }
   }
 
-  //CONS_Printf("angle: cam=%i, target=%i; dir: %i; quads: 1=%i, 2=%i\n", camera->angle / ANGLE_1, targetangle / ANGLE_1, angledir, quad1, quad2);
+  //CONS_Printf("angle: cam=%i, target=%i; dir: %i; quads: 1=%i, 2=%i\n", camera->yaw / ANGLE_1, targetangle / ANGLE_1, angledir, quad1, quad2);
   // set the step variables based on distance and speed...
-  mobjangle = R_PointToAngle2(camera->x, camera->y, target->x, target->y);
+  mobjangle = R_PointToAngle2(camera->pos, target->pos);
 
-  if(movespeed)
+  if (movespeed != 0)
   {
-    xydist = R_PointToDist2(camera->x, camera->y, target->x, target->y);
-    xstep = FixedMul(finecosine[mobjangle >> ANGLETOFINESHIFT], movespeed);
-    ystep = FixedMul(finesine[mobjangle >> ANGLETOFINESHIFT], movespeed);
-    if(xydist)
-      zstep = FixedDiv(zdist, FixedDiv(xydist, movespeed));
+    xydist = R_PointToDist2(camera->pos.x, camera->pos.y, target->pos.x, target->pos.y);
+    xstep = Cos(mobjangle) * movespeed;
+    ystep = Sin(mobjangle) * movespeed;
+    if (xydist != 0)
+      zstep = zdist / (xydist / movespeed);
     else
       zstep = zdist > 0 ? movespeed : -movespeed;
 
-    if(xydist && !anglespeed)
+    if (xydist != 0 && !anglespeed)
     {
-      fangledist = ((double)angledist / ANGLE_1);
-      fmovestep = ((double)FixedDiv(xydist, movespeed) / FRACUNIT);
+      fangledist = double(angledist) / ANGLE_1;
+      fmovestep = (xydist / movespeed).Float();
       if(fmovestep)
         fanglestep = (fangledist / fmovestep);
       else
@@ -1417,18 +1421,18 @@ void SF_MoveCamera()
       anglestep = anglespeed;
 
     if(abs(xstep) >= (abs(xdist) - 1))
-      x = target->x;
+      x = target->pos.x;
     else
     {
-      x = camera->x + xstep;
+      x = camera->pos.x + xstep;
       moved = 1;
     }
 
     if(abs(ystep) >= (abs(ydist) - 1))
-      y = target->y;
+      y = target->pos.y;
     else
     {
-      y = camera->y + ystep;
+      y = camera->pos.y + ystep;
       moved = 1;
     }
 
@@ -1436,39 +1440,39 @@ void SF_MoveCamera()
       z = targetheight;
     else
     {
-      z = camera->z + zstep;
+      z = camera->pos.z + zstep;
       moved = 1;
     }
   }
   else
   {
-    x = camera->x;
-    y = camera->y;
-    z = camera->z;
+    x = camera->pos.x;
+    y = camera->pos.y;
+    z = camera->pos.z;
   }
 
   if(anglestep >= angledist)
-    camera->angle = targetangle;
+    camera->yaw = targetangle;
   else
   {
     if(angledir == 1)
     {
       moved = 1;
-      camera->angle += anglestep;
+      camera->yaw += anglestep;
     }
     else if(angledir == -1)
     {
       moved = 1;
-      camera->angle -= anglestep;
+      camera->yaw -= anglestep;
     }
   }
 
-  if((x != camera->x || y != camera->y) && !camera->TryMove(x, y, true))
+  if((x != camera->pos.x || y != camera->pos.y) && !camera->TryMove(x, y, true))
   {
     script_error("Illegal camera move\n");
     return;
   }
-  camera->z = z;
+  camera->pos.z = z;
 
 
   t_return.value.i = moved;
@@ -1609,7 +1613,7 @@ void SF_FloorHeight()
         }
     }
   else
-    returnval = s->floorheight >> FRACBITS;
+    returnval = s->floorheight.floor();
 
 
   t_return.value.i = returnval;
@@ -1627,7 +1631,7 @@ void SF_MoveFloor()
     { script_error("insufficient arguments to function\n"); return; }
 
   int tagnum = intvalue(t_argv[0]);
-  fixed_t destheight = intvalue(t_argv[1]) << FRACBITS;
+  fixed_t destheight = intvalue(t_argv[1]);
   fixed_t platspeed = FLOORSPEED * (t_argc > 2 ? intvalue(t_argv[2]) : 1);
 
   // move all sectors with tag
@@ -1681,7 +1685,7 @@ void SF_CeilingHeight()
         }
     }
   else
-    returnval = s->ceilingheight >> FRACBITS;
+    returnval = s->ceilingheight.floor();
 
   // return floorheight
   t_return.value.i = returnval;
@@ -1700,7 +1704,7 @@ void SF_MoveCeiling()
     { script_error("insufficient arguments to function\n"); return; }
 
   int tagnum = intvalue(t_argv[0]);
-  fixed_t destheight = intvalue(t_argv[1]) << FRACBITS;
+  fixed_t destheight = intvalue(t_argv[1]);
   fixed_t platspeed = FLOORSPEED * (t_argc > 2 ? intvalue(t_argv[2]) : 1);
 
   // move all sectors with tag
@@ -1821,15 +1825,15 @@ void SF_SectorColormap()
   if (t_argc > 1)
     {
       int i = -1;
-      int mapnum = R_ColormapNumForName(t_argv[1].value.s);
-      if (mapnum == -1)
+      fadetable_t *cmap = R_FindColormap(t_argv[1].value.s);
+      if (!cmap)
 	{ script_error("colormap %s not found\n", t_argv[1].value.s); return; }
 
       // set all sectors with tag
       while ((i = current_map->FindSectorFromTag(tagnum, i)) >= 0)
         {
           sector_t *p = &current_map->sectors[i];
-          if (mapnum == -1)
+          if (!cmap) // FIXME does not work
             {
               p->midmap = 0;
               p->altheightsec = 0;
@@ -1837,7 +1841,7 @@ void SF_SectorColormap()
             }
           else
             {
-              p->midmap = mapnum;
+              p->midmap = cmap;
               p->altheightsec = 2;
               p->heightsec = 0;
             }
@@ -2121,7 +2125,7 @@ void SF_Max()
   n2 = fixedvalue(t_argv[1]);
 
   t_return.type = svt_fixed;
-  t_return.value.f = n1 > n2 ? n1 : n2;
+  t_return.value.i = n1 > n2 ? n1.value() : n2.value();
 }
 
 
@@ -2140,7 +2144,7 @@ void SF_Min()
   n2 = fixedvalue(t_argv[1]);
 
   t_return.type = svt_fixed;
-  t_return.value.f = n1 < n2 ? n1 : n2;
+  t_return.value.i = n1 < n2 ? n1.value() : n2.value();
 }
 
 
@@ -2157,16 +2161,21 @@ void SF_Abs()
   n1 = fixedvalue(t_argv[0]);
 
   t_return.type = svt_fixed;
-  t_return.value.f = n1 < 0 ? n1 * -1 : n1;
+  t_return.value.i = n1 < 0 ? (-n1).value() : n1.value();
 }
 
 
 //Hurdler: some new math functions
-fixed_t double2fixed(double t)
+static int double2fixed(double t)
 {
+  /*
   double fl = floor(t);
   return ((int)fl << 16) | (int)((t-fl)*65536.0);
+  */
+  return fixed_t(float(t)).value();
 }
+
+
 
 void SF_Sin()
 {
@@ -2178,7 +2187,7 @@ void SF_Sin()
     {
       fixed_t n1 = fixedvalue(t_argv[0]);
       t_return.type = svt_fixed;
-      t_return.value.f = double2fixed(sin(FIXED_TO_FLOAT(n1)));
+      t_return.value.i = double2fixed(sin(n1.Float()));
     }
 }
 
@@ -2192,7 +2201,7 @@ void SF_ASin()
     {
       fixed_t n1 = fixedvalue(t_argv[0]);
       t_return.type = svt_fixed;
-      t_return.value.f = double2fixed(asin(FIXED_TO_FLOAT(n1)));
+      t_return.value.i = double2fixed(asin(n1.Float()));
     }
 }
 
@@ -2206,7 +2215,7 @@ void SF_Cos()
     {
       fixed_t n1 = fixedvalue(t_argv[0]);
       t_return.type = svt_fixed;
-      t_return.value.f = double2fixed(cos(FIXED_TO_FLOAT(n1)));
+      t_return.value.i = double2fixed(cos(n1.Float()));
     }
 }
 
@@ -2220,7 +2229,7 @@ void SF_ACos()
     {
       fixed_t n1 = fixedvalue(t_argv[0]);
       t_return.type = svt_fixed;
-      t_return.value.f = double2fixed(acos(FIXED_TO_FLOAT(n1)));
+      t_return.value.i = double2fixed(acos(n1.Float()));
     }
 }
 
@@ -2234,7 +2243,7 @@ void SF_Tan()
     {
       fixed_t n1 = fixedvalue(t_argv[0]);
       t_return.type = svt_fixed;
-      t_return.value.f = double2fixed(tan(FIXED_TO_FLOAT(n1)));
+      t_return.value.i = double2fixed(tan(n1.Float()));
     }
 }
 
@@ -2248,7 +2257,7 @@ void SF_ATan()
     {
       fixed_t n1 = fixedvalue(t_argv[0]);
       t_return.type = svt_fixed;
-      t_return.value.f = double2fixed(atan(FIXED_TO_FLOAT(n1)));
+      t_return.value.i = double2fixed(atan(n1.Float()));
     }
 }
 
@@ -2262,7 +2271,7 @@ void SF_Exp()
     {
       fixed_t n1 = fixedvalue(t_argv[0]);
       t_return.type = svt_fixed;
-      t_return.value.f = double2fixed(exp(FIXED_TO_FLOAT(n1)));
+      t_return.value.i = double2fixed(exp(n1.Float()));
     }
 }
 
@@ -2276,7 +2285,7 @@ void SF_Log()
     {
       fixed_t n1 = fixedvalue(t_argv[0]);
       t_return.type = svt_fixed;
-      t_return.value.f = double2fixed(log(FIXED_TO_FLOAT(n1)));
+      t_return.value.i = double2fixed(log(n1.Float()));
     }
 }
 
@@ -2290,7 +2299,7 @@ void SF_Sqrt()
     {
       fixed_t n1 = fixedvalue(t_argv[0]);
       t_return.type = svt_fixed;
-      t_return.value.f = double2fixed(sqrt(FIXED_TO_FLOAT(n1)));
+      t_return.value.i = double2fixed(sqrt(n1.Float()));
     }
 }
 
@@ -2304,7 +2313,7 @@ void SF_Floor()
     {
       fixed_t n1 = fixedvalue(t_argv[0]);
       t_return.type = svt_fixed;
-      t_return.value.f = n1 & 0xffFF0000;
+      t_return.value.i = n1.value() & 0xFFFF0000;
     }
 }
 
@@ -2319,7 +2328,7 @@ void SF_Pow()
   n1 = fixedvalue(t_argv[0]);
   n2 = fixedvalue(t_argv[1]);
   t_return.type = svt_fixed;
-  t_return.value.f = double2fixed(pow(FIXED_TO_FLOAT(n1), FIXED_TO_FLOAT(n2)));
+  t_return.value.i = double2fixed(pow(n1.Float(), n2.Float()));
 }
 
 

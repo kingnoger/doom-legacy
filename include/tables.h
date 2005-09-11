@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2005/09/11 16:23:25  smite-meister
+// template classes
+//
 // Revision 1.4  2004/11/04 21:12:54  smite-meister
 // save/load fixed
 //
@@ -33,7 +36,7 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Lookup tables.
+/// \brief Lookup tables for trigonometric functions.
 ///
 /// fixed_t finetangent[FINEANGLES/2]   - tangens LUT
 ///  Maps fineangle_t(alpha + pi/2) to fixed_t(tan(angle)).
@@ -53,9 +56,10 @@
 #ifndef tables_h
 #define tables_h 1
 
+#include "doomtype.h"
 #include "m_fixed.h"
 
-typedef unsigned int angle_t;
+typedef Uint32 angle_t;
 
 
 #define FINEANGLES              8192
@@ -64,14 +68,14 @@ typedef unsigned int angle_t;
 #define AIMINGTOSLOPE(aiming)   finesine[((aiming) >> ANGLETOFINESHIFT) & FINEMASK]
 
 
-// Effective size is 10240.
-extern fixed_t  finesine[5*FINEANGLES/4];
+// Effective size is 10240. [5*FINEANGLES/4]
+extern fixed_t *finesine;
 
 // Re-use data, is just PI/2 phase shift.
 extern fixed_t *finecosine;
 
-// Effective size is 4096.
-extern fixed_t  finetangent[FINEANGLES/2];
+// Effective size is 4096. [FINEANGLES/2]
+extern fixed_t *finetangent;
 
 
 const angle_t ANG45  = 0x20000000;
@@ -84,17 +88,33 @@ const angle_t ANGLE_1   = ANG45 / 45;
 const angle_t ANGLE_60  = ANG180 / 3;
 
 
+/// Encapsulation for tabulated sine, cosine and tangent
+inline fixed_t Sin(angle_t a) { return finesine[a >> ANGLETOFINESHIFT]; }
+inline fixed_t Cos(angle_t a) { return finecosine[a >> ANGLETOFINESHIFT]; }
+inline fixed_t Tan(angle_t a)
+{
+  a += ANG90; // wraps around like angles should
+  return finetangent[a >> ANGLETOFINESHIFT];
+  //return finetangent[(2048 + (a>>ANGLETOFINESHIFT)) & FINEMASK];
+}
+
+
 // to get a global angle from cartesian coordinates, the coordinates are
 // flipped until they are in the first octant of the coordinate system, then
 // the y (<=x) is scaled and divided by x to get a tangent (slope) value
 // which is looked up in the tantoangle[] table.
-#define SLOPERANGE  2048
 #define SLOPEBITS   11
-#define DBITS       (FRACBITS-SLOPEBITS)
+#define SLOPERANGE  2048
 
-// The +1 size is to handle the case when x==y without additional checking.
-extern  angle_t     tantoangle[SLOPERANGE+1];
+/// Encapsulation for arcustangent (for the range 0 <= x <= 1)
+inline angle_t ArcTan(fixed_t x)
+{
+  // The +1 size is to handle the case when x==y without additional checking.
+  extern angle_t tantoangle[SLOPERANGE+1];
 
+  //#define DBITS (fixed_t::FBITS - SLOPEBITS)
+  return tantoangle[(x << SLOPEBITS).floor()];
+}
 
 angle_t R_PointToAngle2(fixed_t x2, fixed_t y2, fixed_t x1, fixed_t y1);
 fixed_t R_PointToDist2(fixed_t x2, fixed_t y2, fixed_t x1, fixed_t y1);

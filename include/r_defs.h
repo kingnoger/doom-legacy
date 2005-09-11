@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2005/09/11 16:23:25  smite-meister
+// template classes
+//
 // Revision 1.18  2005/07/31 14:50:25  smite-meister
 // thing spawning fix
 //
@@ -283,7 +286,7 @@ struct sector_t
   float gravity;  // TEST
   float friction, movefactor;  // friction belongs here, not in Actor
 
-  int bottommap, midmap, topmap; // dynamic colormaps
+  class fadetable_t *bottommap, *midmap, *topmap; // dynamic colormaps
 
   // list of mobjs that are at least partially in the sector
   // thinglist is a subset of touching_thinglist
@@ -305,7 +308,7 @@ struct sector_t
   bool                       added;
 
   // SoM: 4/3/2000: per-sector colormaps!
-  struct extracolormap_t    *extra_colormap;
+  fadetable_t *extra_colormap;
 
   // ----- for special tricks with HW renderer -----
   bool                       pseudoSector;
@@ -324,10 +327,10 @@ public:
   fixed_t FindLowestCeilingSurrounding();
   fixed_t FindHighestCeilingSurrounding();
 
-  fixed_t FindNextLowestFloor(int currentheight);
-  fixed_t FindNextHighestFloor(int currentheight);
-  fixed_t FindNextLowestCeiling(int currentheight);
-  fixed_t FindNextHighestCeiling(int currentheight);
+  fixed_t FindNextLowestFloor(fixed_t currentheight);
+  fixed_t FindNextHighestFloor(fixed_t currentheight);
+  fixed_t FindNextLowestCeiling(fixed_t currentheight);
+  fixed_t FindNextHighestCeiling(fixed_t currentheight);
 
   int FindMinSurroundingLight(int max);
   enum special_e

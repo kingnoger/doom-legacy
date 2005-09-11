@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.8  2005/05/26 17:22:51  smite-meister
 // windows alpha fix
 //
@@ -908,7 +911,7 @@ void Menu::DrawMenu()
   // draw the skull cursor (or a blinking star)
   if ((items[itemOn].flags & IT_DISPLAY_MASK) < IT_STRING)
     pointer[which_pointer]->Draw(x-32, cursory-5, V_SCALE);
-  else if (AnimCount<4 * NEWTICRATERATIO)  //blink cursor
+  else if (AnimCount < 4)  //blink cursor
     hud_font->DrawCharacter(x - 10, cursory, '*' | 0x80, V_SCALE);
 }
 
@@ -2011,10 +2014,7 @@ void Menu::DrawSetupPlayer()
   spriteframe_t *sprframe  = multi_pres->GetFrame();
 
   int color = cv_menu_playercolor.value;
-  if (color == 0)
-    current_colormap = colormaps;
-  else
-    current_colormap = (byte *)translationtables - 256 + (color << 8);
+  current_colormap = translationtables[color];
 
   // draw player sprites
   sprframe->tex[0]->Draw(12 +(PLBOXW*8/2),y+44+(PLBOXH*8), V_SCALE | V_MAP);
@@ -3052,7 +3052,7 @@ bool Menu::Responder(event_t *ev)
 	    if (cv->flags & CV_FLOAT)
 	      {
 		char s[20];
-		sprintf(s, "%.4f", float(cv->value)/FRACUNIT + change*(1.0/16.0));
+		sprintf(s, "%.4f", float(cv->value)/fixed_t::UNIT + change*(1.0f/16.0f));
 		cv->Set(s);
 	      }
 	    else

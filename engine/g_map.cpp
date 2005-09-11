@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.60  2005/09/11 16:22:53  smite-meister
+// template classes
+//
 // Revision 1.59  2005/07/20 20:27:19  smite-meister
 // adv. texture cache
 //
@@ -132,8 +135,8 @@
 #include "tables.h"
 
 
+const fixed_t FLOATRANDZ = fixed_t::FMAX-1;
 
-#define FLOATRANDZ      (MAXINT-1)
 
 // Map class constructor
 Map::Map(MapInfo *i)
@@ -246,40 +249,33 @@ Map::~Map()
 void Map::SpawnActor(Actor *p)
 {
   AddThinker(p);     // AddThinker sets Map *mp
-  p->CheckPosition(p->x, p->y); // TEST, sets tmfloorz, tmceilingz
+  p->CheckPosition(p->pos.x, p->pos.y); // TEST, sets tmfloorz, tmceilingz
   p->SetPosition();  // set subsector and/or block links
 }
 
 
-// when player moves in water
-// SoM: Passing the Z height saves extra calculations...
-void Map::SpawnSplash(Actor *mo, fixed_t z)
+// when something disturbs a liquid surface, we get a splash
+DActor *Map::SpawnSplash(const vec_t<fixed_t>& pos, fixed_t z, int sound, mobjtype_t base,
+		      mobjtype_t chunk, bool randtics)
 {
-  // need to touch the surface because the splashes only appear at surface
-  if (mo->z > z || mo->z + mo->height < z)
-    return;
+  // spawn a base splash
+  DActor *p = SpawnDActor(pos.x, pos.y, z, base);
+  S_StartSound(p, sound);
 
-  // note pos +1 +1 so it doesn't eat the sound of the player..
-  DActor *th = SpawnDActor(mo->x+1, mo->y+1, z, MT_SPLASH);
-  //if( z - mo->subsector->sector->floorheight > 4*FRACUNIT)
-  S_StartSound(th, sfx_splash);
-  //else
-  //    S_StartSound (th,sfx_splash);
-  th->tics -= P_Random() & 3;
+  if (randtics)
+    {
+      p->tics -= P_Random() & 3;
 
-  if (th->tics < 1)
-    th->tics = 1;
+      if (p->tics < 1)
+	p->tics = 1;
+    }
 
-  // get rough idea of speed
-  /*
-    thrust = (mo->px + mo->py) >> FRACBITS+1;
+  if (chunk == MT_NONE)
+    return p;
 
-    if (thrust >= 2 && thrust<=3)
-    th->SetState(S_SPLASH2);
-    else
-    if (thrust < 2)
-    th->SetState(S_SPLASH3);
-  */
+  // and possibly an additional chunk
+  p = SpawnDActor(pos.x, pos.y, z, chunk);
+  return p;
 }
 
 
@@ -295,7 +291,7 @@ static bool PTR_BloodTraverse(intercept_t *in)
   if (in->isaline)
     {
       line_t *li = in->line;
-      fixed_t z = bloodthing->z + (P_SignedRandom()<<(FRACBITS-3));
+      fixed_t z = bloodthing->pos.z + P_SignedFRandom(3);
       if (li->flags & ML_TWOSIDED)
 	{
 	  line_opening_t *open = P_LineOpening(li);
@@ -323,10 +319,10 @@ static bool PTR_BloodTraverse(intercept_t *in)
 
 
 // First calls SpawnBlood for the usual blood sprites, then spawns blood splats around on walls.
-void Map::SpawnBloodSplats(fixed_t x, fixed_t y, fixed_t z, int damage, fixed_t px, fixed_t py)
+void Map::SpawnBloodSplats(const vec_t<fixed_t>& r, int damage, fixed_t px, fixed_t py)
 {
   // spawn the usual falling blood sprites at location
-  bloodthing = SpawnBlood(x,y,z,damage);
+  bloodthing = SpawnBlood(r, damage);
 
   fixed_t x2,y2;
   angle_t angle;
@@ -346,9 +342,9 @@ void Map::SpawnBloodSplats(fixed_t x, fixed_t y, fixed_t z, int damage, fixed_t 
   else
     {
       // get direction of damage
-      x2 = x + px;
-      y2 = y + py;
-      angle = R_PointToAngle2(x, y, x2, y2);
+      x2 = r.x + px;
+      y2 = r.y + py;
+      angle = R_PointToAngle2(r.x, r.y, x2, y2);
     }
 
   int distance = damage * 6;
@@ -359,22 +355,22 @@ void Map::SpawnBloodSplats(fixed_t x, fixed_t y, fixed_t z, int damage, fixed_t 
 
   //CONS_Printf ("spawning %d bloodsplats at distance of %d\n", numsplats, distance);
   //CONS_Printf ("damage %d\n", damage);
-  blood_x = x;
-  blood_y = y;
+  blood_x = r.x;
+  blood_y = r.y;
 
   for (int i=0; i<numsplats; i++)
     {
       // find random angle between 0-180deg centered on damage angle
       angle_t anglesplat = angle + (((P_Random() - 128) * FINEANGLES/512*anglemul)<<ANGLETOFINESHIFT);
-      x2 = x + distance*finecosine[anglesplat>>ANGLETOFINESHIFT];
-      y2 = y + distance*finesine[anglesplat>>ANGLETOFINESHIFT];
+      x2 = r.x + distance*finecosine[anglesplat>>ANGLETOFINESHIFT];
+      y2 = r.y + distance*finesine[anglesplat>>ANGLETOFINESHIFT];
       
-      PathTraverse(x, y, x2, y2, PT_ADDLINES, PTR_BloodTraverse);
+      PathTraverse(r.x, r.y, x2, y2, PT_ADDLINES, PTR_BloodTraverse);
   }
 
 #ifdef FLOORSPLATS
   // add a test floor splat
-  R_AddFloorSplat(bloodthing->subsector, "STEP2", x, y, bloodthing->floorz, SPLATDRAWMODE_SHADE);
+  R_AddFloorSplat(bloodthing->subsector, "STEP2", r.x, r.y, bloodthing->floorz, SPLATDRAWMODE_SHADE);
 #endif
 }
 
@@ -382,13 +378,11 @@ void Map::SpawnBloodSplats(fixed_t x, fixed_t y, fixed_t z, int damage, fixed_t 
 // spawn a blood sprite with falling z movement, at location
 // the duration and first sprite frame depends on the damage level
 // the more damage, the longer is the sprite animation
-DActor *Map::SpawnBlood(fixed_t x, fixed_t y, fixed_t z, int damage)
+DActor *Map::SpawnBlood(const vec_t<fixed_t>& r, int damage)
 {
-  DActor *th = SpawnDActor(x, y, z+(P_SignedRandom() << 10), MT_BLOOD);
+  DActor *th = SpawnDActor(r.x, r.y, r.z + P_SignedFRandom(6), MT_BLOOD);
 
-  th->px = P_SignedRandom()<<12;
-  th->py = P_SignedRandom()<<12;
-  th->pz = FRACUNIT*2;
+  th->vel.Set(P_SignedFRandom(4), P_SignedFRandom(4), fixed_t(2));
   th->tics -= P_Random()&3;
 
   if (th->tics < 1)
@@ -409,12 +403,12 @@ DActor *Map::SpawnBlood(fixed_t x, fixed_t y, fixed_t z, int damage)
 
 void Map::SpawnSmoke(fixed_t x, fixed_t y, fixed_t z)
 {
-  x = x - ((P_Random()&8) * FRACUNIT) - 4*FRACUNIT;
-  y = y - ((P_Random()&8) * FRACUNIT) - 4*FRACUNIT;
-  z += (P_Random()&3) * FRACUNIT;
+  x += (P_Random() & 8) - 4;
+  y += (P_Random() & 8) - 4;
+  z += P_Random() & 3;
 
   DActor *th = SpawnDActor(x,y,z, MT_SMOK);
-  th->pz = FRACUNIT;
+  th->vel.z = 1;
   th->tics -= P_Random() & 3;
 
   if (th->tics < 1)
@@ -469,23 +463,23 @@ DActor *Map::SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
 	//   fprintf(stderr,"barrel at z %d floor %d ceiling %d\n",z,floorz,ceilingz);
         }
         else*/
-      p->z = p->floorz;
+      p->pos.z = p->floorz;
     }
   else if (nz == ONCEILINGZ)
-    p->z = p->ceilingz - p->height;
+    p->pos.z = p->ceilingz - p->height;
   else if (nz == FLOATRANDZ)
     {
       fixed_t space = p->ceilingz - p->height - p->floorz;
-      if (space > 48*FRACUNIT)
+      if (space > 48)
         {
-	  space -= 40*FRACUNIT;
-	  p->z = ((space*P_Random()) >> 8) + p->floorz + 40*FRACUNIT;
+	  space -= 40;
+	  p->pos.z = ((space*P_Random()) >> 8) + p->floorz + 40;
         }
       else
-	p->z = p->floorz;
+	p->pos.z = p->floorz;
     }
   else
-    p->z = nz;
+    p->pos.z = nz;
 
   if ((p->flags2 & MF2_FOOTCLIP) && (p->subsector->sector->floortype >= FLOOR_LIQUID)
       && (p->floorz == p->subsector->sector->floorheight))
@@ -504,8 +498,8 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
 {
   fixed_t     nx, ny, nz;
 
-  nx = mthing->x << FRACBITS;
-  ny = mthing->y << FRACBITS;
+  nx = mthing->x;
+  ny = mthing->y;
   nz = ONFLOORZ;
 
   PlayerPawn *p;
@@ -521,15 +515,13 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
   else
     {
       p = pi->pawn;
-      p->x = nx;
-      p->y = ny;
-      p->z = nz;
-      p->px = p->py = p->pz = 0;
+      p->pos.Set(nx, ny, nz);
+      p->vel.Set(0, 0, 0);
     }
 
   AddThinker(p); // AddThinker sets Map *mp
   // set subsector and/or block links
-  p->CheckPosition(p->x, p->y); // TEST, sets tmfloorz, tmceilingz
+  p->CheckPosition(p->pos.x, p->pos.y); // TEST, sets tmfloorz, tmceilingz
   p->SetPosition();
 
   // Boris stuff
@@ -537,7 +529,7 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
     p->UseFavoriteWeapon();
 
   p->eflags |= MFE_ONGROUND;
-  p->z = p->floorz;
+  p->pos.z = p->floorz;
 
   mthing->mobj = p;
 
@@ -545,10 +537,10 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
   // set color translations for player sprites
   p->color = pi->options.color;
 
-  p->angle = ANG45 * (mthing->angle/45);
+  p->yaw = ANG45 * (mthing->angle/45);
 
-  pi->viewheight = cv_viewheight.value<<FRACBITS;
-  pi->viewz = p->z + pi->viewheight;
+  pi->viewheight = cv_viewheight.value;
+  pi->viewz = p->pos.z + pi->viewheight;
 
   pi->playerstate = PST_ALIVE;
 
@@ -588,10 +580,10 @@ DActor *Map::SpawnMapThing(mapthing_t *mt, bool initial)
   if (cv_nomonsters.value && (t == MT_SKULL || (mobjinfo[t].flags & MF_COUNTKILL)))
     return NULL;
 
-  fixed_t nx, ny, nz;
   // spawn it
-  nx = mt->x << FRACBITS;
-  ny = mt->y << FRACBITS;
+  fixed_t nx = mt->x;
+  fixed_t ny = mt->y;
+  fixed_t nz;
 
   if (mobjinfo[t].flags & MF_SPAWNCEILING)
     nz = ONCEILINGZ;
@@ -605,9 +597,9 @@ DActor *Map::SpawnMapThing(mapthing_t *mt, bool initial)
 
   DActor *p = SpawnDActor(nx, ny, nz, mobjtype_t(t));
   if (nz == ONFLOORZ)
-    p->z += mt->z << FRACBITS;
+    p->pos.z += mt->z;
   else if (nz == ONCEILINGZ)
-    p->z -= mt->z << FRACBITS;
+    p->pos.z -= mt->z;
 
   p->spawnpoint = mt;
   p->tid = mt->tid;
@@ -625,7 +617,7 @@ DActor *Map::SpawnMapThing(mapthing_t *mt, bool initial)
   if (p->flags2 & MF2_FLOATBOB)
     {
       p->reactiontime = P_Random();
-      //p->special1 = mt->z << FRACBITS; // TODO floating height
+      p->special1 = mt->z; // floating height (integer, NOT fixed_t)
     }
 
   if (p->tics > 0)
@@ -645,7 +637,7 @@ DActor *Map::SpawnMapThing(mapthing_t *mt, bool initial)
       S_StartSound(fog, sfx_itemrespawn);
     }
 
-  p->angle = ANG45 * (mt->angle/45);
+  p->yaw = ANG45 * (mt->angle/45);
   if (mt->flags & MTF_AMBUSH)
     p->flags |= MF_AMBUSH;
 
@@ -682,9 +674,8 @@ bool Map::CheckRespawnSpot(PlayerInfo *p, mapthing_t *mthing)
   if ((maptic & 0xFFFF) < (unsigned short)mthing->type)
     return false;
 
-  fixed_t x, y;
-  x = mthing->x << FRACBITS;
-  y = mthing->y << FRACBITS;
+  fixed_t x = mthing->x;
+  fixed_t y = mthing->y;
   subsector_t *ss = R_PointInSubsector(x,y);
 
   // check for respawn in team-sector

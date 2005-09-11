@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2005/09/11 16:23:09  smite-meister
+// template classes
+//
 // Revision 1.22  2005/07/18 12:32:45  smite-meister
 // fix
 //
@@ -819,9 +822,9 @@ Far attack frame = 32    S_PLAY_ATK1,    // missilestate
 Death frame = 32         S_PLAY_DIE1,    // deathstate
 Exploding frame = 32     S_PLAY_XDIE1,   // xdeathstate
 Death sound = 32         sfx_pldeth,     // deathsound
-Speed = 3232             0,              // speed
-Width = 211812352        16*FRACUNIT,    // radius
-Height = 211812352       56*FRACUNIT,    // height
+Speed = 3232             0,           // speed   These three are given in 16.16 fixed point
+Width = 211812352        16,          // radius    *
+Height = 211812352       56,          // height    *
 Mass = 3232              100,            // mass
 Missile damage = 3232    0,              // damage
 Action sound = 32        sfx_None,       // activesound
@@ -880,9 +883,9 @@ void dehacked_t::Read_Thing(const char *str)
 	    }
 	  else if (!strcasecmp(word,"sound")) mobjinfo[t].deathsound  = SoundMap(value);
 	}
-      else if (!strcasecmp(word,"Speed"))     mobjinfo[t].speed       = float(value)/FRACUNIT;
-      else if (!strcasecmp(word,"Width"))     mobjinfo[t].radius      = value;
-      else if (!strcasecmp(word,"Height"))    mobjinfo[t].height      = value;
+      else if (!strcasecmp(word,"Speed"))     mobjinfo[t].speed       = float(value)/fixed_t::UNIT;
+      else if (!strcasecmp(word,"Width"))     mobjinfo[t].radius      = float(value)/fixed_t::UNIT;
+      else if (!strcasecmp(word,"Height"))    mobjinfo[t].height      = float(value)/fixed_t::UNIT;
       else if (!strcasecmp(word,"Mass"))      mobjinfo[t].mass        = value;
       else if (!strcasecmp(word,"Missile"))   mobjinfo[t].damage      = value;
       else if (!strcasecmp(word,"Action"))    mobjinfo[t].activesound = SoundMap(value);

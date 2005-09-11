@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1996 by Raven Software, Corp.
-// Copyright (C) 2003-2004 by DooM Legacy Team.
+// Copyright (C) 2003-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.14  2004/11/18 20:30:12  smite-meister
 // tnt, plutonia
 //
@@ -92,15 +95,15 @@ void AdjustPlayerAngle(Actor *pmo)
   angle_t angle;
   int difference;
 
-  angle = R_PointToAngle2(pmo->x, pmo->y, linetarget->x, linetarget->y);
-  difference = (int)angle-(int)pmo->angle;
+  angle = R_PointToAngle2(pmo->pos, linetarget->pos);
+  difference = int(angle) - int(pmo->yaw);
   if(abs(difference) > MAX_ANGLE_ADJUST)
     {
-      pmo->angle += difference > 0 ? MAX_ANGLE_ADJUST : -MAX_ANGLE_ADJUST;
+      pmo->yaw += difference > 0 ? MAX_ANGLE_ADJUST : -MAX_ANGLE_ADJUST;
     }
   else
     {
-      pmo->angle = angle;
+      pmo->yaw = angle;
     }
 }
 
@@ -114,10 +117,10 @@ void A_SnoutAttack(PlayerPawn *player, pspdef_t *psp)
 {
   angle_t angle;
   int damage;
-  int slope;
+  fixed_t slope;
 
   damage = 3+(P_Random()&3);
-  angle = player->angle;
+  angle = player->yaw;
   slope = player->AimLineAttack(angle, MELEERANGE);
   PuffType = MT_SNOUTPUFF;
   PuffSpawned = NULL;
@@ -126,7 +129,7 @@ void A_SnoutAttack(PlayerPawn *player, pspdef_t *psp)
   if(linetarget)
     {
       AdjustPlayerAngle(player);
-      //		player->angle = R_PointToAngle2(player->x,
+      //		player->yaw = R_PointToAngle2(player->x,
       //			player->y, linetarget->x, linetarget->y);
       if(PuffSpawned)
 	{ // Bit something
@@ -146,15 +149,15 @@ void A_SnoutAttack(PlayerPawn *player, pspdef_t *psp)
 void A_FHammerAttack(PlayerPawn *player, pspdef_t *psp)
 {
   angle_t angle;
-  int slope;
+  fixed_t slope;
   int i;
 
   int damage = 60+(P_Random()&63);
-  fixed_t power = 10*FRACUNIT;
+  fixed_t power = 10;
   PuffType = MT_HAMMERPUFF;
   for(i = 0; i < 16; i++)
     {
-      angle = player->angle+i*(ANG45/32);
+      angle = player->yaw+i*(ANG45/32);
       slope = player->AimLineAttack(angle, HAMMER_RANGE);
       if(linetarget)
 	{
@@ -168,7 +171,7 @@ void A_FHammerAttack(PlayerPawn *player, pspdef_t *psp)
 	  player->attackphase = false; // Don't throw a hammer
 	  goto hammerdone;
 	}
-      angle = player->angle-i*(ANG45/32);
+      angle = player->yaw-i*(ANG45/32);
       slope = player->AimLineAttack(angle, HAMMER_RANGE);
       if(linetarget)
 	{
@@ -185,7 +188,7 @@ void A_FHammerAttack(PlayerPawn *player, pspdef_t *psp)
     }
   // didn't find any targets in meleerange, so set to throw out a hammer
   PuffSpawned = NULL;
-  angle = player->angle;
+  angle = player->yaw;
   slope = player->AimLineAttack(angle, HAMMER_RANGE);
   player->LineAttack(angle, HAMMER_RANGE, slope, damage);
   if(PuffSpawned)
@@ -233,17 +236,17 @@ void A_FSwordAttack(PlayerPawn *player, pspdef_t *psp)
   player->ammo[am_mana1] -= mana;
   player->ammo[am_mana2] -= mana;
 
-  angle_t an = player->angle;
+  angle_t an = player->yaw;
   DActor *m;
   if ((m = player->SPMAngle(MT_FSWORD_MISSILE, an + ANG45/4)))
-    m->z -= 10*FRACUNIT;
+    m->pos.z -= 10;
   if ((m = player->SPMAngle(MT_FSWORD_MISSILE, an+ANG45/8)))
-    m->z -= 5*FRACUNIT;
+    m->pos.z -= 5;
   player->SPMAngle(MT_FSWORD_MISSILE, an);
   if ((m = player->SPMAngle(MT_FSWORD_MISSILE, an-ANG45/8)))
-    m->z += 5*FRACUNIT;
+    m->pos.z += 5;
   if ((m = player->SPMAngle(MT_FSWORD_MISSILE, an-ANG45/4)))
-    m->z += 10*FRACUNIT;
+    m->pos.z += 10;
   S_StartSound(player, SFX_FIGHTER_SWORD_FIRE);
 }
 
@@ -255,7 +258,7 @@ void A_FSwordAttack(PlayerPawn *player, pspdef_t *psp)
 
 void A_FSwordAttack2(DActor *actor)
 {
-  angle_t angle = actor->angle;
+  angle_t angle = actor->yaw;
 
   actor->SpawnMissileAngle(MT_FSWORD_MISSILE,angle+ANG45/4);
   actor->SpawnMissileAngle(MT_FSWORD_MISSILE,angle+ANG45/8);
@@ -273,13 +276,14 @@ void A_FSwordAttack2(DActor *actor)
 
 void A_FSwordFlames(DActor *actor)
 {
-  int i;
-
-  for(i = 1+(P_Random()&3); i; i--)
+  for (int i = 1+(P_Random()&3); i; i--)
     {
-      actor->mp->SpawnDActor(actor->x+((P_Random()-128)<<12), actor->y
-		  +((P_Random()-128)<<12), actor->z+((P_Random()-128)<<11),
-		  MT_FSWORD_FLAME);
+      fixed_t x = P_SFRandom(4);
+      fixed_t y = P_SFRandom(4);
+      fixed_t z = P_SFRandom(5);
+      vec_t<fixed_t> temp(x,y,z);
+      temp += actor->pos;
+      actor->mp->SpawnDActor(temp, MT_FSWORD_FLAME);
     }
 }
 
@@ -288,69 +292,64 @@ void A_FSwordFlames(DActor *actor)
 
 void DActor::XBlasterMissileThink()
 {
-  int i;
   fixed_t xfrac;
   fixed_t yfrac;
   fixed_t zfrac;
-  fixed_t mz;
   bool changexy;
   DActor *mo;
 
   // Handle movement
-  if(px || py || (z != floorz) || pz)
+  if(vel.x != 0 || vel.y != 0|| pos.z != floorz || vel.z != 0)
     {
-      xfrac = px>>3;
-      yfrac = py>>3;
-      zfrac = pz>>3;
-      changexy = xfrac || yfrac;
-      for(i = 0; i < 8; i++)
+      xfrac = vel.x>>3;
+      yfrac = vel.y>>3;
+      zfrac = vel.z>>3;
+      changexy = xfrac != 0 || yfrac != 0;
+      for(int i = 0; i < 8; i++)
 	{
 	  if (changexy)
 	    {
-	      if(!TryMove(x+xfrac, y+yfrac, true))
+	      if(!TryMove(pos.x+xfrac, pos.y+yfrac, true))
 		{ // Blocked move
 		  ExplodeMissile();
 		  return;
 		}
 	    }
-	  z += zfrac;
-	  if(z <= floorz)
+	  pos.z += zfrac;
+	  if(pos.z <= floorz)
 	    { // Hit the floor
-	      z = floorz;
+	      pos.z = floorz;
 	      HitFloor();
 	      ExplodeMissile();
 	      return;
 	    }
-	  if(z+height > ceilingz)
+	  if(Top() > ceilingz)
 	    { // Hit the ceiling
-	      z = ceilingz-height;
+	      pos.z = ceilingz-height;
 	      ExplodeMissile();
 	      return;
 	    }
 	  if(changexy)
 	    {
+	      fixed_t mz;
 	      if(type == MT_MWAND_MISSILE && (P_Random() < 128))
 		{
-		  mz = z-8*FRACUNIT;
-		  if(mz < floorz)
-		    {
-		      mz = floorz;
-		    }
-		  mp->SpawnDActor(x, y, mz, MT_MWANDSMOKE);
+		  mz = pos.z-8;
+		  if (mz < floorz)
+ 		    mz = floorz;
+
+		  mp->SpawnDActor(pos.x, pos.y, mz, MT_MWANDSMOKE);
 		}
 	      else if(!--special1)
 		{
 		  special1 = 4;
-		  mz = z-12*FRACUNIT;
+		  mz = pos.z-12;
 		  if(mz < floorz)
-		    {
-		      mz = floorz;
-		    }
-		  mo = mp->SpawnDActor(x, y, mz, MT_CFLAMEFLOOR);
+		    mz = floorz;
+
+		  mo = mp->SpawnDActor(pos.x, pos.y, mz, MT_CFLAMEFLOOR);
 		  if(mo)
-		    {
-		      mo->angle = angle;
-		    }
+		    mo->yaw = yaw;
 		}
 	    }
 	}
@@ -410,7 +409,7 @@ void A_LightningReady(PlayerPawn *player, pspdef_t *psp)
 //
 //============================================================================
 
-#define ZAGSPEED	FRACUNIT
+#define ZAGSPEED 1
 
 void A_LightningClip(DActor *actor)
 {
@@ -418,7 +417,7 @@ void A_LightningClip(DActor *actor)
 
   if (actor->type == MT_LIGHTNING_FLOOR)
     {
-      actor->z = actor->floorz;
+      actor->pos.z = actor->floorz;
       Actor *twin = actor->target;
       //t = twin->realtarget;
 
@@ -426,24 +425,24 @@ void A_LightningClip(DActor *actor)
       int zigZag = P_Random();
       if ((zigZag > 128 && actor->special1 < 2) || actor->special1 < -2)
 	{
-	  actor->Thrust(actor->angle+ANG90, ZAGSPEED);
+	  actor->Thrust(actor->yaw+ANG90, ZAGSPEED);
 	  if (twin)
-	    twin->Thrust(twin->angle+ANG90, ZAGSPEED);
+	    twin->Thrust(twin->yaw+ANG90, ZAGSPEED);
 
 	  actor->special1++;
 	}
       else
 	{
-	  actor->Thrust(actor->angle-ANG90, ZAGSPEED);
+	  actor->Thrust(actor->yaw-ANG90, ZAGSPEED);
 	  if (twin)
-	    twin->Thrust(twin->angle-ANG90, ZAGSPEED);
+	    twin->Thrust(twin->yaw-ANG90, ZAGSPEED);
 
 	  actor->special1--;
 	}
     }
   else if (actor->type == MT_LIGHTNING_CEILING)
     {
-      actor->z = actor->ceilingz - actor->height;
+      actor->pos.z = actor->ceilingz - actor->height;
       //t = actor->realtarget;
     }
 
@@ -453,10 +452,10 @@ void A_LightningClip(DActor *actor)
 	actor->ExplodeMissile();
       else
 	{
-	  actor->angle = R_PointToAngle2(actor->x, actor->y, t->x, t->y);
-	  actor->px = 0;
-	  actor->py = 0;
-	  actor->Thrust(actor->angle, int(0.5 * actor->info->speed * FRACUNIT));
+	  actor->yaw = R_PointToAngle2(actor->pos, t->pos);
+	  actor->vel.x = 0;
+	  actor->vel.y = 0;
+	  actor->Thrust(actor->yaw, 0.5f * actor->info->speed);
 	}
     }
 }
@@ -481,23 +480,24 @@ void A_LightningZap(DActor *actor)
     }
 
   if (actor->type == MT_LIGHTNING_FLOOR)
-    deltaZ = 10*FRACUNIT;
+    deltaZ = 10;
   else
-    deltaZ = -10*FRACUNIT;
+    deltaZ = -10;
 
-  DActor *mo = actor->mp->SpawnDActor(actor->x+((P_Random()-128)*actor->radius/256), 
-		   actor->y+((P_Random()-128)*actor->radius/256), 
-		   actor->z+deltaZ, MT_LIGHTNING_ZAP);
+  fixed_t x = ((P_Random()-128) * actor->radius) >> 8;
+  fixed_t y = ((P_Random()-128) * actor->radius) >> 8;
+
+  DActor *mo = actor->mp->SpawnDActor(actor->pos.x + x, actor->pos.y + y, actor->pos.z+deltaZ, MT_LIGHTNING_ZAP);
   if (mo)
     {
       mo->owner = actor->owner;
       mo->target = actor;
-      mo->px = actor->px;
-      mo->py = actor->py;
+      mo->vel.x = actor->vel.x;
+      mo->vel.y = actor->vel.y;
       if (actor->type == MT_LIGHTNING_FLOOR)
-	mo->pz = 20*FRACUNIT;
+	mo->vel.z = 20;
       else 
-	mo->pz = -20*FRACUNIT;
+	mo->vel.z = -20;
     }
 
   if (actor->type == MT_LIGHTNING_FLOOR && P_Random() < 160)
@@ -519,8 +519,8 @@ void A_MLightningAttack2(PlayerPawn *actor)
   DActor *c = actor->SpawnPlayerMissile(MT_LIGHTNING_CEILING);
   if (f)
     {
-      f->z = ONFLOORZ;
-      f->pz = 0;
+      f->pos.z = ONFLOORZ;
+      f->vel.z = 0;
       f->target = c; // special case, a lightning pair
       f->special1 = 0; // zigzag counter
       A_LightningZap(f);	
@@ -528,8 +528,8 @@ void A_MLightningAttack2(PlayerPawn *actor)
 
   if (c)
     {
-      c->z = ONCEILINGZ;
-      c->pz = 0;
+      c->pos.z = ONCEILINGZ;
+      c->vel.z = 0;
       c->target = f; // special case, a lightning pair
       //c->owner = ; // this could in principle be used to point to the real target... but what is it?
       A_LightningZap(c);	
@@ -567,8 +567,8 @@ void A_ZapMimic(DActor *actor)
 	}
       else
 	{
-	  actor->px = mo->px;
-	  actor->py = mo->py;
+	  actor->vel.x = mo->vel.x;
+	  actor->vel.y = mo->vel.y;
 	}
     }
 }
@@ -581,11 +581,11 @@ void A_ZapMimic(DActor *actor)
 
 void A_LastZap(DActor *actor)
 {
-  DActor *mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_LIGHTNING_ZAP);
+  DActor *mo = actor->mp->SpawnDActor(actor->pos, MT_LIGHTNING_ZAP);
   if(mo)
     {
       mo->SetState(S_LIGHTNING_ZAP_X1);
-      mo->pz = 40*FRACUNIT;
+      mo->vel.z = 40;
     }
 }
 
@@ -630,7 +630,7 @@ void A_MStaffAttack(PlayerPawn *p, pspdef_t *psp)
   int mana = p->weaponinfo[p->readyweapon].ammopershoot;
   p->ammo[am_mana1] -= mana;
   p->ammo[am_mana2] -= mana;
-  angle_t angle = p->angle;
+  angle_t angle = p->yaw;
 	
   MStaffSpawn(p, angle);
   MStaffSpawn(p, angle-ANGLE_1*5);
@@ -664,29 +664,23 @@ void A_MStaffPalette(PlayerPawn *p, pspdef_t *psp)
 void A_MStaffWeave(DActor *actor)
 {
   fixed_t newX, newY;
-  int weaveXY, weaveZ;
-  int angle;
 
-  weaveXY = actor->special2>>16;
-  weaveZ = actor->special2&0xFFFF;
-  angle = (actor->angle+ANG90)>>ANGLETOFINESHIFT;
-  newX = actor->x-FixedMul(finecosine[angle], 
-			   FloatBobOffsets[weaveXY]<<2);
-  newY = actor->y-FixedMul(finesine[angle],
-			   FloatBobOffsets[weaveXY]<<2);
+  int weaveXY = actor->special2>>16;
+  int weaveZ = actor->special2&0xFFFF;
+  int angle = (actor->yaw+ANG90)>>ANGLETOFINESHIFT;
+  newX = actor->pos.x - (finecosine[angle] * FloatBobOffsets[weaveXY] << 2);
+  newY = actor->pos.y - (finesine[angle] * FloatBobOffsets[weaveXY] << 2);
   weaveXY = (weaveXY+6)&63;
-  newX += FixedMul(finecosine[angle], 
-		   FloatBobOffsets[weaveXY]<<2);
-  newY += FixedMul(finesine[angle], 
-		   FloatBobOffsets[weaveXY]<<2);
+  newX += finecosine[angle] * FloatBobOffsets[weaveXY] << 2;
+  newY += finesine[angle] * FloatBobOffsets[weaveXY] << 2;
   actor->TryMove(newX, newY, true);
-  actor->z -= FloatBobOffsets[weaveZ]<<1;
+  actor->pos.z -= FloatBobOffsets[weaveZ]<<1;
   weaveZ = (weaveZ+3)&63;
-  actor->z += FloatBobOffsets[weaveZ]<<1;
-  if(actor->z <= actor->floorz)
-    {
-      actor->z = actor->floorz+FRACUNIT;
-    }
+  actor->pos.z += FloatBobOffsets[weaveZ]<<1;
+
+  if (actor->pos.z <= actor->floorz)
+    actor->pos.z = actor->floorz + 1;
+
   actor->special2 = weaveZ+(weaveXY<<16);
 }
 
@@ -734,7 +728,7 @@ void MStaffSpawn2(DActor *actor, angle_t angle)
 void A_MStaffAttack2(DActor *actor)
 {
   angle_t angle;
-  angle = actor->angle;
+  angle = actor->yaw;
   MStaffSpawn2(actor, angle);
   MStaffSpawn2(actor, angle-ANGLE_1*5);
   MStaffSpawn2(actor, angle+ANGLE_1*5);
@@ -751,16 +745,16 @@ void A_FPunchAttack(PlayerPawn *player, pspdef_t *psp)
 {
   angle_t angle;
   int damage;
-  int slope;
+  fixed_t slope;
   fixed_t power;
   int i;
 
   damage = 40+(P_Random()&15);
-  power = 2*FRACUNIT;
+  power = 2;
   PuffType = MT_PUNCHPUFF;
   for(i = 0; i < 16; i++)
     {
-      angle = player->angle+i*(ANG45/16);
+      angle = player->yaw+i*(ANG45/16);
       slope = player->AimLineAttack(angle, 2*MELEERANGE);
       if(linetarget)
 	{
@@ -768,7 +762,7 @@ void A_FPunchAttack(PlayerPawn *player, pspdef_t *psp)
 	  if(player->attackphase == 3)
 	    {
 	      damage <<= 1;
-	      power = 6*FRACUNIT;
+	      power = 6;
 	      PuffType = MT_HAMMERPUFF;
 	    }
 	  player->LineAttack(angle, 2*MELEERANGE, slope, damage);
@@ -780,7 +774,7 @@ void A_FPunchAttack(PlayerPawn *player, pspdef_t *psp)
 	  AdjustPlayerAngle(player);
 	  goto punchdone;
 	}
-      angle = player->angle-i*(ANG45/16);
+      angle = player->yaw-i*(ANG45/16);
       slope = player->AimLineAttack(angle, 2*MELEERANGE);
       if(linetarget)
 	{
@@ -788,7 +782,7 @@ void A_FPunchAttack(PlayerPawn *player, pspdef_t *psp)
 	  if(player->attackphase == 3)
 	    {
 	      damage <<= 1;
-	      power = 6*FRACUNIT;
+	      power = 6;
 	      PuffType = MT_HAMMERPUFF;
 	    }
 	  player->LineAttack(angle, 2*MELEERANGE, slope, damage);
@@ -804,7 +798,7 @@ void A_FPunchAttack(PlayerPawn *player, pspdef_t *psp)
   // didn't find any creatures, so try to strike any walls
   player->attackphase = 0;
 
-  angle = player->angle;
+  angle = player->yaw;
   slope = player->AimLineAttack(angle, MELEERANGE);
   player->LineAttack(angle, MELEERANGE, slope, damage);
 
@@ -824,7 +818,7 @@ void A_FPunchAttack(PlayerPawn *player, pspdef_t *psp)
 //
 //============================================================================
 
-#define AXERANGE	int(2.25*MELEERANGE)
+#define AXERANGE 2.25f*MELEERANGE
 
 void A_FAxeAttack(PlayerPawn *player, pspdef_t *psp)
 {
@@ -832,7 +826,7 @@ void A_FAxeAttack(PlayerPawn *player, pspdef_t *psp)
   
   fixed_t power;
   int damage;
-  int slope;
+  fixed_t slope;
   int i;
   int useMana;
 
@@ -841,7 +835,7 @@ void A_FAxeAttack(PlayerPawn *player, pspdef_t *psp)
   if(player->ammo[am_mana1] > 0)
     {
       damage <<= 1;
-      power = 6*FRACUNIT;
+      power = 6;
       PuffType = MT_AXEPUFF_GLOW;
       useMana = 1;
     }
@@ -852,7 +846,7 @@ void A_FAxeAttack(PlayerPawn *player, pspdef_t *psp)
     }
   for(i = 0; i < 16; i++)
     {
-      angle = player->angle+i*(ANG45/16);
+      angle = player->yaw+i*(ANG45/16);
       slope = player->AimLineAttack(angle, AXERANGE);
       if(linetarget)
 	{
@@ -866,7 +860,7 @@ void A_FAxeAttack(PlayerPawn *player, pspdef_t *psp)
 	  useMana++; 
 	  goto axedone;
 	}
-      angle = player->angle-i*(ANG45/16);
+      angle = player->yaw-i*(ANG45/16);
       slope = player->AimLineAttack(angle, AXERANGE);
       if(linetarget)
 	{
@@ -884,7 +878,7 @@ void A_FAxeAttack(PlayerPawn *player, pspdef_t *psp)
   // didn't find any creatures, so try to strike any walls
   player->attackphase = 0;
 
-  angle = player->angle;
+  angle = player->yaw;
   slope = player->AimLineAttack(angle, MELEERANGE);
   player->LineAttack(angle, MELEERANGE, slope, damage);
 
@@ -911,31 +905,31 @@ void A_CMaceAttack(PlayerPawn *player, pspdef_t *psp)
 {
   angle_t angle;
   int damage;
-  int slope;
+  fixed_t slope;
   int i;
 
   damage = 25+(P_Random()&15);
   PuffType = MT_HAMMERPUFF;
   for(i = 0; i < 16; i++)
     {
-      angle = player->angle+i*(ANG45/16);
+      angle = player->yaw+i*(ANG45/16);
       slope = player->AimLineAttack(angle, 2*MELEERANGE);
       if(linetarget)
 	{
 	  player->LineAttack(angle, 2*MELEERANGE, slope, 
 		       damage);
 	  AdjustPlayerAngle(player);
-	  //			player->angle = R_PointToAngle2(player->x,
+	  //			player->yaw = R_PointToAngle2(player->x,
 	  //				player->y, linetarget->x, linetarget->y);
 	  goto macedone;
 	}
-      angle = player->angle-i*(ANG45/16);
+      angle = player->yaw-i*(ANG45/16);
       slope = player->AimLineAttack(angle, 2*MELEERANGE);
       if(linetarget)
 	{
 	  player->LineAttack(angle, 2*MELEERANGE, slope, damage);
 	  AdjustPlayerAngle(player);
-	  //			player->angle = R_PointToAngle2(player->x,
+	  //			player->yaw = R_PointToAngle2(player->x,
 	  //				player->y, linetarget->x, linetarget->y);
 	  goto macedone;
 	}
@@ -943,7 +937,7 @@ void A_CMaceAttack(PlayerPawn *player, pspdef_t *psp)
   // didn't find any creatures, so try to strike any walls
   player->attackphase = 0;
 
-  angle = player->angle;
+  angle = player->yaw;
   slope = player->AimLineAttack(angle, MELEERANGE);
   player->LineAttack(angle, MELEERANGE, slope, damage);
  macedone:
@@ -955,26 +949,25 @@ void A_CMaceAttack(PlayerPawn *player, pspdef_t *psp)
 // A_CStaffCheck
 //
 //============================================================================
-#define STAFFRANGE int(1.5*MELEERANGE)
+#define STAFFRANGE 1.5f*MELEERANGE
 void A_CStaffCheck(PlayerPawn *player, pspdef_t *psp)
 {
   int damage;
   int newLife;
   angle_t angle;
-  int slope;
+  fixed_t slope;
   int i;
 
   damage = 20+(P_Random()&15);
   PuffType = MT_CSTAFFPUFF;
   for(i = 0; i < 3; i++)
     {
-      angle = player->angle+i*(ANG45/16);
+      angle = player->yaw+i*(ANG45/16);
       slope = player->AimLineAttack(angle, STAFFRANGE);
       if(linetarget)
 	{
 	  player->LineAttack(angle, STAFFRANGE, slope, damage);
-	  player->angle = R_PointToAngle2(player->x, player->y, 
-				       linetarget->x, linetarget->y);
+	  player->yaw = R_PointToAngle2(player->pos, linetarget->pos);
 	  if ((linetarget->flags & (MF_COUNTKILL|MF_NOTMONSTER))
 	      && !(linetarget->flags2 & (MF2_DORMANT|MF2_INVULNERABLE)))
 	    {
@@ -987,13 +980,12 @@ void A_CStaffCheck(PlayerPawn *player, pspdef_t *psp)
 	    player->weaponinfo[player->readyweapon].ammopershoot;
 	  break;
 	}
-      angle = player->angle-i*(ANG45/16);
+      angle = player->yaw-i*(ANG45/16);
       slope = player->AimLineAttack(angle, STAFFRANGE);
       if(linetarget)
 	{
 	  player->LineAttack(angle, STAFFRANGE, slope, damage);
-	  player->angle = R_PointToAngle2(player->x, player->y, 
-				       linetarget->x, linetarget->y);
+	  player->yaw = R_PointToAngle2(player->pos, linetarget->pos);
 	  if (linetarget->flags & (MF_COUNTKILL|MF_NOTMONSTER))
 	    {
 	      newLife = player->health+(damage>>4);
@@ -1017,12 +1009,12 @@ void A_CStaffAttack(PlayerPawn *player, pspdef_t *psp)
 {
   player->ammo[am_mana1] -= player->weaponinfo[player->readyweapon].ammopershoot;
 
-  DActor *mo = player->SPMAngle(MT_CSTAFF_MISSILE, player->angle-(ANG45/15));
+  DActor *mo = player->SPMAngle(MT_CSTAFF_MISSILE, player->yaw-(ANG45/15));
   if(mo)
     {
       mo->special2 = 32;
     }
-  mo = player->SPMAngle(MT_CSTAFF_MISSILE, player->angle+(ANG45/15));
+  mo = player->SPMAngle(MT_CSTAFF_MISSILE, player->yaw+(ANG45/15));
   if(mo)
     {
       mo->special2 = 0;
@@ -1039,22 +1031,16 @@ void A_CStaffAttack(PlayerPawn *player, pspdef_t *psp)
 void A_CStaffMissileSlither(DActor *actor)
 {
   fixed_t newX, newY;
-  int weaveXY;
-  int angle;
 
-  weaveXY = actor->special2;
-  angle = (actor->angle+ANG90)>>ANGLETOFINESHIFT;
-  newX = actor->x-FixedMul(finecosine[angle], 
-			   FloatBobOffsets[weaveXY]);
-  newY = actor->y-FixedMul(finesine[angle],
-			   FloatBobOffsets[weaveXY]);
+  int weaveXY = actor->special2;
+  int angle = (actor->yaw+ANG90)>>ANGLETOFINESHIFT;
+  newX = actor->pos.x - finecosine[angle] * FloatBobOffsets[weaveXY];
+  newY = actor->pos.y - finesine[angle] * FloatBobOffsets[weaveXY];
   weaveXY = (weaveXY+3)&63;
-  newX += FixedMul(finecosine[angle], 
-		   FloatBobOffsets[weaveXY]);
-  newY += FixedMul(finesine[angle], 
-		   FloatBobOffsets[weaveXY]);
+  newX += finecosine[angle] * FloatBobOffsets[weaveXY];
+  newY += finesine[angle] * FloatBobOffsets[weaveXY];
   actor->TryMove(newX, newY, true);
-  actor->special2 = weaveXY;	
+  actor->special2 = weaveXY;
 }
 
 //============================================================================
@@ -1089,8 +1075,8 @@ void A_CStaffCheckBlink(PlayerPawn *player, pspdef_t *psp)
 //
 //============================================================================
 
-#define FLAMESPEED	int(0.45*FRACUNIT)
-#define CFLAMERANGE	(12*64*FRACUNIT)
+#define FLAMESPEED	0.45f
+#define CFLAMERANGE	12*64
 
 void A_CFlameAttack(PlayerPawn *player, pspdef_t *psp)
 {
@@ -1111,9 +1097,7 @@ void A_CFlameAttack(PlayerPawn *player, pspdef_t *psp)
 void A_CFlamePuff(DActor *actor)
 {
   A_UnHideThing(actor);
-  actor->px = 0;
-  actor->py = 0;
-  actor->pz = 0;
+  actor->vel.Set(0,0,0);
   S_StartSound(actor, SFX_CLERIC_FLAME_EXPLODE);
 }
 
@@ -1131,32 +1115,36 @@ void A_CFlameMissile(DActor *actor)
   if (Blocking.thing && Blocking.thing->flags & MF_SHOOTABLE)
     {
       // Hit something, so spawn the flame circle around the thing
-      fixed_t dist = Blocking.thing->radius+18*FRACUNIT;
+      fixed_t dist = Blocking.thing->radius+18;
       for (int i = 0; i < 4; i++)
 	{
 	  int an = (i*ANG45) >> ANGLETOFINESHIFT;
 	  //int an90 = (i*ANG45 + ANG90) >> ANGLETOFINESHIFT;
-	  DActor *mo = actor->mp->SpawnDActor(Blocking.thing->x + FixedMul(dist, finecosine[an]),
-					      Blocking.thing->y + FixedMul(dist, finesine[an]), 
-					      Blocking.thing->z + 5*FRACUNIT, MT_CIRCLEFLAME);
+	  vec_t<fixed_t> temp(dist * finecosine[an], dist * finesine[an], 5);
+	  temp += Blocking.thing->pos;
+
+	  DActor *mo = actor->mp->SpawnDActor(temp, MT_CIRCLEFLAME);
 	  if (mo)
 	    {
-	      mo->angle = an<<ANGLETOFINESHIFT;
+	      mo->yaw = an<<ANGLETOFINESHIFT;
 	      mo->owner = actor->owner;
-	      mo->px = mo->special1 = FixedMul(FLAMESPEED, finecosine[an]);
-	      mo->py = mo->special2 = FixedMul(FLAMESPEED, finesine[an]);
+	      mo->vel.x = FLAMESPEED * finecosine[an];
+	      mo->vel.y = FLAMESPEED * finesine[an];
+	      mo->special1 = an;
 	      mo->tics -= P_Random()&3;
 	    }
-	  mo = actor->mp->SpawnDActor(Blocking.thing->x - FixedMul(dist, finecosine[an]),
-				      Blocking.thing->y - FixedMul(dist, finesine[an]), 
-				      Blocking.thing->z + 5*FRACUNIT, MT_CIRCLEFLAME);
+
+	  temp.Set(-dist * finecosine[an], -dist * finesine[an], fixed_t(5));
+	  temp += Blocking.thing->pos;
+
+	  mo = actor->mp->SpawnDActor(temp, MT_CIRCLEFLAME);
 	  if (mo)
 	    {
-	      mo->angle = ANG180+(an<<ANGLETOFINESHIFT);
+	      mo->yaw = ANG180 + (an<<ANGLETOFINESHIFT);
 	      mo->owner = actor->owner;
-	      mo->px = mo->special1 = FixedMul(-FLAMESPEED, 
-						 finecosine[an]);
-	      mo->py = mo->special2 = FixedMul(-FLAMESPEED, finesine[an]);
+	      mo->vel.x = -FLAMESPEED * finecosine[an];
+	      mo->vel.y = -FLAMESPEED * finesine[an];
+	      mo->special1 = mo->yaw >> ANGLETOFINESHIFT;
 	      mo->tics -= P_Random()&3;
 	    }
 	}
@@ -1176,10 +1164,10 @@ void A_CFlameAttack(PlayerPawn *player, pspdef_t *psp)
 
 	P_BulletSlope(player);
 	damage = 25+HITDICE(3);
-	angle = player->angle;
+	angle = player->yaw;
 	if(player->refire)
 	{
-		angle += (P_Random()-P_Random())<<17;
+		angle += P_SignedRandom() << 17;
 	}
 	player->AimLineAttack(angle, CFLAMERANGE); // Correctly set linetarget
 	if(!linetarget)
@@ -1207,17 +1195,17 @@ void A_CFlameAttack(PlayerPawn *player, pspdef_t *psp)
 	player->LineAttack(angle, CFLAMERANGE, bulletslope, damage);
 	if(linetarget)
 	{ // Hit something, so spawn the flame circle around the thing
-		dist = linetarget->radius+18*FRACUNIT;
+		dist = linetarget->radius+18;
 		for(i = 0; i < 4; i++)
 		{
 			an = (i*ANG45)>>ANGLETOFINESHIFT;
 			an90 = (i*ANG45+ANG90)>>ANGLETOFINESHIFT;
 			mo = actor->mp->SpawnDActor(linetarget->x+FixedMul(dist, finecosine[an]),
 				linetarget->y+FixedMul(dist, finesine[an]), 
-				linetarget->z+5*FRACUNIT, MT_CIRCLEFLAME);
+				linetarget->z+5, MT_CIRCLEFLAME);
 			if(mo)
 			{
-				mo->angle = an<<ANGLETOFINESHIFT;
+				mo->yaw = an<<ANGLETOFINESHIFT;
 				mo->target = player;
 				mo->px = mo->special1 = FixedMul(FLAMESPEED, finecosine[an]);
 				mo->py = mo->special2 = FixedMul(FLAMESPEED, finesine[an]);
@@ -1225,10 +1213,10 @@ void A_CFlameAttack(PlayerPawn *player, pspdef_t *psp)
 			}
 			mo = actor->mp->SpawnDActor(linetarget->x-FixedMul(dist, finecosine[an]),
 				linetarget->y-FixedMul(dist, finesine[an]), 
-				linetarget->z+5*FRACUNIT, MT_CIRCLEFLAME);
+				linetarget->z+5, MT_CIRCLEFLAME);
 			if(mo)
 			{
-				mo->angle = ANG180+(an<<ANGLETOFINESHIFT);
+				mo->yaw = ANG180+(an<<ANGLETOFINESHIFT);
 				mo->target = player;
 				mo->px = mo->special1 = FixedMul(-FLAMESPEED, 
 					finecosine[an]);
@@ -1249,18 +1237,19 @@ void A_CFlameAttack(PlayerPawn *player, pspdef_t *psp)
 //
 // A_CFlameRotate
 //
+// special1 holds the original fineangle for the radial movement.
+//
 //============================================================================
 
-#define FLAMEROTSPEED	2*FRACUNIT
+#define FLAMEROTSPEED	2
 
 void A_CFlameRotate(DActor *actor)
 {
-  int an;
-
-  an = (actor->angle+ANG90)>>ANGLETOFINESHIFT;
-  actor->px = actor->special1+FixedMul(FLAMEROTSPEED, finecosine[an]);
-  actor->py = actor->special2+FixedMul(FLAMEROTSPEED, finesine[an]);
-  actor->angle += ANG90/15;
+  int an = (actor->yaw + ANG90) >> ANGLETOFINESHIFT;
+  int phi = actor->special1;
+  actor->vel.x =  FLAMESPEED * finecosine[phi] + FLAMEROTSPEED * finecosine[an];
+  actor->vel.y = FLAMESPEED * finesine[phi] + FLAMEROTSPEED * finesine[an];
+  actor->yaw += ANG90/15;
 }
 
 
@@ -1295,7 +1284,7 @@ void A_CHolyAttack2(DActor *actor)
 
   for(j = 0; j < 4; j++)
     {
-      mo = actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_HOLY_FX);
+      mo = actor->mp->SpawnDActor(actor->pos, MT_HOLY_FX);
       if (!mo)
 	continue;
 
@@ -1314,9 +1303,9 @@ void A_CHolyAttack2(DActor *actor)
 	  mo->special2 = ((32+(P_Random()&7))<<16)+32+(P_Random()&7);
 	  break;
 	}
-      mo->z = actor->z;
-      mo->angle = actor->angle + (ANG45 + ANG45/2) - ANG45*j;
-      mo->Thrust(mo->angle, int(mo->info->speed * FRACUNIT));
+      mo->pos.z = actor->pos.z;
+      mo->yaw = actor->yaw + (ANG45 + ANG45/2) - ANG45*j;
+      mo->Thrust(mo->yaw, mo->info->speed);
       mo->owner = actor->owner;
       mo->args[0] = 10; // initial turn value
       mo->args[1] = 0; // initial look angle
@@ -1331,11 +1320,11 @@ void A_CHolyAttack2(DActor *actor)
 	  mo->flags &= ~MF_MISSILE;
 	  mo->eflags |= MFE_SKULLFLY;
 	}
-      tail = actor->mp->SpawnDActor(mo->x, mo->y, mo->z, MT_HOLY_TAIL);
+      tail = actor->mp->SpawnDActor(mo->pos, MT_HOLY_TAIL);
       tail->owner = mo; // parent
       for(i = 1; i < 3; i++)
 	{
-	  next = actor->mp->SpawnDActor(mo->x, mo->y, mo->z, MT_HOLY_TAIL);
+	  next = actor->mp->SpawnDActor(mo->pos, MT_HOLY_TAIL);
 	  next->SetState(statenum_t(next->info->spawnstate+1));
 	  tail->target = next; // tail pieces use target field to point to next piece
 	  tail = next;
@@ -1404,8 +1393,6 @@ static void CHolyFindTarget(DActor *actor)
 
 static void CHolySeekerMissile(DActor *actor, angle_t thresh, angle_t turnMax)
 {
-  int dir;
-  int dist;
   angle_t delta;
   angle_t angle;
   fixed_t newZ;
@@ -1426,7 +1413,7 @@ static void CHolySeekerMissile(DActor *actor, angle_t thresh, angle_t turnMax)
       CHolyFindTarget(actor);
       return;
     }
-  dir = P_FaceMobj(actor, target, &delta);
+  int dir = P_FaceMobj(actor, target, &delta);
   if(delta > thresh)
     {
       delta >>= 1;
@@ -1437,39 +1424,36 @@ static void CHolySeekerMissile(DActor *actor, angle_t thresh, angle_t turnMax)
     }
   if(dir)
     { // Turn clockwise
-      actor->angle += delta;
+      actor->yaw += delta;
     }
   else
     { // Turn counter clockwise
-      actor->angle -= delta;
+      actor->yaw -= delta;
     }
-  angle = actor->angle>>ANGLETOFINESHIFT;
-  actor->px = int(actor->info->speed * finecosine[angle]);
-  actor->py = int(actor->info->speed * finesine[angle]);
-  if (!(game.tic & 15) 
-     || actor->z > target->z+(target->height)
-     || actor->z+actor->height < target->z)
+  angle = actor->yaw>>ANGLETOFINESHIFT;
+  actor->vel.x = actor->info->speed * finecosine[angle];
+  actor->vel.y = actor->info->speed * finesine[angle];
+  if (!(game.tic & 15) || actor->pos.z > target->Top() || actor->Top() < target->pos.z)
     {
-      newZ = target->z+((P_Random()*target->height)>>8);
-      deltaZ = newZ-actor->z;
-      if(abs(deltaZ) > 15*FRACUNIT)
+      newZ = target->pos.z + (P_Random()*target->height >>8);
+      deltaZ = newZ - actor->pos.z;
+      if(abs(deltaZ) > 15)
 	{
 	  if(deltaZ > 0)
 	    {
-	      deltaZ = 15*FRACUNIT;
+	      deltaZ = 15;
 	    }
 	  else
 	    {
-	      deltaZ = -15*FRACUNIT;
+	      deltaZ = -15;
 	    }
 	}
-      dist = P_AproxDistance(target->x-actor->x, target->y-actor->y);
-      dist = dist / int(actor->info->speed * FRACUNIT);
-      if(dist < 1)
-	{
-	  dist = 1;
-	}
-      actor->pz = deltaZ/dist;
+      fixed_t fdist = P_AproxDistance(target->pos.x - actor->pos.x, target->pos.y - actor->pos.y) / actor->info->speed;
+      int dist = fdist.floor();
+      if (dist < 1)
+	dist = 1;
+
+      actor->vel.z = deltaZ/dist;
     }
   return;
 }
@@ -1483,25 +1467,19 @@ static void CHolySeekerMissile(DActor *actor, angle_t thresh, angle_t turnMax)
 static void CHolyWeave(DActor *actor)
 {
   fixed_t newX, newY;
-  int weaveXY, weaveZ;
-  int angle;
 
-  weaveXY = actor->special2>>16;
-  weaveZ = actor->special2&0xFFFF;
-  angle = (actor->angle+ANG90)>>ANGLETOFINESHIFT;
-  newX = actor->x-FixedMul(finecosine[angle], 
-			   FloatBobOffsets[weaveXY]<<2);
-  newY = actor->y-FixedMul(finesine[angle],
-			   FloatBobOffsets[weaveXY]<<2);
+  int weaveXY = actor->special2>>16;
+  int weaveZ = actor->special2&0xFFFF;
+  int angle = (actor->yaw+ANG90)>>ANGLETOFINESHIFT;
+  newX = actor->pos.x - finecosine[angle] * FloatBobOffsets[weaveXY] << 2;
+  newY = actor->pos.y - finesine[angle] * FloatBobOffsets[weaveXY] << 2;
   weaveXY = (weaveXY+(P_Random()%5))&63;
-  newX += FixedMul(finecosine[angle], 
-		   FloatBobOffsets[weaveXY]<<2);
-  newY += FixedMul(finesine[angle], 
-		   FloatBobOffsets[weaveXY]<<2);
+  newX += finecosine[angle] * FloatBobOffsets[weaveXY] << 2;
+  newY += finesine[angle] * FloatBobOffsets[weaveXY] << 2;
   actor->TryMove(newX, newY, true);
-  actor->z -= FloatBobOffsets[weaveZ]<<1;
+  actor->pos.z -= FloatBobOffsets[weaveZ]<<1;
   weaveZ = (weaveZ+(P_Random()%5))&63;
-  actor->z += FloatBobOffsets[weaveZ]<<1;	
+  actor->pos.z += FloatBobOffsets[weaveZ]<<1;	
   actor->special2 = weaveZ+(weaveXY<<16);
 }
 
@@ -1516,9 +1494,9 @@ void A_CHolySeek(DActor *actor)
   actor->health--;
   if(actor->health <= 0)
     {
-      actor->px >>= 2;
-      actor->py >>= 2;
-      actor->pz = 0;
+      actor->vel.x >>= 2;
+      actor->vel.y >>= 2;
+      actor->vel.z = 0;
       actor->SetState(actor->info->deathstate);
       actor->tics -= P_Random()&3;
       return;
@@ -1543,38 +1521,30 @@ void A_CHolySeek(DActor *actor)
 
 static void CHolyTailFollow(Actor *actor, fixed_t dist)
 {
-  int an;
   fixed_t oldDistance, newDistance;
 
   Actor *child = actor->target;
-  if(child)
+  if (child)
     {
-      an = R_PointToAngle2(actor->x, actor->y, child->x, 
-			   child->y)>>ANGLETOFINESHIFT;
-      oldDistance = P_AproxDistance(child->x-actor->x, child->y-actor->y);
-      if(child->TryMove(actor->x+FixedMul(dist, finecosine[an]), 
-			actor->y+FixedMul(dist, finesine[an]), true))
+      int an = R_PointToAngle2(actor->pos, child->pos) >> ANGLETOFINESHIFT;
+      oldDistance = P_AproxDistance(child->pos.x - actor->pos.x, child->pos.y - actor->pos.y);
+      if (child->TryMove(actor->pos.x + dist * finecosine[an], 
+			 actor->pos.y + dist * finesine[an], true))
 	{
-	  newDistance = P_AproxDistance(child->x-actor->x, 
-					child->y-actor->y)-FRACUNIT;
-	  if(oldDistance < FRACUNIT)
+	  newDistance = P_AproxDistance(child->pos.x-actor->pos.x, child->pos.y-actor->pos.y) - 1;
+	  if(oldDistance < 1)
 	    {
-	      if(child->z < actor->z)
-		{
-		  child->z = actor->z-dist;
-		}
+	      if (child->pos.z < actor->pos.z)
+		child->pos.z = actor->pos.z-dist;
 	      else
-		{
-		  child->z = actor->z+dist;
-		}
+		child->pos.z = actor->pos.z+dist;
 	    }
 	  else
 	    {
-	      child->z = actor->z+FixedMul(FixedDiv(newDistance, 
-						    oldDistance), child->z-actor->z);
+	      child->pos.z = actor->pos.z + (newDistance / oldDistance) * (child->pos.z - actor->pos.z);
 	    }
 	}
-      CHolyTailFollow(child, dist-FRACUNIT);
+      CHolyTailFollow(child, dist-1);
     }
 }
 
@@ -1603,21 +1573,19 @@ void A_CHolyTail(DActor *actor)
 {
   DActor *parent = (DActor *)actor->owner;
 
-  if(parent)
+  if (parent)
     {
       if(parent->state >= &states[parent->info->deathstate])
 	{ // Ghost removed, so remove all tail parts
 	  CHolyTailRemove(actor);
 	  return;
 	}
-      else if(actor->TryMove(parent->x-FixedMul(14*FRACUNIT,
-						  finecosine[parent->angle>>ANGLETOFINESHIFT]),
-			parent->y-FixedMul(14*FRACUNIT, 
-					   finesine[parent->angle>>ANGLETOFINESHIFT]), true))
+      else if (actor->TryMove(parent->pos.x - 14 * finecosine[parent->yaw>>ANGLETOFINESHIFT],
+			      parent->pos.y - 14 * finesine[parent->yaw>>ANGLETOFINESHIFT], true))
 	{
-	  actor->z = parent->z-5*FRACUNIT;
+	  actor->pos.z = parent->pos.z-5;
 	}
-      CHolyTailFollow(actor, 10*FRACUNIT);
+      CHolyTailFollow(actor, 10);
     }
 }
 //============================================================================
@@ -1644,7 +1612,7 @@ void A_CHolyCheckScream(DActor *actor)
 
 void A_CHolySpawnPuff(DActor *actor)
 {
-  actor->mp->SpawnDActor(actor->x, actor->y, actor->z, MT_HOLY_MISSILE_PUFF);
+  actor->mp->SpawnDActor(actor->pos, MT_HOLY_MISSILE_PUFF);
 }
 
 //----------------------------------------------------------------------------
@@ -1662,7 +1630,7 @@ void A_FireConePL1(PlayerPawn *player, pspdef_t *psp)
 {
   angle_t angle;
   int damage;
-  int slope;
+  fixed_t slope;
   int i;
   bool conedone = false;
 
@@ -1673,7 +1641,7 @@ void A_FireConePL1(PlayerPawn *player, pspdef_t *psp)
   damage = 90+(P_Random()&15);
   for(i = 0; i < 16; i++)
     {
-      angle = player->angle+i*(ANG45/16);
+      angle = player->yaw+i*(ANG45/16);
       slope = player->AimLineAttack(angle, MELEERANGE);
       if(linetarget)
 	{
@@ -1716,13 +1684,13 @@ void A_ShedShard(DActor *actor)
   // every so many calls, spawn a new missile in it's set directions
   if (spawndir & SHARDSPAWN_LEFT)
     {
-      angle_t m_angle = actor->angle+(ANG45/9);
+      angle_t m_angle = actor->yaw+(ANG45/9);
       mo = actor->SpawnMissileAngle(MT_SHARDFX1, m_angle);
       if (mo)
 	{
-	  mo->px = (20 + 2*spermcount) * finecosine[m_angle >> ANGLETOFINESHIFT];
-	  mo->py = (20 + 2*spermcount) * finesine[m_angle >> ANGLETOFINESHIFT];
-	  mo->pz = actor->pz;
+	  mo->vel.x = (20 + 2*spermcount) * finecosine[m_angle >> ANGLETOFINESHIFT];
+	  mo->vel.y = (20 + 2*spermcount) * finesine[m_angle >> ANGLETOFINESHIFT];
+	  mo->vel.z = actor->vel.z;
 	  mo->special1 = SHARDSPAWN_LEFT;
 	  mo->special2 = spermcount;
 	  mo->owner = actor->owner;
@@ -1731,13 +1699,13 @@ void A_ShedShard(DActor *actor)
     }
   if (spawndir & SHARDSPAWN_RIGHT)
     {
-      angle_t m_angle = actor->angle-(ANG45/9);
+      angle_t m_angle = actor->yaw-(ANG45/9);
       mo = actor->SpawnMissileAngle(MT_SHARDFX1, m_angle);
       if (mo)
 	{
-	  mo->px = (20 + 2*spermcount) * finecosine[m_angle >> ANGLETOFINESHIFT];
-	  mo->py = (20 + 2*spermcount) * finesine[m_angle >> ANGLETOFINESHIFT];
-	  mo->pz = actor->pz;
+	  mo->vel.x = (20 + 2*spermcount) * finecosine[m_angle >> ANGLETOFINESHIFT];
+	  mo->vel.y = (20 + 2*spermcount) * finesine[m_angle >> ANGLETOFINESHIFT];
+	  mo->vel.z = actor->vel.z;
 	  mo->special1 = SHARDSPAWN_RIGHT;
 	  mo->special2 = spermcount;
 	  mo->owner = actor->owner;
@@ -1746,14 +1714,14 @@ void A_ShedShard(DActor *actor)
     }
   if (spawndir & SHARDSPAWN_UP)
     {
-      angle_t m_angle = actor->angle;
+      angle_t m_angle = actor->yaw;
       mo = actor->SpawnMissileAngle(MT_SHARDFX1, m_angle);
       if (mo)
 	{
-	  mo->px = (15 + 2*spermcount) * finecosine[m_angle >> ANGLETOFINESHIFT];
-	  mo->py = (15 + 2*spermcount) * finesine[m_angle >> ANGLETOFINESHIFT];
-	  mo->pz = actor->pz;
-	  mo->z += 8*FRACUNIT;
+	  mo->vel.x = (15 + 2*spermcount) * finecosine[m_angle >> ANGLETOFINESHIFT];
+	  mo->vel.y = (15 + 2*spermcount) * finesine[m_angle >> ANGLETOFINESHIFT];
+	  mo->vel.z = actor->vel.z;
+	  mo->pos.z += 8;
 	  if (spermcount & 1)			// Every other reproduction
 	    mo->special1 = SHARDSPAWN_UP | SHARDSPAWN_LEFT | SHARDSPAWN_RIGHT;
 	  else
@@ -1765,14 +1733,14 @@ void A_ShedShard(DActor *actor)
     }
   if (spawndir & SHARDSPAWN_DOWN)
     {
-      angle_t m_angle = actor->angle;
+      angle_t m_angle = actor->yaw;
       mo = actor->SpawnMissileAngle(MT_SHARDFX1, m_angle);
       if (mo)
 	{
-	  mo->px = (15 + 2*spermcount) * finecosine[m_angle >> ANGLETOFINESHIFT];
-	  mo->py = (15 + 2*spermcount) * finesine[m_angle >> ANGLETOFINESHIFT];
-	  mo->pz = actor->pz;
-	  mo->z -= 4*FRACUNIT;
+	  mo->vel.x = (15 + 2*spermcount) * finecosine[m_angle >> ANGLETOFINESHIFT];
+	  mo->vel.y = (15 + 2*spermcount) * finesine[m_angle >> ANGLETOFINESHIFT];
+	  mo->vel.z = actor->vel.z;
+	  mo->pos.z -= 4;
 	  if (spermcount & 1)			// Every other reproduction
 	    mo->special1 = SHARDSPAWN_DOWN | SHARDSPAWN_LEFT | SHARDSPAWN_RIGHT;
 	  else
@@ -1793,7 +1761,7 @@ void A_ShedShard(DActor *actor)
 /*
 void A_HideInCeiling(DActor *actor)
 {
-	actor->z = actor->ceilingz+4*FRACUNIT;
+	actor->pos.z = actor->ceilingz+4;
 }
 */
 
@@ -1806,7 +1774,7 @@ void A_HideInCeiling(DActor *actor)
 /*
 void A_FloatPuff(Actor *puff)
 {
-  puff->pz += 1.8*FRACUNIT;
+  puff->vel.z += 1.8f;
 }
 */
 

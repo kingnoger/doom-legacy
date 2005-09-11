@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.8  2005/07/05 17:36:42  smite-meister
 // small fixes
 //
@@ -75,9 +78,9 @@ DATAEXPORT dll_info_t dll_info = {0, 1, "Doom Legacy ACBot plugin"};
 */
 
 
-static fixed_t botforwardmove[2] = {50, 100};
-static fixed_t botsidemove[2]    = {48, 80};
-static fixed_t botangleturn[4]   = {500, 1000, 2000, 4000};
+static int botforwardmove[2] = {50, 100};
+static int botsidemove[2]    = {48, 80};
+static int botangleturn[4]   = {500, 1000, 2000, 4000};
 
 
 /// A target Actor for ACBot
@@ -127,8 +130,8 @@ static bool PTR_QuickReachable(intercept_t *in)
 	  fixed_t ceilingheight = s->ceilingheight;
 	  fixed_t floorheight = s->floorheight;
 
-	  if (((floorheight <= last_sector->floorheight + 37*FRACUNIT) ||
-	       ((floorheight <= last_sector->floorheight + 45*FRACUNIT) &&
+	  if (((floorheight <= last_sector->floorheight + 37) ||
+	       ((floorheight <= last_sector->floorheight + 45) &&
 		(last_sector->floortype != FLOOR_WATER))) && // can we jump there?
 	      ((ceilingheight == floorheight && line->special) ||
 	       (ceilingheight - floorheight >= bot->height))) // do we fit?
@@ -167,16 +170,16 @@ bool ACBot::QuickReachable(Actor *g)
         if (!(rover->flags & FF_SOLID) || !(rover->flags & FF_EXISTS))
 	  continue;
 
-	if (*rover->topheight <= pawn->z && goal->z < *rover->topheight)
+	if (*rover->topheight <= pawn->Feet() && goal->pos.z < *rover->topheight)
 	  return false;
 
-	if (*rover->bottomheight >= pawn->z + pawn->height
-	    && goal->z > *rover->bottomheight)
+	if (*rover->bottomheight >= pawn->Top()
+	    && goal->pos.z > *rover->bottomheight)
 	  return false;
       }
   //#endif
 
-  return mp->PathTraverse(pawn->x, pawn->y, goal->x, goal->y,
+  return mp->PathTraverse(pawn->pos.x, pawn->pos.y, goal->pos.x, goal->pos.y,
 			  PT_ADDLINES|PT_ADDTHINGS, PTR_QuickReachable);
 }
 
@@ -189,7 +192,7 @@ bool ACBot::QuickReachable(fixed_t x, fixed_t y)
   goal = NULL;
   last_sector = pawn->subsector->sector;
 
-  return mp->PathTraverse(pawn->x, pawn->y, x, y, PT_ADDLINES|PT_ADDTHINGS, PTR_QuickReachable);
+  return mp->PathTraverse(pawn->pos.x, pawn->pos.y, x, y, PT_ADDLINES|PT_ADDTHINGS, PTR_QuickReachable);
 }
 
 
@@ -223,8 +226,8 @@ void ACBot::ClearPath()
 #ifdef SHOWBOTPATH
   while (!path.empty())
     {
-      if (path.front()->mo)
-	path.front()->mo->Remove();
+      if (path.front()->marker)
+	path.front()->marker->Remove();
 
       path.pop_front();
     }
@@ -416,7 +419,7 @@ void ACBot::LookForThings()
       Actor *actor = (Actor *)th;
 
       mobjtype_t type = actor->IsOf(DActor::_type) ? ((DActor *)actor)->type : MT_NONE;
-      fixed_t dist = P_AproxDistance(pawn->x - actor->x, pawn->y - actor->y);
+      fixed_t dist = P_XYdist(pawn->pos, actor->pos);
       bool enemyFound = false;
       SearchNode_t *node;
 
@@ -441,7 +444,7 @@ void ACBot::LookForThings()
 		}
 	      else
 		{
-		  node = mp->botnodes->GetNodeAt(actor->x, actor->y);
+		  node = mp->botnodes->GetNodeAt(actor->pos);
 		  if (node && dist < cUnseenTeammate.dist)
 		    {
 		      cUnseenTeammate.dist = dist;
@@ -454,11 +457,14 @@ void ACBot::LookForThings()
 	{
 	  // see if the missile is heading my way, if the missile will be closer to me, next tick
 	  //then its heading at least somewhat towards me, so better dodge it
-	  // TODO dot product...
-	  if (P_AproxDistance(pawn->x + pawn->px - (actor->x + actor->px), pawn->y+pawn->py - (actor->y+actor->py)) < dist)
+	  
+	  vec_t<fixed_t> dpos = actor->pos - pawn->pos;
+	  vec_t<fixed_t> dv   = actor->vel - pawn->vel;
+	  if (dot(dpos, dv) < 0)
+	  //if (P_AproxDistance(pawn->x + pawn->px - (actor->x + actor->px), pawn->y+pawn->py - (actor->y+actor->py)) < dist)
 	    {
 	      //if its the closest missile and its reasonably close I should try and avoid it
-	      if (dist && (dist < cMissile.dist) && (dist <= 300*FRACUNIT))
+	      if (dist != 0 && (dist < cMissile.dist) && (dist <= 300))
 		{
 		  cMissile.dist = dist;
 		  cMissile.a = actor;
@@ -541,18 +547,18 @@ void ACBot::LookForThings()
 	  else
 	    {
 	      // item is not gettable atm, may use a search later to find a path to it
-	      node = mp->botnodes->GetNodeAt(actor->x, actor->y);
+	      node = mp->botnodes->GetNodeAt(actor->pos);
 	      if (node  //&& P_AproxDistance(posX2x(node->x) - actor->x, posY2y(node->y) - actor->y) < (BOTNODEGRIDSIZE << 1)
 		  && (weight > bUnseenItemWeight || (weight == bUnseenItemWeight && dist < bUnseenItem.dist)))
 		{
 		  bUnseenItem.a = actor;
 		  bUnseenItem.dist = dist;
 		  bUnseenItemWeight = weight;
-		  //CONS_Printf("best item set to x:%d y:%d for type:%d\n", actor->x>>FRACBITS, actor->y>>FRACBITS, actor->type);
+		  //CONS_Printf("best item set to x:%d y:%d for type:%d\n", actor->pos.x.floor(), actor->pos.y.floor(), actor->type);
 		}
 
 	      //if (!node)
-	      // CONS_Printf("could not find a node here x:%d y:%d for type:%d\n", actor->x>>FRACBITS, actor->y>>FRACBITS, actor->type);
+	      // CONS_Printf("could not find a node here x:%d y:%d for type:%d\n", actor->pos.x.floor(), actor->pos.y.floor(), actor->type);
 	    }
 	}
 
@@ -570,7 +576,7 @@ void ACBot::LookForThings()
 	    }
 	  else
 	    {
-	      node = mp->botnodes->GetNodeAt(actor->x, actor->y);
+	      node = mp->botnodes->GetNodeAt(actor->pos);
 	      if (node &&
 		  (dist < cUnseenEnemy.dist ||
 		   (actor->flags & MF_NOTMONSTER && !(cEnemy.a->flags & MF_NOTMONSTER))))
@@ -685,7 +691,7 @@ static ai_weapon_t ai_weapon_data[NUMWEAPONS] =
   wp_chainsaw, wp_supershotgun
   */
   {0, 0, MT_NONE, 0}, {1|AF, 0, MT_NONE, 0}, {1, 30, MT_NONE, 0}, {1|AF, 50, MT_NONE, 0},
-  {2, 50, MT_ROCKET, 100*FRACUNIT}, {2|AF, 50, MT_PLASMA, 0}, {2, 20, MT_BFG, 0},
+  {2, 50, MT_ROCKET, 100}, {2|AF, 50, MT_PLASMA, 0}, {2, 20, MT_BFG, 0},
   {0, 0, MT_NONE, 0}, {1, 55, MT_NONE, 0},
   /*
   wp_staff, wp_gauntlets, wp_goldwand,
@@ -693,7 +699,7 @@ static ai_weapon_t ai_weapon_data[NUMWEAPONS] =
   wp_skullrod, wp_mace, wp_beak,
   */
   {0, 0, MT_NONE, 0}, {0, 0, MT_NONE, 0}, {1|AF, 0, MT_NONE, 0},
-  {2, 35, MT_CRBOWFX1, 0}, {1|AF, 50, MT_NONE, 0}, {2, 50, MT_PHOENIXFX1, 100*FRACUNIT},
+  {2, 35, MT_CRBOWFX1, 0}, {1|AF, 50, MT_NONE, 0}, {2, 50, MT_PHOENIXFX1, 100},
   {2|AF, 55, MT_HORNRODFX1, 0}, {2|AF, 50, MT_MACEFX1, 0}, {0, 0, MT_NONE, 0},
 
   /*
@@ -712,7 +718,7 @@ static ai_weapon_t ai_weapon_data[NUMWEAPONS] =
 
 void ACBot::AvoidMissile(const Actor *missile)
 {
-  fixed_t delta = pawn->angle - R_PointToAngle2(pawn->x, pawn->y, missile->x, missile->y);
+  int delta = pawn->yaw - R_PointToAngle2(pawn->pos, missile->pos);
 
   if (delta >= 0)
     cmd->side = -botsidemove[1];
@@ -794,8 +800,8 @@ void ACBot::ChangeWeapon()
 
 void ACBot::TurnTowardsPoint(fixed_t x, fixed_t y)
 {
-  fixed_t ang = R_PointToAngle2(pawn->x, pawn->y, x, y);
-  fixed_t delta = ang - pawn->angle;
+  angle_t ang = R_PointToAngle2(pawn->pos.x, pawn->pos.y, x, y);
+  int delta = ang - pawn->yaw;
 
   int botspeed;
 
@@ -807,7 +813,7 @@ void ACBot::TurnTowardsPoint(fixed_t x, fixed_t y)
     botspeed = 3; // 1
 
   if (abs(delta) < ANG5)
-    cmd->yaw = ang >> FRACBITS; //perfect aim
+    cmd->yaw = ang >> 16; //perfect aim
   else if (delta > 0)
     cmd->yaw += botangleturn[botspeed];
   else
@@ -830,54 +836,49 @@ void ACBot::AimWeapon()
     m_speed = 0; // no leading
 
   Actor *dest = cEnemy.a;
-  fixed_t dist = P_AproxDistance(dest->x - pawn->x, dest->y - pawn->y);
-
+  fixed_t dist = P_XYdist(dest->pos, pawn->pos);
 
   if (dist > wdata->dangerdist)
     {
-      fixed_t nx, ny, nz;
+      vec_t<fixed_t> temp;
 
       if (m_speed > 0)
 	{
-	  fixed_t t = fixed_t(dist / m_speed);
-	  t = fixed_t(P_AproxDistance(dest->x + dest->px * t - pawn->x,
-				      dest->y + dest->py * t - pawn->y) / m_speed) + 4;
+	  float t = dist.Float() / m_speed;
+	  temp = dest->pos + dest->vel * t;
+	  t = (P_XYdist(temp, pawn->pos).Float() / m_speed) + 4;
 
 	  do
 	    {
 	      t -= 4;
 	      if (t < 0)
 		t = 0;
-	      nx = dest->x + dest->px * t;
-	      ny = dest->y + dest->py * t;
-	      nz = dest->z + dest->pz * t;
+	      temp = dest->pos + dest->vel * t;
           //} while (!mp->CheckSight2(pawn, dest, nx, ny, nz) && (t > 0));
 	    } while (false); // FIXME
 
-	  subsector_t *sec = mp->R_PointInSubsector(nx, ny);
+	  subsector_t *sec = mp->R_PointInSubsector(temp.x, temp.y);
 	  if (!sec)
 	    sec = dest->subsector;
 
-	  if (nz < sec->sector->floorheight)
-	    nz = sec->sector->floorheight;
-	  else if (nz > sec->sector->ceilingheight)
-	    nz = sec->sector->ceilingheight - dest->height;
+	  if (temp.z < sec->sector->floorheight)
+	    temp.z = sec->sector->floorheight;
+	  else if (temp.z > sec->sector->ceilingheight)
+	    temp.z = sec->sector->ceilingheight - dest->height;
 	}
       else
 	{
-	  nx = dest->x;
-	  ny = dest->y;
-	  nz = dest->z;
+	  temp = dest->pos;
 	}
 
       angle_t angle, realAngle;
-      realAngle = angle = R_PointToAngle2(pawn->x, pawn->y, nx, ny);
+      realAngle = angle = R_PointToAngle2(pawn->pos, temp);
 
-      cmd->pitch = int(atan((nz - pawn->z + (dest->height - pawn->height)/2) / double(dist)) * (ANG180 / M_PI)) >> FRACBITS;
+      cmd->pitch = int(atan(((temp.z - pawn->pos.z + (dest->height - pawn->height)/2) / dist).Float()) * (ANG180 / M_PI)) >> 16;
 
       int spread = (rand() - rand())*ANG45 / RAND_MAX; // was P_SignedRandom()<<21;
 
-      if (P_AproxDistance(dest->px, dest->py) > 8*FRACUNIT) //enemy is moving reasonably fast, so not perfectly acurate
+      if (P_AproxDistance(dest->vel.x, dest->vel.y) > 8) //enemy is moving reasonably fast, so not perfectly acurate
 	{
 	  if (dest->flags & MF_SHADOW)
 	    angle += spread << 2;
@@ -895,7 +896,7 @@ void ACBot::AimWeapon()
 
       int botspeed;
 
-      int delta = angle - pawn->angle;
+      int delta = angle - pawn->yaw;
       if (abs(delta) < (ANG45 >> 1))
 	botspeed = 0;
       else if (abs(delta) < ANG45)
@@ -911,9 +912,9 @@ void ACBot::AimWeapon()
 	  if (abs(delta) <= ANG5)
 	    {
 	      if (skill <= sk_medium)  // check skill, if anything but nightmare bot aim is imperfect
-		cmd->yaw = angle>>FRACBITS;	// not so perfect aim
+		cmd->yaw = angle >> 16;	// not so perfect aim
 	      else
-		cmd->yaw = realAngle>>FRACBITS; // perfect aim
+		cmd->yaw = realAngle >> 16; // perfect aim
 
 	      delta = 0;
 	      /*if (p->readyweapon == wp_missile)
@@ -971,10 +972,10 @@ void ACBot::BuildInput(PlayerInfo *p, int elapsed)
     }
 
   int botspeed = 1;
-  fixed_t forwardmove = 0, sidemove = 0;
+  int forwardmove = 0, sidemove = 0;
 
-  cmd->yaw = pawn->angle >> 16;
-  cmd->pitch = 0; //pawn->aiming >> 16;
+  cmd->yaw = pawn->yaw >> 16;
+  cmd->pitch = 0; //pawn->pitch >> 16;
 
   ChangeWeapon();
   LookForThings();
@@ -1004,14 +1005,14 @@ void ACBot::BuildInput(PlayerInfo *p, int elapsed)
       if (bItem.a && (bItemWeight > 5 || !cEnemy.a))
 	{
 	  // If a nearby item has a good weight, get it no matter what. Else only if we have no target/enemy.
-	  dist = P_AproxDistance(pawn->x - bItem.a->x, pawn->y - bItem.a->y) >> FRACBITS;
+	  dist = P_XYdist(pawn->pos, bItem.a->pos).floor();
 	  if (dist > 64)
 	    botspeed = 1;
 	  else
 	    botspeed = 0;
-	  TurnTowardsPoint(bItem.a->x, bItem.a->y);
+	  TurnTowardsPoint(bItem.a->pos.x, bItem.a->pos.y);
 	  forwardmove = botforwardmove[botspeed];
-	  if (((bItem.a->floorz - pawn->z) >> FRACBITS) > 24 && dist <= 100)
+	  if ((bItem.a->floorz - pawn->Feet()).floor() > 24 && dist <= 100)
 	    cmd->buttons |= ticcmd_t::BT_JUMP;
 	}
       else if (cEnemy.a)
@@ -1020,10 +1021,10 @@ void ACBot::BuildInput(PlayerInfo *p, int elapsed)
 	  weapontype_t w = pawn->readyweapon;
 
 	  //CONS_Printf("heading for an enemy\n");
-	  dist = P_AproxDistance(pawn->x - cEnemy.a->x, pawn->y - cEnemy.a->y) >> FRACBITS;
+	  dist = P_XYdist(pawn->pos, cEnemy.a->pos).floor();
 	  if (dist > 300 || (ai_weapon_data[w].type & TYPEMASK) == MELEE)
 	    forwardmove = botforwardmove[botspeed];
-	  if (ai_weapon_data[w].dangerdist > 50*FRACUNIT && dist < 400)
+	  if (ai_weapon_data[w].dangerdist > 50 && dist < 400)
 	    forwardmove = -botforwardmove[botspeed];
 
 	  PlayerPawn *pp = cEnemy.a->IsOf(PlayerPawn::_type) ? (PlayerPawn *)cEnemy.a : NULL;
@@ -1038,8 +1039,8 @@ void ACBot::BuildInput(PlayerInfo *p, int elapsed)
 
 	  AimWeapon();
 	  lastTarget = cEnemy.a;
-	  lastTargetX = cEnemy.a->x;
-	  lastTargetY = cEnemy.a->y;
+	  lastTargetX = cEnemy.a->pos.x;
+	  lastTargetY = cEnemy.a->pos.y;
 	}
       else
 	{
@@ -1051,7 +1052,7 @@ void ACBot::BuildInput(PlayerInfo *p, int elapsed)
 	      // look for an unactivated switch/door
 	      //CONS_Printf("found a special line\n");
 	      TurnTowardsPoint(x, y);
-	      if (P_AproxDistance(pawn->x - x, pawn->y - y) <= USERANGE)
+	      if (P_AproxDistance(pawn->pos.x - x, pawn->pos.y - y) <= USERANGE)
 		{
 		  if (!use_down)
 		    cmd->buttons |= ticcmd_t::BT_USE;
@@ -1062,22 +1063,22 @@ void ACBot::BuildInput(PlayerInfo *p, int elapsed)
 	  else if (fTeammate.a)
 	    {
 	      // keep together with team (go to furthest visible teammate)
-	      dist = P_AproxDistance(pawn->x - fTeammate.a->x, pawn->y - fTeammate.a->y) >> FRACBITS;
+	      dist = P_AproxDistance(pawn->pos.x - fTeammate.a->pos.x, pawn->pos.y - fTeammate.a->pos.y).floor();
 	      if (dist > 100)
 		{
-		  TurnTowardsPoint(fTeammate.a->x, fTeammate.a->y);
+		  TurnTowardsPoint(fTeammate.a->pos.x, fTeammate.a->pos.y);
 		  forwardmove = botforwardmove[botspeed];
 		}
 
 	      lastTarget = fTeammate.a;
-	      lastTargetX = fTeammate.a->x;
-	      lastTargetY = fTeammate.a->y;
+	      lastTargetX = fTeammate.a->pos.x;
+	      lastTargetY = fTeammate.a->pos.y;
 	    }
 	  else if (lastTarget && (lastTarget->flags & MF_SOLID))
 	    {
 	      // nothing else to do, go where the last enemy/teamate was seen
-	      if ((pawn->px == 0 && pawn->py == 0) ||
-		  !mp->botnodes->DirectlyReachable(NULL, pawn->x, pawn->y, lastTargetX, lastTargetY))
+	      if ((pawn->vel.x == 0 && pawn->vel.y == 0) ||
+		  !mp->botnodes->DirectlyReachable(NULL, pawn->pos.x, pawn->pos.y, lastTargetX, lastTargetY))
 		lastTarget = NULL; //just went through teleporter
 	      else
 		{
@@ -1093,13 +1094,13 @@ void ACBot::BuildInput(PlayerInfo *p, int elapsed)
 	      SearchNode_t *newdest;
 	      if (bUnseenItem.a)
 		{
-		  newdest = mp->botnodes->GetNodeAt(bUnseenItem.a->x, bUnseenItem.a->y);
+		  newdest = mp->botnodes->GetNodeAt(bUnseenItem.a->pos);
 		  //CONS_Printf("found a best item at x:%d, y:%d\n", bUnseenItem->x>>FRACBITS, bUnseenItem.a->y>>FRACBITS);
 		}
 	      else if (cUnseenTeammate.a)
-		newdest = mp->botnodes->GetNodeAt(cUnseenTeammate.a->x, cUnseenTeammate.a->y);
+		newdest = mp->botnodes->GetNodeAt(cUnseenTeammate.a->pos);
 	      else if (cUnseenEnemy.a)
-		newdest = mp->botnodes->GetNodeAt(cUnseenEnemy.a->x, cUnseenEnemy.a->y);
+		newdest = mp->botnodes->GetNodeAt(cUnseenEnemy.a->pos);
 	      else 
 		newdest = NULL;
 
@@ -1111,20 +1112,20 @@ void ACBot::BuildInput(PlayerInfo *p, int elapsed)
 		{
 		  // we have a valid destination
 		  if (!path.empty() &&
-		      P_AproxDistance(pawn->x - path.front()->mx, pawn->y - path.front()->my) < (BOTNODEGRIDSIZE<<1))//BOTNODEGRIDSIZE>>1))
+		      P_AproxDistance(pawn->pos.x - path.front()->mx, pawn->pos.y - path.front()->my) < (BotNodes::GRIDSIZE << 1))
 		    {
 		      // next path node reached!
 #ifdef SHOWBOTPATH
 		      SearchNode_t* temp = path.front();
-		      temp->mo->Remove();
+		      temp->marker->Remove();
 #endif
 		      path.pop_front();
 		    }
 
 		  // do we need to rebuild the path?
 		  if (path.empty() ||
-		      !mp->botnodes->DirectlyReachable(NULL, pawn->x, pawn->y, path.front()->mx, path.front()->my))
-		    if (!mp->botnodes->FindPath(path, mp->botnodes->GetNodeAt(pawn->x, pawn->y), destination))
+		      !mp->botnodes->DirectlyReachable(NULL, pawn->pos.x, pawn->pos.y, path.front()->mx, path.front()->my))
+		    if (!mp->botnodes->FindPath(path, mp->botnodes->GetNodeAt(pawn->pos), destination))
 		      {
 			//CONS_Printf("Bot stuck at x:%d y:%d could not find a path to x:%d y:%d\n",pawn->x>>FRACBITS, pawn->y>>FRACBITS, posX2x(destination->x)>>FRACBITS, posY2y(destination->y)>>FRACBITS);
 			destination = NULL; // can't get there
@@ -1142,15 +1143,15 @@ void ACBot::BuildInput(PlayerInfo *p, int elapsed)
 	    }
 	}
 
-      fixed_t forwardAngle = pawn->angle >> ANGLETOFINESHIFT;
-      fixed_t sideAngle = (pawn->angle - ANG90) >> ANGLETOFINESHIFT;
-      fixed_t cpx = FixedMul(forwardmove*2048, finecosine[forwardAngle]) + FixedMul(sidemove*2048, finecosine[sideAngle]);
-      fixed_t cpy = FixedMul(forwardmove*2048, finesine[forwardAngle]) + FixedMul(sidemove*2048, finesine[sideAngle]);
-      fixed_t nx = pawn->x + pawn->px + cpx;
-      fixed_t ny = pawn->y + pawn->py + cpy;
+      int forwardAngle = pawn->yaw >> ANGLETOFINESHIFT;
+      int sideAngle = (pawn->yaw - ANG90) >> ANGLETOFINESHIFT;
+      fixed_t cpx = (forwardmove * finecosine[forwardAngle] + sidemove * finecosine[sideAngle]) >> 5;
+      fixed_t cpy = (forwardmove * finesine[forwardAngle] + sidemove * finesine[sideAngle]) >> 5;
+      fixed_t nx = pawn->pos.x + pawn->vel.x + cpx;
+      fixed_t ny = pawn->pos.y + pawn->vel.y + cpy;
 
       bool blocked = !pawn->CheckPosition(nx, ny) ||
-	tmfloorz - pawn->z > 24*FRACUNIT ||
+	tmfloorz - pawn->Feet() > 24 ||
 	tmceilingz - tmfloorz < pawn->height;
       //if its time to change strafe directions, 
       if (sidemove && ((pawn->eflags & MFE_JUSTHIT) || blocked))
@@ -1162,14 +1163,13 @@ void ACBot::BuildInput(PlayerInfo *p, int elapsed)
       if (blocked)
 	{
 	  if (++blockedcount > 20 &&
-	      (P_AproxDistance(pawn->px, pawn->py) < 4*FRACUNIT ||
+	      (P_AproxDistance(pawn->vel.x, pawn->vel.y) < 4 ||
 	       (Blocking.thing && (Blocking.thing->flags & MF_SOLID))))
 	    avoidtimer = 20;
 
-	  if (tmfloorz - pawn->z > 24*FRACUNIT &&
-	      (tmfloorz - pawn->z <= 37*FRACUNIT ||
-	       (tmfloorz - pawn->z <= 45*FRACUNIT &&
-		pawn->subsector->sector->floortype != FLOOR_WATER)))
+	  if (tmfloorz - pawn->Feet() > 24 &&
+	      (tmfloorz - pawn->Feet() <= 37 ||
+	       (tmfloorz - pawn->Feet() <= 45 && pawn->subsector->sector->floortype != FLOOR_WATER)))
 	    cmd->buttons |= ticcmd_t::BT_JUMP;
 
 	  for (unsigned i=0; i < spechit.size(); i++)

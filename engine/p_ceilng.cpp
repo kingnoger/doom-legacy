@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.17  2005/06/22 20:44:30  smite-meister
 // alpha3 bugfixes
 //
@@ -151,10 +154,10 @@ ceiling_t::ceiling_t(Map *m, int ty, sector_t *sec, fixed_t sp, int cru, fixed_t
       else
 	destheight -= mp->FindShortestUpperAround(sec);
 
-      if (destheight < (-32000 << FRACBITS))
-	destheight = -32000 << FRACBITS;
-      else if (destheight > (32000 << FRACBITS))
-	destheight = 32000 << FRACBITS;
+      if (destheight < -32000)
+	destheight = -32000;
+      else if (destheight > 32000)
+	destheight = 32000;
       break;
 
     default:

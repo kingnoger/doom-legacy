@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.44  2005/09/11 16:22:54  smite-meister
+// template classes
+//
 // Revision 1.43  2005/07/05 18:29:05  smite-meister
 // damage types
 //
@@ -144,6 +147,7 @@
 #include "g_actor.h"
 #include "g_pawn.h"
 
+#include "p_maputl.h"
 #include "p_spec.h"
 #include "p_heretic.h"
 #include "sounds.h"
@@ -324,9 +328,9 @@ bool Actor::Touch(Actor *p)
 	return false;
 
       // see if it went over / under
-      if (z > p->z + p->height)
+      if (Feet() > p->Top())
 	return false; // overhead
-      if (z + height < p->z)
+      if (Top() < p->Feet())
 	return false; // underneath
 
       if (!(p->flags & MF_SHOOTABLE))
@@ -357,7 +361,7 @@ bool DActor::Touch(Actor *p)
       p->Damage(this, this, damage, dtype);
 
       eflags &= ~MFE_SKULLFLY;
-      px = py = pz = 0;
+      vel.Set(0,0,0);
 
       SetState(game.mode == gm_heretic ? info->seestate : info->spawnstate);
 
@@ -372,9 +376,9 @@ bool DActor::Touch(Actor *p)
 	return false;
 
       // see if it went over / under
-      if (z > p->z + p->height)
+      if (Feet() > p->Top())
 	return false; // overhead
-      if (z + height < p->z)
+      if (Top() < p->Feet())
 	return false; // underneath
 
       // Don't hit the originator.
@@ -407,13 +411,13 @@ bool DActor::Touch(Actor *p)
 	  if (p->Damage(this, owner, damage, dtype))
             {
 	      if (!(p->flags & MF_NOBLOOD))
-		mp->SpawnBlood(x, y, z, damage);
+		mp->SpawnBlood(pos, damage);
             }
 
 	  if ((p->flags2 & MF2_PUSHABLE) && !(flags2 & MF2_CANNOTPUSH))
             { // Push thing
-	      p->px += px >> 2;
-	      p->py += py >> 2;
+	      p->vel.x += vel.x >> 2;
+	      p->vel.y += vel.y >> 2;
             }
 	  //spechit.clear(); FIXME why?
 	  return false;
@@ -423,7 +427,7 @@ bool DActor::Touch(Actor *p)
       damage = ((P_Random()%8)+1) * damage;
       if (p->Damage(this, owner, damage, dtype) &&
 	  !(p->flags & MF_NOBLOOD))
-	mp->SpawnBloodSplats(x, y, z, damage, p->px, p->py);
+	mp->SpawnBloodSplats(pos, damage, p->vel.x, p->vel.y);
 
       // don't traverse any more
       return true;
@@ -432,8 +436,8 @@ bool DActor::Touch(Actor *p)
   if ((p->flags2 & MF2_PUSHABLE) && !(flags2 & MF2_CANNOTPUSH))
     {
       // Push thing
-      p->px += px >> 2;
-      p->py += py >> 2;
+      p->vel.x += vel.x >> 2;
+      p->vel.y += vel.y >> 2;
     }
 
   // check for special pickup
@@ -511,8 +515,8 @@ bool PlayerPawn::Touch(Actor *p)
   if ((p->flags2 & MF2_PUSHABLE) && !(flags2 & MF2_CANNOTPUSH))
     {
       // Push thing
-      p->px += px >> 2;
-      p->py += py >> 2;
+      p->vel.x += vel.x >> 2;
+      p->vel.y += vel.y >> 2;
     }
 
   // check for special pickup
@@ -561,16 +565,16 @@ bool Actor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
       fixed_t apx, apy, apz = 0;
       fixed_t thrust;  
 
-      angle_t ang = R_PointToAngle2(inflictor->x, inflictor->y, x, y);
+      angle_t ang = R_PointToAngle2(inflictor->pos, pos);
 
-      if (game.mode == gm_heretic)
-	thrust = damage*(FRACUNIT>>3)*150/(mass+1);
+      if (game.mode >= gm_heretic)
+	thrust = damage * 18.75f/(mass+1);
       else
-	thrust = damage*(FRACUNIT>>3)*100/(mass+1);
+	thrust = damage * 12.5f/(mass+1);
 
       // sometimes a target shot down might fall off a ledge forwards
       if (damage < 40 && damage > health
-	  && (z - inflictor->z) > 64*FRACUNIT && (P_Random() & 1))
+	  && (pos.z - inflictor->pos.z) > 64 && (P_Random() & 1))
         {
 	  ang += ANG180;
 	  thrust *= 4;
@@ -578,38 +582,38 @@ bool Actor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 
       ang >>= ANGLETOFINESHIFT;
 
-      apx = FixedMul(thrust, finecosine[ang]);
-      apy = FixedMul(thrust, finesine[ang]);
-      px += apx;
-      py += apy;
+      apx = thrust * finecosine[ang];
+      apy = thrust * finesine[ang];
+      vel.x += apx;
+      vel.y += apy;
             
       // pz (do it better for explosions)
       if (!cv_allowrocketjump.value)
 	{
 	  fixed_t dist, sx, sy, sz;
 
-	  sx = inflictor->x;
-	  sy = inflictor->y;
-	  sz = inflictor->z;
+	  sx = inflictor->pos.x;
+	  sy = inflictor->pos.y;
+	  sz = inflictor->pos.z;
 
-	  dist = R_PointToDist2(sx, sy, x, y);
+	  dist = R_PointToDist2(sx, sy, pos.x, pos.y);
                 
-	  ang = R_PointToAngle2(0, sz, dist, z);
+	  ang = R_PointToAngle2(0, sz, dist, pos.z);
                 
 	  ang >>= ANGLETOFINESHIFT;
-	  apz = FixedMul(thrust, finesine[ang]);
+	  apz = thrust * finesine[ang];
 	}
       else
 	{
 	  // rocket jump code
-	  fixed_t delta1 = abs(inflictor->z - z);
-	  fixed_t delta2 = abs(inflictor->z - (z + height));
+	  fixed_t delta1 = abs(inflictor->pos.z - pos.z);
+	  fixed_t delta2 = abs(inflictor->Feet() - Top());
 	  apz = (abs(apx) + abs(apy)) >> 1;
 	  
-	  if (delta1 >= delta2 && inflictor->pz < 0)
+	  if (delta1 >= delta2 && inflictor->vel.z < 0)
 	    apz = -apz;
 	}
-      pz += apz;
+      vel.z += apz;
     }
   
   // do the damage
@@ -638,7 +642,7 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
       // Minotaur is invulnerable during charge attack
       if (type == MT_MINOTAUR)
 	return false;
-      px = py = pz = 0;
+      vel.Set(0,0,0);
     }
 
   // Special damage types

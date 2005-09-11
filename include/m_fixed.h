@@ -1,10 +1,9 @@
-// Emacs style mode select   -*- C++ -*-
+// Emacs style mode select   -*- C++ -*- 
 //-----------------------------------------------------------------------------
 //
 // $Id$
 //
-// Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 2002-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,146 +17,214 @@
 //
 //
 // $Log$
-// Revision 1.2  2004/07/25 20:18:47  hurdler
-// Remove old hardware renderer and add part of the new one
+// Revision 1.3  2005/09/11 16:23:25  smite-meister
+// template classes
 //
-// Revision 1.1.1.1  2002/11/16 14:18:24  hurdler
-// Initial C++ version of Doom Legacy
-//
-// Revision 1.3  2002/07/01 21:00:49  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:25  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.8  2001/01/25 22:15:42  bpereira
-// added heretic support
-//
-// Revision 1.7  2000/09/28 20:57:15  bpereira
-// no message
-//
-// Revision 1.6  2000/04/24 23:52:23  hurdler
-// Apply cph patch
-//
-// Revision 1.5  2000/04/24 20:24:38  bpereira
-// no message
-//
-// Revision 1.4  2000/04/23 16:19:52  bpereira
-// no message
-//
-// Revision 1.3  2000/03/07 03:32:24  hurdler
-// fix linux compilation
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
-//
-//
-// DESCRIPTION:
-//      Fixed point arithemtics, implementation.
-// VB: comments added
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Fixed point arithmetic.
 
-#ifndef __M_FIXED__
-#define __M_FIXED__
+#ifndef m_fixed_h
+#define m_fixed_h 1
 
 #include <stdlib.h>
 #include "doomtype.h"
 
-//
-// Fixed point, 32bit as 16.16.
-//
-#define FRACBITS                16
-#define FRACUNIT                (1<<FRACBITS)
-typedef int fixed_t;
-#define FIXED_TO_FLOAT(x) (((float)(x)) / 65536.0f)
-
-//
-// Declare those functions:
-/*
-fixed_t FixedMul (fixed_t a, fixed_t b);
-fixed_t FixedDiv (fixed_t a, fixed_t b);
-fixed_t FixedDiv2 (fixed_t a, fixed_t b);
-*/
-
-#ifndef USEASM
-    fixed_t FixedMul (fixed_t a, fixed_t b);
-    fixed_t FixedDiv2 (fixed_t a, fixed_t b);
-#else
-# ifdef __WIN32__
-    //Microsoft VisualC++ (no asm inline :( )
-    fixed_t __cdecl FixedMul (fixed_t a, fixed_t b);
-    fixed_t __cdecl FixedDiv2 (fixed_t a, fixed_t b);
-# else
-#  ifdef __WATCOMC__
-    #pragma aux FixedMul =  \
-        "imul ebx",         \
-        "shrd eax,edx,16"   \
-        parm    [eax] [ebx] \
-        value   [eax]       \
-        modify exact [eax edx]
-
-    #pragma aux FixedDiv2 = \
-        "cdq",              \
-        "shld edx,eax,16",  \
-        "sal eax,16",       \
-        "idiv ebx"          \
-        parm    [eax] [ebx] \
-        value   [eax]       \
-        modify exact [eax edx]
-#  else
-    //DJGPP or linux
-    //Hurdler: changed with the fix for gcc 2.95.x provided by cph
-        static inline fixed_t FixedMul (fixed_t a, fixed_t b)         //asm
-        {
-          fixed_t ret;
-          int dummy;
-
-          asm("  imull %3 ;"
-              "  shrdl $16,%1,%0 ;"
-              : "=a" (ret),          /* eax is always the result */
-                "=d" (dummy)            /* cphipps - fix compile problem with gcc-2.95.1
-                                           edx is clobbered, but it might be an input */
-              : "0" (a),                /* eax is also first operand */
-                "r" (b)                 /* second operand could be mem or reg before,
-                                           but gcc compile problems mean i can only us reg */
-              : "%cc"                   /* edx and condition codes clobbered */
-              );
-
-          return ret;
-        }
-
-        static inline fixed_t FixedDiv2 (fixed_t a, fixed_t b)
-        {
-            fixed_t ret;
-            asm (
-                   "movl  %%eax,%%edx      \n" // these two instructions allow the next
-                   "sarl  $31,%%edx        \n" // two to pair, on the Pentium processor.
-                   "shldl $16,%%eax,%%edx  \n"
-                   "sall  $16,%%eax        \n"
-                   "idivl %%ecx            \n"
-
-                 : "=a" (ret)
-                 : "a" (a), "c" (b)
-                 : "dx"
-                 );
-            return ret;
-        }
-#  endif // __WATCOMC__
-# endif // __WIN32__
-#endif // useasm
-
-static inline fixed_t FixedDiv (fixed_t a, fixed_t b)
+/// \brief Class for 16.16 fixed point arithmetic
+///
+/// Binary operators are not member functions but friends, to allow the promotion
+/// of the left operand using non-explicit constructors.
+/// The templated functions and their specializations are used to avoid unnecessary
+/// construction of temporary fixed_t objects.
+/// TODO replace internal int() casts with round()'s?
+class fixed_t
 {
-    //I_Error("<a: %ld, b: %ld>",(long)a,(long)b);
+private:
+  typedef Sint32 value_t;
+  typedef Sint64 large_t;
 
-    if ( (abs(a)>>14) >= abs(b))
-        return (a^b)<0 ? MININT : MAXINT;
 
-    return FixedDiv2 (a,b);
+  /// only nonstatic data member, the fixed point value of the variable
+  value_t val;
+public:
+  enum
+  {
+    IBITS = 16,           ///< bits in the integer part
+    FBITS = 16,           ///< bits in the fractional part
+    UNIT  = (1 << FBITS), ///< unity
+    FMIN  = -(1 << (IBITS-1)),    ///< min representable integer
+    FMAX  = (1 << (IBITS-1)) - 1, ///< max representable integer
+    FMASK = (UNIT - 1)    ///< mask for the fractional part
+  };
+
+  /// Constructors.
+  /// Explicit constructors are only used when the call exactly matches them, i.e.
+  /// the compliler never adds an implicit cast for the input arguments.
+  explicit inline fixed_t() {}
+  inline fixed_t(int a) { val = a << FBITS; }
+  fixed_t(float f)
+  {
+    /* No reason for this slowdown. We don't check int's either.
+    if (f < FMIN)
+      val = FMIN;
+    else if (f > FMAX)
+      val = FMAX;
+    else
+    */
+      val = value_t(f * float(UNIT));
+  }
+  // copy constructor (has to be light!)
+  inline fixed_t(const fixed_t& f) { val = f.val; }
+
+  /// assignment operators
+  inline fixed_t& operator= (const fixed_t& a) { val  = a.val;  return *this; }
+  inline fixed_t& operator+=(const fixed_t& a) { val += a.val;  return *this; }
+  inline fixed_t& operator-=(const fixed_t& a) { val -= a.val;  return *this; }
+  inline fixed_t& operator<<=(int a) { val <<= a;  return *this; }
+  inline fixed_t& operator>>=(int a) { val >>= a;  return *this; }
+
+  /// templates for multiplication and division assignments
+  template<typename U>
+  inline fixed_t& operator*=(const U& a) { val = value_t(val*a); return *this; };
+  template<typename U>
+  inline fixed_t& operator/=(const U& a) { val = value_t(val/a); return *this; };
+
+
+  /// unary minus
+  inline fixed_t operator-() const
+  {
+    fixed_t res;
+    res.val = -val; 
+    return res;
+  }
+
+  /// Addition and subtraction, allowed only between fixed_t objects
+  inline friend fixed_t operator+(const fixed_t& a, const fixed_t& b)
+  {
+    fixed_t res;
+    res.val = a.val + b.val;
+    return res;
+  }
+
+  inline friend fixed_t operator-(const fixed_t& a, const fixed_t& b)
+  {
+    fixed_t res;
+    res.val = a.val - b.val;
+    return res;
+  }
+
+  /// Multiplication template.
+  /// Allow a non-fixed_t object on the left for efficiency (specialized fixed_t-fixed_t version follows!)
+  template<typename U>
+  inline friend fixed_t operator*(const U& a, const fixed_t& b)
+  {
+    fixed_t res;
+    res.val = value_t(a * b.val);
+    return res;
+  }
+
+  /// Division template.
+  /// Allow a non-fixed_t object on the right for efficiency (specialized fixed_t-fixed_t version follows!)
+  template<typename U>
+  inline friend fixed_t operator/(const fixed_t& a, const U& b)
+  {
+    fixed_t res;
+    res.val = value_t(a.val / b);
+    return res;
+  }
+
+  /// Quite esoteric: modulus division for fixed-point numbers (used in automap)
+  inline fixed_t operator%(const fixed_t& a)
+  {
+    fixed_t res;
+    res.val = val % a.val;
+    return res;
+  }
+
+  /// logical NOT
+  inline bool operator!() const { return (val == 0); }
+
+  /// bit shifts
+  inline fixed_t operator<<(int a) const
+  {
+    fixed_t res;
+    res.val = val << a;
+    return res;
+  }
+
+  inline fixed_t operator>>(int a) const
+  {
+    fixed_t res;
+    res.val = val >> a;
+    return res;
+  }
+
+  /// comparison operators
+  inline friend bool operator==(const fixed_t& a, const fixed_t& b) { return a.val == b.val; }
+  inline friend bool operator!=(const fixed_t& a, const fixed_t& b) { return a.val != b.val; }
+  inline friend bool operator<(const fixed_t& a, const fixed_t& b) { return a.val < b.val; }
+  inline friend bool operator>(const fixed_t& a, const fixed_t& b) { return a.val > b.val; }
+  inline friend bool operator<=(const fixed_t& a, const fixed_t& b) { return a.val <= b.val; }
+  inline friend bool operator>=(const fixed_t& a, const fixed_t& b) { return a.val >= b.val; }
+
+  /// basic functions
+  inline friend fixed_t abs(const fixed_t& a) { fixed_t res; res.val = abs(a.val); return res; }
+
+  /// "conversion operators", must not be implicitly used
+  inline float   Float() const { return float(val) / float(UNIT); }
+
+  inline value_t floor() const { return val >> FBITS; }
+  inline value_t ceil() const { return (val & FMASK) ? (val >> FBITS)+1 : val >> FBITS; }
+
+  /// returns the fractional part
+  inline fixed_t frac() const { fixed_t res; res.val = val & FMASK; return res; }
+
+  /// conveniences, remove them if you can!
+  inline value_t  value() const { return val; }
+  inline fixed_t& setvalue(value_t v) { val = v; return *this; }
+};
+
+
+
+/// specialization for assignment-multiplying two fixed_t objects
+template<>
+inline fixed_t& fixed_t::operator*=(const fixed_t& a)
+{
+  val = (large_t(val) * large_t(a.val)) >> FBITS;
+  //val = int(double(val) * double(a.val) / 65536.0);
+  return *this;
 }
 
-#endif //m_fixed.h
+/// specialization for assignment-dividing two fixed_t objects
+template<>
+inline fixed_t& fixed_t::operator/=(const fixed_t& a)
+{
+  val = (large_t(val) << FBITS) / large_t(a.val);
+  //val = int(double(val) / double(a.val) * 65536.0);
+  return *this;
+}
+
+
+/// specialization for multiplying two fixed_t objects
+template<>
+inline fixed_t operator*(const fixed_t& a, const fixed_t& b)
+{
+  fixed_t res;
+  res.val = (fixed_t::large_t(a.val) * fixed_t::large_t(b.val)) >> fixed_t::FBITS;
+  //res.val = int(double(a.val) * double(b.val) / 65536.0);
+  return res;
+}
+
+/// specialization for dividing two fixed_t objects
+template<>
+inline fixed_t operator/(const fixed_t& a, const fixed_t& b)
+{
+  fixed_t res;
+  res.val = (fixed_t::large_t(a.val) << fixed_t::FBITS) / fixed_t::large_t(b.val);
+  //res.val = int(double(a.val) / double(b.val) * 65536.0);
+  return res;
+}
+
+
+#endif

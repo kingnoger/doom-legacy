@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2005/09/11 16:23:25  smite-meister
+// template classes
+//
 // Revision 1.10  2005/03/16 21:16:08  smite-meister
 // menu cleanup, bugfixes
 //
@@ -46,10 +49,8 @@ extern const char VERSIONSTRING[];
 #define MAXPLAYERNAME           21
 #define MAXSKINCOLORS           11
 
-/// Frame rate, number of game tics / second.
-#define OLDTICRATE       35
-#define NEWTICRATERATIO   1  // try 4 for 140 fps :)
-#define TICRATE         (OLDTICRATE*NEWTICRATERATIO) 
+/// Frame rate, original number of game tics / second.
+#define TICRATE 35
 
 
 /// development mode (-devparm)

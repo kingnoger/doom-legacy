@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2005/09/11 16:23:25  smite-meister
+// template classes
+//
 // Revision 1.10  2005/04/22 19:44:50  smite-meister
 // bugs fixed
 //
@@ -87,7 +90,8 @@ extern int              hcolumnofs[MAXVIDHEIGHT];
 // COLUMN DRAWING CODE STUFF
 // -------------------------
 
-extern lighttable_t*    dc_colormap;
+extern lighttable_t    *dc_fadetable; ///< the entire fadetable in the map (for fuzz drawing)
+extern lighttable_t    *dc_colormap;
 extern int              dc_x;
 extern int              dc_yl, dc_yh;
 extern fixed_t          dc_iscale;
@@ -120,9 +124,8 @@ enum transnum_t
 
 
 
-// translation stuff here
-extern byte*            translationtables;
-extern byte*            dc_translation;
+/// Color translation stuff
+extern byte *dc_translation;
 
 extern struct r_lightlist_t *dc_lightlist;
 extern int              dc_numlights;
@@ -142,10 +145,10 @@ extern int              ds_x2;
 
 extern lighttable_t*    ds_colormap;
 
-extern fixed_t          ds_xfrac;
-extern fixed_t          ds_yfrac;
-extern fixed_t          ds_xstep;
-extern fixed_t          ds_ystep;
+extern Sint32          ds_xfrac;
+extern Sint32          ds_yfrac;
+extern Sint32          ds_xstep;
+extern Sint32          ds_ystep;
 
 extern byte*            ds_source;      // start of a 64*64 tile image
 extern byte*            ds_transmap;

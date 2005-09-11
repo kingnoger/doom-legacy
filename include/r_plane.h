@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2005/09/11 16:23:25  smite-meister
+// template classes
+//
 // Revision 1.2  2004/11/09 20:38:52  smite-meister
 // added packing to I/O structs
 //
@@ -91,7 +94,7 @@ struct visplane_t
   int                   maxx;
 
   //SoM: 4/3/2000: Colormaps per sector!
-  extracolormap_t*      extra_colormap;
+  class fadetable_t    *extra_colormap;
 
   // leave pads for [minx-1]/[maxx+1]
 
@@ -142,39 +145,16 @@ extern fixed_t          yslopetab[MAXVIDHEIGHT*4];
 extern fixed_t*         yslope;
 extern fixed_t          distscale[MAXVIDWIDTH];
 
-void R_InitPlanes (void);
-//void R_ClearPlanes(int tag);
-
-void R_MapPlane
-( int           y,
-  int           x1,
-  int           x2 );
-
-void R_MakeSpans
-( int           x,
-  int           t1,
-  int           b1,
-  int           t2,
-  int           b2 );
+void R_InitPlanes();
+void R_MapPlane(int y, int x1, int x2);
+void R_MakeSpans(int x, int t1, int b1, int t2, int b2);
 
 
-//void R_DrawPlanes (void);
-/*
-//visplane_t* R_FindPlane( fixed_t height,
-                         int     picnum,
-                         int     lightlevel,
-                         fixed_t xoff,
-                         fixed_t yoff,
-                         extracolormap_t* planecolormap,
-                         ffloor_t* ffloor);
-*/
 // SoM: Draws a single visplane. If !handlesource, it won't allocate or
 // remove ds_source.
 //void R_DrawSinglePlane(visplane_t* pl, bool handlesource);
 
-visplane_t* R_CheckPlane( visplane_t*   pl,
-  int           start,
-  int           stop );
+visplane_t* R_CheckPlane( visplane_t*   pl, int           start, int           stop );
 
 void R_ExpandPlane(visplane_t*  pl, int start, int stop);
 
