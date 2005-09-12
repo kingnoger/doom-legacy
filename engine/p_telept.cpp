@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2005/09/12 18:33:43  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.18  2005/09/11 16:22:54  smite-meister
 // template classes
 //
@@ -231,9 +234,6 @@ bool Map::EV_SilentLineTeleport(int tag, line_t *line, Actor *thing, bool revers
   if (thing->flags2 & MF2_NOTELEPORT)
     return false;
 
-  fixed_t epsilon;
-  epsilon.setvalue(1); // a HACK
-
   line_t *l;
   for (int i = -1; (l = FindLineFromTag(tag, &i)) != NULL;)
     if (l != line && l->backsector)
@@ -293,9 +293,9 @@ bool Map::EV_SilentLineTeleport(int tag, line_t *line, Actor *thing, bool revers
         // Make sure we are on correct side of exit linedef.
         while (P_PointOnLineSide(x, y, l) != side && --fudge>=0)
           if (abs(l->dx) > abs(l->dy))
-            y -= l->dx < 0 != side ? -epsilon : epsilon;
+            y -= l->dx < 0 != side ? -fixed_epsilon : fixed_epsilon;
           else
-            x += l->dy < 0 != side ? -epsilon : epsilon;
+            x += l->dy < 0 != side ? -fixed_epsilon : fixed_epsilon;
 
         // Height of thing above ground
         fixed_t z = thing->Feet() - thing->floorz;

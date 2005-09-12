@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.35  2005/09/12 18:33:42  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.34  2005/09/11 16:22:54  smite-meister
 // template classes
 //
@@ -995,8 +998,6 @@ void Map::SlideMove(Actor *mo)
   slidemo = mo;
   hitcount = 0;
 
-  fixed_t unit_plus_epsilon;   // FIXME find a better way
-  unit_plus_epsilon.setvalue(fixed_t::UNIT + 1);
   fixed_t fudge;   // FIXME find a better way
   fudge.setvalue(0x800);
 
@@ -1028,7 +1029,7 @@ void Map::SlideMove(Actor *mo)
       traily = mo->pos.y + mo->radius;
     }
 
-  bestslidefrac = unit_plus_epsilon;
+  bestslidefrac = 1 + fixed_epsilon;
 
   PathTraverse (leadx, leady, leadx+mo->vel.x, leady+mo->vel.y,
 		   PT_ADDLINES, PTR_SlideTraverse);
@@ -1038,7 +1039,7 @@ void Map::SlideMove(Actor *mo)
 		   PT_ADDLINES, PTR_SlideTraverse);
 
   // move up to the wall
-  if (bestslidefrac == unit_plus_epsilon)
+  if (bestslidefrac == 1 + fixed_epsilon)
     {
       // the move most have hit the middle, so stairstep
     stairstep:

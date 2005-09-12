@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2005/09/12 18:33:45  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.3  2004/10/14 19:35:51  smite-meister
 // automap, bbox_t
 //
@@ -38,8 +41,8 @@
 
 void bbox_t::Clear()
 {
-  box[BOXTOP] = box[BOXRIGHT] = MININT;
-  box[BOXBOTTOM] = box[BOXLEFT] = MAXINT;
+  box[BOXTOP] = box[BOXRIGHT] = fixed_t::FMIN;
+  box[BOXBOTTOM] = box[BOXLEFT] = fixed_t::FMAX;
 }
 
 

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2005/09/12 18:33:45  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.6  2005/06/05 19:32:28  smite-meister
 // unsigned map structures
 //
@@ -103,11 +106,10 @@ static wallsplat_t *R_AllocWallSplat()
 
 static fixed_t P_SegLength(line_t *l)
 {
-  const double fixedtofloat = 1.0 / 65536.0;
-  double dx = double(l->v2->x - l->v1->x)*fixedtofloat;
-  double dy = double(l->v2->y - l->v1->y)*fixedtofloat;
+  double dx = (l->v2->x - l->v1->x).Float();
+  double dy = (l->v2->y - l->v1->y).Float();
 
-  return int(sqrt(dx*dx+dy*dy) * FRACUNIT);
+  return sqrtf(dx*dx+dy*dy);
 }
 
 // Add a new splat to the linedef:
@@ -148,21 +150,21 @@ void Map::R_AddWallSplat(line_t *line, int side, char *name, fixed_t top, fixed_
   
   // offset needed by draw code for texture mapping
   fixed_t linelength = P_SegLength(line);
-  splat->offset = FixedMul(wallfrac, linelength) - (t->width << (FRACBITS-1));
+  splat->offset = (wallfrac * linelength) - (fixed_t(t->width) >> 1);
   //CONS_Printf("offset splat %d\n",splat->offset);
-  fixed_t fracsplat = FixedDiv( ((t->width<<FRACBITS)>>1) , linelength );
+  fixed_t fracsplat = (fixed_t(t->width) >> 1) / linelength;
     
   wallfrac -= fracsplat;
   if (wallfrac > linelength)
     return;
   //CONS_Printf("final splat position %f\n",FIXED_TO_FLOAT(wallfrac));
-  splat->v1.x = line->v1->x + FixedMul (line->dx, wallfrac);
-  splat->v1.y = line->v1->y + FixedMul (line->dy, wallfrac);
+  splat->v1.x = line->v1->x + (line->dx * wallfrac);
+  splat->v1.y = line->v1->y + (line->dy * wallfrac);
   wallfrac += fracsplat + fracsplat;
   if (wallfrac < 0)
     return;
-  splat->v2.x = line->v1->x + FixedMul (line->dx, wallfrac);
-  splat->v2.y = line->v1->y + FixedMul (line->dy, wallfrac);
+  splat->v2.x = line->v1->x + (line->dx * wallfrac);
+  splat->v2.y = line->v1->y + (line->dy * wallfrac);
 
 
   if (line->frontsector && line->frontsector == backsector)
@@ -229,8 +231,8 @@ static void prepare_rastertab()
 {
   for (int i=0; i<vid.height; i++)
     {
-      rastertab[i].minx = MAXINT;
-      rastertab[i].maxx = MININT;
+      rastertab[i].minx = fixed_t::FMAX;
+      rastertab[i].maxx = fixed_t::FMIN;
     }
 }
 
@@ -490,9 +492,9 @@ static void R_RenderFloorSplat (floorsplat_t* pSplat, vertex_t* verts, byte* pTe
         if (planeheight != cachedheight[y])
         {
             cachedheight[y] = planeheight;
-            distance = cacheddistance[y] = FixedMul (planeheight, yslope[y]);
-            ds_xstep = cachedxstep[y] = FixedMul (distance,basexscale);
-            ds_ystep = cachedystep[y] = FixedMul (distance,baseyscale);
+            distance = cacheddistance[y] = (planeheight * yslope[y]);
+            ds_xstep = cachedxstep[y] = (distance * basexscale);
+            ds_ystep = cachedystep[y] = (distance * baseyscale);
         }
         else
         {
@@ -500,10 +502,10 @@ static void R_RenderFloorSplat (floorsplat_t* pSplat, vertex_t* verts, byte* pTe
             ds_xstep = cachedxstep[y];
             ds_ystep = cachedystep[y];
         }
-        length = FixedMul (distance,distscale[x1]);
+        length = (distance * distscale[x1]);
         angle = (viewangle + xtoviewangle[x1])>>ANGLETOFINESHIFT;
-        ds_xfrac = viewx + FixedMul(finecosine[angle], length);
-        ds_yfrac = -viewy - FixedMul(finesine[angle], length);
+        ds_xfrac = viewx + (finecosine[angle] * length);
+        ds_yfrac = -viewy -(finesine[angle] * length);
         ds_xfrac -= offsetx;
         ds_yfrac += offsety;
 
@@ -511,7 +513,7 @@ static void R_RenderFloorSplat (floorsplat_t* pSplat, vertex_t* verts, byte* pTe
             ds_colormap = fixedcolormap;
         else
         {
-            index = distance >> LIGHTZSHIFT;
+	  index = distance >> LIGHTZSHIFT >> FRACBITS;
             if (index >= MAXLIGHTZ )
                 index = MAXLIGHTZ-1;
             ds_colormap = planezlight[index];
@@ -523,8 +525,8 @@ static void R_RenderFloorSplat (floorsplat_t* pSplat, vertex_t* verts, byte* pTe
         spanfunc ();
 
         // reset for next calls to edge rasterizer
-            rastertab[y].minx = MAXINT;
-            rastertab[y].maxx = MININT;
+            rastertab[y].minx = fixed_t::FMAX;
+            rastertab[y].maxx = fixed_t::FMIN;
         }
 
 #else
@@ -566,8 +568,8 @@ static void R_RenderFloorSplat (floorsplat_t* pSplat, vertex_t* verts, byte* pTe
         }
 
         // r‚initialise les minimus maximus pour le prochain appel
-        rastertab[y].minx = MAXINT;
-        rastertab[y].maxx = MININT;
+        rastertab[y].minx = fixed_t::FMAX;
+        rastertab[y].maxx = fixed_t::FMIN;
     }
 #endif
 }
@@ -613,8 +615,8 @@ void R_DrawVisibleFloorSplats()
             tr_y = v3d->y - viewy;
 
             // rotation around vertical y axis
-            rot_x = FixedMul(tr_x,viewsin) - FixedMul(tr_y,viewcos);
-            rot_y = FixedMul(tr_x,viewcos) + FixedMul(tr_y,viewsin);
+            rot_x = (tr_x * viewsin) -(tr_y * viewcos);
+            rot_y = (tr_x * viewcos) +(tr_y * viewsin);
 
             if (rot_y < 4*FRACUNIT)
                 goto skipit;
@@ -624,8 +626,8 @@ void R_DrawVisibleFloorSplats()
             yscale = -FixedDiv(projectiony, rot_y);
 
             // projection
-            v2d[i].x = (centerxfrac + FixedMul (rot_x, xscale)) >>FRACBITS;
-            v2d[i].y = (centeryfrac + FixedMul (rot_z, yscale)) >>FRACBITS;
+            v2d[i].x = (centerxfrac + (rot_x * xscale)).floor();
+            v2d[i].y = (centeryfrac + (rot_z * yscale)).floor();
         }
         /*
         pSplat->verts[3].x = 100 + iCount;

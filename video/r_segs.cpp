@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2005/09/12 18:33:45  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.16  2005/06/30 18:16:58  smite-meister
 // texture anims fixed
 //
@@ -172,6 +175,10 @@ static fixed_t  waterfrac;
 static fixed_t  waterstep;
 #endif
 
+
+// FIXME HACK
+#define FixedMul(x,y) ((x)*(y))
+
 // OPTIMIZE: closed two sided lines as single sided
 
 // True if any of the segs textures might be visible.
@@ -207,10 +214,10 @@ static fixed_t         rw_midtexturemid;
 static fixed_t         rw_toptexturemid;
 static fixed_t         rw_bottomtexturemid;
 
-static int             worldtop;
-static int             worldbottom;
-static int             worldhigh;
-static int             worldlow;
+static fixed_t             worldtop;
+static fixed_t             worldbottom;
+static fixed_t             worldhigh;
+static fixed_t             worldlow;
 
 static fixed_t         pixhigh;
 static fixed_t         pixlow;
@@ -223,7 +230,7 @@ static fixed_t         topstep;
 static fixed_t         bottomfrac;
 static fixed_t         bottomstep;
 
-lighttable_t**  walllights;
+int *walllights;
 
 short*          maskedtexturecol;
 
@@ -240,21 +247,18 @@ static short last_floorclip[MAXVIDWIDTH];
 
 static void R_DrawSplatColumn (column_t* column)
 {
-    int         topscreen;
-    int         bottomscreen;
-    fixed_t     basetexturemid;
+  fixed_t topscreen, bottomscreen;
+  fixed_t basetexturemid = dc_texturemid;
 
-    basetexturemid = dc_texturemid;
-
-    for ( ; column->topdelta != 0xff ; )
+  for ( ; column->topdelta != 0xff ; )
     {
-        // calculate unclipped screen coordinates
-        //  for post
-        topscreen = sprtopscreen + spryscale*column->topdelta;
-        bottomscreen = topscreen + spryscale*column->length;
+      // calculate unclipped screen coordinates
+      //  for post
+      topscreen = sprtopscreen + spryscale*column->topdelta;
+      bottomscreen = topscreen + spryscale*column->length;
 
-        dc_yl = (topscreen+FRACUNIT-1)>>FRACBITS;
-        dc_yh = (bottomscreen-1)>>FRACBITS;
+      dc_yl = (topscreen + 1 - fixed_epsilon).floor();
+      dc_yh = (bottomscreen - fixed_epsilon).floor();
 
 
 #ifndef BORIS_FIX
@@ -271,7 +275,7 @@ static void R_DrawSplatColumn (column_t* column)
         if (dc_yl <= dc_yh)
         {
             dc_source = (byte *)column + 3;
-            dc_texturemid = basetexturemid - (column->topdelta<<FRACBITS);
+            dc_texturemid = basetexturemid - column->topdelta;
             
             //CONS_Printf("l %d h %d %d\n",dc_yl,dc_yh, column->length);
             // Drawn by either R_DrawColumn
@@ -287,153 +291,156 @@ static void R_DrawSplatColumn (column_t* column)
 
 void Rend::R_DrawWallSplats()
 {
-    wallsplat_t*    splat;
-    seg_t*      seg;
-    angle_t     angle, angle1, angle2;
-    int         x1, x2;
-    unsigned    index;
-    column_t*   col;
-    fixed_t     texturecolumn;
+  wallsplat_t*    splat;
+  seg_t*      seg;
+  angle_t     angle, angle1, angle2;
+  int         x1, x2;
+  unsigned    index;
+  column_t*   col;
 
-    splat = (wallsplat_t*) linedef->splats;
+
+  splat = (wallsplat_t*) linedef->splats;
 
 #ifdef PARANOIA
-    if (!splat)
-        I_Error ("R_DrawWallSplats: splat is NULL");
+  if (!splat)
+    I_Error ("R_DrawWallSplats: splat is NULL");
 #endif
 
-    seg = ds_p->curline;
+  seg = ds_p->curline;
 
-    // draw all splats from the line that touches the range of the seg
-    for ( ; splat ; splat=splat->next)
+  // draw all splats from the line that touches the range of the seg
+  for ( ; splat ; splat=splat->next)
     {
-        angle1 = R_PointToAngle (splat->v1.x, splat->v1.y);
-        angle2 = R_PointToAngle (splat->v2.x, splat->v2.y);
-        angle1 = (angle1-viewangle+ANG90)>>ANGLETOFINESHIFT;
-        angle2 = (angle2-viewangle+ANG90)>>ANGLETOFINESHIFT;
+      angle1 = R_PointToAngle (splat->v1.x, splat->v1.y);
+      angle2 = R_PointToAngle (splat->v2.x, splat->v2.y);
+      angle1 = (angle1-viewangle+ANG90)>>ANGLETOFINESHIFT;
+      angle2 = (angle2-viewangle+ANG90)>>ANGLETOFINESHIFT;
 #if 0
-        if (angle1>clipangle)
-            angle1=clipangle;
-        if (angle2>clipangle)
-            angle2=clipangle;
-        if ((int)angle1<-(int)clipangle)
-            angle1=-clipangle;
-        if ((int)angle2<-(int)clipangle)
-            angle2=-clipangle;
+      if (angle1>clipangle)
+	angle1=clipangle;
+      if (angle2>clipangle)
+	angle2=clipangle;
+      if ((int)angle1<-(int)clipangle)
+	angle1=-clipangle;
+      if ((int)angle2<-(int)clipangle)
+	angle2=-clipangle;
 #else
-        // BP: out of the viewangletox lut, TODO clip it to the screen
-        if( angle1 > FINEANGLES/2 || angle2 > FINEANGLES/2)
-            continue;
+      // BP: out of the viewangletox lut, TODO clip it to the screen
+      if( angle1 > FINEANGLES/2 || angle2 > FINEANGLES/2)
+	continue;
 #endif
-        x1 = viewangletox[angle1];
-        x2 = viewangletox[angle2];
+      x1 = viewangletox[angle1];
+      x2 = viewangletox[angle2];
 
-        if (x1 >= x2)
-            continue;                         // does not cross a pixel
+      if (x1 >= x2)
+	continue;                         // does not cross a pixel
 
-        // splat is not in this seg range
-        if (x2 < ds_p->x1 || x1 > ds_p->x2)
-            continue;
+      // splat is not in this seg range
+      if (x2 < ds_p->x1 || x1 > ds_p->x2)
+	continue;
 
-        if (x1 < ds_p->x1)
-            x1 = ds_p->x1;
-        if (x2 > ds_p->x2)
-            x2 = ds_p->x2;
-        if( x2<=x1 )
-            continue;
+      if (x1 < ds_p->x1)
+	x1 = ds_p->x1;
+      if (x2 > ds_p->x2)
+	x2 = ds_p->x2;
+      if( x2<=x1 )
+	continue;
 
-        // calculate incremental stepping values for texture edges
-        rw_scalestep = ds_p->scalestep;
-        spryscale = ds_p->scale1 + (x1 - ds_p->x1)*rw_scalestep;
-        mfloorclip = floorclip;
-        mceilingclip = ceilingclip;
+      // calculate incremental stepping values for texture edges
+      rw_scalestep = ds_p->scalestep;
+      spryscale = ds_p->scale1 + (x1 - ds_p->x1)*rw_scalestep;
+      mfloorclip = floorclip;
+      mceilingclip = ceilingclip;
 
-	Texture *patch = splat->tex;
+      Texture *patch = splat->tex;
 
-        // clip splat range to seg range left
-        /*if (x1 < ds_p->x1)
+      // clip splat range to seg range left
+      /*if (x1 < ds_p->x1)
         {
-            spryscale += (rw_scalestep * (ds_p->x1 - x1));
-            x1 = ds_p->x1;
+	spryscale += (rw_scalestep * (ds_p->x1 - x1));
+	x1 = ds_p->x1;
         }*/
-        // clip splat range to seg range right
+      // clip splat range to seg range right
 
 
-        // SoM: This is set allready. THIS IS WHAT WAS CAUSING PROBLEMS WITH
-        // BOOM WATER!
-        // frontsector = ds_p->curline->frontsector;
-        dc_texturemid = splat->top + (patch->height<<(FRACBITS-1)) - viewz;
-        if( splat->yoffset )
-            dc_texturemid += *splat->yoffset;
+      // SoM: This is set allready. THIS IS WHAT WAS CAUSING PROBLEMS WITH
+      // BOOM WATER!
+      // frontsector = ds_p->curline->frontsector;
+      dc_texturemid = splat->top + (fixed_t(patch->height) >> 1) - viewz;
+      if( splat->yoffset )
+	dc_texturemid += *splat->yoffset;
 
-        sprtopscreen = centeryfrac - FixedMul(dc_texturemid,spryscale);
+      sprtopscreen = centeryfrac - (dc_texturemid * spryscale);
 
-        // set drawing mode
-        switch (splat->flags & SPLATDRAWMODE_MASK)
+      // set drawing mode
+      switch (splat->flags & SPLATDRAWMODE_MASK)
         {
-            case SPLATDRAWMODE_OPAQUE:
-                colfunc = basecolfunc;
-                break;
-            case SPLATDRAWMODE_TRANS:
-                if( cv_translucency.value == 0 )
-                    colfunc = basecolfunc;
-                else
-                {
-		  dc_transmap = transtables[tr_transmed-1];
-                    colfunc = fuzzcolfunc;
-                }
+	case SPLATDRAWMODE_OPAQUE:
+	  colfunc = basecolfunc;
+	  break;
+	case SPLATDRAWMODE_TRANS:
+	  if( cv_translucency.value == 0 )
+	    colfunc = basecolfunc;
+	  else
+	    {
+	      dc_transmap = transtables[tr_transmed-1];
+	      colfunc = fuzzcolfunc;
+	    }
     
-                break;
-            case SPLATDRAWMODE_SHADE:
-                colfunc = shadecolfunc;
-                break;
+	  break;
+	case SPLATDRAWMODE_SHADE:
+	  colfunc = shadecolfunc;
+	  break;
         }
-        if (fixedcolormap)
-            dc_colormap = fixedcolormap;
 
-        dc_texheight = 0;
+      if (fixedcolormap)
+	dc_colormap = base_colormap + fixedcolormap;
 
-        // draw the columns
-        for (dc_x = x1 ; dc_x <= x2 ; dc_x++,spryscale += rw_scalestep)
+      dc_texheight = 0;
+
+      // draw the columns
+      for (dc_x = x1 ; dc_x <= x2 ; dc_x++,spryscale += rw_scalestep)
         {
-            if (!fixedcolormap)
+	  if (!fixedcolormap)
             {
-                index = spryscale>>LIGHTSCALESHIFT;
-                if (index >=  MAXLIGHTSCALE )
-                    index = MAXLIGHTSCALE-1;
-                dc_colormap = walllights[index];
+	      if (frontsector->extra_colormap)
+		dc_colormap = frontsector->extra_colormap->colormap;
+	      else
+		dc_colormap = base_colormap;
+
+	      index = (spryscale << LIGHTSCALESHIFT).floor();
+	      if (index >=  MAXLIGHTSCALE )
+		index = MAXLIGHTSCALE-1;
+	      dc_colormap += walllights[index];
             }
 
-            if(frontsector->extra_colormap && !fixedcolormap)
-              dc_colormap = frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
+	  sprtopscreen = centeryfrac - (dc_texturemid * spryscale);
+	  dc_iscale.setvalue(0xffffffffu / unsigned(spryscale.value()));
 
-            sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
-            dc_iscale = 0xffffffffu / (unsigned)spryscale;
+	  // find column of patch, from perspective
+	  angle = (rw_centerangle + xtoviewangle[dc_x])>>ANGLETOFINESHIFT;
+	  int texturecolumn = (rw_offset2 - splat->offset - (finetangent[angle] * rw_distance)).floor();
 
-            // find column of patch, from perspective
-            angle = (rw_centerangle + xtoviewangle[dc_x])>>ANGLETOFINESHIFT;
-            texturecolumn = rw_offset2 - splat->offset - FixedMul(finetangent[angle],rw_distance);
+	  //texturecolumn &= 7;
+	  //DEBUG
 
-            //texturecolumn &= 7;
-            //DEBUG
+	  // FIXME !
+	  //            CONS_Printf ("%.2f width %d, %d[x], %.1f[off]-%.1f[soff]-tg(%d)=%.1f*%.1f[d] = %.1f\n", 
+	  //                         FIXED_TO_FLOAT(texturecolumn), patch->width,
+	  //                         dc_x,FIXED_TO_FLOAT(rw_offset2),FIXED_TO_FLOAT(splat->offset),angle,FIXED_TO_FLOAT(finetangent[angle]),FIXED_TO_FLOAT(rw_distance),FIXED_TO_FLOAT(FixedMul(finetangent[angle],rw_distance)));
 
-            // FIXME !
-//            CONS_Printf ("%.2f width %d, %d[x], %.1f[off]-%.1f[soff]-tg(%d)=%.1f*%.1f[d] = %.1f\n", 
-//                         FIXED_TO_FLOAT(texturecolumn), patch->width,
-//                         dc_x,FIXED_TO_FLOAT(rw_offset2),FIXED_TO_FLOAT(splat->offset),angle,FIXED_TO_FLOAT(finetangent[angle]),FIXED_TO_FLOAT(rw_distance),FIXED_TO_FLOAT(FixedMul(finetangent[angle],rw_distance)));
-            texturecolumn >>= FRACBITS;
-            if (texturecolumn < 0 || texturecolumn>=patch->width) 
-                continue;
+	  if (texturecolumn < 0 || texturecolumn>=patch->width) 
+	    continue;
 
-            // draw the texture
-            col = patch->GetMaskedColumn(texturecolumn);
-            R_DrawSplatColumn (col);
+	  // draw the texture
+	  col = patch->GetMaskedColumn(texturecolumn);
+	  R_DrawSplatColumn (col);
 
         }
 
     }// next splat
 
-    colfunc = basecolfunc;
+  colfunc = basecolfunc;
 }
 
 
@@ -452,16 +459,16 @@ static int  column2s_length;     // column->length : for multi-patch on 2sided w
 
 void R_Render2sidedMultiPatchColumn(column_t *column)
 {
-  int topscreen = sprtopscreen; // + spryscale*column->topdelta;  topdelta is 0 for the wall
-  int bottomscreen = topscreen + spryscale * column2s_length;
+  fixed_t topscreen = sprtopscreen; // + spryscale*column->topdelta;  topdelta is 0 for the wall
+  fixed_t bottomscreen = topscreen + spryscale * column2s_length;
 
-  dc_yl = (sprtopscreen+FRACUNIT-1)>>FRACBITS;
-  dc_yh = (bottomscreen-1)>>FRACBITS;
+  dc_yl = 1 + (topscreen - fixed_epsilon).floor();
+  dc_yh = (bottomscreen - fixed_epsilon).floor();
 
-  if(windowtop != MAXINT && windowbottom != MAXINT)
+  if (windowtop != fixed_t::FMAX && windowbottom != fixed_t::FMAX)
     {
-      dc_yl = ((windowtop + FRACUNIT) >> FRACBITS);
-      dc_yh = (windowbottom - 1) >> FRACBITS;
+      dc_yl = windowtop.floor() + 1;
+      dc_yh = (windowbottom - fixed_epsilon).floor();
     }
 
   {
@@ -494,7 +501,7 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
   curline = ds->curline;
   frontsector = curline->frontsector;
   backsector = curline->backsector;
-  windowbottom = windowtop = sprbotscreen = MAXINT;
+  windowbottom = windowtop = sprbotscreen = fixed_t::FMAX;
 
   // translucent?
   line_t *ldef = curline->linedef;
@@ -544,7 +551,7 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
       for(i = 0; i < dc_numlights; i++)
 	{
 	  dc_lightlist[i].height = (centeryfrac) - FixedMul((frontsector->lightlist[i].height - viewz), spryscale);
-	  dc_lightlist[i].heightstep = -FixedMul (rw_scalestep, (frontsector->lightlist[i].height - viewz));
+	  dc_lightlist[i].heightstep = -(rw_scalestep * (frontsector->lightlist[i].height - viewz));
 	  dc_lightlist[i].lightlevel = *frontsector->lightlist[i].lightlevel;
 	  dc_lightlist[i].extra_colormap = frontsector->lightlist[i].extra_colormap;
 	  dc_lightlist[i].flags = frontsector->lightlist[i].caster ? frontsector->lightlist[i].caster->flags : 0;
@@ -587,20 +594,20 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
     {
       dc_texturemid = frontsector->floorheight > backsector->floorheight
 	? frontsector->floorheight : backsector->floorheight;
-      dc_texturemid = dc_texturemid + (tex->height << FRACBITS) - viewz;
+      dc_texturemid += tex->height - viewz;
     }
   else
     {
       dc_texturemid =frontsector->ceilingheight<backsector->ceilingheight
 	? frontsector->ceilingheight : backsector->ceilingheight;
-      dc_texturemid = dc_texturemid - viewz;
+      dc_texturemid -= viewz;
     }
   dc_texturemid += curline->sidedef->rowoffset;
 
   dc_texheight = tex->height;
 
   if (fixedcolormap)
-    dc_colormap = fixedcolormap;
+    dc_colormap = base_colormap + fixedcolormap;
 
   // draw the columns
   for (dc_x = x1 ; dc_x <= x2 ; dc_x++)
@@ -618,12 +625,12 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
 	  unsigned index;
           if(dc_numlights)
 	    {
-	      lighttable_t** xwalllights;
+	      int *xwalllights;
 
-	      sprbotscreen = MAXINT;
+	      sprbotscreen = fixed_t::FMAX;
 	      sprtopscreen = windowtop = (centeryfrac - FixedMul(dc_texturemid, spryscale));
 	      fixed_t realbot = windowbottom = tex->height * spryscale + sprtopscreen;
-	      dc_iscale = 0xffffffffu / (unsigned)spryscale;
+	      dc_iscale.setvalue(0xffffffffu / unsigned(spryscale.value()));
 
 	      for(i = 0; i < dc_numlights; i++)
 		{
@@ -652,17 +659,17 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
 		  else
 		    xwalllights = scalelight[lightnum];
 
-		  index = spryscale>>LIGHTSCALESHIFT;
+		  index = (spryscale << LIGHTSCALESHIFT).floor();
 
 		  if (index >=  MAXLIGHTSCALE )
 		    index = MAXLIGHTSCALE-1;
 
 		  if(dc_lightlist[i].extra_colormap && !fixedcolormap)
-		    dc_lightlist[i].rcolormap = dc_lightlist[i].extra_colormap->colormap + (xwalllights[index] - colormaps);
-		  else if(!fixedcolormap)
-		    dc_lightlist[i].rcolormap = xwalllights[index];
+		    dc_lightlist[i].rcolormap = dc_lightlist[i].extra_colormap->colormap + xwalllights[index];
+		  else if (!fixedcolormap)
+		    dc_lightlist[i].rcolormap = base_colormap + xwalllights[index];
 		  else
-		    dc_lightlist[i].rcolormap = fixedcolormap;
+		    dc_lightlist[i].rcolormap = base_colormap + fixedcolormap;
 
 		  dc_lightlist[i].height += dc_lightlist[i].heightstep;
 
@@ -698,18 +705,21 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
           // calculate lighting
           if (!fixedcolormap)
             {
-	      index = spryscale>>LIGHTSCALESHIFT;
+	      if (frontsector->extra_colormap)
+		dc_colormap = frontsector->extra_colormap->colormap;
+	      else 
+		dc_colormap = base_colormap;
+
+	      index = (spryscale << LIGHTSCALESHIFT).floor();
                 
 	      if (index >=  MAXLIGHTSCALE )
 		index = MAXLIGHTSCALE-1;
                 
-	      dc_colormap = walllights[index];
+	      dc_colormap += walllights[index];
             }
 
-	  if(frontsector->extra_colormap && !fixedcolormap)
-	    dc_colormap = frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
 	  sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
-	  dc_iscale = 0xffffffffu / (unsigned)spryscale;
+	  dc_iscale.setvalue(0xffffffffu / unsigned(spryscale.value()));
             
 	  // draw the texture
 	  colfunc_2s(col);
@@ -733,8 +743,8 @@ void Rend::R_RenderThickSideRange(drawseg_t *ds, int x1, int x2, ffloor_t *ffloo
   sector_t        tempsec;
   int             templight;
   int             i;
-  fixed_t         bottombounds = viewheight << FRACBITS;
-  fixed_t         topbounds = (con_clipviewtop - 1) << FRACBITS;
+  fixed_t         bottombounds = viewheight;
+  fixed_t         topbounds = con_clipviewtop - 1;
   fixed_t         offsetvalue = 0;
 
   void (*colfunc_2s) (column_t*);
@@ -847,7 +857,7 @@ void Rend::R_RenderThickSideRange(drawseg_t *ds, int x1, int x2, ffloor_t *ffloo
   dc_texturemid += offsetvalue;
 
   if (fixedcolormap)
-    dc_colormap = fixedcolormap;
+    dc_colormap = base_colormap + fixedcolormap;
 
     //faB: handle case where multipatch texture is drawn on a 2sided wall, multi-patch textures
     //     are not stored per-column with post info anymore in Doom Legacy
@@ -875,7 +885,7 @@ void Rend::R_RenderThickSideRange(drawseg_t *ds, int x1, int x2, ffloor_t *ffloo
 	  // will (hopefully) put less strain on the stack.
 	  if (dc_numlights)
 	    {
-	      lighttable_t** xwalllights;
+	      int *xwalllights;
 	      fixed_t        height;
 	      fixed_t        bheight = 0;
 	      int            solid = 0;
@@ -897,7 +907,7 @@ void Rend::R_RenderThickSideRange(drawseg_t *ds, int x1, int x2, ffloor_t *ffloo
 		  continue;
 		}
 
-	      dc_iscale = 0xffffffffu / (unsigned)spryscale;
+	      dc_iscale.setvalue(0xffffffffu / unsigned(spryscale.value()));
 
 	      // draw the texture
 
@@ -927,28 +937,29 @@ void Rend::R_RenderThickSideRange(drawseg_t *ds, int x1, int x2, ffloor_t *ffloo
 		      else
 			xwalllights = scalelight[lightnum];
 
-		      index = spryscale>>LIGHTSCALESHIFT;
+		      index = (spryscale << LIGHTSCALESHIFT).floor();
 
 		      if (index >=  MAXLIGHTSCALE )
 			index = MAXLIGHTSCALE-1;
 
-		      if(ffloor->flags & FF_FOG)
+		      if (fixedcolormap)
 			{
-			  if(ffloor->master->frontsector->extra_colormap && !fixedcolormap)
-			    dc_lightlist[i].rcolormap = ffloor->master->frontsector->extra_colormap->colormap + (xwalllights[index] - colormaps);
-			  else if(!fixedcolormap)
-			    dc_lightlist[i].rcolormap = xwalllights[index];
+			  dc_lightlist[i].rcolormap = base_colormap + fixedcolormap;
+			}
+		      else if (ffloor->flags & FF_FOG)
+			{
+			  if(ffloor->master->frontsector->extra_colormap)
+			    dc_lightlist[i].rcolormap = ffloor->master->frontsector->extra_colormap->colormap + xwalllights[index];
+			  else
+			    dc_lightlist[i].rcolormap = base_colormap + xwalllights[index];
 			}
 		      else
 			{
-			  if(dc_lightlist[i].extra_colormap && !fixedcolormap)
-			    dc_lightlist[i].rcolormap = dc_lightlist[i].extra_colormap->colormap + (xwalllights[index] - colormaps);
-			  else if(!fixedcolormap)
-			    dc_lightlist[i].rcolormap = xwalllights[index];
+			  if(dc_lightlist[i].extra_colormap)
+			    dc_lightlist[i].rcolormap = dc_lightlist[i].extra_colormap->colormap + xwalllights[index];
+			  else
+			    dc_lightlist[i].rcolormap = base_colormap + xwalllights[index];
 			}
-
-		      if(fixedcolormap)
-			dc_lightlist[i].rcolormap = fixedcolormap;
 		    }
 
 		  // Check if the current light can cut the current 3D floor.
@@ -975,7 +986,7 @@ void Rend::R_RenderThickSideRange(drawseg_t *ds, int x1, int x2, ffloor_t *ffloo
 		  if(solid)
 		    {
 		      dc_lightlist[i].botheight += dc_lightlist[i].botheightstep;
-		      bheight = dc_lightlist[i].botheight - (FRACUNIT >> 1);
+		      bheight = dc_lightlist[i].botheight - 0.5f;
 		    }
 
 		  if(height <= windowtop)
@@ -1019,21 +1030,22 @@ void Rend::R_RenderThickSideRange(drawseg_t *ds, int x1, int x2, ffloor_t *ffloo
 	  // calculate lighting
 	  if (!fixedcolormap)
 	    {
-	      index = spryscale>>LIGHTSCALESHIFT;
+	      if (frontsector->extra_colormap)
+                dc_colormap = frontsector->extra_colormap->colormap;
+	      if (ffloor->flags & FF_FOG && ffloor->master->frontsector->extra_colormap)
+                dc_colormap = ffloor->master->frontsector->extra_colormap->colormap;
+
+	      index = (spryscale << LIGHTSCALESHIFT).floor();
 
 	      if (index >=  MAXLIGHTSCALE )
                 index = MAXLIGHTSCALE-1;
                 
-	      dc_colormap = walllights[index];
-	      if(frontsector->extra_colormap)
-                dc_colormap = frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
-	      if(ffloor->flags & FF_FOG && ffloor->master->frontsector->extra_colormap)
-                dc_colormap = ffloor->master->frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
+	      dc_colormap += walllights[index];
 	    }
 
-	  sprtopscreen = windowtop = (centeryfrac - FixedMul((dc_texturemid - offsetvalue), spryscale));
-	  sprbotscreen = windowbottom = FixedMul(*ffloor->topheight - *ffloor->bottomheight, spryscale) + sprtopscreen;
-	  dc_iscale = 0xffffffffu / (unsigned)spryscale;
+	  sprtopscreen = windowtop = (centeryfrac - ((dc_texturemid - offsetvalue) * spryscale));
+	  sprbotscreen = windowbottom = ((*ffloor->topheight - *ffloor->bottomheight) * spryscale) + sprtopscreen;
+	  dc_iscale.setvalue(0xffffffffu / unsigned(spryscale.value()));
             
 	  // draw the texture
 	  colfunc_2s (col);
@@ -1082,17 +1094,16 @@ void Rend::R_RenderSegLoop()
 #endif
 
     int                 mid;
-    fixed_t             texturecolumn;
     int                 top;
     int                 bottom;
     int                 i;
     
-    texturecolumn = 0;                                // shut up compiler warning
+    int texturecolumn = 0;                                // shut up compiler warning
     
     for ( ; rw_x < rw_stopx ; rw_x++)
     {
         // mark floor / ceiling areas
-        yl = (topfrac+HEIGHTUNIT-1)>>HEIGHTBITS;
+      yl = (topfrac.value() + HEIGHTUNIT-1)>>HEIGHTBITS;
         
         // no space above wall?
         if (yl < ceilingclip[rw_x]+1)
@@ -1114,7 +1125,7 @@ void Rend::R_RenderSegLoop()
         }
 
         
-        yh = bottomfrac>>HEIGHTBITS;
+        yh = bottomfrac.value() >>HEIGHTBITS;
         
         if (yh >= floorclip[rw_x])
             yh = floorclip[rw_x]-1;
@@ -1191,7 +1202,7 @@ void Rend::R_RenderSegLoop()
           {
             if(ffloor[i].height < viewz)
             {
-              int top_w = (ffloor[i].f_frac >> HEIGHTBITS) + 1;
+              int top_w = (ffloor[i].f_frac.value() >> HEIGHTBITS) + 1;
               int bottom_w = ffloor[i].f_clip[rw_x];
 
               if(top_w < ceilingclip[rw_x] + 1)
@@ -1209,7 +1220,7 @@ void Rend::R_RenderSegLoop()
             else if (ffloor[i].height > viewz)
             {
               int top_w = ffloor[i].c_clip[rw_x] + 1;
-              int bottom_w = (ffloor[i].f_frac >> HEIGHTBITS);
+              int bottom_w = (ffloor[i].f_frac.value() >> HEIGHTBITS);
 
               if (top_w < ceilingclip[rw_x] + 1)
                 top_w = ceilingclip[rw_x] + 1;
@@ -1229,29 +1240,30 @@ void Rend::R_RenderSegLoop()
         //SoM: Calculate offsets for Thick fake floors.
         // calculate texture offset
         angle = (rw_centerangle + xtoviewangle[rw_x])>>ANGLETOFINESHIFT;
-        texturecolumn = rw_offset-FixedMul(finetangent[angle],rw_distance);
-        texturecolumn >>= FRACBITS;
+        texturecolumn = (rw_offset - (finetangent[angle] * rw_distance)).floor();
 
         // texturecolumn and lighting are independent of wall tiers
         if (segtextured)
         {
-            // calculate lighting
-            index = rw_scale>>LIGHTSCALESHIFT;
+	  if (frontsector->extra_colormap && !fixedcolormap)
+	    dc_colormap = frontsector->extra_colormap->colormap;
+	  else
+	    dc_colormap = base_colormap;
+	  
+	  // calculate lighting
+	  index = (rw_scale << LIGHTSCALESHIFT).floor();
             
-            if (index >=  MAXLIGHTSCALE )
-                index = MAXLIGHTSCALE-1;
+	  if (index >=  MAXLIGHTSCALE )
+	    index = MAXLIGHTSCALE-1;
 
-            dc_colormap = walllights[index];
-            dc_x = rw_x;
-            dc_iscale = 0xffffffffu / (unsigned)rw_scale;
-
-            if(frontsector->extra_colormap && !fixedcolormap)
-                dc_colormap = frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
+	  dc_colormap += walllights[index];
+	  dc_x = rw_x;
+	  dc_iscale.setvalue(0xffffffffu / unsigned(rw_scale.value()));
         }
 
         if(dc_numlights)
         {
-          lighttable_t** xwalllights;
+          int *xwalllights;
           for(i = 0; i < dc_numlights; i++)
           {
             int lightnum;
@@ -1273,17 +1285,17 @@ void Rend::R_RenderSegLoop()
             else
                 xwalllights = scalelight[lightnum];
 
-            index = rw_scale>>LIGHTSCALESHIFT;
+            index = (rw_scale << LIGHTSCALESHIFT).floor();
             
             if (index >=  MAXLIGHTSCALE )
                 index = MAXLIGHTSCALE-1;
 
             if(dc_lightlist[i].extra_colormap && !fixedcolormap)
-              dc_lightlist[i].rcolormap = dc_lightlist[i].extra_colormap->colormap + (xwalllights[index] - colormaps);
+              dc_lightlist[i].rcolormap = dc_lightlist[i].extra_colormap->colormap + xwalllights[index];
             else if(!fixedcolormap)
-              dc_lightlist[i].rcolormap = xwalllights[index];
+              dc_lightlist[i].rcolormap = base_colormap + xwalllights[index];
             else
-              dc_lightlist[i].rcolormap = fixedcolormap;
+              dc_lightlist[i].rcolormap = base_colormap + fixedcolormap;
 
             colfunc = R_DrawColumnShadowed_8;
           }
@@ -1334,7 +1346,7 @@ void Rend::R_RenderSegLoop()
             if (toptexture)
             {
                 // top wall
-                mid = pixhigh>>HEIGHTBITS;
+                mid = pixhigh.value() >> HEIGHTBITS;
                 pixhigh += pixhighstep;
                 
                 if (mid >= floorclip[rw_x])
@@ -1374,7 +1386,7 @@ void Rend::R_RenderSegLoop()
             if (bottomtexture)
             {
                 // bottom wall
-                mid = (pixlow+HEIGHTUNIT-1)>>HEIGHTBITS;
+                mid = (pixlow.value() + HEIGHTUNIT-1)>>HEIGHTBITS;
                 pixlow += pixlowstep;
                 
                 // no space above wall?
@@ -1453,7 +1465,7 @@ void Rend::R_RenderSegLoop()
         {
           if (ffloor[i].mark)
           {
-            int y_w = ffloor[i].b_frac >> HEIGHTBITS;
+            int y_w = ffloor[i].b_frac.value() >> HEIGHTBITS;
 
             ffloor[i].f_clip[rw_x] = ffloor[i].c_clip[rw_x] = y_w;
             ffloor[i].b_frac += ffloor[i].b_step;
@@ -1630,8 +1642,8 @@ void Rend::R_StoreWallRange(int start, int stop)
         ffloor[i].f_pos = ffloor[i].height - viewz;
     }
 
-  ds_p->bsilheight = MAXINT;
-  ds_p->tsilheight = MININT;
+  ds_p->bsilheight = fixed_t::FMAX;
+  ds_p->tsilheight = fixed_t::FMIN;
 
   if (!backsector)
     {
@@ -1650,7 +1662,7 @@ void Rend::R_StoreWallRange(int start, int stop)
 
       if (linedef->flags & ML_DONTPEGBOTTOM && midtexture) // FIXME correct?
         {
-	  vtop = frontsector->floorheight + (tc[midtexture]->height << FRACBITS);
+	  vtop = frontsector->floorheight + tc[midtexture]->height;
 	  // bottom of texture at bottom
 	  rw_midtexturemid = vtop - viewz;
         }
@@ -1679,7 +1691,7 @@ void Rend::R_StoreWallRange(int start, int stop)
       else if (backsector->floorheight > viewz)
         {
 	  ds_p->silhouette = SIL_BOTTOM;
-	  ds_p->bsilheight = MAXINT;
+	  ds_p->bsilheight = fixed_t::FMAX;
 	  // ds_p->sprbottomclip = negonearray;
         }
         
@@ -1691,21 +1703,21 @@ void Rend::R_StoreWallRange(int start, int stop)
       else if (backsector->ceilingheight < viewz)
         {
 	  ds_p->silhouette |= SIL_TOP;
-	  ds_p->tsilheight = MININT;
+	  ds_p->tsilheight = fixed_t::FMIN;
 	  // ds_p->sprtopclip = screenheightarray;
         }
         
       if (backsector->ceilingheight <= frontsector->floorheight)
         {
 	  ds_p->sprbottomclip = negonearray;
-	  ds_p->bsilheight = MAXINT;
+	  ds_p->bsilheight = fixed_t::FMAX;
 	  ds_p->silhouette |= SIL_BOTTOM;
         }
         
       if (backsector->floorheight >= frontsector->ceilingheight)
         {
 	  ds_p->sprtopclip = screenheightarray;
-	  ds_p->tsilheight = MININT;
+	  ds_p->tsilheight = fixed_t::FMIN;
 	  ds_p->silhouette |= SIL_TOP;
         }
 
@@ -1717,13 +1729,13 @@ void Rend::R_StoreWallRange(int start, int stop)
 	if (doorclosed || backsector->ceilingheight<=frontsector->floorheight)
 	  {
 	    ds_p->sprbottomclip = negonearray;
-	    ds_p->bsilheight = MAXINT;
+	    ds_p->bsilheight = fixed_t::FMAX;
 	    ds_p->silhouette |= SIL_BOTTOM;
 	  }
 	if (doorclosed || backsector->floorheight>=frontsector->ceilingheight)
 	  {                   // killough 1/17/98, 2/8/98
 	    ds_p->sprtopclip = screenheightarray;
-	    ds_p->tsilheight = MININT;
+	    ds_p->tsilheight = fixed_t::FMIN;
 	    ds_p->silhouette |= SIL_TOP;
 	  }
       }
@@ -1819,7 +1831,7 @@ void Rend::R_StoreWallRange(int start, int stop)
             }
 	  else
             {
-	      vtop = backsector->ceilingheight + (tc[toptexture]->height << FRACBITS);
+	      vtop = backsector->ceilingheight + tc[toptexture]->height;
 	      
 	      // bottom of texture
 	      rw_toptexturemid = vtop - viewz;
@@ -2347,12 +2359,12 @@ void Rend::R_StoreWallRange(int start, int stop)
     if (maskedtexture && !(ds_p->silhouette&SIL_TOP))
     {
         ds_p->silhouette |= SIL_TOP;
-        ds_p->tsilheight = sidedef->midtexture ? MININT: MAXINT;
+        ds_p->tsilheight = sidedef->midtexture ? fixed_t::FMIN: fixed_t::FMAX;
     }
     if (maskedtexture && !(ds_p->silhouette&SIL_BOTTOM))
     {
         ds_p->silhouette |= SIL_BOTTOM;
-        ds_p->bsilheight = sidedef->midtexture ? MAXINT: MININT;
+        ds_p->bsilheight = sidedef->midtexture ? fixed_t::FMAX: fixed_t::FMIN;
     }
     ds_p++;
 }

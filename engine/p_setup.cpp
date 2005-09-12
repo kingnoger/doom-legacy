@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.64  2005/09/12 18:33:42  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.63  2005/09/11 16:22:54  smite-meister
 // template classes
 //
@@ -1266,12 +1269,10 @@ bool Map::Setup(tic_t start, bool spawnthings)
   for (int i=0; i<numsectors; i++)
     SpawnSectorSpecial(sectors[i].special, &sectors[i]);
 
+  R_SetFadetable(info->fadetablelump.c_str());
+
   // fix renderer to this map
   R.SetMap(this);
-  if (!info->fadetablelump.empty())
-    R_SetFadetable(info->fadetablelump.c_str());
-  else
-    R_SetFadetable("COLORMAP");
 
 #ifdef HWRENDER
   if (rendermode != render_soft)

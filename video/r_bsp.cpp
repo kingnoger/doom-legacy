@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2005/09/12 18:33:45  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.6  2005/03/10 22:29:14  smite-meister
 // polyobj rendering
 //
@@ -350,7 +353,7 @@ sector_t *Rend::R_FakeFlat(sector_t *sec, sector_t *tempsec,
                      int *floorlightlevel, int *ceilinglightlevel,
                      bool back)
 {
-  int        mapnum = -1; //SoM: 4/4/2000
+  fadetable_t *f = NULL;
   //Actor *viewmobj = camera.chase ? camera.cam : viewplayer;
 
   if (floorlightlevel)
@@ -362,8 +365,8 @@ sector_t *Rend::R_FakeFlat(sector_t *sec, sector_t *tempsec,
       sec->lightlevel : sectors[sec->ceilinglightsec].lightlevel;
 
   //SoM: 4/4/2000: If the sector has a midmap, it's probably from 280 type
-  if(sec->midmap != -1 && sec->altheightsec == 2)
-    mapnum = sec->midmap;
+  if(sec->midmap && sec->altheightsec == 2)
+    f = sec->midmap;
 
   if (sec->heightsec != -1 && !sec->altheightsec)
     {
@@ -378,7 +381,7 @@ sector_t *Rend::R_FakeFlat(sector_t *sec, sector_t *tempsec,
       tempsec->floorheight   = s->floorheight;
       tempsec->ceilingheight = s->ceilingheight;
 
-      mapnum = s->midmap;
+      f = s->midmap;
 
       if ((underwater && (tempsec->  floorheight = sec->floorheight,
                           tempsec->ceilingheight = s->floorheight-1,
@@ -391,20 +394,20 @@ sector_t *Rend::R_FakeFlat(sector_t *sec, sector_t *tempsec,
 
           if (underwater)
             {
-            if (s->ceilingpic == skyflatnum)
-              {
-                tempsec->floorheight   = tempsec->ceilingheight+1;
-                tempsec->ceilingpic    = tempsec->floorpic;
-                tempsec->ceiling_xoffs = tempsec->floor_xoffs;
-                tempsec->ceiling_yoffs = tempsec->floor_yoffs;
-              }
-            else
-              {
-                tempsec->ceilingpic    = s->ceilingpic;
-                tempsec->ceiling_xoffs = s->ceiling_xoffs;
-                tempsec->ceiling_yoffs = s->ceiling_yoffs;
-              }
-              mapnum = s->bottommap;
+	      if (s->ceilingpic == skyflatnum)
+		{
+		  tempsec->floorheight   = tempsec->ceilingheight+1;
+		  tempsec->ceilingpic    = tempsec->floorpic;
+		  tempsec->ceiling_xoffs = tempsec->floor_xoffs;
+		  tempsec->ceiling_yoffs = tempsec->floor_yoffs;
+		}
+	      else
+		{
+		  tempsec->ceilingpic    = s->ceilingpic;
+		  tempsec->ceiling_xoffs = s->ceiling_xoffs;
+		  tempsec->ceiling_yoffs = s->ceiling_yoffs;
+		}
+              f = s->bottommap;
             }
 
           tempsec->lightlevel  = s->lightlevel;
@@ -417,109 +420,105 @@ sector_t *Rend::R_FakeFlat(sector_t *sec, sector_t *tempsec,
             *ceilinglightlevel = s->ceilinglightsec == -1 ? s->lightlevel :
             sectors[s->ceilinglightsec].lightlevel;
         }
-      else
-        if (heightsec != -1 && viewz >= sectors[heightsec].ceilingheight &&
-            sec->ceilingheight > s->ceilingheight)
-          {   // Above-ceiling hack
-            tempsec->ceilingheight = s->ceilingheight;
-            tempsec->floorheight   = s->ceilingheight + 1;
+      else if (heightsec != -1 && viewz >= sectors[heightsec].ceilingheight &&
+	       sec->ceilingheight > s->ceilingheight)
+	{   // Above-ceiling hack
+	  tempsec->ceilingheight = s->ceilingheight;
+	  tempsec->floorheight   = s->ceilingheight + 1;
 
-            tempsec->floorpic    = tempsec->ceilingpic    = s->ceilingpic;
-            tempsec->floor_xoffs = tempsec->ceiling_xoffs = s->ceiling_xoffs;
-            tempsec->floor_yoffs = tempsec->ceiling_yoffs = s->ceiling_yoffs;
+	  tempsec->floorpic    = tempsec->ceilingpic    = s->ceilingpic;
+	  tempsec->floor_xoffs = tempsec->ceiling_xoffs = s->ceiling_xoffs;
+	  tempsec->floor_yoffs = tempsec->ceiling_yoffs = s->ceiling_yoffs;
 
-            mapnum = s->topmap;
+	  f = s->topmap;
 
-            if (s->floorpic != skyflatnum)
-              {
-                tempsec->ceilingheight = sec->ceilingheight;
-                tempsec->floorpic      = s->floorpic;
-                tempsec->floor_xoffs   = s->floor_xoffs;
-                tempsec->floor_yoffs   = s->floor_yoffs;
-              }
+	  if (s->floorpic != skyflatnum)
+	    {
+	      tempsec->ceilingheight = sec->ceilingheight;
+	      tempsec->floorpic      = s->floorpic;
+	      tempsec->floor_xoffs   = s->floor_xoffs;
+	      tempsec->floor_yoffs   = s->floor_yoffs;
+	    }
 
-            tempsec->lightlevel  = s->lightlevel;
+	  tempsec->lightlevel  = s->lightlevel;
 
-            if (floorlightlevel)
-              *floorlightlevel = s->floorlightsec == -1 ? s->lightlevel :
-              sectors[s->floorlightsec].lightlevel;
+	  if (floorlightlevel)
+	    *floorlightlevel = s->floorlightsec == -1 ? s->lightlevel :
+	    sectors[s->floorlightsec].lightlevel;
 
-            if (ceilinglightlevel)
-              *ceilinglightlevel = s->ceilinglightsec == -1 ? s->lightlevel :
-              sectors[s->ceilinglightsec].lightlevel;
-          }
-        sec = tempsec;
+	  if (ceilinglightlevel)
+	    *ceilinglightlevel = s->ceilinglightsec == -1 ? s->lightlevel :
+	    sectors[s->ceilinglightsec].lightlevel;
+	}
+      sec = tempsec;
     }
   else if (sec->heightsec != -1 && sec->altheightsec == 1) //SoM: 3/20/2000
-  {
-    sector_t*    s = &sectors[sec->heightsec];
-    int          heightsec = viewactor->subsector->sector->heightsec;
-    int          underwater = heightsec!=-1 && viewz<=sectors[heightsec].floorheight;
+    {
+      sector_t*    s = &sectors[sec->heightsec];
+      int          heightsec = viewactor->subsector->sector->heightsec;
+      int          underwater = heightsec!=-1 && viewz<=sectors[heightsec].floorheight;
 
-    *tempsec = *sec;
+      *tempsec = *sec;
 
-    if(underwater)
-    {
-      mapnum = s->bottommap;
-      if(sec->floorlightsec != -1 && floorlightlevel && ceilinglightlevel)
-        *floorlightlevel = *ceilinglightlevel = tempsec->lightlevel = sectors[sec->floorlightsec].lightlevel;
-      if(s->floorheight < tempsec->ceilingheight)
-      {
-        tempsec->ceilingheight = s->floorheight;
-        tempsec->ceilingpic = s->floorpic;
-        tempsec->ceiling_xoffs = s->floor_xoffs;
-        tempsec->ceiling_yoffs = s->floor_yoffs;
-      }
-    }
-    else if(!underwater && heightsec != -1 && viewz >= sectors[heightsec].ceilingheight)
-    {
-      mapnum = s->topmap;
-      if(sec->ceilinglightsec != -1 && floorlightlevel && ceilinglightlevel)
-        *floorlightlevel = *ceilinglightlevel = tempsec->lightlevel = sectors[sec->ceilinglightsec].lightlevel;
-      if(s->ceilingheight > tempsec->floorheight)
-      {
-        tempsec->floorheight = s->ceilingheight;
-        tempsec->floorpic = s->ceilingpic;
-        tempsec->floor_xoffs = s->ceiling_xoffs;
-        tempsec->floor_yoffs = s->ceiling_yoffs;
-      }
-    }
-    else
-    {
-      mapnum = s->midmap;
-      //SoM: Use middle normal sector's lightlevels.
-      if(s->floorheight > tempsec->floorheight)
-      {
-        tempsec->floorheight = s->floorheight;
-        tempsec->floorpic = s->floorpic;
-        tempsec->floor_xoffs = s->floor_xoffs;
-        tempsec->floor_yoffs = s->floor_yoffs;
-      }
+      if(underwater)
+	{
+	  f = s->bottommap;
+	  if(sec->floorlightsec != -1 && floorlightlevel && ceilinglightlevel)
+	    *floorlightlevel = *ceilinglightlevel = tempsec->lightlevel = sectors[sec->floorlightsec].lightlevel;
+	  if(s->floorheight < tempsec->ceilingheight)
+	    {
+	      tempsec->ceilingheight = s->floorheight;
+	      tempsec->ceilingpic = s->floorpic;
+	      tempsec->ceiling_xoffs = s->floor_xoffs;
+	      tempsec->ceiling_yoffs = s->floor_yoffs;
+	    }
+	}
+      else if(!underwater && heightsec != -1 && viewz >= sectors[heightsec].ceilingheight)
+	{
+	  f = s->topmap;
+	  if(sec->ceilinglightsec != -1 && floorlightlevel && ceilinglightlevel)
+	    *floorlightlevel = *ceilinglightlevel = tempsec->lightlevel = sectors[sec->ceilinglightsec].lightlevel;
+	  if(s->ceilingheight > tempsec->floorheight)
+	    {
+	      tempsec->floorheight = s->ceilingheight;
+	      tempsec->floorpic = s->ceilingpic;
+	      tempsec->floor_xoffs = s->ceiling_xoffs;
+	      tempsec->floor_yoffs = s->ceiling_yoffs;
+	    }
+	}
       else
-      {
-        if(floorlightlevel)
-          *floorlightlevel = tempsec->lightlevel;
-      }
-      if(s->ceilingheight < tempsec->ceilingheight)
-      {
-        tempsec->ceilingheight = s->ceilingheight;
-        tempsec->ceilingpic = s->ceilingpic;
-        tempsec->ceiling_xoffs = s->ceiling_xoffs;
-        tempsec->ceiling_yoffs = s->ceiling_yoffs;
-      }
-      else
-      {
-        if(ceilinglightlevel)
-          *ceilinglightlevel = tempsec->lightlevel;
-      }
+	{
+	  f = s->midmap;
+	  //SoM: Use middle normal sector's lightlevels.
+	  if(s->floorheight > tempsec->floorheight)
+	    {
+	      tempsec->floorheight = s->floorheight;
+	      tempsec->floorpic = s->floorpic;
+	      tempsec->floor_xoffs = s->floor_xoffs;
+	      tempsec->floor_yoffs = s->floor_yoffs;
+	    }
+	  else
+	    {
+	      if(floorlightlevel)
+		*floorlightlevel = tempsec->lightlevel;
+	    }
+	  if(s->ceilingheight < tempsec->ceilingheight)
+	    {
+	      tempsec->ceilingheight = s->ceilingheight;
+	      tempsec->ceilingpic = s->ceilingpic;
+	      tempsec->ceiling_xoffs = s->ceiling_xoffs;
+	      tempsec->ceiling_yoffs = s->ceiling_yoffs;
+	    }
+	  else
+	    {
+	      if(ceilinglightlevel)
+		*ceilinglightlevel = tempsec->lightlevel;
+	    }
+	}
+      sec = tempsec;
     }
-  sec = tempsec;
-  }
 
-  if(mapnum >= 0 && mapnum < num_extra_colormaps)
-    sec->extra_colormap = &extra_colormaps[mapnum];
-  else
-    sec->extra_colormap = NULL;
+  sec->extra_colormap = f;
 
   return sec;
 }
@@ -800,7 +799,7 @@ fixed_t             waterheight;
 #endif
 
 //Fab: hack, until water is finished
-fixed_t             dev_waterheight = MININT;
+fixed_t             dev_waterheight = fixed_t::FMIN;
 void Command_Water_f (void)
 {
   if (COM_Argc()<2)
@@ -842,7 +841,7 @@ void Rend::R_Subsector(int num)
   frontsector = R_FakeFlat(frontsector, &tempsec, &floorlightlevel,
 			   &ceilinglightlevel, false);
 
-  extracolormap_t *ceilingcolormap, *floorcolormap;
+  fadetable_t *ceilingcolormap, *floorcolormap;
   floorcolormap = ceilingcolormap = frontsector->extra_colormap;
 
   // SoM: Check and prep all 3D floors. Set the sector floor/ceiling light
@@ -1018,28 +1017,28 @@ void Rend::R_Prep3DFloors(sector_t*  sector)
   ffloor_t*      rover;
   ffloor_t*      best;
   fixed_t        bestheight, maxheight;
-  int            count, i, mapnum;
+  int            i;
   sector_t*      sec;
 
-  count = 1;
-  for(rover = sector->ffloors; rover; rover = rover->next)
-  {
-    if((rover->flags & FF_EXISTS) && (!(rover->flags & FF_NOSHADE) || (rover->flags & FF_CUTLEVEL) || (rover->flags & FF_CUTSPRITES)))
+  int count = 1;
+  for (rover = sector->ffloors; rover; rover = rover->next)
     {
-      count++;
-      if(rover->flags & FF_DOUBLESHADOW)
-        count++;
+      if((rover->flags & FF_EXISTS) && (!(rover->flags & FF_NOSHADE) || (rover->flags & FF_CUTLEVEL) || (rover->flags & FF_CUTSPRITES)))
+	{
+	  count++;
+	  if(rover->flags & FF_DOUBLESHADOW)
+	    count++;
+	}
     }
-  }
 
   if(count != sector->numlights)
-  {
-    if(sector->lightlist)
-      Z_Free(sector->lightlist);
-    sector->lightlist = (lightlist_t *)Z_Malloc(sizeof(lightlist_t) * count, PU_LEVEL, 0);
-    memset(sector->lightlist, 0, sizeof(lightlist_t) * count);
-    sector->numlights = count;
-  }
+    {
+      if(sector->lightlist)
+	Z_Free(sector->lightlist);
+      sector->lightlist = (lightlist_t *)Z_Malloc(sizeof(lightlist_t) * count, PU_LEVEL, 0);
+      memset(sector->lightlist, 0, sizeof(lightlist_t) * count);
+      sector->numlights = count;
+    }
   else
     memset(sector->lightlist, 0, sizeof(lightlist_t) * count);
 
@@ -1048,66 +1047,62 @@ void Rend::R_Prep3DFloors(sector_t*  sector)
   sector->lightlist[0].caster = NULL;
   sector->lightlist[0].extra_colormap = sector->extra_colormap;
 
-  maxheight = MAXINT;
+  maxheight = fixed_t::FMAX;
   for(i = 1; i < count; i++)
-  {
-    bestheight = MAXINT * -1;
-    best = NULL;
-    for(rover = sector->ffloors; rover; rover = rover->next)
     {
-      if(!(rover->flags & FF_EXISTS) || (rover->flags & FF_NOSHADE && !(rover->flags & FF_CUTLEVEL) && !(rover->flags & FF_CUTSPRITES)))
-        continue;
+      bestheight = fixed_t::FMIN;
+      best = NULL;
+      for(rover = sector->ffloors; rover; rover = rover->next)
+	{
+	  if(!(rover->flags & FF_EXISTS) || (rover->flags & FF_NOSHADE && !(rover->flags & FF_CUTLEVEL) && !(rover->flags & FF_CUTSPRITES)))
+	    continue;
 
-      if(*rover->topheight > bestheight && *rover->topheight < maxheight)
-      {
-        best = rover;
-        bestheight = *rover->topheight;
-        continue;
-      }
-      if(rover->flags & FF_DOUBLESHADOW && *rover->bottomheight > bestheight && *rover->bottomheight < maxheight)
-      {
-        best = rover;
-        bestheight = *rover->bottomheight;
-        continue;
-      }
-    }
-    if(!best)
-      return;
+	  if(*rover->topheight > bestheight && *rover->topheight < maxheight)
+	    {
+	      best = rover;
+	      bestheight = *rover->topheight;
+	      continue;
+	    }
+	  if(rover->flags & FF_DOUBLESHADOW && *rover->bottomheight > bestheight && *rover->bottomheight < maxheight)
+	    {
+	      best = rover;
+	      bestheight = *rover->bottomheight;
+	      continue;
+	    }
+	}
+      if(!best)
+	return;
 
-    sector->lightlist[i].height = maxheight = bestheight;
-//    if(best->flags & FF_FOG && *best->topheight == bestheight)
-//      sector->lightlist[i].height++;
+      sector->lightlist[i].height = maxheight = bestheight;
+      //    if(best->flags & FF_FOG && *best->topheight == bestheight)
+      //      sector->lightlist[i].height++;
 
-    sector->lightlist[i].caster = best;
-    sec = &sectors[best->secnum];
-    mapnum = sec->midmap;
-    if(mapnum >= 0 && mapnum < num_extra_colormaps)
-      sec->extra_colormap = &extra_colormaps[mapnum];
-    else
-      sec->extra_colormap = NULL;
+      sector->lightlist[i].caster = best;
+      sec = &sectors[best->secnum];
+      sec->extra_colormap = sec->midmap;
 
-    if(best->flags & FF_NOSHADE)
-    {
-      sector->lightlist[i].lightlevel = sector->lightlist[i-1].lightlevel;
-      sector->lightlist[i].extra_colormap = sector->lightlist[i-1].extra_colormap;
-    }
-    else
-    {
-      sector->lightlist[i].lightlevel = best->bottomlightlevel;
-      sector->lightlist[i].extra_colormap = sec->extra_colormap;
-    }
-
-    if(best->flags & FF_DOUBLESHADOW)
-    {
-      if(bestheight == *best->bottomheight)
-      {
-        sector->lightlist[i].lightlevel = sector->lightlist[best->lastlight].lightlevel;
-        sector->lightlist[i].extra_colormap = sector->lightlist[best->lastlight].extra_colormap;
-      }
+      if(best->flags & FF_NOSHADE)
+	{
+	  sector->lightlist[i].lightlevel = sector->lightlist[i-1].lightlevel;
+	  sector->lightlist[i].extra_colormap = sector->lightlist[i-1].extra_colormap;
+	}
       else
-        best->lastlight = i - 1;
+	{
+	  sector->lightlist[i].lightlevel = best->bottomlightlevel;
+	  sector->lightlist[i].extra_colormap = sec->extra_colormap;
+	}
+
+      if(best->flags & FF_DOUBLESHADOW)
+	{
+	  if(bestheight == *best->bottomheight)
+	    {
+	      sector->lightlist[i].lightlevel = sector->lightlist[best->lastlight].lightlevel;
+	      sector->lightlist[i].extra_colormap = sector->lightlist[best->lastlight].extra_colormap;
+	    }
+	  else
+	    best->lastlight = i - 1;
+	}
     }
-  }
 }
 
 

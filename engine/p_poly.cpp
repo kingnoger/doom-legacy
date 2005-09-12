@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2005/09/12 18:33:42  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.21  2005/09/11 16:22:54  smite-meister
 // template classes
 //
@@ -99,7 +102,10 @@ static void UpdateSegBBox(seg_t *seg);
 //   Poly rotator
 //==========================================================================
 
-IMPLEMENT_CLASS(polyrotator_t, Thinker);
+IMPLEMENT_CLASS(polyobject_t, Thinker);
+polyobject_t::polyobject_t() {}
+
+IMPLEMENT_CLASS(polyrotator_t, polyobject_t);
 polyrotator_t::polyrotator_t() {}
 
 

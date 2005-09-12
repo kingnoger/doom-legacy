@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2005/09/12 18:33:45  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.4  2004/11/09 20:38:53  smite-meister
 // added packing to I/O structs
 //
@@ -126,13 +129,13 @@ void R_SetupSkyDraw()
   if (skytexture->height > 128)
     {
       // horizon line on 256x240 freelook textures of Legacy or heretic
-      skytexturemid = 200<<FRACBITS;
+      skytexturemid = 200;
       skymode = 1;
     }
   else
     {
       // the horizon line in a 256x128 sky texture
-      skytexturemid = 100<<FRACBITS;
+      skytexturemid = 100;
       skymode = 0;
     }
 
@@ -148,15 +151,15 @@ void R_SetupSkyDraw()
 void R_SetSkyScale()
 {
   //fix this quick mess
-  if (skytexturemid>100<<FRACBITS)
+  if (skytexturemid > 100)
     {
       // normal aspect ratio corrected scale
-      skyscale = FixedDiv (FRACUNIT, pspriteyscale);
+      skyscale = 1 / pspriteyscale;
     }
   else
     {
       // double the texture vertically, bleeergh!!
-      skyscale = FixedDiv (FRACUNIT, pspriteyscale)>>1;
+      skyscale = (1 / pspriteyscale) >> 1;
     }
 }
 

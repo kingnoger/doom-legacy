@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2005/09/12 18:33:45  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.3  2005/04/22 19:44:50  smite-meister
 // bugs fixed
 //
@@ -125,7 +128,7 @@ void R_DrawColumn_8()
     {
         // Re-map color indices from wall texture column
         //  using a lighting/special effects LUT.
-        *dest = dc_colormap[dc_source[(frac>>FRACBITS)&127]];
+        *dest = dc_colormap[dc_source[(frac.floor())&127]];
 
         dest += vid.width;
         frac += fracstep;
@@ -168,24 +171,24 @@ void R_DrawColumn_8()
     if (dc_texheight & heightmask)
       {
         heightmask++;
-        heightmask <<= FRACBITS;
+        fixed_t fheightmask = heightmask;
           
         if (frac < 0)
-          while ((frac += heightmask) <  0);
+          while ((frac += fheightmask) <  0);
         else
-          while (frac >= heightmask)
-            frac -= heightmask;
+          while (frac >= fheightmask)
+            frac -= fheightmask;
           
         do
           {
             // Re-map color indices from wall texture column
             //  using a lighting/special effects LUT.
-            // heightmask is the Tutti-Frutti fix -- killough
+            // fheightmask is the Tutti-Frutti fix -- killough
             
-            *dest = colormap[source[frac>>FRACBITS]];
+            *dest = colormap[source[frac.floor()]];
             dest += vid.width;
-            if ((frac += fracstep) >= heightmask)
-              frac -= heightmask;
+            if ((frac += fracstep) >= fheightmask)
+              frac -= fheightmask;
           } 
         while (--count);
       }
@@ -193,15 +196,15 @@ void R_DrawColumn_8()
       {
         while ((count-=2)>=0)   // texture height is a power of 2 -- killough
           {
-            *dest = colormap[source[(frac>>FRACBITS) & heightmask]];
+            *dest = colormap[source[frac.floor() & heightmask]];
             dest += vid.width;
             frac += fracstep;
-            *dest = colormap[source[(frac>>FRACBITS) & heightmask]];
+            *dest = colormap[source[frac.floor() & heightmask]];
             dest += vid.width;
             frac += fracstep;
           }
         if (count & 1)
-          *dest = colormap[source[(frac>>FRACBITS) & heightmask]];
+          *dest = colormap[source[frac.floor() & heightmask]];
       }
   }
 }
@@ -247,7 +250,7 @@ void R_DrawSkyColumn_8()
     {
         // Re-map color indices from wall texture column
         //  using a lighting/special effects LUT.
-        *dest = dc_colormap[dc_source[(frac>>FRACBITS)&255]];
+        *dest = dc_colormap[dc_source[(frac.floor())&255]];
 
         dest += vid.width;
         frac += fracstep;
@@ -289,24 +292,24 @@ void R_DrawSkyColumn_8()
     if (dc_texheight & heightmask)
       {
         heightmask++;
-        heightmask <<= FRACBITS;
+        fixed_t fheightmask = heightmask;
           
         if (frac < 0)
-          while ((frac += heightmask) <  0);
+          while ((frac += fheightmask) <  0);
         else
-          while (frac >= heightmask)
-            frac -= heightmask;
+          while (frac >= fheightmask)
+            frac -= fheightmask;
           
         do
           {
             // Re-map color indices from wall texture column
             //  using a lighting/special effects LUT.
-            // heightmask is the Tutti-Frutti fix -- killough
+            // fheightmask is the Tutti-Frutti fix -- killough
             
-            *dest = colormap[source[frac>>FRACBITS]];
+            *dest = colormap[source[frac.floor()]];
             dest += vid.width;
-            if ((frac += fracstep) >= heightmask)
-              frac -= heightmask;
+            if ((frac += fracstep) >= fheightmask)
+              frac -= fheightmask;
           } 
         while (--count);
       }
@@ -314,15 +317,15 @@ void R_DrawSkyColumn_8()
       {
         while ((count-=2)>=0)   // texture height is a power of 2 -- killough
           {
-            *dest = colormap[source[(frac>>FRACBITS) & heightmask]];
+            *dest = colormap[source[(frac.floor()) & heightmask]];
             dest += vid.width; 
             frac += fracstep;
-            *dest = colormap[source[(frac>>FRACBITS) & heightmask]];
+            *dest = colormap[source[(frac.floor()) & heightmask]];
             dest += vid.width; 
             frac += fracstep;
           }
         if (count & 1)
-          *dest = colormap[source[(frac>>FRACBITS) & heightmask]];
+          *dest = colormap[source[(frac.floor()) & heightmask]];
       }
   }
 }
@@ -378,7 +381,7 @@ void R_DrawFuzzColumn_8()
         //  a pixel that is either one column
         //  left or right of the current one.
         // Add index from colormap to index.
-        *dest = colormaps[6*256+dest[fuzzoffset[fuzzpos]]];
+      *dest = dc_fadetable[6*256 + dest[fuzzoffset[fuzzpos]]];
 
         // Clamp table lookup index.
         if (++fuzzpos == FUZZTABLE)
@@ -437,9 +440,9 @@ void R_DrawShadeColumn_8()
     // Here we do an additional index re-mapping.
     do
     {
-        *dest = *( colormaps + (dc_source[frac>>FRACBITS] <<8) + (*dest) );
-        dest += vid.width;
-        frac += fracstep;
+      *dest = dc_fadetable[(dc_source[frac.floor()] << 8) + *dest];
+      dest += vid.width;
+      frac += fracstep;
     } while (count--);
 }
 #endif
@@ -490,7 +493,7 @@ void R_DrawTranslucentColumn_8()
     // Here we do an additional index re-mapping.
     do
     {
-        *dest = dc_colormap[*( dc_transmap + (dc_source[frac>>FRACBITS] <<8) + (*dest) )];
+        *dest = dc_colormap[*( dc_transmap + (dc_source[frac.floor()] <<8) + (*dest) )];
         dest += vid.width;
         frac += fracstep;
     } while (count--);
@@ -531,46 +534,46 @@ void R_DrawTranslucentColumn_8()
   // This is as fast as it gets.
 
   {
-      register const byte *source = dc_source;            
-      //register const lighttable_t *colormap = dc_colormap;
-      register int heightmask = dc_texheight-1;
-      if (dc_texheight & heightmask)
+    register const byte *source = dc_source;            
+    //register const lighttable_t *colormap = dc_colormap;
+    register int heightmask = dc_texheight-1;
+    if (dc_texheight & heightmask)
       {
-          heightmask++;
-          heightmask <<= FRACBITS;
+	heightmask++;
+	fixed_t fheightmask = heightmask;
           
-          if (frac < 0)
-              while ((frac += heightmask) <  0);
-              else
-                  while (frac >= heightmask)
-                      frac -= heightmask;
+	if (frac < 0)
+	  while ((frac += fheightmask) <  0);
+	else
+	  while (frac >= fheightmask)
+	    frac -= fheightmask;
                   
-                  do
-                  {
-                      // Re-map color indices from wall texture column
-                      //  using a lighting/special effects LUT.
-                      // heightmask is the Tutti-Frutti fix -- killough
+	do
+	  {
+	    // Re-map color indices from wall texture column
+	    //  using a lighting/special effects LUT.
+	    // fheightmask is the Tutti-Frutti fix -- killough
                       
-                      *dest = dc_colormap[*( dc_transmap + (source[frac>>FRACBITS] <<8) + (*dest) )];
-                      dest += vid.width;
-                      if ((frac += fracstep) >= heightmask)
-                          frac -= heightmask;
-                  } 
-                  while (--count);
+	    *dest = dc_colormap[*( dc_transmap + (source[frac.floor()] <<8) + (*dest) )];
+	    dest += vid.width;
+	    if ((frac += fracstep) >= fheightmask)
+	      frac -= fheightmask;
+	  } 
+	while (--count);
       }
-      else
+    else
       {
-          while ((count-=2)>=0)   // texture height is a power of 2 -- killough
+	while ((count-=2)>=0)   // texture height is a power of 2 -- killough
           {
-              *dest = dc_colormap[*( dc_transmap + (source[frac>>FRACBITS] <<8) + (*dest) )];
-              dest += vid.width; 
-              frac += fracstep;
-              *dest = dc_colormap[*( dc_transmap + (source[frac>>FRACBITS] <<8) + (*dest) )];
-              dest += vid.width; 
-              frac += fracstep;
+	    *dest = dc_colormap[*( dc_transmap + (source[frac.floor()] <<8) + (*dest) )];
+	    dest += vid.width; 
+	    frac += fracstep;
+	    *dest = dc_colormap[*( dc_transmap + (source[frac.floor()] <<8) + (*dest) )];
+	    dest += vid.width; 
+	    frac += fracstep;
           }
-          if (count & 1)
-              *dest = dc_colormap[*( dc_transmap + (source[frac>>FRACBITS] <<8) + (*dest) )];
+	if (count & 1)
+	  *dest = dc_colormap[*( dc_transmap + (source[frac.floor()] <<8) + (*dest) )];
       }
   }
 }
@@ -618,7 +621,7 @@ void R_DrawTranslatedColumn_8()
         //  used with PLAY sprites.
         // Thus the "green" ramp of the player 0 sprite
         //  is mapped to gray, red, black/indigo.
-        *dest = dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]];
+        *dest = dc_colormap[dc_translation[dc_source[frac.floor()]]];
 
         dest += vid.width;
 
@@ -929,9 +932,9 @@ void R_DrawColumnShadowed_8()
       // anyway because the lighting of the top should be effected.
       solid = dc_lightlist[i].flags & FF_CUTSOLIDS;
 
-      height = dc_lightlist[i].height >> 16;
+      height = dc_lightlist[i].height.floor();
       if(solid)
-        bheight = dc_lightlist[i].botheight >> 16;
+        bheight = dc_lightlist[i].botheight.floor();
       if(height <= dc_yl)
       {
         dc_colormap = dc_lightlist[i].rcolormap;

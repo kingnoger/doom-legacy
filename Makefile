@@ -81,7 +81,7 @@ export RM
 export LDFLAGS
 
 # C++ compiler (usually g++)
-export CC = g++
+export CC = g++-3.3
 
 # Defines.
 #

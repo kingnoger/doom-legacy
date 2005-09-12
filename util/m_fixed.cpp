@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2005/09/12 18:33:45  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.2  2005/06/05 19:32:27  smite-meister
 // unsigned map structures
 //
@@ -32,40 +35,5 @@
 #include "i_system.h"
 #include "m_fixed.h"
 
-// Fixme. __USE_C_FIXED__ or something.
-#ifndef USEASM
-
-fixed_t FixedMul(fixed_t a, fixed_t b)
-{
-  return (Sint64(a) * Sint64(b)) >> FRACBITS;
-}
-
-fixed_t FixedDiv2(fixed_t a, fixed_t b)
-{
-# if 0
-  Sint64 c = (Sint64(a) << 16) / Sint64(b);
-  return fixed_t(c);
-# endif
-
-  double c = double(a) / double(b) * FRACUNIT;
-
-  if (c >= 2147483648.0 || c < -2147483648.0)
-    I_Error("FixedDiv: divide by zero");
-  return fixed_t(c);
-}
-
-/*
-//
-// FixedDiv, C version.
-//
-fixed_t FixedDiv ( fixed_t   a, fixed_t    b )
-{
-    //I_Error("<a: %ld, b: %ld>",(long)a,(long)b);
-
-    if ( (abs(a)>>14) >= abs(b))
-        return (a^b)<0 ? MININT : MAXINT;
-
-    return FixedDiv2 (a,b);
-}
-*/
-#endif // useasm
+/// smallest possible increment
+fixed_t fixed_epsilon(1/float(fixed_t::UNIT));

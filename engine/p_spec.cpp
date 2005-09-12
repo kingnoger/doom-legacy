@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.45  2005/09/12 18:33:42  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.44  2005/09/11 16:22:54  smite-meister
 // template classes
 //
@@ -393,7 +396,7 @@ fixed_t sector_t::FindNextHighestCeiling(fixed_t currentheight)
 
 fixed_t Map::FindShortestLowerAround(sector_t *sec)
 {
-  int minsize = MAXINT;
+  int minsize = MAXINT; // texture height!
   int secnum = sec - sectors;
 
   if (boomsupport)
@@ -423,7 +426,7 @@ fixed_t Map::FindShortestLowerAround(sector_t *sec)
 
 fixed_t Map::FindShortestUpperAround(sector_t *sec)
 {
-  int minsize = MAXINT;
+  int minsize = MAXINT; // texture height!
   int secnum = sec - sectors;
 
   if (boomsupport)

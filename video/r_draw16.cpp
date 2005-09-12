@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,8 +17,11 @@
 //
 //
 // $Log$
-// Revision 1.1  2002/11/16 14:18:45  hurdler
-// Initial revision
+// Revision 1.2  2005/09/12 18:33:45  smite-meister
+// fixed_t, vec_t
+//
+// Revision 1.1.1.1  2002/11/16 14:18:45  hurdler
+// Initial C++ version of Doom Legacy
 //
 // Revision 1.4  2002/08/19 18:06:47  vberghol
 // renderer somewhat fixed
@@ -35,9 +38,10 @@
 // Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
 // Initial import into CVS (v1.29 pr3)
 //
-//
-// DESCRIPTION:
-//      16bpp (HIGHCOLOR) span/column drawer functions
+//-----------------------------------------------------------------------------
+
+/// \file
+/// \brief 16bpp (HIGHCOLOR) span/column drawer functions
 //
 //  NOTE: no includes because this is included as part of r_draw.c
 //
@@ -45,7 +49,6 @@
 // Doom Legacy will use HICOLOR textures, rendered through software, and
 // may use MMX, or WILL use MMX to get a decent speed.
 //
-//-----------------------------------------------------------------------------
 
 #include "doomtype.h"
 
@@ -104,8 +107,8 @@ void R_DrawColumn_16 (void)
     {
         // Re-map color indices from wall texture column
         //  using a lighting/special effects LUT.
-        //*dest = *( (short *)dc_colormap + dc_source[(frac>>FRACBITS)&127] );
-        *dest = hicolormaps[ ((short*)dc_source)[(frac>>FRACBITS)&127]>>1 ];
+        //*dest = *( (short *)dc_colormap + dc_source[(frac.floor())&127] );
+        *dest = hicolormaps[ ((short*)dc_source)[(frac.floor())&127]>>1 ];
 
         dest += vid.width;
         frac += fracstep;
@@ -146,7 +149,7 @@ void R_DrawSkyColumn_16 (void)
     {
         // DUMMY, just to see it's active
         *dest = (15<<10);
-        //hicolormaps[ ((short*)dc_source)[(frac>>FRACBITS)&255]>>1 ];
+        //hicolormaps[ ((short*)dc_source)[(frac.floor())&255]>>1 ];
 
         dest += vid.width;
         frac += fracstep;
@@ -203,7 +206,7 @@ void R_DrawFuzzColumn_16 (void)
         //  a pixel that is either one column
         //  left or right of the current one.
         // Add index from colormap to index.
-        *dest = color8to16[colormaps[6*256+dest[fuzzoffset[fuzzpos]]]];
+        *dest = color8to16[dc_fadetable[6*256+dest[fuzzoffset[fuzzpos]]]];
 
         // Clamp table lookup index.
         if (++fuzzpos == FUZZTABLE)
@@ -260,7 +263,7 @@ void R_DrawTranslucentColumn_16 (void)
     // Here we do an additional index re-mapping.
     do
     {
-        *dest =( ((color8to16[dc_source[frac>>FRACBITS]]>>1) & 0x39ce) +
+        *dest =( ((color8to16[dc_source[frac.floor()]]>>1) & 0x39ce) +
                  (*dest & HIMASK1) ) /*>> 1*/ & 0x7fff;
 
         dest += vid.width;
@@ -305,7 +308,7 @@ void R_DrawTranslatedColumn_16 (void)
     // Here we do an additional index re-mapping.
     do
     {
-        *dest = color8to16[ dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]] ];
+        *dest = color8to16[ dc_colormap[dc_translation[dc_source[frac.floor()]]] ];
         dest += vid.width;
 
         frac += fracstep;
@@ -324,11 +327,11 @@ void R_DrawTranslatedColumn_16 (void)
 //#ifndef USEASM
 void R_DrawSpan_16 (void)
 {
-    fixed_t             xfrac;
-    fixed_t             yfrac;
-    short*              dest;
-    int                 count;
-    int                 spot;
+  Sint32             xfrac;
+  Sint32             yfrac;
+  short*              dest;
+  int                 count;
+  int                 spot;
 
 #ifdef RANGECHECK
     if (ds_x2 < ds_x1

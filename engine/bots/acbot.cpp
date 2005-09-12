@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2005/09/12 18:33:44  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.9  2005/09/11 16:22:54  smite-meister
 // template classes
 //
@@ -390,23 +393,23 @@ static ai_item_t item_ai[] =
 void ACBot::LookForThings()
 {
   cMissile.a = NULL;
-  cMissile.dist = MAXINT;
+  cMissile.dist = fixed_t::FMAX;
 
   cEnemy.a = NULL;
-  cEnemy.dist = MAXINT;
+  cEnemy.dist = fixed_t::FMAX;
   cUnseenEnemy.a = NULL;
-  cUnseenEnemy.dist = MAXINT;
+  cUnseenEnemy.dist = fixed_t::FMAX;
 
   fTeammate.a = NULL;
   fTeammate.dist = 0;
   cUnseenTeammate.a = NULL;
-  cUnseenTeammate.dist = MAXINT;
+  cUnseenTeammate.dist = fixed_t::FMAX;
 
   bItem.a = NULL;
-  bItem.dist = MAXINT;
+  bItem.dist = fixed_t::FMAX;
   bItemWeight = 0.0;
   bUnseenItem.a = NULL;
-  bUnseenItem.dist = MAXINT;
+  bUnseenItem.dist = fixed_t::FMAX;
   bUnseenItemWeight = 0.0;
 
   // search through the list of all thinkers

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.30  2005/09/12 18:33:45  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.29  2005/09/11 16:23:25  smite-meister
 // template classes
 //
@@ -241,8 +244,8 @@ protected:
 public:
   inline polyobject_t(int num) { polyobj = num; }
 
-  virtual void    Think();
-  virtual fixed_t PushForce();
+  virtual void    Think() {}
+  virtual fixed_t PushForce() { return 0; }
 
   enum podoor_e
   {

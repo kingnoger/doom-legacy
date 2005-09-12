@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.30  2005/09/12 18:33:42  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.29  2005/07/20 20:27:19  smite-meister
 // adv. texture cache
 //
@@ -127,6 +130,8 @@ MapInfo::MapInfo()
 
   cdtrack = 1;
   BossDeathKey = 0;
+
+  fadetablelump = "COLORMAP";
 
   interpic = "INTERPIC"; // fallback for lazy map authors
   intermusic = "-";

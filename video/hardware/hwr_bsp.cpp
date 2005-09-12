@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2005/09/12 18:33:46  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.7  2004/11/09 20:38:54  smite-meister
 // added packing to I/O structs
 //
@@ -81,17 +84,17 @@ HWBsp::HWBsp(int size, int bspnum) :
 
   Poly *rootp = AllocPoly(4);
   PolyVertex *rootpv = rootp->pts;
-  rootpv->x = (float)rootbbox[BOXLEFT  ] * fixedtofloat;
-  rootpv->y = (float)rootbbox[BOXBOTTOM] * fixedtofloat;
+  rootpv->x = rootbbox[BOXLEFT  ].Float();
+  rootpv->y = rootbbox[BOXBOTTOM].Float();
   rootpv++;
-  rootpv->x = (float)rootbbox[BOXLEFT  ] * fixedtofloat;
-  rootpv->y = (float)rootbbox[BOXTOP   ] * fixedtofloat;
+  rootpv->x = rootbbox[BOXLEFT  ].Float();
+  rootpv->y = rootbbox[BOXTOP   ].Float();
   rootpv++;
-  rootpv->x = (float)rootbbox[BOXRIGHT ] * fixedtofloat;
-  rootpv->y = (float)rootbbox[BOXTOP   ] * fixedtofloat;
+  rootpv->x = rootbbox[BOXRIGHT ].Float();
+  rootpv->y = rootbbox[BOXTOP   ].Float();
   rootpv++;
-  rootpv->x = (float)rootbbox[BOXRIGHT ] * fixedtofloat;
-  rootpv->y = (float)rootbbox[BOXBOTTOM] * fixedtofloat;
+  rootpv->x = rootbbox[BOXRIGHT ].Float();
+  rootpv->y = rootbbox[BOXBOTTOM].Float();
   rootpv++;
   Traverse(bspnum - 1, rootp, 0, rootbbox); // create sub-sectors
   if (cv_grsolvetjoin.value)
@@ -168,7 +171,7 @@ void HWBsp::Traverse(int bspnum, Poly* poly, unsigned short* leafnode, bbox_t &b
       PolyVertex *pt = poly->pts;
       for (int i=0; i<poly->numpts; i++)
         {
-          bbox.Add(fixed_t(pt->x * FRACUNIT), fixed_t(pt->y * FRACUNIT));
+          bbox.Add(pt->x, pt->y);
           ++pt;
         }
     }
@@ -523,10 +526,10 @@ Poly* HWBsp::CutOutSubsecPoly(seg_t* lseg, int count, Poly* poly)
     {
       //x, y, dx, dy (like a divline)
       line_t *line = lseg->linedef;
-      p1.x = (lseg->side?line->v2->x:line->v1->x)*fixedtofloat;
-      p1.y = (lseg->side?line->v2->y:line->v1->y)*fixedtofloat;
-      p2.x = (lseg->side?line->v1->x:line->v2->x)*fixedtofloat;
-      p2.y = (lseg->side?line->v1->y:line->v2->y)*fixedtofloat;
+      p1.x = (lseg->side?line->v2->x:line->v1->x).Float();
+      p1.y = (lseg->side?line->v2->y:line->v1->y).Float();
+      p2.x = (lseg->side?line->v1->x:line->v2->x).Float();
+      p2.y = (lseg->side?line->v1->y:line->v2->y).Float();
 
       cutseg.x = p1.x;
       cutseg.y = p1.y;
@@ -632,10 +635,10 @@ void HWBsp::SearchDivLine(node_t* bsp, DivLine *divline)
   // Hurdler: the code here has been removed (see the CVS and also CutOutSubsecPoly)
   // MAR - If you don't use the same partition line that the BSP uses, the front/back polys won't match the subsectors in the BSP!
 #endif
-  divline->x=bsp->x*fixedtofloat;
-  divline->y=bsp->y*fixedtofloat;
-  divline->dx=bsp->dx*fixedtofloat;
-  divline->dy=bsp->dy*fixedtofloat;
+  divline->x=bsp->x.Float();
+  divline->y=bsp->y.Float();
+  divline->dx=bsp->dx.Float();
+  divline->dy=bsp->dy.Float();
 }
 
 #define MAXDIST   (1.5f)
@@ -745,18 +748,18 @@ void HWBsp::SearchSegInBSP(int bspnum,PolyVertex *p,Poly *poly)
       return;
     }
 
-  if ((R.nodes[bspnum].bbox[0][BOXBOTTOM]*fixedtofloat-MAXDIST<=p->y) &&
-      (R.nodes[bspnum].bbox[0][BOXTOP   ]*fixedtofloat+MAXDIST>=p->y) &&
-      (R.nodes[bspnum].bbox[0][BOXLEFT  ]*fixedtofloat-MAXDIST<=p->x) &&
-      (R.nodes[bspnum].bbox[0][BOXRIGHT ]*fixedtofloat+MAXDIST>=p->x))
+  if ((R.nodes[bspnum].bbox[0][BOXBOTTOM].Float()-MAXDIST<=p->y) &&
+      (R.nodes[bspnum].bbox[0][BOXTOP   ].Float()+MAXDIST>=p->y) &&
+      (R.nodes[bspnum].bbox[0][BOXLEFT  ].Float()-MAXDIST<=p->x) &&
+      (R.nodes[bspnum].bbox[0][BOXRIGHT ].Float()+MAXDIST>=p->x))
     {
       SearchSegInBSP(R.nodes[bspnum].children[0],p,poly);
     }
 
-  if ((R.nodes[bspnum].bbox[1][BOXBOTTOM]*fixedtofloat-MAXDIST<=p->y) &&
-      (R.nodes[bspnum].bbox[1][BOXTOP   ]*fixedtofloat+MAXDIST>=p->y) &&
-      (R.nodes[bspnum].bbox[1][BOXLEFT  ]*fixedtofloat-MAXDIST<=p->x) &&
-      (R.nodes[bspnum].bbox[1][BOXRIGHT ]*fixedtofloat+MAXDIST>=p->x))
+  if ((R.nodes[bspnum].bbox[1][BOXBOTTOM].Float()-MAXDIST<=p->y) &&
+      (R.nodes[bspnum].bbox[1][BOXTOP   ].Float()+MAXDIST>=p->y) &&
+      (R.nodes[bspnum].bbox[1][BOXLEFT  ].Float()-MAXDIST<=p->x) &&
+      (R.nodes[bspnum].bbox[1][BOXRIGHT ].Float()+MAXDIST>=p->x))
     {
       SearchSegInBSP(R.nodes[bspnum].children[1],p,poly);
     }
@@ -811,8 +814,8 @@ void HWBsp::AdjustSegs()
           nearv1=nearv2=MYMAX;
           for(int j=0; j<p->numpts; j++)
             {
-              distv1 = p->pts[j].x - ((float)lseg->v1->x)*fixedtofloat;
-              tmp    = p->pts[j].y - ((float)lseg->v1->y)*fixedtofloat;
+              distv1 = p->pts[j].x - (lseg->v1->x).Float();
+              tmp    = p->pts[j].y - (lseg->v1->y).Float();
               distv1 = distv1*distv1+tmp*tmp;
               if (distv1 <= nearv1)
                 {
@@ -820,8 +823,8 @@ void HWBsp::AdjustSegs()
                   nearv1 = distv1;
                 }
               // the same with v2
-              distv2 = p->pts[j].x - ((float)lseg->v2->x)*fixedtofloat;
-              tmp    = p->pts[j].y - ((float)lseg->v2->y)*fixedtofloat;
+              distv2 = p->pts[j].x - (lseg->v2->x).Float();
+              tmp    = p->pts[j].y - (lseg->v2->y).Float();
               distv2 = distv2*distv2+tmp*tmp;
               if (distv2 <= nearv2)
                 {
@@ -842,8 +845,8 @@ void HWBsp::AdjustSegs()
 
               // convert fixed vertex to float vertex
               PolyVertex *p=AllocVertex();
-              p->x=lseg->v1->x*fixedtofloat;
-              p->y=lseg->v1->y*fixedtofloat;
+              p->x=lseg->v1->x.Float();
+              p->y=lseg->v1->y.Float();
               lseg->v1 = (vertex_t *)p; //Hurdler: geez, what a hack!
             }
           if (nearv2<=NEARDIST*NEARDIST)
@@ -853,8 +856,8 @@ void HWBsp::AdjustSegs()
           else
             {
               PolyVertex *p=AllocVertex();
-              p->x=lseg->v2->x*fixedtofloat;
-              p->y=lseg->v2->y*fixedtofloat;
+              p->x=lseg->v2->x.Float();
+              p->y=lseg->v2->y.Float();
               lseg->v2 = (vertex_t *)p; //Hurdler: geez, what a hack!
             }
 
@@ -904,7 +907,7 @@ Subsector::Subsector(int num, Poly *poly)
   int floorlightlevel, ceilinglightlevel;
   frontsector = R.R_FakeFlat(sub->sector, &tempsec, &floorlightlevel, &ceilinglightlevel, false);
 
-  int locFloorHeight, locCeilingHeight;
+  fixed_t locFloorHeight, locCeilingHeight;
   if (frontsector->pseudoSector)
     {
       locFloorHeight   = frontsector->virtualFloorheight;
@@ -960,7 +963,7 @@ Subsector::Subsector(int num, Poly *poly)
       for (int i = 0; i < poly->numpts; i++)
         {
           vertex_array[i * 3 + 0] = *pts++;
-          vertex_array[i * 3 + 1] = locFloorHeight * fixedtofloat;
+          vertex_array[i * 3 + 1] = locFloorHeight.Float();
           vertex_array[i * 3 + 2] = *pts++;
           texcoord_array[i * 2 + 0] = 0.0f;
           texcoord_array[i * 2 + 1] = 0.0f;
@@ -988,7 +991,7 @@ Subsector::Subsector(int num, Poly *poly)
       for (int i = 0; i < poly->numpts; i++)
         {
           vertex_array[i * 3 + 0] = *pts++;
-          vertex_array[i * 3 + 1] = locCeilingHeight * fixedtofloat;
+          vertex_array[i * 3 + 1] = locCeilingHeight.Float();
           vertex_array[i * 3 + 2] = *pts++;
           texcoord_array[i * 2 + 0] = 0.0f;
           texcoord_array[i * 2 + 1] = 0.0f;
@@ -1065,33 +1068,33 @@ void Subsector::AddWall(seg_t *line, seg_t *prev_line, seg_t *next_line, fixed_t
   // 0--1
 
   int i = 0;
-  vertex_array[i * 3 + 0] = line->v1->x * fixedtofloat;
-  vertex_array[i * 3 + 1] = floor * fixedtofloat;
-  vertex_array[i * 3 + 2] = line->v1->y * fixedtofloat;
+  vertex_array[i * 3 + 0] = line->v1->x.Float();
+  vertex_array[i * 3 + 1] = floor.Float();
+  vertex_array[i * 3 + 2] = line->v1->y.Float();
   texcoord_array[i * 2 + 0] = 0.0f;
   texcoord_array[i * 2 + 1] = 0.0f;
   indices[i] = i;
 
   i++;
-  vertex_array[i * 3 + 0] = line->v2->x * fixedtofloat;
-  vertex_array[i * 3 + 1] = floor * fixedtofloat;
-  vertex_array[i * 3 + 2] = line->v2->y * fixedtofloat;
+  vertex_array[i * 3 + 0] = line->v2->x.Float();
+  vertex_array[i * 3 + 1] = floor.Float();
+  vertex_array[i * 3 + 2] = line->v2->y.Float();
   texcoord_array[i * 2 + 0] = 0.0f;
   texcoord_array[i * 2 + 1] = 0.0f;
   indices[i] = i;
 
   i++;
-  vertex_array[i * 3 + 0] = line->v2->x * fixedtofloat;
-  vertex_array[i * 3 + 1] = ceiling * fixedtofloat;
-  vertex_array[i * 3 + 2] = line->v2->y * fixedtofloat;
+  vertex_array[i * 3 + 0] = line->v2->x.Float();
+  vertex_array[i * 3 + 1] = ceiling.Float();
+  vertex_array[i * 3 + 2] = line->v2->y.Float();
   texcoord_array[i * 2 + 0] = 0.0f;
   texcoord_array[i * 2 + 1] = 0.0f;
   indices[i] = i;
 
   i++;
-  vertex_array[i * 3 + 0] = line->v1->x * fixedtofloat;
-  vertex_array[i * 3 + 1] = ceiling * fixedtofloat;
-  vertex_array[i * 3 + 2] = line->v1->y * fixedtofloat;
+  vertex_array[i * 3 + 0] = line->v1->x.Float();
+  vertex_array[i * 3 + 1] = ceiling.Float();
+  vertex_array[i * 3 + 2] = line->v1->y.Float();
   texcoord_array[i * 2 + 0] = 0.0f;
   texcoord_array[i * 2 + 1] = 0.0f;
   indices[i] = i;

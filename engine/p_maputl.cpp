@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2005/09/12 18:33:42  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.18  2005/09/11 16:22:54  smite-meister
 // template classes
 //
@@ -247,37 +250,30 @@ void P_MakeDivline(line_t *li, divline_t *dl)
 //
 fixed_t P_InterceptVector(divline_t *v2, divline_t *v1)
 {
-#if 1
-  // TEST, new version, more accurate
+#if 0
+  // FIXME TEST, new version, more accurate
   Sint64 den = v1->dy.value() * v2->dx.value() - v1->dx.value() * v2->dy.value();
   den >>= fixed_t::FBITS;
   if (den == 0)
     return 0; // parallel lines
 
-  Sint64 num = (v2->y.value() - v1->y.value()) * v1->dx.value()
-    -(v2->x.value() - v1->x.value()) * v1->dy.value();
+  Sint64 num = (v2->y.value() - v1->y.value()) * v1->dx.value();
+  num += -(v2->x.value() - v1->x.value()) * v1->dy.value();
 
   fixed_t res;
   res.setvalue(num / den);
   return res;
 
 #elif 1
-  fixed_t     frac;
-  fixed_t     num;
-  fixed_t     den;
-
-  den = FixedMul (v1->dy>>8,v2->dx) - FixedMul(v1->dx>>8,v2->dy);
+  fixed_t den = (v1->dy >> 8) * v2->dx - (v1->dx >> 8) * v2->dy;
 
   if (den == 0)
     return 0;
   //  I_Error ("P_InterceptVector: parallel");
 
-  num = FixedMul ((v1->x - v2->x)>>8 ,v1->dy)
-    + FixedMul ((v2->y - v1->y)>>8, v1->dx);
+  fixed_t num = ((v1->x - v2->x) >> 8) * v1->dy + ((v2->y - v1->y) >> 8) * v1->dx;
 
-  frac = FixedDiv (num , den);
-
-  return frac;
+  return num / den;
 #else   // UNUSED, float debug.
   float       frac,num,den;
   float       v1x,v1y,v1dx,v1dy;
@@ -660,7 +656,7 @@ static bool P_TraverseIntercepts(traverser_t func, fixed_t maxfrac)
   intercept_t *in = NULL;
   while (i--)
     {
-      fixed_t dist = MAXINT;
+      fixed_t dist = fixed_t::FMAX;
 
       for (int j = 0; j < count; j++)
 	{
@@ -691,7 +687,7 @@ static bool P_TraverseIntercepts(traverser_t func, fixed_t maxfrac)
       if (!func(in))
 	return false; // don't bother going farther
 
-      in->frac = MAXINT; // make sure this intercept is not chosen again
+      in->frac = fixed_t::FMAX; // make sure this intercept is not chosen again
     }
 
   return true; // everything was traversed

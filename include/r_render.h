@@ -8,6 +8,9 @@
 // Renderer is a friend class of Map
 //
 // $Log$
+// Revision 1.10  2005/09/12 18:33:45  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.9  2005/09/11 16:23:25  smite-meister
 // template classes
 //
@@ -39,6 +42,7 @@
 #define r_render_h 1
 
 #include "m_fixed.h"
+#include "r_main.h"
 
 class PlayerInfo;
 class PlayerPawn;
@@ -76,8 +80,6 @@ private:
   // temporarily we have here COPIES of, or pointers to certain Map data members (geometry).
   // these MUST be set every time before rendering begins
 
-  // when the renderer is rewritten, this can be done in a better way (the Map* should be enough)
-
   int             numvertexes;
   vertex_t*       vertexes;
 
@@ -107,6 +109,10 @@ private:
   Actor      *viewactor;  // may be NULL
 
 public:
+
+  /// Currently used fadetable
+  lighttable_t   *base_colormap;
+
 
   // setting the geometry data pointers
   void SetMap(Map *m);

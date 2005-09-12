@@ -4,6 +4,8 @@
 
 #include "doomdef.h"
 #include "r_render.h"
+#include "r_draw.h"
+#include "r_data.h"
 #include "g_map.h"
 
 
@@ -27,4 +29,6 @@ void Rend::SetMap(Map *m)
   lines = m->lines;
 
   sides = m->sides;
+
+  base_colormap = m->fadetable->colormap;
 }

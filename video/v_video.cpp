@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.27  2005/09/12 18:33:45  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.26  2005/07/20 20:27:23  smite-meister
 // adv. texture cache
 //
@@ -218,29 +221,32 @@ void PatchTexture::Draw(int x, int y, int scrn = 0)
   desttop += y * vid.width + x;
 
   byte *destend;
-  fixed_t rowfrac, colfrac;
+  fixed_t rowfrac = 1, colfrac = 1;
   fixed_t col = 0;
+  int icol, idelta;
   if (flags & V_SSIZE)
     {
-      colfrac = FixedDiv(FRACUNIT, vid.dupx<<FRACBITS);
-      rowfrac = FixedDiv(FRACUNIT, vid.dupy<<FRACBITS);
+      colfrac /= vid.dupx;
+      rowfrac /= vid.dupy;
       destend = desttop + width*vid.dupx;
 
       if (flags & V_FLIPX)
         {
           colfrac = -colfrac;
-          col = (width << FRACBITS) + colfrac;
+          col = colfrac + width;
         }
     }
   else
     {
-      colfrac = rowfrac = 1;
+      icol = 0;
+      idelta = 1;
+
       destend = desttop + width;
 
       if (flags & V_FLIPX)
         {
-          colfrac = -1;
-          col = width - 1;
+          idelta = -1;
+          icol = width - 1;
         }
     }
 
@@ -249,7 +255,7 @@ void PatchTexture::Draw(int x, int y, int scrn = 0)
   if (flags & V_SSIZE)
     for ( ; desttop < destend; col += colfrac, desttop++)
       {
-        post_t *post = (post_t *)(pixels + p->columnofs[col >> FRACBITS]);
+        post_t *post = (post_t *)(pixels + p->columnofs[col.floor()]);
 
         // step through the posts in a column
         while (post->topdelta != 0xff)
@@ -261,7 +267,7 @@ void PatchTexture::Draw(int x, int y, int scrn = 0)
             fixed_t row = 0;
             while (count--)
               {
-                byte pixel = source[row >> FRACBITS];
+                byte pixel = source[row.floor()];
 
                 // the compiler is supposed to optimize the ifs out of the loop
                 if (flags & V_MAP)
@@ -278,9 +284,9 @@ void PatchTexture::Draw(int x, int y, int scrn = 0)
           }
       }
   else // unscaled, perhaps a bit faster?
-    for ( ; desttop < destend; col += colfrac, desttop++)
+    for ( ; desttop < destend; icol += idelta, desttop++)
       {
-        post_t *post = (post_t *)(pixels + p->columnofs[col]);
+        post_t *post = (post_t *)(pixels + p->columnofs[icol]);
 
         // step through the posts in a column
         while (post->topdelta != 0xff)
@@ -338,8 +344,8 @@ void LumpTexture::Draw(int x, int y, int scrn = 0)
   fixed_t colfrac = yscale;
 
   // visible (LFB) width after scaling
-  int vis_width = int((width << FRACBITS) / float(xscale));
-  int vis_height = int((height << FRACBITS) / float(yscale));
+  int vis_width  = int(width  / xscale.Float());
+  int vis_height = int(height / yscale.Float());
 
   // clipping to LFB
   int x2, y2; // clipped past-the-end coordinates of the lower right corner in LFB
@@ -350,8 +356,8 @@ void LumpTexture::Draw(int x, int y, int scrn = 0)
       y -= topoffset * vid.dupy;
       x2 = min(x + vis_width*vid.dupx, vid.width);
       y2 = min(y + vis_height*vid.dupy, vid.height);
-      colfrac = FixedDiv(colfrac, vid.dupx << FRACBITS);
-      rowfrac = FixedDiv(rowfrac, vid.dupy << FRACBITS);
+      colfrac /= vid.dupx;
+      rowfrac /= vid.dupy;
     }
   else
     {
@@ -371,8 +377,8 @@ void LumpTexture::Draw(int x, int y, int scrn = 0)
 
   if (flags & V_SSIZE)
     {
-      startcol = FixedDiv(startcol, vid.dupx << FRACBITS);
-      startrow = FixedDiv(startrow, vid.dupy << FRACBITS);
+      startcol /= vid.dupx;
+      startrow /= vid.dupy;
     }
 
   dest_left += y1*vid.width + x1; // top left
@@ -383,12 +389,12 @@ void LumpTexture::Draw(int x, int y, int scrn = 0)
   if (flags & V_SSIZE)
     for (fixed_t row = startrow; dest_left < dest_end; row += rowfrac, dest_left += vid.width)
       {
-	byte *source = base + width*(row >> FRACBITS);
+	byte *source = base + width*(row.floor());
 	byte *dest_right = dest_left + x2 - x1; // past-the-end
 	fixed_t col = startcol;
 	for (byte *dest = dest_left; dest < dest_right; col += colfrac, dest++)
 	  {
-	    byte pixel = source[col >> FRACBITS];
+	    byte pixel = source[col.floor()];
 
 	    // the compiler is supposed to optimize the ifs out of the loop
 	    if (flags & V_MAP)
@@ -442,17 +448,17 @@ void LumpTexture::DrawFill(int x, int y, int w, int h)
   w *= vid.dupx;
   h *= vid.dupy;
 
-  fixed_t dx = FixedDiv(FRACUNIT, vid.dupx<<FRACBITS);
-  fixed_t dy = FixedDiv(FRACUNIT, vid.dupy<<FRACBITS);
+  fixed_t dx = fixed_t(1) / vid.dupx;
+  fixed_t dy = fixed_t(1) / vid.dupy;
 
   fixed_t yfrac = 0;
   for (int v=0; v<h; v++, dest += vid.width)
     {
       fixed_t xfrac = 0;
-      byte *src = flat + (((yfrac >> FRACBITS) % height) * width);
+      byte *src = flat + ((yfrac.floor() % height) * width);
       for (int u=0; u<w; u++)
         {
-          dest[u] = src[(xfrac >> FRACBITS) % width];
+          dest[u] = src[xfrac.floor() % width];
           xfrac += dx;
         }
       yfrac += dy;
@@ -552,7 +558,7 @@ void V_DrawFadeScreen()
   int w = vid.width>>2;
 
   byte  p1, p2, p3, p4;
-  byte *fadetable = (byte *)colormaps + 16*256;
+  byte *fadetable = R_GetFadetable(0)->colormap + 16*256;
 
   for (int y=0 ; y<vid.height ; y++)
     {

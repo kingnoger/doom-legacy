@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2005/09/12 18:33:45  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.7  2004/12/31 16:19:41  smite-meister
 // alpha fixes
 //
@@ -156,8 +159,10 @@ planemgr_t              ffloor[MAXFFLOORS];
 int                     numffloors;
 
 //SoM: 3/23/2000: Boom visplane hashing routine.
-#define visplane_hash(picnum,lightlevel,height) \
-  ((unsigned)((picnum)*3+(lightlevel)+(height)*7) & (MAXVISPLANES-1))
+inline unsigned visplane_hash(int picnum, int lightlevel, fixed_t height)
+{
+  return unsigned(picnum*3 + lightlevel + height.value()*7) & (MAXVISPLANES-1);
+}
 
 // ?
 /*#define MAXOPENINGS     MAXVIDWIDTH*128
@@ -194,7 +199,7 @@ int                     spanstart[MAXVIDHEIGHT];
 //
 // texture mapping
 //
-lighttable_t**          planezlight;
+int      *planezlight;
 fixed_t                 planeheight;
 
 //added:10-02-98: yslopetab is what yslope used to be,
@@ -253,78 +258,80 @@ static int wtofs=0;
 
 void R_MapPlane(int y, int x1, int x2) // t1
 {
-    angle_t     angle;
-    fixed_t     distance;
-    fixed_t     length;
-    unsigned    index;
+  angle_t     angle;
+  fixed_t     distance;
+  fixed_t     length;
+  unsigned    index;
 
 #ifdef RANGECHECK
-    if (x2 < x1
-        || x1<0
-        || x2>=viewwidth
-        || (unsigned)y>viewheight)
+  if (x2 < x1
+      || x1<0
+      || x2>=viewwidth
+      || (unsigned)y>viewheight)
     {
-        I_Error ("R_MapPlane: %i, %i at %i",x1,x2,y);
+      I_Error ("R_MapPlane: %i, %i at %i",x1,x2,y);
     }
 #endif
 
-    if (planeheight != cachedheight[y])
+  if (planeheight != cachedheight[y])
     {
-        cachedheight[y] = planeheight;
-        distance = cacheddistance[y] = FixedMul (planeheight, yslope[y]);
-        ds_xstep = cachedxstep[y] = FixedMul (distance,basexscale);
-        ds_ystep = cachedystep[y] = FixedMul (distance,baseyscale);
+      cachedheight[y] = planeheight;
+      distance = cacheddistance[y] = (planeheight * yslope[y]);
+      ds_xstep = (cachedxstep[y] = (distance * basexscale)).value();
+      ds_ystep = (cachedystep[y] = (distance * baseyscale)).value();
     }
-    else
+  else
     {
-        distance = cacheddistance[y];
-        ds_xstep = cachedxstep[y];
-        ds_ystep = cachedystep[y];
+      distance = cacheddistance[y];
+      ds_xstep = cachedxstep[y].value();
+      ds_ystep = cachedystep[y].value();
     }
-    length = FixedMul (distance,distscale[x1]);
-    angle = (currentplane->viewangle + xtoviewangle[x1])>>ANGLETOFINESHIFT;
-    // SoM: Wouldn't it be faster just to add viewx and viewy to the plane's
-    // x/yoffs anyway?? (Besides, it serves my purpose well for portals!)
-    ds_xfrac = /*viewx +*/ FixedMul(finecosine[angle], length) + xoffs;
-    ds_yfrac = /*-viewy*/yoffs - FixedMul(finesine[angle], length);
+  length = (distance * distscale[x1]);
+  angle = (currentplane->viewangle + xtoviewangle[x1])>>ANGLETOFINESHIFT;
+  // SoM: Wouldn't it be faster just to add viewx and viewy to the plane's
+  // x/yoffs anyway?? (Besides, it serves my purpose well for portals!)
+  ds_xfrac = /*viewx +*/ ((finecosine[angle] * length) + xoffs).value();
+  ds_yfrac = /*-viewy*/ (yoffs - (finesine[angle] * length)).value();
 
 #ifdef OLDWATER
-    if (itswater)
+  if (itswater)
     {
-        int         fuck;
-        //ripples da water texture
-        fuck = (wtofs + (distance>>10) ) & 8191;
-        bgofs = FixedDiv(finesine[fuck],distance>>9)>>16;
+      //ripples da water texture
+      int fuck = (wtofs + (distance << 6).Floor()) & 8191;
+      bgofs = (finesine[fuck] / (distance >> 9)).floor();
 
-        angle = (angle + 2048) & 8191;  //90ø
-        ds_xfrac += FixedMul(finecosine[angle], (bgofs<<FRACBITS));
-        ds_yfrac += FixedMul(finesine[angle], (bgofs<<FRACBITS));
+      angle = (angle + 2048) & 8191;  //90ø
+      ds_xfrac += bgofs * finecosine[angle];
+      ds_yfrac += bgofs * finesine[angle];
 
-        if (y+bgofs>=viewheight)
-            bgofs = viewheight-y-1;
-        if (y+bgofs<0)
-            bgofs = -y;
+      if (y+bgofs>=viewheight)
+	bgofs = viewheight-y-1;
+      if (y+bgofs<0)
+	bgofs = -y;
     }
 #endif
 
-    if (fixedcolormap)
-        ds_colormap = fixedcolormap;
-    else
+  if (currentplane->extra_colormap && !fixedcolormap)
+    ds_colormap = currentplane->extra_colormap->colormap;
+  else
+    ds_colormap = R.base_colormap;
+
+  if (fixedcolormap)
+    ds_colormap += fixedcolormap;
+  else
     {
-        index = distance >> LIGHTZSHIFT;
+      index = (distance >> LIGHTZSHIFT).floor();
 
-        if (index >= MAXLIGHTZ )
-            index = MAXLIGHTZ-1;
+      if (index >= MAXLIGHTZ)
+	index = MAXLIGHTZ-1;
 
-        ds_colormap = planezlight[index];
+      ds_colormap += planezlight[index];
     }
-    if(currentplane->extra_colormap && !fixedcolormap)
-      ds_colormap = currentplane->extra_colormap->colormap + (ds_colormap - colormaps);
 
-    ds_y = y;
-    ds_x1 = x1;
-    ds_x2 = x2;
-    // high or low detail
+  ds_y = y;
+  ds_x1 = x1;
+  ds_x2 = x2;
+  // high or low detail
 
 //added:16-01-98:profile hspans drawer.
 #ifdef TIMING
@@ -365,7 +372,7 @@ void Rend::R_ClearPlanes(int tag)
     {
         floorclip[i] = viewheight;
         ceilingclip[i] = con_clipviewtop;       //Fab:26-04-98: was -1
-        frontscale[i] = MAXINT;
+        frontscale[i] = fixed_t::FMAX;
         for(p = 0; p < MAXFFLOORS; p++)
         {
           ffloor[p].f_clip[i] = viewheight;
@@ -380,7 +387,7 @@ void Rend::R_ClearPlanes(int tag)
     if (tag < 0)
         waterz = (-tag)<<FRACBITS;
     else
-        waterz = MININT;
+        waterz = fixed_t::FMIN;
 
     if (viewz>waterz)
     {
@@ -410,8 +417,8 @@ void Rend::R_ClearPlanes(int tag)
     angle = (viewangle-ANG90)>>ANGLETOFINESHIFT;
 
     // scale will be unit scale at SCREENWIDTH/2 distance
-    basexscale = FixedDiv (finecosine[angle],centerxfrac);
-    baseyscale = -FixedDiv (finesine[angle],centerxfrac);
+    basexscale = finecosine[angle] / centerxfrac;
+    baseyscale = -finesine[angle] / centerxfrac;
 }
 
 
@@ -436,7 +443,8 @@ static visplane_t *new_visplane(unsigned hash)
 //               meme hauteur, meme flattexture, meme lightlevel.
 //               Sinon en alloue un autre.
 //               Merde. Documentation en francais.
-visplane_t* Rend::R_FindPlane(fixed_t height, int picnum, int lightlevel, fixed_t xoff, fixed_t yoff, extracolormap_t* planecolormap, ffloor_t* ffloor)
+visplane_t* Rend::R_FindPlane(fixed_t height, int picnum, int lightlevel, fixed_t xoff, fixed_t yoff,
+			      fadetable_t* planecolormap, ffloor_t* ffloor)
 {
     visplane_t* check;
     unsigned    hash; //SoM: 3/23/2000
@@ -814,10 +822,10 @@ void Rend::R_DrawPlanes()
 #if 0
             // BP: this fix sky not inversed in invuln but it is a original doom2 feature (bug?)
             if(fixedcolormap)
-                dc_colormap = fixedcolormap;
+                dc_colormap = fixedcolormap + R.base_colormap;
             else
 #endif
-            dc_colormap = colormaps;
+	    dc_colormap = R.base_colormap;
             dc_texturemid = skytexturemid;
             dc_texheight = skytexture->height;
             for (x=pl->minx ; x <= pl->maxx ; x++)
@@ -935,8 +943,8 @@ void Rend::R_DrawSinglePlane(visplane_t* pl, bool handlesource)
 
     angle = (pl->viewangle-ANG90)>>ANGLETOFINESHIFT;
 
-    basexscale = FixedDiv (finecosine[angle],centerxfrac);
-    baseyscale = -FixedDiv (finesine[angle],centerxfrac);
+    basexscale = finecosine[angle] / centerxfrac;
+    baseyscale = -finesine[angle] / centerxfrac;
     viewangle = pl->viewangle;
   }
 

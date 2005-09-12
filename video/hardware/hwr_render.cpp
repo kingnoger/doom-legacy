@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2005/09/12 18:33:46  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.9  2004/11/09 20:38:54  smite-meister
 // added packing to I/O structs
 //
@@ -228,9 +231,9 @@ void HWRend::RenderPlayerView(int viewnumber, PlayerInfo *player)
   FTransform atransform;
   atransform.anglex = (float)(R.aimingangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
   atransform.angley = (float)(R.viewangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
-  atransform.x      = ((float)R.viewx) * fixedtofloat;
-  atransform.y      = ((float)R.viewy) * fixedtofloat;
-  atransform.z      = ((float)R.viewz) * fixedtofloat;
+  atransform.x      = R.viewx.Float();
+  atransform.y      = R.viewy.Float();
+  atransform.z      = R.viewz.Float();
   atransform.scalex = 1;
   atransform.scaley = ORIGINAL_ASPECT;
   atransform.scalez = 1;

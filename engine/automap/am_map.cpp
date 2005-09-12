@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.27  2005/09/12 18:33:44  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.26  2005/09/11 16:22:54  smite-meister
 // template classes
 //
@@ -485,7 +488,7 @@ void AutoMap::Resize()
 // initializes the map window location, panning, zoom, colors etc.
 void AutoMap::InitVariables()
 {
-  f_oldloc.x = MAXINT;
+  f_oldloc.x = fixed_t::FMAX;
   amclock = 0;
   lightlev = 0;
 
@@ -545,7 +548,7 @@ void AutoMap::changeWindowLoc()
   if (m_paninc.x != 0 || m_paninc.y != 0)
     {
       followplayer = false;
-      f_oldloc.x = MAXINT;
+      f_oldloc.x = fixed_t::FMAX;
     }
 
   m_x += m_paninc.x;
@@ -718,7 +721,7 @@ bool AutoMap::Responder(event_t *ev)
           // messages are printed on local console
         case AM_FOLLOWKEY:
           followplayer = !followplayer;
-          f_oldloc.x = MAXINT;
+          f_oldloc.x = fixed_t::FMAX;
           CONS_Printf(followplayer ? AMSTR_FOLLOWON : AMSTR_FOLLOWOFF);
           break;
         case AM_GRIDKEY:

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2005/09/12 18:33:45  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.9  2005/07/20 20:27:24  smite-meister
 // adv. texture cache
 //
@@ -394,10 +397,10 @@ bool isVertexInside(vertex_t *vertex, sector_t *sector)
     while(chain)
     {
         // start and end vertex
-        xa = (double)chain->line->v1->x - (double)vertex->x;
-        ya = (double)chain->line->v1->y - (double)vertex->y;
-        xe = (double)chain->line->v2->x - (double)vertex->x;
-        ye = (double)chain->line->v2->y - (double)vertex->y;
+        xa = chain->line->v1->x.Float() - vertex->x.Float();
+        ya = chain->line->v1->y.Float() - vertex->y.Float();
+        xe = chain->line->v2->x.Float() - vertex->x.Float();
+        ye = chain->line->v2->y.Float() - vertex->y.Float();
 
         // angle phi of connection between the vertices and the x-axis
         phi1 = atan2(ya, xa);
@@ -505,8 +508,8 @@ static double lineLength(line_t *line)
 {
     double dx, dy, length;
 
-    dx = (double) line->v1->x - (double) line->v2->x;
-    dy = (double) line->v1->y - (double) line->v2->y;
+    dx = line->v1->x.Float() - line->v2->x.Float();
+    dy = line->v1->y.Float() - line->v2->y.Float();
 
     length = sqrt(dx*dx + dy*dy);
 

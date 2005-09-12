@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2005/09/12 18:33:42  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.2  2004/11/04 21:12:52  smite-meister
 // save/load fixed
 //
@@ -171,42 +174,37 @@ bool Map::SightBlockLinesIterator (int x, int y )
 
 static bool P_SightTraverseIntercepts()
 {
-    int             count;
-    fixed_t         dist;
-    intercept_t     *scan, *in;
-    divline_t       dl;
+  intercept_t     *scan, *in;
+  divline_t       dl;
     
-    count = intercept_p - intercepts;
-    //
-    // calculate intercept distance
-    //
-    for (scan = intercepts ; scan<intercept_p ; scan++)
+  int count = intercept_p - intercepts;
+
+  // calculate intercept distance
+  for (scan = intercepts ; scan<intercept_p ; scan++)
     {
-        P_MakeDivline (scan->d.line, &dl);
-        scan->frac = P_InterceptVector (&trace, &dl);           
+      P_MakeDivline (scan->d.line, &dl);
+      scan->frac = P_InterceptVector (&trace, &dl);           
     }
     
-    //
-    // go through in order
-    //      
-    in = 0;                 // shut up compiler warning
+  // go through in order
+  in = NULL;                 // shut up compiler warning
     
-    while (count--)
+  while (count--)
     {
-        dist = MAXINT;
-        for (scan = intercepts ; scan<intercept_p ; scan++)
-            if (scan->frac < dist)
-            {
-                dist = scan->frac;
-                in = scan;
-            }
+      fixed_t dist = fixed_t::FMAX;
+      for (scan = intercepts ; scan<intercept_p ; scan++)
+	if (scan->frac < dist)
+	  {
+	    dist = scan->frac;
+	    in = scan;
+	  }
             
-            if ( !PTR_SightTraverse (in) )
-                return false;                   // don't bother going farther
-            in->frac = MAXINT;
+      if ( !PTR_SightTraverse(in) )
+	return false;                   // don't bother going farther
+      in->frac = fixed_t::FMAX;
     }
     
-    return true;            // everything was traversed
+  return true;            // everything was traversed
 }
 
 

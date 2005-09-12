@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2005/09/12 18:33:45  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.16  2005/04/22 19:44:50  smite-meister
 // bugs fixed
 //
@@ -158,21 +161,21 @@ int             hcolumnofs[MAXVIDHEIGHT];
 //                      COLUMN DRAWING CODE STUFF
 // =========================================================================
 
-lighttable_t*           dc_colormap;
+lighttable_t           *dc_fadetable; ///< the entire fadetable in the map (for fuzz drawing)
+lighttable_t           *dc_colormap;
 int                     dc_x;         // viewport x coordinate of the column
 int                     dc_yl, dc_yh; // low and high y limits of the column in viewport coords
 
 //Hurdler: 04/06/2000: asm code still use it
 //#ifdef OLDWATER
 int                     dc_yw;          //added:24-02-98: WATER!
-lighttable_t*           dc_wcolormap;   //added:24-02-98:WATER!
+lighttable_t           *dc_wcolormap;   //added:24-02-98:WATER!
 //#endif
 
 fixed_t                 dc_iscale;
 fixed_t                 dc_texturemid;
 
 byte*                   dc_source;
-
 
 // -----------------------
 // translucency stuff here
@@ -186,8 +189,7 @@ byte                   *dc_transmap; // one of the translucency tables
 // translation stuff here
 // ----------------------
 
-byte*                   translationtables;
-
+byte  translationtables[MAXSKINCOLORS][256];
 // R_DrawTranslatedColumn uses this
 byte*                   dc_translation;
 
@@ -207,10 +209,10 @@ int                     ds_x2;
 
 lighttable_t*           ds_colormap;
 
-fixed_t                 ds_xfrac;
-fixed_t                 ds_yfrac;
-fixed_t                 ds_xstep;
-fixed_t                 ds_ystep;
+Sint32                 ds_xfrac;
+Sint32                 ds_yfrac;
+Sint32                 ds_xstep;
+Sint32                 ds_ystep;
 
 byte*                   ds_source;      // start of a 64*64 tile image
 byte*                   ds_transmap;    // one of the translucency tables
@@ -264,10 +266,16 @@ void R_RecalcFuzzOffsets()
 //
 void R_InitTranslationTables()
 {
-  int         i,j;
+  int i, j;
 
-  // player color translation
-  translationtables = (byte *)Z_MallocAlign (256*(MAXSKINCOLORS-1), PU_STATIC, 0, 8);
+  // player color translation (now static)
+  //translationtables = (byte *)Z_MallocAlign(256 * MAXSKINCOLORS, PU_STATIC, 0, 8);
+
+  // The first translation table is basically an identity map
+  // (excepting the translucent palette index). It is taken from COLORMAP.
+  byte *temp = R_GetFadetable(0)->colormap;
+  for (i=0; i<256; i++)
+    translationtables[0][i] = temp[i];
 
   // TODO Hexen has different translation colormaps
   // for each color AND each playerclass: TRANTBL[0-8]
@@ -275,53 +283,53 @@ void R_InitTranslationTables()
   // translate just the 16 green colors
   for (i=0 ; i<256 ; i++)
     {
-      if ((i >= 0x70 && i <= 0x7f && game.mode != gm_heretic) ||
-	  (i >=  225 && i <=  240 && game.mode == gm_heretic))
+      if ((game.mode < gm_heretic && i >= 112 && i <= 127) ||
+	  (game.mode >= gm_heretic && i >=  225 && i <=  240))
         {
 	  if (game.mode >= gm_heretic)
             {
-	      translationtables[i+ 0*256] =   0+(i-225); // dark gray
-	      translationtables[i+ 1*256] =  67+(i-225); // brown
-	      translationtables[i+ 2*256] = 145+(i-225); // red
-	      translationtables[i+ 3*256] =   9+(i-225); // light gray
-	      translationtables[i+ 4*256] =  74+(i-225); // light brown
-	      translationtables[i+ 5*256] = 150+(i-225); // light red
-	      translationtables[i+ 6*256] = 192+(i-225); // light blue
-	      translationtables[i+ 7*256] = 185+(i-225); // dark blue
-	      translationtables[i+ 8*256] = 114+(i-225); // yellow
-	      translationtables[i+ 9*256] =  95+(i-225); // beige
+	      translationtables[1][i] =   0+(i-225); // dark gray
+	      translationtables[2][i] =  67+(i-225); // brown
+	      translationtables[3][i] = 145+(i-225); // red
+	      translationtables[4][i] =   9+(i-225); // light gray
+	      translationtables[5][i] =  74+(i-225); // light brown
+	      translationtables[6][i] = 150+(i-225); // light red
+	      translationtables[7][i] = 192+(i-225); // light blue
+	      translationtables[8][i] = 185+(i-225); // dark blue
+	      translationtables[9][i] = 114+(i-225); // yellow
+	      translationtables[10][i] = 95+(i-225); // beige
             }
 	  else
             {
+	      int index = i - 112;
+
 	      // map green ramp to gray, brown, red
-	      translationtables [i      ] = 0x60 + (i&0xf);
-	      translationtables [i+  256] = 0x40 + (i&0xf);
-	      translationtables [i+2*256] = 0x20 + (i&0xf);
+	      translationtables[1][i] = 0x60 + index;
+	      translationtables[2][i] = 0x40 + index;
+	      translationtables[3][i] = 0x20 + index;
+	      translationtables[4][i] = 0x58 + index; // light gray
+	      translationtables[5][i] = 0x38 + index; // light brown
+	      translationtables[6][i] = 0xb0 + index; // light red
+	      translationtables[7][i] = 0xc0 + index; // light blue
 
-	      // added 9-2-98
-	      translationtables [i+3*256] = 0x58 + (i&0xf); // light gray
-	      translationtables [i+4*256] = 0x38 + (i&0xf); // light brown
-	      translationtables [i+5*256] = 0xb0 + (i&0xf); // light red
-	      translationtables [i+6*256] = 0xc0 + (i&0xf); // light blue
-
-	      if ((i&0xf) < 9)
-		translationtables [i+7*256] = 0xc7 + (i&0xf);   // dark blue
+	      if (index < 9)
+		translationtables[8][i] = 0xc7 + index;   // dark blue
 	      else
-		translationtables [i+7*256] = 0xf0-9 + (i&0xf);
+		translationtables[8][i] = 0xf0-9 + index;
 
-	      if ((i&0xf) < 8)
-		translationtables [i+8*256] = 0xe0 + (i&0xf);   // yellow
+	      if (index < 8)
+		translationtables[9][i] = 0xe0 + index;   // yellow
 	      else
-		translationtables [i+8*256] = 0xa0-8 + (i&0xf);
+		translationtables[9][i] = 0xa0-8 + index;
 
-	      translationtables [i+9*256] = 0x80 + (i&0xf);     // beige
+	      translationtables[10][i] = 0x80 + index;     // beige
             }
         }
       else
         {
 	  // Keep all other colors as is.
-	  for (j=0;j<(MAXSKINCOLORS-1)*256;j+=256)
-	    translationtables [i+j] = i;
+	  for (j=1; j < MAXSKINCOLORS; j++)
+	    translationtables[j][i] = i;
         }
     }
 }

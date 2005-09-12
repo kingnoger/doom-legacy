@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2005/09/12 18:33:46  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.13  2005/05/29 11:30:44  segabor
 // Fixed __APPLE directive__ to __APPLE_CC__ on Mac OS X, new 'Doom Legacy' Xcode project target
 //
@@ -653,7 +656,7 @@ void modelpres_t::SetAnim(int seq)
 
 bool modelpres_t::Update(int nowtic)
 {
-  fixed_t time = int(nowtic * FRACUNIT / 35.0); // seconds
+  float dt = (nowtic - lastupdate) / 35.0f; // seconds
 
   // For some reason head is never animated? Always frame 0 for head.
   for (int i=0; i<2; i++)
@@ -661,7 +664,7 @@ bool modelpres_t::Update(int nowtic)
       MD3_anim *a = &mdl->anim[st[i].seq];
 
       // advance interpolation by elapsed time
-      float in = st[i].interp + a->fps * (time - lastupdate) / FRACUNIT;
+      float in = st[i].interp + a->fps*dt;
       
       if (in > 10)
 	in = 10; // FIXME long lapses are skipped
@@ -676,7 +679,7 @@ bool modelpres_t::Update(int nowtic)
 
       st[i].interp = in; // remainder
     }
-  lastupdate = time;
+  lastupdate = nowtic;
   return true;
 }
 

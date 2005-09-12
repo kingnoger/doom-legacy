@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2005/09/12 18:33:45  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.7  2005/09/11 16:23:25  smite-meister
 // template classes
 //
@@ -189,9 +192,6 @@ struct r_lightlist_t
 #define LIGHTSCALESHIFT         4 // was 12
 #define MAXLIGHTZ              128
 #define LIGHTZSHIFT              4 // without any fixed_t stuff
-
-/// Currently used fadetable
-extern lighttable_t *base_colormap;
 
 /// Precalculated fadetable offsets
 extern int  scalelight[LIGHTLEVELS][MAXLIGHTSCALE];

@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.61  2005/09/12 18:33:42  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.60  2005/09/11 16:22:53  smite-meister
 // template classes
 //
@@ -159,6 +162,8 @@ Map::Map(MapInfo *i)
   blockmap = blockmaplump = NULL;
   blocklinks = NULL;
   rejectmatrix = NULL;
+
+  fadetable = NULL;
 
   levelscript = NULL;
   runningscripts = NULL;

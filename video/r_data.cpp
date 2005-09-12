@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.47  2005/09/12 18:33:45  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.46  2005/07/20 20:27:23  smite-meister
 // adv. texture cache
 //
@@ -270,7 +273,7 @@ Texture::Texture(const char *n)
 {
   width = height = 0;
   leftoffset = topoffset = 0;
-  xscale = yscale = FRACUNIT;
+  xscale = yscale = 1;
   pixels = NULL;
 
   // crap follows.
@@ -438,8 +441,8 @@ DoomTexture::DoomTexture(const maptexture_t *mtex)
 
   width  = SHORT(mtex->width);
   height = SHORT(mtex->height);
-  xscale = mtex->xscale ? mtex->xscale << (FRACBITS - 3) : FRACUNIT;
-  yscale = mtex->yscale ? mtex->yscale << (FRACBITS - 3) : FRACUNIT;
+  xscale = mtex->xscale ? fixed_t(mtex->xscale) >> 3 : 1;
+  yscale = mtex->yscale ? fixed_t(mtex->yscale) >> 3 : 1;
 
   int j = 1;
   for ( ; j*2 <= width; j <<= 1);
@@ -842,8 +845,36 @@ Texture *texturecache_t::GetPtrNum(int n)
 
 
 // semi-hack for linedeftype 242 and the like, where the
-// "texture name" field can hold a colormap or a transmap name instead.
-int texturecache_t::GetTextureOrColormap(const char *name, int &map_num, bool transmap)
+// "texture name" field can hold a colormap name instead.
+int texturecache_t::GetTextureOrColormap(const char *name, fadetable_t*& cmap)
+{
+  // "NoTexture" marker. No texture, no colormap.
+  if (name[0] == '-')
+    {
+      cmap = NULL;
+      return 0;
+    }
+
+  fadetable_t *temp = R_FindColormap(name); // check C_*... lists
+
+  if (temp)
+    {
+      // it is a colormap lumpname, not a texture
+      cmap = temp;
+      return 0;
+    }
+
+  cmap = NULL;
+
+  // it could be a texture, let's check
+  Texture *t = GetPtr(name, TEX_noflat);
+  return t->id;
+}
+
+
+// semi-hack for linedeftype 260, where the
+// "texture name" field can hold a transmap name instead.
+int texturecache_t::GetTextureOrTransmap(const char *name, int& map_num)
 {
   // "NoTexture" marker. No texture, no colormap.
   if (name[0] == '-')
@@ -852,38 +883,21 @@ int texturecache_t::GetTextureOrColormap(const char *name, int &map_num, bool tr
       return 0;
     }
 
-#ifdef HWRENDER
-  if (rendermode == render_soft)
-    {
-#endif
-      int temp;
-      if (transmap)
-        temp = R_TransmapNumForName(name);
-      else
-        temp = R_ColormapNumForName(name); // check C_*... lists
+  int temp = R_TransmapNumForName(name);
 
-      if (temp >= 0)
-        {
-          // it is a trans/colormap lumpname, not a texture
-          map_num = temp;
-          return 0;
-        }
-#ifdef HWRENDER
+  if (temp >= 0)
+    {
+      // it is a transmap lumpname, not a texture
+      map_num = temp;
+      return 0;
     }
-#endif
+
+  map_num = -1;
 
   // it could be a texture, let's check
   Texture *t = GetPtr(name, TEX_noflat);
-
-  // FIXME
-  if (t == default_item)
-    CONS_Printf("Def. texture used for '%s'\n", name);
-
-  map_num = -1;
   return t->id;
 }
-
-
 
 
 
@@ -1132,13 +1146,16 @@ int texturecache_t::ReadTextures()
 //==================================================================
 
 
-/// 32 lightlevel colormaps from COLORMAP lump, also called a fadetable
-// FIXME TODO should be map-specific.
-lighttable_t *colormaps;
 
 /// extra boom colormaps
+/*
 int             num_extra_colormaps;
 extracolormap_t extra_colormaps[MAXCOLORMAPS];
+*/
+
+
+/// the fadetable "cache"
+static vector<fadetable_t*> fadetables;
 
 /// lumplist for C_START - C_END pairs in wads
 static int         numcolormaplumps;
@@ -1146,18 +1163,66 @@ static lumplist_t *colormaplumps;
 
 
 
+fadetable_t::~fadetable_t()
+{
+  if (colormap)
+    Z_Free(colormap);
+}
+
+
+/// For custom, OpenGL-friendly colormaps
+fadetable_t::fadetable_t()
+{
+  lump = -1;
+  colormap = NULL;
+}
+
+/// For lump-based colormaps
+fadetable_t::fadetable_t(int lumpnum)
+{
+  lump = lumpnum;
+
+  int length = fc.LumpLength(lump);
+  if (length != 34*256)
+    {
+      CONS_Printf("Unknown colormap size: %d bytes\n", length);
+    }
+
+  // (aligned on 8 bit for asm code) now 64k aligned for smokie...
+  colormap = (lighttable_t *)Z_MallocAlign(length, PU_STATIC, 0, 16); // 8);
+  fc.ReadLump(lump, colormap);
+
+  // SoM: Added, we set all params of the colormap to normal because there
+  // is no real way to tell how GL should handle a colormap lump anyway..
+  // TODO try to analyze the colormap and somehow simulate it in GL...
+  maskcolor = 0xffff;
+  fadecolor = 0x0;
+  maskamt = 0x0;
+  fadestart = 0;
+  fadeend = 33;
+  fog = 0;
+}
+
+
+
+/// Returns the name of the fadetable
+const char *R_ColormapNameForNum(const fadetable_t *p)
+{
+  if (!p)
+    return "NONE";
+
+  int temp = p->lump;
+  if (temp == -1)
+    return "INLEVEL";
+
+  return fc.FindNameForNum(temp);
+}
+
+
+
 /// Called in R_Init, prepares the lightlevel colormaps and Boom extra colormaps.
 void R_InitColormaps()
 {
-  // Load in the lightlevel colormaps, now 64k aligned for smokie...
-
-  int lump = fc.GetNumForName("COLORMAP");
-  colormaps = (lighttable_t *)Z_MallocAlign(34*256, PU_STATIC, 0, 16);
-  fc.ReadLumpHeader(lump, colormaps, 34*256);
-
-  //SoM: 3/30/2000: Init Boom colormaps.
-  R_ClearColormaps();
-
   // build the colormap lumplists (which record the locations of C_START and C_END in each wad)
   numcolormaplumps = 0;
   colormaplumps = NULL;
@@ -1182,84 +1247,85 @@ void R_InitColormaps()
       colormaplumps[numcolormaplumps].numlumps = end - (start + 1);
       numcolormaplumps++;
     }
-}
 
+  //SoM: 3/30/2000: Init Boom colormaps.
+  R_ClearColormaps();
 
-/// Replaces the lighlevel colormaps used by the software renderer
-void R_SetFadetable(const char *name)
-{
-  int lump = fc.FindNumForName(name);
-  if (lump < 0)
-    {
-      CONS_Printf("R_SetFadetable: Fadetable '%s' not found!\n", name);
-      return;
-    }
-
-  fc.ReadLumpHeader(lump, colormaps, 34*256);
+  // Load in the basic lightlevel colormaps
+  fadetables.push_back(new fadetable_t(fc.GetNumForName("COLORMAP")));
 }
 
 
 /// Clears out all extra colormaps.
 void R_ClearColormaps()
 {
-  num_extra_colormaps = 0;
-  memset(extra_colormaps, 0, MAXCOLORMAPS * sizeof(extracolormap_t));
-  for (int i=0; i < MAXCOLORMAPS; i++)
-    extra_colormaps[i].lump = -1;
+  int n = fadetables.size();
+  for (int i=0; i < n; i++)
+    delete fadetables[i];
+
+  fadetables.clear();
 }
 
 
+/// Auxiliary Get func for fadetables
+fadetable_t *R_GetFadetable(unsigned n)
+{
+  if (n < fadetables.size())
+    return fadetables[n];
+  else
+    return NULL;
+}
 
-// tries to retrieve a colormap by name. returns -1 if unsuccesful.
-int R_ColormapNumForName(const char *name)
+
+/// Tries to retrieve a colormap by name. Only checks stuff between C_START/C_END.
+fadetable_t *R_FindColormap(const char *name)
 {
   int lump = R_CheckNumForNameList(name, colormaplumps, numcolormaplumps);
   if (lump == -1)
-    return -1;
-
-  for (int i=0; i < num_extra_colormaps; i++)
-    if (lump == extra_colormaps[i].lump)
-      return i;
+    return NULL; // no such colormap
+  
+  int n = fadetables.size();
+  for (int i=0; i < n; i++)
+    if (fadetables[i]->lump == lump)
+      return fadetables[i];
 
   // not already cached, we must read it from WAD
-
-  if (num_extra_colormaps == MAXCOLORMAPS)
+  if (n == MAXCOLORMAPS)
     I_Error("R_ColormapNumForName: Too many colormaps!\n");
 
-  int n = num_extra_colormaps++;
-
-  extra_colormaps[n].lump = lump;
-
-  // aligned on 8 bit for asm code
-  extra_colormaps[n].colormap = (lighttable_t *)Z_MallocAlign(fc.LumpLength(lump), PU_LEVEL, 0, 8);
-  fc.ReadLump(lump, extra_colormaps[n].colormap);
-
-  // SoM: Added, we set all params of the colormap to normal because there
-  // is no real way to tell how GL should handle a colormap lump anyway..
-  extra_colormaps[n].maskcolor = 0xffff;
-  extra_colormaps[n].fadecolor = 0x0;
-  extra_colormaps[n].maskamt = 0x0;
-  extra_colormaps[n].fadestart = 0;
-  extra_colormaps[n].fadeend = 33;
-  extra_colormaps[n].fog = 0;
-
-  return n;
+  fadetable_t *temp = new fadetable_t(lump);
+  fadetables.push_back(temp);
+  return temp;
 }
 
 
-
-const char *R_ColormapNameForNum(int num)
+/// Sets the default lighlevel colormaps used by the software renderer in this map.
+/// All lumps are searched.
+bool Map::R_SetFadetable(const char *name)
 {
-  if (num == -1)
-    return "NONE";
+  int lump = fc.FindNumForName(name);
+  if (lump < 0)
+    {
+      CONS_Printf("R_SetFadetable: Fadetable '%s' not found.\n", name);
+      fadetable = fadetables[0]; // use COLORMAP
+      return false;
+    }
 
-  if (num < 0 || num >= MAXCOLORMAPS)
-    I_Error("R_ColormapNameForNum: num is invalid!\n");
+  int n = fadetables.size();
+  for (int i=0; i < n; i++)
+    if (fadetables[i]->lump == lump)
+      {
+	fadetable = fadetables[i];
+	return true;
+      }
 
-  if (extra_colormaps[num].lump == -1)
-    return "INLEVEL";
+  // not already cached, we must read it from WAD
+  if (n == MAXCOLORMAPS)
+    I_Error("R_SetFadetable: Too many colormaps!\n");
 
-  return fc.FindNameForNum(extra_colormaps[num].lump);
+  fadetable = new fadetable_t(lump);
+  fadetables.push_back(fadetable);
+  return true;
 }
 
 
@@ -1286,11 +1352,8 @@ static int RoundUp(double number)
 // custom colormaps at runtime. NOTE: For GL mode, we only need to color
 // data and not the colormap data.
 
-int R_CreateColormap(char *p1, char *p2, char *p3)
+fadetable_t *R_CreateColormap(char *p1, char *p2, char *p3)
 {
-  if (num_extra_colormaps == MAXCOLORMAPS)
-    I_Error("R_CreateColormap: Too many colormaps!\n");
-
   int    i, p;
   double cmaskr, cmaskg, cmaskb;
   double maskamt = 0, othermask = 0;
@@ -1376,38 +1439,41 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
     }
 #undef HEX2INT
 
+  fadetable_t *f;
+
   // check if we already have created one like it
-  for (i = 0; i < num_extra_colormaps; i++)
+  int n = fadetables.size();
+  for (i = 0; i < n; i++)
     {
-      if (extra_colormaps[i].lump == -1 &&
-	  maskcolor == extra_colormaps[i].maskcolor &&
-	  fadecolor == extra_colormaps[i].fadecolor &&
-	  maskamt == extra_colormaps[i].maskamt &&
-	  fadestart == extra_colormaps[i].fadestart &&
-	  fadeend == extra_colormaps[i].fadeend &&
-	  fog == extra_colormaps[i].fog &&
-	  rgba == extra_colormaps[i].rgba)
-	return i;
+      f = fadetables[i];
+      if (f->lump == -1 &&
+	  maskcolor == f->maskcolor &&
+	  fadecolor == f->fadecolor &&
+	  maskamt == f->maskamt &&
+	  fadestart == f->fadestart &&
+	  fadeend == f->fadeend &&
+	  fog == f->fog &&
+	  rgba == f->rgba)
+	return f;
     }
 
   // nope, we have to create it now
-  int n = num_extra_colormaps++;
 
-  extra_colormaps[n].lump = -1;
+  if (n == MAXCOLORMAPS)
+    I_Error("R_CreateColormap: Too many colormaps!\n");
 
-  // aligned on 8 bit for asm code
-  extra_colormaps[n].colormap = NULL;
-  extra_colormaps[n].maskcolor = maskcolor;
-  extra_colormaps[n].fadecolor = fadecolor;
-  extra_colormaps[n].maskamt = maskamt;
-  extra_colormaps[n].fadestart = fadestart;
-  extra_colormaps[n].fadeend = fadeend;
-  extra_colormaps[n].fog = fog;
-  extra_colormaps[n].rgba = rgba;
+  f = new fadetable_t();
+  f->maskcolor = maskcolor;
+  f->fadecolor = fadecolor;
+  f->maskamt = maskamt;
+  f->fadestart = fadestart;
+  f->fadeend = fadeend;
+  f->fog = fog;
+  f->rgba = rgba;
 
 
 #ifdef HWRENDER
-  // TODO: Hurdler: see why we need to have a separate code here
+  // OpenGL renderer does not need the colormap part
   if (rendermode == render_soft)
 #endif
   {
@@ -1438,7 +1504,7 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
     }
 
     char *colormap_p = (char *)Z_MallocAlign((256 * 34) + 1, PU_LEVEL, 0, 8);
-    extra_colormaps[n].colormap = (lighttable_t *)colormap_p;
+    f->colormap = (lighttable_t *)colormap_p;
 
     for(p = 0; p < 34; p++)
     {
@@ -1472,9 +1538,8 @@ int R_CreateColormap(char *p1, char *p2, char *p3)
     }
   }
 
-  return n;
+  return f;
 }
-
 
 
 //  build a table for quick conversion from 8bpp to 15bpp

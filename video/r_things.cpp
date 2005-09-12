@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.34  2005/09/12 18:33:45  smite-meister
+// fixed_t, vec_t
+//
 // Revision 1.33  2005/07/20 20:27:23  smite-meister
 // adv. texture cache
 //
@@ -120,7 +123,7 @@
 
 extern bool devparm;			//in d_main.cpp
 
-#define MINZ                  (FRACUNIT*4)
+#define MINZ                  (4)
 #define BASEYCENTER           (BASEVIDHEIGHT/2)
 #define min(x,y) ( ((x)<(y)) ? (x) : (y) )
 
@@ -163,7 +166,7 @@ fixed_t         pspritescale;
 fixed_t         pspriteyscale;  //added:02-02-98:aspect ratio for psprites
 fixed_t         pspriteiscale;
 
-lighttable_t**  spritelights;
+int *spritelights;
 
 // constant arrays
 //  used for psprite clipping and initializing clipping
@@ -218,8 +221,8 @@ struct vissprite_t
   fixed_t             texturemid;
   class Texture      *tex;
 
-  /// colormap used for lightlevel changes
-  lighttable_t   *lightmap;
+  /// colormap index used for lightlevel changes
+  int lightmap;
 
   /// colormap used for color translation
   byte           *translationmap;
@@ -231,19 +234,19 @@ struct vissprite_t
   int                 heightsec;
 
   //SoM: 4/3/2000: Global colormaps!
-  extracolormap_t*    extra_colormap;
+  fadetable_t    *extra_colormap;
   fixed_t             xscale;
 
   //SoM: Precalculated top and bottom screen coords for the sprite.
   fixed_t             thingheight; //The actual height of the thing (for 3D floors)
   sector_t*           sector; //The sector containing the thing.
-  fixed_t             sz;
-  fixed_t             szt;
+  int             sz;  // was fixed_t
+  int             szt; // was fixed_t
 
   int                 cut;  //0 for none, bit 1 for top, bit 2 for bottom
 
 public:
-  vissprite_t *SplitSprite(Actor *thing, fixed_t cutfrac, lightlist_t *ll);
+  vissprite_t *SplitSprite(Actor *thing, int cutfrac, lightlist_t *ll);
   void DrawVisSprite();
 };
 
@@ -450,8 +453,8 @@ void spritepres_t::Project(Actor *p)
   if (sprframe->rotate)
     {
       // choose a different rotation based on player view
-      angle_t ang = R.R_PointToAngle(p->x, p->y); // uses viewx,viewy
-      rot = (ang - p->angle + unsigned(ANG45/2) * 9) >> 29;
+      angle_t ang = R.R_PointToAngle(p->pos.x, p->pos.y); // uses viewx,viewy
+      rot = (ang - p->yaw + unsigned(ANG45/2) * 9) >> 29;
 
       t = sprframe->tex[rot];
       flip = sprframe->flip[rot];
@@ -474,26 +477,26 @@ void spritepres_t::Project(Actor *p)
 
   // software renderer part
   // aspect ratio stuff :
-  fixed_t  xscale = FixedDiv(projection, proj_tz);
-  fixed_t  yscale = FixedDiv(projectiony, proj_tz); //added:02-02-98:aaargll..if I were a math-guy!!!
+  fixed_t  xscale = (projection / proj_tz);
+  fixed_t  yscale = (projectiony / proj_tz); //added:02-02-98:aaargll..if I were a math-guy!!!
 
   // calculate edges of the shape
-  proj_tx -= (t->leftoffset << FRACBITS);
-  int x1 = (centerxfrac + FixedMul(proj_tx, xscale)) >>FRACBITS;
+  proj_tx -= t->leftoffset;
+  int x1 = (centerxfrac + (proj_tx * xscale)).floor();
 
   // off the right side?
   if (x1 > viewwidth)
     return;
 
-  proj_tx += t->width << FRACBITS;
-  int x2 = ((centerxfrac + FixedMul(proj_tx, xscale)) >>FRACBITS) - 1;
+  proj_tx += t->width;
+  int x2 = (centerxfrac + (proj_tx * xscale)).floor() - 1;
 
   // off the left side
   if (x2 < 0)
     return;
 
   //SoM: 3/17/2000: Disreguard sprites that are out of view..
-  fixed_t gzt = p->z + (t->topoffset << FRACBITS);
+  fixed_t gzt = p->pos.z + t->topoffset;
   int light = 0;
 
   sector_t *sec = p->subsector->sector;
@@ -521,13 +524,13 @@ void spritepres_t::Project(Actor *p)
     {
       int phs = R.viewplayer->subsector->sector->heightsec;
       if (phs != -1 && R.viewz < R.sectors[phs].floorheight ?
-          p->z >= R.sectors[heightsec].floorheight :
+          p->pos.z >= R.sectors[heightsec].floorheight :
           gzt < R.sectors[heightsec].floorheight)
         return;
       if (phs != -1 && R.viewz > R.sectors[phs].ceilingheight ?
           gzt < R.sectors[heightsec].ceilingheight &&
           R.viewz >= R.sectors[heightsec].ceilingheight :
-          p->z >= R.sectors[heightsec].ceilingheight)
+          p->pos.z >= R.sectors[heightsec].ceilingheight)
         return;
     }
 
@@ -538,35 +541,35 @@ void spritepres_t::Project(Actor *p)
   //vis->mobjflags = p->flags;
 
   vis->scale = yscale;           //<<detailshift;
-  vis->gx = p->x;
-  vis->gy = p->y;
-  vis->gz = gzt - (t->height << FRACBITS);
+  vis->gx = p->pos.x;
+  vis->gy = p->pos.y;
+  vis->gz = gzt - t->height;
   vis->gzt = gzt;
   vis->thingheight = p->height;
-  vis->pz = p->z;
+  vis->pz = p->pos.z;
   vis->pzt = vis->pz + vis->thingheight;
   vis->texturemid = vis->gzt - R.viewz;
   // foot clipping
-  if (p->z <= sec->floorheight)
+  if (p->pos.z <= sec->floorheight)
     vis->texturemid -= p->floorclip;
 
   vis->x1 = x1 < 0 ? 0 : x1;
   vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
   vis->xscale = xscale; //SoM: 4/17/2000
   vis->sector = sec;
-  vis->szt = (centeryfrac - FixedMul(vis->gzt - R.viewz, yscale)) >> FRACBITS;
-  vis->sz = (centeryfrac - FixedMul(vis->gz - R.viewz, yscale)) >> FRACBITS;
+  vis->szt = (centeryfrac - ((vis->gzt - R.viewz) * yscale)).floor();
+  vis->sz =  (centeryfrac - ((vis->gz - R.viewz) * yscale)).floor();
   vis->cut = false;
   if (sec->numlights)
     vis->extra_colormap = sec->lightlist[light].extra_colormap;
   else
     vis->extra_colormap = sec->extra_colormap;
 
-  fixed_t iscale = FixedDiv (FRACUNIT, xscale);
+  fixed_t iscale = (1 / xscale);
 
   if (flip)
     {
-      vis->startfrac = (t->width << FRACBITS) - 1;
+      vis->startfrac = t->width - fixed_epsilon;
       vis->xiscale = -iscale;
     }
   else
@@ -609,12 +612,12 @@ void spritepres_t::Project(Actor *p)
 	       (!vis->extra_colormap || !vis->extra_colormap->fog))
         {
           // full bright : goggles
-          vis->lightmap = colormaps;
+          vis->lightmap = 0;
         }
       else
         {
           // diminished light
-          int index = xscale>>(LIGHTSCALESHIFT-detailshift);
+          int index = (xscale << (LIGHTSCALESHIFT+detailshift)).floor();
 
           if (index >= MAXLIGHTSCALE)
             index = MAXLIGHTSCALE-1;
@@ -625,7 +628,7 @@ void spritepres_t::Project(Actor *p)
 
   // color translation
   if (color)
-    vis->translationmap = translationtables + ((color - 1) << 8);
+    vis->translationmap = translationtables[color];
   else
     vis->translationmap = NULL;
 
@@ -637,7 +640,7 @@ void spritepres_t::Project(Actor *p)
       if (sec->lightlist[i].height <= vis->gz)
 	return;
 
-      fixed_t cutfrac = (centeryfrac - FixedMul(sec->lightlist[i].height - R.viewz, vis->scale)) >> FRACBITS;
+      int cutfrac = (centeryfrac - ((sec->lightlist[i].height - R.viewz) * vis->scale)).floor();
       if (cutfrac < 0)
 	continue;
       if (cutfrac > vid.height)
@@ -984,19 +987,19 @@ void R_DrawMaskedColumn(column_t* column)
     {
       // calculate unclipped screen coordinates
       //  for post
-      int topscreen = sprtopscreen + spryscale*column->topdelta;
-      int bottomscreen = sprbotscreen == MAXINT ? topscreen + spryscale*column->length :
+      fixed_t topscreen = sprtopscreen + spryscale*column->topdelta;
+      fixed_t bottomscreen = sprbotscreen == fixed_t::FMAX ? topscreen + spryscale*column->length :
 	sprbotscreen + spryscale*column->length;
 
-      dc_yl = (topscreen+FRACUNIT-1)>>FRACBITS;
-      dc_yh = (bottomscreen-1)>>FRACBITS;
+      dc_yl = 1 + (topscreen - fixed_epsilon).floor();
+      dc_yh = (bottomscreen - fixed_epsilon).floor();
 
-      if (windowtop != MAXINT && windowbottom != MAXINT)
+      if (windowtop != fixed_t::FMAX && windowbottom != fixed_t::FMAX)
         {
           if (windowtop > topscreen)
-            dc_yl = (windowtop + FRACUNIT - 1) >> FRACBITS;
+            dc_yl = 1 + (windowtop - fixed_epsilon).floor();
           if (windowbottom < bottomscreen)
-            dc_yh = (windowbottom - 1) >> FRACBITS;
+            dc_yh = (windowbottom - fixed_epsilon).floor();
         }
 
       if (dc_yh >= mfloorclip[dc_x])
@@ -1007,7 +1010,7 @@ void R_DrawMaskedColumn(column_t* column)
       if (dc_yl <= dc_yh && dc_yl < vid.height && dc_yh > 0)
         {
 	  dc_source = column->data;
-	  dc_texturemid = basetexturemid - (column->topdelta << FRACBITS);
+	  dc_texturemid = basetexturemid - column->topdelta;
 	  // dc_source = column->data - column->topdelta;
 
 	  // Drawn by either R_DrawColumn
@@ -1037,8 +1040,6 @@ void R_DrawMaskedColumn(column_t* column)
 //  mfloorclip and mceilingclip should also be set.
 void vissprite_t::DrawVisSprite()
 {
-  dc_colormap = lightmap;
-
   if (transmap == VIS_SMOKESHADE)
     // shadecolfunc uses 'colormaps'
     colfunc = shadecolfunc;
@@ -1061,30 +1062,28 @@ void vissprite_t::DrawVisSprite()
       dc_translation = translationmap;
     }
 
-  if (extra_colormap && !fixedcolormap)
-    {
-      if(!dc_colormap)
-        dc_colormap = extra_colormap->colormap;
-      else
-        dc_colormap = &extra_colormap->colormap[dc_colormap - colormaps];
-    }
 
-  if (!dc_colormap)
-    dc_colormap = colormaps;
+  if (extra_colormap && !fixedcolormap)
+    dc_colormap = extra_colormap->colormap;
+  else
+    dc_colormap = R.base_colormap;
+
+  dc_colormap += lightmap;
+
 
   //dc_iscale = abs(xiscale)>>detailshift;  ???
-  dc_iscale = FixedDiv (FRACUNIT, scale);
+  dc_iscale = (1 / scale);
   dc_texturemid = texturemid;
   dc_texheight = 0;
 
   fixed_t frac = startfrac;
   spryscale = scale;
-  sprtopscreen = centeryfrac - FixedMul(dc_texturemid,spryscale);
-  windowtop = windowbottom = sprbotscreen = MAXINT;
+  sprtopscreen = centeryfrac - (dc_texturemid * spryscale);
+  windowtop = windowbottom = sprbotscreen = fixed_t::FMAX;
 
   for (dc_x = x1; dc_x <= x2; dc_x++, frac += xiscale)
     {
-      int texturecolumn = frac >> FRACBITS;
+      int texturecolumn = frac.floor();
 #ifdef RANGECHECK
       if (texturecolumn < 0 || texturecolumn >= t->width)
         I_Error ("R_DrawSpriteRange: bad texturecolumn");
@@ -1100,7 +1099,7 @@ void vissprite_t::DrawVisSprite()
 
 
 // splits the vissprite into two  (different light conditions on different parts of the sprite!)
-vissprite_t *vissprite_t::SplitSprite(Actor *thing, fixed_t cutfrac, lightlist_t *ll)
+vissprite_t *vissprite_t::SplitSprite(Actor *thing, int cutfrac, lightlist_t *ll)
 {
   vissprite_t *newsprite = R_NewVisSprite();
   memcpy(newsprite, this, sizeof(vissprite_t));
@@ -1159,7 +1158,7 @@ vissprite_t *vissprite_t::SplitSprite(Actor *thing, fixed_t cutfrac, lightlist_t
 	    ;
 	  else
 	    {
-	      int index = xscale>>(LIGHTSCALESHIFT-detailshift);
+	      int index = (xscale << (LIGHTSCALESHIFT+detailshift)).floor();
 
 	      if (index >= MAXLIGHTSCALE)
 		index = MAXLIGHTSCALE-1;
@@ -1212,16 +1211,16 @@ void Rend::R_AddSprites(sector_t* sec, int lightlevel)
     if (!(thing->flags2 & MF2_DONTDRAW))
       {
         // transform the origin point
-        fixed_t  tr_x = thing->x - viewx;
-        fixed_t  tr_y = thing->y - viewy;
+        fixed_t  tr_x = thing->pos.x - viewx;
+        fixed_t  tr_y = thing->pos.y - viewy;
 
-        proj_tz = FixedMul(tr_x,viewcos) + FixedMul(tr_y,viewsin);
+        proj_tz = (tr_x * viewcos) + (tr_y * viewsin);
 
         // thing is behind view plane?
         if (proj_tz < MINZ)
           continue;
 
-        proj_tx = FixedMul(tr_x,viewsin) - FixedMul(tr_y,viewcos);
+        proj_tx = (tr_x * viewsin) - (tr_y * viewcos);
 
         // too far off the side?
         if (abs(proj_tx) > (proj_tz << 2))
@@ -1234,17 +1233,17 @@ void Rend::R_AddSprites(sector_t* sec, int lightlevel)
 
 
 
-const int PSpriteSY[NUMWEAPONS] =
+const fixed_t PSpriteSY[NUMWEAPONS] =
 {
      0,             // staff
-     5*FRACUNIT,    // goldwand
-    15*FRACUNIT,    // crossbow
-    15*FRACUNIT,    // blaster
-    15*FRACUNIT,    // skullrod
-    15*FRACUNIT,    // phoenix rod
-    15*FRACUNIT,    // mace
-    15*FRACUNIT,    // gauntlets
-    15*FRACUNIT     // beak
+     5,    // goldwand
+    15,    // crossbow
+    15,    // blaster
+    15,    // skullrod
+    15,    // phoenix rod
+    15,    // mace
+    15,    // gauntlets
+    15     // beak
 };
 
 //
@@ -1267,19 +1266,19 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
   // calculate edges of the shape
 
   //added:08-01-98:replaced mul by shift
-  fixed_t tx = psp->sx-((BASEVIDWIDTH/2)<<FRACBITS); // *FRACUNITS);
+  fixed_t tx = psp->sx - (BASEVIDWIDTH/2);
 
   //added:02-02-98:spriteoffset should be abs coords for psprites, based on
   //               320x200
-  tx -= (t->leftoffset << FRACBITS);
-  int x1 = (centerxfrac + FixedMul (tx,pspritescale) ) >>FRACBITS;
+  tx -= t->leftoffset;
+  int x1 = (centerxfrac + (tx * pspritescale)).floor();
 
   // off the right side
   if (x1 > viewwidth)
     return;
 
-  tx += (t->width << FRACBITS);
-  int x2 = ((centerxfrac + FixedMul (tx, pspritescale) ) >>FRACBITS) - 1;
+  tx += t->width;
+  int x2 = (centerxfrac + (tx * pspritescale)).floor() - 1;
 
   // off the left side
   if (x2 < 0)
@@ -1289,11 +1288,11 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
   vissprite_t avis;
   vissprite_t *vis = &avis;
   if (cv_splitscreen.value)
-    vis->texturemid = 120 << FRACBITS;
+    vis->texturemid = 120;
   else
-    vis->texturemid = BASEYCENTER << FRACBITS;
+    vis->texturemid = BASEYCENTER;
 
-  vis->texturemid += FRACUNIT/2 - psp->sy + (t->topoffset << FRACBITS);
+  vis->texturemid += 0.5f - psp->sy + t->topoffset;
 
   /*
   if (game.mode >= gm_heretic)
@@ -1301,7 +1300,7 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
       vis->texturemid -= PSpriteSY[viewplayer->readyweapon];
   */
 
-  //vis->texturemid += FRACUNIT/2;
+  //vis->texturemid += 0.5f;
 
   vis->x1 = x1 < 0 ? 0 : x1;
   vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
@@ -1310,7 +1309,7 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
   if (sprframe->flip[0])
     {
       vis->xiscale = -pspriteiscale;
-      vis->startfrac = (t->width << FRACBITS) - 1;
+      vis->startfrac = t->width - fixed_epsilon;
     }
   else
     {
@@ -1327,7 +1326,7 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
 
   if (viewplayer->flags & MF_SHADOW)      // invisibility effect
     {
-      vis->lightmap = NULL;   // use translucency
+      vis->lightmap = 0;   // use translucency
 
       // in Doom2, it used to switch between invis/opaque the last seconds
       // now it switch between invis/less invis the last seconds
@@ -1345,7 +1344,7 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
   else if (psp->state->frame & TFF_FULLBRIGHT)
     {
       // full bright
-      vis->lightmap = colormaps;
+      vis->lightmap = 0;
     }
   else
     {
@@ -1356,7 +1355,7 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
   if(viewplayer->subsector->sector->numlights)
     {
       int lightnum;
-      int light = R_GetPlaneLight(viewplayer->subsector->sector, viewplayer->z + (41 << FRACBITS), false);
+      int light = R_GetPlaneLight(viewplayer->subsector->sector, viewplayer->Feet() + 41, false);
       vis->extra_colormap = viewplayer->subsector->sector->lightlist[light].extra_colormap;
       lightnum = (*viewplayer->subsector->sector->lightlist[light].lightlevel  >> LIGHTSEGSHIFT)+extralight;
 
@@ -1389,8 +1388,7 @@ void Rend::R_DrawPlayerSprites()
   // get light level
   if (viewplayer->subsector->sector->numlights)
     {
-      light = R_GetPlaneLight(viewplayer->subsector->sector,
-			      viewplayer->z + viewplayer->height, false);
+      light = R_GetPlaneLight(viewplayer->subsector->sector, viewplayer->Top(), false);
       lightnum = (*viewplayer->subsector->sector->lightlist[0].lightlevel >> LIGHTSEGSHIFT) + extralight;
     }
   else
@@ -1410,7 +1408,7 @@ void Rend::R_DrawPlayerSprites()
     //added:06-02-98: quickie fix for psprite pos because of freelook
   int kikhak = centery;
   centery = centerypsp;             //for R_DrawColumn
-  centeryfrac = centery<<FRACBITS;  //for R_DrawVisSprite
+  centeryfrac = centery;  //for R_DrawVisSprite
 
   // add all active psprites
   pspdef_t *psp = viewplayer->psprites;
@@ -1422,7 +1420,7 @@ void Rend::R_DrawPlayerSprites()
 
   //added:06-02-98: oooo dirty boy
   centery = kikhak;
-  centeryfrac = centery<<FRACBITS;
+  centeryfrac = centery;
 }
 
 
@@ -1464,7 +1462,7 @@ void R_SortVisSprites (void)
     vsprsortedhead.next = vsprsortedhead.prev = &vsprsortedhead;
     for (i=0 ; i<count ; i++)
     {
-        bestscale = MAXINT;
+        bestscale = fixed_t::FMAX;
         for (ds=unsorted.next ; ds!= &unsorted ; ds=ds->next)
         {
             if (ds->scale < bestscale)
@@ -1833,11 +1831,12 @@ void Rend::R_DrawSprite(vissprite_t *spr)
   //SoM: 3/17/2000: Clip sprites in water.
   if (spr->heightsec != -1)  // only things in specially marked sectors
     {
-      fixed_t h,mh;
+      fixed_t mh, temp;
+      int h;
       int phs = viewplayer->subsector->sector->heightsec;
       if ((mh = sectors[spr->heightsec].floorheight) > spr->gz &&
-	  (h = centeryfrac - FixedMul(mh-=viewz, spr->scale)) >= 0 &&
-	  (h >>= FRACBITS) < viewheight)
+	  (temp = centeryfrac - ((mh -= viewz) * spr->scale)) >= 0 &&
+	  (h = temp.floor()) < viewheight)
         {
 	  if (mh <= 0 || (phs != -1 && viewz > sectors[phs].floorheight))
             {                          // clip bottom
@@ -1854,8 +1853,8 @@ void Rend::R_DrawSprite(vissprite_t *spr)
         }
 
       if ((mh = sectors[spr->heightsec].ceilingheight) < spr->gzt &&
-	  (h = centeryfrac - FixedMul(mh-viewz, spr->scale)) >= 0 &&
-	  (h >>= FRACBITS) < viewheight)
+	  (temp = centeryfrac - ((mh-viewz) * spr->scale)) >= 0 &&
+	  (h = temp.floor()) < viewheight)
         {
 	  if (phs != -1 && viewz >= sectors[phs].ceilingheight)
             {                         // clip bottom
@@ -1873,7 +1872,7 @@ void Rend::R_DrawSprite(vissprite_t *spr)
     }
   if(spr->cut & vissprite_t::SC_TOP && spr->cut & vissprite_t::SC_BOTTOM)
     {
-      fixed_t   h;
+      int h;
       for(x = spr->x1; x <= spr->x2; x++)
 	{
 	  h = spr->szt;
@@ -1887,7 +1886,7 @@ void Rend::R_DrawSprite(vissprite_t *spr)
     }
   else if(spr->cut & vissprite_t::SC_TOP)
     {
-      fixed_t   h;
+      int h;
       for(x = spr->x1; x <= spr->x2; x++)
 	{
 	  h = spr->szt;
@@ -1897,7 +1896,7 @@ void Rend::R_DrawSprite(vissprite_t *spr)
     }
   else if(spr->cut & vissprite_t::SC_BOTTOM)
     {
-      fixed_t   h;
+      int h;
       for(x = spr->x1; x <= spr->x2; x++)
 	{
 	  h = spr->sz;
