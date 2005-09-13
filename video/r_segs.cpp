@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2005/09/13 14:23:12  smite-meister
+// fixed_t fix
+//
 // Revision 1.17  2005/09/12 18:33:45  smite-meister
 // fixed_t, vec_t
 //
@@ -1084,66 +1087,56 @@ unsigned long   nombre = 100000;
 void Rend::R_RenderSegLoop()
 {
   Texture *tex;
-    angle_t             angle;
-    unsigned            index;
-    int                 yl;
-    int                 yh;
-
-#ifdef OLDWATER
-    int                 yw;     //added:18-02-98:WATER!
-#endif
-
-    int                 mid;
-    int                 top;
-    int                 bottom;
-    int                 i;
+  int  yl, yh;
+  int  mid, top, bottom;
+  int  i;
     
-    int texturecolumn = 0;                                // shut up compiler warning
+  int texturecolumn = 0; // shut up compiler warning
     
-    for ( ; rw_x < rw_stopx ; rw_x++)
+  for ( ; rw_x < rw_stopx ; rw_x++)
     {
-        // mark floor / ceiling areas
+      // mark floor / ceiling areas
       yl = (topfrac.value() + HEIGHTUNIT-1)>>HEIGHTBITS;
         
         // no space above wall?
-        if (yl < ceilingclip[rw_x]+1)
-            yl = ceilingclip[rw_x]+1;
+      if (yl < ceilingclip[rw_x]+1)
+	yl = ceilingclip[rw_x]+1;
         
-        if (markceiling)
+      if (markceiling)
         {
-            top = ceilingclip[rw_x]+1;
-            bottom = yl-1;
+	  top = ceilingclip[rw_x]+1;
+	  bottom = yl-1;
             
-            if (bottom >= floorclip[rw_x])
-                bottom = floorclip[rw_x]-1;
+	  if (bottom >= floorclip[rw_x])
+	    bottom = floorclip[rw_x]-1;
             
-            if (top <= bottom)
+	  if (top <= bottom)
             {
-                ceilingplane->top[rw_x] = top;
-                ceilingplane->bottom[rw_x] = bottom;
+	      ceilingplane->top[rw_x] = top;
+	      ceilingplane->bottom[rw_x] = bottom;
             }
         }
 
         
-        yh = bottomfrac.value() >>HEIGHTBITS;
+      yh = bottomfrac.value() >>HEIGHTBITS;
         
-        if (yh >= floorclip[rw_x])
-            yh = floorclip[rw_x]-1;
+      if (yh >= floorclip[rw_x])
+	yh = floorclip[rw_x]-1;
         
-        if (markfloor)
+      if (markfloor)
         {
-            top = yh+1;
-            bottom = floorclip[rw_x]-1;
-            if (top <= ceilingclip[rw_x])
-                top = ceilingclip[rw_x]+1;
-            if (top <= bottom && floorplane)
+	  top = yh+1;
+	  bottom = floorclip[rw_x]-1;
+	  if (top <= ceilingclip[rw_x])
+	    top = ceilingclip[rw_x]+1;
+	  if (top <= bottom && floorplane)
             {
-                floorplane->top[rw_x] = top;
-                floorplane->bottom[rw_x] = bottom;
+	      floorplane->top[rw_x] = top;
+	      floorplane->bottom[rw_x] = bottom;
             }
         }
 
-        /*if (frontsector->ceilingportal)
+      /*if (frontsector->ceilingportal)
         {
             top = ceilingclip[rw_x]+1;
             bottom = yl-1;
@@ -1161,89 +1154,89 @@ void Rend::R_RenderSegLoop()
             }
         }*/
 #ifdef OLDWATER
-        if (markwater)
+      if (markwater)
         {
-            //added:18-02-98:WATER!
-            yw = waterfrac>>HEIGHTBITS;
+	  //added:18-02-98:WATER!
+	  int yw = waterfrac>>HEIGHTBITS;
             
             // the markwater stuff...
-            if (waterplane->height<viewz)
+	  if (waterplane->height<viewz)
             {
-                top = yw;
-                bottom = waterclip[rw_x]-1;
+	      top = yw;
+	      bottom = waterclip[rw_x]-1;
                 
-                if (top <= ceilingclip[rw_x])
-                    top = ceilingclip[rw_x]+1;
+	      if (top <= ceilingclip[rw_x])
+		top = ceilingclip[rw_x]+1;
             }
-            else  //view from under
+	  else  //view from under
             {
-                top = waterclip[rw_x]+1;
-                bottom = yw;
+	      top = waterclip[rw_x]+1;
+	      bottom = yw;
                 
-                if (bottom >= floorclip[rw_x])
-                    bottom = floorclip[rw_x]-1;
+	      if (bottom >= floorclip[rw_x])
+		bottom = floorclip[rw_x]-1;
             }
-            if (top <= bottom)
+	  if (top <= bottom)
             {
-                waterplane->top[rw_x] = top;
-                waterplane->bottom[rw_x] = bottom;
+	      waterplane->top[rw_x] = top;
+	      waterplane->bottom[rw_x] = bottom;
             }
             
-            // do it only if markwater else not needed!
-            waterfrac += waterstep;   //added:18-02-98:WATER!
-            //dc_wcolormap = colormaps+(32<<8);
+	  // do it only if markwater else not needed!
+	  waterfrac += waterstep;   //added:18-02-98:WATER!
+	  //dc_wcolormap = colormaps+(32<<8);
         }
 #endif
 
-        if (numffloors)
+      if (numffloors)
         {
           firstseg->frontscale[rw_x] = frontscale[rw_x];
           for(i = 0; i < numffloors; i++)
-          {
-            if(ffloor[i].height < viewz)
-            {
-              int top_w = (ffloor[i].f_frac.value() >> HEIGHTBITS) + 1;
-              int bottom_w = ffloor[i].f_clip[rw_x];
+	    {
+	      if(ffloor[i].height < viewz)
+		{
+		  int top_w = (ffloor[i].f_frac.value() >> HEIGHTBITS) + 1;
+		  int bottom_w = ffloor[i].f_clip[rw_x];
 
-              if(top_w < ceilingclip[rw_x] + 1)
-                top_w = ceilingclip[rw_x] + 1;
+		  if(top_w < ceilingclip[rw_x] + 1)
+		    top_w = ceilingclip[rw_x] + 1;
 
-              if (bottom_w > floorclip[rw_x] - 1)
-                bottom_w = floorclip[rw_x] - 1;
+		  if (bottom_w > floorclip[rw_x] - 1)
+		    bottom_w = floorclip[rw_x] - 1;
 
-              if (top_w <= bottom_w)
-              {
-                ffloor[i].plane->top[rw_x] = top_w;
-                ffloor[i].plane->bottom[rw_x] = bottom_w;
-              }
-            }
-            else if (ffloor[i].height > viewz)
-            {
-              int top_w = ffloor[i].c_clip[rw_x] + 1;
-              int bottom_w = (ffloor[i].f_frac.value() >> HEIGHTBITS);
+		  if (top_w <= bottom_w)
+		    {
+		      ffloor[i].plane->top[rw_x] = top_w;
+		      ffloor[i].plane->bottom[rw_x] = bottom_w;
+		    }
+		}
+	      else if (ffloor[i].height > viewz)
+		{
+		  int top_w = ffloor[i].c_clip[rw_x] + 1;
+		  int bottom_w = (ffloor[i].f_frac.value() >> HEIGHTBITS);
 
-              if (top_w < ceilingclip[rw_x] + 1)
-                top_w = ceilingclip[rw_x] + 1;
+		  if (top_w < ceilingclip[rw_x] + 1)
+		    top_w = ceilingclip[rw_x] + 1;
 
-              if (bottom_w > floorclip[rw_x] - 1)
-                bottom_w = floorclip[rw_x] - 1;
+		  if (bottom_w > floorclip[rw_x] - 1)
+		    bottom_w = floorclip[rw_x] - 1;
 
-              if (top_w <= bottom_w)
-              {
-                ffloor[i].plane->top[rw_x] = top_w;
-                ffloor[i].plane->bottom[rw_x] = bottom_w;
-              }
-            }
-          }
+		  if (top_w <= bottom_w)
+		    {
+		      ffloor[i].plane->top[rw_x] = top_w;
+		      ffloor[i].plane->bottom[rw_x] = bottom_w;
+		    }
+		}
+	    }
         }
 
-        //SoM: Calculate offsets for Thick fake floors.
-        // calculate texture offset
-        angle = (rw_centerangle + xtoviewangle[rw_x])>>ANGLETOFINESHIFT;
-        texturecolumn = (rw_offset - (finetangent[angle] * rw_distance)).floor();
+      //SoM: Calculate offsets for Thick fake floors.
+      // calculate texture offset
+      angle_t angle = (rw_centerangle + xtoviewangle[rw_x])>>ANGLETOFINESHIFT;
+      texturecolumn = (rw_offset - (finetangent[angle] * rw_distance)).floor();
 
-        // texturecolumn and lighting are independent of wall tiers
-        if (segtextured)
+      // texturecolumn and lighting are independent of wall tiers
+      if (segtextured)
         {
 	  if (frontsector->extra_colormap && !fixedcolormap)
 	    dc_colormap = frontsector->extra_colormap->colormap;
@@ -1251,7 +1244,7 @@ void Rend::R_RenderSegLoop()
 	    dc_colormap = base_colormap;
 	  
 	  // calculate lighting
-	  index = (rw_scale << LIGHTSCALESHIFT).floor();
+	  int index = (rw_scale << LIGHTSCALESHIFT).floor();
             
 	  if (index >=  MAXLIGHTSCALE )
 	    index = MAXLIGHTSCALE-1;
@@ -1261,53 +1254,53 @@ void Rend::R_RenderSegLoop()
 	  dc_iscale.setvalue(0xffffffffu / unsigned(rw_scale.value()));
         }
 
-        if(dc_numlights)
+      if(dc_numlights)
         {
           int *xwalllights;
           for(i = 0; i < dc_numlights; i++)
-          {
-            int lightnum;
-            if((frontsector->lightlist[i].caster && frontsector->lightlist[i].caster->flags & FF_FOG && frontsector->lightlist[i].height != *frontsector->lightlist[i].caster->bottomheight) || (dc_lightlist[i].extra_colormap && dc_lightlist[i].extra_colormap->fog))
-              lightnum = (dc_lightlist[i].lightlevel >> LIGHTSEGSHIFT);
-            else
-              lightnum = (dc_lightlist[i].lightlevel >> LIGHTSEGSHIFT)+extralight;
+	    {
+	      int lightnum;
+	      if((frontsector->lightlist[i].caster && frontsector->lightlist[i].caster->flags & FF_FOG && frontsector->lightlist[i].height != *frontsector->lightlist[i].caster->bottomheight) || (dc_lightlist[i].extra_colormap && dc_lightlist[i].extra_colormap->fog))
+		lightnum = (dc_lightlist[i].lightlevel >> LIGHTSEGSHIFT);
+	      else
+		lightnum = (dc_lightlist[i].lightlevel >> LIGHTSEGSHIFT)+extralight;
 
-            if (dc_lightlist[i].extra_colormap);
-            else if (curline->v1->y == curline->v2->y)
+	      if (dc_lightlist[i].extra_colormap);
+	      else if (curline->v1->y == curline->v2->y)
                 lightnum--;
-            else if (curline->v1->x == curline->v2->x)
+	      else if (curline->v1->x == curline->v2->x)
                 lightnum++;
     
-            if (lightnum < 0)
+	      if (lightnum < 0)
                 xwalllights = scalelight[0];
-            else if (lightnum >= LIGHTLEVELS)
+	      else if (lightnum >= LIGHTLEVELS)
                 xwalllights = scalelight[LIGHTLEVELS-1];
-            else
+	      else
                 xwalllights = scalelight[lightnum];
 
-            index = (rw_scale << LIGHTSCALESHIFT).floor();
+	      int index = (rw_scale << LIGHTSCALESHIFT).floor();
             
-            if (index >=  MAXLIGHTSCALE )
+	      if (index >=  MAXLIGHTSCALE )
                 index = MAXLIGHTSCALE-1;
 
-            if(dc_lightlist[i].extra_colormap && !fixedcolormap)
-              dc_lightlist[i].rcolormap = dc_lightlist[i].extra_colormap->colormap + xwalllights[index];
-            else if(!fixedcolormap)
-              dc_lightlist[i].rcolormap = base_colormap + xwalllights[index];
-            else
-              dc_lightlist[i].rcolormap = base_colormap + fixedcolormap;
+	      if(dc_lightlist[i].extra_colormap && !fixedcolormap)
+		dc_lightlist[i].rcolormap = dc_lightlist[i].extra_colormap->colormap + xwalllights[index];
+	      else if(!fixedcolormap)
+		dc_lightlist[i].rcolormap = base_colormap + xwalllights[index];
+	      else
+		dc_lightlist[i].rcolormap = base_colormap + fixedcolormap;
 
-            colfunc = R_DrawColumnShadowed_8;
-          }
+	      colfunc = R_DrawColumnShadowed_8;
+	    }
         }
 
-        /*if(dc_wallportals)
+      /*if(dc_wallportals)
           colfunc = R_DrawPortalColumn_8;*/
 
-        frontscale[rw_x] = rw_scale;
+      frontscale[rw_x] = rw_scale;
 
-          // draw the wall tiers
-        if (midtexture)
+      // draw the wall tiers
+      if (midtexture)
         {
 	  tex = tc[midtexture];
 	  // single sided line
@@ -1316,43 +1309,43 @@ void Rend::R_RenderSegLoop()
 	  dc_texturemid = rw_midtexturemid;
 	  dc_source = tex->GetColumn(texturecolumn);
 	  dc_texheight = tex->height;
-            //profile stuff ---------------------------------------------------------
+	  //profile stuff ---------------------------------------------------------
 #ifdef TIMING
-            ProfZeroTimer();
+	  ProfZeroTimer();
 #endif
 #ifdef HORIZONTALDRAW
-            hcolfunc ();
+	  hcolfunc ();
 #else
-            colfunc ();
+	  colfunc ();
 #endif
 #ifdef TIMING
-            RDMSR(0x10,&mycount);
-            mytotal += mycount;      //64bit add
+	  RDMSR(0x10,&mycount);
+	  mytotal += mycount;      //64bit add
             
-            if(nombre--==0)
-                I_Error("R_DrawColumn CPU Spy reports: 0x%d %d\n", *((int*)&mytotal+1),
-                (int)mytotal );
+	  if(nombre--==0)
+	    I_Error("R_DrawColumn CPU Spy reports: 0x%d %d\n", *((int*)&mytotal+1),
+		    (int)mytotal );
 #endif
-            //profile stuff ---------------------------------------------------------
+	  //profile stuff ---------------------------------------------------------
             
-            // dont draw anything more for this column, since
-            // a midtexture blocks the view
-            ceilingclip[rw_x] = viewheight;
-            floorclip[rw_x] = -1;
+	  // dont draw anything more for this column, since
+	  // a midtexture blocks the view
+	  ceilingclip[rw_x] = viewheight;
+	  floorclip[rw_x] = -1;
         }
-        else
+      else
         {
-            // two sided line
-            if (toptexture)
+	  // two sided line
+	  if (toptexture)
             {
-                // top wall
-                mid = pixhigh.value() >> HEIGHTBITS;
-                pixhigh += pixhighstep;
+	      // top wall
+	      mid = pixhigh.value() >> HEIGHTBITS;
+	      pixhigh += pixhighstep;
                 
-                if (mid >= floorclip[rw_x])
-                    mid = floorclip[rw_x]-1;
+	      if (mid >= floorclip[rw_x])
+		mid = floorclip[rw_x]-1;
                 
-                if (mid >= yl)
+	      if (mid >= yl)
                 {
 		  tex = tc[toptexture];
 		  dc_yl = yl;
@@ -1361,39 +1354,39 @@ void Rend::R_RenderSegLoop()
 		  dc_source = tex->GetColumn(texturecolumn);
 		  dc_texheight = tex->height;
 #ifdef HORIZONTALDRAW
-                    hcolfunc ();
+		  hcolfunc ();
 #else
-                    colfunc ();
+		  colfunc ();
 #endif
-                    ceilingclip[rw_x] = mid;
+		  ceilingclip[rw_x] = mid;
                 }
-                else
-                    ceilingclip[rw_x] = yl-1;
+	      else
+		ceilingclip[rw_x] = yl-1;
             }
-            else
+	  else
             {
-                // no top wall
-                if (markceiling)
+	      // no top wall
+	      if (markceiling)
                 {
-                    ceilingclip[rw_x] = yl-1;
+		  ceilingclip[rw_x] = yl-1;
 #ifdef OLDWATER
-                    if (!waterplane || markwater)
-                         waterclip[rw_x] = yl-1;
+		  if (!waterplane || markwater)
+		    waterclip[rw_x] = yl-1;
 #endif
                 }
             }
             
-            if (bottomtexture)
+	  if (bottomtexture)
             {
-                // bottom wall
-                mid = (pixlow.value() + HEIGHTUNIT-1)>>HEIGHTBITS;
-                pixlow += pixlowstep;
+	      // bottom wall
+	      mid = (pixlow.value() + HEIGHTUNIT-1)>>HEIGHTBITS;
+	      pixlow += pixlowstep;
                 
-                // no space above wall?
-                if (mid <= ceilingclip[rw_x])
-                    mid = ceilingclip[rw_x]+1;
+	      // no space above wall?
+	      if (mid <= ceilingclip[rw_x])
+		mid = ceilingclip[rw_x]+1;
 
-                if (mid <= yh)
+	      if (mid <= yh)
                 {
 		  tex = tc[bottomtexture];
 		  dc_yl = mid;
@@ -1402,55 +1395,55 @@ void Rend::R_RenderSegLoop()
 		  dc_source = tex->GetColumn(texturecolumn);
 		  dc_texheight = tex->height;
 #ifdef HORIZONTALDRAW
-                    hcolfunc ();
+		  hcolfunc ();
 #else
-                    colfunc ();
+		  colfunc ();
 #endif
-                    floorclip[rw_x] = mid;
+		  floorclip[rw_x] = mid;
 #ifdef OLDWATER
-                    if (waterplane && waterz<worldlow)
-                        waterclip[rw_x] = mid;
+		  if (waterplane && waterz<worldlow)
+		    waterclip[rw_x] = mid;
 #endif
                 }
-                else
+	      else
                 {
-                    floorclip[rw_x] = yh+1;
+		  floorclip[rw_x] = yh+1;
                 }
 
             }
-            else
+	  else
             {
-                // no bottom wall
-                if (markfloor)
+	      // no bottom wall
+	      if (markfloor)
                 {
-                    floorclip[rw_x] = yh+1;
+		  floorclip[rw_x] = yh+1;
 #ifdef OLDWATER
-                    if (!waterplane || markwater)
-                        waterclip[rw_x] = yh+1;
+		  if (!waterplane || markwater)
+		    waterclip[rw_x] = yh+1;
 #endif
                 }
             }
         }
 
-        if (maskedtexture || numthicksides)
+      if (maskedtexture || numthicksides)
         {
           // save texturecol
           //  for backdrawing of masked mid texture
           maskedtexturecol[rw_x] = texturecolumn;
         }
 
-        if(dc_numlights)
+      if(dc_numlights)
         {
           for(i = 0; i < dc_numlights; i++)
-          {
-            dc_lightlist[i].height += dc_lightlist[i].heightstep;
-            if(dc_lightlist[i].flags & FF_SOLID)
-              dc_lightlist[i].botheight += dc_lightlist[i].botheightstep;
-          }
+	    {
+	      dc_lightlist[i].height += dc_lightlist[i].heightstep;
+	      if(dc_lightlist[i].flags & FF_SOLID)
+		dc_lightlist[i].botheight += dc_lightlist[i].botheightstep;
+	    }
         }
 
 
-        /*if(dc_wallportals)
+      /*if(dc_wallportals)
         {
           wallportal_t* wpr;
           for(wpr = dc_wallportals; wpr; wpr = wpr->next)
@@ -1461,22 +1454,22 @@ void Rend::R_RenderSegLoop()
         }*/
 
 
-        for(i = 0; i < MAXFFLOORS; i++)
+      for(i = 0; i < MAXFFLOORS; i++)
         {
           if (ffloor[i].mark)
-          {
-            int y_w = ffloor[i].b_frac.value() >> HEIGHTBITS;
+	    {
+	      int y_w = ffloor[i].b_frac.value() >> HEIGHTBITS;
 
-            ffloor[i].f_clip[rw_x] = ffloor[i].c_clip[rw_x] = y_w;
-            ffloor[i].b_frac += ffloor[i].b_step;
-          }
+	      ffloor[i].f_clip[rw_x] = ffloor[i].c_clip[rw_x] = y_w;
+	      ffloor[i].b_frac += ffloor[i].b_step;
+	    }
 
           ffloor[i].f_frac += ffloor[i].f_step;
         }
 
-        rw_scale += rw_scalestep;
-        topfrac += topstep;
-        bottomfrac += bottomstep;
+      rw_scale += rw_scalestep;
+      topfrac += topstep;
+      bottomfrac += bottomstep;
     }
 }
 

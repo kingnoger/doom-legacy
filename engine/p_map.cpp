@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.36  2005/09/13 14:23:11  smite-meister
+// fixed_t fix
+//
 // Revision 1.35  2005/09/12 18:33:42  smite-meister
 // fixed_t, vec_t
 //
@@ -887,16 +890,6 @@ fixed_t         tmymove;
 // so that the next move will slide along the wall.
 void P_HitSlideLine(line_t *ld)
 {
-  int                 side;
-
-  angle_t             lineangle;
-  angle_t             moveangle;
-  angle_t             deltaangle;
-
-  fixed_t             movelen;
-  fixed_t             newlen;
-
-
   if (ld->slopetype == ST_HORIZONTAL)
     {
       tmymove = 0;
@@ -909,15 +902,15 @@ void P_HitSlideLine(line_t *ld)
       return;
     }
 
-  side = P_PointOnLineSide (slidemo->pos.x, slidemo->pos.y, ld);
+  int side = P_PointOnLineSide(slidemo->pos.x, slidemo->pos.y, ld);
 
-  lineangle = R_PointToAngle2 (0,0, ld->dx, ld->dy);
+  angle_t lineangle = R_PointToAngle2(0, 0, ld->dx, ld->dy);
 
   if (side == 1)
     lineangle += ANG180;
 
-  moveangle = R_PointToAngle2 (0,0, tmxmove, tmymove);
-  deltaangle = moveangle-lineangle;
+  angle_t moveangle = R_PointToAngle2(0, 0, tmxmove, tmymove);
+  angle_t deltaangle = moveangle-lineangle;
 
   if (deltaangle > ANG180)
     deltaangle += ANG180;
@@ -926,8 +919,7 @@ void P_HitSlideLine(line_t *ld)
   lineangle >>= ANGLETOFINESHIFT;
   deltaangle >>= ANGLETOFINESHIFT;
 
-  movelen = P_AproxDistance (tmxmove, tmymove);
-  newlen = movelen * finecosine[deltaangle];
+  fixed_t newlen = P_AproxDistance(tmxmove, tmymove) * finecosine[deltaangle];
 
   tmxmove = newlen * finecosine[lineangle];
   tmymove = newlen * finesine[lineangle];
@@ -957,8 +949,8 @@ static bool PTR_SlideTraverse(intercept_t *in)
       line_opening_t *open = P_LineOpening(li);
 
       if (!(open->range < slidemo->height ||
-	    open->top - slidemo->pos.z < slidemo->height || 
-	    open->bottom - slidemo->pos.z > 24))
+	    open->top < slidemo->Top() || 
+	    open->bottom > slidemo->Feet() + 24))
 	return true; // this line doesn't block movement
     }
 
@@ -991,12 +983,9 @@ void Map::SlideMove(Actor *mo)
   fixed_t             leady;
   fixed_t             trailx;
   fixed_t             traily;
-  fixed_t             newx;
-  fixed_t             newy;
-  int                 hitcount;
 
   slidemo = mo;
-  hitcount = 0;
+  int hitcount = 0;
 
   fixed_t fudge;   // FIXME find a better way
   fudge.setvalue(0x800);
@@ -1052,8 +1041,8 @@ void Map::SlideMove(Actor *mo)
   bestslidefrac -= fudge;
   if (bestslidefrac > 0)
     {
-      newx = mo->vel.x * bestslidefrac;
-      newy = mo->vel.y * bestslidefrac;
+      fixed_t newx = mo->vel.x * bestslidefrac;
+      fixed_t newy = mo->vel.y * bestslidefrac;
 
       if (!mo->TryMove(mo->pos.x+newx, mo->pos.y+newy, true))
 	goto stairstep;

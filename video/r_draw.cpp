@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.18  2005/09/13 14:23:12  smite-meister
+// fixed_t fix
+//
 // Revision 1.17  2005/09/12 18:33:45  smite-meister
 // fixed_t, vec_t
 //
@@ -161,7 +164,6 @@ int             hcolumnofs[MAXVIDHEIGHT];
 //                      COLUMN DRAWING CODE STUFF
 // =========================================================================
 
-lighttable_t           *dc_fadetable; ///< the entire fadetable in the map (for fuzz drawing)
 lighttable_t           *dc_colormap;
 int                     dc_x;         // viewport x coordinate of the column
 int                     dc_yl, dc_yh; // low and high y limits of the column in viewport coords

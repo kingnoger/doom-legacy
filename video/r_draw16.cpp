@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2005/09/13 14:23:12  smite-meister
+// fixed_t fix
+//
 // Revision 1.2  2005/09/12 18:33:45  smite-meister
 // fixed_t, vec_t
 //
@@ -52,9 +55,8 @@
 
 #include "doomtype.h"
 
-#include "r_local.h"
-#include "r_state.h"
-
+#include "r_draw.h"
+#include "r_render.h"
 
 // ==========================================================================
 // COLUMNS
@@ -161,60 +163,58 @@ void R_DrawSkyColumn_16 (void)
 //
 //
 //#ifndef USEASM
-void R_DrawFuzzColumn_16 (void)
+void R_DrawFuzzColumn_16()
 {
-    int                 count;
-    short*              dest;
-    fixed_t             frac;
-    fixed_t             fracstep;
+  short*              dest;
+  fixed_t             frac;
+  fixed_t             fracstep;
 
-    // Adjust borders. Low...
-    if (!dc_yl)
-        dc_yl = 1;
+  // Adjust borders. Low...
+  if (!dc_yl)
+    dc_yl = 1;
 
-    // .. and high.
-    if (dc_yh == viewheight-1)
-        dc_yh = viewheight - 2;
+  // .. and high.
+  if (dc_yh == viewheight-1)
+    dc_yh = viewheight - 2;
 
-    count = dc_yh - dc_yl;
+  int count = dc_yh - dc_yl;
 
-    // Zero length.
-    if (count < 0)
-        return;
-
+  // Zero length.
+  if (count < 0)
+    return;
 
 #ifdef RANGECHECK
-    if ((unsigned)dc_x >= vid.width
-        || dc_yl < 0 || dc_yh >= vid.height)
+  if ((unsigned)dc_x >= vid.width
+      || dc_yl < 0 || dc_yh >= vid.height)
     {
-        I_Error ("R_DrawFuzzColumn: %i to %i at %i",
-                 dc_yl, dc_yh, dc_x);
+      I_Error ("R_DrawFuzzColumn: %i to %i at %i",
+	       dc_yl, dc_yh, dc_x);
     }
 #endif
 
 
-    // Does not work with blocky mode.
-    dest = (short*) (ylookup[dc_yl] + columnofs[dc_x]);
+  // Does not work with blocky mode.
+  dest = (short*) (ylookup[dc_yl] + columnofs[dc_x]);
 
-    // Looks familiar.
-    fracstep = dc_iscale;
-    frac = dc_texturemid + (dc_yl-centery)*fracstep;
+  // Looks familiar.
+  fracstep = dc_iscale;
+  frac = dc_texturemid + (dc_yl-centery)*fracstep;
 
-    do
+  do
     {
-        // Lookup framebuffer, and retrieve
-        //  a pixel that is either one column
-        //  left or right of the current one.
-        // Add index from colormap to index.
-        *dest = color8to16[dc_fadetable[6*256+dest[fuzzoffset[fuzzpos]]]];
+      // Lookup framebuffer, and retrieve
+      //  a pixel that is either one column
+      //  left or right of the current one.
+      // Add index from colormap to index.
+      *dest = color8to16[R.base_colormap[6*256+dest[fuzzoffset[fuzzpos]]]];
 
-        // Clamp table lookup index.
-        if (++fuzzpos == FUZZTABLE)
-            fuzzpos = 0;
+      // Clamp table lookup index.
+      if (++fuzzpos == FUZZTABLE)
+	fuzzpos = 0;
 
-        dest += vid.width;
+      dest += vid.width;
 
-        frac += fracstep;
+      frac += fracstep;
     } while (count--);
 }
 //#endif

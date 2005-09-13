@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2005/09/13 14:23:12  smite-meister
+// fixed_t fix
+//
 // Revision 1.11  2005/09/11 16:23:25  smite-meister
 // template classes
 //
@@ -90,7 +93,6 @@ extern int              hcolumnofs[MAXVIDHEIGHT];
 // COLUMN DRAWING CODE STUFF
 // -------------------------
 
-extern lighttable_t    *dc_fadetable; ///< the entire fadetable in the map (for fuzz drawing)
 extern lighttable_t    *dc_colormap;
 extern int              dc_x;
 extern int              dc_yl, dc_yh;

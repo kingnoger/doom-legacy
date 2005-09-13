@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2005/09/13 14:23:12  smite-meister
+// fixed_t fix
+//
 // Revision 1.19  2005/09/12 18:33:42  smite-meister
 // fixed_t, vec_t
 //
@@ -126,10 +129,11 @@ int P_PointOnLineSide(fixed_t x, fixed_t y, const line_t *line)
   fixed_t dx = x - line->v1->x;
   fixed_t dy = y - line->v1->y;
 
-#if 0
+#if 1
   fixed_t left = (line->dy >> 16) * dx;  // shift so that it always fits in 32 bits
   fixed_t right = dy * (line->dx >> 16);
 #else
+  // TEST: more accurate PointOnLineSide
   Sint64 left = line->dy.value() * dx.value();
   Sint64 right = dy.value() * line->dx.value();
 #endif
@@ -218,10 +222,11 @@ int P_PointOnDivlineSide(fixed_t x, fixed_t y, divline_t *line)
       return 0;
     }
 
-#if 0
+#if 1
   fixed_t left = (line->dy >> 8) * (dx >> 8); // shift so result always fits in 32 bits
   fixed_t right = (dy >> 8) * (line->dx >> 8);
 #else
+  // TEST: more accurate PointOnDivlineSide
   Sint64 left = line->dy.value() * dx.value();
   Sint64 right = dy.value() * line->dx.value();
 #endif

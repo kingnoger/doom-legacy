@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2005/09/13 14:23:12  smite-meister
+// fixed_t fix
+//
 // Revision 1.4  2005/09/12 18:33:45  smite-meister
 // fixed_t, vec_t
 //
@@ -203,7 +206,10 @@ inline fixed_t& fixed_t::operator*=(const fixed_t& a)
 template<>
 inline fixed_t& fixed_t::operator/=(const fixed_t& a)
 {
-  val = (large_t(val) << FBITS) / large_t(a.val);
+  if ((abs(val) >> 14) >= abs(a.val))
+    val = (val ^ a.val) < 0 ? MININT : MAXINT;
+  else
+    val = (large_t(val) << FBITS) / large_t(a.val);
   //val = int(double(val) / double(a.val) * 65536.0);
   return *this;
 }
@@ -224,7 +230,11 @@ template<>
 inline fixed_t operator/(const fixed_t& a, const fixed_t& b)
 {
   fixed_t res;
-  res.val = (fixed_t::large_t(a.val) << fixed_t::FBITS) / fixed_t::large_t(b.val);
+  // TODO FIXME the actual code should check against divide-by-zero!
+  if ((abs(a.val) >> 14) >= abs(b.val))
+    res.val = (a.val ^ b.val) < 0 ? MININT : MAXINT;
+  else
+    res.val = (fixed_t::large_t(a.val) << fixed_t::FBITS) / fixed_t::large_t(b.val);
   //res.val = int(double(a.val) / double(b.val) * 65536.0);
   return res;
 }

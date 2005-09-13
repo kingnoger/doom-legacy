@@ -17,11 +17,11 @@
 //
 //
 // $Log$
+// Revision 1.5  2005/09/13 14:23:12  smite-meister
+// fixed_t fix
+//
 // Revision 1.4  2005/09/12 18:33:45  smite-meister
 // fixed_t, vec_t
-//
-// Revision 1.3  2005/04/22 19:44:50  smite-meister
-// bugs fixed
 //
 // Revision 1.2  2004/08/02 20:54:48  jussip
 // Minor compilation fix.
@@ -76,8 +76,8 @@
 
 #include "doomtype.h"
 
-#include "r_local.h"
-#include "r_state.h"
+#include "r_draw.h"
+#include "r_render.h"
 
 #define USEBOOMFUNC
 
@@ -381,7 +381,7 @@ void R_DrawFuzzColumn_8()
         //  a pixel that is either one column
         //  left or right of the current one.
         // Add index from colormap to index.
-      *dest = dc_fadetable[6*256 + dest[fuzzoffset[fuzzpos]]];
+      *dest = R.base_colormap[6*256 + dest[fuzzoffset[fuzzpos]]];
 
         // Clamp table lookup index.
         if (++fuzzpos == FUZZTABLE)
@@ -440,7 +440,7 @@ void R_DrawShadeColumn_8()
     // Here we do an additional index re-mapping.
     do
     {
-      *dest = dc_fadetable[(dc_source[frac.floor()] << 8) + *dest];
+      *dest = R.base_colormap[(dc_source[frac.floor()] << 8) + *dest];
       dest += vid.width;
       frac += fracstep;
     } while (count--);
