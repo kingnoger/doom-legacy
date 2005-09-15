@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.49  2005/09/15 16:44:17  segabor
+// "backsector = null" bug fixed, gcc-4 improvements
+//
 // Revision 1.48  2005/09/11 16:22:54  smite-meister
 // template classes
 //
@@ -636,10 +639,17 @@ int DActor::Marshal(LArchive &a)
 	  a << stemp;
 	}
 
+#if __GNUC__ >= 4
+      if (diff & MD_TYPE) a << (short int &)type;
+      if (diff & MD_XY)   a << x << y << angle;
+      if (diff & MD_Z)    a << z;
+      if (diff & MD_MOM)  a << px << py << pz;
+#else
       if (diff & MD_TYPE) a << short(type);
       if (diff & MD_XY)   a << pos.x << pos.y << yaw;
       if (diff & MD_Z)    a << pos.z;
       if (diff & MD_MOM)  a << vel;
+#endif
       if (diff & MD_MASS)   a << mass;
       if (diff & MD_RADIUS) a << radius;
       if (diff & MD_HEIGHT) a << height;
@@ -870,7 +880,7 @@ int PlayerPawn::Marshal(LArchive &a)
       if (diff & PD_REFIRE) a << refire;
       if (diff & PD_MORPHTICS) a << morphTics;
 
-      a << int(pendingweapon) << int(readyweapon);
+      a << (int &)pendingweapon << (int &)readyweapon;
     }
   else
     {
@@ -1230,7 +1240,7 @@ int Map::Serialize(LArchive &a)
 
   for (i = 0; i < ACScriptCount; i++)
     {
-      a << int(ACSInfo[i].state);
+      a << (int &)ACSInfo[i].state;
       a << ACSInfo[i].waitValue;
     }
   a.Write((byte *)ACMapVars, sizeof(ACMapVars));
@@ -1279,7 +1289,7 @@ int Map::Serialize(LArchive &a)
     {
       a << rs->script->scriptnum;
       a << (n = (rs->savepoint - rs->script->data)); // offset
-      a << int(rs->wait_type);
+      a << (int &)rs->wait_type;
       a << rs->wait_data;
 
       Thinker::Serialize(rs->trigger, a);
@@ -1620,7 +1630,7 @@ int Map::Unserialize(LArchive &a)
     {
       Actor *p = NULL;
       a << stemp << temp;
-      if (a.GetPtr(temp, (void *)p))
+      if (a.GetPtr((int &)temp, (void * &)p))
 	TIDmap.insert(pair<const short, Actor*>(stemp, p));
       else
 	I_Error("Crap in TIDmap!\n");
@@ -1672,7 +1682,7 @@ int MapCluster::Unserialize(LArchive &a)
 int MapInfo::Serialize(LArchive &a)
 {
   int temp;
-  a << int(state);
+  a << (int &)state;
   a << found;
 
   a << lumpname << nicename << savename;
@@ -1778,7 +1788,7 @@ int PlayerInfo::Serialize(LArchive &a)
   a << number << team << name;
   a << client_hash;
 
-  a << int(playerstate);
+  a << (int &)playerstate;
   a << spectator << map_completed;
 
   a << requestmap << entrypoint;
@@ -1894,9 +1904,9 @@ int GameInfo::Serialize(LArchive &a)
 
   // treat all enums as ints
   a << demoversion;
-  a << int(mode);
-  a << int(state);
-  a << int(skill);
+  a << (int &)mode;
+  a << (int &)state;
+  a << (int &)skill;
 
   // flags
   a << netgame << multiplayer << modified << paused << inventory;

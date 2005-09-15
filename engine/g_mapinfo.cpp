@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.31  2005/09/15 16:44:17  segabor
+// "backsector = null" bug fixed, gcc-4 improvements
+//
 // Revision 1.30  2005/09/12 18:33:42  smite-meister
 // fixed_t, vec_t
 //
@@ -366,7 +369,12 @@ bool MapInfo::HubLoad()
 
 // one command set per block
 
+#if __GNUC__ >= 4
+#define MI_offset(field) ((char*)&(((MapInfo*)0)->field) - (char*)0)
+//#define MI_offset(field) offsetof(MapInfo, field)
+#else
 #define MI_offset(field) (size_t(&MapInfo::field))
+#endif
 //#define MI_offset(field) (size_t(&((MapInfo *)0)->field))
 static parsercmd_t MapInfo_commands[]=
 {
@@ -522,7 +530,12 @@ char *MapInfo::Read(int lump)
 //   Hexen/ZDoom MAPINFO parser.
 //==============================================
 
+#if __GNUC__ >= 4
+#define CD_offset(field) ((char*)&(((MapCluster*)0)->field) - (char*)0)
+//#define CD_offset(field) offsetof(MapCluster, field)
+#else
 #define CD_offset(field) (size_t(&MapCluster::field))
+#endif
 //#define CD_offset(field) (size_t(&((MapCluster *)0)->field))
 
 // ZDoom clusterdef commands

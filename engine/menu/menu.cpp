@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2005/09/15 16:44:17  segabor
+// "backsector = null" bug fixed, gcc-4 improvements
+//
 // Revision 1.9  2005/09/11 16:22:54  smite-meister
 // template classes
 //
@@ -1372,7 +1375,11 @@ void M_ReadSaveStrings()
           LoadGame_MI[i].flags = IT_NONE | IT_SPACE;
           continue;
         }
+#if __GNUC__ >= 4
+      lseek(handle, offsetof(savegame_header_t, description), SEEK_SET);
+#else
       lseek(handle, size_t(&savegame_header_t::description), SEEK_SET);
+#endif
       read(handle, &savegamestrings[i], SAVEGAME_DESC_SIZE);
       close(handle);
       LoadGame_MI[i].flags = IT_CALL | IT_SPACE;
@@ -2957,7 +2964,7 @@ bool Menu::Responder(event_t *ev)
       if (currentMenu->parent)
         {
           SetupNextMenu(currentMenu->parent);
-          S_StartLocalAmbSound(sfx_menu_close); // it´s a matter of taste which sound to choose
+          S_StartLocalAmbSound(sfx_menu_close); // itÂ¥s a matter of taste which sound to choose
         }
       else
         {

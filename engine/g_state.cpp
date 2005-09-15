@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.44  2005/09/15 16:44:17  segabor
+// "backsector = null" bug fixed, gcc-4 improvements
+//
 // Revision 1.43  2005/07/11 16:58:33  smite-meister
 // msecnode_t bug fixed
 //
@@ -135,8 +138,15 @@ int GameInfo::GetFrags(fragsort_t **fragtab, int type)
     {
       int m = teams.size();
       ft = new fragsort_t[m];
+	  
+	  //FIXME: gcc-4 did not like this kind of dynamic allocation so I changed it to static. Later shall be fixed.
+#if __GNUC__ >= 4
+	  const int cm = m;
+      // int **teamfrags = new int[cm][cm];
+	  int teamfrags[cm][cm];
+#else
       int **teamfrags = (int **)(new int[m][m]);
-
+#endif
       for (i=0; i<m; i++)
 	{
 	  ft[i].num   = i; // team 0 are the unteamed
@@ -203,7 +213,9 @@ int GameInfo::GetFrags(fragsort_t **fragtab, int type)
 	default:
 	  break;
 	}
+#if __GNUC__ < 4
       delete [] teamfrags;
+#endif
       ret = m;
     }
   else

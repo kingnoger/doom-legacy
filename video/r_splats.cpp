@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2005/09/15 16:44:18  segabor
+// "backsector = null" bug fixed, gcc-4 improvements
+//
 // Revision 1.7  2005/09/12 18:33:45  smite-meister
 // fixed_t, vec_t
 //
@@ -132,16 +135,19 @@ void Map::R_AddWallSplat(line_t *line, int side, char *name, fixed_t top, fixed_
     {
       backsector = line->sideptr[side]->sector;
 
-      if (top < backsector->floorheight)
-        {
-	  splat->yoffset = &backsector->floorheight;
-	  top -= backsector->floorheight;
-        }
-      else if(top > backsector->ceilingheight)
-        {
-	  splat->yoffset = &backsector->ceilingheight;
-	  top -= backsector->ceilingheight;
-        }
+	  // BUGFIX! first backsector must be checked against NULL value!
+	  if (backsector) {
+		  if (top < backsector->floorheight)
+			{
+		  splat->yoffset = &backsector->floorheight;
+		  top -= backsector->floorheight;
+			}
+		  else if(top > backsector->ceilingheight)
+			{
+		  splat->yoffset = &backsector->ceilingheight;
+		  top -= backsector->ceilingheight;
+			}
+		}
     }
   //splat->sectorside = side;
 

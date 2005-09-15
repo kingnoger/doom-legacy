@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2005/09/15 16:44:17  segabor
+// "backsector = null" bug fixed, gcc-4 improvements
+//
 // Revision 1.10  2005/04/19 18:28:33  smite-meister
 // new RPCs
 //
@@ -54,6 +57,7 @@
 
 #include <vector>
 #include <string>
+#include "tnl/tnlAssert.h"
 #include "tnl/tnlNetInterface.h"
 
 using namespace std;
