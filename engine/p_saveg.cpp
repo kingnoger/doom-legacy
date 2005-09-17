@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.50  2005/09/17 17:36:09  smite-meister
+// fixed_t fixes
+//
 // Revision 1.49  2005/09/15 16:44:17  segabor
 // "backsector = null" bug fixed, gcc-4 improvements
 //
@@ -640,16 +643,14 @@ int DActor::Marshal(LArchive &a)
 	}
 
 #if __GNUC__ >= 4
-      if (diff & MD_TYPE) a << (short int &)type;
-      if (diff & MD_XY)   a << x << y << angle;
-      if (diff & MD_Z)    a << z;
-      if (diff & MD_MOM)  a << px << py << pz;
+      if (diff & MD_TYPE) a << (short &)type;
 #else
       if (diff & MD_TYPE) a << short(type);
+#endif
       if (diff & MD_XY)   a << pos.x << pos.y << yaw;
       if (diff & MD_Z)    a << pos.z;
       if (diff & MD_MOM)  a << vel;
-#endif
+
       if (diff & MD_MASS)   a << mass;
       if (diff & MD_RADIUS) a << radius;
       if (diff & MD_HEIGHT) a << height;

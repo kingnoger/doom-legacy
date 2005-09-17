@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.37  2005/09/17 17:36:09  smite-meister
+// fixed_t fixes
+//
 // Revision 1.36  2005/09/13 14:23:11  smite-meister
 // fixed_t fix
 //
@@ -1089,7 +1092,7 @@ int             la_damage;
 int             la_dtype;
 fixed_t         attackrange;
 
-fixed_t         aimslope;
+fixed_t         aimslope; // == Tan(pitch)
 
 
 mobjtype_t PuffType = MT_PUFF;

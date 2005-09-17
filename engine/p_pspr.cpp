@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.26  2005/09/17 17:36:09  smite-meister
+// fixed_t fixes
+//
 // Revision 1.25  2005/09/11 16:22:54  smite-meister
 // template classes
 //
@@ -654,8 +657,8 @@ void A_FirePlasma(PlayerPawn *p, pspdef_t *psp)
 //added:16-02-98: Fab comments: autoaim for the bullet-type weapons
 fixed_t P_BulletSlope(PlayerPawn *p)
 {
-  fixed_t slope;
   angle_t an = p->yaw;
+  fixed_t slope;
 
   //added:18-02-98: if AUTOAIM, try to aim at something
   if(!p->player->options.autoaim || !cv_allowautoaim.value)
@@ -676,7 +679,7 @@ fixed_t P_BulletSlope(PlayerPawn *p)
       if(!linetarget)
         {
 	notargetfound:
-	  slope = AIMINGTOSLOPE(p->pitch);
+	  slope = Tan(p->pitch);
         }
     }
 
@@ -700,7 +703,7 @@ static void P_GunShot(PlayerPawn *p, bool accurate)
   if (!accurate)
     {
       angle += P_SignedRandom() << 18;
-      slope += P_SignedRandom() << 4; // TEST vertical scatter
+      slope += P_SignedFRandom(12); // TEST vertical scatter
     }
 
   p->LineAttack(angle, MISSILERANGE, slope, damage);
@@ -757,7 +760,7 @@ void A_FireShotgun2(PlayerPawn *p, pspdef_t *psp)
 
   for (int i=0 ; i<20 ; i++)
     {
-      fixed_t slope = bulletslope + (P_SignedRandom()<<5);
+      fixed_t slope = bulletslope + P_SignedFRandom(11);
       int damage = 5*(P_Random ()%3+1);
       angle_t angle = p->yaw + (P_SignedRandom() << 19);
       p->LineAttack(angle, MISSILERANGE, slope, damage);

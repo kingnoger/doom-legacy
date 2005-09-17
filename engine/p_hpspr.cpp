@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.17  2005/09/17 17:36:09  smite-meister
+// fixed_t fixes
+//
 // Revision 1.16  2005/09/11 16:22:54  smite-meister
 // template classes
 //
@@ -1054,13 +1057,13 @@ void A_FirePhoenixPL2(PlayerPawn *p, pspdef_t *psp)
   vec_t<fixed_t> r(x, y, 26 + fixed_t(int(p->pitch))/173 - p->floorclip);
   r += p->pos;
 
-  fixed_t slope = AIMINGTOSLOPE(p->pitch);
   DActor *mo = p->mp->SpawnDActor(r, MT_PHOENIXFX2);
   mo->owner = p;
   mo->yaw = angle;
-  mo->vel.x = p->vel.x + mo->info->speed * finecosine[angle>>ANGLETOFINESHIFT];
-  mo->vel.y = p->vel.y + mo->info->speed * finesine[angle>>ANGLETOFINESHIFT];
-  mo->vel.z = mo->info->speed * slope;
+  fixed_t temp = mo->info->speed * Cos(p->pitch);
+  mo->vel.x = p->vel.x + temp * Cos(angle);
+  mo->vel.y = p->vel.y + temp * Sin(angle);
+  mo->vel.z = p->vel.z + mo->info->speed * Sin(p->pitch);
   if(!p->refire || !(p->mp->maptic % 38))
     {
       S_StartSound(p, sfx_phopow);

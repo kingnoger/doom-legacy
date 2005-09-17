@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2005/09/17 17:36:09  smite-meister
+// fixed_t fixes
+//
 // Revision 1.18  2005/09/13 14:23:12  smite-meister
 // fixed_t fix
 //
@@ -197,7 +200,7 @@ static int             numthicksides;
 //static short*          thicksidecol;
 
 
-angle_t         rw_normalangle;
+angle_t         rw_normalangle; // normal angle for the current segment
 // angle to line origin
 int             rw_angle1;
 fixed_t         rw_distance;
@@ -1482,12 +1485,7 @@ void Rend::R_RenderSegLoop()
 //
 void Rend::R_StoreWallRange(int start, int stop)
 {
-  fixed_t             hyp;
-  fixed_t             sineval;
-  angle_t             distangle, offsetangle;
-  fixed_t             vtop;
-  int                 lightnum;
-  int                 i;
+  int i;
 
     //SoM: 3/26/2000: Use Boom limit removal and see if it works better.
     //SoM: Boom code:
@@ -1520,15 +1518,15 @@ void Rend::R_StoreWallRange(int start, int stop)
     
   // calculate rw_distance for scale calculation
   rw_normalangle = curline->angle + ANG90;
-  offsetangle = abs(int(rw_normalangle)-rw_angle1);
+  angle_t offsetangle = abs(int(rw_normalangle)-rw_angle1);
     
   if (offsetangle > ANG90)
     offsetangle = ANG90;
     
-  distangle = ANG90 - offsetangle;
-  hyp = R_PointToDist (curline->v1->x, curline->v1->y);
-  sineval = finesine[distangle>>ANGLETOFINESHIFT];
-  rw_distance = FixedMul (hyp, sineval);
+  angle_t distangle = ANG90 - offsetangle;
+  fixed_t hyp = R_PointToDist(curline->v1->x, curline->v1->y);
+  fixed_t sineval = finesine[distangle>>ANGLETOFINESHIFT];
+  rw_distance = hyp * sineval;
     
     
   ds_p->x1 = rw_x = start;
@@ -1655,9 +1653,8 @@ void Rend::R_StoreWallRange(int start, int stop)
 
       if (linedef->flags & ML_DONTPEGBOTTOM && midtexture) // FIXME correct?
         {
-	  vtop = frontsector->floorheight + tc[midtexture]->height;
 	  // bottom of texture at bottom
-	  rw_midtexturemid = vtop - viewz;
+	  rw_midtexturemid = frontsector->floorheight + tc[midtexture]->height - viewz;
         }
       else
         {
@@ -1824,10 +1821,8 @@ void Rend::R_StoreWallRange(int start, int stop)
             }
 	  else
             {
-	      vtop = backsector->ceilingheight + tc[toptexture]->height;
-	      
 	      // bottom of texture
-	      rw_toptexturemid = vtop - viewz;
+	      rw_toptexturemid = backsector->ceilingheight + tc[toptexture]->height - viewz;
             }
         }
 
@@ -2035,7 +2030,7 @@ void Rend::R_StoreWallRange(int start, int stop)
         // OPTIMIZE: get rid of LIGHTSEGSHIFT globally
         if (!fixedcolormap)
         {
-            lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT)+extralight;
+            int lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT)+extralight;
             
             if (curline->v1->y == curline->v2->y)
                 lightnum--;

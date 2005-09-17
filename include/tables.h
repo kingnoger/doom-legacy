@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2005/09/17 17:36:09  smite-meister
+// fixed_t fixes
+//
 // Revision 1.5  2005/09/11 16:23:25  smite-meister
 // template classes
 //
@@ -65,7 +68,6 @@ typedef Uint32 angle_t;
 #define FINEANGLES              8192
 #define FINEMASK                (FINEANGLES-1)
 #define ANGLETOFINESHIFT        19      // 0x100000000 to 0x2000
-#define AIMINGTOSLOPE(aiming)   finesine[((aiming) >> ANGLETOFINESHIFT) & FINEMASK]
 
 
 // Effective size is 10240. [5*FINEANGLES/4]
@@ -89,6 +91,7 @@ const angle_t ANGLE_60  = ANG180 / 3;
 
 
 /// Encapsulation for tabulated sine, cosine and tangent
+//#define AIMINGTOSLOPE(aiming)   finesine[((aiming) >> ANGLETOFINESHIFT) & FINEMASK]
 inline fixed_t Sin(angle_t a) { return finesine[a >> ANGLETOFINESHIFT]; }
 inline fixed_t Cos(angle_t a) { return finecosine[a >> ANGLETOFINESHIFT]; }
 inline fixed_t Tan(angle_t a)

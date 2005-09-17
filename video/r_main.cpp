@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.33  2005/09/17 17:36:09  smite-meister
+// fixed_t fixes
+//
 // Revision 1.32  2005/09/12 18:33:45  smite-meister
 // fixed_t, vec_t
 //
@@ -462,11 +465,9 @@ fixed_t Rend::R_ScaleFromGlobalAngle(angle_t visangle)
 
 #else
   fixed_t             scale;
-  int                 anglea;
-  int                 angleb;
 
-  anglea = ANG90 + (visangle-viewangle);
-  angleb = ANG90 + (visangle-rw_normalangle);
+  int anglea = ANG90 + (visangle-viewangle);
+  int angleb = ANG90 + (visangle-rw_normalangle);
 
     // both sines are allways positive
   fixed_t sinea = finesine[anglea>>ANGLETOFINESHIFT];
@@ -482,8 +483,8 @@ fixed_t Rend::R_ScaleFromGlobalAngle(angle_t visangle)
 
       if (scale > 64)
 	scale = 64;
-      else if (scale < 256)
-	scale = 256;
+      else if (scale.value() < 256)
+	scale.setvalue(256);
     }
   else
     scale = 64;

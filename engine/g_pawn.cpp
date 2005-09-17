@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.57  2005/09/17 17:36:09  smite-meister
+// fixed_t fixes
+//
 // Revision 1.56  2005/09/11 16:22:53  smite-meister
 // template classes
 //
@@ -754,7 +757,7 @@ void PlayerPawn::Move()
 	vel.z = 0.5f;
       else if (onground && !jumpdown && cv_jumpspeed.value) // can't jump while in air or while jumping
 	{
-	  vel.z = cv_jumpspeed.value;
+	  vel.z.setvalue(cv_jumpspeed.value);
 	  if (!(cheats & CF_FLYAROUND))
 	    {
 	      S_StartScreamSound(this, sfx_jump);
@@ -963,7 +966,7 @@ DActor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
 {
   extern Actor *linetarget;
 
-  fixed_t  slope = 0; // == sin(pitch)
+  fixed_t  slope = 0;
 
   if (player->options.autoaim && cv_allowautoaim.value)
     {
@@ -982,11 +985,11 @@ DActor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
             }
 
 	  if (!linetarget)
-	    slope = AIMINGTOSLOPE(pitch);
+	    slope = Tan(pitch);
         }
     }
   else
-    slope = AIMINGTOSLOPE(pitch);
+    slope = Tan(pitch);
 
   // if not autoaim, or if the autoaim didnt aim something, use the mouseaiming    
 
