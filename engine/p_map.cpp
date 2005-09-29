@@ -18,11 +18,11 @@
 //
 //
 // $Log$
+// Revision 1.38  2005/09/29 15:15:19  smite-meister
+// aiming fix
+//
 // Revision 1.37  2005/09/17 17:36:09  smite-meister
 // fixed_t fixes
-//
-// Revision 1.36  2005/09/13 14:23:11  smite-meister
-// fixed_t fix
 //
 // Revision 1.35  2005/09/12 18:33:42  smite-meister
 // fixed_t, vec_t
@@ -107,6 +107,7 @@
 /// \file
 /// \brief Movement, collision handling. Shooting and aiming.
 
+#include <math.h>
 #include "doomdef.h"
 
 #include "g_game.h"
@@ -1092,7 +1093,7 @@ int             la_damage;
 int             la_dtype;
 fixed_t         attackrange;
 
-fixed_t         aimslope; // == Tan(pitch)
+fixed_t         aimslope; // == Sin(pitch)
 
 
 mobjtype_t PuffType = MT_PUFF;
@@ -1292,29 +1293,19 @@ static bool PTR_AimTraverse(intercept_t *in)
 //added:18-02-98: added clipping the shots on the floor and ceiling.
 static bool PTR_ShootTraverse(intercept_t *in)
 {
-  fixed_t             x;
-  fixed_t             y;
-  fixed_t             z;
+  fixed_t  x, y, z;
   fixed_t             frac;
-
-  line_t *li;
-  sector_t *sector=NULL;
 
   fixed_t             slope;
   fixed_t             dist;
-  fixed_t             thingtopslope;
-  fixed_t             thingbottomslope;
 
   fixed_t             floorz = 0;  //SoM: Bullets should hit fake floors!
   fixed_t             ceilingz = 0;
 
   //added:18-02-98:
   fixed_t        distz;    //dist between hit z on wall       and gun z
-  fixed_t        clipz;    //dist between hit z on floor/ceil and gun z
   bool        hitplane;    //true if we clipped z on floor/ceil plane
-  bool        diffheights; //check for sky hacks with different ceil heights
 
-  int            sectorside;
   int            dir;
 
   if (aimslope > 0)
@@ -1330,9 +1321,9 @@ static bool PTR_ShootTraverse(intercept_t *in)
   if (in->isaline)
     {
       //shut up compiler, otherwise it's only used when TWOSIDED
-      diffheights = false;
+      bool diffheights = false; //check for sky hacks with different ceil heights
 
-      li = in->line;
+      line_t *li = in->line;
 
       if (li->special)
 	m->ActivateLine(li, shootthing, 0, SPAC_IMPACT);
@@ -1443,7 +1434,9 @@ static bool PTR_ShootTraverse(intercept_t *in)
       //                use a simple triangle stuff a/b = c/d ...
       // BP:13-3-99: fix the side usage
       hitplane = false;
-      sectorside=P_PointOnLineSide(shootthing->pos.x,shootthing->pos.y,li);
+      int sectorside = P_PointOnLineSide(shootthing->pos.x,shootthing->pos.y,li);
+      sector_t *sector = NULL;
+
       if (li->sideptr[sectorside] != NULL) // can happen in nocliping mode
         {
 	  sector = li->sideptr[sectorside]->sector;
@@ -1465,17 +1458,15 @@ static bool PTR_ShootTraverse(intercept_t *in)
 
 	  if ((z > ceilingz) && distz != 0)
             {
-	      clipz = ceilingz - shootz;
-	      frac = (frac *clipz) / distz;
+	      frac = (frac * (ceilingz - shootz)) / distz;
 	      hitplane = true;
             }
-	  else
-	    if ((z < floorz) && distz != 0)
-	      {
-		clipz = shootz - floorz;
-		frac = -(frac * clipz) / distz;
-		hitplane = true;
-	      }
+	  else if ((z < floorz) && distz != 0)
+	    {
+	      frac = -(frac * (shootz - floorz)) / distz;
+	      hitplane = true;
+	    }
+
 	  if (sector->ffloors)
             {
 	      if (dir == 1 && z > ceilingz)
@@ -1489,10 +1480,8 @@ static bool PTR_ShootTraverse(intercept_t *in)
       if (!hitplane)
         {
 	  divline_t   divl;
-	  fixed_t     frac;
-
-	  P_MakeDivline(li, &divl);
-	  frac = P_InterceptVector(&divl, &trace);
+	  divl.MakeDivline(li);
+	  fixed_t frac = P_InterceptVector(&divl, &trace);
 	  m->R_AddWallSplat(li, sectorside, "A_DMG1", z, frac, SPLATDRAWMODE_SHADE);
         }
 
@@ -1549,12 +1538,12 @@ static bool PTR_ShootTraverse(intercept_t *in)
 
   // check angles to see if the thing can be aimed at
   dist = attackrange * in->frac;
-  thingtopslope = (th->Top() - shootz) / dist;
+  fixed_t thingtopslope = (th->Top() - shootz) / dist;
 
   if (thingtopslope < aimslope)
     return true;            // shot over the thing
 
-  thingbottomslope = (th->pos.z - shootz) / dist;
+  fixed_t thingbottomslope = (th->pos.z - shootz) / dist;
 
   if (thingbottomslope > aimslope)
     return true;            // shot under the thing
@@ -1635,23 +1624,14 @@ fixed_t Actor::AimLineAttack(angle_t ang, fixed_t distance)
   fixed_t x2 = pos.x + temp * Cos(ang);
   fixed_t y2 = pos.y + temp * Sin(ang);
 
+  //added:15-02-98: Fab comments...
+  // Doom's base engine says that at a distance of 160,
+  // the 2d graphics on the plane x,y correspond 1/1 with plane units
   const fixed_t ds = 10.0f/16;
-  fixed_t aimslope = Tan(pitch);
+  fixed_t aimslope = Sin(pitch);
   topslope    = aimslope + ds;
   bottomslope = aimslope - ds;
 
-    /*
-    {
-      x2 = x + (distance>>FRACBITS)*finecosine[ang];
-      y2 = y + (distance>>FRACBITS)*finesine[ang];
-
-      //added:15-02-98: Fab comments...
-      // Doom's base engine says that at a distance of 160,
-      // the 2d graphics on the plane x,y correspond 1/1 with plane units
-      topslope = 100*FRACUNIT/160;
-      bottomslope = -100*FRACUNIT/160;
-    }
-    */
   shootz = lastz = Center() + 8;
 
   // can't shoot outside view angles
@@ -1687,31 +1667,18 @@ fixed_t Actor::AimLineAttack(angle_t ang, fixed_t distance)
 
 void Actor::LineAttack(angle_t ang, fixed_t distance, fixed_t slope, int damage, int dtype)
 {
-  fixed_t     x2;
-  fixed_t     y2;
-
   shootthing = this;
   la_damage = damage;
   la_dtype = dtype;
   linetarget = NULL;
 
   // NOTE see AimLineAttack, same here
-  // player autoaimed attack, 
-  /*
-  if (!player)
-    {   
-      x2 = x + (distance>>FRACBITS)*finecosine[ang]; 
-      y2 = y + (distance>>FRACBITS)*finesine[ang];   
-    }
-  else
-  */
-    {
-      // TODO should be   fixed_t temp = distance * Cos(ArcTan(slope));
-      fixed_t temp = distance * Cos(pitch);
+  fixed_t temp = sqrt((1 - slope*slope).Float()) * distance;
+  //fixed_t temp = distance * Cos(ArcSin(slope));
+  //fixed_t temp = distance * Cos(pitch);
 
-      x2 = pos.x + temp * Cos(ang);
-      y2 = pos.y + temp * Sin(ang);
-    }
+  fixed_t x2 = pos.x + temp * Cos(ang);
+  fixed_t y2 = pos.y + temp * Sin(ang);
 
   shootz = lastz = Center() + 8 - floorclip;
 
@@ -1887,66 +1854,67 @@ bool PlayerPawn::UsePuzzleItem(int type)
 // RADIUS ATTACK
 //==========================================================================
 
-Actor *bombowner;
-Actor *bomb;
-int    bombdamage;
-int    bombdistance;
-int    bombdtype;
-bool   bomb_damage_owner;
+static struct
+{
+  Actor  *owner; // the creature that caused the explosion at b
+  Actor  *b;
 
-// "bombowner" is the creature
-// that caused the explosion at "bomb".
+  int     damage;
+  int     dtype;
+  fixed_t radius;
+  bool    damage_owner;
+} Bomb;
+
+
 static bool PIT_RadiusAttack(Actor *thing)
 {
-  fixed_t  dx, dy, dz;
-  fixed_t  dist;
-
   if (!(thing->flags & MF_SHOOTABLE))
     return true;
 
-  if (!bomb_damage_owner && thing == bombowner)
+  if (!Bomb.damage_owner && thing == Bomb.owner)
     return true;
 
   // Bosses take no damage from concussion.
   // if (thing->flags2 & MF2_BOSS) return true;
 
-  dx = abs(thing->pos.x - bomb->pos.x);
-  dy = abs(thing->pos.y - bomb->pos.y);
+  // TODO uses a weird L-infinity norm, dist = max(dx,dy,dz), L2-norm would be better
+  fixed_t dx = abs(thing->pos.x - Bomb.b->pos.x);
+  fixed_t dy = abs(thing->pos.y - Bomb.b->pos.y);
 
-  dist = dx>dy ? dx : dy;
-  dist -= thing->radius;
+  fixed_t temp = dx>dy ? dx : dy;
+  temp -= thing->radius;
 
   //added:22-02-98: now checks also z dist for rockets exploding
   //                above yer head...
-  dz = abs(thing->Center() - bomb->pos.z);
-  int d = (dist > dz ? dist : dz).floor();
+  fixed_t dz = abs(thing->Center() - Bomb.b->pos.z);
+  fixed_t dist = temp > dz ? temp : dz;
 
-  if (d < 0)
-    d = 0;
+  if (dist < 0)
+    dist = 0;
 
-  if (d >= bombdistance)
+  if (dist >= Bomb.radius)
     return true;    // out of range
 
   // geometry blocks the blast?
-  if (thing->floorz > bomb->pos.z && bomb->ceilingz < thing->pos.z)
+  if (thing->floorz > Bomb.b->pos.z && Bomb.b->ceilingz < thing->pos.z)
     return true;
-  if (thing->ceilingz < bomb->pos.z && bomb->floorz > thing->pos.z)
+  if (thing->ceilingz < Bomb.b->pos.z && Bomb.b->floorz > thing->pos.z)
     return true;
 
-  if (thing->mp->CheckSight(thing, bomb))
+  if (thing->mp->CheckSight(thing, Bomb.b))
     {
-      int damage = (bombdamage * (bombdistance - d)/bombdistance) + 1;
+      int damage = (Bomb.damage * ((Bomb.radius - dist) / Bomb.radius)).floor() + 1;
 
-      // Hexen: if(thing->player) damage >>= 2;
+      // TODO Hexen: if(thing->player) damage >>= 2;
 
       fixed_t apx = 0, apy = 0;
-      if (dist != 0)
+      if (temp != 0)
         {
-	  apx = (thing->pos.x - bomb->pos.x) / (d+1);
-	  apy = (thing->pos.y - bomb->pos.y) / (d+1);
+	  apx = (thing->pos.x - Bomb.b->pos.x) / (dist+1);
+	  apy = (thing->pos.y - Bomb.b->pos.y) / (dist+1);
         }
       // must be in direct path
-      if (thing->Damage(bomb, bombowner, damage, bombdtype) && !(thing->flags & MF_NOBLOOD))
+      if (thing->Damage(Bomb.b, Bomb.owner, damage, Bomb.dtype) && !(thing->flags & MF_NOBLOOD))
 	thing->mp->SpawnBloodSplats(thing->pos, damage, apx, apy);
     }
 
@@ -1954,35 +1922,28 @@ static bool PIT_RadiusAttack(Actor *thing)
 }
 
 
-// Culprit is the creature that caused the explosion.
-void Actor::RadiusAttack(Actor *culprit, int damage, int distance, int dtype, bool downer)
+/// Culprit is the creature that caused the explosion.
+void Actor::RadiusAttack(Actor *culprit, int damage, fixed_t rad, int dtype, bool downer)
 {
-  int nx, ny;
-
-  int         xl;
-  int         xh;
-  int         yl;
-  int         yh;
-
-  if (distance < 0)
-    bombdistance = damage;
+  if (rad < 0)
+    Bomb.radius = damage;
   else
-    bombdistance = distance;
+    Bomb.radius = rad;
 
-  fixed_t dist = bombdistance + MAXRADIUS;
-  yh = (pos.y + dist - mp->bmaporgy).floor() >> MAPBLOCKBITS;
-  yl = (pos.y - dist - mp->bmaporgy).floor() >> MAPBLOCKBITS;
-  xh = (pos.x + dist - mp->bmaporgx).floor() >> MAPBLOCKBITS;
-  xl = (pos.x - dist - mp->bmaporgx).floor() >> MAPBLOCKBITS;
+  fixed_t dist = Bomb.radius + MAXRADIUS;
+  int yh = (pos.y + dist - mp->bmaporgy).floor() >> MAPBLOCKBITS;
+  int yl = (pos.y - dist - mp->bmaporgy).floor() >> MAPBLOCKBITS;
+  int xh = (pos.x + dist - mp->bmaporgx).floor() >> MAPBLOCKBITS;
+  int xl = (pos.x - dist - mp->bmaporgx).floor() >> MAPBLOCKBITS;
 
-  bomb = this;
-  bombowner = culprit;
-  bombdamage = damage;
-  bombdtype = dtype;
-  bomb_damage_owner = downer;
+  Bomb.b = this;
+  Bomb.owner = culprit;
+  Bomb.damage = damage;
+  Bomb.dtype = dtype;
+  Bomb.damage_owner = downer;
 
-  for (ny=yl ; ny<=yh ; ny++)
-    for (nx=xl ; nx<=xh ; nx++)
+  for (int ny=yl ; ny<=yh ; ny++)
+    for (int nx=xl ; nx<=xh ; nx++)
       mp->BlockThingsIterator (nx, ny, PIT_RadiusAttack);
 }
 

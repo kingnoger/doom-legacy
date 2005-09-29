@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.62  2005/09/29 15:15:19  smite-meister
+// aiming fix
+//
 // Revision 1.61  2005/09/12 18:33:42  smite-meister
 // fixed_t, vec_t
 //
@@ -308,7 +311,7 @@ static bool PTR_BloodTraverse(intercept_t *in)
 	}
 
       divline_t divl;
-      P_MakeDivline(li, &divl);
+      divl.MakeDivline(li);
 
       fixed_t frac = P_InterceptVector(&divl, &trace);
       if (game.mode >= gm_heretic)

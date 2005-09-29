@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2005/09/29 15:15:19  smite-meister
+// aiming fix
+//
 // Revision 1.20  2005/09/13 14:23:12  smite-meister
 // fixed_t fix
 //
@@ -144,6 +147,61 @@ int P_PointOnLineSide(fixed_t x, fixed_t y, const line_t *line)
 }
 
 
+// Returns 0 or 1.
+int P_PointOnDivlineSide(fixed_t x, fixed_t y, divline_t *line)
+{
+  if (!line->dx)
+    {
+      if (x <= line->x)
+	return line->dy > 0;
+
+      return line->dy < 0;
+    }
+  if (!line->dy)
+    {
+      if (y <= line->y)
+	return line->dx < 0;
+
+      return line->dx > 0;
+    }
+
+  fixed_t dx = x - line->x;
+  fixed_t dy = y - line->y;
+
+  // try to quickly decide by looking at sign bits
+  if ((line->dy.value() ^ line->dx.value() ^ dx.value() ^ dy.value())&0x80000000)
+    {
+      if ((line->dy.value() ^ dx.value()) & 0x80000000)
+	return 1;           // (left is negative)
+      return 0;
+    }
+
+#if 1
+  fixed_t left = (line->dy >> 8) * (dx >> 8); // shift so result always fits in 32 bits
+  fixed_t right = (dy >> 8) * (line->dx >> 8);
+#else
+  // TEST: more accurate PointOnDivlineSide
+  Sint64 left = line->dy.value() * dx.value();
+  Sint64 right = dy.value() * line->dx.value();
+#endif
+
+  if (right < left)
+    return 0;               // front side
+  return 1;                   // back side
+}
+
+
+/// copies the relevant parts of a linedef
+void divline_t::MakeDivline(const line_t *li)
+{
+  x = li->v1->x;
+  y = li->v1->y;
+  dx = li->dx;
+  dy = li->dy;
+}
+
+
+
 // Considers the line to be infinite
 // Returns side 0 or 1, -1 if box crosses the line.
 int bbox_t::BoxOnLineSide(const line_t *ld)
@@ -192,58 +250,6 @@ int bbox_t::BoxOnLineSide(const line_t *ld)
   return -1;
 }
 
-
-// Returns 0 or 1.
-int P_PointOnDivlineSide(fixed_t x, fixed_t y, divline_t *line)
-{
-  if (!line->dx)
-    {
-      if (x <= line->x)
-	return line->dy > 0;
-
-      return line->dy < 0;
-    }
-  if (!line->dy)
-    {
-      if (y <= line->y)
-	return line->dx < 0;
-
-      return line->dx > 0;
-    }
-
-  fixed_t dx = x - line->x;
-  fixed_t dy = y - line->y;
-
-  // try to quickly decide by looking at sign bits
-  if ((line->dy.value() ^ line->dx.value() ^ dx.value() ^ dy.value())&0x80000000)
-    {
-      if ((line->dy.value() ^ dx.value()) & 0x80000000)
-	return 1;           // (left is negative)
-      return 0;
-    }
-
-#if 1
-  fixed_t left = (line->dy >> 8) * (dx >> 8); // shift so result always fits in 32 bits
-  fixed_t right = (dy >> 8) * (line->dx >> 8);
-#else
-  // TEST: more accurate PointOnDivlineSide
-  Sint64 left = line->dy.value() * dx.value();
-  Sint64 right = dy.value() * line->dx.value();
-#endif
-
-  if (right < left)
-    return 0;               // front side
-  return 1;                   // back side
-}
-
-
-void P_MakeDivline(line_t *li, divline_t *dl)
-{
-  dl->x = li->v1->x;
-  dl->y = li->v1->y;
-  dl->dx = li->dx;
-  dl->dy = li->dy;
-}
 
 
 
@@ -548,10 +554,7 @@ static Map *tempMap;
 
 static bool PIT_AddLineIntercepts(line_t *ld)
 {
-  int                 s1;
-  int                 s2;
-  fixed_t             frac;
-  divline_t           dl;
+  int  s1, s2;
 
   // avoid precision problems with two routines
   if (trace.dx > 16 || trace.dy > 16
@@ -572,8 +575,9 @@ static bool PIT_AddLineIntercepts(line_t *ld)
     return true;    // line isn't crossed
 
   // hit the line
-  P_MakeDivline (ld, &dl);
-  frac = P_InterceptVector (&trace, &dl);
+  divline_t  dl;
+  dl.MakeDivline(ld);
+  fixed_t frac = P_InterceptVector(&trace, &dl);
 
   if (frac < 0)
     return true;    // behind source

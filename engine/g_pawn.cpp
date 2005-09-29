@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.58  2005/09/29 15:15:19  smite-meister
+// aiming fix
+//
 // Revision 1.57  2005/09/17 17:36:09  smite-meister
 // fixed_t fixes
 //
@@ -985,11 +988,11 @@ DActor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
             }
 
 	  if (!linetarget)
-	    slope = Tan(pitch);
+	    slope = Sin(pitch);
         }
     }
   else
-    slope = Tan(pitch);
+    slope = Sin(pitch);
 
   // if not autoaim, or if the autoaim didnt aim something, use the mouseaiming    
 

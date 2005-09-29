@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.44  2005/09/29 15:15:19  smite-meister
+// aiming fix
+//
 // Revision 1.43  2005/09/11 16:22:53  smite-meister
 // template classes
 //
@@ -553,7 +556,7 @@ void Actor::XYMovement()
 		  divline_t   divl;
 		  divline_t   misl;
 
-		  P_MakeDivline(Blocking.line, &divl);
+		  divl.MakeDivline(Blocking.line);
 		  misl.x = pos.x;
 		  misl.y = pos.y;
 		  misl.dx = vel.x;

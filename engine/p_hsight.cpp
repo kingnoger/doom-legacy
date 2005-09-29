@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2005/09/29 15:15:19  smite-meister
+// aiming fix
+//
 // Revision 1.3  2005/09/12 18:33:42  smite-meister
 // fixed_t, vec_t
 //
@@ -128,7 +131,6 @@ bool Map::SightBlockLinesIterator (int x, int y )
     short           *list;
     line_t          *ld;
     int                     s1, s2;
-    divline_t       dl;
     
     offset = y*bmapwidth+x;
     
@@ -145,7 +147,9 @@ bool Map::SightBlockLinesIterator (int x, int y )
         s2 = P_PointOnDivlineSide (ld->v2->x, ld->v2->y, &trace);
         if (s1 == s2)
             continue;               // line isn't crossed
-        P_MakeDivline (ld, &dl);
+
+	divline_t  dl;
+        dl.MakeDivline(ld);
         s1 = P_PointOnDivlineSide (trace.x, trace.y, &dl);
         s2 = P_PointOnDivlineSide (trace.x+trace.dx, trace.y+trace.dy, &dl);
         if (s1 == s2)
@@ -175,14 +179,13 @@ bool Map::SightBlockLinesIterator (int x, int y )
 static bool P_SightTraverseIntercepts()
 {
   intercept_t     *scan, *in;
-  divline_t       dl;
-    
   int count = intercept_p - intercepts;
 
   // calculate intercept distance
   for (scan = intercepts ; scan<intercept_p ; scan++)
     {
-      P_MakeDivline (scan->d.line, &dl);
+      divline_t dl;
+      dl.MakeDivline(scan->d.line);
       scan->frac = P_InterceptVector (&trace, &dl);           
     }
     

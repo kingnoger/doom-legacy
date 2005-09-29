@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.27  2005/09/29 15:15:19  smite-meister
+// aiming fix
+//
 // Revision 1.26  2005/09/17 17:36:09  smite-meister
 // fixed_t fixes
 //
@@ -679,7 +682,7 @@ fixed_t P_BulletSlope(PlayerPawn *p)
       if(!linetarget)
         {
 	notargetfound:
-	  slope = Tan(p->pitch);
+	  slope = Sin(p->pitch);
         }
     }
 
