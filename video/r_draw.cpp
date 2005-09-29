@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2005/09/29 15:47:55  smite-meister
+// fix
+//
 // Revision 1.18  2005/09/13 14:23:12  smite-meister
 // fixed_t fix
 //
@@ -422,20 +425,20 @@ void R_InitViewBorder()
     {
     case gm_doom2:
       // DOOM II border patch, original was GRNROCK
-      window_background = tc.GetPtr("GRNROCK");
+      window_background = tc.GetPtr("GRNROCK", TEX_floor);
       break;
     case gm_heretic:
       if (fc.FindNumForName("e2m1") == -1)
-        window_background = tc.GetPtr("FLOOR04");
+        window_background = tc.GetPtr("FLOOR04", TEX_floor);
       else
-        window_background = tc.GetPtr("FLAT513");
+        window_background = tc.GetPtr("FLAT513", TEX_floor);
       break;
     case gm_hexen:
-      window_background = tc.GetPtr("F_022");
+      window_background = tc.GetPtr("F_022", TEX_floor);
       break;
     default:
       // DOOM border patch.
-      window_background = tc.GetPtr("FLOOR7_2");
+      window_background = tc.GetPtr("FLOOR7_2", TEX_floor);
     }
 }
 

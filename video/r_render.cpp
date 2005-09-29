@@ -9,8 +9,10 @@
 #include "g_map.h"
 
 
-void Rend::SetMap(Map *m)
+void Rend::SetMap(Map *mp)
 {
+  m = mp;
+
   numvertexes = m->numvertexes;
   vertexes = m->vertexes;
 

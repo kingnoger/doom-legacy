@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2005/09/29 15:47:55  smite-meister
+// fix
+//
 // Revision 1.5  2005/05/29 11:30:44  segabor
 // Fixed __APPLE directive__ to __APPLE_CC__ on Mac OS X, new 'Doom Legacy' Xcode project target
 //
@@ -149,7 +152,7 @@ byte *PNGTexture::ReadData(bool read_image)
   // read the PNG info chunks
   png_read_info(png_p, info_p);
 
-  unsigned long w, h;
+  Uint32 w, h;
   int bit_depth, color_type;
   png_get_IHDR(png_p, info_p, &w, &h, &bit_depth, &color_type, NULL, NULL, NULL);
 
