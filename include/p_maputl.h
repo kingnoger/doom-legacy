@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2005/09/29 15:06:15  smite-meister
+// aiming bugfix
+//
 // Revision 1.10  2005/09/11 16:23:25  smite-meister
 // template classes
 //
@@ -88,12 +91,6 @@ extern line_t *ceilingline;
 
 void P_DelSeclist(struct msecnode_t *p);
 
-struct divline_t 
-{
-  fixed_t   x, y;
-  fixed_t dx, dy;
-};
-
 struct intercept_t
 {
   class Map    *m; // ugly but necessary, since line_t's don't carry a Map *. Actors do.
@@ -107,11 +104,19 @@ struct intercept_t
 };
 
 
+/// \brief Encapsulates the XY-plane geometry of a linedef for line traces. 
+struct divline_t 
+{
+  fixed_t   x, y; ///< starting point (v1)
+  fixed_t dx, dy; ///< v2-v1
+
+  void MakeDivline(const line_t *li);
+};
+
 
 fixed_t P_AproxDistance(fixed_t dx, fixed_t dy);
 int     P_PointOnLineSide(fixed_t x, fixed_t y, const line_t *line);
 int     P_PointOnDivlineSide(fixed_t x, fixed_t y, divline_t *line);
-void    P_MakeDivline(line_t* li, divline_t* dl);
 fixed_t P_InterceptVector(divline_t* v2, divline_t* v1);
 
 
@@ -123,9 +128,12 @@ struct line_opening_t
 line_opening_t *P_LineOpening(line_t *linedef);
 
 
-#define PT_ADDLINES     1
-#define PT_ADDTHINGS    2
-#define PT_EARLYOUT     4
+enum
+{
+  PT_ADDLINES  = 1,
+  PT_ADDTHINGS = 2,
+  PT_EARLYOUT  = 4
+};
 
 extern divline_t trace;
 extern class bbox_t tmb;

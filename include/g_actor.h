@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.24  2005/09/29 15:06:15  smite-meister
+// aiming bugfix
+//
 // Revision 1.23  2005/09/11 16:23:25  smite-meister
 // template classes
 //
@@ -314,7 +317,7 @@ public:
 
   /// quick z positions
   inline fixed_t Top() { return pos.z + height; }
-  inline fixed_t Center() { return pos.z + height >> 1; }
+  inline fixed_t Center() { return pos.z + (height >> 1); }
   inline fixed_t Feet() { return pos.z; }
 
   int  health;
@@ -381,7 +384,7 @@ public:
   fixed_t AimLineAttack(angle_t ang, fixed_t distance);
   void    LineAttack(angle_t ang, fixed_t distance, fixed_t slope,
 		     int damage, int dtype = dt_normal);
-  void  RadiusAttack(Actor *culprit, int damage, int distance = -1,
+  void  RadiusAttack(Actor *culprit, int damage, fixed_t radius = -1,
 		     int dtype = dt_normal, bool downer = true);
   // in p_maputl.cpp
   void SetPosition();
