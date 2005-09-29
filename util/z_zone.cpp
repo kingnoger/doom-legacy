@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2005/09/29 15:35:27  smite-meister
+// JDS texture standard
+//
 // Revision 1.10  2005/05/25 17:48:10  jussip
 // Replaced memcpy with memmove for possibly overlapping areas.
 //
@@ -48,21 +51,17 @@
 // Revision 1.1.1.1  2002/11/16 14:18:42  hurdler
 // Initial C++ version of Doom Legacy
 //
-//
-// DESCRIPTION:
-//      Zone Memory Allocation. Neat.
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Zone Memory Allocation. Neat.
 
 #include <vector>
 
 #include "doomdef.h"
 #include "z_zone.h"
 #include "i_system.h"
-#include "m_argv.h"
 #include "i_video.h"
-
-#include "command.h"
 
 #ifdef HWRENDER
 #include "hardware/hwr_render.h"

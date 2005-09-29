@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2005/09/29 15:35:27  smite-meister
+// JDS texture standard
+//
 // Revision 1.7  2005/09/12 18:33:45  smite-meister
 // fixed_t, vec_t
 //
@@ -365,10 +368,10 @@ sector_t *Rend::R_FakeFlat(sector_t *sec, sector_t *tempsec,
       sec->lightlevel : sectors[sec->ceilinglightsec].lightlevel;
 
   //SoM: 4/4/2000: If the sector has a midmap, it's probably from 280 type
-  if(sec->midmap && sec->altheightsec == 2)
+  if(sec->midmap && sec->heightsec_type == sector_t::CS_colormap)
     f = sec->midmap;
 
-  if (sec->heightsec != -1 && !sec->altheightsec)
+  if (sec->heightsec != -1 && sec->heightsec_type == sector_t::CS_boom)
     {
       const sector_t *s = &sectors[sec->heightsec];
       int heightsec = viewactor->subsector->sector->heightsec;
@@ -452,7 +455,7 @@ sector_t *Rend::R_FakeFlat(sector_t *sec, sector_t *tempsec,
 	}
       sec = tempsec;
     }
-  else if (sec->heightsec != -1 && sec->altheightsec == 1) //SoM: 3/20/2000
+  else if (sec->heightsec != -1 && sec->heightsec_type == sector_t::CS_water) //SoM: 3/20/2000
     {
       sector_t*    s = &sectors[sec->heightsec];
       int          heightsec = viewactor->subsector->sector->heightsec;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.45  2005/09/29 15:35:24  smite-meister
+// JDS texture standard
+//
 // Revision 1.44  2005/09/29 15:15:19  smite-meister
 // aiming fix
 //
@@ -801,7 +804,7 @@ void Actor::CheckWater()
   int oldeflags = eflags;
 
   //SoM: 3/28/2000: Only use 280 water type of water. Some boom levels get messed up.
-  if ((sector->heightsec > -1 && sector->altheightsec == 1) ||
+  if ((sector->heightsec > -1 && sector->heightsec_type == sector_t::CS_water) ||
       (sector->floortype == FLOOR_WATER && sector->heightsec == -1))
     {
       if (sector->heightsec > -1)  //water hack

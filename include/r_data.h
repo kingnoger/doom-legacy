@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2005/09/29 15:35:27  smite-meister
+// JDS texture standard
+//
 // Revision 1.21  2005/09/11 16:23:25  smite-meister
 // template classes
 //
@@ -307,27 +310,30 @@ public:
 
 //===============================================================================
 
-/// Texture priorities.
+/// Texture lookup orders
 enum texture_class_t
 {
-  TEX_any = 0,
-  TEX_noflat,
-  TEX_flat
+  TEX_wall = 0,
+  TEX_floor,
+  TEX_sprite,
+  TEX_lod
 };
 
 
 /// \brief Second-level cache for Textures
 ///
 /// There are two ways to add Texture definitions to the cache:
-/// Cache("name") (->Load("name"))creates a texture from a lump (flats...)
 /// Insert(Texture*) inserts a finished texture to cache (anims, doomtextures)
+/// Cache("name") (->Load("name")) tries to create a texture from a lump if it is not already found in cache
 
 class texturecache_t
 {
 protected:
-  cachesource_t main;     ///< advanced textures, TX_START/TX_END
-  cachesource_t flat;     ///< stuff between F_START/F_END
-  cachesource_t doomtex;  ///< stuff defined in TEXTUREx/PNAMES
+  cachesource_t new_tex;    ///< advanced textures, TX_START
+  cachesource_t doom_tex;   ///< TEXTUREx/PNAMES
+  cachesource_t flat_tex;   ///< F_START
+  cachesource_t sprite_tex; ///< advanced spritetextures, S_START
+  cachesource_t lod_tex;    ///< load-on-demand textures, mostly for misc. graphics
 
   memtag_t      tagtype;      ///< memory tag used for the cached data
   Texture      *default_item; ///< the default data item
@@ -344,6 +350,8 @@ protected:
   /// inserts a Texture into the given source
   void Insert(Texture *t, cachesource_t &s);
 
+  /// Creates a Texture from the lump, inserts it to the given source.
+  bool BuildLumpTexture(int lump, bool allow_patch, bool h_start, cachesource_t &source);
 
 public:
   texturecache_t(memtag_t tag);
@@ -355,42 +363,42 @@ public:
   void Clear();
 
   /// insert a Texture into the flat source
-  inline void InsertFlat(Texture *t) { Insert(t, flat); };
+  inline void InsertFlat(Texture *t) { Insert(t, flat_tex); };
 
   /// insert a Texture into the doomtex source
-  inline void InsertDoomTex(Texture *t) { Insert(t, doomtex); };
+  inline void InsertDoomTex(Texture *t) { Insert(t, doom_tex); };
 
   /// Returns pointer to an existing Texture, or tries creating it if nonexistant.
-  Texture *GetPtr(const char *name, texture_class_t mode = TEX_any);
+  Texture *GetPtr(const char *name, texture_class_t mode = TEX_lod);
 
-  /// like GetPtr, but takes a lump number instead of a name.
+  /// like GetPtr, but takes a lump number instead of a name. For TEX_lod ONLY!
   Texture *GetPtrNum(int n);
 
   /// Returns the id of an existing Texture, or tries creating it if nonexistant.
-  inline int GetID(const char *name, texture_class_t mode = TEX_any)
+  inline int GetID(const char *name, texture_class_t mode = TEX_wall)
   {
     Texture *t = GetPtr(name, mode);
     return t ? t->id : 0;
   };
 
   /// For animated textures only
-  inline int GetNoSubstitute(const char *p)
+  inline int GetNoSubstitute(const char *p, texture_class_t mode)
   {
-    Texture *t = GetPtr(p, TEX_noflat);
+    Texture *t = GetPtr(p, mode);
     if (t == default_item)
       return 0;
 
     return t ? t->id : 0;
   };
 
-  /// returns the Texture with the corresponding id
-  Texture *operator[](unsigned id);
-
-  /// First checks if the lump is a valid colormap (or transmap). If not, acts like GetID.
+  /// First checks if the lump is a valid colormap (or transmap). If not, acts like GetPtr(name, TEX_wall);
   int GetTextureOrColormap(const char *name, class fadetable_t*& cmap);
   int GetTextureOrTransmap(const char *name, int& map_num);
 
-  /// Reads the TEXTUREn/PNAMES lumps and F_START lists, generates the corresponding Textures
+  /// returns the Texture with the corresponding id
+  Texture *operator[](unsigned id);
+
+  /// Reads the TEXTUREn/PNAMES lumps and F_START lists, generates the corresponding Textures.
   int ReadTextures();
 
   /// creates the palette conversion colormaps

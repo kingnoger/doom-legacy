@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.44  2005/09/29 15:35:27  smite-meister
+// JDS texture standard
+//
 // Revision 1.43  2005/09/11 16:23:25  smite-meister
 // template classes
 //
@@ -176,6 +179,8 @@ public:
   //@{
   class fadetable_t *fadetable; ///< colormaps the software renderer uses to simulate light levels
   bool R_SetFadetable(const char *name);
+
+  class Texture *skytexture; ///< current sky texture
   //@}
 
   /// \name Blockmap
@@ -423,7 +428,7 @@ public:
   void SpawnScroller(line_t *l, int tag, int type, int control);
   void SpawnFriction(line_t *l, int tag);
   void SpawnPusher(line_t *l, int tag, int type);
-  DActor *GetPushThing(int s);
+
   // some event functions that fit nowhere else
   int  EV_SectorSoundChange(int tag, int seq);
 

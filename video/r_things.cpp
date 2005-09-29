@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.35  2005/09/29 15:35:27  smite-meister
+// JDS texture standard
+//
 // Revision 1.34  2005/09/12 18:33:45  smite-meister
 // fixed_t, vec_t
 //
@@ -700,7 +703,7 @@ static void R_InstallSpriteLump(const char *name, int frame, int rot, bool flip)
   if (frame > maxframe)
     maxframe = frame;
 
-  Texture *t = tc.GetPtr(name, TEX_noflat); // skip flats
+  Texture *t = tc.GetPtr(name, TEX_sprite);
 
 #ifdef HWRENDER
   //BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer

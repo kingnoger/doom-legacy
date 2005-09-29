@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.26  2005/09/29 15:35:27  smite-meister
+// JDS texture standard
+//
 // Revision 1.25  2005/07/20 20:27:22  smite-meister
 // adv. texture cache
 //
@@ -1347,7 +1350,7 @@ static int CmdPolyWaitDirect()
 
 static int CmdChangeFloor()
 {
-  int flat = tc.GetID(ACMap->ACStrings[Pop()], TEX_flat);
+  int flat = tc.GetID(ACMap->ACStrings[Pop()], TEX_floor);
   int tag = Pop();
   int sectorIndex = -1;
   while((sectorIndex = ACMap->FindSectorFromTag(tag, sectorIndex)) >= 0)
@@ -1359,7 +1362,7 @@ static int CmdChangeFloor()
 static int CmdChangeFloorDirect()
 {
   int tag = *PCodePtr++;
-  int flat = tc.GetID(ACMap->ACStrings[*PCodePtr++], TEX_flat);
+  int flat = tc.GetID(ACMap->ACStrings[*PCodePtr++], TEX_floor);
   int sectorIndex = -1;
   while((sectorIndex = ACMap->FindSectorFromTag(tag, sectorIndex)) >= 0)
     ACMap->sectors[sectorIndex].floorpic = flat;
@@ -1369,7 +1372,7 @@ static int CmdChangeFloorDirect()
 
 static int CmdChangeCeiling()
 {
-  int flat = tc.GetID(ACMap->ACStrings[Pop()], TEX_flat);
+  int flat = tc.GetID(ACMap->ACStrings[Pop()], TEX_floor);
   int tag = Pop();
   int sectorIndex = -1;
   while((sectorIndex = ACMap->FindSectorFromTag(tag, sectorIndex)) >= 0)
@@ -1381,7 +1384,7 @@ static int CmdChangeCeiling()
 static int CmdChangeCeilingDirect()
 {
   int tag = *PCodePtr++;
-  int flat = tc.GetID(ACMap->ACStrings[*PCodePtr++], TEX_flat);
+  int flat = tc.GetID(ACMap->ACStrings[*PCodePtr++], TEX_floor);
   int sectorIndex = -1;
   while((sectorIndex = ACMap->FindSectorFromTag(tag, sectorIndex)) >= 0)
     ACMap->sectors[sectorIndex].ceilingpic = flat;
@@ -1665,7 +1668,7 @@ static int CmdSetLineTexture()
 {
   line_t *line;
 
-  int texture = tc.GetID(ACMap->ACStrings[Pop()], TEX_noflat);
+  int texture = tc.GetID(ACMap->ACStrings[Pop()], TEX_wall);
   int position = Pop();
   int side = Pop();
   int lineTag = Pop();

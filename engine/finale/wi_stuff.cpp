@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.29  2005/09/29 15:35:26  smite-meister
+// JDS texture standard
+//
 // Revision 1.28  2005/09/11 16:22:54  smite-meister
 // template classes
 //
@@ -386,10 +389,10 @@ static Texture  *percent,  *colon;
 static Texture*         num[11];
 
 // "Finished!" graphics
-static Texture*         finished;
+static Texture*         finished_tex;
 
 // "Entering" graphic
-static Texture*         entering;
+static Texture*         entering_tex;
 
 // "secret"
 static Texture*         sp_secret;
@@ -512,20 +515,23 @@ static void WI_drawLF(const char *name)
   int y = WI_TITLEY;
 
   // draw <LevelName>
-  if (big_font)
+  if (lastname_tex)
+    {
+      // use levelname graphic if we have one
+      lastname_tex->Draw((BASEVIDWIDTH - (lastname_tex->width))/2, y, FB);
+      y += (5 * lastname_tex->height)/4;
+    }
+  else if (big_font)
     {
       big_font->DrawString((BASEVIDWIDTH - big_font->StringWidth(name))/2, y, name, FB);
       y += (5*big_font->StringHeight(name))/4;
-      big_font->DrawString((BASEVIDWIDTH - big_font->StringWidth("Finished"))/2, y, "Finished", FB);
     }
-  else
-    {
-      // no font, use levelname patches instead
-      lastname_tex->Draw((BASEVIDWIDTH - (lastname_tex->width))/2, y, FB);
-      y += (5 * lastname_tex->height)/4;
-      // draw "Finished!"
-      finished->Draw((BASEVIDWIDTH - (finished->width))/2,y, FB);
-    }
+
+  // draw "Finished!"
+  if (finished_tex)
+    finished_tex->Draw((BASEVIDWIDTH - (finished_tex->width))/2,y, FB);
+  else if (big_font)
+    big_font->DrawString((BASEVIDWIDTH - big_font->StringWidth("Finished"))/2, y, "Finished", FB);
 }
 
 
@@ -535,20 +541,22 @@ static void WI_drawEL(const char *nextname)
   int y = WI_TITLEY;
 
   // draw "Entering"
-  if (big_font)
+  if (entering_tex)
+    {
+      entering_tex->Draw((BASEVIDWIDTH - entering_tex->width)/2, y, FB);
+      y += (5 * entering_tex->height)/4;
+    }
+  else if (big_font)
     {
       big_font->DrawString((BASEVIDWIDTH - big_font->StringWidth("Entering"))/2, y, "Entering", FB);
       y += (5*big_font->StringHeight("Entering"))/4;
-      big_font->DrawString((BASEVIDWIDTH - big_font->StringWidth(nextname))/2, y, nextname, FB);
     }
-  else
-    {
-      entering->Draw((BASEVIDWIDTH - entering->width)/2, y, FB);
 
-      // draw level
-      y += (5 * nextname_tex->height)/4;
-      nextname_tex->Draw((BASEVIDWIDTH - nextname_tex->width)/2, y, FB);
-    }
+  // draw level
+  if (nextname_tex)
+    nextname_tex->Draw((BASEVIDWIDTH - nextname_tex->width)/2, y, FB);
+  else if (big_font)
+    big_font->DrawString((BASEVIDWIDTH - big_font->StringWidth(nextname))/2, y, nextname, FB);
 }
 
 
@@ -1199,15 +1207,6 @@ void Intermission::LoadData()
 
   switch (game.mode)
     {
-    case gm_doom2:
-      // level name patches
-      sprintf(name, "CWILV%2.2d", last);
-      lastname_tex = tc.GetPtr(name);
-
-      sprintf(name, "CWILV%2.2d", next);
-      nextname_tex = tc.GetPtr(name);
-      break;
-
     case gm_doom1s:
     case gm_doom1:
     case gm_udoom:
@@ -1236,12 +1235,6 @@ void Intermission::LoadData()
 		}
 	    }
 	}
-          // level name patches
-      sprintf(name, "WILV%d%d", last / 10, last % 10); // our current map number encoding
-      lastname_tex = tc.GetPtr(name);
-
-      sprintf(name, "WILV%d%d", next / 10, next % 10);
-      nextname_tex = tc.GetPtr(name);
 
       yah[0] = tc.GetPtr("WIURH0");
       yah[1] = tc.GetPtr("WIURH1");
@@ -1270,6 +1263,8 @@ void Intermission::LoadData()
       num[10] = tc.GetPtr("FONTB13"); // minus sign
       percent = tc.GetPtr("FONTB05");
       colon   = tc.GetPtr("FONTB26");
+
+      finished_tex = entering_tex = NULL;
     }
   else
     {
@@ -1286,10 +1281,10 @@ void Intermission::LoadData()
 	}
 
       // "finished"
-      finished = tc.GetPtr("WIF");
+      finished_tex = tc.GetPtr("WIF");
 
       // "entering"
-      entering = tc.GetPtr("WIENTER");
+      entering_tex = tc.GetPtr("WIENTER");
 
       // "kills"
       kills = tc.GetPtr("WIOSTK");
@@ -1349,18 +1344,10 @@ void Intermission::UnloadData()
 
   switch (game.mode)
     {
-    case gm_doom2:
-      lastname_tex->Release();
-      nextname_tex->Release();
-      break;
-
     case gm_doom1s:
     case gm_doom1:
     case gm_udoom:
       // Doom 1
-      lastname_tex->Release();
-      nextname_tex->Release();
-
       if (episode >= 1 && episode <= 3)
 	{
 	  for (j=0;j<NUMANIMS[episode-1];j++)
@@ -1382,6 +1369,11 @@ void Intermission::UnloadData()
       break;
     }
 
+  if (lastname_tex)
+    lastname_tex->Release();
+  if (nextname_tex)
+    nextname_tex->Release();
+
   // numbers
   for (i=0;i<11;i++)
     num[i]->Release();
@@ -1391,8 +1383,8 @@ void Intermission::UnloadData()
 
   if (game.mode != gm_heretic && game.mode != gm_hexen)
     {
-      finished->Release();
-      entering->Release();
+      finished_tex->Release();
+      entering_tex->Release();
       kills->Release();
       secret->Release();
       sp_secret->Release();
@@ -1532,6 +1524,8 @@ void Intermission::Start(const Map *m, const MapInfo *n)
   s_count = sfx_menu_choose;
 
   LoadData();
+  lastname_tex = m->info->namepic.empty() ? NULL : tc.GetPtr(m->info->namepic.c_str());
+  nextname_tex = n->namepic.empty() ? NULL : tc.GetPtr(n->namepic.c_str());
 
   if (cv_deathmatch.value)
     InitDMStats();

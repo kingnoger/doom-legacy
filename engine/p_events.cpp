@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2005/09/29 15:35:25  smite-meister
+// JDS texture standard
+//
 // Revision 1.7  2005/09/11 16:22:54  smite-meister
 // template classes
 //
@@ -54,7 +57,7 @@
 #include "p_spec.h"
 #include "p_acs.h"
 #include "r_data.h"
-#include "r_sky.h"
+#include "r_sky.h" // TODO remove
 #include "sounds.h"
 
 #include "m_random.h"
@@ -163,7 +166,7 @@ void Map::LightningFlash()
 		  lite++;
 		}
 	    }
-	  skytexture = tc.GetPtr(info->sky1.c_str()); // set alternate sky
+	  skytexture = tc.GetPtr(info->sky1.c_str(), TEX_wall); // set default sky
 	}
       return;
     }
@@ -207,7 +210,7 @@ void Map::LightningFlash()
 	}
     }
 
-  skytexture = tc.GetPtr(info->sky2.c_str()); // set alternate sky
+  skytexture = tc.GetPtr(info->sky2.c_str(), TEX_wall); // set alternate sky
   S_StartAmbSound(NULL, SFX_THUNDER_CRASH);
 
   // Calculate the next lighting flash

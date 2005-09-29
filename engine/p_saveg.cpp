@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.51  2005/09/29 15:35:25  smite-meister
+// JDS texture standard
+//
 // Revision 1.50  2005/09/17 17:36:09  smite-meister
 // fixed_t fixes
 //
@@ -1077,9 +1080,9 @@ int Map::Serialize(LArchive &a)
       if (ss->ceilingheight != SHORT(ms->ceilingheight))
 	diff |= SD_CEILHT;
 
-      if (ss->floorpic != tc.GetID(ms->floorpic, TEX_flat))
+      if (ss->floorpic != tc.GetID(ms->floorpic, TEX_floor))
 	diff |= SD_FLOORPIC;
-      if (ss->ceilingpic != tc.GetID(ms->ceilingpic, TEX_flat))
+      if (ss->ceilingpic != tc.GetID(ms->ceilingpic, TEX_floor))
 	diff |= SD_CEILPIC;
 
       if (ss->lightlevel != SHORT(ms->lightlevel)) diff |= SD_LIGHT;
@@ -1431,12 +1434,12 @@ int Map::Unserialize(LArchive &a)
       if (diff & SD_FLOORPIC)
         {
 	  a.Read((byte *)picname, 8);
-	  sectors[i].floorpic = tc.GetID(picname, TEX_flat);
+	  sectors[i].floorpic = tc.GetID(picname, TEX_floor);
         }
       if (diff & SD_CEILPIC)
         {
 	  a.Read((byte *)picname, 8);
-	  sectors[i].ceilingpic = tc.GetID(picname, TEX_flat);
+	  sectors[i].ceilingpic = tc.GetID(picname, TEX_floor);
         }
       if (diff & SD_LIGHT)    a << sectors[i].lightlevel;
       if (diff & SD_SPECIAL)  a << sectors[i].special;

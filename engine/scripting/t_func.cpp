@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.32  2005/09/29 15:35:27  smite-meister
+// JDS texture standard
+//
 // Revision 1.31  2005/09/11 16:22:54  smite-meister
 // template classes
 //
@@ -1793,7 +1796,7 @@ void SF_FloorTexture()
   if(t_argc > 1)
     {
       int i = -1;
-      int picnum = tc.GetID(t_argv[1].value.s, TEX_flat);
+      int picnum = tc.GetID(t_argv[1].value.s, TEX_floor);
 
       // set all sectors with tag
       while ((i = current_map->FindSectorFromTag(tagnum, i)) >= 0)
@@ -1836,14 +1839,14 @@ void SF_SectorColormap()
           if (!cmap) // FIXME does not work
             {
               p->midmap = 0;
-              p->altheightsec = 0;
-              p->heightsec = 0;
+              p->heightsec_type = sector_t::CS_boom;
+              //p->heightsec = 0;
             }
           else
             {
               p->midmap = cmap;
-              p->altheightsec = 2;
-              p->heightsec = 0;
+              p->heightsec_type = sector_t::CS_colormap;
+              //p->heightsec = 0;
             }
         }
     }
@@ -1873,7 +1876,7 @@ void SF_CeilingTexture()
   if (t_argc > 1)
     {
       int i = -1;
-      int picnum = tc.GetID(t_argv[1].value.s, TEX_flat);
+      int picnum = tc.GetID(t_argv[1].value.s, TEX_floor);
 
       // set all sectors with tag
       while ((i = current_map->FindSectorFromTag(tagnum, i)) >= 0)

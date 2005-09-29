@@ -22,42 +22,49 @@ levelnum 1
 nextlevel 2
 par 30
 music D_E1M1
+picname WILV00
 
 map E1M2 "E1M2: Nuclear Plant"
 levelnum 2
 nextlevel 3
 par 75
 music D_E1M2
+picname WILV01
 
 map E1M3 "E1M3: Toxin Refinery"
 levelnum 3
 nextlevel 4
 par 120
 music D_E1M3
+picname WILV02
 
 map E1M4 "E1M4: Command Control"
 levelnum 4
 nextlevel 5
 par 90
 music D_E1M4
+picname WILV03
 
 map E1M5 "E1M5: Phobos Lab"
 levelnum 5
 nextlevel 6
 par 165
 music D_E1M5
+picname WILV04
 
 map E1M6 "E1M6: Central Processing"
 levelnum 6
 nextlevel 7
 par 180
 music D_E1M6
+picname WILV05
 
 map E1M7 "E1M7: Computer Station"
 levelnum 7
 nextlevel 8
 par 180
 music D_E1M7
+picname WILV06
 
 map E1M8 "E1M8: Phobos Anomaly"
 levelnum 8
@@ -66,12 +73,14 @@ par 30
 music D_E1M8
 ; Barons of Hell
 bossdeath 1
+picname WILV07
 
 map E1M9 "E1M9: Military Base"
 levelnum 9
 nextlevel 4
 par 165
 music D_E1M9
+picname WILV08
 
 
 
@@ -96,42 +105,49 @@ levelnum 11
 nextlevel 12
 par 90
 music D_E2M1
+picname WILV10
 
 map E2M2 "E2M2: Containment Area"
 levelnum 12
 nextlevel 13
 par 90
 music D_E2M2
+picname WILV11
 
 map E2M3 "E2M3: Refinery"
 levelnum 13
 nextlevel 14
 par 90
 music D_E2M3
+picname WILV12
 
 map E2M4 "E2M4: Deimos Lab"
 levelnum 14
 nextlevel 15
 par 120
 music D_E2M4
+picname WILV13
 
 map E2M5 "E2M5: Command Center"
 levelnum 15
 nextlevel 16
 par 90
 music D_E2M5
+picname WILV14
 
 map E2M6 "E2M6: Halls of the Damned"
 levelnum 16
 nextlevel 17
 par 360
 music D_E2M6
+picname WILV15
 
 map E2M7 "E2M7: Spawning Vats"
 levelnum 17
 nextlevel 18
 par 240
 music D_E2M7
+picname WILV16
 
 map E2M8 "E2M8: Tower of Babel"
 levelnum 18
@@ -140,12 +156,14 @@ par 30
 music D_E2M8
 ; Cyberdemon
 bossdeath 2
+picname WILV17
 
 map E2M9 "E2M9: Fortress of Mystery"
 levelnum 19
 nextlevel 16
 par 170
 music D_E2M9
+picname WILV18
 
 
 
@@ -170,42 +188,49 @@ levelnum 21
 nextlevel 22
 par 90
 music D_E3M1
+picname WILV20
 
 map E3M2 "E3M2: Slough of Despair"
 levelnum 22
 nextlevel 23
 par 45
 music D_E3M2
+picname WILV21
 
 map E3M3 "E3M3: Pandemonium"
 levelnum 23
 nextlevel 24
 par 90
 music D_E3M3
+picname WILV22
 
 map E3M4 "E3M4: House of Pain"
 levelnum 24
 nextlevel 25
 par 150
 music D_E3M4
+picname WILV23
 
 map E3M5 "E3M5: Unholy Cathedral"
 levelnum 25
 nextlevel 26
 par 90
 music D_E3M5
+picname WILV24
 
 map E3M6 "E3M6: Mt. Erebus"
 levelnum 26
 nextlevel 27
 par 90
 music D_E3M6
+picname WILV25
 
 map E3M7 "E3M7: Limbo"
 levelnum 27
 nextlevel 28
 par 165
 music D_E3M7
+picname WILV26
 
 map E3M8 "E3M8: Dis"
 levelnum 28
@@ -214,12 +239,14 @@ par 30
 music D_E3M8
 ; Spider Mastermind
 bossdeath 8
+picname WILV27
 
 map E3M9 "E3M9: Warrens"
 levelnum 29
 nextlevel 27
 par 135
 music D_E3M9
+picname WILV28
 
 
 
@@ -244,30 +271,35 @@ levelnum 31
 nextlevel 32
 par 0
 music D_E3M4
+picname WILV30
 
 map E4M2 "E4M2: Perfect Hatred"
 levelnum 32
 nextlevel 33
 par 0
 music D_E3M2
+picname WILV31
 
 map E4M3 "E4M3: Sever The Wicked"
 levelnum 33
 nextlevel 34
 par 0
 music D_E3M3
+picname WILV32
 
 map E4M4 "E4M4: Unruly Evil"
 levelnum 34
 nextlevel 35
 par 0
 music D_E1M5
+picname WILV33
 
 map E4M5 "E4M5: They Will Repent"
 levelnum 35
 nextlevel 36
 par 0
 music D_E2M7
+picname WILV34
 
 map E4M6 "E4M6: Against Thee Wickedly"
 levelnum 36
@@ -276,12 +308,14 @@ par 0
 music D_E2M4
 ; Cyberdemon
 bossdeath 4
+picname WILV35
 
 map E4M7 "E4M7: And Hell Followed"
 levelnum 37
 nextlevel 38
 par 0
 music D_E2M6
+picname WILV36
 
 map E4M8 "E4M8: Unto The Cruel"
 levelnum 38
@@ -290,9 +324,11 @@ par 0
 music D_E2M5
 ; Spider Mastermind
 bossdeath 16
+picname WILV37
 
 map E4M9 "E4M9: Fear"
 levelnum 39
 nextlevel 33
 par 0
 music D_E1M9
+picname WILV38

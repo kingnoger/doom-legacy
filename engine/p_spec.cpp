@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.46  2005/09/29 15:35:26  smite-meister
+// JDS texture standard
+//
 // Revision 1.45  2005/09/12 18:33:42  smite-meister
 // fixed_t, vec_t
 //
@@ -1062,12 +1065,12 @@ void Map::SpawnLineSpecials()
       int special = l->special;
 
       int s, subtype;
+      int tag = l->tag; // Doom format: use the tag if we have one
 
       // Legacy extensions are mapped to Hexen linedef namespace so they are reachable from Hexen as well!
       // only check for clearable stuff here
       if (special == LEGACY_EXT && (subtype = l->args[0]) < 128)
 	{
-	  int tag = l->tag; // Doom format: use the tag if we have one
 	  if (!tag)
 	    tag = l->args[3] + 256 * l->args[4]; // Hexen format: get the tag from args[3-4]
 
@@ -1083,10 +1086,10 @@ void Map::SpawnLineSpecials()
 	    {
 	      SpawnFriction(l, tag);
 	    }
+	  /*
 	  else if (subtype == LEGACY_BOOM_PUSHERS)
-	    {
-	      SpawnPusher(l, tag, kind);
-	    }
+	    SpawnPusher(l, tag, kind);
+	  */
 	  else if (subtype == LEGACY_BOOM_RENDERER)
 	    {
 	      switch (kind)
@@ -1143,7 +1146,7 @@ void Map::SpawnLineSpecials()
 		  for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0;)
 		    {
 		      sectors[s].heightsec = sec;
-		      sectors[s].altheightsec = 1;
+		      sectors[s].heightsec_type = sector_t::CS_water;
 		    }
 		  break;
 
@@ -1152,7 +1155,7 @@ void Map::SpawnLineSpecials()
 		  for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0;)
 		    {
 		      sectors[s].midmap = l->frontsector->midmap;
-		      sectors[s].altheightsec = 2;
+		      sectors[s].heightsec_type = sector_t::CS_colormap;
 		    }
 		  break;
 
@@ -1250,6 +1253,9 @@ void Map::SpawnLineSpecials()
       // finally check ungrouped specials 
       bool clear = true;
 
+      if (!tag)
+	tag = l->args[0]; // Hexen format: get the tag from args[0]
+
       switch (special)
         {
 	  // Hexen
@@ -1266,8 +1272,76 @@ void Map::SpawnLineSpecials()
           AddThinker(new scroll_t(scroll_t::sc_side, 0, -l->args[0] << 10, NULL, l->sideptr[0] - sides, false));
 	  break;
 
+	  //============   ZDoom specials   =============
+
+	case 209: // Transfer_Heights
+	case 210: // Transfer_FloorLight
+	case 211: // Transfer_CeilingLight
+	  {
+	    int sec = l->sideptr[0]->sector - sectors;
+
+	    for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0;)
+	      if (special == 209)
+		sectors[s].heightsec = sec;
+	      else if (special == 210)
+		sectors[s].floorlightsec = sec;
+	      else
+		sectors[s].ceilinglightsec = sec;
+	  }
+	  break;
+
+	case 218: // Sector_SetWind
+	  SpawnPusher(l, tag, pusher_t::p_wind);
+	  break;
+
+	case 219: // Sector_SetFriction
+	  SpawnFriction(l, tag);
+	  break;
+
+	case 220: // Sector_SetCurrent
+	  SpawnPusher(l, tag, pusher_t::p_current);
+	  break;
+
+	case 222: // Scroll_Texture_Model
+	  SpawnScroller(l, tag, scroll_t::sc_side, l->args[1] & 0x3);
+	  break;
+
+	case 223: // Scroll_Floor
+	  {
+	    int type = (l->args[2] > 0) ? scroll_t::sc_carry_floor : 0;
+	    if (l->args[2] != 1)
+	      type |= scroll_t::sc_floor;
+
+	    if (l->args[1] & 0x4)
+	      SpawnScroller(l, tag, type, l->args[1] & 0x3);
+	    /* TODO
+	    else
+	      SpawnScroller(l->args[3]-128, l->args[4]-128, tag, type, l->args[1] & 0x3);
+	    */
+	  }
+	  break;
+
+	case 224: // Scroll_Ceiling
+	  {
+	    if (l->args[1] & 0x4)
+	      SpawnScroller(l, tag, scroll_t::sc_ceiling, l->args[1] & 0x3);
+	    /*
+	    else
+	      SpawnScroller(l->args[3]-128, l->args[4]-128, tag, scroll_t::sc_ceiling, l->args[1] & 0x3);
+	    */
+	  }
+	  break;
+
+	case 225: // Scroll_Texture_Offsets
+	  SpawnScroller(l, tag, scroll_t::sc_side, scroll_t::sc_offsets);
+	  break;
+
+	case 227: // PointPush_SetForce
+	  SpawnPusher(l, tag, pusher_t::p_point);
+	  break;
+
 	default:
-	  // TODO is this used? if not, replace it with a thing...
+	  // FIXME teamstartsec not working TODO is this used? if not, replace it with a thing...
 	  if (special >= 1000 && special < 1032)
             {
 	      for (s = -1; (s = FindSectorFromTag(l->tag, s)) >= 0;)
@@ -1421,86 +1495,6 @@ scroll_t::scroll_t(short t, fixed_t dx, fixed_t dy, sector_t *csec, int aff, boo
 
 
 
-// Initialize the scrollers
-/*
-void Map::SpawnScrollers()
-{
-  int i, s;
-  line_t *l = lines, *l2;
-
-  for (i=0;i<numlines;i++,l++)
-    {
-      fixed_t dx = l->dx >> SCROLL_SHIFT;  // direction and speed of scrolling
-      fixed_t dy = l->dy >> SCROLL_SHIFT;
-      //int control = -1;
-      sector_t *control = NULL;
-      bool accel = false;   // no control sector or acceleration
-      int special = l->special;
-
-      // Types 245-249 are same as 250-254 except that the
-      // first side's sector's heights cause scrolling when they change, and
-      // this linedef controls the direction and speed of the scrolling. The
-      // most complicated linedef since donuts, but powerful :)
-
-      if (special >= 245 && special <= 249)         // displacement scrollers
-        {
-          special += 250-245;
-          control = sides[*l->sidenum].sector;
-        }
-      else if (special >= 214 && special <= 218)       // accelerative scrollers
-	{
-	  accel = true;
-	  special += 250-214;
-	  control = sides[*l->sidenum].sector;
-	}
-
-      bool clear = true; // should the special be cleared?
-
-      switch (special)
-        {
-        case 250:   // scroll effect ceiling
-          for (s=-1; (s = FindSectorFromLineTag(l,s)) >= 0;)
-	    AddThinker(new scroll_t(scroll_t::sc_ceiling, -dx, dy, control, s, accel));
-          break;
-
-        case 251:   // scroll effect floor
-        case 253:   // scroll and carry objects on floor
-          for (s=-1; (s = FindSectorFromLineTag(l,s)) >= 0;)
-            AddThinker(new scroll_t(scroll_t::sc_floor, -dx, dy, control, s, accel));
-          if (special != 253)
-            break;
-
-        case 252: // carry objects on floor
-          dx = FixedMul(dx,CARRYFACTOR);
-          dy = FixedMul(dy,CARRYFACTOR);
-          for (s=-1; (s = FindSectorFromLineTag(l,s)) >= 0;)
-	    AddThinker(new scroll_t(scroll_t::sc_carry_floor, dx, dy, control, s, accel));
-          break;
-
-          // scroll wall according to linedef
-          // (same direction and speed as scrolling floors)
-        case 254:
-          for (s=-1; (l2 = FindLineFromTag(l->tag, &s)) != NULL; )
-            if (s != i)
-              AddThinker(Add_WallScroller(dx, dy, l2, control, accel));
-          break;
-
-        case 255:
-          AddThinker(new scroll_t(scroll_t::sc_side, -sides[s].textureoffset,
-                       sides[s].rowoffset, NULL, l->sidenum[0], accel));
-          break;
-
-	default:
-	  clear = false;
-        }
-
-      if (clear)
-	l->special = 0;
-    }
-}
-*/
-
-
 /// spawns Boom wall, floor and ceiling scrollers
 void Map::SpawnScroller(line_t *l, int tag, int type, int control)
 {
@@ -1510,8 +1504,8 @@ void Map::SpawnScroller(line_t *l, int tag, int type, int control)
   fixed_t dy = l->dy >> scroll_t::SCROLL_SHIFT;
 
   // possible control sector
-  sector_t *csec = (control & scroll_t::sc_displacement) ? sides[s].sector : NULL;
-  bool accel = control & scroll_t::sc_accelerative;
+  bool accel = control & scroll_t::sc_accelerative; // implies also sc_displacement
+  sector_t *csec = (control & scroll_t::sc_displacement) || accel ? sides[s].sector : NULL;
 
   if (type == scroll_t::sc_side)
     {
@@ -1642,7 +1636,8 @@ void Map::SpawnFriction(line_t *l, int tag)
   extern float normal_friction;
 
   // line length controls magnitude
-  float length = P_AproxDistance(l->dx,l->dy).Float();
+  // ZDoom option: give magnitude in arg2
+  float length = l->args[1] ? l->args[1] : P_AproxDistance(l->dx, l->dy).Float();
 
   // l = 200 gives 1, l = 100 gives the original, l = 0 gives 0.8125
 
@@ -1868,9 +1863,8 @@ void pusher_t::Think()
 }
 
 // Get pusher object.
-DActor *Map::GetPushThing(int s)
+static DActor *GetPushThing(sector_t *sec)
 {
-  sector_t *sec = sectors + s;
   Actor *thing = sec->thinglist;
 
   while (thing)
@@ -1897,24 +1891,57 @@ void Map::SpawnPusher(line_t *l, int tag, int type)
 {
   int s;
 
+  // Interprets the ZDoom args
+  fixed_t dx, dy;
+
+  if (l->args[3]) // useline?
+    {
+      dx = l->dx;
+      dy = l->dy;
+    }
+  else switch (type)
+    {
+    case pusher_t::p_point:
+      dx = l->args[2]; // amount
+      dy = 0;
+      break;
+
+    default:
+      {
+	angle_t ang = l->args[2] << 24; // angle
+	dx = l->args[1] * Cos(ang);
+	dy = l->args[1] * Sin(ang);
+      }
+      break;
+    }
+
   switch (type)
     {
     case pusher_t::p_wind:
       for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0 ; )	  
-	AddThinker(new pusher_t(pusher_t::p_wind, l->dx, l->dy, NULL, s));
+	AddThinker(new pusher_t(pusher_t::p_wind, dx, dy, NULL, s));
       break;
 
     case pusher_t::p_current:
       for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0 ; )
-	AddThinker(new pusher_t(pusher_t::p_current, l->dx, l->dy, NULL, s));
+	AddThinker(new pusher_t(pusher_t::p_current, dx, dy, NULL, s));
       break;
 
     case pusher_t::p_point:
-      for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0 ; )
+      if (tag)
+	for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0 ; )
+	  {
+	    DActor *thing = GetPushThing(&sectors[s]);
+	    if (thing) // No MT_P* means no effect
+	      AddThinker(new pusher_t(pusher_t::p_point, dx, 0, thing, s));
+	  }
+      else
 	{
-	  DActor* thing = GetPushThing(s);
-	  if (thing) // No MT_P* means no effect
-	    AddThinker(new pusher_t(pusher_t::p_point, l->dx, l->dy, thing, s));
+	  int tid = l->args[1];
+	  Actor *m;
+	  for (s = -1; (m = FindFromTIDmap(tid, &s)) != NULL; )
+	    if (m->IsOf(DActor::_type))
+	      AddThinker(new pusher_t(pusher_t::p_point, dx, 0, (DActor *)m, s));
 	}
       break;
     }

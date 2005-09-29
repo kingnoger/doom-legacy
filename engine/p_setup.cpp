@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.65  2005/09/29 15:35:26  smite-meister
+// JDS texture standard
+//
 // Revision 1.64  2005/09/12 18:33:42  smite-meister
 // fixed_t, vec_t
 //
@@ -346,8 +349,8 @@ void Map::LoadSectors2(int lump)
       ss->floorheight = SHORT(ms->floorheight);
       ss->ceilingheight = SHORT(ms->ceilingheight);
 
-      ss->floorpic = tc.GetID(ms->floorpic, TEX_flat);
-      ss->ceilingpic = tc.GetID(ms->ceilingpic, TEX_flat);
+      ss->floorpic = tc.GetID(ms->floorpic, TEX_floor);
+      ss->ceilingpic = tc.GetID(ms->ceilingpic, TEX_floor);
 
       ss->lightlevel = SHORT(ms->lightlevel);
 
@@ -361,7 +364,7 @@ void Map::LoadSectors2(int lump)
       ss->prevsec = -1;
 
       ss->heightsec = -1; //SoM: 3/17/2000: This causes some real problems
-      ss->altheightsec = 0; //SoM: 3/20/2000
+      ss->heightsec_type = sector_t::CS_boom;
       ss->floorlightsec = -1;
       ss->ceilinglightsec = -1;
       ss->ffloors = NULL;
@@ -1180,19 +1183,22 @@ void Map::SetupSky()
   // original DOOM determined the sky texture to be used
   // depending on the current episode, and the game version.
 
-  if (!info->sky1.empty())
-    skytexture = tc.GetPtr(info->sky1.c_str());
-  else
-    skytexture = tc.GetPtr("SKY1");
+  if (info->sky1.empty())
+    info->sky1 = "SKY1";
+
+  if (info->sky2.empty())
+    info->sky2 = "SKY1";
+
+  skytexture = tc.GetPtr(info->sky1.c_str(), TEX_wall);
 
   // scale up the old skies, if needed
-  R_SetupSkyDraw();
+  R_SetupSkyDraw(skytexture->height);
 
-  // set the sky flat num
+  // set the sky flat num  FIXME should be Map-dependant
   if (hexen_format)
-    skyflatnum = tc.GetID("F_SKY", TEX_flat);
+    skyflatnum = tc.GetID("F_SKY", TEX_floor);
   else
-    skyflatnum = tc.GetID("F_SKY1", TEX_flat);
+    skyflatnum = tc.GetID("F_SKY1", TEX_floor);
 }
 
 

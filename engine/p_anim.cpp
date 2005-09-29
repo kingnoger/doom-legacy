@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2005/09/29 15:35:25  smite-meister
+// JDS texture standard
+//
 // Revision 1.19  2005/09/11 16:22:54  smite-meister
 // template classes
 //
@@ -320,13 +323,13 @@ int P_Read_ANIMATED(int lump)
       int base, last;
       if (a->istexture)
 	{
-	  base = tc.GetNoSubstitute(a->startname);
-	  last = tc.GetNoSubstitute(a->endname);
+	  base = tc.GetNoSubstitute(a->startname, TEX_wall);
+	  last = tc.GetNoSubstitute(a->endname, TEX_wall);
 	}
       else
 	{
-	  base = fc.FindNumForName(a->startname);
-	  last = fc.FindNumForName(a->endname);
+	  base = tc.GetNoSubstitute(a->startname, TEX_floor);
+	  last = tc.GetNoSubstitute(a->endname, TEX_floor);
 	}
 
       int n = last - base + 1; // number of frames
@@ -342,11 +345,7 @@ int P_Read_ANIMATED(int lump)
       AnimatedTexture *t = new AnimatedTexture(a->startname, n);
       for (i=0; i<n; i++)
 	{
-	  if (a->istexture)
-	    t->frames[i].tx = tc[base + i];
-	  else
-	    t->frames[i].tx = tc.GetPtrNum(base + i);
-
+	  t->frames[i].tx = tc[base + i];
 	  t->frames[i].tics = tics;
 	}
 
@@ -463,10 +462,7 @@ int P_Read_ANIMDEFS(int lump)
 		  AnimatedTexture::framedef_t fd;
 
 		  n = base + p.GetInt() - 1;
-		  if (state == PS_FLAT)
-		    fd.tx = tc.GetPtrNum(n);
-		  else
-		    fd.tx = tc[n];
+		  fd.tx = tc[n];
 
 		  word = p.GetToken(" ");
 		  if (!strcasecmp(word, "tics"))
@@ -498,16 +494,17 @@ int P_Read_ANIMDEFS(int lump)
       // no active records
       word = p.GetToken(" ");
       name = p.GetToken(" ");
+      strupr(name);
+
       if (!strcasecmp(word, "flat"))
 	{
-	  // means a LumpTexture
-	  base = fc.FindNumForName(name); // lump number
-	  if (base >= 0)
+	  base = tc.GetNoSubstitute(name, TEX_floor);
+	  if (base > 0)
 	    state = PS_FLAT;
 	}
       else if (!strcasecmp(word, "texture"))
 	{
-	  base = tc.GetNoSubstitute(strupr(name)); // texture number
+	  base = tc.GetNoSubstitute(name, TEX_wall);
 	  if (base > 0)
 	    state = PS_TEX;
 	}

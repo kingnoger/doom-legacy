@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2005/09/29 15:35:27  smite-meister
+// JDS texture standard
+//
 // Revision 1.5  2005/09/12 18:33:45  smite-meister
 // fixed_t, vec_t
 //
@@ -88,7 +91,6 @@
 // that a particular sector ceiling is in fact the sky.
 
 int          skyflatnum; 
-Texture     *skytexture;
 int          skytexturemid;
 
 fixed_t      skyscale;
@@ -102,7 +104,7 @@ int          skymode=0;  // old (0), new (1) (quick fix!)
 //  NOTE: skycolfunc should be set at R_ExecuteSetViewSize ()
 //        I dont bother because we don't use low detail no more
 //
-void R_SetupSkyDraw()
+void R_SetupSkyDraw(int skyheight)
 {
   int          height;
   int          i;
@@ -113,20 +115,9 @@ void R_SetupSkyDraw()
   // note: the TEXTURES lump doesn't have the taller size of Legacy
   //       skies, but the patches it use will give the right size
 
-  /*
-  int count = skytexture->patchcount;
-  patches = skytexture->patches;
-    for (height=0,i=0;i<count;i++,patches++)
-    {
-        fc.ReadLumpHeader (patches->patch, &wpatch, sizeof(patch_t));
-        wpatch.height = SHORT(wpatch.height);
-        if (wpatch.height>height)
-            height = wpatch.height;
-    }
-  */
 
   // DIRTY : should set the routine depending on colormode in screen.c
-  if (skytexture->height > 128)
+  if (skyheight > 128)
     {
       // horizon line on 256x240 freelook textures of Legacy or heretic
       skytexturemid = 200;
@@ -139,11 +130,11 @@ void R_SetupSkyDraw()
       skymode = 0;
     }
 
-    // get the right drawer, it was set by screen.c, depending on the
-    // current video mode bytes per pixel (quick fix)
-    skycolfunc = skydrawerfunc[skymode];
+  // get the right drawer, it was set by screen.c, depending on the
+  // current video mode bytes per pixel (quick fix)
+  skycolfunc = skydrawerfunc[skymode];
 
-    R_SetSkyScale ();
+  R_SetSkyScale();
 }
 
 

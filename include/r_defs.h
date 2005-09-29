@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2005/09/29 15:35:27  smite-meister
+// JDS texture standard
+//
 // Revision 1.19  2005/09/11 16:23:25  smite-meister
 // template classes
 //
@@ -237,6 +240,7 @@ enum floortype_t
   FLOOR_SLUDGE
 };
 
+
 /// \brief Runtime map sector
 struct sector_t
 {
@@ -270,12 +274,19 @@ struct sector_t
   int prevsec;     // -1 or number of sector for previous step
   int nextsec;     // -1 or number of next step sector
 
-  // floor and ceiling texture offsets
+  /// floor and ceiling texture offsets
   fixed_t   floor_xoffs,   floor_yoffs;
   fixed_t ceiling_xoffs, ceiling_yoffs;
 
-  int heightsec;    // other sector, or -1 if no other sector
-  int altheightsec; // Use old boom model? 1 for no 0 for yes.
+  int heightsec;      ///< control sector number, or -1 if none
+  int heightsec_type; ///< what type of control sector is it?
+
+  enum controlsector_t
+  {
+    CS_boom = 0,
+    CS_water,
+    CS_colormap // FIXME probably unneeded
+  };
 
   int floorlightsec, ceilinglightsec;
   int teamstartsec;

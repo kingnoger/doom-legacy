@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2005/09/29 15:35:27  smite-meister
+// JDS texture standard
+//
 // Revision 1.9  2005/07/18 12:31:22  smite-meister
 // cross-cluster mapchanges
 //
@@ -113,9 +116,10 @@ private:
   bool show_yah;
 
   const char *interpic;
+  const char *intermusic;
+
   const char *lastlevelname;
   const char *nextlevelname;
-  const char *intermusic;
 
   // level numbers for old Doom style graphic levelnames and YAH's
   int next, last; 

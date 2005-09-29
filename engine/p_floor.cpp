@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2005/09/29 15:35:25  smite-meister
+// JDS texture standard
+//
 // Revision 1.21  2005/09/11 16:22:54  smite-meister
 // template classes
 //
@@ -118,7 +121,7 @@ int Map::T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, int crush, i
       if (speed < 0)
 	{
 	  // floor going down
-          if (boomsupport && sector->heightsec != -1 && sector->altheightsec == 1)
+          if (boomsupport && sector->heightsec != -1 && sector->heightsec_type == sector_t::CS_water)
 	    {
 	      // Make a splash sound when the floor submerges
 	      if (sector->floorheight + speed < sectors[sector->heightsec].floorheight &&
@@ -150,7 +153,7 @@ int Map::T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, int crush, i
       else
 	{
 	  // floor going up
-          if (boomsupport && sector->heightsec != -1 && sector->altheightsec == 1)
+          if (boomsupport && sector->heightsec != -1 && sector->heightsec_type == sector_t::CS_water)
 	    {
 	      // Make a splash sound when the floor surfaces
 	      if (sector->floorheight + speed > sectors[sector->heightsec].floorheight &&
@@ -194,7 +197,7 @@ int Map::T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, int crush, i
       if (speed < 0)
 	{
 	  // ceiling going down
-          if (boomsupport && sector->heightsec != -1 && sector->altheightsec == 1)
+          if (boomsupport && sector->heightsec != -1 && sector->heightsec_type == sector_t::CS_water)
 	    {
 	      // Make a splash sound when the ceiling enters water
 	      if (sector->ceilingheight + speed < sectors[sector->heightsec].floorheight &&
@@ -232,7 +235,7 @@ int Map::T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, int crush, i
       else
 	{
           // ceiling going up
-          if (boomsupport && sector->heightsec != -1 && sector->altheightsec == 1)
+          if (boomsupport && sector->heightsec != -1 && sector->heightsec_type == sector_t::CS_water)
 	    {
 	      // Make a splash sound when the ceiling leaves water
 	      if (sector->ceilingheight + speed > sectors[sector->heightsec].floorheight &&

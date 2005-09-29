@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.12  2005/09/29 15:35:27  smite-meister
+// JDS texture standard
+//
 // Revision 1.11  2005/07/20 20:27:22  smite-meister
 // adv. texture cache
 //
@@ -121,7 +124,8 @@ public:
   string author;      ///< map creator
   string description; ///< optional map description
 
-  // string previewpic; // preview picture lumpname
+  string namepic;     ///< texture containing map's nice name
+  // string previewpic; // preview picture name
 
   int   scripts; ///< how many FS scripts in the map?
   int   partime; ///< in seconds
@@ -154,7 +158,7 @@ public:
   int BossDeathKey;  ///< bit flags to see which bosses end the map when killed.
 
   // intermission data
-  string interpic;   ///< intermission background picture lumpname
+  string interpic;   ///< intermission background texture name
   string intermusic; ///< intermission music lumpname
 
 public:

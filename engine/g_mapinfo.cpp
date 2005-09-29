@@ -20,6 +20,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.32  2005/09/29 15:35:24  smite-meister
+// JDS texture standard
+//
 // Revision 1.31  2005/09/15 16:44:17  segabor
 // "backsector = null" bug fixed, gcc-4 improvements
 //
@@ -438,6 +441,8 @@ static parsercmd_t MAPINFO_MAP_commands[] =
 
   {P_ITEM_STR, "interpic", MI_offset(interpic)},
   {P_ITEM_STR, "intermusic", MI_offset(intermusic)},
+
+  {P_ITEM_STR, "picname", MI_offset(namepic)},
 
   {P_ITEM_IGNORE, "cd_start_track", 0},
   {P_ITEM_IGNORE, "cd_end1_track", 0},

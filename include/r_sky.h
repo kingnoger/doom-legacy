@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.3  2005/09/29 15:35:27  smite-meister
+// JDS texture standard
+//
 // Revision 1.2  2004/03/28 15:16:14  smite-meister
 // Texture cache.
 //
@@ -52,7 +55,6 @@
 // The sky map is 256*128*4 maps.
 #define ANGLETOSKYSHIFT         22
 
-extern class Texture *skytexture;
 extern int            skytexturemid;
 extern fixed_t        skyscale;
 extern int            skymode;  //current sky old (0) or new(1),
@@ -69,7 +71,7 @@ void R_DrawSkyColumn();
 void R_InitSkyMap();
 
 // call after skytexture is set to adapt for old/new skies
-void R_SetupSkyDraw();
+void R_SetupSkyDraw(int height);
 
 void        R_StorePortalRange();
 void        R_InitPortals();

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,14 +18,11 @@
 //
 //
 // $Log$
+// Revision 1.9  2005/09/29 15:35:27  smite-meister
+// JDS texture standard
+//
 // Revision 1.8  2005/09/12 18:33:45  smite-meister
 // fixed_t, vec_t
-//
-// Revision 1.7  2004/12/31 16:19:41  smite-meister
-// alpha fixes
-//
-// Revision 1.6  2004/08/19 19:42:42  smite-meister
-// bugfixes
 //
 // Revision 1.5  2004/08/15 18:08:30  smite-meister
 // palette-to-palette colormaps etc.
@@ -41,18 +38,6 @@
 //
 // Revision 1.1.1.1  2002/11/16 14:18:46  hurdler
 // Initial C++ version of Doom Legacy
-//
-// Revision 1.5  2002/09/05 14:12:19  vberghol
-// network code partly bypassed
-//
-// Revision 1.4  2002/08/19 18:06:47  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.3  2002/07/01 21:01:12  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:39  vberghol
-// Version 133 Experimental!
 //
 // Revision 1.17  2001/08/06 23:57:09  stroggonmeth
 // Removed portal code, improved 3D floors in hardware mode.
@@ -106,17 +91,18 @@
 // Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
 // Initial import into CVS (v1.29 pr3)
 //
-//
-// DESCRIPTION:
-//      Here is a core component: drawing the floors and ceilings,
-//       while maintaining a per column clipping list only.
-//      Moreover, the sky areas have to be determined.
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Drawing the floors and ceilings,
+/// while maintaining a per column clipping list only.
+/// Moreover, the sky areas have to be determined.
 
 #include "doomdef.h"
 #include "console.h"
+
 #include "g_game.h"
+#include "g_map.h"
 
 #include "r_render.h"
 #include "r_defs.h"
@@ -773,40 +759,39 @@ static int wateranim;
 
 void Rend::R_DrawPlanes()
 {
-    visplane_t*         pl;
-    int                 x;
-    int                 angle;
-    int                 i; //SoM: 3/23/2000
+  visplane_t*         pl;
+  int  x, i;
+  Texture *skytex = m->skytexture;
 
 #ifdef OLDWATER
-    //added:18-02-98:WATER!
-    bool             watertodraw;
+  //added:18-02-98:WATER!
+  bool             watertodraw;
 #endif
 
-    //
-    // DRAW NON-WATER VISPLANES FIRST
-    //
+  //
+  // DRAW NON-WATER VISPLANES FIRST
+  //
 #ifdef OLDWATER
-    watertodraw = false;
-    itswater = false;
+  watertodraw = false;
+  itswater = false;
 #endif
 
-    spanfunc = basespanfunc;
+  spanfunc = basespanfunc;
 
-    for (i=0;i<MAXVISPLANES;i++, pl++)
+  for (i=0;i<MAXVISPLANES;i++, pl++)
     for (pl=visplanes[i]; pl; pl=pl->next)
-    {
+      {
 #ifdef OLDWATER
         if (pl->picnum==1998)   //dont draw water visplanes now.
-        {
+	  {
             watertodraw = true;
             continue;
-        }
+	  }
 #endif
 
         // sky flat
         if (pl->picnum == skyflatnum)
-        {
+	  {
             //added:12-02-98: use correct aspect ratio scale
             //dc_iscale = FixedDiv (FRACUNIT, pspriteyscale);
             dc_iscale = skyscale;
@@ -822,38 +807,38 @@ void Rend::R_DrawPlanes()
 #if 0
             // BP: this fix sky not inversed in invuln but it is a original doom2 feature (bug?)
             if(fixedcolormap)
-                dc_colormap = fixedcolormap + R.base_colormap;
+	      dc_colormap = fixedcolormap + R.base_colormap;
             else
 #endif
-	    dc_colormap = R.base_colormap;
+	      dc_colormap = R.base_colormap;
             dc_texturemid = skytexturemid;
-            dc_texheight = skytexture->height;
+            dc_texheight = skytex->height;
             for (x=pl->minx ; x <= pl->maxx ; x++)
-            {
+	      {
                 dc_yl = pl->top[x];
                 dc_yh = pl->bottom[x];
 
                 if (dc_yl <= dc_yh)
-                {
-                    angle = (viewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
+		  {
+		    int angle = (viewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
                     dc_x = x;
-                    dc_source = skytexture->GetColumn(angle);
+                    dc_source = skytex->GetColumn(angle);
                     skycolfunc();
-                }
-            }
+		  }
+	      }
 // centery = cy;
             continue;
-        }
+	  }
 
         if(pl->ffloor)
           continue;
 
         R_DrawSinglePlane(pl, true);
-    }
+      }
 
-    //
-    // DRAW WATER VISPLANES AFTER
-    //
+  //
+  // DRAW WATER VISPLANES AFTER
+  //
 
 #ifdef OLDWATER
     R_DrawSprites ();   //draw sprites before water. just a damn hack
