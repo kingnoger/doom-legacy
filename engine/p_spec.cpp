@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.47  2005/10/03 17:12:25  smite-meister
+// zdoom fix
+//
 // Revision 1.46  2005/09/29 15:35:26  smite-meister
 // JDS texture standard
 //
@@ -1046,13 +1049,21 @@ void Map::SpawnLineSpecials()
   RemoveAllActiveCeilings();
   RemoveAllActivePlats();
 
-  // First set the Hexen line tags.
+  // First set the Hexen "line tags".
   for (i = 0; i < numlines; i++)
-    if (lines[i].special == 121)
+    switch (lines[i].special)
       {
-	// Hexen: Line_SetIdentification
+      case 121: // Line_SetIdentification
 	lines[i].tag = lines[i].args[0];
 	lines[i].special = 0;
+	break;
+
+      case 215: // ZDoom: Teleport_Line
+	lines[i].tag = lines[i].args[0];
+	break;
+
+      default:
+	break;
       }
 
   InitTagLists(); // Create xref tables for tags
@@ -1082,14 +1093,17 @@ void Map::SpawnLineSpecials()
 	    {
 	      SpawnScroller(l, tag, kind, l->args[2]);
 	    }
+	  /*
 	  else if (subtype == LEGACY_BOOM_FRICTION)
 	    {
 	      SpawnFriction(l, tag);
 	    }
+	  */
 	  /*
 	  else if (subtype == LEGACY_BOOM_PUSHERS)
 	    SpawnPusher(l, tag, kind);
 	  */
+	  /*
 	  else if (subtype == LEGACY_BOOM_RENDERER)
 	    {
 	      switch (kind)
@@ -1109,7 +1123,9 @@ void Map::SpawnLineSpecials()
 		default:
 		  goto error;
 		}
+	    
 	    }
+	  */
 	  else if (subtype == LEGACY_BOOM_EXOTIC)
 	    {
 	      // types which store data in the texture name fields
@@ -1260,16 +1276,16 @@ void Map::SpawnLineSpecials()
         {
 	  // Hexen
 	case 100: // Scroll_Texture_Left
-          AddThinker(new scroll_t(scroll_t::sc_side, l->args[0] << 10, 0, NULL, l->sideptr[0] - sides, false));
+          AddThinker(new scroll_t(scroll_t::sc_side, fixed_t(l->args[0]) >> 6, 0, NULL, l->sideptr[0] - sides, false));
 	  break;
 	case 101: // Scroll_Texture_Right
-          AddThinker(new scroll_t(scroll_t::sc_side, -l->args[0] << 10, 0, NULL, l->sideptr[0] - sides, false));
+          AddThinker(new scroll_t(scroll_t::sc_side, fixed_t(-l->args[0]) >> 6, 0, NULL, l->sideptr[0] - sides, false));
 	  break;
 	case 102: // Scroll_Texture_Up
-          AddThinker(new scroll_t(scroll_t::sc_side, 0, l->args[0] << 10, NULL, l->sideptr[0] - sides, false));
+          AddThinker(new scroll_t(scroll_t::sc_side, 0, fixed_t(l->args[0]) >> 6, NULL, l->sideptr[0] - sides, false));
 	  break;
 	case 103: // Scroll_Texture_Down
-          AddThinker(new scroll_t(scroll_t::sc_side, 0, -l->args[0] << 10, NULL, l->sideptr[0] - sides, false));
+          AddThinker(new scroll_t(scroll_t::sc_side, 0, fixed_t(-l->args[0]) >> 6, NULL, l->sideptr[0] - sides, false));
 	  break;
 
 	  //============   ZDoom specials   =============
@@ -1933,7 +1949,7 @@ void Map::SpawnPusher(line_t *l, int tag, int type)
 	  {
 	    DActor *thing = GetPushThing(&sectors[s]);
 	    if (thing) // No MT_P* means no effect
-	      AddThinker(new pusher_t(pusher_t::p_point, dx, 0, thing, s));
+	      AddThinker(new pusher_t(pusher_t::p_point, dx, dy, thing, s));
 	  }
       else
 	{
@@ -1941,7 +1957,7 @@ void Map::SpawnPusher(line_t *l, int tag, int type)
 	  Actor *m;
 	  for (s = -1; (m = FindFromTIDmap(tid, &s)) != NULL; )
 	    if (m->IsOf(DActor::_type))
-	      AddThinker(new pusher_t(pusher_t::p_point, dx, 0, (DActor *)m, s));
+	      AddThinker(new pusher_t(pusher_t::p_point, dx, dy, (DActor *)m, s));
 	}
       break;
     }

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2005/10/03 17:12:25  smite-meister
+// zdoom fix
+//
 // Revision 1.8  2005/09/29 15:35:25  smite-meister
 // JDS texture standard
 //
@@ -566,7 +569,7 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
     case 71: // Teleport, no fog (silent)
       if (!side)
 	// Only teleport when crossing the front side of a line
-	success = EV_Teleport(tag, line, mo, 0, 2);
+	success = EV_Teleport(tag, line, mo, TP_toTID, TP_silent);
       break;
     case 72: // Thrust Mobj
       if(!side) // Only thrust on side 0
@@ -754,6 +757,10 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       break;
     case 217: // ZDoom Stairs_BuildUpDoom (TODO only partial implementation)
       success = EV_BuildStairs(tag, 0, SPEED(args[1]), HEIGHT(args[2]), 0);
+      break;
+    case 215: // ZDoom Teleport_Line
+      if (!side) // Only teleport when crossing the front side of a line
+	success = EV_Teleport(tag, line, mo, TP_toLine, (args[2] & 0x1) ? TP_flip : 0);
       break;
     case 232: // ZDoom Light_StrobeDoom
       success = EV_StartLightStrobing(tag, args[1], args[2]);

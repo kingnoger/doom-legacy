@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2005/10/03 17:12:25  smite-meister
+// zdoom fix
+//
 // Revision 1.19  2005/09/12 18:33:43  smite-meister
 // fixed_t, vec_t
 //
@@ -75,6 +78,7 @@
 #include "g_pawn.h"
 #include "g_map.h"
 
+#include "p_spec.h"
 #include "m_random.h"
 #include "p_maputl.h"
 
@@ -167,15 +171,15 @@ bool Map::EV_Teleport(int tag, line_t *line, Actor *thing, int type, int flags)
   Actor *m;
   int i;
 
-  bool noplayer = flags & 0x1;
-  bool silent   = flags & 0x2;
-  bool reldir   = flags & 0x4;
-  bool reverse  = flags & 0x8;
+  bool noplayer = flags & TP_noplayer;
+  bool silent   = flags & TP_silent;
+  bool reldir   = flags & TP_reldir;
+  bool reverse  = flags & TP_flip;
 
   if (noplayer && thing->IsOf(PlayerPawn::_type))
     return false;
 
-  if (type == 0) // go to thing with correct TID (Hexen system)
+  if (type == TP_toTID) // go to thing with correct TID (Hexen system)
     {
       i = TIDmap.count(tag);
       if (i > 0)
@@ -188,7 +192,7 @@ bool Map::EV_Teleport(int tag, line_t *line, Actor *thing, int type, int flags)
 	  return thing->Teleport(m->pos.x, m->pos.y, m->yaw, silent); // does the angle change work correctly?
 	}
     }
-  else if (type == 1) // go to teleport thing in tagged sector
+  else if (type == TP_toThingInSector) // go to teleport thing in tagged sector
     {
       for (i = -1; (i = FindSectorFromTag(tag, i)) >= 0;)
 	for (m = sectors[i].thinglist; m != NULL; m = m->snext)
@@ -213,7 +217,7 @@ bool Map::EV_Teleport(int tag, line_t *line, Actor *thing, int type, int flags)
 	      return thing->Teleport(m->pos.x, m->pos.y, m->yaw, false);
 	  }
     }
-  else
+  else // if (type == TP_toLine)
     return EV_SilentLineTeleport(tag, line, thing, reverse);
 
   return false;

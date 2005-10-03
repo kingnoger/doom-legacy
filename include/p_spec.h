@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.31  2005/10/03 17:12:37  smite-meister
+// zdoom fix
+//
 // Revision 1.30  2005/09/12 18:33:45  smite-meister
 // fixed_t, vec_t
 //
@@ -190,6 +193,20 @@ enum planeresult_e
   res_pastdest
 };
 
+
+/// teleporter flags etc.
+enum teleport_e
+{
+  TP_toTID = 0,
+  TP_toThingInSector = 1,
+  TP_toLine = 2,
+
+  // flags
+  TP_noplayer = 0x1,
+  TP_silent = 0x2,
+  TP_reldir = 0x4,
+  TP_flip = 0x8
+};
 
 
 //======================================
