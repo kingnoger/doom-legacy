@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2005/10/05 17:25:08  smite-meister
+// texturecache fix
+//
 // Revision 1.22  2005/09/29 15:35:27  smite-meister
 // JDS texture standard
 //
@@ -155,10 +158,11 @@ class Texture : public cacheitem_t
 {
   friend class texturecache_t;
 public:
-  int     id;  // TODO temp solution, replace with pointers?
-  short   width, height;
+  int     id;  ///< unique texture ID  TODO temp solution, replace with pointers?
+  short   width, height;          ///< bitmap dimensions in texels
   short   leftoffset, topoffset;
-  fixed_t xscale, yscale;
+  fixed_t xscale, yscale;         ///< texel-size / world-size
+  byte    w_bits, h_bits;         ///< largest power-of-two sizes <= actual bitmap size
 
   union
   {
@@ -169,9 +173,15 @@ public:
   };
 
 protected:
-  /// Prepare the texture for use. Returned data layout depends on subclass.
-  virtual byte *Generate() = 0;
+  /// Prepare the texture for use.
   virtual void HWR_Prepare() = 0;
+
+  /// To be called after bitmap size is known
+  inline void Initialize()
+  {
+    for (w_bits = 0; 1 << (w_bits+1) <= width;  w_bits++);
+    for (h_bits = 0; 1 << (h_bits+1) <= height; h_bits++);
+  }
 
 public:
   Texture(const char *name);
@@ -183,14 +193,13 @@ public:
   /// HACK for sw renderer, means that texture is in column_t format
   virtual bool Masked() { return false; };
 
-  /// sw renderer: get raw texture column data for span blitting.
-  /// NOTE if Masked() is true, we only return the first post.
-  virtual byte *GetColumn(int col) = 0;
-
-  /// sw renderer: masked textures. if Masked() is false, returns NULL
+  /// sw renderer: Get masked column data. if Masked() is false, returns NULL
   virtual column_t *GetMaskedColumn(int col) = 0;
 
-  /// returns raw data in row-major form
+  /// sw renderer: Get raw texture column data.
+  virtual byte *GetColumn(int col) = 0;
+
+  /// Get raw column-major texture data.
   virtual byte *GetData() = 0;
 
   /// draw the Texture flat on screen.
@@ -211,14 +220,14 @@ public:
   int    lump;
 
 protected:
-  virtual byte *Generate();   ///< returns row-major data
+  virtual byte *Generate();   ///< returns row-major data, subclasses redefine this
   virtual void HWR_Prepare();
 
 public:
   LumpTexture(const char *name, int lump, int w, int h);
 
-  virtual byte *GetColumn(int col);
   virtual column_t *GetMaskedColumn(int col) { return NULL; }
+  virtual byte *GetColumn(int col);
   virtual byte *GetData() { return Generate(); }
   virtual void Draw(int x, int y, int scrn);
   virtual void HWR_Draw(int x, int y, int flags);
@@ -245,20 +254,26 @@ public:
 
 
 /// \brief Class for patch_t's.
+///
+/// This is trickier than a LumpTexture, because the data could be required in two different formats:
+/// patch_t (masked) and raw.
 class PatchTexture : public Texture
 {
-  int lump;
+  int   lump;
+  byte *patch_data; ///< texture in patch_t format, pixels has it in raw column-major format
 
 protected:
-  virtual byte *Generate();  ///<
+  patch_t *GeneratePatch();
+  byte    *GenerateData();
   virtual void HWR_Prepare();
 
 public:
   PatchTexture(const char *name, int lump);
+  virtual ~PatchTexture();
 
   virtual bool Masked() { return true; };
-  virtual byte *GetColumn(int col);
   virtual column_t *GetMaskedColumn(int col);
+  virtual byte *GetColumn(int col);
   virtual byte *GetData();
   virtual void Draw(int x, int y, int scrn);
   virtual void HWR_Draw(int x, int y, int flags);
@@ -284,16 +299,19 @@ public:
     int patchlump;
   };
 
-  int         widthmask;
-
   short       patchcount; ///< number of patches in the texture
   texpatch_t *patches;    ///< array for the patch definitions
 
-  Uint32     *columnofs; ///< offsets from texdata to raw column data
-  byte       *texdata;   ///< texture data
+  Uint32     *columnofs;   ///< offsets from texdata to raw column data
+  byte       *patch_data;  ///< texture data in patch_t format
+  byte       *bitmap_data; ///< texture data in raw column-major format
 
 protected:
-  virtual byte *Generate();
+  short       widthmask;  ///<  (1 << w_bits) - 1
+
+protected:
+  patch_t *GeneratePatch();
+  byte    *GenerateData();
   virtual void HWR_Prepare();
 
 public:
@@ -301,8 +319,8 @@ public:
   virtual ~DoomTexture();
 
   virtual bool Masked() { return (patchcount == 1); };
-  virtual byte *GetColumn(int col);
   virtual column_t *GetMaskedColumn(int col);
+  virtual byte *GetColumn(int col);
   virtual byte *GetData();
 };
 
@@ -348,7 +366,7 @@ protected:
   Texture *Load(const char *p);
 
   /// inserts a Texture into the given source
-  void Insert(Texture *t, cachesource_t &s);
+  void Insert(Texture *t, cachesource_t &s, bool keep_old = false);
 
   /// Creates a Texture from the lump, inserts it to the given source.
   bool BuildLumpTexture(int lump, bool allow_patch, bool h_start, cachesource_t &source);
@@ -362,11 +380,13 @@ public:
   /// empties the cache, deletes all Textures
   void Clear();
 
-  /// insert a Texture into the flat source
-  inline void InsertFlat(Texture *t) { Insert(t, flat_tex); };
+  /// Insert a Texture into the flat source, used by animated textures.
+  /// Pointers to original Textures are preserved in the master animation.
+  inline void InsertFlat(Texture *t) { Insert(t, flat_tex, true); };
 
-  /// insert a Texture into the doomtex source
-  inline void InsertDoomTex(Texture *t) { Insert(t, doom_tex); };
+  /// Insert a Texture into the doomtex source, used by animated textures.
+  /// Pointers to original Textures are preserved in the master animation.
+  inline void InsertDoomTex(Texture *t) { Insert(t, doom_tex, true); };
 
   /// Returns pointer to an existing Texture, or tries creating it if nonexistant.
   Texture *GetPtr(const char *name, texture_class_t mode = TEX_lod);

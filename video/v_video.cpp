@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.28  2005/10/05 17:25:53  smite-meister
+// texturecache fix
+//
 // Revision 1.27  2005/09/12 18:33:45  smite-meister
 // fixed_t, vec_t
 //
@@ -250,12 +253,12 @@ void PatchTexture::Draw(int x, int y, int scrn = 0)
         }
     }
 
-  patch_t *p = (patch_t *)Generate();
+  patch_t *p = GeneratePatch();
 
   if (flags & V_SSIZE)
     for ( ; desttop < destend; col += colfrac, desttop++)
       {
-        post_t *post = (post_t *)(pixels + p->columnofs[col.floor()]);
+        post_t *post = (post_t *)(patch_data + p->columnofs[col.floor()]);
 
         // step through the posts in a column
         while (post->topdelta != 0xff)
@@ -286,7 +289,7 @@ void PatchTexture::Draw(int x, int y, int scrn = 0)
   else // unscaled, perhaps a bit faster?
     for ( ; desttop < destend; icol += idelta, desttop++)
       {
-        post_t *post = (post_t *)(pixels + p->columnofs[icol]);
+        post_t *post = (post_t *)(patch_data + p->columnofs[icol]);
 
         // step through the posts in a column
         while (post->topdelta != 0xff)

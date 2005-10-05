@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2005/10/05 17:25:53  smite-meister
+// texturecache fix
+//
 // Revision 1.6  2005/09/29 15:47:55  smite-meister
 // fix
 //
@@ -104,6 +107,7 @@ PNGTexture::PNGTexture(const char *n, int l)
   : LumpTexture(n, l, 0, 0)
 {
   ReadData(false); // read the header (height, width)
+  Initialize();
 }
 
 

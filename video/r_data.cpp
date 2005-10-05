@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.49  2005/10/05 17:25:53  smite-meister
+// texturecache fix
+//
 // Revision 1.48  2005/09/29 15:35:27  smite-meister
 // JDS texture standard
 //
@@ -278,6 +281,7 @@ Texture::Texture(const char *n)
   leftoffset = topoffset = 0;
   xscale = yscale = 1;
   pixels = NULL;
+  w_bits = h_bits = 0;
 
   // crap follows.
   id = 0;
@@ -316,6 +320,7 @@ LumpTexture::LumpTexture(const char *n, int l, int w, int h)
   lump = l;
   width = w;
   height = h;
+  Initialize();
 }
 
 
@@ -329,6 +334,8 @@ byte *LumpTexture::Generate()
       // to avoid unnecessary memcpy
       fc.ReadLump(lump, pixels);
 
+      // TODO should be transposed here
+
       // convert to high color
       // short pix16 = ((color8to16[*data++] & 0x7bde) + ((i<<9|j<<4) & 0x7bde))>>1;
     }
@@ -339,7 +346,7 @@ byte *LumpTexture::Generate()
 
 byte *LumpTexture::GetColumn(int col)
 {
-  return Generate(); // TODO not correct but better than nothing?
+  return Generate() + col * height;
 }
 
 
@@ -347,117 +354,6 @@ byte *LumpTexture::GetColumn(int col)
 //==================================================================
 //  PatchTexture
 //==================================================================
-
-PatchTexture::PatchTexture(const char *n, int l)
-  : Texture(n)
-{
-  lump = l;
-
-  patch_t p;
-  fc.ReadLumpHeader(lump, &p, sizeof(patch_t));
-  width = SHORT(p.width);
-  height = SHORT(p.height);
-  leftoffset = SHORT(p.leftoffset);
-  topoffset = SHORT(p.topoffset);
-
-  // nothing more is needed until the texture is Generated.
-
-  if (fc.LumpLength(lump) <= width*4 + 8)
-    I_Error("PatchTexture: lump %d (%s) is invalid\n", l, n);
-}
-
-
-byte *PatchTexture::Generate()
-{
-  if (!pixels)
-    {
-      int len = fc.LumpLength(lump);
-      patch_t *p = (patch_t *)Z_Malloc(len, PU_TEXTURE, (void **)&pixels);
-
-      // to avoid unnecessary memcpy
-      fc.ReadLump(lump, pixels);
-
-      /*
-      // [segabor] necessary endianness conversion
-      // [smite] should not be necessary, because these fields are never used 
-	  p->width		= SHORT(p->width);
-	  p->height		= SHORT(p->height);
-	  p->leftoffset	= SHORT(p->leftoffset);
-	  p->topoffset	= SHORT(p->topoffset);
-      */
-	  
-      for (int i=0; i < width; i++)
-        p->columnofs[i] = LONG(p->columnofs[i]);
-
-      // do a palette conversion if needed
-      byte *colormap = tc.GetPaletteConv(lump >> 16);
-      if (colormap)
-	{
-	  p->width = SHORT(p->width);
-	  R_ColormapPatch(p, colormap);
-	}
-    }
-
-  return pixels;
-}
-
-
-byte *PatchTexture::GetColumn(int col)
-{
-  col %= width;
-  if (col < 0)
-    col += width; // wraparound
-
-  patch_t *p = (patch_t *)Generate();
-  return pixels + p->columnofs[col] + 3; // skip the post_t info
-}
-
-
-column_t *PatchTexture::GetMaskedColumn(int col)
-{
-  col %= width;
-  if (col < 0)
-    col += width; // wraparound
-
-  patch_t *p = (patch_t *)Generate();
-  return (column_t *)(pixels + p->columnofs[col]);
-}
-
-
-byte *PatchTexture::GetData()
-{
-  return Generate(); // TODO not correct but better than nothing?
-}
-
-
-
-//==================================================================
-//  DoomTexture
-//==================================================================
-
-
-DoomTexture::DoomTexture(const maptexture_t *mtex)
-  : Texture(mtex->name)
-{
-  patchcount = SHORT(mtex->patchcount);
-  patches = (texpatch_t *)Z_Malloc(sizeof(texpatch_t)*patchcount, PU_STATIC, 0);
-
-  width  = SHORT(mtex->width);
-  height = SHORT(mtex->height);
-  xscale = mtex->xscale ? fixed_t(mtex->xscale) >> 3 : 1;
-  yscale = mtex->yscale ? fixed_t(mtex->yscale) >> 3 : 1;
-
-  int j = 1;
-  for ( ; j*2 <= width; j <<= 1);
-  widthmask = j-1;
-}
-
-
-DoomTexture::~DoomTexture()
-{
-  Z_Free(patches);
-}
-
 
 // Clip and draw a column from a patch into a cached post.
 static void R_DrawColumnInCache(column_t *col, byte *cache, int originy, int cacheheight)
@@ -486,6 +382,151 @@ static void R_DrawColumnInCache(column_t *col, byte *cache, int originy, int cac
 }
 
 
+PatchTexture::PatchTexture(const char *n, int l)
+  : Texture(n)
+{
+  lump = l;
+
+  patch_t p;
+  fc.ReadLumpHeader(lump, &p, sizeof(patch_t));
+  width = SHORT(p.width);
+  height = SHORT(p.height);
+  leftoffset = SHORT(p.leftoffset);
+  topoffset = SHORT(p.topoffset);
+
+  Initialize();
+  // nothing more is needed until the texture is Generated.
+
+  patch_data = NULL;
+
+  if (fc.LumpLength(lump) <= width*4 + 8)
+    I_Error("PatchTexture: lump %d (%s) is invalid\n", l, n);
+}
+
+
+PatchTexture::~PatchTexture()
+{
+  if (patch_data)
+    Z_Free(patch_data);
+}
+
+
+patch_t *PatchTexture::GeneratePatch()
+{
+  if (!patch_data)
+    {
+      int len = fc.LumpLength(lump);
+      patch_t *p = (patch_t *)Z_Malloc(len, PU_TEXTURE, (void **)&patch_data);
+
+      // to avoid unnecessary memcpy
+      fc.ReadLump(lump, patch_data);
+
+      // [segabor] necessary endianness conversion for p
+      // [smite] should not be necessary, because the other fields are never used 
+	  
+      for (int i=0; i < width; i++)
+        p->columnofs[i] = LONG(p->columnofs[i]);
+
+      // do a palette conversion if needed
+      byte *colormap = tc.GetPaletteConv(lump >> 16);
+      if (colormap)
+	{
+	  p->width = SHORT(p->width);
+	  R_ColormapPatch(p, colormap);
+	}
+    }
+
+  return reinterpret_cast<patch_t*>(patch_data);
+}
+
+
+byte *PatchTexture::GenerateData()
+{
+  if (!pixels)
+    {
+      // we need to draw the patch into a rectangular bitmap
+      int len = width*height;
+      Z_Malloc(len, PU_TEXTURE, (void **)&pixels);
+      memset(pixels, 0, len);
+
+      patch_t *p = GeneratePatch();
+
+      for (int col = 0; col < width; col++)
+	{
+	  column_t *patchcol = (column_t *)((byte *)p + p->columnofs[col]);
+	  R_DrawColumnInCache(patchcol, pixels + col * height, 0, height);
+	}
+    }
+
+  return pixels;
+}
+
+
+column_t *PatchTexture::GetMaskedColumn(int col)
+{
+  col %= width;
+  if (col < 0)
+    col += width; // wraparound
+
+  patch_t *p = GeneratePatch();
+  return (column_t *)(patch_data + p->columnofs[col]);
+}
+
+
+byte *PatchTexture::GetColumn(int col)
+{
+  col %= width;
+  if (col < 0)
+    col += width; // wraparound
+
+  patch_t *p = GeneratePatch();
+  return patch_data + p->columnofs[col] + 3; // skip the post_t info
+
+  //return GenerateData() + col * height; // TODO this is correct, not the one above!
+}
+
+
+byte *PatchTexture::GetData()
+{
+  return GenerateData();
+}
+
+
+
+//==================================================================
+//  DoomTexture
+//==================================================================
+
+
+DoomTexture::DoomTexture(const maptexture_t *mtex)
+  : Texture(mtex->name)
+{
+  patchcount = SHORT(mtex->patchcount);
+  patches = (texpatch_t *)Z_Malloc(sizeof(texpatch_t)*patchcount, PU_STATIC, 0);
+
+  width  = SHORT(mtex->width);
+  height = SHORT(mtex->height);
+  xscale = mtex->xscale ? fixed_t(mtex->xscale) >> 3 : 1;
+  yscale = mtex->yscale ? fixed_t(mtex->yscale) >> 3 : 1;
+
+  Initialize();
+  widthmask = (1 << w_bits) - 1;
+
+  patch_data = NULL;
+  bitmap_data = NULL;
+}
+
+
+DoomTexture::~DoomTexture()
+{
+  Z_Free(patches);
+
+  if (patch_data)
+    Z_Free(patch_data);
+}
+
+
+
 // TODO better DoomTexture handling?
 // When a texture is first needed,
 //  it counts the number of composite columns
@@ -502,70 +543,76 @@ static void R_DrawColumnInCache(column_t *col, byte *cache, int originy, int cac
 //   The texture caching system is a little more hungry of memory, but has
 //   been simplified for the sake of highcolor, dynamic ligthing, & speed.
 
-byte *DoomTexture::Generate()
+patch_t *DoomTexture::GeneratePatch()
 {
-  if (pixels)
-    return texdata; // still in cache!
-
-  // allocate texture column offset lookup
-  int i, blocksize;
-  texpatch_t *tp;
-  patch_t    *p;
-
+  // patchcount must be 1! no splicing!
   // single-patch textures can have holes in it and may be used on
   // 2-sided lines so they need to be kept in patch_t format
-  if (patchcount == 1)
+  if (!patch_data)
     {
-      tp = patches;
-
-      blocksize = fc.LumpLength(tp->patchlump);
+      texpatch_t *tp = patches;
+      int blocksize = fc.LumpLength(tp->patchlump);
       //CONS_Printf ("R_GenTex SINGLE %.8s size: %d\n",name,blocksize);
 
-      Z_Malloc(blocksize, PU_TEXTURE, (void **)&pixels); // change tag at end of function
-      fc.ReadLump(tp->patchlump, pixels);
-      p = (patch_t *)pixels; // TODO would it be possible to use just any lumptexture here?
+      patch_t *p = (patch_t *)Z_Malloc(blocksize, PU_TEXTURE, (void **)&patch_data);
+      texturememory += blocksize;
+      fc.ReadLump(tp->patchlump, patch_data);
 
       // use the patch's column lookup
       columnofs = p->columnofs;
-      texdata = pixels;
+      p->width = SHORT(p->width); // endianness...
 
       // FIXME should use patch width here? texture may be wider!
-      if (width > SHORT(p->width))
+      if (width > p->width)
 	{
 	  CONS_Printf("masked tex '%s' too wide\n", name); // FIXME TEMP behavior
-	  width = SHORT(p->width);
-	  int j = 1;
-	  for ( ; j*2 <= width; j <<= 1);
-	  widthmask = j-1;
+	  width = p->width;
+	  Initialize();
+	  widthmask = (1 << w_bits) - 1;
 	}
 
-      for (i=0; i<width; i++)
-        columnofs[i] = LONG(columnofs[i]) + 3; // skip post_t info by default
+      // do not skip post_t info by default
+      for (int i=0; i<width; i++)
+        columnofs[i] = LONG(columnofs[i]);
+
+      // do a palette conversion if needed
+      byte *colormap = tc.GetPaletteConv(tp->patchlump >> 16);
+      if (colormap)
+	R_ColormapPatch(p, colormap);
     }
-  else
+
+  return reinterpret_cast<patch_t*>(patch_data);
+}
+
+
+byte *DoomTexture::GenerateData()
+{
+  if (!pixels)
     {
+      int i;
       // multi-patch (or 'composite') textures are stored as a simple bitmap
 
-      blocksize = (width * sizeof(int)) + (width * height);
+      int blocksize = (width * sizeof(int)) + (width * height);
       //CONS_Printf ("R_GenTex MULTI  %.8s size: %d\n",name,blocksize);
 
       Z_Malloc(blocksize, PU_TEXTURE, (void **)&pixels);
+      texturememory += blocksize;
 
       // columns lookup table
       columnofs = (Uint32 *)pixels;
-      // texture data after the lookup table
-      texdata = pixels + (width * sizeof(int));
-
-      memset(texdata, 0, width * height); // TEST
-
       // generate column offset lookup
       for (i=0; i<width; i++)
         columnofs[i] = i * height;
 
+      // texture data after the lookup table
+      bitmap_data = pixels + (width * sizeof(int));
+      memset(bitmap_data, 0, width * height); // TEST
+
+      texpatch_t *tp;
       // Composite the patches together.
       for (i=0, tp = patches; i<patchcount; i++, tp++)
         {
-          p = (patch_t *)fc.CacheLumpNum(tp->patchlump, PU_CACHE);
+	  patch_t *p = (patch_t *)fc.CacheLumpNum(tp->patchlump, PU_CACHE);
           int x1 = tp->originx;
           int x2 = x1 + SHORT(p->width);
 
@@ -579,17 +626,16 @@ byte *DoomTexture::Generate()
           for ( ; x < x2; x++)
             {
               column_t *patchcol = (column_t *)((byte *)p + LONG(p->columnofs[x-x1]));
-              R_DrawColumnInCache(patchcol, texdata + columnofs[x], tp->originy, height);
+              R_DrawColumnInCache(patchcol, bitmap_data + columnofs[x], tp->originy, height);
             }
         }
+
+      // Now that the texture has been built in column cache,
+      //  it is purgable from zone memory.
+      //Z_ChangeTag(pixels, PU_CACHE);
     }
 
-  texturememory += blocksize;
-  // Now that the texture has been built in column cache,
-  //  it is purgable from zone memory.
-  Z_ChangeTag(pixels, PU_CACHE);
-
-  return texdata;
+  return bitmap_data; // exists if and only if pixels exists
 }
 
 
@@ -597,15 +643,18 @@ byte *DoomTexture::Generate()
 // returns a pointer to column-major raw data
 byte *DoomTexture::GetColumn(int col)
 {
-  return Generate() + columnofs[col & widthmask];
-  // FIXME tuttifrutti effect?? % width
+  return GenerateData() + columnofs[col & widthmask];
 }
 
 
 column_t *DoomTexture::GetMaskedColumn(int col)
 {
   if (patchcount == 1)
-    return (column_t *)(Generate() + columnofs[col & widthmask] - 3); // put back post_t info
+    {
+      patch_t *p = GeneratePatch();
+      return (column_t *)(patch_data + p->columnofs[col & widthmask]);
+      //return (column_t *)(Generate() + columnofs[col & widthmask] - 3); // put back post_t info
+    }
   else
     return NULL;
 }
@@ -613,7 +662,7 @@ column_t *DoomTexture::GetMaskedColumn(int col)
 
 byte *DoomTexture::GetData()
 {
-  return Generate(); // TODO not correct but better than nothing?
+  return GenerateData();
 }
 
 
@@ -721,23 +770,31 @@ Texture *texturecache_t::Load(const char *name)
 }
 
 
-
-/// inserts a Texture into the given source
-void texturecache_t::Insert(Texture *t, cachesource_t &s)
+/// Inserts a Texture into the given source, replaces and possibly deletes the original
+void texturecache_t::Insert(Texture *t, cachesource_t &s, bool keep_old)
 {
-  t->id = texture_ids.size(); // First texture gets the id 1, 'cos zero maps to NULL
-  texture_ids[t->id] = t;
-
   Texture *old = reinterpret_cast<Texture *>(s.Find(t->name));
 
   if (old)
     {
-      CONS_Printf("Texture %s replaced!\n", old->name);
-      // A Texture of that name is already there, so the old Texture
-      // needs to be renamed and reinserted to the map.
-      // Happens when generating animated textures and H_START textures.
-      old->name[0] = '!';
-      //s.Insert(old); // possible infinite recursion! TODO make a list of duplicates for deletion purposes...
+      // A Texture of that name is already there
+      // Happens when generating animated textures.
+      // Happens with H_START textures, and if other namespaces have duplicates.
+      //CONS_Printf("Texture '%s' replaced!\n", old->name);
+
+      t->id = old->id;        // Grab the ID of the original,
+      texture_ids[t->id] = t; // and take its place here.
+
+      if (!keep_old)
+	delete old;
+    }
+  else
+    {
+      if (keep_old)
+	I_Error("Bad animated texture replace!\n");
+
+      t->id = texture_ids.size(); // First texture gets the ID 1, 'cos zero maps to NULL
+      texture_ids[t->id] = t;
     }
 
   s.Insert(t);
@@ -1088,7 +1145,7 @@ int texturecache_t::ReadTextures()
 	  Insert(tex, doom_tex);
 	  numtextures++;
 
-          CONS_Printf(" Bare PNAMES texture '%s' found!\n", name8);
+          //CONS_Printf(" Bare PNAMES texture '%s' found!\n", name8);
 	}
 
     Z_Free(pnames);
@@ -1863,7 +1920,7 @@ void R_InitFlats()
 
 
 //
-// FIXME Preloads all relevant graphics for the Map.
+// TODO Preloads all relevant graphics for the Map.
 //
 void Map::PrecacheMap()
 {

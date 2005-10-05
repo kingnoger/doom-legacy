@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.4  2005/10/05 17:25:53  smite-meister
+// texturecache fix
+//
 // Revision 1.3  2005/09/13 14:23:12  smite-meister
 // fixed_t fix
 //
@@ -344,8 +347,8 @@ void R_DrawSpan_16 (void)
     }
 #endif
 
-    xfrac = ds_xfrac;
-    yfrac = ds_yfrac;
+    xfrac = ds_xfrac.value();
+    yfrac = ds_yfrac.value();
 
     dest = (short *)(ylookup[ds_y] + columnofs[ds_x1]);
 
@@ -362,8 +365,8 @@ void R_DrawSpan_16 (void)
         *dest++ = hicolormaps[ ((short*)ds_source)[spot]>>1 ];
 
         // Next step in u,v.
-        xfrac += ds_xstep;
-        yfrac += ds_ystep;
+        xfrac += ds_xstep.value();
+        yfrac += ds_ystep.value();
 
     } while (count--);
 }

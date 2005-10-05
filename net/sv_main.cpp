@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.27  2005/10/05 17:25:37  smite-meister
+// texturecache fix
+//
 // Revision 1.26  2005/06/29 14:26:40  smite-meister
 // valgrind pays off
 //
@@ -469,8 +472,6 @@ bool GameInfo::SV_SpawnServer(int mapinfo_lump)
 }
 
 
-int P_Read_ANIMATED(int lump);
-int P_Read_ANIMDEFS(int lump);
 void P_InitSwitchList();
 
 /// reads some lumps affecting the game behavior
@@ -492,11 +493,6 @@ void GameInfo::ReadResourceLumps()
       if (cv_precachesound.value)
 	S_PrecacheSounds();
     }
-
-  // FIXME not correct, texturecache should be cleared and refilled first...
-  // texture and flat animations
-  if (P_Read_ANIMDEFS(fc.FindNumForName("ANIMDEFS")) < 0)
-    P_Read_ANIMATED(fc.FindNumForName("ANIMATED"));
 
   // set switch texture names/numbers, read "SWITCHES" lump
   P_InitSwitchList();

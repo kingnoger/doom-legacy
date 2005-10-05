@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2005/10/05 17:24:37  smite-meister
+// texturecache fix
+//
 // Revision 1.20  2005/09/29 15:35:25  smite-meister
 // JDS texture standard
 //
@@ -218,7 +221,6 @@ public:
 
 protected:
   Texture *Update();
-  virtual byte *Generate() { return NULL; }; /// not used for now
   virtual void HWR_Prepare()  { /* Update()->HWR_Prepare(); */ }
 
 public:
@@ -229,10 +231,12 @@ public:
   /// Shorthand. To be called after the frames are set, and before the texture is used.
   void SetDims()
   {
-    width = frames[0].tx->width;
+    width  = frames[0].tx->width;
     height = frames[0].tx->height;
     xscale = frames[0].tx->xscale;
     yscale = frames[0].tx->yscale;
+    w_bits = frames[0].tx->w_bits;
+    h_bits = frames[0].tx->h_bits;
   };
 
   virtual bool Masked() { return Update()->Masked(); };

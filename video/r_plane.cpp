@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2005/10/05 17:25:53  smite-meister
+// texturecache fix
+//
 // Revision 1.9  2005/09/29 15:35:27  smite-meister
 // JDS texture standard
 //
@@ -198,10 +201,11 @@ fixed_t                 planeheight;
 fixed_t                 yslopetab[MAXVIDHEIGHT*4];
 fixed_t*                yslope;
 
-fixed_t                 distscale[MAXVIDWIDTH];
+fixed_t                 distscale[MAXVIDWIDTH]; ///< 1/abs(cos(xtoviewangle[i]))
 fixed_t                 basexscale;
 fixed_t                 baseyscale;
 
+/// save some calculations for same-height planes
 fixed_t                 cachedheight[MAXVIDHEIGHT];
 fixed_t                 cacheddistance[MAXVIDHEIGHT];
 fixed_t                 cachedxstep[MAXVIDHEIGHT];
@@ -242,13 +246,10 @@ static int bgofs;
 static int wtofs=0;
 #endif
 
+static Texture *ds_tex; ///< current span texture
+
 void R_MapPlane(int y, int x1, int x2) // t1
 {
-  angle_t     angle;
-  fixed_t     distance;
-  fixed_t     length;
-  unsigned    index;
-
 #ifdef RANGECHECK
   if (x2 < x1
       || x1<0
@@ -259,25 +260,27 @@ void R_MapPlane(int y, int x1, int x2) // t1
     }
 #endif
 
+  fixed_t distance;
+
   if (planeheight != cachedheight[y])
     {
       cachedheight[y] = planeheight;
-      distance = cacheddistance[y] = (planeheight * yslope[y]);
-      ds_xstep = (cachedxstep[y] = (distance * basexscale)).value();
-      ds_ystep = (cachedystep[y] = (distance * baseyscale)).value();
+      distance = cacheddistance[y] = planeheight * yslope[y];
+      ds_xstep = cachedxstep[y] = distance * basexscale * ds_tex->xscale;
+      ds_ystep = cachedystep[y] = distance * baseyscale * ds_tex->yscale;
     }
   else
     {
       distance = cacheddistance[y];
-      ds_xstep = cachedxstep[y].value();
-      ds_ystep = cachedystep[y].value();
+      ds_xstep = cachedxstep[y];
+      ds_ystep = cachedystep[y];
     }
-  length = (distance * distscale[x1]);
-  angle = (currentplane->viewangle + xtoviewangle[x1])>>ANGLETOFINESHIFT;
+  fixed_t length = distance * distscale[x1];
+  angle_t angle = (currentplane->viewangle + xtoviewangle[x1])>>ANGLETOFINESHIFT;
   // SoM: Wouldn't it be faster just to add viewx and viewy to the plane's
   // x/yoffs anyway?? (Besides, it serves my purpose well for portals!)
-  ds_xfrac = /*viewx +*/ ((finecosine[angle] * length) + xoffs).value();
-  ds_yfrac = /*-viewy*/ (yoffs - (finesine[angle] * length)).value();
+  ds_xfrac = /*viewx +*/ ((finecosine[angle] * length) + xoffs) * ds_tex->xscale;
+  ds_yfrac = /*-viewy*/ (yoffs - (finesine[angle] * length)) * ds_tex->yscale;
 
 #ifdef OLDWATER
   if (itswater)
@@ -306,7 +309,7 @@ void R_MapPlane(int y, int x1, int x2) // t1
     ds_colormap += fixedcolormap;
   else
     {
-      index = (distance >> LIGHTZSHIFT).floor();
+      int index = (distance >> LIGHTZSHIFT).floor();
 
       if (index >= MAXLIGHTZ)
 	index = MAXLIGHTZ-1;
@@ -324,7 +327,7 @@ void R_MapPlane(int y, int x1, int x2) // t1
   ProfZeroTimer();
 #endif
 
-  spanfunc ();
+  spanfunc();
 
 #ifdef TIMING
   RDMSR(0x10,&mycount);
@@ -936,7 +939,12 @@ void Rend::R_DrawSinglePlane(visplane_t* pl, bool handlesource)
   currentplane = pl;
 
   if (handlesource)
-    ds_source = (byte *)tc[pl->picnum]->GetData();
+    {
+      ds_tex = tc[pl->picnum];
+      ds_source = ds_tex->GetData();
+      ds_xbits = ds_tex->w_bits;
+      ds_ybits  = ds_tex->h_bits;
+    }
 
   xoffs = pl->xoffs;
   yoffs = pl->yoffs;
@@ -964,8 +972,10 @@ void Rend::R_DrawSinglePlane(visplane_t* pl, bool handlesource)
                 pl->bottom[x]);
   }
 
+  /*
   if(handlesource)
     Z_ChangeTag (ds_source, PU_CACHE);
+  */
 }
 
 

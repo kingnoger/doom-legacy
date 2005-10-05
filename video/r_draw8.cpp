@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2005/10/05 17:25:53  smite-meister
+// texturecache fix
+//
 // Revision 1.5  2005/09/13 14:23:12  smite-meister
 // fixed_t fix
 //
@@ -80,6 +83,7 @@
 #include "r_render.h"
 
 #define USEBOOMFUNC
+#define USEHIRES 1
 
 // ==========================================================================
 // COLUMNS
@@ -642,10 +646,10 @@ void R_DrawTranslatedColumn_8()
 #ifndef USEBOOMFUNC
 void R_DrawSpan_8()
 {
-    register ULONG     xfrac;
-    register ULONG     yfrac;
-    register byte*     dest;
-    register int       count;
+  register Uint32 xfrac;
+  register Uint32 yfrac;
+  register byte  *dest;
+  register int    count;
 
 #ifdef RANGECHECK
     if (ds_x2 < ds_x1
@@ -658,8 +662,8 @@ void R_DrawSpan_8()
     }
 #endif
 
-    xfrac = ds_xfrac&0x3fFFff;
-    yfrac = ds_yfrac;
+    xfrac = ds_xfrac.value() & 0x3fFFff; // this does the % 64
+    yfrac = ds_yfrac.value();
 
     dest = ylookup[ds_y] + columnofs[ds_x1];
 
@@ -679,28 +683,45 @@ void R_DrawSpan_8()
         xfrac &= 0x3fFFff;
     } while (count--);
 }
-#else
+#elif defined(USEHIRES)
+// TEST, arbitrary size textures.
 void R_DrawSpan_8()
 { 
-  register unsigned position;
-  unsigned step;
+  byte *dest = ylookup[ds_y] + columnofs[ds_x1];
+  int count = ds_x2 - ds_x1 + 1; 
 
-  byte *source;
-  byte *colormap;
-  byte *dest;
-    
-  unsigned count;
+  // For efficiency, we software-render only powers-of-two sized textures. Bigger ones are truncated.
+  // spot = ybits:xbits  (row-major)
+
+  Uint32 xmask = (1 << ds_xbits) - 1;
+  Uint32 ymask = ((1 << ds_ybits) - 1) << 16;
+  int yshift = 16 - ds_xbits;
+
+  while (count)
+    {
+      int spot = ((ds_yfrac.value() & ymask) >> yshift) + ((ds_xfrac.value() >> 16) & xmask);
+      *dest++ = ds_colormap[ds_source[spot]];
+      ds_xfrac += ds_xstep;
+      ds_yfrac += ds_ystep;
+      count--;
+    } 
+}
+#else
+// The Boom version
+void R_DrawSpan_8()
+{ 
   unsigned spot; 
   unsigned xtemp;
   unsigned ytemp;
                 
-  position = ((ds_xfrac<<10)&0xffff0000) | ((ds_yfrac>>6)&0xffff);
-  step = ((ds_xstep<<10)&0xffff0000) | ((ds_ystep>>6)&0xffff);
+  register unsigned position = ((ds_xfrac<<10)&0xffff0000) | ((ds_yfrac>>6)&0xffff);
+  unsigned step = ((ds_xstep<<10)&0xffff0000) | ((ds_ystep>>6)&0xffff);
                 
-  source = ds_source;
-  colormap = ds_colormap;
-  dest = ylookup[ds_y] + columnofs[ds_x1];       
-  count = ds_x2 - ds_x1 + 1; 
+  byte *source = ds_source;
+  byte *colormap = ds_colormap; // TODO unnecessary!
+  byte *dest = ylookup[ds_y] + columnofs[ds_x1];
+
+  unsigned count = ds_x2 - ds_x1 + 1; 
 
   while (count >= 4)
     {
@@ -752,6 +773,31 @@ void R_DrawSpan_8()
 #endif
 
 
+#if defined (USEHIRES)
+// TEST, arbitrary size textures.
+void R_DrawTranslucentSpan_8()
+{ 
+  byte *dest = ylookup[ds_y] + columnofs[ds_x1];
+  int count = ds_x2 - ds_x1 + 1; 
+
+  // For efficiency, we software-render only powers-of-two sized textures. Bigger ones are truncated.
+  // spot = ybits:xbits  (row-major)
+
+  Uint32 xmask = (1 << ds_xbits) - 1;
+  Uint32 ymask = ((1 << ds_ybits) - 1) << 16;
+  int yshift = 16 - ds_xbits;
+
+  while (count)
+    {
+      int spot = ((ds_yfrac.value() & ymask) >> yshift) + ((ds_xfrac.value() >> 16) & xmask);
+      *dest++ = ds_colormap[ds_transmap[(ds_source[spot] << 8) + *dest]];
+      ds_xfrac += ds_xstep;
+      ds_yfrac += ds_ystep;
+      count--;
+    } 
+}
+#else
+// The Boom version
 void R_DrawTranslucentSpan_8()
 { 
   register unsigned position;
@@ -767,8 +813,8 @@ void R_DrawTranslucentSpan_8()
   unsigned xtemp;
   unsigned ytemp;
                 
-  position = ((ds_xfrac<<10)&0xffff0000) | ((ds_yfrac>>6)&0xffff);
-  step = ((ds_xstep<<10)&0xffff0000) | ((ds_ystep>>6)&0xffff);
+  position = ((ds_xfrac.value()<<10)&0xffff0000) | ((ds_yfrac.value()>>6)&0xffff);
+  step = ((ds_xstep.value()<<10)&0xffff0000) | ((ds_ystep.value()>>6)&0xffff);
                 
   source = ds_source;
   colormap = ds_colormap;
@@ -822,6 +868,7 @@ void R_DrawTranslucentSpan_8()
       //count--;
     } 
 }
+#endif
 
 
 void R_DrawFogSpan_8()

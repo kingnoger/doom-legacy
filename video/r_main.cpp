@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.34  2005/10/05 17:25:53  smite-meister
+// texturecache fix
+//
 // Revision 1.33  2005/09/17 17:36:09  smite-meister
 // fixed_t fixes
 //
@@ -188,18 +191,22 @@
 #include "g_pawn.h"
 #include "g_map.h"
 
+#include "am_map.h"
+#include "hud.h"
 #include "p_camera.h"
 
 #include "r_render.h"
-#include "hud.h"
-#include "am_map.h"
-
-#include "r_local.h"
+#include "r_data.h"
 #include "r_state.h"
+#include "r_draw.h"
+#include "r_bsp.h"
+#include "r_segs.h"
+#include "r_sky.h"
+#include "r_plane.h"
+#include "r_things.h"
 #include "i_video.h"
-#include "m_menu.h"
-#include "t_func.h"
-#include "d_main.h"
+
+#include "w_wad.h"
 
 #ifdef HWRENDER
 #include "hardware/hwr_render.h"
@@ -501,9 +508,7 @@ fixed_t Rend::R_ScaleFromGlobalAngle(angle_t visangle)
 //
 void R_InitTextureMapping()
 {
-  int                 i;
-  int                 x;
-  int                 t;
+  int  i, t;
 
   // Use tangent table to generate viewangletox:
   //  viewangletox will give the next greatest x
@@ -521,8 +526,7 @@ void R_InitTextureMapping()
 	t = viewwidth+1;
       else
         {
-	  fixed_t temp;
-	  temp.setvalue(fixed_t::UNIT - 1);
+	  fixed_t temp = 1 - fixed_epsilon;
 	  temp -= finetangent[i] * focallength;
 	  t = (centerxfrac + temp).floor();
 
@@ -537,7 +541,7 @@ void R_InitTextureMapping()
   // Scan viewangletox[] to generate xtoviewangle[]:
   //  xtoviewangle will give the smallest view angle
   //  that maps to x.
-  for (x=0;x<=viewwidth;x++)
+  for (int x = 0; x <= viewwidth; x++)
     {
       i = 0;
       while (viewangletox[i]>x)
@@ -697,11 +701,12 @@ void R_ExecuteSetViewSize()
   R_SetSkyScale();
 
   // planes
-  //added:02-02-98:now correct aspect ratio!
-  int aspectx = (((vid.height*centerx*BASEVIDWIDTH)/BASEVIDHEIGHT)/vid.width);
 
   if (rendermode == render_soft)
     {
+      //added:02-02-98:now correct aspect ratio!
+      int aspectx = (((vid.height*centerx*BASEVIDWIDTH)/BASEVIDHEIGHT)/vid.width);
+
       // this is only used for planes rendering in software mode
       j = viewheight*4;
       for (i=0 ; i<j ; i++)
@@ -714,7 +719,7 @@ void R_ExecuteSetViewSize()
 
   for (i=0 ; i<viewwidth ; i++)
     {
-      fixed_t cosadj = abs(finecosine[xtoviewangle[i]>>ANGLETOFINESHIFT]);
+      fixed_t cosadj = abs(Cos(xtoviewangle[i]));
       distscale[i] = 1 / cosadj;
     }
 
@@ -873,13 +878,18 @@ void R_ServerInit()
 }
 
 
-
+int P_Read_ANIMATED(int lump);
+int P_Read_ANIMDEFS(int lump);
 
 /// Initializes the client renderer.
 /// The server part has already been initialized in R_ServerInit.
 void R_Init()
 {
   //TestAnims();
+
+  // Read texture animations, insert them into the cache, replacing the originals.
+  if (P_Read_ANIMDEFS(fc.FindNumForName("ANIMDEFS")) < 0)
+    P_Read_ANIMATED(fc.FindNumForName("ANIMATED"));
 
   // prepare the window border textures
   R_InitViewBorder();

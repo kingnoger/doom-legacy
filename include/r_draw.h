@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2005/10/05 17:25:08  smite-meister
+// texturecache fix
+//
 // Revision 1.12  2005/09/13 14:23:12  smite-meister
 // fixed_t fix
 //
@@ -141,16 +144,17 @@ extern int      dc_texheight;
 // SPAN DRAWING CODE STUFF
 // -----------------------
 
-extern int              ds_y;
-extern int              ds_x1;
-extern int              ds_x2;
+/// span y-coordinate and left/right x limits
+extern int ds_y, ds_x1, ds_x2;
 
 extern lighttable_t*    ds_colormap;
 
-extern Sint32          ds_xfrac;
-extern Sint32          ds_yfrac;
-extern Sint32          ds_xstep;
-extern Sint32          ds_ystep;
+/// span texture offset and stepping
+extern fixed_t ds_xfrac, ds_yfrac;
+extern fixed_t ds_xstep, ds_ystep;
+
+/// tex dimensions
+extern int ds_xbits, ds_ybits;
 
 extern byte*            ds_source;      // start of a 64*64 tile image
 extern byte*            ds_transmap;

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2005/10/05 17:25:53  smite-meister
+// texturecache fix
+//
 // Revision 1.19  2005/09/29 15:47:55  smite-meister
 // fix
 //
@@ -214,10 +217,12 @@ int                     ds_x2;
 
 lighttable_t*           ds_colormap;
 
-Sint32                 ds_xfrac;
-Sint32                 ds_yfrac;
-Sint32                 ds_xstep;
-Sint32                 ds_ystep;
+fixed_t                 ds_xfrac;
+fixed_t                 ds_yfrac;
+fixed_t                 ds_xstep;
+fixed_t                 ds_ystep;
+
+int ds_xbits, ds_ybits;
 
 byte*                   ds_source;      // start of a 64*64 tile image
 byte*                   ds_transmap;    // one of the translucency tables
