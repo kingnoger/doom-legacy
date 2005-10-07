@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.50  2005/10/07 20:04:22  smite-meister
+// sprite scaling
+//
 // Revision 1.49  2005/10/05 17:25:53  smite-meister
 // texturecache fix
 //
@@ -479,10 +482,7 @@ byte *PatchTexture::GetColumn(int col)
   if (col < 0)
     col += width; // wraparound
 
-  patch_t *p = GeneratePatch();
-  return patch_data + p->columnofs[col] + 3; // skip the post_t info
-
-  //return GenerateData() + col * height; // TODO this is correct, not the one above!
+  return GenerateData() + col * height; // TODO this is correct, not the one above!
 }
 
 
@@ -1109,7 +1109,6 @@ int texturecache_t::ReadTextures()
 	// maptexture describes texture name, size, and
 	// used patches in z order from bottom to top
 	maptexture_t *mtex = (maptexture_t *)((byte *)maptex + offset);
-	// TODO here allow the introduction of advanced textures somehow too! patchcount == 0?
 	DoomTexture *tex = new DoomTexture(mtex);
 
 	mappatch_t *mp = mtex->patches;

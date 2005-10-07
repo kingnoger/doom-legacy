@@ -18,20 +18,11 @@
 //
 //
 // $Log$
-// Revision 1.13  2005/10/05 17:25:08  smite-meister
-// texturecache fix
-//
-// Revision 1.12  2005/09/13 14:23:12  smite-meister
-// fixed_t fix
+// Revision 1.14  2005/10/07 20:04:06  smite-meister
+// sprite scaling
 //
 // Revision 1.11  2005/09/11 16:23:25  smite-meister
 // template classes
-//
-// Revision 1.10  2005/04/22 19:44:50  smite-meister
-// bugs fixed
-//
-// Revision 1.9  2004/12/31 16:19:40  smite-meister
-// alpha fixes
 //
 // Revision 1.8  2004/11/09 20:38:52  smite-meister
 // added packing to I/O structs
@@ -39,17 +30,11 @@
 // Revision 1.7  2004/10/27 17:37:09  smite-meister
 // netcode update
 //
-// Revision 1.6  2004/08/29 20:48:49  smite-meister
-// bugfixes. wow.
-//
 // Revision 1.5  2004/08/15 18:08:29  smite-meister
 // palette-to-palette colormaps etc.
 //
 // Revision 1.4  2004/03/28 15:16:14  smite-meister
 // Texture cache.
-//
-// Revision 1.3  2003/05/11 21:23:52  smite-meister
-// Hexen fixes
 //
 // Revision 1.2  2003/04/04 00:01:58  smite-meister
 // bugfixes, Hexen HUD
@@ -96,14 +81,14 @@ extern int              hcolumnofs[MAXVIDHEIGHT];
 // COLUMN DRAWING CODE STUFF
 // -------------------------
 
+extern int dc_x, dc_yl, dc_yh; ///< screen coordinates for the column
+extern fixed_t  dc_iscale;     ///< screen coord * dc_iscale = texture coord
+extern fixed_t  dc_texturemid; ///< this texture y coordinate corresponds to screen midpoint
+
+extern byte    *dc_source;     ///< first pixel in a column
+extern int      dc_texheight;  ///< height of repeating texture, zero for nonrepeating ones
+
 extern lighttable_t    *dc_colormap;
-extern int              dc_x;
-extern int              dc_yl, dc_yh;
-extern fixed_t          dc_iscale;
-extern fixed_t          dc_texturemid;
-
-extern byte*            dc_source;      // first pixel in a column
-
 
 // translucency stuff here
 
@@ -128,7 +113,6 @@ enum transnum_t
 
 
 
-
 /// Color translation stuff
 extern byte *dc_translation;
 
@@ -136,8 +120,6 @@ extern struct r_lightlist_t *dc_lightlist;
 extern int              dc_numlights;
 extern int              dc_maxlights;
 
-//Fix TUTIFRUTI
-extern int      dc_texheight;
 
 
 // -----------------------

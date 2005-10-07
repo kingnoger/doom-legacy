@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.36  2005/10/07 20:04:22  smite-meister
+// sprite scaling
+//
 // Revision 1.35  2005/09/29 15:35:27  smite-meister
 // JDS texture standard
 //
@@ -187,42 +190,37 @@ short           screenheightarray[MAXVIDWIDTH];
 /// I.e. a mapthing that is (at least) partly visible.
 struct vissprite_t
 {
-  enum spritecut_e
-  {
-    SC_NONE = 0,
-    SC_TOP = 1,
-    SC_BOTTOM = 2
-  };
-
   // Doubly linked list.
   vissprite_t* prev;
   vissprite_t* next;
 
-  int                 x1;
-  int                 x2;
+  /// left and right screen coordinate limits for the sprite
+  int x1, x2;
 
-  // for line side calculation
-  fixed_t             gx;
-  fixed_t             gy;
+  /// bottom and top screen coordinate limits for the sprite.
+  int yb, yt;
 
-  // global bottom / top for silhouette clipping
-  fixed_t             gz;
-  fixed_t             gzt;
+  /// thing x,y position in world coords (for line side calculation)
+  fixed_t px, py;
 
-  // Physical bottom / top for sorting with 3D floors.
-  fixed_t                               pz;
-  fixed_t                               pzt;
+  /// thing bottom and top in world coords (for sorting with 3D floors)
+  fixed_t pz, pzt;
 
-  // horizontal position of x1
-  fixed_t             startfrac;
+  /// sprite bottom and top edges in world coords (for silhouette clipping)
+  fixed_t gz, gzt;
 
-  fixed_t             scale;
+  /// world coords * scale = screen coords
+  fixed_t xscale, yscale;
 
-  // negative if flipped
-  fixed_t             xiscale;
+  /// screen coords * xiscale = texture coords
+  fixed_t xiscale;
 
-  fixed_t             texturemid;
-  class Texture      *tex;
+  /// horizontal position of x1 (in texture coords)
+  fixed_t startfrac;
+
+  /// sprite top edge z relative to viewer in world coords
+  fixed_t   sprite_top;
+  Texture  *tex;
 
   /// colormap index used for lightlevel changes
   int lightmap;
@@ -233,23 +231,25 @@ struct vissprite_t
   /// which translucency table to use?
   byte           *transmap;
 
-  // SoM: 3/6/2000: height sector for underwater/fake ceiling support
+  /// SoM: 3/6/2000: height sector for underwater/fake ceiling support
   int                 heightsec;
 
-  //SoM: 4/3/2000: Global colormaps!
+  ///SoM: 4/3/2000: Global colormaps!
   fadetable_t    *extra_colormap;
-  fixed_t             xscale;
 
-  //SoM: Precalculated top and bottom screen coords for the sprite.
-  fixed_t             thingheight; //The actual height of the thing (for 3D floors)
-  sector_t*           sector; //The sector containing the thing.
-  int             sz;  // was fixed_t
-  int             szt; // was fixed_t
 
-  int                 cut;  //0 for none, bit 1 for top, bit 2 for bottom
+  enum spritecut_e
+  {
+    SC_NONE = 0,
+    SC_TOP = 1,
+    SC_BOTTOM = 2
+  };
+
+  /// 0 for none, bit 1 for top, bit 2 for bottom
+  int cut;  
 
 public:
-  vissprite_t *SplitSprite(Actor *thing, int cutfrac, lightlist_t *ll);
+  vissprite_t *SplitSprite(Actor *thing, int cut_y, lightlist_t *ll);
   void DrawVisSprite();
 };
 
@@ -431,7 +431,7 @@ spriteframe_t *spritepres_t::GetFrame()
 
 
 // sprite rendering hacks
-fixed_t proj_tz, proj_tx;
+static fixed_t proj_tz, proj_tx;
 
 
 /// this does the actual work of drawing the sprite in the SW renderer
@@ -448,16 +448,15 @@ void spritepres_t::Project(Actor *p)
 
   spriteframe_t *sprframe = &spr->spriteframes[frame];
 
-  unsigned  rot;
-  bool      flip;
   Texture  *t;
+  bool      flip;
 
   // decide which patch to use for sprite relative to player
   if (sprframe->rotate)
     {
       // choose a different rotation based on player view
       angle_t ang = R.R_PointToAngle(p->pos.x, p->pos.y); // uses viewx,viewy
-      rot = (ang - p->yaw + unsigned(ANG45/2) * 9) >> 29;
+      unsigned rot = (ang - p->yaw + unsigned(ANG45/2) * 9) >> 29;
 
       t = sprframe->tex[rot];
       flip = sprframe->flip[rot];
@@ -465,7 +464,6 @@ void spritepres_t::Project(Actor *p)
   else
     {
       // use single rotation for all views
-      rot = 0;
       t = sprframe->tex[0];
       flip = sprframe->flip[0];
     }
@@ -480,26 +478,26 @@ void spritepres_t::Project(Actor *p)
 
   // software renderer part
   // aspect ratio stuff :
-  fixed_t  xscale = (projection / proj_tz);
-  fixed_t  yscale = (projectiony / proj_tz); //added:02-02-98:aaargll..if I were a math-guy!!!
+  fixed_t  xscale = projection  / proj_tz;
+  fixed_t  yscale = projectiony / proj_tz; //added:02-02-98:aaargll..if I were a math-guy!!!
 
   // calculate edges of the shape
-  proj_tx -= t->leftoffset;
-  int x1 = (centerxfrac + (proj_tx * xscale)).floor();
+  proj_tx -= t->leftoffset / t->xscale; // left edge of sprite, world    TODO scaled offsets?**
+  int x1 = (centerxfrac + (proj_tx * xscale)).floor(); // in screen coords
 
   // off the right side?
   if (x1 > viewwidth)
     return;
 
-  proj_tx += t->width;
+  proj_tx += t->width / t->xscale;
   int x2 = (centerxfrac + (proj_tx * xscale)).floor() - 1;
 
   // off the left side
   if (x2 < 0)
     return;
 
-  //SoM: 3/17/2000: Disreguard sprites that are out of view..
-  fixed_t gzt = p->pos.z + t->topoffset;
+  //SoM: 3/17/2000: Disregard sprites that are out of view..
+  fixed_t gzt = p->pos.z + (t->topoffset / t->yscale); // top edge of sprite, world **
   int light = 0;
 
   sector_t *sec = p->subsector->sector;
@@ -514,11 +512,11 @@ void spritepres_t::Project(Actor *p)
         lightnum = (*sec->lightlist[light].lightlevel  >> LIGHTSEGSHIFT)+extralight;
 
       if (lightnum < 0)
-          spritelights = scalelight[0];
+	spritelights = scalelight[0];
       else if (lightnum >= LIGHTLEVELS)
-          spritelights = scalelight[LIGHTLEVELS-1];
+	spritelights = scalelight[LIGHTLEVELS-1];
       else
-          spritelights = scalelight[lightnum];
+	spritelights = scalelight[lightnum];
     }
 
   int heightsec = sec->heightsec;
@@ -543,51 +541,48 @@ void spritepres_t::Project(Actor *p)
 
   //vis->mobjflags = p->flags;
 
-  vis->scale = yscale;           //<<detailshift;
-  vis->gx = p->pos.x;
-  vis->gy = p->pos.y;
-  vis->gz = gzt - t->height;
+  vis->xscale = xscale;
+  vis->yscale = yscale;           //<<detailshift;
+
+  vis->px = p->pos.x;
+  vis->py = p->pos.y;
+  vis->pz = p->Feet();
+  vis->pzt = p->Top();
+
+  vis->gz = gzt - (t->height / t->yscale);
   vis->gzt = gzt;
-  vis->thingheight = p->height;
-  vis->pz = p->pos.z;
-  vis->pzt = vis->pz + vis->thingheight;
-  vis->texturemid = vis->gzt - R.viewz;
-  // foot clipping
+  vis->sprite_top = vis->gzt - R.viewz;
+  // foot clipping FIXME applies also elsewhere! gz, gzt!
   if (p->pos.z <= sec->floorheight)
-    vis->texturemid -= p->floorclip;
+    vis->sprite_top -= p->floorclip;
 
   vis->x1 = x1 < 0 ? 0 : x1;
   vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
-  vis->xscale = xscale; //SoM: 4/17/2000
-  vis->sector = sec;
-  vis->szt = (centeryfrac - ((vis->gzt - R.viewz) * yscale)).floor();
-  vis->sz =  (centeryfrac - ((vis->gz - R.viewz) * yscale)).floor();
-  vis->cut = false;
+  vis->yt = (centeryfrac - ((vis->gzt - R.viewz) * yscale)).floor();
+  vis->yb =  (centeryfrac - ((vis->gz - R.viewz) * yscale)).floor();
+
+  vis->cut = 0;
   if (sec->numlights)
     vis->extra_colormap = sec->lightlist[light].extra_colormap;
   else
     vis->extra_colormap = sec->extra_colormap;
 
-  fixed_t iscale = (1 / xscale);
-
   if (flip)
     {
       vis->startfrac = t->width - fixed_epsilon;
-      vis->xiscale = -iscale;
+      vis->xiscale = -t->xscale / xscale;
     }
   else
     {
       vis->startfrac = 0;
-      vis->xiscale = iscale;
+      vis->xiscale = t->xscale / xscale;
     }
 
   if (vis->x1 > x1)
-    vis->startfrac += vis->xiscale*(vis->x1-x1);
+    vis->startfrac += (vis->x1 - x1) * vis->xiscale;
 
-  //Fab: lumppat is the lump number of the patch to use, this is different
-  //     than lumpid for sprites-in-pwad : the graphics are patched
-  vis->tex = sprframe->tex[rot];
-
+  // texture to use
+  vis->tex = t;
 
   // determine the lightlevel & special effects
 
@@ -643,15 +638,15 @@ void spritepres_t::Project(Actor *p)
       if (sec->lightlist[i].height <= vis->gz)
 	return;
 
-      int cutfrac = (centeryfrac - ((sec->lightlist[i].height - R.viewz) * vis->scale)).floor();
-      if (cutfrac < 0)
+      int cut_y = (centeryfrac - ((sec->lightlist[i].height - R.viewz) * vis->yscale)).floor();
+      if (cut_y < 0)
 	continue;
-      if (cutfrac > vid.height)
+      if (cut_y > vid.height)
 	return;
 
       // Found a split! Make a new sprite, copy the old sprite to it, and
       // adjust the heights.
-      vis = vis->SplitSprite(p, cutfrac, &sec->lightlist[i]);
+      vis = vis->SplitSprite(p, cut_y, &sec->lightlist[i]);
     }
 
 }
@@ -976,7 +971,8 @@ void R_InitSprites(char** namelist)
 short*          mfloorclip;
 short*          mceilingclip;
 
-fixed_t         spryscale;
+fixed_t         spryscale; ///< texture coord * spryscale = screen coord
+/// sprite screen coords
 fixed_t         sprtopscreen;
 fixed_t         sprbotscreen;
 fixed_t         windowtop;
@@ -1014,7 +1010,6 @@ void R_DrawMaskedColumn(column_t* column)
         {
 	  dc_source = column->data;
 	  dc_texturemid = basetexturemid - column->topdelta;
-	  // dc_source = column->data - column->topdelta;
 
 	  // Drawn by either R_DrawColumn
 	  //  or (SHADOW) R_DrawFuzzColumn.
@@ -1073,17 +1068,16 @@ void vissprite_t::DrawVisSprite()
 
   dc_colormap += lightmap;
 
-
-  //dc_iscale = abs(xiscale)>>detailshift;  ???
-  dc_iscale = (1 / scale);
-  dc_texturemid = texturemid;
-  dc_texheight = 0;
-
-  fixed_t frac = startfrac;
-  spryscale = scale;
-  sprtopscreen = centeryfrac - (dc_texturemid * spryscale);
+  spryscale = yscale / tex->yscale;
+  sprtopscreen = centeryfrac - (sprite_top * yscale);
   windowtop = windowbottom = sprbotscreen = fixed_t::FMAX;
 
+  // initialize drawers
+  dc_iscale = tex->yscale / yscale; // = 1 / spryscale;
+  dc_texturemid = sprite_top * tex->yscale;
+  dc_texheight = 0; // clever way of drawing nonrepeating textures
+
+  fixed_t frac = startfrac;
   for (dc_x = x1; dc_x <= x2; dc_x++, frac += xiscale)
     {
       int texturecolumn = frac.floor();
@@ -1102,7 +1096,7 @@ void vissprite_t::DrawVisSprite()
 
 
 // splits the vissprite into two  (different light conditions on different parts of the sprite!)
-vissprite_t *vissprite_t::SplitSprite(Actor *thing, int cutfrac, lightlist_t *ll)
+vissprite_t *vissprite_t::SplitSprite(Actor *thing, int cut_y, lightlist_t *ll)
 {
   vissprite_t *newsprite = R_NewVisSprite();
   memcpy(newsprite, this, sizeof(vissprite_t));
@@ -1112,13 +1106,14 @@ vissprite_t *vissprite_t::SplitSprite(Actor *thing, int cutfrac, lightlist_t *ll
 
   newsprite->gzt = gz;
 
-  sz = cutfrac;
-  newsprite->szt = sz - 1;
+  yb = cut_y;
+  newsprite->yt = yb - 1;
 
   if (ll->height < pzt && ll->height > pz)
     pz = newsprite->pzt = ll->height;
   else
     {
+      // TODO this cannot be correct?!?
       newsprite->pz = newsprite->gz;
       newsprite->pzt = newsprite->gzt;
     }
@@ -1273,14 +1268,14 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
 
   //added:02-02-98:spriteoffset should be abs coords for psprites, based on
   //               320x200
-  tx -= t->leftoffset;
+  tx -= t->leftoffset / t->xscale;
   int x1 = (centerxfrac + (tx * pspritescale)).floor();
 
   // off the right side
   if (x1 > viewwidth)
     return;
 
-  tx += t->width;
+  tx += t->width / t->xscale;
   int x2 = (centerxfrac + (tx * pspritescale)).floor() - 1;
 
   // off the left side
@@ -1291,37 +1286,37 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
   vissprite_t avis;
   vissprite_t *vis = &avis;
   if (cv_splitscreen.value)
-    vis->texturemid = 120;
+    vis->sprite_top = 120;
   else
-    vis->texturemid = BASEYCENTER;
+    vis->sprite_top = BASEYCENTER;
 
-  vis->texturemid += 0.5f - psp->sy + t->topoffset;
+  vis->sprite_top += 0.5f - psp->sy + (t->topoffset / t->yscale);
 
   /*
   if (game.mode >= gm_heretic)
     if (viewheight == vid.height || (!cv_scalestatusbar.value && vid.dupy>1))
-      vis->texturemid -= PSpriteSY[viewplayer->readyweapon];
+      vis->sprite_top -= PSpriteSY[viewplayer->readyweapon];
   */
 
-  //vis->texturemid += 0.5f;
+  //vis->sprite_top += 0.5f;
 
   vis->x1 = x1 < 0 ? 0 : x1;
   vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
-  vis->scale = pspriteyscale;  //<<detailshift;
+  vis->yscale = pspriteyscale;  //<<detailshift;
 
   if (sprframe->flip[0])
     {
-      vis->xiscale = -pspriteiscale;
+      vis->xiscale = -pspriteiscale * t->xscale;
       vis->startfrac = t->width - fixed_epsilon;
     }
   else
     {
-      vis->xiscale = pspriteiscale;
+      vis->xiscale = pspriteiscale * t->xscale;
       vis->startfrac = 0;
     }
 
   if (vis->x1 > x1)
-    vis->startfrac += vis->xiscale*(vis->x1-x1);
+    vis->startfrac += (vis->x1 - x1) * vis->xiscale;
 
   vis->tex = t;
   vis->transmap = NULL;
@@ -1431,55 +1426,50 @@ void Rend::R_DrawPlayerSprites()
 //
 // R_SortVisSprites
 //
-vissprite_t     vsprsortedhead;
+static vissprite_t vsprsortedhead;
 
-
-void R_SortVisSprites (void)
+void R_SortVisSprites()
 {
-    int                 i;
-    int                 count;
-    vissprite_t*        ds;
-    vissprite_t*        best=NULL;      //shut up compiler
-    vissprite_t         unsorted;
-    fixed_t             bestscale;
+  vissprite_t *ds;
+  vissprite_t *best = NULL;      //shut up compiler
 
-    count = vissprite_p - vissprites;
+  int count = vissprite_p - vissprites;
+  if (!count)
+    return;
 
-    unsorted.next = unsorted.prev = &unsorted;
+  vissprite_t unsorted;
+  unsorted.next = unsorted.prev = &unsorted;
 
-    if (!count)
-        return;
-
-    for (ds=vissprites ; ds<vissprite_p ; ds++)
+  for (ds=vissprites ; ds<vissprite_p ; ds++)
     {
-        ds->next = ds+1;
-        ds->prev = ds-1;
+      ds->next = ds+1;
+      ds->prev = ds-1;
     }
 
-    vissprites[0].prev = &unsorted;
-    unsorted.next = &vissprites[0];
-    (vissprite_p-1)->next = &unsorted;
-    unsorted.prev = vissprite_p-1;
+  vissprites[0].prev = &unsorted;
+  unsorted.next = &vissprites[0];
+  (vissprite_p - 1)->next = &unsorted;
+  unsorted.prev = vissprite_p-1;
 
-    // pull the vissprites out by scale
-    vsprsortedhead.next = vsprsortedhead.prev = &vsprsortedhead;
-    for (i=0 ; i<count ; i++)
+  // pull the vissprites out by scale
+  vsprsortedhead.next = vsprsortedhead.prev = &vsprsortedhead;
+  for (int i=0 ; i<count ; i++)
     {
-        bestscale = fixed_t::FMAX;
-        for (ds=unsorted.next ; ds!= &unsorted ; ds=ds->next)
+      fixed_t bestscale = fixed_t::FMAX;
+      for (ds=unsorted.next ; ds!= &unsorted ; ds=ds->next)
         {
-            if (ds->scale < bestscale)
+	  if (ds->yscale < bestscale)
             {
-                bestscale = ds->scale;
-                best = ds;
+	      bestscale = ds->yscale;
+	      best = ds;
             }
         }
-        best->next->prev = best->prev;
-        best->prev->next = best->next;
-        best->next = &vsprsortedhead;
-        best->prev = vsprsortedhead.prev;
-        vsprsortedhead.prev->next = best;
-        vsprsortedhead.prev = best;
+      best->next->prev = best->prev;
+      best->prev->next = best->next;
+      best->next = &vsprsortedhead;
+      best->prev = vsprsortedhead.prev;
+      vsprsortedhead.prev->next = best;
+      vsprsortedhead.prev = best;
     }
 }
 
@@ -1565,7 +1555,7 @@ void Rend::R_CreateDrawNodes()
   R_SortVisSprites();
   for (vissprite_t *rover = vsprsortedhead.prev; rover != &vsprsortedhead; rover = rover->prev)
     {
-      if (rover->szt > vid.height || rover->sz < 0)
+      if (rover->yt > vid.height || rover->yb < 0)
         continue;
 
       int sintersect = (rover->x1 + rover->x2) / 2;
@@ -1578,7 +1568,7 @@ void Rend::R_CreateDrawNodes()
 	    {
 	      if (r2->plane->minx > rover->x2 || r2->plane->maxx < rover->x1)
 		continue;
-	      if (rover->szt > r2->plane->low || rover->sz < r2->plane->high)
+	      if (rover->yt > r2->plane->low || rover->yb < r2->plane->high)
 		continue;
 
 	      if ((r2->plane->height < viewz && rover->pz < r2->plane->height) ||
@@ -1596,7 +1586,7 @@ void Rend::R_CreateDrawNodes()
 
 		  for(i = x1; i <= x2; i++)
 		    {
-		      if (r2->seg->frontscale[i] > rover->scale)
+		      if (r2->seg->frontscale[i] > rover->yscale)
 			break;
 		    }
 		  if (i > x2)
@@ -1615,10 +1605,10 @@ void Rend::R_CreateDrawNodes()
 		continue;
 
 	      scale = r2->thickseg->scale1 > r2->thickseg->scale2 ? r2->thickseg->scale1 : r2->thickseg->scale2;
-	      if (scale <= rover->scale)
+	      if (scale <= rover->yscale)
 		continue;
 	      scale = r2->thickseg->scale1 + (r2->thickseg->scalestep * (sintersect - r2->thickseg->x1));
-	      if (scale <= rover->scale)
+	      if (scale <= rover->yscale)
 		continue;
 
 	      if ((*r2->ffloor->topheight > viewz && *r2->ffloor->bottomheight < viewz) ||
@@ -1638,11 +1628,11 @@ void Rend::R_CreateDrawNodes()
 		continue;
 
 	      scale = r2->seg->scale1 > r2->seg->scale2 ? r2->seg->scale1 : r2->seg->scale2;
-	      if (scale <= rover->scale)
+	      if (scale <= rover->yscale)
 		continue;
 	      scale = r2->seg->scale1 + (r2->seg->scalestep * (sintersect - r2->seg->x1));
 
-	      if (rover->scale < scale)
+	      if (rover->yscale < scale)
 		{
 		  entry = R_CreateDrawNode(NULL);
 		  (entry->prev = r2->prev)->next = entry;
@@ -1655,10 +1645,10 @@ void Rend::R_CreateDrawNodes()
 	    {
 	      if (r2->sprite->x1 > rover->x2 || r2->sprite->x2 < rover->x1)
 		continue;
-	      if (r2->sprite->szt > rover->sz || r2->sprite->sz < rover->szt)
+	      if (r2->sprite->yt > rover->yb || r2->sprite->yb < rover->yt)
 		continue;
 
-	      if (r2->sprite->scale > rover->scale)
+	      if (r2->sprite->yscale > rover->yscale)
 		{
 		  entry = R_CreateDrawNode(NULL);
 		  (entry->prev = r2->prev)->next = entry;
@@ -1785,9 +1775,9 @@ void Rend::R_DrawSprite(vissprite_t *spr)
 	  scale = ds->scale2;
         }
 
-      if (scale < spr->scale
-	  || ( lowscale < spr->scale
-	       && !R_PointOnSegSide (spr->gx, spr->gy, ds->curline) ) )
+      if (scale < spr->yscale
+	  || (lowscale < spr->yscale
+	      && !R_PointOnSegSide(spr->px, spr->py, ds->curline)))
         {
 	  // masked mid texture?
 	  /*if (ds->maskedtexturecol)
@@ -1838,7 +1828,7 @@ void Rend::R_DrawSprite(vissprite_t *spr)
       int h;
       int phs = viewplayer->subsector->sector->heightsec;
       if ((mh = sectors[spr->heightsec].floorheight) > spr->gz &&
-	  (temp = centeryfrac - ((mh -= viewz) * spr->scale)) >= 0 &&
+	  (temp = centeryfrac - ((mh -= viewz) * spr->yscale)) >= 0 &&
 	  (h = temp.floor()) < viewheight)
         {
 	  if (mh <= 0 || (phs != -1 && viewz > sectors[phs].floorheight))
@@ -1856,7 +1846,7 @@ void Rend::R_DrawSprite(vissprite_t *spr)
         }
 
       if ((mh = sectors[spr->heightsec].ceilingheight) < spr->gzt &&
-	  (temp = centeryfrac - ((mh-viewz) * spr->scale)) >= 0 &&
+	  (temp = centeryfrac - ((mh-viewz) * spr->yscale)) >= 0 &&
 	  (h = temp.floor()) < viewheight)
         {
 	  if (phs != -1 && viewz >= sectors[phs].ceilingheight)
@@ -1878,11 +1868,11 @@ void Rend::R_DrawSprite(vissprite_t *spr)
       int h;
       for(x = spr->x1; x <= spr->x2; x++)
 	{
-	  h = spr->szt;
+	  h = spr->yt;
 	  if(cliptop[x] == -2 || h > cliptop[x])
 	    cliptop[x] = h;
 
-	  h = spr->sz;
+	  h = spr->yb;
 	  if(clipbot[x] == -2 || h < clipbot[x])
 	    clipbot[x] = h;
 	}
@@ -1892,7 +1882,7 @@ void Rend::R_DrawSprite(vissprite_t *spr)
       int h;
       for(x = spr->x1; x <= spr->x2; x++)
 	{
-	  h = spr->szt;
+	  h = spr->yt;
 	  if(cliptop[x] == -2 || h > cliptop[x])
 	    cliptop[x] = h;
 	}
@@ -1902,7 +1892,7 @@ void Rend::R_DrawSprite(vissprite_t *spr)
       int h;
       for(x = spr->x1; x <= spr->x2; x++)
 	{
-	  h = spr->sz;
+	  h = spr->yb;
 	  if(clipbot[x] == -2 || h < clipbot[x])
 	    clipbot[x] = h;
 	}
