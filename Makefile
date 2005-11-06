@@ -190,6 +190,7 @@ export engine_objects = \
 	$(objdir)/b_path.o
 
 export util_objects = \
+	$(objdir)/ntexture.o \
 	$(objdir)/command.o \
 	$(objdir)/console.o \
 	$(objdir)/dehacked.o \
@@ -258,11 +259,14 @@ export sdl_objects = \
 	$(objdir)/searchp.o
 #	$(objdir)/filesrch.o \
 
+export grammar_objects = \
+	$(objdir)/ntexture.tab.o \
+	$(objdir)/ntexture.yy.o
 
 
 
 objects = $(engine_objects) $(util_objects) $(audio_objects) $(video_objects) \
-	$(net_objects) $(sdl_objects)
+	$(net_objects) $(sdl_objects) $(grammar_objects)
 
 
 
@@ -273,7 +277,7 @@ all	: mkdirobjs $(exename)
 mkdirobjs:
 	mkdir -p objs
 
-.PHONY	: clean depend engine util audio video net sdl tools
+.PHONY	: clean depend engine util audio video net sdl tools grammars
 
 clean	:
 	$(RM) $(objects)
@@ -323,6 +327,10 @@ sdl	:
 tools	:
 	$(MAKE) -C tools
 
+grammars	:
+	$(MAKE) -C grammars
+
+
 
 ifdef DYNAMIC
 # main program
@@ -330,6 +338,6 @@ $(exename) : engine util audio video net sdl
 	$(LD) $(LDFLAGS) $(objects) $(LIBS) -rdynamic -o $@
 else
 # all in one
-$(exename) : engine util audio video net sdl
+$(exename) : engine util audio video net sdl grammars
 	$(LD) $(LDFLAGS) $(objects) $(LIBS) $(OPENGLLIBS) -rdynamic -o $@
 endif
