@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2005/11/06 19:30:36  smite-meister
+// ntexture
+//
 // Revision 1.11  2005/07/20 20:27:23  smite-meister
 // adv. texture cache
 //
@@ -91,6 +94,9 @@ public:
   /// returns the name of the item
   const char *GetName() { return name; };
 
+  /// change the name of the item
+  void SetName(const char *n) { strncpy(name, n, 8); };
+
   void *operator new(size_t size);
   void  operator delete(void *mem);
 };
@@ -123,6 +129,14 @@ public:
   {
     c_map.insert(c_map_t::value_type(p->name, p));
   };
+
+  /// Since hash_map is a unique associative container we need this, cannot just Insert new stuff with same key.
+  inline int Replace(cacheitem_t *p)
+  {
+    int n = c_map.erase(p->name); // erase the old instance by key
+    c_map.insert(c_map_t::value_type(p->name, p));
+    return n;
+  }
 
   /// Tries to find the named item from this datasource.
   inline cacheitem_t *Find(const char *name)

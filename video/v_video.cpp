@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.29  2005/11/06 19:35:15  smite-meister
+// ntexture
+//
 // Revision 1.28  2005/10/05 17:25:53  smite-meister
 // texturecache fix
 //
@@ -332,19 +335,19 @@ void LumpTexture::Draw(int x, int y, int scrn = 0)
     }
 #endif
 
-  byte *dest_left = vid.screens[scrn];
+  byte *dest_tl = vid.screens[scrn];
 
   // location scaling
   if (flags & V_SLOC)
     {
       x *= vid.dupx;
       y *= vid.dupy;
-      dest_left += vid.scaledofs;
+      dest_tl += vid.scaledofs;
     }
 
   // size scaling
-  fixed_t rowfrac = xscale;
-  fixed_t colfrac = yscale;
+  fixed_t colfrac = xscale;
+  fixed_t rowfrac = yscale;
 
   // visible (LFB) width after scaling
   int vis_width  = int(width  / xscale.Float());
@@ -375,46 +378,52 @@ void LumpTexture::Draw(int x, int y, int scrn = 0)
   int y1 = max(y, 0);
 
   // starting location in texture space
-  fixed_t startcol = (x1 - x)*xscale;
+  fixed_t col = (x1 - x)*xscale;
   fixed_t startrow = (y1 - y)*yscale;
 
   if (flags & V_SSIZE)
     {
-      startcol /= vid.dupx;
+      col /= vid.dupx;
       startrow /= vid.dupy;
     }
 
-  dest_left += y1*vid.width + x1; // top left
-  byte *dest_end = dest_left + (y2-y1)*vid.width; // lower left, past-the-end
+  dest_tl += y1*vid.width + x1; // top left
+  byte *dest_tr = dest_tl + x2 - x1; // top right, past-the-end
 
-  byte *base = Generate();
+  int zzz = (y2-y1)*vid.width;
 
-  if (flags & V_SSIZE)
-    for (fixed_t row = startrow; dest_left < dest_end; row += rowfrac, dest_left += vid.width)
-      {
-	byte *source = base + width*(row.floor());
-	byte *dest_right = dest_left + x2 - x1; // past-the-end
-	fixed_t col = startcol;
-	for (byte *dest = dest_left; dest < dest_right; col += colfrac, dest++)
-	  {
-	    byte pixel = source[col.floor()];
+  byte *base = Generate(); // in col-major order!
 
-	    // the compiler is supposed to optimize the ifs out of the loop
-	    if (flags & V_MAP)
-	      pixel = current_colormap[pixel];
 
-	    if (flags & V_TL)
-	      pixel = transtables[0][(pixel << 8) + *dest];
+  for ( ; dest_tl < dest_tr; col += colfrac, dest_tl++)
+    {
+      // LFB limits for the column
+      byte *dest_end = dest_tl + zzz; // past-the-end
+      byte *source = base + height * col.floor();
 
-	    *dest = pixel;
-	  }
-      }
+      fixed_t row = startrow;
+      for (byte *dest = dest_tl; dest < dest_end; row += rowfrac, dest += vid.width)
+	{
+	  byte pixel = source[row.floor()];
+
+	  // the compiler is supposed to optimize the ifs out of the loop
+	  if (flags & V_MAP)
+	    pixel = current_colormap[pixel];
+
+	  if (flags & V_TL)
+	    pixel = transtables[0][(pixel << 8) + *dest];
+
+	  *dest = pixel;
+	}
+    }
+  /*
   else // unscaled, perhaps a bit faster?
-    for (int row = x1-x; dest_left < dest_end; row++, dest_left += vid.width)
+    for ( ; dest_tl < dest_tr; col++, dest_tl++)
       {
-	byte *dest_right = dest_left + x2 - x1;
+	byte *dest_end = dest_tl + x2 - x1;
+	byte *source = base + height * col.floor();
 	int col = y1-y;
-	for (byte *dest = dest_left; dest < dest_right; col++, dest++)
+	for (int row = x1-x; dest_left < dest_end; row++, dest_left += vid.width)
 	  {
 	    byte pixel = base[col];
 
@@ -429,6 +438,7 @@ void LumpTexture::Draw(int x, int y, int scrn = 0)
 	  }
         base += width;
       }
+  */
 }
 
 
@@ -445,8 +455,8 @@ void LumpTexture::DrawFill(int x, int y, int w, int h)
     }
 #endif
 
-  byte *flat = Generate();
-  byte *dest = vid.screens[0] + y*vid.dupy*vid.width + x*vid.dupx + vid.scaledofs;
+  byte *flat = Generate(); // in col-major order
+  byte *base_dest = vid.screens[0] + y*vid.dupy*vid.width + x*vid.dupx + vid.scaledofs;
 
   w *= vid.dupx;
   h *= vid.dupy;
@@ -454,17 +464,17 @@ void LumpTexture::DrawFill(int x, int y, int w, int h)
   fixed_t dx = fixed_t(1) / vid.dupx;
   fixed_t dy = fixed_t(1) / vid.dupy;
 
-  fixed_t yfrac = 0;
-  for (int v=0; v<h; v++, dest += vid.width)
+  fixed_t xfrac = 0;
+  for (int u=0; u<w; u++, xfrac += dx, base_dest++)
     {
-      fixed_t xfrac = 0;
-      byte *src = flat + ((yfrac.floor() % height) * width);
-      for (int u=0; u<w; u++)
+      fixed_t yfrac = 0;
+      byte *src = flat + (xfrac.floor() % width) * height;
+      byte *dest = base_dest;
+      for (int v=0; v<h; v++, yfrac += dy)
         {
-          dest[u] = src[xfrac.floor() % width];
-          xfrac += dx;
+          *dest = src[yfrac.floor() % height];
+	  dest += vid.width;
         }
-      yfrac += dy;
     }
 }
 

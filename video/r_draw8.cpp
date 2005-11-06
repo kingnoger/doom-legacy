@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.7  2005/11/06 19:35:14  smite-meister
+// ntexture
+//
 // Revision 1.6  2005/10/05 17:25:53  smite-meister
 // texturecache fix
 //
@@ -691,15 +694,15 @@ void R_DrawSpan_8()
   int count = ds_x2 - ds_x1 + 1; 
 
   // For efficiency, we software-render only powers-of-two sized textures. Bigger ones are truncated.
-  // spot = ybits:xbits  (row-major)
+  // spot = xbits:ybits  (col-major)
 
-  Uint32 xmask = (1 << ds_xbits) - 1;
-  Uint32 ymask = ((1 << ds_ybits) - 1) << 16;
-  int yshift = 16 - ds_xbits;
+  Uint32 xmask = ((1 << ds_xbits) - 1) << 16; // this way we save one shift in the loop...
+  Uint32 ymask = (1 << ds_ybits) - 1;
+  int xshift = 16 - ds_ybits;
 
   while (count)
     {
-      int spot = ((ds_yfrac.value() & ymask) >> yshift) + ((ds_xfrac.value() >> 16) & xmask);
+      int spot = ((ds_xfrac.value() & xmask) >> xshift) | (ds_yfrac.floor() & ymask);
       *dest++ = ds_colormap[ds_source[spot]];
       ds_xfrac += ds_xstep;
       ds_yfrac += ds_ystep;
@@ -781,15 +784,15 @@ void R_DrawTranslucentSpan_8()
   int count = ds_x2 - ds_x1 + 1; 
 
   // For efficiency, we software-render only powers-of-two sized textures. Bigger ones are truncated.
-  // spot = ybits:xbits  (row-major)
+  // spot = xbits:ybits  (col-major)
 
-  Uint32 xmask = (1 << ds_xbits) - 1;
-  Uint32 ymask = ((1 << ds_ybits) - 1) << 16;
-  int yshift = 16 - ds_xbits;
+  Uint32 xmask = ((1 << ds_xbits) - 1) << 16; // this way we save one shift in the loop...
+  Uint32 ymask = (1 << ds_ybits) - 1;
+  int xshift = 16 - ds_ybits;
 
   while (count)
     {
-      int spot = ((ds_yfrac.value() & ymask) >> yshift) + ((ds_xfrac.value() >> 16) & xmask);
+      int spot = ((ds_xfrac.value() & xmask) >> xshift) | (ds_yfrac.floor() & ymask);
       *dest++ = ds_colormap[ds_transmap[(ds_source[spot] << 8) + *dest]];
       ds_xfrac += ds_xstep;
       ds_yfrac += ds_ystep;

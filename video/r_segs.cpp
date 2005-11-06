@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.20  2005/11/06 19:35:15  smite-meister
+// ntexture
+//
 // Revision 1.19  2005/09/17 17:36:09  smite-meister
 // fixed_t fixes
 //
@@ -216,6 +219,7 @@ static fixed_t         rw_offset2; // for splats
 
 static fixed_t         rw_scale;
 static fixed_t         rw_scalestep;
+/// these are in world coordinates
 static fixed_t         rw_midtexturemid;
 static fixed_t         rw_toptexturemid;
 static fixed_t         rw_bottomtexturemid;
@@ -634,7 +638,7 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
 	      int *xwalllights;
 
 	      sprbotscreen = fixed_t::FMAX;
-	      sprtopscreen = windowtop = (centeryfrac - FixedMul(dc_texturemid, spryscale));
+	      sprtopscreen = windowtop = centeryfrac - (dc_texturemid * spryscale);
 	      fixed_t realbot = windowbottom = tex->height * spryscale + sprtopscreen;
 	      dc_iscale.setvalue(0xffffffffu / unsigned(spryscale.value()));
 
@@ -724,7 +728,7 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
 	      dc_colormap += walllights[index];
             }
 
-	  sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
+	  sprtopscreen = centeryfrac - (dc_texturemid * spryscale);
 	  dc_iscale.setvalue(0xffffffffu / unsigned(spryscale.value()));
             
 	  // draw the texture
@@ -1309,7 +1313,7 @@ void Rend::R_RenderSegLoop()
 	  // single sided line
 	  dc_yl = yl;
 	  dc_yh = yh;
-	  dc_texturemid = rw_midtexturemid;
+	  dc_texturemid = rw_midtexturemid * tex->yscale;
 	  dc_source = tex->GetColumn(texturecolumn);
 	  dc_texheight = tex->height;
 	  //profile stuff ---------------------------------------------------------
@@ -1353,7 +1357,7 @@ void Rend::R_RenderSegLoop()
 		  tex = tc[toptexture];
 		  dc_yl = yl;
 		  dc_yh = mid;
-		  dc_texturemid = rw_toptexturemid;
+		  dc_texturemid = rw_toptexturemid * tex->yscale;
 		  dc_source = tex->GetColumn(texturecolumn);
 		  dc_texheight = tex->height;
 #ifdef HORIZONTALDRAW
@@ -1394,7 +1398,7 @@ void Rend::R_RenderSegLoop()
 		  tex = tc[bottomtexture];
 		  dc_yl = mid;
 		  dc_yh = yh;
-		  dc_texturemid = rw_bottomtexturemid;
+		  dc_texturemid = rw_bottomtexturemid * tex->yscale;
 		  dc_source = tex->GetColumn(texturecolumn);
 		  dc_texheight = tex->height;
 #ifdef HORIZONTALDRAW

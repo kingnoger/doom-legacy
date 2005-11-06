@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.8  2005/11/06 19:35:14  smite-meister
+// ntexture
+//
 // Revision 1.7  2005/10/05 17:25:53  smite-meister
 // texturecache fix
 //
@@ -115,7 +118,7 @@ PNGTexture::PNGTexture(const char *n, int l)
 byte *PNGTexture::Generate()
 {
   if (!pixels)
-    pixels = ReadData(true);
+    ReadData(true);
 
   return pixels;
 }
@@ -156,7 +159,7 @@ byte *PNGTexture::ReadData(bool read_image)
   // read the PNG info chunks
   png_read_info(png_p, info_p);
 
-  Uint32 w, h;
+  png_uint_32 w, h;
   int bit_depth, color_type;
   png_get_IHDR(png_p, info_p, &w, &h, &bit_depth, &color_type, NULL, NULL, NULL);
 
@@ -243,11 +246,19 @@ byte *PNGTexture::ReadData(bool read_image)
       Z_Free(tmpdata); // free the raw data
 
       // now convert RBG_t to current palette...
-      tmpdata = static_cast<byte *>(Z_Malloc(w * h, PU_TEXTURE, NULL));
+      int len = w * h;
+      Z_Malloc(len, PU_TEXTURE, (void **)(&pixels));
 
       // this takes some time, so better do it only once (never flush PNG textures automatically)
-      for (i=0; i < w*h; i++)
-        tmpdata[i] = NearestColor(rgb_buf[i].r, rgb_buf[i].g, rgb_buf[i].b);
+      // colormap and transpose to col-major order
+      int dest = 0;
+      for (i=0; i<len; i++)
+	{
+	  pixels[dest] = NearestColor(rgb_buf[i].r, rgb_buf[i].g, rgb_buf[i].b);
+	  dest += height;
+	  if (dest >= len)
+	    dest -= len - 1; // next column
+	}
 
       Z_Free(rgb_buf); // free the RGB data
     }

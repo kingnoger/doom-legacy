@@ -17,8 +17,8 @@
 //
 //
 // $Log$
-// Revision 1.23  2005/10/05 17:25:08  smite-meister
-// texturecache fix
+// Revision 1.24  2005/11/06 19:30:36  smite-meister
+// ntexture
 //
 // Revision 1.22  2005/09/29 15:35:27  smite-meister
 // JDS texture standard
@@ -55,9 +55,6 @@
 //
 // Revision 1.10  2004/08/15 18:08:29  smite-meister
 // palette-to-palette colormaps etc.
-//
-// Revision 1.8  2004/08/12 18:30:29  smite-meister
-// cleaned startup
 //
 // Revision 1.6  2004/04/25 16:26:51  smite-meister
 // Doxygen
@@ -166,7 +163,7 @@ public:
 
   union
   {
-    byte  *pixels;
+    byte  *pixels; ///< raw bitmap data in column-major order for sw renderer
 #ifdef HWRENDER
     class GLTexture *gltex;  // for hardware renderer
 #endif
@@ -190,13 +187,13 @@ public:
   void *operator new(size_t size);
   void  operator delete(void *mem);
 
-  /// HACK for sw renderer, means that texture is in column_t format
+  /// sw renderer: True means that texture is available in column_t format using GetMaskedColumn
   virtual bool Masked() { return false; };
 
   /// sw renderer: Get masked column data. if Masked() is false, returns NULL
   virtual column_t *GetMaskedColumn(int col) = 0;
 
-  /// sw renderer: Get raw texture column data.
+  /// sw renderer: Get raw unmasked texture column data.
   virtual byte *GetColumn(int col) = 0;
 
   /// Get raw column-major texture data.
@@ -212,15 +209,16 @@ public:
 
 
 
-/// \brief Row-major Textures which reside in a single lump.
-/// raw (flat, fullscreen pic), png, jpeg...
+/// \brief Textures which reside in a single lump.
+/// This class handles raw pages and Doom flats, derived classes handle png and jpeg,
+/// ideally by redefining the constructor and the function Generate() only.
 class LumpTexture : public Texture
 {
 public:
   int    lump;
 
 protected:
-  virtual byte *Generate();   ///< returns row-major data, subclasses redefine this
+  virtual byte *Generate();         ///< subclasses should redefine this
   virtual void HWR_Prepare();
 
 public:
@@ -243,7 +241,7 @@ class PNGTexture : public LumpTexture
 protected:
   byte *ReadData(bool read_image);
 
-  virtual byte *Generate();   ///< returns row-major data
+  virtual byte *Generate();
   virtual void HWR_Prepare();
 
 public:
@@ -274,7 +272,8 @@ public:
   virtual bool Masked() { return true; };
   virtual column_t *GetMaskedColumn(int col);
   virtual byte *GetColumn(int col);
-  virtual byte *GetData();
+  virtual byte *GetData() { return GenerateData(); }
+
   virtual void Draw(int x, int y, int scrn);
   virtual void HWR_Draw(int x, int y, int flags);
 };
@@ -285,7 +284,6 @@ public:
 ///
 /// All the patches are drawn back to front into the cached texture.
 /// In SW mode, the texture data is stored in column-major order (like patches)
-
 class DoomTexture : public Texture
 {
 public:
@@ -304,7 +302,7 @@ public:
 
   Uint32     *columnofs;   ///< offsets from texdata to raw column data
   byte       *patch_data;  ///< texture data in patch_t format
-  byte       *bitmap_data; ///< texture data in raw column-major format
+  //byte       *bitmap_data; ///< texture data in raw column-major format
 
 protected:
   short       widthmask;  ///<  (1 << w_bits) - 1
@@ -321,7 +319,7 @@ public:
   virtual bool Masked() { return (patchcount == 1); };
   virtual column_t *GetMaskedColumn(int col);
   virtual byte *GetColumn(int col);
-  virtual byte *GetData();
+  virtual byte *GetData() { return GenerateData(); }
 };
 
 
@@ -362,14 +360,11 @@ protected:
   /// sw renderer: colormaps for palette conversions (one for each resource file)
   std::vector<byte *> palette_conversion;
 
-  /// generates a Texture from a single data lump
-  Texture *Load(const char *p);
-
   /// inserts a Texture into the given source
-  void Insert(Texture *t, cachesource_t &s, bool keep_old = false);
+  bool Insert(Texture *t, cachesource_t &s, bool keep_old = false);
 
   /// Creates a Texture from the lump, inserts it to the given source.
-  bool BuildLumpTexture(int lump, bool allow_patch, bool h_start, cachesource_t &source);
+  bool BuildLumpTexture(int lump, bool h_start, cachesource_t &source);
 
 public:
   texturecache_t(memtag_t tag);
@@ -379,6 +374,12 @@ public:
 
   /// empties the cache, deletes all Textures
   void Clear();
+
+  /// generates a Texture from a single data lump
+  static Texture *Load(const char *p);
+
+  /// Insert a Texture into the new_tex source, used by NTEXTURE parser.
+  inline void InsertTexture(Texture *t) { Insert(t, new_tex, false); };
 
   /// Insert a Texture into the flat source, used by animated textures.
   /// Pointers to original Textures are preserved in the master animation.
@@ -411,7 +412,7 @@ public:
     return t ? t->id : 0;
   };
 
-  /// First checks if the lump is a valid colormap (or transmap). If not, acts like GetPtr(name, TEX_wall);
+  /// First checks if the lump is a valid colormap (or transmap). If not, acts like GetID(name, TEX_wall);
   int GetTextureOrColormap(const char *name, class fadetable_t*& cmap);
   int GetTextureOrTransmap(const char *name, int& map_num);
 

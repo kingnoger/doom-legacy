@@ -16,14 +16,11 @@
 // for more details.
 //
 // $Log$
+// Revision 1.28  2005/11/06 19:36:53  smite-meister
+// ntexture
+//
 // Revision 1.27  2005/05/29 11:30:42  segabor
 // Fixed __APPLE directive__ to __APPLE_CC__ on Mac OS X, new 'Doom Legacy' Xcode project target
-//
-// Revision 1.26  2005/05/26 17:22:51  smite-meister
-// windows alpha fix
-//
-// Revision 1.25  2005/05/17 13:57:49  smite-meister
-// little fixes
 //
 // Revision 1.24  2005/03/19 13:51:30  smite-meister
 // sound samplerate fix
@@ -113,6 +110,7 @@
 #include "hardware/hw3sound.h"
 #include "z_zone.h"
 
+#include "m_fixed.h"
 #include "m_swap.h"
 #include "i_system.h"
 #include "i_sound.h"
@@ -140,16 +138,16 @@ public:
   channel_t *ch;
 
   // The channel data pointers, start and end.
-  Uint8* data;
-  Uint8* end;
+  Uint8 *data;
+  Uint8 *end;
 
   // pitch and samplerate fused together
-  Uint32 step;          // The channel step amount...
-  Uint32 stepremainder; // ... and a 0.16 bit remainder of last step.
+  fixed_t step;          // The channel step amount...
+  fixed_t stepremainder; // ... and a 0.16 bit remainder of last step.
 
   // Hardware left and right channel volume lookup.
-  int*  leftvol_lookup;
-  int*  rightvol_lookup;
+  int *leftvol_lookup;
+  int *rightvol_lookup;
 
   // calculate sound parameters using ch
   void CalculateParams();
@@ -161,10 +159,10 @@ static vector<chan_t> channels;
 
 // Pitch to stepping lookup in 16.16 fixed point. 64 pitch units = 1 octave
 //  0 = 0.25x, 128 = 1x, 256 = 4x
-static Uint32 steptable[256];
+static fixed_t steptable[256];
 
 // Volume lookups.
-static int vol_lookup[128*256];
+static int vol_lookup[128][256];
 
 // Buffer for MIDI
 static byte *musicbuffer;
@@ -192,14 +190,14 @@ static void I_SetChannels()
 
   // This table provides step widths for pitch parameters.
   for (i = 0; i < 256; i++)
-    steptable[i] = int(pow(2.0, ((i-128)/64.0))*65536.0);
+    steptable[i] = float(pow(2.0, ((i-128)/64.0)));
 
   // Generates volume lookup tables
   //  which also turn the U8 samples
   //  into S16 samples.
   for (i=0 ; i<128 ; i++)
     for (j=0 ; j<256 ; j++)
-      vol_lookup[i*256+j] = (i*(j-128)*256)/127;
+      vol_lookup[i][j] = (i*(j-128)*256)/127;
 }
 
 /*
@@ -234,7 +232,7 @@ void I_SetSfxVolume(int volume)
 void chan_t::CalculateParams()
 {
   // how fast should the sound sample be played?
-  step = int(steptable[ch->opitch] * (double(ch->si->rate) / audio.freq));
+  step = (double(ch->si->rate) / audio.freq) * steptable[ch->opitch];
 
   // x^2 separation, that is, orientation/stereo.
   //  range is: 0 (left) - 255 (right)
@@ -258,8 +256,8 @@ void chan_t::CalculateParams()
 
   // Get the proper lookup table piece
   //  for this volume level???
-  leftvol_lookup = &vol_lookup[leftvol*256];
-  rightvol_lookup = &vol_lookup[rightvol*256];
+  leftvol_lookup = vol_lookup[leftvol];
+  rightvol_lookup = vol_lookup[rightvol];
 }
 
 //----------------------------------------------
@@ -415,9 +413,9 @@ static void I_UpdateSound_sdl(void *unused, Uint8 *stream, int len)
 	      // pitch.
 	      c->stepremainder += c->step;
 	      // 16.16 fixed point: high word is the current stride
-	      c->data += c->stepremainder >> 16;
+	      c->data += c->stepremainder.floor();
 	      // cut away high word
-	      c->stepremainder &= 0xffff;
+	      c->stepremainder = c->stepremainder.frac();
 	      
 	      // Check whether data is exhausted.
 	      if (c->data >= c->end)
