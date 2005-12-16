@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.66  2005/12/16 18:18:21  smite-meister
+// Deus Vult BLOCKMAP fix
+//
 // Revision 1.65  2005/09/29 15:35:26  smite-meister
 // JDS texture standard
 //
@@ -980,8 +983,8 @@ void Map::LoadSideDefs2(int lump)
 
 void Map::LoadBlockMap(int lump)
 {
-  blockmaplump = (Uint16 *)fc.CacheLumpNum(lump, PU_LEVEL);
-  blockmap = blockmaplump+4; // the offsets array
+  Uint16 *blockmaplump = (Uint16 *)fc.CacheLumpNum(lump, PU_LEVEL);
+  Uint16 *blockmap = blockmaplump + 4; // the offsets array
 
   // Endianness: everything in blockmap is expressed in 2-byte shorts
   int size = fc.LumpLength(lump)/2;
@@ -995,11 +998,18 @@ void Map::LoadBlockMap(int lump)
   bmapwidth = bm->width;
   bmapheight = bm->height;
 
+  int count = bmapwidth * bmapheight;
   // check the blockmap for errors
   int errors = 0;
-  int first = 4 + bmapwidth*bmapheight; // first possible blocklist offset (in shorts)
+  int first = 4 + count; // first possible blocklist offset (in shorts)
+  int list_size = size - first;
 
-  if (size < first+2) // one empty blocklist (two shorts) is the minimal size
+  // we make a new 32-bit blockmap index
+  bmap.index = (Uint16 **)Z_Malloc(count * sizeof(Uint16 *), PU_LEVEL, 0);
+  bmap.lists = (Uint16 *)Z_Malloc(list_size * sizeof(Uint16), PU_LEVEL, 0);
+  memcpy(bmap.lists, &blockmaplump[first], 2*list_size); // copy the lists
+
+  if (list_size < 2) // one empty blocklist (two shorts) is the minimal size
     {
       CONS_Printf(" Blockmap lump is too small!\n");
       errors++;
@@ -1008,44 +1018,57 @@ void Map::LoadBlockMap(int lump)
   if (size > 0x10000+1) // largest, always fully addressable blockmap
     CONS_Printf(" Warning: Blockmap may be too large.\n");
 
-  int count = bmapwidth*bmapheight;
+
   for (int i=0; i < count && errors < 50; i++)
-    if (blockmap[i] < first)
-      {
-	CONS_Printf(" Invalid blocklist offset for cell %d: %d\n", i, blockmap[i]);
-	errors++;
-      }
-    else
-      {
-	int offs = blockmap[i];
-	if (blockmaplump[offs] != 0x0000)
-	  {
-	    CONS_Printf(" Blocklist %d does not start with zero!\n", i);
-	    errors++;
-	  }
+    {
+      int offs = blockmap[i] - first;
+      if (offs < 0)
+	{
+	  //CONS_Printf(" Invalid blocklist offset for cell %d: %d\n", i, blockmap[i]);
+	  //errors++;
+	  // TEST: assume that (short) offset has overflowed, fix
+	  offs += 0x10000;
+	}
 
-	while (offs < size && blockmaplump[offs] != 0xFFFF)
-	  offs++;
+      if (offs >= list_size)
+	{
+	  CONS_Printf(" Blocklist %d offset points past the lump!\n", i);
+	  errors++;
+	  continue;
+	}
 
-	if (offs >= size)
-	  {
-	    CONS_Printf(" Blocklist %d extends beyond the lump size!\n", i);
-	    errors++;
-	  }
-      }
+      // build new blockmap index
+      bmap.index[i] = &bmap.lists[offs+1]; // skip the zero marker
+
+      if (bmap.lists[offs] != 0x0000)
+	{
+	  CONS_Printf(" Blocklist %d does not start with zero!\n", i);
+	  errors++;
+	}
+
+      while (offs < list_size && bmap.lists[offs] != MAPBLOCK_END)
+	offs++;
+
+      if (offs >= list_size)
+	{
+	  CONS_Printf(" Blocklist %d is unterminated!\n", i);
+	  errors++;
+	  continue;
+	}
+    }
 
   if (errors)
     I_Error("Blockmap (%dx%d cells, %d bytes) had some errors.\n", bmapwidth, bmapheight, 2*size);
 
+  Z_Free(blockmaplump);
+
   // init the mobj chains
-  count = bmapwidth*bmapheight*sizeof(Actor *);
-  blocklinks = (Actor **)Z_Malloc(count, PU_LEVEL, 0);
-  memset(blocklinks, 0, count);
+  blocklinks = (Actor **)Z_Malloc(count * sizeof(Actor *), PU_LEVEL, 0);
+  memset(blocklinks, 0, count * sizeof(Actor *));
 
   // init the polyblockmap
-  count = bmapwidth*bmapheight*sizeof(polyblock_t *);
-  PolyBlockMap = (polyblock_t **)Z_Malloc(count, PU_LEVEL, 0);
-  memset(PolyBlockMap, 0, count);
+  PolyBlockMap = (polyblock_t **)Z_Malloc(count * sizeof(polyblock_t *), PU_LEVEL, 0);
+  memset(PolyBlockMap, 0, count * sizeof(polyblock_t *));
 }
 
 
@@ -1252,9 +1275,10 @@ bool Map::Setup(tic_t start, bool spawnthings)
 
   SetupSky();
 
-  // note: most of this ordering is important
-  LoadBlockMap(lumpnum+LUMP_BLOCKMAP);
+  // NOTE: most of this ordering is important
   LoadVertexes(lumpnum+LUMP_VERTEXES);
+  LoadBlockMap(lumpnum+LUMP_BLOCKMAP);
+
   LoadSectors1(lumpnum+LUMP_SECTORS);
   LoadSideDefs(lumpnum+LUMP_SIDEDEFS);
   LoadLineDefs(lumpnum+LUMP_LINEDEFS);

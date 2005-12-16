@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.45  2005/12/16 18:18:35  smite-meister
+// Deus Vult BLOCKMAP fix
+//
 // Revision 1.44  2005/09/29 15:35:27  smite-meister
 // JDS texture standard
 //
@@ -199,11 +202,16 @@ public:
 #define MAXRADIUS       32
 #define MAPBLOCK_END    0xFFFF ///< terminator for a blocklist
 
+  // I'm too lazy to move these into the struct...
   fixed_t bmaporgx, bmaporgy;    ///< origin (lower left corner) of block map in map coordinates
   int     bmapwidth, bmapheight; ///< size of the blockmap in mapblocks
 
-  Uint16 *blockmap;         ///< width*height array of offsets to the blocklists
-  Uint16 *blockmaplump;     ///< blocklists are situated at blockmaplump[offset]
+  struct blockmap_t
+  {
+    Uint16 **index;  ///< width*height array of pointers to the blocklists
+    Uint16  *lists;  ///< packed array of -1 terminated blocklists
+  } bmap;
+
   class  Actor       **blocklinks;   ///< width*height array of thing chains
   struct polyblock_t **PolyBlockMap; ///< width*height array of polyblock chains
   //@}

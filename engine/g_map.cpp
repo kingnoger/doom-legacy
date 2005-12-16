@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.63  2005/12/16 18:18:21  smite-meister
+// Deus Vult BLOCKMAP fix
+//
 // Revision 1.62  2005/09/29 15:15:19  smite-meister
 // aiming fix
 //
@@ -162,8 +165,10 @@ Map::Map(MapInfo *i)
   PolyBlockMap = NULL;
   linebuffer = NULL;
 
-  blockmap = blockmaplump = NULL;
+  bmap.index = NULL;
+  bmap.lists = NULL;
   blocklinks = NULL;
+
   rejectmatrix = NULL;
 
   fadetable = NULL;
@@ -200,7 +205,8 @@ Map::~Map()
   Z_Free(sides);
   Z_Free(linebuffer);
 
-  Z_Free(blockmaplump);
+  Z_Free(bmap.index);
+  Z_Free(bmap.lists);
 
   if (polyobjs)
     {

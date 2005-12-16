@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.48  2005/12/16 18:18:21  smite-meister
+// Deus Vult BLOCKMAP fix
+//
 // Revision 1.47  2005/10/03 17:12:25  smite-meister
 // zdoom fix
 //
@@ -893,7 +896,7 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
 
     case DOOM_Damage_EndLevel: // level end hurt need special handling
       dam = 20;
-      sp |= 11; // FIXME
+      sp |= SS_EndLevelHurt; // HACK
       break;
 
     case DOOM_SpawnDoorClose30s: // after 30 s, close door
@@ -1298,7 +1301,7 @@ void Map::SpawnLineSpecials()
 
 	    for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0;)
 	      if (special == 209)
-		sectors[s].heightsec = sec;
+		sectors[s].heightsec = sec; // TODO "when" parameter
 	      else if (special == 210)
 		sectors[s].floorlightsec = sec;
 	      else

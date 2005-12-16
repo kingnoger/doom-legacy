@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.33  2005/12/16 18:18:21  smite-meister
+// Deus Vult BLOCKMAP fix
+//
 // Revision 1.32  2005/09/29 15:35:27  smite-meister
 // JDS texture standard
 //
@@ -806,8 +809,16 @@ void SF_Spawn()
   if (objtype < 0 || objtype >= NUMMOBJTYPES)
     { script_error("unknown object type: %i\n", objtype); return; }
 
-  t_return.value.mobj = current_map->SpawnDActor(x,y,z, objtype);
-  t_return.value.mobj->yaw = angle;
+  DActor *p = current_map->SpawnDActor(x,y,z, objtype);
+  p->yaw = angle;
+
+  // TEST, update counters
+  if (p->flags & MF_COUNTKILL)
+    current_map->kills++;
+  if (p->flags & MF_COUNTITEM)
+    current_map->items++;
+
+  t_return.value.mobj = p;
 }
 
 

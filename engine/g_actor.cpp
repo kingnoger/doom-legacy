@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.46  2005/12/16 18:18:20  smite-meister
+// Deus Vult BLOCKMAP fix
+//
 // Revision 1.45  2005/09/29 15:35:24  smite-meister
 // JDS texture standard
 //
@@ -1240,14 +1243,17 @@ bool DActor::SetState(statenum_t ns, bool call)
 // The old corpse is removed, a new monster appears at the old one's spawnpoint
 void DActor::NightmareRespawn()
 {
-  fixed_t  nx, ny, nz;
+  mapthing_t *mthing = spawnpoint;
+  if (!mthing)
+    return; // no spawnpoint, no respawn
 
-  nx = spawnpoint->x;
-  ny = spawnpoint->y;
+  fixed_t  nx, ny, nz;
+  nx = mthing->x;
+  ny = mthing->y;
 
   // somthing is occupying it's position?
   if (!CheckPosition(nx, ny))
-    return; // no respwan
+    return; // no respwan (will try again later!)
 
   // spawn a teleport fog at old spot
   // because of removal of the body?
@@ -1263,18 +1269,16 @@ void DActor::NightmareRespawn()
 		   (game.mode == gm_heretic ? TELEFOGHEIGHT : 0) , MT_TFOG);
   S_StartSound(mo, sfx_teleport);
 
-  // spawn the new monster
-  mapthing_t *mthing = spawnpoint;
-
   // spawn it
   if (info->flags & MF_SPAWNCEILING)
     nz = ONCEILINGZ;
   else
     nz = ONFLOORZ;
 
+  // spawn the new monster
   // inherit attributes from deceased one
   mo = mp->SpawnDActor(nx, ny, nz, type);
-  mo->spawnpoint = spawnpoint;
+  mo->spawnpoint = mthing;
   mo->yaw = ANG45 * (mthing->angle/45);
 
   if (mthing->flags & MTF_AMBUSH)

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2005/12/16 18:18:21  smite-meister
+// Deus Vult BLOCKMAP fix
+//
 // Revision 1.21  2005/09/29 15:15:19  smite-meister
 // aiming fix
 //
@@ -453,9 +456,9 @@ bool Map::BlockLinesIterator(int x, int y, line_iterator_t func)
     return true;
 
   // first iterate through polyblockmap, then normal blockmap
-  int offset = y*bmapwidth + x;
+  int cell = y*bmapwidth + x;
 
-  polyblock_t *polyLink = PolyBlockMap[offset];
+  polyblock_t *polyLink = PolyBlockMap[cell];
 
   while (polyLink)
     {
@@ -479,9 +482,8 @@ bool Map::BlockLinesIterator(int x, int y, line_iterator_t func)
       polyLink = polyLink->next;
     }
 
-  offset = blockmap[offset];
-
-  for (Uint16 *p = &blockmaplump[offset+1]; *p != MAPBLOCK_END; p++) // skip the initial zero marker
+  // iterate through the blocklist
+  for (Uint16 *p = bmap.index[cell]; *p != MAPBLOCK_END; p++) // index skips the initial zero marker
     {
       line_t *ld = &lines[*p];
 
