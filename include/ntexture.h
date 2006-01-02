@@ -35,6 +35,7 @@ public:
   Texture *t;
   LumpTexture dummy;
   bool texeloffsets;
+  bool is_sprite;
 
   ntexture_driver(int lump);
   virtual ~ntexture_driver();

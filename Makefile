@@ -45,9 +45,9 @@ ifdef LINUX
  nasmformat = elf - DLINUX # hmmm... a define here...
 # compiler
  platform = -DLINUX
- interface = -DSDL
+ interface = -DSDL -DNOMIXER
 # linker
- LIBS	= -L/usr/X11/lib -lSDLmain -lSDL -lSDL_mixer -lpng -lz -L. -ltnl -ltomcrypt
+ LIBS	= -L/usr/X11/lib -L/local/lib -lSDLmain -lSDL -lSDL_mixer -lpng -lz -L. -ltnl -ltomcrypt
  OPENGLLIBS = -lGL -lGLU
 # OPENGLLIBS = -lGL -lGLU -lCg -lCgGL
  LDFLAGS = -Wall
@@ -81,7 +81,7 @@ export RM
 export LDFLAGS
 
 # C++ compiler (usually g++)
-export CC = g++-3.3
+export CC = g++
 
 # Defines.
 #
@@ -106,7 +106,8 @@ export CC = g++-3.3
 
 
 defines := $(platform) $(interface) $(linkage) -DHWRENDER
-export CF := $(DEBUGFLAGS) $(OPTFLAGS) -Wall $(EXTRAFLAGS) $(defines) #-ansi
+export CF := $(DEBUGFLAGS) $(OPTFLAGS) -Wall $(EXTRAFLAGS) $(defines) -I/local/include
+ #-ansi
 INCLUDES = -Iinclude
 CFLAGS = $(CF) $(INCLUDES)
 

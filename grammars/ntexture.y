@@ -1,7 +1,7 @@
 // Emacs style mode select   -*- C++ -*-
-// GNU Bison 2.0 grammar for the JDS NTEXTURE lumps
-// Generates a C++ parser class
-// Ville Bergholm 2005
+// GNU Bison 2.0 grammar for the JDS NTEXTURE lumps.
+// Generates a C++ parser class.
+// Copyright (C) Ville Bergholm 2005-2006
 
 %skeleton "lalr1.cc"
 %define "parser_class_name" "ntexture_parser"
@@ -33,7 +33,7 @@
 %token <stype> STR
 
 // keywords
-%token TEXTURE
+%token TEXTURE SPRITE
 %token DATA WORLDSIZE SCALE TEXELOFFSETS OFFSET
 
 //%left, %right, %nonassoc    // token precedence
@@ -69,11 +69,12 @@ definitions
 
 // single texture declaration
 texture
-: TEXTURE STR '{'
+: tex_type STR '{'
     {
       d.texname = $2;
       d.t = NULL;
       d.texeloffsets = false;
+      d.is_sprite = false;
     }
   tex_initialization tex_properties '}'
     {
@@ -81,7 +82,10 @@ texture
       if (d.t != &d.dummy)
 	{
 	  CONS_Printf(" Built texture '%s'.\n", d.t->GetName());
-	  tc.InsertTexture(d.t);
+	  if (d.is_sprite)
+	    tc.InsertSprite(d.t);
+	  else
+	    tc.InsertTexture(d.t);
 	}
     }
 /*
@@ -100,7 +104,12 @@ texture
 //| error { yyerrok; }
 ;
 
-// one or the another, not both
+tex_type
+: TEXTURE { d.is_sprite = false; }
+| SPRITE  { d.is_sprite = true;  }
+;
+
+// one or the other, not both
 tex_initialization
 : DATA STR ';'
     {
@@ -124,9 +133,9 @@ tex_properties
 // now we know that t points to a valid texture object, let's just fill in the properties
 tex_property
 : WORLDSIZE num num ';' { d.t->xscale = d.t->width/$2; d.t->yscale = d.t->height/$3; }
-| SCALE num num ';' { d.t->yscale = 1/$2; d.t->xscale = d.t->yscale/$3; /* TODO like this??? */ } 
-| SCALE num ';'     { d.t->xscale = d.t->yscale = 1/$2; }
-| TEXELOFFSETS ';'  { d.texeloffsets = true; }
+| SCALE num num ';'     { d.t->yscale = 1/$2; d.t->xscale = d.t->yscale/$3; /* TODO like this??? */ } 
+| SCALE num ';'         { d.t->xscale = d.t->yscale = 1/$2; }
+| TEXELOFFSETS num ';'  { d.texeloffsets = $2; }
 | OFFSET num num ';'
     {
       if (d.texeloffsets)

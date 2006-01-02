@@ -57,6 +57,7 @@ WHITESP [ \t\v\n\r\f]
 %{ // keywords
 %}
 texture      { return TEXTURE; }
+sprite       { return SPRITE; }
 data         { return DATA; }
 worldsize    { return WORLDSIZE; }
 scale        { return SCALE; }

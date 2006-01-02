@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.28  2006/01/02 17:02:31  smite-meister
+// small fixes
+//
 // Revision 1.27  2005/10/05 17:25:37  smite-meister
 // texturecache fix
 //
@@ -258,6 +261,7 @@ consvar_t cv_nomonsters = {"nomonsters", "0", CV_NETVAR, CV_OnOff};
 consvar_t cv_fastmonsters = {"fastmonsters", "0", CV_NETVAR | CV_CALL, CV_OnOff,FastMonster_OnChange};
 consvar_t cv_solidcorpse  = {"solidcorpse", "0", CV_NETVAR, CV_OnOff};
 consvar_t cv_voodoodolls  = {"voodoodolls", "1", CV_NETVAR, CV_OnOff};
+consvar_t cv_infighting  = {"infighting", "1", CV_NETVAR, CV_OnOff};
 
 
 void TeamPlay_OnChange()
@@ -757,6 +761,7 @@ void SV_Init()
   cv_fastmonsters.Reg();
   cv_solidcorpse.Reg();
   cv_voodoodolls.Reg();
+  cv_infighting.Reg();
 
   cv_playdemospeed.Reg();
   cv_netstat.Reg();

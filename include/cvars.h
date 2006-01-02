@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.11  2006/01/02 17:02:30  smite-meister
+// small fixes
+//
 // Revision 1.10  2005/04/17 17:47:54  smite-meister
 // netcode
 //
@@ -92,6 +95,7 @@ extern consvar_t cv_nomonsters;
 extern consvar_t cv_fastmonsters;
 extern consvar_t cv_solidcorpse;
 extern consvar_t cv_voodoodolls;
+extern consvar_t cv_infighting;
 
 // client info (server needs to know)
 extern consvar_t cv_splitscreen;

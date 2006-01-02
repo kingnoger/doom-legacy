@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.45  2006/01/02 17:02:30  smite-meister
+// small fixes
+//
 // Revision 1.44  2005/09/11 16:22:54  smite-meister
 // template classes
 //
@@ -737,10 +740,11 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 
   // get angry
   if ((!threshold || type == MT_VILE) && source && (source != target))
-      //&& source->type != MT_VILE
       //&& !(source->flags2 & MF2_BOSS)
-      //&& !(type == MT_SORCERER2 && source->type == MT_WIZARD))
     {
+      if (source->team == team && cv_infighting.value == 0)
+	return true;
+
       if (source->IsOf(DActor::_type))
 	{
 	  DActor *ds = (DActor *)source;

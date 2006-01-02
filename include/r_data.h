@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.25  2006/01/02 17:02:30  smite-meister
+// small fixes
+//
 // Revision 1.24  2005/11/06 19:30:36  smite-meister
 // ntexture
 //
@@ -380,6 +383,9 @@ public:
 
   /// Insert a Texture into the new_tex source, used by NTEXTURE parser.
   inline void InsertTexture(Texture *t) { Insert(t, new_tex, false); };
+
+  /// Insert a Texture into the sprite_tex source, used by NTEXTURE parser.
+  inline void InsertSprite(Texture *t) { Insert(t, sprite_tex, false); };
 
   /// Insert a Texture into the flat source, used by animated textures.
   /// Pointers to original Textures are preserved in the master animation.

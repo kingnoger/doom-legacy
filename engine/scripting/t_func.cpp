@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.34  2006/01/02 17:02:30  smite-meister
+// small fixes
+//
 // Revision 1.33  2005/12/16 18:18:21  smite-meister
 // Deus Vult BLOCKMAP fix
 //
@@ -992,8 +995,8 @@ void SF_DamageObj()
     mo->Damage(NULL, current_script->trigger, damageamount);
 }
 
-        // the tag number of the sector the thing is in
-void SF_ObjSector()
+/// the tag number of the sector the thing is in
+void SF_ObjSector() // TODO misleading name! ObjSectorTag would be more accurate.
 {
   // use trigger object if not specified
   Actor *mo = t_argc ? MobjForSvalue(t_argv[0]) : current_script->trigger;
@@ -1002,7 +1005,7 @@ void SF_ObjSector()
   t_return.value.i = mo ? mo->subsector->sector->tag : 0; // nullptr check
 }
 
-        // the health number of an object
+/// the health of an object
 void SF_ObjHealth()
 {
   // use trigger object if not specified
