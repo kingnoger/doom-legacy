@@ -66,11 +66,12 @@ offset       { return OFFSET; }
 
 
 %{
-// hexadecimals, octals?
-//0[xX]{H}+  { yylval->itype = strtol(yytext, NULL, 16); return INT; }
+// octals? can be confusing...
 //0{D}+	     { yylval->itype = strtol(yytext, NULL, 8);  return INT; }
 %}
-{D}+	     { yylval->itype = strtol(yytext, NULL, 10); return INT; }
+
+0[xX]{H}+  { yylval->itype = strtol(yytext, NULL, 16); return INT; }
+{D}+	   { yylval->itype = strtol(yytext, NULL, 10); return INT; }
 
 {D}+{E}          |
 {D}*"."{D}+{E}?	 |
