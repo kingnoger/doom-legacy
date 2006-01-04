@@ -96,6 +96,7 @@ const char *FileCache::Access(const char *f)
 // Pass a null terminated list of files to use.
 // All files are optional, but at least one file must be found.
 // The name searcher looks backwards, so a later file does override all earlier ones.
+// Also adds GWA files if they exist.
 
 bool FileCache::InitMultipleFiles(const char *const*filenames)
 {
@@ -104,8 +105,35 @@ bool FileCache::InitMultipleFiles(const char *const*filenames)
 
   for ( ; *filenames != NULL; filenames++)
     {
-      if (AddFile(*filenames) == -1)
+      const char *curfile = *filenames;
+      char *gwafilename;
+      int fnamelen;
+
+      fnamelen = strlen(curfile);
+      gwafilename = (char*)malloc(fnamelen+1);
+      fnamelen = strlen(curfile);
+      strcpy(gwafilename, curfile);
+
+      if (AddFile(curfile) == -1)
 	result = false;
+
+      // Try both upper and lower case.
+      gwafilename[fnamelen-3] = 'g';
+      gwafilename[fnamelen-2] = 'w';
+      gwafilename[fnamelen-1] = 'a';
+      if(AddFile(gwafilename) != -1)
+	CONS_Printf("Added GL information from file %s.\n", gwafilename);
+      else {
+	gwafilename[fnamelen-3] = 'G';
+	gwafilename[fnamelen-2] = 'W';
+	gwafilename[fnamelen-1] = 'A';
+	if(AddFile(gwafilename) != -1)
+	  CONS_Printf("Added GL information from file %s.\n", gwafilename);
+	else
+	  CONS_Printf("No GL information for file %s.\n", curfile);
+      }
+
+      free(gwafilename);
     }
 
   if (vfiles.size() == 0)
