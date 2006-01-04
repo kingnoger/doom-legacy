@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.21  2006/01/04 23:15:08  jussip
+// Read and convert GL nodes if they exist.
+//
 // Revision 1.20  2005/09/29 15:35:27  smite-meister
 // JDS texture standard
 //
@@ -147,6 +150,8 @@
 #include "m_fixed.h"
 #include "m_bbox.h"
 
+// GL node struct definitions are here.
+#include"doomdata.h"
 
 /// \brief Your plain vanilla vertex
 struct vertex_t
@@ -636,5 +641,12 @@ enum mapthing_flags_e
   MTF_GDEATHMATCH = 0x0400 ///< appears in dm games
 };
 
+// GL node definitions. Currently we use the v5 GL nodes directly.
+// This is not very optimal, but it will do for the moment.
+
+typedef mapglvertex_t glvertex_t;
+typedef mapgl5seg_t glseg_t;
+typedef mapgl5subsector_t glsubsector_t;
+typedef mapgl5node_t glnode_t;
 
 #endif

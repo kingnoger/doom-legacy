@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.67  2006/01/04 23:15:07  jussip
+// Read and convert GL nodes if they exist.
+//
 // Revision 1.66  2005/12/16 18:18:21  smite-meister
 // Deus Vult BLOCKMAP fix
 //
@@ -172,6 +175,7 @@
 /// spawns static Thinkers and the initial Actors.
 
 #include <math.h>
+#include <string.h>
 
 #include "doomdef.h"
 #include "doomdata.h"
@@ -1190,6 +1194,162 @@ static char *levellumps[] =
   }
 */
 
+// Convert short integers to long ones with byte swapping and sign
+// extension. Maps -1 (0xFFFF) to -1 (0xFFFFFFFF).
+//
+// This should probably be somewhere else.
+
+static int LONG_FROM_USHORT(short i) {
+  Uint32 result;
+  result = SHORT(i);
+  if(result == 65535)
+    result = 0xFFFFFFFF;
+  return result;
+}
+
+int Map::LoadGLVertexes(const int lump) {
+  const int glheaderlen = 4;
+  int glversion;
+  byte *data = (byte*)fc.CacheLumpNum(lump, PU_STATIC);
+
+  if(strncmp(GL2_HEADER, (const char*)data, glheaderlen) == 0)
+    glversion = 2;
+  else if(strncmp(GL5_HEADER, (const char*)data, glheaderlen) == 0)
+    glversion = 5;
+  else {
+    return -1; // We don't handle other versions.
+  }
+
+  numglvertexes = (fc.LumpLength(lump) - glheaderlen) / sizeof(mapglvertex_t);
+  glvertexes = (glvertex_t *)Z_Malloc(numglvertexes*sizeof(glvertex_t),PU_LEVEL,0);
+
+  mapglvertex_t *in = (mapglvertex_t *)(data+glheaderlen);
+  glvertex_t *out = glvertexes;
+
+  for (int i=0 ; i<numglvertexes ; i++, in++, out++)
+    {
+      out->x = LONG(in->x);
+      out->y = LONG(in->y);
+    }
+
+  Z_Free(data);
+
+  return glversion;
+}
+
+void Map::LoadGLSegs(const int lump, const int glversion) {
+  byte *data = (byte*)fc.CacheLumpNum(lump, PU_STATIC);
+  if(glversion == 2) {
+    numglsegs = fc.LumpLength(lump) / sizeof(mapgl2seg_t);
+  } else { // Assume version 5.
+    numglsegs = fc.LumpLength(lump) / sizeof(mapgl5seg_t);
+  }
+
+  glsegs = (glseg_t *)Z_Malloc(numglsegs*sizeof(glseg_t), PU_LEVEL, 0);
+
+  if(glversion == 2) {
+    mapgl2seg_t *in = (mapgl2seg_t*)data;
+    glseg_t *out = glsegs;
+    for(int i=0; i<numglsegs; i++, in++, out++) {
+      out->start_vertex = LONG_FROM_USHORT(in->start_vertex);
+      out->end_vertex = LONG_FROM_USHORT(in->end_vertex);
+      out->linedef = SHORT(in->linedef);
+      out->side = LONG_FROM_USHORT(in->side);
+      out->partner_seg = LONG_FROM_USHORT(in->partner_seg);
+    }
+  } else { // V5 again.
+    mapgl5seg_t *in = (mapgl5seg_t*)data;
+    glseg_t *out = glsegs;
+    for(int i=0; i<numglsegs; i++, in++, out++) {
+      out->start_vertex = LONG(in->start_vertex);
+      out->end_vertex = LONG(in->end_vertex);
+      out->linedef = SHORT(in->linedef);
+      out->side = SHORT(in->side);
+      out->partner_seg = LONG(in->partner_seg);
+    }
+
+  }
+
+  Z_Free(data);
+}
+
+void Map::LoadGLSubsectors(const int lump, const int glversion) {
+  byte *data = (byte*)fc.CacheLumpNum(lump, PU_STATIC);
+  if(glversion == 2) {
+    numglsubsectors = fc.LumpLength(lump) / sizeof(mapgl2subsector_t);
+  } else { // Assume version 5.
+    numglsubsectors = fc.LumpLength(lump) / sizeof(mapgl5subsector_t);
+  }
+
+  glsubsectors = (glsubsector_t *)Z_Malloc(numglsubsectors*sizeof(glsubsector_t), PU_LEVEL, 0);
+
+  if(glversion == 2) {
+    mapgl2subsector_t *in = (mapgl2subsector_t*)data;
+    glsubsector_t *out = glsubsectors;
+    for(int i=0; i<numglsubsectors; i++, in++, out++) {
+      out->count = LONG_FROM_USHORT(in->count);
+      out->first_seg = LONG_FROM_USHORT(in->first_seg);
+    }
+  } else { // V5 again.
+    mapgl5subsector_t *in = (mapgl5subsector_t*)data;
+    glsubsector_t *out = glsubsectors;
+    for(int i=0; i<numglsubsectors; i++, in++, out++) {
+      out->count = LONG(in->count);
+      out->first_seg = LONG(in->first_seg);
+    }
+
+  }
+
+  Z_Free(data);
+}
+
+void Map::LoadGLNodes(const int lump, const int glversion) {
+  byte *data = (byte*)fc.CacheLumpNum(lump, PU_STATIC);
+  if(glversion == 2) {
+    numglnodes = fc.LumpLength(lump) / sizeof(mapgl2node_t);
+  } else { // Assume version 5.
+    numglnodes = fc.LumpLength(lump) / sizeof(mapgl5node_t);
+  }
+
+  glnodes = (glnode_t *)Z_Malloc(numglnodes*sizeof(glnode_t), PU_LEVEL, 0);
+
+  if(glversion == 2) {
+    mapgl2node_t *in = (mapgl2node_t*)data;
+    glnode_t *out = glnodes;
+    for(int i=0; i<numglnodes; i++, in++, out++) {
+      out->x = SHORT(in->x);
+      out->y = SHORT(in->y);
+      out->dx = SHORT(in->dx);
+      out->dy = SHORT(in->dy);
+      for (int j=0 ; j<2 ; j++)
+        {
+          out->children[j] = LONG_FROM_USHORT(in->children[j]);
+	  if(in->children[j] & CHILD_IS_SUBSEC_V2)
+	    out->children[j] |= CHILD_IS_SUBSEC;
+          for (int k=0 ; k<4 ; k++)
+            out->bbox[j][k] = SHORT(in->bbox[j][k]);
+        }
+    }
+  } else { // V5 again.
+    mapgl5node_t *in = (mapgl5node_t*)data;
+    glnode_t *out = glnodes;
+    for(int i=0; i<numglnodes; i++, in++, out++) {
+      out->x = LONG(in->x);
+      out->y = LONG(in->y);
+      out->dx = LONG(in->dx);
+      out->dy = LONG(in->dy);
+      for (int j=0 ; j<2 ; j++)
+        {
+          out->children[j] = LONG(in->children[j]);
+          for (int k=0 ; k<4 ; k++)
+            out->bbox[j][k] = LONG(in->bbox[j][k]);
+        }
+    }
+
+  }
+
+  Z_Free(data);
+}
 
 // Setup sky texture to use for the level
 //
@@ -1231,6 +1391,10 @@ void Map::SetupSky()
 bool Map::Setup(tic_t start, bool spawnthings)
 {
   extern  bool precache;
+
+  int gllump;
+  char glname[9];
+  glname[8] = '\0';
 
   CONS_Printf("Map::Setup: %s\n", lumpname.c_str());
   con.Drawer();     // let the user know what we are going to do
@@ -1337,6 +1501,27 @@ bool Map::Setup(tic_t start, bool spawnthings)
 
   if (precache)
     PrecacheMap();
+
+  // Load GL nodes if they exist.
+  strcpy(glname, "GL_");
+  strncat(glname, lumpname.c_str(), 5);
+  gllump = fc.GetNumForName(glname);
+  if(gllump != -1) {
+    int gl_version;
+
+    gl_version = LoadGLVertexes(gllump+LUMP_GL_VERTEXES);
+    CONS_Printf("Level %s has v%d GL nodes.\n", lumpname.c_str(), gl_version);
+
+    if(gl_version < 0)
+      I_Error("Can not handle GL nodes that are not v2 or v5.");
+
+    LoadGLSegs(gllump+LUMP_GL_SEGS, gl_version);
+    LoadGLSubsectors(gllump+LUMP_GL_SSECT, gl_version);
+    LoadGLNodes(gllump+LUMP_GL_NODES, gl_version);
+
+  } else {
+    CONS_Printf("Level %s has no GL nodes.\n", lumpname.c_str());
+  }
 
   //CONS_Printf("%d vertexs %d segs %d subsector\n",numvertexes,numsegs,numsubsectors);
   return true;

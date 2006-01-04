@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2006/01/04 23:15:08  jussip
+// Read and convert GL nodes if they exist.
+//
 // Revision 1.12  2005/06/05 19:32:26  smite-meister
 // unsigned map structures
 //
@@ -64,8 +67,18 @@
 // The most basic types we use, portability.
 #include "doomtype.h"
 
-
 const Uint16 NULL_INDEX = 0xFFFF; // or -1. Used for sidenums and blocklist linedefnums ONLY.
+
+#define GL2_HEADER "gNd2"
+#define GL5_HEADER "gNd5"
+
+#define VERT_IS_GL_V2 (1 << 15)
+#define VERT_IS_GL_V5 (1 << 31)
+#define VERT_IS_GL (1 << 31)
+
+#define CHILD_IS_SUBSEC_V2 (1 << 15)
+#define CHILD_IS_SUBSEC_V5 (1 << 31)
+#define CHILD_IS_SUBSEC (1 << 31)
 
 // TODO tags to unsigned? lightlevels too?
 
@@ -88,6 +101,16 @@ enum map_lump_e
   LUMP_BEHAVIOR  ///< Hexen ACS script lump
 };
 
+/// Lump order for GL nodes.
+enum map_gllump_e
+{
+  LUMP_GL_LABEL,    ///< Separator, like GL_MAP01
+  LUMP_GL_VERTEXES, ///< Extra vertices
+  LUMP_GL_SEGS,     ///< Segs suitable for GL rendering
+  LUMP_GL_SSECT,    ///< Truely convex GL subsectors
+  LUMP_GL_NODES,    ///< GL BSP nodes
+  LUMP_GL_PVS,      ///< Subsector to subsector visibility info.
+};
 
 
 /// \brief A single Vertex.
@@ -302,5 +325,88 @@ struct SWITCHES_t
   Uint16 episode; 
 } __attribute__((packed));
 
+/// \brief GL v2 Vertex
+///
+/// Fortunately v2 and v5 vertices are identical except for the header.
+
+struct mapglvertex_t
+{
+  Sint32 x; ///< X-coordinate in 16.16 fixed point
+  Sint32 y; ///< Y-coordinate in 16.16 fixed point
+} __attribute__((packed));
+
+/// \brief GL v2 seg
+///
+/// A single wall segment.
+
+struct mapgl2seg_t
+{
+  Uint16 start_vertex; ///< From this vertex...
+  Uint16 end_vertex;   ///< ... to this one.
+  Uint16 linedef;      ///< Along this linedef.
+  Uint16 side;         ///< 0 means right side, 1 means left side.
+  Uint16 partner_seg;  ///< Which GL seg is on the other side of the linedef.
+} __attribute__((packed));
+
+/// \brief GL v5 seg
+///
+/// A single wall segment.
+
+struct mapgl5seg_t
+{
+  Uint32 start_vertex; ///< From this vertex...
+  Uint32 end_vertex;   ///< ... to this one.
+  Uint16 linedef;      ///< Along this linedef.
+  Uint16 side;         ///< 0 means right side, 1 means left side.
+  Uint32 partner_seg;  ///< Which GL seg is on the other side of the linedef.
+} __attribute__((packed));
+
+/// \brief GL v2 subsector.
+///
+/// A single convex area ready for GL rendering.
+
+struct mapgl2subsector_t
+{
+  Uint16 count;       ///< Read this many segs.
+  Uint16 first_seg;   ///< Starting with this
+} __attribute__((packed));
+
+/// \brief GL v5 subsector.
+///
+/// A single convex area ready for GL rendering.
+
+struct mapgl5subsector_t
+{
+  Uint32 count;       ///< Read this many segs.
+  Uint32 first_seg;   ///< Starting with this
+} __attribute__((packed));
+
+/// \brief GL v2 Node
+///
+/// A single node in the BSP tree
+
+struct mapgl2node_t
+{
+  Sint16 x;           
+  Sint16 y;           
+  Sint16 dx;          
+  Sint16 dy;          
+  Sint16 bbox[2][4];  ///< Bounding boxes for children
+  Uint16 children[2]; ///< Offsets to children.
+} __attribute__((packed));
+
+/// \brief GL v5 Node
+///
+/// A single node in the BSP tree
+
+struct mapgl5node_t
+{
+  Sint16 x;           
+  Sint16 y;           
+  Sint16 dx;
+  Sint16 dy;          
+  Sint16 bbox[2][4];  ///< Bounding boxes for children
+  Uint32 children[2]; ///< Offsets to children.
+} __attribute__((packed));
 
 #endif

@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.46  2006/01/04 23:15:08  jussip
+// Read and convert GL nodes if they exist.
+//
 // Revision 1.45  2005/12/16 18:18:35  smite-meister
 // Deus Vult BLOCKMAP fix
 //
@@ -110,7 +113,7 @@
 #include <map>
 
 #include "doomdef.h"
-#include "doomtype.h"
+#include "r_defs.h"
 #include "g_think.h"
 #include "vect.h"
 #include "m_fixed.h"
@@ -173,8 +176,21 @@ public:
   int                 numsegs;
   struct seg_t       *segs;
 
+  int                 numglvertexes;
+  glvertex_t         *glvertexes;
+
+  int                 numglsegs;
+  glseg_t            *glsegs;
+
+  int                 numglsubsectors;
+  glsubsector_t      *glsubsectors;
+
+  int                 numglnodes;
+  glnode_t           *glnodes;
+
   int                 NumPolyobjs;
   struct polyobj_t   *polyobjs;
+
   //@}
 
   /// \name Rendering
@@ -386,6 +402,10 @@ public:
   void GroupLines();
   void SetupSky();
 
+  int LoadGLVertexes(const int lump);
+  void LoadGLSegs(const int lump, const int glversion);
+  void LoadGLSubsectors(const int lump, const int glversion);
+  void LoadGLNodes(const int lump, const int glversion);
 
   // in p_sight.cpp
   bool CrossSubsector(int num);

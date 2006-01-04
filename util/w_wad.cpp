@@ -346,10 +346,10 @@ const char *FileCache::FindNameForNum(int lump)
 // -----------------------------------------------------
 // Calls FindNumForName, but bombs out if not found.
 
-int FileCache::GetNumForName(const char *name, bool scanforward)
+int FileCache::GetNumForName(const char *name, bool scanforward, bool errorifnotfound)
 {
   int i = FindNumForName(name, scanforward);
-  if (i == -1)
+  if (i == -1 && errorifnotfound)
     I_Error("FileCache::GetNumForName: %s not found!\n", name);
   
   return i;

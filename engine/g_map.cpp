@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.64  2006/01/04 23:15:07  jussip
+// Read and convert GL nodes if they exist.
+//
 // Revision 1.63  2005/12/16 18:18:21  smite-meister
 // Deus Vult BLOCKMAP fix
 //
@@ -165,6 +168,11 @@ Map::Map(MapInfo *i)
   PolyBlockMap = NULL;
   linebuffer = NULL;
 
+  glvertexes   = NULL;
+  glsegs       = NULL;
+  glsubsectors = NULL;
+  glnodes      = NULL;
+
   bmap.index = NULL;
   bmap.lists = NULL;
   blocklinks = NULL;
@@ -204,6 +212,14 @@ Map::~Map()
   Z_Free(lines);
   Z_Free(sides);
   Z_Free(linebuffer);
+
+  // Remove GL nodes if they exist.
+  if(glvertexes != NULL) {
+    Z_Free(glvertexes);
+    Z_Free(glsegs);
+    Z_Free(glsubsectors);
+    Z_Free(glnodes);
+  }
 
   Z_Free(bmap.index);
   Z_Free(bmap.lists);
