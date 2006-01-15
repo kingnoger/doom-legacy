@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.47  2006/01/15 23:48:06  jussip
+// Renamed VERSION to LEGACY_VERSION to avoid namespace collision with Autotools.
+//
 // Revision 1.46  2005/07/20 20:27:19  smite-meister
 // adv. texture cache
 //
@@ -169,9 +172,9 @@ void CL_Init();
 
 
 // Version number: major.minor.subversion
-const int  VERSION = 199;  // major*100 + minor
-const int  SUBVERSION = 0; // for bugfix releases, should not affect compatibility
-const char VERSIONSTRING[] = "alpha4";
+const int  LEGACY_VERSION = 199;  // major*100 + minor
+const int  LEGACY_SUBVERSION = 0; // for bugfix releases, should not affect compatibility
+const char LEGACY_VERSIONSTRING[] = "alpha4";
 
 // Name of local directory for config files and savegames
 #ifdef LINUX 
@@ -580,13 +583,13 @@ static void D_CheckWadVersion()
 	wadversion += l*100;
     }
 
-  if (wadversion != VERSION)
+  if (wadversion != LEGACY_VERSION)
 	  I_Error("Your legacy.wad file is version %d.%d, you need version %d.%d\n"
 	    "Use the legacy.wad coming from the same zip file as this executable\n"
 	    "\n"
 	    "Use -noversioncheck to remove this check,\n"
 	    "but this can cause Legacy to crash\n",
-	    wadversion/100,wadversion%100,VERSION/100,VERSION%100);
+	    wadversion/100,wadversion%100,LEGACY_VERSION/100,LEGACY_VERSION%100);
 }
 
 
@@ -671,7 +674,8 @@ void D_DoomMain()
 
   // start console output by the banner line
   char banner[81];
-  sprintf(banner, VERSION_BANNER, VERSION/100, VERSION%100, SUBVERSION, VERSIONSTRING);
+  sprintf(banner, LEGACY_VERSION_BANNER, LEGACY_VERSION/100,
+	  LEGACY_VERSION%100, LEGACY_SUBVERSION, LEGACY_VERSIONSTRING);
   CONS_Printf("%s\n", D_MakeTitleString(banner));
 
   // get parameters from a response file (eg: legacy @parms.txt)

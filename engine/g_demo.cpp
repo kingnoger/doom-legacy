@@ -313,7 +313,7 @@ void GameInfo::BeginRecording()
   int n = Players.size();
   demo_p = demobuffer;
 
-  *demo_p++ = VERSION;
+  *demo_p++ = LEGACY_VERSION;
   *demo_p++ = skill;
   //*demo_p++ = currentlevel->episode; //gameepisode;
   *demo_p++ = 1; //FIXME! no more gamemap;
@@ -386,13 +386,13 @@ void GameInfo::PlayDemo(char *defdemoname)
   if (demoversion < 109)
     {
       CONS_Printf ("\2ERROR: demo version too old.\n");
-      demoversion = VERSION;
+      demoversion = LEGACY_VERSION;
       Z_Free (demobuffer);
 no_demo:
       return;
     }
 
-  if (demoversion < VERSION)
+  if (demoversion < LEGACY_VERSION)
     CONS_Printf ("\2Demo is from an older game version\n");
 
 
@@ -429,7 +429,7 @@ void GameInfo::StopDemo()
   timingdemo = false;
   singletics = false;
 
-  Downgrade(VERSION);
+  Downgrade(LEGACY_VERSION);
 
   state = GS_NULL;
   //SV_StopServer();

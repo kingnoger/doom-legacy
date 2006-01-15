@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.50  2006/01/15 23:48:06  jussip
+// Renamed VERSION to LEGACY_VERSION to avoid namespace collision with Autotools.
+//
 // Revision 1.49  2005/06/29 14:26:39  smite-meister
 // valgrind pays off
 //
@@ -172,7 +175,7 @@ GameInfo game; ///< The single global instance of GameInfo.
 
 GameInfo::GameInfo()
 {
-  demoversion = VERSION;
+  demoversion = LEGACY_VERSION;
   mode = gm_none;
   state = GS_NULL;
   skill = sk_medium;

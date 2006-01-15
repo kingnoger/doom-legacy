@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.12  2006/01/15 23:48:06  jussip
+// Renamed VERSION to LEGACY_VERSION to avoid namespace collision with Autotools.
+//
 // Revision 1.11  2005/09/11 16:23:25  smite-meister
 // template classes
 //
@@ -36,10 +39,10 @@
 #define doomdef_h 1
 
 /// version control
-extern const int  VERSION;
-extern const int  SUBVERSION;
-extern const char VERSIONSTRING[];
-#define VERSION_BANNER "Doom Legacy %d.%d.%d %s"
+extern const int  LEGACY_VERSION;
+extern const int  LEGACY_SUBVERSION;
+extern const char LEGACY_VERSIONSTRING[];
+#define LEGACY_VERSION_BANNER "Doom Legacy %d.%d.%d %s"
 
 
 //#define RANGECHECK              // Uncheck this to compile debugging code

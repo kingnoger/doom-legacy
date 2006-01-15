@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.19  2006/01/15 23:48:07  jussip
+// Renamed VERSION to LEGACY_VERSION to avoid namespace collision with Autotools.
+//
 // Revision 1.18  2005/06/23 17:25:39  smite-meister
 // map conversion command added
 //
@@ -95,8 +98,9 @@
 //  Returns program version.
 void Command_Version_f()
 {
-  CONS_Printf(VERSION_BANNER" "__TIME__" "__DATE__"\n",
-	      VERSION/100, VERSION%100, SUBVERSION, VERSIONSTRING);
+  CONS_Printf(LEGACY_VERSION_BANNER" "__TIME__" "__DATE__"\n",
+	      LEGACY_VERSION/100, LEGACY_VERSION%100, LEGACY_SUBVERSION,
+	      LEGACY_VERSIONSTRING);
 }
 
 

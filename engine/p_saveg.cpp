@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.52  2006/01/15 23:48:06  jussip
+// Renamed VERSION to LEGACY_VERSION to avoid namespace collision with Autotools.
+//
 // Revision 1.51  2005/09/29 15:35:25  smite-meister
 // JDS texture standard
 //
@@ -2133,7 +2136,7 @@ void GameInfo::LoadGame(int slot)
 
   Z_Free(savebuffer); // the compressed buffer is no longer needed
 
-  Downgrade(VERSION); // reset the game version
+  Downgrade(LEGACY_VERSION); // reset the game version
   SV_SpawnServer(-1);
 
   // dearchive all the modifications

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.16  2006/01/15 23:48:07  jussip
+// Renamed VERSION to LEGACY_VERSION to avoid namespace collision with Autotools.
+//
 // Revision 1.15  2005/05/29 11:30:43  segabor
 // Fixed __APPLE directive__ to __APPLE_CC__ on Mac OS X, new 'Doom Legacy' Xcode project target
 //
@@ -104,8 +107,8 @@ void LConnection::writeConnectRequest(BitStream *stream)
 {
   Parent::writeConnectRequest(stream);
 
-  stream->write(VERSION);
-  stream->writeString(VERSIONSTRING);
+  stream->write(LEGACY_VERSION);
+  stream->writeString(LEGACY_VERSIONSTRING);
 
   joining_players.clear();
 
@@ -146,10 +149,10 @@ bool LConnection::readConnectRequest(BitStream *stream, const char **errorString
   stream->read(&version);
   stream->readString(temp);
 
-  if (version != VERSION || strcmp(temp, VERSIONSTRING))
+  if (version != LEGACY_VERSION || strcmp(temp, LEGACY_VERSIONSTRING))
     {
       sprintf(temp, "Different Legacy versions cannot play a net game! (Server version %d.%d%s)",
-	      VERSION/100, VERSION%100, VERSIONSTRING);
+	      LEGACY_VERSION/100, LEGACY_VERSION%100, LEGACY_VERSIONSTRING);
       return false;
     }
 

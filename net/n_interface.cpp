@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.15  2006/01/15 23:48:07  jussip
+// Renamed VERSION to LEGACY_VERSION to avoid namespace collision with Autotools.
+//
 // Revision 1.14  2005/05/29 11:30:43  segabor
 // Fixed __APPLE directive__ to __APPLE_CC__ on Mac OS X, new 'Doom Legacy' Xcode project target
 //
@@ -122,7 +125,7 @@ void serverinfo_t::Read(BitStream &s)
 void serverinfo_t::Write(BitStream &s)
 {
   s.write(game.demoversion);
-  s.writeString(VERSIONSTRING);
+  s.writeString(LEGACY_VERSIONSTRING);
   s.writeString(cv_servername.str);
   s.write((unsigned int)game.Players.size());
   s.write(game.maxplayers);
@@ -232,8 +235,8 @@ void LNetInterface::SendPing(const Address &a, const Nonce &cn)
 
   out.write(U8(PT_ServerPing));
   cn.write(&out);           // client nonce
-  out.write(VERSION);       // version information
-  out.writeString(VERSIONSTRING);
+  out.write(LEGACY_VERSION);       // version information
+  out.writeString(LEGACY_VERSIONSTRING);
   out.write(nowtime);  // this is used to calculate the ping value
 
   out.sendto(mSocket, a);
@@ -277,14 +280,14 @@ void LNetInterface::handleInfoPacket(const Address &address, U8 packetType, BitS
 	  // check version TODO different versioning for protocol? no?
 	  int version;
 	  stream->read(&version);
-	  if (version != VERSION)
+	  if (version != LEGACY_VERSION)
 	    {
 	      CONS_Printf("Wrong version (%d.%d)\n", version/100, version%100);
 	      break;
 	    }
 	  char temp[256];
 	  stream->readString(temp);
-	  //if (strcmp(temp, VERSIONSTRING)) break;
+	  //if (strcmp(temp, LEGACY_VERSIONSTRING)) break;
 	  CONS_Printf(" versionstring '%s'\n", temp);
 
 	  // local sending time

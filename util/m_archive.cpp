@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.8  2006/01/15 23:48:07  jussip
+// Renamed VERSION to LEGACY_VERSION to avoid namespace collision with Autotools.
+//
 // Revision 1.7  2005/09/11 16:23:09  smite-meister
 // template classes
 //
@@ -117,9 +120,9 @@ void LArchive::Create(const char *descr)
   pointermap[NULL] = 0;
 
   strncpy(header.id_string, Savegame_id, 24);
-  sprintf(header.version_string, "v.%d\n", VERSION);
+  sprintf(header.version_string, "v.%d\n", LEGACY_VERSION);
   strncpy(header.description, descr, 32);
-  header.version = LONG(VERSION);
+  header.version = LONG(LEGACY_VERSION);
 
   m_sbuf.reserve(32*1024); // default size 32 kB
 }
@@ -141,7 +144,7 @@ bool LArchive::Open(byte *buffer, size_t length)
       
   int i = LONG(header.version);
 
-  if (i > VERSION || i < VERSION) // here you can do backwards save compatibility
+  if (i > LEGACY_VERSION || i < LEGACY_VERSION) // here you can do backwards save compatibility
     {
       M_StartMessage("Savegame from different version\n\nPress ESC\n");
       return false;

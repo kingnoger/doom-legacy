@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.32  2006/01/15 23:48:06  jussip
+// Renamed VERSION to LEGACY_VERSION to avoid namespace collision with Autotools.
+//
 // Revision 1.31  2005/06/05 19:32:27  smite-meister
 // unsigned map structures
 //
@@ -548,7 +551,8 @@ void I_SysInit()
     }
 
   char title[30];
-  sprintf(title, VERSION_BANNER, VERSION/100, VERSION%100, SUBVERSION, VERSIONSTRING);
+  sprintf(title, LEGACY_VERSION_BANNER, LEGACY_VERSION/100, 
+	  LEGACY_VERSION%100, LEGACY_SUBVERSION, LEGACY_VERSIONSTRING);
 
   // Window title
   SDL_WM_SetCaption(title, "Doom Legacy");
