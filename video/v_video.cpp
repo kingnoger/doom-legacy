@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.30  2006/02/08 19:09:27  jussip
+// Added beginnings of a new OpenGL renderer.
+//
 // Revision 1.29  2005/11/06 19:35:15  smite-meister
 // ntexture
 //
@@ -103,6 +106,8 @@
 #include "hardware/hwr_render.h"
 #endif
 
+#include"oglrenderer.hpp"
+
 using namespace std;
 
 byte *current_colormap; // for applying colormaps to Drawn Textures
@@ -184,16 +189,24 @@ void PatchTexture::Draw(int x, int y, int scrn = 0)
   int flags = scrn & V_FLAGMASK;
   scrn &= V_SCREENMASK;
 
-#ifdef HWRENDER
-  // draw an hardware converted patch
-  if (rendermode != render_soft)
-    {
-      HWR_Draw(x, y, flags);
-      return;
-    }
-#endif
+  /*
+  if(x > 320 || y > 200)
+    printf("Patchtexture %s drawing outside screen: %d %d.\n", name, x, y);
+  */
 
   byte *desttop = vid.screens[scrn];
+
+  if(rendermode == render_opengl){
+    if(oglrenderer && oglrenderer->ReadyToDraw()) {
+      // Console tries to use some patches before graphics are
+      // initialized. If this is the case, then create the missing
+      // texture.
+      if(glid == NOTEXTURE) 
+	GenerateData();
+      oglrenderer->Draw2DGraphic_Doom(x, y, width, height, glid);
+    }
+    return;
+  }
 
   // scaling
   if (flags & V_SLOC)
@@ -255,6 +268,7 @@ void PatchTexture::Draw(int x, int y, int scrn = 0)
           icol = width - 1;
         }
     }
+
 
   patch_t *p = GeneratePatch();
 
@@ -327,15 +341,20 @@ void LumpTexture::Draw(int x, int y, int scrn = 0)
   int flags = scrn & V_FLAGMASK;
   scrn &= V_SCREENMASK;
 
-#ifdef HWRENDER
-  if (rendermode != render_soft)
-    {
-      HWR_Draw(x, y, flags);
-      return;
-    }
-#endif
+  /*
+  if(x > 320 || y > 200)
+    printf("Lumptexture %s drawing outside screen: %d %d.\n", name, x, y);
+  */
 
   byte *dest_tl = vid.screens[scrn];
+
+  byte *base = Generate(); // in col-major order!
+
+  if(rendermode == render_opengl){
+    if(oglrenderer && oglrenderer->ReadyToDraw()) 
+      oglrenderer->Draw2DGraphic_Doom(x, y, width, height, glid);
+    return;
+  }
 
   // location scaling
   if (flags & V_SLOC)
@@ -392,9 +411,6 @@ void LumpTexture::Draw(int x, int y, int scrn = 0)
 
   int zzz = (y2-y1)*vid.width;
 
-  byte *base = Generate(); // in col-major order!
-
-
   for ( ; dest_tl < dest_tr; col += colfrac, dest_tl++)
     {
       // LFB limits for the column
@@ -447,15 +463,17 @@ void LumpTexture::Draw(int x, int y, int scrn = 0)
 // scaled to screen size.
 void LumpTexture::DrawFill(int x, int y, int w, int h)
 {
-#ifdef HWRENDER
-  if (rendermode != render_soft)
-    {
-      HWR.DrawFill(x, y, w, h, this);
-      return;
-    }
-#endif
 
   byte *flat = Generate(); // in col-major order
+
+
+  if(rendermode == render_opengl){
+    if(oglrenderer && oglrenderer->ReadyToDraw()) 
+      oglrenderer->Draw2DGraphicFill_Doom(x, y, w, h, width, height, glid);
+    return;
+  }
+
+
   byte *base_dest = vid.screens[0] + y*vid.dupy*vid.width + x*vid.dupx + vid.scaledofs;
 
   w *= vid.dupx;
@@ -729,6 +747,7 @@ void font_t::DrawCharacter(int x, int y, char c, int flags)
 //  NOTE: the text is centered for screens larger than the base width
 void font_t::DrawString(int x, int y, const char *str, int flags)
 {
+
   if (flags & V_WHITEMAP)
     {
       current_colormap = whitemap;
@@ -736,6 +755,7 @@ void font_t::DrawString(int x, int y, const char *str, int flags)
     }
 
   int dupx, dupy;
+
 
   if (flags & V_SSIZE)
     {
@@ -753,10 +773,9 @@ void font_t::DrawString(int x, int y, const char *str, int flags)
       y *= vid.dupy;
       flags &= ~V_SLOC; // not passed on to Texture::Draw
     }
-    
   // cursor coordinates
   int cx = x + vid.scaledofs % vid.width;
-  int cy = y + vid.scaledofs / vid.width;
+  int cy = y + vid.scaledofs / vid.height;
   int rowheight = (height + 1) * dupy;
 
   while (1)

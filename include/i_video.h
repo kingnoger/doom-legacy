@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2006/02/08 19:09:27  jussip
+// Added beginnings of a new OpenGL renderer.
+//
 // Revision 1.4  2004/12/08 16:59:25  segabor
 // A tiny fix: no macConfigureInput needed ...
 //
@@ -60,11 +63,18 @@
 #ifndef i_video_h
 #define i_video_h 1
 
+#include<GL/gl.h>
+
 #include "doomtype.h"
 
 #ifdef __GNUG__
 #pragma interface
 #endif
+
+// The new OpenGL renderer.
+class OGLRenderer;
+extern OGLRenderer *oglrenderer; // If this is not NULL, we are using OpenGL.
+extern GLuint missingtexture;
 
 typedef enum {
   render_soft   = 1,

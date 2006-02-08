@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.14  2006/02/08 19:09:27  jussip
+// Added beginnings of a new OpenGL renderer.
+//
 // Revision 1.13  2006/01/04 23:15:08  jussip
 // Read and convert GL nodes if they exist.
 //
@@ -408,5 +411,6 @@ struct mapgl5node_t
   Sint16 bbox[2][4];  ///< Bounding boxes for children
   Uint32 children[2]; ///< Offsets to children.
 } __attribute__((packed));
+
 
 #endif

@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.13  2006/02/08 19:09:27  jussip
+// Added beginnings of a new OpenGL renderer.
+//
 // Revision 1.12  2005/09/11 16:23:25  smite-meister
 // template classes
 //
@@ -61,7 +64,6 @@
 
 #include "doomdef.h"
 #include "doomtype.h"
-
 
 /// flags for drawing Textures
 enum texture_draw_e

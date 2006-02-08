@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.47  2006/02/08 19:09:27  jussip
+// Added beginnings of a new OpenGL renderer.
+//
 // Revision 1.46  2006/01/04 23:15:08  jussip
 // Read and convert GL nodes if they exist.
 //
@@ -177,7 +180,7 @@ public:
   struct seg_t       *segs;
 
   int                 numglvertexes;
-  glvertex_t         *glvertexes;
+  vertex_t           *glvertexes;
 
   int                 numglsegs;
   glseg_t            *glsegs;

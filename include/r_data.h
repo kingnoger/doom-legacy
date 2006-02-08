@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.26  2006/02/08 19:09:27  jussip
+// Added beginnings of a new OpenGL renderer.
+//
 // Revision 1.25  2006/01/02 17:02:30  smite-meister
 // small fixes
 //
@@ -82,11 +85,15 @@
 #ifndef r_data_h
 #define r_data_h 1
 
+#include<GL/gl.h>
+
 #include <map>
 #include "doomtype.h"
 #include "m_fixed.h"
 #include "z_cache.h"
 
+
+#define TRANSPARENTPIXEL 247
 
 /// \brief patch_t, the strange Doom graphics format.
 ///
@@ -164,17 +171,15 @@ public:
   fixed_t xscale, yscale;         ///< texel-size / world-size
   byte    w_bits, h_bits;         ///< largest power-of-two sizes <= actual bitmap size
 
-  union
-  {
-    byte  *pixels; ///< raw bitmap data in column-major order for sw renderer
-#ifdef HWRENDER
-    class GLTexture *gltex;  // for hardware renderer
-#endif
-  };
+  byte  *pixels; ///< raw bitmap data in column-major order for sw renderer
+  GLuint glid;   ///< OpenGL handle.
+  static const GLuint NOTEXTURE = 0;
 
 protected:
   /// Prepare the texture for use.
   virtual void HWR_Prepare() = 0;
+
+  virtual void BuildGLTexture(byte *rgba);
 
   /// To be called after bitmap size is known
   inline void Initialize()
@@ -465,6 +470,9 @@ public:
   ~fadetable_t();
 };
 
+
+// Create RGBA texture from paletted data.
+byte* ColumnMajorToRGBA(byte *pixeldata, int w, int h);
 
 
 // Quantizes an RGB color into current palette

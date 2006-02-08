@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.22  2006/02/08 19:09:27  jussip
+// Added beginnings of a new OpenGL renderer.
+//
 // Revision 1.21  2006/01/04 23:15:08  jussip
 // Read and convert GL nodes if they exist.
 //
@@ -641,12 +644,59 @@ enum mapthing_flags_e
   MTF_GDEATHMATCH = 0x0400 ///< appears in dm games
 };
 
-// GL node definitions. Currently we use the v5 GL nodes directly.
+// GL node definitions. Currently we use some v5 GL nodes directly.
 // This is not very optimal, but it will do for the moment.
 
-typedef mapglvertex_t glvertex_t;
-typedef mapgl5seg_t glseg_t;
-typedef mapgl5subsector_t glsubsector_t;
+// glvertexes and vertexes are both the same.
+
+struct glseg_t {
+  vertex_t *start_vertex;
+  vertex_t *end_vertex;  
+  line_t *linedef;     
+  char side;         ///< 0 means right side, 1 means left side.
+  glseg_t *partner_seg; 
+};
+
 typedef mapgl5node_t glnode_t;
+
+struct glsubsector_t {
+  Uint32 count;
+  Uint32 first_seg;
+  sector_t *sector;
+};
+
+/// \brief Data needed to render level geometry with GL renderer.
+///
+/// These are all unpacked, endianness-swapped and converted to v5 GL
+/// nodes.
+
+struct gllevel_t {
+  vertex_t *vertexes;
+  int      numvertexes;
+
+  line_t *lines;
+  int    numlines;
+
+  side_t *sides;
+  int    numsides;
+
+  sector_t *sectors;
+  int      numsectors;
+
+  vertex_t *glvertexes;
+  int      numglvertexes;
+
+  glseg_t *glsegs;
+  int     numglsegs;
+
+  glsubsector_t *glsubsectors;
+  int              numglsubsectors;
+
+  glnode_t *glnodes;
+  int      numglnodes;
+
+  polyobj_t *polyobjs;
+  int       numpolyobjs;
+};
 
 #endif

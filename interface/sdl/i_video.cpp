@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2006/02/08 19:09:27  jussip
+// Added beginnings of a new OpenGL renderer.
+//
 // Revision 1.22  2005/05/31 09:10:31  smite-meister
 // fixed fullscreen modes
 //
@@ -107,9 +110,13 @@
 #include "m_dll.h"
 #include "sdl/ogl_sdl.h"
 
+#include "oglrenderer.hpp"
+
 void I_UngrabMouse();
 void I_GrabMouse();
 
+OGLRenderer *oglrenderer = NULL;
+//GLuint missingtexture = 0xFFFF;
 
 #ifdef DYNAMIC_LINKAGE
 static LegacyDLL OGL_renderer;
@@ -195,6 +202,9 @@ void I_StartFrame()
             return;
         }
     }
+  else {
+    oglrenderer->StartFrame();
+  }
 
   return;
 }
@@ -238,9 +248,9 @@ void I_FinishUpdate()
       if (SDL_MUSTLOCK(vidSurface))
         SDL_UnlockSurface(vidSurface);
     }
-  else
-    OglSdlFinishUpdate(false);
-
+  else if(oglrenderer != NULL)
+    //    OglSdlFinishUpdate(false);
+    oglrenderer->FinishFrame();
   I_GetEvent();
 
   return;
@@ -417,12 +427,42 @@ int I_SetVideoMode(int modeNum)
     }
   else
     {
+      /*
       if (!OglSdlSurface())
         I_Error("Could not set vidmode\n");
+      */
+      //        GLenum errornum;
+      /*      
+	unsigned char mytex[] = {0, 255, 0, 255, 0, 0, 
+				 255, 0, 0, 0, 255, 0};
+      */
+	if(!oglrenderer->InitVideoMode(vid.width, vid.height,
+				     cv_fullscreen.value))
+	I_Error("Could not set OpenGL vidmode.\n");
+	// Clear any old GL errors.
+	while(glGetError() != GL_NO_ERROR)
+	  ;
+	/*
+	// Create a default empty texture.
+	glGenTextures(1, &missingtexture);
+	if(missingtexture != 0)
+	  CONS_Printf("Default missing texture ID is %d, not 0. This could be a problem.\n", missingtexture);
+	
+	glBindTexture(GL_TEXTURE_2D, missingtexture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);       
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 2, 2, 0, GL_RGB, 
+		     GL_UNSIGNED_BYTE, mytex);
+	errornum = glGetError();
+	if(errornum != GL_NO_ERROR)
+	  CONS_Printf("GL error while building default texture: %s.\n", gluErrorString(errornum));
+	*/
+      
     }
-
   I_StartupMouse();
-
+  
   return 1;
 }
 
@@ -506,12 +546,19 @@ bool I_StartupGraphics()
       memcpy(&HWD, &r_export, sizeof(hw_renderer_export_t));
 #endif
 #endif
+      /* JussiP: remove this old garbage to prevent it from fiddling
+	 with the new renderer.*/
 
+      /*
       vid.width = 640; // hack to make voodoo cards work in 640x480
       vid.height = 480;
 
       if (!OglSdlSurface())
         rendermode = render_soft;
+      */
+      
+      oglrenderer = new OGLRenderer;
+
     }
 
   if (rendermode == render_soft)
@@ -549,7 +596,9 @@ void I_ShutdownGraphics()
     }
   else
     {
-      OglSdlShutdown();
+      //      OglSdlShutdown();
+      delete oglrenderer;
+      oglrenderer = NULL;
 
 #ifdef DYNAMIC_LINKAGE
       if (ogl_handle)

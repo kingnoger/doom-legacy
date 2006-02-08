@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.35  2006/02/08 19:09:27  jussip
+// Added beginnings of a new OpenGL renderer.
+//
 // Revision 1.34  2005/10/05 17:25:53  smite-meister
 // texturecache fix
 //
@@ -212,6 +215,7 @@
 #include "hardware/hwr_render.h"
 #endif
 
+#include"oglrenderer.hpp"
 
 Rend R;
 #ifdef HWRENDER
@@ -1114,6 +1118,7 @@ void Rend::R_RenderPlayerView(int viewport, PlayerInfo *player)
 {
   SetMap(player->mp);
 
+  /*
 #ifdef HWRENDER
   if (rendermode != render_soft)
     {
@@ -1121,6 +1126,12 @@ void Rend::R_RenderPlayerView(int viewport, PlayerInfo *player)
       return;
     }
 #endif
+  */
+
+  if(rendermode == render_opengl) {
+    oglrenderer->Render3DView(player);
+    return;
+  }
 
   if (viewport == 0) // support just two viewports for now
     {

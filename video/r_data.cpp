@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.52  2006/02/08 19:09:27  jussip
+// Added beginnings of a new OpenGL renderer.
+//
 // Revision 1.51  2005/11/06 19:35:14  smite-meister
 // ntexture
 //
@@ -116,6 +119,7 @@
 
 #include <math.h>
 #include <png.h>
+#include <GL/glu.h>
 
 #include "doomdef.h"
 #include "doomdata.h"
@@ -289,6 +293,8 @@ Texture::Texture(const char *n)
 
   // crap follows.
   id = 0;
+
+  glid = NOTEXTURE; 
 }
 
 
@@ -296,6 +302,9 @@ Texture::~Texture()
 {
   if (pixels)
     Z_Free(pixels);
+
+  if(glid != NOTEXTURE)
+    glDeleteTextures(1, &glid);
 }
 
 
@@ -310,6 +319,27 @@ void Texture::operator delete(void *mem)
   Z_Free(mem);
 }
 
+// Creates a GL texture from the given row-major data. Width and
+// height are taken from class variables.
+
+void Texture::BuildGLTexture(byte *rgba) {
+
+  // Discard old texture if we had one.
+  if(glid != NOTEXTURE)
+    glDeleteTextures(1, &glid);
+
+  glGenTextures(1, &glid);
+  glBindTexture(GL_TEXTURE_2D, glid);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, 
+		  GL_NEAREST_MIPMAP_NEAREST);
+  gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGBA, width, height, GL_RGBA, \
+		    GL_UNSIGNED_BYTE, rgba);
+
+  //  CONS_Printf("Created GL texture %d for %s.\n", glid, name);
+}
 
 
 //==================================================================
@@ -357,6 +387,13 @@ byte *LumpTexture::Generate()
       // short pix16 = ((color8to16[*data++] & 0x7bde) + ((i<<9|j<<4) & 0x7bde))>>1;
     }
 
+  // Create OpenGL texture if required.
+  if(oglrenderer != NULL && glid == NOTEXTURE) {
+    byte *rgba;
+    rgba = ColumnMajorToRGBA(pixels, width, height);
+    BuildGLTexture(rgba);
+    Z_Free(rgba);
+  }
   return pixels;
 }
 
@@ -470,7 +507,7 @@ byte *PatchTexture::GenerateData()
       // we need to draw the patch into a rectangular bitmap in column-major order
       int len = width*height;
       Z_Malloc(len, PU_TEXTURE, (void **)&pixels);
-      memset(pixels, 0, len);
+      memset(pixels, TRANSPARENTPIXEL, len);
 
       patch_t *p = GeneratePatch();
 
@@ -479,7 +516,16 @@ byte *PatchTexture::GenerateData()
 	  column_t *patchcol = reinterpret_cast<column_t*>(patch_data + p->columnofs[col]);
 	  R_DrawColumnInCache(patchcol, pixels + col * height, 0, height);
 	}
+
     }
+
+  // Create OpenGL texture if required.
+  if(oglrenderer != NULL && glid == NOTEXTURE) {
+    byte *rgba;
+    rgba = ColumnMajorToRGBA(pixels, width, height);
+    BuildGLTexture(rgba);
+    Z_Free(rgba);
+  }
 
   return pixels;
 }
@@ -1741,7 +1787,32 @@ void R_Init8to16()
     hicolormaps[i] = i<<1;
 }
 
+// Converts indexed data in column major order to RGBA data in row
+// major order. The caller is responsible for Z_Free:ing the resulting
+// graphic.
 
+byte* ColumnMajorToRGBA(byte *pixeldata, int w, int h) {
+  byte *result;
+  int i, j;
+  result = static_cast<byte*> (Z_Malloc(4*w*h, PU_STATIC, NULL));
+  byte *palette = (byte *)fc.CacheLumpName("PLAYPAL", PU_CACHE);
+
+  for(i=0; i<w; i++)
+    for(j=0; j<h; j++) {
+      byte curbyte = pixeldata[i*h + j];
+      byte *rgb_in = palette + 3*curbyte;
+      byte *rgba_out = result + 4*(j*w + i);
+      *rgba_out++ = *rgb_in++;
+      *rgba_out++ = *rgb_in++;
+      *rgba_out++ = *rgb_in++;
+      if(curbyte == TRANSPARENTPIXEL)
+	*rgba_out = 0;
+      else
+	*rgba_out = 255;
+    }
+
+  return result;
+}
 
 
 

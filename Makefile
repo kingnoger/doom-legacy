@@ -81,7 +81,7 @@ export RM
 export LDFLAGS
 
 # C++ compiler (usually g++)
-export CC = g++
+export CC = g++-3.3
 
 # Defines.
 #
@@ -239,7 +239,8 @@ export video_objects = \
 	$(objdir)/hwr_render.o \
 	$(objdir)/hwr_bsp.o \
 	$(objdir)/hwr_geometry.o \
-	$(objdir)/hwr_states.o
+	$(objdir)/hwr_states.o \
+	$(objdir)/oglrenderer.o
 
 export net_objects = \
 	$(objdir)/n_interface.o \
