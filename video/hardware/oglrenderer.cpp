@@ -425,7 +425,7 @@ void OGLRenderer::RenderGLSeg(int num) {
   sector_t *rs; // Remote sector.
 
   GLfloat rs_floor, rs_ceil, ls_floor, ls_ceil; // Floor and ceiling heights.
-  GLuint uppertex, middletex, lowertex; // OpenGL texture handles.
+  Texture *uppertex, *middletex, *lowertex;
 
   if(num < 0 || num > l.numglsegs)
     return;
@@ -471,24 +471,37 @@ void OGLRenderer::RenderGLSeg(int num) {
     rs_ceil = 0.0;
   }
 
-  // FIXME add texture offset calculations.
-  uppertex = middletex = lowertex = 42; // SWITCH TO 0 when textures work.
+  uppertex = tc[lsd->toptexture];
+  middletex = tc[lsd->midtexture];
+  lowertex = tc[lsd->bottomtexture];
+
+  // Generate GL textures.
+  if(uppertex && uppertex->glid == uppertex->NOTEXTURE)
+    uppertex->GetData();
+  if(middletex && middletex->glid == middletex->NOTEXTURE)
+    middletex->GetData();
+  if(lowertex && lowertex->glid == lowertex->NOTEXTURE)
+    lowertex->GetData();
 
   // Ready to draw textures.
   if(rs != NULL) {
-    if(rs_ceil < ls_ceil && uppertex != 0) {
+    if(rs_ceil < ls_ceil && uppertex) {
+      glBindTexture(GL_TEXTURE_2D, uppertex->glid);
       DrawSingleQuad(fv, tv, rs_ceil, ls_ceil);
     }
     
-    if(rs_floor > ls_floor && lowertex != 0) {
+    if(rs_floor > ls_floor && lowertex) {
+      glBindTexture(GL_TEXTURE_2D, lowertex->glid);
       DrawSingleQuad(fv, tv, ls_floor, rs_floor);
     }
 
     // Middle textures do not repeat, so we need some trickery.
     if(middletex != 0 && ls_floor < rs_ceil && ls_ceil > rs_floor) {
+      glBindTexture(GL_TEXTURE_2D, middletex->glid);
       // FIXMEEEEEE
     }
-  } else if(middletex != 0) {
+  } else if(middletex) {
+    glBindTexture(GL_TEXTURE_2D, middletex->glid);
     DrawSingleQuad(fv, tv, ls_floor, ls_ceil);
   }
 }

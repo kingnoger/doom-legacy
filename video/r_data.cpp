@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.53  2006/02/09 22:36:29  jussip
+// Wall texturing works better now.
+//
 // Revision 1.52  2006/02/08 19:09:27  jussip
 // Added beginnings of a new OpenGL renderer.
 //
@@ -696,6 +699,14 @@ byte *DoomTexture::GenerateData()
       //  it is purgable from zone memory.
       //Z_ChangeTag(pixels, PU_CACHE);
     }
+
+  // Create OpenGL texture if required.
+  if(oglrenderer != NULL && glid == NOTEXTURE) {
+    byte *rgba;
+    rgba = ColumnMajorToRGBA(pixels, width, height);
+    BuildGLTexture(rgba);
+    Z_Free(rgba);
+  }
 
   return pixels;
 }
