@@ -19,6 +19,7 @@
 #include"g_player.h"
 #include"g_actor.h"
 #include"tables.h"
+#include"r_data.h"
 
 
 OGLRenderer::OGLRenderer() {
@@ -340,39 +341,37 @@ void OGLRenderer::RenderGLSubsector(int num) {
   int firstseg;
   int segcount;
   glsubsector_t *ss;
+  sector_t *s;
+  Texture *ftex;
   if(num < 0 || num > l.numglsubsectors)
     return;
   
   ss = &l.glsubsectors[num];
   firstseg = ss->first_seg;
   segcount = ss->count;
+  s = ss->sector;
+
+  // Bind ceiling texture.
+  ftex = tc[s->ceilingpic];
+  if(ftex->glid == ftex->NOTEXTURE) 
+    ftex->GetData(); // Creates the texture.
+  glBindTexture(GL_TEXTURE_2D, ftex->glid);
 
   // First draw the ceiling.
   glNormal3f(0.0, 0.0, -1.0);
   glBegin(GL_POLYGON);
   for(curseg = firstseg; curseg < firstseg + segcount; curseg++) {
-    glseg_t s = l.glsegs[curseg];
+    glseg_t seg = l.glsegs[curseg];
     GLfloat x, y, z, tx, ty;
     vertex_t *v;
-    /*
-    if(s.start_vertex & VERT_IS_GL) {
-       v = l.glvertexes[s.start_vertex & (~VERT_IS_GL)];
-      x = v.x.Float();
-      y = v.y.Float();
-    } else {
-      const vertex_t v = l.vertexes[s.start_vertex];
-      x = v.x.Float();
-      y = v.y.Float();
-    }
-    */
-    v = s.start_vertex;
+
+    v = seg.start_vertex;
     x = v->x.Float();
     y = v->y.Float();
-    z = ss->sector->ceilingheight.Float(); 
+    z = s->ceilingheight.Float(); 
 
-    // FIXME.
-    tx = x/64.0;
-    ty = 1.0 - y/64.0;
+    tx = x/ftex->width;
+    ty = 1.0 - y/ftex->height;
 
     glTexCoord2f(tx, ty);
     glVertex3f(x, y, z);
@@ -381,22 +380,26 @@ void OGLRenderer::RenderGLSubsector(int num) {
   }
   glEnd();
 
-  // Then the floor.
+  // Then the floor. First bind texture.
+  ftex = tc[s->floorpic];
+  if(ftex->glid == ftex->NOTEXTURE) 
+    ftex->GetData(); // Creates the texture.
+  glBindTexture(GL_TEXTURE_2D, ftex->glid);
+
   glNormal3f(0.0, 0.0, 1.0);
   glBegin(GL_POLYGON);
   for(curseg = firstseg+segcount-1; curseg >= firstseg; curseg--) {
-    glseg_t s = l.glsegs[curseg];
+    glseg_t seg = l.glsegs[curseg];
     GLfloat x, y, z, tx, ty;
     vertex_t *v;
 
-    v = s.end_vertex;
+    v = seg.end_vertex;
     x = v->x.Float();
     y = v->y.Float();
-    z = ss->sector->floorheight.Float(); 
+    z = s->floorheight.Float(); 
 
-    // FIXME.
-    tx = x/64.0;
-    ty = 1.0 - y/64.0;
+    tx = x/ftex->width;
+    ty = 1.0 - y/ftex->height;
 
     glTexCoord2f(tx, ty);
     glVertex3f(x, y, z);
