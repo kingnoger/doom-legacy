@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.37  2006/02/09 20:54:25  jussip
+// Player sprites (sorta) work.
+//
 // Revision 1.36  2005/10/07 20:04:22  smite-meister
 // sprite scaling
 //
@@ -124,6 +127,8 @@
 
 #include "z_zone.h"
 #include "z_cache.h"
+
+#include "oglrenderer.hpp"
 
 #include "i_video.h"            //rendermode
 
@@ -1369,7 +1374,13 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
   else
     vis->extra_colormap = viewplayer->subsector->sector->extra_colormap;
 
-  vis->DrawVisSprite();
+  if(rendermode == render_soft)
+    vis->DrawVisSprite();
+  else if(rendermode == render_opengl) {
+    if(vis->tex->glid == vis->tex->NOTEXTURE)
+      vis->tex->GetData(); // Generates OpenGL texture id.
+    oglrenderer->Draw2DGraphic_Doom(vis->x1, -100-vis->sprite_top.Float()+BASEVIDHEIGHT, vis->tex->width, vis->tex->height, vis->tex->glid);
+  }
 }
 
 
@@ -1380,7 +1391,8 @@ void Rend::R_DrawPlayerSprites()
   int         lightnum;
   int         light = 0;
 
-  if (rendermode != render_soft)
+  if (rendermode != render_soft && 
+      rendermode != render_opengl)
     return;
 
   // get light level

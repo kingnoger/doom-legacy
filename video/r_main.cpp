@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.36  2006/02/09 20:54:25  jussip
+// Player sprites (sorta) work.
+//
 // Revision 1.35  2006/02/08 19:09:27  jussip
 // Added beginnings of a new OpenGL renderer.
 //
@@ -1128,8 +1131,12 @@ void Rend::R_RenderPlayerView(int viewport, PlayerInfo *player)
 #endif
   */
 
+  R_SetupFrame(player);
+
   if(rendermode == render_opengl) {
     oglrenderer->Render3DView(player);
+    // Draw weapon sprites. 
+    R_DrawPlayerSprites();
     return;
   }
 
@@ -1144,8 +1151,6 @@ void Rend::R_RenderPlayerView(int viewport, PlayerInfo *player)
       ylookup = ylookup2;
     }
 
-
-  R_SetupFrame(player);
 
   // Clear buffers.
   R_ClearClipSegs ();
