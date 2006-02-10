@@ -106,34 +106,22 @@ bool FileCache::InitMultipleFiles(const char *const*filenames)
   for ( ; *filenames != NULL; filenames++)
     {
       const char *curfile = *filenames;
-      char *gwafilename;
-      int fnamelen;
-
-      fnamelen = strlen(curfile);
-      gwafilename = (char*)malloc(fnamelen+1);
-      fnamelen = strlen(curfile);
-      strcpy(gwafilename, curfile);
-
       if (AddFile(curfile) == -1)
 	result = false;
 
+      string gwafile(curfile);
       // Try both upper and lower case.
-      gwafilename[fnamelen-3] = 'g';
-      gwafilename[fnamelen-2] = 'w';
-      gwafilename[fnamelen-1] = 'a';
-      if(AddFile(gwafilename) != -1)
-	CONS_Printf("Added GL information from file %s.\n", gwafilename);
-      else {
-	gwafilename[fnamelen-3] = 'G';
-	gwafilename[fnamelen-2] = 'W';
-	gwafilename[fnamelen-1] = 'A';
-	if(AddFile(gwafilename) != -1)
-	  CONS_Printf("Added GL information from file %s.\n", gwafilename);
-	else
-	  CONS_Printf("No GL information for file %s.\n", curfile);
-      }
-
-      free(gwafilename);
+      gwafile.replace(gwafile.length()-3, 3, "gwa");
+      if (AddFile(gwafile.c_str()) != -1)
+	CONS_Printf("Added GL information from file %s.\n", gwafile.c_str());
+      else
+	{
+	  gwafile.replace(gwafile.length()-3, 3, "GWA");
+	  if (AddFile(gwafile.c_str()) != -1)
+	    CONS_Printf("Added GL information from file %s.\n", gwafile.c_str());
+	  else
+	    CONS_Printf("No GL information for file %s.\n", curfile);
+	}
     }
 
   if (vfiles.size() == 0)

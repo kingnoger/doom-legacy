@@ -21,6 +21,9 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 // $Log$
+// Revision 1.35  2006/02/10 18:00:41  smite-meister
+// glnodes fixed
+//
 // Revision 1.34  2006/01/02 17:02:30  smite-meister
 // small fixes
 //
@@ -774,10 +777,9 @@ void SF_Player()
   Actor *mo = t_argc ? MobjForSvalue(t_argv[0]) :
     current_script->trigger;
 
-  if (mo)
+  if (mo && mo->IsOf(PlayerPawn::_type))
     {
-      if (mo->IsOf(PlayerPawn::_type))
-        t_return.value.i = ((PlayerPawn *)mo)->player->number - 1;
+      t_return.value.i = reinterpret_cast<PlayerPawn *>(mo)->player->number - 1;
     }
   else
     t_return.value.i = -1;

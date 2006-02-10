@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.47  2006/02/10 18:00:39  smite-meister
+// glnodes fixed
+//
 // Revision 1.46  2005/12/16 18:18:20  smite-meister
 // Deus Vult BLOCKMAP fix
 //
@@ -161,6 +164,8 @@ extern fixed_t FloatBobOffsets[64];
 //             Actor class implementation
 //===========================================================
 
+TNL_IMPLEMENT_NETOBJECT(Actor);
+
 IMPLEMENT_CLASS(Actor, Thinker);
 
 Actor::~Actor()
@@ -195,6 +200,9 @@ Actor::Actor()
   reactiontime = 0;
   floorclip = 0;
   team = 0;
+
+  // net stuff
+  mNetFlags.set(Ghostable);
 }
 
 
@@ -224,6 +232,9 @@ Actor::Actor(fixed_t nx, fixed_t ny, fixed_t nz)
   reactiontime = 0;
   floorclip = 0;
   team = 0;
+
+  // net stuff
+  mNetFlags.set(Ghostable);
 }
 
 

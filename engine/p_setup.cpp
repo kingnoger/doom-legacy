@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.69  2006/02/10 18:00:40  smite-meister
+// glnodes fixed
+//
 // Revision 1.68  2006/02/08 19:09:26  jussip
 // Added beginnings of a new OpenGL renderer.
 //
@@ -199,6 +202,7 @@
 #include "m_bbox.h"
 #include "m_swap.h"
 #include "m_misc.h"
+#include "tables.h"
 
 #include "i_sound.h" //for I_PlayCD()..
 #include "r_sky.h"
@@ -255,26 +259,12 @@ void Map::LoadVertexes(int lump)
 }
 
 
-//
-// Computes the line length in frac units, the glide render needs this
-//
-/*
-float P_SegLength(seg_t *seg)
-{
-  // make a vector (start at origin)
-  double dx = (seg->v2->x - seg->v1->x).Float();
-  double dy = (seg->v2->y - seg->v1->y).Float();
-
-  return sqrt(dx*dx+dy*dy)*FRACUNIT;
-}
-*/
-
 
 void Map::LoadSegs(int lump)
 {
   numsegs = fc.LumpLength(lump) / sizeof(mapseg_t);
   segs = (seg_t *)Z_Malloc(numsegs*sizeof(seg_t), PU_LEVEL, NULL);
-  memset(segs, 0, numsegs*sizeof(seg_t));
+  memset(segs, 0, numsegs*sizeof(seg_t)); // clear everything
   byte *data = (byte *)fc.CacheLumpNum(lump, PU_STATIC);
 
   mapseg_t *ms = (mapseg_t *)data;
@@ -284,33 +274,17 @@ void Map::LoadSegs(int lump)
       seg->v1 = &vertexes[SHORT(ms->v1)];
       seg->v2 = &vertexes[SHORT(ms->v2)];
 
-#if 0 //FIXME: Hurdler: put it back when new renderer is OK
-#ifdef HWRENDER
-      // used for the hardware render
-      if (rendermode != render_soft)
-        {
-          seg->length = P_SegLength(seg);
-          //Hurdler: 04/12/2000: for now, only used in hardware mode
-          seg->lightmaps = NULL; // list of static lightmap for this seg
-        }
-#endif
-#endif
-
-      seg->angle = (SHORT(ms->angle))<<16;
-      seg->offset = (SHORT(ms->offset))<<16;
       line_t *ldef = &lines[SHORT(ms->linedef)];
       seg->linedef = ldef;
       seg->side = SHORT(ms->side);
+      // NOTE: partner_seg is NULL, length is 0 (not needed in software)
+
       seg->sidedef = ldef->sideptr[seg->side];
+      seg->offset = SHORT(ms->offset);
+      seg->angle = SHORT(ms->angle) << 16;
 
       seg->frontsector = ldef->sideptr[seg->side]->sector;
-      if (ldef->flags & ML_TWOSIDED)
-        seg->backsector = ldef->sideptr[seg->side^1]->sector;
-      else
-        seg->backsector = NULL;
-
-      seg->numlights = 0;
-      seg->rlights = NULL;
+      seg->backsector = (ldef->flags & ML_TWOSIDED) ? ldef->sideptr[seg->side^1]->sector : NULL;
     }
 
   Z_Free(data);
@@ -330,8 +304,8 @@ void Map::LoadSubsectors(int lump)
 
   for (int i=0; i<numsubsectors; i++, ss++, mss++)
     {
-      ss->numlines = SHORT(mss->numsegs);
-      ss->firstline = SHORT(mss->firstseg);
+      ss->num_segs = SHORT(mss->numsegs);
+      ss->first_seg = SHORT(mss->firstseg);
     }
 
   Z_Free(data);
@@ -410,6 +384,15 @@ void Map::LoadSectors2(int lump)
 }
 
 
+// BSP 'child is subsector' from original/v2 to v5.
+static void ConvertGLFlags16_32(Uint32 &in)
+{
+  if (in & CHILD_IS_SUBSECTOR_OLD)
+    {
+      in &= ~CHILD_IS_SUBSECTOR_OLD;
+      in |= NF_SUBSECTOR;
+    }
+}
 
 void Map::LoadNodes(int lump)
 {
@@ -429,6 +412,7 @@ void Map::LoadNodes(int lump)
       for (int j=0 ; j<2 ; j++)
         {
           no->children[j] = SHORT(mn->children[j]);
+	  ConvertGLFlags16_32(no->children[j]); // needed here too (internally we use GLv5 nodes)
           for (int k=0 ; k<4 ; k++)
             no->bbox[j].box[k] = SHORT(mn->bbox[j][k]);
         }
@@ -841,15 +825,8 @@ void Map::LoadLineDefs2()
   line_t* ld = lines;
   for (int i=0; i < numlines; i++, ld++)
     {
-      if (ld->sideptr[0])
-        ld->frontsector = ld->sideptr[0]->sector;
-      else
-        ld->frontsector = NULL;
-
-      if (ld->sideptr[1])
-        ld->backsector = ld->sideptr[1]->sector;
-      else
-        ld->backsector = NULL;
+      ld->frontsector = ld->sideptr[0] ? ld->sideptr[0]->sector : NULL;
+      ld->backsector =  ld->sideptr[1] ? ld->sideptr[1]->sector : NULL;
     }
 }
 
@@ -1088,12 +1065,28 @@ void Map::GroupLines()
 {
   int i, j;
 
-  // look up sector number for each subsector
+  // Look up sector number for each subsector. This is made more complex by the
+  // presence of minisegs from GL-subsectors (they have no associated lines!)
   subsector_t *ss = subsectors;
   for (i=0 ; i<numsubsectors ; i++, ss++)
     {
-      seg_t *seg = &segs[ss->firstline];
-      ss->sector = seg->sidedef->sector;
+      if (ss->sector) // This subsector is already processed.
+	continue;
+
+      // Go through segs one by one. Stop when any assignation is done.
+      for (unsigned csnum = ss->first_seg; csnum < ss->first_seg + ss->num_segs; csnum++)
+	{
+	  seg_t *seg = &segs[csnum];
+	  if (seg->sidedef)
+	    {
+	      ss->sector = seg->sidedef->sector;
+	      break;
+	    }
+	}
+
+      // Every gl subsector should have at least one non-miniseg.
+      if (!ss->sector)
+	CONS_Printf("GL subsector %d consists entirely of minisegs. Unpredictable things may happen at any time.\n", i);
     }
 
   // count number of lines in each sector
@@ -1203,25 +1196,17 @@ static char *levellumps[] =
 //
 // This should probably be somewhere else.
 
-static int LONG_FROM_USHORT(short i) {
-  Uint32 result;
-  result = SHORT(i);
+static int LONG_FROM_USHORT(short i)
+{
+  Uint32 result = SHORT(i);
   if(result == 65535)
     result = 0xFFFFFFFF;
   return result;
 }
 
-// Converts 'vertex is GL vertex' flag of GL segs and 'child is
-// subsector' from v2 to v5.
 
-static void ConvertGLFlags16_32(Uint32 &in) {
-  if(in & VERT_IS_GL_V2) {
-    in &= ~VERT_IS_GL_V2;
-    in |= VERT_IS_GL_V5;
-  }
-}
-
-int Map::LoadGLVertexes(const int lump) {
+int Map::LoadGLVertexes(const int lump)
+{
   const int glheaderlen = 4;
   int glversion;
   byte *data = (byte*)fc.CacheLumpNum(lump, PU_STATIC);
@@ -1242,12 +1227,8 @@ int Map::LoadGLVertexes(const int lump) {
 
   for (int i=0 ; i<numglvertexes ; i++, in++, out++)
     {
-      Sint32 b;
-      // FIXME, use floating point.
-      b = LONG(in->x);
-      out->x = *((fixed_t*)&b);
-      b = LONG(in->y);
-      out->y = *((fixed_t*)&b);
+      out->x.setvalue(LONG(in->x));
+      out->y.setvalue(LONG(in->y));
     }
 
   Z_Free(data);
@@ -1255,199 +1236,217 @@ int Map::LoadGLVertexes(const int lump) {
   return glversion;
 }
 
-void Map::LoadGLSegs(const int lump, const int glversion) {
-  byte *data = (byte*)fc.CacheLumpNum(lump, PU_STATIC);
-  if(glversion == 2) {
-    numglsegs = fc.LumpLength(lump) / sizeof(mapgl2seg_t);
-  } else { // Assume version 5.
-    numglsegs = fc.LumpLength(lump) / sizeof(mapgl5seg_t);
-  }
 
-  glsegs = (glseg_t *)Z_Malloc(numglsegs*sizeof(glseg_t), PU_LEVEL, 0);
-
-  if(glversion == 2) {
-    mapgl2seg_t *in = (mapgl2seg_t*)data;
-    glseg_t *out = glsegs;
-    for(int i=0; i<numglsegs; i++, in++, out++) {
-      Uint16 v;
-      v = SHORT(in->start_vertex);
-      if(v & VERT_IS_GL_V2)
-	out->start_vertex = &glvertexes[v & (~VERT_IS_GL_V2)];
-      else
-	out->start_vertex = &vertexes[v];
-
-      v = SHORT(in->end_vertex);
-      if(v & VERT_IS_GL_V2)
-	out->end_vertex = &glvertexes[v & (~VERT_IS_GL_V2)];
-      else
-	out->end_vertex = &vertexes[v];
-
-      v = SHORT(in->linedef);
-      if(v == NULL_INDEX)
-	out->linedef = NULL;
-      else
-	out->linedef = &lines[v];
-
-      if(in->side == 0)
-	out->side = 0;
-      else
-	out->side = 1;
-
-      v = in->partner_seg;
-      if(v == NULL_INDEX)
-	out->partner_seg = NULL;
-      else
-	out->partner_seg = &glsegs[v];
-    }
-  } else { // V5 again.
-    mapgl5seg_t *in = (mapgl5seg_t*)data;
-    glseg_t *out = glsegs;
-    for(int i=0; i<numglsegs; i++, in++, out++) {
-      Uint32 v;
-      Uint16 ld;
-      v = LONG(in->start_vertex);
-      if(v & VERT_IS_GL_V5)
-	out->start_vertex = &glvertexes[v&(~VERT_IS_GL_V5)];
-      else
-	out->start_vertex = &vertexes[v];
-
-      v = LONG(in->end_vertex);
-      if(v & VERT_IS_GL_V5)
-	out->end_vertex = &glvertexes[v&(~VERT_IS_GL_V5)];
-      else
-	out->end_vertex = &vertexes[v];
-
-      ld = SHORT(in->linedef);
-      if(ld == NULL_INDEX)
-	out->linedef = NULL;
-      else
-	out->linedef = &lines[ld];
-
-      if(SHORT(in->side))
-	out->side = 1;
-      else
-	out->side = 0;
-
-      v = LONG(in->partner_seg);
-      if(v == 0xFFFFFFFF)
-	out->partner_seg = NULL;
-      else
-	out->partner_seg = &glsegs[v]; 
-    }
-
-  }
-
-  Z_Free(data);
+static float SegLength(float dx, float dy)
+{
+  return sqrt(dx*dx + dy*dy);
 }
 
-void Map::LoadGLSubsectors(const int lump, const int glversion) {
+/// GL segs always override the normal segs.
+void Map::LoadGLSegs(const int lump, const int glversion)
+{
+  if (glversion == 2)
+    numsegs = fc.LumpLength(lump) / sizeof(mapgl2seg_t);
+  else // Assume version 5.
+    numsegs = fc.LumpLength(lump) / sizeof(mapgl5seg_t);
+
+  segs = (seg_t *)Z_Malloc(numsegs*sizeof(seg_t), PU_LEVEL, 0);
+  memset(segs, 0, numsegs*sizeof(seg_t)); // clear all fields to zero
   byte *data = (byte*)fc.CacheLumpNum(lump, PU_STATIC);
-  if(glversion == 2) {
-    numglsubsectors = fc.LumpLength(lump) / sizeof(mapgl2subsector_t);
-  } else { // Assume version 5.
-    numglsubsectors = fc.LumpLength(lump) / sizeof(mapgl5subsector_t);
-  }
 
-  glsubsectors = (glsubsector_t *)Z_Malloc(numglsubsectors*sizeof(glsubsector_t), PU_LEVEL, 0);
+  seg_t *seg = segs;
+  mapgl2seg_t *in2 = (mapgl2seg_t*)data;
+  mapgl5seg_t *in  = (mapgl5seg_t*)data;
 
-  if(glversion == 2) {
-    mapgl2subsector_t *in = (mapgl2subsector_t*)data;
-    glsubsector_t *out = glsubsectors;
-    for(int i=0; i<numglsubsectors; i++, in++, out++) {
-      out->count = LONG_FROM_USHORT(in->count);
-      out->first_seg = LONG_FROM_USHORT(in->first_seg);
-      out->sector = NULL;
-    }
-  } else { // V5 again.
-    mapgl5subsector_t *in = (mapgl5subsector_t*)data;
-    glsubsector_t *out = glsubsectors;
-    for(int i=0; i<numglsubsectors; i++, in++, out++) {
-      out->count = LONG(in->count);
-      out->first_seg = LONG(in->first_seg);
-      out->sector = NULL;
-    }
+  for (int i=0; i<numsegs; i++, seg++)
+    {
+      line_t *ldef;
+      if (glversion == 2)
+	{
+	  Uint16 v = SHORT(in2->start_vertex);
+	  if (v & VERT_IS_GL_V2)
+	    seg->v1 = &glvertexes[v & (~VERT_IS_GL_V2)];
+	  else
+	    seg->v1 = &vertexes[v];
 
-  }
+	  v = SHORT(in2->end_vertex);
+	  if(v & VERT_IS_GL_V2)
+	    seg->v2 = &glvertexes[v & (~VERT_IS_GL_V2)];
+	  else
+	    seg->v2 = &vertexes[v];
 
-  // Now map all GL subsectors to the sector they reside in. We get
-  // this info from from one of the segs.
-  for(int i=0; i<numglsubsectors; i++) {
-    glsubsector_t *ss = &glsubsectors[i];
+	  v = SHORT(in2->linedef);
+	  if (v == NULL_INDEX)
+	    ldef = NULL;
+	  else
+	    ldef = &lines[v];
 
-    if(ss->sector) // This subsector is already processed.
-      continue;
+	  if (in2->side == 0)
+	    seg->side = 0;
+	  else
+	    seg->side = 1;
 
-    // Go through segs one by one. Stop when any assignation is
-    // done.
-    for(Uint32 csnum = ss->first_seg; csnum < ss->first_seg + ss->count; csnum++) {
-      glseg_t *curseg = &glsegs[csnum];
+	  v = in2->partner_seg;
+	  if(v == NULL_INDEX)
+	    seg->partner_seg = NULL;
+	  else
+	    seg->partner_seg = &segs[v];
 
-      // Check "our" side of the seg.
-      if(curseg->linedef != NULL) {
-	side_t *sd;
-	if(curseg->side == 0)
-	  sd = curseg->linedef->sideptr[0];
-	else
-	  sd = curseg->linedef->sideptr[1];
-
-	if(sd != NULL) {
-	  ss->sector = sd->sector;
-	  break;
+	  in2++;
 	}
-      }
-    }
+      else
+	{ // V5 again.
+	  Uint32 v = LONG(in->start_vertex);
 
-    // Every gl subsector should have at least one non-miniseg.
-    if(ss->sector == NULL)
-      CONS_Printf("GL subsector %d consists entirely of minisegs. Unpredictable things may happen at any time.\n", i);
-  }
+	  if (v & VERT_IS_GL_V5)
+	    seg->v1 = &glvertexes[v&(~VERT_IS_GL_V5)];
+	  else
+	    seg->v1 = &vertexes[v];
+
+	  v = LONG(in->end_vertex);
+	  if (v & VERT_IS_GL_V5)
+	    seg->v2 = &glvertexes[v&(~VERT_IS_GL_V5)];
+	  else
+	    seg->v2 = &vertexes[v];
+
+	  Uint16 ld = SHORT(in->linedef);
+	  if (ld == NULL_INDEX)
+	    ldef = NULL;
+	  else
+	    ldef = &lines[ld];
+
+	  if (SHORT(in->side))
+	    seg->side = 1;
+	  else
+	    seg->side = 0;
+
+	  v = LONG(in->partner_seg);
+	  if (v == NULL_INDEX_32)
+	    seg->partner_seg = NULL;
+	  else
+	    seg->partner_seg = &segs[v]; 
+
+	  in++;
+	}
+
+      seg->linedef = ldef;
+
+      // fill in the rest
+      seg->sidedef = ldef ? ldef->sideptr[seg->side] : NULL;
+
+      if (ldef)
+	{ // not a miniseg
+	  float sx = ((seg->side ? ldef->v2->x : ldef->v1->x) - seg->v1->x).Float();
+	  float sy = ((seg->side ? ldef->v2->y : ldef->v1->y) - seg->v1->y).Float();
+	  seg->offset = SegLength(sx, sy);
+	}
+
+      // make a vector (start at origin)
+      float dx = (seg->v2->x - seg->v1->x).Float();
+      float dy = (seg->v2->y - seg->v1->y).Float();
+
+      if (dx == 0)
+	seg->angle = (dy > 0) ? ANG90 : ANG270;
+      else
+	seg->angle = angle_t((atan2(dy, dx) * ANG180) / M_PI);
+
+      seg->length = SegLength(dx, dy);
+
+      seg->frontsector = ldef->sideptr[seg->side]->sector;
+      seg->backsector = (ldef->flags & ML_TWOSIDED) ? ldef->sideptr[seg->side^1]->sector : NULL;
+    }
 
   Z_Free(data);
 }
 
-void Map::LoadGLNodes(const int lump, const int glversion) {
+
+void Map::LoadGLSubsectors(const int lump, const int glversion)
+{
+  if (glversion == 2)
+    numsubsectors = fc.LumpLength(lump) / sizeof(mapgl2subsector_t);
+  else // Assume version 5.
+    numsubsectors = fc.LumpLength(lump) / sizeof(mapgl5subsector_t);
+
+  subsectors = (subsector_t *)Z_Malloc(numsubsectors*sizeof(subsector_t), PU_LEVEL, 0);
   byte *data = (byte*)fc.CacheLumpNum(lump, PU_STATIC);
-  if(glversion == 2) {
-    numglnodes = fc.LumpLength(lump) / sizeof(mapgl2node_t);
-  } else { // Assume version 5.
-    numglnodes = fc.LumpLength(lump) / sizeof(mapgl5node_t);
-  }
 
-  glnodes = (glnode_t *)Z_Malloc(numglnodes*sizeof(glnode_t), PU_LEVEL, 0);
+  subsector_t *ss = subsectors;
+  if (glversion == 2)
+    {
+      mapgl2subsector_t *in = (mapgl2subsector_t*)data;
 
-  if(glversion == 2) {
-    mapgl2node_t *in = (mapgl2node_t*)data;
-    glnode_t *out = glnodes;
-    for(int i=0; i<numglnodes; i++, in++, out++) {
-      out->x = SHORT(in->x);
-      out->y = SHORT(in->y);
-      out->dx = SHORT(in->dx);
-      out->dy = SHORT(in->dy);
-      for (int j=0 ; j<2 ; j++)
-        {
-          out->children[j] = SHORT(in->children[j]);
-	  ConvertGLFlags16_32(out->children[j]);	  
-          for (int k=0 ; k<4 ; k++)
-            out->bbox[j][k] = SHORT(in->bbox[j][k]);
-        }
+      for(int i=0; i<numsubsectors; i++, in++, ss++)
+	{
+	  ss->num_segs  = LONG_FROM_USHORT(in->count);
+	  ss->first_seg = LONG_FROM_USHORT(in->first_seg);
+	  ss->sector = NULL;
+	}
     }
-  } else { // V5 again.
-    mapgl5node_t *in = (mapgl5node_t*)data;
-    glnode_t *out = glnodes;
-    for(int i=0; i<numglnodes; i++, in++, out++) {
-      out->x = LONG(in->x);
-      out->y = LONG(in->y);
-      out->dx = LONG(in->dx);
-      out->dy = LONG(in->dy);
-      for (int j=0 ; j<2 ; j++)
-        {
-          out->children[j] = LONG(in->children[j]);
-          for (int k=0 ; k<4 ; k++)
-            out->bbox[j][k] = LONG(in->bbox[j][k]);
-        }
+  else
+    { // V5 again.
+      mapgl5subsector_t *in = (mapgl5subsector_t*)data;
+
+      for(int i=0; i<numsubsectors; i++, in++, ss++)
+	{
+	  ss->num_segs = LONG(in->count);
+	  ss->first_seg = LONG(in->first_seg);
+	  ss->sector = NULL;
+	}
     }
 
-  }
+
+  Z_Free(data);
+}
+
+
+
+void Map::LoadGLNodes(const int lump, const int glversion)
+{
+  if (glversion == 2)
+    numnodes = fc.LumpLength(lump) / sizeof(mapnode_t);
+  else // Assume version 5.
+    numnodes = fc.LumpLength(lump) / sizeof(mapgl5node_t);
+
+  nodes = (node_t *)Z_Malloc(numnodes*sizeof(node_t), PU_LEVEL, 0);
+  byte *data = (byte*)fc.CacheLumpNum(lump, PU_STATIC);
+  node_t *no = nodes;
+
+  if (glversion == 2)
+    {
+      mapnode_t *in = (mapnode_t*)data;
+
+      for (int i=0; i<numnodes; i++, in++, no++)
+	{
+	  no->x = SHORT(in->x);
+	  no->y = SHORT(in->y);
+	  no->dx = SHORT(in->dx);
+	  no->dy = SHORT(in->dy);
+	  for (int j=0 ; j<2 ; j++)
+	    {
+	      no->children[j] = SHORT(in->children[j]);
+	      ConvertGLFlags16_32(no->children[j]);	  
+	      for (int k=0 ; k<4 ; k++)
+		no->bbox[j].box[k] = SHORT(in->bbox[j][k]);
+	    }
+	}
+    }
+  else
+    { // V5 again.
+      mapgl5node_t *in = (mapgl5node_t*)data;
+      for (int i=0; i<numnodes; i++, in++, no++)
+	{
+	  no->x = SHORT(in->x);
+	  no->y = SHORT(in->y);
+	  no->dx = SHORT(in->dx);
+	  no->dy = SHORT(in->dy);
+	  for (int j=0 ; j<2 ; j++)
+	    {
+	      no->children[j] = LONG(in->children[j]);
+	      for (int k=0 ; k<4 ; k++)
+		no->bbox[j].box[k] = SHORT(in->bbox[j][k]);
+	    }
+	}
+    }
 
   Z_Free(data);
 }
@@ -1493,10 +1492,6 @@ bool Map::Setup(tic_t start, bool spawnthings)
 {
   extern  bool precache;
 
-  int gllump;
-  char glname[9];
-  glname[8] = '\0';
-
   CONS_Printf("Map::Setup: %s\n", lumpname.c_str());
   con.Drawer();     // let the user know what we are going to do
   I_FinishUpdate(); // page flip or blit buffer
@@ -1541,23 +1536,51 @@ bool Map::Setup(tic_t start, bool spawnthings)
   SetupSky();
 
   // NOTE: most of this ordering is important
-  LoadVertexes(lumpnum+LUMP_VERTEXES);
-  LoadBlockMap(lumpnum+LUMP_BLOCKMAP);
+  // Load GL data if it exists, otherwise use normal data
+  char glname[9] = "GL_\0\0\0\0\0";
+  strncat(glname, lumpname.c_str(), 5);
 
-  LoadSectors1(lumpnum+LUMP_SECTORS);
-  LoadSideDefs(lumpnum+LUMP_SIDEDEFS);
-  LoadLineDefs(lumpnum+LUMP_LINEDEFS);
+  int gllump = fc.FindNumForName(glname);
+  int gl_version = 0;
+  if (gllump != -1)
+    {
+      gl_version = LoadGLVertexes(gllump+LUMP_GL_VERTEXES);
+      CONS_Printf("Map %s has v%d GL nodes.\n", lumpname.c_str(), gl_version);
+
+      if (gl_version < 0)
+	I_Error("Can not handle GL nodes that are not v2 or v5.");
+    }
+  else
+    {
+      CONS_Printf("Level %s has no GL nodes.\n", lumpname.c_str());
+      LoadVertexes(lumpnum+LUMP_VERTEXES); // just loads the vertices
+    }
+
+  LoadBlockMap(lumpnum+LUMP_BLOCKMAP); // loads (and possibly fixes) the blockmap
+  LoadSectors1(lumpnum+LUMP_SECTORS);  // allocates sectors
+  LoadSideDefs(lumpnum+LUMP_SIDEDEFS); // allocates sidedefs
+  LoadLineDefs(lumpnum+LUMP_LINEDEFS); // points to v, si(and back)
 
   if (!hexen_format)
-    ConvertLineDefs();
+    ConvertLineDefs(); // just type conversion to mod. Hexen system
 
-  LoadSideDefs2(lumpnum+LUMP_SIDEDEFS); // also processes some linedef specials
-  LoadLineDefs2();
+  LoadSideDefs2(lumpnum+LUMP_SIDEDEFS); // points to se, uses l, processes some linedef specials
+  LoadLineDefs2(); // uses si, points to se
 
-  LoadSubsectors(lumpnum+LUMP_SSECTORS);
-  LoadNodes(lumpnum+LUMP_NODES);
-  LoadSegs(lumpnum+LUMP_SEGS);
-  LoadSectors2(lumpnum+LUMP_SECTORS);
+  if (gllump != -1)
+    {
+      LoadGLSubsectors(gllump+LUMP_GL_SSECT, gl_version);
+      LoadGLNodes(gllump+LUMP_GL_NODES, gl_version);
+      LoadGLSegs(gllump+LUMP_GL_SEGS, gl_version);
+    }
+  else
+    {
+      LoadSubsectors(lumpnum+LUMP_SSECTORS); // just loads them
+      LoadNodes(lumpnum+LUMP_NODES); // loads nodes
+      LoadSegs(lumpnum+LUMP_SEGS); // points to v, l, si, se, uses l
+    }
+
+  LoadSectors2(lumpnum+LUMP_SECTORS); // rest of secs, uses nothing!!!
   rejectmatrix = (byte *)fc.CacheLumpNum(lumpnum+LUMP_REJECT,PU_LEVEL);
   GroupLines();
 
@@ -1596,27 +1619,6 @@ bool Map::Setup(tic_t start, bool spawnthings)
   if (precache)
     PrecacheMap();
 
-  // Load GL nodes if they exist.
-  strcpy(glname, "GL_");
-  strncat(glname, lumpname.c_str(), 5);
-  gllump = fc.GetNumForName(glname);
-  if(gllump != -1) {
-    int gl_version;
-
-    gl_version = LoadGLVertexes(gllump+LUMP_GL_VERTEXES);
-    CONS_Printf("Level %s has v%d GL nodes.\n", lumpname.c_str(), gl_version);
-
-    if(gl_version < 0)
-      I_Error("Can not handle GL nodes that are not v2 or v5.");
-
-    LoadGLSegs(gllump+LUMP_GL_SEGS, gl_version);
-    LoadGLSubsectors(gllump+LUMP_GL_SSECT, gl_version);
-    LoadGLNodes(gllump+LUMP_GL_NODES, gl_version);
-
-  } else {
-    CONS_Printf("Level %s has no GL nodes.\n", lumpname.c_str());
-  }
-
   // Setup the OpenGL renderer.
   if (rendermode == render_opengl) {
     gllevel_t l;
@@ -1638,14 +1640,14 @@ bool Map::Setup(tic_t start, bool spawnthings)
     l.glvertexes = glvertexes;
     l.numglvertexes = numglvertexes;
 
-    l.glsegs = glsegs;
-    l.numglsegs = numglsegs;
+    l.glsegs = segs;
+    l.numglsegs = numsegs;
 
-    l.glsubsectors = glsubsectors;
-    l.numglsubsectors = numglsubsectors;
+    l.glsubsectors = subsectors;
+    l.numglsubsectors = numsubsectors;
 
-    l.glnodes = glnodes;
-    l.numglnodes = numglnodes;
+    l.glnodes = nodes;
+    l.numglnodes = numnodes;
 
     l.polyobjs = polyobjs;
     l.numpolyobjs = NumPolyobjs;

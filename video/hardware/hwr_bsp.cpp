@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2006/02/10 18:02:35  smite-meister
+// glnodes fixed
+//
 // Revision 1.8  2005/09/12 18:33:46  smite-meister
 // fixed_t, vec_t
 //
@@ -134,7 +137,7 @@ void HWBsp::AddSubsector(unsigned int num, Poly *poly)
 {
   if (poly)
     {
-      poly = CutOutSubsecPoly(&R.segs[R.subsectors[num].firstline], R.subsectors[num].numlines, poly);
+      poly = CutOutSubsecPoly(&R.segs[R.subsectors[num].first_seg], R.subsectors[num].num_segs, poly);
 
       planepolys[num] = poly; //extra data for this subsector
 
@@ -142,7 +145,7 @@ void HWBsp::AddSubsector(unsigned int num, Poly *poly)
     }
 }
 
-void HWBsp::Traverse(int bspnum, Poly* poly, unsigned short* leafnode, bbox_t &bbox)
+void HWBsp::Traverse(int bspnum, Poly* poly, Uint32 *leafnode, bbox_t &bbox)
 {
   if (bspnum & NF_SUBSECTOR) // found a subsector?
     {
@@ -807,8 +810,8 @@ void HWBsp::AdjustSegs()
         {
           continue;
         }
-      seg_t* lseg = &R.segs[R.subsectors[i].firstline];
-      for(int count=R.subsectors[i].numlines; count--; lseg++)
+      seg_t* lseg = &R.segs[R.subsectors[i].first_seg];
+      for(int count=R.subsectors[i].num_segs; count--; lseg++)
         {
           float distv1,distv2,tmp;
           nearv1=nearv2=MYMAX;
@@ -888,8 +891,8 @@ Subsector::Subsector(int num, Poly *poly)
     {
       CONS_Printf("found a sub sector: %d\n", num);
       sub = &R.subsectors[num]; // subsector
-      count = sub->numlines; // how many linedefs
-      line = &R.segs[sub->firstline]; // first line seg
+      count = sub->num_segs; // how many segs
+      line = &R.segs[sub->first_seg]; // first line seg
       prev_line = line + count - 1;   // last line seg
       next_line = line + 1;
     }
@@ -1035,7 +1038,7 @@ Subsector::Subsector(int num, Poly *poly)
           if (count > 1)
             next_line++;
           else
-            next_line = &R.segs[sub->firstline];
+            next_line = &R.segs[sub->first_seg];
           prev_line++;
         }
     }

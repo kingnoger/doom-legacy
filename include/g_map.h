@@ -16,6 +16,9 @@
 // GNU General Public License for more details.
 //
 // $Log$
+// Revision 1.48  2006/02/10 18:01:08  smite-meister
+// glnodes fixed
+//
 // Revision 1.47  2006/02/08 19:09:27  jussip
 // Added beginnings of a new OpenGL renderer.
 //
@@ -179,17 +182,9 @@ public:
   int                 numsegs;
   struct seg_t       *segs;
 
+  /// additional vertices from GL-nodes
   int                 numglvertexes;
   vertex_t           *glvertexes;
-
-  int                 numglsegs;
-  glseg_t            *glsegs;
-
-  int                 numglsubsectors;
-  glsubsector_t      *glsubsectors;
-
-  int                 numglnodes;
-  glnode_t           *glnodes;
 
   int                 NumPolyobjs;
   struct polyobj_t   *polyobjs;

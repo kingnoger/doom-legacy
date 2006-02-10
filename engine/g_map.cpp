@@ -5,6 +5,9 @@
 // Copyright (C) 1998-2005 by DooM Legacy Team.
 //
 // $Log$
+// Revision 1.65  2006/02/10 18:00:39  smite-meister
+// glnodes fixed
+//
 // Revision 1.64  2006/01/04 23:15:07  jussip
 // Read and convert GL nodes if they exist.
 //
@@ -169,9 +172,6 @@ Map::Map(MapInfo *i)
   linebuffer = NULL;
 
   glvertexes   = NULL;
-  glsegs       = NULL;
-  glsubsectors = NULL;
-  glnodes      = NULL;
 
   bmap.index = NULL;
   bmap.lists = NULL;
@@ -214,12 +214,8 @@ Map::~Map()
   Z_Free(linebuffer);
 
   // Remove GL nodes if they exist.
-  if(glvertexes != NULL) {
+  if (glvertexes)
     Z_Free(glvertexes);
-    Z_Free(glsegs);
-    Z_Free(glsubsectors);
-    Z_Free(glnodes);
-  }
 
   Z_Free(bmap.index);
   Z_Free(bmap.lists);

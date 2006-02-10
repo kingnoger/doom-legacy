@@ -340,7 +340,7 @@ void OGLRenderer::RenderGLSubsector(int num) {
   int curseg;
   int firstseg;
   int segcount;
-  glsubsector_t *ss;
+  subsector_t *ss;
   sector_t *s;
   Texture *ftex;
   if(num < 0 || num > l.numglsubsectors)
@@ -348,7 +348,7 @@ void OGLRenderer::RenderGLSubsector(int num) {
   
   ss = &l.glsubsectors[num];
   firstseg = ss->first_seg;
-  segcount = ss->count;
+  segcount = ss->num_segs;
   s = ss->sector;
 
   // Bind ceiling texture.
@@ -361,11 +361,11 @@ void OGLRenderer::RenderGLSubsector(int num) {
   glNormal3f(0.0, 0.0, -1.0);
   glBegin(GL_POLYGON);
   for(curseg = firstseg; curseg < firstseg + segcount; curseg++) {
-    glseg_t seg = l.glsegs[curseg];
+    seg_t seg = l.glsegs[curseg];
     GLfloat x, y, z, tx, ty;
     vertex_t *v;
 
-    v = seg.start_vertex;
+    v = seg.v1;
     x = v->x.Float();
     y = v->y.Float();
     z = s->ceilingheight.Float(); 
@@ -389,11 +389,11 @@ void OGLRenderer::RenderGLSubsector(int num) {
   glNormal3f(0.0, 0.0, 1.0);
   glBegin(GL_POLYGON);
   for(curseg = firstseg+segcount-1; curseg >= firstseg; curseg--) {
-    glseg_t seg = l.glsegs[curseg];
+    seg_t seg = l.glsegs[curseg];
     GLfloat x, y, z, tx, ty;
     vertex_t *v;
 
-    v = seg.end_vertex;
+    v = seg.v2;
     x = v->x.Float();
     y = v->y.Float();
     z = s->floorheight.Float(); 
@@ -414,7 +414,7 @@ void OGLRenderer::RenderGLSubsector(int num) {
 // silently ignored.
 
 void OGLRenderer::RenderGLSeg(int num) {
-  glseg_t *s;
+  seg_t *s;
   line_t *ld;
   vertex_t *fv;
   vertex_t *tv;
@@ -435,8 +435,8 @@ void OGLRenderer::RenderGLSeg(int num) {
   if(ld == NULL)
     return;
 
-  fv = s->start_vertex;
-  tv = s->end_vertex;
+  fv = s->v1;
+  tv = s->v2;
 
   // Calculate surface normal. Should we account for degenerate
   // linedefs?

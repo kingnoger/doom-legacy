@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.37  2006/02/10 18:02:35  smite-meister
+// glnodes fixed
+//
 // Revision 1.36  2006/02/09 20:54:25  jussip
 // Player sprites (sorta) work.
 //
@@ -935,20 +938,16 @@ void R_Init()
 //
 subsector_t *Map::R_PointInSubsector(fixed_t x, fixed_t y)
 {
-  node_t*     node;
-  int         side;
-  int         nodenum;
-
   // single subsector is a special case
   if (!numnodes)
     return subsectors;
 
-  nodenum = numnodes-1;
+  int nodenum = numnodes-1;
 
   while (! (nodenum & NF_SUBSECTOR) )
     {
-      node = &nodes[nodenum];
-      side = R_PointOnSide (x, y, node);
+      node_t *node = &nodes[nodenum];
+      int side = R_PointOnSide (x, y, node);
       nodenum = node->children[side];
     }
 
@@ -960,28 +959,23 @@ subsector_t *Map::R_PointInSubsector(fixed_t x, fixed_t y)
 //
 subsector_t* Map::R_IsPointInSubsector(fixed_t x, fixed_t y)
 {
-  node_t*     node;
-  int         side;
-  int         nodenum,i;
-  subsector_t *ret;
-
   // single subsector is a special case
   if (!numnodes)
     return subsectors;
 
-  nodenum = numnodes-1;
+  int nodenum = numnodes-1;
 
   while (! (nodenum & NF_SUBSECTOR) )
     {
-      node = &nodes[nodenum];
-      side = R_PointOnSide (x, y, node);
+      node_t *node = &nodes[nodenum];
+      int side = R_PointOnSide (x, y, node);
       nodenum = node->children[side];
     }
 
-  ret=&subsectors[nodenum & ~NF_SUBSECTOR];
-  for(i=0;i<ret->numlines;i++)
+  subsector_t *ret = &subsectors[nodenum & ~NF_SUBSECTOR];
+  for (unsigned i=0; i<ret->num_segs; i++)
     {
-      if(R_PointOnSegSide(x,y,&segs[ret->firstline+i]))
+      if (R_PointOnSegSide(x,y,&segs[ret->first_seg + i]))
 	return 0;
     }
 

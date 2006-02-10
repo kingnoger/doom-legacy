@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.23  2006/02/10 18:01:08  smite-meister
+// glnodes fixed
+//
 // Revision 1.22  2006/02/08 19:09:27  jussip
 // Added beginnings of a new OpenGL renderer.
 //
@@ -153,8 +156,6 @@
 #include "m_fixed.h"
 #include "m_bbox.h"
 
-// GL node struct definitions are here.
-#include"doomdata.h"
 
 /// \brief Your plain vanilla vertex
 struct vertex_t
@@ -522,11 +523,11 @@ struct line_t
 /// (all or some) sides of a convex BSP leaf.
 struct subsector_t
 {
-  sector_t *sector;    ///< to which sector does this subsector belong?
-  Uint16    numlines;  ///< number of linesegs surrounding this subsector
-  Uint16    firstline; ///< index into the segs array
+  Uint32 num_segs;  ///< number of linesegs surrounding this subsector
+  Uint32 first_seg; ///< index into the segs array
+  sector_t *sector; ///< to which sector does this subsector belong?
 
-  int       validcount;  // Hurdler: added for optimized mlook in hw mode
+  //int       validcount;  // Hurdler: added for optimized mlook in hw mode
 
   struct floorsplat_t *splats; ///< floorsplat list
   struct polyobj_t    *poly;
@@ -563,23 +564,20 @@ struct msecnode_t
 struct seg_t
 {
   vertex_t *v1, *v2;
-  int       side;
+  line_t   *linedef;
+  short     side;        ///< 0 means right side, 1 means left side.
+  seg_t    *partner_seg; ///< the other side
+
+  side_t   *sidedef;
   fixed_t   offset;
   angle_t   angle;
-  side_t   *sidedef;
-  line_t   *linedef;
+  float     length; ///< seg length
 
   // Sector references.
   // Could be retrieved from linedef, too.
   // backsector is NULL for one sided lines
   sector_t *frontsector;
   sector_t *backsector;
-
-  // lenght of the seg : used by the hardware renderer
-  //float       length;
-
-  //Hurdler: 04/12/2000: added for static lightmap
-  //lightmap_t  *lightmaps;
 
   // SoM: Why slow things down by calculating lightlists for every thick side.
   int         numlights;
@@ -598,8 +596,8 @@ struct node_t
   /// Bounding box for each child.
   bbox_t bbox[2];
 
-#define NF_SUBSECTOR    0x8000 ///< Indicates a BSP leaf == subsector.
-  Uint16 children[2];
+  Uint32 children[2]; ///< indices of children nodes
+#define NF_SUBSECTOR (1 << 31) ///< Indicates a BSP leaf => child == subsector.
 };
 
 
@@ -644,26 +642,14 @@ enum mapthing_flags_e
   MTF_GDEATHMATCH = 0x0400 ///< appears in dm games
 };
 
+
+
+
 // GL node definitions. Currently we use some v5 GL nodes directly.
 // This is not very optimal, but it will do for the moment.
 
 // glvertexes and vertexes are both the same.
 
-struct glseg_t {
-  vertex_t *start_vertex;
-  vertex_t *end_vertex;  
-  line_t *linedef;     
-  char side;         ///< 0 means right side, 1 means left side.
-  glseg_t *partner_seg; 
-};
-
-typedef mapgl5node_t glnode_t;
-
-struct glsubsector_t {
-  Uint32 count;
-  Uint32 first_seg;
-  sector_t *sector;
-};
 
 /// \brief Data needed to render level geometry with GL renderer.
 ///
@@ -686,13 +672,13 @@ struct gllevel_t {
   vertex_t *glvertexes;
   int      numglvertexes;
 
-  glseg_t *glsegs;
+  seg_t  *glsegs;
   int     numglsegs;
 
-  glsubsector_t *glsubsectors;
-  int              numglsubsectors;
+  subsector_t *glsubsectors;
+  int          numglsubsectors;
 
-  glnode_t *glnodes;
+  node_t  *glnodes;
   int      numglnodes;
 
   polyobj_t *polyobjs;

@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.5  2006/02/10 18:01:11  smite-meister
+// glnodes fixed
+//
 // Revision 1.4  2004/10/14 19:35:50  smite-meister
 // automap, bbox_t
 //
@@ -128,7 +131,7 @@ public:
   ~HWBsp();
 
   /// Traverse recursively the BSP nodes to create sub-sectors
-  void Traverse(int bspnum, Poly* poly, unsigned short* leafnode, bbox_t &bbox);
+  void Traverse(int bspnum, Poly* poly, Uint32 *leafnode, bbox_t &bbox);
 
   /// Render recursively the BSP nodes
   void Render(int bspnum);

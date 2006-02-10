@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.10  2006/02/10 18:00:41  smite-meister
+// glnodes fixed
+//
 // Revision 1.9  2005/09/11 16:22:54  smite-meister
 // template classes
 //
@@ -140,8 +143,8 @@ bool Map::CrossSubsector(int num)
   subsector_t *sub = &subsectors[num];
 
   // check lines
-  int count = sub->numlines;
-  seg_t *seg = &segs[sub->firstline];
+  int count = sub->num_segs;
+  seg_t *seg = &segs[sub->first_seg];
 
   for ( ; count ; seg++, count--)
     {

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,44 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
-// $Log$
-// Revision 1.14  2006/02/08 19:09:27  jussip
-// Added beginnings of a new OpenGL renderer.
-//
-// Revision 1.13  2006/01/04 23:15:08  jussip
-// Read and convert GL nodes if they exist.
-//
-// Revision 1.12  2005/06/05 19:32:26  smite-meister
-// unsigned map structures
-//
-// Revision 1.11  2004/11/28 18:02:23  smite-meister
-// RPCs finally work!
-//
-// Revision 1.10  2004/11/09 20:38:52  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.8  2004/08/14 16:28:38  smite-meister
-// removed libtnl.a
-//
-// Revision 1.6  2003/04/19 17:38:47  smite-meister
-// SNDSEQ support, tools, linedef system...
-//
-// Revision 1.5  2003/04/14 08:58:30  smite-meister
-// Hexen maps load.
-//
-// Revision 1.4  2003/03/23 14:24:13  smite-meister
-// Polyobjects, MD3 models
-//
-// Revision 1.3  2003/03/08 16:07:14  smite-meister
-// Lots of stuff. Sprite cache. Movement+friction fix.
-//
-// Revision 1.2  2003/02/23 22:49:31  smite-meister
-// FS is back! L2 cache works.
-//
-// Revision 1.1.1.1  2002/11/16 14:18:22  hurdler
-// Initial C++ version of Doom Legacy
 //
 //-----------------------------------------------------------------------------
 
@@ -70,18 +32,17 @@
 // The most basic types we use, portability.
 #include "doomtype.h"
 
-const Uint16 NULL_INDEX = 0xFFFF; // or -1. Used for sidenums and blocklist linedefnums ONLY.
+const Uint16 NULL_INDEX    = 0xFFFF; // or -1. Used for sidenums and blocklist linedefnums.
+const Uint32 NULL_INDEX_32 = 0xFFFFFFFF; // or -1. Used for GLsegs
 
 #define GL2_HEADER "gNd2"
 #define GL5_HEADER "gNd5"
 
 #define VERT_IS_GL_V2 (1 << 15)
 #define VERT_IS_GL_V5 (1 << 31)
-#define VERT_IS_GL (1 << 31)
 
-#define CHILD_IS_SUBSEC_V2 (1 << 15)
-#define CHILD_IS_SUBSEC_V5 (1 << 31)
-#define CHILD_IS_SUBSEC (1 << 31)
+#define CHILD_IS_SUBSECTOR_OLD (1 << 15) // old leaf node flag for BSP
+
 
 // TODO tags to unsigned? lightlevels too?
 
@@ -325,8 +286,16 @@ struct SWITCHES_t
 {
   char   name1[9]; ///< texture name for the ON position
   char   name2[9]; ///< texture name for the OFF position
-  Uint16 episode; 
+  Uint16 episode;
 } __attribute__((packed));
+
+
+
+
+//===========================================================
+// GL-nodes
+//===========================================================
+
 
 /// \brief GL v2 Vertex
 ///
@@ -384,30 +353,19 @@ struct mapgl5subsector_t
   Uint32 first_seg;   ///< Starting with this
 } __attribute__((packed));
 
+
 /// \brief GL v2 Node
 ///
-/// A single node in the BSP tree
-
-struct mapgl2node_t
-{
-  Sint16 x;           
-  Sint16 y;           
-  Sint16 dx;          
-  Sint16 dy;          
-  Sint16 bbox[2][4];  ///< Bounding boxes for children
-  Uint16 children[2]; ///< Offsets to children.
-} __attribute__((packed));
+/// A single node in the BSP tree, identical in structure to normal nodes.
+typedef mapnode_t mapgl2node_t;
 
 /// \brief GL v5 Node
 ///
 /// A single node in the BSP tree
-
 struct mapgl5node_t
 {
-  Sint16 x;           
-  Sint16 y;           
-  Sint16 dx;
-  Sint16 dy;          
+  Sint16 x, y;
+  Sint16 dx, dy;
   Sint16 bbox[2][4];  ///< Bounding boxes for children
   Uint32 children[2]; ///< Offsets to children.
 } __attribute__((packed));

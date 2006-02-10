@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.9  2006/02/10 18:02:35  smite-meister
+// glnodes fixed
+//
 // Revision 1.8  2005/09/29 15:35:27  smite-meister
 // JDS texture standard
 //
@@ -999,8 +1002,8 @@ void Rend::R_Subsector(int num)
 	}
     }
 
-  count = sub->numlines;
-  seg_t *line = &segs[sub->firstline];
+  count = sub->num_segs;
+  seg_t *line = &segs[sub->first_seg];
   while (count--)
     {
       R_AddLine(line);

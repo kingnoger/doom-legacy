@@ -18,6 +18,9 @@
 //
 //
 // $Log$
+// Revision 1.25  2006/02/10 18:01:08  smite-meister
+// glnodes fixed
+//
 // Revision 1.24  2005/09/29 15:06:15  smite-meister
 // aiming bugfix
 //
@@ -96,6 +99,7 @@
 #ifndef g_actor_h
 #define g_actor_h 1
 
+#include "tnl/tnlNetObject.h"
 #include "m_fixed.h"  // Basics.
 #include "vect.h"
 #include "g_think.h"  // We need the Thinker stuff.
@@ -280,9 +284,13 @@ enum mobjeflag_t
 
 
 /// \brief Basis class for all Thinkers with a well-defined location.
-class Actor : public Thinker
+class Actor : public Thinker, public TNL::NetObject
 {
+  typedef TNL::NetObject Parent;
+  TNL_DECLARE_CLASS(Actor);
+
   DECLARE_CLASS(Actor)
+
 public:
   class presentation_t *pres;  ///< graphic presentation
 
@@ -350,6 +358,8 @@ public:
 
   virtual void Think();
   virtual void CheckPointers();
+
+  void ClientInterpolate(); ///< Netcode: clientside movement interpolation
 
   void CheckWater(); ///< set some eflags if sector contains water
 

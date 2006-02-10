@@ -17,6 +17,9 @@
 //
 //
 // $Log$
+// Revision 1.6  2006/02/10 18:00:39  smite-meister
+// glnodes fixed
+//
 // Revision 1.5  2005/04/17 18:36:33  smite-meister
 // netcode
 //
@@ -44,6 +47,7 @@
 #include "g_game.h"
 #include "g_team.h"
 #include "g_player.h"
+#include "g_pawn.h"
 
 #include "w_wad.h"
 
@@ -77,21 +81,25 @@ void GameType::ReadServerInfo(BitStream &s)
 void GameType::performScopeQuery(GhostConnection *c)
 {
   //CONS_Printf("doing scope query\n");
+
+  // first scope the players and their pawns
   for (GameInfo::player_iter_t t = e.game->Players.begin(); t != e.game->Players.end(); t++)
     {
-      bool owner = (t->second->connection == c); // connection c owns this player
+      PlayerInfo *p = t->second;
+      bool owner = (p->connection == c); // connection c owns this player
 
       // TODO set/clear masks so that HUD data is only sent to the client owning the pinfo etc.
-      c->objectInScope(t->second); // player information is always in scope
+      c->objectInScope(p); // player information is always in scope
 
       // pawns are usually in scope only to their owners
-      /*
-      if (!cv_hiddenplayers.value || owner)
-        c->objectInScope(t->second->pawn);
-      */
+      if ((!cv_hiddenplayers.value || owner)
+	  && p->pawn)
+        c->objectInScope(p->pawn);
     }
 
-  // other stuff
+  // in mods, here you could scope bases, flags etc.
+
+  // then actors in PVS, thinkers etc.
 }
 
 
