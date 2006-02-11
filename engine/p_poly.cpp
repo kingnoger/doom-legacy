@@ -17,60 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.22  2005/09/12 18:33:42  smite-meister
-// fixed_t, vec_t
-//
-// Revision 1.21  2005/09/11 16:22:54  smite-meister
-// template classes
-//
-// Revision 1.20  2005/06/23 19:42:15  smite-meister
-// obscure Hexen bugs fixed
-//
-// Revision 1.18  2005/03/10 22:28:43  smite-meister
-// poly renderer
-//
-// Revision 1.17  2004/11/09 20:38:50  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.16  2004/11/04 21:12:52  smite-meister
-// save/load fixed
-//
-// Revision 1.15  2004/10/14 19:35:30  smite-meister
-// automap, bbox_t
-//
-// Revision 1.14  2004/04/25 16:26:49  smite-meister
-// Doxygen
-//
-// Revision 1.12  2003/12/31 18:32:50  smite-meister
-// Last commit of the year? Sound works.
-//
-// Revision 1.10  2003/11/12 11:07:23  smite-meister
-// Serialization done. Map progression.
-//
-// Revision 1.9  2003/06/20 20:56:07  smite-meister
-// Presentation system tweaked
-//
-// Revision 1.7  2003/06/08 16:19:21  smite-meister
-// Hexen lights.
-//
-// Revision 1.6  2003/06/01 18:56:30  smite-meister
-// zlib compression, partial polyobj fix
-//
-// Revision 1.5  2003/05/30 13:34:46  smite-meister
-// Cleanup, HUD improved, serialization
-//
-// Revision 1.4  2003/05/05 00:24:49  smite-meister
-// Hexen linedef system. Pickups.
-//
-// Revision 1.3  2003/04/24 20:30:15  hurdler
-// Remove lots of compiling warnings
-//
-// Revision 1.2  2003/04/19 17:38:47  smite-meister
-// SNDSEQ support, tools, linedef system...
-//
-// Revision 1.1  2003/03/23 14:24:13  smite-meister
-// Polyobjects, MD3 models
 //
 //-----------------------------------------------------------------------------
 

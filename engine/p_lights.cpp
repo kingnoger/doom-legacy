@@ -17,45 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.15  2005/09/11 16:22:54  smite-meister
-// template classes
-//
-// Revision 1.14  2005/05/26 17:22:50  smite-meister
-// windows alpha fix
-//
-// Revision 1.13  2005/03/04 16:23:07  smite-meister
-// mp3, sector_t
-//
-// Revision 1.12  2004/11/09 20:38:50  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.11  2004/09/03 16:28:50  smite-meister
-// bugfixes and ZDoom linedef types
-//
-// Revision 1.10  2004/04/25 16:26:49  smite-meister
-// Doxygen
-//
-// Revision 1.9  2004/01/10 16:02:59  smite-meister
-// Cleanup and Hexen gameplay -related bugfixes
-//
-// Revision 1.8  2003/12/31 18:32:50  smite-meister
-// Last commit of the year? Sound works.
-//
-// Revision 1.6  2003/12/13 23:51:03  smite-meister
-// Hexen update
-//
-// Revision 1.4  2003/11/12 11:07:22  smite-meister
-// Serialization done. Map progression.
-//
-// Revision 1.3  2003/06/20 20:56:07  smite-meister
-// Presentation system tweaked
-//
-// Revision 1.2  2003/06/08 16:19:21  smite-meister
-// Hexen lights.
-//
-// Revision 1.1.1.1  2002/11/16 14:17:59  hurdler
-// Initial C++ version of Doom Legacy
 //
 //-----------------------------------------------------------------------------
 

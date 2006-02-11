@@ -19,60 +19,6 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
-// $Log$
-// Revision 1.32  2005/09/29 15:35:24  smite-meister
-// JDS texture standard
-//
-// Revision 1.31  2005/09/15 16:44:17  segabor
-// "backsector = null" bug fixed, gcc-4 improvements
-//
-// Revision 1.30  2005/09/12 18:33:42  smite-meister
-// fixed_t, vec_t
-//
-// Revision 1.29  2005/07/20 20:27:19  smite-meister
-// adv. texture cache
-//
-// Revision 1.28  2005/07/11 16:58:33  smite-meister
-// msecnode_t bug fixed
-//
-// Revision 1.27  2005/06/16 18:18:08  smite-meister
-// bugfixes
-//
-// Revision 1.21  2004/11/04 21:12:52  smite-meister
-// save/load fixed
-//
-// Revision 1.19  2004/10/14 19:35:30  smite-meister
-// automap, bbox_t
-//
-// Revision 1.18  2004/09/13 20:43:29  smite-meister
-// interface cleanup, sp map reset fixed
-//
-// Revision 1.14  2004/07/05 16:53:24  smite-meister
-// Netcode replaced
-//
-// Revision 1.13  2004/01/10 16:02:59  smite-meister
-// Cleanup and Hexen gameplay -related bugfixes
-//
-// Revision 1.10  2003/12/31 18:32:49  smite-meister
-// Last commit of the year? Sound works.
-//
-// Revision 1.8  2003/12/09 01:02:00  smite-meister
-// Hexen mapchange works, keycodes fixed
-//
-// Revision 1.6  2003/12/03 10:49:49  smite-meister
-// Save/load bugfix, text strings updated
-//
-// Revision 1.4  2003/11/23 19:54:10  hurdler
-// Remove warning and error at compile time
-//
-// Revision 1.3  2003/11/23 19:07:41  smite-meister
-// New startup order
-//
-// Revision 1.1  2003/11/12 11:07:17  smite-meister
-// Serialization done. Map progression.
-//
-// Revision 1.1.1.1  2002/11/16 14:17:59  hurdler
-// Initial C++ version of Doom Legacy
 //
 //-----------------------------------------------------------------------------
 

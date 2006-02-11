@@ -17,46 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.4  2005/09/29 15:15:19  smite-meister
-// aiming fix
-//
-// Revision 1.3  2005/09/12 18:33:42  smite-meister
-// fixed_t, vec_t
-//
-// Revision 1.2  2004/11/04 21:12:52  smite-meister
-// save/load fixed
-//
-// Revision 1.1.1.1  2002/11/16 14:17:58  hurdler
-// Initial C++ version of Doom Legacy
-//
-// Revision 1.7  2002/08/21 16:58:33  vberghol
-// Version 1.41 Experimental compiles and links!
-//
-// Revision 1.6  2002/08/20 13:56:58  vberghol
-// sdfgsd
-//
-// Revision 1.5  2002/08/06 13:14:22  vberghol
-// ...
-//
-// Revision 1.4  2002/07/23 19:21:41  vberghol
-// fixed up to p_enemy.cpp
-//
-// Revision 1.3  2002/07/01 21:00:18  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:13  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.4  2001/04/17 22:26:07  calumr
-// Initial Mac add
-//
-// Revision 1.3  2001/02/24 13:35:20  bpereira
-// no message
-//
-// Revision 1.2  2001/02/10 13:20:55  hurdler
-// update license
-//
 //-----------------------------------------------------------------------------
 
 /// \file

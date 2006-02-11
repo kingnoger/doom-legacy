@@ -16,55 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.26  2005/09/11 16:22:53  smite-meister
-// template classes
-//
-// Revision 1.25  2005/07/31 14:50:24  smite-meister
-// thing spawning fix
-//
-// Revision 1.24  2005/07/12 18:55:21  smite-meister
-// inventory and player preferences fixed
-//
-// Revision 1.18  2004/09/24 21:19:59  jussip
-// Joystick axis unbinding.
-//
-// Revision 1.15  2004/09/20 22:42:48  jussip
-// Joystick axis binding works. New joystick code ready for use.
-//
-// Revision 1.14  2004/09/13 20:43:29  smite-meister
-// interface cleanup, sp map reset fixed
-//
-// Revision 1.13  2004/09/10 19:59:15  jussip
-// Joystick code almost ready for use.
-//
-// Revision 1.12  2004/09/09 22:04:38  jussip
-// New joy code a bit more finished. Button binding works.
-//
-// Revision 1.11  2004/09/09 17:15:18  jussip
-// Cleared out old joystick crap in preparation for brand new code.
-//
-// Revision 1.7  2004/07/05 16:53:24  smite-meister
-// Netcode replaced
-//
-// Revision 1.6  2004/01/10 16:02:59  smite-meister
-// Cleanup and Hexen gameplay -related bugfixes
-//
-// Revision 1.5  2003/12/09 01:02:00  smite-meister
-// Hexen mapchange works, keycodes fixed
-//
-// Revision 1.4  2003/02/08 21:43:50  smite-meister
-// New Memzone system. Choose your pawntype! Cyberdemon OK.
-//
-// Revision 1.3  2003/01/25 21:33:05  smite-meister
-// Now compiles with MinGW 2.0 / GCC 3.2.
-// Builder can choose between dynamic and static linkage.
-//
-// Revision 1.2  2003/01/12 12:56:40  smite-meister
-// Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
-//
-// Revision 1.1.1.1  2002/11/16 14:17:51  hurdler
-// Initial C++ version of Doom Legacy
 //-----------------------------------------------------------------------------
 
 /// \file

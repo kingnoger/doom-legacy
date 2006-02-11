@@ -17,63 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.22  2005/12/16 18:18:21  smite-meister
-// Deus Vult BLOCKMAP fix
-//
-// Revision 1.21  2005/09/29 15:15:19  smite-meister
-// aiming fix
-//
-// Revision 1.20  2005/09/13 14:23:12  smite-meister
-// fixed_t fix
-//
-// Revision 1.19  2005/09/12 18:33:42  smite-meister
-// fixed_t, vec_t
-//
-// Revision 1.18  2005/09/11 16:22:54  smite-meister
-// template classes
-//
-// Revision 1.17  2005/07/11 16:58:40  smite-meister
-// msecnode_t bug fixed
-//
-// Revision 1.16  2005/06/05 19:32:25  smite-meister
-// unsigned map structures
-//
-// Revision 1.15  2004/11/18 20:30:11  smite-meister
-// tnt, plutonia
-//
-// Revision 1.14  2004/11/13 22:38:43  smite-meister
-// intermission works
-//
-// Revision 1.13  2004/11/09 20:38:50  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.12  2004/11/04 21:12:52  smite-meister
-// save/load fixed
-//
-// Revision 1.11  2004/10/14 19:35:30  smite-meister
-// automap, bbox_t
-//
-// Revision 1.10  2004/10/11 11:23:46  smite-meister
-// map utils
-//
-// Revision 1.7  2003/11/12 11:07:22  smite-meister
-// Serialization done. Map progression.
-//
-// Revision 1.5  2003/05/05 00:24:49  smite-meister
-// Hexen linedef system. Pickups.
-//
-// Revision 1.4  2003/02/23 22:49:30  smite-meister
-// FS is back! L2 cache works.
-//
-// Revision 1.3  2003/01/18 20:17:41  smite-meister
-// HUD fixed, levelchange crash fixed.
-//
-// Revision 1.2  2002/12/16 22:11:53  smite-meister
-// Actor/DActor separation done!
-//
-// Revision 1.1.1.1  2002/11/16 14:18:01  hurdler
-// Initial C++ version of Doom Legacy
 //
 //-----------------------------------------------------------------------------
 

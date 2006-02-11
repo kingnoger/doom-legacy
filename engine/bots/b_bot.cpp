@@ -16,22 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.5  2005/06/16 18:18:10  smite-meister
-// bugfixes
-//
-// Revision 1.4  2005/04/17 17:59:00  smite-meister
-// netcode
-//
-// Revision 1.3  2004/11/09 20:38:51  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.2  2004/10/27 17:37:08  smite-meister
-// netcode update
-//
-// Revision 1.1  2004/10/17 01:57:05  smite-meister
-// bots!
-//
 //-----------------------------------------------------------------------------
 
 /// \file

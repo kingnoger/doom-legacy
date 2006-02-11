@@ -20,30 +20,6 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
-// $Log$
-// Revision 1.8  2005/09/11 16:22:54  smite-meister
-// template classes
-//
-// Revision 1.7  2005/06/30 18:16:58  smite-meister
-// texture anims fixed
-//
-// Revision 1.6  2004/10/27 17:37:09  smite-meister
-// netcode update
-//
-// Revision 1.5  2004/08/12 18:30:28  smite-meister
-// cleaned startup
-//
-// Revision 1.4  2004/01/10 16:02:59  smite-meister
-// Cleanup and Hexen gameplay -related bugfixes
-//
-// Revision 1.3  2004/01/02 14:25:02  smite-meister
-// cleanup
-//
-// Revision 1.2  2003/02/23 22:49:31  smite-meister
-// FS is back! L2 cache works.
-//
-// Revision 1.1.1.1  2002/11/16 14:18:19  hurdler
-// Initial C++ version of Doom Legacy
 //
 //--------------------------------------------------------------------------
 

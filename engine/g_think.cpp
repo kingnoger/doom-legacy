@@ -16,25 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.10  2004/11/04 21:12:52  smite-meister
-// save/load fixed
-//
-// Revision 1.9  2004/04/25 16:26:49  smite-meister
-// Doxygen
-//
-// Revision 1.8  2004/01/02 14:21:21  smite-meister
-// save bugfix
-//
-// Revision 1.7  2003/12/13 23:51:03  smite-meister
-// Hexen update
-//
-// Revision 1.6  2003/11/13 00:33:02  smite-meister
-// Static initialization order fiasco fixed
-//
-// Revision 1.5  2003/11/12 11:07:19  smite-meister
-// Serialization done. Map progression.
-//
 //-----------------------------------------------------------------------------
 
 /// \file

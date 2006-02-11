@@ -17,43 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.15  2005/07/11 16:58:40  smite-meister
-// msecnode_t bug fixed
-//
-// Revision 1.14  2004/12/02 17:22:34  smite-meister
-// HUD fixed
-//
-// Revision 1.10  2003/12/13 23:51:03  smite-meister
-// Hexen update
-//
-// Revision 1.9  2003/12/07 00:16:34  smite-meister
-// hah.
-//
-// Revision 1.8  2003/12/06 23:57:47  smite-meister
-// save-related bugfixes
-//
-// Revision 1.7  2003/11/12 11:07:23  smite-meister
-// Serialization done. Map progression.
-//
-// Revision 1.6  2003/06/01 18:56:30  smite-meister
-// zlib compression, partial polyobj fix
-//
-// Revision 1.5  2003/04/19 17:38:47  smite-meister
-// SNDSEQ support, tools, linedef system...
-//
-// Revision 1.4  2003/04/04 00:01:57  smite-meister
-// bugfixes, Hexen HUD
-//
-// Revision 1.3  2003/02/23 22:49:31  smite-meister
-// FS is back! L2 cache works.
-//
-// Revision 1.2  2002/12/23 23:15:41  smite-meister
-// Weapon groups, MAPINFO parser added!
-//
-// Revision 1.1.1.1  2002/11/16 14:18:08  hurdler
-// Initial C++ version of Doom Legacy
-//
 //-----------------------------------------------------------------------------
 
 /// \file

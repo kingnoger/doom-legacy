@@ -17,55 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.20  2005/10/03 17:12:25  smite-meister
-// zdoom fix
-//
-// Revision 1.19  2005/09/12 18:33:43  smite-meister
-// fixed_t, vec_t
-//
-// Revision 1.18  2005/09/11 16:22:54  smite-meister
-// template classes
-//
-// Revision 1.17  2005/06/05 19:32:25  smite-meister
-// unsigned map structures
-//
-// Revision 1.16  2004/11/04 21:12:53  smite-meister
-// save/load fixed
-//
-// Revision 1.14  2004/04/25 16:26:50  smite-meister
-// Doxygen
-//
-// Revision 1.12  2003/12/31 18:32:50  smite-meister
-// Last commit of the year? Sound works.
-//
-// Revision 1.10  2003/06/20 20:56:07  smite-meister
-// Presentation system tweaked
-//
-// Revision 1.8  2003/05/05 00:24:49  smite-meister
-// Hexen linedef system. Pickups.
-//
-// Revision 1.7  2003/04/14 08:58:27  smite-meister
-// Hexen maps load.
-//
-// Revision 1.6  2003/04/04 00:01:57  smite-meister
-// bugfixes, Hexen HUD
-//
-// Revision 1.5  2003/03/23 14:24:13  smite-meister
-// Polyobjects, MD3 models
-//
-// Revision 1.4  2003/01/25 21:33:05  smite-meister
-// Now compiles with MinGW 2.0 / GCC 3.2.
-// Builder can choose between dynamic and static linkage.
-//
-// Revision 1.3  2002/12/29 18:57:03  smite-meister
-// MAPINFO implemented, Actor deaths handled better
-//
-// Revision 1.2  2002/12/16 22:12:00  smite-meister
-// Actor/DActor separation done!
-//
-// Revision 1.1.1.1  2002/11/16 14:18:04  hurdler
-// Initial C++ version of Doom Legacy
 //
 //-----------------------------------------------------------------------------
 

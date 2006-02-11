@@ -15,42 +15,6 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// $Log$
-// Revision 1.14  2005/09/11 16:22:54  smite-meister
-// template classes
-//
-// Revision 1.13  2005/07/01 16:45:12  smite-meister
-// FS cameras work
-//
-// Revision 1.12  2005/06/16 18:18:08  smite-meister
-// bugfixes
-//
-// Revision 1.11  2005/04/22 19:44:49  smite-meister
-// bugs fixed
-//
-// Revision 1.10  2004/11/04 21:12:52  smite-meister
-// save/load fixed
-//
-// Revision 1.9  2004/10/27 17:37:06  smite-meister
-// netcode update
-//
-// Revision 1.8  2004/07/05 16:53:25  smite-meister
-// Netcode replaced
-//
-// Revision 1.7  2004/01/10 16:02:59  smite-meister
-// Cleanup and Hexen gameplay -related bugfixes
-//
-// Revision 1.6  2003/11/12 11:07:19  smite-meister
-// Serialization done. Map progression.
-//
-// Revision 1.5  2003/03/15 20:07:15  smite-meister
-// Initial Hexen compatibility!
-//
-// Revision 1.4  2003/01/12 12:56:40  smite-meister
-// Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
-//
-// Revision 1.3  2002/12/23 23:15:41  smite-meister
-// Weapon groups, MAPINFO parser added!
 //
 //-----------------------------------------------------------------------------
 

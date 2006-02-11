@@ -20,51 +20,6 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
-// $Log$
-// Revision 1.15  2005/06/22 20:44:31  smite-meister
-// alpha3 bugfixes
-//
-// Revision 1.14  2005/04/22 19:44:49  smite-meister
-// bugs fixed
-//
-// Revision 1.13  2004/11/09 20:38:52  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.12  2004/10/27 17:37:09  smite-meister
-// netcode update
-//
-// Revision 1.11  2004/08/29 20:48:49  smite-meister
-// bugfixes. wow.
-//
-// Revision 1.10  2004/08/12 18:30:28  smite-meister
-// cleaned startup
-//
-// Revision 1.9  2004/03/28 15:16:14  smite-meister
-// Texture cache.
-//
-// Revision 1.8  2004/01/05 11:48:08  smite-meister
-// 7 bugfixes
-//
-// Revision 1.7  2003/12/06 23:57:47  smite-meister
-// save-related bugfixes
-//
-// Revision 1.6  2003/11/23 19:07:42  smite-meister
-// New startup order
-//
-// Revision 1.5  2003/11/23 00:41:55  smite-meister
-// bugfixes
-//
-// Revision 1.4  2003/11/12 11:07:26  smite-meister
-// Serialization done. Map progression.
-//
-// Revision 1.3  2003/05/11 21:23:52  smite-meister
-// Hexen fixes
-//
-// Revision 1.2  2003/02/23 22:49:31  smite-meister
-// FS is back! L2 cache works.
-//
-// Revision 1.1.1.1  2002/11/16 14:18:19  hurdler
-// Initial C++ version of Doom Legacy
 //
 //--------------------------------------------------------------------------
 

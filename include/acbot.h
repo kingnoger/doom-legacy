@@ -16,16 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.3  2005/04/17 17:59:00  smite-meister
-// netcode
-//
-// Revision 1.2  2004/10/27 17:37:08  smite-meister
-// netcode update
-//
-// Revision 1.1  2004/10/17 01:57:05  smite-meister
-// bots!
-//
 //-----------------------------------------------------------------------------
 
 /// \file

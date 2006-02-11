@@ -17,69 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.27  2005/09/29 15:15:19  smite-meister
-// aiming fix
-//
-// Revision 1.26  2005/09/17 17:36:09  smite-meister
-// fixed_t fixes
-//
-// Revision 1.25  2005/09/11 16:22:54  smite-meister
-// template classes
-//
-// Revision 1.24  2005/07/05 18:29:05  smite-meister
-// damage types
-//
-// Revision 1.23  2005/07/05 17:36:42  smite-meister
-// small fixes
-//
-// Revision 1.22  2005/04/19 18:28:28  smite-meister
-// new RPCs
-//
-// Revision 1.20  2005/03/29 17:20:45  smite-meister
-// state and mobjinfo tables fixed
-//
-// Revision 1.18  2004/09/06 19:58:03  smite-meister
-// Doom linedefs done!
-//
-// Revision 1.17  2004/07/05 16:53:25  smite-meister
-// Netcode replaced
-//
-// Revision 1.16  2004/03/28 15:16:13  smite-meister
-// Texture cache.
-//
-// Revision 1.12  2003/12/03 10:49:50  smite-meister
-// Save/load bugfix, text strings updated
-//
-// Revision 1.11  2003/11/12 11:07:23  smite-meister
-// Serialization done. Map progression.
-//
-// Revision 1.10  2003/06/29 17:33:59  smite-meister
-// VFile system, PAK support, Hexen bugfixes
-//
-// Revision 1.9  2003/05/30 13:34:46  smite-meister
-// Cleanup, HUD improved, serialization
-//
-// Revision 1.7  2003/03/15 20:07:16  smite-meister
-// Initial Hexen compatibility!
-//
-// Revision 1.6  2003/02/16 16:54:51  smite-meister
-// L2 sound cache done
-//
-// Revision 1.5  2003/02/08 21:43:50  smite-meister
-// New Memzone system. Choose your pawntype! Cyberdemon OK.
-//
-// Revision 1.4  2002/12/29 18:57:03  smite-meister
-// MAPINFO implemented, Actor deaths handled better
-//
-// Revision 1.3  2002/12/23 23:15:41  smite-meister
-// Weapon groups, MAPINFO parser added!
-//
-// Revision 1.2  2002/12/16 22:11:55  smite-meister
-// Actor/DActor separation done!
-//
-// Revision 1.1.1.1  2002/11/16 14:18:02  hurdler
-// Initial C++ version of Doom Legacy
 //
 //-----------------------------------------------------------------------------
 

@@ -17,39 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.15  2005/09/11 16:22:54  smite-meister
-// template classes
-//
-// Revision 1.14  2004/11/18 20:30:12  smite-meister
-// tnt, plutonia
-//
-// Revision 1.13  2004/11/04 21:12:53  smite-meister
-// save/load fixed
-//
-// Revision 1.12  2004/10/27 17:37:07  smite-meister
-// netcode update
-//
-// Revision 1.11  2004/09/23 23:21:17  smite-meister
-// HUD updated
-//
-// Revision 1.10  2004/07/05 16:53:26  smite-meister
-// Netcode replaced
-//
-// Revision 1.7  2003/12/31 18:32:50  smite-meister
-// Last commit of the year? Sound works.
-//
-// Revision 1.4  2003/11/12 11:07:24  smite-meister
-// Serialization done. Map progression.
-//
-// Revision 1.3  2003/05/30 13:34:47  smite-meister
-// Cleanup, HUD improved, serialization
-//
-// Revision 1.2  2003/05/05 00:24:49  smite-meister
-// Hexen linedef system. Pickups.
-//
-// Revision 1.1  2003/03/15 20:07:18  smite-meister
-// Initial Hexen compatibility!
 //
 //-----------------------------------------------------------------------------
 

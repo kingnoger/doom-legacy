@@ -17,22 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.9  2005/05/31 18:04:21  smite-meister
-// screenslink crash fixed
-//
-// Revision 1.7  2004/11/09 20:38:51  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.6  2004/09/23 23:21:17  smite-meister
-// HUD updated
-//
-// Revision 1.4  2004/03/28 15:16:13  smite-meister
-// Texture cache.
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
-//
 //-----------------------------------------------------------------------------
 
 /// \file

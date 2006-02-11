@@ -17,49 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.17  2005/09/17 17:36:09  smite-meister
-// fixed_t fixes
-//
-// Revision 1.16  2005/09/11 16:22:54  smite-meister
-// template classes
-//
-// Revision 1.15  2004/11/18 20:30:10  smite-meister
-// tnt, plutonia
-//
-// Revision 1.14  2004/11/09 20:38:50  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.13  2004/11/04 21:12:52  smite-meister
-// save/load fixed
-//
-// Revision 1.12  2004/07/05 16:53:25  smite-meister
-// Netcode replaced
-//
-// Revision 1.9  2003/12/31 18:32:50  smite-meister
-// Last commit of the year? Sound works.
-//
-// Revision 1.8  2003/12/03 10:49:49  smite-meister
-// Save/load bugfix, text strings updated
-//
-// Revision 1.7  2003/11/12 11:07:21  smite-meister
-// Serialization done. Map progression.
-//
-// Revision 1.5  2003/03/15 20:07:16  smite-meister
-// Initial Hexen compatibility!
-//
-// Revision 1.4  2003/03/08 16:07:07  smite-meister
-// Lots of stuff. Sprite cache. Movement+friction fix.
-//
-// Revision 1.3  2002/12/23 23:15:41  smite-meister
-// Weapon groups, MAPINFO parser added!
-//
-// Revision 1.2  2002/12/16 22:11:38  smite-meister
-// Actor/DActor separation done!
-//
-// Revision 1.1.1.1  2002/11/16 14:17:58  hurdler
-// Initial C++ version of Doom Legacy
-//
 //-----------------------------------------------------------------------------
 
 /// \file

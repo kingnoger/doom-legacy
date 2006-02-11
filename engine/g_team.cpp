@@ -16,9 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.1  2004/06/25 18:02:47  smite-meister
-// Cleanup
 //
 //
 //-----------------------------------------------------------------------------

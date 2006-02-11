@@ -16,33 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.9  2005/10/03 17:12:25  smite-meister
-// zdoom fix
-//
-// Revision 1.8  2005/09/29 15:35:25  smite-meister
-// JDS texture standard
-//
-// Revision 1.7  2005/09/11 16:22:54  smite-meister
-// template classes
-//
-// Revision 1.6  2005/03/04 16:23:07  smite-meister
-// mp3, sector_t
-//
-// Revision 1.5  2004/11/19 16:51:04  smite-meister
-// cleanup
-//
-// Revision 1.4  2004/11/09 20:38:50  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.3  2004/10/27 17:37:06  smite-meister
-// netcode update
-//
-// Revision 1.2  2004/09/06 19:58:03  smite-meister
-// Doom linedefs done!
-//
-// Revision 1.1  2004/09/03 16:30:14  smite-meister
-// file split
 //
 //-----------------------------------------------------------------------------
 

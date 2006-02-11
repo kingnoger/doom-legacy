@@ -16,30 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.10  2005/09/12 18:33:44  smite-meister
-// fixed_t, vec_t
-//
-// Revision 1.9  2005/09/11 16:22:54  smite-meister
-// template classes
-//
-// Revision 1.8  2005/07/05 17:36:42  smite-meister
-// small fixes
-//
-// Revision 1.7  2005/06/05 19:32:26  smite-meister
-// unsigned map structures
-//
-// Revision 1.6  2005/04/17 17:59:00  smite-meister
-// netcode
-//
-// Revision 1.3  2004/11/09 20:38:51  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.1  2004/10/17 01:57:05  smite-meister
-// bots!
-//
-// Revision 1.2  2002/09/27 16:40:07  tonyd
-// First commit of acbot
 //
 //-----------------------------------------------------------------------------
 

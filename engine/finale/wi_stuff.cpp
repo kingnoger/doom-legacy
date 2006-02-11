@@ -17,49 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.29  2005/09/29 15:35:26  smite-meister
-// JDS texture standard
-//
-// Revision 1.28  2005/09/11 16:22:54  smite-meister
-// template classes
-//
-// Revision 1.27  2005/07/18 12:31:23  smite-meister
-// cross-cluster mapchanges
-//
-// Revision 1.26  2005/06/12 16:26:27  smite-meister
-// alpha2 bugfixes
-//
-// Revision 1.25  2005/04/17 18:36:34  smite-meister
-// netcode
-//
-// Revision 1.24  2005/03/19 13:51:29  smite-meister
-// sound samplerate fix
-//
-// Revision 1.23  2004/11/19 16:51:04  smite-meister
-// cleanup
-//
-// Revision 1.22  2004/11/18 20:30:12  smite-meister
-// tnt, plutonia
-//
-// Revision 1.21  2004/11/13 22:38:43  smite-meister
-// intermission works
-//
-// Revision 1.20  2004/11/09 20:38:51  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.19  2004/10/27 17:37:07  smite-meister
-// netcode update
-//
-// Revision 1.18  2004/09/23 23:21:17  smite-meister
-// HUD updated
-//
-// Revision 1.17  2004/08/13 18:25:10  smite-meister
-// sw renderer fix
-//
-// Revision 1.16  2004/08/12 18:30:26  smite-meister
-// cleaned startup
-//
 //-----------------------------------------------------------------------------
 
 /// \file

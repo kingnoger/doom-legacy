@@ -17,69 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.26  2005/09/29 15:35:27  smite-meister
-// JDS texture standard
-//
-// Revision 1.25  2005/07/20 20:27:22  smite-meister
-// adv. texture cache
-//
-// Revision 1.24  2005/06/23 19:42:15  smite-meister
-// obscure Hexen bugs fixed
-//
-// Revision 1.23  2005/06/05 19:32:26  smite-meister
-// unsigned map structures
-//
-// Revision 1.21  2005/03/16 21:16:07  smite-meister
-// menu cleanup, bugfixes
-//
-// Revision 1.20  2004/11/09 20:38:52  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.19  2004/10/27 17:37:09  smite-meister
-// netcode update
-//
-// Revision 1.18  2004/07/05 16:53:28  smite-meister
-// Netcode replaced
-//
-// Revision 1.17  2004/04/25 16:26:50  smite-meister
-// Doxygen
-//
-// Revision 1.15  2004/01/10 16:02:59  smite-meister
-// Cleanup and Hexen gameplay -related bugfixes
-//
-// Revision 1.13  2003/12/31 18:32:50  smite-meister
-// Last commit of the year? Sound works.
-//
-// Revision 1.12  2003/12/13 23:51:03  smite-meister
-// Hexen update
-//
-// Revision 1.9  2003/11/12 11:07:26  smite-meister
-// Serialization done. Map progression.
-//
-// Revision 1.8  2003/05/11 21:23:51  smite-meister
-// Hexen fixes
-//
-// Revision 1.7  2003/05/05 00:24:49  smite-meister
-// Hexen linedef system. Pickups.
-//
-// Revision 1.6  2003/04/24 20:30:26  hurdler
-// Remove lots of compiling warnings
-//
-// Revision 1.5  2003/04/20 17:35:38  smite-meister
-// Hexen volume fix
-//
-// Revision 1.4  2003/04/14 08:58:29  smite-meister
-// Hexen maps load.
-//
-// Revision 1.3  2003/04/04 00:01:57  smite-meister
-// bugfixes, Hexen HUD
-//
-// Revision 1.2  2003/03/23 14:24:13  smite-meister
-// Polyobjects, MD3 models
-//
-// Revision 1.1  2003/03/15 20:07:20  smite-meister
-// Initial Hexen compatibility!
 //
 //-----------------------------------------------------------------------------
 

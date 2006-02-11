@@ -17,33 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.10  2006/02/10 18:00:41  smite-meister
-// glnodes fixed
-//
-// Revision 1.9  2005/09/11 16:22:54  smite-meister
-// template classes
-//
-// Revision 1.7  2004/11/09 20:38:50  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.6  2004/11/04 21:12:52  smite-meister
-// save/load fixed
-//
-// Revision 1.5  2004/07/25 20:19:21  hurdler
-// Remove old hardware renderer and add part of the new one
-//
-// Revision 1.4  2004/03/28 15:16:13  smite-meister
-// Texture cache.
-//
-// Revision 1.3  2003/05/05 00:24:49  smite-meister
-// Hexen linedef system. Pickups.
-//
-// Revision 1.2  2003/03/15 20:07:17  smite-meister
-// Initial Hexen compatibility!
-//
-// Revision 1.1.1.1  2002/11/16 14:18:03  hurdler
-// Initial C++ version of Doom Legacy
 //
 //-----------------------------------------------------------------------------
 

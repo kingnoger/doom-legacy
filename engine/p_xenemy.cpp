@@ -17,43 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.18  2005/09/11 16:22:54  smite-meister
-// template classes
-//
-// Revision 1.17  2004/11/04 21:12:53  smite-meister
-// save/load fixed
-//
-// Revision 1.16  2004/10/27 17:37:07  smite-meister
-// netcode update
-//
-// Revision 1.15  2004/07/05 16:53:26  smite-meister
-// Netcode replaced
-//
-// Revision 1.14  2004/04/25 16:26:50  smite-meister
-// Doxygen
-//
-// Revision 1.9  2003/12/09 01:02:01  smite-meister
-// Hexen mapchange works, keycodes fixed
-//
-// Revision 1.7  2003/11/12 11:07:23  smite-meister
-// Serialization done. Map progression.
-//
-// Revision 1.6  2003/05/30 13:34:47  smite-meister
-// Cleanup, HUD improved, serialization
-//
-// Revision 1.4  2003/05/05 00:24:49  smite-meister
-// Hexen linedef system. Pickups.
-//
-// Revision 1.3  2003/04/14 08:58:28  smite-meister
-// Hexen maps load.
-//
-// Revision 1.2  2003/03/23 14:24:13  smite-meister
-// Polyobjects, MD3 models
-//
-// Revision 1.1  2003/03/15 20:07:18  smite-meister
-// Initial Hexen compatibility!
-//
 //-----------------------------------------------------------------------------
 
 /// \file

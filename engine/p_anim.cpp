@@ -16,54 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.21  2005/10/05 17:24:37  smite-meister
-// texturecache fix
-//
-// Revision 1.20  2005/09/29 15:35:25  smite-meister
-// JDS texture standard
-//
-// Revision 1.19  2005/09/11 16:22:54  smite-meister
-// template classes
-//
-// Revision 1.18  2005/07/31 14:50:24  smite-meister
-// thing spawning fix
-//
-// Revision 1.17  2005/07/20 20:27:21  smite-meister
-// adv. texture cache
-//
-// Revision 1.16  2005/06/30 18:16:57  smite-meister
-// texture anims fixed
-//
-// Revision 1.15  2005/01/25 18:29:13  smite-meister
-// preparing for alpha
-//
-// Revision 1.14  2005/01/04 18:32:41  smite-meister
-// better colormap handling
-//
-// Revision 1.13  2004/11/28 18:02:21  smite-meister
-// RPCs finally work!
-//
-// Revision 1.11  2004/10/14 19:35:30  smite-meister
-// automap, bbox_t
-//
-// Revision 1.10  2004/09/23 23:21:16  smite-meister
-// HUD updated
-//
-// Revision 1.8  2004/09/06 19:58:02  smite-meister
-// Doom linedefs done!
-//
-// Revision 1.7  2004/09/03 16:28:49  smite-meister
-// bugfixes and ZDoom linedef types
-//
-// Revision 1.4  2004/07/05 16:53:25  smite-meister
-// Netcode replaced
-//
-// Revision 1.3  2004/04/25 16:26:49  smite-meister
-// Doxygen
-//
-// Revision 1.2  2004/04/01 09:16:16  smite-meister
-// Texture system bugfixes
 //
 //-----------------------------------------------------------------------------
 

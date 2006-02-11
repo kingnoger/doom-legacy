@@ -16,42 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.44  2005/09/15 16:44:17  segabor
-// "backsector = null" bug fixed, gcc-4 improvements
-//
-// Revision 1.43  2005/07/11 16:58:33  smite-meister
-// msecnode_t bug fixed
-//
-// Revision 1.42  2005/06/12 16:26:26  smite-meister
-// alpha2 bugfixes
-//
-// Revision 1.41  2005/04/17 18:36:33  smite-meister
-// netcode
-//
-// Revision 1.38  2004/11/13 22:38:42  smite-meister
-// intermission works
-//
-// Revision 1.37  2004/10/27 17:37:06  smite-meister
-// netcode update
-//
-// Revision 1.36  2004/09/23 23:21:16  smite-meister
-// HUD updated
-//
-// Revision 1.35  2004/08/12 18:30:23  smite-meister
-// cleaned startup
-//
-// Revision 1.33  2004/07/13 20:23:36  smite-meister
-// Mod system basics
-//
-// Revision 1.32  2004/07/11 14:32:00  smite-meister
-// Consvars updated, bugfixes
-//
-// Revision 1.31  2004/07/05 16:53:24  smite-meister
-// Netcode replaced
-//
-// Revision 1.30  2004/04/25 16:26:49  smite-meister
-// Doxygen
 //-----------------------------------------------------------------------------
 
 /// \file

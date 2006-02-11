@@ -17,27 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.7  2005/09/11 16:22:54  smite-meister
-// template classes
-//
-// Revision 1.6  2005/07/11 16:58:40  smite-meister
-// msecnode_t bug fixed
-//
-// Revision 1.5  2004/07/14 16:13:13  smite-meister
-// cleanup, commands
-//
-// Revision 1.4  2004/04/25 16:26:50  smite-meister
-// Doxygen
-//
-// Revision 1.3  2004/01/02 14:25:01  smite-meister
-// cleanup
-//
-// Revision 1.2  2003/12/31 18:32:50  smite-meister
-// Last commit of the year? Sound works.
-//
-// Revision 1.1  2003/05/05 00:24:49  smite-meister
-// Hexen linedef system. Pickups.
 //
 //-----------------------------------------------------------------------------
 

@@ -17,43 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.13  2004/12/02 17:22:35  smite-meister
-// HUD fixed
-//
-// Revision 1.12  2004/11/28 18:02:22  smite-meister
-// RPCs finally work!
-//
-// Revision 1.11  2004/09/23 23:21:18  smite-meister
-// HUD updated
-//
-// Revision 1.10  2004/09/03 16:28:50  smite-meister
-// bugfixes and ZDoom linedef types
-//
-// Revision 1.9  2004/08/12 18:30:27  smite-meister
-// cleaned startup
-//
-// Revision 1.8  2004/07/05 16:53:27  smite-meister
-// Netcode replaced
-//
-// Revision 1.7  2004/03/28 15:16:13  smite-meister
-// Texture cache.
-//
-// Revision 1.6  2003/04/24 20:30:23  hurdler
-// Remove lots of compiling warnings
-//
-// Revision 1.5  2003/02/23 22:49:31  smite-meister
-// FS is back! L2 cache works.
-//
-// Revision 1.4  2003/01/18 20:17:41  smite-meister
-// HUD fixed, levelchange crash fixed.
-//
-// Revision 1.3  2002/12/16 22:12:13  smite-meister
-// Actor/DActor separation done!
-//
-// Revision 1.2  2002/12/03 10:20:08  smite-meister
-// HUD rationalized
-//
 //-----------------------------------------------------------------------------
 
 /// \file

@@ -17,21 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.26  2005/03/19 13:51:29  smite-meister
-// sound samplerate fix
-//
-// Revision 1.25  2004/11/19 16:51:04  smite-meister
-// cleanup
-//
-// Revision 1.24  2004/10/27 17:37:07  smite-meister
-// netcode update
-//
-// Revision 1.23  2004/09/23 23:21:17  smite-meister
-// HUD updated
-//
-// Revision 1.22  2004/08/19 19:42:41  smite-meister
-// bugfixes
 //
 //-----------------------------------------------------------------------------
 

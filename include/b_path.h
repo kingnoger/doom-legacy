@@ -16,21 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.3  2005/09/11 16:22:54  smite-meister
-// template classes
-//
-// Revision 1.2  2004/11/09 20:38:51  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.1  2004/10/17 01:57:05  smite-meister
-// bots!
-//
-// Revision 1.3  2002/09/28 06:53:11  tonyd
-// fixed CR problem, fixed game options crash
-//
-// Revision 1.2  2002/09/27 16:40:08  tonyd
-// First commit of acbot
 //
 //-----------------------------------------------------------------------------
 

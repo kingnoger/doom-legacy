@@ -16,18 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.6  2006/02/10 18:00:39  smite-meister
-// glnodes fixed
-//
-// Revision 1.5  2005/04/17 18:36:33  smite-meister
-// netcode
-//
-// Revision 1.4  2004/12/08 16:43:44  segabor
-// small type casting fix
-//
-// Revision 1.3  2004/10/27 17:37:06  smite-meister
-// netcode update
 //
 //-----------------------------------------------------------------------------
 

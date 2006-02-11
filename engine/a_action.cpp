@@ -17,64 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.19  2005/09/11 16:22:53  smite-meister
-// template classes
-//
-// Revision 1.18  2004/11/28 18:02:19  smite-meister
-// RPCs finally work!
-//
-// Revision 1.17  2004/11/04 21:12:51  smite-meister
-// save/load fixed
-//
-// Revision 1.16  2004/10/27 17:37:05  smite-meister
-// netcode update
-//
-// Revision 1.15  2004/07/14 16:13:12  smite-meister
-// cleanup, commands
-//
-// Revision 1.14  2004/07/05 16:53:24  smite-meister
-// Netcode replaced
-//
-// Revision 1.13  2004/04/25 16:26:48  smite-meister
-// Doxygen
-//
-// Revision 1.12  2004/01/11 17:19:14  smite-meister
-// bugfixes
-//
-// Revision 1.11  2004/01/06 14:37:45  smite-meister
-// six bugfixes, cleanup
-//
-// Revision 1.10  2004/01/02 14:25:01  smite-meister
-// cleanup
-//
-// Revision 1.9  2003/12/31 18:32:49  smite-meister
-// Last commit of the year? Sound works.
-//
-// Revision 1.8  2003/12/23 18:06:06  smite-meister
-// Hexen stairbuilders. Moving geometry done!
-//
-// Revision 1.7  2003/12/03 10:49:49  smite-meister
-// Save/load bugfix, text strings updated
-//
-// Revision 1.6  2003/11/23 00:41:54  smite-meister
-// bugfixes
-//
-// Revision 1.5  2003/11/12 11:07:15  smite-meister
-// Serialization done. Map progression.
-//
-// Revision 1.4  2003/05/30 13:34:41  smite-meister
-// Cleanup, HUD improved, serialization
-//
-// Revision 1.3  2003/05/05 00:24:48  smite-meister
-// Hexen linedef system. Pickups.
-//
-// Revision 1.2  2003/04/14 08:58:24  smite-meister
-// Hexen maps load.
-//
-// Revision 1.1  2003/03/15 20:07:13  smite-meister
-// Initial Hexen compatibility!
-//
 //-----------------------------------------------------------------------------
 
 /// \file

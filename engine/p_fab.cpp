@@ -16,43 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.13  2005/09/11 16:22:54  smite-meister
-// template classes
-//
-// Revision 1.12  2004/11/09 20:38:50  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.11  2004/08/19 19:42:40  smite-meister
-// bugfixes
-//
-// Revision 1.10  2004/08/12 18:30:23  smite-meister
-// cleaned startup
-//
-// Revision 1.9  2004/07/05 16:53:25  smite-meister
-// Netcode replaced
-//
-// Revision 1.8  2004/03/28 15:16:13  smite-meister
-// Texture cache.
-//
-// Revision 1.7  2003/11/27 11:28:25  smite-meister
-// Doom/Heretic startup bug fixed
-//
-// Revision 1.6  2003/11/23 19:07:41  smite-meister
-// New startup order
-//
-// Revision 1.5  2003/11/23 00:41:55  smite-meister
-// bugfixes
-//
-// Revision 1.4  2003/03/15 20:07:15  smite-meister
-// Initial Hexen compatibility!
-//
-// Revision 1.3  2002/12/16 22:11:29  smite-meister
-// Actor/DActor separation done!
-//
-// Revision 1.2  2002/12/03 10:11:39  smite-meister
-// Blindness and missile clipping bugs fixed
-//
 //-----------------------------------------------------------------------------
 
 /// \file

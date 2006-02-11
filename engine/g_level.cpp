@@ -19,54 +19,6 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
-// $Log$
-// Revision 1.16  2005/07/20 20:27:19  smite-meister
-// adv. texture cache
-//
-// Revision 1.15  2004/08/12 18:30:23  smite-meister
-// cleaned startup
-//
-// Revision 1.14  2004/07/14 16:13:13  smite-meister
-// cleanup, commands
-//
-// Revision 1.13  2004/03/28 15:16:12  smite-meister
-// Texture cache.
-//
-// Revision 1.12  2003/12/31 18:32:49  smite-meister
-// Last commit of the year? Sound works.
-//
-// Revision 1.11  2003/12/21 12:29:09  smite-meister
-// bugfixes
-//
-// Revision 1.10  2003/12/18 11:57:31  smite-meister
-// fixes / new bugs revealed
-//
-// Revision 1.9  2003/12/09 01:02:00  smite-meister
-// Hexen mapchange works, keycodes fixed
-//
-// Revision 1.8  2003/12/06 23:57:47  smite-meister
-// save-related bugfixes
-//
-// Revision 1.7  2003/12/03 10:49:49  smite-meister
-// Save/load bugfix, text strings updated
-//
-// Revision 1.6  2003/11/30 00:09:42  smite-meister
-// bugfixes
-//
-// Revision 1.5  2003/11/27 11:28:25  smite-meister
-// Doom/Heretic startup bug fixed
-//
-// Revision 1.4  2003/11/23 00:41:55  smite-meister
-// bugfixes
-//
-// Revision 1.3  2003/11/12 11:07:17  smite-meister
-// Serialization done. Map progression.
-//
-// Revision 1.2  2003/07/02 17:52:46  smite-meister
-// VDir fix
-//
-// Revision 1.1  2003/06/10 22:39:54  smite-meister
-// Bugfixes
 //
 //-----------------------------------------------------------------------------
 
