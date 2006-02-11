@@ -1,6 +1,8 @@
 // Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
+// $Id$
+//
 // Copyright (C) 2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
