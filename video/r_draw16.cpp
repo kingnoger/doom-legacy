@@ -16,33 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.4  2005/10/05 17:25:53  smite-meister
-// texturecache fix
-//
-// Revision 1.3  2005/09/13 14:23:12  smite-meister
-// fixed_t fix
-//
-// Revision 1.2  2005/09/12 18:33:45  smite-meister
-// fixed_t, vec_t
-//
-// Revision 1.1.1.1  2002/11/16 14:18:45  hurdler
-// Initial C++ version of Doom Legacy
-//
-// Revision 1.4  2002/08/19 18:06:47  vberghol
-// renderer somewhat fixed
-//
-// Revision 1.3  2002/07/01 21:01:11  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:38  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //-----------------------------------------------------------------------------
 

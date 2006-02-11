@@ -17,49 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.6  2005/09/29 15:35:27  smite-meister
-// JDS texture standard
-//
-// Revision 1.5  2005/09/12 18:33:45  smite-meister
-// fixed_t, vec_t
-//
-// Revision 1.4  2004/11/09 20:38:53  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.3  2004/08/15 18:08:30  smite-meister
-// palette-to-palette colormaps etc.
-//
-// Revision 1.2  2004/03/28 15:16:15  smite-meister
-// Texture cache.
-//
-// Revision 1.1.1.1  2002/11/16 14:18:47  hurdler
-// Initial C++ version of Doom Legacy
-//
-// Revision 1.8  2001/08/06 23:57:09  stroggonmeth
-// Removed portal code, improved 3D floors in hardware mode.
-//
-// Revision 1.7  2001/04/02 18:54:32  bpereira
-// no message
-//
-// Revision 1.6  2001/03/21 18:24:39  stroggonmeth
-// Misc changes and fixes. Code cleanup
-//
-// Revision 1.5  2001/03/13 22:14:20  stroggonmeth
-// Long time no commit. 3D floors, FraggleScript, portals, ect.
-//
-// Revision 1.4  2001/01/25 22:15:44  bpereira
-// added heretic support
-//
-// Revision 1.3  2000/09/21 16:45:08  bpereira
-// no message
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
-//
 //
 // DESCRIPTION:
 //      Sky rendering. The DOOM sky is a texture map like any

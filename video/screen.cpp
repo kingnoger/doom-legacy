@@ -16,58 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.18  2005/04/05 16:15:13  smite-meister
-// valgrind fixes
-//
-// Revision 1.17  2004/11/19 16:51:07  smite-meister
-// cleanup
-//
-// Revision 1.16  2004/09/23 23:21:20  smite-meister
-// HUD updated
-//
-// Revision 1.15  2004/08/18 14:35:23  smite-meister
-// PNG support!
-//
-// Revision 1.14  2004/08/16 20:54:18  smite-meister
-// bugfix
-//
-// Revision 1.13  2004/08/15 18:08:30  smite-meister
-// palette-to-palette colormaps etc.
-//
-// Revision 1.12  2004/07/25 20:16:43  hurdler
-// Remove old hardware renderer and add part of the new one
-//
-// Revision 1.11  2004/07/11 14:32:02  smite-meister
-// Consvars updated, bugfixes
-//
-// Revision 1.10  2004/07/05 16:53:45  smite-meister
-// Netcode replaced
-//
-// Revision 1.9  2004/06/27 13:15:31  hurdler
-// minor things
-//
-// Revision 1.8  2004/03/28 15:16:15  smite-meister
-// Texture cache.
-//
-// Revision 1.7  2003/11/23 19:07:42  smite-meister
-// New startup order
-//
-// Revision 1.6  2003/02/23 22:49:32  smite-meister
-// FS is back! L2 cache works.
-//
-// Revision 1.5  2002/12/29 18:57:03  smite-meister
-// MAPINFO implemented, Actor deaths handled better
-//
-// Revision 1.4  2002/12/23 23:22:47  smite-meister
-// WAD2+WAD3 support, MAPINFO parser added!
-//
-// Revision 1.3  2002/12/16 22:22:04  smite-meister
-// Actor/DActor separation
-//
-// Revision 1.2  2002/12/03 10:07:13  smite-meister
-// Video unit overhaul begins
-//
 //-----------------------------------------------------------------------------
 
 /// \file

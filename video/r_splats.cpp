@@ -16,33 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.9  2005/09/17 17:36:09  smite-meister
-// fixed_t fixes
-//
-// Revision 1.8  2005/09/15 16:44:18  segabor
-// "backsector = null" bug fixed, gcc-4 improvements
-//
-// Revision 1.7  2005/09/12 18:33:45  smite-meister
-// fixed_t, vec_t
-//
-// Revision 1.6  2005/06/05 19:32:28  smite-meister
-// unsigned map structures
-//
-// Revision 1.5  2004/12/19 23:54:08  smite-meister
-// small fixes
-//
-// Revision 1.4  2004/11/18 20:30:15  smite-meister
-// tnt, plutonia
-//
-// Revision 1.3  2004/03/28 15:16:15  smite-meister
-// Texture cache.
-//
-// Revision 1.2  2003/04/24 20:30:37  hurdler
-// Remove lots of compiling warnings
-//
-// Revision 1.1.1.1  2002/11/16 14:18:48  hurdler
-// Initial C++ version of Doom Legacy
 //
 //-----------------------------------------------------------------------------
 

@@ -16,36 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.10  2005/09/12 18:33:46  smite-meister
-// fixed_t, vec_t
-//
-// Revision 1.9  2004/11/09 20:38:54  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.8  2004/09/24 11:34:01  smite-meister
-// fix
-//
-// Revision 1.7  2004/09/23 23:21:20  smite-meister
-// HUD updated
-//
-// Revision 1.6  2004/08/29 13:50:23  hurdler
-// minor update
-//
-// Revision 1.5  2004/08/19 19:42:42  smite-meister
-// bugfixes
-//
-// Revision 1.4  2004/08/18 14:35:23  smite-meister
-// PNG support!
-//
-// Revision 1.3  2004/07/25 20:16:08  hurdler
-// Remove old hardware renderer and add part of the new one
-//
-// Revision 1.2  2004/05/02 21:15:56  hurdler
-// add dummy new renderer (bis)
-//
-// Revision 1.1  2004/05/01 23:29:19  hurdler
-// add dummy new renderer
 //
 //-----------------------------------------------------------------------------
 

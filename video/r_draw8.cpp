@@ -16,65 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.7  2005/11/06 19:35:14  smite-meister
-// ntexture
-//
-// Revision 1.6  2005/10/05 17:25:53  smite-meister
-// texturecache fix
-//
-// Revision 1.5  2005/09/13 14:23:12  smite-meister
-// fixed_t fix
-//
-// Revision 1.4  2005/09/12 18:33:45  smite-meister
-// fixed_t, vec_t
-//
-// Revision 1.2  2004/08/02 20:54:48  jussip
-// Minor compilation fix.
-//
-// Revision 1.1.1.1  2002/11/16 14:18:46  hurdler
-// Initial C++ version of Doom Legacy
-//
-// Revision 1.20  2001/08/06 23:57:09  stroggonmeth
-// Removed portal code, improved 3D floors in hardware mode.
-//
-// Revision 1.17  2001/03/21 18:24:39  stroggonmeth
-// Misc changes and fixes. Code cleanup
-//
-// Revision 1.16  2001/03/13 22:14:20  stroggonmeth
-// Long time no commit. 3D floors, FraggleScript, portals, ect.
-//
-// Revision 1.15  2001/01/25 22:15:44  bpereira
-// added heretic support
-//
-// Revision 1.14  2000/11/21 21:13:18  stroggonmeth
-// Optimised 3D floors and fixed crashing bug in high resolutions.
-//
-// Revision 1.12  2000/11/02 17:50:09  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.8  2000/04/18 17:39:39  stroggonmeth
-// Bug fixes and performance tuning.
-//
-// Revision 1.6  2000/04/06 21:06:19  stroggonmeth
-// Optimized extra_colormap code...
-// Added #ifdefs for older water code.
-//
-// Revision 1.5  2000/04/05 15:47:46  stroggonmeth
-// Added hack for Dehacked lumps. Transparent sprites are now affected by colormaps.
-//
-// Revision 1.4  2000/04/04 19:28:43  stroggonmeth
-// Global colormaps working. Added a new linedef type 272.
-//
-// Revision 1.3  2000/04/04 00:32:47  stroggonmeth
-// Initial Boom compatability plus few misc changes all around.
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
-//
 //-----------------------------------------------------------------------------
 
 /// \file

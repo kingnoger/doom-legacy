@@ -16,68 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.10  2005/09/12 18:33:45  smite-meister
-// fixed_t, vec_t
-//
-// Revision 1.9  2005/07/20 20:27:24  smite-meister
-// adv. texture cache
-//
-// Revision 1.8  2005/06/05 19:32:28  smite-meister
-// unsigned map structures
-//
-// Revision 1.7  2004/11/09 20:38:54  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.6  2004/09/23 23:21:20  smite-meister
-// HUD updated
-//
-// Revision 1.5  2004/08/15 18:08:30  smite-meister
-// palette-to-palette colormaps etc.
-//
-// Revision 1.4  2004/07/25 20:16:08  hurdler
-// Remove old hardware renderer and add part of the new one
-//
-// Revision 1.3  2004/03/28 15:16:15  smite-meister
-// Texture cache.
-//
-// Revision 1.2  2003/05/11 21:23:53  smite-meister
-// Hexen fixes
-//
-// Revision 1.1.1.1  2002/11/16 14:18:56  hurdler
-// Initial C++ version of Doom Legacy
-//
-// Revision 1.9  2001/12/26 17:24:47  hurdler
-// Update Linux version
-//
-// Revision 1.8  2001/05/14 19:02:58  metzgermeister
-//   * Fixed floor not moving up with player on E3M1
-//   * Fixed crash due to oversized string in screen message ... bad bug!
-//   * Corrected some typos
-//   * fixed sound bug in SDL
-//
-// Revision 1.7  2001/05/07 15:55:05  hurdler
-// temporary "fix" for heretic
-//
-// Revision 1.6  2001/04/11 21:14:11  metzgermeister
-// *** empty log message ***
-//
-// Revision 1.5  2001/04/10 18:39:39  metzgermeister
-// fixed a (possible?) crash bug
-//
-// Revision 1.4  2001/04/09 23:26:06  hurdler
-// clean up
-//
-// Revision 1.3  2001/04/09 20:23:12  metzgermeister
-// more conservative trick treatment
-//
-// Revision 1.2  2001/03/26 19:47:56  metzgermeister
-// more tricky things
-//
-// Revision 1.1  2001/03/25 18:11:24  metzgermeister
-//   * SDL sound bug with swapped stereo channels fixed
-//   * separate hw_trick.c now for HW_correctSWTrick(.)
-//
 //-----------------------------------------------------------------------------
 
 /// \file

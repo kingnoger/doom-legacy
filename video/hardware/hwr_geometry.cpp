@@ -16,31 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.8  2005/05/29 11:30:44  segabor
-// Fixed __APPLE directive__ to __APPLE_CC__ on Mac OS X, new 'Doom Legacy' Xcode project target
-//
-// Revision 1.7  2004/12/08 16:47:16  segabor
-// Mac specific GL includes
-//
-// Revision 1.6  2004/11/21 12:51:07  hurdler
-// might fix "glClientActiveTexture" compilation error on some systems
-//
-// Revision 1.5  2004/10/31 22:22:13  smite-meister
-// Hasta la vista, pic_t!
-//
-// Revision 1.4  2004/07/23 22:18:42  hurdler
-// respect indent style and temporary (static, unoptimized and not correct) support for wall/floor/ceiling so I can actually work on texture support
-//
-// Revision 1.3  2004/07/07 19:24:43  hurdler
-// manage buffers properly
-//
-// Revision 1.2  2004/06/27 10:50:35  hurdler
-// new renderer things which will not break everyting else
-//
-// Revision 1.1  2004/06/02 21:05:55  hurdler
-// change the way polygons are managed (early implementation)
-//
 //-----------------------------------------------------------------------------
 
 /// \file

@@ -16,31 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.8  2005/11/06 19:35:14  smite-meister
-// ntexture
-//
-// Revision 1.7  2005/10/05 17:25:53  smite-meister
-// texturecache fix
-//
-// Revision 1.6  2005/09/29 15:47:55  smite-meister
-// fix
-//
-// Revision 1.5  2005/05/29 11:30:44  segabor
-// Fixed __APPLE directive__ to __APPLE_CC__ on Mac OS X, new 'Doom Legacy' Xcode project target
-//
-// Revision 1.4  2004/12/08 16:39:44  segabor
-// Exclude malloc.h in MacOS X
-//
-// Revision 1.3  2004/10/31 22:22:13  smite-meister
-// Hasta la vista, pic_t!
-//
-// Revision 1.2  2004/09/14 21:41:57  hurdler
-// rename "data" to "pixels" (I think it's more appropriate and that's how SDL and OpenGL name such data after all)
-//
-// Revision 1.1  2004/08/18 14:35:23  smite-meister
-// PNG support!
-//
 //-----------------------------------------------------------------------------
 
 /// \file

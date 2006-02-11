@@ -16,19 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.4  2004/07/25 20:54:55  hurdler
-// oops
-//
-// Revision 1.3  2004/07/23 22:18:42  hurdler
-// respect indent style and temporary (static, unoptimized and not correct) support for wall/floor/ceiling so I can actually work on texture support
-//
-// Revision 1.2  2004/06/27 10:50:35  hurdler
-// new renderer things which will not break everyting else
-//
-// Revision 1.1  2004/05/29 15:30:58  hurdler
-// change the way states are managed (early implementation)
-//
 //
 // DESCRIPTION:
 //      manage OpenGL graphics states

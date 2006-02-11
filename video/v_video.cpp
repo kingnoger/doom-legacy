@@ -17,69 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.30  2006/02/08 19:09:27  jussip
-// Added beginnings of a new OpenGL renderer.
-//
-// Revision 1.29  2005/11/06 19:35:15  smite-meister
-// ntexture
-//
-// Revision 1.28  2005/10/05 17:25:53  smite-meister
-// texturecache fix
-//
-// Revision 1.27  2005/09/12 18:33:45  smite-meister
-// fixed_t, vec_t
-//
-// Revision 1.26  2005/07/20 20:27:23  smite-meister
-// adv. texture cache
-//
-// Revision 1.25  2005/06/28 18:11:42  smite-meister
-// fixed menu scaling
-//
-// Revision 1.24  2005/04/19 18:28:43  smite-meister
-// new RPCs
-//
-// Revision 1.23  2005/04/05 16:15:13  smite-meister
-// valgrind fixes
-//
-// Revision 1.19  2004/11/28 18:02:25  smite-meister
-// RPCs finally work!
-//
-// Revision 1.18  2004/11/13 22:39:00  smite-meister
-// intermission works
-//
-// Revision 1.17  2004/11/09 20:38:53  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.15  2004/10/31 22:22:13  smite-meister
-// Hasta la vista, pic_t!
-//
-// Revision 1.14  2004/10/27 17:37:11  smite-meister
-// netcode update
-//
-// Revision 1.13  2004/10/14 19:35:52  smite-meister
-// automap, bbox_t
-//
-// Revision 1.12  2004/09/23 23:21:20  smite-meister
-// HUD updated
-//
-// Revision 1.11  2004/09/14 21:41:57  hurdler
-// rename "data" to "pixels" (I think it's more appropriate and that's how SDL and OpenGL name such data after all)
-//
-// Revision 1.10  2004/08/13 18:25:11  smite-meister
-// sw renderer fix
-//
-// Revision 1.7  2004/07/25 20:16:43  hurdler
-// Remove old hardware renderer and add part of the new one
-//
-// Revision 1.4  2004/01/10 16:03:00  smite-meister
-// Cleanup and Hexen gameplay -related bugfixes
-//
-// Revision 1.3  2002/12/16 22:22:05  smite-meister
-// Actor/DActor separation
-//
-// Revision 1.2  2002/12/03 10:07:13  smite-meister
-// Video unit overhaul begins
 //
 //-----------------------------------------------------------------------------
 

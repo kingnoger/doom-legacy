@@ -16,49 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.14  2005/09/12 18:33:46  smite-meister
-// fixed_t, vec_t
-//
-// Revision 1.13  2005/05/29 11:30:44  segabor
-// Fixed __APPLE directive__ to __APPLE_CC__ on Mac OS X, new 'Doom Legacy' Xcode project target
-//
-// Revision 1.12  2004/12/08 16:47:16  segabor
-// Mac specific GL includes
-//
-// Revision 1.11  2004/11/19 16:51:07  smite-meister
-// cleanup
-//
-// Revision 1.10  2004/10/31 22:22:13  smite-meister
-// Hasta la vista, pic_t!
-//
-// Revision 1.9  2004/09/03 16:28:52  smite-meister
-// bugfixes and ZDoom linedef types
-//
-// Revision 1.8  2004/08/12 18:30:34  smite-meister
-// cleaned startup
-//
-// Revision 1.7  2004/07/05 16:53:45  smite-meister
-// Netcode replaced
-//
-// Revision 1.6  2004/03/28 15:16:15  smite-meister
-// Texture cache.
-//
-// Revision 1.5  2003/12/18 11:57:31  smite-meister
-// fixes / new bugs revealed
-//
-// Revision 1.4  2003/06/20 20:56:08  smite-meister
-// Presentation system tweaked
-//
-// Revision 1.3  2003/04/24 20:30:44  hurdler
-// Remove lots of compiling warnings
-//
-// Revision 1.2  2003/04/05 12:20:00  smite-meister
-// Makefiles fixed
-//
-// Revision 1.1  2003/03/23 14:24:14  smite-meister
-// Polyobjects, MD3 models
-//
 //-----------------------------------------------------------------------------
 
 /// \file
