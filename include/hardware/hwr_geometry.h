@@ -16,16 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.3  2004/07/07 19:24:44  hurdler
-// manage buffers properly
-//
-// Revision 1.2  2004/06/27 10:50:35  hurdler
-// new renderer things which will not break everyting else
-//
-// Revision 1.1  2004/06/02 21:05:55  hurdler
-// change the way polygons are managed (early implementation)
-//
 //
 //-----------------------------------------------------------------------------
 

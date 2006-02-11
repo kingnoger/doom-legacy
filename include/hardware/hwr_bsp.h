@@ -16,21 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.5  2006/02/10 18:01:11  smite-meister
-// glnodes fixed
-//
-// Revision 1.4  2004/10/14 19:35:50  smite-meister
-// automap, bbox_t
-//
-// Revision 1.3  2004/07/25 20:18:16  hurdler
-// Remove old hardware renderer and add part of the new one
-//
-// Revision 1.2  2004/07/23 22:18:43  hurdler
-// respect indent style and temporary (static, unoptimized and not correct) support for wall/floor/ceiling so I can actually work on texture support
-//
-// Revision 1.1  2004/07/21 16:05:28  hurdler
-// early implementation of the new HWBsp class and of the Subsector class
 //
 //
 //-----------------------------------------------------------------------------

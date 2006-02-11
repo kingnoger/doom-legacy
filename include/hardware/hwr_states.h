@@ -16,25 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.6  2005/05/29 11:30:42  segabor
-// Fixed __APPLE directive__ to __APPLE_CC__ on Mac OS X, new 'Doom Legacy' Xcode project target
-//
-// Revision 1.5  2004/12/08 16:46:02  segabor
-// Mac specific GL includes
-//
-// Revision 1.4  2004/07/25 20:51:38  hurdler
-// oops
-//
-// Revision 1.3  2004/07/25 20:18:16  hurdler
-// Remove old hardware renderer and add part of the new one
-//
-// Revision 1.2  2004/06/27 10:50:35  hurdler
-// new renderer things which will not break everyting else
-//
-// Revision 1.1  2004/05/29 15:30:57  hurdler
-// change the way states are managed (early implementation)
-//
 //
 //-----------------------------------------------------------------------------
 

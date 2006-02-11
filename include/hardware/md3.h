@@ -16,19 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.4  2004/09/03 16:28:51  smite-meister
-// bugfixes and ZDoom linedef types
-//
-// Revision 1.3  2004/08/12 18:30:30  smite-meister
-// cleaned startup
-//
-// Revision 1.2  2004/03/28 15:16:14  smite-meister
-// Texture cache.
-//
-// Revision 1.1  2003/03/23 14:24:14  smite-meister
-// Polyobjects, MD3 models
-//
 //-----------------------------------------------------------------------------
 
 /// \file

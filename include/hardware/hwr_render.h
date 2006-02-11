@@ -16,25 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.6  2005/09/11 16:23:25  smite-meister
-// template classes
-//
-// Revision 1.5  2005/05/29 11:30:42  segabor
-// Fixed __APPLE directive__ to __APPLE_CC__ on Mac OS X, new 'Doom Legacy' Xcode project target
-//
-// Revision 1.4  2004/12/08 16:46:02  segabor
-// Mac specific GL includes
-//
-// Revision 1.3  2004/07/25 20:18:16  hurdler
-// Remove old hardware renderer and add part of the new one
-//
-// Revision 1.2  2004/05/02 21:15:56  hurdler
-// add dummy new renderer (bis)
-//
-// Revision 1.1  2004/05/01 23:29:19  hurdler
-// add dummy new renderer
-//
 //-----------------------------------------------------------------------------
 
 #ifndef hwr_render_h
