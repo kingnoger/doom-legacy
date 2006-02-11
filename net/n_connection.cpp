@@ -16,39 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.16  2006/01/15 23:48:07  jussip
-// Renamed VERSION to LEGACY_VERSION to avoid namespace collision with Autotools.
-//
-// Revision 1.15  2005/05/29 11:30:43  segabor
-// Fixed __APPLE directive__ to __APPLE_CC__ on Mac OS X, new 'Doom Legacy' Xcode project target
-//
-// Revision 1.14  2005/05/26 17:22:52  smite-meister
-// windows alpha fix
-//
-// Revision 1.13  2005/04/19 18:28:34  smite-meister
-// new RPCs
-//
-// Revision 1.12  2005/04/17 17:44:37  smite-meister
-// netcode
-//
-// Revision 1.11  2005/03/24 16:58:21  smite-meister
-// upgrade to OpenTNL 1.5
-//
-// Revision 1.10  2004/11/28 18:02:23  smite-meister
-// RPCs finally work!
-//
-// Revision 1.9  2004/11/09 20:38:52  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.4  2004/07/13 20:23:38  smite-meister
-// Mod system basics
-//
-// Revision 1.3  2004/07/11 14:32:01  smite-meister
-// Consvars updated, bugfixes
-//
-// Revision 1.1  2004/07/05 16:53:30  smite-meister
-// Netcode replaced
 //
 //-----------------------------------------------------------------------------
 

@@ -16,54 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.19  2006/01/15 23:48:07  jussip
-// Renamed VERSION to LEGACY_VERSION to avoid namespace collision with Autotools.
-//
-// Revision 1.18  2005/06/23 17:25:39  smite-meister
-// map conversion command added
-//
-// Revision 1.17  2005/06/12 16:26:28  smite-meister
-// alpha2 bugfixes
-//
-// Revision 1.16  2005/04/19 18:28:34  smite-meister
-// new RPCs
-//
-// Revision 1.15  2005/04/17 17:44:37  smite-meister
-// netcode
-//
-// Revision 1.14  2005/03/24 16:58:22  smite-meister
-// upgrade to OpenTNL 1.5
-//
-// Revision 1.12  2004/11/28 18:02:23  smite-meister
-// RPCs finally work!
-//
-// Revision 1.10  2004/11/09 20:38:53  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.9  2004/10/27 17:37:10  smite-meister
-// netcode update
-//
-// Revision 1.8  2004/09/03 16:28:51  smite-meister
-// bugfixes and ZDoom linedef types
-//
-// Revision 1.7  2004/08/18 14:35:22  smite-meister
-// PNG support!
-//
-// Revision 1.6  2004/08/06 18:54:39  smite-meister
-// netcode update
-//
-// Revision 1.5  2004/07/14 16:13:13  smite-meister
-// cleanup, commands
-//
-// Revision 1.4  2004/07/13 20:23:39  smite-meister
-// Mod system basics
-//
-// Revision 1.3  2004/07/09 19:43:40  smite-meister
-// Netcode fixes
-//
-// Revision 1.1  2004/07/05 16:53:30  smite-meister
-// Netcode replaced
 //
 //-----------------------------------------------------------------------------
 

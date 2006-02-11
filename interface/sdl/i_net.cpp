@@ -17,25 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.2  2004/08/18 14:35:21  smite-meister
-// PNG support!
-//
-// Revision 1.1.1.1  2002/11/16 14:18:31  hurdler
-// Initial C++ version of Doom Legacy
-//
-// Revision 1.3  2002/07/01 21:01:03  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:34  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.2  2000/09/10 10:56:00  metzgermeister
-// clean up & made it work again
-//
-// Revision 1.1  2000/08/21 21:17:32  metzgermeister
-// Initial import to CVS
-//
 //
 // DESCRIPTION:
 //      network interface

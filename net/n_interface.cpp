@@ -16,48 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.15  2006/01/15 23:48:07  jussip
-// Renamed VERSION to LEGACY_VERSION to avoid namespace collision with Autotools.
-//
-// Revision 1.14  2005/05/29 11:30:43  segabor
-// Fixed __APPLE directive__ to __APPLE_CC__ on Mac OS X, new 'Doom Legacy' Xcode project target
-//
-// Revision 1.13  2005/04/17 17:44:37  smite-meister
-// netcode
-//
-// Revision 1.12  2004/11/28 18:02:23  smite-meister
-// RPCs finally work!
-//
-// Revision 1.11  2004/11/19 16:51:06  smite-meister
-// cleanup
-//
-// Revision 1.10  2004/11/09 20:38:53  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.9  2004/11/04 21:12:54  smite-meister
-// save/load fixed
-//
-// Revision 1.8  2004/08/06 18:54:39  smite-meister
-// netcode update
-//
-// Revision 1.7  2004/07/13 20:23:39  smite-meister
-// Mod system basics
-//
-// Revision 1.6  2004/07/11 14:32:01  smite-meister
-// Consvars updated, bugfixes
-//
-// Revision 1.5  2004/07/09 19:43:40  smite-meister
-// Netcode fixes
-//
-// Revision 1.3  2004/07/05 16:53:30  smite-meister
-// Netcode replaced
-//
-// Revision 1.2  2004/06/25 19:54:09  smite-meister
-// Netcode
-//
-// Revision 1.1  2004/06/18 08:15:30  smite-meister
-// New TNL netcode!
 //
 //-----------------------------------------------------------------------------
 

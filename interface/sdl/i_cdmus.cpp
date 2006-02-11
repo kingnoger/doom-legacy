@@ -16,24 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.6  2005/01/25 18:29:16  smite-meister
-// preparing for alpha
-//
-// Revision 1.5  2004/07/11 14:32:01  smite-meister
-// Consvars updated, bugfixes
-//
-// Revision 1.4  2004/07/05 16:53:29  smite-meister
-// Netcode replaced
-//
-// Revision 1.3  2004/01/10 16:02:59  smite-meister
-// Cleanup and Hexen gameplay -related bugfixes
-//
-// Revision 1.2  2003/03/08 16:07:17  smite-meister
-// Lots of stuff. Sprite cache. Movement+friction fix.
-//
-// Revision 1.1.1.1  2002/11/16 14:18:31  hurdler
-// Initial C++ version of Doom Legacy
 //-----------------------------------------------------------------------------
 
 /// \file

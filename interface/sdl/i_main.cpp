@@ -16,14 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.2  2003/12/09 01:02:01  smite-meister
-// Hexen mapchange works, keycodes fixed
-//
-// Revision 1.1.1.1  2002/11/16 14:18:31  hurdler
-// Initial C++ version of Doom Legacy
-//
-//
 // DESCRIPTION:
 //    Main program, simply calls D_DoomMain high level loop.
 //-----------------------------------------------------------------------------

@@ -16,24 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.5  2004/08/29 13:50:22  hurdler
-// minor update
-//
-// Revision 1.4  2004/07/25 20:17:50  hurdler
-// Remove old hardware renderer and add part of the new one
-//
-// Revision 1.3  2004/05/02 21:15:56  hurdler
-// add dummy new renderer (bis)
-//
-// Revision 1.2  2003/01/25 21:33:06  smite-meister
-// Now compiles with MinGW 2.0 / GCC 3.2.
-// Builder can choose between dynamic and static linkage.
-//
-// Revision 1.1.1.1  2002/11/16 14:18:32  hurdler
-// Initial C++ version of Doom Legacy
-//
-//
 // DESCRIPTION:
 //      SDL specific part of the OpenGL API for Doom Legacy
 //
