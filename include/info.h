@@ -17,46 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.14  2005/09/11 16:23:25  smite-meister
-// template classes
-//
-// Revision 1.13  2005/07/31 14:50:25  smite-meister
-// thing spawning fix
-//
-// Revision 1.12  2005/07/20 20:27:22  smite-meister
-// adv. texture cache
-//
-// Revision 1.11  2005/04/01 14:47:45  smite-meister
-// dehacked works
-//
-// Revision 1.10  2005/03/29 17:20:46  smite-meister
-// state and mobjinfo tables fixed
-//
-// Revision 1.6  2003/03/23 14:24:13  smite-meister
-// Polyobjects, MD3 models
-//
-// Revision 1.5  2003/03/15 20:07:21  smite-meister
-// Initial Hexen compatibility!
-//
-// Revision 1.4  2003/03/08 16:07:15  smite-meister
-// Lots of stuff. Sprite cache. Movement+friction fix.
-//
-// Revision 1.3  2003/02/16 16:54:52  smite-meister
-// L2 sound cache done
-//
-// Revision 1.2  2003/01/12 12:56:42  smite-meister
-// Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
-//
-// Revision 1.1.1.1  2002/11/16 14:18:24  hurdler
-// Initial C++ version of Doom Legacy
-//
-// Revision 1.6  2001/01/25 22:15:42  bpereira
-// added heretic support
-//
-// Revision 1.3  2000/04/04 00:32:46  stroggonmeth
-// Initial Boom compatability plus few misc changes all around.
-//
 //-----------------------------------------------------------------------------
 
 /// \file
