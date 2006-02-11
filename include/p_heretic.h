@@ -16,20 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.4  2003/04/04 00:01:58  smite-meister
-// bugfixes, Hexen HUD
-//
-// Revision 1.3  2003/03/15 20:07:21  smite-meister
-// Initial Hexen compatibility!
-//
-// Revision 1.2  2002/12/16 22:05:02  smite-meister
-// Actor / DActor separation done!
-//
-// Revision 1.1.1.1  2002/11/16 14:18:25  hurdler
-// Initial C++ version of Doom Legacy
-//
-//
 // DESCRIPTION:
 //     Misc. routines from Heretic
 //-----------------------------------------------------------------------------

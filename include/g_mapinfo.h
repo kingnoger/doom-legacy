@@ -19,44 +19,6 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
-// $Log$
-// Revision 1.12  2005/09/29 15:35:27  smite-meister
-// JDS texture standard
-//
-// Revision 1.11  2005/07/20 20:27:22  smite-meister
-// adv. texture cache
-//
-// Revision 1.9  2004/10/14 19:35:50  smite-meister
-// automap, bbox_t
-//
-// Revision 1.5  2004/04/25 16:26:51  smite-meister
-// Doxygen
-//
-// Revision 1.1  2003/11/12 11:07:27  smite-meister
-// Serialization done. Map progression.
-//
-// Revision 1.7  2003/03/23 14:24:13  smite-meister
-// Polyobjects, MD3 models
-//
-// Revision 1.6  2003/02/23 22:49:31  smite-meister
-// FS is back! L2 cache works.
-//
-// Revision 1.5  2003/01/25 21:33:06  smite-meister
-// Now compiles with MinGW 2.0 / GCC 3.2.
-// Builder can choose between dynamic and static linkage.
-//
-// Revision 1.4  2003/01/12 12:56:42  smite-meister
-// Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
-//
-// Revision 1.3  2002/12/29 18:57:03  smite-meister
-// MAPINFO implemented, Actor deaths handled better
-//
-// Revision 1.2  2002/12/23 23:19:37  smite-meister
-// Weapon groups, MAPINFO parser, WAD2+WAD3 support added!
-//
-// Revision 1.1.1.1  2002/11/16 14:18:25  hurdler
-// Initial C++ version of Doom Legacy
-//
 //--------------------------------------------------------------------------
 
 /// \file

@@ -17,28 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.7  2004/10/27 17:37:09  smite-meister
-// netcode update
-//
-// Revision 1.6  2003/12/31 18:32:50  smite-meister
-// Last commit of the year? Sound works.
-//
-// Revision 1.5  2003/03/23 14:24:14  smite-meister
-// Polyobjects, MD3 models
-//
-// Revision 1.4  2003/03/15 20:07:21  smite-meister
-// Initial Hexen compatibility!
-//
-// Revision 1.3  2003/02/16 16:54:52  smite-meister
-// L2 sound cache done
-//
-// Revision 1.2  2003/01/25 21:33:06  smite-meister
-// Now compiles with MinGW 2.0 / GCC 3.2.
-// Builder can choose between dynamic and static linkage.
-//
-// Revision 1.1.1.1  2002/11/16 14:18:28  hurdler
-// Initial C++ version of Doom Legacy
 //
 //-----------------------------------------------------------------------------
 

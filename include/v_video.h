@@ -17,43 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.13  2006/02/08 19:09:27  jussip
-// Added beginnings of a new OpenGL renderer.
-//
-// Revision 1.12  2005/09/11 16:23:25  smite-meister
-// template classes
-//
-// Revision 1.11  2005/06/30 18:16:58  smite-meister
-// texture anims fixed
-//
-// Revision 1.10  2005/03/16 21:16:08  smite-meister
-// menu cleanup, bugfixes
-//
-// Revision 1.9  2004/12/08 10:16:03  segabor
-// "segabor: byte alignment fix"
-//
-// Revision 1.8  2004/10/31 22:24:53  smite-meister
-// pic_t moves into history
-//
-// Revision 1.7  2004/10/27 17:37:09  smite-meister
-// netcode update
-//
-// Revision 1.6  2004/09/23 23:21:19  smite-meister
-// HUD updated
-//
-// Revision 1.5  2004/08/13 18:25:11  smite-meister
-// sw renderer fix
-//
-// Revision 1.4  2004/08/12 18:30:30  smite-meister
-// cleaned startup
-//
-// Revision 1.3  2004/03/28 15:16:14  smite-meister
-// Texture cache.
-//
-// Revision 1.2  2002/12/03 10:23:46  smite-meister
-// Video system overhaul
-//
 //-----------------------------------------------------------------------------
 
 /// \file

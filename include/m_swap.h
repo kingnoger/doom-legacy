@@ -17,16 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.3  2004/11/20 18:49:57  smite-meister
-// oops
-//
-// Revision 1.2  2004/11/19 16:51:06  smite-meister
-// cleanup
-//
-// Revision 1.1.1.1  2002/11/16 14:18:24  hurdler
-// Initial C++ version of Doom Legacy
-//
 //-----------------------------------------------------------------------------
 
 /// \file

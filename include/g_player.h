@@ -16,43 +16,6 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// $Log$
-// Revision 1.24  2005/07/20 20:27:22  smite-meister
-// adv. texture cache
-//
-// Revision 1.23  2005/07/11 16:58:57  smite-meister
-// msecnode_t bug fixed
-//
-// Revision 1.22  2005/04/22 19:44:50  smite-meister
-// bugs fixed
-//
-// Revision 1.21  2005/04/19 18:28:32  smite-meister
-// new RPCs
-//
-// Revision 1.20  2005/04/17 17:47:54  smite-meister
-// netcode
-//
-// Revision 1.19  2004/11/04 21:12:54  smite-meister
-// save/load fixed
-//
-// Revision 1.18  2004/10/27 17:37:09  smite-meister
-// netcode update
-//
-// Revision 1.17  2004/08/12 18:30:29  smite-meister
-// cleaned startup
-//
-// Revision 1.16  2004/07/13 20:23:37  smite-meister
-// Mod system basics
-//
-// Revision 1.15  2004/07/09 19:43:40  smite-meister
-// Netcode fixes
-//
-// Revision 1.14  2004/07/05 16:53:29  smite-meister
-// Netcode replaced
-//
-// Revision 1.13  2004/04/25 16:26:51  smite-meister
-// Doxygen
-//
 //-----------------------------------------------------------------------------
 
 /// \file

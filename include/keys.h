@@ -16,22 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.5  2004/10/27 17:37:09  smite-meister
-// netcode update
-//
-// Revision 1.4  2004/09/09 22:04:39  jussip
-// New joy code a bit more finished. Button binding works.
-//
-// Revision 1.3  2004/07/05 16:53:29  smite-meister
-// Netcode replaced
-//
-// Revision 1.2  2003/12/09 01:02:01  smite-meister
-// Hexen mapchange works, keycodes fixed
-//
-// Revision 1.1.1.1  2002/11/16 14:18:24  hurdler
-// Initial C++ version of Doom Legacy
-//
 //-----------------------------------------------------------------------------
 
 /// \file

@@ -16,68 +16,6 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// $Log$
-// Revision 1.31  2005/09/11 16:23:25  smite-meister
-// template classes
-//
-// Revision 1.30  2005/06/29 14:26:39  smite-meister
-// valgrind pays off
-//
-// Revision 1.29  2005/06/22 20:44:31  smite-meister
-// alpha3 bugfixes
-//
-// Revision 1.28  2005/04/22 19:44:50  smite-meister
-// bugs fixed
-//
-// Revision 1.27  2005/04/17 17:47:54  smite-meister
-// netcode
-//
-// Revision 1.26  2004/12/31 16:19:40  smite-meister
-// alpha fixes
-//
-// Revision 1.25  2004/11/18 20:30:14  smite-meister
-// tnt, plutonia
-//
-// Revision 1.24  2004/11/13 22:38:59  smite-meister
-// intermission works
-//
-// Revision 1.20  2004/04/25 16:26:51  smite-meister
-// Doxygen
-//
-// Revision 1.17  2003/12/31 18:32:50  smite-meister
-// Last commit of the year? Sound works.
-//
-// Revision 1.15  2003/11/12 11:07:27  smite-meister
-// Serialization done. Map progression.
-//
-// Revision 1.14  2003/05/30 13:34:48  smite-meister
-// Cleanup, HUD improved, serialization
-//
-// Revision 1.12  2003/05/05 00:24:50  smite-meister
-// Hexen linedef system. Pickups.
-//
-// Revision 1.11  2003/04/04 00:01:57  smite-meister
-// bugfixes, Hexen HUD
-//
-// Revision 1.10  2003/03/23 14:24:13  smite-meister
-// Polyobjects, MD3 models
-//
-// Revision 1.9  2003/03/15 20:07:20  smite-meister
-// Initial Hexen compatibility!
-//
-// Revision 1.8  2003/03/08 16:07:15  smite-meister
-// Lots of stuff. Sprite cache. Movement+friction fix.
-//
-// Revision 1.7  2003/02/16 16:54:52  smite-meister
-// L2 sound cache done
-//
-// Revision 1.6  2003/01/25 21:33:06  smite-meister
-// Now compiles with MinGW 2.0 / GCC 3.2.
-// Builder can choose between dynamic and static linkage.
-//
-// Revision 1.5  2003/01/18 20:17:41  smite-meister
-// HUD fixed, levelchange crash fixed.
-//
 //-----------------------------------------------------------------------------
 
 /// \file

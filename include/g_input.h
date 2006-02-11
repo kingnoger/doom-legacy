@@ -16,21 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.9  2005/03/21 17:44:18  smite-meister
-// fixes
-//
-// Revision 1.6  2004/09/20 22:42:49  jussip
-// Joystick axis binding works. New joystick code ready for use.
-//
-// Revision 1.5  2004/07/11 14:32:01  smite-meister
-// Consvars updated, bugfixes
-//
-// Revision 1.2  2003/12/09 01:02:01  smite-meister
-// Hexen mapchange works, keycodes fixed
-//
-// Revision 1.1.1.1  2002/11/16 14:18:23  hurdler
-// Initial C++ version of Doom Legacy
 //-----------------------------------------------------------------------------
 
 /// \file

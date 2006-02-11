@@ -16,67 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.26  2006/02/08 19:09:27  jussip
-// Added beginnings of a new OpenGL renderer.
-//
-// Revision 1.25  2006/01/02 17:02:30  smite-meister
-// small fixes
-//
-// Revision 1.24  2005/11/06 19:30:36  smite-meister
-// ntexture
-//
-// Revision 1.22  2005/09/29 15:35:27  smite-meister
-// JDS texture standard
-//
-// Revision 1.21  2005/09/11 16:23:25  smite-meister
-// template classes
-//
-// Revision 1.20  2005/07/20 20:27:23  smite-meister
-// adv. texture cache
-//
-// Revision 1.19  2005/06/30 18:16:58  smite-meister
-// texture anims fixed
-//
-// Revision 1.18  2005/01/04 18:32:44  smite-meister
-// better colormap handling
-//
-// Revision 1.17  2004/12/08 10:16:03  segabor
-// "segabor: byte alignment fix"
-//
-// Revision 1.16  2004/10/31 22:24:53  smite-meister
-// pic_t moves into history
-//
-// Revision 1.15  2004/09/23 23:21:19  smite-meister
-// HUD updated
-//
-// Revision 1.14  2004/09/14 21:41:57  hurdler
-// rename "data" to "pixels" (I think it's more appropriate and that's how SDL and OpenGL name such data after all)
-//
-// Revision 1.13  2004/09/03 16:28:51  smite-meister
-// bugfixes and ZDoom linedef types
-//
-// Revision 1.11  2004/08/18 14:35:20  smite-meister
-// PNG support!
-//
-// Revision 1.10  2004/08/15 18:08:29  smite-meister
-// palette-to-palette colormaps etc.
-//
-// Revision 1.6  2004/04/25 16:26:51  smite-meister
-// Doxygen
-//
-// Revision 1.4  2003/11/23 19:07:42  smite-meister
-// New startup order
-//
-// Revision 1.3  2003/02/23 22:49:31  smite-meister
-// FS is back! L2 cache works.
-//
-// Revision 1.2  2003/01/12 12:56:42  smite-meister
-// Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
-//
-// Revision 1.1.1.1  2002/11/16 14:18:26  hurdler
-// Initial C++ version of Doom Legacy
-//
 //-----------------------------------------------------------------------------
 
 /// \file

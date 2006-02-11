@@ -16,20 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.4  2004/07/05 16:53:29  smite-meister
-// Netcode replaced
-//
-// Revision 1.3  2003/11/23 19:07:42  smite-meister
-// New startup order
-//
-// Revision 1.2  2003/03/15 20:07:21  smite-meister
-// Initial Hexen compatibility!
-//
-// Revision 1.1.1.1  2002/11/16 14:18:25  hurdler
-// Initial C++ version of Doom Legacy
-//
-//
 // DESCRIPTION:
 //
 //

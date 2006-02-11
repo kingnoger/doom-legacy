@@ -16,22 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.5  2005/09/11 16:23:25  smite-meister
-// template classes
-//
-// Revision 1.4  2004/11/18 20:30:14  smite-meister
-// tnt, plutonia
-//
-// Revision 1.3  2004/11/09 20:38:52  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.2  2004/03/28 15:16:14  smite-meister
-// Texture cache.
-//
-// Revision 1.1.1.1  2002/11/16 14:18:27  hurdler
-// Initial C++ version of Doom Legacy
-//
 //-----------------------------------------------------------------------------
 
 /// \file

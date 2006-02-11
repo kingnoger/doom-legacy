@@ -17,25 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.4  2005/09/11 16:23:25  smite-meister
-// template classes
-//
-// Revision 1.3  2005/04/19 18:28:34  smite-meister
-// new RPCs
-//
-// Revision 1.2  2004/11/09 20:38:52  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.1.1.1  2002/11/16 14:18:26  hurdler
-// Initial C++ version of Doom Legacy
-//
-// Revision 1.5  2001/03/13 22:14:20  stroggonmeth
-// Long time no commit. 3D floors, FraggleScript, portals, ect.
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
-//
 //-----------------------------------------------------------------------------
 
 /// \file

@@ -17,52 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.15  2005/06/28 17:05:00  smite-meister
-// item respawning cleaned up
-//
-// Revision 1.14  2005/03/24 17:00:39  smite-meister
-// alpha fixes
-//
-// Revision 1.13  2004/11/18 20:30:14  smite-meister
-// tnt, plutonia
-//
-// Revision 1.12  2004/07/05 16:53:29  smite-meister
-// Netcode replaced
-//
-// Revision 1.11  2004/03/28 15:16:14  smite-meister
-// Texture cache.
-//
-// Revision 1.10  2003/05/30 13:34:48  smite-meister
-// Cleanup, HUD improved, serialization
-//
-// Revision 1.9  2003/05/05 00:24:49  smite-meister
-// Hexen linedef system. Pickups.
-//
-// Revision 1.8  2003/04/19 17:38:47  smite-meister
-// SNDSEQ support, tools, linedef system...
-//
-// Revision 1.7  2003/04/04 00:01:57  smite-meister
-// bugfixes, Hexen HUD
-//
-// Revision 1.6  2003/03/15 20:07:20  smite-meister
-// Initial Hexen compatibility!
-//
-// Revision 1.5  2003/03/08 16:07:13  smite-meister
-// Lots of stuff. Sprite cache. Movement+friction fix.
-//
-// Revision 1.4  2003/02/16 16:54:51  smite-meister
-// L2 sound cache done
-//
-// Revision 1.3  2003/01/18 20:17:41  smite-meister
-// HUD fixed, levelchange crash fixed.
-//
-// Revision 1.2  2002/12/23 23:19:37  smite-meister
-// Weapon groups, MAPINFO parser, WAD2+WAD3 support added!
-//
-// Revision 1.1.1.1  2002/11/16 14:18:22  hurdler
-// Initial C++ version of Doom Legacy
-//
 //-----------------------------------------------------------------------------
 
 /// \file

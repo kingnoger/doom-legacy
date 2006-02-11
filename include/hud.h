@@ -16,22 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.5  2004/12/05 14:46:33  smite-meister
-// keybar
-//
-// Revision 1.4  2004/12/02 17:22:35  smite-meister
-// HUD fixed
-//
-// Revision 1.3  2004/11/13 22:38:59  smite-meister
-// intermission works
-//
-// Revision 1.2  2004/09/24 11:34:00  smite-meister
-// fix
-//
-// Revision 1.1  2004/09/23 23:21:19  smite-meister
-// HUD updated
-//
 //-----------------------------------------------------------------------------
 
 /// \file

@@ -15,22 +15,6 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// $Log$
-// Revision 1.5  2004/07/05 16:53:29  smite-meister
-// Netcode replaced
-//
-// Revision 1.4  2004/01/02 14:25:02  smite-meister
-// cleanup
-//
-// Revision 1.3  2003/12/06 23:57:47  smite-meister
-// save-related bugfixes
-//
-// Revision 1.2  2003/05/30 13:34:48  smite-meister
-// Cleanup, HUD improved, serialization
-//
-// Revision 1.1  2003/05/11 21:27:26  smite-meister
-// Team system
-//
 //-----------------------------------------------------------------------------
 
 /// \file

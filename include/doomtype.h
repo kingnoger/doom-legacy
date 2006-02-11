@@ -17,22 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.7  2005/06/05 19:32:26  smite-meister
-// unsigned map structures
-//
-// Revision 1.5  2004/08/18 14:35:20  smite-meister
-// PNG support!
-//
-// Revision 1.3  2003/03/23 14:24:13  smite-meister
-// Polyobjects, MD3 models
-//
-// Revision 1.2  2003/02/23 22:49:31  smite-meister
-// FS is back! L2 cache works.
-//
-// Revision 1.1.1.1  2002/11/16 14:18:22  hurdler
-// Initial C++ version of Doom Legacy
-//
 //-----------------------------------------------------------------------------
 
 /// \file

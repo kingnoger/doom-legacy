@@ -16,49 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.17  2005/09/11 16:23:25  smite-meister
-// template classes
-//
-// Revision 1.16  2005/06/16 18:18:11  smite-meister
-// bugfixes
-//
-// Revision 1.15  2005/03/19 13:51:29  smite-meister
-// sound samplerate fix
-//
-// Revision 1.14  2004/11/09 20:38:52  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.13  2004/09/03 16:28:51  smite-meister
-// bugfixes and ZDoom linedef types
-//
-// Revision 1.11  2004/07/05 16:53:29  smite-meister
-// Netcode replaced
-//
-// Revision 1.10  2004/03/28 15:16:14  smite-meister
-// Texture cache.
-//
-// Revision 1.8  2003/12/31 18:32:50  smite-meister
-// Last commit of the year? Sound works.
-//
-// Revision 1.7  2003/04/19 17:38:47  smite-meister
-// SNDSEQ support, tools, linedef system...
-//
-// Revision 1.6  2003/04/14 08:58:31  smite-meister
-// Hexen maps load.
-//
-// Revision 1.4  2003/03/08 16:07:16  smite-meister
-// Lots of stuff. Sprite cache. Movement+friction fix.
-//
-// Revision 1.3  2003/02/16 16:54:52  smite-meister
-// L2 sound cache done
-//
-// Revision 1.2  2003/01/25 21:33:06  smite-meister
-// Now compiles with MinGW 2.0 / GCC 3.2.
-// Builder can choose between dynamic and static linkage.
-//
-// Revision 1.1.1.1  2002/11/16 14:18:27  hurdler
-// Initial C++ version of Doom Legacy
 //-----------------------------------------------------------------------------
 
 /// \file

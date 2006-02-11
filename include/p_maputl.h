@@ -16,40 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.11  2005/09/29 15:06:15  smite-meister
-// aiming bugfix
-//
-// Revision 1.10  2005/09/11 16:23:25  smite-meister
-// template classes
-//
-// Revision 1.9  2004/11/18 20:30:14  smite-meister
-// tnt, plutonia
-//
-// Revision 1.8  2004/11/09 20:38:52  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.7  2004/11/04 21:12:54  smite-meister
-// save/load fixed
-//
-// Revision 1.6  2004/10/17 02:01:39  smite-meister
-// bots!
-//
-// Revision 1.5  2004/10/14 19:35:50  smite-meister
-// automap, bbox_t
-//
-// Revision 1.4  2004/10/11 11:13:42  smite-meister
-// map utils
-//
-// Revision 1.3  2004/09/13 20:43:31  smite-meister
-// interface cleanup, sp map reset fixed
-//
-// Revision 1.2  2003/03/15 20:07:21  smite-meister
-// Initial Hexen compatibility!
-//
-// Revision 1.1.1.1  2002/11/16 14:18:25  hurdler
-// Initial C++ version of Doom Legacy
-//
 //-----------------------------------------------------------------------------
 
 /// \file

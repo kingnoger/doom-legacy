@@ -16,13 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.2  2004/10/14 19:35:50  smite-meister
-// automap, bbox_t
-//
-// Revision 1.1  2004/03/28 15:16:14  smite-meister
-// Texture cache.
-//
 //-----------------------------------------------------------------------------
 
 /// \file

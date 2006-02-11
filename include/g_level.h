@@ -16,47 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.15  2005/06/12 16:26:27  smite-meister
-// alpha2 bugfixes
-//
-// Revision 1.14  2004/08/12 18:30:29  smite-meister
-// cleaned startup
-//
-// Revision 1.13  2004/07/14 16:13:13  smite-meister
-// cleanup, commands
-//
-// Revision 1.12  2004/04/25 16:26:50  smite-meister
-// Doxygen
-//
-// Revision 1.11  2003/12/18 11:57:31  smite-meister
-// fixes / new bugs revealed
-//
-// Revision 1.10  2003/12/06 23:57:47  smite-meister
-// save-related bugfixes
-//
-// Revision 1.9  2003/11/30 00:09:47  smite-meister
-// bugfixes
-//
-// Revision 1.8  2003/11/12 11:07:26  smite-meister
-// Serialization done. Map progression.
-//
-// Revision 1.7  2003/07/02 17:52:46  smite-meister
-// VDir fix
-//
-// Revision 1.6  2003/06/10 22:39:59  smite-meister
-// Bugfixes
-//
-// Revision 1.5  2003/05/11 21:23:52  smite-meister
-// Hexen fixes
-//
-// Revision 1.4  2003/01/25 21:33:05  smite-meister
-// Now compiles with MinGW 2.0 / GCC 3.2.
-// Builder can choose between dynamic and static linkage.
-//
-// Revision 1.3  2002/12/29 18:57:03  smite-meister
-// MAPINFO implemented, Actor deaths handled better
-//
 //-----------------------------------------------------------------------------
 
 // \file

@@ -17,29 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.2  2004/08/18 14:35:20  smite-meister
-// PNG support!
-//
-// Revision 1.1.1.1  2002/11/16 14:18:25  hurdler
-// Initial C++ version of Doom Legacy
-//
-// Revision 1.4  2000/09/10 10:46:15  metzgermeister
-// merged with SDL version
-//
-// Revision 1.3  2000/04/21 08:23:47  emanne
-// To have SDL working.
-// Makefile: made the hiding by "@" optional. See the CC variable at
-// the begining. Sorry, but I like to see what's going on while building
-//
-// qmus2mid.h: force include of qmus2mid_sdl.h when needed.
-// s_sound.c: ??!
-// s_sound.h: with it.
-// (sorry for s_sound.* : I had problems with cvs...)
-//
-// Revision 1.2  2000/02/26 00:28:42  hurdler
-// Mostly bug fix (see borislog.txt 23-2-2000, 24-2-2000)
-//
 //-----------------------------------------------------------------------------
 
 /// \file

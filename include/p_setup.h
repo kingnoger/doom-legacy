@@ -16,25 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.6  2005/06/08 17:29:40  smite-meister
-// FS bugfixes
-//
-// Revision 1.5  2004/03/28 15:16:14  smite-meister
-// Texture cache.
-//
-// Revision 1.4  2003/11/12 11:07:27  smite-meister
-// Serialization done. Map progression.
-//
-// Revision 1.3  2003/04/19 17:38:47  smite-meister
-// SNDSEQ support, tools, linedef system...
-//
-// Revision 1.2  2003/04/14 08:58:30  smite-meister
-// Hexen maps load.
-//
-// Revision 1.1.1.1  2002/11/16 14:18:25  hurdler
-// Initial C++ version of Doom Legacy
-//
 //-----------------------------------------------------------------------------
 
 /// \file

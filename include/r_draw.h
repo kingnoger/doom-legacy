@@ -17,31 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.14  2005/10/07 20:04:06  smite-meister
-// sprite scaling
-//
-// Revision 1.11  2005/09/11 16:23:25  smite-meister
-// template classes
-//
-// Revision 1.8  2004/11/09 20:38:52  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.7  2004/10/27 17:37:09  smite-meister
-// netcode update
-//
-// Revision 1.5  2004/08/15 18:08:29  smite-meister
-// palette-to-palette colormaps etc.
-//
-// Revision 1.4  2004/03/28 15:16:14  smite-meister
-// Texture cache.
-//
-// Revision 1.2  2003/04/04 00:01:58  smite-meister
-// bugfixes, Hexen HUD
-//
-// Revision 1.1.1.1  2002/11/16 14:18:26  hurdler
-// Initial C++ version of Doom Legacy
-//
 //-----------------------------------------------------------------------------
 
 /// \file

@@ -17,49 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.19  2005/04/19 18:28:31  smite-meister
-// new RPCs
-//
-// Revision 1.18  2004/11/28 18:02:23  smite-meister
-// RPCs finally work!
-//
-// Revision 1.17  2004/11/19 16:51:06  smite-meister
-// cleanup
-//
-// Revision 1.16  2004/11/13 22:38:59  smite-meister
-// intermission works
-//
-// Revision 1.15  2004/11/09 20:38:52  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.14  2004/09/23 23:21:19  smite-meister
-// HUD updated
-//
-// Revision 1.11  2004/07/13 20:23:37  smite-meister
-// Mod system basics
-//
-// Revision 1.10  2004/07/05 16:53:29  smite-meister
-// Netcode replaced
-//
-// Revision 1.9  2004/04/25 16:26:50  smite-meister
-// Doxygen
-//
-// Revision 1.7  2003/12/31 18:32:50  smite-meister
-// Last commit of the year? Sound works.
-//
-// Revision 1.6  2003/11/12 11:07:26  smite-meister
-// Serialization done. Map progression.
-//
-// Revision 1.3  2002/12/29 18:57:03  smite-meister
-// MAPINFO implemented, Actor deaths handled better
-//
-// Revision 1.2  2002/12/23 23:19:37  smite-meister
-// Weapon groups, MAPINFO parser, WAD2+WAD3 support added!
-//
-// Revision 1.1.1.1  2002/11/16 14:18:23  hurdler
-// Initial C++ version of Doom Legacy
-//
 //-----------------------------------------------------------------------------
 
 /// \file

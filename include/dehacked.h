@@ -16,30 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.5  2005/04/01 14:47:45  smite-meister
-// dehacked works
-//
-// Revision 1.4  2004/12/31 16:19:40  smite-meister
-// alpha fixes
-//
-// Revision 1.3  2004/12/19 23:30:17  smite-meister
-// More BEX support
-//
-// Revision 1.2  2004/03/28 15:16:14  smite-meister
-// Texture cache.
-//
-// Revision 1.1.1.1  2002/11/16 14:18:22  hurdler
-// Initial C++ version of Doom Legacy
-//
-// Revision 1.5  2000/11/02 17:50:06  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.3  2000/04/05 15:47:46  stroggonmeth
-// Added hack for Dehacked lumps. Transparent sprites are now affected by colormaps.
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //-----------------------------------------------------------------------------
 

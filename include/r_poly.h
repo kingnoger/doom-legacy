@@ -17,19 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.4  2005/09/11 16:23:25  smite-meister
-// template classes
-//
-// Revision 1.3  2004/07/25 20:18:47  hurdler
-// Remove old hardware renderer and add part of the new one
-//
-// Revision 1.2  2003/06/01 18:56:30  smite-meister
-// zlib compression, partial polyobj fix
-//
-// Revision 1.1  2003/05/05 00:24:50  smite-meister
-// Hexen linedef system. Pickups.
-//
 //
 //
 // DESCRIPTION:

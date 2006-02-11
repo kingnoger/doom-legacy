@@ -16,20 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.4  2003/12/13 23:51:03  smite-meister
-// Hexen update
-//
-// Revision 1.3  2003/11/30 00:09:48  smite-meister
-// bugfixes
-//
-// Revision 1.2  2003/11/12 11:14:52  smite-meister
-// cr/lf
-//
-// Revision 1.1  2003/11/12 11:13:15  smite-meister
-// Serialization done. Map progression.
-//
-//
 //
 // DESCRIPTION:
 //   AC Script interpreter

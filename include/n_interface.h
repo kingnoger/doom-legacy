@@ -16,36 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.11  2005/09/15 16:44:17  segabor
-// "backsector = null" bug fixed, gcc-4 improvements
-//
-// Revision 1.10  2005/04/19 18:28:33  smite-meister
-// new RPCs
-//
-// Revision 1.9  2005/04/17 17:47:54  smite-meister
-// netcode
-//
-// Revision 1.8  2004/11/28 18:02:23  smite-meister
-// RPCs finally work!
-//
-// Revision 1.7  2004/11/04 21:12:54  smite-meister
-// save/load fixed
-//
-// Revision 1.6  2004/07/13 20:23:37  smite-meister
-// Mod system basics
-//
-// Revision 1.5  2004/07/09 19:43:40  smite-meister
-// Netcode fixes
-//
-// Revision 1.3  2004/07/05 16:53:29  smite-meister
-// Netcode replaced
-//
-// Revision 1.2  2004/06/25 19:53:23  smite-meister
-// Netcode
-//
-// Revision 1.1  2004/06/18 08:17:02  smite-meister
-// New TNL netcode!
 //
 //-----------------------------------------------------------------------------
 

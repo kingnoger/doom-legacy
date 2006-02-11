@@ -17,18 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.12  2006/01/15 23:48:06  jussip
-// Renamed VERSION to LEGACY_VERSION to avoid namespace collision with Autotools.
-//
-// Revision 1.11  2005/09/11 16:23:25  smite-meister
-// template classes
-//
-// Revision 1.10  2005/03/16 21:16:08  smite-meister
-// menu cleanup, bugfixes
-//
-// Revision 1.1.1.1  2002/11/16 14:18:23  hurdler
-// Initial C++ version of Doom Legacy
 //
 //-----------------------------------------------------------------------------
 

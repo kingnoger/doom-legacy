@@ -17,34 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.2  2004/08/18 14:35:20  smite-meister
-// PNG support!
-//
-// Revision 1.1.1.1  2002/11/16 14:17:47  hurdler
-// Initial C++ version of Doom Legacy
-//
-// Revision 1.3  2002/07/01 20:59:47  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:09  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.6  2001/03/09 21:53:56  metzgermeister
-// *** empty log message ***
-//
-// Revision 1.5  2001/03/03 19:45:12  ydario
-// Do not compile under OS/2
-//
-// Revision 1.4  2000/10/08 13:30:01  bpereira
-// no message
-//
-// Revision 1.3  2000/09/10 10:46:15  metzgermeister
-// merged with SDL version
-//
-// Revision 1.2  2000/02/26 00:28:42  hurdler
-// Mostly bug fix (see borislog.txt 23-2-2000, 24-2-2000)
-//
 //-----------------------------------------------------------------------------
 
 /// \file

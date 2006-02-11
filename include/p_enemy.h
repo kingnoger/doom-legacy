@@ -16,22 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.7  2005/09/11 16:23:25  smite-meister
-// template classes
-//
-// Revision 1.6  2004/11/09 20:38:52  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.5  2003/12/03 10:49:50  smite-meister
-// Save/load bugfix, text strings updated
-//
-// Revision 1.4  2003/11/27 11:28:26  smite-meister
-// Doom/Heretic startup bug fixed
-//
-// Revision 1.3  2003/03/15 20:07:21  smite-meister
-// Initial Hexen compatibility!
-//
 //-----------------------------------------------------------------------------
 
 /// \file

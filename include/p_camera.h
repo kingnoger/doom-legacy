@@ -16,30 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.8  2005/07/01 16:45:13  smite-meister
-// FS cameras work
-//
-// Revision 1.7  2005/06/16 18:18:11  smite-meister
-// bugfixes
-//
-// Revision 1.6  2004/10/27 17:37:09  smite-meister
-// netcode update
-//
-// Revision 1.5  2004/07/05 16:53:29  smite-meister
-// Netcode replaced
-//
-// Revision 1.4  2003/02/23 22:49:31  smite-meister
-// FS is back! L2 cache works.
-//
-// Revision 1.3  2002/12/23 23:19:37  smite-meister
-// Weapon groups, MAPINFO parser, WAD2+WAD3 support added!
-//
-// Revision 1.2  2002/12/16 22:04:59  smite-meister
-// Actor / DActor separation done!
-//
-// Revision 1.1.1.1  2002/11/16 14:18:29  hurdler
-// Initial C++ version of Doom Legacy
 //-----------------------------------------------------------------------------
 
 /// \file

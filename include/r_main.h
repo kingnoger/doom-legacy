@@ -17,49 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.8  2005/09/12 18:33:45  smite-meister
-// fixed_t, vec_t
-//
-// Revision 1.7  2005/09/11 16:23:25  smite-meister
-// template classes
-//
-// Revision 1.6  2004/12/31 16:19:40  smite-meister
-// alpha fixes
-//
-// Revision 1.5  2004/11/09 20:38:52  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.4  2004/08/15 18:08:29  smite-meister
-// palette-to-palette colormaps etc.
-//
-// Revision 1.3  2004/07/05 16:53:29  smite-meister
-// Netcode replaced
-//
-// Revision 1.2  2003/03/15 20:07:21  smite-meister
-// Initial Hexen compatibility!
-//
-// Revision 1.1.1.1  2002/11/16 14:18:27  hurdler
-// Initial C++ version of Doom Legacy
-//
-// Revision 1.6  2001/03/13 22:14:20  stroggonmeth
-// Long time no commit. 3D floors, FraggleScript, portals, ect.
-//
-// Revision 1.5  2001/01/25 22:15:44  bpereira
-// added heretic support
-//
-// Revision 1.4  2000/04/04 19:28:43  stroggonmeth
-// Global colormaps working. Added a new linedef type 272.
-//
-// Revision 1.3  2000/04/04 00:32:47  stroggonmeth
-// Initial Boom compatability plus few misc changes all around.
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
-//
 //-----------------------------------------------------------------------------
 
 /// \file

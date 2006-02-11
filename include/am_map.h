@@ -17,28 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.7  2004/10/14 19:35:50  smite-meister
-// automap, bbox_t
-//
-// Revision 1.6  2004/09/23 23:21:19  smite-meister
-// HUD updated
-//
-// Revision 1.5  2004/08/12 18:30:29  smite-meister
-// cleaned startup
-//
-// Revision 1.4  2004/03/28 15:16:14  smite-meister
-// Texture cache.
-//
-// Revision 1.3  2004/01/06 14:37:45  smite-meister
-// six bugfixes, cleanup
-//
-// Revision 1.2  2003/11/12 11:07:26  smite-meister
-// Serialization done. Map progression.
-//
-// Revision 1.1.1.1  2002/11/16 14:18:20  hurdler
-// Initial C++ version of Doom Legacy
-//
 //-----------------------------------------------------------------------------
 
 /// \file

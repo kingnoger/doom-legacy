@@ -17,31 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.9  2005/06/05 19:32:27  smite-meister
-// unsigned map structures
-//
-// Revision 1.8  2004/09/13 20:43:31  smite-meister
-// interface cleanup, sp map reset fixed
-//
-// Revision 1.7  2004/09/06 22:28:53  jussip
-// Beginnings of new joystick code.
-//
-// Revision 1.6  2004/08/18 14:35:20  smite-meister
-// PNG support!
-//
-// Revision 1.5  2004/08/12 18:30:29  smite-meister
-// cleaned startup
-//
-// Revision 1.4  2004/07/05 16:53:29  smite-meister
-// Netcode replaced
-//
-// Revision 1.3  2003/11/23 19:07:42  smite-meister
-// New startup order
-//
-// Revision 1.2  2002/12/03 10:23:46  smite-meister
-// Video system overhaul
-//
 //-----------------------------------------------------------------------------
 
 /// \file

@@ -17,16 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.3  2004/07/05 16:53:29  smite-meister
-// Netcode replaced
-//
-// Revision 1.2  2003/02/16 16:54:52  smite-meister
-// L2 sound cache done
-//
-// Revision 1.1.1.1  2002/11/16 14:18:23  hurdler
-// Initial C++ version of Doom Legacy
-//
 //
 // DESCRIPTION:
 //      System interface, sound.

@@ -16,15 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.5  2005/09/13 14:23:12  smite-meister
-// fixed_t fix
-//
-// Revision 1.4  2005/09/12 18:33:45  smite-meister
-// fixed_t, vec_t
-//
-// Revision 1.3  2005/09/11 16:23:25  smite-meister
-// template classes
 //
 //-----------------------------------------------------------------------------
 

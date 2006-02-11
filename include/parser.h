@@ -16,34 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.9  2005/06/16 18:18:11  smite-meister
-// bugfixes
-//
-// Revision 1.8  2005/03/22 16:58:57  smite-meister
-// dehacked fix
-//
-// Revision 1.7  2004/12/19 23:37:59  smite-meister
-// oops
-//
-// Revision 1.6  2004/12/19 23:30:18  smite-meister
-// More BEX support
-//
-// Revision 1.5  2004/10/14 19:35:50  smite-meister
-// automap, bbox_t
-//
-// Revision 1.4  2004/09/23 23:21:19  smite-meister
-// HUD updated
-//
-// Revision 1.3  2004/09/03 16:28:51  smite-meister
-// bugfixes and ZDoom linedef types
-//
-// Revision 1.2  2004/03/28 15:16:14  smite-meister
-// Texture cache.
-//
-// Revision 1.1  2003/12/31 18:32:50  smite-meister
-// Last commit of the year? Sound works.
-//
 //-----------------------------------------------------------------------------
 
 /// \file

@@ -16,28 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.12  2005/04/19 18:28:33  smite-meister
-// new RPCs
-//
-// Revision 1.11  2005/04/17 17:47:54  smite-meister
-// netcode
-//
-// Revision 1.10  2005/03/24 16:59:17  smite-meister
-// upgrade to OpenTNL 1.5
-//
-// Revision 1.9  2004/11/28 18:02:23  smite-meister
-// RPCs finally work!
-//
-// Revision 1.8  2004/11/09 20:38:52  smite-meister
-// added packing to I/O structs
-//
-// Revision 1.3  2004/07/05 16:53:29  smite-meister
-// Netcode replaced
-//
-// Revision 1.1  2004/06/18 08:17:02  smite-meister
-// New TNL netcode!
-//
 //-----------------------------------------------------------------------------
 
 /// \file

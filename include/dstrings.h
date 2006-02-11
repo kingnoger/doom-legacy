@@ -17,30 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.8  2005/06/28 17:05:00  smite-meister
-// item respawning cleaned up
-//
-// Revision 1.7  2004/11/13 22:38:59  smite-meister
-// intermission works
-//
-// Revision 1.6  2004/10/31 22:24:53  smite-meister
-// pic_t moves into history
-//
-// Revision 1.5  2004/07/05 16:53:29  smite-meister
-// Netcode replaced
-//
-// Revision 1.4  2004/03/28 15:16:14  smite-meister
-// Texture cache.
-//
-// Revision 1.3  2003/12/03 10:49:50  smite-meister
-// Save/load bugfix, text strings updated
-//
-// Revision 1.2  2003/04/04 00:01:57  smite-meister
-// bugfixes, Hexen HUD
-//
-// Revision 1.1.1.1  2002/11/16 14:18:23  hurdler
-// Initial C++ version of Doom Legacy
 //
 //-----------------------------------------------------------------------------
 

@@ -17,31 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.1  2002/11/16 14:18:26  hurdler
-// Initial revision
-//
-// Revision 1.3  2002/07/01 21:00:54  jpakkane
-// Fixed cr+lf to UNIX form.
-//
-// Revision 1.2  2002/06/28 10:57:28  vberghol
-// Version 133 Experimental!
-//
-// Revision 1.5  2001/05/30 04:00:52  stroggonmeth
-// Fixed crashing bugs in software with 3D floors.
-//
-// Revision 1.4  2001/03/21 18:24:39  stroggonmeth
-// Misc changes and fixes. Code cleanup
-//
-// Revision 1.3  2001/03/13 22:14:20  stroggonmeth
-// Long time no commit. 3D floors, FraggleScript, portals, ect.
-//
-// Revision 1.2  2000/02/27 00:42:10  hurdler
-// fix CR+LF problem
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
-//
 //
 // DESCRIPTION:
 //      Refresh (R_*) module, global header.

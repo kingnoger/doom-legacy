@@ -17,33 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.9  2005/03/16 21:16:08  smite-meister
-// menu cleanup, bugfixes
-//
-// Revision 1.8  2004/09/23 23:21:19  smite-meister
-// HUD updated
-//
-// Revision 1.7  2004/07/05 16:53:29  smite-meister
-// Netcode replaced
-//
-// Revision 1.6  2004/03/28 15:16:14  smite-meister
-// Texture cache.
-//
-// Revision 1.5  2003/12/31 18:32:50  smite-meister
-// Last commit of the year? Sound works.
-//
-// Revision 1.4  2003/03/23 14:24:13  smite-meister
-// Polyobjects, MD3 models
-//
-// Revision 1.3  2003/03/15 20:07:21  smite-meister
-// Initial Hexen compatibility!
-//
-// Revision 1.2  2002/12/16 22:04:58  smite-meister
-// Actor / DActor separation done!
-//
-// Revision 1.1.1.1  2002/11/16 14:18:24  hurdler
-// Initial C++ version of Doom Legacy
 //
 //-----------------------------------------------------------------------------
 

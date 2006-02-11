@@ -17,16 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.3  2005/05/31 18:04:21  smite-meister
-// screenslink crash fixed
-//
-// Revision 1.2  2004/03/28 15:16:14  smite-meister
-// Texture cache.
-//
-// Revision 1.1.1.1  2002/11/16 14:18:23  hurdler
-// Initial C++ version of Doom Legacy
-//
 //-----------------------------------------------------------------------------
 
 /// \file

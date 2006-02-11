@@ -16,42 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.14  2004/09/03 16:28:51  smite-meister
-// bugfixes and ZDoom linedef types
-//
-// Revision 1.13  2004/08/12 18:30:30  smite-meister
-// cleaned startup
-//
-// Revision 1.12  2004/07/05 16:53:29  smite-meister
-// Netcode replaced
-//
-// Revision 1.11  2004/04/01 09:16:16  smite-meister
-// Texture system bugfixes
-//
-// Revision 1.9  2003/12/18 11:57:31  smite-meister
-// fixes / new bugs revealed
-//
-// Revision 1.8  2003/06/20 20:56:08  smite-meister
-// Presentation system tweaked
-//
-// Revision 1.7  2003/04/04 00:01:58  smite-meister
-// bugfixes, Hexen HUD
-//
-// Revision 1.6  2003/03/23 14:24:13  smite-meister
-// Polyobjects, MD3 models
-//
-// Revision 1.5  2003/03/08 16:07:16  smite-meister
-// Lots of stuff. Sprite cache. Movement+friction fix.
-//
-// Revision 1.4  2003/01/12 12:56:42  smite-meister
-// Texture bug finally fixed! Pickup, chasecam and sw renderer bugs fixed.
-//
-// Revision 1.3  2002/12/29 18:57:03  smite-meister
-// MAPINFO implemented, Actor deaths handled better
-//
-// Revision 1.2  2002/12/23 23:19:37  smite-meister
-// Weapon groups, MAPINFO parser, WAD2+WAD3 support added!
 //-----------------------------------------------------------------------------
 
 /// \file

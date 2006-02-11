@@ -16,33 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.11  2006/01/02 17:02:30  smite-meister
-// small fixes
-//
-// Revision 1.10  2005/04/17 17:47:54  smite-meister
-// netcode
-//
-// Revision 1.9  2005/03/16 21:16:08  smite-meister
-// menu cleanup, bugfixes
-//
-// Revision 1.8  2004/11/28 18:02:23  smite-meister
-// RPCs finally work!
-//
-// Revision 1.7  2004/11/13 22:38:59  smite-meister
-// intermission works
-//
-// Revision 1.6  2004/09/09 17:15:20  jussip
-// Cleared out old joystick crap in preparation for brand new code.
-//
-// Revision 1.4  2004/07/25 20:18:47  hurdler
-// Remove old hardware renderer and add part of the new one
-//
-// Revision 1.2  2004/07/13 20:23:37  smite-meister
-// Mod system basics
-//
-// Revision 1.1  2004/06/25 15:18:37  smite-meister
-// CVar cleanup
 //
 //-----------------------------------------------------------------------------
 

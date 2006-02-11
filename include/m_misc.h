@@ -17,21 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.5  2004/11/13 22:38:59  smite-meister
-// intermission works
-//
-// Revision 1.4  2004/08/12 18:30:29  smite-meister
-// cleaned startup
-//
-// Revision 1.3  2004/07/13 20:23:37  smite-meister
-// Mod system basics
-//
-// Revision 1.2  2003/04/04 00:01:58  smite-meister
-// bugfixes, Hexen HUD
-//
-// Revision 1.1.1.1  2002/11/16 14:18:24  hurdler
-// Initial C++ version of Doom Legacy
 //
 //-----------------------------------------------------------------------------
 

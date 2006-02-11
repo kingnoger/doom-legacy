@@ -16,19 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.4  2004/08/12 18:30:29  smite-meister
-// cleaned startup
-//
-// Revision 1.3  2004/07/25 20:18:47  hurdler
-// Remove old hardware renderer and add part of the new one
-//
-// Revision 1.2  2004/07/05 16:53:29  smite-meister
-// Netcode replaced
-//
-// Revision 1.1.1.1  2002/11/16 14:18:20  hurdler
-// Initial C++ version of Doom Legacy
-//
 //-----------------------------------------------------------------------------
 
 /// \file

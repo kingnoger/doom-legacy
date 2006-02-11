@@ -15,43 +15,6 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// $Log$
-// Revision 1.7  2005/09/11 16:23:25  smite-meister
-// template classes
-//
-// Revision 1.6  2005/06/16 18:18:11  smite-meister
-// bugfixes
-//
-// Revision 1.5  2005/03/16 21:16:08  smite-meister
-// menu cleanup, bugfixes
-//
-// Revision 1.4  2004/08/18 14:35:20  smite-meister
-// PNG support!
-//
-// Revision 1.3  2004/04/25 16:26:51  smite-meister
-// Doxygen
-//
-// Revision 1.2  2003/12/06 23:57:47  smite-meister
-// save-related bugfixes
-//
-// Revision 1.1  2003/11/12 11:07:27  smite-meister
-// Serialization done. Map progression.
-//
-// Revision 1.8  2003/06/08 16:19:21  smite-meister
-// Hexen lights.
-//
-// Revision 1.7  2003/06/01 18:56:30  smite-meister
-// zlib compression, partial polyobj fix
-//
-// Revision 1.6  2003/05/30 13:34:48  smite-meister
-// Cleanup, HUD improved, serialization
-//
-// Revision 1.5  2003/04/08 09:46:07  smite-meister
-// Bugfixes
-//
-// Revision 1.4  2003/04/04 00:01:57  smite-meister
-// bugfixes, Hexen HUD
-//
 //-----------------------------------------------------------------------------
 
 /// \file

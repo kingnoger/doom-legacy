@@ -16,33 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.9  2005/09/11 16:23:25  smite-meister
-// template classes
-//
-// Revision 1.8  2005/03/16 21:16:08  smite-meister
-// menu cleanup, bugfixes
-//
-// Revision 1.7  2004/11/28 18:02:23  smite-meister
-// RPCs finally work!
-//
-// Revision 1.6  2004/10/27 17:37:09  smite-meister
-// netcode update
-//
-// Revision 1.5  2004/07/25 20:18:47  hurdler
-// Remove old hardware renderer and add part of the new one
-//
-// Revision 1.4  2004/07/13 20:23:37  smite-meister
-// Mod system basics
-//
-// Revision 1.3  2004/07/11 14:32:01  smite-meister
-// Consvars updated, bugfixes
-//
-// Revision 1.2  2004/07/05 16:53:29  smite-meister
-// Netcode replaced
-//
-// Revision 1.1.1.1  2002/11/16 14:18:20  hurdler
-// Initial C++ version of Doom Legacy
 //
 //-----------------------------------------------------------------------------
 

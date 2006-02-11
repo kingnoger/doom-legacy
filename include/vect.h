@@ -16,13 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.2  2005/09/11 16:23:25  smite-meister
-// template classes
-//
-// Revision 1.1  2005/08/11 19:56:39  smite-meister
-// template classes
-//
 //-----------------------------------------------------------------------------
 
 /// \file

@@ -16,37 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.10  2005/01/25 18:29:12  smite-meister
-// preparing for alpha
-//
-// Revision 1.9  2004/10/27 17:37:05  smite-meister
-// netcode update
-//
-// Revision 1.8  2004/08/12 18:30:22  smite-meister
-// cleaned startup
-//
-// Revision 1.7  2004/01/02 14:25:01  smite-meister
-// cleanup
-//
-// Revision 1.6  2003/12/31 18:32:49  smite-meister
-// Last commit of the year? Sound works.
-//
-// Revision 1.5  2003/06/10 22:39:52  smite-meister
-// Bugfixes
-//
-// Revision 1.4  2003/06/08 16:19:21  smite-meister
-// Hexen lights.
-//
-// Revision 1.3  2003/04/24 20:29:57  hurdler
-// Remove lots of compiling warnings
-//
-// Revision 1.2  2003/04/20 16:45:49  smite-meister
-// partial SNDSEQ fix
-//
-// Revision 1.1  2003/04/19 17:38:46  smite-meister
-// SNDSEQ support, tools, linedef system...
-//
 //-----------------------------------------------------------------------------
 
 /// \file

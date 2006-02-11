@@ -16,30 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.9  2005/05/31 18:04:21  smite-meister
-// screenslink crash fixed
-//
-// Revision 1.8  2004/08/15 18:08:29  smite-meister
-// palette-to-palette colormaps etc.
-//
-// Revision 1.7  2004/07/05 16:53:29  smite-meister
-// Netcode replaced
-//
-// Revision 1.6  2004/06/27 10:56:38  hurdler
-// minor things
-//
-// Revision 1.5  2004/03/28 15:16:14  smite-meister
-// Texture cache.
-//
-// Revision 1.4  2002/12/23 23:19:37  smite-meister
-// Weapon groups, MAPINFO parser, WAD2+WAD3 support added!
-//
-// Revision 1.3  2002/12/16 22:05:08  smite-meister
-// Actor / DActor separation done!
-//
-// Revision 1.2  2002/12/03 10:23:46  smite-meister
-// Video system overhaul
 //-----------------------------------------------------------------------------
 
 /// \file

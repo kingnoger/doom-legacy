@@ -16,37 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.12  2005/07/31 14:50:25  smite-meister
-// thing spawning fix
-//
-// Revision 1.11  2004/10/16 12:43:49  smite-meister
-// iteration
-//
-// Revision 1.9  2004/04/25 16:26:51  smite-meister
-// Doxygen
-//
-// Revision 1.8  2003/11/13 00:32:41  smite-meister
-// Static initialization order fiasco fixed
-//
-// Revision 1.7  2003/11/12 11:07:27  smite-meister
-// Serialization done. Map progression.
-//
-// Revision 1.6  2003/05/30 13:34:49  smite-meister
-// Cleanup, HUD improved, serialization
-//
-// Revision 1.4  2003/03/15 20:07:21  smite-meister
-// Initial Hexen compatibility!
-//
-// Revision 1.3  2002/12/23 23:19:37  smite-meister
-// Weapon groups, MAPINFO parser, WAD2+WAD3 support added!
-//
-// Revision 1.2  2002/12/16 22:04:55  smite-meister
-// Actor / DActor separation done!
-//
-// Revision 1.1.1.1  2002/11/16 14:18:28  hurdler
-// Initial C++ version of Doom Legacy
-//
 //-----------------------------------------------------------------------------
 
 /// \file

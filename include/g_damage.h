@@ -16,19 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.4  2005/07/05 18:29:06  smite-meister
-// damage types
-//
-// Revision 1.3  2004/11/18 20:30:14  smite-meister
-// tnt, plutonia
-//
-// Revision 1.2  2002/12/16 22:07:59  smite-meister
-// cr/lf fix
-//
-// Revision 1.1  2002/12/16 22:06:24  smite-meister
-// Added damage system
-//
 //-----------------------------------------------------------------------------
 
 /// \file
