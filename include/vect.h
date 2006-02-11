@@ -24,6 +24,8 @@
 #ifndef vect_h
 #define vect_h 1
 
+#include<iostream>
+
 //#include <math.h>
 
 /// \brief Simple template class for three-vectors

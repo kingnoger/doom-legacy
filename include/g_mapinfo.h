@@ -33,6 +33,8 @@
 
 using namespace std;
 
+class Map;
+
 /// \brief Stores all kinds of metadata for an associated Map.
 ///
 /// OK. Doom map format is (undestandably) primitive and has no place for

@@ -31,6 +31,9 @@
 
 #include "doomtype.h"
 
+class GameType;
+class LNetInterface;
+
 using namespace std;
 
 
