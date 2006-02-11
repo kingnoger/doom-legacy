@@ -15,38 +15,6 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// $Log$
-// Revision 1.8  2006/01/15 23:48:07  jussip
-// Renamed VERSION to LEGACY_VERSION to avoid namespace collision with Autotools.
-//
-// Revision 1.7  2005/09/11 16:23:09  smite-meister
-// template classes
-//
-// Revision 1.6  2005/03/16 21:16:09  smite-meister
-// menu cleanup, bugfixes
-//
-// Revision 1.5  2005/01/25 18:29:17  smite-meister
-// preparing for alpha
-//
-// Revision 1.4  2004/01/02 14:19:39  smite-meister
-// save bugfix
-//
-// Revision 1.3  2003/12/09 01:02:02  smite-meister
-// Hexen mapchange works, keycodes fixed
-//
-// Revision 1.2  2003/12/06 23:57:47  smite-meister
-// save-related bugfixes
-//
-// Revision 1.1  2003/11/12 11:07:27  smite-meister
-// Serialization done. Map progression.
-//
-// Revision 1.6  2003/06/08 16:19:21  smite-meister
-// Hexen lights.
-//
-// Revision 1.5  2003/06/01 18:56:30  smite-meister
-// zlib compression, partial polyobj fix
-//
-//
 // DESCRIPTION:
 //   Archive class implementation
 //

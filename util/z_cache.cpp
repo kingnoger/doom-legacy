@@ -16,37 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.10  2005/07/20 20:27:23  smite-meister
-// adv. texture cache
-//
-// Revision 1.9  2004/11/28 18:02:24  smite-meister
-// RPCs finally work!
-//
-// Revision 1.8  2004/09/03 16:28:52  smite-meister
-// bugfixes and ZDoom linedef types
-//
-// Revision 1.7  2004/08/12 18:30:33  smite-meister
-// cleaned startup
-//
-// Revision 1.6  2004/03/28 15:16:15  smite-meister
-// Texture cache.
-//
-// Revision 1.5  2003/06/29 17:33:59  smite-meister
-// VFile system, PAK support, Hexen bugfixes
-//
-// Revision 1.4  2003/04/04 00:01:58  smite-meister
-// bugfixes, Hexen HUD
-//
-// Revision 1.3  2003/03/08 16:07:18  smite-meister
-// Lots of stuff. Sprite cache. Movement+friction fix.
-//
-// Revision 1.2  2003/02/23 22:49:31  smite-meister
-// FS is back! L2 cache works.
-//
-// Revision 1.1  2003/02/18 20:03:19  smite-meister
-// L2 cache added
-//
 //---------------------------------------------------------------------
 
 /// \file

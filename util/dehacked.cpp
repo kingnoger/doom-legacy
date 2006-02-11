@@ -16,60 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.23  2005/09/11 16:23:09  smite-meister
-// template classes
-//
-// Revision 1.22  2005/07/18 12:32:45  smite-meister
-// fix
-//
-// Revision 1.21  2005/06/29 14:26:40  smite-meister
-// valgrind pays off
-//
-// Revision 1.14  2004/12/19 23:43:20  smite-meister
-// more BEX support
-//
-// Revision 1.13  2004/12/08 16:49:05  segabor
-// Missing devparm reference added
-//
-// Revision 1.12  2004/11/18 20:30:14  smite-meister
-// tnt, plutonia
-//
-// Revision 1.10  2004/03/28 15:16:15  smite-meister
-// Texture cache.
-//
-// Revision 1.9  2004/01/10 16:03:00  smite-meister
-// Cleanup and Hexen gameplay -related bugfixes
-//
-// Revision 1.8  2003/12/31 18:32:50  smite-meister
-// Last commit of the year? Sound works.
-//
-// Revision 1.6  2003/03/23 14:24:14  smite-meister
-// Polyobjects, MD3 models
-//
-// Revision 1.5  2003/03/15 20:07:21  smite-meister
-// Initial Hexen compatibility!
-//
-// Revision 1.4  2003/02/16 16:54:52  smite-meister
-// L2 sound cache done
-//
-// Revision 1.3  2002/12/23 23:20:57  smite-meister
-// WAD2+WAD3 support added!
-//
-// Revision 1.1.1.1  2002/11/16 14:18:38  hurdler
-// Initial C++ version of Doom Legacy
-//
-// Revision 1.9  2001/01/25 22:15:41  bpereira
-// added heretic support
-//
-// Revision 1.6  2000/11/02 17:50:06  stroggonmeth
-// Big 3Dfloors & FraggleScript commit!!
-//
-// Revision 1.3  2000/04/05 15:47:46  stroggonmeth
-// Added hack for Dehacked lumps. Transparent sprites are now affected by colormaps.
-//
-// Revision 1.1.1.1  2000/02/22 20:32:32  hurdler
-// Initial import into CVS (v1.29 pr3)
 //
 //-----------------------------------------------------------------------------
 

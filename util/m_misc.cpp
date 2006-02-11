@@ -17,48 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.16  2005/07/12 18:55:24  smite-meister
-// inventory and player preferences fixed
-//
-// Revision 1.15  2005/05/31 18:04:22  smite-meister
-// screenslink crash fixed
-//
-// Revision 1.14  2004/11/19 16:51:06  smite-meister
-// cleanup
-//
-// Revision 1.13  2004/11/13 22:39:00  smite-meister
-// intermission works
-//
-// Revision 1.12  2004/10/27 17:37:11  smite-meister
-// netcode update
-//
-// Revision 1.11  2004/09/20 22:42:50  jussip
-// Joystick axis binding works. New joystick code ready for use.
-//
-// Revision 1.10  2004/08/12 18:30:33  smite-meister
-// cleaned startup
-//
-// Revision 1.9  2004/07/25 20:17:05  hurdler
-// Remove old hardware renderer and add part of the new one
-//
-// Revision 1.8  2004/07/13 20:23:39  smite-meister
-// Mod system basics
-//
-// Revision 1.7  2004/07/11 14:32:02  smite-meister
-// Consvars updated, bugfixes
-//
-// Revision 1.6  2004/03/28 15:16:15  smite-meister
-// Texture cache.
-//
-// Revision 1.5  2004/01/10 16:03:00  smite-meister
-// Cleanup and Hexen gameplay -related bugfixes
-//
-// Revision 1.4  2003/12/09 01:02:02  smite-meister
-// Hexen mapchange works, keycodes fixed
-//
-// Revision 1.3  2003/04/04 00:01:58  smite-meister
-// bugfixes, Hexen HUD
 //
 //-----------------------------------------------------------------------------
 

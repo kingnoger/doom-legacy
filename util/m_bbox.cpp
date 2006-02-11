@@ -17,18 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.4  2005/09/12 18:33:45  smite-meister
-// fixed_t, vec_t
-//
-// Revision 1.3  2004/10/14 19:35:51  smite-meister
-// automap, bbox_t
-//
-// Revision 1.2  2004/10/11 11:14:51  smite-meister
-// map utils
-//
-// Revision 1.1.1.1  2002/11/16 14:18:38  hurdler
-// Initial C++ version of Doom Legacy
 //
 //-----------------------------------------------------------------------------
 

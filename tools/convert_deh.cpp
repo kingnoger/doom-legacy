@@ -16,19 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.4  2005/06/23 17:25:40  smite-meister
-// map conversion command added
-//
-// Revision 1.3  2005/06/22 20:44:31  smite-meister
-// alpha3 bugfixes
-//
-// Revision 1.2  2005/04/01 18:03:07  smite-meister
-// fix
-//
-// Revision 1.1  2005/04/01 14:47:46  smite-meister
-// dehacked works
-//
 //
 //-----------------------------------------------------------------------------
 

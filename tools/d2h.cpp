@@ -16,16 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.3  2004/09/30 11:08:22  smite-meister
-// small update
-//
-// Revision 1.2  2003/11/30 00:09:48  smite-meister
-// bugfixes
-//
-// Revision 1.1  2003/04/19 17:38:48  smite-meister
-// SNDSEQ support, tools, linedef system...
-//
 //-----------------------------------------------------------------------------
 
 /// \file

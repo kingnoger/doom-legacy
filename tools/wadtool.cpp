@@ -16,18 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.4  2004/12/31 16:19:40  smite-meister
-// alpha fixes
-//
-// Revision 1.3  2004/12/08 09:45:45  segabor
-// "segabor: endianness fixed"
-//
-// Revision 1.2  2004/09/30 11:08:22  smite-meister
-// small update
-//
-// Revision 1.1  2004/08/14 16:38:01  smite-meister
-// new tool for easy wad manipulation
 //
 //-----------------------------------------------------------------------------
 

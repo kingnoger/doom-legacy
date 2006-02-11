@@ -17,39 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.11  2005/09/29 15:35:27  smite-meister
-// JDS texture standard
-//
-// Revision 1.10  2005/05/25 17:48:10  jussip
-// Replaced memcpy with memmove for possibly overlapping areas.
-//
-// Revision 1.9  2004/08/18 14:35:23  smite-meister
-// PNG support!
-//
-// Revision 1.8  2004/07/25 20:17:05  hurdler
-// Remove old hardware renderer and add part of the new one
-//
-// Revision 1.7  2004/03/28 15:16:15  smite-meister
-// Texture cache.
-//
-// Revision 1.6  2003/12/21 12:29:09  smite-meister
-// bugfixes
-//
-// Revision 1.5  2003/04/04 00:01:58  smite-meister
-// bugfixes, Hexen HUD
-//
-// Revision 1.4  2003/03/25 18:14:50  smite-meister
-// Memory debug
-//
-// Revision 1.3  2003/03/08 16:07:19  smite-meister
-// Lots of stuff. Sprite cache. Movement+friction fix.
-//
-// Revision 1.2  2003/02/08 21:43:50  smite-meister
-// New Memzone system. Choose your pawntype! Cyberdemon OK.
-//
-// Revision 1.1.1.1  2002/11/16 14:18:42  hurdler
-// Initial C++ version of Doom Legacy
 //
 //-----------------------------------------------------------------------------
 

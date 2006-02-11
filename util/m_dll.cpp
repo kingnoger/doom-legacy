@@ -16,17 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.3  2004/07/13 20:23:39  smite-meister
-// Mod system basics
-//
-// Revision 1.2  2003/04/26 12:01:13  smite-meister
-// Bugfixes. Hexen maps work again.
-//
-// Revision 1.1  2003/01/25 21:33:06  smite-meister
-// Now compiles with MinGW 2.0 / GCC 3.2.
-// Builder can choose between dynamic and static linkage.
-//
 //-----------------------------------------------------------------------------
 
 /// \file

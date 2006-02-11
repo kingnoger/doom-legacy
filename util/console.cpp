@@ -16,64 +16,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.24  2005/04/05 16:15:13  smite-meister
-// valgrind fixes
-//
-// Revision 1.23  2005/03/21 17:44:20  smite-meister
-// fixes
-//
-// Revision 1.22  2005/03/19 13:51:30  smite-meister
-// sound samplerate fix
-//
-// Revision 1.21  2004/11/19 16:51:06  smite-meister
-// cleanup
-//
-// Revision 1.20  2004/10/27 17:37:11  smite-meister
-// netcode update
-//
-// Revision 1.19  2004/09/24 11:34:00  smite-meister
-// fix
-//
-// Revision 1.16  2004/08/12 18:30:33  smite-meister
-// cleaned startup
-//
-// Revision 1.15  2004/07/25 20:17:05  hurdler
-// Remove old hardware renderer and add part of the new one
-//
-// Revision 1.14  2004/07/11 14:32:01  smite-meister
-// Consvars updated, bugfixes
-//
-// Revision 1.13  2004/07/05 16:53:30  smite-meister
-// Netcode replaced
-//
-// Revision 1.12  2004/04/25 16:26:51  smite-meister
-// Doxygen
-//
-// Revision 1.10  2004/01/10 16:03:00  smite-meister
-// Cleanup and Hexen gameplay -related bugfixes
-//
-// Revision 1.9  2003/12/31 18:32:50  smite-meister
-// Last commit of the year? Sound works.
-//
-// Revision 1.8  2003/12/09 01:02:02  smite-meister
-// Hexen mapchange works, keycodes fixed
-//
-// Revision 1.7  2003/05/05 00:24:50  smite-meister
-// Hexen linedef system. Pickups.
-//
-// Revision 1.6  2003/04/24 20:30:33  hurdler
-// Remove lots of compiling warnings
-//
-// Revision 1.5  2003/01/25 21:33:06  smite-meister
-// Now compiles with MinGW 2.0 / GCC 3.2.
-// Builder can choose between dynamic and static linkage.
-//
-// Revision 1.4  2002/12/29 18:57:03  smite-meister
-// MAPINFO implemented, Actor deaths handled better
-//
-// Revision 1.3  2002/12/16 22:19:36  smite-meister
-// HUD fix
 //
 //-----------------------------------------------------------------------------
 

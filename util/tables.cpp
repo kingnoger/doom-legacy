@@ -17,21 +17,6 @@
 // GNU General Public License for more details.
 //
 //
-// $Log$
-// Revision 1.5  2005/09/11 16:23:09  smite-meister
-// template classes
-//
-// Revision 1.4  2004/11/04 21:12:54  smite-meister
-// save/load fixed
-//
-// Revision 1.3  2004/08/15 18:08:30  smite-meister
-// palette-to-palette colormaps etc.
-//
-// Revision 1.2  2004/07/05 16:53:30  smite-meister
-// Netcode replaced
-//
-// Revision 1.1.1.1  2002/11/16 14:18:42  hurdler
-// Initial C++ version of Doom Legacy
 //
 //-----------------------------------------------------------------------------
 
