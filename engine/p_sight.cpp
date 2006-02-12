@@ -122,6 +122,8 @@ bool Map::CrossSubsector(int num)
   for ( ; count ; seg++, count--)
     {
       line_t *line = seg->linedef;
+      if (!line)
+	continue; // miniseg
 
       // allready checked other side?
       if (line->validcount == validcount)

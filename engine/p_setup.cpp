@@ -140,11 +140,11 @@ void Map::LoadSegs(int lump)
 void Map::LoadSubsectors(int lump)
 {
   numsubsectors = fc.LumpLength(lump) / sizeof(mapsubsector_t);
-  subsectors = (subsector_t *)Z_Malloc(numsubsectors*sizeof(subsector_t), PU_LEVEL, 0);
+  subsectors = (subsector_t *)Z_Malloc(numsubsectors * sizeof(subsector_t), PU_LEVEL, 0);
+  memset(subsectors, 0, numsubsectors * sizeof(subsector_t));
   byte *data = (byte *)fc.CacheLumpNum(lump, PU_STATIC);
 
   mapsubsector_t *mss = (mapsubsector_t *)data;
-  memset(subsectors, 0, numsubsectors*sizeof(subsector_t));
   subsector_t *ss = subsectors;
 
   for (int i=0; i<numsubsectors; i++, ss++, mss++)
@@ -1184,6 +1184,9 @@ void Map::LoadGLSegs(const int lump, const int glversion)
 	  float sx = ((seg->side ? ldef->v2->x : ldef->v1->x) - seg->v1->x).Float();
 	  float sy = ((seg->side ? ldef->v2->y : ldef->v1->y) - seg->v1->y).Float();
 	  seg->offset = SegLength(sx, sy);
+
+	  seg->frontsector = ldef->sideptr[seg->side]->sector;
+	  seg->backsector = (ldef->flags & ML_TWOSIDED) ? ldef->sideptr[seg->side^1]->sector : NULL;
 	}
 
       // make a vector (start at origin)
@@ -1196,9 +1199,6 @@ void Map::LoadGLSegs(const int lump, const int glversion)
 	seg->angle = angle_t((atan2(dy, dx) * ANG180) / M_PI);
 
       seg->length = SegLength(dx, dy);
-
-      seg->frontsector = ldef->sideptr[seg->side]->sector;
-      seg->backsector = (ldef->flags & ML_TWOSIDED) ? ldef->sideptr[seg->side^1]->sector : NULL;
     }
 
   Z_Free(data);
@@ -1212,7 +1212,8 @@ void Map::LoadGLSubsectors(const int lump, const int glversion)
   else // Assume version 5.
     numsubsectors = fc.LumpLength(lump) / sizeof(mapgl5subsector_t);
 
-  subsectors = (subsector_t *)Z_Malloc(numsubsectors*sizeof(subsector_t), PU_LEVEL, 0);
+  subsectors = (subsector_t *)Z_Malloc(numsubsectors * sizeof(subsector_t), PU_LEVEL, 0);
+  memset(subsectors, 0, numsubsectors * sizeof(subsector_t));
   byte *data = (byte*)fc.CacheLumpNum(lump, PU_STATIC);
 
   subsector_t *ss = subsectors;
@@ -1382,10 +1383,10 @@ bool Map::Setup(tic_t start, bool spawnthings)
 
   // NOTE: most of this ordering is important
   // Load GL data if it exists, otherwise use normal data
-  char glname[9] = "GL_\0\0\0\0\0";
-  strncat(glname, lumpname.c_str(), 5);
+  string glname = "GL_";
+  glname.append(lumpname, 0, 5);
 
-  int gllump = fc.FindNumForName(glname);
+  int gllump = fc.FindNumForName(glname.c_str());
   int gl_version = 0;
   if (gllump != -1)
     {

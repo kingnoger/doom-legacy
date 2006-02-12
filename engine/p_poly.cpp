@@ -966,7 +966,8 @@ void Map::IterFindPolySegs(fixed_t x, fixed_t y, seg_t **segList)
 
   for (int i = 0; i < numsegs; i++)
     {
-      if (segs[i].v1->x == x && segs[i].v1->y == y)
+      if (segs[i].linedef && // skip minisegs
+	  segs[i].v1->x == x && segs[i].v1->y == y)
 	{
 	  if (!segList)
 	    PolySegCount++;
@@ -984,32 +985,33 @@ void Map::IterFindPolySegs(fixed_t x, fixed_t y, seg_t **segList)
 
 void Map::SpawnPolyobj(int index, int tag, bool crush)
 {
-  int i, j;
-  seg_t *polySegList[PO_MAXPOLYSEGS];
+  seg_t *polySegList[PO_MAXPOLYSEGS], *seg;
 
-  for (i = 0; i < numsegs; i++)
+  for (int i = 0; i < numsegs; i++)
     {
-      if (segs[i].linedef->special == PO_LINE_START &&
-	 segs[i].linedef->args[0] == tag)
+      seg = &segs[i];
+      if (seg->linedef && // not miniseg
+	  seg->linedef->special == PO_LINE_START &&
+	  seg->linedef->args[0] == tag)
 	{
 	  if (polyobjs[index].segs)
 	    I_Error("SpawnPolyobj:  Polyobj %d already spawned.\n", tag);
 
-	  segs[i].linedef->special = 0;
-	  segs[i].linedef->args[0] = 0;
+	  seg->linedef->special = 0;
+	  seg->linedef->args[0] = 0;
 	  PolySegCount = 1;
-	  PolyStartX = segs[i].v1->x;
-	  PolyStartY = segs[i].v1->y;
-	  //CONS_Printf(" xxx seg(%d) v1 = %d, line(%d) v1 = %d\n", i, segs[i].v1 - vertexes, segs[i].linedef - lines, segs[i].linedef->v1 - vertexes);
-	  IterFindPolySegs(segs[i].v2->x, segs[i].v2->y, NULL);
+	  PolyStartX = seg->v1->x;
+	  PolyStartY = seg->v1->y;
+	  //CONS_Printf(" xxx seg(%d) v1 = %d, line(%d) v1 = %d\n", i, seg->v1 - vertexes, seg->linedef - lines, seg->linedef->v1 - vertexes);
+	  IterFindPolySegs(seg->v2->x, seg->v2->y, NULL);
 
 	  polyobjs[index].numsegs = PolySegCount;
 	  polyobjs[index].segs = (seg_t **)Z_Malloc(PolySegCount*sizeof(seg_t *), PU_LEVEL, 0);
-	  *(polyobjs[index].segs) = &segs[i]; // insert the first seg
-	  IterFindPolySegs(segs[i].v2->x, segs[i].v2->y, polyobjs[index].segs+1);
+	  polyobjs[index].segs[0] = seg; // insert the first seg
+	  IterFindPolySegs(seg->v2->x, seg->v2->y, polyobjs[index].segs+1);
 	  polyobjs[index].crush = crush;
 	  polyobjs[index].tag = tag;
-	  polyobjs[index].seqType = segs[i].linedef->args[2];
+	  polyobjs[index].seqType = seg->linedef->args[2];
 	  //CONS_Printf("--- %d\n", PolySegCount);
 	  /*
 	    // not necessary
@@ -1025,21 +1027,23 @@ void Map::SpawnPolyobj(int index, int tag, bool crush)
     { // didn't find a polyobj through PO_LINE_START
       int psIndex = 0;
       polyobjs[index].numsegs = 0;
-      for (j = 1; j < PO_MAXPOLYSEGS; j++)
+      for (int j = 1; j < PO_MAXPOLYSEGS; j++)
 	{
 	  int psIndexOld = psIndex;
-	  for (i = 0; i < numsegs; i++)
+	  for (int i = 0; i < numsegs; i++)
 	    {
-	      if (segs[i].linedef->special == PO_LINE_EXPLICIT &&
-		  segs[i].linedef->args[0] == tag)
+	      seg = &segs[i];
+	      if (seg->linedef && // not miniseg
+		  seg->linedef->special == PO_LINE_EXPLICIT &&
+		  seg->linedef->args[0] == tag)
 		{
-		  if (!segs[i].linedef->args[1])
+		  if (!seg->linedef->args[1])
 		    I_Error("SpawnPolyobj:  Explicit line missing order number (probably %d) in poly %d.\n",
 			    j+1, tag);
 
-		  if (segs[i].linedef->args[1] == j)
+		  if (seg->linedef->args[1] == j)
 		    {
-		      polySegList[psIndex] = &segs[i];
+		      polySegList[psIndex] = seg;
 		      polyobjs[index].numsegs++;
 		      psIndex++;
 		      if (psIndex > PO_MAXPOLYSEGS)
@@ -1050,45 +1054,49 @@ void Map::SpawnPolyobj(int index, int tag, bool crush)
 	  // Clear out any specials for these segs...we cannot clear them out
 	  // 	in the above loop, since we aren't guaranteed one seg per
 	  //		linedef.
-	  for (i = 0; i < numsegs; i++)
+	  for (int i = 0; i < numsegs; i++)
 	    {
-	      if (segs[i].linedef->special == PO_LINE_EXPLICIT &&
-		 segs[i].linedef->args[0] == tag && segs[i].linedef->args[1] == j)
+	      seg = &segs[i];
+	      if (seg->linedef && // not miniseg
+		  seg->linedef->special == PO_LINE_EXPLICIT &&
+		  seg->linedef->args[0] == tag && seg->linedef->args[1] == j)
 		{
-		  segs[i].linedef->special = 0;
-		  segs[i].linedef->args[0] = 0;
+		  seg->linedef->special = 0;
+		  seg->linedef->args[0] = 0;
 		}
 	    }
+
 	  if (psIndex == psIndexOld)
 	    { // Check if an explicit line order has been skipped
 				// A line has been skipped if there are any more explicit
 				// lines with the current tag value
-	      for (i = 0; i < numsegs; i++)
+	      for (int i = 0; i < numsegs; i++)
 		{
-		  if (segs[i].linedef->special == PO_LINE_EXPLICIT &&
-		     segs[i].linedef->args[0] == tag)
+		  seg = &segs[i];
+		  if (seg->linedef && // not miniseg
+		      seg->linedef->special == PO_LINE_EXPLICIT &&
+		      seg->linedef->args[0] == tag)
 		    {
-		      I_Error("SpawnPolyobj:  Missing explicit line %d for poly %d\n",
-			      j, tag);
+		      I_Error("SpawnPolyobj:  Missing explicit line %d for poly %d\n", j, tag);
 		    }
 		}
 	    }
 	}
+
       if (polyobjs[index].numsegs)
 	{
 	  PolySegCount = polyobjs[index].numsegs; // PolySegCount used globally
 	  polyobjs[index].crush = crush;
 	  polyobjs[index].tag = tag;
 	  polyobjs[index].segs = (seg_t **)Z_Malloc(polyobjs[index].numsegs*sizeof(seg_t *), PU_LEVEL, 0);
-	  for (i = 0; i < polyobjs[index].numsegs; i++)
+	  for (int i = 0; i < polyobjs[index].numsegs; i++)
 	    polyobjs[index].segs[i] = polySegList[i];
 
-	  polyobjs[index].seqType = (*polyobjs[index].segs)->linedef->args[3];
+	  polyobjs[index].seqType = polyobjs[index].segs[0]->linedef->args[3];
 	}
       // Next, change the polyobjs first line to point to a mirror
       //		if it exists
-      (*polyobjs[index].segs)->linedef->args[1] =
-	(*polyobjs[index].segs)->linedef->args[2];
+      polyobjs[index].segs[0]->linedef->args[1] = polyobjs[index].segs[0]->linedef->args[2];
     }
 }
 

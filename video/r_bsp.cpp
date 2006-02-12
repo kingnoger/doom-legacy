@@ -932,11 +932,12 @@ void Rend::R_Subsector(int num)
     }
 
   count = sub->num_segs;
-  seg_t *line = &segs[sub->first_seg];
+  seg_t *seg = &segs[sub->first_seg];
   while (count--)
     {
-      R_AddLine(line);
-      line++;
+      if (seg->linedef)
+	R_AddLine(seg);
+      seg++;
     }
 }
 
