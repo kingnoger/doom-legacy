@@ -1398,9 +1398,9 @@ bool Map::Setup(tic_t start, bool spawnthings)
   else
     {
       CONS_Printf("Level %s has no GL nodes.\n", lumpname.c_str());
-      LoadVertexes(lumpnum+LUMP_VERTEXES); // just loads the vertices
     }
 
+  LoadVertexes(lumpnum+LUMP_VERTEXES); // These are always needed.
   LoadBlockMap(lumpnum+LUMP_BLOCKMAP); // loads (and possibly fixes) the blockmap
   LoadSectors1(lumpnum+LUMP_SECTORS);  // allocates sectors
   LoadSideDefs(lumpnum+LUMP_SIDEDEFS); // allocates sidedefs
