@@ -962,6 +962,7 @@ void Rend::R_RenderPlayerView(int viewport, PlayerInfo *player)
   R_SetupFrame(player);
 
   if(rendermode == render_opengl) {
+    oglrenderer->SetThinkers(&player->mp->thinkercap);
     oglrenderer->Render3DView(player);
     // Draw weapon sprites. 
     R_DrawPlayerSprites();

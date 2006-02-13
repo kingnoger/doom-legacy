@@ -62,12 +62,15 @@ private:
 
   bool workinggl;  // Do we have a working OpenGL context?
 
+  Thinker *thinkers;
+
   gllevel_t l; // All we need to render the level geometry.
 
   void RenderBSP(); // Walk through the BSP and render walls and things.
   void RenderGLSubsector(int num);
   void RenderGLSeg(int num);
   void DrawSingleQuad(vertex_t *fv, vertex_t *tv, GLfloat lower, GLfloat upper, GLfloat texleft=0.0, GLfloat texright=1.0, GLfloat textop=0.0, GLfloat texbottom=1.0);
+  void DrawSingleThinker(Thinker *t);
 
 public:
 
@@ -91,6 +94,8 @@ public:
   void Setup3DMode();
 
   void SetLevelData(gllevel_t &in) {l = in;}
+  // Must be re-set every single frame.
+  void SetThinkers(Thinker *tt) {thinkers = tt;}
 
   void Render3DView(PlayerInfo *player);
 

@@ -22,6 +22,7 @@
 #include"g_actor.h"
 #include"tables.h"
 #include"r_data.h"
+#include"r_sprite.h"
 
 
 OGLRenderer::OGLRenderer() {
@@ -32,6 +33,8 @@ OGLRenderer::OGLRenderer() {
   x = y = z = 0.0;
   theta = phi = 0.0;
   viewportw = viewporth = 0;
+
+  thinkers = NULL;
 
   fov = 45.0;
 
@@ -313,6 +316,7 @@ void OGLRenderer::Render3DView(PlayerInfo *player) {
 
   // Pretty soon we want to draw HUD graphics and stuff.
   Setup2DMode();
+
 }
 
 
@@ -331,6 +335,9 @@ void OGLRenderer::RenderBSP() {
 
   for(int i=0; i<l.numglsegs; i++)
     RenderGLSeg(i);
+
+  for(Thinker *ct = thinkers->Next(); ct != thinkers; ct = ct->Next())
+    DrawSingleThinker(ct);
 }
 
 // Draw the floor and ceiling of a single GL subsector. In the future
@@ -582,4 +589,48 @@ void OGLRenderer::DrawSingleQuad(vertex_t *fv, vertex_t *tv, GLfloat lower, GLfl
   glVertex3f(fv->x.Float(), fv->y.Float(), upper);
 
   glEnd();
+}
+
+// Draws the specified item (weapon, monster, flying rocket etc) in
+// the 3D view. Translations and rotations are done with OpenGL
+// matrices.
+
+void OGLRenderer::DrawSingleThinker(Thinker *t) {
+  Actor *a;
+
+  a = dynamic_cast<Actor*>(t);
+  if(!a)
+    return;
+
+  // You can't draw the invisible.
+  if(!a->pres)
+    return;
+  /*
+  // Some items (spawnpoints?) do not get drawn ever.
+  if(!t->mobj)
+    return;
+
+  sp = dynamic_cast<spritepres_t*> (t->mobj->pres);
+  if(sp == NULL) {
+    CONS_Printf("Someone is using MD3 models, but they are not supported. Stop that.\n");
+      return;
+  }
+
+  frame = sp->GetFrame();
+  */
+  glMatrixMode(GL_MODELVIEW);
+  glPushMatrix();
+
+  glTranslatef(a->pos.x.Float(), a->pos.y.Float(), a->pos.z.Float());
+  glNormal3f(-1.0, 0.0, 0.0);
+  glRotatef(theta, 0.0, 0.0, 1.0);
+
+  glBegin(GL_TRIANGLES);
+  glVertex3f(0.0, 0.0, 128.0);
+  glVertex3f(0.0, 32.0, 0.0);
+  glVertex3f(0.0, -32.0, 0.0);
+  glEnd();
+
+  // Leave the matrix stack as it was.
+  glPopMatrix();
 }
