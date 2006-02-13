@@ -57,7 +57,6 @@ void OGLRenderer::InitGLState() {
   glEnable(GL_TEXTURE_2D);
   //glEnable(GL_ALPHA_TEST);
   //glAlphaFunc(GL_ALWAYS, 0.0);
-  // glEnable(GL_LIGHTING);
   glEnable(GL_BLEND);
   // glBlendFunc(GL_ONE, GL_ZERO);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -202,6 +201,7 @@ void OGLRenderer::Setup2DMode() {
 void OGLRenderer::Setup3DMode() {
   consolemode = false;
 
+  // glEnable(GL_LIGHTING);
   glEnable(GL_DEPTH_TEST);
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
@@ -247,8 +247,6 @@ void OGLRenderer::Draw2DGraphic(GLfloat top, GLfloat left, GLfloat bottom, GLflo
   textop = texbottom;
   texbottom = temp;
 
-  // The translation is set up. Drawing a 1x1 patch, which will
-  // magically appear at the proper place.
   glBegin(GL_QUADS);
   glTexCoord2f(texleft, texbottom);
   glVertex2f(left, bottom);
@@ -427,6 +425,9 @@ void OGLRenderer::RenderGLSeg(int num) {
   sector_t *rs; // Remote sector.
 
   GLfloat rs_floor, rs_ceil, ls_floor, ls_ceil; // Floor and ceiling heights.
+  GLfloat textop, texbottom, texleft, texright;
+  GLfloat utexhei, ltexhei;
+  GLfloat ls_height, tex_yoff;
   Texture *uppertex, *middletex, *lowertex;
 
   if(num < 0 || num > l.numglsegs)
@@ -434,6 +435,7 @@ void OGLRenderer::RenderGLSeg(int num) {
 
   s = &(l.glsegs[num]);
   ld = s->linedef;
+  // Don't draw minisegs.
   if(ld == NULL)
     return;
 
@@ -462,17 +464,21 @@ void OGLRenderer::RenderGLSeg(int num) {
   ls = lsd->sector;
   ls_floor = ls->floorheight.Float();
   ls_ceil = ls->ceilingheight.Float();
+  ls_height = ls_ceil - ls_floor;
 
   if(rsd) {
     rs = rsd->sector;
     rs_floor = rs->floorheight.Float();
     rs_ceil = rs->ceilingheight.Float();
+    utexhei = ls_ceil - rs_ceil;
+    ltexhei = rs_floor - ls_floor;
   } else {
     rs = NULL;
     rs_floor = 0.0;
     rs_ceil = 0.0;
   }
 
+  tex_yoff = lsd->rowoffset.Float();
   uppertex = tc[lsd->toptexture];
   middletex = tc[lsd->midtexture];
   lowertex = tc[lsd->bottomtexture];
@@ -485,26 +491,79 @@ void OGLRenderer::RenderGLSeg(int num) {
   if(lowertex && lowertex->glid == lowertex->NOTEXTURE)
     lowertex->GetData();
 
+  // Texture X offsets.
+  texleft = lsd->textureoffset.Float() + s->offset.Float();
+  texright = texleft + s->length;
+
   // Ready to draw textures.
   if(rs != NULL) {
     if(rs_ceil < ls_ceil && uppertex) {
+      if(ld->flags & ML_DONTPEGTOP) {
+	textop = tex_yoff;
+	texbottom = textop + utexhei;
+      } else {
+	texbottom = tex_yoff;
+	textop = texbottom - utexhei;
+      }
+
       glBindTexture(GL_TEXTURE_2D, uppertex->glid);
-      DrawSingleQuad(fv, tv, rs_ceil, ls_ceil);
+      DrawSingleQuad(fv, tv, rs_ceil, ls_ceil, texleft/uppertex->width,
+		     texright/uppertex->width, textop/uppertex->height,
+		     texbottom/uppertex->height);
     }
     
     if(rs_floor > ls_floor && lowertex) {
+      // Lower textures are a major PITA.
+      if(ld->flags & ML_DONTPEGBOTTOM) {
+	texbottom = tex_yoff + ls_height - lowertex->height;
+	textop = texbottom - ltexhei;
+      } else {
+	textop = tex_yoff;
+	texbottom = textop + ltexhei;
+      }
       glBindTexture(GL_TEXTURE_2D, lowertex->glid);
-      DrawSingleQuad(fv, tv, ls_floor, rs_floor);
+      DrawSingleQuad(fv, tv, ls_floor, rs_floor, texleft/lowertex->width,
+		     texright/lowertex->width, textop/lowertex->height,
+		     texbottom/lowertex->height);
     }
 
-    // Middle textures do not repeat, so we need some trickery.
+    // Double sided middle textures do not repeat, so we need some
+    // trickery.
     if(middletex != 0 && ls_floor < rs_ceil && ls_ceil > rs_floor) {
+      GLfloat top, bottom;
+      if(ld->flags & ML_DONTPEGBOTTOM) {
+	if(ls_floor < rs_floor)
+	  bottom = rs_floor;
+	else
+	  bottom = ls_floor;
+	top = bottom + middletex->height; // FIXME, should be at most
+					  // the height of the remote
+					  // sector?
+      } else {
+	if(ls_ceil < rs_ceil)
+	  top = ls_ceil;
+	else
+	  top = rs_ceil;
+	bottom = top - middletex->height;
       glBindTexture(GL_TEXTURE_2D, middletex->glid);
-      // FIXMEEEEEE
+      DrawSingleQuad(fv, tv, bottom, top, texleft/middletex->width, 
+		     texright/middletex->width);
+      //, textop/middletex->height,
+      //     texbottom/middletex->height);
+      }
     }
   } else if(middletex) {
+    if(ld->flags & ML_DONTPEGTOP) {
+      texbottom = tex_yoff;
+      textop = texbottom - ls_height;
+    } else {
+      textop = tex_yoff;
+      texbottom = textop + ls_height;
+    }
     glBindTexture(GL_TEXTURE_2D, middletex->glid);
-    DrawSingleQuad(fv, tv, ls_floor, ls_ceil);
+    DrawSingleQuad(fv, tv, ls_floor, ls_ceil, texleft/middletex->width, 
+		   texright/middletex->width, textop/middletex->height,
+		   texbottom/middletex->height);
   }
 }
 
