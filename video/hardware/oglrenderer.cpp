@@ -360,61 +360,64 @@ void OGLRenderer::RenderGLSubsector(int num) {
 
   // Bind ceiling texture.
   ftex = tc[s->ceilingpic];
-  if(ftex->glid == ftex->NOTEXTURE) 
-    ftex->GetData(); // Creates the texture.
-  glBindTexture(GL_TEXTURE_2D, ftex->glid);
+  if(ftex) {
+    if(ftex->glid == ftex->NOTEXTURE) 
+      ftex->GetData(); // Creates the texture.
+    glBindTexture(GL_TEXTURE_2D, ftex->glid);
 
-  // First draw the ceiling.
-  glNormal3f(0.0, 0.0, -1.0);
-  glBegin(GL_POLYGON);
-  for(curseg = firstseg; curseg < firstseg + segcount; curseg++) {
-    seg_t seg = l.glsegs[curseg];
-    GLfloat x, y, z, tx, ty;
-    vertex_t *v;
+    // First draw the ceiling.
+    glNormal3f(0.0, 0.0, -1.0);
+    glBegin(GL_POLYGON);
+    for(curseg = firstseg; curseg < firstseg + segcount; curseg++) {
+      seg_t seg = l.glsegs[curseg];
+      GLfloat x, y, z, tx, ty;
+      vertex_t *v;
 
-    v = seg.v1;
-    x = v->x.Float();
-    y = v->y.Float();
-    z = s->ceilingheight.Float(); 
+      v = seg.v1;
+      x = v->x.Float();
+      y = v->y.Float();
+      z = s->ceilingheight.Float(); 
 
-    tx = x/ftex->width;
-    ty = 1.0 - y/ftex->height;
+      tx = x/ftex->width;
+      ty = 1.0 - y/ftex->height;
 
-    glTexCoord2f(tx, ty);
-    glVertex3f(x, y, z);
+      glTexCoord2f(tx, ty);
+      glVertex3f(x, y, z);
 
-    //    printf("(%.2f, %.2f)\n", x, y);
+      //    printf("(%.2f, %.2f)\n", x, y);
+    }
+    glEnd();
   }
-  glEnd();
-
+ 
   // Then the floor. First bind texture.
   ftex = tc[s->floorpic];
-  if(ftex->glid == ftex->NOTEXTURE) 
-    ftex->GetData(); // Creates the texture.
-  glBindTexture(GL_TEXTURE_2D, ftex->glid);
+  if(ftex) {
+    if(ftex->glid == ftex->NOTEXTURE) 
+      ftex->GetData(); // Creates the texture.
+    glBindTexture(GL_TEXTURE_2D, ftex->glid);
 
-  glNormal3f(0.0, 0.0, 1.0);
-  glBegin(GL_POLYGON);
-  for(curseg = firstseg+segcount-1; curseg >= firstseg; curseg--) {
-    seg_t seg = l.glsegs[curseg];
-    GLfloat x, y, z, tx, ty;
-    vertex_t *v;
+    glNormal3f(0.0, 0.0, 1.0);
+    glBegin(GL_POLYGON);
+    for(curseg = firstseg+segcount-1; curseg >= firstseg; curseg--) {
+      seg_t seg = l.glsegs[curseg];
+      GLfloat x, y, z, tx, ty;
+      vertex_t *v;
 
-    v = seg.v2;
-    x = v->x.Float();
-    y = v->y.Float();
-    z = s->floorheight.Float(); 
+      v = seg.v2;
+      x = v->x.Float();
+      y = v->y.Float();
+      z = s->floorheight.Float(); 
 
-    tx = x/ftex->width;
-    ty = 1.0 - y/ftex->height;
+      tx = x/ftex->width;
+      ty = 1.0 - y/ftex->height;
 
-    glTexCoord2f(tx, ty);
-    glVertex3f(x, y, z);
+      glTexCoord2f(tx, ty);
+      glVertex3f(x, y, z);
 
-    //    printf("(%.2f, %.2f)\n", x, y);
+      //    printf("(%.2f, %.2f)\n", x, y);
+    }
+    glEnd();
   }
-  glEnd();
-
 }
 
 // Renders one single GL seg. Minisegs and invalid parameters are
