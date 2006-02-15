@@ -58,6 +58,7 @@ OGLRenderer::~OGLRenderer() {
 void OGLRenderer::InitGLState() {
   glShadeModel(GL_SMOOTH);
   glEnable(GL_TEXTURE_2D);
+
   /*
   glEnable(GL_ALPHA_TEST);
   glAlphaFunc(GL_GEQUAL, 1.0);
@@ -297,7 +298,7 @@ void OGLRenderer::Render3DView(PlayerInfo *player) {
   Setup3DMode();
   x = player->pov->pos.x.Float();
   y = player->pov->pos.y.Float();
-  z = player->pov->pos.z.Float();
+  z = player->viewz.Float();
 
   theta = (double)(player->pov->yaw>>ANGLETOFINESHIFT)*(360.0f/(double)FINEANGLES);
   phi = (double)(player->pov->pitch>>ANGLETOFINESHIFT)*(360.0f/(double)FINEANGLES);
@@ -311,7 +312,7 @@ void OGLRenderer::Render3DView(PlayerInfo *player) {
   glRotatef(-90.0,  1.0, 0.0, 0.0);
   glRotatef(90.0,   0.0, 0.0, 1.0);
   glRotatef(-theta, 0.0, 0.0, 1.0);
-  glTranslatef(-x, -y, -(z+56)); // FIXME, proper view height.
+  glTranslatef(-x, -y, -z);
 
   RenderBSP();
 
