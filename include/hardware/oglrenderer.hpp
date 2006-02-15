@@ -26,6 +26,8 @@
 #include"r_defs.h"
 
 class PlayerInfo;
+class Texture;
+class Actor;
 
 // This is an attempt at creating a new OpenGL renderer for Legacy.
 // The basic idea is that ALL rendering related stuff is kept inside
@@ -70,7 +72,6 @@ private:
   void RenderGLSubsector(int num);
   void RenderGLSeg(int num);
   void DrawSingleQuad(vertex_t *fv, vertex_t *tv, GLfloat lower, GLfloat upper, GLfloat texleft=0.0, GLfloat texright=1.0, GLfloat textop=0.0, GLfloat texbottom=1.0);
-  void DrawSingleThinker(Thinker *t);
 
 public:
 
@@ -98,6 +99,7 @@ public:
   void SetThinkers(Thinker *tt) {thinkers = tt;}
 
   void Render3DView(PlayerInfo *player);
+  void DrawSpriteItem(const Actor *a, Texture *t, bool flip);
 
 };
 

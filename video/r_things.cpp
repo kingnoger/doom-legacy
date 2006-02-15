@@ -395,13 +395,11 @@ void spritepres_t::Project(Actor *p)
       flip = sprframe->flip[0];
     }
 
-#ifdef HWRENDER
   // hardware renderer part
-  if (rendermode != render_soft)
-    {
-      return;
-    }
-#endif
+  if (rendermode == render_opengl) {
+    oglrenderer->DrawSpriteItem(p, t, flip);
+    return;
+  }
 
   // software renderer part
   // aspect ratio stuff :

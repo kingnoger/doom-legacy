@@ -58,10 +58,11 @@ OGLRenderer::~OGLRenderer() {
 void OGLRenderer::InitGLState() {
   glShadeModel(GL_SMOOTH);
   glEnable(GL_TEXTURE_2D);
-  //glEnable(GL_ALPHA_TEST);
-  //glAlphaFunc(GL_ALWAYS, 0.0);
+  /*
+  glEnable(GL_ALPHA_TEST);
+  glAlphaFunc(GL_GEQUAL, 1.0);
+  */
   glEnable(GL_BLEND);
-  // glBlendFunc(GL_ONE, GL_ZERO);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glEnable(GL_CULL_FACE);
 }
@@ -336,8 +337,21 @@ void OGLRenderer::RenderBSP() {
   for(int i=0; i<l.numglsegs; i++)
     RenderGLSeg(i);
 
-  for(Thinker *ct = thinkers->Next(); ct != thinkers; ct = ct->Next())
-    DrawSingleThinker(ct);
+  for(Thinker *ct = thinkers->Next(); ct != thinkers; ct = ct->Next()) {
+    // Kludge kludge
+    Actor *a = dynamic_cast<Actor*>(ct);
+    spritepres_t *sp;
+
+    if(!a)
+      continue;
+    if(!a->pres)
+      continue;
+    sp = dynamic_cast<spritepres_t*>(a->pres);
+    if(!sp)
+      continue;
+    sp->Project(a);
+
+  }
 }
 
 // Draw the floor and ceiling of a single GL subsector. In the future
@@ -598,41 +612,59 @@ void OGLRenderer::DrawSingleQuad(vertex_t *fv, vertex_t *tv, GLfloat lower, GLfl
 // the 3D view. Translations and rotations are done with OpenGL
 // matrices.
 
-void OGLRenderer::DrawSingleThinker(Thinker *t) {
-  Actor *a;
-
-  a = dynamic_cast<Actor*>(t);
-  if(!a)
-    return;
+void OGLRenderer::DrawSpriteItem(const Actor *a, Texture *t, bool flip) {
+  GLfloat top, bottom, left, right;
+  GLfloat texleft, texright, textop, texbottom;
 
   // You can't draw the invisible.
-  if(!a->pres)
-    return;
-  /*
-  // Some items (spawnpoints?) do not get drawn ever.
-  if(!t->mobj)
+  if(!t)
     return;
 
-  sp = dynamic_cast<spritepres_t*> (t->mobj->pres);
-  if(sp == NULL) {
-    CONS_Printf("Someone is using MD3 models, but they are not supported. Stop that.\n");
-      return;
+  if(t->glid == t->NOTEXTURE)
+    t->GetData();
+  glBindTexture(GL_TEXTURE_2D, t->glid);
+
+  if(flip) {
+    texleft = 1.0;
+    texright = 0.0;
+  } else {
+    texleft = 0.0;
+    texright = 1.0;
   }
 
-  frame = sp->GetFrame();
-  */
+  // Shouldn't these be the other way around?
+  texbottom = 1.0;
+  textop = 0.0;
+
+  left = t->width/2;
+  right = -left;
+  bottom = 0.0;
+  top = t->height;
   glMatrixMode(GL_MODELVIEW);
   glPushMatrix();
 
   glTranslatef(a->pos.x.Float(), a->pos.y.Float(), a->pos.z.Float());
-  glNormal3f(-1.0, 0.0, 0.0);
   glRotatef(theta, 0.0, 0.0, 1.0);
+  glNormal3f(-1.0, 0.0, 0.0);
 
+  glBegin(GL_QUADS);
+  glTexCoord2f(texleft, texbottom);
+  glVertex3f(0.0, left, bottom);
+  glTexCoord2f(texright, texbottom);
+  glVertex3f(0.0, right, bottom);
+  glTexCoord2f(texright, textop);
+  glVertex3f(0.0, right, top);
+  glTexCoord2f(texleft, textop);
+  glVertex3f(0.0, left, top);
+  glEnd();
+
+  /* The world famous black triangles look.
   glBegin(GL_TRIANGLES);
   glVertex3f(0.0, 0.0, 128.0);
   glVertex3f(0.0, 32.0, 0.0);
   glVertex3f(0.0, -32.0, 0.0);
   glEnd();
+  */
 
   // Leave the matrix stack as it was.
   glPopMatrix();
