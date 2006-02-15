@@ -572,7 +572,7 @@ byte *DoomTexture::GenerateData()
         columnofs[i] = i * height;
 
       // prepare texture bitmap
-      memset(pixels, 0, size); // TEST
+      memset(pixels, TRANSPARENTPIXEL, size); // TEST
 
       texpatch_t *tp;
       // Composite the patches together.
