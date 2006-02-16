@@ -1128,7 +1128,7 @@ int Map::Serialize(LArchive &a)
 
   for (i = 0; i < NumPolyobjs; i++)
     a << polyobjs[i].tag << polyobjs[i].angle
-      << polyobjs[i].startSpot.x << polyobjs[i].startSpot.y;
+      << polyobjs[i].spawnspot.x << polyobjs[i].spawnspot.y;
 
   //----------------------------------------------
   // scripts
@@ -1397,8 +1397,8 @@ int Map::Unserialize(LArchive &a)
       PO_RotatePolyobj(polyobjs[i].tag, ang);
       fixed_t x, y;
       a << x << y;
-      PO_MovePolyobj(polyobjs[i].tag, x - polyobjs[i].startSpot.x,
-		     y - polyobjs[i].startSpot.y);
+      PO_MovePolyobj(polyobjs[i].tag, x - polyobjs[i].spawnspot.x,
+		     y - polyobjs[i].spawnspot.y);
     }
 
   //----------------------------------------------

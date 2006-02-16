@@ -24,6 +24,7 @@
 #include "p_spec.h"
 #include "p_maputl.h"
 #include "p_hacks.h"
+#include "r_poly.h"
 
 #include "r_splats.h"
 
@@ -108,6 +109,15 @@ Map::~Map()
 
   if (polyobjs)
     {
+      for (int i=0; i < NumPolyobjs; i++)
+	{
+	  if (polyobjs[i].segs)
+	    Z_Free(polyobjs[i].segs);
+
+	  if (polyobjs[i].originalPts)
+	    Z_Free(polyobjs[i].originalPts);
+	}
+
       Z_Free(polyobjs);
       Z_Free(blocklinks);
       Z_Free(PolyBlockMap);

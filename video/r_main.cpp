@@ -948,26 +948,18 @@ void R_RotateBuffere()
 void Rend::R_RenderPlayerView(int viewport, PlayerInfo *player)
 {
   SetMap(player->mp);
+  R_SetupFrame(player); // some of this is needed for OpenGL too!
 
-  /*
-#ifdef HWRENDER
-  if (rendermode != render_soft)
+  // OpenGL
+  if (rendermode == render_opengl)
     {
-      HWR.RenderPlayerView(viewport, player);
+      oglrenderer->Render3DView(player);
+      // Draw weapon sprites. 
+      R_DrawPlayerSprites();
       return;
     }
-#endif
-  */
 
-  R_SetupFrame(player);
 
-  if(rendermode == render_opengl) {
-    oglrenderer->SetThinkers(&player->mp->thinkercap);
-    oglrenderer->Render3DView(player);
-    // Draw weapon sprites. 
-    R_DrawPlayerSprites();
-    return;
-  }
 
   if (viewport == 0) // support just two viewports for now
     {

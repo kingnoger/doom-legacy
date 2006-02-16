@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1996 by Raven Software, Corp.
-// Copyright (C) 2003-2005 by DooM Legacy Team.
+// Copyright (C) 2003-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -16,12 +16,10 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
-//
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Polyobjects
+/// \brief Polyobjects.
 
 #include <vector>
 
@@ -98,7 +96,7 @@ void polyrotator_t::Think()
 	  if (poly->specialdata == this)
 	    poly->specialdata = NULL;
 
-	  mp->SN_StopSequence(&poly->startSpot);
+	  mp->SN_StopSequence(&poly->spawnspot);
 	  mp->PolyobjFinished(poly->tag);
 	  mp->RemoveThinker(this);
 	}
@@ -127,7 +125,7 @@ bool Map::EV_RotatePoly(byte *args, int direction, bool overRide)
   AddThinker(p);
   poly->specialdata = p;
 
-  SN_StartSequence(&poly->startSpot, SEQ_DOOR + poly->seqType);
+  SN_StartSequence(&poly->spawnspot, SEQ_DOOR + poly->seqType);
 	
   int mirror;
   while ((mirror = GetPolyobjMirror(polynum)))
@@ -143,13 +141,14 @@ bool Map::EV_RotatePoly(byte *args, int direction, bool overRide)
       AddThinker(p);
       poly->specialdata = p;
 
+      // FIXME WTF?
       if ((poly = GetPolyobj(polynum)))
 	poly->specialdata = p;
       else
 	I_Error("EV_RotatePoly:  Invalid polyobj num: %d\n", polynum);
 
+      SN_StartSequence(&poly->spawnspot, SEQ_DOOR + poly->seqType);
       polynum = mirror;
-      SN_StartSequence(&poly->startSpot, SEQ_DOOR + poly->seqType);
     }
   return true;
 }
@@ -199,7 +198,7 @@ void polymover_t::Think()
 	    {
 	      poly->specialdata = NULL;
 	    }
-	  mp->SN_StopSequence(&poly->startSpot);
+	  mp->SN_StopSequence(&poly->spawnspot);
 	  mp->PolyobjFinished(poly->tag);
 	  mp->RemoveThinker(this);
 	}
@@ -235,7 +234,7 @@ bool Map::EV_MovePoly(byte *args, bool timesEight, bool overRide)
   polymover_t *p = new polymover_t(polynum, args, timesEight, mirrored);
   AddThinker(p);
   poly->specialdata = p;
-  SN_StartSequence(&poly->startSpot, SEQ_DOOR + poly->seqType);
+  SN_StartSequence(&poly->spawnspot, SEQ_DOOR + poly->seqType);
 
   while ((mirror = GetPolyobjMirror(polynum)))
     {
@@ -251,7 +250,7 @@ bool Map::EV_MovePoly(byte *args, bool timesEight, bool overRide)
       poly->specialdata = p;
 
       polynum = mirror;
-      SN_StartSequence(&poly->startSpot, SEQ_DOOR + poly->seqType);
+      SN_StartSequence(&poly->spawnspot, SEQ_DOOR + poly->seqType);
     }
   return true;
 }
@@ -291,7 +290,7 @@ void polydoor_rot_t::Think()
       if (!--tics)
 	{
 	  poly = mp->GetPolyobj(polyobj);
-	  mp->SN_StartSequence(&poly->startSpot, SEQ_DOOR + poly->seqType);
+	  mp->SN_StartSequence(&poly->spawnspot, SEQ_DOOR + poly->seqType);
 	}
       return;
     }
@@ -303,7 +302,7 @@ void polydoor_rot_t::Think()
       if (dist <= 0)
 	{
 	  poly = mp->GetPolyobj(polyobj);
-	  mp->SN_StopSequence(&poly->startSpot);
+	  mp->SN_StopSequence(&poly->spawnspot);
 	  if (!closing)
 	    {
 	      closing = true;
@@ -332,7 +331,7 @@ void polydoor_rot_t::Think()
 	  closing = false;
 	  dist = totalDist-dist;
 	  speed = -speed;
-	  mp->SN_StartSequence(&poly->startSpot, SEQ_DOOR + poly->seqType);
+	  mp->SN_StartSequence(&poly->spawnspot, SEQ_DOOR + poly->seqType);
 	}
     }
 }
@@ -358,7 +357,7 @@ void polydoor_slide_t::Think()
       if (!--tics)
 	{
 	  poly = mp->GetPolyobj(polyobj);
-	  mp->SN_StartSequence(&poly->startSpot, SEQ_DOOR + poly->seqType);
+	  mp->SN_StartSequence(&poly->spawnspot, SEQ_DOOR + poly->seqType);
 	}
       return;
     }
@@ -370,7 +369,7 @@ void polydoor_slide_t::Think()
       if (dist <= 0)
 	{
 	  poly = mp->GetPolyobj(polyobj);
-	  mp->SN_StopSequence(&poly->startSpot);
+	  mp->SN_StopSequence(&poly->spawnspot);
 	  if (!closing)
 	    {
 	      closing = true;
@@ -401,7 +400,7 @@ void polydoor_slide_t::Think()
 	  dist = totalDist-dist;
 	  xs = -xs;
 	  ys = -ys;
-	  mp->SN_StartSequence(&poly->startSpot, SEQ_DOOR + poly->seqType);
+	  mp->SN_StartSequence(&poly->spawnspot, SEQ_DOOR + poly->seqType);
 	}
     }
 }
@@ -434,7 +433,7 @@ bool Map::EV_OpenPolyDoor(byte *args, int type)
   AddThinker(pd);
   poly->specialdata = pd;
 
-  SN_StartSequence(&poly->startSpot, SEQ_DOOR + poly->seqType);
+  SN_StartSequence(&poly->spawnspot, SEQ_DOOR + poly->seqType);
 
   int mirror;
   while ((mirror = GetPolyobjMirror(polynum)))
@@ -454,7 +453,7 @@ bool Map::EV_OpenPolyDoor(byte *args, int type)
       AddThinker(pd);
       poly->specialdata = pd;
 
-      SN_StartSequence(&poly->startSpot, SEQ_DOOR + poly->seqType);
+      SN_StartSequence(&poly->spawnspot, SEQ_DOOR + poly->seqType);
 
       polynum = mirror;
     }
@@ -593,11 +592,10 @@ bool Map::PO_MovePolyobj(int num, fixed_t x, fixed_t y)
   UnLinkPolyobj(po);
 
   seg_t **segList = po->segs;
-  vertex_t *prevPts = po->prevPts;
   bool blocked = false;
 
   validcount++;
-  for (count = po->numsegs; count; count--, segList++, prevPts++)
+  for (count = po->numsegs; count; count--, segList++)
     {
       if ((*segList)->linedef->validcount != validcount)
 	{
@@ -617,8 +615,6 @@ bool Map::PO_MovePolyobj(int num, fixed_t x, fixed_t y)
 	  (*segList)->v1->x += x;
 	  (*segList)->v1->y += y;
 	}
-      (*prevPts).x += x; // previous points are unique for each seg
-      (*prevPts).y += y;
     }
   segList = po->segs;
   for (count = po->numsegs; count; count--, segList++)
@@ -632,7 +628,6 @@ bool Map::PO_MovePolyobj(int num, fixed_t x, fixed_t y)
     {
       count = po->numsegs;
       segList = po->segs;
-      prevPts = po->prevPts;
       validcount++;
       while(count--)
 	{
@@ -652,16 +647,13 @@ bool Map::PO_MovePolyobj(int num, fixed_t x, fixed_t y)
 	      (*segList)->v1->x -= x;
 	      (*segList)->v1->y -= y;
 	    }
-	  (*prevPts).x -= x;
-	  (*prevPts).y -= y;
 	  segList++;
-	  prevPts++;
 	}
       LinkPolyobj(po);
       return false;
     }
-  po->startSpot.x += x;
-  po->startSpot.y += y;
+  po->spawnspot.x += x;
+  po->spawnspot.y += y;
   LinkPolyobj(po);
   return true;
 }
@@ -702,7 +694,9 @@ bool Map::PO_RotatePolyobj(int num, angle_t angle)
 
   seg_t **segList = po->segs;
   vertex_t *originalPts = po->originalPts;
-  vertex_t *prevPts = po->prevPts;
+
+  vertex_t  prev_points[po->numsegs];
+  vertex_t *prevPts = prev_points;
 
   for (count = po->numsegs; count; count--, segList++, originalPts++, prevPts++)
     {
@@ -711,7 +705,7 @@ bool Map::PO_RotatePolyobj(int num, angle_t angle)
       (*segList)->v1->x = originalPts->x;
       (*segList)->v1->y = originalPts->y;
       RotatePt(po->angle + angle, (*segList)->v1->x, (*segList)->v1->y,
-	       po->startSpot.x, po->startSpot.y);
+	       po->spawnspot.x, po->spawnspot.y);
     }
   segList = po->segs;
   bool blocked = false;
@@ -732,7 +726,7 @@ bool Map::PO_RotatePolyobj(int num, angle_t angle)
   if (blocked)
     {
       segList = po->segs;
-      prevPts = po->prevPts;
+      prevPts = prev_points;
       for (count = po->numsegs; count; count--, segList++, prevPts++)
 	{
 	  (*segList)->v1->x = prevPts->x;
@@ -740,7 +734,7 @@ bool Map::PO_RotatePolyobj(int num, angle_t angle)
 	}
       segList = po->segs;
       validcount++;
-      for (count = po->numsegs; count; count--, segList++, prevPts++)
+      for (count = po->numsegs; count; count--, segList++)
 	{
 	  if ((*segList)->linedef->validcount != validcount)
 	    {
@@ -947,231 +941,202 @@ void Map::InitPolyBlockMap()
     }
 }
 
-//==========================================================================
-//
-// IterFindPolySegs
-//
-//              Passing NULL for segList will cause IterFindPolySegs to
-//      count the number of segs in the polyobj
+
 //==========================================================================
 
-static int PolySegCount;
-static fixed_t PolyStartX;
-static fixed_t PolyStartY;
+static vector<seg_t *> zzz_polysegs;
 
-void Map::IterFindPolySegs(fixed_t x, fixed_t y, seg_t **segList)
+// find segs in PO (assume it is a simple cycle, or else...)
+int Map::FindPolySegs(seg_t *seg)
 {
-  if (x == PolyStartX && y == PolyStartY)
-    return;
+  vertex_t start = *seg->v1;
+  vertex_t end = *seg->v2;
+
+  zzz_polysegs.clear();
+  zzz_polysegs.push_back(seg);
+
+  if (end == start)
+    return zzz_polysegs.size();
 
   for (int i = 0; i < numsegs; i++)
     {
       if (segs[i].linedef && // skip minisegs
-	  segs[i].v1->x == x && segs[i].v1->y == y)
+	  *segs[i].v1 == end)
 	{
-	  if (!segList)
-	    PolySegCount++;
-	  else
-	    *segList++ = &segs[i];
+	  // if PO segs do not form a simple cycle, we may get stuck in infinite loop...
+	  if (zzz_polysegs.size() >= PO_MAXPOLYSEGS)
+	    I_Error("FindPolySegs:  Polyobj with more than %d segs (or a subcycle) found.\n", PO_MAXPOLYSEGS);
+  
+	  zzz_polysegs.push_back(&segs[i]);
+	  end = *segs[i].v2;
 
-	  IterFindPolySegs(segs[i].v2->x, segs[i].v2->y, segList);
-	  return;
+	  if (end == start)
+	    return zzz_polysegs.size();
+
+	  i = -1; //re-start search
 	}
     }
-  I_Error("IterFindPolySegs:  Non-closed Polyobj located.\n");
+
+  I_Error("FindPolySegs:  Non-closed Polyobj located.\n");
+  return 0;
 }
 
 
 
-void Map::SpawnPolyobj(int index, int tag, bool crush)
+bool Map::SpawnPolyobj(polyobj_t *po, int tag, bool crush)
 {
-  seg_t *polySegList[PO_MAXPOLYSEGS], *seg;
+  seg_t *seg;
 
   for (int i = 0; i < numsegs; i++)
     {
       seg = &segs[i];
+      // find PO_LINE_START(tag)
       if (seg->linedef && // not miniseg
 	  seg->linedef->special == PO_LINE_START &&
 	  seg->linedef->args[0] == tag)
 	{
-	  if (polyobjs[index].segs)
-	    I_Error("SpawnPolyobj:  Polyobj %d already spawned.\n", tag);
-
+	  // mark as used
 	  seg->linedef->special = 0;
 	  seg->linedef->args[0] = 0;
-	  PolySegCount = 1;
-	  PolyStartX = seg->v1->x;
-	  PolyStartY = seg->v1->y;
-	  //CONS_Printf(" xxx seg(%d) v1 = %d, line(%d) v1 = %d\n", i, seg->v1 - vertexes, seg->linedef - lines, seg->linedef->v1 - vertexes);
-	  IterFindPolySegs(seg->v2->x, seg->v2->y, NULL);
 
-	  polyobjs[index].numsegs = PolySegCount;
-	  polyobjs[index].segs = (seg_t **)Z_Malloc(PolySegCount*sizeof(seg_t *), PU_LEVEL, 0);
-	  polyobjs[index].segs[0] = seg; // insert the first seg
-	  IterFindPolySegs(seg->v2->x, seg->v2->y, polyobjs[index].segs+1);
-	  polyobjs[index].crush = crush;
-	  polyobjs[index].tag = tag;
-	  polyobjs[index].seqType = seg->linedef->args[2];
-	  //CONS_Printf("--- %d\n", PolySegCount);
-	  /*
-	    // not necessary
-	  if (polyobjs[index].seqType >= SEQTYPE_NUMSEQ)
-	    polyobjs[index].seqType = 0;
-	  */
+	  // find segs in PO(tag)
+	  po->numsegs = FindPolySegs(seg);
+	  po->segs = (seg_t **)Z_Malloc(po->numsegs * sizeof(seg_t *), PU_LEVEL, 0);
+	  for (int j=0; j < po->numsegs; j++)
+	    po->segs[j] = zzz_polysegs[j]; // store the segs
 
-	  break;
+	  po->crush = crush;
+	  po->tag = tag;
+	  po->seqType = seg->linedef->args[2];
+	  return true;
 	}
     }
 
-  if (!polyobjs[index].segs)
-    { // didn't find a polyobj through PO_LINE_START
-      int psIndex = 0;
-      polyobjs[index].numsegs = 0;
-      for (int j = 1; j < PO_MAXPOLYSEGS; j++)
+
+  // didn't find polyobj(tag) through PO_LINE_START, try PO_LINE_EXPLICIT
+
+  seg_t *polySegList[PO_MAXPOLYSEGS];
+  int psIndex = 0;
+  for (int j = 1; j < PO_MAXPOLYSEGS; j++) // iterate linedef order numbers
+    {
+      int psIndexOld = psIndex;
+      bool tagfound = false;
+
+      for (int i = 0; i < numsegs; i++)
 	{
-	  int psIndexOld = psIndex;
-	  for (int i = 0; i < numsegs; i++)
+	  seg = &segs[i];
+	  if (seg->linedef && // not miniseg
+	      seg->linedef->special == PO_LINE_EXPLICIT &&
+	      seg->linedef->args[0] == tag)
 	    {
-	      seg = &segs[i];
-	      if (seg->linedef && // not miniseg
-		  seg->linedef->special == PO_LINE_EXPLICIT &&
-		  seg->linedef->args[0] == tag)
-		{
-		  if (!seg->linedef->args[1])
-		    I_Error("SpawnPolyobj:  Explicit line missing order number (probably %d) in poly %d.\n",
-			    j+1, tag);
+	      tagfound = true;
 
-		  if (seg->linedef->args[1] == j)
-		    {
-		      polySegList[psIndex] = seg;
-		      polyobjs[index].numsegs++;
-		      psIndex++;
-		      if (psIndex > PO_MAXPOLYSEGS)
-			I_Error("SpawnPolyobj:  psIndex > PO_MAXPOLYSEGS\n");
-		    }
-		}
-	    }
-	  // Clear out any specials for these segs...we cannot clear them out
-	  // 	in the above loop, since we aren't guaranteed one seg per
-	  //		linedef.
-	  for (int i = 0; i < numsegs; i++)
-	    {
-	      seg = &segs[i];
-	      if (seg->linedef && // not miniseg
-		  seg->linedef->special == PO_LINE_EXPLICIT &&
-		  seg->linedef->args[0] == tag && seg->linedef->args[1] == j)
-		{
-		  seg->linedef->special = 0;
-		  seg->linedef->args[0] = 0;
-		}
-	    }
+	      if (!seg->linedef->args[1])
+		I_Error("SpawnPolyobj:  Explicit line missing order number (probably %d) in poly %d.\n", j+1, tag);
 
-	  if (psIndex == psIndexOld)
-	    { // Check if an explicit line order has been skipped
-				// A line has been skipped if there are any more explicit
-				// lines with the current tag value
-	      for (int i = 0; i < numsegs; i++)
+	      if (seg->linedef->args[1] == j)
 		{
-		  seg = &segs[i];
-		  if (seg->linedef && // not miniseg
-		      seg->linedef->special == PO_LINE_EXPLICIT &&
-		      seg->linedef->args[0] == tag)
-		    {
-		      I_Error("SpawnPolyobj:  Missing explicit line %d for poly %d\n", j, tag);
-		    }
+		  polySegList[psIndex++] = seg;
+		  po->numsegs++;
+
+		  if (psIndex > PO_MAXPOLYSEGS)
+		    I_Error("SpawnPolyobj:  psIndex > PO_MAXPOLYSEGS\n");
 		}
 	    }
 	}
 
-      if (polyobjs[index].numsegs)
-	{
-	  PolySegCount = polyobjs[index].numsegs; // PolySegCount used globally
-	  polyobjs[index].crush = crush;
-	  polyobjs[index].tag = tag;
-	  polyobjs[index].segs = (seg_t **)Z_Malloc(polyobjs[index].numsegs*sizeof(seg_t *), PU_LEVEL, 0);
-	  for (int i = 0; i < polyobjs[index].numsegs; i++)
-	    polyobjs[index].segs[i] = polySegList[i];
+      if (psIndex != psIndexOld) // found segs with current order number + tag
+	for (int i = 0; i < numsegs; i++)
+	  {
+	    // Clear out any specials for these segs...we cannot clear them out
+	    // in the above loop, since we aren't guaranteed one seg per linedef.
 
-	  polyobjs[index].seqType = polyobjs[index].segs[0]->linedef->args[3];
-	}
-      // Next, change the polyobjs first line to point to a mirror
-      //		if it exists
-      polyobjs[index].segs[0]->linedef->args[1] = polyobjs[index].segs[0]->linedef->args[2];
+	    seg = &segs[i];
+	    if (seg->linedef && // not miniseg
+		seg->linedef->special == PO_LINE_EXPLICIT &&
+		seg->linedef->args[0] == tag && seg->linedef->args[1] == j)
+	      {
+		seg->linedef->special = 0;
+		seg->linedef->args[0] = 0;
+	      }
+	  }
+      else // no segs found with current order number + tag
+	// Check if an explicit line order has been skipped
+	// A line has been skipped if there are any more explicit
+	// lines with the current tag value
+	if (tagfound)
+	  I_Error("SpawnPolyobj:  Missing explicit line %d for poly %d\n", j, tag);
     }
+
+  if (po->numsegs)
+    {
+      po->crush = crush;
+      po->tag = tag;
+      po->segs = (seg_t **)Z_Malloc(po->numsegs * sizeof(seg_t *), PU_LEVEL, 0);
+      for (int i = 0; i < po->numsegs; i++)
+	po->segs[i] = polySegList[i];
+
+      po->seqType = po->segs[0]->linedef->args[3];
+
+      // Next, change the polyobjs first line to point to a mirror if it exists
+      po->segs[0]->linedef->args[1] = po->segs[0]->linedef->args[2];
+      return true;
+    }
+
+  return false; // no segs found
 }
 
 
 
-void Map::TranslateToStartSpot(int tag, fixed_t originX, fixed_t originY)
+
+void Map::TranslateToStartSpot(polyobj_t *po, fixed_t anchorX, fixed_t anchorY)
 {
-  int i;
+  po->originalPts = (vertex_t *)Z_Malloc(po->numsegs * sizeof(vertex_t), PU_LEVEL, 0);
 
-  polyobj_t *po = NULL;
-  for (i = 0; i < NumPolyobjs; i++)
-    {
-      if (polyobjs[i].tag == tag)
-	{
-	  po = &polyobjs[i];
-	  break;
-	}
-    }
-  if (!po)
-    // didn't match the tag with a polyobj tag
-    I_Error("TranslateToStartSpot:  Unable to match polyobj tag: %d\n", tag);
+  fixed_t deltaX = anchorX - po->spawnspot.x;
+  fixed_t deltaY = anchorY - po->spawnspot.y;
 
-  if (po->segs == NULL)
-    I_Error("TranslateToStartSpot:  Anchor point located without a StartSpot point: %d\n", tag);
-
-  po->originalPts = (vertex_t *)Z_Malloc(po->numsegs*sizeof(vertex_t), PU_LEVEL, 0);
-  po->prevPts = (vertex_t *)Z_Malloc(po->numsegs*sizeof(vertex_t), PU_LEVEL, 0);
-  fixed_t deltaX = originX-po->startSpot.x;
-  fixed_t deltaY = originY-po->startSpot.y;
-  //CONS_Printf("origin x,y = %d,%d \n", originX >> FRACBITS, originY >> FRACBITS);
-  //CONS_Printf("delta x,y = %d,%d \n", deltaX >> FRACBITS, deltaY >> FRACBITS);
-  seg_t **tempSeg = po->segs;
-  seg_t **veryTempSeg;
-  vertex_t *tempPt = po->originalPts;
-  vertex_t avg; // used to find a polyobj's center, and hence subsector
-  avg.x = 0;
-  avg.y = 0;
+  vertex_t avg = {0, 0}; // used to find a polyobj's center, and hence subsector
 
   validcount++;
-  for (i = 0; i < po->numsegs; i++, tempSeg++, tempPt++)
+  for (int i = 0; i < po->numsegs; i++)
     {
-      if ((*tempSeg)->linedef->validcount != validcount)
+      // the linedef bboxes are moved just once
+      if (po->segs[i]->linedef->validcount != validcount)
 	{
-	  (*tempSeg)->linedef->bbox.Move(-deltaX, -deltaY);
-	  (*tempSeg)->linedef->validcount = validcount;
+	  po->segs[i]->linedef->bbox.Move(-deltaX, -deltaY);
+	  po->segs[i]->linedef->validcount = validcount;
 	}
-      for (veryTempSeg = po->segs; veryTempSeg != tempSeg; veryTempSeg++)
+
+      // multiply used vertices are moved just once
+      seg_t **temp;
+      for (temp = po->segs; temp != &po->segs[i]; temp++)
 	{
-	  if ((*veryTempSeg)->v1 == (*tempSeg)->v1)
+	  if ((*temp)->v1 == po->segs[i]->v1)
 	    break;
 	}
-      if (veryTempSeg == tempSeg)
+      if (temp == &po->segs[i])
 	{ // the point hasn't been translated, yet
-	  (*tempSeg)->v1->x -= deltaX;
-	  (*tempSeg)->v1->y -= deltaY;
+	  po->segs[i]->v1->x -= deltaX;
+	  po->segs[i]->v1->y -= deltaY;
 	}
-      //CONS_Printf("tempseg x = %d, ", (*tempSeg)->v1->x>>FRACBITS);
-      //CONS_Printf("tempseg y = %d\n", (*tempSeg)->v1->y>>FRACBITS);
+
       // sacrifice some precision
-      avg.x += (*tempSeg)->v1->x>>fixed_t::FBITS;
-      avg.y += (*tempSeg)->v1->y>>fixed_t::FBITS;
-      // the original Pts are based off the startSpot Pt, and are
-      // unique to each seg, not each linedef
-      tempPt->x = (*tempSeg)->v1->x-po->startSpot.x;
-      tempPt->y = (*tempSeg)->v1->y-po->startSpot.y;
+      avg.x += po->segs[i]->v1->x >> fixed_t::FBITS;
+      avg.y += po->segs[i]->v1->y >> fixed_t::FBITS;
+
+      // origin is the anchor spot
+      po->originalPts[i].x = po->segs[i]->v1->x - po->spawnspot.x;
+      po->originalPts[i].y = po->segs[i]->v1->y - po->spawnspot.y;
     }
+
   avg.x /= po->numsegs;
   avg.y /= po->numsegs;
-  //CONS_Printf("avg x,y = %d,%d\n", avg.x, avg.y);
-  subsector_t *sub = R_PointInSubsector(avg.x<<fixed_t::FBITS, avg.y<<fixed_t::FBITS);
+  subsector_t *sub = R_PointInSubsector(avg.x << fixed_t::FBITS, avg.y << fixed_t::FBITS);
 
-  // FIXME errors in polyobj spawning
   if (sub->poly != NULL)
     //I_Error("PO_TranslateToStartSpot:  Multiple polyobjs in a single subsector.\n");
-    CONS_Printf("Multiple polyobjs (%d) in a single subsector %d (%d)\n", tag, sub-subsectors, numsubsectors);
+    CONS_Printf("Multiple polyobjs (%d) in a single subsector %d (%d)\n", po->tag, sub-subsectors, numsubsectors);
 
   sub->poly = po;
 }
@@ -1183,38 +1148,52 @@ void Map::TranslateToStartSpot(int tag, fixed_t originX, fixed_t originY)
 
 vector<mapthing_t *> polyspawn; // temporary list of PO mapthings used during map loading
 
+
 void Map::InitPolyobjs()
 {
-  int i, n;
-  mapthing_t  *mt;
+  int i;
+  mapthing_t *mt;
+
+  CONS_Printf("%d Polyobjs\n", NumPolyobjs);
 
   // allocate the polyobjects
   polyobjs = (polyobj_t *)Z_Malloc(NumPolyobjs * sizeof(polyobj_t), PU_LEVEL, 0);
   memset(polyobjs, 0, NumPolyobjs * sizeof(polyobj_t));
 
   int index = 0; // index polyobj number
-  CONS_Printf("%d Polyobjs\n", NumPolyobjs);
-  // Find the startSpot points, and spawn each polyobj
-  n = polyspawn.size();
+  int n = polyspawn.size();
+
+  // Find the spawn spots, and spawn each polyobj.
+  // For a PO_SPAWN* thing, the "angle" field contains the PO tag.
   for (i=0; i<n; i++)
     {
       mt = polyspawn[i];
       if (mt->type == PO_SPAWN_TYPE || mt->type == PO_SPAWNCRUSH_TYPE)
 	{ // Polyobj StartSpot Pt.
-	  polyobjs[index].startSpot.x = mt->x;
-	  polyobjs[index].startSpot.y = mt->y;
-	  SpawnPolyobj(index, mt->angle, (mt->type == PO_SPAWNCRUSH_TYPE));
+	  polyobjs[index].spawnspot.x = mt->x;
+	  polyobjs[index].spawnspot.y = mt->y;
+	  if (!SpawnPolyobj(&polyobjs[index], mt->angle, mt->type == PO_SPAWNCRUSH_TYPE))
+	    I_Error("InitPolyobjs:  No lines found for PO %d!\n", mt->angle);
 	  //CONS_Printf("Polyobj %d: tag = %d\n", index, mt->angle);
 	  index++;
 	}
-      //CONS_Printf(" xyz = (%d %d %d), angle = %d, tid = %d\n", mt->x, mt->y, mt->z, mt->angle, mt->tid);
     }
 
+  // then find anchor spots, and translate the polyobjs
   for (i=0; i<n; i++)
     {
       mt = polyspawn[i];
       if (mt->type == PO_ANCHOR_TYPE)
-	TranslateToStartSpot(mt->angle, mt->x, mt->y);
+	{
+	  int tag = mt->angle;
+	  polyobj_t *po = GetPolyobj(tag);
+
+	  if (po)
+	    TranslateToStartSpot(po, mt->x, mt->y);
+	  else
+	    CONS_Printf("InitPolyobjs:  Unused anchor point (tag: %d)\n", tag);
+	}
+
       mt->type = 0; // so that it won't interfere with the spawning of the real THINGS
     }
 
@@ -1222,7 +1201,7 @@ void Map::InitPolyobjs()
   for (i = 0; i < NumPolyobjs; i++)
     if (!polyobjs[i].originalPts)
       {
-	I_Error("InitPolyobjs:  StartSpot located without an Anchor point: %d\n",
+	I_Error("InitPolyobjs:  PO without an anchor point: %d\n",
 		polyobjs[i].tag);
       }
 

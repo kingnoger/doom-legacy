@@ -4,6 +4,15 @@
 //
 // Copyright (C) 2002-2005 by DooM Legacy Team.
 //
+// This program is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public License
+// as published by the Free Software Foundation; either version 2
+// of the License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
 //
 //-----------------------------------------------------------------------------
 
@@ -480,7 +489,7 @@ void PlayerInfo::CalcViewHeight()
   if (!pawn)
     return;
 
-  bool onground = (pawn->pos.z <= pawn->floorz);
+  bool onground = (pawn->Feet() <= pawn->floorz);
 
   const fixed_t MAXBOB = 16; // 16 pixels of bob
   const fixed_t FLYBOB = 0.5f;
@@ -504,7 +513,7 @@ void PlayerInfo::CalcViewHeight()
   if ((pawn->cheats & CF_NOMOMENTUM) || !onground)
     {
       viewheight = eyes;
-      viewz = pawn->pos.z + eyes;
+      viewz = pawn->Feet() + eyes;
     }
   else
     {
@@ -536,7 +545,7 @@ void PlayerInfo::CalcViewHeight()
 	    }
 	}
 
-      viewz = pawn->pos.z + viewheight + bob - pawn->floorclip;
+      viewz = pawn->Feet() + viewheight + bob - pawn->floorclip;
 
       if (viewz < pawn->floorz + 4)
 	viewz = pawn->floorz + 4;

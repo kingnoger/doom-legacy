@@ -683,8 +683,3 @@ void PNGTexture::HWR_Prepare()
 {
   //CONS_Printf("PNGTexture::HWR_Prepare: Not yet implemented\n");
 }
-bool spritepres_t::Draw(const Actor *p)
-{
-  //CONS_Printf("spritepres_t::Draw: Not yet implemented\n");
-  return false; // do nothing for now
-}

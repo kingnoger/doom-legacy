@@ -18,23 +18,29 @@
 #include"oglrenderer.hpp"
 #include"doomdef.h"
 #include"screen.h"
+
+#include"g_map.h"
 #include"g_player.h"
 #include"g_actor.h"
+
 #include"tables.h"
 #include"r_data.h"
 #include"r_sprite.h"
+
+#include"r_render.h" // for spritepres_t::Draw()
+#include"i_video.h" // for spritepres_t::Draw()
 
 
 OGLRenderer::OGLRenderer() {
   screen = NULL;
   workinggl = false;
+
+  mp = NULL;
   l.glvertexes = NULL;
 
   x = y = z = 0.0;
   theta = phi = 0.0;
   viewportw = viewporth = 0;
-
-  thinkers = NULL;
 
   fov = 45.0;
 
@@ -294,7 +300,41 @@ void OGLRenderer::Draw2DGraphicFill_Doom(float x, float y, float width, float he
 // Set up state and draw a view of the level from the given viewpoint.
 // It is usually the place where the player is currently located.
 
-void OGLRenderer::Render3DView(PlayerInfo *player) {
+void OGLRenderer::Render3DView(PlayerInfo *player)
+{
+  // Set up the Map to be rendered. Needs to be done separately for each viewport, since the engine
+  // can run several Maps at once.
+  mp = player->mp;
+
+  // shortcuts...
+  l.vertexes = mp->vertexes;
+  l.numvertexes = mp->numvertexes;
+
+  l.lines = mp->lines;
+  l.numlines = mp->numlines;
+
+  l.sides = mp->sides;
+  l.numsides = mp->numsides;
+
+  l.sectors = mp->sectors;
+  l.numsectors = mp->numsectors;
+
+  l.glvertexes = mp->glvertexes;
+  l.numglvertexes = mp->numglvertexes;
+
+  l.glsegs = mp->segs;
+  l.numglsegs = mp->numsegs;
+
+  l.glsubsectors = mp->subsectors;
+  l.numglsubsectors = mp->numsubsectors;
+
+  l.glnodes = mp->nodes;
+  l.numglnodes = mp->numnodes;
+
+  l.polyobjs = mp->polyobjs;
+  l.numpolyobjs = mp->NumPolyobjs;
+
+
   Setup3DMode();
   x = player->pov->pos.x.Float();
   y = player->pov->pos.y.Float();
@@ -331,29 +371,45 @@ void OGLRenderer::RenderBSP() {
 
   // FIXME We don't use no fancy schmanzy BSP trees. Real men just
   // dump their vertex data to the card and let it handle everything.
+  // if (l.numglnodes == 0) fuck_you();
+  // RenderBSPNode(l.numglnodes-1);
 
   for(int i=0; i<l.numglsubsectors; i++)
     RenderGLSubsector(i);
 
   for(int i=0; i<l.numglsegs; i++)
     RenderGLSeg(i);
-
-  for(Thinker *ct = thinkers->Next(); ct != thinkers; ct = ct->Next()) {
-    // Kludge kludge
-    Actor *a = dynamic_cast<Actor*>(ct);
-    spritepres_t *sp;
-
-    if(!a)
-      continue;
-    if(!a->pres)
-      continue;
-    sp = dynamic_cast<spritepres_t*>(a->pres);
-    if(!sp)
-      continue;
-    sp->Project(a);
-
-  }
 }
+
+
+void OGLRenderer::RenderBSPNode(int nodenum)
+{
+  // Found a subsector (leaf node)?
+  if (nodenum & NF_SUBSECTOR)
+    {
+      RenderGLSubsector(nodenum & ~NF_SUBSECTOR);
+      return;
+    }
+
+  // otherwise keep traversing the tree
+  node_t *node = &l.glnodes[nodenum];
+
+  // Decide which side the view point is on.
+  //int side = R_PointOnSide(x, y, node);
+
+  /*
+  // Recursively divide front space.
+  RenderBSPNode(node->children[side]);
+
+  // Possibly divide back space.
+  // TODO check view frustum overlap with backnode bbox
+  if (R_CheckBBox(node->bbox[side^1]))
+    RenderBSPNode(node->children[side^1]);
+  */
+}
+
+
+
 
 // Draw the floor and ceiling of a single GL subsector. In the future
 // render also 3D floors and possibly things inside the subsector.
@@ -433,12 +489,60 @@ void OGLRenderer::RenderGLSubsector(int num) {
     }
     glEnd();
   }
+
+  // TODO render segs here
+
+  // finally the actors
+  RenderActors(s);
 }
+
+
+
+void OGLRenderer::RenderActors(sector_t *sec)
+{
+  // BSP is traversed by subsector.
+  // A sector might have been split into several subsectors during BSP building.
+  // Thus we check whether its already drawn.
+  if (sec->validcount == validcount)
+    return;
+
+  // Well, now it will be done.
+  sec->validcount = validcount;
+
+  /*
+  if (!sec->numlights)
+    {
+      if (sec->heightsec == -1)
+        lightlevel = sec->lightlevel;
+
+      int lightnum = (lightlevel >> LIGHTSEGSHIFT)+extralight;
+
+      if (lightnum < 0)
+        spritelights = scalelight[0];
+      else if (lightnum >= LIGHTLEVELS)
+        spritelights = scalelight[LIGHTLEVELS-1];
+      else
+        spritelights = scalelight[lightnum];
+    }
+  */
+
+  // Handle all things in sector.
+  for (Actor *thing = sec->thinglist; thing; thing = thing->snext)
+    if (!(thing->flags2 & MF2_DONTDRAW))
+      {
+	if (!thing->pres)
+	  continue;
+        thing->pres->Draw(thing); // does both sprites and 3d models
+      }
+}
+
+
 
 // Renders one single GL seg. Minisegs and invalid parameters are
 // silently ignored.
 
 void OGLRenderer::RenderGLSeg(int num) {
+  // TODO segs should be rendered together with their associated subsec (with backface culling...)
   seg_t *s;
   line_t *ld;
   vertex_t *fv;
@@ -613,7 +717,8 @@ void OGLRenderer::DrawSingleQuad(vertex_t *fv, vertex_t *tv, GLfloat lower, GLfl
 // the 3D view. Translations and rotations are done with OpenGL
 // matrices.
 
-void OGLRenderer::DrawSpriteItem(const Actor *a, Texture *t, bool flip) {
+void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Texture *t, bool flip)
+{
   GLfloat top, bottom, left, right;
   GLfloat texleft, texright, textop, texbottom;
 
@@ -644,7 +749,7 @@ void OGLRenderer::DrawSpriteItem(const Actor *a, Texture *t, bool flip) {
   glMatrixMode(GL_MODELVIEW);
   glPushMatrix();
 
-  glTranslatef(a->pos.x.Float(), a->pos.y.Float(), a->pos.z.Float());
+  glTranslatef(pos.x.Float(), pos.y.Float(), pos.z.Float());
   glRotatef(theta, 0.0, 0.0, 1.0);
   glNormal3f(-1.0, 0.0, 0.0);
 
@@ -669,4 +774,47 @@ void OGLRenderer::DrawSpriteItem(const Actor *a, Texture *t, bool flip) {
 
   // Leave the matrix stack as it was.
   glPopMatrix();
+}
+
+
+bool spritepres_t::Draw(const Actor *p)
+{
+  int frame = state->frame & TFF_FRAMEMASK;
+
+  if (frame >= spr->numframes)
+    {
+      frame = spr->numframes - 1; // Thing may require more frames than the defaultsprite has...
+      //I_Error("spritepres_t::Project: invalid sprite frame %d (%d)\n", frame, spr->numframes);
+    }
+    
+  spriteframe_t *sprframe = &spr->spriteframes[frame];
+
+  Texture  *t;
+  bool      flip;
+
+  // decide which patch to use for sprite relative to player
+  if (sprframe->rotate)
+    {
+      // choose a different rotation based on player view
+      angle_t ang = R.R_PointToAngle(p->pos.x, p->pos.y); // uses viewx,viewy
+      unsigned rot = (ang - p->yaw + unsigned(ANG45/2) * 9) >> 29;
+
+      t = sprframe->tex[rot];
+      flip = sprframe->flip[rot];
+    }
+  else
+    {
+      // use single rotation for all views
+      t = sprframe->tex[0];
+      flip = sprframe->flip[0];
+    }
+
+  // TODO MF_SHADOW, translucency, colormapping etc.
+
+  // hardware renderer part
+  oglrenderer->DrawSpriteItem(p->pos, t, flip);
+
+
+  //CONS_Printf("spritepres_t::Draw: Not yet implemented\n");
+  return true;
 }

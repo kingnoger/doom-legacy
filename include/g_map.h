@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2005 by DooM Legacy Team.
+// Copyright (C) 2002-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -441,9 +441,9 @@ public:
 
   // in p_poly.cpp
   void InitPolyobjs();
-  void IterFindPolySegs(fixed_t x, fixed_t y, seg_t **segList);
-  void SpawnPolyobj(int index, int tag, bool crush);
-  void TranslateToStartSpot(int tag, fixed_t originX, fixed_t originY);
+  int  FindPolySegs(seg_t *startseg);
+  bool SpawnPolyobj(polyobj_t *po, int tag, bool crush);
+  void TranslateToStartSpot(polyobj_t *po, fixed_t originX, fixed_t originY);
   void InitPolyBlockMap();
 
   polyobj_t *GetPolyobj(int num);

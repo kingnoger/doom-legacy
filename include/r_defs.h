@@ -34,6 +34,8 @@
 struct vertex_t
 {
   fixed_t  x, y;
+
+  inline bool operator==(const vertex_t& v) const { return (x == v.x) && (y == v.y); }
 };
 
 

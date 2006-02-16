@@ -23,6 +23,7 @@
 #include<GL/gl.h>
 #include<GL/glu.h>
 
+#include"vect.h"
 #include"r_defs.h"
 
 class PlayerInfo;
@@ -64,13 +65,14 @@ private:
 
   bool workinggl;  // Do we have a working OpenGL context?
 
-  Thinker *thinkers;
-
-  gllevel_t l; // All we need to render the level geometry.
+  class Map *mp;  ///< Map to be rendered
+  gllevel_t l;    ///< All we need to render the level geometry.
 
   void RenderBSP(); // Walk through the BSP and render walls and things.
+  void RenderBSPNode(int nodenum); ///< Render a single BSP node
   void RenderGLSubsector(int num);
   void RenderGLSeg(int num);
+  void RenderActors(sector_t *sec);
   void DrawSingleQuad(vertex_t *fv, vertex_t *tv, GLfloat lower, GLfloat upper, GLfloat texleft=0.0, GLfloat texright=1.0, GLfloat textop=0.0, GLfloat texbottom=1.0);
 
 public:
@@ -94,12 +96,8 @@ public:
 
   void Setup3DMode();
 
-  void SetLevelData(gllevel_t &in) {l = in;}
-  // Must be re-set every single frame.
-  void SetThinkers(Thinker *tt) {thinkers = tt;}
-
   void Render3DView(PlayerInfo *player);
-  void DrawSpriteItem(const Actor *a, Texture *t, bool flip);
+  void DrawSpriteItem(const vec_t<fixed_t>& pos, Texture *t, bool flip);
 
 };
 

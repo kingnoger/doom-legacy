@@ -69,7 +69,6 @@
 #include "hardware/hwr_render.h"
 #endif
 
-#include"oglrenderer.hpp"
 
 extern vector<mapthing_t *> polyspawn; // for spawning polyobjects
 
@@ -1465,41 +1464,12 @@ bool Map::Setup(tic_t start, bool spawnthings)
   if (precache)
     PrecacheMap();
 
-  // Setup the OpenGL renderer.
-  if (rendermode == render_opengl) {
-    gllevel_t l;
-    if(glvertexes == NULL)
-      I_Error("Trying to use OpenGL renderer without GL nodes. Exiting.\n");
-
-    l.vertexes = vertexes;
-    l.numvertexes = numvertexes;
-
-    l.lines = lines;
-    l.numlines = numlines;
-
-    l.sides = sides;
-    l.numsides = numsides;
-
-    l.sectors = sectors;
-    l.numsectors = numsectors;
-
-    l.glvertexes = glvertexes;
-    l.numglvertexes = numglvertexes;
-
-    l.glsegs = segs;
-    l.numglsegs = numsegs;
-
-    l.glsubsectors = subsectors;
-    l.numglsubsectors = numsubsectors;
-
-    l.glnodes = nodes;
-    l.numglnodes = numnodes;
-
-    l.polyobjs = polyobjs;
-    l.numpolyobjs = NumPolyobjs;
-
-    oglrenderer->SetLevelData(l);
-  }
+  // OpenGL renderer. TODO more friendly behavior
+  if (rendermode == render_opengl && glvertexes == NULL)
+    {
+      CONS_Printf("Trying to use OpenGL renderer without GL nodes. Exiting.\n");
+      return false;
+    }
 
   //CONS_Printf("%d vertexs %d segs %d subsector\n",numvertexes,numsegs,numsubsectors);
   return true;
