@@ -331,6 +331,8 @@ void OGLRenderer::Render3DView(PlayerInfo *player)
   l.glnodes = mp->nodes;
   l.numglnodes = mp->numnodes;
 
+  l.glvis = mp->glvis;
+
   l.polyobjs = mp->polyobjs;
   l.numpolyobjs = mp->NumPolyobjs;
 
@@ -774,6 +776,20 @@ void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Texture *t, bool fli
 
   // Leave the matrix stack as it was.
   glPopMatrix();
+}
+
+// Check for visibility between the given glsubsectors. Returns true
+// if you can see from one to the other and false if not.
+
+bool OGLRenderer::CheckVis(int fromss, int toss) {
+  byte *vis;
+  if(l.glvis == NULL)
+    return true;
+
+  vis = l.glvis + (((l.numglsubsectors + 7) / 8) * fromss);
+  if (vis[toss >> 3] & (1 << (toss & 7)))
+    return true;
+  return false;
 }
 
 

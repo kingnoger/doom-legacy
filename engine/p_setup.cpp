@@ -1296,6 +1296,37 @@ void Map::LoadGLNodes(const int lump, const int glversion)
   Z_Free(data);
 }
 
+// Load glVis data. If it does not exist, glvis is set to NULL.
+
+void Map::LoadGLVis(const int lump) {
+  byte *data;
+  int vissize;
+  const char *lname = fc.FindNameForNum(lump);
+  vissize = fc.LumpLength(lump);
+
+  // glVIS is not always present. Check for it.
+  if(lname == NULL || !strcmp(lname, "GL_VIS")) {
+    CONS_Printf("Level does not have GL_VIS data.\n");
+    return;
+  }
+
+  if(vissize == 0) {
+    CONS_Printf("Level has empty GL_VIS data.\n");
+    return;
+  }
+
+  // At this point we know that GL_VIS exists, and that it is
+  // nonempty. Load it.
+
+  data = static_cast<byte*>(fc.CacheLumpNum(lump, PU_STATIC));
+  glvis = static_cast<byte*>(Z_Malloc(vissize, PU_STATIC, 0));
+
+  memcpy(glvis, data, vissize);
+
+  CONS_Printf("Level has %d bytes of glVIS data.\n", vissize);
+}
+
+
 // Setup sky texture to use for the level
 //
 // - in future, each level may use a different sky.
@@ -1417,6 +1448,7 @@ bool Map::Setup(tic_t start, bool spawnthings)
       LoadGLSubsectors(gllump+LUMP_GL_SSECT, gl_version);
       LoadGLNodes(gllump+LUMP_GL_NODES, gl_version);
       LoadGLSegs(gllump+LUMP_GL_SEGS, gl_version);
+      LoadGLVis(gllump+LUMP_GL_PVS);
     }
   else
     {

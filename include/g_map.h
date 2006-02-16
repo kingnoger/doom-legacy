@@ -100,6 +100,8 @@ public:
   int                 NumPolyobjs;
   struct polyobj_t   *polyobjs;
 
+  byte *glvis;       //<  Subsector visibility data from glVIS.
+
   //@}
 
   /// \name Rendering
@@ -315,6 +317,7 @@ public:
   void LoadGLSegs(const int lump, const int glversion);
   void LoadGLSubsectors(const int lump, const int glversion);
   void LoadGLNodes(const int lump, const int glversion);
+  void LoadGLVis(const int lump);
 
   // in p_sight.cpp
   bool CrossSubsector(int num);

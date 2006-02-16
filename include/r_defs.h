@@ -558,6 +558,8 @@ struct gllevel_t {
 
   polyobj_t *polyobjs;
   int       numpolyobjs;
+
+  byte *glvis;
 };
 
 #endif

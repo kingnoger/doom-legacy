@@ -59,6 +59,7 @@ Map::Map(MapInfo *i)
   linebuffer = NULL;
 
   glvertexes   = NULL;
+  glvis = NULL;
 
   bmap.index = NULL;
   bmap.lists = NULL;
@@ -103,6 +104,8 @@ Map::~Map()
   // Remove GL nodes if they exist.
   if (glvertexes)
     Z_Free(glvertexes);
+  if(glvis)
+    Z_Free(glvis);
 
   Z_Free(bmap.index);
   Z_Free(bmap.lists);

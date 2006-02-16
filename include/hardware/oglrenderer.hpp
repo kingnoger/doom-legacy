@@ -99,6 +99,7 @@ public:
   void Render3DView(PlayerInfo *player);
   void DrawSpriteItem(const vec_t<fixed_t>& pos, Texture *t, bool flip);
 
+  bool CheckVis(int fromss, int toss);
 };
 
 
