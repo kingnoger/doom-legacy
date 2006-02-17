@@ -555,7 +555,7 @@ byte *DoomTexture::GenerateData()
 {
   if (!pixels)
     {
-      CONS_Printf("Generating data for '%s'\n", name);
+      //CONS_Printf("Generating data for '%s'\n", name);
       int i;
       // multi-patch (or 'composite') textures are stored as a simple bitmap
 
