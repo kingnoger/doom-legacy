@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004 by DooM Legacy Team.
+// Copyright (C) 2004-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,8 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -378,7 +376,7 @@ int CreateWad(const char *wadname, const char *inv_name)
 
 
 
-int ExtractWad(const char *wadname)
+int ExtractWad(const char *wadname, int num, char *lumpnames[])
 {
   Wad w;
 
@@ -388,24 +386,36 @@ int ExtractWad(const char *wadname)
       return -1;
     }
 
-  // create a log file (which can be used as an inventory file when recreating the wad!)
-  string logname = wadname;
-  logname += ".log";
-  FILE *log = fopen(logname.c_str(), "wb");
-
+  int n = w.GetNumItems();
   printf("Extracting the lumps from WAD file %s\n", wadname);
-
   w.ListItems(false);
 
-  int i, n = w.GetNumItems();
+  string logname = wadname;
+  logname += ".log";
+  FILE *log = stdout;
+
+  if (!num)
+    {
+      // create a log file (which can be used as an inventory file when recreating the wad!)
+      log = fopen(logname.c_str(), "wb");
+    }
+
   char name8[9];
   name8[8] = '\0';    
+  int count = 0;
+  int ln = 0;
 
+  do {
+
+  int i;
   // extract the lumps into files
   for (i = 0; i < n; i++)
     {
       const char *name = w.GetItemName(i);
       strncpy(name8, name, 8);
+
+      if (num && strcasecmp(name8, lumpnames[ln]))
+	continue; // not the correct one
 
       string lfilename = name8;
       lfilename += ".lmp";
@@ -427,13 +437,22 @@ int ExtractWad(const char *wadname)
       FILE *output = fopen(lfilename.c_str(), "wb");
       fwrite(dest, size, 1, output);
       fclose(output);
-
+      count++;
       free(dest);
+
+      if (num)
+	break; // extract only first instance
     }
 
-  fclose(log);
+  if (num && i == n)
+    printf("Lump '%s' not found.\n", lumpnames[ln]);
 
-  printf("\nDone. Wrote %d lumps.\n", i);
+  } while (++ln < num);
+
+  if (!num)
+    fclose(log);
+
+  printf("\nDone. Wrote %d lumps.\n", count);
   return 0;
 }
 
@@ -446,8 +465,12 @@ int main(int argc, char *argv[])
   if (argc < 3 || argv[1][0] != '-')
     {
       printf("This program lists WAD file contents, constructs them\n"
-	     "or dumps their entire contents into the current directory.\n"
-	     "Usage: wadtool <-l | -c | -x> wadfile.wad [<inventoryfile>]\n");
+	     "or extracts their contents into the current directory.\n"
+	     "Usage:\n"
+	     "  wadtool -l <wadfile>\t\t\tLists the contents of the WAD.\n"
+	     "  wadtool -c <wadfile> <inventoryfile>\tConstructs a new WAD using the given inventory file.\n"
+	     "  wadtool -x <wadfile> [<lumpname> ...]\tExtracts the given lumps.\n"
+	     "    If no lumpnames are given, extracts the entire contents of the WAD.\n");
       return -1;
     }
 
@@ -464,7 +487,10 @@ int main(int argc, char *argv[])
 	printf("Usage: wadtool -c wadfile.wad <inventoryfile>\n");
       break;
     case 'x':
-      ExtractWad(argv[2]);
+      if (argc >= 4)
+	ExtractWad(argv[2], argc-3, &argv[3]);
+      else
+	ExtractWad(argv[2], 0, NULL);
       break;
     default:
       printf("Unknown option '%s'", argv[1]);

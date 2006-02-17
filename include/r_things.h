@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -16,17 +16,15 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
-//
-// DESCRIPTION:
-//      Rendering of moving objects, sprites.
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Rendering of sprites and masked textures
 
 #ifndef r_things_h
 #define r_things_h 1
 
+#include "m_fixed.h"
 #include "screen.h"
 
 // Constant arrays used for psprite clipping

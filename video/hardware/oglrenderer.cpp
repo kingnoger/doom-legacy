@@ -15,20 +15,18 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
-#include"oglrenderer.hpp"
-#include"doomdef.h"
-#include"screen.h"
+#include "oglrenderer.hpp"
+#include "doomdef.h"
+#include "screen.h"
 
-#include"g_map.h"
-#include"g_player.h"
-#include"g_actor.h"
+#include "g_map.h"
+#include "g_player.h"
+#include "g_actor.h"
 
-#include"tables.h"
-#include"r_data.h"
-#include"r_sprite.h"
-
-#include"r_render.h" // for spritepres_t::Draw()
-#include"i_video.h" // for spritepres_t::Draw()
+#include "tables.h"
+#include "r_data.h"
+#include "r_main.h"
+#include "r_sprite.h"
 
 
 OGLRenderer::OGLRenderer() {
@@ -790,47 +788,4 @@ bool OGLRenderer::CheckVis(int fromss, int toss) {
   if (vis[toss >> 3] & (1 << (toss & 7)))
     return true;
   return false;
-}
-
-
-bool spritepres_t::Draw(const Actor *p)
-{
-  int frame = state->frame & TFF_FRAMEMASK;
-
-  if (frame >= spr->numframes)
-    {
-      frame = spr->numframes - 1; // Thing may require more frames than the defaultsprite has...
-      //I_Error("spritepres_t::Project: invalid sprite frame %d (%d)\n", frame, spr->numframes);
-    }
-    
-  spriteframe_t *sprframe = &spr->spriteframes[frame];
-
-  Texture  *t;
-  bool      flip;
-
-  // decide which patch to use for sprite relative to player
-  if (sprframe->rotate)
-    {
-      // choose a different rotation based on player view
-      angle_t ang = R.R_PointToAngle(p->pos.x, p->pos.y); // uses viewx,viewy
-      unsigned rot = (ang - p->yaw + unsigned(ANG45/2) * 9) >> 29;
-
-      t = sprframe->tex[rot];
-      flip = sprframe->flip[rot];
-    }
-  else
-    {
-      // use single rotation for all views
-      t = sprframe->tex[0];
-      flip = sprframe->flip[0];
-    }
-
-  // TODO MF_SHADOW, translucency, colormapping etc.
-
-  // hardware renderer part
-  oglrenderer->DrawSpriteItem(p->pos, t, flip);
-
-
-  //CONS_Printf("spritepres_t::Draw: Not yet implemented\n");
-  return true;
 }

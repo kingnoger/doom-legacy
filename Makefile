@@ -234,6 +234,7 @@ export video_objects = \
 	$(objdir)/r_segs.o \
 	$(objdir)/r_sky.o \
 	$(objdir)/r_splats.o \
+	$(objdir)/r_sprite.o \
 	$(objdir)/r_things.o \
 	$(objdir)/hw_trick.o \
 	$(objdir)/hwr_render.o \

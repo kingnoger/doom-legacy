@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -84,9 +84,9 @@ enum MD3_animseq_e
 };
 
 
-//================================
-//           Sprites
-//================================
+//========================================================
+//                       Sprites
+//========================================================
 
 /// \brief One frame of a sprite_t
 ///
@@ -97,7 +97,6 @@ enum MD3_animseq_e
 /// The base name is NNNNFx or NNNNFxFx, with x indicating the rotation, x = 0--7.
 /// Horizontal flipping is used to save space, thus NNNNF2F5 defines a mirrored patch.
 /// Some sprites only have one picture used for all directions: NNNNF0
-
 struct spriteframe_t
 {
   // If false use 0 for any position.
@@ -105,10 +104,10 @@ struct spriteframe_t
   //  we might as well insert the same name eight times.
   char   rotate;
 
-  // Texture to use for view angles 0-7.
-  class Texture *tex[8];
-  bool          flip[8]; // Flip bit to use for view angles 0-7.
+  class Texture *tex[8]; ///< Texture to use for view angles 0-7.
+  bool          flip[8]; ///< Flip bit to use for view angles 0-7.
 };
+
 
 
 /// \brief An animated collection of 2D frames
@@ -121,13 +120,14 @@ public:
   sprite_t(const char *name);
   virtual ~sprite_t();
 
-  int  iname; // sprite name (4 chars) as an int
+  Sint32  iname;  ///< sprite name (4 chars) as an int
   int            numframes;
   spriteframe_t *spriteframes;
 };
 
 
-/// \brief Cache for sprite_t's
+
+/// \brief Cache for sprite_t's.
 class spritecache_t : public cache_t
 {
 protected:
@@ -135,26 +135,21 @@ protected:
 
 public:
   spritecache_t(memtag_t tag);
-
   inline sprite_t *Get(const char *p) { return (sprite_t *)Cache(p); };
 };
 
-
 extern spritecache_t sprites;
 
-extern int numspritelumps;
 
-
-//================================
-//        Presentations
-//================================
+//========================================================
+//                     Presentations
+//========================================================
 
 /// \brief Abstract base class for presentation objects
 ///
 /// Idea: Game entities have a pointer to a graphic presentation.
 /// The animation data is stored in the presentation object.
 /// The actual implementation of the "graphic presentation" can be a sprite, md3 or anything.
-
 class presentation_t
 {
 protected:
@@ -259,15 +254,19 @@ public:
 
 
 
+//========================================================
+//                    Sprite skins
+//========================================================
 
-// -----------
-// SKINS STUFF
-// -----------
 #define SKINNAMESIZE 16
 #define MAXSKINS 10
 
-// 10 customisable sounds for Skins
-typedef enum {
+
+struct skin_t
+{
+  // 10 customisable sounds for Skins
+  enum skinsound_t
+  {
   SKSPLPAIN,
   SKSSLOP,
   SKSOOF,
@@ -279,10 +278,8 @@ typedef enum {
   SKSJUMP,
   SKSOUCH,
   NUMSKINSOUNDS
-} skinsound_t;
+  };
 
-struct skin_t
-{
   char        name[SKINNAMESIZE+1];   // short descriptive name of the skin
   sprite_t   *spritedef;
   char        faceprefix[4];          // 3 chars+'\0', default is "STF"
@@ -295,10 +292,9 @@ struct skin_t
 extern int       numskins;
 extern skin_t    skins[MAXSKINS+1];
 
-//void    R_InitSkins (void);
+
 void    SetPlayerSkin(int playernum,char *skinname);
 int     R_SkinAvailable(char* name);
 void    R_AddSkins(int wadnum);
-
 
 #endif
