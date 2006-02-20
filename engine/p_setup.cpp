@@ -1302,7 +1302,6 @@ void Map::LoadGLVis(const int lump) {
   byte *data;
   int vissize;
   const char *lname = fc.FindNameForNum(lump);
-  vissize = fc.LumpLength(lump);
 
   // glVIS is not always present. Check for it.
   if(lname == NULL || !strcmp(lname, "GL_VIS")) {
@@ -1310,6 +1309,7 @@ void Map::LoadGLVis(const int lump) {
     return;
   }
 
+  vissize = fc.LumpLength(lump);
   if(vissize == 0) {
     CONS_Printf("Level has empty GL_VIS data.\n");
     return;
@@ -1323,7 +1323,7 @@ void Map::LoadGLVis(const int lump) {
 
   memcpy(glvis, data, vissize);
 
-  CONS_Printf("Level has %d bytes of glVIS data.\n", vissize);
+  CONS_Printf("Loaded %d bytes of glVIS data.\n", vissize);
 }
 
 
