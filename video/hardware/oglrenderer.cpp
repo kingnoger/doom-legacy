@@ -674,12 +674,12 @@ void OGLRenderer::RenderGLSeg(int num) {
 	else
 	  top = rs_ceil;
 	bottom = top - middletex->height;
+      }
       glBindTexture(GL_TEXTURE_2D, middletex->glid);
       DrawSingleQuad(fv, tv, bottom, top, texleft/middletex->width, 
 		     texright/middletex->width);
       //, textop/middletex->height,
       //     texbottom/middletex->height);
-      }
     }
   } else if(middletex) {
     if(ld->flags & ML_DONTPEGBOTTOM) {
