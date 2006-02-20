@@ -682,7 +682,7 @@ void OGLRenderer::RenderGLSeg(int num) {
       }
     }
   } else if(middletex) {
-    if(ld->flags & ML_DONTPEGTOP) {
+    if(ld->flags & ML_DONTPEGBOTTOM) {
       texbottom = tex_yoff;
       textop = texbottom - ls_height;
     } else {
