@@ -49,6 +49,7 @@ private:
   double x, y, z; // Location of camera.
   double theta;   // Rotation angle of camera in degrees.
   double phi;     // Up-down rotation angle of camera in degrees.
+  subsector_t *curssec; // The gl subsector the camera is in.
 
   double fov;     // Field of view in degrees.
 
@@ -68,9 +69,9 @@ private:
   class Map *mp;  ///< Map to be rendered
   gllevel_t l;    ///< All we need to render the level geometry.
 
-  void RenderBSP(); // Walk through the BSP and render walls and things.
-  void RenderBSPNode(int nodenum); ///< Render a single BSP node
+  void RenderBSPNode(int nodenum); ///< Render level using BSP.
   void RenderGLSubsector(int num);
+  void RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Texture *tex, bool isFloor);
   void RenderGLSeg(int num);
   void RenderActors(sector_t *sec);
   void DrawSingleQuad(vertex_t *fv, vertex_t *tv, GLfloat lower, GLfloat upper, GLfloat texleft=0.0, GLfloat texright=1.0, GLfloat textop=0.0, GLfloat texbottom=1.0);

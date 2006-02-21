@@ -32,6 +32,7 @@
 OGLRenderer::OGLRenderer() {
   screen = NULL;
   workinggl = false;
+  curssec = NULL;
 
   mp = NULL;
   l.glvertexes = NULL;
@@ -63,10 +64,11 @@ void OGLRenderer::InitGLState() {
   glShadeModel(GL_SMOOTH);
   glEnable(GL_TEXTURE_2D);
 
-  /*
+  // Gets rid of "black boxes" around sprites. Might also speed up
+  // rendering a bit?
   glEnable(GL_ALPHA_TEST);
   glAlphaFunc(GL_GEQUAL, 1.0);
-  */
+
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glEnable(GL_CULL_FACE);
@@ -339,6 +341,7 @@ void OGLRenderer::Render3DView(PlayerInfo *player)
   x = player->pov->pos.x.Float();
   y = player->pov->pos.y.Float();
   z = player->viewz.Float();
+  curssec = player->pov->subsector;
 
   theta = (double)(player->pov->yaw>>ANGLETOFINESHIFT)*(360.0f/(double)FINEANGLES);
   phi = (double)(player->pov->pitch>>ANGLETOFINESHIFT)*(360.0f/(double)FINEANGLES);
@@ -354,7 +357,10 @@ void OGLRenderer::Render3DView(PlayerInfo *player)
   glRotatef(-theta, 0.0, 0.0, 1.0);
   glTranslatef(-x, -y, -z);
 
-  RenderBSP();
+  if(l.glvertexes == NULL)
+    I_Error("Trying to render level but level geometry is not set.\n");
+
+  RenderBSPNode(l.numglnodes-1);
 
   // Pretty soon we want to draw HUD graphics and stuff.
   Setup2DMode();
@@ -362,32 +368,17 @@ void OGLRenderer::Render3DView(PlayerInfo *player)
 }
 
 
-// Walk through the BSP tree and render walls and items. Assumes that
-// the OpenGL state is properly set elsewhere.
-
-void OGLRenderer::RenderBSP() {
-  if(l.glvertexes == NULL)
-    I_Error("Trying to render level but level geometry is not set.\n");
-
-  // FIXME We don't use no fancy schmanzy BSP trees. Real men just
-  // dump their vertex data to the card and let it handle everything.
-  // if (l.numglnodes == 0) fuck_you();
-  // RenderBSPNode(l.numglnodes-1);
-
-  for(int i=0; i<l.numglsubsectors; i++)
-    RenderGLSubsector(i);
-
-  for(int i=0; i<l.numglsegs; i++)
-    RenderGLSeg(i);
-}
-
+// Walk through the BSP tree and render the level in back-to-front
+// order. Assumes that the OpenGL state is properly set elsewhere.
 
 void OGLRenderer::RenderBSPNode(int nodenum)
 {
   // Found a subsector (leaf node)?
   if (nodenum & NF_SUBSECTOR)
     {
-      RenderGLSubsector(nodenum & ~NF_SUBSECTOR);
+      int nt = nodenum & ~NF_SUBSECTOR;
+      if(curssec == NULL || CheckVis(curssec-l.glsubsectors, nt))
+	 RenderGLSubsector(nt);
       return;
     }
 
@@ -395,24 +386,75 @@ void OGLRenderer::RenderBSPNode(int nodenum)
   node_t *node = &l.glnodes[nodenum];
 
   // Decide which side the view point is on.
-  //int side = R_PointOnSide(x, y, node);
+  int side = R_PointOnSide(float(x), float(y), node);
 
-  /*
-  // Recursively divide front space.
+  // OpenGL requires back-to-front drawing for translucency effects to
+  // work properly. Thus we first check the back.
+
+  // if (R_CheckBBox(node->bbox[side^1]))
+  RenderBSPNode(node->children[side^1]);
+
+  // Now we draw the front side.
   RenderBSPNode(node->children[side]);
-
-  // Possibly divide back space.
-  // TODO check view frustum overlap with backnode bbox
-  if (R_CheckBBox(node->bbox[side^1]))
-    RenderBSPNode(node->children[side^1]);
-  */
 }
 
+// Draws one single GL subsector polygon that is either a floor or a
+// ceiling. 
 
+void OGLRenderer::RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Texture *tex, bool isFloor) {
+  int curseg;
+  int firstseg;
+  int segcount;
+  int loopstart, loopend, loopinc;
+  
+  firstseg = ss->first_seg;
+  segcount = ss->num_segs;
 
+  // GL subsector polygons are clockwise when viewed from above.
+  // OpenGL polygons are defined counterclockwise. Thus we need to go
+  // "backwards" when drawing the floor.
+  if(isFloor) {
+    loopstart = firstseg+segcount-1;
+    loopend = firstseg-1;
+    loopinc = -1;
+  } else {
+    loopstart = firstseg;
+    loopend = firstseg+segcount;
+    loopinc = 1;
+  }
 
-// Draw the floor and ceiling of a single GL subsector. In the future
-// render also 3D floors and possibly things inside the subsector.
+  glBindTexture(GL_TEXTURE_2D, tex->glid);
+  
+  glNormal3f(0.0, 0.0, -loopinc);
+  glBegin(GL_POLYGON);
+  for(curseg = loopstart; curseg != loopend; curseg += loopinc) {
+    seg_t *seg = &l.glsegs[curseg];
+    GLfloat x, y, tx, ty;
+    vertex_t *v;
+    
+    if(isFloor)
+      v = seg->v2;
+    else
+      v = seg->v1;
+    x = v->x.Float();
+    y = v->y.Float();
+    //    z = s->ceilingheight.Float(); 
+    
+    tx = x/tex->width;
+    ty = 1.0 - y/tex->height;
+    
+    glTexCoord2f(tx, ty);
+    glVertex3f(x, y, height);
+    
+    //    printf("(%.2f, %.2f)\n", x, y);
+  }
+  glEnd();
+
+}
+
+// Draw the floor and ceiling of a single GL subsector. The rendering
+// order is flats->wall segs->items, so there is no occlusion. In the
+// future render also 3D floors and polyobjs.
 
 void OGLRenderer::RenderGLSubsector(int num) {
   int curseg;
@@ -434,30 +476,8 @@ void OGLRenderer::RenderGLSubsector(int num) {
   if(ftex) {
     if(ftex->glid == ftex->NOTEXTURE) 
       ftex->GetData(); // Creates the texture.
-    glBindTexture(GL_TEXTURE_2D, ftex->glid);
 
-    // First draw the ceiling.
-    glNormal3f(0.0, 0.0, -1.0);
-    glBegin(GL_POLYGON);
-    for(curseg = firstseg; curseg < firstseg + segcount; curseg++) {
-      seg_t seg = l.glsegs[curseg];
-      GLfloat x, y, z, tx, ty;
-      vertex_t *v;
-
-      v = seg.v1;
-      x = v->x.Float();
-      y = v->y.Float();
-      z = s->ceilingheight.Float(); 
-
-      tx = x/ftex->width;
-      ty = 1.0 - y/ftex->height;
-
-      glTexCoord2f(tx, ty);
-      glVertex3f(x, y, z);
-
-      //    printf("(%.2f, %.2f)\n", x, y);
-    }
-    glEnd();
+    RenderGlSsecPolygon(ss, s->ceilingheight.Float(), ftex, false);
   }
  
   // Then the floor. First bind texture.
@@ -465,32 +485,12 @@ void OGLRenderer::RenderGLSubsector(int num) {
   if(ftex) {
     if(ftex->glid == ftex->NOTEXTURE) 
       ftex->GetData(); // Creates the texture.
-    glBindTexture(GL_TEXTURE_2D, ftex->glid);
-
-    glNormal3f(0.0, 0.0, 1.0);
-    glBegin(GL_POLYGON);
-    for(curseg = firstseg+segcount-1; curseg >= firstseg; curseg--) {
-      seg_t seg = l.glsegs[curseg];
-      GLfloat x, y, z, tx, ty;
-      vertex_t *v;
-
-      v = seg.v2;
-      x = v->x.Float();
-      y = v->y.Float();
-      z = s->floorheight.Float(); 
-
-      tx = x/ftex->width;
-      ty = 1.0 - y/ftex->height;
-
-      glTexCoord2f(tx, ty);
-      glVertex3f(x, y, z);
-
-      //    printf("(%.2f, %.2f)\n", x, y);
-    }
-    glEnd();
+    RenderGlSsecPolygon(ss, s->floorheight.Float(), ftex, true);
   }
 
-  // TODO render segs here
+  // Draw the walls of this subsector.
+  for(curseg=firstseg; curseg<firstseg+segcount; curseg++)
+    RenderGLSeg(curseg);
 
   // finally the actors
   RenderActors(s);
@@ -500,6 +500,7 @@ void OGLRenderer::RenderGLSubsector(int num) {
 
 void OGLRenderer::RenderActors(sector_t *sec)
 {
+  /*
   // BSP is traversed by subsector.
   // A sector might have been split into several subsectors during BSP building.
   // Thus we check whether its already drawn.
@@ -508,7 +509,7 @@ void OGLRenderer::RenderActors(sector_t *sec)
 
   // Well, now it will be done.
   sec->validcount = validcount;
-
+  */
   /*
   if (!sec->numlights)
     {
@@ -542,7 +543,6 @@ void OGLRenderer::RenderActors(sector_t *sec)
 // silently ignored.
 
 void OGLRenderer::RenderGLSeg(int num) {
-  // TODO segs should be rendered together with their associated subsec (with backface culling...)
   seg_t *s;
   line_t *ld;
   vertex_t *fv;
@@ -564,7 +564,7 @@ void OGLRenderer::RenderGLSeg(int num) {
 
   s = &(l.glsegs[num]);
   ld = s->linedef;
-  // Don't draw minisegs.
+  // Minisegs don't have wall textures so no point in drawing them.
   if(ld == NULL)
     return;
 
