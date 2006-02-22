@@ -22,12 +22,14 @@
 #include "g_map.h"
 #include "g_player.h"
 #include "g_actor.h"
+#include "g_mapinfo.h"
 
 #include "tables.h"
 #include "r_data.h"
 #include "r_main.h"
 #include "r_sprite.h"
 
+extern int skyflatnum;
 
 OGLRenderer::OGLRenderer() {
   screen = NULL;
@@ -66,7 +68,7 @@ void OGLRenderer::InitGLState() {
 
   // Gets rid of "black boxes" around sprites. Might also speed up
   // rendering a bit?
-  glEnable(GL_ALPHA_TEST);
+  //  glEnable(GL_ALPHA_TEST);
   glAlphaFunc(GL_GEQUAL, 1.0);
 
   glEnable(GL_BLEND);
@@ -477,7 +479,9 @@ void OGLRenderer::RenderGLSubsector(int num) {
     if(ftex->glid == ftex->NOTEXTURE) 
       ftex->GetData(); // Creates the texture.
 
-    RenderGlSsecPolygon(ss, s->ceilingheight.Float(), ftex, false);
+    // Skip sky flats.
+    if(s->ceilingpic != skyflatnum)
+      RenderGlSsecPolygon(ss, s->ceilingheight.Float(), ftex, false);
   }
  
   // Then the floor. First bind texture.
@@ -485,7 +489,10 @@ void OGLRenderer::RenderGLSubsector(int num) {
   if(ftex) {
     if(ftex->glid == ftex->NOTEXTURE) 
       ftex->GetData(); // Creates the texture.
-    RenderGlSsecPolygon(ss, s->floorheight.Float(), ftex, true);
+
+    // Skip sky flats.
+    if(s->floorpic != skyflatnum)
+      RenderGlSsecPolygon(ss, s->floorheight.Float(), ftex, true);
   }
 
   // Draw the walls of this subsector.
@@ -626,6 +633,7 @@ void OGLRenderer::RenderGLSeg(int num) {
 
   // Ready to draw textures.
   if(rs != NULL) {
+    // Upper texture.
     if(rs_ceil < ls_ceil && uppertex) {
       if(ld->flags & ML_DONTPEGTOP) {
 	textop = tex_yoff;
@@ -635,10 +643,14 @@ void OGLRenderer::RenderGLSeg(int num) {
 	textop = texbottom - utexhei;
       }
 
-      glBindTexture(GL_TEXTURE_2D, uppertex->glid);
-      DrawSingleQuad(fv, tv, rs_ceil, ls_ceil, texleft/uppertex->width,
+      // If the front and back ceilings are sky, do not draw this
+      // upper texture.
+      if(ls->ceilingpic != skyflatnum || rs->ceilingpic != skyflatnum) {
+	glBindTexture(GL_TEXTURE_2D, uppertex->glid);
+	DrawSingleQuad(fv, tv, rs_ceil, ls_ceil, texleft/uppertex->width,
 		     texright/uppertex->width, textop/uppertex->height,
 		     texbottom/uppertex->height);
+      }
     }
     
     if(rs_floor > ls_floor && lowertex) {
@@ -682,6 +694,7 @@ void OGLRenderer::RenderGLSeg(int num) {
       //     texbottom/middletex->height);
     }
   } else if(middletex) {
+    // Single sided middle texture.
     if(ld->flags & ML_DONTPEGBOTTOM) {
       texbottom = tex_yoff;
       textop = texbottom - ls_height;
@@ -721,10 +734,19 @@ void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Texture *t, bool fli
 {
   GLfloat top, bottom, left, right;
   GLfloat texleft, texright, textop, texbottom;
+  GLboolean isAlpha; // Alpha test enabled.
 
   // You can't draw the invisible.
   if(!t)
     return;
+
+  // Rendering sprite items requires skipping totally transparent
+  // pixels. Since alpha testing may slow down rendering we want to
+  // use it as little as possible.
+  isAlpha = 0; // Shut up compiler.
+  glGetBooleanv(GL_ALPHA_TEST, &isAlpha);
+  if(!isAlpha)
+    glEnable(GL_ALPHA_TEST);
 
   if(t->glid == t->NOTEXTURE)
     t->GetData();
@@ -774,6 +796,10 @@ void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Texture *t, bool fli
 
   // Leave the matrix stack as it was.
   glPopMatrix();
+
+  // Restore alpha testing to the state it was.
+  if(!isAlpha)
+    glDisable(GL_ALPHA_TEST);
 }
 
 // Check for visibility between the given glsubsectors. Returns true
