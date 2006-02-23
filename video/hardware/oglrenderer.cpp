@@ -16,6 +16,7 @@
 // GNU General Public License for more details.
 
 #include "oglrenderer.hpp"
+#include "oglhelpers.hpp"
 #include "doomdef.h"
 #include "screen.h"
 
@@ -51,6 +52,8 @@ OGLRenderer::OGLRenderer() {
   // Initially we are at 2D mode.
   consolemode = true;
 
+  InitLumLut();
+
   CONS_Printf("New OpenGL renderer created.\n");
 }
 
@@ -80,6 +83,7 @@ void OGLRenderer::InitGLState() {
 
 void OGLRenderer::StartFrame() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  ClearDrawColor();
 }
 
 // Done with drawing. Swap buffers.
@@ -179,6 +183,7 @@ bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen)
 void OGLRenderer::Setup2DMode() {
   GLfloat extraoffx, extraoffy, extrascalex, extrascaley;
   consolemode = true;
+  ClearDrawColor();
 
   //glDisable(GL_LIGHTING);
   glDisable(GL_DEPTH_TEST);
@@ -213,6 +218,7 @@ void OGLRenderer::Setup2DMode() {
 
 void OGLRenderer::Setup3DMode() {
   consolemode = false;
+  ClearDrawColor();
 
   // glEnable(GL_LIGHTING);
   glEnable(GL_DEPTH_TEST);
@@ -465,14 +471,25 @@ void OGLRenderer::RenderGLSubsector(int num) {
   subsector_t *ss;
   sector_t *s;
   Texture *ftex;
+  GLfloat c[4];
+  byte light;
   if(num < 0 || num > l.numglsubsectors)
     return;
-  
+
+
   ss = &l.glsubsectors[num];
   firstseg = ss->first_seg;
   segcount = ss->num_segs;
   s = ss->sector;
 
+  // Set up sector lighting.
+  light = LightLevelToLum(s->lightlevel);
+  c[0] = light/255.0;
+  c[1] = light/255.0;
+  c[2] = light/255.0;
+  c[3] = 1.0;
+  glColor4fv(c);
+  
   // Bind ceiling texture.
   ftex = tc[s->ceilingpic];
   if(ftex) {
