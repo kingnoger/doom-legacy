@@ -67,7 +67,6 @@ private:
   bool workinggl;  // Do we have a working OpenGL context?
 
   class Map *mp;  ///< Map to be rendered
-  gllevel_t l;    ///< All we need to render the level geometry.
 
   void RenderBSPNode(int nodenum); ///< Render level using BSP.
   void RenderGLSubsector(int num);

@@ -38,7 +38,7 @@ OGLRenderer::OGLRenderer() {
   curssec = NULL;
 
   mp = NULL;
-  l.glvertexes = NULL;
+  //  l.glvertexes = NULL;
 
   x = y = z = 0.0;
   theta = phi = 0.0;
@@ -314,36 +314,6 @@ void OGLRenderer::Render3DView(PlayerInfo *player)
   // can run several Maps at once.
   mp = player->mp;
 
-  // shortcuts...
-  l.vertexes = mp->vertexes;
-  l.numvertexes = mp->numvertexes;
-
-  l.lines = mp->lines;
-  l.numlines = mp->numlines;
-
-  l.sides = mp->sides;
-  l.numsides = mp->numsides;
-
-  l.sectors = mp->sectors;
-  l.numsectors = mp->numsectors;
-
-  l.glvertexes = mp->glvertexes;
-  l.numglvertexes = mp->numglvertexes;
-
-  l.glsegs = mp->segs;
-  l.numglsegs = mp->numsegs;
-
-  l.glsubsectors = mp->subsectors;
-  l.numglsubsectors = mp->numsubsectors;
-
-  l.glnodes = mp->nodes;
-  l.numglnodes = mp->numnodes;
-
-  l.glvis = mp->glvis;
-
-  l.polyobjs = mp->polyobjs;
-  l.numpolyobjs = mp->NumPolyobjs;
-
 
   Setup3DMode();
   x = player->pov->pos.x.Float();
@@ -365,10 +335,10 @@ void OGLRenderer::Render3DView(PlayerInfo *player)
   glRotatef(-theta, 0.0, 0.0, 1.0);
   glTranslatef(-x, -y, -z);
 
-  if(l.glvertexes == NULL)
+  if(mp->glvertexes == NULL)
     I_Error("Trying to render level but level geometry is not set.\n");
 
-  RenderBSPNode(l.numglnodes-1);
+  RenderBSPNode(mp->numnodes-1);
 
   // Pretty soon we want to draw HUD graphics and stuff.
   Setup2DMode();
@@ -385,13 +355,13 @@ void OGLRenderer::RenderBSPNode(int nodenum)
   if (nodenum & NF_SUBSECTOR)
     {
       int nt = nodenum & ~NF_SUBSECTOR;
-      if(curssec == NULL || CheckVis(curssec-l.glsubsectors, nt))
+      if(curssec == NULL || CheckVis(curssec-mp->subsectors, nt))
 	 RenderGLSubsector(nt);
       return;
     }
 
   // otherwise keep traversing the tree
-  node_t *node = &l.glnodes[nodenum];
+  node_t *node = &mp->nodes[nodenum];
 
   // Decide which side the view point is on.
   int side = R_PointOnSide(float(x), float(y), node);
@@ -436,7 +406,7 @@ void OGLRenderer::RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Texture *
   glNormal3f(0.0, 0.0, -loopinc);
   glBegin(GL_POLYGON);
   for(curseg = loopstart; curseg != loopend; curseg += loopinc) {
-    seg_t *seg = &l.glsegs[curseg];
+    seg_t *seg = &mp->segs[curseg];
     GLfloat x, y, tx, ty;
     vertex_t *v;
     
@@ -473,11 +443,11 @@ void OGLRenderer::RenderGLSubsector(int num) {
   Texture *ftex;
   GLfloat c[4];
   byte light;
-  if(num < 0 || num > l.numglsubsectors)
+  if(num < 0 || num > mp->numsubsectors)
     return;
 
 
-  ss = &l.glsubsectors[num];
+  ss = &mp->subsectors[num];
   firstseg = ss->first_seg;
   segcount = ss->num_segs;
   s = ss->sector;
@@ -583,10 +553,10 @@ void OGLRenderer::RenderGLSeg(int num) {
   GLfloat ls_height, tex_yoff;
   Texture *uppertex, *middletex, *lowertex;
 
-  if(num < 0 || num > l.numglsegs)
+  if(num < 0 || num > mp->numsegs)
     return;
 
-  s = &(l.glsegs[num]);
+  s = &(mp->segs[num]);
   ld = s->linedef;
   // Minisegs don't have wall textures so no point in drawing them.
   if(ld == NULL)
@@ -595,7 +565,7 @@ void OGLRenderer::RenderGLSeg(int num) {
   fv = s->v1;
   tv = s->v2;
 
-  // Calculate surface normal. Should we account for degenerate
+  // Calculate surface normamp-> Should we account for degenerate
   // linedefs?
   nx = tv->y - fv->y;
   ny = fv->x - tv->x;
@@ -824,10 +794,10 @@ void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Texture *t, bool fli
 
 bool OGLRenderer::CheckVis(int fromss, int toss) {
   byte *vis;
-  if(l.glvis == NULL)
+  if(mp->glvis == NULL)
     return true;
 
-  vis = l.glvis + (((l.numglsubsectors + 7) / 8) * fromss);
+  vis = mp->glvis + (((mp->numsubsectors + 7) / 8) * fromss);
   if (vis[toss >> 3] & (1 << (toss & 7)))
     return true;
   return false;
