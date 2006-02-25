@@ -92,6 +92,74 @@ void OGLRenderer::FinishFrame() {
     SDL_GL_SwapBuffers(); // Double buffered OpenGL goodness.
 }
 
+// Writes a screen shot to the specified file. Writing is done in BMP
+// format, as SDL has direct support of that. Adds proper file suffix
+// when necessary. Returns true on success.
+
+bool OGLRenderer::WriteScreenshot(const char *fname) {
+  int fnamelength;
+  string finalname;
+  SDL_Surface *buffer;
+  bool success;
+
+  if(screen == NULL)
+    return false;
+
+  /*
+  if(screen->pixels == NULL) {
+    CONS_Printf("Empty SDL surface. Can not take screenshot.\n");
+    return false;
+  }
+  */
+
+  if(fname == NULL)
+    finalname = "DOOM000.bmp";
+  else {    
+    fnamelength = strlen(fname);
+
+    if(!strcmp(fname+fnamelength-4, ".bmp") ||
+       !strcmp(fname+fnamelength-4, ".BMP"))
+      finalname = fname;
+    else {
+      finalname = fname;
+      finalname += ".bmp";
+    }
+  }
+
+  // Now we know the file name. Time to start the magic.
+
+  // Potential endianness bug with masks?
+  buffer = SDL_CreateRGBSurface(SDL_SWSURFACE, screen->w, 
+				screen->h, 32, 0xff000000, 0xff0000, \
+				0xff00, 0xff);
+  if(!buffer) {
+    CONS_Printf("Could not create SDL surface. SDL error: %s\n", SDL_GetError());
+    return false;
+  }
+
+  SDL_LockSurface(buffer);
+  glReadPixels(0, 0, screen->w, screen->h, GL_RGBA, 
+	       GL_UNSIGNED_INT_8_8_8_8, buffer->pixels);
+
+  // OpenGL keeps the pixel data "upside down" for some reason. Flip
+  // the surface.
+  for(int i=0; i < buffer->w; i++)
+    for(int j=0; j<buffer->h/2; j++) {
+      Uint32 temp;
+      Uint32 *p1;
+      Uint32 *p2;
+      p1 = static_cast<Uint32*>(buffer->pixels) + j*buffer->w + i;
+      p2 = static_cast<Uint32*>(buffer->pixels) + (buffer->h-j)*buffer->w + i;
+      temp = *p1;
+      *p1 = *p2;
+      *p2 = temp;
+    }
+  SDL_UnlockSurface(buffer);
+  success = !SDL_SaveBMP(buffer, finalname.c_str());
+  SDL_FreeSurface(buffer);
+  return success;
+}
+
 bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen) {
   Uint32 surfaceflags;
   int mindepth = 16;

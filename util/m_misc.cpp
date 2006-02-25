@@ -43,9 +43,7 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
-#ifdef HWRENDER
-# include "hardware/hwr_render.h"
-#endif
+#include "oglrenderer.hpp"
 
 
 // ==========================================================================
@@ -406,33 +404,35 @@ void M_ScreenShot()
   char lbmname[MAX_CONFIGNAME];
   bool ret = false;
 
-#ifdef HWRENDER
-  if (rendermode!=render_soft)
+  // find a file name to save it to
+  if(rendermode == render_opengl)
+    strcpy(lbmname, "DOOM000.bmp");
+  else
+    strcpy(lbmname, "DOOM000.pcx");
+
+  for (int i=0; i <= 999; i++)
     {
-      ret = HWR.Screenshot(lbmname);
+      lbmname[4] = i/100 + '0';
+      lbmname[5] = i/10  + '0';
+      lbmname[6] = i%10  + '0';
+      if (access(lbmname, F_OK) == -1)
+	{
+	  break;
+	}
+    }
+
+  if (rendermode == render_opengl)
+    {
+      ret = oglrenderer->WriteScreenshot(lbmname);
     }
   else
-#endif
     {
       // this should be a LFB
       byte *linear = vid.screens[0];
+      // Save the pcx
+      ret = WritePCXfile(lbmname, linear, vid.width, vid.height,
+			 (byte *)fc.CacheLumpName("PLAYPAL", PU_CACHE));
 
-      // find a file name to save it to
-      strcpy(lbmname, "DOOM000.pcx");
-
-      for (int i=0; i <= 999; i++)
-        {
-          lbmname[4] = i/100 + '0';
-          lbmname[5] = i/10  + '0';
-          lbmname[6] = i%10  + '0';
-          if (access(lbmname, F_OK) == -1)
-	    {
-	      // file doesn't exist, save the pcx
-	      ret = WritePCXfile(lbmname, linear, vid.width, vid.height,
-				 (byte *)fc.CacheLumpName("PLAYPAL", PU_CACHE));
-	      break;
-	    }
-	}
     }
 
   if (ret)

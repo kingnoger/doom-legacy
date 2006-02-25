@@ -85,6 +85,7 @@ public:
   void StartFrame();
   void FinishFrame();
   void ClearDrawColor() { glColor4f(1.0, 1.0, 1.0, 1.0); }
+  bool WriteScreenshot(const char *fname = NULL);
 
   bool ReadyToDraw() const { return workinggl; } // Console tries to draw to screen before video is initialized.
 
