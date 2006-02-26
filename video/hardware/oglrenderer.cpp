@@ -382,8 +382,6 @@ void OGLRenderer::Render3DView(PlayerInfo *player)
   // can run several Maps at once.
   mp = player->mp;
 
-
-  Setup3DMode();
   x = player->pov->pos.x.Float();
   y = player->pov->pos.y.Float();
   z = player->viewz.Float();
@@ -392,8 +390,11 @@ void OGLRenderer::Render3DView(PlayerInfo *player)
   theta = (double)(player->pov->yaw>>ANGLETOFINESHIFT)*(360.0f/(double)FINEANGLES);
   phi = (double)(player->pov->pitch>>ANGLETOFINESHIFT)*(360.0f/(double)FINEANGLES);
 
-  //  printf("Rendering at (%.2f, %.2f, %.2f), theta %.2f, phi %.2f.\n", x, y, z, theta, phi);
+  // This simple sky rendering algorithm uses 2D mode. We should
+  // probably do something more fancy in the future.
+  DrawSimpleSky();
 
+  Setup3DMode();
   glMatrixMode(GL_PROJECTION);
 
   // Set up camera to look through player's eyes.
@@ -869,4 +870,56 @@ bool OGLRenderer::CheckVis(int fromss, int toss) {
   if (vis[toss >> 3] & (1 << (toss & 7)))
     return true;
   return false;
+}
+
+// Draws the background sky texture. Very simple, ignores looking
+// up/down.
+
+void OGLRenderer::DrawSimpleSky() {
+  GLfloat left, right, top, bottom, texleft, texright, textop, texbottom;
+  GLfloat fovx;
+  GLboolean isdepth;
+
+  glMatrixMode(GL_PROJECTION);
+
+  isdepth = 0;
+  glGetBooleanv(GL_DEPTH_TEST, &isdepth);
+  if(isdepth)
+    glDisable(GL_DEPTH_TEST);
+  glPushMatrix();
+  glLoadIdentity();
+  gluOrtho2D(0.0, 1.0, 0.0, 1.0);
+
+  if(mp->skytexture->glid == mp->skytexture->NOTEXTURE)
+    mp->skytexture->GetData();
+
+  glBindTexture(GL_TEXTURE_2D, mp->skytexture->glid);
+  textop = 1.0;
+  texbottom = 0.0;
+  top = 1.0;
+  bottom = 0.0;
+  left = 0.0;
+  right = 1.0;
+
+  fovx = fov*screenar;
+  if(fovx > 90)
+    fovx = 90;
+
+  texleft = (2.0*theta + fovx)/720.0;
+  texright = (2.0*theta - fovx)/720.0;
+
+  glBegin(GL_QUADS);
+  glTexCoord2f(texleft, texbottom);
+  glVertex2f(left, bottom);
+  glTexCoord2f(texright, texbottom);
+  glVertex2f(right, bottom);
+  glTexCoord2f(texright, textop);
+  glVertex2f(right, top);
+  glTexCoord2f(texleft, textop);
+  glVertex2f(left, top);
+  glEnd();
+
+  if(isdepth)
+    glEnable(GL_DEPTH_TEST);
+  glPopMatrix();
 }

@@ -74,6 +74,7 @@ private:
   void RenderGLSeg(int num);
   void RenderActors(sector_t *sec);
   void DrawSingleQuad(vertex_t *fv, vertex_t *tv, GLfloat lower, GLfloat upper, GLfloat texleft=0.0, GLfloat texright=1.0, GLfloat textop=0.0, GLfloat texbottom=1.0);
+  void DrawSimpleSky();
 
 public:
 
