@@ -173,7 +173,6 @@ public:
 
 protected:
   Texture *Update();
-  virtual void HWR_Prepare()  { /* Update()->HWR_Prepare(); */ }
 
 public:
   AnimatedTexture(const char *p, int n);
@@ -195,6 +194,9 @@ public:
   virtual byte *GetColumn(int col) { return Update()->GetColumn(col); }
   virtual column_t *GetMaskedColumn(int col) { return Update()->GetMaskedColumn(col); }
   virtual byte *GetData() { return Update()->GetData(); }
+
+  /// The glid of the metatexture changes all the time.
+  virtual GLuint GLPrepare() { return glid = Update()->GLPrepare(); }
 
   virtual void Draw(int x, int y, int scrn) { Update()->Draw(x, y, scrn); }
   virtual void HWR_Draw(int x, int y, int flags) { Update()->HWR_Draw(x, y, flags); }

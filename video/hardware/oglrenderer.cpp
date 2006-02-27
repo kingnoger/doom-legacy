@@ -349,22 +349,24 @@ void OGLRenderer::Draw2DGraphic(GLfloat top, GLfloat left, GLfloat bottom, GLflo
 // Just like the earlier one, except the coordinates are given in Doom
 // units. (screen is 320 wide and 200 high.)
 
-void OGLRenderer::Draw2DGraphic_Doom(float x, float y, float width, float height, GLuint tex) {
+void OGLRenderer::Draw2DGraphic_Doom(float x, float y, Texture *tex)
+{
   /*
   if((x+width) > doomscreenw || (y+height) > doomscreenh)
     printf("Tex %d out of bounds: (%.2f, %.2f) (%.2f, %.2f).\n", tex, x, y, x+width, y+height);  
   */
   Draw2DGraphic(y/BASEVIDHEIGHT, x/BASEVIDWIDTH, 
-		(y+height)/BASEVIDHEIGHT, (x+width)/BASEVIDWIDTH,
-		tex);
+		(y+tex->height)/BASEVIDHEIGHT, (x+tex->width)/BASEVIDWIDTH,
+		tex->GLPrepare());
 }
 
-void OGLRenderer::Draw2DGraphicFill_Doom(float x, float y, float width, float height, float texwidth, float texheight, GLuint tex) {
+void OGLRenderer::Draw2DGraphicFill_Doom(float x, float y, float width, float height, Texture *tex)
+{
   //  CONS_Printf("w: %f, h: %f, texw: %f, texh: %f.\n", width, height, texwidth, texheight);
   //  CONS_Printf("xrepeat %.2f, yrepeat %.2f.\n", width/texwidth, height/texheight);
   Draw2DGraphic(y/BASEVIDHEIGHT, x/BASEVIDWIDTH, 
 		(y+height)/BASEVIDHEIGHT, (x+width)/BASEVIDWIDTH,
-		tex, 1.0, 1.0-height/texheight, 1.0, 1.0-width/texwidth);
+		tex->GLPrepare(), 1.0, 1.0-height/tex->height, 1.0, 1.0-width/tex->width);
 
   /*
   Draw2DGraphic(y/BASEVIDHEIGHT, x/BASEVIDWIDTH, 
@@ -470,7 +472,7 @@ void OGLRenderer::RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Texture *
     loopinc = 1;
   }
 
-  glBindTexture(GL_TEXTURE_2D, tex->glid);
+  glBindTexture(GL_TEXTURE_2D, tex->GLPrepare());
   
   glNormal3f(0.0, 0.0, -loopinc);
   glBegin(GL_POLYGON);
@@ -529,27 +531,15 @@ void OGLRenderer::RenderGLSubsector(int num) {
   c[3] = 1.0;
   glColor4fv(c);
   
-  // Bind ceiling texture.
+  // Draw ceiling texture, skip sky flats.
   ftex = tc[s->ceilingpic];
-  if(ftex) {
-    if(ftex->glid == ftex->NOTEXTURE) 
-      ftex->GetData(); // Creates the texture.
-
-    // Skip sky flats.
-    if(s->ceilingpic != skyflatnum)
-      RenderGlSsecPolygon(ss, s->ceilingheight.Float(), ftex, false);
-  }
+  if (ftex && s->ceilingpic != skyflatnum)
+    RenderGlSsecPolygon(ss, s->ceilingheight.Float(), ftex, false);
  
-  // Then the floor. First bind texture.
+  // Then the floor.
   ftex = tc[s->floorpic];
-  if(ftex) {
-    if(ftex->glid == ftex->NOTEXTURE) 
-      ftex->GetData(); // Creates the texture.
-
-    // Skip sky flats.
-    if(s->floorpic != skyflatnum)
-      RenderGlSsecPolygon(ss, s->floorheight.Float(), ftex, true);
-  }
+  if(ftex && s->floorpic != skyflatnum)
+    RenderGlSsecPolygon(ss, s->floorheight.Float(), ftex, true);
 
   // Draw the walls of this subsector.
   for(curseg=firstseg; curseg<firstseg+segcount; curseg++)
@@ -563,7 +553,6 @@ void OGLRenderer::RenderGLSubsector(int num) {
 
 void OGLRenderer::RenderActors(sector_t *sec)
 {
-  /*
   // BSP is traversed by subsector.
   // A sector might have been split into several subsectors during BSP building.
   // Thus we check whether its already drawn.
@@ -572,7 +561,7 @@ void OGLRenderer::RenderActors(sector_t *sec)
 
   // Well, now it will be done.
   sec->validcount = validcount;
-  */
+
   /*
   if (!sec->numlights)
     {
@@ -675,14 +664,6 @@ void OGLRenderer::RenderGLSeg(int num) {
   middletex = tc[lsd->midtexture];
   lowertex = tc[lsd->bottomtexture];
 
-  // Generate GL textures.
-  if(uppertex && uppertex->glid == uppertex->NOTEXTURE)
-    uppertex->GetData();
-  if(middletex && middletex->glid == middletex->NOTEXTURE)
-    middletex->GetData();
-  if(lowertex && lowertex->glid == lowertex->NOTEXTURE)
-    lowertex->GetData();
-
   // Texture X offsets.
   texleft = lsd->textureoffset.Float() + s->offset.Float();
   texright = texleft + s->length;
@@ -702,10 +683,10 @@ void OGLRenderer::RenderGLSeg(int num) {
       // If the front and back ceilings are sky, do not draw this
       // upper texture.
       if(ls->ceilingpic != skyflatnum || rs->ceilingpic != skyflatnum) {
-	glBindTexture(GL_TEXTURE_2D, uppertex->glid);
+	glBindTexture(GL_TEXTURE_2D, uppertex->GLPrepare());
 	DrawSingleQuad(fv, tv, rs_ceil, ls_ceil, texleft/uppertex->width,
-		     texright/uppertex->width, textop/uppertex->height,
-		     texbottom/uppertex->height);
+		       texright/uppertex->width, textop/uppertex->height,
+		       texbottom/uppertex->height);
       }
     }
     
@@ -718,7 +699,7 @@ void OGLRenderer::RenderGLSeg(int num) {
 	textop = tex_yoff;
 	texbottom = textop + ltexhei;
       }
-      glBindTexture(GL_TEXTURE_2D, lowertex->glid);
+      glBindTexture(GL_TEXTURE_2D, lowertex->GLPrepare());
       DrawSingleQuad(fv, tv, ls_floor, rs_floor, texleft/lowertex->width,
 		     texright/lowertex->width, textop/lowertex->height,
 		     texbottom/lowertex->height);
@@ -743,7 +724,7 @@ void OGLRenderer::RenderGLSeg(int num) {
 	  top = rs_ceil;
 	bottom = top - middletex->height;
       }
-      glBindTexture(GL_TEXTURE_2D, middletex->glid);
+      glBindTexture(GL_TEXTURE_2D, middletex->GLPrepare());
       DrawSingleQuad(fv, tv, bottom, top, texleft/middletex->width, 
 		     texright/middletex->width);
       //, textop/middletex->height,
@@ -758,7 +739,7 @@ void OGLRenderer::RenderGLSeg(int num) {
       textop = tex_yoff;
       texbottom = textop + ls_height;
     }
-    glBindTexture(GL_TEXTURE_2D, middletex->glid);
+    glBindTexture(GL_TEXTURE_2D, middletex->GLPrepare());
     DrawSingleQuad(fv, tv, ls_floor, ls_ceil, texleft/middletex->width, 
 		   texright/middletex->width, textop/middletex->height,
 		   texbottom/middletex->height);
@@ -804,9 +785,7 @@ void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Texture *t, bool fli
   if(!isAlpha)
     glEnable(GL_ALPHA_TEST);
 
-  if(t->glid == t->NOTEXTURE)
-    t->GetData();
-  glBindTexture(GL_TEXTURE_2D, t->glid);
+  glBindTexture(GL_TEXTURE_2D, t->GLPrepare());
 
   if(flip) {
     texleft = 1.0;
@@ -890,10 +869,7 @@ void OGLRenderer::DrawSimpleSky() {
   glLoadIdentity();
   gluOrtho2D(0.0, 1.0, 0.0, 1.0);
 
-  if(mp->skytexture->glid == mp->skytexture->NOTEXTURE)
-    mp->skytexture->GetData();
-
-  glBindTexture(GL_TEXTURE_2D, mp->skytexture->glid);
+  glBindTexture(GL_TEXTURE_2D, mp->skytexture->GLPrepare());
   textop = 1.0;
   texbottom = 0.0;
   top = 1.0;

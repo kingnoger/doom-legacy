@@ -103,6 +103,9 @@ struct pic_t
 class Texture : public cacheitem_t
 {
   friend class texturecache_t;
+protected:
+  GLuint glid;   ///< OpenGL handle. Accessed using GLPrepare().
+
 public:
   int     id;  ///< unique texture ID  TODO temp solution, replace with pointers?
   short   width, height;          ///< bitmap dimensions in texels
@@ -111,15 +114,9 @@ public:
   byte    w_bits, h_bits;         ///< largest power-of-two sizes <= actual bitmap size
 
   byte  *pixels; ///< raw bitmap data in column-major order for sw renderer
-  GLuint glid;   ///< OpenGL handle.
   static const GLuint NOTEXTURE = 0;
 
 protected:
-  /// Prepare the texture for use.
-  virtual void HWR_Prepare() = 0;
-
-  virtual void BuildGLTexture(byte *rgba);
-
   /// To be called after bitmap size is known
   inline void Initialize()
   {
@@ -146,6 +143,9 @@ public:
   /// Get raw column-major texture data.
   virtual byte *GetData() = 0;
 
+  /// Creates an OpenGL texture if necessary, returns the handle.
+  virtual GLuint GLPrepare();
+
   /// draw the Texture flat on screen.
   virtual void Draw(int x, int y, int scrn) {}; // scrn may contain flags
   virtual void HWR_Draw(int x, int y, int flags) {};
@@ -166,7 +166,6 @@ public:
 
 protected:
   virtual byte *Generate();         ///< subclasses should redefine this
-  virtual void HWR_Prepare();
 
 public:
   LumpTexture(const char *name, int lump, int w, int h);
@@ -187,9 +186,7 @@ class PNGTexture : public LumpTexture
 {
 protected:
   byte *ReadData(bool read_image);
-
   virtual byte *Generate();
-  virtual void HWR_Prepare();
 
 public:
   PNGTexture(const char *name, int lump);
@@ -210,7 +207,6 @@ class PatchTexture : public Texture
 protected:
   patch_t *GeneratePatch();
   byte    *GenerateData();
-  virtual void HWR_Prepare();
 
 public:
   PatchTexture(const char *name, int lump);
@@ -257,7 +253,6 @@ protected:
 protected:
   patch_t *GeneratePatch();
   byte    *GenerateData();
-  virtual void HWR_Prepare();
 
 public:
   DoomTexture(const struct maptexture_t *mtex);

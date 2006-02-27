@@ -225,27 +225,39 @@ void Texture::operator delete(void *mem)
   Z_Free(mem);
 }
 
-// Creates a GL texture from the given row-major data. Width and
-// height are taken from class variables.
 
-void Texture::BuildGLTexture(byte *rgba) {
+/// Creates a GL texture.
+GLuint Texture::GLPrepare()
+{
+  if (glid == NOTEXTURE)
+    {
+      GetData(); // reads pixels
+      byte *rgba = ColumnMajorToRGBA(pixels, width, height);
 
-  // Discard old texture if we had one.
-  if(glid != NOTEXTURE)
-    glDeleteTextures(1, &glid);
+      // Discard old texture if we had one.
+      /*
+      if(glid != NOTEXTURE)
+	glDeleteTextures(1, &glid);
+      */
 
-  glGenTextures(1, &glid);
-  glBindTexture(GL_TEXTURE_2D, glid);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, 
-		  GL_NEAREST_MIPMAP_NEAREST);
-  gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGBA, width, height, GL_RGBA, \
-		    GL_UNSIGNED_BYTE, rgba);
+      glGenTextures(1, &glid);
+      glBindTexture(GL_TEXTURE_2D, glid);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, 
+		      GL_NEAREST_MIPMAP_NEAREST);
+      gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGBA, width, height, GL_RGBA, \
+			GL_UNSIGNED_BYTE, rgba);
 
-  //  CONS_Printf("Created GL texture %d for %s.\n", glid, name);
+      //  CONS_Printf("Created GL texture %d for %s.\n", glid, name);
+
+      Z_Free(rgba);
+    }
+
+  return glid;
 }
+
 
 
 //==================================================================
@@ -293,13 +305,6 @@ byte *LumpTexture::Generate()
       // short pix16 = ((color8to16[*data++] & 0x7bde) + ((i<<9|j<<4) & 0x7bde))>>1;
     }
 
-  // Create OpenGL texture if required.
-  if(oglrenderer != NULL && glid == NOTEXTURE) {
-    byte *rgba;
-    rgba = ColumnMajorToRGBA(pixels, width, height);
-    BuildGLTexture(rgba);
-    Z_Free(rgba);
-  }
   return pixels;
 }
 
@@ -424,14 +429,6 @@ byte *PatchTexture::GenerateData()
 	}
 
     }
-
-  // Create OpenGL texture if required.
-  if(oglrenderer != NULL && glid == NOTEXTURE) {
-    byte *rgba;
-    rgba = ColumnMajorToRGBA(pixels, width, height);
-    BuildGLTexture(rgba);
-    Z_Free(rgba);
-  }
 
   return pixels;
 }
@@ -602,14 +599,6 @@ byte *DoomTexture::GenerateData()
       //  it is purgable from zone memory.
       //Z_ChangeTag(pixels, PU_CACHE);
     }
-
-  // Create OpenGL texture if required.
-  if(oglrenderer != NULL && glid == NOTEXTURE) {
-    byte *rgba;
-    rgba = ColumnMajorToRGBA(pixels, width, height);
-    BuildGLTexture(rgba);
-    Z_Free(rgba);
-  }
 
   return pixels;
 }

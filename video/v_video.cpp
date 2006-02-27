@@ -131,19 +131,16 @@ void PatchTexture::Draw(int x, int y, int scrn = 0)
     printf("Patchtexture %s drawing outside screen: %d %d.\n", name, x, y);
   */
 
-  byte *desttop = vid.screens[scrn];
-
   if(rendermode == render_opengl){
-    if(oglrenderer && oglrenderer->ReadyToDraw()) {
+    if(oglrenderer && oglrenderer->ReadyToDraw())
       // Console tries to use some patches before graphics are
       // initialized. If this is the case, then create the missing
       // texture.
-      if(glid == NOTEXTURE) 
-	GenerateData();
-      oglrenderer->Draw2DGraphic_Doom(x, y, width, height, glid);
-    }
+      oglrenderer->Draw2DGraphic_Doom(x, y, this);
     return;
   }
+
+  byte *desttop = vid.screens[scrn];
 
   // scaling
   if (flags & V_SLOC)
@@ -283,15 +280,14 @@ void LumpTexture::Draw(int x, int y, int scrn = 0)
     printf("Lumptexture %s drawing outside screen: %d %d.\n", name, x, y);
   */
 
-  byte *dest_tl = vid.screens[scrn];
-
-  byte *base = Generate(); // in col-major order!
-
   if(rendermode == render_opengl){
     if(oglrenderer && oglrenderer->ReadyToDraw()) 
-      oglrenderer->Draw2DGraphic_Doom(x, y, width, height, glid);
+      oglrenderer->Draw2DGraphic_Doom(x, y, this);
     return;
   }
+
+  byte *dest_tl = vid.screens[scrn];
+  byte *base = Generate(); // in col-major order!
 
   // location scaling
   if (flags & V_SLOC)
@@ -400,17 +396,13 @@ void LumpTexture::Draw(int x, int y, int scrn = 0)
 // scaled to screen size.
 void LumpTexture::DrawFill(int x, int y, int w, int h)
 {
-
-  byte *flat = Generate(); // in col-major order
-
-
   if(rendermode == render_opengl){
     if(oglrenderer && oglrenderer->ReadyToDraw()) 
-      oglrenderer->Draw2DGraphicFill_Doom(x, y, w, h, width, height, glid);
+      oglrenderer->Draw2DGraphicFill_Doom(x, y, w, h, this);
     return;
   }
 
-
+  byte *flat = Generate(); // in col-major order
   byte *base_dest = vid.screens[0] + y*vid.dupy*vid.width + x*vid.dupx + vid.scaledofs;
 
   w *= vid.dupx;

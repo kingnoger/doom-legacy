@@ -823,12 +823,11 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
 
   if(rendermode == render_soft)
     vis->DrawVisSprite();
-  else if(rendermode == render_opengl) {
-    if(vis->tex->glid == vis->tex->NOTEXTURE)
-      vis->tex->GetData(); // Generates OpenGL texture id.
-    // FIXME, the number 100 was taken at random to look good.
-    oglrenderer->Draw2DGraphic_Doom(vis->x1, -100-vis->sprite_top.Float()+BASEVIDHEIGHT, vis->tex->width, vis->tex->height, vis->tex->glid);
-  }
+  else if(rendermode == render_opengl)
+    {
+      // FIXME, the number 100 was taken at random to look good.
+      oglrenderer->Draw2DGraphic_Doom(vis->x1, -100-vis->sprite_top.Float()+BASEVIDHEIGHT, vis->tex);
+    }
 }
 
 

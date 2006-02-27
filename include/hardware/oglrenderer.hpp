@@ -94,8 +94,8 @@ public:
 
   void Setup2DMode();
   void Draw2DGraphic(GLfloat top, GLfloat left, GLfloat bottom, GLfloat right, GLuint tex, GLfloat textop=1.0, GLfloat texbottom=0.0, GLfloat texleft=0.0, GLfloat texright=1.0);
-  void Draw2DGraphic_Doom(float x, float y, float width, float height, GLuint tex);
-  void Draw2DGraphicFill_Doom(float x, float y, float width, float height, float texwidth, float texheight, GLuint tex);
+  void Draw2DGraphic_Doom(float x, float y, Texture *tex);
+  void Draw2DGraphicFill_Doom(float x, float y, float width, float height, Texture *tex);
 
   void Setup3DMode();
 
