@@ -868,10 +868,13 @@ void OGLRenderer::DrawSimpleSky() {
   glPushMatrix();
   glLoadIdentity();
   gluOrtho2D(0.0, 1.0, 0.0, 1.0);
+  glMatrixMode(GL_MODELVIEW);
+  glPushMatrix();
+  glLoadIdentity();
 
   glBindTexture(GL_TEXTURE_2D, mp->skytexture->GLPrepare());
-  textop = 1.0;
-  texbottom = 0.0;
+  textop = 0.0;   // And yet again these should be the other way around.
+  texbottom = 1.0;
   top = 1.0;
   bottom = 0.0;
   left = 0.0;
@@ -897,5 +900,7 @@ void OGLRenderer::DrawSimpleSky() {
 
   if(isdepth)
     glEnable(GL_DEPTH_TEST);
+  glPopMatrix();
+  glMatrixMode(GL_PROJECTION);
   glPopMatrix();
 }
