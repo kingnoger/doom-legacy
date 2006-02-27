@@ -29,6 +29,8 @@
 #include "r_data.h"
 #include "r_main.h"
 #include "r_sprite.h"
+#include "am_map.h"
+#include "w_wad.h" // Need file cache to get playpal.
 
 extern int skyflatnum;
 
@@ -36,6 +38,7 @@ OGLRenderer::OGLRenderer() {
   screen = NULL;
   workinggl = false;
   curssec = NULL;
+  palette = NULL;
 
   mp = NULL;
   //  l.glvertexes = NULL;
@@ -90,6 +93,7 @@ void OGLRenderer::StartFrame() {
 
 void OGLRenderer::FinishFrame() {
     SDL_GL_SwapBuffers(); // Double buffered OpenGL goodness.
+    palette = NULL;       // It might have gotten uncached.
 }
 
 // Writes a screen shot to the specified file. Writing is done in BMP
@@ -375,6 +379,41 @@ void OGLRenderer::Draw2DGraphicFill_Doom(float x, float y, float width, float he
   */
 }
 
+// Currently a no-op. Possibly do something in the future.
+
+void OGLRenderer::ClearAutomap() {
+}
+
+// Draws the specified map line to screen.
+
+void OGLRenderer::DrawAutomapLine(const fline_t *line, const int color) {
+  GLfloat c[4];
+  
+  if(!consolemode)
+    I_Error("Trying to draw level map while in 3D mode.\n");
+
+  if(!palette)
+    palette = static_cast<byte*>(fc.CacheLumpName("PLAYPAL", PU_CACHE));
+
+  // Set color.
+  c[0] = palette[3*color]/255.0;
+  c[1] = palette[3*color+1]/255.0;
+  c[2] = palette[3*color+2]/255.0;
+  c[3] = 1.0;
+  glColor4fv(c);
+
+  // Do not use a texture.
+  glBindTexture(GL_TEXTURE_2D, 0);
+
+  glBegin(GL_LINES);
+  glVertex2f(line->a.x/float(BASEVIDWIDTH), 
+	     1.0-line->a.y/float(BASEVIDHEIGHT));
+  glVertex2f(line->b.x/float(BASEVIDWIDTH),
+	     1.0-line->b.y/float(BASEVIDHEIGHT));
+  glEnd();
+
+}
+
 // Set up state and draw a view of the level from the given viewpoint.
 // It is usually the place where the player is currently located.
 
@@ -487,7 +526,6 @@ void OGLRenderer::RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Texture *
       v = seg->v1;
     x = v->x.Float();
     y = v->y.Float();
-    //    z = s->ceilingheight.Float(); 
     
     tx = x/tex->width;
     ty = 1.0 - y/tex->height;
@@ -619,6 +657,9 @@ void OGLRenderer::RenderGLSeg(int num) {
   // Minisegs don't have wall textures so no point in drawing them.
   if(ld == NULL)
     return;
+
+  // Mark this linedef as visited so it gets drawn on the automap.
+  ld->flags |= ML_MAPPED;
 
   fv = s->v1;
   tv = s->v2;

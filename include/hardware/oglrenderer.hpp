@@ -29,6 +29,7 @@
 class PlayerInfo;
 class Texture;
 class Actor;
+struct fline_t;
 
 // This is an attempt at creating a new OpenGL renderer for Legacy.
 // The basic idea is that ALL rendering related stuff is kept inside
@@ -67,6 +68,7 @@ private:
   bool workinggl;  // Do we have a working OpenGL context?
 
   class Map *mp;  ///< Map to be rendered
+  byte *palette;  ///< Converting palette data to OGL colors.
 
   void RenderBSPNode(int nodenum); ///< Render level using BSP.
   void RenderGLSubsector(int num);
@@ -96,6 +98,8 @@ public:
   void Draw2DGraphic(GLfloat top, GLfloat left, GLfloat bottom, GLfloat right, GLuint tex, GLfloat textop=1.0, GLfloat texbottom=0.0, GLfloat texleft=0.0, GLfloat texright=1.0);
   void Draw2DGraphic_Doom(float x, float y, Texture *tex);
   void Draw2DGraphicFill_Doom(float x, float y, float width, float height, Texture *tex);
+  void ClearAutomap();
+  void DrawAutomapLine(const fline_t *line, const int color);
 
   void Setup3DMode();
 

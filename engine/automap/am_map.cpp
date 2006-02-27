@@ -53,20 +53,17 @@
 #include "i_video.h"
 #include "tables.h"
 
-#ifdef HWRENDER
-#include "hardware/hwr_render.h"
-#endif
+#include "oglrenderer.hpp"
 
+extern OGLRenderer *oglrenderer;
 
 // the only AutoMap instance in the game
 AutoMap automap;
-
 
 struct mline_t
 {
   mpoint_t a, b;
 };
-
 
 byte *fb; // pseudo-frame buffer
 
@@ -789,11 +786,9 @@ void AutoMap::clearFB(int color)
 {
   if (!mapback)
     {
-#ifdef HWRENDER
-      if (rendermode != render_soft)
-	HWR.ClearAutomap();
+      if (rendermode == render_opengl)
+	oglrenderer->ClearAutomap();
       else
-#endif
 	memset(fb, color, f_w*f_h*vid.BytesPerPixel);
     }
   else
@@ -1083,11 +1078,9 @@ static void AM_drawMline(mline_t* ml, int color)
 
   if (AM_clipMline(ml, &fl))
     {
-#ifdef HWRENDER
-      if (rendermode != render_soft)
-	HWRend::DrawAMline(&fl, color);
+      if (rendermode == render_opengl)
+	oglrenderer->DrawAutomapLine(&fl, color); //, color);
       else
-#endif
 	AM_drawFline_soft(&fl, color); // draws it on frame buffer using fb coords
     }
 }
@@ -1383,6 +1376,9 @@ void AutoMap::Drawer()
   AM_drawCrosshair(XHAIRCOLORS);
 
   drawMarks();
+
+  if(rendermode == render_opengl)
+    oglrenderer->ClearDrawColor();
 
   // mapname
   {

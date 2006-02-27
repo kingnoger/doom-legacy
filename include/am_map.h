@@ -44,7 +44,6 @@ struct mpoint_t
   fixed_t x,y;
 };
 
-
 /// \brief The in-game overhead map.
 ///
 /// There is only one global instance in use, called "automap".
