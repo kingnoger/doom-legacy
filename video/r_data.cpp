@@ -206,11 +206,10 @@ Texture::Texture(const char *n)
 
 Texture::~Texture()
 {
+  ClearGLTexture();
+
   if (pixels)
     Z_Free(pixels);
-
-  if(glid != NOTEXTURE)
-    glDeleteTextures(1, &glid);
 }
 
 
@@ -258,6 +257,12 @@ GLuint Texture::GLPrepare()
   return glid;
 }
 
+void Texture::ClearGLTexture() {
+  if(glid != NOTEXTURE) {
+    glDeleteTextures(1, &glid);
+    glid = NOTEXTURE;
+  }
+}
 
 
 //==================================================================

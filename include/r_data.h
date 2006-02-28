@@ -146,6 +146,9 @@ public:
   /// Creates an OpenGL texture if necessary, returns the handle.
   virtual GLuint GLPrepare();
 
+  /// Unloads the texture from OpenGL. 
+  virtual void ClearGLTexture();
+
   /// draw the Texture flat on screen.
   virtual void Draw(int x, int y, int scrn) {}; // scrn may contain flags
   virtual void HWR_Draw(int x, int y, int flags) {};
@@ -278,6 +281,8 @@ enum texture_class_t
 };
 
 
+typedef std::map<unsigned, Texture *>::iterator texiterator;
+
 /// \brief Second-level cache for Textures
 ///
 /// There are two ways to add Texture definitions to the cache:
@@ -316,6 +321,12 @@ public:
 
   /// empties the cache, deletes all Textures
   void Clear();
+
+  /// For iterating through the textures.
+  texiterator begin() { return texture_ids.begin(); }
+
+  /// For stopping the iteration.
+  texiterator end() { return texture_ids.end(); }
 
   /// generates a Texture from a single data lump
   static Texture *Load(const char *p);

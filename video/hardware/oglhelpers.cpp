@@ -15,6 +15,8 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
+#include"r_data.h"
+#include"doomdef.h"
 #include"oglhelpers.hpp"
 
 static byte lightleveltonumlut[256];
@@ -55,7 +57,14 @@ void InitLumLut() {
         xxx = x * xx;
         k = 255 * (A * xx * xxx + B * xx * xx + C * xxx + D * xx);
 
-        lightleveltonumlut[i] = 255 < k ? 255 : k; //min(255, k);
+        lightleveltonumlut[i] = 255 < k ? 255 : int(k); //min(255, k);
     }
 }
 
+void ClearGLTextures() {
+  for(texiterator ti = tc.begin(); ti != tc.end(); ti++) {
+    if((*ti).second)
+      (*ti).second->ClearGLTexture();
+  }
+  CONS_Printf("All OpenGL textures cleared.\n");
+}

@@ -44,6 +44,7 @@
 #include "sdl/ogl_sdl.h"
 
 #include "oglrenderer.hpp"
+#include "oglhelpers.hpp"
 
 void I_UngrabMouse();
 void I_GrabMouse();
@@ -364,35 +365,17 @@ int I_SetVideoMode(int modeNum)
       if (!OglSdlSurface())
         I_Error("Could not set vidmode\n");
       */
-      //        GLenum errornum;
-      /*      
-	unsigned char mytex[] = {0, 255, 0, 255, 0, 0, 
-				 255, 0, 0, 0, 255, 0};
-      */
-	if(!oglrenderer->InitVideoMode(vid.width, vid.height,
+
+      // Some platfroms silently destroy OpenGL textures when changing
+      // resolution. Unload them all, just in case.
+      ClearGLTextures();
+
+      if(!oglrenderer->InitVideoMode(vid.width, vid.height,
 				     cv_fullscreen.value))
 	I_Error("Could not set OpenGL vidmode.\n");
-	// Clear any old GL errors.
-	while(glGetError() != GL_NO_ERROR)
+      // Clear any old GL errors.
+      while(glGetError() != GL_NO_ERROR)
 	  ;
-	/*
-	// Create a default empty texture.
-	glGenTextures(1, &missingtexture);
-	if(missingtexture != 0)
-	  CONS_Printf("Default missing texture ID is %d, not 0. This could be a problem.\n", missingtexture);
-	
-	glBindTexture(GL_TEXTURE_2D, missingtexture);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);       
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 2, 2, 0, GL_RGB, 
-		     GL_UNSIGNED_BYTE, mytex);
-	errornum = glGetError();
-	if(errornum != GL_NO_ERROR)
-	  CONS_Printf("GL error while building default texture: %s.\n", gluErrorString(errornum));
-	*/
-      
     }
   I_StartupMouse();
   
