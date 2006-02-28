@@ -175,16 +175,16 @@ bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen)
   if(fullscreen)
     surfaceflags |= SDL_FULLSCREEN;
 
-  SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 1);
-  SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 1);
-  SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 1);
-  SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
+  SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+  SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+  SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+  //  SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 8);
   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
   // Check that we get hicolor.
-  int cbpp = SDL_VideoModeOK(w, h, mindepth, surfaceflags);
-  if(cbpp < 16) {
+  int cbpp = SDL_VideoModeOK(w, h, 24, surfaceflags);
+  if(cbpp < mindepth) {
     CONS_Printf("Hicolor OpenGL mode not available.\n");
     return false;
   }
@@ -194,6 +194,19 @@ bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen)
     CONS_Printf("Could not obtain requested resolution.\n");
     return false;
   }
+
+
+  CONS_Printf("Color depth in bits: ");
+  SDL_GL_GetAttribute(SDL_GL_RED_SIZE, &temp);
+  CONS_Printf("R %d, ", temp);
+  SDL_GL_GetAttribute(SDL_GL_GREEN_SIZE, &temp);
+  CONS_Printf("G %d, ", temp);
+  SDL_GL_GetAttribute(SDL_GL_BLUE_SIZE, &temp);
+  CONS_Printf("B %d.\n", temp);
+  SDL_GL_GetAttribute(SDL_GL_ALPHA_SIZE, &temp);
+  CONS_Printf("Alpha buffer depth %d bits.\n", temp);
+  SDL_GL_GetAttribute(SDL_GL_DEPTH_SIZE, &temp);
+  CONS_Printf("Depth buffer depth %d bits.\n", temp);
 
   SDL_GL_GetAttribute(SDL_GL_DOUBLEBUFFER, &temp);
   if(temp)
@@ -529,7 +542,7 @@ void OGLRenderer::RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Texture *
     
     tx = x/tex->width;
     ty = 1.0 - y/tex->height;
-    
+
     glTexCoord2f(tx, ty);
     glVertex3f(x, y, height);
     
