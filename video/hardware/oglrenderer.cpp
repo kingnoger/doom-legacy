@@ -47,7 +47,7 @@ OGLRenderer::OGLRenderer() {
   theta = phi = 0.0;
   viewportw = viewporth = 0;
 
-  fov = 45.0;
+  fov = 70.0;
 
   hudar = 4.0/3.0; // Basic DOOM hud takes the full screen.
   screenar = 1.0;  // Pick a default value, any default value.
@@ -220,9 +220,9 @@ bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen)
     CONS_Printf(" (fullscreen)\n");
   else
     CONS_Printf(" (windowed)\n");
-  CONS_Printf("OpenGL Vendor:   %s.\n", glGetString(GL_VENDOR));
-  CONS_Printf("OpenGL renderer: %s.\n", glGetString(GL_RENDERER));
-  CONS_Printf("OpenGL version:  %s.\n", glGetString(GL_VERSION));
+  CONS_Printf("OpenGL Vendor:   %s\n", glGetString(GL_VENDOR));
+  CONS_Printf("OpenGL renderer: %s\n", glGetString(GL_RENDERER));
+  CONS_Printf("OpenGL version:  %s\n", glGetString(GL_VERSION));
 
   // Calculate the screen's aspect ratio. Assumes square pixels.
   if(w == 1280 && h == 1024 &&     // Check a couple of exceptions.

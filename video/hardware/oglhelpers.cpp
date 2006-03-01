@@ -62,9 +62,12 @@ void InitLumLut() {
 }
 
 void ClearGLTextures() {
-  for(texiterator ti = tc.begin(); ti != tc.end(); ti++) {
+  int count = 0;
+  for(texiterator ti = tc.begin(); ti != tc.end(); ti++)
     if((*ti).second)
-      (*ti).second->ClearGLTexture();
-  }
-  CONS_Printf("All OpenGL textures cleared.\n");
+      if((*ti).second->ClearGLTexture())
+	count++;
+
+  if(count)
+    CONS_Printf("Cleared %d OpenGL textures.\n", count);
 }

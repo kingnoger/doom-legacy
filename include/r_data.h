@@ -147,7 +147,7 @@ public:
   virtual GLuint GLPrepare();
 
   /// Unloads the texture from OpenGL. 
-  virtual void ClearGLTexture();
+  virtual bool ClearGLTexture();
 
   /// draw the Texture flat on screen.
   virtual void Draw(int x, int y, int scrn) {}; // scrn may contain flags

@@ -257,11 +257,15 @@ GLuint Texture::GLPrepare()
   return glid;
 }
 
-void Texture::ClearGLTexture() {
+// Returns true if texture existed and was deleted. False otherwise.
+
+bool Texture::ClearGLTexture() {
   if(glid != NOTEXTURE) {
     glDeleteTextures(1, &glid);
     glid = NOTEXTURE;
+    return true;
   }
+  return false;
 }
 
 
