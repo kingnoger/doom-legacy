@@ -25,17 +25,19 @@
 #ifndef m_swap_h
 #define m_swap_h 1
 
+#include "doomtype.h"
+
 // WAD files are always little endian.
 
 #ifdef __BIG_ENDIAN__
-# define SHORT(x) ((short)( \
-(((unsigned short)(x) & (unsigned short)0x00ffU) << 8) | \
-(((unsigned short)(x) & (unsigned short)0xff00U) >> 8) ))
-# define LONG(x) ((int)( \
-(((unsigned int)(x) & (unsigned int)0x000000ffUL) << 24) | \
-(((unsigned int)(x) & (unsigned int)0x0000ff00UL) <<  8) | \
-(((unsigned int)(x) & (unsigned int)0x00ff0000UL) >>  8) | \
-(((unsigned int)(x) & (unsigned int)0xff000000UL) >> 24) ))
+# define SHORT(x) ((Sint16)( \
+(((Uint16)(x) & (Uint16)0x00ffU) << 8) | \
+(((Uint16)(x) & (Uint16)0xff00U) >> 8) ))
+# define LONG(x) ((Sint32)( \
+(((Uint32)(x) & (Uint32)0x000000ffUL) << 24) | \
+(((Uint32)(x) & (Uint32)0x0000ff00UL) <<  8) | \
+(((Uint32)(x) & (Uint32)0x00ff0000UL) >>  8) | \
+(((Uint32)(x) & (Uint32)0xff000000UL) >> 24) ))
 #else
 # define SHORT(x) (x)
 # define LONG(x)  (x)

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -16,12 +16,12 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
-//
 //-----------------------------------------------------------------------------
 
 /// \file
 /// \brief Movement, collision handling. Shooting and aiming.
+
+// FIXME entire aiming/sight/trace/intercept system: handle z coordinate better. also, slope was originally tangent, now it is sine, but NOT everywhere! FIX!
 
 #include <math.h>
 #include "doomdef.h"
@@ -1543,12 +1543,12 @@ fixed_t Actor::AimLineAttack(angle_t ang, fixed_t distance)
   //added:15-02-98: Fab comments...
   // Doom's base engine says that at a distance of 160,
   // the 2d graphics on the plane x,y correspond 1/1 with plane units
-  const fixed_t ds = 10.0f/16;
+  const fixed_t ds = 10.0f/16; // tan of half the vertical fov
   fixed_t aimslope = Sin(pitch);
-  topslope    = aimslope + ds;
+  topslope    = aimslope + ds; // TODO not correct... should add the angles and do some clipping
   bottomslope = aimslope - ds;
 
-  shootz = lastz = Center() + 8;
+  shootz = lastz = Center() + 8 - floorclip;
 
   // can't shoot outside view angles
 
@@ -1586,13 +1586,11 @@ void Actor::LineAttack(angle_t ang, fixed_t distance, fixed_t slope, int damage,
   shootthing = this;
   la_damage = damage;
   la_dtype = dtype;
-  linetarget = NULL;
 
   // NOTE see AimLineAttack, same here
   fixed_t temp = sqrt((1 - slope*slope).Float()) * distance;
   //fixed_t temp = distance * Cos(ArcSin(slope));
   //fixed_t temp = distance * Cos(pitch);
-
   fixed_t x2 = pos.x + temp * Cos(ang);
   fixed_t y2 = pos.y + temp * Sin(ang);
 
@@ -1602,6 +1600,7 @@ void Actor::LineAttack(angle_t ang, fixed_t distance, fixed_t slope, int damage,
   aimslope = slope;
 
   tmthing = shootthing;
+  linetarget = NULL;
 
   mp->PathTraverse(pos.x, pos.y, x2, y2,
 		   PT_ADDLINES|PT_ADDTHINGS,

@@ -694,8 +694,7 @@ void MStaffSpawn2(DActor *actor, angle_t angle)
 
 void A_MStaffAttack2(DActor *actor)
 {
-  angle_t angle;
-  angle = actor->yaw;
+  angle_t angle = actor->yaw;
   MStaffSpawn2(actor, angle);
   MStaffSpawn2(actor, angle-ANGLE_1*5);
   MStaffSpawn2(actor, angle+ANGLE_1*5);
@@ -711,48 +710,39 @@ void A_MStaffAttack2(DActor *actor)
 void A_FPunchAttack(PlayerPawn *player, pspdef_t *psp)
 {
   angle_t angle;
-  int damage;
   fixed_t slope;
-  fixed_t power;
-  int i;
 
-  damage = 40+(P_Random()&15);
-  power = 2;
+  int damage = 40+(P_Random()&15);
+  fixed_t power = 2;
   PuffType = MT_PUNCHPUFF;
-  for(i = 0; i < 16; i++)
+  for(int i = 0; i < 16; i++)
     {
+      // find the target most directly in front of the player
       angle = player->yaw+i*(ANG45/16);
       slope = player->AimLineAttack(angle, 2*MELEERANGE);
-      if(linetarget)
+      if (!linetarget)
 	{
-	  player->attackphase++;
-	  if(player->attackphase == 3)
-	    {
-	      damage <<= 1;
-	      power = 6;
-	      PuffType = MT_HAMMERPUFF;
-	    }
-	  player->LineAttack(angle, 2*MELEERANGE, slope, damage);
-	  if (linetarget->flags & MF_SHOOTABLE)
-	    //(linetarget->flags&MF_COUNTKILL || linetarget->player)
-	    {
-	      linetarget->Thrust(angle, power);
-	    }
-	  AdjustPlayerAngle(player);
-	  goto punchdone;
+	  // try the other side
+	  angle = player->yaw-i*(ANG45/16);
+	  slope = player->AimLineAttack(angle, 2*MELEERANGE);
 	}
-      angle = player->yaw-i*(ANG45/16);
-      slope = player->AimLineAttack(angle, 2*MELEERANGE);
+
       if(linetarget)
 	{
 	  player->attackphase++;
-	  if(player->attackphase == 3)
+	  if (player->attackphase == 3)
 	    {
 	      damage <<= 1;
 	      power = 6;
 	      PuffType = MT_HAMMERPUFF;
 	    }
 	  player->LineAttack(angle, 2*MELEERANGE, slope, damage);
+	  if (!linetarget)
+	    {
+	      CONS_Printf("AimLineAttack mismatch (bug)\n");
+	      return;
+	    }
+
 	  if (linetarget->flags & MF_SHOOTABLE)	  
 	    //(linetarget->flags&MF_COUNTKILL || linetarget->player)
 	    {

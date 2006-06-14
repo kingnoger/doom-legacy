@@ -40,6 +40,7 @@ protected:
 
 public:
   HudWidget(int x, int y);
+  virtual ~HudWidget() {};
 
   /// force: update even if no change
   virtual void Update(bool force)  { Draw(); };

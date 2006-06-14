@@ -319,11 +319,12 @@ bool MapInfo::HubLoad()
 // one command set per block
 
 #if __GNUC__ >= 4
-#define MI_offset(field) ((char*)&(((MapInfo*)0)->field) - (char*)0)
-//#define MI_offset(field) offsetof(MapInfo, field)
+//#define MI_offset(field) ((char*)&(((MapInfo*)0)->field) - (char*)0)
+# define MI_offset(field) offsetof(MapInfo, field)
 #else
-#define MI_offset(field) (size_t(&MapInfo::field))
+# define MI_offset(field) (size_t(&MapInfo::field))
 #endif
+
 //#define MI_offset(field) (size_t(&((MapInfo *)0)->field))
 static parsercmd_t MapInfo_commands[]=
 {
@@ -466,9 +467,11 @@ char *MapInfo::Read(int lump)
     else
       doom_offs[0] = 0, doom_offs[1] = 65535;
 
+  /*
   CONS_Printf("doom offsets: %d, %d\n", doom_offs[0], doom_offs[1]);
   CONS_Printf("heretic offsets: %d, %d\n", heretic_offs[0], heretic_offs[1]);
   CONS_Printf("hexen offsets: %d, %d\n", hexen_offs[0], hexen_offs[1]);
+  */
 
 
   // FS script data
@@ -482,10 +485,10 @@ char *MapInfo::Read(int lump)
 //==============================================
 
 #if __GNUC__ >= 4
-#define CD_offset(field) ((char*)&(((MapCluster*)0)->field) - (char*)0)
+# define CD_offset(field) ((char*)&(((MapCluster*)0)->field) - (char*)0)
 //#define CD_offset(field) offsetof(MapCluster, field)
 #else
-#define CD_offset(field) (size_t(&MapCluster::field))
+# define CD_offset(field) (size_t(&MapCluster::field))
 #endif
 //#define CD_offset(field) (size_t(&((MapCluster *)0)->field))
 

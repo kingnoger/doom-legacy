@@ -136,8 +136,8 @@ void BeginGame(int episode, int skill, bool public_server)
 //======================================================================
 
 event_t  events[MAXEVENTS];
-int      eventhead;
-int      eventtail;
+int      eventhead = 0;
+int      eventtail = 0;
 
 bool shiftdown = false, altdown = false;
 

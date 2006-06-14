@@ -1423,9 +1423,9 @@ bool dehacked_t::LoadDehackedLump(const char *buf, int len)
   num_errors = 0;
 
   // original values
-  d_actions = (actionf_p1 *)Z_Malloc(NUMSTATES * sizeof(actionf_p1), PU_STATIC, NULL);
-  w_actions = (actionf_p2 *)Z_Malloc(NUMWEAPONSTATES * sizeof(actionf_p2), PU_STATIC, NULL);
-  savesprnames = (char **)Z_Malloc(NUMSPRITES * sizeof(char *), PU_STATIC, NULL);
+  d_actions = (actionf_p1 *)Z_Malloc(int(NUMSTATES) * sizeof(actionf_p1), PU_STATIC, NULL);
+  w_actions = (actionf_p2 *)Z_Malloc(int(NUMWEAPONSTATES) * sizeof(actionf_p2), PU_STATIC, NULL);
+  savesprnames = (char **)Z_Malloc(int(NUMSPRITES) * sizeof(char *), PU_STATIC, NULL);
 
   int i;
 

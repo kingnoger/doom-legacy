@@ -138,6 +138,9 @@ Map::~Map()
       Z_Free(ActionCodeBase);
     }
 
+  if (ACStrings)
+    Z_Free(ACStrings);
+
   Z_Free(mapthings);
 
   if (botnodes)

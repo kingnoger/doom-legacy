@@ -23,6 +23,7 @@
 /// \brief Sound system and cache
 
 #include <stdlib.h> // rand
+#include <math.h>
 
 #include "doomdef.h"
 #include "doomdata.h"

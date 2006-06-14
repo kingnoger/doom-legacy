@@ -340,10 +340,10 @@ void *Z_MallocAlign(int size, int tag, void **user, int alignbits)
   temp->id = ZONEID;
   temp->tag = tag;
   temp->user = user;
-  ((byte *)temp) += sizeof(memblock_t);
+  byte *ret = reinterpret_cast<byte*>(temp) + sizeof(memblock_t);
   if (user)
-    *user = temp;
-  return temp;
+    *user = ret;
+  return ret;
 #endif
 
   void *allocation;
@@ -377,9 +377,12 @@ void *Z_MallocAlign(int size, int tag, void **user, int alignbits)
 // pointer to the memory. Returns NULL on failure.
 void* memzone_t::Malloc(int size, int tag, void **user, int alignbits)
 {
+#ifdef MEMDEBUG
+  return NULL;
+#else
   Uint32 alignmask = (1 << alignbits) - 1;
 
-# define ALIGN(a) (((Uint32)(a)+alignmask) & ~alignmask)
+#define ALIGN(a) (((Uint32)(a)+alignmask) & ~alignmask)
 
   size = (size + 3) & ~3; // align size to next multiple of 4
   size += sizeof(memblock_t); // account for size of block header
@@ -515,6 +518,7 @@ void* memzone_t::Malloc(int size, int tag, void **user, int alignbits)
   base = base->next;
 
   return (void *)((byte *)rover + sizeof(memblock_t));
+#endif
 }
 
 
@@ -620,23 +624,22 @@ void Z_FileDumpHeap(FILE *f)
 
   for (unsigned int i=0; i < zones.size(); i++)
     {
-      fprintf(f, "Z_FileDumpHeap info for zone %d/%d.\n", i, zones.size());
+      fprintf(f, "Z_FileDumpHeap info for zone %d/%ld.\n", i, zones.size());
       zones[i]->FileDumpHeap(f);
     }
 }
 
 void memzone_t::FileDumpHeap(FILE *f)
 {
-  memblock_t *block;
   int i = 0;
 
   fprintf(f, "zone size: %i     location: %p\n", size, this);
 
-  for (block = blocklist.next ; ; block = block->next)
+  for (memblock_t *block = blocklist.next ; ; block = block->next)
     {
       i++;
-      fprintf (f,"block:%p size:%7i user:%7x tag:%3i prev:%p next:%p id:%7i\n",
-               block, block->size, (int)block->user, block->tag, block->prev, block->next, block->id);
+      fprintf (f,"block:%p size:%7i user:%p tag:%3i prev:%p next:%p id:%7i\n",
+               block, block->size, block->user, block->tag, block->prev, block->next, block->id);
 
       if (block->next == &blocklist)
         {
@@ -645,7 +648,7 @@ void memzone_t::FileDumpHeap(FILE *f)
         }
 
       if ((block->user > (void **)0x100) &&
-           ((int)(*(block->user))!=((int)block)+(int)sizeof(memblock_t)))
+	  (*(block->user) != reinterpret_cast<byte*>(block) + sizeof(memblock_t)))
         fprintf (f,"ERROR: block don't have a proper user\n");
 
       if ( (byte *)block + block->size != (byte *)block->next)

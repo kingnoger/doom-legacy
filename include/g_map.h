@@ -478,7 +478,7 @@ public:
 
   // ACS scripting
   void CheckACSStore();
-  void StartOpenACS(int number, int infoIndex, int *address);
+  void StartOpenACS(int number, int infoIndex, Sint32 *address);
   bool StartACS(int number, byte *args, Actor *activator, line_t *line, int side);
   bool StartLockedACS(line_t *line, byte *args, class PlayerPawn *p, int side);
   bool TerminateACS(int number);

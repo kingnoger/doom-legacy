@@ -15,7 +15,7 @@ all	: $(grammar_objects)
 
 ntexture.tab.c	: ntexture.y $(i)/ntexture.h
 	@echo "Need to run Bison!"
-#	bison $<
+	bison $<
 
 ntexture.yy.c	: ntexture.flex $(i)/ntexture.h ntexture.tab.h
 	flex $<

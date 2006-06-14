@@ -39,13 +39,13 @@ endif
 ifdef LINUX
 
 # file removal utility
- RM = rm -f
+ RM = rm
 # assembler
  NASM = nasm
  nasmformat = elf - DLINUX # hmmm... a define here...
 # compiler
  platform = -DLINUX
- interface = -DSDL -DNOMIXER
+ interface = -DSDL
 # linker
  LIBS	= -L/usr/X11/lib -L/local/lib -lSDLmain -lSDL -lSDL_mixer -lpng -lz -L. -ltnl -ltomcrypt
  OPENGLLIBS = -lGL -lGLU
@@ -81,7 +81,7 @@ export RM
 export LDFLAGS
 
 # C++ compiler (usually g++)
-export CC = g++-3.3
+export CC = g++
 
 # Defines.
 #

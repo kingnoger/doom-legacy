@@ -22,17 +22,15 @@
 /// \file
 /// \brief Converts Doom MUS data to MIDI music data
 
-#ifndef __OS2__
-
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+
 #include "doomdef.h"
 #include "i_system.h"
-#include "byteptr.h"
 #include "m_swap.h"
 
 #include "qmus2mid.h"
@@ -65,9 +63,21 @@ static unsigned char MUS2MIDcontrol[15] =
 static byte    MUSchannel;
 static byte    MIDItrack;
 
+
 #define fwritemem(p,s,n,f)  memcpy(*f,p,n*s);*f+=(s*n)
-#define fwriteshort(x,f)    WRITESHORT(*f,((x>>8) & 0xff) | (x<<8))
-#define fwritelong(x,f)     WRITEULONG(*f,((x>>24) & 0xff) | ((x>>8) & 0xff00) | ((x<<8) & 0xff0000) | (x<<24))
+
+inline void fwriteshort(Uint16 x, byte **f)
+{
+  Sint16 *p = reinterpret_cast<Sint16*>(*f);
+  *p++ = ((x>>8) & 0xff) | (x<<8);
+}
+
+inline void fwritelong(Uint32 x, byte **f)
+{
+  Sint32 *p = reinterpret_cast<Sint32*>(*f);
+  *p++ = ((x>>24) & 0xff) | ((x>>8) & 0xff00) | ((x<<8) & 0xff0000) | (x<<24);
+}
+
 
 #define last(e)         ((unsigned char)(e & 0x80))
 #define event_type(e)   ((unsigned char)((e & 0x7F)>>4))
@@ -394,5 +404,3 @@ int qmus2mid(byte *mus,
 
     return 0;
 }
-
-#endif // __OS2__

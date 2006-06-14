@@ -1,9 +1,8 @@
 // Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
-//
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,13 +14,11 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
-//
-// DESCRIPTION:
-// GameInfo class implementation:
-//   Demo recording and playback related part
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief GameInfo class implementation:
+/// Demo recording and playback related part
 
 #include "doomdef.h"
 #include "d_ticcmd.h"
@@ -45,7 +42,6 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
-#include "byteptr.h" // shouldn't be here
 
 #warning The demo system is completely inoperational.
 
@@ -163,6 +159,21 @@ vector<ticcmd_t> oldcmd;
 // was G_ReadDemoTiccmd
 //
 
+  // HACK
+inline Sint8 READCHAR(byte *p)
+{
+  Sint8 t = *(reinterpret_cast<Sint8*>(p));
+  p++;
+  return t;
+}
+inline Sint16 READSHORT(byte *p)
+{
+  Sint16 t = *(reinterpret_cast<Sint16*>(p));
+  p += 2;
+  return t;
+}
+
+
 void GameInfo::ReadDemoTiccmd(ticcmd_t* cmd, int playernum)
 {
   if (*demo_p == DEMOMARKER)
@@ -171,50 +182,39 @@ void GameInfo::ReadDemoTiccmd(ticcmd_t* cmd, int playernum)
       CheckDemoStatus();
       return;
     }
-  if(demoversion<112)
-    {
-      cmd->forward = READCHAR(demo_p);
-      cmd->side = READCHAR(demo_p);
-      //cmd->yaw = READBYTE(demo_p)<<8;
-      cmd->yaw = (*demo_p++)<<8;
-      //cmd->buttons = READBYTE(demo_p);
-      cmd->buttons = *demo_p++;
-      cmd->yaw = 0;
-    }
-  else
-    {
-      char ziptic=*demo_p++;
 
-      if(ziptic & ZT_FWD)
-        oldcmd[playernum].forward = READCHAR(demo_p);
-      if(ziptic & ZT_SIDE)
-        oldcmd[playernum].side = READCHAR(demo_p);
-      if(ziptic & ZT_ANGLE)
-        {
-          if(demoversion<125)
-            oldcmd[playernum].yaw = (*demo_p++)<<8;
-          else
-            oldcmd[playernum].yaw = READSHORT(demo_p);
-        }
-      if(ziptic & ZT_BUTTONS)
-        oldcmd[playernum].buttons = *demo_p++;
-      if(ziptic & ZT_AIMING)
-        {
-          if(demoversion<128)
-            oldcmd[playernum].yaw = READCHAR(demo_p);
-          else
-            oldcmd[playernum].yaw = READSHORT(demo_p);
-        }
-      if(ziptic & ZT_CHAT)
-        demo_p++;
+  char ziptic=*demo_p++;
+
+  if(ziptic & ZT_FWD)
+    oldcmd[playernum].forward = READCHAR(demo_p);
+  if(ziptic & ZT_SIDE)
+    oldcmd[playernum].side = READCHAR(demo_p);
+  if(ziptic & ZT_ANGLE)
+    {
+      if(demoversion<125)
+	oldcmd[playernum].yaw = (*demo_p++)<<8;
+      else
+	oldcmd[playernum].yaw = READSHORT(demo_p);
+    }
+  if(ziptic & ZT_BUTTONS)
+    oldcmd[playernum].buttons = *demo_p++;
+  if(ziptic & ZT_AIMING)
+    {
+      if(demoversion<128)
+	oldcmd[playernum].yaw = READCHAR(demo_p);
+      else
+	oldcmd[playernum].yaw = READSHORT(demo_p);
+    }
+  if(ziptic & ZT_CHAT)
+    demo_p++;
       /*
       if(ziptic & ZT_EXTRADATA)
         ReadLmpExtraData(&demo_p,playernum);
       else
         ReadLmpExtraData(0,playernum);
       */
-      memcpy(cmd,&(oldcmd[playernum]),sizeof(ticcmd_t));
-    }
+  memcpy(cmd,&(oldcmd[playernum]),sizeof(ticcmd_t));
+
 }
 
 // was G_WriteDemoTiccmd

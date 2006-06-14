@@ -36,6 +36,7 @@ protected:
 
 public:
   BotAI();
+  virtual ~BotAI() {}
 
   virtual void BuildInput(PlayerInfo *p, int elapsed_tics) = 0;
 };

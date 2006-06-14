@@ -104,9 +104,9 @@ typedef int (*acsfunc_t)();
 #define S_PUSH(x) ACScript->stak[ACScript->stackPtr++] = x
 
 
-static acs_t *ACScript; // script being interpreted
-static Map   *ACMap;    // where it runs (shorthand)
-static int   *PCodePtr;
+static acs_t  *ACScript; // script being interpreted
+static Map    *ACMap;    // where it runs (shorthand)
+static Sint32 *PCodePtr;
 static union
 {
   byte SpecArgs[8];
@@ -374,28 +374,32 @@ void Map::LoadACScripts(int lump)
     return;
 
   int i;
-  acsInfo_t *info;
 
   struct acsHeader_t
   {
-    int marker;
-    int infoOffset;
-    int code;
+    Sint32 marker;
+    Sint32 infoOffset;
+    Sint32 code;
   };
 
   acsHeader_t *header = (acsHeader_t *)fc.CacheLumpNum(lump, PU_LEVEL);
   ActionCodeBase = (byte *)header;
-  int *buffer = (int *)((byte *)header+header->infoOffset);
+  Sint32 *buffer = (Sint32 *)(ActionCodeBase + header->infoOffset);
   ACScriptCount = *buffer++;
   if (ACScriptCount == 0)
-    return; // Empty behavior lump
+    {
+      Z_Free(ActionCodeBase);
+      ActionCodeBase = NULL;
+      return; // Empty behavior lump
+    }
 
   ACSInfo = (acsInfo_t *)Z_Malloc(ACScriptCount*sizeof(acsInfo_t), PU_LEVEL, 0);
   memset(ACSInfo, 0, ACScriptCount*sizeof(acsInfo_t));
-  for (i = 0, info = ACSInfo; i < ACScriptCount; i++, info++)
+  acsInfo_t *info = ACSInfo;
+  for (i = 0; i < ACScriptCount; i++, info++)
     {
       info->number = *buffer++;
-      info->address = (int *)(ActionCodeBase+*buffer++);
+      info->address = (Sint32 *)(ActionCodeBase+*buffer++);
       info->argCount = *buffer++;
       if (info->number >= OPEN_SCRIPTS_BASE)
 	{ // Auto-activate
@@ -408,17 +412,18 @@ void Map::LoadACScripts(int lump)
 	  info->state = ACS_inactive;
 	}
     }
+
   ACStringCount = *buffer++;
-  ACStrings = (char **)buffer;
+  ACStrings = (char **)Z_Malloc(ACStringCount * sizeof(char*), PU_LEVEL, 0);
   for (i = 0; i < ACStringCount; i++)
-    ACStrings[i] += (int)ActionCodeBase;
+    ACStrings[i] = (char *)ActionCodeBase + buffer[i];
 
   memset(ACMapVars, 0, sizeof(ACMapVars));
 }
 
 
 // Scripts that always start immediately at level load.
-void Map::StartOpenACS(int number, int infoIndex, int *address)
+void Map::StartOpenACS(int number, int infoIndex, Sint32 *address)
 {
   CONS_Printf("Starting an opening ACS (script %d)\n", number);
   acs_t *script = new acs_t(number, infoIndex, address);
@@ -594,7 +599,7 @@ IMPLEMENT_CLASS(acs_t, Thinker);
 acs_t::acs_t() {}
 
 
-acs_t::acs_t(int num, int ii, int *addr)
+acs_t::acs_t(int num, int ii, Sint32 *addr)
 {
   number = num;
   infoIndex = ii;
@@ -1121,7 +1126,7 @@ static int CmdDecWorldVar()
 
 static int CmdGoto()
 {
-  PCodePtr = (int *)(ACMap->ActionCodeBase+*PCodePtr);
+  PCodePtr = reinterpret_cast<Sint32 *>(ACMap->ActionCodeBase+*PCodePtr);
   return SCRIPT_CONTINUE;
 }
 
@@ -1129,7 +1134,7 @@ static int CmdIfGoto()
 {
   if(Pop())
     {
-      PCodePtr = (int *)(ACMap->ActionCodeBase+*PCodePtr);
+      PCodePtr = reinterpret_cast<Sint32 *>(ACMap->ActionCodeBase+*PCodePtr);
     }
   else
     {
@@ -1403,7 +1408,7 @@ static int CmdIfNotGoto()
     }
   else
     {
-      PCodePtr = (int *)(ACMap->ActionCodeBase+*PCodePtr);
+      PCodePtr = reinterpret_cast<Sint32 *>(ACMap->ActionCodeBase+*PCodePtr);
     }
   return SCRIPT_CONTINUE;
 }
@@ -1441,7 +1446,7 @@ static int CmdCaseGoto()
 {
   if(Top() == *PCodePtr++)
     {
-      PCodePtr = (int *)(ACMap->ActionCodeBase+*PCodePtr);
+      PCodePtr = reinterpret_cast<Sint32 *>(ACMap->ActionCodeBase+*PCodePtr);
       Drop();
     }
   else

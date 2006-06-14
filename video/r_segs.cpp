@@ -1360,19 +1360,20 @@ void Rend::R_StoreWallRange(int start, int stop)
 
     //SoM: 3/26/2000: Use Boom limit removal and see if it works better.
     //SoM: Boom code:
-  if (ds_p == drawsegs+maxdrawsegs)
+  if (ds_p == drawsegs + maxdrawsegs)
     {
-      unsigned pos = ds_p - drawsegs;
-      unsigned pos2 = firstnewseg - drawsegs;
-      unsigned newmax = maxdrawsegs ? maxdrawsegs*2 : 128;
-      if(firstseg)
-        firstseg = (drawseg_t *)(firstseg - drawsegs);
-      drawsegs = (drawseg_t *)realloc(drawsegs,newmax*sizeof(*drawsegs));
-      ds_p = drawsegs + pos;
-      firstnewseg = drawsegs + pos2;
-      maxdrawsegs = newmax;
-      if(firstseg)
-        firstseg = drawsegs + (int)firstseg;
+      unsigned pos_ds_p = ds_p - drawsegs;
+      unsigned pos_firstnewseg = firstnewseg - drawsegs;
+      unsigned pos_firstseg = firstseg - drawsegs;
+
+      maxdrawsegs = maxdrawsegs ? maxdrawsegs*2 : 128;
+      drawsegs = (drawseg_t *)realloc(drawsegs, maxdrawsegs*sizeof(*drawsegs));
+
+      ds_p = drawsegs + pos_ds_p;
+      firstnewseg = drawsegs + pos_firstnewseg;
+
+      if (firstseg)
+        firstseg = drawsegs + pos_firstseg; // if NULL, let it remain NULL
     }
 
     

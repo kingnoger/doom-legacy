@@ -15,18 +15,16 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
-//
-// DESCRIPTION:
-//   AC Script interpreter
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief AC Script interpreter
 
 #ifndef p_acs_h
 #define p_acs_h 1
 
 #include <map>
-
+#include "doomtype.h"
 
 #define MAX_ACS_SCRIPT_VARS 10
 #define MAX_ACS_WORLD_VARS 64
@@ -35,6 +33,7 @@
 void P_ACSInitNewGame();
 bool P_AddToACSStore(int tmap, int number, byte *args);
 
+/// \brief Thinker class for running AC scripts
 class acs_t : public Thinker
 {
   DECLARE_CLASS(acs_t);
@@ -48,15 +47,15 @@ public:
   int stackPtr;
   int stak[ACS_STACK_DEPTH];
   int vars[MAX_ACS_SCRIPT_VARS];
-  int *ip;
+  Sint32 *ip; ///< Instruction Pointer into the raw BEHAVIOR lump
 
 public:
-  acs_t(int num, int infoindex, int *ip);
+  acs_t(int num, int infoindex, Sint32 *ip);
 
   virtual void Think();
 };
 
-
+/// \brief Data for a stored or "queued" AC script in a currently inactive Map.
 struct acsstore_t
 {
   int tmap;	// Target map
@@ -81,13 +80,14 @@ enum acs_state_t
   ACS_terminating
 };
 
+
 struct acsInfo_t
 {
-  int  number;
-  int *address;
-  int  argCount;
+  int     number;
+  Sint32 *address;
+  int     argCount;
   acs_state_t state;
-  int  waitValue;
+  int     waitValue;
 };
 
 
