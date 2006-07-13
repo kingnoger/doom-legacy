@@ -194,22 +194,31 @@ public:
 
   static int Serialize(presentation_t *p, LArchive &a);
   static presentation_t *Unserialize(LArchive &a);
+
+  /// Netcode
+  virtual void   Pack(class TNL::BitStream *s) = 0;
+  virtual void Unpack(class TNL::BitStream *s) = 0;
+  virtual void   PackAnim(class TNL::BitStream *s) = 0;
+  virtual void UnpackAnim(class TNL::BitStream *s) = 0;
 };
 
 
 /// \brief Sprite presentation
 ///
 /// Sprites can be animated in two ways, either using SetAnim or SetFrame.
-/// Both use the states table.
+/// Both use the states table. A sprite presentation is defined by a mobjinfo_t struct.
 class spritepres_t : public presentation_t
 {
 protected:
   sprite_t *spr;
-  const struct mobjinfo_t *info; // this is used to know which sequence corresponds to which state
-  const state_t *state; // the animation frames are tied to the states table
+  const struct mobjinfo_t *info; ///< this is used to know which sequence corresponds to which state
+  const state_t *state; ///< animation frames are tied to the states table
 
 public:
-  spritepres_t(const char *name, const mobjinfo_t *inf, int col = 0);
+  spritepres_t(); ///< simple constructor for netcode
+  spritepres_t(const mobjinfo_t *inf, int col = 0); ///< normal constructor
+  spritepres_t(class TNL::BitStream *s);
+
   virtual ~spritepres_t();
 
   virtual void SetFrame(const state_t *st); // Only used by DActors with sprites
@@ -220,6 +229,12 @@ public:
   virtual bool Draw(const Actor *p);
   virtual spriteframe_t *GetFrame();
   virtual int  Marshal(LArchive &a);
+
+  /// Netcode
+  virtual void   Pack(class TNL::BitStream *s);
+  virtual void Unpack(class TNL::BitStream *s) {}
+  virtual void   PackAnim(class TNL::BitStream *s);
+  virtual void UnpackAnim(class TNL::BitStream *s);
 };
 
 

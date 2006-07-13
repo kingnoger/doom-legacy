@@ -25,6 +25,7 @@
 #define vect_h 1
 
 #include<iostream>
+#include "tnl/tnlBitStream.h"
 
 //#include <math.h>
 
@@ -144,7 +145,25 @@ public:
   {
     return T_this(a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x);
   }
+
+
+  /// OpenTNL packing method
+  inline void Pack(TNL::BitStream *s)
+  {
+    x.Pack(s);
+    y.Pack(s);
+    z.Pack(s);
+  }
+
+  /// OpenTNL unpacking method
+  inline void Unpack(TNL::BitStream *s)
+  {
+    x.Unpack(s);
+    y.Unpack(s);
+    z.Unpack(s);
+  }
 };
+
 
 
 

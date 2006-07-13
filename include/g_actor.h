@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -16,10 +16,7 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
-//
 //-----------------------------------------------------------------------------
-
 
 #ifndef g_actor_h
 #define g_actor_h 1
@@ -30,6 +27,8 @@
 #include "g_think.h"  // We need the Thinker stuff.
 #include "g_damage.h" // and damage types
 #include "info.h"     // stuff for DActor
+
+using namespace TNL;
 
 const fixed_t ONFLOORZ   = fixed_t::FMIN;
 const fixed_t ONCEILINGZ = fixed_t::FMAX;
@@ -136,7 +135,7 @@ enum mobjflag_t
   MF_SPECIAL      = 0x00800000, ///< Call TouchSpecialThing when touched. Mostly items you can pick up.
   MF_DROPPED      = 0x01000000, ///< *Dropped by a monster
   MF_MISSILE      = 0x02000000, ///< Player missiles as well as fireballs. Don't hit same species, explode on block.
-  MF_CORPSE       = 0x04000000, ///< *Acts like a corpse, falls down stairs etc.
+  MF_CORPSE       = 0x04000000, ///< Dead. Acts like a corpse, falls down stairs etc.
   // 5 bits free
 };
 
@@ -168,11 +167,9 @@ enum mobjflag2_t
   MF2_FOOTCLIP       = 0x00040000,    ///< Feet may be be clipped
   MF2_DONTDRAW       = 0x00080000,    ///< Invisible (does not generate a vissprite)
   // giving hurt
-  MF2_FIREDAMAGE     = 0x00100000,    ///< Does fire damage
-  MF2_ICEDAMAGE	     = 0x00200000,    ///< Does ice damage
-  MF2_NODMGTHRUST    = 0x00400000,    ///< Does not thrust target when damaging        
-  MF2_TELESTOMP      = 0x00800000,    ///< Can telefrag another Actor
-  // 4 bits free (more damage types?)
+  MF2_NODMGTHRUST    = 0x00100000,    ///< Does not thrust target when damaging        
+  MF2_TELESTOMP      = 0x00200000,    ///< Can telefrag another Actor
+  // 6 bits free
   // activation
   MF2_IMPACT	     = 0x10000000,    ///< Can activate SPAC_IMPACT
   MF2_PUSHWALL	     = 0x20000000,    ///< Can activate SPAC_PUSH
@@ -209,20 +206,38 @@ enum mobjeflag_t
 
 
 /// \brief Basis class for all Thinkers with a well-defined location.
-class Actor : public Thinker, public TNL::NetObject
+class Actor : public Thinker, public NetObject
 {
-  typedef TNL::NetObject Parent;
+  typedef NetObject Parent;
   TNL_DECLARE_CLASS(Actor);
 
-  DECLARE_CLASS(Actor)
+  DECLARE_CLASS(Actor);
+
+  /// netcode
+  virtual bool onGhostAdd(GhostConnection *c);
+  virtual void onGhostRemove();
+  virtual U32 packUpdate(GhostConnection *c, U32 updateMask, BitStream *s);
+  virtual void unpackUpdate(GhostConnection *c, BitStream *s);
+
+public:
+  /// Ghosting flags
+  enum mask_e
+    {
+      M_MOVE = BIT(1),
+      M_ANIM = BIT(2),
+      M_PRES = BIT(3),
+      M_EVERYTHING = 0xFFFFFFFF
+    };
 
 public:
   class presentation_t *pres;  ///< graphic presentation
 
+  /// \name Links to Map geometry
+  //@{
   Actor *sprev, *snext;  ///< sector links
   Actor *bprev, *bnext;  ///< blockmap links
 
-  struct subsector_t *subsector; ///< location
+  struct subsector_t *subsector; ///< current location in BSP
 
   /// The closest interval over all contacted Sectors (or Things).
   fixed_t floorz, ceilingz;
@@ -232,6 +247,7 @@ public:
 
   /// For nightmare and itemrespawn respawn.
   struct mapthing_t *spawnpoint;
+  //@}
 
 public:
   /// position
@@ -242,6 +258,10 @@ public:
 
   /// orientation using Euler angles: yaw is left-right, pitch is up-down, roll is "around"
   angle_t yaw, pitch; //, roll;
+
+  /// TEST: "actual" loc. data for netcode
+  vec_t<fixed_t> apos, avel;
+
 
   /// For movement checking.
   float   mass;
@@ -259,10 +279,12 @@ public:
   int  flags2;
   int  eflags;
 
-  // Hexen fields
+  /// \name Hexen fields
+  //@{
   short	tid;     ///< thing identifier
   byte	special; ///< special type
   byte	args[5]; ///< special arguments
+  //@}
 
   Actor *owner;   ///< Owner of this Actor. For example, for missiles this is the shooter.
   Actor *target;  ///< Thing being chased/attacked (or NULL), also the target for missiles.
@@ -282,6 +304,7 @@ public:
   virtual void Detach();  ///< detaches the Actor from the Map
 
   virtual void Think();
+  virtual void ClientThink(); ///< movement interpolation
   virtual void CheckPointers();
 
   void ClientInterpolate(); ///< Netcode: clientside movement interpolation
@@ -299,7 +322,7 @@ public:
 
   // in p_inter.cpp
   virtual bool Touch(Actor *a); ///< Actor touches another Actor
-  virtual void Die(Actor *inflictor, Actor *source);
+  virtual void Die(Actor *inflictor, Actor *source, int dtype);
   virtual void Killed(class PlayerPawn *victim, Actor *inflictor);
   virtual bool Morph(mobjtype_t form);
   virtual bool Damage(Actor *inflictor, Actor *source, int damage, int dtype = dt_normal);
@@ -336,7 +359,7 @@ class DActor : public Actor
 {
   DECLARE_CLASS(DActor);
 public:
-  mobjtype_t  type;       ///< what kind of thing is it?
+  mobjtype_t        type; ///< what kind of thing is it?
   const mobjinfo_t *info; ///< basic properties    
 
   // state machine variables
@@ -362,7 +385,7 @@ public:
 
   // in p_inter.cpp
   virtual bool Touch(Actor *a);
-  virtual void Die(Actor *inflictor, Actor *source);
+  virtual void Die(Actor *inflictor, Actor *source, int dtype);
   virtual void Killed(PlayerPawn *victim, Actor *inflictor);
   virtual bool Morph(mobjtype_t form);
   virtual bool Damage(Actor *inflictor, Actor *source, int damage, int dtype = dt_normal);

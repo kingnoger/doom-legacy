@@ -41,7 +41,6 @@
 #include "m_argv.h"
 
 #include "m_dll.h"
-#include "sdl/ogl_sdl.h"
 
 #include "oglrenderer.hpp"
 #include "oglhelpers.hpp"

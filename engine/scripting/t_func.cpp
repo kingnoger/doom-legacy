@@ -789,7 +789,7 @@ void SF_KillObj()
   Actor *mo = t_argc ? MobjForSvalue(t_argv[0]) : current_script->trigger;
 
   if (mo)
-    mo->Die(NULL, current_script->trigger);         // kill it
+    mo->Die(NULL, current_script->trigger, 0);         // kill it
 }
 
 // mobj x, y, z

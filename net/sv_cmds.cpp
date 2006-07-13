@@ -636,21 +636,23 @@ void Command_Kill_f()
       Actor *m = NULL;
 
       if (!strcasecmp(s, "me") && com_player)
-	m = com_player->pawn; // suicide
+	{
+	  m = com_player->pawn; // suicide
+	  Kill_pawn(m, m);
+	}
       else if (!strcasecmp(s, "monsters") && com_player && com_player->mp)
 	{
 	  // monsters
 	  CONS_Printf("%d monsters killed.\n", com_player->mp->Massacre());
-	  continue;
 	}
       else if ((p = game.FindPlayer(s)))
-	m = p->pawn; // another player by number or name
+	{
+	  m = p->pawn; // another player by number or name
+	  Kill_pawn(m, NULL); // server does the killing
+	}
       else
 	{
 	  CONS_Printf("Player %s is not in the game.\n", s);
-	  continue;
 	}
-
-      Kill_pawn(m, NULL); // server does the killing
     }
 }

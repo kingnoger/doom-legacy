@@ -106,15 +106,8 @@ void MapInfo::Ticker()
 
       if (state == MAP_FINISHED)
 	{
-	  // check if it's time to stop
-	  int n = me->players.size();
-	  for (int i=0; i<n; i++)
-	    if (!me->players[i]->map_completed && !me->players[i]->spectator)
-	      return;
-
-	  // no players left
 	  // TODO spectators have no destinations set, they should perhaps follow the last exiting player...
-	  if (hub)
+	  if (hub && game.server)
 	    HubSave();
 	  else
 	    Close(-1);
@@ -176,12 +169,16 @@ bool MapInfo::Activate(PlayerInfo *p)
 	return false;
     }
 
-  me->CheckACSStore(); // execute waiting scripts
+  if (game.server)
+    me->CheckACSStore(); // execute waiting scripts
 
   if (!p)
     return true; // map activated without players
 
   me->AddPlayer(p);
+
+  if (game.server)
+    p->s2cEnterMap(mapnumber);
   return true;
 }
 
@@ -195,7 +192,6 @@ int MapInfo::EvictPlayers(int next, int ep, bool force)
   if (next < 0)
     next = nextlevel;
 
-  // kick out the players
   int n = me->players.size();
   for (int i = 0; i < n; i++)
     {
@@ -206,10 +202,10 @@ int MapInfo::EvictPlayers(int next, int ep, bool force)
 	  p->Reset(true, true); // and everything goes.
 	}
 
-      p->ExitLevel(next, ep);
+      p->ExitLevel(next, ep); // puts them in the PST_LEAVINGMAP state
     }
 
-  me->HandlePlayers();
+  me->HandlePlayers(); // kicks them out, starts intermissions
 
   return n;
 }
@@ -270,7 +266,7 @@ bool MapInfo::HubSave()
 /// well, loading the hub saves
 bool MapInfo::HubLoad()
 {
-  if (state != MAP_SAVED)
+  if (!game.server || state != MAP_SAVED)
     return false;
 
   CONS_Printf("Loading a hubsave...");

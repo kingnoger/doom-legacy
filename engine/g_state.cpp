@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,7 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -320,7 +319,7 @@ void GameInfo::Ticker()
 	      // TODO purge the removed players from the frag maps of other players?
 	      continue;
 	    }
-	  else if (p->playerstate == PST_NEEDMAP)
+	  else if (server && p->playerstate == PST_NEEDMAP)
 	    {
 	      // assign the player to a map
 	      CONS_Printf("Map request..");

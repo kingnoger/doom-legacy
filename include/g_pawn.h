@@ -206,7 +206,7 @@ public:
   // in p_inter.cpp
   void TouchSpecialThing(DActor *special);
   virtual bool Touch(Actor *a);
-  virtual void Die(Actor *inflictor, Actor *source);
+  virtual void Die(Actor *inflictor, Actor *source, int dtype);
   virtual void Killed(PlayerPawn *victim, Actor *inflictor);
   virtual bool Damage(Actor *inflictor, Actor *source, int damage, int dtype = dt_normal);
 

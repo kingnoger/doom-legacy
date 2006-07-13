@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,8 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -341,10 +339,12 @@ presentation_t *presentation_t::Unserialize(LArchive &a)
   //CONS_Printf("unserializing a presentation, %d\n", temp);
   if (temp == 0)
     return NULL;
-  else if (temp == 1)      
-    p = new spritepres_t(NULL, NULL, 0);
+  else
+    p = new spritepres_t(NULL, 0);
+  /*
   else
     p = new modelpres_t(NULL);
+  */
 
   p->Marshal(a);
 
@@ -682,7 +682,7 @@ int DActor::Marshal(LArchive &a)
 	pos.z = floorz;
 
       // TODO simplified presentation loading for DActors for now (only sprites)
-      pres = new spritepres_t(NULL, info, 0);
+      pres = new spritepres_t(info, 0);
       pres->SetFrame(state);
     }
 
@@ -1685,7 +1685,7 @@ int PlayerInfo::Serialize(LArchive &a)
   a << client_hash;
 
   a << (int &)playerstate;
-  a << spectator << map_completed;
+  a << spectator;
 
   a << requestmap << entrypoint;
 
@@ -1722,7 +1722,7 @@ int PlayerInfo::Unserialize(LArchive &a)
   a << client_hash; // so we can recognize the clients after loading
 
   a << n; playerstate = playerstate_t(n);
-  a << spectator << map_completed;
+  a << spectator;
 
   a << requestmap << entrypoint;
 

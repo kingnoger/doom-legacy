@@ -784,14 +784,14 @@ void ACBot::TurnTowardsPoint(fixed_t x, fixed_t y)
 
   int botspeed;
 
-  if (abs(delta) < (ANG45 >> 2))
+  if (unsigned(abs(delta)) < (ANG45 >> 2))
     botspeed = 0;
-  else if (abs(delta) < ANG45)
+  else if (unsigned(abs(delta)) < ANG45)
     botspeed = 2; // 1
   else
     botspeed = 3; // 1
 
-  if (abs(delta) < ANG5)
+  if (unsigned(abs(delta)) < ANG5)
     cmd->yaw = ang >> 16; //perfect aim
   else if (delta > 0)
     cmd->yaw += botangleturn[botspeed];
@@ -876,19 +876,19 @@ void ACBot::AimWeapon()
       int botspeed;
 
       int delta = angle - pawn->yaw;
-      if (abs(delta) < (ANG45 >> 1))
+      if (unsigned(abs(delta)) < (ANG45 >> 1))
 	botspeed = 0;
-      else if (abs(delta) < ANG45)
+      else if (unsigned(abs(delta)) < ANG45)
 	botspeed = 1;
       else
 	botspeed = 3;
 
-      if (abs(delta) < ANG45)
+      if (unsigned(abs(delta)) < ANG45)
 	{
 	  if (wdata->type & AF)
 	    cmd->buttons |= ticcmd_t::BT_ATTACK;
 
-	  if (abs(delta) <= ANG5)
+	  if (unsigned(abs(delta)) <= ANG5)
 	    {
 	      if (skill <= sk_medium)  // check skill, if anything but nightmare bot aim is imperfect
 		cmd->yaw = angle >> 16;	// not so perfect aim
@@ -944,7 +944,7 @@ void ACBot::BuildInput(PlayerInfo *p, int elapsed)
 
   cmd->Clear();
 
-  if (subject->playerstate != PST_ALIVE)
+  if (!subject->pawn || (subject->pawn->flags & MF_CORPSE))
     {
       cmd->buttons |= ticcmd_t::BT_USE; // I want to respawn
       return;

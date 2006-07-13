@@ -222,7 +222,7 @@ void P_InitLava()
 {
   LavaInflictor = new DActor(MT_PHOENIXFX2);
   LavaInflictor->flags =  MF_NOBLOCKMAP | MF_NOGRAVITY;
-  LavaInflictor->flags2 = MF2_FIREDAMAGE|MF2_NODMGTHRUST;
+  LavaInflictor->flags2 = MF2_NODMGTHRUST;
 }
 
 //----------------------------------------------------------------------------

@@ -671,19 +671,69 @@ void presentation_t::operator delete(void *mem)
 presentation_t::~presentation_t()
 {}
 
-spritepres_t::spritepres_t(const char *name, const mobjinfo_t *inf, int col)
+
+spritepres_t::spritepres_t()
 {
+}
+
+
+void spritepres_t::Pack(BitStream *s)
+{
+  s->writeInt(info - mobjinfo, 16); // "mobjtype", defines the spritepres
+
+  PackAnim(s);
+  s->write(color);
+  // flags and lastupdate need not be sent
+}
+
+/// replaces Unpack()
+spritepres_t::spritepres_t(BitStream *s)
+{
+  int temp = s->readInt(16);
+  if (temp < NUMMOBJTYPES)
+    info = &mobjinfo[temp];
+  else
+    info = NULL;
+
+  spr = NULL;
+
+  UnpackAnim(s);
+  U8 c;
+  s->read(&c);
+  color = c;
+}
+
+
+void spritepres_t::PackAnim(BitStream *s)
+{
+  s->writeInt(animseq, 8);
+  s->writeInt(state - states, 16);
+}
+
+
+void spritepres_t::UnpackAnim(BitStream *s)
+{
+  animseq = s->readInt(8);
+  SetFrame(&states[s->readInt(16)]);
+}
+
+
+
+spritepres_t::spritepres_t(const mobjinfo_t *inf, int col)
+{
+  info = inf;
+  spr = NULL;
   color = col;
   animseq = Idle;
-  spr = sprites.Get(name); // cache the sprite
-  info = inf;
 
-  flags = 0;
-  lastupdate = -1;
   if (info)
     SetFrame(&states[info->spawnstate]); // corresponds to Idle animation
   else
-    state = &states[S_NULL]; // SetFrame or SetAnim fixes this
+    {
+      state = &states[S_NULL]; // SetFrame or SetAnim fixes this
+      flags = 0;
+      lastupdate = -1;
+    }
 }
 
 
@@ -702,9 +752,10 @@ void spritepres_t::SetFrame(const state_t *st)
   // some sprites change name during animation (!!!)
   char *name = sprnames[st->sprite];
 
-  if (spr->iname != *reinterpret_cast<Sint32 *>(name))
+  if (!spr || spr->iname != *reinterpret_cast<Sint32 *>(name))
     {
-      spr->Release();
+      if (spr)
+	spr->Release();
       spr = sprites.Get(name);
     }
 

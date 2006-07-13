@@ -1,8 +1,19 @@
 // Emacs style mode select   -*- C++ -*- 
 //-----------------------------------------------------------------------------
+//
 // $Id$
 //
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
+//
+// This program is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public License
+// as published by the Free Software Foundation; either version 2
+// of the License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
 //
 //-----------------------------------------------------------------------------
 
@@ -30,6 +41,7 @@
 
 #include "hud.h"
 #include "m_random.h"
+#include "wi_stuff.h"
 
 #include "sounds.h"
 #include "s_sound.h"
@@ -447,10 +459,7 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
       p->vel.Set(0, 0, 0);
     }
 
-  AddThinker(p); // AddThinker sets Map *mp
-  // set subsector and/or block links
-  p->CheckPosition(p->pos.x, p->pos.y); // TEST, sets tmfloorz, tmceilingz
-  p->SetPosition();
+  SpawnActor(p); // spawn the pawn
 
   // Boris stuff
   if (!pi->options.originalweaponswitch)
@@ -459,18 +468,11 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
   p->eflags |= MFE_ONGROUND;
   p->pos.z = p->floorz;
 
-  mthing->mobj = p;
-
   // FIXME set skin sprite here
   // set color translations for player sprites
   p->color = pi->options.color;
 
   p->yaw = ANG45 * (mthing->angle/45);
-
-  pi->viewheight = cv_viewheight.value;
-  pi->viewz = p->pos.z + pi->viewheight;
-
-  pi->playerstate = PST_ALIVE;
 
   // setup gun psprite
   p->SetupPsprites();
@@ -479,11 +481,9 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
   if (cv_deathmatch.value)
     p->keycards = it_allkeys;
 
-  pi->pov = p;
-
   p->spawnpoint = mthing;
-  // set the timer
-  mthing->type = short((maptic + 20) & 0xFFFF);
+  mthing->mobj = p;
+  mthing->type = short((maptic + 20) & 0xFFFF); // set the timer
 
   // TODO spawn a teleport fog?
   /*
@@ -491,6 +491,12 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
     Actor *fog = SpawnDActor(nx+20*finecosine[an], ny+20*finesine[an], nz, MT_TFOG);
     S_StartSound(fog, sfx_telept); // don't start sound on first frame?
   */
+
+  pi->pov = p;
+  pi->viewheight = cv_viewheight.value;
+  pi->viewz = p->pos.z + pi->viewheight;
+  pi->playerstate = PST_INMAP;
+  pi->setMaskBits(PlayerInfo::M_PAWN); // notify network system
 }
 
 
@@ -771,7 +777,7 @@ int Map::RespawnPlayers()
 // called when a dead player pushes USE
 void Map::RebornPlayer(PlayerInfo *p)
 {
-  // at this point p->playerstate should be PST_DEAD
+  // at this point p->playerstate should be PST_INMAP or PST_FINISHEDMAP
   // and p->pawn not NULL
 
   // first dissociate the corpse
@@ -802,10 +808,13 @@ void Map::RebornPlayer(PlayerInfo *p)
   // should we load a saved playerpawn?  
   if (info->hub)
     p->LoadPawn();
+
+  p->setMaskBits(PlayerInfo::M_PAWN); // notify network system
 }
 
 
 // Adds a player to a Map. The player is immediately queued for respawn.
+// Only called from MapInfo.
 void Map::AddPlayer(PlayerInfo *p)
 {
   // At this point the player may or may not have a pawn.
@@ -815,7 +824,7 @@ void Map::AddPlayer(PlayerInfo *p)
   p->time = 0; // respawn delay counter
   p->playerstate = PST_RESPAWN;
   p->requestmap = 0;
-  p->leaving_map = false;
+
   // TODO if (p->spectator) spawn PST_SPECTATOR
 
   if (p->pawn)
@@ -835,6 +844,7 @@ void Map::AddPlayer(PlayerInfo *p)
 // removes a player from map (but does not remove the pawn!)
 bool Map::RemovePlayer(PlayerInfo *p)
 {
+  // FIXME TODO maybe unnecessary (only used in sp games?)
   vector<PlayerInfo *>::iterator i;
   for (i = players.begin(); i != players.end(); i++)
     if (*i == p)
@@ -857,6 +867,7 @@ int Map::HandlePlayers()
     if (respawnqueue[i]->playerstate == PST_REMOVE)
       respawnqueue[i] = NULL;
 
+  int fin = 0;
   int r = 0;
 
   // we iterate the vector in reversed order since we may have to delete some items on the way
@@ -866,8 +877,9 @@ int Map::HandlePlayers()
       --t; // since t was not equal to begin(), this must be valid
 
       PlayerInfo *p = *t;
+      
 
-      if (p->leaving_map || p->playerstate == PST_REMOVE)
+      if (p->playerstate == PST_LEAVINGMAP || p->playerstate == PST_REMOVE)
 	{
 	  //CONS_Printf(" Map:: Removing player %s.\n", p->name.c_str());
 	  r++;
@@ -879,16 +891,43 @@ int Map::HandlePlayers()
 	  if (w)
 	    switch (p->playerstate) 
 	      {
-	      case PST_ALIVE:
-		// save pawn for next level
-		w->Detach();
-		break;
+	      case PST_LEAVINGMAP:
+		if (w->flags & MF_CORPSE)
+		  {
+		    // drop the dead pawn
+		    w->player = NULL;
+		    QueueBody(w);
+		    p->pawn = NULL;
+		  }
+		else
+		  {
+		    // save pawn for next level
+		    w->Detach();
+		  }
 
-	      case PST_DEAD:
-		// drop the pawn
-		w->player = NULL;
-		QueueBody(w);
-		p->pawn = NULL;
+		// intermission?
+		if (game.server)
+		  {
+		    // Starts an intermission for the player if appropriate.
+		    MapInfo *next = game.FindMapInfo(p->requestmap); // do we need an intermission?
+
+		    if (next) // TODO disable intermissions server option?
+		      {
+			if (p->connection)
+			  //p->s2cStartIntermission(next->mapnumber); // nonlocal players need intermission data
+			  p->s2cStartIntermission();
+			else
+			  {
+			    // for locals, the intermission is started
+			    wi.Start(this, next);
+			    game.StartIntermission();
+			  }
+			p->playerstate = PST_INTERMISSION; // rpc_end_intermission resets this
+			return true;
+		      }
+		    else
+		      p->playerstate = PST_NEEDMAP;
+		  }
 		break;
 
 	      case PST_REMOVE:
@@ -897,15 +936,18 @@ int Map::HandlePlayers()
 		break;
 
 	      default:
-		// PST_NEEDMAP, PST_RESPAWN, PST_INTERMISSION,
-		// meaning the possible pawn is not connected to any Map
+		// not possible
 		break;
 	      }
-
-	  // intermission?
-	  p->CheckIntermission(this);
 	}
+      else if (p->playerstate == PST_FINISHEDMAP)
+	fin++;
     }
+
+  // TODO handle spectators...
+  // if all the remaining players are finished, finish the Map.
+  if (players.size() == fin)
+    info->state = MapInfo::MAP_FINISHED;
 
   return r;
 }
@@ -1027,8 +1069,9 @@ void Map::BossDeath(const DActor *mo)
 
   // make sure there is a player alive for victory
   for (i=0 ; i<n ; i++)
-    if (players[i]->playerstate == PST_ALIVE)
-    // if (players[i]->pawn->health > 0) // crashes if pawn==NULL!
+    if ((players[i]->playerstate == PST_INMAP ||
+	 players[i]->playerstate == PST_FINISHEDMAP) &&
+	players[i]->pawn && !(players[i]->pawn->flags & MF_CORPSE))
       break;
 
   if (i == n)
@@ -1205,10 +1248,8 @@ void Map::ExitMap(Actor *activator, int next, int ep)
 {
   //CONS_Printf("ExitMap => %d, %d\n", next, ep);
 
-  if (!cv_exitmode.value)
+  if (!game.server || !cv_exitmode.value)
     return; // exit not allowed
-
-  info->state = MapInfo::MAP_FINISHED;
 
   if (next == 0)
     next = info->nextlevel; // zero means "normal exit"
@@ -1220,9 +1261,9 @@ void Map::ExitMap(Actor *activator, int next, int ep)
   PlayerInfo *quitter = (activator && activator->IsOf(PlayerPawn::_type)) ?
     ((PlayerPawn *)activator)->player : NULL;
 
-  int mode = cv_exitmode.value;
-  if (!quitter)
-    mode = 1; // timed exit / bossdeath, everyone leaves at once.
+  int mode = quitter ? cv_exitmode.value : 1; // timed exit, bossdeath => everyone leaves at once.
+
+  // laitetaan joko m_fin tai p_leavmap, aina reqmap
 
   switch (mode)
     {
@@ -1240,7 +1281,7 @@ void Map::ExitMap(Actor *activator, int next, int ep)
       break;
 
     case 3: // last: all players need to reach the exit, others have to wait for the last one
-      quitter->map_completed = true;
+      quitter->playerstate = PST_FINISHEDMAP;
       quitter->requestmap = next;
       quitter->entrypoint = ep;
 

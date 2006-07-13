@@ -82,11 +82,23 @@ void Map::RemoveThinker(Thinker *t)
 void Map::RunThinkers()
 {
   Thinker *t, *next; 
+
+  if (!game.server)
+    {
+      for (t = thinkercap.next; t != &thinkercap; t = t->next)
+	t->ClientThink();
+    }
+  else
+    {
+
   for (t = thinkercap.next; t != &thinkercap; t = next)
     {
       next = t->next; // if t is removed while it thinks, its next pointer will no longer be valid.
       //if (t->mp == NULL) I_Error("Thinker::mp == NULL! Cannot be!\n");
+
       t->Think();
+    }
+
     }
 
   int n = DeletionList.size();

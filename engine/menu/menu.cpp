@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -812,7 +811,7 @@ void Menu::DrawMenu()
   if ((items[itemOn].flags & IT_DISPLAY_MASK) < IT_STRING)
     pointer[which_pointer]->Draw(x-32, cursory-5, V_SCALE);
   else if (AnimCount < 4)  //blink cursor
-    hud_font->DrawCharacter(x - 10, cursory, '*' | 0x80, V_SCALE);
+    hud_font->DrawCharacter(x-10, cursory, '*' | 0x80, V_SCALE);
 }
 
 
@@ -1905,7 +1904,7 @@ void Menu::DrawSetupPlayer()
   if (!multi_pres)
     {
       // if the presentation does not exist (or needed to be changed), create it anew
-      multi_pres = new spritepres_t("NONE", &mobjinfo[pawndata[p.ptype].mt], cv_menu_playercolor.value);
+      multi_pres = new spritepres_t(&mobjinfo[pawndata[p.ptype].mt], cv_menu_playercolor.value);
       multi_pres->SetAnim(presentation_t::Run);
     }
 

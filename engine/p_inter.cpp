@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -509,7 +508,7 @@ bool Actor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
   // do the damage
   health -= damage;
   if (health <= 0)
-    Die(inflictor, source);
+    Die(inflictor, source, dtype);
 
   return true;
 }
@@ -832,10 +831,10 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 //======================================================
 
 // inflictor is the bullet, source is the one who pulled the trigger ;)
-void Actor::Die(Actor *inflictor, Actor *source)
+void Actor::Die(Actor *inflictor, Actor *source, int dtype)
 {
   // switch physics to inanimate object mode
-  eflags &= ~(MFE_INFLOAT | MFE_SKULLFLY | MFE_SWIMMING);
+  eflags &= ~(MFE_INFLOAT | MFE_SKULLFLY | MFE_SWIMMING | MFE_FLY);
 
   // cream a corpse :)
   if (flags & MF_CORPSE)
@@ -845,6 +844,8 @@ void Actor::Die(Actor *inflictor, Actor *source)
       radius = 0;
       return;
     }
+
+  flags |= MF_CORPSE; // it's dead now.
 
   // dead target is no more shootable
   if (!cv_solidcorpse.value)
@@ -868,8 +869,7 @@ void Actor::Die(Actor *inflictor, Actor *source)
 	}
       else if (!game.multiplayer)
 	{
-	  // count all monster deaths,
-	  // even those caused by other monsters
+	  // TODO count all monster deaths, even those caused by other monsters?
 	  game.Players.begin()->second->kills++;
 	}
 
@@ -880,11 +880,12 @@ void Actor::Die(Actor *inflictor, Actor *source)
 
 bool P_CheckSpecialDeath(DActor *m, int dtype);
 
-void DActor::Die(Actor *inflictor, Actor *source)
+void DActor::Die(Actor *inflictor, Actor *source, int dtype)
 {
-  Actor::Die(inflictor, source);
+  bool gib_corpse = flags & MF_CORPSE;
+  Actor::Die(inflictor, source, dtype);
 
-  if (flags & MF_CORPSE)
+  if (gib_corpse)
     {
       if (flags & MF_NOBLOOD)
 	Remove();
@@ -903,22 +904,15 @@ void DActor::Die(Actor *inflictor, Actor *source)
   //added:22-02-98: remember who exploded the barrel, so that the guy who
   //                shot the barrel which killed another guy, gets the frag!
   //                (source is passed from barrel to barrel also!)
-  //                (only for multiplayer fun, does not remember monsters)
   if ((type == MT_BARREL || type == MT_POD) && source)
     owner = source;
 
   if (!inflictor)
     inflictor = source;
 
-  // TODO mobjinfo.damage, upper 16 bits could hold damage type, remove MF2_FIREDAMAGE et al.
-  if (inflictor)
+  // special deaths based on damage type (burning, freezing...)
+  if (dtype)
     {
-      int dtype = 0;
-      if (inflictor->flags2 & MF2_FIREDAMAGE)
-	dtype = dt_heat;
-      if (inflictor->flags2 & MF2_ICEDAMAGE)
-	dtype = dt_cold;
-
       if (P_CheckSpecialDeath(this, dtype))
 	return;
     }
@@ -939,10 +933,8 @@ void DActor::Die(Actor *inflictor, Actor *source)
 
 
 
-void PlayerPawn::Die(Actor *inflictor, Actor *source)
+void PlayerPawn::Die(Actor *inflictor, Actor *source, int dtype)
 {
-  Actor::Die(inflictor, source);
-
   // start playing death anim. sequence
   if (health < -maxhealth >> 1)
     pres->SetAnim(presentation_t::Death2);
@@ -976,13 +968,12 @@ void PlayerPawn::Die(Actor *inflictor, Actor *source)
   else if (!(flags & MF_CORPSE))
     source->Killed(this, inflictor); // you can kill 'em only once!
 
+  Actor::Die(inflictor, source, dtype);
+
   // dead guy attributes
-  eflags &= ~MFE_FLY;
   powers[pw_flight] = 0;
   powers[pw_weaponlevel2] = 0;
   DropWeapon();  // put weapon away
-
-  player->playerstate = PST_DEAD;
 
   // (since A_Fall is not called for PlayerPawns)
   // actor is on ground, it can be walked over
@@ -995,7 +986,7 @@ void PlayerPawn::Die(Actor *inflictor, Actor *source)
       health = maxhealth >> 1;
     }
 
-  flags |= MF_CORPSE|MF_DROPOFF;
+  flags |= MF_DROPOFF;
 
   // So change this if corpse objects
   // are meant to be obstacles.

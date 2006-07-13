@@ -196,8 +196,7 @@ Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, int type)
   attacker = NULL;
 
   color = 0;
-  state_t *state = &states[info->spawnstate];
-  pres = new spritepres_t(sprnames[state->sprite], info, 0);
+  pres = new spritepres_t(info, 0);
 }
 
 
@@ -308,7 +307,7 @@ void PlayerPawn::Think()
       eflags &= ~MFE_JUSTATTACKED;
     }
 
-  if (player->playerstate == PST_DEAD)
+  if (flags & MF_CORPSE)
     {
       DeathThink();
       goto actor_think;

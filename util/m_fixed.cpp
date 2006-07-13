@@ -22,8 +22,22 @@
 /// \file
 /// \brief Fixed point math.
 
+#include "tnl/tnlBitStream.h"
 #include "i_system.h"
 #include "m_fixed.h"
 
 /// smallest possible increment
 fixed_t fixed_epsilon(1/float(fixed_t::UNIT));
+
+/// OpenTNL packing method
+void fixed_t::Pack(class BitStream *s)
+{
+  // TODO: save some bandwidth
+  s->writeInt(val, 32);
+}
+
+/// OpenTNL unpacking method
+void fixed_t::Unpack(class BitStream *s)
+{
+  val = s->readInt(32);
+}

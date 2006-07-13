@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2005 by Doom Legacy Team
+// Copyright (C) 2002-2006 by Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -68,7 +68,7 @@ public:
       MAP_RUNNING,      ///< currently running, "me" is valid
       MAP_INSTASIS,     ///< presently halted, but "me" is still valid
       MAP_RESET,        ///< (single player) player has died, the map should be reset
-      MAP_FINISHED,     ///< (at least some) players have finished the map, but it is still running, "me" is valid
+      MAP_FINISHED,     ///< Map will be saved or closed after the tick, but currently "me" is still valid
       MAP_SAVED         ///< "me" should be NULL, the Map is saved on disk
     };
 

@@ -72,9 +72,7 @@
 #include "g_game.h"
 #include "keys.h"
 
-#include "sdl/endtxt.h"
-
-
+void ShowEndTxt();
 vector<SDL_Joystick*> joysticks;
 
 

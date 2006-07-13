@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -38,12 +38,15 @@ using namespace TNL;
 
 
 /// Player states.
+///
+/// The asterisk means that in this state the player is always associated with a Map.
 enum playerstate_t
 {
-  PST_NEEDMAP,      ///< waiting to be assigned to a map respawn queue (by GameInfo)
-  PST_RESPAWN,      ///< waiting in a respawn queue (of a certain Map)
-  PST_ALIVE,        ///< playing, camping or spectating
-  PST_DEAD,         ///< dead on the ground, view follows killer
+  PST_NEEDMAP,      ///< waiting to be assigned to a Map respawn queue (by GameInfo)
+  PST_RESPAWN,      ///< *waiting in the respawn queue of a certain Map
+  PST_INMAP,        ///< *playing, camping, spectating or, well, dead on the ground
+  PST_FINISHEDMAP,  ///< *like PST_INMAP, but waiting for others to finish too
+  PST_LEAVINGMAP,   ///< *still in a Map, waiting to be thrown out
   PST_INTERMISSION, ///< viewing an intermission
   PST_REMOVE        ///< waiting to be removed from the game
 };
@@ -83,8 +86,8 @@ public:
   int Serialize(class LArchive &a);
   int Unserialize(LArchive &a);
 
-  void Write(BitStream *stream);
-  void Read(BitStream *stream);
+  void Write(class BitStream *stream);
+  void Read(class BitStream *stream);
 };
 
 
@@ -124,6 +127,17 @@ class PlayerInfo : public NetObject
   virtual void unpackUpdate(GhostConnection *c, BitStream *s);
 
 public:
+  /// Ghosting flags
+  enum mask_e
+    {
+      M_IDENTITY   = BIT(1),
+      M_PAWN       = BIT(2),
+      M_SCORE      = BIT(3),
+      M_PALETTE    = BIT(4),
+      M_HUDFLASH   = BIT(5)
+    };
+
+public:
   string name;     ///< name of the player
   int    number;   ///< player number
   int    team;     ///< player's team
@@ -132,9 +146,7 @@ public:
   unsigned client_hash;          ///< hash of the client network address
 
   playerstate_t playerstate;
-  bool spectator;     ///< ghost spectator in a map?
-  bool map_completed; ///< TEST has finished the map, but continues playing
-  bool leaving_map;   ///< TEST
+  bool spectator;     ///< incorporeal, invisible spectator in a map?
 
   int requestmap;  ///< the map which we wish to enter
   int entrypoint;  ///< which spawning point to use
@@ -203,15 +215,34 @@ public:
 
   bool InventoryResponder(short (*gc)[2], struct event_t *ev);
 
-  void ExitLevel(int nextmap, int ep);
-  bool CheckIntermission(const Map *m);
+  void ExitLevel(int nextmap, int ep); ///< sets requestmap and ep if not already set, goes to PST_LEAVINGMAP state
   void Reset(bool resetpawn, bool resetfrags);  // resets the player (when starting a new level, for example)
 
   virtual void SetMessage(const char *msg, int priority = 0, int type = M_CONSOLE);
 
   /// Client: Calculate the walking / running viewpoint bobbing and weapon swing
   void CalcViewHeight();
+
+  //=============== Some RPCs ===============
+  /// The player has entered a new map (owning client should set it up!)
+  TNL_DECLARE_RPC(s2cEnterMap, (U8 mapnum));
+
+  /// Server tells the player to start the intermission.
+  TNL_DECLARE_RPC(s2cStartIntermission, ());
+
+  /// Client tells server that player has finished the intermission.
+  TNL_DECLARE_RPC(c2sIntermissionDone, ());
+
+
+  /// Shorthand for the RPC implementation macro
+#define PLAYERINFO_RPC_S2C(methodName, args, argNames) \
+   TNL_IMPLEMENT_NETOBJECT_RPC(PlayerInfo, methodName, args, argNames, NetClassGroupGameMask, RPCGuaranteedOrdered, RPCToGhost, 0)
+
+#define PLAYERINFO_RPC_C2S(methodName, args, argNames) \
+   TNL_IMPLEMENT_NETOBJECT_RPC(PlayerInfo, methodName, args, argNames, NetClassGroupGameMask, RPCGuaranteedOrdered, RPCToGhostParent, 0)
 };
+
+
 
 
 // TEMP

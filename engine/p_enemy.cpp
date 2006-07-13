@@ -602,7 +602,7 @@ bool DActor::LookForPlayers(bool allaround)
 	return false;
 
       PlayerInfo *k = mp->players[lastlook];
-      if (k->playerstate != PST_ALIVE || !k->pawn || k->spectator)
+      if (!k->pawn || (k->pawn->flags & MF_CORPSE) || k->spectator)
 	continue;
 
       PlayerPawn *p = k->pawn;
@@ -922,7 +922,7 @@ void A_Fall(DActor *actor)
   if (!cv_solidcorpse.value)
     actor->flags &= ~MF_SOLID;
 
-  actor->flags   |= MF_CORPSE|MF_DROPOFF;
+  actor->flags   |= MF_DROPOFF;
   actor->height >>= 2;
   actor->radius -= (actor->radius>>4);      //for solid corpses
   actor->health = actor->info->spawnhealth>>1;

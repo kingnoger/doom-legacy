@@ -19,6 +19,7 @@
 /// \file
 /// \brief PlayerInfo class implementation
 
+#include "tnl/tnlNetObject.h"
 #include "doomdef.h"
 #include "command.h"
 #include "cvars.h"
@@ -26,6 +27,7 @@
 #include "g_player.h"
 #include "g_game.h"
 #include "g_map.h"
+#include "g_mapinfo.h"
 #include "g_actor.h"
 #include "g_pawn.h"
 
@@ -204,8 +206,6 @@ PlayerInfo::PlayerInfo(const LocalPlayerInfo *p)
 
   playerstate = PST_NEEDMAP;
   spectator = false;
-  map_completed = false;
-  leaving_map = false;
 
   requestmap = entrypoint = 0;
 
@@ -266,43 +266,41 @@ void PlayerInfo::onGhostRemove()
 }
 
 
-enum mask_e
-{
-  M_IDENTITY   = BIT(1),
-  M_STATE      = BIT(2),
-  M_SCORE      = BIT(3),
-  M_PALETTE    = BIT(4),
-  M_HUDFLASH   = BIT(5),
-  M_EVERYTHING = 0xFFFFFFFF,
-};
-
 /// This is the function the server uses to ghost PlayerInfo data to clients.
 U32 PlayerInfo::packUpdate(GhostConnection *c, U32 mask, class BitStream *stream)
 {
   if (isInitialUpdate())
-    mask = M_EVERYTHING;
+    mask = M_IDENTITY; // everything else is at default value at this point
+
 
   // check which states need to be updated, and write updates
+
   if (stream->writeFlag(mask & M_IDENTITY))
     {
+      // very rarely
       CONS_Printf("--- pi stuff sent\n");
       stream->writeString(name.c_str());
       stream->write(number);
       stream->write(team);
     }
 
-  if (stream->writeFlag(mask & M_STATE))
+  if (stream->writeFlag(mask & M_PAWN))
     {
-      U8 temp = playerstate;
-      stream->write(temp);
+      // rarely
+      S32 idx = c->getGhostIndex(pawn); // these indices replace pointers to other ghosts!
+      stream->write(idx);
+
+      idx = c->getGhostIndex(pov); // these indices replace pointers to other ghosts!
+      stream->write(idx);
     }
 
   if (stream->writeFlag(mask & M_SCORE))
     {
+      // occasionally
       stream->write(score);
+      // kills, items, secrets?
     }
 
-  // TODO: mp, pawn, pov?
 
   // feedback (goes only to the owner)
   if (c != connection)
@@ -316,12 +314,14 @@ U32 PlayerInfo::packUpdate(GhostConnection *c, U32 mask, class BitStream *stream
 
   if (stream->writeFlag(mask & M_PALETTE))
     {
+      // often
       stream->write(palette);
       palette = -1;
     }
 
   if (stream->writeFlag(mask & M_HUDFLASH))
     {
+      // often
       // palette change overrides flashes
       if (stream->writeFlag(damagecount))
 	stream->write(damagecount);
@@ -341,12 +341,12 @@ U32 PlayerInfo::packUpdate(GhostConnection *c, U32 mask, class BitStream *stream
 
 
 ///
-void PlayerInfo::unpackUpdate(GhostConnection *connection, BitStream *stream)
+void PlayerInfo::unpackUpdate(GhostConnection *c, BitStream *stream)
 {
   char temp[256];
 
   // NOTE: the unpackUpdate function must be symmetrical to packUpdate
-  if (stream->readFlag())
+  if (stream->readFlag()) // M_IDENTITY
     {
       CONS_Printf("--- pi stuff received\n");
       stream->readString(temp);
@@ -355,14 +355,17 @@ void PlayerInfo::unpackUpdate(GhostConnection *connection, BitStream *stream)
       stream->read(&team);
     }
 
-  if (stream->readFlag())
+  if (stream->readFlag()) // M_PAWN
     {
-      U8 temp;
-      stream->read(&temp);
-      playerstate = playerstate_t(temp);
+      S32 idx;
+      stream->read(&idx);
+      pawn = reinterpret_cast<PlayerPawn *>(c->resolveGhost(idx)); // these indices replace pointers to other ghosts!
+
+      stream->read(&idx);
+      pov = reinterpret_cast<Actor *>(c->resolveGhost(idx));
     }
 
-  if (stream->readFlag())
+  if (stream->readFlag()) // M_SCORE
     stream->read(&score);
 
   if (!stream->readFlag())
@@ -370,10 +373,10 @@ void PlayerInfo::unpackUpdate(GhostConnection *connection, BitStream *stream)
 
   // feedback
 
-  if (stream->readFlag())
+  if (stream->readFlag()) // M_PALETTE
     stream->read(&palette);
 
-  if (stream->readFlag())
+  if (stream->readFlag()) // M_HUDFLASH
     {
       // palette change overrides flashes
       if (stream->readFlag())
@@ -383,6 +386,39 @@ void PlayerInfo::unpackUpdate(GhostConnection *connection, BitStream *stream)
     }
 
   itemuse = stream->readFlag();
+}
+
+
+/// server notifies the client that this player has entered a new map
+PLAYERINFO_RPC_S2C(s2cEnterMap, (U8 mapnum), (mapnum))
+{
+  MapInfo *m = game.FindMapInfo(mapnum);
+  if (!m)
+    I_Error("Server sent a player to an unknown map %d!", mapnum);
+
+  requestmap = mapnum;
+  if (mp)
+    playerstate = PST_LEAVINGMAP;
+  else
+    playerstate = PST_NEEDMAP;
+
+  if (!m->Activate(NULL)) // clientside map activation
+    I_Error("Crap!\n");
+}
+
+
+PLAYERINFO_RPC_S2C(s2cStartIntermission, (), ())
+{
+  CONS_Printf("server ordered intermission for player %d\n", number);
+  //wi.Start(this, next);
+  //game.StartIntermission();
+}
+
+
+PLAYERINFO_RPC_C2S(c2sIntermissionDone, (), ())
+{
+  CONS_Printf("client player %d has finished intermission\n", number);
+  playerstate = PST_NEEDMAP; 
 }
 
 
@@ -419,36 +455,9 @@ void PlayerInfo::ExitLevel(int nextmap, int ep)
       entrypoint = ep;
     }
 
-  leaving_map = true;
+  playerstate = PST_LEAVINGMAP;
 }
 
-
-// Starts an intermission for the player if appropriate.
-bool PlayerInfo::CheckIntermission(const Map *m)
-{
-  if (playerstate == PST_REMOVE)
-    return false; // no intermission for you!
-
-  MapInfo *info = game.FindMapInfo(requestmap); // do we need an intermission?
-
-  if (info) // TODO disable intermissions server option?
-    {
-      if (connection)
-	connection->rpcStartIntermission_s2c(); // nonlocal players need intermission data
-      else
-	{
-	  // for locals, the intermission is started
-	  wi.Start(m, info);
-	  game.StartIntermission();
-	}
-      playerstate = PST_INTERMISSION; // rpc_end_intermission resets this
-      return true;
-    }
-  else
-    playerstate = PST_NEEDMAP;
-
-  return false;
-}
 
 
 
@@ -456,7 +465,6 @@ bool PlayerInfo::CheckIntermission(const Map *m)
 void PlayerInfo::Reset(bool rpawn, bool rfrags)
 {
   kills = items = secrets = time = 0;
-  map_completed = false;
 
   if (pawn)
     {
@@ -466,6 +474,7 @@ void PlayerInfo::Reset(bool rpawn, bool rfrags)
     }
 
   pov = NULL;
+  setMaskBits(PlayerInfo::M_PAWN);
 
   // Initial height of PointOfView
   // will be set by player think.
@@ -475,6 +484,7 @@ void PlayerInfo::Reset(bool rpawn, bool rfrags)
     {
       score = 0;
       Frags.clear();
+      setMaskBits(PlayerInfo::M_SCORE);
     }
 
   return;
@@ -520,10 +530,10 @@ void PlayerInfo::CalcViewHeight()
       int phase = (FINEANGLES/20 * game.tic) & FINEMASK;
       fixed_t bob = (bob_amplitude/2) * finesine[phase];
 
-      if (playerstate == PST_ALIVE)
+      if (!(pawn->flags & MF_CORPSE))
 	{
 	  viewheight += deltaviewheight;
-	  
+
 	  if (viewheight > eyes)
 	    {
 	      viewheight = eyes;
@@ -601,5 +611,5 @@ void PlayerInfo::LoadPawn()
 
   // and a new presentation
   const mobjinfo_t *info = &mobjinfo[pawn->pinfo->mt];
-  pawn->pres = new spritepres_t(sprnames[states[info->spawnstate].sprite], info, 0);
+  pawn->pres = new spritepres_t(info, 0);
 }

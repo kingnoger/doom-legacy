@@ -34,6 +34,7 @@
 #include "g_type.h"
 #include "g_game.h"
 #include "g_team.h"
+#include "g_map.h"
 #include "g_player.h"
 #include "g_pawn.h"
 
@@ -85,9 +86,32 @@ void GameType::performScopeQuery(GhostConnection *c)
         c->objectInScope(p->pawn);
     }
 
-  // in mods, here you could scope bases, flags etc.
+  // TODO in mods, here you could scope bases, flags etc.
+
 
   // then actors in PVS, thinkers etc.
+
+  for (GameInfo::player_iter_t t = e.game->Players.begin(); t != e.game->Players.end(); t++)
+    {
+      PlayerInfo *p = t->second;
+      if (p->playerstate == PST_RESPAWN ||
+	  p->playerstate == PST_INMAP ||
+	  p->playerstate == PST_FINISHEDMAP)
+	{
+	  // in a Map, can see something
+	  Map *m = p->mp;
+	  // TODO for now, ignore PVS, scope all stuff in Map
+	  // TODO use IterateThinkers?
+	  for (Thinker *t = m->thinkercap.next; t != &m->thinkercap; t = t->next)
+	    {
+	      if (t->IsOf(Actor::_type))
+		{
+		  Actor *a = reinterpret_cast<Actor *>(t);
+		  c->objectInScope(a);
+		}
+	    }
+	}
+    }
 }
 
 

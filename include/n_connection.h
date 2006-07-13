@@ -106,9 +106,6 @@ public:
   //TNL_DECLARE_RPC(rpcStart3DSound_s2c, (U8 pnum));
   //TNL_DECLARE_RPC(rpcStop3DSound_s2c, (U8 pnum));
 
-  /// Server tells the client to start the intermission.
-  TNL_DECLARE_RPC(rpcStartIntermission_s2c, ());
-
   /// Server kicks a player away.
   TNL_DECLARE_RPC(rpcKick_s2c, (U8 pnum, StringPtr str));
 
@@ -118,9 +115,6 @@ public:
 
   /// Client requests a suicide.
   TNL_DECLARE_RPC(rpcSuicide_c2s, (U8 pnum));
-
-  /// Client tells server that it has finished playing the intermission.
-  TNL_DECLARE_RPC(rpcIntermissionDone_c2s, ());
 
   /// Client asks for a new POV ("spy mode").
   TNL_DECLARE_RPC(rpcRequestPOVchange_c2s, (S32 pnum));

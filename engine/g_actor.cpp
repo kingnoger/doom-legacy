@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -30,6 +30,7 @@
 
 #include "g_game.h"
 #include "g_map.h"
+#include "g_mapinfo.h"
 #include "g_pawn.h"
 #include "g_player.h"
 #include "g_input.h"
@@ -57,8 +58,6 @@ extern fixed_t FloatBobOffsets[64];
 //             Actor class implementation
 //===========================================================
 
-TNL_IMPLEMENT_NETOBJECT(Actor);
-
 IMPLEMENT_CLASS(Actor, Thinker);
 
 Actor::~Actor()
@@ -68,7 +67,7 @@ Actor::~Actor()
 }
 
 
-// trick constructor
+/// trick constructor
 Actor::Actor()
 {
   mp = NULL;
@@ -99,7 +98,7 @@ Actor::Actor()
 }
 
 
-//  Normal constructor
+///  Normal constructor
 Actor::Actor(fixed_t nx, fixed_t ny, fixed_t nz)
   : Thinker(), pos(nx, ny, nz)
 {
@@ -130,6 +129,143 @@ Actor::Actor(fixed_t nx, fixed_t ny, fixed_t nz)
   mNetFlags.set(Ghostable);
 }
 
+
+
+//===========================================================
+//                     Actor netcode
+//===========================================================
+
+TNL_IMPLEMENT_NETOBJECT(Actor);
+
+#define ACTOR_AR 8 // angle resolution for netcode (in bits)
+
+/// This is called on clients when a new Actor comes into scope
+bool Actor::onGhostAdd(class GhostConnection *c)
+{
+  CONS_Printf("Adding a %s.\n", Type()->name);
+  return true;
+}
+
+
+/// This is called on clients when an Actor leaves scope
+void Actor::onGhostRemove()
+{
+  CONS_Printf("Removing a %s.\n", Type()->name);
+  // TODO CHECK automatically destroyed after this?
+  //Remove();
+}
+
+
+
+/// This is the function the server uses to ghost Actor data to clients.
+U32 Actor::packUpdate(GhostConnection *c, U32 mask, class BitStream *stream)
+{
+  if (isInitialUpdate())
+    {
+      mask = M_EVERYTHING;
+    }
+
+  // check which states need to be updated, and write updates
+  if (stream->writeFlag(mask & M_MOVE))
+    {
+      // as often as possible
+      pos.Pack(stream);
+      vel.Pack(stream);
+      stream->writeInt(yaw   >> (32-ACTOR_AR), ACTOR_AR); // we do not need full resolution
+      stream->writeInt(pitch >> (32-ACTOR_AR), ACTOR_AR);
+    }
+
+  if (stream->writeFlag(mask & M_ANIM))
+    {
+      // often
+      // send over animation sequence and interpolation / state
+      pres->PackAnim(stream);
+    }
+
+  // NOTE: here we are in fact transferring presentation_t data.
+  // Decided not to make presentation_t a NetObject of its own, since
+  // it is always associated with an Actor and this is simpler.
+
+  if (stream->writeFlag(mask & M_PRES))
+    {
+      // very rarely
+      // send over model/sprite info (mobjinfo/modeltype, color, drawing flags)
+      pres->Pack(stream);
+    }
+
+  if (isInitialUpdate())
+    {
+      // map number (only needed on initial update)
+      stream->write(mp->info->mapnumber);
+    }
+
+  // TODO floorclip, team
+
+  // the return value from packUpdate can set which states still
+  // need to be updated for this object.
+  return 0;
+}
+
+
+/// the clientside pair of packUpdate
+void Actor::unpackUpdate(GhostConnection *connection, BitStream *stream)
+{
+  // NOTE: the unpackUpdate function must be symmetrical to packUpdate
+  if (stream->readFlag()) // M_MOVE
+    {
+      // movement data
+      apos.Unpack(stream); // NOTE: unpacked to apos, not pos! then we interpolate...
+      avel.Unpack(stream);
+      yaw   = stream->readInt(ACTOR_AR); // we do not need full resolution
+      pitch = stream->readInt(ACTOR_AR);
+    }
+
+  if (stream->readFlag()) // M_ANIM
+    {
+      // get animation sequence and interpolation
+      pres->UnpackAnim(stream);
+    }
+
+  if (stream->readFlag()) // M_PRES
+    {
+      // get model/sprite info (mobjinfo/modeltype, color)
+      // TODO read presentation type, create it
+      if (pres)
+	delete pres;
+      pres = new spritepres_t(stream);
+    }
+
+  if (isInitialUpdate())
+    {
+      // map number (only needed on initial update)
+      int temp;
+      stream->read(&temp);
+      MapInfo *m = game.FindMapInfo(temp);
+      if (!m)
+	I_Error("Got a ghosted Actor for an unknown map %d!", temp);
+
+      //if (!m->me) I_Error("Got a ghosted Actor for an inactive map %d!", temp);
+
+      m->me->SpawnActor(this); // link the ghost to the correct Map
+    }
+}
+
+
+
+/// Interpolate movement
+void Actor::ClientThink()
+{
+  // FIXME interpolate movement
+  UnsetPosition();
+  pos = apos;
+  vel = avel;
+  SetPosition();
+}
+
+
+//===========================================================
+//              Rest of Actor implementation
+//===========================================================
 
 // NULLs pointers to objects that will be deleted soon
 void Actor::CheckPointers()
@@ -955,7 +1091,7 @@ DActor::DActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
     pres = new modelpres_t("models/sarge/");
   else
   */
-    pres = new spritepres_t(sprnames[state->sprite], info, 0);
+  pres = new spritepres_t(info, 0);
 }
 
 

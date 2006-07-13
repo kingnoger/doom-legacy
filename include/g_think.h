@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2005 by DooM Legacy Team.
+// Copyright (C) 2002-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,7 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -143,6 +142,7 @@ TypeInfo c::_type(#c, c::Create, &par::_type);
 class Thinker
 {
   friend class Map;
+  friend class GameType;
 
   DECLARE_CLASS(Thinker);
 
@@ -176,6 +176,7 @@ public:
 
   /// what it actually does :)
   virtual void Think() {}
+  virtual void ClientThink() {} ///< movement interpolation
 
   /// pointer management
   virtual void CheckPointers() {}

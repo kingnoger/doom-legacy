@@ -1326,7 +1326,8 @@ void A_TreeDeath(DActor *actor)
       return;
     }
 
-  // some trees can only be burned
+  // some trees can only be burned FIXME wtf?
+  /*
   if (!(actor->flags2 & MF2_FIREDAMAGE))
     {
       // A_Fall is not called on the trees, so these hacks are not needed
@@ -1337,6 +1338,7 @@ void A_TreeDeath(DActor *actor)
       return;
     }
   else
+  */
     {
       actor->SetState(actor->info->meleestate);
     }

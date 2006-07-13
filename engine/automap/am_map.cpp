@@ -732,7 +732,7 @@ void AutoMap::Ticker()
   if (!active)
     return;
 
-  if (mpawn->player->playerstate == PST_DEAD)
+  if (mpawn->flags & MF_CORPSE)
     {
       // don't die in auto map, switch view prior to dying
       Close();

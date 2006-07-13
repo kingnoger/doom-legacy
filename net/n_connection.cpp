@@ -43,7 +43,7 @@ extern unsigned num_bots;
 /*
 More serverside stuff:
 
-void objectLocalScopeAlways(o)
+void objectLocalScopeAlways(o) (for playerinfos)
 void objectLocalClearAlways(o)
 bool isGhosting()
 
@@ -524,15 +524,6 @@ LCONNECTION_RPC(rpcSendNetVar_s2c, (U16 netid, StringPtr s), (netid, s),
 
 
 
-LCONNECTION_RPC(rpcStartIntermission_s2c, (), (),
-		RPCGuaranteedOrdered, RPCDirServerToClient, 0)
-{
-  //wi.StartIntermission();
-}
-
-
-
-
 /// only called on a server
 void LNetInterface::Kick(PlayerInfo *p)
 {
@@ -626,14 +617,6 @@ LCONNECTION_RPC(rpcSuicide_c2s, (U8 pnum), (pnum),
 
 
 
-LCONNECTION_RPC(rpcIntermissionDone_c2s, (), (),
-		RPCGuaranteedOrdered, RPCDirClientToServer, 0)
-{
-  //player[0]->playerstate = PST_NEEDMAP; 
-}
-
-
-
 LCONNECTION_RPC(rpcRequestPOVchange_c2s, (S32 pnum), (pnum),
 		  RPCGuaranteedOrdered, RPCDirClientToServer, 0)
 {
@@ -663,6 +646,7 @@ LCONNECTION_RPC(rpcRequestPOVchange_c2s, (S32 pnum), (pnum),
 
       // tell who's the view
       player[0]->SetMessage(va("Viewpoint: %s\n", p->name.c_str()));
+      player[0]->setMaskBits(PlayerInfo::M_PAWN); // notify network system
     }
 
   // TODO client should start HUD on the new pov...

@@ -1602,9 +1602,7 @@ void A_FireConePL1(PlayerPawn *player, pspdef_t *psp)
       slope = player->AimLineAttack(angle, MELEERANGE);
       if(linetarget)
 	{
-	  player->flags2 |= MF2_ICEDAMAGE;
-	  linetarget->Damage(player, player, damage);
-	  player->flags2 &= ~MF2_ICEDAMAGE;
+	  linetarget->Damage(player, player, damage | dt_cold);
 	  conedone = true;
 	  break;
 	}

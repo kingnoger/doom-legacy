@@ -14,7 +14,6 @@
 #include "w_wad.h"
 #include "z_zone.h"
 #include "m_argv.h"
-#include "sdl/endtxt.h"
 
 
 void ShowEndTxt()

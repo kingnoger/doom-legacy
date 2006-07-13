@@ -1461,6 +1461,7 @@ bool Map::Setup(tic_t start, bool spawnthings)
   rejectmatrix = (byte *)fc.CacheLumpNum(lumpnum+LUMP_REJECT,PU_LEVEL);
   GroupLines();
 
+  // lights, scrollers, sectordamage...
   for (int i=0; i<numsectors; i++)
     SpawnSectorSpecial(sectors[i].special, &sectors[i]);
 
@@ -1474,8 +1475,8 @@ bool Map::Setup(tic_t start, bool spawnthings)
   if (!polyspawn.empty())
     InitPolyobjs(); // create the polyobjs, clear their mapthings (before spawning other things!)
 
-  // spawn the THINGS (Actors) if needed
-  if (spawnthings)
+  // spawn the THINGS (Actors) if needed (not needed on clients or when loading savegames)
+  if (spawnthings && game.server)
     {
       for (int i=0; i<nummapthings; i++)
         if (mapthings[i].type)
@@ -1486,10 +1487,13 @@ bool Map::Setup(tic_t start, bool spawnthings)
 
   SpawnLineSpecials(); // spawn Thinkers created by linedefs (also does some mandatory initializations!)
 
-  if (hexen_format)
-    LoadACScripts(lumpnum + LUMP_BEHAVIOR);
+  if (game.server)
+    {
+      if (hexen_format)
+	LoadACScripts(lumpnum + LUMP_BEHAVIOR);
 
-  FS_PreprocessScripts();        // preprocess FraggleScript scripts (needs already added players)
+      FS_PreprocessScripts();        // preprocess FraggleScript scripts (needs already added players)
+    }
 
   InitLightning(); // Hexen lightning effect
 

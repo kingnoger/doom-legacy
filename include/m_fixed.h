@@ -26,7 +26,10 @@
 #define m_fixed_h 1
 
 #include <stdlib.h>
+#include "tnl/tnlBitStream.h"
 #include "doomtype.h"
+
+using namespace TNL;
 
 /// \brief Class for 16.16 fixed point arithmetic
 ///
@@ -180,6 +183,13 @@ public:
   /// conveniences, remove them if you can!
   inline value_t  value() const { return val; }
   inline fixed_t& setvalue(value_t v) { val = v; return *this; }
+
+
+  /// OpenTNL packing method
+  void Pack(BitStream *s);
+
+  /// OpenTNL unpacking method
+  void Unpack(BitStream *s);
 };
 
 

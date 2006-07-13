@@ -37,7 +37,6 @@
 #include "hardware/hwr_geometry.h"
 #include "hardware/hwr_render.h"
 #include "hardware/hwr_bsp.h"
-#include "sdl/ogl_sdl.h"
 
 #include "tables.h"
 #include "m_bbox.h"
@@ -48,6 +47,8 @@
 #include "r_main.h"
 #include "r_draw.h"
 #include "v_video.h"
+
+void OglSdlFinishUpdate(bool vidwait);
 
 void show_stackframe();
 

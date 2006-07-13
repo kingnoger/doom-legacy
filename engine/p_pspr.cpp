@@ -350,7 +350,7 @@ void A_WeaponReady(PlayerPawn *p, pspdef_t *psp)
 
   // check for change
   //  if player is dead, put the weapon away
-  if (p->pendingweapon != wp_none || !p->health)
+  if (p->pendingweapon != wp_none || (p->flags & MF_CORPSE))
     {
       // change weapon
       //  (pending weapon should allready be validated)
@@ -414,34 +414,26 @@ void A_CheckReload(PlayerPawn *p, pspdef_t *psp)
 //
 void A_Lower(PlayerPawn *p, pspdef_t *psp)
 {
-  if(p->morphTics)
+  if (p->morphTics)
     psp->sy = WEAPONBOTTOM;
   else
     psp->sy += LOWERSPEED;
 
-  // Is already down.
-  if (psp->sy < WEAPONBOTTOM )
+  // Not yet down.
+  if (psp->sy < WEAPONBOTTOM)
     return;
 
-  // Player is dead.
-  if (p->player->playerstate == PST_DEAD)
+  if (p->flags & MF_CORPSE)
     {
+      // Pawn is dead, so keep the weapon off screen.
       psp->sy = WEAPONBOTTOM;
-      // don't bring weapon back up
+      p->SetPsprite(ps_weapon, S_WNULL);
       return;
     }
 
   // The old weapon has been lowered off the screen,
   // so change the weapon and start raising it
-  if (!p->health)
-    {
-      // Player is dead, so keep the weapon off screen.
-      p->SetPsprite(ps_weapon, S_WNULL);
-      return;
-    }
-
   p->readyweapon = p->pendingweapon;
-
   p->BringUpWeapon();
 }
 
