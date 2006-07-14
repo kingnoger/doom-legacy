@@ -69,6 +69,7 @@ extern pawn_info_t pawndata[];
 /// \brief An Actor that has active AI or human control.
 class Pawn : public Actor
 {
+  TNL_DECLARE_CLASS(Pawn);
   DECLARE_CLASS(Pawn)
 private:
 
@@ -105,6 +106,7 @@ public:
 
 class PlayerPawn : public Pawn
 {
+  TNL_DECLARE_CLASS(PlayerPawn);
   DECLARE_CLASS(PlayerPawn);
 public:
   /// Controlling player

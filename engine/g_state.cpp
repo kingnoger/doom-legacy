@@ -52,8 +52,6 @@
 
 
 void F_Ticker();
-void P_ACSInitNewGame();
-
 
 
 // WARNING : check cv_fraglimit>0 before call this function !
@@ -319,7 +317,8 @@ void GameInfo::Ticker()
 	      // TODO purge the removed players from the frag maps of other players?
 	      continue;
 	    }
-	  else if (server && p->playerstate == PST_NEEDMAP)
+	  else if (//server &&
+		   p->playerstate == PST_NEEDMAP)
 	    {
 	      // assign the player to a map
 	      CONS_Printf("Map request..");
@@ -365,69 +364,6 @@ void GameInfo::Ticker()
 	    }
 	}
     }
-}
-
-
-
-
-/// starts or restarts the game. assumes that we have set up the clustermap.
-bool GameInfo::StartGame(skill_t sk, int cluster)
-{
-  if (clustermap.empty() || mapinfo.empty())
-    return false;
-
-  CONS_Printf("Starting a game\n");
-
-  currentcluster = FindCluster(cluster);
-  if (!currentcluster)
-    currentcluster = clustermap.begin()->second;
-
-  skill = sk;
-
-  // set cvars
-  if (skill == sk_nightmare)
-    {
-      cv_respawnmonsters.Set(1);
-      cv_fastmonsters.Set(1);
-    }
-  else
-    {
-      cv_respawnmonsters.Set(0);
-      cv_fastmonsters.Set(0);
-    }
-
-  cv_deathmatch.Set(0);
-  cv_timelimit.Set(0);
-  cv_fraglimit.Set(0);
-
-  if (paused)
-    {
-      paused = false;
-      S.ResumeMusic();
-    }
-
-  extern bool force_wipe;
-  force_wipe = true;
-
-  state = GS_LEVEL;
-
-  player_iter_t i;
-  for (i = Players.begin(); i != Players.end(); i++)
-    (*i).second->Reset(true, true);
-
-  P_ACSInitNewGame(); // clear the ACS world vars etc.
-
-  G_ReleaseKeys();
-
-  // clear hud messages remains (usually from game startup)
-  con.ClearHUD();
-  automap.Close();
-
-#ifdef PARANOIA
-  Z_CheckHeap(-2);
-#endif
-
-  return true;
 }
 
 

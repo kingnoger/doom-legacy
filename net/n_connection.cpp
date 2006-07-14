@@ -34,6 +34,8 @@
 #include "g_player.h"
 #include "g_pawn.h"
 
+#include "w_wad.h"
+
 #ifndef min
 #define min(x,y) ( ((x)<(y)) ? (x) : (y) )
 #endif
@@ -227,12 +229,12 @@ bool LConnection::readConnectAccept(BitStream *stream, const char **errorString)
 
 
 
-
 void LConnection::onConnectTerminated(TerminationReason r, const char *reason)
 {
   CONS_Printf("Connect terminated (%d), %s\n", r, reason);
   ConnectionTerminated(false);
 }
+
 
 
 
@@ -257,6 +259,16 @@ void LConnection::onConnectionEstablished()
       CONS_Printf("Connected to server at %s.\n", getNetAddressString());
 
       rpcTest(7467);
+
+      int lump = fc.FindNumForName(game.gtype->mapinfo_name.c_str());
+      if (lump < 0)
+	{
+	  I_Error("MAPINFO lump '%s' not found.\n", COM_Argv(1));
+	  return;
+	}
+
+      game.CL_SpawnClient(lump);
+      game.CL_StartGame();
     }
   else
     {

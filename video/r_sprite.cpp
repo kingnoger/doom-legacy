@@ -682,7 +682,7 @@ void spritepres_t::Pack(BitStream *s)
   s->writeInt(info - mobjinfo, 16); // "mobjtype", defines the spritepres
 
   PackAnim(s);
-  s->write(color);
+  s->writeInt(color, 8);
   // flags and lastupdate need not be sent
 }
 
@@ -698,9 +698,7 @@ spritepres_t::spritepres_t(BitStream *s)
   spr = NULL;
 
   UnpackAnim(s);
-  U8 c;
-  s->read(&c);
-  color = c;
+  color = s->readInt(8);
 }
 
 

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -162,13 +161,25 @@ public:
 
 
   // in sv_main.cpp
-  void ReadResourceLumps();
+public:
   bool Playing();
   void SV_Reset();
   bool SV_SpawnServer(int mapinfo_lump);
   void SV_SetServerState(bool open);
-  void CL_Reset();
+  bool SV_StartGame(skill_t skill, int cluster = 1);
   void TryRunTics(tic_t realtics);
+private:
+  void ReadResourceLumps();
+  void SV_ResetScripting();
+
+
+  // in cl_main.cpp
+public:
+  void CL_Reset();
+  bool CL_SpawnClient(int mapinfo_lump);
+  bool CL_StartGame();
+
+
 
   int  Serialize(class LArchive &a);
   int  Unserialize(LArchive &a);
@@ -187,7 +198,6 @@ public:
 
   // in g_state.cpp
   void Ticker(); ///< ticks the game forward in time
-  bool StartGame(skill_t skill, int cluster = 1);
   void StartIntermission();
   void EndIntermission();
   void StartFinale(MapCluster *next);

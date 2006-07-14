@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004-2005 by DooM Legacy Team.
+// Copyright (C) 2004-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,8 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -305,4 +303,50 @@ void GameInfo::CL_Reset()
   CONS_Printf("Client reset\n");
 
   net->CL_Reset();
+}
+
+
+
+bool GameInfo::CL_SpawnClient(int mapinfo_lump)
+{
+  if (mapinfo_lump >= 0)
+    {
+      CONS_Printf("Setting up client...\n");
+
+      if (Read_MAPINFO(mapinfo_lump) <= 0)
+	{
+	  CONS_Printf(" Bad MAPINFO lump.\n");
+	  return false;
+	}
+    }
+  else
+    return false;
+
+  ReadResourceLumps(); // SNDINFO etc.
+  return true;
+}
+
+
+bool GameInfo::CL_StartGame()
+{
+  CONS_Printf("starting client game...\n");
+  if (paused)
+    {
+      paused = false;
+      S.ResumeMusic();
+    }
+
+  extern bool force_wipe;
+  force_wipe = true;
+
+  G_ReleaseKeys();
+
+  // clear hud messages remains (usually from game startup)
+  con.ClearHUD();
+  automap.Close();
+
+  currentcluster = clustermap.begin()->second; // FIXME get cluster from server
+
+  state = GS_LEVEL;
+  return true;
 }

@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004-2005 by DooM Legacy Team.
+// Copyright (C) 2004-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,8 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -105,6 +103,8 @@ Have polymorphed class GameType which creates these into GameInfo containers
 #include "d_main.h"
 
 #include "g_game.h"
+#include "g_type.h"
+#include "g_level.h"
 #include "g_mapinfo.h"
 #include "g_map.h"
 #include "g_player.h"
@@ -340,10 +340,6 @@ bool GameInfo::Playing()
 
 
 
-
-void P_ACSInitNewGame();
-
-
 /// Close net connections, delete players, clear game status.
 /// After this you are not Playing().
 void GameInfo::SV_Reset()
@@ -354,7 +350,7 @@ void GameInfo::SV_Reset()
   Clear_mapinfo_clustermap();
 
   // clear teams?
-  P_ACSInitNewGame(); // TODO clear FS global/hub data
+  SV_ResetScripting();
 
   Z_FreeTags(PU_LEVEL, MAXINT);
 
@@ -389,6 +385,8 @@ bool GameInfo::SV_SpawnServer(int mapinfo_lump)
 	  CONS_Printf(" Bad MAPINFO lump.\n");
 	  return false;
 	}
+
+      gtype->mapinfo_name = fc.FindNameForNum(mapinfo_lump); // HACK
     }
   else
     SV_Reset(); // just loading a game
@@ -435,6 +433,68 @@ void GameInfo::SV_SetServerState(bool open)
   // TODO else net->SV_Close()
 }
 
+
+
+/// starts or restarts the game. assumes that we have set up the clustermap.
+bool GameInfo::SV_StartGame(skill_t sk, int cluster)
+{
+  if (clustermap.empty() || mapinfo.empty())
+    return false;
+
+  CONS_Printf("Starting a game\n");
+
+  // close and reset open maps, if any, release and reset players
+  if (currentcluster)
+    currentcluster->Finish(0);
+
+  for (player_iter_t i = Players.begin(); i != Players.end(); i++)
+    i->second->Reset(true, true);
+  // TODO need we nuke pawns too?
+
+  currentcluster = FindCluster(cluster);
+  if (!currentcluster)
+    currentcluster = clustermap.begin()->second;
+
+  skill = sk;
+
+  // set cvars
+  if (skill == sk_nightmare)
+    {
+      cv_respawnmonsters.Set(1);
+      cv_fastmonsters.Set(1);
+    }
+  else
+    {
+      cv_respawnmonsters.Set(0);
+      cv_fastmonsters.Set(0);
+    }
+
+  cv_deathmatch.Set(0);
+  cv_timelimit.Set(0);
+  cv_fraglimit.Set(0);
+
+  SV_ResetScripting();
+
+  if (!dedicated)
+    CL_StartGame();
+
+  paused = false;
+  state = GS_LEVEL;
+
+#ifdef PARANOIA
+  Z_CheckHeap(-2);
+#endif
+
+  return true;
+}
+
+
+/// Clears all global and hub scripting variables.
+void GameInfo::SV_ResetScripting()
+{
+  void P_ACSInitNewGame();
+  P_ACSInitNewGame(); // clear the ACS world vars etc. TODO FS too
+}
 
 
 

@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004-2005 by DooM Legacy Team.
+// Copyright (C) 2004-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,8 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -55,14 +53,33 @@ void GameType::WriteServerInfo(BitStream &s)
 {
   consvar_t::SaveNetVars(s);
   fc.WriteNetInfo(s); // file names, sizes and md5 sums
-
+  s.writeString(mapinfo_name.c_str()); // HACK
   // TODO how long it has been running, how long to go,  gamestate, tick, serverplayer?
 }
 
 void GameType::ReadServerInfo(BitStream &s)
 {
   consvar_t::LoadNetVars(s);
-  //fc.WriteNetInfo(s); // file names, sizes and md5 sums
+
+  //void ReadNetInfo(BitStream &s)
+  S32 n;
+  s.read(&n); // number of files
+
+  bool dl;
+  char name[128];
+  S32 size;
+  byte md5[16];
+
+  for (int i=0; i<n; i++)
+    {
+      s.read(&dl);  // downloadable?
+      s.readString(name);
+      s.read(&size);
+      s.read(16, md5);
+    }
+
+  s.readString(name); // HACK, mapinfo lump name
+  mapinfo_name = name;
 }
 
 

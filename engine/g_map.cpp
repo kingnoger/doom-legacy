@@ -947,7 +947,12 @@ int Map::HandlePlayers()
   // TODO handle spectators...
   // if all the remaining players are finished, finish the Map.
   if (players.size() == fin)
-    info->state = MapInfo::MAP_FINISHED;
+    {
+      if (game.server)
+	info->state = MapInfo::MAP_FINISHED;
+      else
+	info->state = MapInfo::MAP_INSTASIS; // TEST
+    }
 
   return r;
 }

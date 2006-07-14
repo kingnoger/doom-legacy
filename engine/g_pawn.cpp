@@ -105,7 +105,10 @@ pawn_info_t pawndata[] =
 //=====================================
 
 IMPLEMENT_CLASS(Pawn, Actor);
+TNL_IMPLEMENT_NETOBJECT(Pawn);
+
 IMPLEMENT_CLASS(PlayerPawn, Pawn);
+TNL_IMPLEMENT_NETOBJECT(PlayerPawn);
 
 Pawn::Pawn()
   : Actor()

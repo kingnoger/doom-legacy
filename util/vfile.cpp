@@ -1,7 +1,7 @@
 // Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
-// Copyright (C) 2003-2004 by DooM Legacy Team.
+// Copyright (C) 2003-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -13,11 +13,10 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
-// DESCRIPTION:
-//   Implementation for VFile, VDir, VDataFile
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Implementation for VFile, VDir and VDataFile classes.
 
 #include <sys/stat.h>
 #include <dirent.h>

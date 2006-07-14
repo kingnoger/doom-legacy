@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004 by DooM Legacy Team.
+// Copyright (C) 2004-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,8 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -85,7 +83,7 @@ void serverinfo_t::Write(BitStream &s)
   s.write(game.demoversion);
   s.writeString(LEGACY_VERSIONSTRING);
   s.writeString(cv_servername.str);
-  s.write((unsigned int)game.Players.size());
+  s.write(static_cast<unsigned int>(game.Players.size()));
   s.write(game.maxplayers);
   s.writeString(game.gtype->gt_name.c_str());
   s.write(game.gtype->gt_version);
@@ -513,5 +511,3 @@ void FileCache::WriteNetInfo(BitStream &s)
       s.write(16, md5);
     }
 }
-
-

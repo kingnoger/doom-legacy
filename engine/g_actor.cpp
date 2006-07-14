@@ -16,7 +16,6 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
 //-----------------------------------------------------------------------------
 
 /// \file
@@ -136,6 +135,7 @@ Actor::Actor(fixed_t nx, fixed_t ny, fixed_t nz)
 //===========================================================
 
 TNL_IMPLEMENT_NETOBJECT(Actor);
+TNL_IMPLEMENT_NETOBJECT(DActor);
 
 #define ACTOR_AR 8 // angle resolution for netcode (in bits)
 
@@ -175,13 +175,6 @@ U32 Actor::packUpdate(GhostConnection *c, U32 mask, class BitStream *stream)
       stream->writeInt(pitch >> (32-ACTOR_AR), ACTOR_AR);
     }
 
-  if (stream->writeFlag(mask & M_ANIM))
-    {
-      // often
-      // send over animation sequence and interpolation / state
-      pres->PackAnim(stream);
-    }
-
   // NOTE: here we are in fact transferring presentation_t data.
   // Decided not to make presentation_t a NetObject of its own, since
   // it is always associated with an Actor and this is simpler.
@@ -191,6 +184,14 @@ U32 Actor::packUpdate(GhostConnection *c, U32 mask, class BitStream *stream)
       // very rarely
       // send over model/sprite info (mobjinfo/modeltype, color, drawing flags)
       pres->Pack(stream);
+      mask &= ~M_ANIM; // it's already included here
+    }
+
+  if (stream->writeFlag(mask & M_ANIM))
+    {
+      // often
+      // send over animation sequence and interpolation / state
+      pres->PackAnim(stream);
     }
 
   if (isInitialUpdate())
@@ -220,12 +221,6 @@ void Actor::unpackUpdate(GhostConnection *connection, BitStream *stream)
       pitch = stream->readInt(ACTOR_AR);
     }
 
-  if (stream->readFlag()) // M_ANIM
-    {
-      // get animation sequence and interpolation
-      pres->UnpackAnim(stream);
-    }
-
   if (stream->readFlag()) // M_PRES
     {
       // get model/sprite info (mobjinfo/modeltype, color)
@@ -233,6 +228,12 @@ void Actor::unpackUpdate(GhostConnection *connection, BitStream *stream)
       if (pres)
 	delete pres;
       pres = new spritepres_t(stream);
+    }
+
+  if (stream->readFlag()) // M_ANIM
+    {
+      // get animation sequence and interpolation
+      pres->UnpackAnim(stream);
     }
 
   if (isInitialUpdate())
@@ -245,6 +246,10 @@ void Actor::unpackUpdate(GhostConnection *connection, BitStream *stream)
 	I_Error("Got a ghosted Actor for an unknown map %d!", temp);
 
       //if (!m->me) I_Error("Got a ghosted Actor for an inactive map %d!", temp);
+
+      if (!m->me)
+	if (!m->Activate(NULL)) // clientside map activation
+	  I_Error("Crap!\n");
 
       m->me->SpawnActor(this); // link the ghost to the correct Map
     }

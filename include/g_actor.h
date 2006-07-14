@@ -210,7 +210,6 @@ class Actor : public Thinker, public NetObject
 {
   typedef NetObject Parent;
   TNL_DECLARE_CLASS(Actor);
-
   DECLARE_CLASS(Actor);
 
   /// netcode
@@ -357,6 +356,7 @@ public:
 /// (uses the A_* routines and the states table in info.cpp)
 class DActor : public Actor
 {
+  TNL_DECLARE_CLASS(DActor);
   DECLARE_CLASS(DActor);
 public:
   mobjtype_t        type; ///< what kind of thing is it?

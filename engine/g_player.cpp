@@ -40,7 +40,7 @@
 #include "wi_stuff.h"
 #include "tables.h"
 #include "z_zone.h"
-
+#include "hud.h"
 
 //============================================================
 //           Global (nonstatic) client data
@@ -248,6 +248,9 @@ bool PlayerInfo::onGhostAdd(class GhostConnection *c)
 
 	      p->info = this;
 	      LConnection::joining_players.erase(t); // the PlayerInfo found its owner
+
+	      ViewPlayers.push_back(this); // let's see it too!
+	      hud.ST_Start(this);
 	      break;
 	    }
 	}
@@ -278,7 +281,7 @@ U32 PlayerInfo::packUpdate(GhostConnection *c, U32 mask, class BitStream *stream
   if (stream->writeFlag(mask & M_IDENTITY))
     {
       // very rarely
-      CONS_Printf("--- pi stuff sent\n");
+      CONS_Printf("---PI: sent identity\n");
       stream->writeString(name.c_str());
       stream->write(number);
       stream->write(team);
@@ -286,6 +289,7 @@ U32 PlayerInfo::packUpdate(GhostConnection *c, U32 mask, class BitStream *stream
 
   if (stream->writeFlag(mask & M_PAWN))
     {
+      CONS_Printf("---PI: sent pawn\n");
       // rarely
       S32 idx = c->getGhostIndex(pawn); // these indices replace pointers to other ghosts!
       stream->write(idx);
@@ -296,6 +300,7 @@ U32 PlayerInfo::packUpdate(GhostConnection *c, U32 mask, class BitStream *stream
 
   if (stream->writeFlag(mask & M_SCORE))
     {
+      CONS_Printf("---PI: sent score\n");
       // occasionally
       stream->write(score);
       // kills, items, secrets?
@@ -348,7 +353,7 @@ void PlayerInfo::unpackUpdate(GhostConnection *c, BitStream *stream)
   // NOTE: the unpackUpdate function must be symmetrical to packUpdate
   if (stream->readFlag()) // M_IDENTITY
     {
-      CONS_Printf("--- pi stuff received\n");
+      CONS_Printf("---PI: got identity\n");
       stream->readString(temp);
       name = temp;
       stream->read(&number);
@@ -357,6 +362,7 @@ void PlayerInfo::unpackUpdate(GhostConnection *c, BitStream *stream)
 
   if (stream->readFlag()) // M_PAWN
     {
+      CONS_Printf("---PI: got pawn\n");
       S32 idx;
       stream->read(&idx);
       pawn = reinterpret_cast<PlayerPawn *>(c->resolveGhost(idx)); // these indices replace pointers to other ghosts!
@@ -366,7 +372,10 @@ void PlayerInfo::unpackUpdate(GhostConnection *c, BitStream *stream)
     }
 
   if (stream->readFlag()) // M_SCORE
-    stream->read(&score);
+    {
+      CONS_Printf("---PI: got score\n");
+      stream->read(&score);
+    }
 
   if (!stream->readFlag())
     return; // nothing more
@@ -392,6 +401,8 @@ void PlayerInfo::unpackUpdate(GhostConnection *c, BitStream *stream)
 /// server notifies the client that this player has entered a new map
 PLAYERINFO_RPC_S2C(s2cEnterMap, (U8 mapnum), (mapnum))
 {
+  CONS_Printf("player sent to map %d\n", mapnum);
+
   MapInfo *m = game.FindMapInfo(mapnum);
   if (!m)
     I_Error("Server sent a player to an unknown map %d!", mapnum);

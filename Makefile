@@ -44,7 +44,7 @@ ifdef LINUX
  NASM = nasm
  nasmformat = elf - DLINUX # hmmm... a define here...
 # compiler
- platform = -DLINUX
+ platform = -DLINUX -DNOMIXER
  interface = -DSDL
 # linker
  LIBS	= -L/usr/X11/lib -L/local/lib -lSDLmain -lSDL -lSDL_mixer -lpng -lz -L. -ltnl -ltomcrypt

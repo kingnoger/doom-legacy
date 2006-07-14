@@ -494,21 +494,40 @@ void Command_NewGame_f()
       hud.ST_Start(LocalPlayers[0].info);
     }
 
-  game.StartGame(skill_t(sk), epi);
+  game.SV_StartGame(skill_t(sk), epi);
 }
 
 
 // starts or restarts the game
 void Command_StartGame_f()
 {
+  if (COM_Argc() > 3)
+    {
+      CONS_Printf("Usage: startgame [episode] [skill]\n");
+      return;
+    }
+
   if (!game.server)
     {
       CONS_Printf("Only the server can restart the game.\n");
       return;
     }
 
-  if (!game.StartGame(game.skill, 1))
-    CONS_Printf("You must first set the levelgraph!\n");
+  int sk = sk_medium;
+  int epi = 1;
+  if (COM_Argc() >= 2)
+    {
+      epi = atoi(COM_Argv(1));
+
+      if (COM_Argc() >= 3)
+	{
+	  sk = atoi(COM_Argv(2));
+	  sk = (sk > sk_nightmare) ? sk_nightmare : ((sk < 0) ? 0 : sk);
+	}
+    }
+
+  if (!game.SV_StartGame(skill_t(sk), epi))
+    CONS_Printf("No MAPINFO lump loaded, use newgame instead!\n");
 }
 
 

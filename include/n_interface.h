@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004 by DooM Legacy Team.
+// Copyright (C) 2004-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,8 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -164,13 +162,13 @@ public:
   U32            token; ///< id token the server returned
   unsigned   nextquery; ///< when should the next server query be sent?
 
-  unsigned        ping;
+  unsigned        ping; ///< computed ping
 
   int          version; ///< server version
-  string versionstring;
+  string versionstring; ///< take a guess
   string          name; ///< server name
-  int          players;
-  int       maxplayers;
+  int          players; ///< current # of players
+  int       maxplayers; ///< maximum # of players
   string       gt_name; ///< name of the gametype DLL
   U32       gt_version; ///< DLL version
 
