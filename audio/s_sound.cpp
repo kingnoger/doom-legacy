@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -651,6 +650,8 @@ int SoundSystem::Start3DSound(sfxinfo_t *s, soundsource_t *source, float volume)
   c->source = *source;
 
   c->ovol = int(volume * 255 * vmax);
+  c->opitch = pitch;
+  c->osep = 128;
 
   // Check pitch and separation
   c->Adjust(listener);

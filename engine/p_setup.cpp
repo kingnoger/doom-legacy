@@ -16,7 +16,6 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
 //-----------------------------------------------------------------------------
 
 /// \file
@@ -817,6 +816,9 @@ void Map::LoadBlockMap(int lump)
 
   // Endianness: everything in blockmap is expressed in 2-byte shorts
   int size = fc.LumpLength(lump)/2;
+  if (size < 6)
+    I_Error("Map %s: Blockmap is missing.\n", lumpname.c_str());
+
   for (int i=0; i < size; i++)
     blockmaplump[i] = SHORT(blockmaplump[i]);
 
@@ -832,6 +834,9 @@ void Map::LoadBlockMap(int lump)
   int errors = 0;
   int first = 4 + count; // first possible blocklist offset (in shorts)
   int list_size = size - first;
+
+  if (list_size < 0)
+    I_Error("Map %s: Blockmap is corrupted.\n", lumpname.c_str());
 
   // we make a new 32-bit blockmap index
   bmap.index = (Uint16 **)Z_Malloc(count * sizeof(Uint16 *), PU_LEVEL, 0);
@@ -887,7 +892,7 @@ void Map::LoadBlockMap(int lump)
     }
 
   if (errors)
-    I_Error("Blockmap (%dx%d cells, %d bytes) had some errors.\n", bmapwidth, bmapheight, 2*size);
+    I_Error("Map %s: Blockmap (%dx%d cells, %d bytes) had some errors.\n", lumpname.c_str(), bmapwidth, bmapheight, 2*size);
 
   Z_Free(blockmaplump);
 
