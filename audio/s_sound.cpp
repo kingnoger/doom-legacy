@@ -63,12 +63,40 @@ consvar_t cv_surround = {"surround", "0", CV_SAVE, CV_OnOff};
 consvar_t cv_precachesound = {"precachesound","0",CV_SAVE ,CV_OnOff};
 
 
-const int SURROUND_SEP   = -128;
-const int S_STEREO_SWING = 96;
-
 bool  nomusic = false, nosound = false;
 
 SoundSystem S;
+
+
+/// \brief RIFF/WAVE file header
+struct WAV_t
+{
+  char   riff_magic[4];  ///< "RIFF"
+  Uint32 riff_size;      ///< filesize-8
+  char   wave_magic[4];  ///< "WAVE"
+
+  // fmt subchunk
+  struct
+  {
+    char   magic[4];      ///< "fmt "
+    Uint32 size;          ///< must be 16 
+    Uint16 audioformat;   ///< 1 means PCM
+    Uint16 numchannels;   ///< mono or stereo?
+    Uint32 samplerate;    ///< in Hz
+    Uint32 byterate;      ///< == samplerate*numchannels*bitspersample/8
+    Uint16 blockalign;    ///< == numchannels*bitspersample/8
+    Uint16 bitspersample; ///< 8 or 16
+  } __attribute__((packed)) fmt;
+
+  // data subchunk
+  struct
+  {
+    char   magic[4]; ///< "data"
+    Uint32 size;     ///< == numsamples*numchannels*bitspersample/8
+    byte   data[0];  ///< actual data begins here
+  } __attribute__((packed)) data;
+} __attribute__((packed));
+
 
 
 //===========================================================
@@ -105,34 +133,64 @@ soundcache_t::soundcache_t(memtag_t tag)
 {}
 
 
-// We assume that the sound is in Doom sound format (for now).
-// TODO: Make it recognize other formats as well! WAV for example
+// We assume that the sound is in Doom or WAV sound format.
 cacheitem_t *soundcache_t::Load(const char *p)
 {
   int lump = fc.FindNumForName(p, false);
   if (lump == -1)
     return NULL;
 
+  byte *raw = static_cast<byte *>(fc.CacheLumpNum(lump, tagtype));
+  unsigned size = fc.LumpLength(lump);
+
   sounditem_t *t = new sounditem_t(p);
-
   t->lumpnum = lump;
-  t->data = fc.CacheLumpNum(lump, tagtype);
-  int size = fc.LumpLength(lump);
+  t->data = raw;
+  
+  WAV_t *h = reinterpret_cast<WAV_t *>(raw);
+  if (!strncmp(h->riff_magic, "RIFF", 4))
+    {
+      // RIFF file
+      if (strncmp(h->wave_magic, "WAVE", 4))
+	I_Error("RIFF lump '%s' has unknown type!\n", p);
 
-  doomsfx_t *ds = (doomsfx_t *)t->data;
-  // endianness conversion
-  ds->magic	= SHORT(ds->magic);
-  ds->rate	= SHORT(ds->rate);
-  ds->samples	= SHORT(ds->samples);
-  ds->zero	= SHORT(ds->zero);
+      if (LONG(h->riff_size)+8 != size
+	  || strncmp(h->fmt.magic, "fmt ", 4)
+	  || strncmp(h->data.magic, "data", 4))
+	I_Error("WAVE lump '%s' is corrupted!\n", p);
 
-  //CONS_Printf(" Sound '%s', s = %d\n", p, ds->samples);
-  //CONS_Printf("m = %d, r = %d, s = %d, z = %d, length = %d\n", ds->magic, ds->rate, ds->samples, ds->zero, size);
+      t->depth = SHORT(h->fmt.bitspersample) / 8;
 
-  t->rate = ds->rate; // the only piece of header info we use
-  t->length = size - 8;  // 8 byte header
-  t->sdata = &ds->data;
+      if (LONG(h->fmt.size) != 16
+	  || SHORT(h->fmt.audioformat) != 1  // PCM only
+	  || SHORT(h->fmt.numchannels) != 1 // TODO support stereo?
+	  || (t->depth != 1 && t->depth != 2))
+	I_Error("WAVE lump '%s' is in an unsupported format!\n", p);
 
+      t->rate = LONG(h->fmt.samplerate);
+      t->length = LONG(h->data.size);
+      if (t->length != size-44)
+	I_Error("WAVE lump '%s' has wrong length!\n", p);
+      t->sdata = &h->data.data;
+    }
+  else
+    {
+      // assume Doom SFX
+      doomsfx_t *ds = reinterpret_cast<doomsfx_t *>(raw);
+      // endianness conversion
+      ds->magic   = SHORT(ds->magic);
+      ds->rate    = SHORT(ds->rate);
+      ds->samples = SHORT(ds->samples);
+      ds->zero    = SHORT(ds->zero);
+
+      //CONS_Printf(" Sound '%s', s = %d\n", p, ds->samples);
+      //CONS_Printf("m = %d, r = %d, s = %d, z = %d, length = %d\n", ds->magic, ds->rate, ds->samples, ds->zero, size);
+
+      t->rate = ds->rate; // the only piece of header info we use
+      t->depth = 1;
+      t->length = size - 8;  // 8 byte header
+      t->sdata = &ds->data;
+    }
   return t;
 }
 
@@ -177,7 +235,7 @@ void soundsource_t::Update()
 }
 
 // returns a value in the range [0.0, 1.0]
-static float S_ObservedVolume(Actor *listener, soundsource_t *source)
+float soundsource_t::ObservedVolume(Actor *listener)
 {
   // when to clip out sounds
   // Does not fit the large outdoor areas.
@@ -192,19 +250,15 @@ static float S_ObservedVolume(Actor *listener, soundsource_t *source)
   if (!listener)
     return 0;
 
-  // special case, same source and listener, absolute volume
-  if (source->act == listener)
-    return 1.0f;
-
   // calculate the distance to sound origin
   //  and clip it if necessary
-  vec_t<fixed_t> d = listener->pos - source->pos;
+  vec_t<fixed_t> d = listener->pos - pos;
 
   // From _GG1_ p.428. Approx. euclidean distance fast.
   /*
-  fixed_t adx = abs(listener->x - source->x);    
-  fixed_t ady = abs(listener->y - source->y);
-  fixed_t adz = abs(listener->z - source->z);
+  fixed_t adx = abs(listener->x - x);    
+  fixed_t ady = abs(listener->y - y);
+  fixed_t adz = abs(listener->z - z);
   fixed_t dist = adx + ady - ((adx < ady ? adx : ady)>>1);
   dist = dist + adz - ((dist < adz ? dist : adz)>>1);
   */
@@ -223,22 +277,37 @@ static float S_ObservedVolume(Actor *listener, soundsource_t *source)
 
 
 
-// Changes stereo-separation and pitch variables for a channel.
-// Otherwise, modifies parameters and returns sound volume.
-int channel_t::Adjust(Actor *l)
+// Changes observed volume, stereo-separation and pitch variables for a channel.
+// Returns sound volume.
+float soundchannel_t::Adjust()
 {
-  if (!l)
-    return 0;
-
   if (!source.act)
     return 0; // just in case
 
-  // special case, same source and listener, absolute volume
-  if (source.act == l)
-    return volume;
-
   source.Update();
+
+  // check non-local sounds for distance clipping
+  float vmax = -1;
+  Actor *l = NULL;
+
+  int n = ViewPlayers.size();
+  for (int i=0; i<n; i++)
+    {
+      Actor *p = ViewPlayers[i]->pawn;    
+      float v = source.ObservedVolume(p);	      
+      if (v > vmax)
+	{
+	  l = p;
+	  vmax = v;
+	}
+    }
+
+  if (!l)
+    return 0;
+
+  volume = b_volume*vmax;
   
+
   // angle of source to listener
   angle_t angle = R_PointToAngle2(l->pos.x, l->pos.y, source.pos.x, source.pos.y);
 
@@ -247,25 +316,23 @@ int channel_t::Adjust(Actor *l)
   else
     angle += (ANGLE_MAX - l->yaw);
 
-  int sep;
+  const float SURROUND_SEP = 0.5f; // TODO wtf?
+  const float STEREO_SWING = 0.375f; 
 
   // Produce a surround sound for angle from 105 till 255
   if (cv_surround.value && (angle > (ANG90 + (ANG45/3)) && angle < (ANG270 - (ANG45/3))))
-    sep = SURROUND_SEP;
+    separation = SURROUND_SEP;
   else
     {
-      angle >>= ANGLETOFINESHIFT;
-
       // stereo separation
-      sep = 128 - (finesine[angle] * S_STEREO_SWING).floor();
+      separation = 0.5 - Sin(angle).Float()*STEREO_SWING;
 
       if (cv_stereoreverse.value)
-	sep = (~sep) & 255;
+	separation = 1-separation;
     }
 
-  osep = sep;
 
-  opitch = pitch;
+  pitch = b_pitch;
   // TODO Doppler effect (approximate)
   /*
   if (s.origin)
@@ -281,7 +348,8 @@ int channel_t::Adjust(Actor *l)
       opitch = ...;
     }
   */
-  return ovol;
+
+  return volume;
 }
 
 
@@ -563,8 +631,35 @@ bool SoundSystem::ChannelPlaying(unsigned cnum)
 }
 
 
+void soundchannel_t::Init(sfxinfo_t *s, float vol, bool rand_pitch)
+{
+  priority = s->priority;
+
+  // 64 pitch units = 1 octave
+  // TODO variable pitch shifts as per sound?
+  if (rand_pitch)
+    {
+      b_pitch = s->pitch + 16 - (rand() & 31);
+
+      if (b_pitch < 0)
+	b_pitch = 0;
+      if (b_pitch > 255)
+	b_pitch = 255;
+    }
+  else
+    b_pitch = s->pitch;
+  pitch = b_pitch;
+
+  if (vol > 1 || vol < 0)
+    vol = 1;
+
+  b_volume = volume = vol;
+
+  si = sc.Get(s->lumpname);
+}
+
 // Starts a normal mono(stereo) sound
-int SoundSystem::StartAmbSound(sfxinfo_t *s, float volume, int separation)
+int SoundSystem::StartAmbSound(sfxinfo_t *s, float volume, float sep)
 {
   if (nosound)
     return -1;
@@ -574,20 +669,14 @@ int SoundSystem::StartAmbSound(sfxinfo_t *s, float volume, int separation)
   if (i == -1)
     return -1;
 
-  if (volume > 1 || volume < 0)
-    volume = 1;
-
-  channel_t *c = &channels[i];
+  soundchannel_t *c = &channels[i];
   c->source.isactor = false;
   c->source.act = NULL;
 
   // copy source data
-  c->ovol= c->volume = int(volume*255);
-  c->opitch = c->pitch = s->pitch;
-  c->osep = separation;
-  c->priority = s->priority;
+  c->Init(s, volume, false);
 
-  c->si = sc.Get(s->lumpname);
+  c->separation = sep;
 
   I_StartSound(c);
   return i;
@@ -609,7 +698,7 @@ int SoundSystem::Start3DSound(sfxinfo_t *s, soundsource_t *source, float volume)
   for (int i=0; i<n; i++)
     {
       Actor *temp = ViewPlayers[i]->pawn;    
-      float v = S_ObservedVolume(temp, source);
+      float v = source->ObservedVolume(temp);
 
       if (v > vmax)
 	{
@@ -629,34 +718,13 @@ int SoundSystem::Start3DSound(sfxinfo_t *s, soundsource_t *source, float volume)
   if (i == -1)
     return -1;
 
-  channel_t *c = &channels[i];
-
-  // 64 pitch units = 1 octave
-  // TODO variable pitch shifts as per sound?
-  int pitch = s->pitch + 16 - (rand() & 31);
-
-  if (pitch < 0)
-    pitch = 0;
-  if (pitch > 255)
-    pitch = 255;
-
-  if (volume > 1 || volume < 0)
-    volume = 1;
-
-  // copy source data
-  c->volume = int(volume*255);
-  c->pitch = pitch;
-  c->priority = s->priority;
+  soundchannel_t *c = &channels[i];
   c->source = *source;
 
-  c->ovol = int(volume * 255 * vmax);
-  c->opitch = pitch;
-  c->osep = 128;
+  c->Init(s, volume, true);
 
-  // Check pitch and separation
-  c->Adjust(listener);
-
-  c->si = sc.Get(s->lumpname);
+  // Set volume, pitch and separation
+  c->Adjust();
 
   I_StartSound(c);
   //CONS_Printf("3D sound started, %d, %f\n", c->ovol, v1);
@@ -720,7 +788,7 @@ void SoundSystem::StopChannel(unsigned cnum)
   if (cnum >= channels.size())
     return;
 
-  channel_t *c = &channels[cnum];
+  soundchannel_t *c = &channels[cnum];
 
   if (c->si)
     {
@@ -776,46 +844,19 @@ void SoundSystem::UpdateSounds()
     }
 
 
-  // 3D sound channels
-
-  int n = ViewPlayers.size();
-
-  // static sound channels
+  // sound channels
   int nchan = channels.size();
-
   for (int cnum = 0; cnum < nchan; cnum++)
     {
-      channel_t *c = &channels[cnum];
+      soundchannel_t *c = &channels[cnum];
 
       if (c->playing)
 	{
 	  if (!c->source.act)
-	    continue;
+	    continue; // unchanging
 
-	  // check non-local sounds for distance clipping
-	  //  or modify their params
-	  float vmax = -1;
-	  Actor *listener = NULL;
-
-	  for (int i=0; i<n; i++)
-	    {
-	      Actor *temp = ViewPlayers[i]->pawn;    
-	      float v = S_ObservedVolume(temp, &c->source);
-	      
-	      if (v > vmax)
-		{
-		  listener = temp;
-		  vmax = v;
-		}
-	    }
-            
-	  if (vmax <= 0.0)
+	  if (c->Adjust() <= 0)
 	    StopChannel(cnum);
-	  else
-	    {
-	      c->ovol = int(c->volume * vmax);
-	      c->Adjust(listener);
-	    }
 	}
       else
 	// if channel is allocated but sound has stopped, free it

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -1022,8 +1021,6 @@ bool S_StartMusic(int m_id, bool loop)
   return false;
 }
 
-#define NORM_SEP 128
-
 
 int S_StartAmbSound(PlayerInfo *p, int sfx_id, float volume)
 {
@@ -1064,7 +1061,7 @@ int S_StartLocalAmbSound(int sfx_id, float volume)
       return -1;
     }
 
-  return S.StartAmbSound(i->second, volume, NORM_SEP);
+  return S.StartAmbSound(i->second, volume);
 }
 
 

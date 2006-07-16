@@ -43,23 +43,13 @@ void I_SubmitSound();
 //  SFX I/O
 //
 
-class channel_t;
-
 void I_SetSfxVolume(int volume);
 
 // Starts a sound in a particular sound channel, returns a handle
-int I_StartSound(channel_t *c);
+int I_StartSound(class soundchannel_t *c);
 
 // Stops a sound channel.
-void I_StopSound(channel_t *c);
-
-// Returns false if no longer playing, true if playing.
-//bool I_SoundIsPlaying(int handle);
-
-// Updates the volume, separation,
-//  and pitch of a sound channel.
-// returns false if sound is already stopped / not found
-//bool I_UpdateSoundParams(int handle, int vol, int sep, int pitch);
+void I_StopSound(soundchannel_t *c);
 
 //
 //  MUSIC I/O

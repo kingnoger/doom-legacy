@@ -16,20 +16,23 @@
 
 <h1>Doom Legacy features</h1>
 
-<p />
+<p>
 As of version 2.0, the Legacy game engine has been rewritten in
 C++. A host of features were added to the game. Here is a short
 summary.
-
-<p />
-**  Partly implemented<br />
+</p>
+<p>
+*   Nearly complete<br/>
+**  Partly implemented<br/>
 *** In a planning stage
+</p>
 
 <h2>Graphics</h2>
 
 <ul>
  <li>** A brand new OpenGL graphics engine.</li>
- <li>** hi-res sprites/textures/flats, PNG support.</li>
+ <li>Support for v2 and v5 GL nodes.
+ <li>* hi-res sprites/textures/flats, PNG support.</li>
  <li>Generic graphic presentations for game objects. Support for sprites, **MD2s and **MD3s.</li>
 </ul>
 
@@ -43,8 +46,9 @@ capabilities. Music is produced using the SDL_mixer
 library. Highlights:
 
 <ul>
- <li>Supports MUS, MIDI, MP3 and Ogg Vorbis music.</li>
- <li>Original Doom and **WAV sounds.</li>
+ <li>Supports MUS, MIDI, MP3 and Ogg Vorbis music, as well as various
+ module formats.</li>
+ <li>Original Doom and WAV/RIFF sounds.</li>
  <li>Software 3D sound renderer.</li>
 </ul>
 
@@ -73,16 +77,17 @@ required, it can be enhanced with the following features:
 
 <ul>
  <li>LevelInfo lumps.</li>
- <li>Hexen/ZDoom-style MAPINFO support, with extensions. Free level ordering.</li>
+ <li>Hexen/ZDoom-style MAPINFO support, with extensions. Free level
+ ordering, hubs á la Hexen.</li>
  <li>SNDINFO and SNDSEQ support, with extensions.</li>
  <li>ANIMDEFS support.</li>
  <li>WAD2/WAD3 support.</li>
  <li>PAK and **PK3 support.</li>
  <li>Use normal directories as resource "files".</li>
  <li>Essential DeHackEd and BEX support with extensions.</li>
- <li>Cross-over games: Doom/Heretic/Hexen entities in the same level,
+ <li>*Cross-over games: Doom/Heretic/Hexen entities in the same level,
   players playing Hellspawn instead of Marines...</li>
- <li>Voodoo Dolls work.</li>
+ <li>Voodoo Dolls finally work.</li>
  <li>*** DLL modifiability.</li>
 </ul>
 
@@ -95,7 +100,7 @@ required, it can be enhanced with the following features:
  <li>Second level dedicated cache system for sounds, sprites etc.</li>
  <li>zlib compression for savegames.</li>
  <li>New game objects with custom AI are easy to make through inheritance.</li>
- <li>New save/load system, hubs á la Hexen.</li>
+ <li>New save/load system.</li>
  <li>Damage system with different types of damage.</li>
 </ul>
 

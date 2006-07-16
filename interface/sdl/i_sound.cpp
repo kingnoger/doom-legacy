@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 2000-2005 by Doom Legacy team
+// Copyright (C) 2000-2006 by Doom Legacy team
 //
 // This source is available for distribution and/or modification
 // only under the terms of the DOOM Source Code License as
@@ -14,7 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // FITNESS FOR A PARTICULAR PURPOSE. See the DOOM Source Code License
 // for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -64,31 +63,6 @@
 #define SAMPLERATE      22050   // Hz
 #define SAMPLECOUNT     512 // requested audio buffer size (about 46 ms at 11 kHz)
 
-class chan_t
-{
-public:
-  // the corresponding SoundSystem channel
-  channel_t *ch;
-
-  // The channel data pointers, start and end.
-  Uint8 *data;
-  Uint8 *end;
-
-  // pitch and samplerate fused together
-  fixed_t step;          // The channel step amount...
-  fixed_t stepremainder; // ... and a 0.16 bit remainder of last step.
-
-  // Hardware left and right channel volume lookup.
-  int *leftvol_lookup;
-  int *rightvol_lookup;
-
-  // calculate sound parameters using ch
-  void CalculateParams();
-};
-
-
-
-static vector<chan_t> channels;
 
 // Pitch to stepping lookup in 16.16 fixed point. 64 pitch units = 1 octave
 //  0 = 0.25x, 128 = 1x, 256 = 4x
@@ -161,35 +135,32 @@ void I_SetSfxVolume(int volume)
 }
 
 // used to (re)calculate channel params
-void chan_t::CalculateParams()
+void soundchannel_t::CalculateParams()
 {
   // how fast should the sound sample be played?
-  step = (double(ch->si->rate) / audio.freq) * steptable[ch->opitch];
+  step = (double(si->rate) / audio.freq) * steptable[pitch];
 
   // x^2 separation, that is, orientation/stereo.
-  //  range is: 0 (left) - 255 (right)
 
-  // Volume arrives in range 0..255 and it must be in 0..cv_soundvolume...
-  int vol = (ch->ovol * cv_soundvolume.value) >> 7;
-  // note: >> 6 would use almost the entire dynamical range, but
+  float vol = (volume * cv_soundvolume.value) / 64.0;
+  // note: >> 5 would use almost the entire dynamical range, but
   // then there would be no "dynamical room" for other sounds :-/
-  int sep = ch->osep;
-
-  int leftvol  = vol - ((vol*sep*sep) >> 16); ///(256*256);
-  sep = 255 - sep;
-  int rightvol = vol - ((vol*sep*sep) >> 16);
+  float sep = separation;
+  leftvol  = vol * (1 - sep*sep);
+  sep = 1 - sep;
+  rightvol = vol * (1 - sep*sep);
 
   // Sanity check, clamp volume.
-  if (rightvol < 0 || rightvol > 127)
+  if (rightvol < 0 || rightvol >= 0.5)
     I_Error("rightvol out of bounds");
 
-  if (leftvol < 0 || leftvol > 127)
+  if (leftvol < 0 || leftvol >= 0.5)
     I_Error("leftvol out of bounds");
 
-  // Get the proper lookup table piece
-  //  for this volume level???
-  leftvol_lookup = vol_lookup[leftvol];
-  rightvol_lookup = vol_lookup[rightvol];
+  // Volume arrives in range 0..1 and it must be in 0..127
+  // Get the proper lookup table piece for this volume level
+  leftvol_lookup = vol_lookup[int(128*leftvol)];
+  rightvol_lookup = vol_lookup[int(128*rightvol)];
 }
 
 //----------------------------------------------
@@ -198,7 +169,7 @@ void chan_t::CalculateParams()
 //  which is maintained as a given number
 //  (eight, usually) of internal channels.
 
-int I_StartSound(channel_t *s_channel)
+int I_StartSound(soundchannel_t *c)
 {
   if (nosound)
     return 0;
@@ -207,27 +178,17 @@ int I_StartSound(channel_t *s_channel)
   SDL_LockAudio();
 #endif
 
-  int n = channels.size();
-  //CONS_Printf("SDL channels: %d\n", n);
-
   // Tales from the cryptic.
-  // Because SoundSystem class takes care of channel management,
-  // we know that a new channel can be created.
-  channels.resize(n+1);
-  chan_t *c = &channels[n];
-  c->ch = s_channel;
+  c->samplesize = c->si->depth;
 
   // Set pointer to raw data.
-  c->data = (Uint8 *)s_channel->si->sdata;
+  c->data = (Uint8 *)c->si->sdata;
   // Set pointer to end of raw data.
-  c->end = c->data + s_channel->si->length;
+  c->end = c->data + c->si->length;
   
   c->stepremainder = 0;
 
-  // Set pitch, volume and separation
-  c->CalculateParams();
-
-  s_channel->playing = true;
+  c->playing = true;
 
 #ifdef NOMIXER
   SDL_UnlockAudio();
@@ -248,16 +209,9 @@ int I_StartSound(channel_t *s_channel)
 }
 
 
-void I_StopSound(channel_t *c)
+void I_StopSound(soundchannel_t *c)
 {
-  vector<chan_t>::iterator i;
-
-  for (i = channels.begin(); i != channels.end(); i++)
-    if (i->ch == c)
-      break;
- 
-  if (i != channels.end())
-    channels.erase(i);
+  c->playing = false;
 }
 
 /*
@@ -302,7 +256,6 @@ static void I_UpdateSound_sdl(void *unused, Uint8 *stream, int len)
   // Here we mix in current sound data.
 
   // Data, from raw sound, for right and left.
-  register unsigned int sample;
   register int dl, dr;
 
   // Left and right channel
@@ -317,6 +270,19 @@ static void I_UpdateSound_sdl(void *unused, Uint8 *stream, int len)
   //  (right channel is implicit).
   Sint16 *leftend = leftout + len/step;
 
+
+  int n = S.channels.size();
+  for (int i = 0; i < n; i++)
+    {
+      soundchannel_t *c = &S.channels[i];
+      // Check if channel is active.
+      if (c->playing)
+	{
+	  // Set current pitch, volume and separation
+	  c->CalculateParams();
+	}
+    }
+
   // Mix sounds into the mixing buffer.
   // Loop over entire buffer
   while (leftout != leftend)
@@ -328,24 +294,40 @@ static void I_UpdateSound_sdl(void *unused, Uint8 *stream, int len)
       // Love thy L2 chache - made this a loop.
       // Now more channels could be set at compile time
       //  as well. Thus loop those  channels.
-      int i, n = channels.size();
-      for (i = 0; i < n; i++)
+      for (int i = 0; i < n; i++)
         {
-	  chan_t *c = &channels[i];
+	  soundchannel_t *c = &S.channels[i];
 	  // Check if channel is active.
-	  if (c->data)
+	  if (c->playing)
             {
-	      // Get the raw data from the channel.
-	      sample = *(c->data);
-	      // Add left and right part for this channel (sound)
-	      //  to the current data.
-	      // Adjust volume accordingly.
-	      dl += c->leftvol_lookup[sample];
-	      dr += c->rightvol_lookup[sample];
-	      // pitch.
+	      // handle pitch.
 	      c->stepremainder += c->step;
-	      // 16.16 fixed point: high word is the current stride
-	      c->data += c->stepremainder.floor();
+
+	      register unsigned int sample;
+	      // Get the raw data from the channel.
+	      if (c->samplesize == 2)
+		{
+		  // S16 FIXME this still does not work right
+		  sample = *reinterpret_cast<Sint16 *>(c->data);
+		  dl +=  int(c->leftvol*sample);
+		  dr += int(c->rightvol*sample);
+
+		  // 16.16 fixed point: high word is the current stride
+		  c->data += 2*c->stepremainder.floor();
+		}
+	      else
+		{
+		  // U8
+		  sample = *(c->data);
+		  // Add left and right part for this channel (sound) to the current data.
+		  // Adjust volume accordingly.
+		  dl += c->leftvol_lookup[sample];
+		  dr += c->rightvol_lookup[sample];
+
+		  // 16.16 fixed point: high word is the current stride
+		  c->data += c->stepremainder.floor();
+		}
+
 	      // cut away high word
 	      c->stepremainder = c->stepremainder.frac();
 	      
@@ -353,7 +335,7 @@ static void I_UpdateSound_sdl(void *unused, Uint8 *stream, int len)
 	      if (c->data >= c->end)
 		{
 		  c->data = NULL;
-		  c->ch->playing = false; // notify SoundSystem
+		  c->playing = false; // notify SoundSystem
 		}
             }
         }

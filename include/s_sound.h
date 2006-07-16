@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,7 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -81,7 +80,7 @@ public:
 
 
 
-/// \brief Sound cache item, 
+/// \brief Sound cache item
 class sounditem_t : public cacheitem_t
 {
   friend class soundcache_t;
@@ -93,10 +92,12 @@ public:
   virtual ~sounditem_t();
 
   unsigned  rate;   ///< sample rate in Hz
+  unsigned  depth;  ///< sample size in bytes (1 or 2)
   void     *data;   ///< unconverted data
-  int       length; ///< length in bytes
+  unsigned  length; ///< length in bytes
   void     *sdata;  ///< raw converted sound data (for now assumed always to be U8 depth)
 };
+
 
 
 
@@ -117,30 +118,61 @@ struct soundsource_t
   };
 
 public:
-  void Update();
+  void  Update();
+  float ObservedVolume(Actor *listener);
 };
+
 
 
 /// \brief Normal "static" mono(stereo) sound channel.
-struct channel_t
+class soundchannel_t
 {
-  int volume;
-  int pitch;
-  int priority;
+public:
+  sounditem_t *si;      ///< data source for the sound
+  soundsource_t source; ///< origin of sound (or NULL)
 
-  // observed variables
-  int ovol;
-  int opitch;
-  int osep; ///< left/right x^2 separation. 128 is front, 0 is totally left, 256 is totally right
+  /// sfx base parameters
+  int   priority;
+  float b_volume;
+  int   b_pitch;
 
-  class sounditem_t *si;
+  // observed variables (affected by distance and relative velocity)
+  float separation; ///< left/right x^2 separation. 0 is totally left, 0.5 is front, 1 is totally right
+  float volume;
+  int   pitch;
 
   bool playing;
-  soundsource_t source;  ///< origin of sound (or NULL)
+
+  //============================================================
+  // Stuff below this line is used by the sound interface only.
+  //============================================================
+
+  // The channel data pointers, start and end.
+  Uint8 *data;
+  Uint8 *end;
+
+  int samplesize; ///< 1 or 2 (bytes)
+
+  // pitch and samplerate fused together
+  fixed_t step;          // The channel step amount...
+  fixed_t stepremainder; // ... and a 0.16 bit remainder of last step.
+
+  float leftvol, rightvol;
+
+  // Hardware left and right channel volume lookup.
+  int *leftvol_lookup;
+  int *rightvol_lookup;
+
+  // calculate sound parameters using ch
+  void CalculateParams();
+
 
 public:
-  int Adjust(Actor *listener);
+  void  Init(sfxinfo_t *s, float vol, bool rand_pitch);
+  float Adjust();  ///< returns volume heard by present observers
 };
+
+
 
 
 
@@ -154,8 +186,10 @@ class SoundSystem
 private:
   // sound
   int soundvolume;
-  vector<channel_t> channels; ///< the set of channels available
+public:
+  vector<soundchannel_t> channels; ///< the set of channels available
 
+private:
   // music
   int  musicvolume;
   bool mus_paused;            ///< whether music is paused
@@ -179,9 +213,9 @@ public:
   // --------- sound ---------
 
   /// normal mono/stereo sound
-  int StartAmbSound(sfxinfo_t *s, float volume = 1.0, int separation = 128);
+  int StartAmbSound(sfxinfo_t *s, float volume = 1.0f, float separation = 0.5f);
   /// positional 3D sound
-  int Start3DSound(sfxinfo_t *s, soundsource_t *source, float volume = 1.0);
+  int Start3DSound(sfxinfo_t *s, soundsource_t *source, float volume = 1.0f);
 
   void Stop3DSounds();
   void Stop3DSound(void *origin);
