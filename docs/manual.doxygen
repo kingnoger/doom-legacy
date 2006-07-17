@@ -1,6 +1,6 @@
 /*
   Doom Legacy Manual
-  Copyright (C) 1998-2004 by DooM Legacy Team.
+  Copyright (C) 1998-2006 by DooM Legacy Team.
 
   $Id$
 */
@@ -9,33 +9,26 @@
 /*!
 @mainpage Doom Legacy Manual
 
-Copyright &copy; 1998-2004 by DooM Legacy Team.
+Copyright &copy; 1998-2006 by DooM Legacy Team.
 
 
 @section introduction Introduction
 
-This is the main index page for <b>Doom Legacy</b> documentation....
-
+This is the main index page for <b>Doom Legacy</b> documentation.
 TODO finish this page
-
 
 @section contents Contents of this manual
 
 The Legacy documentation is divided into three chapters:
 
-@ref playing, information for players
+@ref playing, information for players.
 
-@ref editing, information for map authors
+@ref editing, information for map authors.
 
-@ref coding, information for developers and other interested parties
+@ref coding, information for developers and other interested parties.
 
-@subsection test1 subsection
-
-even more text
-
-<a href="http://legacy.newdoom.com/">Doom Legacy</a> home page
-
-
+@see
+<a href="http://legacy.newdoom.com/">Doom Legacy</a> home page.
  */
 
 
@@ -43,7 +36,6 @@ even more text
 /*! @page playing Playing Doom Legacy
 
 Just start playing, moron!
-
 
 <ul>
 <li><a href="../legacy.html">legacy.html</a> Legacy reference manual</li>
@@ -65,8 +57,8 @@ Lots of features, such as new linedef types, 3d floors, scripting...
 <li><a href="../features.html">features.html</a> Summary of Doom Legacy features</li>
 <li><a href="../editing.html">editing.html</a> Legacy Map Author's reference manual</li>
 <li><a href="../boomref.html">boomref.html</a> Boom reference manual</li>
-<li><a href="">.html</a> FraggleScript</li>
-<li><a href="">.html</a> Action Code Script</li>
+<li><a href="../fsbasic.html">fsbasic.html</a> FraggleScript</li>
+<li><a href="../acs.html">acs.html</a> Action Code Script</li>
 </ul>
 
  */
@@ -86,9 +78,9 @@ The source can be found <a href="http://sourceforge.net/projects/doomlegacy/">he
 <li><a href="../BUGS.html">BUGS.html</a> Bugs list</li>
 </ul>
 
-@ref GameInfo is a class
+@note
+To get started, you should read the documentation on the most central classes:
+@ref GameInfo, @ref PlayerInfo, @ref MapCluster, @ref MapInfo, @ref Map, @ref Thinker, @ref Actor, @ref DActor and @ref PlayerPawn.
 
-@note this here
-
-@see GameInfo is very important
+The netcode is found within @ref GameInfo, @ref LNetInterface and @ref LConnection.
  */

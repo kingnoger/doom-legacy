@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -409,20 +408,20 @@ void PlayerPawn::TouchSpecialThing(DActor *thing)
 
       // medikits, heals
     case MT_STIM:
-      if (!GiveBody(10))
+      if (!GiveBody(amount))
 	return;
       player->SetMessage(GOTSTIM, 1);
       break;
 
     case MT_XHEALINGBOTTLE:
     case MT_HEALINGBOTTLE:
-      if (!GiveBody(10))
+      if (!GiveBody(amount))
 	return;
       player->SetMessage(text[TXT_ITEMHEALTH], 1);
       break;
 
     case MT_MEDI:
-      if (!GiveBody(25))
+      if (!GiveBody(amount))
 	return;
       if (health < 25)
 	player->SetMessage(GOTMEDINEED, 1);

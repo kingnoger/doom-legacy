@@ -16,13 +16,10 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
-//
-// DESCRIPTION:
-//      System interface, sound.
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Sound system interface
 
 #ifndef i_sound_h
 #define i_sound_h 1

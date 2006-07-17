@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -260,17 +259,17 @@ extern int maxammo1[NUMAMMO]; ///< without backpack
 extern int maxammo2[NUMAMMO]; ///< with backpack
 
 
-/// "volatile" weapon info (changes with tome of power etc...)
+/// \brief Volatile weapon info (changes with tome of power etc...)
 struct weaponinfo_t
 {
-  ammotype_t ammo;
-  int        ammopershoot;
-  weaponstatenum_t upstate;
-  weaponstatenum_t downstate;
-  weaponstatenum_t readystate;
-  weaponstatenum_t atkstate;
-  weaponstatenum_t holdatkstate;
-  weaponstatenum_t flashstate;
+  ammotype_t ammo;               ///< Type of ammo it uses.
+  int        ammopershoot;       ///< How much ammo it uses per shot.
+  weaponstatenum_t upstate;      ///< Being drawn.
+  weaponstatenum_t downstate;    ///< Being put away.
+  weaponstatenum_t readystate;   ///< Ready to be fired.
+  weaponstatenum_t atkstate;     ///< Fire.
+  weaponstatenum_t holdatkstate; ///< Continuous fire.
+  weaponstatenum_t flashstate;   ///< Muzzle flash.
 };
 
 extern weaponinfo_t wpnlev1info[NUMWEAPONS];

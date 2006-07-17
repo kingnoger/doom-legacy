@@ -65,7 +65,7 @@ WARN_LOGFILE           =
 # configuration options related to the input files
 #---------------------------------------------------------------------------
 INPUT                  = docs/manual.doxygen .
-FILE_PATTERNS          = *.h
+FILE_PATTERNS          = *.h *.cpp
 RECURSIVE              = YES
 EXCLUDE                = ./experimental/ ./include/tnl/
 EXCLUDE_SYMLINKS       = YES
@@ -188,12 +188,12 @@ CLASS_DIAGRAMS         = YES
 HIDE_UNDOC_RELATIONS   = YES
 HAVE_DOT               = YES
 CLASS_GRAPH            = YES
-COLLABORATION_GRAPH    = YES
+COLLABORATION_GRAPH    = NO
 UML_LOOK               = NO
 TEMPLATE_RELATIONS     = YES
 INCLUDE_GRAPH          = YES
 INCLUDED_BY_GRAPH      = YES
-CALL_GRAPH             = YES
+CALL_GRAPH             = NO
 GRAPHICAL_HIERARCHY    = YES
 DOT_IMAGE_FORMAT       = png
 DOT_PATH               = 

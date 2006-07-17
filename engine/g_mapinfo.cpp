@@ -579,6 +579,7 @@ int GameInfo::Read_MAPINFO(int lump)
 	{
 	  // cluster definition block begins (ZDoom)
 	  parsestate = PS_CLUSTERDEF;
+
 	  n = p.GetInt();
 
 	  if (clustermap.count(n))
@@ -589,9 +590,8 @@ int GameInfo::Read_MAPINFO(int lump)
 	  else
 	    clustermap[n] = cl = new MapCluster(n);
 
-	  if (sscanf(p.Pointer(), "\"%60[^\"]\"", line) == 1)
+	  if (sscanf(p.Pointer(), " \"%60[^\"]\"", line) == 1)
 	    cl->clustername = line;
-	  
 	}
       else switch (parsestate)
 	{

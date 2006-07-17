@@ -21,7 +21,31 @@
 /// \file
 /// \brief Movement, collision handling. Shooting and aiming.
 
+/*!
+  \defgroup g_iterators Map geometry iterator functions
+
+  Functions and methods used to iterate through Map geometry.
+ */
+
+/*!
+  \defgroup g_pit Iterator functions for Actors and line_t's 
+  \ingroup g_iterators
+
+  The PIT functions: Unary functors for Actors and line_t's.
+  Return false to stop iteration, true to continue.
+ */
+
+/*!
+  \defgroup g_ptr Traverser functions intercept_t's
+  \ingroup g_iterators
+
+  The PTR functions: Unary functors for intercept_t
+  Return false to stop traversal, true to continue.
+ */
+
+
 // FIXME entire aiming/sight/trace/intercept system: handle z coordinate better. also, slope was originally tangent, now it is sine, but NOT everywhere! FIX!
+
 
 #include <math.h>
 #include "doomdef.h"
@@ -67,9 +91,7 @@ int      tmfloorpic;
 Actor *tmfloorthing;   // the thing corresponding to tmfloorz
                                 // or NULL if tmfloorz is from a sector
 
-//added:28-02-98: used at P_ThingHeightClip() for moving sectors
-fixed_t  tmsectorfloorz;
-fixed_t  tmsectorceilingz;
+static fixed_t  tmsectorfloorz, tmsectorceilingz;
 
 //=======================================================
 //   Stuff set by PIT_CheckLine() and PIT_CheckThing
@@ -82,8 +104,6 @@ line_t *ceilingline;
 
 
 
-
-static msecnode_t *sector_list = NULL;
 msecnode_t *P_AddSecnode(sector_t *s, Actor *thing, msecnode_t *nextnode);
 msecnode_t *P_DelSecnode(msecnode_t *node);
 
@@ -123,6 +143,11 @@ bool Map::RadiusLinesCheck(fixed_t x, fixed_t y, fixed_t radius, line_iterator_t
 //    Teleportation
 //===========================================
 
+/// \brief Checks if an Actor blocks a teleportation move (or is telefragged)
+/// \ingroup g_pit
+/*!
+  Well.
+*/
 static bool PIT_StompThing(Actor *thing)
 {
   // don't clip against self
@@ -203,6 +228,11 @@ bool Actor::TeleportMove(fixed_t nx, fixed_t ny)
 //  Spikes
 //===========================================
 
+/// \brief Checks if an Actor is hit by a Hexen spike
+/// \ingroup g_pit
+/*!
+  Well.
+*/
 static bool PIT_ThrustStompThing(Actor *thing)
 {
   if (!(thing->flags & MF_SHOOTABLE))
@@ -419,9 +449,12 @@ static void CheckForPushSpecial(line_t *line, int side, Actor *thing)
     }
 }
 
-// Iterator function for Actor->Actor collision checks. Global variable 'tmthing'
-// is the active object whose collisions are checked. 'thing' is any other object
-// to which it may collide.
+/// \brief Checks if an Actor is collided by another.
+/// \ingroup g_pit
+/*!
+  Iterator function for Actor->Actor collision checks. tmthing collides, thing gets collided.
+  Sets Blocking.thing, calls Actor::Touch.
+*/
 static bool PIT_CheckThing(Actor *thing)
 {
   // don't clip against self
@@ -499,9 +532,14 @@ static bool PIT_CrossLine (line_t *ld)
 */
 
 
-// Iterator for Actor->Line collision checking.
-// Adjusts tmfloorz and tmceilingz as lines are contacted.
-// Fills the spechit vector.
+
+/// \brief Checks if a line_t is hit by an Actor.
+/// \ingroup g_pit
+/*!
+  Iterator for Actor->Line collision checking.
+  Adjusts tmfloorz and tmceilingz as lines are contacted.
+  Sets Blocking.line, pushes lines, adds them to spechit vector.
+*/
 static bool PIT_CheckLine(line_t *ld)
 {
   if (!tmb.BoxTouchBox(ld->bbox))
@@ -733,60 +771,6 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 }
 
 
-// Takes a valid thing and adjusts the thing->floorz,
-// thing->ceilingz, and possibly thing->z.
-// This is called for all nearby monsters
-// whenever a sector changes height.
-// If the thing doesn't fit,
-// the z will be set to the lowest value
-// and false will be returned.
-bool P_ThingHeightClip(Actor *thing)
-{
-  bool onfloor = (thing->pos.z <= thing->floorz);
-
-  thing->CheckPosition(thing->pos.x, thing->pos.y);
-
-  // what about stranding a monster partially off an edge?
-
-  thing->floorz = tmfloorz;
-  thing->ceilingz = tmceilingz;
-
-  if (!tmfloorthing && onfloor && !(thing->flags & MF_NOGRAVITY))
-    {
-      // walking monsters rise and fall with the floor
-      thing->pos.z = thing->floorz;
-    }
-  else
-    {
-      // don't adjust a floating monster unless forced to
-      //added:18-04-98:test onfloor
-      if (!onfloor)                    //was tmsectorceilingz
-	if (thing->Top() > tmceilingz)
-	  thing->pos.z = thing->ceilingz - thing->height;
-
-      //thing->eflags &= ~MFE_ONGROUND;
-    }
-
-  //debug : be sure it falls to the floor
-  thing->eflags &= ~MFE_ONGROUND;
-
-  //added:28-02-98:
-  // test sector bouding top & bottom, not things
-
-  //if (tmsectorceilingz - tmsectorfloorz < thing->height)
-  //    return false;
-
-  if (thing->ceilingz - thing->floorz < thing->height
-      // BP: i know that this code cause many trouble but this fix alos 
-      // lot of problem, mainly this is implementation of the stepping 
-      // for mobj (walk on solid corpse without jumping or fake 3d bridge)
-      // problem is imp into imp at map01 and monster going at top of others
-      && thing->pos.z >= thing->floorz)
-    return false;
-
-  return true;
-}
-
 
 
 //==========================================================================
@@ -846,7 +830,11 @@ void P_HitSlideLine(line_t *ld)
 }
 
 
-/// tries sliding along the intercept
+/// \brief Tries sliding along the intercept_t
+/// \ingroup g_ptr
+/*!
+  When a move is blocked by an unpassable line, try sliding along it.
+*/
 static bool PTR_SlideTraverse(intercept_t *in)
 {
 #ifdef PARANOIA
@@ -1057,8 +1045,13 @@ void Map::SpawnPuff(fixed_t x, fixed_t y, fixed_t z)
   PuffSpawned = puff;
 }
 
-// Sets linetarget and aimslope when a target is aimed at.
-// Returns true if the thing is not shootable, else continue through..
+
+/// \brief Aiming up and down for missile attacks.
+/// \ingroup g_ptr
+/*!
+  Sets linetarget when a target is hit.
+  Returns true if the thing is not shootable, else continue through..
+*/
 static bool PTR_AimTraverse(intercept_t *in)
 {
   line_t *li;
@@ -1205,10 +1198,15 @@ static bool PTR_AimTraverse(intercept_t *in)
 }
 
 
-// Firing instant-hit weapons
-//added:18-02-98: added clipping the shots on the floor and ceiling.
+/// \brief Firing instant-hit missile weapons.
+/// \ingroup g_ptr
+/*!
+  Sets linetarget and aimslope when a target is aimed at.
+  Returns true if the thing is not shootable, else continue through..
+*/
 static bool PTR_ShootTraverse(intercept_t *in)
 {
+  //added:18-02-98: added clipping the shots on the floor and ceiling.
   fixed_t  x, y, z;
   fixed_t             frac;
 
@@ -1614,6 +1612,11 @@ void Actor::LineAttack(angle_t ang, fixed_t distance, fixed_t slope, int damage,
 
 static PlayerPawn *usething;
 
+/// \brief Using special line_t's
+/// \ingroup g_ptr
+/*!
+  Called when a player has pushed USE.
+*/
 static bool PTR_UseTraverse(intercept_t *in)
 {
   tmthing = NULL; // FIXME why? affects P_LineOpening
@@ -1683,6 +1686,11 @@ static PlayerPawn *PuzzleItemUser;
 static int  PuzzleItemType;
 static bool PuzzleActivated;
 
+/// \brief Using Hexen puzzle items.
+/// \ingroup g_ptr
+/*!
+  Called when a player activates a puzzle item.
+*/
 static bool PTR_PuzzleItemTraverse(intercept_t *in)
 {
   const int USE_PUZZLE_ITEM_SPECIAL = 129;
@@ -1780,7 +1788,11 @@ static struct
   bool    damage_owner;
 } Bomb;
 
-
+/// \brief Checks if an Actor is damaged by a radius attack.
+/// \ingroup g_pit
+/*!
+  Explosions etc. Uses the struct Bomb to hold data.
+*/
 static bool PIT_RadiusAttack(Actor *thing)
 {
   if (!(thing->flags & MF_SHOOTABLE))
@@ -1837,7 +1849,11 @@ static bool PIT_RadiusAttack(Actor *thing)
 }
 
 
-/// Culprit is the creature that caused the explosion.
+/// \brief Effects a radius attack.
+/*!
+  culprit is the creature that caused the explosion.
+  Iterates through blockmap for targets.
+*/
 void Actor::RadiusAttack(Actor *culprit, int damage, fixed_t rad, int dtype, bool downer)
 {
   if (rad < 0)
@@ -1866,25 +1882,75 @@ void Actor::RadiusAttack(Actor *culprit, int damage, fixed_t rad, int dtype, boo
 
 //==========================================================================
 // SECTOR HEIGHT CHANGING
-// After modifying a sectors floor or ceiling height,
-// call this routine to adjust the positions
-// of all things that touch the sector.
-//
-// If anything doesn't fit anymore, true will be returned.
-// If crunch is true, they will take damage
-//  as they are being crushed.
-// If Crunch is false, you should set the sector height back
-//  the way it was and call P_ChangeSector again
-//  to undo the changes.
 //==========================================================================
+
+// Takes a valid thing and adjusts the thing->floorz,
+// thing->ceilingz, and possibly thing->z.
+// This is called for all nearby monsters
+// whenever a sector changes height.
+// If the thing doesn't fit,
+// the z will be set to the lowest value
+// and false will be returned.
+static bool P_ThingHeightClip(Actor *thing)
+{
+  bool onfloor = (thing->pos.z <= thing->floorz);
+
+  thing->CheckPosition(thing->pos.x, thing->pos.y);
+
+  // what about stranding a monster partially off an edge?
+
+  thing->floorz = tmfloorz;
+  thing->ceilingz = tmceilingz;
+
+  if (!tmfloorthing && onfloor && !(thing->flags & MF_NOGRAVITY))
+    {
+      // walking monsters rise and fall with the floor
+      thing->pos.z = thing->floorz;
+    }
+  else
+    {
+      // don't adjust a floating monster unless forced to
+      //added:18-04-98:test onfloor
+      if (!onfloor)                    //was tmsectorceilingz
+	if (thing->Top() > tmceilingz)
+	  thing->pos.z = thing->ceilingz - thing->height;
+
+      //thing->eflags &= ~MFE_ONGROUND;
+    }
+
+  //debug : be sure it falls to the floor
+  thing->eflags &= ~MFE_ONGROUND;
+
+  //added:28-02-98:
+  // test sector bouding top & bottom, not things
+
+  //if (tmsectorceilingz - tmsectorfloorz < thing->height)
+  //    return false;
+
+  if (thing->ceilingz - thing->floorz < thing->height
+      // BP: i know that this code cause many trouble but this fix alos 
+      // lot of problem, mainly this is implementation of the stepping 
+      // for mobj (walk on solid corpse without jumping or fake 3d bridge)
+      // problem is imp into imp at map01 and monster going at top of others
+      && thing->pos.z >= thing->floorz)
+    return false;
+
+  return true;
+}
+
 int         crushdamage;
 bool        nofit;
 sector_t   *sectorchecked;
 
-// deals crush damage
+
+/// \brief Checks if an Actor is affected by a sector_t height change.
+/// \ingroup g_pit
+/*!
+  Updates Actor height clipping data, deals crush damage, crunches items.
+*/
 static bool PIT_ChangeSector(Actor *thing)
 {
-  if (P_ThingHeightClip (thing))
+  if (P_ThingHeightClip(thing))
     {
       // keep checking
       return true;
@@ -1925,8 +1991,9 @@ static bool PIT_ChangeSector(Actor *thing)
   return true;
 }
 
-
-// changes sector height, crushes things
+/*!
+  changes sector height, crushes things
+*/
 bool Map::ChangeSector(sector_t *sector, int crunch)
 {
   nofit = false;
@@ -1941,10 +2008,19 @@ bool Map::ChangeSector(sector_t *sector, int crunch)
   return nofit;
 }
 
-
-//SoM: 3/15/2000: New function. Much faster.
+/// \brief Handles sector_t height changes.
+/// \ingroup g_iterators
+/*!
+  After modifying a sectors floor or ceiling height, call this routine to adjust the positions
+  of all things that touch the sector (touching_thinglist).
+   If anything doesn't fit anymore, true will be returned.
+  If crunch is true, they will take damage as they are being crushed.
+  If crunch is false, you should set the sector height back
+  the way it was and call P_ChangeSector again to undo the changes.
+*/
 bool Map::CheckSector(sector_t *sector, int crunch)
 {
+  //SoM: 3/15/2000: New function. Much faster.
   msecnode_t      *n;
 
   if (!boomsupport) // use the old routine for old demos though
@@ -2012,10 +2088,16 @@ bool Map::CheckSector(sector_t *sector, int crunch)
 //  Sector lists
 //==========================================================================
 
-// Locates all the sectors the object is in by looking at the lines that
-// cross through it. You have already decided that the object is allowed
-// at this location, so don't bother with checking impassable or
-// blocking lines.
+static msecnode_t *sector_list = NULL;
+
+/// \brief Adds sectors to the touching_sectorlist of an Actor.
+/// \ingroup g_pit
+/*!
+  Locates all the sectors the object is in by looking at the lines that
+  cross through it. You have already decided that the object is allowed
+  at this location, so don't bother with checking impassable or
+  blocking lines.
+*/
 static bool PIT_GetSectors(line_t *ld)
 {
   if (!tmb.BoxTouchBox(ld->bbox))
@@ -2045,9 +2127,11 @@ static bool PIT_GetSectors(line_t *ld)
   return true;
 }
 
-
-// alters/creates the sector_list that shows what sectors
-// the object resides in.
+/// \brief Builds the touching_sectorlist of an Actor.
+/// \ingroup g_iterators
+/*!
+  Alters/creates the sector_list that shows what sectors the object resides in.
+*/
 void Map::CreateSecNodeList(Actor *thing, fixed_t x, fixed_t y)
 {
   int xl, xh, yl, yh, bx, by;
@@ -2113,6 +2197,11 @@ void Map::CreateSecNodeList(Actor *thing, fixed_t x, fixed_t y)
 
 Actor *onmobj; //generic global onmobj...used for landing on pods/players
 
+/// \brief Clip z movement
+/// \ingroup g_pit
+/*!
+  TODO
+*/
 static bool PIT_CheckOnmobjZ(Actor *thing)
 {
   if (!(thing->flags & (MF_SOLID|MF_SPECIAL|MF_SHOOTABLE)))    
@@ -2224,7 +2313,6 @@ void Actor::FakeZMovement()
 Actor *Actor::CheckOnmobj()
 {
   int          xl,xh,yl,yh,bx,by;
-  subsector_t *newsubsec;
     
   tmthing = this;
   tmflags = flags;
@@ -2234,15 +2322,15 @@ Actor *Actor::CheckOnmobj()
   
   tmb.Set(pos.x, pos.y, radius);
 
-  newsubsec = mp->R_PointInSubsector(pos.x, pos.y);
+  subsector_t *ss = mp->R_PointInSubsector(pos.x, pos.y);
     
   //
   // the base floor / ceiling is from the subsector that contains the
   // point.  Any contacted lines the step closer together will adjust them
   //
-  tmfloorz = tmdropoffz = newsubsec->sector->floorheight;
-  tmceilingz = newsubsec->sector->ceilingheight;
-  tmfloorpic = newsubsec->sector->floorpic; 
+  tmfloorz = tmdropoffz = ss->sector->floorheight;
+  tmceilingz = ss->sector->ceilingheight;
+  tmfloorpic = ss->sector->floorpic; 
    
   validcount++;
   spechit.clear();
@@ -2317,22 +2405,22 @@ bool Actor::CheckPosition(fixed_t nx, fixed_t ny)
 
   tmb.Set(nx, ny, radius);
 
-  subsector_t *newsubsec = mp->R_PointInSubsector(nx,ny);
+  subsector_t *ss = mp->R_PointInSubsector(nx,ny);
 
   // The base floor / ceiling is from the subsector
   // that contains the point.
   // Any contacted lines the step closer together
   // will adjust them.
-  tmfloorz = tmsectorfloorz = tmdropoffz = newsubsec->sector->floorheight;
-  tmceilingz = tmsectorceilingz = newsubsec->sector->ceilingheight;
-  tmfloorpic = newsubsec->sector->floorpic;
+  tmfloorz = tmsectorfloorz = tmdropoffz = ss->sector->floorheight;
+  tmceilingz = tmsectorceilingz = ss->sector->ceilingheight;
+  tmfloorpic = ss->sector->floorpic;
 
   // Check list of fake floors and see if tmfloorz/tmceilingz need to be altered.
-  if (newsubsec->sector->ffloors)
+  if (ss->sector->ffloors)
     {
       fixed_t thingtop = Top();
 
-      for (ffloor_t *rover = newsubsec->sector->ffloors; rover; rover = rover->next)
+      for (ffloor_t *rover = ss->sector->ffloors; rover; rover = rover->next)
 	{
 	  if (!(rover->flags & FF_SOLID) || !(rover->flags & FF_EXISTS))
 	    continue;

@@ -261,10 +261,13 @@ void Actor::unpackUpdate(GhostConnection *connection, BitStream *stream)
 void Actor::ClientThink()
 {
   // FIXME interpolate movement
-  UnsetPosition();
-  pos = apos;
-  vel = avel;
-  SetPosition();
+  if (pos != apos)
+    {
+      UnsetPosition();
+      pos = apos;
+      vel = avel;
+      SetPosition();
+    }
 }
 
 

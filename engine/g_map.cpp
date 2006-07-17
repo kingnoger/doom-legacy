@@ -189,7 +189,8 @@ Map::~Map()
 void Map::SpawnActor(Actor *p)
 {
   AddThinker(p);     // AddThinker sets Map *mp
-  p->CheckPosition(p->pos.x, p->pos.y); // TEST, sets tmfloorz, tmceilingz
+  if (game.server)
+    p->CheckPosition(p->pos.x, p->pos.y); // TEST, sets tmfloorz, tmceilingz
   p->SetPosition();  // set subsector and/or block links
 }
 
@@ -226,6 +227,11 @@ DActor *Map::SpawnSplash(const vec_t<fixed_t>& pos, fixed_t z, int sound, mobjty
 static Actor   *bloodthing;
 static fixed_t  blood_x, blood_y;
 
+/// \brief Spray blood splats on walls.
+/// \ingroup g_ptr
+/*!
+  Adds a wall splat on the first solid wall encountered.
+*/
 static bool PTR_BloodTraverse(intercept_t *in)
 {
   if (in->isaline)
@@ -867,7 +873,7 @@ int Map::HandlePlayers()
     if (respawnqueue[i]->playerstate == PST_REMOVE)
       respawnqueue[i] = NULL;
 
-  int fin = 0;
+  unsigned fin = 0;
   int r = 0;
 
   // we iterate the vector in reversed order since we may have to delete some items on the way

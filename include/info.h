@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -5761,24 +5760,22 @@ typedef void (*actionf_p2)(class PlayerPawn *player, struct pspdef_t *psp);
 /// \brief DActor (mobj, THING) state description
 struct state_t
 {
-  spritenum_t   sprite;
-  long          frame;          //faB: we use the upper 16bits for translucency
-                                //     and other shade effects
-  long          tics;
-
-  actionf_p1    action;
-  statenum_t    nextstate;
+  spritenum_t   sprite;    ///< Sprite to use.
+  Sint32        frame;     ///< Lowest 15 bits contain the frame number, the rest are flags for visual effects.
+  Sint32        tics;      ///< Duration of the state in tics, -1 means infinite.
+  actionf_p1    action;    ///< Action function to call when entering this state, or NULL if none.
+  statenum_t    nextstate; ///< The next state.
 };
 
 /// \brief First person sprite (weapon) state description
 struct weaponstate_t
 {
-  spritenum_t   sprite;
-  long          frame;
-  long          tics;
-  actionf_p2    action;
-  weaponstatenum_t nextstate;
-  int           misc1, misc2;
+  spritenum_t   sprite;       ///< Sprite to use.
+  long          frame;        ///< Lowest 15 bits contain the frame number, the rest are flags for visual effects.
+  long          tics;         ///< Duration of the state in tics, -1 means infinite.
+  actionf_p2    action;       ///< Action function to call when entering this state, or NULL if none.
+  weaponstatenum_t nextstate; ///< The next state.
+  int           misc1, misc2; ///< x and y coordinates for the weapon sprites.
 };
 
 
@@ -6526,31 +6523,31 @@ enum mobjtype_t
 /// \brief THING (mobj) initial parameters
 struct mobjinfo_t
 {
-  int doomednum;
-  statenum_t spawnstate;
-  int spawnhealth;
-  statenum_t seestate;
-  int seesound;
-  int reactiontime;
-  int attacksound;
-  statenum_t painstate;
-  int painchance;
-  int painsound;
-  statenum_t meleestate;
-  statenum_t missilestate;
-  statenum_t crashstate;   // from heretic/hexen
-  statenum_t deathstate;
-  statenum_t xdeathstate;
-  int deathsound;
-  float speed;
-  fixed_t radius;
-  fixed_t height;
-  float   mass;
-  int damage;
-  int activesound;
-  int flags;
-  statenum_t raisestate; // not for heretic/hexen
-  int flags2; // from heretic/hexen
+  int doomednum;           ///< Editor number for this thing type or -1 if none.
+  statenum_t spawnstate;   ///< Initial state.
+  int spawnhealth;         ///< Initial health.
+  statenum_t seestate;     ///< Used when thing sees an enemy. Active.
+  int seesound;            ///< Played when thing sees an enemy.
+  int reactiontime;        ///< How soon (in tics) will the thing do something again.
+  int attacksound;         ///< Played when attacking.
+  statenum_t painstate;    ///< Used when thing is hurt.
+  int painchance;          ///< Probability of going into painstate when hurt.
+  int painsound;           ///< Played when hurt.
+  statenum_t meleestate;   ///< Used when thing executes a melee attack.
+  statenum_t missilestate; ///< Same, but for missile attacks.
+  statenum_t crashstate;   ///< Used when a flying thing has died and crashed on the ground.
+  statenum_t deathstate;   ///< Used when thing is killed.
+  statenum_t xdeathstate;  ///< Used when thing is killed in a messy way, e.g. exploded.
+  int deathsound;          ///< Played when thing dies.
+  float speed;             ///< Max. movement speed.
+  fixed_t radius;          ///< Thing radius.
+  fixed_t height;          ///< Thing height.
+  float   mass;            ///< Just take a guess.
+  int damage;              ///< Low 16 bits: damage for missiles, high 16 bits: see damage_t.
+  int activesound;         ///< Occasionally played when active.
+  int flags;               ///< mobjflag_t flags.
+  statenum_t raisestate;   ///< Used when thing is being raised from dead.
+  int flags2;              ///< mobjflag2_t flags.
 };
 
 extern mobjinfo_t mobjinfo[NUMMOBJTYPES];

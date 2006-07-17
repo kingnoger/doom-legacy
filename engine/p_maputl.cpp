@@ -381,16 +381,15 @@ line_opening_t *P_LineOpening(line_t *linedef)
 //   Blockmap iterators
 //==========================================================================
 
-// For each line/thing in the given mapblock,
-// call the passed PIT_* function.
-// If the function returns false,
-// exit with false without checking anything else.
-//
-// The validcount flags are used to avoid checking lines
-// that are marked in multiple mapblocks,
-// so increment validcount before the first call
-// to BlockLinesIterator, then make one or more calls
-// to it.
+/// \brief Iterate a blockmap cell for line_t'
+/// \ingroup g_iterators
+/*!
+  For each line in the given mapblock, call the passed \ref g_pit PIT function.
+  If the function returns false, exit with false without checking anything else.
+ 
+  The validcount flags are used to avoid checking lines that are marked in multiple mapblocks,
+  so increment validcount before the first call to BlockLinesIterator, then make one or more calls to it.
+*/
 bool Map::BlockLinesIterator(int x, int y, line_iterator_t func)
 {
   int i;
@@ -442,7 +441,12 @@ bool Map::BlockLinesIterator(int x, int y, line_iterator_t func)
 }
 
 
-// Same as previous, but iterates through things
+/// \brief Iterate a blockmap cell for Actor's
+/// \ingroup g_iterators
+/*!
+  For each Actor in the given mapblock, call the passed \ref g_pit PIT function.
+  If the function returns false, exit with false without checking anything else.
+*/
 bool Map::BlockThingsIterator(int x, int y, thing_iterator_t func)
 {
   Actor *mobj;
@@ -465,7 +469,11 @@ bool Map::BlockThingsIterator(int x, int y, thing_iterator_t func)
 //  Thinker iteration
 //==========================================================================
 
-// Iterates through all the Thinkers in the Map, calling 'func' for each.
+/// \brief Iterate the Thinker list
+/*!
+  Iterates through all the Thinkers in the Map, calling 'func' for each.
+  If the function returns false, exit with false without checking anything else.
+*/
 bool Map::IterateThinkers(thinker_iterator_t func)
 {
   Thinker *t, *n;
@@ -487,16 +495,15 @@ static vector<intercept_t> intercepts;
 divline_t   trace;
 static bool earlyout;
 
-// Looks for lines in the given block
-// that intercept the given trace
-// to add to the intercepts list.
-//
-// A line is crossed if its endpoints
-// are on opposite sides of the trace.
-// Returns true if earlyout and a solid line hit.
-
 static Map *tempMap;
 
+/// \brief Find lines intercepted by the trace.
+/// \ingroup g_pit
+/*!
+  Checks if the line_t intercepts the given trace. If so, adds it to the intercepts list.
+  A line is crossed if its endpoints are on opposite sides of the trace.
+  Iteration is stopped if earlyout is true and a solid line is hit.
+*/
 static bool PIT_AddLineIntercepts(line_t *ld)
 {
   int  s1, s2;
@@ -544,8 +551,11 @@ static bool PIT_AddLineIntercepts(line_t *ld)
 }
 
 
-
-// iteration function to see if an Actor intercepts a given line (trace)
+/// \brief Find Actors intercepted by the trace.
+/// \ingroup g_pit
+/*!
+  Checks if the Actor intercepts the given trace. If so, adds it to the intercepts list.
+*/
 static bool PIT_AddThingIntercepts(Actor *thing)
 {
   fixed_t  x1, y1, x2, y2;
@@ -648,9 +658,13 @@ static bool P_TraverseIntercepts(traverser_t func, fixed_t maxfrac)
 }
 
 
-// Traces a line from x1,y1 to x2,y2 by stepping through the blockmap,
-// adding line/thing intercepts and then calling the traverser function for each intercept.
-// Returns true if the traverser function returns true for all lines.
+/// \brief Traces a line through the blockmap.
+/// \ingroup g_iterators
+/*!
+  Traces a line from x1,y1 to x2,y2 by stepping through the blockmap
+  adding line/thing intercepts and then calling the traverser function for each intercept.
+  Returns true if the traverser function returns true for all lines.
+*/
 bool Map::PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags, traverser_t trav)
 {
   earlyout = flags & PT_EARLYOUT;
