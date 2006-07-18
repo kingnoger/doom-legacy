@@ -62,11 +62,12 @@ enum gamemode_t
 
 
 /// \brief Game info common to all players.
-///
-/// There is only one instance in existence, called 'game'.
-/// It stores all relevant data concerning one game,
-/// including game state, flags, players, teams, maps etc.
-
+/// \ingroup g_central
+/*!
+  There is only one instance in existence, called 'game'.
+  It stores all relevant data concerning one game,
+  including game state, flags, players, teams, maps etc.
+*/
 class GameInfo
 {
   friend class Intermission;

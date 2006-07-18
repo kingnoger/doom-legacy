@@ -37,7 +37,7 @@ using namespace std;
 using namespace TNL;
 
 
-/// Player states.
+/// \brief Player states.
 ///
 /// The asterisk means that in this state the player is always associated with a Map.
 enum playerstate_t
@@ -112,9 +112,11 @@ public:
 
 
 /// \brief Describes a single player, either human or AI.
-///
-/// Created when a player joins the game, deleted when he leaves.
-/// Ghosted over network.
+/// \ingroup g_central
+/*!
+  Created when a player joins the game, deleted when he leaves.
+  Ghosted over the network.
+*/
 class PlayerInfo : public NetObject
 {
   friend class GameInfo;
@@ -145,8 +147,8 @@ public:
   class LConnection *connection; ///< network connection
   unsigned client_hash;          ///< hash of the client network address
 
-  playerstate_t playerstate;
-  bool spectator;     ///< incorporeal, invisible spectator in a map?
+  playerstate_t playerstate; ///< current state of the player
+  bool spectator;     ///< TEST incorporeal, invisible spectator in a map?
 
   int requestmap;  ///< the map which we wish to enter
   int entrypoint;  ///< which spawning point to use
@@ -156,14 +158,16 @@ public:
   class Actor      *pov;  ///< the POV of the player. usually same as pawn, but can also be a chasecam etc...
 
   PlayerPawn *hubsavepawn; ///< copy of the pawn made when entering a map within a hub
-  //============ Score ============
 
+  /// \name Scoring
+  //@{
   map<int, int> Frags; ///< mapping from player number to how many times you have fragged him
   int score;           ///< game-type dependent scoring based on frags, updated in real time
   int kills, items, secrets, time; ///< accomplishments in the current Map
+  //@}
 
-  //============ Messages ============
-
+  /// \name Message system
+  //@{
   enum messagetype_t
   {
     M_CONSOLE = 0, ///< print message on console (echoed briefly on HUD)
@@ -178,9 +182,10 @@ public:
   };
 
   deque<message_t> messages; ///< local message queue
+  //@}
 
-  //============ Feedback ============
-
+  /// \name Player feedback
+  //@{
   // POV height and bobbing during movement.
   fixed_t  viewz;           ///< absolute viewpoint z coordinate
   fixed_t  viewheight;      ///< distance from feet to eyes
@@ -192,17 +197,17 @@ public:
   int bonuscount;
   //int poisoncount;
   bool itemuse;
+  //@}
 
-  //============ Options ============
+  PlayerOptions options; ///< Player preferences.
 
-  PlayerOptions options;
-
-  //============ Control ============
-
+  /// \name Controls
+  //@{
   ticcmd_t    cmd;  ///< current state of the player's controls
   int invTics;  ///< When >0, show inventory in HUD
   int invSlot;  ///< Active inventory slot is pawn->inventory[invSlot]
   int invPos;   ///< Position of the active slot on HUD, always 0-6
+  //@}
 
 public:
   PlayerInfo(const LocalPlayerInfo *p = NULL);

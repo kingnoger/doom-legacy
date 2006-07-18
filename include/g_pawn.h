@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -42,6 +42,7 @@ enum cheat_t
   CF_FLYAROUND   = 8,  // Fly using jump key
 };
 
+/// Player class, from Hexen.
 enum pclass_t
 {
   PCLASS_NONE = 0,
@@ -53,7 +54,7 @@ enum pclass_t
 };
 
 
-// TODO testing, this is a hack...
+/// TODO TEST, this is a HACK...
 struct pawn_info_t
 {
   mobjtype_t   mt;
@@ -100,10 +101,11 @@ public:
 
 
 /// \brief A Pawn that represents a player avatar.
-///
-/// It takes orders from its player, which is represented
-/// by a PlayerInfo instance.
-
+/// \ingroup g_central
+/*!
+  It takes orders from its player, which is represented by a PlayerInfo instance, 
+  or from a BotAI instance.
+*/
 class PlayerPawn : public Pawn
 {
   TNL_DECLARE_CLASS(PlayerPawn);
@@ -115,10 +117,13 @@ public:
   /// player class, a Hexen kludge
   byte pclass;
 
+  /// \name Controls.
   /// True if the corresponding button was down last tic.
+  //@{
   bool attackdown;
   bool usedown;
-  bool jumpdown;  // don't jump like a monkey!
+  bool jumpdown;   ///< don't jump like a monkey!
+  //@}
 
   int refire;     ///< Refired shots are less accurate. to Pawn?
   int morphTics;  ///< Player is in a morphed state if >0
@@ -132,9 +137,11 @@ public:
 
   int  keycards; ///< Bit field, see the definition of keycard_t
 
+  /// \name Guns & Ammo, armor
+  //@{
   weapontype_t readyweapon;   ///< Current weapon
   weapontype_t pendingweapon; ///< Weapon we are changing to or wp_nochange
-  bool         weaponowned[NUMWEAPONS];
+  bool         weaponowned[NUMWEAPONS]; ///< owned weapons
 
   const weaponinfo_t *weaponinfo; ///< Changed when using level2 weapons (Heretic)
 
@@ -144,13 +151,13 @@ public:
   float toughness; ///< Natural armor, depends on class.
   float armorfactor[NUMARMOR];
   int   armorpoints[NUMARMOR];
+  //@}
 
   /// Tic counters for power ups.
   int powers[NUMPOWERS];
 
   /// Bit flags, for cheats and debug.
   int cheats;
-
 
   /// Current sector special (lava/slime/water...)
   int specialsector;

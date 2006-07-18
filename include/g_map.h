@@ -45,12 +45,13 @@ typedef bool (*thing_iterator_t)(class Actor *a);
 typedef bool (*thinker_iterator_t)(Thinker *t);
 
 /// \brief A single game map and all the stuff it contains.
-///
 /// \nosubgrouping
-/// This class stores all gameplay-related information about one map,
-/// including geometry, BSP, blockmap, reject, mapthings, Thinker list,
-/// player list, ambient sounds, physics...
-
+/// \ingroup g_central
+/*!
+  This class stores all gameplay-related information about one map,
+  including geometry, BSP, blockmap, reject, mapthings, Thinker list,
+  player list, ambient sounds, physics...
+*/
 class Map
 {
   friend class GameInfo;
@@ -71,37 +72,36 @@ public:
   /// \name Geometry
   //@{
   int                 numvertexes;
-  struct vertex_t    *vertexes;
-  bbox_t              root_bbox; ///< bounding box for all the vertices in the map
+  struct vertex_t    *vertexes;    ///< normal vertices
 
   int                 numlines;
-  struct line_t      *lines;
+  struct line_t      *lines;       ///< linedefs
 
   int                 numsides;
-  struct side_t      *sides;
+  struct side_t      *sides;       ///< sidedefs
 
   int                 numsectors;
-  struct sector_t    *sectors;
-  line_t            **linebuffer; ///< combining sectors and lines
+  struct sector_t    *sectors;     ///< map sectors
 
   int                 numsubsectors;
-  struct subsector_t *subsectors;
+  struct subsector_t *subsectors;  ///< subsectors, aka BSP leaves
 
   int                 numnodes;
-  struct node_t      *nodes;
+  struct node_t      *nodes;       ///< BSP nodes
 
   int                 numsegs;
-  struct seg_t       *segs;
+  struct seg_t       *segs;        ///< what linedefs are to sectors, segs are to subsectors
 
-  /// additional vertices from GL-nodes
   int                 numglvertexes;
-  vertex_t           *glvertexes;
+  vertex_t           *glvertexes;  ///< additional vertices from GL nodes
 
   int                 NumPolyobjs;
-  struct polyobj_t   *polyobjs;
+  struct polyobj_t   *polyobjs;    ///< polyobjects
 
-  byte *glvis;       //<  Subsector visibility data from glVIS.
+  byte *glvis; ///<  Subsector visibility data from glVIS.
 
+  bbox_t              root_bbox;   ///< bounding box for all the vertices in the map
+  line_t            **linebuffer;  ///< combining sectors and lines
   //@}
 
   /// \name Rendering
@@ -145,8 +145,8 @@ public:
 
 
   /// \name Reject
-  /// For fast sight rejection.
-  /// Speeds up enemy AI by skipping detailed LineOf Sight calculation.
+  /// Binary sector-to-sector visibility matrix for fast sight rejection.
+  /// Speeds up enemy AI by skipping detailed LineOfSight calculation.
   /// Without the "Reject special effects" hacks in some PWADs, this could be used as a PVS lookup as well.
   //@{
   byte *rejectmatrix;
@@ -173,7 +173,7 @@ public:
   /// \name Mapthings and Thinkers
   //@{
   int                nummapthings;
-  struct mapthing_t *mapthings;
+  struct mapthing_t *mapthings;    ///< things
 
   Thinker thinkercap; ///< Linked list of Thinkers in the map. The head and tail of the thinker list.
 
@@ -455,8 +455,8 @@ public:
   void LinkPolyobj(polyobj_t *po);
   void UnLinkPolyobj(polyobj_t *po);
   bool PO_CheckBlockingActors(seg_t *seg, polyobj_t *po);
-  bool PO_MovePolyobj(int num, fixed_t x, fixed_t y);
-  bool PO_RotatePolyobj(int num, angle_t angle);
+  bool PO_MovePolyobj(polyobj_t *po, fixed_t x, fixed_t y);
+  bool PO_RotatePolyobj(polyobj_t *po, angle_t angle);
   bool PO_Busy(int num);
 
   bool EV_RotatePoly(byte *args, int direction, bool overRide);

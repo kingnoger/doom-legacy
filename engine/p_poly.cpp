@@ -66,7 +66,7 @@ polyrotator_t::polyrotator_t(int num, byte *args, int dir)
   else
     dist = ANGLE_MAX >> ANGLETOFINESHIFT;
 
-  speed = dir * args[1] * (ANG90 >> 9) >> ANGLETOFINESHIFT;
+  speed = dir * (args[1] * ((ANG90/64) >> 3) >> ANGLETOFINESHIFT);
   // max. +-pi/4 per tic, min 4 fineangleunits/tic!
 }
 
@@ -81,18 +81,27 @@ fixed_t polyrotator_t::PushForce()
 
 void polyrotator_t::Think()
 {
-  if (mp->PO_RotatePolyobj(polyobj, speed << ANGLETOFINESHIFT))
-    {
-      int absSpeed = abs(speed);
+  polyobj_t *poly = mp->GetPolyobj(polyobj);
 
-      if (dist == -1)
-	{ // perpetual polyobj
-	  return;
-	}
+  if (dist == -1) // perpetual rotator
+    {
+      mp->PO_RotatePolyobj(poly, speed << ANGLETOFINESHIFT);
+      return;
+    }
+
+  // not a perpetual polyobj
+  int absSpeed = abs(speed);
+  if (dist < absSpeed)
+    {
+      speed = dist * (speed < 0 ? -1 : 1);
+      absSpeed = dist;
+    }
+
+  if (mp->PO_RotatePolyobj(poly, speed << ANGLETOFINESHIFT))
+    {
       dist -= absSpeed;
       if (dist <= 0)
 	{
-	  polyobj_t *poly = mp->GetPolyobj(polyobj);
 	  if (poly->specialdata == this)
 	    poly->specialdata = NULL;
 
@@ -100,9 +109,6 @@ void polyrotator_t::Think()
 	  mp->PolyobjFinished(poly->tag);
 	  mp->RemoveThinker(this);
 	}
-
-      if (dist < absSpeed)
-	speed = dist * (speed < 0 ? -1 : 1);
     }
 }
 
@@ -126,7 +132,7 @@ bool Map::EV_RotatePoly(byte *args, int direction, bool overRide)
   poly->specialdata = p;
 
   SN_StartSequence(&poly->spawnspot, SEQ_DOOR + poly->seqType);
-	
+
   int mirror;
   while ((mirror = GetPolyobjMirror(polynum)))
     {
@@ -142,10 +148,12 @@ bool Map::EV_RotatePoly(byte *args, int direction, bool overRide)
       poly->specialdata = p;
 
       // FIXME WTF?
+      /*
       if ((poly = GetPolyobj(polynum)))
 	poly->specialdata = p;
       else
 	I_Error("EV_RotatePoly:  Invalid polyobj num: %d\n", polynum);
+      */
 
       SN_StartSequence(&poly->spawnspot, SEQ_DOOR + poly->seqType);
       polynum = mirror;
@@ -185,15 +193,21 @@ fixed_t polymover_t::PushForce() { return speed >> 3; }
 
 void polymover_t::Think()
 {
-  polyobj_t *poly;
+  polyobj_t *poly = mp->GetPolyobj(polyobj);
 
-  if (mp->PO_MovePolyobj(polyobj, xs, ys))
+  if (dist < speed) // speed is always nonnegative
     {
-      fixed_t absSpeed = abs(speed);
-      dist -= absSpeed;
+      speed = dist;
+      int angle = ang >> ANGLETOFINESHIFT;
+      xs = speed * finecosine[angle];
+      ys = speed * finesine[angle];
+    }
+
+  if (mp->PO_MovePolyobj(poly, xs, ys))
+    {
+      dist -= speed;
       if (dist <= 0)
 	{
-	  poly = mp->GetPolyobj(polyobj);
 	  if (poly->specialdata == this)
 	    {
 	      poly->specialdata = NULL;
@@ -201,13 +215,6 @@ void polymover_t::Think()
 	  mp->SN_StopSequence(&poly->spawnspot);
 	  mp->PolyobjFinished(poly->tag);
 	  mp->RemoveThinker(this);
-	}
-      if (dist < absSpeed)
-	{
-	  speed = dist * (speed < 0 ? -1 : 1);
-	  int angle = ang >> ANGLETOFINESHIFT;
-	  xs = speed * finecosine[angle];
-	  ys = speed * finesine[angle];
 	}
     }
 }
@@ -283,25 +290,29 @@ polydoor_rot_t::polydoor_rot_t(int num, byte *args, bool mirror)
 
 void polydoor_rot_t::Think()
 {
-  polyobj_t *poly;
+  polyobj_t *poly = mp->GetPolyobj(polyobj);
 
   if (tics)
     {
       if (!--tics)
 	{
-	  poly = mp->GetPolyobj(polyobj);
 	  mp->SN_StartSequence(&poly->spawnspot, SEQ_DOOR + poly->seqType);
 	}
       return;
     }
 
-  if (mp->PO_RotatePolyobj(polyobj, speed))
+  int absSpeed = abs(speed);
+  if (dist < absSpeed)
     {
-      int absSpeed = abs(speed);
+      speed = dist * (speed < 0 ? -1 : 1);
+      absSpeed = dist;
+    }
+
+  if (mp->PO_RotatePolyobj(poly, speed))
+    {
       dist -= absSpeed;
       if (dist <= 0)
 	{
-	  poly = mp->GetPolyobj(polyobj);
 	  mp->SN_StopSequence(&poly->spawnspot);
 	  if (!closing)
 	    {
@@ -321,7 +332,6 @@ void polydoor_rot_t::Think()
     }
   else
     {
-      poly = mp->GetPolyobj(polyobj);
       if (poly->crush || !closing)
 	{ // continue moving if the poly is a crusher, or is opening
 	  return;
@@ -350,33 +360,39 @@ polydoor_slide_t::polydoor_slide_t(int num, byte *args, bool mirror)
 
 void polydoor_slide_t::Think()
 {
-  polyobj_t *poly;
+  polyobj_t *poly = mp->GetPolyobj(polyobj);
 
   if (tics)
     {
       if (!--tics)
 	{
-	  poly = mp->GetPolyobj(polyobj);
 	  mp->SN_StartSequence(&poly->spawnspot, SEQ_DOOR + poly->seqType);
 	}
       return;
     }
 
-  if (mp->PO_MovePolyobj(polyobj, xs, ys))
+  if (dist < speed) // speed is always nonnegative
     {
-      fixed_t absSpeed = abs(speed);
-      dist -= absSpeed;
+      speed = dist;
+      int angle = ang >> ANGLETOFINESHIFT;
+      xs = speed * finecosine[angle];
+      ys = speed * finesine[angle];
+    }
+
+  if (mp->PO_MovePolyobj(poly, xs, ys))
+    {
+      dist -= speed;
       if (dist <= 0)
 	{
-	  poly = mp->GetPolyobj(polyobj);
 	  mp->SN_StopSequence(&poly->spawnspot);
 	  if (!closing)
 	    {
 	      closing = true;
 	      dist = totalDist;
 	      tics = waitTics;
+	      ang += ANG180; // reverse direction
 	      xs = -xs;
-	      ys = -ys;					
+	      ys = -ys;
 	    }
 	  else
 	    {
@@ -389,7 +405,6 @@ void polydoor_slide_t::Think()
     }
   else
     {
-      poly = mp->GetPolyobj(polyobj);
       if (poly->crush || !closing)
 	{ // continue moving if the poly is a crusher, or is opening
 	  return;
@@ -398,6 +413,7 @@ void polydoor_slide_t::Think()
 	{ // open back up
 	  closing = false;
 	  dist = totalDist-dist;
+	  ang += ANG180; // reverse direction
 	  xs = -xs;
 	  ys = -ys;
 	  mp->SN_StartSequence(&poly->spawnspot, SEQ_DOOR + poly->seqType);
@@ -579,15 +595,14 @@ static void UpdateSegBBox(seg_t *seg)
 //==========================================================================
 
 
-bool Map::PO_MovePolyobj(int num, fixed_t x, fixed_t y)
+bool Map::PO_MovePolyobj(polyobj_t *po, fixed_t x, fixed_t y)
 {
   int count;
 
   seg_t **veryTempSeg;
-  polyobj_t *po;
 
-  if (!(po = GetPolyobj(num)))
-    I_Error("PO_MovePolyobj:  Invalid polyobj number: %d\n", num);
+  if (!po)
+    I_Error("PO_MovePolyobj:  Invalid polyobj.\n");
 
   UnLinkPolyobj(po);
 
@@ -599,7 +614,7 @@ bool Map::PO_MovePolyobj(int num, fixed_t x, fixed_t y)
     {
       if ((*segList)->linedef->validcount != validcount)
 	{
-	  (*segList)->linedef->bbox.Move(x, y);	  
+	  (*segList)->linedef->bbox.Move(x, y);
 	  (*segList)->linedef->validcount = validcount;
 	}
       for (veryTempSeg = po->segs; veryTempSeg != segList;
@@ -682,13 +697,12 @@ static void RotatePt(angle_t an, fixed_t& x, fixed_t& y, fixed_t startSpotX, fix
 
 
 
-bool Map::PO_RotatePolyobj(int num, angle_t angle)
+bool Map::PO_RotatePolyobj(polyobj_t *po, angle_t angle)
 {
   int count;
-  polyobj_t *po;
 
-  if (!(po = GetPolyobj(num)))
-    I_Error("PO_RotatePolyobj:  Invalid polyobj number: %d\n", num);
+  if (!po)
+    I_Error("PO_RotatePolyobj:  Invalid polyobj.\n");
 
   UnLinkPolyobj(po);
 
@@ -881,7 +895,7 @@ bool Map::PO_CheckBlockingActors(seg_t *seg, polyobj_t *po)
 	    {
 	      if (mobj->flags & MF_SOLID)
 		{
-		  tmb.Set(mobj->pos.x, mobj->pos.y, mobj->radius); 
+		  tmb.Set(mobj->pos.x, mobj->pos.y, mobj->radius);
 
 		  if (!tmb.BoxTouchBox(ld->bbox))
 		    continue;
@@ -932,10 +946,10 @@ void Map::InitPolyBlockMap()
 	      topY = (*segList)->v1->y;
 	    }
 	}
-      int area = ((rightX - leftX)*(topY - bottomY)).floor();
+      //int area = ((rightX - leftX)*(topY - bottomY)).floor();
 
       //    fprintf(stdaux, "Area of Polyobj[%d]: %d\n", polyobjs[i].tag, area);
-      //    fprintf(stdaux, "\t[%d]\n[%d]\t\t[%d]\n\t[%d]\n", topY>>FRACBITS, 
+      //    fprintf(stdaux, "\t[%d]\n[%d]\t\t[%d]\n\t[%d]\n", topY>>FRACBITS,
       //    		leftX>>FRACBITS,
       //    	rightX>>FRACBITS, bottomY>>FRACBITS);
     }
@@ -966,7 +980,7 @@ int Map::FindPolySegs(seg_t *seg)
 	  // if PO segs do not form a simple cycle, we may get stuck in infinite loop...
 	  if (zzz_polysegs.size() >= PO_MAXPOLYSEGS)
 	    I_Error("FindPolySegs:  Polyobj with more than %d segs (or a subcycle) found.\n", PO_MAXPOLYSEGS);
-  
+
 	  zzz_polysegs.push_back(&segs[i]);
 	  end = *segs[i].v2;
 

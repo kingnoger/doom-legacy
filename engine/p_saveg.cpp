@@ -1394,10 +1394,10 @@ int Map::Unserialize(LArchive &a)
 
       angle_t ang;
       a << ang;
-      PO_RotatePolyobj(polyobjs[i].tag, ang);
+      PO_RotatePolyobj(&polyobjs[i], ang);
       fixed_t x, y;
       a << x << y;
-      PO_MovePolyobj(polyobjs[i].tag, x - polyobjs[i].spawnspot.x,
+      PO_MovePolyobj(&polyobjs[i], x - polyobjs[i].spawnspot.x,
 		     y - polyobjs[i].spawnspot.y);
     }
 

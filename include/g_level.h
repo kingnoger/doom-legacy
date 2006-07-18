@@ -30,11 +30,13 @@ using namespace std;
 
 
 /// \brief MapCluster class is used to group maps together into hubs or episodes.
-///
-/// When a cluster is entered/exited, a finale may
-/// take place. Clusters are also used for hubs.
-/// They roughly correspond to Hexen/ZDoom clusters and Doom/Heretic episodes.
-/// Within a cluster, several Maps may run simultaneously.
+/// \ingroup g_central
+/*!
+  When a cluster is entered/exited, a finale may
+  take place. Clusters are also used for hubs.
+  They roughly correspond to Hexen/ZDoom clusters and Doom/Heretic episodes.
+  Within a cluster, several Maps may run simultaneously.
+*/
 class MapCluster
 {
   friend class GameInfo;
@@ -51,13 +53,16 @@ public:
 
   int time, partime; ///< the time it took to complete cluster, partime (in s)
 
-  // finale data
+  /// \name Finale data
+  //@{
   string entertext;
   string exittext;
   string finalepic;
   string finalemusic;
   int    episode; ///< which finale to show?
+  //@}
 
+public:
   MapCluster();
   MapCluster(int n);
 

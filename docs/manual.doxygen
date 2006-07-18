@@ -79,8 +79,6 @@ The source can be found <a href="http://sourceforge.net/projects/doomlegacy/">he
 </ul>
 
 @note
-To get started, you should read the documentation on the most central classes:
-@ref GameInfo, @ref PlayerInfo, @ref MapCluster, @ref MapInfo, @ref Map, @ref Thinker, @ref Actor, @ref DActor and @ref PlayerPawn.
-
+To get started, you should read the documentation on @ref g_central.
 The netcode is found within @ref GameInfo, @ref LNetInterface and @ref LConnection.
  */

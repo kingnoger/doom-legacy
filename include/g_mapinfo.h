@@ -33,29 +33,28 @@
 
 using namespace std;
 
-class Map;
-
 /// \brief Stores all kinds of metadata for an associated Map.
-///
-/// OK. Doom map format is (undestandably) primitive and has no place for
-/// general information about maps. There are at least two ways to fix this:
-///
-/// 1)  MAPINFO lump (from Hexen and ZDoom)
-///     There can be one MAPINFO lump per wad. It is a text lump that consists of
-///     two kinds of blocks: MAP blocks and CLUSTERDEF blocks.
-///
-/// 2)  LevelInfo lumps (Legacy, others?)
-///     There is one LevelInfo lump per Map. It is the same lump as the
-///     mapname "separator", i.e. MAP16, E6M2, MYOWNMAP... 
-///     LevelInfo only contains info about the one map to which it belongs.
-///     It is a text lump that consists of blocks, such as [script], ...
-///
-/// Internally, all the data for each map is combined into one class, MapInfo.
-/// It contains all the information regarding a Map that doesn't directly affect
-/// gameplay but can be of interest to human players, such as the Map
-/// name, author, recommendation for # of players, hints, music that is
-/// played during the map, partime etc.
-
+/// \ingroup g_central
+/*!
+  OK. Doom map format is (undestandably) primitive and has no place for
+  general information about maps. There are at least two ways to fix this:
+ 
+  1)  MAPINFO lump (from Hexen and ZDoom)
+      There can be one MAPINFO lump per wad. It is a text lump that consists of
+      two kinds of blocks: MAP blocks and CLUSTERDEF blocks.
+ 
+  2)  LevelInfo lumps (Legacy, others?)
+      There is one LevelInfo lump per Map. It is the same lump as the
+      mapname "separator", i.e. MAP16, E6M2, MYOWNMAP... 
+      LevelInfo only contains info about the one map to which it belongs.
+      It is a text lump that consists of blocks, such as [script], ...
+ 
+  Internally, all the data for each map is combined into one class, MapInfo.
+  It contains all the information regarding a Map that doesn't directly affect
+  gameplay but can be of interest to human players, such as the Map
+  name, author, recommendation for # of players, hints, music that is
+  played during the map, partime etc.
+*/
 class MapInfo
 {
   friend class Map;

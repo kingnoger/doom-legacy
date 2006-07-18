@@ -135,9 +135,11 @@ TypeInfo c::_type(#c, c::Create, &par::_type);
 // Thinker
 
 /// \brief Base class for most active game objects.
-///
-/// All dynamic map elements are Thinker descendants.
-/// The Map stores them in a doubly linked ring.
+/// \ingroup g_central
+/*!
+  All dynamic map elements are Thinker descendants.
+  The Map stores them in a doubly linked ring.
+*/
 
 class Thinker
 {

@@ -18,6 +18,9 @@
 //
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Actor and DActor class definitions
+
 #ifndef g_actor_h
 #define g_actor_h 1
 
@@ -35,69 +38,6 @@ const fixed_t ONCEILINGZ = fixed_t::FMAX;
 
 const fixed_t TELEFOGHEIGHT = 32;
 const fixed_t FOOTCLIPSIZE  = 10;
-
-/// \file
-/// \brief Actor class definition
-///
-/// Actors are used to tell the refresh where to draw an image,
-/// tell the world simulation when objects are contacted,
-/// and tell the sound driver how to position a sound.
-///
-/// The refresh uses the next and prev links to follow
-/// lists of things in sectors as they are being drawn.
-/// The sprite, frame, and angle elements determine which patch_t
-/// is used to draw the sprite if it is visible.
-/// The sprite and frame values are allmost allways set
-/// from state_t structures.
-/// The statescr.exe utility generates the states.h and states.c
-/// files that contain the sprite/frame numbers from the
-/// statescr.txt source file.
-/// The xyz origin point represents a point at the bottom middle
-/// of the sprite (between the feet of a biped).
-/// This is the default origin position for patch_ts grabbed
-/// with lumpy.exe.
-/// A walking creature will have its z equal to the floor
-/// it is standing on.
-///
-/// The sound code uses the x,y, and subsector fields
-/// to do stereo positioning of any sound effited by the Actor.
-///
-/// The play simulation uses the blocklinks, x,y,z, radius, height
-/// to determine when Actors are touching each other,
-/// touching lines in the map, or hit by trace lines (gunshots,
-/// lines of sight, etc).
-/// The Actor->flags element has various bit flags
-/// used by the simulation.
-///
-/// Every Actor is linked into a single sector
-/// based on its origin coordinates.
-/// The subsector_t is found with R_PointInSubsector(x,y),
-/// and the sector_t can be found with subsector->sector.
-/// The sector links are only used by the rendering code,
-/// the play simulation does not care about them at all.
-///
-/// Any Actor that needs to be acted upon by something else
-/// in the play world (block movement, be shot, etc) will also
-/// need to be linked into the blockmap.
-/// If the thing has the MF_NOBLOCK flag set, it will not use
-/// the block links. It can still interact with other things,
-/// but only as the instigator (missiles will run into other
-/// things, but nothing can run into a missile).
-/// Each block in the grid is 128*128 units, and knows about
-/// every line_t that it contains a piece of, and every
-/// interactable Actor that has its origin contained.
-///
-/// A valid Actor is a Actor that has the proper subsector_t
-/// filled in for its xy coordinates and is linked into the
-/// sector from which the subsector was made, or has the
-/// MF_NOSECTOR flag set (the subsector_t needs to be valid
-/// even if MF_NOSECTOR is set), and is linked into a blockmap
-/// block or has the MF_NOBLOCKMAP flag set.
-/// Links should only be modified by the P_[Un]SetThingPosition()
-/// functions.
-/// Do not change the MF_NO? flags while a thing is valid.
-///
-/// Any questions?
 
 
 /// Actor flags. More or less permanent attributes of the Actor.
@@ -206,6 +146,57 @@ enum mobjeflag_t
 
 
 /// \brief Basis class for all Thinkers with a well-defined location.
+/// \ingroup g_central
+/*!
+  Actors are used to tell the renderer where to draw an image,
+  tell the world simulation when objects are contacted,
+  and tell the sound system how to position a sound.
+ 
+  The renderer uses the snext and sprev links to follow
+  lists of things in sectors as they are being drawn.
+
+  The xyz origin point represents a point at the bottom middle
+  of the sprite (between the feet of a biped).
+  This is the default origin position for patch_ts grabbed
+  with lumpy.exe.
+  A walking creature will have its z equal to the floor it is standing on.
+ 
+  The sound code uses the x,y, and subsector fields
+  to do stereo positioning of any sound emitted by the Actor.
+ 
+  The play simulation uses the blocklinks, x,y,z, radius, height
+  to determine when Actors are touching each other,
+  touching lines in the map, or hit by trace lines (gunshots, lines of sight, etc).
+  The flags fields have various bit flags used by the simulation.
+ 
+  Every Actor is linked into a single sector based on its origin coordinates.
+  The subsector_t is found with R_PointInSubsector(x,y),
+  and the sector_t can be found with subsector->sector.
+  The sector links are only used by the rendering code,
+  the play simulation does not care about them at all.
+ 
+  Any Actor that needs to be acted upon by something else
+  in the play world (block movement, be shot, etc) will also
+  need to be linked into the blockmap.
+  If the thing has the MF_NOBLOCK flag set, it will not use
+  the block links. It can still interact with other things,
+  but only as the instigator (missiles will run into other
+  things, but nothing can run into a missile).
+  Each block in the grid is 128*128 units, and knows about
+  every line_t that it contains a piece of, and every
+  interactable Actor that has its origin contained.
+ 
+  A valid Actor is a Actor that has the proper subsector_t
+  filled in for its xy coordinates and is linked into the
+  sector from which the subsector was made, or has the
+  MF_NOSECTOR flag set (the subsector_t needs to be valid
+  even if MF_NOSECTOR is set), and is linked into a blockmap
+  block or has the MF_NOBLOCKMAP flag set.
+  Links should only be modified by the [Un]SetPosition() functions.
+  Do not change the MF_NO? flags while a thing is valid.
+ 
+  Any questions?
+ */
 class Actor : public Thinker, public NetObject
 {
   typedef NetObject Parent;
@@ -351,9 +342,14 @@ public:
 
 //========================================================
 /// \brief Doom Actor.
-///
-/// An Actor with the standard Doom/Heretic AI
-/// (uses the A_* routines and the states table in info.cpp)
+/// \ingroup g_central
+/*!
+  An Actor with the standard Doom/Heretic AI.
+  Uses the A_* routines and the states table in info_*.cpp.
+
+  The sprite and frame elements of state_t (together with angle) determine which patch_t
+  is used to draw the sprite if it is visible.
+*/
 class DActor : public Actor
 {
   TNL_DECLARE_CLASS(DActor);
@@ -373,7 +369,7 @@ public:
   int  threshold;  ///< If >0, the target will be chased no matter what (even if shot)
   int  lastlook;   ///< Player number last looked for.
 
-  int  special1, special2; ///< type dependent general storage
+  int  special1, special2; ///< mobjtype dependent general storage
 
 public:
   /// create a nonfunctional special DActor (LavaInflictor etc...)
