@@ -24,7 +24,6 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#define USE_RWOPS // for SDL_mixer 1.2.6
 
 #if defined(FREEBSD) || defined(__APPLE_CC__) || defined(__MACOS__)
 # include <SDL.h>
@@ -429,7 +428,6 @@ void I_InitMusic()
 {
   if (nosound)
     {
-      // FIXME: workaround for shitty programming undoc'ed features
       nomusic = true;
       return;
     }
@@ -557,7 +555,6 @@ void I_UnRegisterSong(int handle)
   if (music.mus)
     {
       Mix_FreeMusic(music.mus);
-      SDL_FreeRW(music.rwop);
       music.mus = NULL;
       music.rwop = NULL;
     }
@@ -593,30 +590,16 @@ int I_RegisterSong(void* data, int len)
       music.rwop = SDL_RWFromConstMem(mus2mid_buffer, midlength);
     }
   else
-  //  else if (memcmp(data,"MThd", 4) == 0 || memcmp(data, "OggS", 4) == 0 ||
-  // (memcmp(data,"ID3", 3) == 0 || (bdata[0] == 255 && (bdata[1] & 0xe0 == 0xe0))))
-    // Damn, MP3 has no real header! This code only recognizes ID3 tags
-    // or the 11 bits long frame sync block which is all ones!
     {
-      // MIDI, MP3 and Ogg Vorbis
+      // MIDI, MP3, Ogg Vorbis, various module formats
       music.rwop = SDL_RWFromConstMem(data, len);
     }
-  /*
-  else
-    {
-      CONS_Printf("Music lump is not in MUS, Midi, MP3 or Ogg Vorbis format!\n");
-      return 0;
-    }
-  */
   
-  // FIXME TODO SDL_mixer _should_ support playing also mp3 music directly from memory,
-  // I hope the SDL_mixer guys finish this soon!
-
+  // SDL_mixer automatically frees the rwop when the music is stopped.
   music.mus = Mix_LoadMUS_RW(music.rwop);
   if (!music.mus)
     {
       CONS_Printf("Couldn't load music lump: %s\n", Mix_GetError());
-      SDL_FreeRW(music.rwop);
       music.rwop = NULL;
     }
 
