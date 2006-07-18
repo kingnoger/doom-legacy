@@ -72,7 +72,7 @@ public:
     };
 
   mapstate_e   state;
-  Map         *me;    ///< the actual running Map instance corresponding to this MapInfo
+  class Map   *me;    ///< the actual running Map instance corresponding to this MapInfo
   bool         found; ///< present in the resource pool (WAD files etc.)
 
   string lumpname;   ///< map lump name ("MAP04")

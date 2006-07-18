@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -16,7 +16,6 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
 //-----------------------------------------------------------------------------
 
 /// \file
@@ -25,9 +24,9 @@
 #ifndef doomtype_h
 #define doomtype_h 1
 
+#include <stdint.h>
 
 // Standard library differences
-
 #ifdef __WIN32__
 # include <windows.h>
 # define ASMCALL __cdecl
@@ -66,7 +65,7 @@ typedef signed int   Sint32;
 #ifdef __WIN32__
 typedef __int64 Sint64;
 #else
-typedef signed long long Sint64;
+typedef int64_t Sint64;
 #endif
 
 typedef unsigned char  byte;
