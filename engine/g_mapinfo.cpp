@@ -359,7 +359,6 @@ static parsercmd_t MapInfo_commands[]=
 static parsercmd_t MAPINFO_MAP_commands[] =
 {
   {P_ITEM_INT, "cluster", MI_offset(cluster)},
-  {P_ITEM_INT, "levelnum", MI_offset(mapnumber)},
 
   {P_ITEM_INT, "warptrans", MI_offset(warptrans)}, // Damnation!
   {P_ITEM_INT, "next", MI_offset(warpnext)}, // Hexen 'next' refers to warptrans numbers, not levelnums!
@@ -541,28 +540,51 @@ int GameInfo::Read_MAPINFO(int lump)
 	}
       else if (!strcasecmp(line, "MAP"))
 	{
-	  // map definition block begins
 	  parsestate = PS_MAP;
-	  i = sscanf(p.Pointer(), "%16s \"%60[^\"]\"", ln, line);
+	  // map definition block begins. accepted formats:
+
+	  // standard:  map xxx   nicename 2
+	  // shorthand: map MAP02 nicename
+	  // old Hexen: map 2     nicename
+
+	  i = sscanf(p.Pointer(), "%16s \"%60[^\"]\" %d", ln, line, &n);
+	  if (i == 1) // nicename not quoted
+	    i = sscanf(p.Pointer(), "%16s %60s %d", ln, line, &n);
 
 	  info = new MapInfo(def); // copy construction
 	  tempinfo.push_back(info);
 
-	  if (IsNumeric(ln))
+	  if (i == 3)
 	    {
-	      // assume Hexen
-	      n = atoi(ln);
-	      char temp[10];
+	      info->lumpname = ln;
 	      if (n >= 0 && n <= 99)
+		info->mapnumber = n;
+	    }
+	  else if (i == 2)
+	    {
+	      // no mapnumber given, deduce it
+	      if (IsNumeric(ln))
 		{
-		  sprintf(temp, "MAP%02d", n);
-		  info->lumpname = temp;
+		  // assume deprecated Hexen format
+		  n = atoi(ln);
+		  char temp[10];
+		  if (n >= 0 && n <= 99)
+		    {
+		      sprintf(temp, "MAP%02d", n);
+		      info->lumpname = temp;
+		      info->mapnumber = n;
+		    }
+		}
+	      else
+		{
+		  // lumpname must be in MAPxx format
+		  i = sscanf(ln, "MAP%2d", &n);
+		  info->lumpname = ln;
 		  info->mapnumber = n;
 		}
 	    }
 	  else
-	    // ZDoom style
-	    info->lumpname = ln;
+	    CONS_Printf(" Bad map definition at char %d!\n", p.Location());
 
 	  info->nicename = line;
 
@@ -570,7 +592,7 @@ int GameInfo::Read_MAPINFO(int lump)
 	  const char *temp = info->lumpname.c_str();
 	  if (fc.FindNumForName(temp) == -1)
 	    {
-	      CONS_Printf("Map '%s' not present!\n", temp);
+	      CONS_Printf(" Map '%s' not present!\n", temp);
 	    }
 	  else
 	    info->found = true;
@@ -584,7 +606,7 @@ int GameInfo::Read_MAPINFO(int lump)
 
 	  if (clustermap.count(n))
 	    {
-	      CONS_Printf("Cluster number %d defined more than once!\n", n);
+	      CONS_Printf(" Cluster number %d defined more than once!\n", n);
 	      cl = clustermap[n]; // already there, update the existing cluster
 	    }
 	  else
@@ -596,7 +618,7 @@ int GameInfo::Read_MAPINFO(int lump)
       else switch (parsestate)
 	{
 	case PS_CLEAR:
-	  CONS_Printf("Unknown MAPINFO block at char %d!\n", p.Location());
+	  CONS_Printf(" Unknown MAPINFO block at char %d!\n", p.Location());
 	  break;
 
 	case PS_MAP:
@@ -621,7 +643,7 @@ int GameInfo::Read_MAPINFO(int lump)
 
       if (mapinfo.count(j)) // already there
 	{
-	  CONS_Printf("Map number %d found more than once!\n", j);
+	  CONS_Printf(" Map number %d found more than once!\n", j);
 	  delete mapinfo[j]; // later one takes precedence
 	}
 
@@ -643,7 +665,7 @@ int GameInfo::Read_MAPINFO(int lump)
       n = info->cluster;
       if (!clustermap.count(n))
 	{
-	  CONS_Printf(" new cluster %d (map %d)\n", n, info->mapnumber);
+	  CONS_Printf(" New cluster %d (map %d)\n", n, info->mapnumber);
 	  // create the cluster
 	  cl = clustermap[n] = new MapCluster(n);
 	  cl->hub = cl->keepstuff = true; // for original Hexen
@@ -664,7 +686,7 @@ int GameInfo::Read_MAPINFO(int lump)
       cl = (*t).second;
       if (cl->maps.empty())
 	{
-	  CONS_Printf("Cluster %d has no maps!\n", cl->number);
+	  CONS_Printf(" Cluster %d has no maps!\n", cl->number);
 	  clustermap.erase(t);
 	  delete cl;
 	}

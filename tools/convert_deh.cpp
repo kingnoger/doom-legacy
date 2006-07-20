@@ -436,7 +436,7 @@ flag_mnemonic_t BEX_Flag2Mnemonics[32] =
   {"CANNOTPUSH",       0x2000, MF2_CANNOTPUSH},   // Cannot push other pushable actors
   {"FEETARECLIPPED",   0x4000, 0}, // made a variable, useless
   {"BOSS",             0x8000, MF2_BOSS},         // Is a major boss, not as easy to kill
-  {"FIREDAMAGE",   0x00010000, MF2_FIREDAMAGE},   // Does fire damage
+  {"FIREDAMAGE",   0x00010000, 0},   // Does fire damage, TODO
   {"NODMGTHRUST",  0x00020000, MF2_NODMGTHRUST},  // Does not thrust target when damaging        
   {"TELESTOMP",    0x00040000, MF2_TELESTOMP},    // Can telefrag another Actor
   {"FLOATBOB",     0x00080000, MF2_FLOATBOB},     // Bobs up and down in the air (item)
@@ -450,7 +450,7 @@ flag_mnemonic_t BEX_Flag2Mnemonics[32] =
   {"NONSHOOTABLE", 0x04000000, MF2_NONSHOOTABLE}, // Transparent to MF_MISSILEs
   {"INVULNERABLE", 0x08000000, MF2_INVULNERABLE}, // Does not take damage
   {"DORMANT",      0x10000000, MF2_DORMANT},      // Cannot be damaged, is not noticed by seekers
-  {"ICEDAMAGE",    0x20000000, MF2_ICEDAMAGE},    // Does ice damage
+  {"ICEDAMAGE",    0x20000000, 0},    // Does ice damage, TODO
   {"SEEKERMISSILE", 0x40000000, MF2_SEEKERMISSILE}, // Is a seeker (for reflection)
   {"REFLECTIVE",   0x80000000, MF2_REFLECTIVE},   // Reflects missiles
 };

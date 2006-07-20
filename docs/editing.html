@@ -95,175 +95,29 @@ used.
 <hr />
 <h2><a name="MAPINFO">The MAPINFO lump</a></h2>
 
-<p>TODO: JDS specification</p>
-
 <p>
 MAPINFO is a special plaintext lump, introduced in Hexen, extended by
-ZDoom, that fixes many shortcomings of the map format and can be used
-<i>inter alia</i> to create custom map orderings within the WAD.
-MAPINFO may contain two types of entries:
-<b>map</b> and <b>cluster</b> definitions. Each of these consists of a
-number of commands, one command per line.
-The map definitions define properties of individual maps.
-The cluster definitions define properties of map clusters, which
-roughly correspond to Doom episodes or Hexen hubs.
+ZDoom and later the JDS group, that fixes many shortcomings of the map
+format and can be used <i>inter alia</i> to create custom map
+orderings and hubs within the WAD.
 </p>
+
+<p>Legacy follows the <a href="JDS_MAPINFO.html">JDS MAPINFO standard</a>.</p>
 
 <p>
 There is some overlap in the functionality of the MAPINFO lump and
 the <a href="#levelinfo">LevelInfo</a> lumps. We suggest that you use
-LevelInfo to handle all strictly map-dependant stuff, and MAPINFO for
-all things related to map ordering, finales and hubs.
+MAPINFO whenever you can, and LevelInfo when you must.
 </p>
 
 <p>
 There should be only one MAPINFO lump per wad, containing entries for
 each map and cluster in the game.<br/>
 For examples of MAPINFO lumps, see the <b>MI_*</b> lumps
-in legacy.wad. For instance, <a
-href="../resources/MAPINFO_Doom.txt">this lump</a> recreates the
-original Doom episodes.
+in legacy.wad.
+For instance, <a href="../resources/MAPINFO_Doom.txt">this lump</a>
+recreates the original Doom episodes.
 </p>
-
-<table class="def">
-<tr><th>MAPINFO map command</th><th>effect</th></tr>
-
-<tr><td>defaultmap</td>
-<td>
-Starts the default map definition. The properties defined here are
-defaults for all maps following this definition.
-</td></tr>
-
-<tr><td>map &lt;lumpname&gt; &lt;nicename&gt;</td>
-<td>
-Starts a new map definition. Lumpname is the "separator" lump starting
-the map (MAP04, E3M1, MYOWNMAP etc.). Nicename is the full name of the map
-(e.g. "The Nuclear Plant").
-</td></tr>
-
-<tr><td>levelnum &lt;1-99&gt;</td>
-<td>
-Sets the number of the map, used among other things in the exit
-teleporters.
-</td></tr>
-
-<tr><td>cluster &lt;n&gt;</td>
-<td>
-Sets the cluster in which the map belongs.
-</td></tr>
-
-<tr><td>nextlevel &lt;normal&gt; [secret] </td>
-<td>
-Sets the mapnumber where the Doom-type exits take the players from
-this map. A value of -1 means that the game ends here.
-Optionally, you can also set the destination for Doom secret exits.<br/>
-This command is not necessary in Hexen-format maps, because the
-Hexen exit teleporters always carry the destination map number.
-
-</td></tr>
-
-<tr><td class="note" colspan="2">
-Commands below this row are <b>deprecated</b>. They are supported for
-Hexen compatibility, but should not be used in new maps.<br/>
-All their functionality is better implemented using either
-<a href="#scripting">scripting</a> or <a href="#levelinfo">LevelInfo</a> lumps.
-</td></tr>
-
-
-<tr><td>bossdeath &lt;code&gt;</td>
-<td>
-Implements the end-of-level boss death hacks of original Doom and
-Heretic. Scripting is a much better way to do this kind of stuff.
-</td></tr>
-
-<tr><td>par &lt;n&gt;</td>
-<td>
-Map partime in seconds.
-</td></tr>
-
-<tr><td>music &lt;lumpname&gt;</td>
-<td>
-Music to be played while in the map.
-</td></tr>
-
-<tr><td>sky1 &lt;texture&gt; &lt;scrollspeed&gt;</td>
-<td>
-Sets the primary sky properties in the map.
-</td></tr>
-
-<tr><td>sky2 &lt;texture&gt; &lt;scrollspeed&gt;</td>
-<td>
-Sets the secondary sky properties in the map.
-</td></tr>
-
-<tr><td>doublesky</td>
-<td>
-</td></tr>
-
-<tr><td>lightning</td>
-<td>
-</td></tr>
-
-
-
-<tr><th>MAPINFO cluster command</th><th>effect</th></tr>
-
-<tr><td>clusterdef &lt;n&gt; &lt;clustername&gt;</td>
-<td>
-Starts a new cluster definition. n is the number of the cluster and
-must be positive. clustername is the name of the hub/episode
-represented by the cluster, e.g. "Inferno".
-</td></tr>
-
-<tr><td>interpic &lt;lumpname&gt;</td>
-<td>
-Sets the intermission background picture for this cluster.
-</td></tr>
-
-<tr><td>intermusic &lt;lumpname&gt;</td>
-<td>
-Sets the intermission music for this cluster.
-</td></tr>
-
-<tr><td>finale &lt;1-3&gt;</td>
-<td>
-Which finale to show when the cluster is finished? Does not apply to
-Doom2 or Hexen.
-</td></tr>
-
-<tr><td>entertext &lt;text&gt;</td>
-<td>
-Message to be displayed when the cluster is first entered. "\n" is the
-newline character. 
-</td></tr>
-
-<tr><td>exittext &lt;text&gt;</td>
-<td>
-Message to be displayed when the cluster is exited.
-</td></tr>
-
-<tr><td>flat &lt;lumpname&gt;</td>
-<td>
-Background picture for the enter/exittext.
-</td></tr>
-
-<tr><td>music &lt;lumpname&gt;</td>
-<td>
-Music to be played during the enter/exittext.
-</td></tr>
-
-<tr><td>hub</td>
-<td>
-Makes this cluster a hub, meaning that the maps are saved when they
-are exited. If you later return to the map, you'll find it as you left
-it. Hubs cannot span several clusters, i.e., when you exit a
-cluster, all the hubsaves are deleted.
-</td></tr>
-
-
-
-</table>
-
 
 <hr />
 <h2><a name="levelinfo">LevelInfo lumps</a></h2>
@@ -279,7 +133,7 @@ one or more <b>blocks</b>. Each block begins with
 </div>
 <p>
 and ends when the next block begins, or when the lump ends.
-The recognized blocknames are
+The recognized blocks are
 <b>[level info]</b>, <b>[scripts]</b> and <b>[intertext]</b>.
 </p>
 
@@ -293,43 +147,6 @@ It consists of commands, one per line.
 
 <table class="def">
 <tr><th>[level info] command</th><th>effect</th></tr>
-
-<tr><td>name &lt;nicename&gt;</td>
-<td>
-Sets the full name of the map (e.g. "Mission Control"):
-</td></tr>
-
-<tr><td>version &lt;string&gt;</td>
-<td>
-Map version.
-</td></tr>
-
-<tr><td>author &lt;name&gt;</td>
-<td>
-Name of the map author.
-</td></tr>
-
-<tr><td>hint &lt;string&gt;</td>
-<td>
-An additional string, which can be a map description, hint,
-recommendation etc.
-</td></tr>
-
-<tr><td>partime &lt;n&gt;</td>
-<td>
-Map partime (in seconds).
-</td></tr>
-
-<tr><td>music &lt;lumpname&gt;</td>
-<td>
-Sets the music played in the map.
-</td></tr>
-
-<tr><td>gravity &lt;float&gt;</td>
-<td>
-Sets the acceleration of gravity in the map. Default is 1.0.
-</td></tr>
-
 
 <tr><td>doom_thingoffset &lt;min&gt; &lt;max&gt;</td>
 <td>
@@ -354,6 +171,46 @@ Guess...
 <tr><td>consolecmd &lt;expr&gt;</td>
 <td>
 <b>Deprecated</b>. Execute a <a href="console.html">console expression</a> after loading the map.
+</td></tr>
+
+<tr><td class="warning" colspan="2">
+<b>Deprecated commands</b>, use <a href="#MAPINFO">MAPINFO</a> instead.
+</td></tr>
+
+<tr><td>name &lt;nicename&gt;</td>
+<td>
+Sets the full name of the map (e.g. "Mission Control"):
+</td></tr>
+
+<tr><td>version &lt;string&gt;</td>
+<td>
+Map version.
+</td></tr>
+
+<tr><td>author &lt;name&gt;</td>
+<td>
+Name of the map author.
+</td></tr>
+
+<tr><td>description &lt;string&gt;</td>
+<td>
+An additional string, which can be a map description, hint,
+recommendation etc.
+</td></tr>
+
+<tr><td>partime &lt;n&gt;</td>
+<td>
+Map partime (in seconds).
+</td></tr>
+
+<tr><td>music &lt;lumpname&gt;</td>
+<td>
+Sets the music played in the map.
+</td></tr>
+
+<tr><td>gravity &lt;float&gt;</td>
+<td>
+Sets the acceleration of gravity in the map. Default is 1.0.
 </td></tr>
 </table>
 
@@ -519,7 +376,7 @@ lower than the target ceiling (this is usually not desired).
 
 
 <tr><td>282</td>
-<td><b>Easy colormap effect:</b><br/>
+<td><b>Easy colormap/fog effect:</b><br/>
 This type sets the colormaps of all tagged sectors as described
 below, without changing the floor/ceiling or light values. This is
 nice for putting colored lighting in many different sectors of
@@ -556,7 +413,7 @@ seen through it.
 This can be used to make a better fog effect by applying it to the
 linedefs connecting sectors with different &quot;fogginess&quot;.
 Because you usually will not want this
-effect on both sides of the line, this linedef will only effect sides
+effect on both sides of the line, this linedef will only affect sides
 with a middle texture.
 </td></tr>
 
@@ -858,15 +715,15 @@ The Legacy texture system is somewhat involved, which is caused by two main
 reasons: The original Doom graphics formats have no "magic numbers" by
 which they could be reliably identified, and there are certain nasty
 texture namespace overlaps in the original IWADs.
-</p>
+Legacy follows the <a href="http://glbsp.sourceforge.net/JointTextureSpec.txt">JDS texture
+standard</a>.</p>
 
 
 <h3>Advanced Textures</h3>
 
 <p>
 These are single-lump textures which must have magic numbers and reside
-between <b>TX_START</b> and <b>TX_END</b> markers. Currently Legacy supports just
-the PNG format here. TODO JPEG
+between <b>TX_START</b> and <b>TX_END</b> markers.
 </p>
 
 

@@ -68,10 +68,10 @@ int VFile::FindNumForName(const char* name, int startitem)
   for (; i != j; i++)
     {
       // TODO does this work? Are the elements with same key always in insertion order?
-      if ((*i).second < startitem)
+      if (i->second < startitem)
 	continue;
 
-      return (*i).second;
+      return i->second;
     }
 
   return -1;
@@ -107,7 +107,7 @@ void *VFile::CacheItem(int item, int tag)
 struct vdiritem_t
 {
   int  size;  // item size in bytes
-  char name[MAX_VDIR_ITEM_NAME];  // item name c-string ('\0'-terminated)
+  char name[MAX_VDIR_ITEM_NAME+1];  // item name c-string ('\0'-terminated)
 };
 
 
@@ -159,17 +159,25 @@ bool VDir::Open(const char *fname)
   int i = 0;
   while ((d = readdir(dstream)))
     {
-      const char *name = d->d_name;
-      if (name[0] != '.')
+      const char *temp = d->d_name;
+      if (temp[0] != '.')
 	{
-	  strncpy(contents[i].name, name, MAX_VDIR_ITEM_NAME);
-	  stat(name, &tempstat);
-	  contents[i].size = tempstat.st_size;
+	  strncpy(contents[i].name, temp, MAX_VDIR_ITEM_NAME);
+	  string fullname = filename + temp;
+
+	  if (stat(fullname.c_str(), &tempstat))
+	    {
+	      CONS_Printf("Could not stat file '%s'.\n", fullname.c_str());
+	      contents[i].size = 0;
+	    }
+	  else
+	    contents[i].size = tempstat.st_size;
+
 	  imap.insert(pair<const char *, int>(contents[i].name, i)); // fill the name map
 	  i++;
 	}
     }
-      
+
   // set up caching
   cache = (lumpcache_t *)Z_Malloc(numitems * sizeof(lumpcache_t), PU_STATIC, NULL);
   memset(cache, 0, numitems * sizeof(lumpcache_t));
@@ -252,7 +260,12 @@ bool VDataFile::Open(const char *fname)
 
   // get file system info about the file
   struct stat tempstat;
-  fstat(fileno(stream), &tempstat);
+  if (fstat(fileno(stream), &tempstat))
+    {
+      CONS_Printf("Could not stat file '%s'.\n", fname);
+      return false;
+    }
+
   size = tempstat.st_size;
 
   // generate md5sum 

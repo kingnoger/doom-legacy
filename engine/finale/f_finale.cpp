@@ -131,7 +131,7 @@ void F_StartFinale(const MapCluster *cd, bool enter, bool end)
 {
   endgame = end;
   gameepisode = cd->episode;
-  finaleflat = tc.GetPtr(cd->finalepic.c_str());
+  finaleflat = tc.GetPtr(cd->finalepic.c_str(), TEX_floor);
 
   if (enter)
     finaletext = cd->entertext;

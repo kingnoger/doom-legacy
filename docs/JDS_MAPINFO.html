@@ -14,7 +14,7 @@
 <!-- $Id$ -->
 <body>
 <h1>Joint MAPINFO Standard</h1>
-<h3>Version 0.4 (draft), released 2005-11-4.</h3>
+<h3>Version 0.5 (draft), released 2006-07-20.</h3>
 
 <h2>Introduction</h2>
 
@@ -66,8 +66,10 @@ Standard</a>, unless specified otherwise.</li>
 
 <p>
 A map definition begins with the keyword <b>map</b>, followed by the
-map separator lumpname, a nice long name for the map, and the level number (a unique
-positive number used by the exit teleporters destined for this map):
+map separator lumpname (e.g. MAP04, E3M1 etc.),
+a nice long name for the map (e.g. "The Nuclear Plant"),
+and the level number (a unique positive number used by the exit
+teleporters destined for this map):
 </p>
 <div class="code">map &lt;str lumpname&gt; &lt;str nicename&gt; [int levelnumber]</div>
 <!-- Hexen uses the syntax   map 3 "nicename" -->
@@ -136,7 +138,8 @@ Clusters are used for grouping maps together. Each map belongs to
 a single cluster. If a map has no cluster keyword, it is assigned to
 special cluster 0, which is automatically generated.
 A cluster definition begins with the keyword <b>clusterdef</b>,
-followed by a positive cluster number and a nice long name for the cluster:
+followed by a positive cluster number and a nice long name for the
+cluster (e.g. "Knee-deep in the Dead"):
 </p>
 <div class="code">clusterdef &lt;int number&gt; [str nicename]
 </div>
@@ -168,10 +171,9 @@ always produce the expected finales:
 </p>
 <table class="def">
 <tr><th>Script name</th><th>Description</th></tr>
-<tr><td>Doom1</td><td>Doom 1 bunny scroller</td></tr>
+<tr><td>Doom1</td><td>Doom 1 finales (episode dependant)</td></tr>
 <tr><td>Doom2</td><td>Doom 2 cast presentation</td></tr>
-<tr><td>Heretic_underwater</td><td>Heretic episode 2 underwater scene</td></tr>
-<tr><td>Heretic_demon</td><td>Heretic episode 3 demon scroller</td></tr>
+<tr><td>Heretic</td><td>Heretic finales (episode dependant)</td></tr>
 <tr><td>Hexen</td><td>Hexen chessboard scene</td></tr>
 </table>
 

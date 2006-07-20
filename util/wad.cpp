@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 2002-2004 by DooM Legacy Team.
+// Copyright (C) 2002-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -145,7 +145,13 @@ Wad::Wad(const char *fname, const char *lumpname)
 
   // get file system info about the file
   struct stat bufstat;
-  fstat(fileno(stream), &bufstat);
+  if (fstat(fileno(stream), &bufstat))
+    {
+      CONS_Printf("Could not stat file '%s'.\n", fname);
+      size = directory->size = 0;
+      return;
+    }
+
   size = directory->size = bufstat.st_size;
   strncpy(directory->name, lumpname, 8);
 

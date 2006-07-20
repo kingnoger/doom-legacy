@@ -96,11 +96,15 @@ table.def td.note
 {
   vertical-align: top;
   background: #202000;
-  padding: 0.3ex 1ex;
   text-align: center;
 }
 
-
+table.def td.warning
+{
+  vertical-align: top;
+  background: #703000;
+  text-align: center;
+}
 
 :link    { color: #80FF00; text-decoration: none; }
 :visited { color: #5EBB00; text-decoration: none; }

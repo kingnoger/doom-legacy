@@ -1,5 +1,5 @@
 ; MAPINFO file: Doom II mission pack Plutonia Experiment
-; Doom Legacy Team 2004
+; Doom Legacy Team 2004-2006
 
 ;------------------------------------------
 ; maps 1-6
@@ -17,42 +17,36 @@ interpic INTERPIC
 intermusic D_DM2INT
 
 map MAP01 "level 1: congo"
-levelnum 1
 nextlevel 2
 par 30
 music D_RUNNIN
 picname CWILV00
 
 map MAP02 "level 2: well of souls"
-levelnum 2
 nextlevel 3
 par 90
 music D_STALKS
 picname CWILV01
 
 map MAP03 "level 3: aztec"
-levelnum 3
 nextlevel 4
 par 120
 music D_COUNTD
 picname CWILV02
 
 map MAP04 "level 4: caged"
-levelnum 4
 nextlevel 5
 par 120
 music D_BETWEE
 picname CWILV03
 
 map MAP05 "level 5: ghost town"
-levelnum 5
 nextlevel 6
 par 90
 music D_DOOM
 picname CWILV04
 
 map MAP06 "level 6: baron's lair"
-levelnum 6
 nextlevel 7
 par 150
 music D_THE_DA
@@ -74,7 +68,6 @@ interpic INTERPIC
 intermusic D_DM2INT
 
 map MAP07 "level 7: caughtyard"
-levelnum 7
 nextlevel 8
 par 120
 music D_SHAWN
@@ -83,28 +76,24 @@ bossdeath 96
 picname CWILV06
 
 map MAP08 "level 8: realm"
-levelnum 8
 nextlevel 9
 par 120
 music D_DDTBLU
 picname CWILV07
 
 map MAP09 "level 9: abattoire"
-levelnum 9
 nextlevel 10
 par 270
 music D_IN_CIT
 picname CWILV08
 
 map MAP10 "level 10: onslaught"
-levelnum 10
 nextlevel 11
 par 90
 music D_DEAD
 picname CWILV09
 
 map MAP11 "level 11: hunted"
-levelnum 11
 nextlevel 12
 par 210
 music D_STLKS2
@@ -126,63 +115,54 @@ interpic INTERPIC
 intermusic D_DM2INT
 
 map MAP12 "level 12: speed"
-levelnum 12
 nextlevel 13
 par 150
 music D_THEDA2
 picname CWILV11
 
 map MAP13 "level 13: the crypt"
-levelnum 13
 nextlevel 14
 par 150
 music D_DOOM2
 picname CWILV12
 
 map MAP14 "level 14: genesis"
-levelnum 14
 nextlevel 15
 par 150
 music D_DDTBL2
 picname CWILV13
 
 map MAP15 "level 15: the twilight"
-levelnum 15
 nextlevel 16
 par 210
 music D_RUNNI2
 picname CWILV14
 
 map MAP16 "level 16: the omen"
-levelnum 16
 nextlevel 17
 par 150
 music D_DEAD2
 picname CWILV15
 
 map MAP17 "level 17: compound"
-levelnum 17
 nextlevel 18
 par 420
 music D_STLKS3
 picname CWILV16
 
 map MAP18 "level 18: neurosphere"
-levelnum 18
 nextlevel 19
 par 150
 music D_ROMERO
 picname CWILV17
 
 map MAP19 "level 19: nme"
-levelnum 19
 nextlevel 20
 par 210
 music D_SHAWN2
 picname CWILV18
 
 map MAP20 "level 20: the death domain"
-levelnum 20
 nextlevel 21
 par 150
 music D_MESSAG
@@ -204,70 +184,60 @@ interpic INTERPIC
 intermusic D_DM2INT
 
 map MAP21 "level 21: slayer"
-levelnum 21
 nextlevel 22
 par 240
 music D_COUNT2
 picname CWILV20
 
 map MAP22 "level 22: impossible mission"
-levelnum 22
 nextlevel 23
 par 150
 music D_DDTBL3
 picname CWILV21
 
 map MAP23 "level 23: tombstone"
-levelnum 23
 nextlevel 24
 par 180
 music D_AMPIE
 picname CWILV22
 
 map MAP24 "level 24: the final frontier"
-levelnum 24
 nextlevel 25
 par 150
 music D_THEDA3
 picname CWILV23
 
 map MAP25 "level 25: the temple of darkness"
-levelnum 25
 nextlevel 26
 par 150
 music D_ADRIAN
 picname CWILV24
 
 map MAP26 "level 26: bunker"
-levelnum 26
 nextlevel 27
 par 300
 music D_MESSG2
 picname CWILV25
 
 map MAP27 "level 27: anti-christ"
-levelnum 27
 nextlevel 28
 par 330
 music D_ROMER2
 picname CWILV26
 
 map MAP28 "level 28: the sewers"
-levelnum 28
 nextlevel 29
 par 420
 music D_TENSE
 picname CWILV27
 
 map MAP29 "level 29: odyssey of noises"
-levelnum 29
 nextlevel 30
 par 300
 music D_SHAWN3
 picname CWILV28
 
 map MAP30 "level 30: the gateway of hell"
-levelnum 30
 nextlevel -1
 par 180
 music D_OPENIN
@@ -286,7 +256,6 @@ entertext "You've found the second-hardest level we\ngot. Hope you have a saved 
 
 map MAP31 "level 31: cyberden"
 cluster 5
-levelnum 31
 nextlevel 16 32
 par 120
 music D_EVIL
@@ -306,7 +275,6 @@ entertext "Betcha wondered just what WAS the hardest\nlevel we had ready for ya?
 
 map MAP32 "level 32: go 2 it"
 cluster 6
-levelnum 32
 nextlevel 16
 par 30
 music D_ULTIMA
