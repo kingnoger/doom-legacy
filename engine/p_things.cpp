@@ -202,8 +202,8 @@ bool Map::EV_ThingProjectile(byte *args, bool gravity)
     
   angle_t angle = int(args[2] << 24);
   int fineAngle = angle >> ANGLETOFINESHIFT;
-  fixed_t speed = int(args[3] << 13);
-  fixed_t vspeed = int(args[4] << 13);
+  fixed_t speed = args[3]/8.0f;
+  fixed_t vspeed = args[4]/8.0f;
   while ((mobj = FindFromTIDmap(tid, &searcher)) != NULL)
     {
       DActor *newMobj = SpawnDActor(mobj->pos.x, mobj->pos.y, mobj->pos.z, moType);

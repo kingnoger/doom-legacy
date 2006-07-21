@@ -2,6 +2,22 @@
 ; Doom Legacy Team 2003-2005
 ; Partimes are Heretic-N speedruns + 30s (as of 2005-4-13). Good luck in beating those:)
 
+episode E1M1 "City of the Damned"
+picname M_EPI1
+
+episode E2M1 "Hell's Maw"
+picname M_EPI2
+
+episode E3M1 "The Dome of D'Sparil"
+picname M_EPI3
+
+episode E4M1 "The Ossuary"
+picname M_EPI4
+
+episode E5M1 "The Stagnant Demesne"
+picname M_EPI5
+
+
 ;------------------------------------------
 ; Episode 1
 

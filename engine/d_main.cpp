@@ -95,35 +95,13 @@ enum gamemission_t
 int mission = gmi_doom2;
 
 
-// Helper function: start a new game using the predefined MAPINFO lumps in legacy.wad...
+// Helper function: start a new game
 void BeginGame(int episode, int skill, bool public_server)
 {
-  char *m;
-
-  switch (game.mode)
-    {
-    case gm_hexen:
-      m = "MAPINFO";
-      break;
-    case gm_heretic:
-      m = "MI_HTIC";
-      break;
-    case gm_doom2:
-      if (mission == gmi_tnt)
-	m = "MI_TNT";
-      else if (mission == gmi_plut)
-	m = "MI_PLUT";
-      else
-	m = "MI_DOOM2";
-      break;
-    default:
-      m = "MI_DOOM1";
-    }
-
   if (public_server)
-    COM_BufAddText(va("newgame %s server %d %d\n", m, episode, skill));
+    COM_BufAddText(va("newgame %s server %d %d\n", game.mapinfo_lump.c_str(), episode, skill));
   else
-    COM_BufAddText(va("newgame %s local %d %d\n", m, episode, skill));
+    COM_BufAddText(va("newgame %s local %d %d\n", game.mapinfo_lump.c_str(), episode, skill));
 }
 
 
@@ -680,6 +658,32 @@ void D_DoomMain()
 
   // ------------- starting the game ----------------
 
+  char *m;
+
+  if (fc.FindNumForName("MAPINFO") >= 0)
+    m = "MAPINFO";
+  else switch (game.mode)
+    {
+    case gm_hexen:
+      I_Error("No MAPINFO lump found!\n");
+      break;
+    case gm_heretic:
+      m = "MI_HTIC";
+      break;
+    case gm_doom2:
+      if (mission == gmi_tnt)
+	m = "MI_TNT";
+      else if (mission == gmi_plut)
+	m = "MI_PLUT";
+      else
+	m = "MI_DOOM2";
+      break;
+    default:
+      m = "MI_DOOM1";
+    }
+
+  game.mapinfo_lump = m;
+
   bool public_server = game.dedicated || M_CheckParm("-server");
   bool autostart = public_server; // server starts automatically
   int  episode = 1;
@@ -725,10 +729,10 @@ void D_DoomMain()
 
 // entry point for not C++ environments (C or Obj-C)
 extern "C" {
-	void D_RunDoom()
-	{
-		D_DoomMain ();
-		D_DoomLoop ();
-	}
+  void D_RunDoom()
+  {
+    D_DoomMain();
+    D_DoomLoop();
+  }
 }
  

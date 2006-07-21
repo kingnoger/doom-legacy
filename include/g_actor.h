@@ -288,6 +288,7 @@ public:
 public:
   // in g_actor.cpp
   Actor(fixed_t nx, fixed_t ny, fixed_t nz); ///< construct a new Actor
+  //Actor(const Actor &a); // TODO is the auto-generated copy constructor bad because of NetObject fields?
   virtual ~Actor();
 
   void Remove();  ///< delayed destruction

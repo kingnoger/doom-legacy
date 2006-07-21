@@ -48,6 +48,7 @@ extern consvar_t cv_teamdamage;
 extern consvar_t cv_hiddenplayers;
 
 extern consvar_t cv_exitmode;
+extern consvar_t cv_intermission;
 extern consvar_t cv_fraglimit;
 extern consvar_t cv_timelimit;
 

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -1438,7 +1438,7 @@ void Intermission::Ticker()
 
 
 // store data from the last completed map
-void Intermission::Start(const Map *m, const MapInfo *n)
+void Intermission::Start(const MapInfo *f, const MapInfo *n, int maptic, int kills, int items, int secrets)
 {
   if (!n)
     I_Error("Intermission: Nextmap does not exist!\n");
@@ -1446,33 +1446,25 @@ void Intermission::Start(const Map *m, const MapInfo *n)
   if (state != Inactive)
     return; // already running
 
-  time = m->maptic / 35;
+  time = maptic / 35;
 
-  total.kills = m->kills;
-  if (total.kills == 0)
-    total.kills = 1;
+  total.kills = kills ? kills : 1;
+  total.items = items ? items : 1;
+  total.secrets = secrets ? secrets : 1;
 
-  total.items = m->items;
-  if (total.items == 0)
-    total.items = 1;
-
-  total.secrets = m->secrets;
-  if (total.secrets == 0)
-    total.secrets = 1;
-
-  last = m->info->mapnumber - 1; // number of level just completed, zero-based
-  partime = m->info->partime;
-  lastlevelname = m->info->nicename.c_str();
+  last = f->mapnumber - 1; // number of level just completed, zero-based
+  partime = f->partime;
+  lastlevelname = f->nicename.c_str();
 
   next = n->mapnumber - 1; // number of next level
   nextlevelname = n->nicename.c_str();
 
   // current and next clusters: show yah only if clusters belong to same episode
-  episode = game.FindCluster(m->info->cluster)->episode;
+  episode = game.FindCluster(f->cluster)->episode;
   show_yah = (game.FindCluster(n->cluster)->episode == episode);
 
-  interpic = m->info->interpic.c_str();
-  intermusic = m->info->intermusic.c_str();
+  interpic = f->interpic.c_str();
+  intermusic = f->intermusic.c_str();
 
   acceleratestage = false;
   count = bcount = 0;
@@ -1481,7 +1473,7 @@ void Intermission::Start(const Map *m, const MapInfo *n)
   s_count = sfx_menu_choose;
 
   LoadData();
-  lastname_tex = m->info->namepic.empty() ? NULL : tc.GetPtr(m->info->namepic.c_str());
+  lastname_tex = f->namepic.empty() ? NULL : tc.GetPtr(f->namepic.c_str());
   nextname_tex = n->namepic.empty() ? NULL : tc.GetPtr(n->namepic.c_str());
 
   if (cv_deathmatch.value)

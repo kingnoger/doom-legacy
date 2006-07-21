@@ -233,7 +233,7 @@ public:
   TNL_DECLARE_RPC(s2cEnterMap, (U8 mapnum));
 
   /// Server tells the player to start the intermission.
-  TNL_DECLARE_RPC(s2cStartIntermission, ());
+  TNL_DECLARE_RPC(s2cStartIntermission, (U8 finished, U8 next, U32 maptic, U32 kills, U32 items, U32 secrets));
 
   /// Client tells server that player has finished the intermission.
   TNL_DECLARE_RPC(c2sIntermissionDone, ());

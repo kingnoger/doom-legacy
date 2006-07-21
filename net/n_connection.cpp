@@ -260,14 +260,7 @@ void LConnection::onConnectionEstablished()
 
       rpcTest(7467);
 
-      int lump = fc.FindNumForName(game.gtype->mapinfo_name.c_str());
-      if (lump < 0)
-	{
-	  I_Error("MAPINFO lump '%s' not found.\n", COM_Argv(1));
-	  return;
-	}
-
-      game.CL_SpawnClient(lump);
+      game.CL_SpawnClient();
       game.CL_StartGame();
     }
   else

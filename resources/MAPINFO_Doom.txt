@@ -1,6 +1,19 @@
 ; MAPINFO file: original Doom map ordering
 ; Doom Legacy Team 2003-2006
 
+episode E1M1 "Knee-Deep in the Dead"
+picname M_EPI1
+
+episode E2M1 "The Shores of Hell"
+picname M_EPI2
+
+episode E3M1 "Inferno"
+picname M_EPI3
+
+episode E4M1 "Thy Flesh Consumed"
+picname M_EPI4
+
+
 ;------------------------------------------
 ; Episode 1
 

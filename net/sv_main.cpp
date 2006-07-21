@@ -150,21 +150,23 @@ consvar_t cv_maxplayers     = {"maxplayers", "32", CV_NETVAR, maxplayers_cons_t,
 CV_PossibleValue_t teamplay_cons_t[]={{0, "Off"},{1, "Color"},{2, "Skin"},{3, NULL}};
 CV_PossibleValue_t deathmatch_cons_t[]={{0, "Coop"},{1, "1"},{2, "2"},{3, "3"},{0, NULL}};
 CV_PossibleValue_t fraglimit_cons_t[]={{0, "MIN"},{1000, "MAX"},{0, NULL}};
-CV_PossibleValue_t exitmode_cons_t[]={{0, "no exit"},{1, "first"},{2, "individual"},{3, "last"},{4, NULL}};
+CV_PossibleValue_t exitmode_cons_t[]={{0, "no exit"},{1, "first"},{2, "last"},{3, "individual"},{4, NULL}};
 
 void TeamPlay_OnChange();
 void Deathmatch_OnChange();
 void FragLimit_OnChange();
 void TimeLimit_OnChange();
 void FastMonster_OnChange();
+void ExitMode_OnChange();
 
 consvar_t cv_deathmatch = {"deathmatch", "0", CV_NETVAR | CV_NOINIT | CV_CALL, deathmatch_cons_t, Deathmatch_OnChange};
 consvar_t cv_teamplay   = {"teamplay"  , "0", CV_NETVAR | CV_CALL, teamplay_cons_t, TeamPlay_OnChange};
-consvar_t cv_teamdamage = {"teamdamage", "0", CV_NETVAR, CV_OnOff};
+consvar_t cv_teamdamage    = {"teamdamage", "0", CV_NETVAR, CV_OnOff};
 consvar_t cv_hiddenplayers = {"hiddenplayers", "0", CV_NETVAR, CV_YesNo};
-consvar_t cv_exitmode   = {"exitmode", "1", CV_NETVAR, exitmode_cons_t, NULL};
-consvar_t cv_fraglimit  = {"fraglimit" , "0", CV_NETVAR | CV_CALL | CV_NOINIT,fraglimit_cons_t, FragLimit_OnChange};
-consvar_t cv_timelimit  = {"timelimit" , "0", CV_NETVAR | CV_CALL | CV_NOINIT, CV_Unsigned, TimeLimit_OnChange};
+consvar_t cv_exitmode      = {"exitmode", "1", CV_NETVAR | CV_CALL, exitmode_cons_t, ExitMode_OnChange};
+consvar_t cv_intermission  = {"intermission", "1", CV_NETVAR, CV_OnOff};
+consvar_t cv_fraglimit     = {"fraglimit" , "0", CV_NETVAR | CV_CALL | CV_NOINIT,fraglimit_cons_t, FragLimit_OnChange};
+consvar_t cv_timelimit     = {"timelimit" , "0", CV_NETVAR | CV_CALL | CV_NOINIT, CV_Unsigned, TimeLimit_OnChange};
 
 consvar_t cv_jumpspeed       = {"jumpspeed", "6", CV_NETVAR | CV_FLOAT};
 consvar_t cv_allowrocketjump = {"allowrocketjump", "0", CV_NETVAR, CV_YesNo};
@@ -258,6 +260,10 @@ void Deathmatch_OnChange()
 
 void FragLimit_OnChange()
 {
+  if (cv_fraglimit.value > 0)
+    {
+      cv_exitmode.Set(0); // no exit
+    }
 }
 
 
@@ -270,8 +276,13 @@ void TimeLimit_OnChange()
 }
 
 
-
-
+void ExitMode_OnChange()
+{
+  if (cv_exitmode.value == 3)
+    cv_intermission.Set(0);
+  else
+    cv_intermission.Set(1);
+}
 
 
 
@@ -338,16 +349,16 @@ bool GameInfo::Playing()
 }
 
 
-
-
 /// Close net connections, delete players, clear game status.
 /// After this you are not Playing().
-void GameInfo::SV_Reset()
+void GameInfo::SV_Reset(bool clear_mapinfo)
 {
   net->SV_Reset(); // disconnect clients etc.
 
   ClearPlayers();
-  Clear_mapinfo_clustermap();
+
+  if (clear_mapinfo)
+    Clear_mapinfo_clustermap();
 
   // clear teams?
   SV_ResetScripting();
@@ -367,29 +378,27 @@ void GameInfo::SV_Reset()
 /// Resets and initializes the server.
 /// Sets up the game if given a valid MAPINFO lump.
 /// If given a negative lump number, does not read any MAPINFO (for loading games).
-bool GameInfo::SV_SpawnServer(int mapinfo_lump)
+bool GameInfo::SV_SpawnServer(bool force_mapinfo)
 {
-  if (mapinfo_lump >= 0)
+  if (Playing())
     {
-      if (Playing())
-	{
-	  I_Error("Tried to spawn a server while playing.\n");
-	  return false;
-	}
+      I_Error("Tried to spawn a server while playing.\n");
+      return false;
+    }
 
-      SV_Reset();
-      CONS_Printf("Starting a server.\n");
+  CONS_Printf("Starting a server.\n");
 
-      if (Read_MAPINFO(mapinfo_lump) <= 0)
+  if (force_mapinfo || mapinfo.empty())
+    {
+      SV_Reset(true);
+      if (Read_MAPINFO() <= 0)
 	{
 	  CONS_Printf(" Bad MAPINFO lump.\n");
 	  return false;
 	}
-
-      gtype->mapinfo_name = fc.FindNameForNum(mapinfo_lump); // HACK
     }
   else
-    SV_Reset(); // just loading a game
+    SV_Reset(false); // keep current MAPINFO data
 
   ReadResourceLumps(); // SNDINFO etc.
   return true;
@@ -436,7 +445,7 @@ void GameInfo::SV_SetServerState(bool open)
 
 
 /// starts or restarts the game. assumes that we have set up the clustermap.
-bool GameInfo::SV_StartGame(skill_t sk, int cluster)
+bool GameInfo::SV_StartGame(skill_t sk, int epi)
 {
   if (clustermap.empty() || mapinfo.empty())
     return false;
@@ -451,9 +460,15 @@ bool GameInfo::SV_StartGame(skill_t sk, int cluster)
     i->second->Reset(true, true);
   // TODO need we nuke pawns too?
 
-  currentcluster = FindCluster(cluster);
-  if (!currentcluster)
-    currentcluster = clustermap.begin()->second;
+  if (epi >= episodes.size())
+    epi = 0;
+
+  entrypoint = episodes[epi];
+
+  if (entrypoint->minfo)
+    currentcluster = FindCluster(entrypoint->minfo->cluster);
+  else
+    currentcluster = NULL;
 
   skill = sk;
 
@@ -723,6 +738,7 @@ void SV_Init()
   cv_teamdamage.Reg();
   cv_hiddenplayers.Reg();
   cv_exitmode.Reg();
+  cv_intermission.Reg();
   cv_fraglimit.Reg();
   cv_timelimit.Reg();
 

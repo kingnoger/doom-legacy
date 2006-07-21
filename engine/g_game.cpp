@@ -92,6 +92,7 @@ GameInfo::GameInfo()
   skill = sk_medium;
   maxplayers = 32;
   maxteams = 4;
+  entrypoint = NULL;
   currentcluster = NULL;
 
   server = true;

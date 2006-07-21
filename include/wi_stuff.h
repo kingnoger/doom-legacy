@@ -129,7 +129,7 @@ public:
   Intermission();
 
   /// starts the intermission
-  void Start(const class Map *m, const class MapInfo *n);
+  void Start(const class MapInfo *f, const MapInfo *n, int maptic, int kills, int items, int secrets);
 
   /// the intermission is ended when the server says so
   void End();

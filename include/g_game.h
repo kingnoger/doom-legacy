@@ -128,12 +128,18 @@ public:
 
   vector<class TeamInfo*> teams;     ///< the teams in the game
 
+  /// \name MAPINFO data
+  //@{
   typedef map<int, class MapInfo*>::iterator mapinfo_iter_t;
-  map<int, MapInfo*> mapinfo;        ///< all the maps of the current game
-
   typedef map<int, class MapCluster*>::iterator cluster_iter_t;
-  map<int, MapCluster*> clustermap;  ///< map clusters or hubs of the current game
 
+  string              mapinfo_lump;  ///< MAPINFO lump used
+  map<int, MapInfo*>       mapinfo;  ///< all the maps of the current game
+  map<int, MapCluster*> clustermap;  ///< map clusters or hubs of the current game
+  vector<class Episode*>  episodes;  ///< game entrypoints
+  //@}
+
+  Episode        *entrypoint;  ///< game entrypoint for players
   MapCluster *currentcluster;  ///< currently active MapCluster (contains active Maps)
 
   GameType     *gtype; ///< TEST
@@ -164,8 +170,8 @@ public:
   // in sv_main.cpp
 public:
   bool Playing();
-  void SV_Reset();
-  bool SV_SpawnServer(int mapinfo_lump);
+  void SV_Reset(bool clear_mapinfo = true);
+  bool SV_SpawnServer(bool force_mapinfo);
   void SV_SetServerState(bool open);
   bool SV_StartGame(skill_t skill, int cluster = 1);
   void TryRunTics(tic_t realtics);
@@ -177,7 +183,7 @@ private:
   // in cl_main.cpp
 public:
   void CL_Reset();
-  bool CL_SpawnClient(int mapinfo_lump);
+  bool CL_SpawnClient();
   bool CL_StartGame();
 
 
@@ -191,7 +197,7 @@ public:
   bool CheckScoreLimit();
 
   // in g_mapinfo.cpp
-  int  Read_MAPINFO(int lump);
+  int  Read_MAPINFO();
   void Clear_mapinfo_clustermap();
   MapCluster *FindCluster(int number);
   MapInfo *FindMapInfo(int number);

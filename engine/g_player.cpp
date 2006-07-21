@@ -418,11 +418,20 @@ PLAYERINFO_RPC_S2C(s2cEnterMap, (U8 mapnum), (mapnum))
 }
 
 
-PLAYERINFO_RPC_S2C(s2cStartIntermission, (), ())
+PLAYERINFO_RPC_S2C(s2cStartIntermission, (U8 finished, U8 next, U32 maptic, U32 kills, U32 items, U32 secrets), (finished, next, maptic, kills, items, secrets))
 {
   CONS_Printf("server ordered intermission for player %d\n", number);
-  //wi.Start(this, next);
-  //game.StartIntermission();
+
+  MapInfo *f = game.FindMapInfo(finished);
+  MapInfo *n = game.FindMapInfo(next);
+
+  if (f && n)
+    {
+      wi.Start(f, n, maptic, kills, items, secrets);
+      game.StartIntermission();
+    }
+  else
+    game.EndIntermission();
 }
 
 
@@ -617,6 +626,9 @@ void PlayerInfo::SavePawn()
 /// Copies the saved pawn as the actual pawn
 void PlayerInfo::LoadPawn()
 {
+  if (!hubsavepawn)
+    return;
+
   pawn = new PlayerPawn(*hubsavepawn);
   pawn->player = this;
 

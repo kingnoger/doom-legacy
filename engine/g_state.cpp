@@ -265,15 +265,8 @@ void GameInfo::Ticker()
       break;
 
     case GS_LEVEL:
-      if (!paused)
+      if (!paused && currentcluster)
 	currentcluster->Ticker();
-
-      // check fraglimit cvar TODO how does this work? when are the scores (or teamscores) zeroed?
-      if (cv_fraglimit.value && CheckScoreLimit())
-	{
-	  // go on to the next map
-	  currentcluster->Finish(-1);
-	}
 
       if (!dedicated)
 	{
@@ -324,20 +317,20 @@ void GameInfo::Ticker()
 	      CONS_Printf("Map request..");
 
 	      if (p->requestmap == 0)
-		m = currentcluster->maps[0]; // first map in cluster
+		m = entrypoint->minfo;
+		//m = currentcluster->maps[0]; // first map in cluster
 	      else
+		m = FindMapInfo(p->requestmap);
+
+	      if (!m)
 		{
-		  m = FindMapInfo(p->requestmap);
-		  if (!m)
-		    {
-		      // game ends
-		      currentcluster->Finish(p->requestmap, p->entrypoint);
-		      StartFinale(NULL);
-		      break;
-		    }
-		  else if (!m->found)
-		    m = currentcluster->maps[0];
+		  // game ends
+		  currentcluster->Finish(p->requestmap, p->entrypoint);
+		  StartFinale(NULL);
+		  break;
 		}
+	      else if (!m->found)
+		m = currentcluster->maps[0];
 
 	      // cluster change?
 	      if (currentcluster->number != m->cluster)
@@ -375,19 +368,19 @@ void GameInfo::StartIntermission()
 }
 
 
-// TODO should send an rpc ending the intermission.
+//
 void GameInfo::EndIntermission()
 {
   state = GS_LEVEL;
 
-  if (server)
+  for (int i = 0; i < NUM_LOCALPLAYERS; i++)
     {
-      for (int i = 0; i < NUM_LOCALPLAYERS; i++)
-	{
-	  PlayerInfo *p = LocalPlayers[i].info;
-	  if (p && p->playerstate == PST_INTERMISSION)
-	    p->playerstate = PST_NEEDMAP;
-	}
+      PlayerInfo *p = LocalPlayers[i].info;
+      if (p && p->playerstate == PST_INTERMISSION)
+	if (server)
+	  p->playerstate = PST_NEEDMAP;
+	else
+	  p->c2sIntermissionDone();
     }
 }
 

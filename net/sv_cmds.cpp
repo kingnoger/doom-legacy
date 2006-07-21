@@ -313,7 +313,7 @@ void Command_Connect_f()
 // shuts down the current game
 void Command_Reset_f()
 {
-  game.SV_Reset();
+  game.SV_Reset(false);
 
   if (!game.dedicated)
     game.StartIntro();
@@ -473,7 +473,14 @@ void Command_NewGame_f()
       return;
     }
 
-  if (!game.SV_SpawnServer(lump))
+  bool reread = false;
+  if (game.mapinfo_lump != COM_Argv(1))
+    {
+      game.mapinfo_lump = COM_Argv(1);
+      reread = true;
+    }
+
+  if (!game.SV_SpawnServer(reread))
     return;
 
   if (!strcasecmp(COM_Argv(2), "server"))
@@ -494,7 +501,7 @@ void Command_NewGame_f()
       hud.ST_Start(LocalPlayers[0].info);
     }
 
-  game.SV_StartGame(skill_t(sk), epi);
+  game.SV_StartGame(skill_t(sk), epi-1);
 }
 
 
@@ -526,7 +533,7 @@ void Command_StartGame_f()
 	}
     }
 
-  if (!game.SV_StartGame(skill_t(sk), epi))
+  if (!game.SV_StartGame(skill_t(sk), epi-1))
     CONS_Printf("No MAPINFO lump loaded, use newgame instead!\n");
 }
 

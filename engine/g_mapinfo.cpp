@@ -30,6 +30,7 @@
 
 #include "doomdef.h"
 #include "command.h"
+#include "cvars.h"
 #include "parser.h"
 
 #include "g_mapinfo.h"
@@ -102,6 +103,13 @@ void MapInfo::Ticker()
   if (me && state != MAP_INSTASIS)
     {
       me->Ticker();
+
+      // check fraglimit cvar TODO how does this work? when are the scores (or teamscores) zeroed?
+      if (cv_fraglimit.value && game.CheckScoreLimit())
+	{
+	  // go on to the next map
+	  Close(-1);
+	}
 
       if (state == MAP_FINISHED)
 	{
@@ -355,48 +363,6 @@ static parsercmd_t MapInfo_commands[]=
 
 
 
-
-static parsercmd_t MAPINFO_MAP_commands[] =
-{
-  {P_ITEM_INT, "cluster", MI_offset(cluster)},
-
-  {P_ITEM_INT, "warptrans", MI_offset(warptrans)}, // Damnation!
-  {P_ITEM_INT, "next", MI_offset(warpnext)}, // Hexen 'next' refers to warptrans numbers, not levelnums!
-
-  // TODO implement ZDoom lumpname-fields?
-  //{P_ITEM_STR16, "next", MI_offset(nextmaplump)},
-  //{P_ITEM_STR16, "secretnext", MI_offset(secretmaplump)},
-
-  // our own solution (because the Hexen way SUCKS and ZDoom is not much better :)
-  {P_ITEM_INT_INT, "nextlevel", MI_offset(nextlevel), MI_offset(secretlevel)}, // refers to levelnums
-
-  {P_ITEM_BOOL, "doublesky", MI_offset(doublesky)},
-  {P_ITEM_STR16_FLOAT, "sky1", MI_offset(sky1), MI_offset(sky1sp)},
-  {P_ITEM_STR16_FLOAT, "sky2", MI_offset(sky2), MI_offset(sky2sp)},
-  {P_ITEM_BOOL, "lightning", MI_offset(lightning)},
-  {P_ITEM_STR, "fadetable", MI_offset(fadetablelump)},
-  {P_ITEM_INT, "cdtrack", MI_offset(cdtrack)},
-  {P_ITEM_STR, "music", MI_offset(musiclump)},
-  {P_ITEM_INT, "par", MI_offset(partime)},
-  {P_ITEM_INT, "bossdeath", MI_offset(BossDeathKey)},
-
-  {P_ITEM_STR, "interpic", MI_offset(interpic)},
-  {P_ITEM_STR, "intermusic", MI_offset(intermusic)},
-
-  {P_ITEM_STR, "picname", MI_offset(namepic)},
-
-  {P_ITEM_IGNORE, "cd_start_track", 0},
-  {P_ITEM_IGNORE, "cd_end1_track", 0},
-  {P_ITEM_IGNORE, "cd_end2_track", 0},
-  {P_ITEM_IGNORE, "cd_end3_track", 0},
-  {P_ITEM_IGNORE, "cd_intermission_track", 0},
-  {P_ITEM_IGNORE, "cd_title_track", 0},
-  {P_ITEM_IGNORE, NULL, 0}
-};
-#undef MI_offset
-
-
-
 /// Reads a MapInfo lump for a map.
 char *MapInfo::Read(int lump)
 {
@@ -478,6 +444,48 @@ char *MapInfo::Read(int lump)
 //   Hexen/ZDoom MAPINFO parser.
 //==============================================
 
+/// MAPINFO map commands
+static parsercmd_t MAPINFO_MAP_commands[] =
+{
+  {P_ITEM_INT, "cluster", MI_offset(cluster)},
+
+  {P_ITEM_INT, "warptrans", MI_offset(warptrans)}, // Damnation!
+  {P_ITEM_INT, "next", MI_offset(warpnext)}, // Hexen 'next' refers to warptrans numbers, not levelnums!
+
+  // TODO implement ZDoom lumpname-fields?
+  //{P_ITEM_STR16, "next", MI_offset(nextmaplump)},
+  //{P_ITEM_STR16, "secretnext", MI_offset(secretmaplump)},
+
+  // our own solution (because the Hexen way SUCKS and ZDoom is not much better :)
+  {P_ITEM_INT_INT, "nextlevel", MI_offset(nextlevel), MI_offset(secretlevel)}, // refers to levelnums
+
+  {P_ITEM_BOOL, "doublesky", MI_offset(doublesky)},
+  {P_ITEM_STR16_FLOAT, "sky1", MI_offset(sky1), MI_offset(sky1sp)},
+  {P_ITEM_STR16_FLOAT, "sky2", MI_offset(sky2), MI_offset(sky2sp)},
+  {P_ITEM_BOOL, "lightning", MI_offset(lightning)},
+  {P_ITEM_STR, "fadetable", MI_offset(fadetablelump)},
+  {P_ITEM_INT, "cdtrack", MI_offset(cdtrack)},
+  {P_ITEM_STR, "music", MI_offset(musiclump)},
+  {P_ITEM_INT, "par", MI_offset(partime)},
+  {P_ITEM_INT, "bossdeath", MI_offset(BossDeathKey)},
+
+  {P_ITEM_STR, "interpic", MI_offset(interpic)},
+  {P_ITEM_STR, "intermusic", MI_offset(intermusic)},
+
+  {P_ITEM_STR, "picname", MI_offset(namepic)},
+
+  {P_ITEM_IGNORE, "cd_start_track", 0},
+  {P_ITEM_IGNORE, "cd_end1_track", 0},
+  {P_ITEM_IGNORE, "cd_end2_track", 0},
+  {P_ITEM_IGNORE, "cd_end3_track", 0},
+  {P_ITEM_IGNORE, "cd_intermission_track", 0},
+  {P_ITEM_IGNORE, "cd_title_track", 0},
+  {P_ITEM_IGNORE, NULL, 0}
+};
+#undef MI_offset
+
+
+
 #if __GNUC__ >= 4
 # define CD_offset(field) ((char*)&(((MapCluster*)0)->field) - (char*)0)
 //#define CD_offset(field) offsetof(MapCluster, field)
@@ -486,7 +494,7 @@ char *MapInfo::Read(int lump)
 #endif
 //#define CD_offset(field) (size_t(&((MapCluster *)0)->field))
 
-// ZDoom clusterdef commands
+/// ZDoom clusterdef commands
 static parsercmd_t MAPINFO_CLUSTERDEF_commands[] =
 {
   {P_ITEM_INT, "finale", CD_offset(episode)},
@@ -500,12 +508,30 @@ static parsercmd_t MAPINFO_CLUSTERDEF_commands[] =
 };
 #undef CD_offset
 
+#if __GNUC__ >= 4
+# define EP_offset(field) ((char*)&(((Episode*)0)->field) - (char*)0)
+#else
+# define EP_offset(field) (size_t(&Episode::field))
+#endif
+
+/// MAPINFO episode commands
+static parsercmd_t MAPINFO_EPISODE_commands[] =
+{
+  {P_ITEM_STR, "picname", EP_offset(namepic)},
+  {P_ITEM_IGNORE, NULL, 0}
+};
+#undef EP_offset
+
 
 /// Reads the MAPINFO lump, filling mapinfo and clustermap with data
-int GameInfo::Read_MAPINFO(int lump)
+int GameInfo::Read_MAPINFO()
 {
+  int lump = fc.FindNumForName(mapinfo_lump.c_str());
   if (lump < 0)
-    return -1;
+    {
+      I_Error("MAPINFO lump '%s' not found.\n", mapinfo_lump.c_str());
+      return -1;
+    }
 
   CONS_Printf("Reading MAPINFO...\n");
 
@@ -515,10 +541,11 @@ int GameInfo::Read_MAPINFO(int lump)
 
   Clear_mapinfo_clustermap();
 
-  enum {PS_CLEAR, PS_MAP, PS_CLUSTERDEF} parsestate = PS_CLEAR;
+  enum {PS_CLEAR, PS_MAP, PS_CLUSTERDEF, PS_EPISODE} parsestate = PS_CLEAR;
   int i, n;
   vector<MapInfo *> tempinfo;
 
+  Episode    *ep = NULL;
   MapCluster *cl = NULL;
   MapInfo  *info = NULL;
   MapInfo   def; // default map
@@ -615,6 +642,24 @@ int GameInfo::Read_MAPINFO(int lump)
 	  if (sscanf(p.Pointer(), " \"%60[^\"]\"", line) == 1)
 	    cl->clustername = line;
 	}
+      else if (!strcasecmp(line, "EPISODE"))
+	{
+	  // game entrypoint definition
+	  i = sscanf(p.Pointer(), "%16s \"%60[^\"]\" %d", ln, line, &n);
+
+	  if (i >= 2)
+	    {
+	      parsestate = PS_EPISODE;
+
+	      ep = new Episode(ln, line);
+	      if (i == 3)
+		ep->entrypoint = n;
+
+	      episodes.push_back(ep);
+	    }
+	  else
+	    CONS_Printf("Bad episode definition at char %d!\n", p.Location());
+	}
       else switch (parsestate)
 	{
 	case PS_CLEAR:
@@ -629,6 +674,11 @@ int GameInfo::Read_MAPINFO(int lump)
 	case PS_CLUSTERDEF:
 	  p.SetPointer(start);
 	  p.ParseCmd(MAPINFO_CLUSTERDEF_commands, (char *)cl);
+	  break;
+
+	case PS_EPISODE:
+	  p.SetPointer(start);
+	  p.ParseCmd(MAPINFO_EPISODE_commands, (char *)ep);
 	  break;
 	}
     }
@@ -683,7 +733,7 @@ int GameInfo::Read_MAPINFO(int lump)
     {
       t = s++; // erase will invalidate t
 
-      cl = (*t).second;
+      cl = t->second;
       if (cl->maps.empty())
 	{
 	  CONS_Printf(" Cluster %d has no maps!\n", cl->number);
@@ -711,6 +761,23 @@ int GameInfo::Read_MAPINFO(int lump)
 	info->nextlevel = warptransmap[info->warpnext]->mapnumber;
     }
 
+  // backwards compatibility
+  if (episodes.empty() && !mapinfo.empty())
+    {
+      info = mapinfo.begin()->second;
+      episodes.push_back(new Episode(info->lumpname.c_str(), "Episode"));
+    }
+
+  // find direct pointers for convenience
+  n = episodes.size();
+  for (i=0; i<n; i++)
+    {
+      ep = episodes[i];
+      ep->minfo = FindMapInfo(ep->maplump.c_str());
+      if (ep->minfo)
+	ep->active = ep->minfo->found;
+    }
+
   n = mapinfo.size();
   CONS_Printf(" %d maps found.\n", n);
   return n;
@@ -736,6 +803,10 @@ void GameInfo::Clear_mapinfo_clustermap()
   clustermap.clear();
 
   currentcluster = NULL;
+
+  for (int i=0; i < episodes.size(); i++)
+    delete episodes[i];
+  episodes.clear();
 }
 
 

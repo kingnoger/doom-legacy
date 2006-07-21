@@ -603,7 +603,7 @@ void I_Quit()
   if (quitting) return;
   quitting = true;
 
-  game.SV_Reset();
+  game.SV_Reset(true);
   I_ShutdownSound();
   I_ShutdownCD();
 

@@ -93,6 +93,9 @@ public:
   /// changes menu node
   static void SetupNextMenu(Menu *m);
 
+  /// utility
+  int GetNumitems() const { return numitems; }
+
   /// the actual drawing
   void DrawTitle();
   void DrawMenu();

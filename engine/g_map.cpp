@@ -867,6 +867,9 @@ bool Map::RemovePlayer(PlayerInfo *p)
 // Check if any players are leaving, handle the pawns properly, remove the players from the map.
 int Map::HandlePlayers()
 {
+  if (info->state == MapInfo::MAP_RESET)
+    return 0; // single player, special case
+
   // Clean respawnqueue from removed players
   int n = respawnqueue.size();
   for (int i=0; i<n; i++)
@@ -917,18 +920,21 @@ int Map::HandlePlayers()
 		    // Starts an intermission for the player if appropriate.
 		    MapInfo *next = game.FindMapInfo(p->requestmap); // do we need an intermission?
 
-		    if (next) // TODO disable intermissions server option?
+		    // only use intermissions if mapchanges are synchronous
+		    if (next && cv_intermission.value)
 		      {
 			if (p->connection)
-			  //p->s2cStartIntermission(next->mapnumber); // nonlocal players need intermission data
-			  p->s2cStartIntermission();
+			  // nonlocal players need intermission data
+			  // TODO need we send Map kills, items or secrets?
+			  p->s2cStartIntermission(info->mapnumber, next->mapnumber, maptic, kills, items, secrets);
 			else
 			  {
 			    // for locals, the intermission is started
-			    wi.Start(this, next);
+			    wi.Start(info, next, maptic, kills, items, secrets);
 			    game.StartIntermission();
 			  }
-			p->playerstate = PST_INTERMISSION; // rpc_end_intermission resets this
+
+			p->playerstate = PST_INTERMISSION; // c2sIntermissionDone rpc resets this
 			return true;
 		      }
 		    else
@@ -950,15 +956,17 @@ int Map::HandlePlayers()
 	fin++;
     }
 
+  if (players.size() != fin)
+    return r;
+
   // TODO handle spectators...
-  // if all the remaining players are finished, finish the Map.
-  if (players.size() == fin)
-    {
-      if (game.server)
-	info->state = MapInfo::MAP_FINISHED;
-      else
-	info->state = MapInfo::MAP_INSTASIS; // TEST
-    }
+
+  // all the remaining players are finished, so let's finish the Map.
+  if (game.server)
+    info->state = MapInfo::MAP_FINISHED;
+  else
+    info->state = MapInfo::MAP_INSTASIS; // TEST
+
 
   return r;
 }

@@ -50,7 +50,6 @@ class GameType : public NetObject
 public:
   string     gt_name; ///< name unique to this GameType
   U32     gt_version;
-  string mapinfo_name; ///< TEST, crappy HACK
 
   /// dll-to-engine interface
   engine_export_t e;

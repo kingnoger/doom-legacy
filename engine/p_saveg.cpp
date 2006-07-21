@@ -2026,7 +2026,8 @@ void GameInfo::LoadGame(int slot)
   Z_Free(savebuffer); // the compressed buffer is no longer needed
 
   Downgrade(LEGACY_VERSION); // reset the game version
-  SV_SpawnServer(-1);
+  SV_Reset();
+  ReadResourceLumps();
 
   // dearchive all the modifications
   if (Unserialize(a))

@@ -46,6 +46,7 @@
 #include "r_sprite.h"
 
 #include "g_game.h"
+#include "g_level.h"
 #include "g_player.h"
 #include "g_pawn.h"
 #include "g_input.h"
@@ -146,8 +147,8 @@ struct menuitem_t
 {
   short  flags; ///< bit flags
 
-  char    *pic; ///< Texture name or NULL
-  char   *text; ///< plain text, used when we have a valid font (e.g. FONTBxx lumps)
+  const char  *pic; ///< Texture name or NULL
+  const char *text; ///< plain text, used when we have a valid font (e.g. FONTBxx lumps)
 
   union use_t
   {
@@ -960,16 +961,11 @@ void M_NewGame(int choice);
 void M_LoadGame(int choice);
 void M_SaveGame(int choice);
 
-enum single_e
-{
-  MI_newgame = 0,
-  MI_mapinfogame = 1,
-};
 
 static menuitem_t SinglePlayer_MI[] =
 {
   {IT_ACT, "M_NGAME" , "NEW GAME" ,{(consvar_t *)M_NewGame} ,'n'},
-  {IT_ACT, NULL, "NEW MAPINFO GAME", {(consvar_t *)M_NewGame} ,'m'},
+  //{IT_ACT, NULL, "NEW MAPINFO GAME", {(consvar_t *)M_NewGame} ,'m'},
   {IT_ACT, "M_LOADG" , "LOAD GAME",{(consvar_t *)M_LoadGame},'l'},
   {IT_ACT, "M_SAVEG" , "SAVE GAME",{(consvar_t *)M_SaveGame},'s'},
   {IT_ACT, "M_ENDGAM", "END GAME" ,{(consvar_t *)M_EndGame},'e'}
@@ -979,8 +975,8 @@ Menu SinglePlayerDef("M_SINGLE", "Single Player", &MainMenuDef, ITEMS(SinglePlay
 
 
 const  char *ALREADYPLAYING = "You are already playing\n\nLeave this game first\n";
-static int epi;
 
+static int epi;
 
 void M_NewGame(int choice)
 {
@@ -990,25 +986,75 @@ void M_NewGame(int choice)
       return;
     }
 
-  if (choice == MI_mapinfogame)
+  if (EpiDef.GetNumitems() == 1)
     {
-      // use MAPINFO
-      epi = -1;
-      if (game.mode == gm_hexen)
-        Menu::SetupNextMenu(&ClassDef);
+      // no episode choice to make
+      epi = 0;
+
+      if (game.mode == gm_hexen) // episode/class/skill
+	Menu::SetupNextMenu(&ClassDef);
       else
-        Menu::SetupNextMenu(&SkillDef);
-    }
-  else if (game.mode == gm_doom2)
-    {
-      epi = 1;
-      Menu::SetupNextMenu(&SkillDef);
+	Menu::SetupNextMenu(&SkillDef); // episode/skill
     }
   else
     Menu::SetupNextMenu(&EpiDef);
-
-  // TODO build EpiDef items using clustermap!
 }
+
+//===========================================================================
+//                       EPISODE SELECTION MENU
+//===========================================================================
+
+void M_Episode(int choice)
+{
+  /*
+  if ((game.mode == gm_doom1s) && choice)
+    {
+      Menu::SetupNextMenu(&ReadDef1);
+      mbox.Set(SWSTRING,NULL,MsgBox::NOTHING);
+      return;
+    }
+
+  // Yet another hack...
+  if ((game.mode == gm_doom1) && (choice > 2))
+    {
+      I_Error("M_Episode: 4th episode requires Ultimate DOOM\n");
+      choice = 0;
+    }
+  */
+
+  epi = choice;
+
+  if (game.mode == gm_hexen) // episode/class/skill
+    Menu::SetupNextMenu(&ClassDef);
+  else
+    Menu::SetupNextMenu(&SkillDef); // episode/skill
+}
+
+
+static const size_t MAX_EPISODES = 10; // should be enough...
+static menuitem_t Episode_MI[MAX_EPISODES]; 
+
+/*
+static menuitem_t DoomEp_MI[]=
+{
+  {IT_ACT, "M_EPI1", "Knee-Deep in the Dead", {(consvar_t *)M_Episode},'k'},
+  {IT_ACT, "M_EPI2", "The Shores of Hell"   , {(consvar_t *)M_Episode},'t'},
+  {IT_ACT, "M_EPI3", "Inferno"              , {(consvar_t *)M_Episode},'i'},
+  {IT_ACT, "M_EPI4", "Thy Flesh consumed"   , {(consvar_t *)M_Episode},'t'},
+  {IT_ACT, "M_EPI5", "Episode 5"            , {(consvar_t *)M_Episode},'t'},
+};
+
+static menuitem_t HereticEp_MI[]=
+{
+  {IT_ACT, "M_EPI1", "City of the Damned",   {(consvar_t *)M_Episode},'c'},
+  {IT_ACT, "M_EPI2", "Hell's Maw",           {(consvar_t *)M_Episode},'h'},
+  {IT_ACT, "M_EPI3", "The Dome of D'Sparil", {(consvar_t *)M_Episode},'t'},
+  {IT_ACT, "M_EPI4", "The Ossuary",          {(consvar_t *)M_Episode},'t'},
+  {IT_ACT, "M_EPI5", "The Stagnant Demesne", {(consvar_t *)M_Episode},'t'},
+};
+*/
+
+Menu EpiDef("M_EPISOD", "Which Episode?", &MainMenuDef, ITEMS(Episode_MI), 48, 63);
 
 
 //===========================================================================
@@ -1077,53 +1123,6 @@ void Menu::DrawClass()
   DrawMenu();
 }
 
-//===========================================================================
-//                       EPISODE SELECTION MENU
-//===========================================================================
-
-void M_Episode(int choice);
-
-static menuitem_t DoomEp_MI[]=
-{
-  {IT_ACT, "M_EPI1", "Knee-Deep in the Dead", {(consvar_t *)M_Episode},'k'},
-  {IT_ACT, "M_EPI2", "The Shores of Hell"   , {(consvar_t *)M_Episode},'t'},
-  {IT_ACT, "M_EPI3", "Inferno"              , {(consvar_t *)M_Episode},'i'},
-  {IT_ACT, "M_EPI4", "Thy Flesh consumed"   , {(consvar_t *)M_Episode},'t'},
-  {IT_ACT, "M_EPI5", "Episode 5"            , {(consvar_t *)M_Episode},'t'},
-};
-
-static menuitem_t HereticEp_MI[]=
-{
-  {IT_ACT, "M_EPI1", "City of the Damned",   {(consvar_t *)M_Episode},'c'},
-  {IT_ACT, "M_EPI2", "Hell's Maw",           {(consvar_t *)M_Episode},'h'},
-  {IT_ACT, "M_EPI3", "The Dome of D'Sparil", {(consvar_t *)M_Episode},'t'},
-  {IT_ACT, "M_EPI4", "The Ossuary",          {(consvar_t *)M_Episode},'t'},
-  {IT_ACT, "M_EPI5", "The Stagnant Demesne", {(consvar_t *)M_Episode},'t'},
-};
-
-Menu EpiDef("M_EPISOD", "Which Episode?", &MainMenuDef, ITEMS(DoomEp_MI), 48, 63);
-
-
-void M_Episode(int choice)
-{
-  if ((game.mode == gm_doom1s) && choice)
-    {
-      Menu::SetupNextMenu(&ReadDef1);
-      mbox.Set(SWSTRING,NULL,MsgBox::NOTHING);
-      return;
-    }
-
-  // Yet another hack...
-  if ((game.mode == gm_doom1) && (choice > 2))
-    {
-      I_Error("M_Episode: 4th episode requires Ultimate DOOM\n");
-      choice = 0;
-    }
-
-  epi = choice+1;
-  Menu::SetupNextMenu(&SkillDef);
-}
-
 
 //===========================================================================
 //                             SKILL MENU
@@ -1147,11 +1146,11 @@ menuitem_t Skill_MI[]=
 
 static menuitem_t HereticSkill_MI[]=
 {
-  {IT_ACT, "M_JKILL", "THOU NEEDETH A WET-NURSE", {(consvar_t *)M_ChooseSkill}, 't'},
-  {IT_ACT, "M_ROUGH", "YELLOWBELLIES-R-US",       {(consvar_t *)M_ChooseSkill}, 'y'},
-  {IT_ACT, "M_HURT" , "BRINGEST THEM ONETH",      {(consvar_t *)M_ChooseSkill}, 'b'},
-  {IT_ACT, "M_ULTRA", "THOU ART A SMITE-MEISTER", {(consvar_t *)M_ChooseSkill}, 't'},
-  {IT_ACT, "M_NMARE", "BLACK PLAGUE POSSESSES THEE", {(consvar_t *)M_ChooseSkill}, 'b'}
+  {IT_ACT, "M_JKILL", "Thou needeth a wet-nurse", {(consvar_t *)M_ChooseSkill}, 't'},
+  {IT_ACT, "M_ROUGH", "Yellowbellies-R-us",       {(consvar_t *)M_ChooseSkill}, 'y'},
+  {IT_ACT, "M_HURT" , "Bringest them oneth",      {(consvar_t *)M_ChooseSkill}, 'b'},
+  {IT_ACT, "M_ULTRA", "Thou art a smite-meister", {(consvar_t *)M_ChooseSkill}, 't'},
+  {IT_ACT, "M_NMARE", "Black plague possesses thee", {(consvar_t *)M_ChooseSkill}, 'b'}
 };
 
 Menu SkillDef("M_SKILL", //"M_NEWG"
@@ -1160,13 +1159,10 @@ Menu SkillDef("M_SKILL", //"M_NEWG"
 
 void M_VerifyNightmare(int ch)
 {
-  if (ch != 'y') return;
+  if (ch != 'y')
+    return;
 
-  if (epi < 0)
-    COM_BufAddText(va("newgame MAPINFO local 1 %d\n", sk_nightmare));
-  else
-    BeginGame(epi, sk_nightmare, false);
-
+  BeginGame(epi+1, sk_nightmare, false);
   Menu::Close(true);
 }
 
@@ -1183,11 +1179,7 @@ void M_ChooseSkill(int choice)
       return;
     }
 
-  if (epi < 0)
-    COM_BufAddText(va("newgame MAPINFO local 1 %d\n", choice));
-  else
-    BeginGame(epi, choice, false);
-
+  BeginGame(epi+1, choice, false);
   Menu::Close(true);
 }
 
@@ -3075,6 +3067,22 @@ void Menu::Open()
   itemOn = currentMenu->lastOn;
 
   con.Toggle(true);   // dirty hack : move away console
+
+
+  // episodes
+  if (game.episodes.empty())
+    game.Read_MAPINFO();
+
+  int n = min(game.episodes.size(), MAX_EPISODES);
+  EpiDef.numitems = n;
+  for (int i=0; i<n; i++)
+    {
+      Episode_MI[i].flags = game.episodes[i]->active ? IT_ACT : (IT_SPACE | IT_DISABLED);
+      Episode_MI[i].pic = game.episodes[i]->namepic.empty() ? NULL : game.episodes[i]->namepic.c_str(); // FIXME dangerous?
+      Episode_MI[i].text = game.episodes[i]->name.c_str(); // this too?
+      Episode_MI[i].use.routine = M_Episode;
+      Episode_MI[i].alphaKey = Episode_MI[i].text[0];
+    }
 }
 
 
@@ -3241,6 +3249,9 @@ void Menu::Init()
       exmy_cons_t[36].strvalue = NULL;
     }
 
+
+  EpiDef.numitems = 0;
+
   switch (game.mode)
     {
     case gm_doom2:
@@ -3250,12 +3261,11 @@ void Menu::Init()
       SkillDef.items = Skill_MI;
       SkillDef.parent = &MainMenuDef; // no episode menu
       break;
+
     case gm_doom1s:
       // Episodes 2 and 3 are handled,
       //  branching to an ad screen.
     case gm_doom1:
-      // We need to remove the fourth episode.
-      EpiDef.numitems = 3;
     case gm_udoom:
       // We are fine.
       pointer[0] = tc.GetPtr("M_SKULL1");
@@ -3263,9 +3273,6 @@ void Menu::Init()
       cv_menu_startmap.PossibleValue = exmy_cons_t;
       MainMenuDef.drawroutine = &Menu::DrawMenu;
       SkillDef.items = Skill_MI;
-      EpiDef.items = DoomEp_MI;
-      if (game.mode == gm_udoom)
-        EpiDef.numitems = 4;
       break;
 
     case gm_heretic:
@@ -3278,8 +3285,6 @@ void Menu::Init()
       pointer[1] = tc.GetPtr("M_SLCTR2");
 
       SkillDef.items = HereticSkill_MI;
-      EpiDef.items = HereticEp_MI;
-      EpiDef.numitems = 5;
       break;
 
     case gm_hexen:
@@ -3288,7 +3293,6 @@ void Menu::Init()
       SkullBaseLump = fc.GetNumForName("FBULA0");
       pointer[0] = tc.GetPtr("M_SLCTR1");
       pointer[1] = tc.GetPtr("M_SLCTR2");
-      SinglePlayer_MI[MI_newgame].flags = IT_OFF_BIG;
       break;
 
     default: // use legacy.wad menu graphics

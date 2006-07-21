@@ -307,20 +307,15 @@ void GameInfo::CL_Reset()
 
 
 
-bool GameInfo::CL_SpawnClient(int mapinfo_lump)
+bool GameInfo::CL_SpawnClient()
 {
-  if (mapinfo_lump >= 0)
-    {
-      CONS_Printf("Setting up client...\n");
+  CONS_Printf("Setting up client...\n");
 
-      if (Read_MAPINFO(mapinfo_lump) <= 0)
-	{
-	  CONS_Printf(" Bad MAPINFO lump.\n");
-	  return false;
-	}
+  if (Read_MAPINFO() <= 0)
+    {
+      CONS_Printf(" Bad MAPINFO lump.\n");
+      return false;
     }
-  else
-    return false;
 
   ReadResourceLumps(); // SNDINFO etc.
   return true;
@@ -345,7 +340,7 @@ bool GameInfo::CL_StartGame()
   con.ClearHUD();
   automap.Close();
 
-  currentcluster = clustermap.begin()->second; // FIXME get cluster from server
+  //currentcluster = clustermap.begin()->second; // FIXME get cluster from server
 
   state = GS_LEVEL;
   return true;

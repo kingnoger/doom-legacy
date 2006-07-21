@@ -76,4 +76,27 @@ public:
 };
 
 
+/// \brief Game entrypoint.
+class Episode
+{
+public:
+  string name;          ///< Episode name.
+  string namepic;       ///< Optional Texture containing the episode name.
+  string maplump;       ///< Map where the episode starts.
+  int    entrypoint;    ///< Starting entrypoint within the Map.
+  bool   active;        ///< Is the maplump found?
+  class MapInfo *minfo; ///< corresponding MapInfo
+
+public:
+  Episode(const char *lump, const char *n)
+  {
+    name = n;
+    maplump = lump;
+    entrypoint = 0;
+    active = false;
+    minfo = NULL;
+  }
+};
+
+
 #endif

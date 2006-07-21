@@ -53,7 +53,7 @@ void GameType::WriteServerInfo(BitStream &s)
 {
   consvar_t::SaveNetVars(s);
   fc.WriteNetInfo(s); // file names, sizes and md5 sums
-  s.writeString(mapinfo_name.c_str()); // HACK
+  s.writeString(game.mapinfo_lump.c_str()); // HACK
   // TODO how long it has been running, how long to go,  gamestate, tick, serverplayer?
 }
 
@@ -79,7 +79,7 @@ void GameType::ReadServerInfo(BitStream &s)
     }
 
   s.readString(name); // HACK, mapinfo lump name
-  mapinfo_name = name;
+  game.mapinfo_lump = name;
 }
 
 
