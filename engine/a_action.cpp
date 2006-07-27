@@ -878,7 +878,7 @@ void A_CheckThrowBomb(DActor *actor)
       actor->SetState(S_THROWINGBOMB7);
       actor->pos.z = actor->floorz;
       actor->vel.z = 0;
-      actor->flags2 &= ~MF2_FLOORBOUNCE;
+      actor->flags2 &= ~MF2_FULLBOUNCE;
       actor->flags &= ~MF_MISSILE;
     }
   if(!--actor->health)
@@ -954,7 +954,7 @@ void A_Quake(DActor *actor)
 	  // Tested in tile units (64 pixels)
 	  if (dist < actor->args[3])		// In tremor radius
 	    {
-	      // FIXME do the shaking somehow  localQuakeHappening[i] = richters;
+	      // FIXME do the shaking somehow  localQuakeHappening[i] = richters; // viewx,y += -2*r..+2*r
 	    }
 	  // Check if in damage radius
 	  if ((dist < actor->args[2]) && (victim->pos.z <= victim->floorz))

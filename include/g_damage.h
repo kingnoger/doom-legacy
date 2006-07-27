@@ -15,7 +15,6 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
 //-----------------------------------------------------------------------------
 
 /// \file
@@ -37,14 +36,17 @@ enum damage_t
   dt_cutting    = 0x30000, ///< claws, shrapnel
   dt_heat       = 0x40000, ///< imp fireball
   dt_cold       = 0x50000, ///< cone of cold
-  dt_radiation  = 0x60000, ///< nukage
-  dt_biological = 0x70000, ///< biowarfare agents
-  dt_corrosive  = 0x80000, ///< chemicals, acid
-  dt_poison     = 0x90000, ///< poison clouds, darts
-  dt_shock      = 0xA0000, ///< electric shock
-  dt_magic      = 0xB0000, ///< ethereal or otherwise strange
-  dt_oxygen     = 0xC0000, ///< lack of oxygen
-  dt_telefrag   = 0xD0000, ///< telefrag
+  dt_shock      = 0x60000, ///< electric shock
+  dt_corrosive  = 0x70000, ///< chemicals, acid
+  dt_magic      = 0x80000, ///< ethereal or otherwise strange
+  dt_telefrag   = 0x90000, ///< telefrag
+
+  dt_LIVING     = 0xA0000, ///< damagetypes after this only affect living things
+  dt_radiation  = 0xA0000, ///< nukage
+  dt_biological = 0xB0000, ///< biowarfare agents
+  dt_poison     = 0xC0000, ///< poison clouds, darts
+  dt_oxygen     = 0xD0000, ///< lack of oxygen
+
   dt_TYPEMASK   = 0xF0000,
 
   // flags: other effects (bit of a hack)

@@ -426,7 +426,7 @@ int Actor::Marshal(LArchive &a)
 	{
 	  if (spawnpoint)
 	    spawnpoint->mobj = this;
-	  CheckPosition(pos.x, pos.y);
+	  TestLocation();
 	  SetPosition();
 	}
     }
@@ -674,7 +674,7 @@ int DActor::Marshal(LArchive &a)
       // set sprev, snext, bprev, bnext, subsector
       if (mp)
 	{
-	  CheckPosition(pos.x, pos.y); // TEST, sets tmfloorz, tmceilingz
+	  TestLocation(); // TEST, sets tmfloorz, tmceilingz
 	  SetPosition();
 	}
 

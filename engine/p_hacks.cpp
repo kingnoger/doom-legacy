@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004-2005 by DooM Legacy Team.
+// Copyright (C) 2004-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -34,7 +34,7 @@ VoodooDoll::VoodooDoll(const PlayerPawn &p)
   : PlayerPawn(p)
 {
   flags  = MF_SOLID | MF_SHOOTABLE | MF_DROPOFF | MF_PICKUP | MF_NOTMONSTER;
-  flags2 = MF2_WINDTHRUST | MF2_PUSHABLE | MF2_SLIDE | MF2_PASSMOBJ | MF2_TELESTOMP;
+  flags2 = MF2_WINDTHRUST | MF2_PUSHABLE | MF2_SLIDE | MF2_TELESTOMP;
   eflags = 0;
   //pres->color = 2;
 }

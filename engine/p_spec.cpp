@@ -695,8 +695,7 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
 	switch (temp)
 	  {
 	  case HERETIC_Damage_Sludge:
-	    sec->damage = 4;
-	    sec->damagetype = dt_corrosive;
+	    sec->damage = 4 | dt_corrosive;
 	    sp |= SS_damage_32;
 	    break;
 
@@ -704,14 +703,12 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
 	    AddThinker(new scroll_t(scroll_t::sc_carry_floor, 2048*28, 0, NULL, sec - sectors, false));
 	    // fallthru
 	  case HERETIC_Lava_Wimpy:
-	    sec->damage = 5;
-	    sec->damagetype = dt_heat;
+	    sec->damage = 5 | dt_heat;
 	    sp |= SS_damage_16;
 	    break;
 
 	  case HERETIC_Lava_Hefty:
-	    sec->damage = 8;
-	    sec->damagetype = dt_heat;
+	    sec->damage = 8 | dt_heat;
 	    sp |= SS_damage_16;
 	    break;
 
@@ -759,8 +756,7 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
       if (temp)
 	{
 	  sp |= SS_damage_32;
-	  sec->damage = BoomDamage[temp];
-	  sec->damagetype = dt_radiation; // could as well choose randomly?      
+	  sec->damage = BoomDamage[temp] | dt_radiation; // could as well choose randomly?
 	}
     }
 
@@ -846,8 +842,7 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
   if (dam)
     {
       sp |= SS_damage_32;
-      sec->damage = dam;
-      sec->damagetype = dt_radiation; // could as well choose randomly?
+      sec->damage = dam | dt_radiation; // could as well choose randomly?
     }
 
   /*

@@ -177,7 +177,7 @@ struct sector_t
 
   // TODO this could be replaced with a pointer to a sectorinfo struct
   // (to save space, since most sectors have default values for these...)
-  short damage, damagetype; // TEST given according to damage bits in 'special'
+  int   damage; // TEST given according to damage bits in 'special'
   float gravity;  // TEST
   float friction, movefactor;  // friction belongs here, not in Actor
 

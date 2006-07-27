@@ -1129,7 +1129,7 @@ void ACBot::BuildInput(PlayerInfo *p, int elapsed)
       fixed_t nx = pawn->pos.x + pawn->vel.x + cpx;
       fixed_t ny = pawn->pos.y + pawn->vel.y + cpy;
 
-      bool blocked = !pawn->CheckPosition(nx, ny) ||
+      bool blocked = !pawn->TestLocation(nx, ny) ||
 	tmfloorz - pawn->Feet() > 24 ||
 	tmceilingz - tmfloorz < pawn->height;
       //if its time to change strafe directions, 

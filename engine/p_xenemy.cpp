@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1996 by Raven Software, Corp.
-// Copyright (C) 2003-2005 by DooM Legacy Team.
+// Copyright (C) 2003-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -121,32 +120,22 @@ void A_QueueCorpse(DActor *actor)
 
 bool P_CheckMeleeRange2(DActor *actor)
 {
-  Actor *mo;
-  fixed_t dist;
+  if (!actor->target)
+    return false;
 
-  if(!actor->target)
-    {
-      return(false);
-    }
-  mo = actor->target;
-  dist = P_XYdist(mo->pos, actor->pos);
-  if(dist >= MELEERANGE*2 || dist < MELEERANGE)
-    {
-      return(false);
-    }
-  if(!actor->mp->CheckSight(actor, mo))
-    {
-      return(false);
-    }
-  if(mo->Feet() > actor->Top())
-    { // Target is higher than the attacker
-      return(false);
-    }
-  else if(actor->Feet() > mo->Top())
-    { // Attacker is higher
-      return(false);
-    }
-  return(true);
+  Actor *mo = actor->target;
+  fixed_t dist = P_XYdist(mo->pos, actor->pos);
+  if (dist >= MELEERANGE*2 || dist < MELEERANGE)
+    return false;
+
+  if (!actor->mp->CheckSight(actor, mo))
+    return false;
+
+  if (mo->Feet() > actor->Top() || // Target is higher than the attacker
+      actor->Feet() > mo->Top())   // Attacker is higher
+    return false;
+
+  return true;
 }
 
 
@@ -254,10 +243,9 @@ void A_UnSetReflective(DActor *actor)
 
 void A_PigLook(DActor *actor)
 {
-  if(actor->UpdateMorph(10))
-    {
-      return;
-    }
+  if (actor->UpdateMorph(10))
+    return;
+
   A_Look(actor);
 }
 
@@ -269,10 +257,9 @@ void A_PigLook(DActor *actor)
 
 void A_PigChase(DActor *actor)
 {
-  if(actor->UpdateMorph(3))
-    {
-      return;
-    }
+  if (actor->UpdateMorph(3))
+    return;
+
   A_Chase(actor);
 }
 
@@ -284,15 +271,13 @@ void A_PigChase(DActor *actor)
 
 void A_PigAttack(DActor *actor)
 {
-  if(actor->UpdateMorph(18))
-    {
-      return;
-    }
-  if(!actor->target)
-    {
-      return;
-    }
-  if(actor->CheckMeleeRange())
+  if (actor->UpdateMorph(18))
+    return;
+
+  if (!actor->target)
+    return;
+
+  if (actor->CheckMeleeRange())
     {
       actor->target->Damage(actor, actor, 2+(P_Random()&1));
       S_StartSound(actor, SFX_PIG_ATTACK);
@@ -3450,8 +3435,11 @@ void A_CheckFloor(DActor *actor)
 void A_FreezeDeath(DActor *actor)
 {
   actor->tics = 75+P_Random()+P_Random();
+
   actor->flags |= MF_SOLID|MF_SHOOTABLE|MF_NOBLOOD;
-  actor->flags2 |= MF2_PUSHABLE|MF2_TELESTOMP|MF2_PASSMOBJ|MF2_SLIDE;
+  actor->flags2 |= MF2_PUSHABLE|MF2_TELESTOMP|MF2_SLIDE;
+  actor->flags2 &= ~MF2_NOPASSMOBJ;
+
   actor->height <<= 2;
   S_StartSound(actor, SFX_FREEZE_DEATH);
 

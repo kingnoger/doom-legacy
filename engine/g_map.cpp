@@ -190,7 +190,7 @@ void Map::SpawnActor(Actor *p)
 {
   AddThinker(p);     // AddThinker sets Map *mp
   if (game.server)
-    p->CheckPosition(p->pos.x, p->pos.y); // TEST, sets tmfloorz, tmceilingz
+    p->TestLocation(); // TEST, sets tmfloorz, tmceilingz
   p->SetPosition();  // set subsector and/or block links
 }
 
@@ -369,49 +369,20 @@ DActor *Map::SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
   DActor *p = new DActor(nx, ny, nz, t);
   AddThinker(p);
 
-  //p->CheckPosition(nx, ny); // TEST, sets tmfloorz, tmceilingz. Wrong, since owner is not yet set => collides
+  //p->TestLocation(nx, ny); // TODO sets tmfloorz, tmceilingz. Wrong, since for missiles owner is not yet set => collides
   // set subsector and/or block links
   p->SetPosition();
 
   p->floorz = p->subsector->sector->floorheight;
   p->ceilingz = p->subsector->sector->ceilingheight;
 
-  if (nz == ONFLOORZ)
+  if (nz == ONFLOORZ || (p->flags2 & MF2_FLOORHUGGER))
     {
-      //if (!P_CheckPosition(mobj,x,y))
-      // we could send a message to the console here, saying
-      // "no place for spawned thing"...
-
       //added:28-02-98: defaults onground
       p->eflags |= MFE_ONGROUND;
-
-      //added:28-02-98: dirty hack : dont stack monsters coz it blocks
-      //                moving floors and anyway whats the use of it?
-      /*if (flags & MF_NOBLOOD)
-        {
-	z = floorz;
-	
-	// first check the tmfloorz
-	P_CheckPosition(mobj,x,y);
-	z = tmfloorz+FRACUNIT;
-
-	// second check at the good z pos
-	P_CheckPosition(mobj,x,y);
-
-	floorz = tmfloorz;
-	ceilingz = tmsectorceilingz;
-	z = tmfloorz;
-	// thing not on solid ground
-	if (tmfloorthing)
-	eflags &= ~MFE_ONGROUND;
-
-	//if (type == MT_BARREL)
-	//   fprintf(stderr,"barrel at z %d floor %d ceiling %d\n",z,floorz,ceilingz);
-        }
-        else*/
       p->pos.z = p->floorz;
     }
-  else if (nz == ONCEILINGZ)
+  else if (nz == ONCEILINGZ || (p->flags2 & MF2_CEILINGHUGGER))
     p->pos.z = p->ceilingz - p->height;
   else if (nz == FLOATRANDZ)
     {
@@ -577,7 +548,12 @@ DActor *Map::SpawnMapThing(mapthing_t *mt, bool initial)
       S_StartSound(fog, sfx_itemrespawn);
     }
 
-  p->yaw = ANG45 * (mt->angle/45);
+  // yaw
+  if (p->flags & MF_COUNTKILL)
+    p->yaw = ANG45 * (mt->angle/45);
+  else
+    p->yaw = ((mt->angle << 8)/360) << 24; // full angle resolution
+
   if (mt->flags & MTF_AMBUSH)
     p->flags |= MF_AMBUSH;
 
@@ -628,7 +604,7 @@ bool Map::CheckRespawnSpot(PlayerInfo *p, mapthing_t *mthing)
   // FIXME! at this point p has no longer a pawn, besides,
   // if the new pawn is larger than the previous, it wouldn't help anyway
   // no size checking right now.
-  //if (!P_CheckPosition (p.mo, x, y)) return false;
+  //if (!p->pawn->TestLocation(x, y)) return false;
 
   return true;
 }

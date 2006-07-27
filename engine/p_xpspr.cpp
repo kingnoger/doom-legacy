@@ -57,22 +57,65 @@ extern Actor *PuffSpawned;
 
 #define MAX_ANGLE_ADJUST (5*ANGLE_1)
 
-void AdjustPlayerAngle(Actor *pmo)
+void Pawn::AdjustPlayerAngle(Actor *t)
 {
-  angle_t angle;
-  int difference;
-
-  angle = R_PointToAngle2(pmo->pos, linetarget->pos);
-  difference = int(angle) - int(pmo->yaw);
-  if(abs(difference) > MAX_ANGLE_ADJUST)
+  angle_t angle = R_PointToAngle2(pos, t->pos) - yaw;
+  int difference = int(angle); // to signed
+  if (abs(difference) > MAX_ANGLE_ADJUST)
     {
-      pmo->yaw += difference > 0 ? MAX_ANGLE_ADJUST : -MAX_ANGLE_ADJUST;
+      yaw += difference > 0 ? MAX_ANGLE_ADJUST : -MAX_ANGLE_ADJUST;
     }
   else
     {
-      pmo->yaw = angle;
+      yaw = angle;
     }
 }
+
+
+/// Helper function for melee weapons
+// Returns 1 if hit a target, 0 if not.
+static int MeleeBlow(PlayerPawn *player, int damage, fixed_t range, fixed_t power, angle_t sweep = ANG45/16)
+{
+  angle_t angle;
+  fixed_t slope;
+
+  // sweep for targets in front
+  for (int i = 0; i < 16; i++)
+    {
+      angle = player->yaw + i*sweep;
+      slope = player->AimLineAttack(angle, range);
+
+      if (!linetarget)
+	{
+	  // try the other side
+	  angle = player->yaw - i*sweep;
+	  slope = player->AimLineAttack(angle, range);
+	}
+
+      if (linetarget)
+	{
+	  player->LineAttack(angle, range, slope, damage);
+	  if (linetarget->flags & MF_SHOOTABLE && power > 0)
+	    linetarget->Thrust(angle, power);
+
+	  player->AdjustPlayerAngle(linetarget);
+	  return 1;
+	}
+    }
+
+  // didn't find any creatures, so try to strike any walls
+  angle = player->yaw;
+
+  // NOTE: some attacks had MELEERANGE here, I assume they're just typos
+  slope = player->AimLineAttack(angle, range);
+
+  if (!player->LineAttack(angle, range, slope, damage))
+    S_StartSound(player, SFX_FIGHTER_HAMMER_MISS);
+
+  return 0;
+}
+
+
 
 //============================================================================
 //
@@ -95,7 +138,7 @@ void A_SnoutAttack(PlayerPawn *player, pspdef_t *psp)
   S_StartSound(player, SFX_PIG_ACTIVE1+(P_Random()&1));
   if(linetarget)
     {
-      AdjustPlayerAngle(player);
+      player->AdjustPlayerAngle(linetarget);
       //		player->yaw = R_PointToAngle2(player->x,
       //			player->y, linetarget->x, linetarget->y);
       if(PuffSpawned)
@@ -115,63 +158,23 @@ void A_SnoutAttack(PlayerPawn *player, pspdef_t *psp)
 
 void A_FHammerAttack(PlayerPawn *player, pspdef_t *psp)
 {
-  angle_t angle;
-  fixed_t slope;
-  int i;
-
   int damage = 60+(P_Random()&63);
   fixed_t power = 10;
   PuffType = MT_HAMMERPUFF;
-  for(i = 0; i < 16; i++)
-    {
-      angle = player->yaw+i*(ANG45/32);
-      slope = player->AimLineAttack(angle, HAMMER_RANGE);
-      if(linetarget)
-	{
-	  player->LineAttack(angle, HAMMER_RANGE, slope, damage);
-	  AdjustPlayerAngle(player);
-	  if (linetarget->flags & MF_SHOOTABLE)
-	    //was (linetarget->flags&MF_COUNTKILL || linetarget->player)
-	    {
-	      linetarget->Thrust(angle, power);
-	    }
-	  player->attackphase = false; // Don't throw a hammer
-	  goto hammerdone;
-	}
-      angle = player->yaw-i*(ANG45/32);
-      slope = player->AimLineAttack(angle, HAMMER_RANGE);
-      if(linetarget)
-	{
-	  player->LineAttack(angle, HAMMER_RANGE, slope, damage);
-	  AdjustPlayerAngle(player);
-	  if (linetarget->flags & MF_SHOOTABLE)
-	    //(linetarget->flags&MF_COUNTKILL || linetarget->player)
-	    {
-	      linetarget->Thrust(angle, power);
-	    }
-	  player->attackphase = false; // Don't throw a hammer
-	  goto hammerdone;
-	}
-    }
-  // didn't find any targets in meleerange, so set to throw out a hammer
   PuffSpawned = NULL;
-  angle = player->yaw;
-  slope = player->AimLineAttack(angle, HAMMER_RANGE);
-  player->LineAttack(angle, HAMMER_RANGE, slope, damage);
-  if(PuffSpawned)
-    {
-      player->attackphase = false;
-    }
+
+  if (MeleeBlow(player, damage, HAMMER_RANGE, power, ANG45/32))
+    player->attackphase = false; // Don't throw a hammer
   else
     {
-      player->attackphase = true;
+      // did we hit a wall?
+      player->attackphase = PuffSpawned ? false : true;
     }
- hammerdone:
+
   if (player->ammo[am_mana2] < player->weaponinfo[player->readyweapon].ammopershoot)
     { // Don't spawn a hammer if the player doesn't have enough mana
       player->attackphase = false;
     }
-  return;		
 }
 
 //============================================================================
@@ -254,88 +257,6 @@ void A_FSwordFlames(DActor *actor)
     }
 }
 
-//----------------------------------------------------------------------------
-// Thinking function for mage wand projectile / cleric flame
-
-void DActor::XBlasterMissileThink()
-{
-  fixed_t xfrac;
-  fixed_t yfrac;
-  fixed_t zfrac;
-  bool changexy;
-  DActor *mo;
-
-  // Handle movement
-  if(vel.x != 0 || vel.y != 0|| pos.z != floorz || vel.z != 0)
-    {
-      xfrac = vel.x>>3;
-      yfrac = vel.y>>3;
-      zfrac = vel.z>>3;
-      changexy = xfrac != 0 || yfrac != 0;
-      for(int i = 0; i < 8; i++)
-	{
-	  if (changexy)
-	    {
-	      if(!TryMove(pos.x+xfrac, pos.y+yfrac, true))
-		{ // Blocked move
-		  ExplodeMissile();
-		  return;
-		}
-	    }
-	  pos.z += zfrac;
-	  if(pos.z <= floorz)
-	    { // Hit the floor
-	      pos.z = floorz;
-	      HitFloor();
-	      ExplodeMissile();
-	      return;
-	    }
-	  if(Top() > ceilingz)
-	    { // Hit the ceiling
-	      pos.z = ceilingz-height;
-	      ExplodeMissile();
-	      return;
-	    }
-	  if(changexy)
-	    {
-	      fixed_t mz;
-	      if(type == MT_MWAND_MISSILE && (P_Random() < 128))
-		{
-		  mz = pos.z-8;
-		  if (mz < floorz)
- 		    mz = floorz;
-
-		  mp->SpawnDActor(pos.x, pos.y, mz, MT_MWANDSMOKE);
-		}
-	      else if(!--special1)
-		{
-		  special1 = 4;
-		  mz = pos.z-12;
-		  if(mz < floorz)
-		    mz = floorz;
-
-		  mo = mp->SpawnDActor(pos.x, pos.y, mz, MT_CFLAMEFLOOR);
-		  if(mo)
-		    mo->yaw = yaw;
-		}
-	    }
-	}
-    }
-  // Advance the state
-  if(tics != -1)
-    {
-      tics--;
-      while(!tics)
-	{
-	  if(!SetState(state->nextstate))
-	    { // mobj was removed
-	      return;
-	    }
-	}
-    }
-}
-
-
 
 //============================================================================
 //
@@ -364,10 +285,8 @@ void A_WeaponReady(PlayerPawn* player, pspdef_t* psp);
 void A_LightningReady(PlayerPawn *player, pspdef_t *psp)
 {
   A_WeaponReady(player, psp);
-  if(P_Random() < 160)
-    {
-      S_StartSound(player, SFX_MAGE_LIGHTNING_READY);
-    }
+  if (P_Random() < 160)
+    S_StartSound(player, SFX_MAGE_LIGHTNING_READY);
 }
 
 //============================================================================
@@ -385,8 +304,8 @@ void A_LightningClip(DActor *actor)
   if (actor->type == MT_LIGHTNING_FLOOR)
     {
       actor->pos.z = actor->floorz;
-      Actor *twin = actor->target;
-      //t = twin->realtarget;
+      Actor *twin = actor->target; // special case
+      t = twin->target; // real target for the pair
 
       // floor lightning zig-zags, and forces the ceiling lightning to mimic
       int zigZag = P_Random();
@@ -410,7 +329,7 @@ void A_LightningClip(DActor *actor)
   else if (actor->type == MT_LIGHTNING_CEILING)
     {
       actor->pos.z = actor->ceilingz - actor->height;
-      //t = actor->realtarget;
+      t = actor->target;
     }
 
   if (t)
@@ -457,8 +376,8 @@ void A_LightningZap(DActor *actor)
   DActor *mo = actor->mp->SpawnDActor(actor->pos.x + x, actor->pos.y + y, actor->pos.z+deltaZ, MT_LIGHTNING_ZAP);
   if (mo)
     {
-      mo->owner = actor->owner;
-      mo->target = actor;
+      mo->owner = actor;
+      mo->target = actor->target;
       mo->vel.x = actor->vel.x;
       mo->vel.y = actor->vel.y;
       if (actor->type == MT_LIGHTNING_FLOOR)
@@ -479,8 +398,12 @@ void A_LightningZap(DActor *actor)
 
 void A_MLightningAttack2(PlayerPawn *actor)
 {
-  // TODO I really have no idea how the lightning pair is supposed to work.
-  // Do they track some target, or just zigzag on? 
+  // Lightning pair: floor one leads, ceiling one follows.
+  // Zigzags forward, emits zaps. When it hits something, it locks on to it
+  // and starts homing (target is set elsewhere).
+  // F: owner is the shooter, target is C
+  // C: owner is F, target is the actual target for the pair
+  // Z: owner is the emitter
 
   DActor *f = actor->SpawnPlayerMissile(MT_LIGHTNING_FLOOR);
   DActor *c = actor->SpawnPlayerMissile(MT_LIGHTNING_CEILING);
@@ -488,7 +411,7 @@ void A_MLightningAttack2(PlayerPawn *actor)
     {
       f->pos.z = ONFLOORZ;
       f->vel.z = 0;
-      f->target = c; // special case, a lightning pair
+      f->target = c; // special case
       f->special1 = 0; // zigzag counter
       A_LightningZap(f);	
     }
@@ -497,8 +420,8 @@ void A_MLightningAttack2(PlayerPawn *actor)
     {
       c->pos.z = ONCEILINGZ;
       c->vel.z = 0;
-      c->target = f; // special case, a lightning pair
-      //c->owner = ; // this could in principle be used to point to the real target... but what is it?
+      c->target = NULL; // initially no target
+      c->owner = f;
       A_LightningZap(c);	
     }
   S_StartSound(actor, SFX_MAGE_LIGHTNING_FIRE);
@@ -524,18 +447,18 @@ void A_MLightningAttack(PlayerPawn *player, pspdef_t *psp)
 
 void A_ZapMimic(DActor *actor)
 {
-  DActor *mo = (DActor *)actor->target;
-  if (mo)
+  DActor *ow = reinterpret_cast<DActor*>(actor->owner);
+  if (ow)
     {
-      if (mo->state >= &states[mo->info->deathstate]
-	  || mo->state == &states[S_FREETARGMOBJ])
+      if (ow->state >= &states[ow->info->deathstate]
+	  || ow->state == &states[S_FREETARGMOBJ])
 	{
 	  actor->ExplodeMissile();
 	}
       else
 	{
-	  actor->vel.x = mo->vel.x;
-	  actor->vel.y = mo->vel.y;
+	  actor->vel.x = ow->vel.x;
+	  actor->vel.y = ow->vel.y;
 	}
     }
 }
@@ -549,7 +472,7 @@ void A_ZapMimic(DActor *actor)
 void A_LastZap(DActor *actor)
 {
   DActor *mo = actor->mp->SpawnDActor(actor->pos, MT_LIGHTNING_ZAP);
-  if(mo)
+  if (mo)
     {
       mo->SetState(S_LIGHTNING_ZAP_X1);
       mo->vel.z = 40;
@@ -564,11 +487,21 @@ void A_LastZap(DActor *actor)
 
 void A_LightningRemove(DActor *actor)
 {
-  DActor *mo = (DActor *)actor->target;
-  if (mo)
+  Actor *twin;
+
+  if (actor->type == MT_LIGHTNING_FLOOR)
+    twin = actor->target; // special case, see above
+  else
+    twin = actor->owner;
+
+  if (twin)
     {
-      mo->target = NULL;
-      mo->ExplodeMissile();
+      if (actor->type == MT_LIGHTNING_FLOOR)
+	twin->owner = NULL;
+      else
+	twin->target = NULL;
+
+      reinterpret_cast<DActor*>(twin)->ExplodeMissile();
     }
 }
 
@@ -715,7 +648,7 @@ void A_FPunchAttack(PlayerPawn *player, pspdef_t *psp)
   int damage = 40+(P_Random()&15);
   fixed_t power = 2;
   PuffType = MT_PUNCHPUFF;
-  for(int i = 0; i < 16; i++)
+  for (int i = 0; i < 16; i++)
     {
       // find the target most directly in front of the player
       angle = player->yaw+i*(ANG45/16);
@@ -727,7 +660,7 @@ void A_FPunchAttack(PlayerPawn *player, pspdef_t *psp)
 	  slope = player->AimLineAttack(angle, 2*MELEERANGE);
 	}
 
-      if(linetarget)
+      if (linetarget)
 	{
 	  player->attackphase++;
 	  if (player->attackphase == 3)
@@ -748,16 +681,18 @@ void A_FPunchAttack(PlayerPawn *player, pspdef_t *psp)
 	    {
 	      linetarget->Thrust(angle, power);
 	    }
-	  AdjustPlayerAngle(player);
+	  player->AdjustPlayerAngle(linetarget);
 	  goto punchdone;
 	}
     }
+
   // didn't find any creatures, so try to strike any walls
   player->attackphase = 0;
 
   angle = player->yaw;
   slope = player->AimLineAttack(angle, MELEERANGE);
-  player->LineAttack(angle, MELEERANGE, slope, damage);
+  if (!player->LineAttack(angle, MELEERANGE, slope, damage))
+    S_StartSound(player, SFX_FIGHTER_PUNCH_MISS);
 
  punchdone:
   if(player->attackphase == 3)
@@ -766,7 +701,6 @@ void A_FPunchAttack(PlayerPawn *player, pspdef_t *psp)
       player->SetPsprite(ps_weapon, S_PUNCHATK2_1);
       S_StartSound(player, SFX_FIGHTER_GRUNT);
     }
-  return;		
 }
 
 //============================================================================
@@ -775,21 +709,15 @@ void A_FPunchAttack(PlayerPawn *player, pspdef_t *psp)
 //
 //============================================================================
 
-#define AXERANGE 2.25f*MELEERANGE
-
 void A_FAxeAttack(PlayerPawn *player, pspdef_t *psp)
 {
-  angle_t angle;
-  
-  fixed_t power;
-  int damage;
-  fixed_t slope;
-  int i;
+#define AXERANGE 2.25f*MELEERANGE
+
   int useMana;
 
-  damage = 40+(P_Random()&15)+(P_Random()&7);
-  power = 0;
-  if(player->ammo[am_mana1] > 0)
+  int damage = 40+(P_Random()&15)+(P_Random()&7);
+  fixed_t power = 0;
+  if (player->ammo[am_mana1] > 0)
     {
       damage <<= 1;
       power = 6;
@@ -801,55 +729,18 @@ void A_FAxeAttack(PlayerPawn *player, pspdef_t *psp)
       PuffType = MT_AXEPUFF;
       useMana = 0;
     }
-  for(i = 0; i < 16; i++)
-    {
-      angle = player->yaw+i*(ANG45/16);
-      slope = player->AimLineAttack(angle, AXERANGE);
-      if(linetarget)
-	{
-	  player->LineAttack(angle, AXERANGE, slope, damage);
-	  if (linetarget->flags & MF_SHOOTABLE)
-	    //(linetarget->flags&MF_COUNTKILL || linetarget->player)
-	    {
-	      linetarget->Thrust(angle, power);
-	    }
-	  AdjustPlayerAngle(player);
-	  useMana++; 
-	  goto axedone;
-	}
-      angle = player->yaw-i*(ANG45/16);
-      slope = player->AimLineAttack(angle, AXERANGE);
-      if(linetarget)
-	{
-	  player->LineAttack(angle, AXERANGE, slope, damage);
-	  if (linetarget->flags & MF_SHOOTABLE)
-	    //(linetarget->flags&MF_COUNTKILL)
-	    {
-	      linetarget->Thrust(angle, power);
-	    }
-	  AdjustPlayerAngle(player);
-	  useMana++; 
-	  goto axedone;
-	}
-    }
-  // didn't find any creatures, so try to strike any walls
-  player->attackphase = 0;
 
-  angle = player->yaw;
-  slope = player->AimLineAttack(angle, MELEERANGE);
-  player->LineAttack(angle, MELEERANGE, slope, damage);
+  int hit = MeleeBlow(player, damage, AXERANGE, power);
+  if (!hit)
+    player->attackphase = 0;
 
- axedone:
-  if(useMana == 2)
+  if (useMana && hit)
     {
       player->ammo[am_mana1] -= 
 	player->weaponinfo[player->readyweapon].ammopershoot;
-      if(player->ammo[am_mana1] <= 0)
-	{
-	  player->SetPsprite(ps_weapon, S_FAXEATK_5);
-	}
+      if (player->ammo[am_mana1] <= 0)
+	player->SetPsprite(ps_weapon, S_FAXEATK_5);
     }
-  return;		
 }
 
 //===========================================================================
@@ -860,45 +751,10 @@ void A_FAxeAttack(PlayerPawn *player, pspdef_t *psp)
 
 void A_CMaceAttack(PlayerPawn *player, pspdef_t *psp)
 {
-  angle_t angle;
-  int damage;
-  fixed_t slope;
-  int i;
-
-  damage = 25+(P_Random()&15);
+  int damage = 25+(P_Random()&15);
   PuffType = MT_HAMMERPUFF;
-  for(i = 0; i < 16; i++)
-    {
-      angle = player->yaw+i*(ANG45/16);
-      slope = player->AimLineAttack(angle, 2*MELEERANGE);
-      if(linetarget)
-	{
-	  player->LineAttack(angle, 2*MELEERANGE, slope, 
-		       damage);
-	  AdjustPlayerAngle(player);
-	  //			player->yaw = R_PointToAngle2(player->x,
-	  //				player->y, linetarget->x, linetarget->y);
-	  goto macedone;
-	}
-      angle = player->yaw-i*(ANG45/16);
-      slope = player->AimLineAttack(angle, 2*MELEERANGE);
-      if(linetarget)
-	{
-	  player->LineAttack(angle, 2*MELEERANGE, slope, damage);
-	  AdjustPlayerAngle(player);
-	  //			player->yaw = R_PointToAngle2(player->x,
-	  //				player->y, linetarget->x, linetarget->y);
-	  goto macedone;
-	}
-    }
-  // didn't find any creatures, so try to strike any walls
-  player->attackphase = 0;
 
-  angle = player->yaw;
-  slope = player->AimLineAttack(angle, MELEERANGE);
-  player->LineAttack(angle, MELEERANGE, slope, damage);
- macedone:
-  return;		
+  MeleeBlow(player, damage, 2*MELEERANGE, 0);
 }
 
 //============================================================================
@@ -909,26 +765,21 @@ void A_CMaceAttack(PlayerPawn *player, pspdef_t *psp)
 #define STAFFRANGE 1.5f*MELEERANGE
 void A_CStaffCheck(PlayerPawn *player, pspdef_t *psp)
 {
-  int damage;
-  int newLife;
-  angle_t angle;
-  fixed_t slope;
-  int i;
-
-  damage = 20+(P_Random()&15);
+  int damage = 20+(P_Random()&15);
   PuffType = MT_CSTAFFPUFF;
-  for(i = 0; i < 3; i++)
+
+  for (int i = 0; i < 3; i++)
     {
-      angle = player->yaw+i*(ANG45/16);
-      slope = player->AimLineAttack(angle, STAFFRANGE);
-      if(linetarget)
+      angle_t angle = player->yaw + i*(ANG45/16);
+      fixed_t slope = player->AimLineAttack(angle, STAFFRANGE);
+      if (linetarget)
 	{
 	  player->LineAttack(angle, STAFFRANGE, slope, damage);
 	  player->yaw = R_PointToAngle2(player->pos, linetarget->pos);
 	  if ((linetarget->flags & (MF_COUNTKILL|MF_NOTMONSTER))
 	      && !(linetarget->flags2 & (MF2_DORMANT|MF2_INVULNERABLE)))
 	    {
-	      newLife = player->health+(damage>>3);
+	      int newLife = player->health+(damage>>3);
 	      newLife = newLife > 100 ? 100 : newLife;
 	      player->health = player->health = newLife;
 	      player->SetPsprite(ps_weapon, S_CSTAFFATK2_1);
@@ -939,13 +790,14 @@ void A_CStaffCheck(PlayerPawn *player, pspdef_t *psp)
 	}
       angle = player->yaw-i*(ANG45/16);
       slope = player->AimLineAttack(angle, STAFFRANGE);
-      if(linetarget)
+      if (linetarget)
 	{
 	  player->LineAttack(angle, STAFFRANGE, slope, damage);
 	  player->yaw = R_PointToAngle2(player->pos, linetarget->pos);
 	  if (linetarget->flags & (MF_COUNTKILL|MF_NOTMONSTER))
 	    {
-	      newLife = player->health+(damage>>4);
+	      // FIXME cstaff wtf? different condition, different health leech on other side?
+	      int newLife = player->health+(damage>>4);
 	      newLife = newLife > 100 ? 100 : newLife;
 	      player->health = newLife;
 	      player->SetPsprite(ps_weapon, S_CSTAFFATK2_1);
@@ -967,15 +819,13 @@ void A_CStaffAttack(PlayerPawn *player, pspdef_t *psp)
   player->ammo[am_mana1] -= player->weaponinfo[player->readyweapon].ammopershoot;
 
   DActor *mo = player->SPMAngle(MT_CSTAFF_MISSILE, player->yaw-(ANG45/15));
-  if(mo)
-    {
-      mo->special2 = 32;
-    }
+  if (mo)
+    mo->special2 = 32;
+
   mo = player->SPMAngle(MT_CSTAFF_MISSILE, player->yaw+(ANG45/15));
-  if(mo)
-    {
-      mo->special2 = 0;
-    }
+  if (mo)
+    mo->special2 = 0;
+
   S_StartSound(player, SFX_CLERIC_CSTAFF_FIRE);
 }
 
@@ -987,13 +837,11 @@ void A_CStaffAttack(PlayerPawn *player, pspdef_t *psp)
 
 void A_CStaffMissileSlither(DActor *actor)
 {
-  fixed_t newX, newY;
-
   int weaveXY = actor->special2;
   int angle = (actor->yaw+ANG90)>>ANGLETOFINESHIFT;
-  newX = actor->pos.x - finecosine[angle] * FloatBobOffsets[weaveXY];
-  newY = actor->pos.y - finesine[angle] * FloatBobOffsets[weaveXY];
-  weaveXY = (weaveXY+3)&63;
+  fixed_t newX = actor->pos.x - finecosine[angle] * FloatBobOffsets[weaveXY];
+  fixed_t newY = actor->pos.y - finesine[angle] * FloatBobOffsets[weaveXY];
+  weaveXY = (weaveXY + 3) & 63;
   newX += finecosine[angle] * FloatBobOffsets[weaveXY];
   newY += finesine[angle] * FloatBobOffsets[weaveXY];
   actor->TryMove(newX, newY, true);
@@ -1210,13 +1058,20 @@ void A_CFlameRotate(DActor *actor)
 }
 
 
-//============================================================================
-//
-// A_CHolyAttack3
-//
-// 	Spawns the spirits
-//============================================================================
 
+//==========================================================================
+//  Wraithverge. Complex.
+//
+// A_CHolyAttack and A_CHolyAttack3 shoot a MT_HOLY_MISSILE.
+// MT_HOLY_MISSILE calls A_CHolySpawnPuff a few times, then A_CHolyAttack2 when it explodes.
+// A_CHolySpawnPuff spawns a MT_HOLY_MISSILE_PUFF, which does nothing.
+// A_CHolyAttack2 spawns four MT_HOLY_FX's, each with three MT_HOLY_TAIL pieces.
+// The tail is harmless and just follows its MT_HOLY_FX.
+// MT_HOLY_FX's call 3*A_CHolySeek, then A_CHolyCheckScream and loop until dead.
+//
+//==========================================================================
+
+// Cleric boss enemy uses this
 void A_CHolyAttack3(DActor *actor)
 {
   actor->SpawnMissile(actor->target, MT_HOLY_MISSILE);
@@ -1235,17 +1090,13 @@ void A_CHolyAttack2(DActor *actor)
 {
   extern  consvar_t cv_deathmatch;
 
-  int i, j;
-  DActor *mo;
-  DActor *tail, *next;
-
-  for(j = 0; j < 4; j++)
+  for (int j = 0; j < 4; j++)
     {
-      mo = actor->mp->SpawnDActor(actor->pos, MT_HOLY_FX);
+      DActor *mo = actor->mp->SpawnDActor(actor->pos, MT_HOLY_FX);
       if (!mo)
 	continue;
 
-      switch(j)
+      switch (j)
 	{ // float bob index
 	case 0:
 	  mo->special2 = P_Random()&7; // upper-left
@@ -1273,15 +1124,15 @@ void A_CHolyAttack2(DActor *actor)
       if (linetarget)
 	{
 	  mo->target = linetarget;
-	  mo->flags |= MF_NOCLIPLINE|MF_NOCLIPTHING;
+	  mo->flags |= MF_NOCLIPLINE; // |MF_NOCLIPTHING;
 	  mo->flags &= ~MF_MISSILE;
 	  mo->eflags |= MFE_SKULLFLY;
 	}
-      tail = actor->mp->SpawnDActor(mo->pos, MT_HOLY_TAIL);
+      DActor *tail = actor->mp->SpawnDActor(mo->pos, MT_HOLY_TAIL);
       tail->owner = mo; // parent
-      for(i = 1; i < 3; i++)
+      for (int i = 1; i < 3; i++)
 	{
-	  next = actor->mp->SpawnDActor(mo->pos, MT_HOLY_TAIL);
+	  DActor *next = actor->mp->SpawnDActor(mo->pos, MT_HOLY_TAIL);
 	  next->SetState(statenum_t(next->info->spawnstate+1));
 	  tail->target = next; // tail pieces use target field to point to next piece
 	  tail = next;
@@ -1335,7 +1186,7 @@ static void CHolyFindTarget(DActor *actor)
   if (target)
     {
       actor->target = target;
-      actor->flags |= MF_NOCLIPLINE|MF_NOCLIPTHING;
+      actor->flags |= MF_NOCLIPLINE; //|MF_NOCLIPTHING;
       actor->eflags |= MFE_SKULLFLY;
       actor->flags &= ~MF_MISSILE;
     }
@@ -1356,10 +1207,9 @@ static void CHolySeekerMissile(DActor *actor, angle_t thresh, angle_t turnMax)
   fixed_t deltaZ;
 
   Actor *target = actor->target;
-  if(target == NULL)
-    {
-      return;
-    }
+  if (target == NULL)
+    return;
+
   if (!(target->flags & MF_SHOOTABLE) 
       || !(target->flags & (MF_COUNTKILL|MF_NOTMONSTER)))
     { // Target died/target isn't a player or creature
@@ -1423,13 +1273,11 @@ static void CHolySeekerMissile(DActor *actor, angle_t thresh, angle_t turnMax)
 
 static void CHolyWeave(DActor *actor)
 {
-  fixed_t newX, newY;
-
   int weaveXY = actor->special2>>16;
-  int weaveZ = actor->special2&0xFFFF;
-  int angle = (actor->yaw+ANG90)>>ANGLETOFINESHIFT;
-  newX = actor->pos.x - finecosine[angle] * FloatBobOffsets[weaveXY] << 2;
-  newY = actor->pos.y - finesine[angle] * FloatBobOffsets[weaveXY] << 2;
+  int weaveZ = actor->special2 & 0xFFFF;
+  int angle = (actor->yaw+ANG90) >> ANGLETOFINESHIFT;
+  fixed_t newX = actor->pos.x - finecosine[angle] * FloatBobOffsets[weaveXY] << 2;
+  fixed_t newY = actor->pos.y - finesine[angle] * FloatBobOffsets[weaveXY] << 2;
   weaveXY = (weaveXY+(P_Random()%5))&63;
   newX += finecosine[angle] * FloatBobOffsets[weaveXY] << 2;
   newY += finesine[angle] * FloatBobOffsets[weaveXY] << 2;
@@ -1449,7 +1297,7 @@ static void CHolyWeave(DActor *actor)
 void A_CHolySeek(DActor *actor)
 {
   actor->health--;
-  if(actor->health <= 0)
+  if (actor->health <= 0)
     {
       actor->vel.x >>= 2;
       actor->vel.y >>= 2;
@@ -1458,14 +1306,12 @@ void A_CHolySeek(DActor *actor)
       actor->tics -= P_Random()&3;
       return;
     }
+
   if (actor->target)
     {
-      CHolySeekerMissile(actor, actor->args[0]*ANGLE_1,
-			 actor->args[0]*ANGLE_1*2);
-      if(!((game.tic + 7) & 15))
-	{
-	  actor->args[0] = 5+(P_Random()/20);
-	}
+      CHolySeekerMissile(actor, actor->args[0]*ANGLE_1, actor->args[0]*ANGLE_1*2);
+      if (!((game.tic + 7) & 15))
+	actor->args[0] = 5 + (P_Random()/20);
     }
   CHolyWeave(actor);
 }
@@ -1478,18 +1324,16 @@ void A_CHolySeek(DActor *actor)
 
 static void CHolyTailFollow(Actor *actor, fixed_t dist)
 {
-  fixed_t oldDistance, newDistance;
-
-  Actor *child = actor->target;
+  Actor *child = actor->target; // special case
   if (child)
     {
       int an = R_PointToAngle2(actor->pos, child->pos) >> ANGLETOFINESHIFT;
-      oldDistance = P_AproxDistance(child->pos.x - actor->pos.x, child->pos.y - actor->pos.y);
+      fixed_t oldDistance = P_AproxDistance(child->pos.x - actor->pos.x, child->pos.y - actor->pos.y);
       if (child->TryMove(actor->pos.x + dist * finecosine[an], 
 			 actor->pos.y + dist * finesine[an], true))
 	{
-	  newDistance = P_AproxDistance(child->pos.x-actor->pos.x, child->pos.y-actor->pos.y) - 1;
-	  if(oldDistance < 1)
+	  fixed_t newDistance = P_AproxDistance(child->pos.x-actor->pos.x, child->pos.y-actor->pos.y) - 1;
+	  if (oldDistance < 1)
 	    {
 	      if (child->pos.z < actor->pos.z)
 		child->pos.z = actor->pos.z-dist;
@@ -1513,7 +1357,7 @@ static void CHolyTailFollow(Actor *actor, fixed_t dist)
 
 static void CHolyTailRemove(Actor *actor)
 {
-  Actor *child = actor->target;
+  Actor *child = actor->target; // special case
   if (child)
     CHolyTailRemove(child);
 
@@ -1528,7 +1372,7 @@ static void CHolyTailRemove(Actor *actor)
 
 void A_CHolyTail(DActor *actor)
 {
-  DActor *parent = (DActor *)actor->owner;
+  DActor *parent = reinterpret_cast<DActor*>(actor->owner);
 
   if (parent)
     {
@@ -1537,8 +1381,8 @@ void A_CHolyTail(DActor *actor)
 	  CHolyTailRemove(actor);
 	  return;
 	}
-      else if (actor->TryMove(parent->pos.x - 14 * finecosine[parent->yaw>>ANGLETOFINESHIFT],
-			      parent->pos.y - 14 * finesine[parent->yaw>>ANGLETOFINESHIFT], true))
+      else if (actor->TryMove(parent->pos.x - 14 * Cos(parent->yaw),
+			      parent->pos.y - 14 * Sin(parent->yaw), true))
 	{
 	  actor->pos.z = parent->pos.z-5;
 	}

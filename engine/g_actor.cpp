@@ -46,8 +46,41 @@
 #include "m_random.h"
 #include "tables.h"
 
+/*!
+  \defgroup g_actor Common types of Actors
 
-#define VIEWHEIGHT  41
+  Certain types of Actors appear throughout the code.
+*/
+
+/*!
+  \page actor_monster Monster
+  \ingroup g_actor
+  Basic monster, e.g. a Doom imp.
+  Has typically the flags MF_SOLID | MF_SHOOTABLE | MF_COUNTKILL and the flags2 MF2_PUSHWALL | MF2_MCROSS.
+*/
+
+
+/*!
+  \page actor_floater Floater
+  \ingroup g_actor
+  Floating monster, e.g. a cacodemon.
+  Has the flags MF_FLOAT | MF_DROPOFF | MF_NOGRAVITY in addition to the normal @ref actor_monster flags.
+  In DActor::P_Move, if it encounters a wall with an opening during its move,
+  it will try to float vertically towards the opening and set the flag MFE_INFLOAT.
+  If it has a target, during ZMovement it will float towards it in the vertical direction
+  unless MFE_INFLOAT is on.
+*/
+
+/*!
+  \page actor_missile Missile
+  \ingroup g_actor
+  Moving projectile, e.g. a rocket. Often does damage. Definition: has the flag MF_MISSILE.
+  Usually also has the flags MF_DROPOFF | MF_NOBLOCKMAP | MF_NOGRAVITY
+  and the flags2 MF2_NOTELEPORT | MF2_IMPACT | MF2_PCROSS.
+  Many flags only make sense if they are combined with MF_MISSILE... TODO explain
+
+  MF2_SEEKERMISSILE homes towards its target. If reflected from a MF2_REFLECTIVE target, owner becomes target and v.v.
+*/
 
 
 extern fixed_t FloatBobOffsets[64];
@@ -367,17 +400,41 @@ void Actor::Remove()
 
 
 void P_NoiseAlert(Actor *target, Actor *emitter);
-static void PlayerLandedOnThing(PlayerPawn *p, Actor *onmobj)
+void PlayerPawn::LandedOnThing(Actor *onmobj)
 {
-  p->player->deltaviewheight = p->vel.z >> 3;
-  if (p->vel.z < -23)
+  // TODO damage also the thing! kill imps in super mario fashion!
+
+  player->deltaviewheight = vel.z >> 3;
+
+  if (vel.z < -23)
     {
-      //P_FallingDamage(mo->player);
-      P_NoiseAlert(p, p);
+      FallingDamage();
+      P_NoiseAlert(this, this);
+      return;
     }
-  else if (p->vel.z < -8 && !p->morphTics)
+
+  if (morphTics)
+    return;
+
+  if (vel.z < -8)
+    S_StartSound(this, sfx_land);
+
+  if (vel.z < -12)
     {
-      S_StartSound(p, sfx_grunt);
+      switch (pclass)
+	{
+	case PCLASS_FIGHTER:
+	  S_StartSound(this, SFX_PLAYER_FIGHTER_GRUNT);
+	  break;
+	case PCLASS_CLERIC:
+	  S_StartSound(this, SFX_PLAYER_CLERIC_GRUNT);
+	  break;
+	case PCLASS_MAGE:
+	  S_StartSound(this, SFX_PLAYER_MAGE_GRUNT);
+	  break;
+	default:
+	  break;
+	}
     }
 }
 
@@ -389,7 +446,7 @@ void Actor::Think()
   if (IsOf(PlayerPawn::_type))
     p = (PlayerPawn *)this;
 
-  // check possible sector water content, set a few eflags
+  // check possible sector water content, set water eflags, cause splashes on ffloors
   CheckWater();
 
   // XY movement
@@ -399,15 +456,15 @@ void Actor::Think()
     {
       if (eflags & MFE_BLASTED)
 	{
-	  // Reset to not blasted when momentums are gone
+	  // Reset to not blasted when xy-speed is gone
 	  eflags &= ~MFE_BLASTED;
-	  // if (!(flags & MF_ICECORPSE)) TODO ICECORPSE?
-	    flags2 &= ~MF2_SLIDE;
+	  //if (!(flags & MF_ICECORPSE)) TODO ICECORPSE?
+	  //  flags2 &= ~MF2_SLIDE;
 	}
 
       if (eflags & MFE_SKULLFLY)
 	{
-	  // the skull slammed into something
+	  // the actor slammed into something
 	  eflags &= ~MFE_SKULLFLY;
 	  vel.z = 0;
 	}
@@ -419,47 +476,46 @@ void Actor::Think()
   if (flags2 & MF2_FLOATBOB)
     {
       // Floating item bobbing motion (maybe move to DActor::Think ?)
-      pos.z += floorz + FloatBobOffsets[(reactiontime++) & 63];
+      pos.z = floorz + FloatBobOffsets[(reactiontime++) & 63]; // floating height is added later
     }
   else if (!(eflags & MFE_ONGROUND) || (pos.z != floorz) || vel.z != 0)
     {
       // time to fall...
-      if (flags2 & MF2_PASSMOBJ)
-	{
-	  // Heretic z code
-	  Actor *onmo = CheckOnmobj();
-	  if (!onmo)
-	    {
-	      ZMovement();
-	      eflags &= ~MFE_ONMOBJ;
-	    }
-	  else
-	    {
-	      if (p) // FIXME is this ok? For all Actors?
-		{
-		  if (vel.z < -8 && !(eflags & MFE_FLY))
-		    {
-		      PlayerLandedOnThing(p, onmo);
-		    }
 
-		  if (onmo->Top() - pos.z <= 24)
-		    {
-		      p->player->viewheight -= onmo->Top() - pos.z;
-		      p->player->deltaviewheight = 
-			(VIEWHEIGHT - p->player->viewheight)>>3;
-		      pos.z = onmo->Top();
-		      eflags |= MFE_ONMOBJ;
-		      vel.z = 0;
-		    }                               
-		  else
-		    { // hit the bottom of the blocking mobj
-		      vel.z = 0;
-		    }
+      if (flags2 & MF2_NOPASSMOBJ)
+	{
+	  // simplified treatment
+	  ZMovement();
+	  return;
+	}
+
+      Actor *onmo = CheckOnmobj();
+      if (!onmo)
+	{
+	  ZMovement();
+	  eflags &= ~MFE_ONMOBJ;
+	}
+      else
+	{
+	  if (p) // FIXME is this ok? For all Actors?
+	    {
+	      if (vel.z < -8 && !(eflags & MFE_FLY))
+		p->LandedOnThing(onmo);
+
+	      if (onmo->Top() <= pos.z + 24) // FIXME magic number
+		{
+		  p->player->viewheight -= onmo->Top() - pos.z;
+		  p->player->deltaviewheight = (cv_viewheight.value - p->player->viewheight) >> 3;
+		  pos.z = onmo->Top();
+		  eflags |= MFE_ONMOBJ;
+		  vel.z = 0;
+		}                               
+	      else
+		{ // hit the bottom of the blocking mobj
+		  vel.z = 0;
 		}
 	    }
 	}
-      else
-	ZMovement();
     }
 }
 
@@ -502,15 +558,15 @@ float Actor::GetMoveFactor()
 	{
           // phares 3/11/98: you start off slowly, then increase as
           // you get better footing
-#define MORE_FRICTION_MOMENTUM 15000       // mud factor based on momentum
+	  const float MORE_FRICTION_MOMENTUM = 0.22888f; // 15000  // mud factor based on momentum
 
-          fixed_t momentum = P_AproxDistance(vel.x, vel.y);
+          float momentum = P_AproxDistance(vel.x, vel.y).Float();
 
 	  if (momentum < MORE_FRICTION_MOMENTUM)
 	    mf *= 0.125;
-          else if (momentum < MORE_FRICTION_MOMENTUM<<1)
+          else if (momentum < 2*MORE_FRICTION_MOMENTUM)
 	    mf *= 0.25; 
-          else if (momentum < MORE_FRICTION_MOMENTUM<<2)
+          else if (momentum < 4*MORE_FRICTION_MOMENTUM)
 	    mf *= 0.5;
 
 	}
@@ -536,7 +592,7 @@ float Actor::GetMoveFactor()
 
 
 
-// handles horizontal movement
+/// Handles horizontal movement
 void Actor::XYMovement()
 {
   extern int skyflatnum;
@@ -552,10 +608,9 @@ void Actor::XYMovement()
   else if (vel.y < -MAXMOVE)
     vel.y = -MAXMOVE;
 
-  fixed_t xmove = vel.x;
+  fixed_t xmove = vel.x; // this is so that we can change velocity in the collision code during the move
   fixed_t ymove = vel.y;
 
-  //reducing bobbing/momentum on ice
   fixed_t oldx = pos.x;
   fixed_t oldy = pos.y;
 
@@ -563,7 +618,8 @@ void Actor::XYMovement()
 
   do
     {
-      if (xmove > MAXMOVE/2 || ymove > MAXMOVE/2)
+      // TODO try size should depend on mobj radius
+      if (abs(xmove) > MAXMOVE/2 || abs(ymove) > MAXMOVE/2)
         {
 	  ptryx = pos.x + xmove/2;
 	  ptryy = pos.y + ymove/2;
@@ -580,14 +636,55 @@ void Actor::XYMovement()
       if (!TryMove(ptryx, ptryy, true))
         {
 	  // blocked move
-
 	  if (flags2 & MF2_SLIDE)
-            {   // try to slide along it
-	      mp->SlideMove(this);
+            {
+	      // try to slide along whatever blocked us
+	      if (!Blocking.thing)
+		{
+		  SlideMove(); // Slide against wall
+		}
+	      else
+		{
+		  // Slide against mobj TODO is this needed? wasn't before!
+		  if (TryMove(pos.x, ptryy, true))
+		    vel.x = 0;
+		  else if (TryMove(ptryx, pos.y, true))
+		    vel.y = 0;
+		  else
+		    vel.x = vel.y = 0;
+		}
             }
 	  else if (flags & MF_MISSILE)
             {
-	      // explode a missile
+	      if (Blocking.thing)
+		return; // explosions handled at Actor::Touch()
+
+	      // must have been blocked by a line
+
+	      if ((flags2 & MF2_FULLBOUNCE))
+		{
+		  // Struck a wall
+		  BounceWall();
+		  DActor *t = IsOf(DActor::_type) ? reinterpret_cast<DActor*>(this) : NULL;
+		  if (t)
+		    switch (t->type)
+		      {
+		      case MT_SORCBALL1:
+		      case MT_SORCBALL2:
+		      case MT_SORCBALL3:
+		      case MT_SORCFX1:
+			break;
+		      default:
+			if (t->info->seesound)
+			  S_StartSound(this, t->info->seesound);
+			break;
+		      }
+
+		  return; // no blow
+		}
+
+
+	      // explode a missile, but not against the sky (hack)
 	      if (ceilingline &&
 		  ceilingline->backsector &&
 		  ceilingline->backsector->ceilingpic == skyflatnum &&
@@ -597,9 +694,11 @@ void Actor::XYMovement()
 		if (!boomsupport ||
                     pos.z > ceilingline->backsector->ceilingheight)
                   {
-                    // Hack to prevent missiles exploding
-                    // against the sky.
+                    // Hack to prevent missiles exploding against the sky.
                     // Does not handle sky floors.
+		    
+		    // if (type == MT_HOLY_FX) ExplodeMissile(); // TODO some things do explode against sky
+
 		    Remove();
 		    return;
                   }
@@ -621,7 +720,7 @@ void Actor::XYMovement()
                 }
 
 	      flags &= ~MF_MISSILE;
-	      //ExplodeMissile();
+	      return;
             }
 	  else
 	    vel.x = vel.y = 0;
@@ -724,7 +823,7 @@ void Actor::ZMovement()
       if (!(eflags & MFE_SKULLFLY) && !(eflags & MFE_INFLOAT))
         {
 	  fixed_t dist = P_AproxDistance(pos.x - target->pos.x, pos.y - target->pos.y);
-	  fixed_t delta = (target->pos.z + (height>>1)) - pos.z; // TODO why not target->height?
+	  fixed_t delta = (target->pos.z + (height>>1)) - pos.z; // assumed to be taller than target so this looks good...
 
 	  if (delta < 0 && dist < -(delta*3) )
 	    pos.z -= FLOATSPEED;
@@ -757,18 +856,23 @@ void Actor::ZMovement()
 	{
 	  HitFloor();
 	  eflags |= MFE_JUSTHITFLOOR;
+
+	  if (eflags & MFE_SKULLFLY)
+	    {
+	      // the skull slammed into floor
+	      vel.z = -vel.z;
+	    }
+	  else if (flags & MF_COUNTKILL) // usually blasted mobj falling
+	    {
+	      if (vel.z < -23)
+		FallingDamage();
+	      vel.z = 0;
+	    }
+	  else
+	    vel.z = 0;
 	}
 
       pos.z = floorz;
-
-      if (eflags & MFE_SKULLFLY)
-        {
-	  // the skull slammed into something
-	  vel.z = -vel.z;
-        }
-      else
-	vel.z = 0;
-
     }
   else if (!(flags & MF_NOGRAVITY)) // Gravity!
     {
@@ -796,30 +900,36 @@ void Actor::ZMovement()
 
   if (Top() > ceilingz)
     {
-      pos.z = ceilingz - height;
-
-      // hit the ceiling
-      if (vel.z > 0)
-	if (eflags & MFE_SKULLFLY)
-	  {       // the skull slammed into something
-	    vel.z = -vel.z;
-	  }
-	else
-	  vel.z = 0;
-
       if (flags & MF_MISSILE)
         {
-	  //SoM: 4/3/2000: Don't explode on the sky!
+	  pos.z = ceilingz - height;
+	  eflags |= MFE_JUSTHITFLOOR; // with missiles works also with ceiling hits
+
+	  // Don't explode on the sky!
 	  if (subsector->sector->ceilingpic == skyflatnum &&
-	      subsector->sector->ceilingheight == ceilingz)
+	      subsector->sector->ceilingheight == ceilingz &&
+	      !(flags2 & MF2_FULLBOUNCE))
             {
+	      // if (type == MT_HOLY_FX) return; // TODO some things do explode against sky
+
 	      Remove();
-	      return;
             }
 
-	  eflags |= MFE_JUSTHITFLOOR; // with missiles works also with ceiling hits
 	  return;
         }
+
+      // Did we actually hit the ceiling?
+      if (Top() - vel.z <= ceilingz)
+	{
+	  if (eflags & MFE_SKULLFLY)
+	    {
+	      vel.z = -vel.z; // skull slammed into roof
+	    }
+	  else
+	    vel.z = 0;
+	}
+
+      pos.z = ceilingz - height;
     }
 
   // no z friction for missiles and skulls
@@ -856,10 +966,10 @@ void Actor::CheckWater()
 
   //SoM: 3/28/2000: Only use 280 water type of water. Some boom levels get messed up.
   if ((sector->heightsec > -1 && sector->heightsec_type == sector_t::CS_water) ||
-      (sector->floortype == FLOOR_WATER && sector->heightsec == -1))
+      (sector->heightsec == -1 && sector->floortype == FLOOR_WATER))
     {
-      if (sector->heightsec > -1)  //water hack
-	fz = (mp->sectors[sector->heightsec].floorheight);
+      if (sector->heightsec > -1)  // swimmable Boom water
+	fz = mp->sectors[sector->heightsec].floorheight;
       else
 	fz = sector->floorheight + 0.25f; // water texture
 
@@ -913,7 +1023,7 @@ void Actor::CheckWater()
 
 
 
-// Creates a splash if needed and returns the floor type
+/// Creates a splash if needed and returns the floor type
 int Actor::HitFloor()
 {
   if (floorz != subsector->sector->floorheight)
@@ -926,6 +1036,7 @@ int Actor::HitFloor()
 
   int floortype = subsector->sector->floortype;
 
+  // some things do not cause a splash
   if (flags & MF_NOSPLASH)
     return floortype;
 
@@ -1108,15 +1219,9 @@ void BlasterMissileThink();
 
 void DActor::Think()
 {
-  if (type == MT_BLASTERFX1)
+  if (type == MT_BLASTERFX1 || type == MT_MWAND_MISSILE || type == MT_CFLAME_MISSILE)
     {
       BlasterMissileThink();
-      return;
-    }
-
-  if (type == MT_MWAND_MISSILE || type == MT_CFLAME_MISSILE)
-    {
-      XBlasterMissileThink();
       return;
     }
 
@@ -1134,9 +1239,12 @@ void DActor::Think()
   
   Actor::Think();
 
+  if (eflags & MFE_REMOVE)
+    return; // was removed
+
   // must have hit something
   if ((oldeflags & MFE_SKULLFLY) && !(eflags & MFE_SKULLFLY))
-    SetState(game.mode == gm_heretic ? info->seestate : info->spawnstate);
+    SetState(game.mode >= gm_heretic ? info->seestate : info->spawnstate); // TODO depends on monster, not gametype
   
   // must have exploded
   if ((oldflags & MF_MISSILE) && !(flags & MF_MISSILE))
@@ -1145,29 +1253,41 @@ void DActor::Think()
   // missiles hitting the floor
   if ((flags & MF_MISSILE) && (eflags & MFE_JUSTHITFLOOR))
     {
-      if (flags2 & MF2_FLOORBOUNCE)
+      if ((flags2 & MF2_CEILINGHUGGER) || (flags2 & MF2_FLOORHUGGER))
+	return;
+
+      if (flags2 & (MF2_FULLBOUNCE | MF2_FLOORBOUNCE))
 	{
+	  // NOTE: originally ceilingbounce zeroed vz, now it reflects it
 	  FloorBounceMissile();
+	  return;
+	}	
+
+      if (type == MT_HOLY_FX)
+	{ // The spirit struck the ground
+	  vel.z = 0;
+	  HitFloor();
+	  return;
 	}
-      else if (type == MT_MNTRFX2)
-	{ // Minotaur floor fire can go up steps
-	}
-      else if (!(flags & MF_NOCLIPLINE))
+
+      if (!(flags & MF_NOCLIPLINE))
 	{
+	  // TODO HitFloor();
 	  ExplodeMissile();
 	}
+
+      return;
     }
   else if (flags2 & MF2_FLOATBOB)
     {
       pos.z += special1; // floating height
     }
 
+
   // crashing to ground
   if (info->crashstate && (flags & MF_CORPSE) && (eflags & MFE_JUSTHITFLOOR))
-    {
-      SetState(info->crashstate);
-      //flags &= ~MF_CORPSE; // FIXME why?
-    }
+    SetState(info->crashstate);
+
 
   // cycle through states,
   // calling action functions at transitions
@@ -1300,7 +1420,7 @@ void DActor::NightmareRespawn()
   ny = mthing->y;
 
   // somthing is occupying it's position?
-  if (!CheckPosition(nx, ny))
+  if (!TestLocation(nx, ny))
     return; // no respwan (will try again later!)
 
   // spawn a teleport fog at old spot
@@ -1355,7 +1475,7 @@ DActor *DActor::SpawnMissile(Actor *dest, mobjtype_t type)
       mz += 40;
       break;
     case MT_MNTRFX2: // Minotaur floor fire missile
-      mz = ONFLOORZ;
+      mz = ONFLOORZ +floorclip;
       break;
     case MT_SRCRFX1: // Sorcerer Demon fireball
       mz += 48;
@@ -1364,6 +1484,16 @@ DActor *DActor::SpawnMissile(Actor *dest, mobjtype_t type)
     case MT_REDAXE: // Knight red power axe
       mz += 36;
       break;
+    case MT_CENTAUR_FX:
+      mz += 45;
+      break;
+    case MT_ICEGUY_FX:
+      mz += 40;
+      break;
+    case MT_HOLY_MISSILE:
+      mz += 40;
+      break;
+
     default:
       mz += 32;
       break;
@@ -1378,12 +1508,12 @@ DActor *DActor::SpawnMissile(Actor *dest, mobjtype_t type)
 
   th->owner = this; // where it came from
 
-  angle_t an = R_PointToAngle2(pos.x, pos.y, dest->pos.x, dest->pos.y);
+  angle_t an = R_PointToAngle2(pos, dest->pos);
 
   // fuzzy player
   if (dest->flags & MF_SHADOW)
     {
-      if (game.mode == gm_heretic || game.mode == gm_hexen)
+      if (game.mode >= gm_heretic)
 	an += P_SignedRandom()<<21; 
       else
 	an += P_SignedRandom()<<20;
@@ -1407,18 +1537,19 @@ DActor *DActor::SpawnMissile(Actor *dest, mobjtype_t type)
 // Moves the missile forward a bit and possibly explodes it right there.
 bool DActor::CheckMissileSpawn()
 {
-  if (game.mode != gm_heretic && game.mode != gm_hexen)
+  if (game.mode < gm_heretic)
     {
       tics -= P_Random()&3;
       if (tics < 1)
 	tics = 1;
     }
 
+  // TODO if very fast, move forward less (ideally just one radius...)
   // move a little forward so an angle can
   // be computed if it immediately explodes
   pos += vel >> 1;
 
-  if (!TryMove(pos.x, pos.y, false))
+  if (!TryMove(pos.x, pos.y, true))
     {
       ExplodeMissile();
       return false;
@@ -1439,7 +1570,7 @@ void DActor::ExplodeMissile()
 
   SetState(mobjinfo[type].deathstate);
 
-  if (game.mode != gm_heretic)
+  if (game.mode < gm_heretic)
     {
       tics -= P_Random()&3;
         
@@ -1449,15 +1580,97 @@ void DActor::ExplodeMissile()
 
   flags &= ~MF_MISSILE;
 
-  if (info->deathsound)
-    S_StartSound(this, info->deathsound);
+  switch (type)
+    {
+    case MT_SORCBALL1:
+    case MT_SORCBALL2:
+    case MT_SORCBALL3:
+      S_StartSound(this, SFX_SORCERER_BIGBALLEXPLODE); // TODO see if these can be made deathsounds...
+      break;
+    case MT_SORCFX1:
+      S_StartSound(this, SFX_SORCERER_HEADSCREAM);
+      break;
+
+    default:
+      if (info->deathsound)
+	S_StartSound(this, info->deathsound);
+      break;
+    }
 }
 
 
 
-// some (player) missiles are bouncy
+/// MF2_FLOORBOUNCE missiles bounce once from floor and immediately explode.
 void DActor::FloorBounceMissile()
 {
-  vel.z = -vel.z;
-  SetState(mobjinfo[type].deathstate);
+  if (!(flags2 & MF2_FULLBOUNCE))
+    {
+      vel.z = -vel.z;
+      SetState(info->deathstate);
+      return;
+    }
+
+  // most missiles sink
+  if (HitFloor() >= FLOOR_LIQUID)
+    {
+      switch (type)
+	{
+	case MT_SORCFX1:
+	case MT_SORCBALL1:
+	case MT_SORCBALL2:
+	case MT_SORCBALL3:
+	  break;
+	default:
+	  Remove();
+	  return;
+	}
+    }
+
+  // lose energy TODO store the Q factor in mobjinfo....
+  switch (type)
+    {
+    case MT_SORCFX1:
+      vel.z = -vel.z; // no energy absorbed
+      break;
+    case MT_SGSHARD1:
+    case MT_SGSHARD2:
+    case MT_SGSHARD3:
+    case MT_SGSHARD4:
+    case MT_SGSHARD5:
+    case MT_SGSHARD6:
+    case MT_SGSHARD7:
+    case MT_SGSHARD8:
+    case MT_SGSHARD9:
+    case MT_SGSHARD0:
+      vel.z *= -0.3f;
+      if (abs(vel.z) < 0.5f) // TODO into action func
+	{
+	  SetState(S_NULL);
+	  return;
+	}
+      break;
+    default:
+      vel.z *= -0.7f;
+      break;
+    }
+
+  vel.x *= 2.0f/3;
+  vel.y *= 2.0f/3;
+
+  if (info->seesound)
+    {
+      switch (type)
+	{
+	case MT_SORCBALL1:
+	case MT_SORCBALL2:
+	case MT_SORCBALL3:
+	  if (!args[0])
+	    S_StartSound(this, info->seesound);
+	  break;
+	default:
+	  S_StartSound(this, info->seesound);
+	  break;
+	}
+    }
+
 }

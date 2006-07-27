@@ -695,7 +695,16 @@ const fixed_t PSpriteSY[NUMWEAPONS] =
     15,    // gauntlets
     15     // beak
 };
-
+/*
+// TODO Hexen weaponsprite y adjustments...
+int PSpriteSY[NUMCLASSES][NUMWEAPONS] =
+{
+  { 0, -12, -10, 10 }, // Fighter
+  { -8, 10, 10, 0 }, // Cleric
+  { 9, 20, 20, 20 }, // Mage
+  { 10, 10, 10, 10 } // Pig
+};
+*/
 //
 // R_DrawPSprite
 //

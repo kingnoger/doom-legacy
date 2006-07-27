@@ -60,7 +60,7 @@
 
 #define MIDBUFFERSIZE   128*1024
 #define SAMPLERATE      22050   // Hz
-#define SAMPLECOUNT     512 // requested audio buffer size (about 46 ms at 11 kHz)
+#define SAMPLECOUNT     1024 // requested audio buffer size (512 means about 46 ms at 11 kHz)
 
 
 // Pitch to stepping lookup in 16.16 fixed point. 64 pitch units = 1 octave

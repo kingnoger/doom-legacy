@@ -537,7 +537,7 @@ static void ThrustMobj(Actor *mobj, seg_t *seg, polyobj_t *po)
   mobj->vel.y += thrustY;
 
   if (po->crush)
-    if (!mobj->CheckPosition(mobj->pos.x + thrustX, mobj->pos.y + thrustY))
+    if (!mobj->TestLocation(mobj->pos.x + thrustX, mobj->pos.y + thrustY)) // was checkposition
       mobj->Damage(NULL, NULL, 3);
 }
 

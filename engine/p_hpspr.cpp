@@ -288,8 +288,6 @@ void A_FireBlasterPL1(PlayerPawn *p, pspdef_t *psp)
 
 //----------------------------------------------------------------------------
 //
-// was P_BlasterMobjThinker
-//
 // Thinker for the ultra-fast blaster PL2 ripper-spawning missile.
 //
 //----------------------------------------------------------------------------
@@ -312,7 +310,9 @@ void DActor::BlasterMissileThink()
 		  return;
 		}
 	    }
+
 	  pos.z += frac.z;
+
 	  if(pos.z <= floorz)
 	    { // Hit the floor
 	      pos.z = floorz;
@@ -320,30 +320,69 @@ void DActor::BlasterMissileThink()
 	      ExplodeMissile();
 	      return;
 	    }
+
 	  if (Top() > ceilingz)
 	    { // Hit the ceiling
 	      pos.z = ceilingz-height;
 	      ExplodeMissile();
 	      return;
 	    }
-	  if (changexy && (P_Random() < 64))
+
+	  if (changexy)
 	    {
-	      fixed_t nz = pos.z - 8;
-	      if (nz < floorz)
+	      mobjtype_t t = MT_NONE;
+	      fixed_t mz = 0;
+	      switch (type)
 		{
-		  nz = floorz;
+		case MT_BLASTERFX1:
+		  if (P_Random() < 64)
+		    {
+		      mz = pos.z - 8;
+		      t = MT_BLASTERSMOKE;
+		    }
+		  break;
+
+		case MT_MWAND_MISSILE:
+		  if (P_Random() < 128)
+		    {
+		      mz = pos.z - 8;
+		      t = MT_MWANDSMOKE;
+		    }
+		  break;
+		  
+		case MT_CFLAME_MISSILE:
+		  if (!--special1)
+		    {
+		      special1 = 4;
+		      mz = pos.z-12;
+		      t = MT_CFLAMEFLOOR;
+		    }
+		  break;
+
+		default:
+		  break;
 		}
-	      mp->SpawnDActor(pos.x, pos.y, nz, MT_BLASTERSMOKE);
+
+	      if (t != MT_NONE)
+		{
+		  if (mz < floorz)
+		    mz = floorz;
+
+		  DActor *mo = mp->SpawnDActor(pos.x, pos.y, mz, t);
+		  if (mo)
+		    mo->yaw = yaw;
+		}
 	    }
 	}
     }
+
   // Advance the state
-  if(tics != -1)
+  if (tics != -1)
     {
       tics--;
-      while(!tics)
+      while (!tics)
 	{
-	  if(!SetState(state->nextstate))
+	  if (!SetState(state->nextstate))
 	    { // mobj was removed
 	      return;
 	    }

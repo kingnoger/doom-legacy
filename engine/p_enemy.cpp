@@ -1155,7 +1155,6 @@ void A_SkelMissile(DActor *actor)
     }
 }
 
-int     TRACEANGLE = 0xc000000;
 
 // guide a guiding missile
 void A_Tracer(DActor *actor)
@@ -1182,20 +1181,21 @@ void A_Tracer(DActor *actor)
     return;
 
   // change angle
+  const int TRACEANGLE = 0xc000000;
   angle_t exact = R_PointToAngle2(actor->pos.x, actor->pos.y, dest->pos.x, dest->pos.y);
 
   if (exact != actor->yaw)
     {
-      if (exact - actor->yaw > 0x80000000)
+      if (exact - actor->yaw > ANG180)
         {
 	  actor->yaw -= TRACEANGLE;
-	  if (exact - actor->yaw < 0x80000000)
+	  if (exact - actor->yaw < ANG180)
 	    actor->yaw = exact;
         }
       else
         {
 	  actor->yaw += TRACEANGLE;
-	  if (exact - actor->yaw > 0x80000000)
+	  if (exact - actor->yaw > ANG180)
 	    actor->yaw = exact;
         }
     }
@@ -1279,7 +1279,7 @@ bool PIT_VileCheck(Actor *th)
   corpsehit = thing;
   corpsehit->vel.x = corpsehit->vel.y = 0;
   corpsehit->height <<= 2;
-  bool check = corpsehit->CheckPosition(corpsehit->pos.x, corpsehit->pos.y);
+  bool check = corpsehit->TestLocation();
   corpsehit->height >>= 2;
 
   if (!check)
@@ -1957,7 +1957,9 @@ void A_SpawnFly(DActor *mo)
     newmobj->SetState(newmobj->info->seestate);
 
   // telefrag anything in this spot
+  newmobj->flags2 |= MF2_TELESTOMP;
   newmobj->TeleportMove(newmobj->pos.x, newmobj->pos.y);
+  newmobj->flags2 &= ~MF2_TELESTOMP;
 
   // remove self (i.e., cube).
   mo->Remove();

@@ -97,6 +97,7 @@ public:
   virtual bool Damage(Actor *inflictor, Actor *source, int damage, int dtype = dt_normal);
 
   bool GiveBody(int num);
+  void AdjustPlayerAngle(Actor *t);
 };
 
 
@@ -156,6 +157,8 @@ public:
   /// Tic counters for power ups.
   int powers[NUMPOWERS];
 
+  int poisoncount; ///< poisoning
+
   /// Bit flags, for cheats and debug.
   int cheats;
 
@@ -183,6 +186,7 @@ public:
   virtual void ZMovement();
   virtual void XYFriction(fixed_t oldx, fixed_t oldy, bool oldfriction);
   virtual bool Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent = false);
+  void LandedOnThing(Actor *a);
 
   void Reset();
   weapontype_t FindWeapon(int g);
@@ -218,6 +222,8 @@ public:
   virtual void Die(Actor *inflictor, Actor *source, int dtype);
   virtual void Killed(PlayerPawn *victim, Actor *inflictor);
   virtual bool Damage(Actor *inflictor, Actor *source, int damage, int dtype = dt_normal);
+  virtual bool FallingDamage();
+  void Poison(Actor *culprit, int poison);
 
   // in p_pspr.cpp
   void MovePsprites();

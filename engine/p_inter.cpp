@@ -21,6 +21,8 @@
 /// \file
 /// \brief Actor interactions (collisions, damage, death).
 
+#include <math.h>
+
 #include "doomdef.h"
 #include "command.h"
 #include "cvars.h"
@@ -51,6 +53,21 @@ extern int ArmorIncrement[NUMCLASSES][NUMARMOR];
 void P_TeleportOther(Actor *v);
 bool P_AutoUseChaosDevice(PlayerPawn *p);
 void P_AutoUseHealth(PlayerPawn *p, int saveHealth);
+
+
+// TODO owner chains, must not be looped!
+static Actor *FindOwner(Actor *a)
+{
+  int count = 0;
+  while (a->owner)
+    {
+      a = a->owner;
+      if (++count > 10)
+	I_Error("Actor::owner loop detected!\n");
+    }
+
+  return a;
+}
 
 
 //======================================================
@@ -216,12 +233,6 @@ bool Actor::Touch(Actor *p)
       if ((p->flags & MF_SHADOW) && (flags2 & MF2_THRUGHOST))
 	return false;
 
-      // see if it went over / under
-      if (Feet() > p->Top())
-	return false; // overhead
-      if (Top() < p->Feet())
-	return false; // underneath
-
       if (!(p->flags & MF_SHOOTABLE))
         {
 	  // didn't do any damage
@@ -237,6 +248,7 @@ bool Actor::Touch(Actor *p)
 }
 
 
+/// DActor physically touching an Actor. Returns true if an interaction takes place.
 bool DActor::Touch(Actor *p)
 {
   int damage = info->damage & dt_DAMAGEMASK;
@@ -245,6 +257,19 @@ bool DActor::Touch(Actor *p)
   // check for skulls slamming into things
   if (eflags & MFE_SKULLFLY)
     {
+      /* TODO touchfuncs for Hexen extra effects!
+      if (xxflags & MFX_CALL_TOUCHFUNC)
+	{
+	  int temp = info->touchfunc(this, p);
+	  if (temp >= 0)
+	    return temp;
+	}
+      */
+
+      // Slamming monsters shouldn't move non-creatures
+      if (!(p->flags & MF_SHOOTABLE))
+	return true;
+
       damage = ((P_Random()%8) + 1) * damage;
 
       p->Damage(this, this, damage, dtype);
@@ -252,27 +277,121 @@ bool DActor::Touch(Actor *p)
       eflags &= ~MFE_SKULLFLY;
       vel.Set(0,0,0);
 
-      SetState(game.mode == gm_heretic ? info->seestate : info->spawnstate);
+      SetState(game.mode >= gm_heretic ? info->seestate : info->spawnstate); // FIXME monster property
 
       return true; // stop moving
     }
 
+
+  // Check for blasted thing running into another
+  if (eflags & MFE_BLASTED &&
+      p->flags & MF_SHOOTABLE &&
+      p->flags & MF_COUNTKILL &&
+      !(p->flags2 & MF2_BOSS))
+    {
+      // what a mockery of physics :)
+      p->vel.x += vel.x;
+      p->vel.y += vel.y;
+      if ((p->vel.x + p->vel.y) > 3)
+	{
+	  p->Damage(this, this, int(mass/100)+1);
+	  Damage(p, p, int(((p->mass/100)+1)/4));
+	}
+      return true;
+    }
+
+
   // missiles can hit other things
   if (flags & MF_MISSILE)
     {
+      // nonshootables are transparent to missiles
+      if (p->flags2 & MF2_NONSHOOTABLE)
+	return false;
+
       // Check for passing through a ghost (heretic)
       if ((p->flags & MF_SHADOW) && (flags2 & MF2_THRUGHOST))
 	return false;
 
-      // see if it went over / under
-      if (Feet() > p->Top())
-	return false; // overhead
-      if (Top() < p->Feet())
-	return false; // underneath
-
       // Don't hit the originator.
       if (p == owner)
 	return false;
+
+      // superbouncy missiles
+      if (flags2 & MF2_FULLBOUNCE)
+	{
+	  if (!(p->flags & MF_SOLID))
+	    return false;
+
+	  if ((p->flags2 & MF2_REFLECTIVE) ||
+	      !(p->flags & (MF_COUNTKILL | MF_NOTMONSTER))) // TODO why? isn't MF_SHOOTABLE enough?
+	    {
+	      yaw = R_PointToAngle2(p->pos, pos) + ANGLE_1*((P_Random()%16) - 8);
+	      fixed_t speed = 0.75 * P_AproxDistance(vel.x, vel.y);
+
+	      vel.x = speed * Cos(yaw);
+	      vel.y = speed * Sin(yaw);
+	      if (info->seesound)
+		S_StartSound(this, info->seesound);
+
+	      return true; // block but do not explode missile
+	    }
+
+	  goto explode; // Struck a player/creature
+	}
+      else if (p->flags2 & MF2_REFLECTIVE)
+	{
+	  yaw = R_PointToAngle2(p->pos, pos);
+
+	  DActor *t = p->IsOf(DActor::_type) ? reinterpret_cast<DActor*>(p) : NULL;
+	  mobjtype_t temp = t ? t->type : MT_NONE;
+
+	  // Change angle for deflection/reflection
+	  switch (temp)
+	    {
+	    case MT_CENTAUR:
+	    case MT_CENTAURLEADER:
+	      if ((abs(int(yaw - p->yaw)) >> 24) > 45 || type == MT_HOLY_FX) // flank shot or wraithverge
+		goto explode;
+
+	      // fallthru
+	    case MT_SORCBOSS:
+	      // Deflection
+	      if (P_Random() < 128)
+		yaw += ANG45;
+	      else
+		yaw -= ANG45;
+	      break;
+
+	    default:
+	      // Reflection
+	      yaw += ANGLE_1 * ((P_Random()%16)-8);
+	      break;
+	    }
+
+	  // Reflect the missile along angle
+	  float speed = t ? 0.5*t->info->speed : 0.5*sqrt(vel.XYNorm2().Float());
+	  vel.x = speed * Cos(yaw);
+	  vel.y = speed * Sin(yaw);
+	  // vel.z = -vel.z;
+
+	  // exchange target and owner
+	  if (flags2 & MF2_SEEKERMISSILE)
+	    target = owner;
+
+	  owner = p;
+	  return true; // block but do not explode missile
+	}
+
+    explode:
+
+      /*
+      if (xxflags & MFX_CALL_TOUCHFUNC)
+	{
+	  int temp = info->touchfunc(this, p);
+	  if (temp >= 0)
+	    return temp; // fixme explode?
+	}
+      */
 
       // Don't damage the same species as the originator.
       if (owner && owner->IsOf(DActor::_type) && p->IsOf(DActor::_type))
@@ -283,13 +402,22 @@ bool DActor::Touch(Actor *p)
 	  if (ow->type == t->type ||
 	      (ow->type == MT_KNIGHT  && t->type == MT_BRUISER) ||
 	      (ow->type == MT_BRUISER && t->type == MT_KNIGHT)) // damn complicated!
-	    return true; // Explode, but do no damage.
+	    {
+	      ExplodeMissile();
+	      return true; // Explode, but do no damage.
+	    }
         }
 
       if (!(p->flags & MF_SHOOTABLE))
         {
 	  // didn't do any damage
-	  return (p->flags & MF_SOLID);
+	  if (p->flags & MF_SOLID)
+	    {
+	      ExplodeMissile();
+	      return true;
+	    }
+
+	  return false;
         }
 
       // ripping projectiles
@@ -314,11 +442,19 @@ bool DActor::Touch(Actor *p)
 
       // damage / explode
       damage = ((P_Random()%8)+1) * damage;
-      if (p->Damage(this, owner, damage, dtype) &&
+      if (damage &&
+	  p->Damage(this, owner, damage, dtype) &&
 	  !(p->flags & MF_NOBLOOD))
-	mp->SpawnBloodSplats(pos, damage, p->vel.x, p->vel.y);
-
+	{
+	  /* Hexen:
+	  if (P_Random() < 192)
+	    P_BloodSplatter(tmthing->x, tmthing->y, tmthing->z, thing);
+	  */
+	  mp->SpawnBloodSplats(pos, damage, p->vel.x, p->vel.y);
+	}
+	
       // don't traverse any more
+      ExplodeMissile();
       return true;
     }
 
@@ -341,22 +477,9 @@ bool DActor::Touch(Actor *p)
       return p->flags & MF_SOLID; // most specials are not solid...
     }
 
-  /*
-  // check again for special pickup (Why?)
-  if (flags & MF_SPECIAL)
-    {
-      //if (p->flags & MF_PICKUP)
-      if (p->Type() == Thinker::tt_ppawn)
-        {
-	  // can remove thing
-	  ((PlayerPawn *)p)->TouchSpecialThing(this);
-        }
-      return flags & MF_SOLID;
-    }
-  */
-
-
   return (p->flags & MF_SOLID);
+
+
 
   /*
   //added:22-02-98: added z checking at last
@@ -443,7 +566,7 @@ bool Actor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
   if (!(flags & MF_SHOOTABLE))
     return false;
 
-  if ((dtype & dt_TYPEMASK) == dt_poison && flags & MF_NOBLOOD)
+  if ((dtype & dt_TYPEMASK) >= dt_LIVING && (flags & MF_NOBLOOD))
     return false; // only damage living things with poison
 
   // old recoil code
@@ -515,6 +638,8 @@ bool Actor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 
 
 
+
+
 bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 {
   if (!(flags & MF_SHOOTABLE))
@@ -526,6 +651,44 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
   if (health <= 0)
     return false;
 
+  /* TODO ice corpses
+	if(target->health <= 0)
+	{
+		if (inflictor && inflictor->flags2&MF2_ICEDAMAGE)
+		{
+			return;
+		}
+		else if (target->flags&MF_ICECORPSE) // frozen
+		{
+			target->tics = 1;
+			target->momx = target->momy = 0;
+		}
+		return;
+	}
+
+  if ((target->flags2 & MF2_INVULNERABLE) && damage < 10000)
+	{ // mobj is invulnerable
+		if(target->player) return;	// for player, no exceptions
+		if(inflictor)
+		{
+			switch(inflictor->type)
+			{
+				// These inflictors aren't foiled by invulnerability
+				case MT_HOLY_FX:
+				case MT_POISONCLOUD:
+				case MT_FIREBOMB:
+					break;
+				default:
+					return;
+			}
+		}
+		else
+		{
+			return;
+		}
+	}
+  */
+
   if (eflags & MFE_SKULLFLY)
     {
       // Minotaur is invulnerable during charge attack
@@ -533,6 +696,13 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 	return false;
       vel.Set(0,0,0);
     }
+
+  if (flags2 & MF2_DORMANT)
+    {
+      // Invulnerable, and won't wake up
+      return false;
+    }
+
 
   // Special damage types
   if (inflictor && (inflictor->IsOf(DActor::_type)))
@@ -543,6 +713,12 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
         case MT_EGGFX:
 	  Morph(MT_CHICKEN);
 	  return false; // Always return
+
+        case MT_XEGGFX:
+	  Morph(MT_PIG);
+	  return false;
+
+
         case MT_WHIRLWIND:
 	  return P_TouchWhirlwind(this);
 
@@ -612,13 +788,39 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
       return true;
     }
 
-  // hurt but not dead
-
+  // Hurt but not dead. Should we go into painstate?
   if ((P_Random () < info->painchance)
       && !(eflags & MFE_SKULLFLY || flags & MF_CORPSE))
     {
-      eflags |= MFE_JUSTHIT;    // fight back!
-      SetState(info->painstate);
+      if ((dtype & dt_TYPEMASK) == dt_shock)
+	{
+	  if (P_Random() < 96)
+	    {
+	      eflags |= MFE_JUSTHIT; // fight back!
+	      SetState(info->painstate);
+	    }
+	  else
+	    { // "electrocute" the target
+	      /* TODO fullbright
+	      frame |= FF_FULLBRIGHT;
+	      if (flags & MF_COUNTKILL && P_Random() < 128)
+		Howl();
+	      */
+	    }
+	}
+      else
+	{
+	  eflags |= MFE_JUSTHIT;    // fight back!
+	  SetState(info->painstate);
+
+	  /* TODO poisonhowl
+	  if (inflictor && inflictor->type == MT_POISONCLOUD)
+	    {
+	      if (flags & MF_COUNTKILL && P_Random() < 128)
+		Howl();
+	    }
+	  */
+	}
     }
 
   // we're awake now...
@@ -626,7 +828,7 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 
   // get angry
   if ((!threshold || type == MT_VILE) && source && (source != target))
-      //&& !(source->flags2 & MF2_BOSS)
+      //&& !(source->flags2 & MF2_BOSS) // FIXME Hexen
     {
       if (source->team == team && cv_infighting.value == 0)
 	return true;
@@ -639,7 +841,14 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 	  if ((ds->type == MT_VILE) ||
 	      (ds->type == MT_WIZARD && type == MT_SORCERER2) ||
 	      (ds->type == MT_MINOTAUR && type == MT_MINOTAUR))
+	    //|| (target->type == MT_BISHOP) || (target->type == MT_XMINOTAUR))
 	    return true;
+
+	  /*
+		if((target->type == MT_CENTAUR && source->type == MT_CENTAURLEADER)
+			|| (target->type == MT_CENTAURLEADER 
+				&& source->type == MT_CENTAUR))
+	  */
 	}
 
       // if not intent on another player,
@@ -707,7 +916,7 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 	  damage <<= d->special2; // shard damage depends on spermcount
 	  break;
 
-	  // TODO Hexen damage effects
+	  // TODO Hexen damage effects TODO both PPawn and DActor
 	  /*
 	case MT_BISH_FX:
 	  damage >>= 1; // Bishops are just too nasty TODO fix this elsewhere
@@ -717,7 +926,7 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 	  break;
 	case MT_CSTAFF_MISSILE:
 	  // Cleric Serpent Staff does poison damage
-	  P_PoisonPlayer(player, source, 20);
+	  P_PoisonPlayer(player, source, 20); // only for ppawns (dactors get full damage instead (all poison))
 	  damage >>= 1;
 	  break;
 	case MT_POISONDART:
@@ -819,9 +1028,50 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
       pres->SetAnim(presentation_t::Pain);
     }
 
-  attacker = source;
-
   return Actor::Damage(inflictor, source, damage, dtype);
+}
+
+
+bool Actor::FallingDamage()
+{
+  fixed_t v = abs(vel.z);
+
+  if (v <= 23)
+    return false; // no damage
+
+  int damage = 10000; // automatic death
+
+  if (v <= 35)
+    damage = ((v - 23) * 6).floor();
+
+  //damage = 10000;	// always kill 'em
+  return Damage(NULL, NULL, damage, dt_crushing);
+}
+
+
+bool PlayerPawn::FallingDamage()
+{
+  float v = abs(vel.z).Float();
+
+  if (v <= 23)
+    return false; // no damage
+
+  if (v >= 63)
+    {
+      // automatic death
+      return Damage(NULL, NULL, 10000);
+    }
+
+  float dist = v * 16.0f/23;
+  int damage = int((dist * dist)/10.0 -24);
+
+  if (vel.z > -39 && damage > health && health != 1)
+    { // No-death threshold
+      damage = health - 1;
+    }
+
+  S_StartSound(this, sfx_land);
+  return Damage(NULL, NULL, damage);
 }
 
 
@@ -845,7 +1095,7 @@ void Actor::Die(Actor *inflictor, Actor *source, int dtype)
       return;
     }
 
-  flags |= MF_CORPSE; // it's dead now.
+  flags |= (MF_CORPSE | MF_DROPOFF); // it's dead now.
 
   // dead target is no more shootable
   if (!cv_solidcorpse.value)
@@ -917,8 +1167,8 @@ void DActor::Die(Actor *inflictor, Actor *source, int dtype)
 	return;
     }
 
-  if (((game.mode != gm_heretic && health < -info->spawnhealth)
-       ||(game.mode == gm_heretic && health < -(info->spawnhealth>>1)))
+  if (((game.mode < gm_heretic && health < -info->spawnhealth)
+       ||(game.mode >= gm_heretic && health < -(info->spawnhealth>>1)))
       && info->xdeathstate)
     SetState(info->xdeathstate);
   else
@@ -935,6 +1185,8 @@ void DActor::Die(Actor *inflictor, Actor *source, int dtype)
 
 void PlayerPawn::Die(Actor *inflictor, Actor *source, int dtype)
 {
+  attacker = source;
+
   // start playing death anim. sequence
   if (health < -maxhealth >> 1)
     pres->SetAnim(presentation_t::Death2);
@@ -986,15 +1238,74 @@ void PlayerPawn::Die(Actor *inflictor, Actor *source, int dtype)
       health = maxhealth >> 1;
     }
 
-  flags |= MF_DROPOFF;
-
   // So change this if corpse objects
   // are meant to be obstacles.
 
   // TODO Player flame and ice death
   // SetState(S_PLAY_FDTH1);
   //S_StartSound(this, sfx_hedat1); // Burn sound
+
+  if ((dtype & dt_TYPEMASK) == dt_heat)
+    {
+      // Player flame death
+      switch (pclass)
+	{
+	case PCLASS_FIGHTER:
+	  S_StartSound(this, SFX_PLAYER_FIGHTER_BURN_DEATH);
+	  //P_SetMobjState(this, S_PLAY_F_FDTH1);
+	  return;
+	case PCLASS_CLERIC:
+	  S_StartSound(this, SFX_PLAYER_CLERIC_BURN_DEATH);
+	  //P_SetMobjState(this, S_PLAY_C_FDTH1);
+	  return;
+	case PCLASS_MAGE:
+	  S_StartSound(this, SFX_PLAYER_MAGE_BURN_DEATH);
+	  //P_SetMobjState(this, S_PLAY_M_FDTH1);
+	  return;
+	default:
+	  break;
+	}
+    }
+  else if ((dtype & dt_TYPEMASK) == dt_cold)
+    {
+      // Player ice death
+      // TODO flags |= MF_ICECORPSE;
+      /*
+      switch (pclass)
+	{
+	case PCLASS_FIGHTER:
+	  P_SetMobjState(this, S_FPLAY_ICE);
+	  return;
+	case PCLASS_CLERIC:
+	  P_SetMobjState(this, S_CPLAY_ICE);
+	  return;
+	case PCLASS_MAGE:
+	  P_SetMobjState(this, S_MPLAY_ICE);
+	  return;
+	case PCLASS_PIG:
+	  P_SetMobjState(this, S_PIG_ICE);
+	  return;
+	default:
+	  break;
+	}
+      */
+    }
 }
+
+
+/// set up a poisoning
+void PlayerPawn::Poison(Actor *culprit, int poison)
+{
+  if ((cheats & CF_GODMODE) || powers[pw_invulnerability])
+    return;
+
+  poisoncount += poison;
+  attacker = culprit;
+  if (poisoncount > 100)
+    poisoncount = 100;
+}
+
+
 
 
 

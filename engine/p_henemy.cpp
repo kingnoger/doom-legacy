@@ -1415,7 +1415,7 @@ void A_MakePod(DActor *actor)
   fixed_t y = actor->pos.y;
 
   DActor *mo = actor->mp->SpawnDActor(x, y, ONFLOORZ, MT_POD);
-  if (mo->CheckPosition(x, y) == false)
+  if (!mo->TestLocation())
     { // Didn't fit
       mo->Remove();
       return;
@@ -1693,7 +1693,7 @@ void A_FreeTargMobj(DActor *mo)
   mo->pos.z = mo->ceilingz+4;
   mo->flags &= ~(MF_SHOOTABLE|MF_FLOAT|MF_SOLID|MF_COUNTKILL);
   mo->flags |= MF_CORPSE|MF_DROPOFF|MF_NOGRAVITY;
-  mo->flags2 &= ~(MF2_PASSMOBJ|MF2_LOGRAV);
+  mo->flags2 &= ~(MF2_LOGRAV);
   mo->flags2 |= MF2_DONTDRAW;
   mo->eflags &= ~MFE_SKULLFLY;
   //mo->health = -1000;

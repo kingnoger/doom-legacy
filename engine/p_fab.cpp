@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,7 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -235,3 +234,191 @@ void BloodTime_OnChange()
 
     CONS_Printf ("blood lasts for %d seconds\n", cv_bloodtime.value);
 }
+
+
+/*
+FIXME touch functions for actors (wraithverge, mage lightning
+
+// extra pain
+void DActor::Howl()
+{
+  int sound = 0;
+
+  switch (type)
+    {
+    case MT_CENTAUR:
+    case MT_CENTAURLEADER:
+    case MT_ETTIN:
+      sound = SFX_PUPPYBEAT;
+      break;
+    default:
+      break;
+    }
+
+  if (!S_GetSoundPlayingInfo(this, sound))
+    S_StartSound(this, sound);
+}
+
+
+
+
+
+int MT_HOLY_FX_touchfunc(this, Actor *p)
+{
+  if (p->flags & MF_SHOOTABLE && p != this->owner)
+    {
+      if (owner->team && p->team == owner->team)
+	{
+	  // don't attack other co-op players
+	  return false;
+	}
+
+      if (p->flags2 & MF2_REFLECTIVE
+	  && (p->player || p->flags2 & MF2_BOSS))
+	{
+	  this->target = this->owner;
+	  this->owner = p;
+	  return false;
+	}
+
+      if (p->flags & MF_COUNTKILL || p->player)
+	this->target = p;
+
+      if (P_Random() < 96)
+	{
+	  damage = 12;
+	  if (p->player || p->flags2 & MF2_BOSS)
+	    {
+	      damage = 3;
+	      // ghost burns out faster when attacking players/bosses
+	      this->health -= 6;
+	    }
+
+	  p->Damage(this, this->owner, damage);
+	  if (P_Random() < 128)
+	    {
+	      P_SpawnMobj(this->x, this->y, this->z, MT_HOLY_PUFF);
+	      S_StartSound(this, SFX_SPIRIT_ATTACK);
+	      if (p->flags & MF_COUNTKILL && P_Random() < 128)
+		p->Howl()
+	    }
+	}
+
+      if (p->health <= 0)
+	this->target = NULL;
+
+    }
+  return false;
+}
+
+
+
+int MT_LIGHTNING_touchfunc(this, Actor *p)
+{
+  //if(this->type == MT_LIGHTNING_FLOOR || this->type == MT_LIGHTNING_CEILING)
+
+  if (p->flags & MF_SHOOTABLE && p != this->ultimateowner)
+    {
+      if (p->mass != MAXINT)
+	{
+	  p->vel.x += this->vel.x>>4;
+	  p->vel.y += this->vel.y>>4;
+	}
+      // players and bosses take less damage
+      if ((!p->player && !(p->flags2 & MF2_BOSS))
+	 || !(leveltime&1))
+	{
+	  if (p->type == MT_CENTAUR ||
+	      p->type == MT_CENTAURLEADER)
+	    { // Lightning does more damage to centaurs
+	      p->Damage(this, this->ultimateowner, 9);
+	    }
+	  else
+	    {
+	      p->Damage(this, this->ultimateowner, 3);
+	    }
+
+ 	  if (!(S_GetSoundPlayingInfo(this, SFX_MAGE_LIGHTNING_ZAP)))
+	    S_StartSound(this, SFX_MAGE_LIGHTNING_ZAP);
+					}
+	  if (p->flags&MF_COUNTKILL && P_Random() < 64)
+	    p->Howl();
+	}
+      this->health--;
+      if (this->health <= 0 || p->health <= 0)
+	return true;
+
+      if (this->type == MT_LIGHTNING_FLOOR)
+	{
+	  if (this->twin 
+	     && !(this->twin)->target)
+	    {
+	      (this->twin)->target = p;
+	    }
+	}
+      else if (!this->target)
+	{
+	  this->target = p;
+	}
+    }
+  return false; // lightning zaps through all sprites
+}
+
+
+
+int MT_LIGHTNING_ZAP_touchfunc(this, Actor *p)
+{
+  //if(this->type == MT_LIGHTNING_ZAP)
+
+  if (p->flags & MF_SHOOTABLE && p != this->ultimateowner)
+    {			
+      Actor *lmo = this->emitter;
+      if(lmo)
+	{
+	  if(lmo->type == MT_LIGHTNING_FLOOR)
+	    {
+	      if(lmo->twin 
+		 && !(lmo->twin)->target)
+		{
+		  (lmo->twin)->target = p;
+		}
+	    }
+	  else if(!lmo->target)
+	    {
+	      lmo->target = p;
+	    }
+	  if(!(leveltime&3))
+	    {
+	      lmo->health--;
+	    }
+	}
+    }
+  return -1; // do not force return
+}
+
+
+int MT_MSTAFF_FX2_touchfunc(this, Actor *p)
+{
+  //if(this->type == MT_MSTAFF_FX2
+  if (p != this->ultimateowner &&
+      !p->player && !(p->flags2&MF2_BOSS))
+    {
+      switch(p->type)
+	{
+	case MT_FIGHTER_BOSS:	// these not flagged boss
+	case MT_CLERIC_BOSS:	// so they can be blasted
+	case MT_MAGE_BOSS:
+	  break;
+	default:
+	  p->Damage(this, this->ultimateowner, 10);
+	  return false; // force return
+	  break;
+	}
+    }
+
+  //do not force return
+  return -1
+}
+
+
+*/

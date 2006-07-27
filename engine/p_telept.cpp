@@ -115,7 +115,6 @@ bool Map::EV_Teleport(int tag, line_t *line, Actor *thing, int type, int flags)
     return false;
 
   // don't teleport missiles
-  // TODO give all Doom missiles the MF2_NOTELEPORT flag....simpler
   if (thing->flags2 & MF2_NOTELEPORT)
     return false;
 

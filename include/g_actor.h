@@ -86,30 +86,45 @@ enum mobjflag2_t
   // physical properties
   MF2_LOGRAV         =     0x0001,    ///< Experiences only 1/8 gravity
   MF2_WINDTHRUST     =     0x0002,    ///< Is affected by wind
-  MF2_FLOORBOUNCE    =     0x0004,    ///< Bounces off the floor
-  MF2_SLIDE          =     0x0008,    ///< Slides against walls
-  MF2_PUSHABLE       =     0x0010,    ///< Can be pushed by other moving actors
-  MF2_CANNOTPUSH     =     0x0020,    ///< Cannot push other pushable actors
+  MF2_FLOORBOUNCE    =     0x0004,    ///< Bounces off the floor once and immediately explodes.
+  MF2_FULLBOUNCE     =     0x0008,    ///< Bounces off all surfaces, loses kinetic energy, does not explode.
+  MF2_SLIDE          =     0x0010,    ///< Slides against walls
+  MF2_PUSHABLE       =     0x0020,    ///< Can be pushed by other moving actors
+  MF2_CANNOTPUSH     =     0x0040,    ///< Cannot push other pushable actors
+  MF2_FLOORHUGGER    =     0x0080,    ///< Stays on floor, climbs any step up or down
+  MF2_CEILINGHUGGER  =     0x0100,    ///< Stays on ceiling, climbs any step down or up
+  // 3 bits free
+
   // game mechanics
-  MF2_FLOATBOB       =     0x0040,    ///< Bobs up and down in the air (item)
-  MF2_THRUGHOST      =     0x0080,    ///< Will pass through ghosts (missile)
-  MF2_RIP            =     0x0100,    ///< Rips through solid targets (missile)
-  MF2_PASSMOBJ       =     0x0200,    ///< Can move over/under other Actors 
-  MF2_NOTELEPORT     =     0x0400,    ///< Does not teleport
-  MF2_NONSHOOTABLE   =     0x0800,    ///< Transparent to MF_MISSILEs
-  MF2_INVULNERABLE   =     0x1000,    ///< Does not take damage
-  MF2_DORMANT	     =     0x2000,    ///< Cannot be damaged, is not noticed by seekers
-  MF2_CANTLEAVEFLOORPIC  = 0x4000,    ///< Stays within a certain floor texture
-  MF2_BOSS           =     0x8000,    ///< Is a major boss, not as easy to kill
-  MF2_SEEKERMISSILE  = 0x00010000,    ///< Is a seeker (for reflection)
-  MF2_REFLECTIVE     = 0x00020000,    ///< Reflects missiles
+  MF2_FLOATBOB       =     0x1000,    ///< Bobs up and down in the air (item)
+  MF2_THRUGHOST      =     0x2000,    ///< Will pass through ghosts (missile)
+  MF2_RIP            =     0x4000,    ///< Rips through solid targets (missile)
+  //MF2_PASSMOBJ     =     0x8000,    ///< Can move over/under other Actors 
+  MF2_NOPASSMOBJ     =     0x8000,    ///< Cannot move over/under other Actors with this flag
+  MF2_NOTELEPORT     =    0x10000,    ///< Does not teleport
+  MF2_NONSHOOTABLE   =    0x20000,    ///< Transparent to MF_MISSILEs
+  MF2_INVULNERABLE   =    0x40000,    ///< Does not take damage
+  MF2_DORMANT	     =    0x80000,    ///< Cannot be damaged, is not noticed by seekers
+  MF2_CANTLEAVEFLOORPIC =0x100000,    ///< Stays within a certain floor texture
+  MF2_BOSS           =   0x200000,    ///< Is a major boss, not as easy to kill (odd collection of immunities)
+  //dragon, sorcboss,korax, spidermm, cyborg, both dsparils, minotaur
+  // full vol seesound and activesound, cannot be blasted, some resistance to wraithverge,
+  // not affected by others blasted to them, some res to magelightning, some res to bloodscourge,
+  // doom and heretic bosses take no radiusdamage, no morph or teleportother
+  // heretic and hexen bosses do not aggravate teammates ever
+  // hexen class bosses: some res to bloodsc., no morphing
+
+  MF2_SEEKERMISSILE  = 0x00400000,    ///< Is a seeker (for reflection)
+  MF2_REFLECTIVE     = 0x00800000,    ///< Reflects missiles
+
   // rendering
-  MF2_FOOTCLIP       = 0x00040000,    ///< Feet may be be clipped
-  MF2_DONTDRAW       = 0x00080000,    ///< Invisible (does not generate a vissprite)
+  MF2_FOOTCLIP       = 0x01000000,    ///< Feet should be be clipped by floorclip units
+  MF2_DONTDRAW       = 0x02000000,    ///< Invisible (does not generate a vissprite)
+
   // giving hurt
-  MF2_NODMGTHRUST    = 0x00100000,    ///< Does not thrust target when damaging        
-  MF2_TELESTOMP      = 0x00200000,    ///< Can telefrag another Actor
-  // 6 bits free
+  MF2_NODMGTHRUST    = 0x04000000,    ///< Does not thrust target when damaging        
+  MF2_TELESTOMP      = 0x08000000,    ///< Can telefrag another Actor
+
   // activation
   MF2_IMPACT	     = 0x10000000,    ///< Can activate SPAC_IMPACT
   MF2_PUSHWALL	     = 0x20000000,    ///< Can activate SPAC_PUSH
@@ -127,7 +142,7 @@ enum mobjeflag_t
   // (instant damage in lava/slime sectors to prevent jump cheat..)
   MFE_JUSTHITFLOOR  = 0x0004,  ///< Just hit the floor while falling, cleared on next frame
 
-  MFE_TOUCHWATER    = 0x0010,  ///< Touches water
+  MFE_TOUCHWATER    = 0x0010,  ///< Touches water surface
   MFE_UNDERWATER    = 0x0020,  ///< Waist below water surface (swimming is possible)
   // active physics mode
   MFE_SWIMMING      = 0x0040,  ///< Swimming physics used (different gravity)
@@ -279,7 +294,7 @@ public:
   Actor *owner;   ///< Owner of this Actor. For example, for missiles this is the shooter.
   Actor *target;  ///< Thing being chased/attacked (or NULL), also the target for missiles.
 
-  int reactiontime; ///< time (in tics) before the thing can attack or move again
+  int reactiontime; ///< Time (in tics) before the thing can attack or move again. For MF2_FLOATBOB actors this is the bob phase.
 
   fixed_t floorclip; ///< cut this amount from legs (deep water illusion) (Hexen)
 
@@ -300,7 +315,7 @@ public:
 
   void ClientInterpolate(); ///< Netcode: clientside movement interpolation
 
-  void CheckWater(); ///< set some eflags if sector contains water
+  void CheckWater();  ///< set some eflags if sector contains water
 
   float GetMoveFactor();
   virtual void XYMovement();
@@ -317,6 +332,7 @@ public:
   virtual void Killed(class PlayerPawn *victim, Actor *inflictor);
   virtual bool Morph(mobjtype_t form);
   virtual bool Damage(Actor *inflictor, Actor *source, int damage, int dtype = dt_normal);
+  virtual bool FallingDamage();
 
   // in p_telept.cpp
   virtual bool Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent = false);
@@ -324,17 +340,21 @@ public:
   // in p_map.cpp
   bool TeleportMove(fixed_t nx, fixed_t ny);
   bool TryMove(fixed_t nx, fixed_t ny, bool allowdropoff);
-  void CheckMissileImpact();
   bool TestLocation();
-  bool CheckPosition(fixed_t nx, fixed_t ny);
+  bool TestLocation(fixed_t nx, fixed_t ny);
+  bool CheckPosition(fixed_t nx, fixed_t ny, bool interact);
+protected:
+  void CheckLineImpact(); ///< only used with TryMove
+  void SlideMove();
+  void BounceWall();
+public:
   void FakeZMovement();
   Actor *CheckOnmobj();
 
+
   fixed_t AimLineAttack(angle_t ang, fixed_t distance);
-  void    LineAttack(angle_t ang, fixed_t distance, fixed_t slope,
-		     int damage, int dtype = dt_normal);
-  void  RadiusAttack(Actor *culprit, int damage, fixed_t radius = -1,
-		     int dtype = dt_normal, bool downer = true);
+  bool    LineAttack(angle_t ang, fixed_t distance, fixed_t slope, int damage, int dtype = dt_normal);
+  void    RadiusAttack(Actor *culprit, int damage, fixed_t radius = -1, int dtype = dt_normal, bool downer = true);
   // in p_maputl.cpp
   void SetPosition();
   void UnsetPosition();
@@ -409,7 +429,6 @@ public:
   
   // in p_hpspr.cpp
   void BlasterMissileThink();
-  void XBlasterMissileThink();
 
   // in p_henemy.cpp
   void DSparilTeleport();

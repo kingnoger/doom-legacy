@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by Raven Software, Corp.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,8 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -48,14 +46,14 @@
 void P_MinotaurSlam(Actor *source, Actor *target)
 {
   angle_t angle = R_PointToAngle2(source->pos, target->pos);
-  angle >>= ANGLETOFINESHIFT;
   fixed_t thrust = 16 + P_FRandom(6);
-  target->vel.x += thrust * finecosine[angle];
-  target->vel.y += thrust * finesine[angle];
-  target->Damage(NULL, NULL, HITDICE(6));
+  target->vel.x += thrust * Cos(angle);
+  target->vel.y += thrust * Sin(angle);
+  target->Damage(NULL, NULL, HITDICE(6)); // FIXME Hexen minotaur HITDICE(4)
 
   //if(target->player)
   target->reactiontime = 14 + (P_Random()&7);
+  source->args[0] = 0; // Stop charging
 }
 
 
@@ -180,7 +178,7 @@ DActor *DActor::SpawnMissileAngle(mobjtype_t t, angle_t angle, fixed_t momz)
       mz = pos.z+40;
       break;
     case MT_MNTRFX2: // Minotaur floor fire missile
-      mz = ONFLOORZ; // +floorclip; 
+      mz = ONFLOORZ +floorclip; 
       break;
     case MT_SRCRFX1: // Sorcerer Demon fireball
       mz = pos.z+48;

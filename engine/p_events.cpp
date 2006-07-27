@@ -221,7 +221,8 @@ bool Map::ActivateLine(line_t *line, Actor *thing, int side, int atype)
     return false;
 
   unsigned spec = unsigned(line->special);
-  bool p = (thing->Type() == &PlayerPawn::_type);
+  PlayerPawn *p = thing->IsOf(PlayerPawn::_type) ? reinterpret_cast<PlayerPawn*>(thing) : NULL;
+
   // flying blood or water does not activate anything
   bool forceuse = (line->flags & ML_MONSTERS_CAN_ACTIVATE) && !(thing->flags & MF_NOSPLASH);
 
@@ -282,7 +283,7 @@ bool Map::ActivateLine(line_t *line, Actor *thing, int side, int atype)
 	}
       else if (spec >= GenLockedBase)
 	{
-	  if (!p || !((PlayerPawn *)thing)->CanUnlockGenDoor(line))
+	  if (!p || !p->CanUnlockGenDoor(line))
 	    return false;  // monsters disallowed from unlocking doors, players need key
 	  linefunc = &Map::EV_DoGenLockedDoor;
 	}

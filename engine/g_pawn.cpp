@@ -2,7 +2,17 @@
 //-----------------------------------------------------------------------------
 //  $Id$
 //
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
+//
+// This program is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public License
+// as published by the Free Software Foundation; either version 2
+// of the License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
 //
 //-----------------------------------------------------------------------------
 
@@ -21,6 +31,7 @@
 #include "d_ticcmd.h"
 
 #include "p_spec.h"
+#include "p_enemy.h"
 
 #include "dstrings.h"
 #include "hardware/hw3sound.h" // ugh.
@@ -219,7 +230,7 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, int type, int pcl)
   // SetPosition that have something to do with a map.
   flags |= (MF_NOTMONSTER | MF_PICKUP | MF_SHOOTABLE | MF_DROPOFF);
   flags &= ~MF_COUNTKILL;
-  flags2 |= (MF2_WINDTHRUST | MF2_SLIDE | MF2_PASSMOBJ | MF2_TELESTOMP);
+  flags2 |= (MF2_WINDTHRUST | MF2_SLIDE | MF2_TELESTOMP);
 
   player = NULL;
 
@@ -274,6 +285,7 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, int type, int pcl)
       armorfactor[i] = 0;
     }
 
+  poisoncount = 0;
   specialsector = 0;
   extralight = fixedcolormap = 0;
 
@@ -489,6 +501,24 @@ void PlayerPawn::Think()
     }
   else
     fixedcolormap = 0;
+
+
+  // handle poisonings
+  if (poisoncount && !(mp->maptic & 15))
+    {
+      poisoncount -= 5;
+      if (poisoncount < 0)
+	poisoncount = 0;
+
+      Damage(attacker, attacker, 1, dt_poison); 
+
+      if (!(mp->maptic & 63))
+	{
+	  // TODO painsound and anim...
+	  //pres->SetAnim(presentation_t::Pain);
+	}
+    }
+
 
  actor_think:
   // this is where the "actor part" of the thinking begins
@@ -729,15 +759,49 @@ void PlayerPawn::ZMovement()
   Actor::ZMovement();
 
   if (oldz + oldpz <= floorz && (oldpz < 0)) // falling
+    // TODO if (eflags & MFE_JUSTHITFLOOR)
     {
+      jumpdown = 7;// delay any jumping for a short time
+
       if ((oldpz < -8) && !(eflags & MFE_FLY))
 	{
 	  // Squat down.
 	  // Decrease viewheight for a moment
 	  // after hitting the ground (hard),
 	  // and utter appropriate sound.
-	  player->deltaviewheight = oldpz>>3;
-	  S_StartSound(this, sfx_grunt);
+	  player->deltaviewheight = oldpz >> 3;
+
+	  if (vel.z < -23)
+	    {
+	      FallingDamage();
+	      P_NoiseAlert(this, this);
+	    }
+	  else if (vel.z < -12 && !morphTics)
+	    {
+	      S_StartSound(this, sfx_land);
+	      /* TODO
+	       switch (pclass)
+		{
+		case PCLASS_FIGHTER:
+		  S_StartSound(mo, SFX_PLAYER_FIGHTER_GRUNT);
+		  break;
+		case PCLASS_CLERIC:
+		  S_StartSound(mo, SFX_PLAYER_CLERIC_GRUNT);
+		  break;
+		case PCLASS_MAGE:
+		  S_StartSound(mo, SFX_PLAYER_MAGE_GRUNT);
+		  break;
+		default:
+		  break;
+		}
+	      */
+	    }
+	  else if ((subsector->sector->floortype < FLOOR_LIQUID) && 
+		   !morphTics)
+	    {
+	      S_StartSound(this, sfx_land);
+	      S_StartSound(this, sfx_grunt);
+	    }
 	}
     }
 
@@ -796,7 +860,6 @@ bool PlayerPawn::Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent)
 
   return ret;
 }
-
 
 
 //=================================================
@@ -901,6 +964,10 @@ DActor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
   th->yaw = ang;
 
   th->Thrust(ang, finecosine[pitch >> ANGLETOFINESHIFT] * th->info->speed);
+
+  if (th->flags2 & (MF2_CEILINGHUGGER | MF2_FLOORHUGGER))
+    slope = 0;
+
   th->vel.z = slope * th->info->speed;
 
   return (th->CheckMissileSpawn()) ? th : NULL;
@@ -1087,6 +1154,9 @@ void PlayerPawn::ProcessSpecialSector(sector_t *sector, bool instantdamage)
 {
   if (instantdamage && sector->damage)
     {
+      int damage = sector->damage & dt_DAMAGEMASK;
+      int dtype = sector->damage & dt_TYPEMASK;
+
       if ((sector->special & SS_SPECIALMASK) == SS_EndLevelHurt)
 	{
           // EXIT SUPER DAMAGE! (for E1M8 finale)
@@ -1098,10 +1168,9 @@ void PlayerPawn::ProcessSpecialSector(sector_t *sector, bool instantdamage)
 	      return;
 	    }
 	}
-      else if (sector->damage < 20 && !powers[pw_ironfeet])
-	Damage(NULL, NULL, sector->damage, sector->damagetype);
-      else if (!powers[pw_ironfeet] || P_Random() < 5)
-	Damage(NULL, NULL, sector->damage, sector->damagetype);
+      else if (!powers[pw_ironfeet] ||
+	       (damage >= 20 && P_Random() < 5))
+	Damage(NULL, NULL, damage, dtype);
       
       mp->SpawnSmoke(pos.x, pos.y, pos.z);
     }
@@ -1621,7 +1690,7 @@ bool PlayerPawn::GiveArtifact(artitype_t arti, DActor *from)
       if (!gave_piece)
 	return true;
 
-      // Automatically check if we have all pieces... For now you have to assemble the weapons yourself.
+      // TODO Automatically check if we have all pieces... For now you have to assemble the weapons yourself.
       /*
       if (all_pieces)
 	{

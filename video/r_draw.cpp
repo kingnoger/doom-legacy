@@ -195,7 +195,14 @@ void R_InitTranslationTables()
     translationtables[0][i] = temp[i];
 
   // TODO Hexen has different translation colormaps
-  // for each color AND each playerclass: TRANTBL[0-8]
+  // for each color AND each playerclass???: TRANTBL[0-8]
+  /*
+  for (i = 0; i < 3*(MAXPLAYERS-1); i++)
+    {
+      int lump = fc.GetNumForName("TRANTBL0") + i;
+      fc.ReadLumpHeader(lump, translationtables[i], 256);
+    }
+  */
 
   // translate just the 16 green colors
   for (i=0 ; i<256 ; i++)
@@ -250,6 +257,7 @@ void R_InitTranslationTables()
         }
     }
 }
+
 
 
 // ==========================================================================

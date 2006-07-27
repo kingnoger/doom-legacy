@@ -292,7 +292,6 @@ public:
   bool RadiusLinesCheck(fixed_t x, fixed_t y, fixed_t radius, line_iterator_t func);
   bool CheckSector(sector_t* sector, int crunch);
   bool ChangeSector(sector_t *sector, int crunch);
-  void SlideMove(Actor* mo);
 
   // in p_setup.cpp
   bool Setup(tic_t start, bool spawnthings = true);
