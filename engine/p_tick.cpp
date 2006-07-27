@@ -90,22 +90,23 @@ void Map::RunThinkers()
     }
   else
     {
-
-  for (t = thinkercap.next; t != &thinkercap; t = next)
-    {
-      next = t->next; // if t is removed while it thinks, its next pointer will no longer be valid.
-      //if (t->mp == NULL) I_Error("Thinker::mp == NULL! Cannot be!\n");
-
-      t->Think();
+      for (t = thinkercap.next; t != &thinkercap; t = next)
+	{
+	  next = t->next; // if t is removed while it thinks, its next pointer will no longer be valid.
+	  //if (t->mp == NULL) I_Error("Thinker::mp == NULL! Cannot be!\n");
+	  t->Think();
+	}
     }
+}
 
-    }
 
+void Map::PointerCleanup()
+{
   int n = DeletionList.size();
   if (n == 0 && !force_pointercheck)
     return;
 
-  for (t = thinkercap.next; t != &thinkercap; t = t->next)
+  for (Thinker *t = thinkercap.next; t != &thinkercap; t = t->next)
     t->CheckPointers();
 
   // FIXME unfortunate HACK (the entire sound alert system is unrealistic!)
@@ -147,6 +148,8 @@ void Map::Ticker()
   FS_DelayedScripts();
 
   HandlePlayers();
+
+  PointerCleanup(); // this must be done AFTER players have left the Map, BEFORE they enter another
 
   // for par times etc.
   maptic++;

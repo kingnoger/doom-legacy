@@ -59,8 +59,8 @@ extern Actor *PuffSpawned;
 
 void Pawn::AdjustPlayerAngle(Actor *t)
 {
-  angle_t angle = R_PointToAngle2(pos, t->pos) - yaw;
-  int difference = int(angle); // to signed
+  angle_t angle = R_PointToAngle2(pos, t->pos);
+  int difference = Sint32(angle - yaw); // to signed
   if (abs(difference) > MAX_ANGLE_ADJUST)
     {
       yaw += difference > 0 ? MAX_ANGLE_ADJUST : -MAX_ANGLE_ADJUST;
@@ -1118,9 +1118,8 @@ void A_CHolyAttack2(DActor *actor)
       mo->args[0] = 10; // initial turn value
       mo->args[1] = 0; // initial look angle
       if (cv_deathmatch.value)
-	{ // Ghosts last slightly less longer in DeathMatch
-	  mo->health = 85;
-	}
+	mo->health = 85; // Ghosts last slightly less longer in DeathMatch
+
       if (linetarget)
 	{
 	  mo->target = linetarget;

@@ -47,6 +47,13 @@
 #include "tables.h"
 
 /*!
+  \defgroup g_thing The Doom mapthing system
+
+  These data structures are used to define the Doom mapthing system,
+  including the monster AI.
+*/
+
+/*!
   \defgroup g_actor Common types of Actors
 
   Certain types of Actors appear throughout the code.
@@ -58,7 +65,6 @@
   Basic monster, e.g. a Doom imp.
   Has typically the flags MF_SOLID | MF_SHOOTABLE | MF_COUNTKILL and the flags2 MF2_PUSHWALL | MF2_MCROSS.
 */
-
 
 /*!
   \page actor_floater Floater
@@ -81,6 +87,14 @@
 
   MF2_SEEKERMISSILE homes towards its target. If reflected from a MF2_REFLECTIVE target, owner becomes target and v.v.
 */
+
+/*!
+  \page actor_item Pickup
+  \ingroup g_actor
+  Item that can be picked up by the players, e.g. a health bonus. Definition: has the flag MF_SPECIAL.
+  Often also has the flags MF_COUNTITEM and MF2_FLOATBOB.
+*/
+
 
 
 extern fixed_t FloatBobOffsets[64];

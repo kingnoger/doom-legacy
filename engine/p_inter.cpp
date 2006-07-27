@@ -56,7 +56,7 @@ void P_AutoUseHealth(PlayerPawn *p, int saveHealth);
 
 
 // TODO owner chains, must not be looped!
-static Actor *FindOwner(Actor *a)
+Actor *FindOwner(Actor *a)
 {
   int count = 0;
   while (a->owner)
@@ -257,14 +257,12 @@ bool DActor::Touch(Actor *p)
   // check for skulls slamming into things
   if (eflags & MFE_SKULLFLY)
     {
-      /* TODO touchfuncs for Hexen extra effects!
-      if (xxflags & MFX_CALL_TOUCHFUNC)
+      if (flags & MF_TOUCHFUNC)
 	{
-	  int temp = info->touchfunc(this, p);
+	  int temp = info->touchf(this, p);
 	  if (temp >= 0)
 	    return temp;
 	}
-      */
 
       // Slamming monsters shouldn't move non-creatures
       if (!(p->flags & MF_SHOOTABLE))
@@ -276,9 +274,6 @@ bool DActor::Touch(Actor *p)
 
       eflags &= ~MFE_SKULLFLY;
       vel.Set(0,0,0);
-
-      SetState(game.mode >= gm_heretic ? info->seestate : info->spawnstate); // FIXME monster property
-
       return true; // stop moving
     }
 
@@ -384,14 +379,12 @@ bool DActor::Touch(Actor *p)
 
     explode:
 
-      /*
-      if (xxflags & MFX_CALL_TOUCHFUNC)
+      if (flags & MF_TOUCHFUNC)
 	{
-	  int temp = info->touchfunc(this, p);
+	  int temp = info->touchf(this, p);
 	  if (temp >= 0)
 	    return temp; // fixme explode?
 	}
-      */
 
       // Don't damage the same species as the originator.
       if (owner && owner->IsOf(DActor::_type) && p->IsOf(DActor::_type))
@@ -478,47 +471,6 @@ bool DActor::Touch(Actor *p)
     }
 
   return (p->flags & MF_SOLID);
-
-
-
-  /*
-  //added:22-02-98: added z checking at last
-  //SoM: 3/10/2000: Treat noclip things as non-solid!
-  if ((p->flags & MF_SOLID) && (flags & MF_SOLID) &&
-      !(p->flags & MF_NOCLIP) && !(flags & MF_NOCLIP))
-    {
-      // pass under
-      tmtopz = z + height;
-
-      if (tmtopz < p->z)
-        {
-	  if (p->z < tmceilingz)
-	    tmceilingz = p->z;
-	  return false;
-        }
-
-      topz = p->z + p->height + FRACUNIT;
-
-      // block only when jumping not high enough,
-      // (dont climb max. 24units while already in air)
-      // if not in air, let P_TryMove() decide if its not too high
-      // FIXME why test player here
-      if (Type() == Thinker::tt_ppawn &&
-	  z < topz &&
-	  z > floorz)  // block while in air
-	return true;
-
-
-      if (topz > tmfloorz)
-        {
-	  tmfloorz = topz;
-	  tmfloorthing = p;       //thing we may stand on
-        }
-
-    }
-  // not solid not blocked
-  return false;
-  */
 }
 
 

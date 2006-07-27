@@ -76,7 +76,9 @@ enum mobjflag_t
   MF_DROPPED      = 0x01000000, ///< *Dropped by a monster
   MF_MISSILE      = 0x02000000, ///< Player missiles as well as fireballs. Don't hit same species, explode on block.
   MF_CORPSE       = 0x04000000, ///< Dead. Acts like a corpse, falls down stairs etc.
-  // 5 bits free
+
+  MF_TOUCHFUNC    = 0x08000000, ///< Actor has a touch function. A HACK to handle complex Hexen mapthing behavior.
+  // 4 bits free
 };
 
 
@@ -99,7 +101,6 @@ enum mobjflag2_t
   MF2_FLOATBOB       =     0x1000,    ///< Bobs up and down in the air (item)
   MF2_THRUGHOST      =     0x2000,    ///< Will pass through ghosts (missile)
   MF2_RIP            =     0x4000,    ///< Rips through solid targets (missile)
-  //MF2_PASSMOBJ     =     0x8000,    ///< Can move over/under other Actors 
   MF2_NOPASSMOBJ     =     0x8000,    ///< Cannot move over/under other Actors with this flag
   MF2_NOTELEPORT     =    0x10000,    ///< Does not teleport
   MF2_NONSHOOTABLE   =    0x20000,    ///< Transparent to MF_MISSILEs
@@ -338,6 +339,8 @@ public:
   virtual bool Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent = false);
 
   // in p_map.cpp
+  void SetPosition();
+  void UnsetPosition();
   bool TeleportMove(fixed_t nx, fixed_t ny);
   bool TryMove(fixed_t nx, fixed_t ny, bool allowdropoff);
   bool TestLocation();
@@ -350,23 +353,21 @@ protected:
 public:
   void FakeZMovement();
   Actor *CheckOnmobj();
-
-
   fixed_t AimLineAttack(angle_t ang, fixed_t distance);
   bool    LineAttack(angle_t ang, fixed_t distance, fixed_t slope, int damage, int dtype = dt_normal);
   void    RadiusAttack(Actor *culprit, int damage, fixed_t radius = -1, int dtype = dt_normal, bool downer = true);
-  // in p_maputl.cpp
-  void SetPosition();
-  void UnsetPosition();
+
+  virtual void Howl() {};
 };
 
 
 //========================================================
 /// \brief Doom Actor.
 /// \ingroup g_central
+/// \ingroup g_thing
 /*!
-  An Actor with the standard Doom/Heretic AI.
-  Uses the A_* routines and the states table in info_*.cpp.
+  An Actor with the standard Doom/Heretic AI. Also known as THING or mobj_t.
+  Uses the A_* action functions and the state table in info_*.cpp.
 
   The sprite and frame elements of state_t (together with angle) determine which patch_t
   is used to draw the sprite if it is visible.
@@ -440,6 +441,9 @@ public:
   // in p_things.cpp
   bool Activate();
   bool Deactivate();
+
+  // elsewhere
+  virtual void Howl();
 };
 
 #endif

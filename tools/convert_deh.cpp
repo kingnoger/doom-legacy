@@ -432,7 +432,7 @@ flag_mnemonic_t BEX_Flag2Mnemonics[32] =
   {"PUSHABLE",         0x0200, MF2_PUSHABLE},     // Can be pushed by other moving actors
   {"SLIDE",            0x0400, MF2_SLIDE},        // Slides against walls
   {"ONMOBJ",           0x0800, 0}, // eflags, useless
-  {"PASSMOBJ",         0x1000, MF2_PASSMOBJ},     // Can move over/under other Actors 
+  {"PASSMOBJ",         0x1000, 0},     // Can move over/under other Actors 
   {"CANNOTPUSH",       0x2000, MF2_CANNOTPUSH},   // Cannot push other pushable actors
   {"FEETARECLIPPED",   0x4000, 0}, // made a variable, useless
   {"BOSS",             0x8000, MF2_BOSS},         // Is a major boss, not as easy to kill

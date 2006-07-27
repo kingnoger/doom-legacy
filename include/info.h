@@ -28,30 +28,7 @@
 
 #include "m_fixed.h"
 
-
 void P_PatchInfoTables();
-
-
-/// \brief THING frame flags
-///
-/// faB: I noticed they didn't use the 32 bits of the frame field,
-///      so now we use the upper 16 bits for new effects.
-///  MF_SHADOW is no more used to activate translucency (or the old fuzzy)
-///  The frame field allows to set translucency per frame, instead of per sprite.
-///  Now, (frame & TFF_TRANSMASK) is the translucency table number, if 0
-///  it is not translucent.
-///  MF_SHADOW still affects the targeting for monsters (they miss more)
-///  NOTE: the FF_ prefix is used by the ffloortype_e members!
-
-enum thingframeflag_t
-{
-  TFF_FRAMEMASK  =   0x7fff,  ///< mask for the frame number
-  TFF_FULLBRIGHT =   0x8000,  ///< frame always appear at full brightness (fixedcolormap) (torches, muzzle flare, light sources)
-  TFF_TRANSMASK  =  0x70000,  ///< 0 = no translucency (opaque), 1-7 = translucency table
-  TFF_TRANSSHIFT       = 16,
-  TFF_SMOKESHADE =  0x80000,  ///< sprite is an alpha channel (for smoke etc.)
-};
-
 
 
 /// \brief Sprite enumeration, for combining weapon and THING states with sprite names.
@@ -5753,36 +5730,6 @@ enum statenum_t
 };
 
 
-// "Action function" types
-typedef void (*actionf_p1)(class DActor *actor);
-typedef void (*actionf_p2)(class PlayerPawn *player, struct pspdef_t *psp);
-
-/// \brief DActor (mobj, THING) state description
-struct state_t
-{
-  spritenum_t   sprite;    ///< Sprite to use.
-  Sint32        frame;     ///< Lowest 15 bits contain the frame number, the rest are flags for visual effects.
-  Sint32        tics;      ///< Duration of the state in tics, -1 means infinite.
-  actionf_p1    action;    ///< Action function to call when entering this state, or NULL if none.
-  statenum_t    nextstate; ///< The next state.
-};
-
-/// \brief First person sprite (weapon) state description
-struct weaponstate_t
-{
-  spritenum_t   sprite;       ///< Sprite to use.
-  long          frame;        ///< Lowest 15 bits contain the frame number, the rest are flags for visual effects.
-  long          tics;         ///< Duration of the state in tics, -1 means infinite.
-  actionf_p2    action;       ///< Action function to call when entering this state, or NULL if none.
-  weaponstatenum_t nextstate; ///< The next state.
-  int           misc1, misc2; ///< x and y coordinates for the weapon sprites.
-};
-
-
-extern state_t       states[NUMSTATES];
-extern weaponstate_t weaponstates[NUMWEAPONSTATES];
-extern char *sprnames[NUMSPRITES+1];
-
 
 /// \brief Enumeration for THING (mobj) types.
 ///
@@ -6519,8 +6466,39 @@ enum mobjtype_t
 };
 
 
+// "Action function" types
+typedef void (*actionf_p1)(class DActor *actor);
+typedef void (*actionf_p2)(class PlayerPawn *player, struct pspdef_t *psp);
+typedef int (*touchfunc_t)(class DActor *d, class Actor *a);
 
-/// \brief THING (mobj) initial parameters
+
+/// \brief Description of a single DActor state
+/// \ingroup g_thing
+struct state_t
+{
+  spritenum_t   sprite;    ///< Sprite to use.
+  Sint32        frame;     ///< Lowest 15 bits contain the frame number, the rest are flags for visual effects.
+  Sint32        tics;      ///< Duration of the state in tics, -1 means infinite.
+  actionf_p1    action;    ///< Action function to call when entering this state, or NULL if none.
+  statenum_t    nextstate; ///< The next state.
+};
+
+
+/// \brief Description of a single first-person sprite (weapon) state
+/// \ingroup g_thing
+struct weaponstate_t
+{
+  spritenum_t   sprite;       ///< Sprite to use.
+  long          frame;        ///< Lowest 15 bits contain the frame number, the rest are flags for visual effects.
+  long          tics;         ///< Duration of the state in tics, -1 means infinite.
+  actionf_p2    action;       ///< Action function to call when entering this state, or NULL if none.
+  weaponstatenum_t nextstate; ///< The next state.
+  int           misc1, misc2; ///< x and y coordinates for the weapon sprites.
+};
+
+
+/// \brief DActor initial properties
+/// \ingroup g_thing
 struct mobjinfo_t
 {
   int doomednum;           ///< Editor number for this thing type or -1 if none.
@@ -6548,10 +6526,37 @@ struct mobjinfo_t
   int flags;               ///< mobjflag_t flags.
   statenum_t raisestate;   ///< Used when thing is being raised from dead.
   int flags2;              ///< mobjflag2_t flags.
+  touchfunc_t touchf;      ///< If MF_TOUCHFUNC is set, this function is to be called when touching another Actor.
 };
 
-extern mobjinfo_t mobjinfo[NUMMOBJTYPES];
 
+
+extern state_t       states[NUMSTATES];
+extern weaponstate_t weaponstates[NUMWEAPONSTATES];
+extern char         *sprnames[NUMSPRITES+1];
+extern mobjinfo_t    mobjinfo[NUMMOBJTYPES];
+
+
+
+/// \brief THING frame flags
+/// \ingroup g_thing
+///
+/// faB: I noticed they didn't use the 32 bits of the frame field,
+///      so now we use the upper 16 bits for new effects.
+///  MF_SHADOW is no more used to activate translucency (or the old fuzzy)
+///  The frame field allows to set translucency per frame, instead of per sprite.
+///  Now, (frame & TFF_TRANSMASK) is the translucency table number, if 0
+///  it is not translucent.
+///  MF_SHADOW still affects the targeting for monsters (they miss more)
+///  NOTE: the FF_ prefix is used by the ffloortype_e members!
+enum thingframeflag_t
+{
+  TFF_FRAMEMASK  =   0x7fff,  ///< mask for the frame number
+  TFF_FULLBRIGHT =   0x8000,  ///< frame always appear at full brightness (fixedcolormap) (torches, muzzle flare, light sources)
+  TFF_TRANSMASK  =  0x70000,  ///< 0 = no translucency (opaque), 1-7 = translucency table
+  TFF_TRANSSHIFT       = 16,
+  TFF_SMOKESHADE =  0x80000,  ///< sprite is an alpha channel (for smoke etc.)
+};
 
 
 #endif

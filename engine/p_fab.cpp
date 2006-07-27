@@ -36,6 +36,7 @@
 #include "p_pspr.h"
 #include "m_random.h"
 #include "r_draw.h"
+#include "sounds.h"
 
 // action function for running FS
 void A_StartFS(DActor *actor)
@@ -236,9 +237,6 @@ void BloodTime_OnChange()
 }
 
 
-/*
-FIXME touch functions for actors (wraithverge, mage lightning
-
 // extra pain
 void DActor::Howl()
 {
@@ -255,170 +253,181 @@ void DActor::Howl()
       break;
     }
 
-  if (!S_GetSoundPlayingInfo(this, sound))
+  //if (!S_GetSoundPlayingInfo(this, sound)) //TODO
     S_StartSound(this, sound);
 }
 
 
+Actor *FindOwner(Actor *a);
 
-
-
-int MT_HOLY_FX_touchfunc(this, Actor *p)
+int MT_HOLY_FX_touchfunc(DActor *d, Actor *p)
 {
-  if (p->flags & MF_SHOOTABLE && p != this->owner)
+  if (!(p->flags & MF_SHOOTABLE) || p == d->owner)
+    return false;
+
+  if (d->owner->team && p->team == d->owner->team)
     {
-      if (owner->team && p->team == owner->team)
-	{
-	  // don't attack other co-op players
-	  return false;
-	}
-
-      if (p->flags2 & MF2_REFLECTIVE
-	  && (p->player || p->flags2 & MF2_BOSS))
-	{
-	  this->target = this->owner;
-	  this->owner = p;
-	  return false;
-	}
-
-      if (p->flags & MF_COUNTKILL || p->player)
-	this->target = p;
-
-      if (P_Random() < 96)
-	{
-	  damage = 12;
-	  if (p->player || p->flags2 & MF2_BOSS)
-	    {
-	      damage = 3;
-	      // ghost burns out faster when attacking players/bosses
-	      this->health -= 6;
-	    }
-
-	  p->Damage(this, this->owner, damage);
-	  if (P_Random() < 128)
-	    {
-	      P_SpawnMobj(this->x, this->y, this->z, MT_HOLY_PUFF);
-	      S_StartSound(this, SFX_SPIRIT_ATTACK);
-	      if (p->flags & MF_COUNTKILL && P_Random() < 128)
-		p->Howl()
-	    }
-	}
-
-      if (p->health <= 0)
-	this->target = NULL;
-
+      // don't attack teammembers
+      return false;
     }
+
+  bool isplayer = (p->flags & MF_NOTMONSTER);
+
+  if ((p->flags2 & MF2_REFLECTIVE)
+      && (isplayer || (p->flags2 & MF2_BOSS)))
+    {
+      // reflected back at previous owner
+      d->target = d->owner;
+      d->owner = p;
+      return false;
+    }
+
+  if ((p->flags & MF_COUNTKILL) || isplayer)
+    d->target = p; // target monsters and players
+
+  if (P_Random() < 96)
+    {
+      int damage = 12;
+      if (isplayer || p->flags2 & MF2_BOSS)
+	{
+	  damage = 3;
+	  // ghost burns out faster when attacking players/bosses
+	  d->health -= 6;
+	}
+
+      p->Damage(d, d->owner, damage);
+      if (P_Random() < 128)
+	{
+	  d->mp->SpawnDActor(d->pos, MT_HOLY_PUFF);
+	  S_StartSound(d, SFX_SPIRIT_ATTACK);
+	  if ((p->flags & MF_COUNTKILL) && P_Random() < 128)
+	    p->Howl();
+	}
+    }
+
+  if (p->health <= 0)
+    d->target = NULL;
+
   return false;
 }
 
 
 
-int MT_LIGHTNING_touchfunc(this, Actor *p)
+int MT_LIGHTNING_touchfunc(DActor *d, Actor *p)
 {
-  //if(this->type == MT_LIGHTNING_FLOOR || this->type == MT_LIGHTNING_CEILING)
+  if (!(p->flags & MF_SHOOTABLE))
+    return false;
 
-  if (p->flags & MF_SHOOTABLE && p != this->ultimateowner)
+  Actor *ultimateowner = FindOwner(d);
+
+  if (p == ultimateowner)
+    return false;
+
+  if (p->mass != MAXINT)
     {
-      if (p->mass != MAXINT)
-	{
-	  p->vel.x += this->vel.x>>4;
-	  p->vel.y += this->vel.y>>4;
-	}
-      // players and bosses take less damage
-      if ((!p->player && !(p->flags2 & MF2_BOSS))
-	 || !(leveltime&1))
-	{
-	  if (p->type == MT_CENTAUR ||
-	      p->type == MT_CENTAURLEADER)
-	    { // Lightning does more damage to centaurs
-	      p->Damage(this, this->ultimateowner, 9);
-	    }
-	  else
-	    {
-	      p->Damage(this, this->ultimateowner, 3);
-	    }
-
- 	  if (!(S_GetSoundPlayingInfo(this, SFX_MAGE_LIGHTNING_ZAP)))
-	    S_StartSound(this, SFX_MAGE_LIGHTNING_ZAP);
-					}
-	  if (p->flags&MF_COUNTKILL && P_Random() < 64)
-	    p->Howl();
-	}
-      this->health--;
-      if (this->health <= 0 || p->health <= 0)
-	return true;
-
-      if (this->type == MT_LIGHTNING_FLOOR)
-	{
-	  if (this->twin 
-	     && !(this->twin)->target)
-	    {
-	      (this->twin)->target = p;
-	    }
-	}
-      else if (!this->target)
-	{
-	  this->target = p;
-	}
+      p->vel.x += d->vel.x>>4;
+      p->vel.y += d->vel.y>>4;
     }
+
+  mobjtype_t temp = p->IsOf(DActor::_type) ? reinterpret_cast<DActor*>(p)->type : MT_NONE;
+
+  // players and bosses take less damage
+  if (!(temp == MT_NONE || (p->flags2 & MF2_BOSS))
+      || !(d->mp->maptic & 1))
+    {
+      if (temp == MT_CENTAUR ||
+	  temp == MT_CENTAURLEADER)
+	{ // Lightning does more damage to centaurs
+	  p->Damage(d, ultimateowner, 9);
+	}
+      else
+	{
+	  p->Damage(d, ultimateowner, 3);
+	}
+
+      //if (!(S_GetSoundPlayingInfo(d, SFX_MAGE_LIGHTNING_ZAP))) TODO
+	S_StartSound(d, SFX_MAGE_LIGHTNING_ZAP);
+
+      if ((p->flags & MF_COUNTKILL) && P_Random() < 64)
+	p->Howl();
+    }
+
+  if (--(d->health) <= 0 || p->health <= 0)
+    return true;
+
+  if (d->type == MT_LIGHTNING_FLOOR)
+    {
+      // complicated. see A_MLightningAttack2.
+      if (d->target && !d->target->target)
+	d->target->target = p;
+    }
+  else if (!d->target)
+    {
+      d->target = p;
+    }
+
   return false; // lightning zaps through all sprites
 }
 
 
 
-int MT_LIGHTNING_ZAP_touchfunc(this, Actor *p)
+int MT_LIGHTNING_ZAP_touchfunc(DActor *d, Actor *p)
 {
-  //if(this->type == MT_LIGHTNING_ZAP)
+  if (!(p->flags & MF_SHOOTABLE))
+    return -1;
 
-  if (p->flags & MF_SHOOTABLE && p != this->ultimateowner)
-    {			
-      Actor *lmo = this->emitter;
-      if(lmo)
+  Actor *ultimateowner = FindOwner(d);
+
+  if (p == ultimateowner)
+    return -1;
+
+  if (d->owner)
+    {
+      DActor *lmo = reinterpret_cast<DActor*>(d->owner);
+  
+      if (lmo->type == MT_LIGHTNING_FLOOR)
 	{
-	  if(lmo->type == MT_LIGHTNING_FLOOR)
-	    {
-	      if(lmo->twin 
-		 && !(lmo->twin)->target)
-		{
-		  (lmo->twin)->target = p;
-		}
-	    }
-	  else if(!lmo->target)
-	    {
-	      lmo->target = p;
-	    }
-	  if(!(leveltime&3))
-	    {
-	      lmo->health--;
-	    }
+	  // complicated. see A_MLightningAttack2.
+	  if (lmo->target && !lmo->target->target)
+	    lmo->target->target = p;
 	}
+      else if (!lmo->target)
+	{
+	  lmo->target = p;
+	}
+
+      if (!(d->mp->maptic & 3))
+	lmo->health--;
     }
+
   return -1; // do not force return
 }
 
 
-int MT_MSTAFF_FX2_touchfunc(this, Actor *p)
+int MT_MSTAFF_FX2_touchfunc(DActor *d, Actor *p)
 {
-  //if(this->type == MT_MSTAFF_FX2
-  if (p != this->ultimateowner &&
-      !p->player && !(p->flags2&MF2_BOSS))
+  if (!(p->flags & MF_SHOOTABLE))
+    return -1;
+
+  Actor *ultimateowner = FindOwner(d);
+  
+  mobjtype_t temp = p->IsOf(DActor::_type) ? reinterpret_cast<DActor*>(p)->type : MT_NONE;
+
+  if (p == ultimateowner || temp == MT_NONE || (p->flags2 & MF2_BOSS))
+    return -1;
+
+  switch (temp)
     {
-      switch(p->type)
-	{
-	case MT_FIGHTER_BOSS:	// these not flagged boss
-	case MT_CLERIC_BOSS:	// so they can be blasted
-	case MT_MAGE_BOSS:
-	  break;
-	default:
-	  p->Damage(this, this->ultimateowner, 10);
-	  return false; // force return
-	  break;
-	}
+    case MT_FIGHTER_BOSS:	// these not flagged boss
+    case MT_CLERIC_BOSS:	// so they can be blasted
+    case MT_MAGE_BOSS:
+      break;
+    default:
+      p->Damage(d, ultimateowner, 10, dt_heat);
+      return false; // force return
+      break;
     }
 
   //do not force return
-  return -1
+  return -1;
 }
-
-
-*/

@@ -250,6 +250,7 @@ public:
   void DetachThinker(Thinker *thinker);
   void RemoveThinker(Thinker *thinker);
   void RunThinkers();
+  void PointerCleanup();
 
   // in g_map.cpp
   void AddPlayer(PlayerInfo *p); // adds a new player to the map (and respawnqueue)

@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,22 +15,24 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
-// DESCRIPTION:
-//
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Miscellaneous oddities
 
-#ifndef __P_FAB__
-#define __P_FAB__
-
-#include "doomtype.h"
+#ifndef p_fab_h
+#define p_fab_h 1
 
 // spawn smoke trails behind rockets and skull head attacks
 void A_SmokeTrailer(class DActor *actor);
 
 // hack the states table to set Doom Legacy's default translucency on sprites
 void P_SetTranslucencies();
+
+// touch functions
+int MT_HOLY_FX_touchfunc(class DActor *d, class Actor *p);
+int MT_LIGHTNING_touchfunc(DActor *d, Actor *p);
+int MT_LIGHTNING_ZAP_touchfunc(DActor *d, Actor *p);
+int MT_MSTAFF_FX2_touchfunc(DActor *d, Actor *p);
 
 #endif

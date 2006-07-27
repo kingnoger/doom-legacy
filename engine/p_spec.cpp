@@ -613,8 +613,8 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
       return sp;
     }
 
-  const char HScrollDirs[4][2] = {{1,0}, {0,1}, {0,-1}, {-1,0}};
-  const char HScrollSpeeds[5] = { 5, 10, 25, 30, 35 };
+  const float HScrollDirs[4][2] = {{1,0}, {0,1}, {0,-1}, {-1,0}};
+  const float HScrollSpeeds[5] = { 5/32.0, 10/32.0, 25/32.0, 30/32.0, 35/32.0 };
   const float d = 0.707;
   const float XScrollDirs[8][2] = {{0,1}, {1,0}, {0,-1}, {-1,0}, {-d,d}, {d,d}, {d,-d}, {-d,-d}};
 
@@ -630,8 +630,8 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
 	  // Hexen winds (just like Heretic?)
 	  temp -= 40; // zero base
 
-	  fixed_t dx = HScrollDirs[temp/3][0]*HScrollSpeeds[temp%3]*2048;
-	  fixed_t dy = HScrollDirs[temp/3][1]*HScrollSpeeds[temp%3]*2048;
+	  fixed_t dx = HScrollDirs[temp/3][0]*HScrollSpeeds[temp%3];
+	  fixed_t dy = HScrollDirs[temp/3][1]*HScrollSpeeds[temp%3];
 	  
 	  AddThinker(new scroll_t(scroll_t::sc_wind, dx, dy, NULL, sec - sectors, false));
 	}
@@ -640,8 +640,8 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
 	  // Hexen scrollers
 	  temp -= 201; // zero base
 
-	  fixed_t dx = int(XScrollDirs[temp/3][0]*HScrollSpeeds[temp%3]*2048);
-	  fixed_t dy = int(XScrollDirs[temp/3][1]*HScrollSpeeds[temp%3]*2048);
+	  fixed_t dx = XScrollDirs[temp/3][0]*HScrollSpeeds[temp%3];
+	  fixed_t dy = XScrollDirs[temp/3][1]*HScrollSpeeds[temp%3];
 	  
 	  AddThinker(new scroll_t(scroll_t::sc_carry_floor, dx, dy, NULL, sec - sectors, false));
 	}
@@ -700,7 +700,7 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
 	    break;
 
 	  case HERETIC_Lava_FlowEast:
-	    AddThinker(new scroll_t(scroll_t::sc_carry_floor, 2048*28, 0, NULL, sec - sectors, false));
+	    AddThinker(new scroll_t(scroll_t::sc_carry_floor, 28.0f/32.0f, 0, NULL, sec - sectors, false));
 	    // fallthru
 	  case HERETIC_Lava_Wimpy:
 	    sec->damage = 5 | dt_heat;
@@ -728,8 +728,8 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
 	  // Heretic scrollers
 	  temp -= 20; // zero base
 
-	  fixed_t dx = HScrollDirs[temp/5][0]*HScrollSpeeds[temp%5]*2048;
-	  fixed_t dy = HScrollDirs[temp/5][1]*HScrollSpeeds[temp%5]*2048;
+	  fixed_t dx = HScrollDirs[temp/5][0]*HScrollSpeeds[temp%5];
+	  fixed_t dy = HScrollDirs[temp/5][1]*HScrollSpeeds[temp%5];
 
 	  // texture scrolls, actors are pushed
 	  AddThinker(new scroll_t(scroll_t::sc_floor | scroll_t::sc_carry_floor,
@@ -740,8 +740,8 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
 	  // Heretic winds
 	  temp -= 40; // zero base
 
-	  fixed_t dx = HScrollDirs[temp/3][0]*HScrollSpeeds[temp%3]*2048;
-	  fixed_t dy = HScrollDirs[temp/3][1]*HScrollSpeeds[temp%3]*2048;
+	  fixed_t dx = HScrollDirs[temp/3][0]*HScrollSpeeds[temp%3];
+	  fixed_t dy = HScrollDirs[temp/3][1]*HScrollSpeeds[temp%3];
 	  
 	  AddThinker(new scroll_t(scroll_t::sc_carry_floor | scroll_t::sc_wind,
 				  dx, dy, NULL, sec - sectors, false));
