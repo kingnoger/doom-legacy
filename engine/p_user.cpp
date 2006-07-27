@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -769,6 +768,50 @@ bool P_UseArtifact(PlayerPawn *p, artitype_t arti)
       return false;
     }
   return true;
+}
+
+
+
+bool Map::EV_LineSearchForPuzzleItem(line_t *line, byte *args, Actor *a)
+{
+  if (!a)
+    return false;
+
+  PlayerPawn *p = a->IsOf(PlayerPawn::_type) ? reinterpret_cast<PlayerPawn*>(a) : NULL;
+
+  if (!p)
+    return false;
+
+  // Search player's inventory for puzzle items
+  vector<inventory_t>::iterator t;
+  for (t = p->inventory.begin(); t < p->inventory.end(); t++)
+    {
+      artitype_t arti = artitype_t(t->type);
+      int type = arti - arti_firstpuzzitem;
+      if (type < 0)
+	continue;
+
+      if (type == args[0])
+	{
+	  // A puzzle item was found for the line
+	  if (P_UseArtifact(p, arti))
+	    {
+	      // Artifact was used - remove it from inventory
+	      if (--(t->count) == 0)
+		{
+		  // Used last of a type - compact the artifact list
+		  p->inventory.erase(t);
+		}
+
+	      S_StartSound(p, SFX_PUZZLE_SUCCESS);
+	      p->player->itemuse = true;
+
+	      return true;
+	    }
+	}
+    }
+
+  return false;
 }
 
 

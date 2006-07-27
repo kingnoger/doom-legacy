@@ -1239,23 +1239,19 @@ void PlayerPawn::PlayerInSpecialSector()
 
   sector_t *sec = subsector->sector;
 
+  if (sec->floortype == FLOOR_LAVA && Feet() == floorz)
+    {
+      // Hexen lava
+      if (((eflags & MFE_JUSTHITFLOOR) && (mp->maptic & 2)) ||
+	  !(mp->maptic & 31))
+	{
+	  Damage(NULL, NULL, 10, dt_heat);
+	  S_StartSound(this, SFX_LAVA_SIZZLE);
+	}
+    }
+
   //Fab: keep track of what sector type the player's currently in
   specialsector = sec->special;
-
-#ifdef OLDWATER
-  //Fab: VERY NASTY hack for water QUICK TEST !!!!!!!!!!!!!!!!!!!!!!!
-  if (sec->tag < 0)
-    {
-      specialsector = 888;    // no particular value
-      return;
-    }
-  else if (levelflats[sec->floorpic].iswater)
-    // old water (flat texture)
-    {
-      specialsector = 887;
-      return;
-    }
-#endif
 
   if (!specialsector)     // nothing special, exit
     return;

@@ -370,6 +370,7 @@ public:
 
   // some event functions that fit nowhere else
   int  EV_SectorSoundChange(int tag, int seq);
+  bool EV_LineSearchForPuzzleItem(line_t *line, byte *args, Actor *mo);
 
   // in a_action.cpp
   bool EV_LocalQuake(byte *args);

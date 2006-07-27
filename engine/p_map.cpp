@@ -1071,8 +1071,11 @@ static bool PTR_SlideTraverse(intercept_t *in)
 // Find the first line hit, move flush to it, and slide along it
 //
 // This is a kludgy mess.
-void Actor::SlideMove()
+void Actor::SlideMove(fixed_t nx, fixed_t ny)
 {
+  fixed_t dx = nx - pos.x;
+  fixed_t dy = ny - pos.y;
+
   fixed_t leadx, leady;
   fixed_t trailx, traily;
 
@@ -1088,7 +1091,7 @@ void Actor::SlideMove()
 
 
   // trace along the three leading corners
-  if (vel.x > 0)
+  if (dx > 0)
     {
       leadx = pos.x + radius;
       trailx = pos.x - radius;
@@ -1099,7 +1102,7 @@ void Actor::SlideMove()
       trailx = pos.x + radius;
     }
 
-  if (vel.y > 0)
+  if (dy > 0)
     {
       leady = pos.y + radius;
       traily = pos.y - radius;
@@ -1113,17 +1116,17 @@ void Actor::SlideMove()
   bestslidefrac = 1 + fixed_epsilon;
 
   // find bestslideline and -frac
-  mp->PathTraverse(leadx, leady, leadx+vel.x, leady+vel.y, PT_ADDLINES, PTR_SlideTraverse);
-  mp->PathTraverse(trailx, leady, trailx+vel.x, leady+vel.y, PT_ADDLINES, PTR_SlideTraverse);
-  mp->PathTraverse(leadx, traily, leadx+vel.x, traily+vel.y, PT_ADDLINES, PTR_SlideTraverse);
+  mp->PathTraverse(leadx, leady, leadx+dx, leady+dy, PT_ADDLINES, PTR_SlideTraverse);
+  mp->PathTraverse(trailx, leady, trailx+dx, leady+dy, PT_ADDLINES, PTR_SlideTraverse);
+  mp->PathTraverse(leadx, traily, leadx+dx, traily+dy, PT_ADDLINES, PTR_SlideTraverse);
   
   // move up to the wall
   if (bestslidefrac == 1 + fixed_epsilon)
     {
       // the move must have hit the middle, so stairstep
     stairstep:
-      if (!TryMove(pos.x, pos.y + vel.y, true)) //SoM: 4/10/2000
-	TryMove (pos.x + vel.x, pos.y, true);  //Allow things to drop off.
+      if (!TryMove(pos.x, pos.y + dy, true)) //SoM: 4/10/2000
+	TryMove (pos.x + dx, pos.y, true);  //Allow things to drop off.
       return;
     }
 
@@ -1131,8 +1134,8 @@ void Actor::SlideMove()
   bestslidefrac -= fudge;
   if (bestslidefrac > 0)
     {
-      fixed_t newx = vel.x * bestslidefrac;
-      fixed_t newy = vel.y * bestslidefrac;
+      fixed_t newx = dx * bestslidefrac;
+      fixed_t newy = dy * bestslidefrac;
 
       if (!TryMove(pos.x+newx, pos.y+newy, true))
 	goto stairstep;
@@ -1148,13 +1151,13 @@ void Actor::SlideMove()
   if (bestslidefrac <= 0)
     return;
 
-  tmxmove = vel.x * bestslidefrac;
-  tmymove = vel.y * bestslidefrac;
+  tmxmove = dx * bestslidefrac;
+  tmymove = dy * bestslidefrac;
 
   P_HitSlideLine(bestslideline);     // clip the moves
 
-  vel.x = tmxmove;
-  vel.y = tmymove;
+  dx = tmxmove;
+  dy = tmymove;
 
   if (!TryMove(pos.x+tmxmove, pos.y+tmymove, true))
     {
@@ -1207,19 +1210,22 @@ static bool PTR_BounceTraverse(intercept_t *in)
 
 
 ///
-void Actor::BounceWall()
+void Actor::BounceWall(fixed_t nx, fixed_t ny)
 {
+  fixed_t dx = nx - pos.x;
+  fixed_t dy = ny - pos.y;
+
   fixed_t leadx, leady;
 
   slidemo = this;
 
   // trace from leading corner
-  if (vel.x > 0)
+  if (dx > 0)
     leadx = pos.x+radius;
   else
     leadx = pos.x-radius;
 
-  if (vel.y > 0)
+  if (dy > 0)
     leady = pos.y+radius;
   else
     leady = pos.y-radius;
@@ -1227,25 +1233,28 @@ void Actor::BounceWall()
   bestslidefrac = 1 + fixed_epsilon;
   bestslideline = NULL;
 
-  mp->PathTraverse(leadx, leady, leadx+vel.x, leady+vel.y, PT_ADDLINES, PTR_BounceTraverse);
+  mp->PathTraverse(leadx, leady, leadx+dx, leady+dy, PT_ADDLINES, PTR_BounceTraverse);
+
+  if (!bestslideline)
+    return;
 
   int side = P_PointOnLineSide(pos.x, pos.y, bestslideline);
   angle_t lineangle = R_PointToAngle2(0, 0, bestslideline->dx, bestslideline->dy);
   if (side == 1)
     lineangle += ANG180;
 
-  angle_t moveangle = R_PointToAngle2(0, 0, vel.x, vel.y);
+  angle_t moveangle = R_PointToAngle2(0, 0, dx, dy);
   angle_t newangle = 2*lineangle - moveangle;
 
   newangle >>= ANGLETOFINESHIFT;
 
-  fixed_t movelen = 0.75 * P_AproxDistance(vel.x, vel.y); // lose energy in the bounce
+  fixed_t movelen = 0.75 * P_AproxDistance(dx, dy); // lose energy in the bounce
 
   if (movelen < 1)
     movelen = 2;
 
-  vel.x = movelen * finecosine[newangle];
-  vel.y = movelen * finesine[newangle];
+  dx = movelen * finecosine[newangle];
+  dy = movelen * finesine[newangle];
 }
 
 

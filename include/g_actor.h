@@ -345,8 +345,8 @@ public:
   bool CheckPosition(fixed_t nx, fixed_t ny, bool interact);
 protected:
   void CheckLineImpact(); ///< only used with TryMove
-  void SlideMove();
-  void BounceWall();
+  void SlideMove(fixed_t nx, fixed_t ny);
+  void BounceWall(fixed_t nx, fixed_t ny);
 public:
   void FakeZMovement();
   Actor *CheckOnmobj();

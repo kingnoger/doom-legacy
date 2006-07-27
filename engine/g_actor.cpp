@@ -641,7 +641,7 @@ void Actor::XYMovement()
 	      // try to slide along whatever blocked us
 	      if (!Blocking.thing)
 		{
-		  SlideMove(); // Slide against wall
+		  SlideMove(ptryx, ptryy); // Slide against wall
 		}
 	      else
 		{
@@ -664,7 +664,7 @@ void Actor::XYMovement()
 	      if ((flags2 & MF2_FULLBOUNCE))
 		{
 		  // Struck a wall
-		  BounceWall();
+		  BounceWall(ptryx, ptryy);
 		  DActor *t = IsOf(DActor::_type) ? reinterpret_cast<DActor*>(this) : NULL;
 		  if (t)
 		    switch (t->type)

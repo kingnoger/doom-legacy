@@ -810,7 +810,7 @@ void A_PoisonBagInit(DActor *actor)
   mo->vel.x = 1; // missile objects must move to impact other objects
   mo->special1 = 24+(P_Random()&7);
   mo->special2 = 0;
-  mo->target = actor->target;
+  mo->owner = actor->owner;
   mo->radius = 20;
   mo->height = 30;
   mo->flags &= ~(MF_NOCLIPLINE | MF_NOCLIPTHING);
@@ -997,7 +997,7 @@ void A_TeloSpawnA(DActor *actor)
     {
       mo->special1 = TELEPORT_LIFE;			// Lifetime countdown
       mo->yaw = actor->yaw;
-      mo->target = actor->target;
+      mo->owner = actor->owner;
       mo->vel = actor->vel >> 1;
     }
 }
@@ -1009,7 +1009,7 @@ void A_TeloSpawnB(DActor *actor)
     {
       mo->special1 = TELEPORT_LIFE;			// Lifetime countdown
       mo->yaw = actor->yaw;
-      mo->target = actor->target;
+      mo->owner = actor->owner;
       mo->vel = actor->vel >> 1;
     }
 }
@@ -1021,7 +1021,7 @@ void A_TeloSpawnC(DActor *actor)
     {
       mo->special1 = TELEPORT_LIFE;			// Lifetime countdown
       mo->yaw = actor->yaw;
-      mo->target = actor->target;
+      mo->owner = actor->owner;
       mo->vel = actor->vel >> 1;
     }
 }
@@ -1033,7 +1033,7 @@ void A_TeloSpawnD(DActor *actor)
     {
       mo->special1 = TELEPORT_LIFE;			// Lifetime countdown
       mo->yaw = actor->yaw;
-      mo->target = actor->target;
+      mo->owner = actor->owner;
       mo->vel = actor->vel >> 1;
     }
 }

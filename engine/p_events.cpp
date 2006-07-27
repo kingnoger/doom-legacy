@@ -659,11 +659,9 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
     case 120: // Quake Tremor
       success = EV_LocalQuake(args);
       break;
-      /*
-    case 129: // UsePuzzleItem. Not needed, see P_UseArtifact()
+    case 129: // UsePuzzleItem. Not really needed, see P_UseArtifact()
       success = EV_LineSearchForPuzzleItem(line, args, mo);
       break;
-      */
     case 130: // Thing_Activate
       success = EV_ThingActivate(args[0]);
       break;
