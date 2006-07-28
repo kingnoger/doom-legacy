@@ -55,7 +55,7 @@ extern Actor *PuffSpawned;
 //
 //============================================================================
 
-#define MAX_ANGLE_ADJUST (5*ANGLE_1)
+static const int MAX_ANGLE_ADJUST = 5*ANGLE_1;
 
 void Pawn::AdjustPlayerAngle(Actor *t)
 {
@@ -77,28 +77,29 @@ void Pawn::AdjustPlayerAngle(Actor *t)
 static int MeleeBlow(PlayerPawn *player, int damage, fixed_t range, fixed_t power, angle_t sweep = ANG45/16)
 {
   angle_t angle;
-  fixed_t slope;
+  fixed_t sine;
+  Actor *targ;
 
   // sweep for targets in front
   for (int i = 0; i < 16; i++)
     {
       angle = player->yaw + i*sweep;
-      slope = player->AimLineAttack(angle, range);
+      targ = player->AimLineAttack(angle, range, sine);
 
-      if (!linetarget)
+      if (!targ)
 	{
 	  // try the other side
 	  angle = player->yaw - i*sweep;
-	  slope = player->AimLineAttack(angle, range);
+	  targ = player->AimLineAttack(angle, range, sine);
 	}
 
-      if (linetarget)
+      if (targ)
 	{
-	  player->LineAttack(angle, range, slope, damage);
-	  if (linetarget->flags & MF_SHOOTABLE && power > 0)
-	    linetarget->Thrust(angle, power);
+	  player->LineAttack(angle, range, sine, damage);
+	  if (targ->flags & MF_SHOOTABLE && power > 0)
+	    targ->Thrust(angle, power);
 
-	  player->AdjustPlayerAngle(linetarget);
+	  player->AdjustPlayerAngle(targ);
 	  return 1;
 	}
     }
@@ -107,9 +108,9 @@ static int MeleeBlow(PlayerPawn *player, int damage, fixed_t range, fixed_t powe
   angle = player->yaw;
 
   // NOTE: some attacks had MELEERANGE here, I assume they're just typos
-  slope = player->AimLineAttack(angle, range);
+  player->AimLineAttack(angle, range, sine);
 
-  if (!player->LineAttack(angle, range, slope, damage))
+  if (!player->LineAttack(angle, range, sine, damage))
     S_StartSound(player, SFX_FIGHTER_HAMMER_MISS);
 
   return 0;
@@ -125,23 +126,19 @@ static int MeleeBlow(PlayerPawn *player, int damage, fixed_t range, fixed_t powe
 
 void A_SnoutAttack(PlayerPawn *player, pspdef_t *psp)
 {
-  angle_t angle;
-  int damage;
-  fixed_t slope;
+  fixed_t sine;
 
-  damage = 3+(P_Random()&3);
-  angle = player->yaw;
-  slope = player->AimLineAttack(angle, MELEERANGE);
+  int damage = 3+(P_Random()&3);
+  angle_t angle = player->yaw;
+  player->AimLineAttack(angle, MELEERANGE, sine);
   PuffType = MT_SNOUTPUFF;
   PuffSpawned = NULL;
-  player->LineAttack(angle, MELEERANGE, slope, damage);
+  Actor *targ = player->LineAttack(angle, MELEERANGE, sine, damage);
   S_StartSound(player, SFX_PIG_ACTIVE1+(P_Random()&1));
-  if(linetarget)
+  if (targ)
     {
-      player->AdjustPlayerAngle(linetarget);
-      //		player->yaw = R_PointToAngle2(player->x,
-      //			player->y, linetarget->x, linetarget->y);
-      if(PuffSpawned)
+      player->AdjustPlayerAngle(targ);
+      if (PuffSpawned)
 	{ // Bit something
 	  S_StartSound(player, SFX_PIG_ATTACK);
 	}
@@ -643,7 +640,7 @@ void A_MStaffAttack2(DActor *actor)
 void A_FPunchAttack(PlayerPawn *player, pspdef_t *psp)
 {
   angle_t angle;
-  fixed_t slope;
+  fixed_t sine;
 
   int damage = 40+(P_Random()&15);
   fixed_t power = 2;
@@ -652,15 +649,15 @@ void A_FPunchAttack(PlayerPawn *player, pspdef_t *psp)
     {
       // find the target most directly in front of the player
       angle = player->yaw+i*(ANG45/16);
-      slope = player->AimLineAttack(angle, 2*MELEERANGE);
-      if (!linetarget)
+      Actor *targ = player->AimLineAttack(angle, 2*MELEERANGE, sine);
+      if (!targ)
 	{
 	  // try the other side
 	  angle = player->yaw-i*(ANG45/16);
-	  slope = player->AimLineAttack(angle, 2*MELEERANGE);
+	  targ = player->AimLineAttack(angle, 2*MELEERANGE, sine);
 	}
 
-      if (linetarget)
+      if (targ)
 	{
 	  player->attackphase++;
 	  if (player->attackphase == 3)
@@ -669,19 +666,19 @@ void A_FPunchAttack(PlayerPawn *player, pspdef_t *psp)
 	      power = 6;
 	      PuffType = MT_HAMMERPUFF;
 	    }
-	  player->LineAttack(angle, 2*MELEERANGE, slope, damage);
-	  if (!linetarget)
+	  targ = player->LineAttack(angle, 2*MELEERANGE, sine, damage);
+	  if (!targ)
 	    {
 	      CONS_Printf("AimLineAttack mismatch (bug)\n");
 	      return;
 	    }
 
-	  if (linetarget->flags & MF_SHOOTABLE)	  
-	    //(linetarget->flags&MF_COUNTKILL || linetarget->player)
+	  if (targ->flags & MF_SHOOTABLE)	  
+	    //(targ->flags&MF_COUNTKILL || targ->player)
 	    {
-	      linetarget->Thrust(angle, power);
+	      targ->Thrust(angle, power);
 	    }
-	  player->AdjustPlayerAngle(linetarget);
+	  player->AdjustPlayerAngle(targ);
 	  goto punchdone;
 	}
     }
@@ -690,8 +687,8 @@ void A_FPunchAttack(PlayerPawn *player, pspdef_t *psp)
   player->attackphase = 0;
 
   angle = player->yaw;
-  slope = player->AimLineAttack(angle, MELEERANGE);
-  if (!player->LineAttack(angle, MELEERANGE, slope, damage))
+  player->AimLineAttack(angle, MELEERANGE, sine);
+  if (!player->LineAttack(angle, MELEERANGE, sine, damage))
     S_StartSound(player, SFX_FIGHTER_PUNCH_MISS);
 
  punchdone:
@@ -771,33 +768,34 @@ void A_CStaffCheck(PlayerPawn *player, pspdef_t *psp)
   for (int i = 0; i < 3; i++)
     {
       angle_t angle = player->yaw + i*(ANG45/16);
-      fixed_t slope = player->AimLineAttack(angle, STAFFRANGE);
-      if (linetarget)
+      fixed_t sine;
+      Actor *targ = player->AimLineAttack(angle, STAFFRANGE, sine);
+      if (targ)
 	{
-	  player->LineAttack(angle, STAFFRANGE, slope, damage);
-	  player->yaw = R_PointToAngle2(player->pos, linetarget->pos);
-	  if ((linetarget->flags & (MF_COUNTKILL|MF_NOTMONSTER))
-	      && !(linetarget->flags2 & (MF2_DORMANT|MF2_INVULNERABLE)))
+	  player->LineAttack(angle, STAFFRANGE, sine, damage);
+	  player->yaw = R_PointToAngle2(player->pos, targ->pos);
+	  if ((targ->flags & (MF_COUNTKILL|MF_NOTMONSTER))
+	      && !(targ->flags2 & (MF2_DORMANT|MF2_INVULNERABLE)))
 	    {
-	      int newLife = player->health+(damage>>3);
+	      int newLife = player->health + (damage>>3);
 	      newLife = newLife > 100 ? 100 : newLife;
-	      player->health = player->health = newLife;
+	      player->health = newLife;
 	      player->SetPsprite(ps_weapon, S_CSTAFFATK2_1);
 	    }
 	  player->ammo[am_mana1] -= 
 	    player->weaponinfo[player->readyweapon].ammopershoot;
 	  break;
 	}
-      angle = player->yaw-i*(ANG45/16);
-      slope = player->AimLineAttack(angle, STAFFRANGE);
-      if (linetarget)
+      angle = player->yaw - i*(ANG45/16);
+      targ = player->AimLineAttack(angle, STAFFRANGE, sine);
+      if (targ)
 	{
-	  player->LineAttack(angle, STAFFRANGE, slope, damage);
-	  player->yaw = R_PointToAngle2(player->pos, linetarget->pos);
-	  if (linetarget->flags & (MF_COUNTKILL|MF_NOTMONSTER))
+	  player->LineAttack(angle, STAFFRANGE, sine, damage);
+	  player->yaw = R_PointToAngle2(player->pos, targ->pos);
+	  if (targ->flags & (MF_COUNTKILL|MF_NOTMONSTER))
 	    {
 	      // FIXME cstaff wtf? different condition, different health leech on other side?
-	      int newLife = player->health+(damage>>4);
+	      int newLife = player->health + (damage>>4);
 	      newLife = newLife > 100 ? 100 : newLife;
 	      player->health = newLife;
 	      player->SetPsprite(ps_weapon, S_CSTAFFATK2_1);
@@ -844,7 +842,10 @@ void A_CStaffMissileSlither(DActor *actor)
   weaveXY = (weaveXY + 3) & 63;
   newX += finecosine[angle] * FloatBobOffsets[weaveXY];
   newY += finesine[angle] * FloatBobOffsets[weaveXY];
-  actor->TryMove(newX, newY, true);
+
+  if (!actor->TryMove(newX, newY, true))
+    CONS_Printf("safafzfdfz\n");
+
   actor->special2 = weaveXY;
 }
 
@@ -997,7 +998,7 @@ void A_CFlameAttack(PlayerPawn *player, pspdef_t *psp)
 	{
 		PuffType = MT_FLAMEPUFF;
 	}
-	player->LineAttack(angle, CFLAMERANGE, bulletslope, damage);
+	player->LineAttack(angle, CFLAMERANGE, bulletsine, damage);
 	if(linetarget)
 	{ // Hit something, so spawn the flame circle around the thing
 		dist = linetarget->radius+18;
@@ -1120,9 +1121,9 @@ void A_CHolyAttack2(DActor *actor)
       if (cv_deathmatch.value)
 	mo->health = 85; // Ghosts last slightly less longer in DeathMatch
 
-      if (linetarget)
+      if (actor->target)
 	{
-	  mo->target = linetarget;
+	  mo->target = actor->target;
 	  mo->flags |= MF_NOCLIPLINE; // |MF_NOCLIPTHING;
 	  mo->flags &= ~MF_MISSILE;
 	  mo->eflags |= MFE_SKULLFLY;
@@ -1151,7 +1152,9 @@ void A_CHolyAttack(PlayerPawn *p, pspdef_t *psp)
   int mana = p->weaponinfo[p->readyweapon].ammopershoot;
   p->ammo[am_mana1] -= mana;
   p->ammo[am_mana2] -= mana;
-  p->SpawnPlayerMissile(MT_HOLY_MISSILE);
+  DActor *mo = p->SpawnPlayerMissile(MT_HOLY_MISSILE);
+  fixed_t dummy;
+  mo->target = p->AimLineAttack(p->yaw, AIMRANGE, dummy); // HACK to compensate SPMAngle without autoaim
 
   p->player->palette = STARTHOLYPAL;
   S_StartSound(p, SFX_CHOLY_FIRE);
@@ -1428,24 +1431,21 @@ void A_CHolySpawnPuff(DActor *actor)
 
 void A_FireConePL1(PlayerPawn *player, pspdef_t *psp)
 {
-  angle_t angle;
-  int damage;
-  fixed_t slope;
-  int i;
   bool conedone = false;
 
   player->ammo[am_mana1] -= player->weaponinfo[player->readyweapon].ammopershoot;
 
   S_StartSound(player, SFX_MAGE_SHARDS_FIRE);
 
-  damage = 90+(P_Random()&15);
-  for(i = 0; i < 16; i++)
+  int damage = 90+(P_Random()&15);
+  for (int i = 0; i < 16; i++)
     {
-      angle = player->yaw+i*(ANG45/16);
-      slope = player->AimLineAttack(angle, MELEERANGE);
-      if(linetarget)
+      angle_t angle = player->yaw+i*(ANG45/16);
+      fixed_t sine;
+      Actor *targ = player->AimLineAttack(angle, MELEERANGE, sine);
+      if (targ)
 	{
-	  linetarget->Damage(player, player, damage | dt_cold);
+	  targ->Damage(player, player, damage, dt_cold);
 	  conedone = true;
 	  break;
 	}

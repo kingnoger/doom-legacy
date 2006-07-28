@@ -941,60 +941,53 @@ void A_Fall(DActor *actor)
 //
 void A_PosAttack(DActor *actor)
 {
-  int         angle;
-  int         damage;
-
   if (!actor->target)
     return;
 
-  A_FaceTarget (actor);
-  angle = actor->yaw;
-  fixed_t slope = actor->AimLineAttack(angle, MISSILERANGE);
+  A_FaceTarget(actor);
+  angle_t angle = actor->yaw;
+  fixed_t sine;
+  actor->AimLineAttack(angle, MISSILERANGE, sine);
   S_StartAttackSound(actor, sfx_pistol);
   angle += P_SignedRandom()<<20;
-  damage = ((P_Random()%5)+1)*3;
-  actor->LineAttack(angle, MISSILERANGE, slope, damage);
+  int damage = ((P_Random()%5)+1)*3;
+  actor->LineAttack(angle, MISSILERANGE, sine, damage);
 }
 
 void A_SPosAttack(DActor *actor)
 {
-  int         i;
-  int         angle;
-  int         bangle;
-  int         damage;
-
   if (!actor->target)
     return;
+
   S_StartAttackSound(actor, sfx_shotgn);
   A_FaceTarget (actor);
-  bangle = actor->yaw;
-  fixed_t slope = actor->AimLineAttack(bangle, MISSILERANGE);
+  angle_t bangle = actor->yaw;
+  fixed_t sine;
+  actor->AimLineAttack(bangle, MISSILERANGE, sine);
 
-  for (i=0 ; i<3 ; i++)
+  for (int i=0 ; i<3 ; i++)
     {
-      angle  = (P_SignedRandom()<<20)+bangle;
-      damage = ((P_Random()%5)+1)*3;
-      actor->LineAttack(angle, MISSILERANGE, slope, damage);
+      angle_t angle  = (P_SignedRandom()<<20)+bangle;
+      int damage = ((P_Random()%5)+1)*3;
+      actor->LineAttack(angle, MISSILERANGE, sine, damage);
     }
 }
 
 void A_CPosAttack(DActor *actor)
 {
-  int         angle;
-  int         bangle;
-  int         damage;
-
   if (!actor->target)
     return;
+
   S_StartAttackSound(actor, sfx_shotgn);
   A_FaceTarget (actor);
-  bangle = actor->yaw;
-  fixed_t slope = actor->AimLineAttack(bangle, MISSILERANGE);
+  angle_t bangle = actor->yaw;
+  fixed_t sine;
+  actor->AimLineAttack(bangle, MISSILERANGE, sine);
 
-  angle  = (P_SignedRandom()<<20)+bangle;
+  angle_t angle  = (P_SignedRandom()<<20)+bangle;
 
-  damage = ((P_Random()%5)+1)*3;
-  actor->LineAttack(angle, MISSILERANGE, slope, damage);
+  int damage = ((P_Random()%5)+1)*3;
+  actor->LineAttack(angle, MISSILERANGE, sine, damage);
 }
 
 void A_CPosRefire(DActor *actor)

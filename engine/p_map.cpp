@@ -36,15 +36,25 @@
  */
 
 /*!
-  \defgroup g_ptr Traverser functions intercept_t's
+  \defgroup g_trace Trace functions
   \ingroup g_iterators
+
+  A trace is a line segment drawn through the Map geometry
+  from point A to point B. It may be intercepted by linedefs and Actors.
+  These intercept events are recorded using intercept_t.
+  Afterwards, the intercepts may be processed using a traverser function.
+
+  The trace system has been modified. Now 'slope' always means tan(angle),
+  for sin(angle) we use 'sine'.
+ */
+
+/*!
+  \defgroup g_ptr Traverser functions for intercept_t's
+  \ingroup g_trace
 
   The PTR functions: Unary functors for intercept_t
   Return false to stop traversal, true to continue.
  */
-
-
-// FIXME entire aiming/sight/trace/intercept system: handle z coordinate better. also, slope was originally tangent, now it is sine, but NOT everywhere! FIX!
 
 
 #include <math.h>
@@ -75,7 +85,7 @@ extern int boomsupport;
 
 // TODO add z parameter to ALL movement/clipping functions (you can always use ONFLOORZ as a default)
 
-Actor    *tmthing; // cp,
+static Actor    *tmthing; // cp,
 
 
 // If "floatok" true, move would be ok
@@ -115,7 +125,7 @@ const fixed_t MAXSTEPMOVE = 24;
 
 // Attempt to move to a new position,
 // crossing special lines in the way.
-// TODO verify logic
+// TODO verify onmobj logic
 bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 {
   //  max Z move up or down without jumping
@@ -617,7 +627,7 @@ static bool PIT_CheckLine(line_t *ld)
       return false;
     }
 
-  line_opening_t *open = P_LineOpening(ld);
+  line_opening_t *open = P_LineOpening(ld, tmthing);
 
   // adjust floor / ceiling heights
   if (open->top < tmceilingz)
@@ -1043,7 +1053,7 @@ static bool PTR_SlideTraverse(intercept_t *in)
     }
   else if (!(li->flags & ML_BLOCKING))
     {
-      line_opening_t *open = P_LineOpening(li);
+      line_opening_t *open = P_LineOpening(li, slidemo);
 
       if (!(open->range < slidemo->height ||
 	    open->top < slidemo->Top() || 
@@ -1188,7 +1198,7 @@ static bool PTR_BounceTraverse(intercept_t *in)
     }
   else
     {
-      line_opening_t *open = P_LineOpening(li);
+      line_opening_t *open = P_LineOpening(li, slidemo);
 
       // will it fit through? FIXME does this include fake floors?
       if (open->range >= slidemo->height &&
@@ -1266,16 +1276,19 @@ void Actor::BounceWall(fixed_t nx, fixed_t ny)
 //   Autoaim, shooting with instahit weapons
 //==========================================================================
 
-Actor *linetarget;     // who got hit (or NULL)
 static Actor *shootthing;
+
+Actor *linetarget;     // who got hit (or NULL) // TODO make static
+static fixed_t aimsine; // == Sin(pitch)
+static fixed_t bottomsine, topsine; // vertical aiming range
 
 static fixed_t shootz; // bullet starting z
 static fixed_t lastz;  //SoM: The last z height of the bullet when it crossed a line
 
 static int     la_damage, la_dtype;
-static fixed_t attackrange;
+static fixed_t attackrange; // 3D length of the attack trace
 
-static fixed_t aimslope; // == Sin(pitch)
+
 
 mobjtype_t PuffType = MT_PUFF;
 Actor *PuffSpawned;
@@ -1327,15 +1340,13 @@ void Map::SpawnPuff(fixed_t x, fixed_t y, fixed_t z)
 /// \brief Aiming up and down for missile attacks.
 /// \ingroup g_ptr
 /*!
-  Seeks targets along the trace between bottomslope and topslope.
+  Seeks targets along the trace between bottomsine and topsine.
   Sets linetarget when a target is hit.
   Returns true if the thing is not shootable, else continue through..
 */
 static bool PTR_AimTraverse(intercept_t *in)
 {
-  fixed_t dist;
-
-  extern fixed_t bottomslope, topslope;
+  fixed_t dist; // 3D distance
 
   if (in->isaline)
     {
@@ -1345,10 +1356,8 @@ static bool PTR_AimTraverse(intercept_t *in)
 	return false;               // stop
 
       // Crosses a two sided line.
-      // A two sided line will restrict
-      // the possible target ranges.
-      tmthing = NULL;
-      line_opening_t *open = P_LineOpening(li);
+      // A two sided line will restrict the possible target ranges.
+      line_opening_t *open = P_LineOpening(li); // TODO thing?
 
       if (open->range <= 0)
 	return false;               // stop
@@ -1360,146 +1369,132 @@ static bool PTR_AimTraverse(intercept_t *in)
       if (li->frontsector->floorheight != li->backsector->floorheight)
         {
 	  temp = (open->bottom - shootz) / dist;
-	  if (temp > bottomslope)
-	    bottomslope = temp;
+	  if (temp > bottomsine)
+	    bottomsine = temp;
         }
 
       if (li->frontsector->ceilingheight != li->backsector->ceilingheight)
         {
 	  temp = (open->top - shootz) / dist;
-	  if (temp < topslope)
-	    topslope = temp;
+	  if (temp < topsine)
+	    topsine = temp;
         }
 
-      if (topslope <= bottomslope)
+      if (topsine <= bottomsine)
 	return false;               // stop
 
+
+      // FIXME aimsine is used here, but it makes no sense! we're aiming up and down! it's not well-defined yet!
       if (li->frontsector->ffloors || li->backsector->ffloors)
         {
-          int  frontflag;
+          int dir = (aimsine > 0) ? 1 : ((aimsine < 0) ? -1 : 0);
 
-          int dir = aimslope > 0 ? 1 : aimslope < 0 ? -1 : 0;
-
-          frontflag = P_PointOnLineSide(shootthing->pos.x, shootthing->pos.y, li);
+          int frontflag = P_PointOnLineSide(shootthing->pos.x, shootthing->pos.y, li);
 
           //SoM: Check 3D FLOORS!
-          if (li->frontsector->ffloors)
+	  for (ffloor_t *rover = li->frontsector->ffloors; rover; rover = rover->next)
 	    {
-	      ffloor_t *rover = li->frontsector->ffloors;
-	      fixed_t    highslope, lowslope;
+	      if (!(rover->flags & FF_SOLID) || !(rover->flags & FF_EXISTS))
+		continue;
 
-	      for(; rover; rover = rover->next)
-		{
-		  if (!(rover->flags & FF_SOLID) || !(rover->flags & FF_EXISTS)) continue;
+	      fixed_t highsine = (*rover->topheight - shootz) / dist;
+	      fixed_t lowsine = (*rover->bottomheight - shootz) / dist;
+	      if ((aimsine >= lowsine && aimsine <= highsine))
+		return false; // hit the side of the floor
 
-		  highslope = (*rover->topheight - shootz) / dist;
-		  lowslope = (*rover->bottomheight - shootz) / dist;
-		  if ((aimslope >= lowslope && aimslope <= highslope))
-		    return false;
+	      if (lastz > *rover->topheight && dir == -1 && aimsine < highsine)
+		frontflag |= 0x2;
 
-		  if (lastz > *rover->topheight && dir == -1 && aimslope < highslope)
-		    frontflag |= 0x2;
-
-		  if (lastz < *rover->bottomheight && dir == 1 && aimslope > lowslope)
-		    frontflag |= 0x2;
-		}
+	      if (lastz < *rover->bottomheight && dir == 1 && aimsine > lowsine)
+		frontflag |= 0x2;
 	    }
 
-          if (li->backsector->ffloors)
+	  for (ffloor_t *rover = li->backsector->ffloors; rover; rover = rover->next)
 	    {
-	      ffloor_t *rover = li->backsector->ffloors;
-	      fixed_t    highslope, lowslope;
+	      if (!(rover->flags & FF_SOLID) || !(rover->flags & FF_EXISTS))
+		continue;
 
-	      for(; rover; rover = rover->next)
-		{
-		  if (!(rover->flags & FF_SOLID) || !(rover->flags & FF_EXISTS)) continue;
+	      fixed_t highsine = (*rover->topheight - shootz) / dist;
+	      fixed_t lowsine = (*rover->bottomheight - shootz) / dist;
+	      if ((aimsine >= lowsine && aimsine <= highsine))
+		return false; // hit the side of the floor
 
-		  highslope = (*rover->topheight - shootz) / dist;
-		  lowslope = (*rover->bottomheight - shootz) / dist;
-		  if ((aimslope >= lowslope && aimslope <= highslope))
-		    return false;
+	      if (lastz > *rover->topheight && dir == -1 && aimsine < highsine)
+		frontflag |= 0x4;
 
-		  if (lastz > *rover->topheight && dir == -1 && aimslope < highslope)
-		    frontflag |= 0x4;
-
-		  if (lastz < *rover->bottomheight && dir == 1 && aimslope > lowslope)
-		    frontflag |= 0x4;
-		}
+	      if (lastz < *rover->bottomheight && dir == 1 && aimsine > lowsine)
+		frontflag |= 0x4;
 	    }
+
           if ((!(frontflag & 0x1) && frontflag & 0x2) || (frontflag & 0x1 && frontflag & 0x4))
             return false;
         }
 
-      lastz = aimslope * dist + shootz;
+      lastz = aimsine * dist + shootz; // FIXME aimsine is not well-defined
 
-      return true;                    // shot continues
+      return true; // shot continues
     }
 
   // shoot a thing
   Actor *th = in->thing;
   if (th == shootthing)
-    return true;                    // can't shoot self
+    return true; // can't shoot self
 
   // TODO pods should not be targeted it seems. Add a new flag?
   // || (th->type == MT_POD))
-  if ((!(th->flags & MF_SHOOTABLE)) || (th->flags & MF_CORPSE))
+  if (!(th->flags & MF_SHOOTABLE) || (th->flags & MF_CORPSE))
     return true; // corpse or something
+  // NOTE since top- and bottomsines are not adjusted, we may try to shoot through the thing!
 
   // check angles to see if the thing can be aimed at
   dist = attackrange * in->frac;
-  fixed_t thingtopslope = (th->Top() - shootz ) / dist;
+  fixed_t thingtopsine = (th->Top() - shootz) / dist;
 
-  //added:15-02-98: bottomslope is negative!
-  if (thingtopslope < bottomslope)
+  if (thingtopsine < bottomsine)
     return true;                    // shot over the thing
 
-  fixed_t thingbottomslope = (th->pos.z - shootz) / dist;
+  fixed_t thingbottomsine = (th->Feet() - shootz) / dist;
 
-  if (thingbottomslope > topslope)
+  if (thingbottomsine > topsine)
     return true;                    // shot under the thing
 
-  // this thing can be hit!
-  if (thingtopslope > topslope)
-    thingtopslope = topslope;
+  // this thing can be hit! take aim!
+  if (thingtopsine > topsine)
+    thingtopsine = topsine;
 
-  if (thingbottomslope < bottomslope)
-    thingbottomslope = bottomslope;
+  if (thingbottomsine < bottomsine)
+    thingbottomsine = bottomsine;
 
-  //added:15-02-98: find the slope just in the middle(y) of the thing!
-  aimslope = (thingtopslope+thingbottomslope)/2;
+  //added:15-02-98: find the sine just in the middle(y) of the thing!
+  aimsine = (thingtopsine + thingbottomsine)/2;
   linetarget = th;
 
-  return false;                       // don't go any farther
+  return false; // don't seek any farther
 }
 
 
 /// \brief Firing instant-hit missile weapons.
 /// \ingroup g_ptr
 /*!
-  Sets linetarget and aimslope when a target is aimed at.
+  Sets linetarget and aimsine when a target is aimed at.
   Returns true if the thing is not shootable, else continue through..
 */
 static bool PTR_ShootTraverse(intercept_t *in)
 {
   //added:18-02-98: added clipping the shots on the floor and ceiling.
-  fixed_t  x, y, z;
-  fixed_t             frac;
+  fixed_t x, y, z;
+  fixed_t sine; // temp variable
 
-  fixed_t             slope;
-  fixed_t             dist;
+  fixed_t dist;  // 3D distance
+  fixed_t frac;
 
-  fixed_t             floorz = 0;  //SoM: Bullets should hit fake floors!
-  fixed_t             ceilingz = 0;
-
-  //added:18-02-98:
-  fixed_t        distz;    //dist between hit z on wall       and gun z
   bool        hitplane;    //true if we clipped z on floor/ceil plane
 
-  int            dir;
+  int dir;
 
-  if (aimslope > 0)
+  if (aimsine > 0)
     dir = 1;
-  else if (aimslope < 0)
+  else if (aimsine < 0)
     dir = -1;
   else
     dir = 0;
@@ -1515,95 +1510,80 @@ static bool PTR_ShootTraverse(intercept_t *in)
       line_t *li = in->line;
 
       if (li->special)
-	m->ActivateLine(li, shootthing, 0, SPAC_IMPACT);
-      // m->ShootSpecialLine(shootthing, li); // your documentation no longer confuses me, old version
+	m->ActivateLine(li, shootthing, 0, SPAC_IMPACT); // your documentation no longer confuses me, old version
 
       if (!(li->flags & ML_TWOSIDED))
 	goto hitline;
 
-      // crosses a two sided line
       {
-	tmthing = NULL;
-	line_opening_t *open = P_LineOpening(li);
+      // crosses a two sided line
+      line_opening_t *open = P_LineOpening(li, shootthing); // TODO correct thing?
 
-	dist = attackrange * in->frac;
+      dist = attackrange * in->frac;
 
-	// hit lower texture ?
-	if (li->frontsector->floorheight != li->backsector->floorheight)
-	  {
-	    //added:18-02-98: comments :
-	    // find the slope aiming on the border between the two floors
-	    slope = (open->bottom - shootz ) / dist;
-	    if (slope > aimslope)
-	      goto hitline;
-	  }
+      // hit low?
+      if (li->frontsector->floorheight != li->backsector->floorheight)
+	{
+	  //added:18-02-98: comments :
+	  // find the sine aiming on the border between the two floors
+	  sine = (open->bottom - shootz) / dist;
+	  if (sine > aimsine)
+	    goto hitline;
+	}
 
-	// hit upper texture ?
-	if (li->frontsector->ceilingheight != li->backsector->ceilingheight)
-	  {
-	    //added:18-02-98: remember : diff ceil heights
-	    diffheights = true;
+      // hit high?
+      if (li->frontsector->ceilingheight != li->backsector->ceilingheight)
+	{
+	  //added:18-02-98: remember : diff ceil heights
+	  diffheights = true;
 
-	    slope = (open->top - shootz ) / dist;
-	    if (slope < aimslope)
-	      goto hitline;
-	  }
+	  sine = (open->top - shootz) / dist;
+	  if (sine < aimsine)
+	    goto hitline;
+	}
       }
 
       if (li->frontsector->ffloors || li->backsector->ffloors)
         {
-          int  frontflag;
-
-          frontflag = P_PointOnLineSide(shootthing->pos.x, shootthing->pos.y, li);
+          int frontflag = P_PointOnLineSide(shootthing->pos.x, shootthing->pos.y, li);
 
           //SoM: Check 3D FLOORS!
-          if (li->frontsector->ffloors)
+	  for (ffloor_t *rover = li->frontsector->ffloors; rover; rover = rover->next)
 	    {
-	      ffloor_t *rover = li->frontsector->ffloors;
-	      fixed_t    highslope, lowslope;
+	      if (!(rover->flags & FF_SOLID) || !(rover->flags & FF_EXISTS)) continue;
 
-	      for(; rover; rover = rover->next)
-		{
-		  if (!(rover->flags & FF_SOLID) || !(rover->flags & FF_EXISTS)) continue;
+	      fixed_t highsine = (*rover->topheight - shootz) / dist;
+	      fixed_t lowsine = (*rover->bottomheight - shootz) / dist;
+	      if ((aimsine >= lowsine && aimsine <= highsine))
+		goto hitline;
 
-		  highslope = (*rover->topheight - shootz) / dist;
-		  lowslope = (*rover->bottomheight - shootz) / dist;
-		  if ((aimslope >= lowslope && aimslope <= highslope))
-		    goto hitline;
+	      if (lastz > *rover->topheight && dir == -1 && aimsine < highsine)
+		frontflag |= 0x2;
 
-		  if (lastz > *rover->topheight && dir == -1 && aimslope < highslope)
-		    frontflag |= 0x2;
-
-		  if (lastz < *rover->bottomheight && dir == 1 && aimslope > lowslope)
-		    frontflag |= 0x2;
-		}
+	      if (lastz < *rover->bottomheight && dir == 1 && aimsine > lowsine)
+		frontflag |= 0x2;
 	    }
 
-          if (li->backsector->ffloors)
+	  for (ffloor_t *rover = li->backsector->ffloors; rover; rover = rover->next)
 	    {
-	      ffloor_t *rover = li->backsector->ffloors;
-	      fixed_t    highslope, lowslope;
+	      if (!(rover->flags & FF_SOLID) || !(rover->flags & FF_EXISTS)) continue;
 
-	      for(; rover; rover = rover->next)
-		{
-		  if (!(rover->flags & FF_SOLID) || !(rover->flags & FF_EXISTS)) continue;
+	      fixed_t highsine = (*rover->topheight - shootz) / dist;
+	      fixed_t lowsine = (*rover->bottomheight - shootz) / dist;
+	      if ((aimsine >= lowsine && aimsine <= highsine))
+		goto hitline;
 
-		  highslope = (*rover->topheight - shootz) / dist;
-		  lowslope = (*rover->bottomheight - shootz) / dist;
-		  if ((aimslope >= lowslope && aimslope <= highslope))
-		    goto hitline;
+	      if (lastz > *rover->topheight && dir == -1 && aimsine < highsine)
+		frontflag |= 0x4;
 
-		  if (lastz > *rover->topheight && dir == -1 && aimslope < highslope)
-		    frontflag |= 0x4;
-
-		  if (lastz < *rover->bottomheight && dir == 1 && aimslope > lowslope)
-		    frontflag |= 0x4;
-		}
+	      if (lastz < *rover->bottomheight && dir == 1 && aimsine > lowsine)
+		frontflag |= 0x4;
 	    }
+
           if ((!(frontflag & 0x1) && frontflag & 0x2) || (frontflag & 0x1 && frontflag & 0x4))
             goto hitline;
         }
-      lastz = aimslope * dist + shootz;
+      lastz = aimsine * dist + shootz;
 
       // shot continues
       return true;
@@ -1611,39 +1591,40 @@ static bool PTR_ShootTraverse(intercept_t *in)
 
       // hit line
     hitline:
-
+#warning TODO check this
       // position a bit closer
       frac = in->frac - 4 / attackrange;
-      dist = frac * attackrange;    //dist to hit on line
+      dist = frac * attackrange; // four mapunits back from actual intercept
 
-      distz = aimslope * dist;      //z add between gun z and hit z
-      z = shootz + distz;                     // hit z on wall
+      fixed_t distz = aimsine * dist; // z add between gun z and hit z
+      z = shootz + distz; // hit z on wall
 
       //added:17-02-98: clip shots on floor and ceiling
       //                use a simple triangle stuff a/b = c/d ...
       // BP:13-3-99: fix the side usage
       hitplane = false;
-      int sectorside = P_PointOnLineSide(shootthing->pos.x,shootthing->pos.y,li);
+      int sectorside = P_PointOnLineSide(shootthing->pos.x, shootthing->pos.y, li);
       sector_t *sector = NULL;
+      fixed_t   floorz = 0;  //SoM: Bullets should hit fake floors!
+      fixed_t   ceilingz = 0;
 
       if (li->sideptr[sectorside] != NULL) // can happen in nocliping mode
         {
 	  sector = li->sideptr[sectorside]->sector;
+
 	  floorz = sector->floorheight;
 	  ceilingz = sector->ceilingheight;
-	  if (sector->ffloors)
-            {
-              ffloor_t *rover;
-              for(rover = sector->ffloors; rover; rover = rover->next)
-		{
-		  if (!(rover->flags & FF_SOLID)) continue;
 
-		  if (dir == 1 && *rover->bottomheight < ceilingz && *rover->bottomheight > lastz)
-		    ceilingz = *rover->bottomheight;
-		  if (dir == -1 && *rover->topheight > floorz && *rover->topheight < lastz)
-		    floorz = *rover->topheight;
-		}
-            }
+	  for (ffloor_t *rover = sector->ffloors; rover; rover = rover->next)
+	    {
+	      if (!(rover->flags & FF_SOLID))
+		continue;
+
+	      if (dir == 1 && *rover->bottomheight < ceilingz && *rover->bottomheight > lastz)
+		ceilingz = *rover->bottomheight;
+	      if (dir == -1 && *rover->topheight > floorz && *rover->topheight < lastz)
+		floorz = *rover->topheight;
+	    }
 
 	  if ((z > ceilingz) && distz != 0)
             {
@@ -1695,7 +1676,7 @@ static bool PTR_ShootTraverse(intercept_t *in)
 
       if (sector && sector->ffloors)
         {
-          if (dir == 1 && z + 16 > ceilingz)
+          if (dir == 1 && z + 16 > ceilingz) // FIXME magic number
             z = ceilingz - 16;
           if (dir == -1 && z < floorz)
             z = floorz;
@@ -1713,28 +1694,27 @@ static bool PTR_ShootTraverse(intercept_t *in)
     return true;            // can't shoot self
 
   if (!(th->flags & MF_SHOOTABLE))
-    return true;            // corpse or something
+    return true; // nonshootable
 
-  // check for physical attacks on a ghost
-  // FIXME this is stupid. We should use some sort of damage type system.
+  // check for physical attacks on a ghost FIXME this is stupid. We should use some sort of damage type system.
   // (if damagetype != dt_ethereal ...)
   /*
   if (game.mode == gm_heretic && (th->flags & MF_SHADOW))
     if (shootthing->Type() == Thinker::tt_ppawn)
-      if (((PlayerPawn *)shootthing)->player->readyweapon == wp_staff)
+      if (shootthing->readyweapon == wp_staff)
 	return true;
   */
 
   // check angles to see if the thing can be aimed at
   dist = attackrange * in->frac;
-  fixed_t thingtopslope = (th->Top() - shootz) / dist;
+  fixed_t thingtopsine = (th->Top() - shootz) / dist;
 
-  if (thingtopslope < aimslope)
+  if (thingtopsine < aimsine)
     return true;            // shot over the thing
 
-  fixed_t thingbottomslope = (th->pos.z - shootz) / dist;
+  fixed_t thingbottomsine = (th->Feet() - shootz) / dist;
 
-  if (thingbottomslope > aimslope)
+  if (thingbottomsine > aimsine)
     return true;            // shot under the thing
 
   // SoM: SO THIS IS THE PROBLEM!!!
@@ -1743,22 +1723,19 @@ static bool PTR_ShootTraverse(intercept_t *in)
   // it appears that the bullet hits the 3D floor but it actually just hits
   // the line behind it. Thus allowing a bullet to hit things under a 3D
   // floor and still be clipped a 3D floor.
-  if (th->subsector->sector->ffloors)
+
+  sector_t *sector = th->subsector->sector;
+  for (ffloor_t *rover = sector->ffloors; rover; rover = rover->next)
     {
-      sector_t *sector = th->subsector->sector;
-      ffloor_t *rover;
+      if (!(rover->flags & FF_SOLID))
+	continue;
 
-      for(rover = sector->ffloors; rover; rover = rover->next)
-	{
-	  if (!(rover->flags & FF_SOLID))
-	    continue;
-
-	  if (dir == -1 && *rover->topheight < lastz && *rover->topheight > th->Top())
-	    return true;
-	  if (dir == 1 && *rover->bottomheight > lastz && *rover->bottomheight < th->Feet())
-	    return true;
-	}
+      if (dir == -1 && *rover->topheight < lastz && *rover->topheight > th->Top())
+	return true;
+      if (dir == 1 && *rover->bottomheight > lastz && *rover->bottomheight < th->Feet())
+	return true;
     }
+
 
   // hit thing
   // position a bit closer
@@ -1766,7 +1743,7 @@ static bool PTR_ShootTraverse(intercept_t *in)
 
   x = trace.x + (trace.dx * frac);
   y = trace.y + (trace.dy * frac);
-  z = shootz + aimslope * (frac * attackrange);
+  z = shootz + aimsine * (frac * attackrange);
 
   if (la_damage)
     hitplane = th->Damage(shootthing, shootthing, la_damage, la_dtype);
@@ -1787,7 +1764,7 @@ static bool PTR_ShootTraverse(intercept_t *in)
     m->SpawnPuff(x,y,z);
   else
     {
-      if (game.mode == gm_heretic || game.mode == gm_hexen)
+      if (game.mode >= gm_heretic)
 	m->SpawnPuff(x, y, z);
 
       /* TODO heretic blood splatter
@@ -1812,12 +1789,21 @@ static bool PTR_ShootTraverse(intercept_t *in)
 }
 
 
-// Actor tries to find a target
-fixed_t Actor::AimLineAttack(angle_t ang, fixed_t distance)
+/// \brief Actor tries to find a target for an attack
+/// \ingroup g_trace
+/*!
+  The function performs a trace starting from (roughly) the center of the Actor.
+  It returns the nearest suitable target that can be hit by varying the pitch of the trace.
+  \param[in] ang yaw angle for the attack
+  \param[in] distance range of the attack (including z direction!)
+  \param[out] sinpitch sine of the pitch angle towards target
+  \return pointer to the target or NULL if none was found
+*/
+Actor *Actor::AimLineAttack(angle_t ang, fixed_t distance, fixed_t &sinpitch)
 {
-  extern fixed_t bottomslope, topslope;
-
   shootthing = this;
+  attackrange = distance;
+  linetarget = NULL;
 
   // Since monsters shouldn't change their "pitch" angle,
   // why not use the same routine for them also?
@@ -1825,76 +1811,70 @@ fixed_t Actor::AimLineAttack(angle_t ang, fixed_t distance)
   fixed_t x2 = pos.x + temp * Cos(ang);
   fixed_t y2 = pos.y + temp * Sin(ang);
 
+  aimsine = Sin(pitch); // initial try, TODO bad heuristics for ffloors...
+
   //added:15-02-98: Fab comments...
   // Doom's base engine says that at a distance of 160,
   // the 2d graphics on the plane x,y correspond 1/1 with plane units
   const fixed_t ds = 10.0f/16; // tan of half the vertical fov
-  fixed_t aimslope = Sin(pitch);
-  topslope    = aimslope + ds; // TODO not correct... should add the angles and do some clipping
-  bottomslope = aimslope - ds;
 
-  shootz = lastz = Center() + 8 - floorclip; // FIXME magic number
 
+  topsine    = aimsine + ds; // TODO not correct... should add the angles and do some clipping
+  bottomsine = aimsine - ds;
   // can't shoot outside view angles
 
-
-  attackrange = distance;
-  linetarget = NULL;
+  shootz = lastz = Center() + 8 - floorclip; // FIXME magic number
 
   //added:15-02-98: comments
   // traverse all linedefs and mobjs from the blockmap containing t1,
   // to the blockmap containing the dest. point.
   // Call the function for each mobj/line on the way,
   // starting with the mobj/linedef at the shortest distance...
-  mp->PathTraverse(pos.x, pos.y, x2, y2,
-		   PT_ADDLINES|PT_ADDTHINGS,
-		   PTR_AimTraverse);
+  mp->PathTraverse(pos.x, pos.y, x2, y2, PT_ADDLINES | PT_ADDTHINGS, PTR_AimTraverse);
 
-  //added:15-02-98: linetarget is only for mobjs, not for linedefs
-  if (linetarget)
-    return aimslope;
-
-  return 0;
+  // found a target?
+  sinpitch = aimsine; // unchanged if no target was found
+  return linetarget;
 }
 
 
-// If damage == 0, it is just a test trace
-// that will leave linetarget set.
-//
-// Shoots an insta-hit projectile from Actor to the direction determined by (yaw, pitch)
-// 'distance' is the max distance for the projectile
-// 'damage' is obvious, dtype is the damage type.
-// global variable 'linetarget' will point to the Actor who got hit.
-// Returns false if nothing was hit.
-
-bool Actor::LineAttack(angle_t ang, fixed_t distance, fixed_t slope, int damage, int dtype)
+/// \brief Shoots an insta-hit projectile from Actor to the direction determined by (yaw, pitch)
+/// \ingroup g_trace
+/*!
+  The function performs a trace starting from (roughly) the center of the actor.
+  If damage == 0, it is just a test trace that will leave linetarget set.
+  Otherwise, a contacted target will be damaged.
+  \param ang yaw angle for the attack
+  \param distance max range for the projectile (including z direction!)
+  \param sine sin(pitch) for the attack
+  \param damage damage amount
+  \param dtype damage type
+  \return pointer to the target or NULL if none was hit
+*/
+Actor *Actor::LineAttack(angle_t ang, fixed_t distance, fixed_t sine, int damage, int dtype)
 {
   shootthing = this;
+  attackrange = distance;
+  linetarget = NULL;
   la_damage = damage;
   la_dtype = dtype;
 
-  // NOTE see AimLineAttack, same here
-  fixed_t temp = sqrt((1 - slope*slope).Float()) * distance;
-  //fixed_t temp = distance * Cos(ArcSin(slope));
+  fixed_t temp = sqrt((1 - sine*sine).Float()) * distance;
+  //fixed_t temp = distance * Cos(ArcSin(sine));
   //fixed_t temp = distance * Cos(pitch);
   fixed_t x2 = pos.x + temp * Cos(ang);
   fixed_t y2 = pos.y + temp * Sin(ang);
 
   shootz = lastz = Center() + 8 - floorclip; // FIXME magic number
+  aimsine = sine;
 
-  attackrange = distance;
-  aimslope = slope;
+  mp->PathTraverse(pos.x, pos.y, x2, y2, PT_ADDLINES | PT_ADDTHINGS, PTR_ShootTraverse);
 
-  tmthing = shootthing;
-  linetarget = NULL;
-
-  return !mp->PathTraverse(pos.x, pos.y, x2, y2,
-			   PT_ADDLINES|PT_ADDTHINGS,
-			   PTR_ShootTraverse);
+  return linetarget;
 
   /* TODO missed cleric flame attack:
      case MT_FLAMEPUFF:
-     P_SpawnPuff(x2, y2, shootz+FixedMul(slope, distance));
+     P_SpawnPuff(x2, y2, shootz+FixedMul(sine, distance));
   */
 }
 
@@ -1912,12 +1892,11 @@ static PlayerPawn *usething;
 */
 static bool PTR_UseTraverse(intercept_t *in)
 {
-  tmthing = NULL; // FIXME why? affects P_LineOpening
   line_t *line = in->line;
   CONS_Printf("Line: s = %d, tag = %d\n", line->special, line->tag);
   if (!line->special)
     {
-      line_opening_t *open = P_LineOpening(line);
+      line_opening_t *open = P_LineOpening(line, usething);
       // TEST: use through a hole only if you can reach it
       if (open->range <= 0 || open->top < usething->Feet() || open->bottom > usething->Top())
         {
@@ -1993,7 +1972,7 @@ static bool PTR_PuzzleItemTraverse(intercept_t *in)
       line_t *line = in->line;
       if (line->special != USE_PUZZLE_ITEM_SPECIAL)
 	{
-	  line_opening_t *open = P_LineOpening(line);
+	  line_opening_t *open = P_LineOpening(line, PuzzleItemUser);
 	  if (open->range <= 0)
 	    {
 	      int sound;

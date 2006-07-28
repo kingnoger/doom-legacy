@@ -923,32 +923,30 @@ weapontype_t PlayerPawn::FindWeapon(int g)
 // Tries to aim at a nearby monster
 DActor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
 {
-  extern Actor *linetarget;
-
-  fixed_t  slope = 0;
+  fixed_t sine = 0;
 
   if (player->options.autoaim && cv_allowautoaim.value)
     {
-      // see which target is to be aimed at TODO use AIMRANGE
-      slope = AimLineAttack(ang, 16*64);
+      // see which target is to be aimed at
+      Actor *targ = AimLineAttack(ang, AIMRANGE, sine);
 
-      if (!linetarget)
+      if (!targ)
         {
 	  ang += 1<<26;
-	  slope = AimLineAttack(ang, 16*64);
+	  targ = AimLineAttack(ang, AIMRANGE, sine);
 
-	  if (!linetarget)
+	  if (!targ)
             {
 	      ang -= 2<<26;
-	      slope = AimLineAttack(ang, 16*64);
+	      targ = AimLineAttack(ang, AIMRANGE, sine);
             }
 
-	  if (!linetarget)
-	    slope = Sin(pitch);
+	  if (!targ)
+	    sine = Sin(pitch);
         }
     }
   else
-    slope = Sin(pitch);
+    sine = Sin(pitch);
 
   // if not autoaim, or if the autoaim didnt aim something, use the mouseaiming    
 
@@ -963,12 +961,12 @@ DActor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
 
   th->yaw = ang;
 
-  th->Thrust(ang, finecosine[pitch >> ANGLETOFINESHIFT] * th->info->speed);
+  th->Thrust(ang, th->info->speed * sqrt(1 - sine*sine));
 
   if (th->flags2 & (MF2_CEILINGHUGGER | MF2_FLOORHUGGER))
-    slope = 0;
+    sine = 0;
 
-  th->vel.z = slope * th->info->speed;
+  th->vel.z = sine * th->info->speed;
 
   return (th->CheckMissileSpawn()) ? th : NULL;
 }

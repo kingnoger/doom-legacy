@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2005 by DooM Legacy Team.
+// Copyright (C) 2002-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,8 +15,6 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
-//
 //-----------------------------------------------------------------------------
 
 /// \file
@@ -26,6 +24,7 @@
 #define m_fixed_h 1
 
 #include <stdlib.h>
+#include <math.h>
 #include "tnl/tnlBitStream.h"
 #include "doomtype.h"
 
@@ -40,13 +39,14 @@ using namespace TNL;
 /// TODO replace internal int() casts with round()'s?
 class fixed_t
 {
-private:
+public:
   typedef Sint32 value_t;
   typedef Sint64 large_t;
 
-
+private:
   /// only nonstatic data member, the fixed point value of the variable
   value_t val;
+
 public:
   enum
   {
@@ -170,6 +170,7 @@ public:
 
   /// basic functions
   inline friend fixed_t abs(const fixed_t& a) { fixed_t res; res.val = abs(a.val); return res; }
+  inline friend fixed_t sqrt(const fixed_t& a) { fixed_t res; res.val = int(sqrtf(a.val)*256.0); return res; }
 
   /// "conversion operators", must not be implicitly used
   inline float   Float() const { return float(val) / float(UNIT); }

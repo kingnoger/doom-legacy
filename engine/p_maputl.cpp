@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -16,14 +16,12 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
-//
 //-----------------------------------------------------------------------------
 
 /// \file
 /// \brief Map geometry utility functions, blockmap iterators, traces and intercepts.
 ///
-/// Geometric utility functions.
+/// @ref g_geometry
 /// BLOCKMAP iterator functions and some central PIT_* functions to use for iteration.
 /// Intercepts and traces.
 /// Functions for manipulating msecnode_t threads.
@@ -41,13 +39,23 @@
 #include "tables.h"
 #include "z_zone.h"
 
-
 //==========================================================================
 //  Simple map geometry utility functions
 //==========================================================================
 
-// Gives an estimation of distance (not exact)
-// Sort of octagonal norm.
+/*!
+  \defgroup g_geometry Simple map geometry utility functions
+
+  Distances, point vs. line problems, line intercepts, bounding boxes etc.
+  Most of this is 2D stuff.
+*/
+
+
+/// \brief Estimation of 2D vector length (not exact)
+/// \ingroup g_geometry
+/*!
+  Sort of octagonal norm.
+*/
 fixed_t P_AproxDistance(fixed_t dx, fixed_t dy)
 {
   dx = abs(dx);
@@ -57,7 +65,12 @@ fixed_t P_AproxDistance(fixed_t dx, fixed_t dy)
   return dx+dy-(dy>>1);
 }
 
-/// On which side of a line the point is? Returns 0 or 1.
+
+/// \brief On which side of a 2D line the point is?
+/// \ingroup g_geometry
+/*!
+  \return side number, 0 or 1
+*/
 int P_PointOnLineSide(fixed_t x, fixed_t y, const line_t *line)
 {
   if (!line->dx)
@@ -93,7 +106,11 @@ int P_PointOnLineSide(fixed_t x, fixed_t y, const line_t *line)
 }
 
 
-// Returns 0 or 1.
+/// \brief On which side of a 2D divline the point is?
+/// \ingroup g_geometry
+/*!
+  \return side number, 0 or 1
+*/
 int P_PointOnDivlineSide(fixed_t x, fixed_t y, divline_t *line)
 {
   if (!line->dx)
@@ -137,7 +154,6 @@ int P_PointOnDivlineSide(fixed_t x, fixed_t y, divline_t *line)
 }
 
 
-/// copies the relevant parts of a linedef
 void divline_t::MakeDivline(const line_t *li)
 {
   x = li->v1->x;
@@ -147,9 +163,12 @@ void divline_t::MakeDivline(const line_t *li)
 }
 
 
-
-// Considers the line to be infinite
-// Returns side 0 or 1, -1 if box crosses the line.
+/// \brief On which side of a 2D line the bounding box is?
+/// \ingroup g_geometry
+/*!
+  Considers the line to be infinite in length.
+  \return side number, 0 or 1, or -1 if box crosses the line
+*/
 int bbox_t::BoxOnLineSide(const line_t *ld)
 {
   int         p1;
@@ -199,12 +218,12 @@ int bbox_t::BoxOnLineSide(const line_t *ld)
 
 
 
-//
-// Returns the fractional intercept point
-// along the first divline.
-// This is only called by the addthings
-// and addlines traversers.
-//
+/// \brief Finds the intercept point of two 2D line segments
+/// \ingroup g_geometry
+/*!
+  \return fractional intercept point along the first divline
+  This is only called by the addthings and addlines traversers.
+*/
 fixed_t P_InterceptVector(divline_t *v2, divline_t *v1)
 {
 #if 0
@@ -264,10 +283,8 @@ fixed_t P_InterceptVector(divline_t *v2, divline_t *v1)
 
 static line_opening_t Opening;
 
-line_opening_t *P_LineOpening(line_t *linedef)
+line_opening_t *P_LineOpening(line_t *linedef, Actor *thing)
 {
-  extern Actor *tmthing;
-
   if (linedef->sideptr[1] == NULL)
     {
       // single sided line
@@ -300,12 +317,13 @@ line_opening_t *P_LineOpening(line_t *linedef)
       Opening.lowfloor = front->floorheight;
     }
 
-  if (tmthing && (front->ffloors || back->ffloors))
+  // TODO check ffloor handling
+  if (thing && (front->ffloors || back->ffloors))
     {
       //SoM: 3/27/2000: Check for fake floors in the sector.
 
-      fixed_t thingbot = tmthing->Feet();
-      fixed_t thingtop = thingbot + tmthing->height;
+      fixed_t thingbot = thing->Feet();
+      fixed_t thingtop = thing->Top();
 
       fixed_t lowestceiling = Opening.top;
       fixed_t highestfloor = Opening.bottom;
@@ -499,6 +517,7 @@ static Map *tempMap;
 
 /// \brief Find lines intercepted by the trace.
 /// \ingroup g_pit
+/// \ingroup g_trace
 /*!
   Checks if the line_t intercepts the given trace. If so, adds it to the intercepts list.
   A line is crossed if its endpoints are on opposite sides of the trace.
@@ -553,6 +572,7 @@ static bool PIT_AddLineIntercepts(line_t *ld)
 
 /// \brief Find Actors intercepted by the trace.
 /// \ingroup g_pit
+/// \ingroup g_trace
 /*!
   Checks if the Actor intercepts the given trace. If so, adds it to the intercepts list.
 */
@@ -593,7 +613,7 @@ static bool PIT_AddThingIntercepts(Actor *thing)
   dl.dx = x2-x1;
   dl.dy = y2-y1;
 
-  fixed_t frac = P_InterceptVector (&trace, &dl);
+  fixed_t frac = P_InterceptVector(&trace, &dl);
 
   if (frac < 0)
     return true;            // behind source
@@ -608,15 +628,19 @@ static bool PIT_AddThingIntercepts(Actor *thing)
   return true;                // keep going
 }
 
-
-// Calls the traverser function on all intercept_t's in the
-// intercepts vector, in the nearness-of-intercept order.
-// Returns true if the traverser function returns true for all lines.
+/// \brief Calls the traverser function for all elements of the intercepts vector
+/// \ingroup g_trace
+/*!
+  Calls the traverser function on all intercept_t's in the
+  intercepts vector, in the nearness-of-intercept order.
+  \return true if the traverser function returns true for all lines
+*/
 static bool P_TraverseIntercepts(traverser_t func, fixed_t maxfrac)
 {
   int count = intercepts.size();
   int i = count;
 
+  // TODO introsort
   intercept_t *in = NULL;
   while (i--)
     {
@@ -659,11 +683,11 @@ static bool P_TraverseIntercepts(traverser_t func, fixed_t maxfrac)
 
 
 /// \brief Traces a line through the blockmap.
-/// \ingroup g_iterators
+/// \ingroup g_trace
 /*!
   Traces a line from x1,y1 to x2,y2 by stepping through the blockmap
   adding line/thing intercepts and then calling the traverser function for each intercept.
-  Returns true if the traverser function returns true for all lines.
+  \return true if the traverser function returns true for all lines
 */
 bool Map::PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags, traverser_t trav)
 {
@@ -785,13 +809,11 @@ bool Map::PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags
 }
 
 
-
-
-//===========================================================================
-// Searches though the surrounding mapblocks for Actors.
-//		distance is in MAPBLOCKUNITS
-//===========================================================================
-
+/// \brief Searches though the surrounding mapblocks for Actors.
+/// \ingroup g_iterators
+/*!
+  \param distance is in MAPBLOCKUNITS
+*/
 Actor *Map::RoughBlockSearch(Actor *center, Actor *master, int distance, int flags)
 {
   // TODO this is pretty ugly. One that searches a circular area would be better...
@@ -868,7 +890,11 @@ Actor *Map::RoughBlockSearch(Actor *center, Actor *master, int distance, int fla
 }
 
 
-// TODO rewrite using blockmap iterators (-> PIT_...)
+/// \brief Searches a single blockmap cell for Actors.
+/// \ingroup g_iterators
+/*!
+  TODO rewrite using blockmap iterators (-> PIT_...)
+*/
 Actor *Map::RoughBlockCheck(Actor *center, Actor *master, int index, int flags)
 {
   enum { friendly = 1, bloodsc = 2 }; // you could add more

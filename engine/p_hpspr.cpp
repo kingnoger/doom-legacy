@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by Raven Software, Corp.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -52,11 +51,8 @@ inline angle_t R_PointToAngle2(vec_t<fixed_t>& a, vec_t<fixed_t>& b)
 
 extern consvar_t  cv_deathmatch;
 extern mobjtype_t PuffType;
-extern Actor *linetarget;
 
 //---------------------------------------------------------------------------
-//
-// was P_RepositionMace
 //
 // Chooses the next spot to place the mace.
 //
@@ -73,8 +69,6 @@ void Map::RepositionMace(DActor *mo)
 }
 
 //---------------------------------------------------------------------------
-//
-// was P_CloseWeapons
 //
 // Called at level load after things are loaded.
 //
@@ -180,13 +174,14 @@ void A_BeakAttackPL1(PlayerPawn *p, pspdef_t *psp)
 {
   int damage = 1+(P_Random()&3);
   angle_t angle = p->yaw;
-  fixed_t slope = p->AimLineAttack(angle, MELEERANGE);
+  fixed_t sine;
+
+  p->AimLineAttack(angle, MELEERANGE, sine);
   PuffType = MT_BEAKPUFF;
-  p->LineAttack(angle, MELEERANGE, slope, damage);
-  if(linetarget)
-    {
-      p->yaw = R_PointToAngle2(p->pos, linetarget->pos);
-    }
+  Actor *targ = p->LineAttack(angle, MELEERANGE, sine, damage);
+  if (targ)
+    p->yaw = R_PointToAngle2(p->pos, targ->pos);
+
   S_StartSound(p, sfx_chicpk1+(P_Random()%3));
   p->attackphase = 12;
   psp->tics -= P_Random()&7;
@@ -202,13 +197,13 @@ void A_BeakAttackPL2(PlayerPawn *p, pspdef_t *psp)
 {
   int damage = HITDICE(4);
   angle_t angle = p->yaw;
-  fixed_t slope = p->AimLineAttack(angle, MELEERANGE);
+  fixed_t sine;
+  p->AimLineAttack(angle, MELEERANGE, sine);
   PuffType = MT_BEAKPUFF;
-  p->LineAttack(angle, MELEERANGE, slope, damage);
-  if(linetarget)
-    {
-      p->yaw = R_PointToAngle2(p->pos, linetarget->pos);
-    }
+  Actor *targ = p->LineAttack(angle, MELEERANGE, sine, damage);
+  if (targ)
+    p->yaw = R_PointToAngle2(p->pos, targ->pos);
+
   S_StartSound(p, sfx_chicpk1+(P_Random()%3));
   p->attackphase = 12;
   psp->tics -= P_Random()&3;
@@ -225,14 +220,15 @@ void A_StaffAttackPL1(PlayerPawn *p, pspdef_t *psp)
   int damage = 5+(P_Random()&15);
   angle_t angle = p->yaw;
   angle += P_SignedRandom()<<18;
-  fixed_t slope = p->AimLineAttack(angle, MELEERANGE);
+  fixed_t sine;
+  p->AimLineAttack(angle, MELEERANGE, sine);
   PuffType = MT_STAFFPUFF;
-  p->LineAttack(angle, MELEERANGE, slope, damage);
-  if(linetarget)
+  Actor *targ = p->LineAttack(angle, MELEERANGE, sine, damage);
+  if (targ)
     {
       //S_StartSound(p, sfx_stfhit);
       // turn to face target
-      p->yaw = R_PointToAngle2(p->pos, linetarget->pos);
+      p->yaw = R_PointToAngle2(p->pos, targ->pos);
     }
 }
 
@@ -247,22 +243,21 @@ void A_StaffAttackPL2(PlayerPawn *p, pspdef_t *psp)
   int damage = 18+(P_Random()&63);
   angle_t angle = p->yaw;
   angle += P_SignedRandom()<<18;
-  fixed_t slope = p->AimLineAttack(angle, MELEERANGE);
+  fixed_t sine;
+  p->AimLineAttack(angle, MELEERANGE, sine);
   PuffType = MT_STAFFPUFF2;
 
-  p->LineAttack(angle, MELEERANGE, slope, damage, dt_magic);
-  if (linetarget)
+  Actor *targ = p->LineAttack(angle, MELEERANGE, sine, damage, dt_magic);
+  if (targ)
     {
-      linetarget->vel.x += 10 * finecosine[angle];
-      linetarget->vel.y += 10 * finesine[angle];
-      if (!(linetarget->flags & MF_NOGRAVITY))
-	{
-	  linetarget->vel.z += 5;
-	}
+      targ->vel.x += 10 * finecosine[angle];
+      targ->vel.y += 10 * finesine[angle];
+      if (!(targ->flags & MF_NOGRAVITY))
+	targ->vel.z += 5;
 
       //S_StartSound(p, sfx_stfpow);
       // turn to face target
-      p->yaw = R_PointToAngle2(p->pos, linetarget->pos);
+      p->yaw = R_PointToAngle2(p->pos, targ->pos);
     }
 }
 
@@ -443,7 +438,7 @@ void A_FireGoldWandPL2(PlayerPawn *p, pspdef_t *psp)
 
   PuffType = MT_GOLDWANDPUFF2;
 
-  fixed_t slope = P_BulletSlope(p);
+  fixed_t sine = P_BulletSlope(p);
   
   p->SPMAngle(MT_GOLDWANDFX2, p->yaw - (ANG45/8));
   p->SPMAngle(MT_GOLDWANDFX2, p->yaw + (ANG45/8));
@@ -452,7 +447,7 @@ void A_FireGoldWandPL2(PlayerPawn *p, pspdef_t *psp)
   for (int i = 0; i < 5; i++)
     {
       int damage = 1+(P_Random()&7);
-      p->LineAttack(angle, MISSILERANGE, slope, damage);
+      p->LineAttack(angle, MISSILERANGE, sine, damage);
       angle += ((ANG45/8)*2)/4;
     }
   S_StartSound(p, sfx_gldhit);
@@ -472,11 +467,11 @@ void A_FireMacePL1B(PlayerPawn *p, pspdef_t *psp)
   p->ammo[am_mace] -= wpnlev1info[wp_mace].ammopershoot;
 
   DActor *ball = p->mp->SpawnDActor(p->pos.x, p->pos.y, p->pos.z + 28 - p->floorclip, MT_MACEFX2);
-  ball->vel.z = 2 + (fixed_t(int(p->pitch)) >> 5);
+  ball->vel.z = 2 + Sin(p->pitch); // approximate TEST
   angle_t angle = p->yaw;
   ball->owner = p;
   ball->yaw = angle;
-  ball->pos.z += fixed_t(int(p->pitch)) >> 4;
+  ball->pos.z += 2*Sin(p->pitch); // approximate TEST
   angle >>= ANGLETOFINESHIFT;
   ball->vel.x = (p->vel.x >> 1) + ball->info->speed * finecosine[angle];
   ball->vel.y = (p->vel.y >> 1) + ball->info->speed * finesine[angle];
@@ -528,6 +523,7 @@ void A_MacePL1Check(DActor *ball)
       return;
     }
   ball->special1 = 0;
+  ball->flags &= ~MF_NOGRAVITY;
   ball->flags2 |= MF2_LOGRAV;
   angle = ball->yaw>>ANGLETOFINESHIFT;
   ball->vel.x = 7 * finecosine[angle];
@@ -629,9 +625,10 @@ void A_FireMacePL2(PlayerPawn *p, pspdef_t *psp)
     {
       mo->vel.x += p->vel.x;
       mo->vel.y += p->vel.y;
-      mo->vel.z = 2 + (fixed_t(int(p->pitch)) >> 5);
-      if (linetarget)
-	mo->target = linetarget;
+      mo->vel.z = 2 + Sin(p->pitch); // TEST approximate
+
+      fixed_t dummy;
+      mo->target = p->AimLineAttack(p->yaw, AIMRANGE, dummy); // HACK to compensate SPMAngle without autoaim
     }
   S_StartSound(p, sfx_lobsht);
 }
@@ -647,6 +644,7 @@ void A_DeathBallImpact(DActor *ball)
   int i;
   angle_t angle = 0;
   bool newAngle;
+  fixed_t dummy;
 
   if ((ball->pos.z <= ball->floorz) && (ball->HitFloor() != FLOOR_SOLID))
     { // Landed in some sort of liquid
@@ -673,11 +671,11 @@ void A_DeathBallImpact(DActor *ball)
 	{ // Find new target
 	  for(i = 0; i < 16; i++)
 	    {
-	      ball->AimLineAttack(angle, 10*64);
-	      if(linetarget && ball->owner != linetarget)
+	      Actor *targ = ball->AimLineAttack(angle, 10*64, dummy);
+	      if (targ && ball->owner != targ)
 		{
-		  ball->target = linetarget;
-		  angle = R_PointToAngle2(ball->pos, linetarget->pos);
+		  ball->target = targ;
+		  angle = R_PointToAngle2(ball->pos, targ->pos);
 		  newAngle = true;
 		  break;
 		}
@@ -823,8 +821,9 @@ void A_FireSkullRodPL2(PlayerPawn *p, pspdef_t *psp)
         { // Always use red missiles in single player games
 	  mi->special2 = 2;
         }
-      if (linetarget)
-	mi->target = linetarget;
+
+      fixed_t dummy;
+      mi->target = p->AimLineAttack(p->yaw, AIMRANGE, dummy); // HACK to compensate SPMAngle without autoaim
         
       S_StartSound(mi, sfx_hrnpow);
     }
@@ -1050,7 +1049,7 @@ void A_FirePhoenixPL2(PlayerPawn *p, pspdef_t *psp)
   angle_t angle = p->yaw;
   fixed_t x = P_SignedFRandom(7);
   fixed_t y = P_SignedFRandom(7);
-  vec_t<fixed_t> r(x, y, 26 + fixed_t(int(p->pitch))/173 - p->floorclip);
+  vec_t<fixed_t> r(x, y, 26 + Tan(p->pitch) - p->floorclip); // TEST approximate
   r += p->pos;
 
   DActor *mo = p->mp->SpawnDActor(r, MT_PHOENIXFX2);
@@ -1108,15 +1107,12 @@ void A_FloatPuff(DActor *puff)
 
 void A_GauntletAttack(PlayerPawn *p, pspdef_t *psp)
 {
-  angle_t angle;
   int damage;
-  fixed_t slope;
-  int randVal;
   fixed_t dist;
 
   psp->sx = (P_Random() & 3) - 2;
   psp->sy = WEAPONTOP + (P_Random() & 3);
-  angle = p->yaw;
+  angle_t angle = p->yaw;
   if (p->powers[pw_weaponlevel2])
     {
       damage = HITDICE(2);
@@ -1131,31 +1127,26 @@ void A_GauntletAttack(PlayerPawn *p, pspdef_t *psp)
       angle += P_SignedRandom()<<18;
       PuffType = MT_GAUNTLETPUFF1;
     }
-  slope = p->AimLineAttack(angle, dist);
-  p->LineAttack(angle, dist, slope, damage);
+  fixed_t sine;
+  p->AimLineAttack(angle, dist, sine);
+  Actor *targ = p->LineAttack(angle, dist, sine, damage);
 
-  if (!linetarget)
+  if (!targ)
     {
       if (P_Random() > 64)
-	{
-	  p->extralight = !p->extralight;
-	}
+	p->extralight = !p->extralight;
+
       S_StartSound(p, sfx_gntful);
       return;
     }
-  randVal = P_Random();
+  int randVal = P_Random();
   if (randVal < 64)
-    {
-      p->extralight = 0;
-    }
+    p->extralight = 0;
   else if (randVal < 160)
-    {
-      p->extralight = 1;
-    }
+    p->extralight = 1;
   else
-    {
-      p->extralight = 2;
-    }
+    p->extralight = 2;
+
   if (p->powers[pw_weaponlevel2])
     {
       p->GiveBody(damage>>1);
@@ -1165,8 +1156,9 @@ void A_GauntletAttack(PlayerPawn *p, pspdef_t *psp)
     {
       S_StartSound(p, sfx_gnthit);
     }
+
   // turn to face target
-  angle = R_PointToAngle2(p->pos, linetarget->pos);
+  angle = R_PointToAngle2(p->pos, targ->pos);
   if (angle - p->yaw > ANG180)
     {
       if (angle - p->yaw < -ANG90/20)
@@ -1181,5 +1173,6 @@ void A_GauntletAttack(PlayerPawn *p, pspdef_t *psp)
       else
 	p->yaw += ANG90/20;
     }
+
   p->eflags |= MFE_JUSTATTACKED;
 }

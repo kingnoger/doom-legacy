@@ -489,14 +489,15 @@ void A_Punch(PlayerPawn *p, pspdef_t *psp)
   angle_t angle = p->yaw;
   angle += P_SignedRandom() << 18;
 
-  fixed_t slope = p->AimLineAttack(angle, MELEERANGE);
-  p->LineAttack(angle, MELEERANGE, slope, damage);
+  fixed_t sine;
+  p->AimLineAttack(angle, MELEERANGE, sine);
+  Actor *targ = p->LineAttack(angle, MELEERANGE, sine, damage);
 
   // turn to face target
-  if (linetarget)
+  if (targ)
     {
       S_StartAttackSound(p, sfx_punch);
-      p->yaw = R_PointToAngle2(p->pos.x, p->pos.y, linetarget->pos.x, linetarget->pos.y);
+      p->yaw = R_PointToAngle2(p->pos, targ->pos);
     }
   else if (p->pinfo->nproj != MT_NONE)
     {
@@ -515,18 +516,20 @@ void A_Saw(PlayerPawn *p, pspdef_t *psp)
   angle_t angle = p->yaw + (P_SignedRandom() << 18);
 
   // use meleerange + 1 se the puff doesn't skip the flash
-  fixed_t slope = p->AimLineAttack(angle, MELEERANGE+1);
-  p->LineAttack(angle, MELEERANGE+1, slope, damage, dt_cutting | dt_norecoil);
+  fixed_t sine;
+  p->AimLineAttack(angle, MELEERANGE+1, sine);
+  Actor *targ = p->LineAttack(angle, MELEERANGE+1, sine, damage, dt_cutting | dt_norecoil);
 
-  if (!linetarget)
+  if (!targ)
     {
       S_StartAttackSound(p, sfx_sawful);
       return;
     }
+
   S_StartAttackSound(p, sfx_sawhit);
 
   // turn to face target
-  angle = R_PointToAngle2 (p->pos.x, p->pos.y, linetarget->pos.x, linetarget->pos.y);
+  angle = R_PointToAngle2(p->pos, targ->pos);
   if (angle - p->yaw > ANG180)
     {
       if (angle - p->yaw < -ANG90/20)
@@ -572,9 +575,7 @@ void A_FireBFG(PlayerPawn *p, pspdef_t *psp)
 void A_FirePlasma(PlayerPawn *p, pspdef_t *psp)
 {
   p->ammo[p->weaponinfo[p->readyweapon].ammo] -= p->weaponinfo[p->readyweapon].ammopershoot;
-
-  p->SetPsprite(ps_flash, weaponstatenum_t(p->weaponinfo[p->readyweapon].flashstate
-				     + (P_Random() & 1)));
+  p->SetPsprite(ps_flash, weaponstatenum_t(p->weaponinfo[p->readyweapon].flashstate + (P_Random() & 1)));
   p->SpawnPlayerMissile(MT_PLASMA);
 }
 
@@ -590,32 +591,29 @@ void A_FirePlasma(PlayerPawn *p, pspdef_t *psp)
 fixed_t P_BulletSlope(PlayerPawn *p)
 {
   angle_t an = p->yaw;
-  fixed_t slope;
-
+  fixed_t sine;
+  Actor *targ;
   //added:18-02-98: if AUTOAIM, try to aim at something
-  if(!p->player->options.autoaim || !cv_allowautoaim.value)
+  if (!p->player->options.autoaim || !cv_allowautoaim.value)
     goto notargetfound;
 
   // see which target is to be aimed at
-  slope = p->AimLineAttack(an, AIMRANGE);
+  targ = p->AimLineAttack(an, AIMRANGE, sine);
+  if (targ)
+    return sine;
 
-  if (!linetarget)
-    {
-      an += 1<<26;
-      slope = p->AimLineAttack(an, AIMRANGE);
-      if (!linetarget)
-        {
-	  an -= 2<<26;
-	  slope = p->AimLineAttack(an, AIMRANGE);
-        }
-      if(!linetarget)
-        {
-	notargetfound:
-	  slope = Sin(p->pitch);
-        }
-    }
+  an += 1<<26;
+  targ = p->AimLineAttack(an, AIMRANGE, sine);
+  if (targ)
+    return sine;
 
-  return slope;
+  an -= 2<<26;
+  targ = p->AimLineAttack(an, AIMRANGE, sine);
+  if (targ)
+    return sine;
+
+ notargetfound:
+  return Sin(p->pitch);
 }
 
 
@@ -624,21 +622,21 @@ fixed_t P_BulletSlope(PlayerPawn *p)
 //
 //added:16-02-98: used only for player (pistol,shotgun,chaingun)
 //                supershotgun use p_lineattack directely
-static fixed_t bulletslope;
+static fixed_t bulletsine;
 
 static void P_GunShot(PlayerPawn *p, bool accurate)
 {
   int damage = 5*(P_Random()%3 + 1);
   angle_t angle = p->yaw;
-  fixed_t slope = bulletslope;
+  fixed_t sine = bulletsine;
 
   if (!accurate)
     {
       angle += P_SignedRandom() << 18;
-      slope += P_SignedFRandom(12); // TEST vertical scatter
+      sine += P_SignedFRandom(12); // TEST vertical scatter
     }
 
-  p->LineAttack(angle, MISSILERANGE, slope, damage);
+  p->LineAttack(angle, MISSILERANGE, sine, damage);
 }
 
 
@@ -653,7 +651,7 @@ void A_FirePistol(PlayerPawn *p, pspdef_t *psp)
   p->ammo[p->weaponinfo[p->readyweapon].ammo]--;
   p->SetPsprite(ps_flash, p->weaponinfo[p->readyweapon].flashstate);
 
-  bulletslope = P_BulletSlope(p);
+  bulletsine = P_BulletSlope(p);
   P_GunShot(p, !p->refire);
 }
 
@@ -669,7 +667,7 @@ void A_FireShotgun(PlayerPawn *p, pspdef_t *psp)
   p->ammo[p->weaponinfo[p->readyweapon].ammo]--;
   p->SetPsprite(ps_flash, p->weaponinfo[p->readyweapon].flashstate);
 
-  bulletslope = P_BulletSlope(p);
+  bulletsine = P_BulletSlope(p);
   for (int i=0; i<7; i++)
     P_GunShot(p, false);
 }
@@ -688,14 +686,14 @@ void A_FireShotgun2(PlayerPawn *p, pspdef_t *psp)
 
   p->SetPsprite(ps_flash, p->weaponinfo[p->readyweapon].flashstate);
 
-  bulletslope = P_BulletSlope(p);
+  bulletsine = P_BulletSlope(p);
 
   for (int i=0 ; i<20 ; i++)
     {
-      fixed_t slope = bulletslope + P_SignedFRandom(11);
+      fixed_t sine = bulletsine + P_SignedFRandom(11);
       int damage = 5*(P_Random ()%3+1);
       angle_t angle = p->yaw + (P_SignedRandom() << 19);
-      p->LineAttack(angle, MISSILERANGE, slope, damage);
+      p->LineAttack(angle, MISSILERANGE, sine, damage);
     }
 }
 
@@ -734,7 +732,7 @@ void A_FireCGun(PlayerPawn *p, pspdef_t *psp)
 
   p->SetPsprite(ps_flash, weaponstatenum_t(p->weaponinfo[p->readyweapon].flashstate
 				     + psp->state - &weaponstates[S_CHAIN1]));
-  bulletslope = P_BulletSlope(p);
+  bulletsine = P_BulletSlope(p);
   P_GunShot(p, !p->refire);
 }
 
@@ -770,15 +768,14 @@ void A_BFGSpray(DActor *mo)
     {
       angle_t an = mo->yaw - ANG90/2 + ANG90/40*i;
 
-      // mo->owner is the originator (player)
-      //  of the missile
-      mo->owner->AimLineAttack(an, 16*64);
+      // mo->owner is the originator (player) of the missile
+      fixed_t dummy;
+      Actor *targ = mo->owner->AimLineAttack(an, 16*64, dummy);
 
-      if (!linetarget)
+      if (!targ)
 	continue;
 
-      DActor *extrabfg = mo->mp->SpawnDActor(linetarget->pos.x, linetarget->pos.y,
-        linetarget->pos.z + (linetarget->height>>2), MT_EXTRABFG);
+      DActor *extrabfg = mo->mp->SpawnDActor(targ->pos.x, targ->pos.y, targ->pos.z + (targ->height>>2), MT_EXTRABFG);
       extrabfg->owner = mo->owner;
 
       int damage = 0;
@@ -786,7 +783,7 @@ void A_BFGSpray(DActor *mo)
 	damage += (P_Random()&7) + 1;
 
       // to get correct recoil, we must use either the player or the BFG ball as the inflictor (matter of taste)
-      linetarget->Damage(mo, mo->owner, damage);
+      targ->Damage(mo, mo->owner, damage);
     }
 }
 

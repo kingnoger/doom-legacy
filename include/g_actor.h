@@ -353,8 +353,8 @@ protected:
 public:
   void FakeZMovement();
   Actor *CheckOnmobj();
-  fixed_t AimLineAttack(angle_t ang, fixed_t distance);
-  bool    LineAttack(angle_t ang, fixed_t distance, fixed_t slope, int damage, int dtype = dt_normal);
+  Actor *AimLineAttack(angle_t ang, fixed_t distance, fixed_t &sinpitch);
+  Actor *LineAttack(angle_t ang, fixed_t distance, fixed_t slope, int damage, int dtype = dt_normal);
   void    RadiusAttack(Actor *culprit, int damage, fixed_t radius = -1, int dtype = dt_normal, bool downer = true);
 
   virtual void Howl() {};

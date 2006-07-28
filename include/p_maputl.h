@@ -39,13 +39,12 @@ extern int validcount;
 // variables used by movement functions to communicate
 extern bool    floatok;
 extern fixed_t tmfloorz, tmceilingz;
-extern class Actor *linetarget;
 
 extern std::vector<struct line_t *> spechit;
 
 struct position_check_t
 {
-  Actor  *thing;
+  class Actor  *thing;
   line_t *line;
 };
 
@@ -57,10 +56,12 @@ extern line_t *ceilingline;
 
 void P_DelSeclist(struct msecnode_t *p);
 
+/// \brief Describes a single intercept of a trace line, either an Actor or a line_t
+/// \ingroup g_trace
 struct intercept_t
 {
-  class Map    *m; // ugly but necessary, since line_t's don't carry a Map *. Actors do.
-  fixed_t    frac; // along trace line
+  class Map    *m; ///< Ugly but necessary, since line_t's don't carry a Map *. Actors do.
+  fixed_t    frac; ///< Fractional position of the intercept along the 2D trace line.
   bool    isaline;
   union
   {
@@ -71,11 +72,13 @@ struct intercept_t
 
 
 /// \brief Encapsulates the XY-plane geometry of a linedef for line traces. 
+/// \ingroup g_geometry
 struct divline_t 
 {
   fixed_t   x, y; ///< starting point (v1)
   fixed_t dx, dy; ///< v2-v1
 
+  /// copies the relevant parts of a linedef
   void MakeDivline(const line_t *li);
 };
 
@@ -91,14 +94,15 @@ struct line_opening_t
   fixed_t top, bottom, range, lowfloor;
 };
 
-line_opening_t *P_LineOpening(line_t *linedef);
+line_opening_t *P_LineOpening(line_t *linedef, Actor *thing = NULL);
 
-
+/// \brief Flags for Map::PathTraverse
+/// \ingroup g_trace
 enum
 {
-  PT_ADDLINES  = 1,
-  PT_ADDTHINGS = 2,
-  PT_EARLYOUT  = 4
+  PT_ADDLINES  = 0x1,
+  PT_ADDTHINGS = 0x2,
+  PT_EARLYOUT  = 0x4
 };
 
 extern divline_t trace;

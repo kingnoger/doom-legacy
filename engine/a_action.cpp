@@ -46,7 +46,7 @@ void P_ThrustSpike(Actor *actor);
 
 // PUBLIC DATA DEFINITIONS -------------------------------------------------
 
-static int FloatBobOffsets_int[64] =
+static fixed_t::value_t FloatBobOffsets_int[64] =
 {
   0, 51389, 102283, 152192,
   200636, 247147, 291278, 332604,
