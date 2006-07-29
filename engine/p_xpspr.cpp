@@ -44,7 +44,6 @@
 void A_UnHideThing(DActor *actor);
 int P_FaceMobj(Actor *source, Actor *target, angle_t *delta);
 
-extern fixed_t FloatBobOffsets[64];
 extern mobjtype_t PuffType;
 extern Actor *PuffSpawned;
 

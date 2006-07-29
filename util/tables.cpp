@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,8 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -38,7 +36,18 @@
 ///  finesine[i]    == FRACUNIT * sin((i + 0.5) * (2*pi / FINEANGLES))
 ///  tantoangle[i]  == atan(i/SLOPERANGE) * (2^32 / (2*pi))
 
+#include <math.h>
 #include "tables.h"
+
+
+const fixed_t FloatBobOffsets[64];
+
+void GenerateTables()
+{
+  for (int i=0; i<64; i++)
+    const_cast<fixed_t*>(FloatBobOffsets)[i] = float(8.0 * sin(i*(M_PI/32.0)));
+}
+
 
 // 0 the original
 // 1 new in c
@@ -2261,6 +2270,6 @@ angle_t tantoangle[2049] =
 
 
 
-fixed_t *finesine    = reinterpret_cast<fixed_t *>(finesine_int);
-fixed_t *finecosine  = reinterpret_cast<fixed_t *>(&finesine_int[FINEANGLES/4]);
-fixed_t *finetangent = reinterpret_cast<fixed_t *>(finetangent_int);
+const fixed_t* const finesine    = reinterpret_cast<fixed_t *>(finesine_int);
+const fixed_t* const finecosine  = reinterpret_cast<fixed_t *>(&finesine_int[FINEANGLES/4]);
+const fixed_t* const finetangent = reinterpret_cast<fixed_t *>(finetangent_int);

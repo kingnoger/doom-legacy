@@ -39,8 +39,6 @@
 #include "tables.h"
 
 
-extern fixed_t FloatBobOffsets[64];
-
 angle_t abs(angle_t a);
 int  P_FaceMobj(Actor *source, Actor *target, angle_t *delta);
 void P_SpawnDirt(DActor *actor, fixed_t radius);
@@ -2568,18 +2566,21 @@ void A_IceGuyMissileExplode(DActor *actor)
 //
 //	Sorcerer stuff
 //
-// Sorcerer Variables
+//  Sorcerer Variables
 //		special1		Angle of ball 1 (all others relative to that)
 //		special2		which ball to stop at in stop mode (MT_???)
-//		args[0]			Denfense time
+//		args[0]			Defense time
 //		args[1]			Number of full rotations since stopping mode
 //		args[2]			Target orbit speed for acceleration/deceleration
 //		args[3]			Movement mode (see SORC_ macros)
 //		args[4]			Current ball orbit speed
-//	Sorcerer Ball Variables
+//  Sorcerer Ball Variables
+//              owner                   Points to Sorcerer (aka parent)
 //		special1		Previous angle of ball (for woosh)
 //		special2		Countdown of rapid fire (FX4)
 //		args[0]			If set, don't play the bounce sound when bouncing
+//              args[4]			Ball 1 only
+//              args[1]			Ball 2 only, HACK, stores the sorcerer special
 //============================================================================
 
 #define SORCBALL_INITIAL_SPEED 		7
@@ -2627,7 +2628,7 @@ void A_SorcSpinBalls(DActor *actor)
   fixed_t z;
 
   A_SlowBalls(actor);
-  actor->args[0] = 0;									// Currently no defense
+  actor->args[0] = 0;	       	// Currently no defense
   actor->args[3] = SORC_NORMAL;
   actor->args[4] = SORCBALL_INITIAL_SPEED;		// Initial orbit speed
   actor->special1 = ANGLE_1;
@@ -2640,26 +2641,135 @@ void A_SorcSpinBalls(DActor *actor)
       mo->special2 = SORCFX4_RAPIDFIRE_TIME;
     }
   mo = actor->mp->SpawnDActor(actor->pos.x, actor->pos.y, z, MT_SORCBALL2);
-  if (mo) mo->owner = actor;
+  if (mo)
+    {
+      mo->owner = actor;
+      mo->args[1] = actor->special; // HACK
+      actor->special = 0; // so no unwanted things happen when sorc dies
+    }
   mo = actor->mp->SpawnDActor(actor->pos.x, actor->pos.y, z, MT_SORCBALL3);
   if (mo) mo->owner = actor;
 }
 
 
-//
-// A_SorcBallOrbit() ==========================================
-//
+// Set balls to speed mode - actor is sorcerer
+void A_SpeedBalls(DActor *actor)
+{
+  actor->args[3] = SORC_ACCELERATE;				// speed mode
+  actor->args[2] = SORCBALL_TERMINAL_SPEED;		// target speed
+}
 
+
+// Set balls to slow mode - actor is sorcerer
+void A_SlowBalls(DActor *actor)
+{
+  actor->args[3] = SORC_DECELERATE;				// slow mode
+  actor->args[2] = SORCBALL_INITIAL_SPEED;		// target speed
+}
+
+
+// Instant stop when rotation gets to ball in special2 - actor is sorcerer
+void A_StopBalls(DActor *actor)
+{
+  int chance = P_Random();
+  actor->args[3] = SORC_STOPPING;				// stopping mode
+  actor->args[1] = 0;							// Reset rotation counter
+
+  if ((actor->args[0] <= 0) && (chance < 200))
+    {
+      actor->special2 = MT_SORCBALL2;			// Blue
+    }
+  else if((actor->health < (actor->info->spawnhealth >> 1)) &&
+	  (chance < 200))
+    {
+      actor->special2 = MT_SORCBALL3;			// Green
+    }
+  else
+    {
+      actor->special2 = MT_SORCBALL1;			// Yellow
+    }
+}
+
+
+// Resume ball spinning - actor is sorcerer
+void A_SorcBossAttack(DActor *actor)
+{
+  actor->args[3] = SORC_ACCELERATE;
+  actor->args[2] = SORCBALL_INITIAL_SPEED;
+}
+
+
+// spell cast magic fizzle - actor is sorcerer
+void A_SpawnFizzle(DActor *actor)
+{
+  fixed_t x,y,z;
+  fixed_t dist = 5;
+  angle_t angle = actor->yaw >> ANGLETOFINESHIFT;
+  int speed = int(actor->info->speed);
+  angle_t rangle;
+  DActor *mo;
+  int ix;
+
+  x = actor->pos.x + dist * finecosine[angle];
+  y = actor->pos.y + dist * finesine[angle];
+  z = actor->pos.z - actor->floorclip + (actor->height>>1);
+  for (ix=0; ix<5; ix++)
+    {
+      mo = actor->mp->SpawnDActor(x,y,z,MT_SORCSPARK1);
+      if (mo)
+	{
+	  rangle = angle + ((P_Random()%5) << 1);
+	  mo->vel.x = (P_Random()%speed) * finecosine[rangle];
+	  mo->vel.y = (P_Random()%speed) * finesine[rangle];
+	  mo->vel.z = 2;
+	}
+    }
+}
+
+
+// This is a HACK to counter the hack in original Hexen:
+// Sorceror's special field does not contain a special code but a script number...
+void A_SorcDeath(DActor *actor)
+{
+  // At this point the sorcerer death action is already executed.
+
+  byte argh[5];
+  argh[0] = actor->special; // script number to execute
+  argh[1] = 0; // in the current Map
+  argh[2] = argh[3] = argh[4] = 0; // with zero args
+
+  actor->mp->ExecuteLineSpecial(80, argh, NULL, 0, actor); // ACS_Execute
+  actor->special = 0;
+}
+
+
+
+//==============================================================
+
+
+// Main action func for balls - actor is a ball
 void A_SorcBallOrbit(DActor *actor)
 {
+  DActor *parent = reinterpret_cast<DActor*>(actor->owner);
+
   angle_t angle = 0, baseangle;
-  int mode = actor->owner->args[3];
-  DActor *parent = (DActor *)actor->owner;
+  int mode = parent->args[3];
+
   fixed_t dist = parent->radius - (actor->radius<<1);
   angle_t prevangle = actor->special1;
 	
   if (parent->health <= 0)
-    actor->SetState(actor->info->painstate);
+    {
+      if (actor->type == MT_SORCBALL2)
+	{
+	  // HACK: handle sorc death special
+	  parent->special = actor->args[1]; // put script number back
+	  actor->args[1] = 0;
+	  A_SorcDeath(parent);
+	}
+
+      actor->SetState(actor->info->painstate);
+    }
 
   baseangle = parent->special1;
   switch(actor->type)
@@ -2781,60 +2891,11 @@ void A_SorcBallOrbit(DActor *actor)
 }
 
 
-//
-// Set balls to speed mode - actor is sorcerer
-//
-void A_SpeedBalls(DActor *actor)
-{
-  actor->args[3] = SORC_ACCELERATE;				// speed mode
-  actor->args[2] = SORCBALL_TERMINAL_SPEED;		// target speed
-}
 
-
-//
-// Set balls to slow mode - actor is sorcerer
-//
-void A_SlowBalls(DActor *actor)
-{
-  actor->args[3] = SORC_DECELERATE;				// slow mode
-  actor->args[2] = SORCBALL_INITIAL_SPEED;		// target speed
-}
-
-
-//
-// Instant stop when rotation gets to ball in special2
-//		actor is sorcerer
-//
-void A_StopBalls(DActor *actor)
-{
-  int chance = P_Random();
-  actor->args[3] = SORC_STOPPING;				// stopping mode
-  actor->args[1] = 0;							// Reset rotation counter
-
-  if ((actor->args[0] <= 0) && (chance < 200))
-    {
-      actor->special2 = MT_SORCBALL2;			// Blue
-    }
-  else if((actor->health < (actor->info->spawnhealth >> 1)) &&
-	  (chance < 200))
-    {
-      actor->special2 = MT_SORCBALL3;			// Green
-    }
-  else
-    {
-      actor->special2 = MT_SORCBALL1;			// Yellow
-    }
-
-
-}
-
-
-//
 // Increase ball orbit speed - actor is ball
-//
 void A_AccelBalls(DActor *actor)
 {
-  DActor *sorc = (DActor *)actor->owner;
+  DActor *sorc = reinterpret_cast<DActor*>(actor->owner);
 
   if (sorc->args[4] < sorc->args[2])
     {
@@ -2871,22 +2932,21 @@ void A_DecelBalls(DActor *actor)
 // Update angle if first ball - actor is ball
 void A_SorcUpdateBallAngle(DActor *actor)
 {
-  DActor *parent = (DActor *)actor->owner;
+  DActor *sorc = reinterpret_cast<DActor*>(actor->owner);
+
   if (actor->type == MT_SORCBALL1)
-    {
-      parent->special1 += ANGLE_1*parent->args[4];
-    }
+    sorc->special1 += ANGLE_1*sorc->args[4];
 }
 
 
 // actor is ball
 void A_CastSorcererSpell(DActor *actor)
 {
+  DActor *parent = reinterpret_cast<DActor*>(actor->owner);
   DActor *mo;
   int spell = actor->type;
   angle_t ang1,ang2;
   fixed_t z;
-  DActor *parent = (DActor *)actor->owner;
 
   S_StartAmbSound(NULL, SFX_SORCERER_SPELLCAST);
 
@@ -2941,9 +3001,9 @@ void A_SpawnReinforcements(DActor *actor)
 // actor is ball
 void A_SorcOffense1(DActor *actor)
 {
+  DActor *parent = reinterpret_cast<DActor*>(actor->owner);
   DActor *mo;
   angle_t ang1,ang2;
-  DActor *parent = (DActor *)actor->owner;
 
   ang1 = actor->yaw + ANGLE_1*70;
   ang2 = actor->yaw - ANGLE_1*70;
@@ -2964,12 +3024,12 @@ void A_SorcOffense1(DActor *actor)
 }
 
 
-// DActor is ball
+// actor is ball
 void A_SorcOffense2(DActor *actor)
 {
+  DActor *parent = reinterpret_cast<DActor*>(actor->owner);
   DActor *mo;
   int delta, index;
-  DActor *parent = (DActor *)actor->owner;
   Actor *dest = parent->target;
 
   index = actor->args[4] << 5;
@@ -2987,44 +3047,9 @@ void A_SorcOffense2(DActor *actor)
 }
 
 
-// Resume ball spinning
-void A_SorcBossAttack(DActor *actor)
-{
-  actor->args[3] = SORC_ACCELERATE;
-  actor->args[2] = SORCBALL_INITIAL_SPEED;
-}
-
-
-// spell cast magic fizzle
-void A_SpawnFizzle(DActor *actor)
-{
-  fixed_t x,y,z;
-  fixed_t dist = 5;
-  angle_t angle = actor->yaw >> ANGLETOFINESHIFT;
-  int speed = int(actor->info->speed);
-  angle_t rangle;
-  DActor *mo;
-  int ix;
-
-  x = actor->pos.x + dist * finecosine[angle];
-  y = actor->pos.y + dist * finesine[angle];
-  z = actor->pos.z - actor->floorclip + (actor->height>>1);
-  for (ix=0; ix<5; ix++)
-    {
-      mo = actor->mp->SpawnDActor(x,y,z,MT_SORCSPARK1);
-      if (mo)
-	{
-	  rangle = angle + ((P_Random()%5) << 1);
-	  mo->vel.x = (P_Random()%speed) * finecosine[rangle];
-	  mo->vel.y = (P_Random()%speed) * finesine[rangle];
-	  mo->vel.z = 2;
-	}
-    }
-}
-
 
 //============================================================================
-// Yellow spell - offense
+// FX1: Yellow spell - offense
 //============================================================================
 
 void A_SorcFX1Seek(DActor *actor)
@@ -3035,14 +3060,10 @@ void A_SorcFX1Seek(DActor *actor)
 
 
 //============================================================================
-// Blue spell - defense
+// FX2: Blue spell - defense
 //============================================================================
-//
-// FX2 Variables
-//		special1		current angle
-//		special2
+//		special1	current angle
 //		args[0]		0 = CW,  1 = CCW
-//		args[1]		
 //============================================================================
 
 // Split ball in two
@@ -3073,9 +3094,10 @@ void A_SorcFX2Split(DActor *actor)
 // Orbit FX2 about sorcerer
 void A_SorcFX2Orbit(DActor *actor)
 {
+  DActor *parent = reinterpret_cast<DActor*>(actor->owner);
+
   angle_t angle;
   fixed_t x,y,z;
-  DActor *parent = (DActor *)actor->owner;
   fixed_t dist = parent->info->radius;
 
   if ((parent->health <= 0) ||		// Sorcerer is dead
@@ -3126,19 +3148,16 @@ void A_SorcFX2Orbit(DActor *actor)
 
 
 //============================================================================
-// Green spell - spawn bishops
+// FX3: Green spell - spawn bishops
 //============================================================================
 
 void A_SpawnBishop(DActor *actor)
 {
-  DActor *mo;
-  mo=actor->mp->SpawnDActor(actor->pos, MT_BISHOP);
-  if(mo)
+  DActor *mo = actor->mp->SpawnDActor(actor->pos, MT_BISHOP);
+  if (mo)
     {
-      if(!mo->TestLocation())
-	{
-	  mo->SetState(S_NULL);
-	}
+      if (!mo->TestLocation())
+	mo->SetState(S_NULL);
     }
   actor->SetState(S_NULL);
 }
@@ -3163,15 +3182,13 @@ void A_SorcererBishopEntry(DActor *actor)
 
 
 //============================================================================
-// FX4 - rapid fire balls
+// FX4: rapid fire balls
 //============================================================================
 
 void A_SorcFX4Check(DActor *actor)
 {
   if (actor->special2-- <= 0)
-    {
-      actor->SetState(actor->info->deathstate, false);
-    }
+    actor->SetState(actor->info->deathstate, false);
 }
 
 //============================================================================
@@ -3220,18 +3237,6 @@ void A_BounceCheck(DActor *actor)
     }
 }
 
-
-// This is a hack to counter the hack in original Hexen
-void A_SorcDeath(DActor *actor)
-{
-  // Before the sorcerer death action is executed, we must fix the args:
-  actor->args[0] = actor->special; // script number to execute
-  actor->args[1] = 0; // in the current Map
-  actor->args[2] = actor->args[3] = actor->args[4] = 0; // with zero args
-
-  actor->special = 80; // ACS_Execute
-  // NOTE that as the sorcerer's args are reset, the remaining balls may act funny!
-}
 
 
 

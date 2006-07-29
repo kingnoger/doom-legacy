@@ -47,19 +47,22 @@
 typedef Uint32 angle_t;
 
 
+extern const fixed_t FloatBobOffsets[64];
+
+
 #define FINEANGLES              8192
 #define FINEMASK                (FINEANGLES-1)
 #define ANGLETOFINESHIFT        19      // 0x100000000 to 0x2000
 
 
 // Effective size is 10240. [5*FINEANGLES/4]
-extern fixed_t *finesine;
+extern const fixed_t* const finesine;
 
 // Re-use data, is just PI/2 phase shift.
-extern fixed_t *finecosine;
+extern const fixed_t* const finecosine;
 
 // Effective size is 4096. [FINEANGLES/2]
-extern fixed_t *finetangent;
+extern const fixed_t* const finetangent;
 
 
 const angle_t ANG45  = 0x20000000;

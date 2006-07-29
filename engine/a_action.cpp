@@ -46,6 +46,7 @@ void P_ThrustSpike(Actor *actor);
 
 // PUBLIC DATA DEFINITIONS -------------------------------------------------
 
+/*
 static fixed_t::value_t FloatBobOffsets_int[64] =
 {
   0, 51389, 102283, 152192,
@@ -65,8 +66,9 @@ static fixed_t::value_t FloatBobOffsets_int[64] =
   -370728, -332605, -291279, -247148,
   -200637, -152193, -102284, -51389
 };
+const fixed_t *FloatBobOffsets = reinterpret_cast<fixed_t *>(FloatBobOffsets_int);
+*/
 
-fixed_t *FloatBobOffsets = reinterpret_cast<fixed_t *>(FloatBobOffsets_int);
 
 
 // A Hexen hack to store a mobjtype number into one byte
