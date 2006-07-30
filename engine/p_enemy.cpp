@@ -226,11 +226,11 @@ static Actor   *soundtarget;
 static void P_RecursiveSound(sector_t *sec, int soundblocks)
 {
   // wake up all monsters in this sector
-  if (sec->validcount == validcount && sec->soundtraversed <= soundblocks+1)
-    return; // already flooded
+  if (sec->validcount == validcount && sec->soundtraversed <= soundblocks)
+    return; // already flooded with louder sound
 
   sec->validcount = validcount;
-  sec->soundtraversed = soundblocks+1;
+  sec->soundtraversed = soundblocks;
   sec->soundtarget = soundtarget;
 
   for (int i=0; i < sec->linecount; i++)
@@ -251,10 +251,11 @@ static void P_RecursiveSound(sector_t *sec, int soundblocks)
       else
 	other = check->sideptr[0]->sector;
 
+      // sound can cross one ML_SOUNDBLOCK line, but no more
       if (check->flags & ML_SOUNDBLOCK)
         {
-	  if (!soundblocks)
-	    P_RecursiveSound(other, 1);
+	  if (soundblocks <= 0)
+	    P_RecursiveSound(other, soundblocks+1);
         }
       else
 	P_RecursiveSound(other, soundblocks);
@@ -376,7 +377,7 @@ bool DActor::P_Move()
     return false;
 
 #ifdef PARANOIA
-  if (unsigned(movedir) >= 8)
+  if (movedir >= 8)
     I_Error ("Weird movedir!");
 #endif
 
@@ -572,21 +573,58 @@ void DActor::P_NewChaseDir()
 
 
 
-// If allaround is false, only look 180 degrees in front.
-// Returns true if a player is targeted.
-//
-// TODO: make this LookForEnemies, looking for every Actor who does not belong to the same team!
-// Armies of monsters fighting against each other!
-bool DActor::LookForPlayers(bool allaround)
-{
-  // FIXME removed until LookForMonsters is fixed
-  //if (!game.multiplayer && consoleplayer->pawn->health <= 0 && game.mode == gm_heretic)
-  //  // Single player game and player is dead, look for monsters
-  //  return LookForMonsters();
+static Actor *looker;
+static int search_count;
 
+// TODO save CPU, add realism, use blockmap or BSP to only seek surroundings
+static bool IT_FindEnemies(Thinker *th)
+{
+  const int MONS_LOOK_RANGE = 20*64;
+  const int MONS_LOOK_LIMIT = 64;
+
+  Actor *a = th->IsOf(Actor::_type) ? reinterpret_cast<Actor*>(th) : NULL;
+
+  if (!a)
+    return true; // not an Actor
+	
+  if (!(a->flags & (MF_COUNTKILL | MF_NOTMONSTER)) ||
+      !(a->flags & MF_SHOOTABLE) ||
+      (a->flags & MF_CORPSE))
+    {
+      return true; // not a valid target
+    }
+
+  if (P_XYdist(looker->pos, a->pos) > MONS_LOOK_RANGE)
+    return true; // out of range
+
+  if (P_Random() < 16)
+    return true; // skip on a whim
+
+  if (search_count++ > MONS_LOOK_LIMIT)
+    return false; // stop searching
+
+  if ((looker->team && looker->team == a->team) || // I pity the foo' who's not on my team!
+      a == looker || a == looker->owner)
+    return true;
+
+  if (!looker->mp->CheckSight(looker, a))
+    return true; // out of sight
+
+  looker->target = a; // found a target
+  return false;
+}
+
+
+// If allaround is false, only look 180 degrees in front.
+// Returns true if a new target is found
+//
+// First looks for enemy players, then for any Actor who does not belong to the same team!
+// Armies of monsters fighting against each other!
+bool DActor::LookForEnemies(bool allaround)
+{
   int n = mp->players.size();
   if (n == 0)
-    return false;
+    goto noplayerfound;
 
   // BP: first time init, this allow minimum lastlook changes
   if (lastlook < 0)
@@ -599,7 +637,7 @@ bool DActor::LookForPlayers(bool allaround)
 
       // check max. 2 players/turn
       if (c >= 2)
-	return false;
+	break;
 
       PlayerInfo *k = mp->players[lastlook];
       if (!k->pawn || (k->pawn->flags & MF_CORPSE) || k->spectator)
@@ -607,18 +645,16 @@ bool DActor::LookForPlayers(bool allaround)
 
       PlayerPawn *p = k->pawn;
 
-      if (p->health <= 0)
-	continue;           // dead
-
       if (!mp->CheckSight(this, p))
-	continue;           // out of sight
+	continue; // out of sight
 
-      if (p == owner)
-	continue; // Don't target master
+      if ((team && team == p->team) ||
+	  p == owner)
+	continue; // don't target master or teammate
 
       if (!allaround)
         {
-	  angle_t an = R_PointToAngle2(pos.x, pos.y, p->pos.x, p->pos.y) - yaw;
+	  angle_t an = R_PointToAngle2(pos, p->pos) - yaw;
 
 	  if (an > ANG90 && an < ANG270)
             {
@@ -630,79 +666,30 @@ bool DActor::LookForPlayers(bool allaround)
         }
 
       if (p->flags & MF_SHADOW)
-        { // Player is invisible
+        {
+	  // Player is invisible
 	  if (P_XYdist(p->pos, pos) > 2*MELEERANGE && P_AproxDistance(p->vel.x, p->vel.y) < 5)
-            { // Player is sneaking - can't detect
-	      return false;
-            }
+	    continue; // Player is sneaking - can't detect
+
 	  if (P_Random() < 225)
-            { // Player isn't sneaking, but still didn't detect
-	      return false ;
-            }
+	    continue; // Player isn't sneaking, but still didn't detect
         }
 
       target = p;
-
       return true;
     }
 
-  return false;
-}
-
-// was P_LookForMonsters
-#define MONS_LOOK_RANGE (20*64)
-#define MONS_LOOK_LIMIT 64
-/*
-bool DActor::LookForMonsters()
-{
-  Actor *mo;
-  Thinker *t, *tc;
-
-  if (!mp->CheckSight(game.players[0]->pawn, this))
-    // Player can't see monster
-    return false;
-
-  int count = 0;
-  tc = &mp->thinkercap;
-  for (t = tc->next; t != tc; t = t->next)
+ noplayerfound:
+  if (false)  // TEST FIXME
     {
-      if (t->Type() != Thinker::tt_actor)
-	// Not a mobj thinker
-	continue;
-	
-      mo = (Actor *)t;
-      if (!(mo->flags & MF_COUNTKILL) || (mo == this) || (mo->health <= 0))
-	{ // Not a valid monster
-	  continue;
-	}
-      if (P_XYdist(pos, mo->pos) > MONS_LOOK_RANGE)
-	{ // Out of range
-	  continue;
-	}
-      if (P_Random() < 16)
-	{ // Skip
-	  continue;
-	}
-      if (count++ > MONS_LOOK_LIMIT)
-	{ // Stop searching
-	  return false;
-	}
-      if (!mp->CheckSight(this, mo))
-	{ // Out of sight
-	  continue;
-	}
-
-      // Hexen
-      if (mo->owner == owner)
-        continue;
-
-      // Found a target monster
-      target = mo;
-      return true;
+      looker = this;
+      search_count = 0;
+      return (!mp->IterateThinkers(IT_FindEnemies) && target);
     }
+
   return false;
 }
-*/
+
 
 
 //=========================================
@@ -732,7 +719,7 @@ void A_Look(DActor *actor)
     }
 
 
-  if (!actor->LookForPlayers(false))
+  if (!actor->LookForEnemies(false))
     return;
 
   // go into chase state
@@ -820,7 +807,7 @@ void A_Chase(DActor *actor)
   if (!actor->target || !(actor->target->flags & MF_SHOOTABLE))
     {
       // look for a new target
-      if (actor->LookForPlayers(true))
+      if (actor->LookForEnemies(true))
 	return;     // got a new target
 
       actor->SetState(actor->info->spawnstate);
@@ -865,7 +852,7 @@ void A_Chase(DActor *actor)
   if (game.multiplayer && !actor->threshold
       && !actor->mp->CheckSight(actor, actor->target) )
     {
-      if (actor->LookForPlayers(true))
+      if (actor->LookForEnemies(true))
 	return;     // got a new target
     }
 
@@ -1946,7 +1933,7 @@ void A_SpawnFly(DActor *mo)
 
   DActor *newmobj = mo->mp->SpawnDActor(targ->pos, type);
 
-  if (newmobj->LookForPlayers(true))
+  if (newmobj->LookForEnemies(true))
     newmobj->SetState(newmobj->info->seestate);
 
   // telefrag anything in this spot

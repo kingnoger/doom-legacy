@@ -333,8 +333,6 @@ void Actor::CheckPointers()
 // detaches the Actor from the Map
 void Actor::Detach()
 {
-  void P_DelSeclist(msecnode_t *p);
-
   if (tid)
     {
       mp->RemoveFromTIDmap(this);
@@ -345,7 +343,7 @@ void Actor::Detach()
 
   if (touching_sectorlist)
     {
-      P_DelSeclist(touching_sectorlist);
+      msecnode_t::DeleteSectorlist(touching_sectorlist);
       touching_sectorlist = NULL;
     }
 
@@ -392,7 +390,7 @@ void Actor::Remove()
 
   if (touching_sectorlist)
     {
-      P_DelSeclist(touching_sectorlist);
+      msecnode_t::DeleteSectorlist(touching_sectorlist);
       touching_sectorlist = NULL;
     }
 
@@ -555,6 +553,8 @@ float Actor::GetMoveFactor()
 	  if ((sec->special & SS_friction) && (pos.z <= sec->floorheight))
 	    if (frict == normal_friction || frict > sec->friction)
 	      {
+		// with friction, more is less:)
+		// find the stickiest mud and least slippery ice, mud overrules ice
 		frict = sec->friction;
 		mf = sec->movefactor;
 	      }
@@ -1177,7 +1177,7 @@ DActor::DActor()
   state = NULL;
   tics = movedir = movecount = threshold = 0;
   lastlook = -1;
-  special1 = special2 = 0;
+  special1 = special2 = special3 = 0;
 }
 
 
@@ -1209,7 +1209,7 @@ DActor::DActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
 
   movedir = movecount = threshold = 0;
   lastlook = -1;
-  special1 = special2 = 0;
+  special1 = special2 = special3 = 0;
 
   // do not set the state with SetState,
   // because action routines can not be called yet
@@ -1318,10 +1318,12 @@ void DActor::Think()
       if (!(flags & MF_COUNTKILL))
 	return;
 
-      movecount++;
-
-      if (movecount < cv_respawnmonsterstime.value*TICRATE)
-	return;
+      // use reactiontime as a respawn counter
+      if (reactiontime < cv_respawnmonsterstime.value*TICRATE)
+	{
+	  reactiontime++;
+	  return;
+	}
 
       if (mp->maptic & 31)
 	return;

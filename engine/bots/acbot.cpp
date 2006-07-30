@@ -1129,7 +1129,7 @@ void ACBot::BuildInput(PlayerInfo *p, int elapsed)
       fixed_t nx = pawn->pos.x + pawn->vel.x + cpx;
       fixed_t ny = pawn->pos.y + pawn->vel.y + cpy;
 
-      bool blocked = !pawn->TestLocation(nx, ny) ||
+      bool blocked = !pawn->TestLocation(nx, ny) || // FIXME wrong
 	tmfloorz - pawn->Feet() > 24 ||
 	tmceilingz - tmfloorz < pawn->height;
       //if its time to change strafe directions, 
@@ -1148,7 +1148,7 @@ void ACBot::BuildInput(PlayerInfo *p, int elapsed)
 
 	  if (tmfloorz - pawn->Feet() > 24 &&
 	      (tmfloorz - pawn->Feet() <= 37 ||
-	       (tmfloorz - pawn->Feet() <= 45 && pawn->subsector->sector->floortype != FLOOR_WATER)))
+	       (tmfloorz - pawn->Feet() <= 45 && pawn->subsector->sector->floortype != FLOOR_WATER))) // FIXME cv_jumpspeed
 	    cmd->buttons |= ticcmd_t::BT_JUMP;
 
 	  for (unsigned i=0; i < spechit.size(); i++)

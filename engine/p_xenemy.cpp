@@ -799,7 +799,7 @@ void A_SerpentChase(DActor *actor)
 
   if(!actor->target || !(actor->target->flags&MF_SHOOTABLE))
     { // look for a new target
-      if(actor->LookForPlayers(true))
+      if(actor->LookForEnemies(true))
 	{ // got a new target
 	  return;
 	}
@@ -836,7 +836,7 @@ void A_SerpentChase(DActor *actor)
   //
   if (!actor->threshold && !actor->mp->CheckSight (actor, actor->target) )
     {
-      if (actor->LookForPlayers(true))
+      if (actor->LookForEnemies(true))
 	return;         // got a new target
     }
 
@@ -1000,7 +1000,7 @@ void A_SerpentWalk(DActor *actor)
 
   if(!actor->target || !(actor->target->flags&MF_SHOOTABLE))
     { // look for a new target
-      if(actor->LookForPlayers(true))
+      if(actor->LookForEnemies(true))
 	{ // got a new target
 	  return;
 	}
@@ -1036,7 +1036,7 @@ void A_SerpentWalk(DActor *actor)
   //
   if (!actor->threshold && !actor->mp->CheckSight (actor, actor->target))
     {
-      if (actor->LookForPlayers(true))
+      if (actor->LookForEnemies(true))
 	return;         // got a new target
     }
 
@@ -1701,7 +1701,7 @@ void A_DragonFlight(DActor *actor)
 	}
     }
   else
-    actor->LookForPlayers(true);
+    actor->LookForEnemies(true);
 }
 
 //============================================================================
@@ -2324,7 +2324,7 @@ void A_FiredChase(DActor *actor)
 
   if(!t || !(t->flags&MF_SHOOTABLE))
     {	// Invalid target
-      actor->LookForPlayers(true);
+      actor->LookForEnemies(true);
       return;
     }
 
@@ -2564,7 +2564,7 @@ void A_IceGuyMissileExplode(DActor *actor)
 
 //============================================================================
 //
-//	Sorcerer stuff
+//	Sorcerer (Heresiarch) stuff
 //
 //  Sorcerer Variables
 //		special1		Angle of ball 1 (all others relative to that)
@@ -2574,13 +2574,13 @@ void A_IceGuyMissileExplode(DActor *actor)
 //		args[2]			Target orbit speed for acceleration/deceleration
 //		args[3]			Movement mode (see SORC_ macros)
 //		args[4]			Current ball orbit speed
+//		special3		HACK to counter original Hexen hack, stores the special action
 //  Sorcerer Ball Variables
 //              owner                   Points to Sorcerer (aka parent)
 //		special1		Previous angle of ball (for woosh)
 //		special2		Countdown of rapid fire (FX4)
 //		args[0]			If set, don't play the bounce sound when bouncing
 //              args[4]			Ball 1 only
-//              args[1]			Ball 2 only, HACK, stores the sorcerer special
 //============================================================================
 
 #define SORCBALL_INITIAL_SPEED 		7
@@ -2624,29 +2624,26 @@ void A_SorcOffense2(DActor *actor);
 // Spawn spinning balls above head - actor is sorcerer
 void A_SorcSpinBalls(DActor *actor)
 {
-  DActor *mo;
-  fixed_t z;
+  actor->special3 = actor->special; // HACK, store special action
+  actor->special = 0; // so no unwanted things happen when sorc dies
 
   A_SlowBalls(actor);
   actor->args[0] = 0;	       	// Currently no defense
   actor->args[3] = SORC_NORMAL;
   actor->args[4] = SORCBALL_INITIAL_SPEED;		// Initial orbit speed
   actor->special1 = ANGLE_1;
-  z = actor->pos.z - actor->floorclip + actor->info->height;
+  fixed_t z = actor->pos.z - actor->floorclip + actor->info->height;
 	
-  mo = actor->mp->SpawnDActor(actor->pos.x, actor->pos.y, z, MT_SORCBALL1);
+  DActor *mo = actor->mp->SpawnDActor(actor->pos.x, actor->pos.y, z, MT_SORCBALL1);
   if (mo)
     {
       mo->owner = actor;
       mo->special2 = SORCFX4_RAPIDFIRE_TIME;
     }
+
   mo = actor->mp->SpawnDActor(actor->pos.x, actor->pos.y, z, MT_SORCBALL2);
-  if (mo)
-    {
-      mo->owner = actor;
-      mo->args[1] = actor->special; // HACK
-      actor->special = 0; // so no unwanted things happen when sorc dies
-    }
+  if (mo) mo->owner = actor;
+
   mo = actor->mp->SpawnDActor(actor->pos.x, actor->pos.y, z, MT_SORCBALL3);
   if (mo) mo->owner = actor;
 }
@@ -2732,14 +2729,9 @@ void A_SpawnFizzle(DActor *actor)
 void A_SorcDeath(DActor *actor)
 {
   // At this point the sorcerer death action is already executed.
-
-  byte argh[5];
-  argh[0] = actor->special; // script number to execute
-  argh[1] = 0; // in the current Map
-  argh[2] = argh[3] = argh[4] = 0; // with zero args
-
-  actor->mp->ExecuteLineSpecial(80, argh, NULL, 0, actor); // ACS_Execute
-  actor->special = 0;
+  // special3 is the script number to execute, in current map, with zero args
+  byte argh[7] = {actor->special3, 0, 0, 0, 0, 0, 0};
+  actor->mp->StartACS(argh[0], &argh[2], actor, NULL, 0);
 }
 
 
@@ -2760,14 +2752,6 @@ void A_SorcBallOrbit(DActor *actor)
 	
   if (parent->health <= 0)
     {
-      if (actor->type == MT_SORCBALL2)
-	{
-	  // HACK: handle sorc death special
-	  parent->special = actor->args[1]; // put script number back
-	  actor->args[1] = 0;
-	  A_SorcDeath(parent);
-	}
-
       actor->SetState(actor->info->painstate);
     }
 
@@ -3291,7 +3275,7 @@ void A_FastChase(DActor *actor)
 
   if(!actor->target || !(actor->target->flags&MF_SHOOTABLE))
     { // look for a new target
-      if(actor->LookForPlayers(true))
+      if(actor->LookForEnemies(true))
 	{ // got a new target
 	  return;
 	}
@@ -3358,7 +3342,7 @@ void A_FastChase(DActor *actor)
   //
   if (!actor->threshold && !actor->mp->CheckSight(actor, actor->target))
     {
-      if (actor->LookForPlayers(true))
+      if (actor->LookForEnemies(true))
 	return;         // got a new target
     }
 

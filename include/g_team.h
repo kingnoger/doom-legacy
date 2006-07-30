@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2004 by DooM Legacy Team.
+// Copyright (C) 2002-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -19,8 +19,18 @@
 
 /// \file
 /// \brief Team system
+
+#ifndef g_team_h
+#define g_team_h 1
+
+#include <string>
+
+using namespace std;
+
+/// \brief Describes a single team.
+/// \ingroup g_central
 ///
-/// Every single pawn in the game belongs to a team.
+/// Every single Actor in the game belongs to a team.
 /// Some teams are always fixed, others can be created and destroyed.
 /// Team 0 is always the "individual" team.
 ///   Fellow teammates are targeted and attacked if the Actor AI so demands.
@@ -32,20 +42,18 @@
 /// This means that if you put Hellspawn and Heretic monsters in the same room, they will
 /// attack each other unless they are specifically assigned to same team.
 /// Team score is only kept for teams > 0.
-
-#ifndef g_team_h
-#define g_team_h 1
-
-#include <string>
-
-using namespace std;
-
-/// \brief Describes a single team.
-
 class TeamInfo
 {
   friend class GameInfo;
 public:
+  enum team_e
+  {
+    TEAM_Individual = 0,
+    TEAM_Doom = -1,
+    TEAM_Heretic = -2,
+    TEAM_Hexen = -3,
+  };
+
   string name;
   int color;
   int score;

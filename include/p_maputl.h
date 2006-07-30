@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,7 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -32,10 +31,9 @@
 
 #define USERANGE 64
 
-
 extern int validcount;
 
-// P_MAP
+
 // variables used by movement functions to communicate
 extern bool    floatok;
 extern fixed_t tmfloorz, tmceilingz;
@@ -52,9 +50,38 @@ extern position_check_t Blocking;
 extern line_t *ceilingline;
 
 
-// P_MAPUTL
 
-void P_DelSeclist(struct msecnode_t *p);
+
+/// \brief Encapsulates the XY-plane geometry of a linedef for line traces. 
+/// \ingroup g_geoutils
+struct divline_t 
+{
+  fixed_t   x, y; ///< starting point (v1)
+  fixed_t dx, dy; ///< v2-v1
+
+  /// copies the relevant parts of a linedef
+  void MakeDivline(const line_t *li);
+};
+
+
+fixed_t P_AproxDistance(fixed_t dx, fixed_t dy);
+int     P_PointOnLineSide(fixed_t x, fixed_t y, const line_t *line);
+int     P_PointOnDivlineSide(fixed_t x, fixed_t y, divline_t *line);
+fixed_t P_InterceptVector(divline_t* v2, divline_t* v1);
+
+inline angle_t R_PointToAngle2(const vec_t<fixed_t>& a, const vec_t<fixed_t>& b)
+{
+  return R_PointToAngle2(a.x, a.y, b.x, b.y);
+}
+
+inline fixed_t P_XYdist(const vec_t<fixed_t>& a, const vec_t<fixed_t>& b)
+{
+  return P_AproxDistance(a.x - b.x, a.y - b.y);
+}
+
+
+
+
 
 /// \brief Describes a single intercept of a trace line, either an Actor or a line_t
 /// \ingroup g_trace
@@ -71,22 +98,7 @@ struct intercept_t
 };
 
 
-/// \brief Encapsulates the XY-plane geometry of a linedef for line traces. 
-/// \ingroup g_geometry
-struct divline_t 
-{
-  fixed_t   x, y; ///< starting point (v1)
-  fixed_t dx, dy; ///< v2-v1
 
-  /// copies the relevant parts of a linedef
-  void MakeDivline(const line_t *li);
-};
-
-
-fixed_t P_AproxDistance(fixed_t dx, fixed_t dy);
-int     P_PointOnLineSide(fixed_t x, fixed_t y, const line_t *line);
-int     P_PointOnDivlineSide(fixed_t x, fixed_t y, divline_t *line);
-fixed_t P_InterceptVector(divline_t* v2, divline_t* v1);
 
 
 struct line_opening_t
@@ -95,6 +107,7 @@ struct line_opening_t
 };
 
 line_opening_t *P_LineOpening(line_t *linedef, Actor *thing = NULL);
+
 
 /// \brief Flags for Map::PathTraverse
 /// \ingroup g_trace
@@ -109,16 +122,5 @@ extern divline_t trace;
 extern class bbox_t tmb;
 
 
-
-
-inline angle_t R_PointToAngle2(const vec_t<fixed_t>& a, const vec_t<fixed_t>& b)
-{
-  return R_PointToAngle2(a.x, a.y, b.x, b.y);
-}
-
-inline fixed_t P_XYdist(const vec_t<fixed_t>& a, const vec_t<fixed_t>& b)
-{
-  return P_AproxDistance(a.x - b.x, a.y - b.y);
-}
 
 #endif

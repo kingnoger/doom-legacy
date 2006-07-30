@@ -56,6 +56,20 @@
   Return false to stop traversal, true to continue.
  */
 
+/*
+  line activation:
+  SPAC_USE    = 1,	///< when player uses line
+
+  SPAC_CROSS  =	0,	///< when player crosses line
+  SPAC_MCROSS =	2,	///< when monster crosses line
+  SPAC_PCROSS =	5,      ///< projectile crosses line
+  crossings: at trymove if move is succesful, line must be twosided and passable...
+
+  SPAC_IMPACT =	3,	///< when projectile hits line
+  SPAC_PUSH   =	4,	///< when player/monster pushes line
+  impacts, line must be onesided or unpassable  (or we must hit upper/lowertexture?)
+ */
+
 
 #include <math.h>
 #include "doomdef.h"
@@ -94,11 +108,26 @@ bool     floatok; // A::Trymove, DA:PMove
 
 static bool interact; // touch or just see if it fits? TODO TEST
 
-// cp
-fixed_t  tmfloorz, tmceilingz;
-static fixed_t  tmdropoffz;
-static int      tmfloorpic;
-static fixed_t  tmsectorfloorz, tmsectorceilingz;
+// checkposition data (z properties in the XY footprint of the Actor)
+/*
+static struct
+{
+  fixed_t  floorz;   ///< highest floor
+  fixed_t  ceilingz; ///< lowest ceiling
+  fixed_t  dropoffz; ///< lowest floor
+  int      floorpic; ///< floorpic of highest floor
+  //fixed_t  sectorfloorz, sectorceilingz;
+
+} tm;
+*/
+
+fixed_t tmfloorz;   ///< highest floor
+fixed_t tmceilingz; ///< lowest ceiling
+fixed_t tmdropoffz; ///< lowest floor
+int     tmfloorpic; ///< floorpic of highest floor
+fixed_t tmsectorfloorz, tmsectorceilingz;
+
+
 Actor *tmfloorthing; // the thing corresponding to tmfloorz or NULL if tmfloorz is from a sector FIXME
 
 
@@ -113,15 +142,12 @@ line_t *ceilingline; // cp
 
 
 
-msecnode_t *P_AddSecnode(sector_t *s, Actor *thing, msecnode_t *nextnode);
-msecnode_t *P_DelSecnode(msecnode_t *node);
-
-
 bbox_t tmb; // a bounding box; checkposition()
 fixed_t tmx, tmy; // mostly used here, set together with tmb
 
 
 const fixed_t MAXSTEPMOVE = 24;
+const fixed_t MAXWATERSTEPMOVE = 37;
 
 // Attempt to move to a new position,
 // crossing special lines in the way.
@@ -643,7 +669,7 @@ static bool PIT_CheckLine(line_t *ld)
     }
 
   if (open->lowfloor < tmdropoffz)
-    tmdropoffz = open->lowfloor; // FIXME lowest or highest lowfloor?
+    tmdropoffz = open->lowfloor;
 
   // if contacted a special line, add it to the list
   if (ld->special)
@@ -691,6 +717,7 @@ static bool PIT_CheckLine(line_t *ld)
 /*!
   Does full Actor->Actor collision checking, XY line collisions.
   Crossed special lines are stored into spechit.
+  \return false if XY position is utterly impossible
  */
 bool Actor::CheckPosition(fixed_t nx, fixed_t ny, bool act)
 {
@@ -1473,11 +1500,27 @@ static bool PTR_AimTraverse(intercept_t *in)
 }
 
 
+/*
+struct line_opening2_t
+{
+  fixed_t top;
+  fixed_t bottom;
+  fixed_t lowfloor;
+  opening_t *next; ///< next one (upwards)
+
+public:
+  void FreeChain();
+}
+#warning modded for new lineopenings
+*/
+
+
+
 /// \brief Firing instant-hit missile weapons.
 /// \ingroup g_ptr
 /*!
-  Sets linetarget and aimsine when a target is aimed at.
-  Returns true if the thing is not shootable, else continue through..
+  aimsine is sin(pitch) for the shot. Sets linetarget if a target is hit.
+  \return true if the shot continues after this intercept
 */
 static bool PTR_ShootTraverse(intercept_t *in)
 {
@@ -2392,7 +2435,7 @@ static bool PIT_GetSectors(line_t *ld)
   // allowed to move to this position, then the sector_list
   // will be attached to the Thing's Actor at touching_sectorlist.
 
-  sector_list = P_AddSecnode(ld->frontsector,tmthing,sector_list);
+  sector_list = msecnode_t::AddToSectorlist(ld->frontsector, tmthing, sector_list);
 
   // Don't assume all lines are 2-sided, since some Things
   // like MT_TFOG are allowed regardless of whether their radius takes
@@ -2401,7 +2444,7 @@ static bool PIT_GetSectors(line_t *ld)
   // Use sidedefs instead of 2s flag to determine two-sidedness.
 
   if (ld->backsector)
-    sector_list = P_AddSecnode(ld->backsector, tmthing, sector_list);
+    sector_list = msecnode_t::AddToSectorlist(ld->backsector, tmthing, sector_list);
 
   return true;
 }
@@ -2445,26 +2488,13 @@ void Map::CreateSecNodeList(Actor *thing, fixed_t x, fixed_t y)
 
   // Add the sector of the (x,y) point to sector_list.
 
-  sector_list = P_AddSecnode(thing->subsector->sector,thing,sector_list);
+  sector_list = msecnode_t::AddToSectorlist(thing->subsector->sector, thing, sector_list);
 
   // Now delete any nodes that won't be used. These are the ones where
   // m_thing is still NULL.
 
-  node = sector_list;
-  while (node)
-    {
-      if (node->m_thing == NULL)
-	{
-	  if (node == sector_list)
-	    sector_list = node->m_tnext;
-	  node = P_DelSecnode(node);
-	}
-      else
-	node = node->m_tnext;
-    }
-
-  thing->touching_sectorlist = sector_list;
-  sector_list = NULL;
+  thing->touching_sectorlist = msecnode_t::CleanSectorlist(sector_list);
+  sector_list = NULL; // just to be sure
 }
 
 

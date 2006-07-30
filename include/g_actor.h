@@ -299,7 +299,7 @@ public:
 
   fixed_t floorclip; ///< cut this amount from legs (deep water illusion) (Hexen)
 
-  short team; ///< see g_team.h
+  short team; ///< see TeamInfo
 
 public:
   // in g_actor.cpp
@@ -385,13 +385,14 @@ public:
   int            tics;    ///< state tic counter
 
   // Movement direction, movement generation (zig-zagging).
-  int  movedir;    ///< 0-7
-  int  movecount;  ///< when 0, select a new dir
+  Uint16  movedir;    ///< 0-8
+  Sint16  movecount;  ///< when 0, select a new dir
 
-  int  threshold;  ///< If >0, the target will be chased no matter what (even if shot)
-  int  lastlook;   ///< Player number last looked for.
+  Sint16  threshold;  ///< If >0, the current target will be chased no matter what (even if shot)
+  Sint16  lastlook;   ///< Player number last looked for.
 
-  int  special1, special2; ///< mobjtype dependent general storage
+  Sint32  special1, special2, special3; ///< mobjtype dependent general storage
+
 
 public:
   /// create a nonfunctional special DActor (LavaInflictor etc...)
@@ -422,8 +423,7 @@ public:
   // in p_enemy.cpp
   bool CheckMeleeRange();
   bool CheckMissileRange();
-  bool LookForPlayers(bool allaround);
-  bool LookForMonsters();
+  bool LookForEnemies(bool allaround);
   void P_NewChaseDir();
   bool P_TryWalk();
   bool P_Move();

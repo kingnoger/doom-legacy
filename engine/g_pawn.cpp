@@ -641,8 +641,32 @@ void PlayerPawn::Move()
 
   float mf = GetMoveFactor();
 
-  // limit speed = push/(1-friction) => multiplier = 2*(1-friction) = 0.1875
-  float magic = 0.1875f * speed * mf;
+#define F_NORM 0.90625f
+
+  // mf_ice = (1-f)/(1-n)
+  // mf_mud = (f-2*n+1)/(1-n)
+
+  // NOTE: limit speed depends on in which order thrust and friction are applied.
+  // Currently thrust is first, hence limit speed is
+  // v' = f*(v+t) = v  <=>  v = f/(1-f) * t
+  // On a normal surface, the max limit speed should be equal to 2*PlayerPawn::speed.
+  // Hence t_max = 2 * (1-f_norm)/f_norm * s
+  float magic = (2*(1-F_NORM)/F_NORM) * speed * mf;
+
+  // lim v on ice:  v = f/n * 2*s
+  // lim v on mud:  v = f/n * (f-xxx)/(1-f) * 2*s
+  // a on ice = (1-f)*(f/n * 2*s - v)
+  // a on mud = -(1-f)*v + f/n * (f-2*n+1) * 2*s
+
+  // If friction is applied first: TODO this is more natural...
+  // v' = f*v + t = v  <=>  v = 1/(1-f) * t
+  // t_max = 2 * (1-f_norm) * s
+  // float magic = 2*(1-F_NORM) * speed * mf;
+
+  // lim v on ice:  v = 2*s
+  // lim v on mud:  v = (f-xxx)/(1-f) * 2*s
+  // a on ice = (1-f) * (2*s - v)
+  // a on mud = -(1-f)*v + (f-2*n+1)* 2*s
 
   if (cmd->forward)
     {

@@ -16,7 +16,6 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
 //-----------------------------------------------------------------------------
 
 /// \file
@@ -29,8 +28,14 @@
 #include "m_fixed.h"
 #include "m_bbox.h"
 
+/*!
+  \defgroup g_mapgeometry Runtime Map geometry
+
+  Runtime structures for Map geometry and related things.
+*/
 
 /// \brief Your plain vanilla vertex
+/// \ingroup \g_mapgeometry
 struct vertex_t
 {
   fixed_t  x, y;
@@ -53,33 +58,35 @@ struct mappoint_t
 
 
 /// "Fake floor" types
+/// \ingroup \g_mapgeometry
 enum ffloortype_e
 {
-  FF_EXISTS            = 0x1,    ///< MAKE SURE IT'S VALID
-  FF_SOLID             = 0x2,    ///< Does it clip things?
-  FF_RENDERSIDES       = 0x4,    ///< Render the sides?
-  FF_RENDERPLANES      = 0x8,    ///< Render the floor/ceiling?
-  FF_RENDERALL         = 0xC,    ///< Render everything?
-  FF_SWIMMABLE         = 0x10,   ///< Can we swim?
-  FF_NOSHADE           = 0x20,   ///< Does it mess with the lighting?
-  FF_CUTSOLIDS         = 0x40,   ///< Does it cut out hidden solid pixles?
-  FF_CUTEXTRA          = 0x80,   ///< Does it cut out hidden translucent pixles?
-  FF_CUTLEVEL          = 0xC0,   ///< Does it cut out all hidden pixles?
-  FF_CUTSPRITES        = 0x100,  ///< Final Step in 3D water
-  FF_BOTHPLANES        = 0x200,  ///< Render both planes all the time?
-  FF_EXTRA             = 0x400,  ///< Does it get cut by FF_CUTEXTRAS?
-  FF_TRANSLUCENT       = 0x800,  ///< See through!
-  FF_FOG               = 0x1000, ///< Fog "brush"?
-  FF_INVERTPLANES      = 0x2000, ///< Reverse the plane visibility rules?
-  FF_ALLSIDES          = 0x4000, ///< Render inside and outside sides?
-  FF_INVERTSIDES       = 0x8000, ///< Only render inside sides?
-  FF_DOUBLESHADOW      = 0x10000,///< Make two lightlist entries to reset light?
+  FF_EXISTS            = 0x0001,  ///< MAKE SURE IT'S VALID
+  FF_SOLID             = 0x0002,  ///< Does it clip things?
+  FF_RENDERSIDES       = 0x0004,  ///< Render the sides?
+  FF_RENDERPLANES      = 0x0008,  ///< Render the floor/ceiling?
+  FF_RENDERALL = FF_RENDERSIDES | FF_RENDERPLANES,  ///< Render everything?
+  FF_SWIMMABLE         = 0x0010,  ///< Can we swim?
+  FF_NOSHADE           = 0x0020,  ///< Does it mess with the lighting?
+  FF_CUTSOLIDS         = 0x0040,  ///< Does it cut out hidden solid pixles?
+  FF_CUTEXTRA          = 0x0080,  ///< Does it cut out hidden translucent pixles?
+  FF_CUTLEVEL = FF_CUTSOLIDS | FF_CUTEXTRA,  ///< Does it cut out all hidden pixles?
+  FF_CUTSPRITES        = 0x0100,  ///< Final Step in 3D water
+  FF_BOTHPLANES        = 0x0200,  ///< Render both planes all the time?
+  FF_EXTRA             = 0x0400,  ///< Does it get cut by FF_CUTEXTRAS?
+  FF_TRANSLUCENT       = 0x0800,  ///< See through!
+  FF_FOG               = 0x1000,  ///< Fog "brush"?
+  FF_INVERTPLANES      = 0x2000,  ///< Reverse the plane visibility rules?
+  FF_ALLSIDES          = 0x4000,  ///< Render inside and outside sides?
+  FF_INVERTSIDES       = 0x8000,  ///< Only render inside sides?
+  FF_DOUBLESHADOW     = 0x10000,  ///< Make two lightlist entries to reset light?
 };
 
 
 /// \brief Fake floor, better known as 3D floor:)
+/// \ingroup \g_mapgeometry
 ///
-/// Store fake planes in a resizable array insted of just by
+/// Store fake planes in a resizable array instead of just by
 /// heightsec. Allows for multiple fake planes.
 struct ffloor_t
 {
@@ -114,6 +121,7 @@ struct ffloor_t
 
 
 /// Sector floor properties
+/// \ingroup \g_mapgeometry
 enum floortype_t
 {
   FLOOR_SOLID,
@@ -126,6 +134,7 @@ enum floortype_t
 
 
 /// \brief Runtime map sector
+/// \ingroup \g_mapgeometry
 struct sector_t
 {
   fixed_t  floorheight, ceilingheight;
@@ -134,29 +143,29 @@ struct sector_t
   short    special, tag;
   int      nexttag, firsttag; //SoM: 3/6/2000: by killough: improves searches for tags.
 
-  short     soundtraversed; // 0 = untraversed, 1,2 = sndlines -1
-  class Actor *soundtarget; // thing that made a sound (or null)
+  short     soundtraversed; ///< Noise alert: # of MF_SOUNDBLOCK lines noise has crossed
+  class Actor *soundtarget; ///< Noise alert: thing that made a sound
 
-  short      seqType;   // sector sound sequence
-  mappoint_t soundorg;  // origin for any sounds played by the sector
+  short      seqType;   ///< sector sound sequence
+  mappoint_t soundorg;  ///< origin for any sounds played by the sector
 
-  short  floortype;   // see floortype_t
+  short  floortype;     ///< see floortype_t
 
-  int    blockbox[4]; // mapblock bounding box for height changes
+  int    blockbox[4];   ///< mapblock bounding box for height changes TODO obsolete?
 
-  int     validcount; // if == validcount, already checked
-  Actor  *thinglist;  // list of mobjs in sector
+  int     validcount;   ///< if == global validcount, already checked
+  Actor  *thinglist;    ///< list of Actors in sector
 
   //SoM: 3/6/2000: Start boom extra stuff
   // Thinker for reversable actions
-  class Thinker *floordata; // make thinkers on
-  Thinker *ceilingdata;  // floors, ceilings, lighting,
-  Thinker *lightingdata; // independent of one another
+  class Thinker *floordata; ///< floor effect
+  Thinker *ceilingdata;     ///< ceiling effect
+  Thinker *lightingdata;    ///< lighting effect
 
   // lockout machinery for stairbuilding
-  int stairlock;   // -2 on first locked -1 after thinker done 0 normally
-  int prevsec;     // -1 or number of sector for previous step
-  int nextsec;     // -1 or number of next step sector
+  int stairlock;   ///< -2 on first locked -1 after thinker done 0 normally
+  int prevsec;     ///< -1 or number of sector for previous step
+  int nextsec;     ///< -1 or number of next step sector
 
   /// floor and ceiling texture offsets
   fixed_t   floor_xoffs,   floor_yoffs;
@@ -179,13 +188,13 @@ struct sector_t
   // (to save space, since most sectors have default values for these...)
   int   damage; // TEST given according to damage bits in 'special'
   float gravity;  // TEST
-  float friction, movefactor;  // friction belongs here, not in Actor
+  float friction, movefactor;  ///< sector floor friction properties
 
-  class fadetable_t *bottommap, *midmap, *topmap; // dynamic colormaps
+  class fadetable_t *bottommap, *midmap, *topmap; ///< dynamic colormaps
 
-  // list of mobjs that are at least partially in the sector
-  // thinglist is a subset of touching_thinglist
-  struct msecnode_t *touching_thinglist;               // phares 3/14/98
+  /// list of Actors that are at least partially in the sector (superset of thinglist)
+  struct msecnode_t *touching_thinglist;
+
   //SoM: 3/6/2000: end stuff...
 
   int       linecount;
@@ -242,6 +251,7 @@ public:
 
 
 /// \brief SideDef
+/// \ingroup \g_mapgeometry
 struct side_t
 {
   /// add this to the calculated texture column
@@ -264,7 +274,8 @@ struct side_t
 
 
 
-/// Move clipping aid for LineDefs.
+/// \brief Move clipping aid for LineDefs.
+/// \ingroup \g_mapgeometry
 enum slopetype_t
 {
   ST_HORIZONTAL,
@@ -274,7 +285,8 @@ enum slopetype_t
 };
 
 
-/// LineDef flags
+/// \brief LineDef flags
+/// \ingroup \g_mapgeometry
 enum line_flags_e
 {
   /// Solid, is an obstacle.
@@ -346,6 +358,7 @@ enum line_flags_e
 
 
 /// \brief LineDef
+/// \ingroup \g_mapgeometry
 struct line_t
 {
   /// Vertices, from v1 to v2.
@@ -391,7 +404,8 @@ struct line_t
 
 
 
-/// \brief SubSector
+/// \brief SubSector, BSP leaf
+/// \ingroup \g_mapgeometry
 ///
 /// Each sector is divided into one or more convex subsectors during BSP nodebuilding.
 /// Basically, this is a list of LineSegs, indicating the visible walls that define
@@ -409,7 +423,8 @@ struct subsector_t
 };
 
 
-/// \brief Sector list node, showing all sectors an object appears in.
+/// \brief Sector list node, showing all sectors an Actor appears in.
+/// \ingroup \g_mapgeometry
 ///
 /// There are two threads that flow through these nodes. The first thread
 /// starts at touching_thinglist in a sector_t and flows through the m_snext
@@ -418,7 +433,7 @@ struct subsector_t
 /// through the m_tnext links to find all sectors a thing touches. This is
 /// useful when applying friction or push effects to sectors. These effects
 /// can be done as thinkers that act upon all objects touching their sectors.
-/// As an mobj moves through the world, these nodes are created and
+/// As an Actor moves through the world, these nodes are created and
 /// destroyed, with the links changed appropriately.
 ///
 /// For the links, NULL means top or end of list.
@@ -431,15 +446,43 @@ struct msecnode_t
   msecnode_t  *m_sprev;  ///< prev msecnode_t for this sector
   msecnode_t  *m_snext;  ///< next msecnode_t for this sector
   bool visited; ///< used in search algorithms
+
+private:
+  /// Freelist for unused nodes
+  static msecnode_t *headsecnode;
+
+  /// Allocate a new node (or get one from the freelist)
+  static msecnode_t *GetNode();
+  /// Return a node to freelist
+  void Free();
+  /// Unlink from both threads and Free the node
+  msecnode_t *Delete();
+
+public:
+  static void InitSecnodes();
+
+  /// Adds a sector/Actor node to a sector list
+  static msecnode_t *AddToSectorlist(sector_t *s, Actor *thing, msecnode_t *seclist);
+
+  /// Delete an entire sector list
+  static void DeleteSectorlist(msecnode_t *seclist)
+  {
+    while (seclist)
+      seclist = seclist->Delete();
+  }
+
+  /// Removes unused nodes from a sector list
+  static msecnode_t *CleanSectorlist(msecnode_t *seclist);
 };
 
 
 
 /// \brief LineSeg
+/// \ingroup \g_mapgeometry
 struct seg_t
 {
-  vertex_t *v1, *v2;
-  line_t   *linedef;
+  vertex_t *v1, *v2;     ///< start and end vertices
+  line_t   *linedef;     ///< corresponding linedef
   short     side;        ///< 0 means right side, 1 means left side.
   seg_t    *partner_seg; ///< the other side
 
@@ -448,9 +491,8 @@ struct seg_t
   angle_t   angle;
   float     length; ///< seg length
 
-  // Sector references.
+  /// Sector references. Backsector is NULL for one sided lines
   // Could be retrieved from linedef, too.
-  // backsector is NULL for one sided lines
   sector_t *frontsector;
   sector_t *backsector;
 
@@ -462,6 +504,7 @@ struct seg_t
 
 
 /// \brief BSP node
+/// \ingroup \g_mapgeometry
 struct node_t
 {
   /// Partition line.
@@ -479,13 +522,14 @@ struct node_t
 
 
 /// \brief Runtime mapthing
+/// \ingroup \g_mapgeometry
 struct mapthing_t
 {
   short tid;      ///< Thing ID (from Hexen)
   short x, y, z;  ///< coordinates
   short angle;    ///< orientation
   short type;     ///< DoomEd number
-  short flags;
+  short flags;    ///< see mapthing_flags_e
   byte special;   ///< thing action
   byte args[5];   ///< arguments for the thing action
 
@@ -493,7 +537,8 @@ struct mapthing_t
 };
 
 
-/// mapthing_t flags
+/// \brief mapthing_t flags
+/// \ingroup \g_mapgeometry
 enum mapthing_flags_e
 {
   // original Doom flags
@@ -522,16 +567,16 @@ enum mapthing_flags_e
 
 // GL node definitions. Currently we use some v5 GL nodes directly.
 // This is not very optimal, but it will do for the moment.
-
 // glvertexes and vertexes are both the same.
 
 
 /// \brief Data needed to render level geometry with GL renderer.
+/// \ingroup \g_mapgeometry
 ///
 /// These are all unpacked, endianness-swapped and converted to v5 GL
 /// nodes.
-
-struct gllevel_t {
+struct gllevel_t
+{
   vertex_t *vertexes;
   int      numvertexes;
 

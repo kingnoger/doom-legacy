@@ -44,7 +44,7 @@
 //==========================================================================
 
 /*!
-  \defgroup g_geometry Simple map geometry utility functions
+  \defgroup g_geoutils Simple map geometry utility functions
 
   Distances, point vs. line problems, line intercepts, bounding boxes etc.
   Most of this is 2D stuff.
@@ -52,7 +52,7 @@
 
 
 /// \brief Estimation of 2D vector length (not exact)
-/// \ingroup g_geometry
+/// \ingroup g_geoutils
 /*!
   Sort of octagonal norm.
 */
@@ -67,7 +67,7 @@ fixed_t P_AproxDistance(fixed_t dx, fixed_t dy)
 
 
 /// \brief On which side of a 2D line the point is?
-/// \ingroup g_geometry
+/// \ingroup g_geoutils
 /*!
   \return side number, 0 or 1
 */
@@ -107,7 +107,7 @@ int P_PointOnLineSide(fixed_t x, fixed_t y, const line_t *line)
 
 
 /// \brief On which side of a 2D divline the point is?
-/// \ingroup g_geometry
+/// \ingroup g_geoutils
 /*!
   \return side number, 0 or 1
 */
@@ -164,7 +164,7 @@ void divline_t::MakeDivline(const line_t *li)
 
 
 /// \brief On which side of a 2D line the bounding box is?
-/// \ingroup g_geometry
+/// \ingroup g_geoutils
 /*!
   Considers the line to be infinite in length.
   \return side number, 0 or 1, or -1 if box crosses the line
@@ -219,10 +219,10 @@ int bbox_t::BoxOnLineSide(const line_t *ld)
 
 
 /// \brief Finds the intercept point of two 2D line segments
-/// \ingroup g_geometry
+/// \ingroup g_geoutils
 /*!
-  \return fractional intercept point along the first divline
   This is only called by the addthings and addlines traversers.
+  \return fractional intercept point along the first divline
 */
 fixed_t P_InterceptVector(divline_t *v2, divline_t *v1)
 {
@@ -331,52 +331,50 @@ line_opening_t *P_LineOpening(line_t *linedef, Actor *thing)
       fixed_t delta1, delta2;
 
       // Check for frontsector's fake floors
-      if (front->ffloors)
-	for (ffloor_t *rover = front->ffloors; rover; rover = rover->next)
-	  {
-	    if (!(rover->flags & FF_SOLID))
-	      continue;
+      for (ffloor_t *rover = front->ffloors; rover; rover = rover->next)
+	{
+	  if (!(rover->flags & FF_SOLID))
+	    continue;
 
-	    delta1 = abs(thingbot - ((*rover->bottomheight + *rover->topheight) / 2));
-	    delta2 = abs(thingtop - ((*rover->bottomheight + *rover->topheight) / 2));
+	  delta1 = abs(thingbot - ((*rover->bottomheight + *rover->topheight) / 2));
+	  delta2 = abs(thingtop - ((*rover->bottomheight + *rover->topheight) / 2));
 	    
-	    if (delta1 >= delta2)
-	      {
-		if (*rover->bottomheight < lowestceiling)
-		  lowestceiling = *rover->bottomheight;
-	      }
-	    else
-	      {
-		if (*rover->topheight > highestfloor)
-		  highestfloor = *rover->topheight;
-		else if (*rover->topheight > highest_lowfloor)
-		  highest_lowfloor = *rover->topheight;
-	      }
-	  }
+	  if (delta1 >= delta2)
+	    {
+	      if (*rover->bottomheight < lowestceiling)
+		lowestceiling = *rover->bottomheight;
+	    }
+	  else
+	    {
+	      if (*rover->topheight > highestfloor)
+		highestfloor = *rover->topheight;
+	      else if (*rover->topheight > highest_lowfloor)
+		highest_lowfloor = *rover->topheight;
+	    }
+	}
 
       // Check for backsectors fake floors
-      if (back->ffloors)
-	for (ffloor_t *rover = back->ffloors; rover; rover = rover->next)
-	  {
-	    if (!(rover->flags & FF_SOLID))
-	      continue;
+      for (ffloor_t *rover = back->ffloors; rover; rover = rover->next)
+	{
+	  if (!(rover->flags & FF_SOLID))
+	    continue;
 
-	    delta1 = abs(thingbot - ((*rover->bottomheight + *rover->topheight) / 2));
-	    delta2 = abs(thingtop - ((*rover->bottomheight + *rover->topheight) / 2));
+	  delta1 = abs(thingbot - ((*rover->bottomheight + *rover->topheight) / 2));
+	  delta2 = abs(thingtop - ((*rover->bottomheight + *rover->topheight) / 2));
 	    
-	    if (delta1 >= delta2)
-	      {
-		if (*rover->bottomheight < lowestceiling)
-		  lowestceiling = *rover->bottomheight;
-	      }
-	    else
-	      {
-		if (*rover->topheight > highestfloor)
-		  highestfloor = *rover->topheight;
-		else if (*rover->topheight > highest_lowfloor)
-		  highest_lowfloor = *rover->topheight;
-	      }
-	  }
+	  if (delta1 >= delta2)
+	    {
+	      if (*rover->bottomheight < lowestceiling)
+		lowestceiling = *rover->bottomheight;
+	    }
+	  else
+	    {
+	      if (*rover->topheight > highestfloor)
+		highestfloor = *rover->topheight;
+	      else if (*rover->topheight > highest_lowfloor)
+		highest_lowfloor = *rover->topheight;
+	    }
+	}
 
       if (lowestceiling < Opening.top)
 	Opening.top = lowestceiling;
@@ -938,16 +936,16 @@ Actor *Map::RoughBlockCheck(Actor *center, Actor *master, int index, int flags)
 //  Functions for manipulating msecnode_t threads
 //==========================================================================
 
-static msecnode_t *headsecnode = NULL; // freelist for secnodes
+msecnode_t *msecnode_t::headsecnode = NULL; // freelist for secnodes
 
-void P_Initsecnode()
+void msecnode_t::InitSecnodes()
 {
   headsecnode = NULL;
 }
 
 // Retrieves a node from the freelist. The calling routine
 // should make sure it sets all fields properly.
-msecnode_t *P_GetSecnode()
+msecnode_t *msecnode_t::GetNode()
 {
   msecnode_t *node;
 
@@ -963,41 +961,72 @@ msecnode_t *P_GetSecnode()
 }
 
 // Returns a node to the freelist.
-void P_PutSecnode(msecnode_t *node)
+void msecnode_t::Free()
 {
-  node->m_snext = headsecnode;
-  headsecnode = node;
+  m_snext = headsecnode;
+  headsecnode = this;
 }
+
+// Deletes a sector node from the list of
+// sectors this object appears in. Returns a pointer to the next node
+// on the linked list, or NULL.
+msecnode_t *msecnode_t::Delete()
+{
+  // Unlink from the Thing thread. The Thing thread begins at
+  // sector_list (unavailable here) and not from m_thing->touching_sectorlist.
+
+  if (m_tprev)
+    m_tprev->m_tnext = m_tnext;
+  if (m_tnext)
+    m_tnext->m_tprev = m_tprev;
+
+  // Unlink from the sector thread. This thread begins at
+  // m_sector->touching_thinglist.
+
+  if (m_sprev)
+    m_sprev->m_snext = m_snext;
+  else
+    m_sector->touching_thinglist = m_snext;
+
+  if (m_snext)
+    m_snext->m_sprev = m_sprev;
+
+  // Return this node to the freelist
+  Free();
+  return m_tnext; // unharmed by Free
+}
+
+
 
 // Searches the current list to see if this sector is
 // already there. If not, it adds a sector node at the head of the list of
 // sectors this object appears in. This is called when creating a list of
 // nodes that will get linked in later. Returns a pointer to the new node.
-msecnode_t *P_AddSecnode(sector_t *s, Actor *thing, msecnode_t *nextnode)
+msecnode_t *msecnode_t::AddToSectorlist(sector_t *s, Actor *thing, msecnode_t *seclist)
 {
-  msecnode_t *node = nextnode;
+  msecnode_t *node = seclist;
   while (node)
     {
       if (node->m_sector == s)   // Already have a node for this sector?
 	{
 	  node->m_thing = thing; // Yes. Setting m_thing says 'keep it'.
-	  return nextnode;
+	  return seclist;
 	}
       node = node->m_tnext;
     }
 
   // Couldn't find an existing node for this sector. Add one at the head of the list.
-  node = P_GetSecnode();
+  node = GetNode();
 
   //mark new nodes unvisited.
   node->visited = false;
 
   node->m_sector = s;       // sector
-  node->m_thing  = thing;     // mobj
+  node->m_thing  = thing;   // Actor
   node->m_tprev  = NULL;    // prev node on Thing thread
-  node->m_tnext  = nextnode;  // next node on Thing thread
-  if (nextnode)
-    nextnode->m_tprev = node; // set back link on Thing
+  node->m_tnext  = seclist;  // next node on Thing thread
+  if (seclist)
+    seclist->m_tprev = node; // set back link on Thing
 
   // Add new node at head of sector thread starting at s->touching_thinglist
 
@@ -1011,54 +1040,21 @@ msecnode_t *P_AddSecnode(sector_t *s, Actor *thing, msecnode_t *nextnode)
 }
 
 
-// Deletes a sector node from the list of
-// sectors this object appears in. Returns a pointer to the next node
-// on the linked list, or NULL.
-msecnode_t *P_DelSecnode(msecnode_t *node)
+
+msecnode_t *msecnode_t::CleanSectorlist(msecnode_t *seclist)
 {
-  msecnode_t *tp;  // prev node on thing thread
-  msecnode_t *tn;  // next node on thing thread
-  msecnode_t *sp;  // prev node on sector thread
-  msecnode_t *sn;  // next node on sector thread
-
-  if (node)
+  msecnode_t *node = seclist;
+  while (node)
     {
-      // Unlink from the Thing thread. The Thing thread begins at
-      // sector_list and not from Actor->touching_sectorlist.
-
-      tp = node->m_tprev;
-      tn = node->m_tnext;
-      if (tp)
-	tp->m_tnext = tn;
-      if (tn)
-	tn->m_tprev = tp;
-
-      // Unlink from the sector thread. This thread begins at
-      // sector_t->touching_thinglist.
-
-      sp = node->m_sprev;
-      sn = node->m_snext;
-      if (sp)
-	sp->m_snext = sn;
+      if (node->m_thing == NULL)
+	{
+	  if (node == seclist)
+	    seclist = node->m_tnext;
+	  node = node->Delete();
+	}
       else
-	node->m_sector->touching_thinglist = sn;
-
-      if (sn)
-	sn->m_sprev = sp;
-
-      // Return this node to the freelist
-
-      P_PutSecnode(node);
-      return tn;
+	node = node->m_tnext;
     }
 
-  return NULL;
-}
-
-
-// Delete an entire sector list
-void P_DelSeclist(msecnode_t *node)
-{
-  while (node)
-    node = P_DelSecnode(node);
+  return seclist;
 }
