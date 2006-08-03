@@ -36,6 +36,12 @@ hr { margin: 2em 0; }
 b { color: #DDE0DD; }
 
 
+span.keyword
+{
+  color: #AAAAEE;
+  font-weight: bold;
+}
+
 
 p.new
 {

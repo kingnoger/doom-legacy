@@ -1138,3 +1138,10 @@ int S_StartSound(Actor *a, int sfx_id, float vol)
 
   return S.Start3DSound(i->second, &s, vol);
 }
+
+
+
+bool S_PlayingSound(Actor *origin, int sfx_id)
+{
+  return S.PlayingSound(origin);
+}

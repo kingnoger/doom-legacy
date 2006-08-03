@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -54,7 +53,7 @@ void Map::AddThinker(Thinker *t)
 // Removes a Thinker from the Map without deleting it
 void Map::DetachThinker(Thinker *t)
 {
-  t->mp = NULL; // TEST a PlayerPawn often exits the Map while still Thinking! We need this still!
+  t->mp = NULL;
   t->next->prev = t->prev;
   t->prev->next = t->next;
   t->prev = t->next = NULL;
@@ -129,11 +128,14 @@ void Map::Ticker()
   //CONS_Printf("Tic begins..");
   int i = 0;
 
+  RunThinkers();
+
+  // after a player is respawned, its input should be built before it is used in RunThinkers.
   if (!respawnqueue.empty())
     i = RespawnPlayers();
 
   //CONS_Printf("think..");
-  RunThinkers();
+  //RunThinkers();
 
   //CONS_Printf("specials..");
   UpdateSpecials();

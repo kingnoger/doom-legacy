@@ -802,6 +802,23 @@ void SoundSystem::StopChannel(unsigned cnum)
 }
 
 
+
+// Is the origin playing a sound?
+bool SoundSystem::PlayingSound(Actor *origin)
+{
+  if (!origin)
+    return false;
+
+  int n = channels.size();
+  for (int cnum=0; cnum<n; cnum++)
+    {
+      if (channels[cnum].si && channels[cnum].source.act == origin)
+	return true;
+    }
+  return false;
+}
+
+
 // Updates music & sounds, called once a gametic
 void SoundSystem::UpdateSounds()
 {

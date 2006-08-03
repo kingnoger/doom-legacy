@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004 by DooM Legacy Team.
+// Copyright (C) 2004-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -41,7 +41,7 @@ public:
   virtual ~VoodooDoll();
 
   virtual void CheckPointers();
-  virtual void XYFriction(fixed_t oldx, fixed_t oldy, bool oldfriction);
+  virtual void XYFriction(fixed_t oldx, fixed_t oldy);
   virtual void Think();
 
 

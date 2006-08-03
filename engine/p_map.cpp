@@ -536,12 +536,12 @@ static bool PIT_CheckThing(Actor *thing)
   if (!(tmthing->flags2 & MF2_NOPASSMOBJ) || !(thing->flags2 & MF2_NOPASSMOBJ))
     {
       // check if an Actor passed over/under another
-      if (tmthing->Feet() > thing->Top())
+      if (tmthing->Feet() >= thing->Top())
         {
 	  // over
 	  return true;
         }
-      else if (tmthing->Top() < thing->Feet())
+      else if (tmthing->Top() <= thing->Feet())
         {
 	  // under thing
 	  return true;

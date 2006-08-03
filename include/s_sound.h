@@ -220,6 +220,7 @@ public:
   void Stop3DSounds();
   void Stop3DSound(void *origin);
 
+  bool PlayingSound(Actor *origin);
   void StopChannel(unsigned cnum);
   bool ChannelPlaying(unsigned cnum);
 

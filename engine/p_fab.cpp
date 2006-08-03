@@ -208,6 +208,9 @@ void P_SetTranslucencies()
     //Fab: lava/slime damage smoke test
     R_SetTrans (S_SMOK1      , S_SMOK5     , tr_transmed);
     R_SetTrans (S_SPLASH1    , S_SPLASH3   , tr_transmor);
+
+    // TEST: Hexen
+    R_SetTrans(S_AXEPUFF_GLOW1, S_AXEPUFF_GLOW7, tr_transmor);
 }
 
 void Translucency_OnChange()
@@ -253,7 +256,7 @@ void DActor::Howl()
       break;
     }
 
-  //if (!S_GetSoundPlayingInfo(this, sound)) //TODO
+  if (!S_PlayingSound(this, sound))
     S_StartSound(this, sound);
 }
 
@@ -345,7 +348,7 @@ int MT_LIGHTNING_touchfunc(DActor *d, Actor *p)
 	  p->Damage(d, ultimateowner, 3);
 	}
 
-      //if (!(S_GetSoundPlayingInfo(d, SFX_MAGE_LIGHTNING_ZAP))) TODO
+      if (!(S_PlayingSound(d, SFX_MAGE_LIGHTNING_ZAP)))
 	S_StartSound(d, SFX_MAGE_LIGHTNING_ZAP);
 
       if ((p->flags & MF_COUNTKILL) && P_Random() < 64)

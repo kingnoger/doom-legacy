@@ -640,6 +640,7 @@ bool DActor::LookForEnemies(bool allaround)
 	break;
 
       PlayerInfo *k = mp->players[lastlook];
+
       if (!k->pawn || (k->pawn->flags & MF_CORPSE) || k->spectator)
 	continue;
 

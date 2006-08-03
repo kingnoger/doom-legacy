@@ -160,7 +160,7 @@ void VoodooDoll::Think()
 
 
 
-void VoodooDoll::XYFriction(fixed_t oldx, fixed_t oldy, bool oldfriction)
+void VoodooDoll::XYFriction(fixed_t oldx, fixed_t oldy)
 {
   Actor::XYFriction(oldx, oldy);
 }

@@ -359,7 +359,7 @@ void spritepres_t::Project(Actor *p)
     {
       if (flags & TFF_TRANSMASK)
         vis->transmap = transtables[((flags & TFF_TRANSMASK) >> TFF_TRANSSHIFT) - 1];
-      else if (p->flags & MF_SHADOW)
+      else if (p->flags & (MF_SHADOW | MF_ALTSHADOW)) // TODO altshadow should transpose the translucency table...
         // actually only the player should use this (temporary invisibility)
         // because now the translucency is set through TFF_TRANSMASK
         vis->transmap = transtables[tr_transhi - 1];

@@ -839,7 +839,7 @@ void PlayerPawn::ZMovement()
 
 
 
-void PlayerPawn::XYFriction(fixed_t oldx, fixed_t oldy, bool oldfriction)
+void PlayerPawn::XYFriction(fixed_t oldx, fixed_t oldy)
 {
   if (player == NULL)
     return;

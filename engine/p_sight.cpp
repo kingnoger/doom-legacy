@@ -252,6 +252,9 @@ bool Map::CheckSight(Actor *t1, Actor *t2)
   if (!t1 || !t2)
     return false;
 
+  if (t1->mp != this || t2->mp != this)
+    return false;
+
   // First check for trivial rejection.
 
   // Determine subsector entries in REJECT table.

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,8 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -860,6 +858,59 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
 
 
 
+// flat floortypes
+static struct
+{
+  char        *name;
+  floortype_t  type;
+}
+ftypes[] =
+{
+  {"FWATER",   FLOOR_WATER},
+  {"FLTWAWA1", FLOOR_WATER},
+  {"FLTFLWW1", FLOOR_WATER},
+
+  {"FLTLAVA1", FLOOR_LAVA},
+  {"FLATHUH1", FLOOR_LAVA},
+
+  {"FLTSLUD1", FLOOR_SLUDGE},
+
+  {"X_005", FLOOR_WATER},
+  {"X_001", FLOOR_LAVA},
+  {"X_009", FLOOR_SLUDGE},
+  {"F_033", FLOOR_ICE}
+};
+
+
+/// Sets some floortype-dependent attributes depending on the floor texture.
+void sector_t::SetFloorType(const char *pic)
+{
+  // Ohhhh... This sucks so much... FIXME, TERRAIN lump?
+  for (int i=0; i<10; i++)
+    if (!strncasecmp(pic, ftypes[i].name, 8))
+      {
+	floortype = ftypes[i].type;
+	break;
+      }
+
+  extern float normal_friction;
+  const float friction_low = 0.973f; // 0xf900
+
+  switch (floortype)
+    {
+    case FLOOR_ICE:
+      friction = friction_low;
+      movefactor = 0.5f;
+      special |= SS_friction;
+      break;
+
+    default:
+      friction = normal_friction;
+      movefactor = 1.0f;
+      break;
+    }
+}
+
 
 
 //====================================================================
@@ -1585,9 +1636,9 @@ void Map::SpawnFriction(line_t *l, int tag)
 
   for (int s = -1; (s = FindSectorFromTag(tag, s)) >= 0 ; )
     {
-      //AddThinker(new friction_t(friction,movefactor,s));
       sectors[s].friction   = friction;
       sectors[s].movefactor = movefactor;
+      // TEST sectors[s].special |= SS_friction;
     }
 }
 
@@ -1667,15 +1718,12 @@ void pusher_t::Think()
   // For constant pushers (wind/current) there are 3 situations:
   //
   // 1) Affected Thing is above the floor.
-  //
   //    Apply the full force if wind, no force if current.
   //
   // 2) Affected Thing is on the ground.
-  //
   //    Apply half force if wind, full force if current.
   //
   // 3) Affected Thing is below the ground (underwater effect).
-  //
   //    Apply no force if wind, full force if current.
   //
   // Apply the effect to clipped players only for now.

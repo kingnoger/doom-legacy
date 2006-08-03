@@ -45,6 +45,7 @@ int  S_StartAmbSound(class PlayerInfo *p, int sfx_id, float volume = 1.0);
 int  S_StartLocalAmbSound(int sfx_id, float volume = 1.0);
 int  S_StartSound(struct mappoint_t *origin, int sfx_id, float volume = 1.0);
 int  S_StartSound(class Actor *origin, int sfx_id, float volume = 1.0);
+bool S_PlayingSound(Actor *origin, int sfx_id);
 bool S_StartMusic(int music_id, bool looping = false);
 
 void S_ClearSounds();

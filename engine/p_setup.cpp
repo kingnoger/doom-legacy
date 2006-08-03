@@ -213,11 +213,11 @@ void Map::LoadSectors2(int lump)
       ss->lineoutLength = -1.0;
       // ----- end special tricks -----
 
-      // set floortype-dependent attributes
-      ss->SetFloorType(ms->floorpic);
-
       ss->gravity = 1.0f;
       ss->special = SHORT(ms->special);
+
+      // set floortype-dependent attributes
+      ss->SetFloorType(ms->floorpic);
     }
 
   Z_Free(data);

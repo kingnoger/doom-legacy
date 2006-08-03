@@ -409,7 +409,8 @@ void A_MLightningAttack2(PlayerPawn *actor)
       f->vel.z = 0;
       f->target = c; // special case
       f->special1 = 0; // zigzag counter
-      A_LightningZap(f);	
+      f->special2 = 1; // "initialized" flag
+      A_LightningZap(f);
     }
 
   if (c)
@@ -418,7 +419,8 @@ void A_MLightningAttack2(PlayerPawn *actor)
       c->vel.z = 0;
       c->target = NULL; // initially no target
       c->owner = f;
-      A_LightningZap(c);	
+      c->special2 = 1; // "initialized" flag
+      A_LightningZap(c);
     }
   S_StartSound(actor, SFX_MAGE_LIGHTNING_FIRE);
 }
@@ -483,6 +485,9 @@ void A_LastZap(DActor *actor)
 
 void A_LightningRemove(DActor *actor)
 {
+  if (!actor->special2)
+    return; // not yet initialized (exploded during spawning)
+
   Actor *twin;
 
   if (actor->type == MT_LIGHTNING_FLOOR)

@@ -184,7 +184,7 @@ public:
   void Move();
   virtual void XYMovement();
   virtual void ZMovement();
-  virtual void XYFriction(fixed_t oldx, fixed_t oldy, bool oldfriction);
+  virtual void XYFriction(fixed_t oldx, fixed_t oldy);
   virtual bool Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent = false);
   void LandedOnThing(Actor *a);
 
