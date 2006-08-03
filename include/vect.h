@@ -78,11 +78,15 @@ public:
   inline T_this operator-() const { return T_this(-x, -y, -z); }
 
   /// utility methods
-  T Norm()  const { return sqrt((x * x) + (y * y) + (z * z)); }
-  T Norm2() const { return (x * x) + (y * y) + (z * z); }
-  T XYNorm2() const { return (x * x) + (y * y); }
+  inline T Norm()  const { return sqrt((x * x) + (y * y) + (z * z)); }
+  inline T Norm2() const { return (x * x) + (y * y) + (z * z); }
+  inline T XYNorm2() const { return (x * x) + (y * y); }
   template<typename U>
-  T_this Project(const vec_t<U>& v) const { return v*(((*this)*v)/v.Norm2()); }
+  inline T_this Project(const vec_t<U>& v) const
+  {
+    T temp = dot(v, *this) / v.Norm2();
+    return T_this(v.x*temp, v.y*temp, v.z*temp);
+  }
 
   /// polar coordinate methods
   T Theta() const { return atan2(sqrt((x * x) + (y * y)), z); }
@@ -134,7 +138,7 @@ public:
 
   /// inner (dot) product
   template<typename U>
-  inline friend T dot(const vec_t<T>& a, const vec_t<U>& b)
+  inline friend U dot(const vec_t<T>& a, const vec_t<U>& b)
   {
     return (a.x * b.x) + (a.y * b.y) + (a.z * b.z);
   }

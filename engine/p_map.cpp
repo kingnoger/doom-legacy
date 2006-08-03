@@ -56,20 +56,6 @@
   Return false to stop traversal, true to continue.
  */
 
-/*
-  line activation:
-  SPAC_USE    = 1,	///< when player uses line
-
-  SPAC_CROSS  =	0,	///< when player crosses line
-  SPAC_MCROSS =	2,	///< when monster crosses line
-  SPAC_PCROSS =	5,      ///< projectile crosses line
-  crossings: at trymove if move is succesful, line must be twosided and passable...
-
-  SPAC_IMPACT =	3,	///< when projectile hits line
-  SPAC_PUSH   =	4,	///< when player/monster pushes line
-  impacts, line must be onesided or unpassable  (or we must hit upper/lowertexture?)
- */
-
 
 #include <math.h>
 #include "doomdef.h"
@@ -106,7 +92,7 @@ static Actor    *tmthing; // cp,
 // if within "tmfloorz - tmceilingz".
 bool     floatok; // A::Trymove, DA:PMove
 
-static bool interact; // touch or just see if it fits? TODO TEST
+static bool interact; // touch or just see if it fits?
 
 // checkposition data (z properties in the XY footprint of the Actor)
 /*
@@ -136,6 +122,8 @@ Actor *tmfloorthing; // the thing corresponding to tmfloorz or NULL if tmfloorz 
 //=======================================================
 vector<line_t *>  spechit; // cp
 position_check_t Blocking; // thing or line that blocked the position (NULL if not blocked) cp
+// Blocking.thing is set only if an actual collision takes place, and iteration is stopped (z and flags included)
+
 
 // keep track of the line that lowers the ceiling, so missiles don't explode against sky hack walls
 line_t *ceilingline; // cp
@@ -158,18 +146,29 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
   //  above this, a heigth difference is considered a 'dropoff'
   floatok = false;
 
-  // FIXME rename checkmissileimpact to checklineimpact
+  // TODO the problems with the collision check code are
+  // 1) no traces are used, rather blockmapcells are iterated one by one and we stop
+  //    when the first blocking thing/line is found -> there might be others we actually hit first
+  // 2) z fit is only checked later
+  // 3) if no z fit, all accumulated impacts and pushes are processed. if z fit ok, all crossings are processed.
   if (!CheckPosition(nx, ny, true))
     {
       // blocked by an unpassable line or an Actor
-      if (!Blocking.thing || // must be a blocking line
+      if (Blocking.thing)
+	{
+	  // TODO try to climb on top of it
+	  /*
+	  (
 	  Blocking.thing->Top() - Feet() > MAXSTEPMOVE ||
 	  Blocking.thing->subsector->sector->ceilingheight - Blocking.thing->Top() < height ||
 	  tmceilingz - Blocking.thing->Top() < height)
-	{
-	  CheckLineImpact();
-	  return false;       // solid wall or thing
+	  */
+	  return false;
 	}
+
+      // must be a blocking line
+      CheckLineImpact();
+      return false;
     }
 
   // handle z-lineclip and spechit
@@ -548,11 +547,12 @@ static bool PIT_CheckThing(Actor *thing)
 	  return true;
         }
     }
-  //  else return false; // old Heretic behavior, but we allow Touch()ing
 
-  Blocking.thing = thing;
+  bool collision = interact ? tmthing->Touch(thing) : true; // they overlap geometrically
+  if (collision)
+    Blocking.thing = thing;
 
-  return interact ? !(tmthing->Touch(thing)) : false; // they overlap
+  return !collision;
 }
 
 // SoM: 3/15/2000
@@ -634,7 +634,7 @@ static bool PIT_CheckLine(line_t *ld)
       else if ((ld->flags & ML_BLOCKMONSTERS) && !(tmthing->flags & MF_NOTMONSTER))
 	{
 	  stopped = true; // block monsters only
-	  push = false;
+	  push = false; // TODO why?
 	}
     }
 
@@ -1018,7 +1018,7 @@ Actor *Actor::CheckOnmobj()
 static fixed_t bestslidefrac, secondslidefrac;
 static line_t *bestslideline, *secondslideline;
 static Actor *slidemo;
-static fixed_t tmxmove, tmymove;
+static vec_t<fixed_t> tmmove;
 
 
 // Adjusts the xmove / ymove
@@ -1027,16 +1027,25 @@ static void P_HitSlideLine(line_t *ld)
 {
   if (ld->slopetype == ST_HORIZONTAL)
     {
-      tmymove = 0;
+      tmmove.y = 0;
+      slidemo->vel.y = 0;
       return;
     }
 
   if (ld->slopetype == ST_VERTICAL)
     {
-      tmxmove = 0;
+      tmmove.x = 0;
+      slidemo->vel.x = 0;
       return;
     }
 
+  vec_t<float> line_normal(ld->dy.Float(), -ld->dx.Float(), 0); // line rotated 90 degrees clockwise
+  //vec_t<fixed_t> line_normal(ld->dy, -ld->dx, 0); // line rotated 90 degrees clockwise
+
+  tmmove -= tmmove.Project(line_normal);
+  slidemo->vel -= slidemo->vel.Project(line_normal);
+
+  /*
   int side = P_PointOnLineSide(slidemo->pos.x, slidemo->pos.y, ld);
 
   angle_t lineangle = R_PointToAngle2(0, 0, ld->dx, ld->dy);
@@ -1058,6 +1067,7 @@ static void P_HitSlideLine(line_t *ld)
 
   tmxmove = newlen * finecosine[lineangle];
   tmymove = newlen * finesine[lineangle];
+  */
 }
 
 
@@ -1188,15 +1198,15 @@ void Actor::SlideMove(fixed_t nx, fixed_t ny)
   if (bestslidefrac <= 0)
     return;
 
-  tmxmove = dx * bestslidefrac;
-  tmymove = dy * bestslidefrac;
+  tmmove.x = dx * bestslidefrac;
+  tmmove.y = dy * bestslidefrac;
 
   P_HitSlideLine(bestslideline);     // clip the moves
 
-  dx = tmxmove;
-  dy = tmymove;
+  dx = tmmove.x;
+  dy = tmmove.y;
 
-  if (!TryMove(pos.x+tmxmove, pos.y+tmymove, true))
+  if (!TryMove(pos.x+dx, pos.y+dy, true))
     {
       goto retry;
     }

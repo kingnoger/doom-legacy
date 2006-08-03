@@ -656,7 +656,7 @@ void Actor::XYMovement()
 		}
 	      else
 		{
-		  // Slide against mobj TODO is this needed? wasn't before!
+		  // Slide against an Actor
 		  if (TryMove(pos.x, ptryy, true))
 		    vel.x = 0;
 		  else if (TryMove(ptryx, pos.y, true))
@@ -665,7 +665,7 @@ void Actor::XYMovement()
 		    vel.x = vel.y = 0;
 		}
             }
-	  else if (flags & MF_MISSILE)
+	    else if (flags & MF_MISSILE)
             {
 	      if (Blocking.thing)
 		return; // explosions handled at Actor::Touch()

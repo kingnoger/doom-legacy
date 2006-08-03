@@ -30,6 +30,7 @@
 
 using namespace TNL;
 
+
 /// \brief Class for 16.16 fixed point arithmetic
 ///
 /// Binary operators are not member functions but friends, to allow the promotion
@@ -65,13 +66,12 @@ public:
   inline fixed_t(int a) { val = a << FBITS; }
   fixed_t(float f)
   {
-    /* No reason for this slowdown. We don't check int's either.
-    if (f < FMIN)
-      val = FMIN;
-    else if (f > FMAX)
-      val = FMAX;
-    else
-    */
+    // No reason for this slowdown. We don't check int's either.
+    //if (f < FMIN)
+    //  val = FMIN;
+    //else if (f > FMAX)
+    //  val = FMAX;
+    //else
       val = value_t(f * float(UNIT));
   }
   // copy constructor (has to be light!)
@@ -116,11 +116,34 @@ public:
 
   /// Multiplication template.
   /// Allow a non-fixed_t object on the left for efficiency (specialized fixed_t-fixed_t version follows!)
-  template<typename U>
-  inline friend fixed_t operator*(const U& a, const fixed_t& b)
+  //template<typename U>
+  //inline friend fixed_t operator*(const U& a, const fixed_t& b)
+  //{
+  //  fixed_t res;
+  //  res.val = value_t(a * b.val);
+  //  return res;
+  //}
+
+
+  inline friend fixed_t operator*(double a, const fixed_t& b)
   {
     fixed_t res;
     res.val = value_t(a * b.val);
+    return res;
+  }
+
+  inline friend fixed_t operator*(int a, const fixed_t& b)
+  {
+    fixed_t res;
+    res.val = value_t(a * b.val);
+    return res;
+  }
+
+  inline friend fixed_t operator*(const fixed_t& a, const fixed_t& b)
+  {
+    fixed_t res;
+    res.val = (fixed_t::large_t(a.val) * fixed_t::large_t(b.val)) >> fixed_t::FBITS;
+    //res.val = int(double(a.val) * double(b.val) / 65536.0);
     return res;
   }
 
@@ -218,6 +241,7 @@ inline fixed_t& fixed_t::operator/=(const fixed_t& a)
 
 
 /// specialization for multiplying two fixed_t objects
+/*
 template<>
 inline fixed_t operator*(const fixed_t& a, const fixed_t& b)
 {
@@ -226,6 +250,7 @@ inline fixed_t operator*(const fixed_t& a, const fixed_t& b)
   //res.val = int(double(a.val) * double(b.val) / 65536.0);
   return res;
 }
+*/
 
 /// specialization for dividing two fixed_t objects
 template<>
