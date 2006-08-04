@@ -80,6 +80,10 @@ enum consistency_marker_t
 };
 
 
+// assumes a is the LArchive
+#define ST_PTR(p, array) {int temp; a << (temp = p ? (p - array) : -1);}
+#define RE_PTR(p, array) {int temp; a << temp; p = (temp == -1) ? NULL : &array[temp];}
+
 //==============================================
 // Marshalling functions for various Thinkers
 //==============================================
@@ -89,8 +93,8 @@ int acs_t::Marshal(LArchive &a)
   int temp;
   if (a.IsStoring())
     {
-      a << (temp = ((byte *)ip - mp->ActionCodeBase)); // byte offset
-      a << (temp = line ? (line - mp->lines) : -1);
+      a << (temp = (reinterpret_cast<byte*>(ip) - mp->ActionCodeBase)); // byte offset
+      ST_PTR(line, mp->lines);
       Thinker::Serialize(activator, a);
       a.Write((byte *)stak, sizeof(stak));
       a.Write((byte *)vars, sizeof(vars));
@@ -98,9 +102,8 @@ int acs_t::Marshal(LArchive &a)
   else
     {
       a << temp;
-      ip = (int *)(&mp->ActionCodeBase[temp]);
-      a << temp;
-      line = (temp == -1) ? NULL : &mp->lines[temp];
+      ip = reinterpret_cast<int*>(&mp->ActionCodeBase[temp]);
+      RE_PTR(line, mp->lines);
       activator = (Actor *)Thinker::Unserialize(a);
       a.Read((byte *)stak, sizeof(stak));
       a.Read((byte *)vars, sizeof(vars));
@@ -238,15 +241,13 @@ int vdoor_t::Marshal(LArchive &a)
 
 int button_t::Marshal(LArchive &a)
 {
-  int temp;
   if (a.IsStoring())
     {
-      a << (temp = line ? (line - mp->lines) : -1);
+      ST_PTR(line, mp->lines);
     }
   else
     {
-      a << temp;
-      line = (temp == -1) ? NULL : &mp->lines[temp];
+      RE_PTR(line, mp->lines);
       soundorg = &line->frontsector->soundorg;
     }
 
@@ -259,15 +260,13 @@ int scroll_t::Marshal(LArchive &a)
   a << type << affectee << vx << vy;
   a << last_height << accel << vdx << vdy;
 
-  int temp;
   if (a.IsStoring())
     {
-      a << (temp = control ? (control - mp->sectors) : -1);
+      ST_PTR(control, mp->sectors);
     }
   else
     {
-      a << temp;
-      control = (temp == -1) ? NULL : &mp->sectors[temp];
+      RE_PTR(control, mp->sectors);
     }
   return 0;
 }
@@ -279,7 +278,7 @@ int pusher_t::Marshal(LArchive &a)
   if (a.IsStoring())
     Thinker::Serialize(source, a);
   else
-    source = (DActor *)Thinker::Unserialize(a);
+    source = reinterpret_cast<DActor*>(Thinker::Unserialize(a));
   return 0;
 }
 
@@ -318,6 +317,12 @@ int polydoor_slide_t::Marshal(LArchive &a)
   return 0;
 }
 
+enum presentation_id_t
+{
+  PID_NONE = 0,
+  PID_SPRITE,
+  PID_MODEL
+};
 
 int presentation_t::Serialize(presentation_t *p, LArchive &a)
 {
@@ -327,7 +332,7 @@ int presentation_t::Serialize(presentation_t *p, LArchive &a)
   if (p)
     p->Marshal(a); // handles the type id as well.
   else
-    a << (temp = 0);
+    a << (temp = PID_NONE);
   return 0;
 }
 
@@ -337,14 +342,25 @@ presentation_t *presentation_t::Unserialize(LArchive &a)
   int temp;
   a << temp; // read the type id
   //CONS_Printf("unserializing a presentation, %d\n", temp);
-  if (temp == 0)
-    return NULL;
-  else
-    p = new spritepres_t(NULL, 0);
-  /*
-  else
-    p = new modelpres_t(NULL);
-  */
+  switch (temp)
+    {
+    case PID_NONE:
+      return NULL;
+
+    case PID_SPRITE:
+      p = new spritepres_t(NULL, 0);
+      break;
+
+      /*
+      case PID_MODEL:
+	p = new modelpres_t(NULL);
+	break;
+      */
+
+    default:
+      I_Error("Unknown presentation id %d!\n", temp);
+      break;
+    }
 
   p->Marshal(a);
 
@@ -356,16 +372,16 @@ int spritepres_t::Marshal(LArchive &a)
   int temp;
   if (a.IsStoring())
     {
-      a << (temp = 1); // type id
-      a << (temp = (info - mobjinfo));
-      a << (temp = (state - states));
+      a << (temp = PID_SPRITE); // type id
+      ST_PTR(info, mobjinfo);
+      ST_PTR(state, states);
     }
   else
     {
-      a << temp;
-      info = mobjinfo + temp;
-      a << temp;
-      SetFrame(&states[temp]);
+      RE_PTR(info, mobjinfo);
+      state_t *st;
+      RE_PTR(st, states);
+      SetFrame(st);
     }
 
   a << color << animseq;
@@ -377,7 +393,7 @@ int modelpres_t::Marshal(LArchive &a)
   int temp;
   if (a.IsStoring())
     {
-      a << (temp = 2); // type id
+      a << (temp = PID_MODEL); // type id
       // TODO store the model name
     }
   else
@@ -391,7 +407,6 @@ int modelpres_t::Marshal(LArchive &a)
 
 int Actor::Marshal(LArchive &a)
 {
-  int temp;
   a << pos << vel;
   a << yaw << pitch;
   a << mass << radius << height;
@@ -408,24 +423,23 @@ int Actor::Marshal(LArchive &a)
 
   if (a.IsStoring())
     {
-      a << (temp = spawnpoint ? (spawnpoint - mp->mapthings) : -1);
+      presentation_t::Serialize(pres, a);
+      ST_PTR(spawnpoint, mp->mapthings);
       Thinker::Serialize(owner, a);
       Thinker::Serialize(target, a);
-      presentation_t::Serialize(pres, a);
     }
   else
     {
-      a << temp;
-      spawnpoint = (temp == -1) ? NULL : &mp->mapthings[temp];
-
-      owner  = (Actor *)Thinker::Unserialize(a);
-      target = (Actor *)Thinker::Unserialize(a);
       pres = presentation_t::Unserialize(a);
+      RE_PTR(spawnpoint, mp->mapthings);
+      owner  = reinterpret_cast<Actor*>(Thinker::Unserialize(a));
+      target = reinterpret_cast<Actor*>(Thinker::Unserialize(a));
 
       if (mp)
 	{
 	  if (spawnpoint)
 	    spawnpoint->mobj = this;
+	  // set links to map geometry
 	  TestLocation();
 	  SetPosition();
 	}
@@ -469,11 +483,13 @@ int DActor::Marshal(LArchive &a)
     MD_LASTLOOK   = 0x400000,
     MD_SPECIAL1   = 0x800000,
     MD_SPECIAL2  = 0x1000000,
+    MD_SPECIAL3  = 0x2000000,
 
-    MD_TARGET    = 0x2000000,
-    MD_OWNER     = 0x4000000,
+    MD_TARGET    = 0x4000000,
+    MD_OWNER     = 0x8000000,
   };
 
+  int temp;
   short stemp;
   int i;
 
@@ -487,7 +503,7 @@ int DActor::Marshal(LArchive &a)
 	  diff = MD_SPAWNPOINT;
     
 	  if ((pos.x != spawnpoint->x) || (pos.y != spawnpoint->y) ||
-	      (yaw != unsigned(ANG45 * (spawnpoint->angle/45))))
+	      (yaw != unsigned(ANG45 * (spawnpoint->angle/45))) || pitch)
 	    diff |= MD_XY;
 
 	  if (type != spawnpoint->type)
@@ -502,14 +518,16 @@ int DActor::Marshal(LArchive &a)
       // not the default but the most probable
       if (pos.z != floorz)             diff |= MD_Z;
       if (vel != vec_t<fixed_t>(0,0,0)) diff |= MD_MOM;
+
       if (mass   != info->mass)        diff |= MD_MASS;
       if (radius != info->radius)      diff |= MD_RADIUS;
       if (height != info->height)      diff |= MD_HEIGHT;
+
       if (health != info->spawnhealth) diff |= MD_HEALTH;
       if (flags  != info->flags)       diff |= MD_FLAGS;
       if (flags2 != info->flags2)      diff |= MD_FLAGS2;
       if (eflags)                      diff |= MD_EFLAGS;
- 
+
       if (tid)       diff |= MD_TID;
       if (special)   diff |= MD_SPECIAL;
       if (reactiontime != info->reactiontime) diff |= MD_RTIME;
@@ -525,24 +543,22 @@ int DActor::Marshal(LArchive &a)
       if (lastlook != -1) diff |= MD_LASTLOOK;
       if (special1)  diff |= MD_SPECIAL1;
       if (special2)  diff |= MD_SPECIAL2;
+      if (special3)  diff |= MD_SPECIAL3;
 
       if (owner)   diff |= MD_OWNER;
       if (target)  diff |= MD_TARGET;
 
-      a << diff;
+      a << diff; // store the bit field
 
       if (diff & MD_SPAWNPOINT)
 	{
-	  stemp = short(spawnpoint - mp->mapthings);
+	  stemp = spawnpoint - mp->mapthings;
 	  a << stemp;
 	}
 
-#if __GNUC__ >= 4
-      if (diff & MD_TYPE) a << (short &)type;
-#else
-      if (diff & MD_TYPE) a << short(type);
-#endif
-      if (diff & MD_XY)   a << pos.x << pos.y << yaw;
+      if (diff & MD_TYPE) a << (stemp = type);
+
+      if (diff & MD_XY)   a << pos.x << pos.y << yaw << pitch;
       if (diff & MD_Z)    a << pos.z;
       if (diff & MD_MOM)  a << vel;
 
@@ -568,8 +584,8 @@ int DActor::Marshal(LArchive &a)
 
       if (diff & MD_STATE)
 	{
-	  stemp = short(state - states);
-	  a << stemp;
+	  temp = state - states;
+	  a << temp;
 	}
       if (diff & MD_TICS)      a << tics;
 
@@ -577,8 +593,10 @@ int DActor::Marshal(LArchive &a)
       if (diff & MD_MOVECOUNT) a << movecount;
       if (diff & MD_THRESHOLD) a << threshold;
       if (diff & MD_LASTLOOK)  a << lastlook;
+
       if (diff & MD_SPECIAL1)  a << special1;
       if (diff & MD_SPECIAL2)  a << special2;
+      if (diff & MD_SPECIAL3)  a << special3;
 
       if (diff & MD_OWNER)  Thinker::Serialize(owner, a);
       if (diff & MD_TARGET) Thinker::Serialize(target, a);
@@ -602,8 +620,8 @@ int DActor::Marshal(LArchive &a)
 	}
       else
 	type = mobjtype_t(spawnpoint->type); // Map::LoadThings() should set it to the correct value
-      info = &mobjinfo[type];
 
+      info = &mobjinfo[type];
       {
 	// use info for init, correct later
 	mass         = info->mass;
@@ -617,19 +635,17 @@ int DActor::Marshal(LArchive &a)
       }
 
       if (diff & MD_XY)
-	a << pos.x << pos.y << yaw;
+	a << pos.x << pos.y << yaw << pitch;
       else
 	{
 	  pos.x = spawnpoint->x;
 	  pos.y = spawnpoint->y;
 	  yaw = ANG45 * (spawnpoint->angle/45);
+	  pitch = 0;
 	}
 
-      if (diff & MD_Z)
-	a << pos.z;
-
-      if (diff & MD_MOM)
-	a << vel; // else zero (by constructor)
+      if (diff & MD_Z)      a << pos.z;
+      if (diff & MD_MOM)    a << vel; // else zero (by constructor)
 
       if (diff & MD_MASS)   a << mass;
       if (diff & MD_RADIUS) a << radius;
@@ -653,8 +669,8 @@ int DActor::Marshal(LArchive &a)
 
       if (diff & MD_STATE)
 	{
-	  a << stemp;
-	  state = &states[stemp];
+	  a << temp;
+	  state = &states[temp];
 	}
       if (diff & MD_TICS)
 	a << tics;
@@ -665,11 +681,13 @@ int DActor::Marshal(LArchive &a)
       if (diff & MD_MOVECOUNT) a << movecount;
       if (diff & MD_THRESHOLD) a << threshold;
       if (diff & MD_LASTLOOK)  a << lastlook;
+
       if (diff & MD_SPECIAL1)  a << special1;
       if (diff & MD_SPECIAL2)  a << special2;
+      if (diff & MD_SPECIAL3)  a << special3;
 
-      if (diff & MD_OWNER)  owner  = (Actor *)Thinker::Unserialize(a);
-      if (diff & MD_TARGET) target = (Actor *)Thinker::Unserialize(a);
+      if (diff & MD_OWNER)  owner  = reinterpret_cast<Actor*>(Thinker::Unserialize(a));
+      if (diff & MD_TARGET) target = reinterpret_cast<Actor*>(Thinker::Unserialize(a));
 
       // set sprev, snext, bprev, bnext, subsector
       if (mp)
@@ -698,17 +716,14 @@ int Pawn::Marshal(LArchive & a)
   a << maxhealth << speed;
   a << attackphase;
 
-  int temp;
-
   if (a.IsStoring())
     {
-      a << (temp = pinfo ? (pinfo - pawndata) : -1);
+      ST_PTR(pinfo, pawndata);
       Thinker::Serialize(attacker, a);
     }
   else
     {
-      a << temp;
-      pinfo = (temp == -1) ? NULL : &pawndata[temp];
+      RE_PTR(pinfo, pawndata);
       attacker = (Actor *)Thinker::Unserialize(a);
     }
 
@@ -720,118 +735,74 @@ int PlayerPawn::Marshal(LArchive &a)
 {
   Pawn::Marshal(a);
 
-  int i, n, diff;
+  int i, temp;
 
-  enum player_diff
-  {
-    PD_POWERS       = 0x0001,
-    PD_PMASK        = 0xFFFF, // 12 powers now in total (room for 16)
+  // player pointer doesn't need to be stored
+  a << pclass;
+  a << attackdown << usedown << jumpdown;
+  a << refire << morphTics << fly_zspeed;
 
-    PD_REFIRE      = 0x010000,
-    PD_MORPHTICS   = 0x020000,
+  a << keycards;
 
-    PD_ATTACKDWN   = 0x100000,
-    PD_USEDWN      = 0x200000,
-    PD_JMPDWN      = 0x400000
-  };
+  for (i=0; i<NUMAMMO; i++)
+    a << ammo[i] << maxammo[i];
+
+  a << toughness;
+  for (i=0; i<NUMARMOR; i++)
+    a << armorfactor[i] << armorpoints[i];
+
+  for (i=0; i<NUMPOWERS; i++)
+    a << powers[i];
+
+  a << poisoncount << cheats;
+  a << specialsector << extralight << fixedcolormap;
 
   if (a.IsStoring())
     {
       for (i=0; i<NUMPSPRITES; i++)
 	{
-	  a << (n = psprites[i].state ? (psprites[i].state - weaponstates) : -1);
+	  ST_PTR(psprites[i].state, weaponstates);
 	  a << psprites[i].tics << psprites[i].sx << psprites[i].sy;
 	}
 
       // inventory is closed.
-      a << (n = inventory.size());
-      for (i=0; i<n; i++)
+      a << (temp = inventory.size());
+      for (i=0; i<temp; i++)
 	a << inventory[i].type << inventory[i].count;
 
-      diff = 0;
+      a << (temp = pendingweapon);
+      a << (temp = readyweapon);
+
+      // NOTE: NUMWEAPONS better be <= 32
+      temp = 0;
       for (i=0; i<NUMWEAPONS; i++)
 	if (weaponowned[i])
-	  diff |= (1 << i);
-      a << diff; // we have already 32 weapon types. whew!
-
-      diff = 0;
-      for (i=0; i<NUMPOWERS; i++)
-	if (powers[i])
-	  diff |= PD_POWERS << i;
-
-      if (refire)      diff |= PD_REFIRE;
-      if (morphTics)   diff |= PD_MORPHTICS;
-
-      // booleans
-      if (attackdown) diff |= PD_ATTACKDWN;
-      if (usedown)    diff |= PD_USEDWN;
-      if (jumpdown)   diff |= PD_JMPDWN;
-
-      a << diff;
-
-      for (i=0; i<NUMPOWERS; i++)
-	if (diff & (PD_POWERS << i))
-	  a << powers[i];
-
-      if (diff & PD_REFIRE) a << refire;
-      if (diff & PD_MORPHTICS) a << morphTics;
-
-      a << (int &)pendingweapon << (int &)readyweapon;
+	  temp |= (1 << i);
+      a << temp; // we have already 32 weapon types. whew!
     }
   else
     {
       // loading
       for (i=0; i<NUMPSPRITES; i++)
 	{
-	  a << n;	  
-	  psprites[i].state = (n == -1) ? NULL : &weaponstates[n];
+	  RE_PTR(psprites[i].state, weaponstates);
 	  a << psprites[i].tics << psprites[i].sx << psprites[i].sy;
 	}
 
-      a << n;
-      inventory.resize(n);
-      for (i=0; i<n; i++)
+      a << temp;
+      inventory.resize(temp);
+      for (i=0; i<temp; i++)
 	a << inventory[i].type << inventory[i].count;
 
-      a << diff;
+      a << temp; pendingweapon = weapontype_t(temp);
+      a << temp; readyweapon = weapontype_t(temp);
+
+      a << temp;
       for (i=0; i<NUMWEAPONS; i++)
-	weaponowned[i] = (diff & (1 << i));
+	weaponowned[i] = (temp & (1 << i));
 
-      a << diff;
-      for (i=0; i<NUMPOWERS; i++)
-	if (diff & (PD_POWERS << i))
-	  a << powers[i];
-
-      if (diff & PD_REFIRE) a << refire;
-      if (diff & PD_MORPHTICS) a << morphTics;
-
-      attackdown   = diff & PD_ATTACKDWN;
-      usedown      = diff & PD_USEDWN;
-      jumpdown     = diff & PD_JMPDWN;
-
-      weaponinfo = (powers[pw_weaponlevel2] ? wpnlev2info : wpnlev1info);
-
-      a << n; pendingweapon = weapontype_t(n);
-      a << n; readyweapon = weapontype_t(n);
+      weaponinfo = powers[pw_weaponlevel2] ? wpnlev2info : wpnlev1info;
     }
-
-  // non-coded stuff (just read/write the numbers)
-  a << pclass;
-  a << fly_zspeed;
-  a << keycards;
-  a << cheats;
-
-  for (i=0; i<NUMAMMO; i++)
-    {
-      a << ammo[i];
-      a << maxammo[i];
-    }
-
-  a << toughness;
-  for (i=0; i<NUMARMOR; i++)
-    a << armorfactor[i] << armorpoints[i];
-
-  a << specialsector << extralight << fixedcolormap;
 
   return 0;
 }
@@ -889,7 +860,73 @@ int svariable_t::Unserialize(LArchive &a)
 }      
 
 
+int script_t::Serialize(LArchive &a)
+{
+  // count number of variables
+  int i, n = 0;
+  for (i=0; i<VARIABLESLOTS; i++)
+    {
+      svariable_t *sv = variables[i];
+      while (sv && sv->type != svt_label)
+        {
+          n++;
+          sv = sv->next;
+        }
+    }
+  a << n;
 
+  // go thru hash chains, store each variable
+  for (i=0; i<VARIABLESLOTS; i++)
+    {
+      // go thru this hashchain
+      svariable_t *sv = variables[i];
+      
+      // once we get to a label there can be no more actual
+      // variables in the list to store
+      while (sv && sv->type != svt_label)
+        {
+	  sv->Serialize(a);
+          sv = sv->next;
+        }
+    }
+
+  return 0;
+}
+
+
+int script_t::Unserialize(LArchive &a)
+{
+  int i, n;
+
+  // free all the variables in the script first
+  for (i=0; i<VARIABLESLOTS; i++)
+    {
+      svariable_t *sv = variables[i];
+      
+      while (sv && sv->type != svt_label)
+        {
+          svariable_t *next = sv->next;
+          Z_Free(sv);
+          sv = next;
+        }
+      variables[i] = sv;       // null or label
+    }
+
+  // now read the number of variables from the savegame file
+  a << n;
+  for (i=0; i<n; i++)
+    {
+      svariable_t *sv = (svariable_t*)Z_Malloc(sizeof(svariable_t), PU_LEVEL, 0);
+      sv->Unserialize(a);
+      
+      // link in the new variable
+      int hashkey = script_t::variable_hash(sv->name);
+      sv->next = variables[hashkey];
+      variables[hashkey] = sv;
+    }
+
+  return 0;
+}
 
 //==============================================
 //  Map serialization
@@ -1139,37 +1176,10 @@ int Map::Serialize(LArchive &a)
       a << (int &)ACSInfo[i].state;
       a << ACSInfo[i].waitValue;
     }
-  a.Write((byte *)ACMapVars, sizeof(ACMapVars));
+  a.Write(reinterpret_cast<byte*>(ACMapVars), sizeof(ACMapVars));
 
   // FS: levelscript contains the map global variables (everything else can be loaded from the WAD)
-
-  // count number of variables
-  n = 0;
-  for (i=0; i<VARIABLESLOTS; i++)
-    {
-      svariable_t *sv = levelscript->variables[i];
-      while (sv && sv->type != svt_label)
-        {
-          n++;
-          sv = sv->next;
-        }
-    }
-  a << n;
-
-  // go thru hash chains, store each variable
-  for (i=0; i<VARIABLESLOTS; i++)
-    {
-      // go thru this hashchain
-      svariable_t *sv = levelscript->variables[i];
-      
-      // once we get to a label there can be no more actual
-      // variables in the list to store
-      while (sv && sv->type != svt_label)
-        {
-	  sv->Serialize(a);
-          sv = sv->next;
-        }
-    }
+  levelscript->Serialize(a);
 
   //runningscripts (scripts currently suspended)
   runningscript_t *rs;
@@ -1238,7 +1248,10 @@ int Map::Serialize(LArchive &a)
   a << i; // store the number of thinkers in ring
 
   for (th = thinkercap.next; th != &thinkercap; th = th->next)
-    Thinker::Serialize(th, a);
+    {
+      a.Marker(MARK_THINK);
+      Thinker::Serialize(th, a);
+    }
 
   a.Marker(MARK_MISC);
   //----------------------------------------------
@@ -1414,33 +1427,7 @@ int Map::Unserialize(LArchive &a)
   a.Read((byte *)ACMapVars, sizeof(ACMapVars));
 
   // FS: restore levelscript
-  // free all the variables in the current levelscript first
-  
-  for (i=0; i<VARIABLESLOTS; i++)
-    {
-      svariable_t *sv = levelscript->variables[i];
-      
-      while (sv && sv->type != svt_label)
-        {
-          svariable_t *next = sv->next;
-          Z_Free(sv);
-          sv = next;
-        }
-      levelscript->variables[i] = sv;       // null or label
-    }
-
-  // now read the number of variables from the savegame file
-  a << n;
-  for (i=0; i<n; i++)
-    {
-      svariable_t *sv = (svariable_t*)Z_Malloc(sizeof(svariable_t), PU_LEVEL, 0);
-      sv->Unserialize(a);
-      
-      // link in the new variable
-      int hashkey = script_t::variable_hash(sv->name);
-      sv->next = levelscript->variables[hashkey];
-      levelscript->variables[hashkey] = sv;
-    }
+  levelscript->Unserialize(a);
 
   // restore runningscripts
   // remove all runningscripts first: levelscript may have started them
@@ -1501,6 +1488,9 @@ int Map::Unserialize(LArchive &a)
   a << n;
   for (i=0; i<n; i++)
     {
+      if (!a.Marker(MARK_THINK))
+	return -666;
+
       Thinker *th = Thinker::Unserialize(a);
       AddThinker(th);
     }
@@ -1578,7 +1568,7 @@ int MapCluster::Unserialize(LArchive &a)
 int MapInfo::Serialize(LArchive &a)
 {
   int temp;
-  a << (int &)state;
+  a << (temp = state);
   a << found;
 
   a << lumpname << nicename << savename;
@@ -1663,7 +1653,11 @@ int MapInfo::Unserialize(LArchive &a)
   else if (temp == 1)
     {
       me = new Map(this);
-      me->Unserialize(a);
+      if (me->Unserialize(a))
+	{
+	  I_Error("Map archive corrupted!\n");
+	  return -1;
+	}
       a.active_map = NULL; // this map is done
     }
   else
@@ -1684,7 +1678,7 @@ int PlayerInfo::Serialize(LArchive &a)
   a << number << team << name;
   a << client_hash;
 
-  a << (int &)playerstate;
+  a << (n = playerstate);
   a << spectator;
 
   a << requestmap << entrypoint;
@@ -1800,9 +1794,9 @@ int GameInfo::Serialize(LArchive &a)
 
   // treat all enums as ints
   a << demoversion;
-  a << (int &)mode;
-  a << (int &)state;
-  a << (int &)skill;
+  a << (n = mode);
+  a << (n = state);
+  a << (n = skill);
 
   // flags
   a << netgame << multiplayer << modified << paused << inventory;
