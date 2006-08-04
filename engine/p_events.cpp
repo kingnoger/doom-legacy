@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004-2005 by DooM Legacy Team.
+// Copyright (C) 2004-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,8 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -212,19 +210,17 @@ void Map::LightningFlash()
 //
 //============================================================================
 
-// New Hexen linedef system.
+// New Hexen-derived linedef system.
 
 bool Map::ActivateLine(line_t *line, Actor *thing, int side, int atype)
 {
   // Things that should NOT trigger specials...
+  // flying blood or water does not activate anything
   if (thing->flags & MF_NOTRIGGER)
     return false;
 
   unsigned spec = unsigned(line->special);
   PlayerPawn *p = thing->IsOf(PlayerPawn::_type) ? reinterpret_cast<PlayerPawn*>(thing) : NULL;
-
-  // flying blood or water does not activate anything
-  bool forceuse = (line->flags & ML_MONSTERS_CAN_ACTIVATE) && !(thing->flags & MF_NOSPLASH);
 
   // Boom generalized types first
   if (boomsupport && spec >= GenCrusherBase)
@@ -263,19 +259,19 @@ bool Map::ActivateLine(line_t *line, Actor *thing, int side, int atype)
       // check each range of generalized linedefs
       if (spec >= GenFloorBase)
 	{
-	  if (!p && ((spec & FloorChange) || !(spec & FloorModel)) && !forceuse)
+	  if (!p && ((spec & FloorChange) || !(spec & FloorModel)))
 	    return false;   // FloorModel is "Allow Monsters" if FloorChange is 0
 	  linefunc = &Map::EV_DoGenFloor;
 	}
       else if (spec >= GenCeilingBase)
 	{
-	  if (!p && ((spec & CeilingChange) || !(spec & CeilingModel)) && !forceuse)
+	  if (!p && ((spec & CeilingChange) || !(spec & CeilingModel)))
 	    return false;   // CeilingModel is "Allow Monsters" if CeilingChange is 0
 	  linefunc = &Map::EV_DoGenCeiling;
 	}
       else if (spec >= GenDoorBase)
 	{
-	  if (!p && ((!(spec & DoorMonster) && !forceuse) || (line->flags & ML_SECRET)))
+	  if (!p && (!(spec & DoorMonster) || (line->flags & ML_SECRET)))
 	    // monsters disallowed from this door
 	    // they can't open secret doors either
 	    return false;
@@ -289,19 +285,19 @@ bool Map::ActivateLine(line_t *line, Actor *thing, int side, int atype)
 	}
       else if (spec >= GenLiftBase)
 	{
-	  if (!p && !(spec & LiftMonster) && !forceuse)
+	  if (!p && !(spec & LiftMonster))
 	    return false; // monsters disallowed
 	  linefunc = &Map::EV_DoGenLift;
 	}
       else if (spec >= GenStairsBase)
 	{
-	  if (!p && !(spec & StairMonster) && !forceuse)
+	  if (!p && !(spec & StairMonster))
 	    return false; // monsters disallowed
 	  linefunc = &Map::EV_DoGenStairs;
 	}
       else // if (spec >= GenCrusherBase)
 	{
-	  if (!p && !(spec & CrusherMonster) && !forceuse)
+	  if (!p && !(spec & CrusherMonster))
 	    return false; // monsters disallowed
 	  linefunc = &Map::EV_DoGenCrusher;
 	}
@@ -348,10 +344,22 @@ bool Map::ActivateLine(line_t *line, Actor *thing, int side, int atype)
   if (act != atype)
     return false;
 
-  // monsters can activate the MCROSS activation type, but never open secret doors
-  if (!p && !(thing->flags & MF_MISSILE) && !forceuse)
-    if (act != SPAC_MCROSS || line->flags & ML_SECRET)
-      return false;
+  if (!p)
+    {
+      // do not let missiles trigger SPAC_CROSS lines...
+      if ((thing->flags & MF_MISSILE) && act == SPAC_CROSS)
+	return false;
+
+      // ML_MONSTERS_CAN_ACTIVATE enables monsters to activate SPAC_CROSS and SPAC_USE,
+      // for other activation types we have corresponding Actor flags.
+      // HOWEVER: monsters never open secret doors
+
+      bool monster_ok = (!(act <= SPAC_USE || act == SPAC_PASSUSE) || (line->flags & ML_MONSTERS_CAN_ACTIVATE))
+	&& !(line->flags & ML_SECRET);
+
+      if (!monster_ok)
+	return false;
+    }
 
   bool repeat = line->flags & ML_REPEAT_SPECIAL;
   bool success = ExecuteLineSpecial(spec, line->args, line, side, thing);

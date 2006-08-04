@@ -229,6 +229,7 @@ void P_InitLava()
 void DoomPatchEngine()
 {
   cv_jumpspeed.Set("6.0");
+  cv_fallingdamage.Set("0");
 
   // hacks: teleport fog, blood, gibs
   mobjinfo[MT_TFOG].spawnstate = S_TFOG;
@@ -246,6 +247,7 @@ void DoomPatchEngine()
 void HereticPatchEngine()
 {
   cv_jumpspeed.Set("6.0");
+  cv_fallingdamage.Set("0");
 
   // hacks
   mobjinfo[MT_TFOG].spawnstate = S_HTFOG1;
@@ -268,6 +270,7 @@ void HereticPatchEngine()
 void HexenPatchEngine()
 {
   cv_jumpspeed.Set("9.0");
+  cv_fallingdamage.Set("23");
 
   // hacks
   mobjinfo[MT_TFOG].spawnstate = S_XTFOG1;

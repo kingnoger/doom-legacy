@@ -408,17 +408,15 @@ void Actor::Remove()
 
 
 
-void P_NoiseAlert(Actor *target, Actor *emitter);
 void PlayerPawn::LandedOnThing(Actor *onmobj)
 {
   // TODO damage also the thing! kill imps in super mario fashion!
 
   player->deltaviewheight = vel.z >> 3;
 
-  if (vel.z < -23)
+  if (cv_fallingdamage.value && vel.z < -cv_fallingdamage.value)
     {
       FallingDamage();
-      P_NoiseAlert(this, this);
       return;
     }
 
@@ -873,9 +871,9 @@ void Actor::ZMovement()
 	      // the skull slammed into floor
 	      vel.z = -vel.z;
 	    }
-	  else if (flags & MF_COUNTKILL) // usually blasted mobj falling
+	  else if (flags & MF_SHOOTABLE) // usually blasted mobj falling
 	    {
-	      if (vel.z < -23)
+	      if (cv_fallingdamage.value && vel.z < -cv_fallingdamage.value)
 		FallingDamage();
 	      vel.z = 0;
 	    }

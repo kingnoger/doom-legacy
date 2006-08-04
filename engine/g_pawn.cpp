@@ -230,7 +230,7 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, int type, int pcl)
   // SetPosition that have something to do with a map.
   flags |= (MF_NOTMONSTER | MF_PICKUP | MF_SHOOTABLE | MF_DROPOFF);
   flags &= ~MF_COUNTKILL;
-  flags2 |= (MF2_WINDTHRUST | MF2_SLIDE | MF2_TELESTOMP);
+  flags2 |= (MF2_WINDTHRUST | MF2_SLIDE | MF2_TELESTOMP | MF2_PUSHWALL);
 
   player = NULL;
 
@@ -776,31 +776,26 @@ void PlayerPawn::ZMovement()
       player->deltaviewheight = (cv_viewheight.value - player->viewheight) >> 3;
     }
 
-  fixed_t oldz, oldpz;
+  fixed_t oldz, oldvz;
   oldz = pos.z;
-  oldpz = vel.z;
+  oldvz = vel.z;
 
   Actor::ZMovement();
 
-  if (oldz + oldpz <= floorz && (oldpz < 0)) // falling
+  if (oldz + oldvz <= floorz && (oldvz < 0)) // falling
     // TODO if (eflags & MFE_JUSTHITFLOOR)
     {
       jumpdown = 7;// delay any jumping for a short time
 
-      if ((oldpz < -8) && !(eflags & MFE_FLY))
+      if ((oldvz < -8) && !(eflags & MFE_FLY))
 	{
 	  // Squat down.
 	  // Decrease viewheight for a moment
 	  // after hitting the ground (hard),
 	  // and utter appropriate sound.
-	  player->deltaviewheight = oldpz >> 3;
+	  player->deltaviewheight = oldvz >> 3;
 
-	  if (vel.z < -23)
-	    {
-	      FallingDamage();
-	      P_NoiseAlert(this, this);
-	    }
-	  else if (vel.z < -12 && !morphTics)
+	  if (oldvz < -12 && !morphTics)
 	    {
 	      S_StartSound(this, sfx_land);
 	      /* TODO
@@ -829,10 +824,10 @@ void PlayerPawn::ZMovement()
 	}
     }
 
-  if (oldz+oldpz + height > ceilingz)
+  if (oldz+oldvz + height > ceilingz)
     {
       // player avatar hits his head on the ceiling, ouch!
-      if (!(cheats & CF_FLYAROUND) && !(eflags & MFE_FLY) && vel.z > 8)
+      if (!(cheats & CF_FLYAROUND) && !(eflags & MFE_FLY) && oldvz > 8)
 	S_StartSound(this, sfx_grunt);
     }
 }

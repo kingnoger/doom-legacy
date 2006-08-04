@@ -275,12 +275,16 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
             {
 	      if (ld->special)
 		{
+		  if (flags2 & MF2_MCROSS &&
+		      mp->ActivateLine(ld, this, oldside, SPAC_MCROSS))
+		    continue;
+
+		  if (flags2 & MF2_PCROSS &&
+		      mp->ActivateLine(ld, this, oldside, SPAC_PCROSS))
+		    continue;
+		  
 		  if (flags & MF_NOTMONSTER || ld->flags & ML_MONSTERS_CAN_ACTIVATE)
 		    mp->ActivateLine(ld, this, oldside, SPAC_CROSS);
-		  else if (flags2 & MF2_MCROSS)
-		    mp->ActivateLine(ld, this, oldside, SPAC_MCROSS);
-		  else if (flags2 & MF2_PCROSS)
-		    mp->ActivateLine(ld, this, oldside, SPAC_PCROSS);
 		}
             }
         }
@@ -1946,7 +1950,7 @@ static PlayerPawn *usething;
 static bool PTR_UseTraverse(intercept_t *in)
 {
   line_t *line = in->line;
-  CONS_Printf("Line: s = %d, tag = %d\n", line->special, line->tag);
+  CONS_Printf("Line: s = %d, tag = %d, flags = %x\n", line->special, line->tag, line->flags);
   if (!line->special)
     {
       line_opening_t *open = P_LineOpening(line, usething);

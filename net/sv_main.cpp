@@ -169,6 +169,7 @@ consvar_t cv_fraglimit     = {"fraglimit" , "0", CV_NETVAR | CV_CALL | CV_NOINIT
 consvar_t cv_timelimit     = {"timelimit" , "0", CV_NETVAR | CV_CALL | CV_NOINIT, CV_Unsigned, TimeLimit_OnChange};
 
 consvar_t cv_jumpspeed       = {"jumpspeed", "6", CV_NETVAR | CV_FLOAT};
+consvar_t cv_fallingdamage   = {"fallingdamage", "0", CV_NETVAR, CV_Unsigned};
 consvar_t cv_allowrocketjump = {"allowrocketjump", "0", CV_NETVAR, CV_YesNo};
 consvar_t cv_allowautoaim    = {"allowautoaim", "1", CV_NETVAR, CV_YesNo};
 consvar_t cv_allowmlook      = {"allowfreelook", "1", CV_NETVAR, CV_YesNo};
@@ -743,6 +744,7 @@ void SV_Init()
   cv_timelimit.Reg();
 
   cv_jumpspeed.Reg();
+  cv_fallingdamage.Reg();
   cv_allowrocketjump.Reg();
   cv_allowautoaim.Reg();
   cv_allowmlook.Reg();

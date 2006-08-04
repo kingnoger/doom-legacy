@@ -986,15 +986,15 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 
 bool Actor::FallingDamage()
 {
-  fixed_t v = abs(vel.z);
+  float v = abs(vel.z).Float();
 
-  if (v <= 23)
+  if (!cv_fallingdamage.value || v <= cv_fallingdamage.value)
     return false; // no damage
 
   int damage = 10000; // automatic death
 
   if (v <= 35)
-    damage = ((v - 23) * 6).floor();
+    damage = int(6 * (v - cv_fallingdamage.value));
 
   //damage = 10000;	// always kill 'em
   return Damage(NULL, NULL, damage, dt_crushing);
@@ -1003,27 +1003,31 @@ bool Actor::FallingDamage()
 
 bool PlayerPawn::FallingDamage()
 {
+  void P_NoiseAlert(Actor *target, Actor *emitter);
+
   float v = abs(vel.z).Float();
 
-  if (v <= 23)
+  if (!cv_fallingdamage.value || v <= cv_fallingdamage.value)
     return false; // no damage
+
+  P_NoiseAlert(this, this); // monsters hear the thump
 
   if (v >= 63)
     {
       // automatic death
-      return Damage(NULL, NULL, 10000);
+      return Damage(NULL, NULL, 10000, dt_crushing);
     }
 
-  float dist = v * 16.0f/23;
+  float dist = v * 16.0f / cv_fallingdamage.value;
   int damage = int((dist * dist)/10.0 -24);
 
-  if (vel.z > -39 && damage > health && health != 1)
+  if (v < 39 && damage > health && health != 1)
     { // No-death threshold
       damage = health - 1;
     }
 
   S_StartSound(this, sfx_land);
-  return Damage(NULL, NULL, damage);
+  return Damage(NULL, NULL, damage, dt_crushing);
 }
 
 

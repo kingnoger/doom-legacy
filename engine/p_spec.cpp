@@ -866,15 +866,15 @@ static struct
 }
 ftypes[] =
 {
+  // Heretic
   {"FWATER",   FLOOR_WATER},
   {"FLTWAWA1", FLOOR_WATER},
   {"FLTFLWW1", FLOOR_WATER},
-
   {"FLTLAVA1", FLOOR_LAVA},
   {"FLATHUH1", FLOOR_LAVA},
-
   {"FLTSLUD1", FLOOR_SLUDGE},
 
+  // Hexen
   {"X_005", FLOOR_WATER},
   {"X_001", FLOOR_LAVA},
   {"X_009", FLOOR_SLUDGE},
@@ -907,6 +907,7 @@ void sector_t::SetFloorType(const char *pic)
     default:
       friction = normal_friction;
       movefactor = 1.0f;
+      special &= ~SS_friction;
       break;
     }
 }

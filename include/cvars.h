@@ -53,6 +53,7 @@ extern consvar_t cv_fraglimit;
 extern consvar_t cv_timelimit;
 
 extern consvar_t cv_jumpspeed;
+extern consvar_t cv_fallingdamage;
 extern consvar_t cv_allowrocketjump;
 extern consvar_t cv_allowautoaim;
 extern consvar_t cv_allowmlook;

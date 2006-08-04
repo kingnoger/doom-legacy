@@ -518,6 +518,7 @@ static parsercmd_t MAPINFO_CLUSTERDEF_commands[] =
 static parsercmd_t MAPINFO_EPISODE_commands[] =
 {
   {P_ITEM_STR, "picname", EP_offset(namepic)},
+  {P_ITEM_STR, "name", EP_offset(name)}, // ZDoom support
   {P_ITEM_IGNORE, NULL, 0}
 };
 #undef EP_offset
@@ -647,9 +648,12 @@ int GameInfo::Read_MAPINFO()
 	  // game entrypoint definition
 	  i = sscanf(p.Pointer(), "%16s \"%60[^\"]\" %d", ln, line, &n);
 
-	  if (i >= 2)
+	  if (i >= 1)
 	    {
 	      parsestate = PS_EPISODE;
+
+	      if (i == 1)
+		line[0] = '\0'; // ZDoom support, get episode name later
 
 	      ep = new Episode(ln, line);
 	      if (i == 3)

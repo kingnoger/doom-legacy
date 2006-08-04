@@ -1292,11 +1292,15 @@ static int CmdPolyWaitDirect()
 
 static int CmdChangeFloor()
 {
-  int flat = tc.GetID(ACMap->ACStrings[Pop()], TEX_floor);
+  const char *texname = ACMap->ACStrings[Pop()];
+  int flat = tc.GetID(texname, TEX_floor);
   int tag = Pop();
   int sectorIndex = -1;
   while((sectorIndex = ACMap->FindSectorFromTag(tag, sectorIndex)) >= 0)
-    ACMap->sectors[sectorIndex].floorpic = flat;
+    {
+      ACMap->sectors[sectorIndex].floorpic = flat;
+      ACMap->sectors[sectorIndex].SetFloorType(texname);
+    }
 
   return SCRIPT_CONTINUE;
 }
@@ -1304,10 +1308,14 @@ static int CmdChangeFloor()
 static int CmdChangeFloorDirect()
 {
   int tag = *PCodePtr++;
-  int flat = tc.GetID(ACMap->ACStrings[*PCodePtr++], TEX_floor);
+  const char *texname = ACMap->ACStrings[*PCodePtr++];
+  int flat = tc.GetID(texname, TEX_floor);
   int sectorIndex = -1;
   while((sectorIndex = ACMap->FindSectorFromTag(tag, sectorIndex)) >= 0)
-    ACMap->sectors[sectorIndex].floorpic = flat;
+    {
+      ACMap->sectors[sectorIndex].floorpic = flat;
+      ACMap->sectors[sectorIndex].SetFloorType(texname);
+    }
 
   return SCRIPT_CONTINUE;
 }
