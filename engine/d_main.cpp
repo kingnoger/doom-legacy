@@ -61,7 +61,7 @@ void CL_Init();
 // Version number: major.minor.subversion
 const int  LEGACY_VERSION = 199;  // major*100 + minor
 const int  LEGACY_SUBVERSION = 0; // for bugfix releases, should not affect compatibility
-const char LEGACY_VERSIONSTRING[] = "alpha4";
+const char LEGACY_VERSIONSTRING[] = "alpha5";
 
 // Name of local directory for config files and savegames
 #ifdef LINUX 

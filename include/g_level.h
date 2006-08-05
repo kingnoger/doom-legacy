@@ -76,7 +76,12 @@ public:
 };
 
 
-/// \brief Game entrypoint.
+/// \brief Game entrypoint
+/// \ingroup g_central
+/*!
+  This class represents one of the items in the "choose episode" menu of game startup.
+  They are built from the MAPINFO lump.
+*/
 class Episode
 {
 public:
@@ -88,6 +93,15 @@ public:
   class MapInfo *minfo; ///< corresponding MapInfo
 
 public:
+  /// constructor for unserializing
+  Episode()
+  {
+    entrypoint = 0;
+    active = false;
+    minfo = NULL;
+  };
+  
+  /// normal constructor
   Episode(const char *lump, const char *n)
   {
     name = n;
@@ -95,7 +109,10 @@ public:
     entrypoint = 0;
     active = false;
     minfo = NULL;
-  }
+  };
+
+  int Serialize(class LArchive &a);
+  int Unserialize(LArchive &a);
 };
 
 

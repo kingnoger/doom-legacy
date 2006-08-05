@@ -1332,7 +1332,8 @@ bool PlayerPawn::GivePower(int power)
 	return false;
       powers[power] = INVULNTICS;
       flags2 |= MF2_INVULNERABLE;
-      if (pclass == 3) flags2 |= MF2_REFLECTIVE; // Hexen mage
+      if (pclass == PCLASS_MAGE)
+	flags2 |= MF2_REFLECTIVE; // Hexen mage
       break;
 
     case pw_weaponlevel2:

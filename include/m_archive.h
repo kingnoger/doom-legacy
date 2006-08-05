@@ -104,12 +104,11 @@ public:
   int Read(byte *dest, size_t length);
   int Write(const byte *source, size_t length);
 
-  LArchive &operator<<(byte &c);    ///< 8 bits
+  LArchive &operator<<(Uint8  &c);  ///< 8 bits
   LArchive &operator<<(Uint16 &c);  ///< 16 bits
   LArchive &operator<<(Uint32 &c);  ///< 32 bits
 
-  inline LArchive &operator<<(int &c) { return operator<<(reinterpret_cast<Uint32 &>(c)); }
-  inline LArchive &operator<<(long int &c) { return operator<<(reinterpret_cast<Uint32 &>(c)); }
+  inline LArchive &operator<<(Sint32 &c) { return operator<<(reinterpret_cast<Uint32 &>(c)); }
   inline LArchive &operator<<(float &c) { return operator<<(reinterpret_cast<Uint32 &>(c)); }
   inline LArchive &operator<<(short &c) { return operator<<(reinterpret_cast<Uint16 &>(c)); }
 
@@ -128,10 +127,6 @@ public:
     operator<<(v.z);
     return *this;
   }
-
-  /*
-  LArchive &operator << (double c);
-  */
 
   LArchive &operator<<(string &s);
   LArchive &operator<<(char *&s); // Z_Mallocs the memory for the c-string when retrieving

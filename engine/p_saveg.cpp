@@ -1249,7 +1249,6 @@ int Map::Serialize(LArchive &a)
 
   for (th = thinkercap.next; th != &thinkercap; th = th->next)
     {
-      a.Marker(MARK_THINK);
       Thinker::Serialize(th, a);
     }
 
@@ -1488,9 +1487,6 @@ int Map::Unserialize(LArchive &a)
   a << n;
   for (i=0; i<n; i++)
     {
-      if (!a.Marker(MARK_THINK))
-	return -666;
-
       Thinker *th = Thinker::Unserialize(a);
       AddThinker(th);
     }
@@ -1526,6 +1522,28 @@ int Map::Unserialize(LArchive &a)
   return 0;
 }
 
+
+
+
+int Episode::Serialize(LArchive &a)
+{
+  int n;
+  a << name << namepic << maplump;
+  a << entrypoint << active;
+  a << (n = minfo ? minfo->mapnumber : 0);
+  return 0;
+}
+
+
+int Episode::Unserialize(LArchive &a)
+{
+  int n;
+  a << name << namepic << maplump;
+  a << entrypoint << active;
+  a << n;
+  minfo = game.FindMapInfo(n);
+  return 0;
+}
 
 
 int MapCluster::Serialize(LArchive &a)
@@ -1700,11 +1718,13 @@ int PlayerInfo::Serialize(LArchive &a)
 
   // current feedback is lost
 
-  // mp is handled through the pawn
   // players are serialized after maps, so pawn may already be stored
   Thinker::Serialize(pawn, a); 
   Thinker::Serialize(pov, a); 
   Thinker::Serialize(hubsavepawn, a); 
+
+  // TEST, save current map number
+  a << (n = mp ? mp->info->mapnumber : 0);
 
   return 0;
 }
@@ -1735,9 +1755,19 @@ int PlayerInfo::Unserialize(LArchive &a)
   pov = static_cast<Actor*>(Thinker::Unserialize(a));
   hubsavepawn = static_cast<PlayerPawn*>(Thinker::Unserialize(a));
 
+  // TEST, get current map and link PI to it
+  a << n;
+  mp = n ? game.FindMapInfo(n)->me : NULL;
+  if (mp)
+    {
+      mp->players.push_back(this);
+    }
+
   if (pawn)
     {
-      mp = pawn->mp;
+      if (mp != pawn->mp)
+	I_Error("LoadGame: corrupted PlayerInfo\n");
+
       pawn->player = this;
     }
 
@@ -1821,6 +1851,13 @@ int GameInfo::Serialize(LArchive &a)
     l->second->Serialize(a);
 
   a << currentcluster->number;
+
+  a.Marker(MARK_GROUP);
+
+  // episodes
+  a << (n = episodes.size());
+  for (i = 0; i<n; i++)
+    episodes[i]->Serialize(a);
 
   a.Marker(MARK_GROUP);
 
@@ -1927,6 +1964,19 @@ int GameInfo::Unserialize(LArchive &a)
 
   a << n;
   currentcluster = clustermap[n];
+
+  if (!a.Marker(MARK_GROUP))
+    return -1;
+
+  // episodes
+  a << n;
+  episodes.resize(n);
+  for (i = 0; i < n; i++)
+    {
+      episodes[i] = new Episode;
+      if (episodes[i]->Unserialize(a))
+	return -666;
+    }
 
   if (!a.Marker(MARK_GROUP))
     return -1;

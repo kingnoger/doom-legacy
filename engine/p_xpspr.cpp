@@ -1261,7 +1261,7 @@ static void CHolySeekerMissile(DActor *actor, angle_t thresh, angle_t turnMax)
 	      deltaZ = -15;
 	    }
 	}
-      fixed_t fdist = P_AproxDistance(target->pos.x - actor->pos.x, target->pos.y - actor->pos.y) / actor->info->speed;
+      fixed_t fdist = P_XYdist(target->pos, actor->pos) / actor->info->speed;
       int dist = fdist.floor();
       if (dist < 1)
 	dist = 1;
@@ -1334,11 +1334,11 @@ static void CHolyTailFollow(Actor *actor, fixed_t dist)
   if (child)
     {
       int an = R_PointToAngle2(actor->pos, child->pos) >> ANGLETOFINESHIFT;
-      fixed_t oldDistance = P_AproxDistance(child->pos.x - actor->pos.x, child->pos.y - actor->pos.y);
+      fixed_t oldDistance = P_XYdist(child->pos, actor->pos);
       if (child->TryMove(actor->pos.x + dist * finecosine[an], 
 			 actor->pos.y + dist * finesine[an], true))
 	{
-	  fixed_t newDistance = P_AproxDistance(child->pos.x-actor->pos.x, child->pos.y-actor->pos.y) - 1;
+	  fixed_t newDistance = P_XYdist(child->pos, actor->pos) - 1;
 	  if (oldDistance < 1)
 	    {
 	      if (child->pos.z < actor->pos.z)
