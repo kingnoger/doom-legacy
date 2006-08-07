@@ -37,6 +37,7 @@ VoodooDoll::VoodooDoll(const PlayerPawn &p)
   flags2 = MF2_WINDTHRUST | MF2_PUSHABLE | MF2_SLIDE | MF2_TELESTOMP;
   eflags = 0;
   //pres->color = 2;
+  player = NULL; // so ~PlayerPawn does not cause trouble
 }
 
 
