@@ -16,8 +16,6 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
-//
 //-----------------------------------------------------------------------------
 
 /// \file
@@ -1837,83 +1835,6 @@ void R_InitTranslucencyTables()
     }
   */
 }
-
-
-
-
-
-
-
-
-
-//lumplist_t*  flats;
-//int          numflatlists;
-//extern int   numwadfiles;
-
-/*
-void R_InitFlats()
-{
-  int       startnum;
-  int       endnum;
-  int       cfile;
-  int       clump;
-  int nwads;
-
-  numflatlists = 0;
-  flats = NULL;
-  cfile = clump = 0;
-
-#ifdef OLDWATER
-  //added:18-02-98: WATER! flatnum of the first waterflat
-  firstwaterflat = fc.GetNumForName ("WATER0");
-#endif
-  nwads = fc.Size();
-
-  for(;cfile < nwads;cfile ++, clump = 0)
-  {
-    startnum = fc.FindNumForNameFile("F_START", cfile, clump);
-    if(startnum == -1)
-    {
-      clump = 0;
-      startnum = fc.FindNumForNameFile("FF_START", cfile, clump);
-
-      if(startnum == -1) //If STILL -1, search the whole file!
-      {
-        flats = (lumplist_t *)realloc(flats, sizeof(lumplist_t) * (numflatlists + 1));
-        flats[numflatlists].wadfile = cfile;
-        flats[numflatlists].firstlump = 0;
-        flats[numflatlists].numlumps = 0xffff; //Search the entire file!
-        numflatlists ++;
-        continue;
-      }
-    }
-
-    endnum = fc.FindNumForNameFile("F_END", cfile, clump);
-    if(endnum == -1)
-      endnum = fc.FindNumForNameFile("FF_END", cfile, clump);
-
-    if(endnum == -1 || (startnum &0xFFFF) > (endnum & 0xFFFF))
-    {
-      flats = (lumplist_t *)realloc(flats, sizeof(lumplist_t) * (numflatlists + 1));
-      flats[numflatlists].wadfile = cfile;
-      flats[numflatlists].firstlump = 0;
-      flats[numflatlists].numlumps = 0xffff; //Search the entire file!
-      numflatlists ++;
-      continue;
-    }
-
-    flats = (lumplist_t *)realloc(flats, sizeof(lumplist_t) * (numflatlists + 1));
-    flats[numflatlists].wadfile = startnum >> 16;
-    flats[numflatlists].firstlump = (startnum&0xFFFF) + 1;
-    flats[numflatlists].numlumps = endnum - (startnum + 1);
-    numflatlists++;
-    continue;
-  }
-
-  if(!numflatlists)
-    I_Error("R_InitFlats: No flats found!\n");
-}
-*/
 
 
 

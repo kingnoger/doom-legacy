@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,7 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -227,6 +226,7 @@ Video::Video()
 {
   buffer = direct = NULL;
   palette = NULL;
+  currentpalette = 0;
 }
 
 
@@ -487,6 +487,8 @@ void Video::SetPalette(int palettenum)
   if (!palette)
     LoadPalette("PLAYPAL");
 
+  currentpalette = palettenum;
+
   // PLAYPAL lump contains 14 different 256 color RGB palettes (28 for Hexen)
   // VB: is software gamma correction used also with OpenGL palette?
 
@@ -506,6 +508,7 @@ void Video::SetPalette(int palettenum)
 void Video::SetPaletteLump(const char *pal)
 {
   LoadPalette(pal);
+  currentpalette = 0;
 #ifdef HWRENDER
   if (rendermode != render_soft)
   {
@@ -514,4 +517,14 @@ void Video::SetPaletteLump(const char *pal)
   else
 #endif
     I_SetPalette(palette);
+}
+
+
+// returns the current palette
+RGBA_t *Video::GetCurrentPalette()
+{
+  if (!palette)
+    return NULL;
+
+  return &palette[currentpalette << 8];
 }

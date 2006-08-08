@@ -401,14 +401,15 @@ bool WritePCXfile(const char*   filename,
 //
 void M_ScreenShot()
 {
+  bool WritePNGScreenshot(FILE *fp, byte *lfb, int width, int height, RGBA_t *pal);
+
   char lbmname[MAX_CONFIGNAME];
-  bool ret = false;
 
   // find a file name to save it to
   if(rendermode == render_opengl)
     strcpy(lbmname, "DOOM000.bmp");
   else
-    strcpy(lbmname, "DOOM000.pcx");
+    strcpy(lbmname, "DOOM000.png");
 
   for (int i=0; i <= 999; i++)
     {
@@ -416,10 +417,10 @@ void M_ScreenShot()
       lbmname[5] = i/10  + '0';
       lbmname[6] = i%10  + '0';
       if (access(lbmname, F_OK) == -1)
-	{
-	  break;
-	}
+	break;
     }
+
+  bool ret = false;
 
   if (rendermode == render_opengl)
     {
@@ -427,12 +428,16 @@ void M_ScreenShot()
     }
   else
     {
-      // this should be a LFB
-      byte *linear = vid.screens[0];
-      // Save the pcx
-      ret = WritePCXfile(lbmname, linear, vid.width, vid.height,
-			 (byte *)fc.CacheLumpName("PLAYPAL", PU_CACHE));
+      RGBA_t *pal = vid.GetCurrentPalette();
+      FILE *fp = fopen(lbmname, "wb");
+      if (fp)
+	{
+	  ret = WritePNGScreenshot(fp, vid.screens[0], vid.width, vid.height, pal);
+	  fclose(fp);
+	}
 
+      // Save the pcx
+      //ret = WritePCXfile(lbmname, vid.screens[0], vid.width, vid.height, (byte *)fc.CacheLumpName("PLAYPAL", PU_CACHE));
     }
 
   if (ret)

@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,7 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -74,7 +73,8 @@ public:
 
   int   setmodeneeded; ///< video mode change needed if > 0 // (the mode number to set + 1)
 
-  RGBA_t *palette;  ///< local copy of the current palette
+  RGBA_t *palette;        ///< local copy of the current palette
+  int     currentpalette; ///< number of the currently active palette
 
 private:
   /// Recalc screen size dependent stuff
@@ -98,6 +98,9 @@ public:
 
   /// Equivalent to LoadPalette(pal); SetPalette(0);
   void SetPaletteLump(const char *pal);
+
+  /// Returns the currently active palette
+  RGBA_t *GetCurrentPalette();
 };
 
 extern Video vid;

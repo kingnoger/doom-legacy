@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004 by DooM Legacy Team.
+// Copyright (C) 2004-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,11 +15,10 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief PNG Textures
+/// \brief PNG Textures and screenshots
 
 #ifndef __APPLE_CC__
 #include <malloc.h>
@@ -244,4 +243,85 @@ byte *PNGTexture::ReadData(bool read_image)
   png_destroy_read_struct(&png_p, &info_p, NULL);
   I_Error("Could not read PNG texture '%s'.\n", name);
   return NULL;
+}
+
+
+
+bool WritePNGScreenshot(FILE *fp, byte *lfb, int width, int height, RGBA_t *pal)
+{
+  int i, j;
+
+  png_struct *png_p = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, PNG_error, PNG_warning);
+  if (!png_p)
+    return false;
+
+  png_info *info_p = png_create_info_struct(png_p);
+  if (!info_p)
+    {
+      png_destroy_write_struct(&png_p, NULL);
+      return false;
+    }
+
+  // error handler
+  if (setjmp(png_jmpbuf(png_p)))
+    {
+      I_Error("Error writing PNG screenshot.\n");
+      png_destroy_write_struct(&png_p, &info_p);
+      return false;
+    }
+
+  // output fn
+  png_init_io(png_p, fp);
+
+  // header info
+  png_set_IHDR(png_p, info_p, width, height,
+	       8, PNG_COLOR_TYPE_PALETTE, PNG_INTERLACE_ADAM7,
+	       PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+
+  // define palette
+  png_color palette[256];
+  for (i=0; i<256; i++)
+    {
+      palette[i].red   = pal[i].red;
+      palette[i].green = pal[i].green;
+      palette[i].blue  = pal[i].blue;
+    }
+  png_set_PLTE(png_p, info_p, palette, 256);
+
+  png_set_gAMA(png_p, info_p, 1/2.2); // TODO tweak, use actual gamma value
+  //png_set_tIME(png_p, info_p, &modtime);
+
+  // text metadata
+  png_text text[3];
+  text[0].compression = PNG_TEXT_COMPRESSION_NONE;
+  text[0].key = "Title";
+  text[0].text = "Screenshot";
+
+  char banner[81];
+  sprintf(banner, LEGACY_VERSION_BANNER, LEGACY_VERSION/100,
+	  LEGACY_VERSION%100, LEGACY_SUBVERSION, LEGACY_VERSIONSTRING);
+  text[1].compression = PNG_TEXT_COMPRESSION_NONE;
+  text[1].key = "Author";
+  text[1].text = banner;
+
+  /*
+  text[2].compression = PNG_TEXT_COMPRESSION_NONE;
+  text[2].key = "Description";
+  text[2].text = "";
+  */
+
+  png_set_text(png_p, info_p, text, 2);
+
+  byte **row_pointers = static_cast<byte **>(alloca(height * sizeof(byte*)));
+  for (i=0, j=0; i<height; i++, j += width)
+    row_pointers[i] = &lfb[j];
+
+  png_set_rows(png_p, info_p, row_pointers);
+  png_write_png(png_p, info_p, PNG_TRANSFORM_IDENTITY, NULL);
+
+
+  png_write_end(png_p, info_p);
+  png_destroy_write_struct(&png_p, &info_p);
+
+  return true;
 }
