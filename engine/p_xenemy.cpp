@@ -3594,7 +3594,7 @@ void A_KoraxChase(DActor *actor)
   if ((!actor->special2) &&
       (actor->health <= (actor->info->spawnhealth/2)))
     {
-      lastfound = 0;
+      lastfound = -1;
       spot = actor->mp->FindFromTIDmap(KORAX_FIRST_TELEPORT_TID, &lastfound);
       if (spot)
 	{
@@ -3622,9 +3622,9 @@ void A_KoraxChase(DActor *actor)
     {
       if (P_Random()<10)
 	{
-	  lastfound = actor->special1;
+	  lastfound = actor->special1-1;
 	  spot = actor->mp->FindFromTIDmap(KORAX_TELEPORT_TID, &lastfound);
-	  actor->special1 = lastfound;
+	  actor->special1 = lastfound+1;
 	  if (spot)
 	    {
 	      actor->Teleport(spot->pos.x, spot->pos.y, spot->yaw, false);

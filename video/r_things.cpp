@@ -315,10 +315,8 @@ void spritepres_t::Project(Actor *p)
 
   vis->gz = gzt - (t->height / t->yscale);
   vis->gzt = gzt;
-  vis->sprite_top = vis->gzt - R.viewz;
+  vis->sprite_top = vis->gzt - R.viewz - p->floorclip;
   // foot clipping FIXME applies also elsewhere! gz, gzt!
-  if (p->pos.z <= sec->floorheight)
-    vis->sprite_top -= p->floorclip;
 
   vis->x1 = x1 < 0 ? 0 : x1;
   vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;

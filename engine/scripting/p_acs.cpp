@@ -1208,11 +1208,11 @@ static bool IT_TypeCount(Thinker *th)
 {
   if (th->IsOf(DActor::_type))
     {
-      DActor *m = (DActor *)th;
+      DActor *m = reinterpret_cast<DActor *>(th);
 
       if (m->type == moType)
 	{
-	  if (m->flags & MF_COUNTKILL && m->flags & MF_CORPSE)
+	  if (m->flags & MF_CORPSE) // had && m->flags & MF_COUNTKILL, but why?
 	    return true; // Don't count dead monsters
 	  thingCount++;
 	}
@@ -1245,11 +1245,11 @@ static void ThingCount(int type, int tid)
 	    thingCount++; // Just count TIDs
 	  else if (mobj->IsOf(DActor::_type))
 	    {
-	      DActor *da = (DActor *)mobj;
+	      DActor *da = reinterpret_cast<DActor *>(mobj);
 	      if (moType == da->type)
 		{
-		  if ((mobj->health <= 0) || (mobj->flags & MF_CORPSE)) // NOTE: had && mobj->flags & MF_COUNTKILL, but why?
-		    continue; // Don't count dead monsters or corpses (which is what dead monsters become when they stop moving!)
+		  if (mobj->flags & MF_CORPSE) // NOTE: had && mobj->flags & MF_COUNTKILL, but why?
+		    continue; // Don't count dead monsters or corpses
 		  thingCount++;
 		}
 	    }

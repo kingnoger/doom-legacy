@@ -695,7 +695,7 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       success = EV_ThingSpawn(args, 0);
       break;
     case 138: // Floor_Waggle
-      success = EV_DoFloorWaggle(tag, args[1] << 13, angle_t(args[2] << 20), angle_t(args[3] << 26), args[4]*35);
+      success = EV_DoFloorWaggle(tag, HEIGHT(args[1]) >> 3, angle_t(args[2] << 20), ANGLE(args[3]) << 2, args[4]*35);
       break;
     case 140: // Sector_SoundChange
       success = EV_SectorSoundChange(args[0], args[1]);

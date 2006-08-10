@@ -978,7 +978,7 @@ floorwaggle_t::floorwaggle_t(Map *m, sector_t *sec, fixed_t a, angle_t f, angle_
   freq = f;
   amp = 0;
   maxamp = a;
-  ampdelta = a / (35 + ((3*35) * (a >> 13))/255);
+  ampdelta = a / (35 + ((3*35) * (a.value() >> 13))/255.0);
   wait = w ? w : -1;
   state = Expand;
 }
@@ -1018,7 +1018,7 @@ void floorwaggle_t::Think()
     }
   // floatbob == 8*sin(x), 2*pi divided in 64 units
   phase += freq;
-  sector->floorheight = baseheight + finesine[phase >> ANGLETOFINESHIFT] * amp;
+  sector->floorheight = baseheight + Sin(phase) * amp;
   mp->CheckSector(sector, true);
 }
 

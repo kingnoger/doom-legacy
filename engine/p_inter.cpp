@@ -1079,7 +1079,7 @@ void Actor::Die(Actor *inflictor, Actor *source, int dtype)
 	  game.Players.begin()->second->kills++;
 	}
 
-      flags &= ~MF_COUNTKILL;
+      //flags &= ~MF_COUNTKILL; // messes up some ACS scripts
     }
 }
 

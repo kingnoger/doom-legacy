@@ -890,8 +890,12 @@ void sector_t::SetFloorType(const char *pic)
     if (!strncasecmp(pic, ftypes[i].name, 8))
       {
 	floortype = ftypes[i].type;
-	break;
+	goto found;
       }
+
+  floortype = FLOOR_SOLID;
+
+ found:
 
   extern float normal_friction;
   const float friction_low = 0.973f; // 0xf900
