@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2005 by DooM Legacy Team.
+// Copyright (C) 2002-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
 //-----------------------------------------------------------------------------
 
 /// \file
@@ -24,10 +23,10 @@
 #ifndef vect_h
 #define vect_h 1
 
-#include<iostream>
-#include "tnl/tnlBitStream.h"
+#include <math.h>
+//#include<iostream>
 
-//#include <math.h>
+namespace TNL { class BitStream; };
 
 /// \brief Simple template class for three-vectors
 ///
@@ -93,7 +92,7 @@ public:
   T Phi()   const { return atan2(y, x); }
 
   /// output method
-  void Print() const { std::cout << "(" << x << ',' <<  y << ',' << z << ")"; }
+  //void Print() const { std::cout << "(" << x << ',' <<  y << ',' << z << ")"; }
 
   /// Addition and subtraction
   template<typename U>

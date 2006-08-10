@@ -105,7 +105,7 @@ void MapInfo::Ticker()
       me->Ticker();
 
       // check fraglimit cvar TODO how does this work? when are the scores (or teamscores) zeroed?
-      if (cv_fraglimit.value && game.CheckScoreLimit())
+      if (game.server && cv_fraglimit.value && game.CheckScoreLimit())
 	{
 	  // go on to the next map
 	  Close(-1);
@@ -808,7 +808,7 @@ void GameInfo::Clear_mapinfo_clustermap()
 
   currentcluster = NULL;
 
-  for (int i=0; i < episodes.size(); i++)
+  for (unsigned i=0; i < episodes.size(); i++)
     delete episodes[i];
   episodes.clear();
 }

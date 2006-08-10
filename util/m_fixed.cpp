@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -30,14 +29,14 @@
 fixed_t fixed_epsilon(1/float(fixed_t::UNIT));
 
 /// OpenTNL packing method
-void fixed_t::Pack(class BitStream *s)
+void fixed_t::Pack(TNL::BitStream *s)
 {
   // TODO: save some bandwidth
   s->writeInt(val, 32);
 }
 
 /// OpenTNL unpacking method
-void fixed_t::Unpack(class BitStream *s)
+void fixed_t::Unpack(TNL::BitStream *s)
 {
   val = s->readInt(32);
 }

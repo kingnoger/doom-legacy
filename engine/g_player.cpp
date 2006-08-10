@@ -250,11 +250,12 @@ bool PlayerInfo::onGhostAdd(class GhostConnection *c)
 	      LConnection::joining_players.erase(t); // the PlayerInfo found its owner
 
 	      ViewPlayers.push_back(this); // let's see it too!
-	      hud.ST_Start(this);
+	      //hud.ST_Start(this); // TODO
 	      break;
 	    }
 	}
     }
+  // NOTE playerstate should not mean anything to the client...yet?
 
   return true;
 }
@@ -407,13 +408,18 @@ PLAYERINFO_RPC_S2C(s2cEnterMap, (U8 mapnum), (mapnum))
   if (!m)
     I_Error("Server sent a player to an unknown map %d!", mapnum);
 
-  requestmap = mapnum;
+  //requestmap = mapnum;
+  /*
   if (mp)
     playerstate = PST_LEAVINGMAP;
   else
     playerstate = PST_NEEDMAP;
+  */
 
-  if (!m->Activate(NULL)) // clientside map activation
+  if (mp)
+    mp->RemovePlayer(this);
+
+  if (!m->Activate(this)) // clientside map activation
     I_Error("Crap!\n");
 }
 

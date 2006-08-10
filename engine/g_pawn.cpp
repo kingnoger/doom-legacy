@@ -180,7 +180,7 @@ bool Pawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, int type)
   : Actor(x, y, z)
 {
-  /*
+  // TEMP
   if (type < 0)
     {
       if (game.mode == gm_hexen)
@@ -190,7 +190,6 @@ Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, int type)
       else
 	type = 0;
     }
-  */
 
   pinfo = &pawndata[type];
   const mobjinfo_t *info = &mobjinfo[pinfo->mt];

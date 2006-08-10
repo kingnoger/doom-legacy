@@ -21,6 +21,7 @@
 /// \file
 /// \brief Part of Map class implementation. Thinkers, Map::Ticker().
 
+#include "g_mapinfo.h"
 #include "g_map.h"
 #include "g_game.h"
 #include "g_player.h"
@@ -82,19 +83,11 @@ void Map::RunThinkers()
 {
   Thinker *t, *next; 
 
-  if (!game.server)
+  for (t = thinkercap.next; t != &thinkercap; t = next)
     {
-      for (t = thinkercap.next; t != &thinkercap; t = t->next)
-	t->ClientThink();
-    }
-  else
-    {
-      for (t = thinkercap.next; t != &thinkercap; t = next)
-	{
-	  next = t->next; // if t is removed while it thinks, its next pointer will no longer be valid.
-	  //if (t->mp == NULL) I_Error("Thinker::mp == NULL! Cannot be!\n");
-	  t->Think();
-	}
+      next = t->next; // if t is removed while it thinks, its next pointer will no longer be valid.
+      //if (t->mp == NULL) I_Error("Thinker::mp == NULL! Cannot be!\n");
+      t->Think();
     }
 }
 
@@ -128,28 +121,44 @@ void Map::Ticker()
   //CONS_Printf("Tic begins..");
   int i = 0;
 
-  RunThinkers();
+  if (game.server)
+    {
+      RunThinkers();
 
-  // after a player is respawned, its input should be built before it is used in RunThinkers.
-  if (!respawnqueue.empty())
-    i = RespawnPlayers();
+      // after a player is respawned, its input should be built before it is used in RunThinkers.
+      if (!respawnqueue.empty())
+	i = RespawnPlayers();
 
-  //CONS_Printf("think..");
-  //RunThinkers();
+      //CONS_Printf("think..");
+      //RunThinkers();
 
-  //CONS_Printf("specials..");
-  UpdateSpecials();
+      //CONS_Printf("specials..");
+      UpdateSpecials();
 
-  //CONS_Printf("respawnspecials..");
-  RespawnSpecials();
+      //CONS_Printf("respawnspecials..");
+      RespawnSpecials();
 
-  //CONS_Printf("sound sequences..");
-  UpdateSoundSequences();
+      //CONS_Printf("sound sequences..");
+      UpdateSoundSequences();
 
-  //CONS_Printf("FS..");
-  FS_DelayedScripts();
+      //CONS_Printf("FS..");
+      FS_DelayedScripts();
 
-  HandlePlayers();
+      HandlePlayers();
+    }
+  else
+    {
+      // client tick 
+      if (players.size() == 0)
+	{
+	  info->state = MapInfo::MAP_FINISHED;
+	  //info->state = MapInfo::MAP_INSTASIS; // TODO alternative
+	  return;
+	}
+
+      for (Thinker *t = thinkercap.next; t != &thinkercap; t = t->next)
+	t->ClientThink();
+    }
 
   PointerCleanup(); // this must be done AFTER players have left the Map, BEFORE they enter another
 

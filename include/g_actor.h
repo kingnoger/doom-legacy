@@ -340,7 +340,7 @@ public:
 
   // in p_map.cpp
   void SetPosition();
-  void UnsetPosition();
+  void UnsetPosition(bool clear_touching_sectorlist = false);
   bool TeleportMove(fixed_t nx, fixed_t ny);
   bool TryMove(fixed_t nx, fixed_t ny, bool allowdropoff);
   bool TestLocation();

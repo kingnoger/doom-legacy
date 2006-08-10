@@ -810,9 +810,13 @@ void Map::RebornPlayer(PlayerInfo *p)
 void Map::AddPlayer(PlayerInfo *p)
 {
   // At this point the player may or may not have a pawn.
-  players.push_back(p);
-  respawnqueue.push_back(p);
   p->mp = this;
+  players.push_back(p);
+
+  if (!game.server)
+    return;
+
+  respawnqueue.push_back(p);
   p->time = 0; // respawn delay counter
   p->playerstate = PST_RESPAWN;
   p->requestmap = 0;
@@ -834,9 +838,9 @@ void Map::AddPlayer(PlayerInfo *p)
 
 
 // removes a player from map (but does not remove the pawn!)
+// used by server in sp games, and by client
 bool Map::RemovePlayer(PlayerInfo *p)
 {
-  // FIXME TODO maybe unnecessary (only used in sp games?)
   vector<PlayerInfo *>::iterator i;
   for (i = players.begin(); i != players.end(); i++)
     if (*i == p)

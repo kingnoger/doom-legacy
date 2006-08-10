@@ -310,7 +310,7 @@ void GameInfo::Ticker()
 	      // TODO purge the removed players from the frag maps of other players?
 	      continue;
 	    }
-	  else if (//server &&
+	  else if (server &&
 		   p->playerstate == PST_NEEDMAP)
 	    {
 	      // assign the player to a map

@@ -25,10 +25,9 @@
 
 #include <stdlib.h>
 #include <math.h>
-#include "tnl/tnlBitStream.h"
 #include "doomtype.h"
 
-using namespace TNL;
+namespace TNL { class BitStream; };
 
 
 /// \brief Class for 16.16 fixed point arithmetic
@@ -210,10 +209,10 @@ public:
 
 
   /// OpenTNL packing method
-  void Pack(BitStream *s);
+  void Pack(TNL::BitStream *s);
 
   /// OpenTNL unpacking method
-  void Unpack(BitStream *s);
+  void Unpack(TNL::BitStream *s);
 };
 
 

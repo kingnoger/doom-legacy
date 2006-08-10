@@ -339,13 +339,7 @@ void Actor::Detach()
       tid = 0;
     }
 
-  UnsetPosition(); // blockmap and sector links
-
-  if (touching_sectorlist)
-    {
-      msecnode_t::DeleteSectorlist(touching_sectorlist);
-      touching_sectorlist = NULL;
-    }
+  UnsetPosition(true); // blockmap and sector links
 
   // free up the spawnpoint
   if (spawnpoint && spawnpoint->mobj == this)
@@ -386,13 +380,7 @@ void Actor::Remove()
     mp->RemoveFromTIDmap(this);
 
   // unlink from sector and block lists
-  UnsetPosition();
-
-  if (touching_sectorlist)
-    {
-      msecnode_t::DeleteSectorlist(touching_sectorlist);
-      touching_sectorlist = NULL;
-    }
+  UnsetPosition(true);
 
   // free up the spawnpoint
   if (spawnpoint && spawnpoint->mobj == this)

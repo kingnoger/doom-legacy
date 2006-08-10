@@ -299,20 +299,33 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 //              Actor position checking and setting
 //=====================================================================
 
-// Unlinks a thing from block map and sectors.
-// On each position change, BLOCKMAP and other
-// lookups maintaining lists ot things inside
-// these structures need to be updated.
-
-void Actor::UnsetPosition()
+/// \brief Unlinks an Actor from all blockmap and sector lists
+/*!
+  On each position change, BLOCKMAP and other lookups maintaining lists of things inside
+  these structures need to be updated.
+  This function should _only_ be called in an unset/set sequence, or when
+  an Actor is completely removed from a Map.
+*/
+void Actor::UnsetPosition(bool clear_touching_sectorlist)
 {
-  //extern msecnode_t *sector_list;
-  int blockx, blocky;
+  // Free touching_sectorlist.
+  // Must be done before Actor is deleted or removed, otherwise optional.
+  // In SetPosition(), we'll keep any nodes that represent
+  // sectors the Thing still touches. We'll add new ones then, and
+  // delete any nodes for sectors the Thing has vacated. Then we'll
+  // put it back into touching_sectorlist. It's done this way to
+  // avoid a lot of deleting/creating for nodes, when most of the
+  // time you just get back what you deleted anyway.
+  if (clear_touching_sectorlist && touching_sectorlist)
+    {
+      msecnode_t::DeleteSectorlist(touching_sectorlist);
+      touching_sectorlist = NULL;
+    }
 
-  if (! (flags & MF_NOSECTOR))
+  if (!(flags & MF_NOSECTOR))
     {
       // inert things don't need to be in blockmap?
-      // unlink from subsector
+      // unlink from sector
       if (snext)
 	snext->sprev = sprev;
 
@@ -323,27 +336,12 @@ void Actor::UnsetPosition()
 #ifdef PARANOIA
       sprev = snext = NULL;
 #endif
-      //SoM: 4/7/2000
-      //
-      // Save the sector list pointed to by touching_sectorlist.
-      // In P_SetThingPosition, we'll keep any nodes that represent
-      // sectors the Thing still touches. We'll add new ones then, and
-      // delete any nodes for sectors the Thing has vacated. Then we'll
-      // put it back into touching_sectorlist. It's done this way to
-      // avoid a lot of deleting/creating for nodes, when most of the
-      // time you just get back what you deleted anyway.
-      //
-      // If this Thing is being removed entirely, then the calling
-      // routine will clear out the nodes in sector_list.
-
-      // smite-meister: This is because normally this function is used in a unset/set sequence.
-      // the subsequent set requires that sector_list is preserved...
     }
 
-  if (! (flags & MF_NOBLOCKMAP))
+  if (!(flags & MF_NOBLOCKMAP))
     {
       // inert things don't need to be in blockmap
-      // unlink from block map
+      // unlink from blockmap
       if (bnext)
 	bnext->bprev = bprev;
 
@@ -351,8 +349,8 @@ void Actor::UnsetPosition()
 	bprev->bnext = bnext;
       else
         {
-	  blockx = (pos.x - mp->bmaporgx).floor() >> MAPBLOCKBITS;
-	  blocky = (pos.y - mp->bmaporgy).floor() >> MAPBLOCKBITS;
+	  int blockx = (pos.x - mp->bmaporgx).floor() >> MAPBLOCKBITS;
+	  int blocky = (pos.y - mp->bmaporgy).floor() >> MAPBLOCKBITS;
 
 	  if (blockx>=0 && blockx < mp->bmapwidth && blocky>=0 && blocky < mp->bmapheight)
 	    mp->blocklinks[blocky * mp->bmapwidth + blockx] = bnext;
@@ -373,11 +371,12 @@ bool Map::SetBMlink(fixed_t x, fixed_t y, Actor *a)
 }
 */
 
-//
-// Links a thing into both a block and a subsector
-// based on it's x y. Sets subsector properly.
-// Does NOT check whether it actually fits there.
-//
+
+/// \brief Links an Actor into blockmap and a sector lists
+/*!
+  Tries to link the Actor to its current position.
+  Does NOT check whether it actually fits there.
+*/
 void Actor::SetPosition()
 {
   // NOTE that tmfloorz and tmceilingz must be set (using CheckPosition() or something)
@@ -390,7 +389,7 @@ void Actor::SetPosition()
 
   if (!(flags & MF_NOSECTOR))
     {
-      // invisible things don't go into the sector links
+      // some things don't go into the sector links
       sector_t *sec = ss->sector;
 #ifdef PARANOIA
       if (sprev != NULL || snext != NULL)
@@ -407,17 +406,12 @@ void Actor::SetPosition()
 
       //SoM: 4/6/2000
       //
-      // If sector_list isn't NULL, it has a collection of sector
-      // nodes that were just removed from this Thing.
-
       // Collect the sectors the object will live in by looking at
-      // the existing sector_list and adding new nodes and deleting
+      // the existing touching_sectorlist and adding new nodes and deleting
       // obsolete ones.
-
-        // When a node is deleted, its sector links (the links starting
-        // at sector_t->touching_thinglist) are broken. When a node is
-        // added, new sector links are created.
-
+      // When a node is deleted, its sector links (the links starting
+      // at sector_t->touching_thinglist) are broken. When a node is
+      // added, new sector links are created.
       mp->CreateSecNodeList(this, pos.x, pos.y);
     }
 
@@ -717,7 +711,7 @@ static bool PIT_CheckLine(line_t *ld)
 //     the nearest ceiling or thing's bottom over tmthing
 //
 
-/// \brief xxxx
+/// \brief Actor collision checking
 /*!
   Does full Actor->Actor collision checking, XY line collisions.
   Crossed special lines are stored into spechit.
@@ -2509,6 +2503,12 @@ void Map::CreateSecNodeList(Actor *thing, fixed_t x, fixed_t y)
 
   thing->touching_sectorlist = msecnode_t::CleanSectorlist(sector_list);
   sector_list = NULL; // just to be sure
+
+#warning FIXME
+  // FIXME TEST
+  for (msecnode_t *p = thing->touching_sectorlist; p; p = p->m_tnext)
+    if (!p->m_thing || !p->m_sector)
+      I_Error("xxsdfsd");
 }
 
 
@@ -2583,8 +2583,7 @@ bool Actor::TeleportMove(fixed_t nx, fixed_t ny)
       if (!mp->BlockThingsIterator(bx,by,PIT_StompThing))
 	return false;
 
-  // the move is ok,
-  // so link the thing into its new position
+  // the move is ok, so link the thing into its new position
   UnsetPosition();
   pos.x = nx;
   pos.y = ny;

@@ -1034,25 +1034,6 @@ void M_Episode(int choice)
 static const size_t MAX_EPISODES = 10; // should be enough...
 static menuitem_t Episode_MI[MAX_EPISODES]; 
 
-/*
-static menuitem_t DoomEp_MI[]=
-{
-  {IT_ACT, "M_EPI1", "Knee-Deep in the Dead", {(consvar_t *)M_Episode},'k'},
-  {IT_ACT, "M_EPI2", "The Shores of Hell"   , {(consvar_t *)M_Episode},'t'},
-  {IT_ACT, "M_EPI3", "Inferno"              , {(consvar_t *)M_Episode},'i'},
-  {IT_ACT, "M_EPI4", "Thy Flesh consumed"   , {(consvar_t *)M_Episode},'t'},
-  {IT_ACT, "M_EPI5", "Episode 5"            , {(consvar_t *)M_Episode},'t'},
-};
-
-static menuitem_t HereticEp_MI[]=
-{
-  {IT_ACT, "M_EPI1", "City of the Damned",   {(consvar_t *)M_Episode},'c'},
-  {IT_ACT, "M_EPI2", "Hell's Maw",           {(consvar_t *)M_Episode},'h'},
-  {IT_ACT, "M_EPI3", "The Dome of D'Sparil", {(consvar_t *)M_Episode},'t'},
-  {IT_ACT, "M_EPI4", "The Ossuary",          {(consvar_t *)M_Episode},'t'},
-  {IT_ACT, "M_EPI5", "The Stagnant Demesne", {(consvar_t *)M_Episode},'t'},
-};
-*/
 
 Menu EpiDef("M_EPISOD", "Which Episode?", &MainMenuDef, ITEMS(Episode_MI), 48, 63);
 

@@ -35,12 +35,12 @@ Normally there's just one MAPINFO lump in a WAD file, named MAPINFO.
 The MAPINFO lump consists of any number of map, cluster and episode
 definitions. Each definition begins with a specific keyword and ends
 when a new definition begins. The body of a definition consists of
-lines, each containing a single keyword, possibly followed by
+lines, each containing a single <span class="keyword">keyword</span>, possibly followed by
 data items separated by whitespace and ending in a newline (ASCII 0x0A).
 Carriage returns (ASCII 0x0D), spaces and tabs are treated as whitespace.
 </p>
 <ul>
-<li>There are three types of data items: integers, floats and strings.</li>
+<li>There are three types of data items: <b>integers</b>, <b>floats</b> and <b>strings</b>.</li>
 <li>All data items (not keywords!) may (but are not required to) be
 quoted using double quotes.
 Quoted string-type data is to be interpreted as a C string literal. Most
@@ -50,7 +50,7 @@ An empty string is denoted as <b>""</b>.
 </li>
 <li>In this specification, required data items are denoted in angle
 brackets, optional data items in brackets:
-keyword &lt;int required&gt; [int optional1] [int optional2] 
+<span class="keyword">keyword</span> &lt;int required&gt; [int optional1] [int optional2] 
 </li>
 <li>In case of multiple definitions of any property, later definitions
 always override the earlier definitions.</li>
@@ -65,7 +65,7 @@ Standard</a>, unless specified otherwise.</li>
 <h2>Map definitions</h2>
 
 <p>
-A map definition begins with the keyword <b>map</b>, followed by the
+A map definition begins with the keyword <span class="keyword">map</span>, followed by the
 map separator lumpname (e.g. MAP04, E3M1 etc.),
 a nice long name for the map (e.g. "The Nuclear Plant"),
 and the level number (a unique positive number used by the exit
@@ -76,7 +76,7 @@ teleporters destined for this map):
 <p>
 If (and only if) the map lumpname is of the form MAPxx, the levelnumber may be omitted (and
 is taken to be xx).<br/>
-You can also use the keyword <b>defaultmap</b> to
+You can also use the keyword <span class="keyword">defaultmap</span> to
 start the definition for the default map properties:
 </p>
 <div class="code">defaultmap</div>
@@ -137,7 +137,7 @@ effect in the map.</td></tr>
 Clusters are used for grouping maps together. Each map belongs to
 a single cluster. If a map has no cluster keyword, it is assigned to
 special cluster 0, which is automatically generated.
-A cluster definition begins with the keyword <b>clusterdef</b>,
+A cluster definition begins with the keyword <span class="keyword">clusterdef</span>,
 followed by a positive cluster number and a nice long name for the
 cluster (e.g. "Knee-deep in the Dead"):
 </p>
@@ -184,7 +184,7 @@ Episodes are used for defining entry points to the game, visible in
 the game menu.
 The episodes should appear in the game menu in the same order they
 are defined.
-An episode definition begins with the keyword <b>episode</b>,
+An episode definition begins with the keyword <span class="keyword">episode</span>,
 followed by the lumpname of the initial map, the name of the episode, 
 and possibly the in-map entrypoint (Hexen only):
 </p>
