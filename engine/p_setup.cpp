@@ -266,7 +266,7 @@ void Map::LoadNodes(int lump)
 
 
 
-void Map::LoadThings(int lump)
+void Map::LoadThings(int lump, bool heed_spawnflags)
 {
   TIDmap.clear();
 
@@ -511,8 +511,9 @@ void Map::LoadThings(int lump)
 
       // Spawning flags don't apply to playerstarts, teleport exits or polyobjs! Why, pray, is that?
       // wrong flags?
-      if ((t->flags & ffail) || !(t->flags & fskill) || !(t->flags & fmode) || !(t->flags & fclass))
-	continue;
+      if (heed_spawnflags)
+	if ((t->flags & ffail) || !(t->flags & fskill) || !(t->flags & fmode) || !(t->flags & fclass))
+	  continue;
 
       //======== now common things affected by spawning flags ========
 
@@ -1475,7 +1476,9 @@ bool Map::Setup(tic_t start, bool spawnthings)
   // fix renderer to this map
   R.SetMap(this);
 
-  LoadThings(lumpnum + LUMP_THINGS);
+  // NOTE: in loading a game, we ignore spawnflags so (almost) every mapthing gets a type.
+  // This is because the players have not been unserialized yet and hence the fclass mask cannot be set.
+  LoadThings(lumpnum + LUMP_THINGS, spawnthings);
 
   if (!polyspawn.empty())
     InitPolyobjs(); // create the polyobjs, clear their mapthings (before spawning other things!)

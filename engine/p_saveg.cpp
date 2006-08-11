@@ -60,10 +60,18 @@
 
 #include "hud.h"
 
-// NOTE! The Map *mp is not saved for Thinkers in general, because it can be deduced
-// from the context. However, some thinkers are not always associated with a Map.
-// Hence they must save the Map reference as well.
+/*
+  Rough saving order:
+  Game: mapinfo, clustermap, episodes, teams, players, rest.
+  MapInfo: Map
+  Map: sectors, lines/sides, polyobjs, scripts, Thinkers, rest.
+  Thinker: stuff, pointers to other Thinkers.
+  PlayerInfo: stuff, pawn, pov, hubsavepawn.
 
+  Extraction of Thinkers requires active_map, which is only set at Map::Unserialize.
+  Ergo, if a Thinker needs a Map during unserialization, its Map must be Unserialized first,
+  or must save the Map reference as well.
+*/
 
 enum consistency_marker_t
 {
@@ -610,7 +618,7 @@ int DActor::Marshal(LArchive &a)
 	{
 	  a << stemp;
 	  spawnpoint = mp->mapthings + stemp;
-	  mp->mapthings[stemp].mobj = this;
+	  spawnpoint->mobj = this;
 	}
 
       if (diff & MD_TYPE)

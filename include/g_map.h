@@ -302,7 +302,7 @@ public:
   void LoadSectors1(int lump);
   void LoadSectors2(int lump);
   void LoadNodes(int lump);
-  void LoadThings(int lump);
+  void LoadThings(int lump, bool heed_spawnflags);
   void LoadLineDefs(int lump);
   void LoadLineDefs2();
   void ConvertLineDefs();

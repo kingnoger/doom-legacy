@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -112,15 +112,14 @@ bool FileCache::InitMultipleFiles(const char *const*filenames)
       string gwafile(curfile);
       // Try both upper and lower case.
       gwafile.replace(gwafile.length()-3, 3, "gwa");
-      if (AddFile(gwafile.c_str()) != -1)
+      if (AddFile(gwafile.c_str(), true) != -1)
 	CONS_Printf("Added GL information from file %s.\n", gwafile.c_str());
       else
 	{
 	  gwafile.replace(gwafile.length()-3, 3, "GWA");
-	  if (AddFile(gwafile.c_str()) != -1)
+	  if (AddFile(gwafile.c_str(), true) != -1)
 	    CONS_Printf("Added GL information from file %s.\n", gwafile.c_str());
-	  else
-	    CONS_Printf("No GL information for file %s.\n", curfile);
+	  //else CONS_Printf("No GL information for file %s.\n", curfile);
 	}
     }
 
@@ -139,7 +138,7 @@ bool FileCache::InitMultipleFiles(const char *const*filenames)
 // Other files are single lumps with the base filename for the lump name.
 // Lump names can appear multiple times.
 
-int FileCache::AddFile(const char *fname)
+int FileCache::AddFile(const char *fname, bool silent)
 {
   int nfiles = vfiles.size();
   
@@ -151,7 +150,7 @@ int FileCache::AddFile(const char *fname)
 
   const char *name = Access(fname);
 
-  if (!name)
+  if (!name && !silent)
     {
       CONS_Printf("FileCache::AddFile: Can't access file %s (path %s)\n", fname, datapath.c_str());
       return -1;

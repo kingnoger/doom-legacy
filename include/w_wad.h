@@ -57,7 +57,7 @@ public:
   void SetPath(const char *p);        ///< set the default path
   const char *Access(const char *f);  ///< tries to find the given file, returns path where found
 
-  int  AddFile(const char *filename); ///< opens a new VFile, returns -1 on error
+  int  AddFile(const char *filename, bool silent = false); ///< opens a new VFile, returns -1 on error
 
   /// returns true if everything is OK, false if at least one file was missing
   bool InitMultipleFiles(const char *const*filenames);
