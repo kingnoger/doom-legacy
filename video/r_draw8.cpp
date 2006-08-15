@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
 //-----------------------------------------------------------------------------
 
 /// \file
@@ -26,64 +25,104 @@
 #include "r_draw.h"
 #include "r_render.h"
 
-#define USEBOOMFUNC
 #define USEHIRES 1
 
-// ==========================================================================
-// COLUMNS
-// ==========================================================================
 
-//  A column is a vertical slice/span of a wall texture that uses
-//  a has a constant z depth from top to bottom.
-//
-
-#ifndef USEASM
-#ifndef USEBOOMFUNC
+// We use the improved Boom versions of the drawers.
+// The original code is left here for comparison.
+#ifdef ORIGINAL_DRAWERS
 void R_DrawColumn_8()
 {
-    register int     count;
-    register byte*   dest;
-    register fixed_t frac;
-    register fixed_t fracstep;
+  register int count = dc_yh - dc_yl + 1;
 
-    count = dc_yh - dc_yl + 1;
-
-    // Zero length, column does not exceed a pixel.
-    if (count <= 0)
-        return;
+  // Zero length, column does not exceed a pixel.
+  if (count <= 0)
+    return;
 
 #ifdef RANGECHECK
-    if ((unsigned)dc_x >= vid.width
-        || dc_yl < 0
-        || dc_yh >= vid.height)
-        I_Error ("R_DrawColumn: %i to %i at %i", dc_yl, dc_yh, dc_x);
+  if (unsigned(dc_x) >= vid.width
+      || dc_yl < 0
+      || dc_yh >= vid.height)
+    I_Error ("R_DrawColumn: %i to %i at %i", dc_yl, dc_yh, dc_x);
 #endif
 
-    // Framebuffer destination address.
-    // Use ylookup LUT to avoid multiply with ScreenWidth.
-    // Use columnofs LUT for subwindows?
-    dest = ylookup[dc_yl] + columnofs[dc_x];
+  // Framebuffer destination address.
+  // Use ylookup LUT to avoid multiply with ScreenWidth.
+  // Use columnofs LUT for subwindows?
+  register byte *dest = ylookup[dc_yl] + columnofs[dc_x];
 
-    // Determine scaling,
-    //  which is the only mapping to be done.
-    fracstep = dc_iscale;
-    frac = dc_texturemid + (dc_yl-centery)*fracstep;
+  // Determine scaling, which is the only mapping to be done.
+  register fixed_t fracstep = dc_iscale;
+  register fixed_t frac = dc_texturemid + (dc_yl-centery)*fracstep;
 
-    // Inner loop that does the actual texture mapping,
-    //  e.g. a DDA-lile scaling.
-    // This is as fast as it gets.
-    do
+  // Inner loop that does the actual texture mapping,
+  //  e.g. a DDA-lile scaling.
+  // This is as fast as it gets.
+  do
     {
-        // Re-map color indices from wall texture column
-        //  using a lighting/special effects LUT.
-        *dest = dc_colormap[dc_source[(frac.floor())&127]];
+      // Re-map color indices from wall texture column
+      //  using a lighting/special effects LUT.
+      *dest = dc_colormap[dc_source[(frac.floor())&127]];
+      // R_DrawSkyColumn_8: *dest = dc_colormap[dc_source[(frac.floor())&255]];
+      // R_DrawTranslucentColumn_8: *dest = dc_colormap[dc_transmap[(dc_source[frac.floor()] << 8) + *dest]];
 
-        dest += vid.width;
-        frac += fracstep;
+      dest += vid.width;
+      frac += fracstep;
 
     } while (--count);
 }
-#else //USEBOOMFUNC
+
+
+void R_DrawSpan_8()
+{
+  register Uint32 xfrac;
+  register Uint32 yfrac;
+  register byte  *dest;
+  register int    count;
+
+#ifdef RANGECHECK
+  if (ds_x2 < ds_x1
+      || ds_x1<0
+      || ds_x2>=vid.width
+      || unsigned(ds_y) > vid.height)
+    {
+      I_Error( "R_DrawSpan: %i to %i at %i", ds_x1,ds_x2,ds_y);
+    }
+#endif
+
+  xfrac = ds_xfrac.value() & 0x3fFFff; // this does the % 64
+  yfrac = ds_yfrac.value();
+
+  dest = ylookup[ds_y] + columnofs[ds_x1];
+
+  // We do not check for zero spans here?
+  count = ds_x2 - ds_x1;
+
+  do
+    {
+      // Lookup pixel from flat texture tile,
+      //  re-index using light/colormap.
+      *dest = ds_colormap[ds_source[((yfrac>>(16-6))&(0x3f<<6)) | (xfrac>>16)]];
+      dest++;
+
+      // Next step in u,v.
+      xfrac += ds_xstep;
+      yfrac += ds_ystep;
+      xfrac &= 0x3fFFff;
+    } while (count--);
+}
+#endif
+
+
+
+//==========================================================================
+// COLUMNS
+//==========================================================================
+
+// A column is a vertical slice/span of a wall texture that uses
+// a has a constant z depth from top to bottom.
+
+
 // SoM: Experiment to make software go faster. Taken from the Boom source
 void R_DrawColumn_8()
 {
@@ -156,56 +195,9 @@ void R_DrawColumn_8()
       }
   }
 }
-#endif  //USEBOOMFUNC
-#endif
 
-#ifndef USEASM
-#ifndef USEBOOMFUNC
-void R_DrawSkyColumn_8()
-{
-    register int     count;
-    register byte*   dest;
-    register fixed_t frac;
-    register fixed_t fracstep;
-        
-    count = dc_yh - dc_yl;
-        
-    // Zero length, column does not exceed a pixel.
-    if (count < 0)
-                return;
-        
-#ifdef RANGECHECK
-    if ((unsigned)dc_x >= vid.width
-                || dc_yl < 0
-                || dc_yh >= vid.height)
-                I_Error ("R_DrawColumn: %i to %i at %i", dc_yl, dc_yh, dc_x);
-#endif
-        
-    // Framebuffer destination address.
-    // Use ylookup LUT to avoid multiply with ScreenWidth.
-    // Use columnofs LUT for subwindows?
-    dest = ylookup[dc_yl] + columnofs[dc_x];
-        
-    // Determine scaling,
-    //  which is the only mapping to be done.
-    fracstep = dc_iscale;
-    frac = dc_texturemid + (dc_yl-centery)*fracstep;
-        
-    // Inner loop that does the actual texture mapping,
-    //  e.g. a DDA-lile scaling.
-    // This is as fast as it gets.
-    do
-    {
-        // Re-map color indices from wall texture column
-        //  using a lighting/special effects LUT.
-        *dest = dc_colormap[dc_source[(frac.floor())&255]];
 
-        dest += vid.width;
-        frac += fracstep;
-                
-    } while (count--);
-}
-#else
+/*
 void R_DrawSkyColumn_8()
 {
   int count = dc_yh - dc_yl + 1; 
@@ -277,123 +269,94 @@ void R_DrawSkyColumn_8()
       }
   }
 }
-#endif // USEBOOMFUNC
-#endif
+*/
+
 
 //  The standard Doom 'fuzzy' (blur, shadow) effect
 //  originally used for spectres and when picking up the blur sphere
-//
-//#ifndef USEASM // NOT IN ASSEMBLER, TO DO.. IF WORTH IT
 void R_DrawFuzzColumn_8()
 {
-    register int     count;
-    register byte*   dest;
-    register fixed_t frac;
-    register fixed_t fracstep;
+  // Adjust borders. Low...
+  if (!dc_yl)
+    dc_yl = 1;
 
-    // Adjust borders. Low...
-    if (!dc_yl)
-        dc_yl = 1;
+  // .. and high.
+  if (dc_yh == viewheight-1)
+    dc_yh = viewheight - 2;
 
-    // .. and high.
-    if (dc_yh == viewheight-1)
-        dc_yh = viewheight - 2;
+  register int count = dc_yh - dc_yl;
 
-    count = dc_yh - dc_yl;
-
-    // Zero length.
-    if (count < 0)
-        return;
-
+  // Zero length.
+  if (count < 0)
+    return;
 
 #ifdef RANGECHECK
-    if ((unsigned)dc_x >= vid.width
-        || dc_yl < 0 || dc_yh >= vid.height)
+  if (unsigned(dc_x) >= vid.width
+      || dc_yl < 0 || dc_yh >= vid.height)
     {
-        I_Error ("R_DrawFuzzColumn: %i to %i at %i",
-                 dc_yl, dc_yh, dc_x);
+      I_Error ("R_DrawFuzzColumn: %i to %i at %i",
+	       dc_yl, dc_yh, dc_x);
     }
 #endif
 
+  // Does not work with blocky mode.
+  register byte *dest = ylookup[dc_yl] + columnofs[dc_x];
 
-    // Does not work with blocky mode.
-    dest = ylookup[dc_yl] + columnofs[dc_x];
-
-    // Looks familiar.
-    fracstep = dc_iscale;
-    frac = dc_texturemid + (dc_yl-centery)*fracstep;
-
-    do
+  do
     {
-        // Lookup framebuffer, and retrieve
-        //  a pixel that is either one column
-        //  left or right of the current one.
-        // Add index from colormap to index.
+      // Lookup framebuffer, and retrieve
+      //  a pixel that is either one column
+      //  left or right of the current one.
+      // Add index from colormap to index.
       *dest = R.base_colormap[6*256 + dest[fuzzoffset[fuzzpos]]];
 
-        // Clamp table lookup index.
-        if (++fuzzpos == FUZZTABLE)
-            fuzzpos = 0;
+      // Clamp table lookup index.
+      if (++fuzzpos == FUZZTABLE)
+	fuzzpos = 0;
 
-        dest += vid.width;
-
-        frac += fracstep;
+      dest += vid.width;
     } while (count--);
 }
-//#endif
 
 
-#ifndef USEASM
-// used in tiltview, but never called for now, but who know...
-void R_DrawSpanNoWrap()
-{}
-#endif
 
-#ifndef USEASM
+
 void R_DrawShadeColumn_8()
 {
-    register int     count;
-    register byte*   dest;
-    register fixed_t frac;
-    register fixed_t fracstep;
+  // check out coords for src*
+  if((dc_yl<0)||(dc_x>=vid.width))
+    return;
 
-    // check out coords for src*
-    if((dc_yl<0)||(dc_x>=vid.width))
-      return;
-
-    count = dc_yh - dc_yl;
-    if (count < 0)
-        return;
+  register int count = dc_yh - dc_yl;
+  if (count < 0)
+    return;
 
 #ifdef RANGECHECK
-    if ((unsigned)dc_x >= vid.width
-        || dc_yl < 0
-        || dc_yh >= vid.height)
+  if (unsigned(dc_x) >= vid.width
+      || dc_yl < 0
+      || dc_yh >= vid.height)
     {
-        I_Error ( "R_DrawColumn: %i to %i at %i",
-                  dc_yl, dc_yh, dc_x);
+      I_Error ( "R_DrawColumn: %i to %i at %i",
+		dc_yl, dc_yh, dc_x);
     }
-
 #endif
 
-    // FIXME. As above.
-    //src  = ylookup[dc_yl] + columnofs[dc_x+2];
-    dest = ylookup[dc_yl] + columnofs[dc_x];
+  // FIXME. As above.
+  //src  = ylookup[dc_yl] + columnofs[dc_x+2];
+  register byte *dest = ylookup[dc_yl] + columnofs[dc_x];
 
+  // Looks familiar.
+  register fixed_t fracstep = dc_iscale;
+  register fixed_t frac = dc_texturemid + (dc_yl-centery)*fracstep;
 
-    // Looks familiar.
-    fracstep = dc_iscale;
-    frac = dc_texturemid + (dc_yl-centery)*fracstep;
-
-    // Here we do an additional index re-mapping.
-    do
+  // Here we do an additional index re-mapping.
+  do
     {
       *dest = R.base_colormap[(dc_source[frac.floor()] << 8) + *dest];
       dest += vid.width;
       frac += fracstep;
     } while (count--);
 }
-#endif
 
 
 //
@@ -401,66 +364,15 @@ void R_DrawShadeColumn_8()
 // a lot in 640x480 with big sprites (bfg on all screen, or transparent
 // walls on fullscreen)
 //
-#ifndef USEASM
-#ifndef USEBOOMFUNC
 void R_DrawTranslucentColumn_8()
 {
-    register int     count;
-    register byte*   dest;
-    register fixed_t frac;
-    register fixed_t fracstep;
-
-    // check out coords for src*
-    if((dc_yl<0)||(dc_x>=vid.width))
-      return;
-
-    count = dc_yh - dc_yl;
-    if (count < 0)
-        return;
-
-#ifdef RANGECHECK
-    if ((unsigned)dc_x >= vid.width
-        || dc_yl < 0
-        || dc_yh >= vid.height)
-    {
-        I_Error ( "R_DrawColumn: %i to %i at %i",
-                  dc_yl, dc_yh, dc_x);
-    }
-
-#endif
-
-    // FIXME. As above.
-    //src  = ylookup[dc_yl] + columnofs[dc_x+2];
-    dest = ylookup[dc_yl] + columnofs[dc_x];
-
-
-    // Looks familiar.
-    fracstep = dc_iscale;
-    frac = dc_texturemid + (dc_yl-centery)*fracstep;
-
-    // Here we do an additional index re-mapping.
-    do
-    {
-        *dest = dc_colormap[*( dc_transmap + (dc_source[frac.floor()] <<8) + (*dest) )];
-        dest += vid.width;
-        frac += fracstep;
-    } while (count--);
-}
-#else
-void R_DrawTranslucentColumn_8()
-{
-  register int     count; 
-  register byte    *dest;
-  register fixed_t frac;
-  register fixed_t fracstep;     
-
-  count = dc_yh - dc_yl + 1; 
+  register int count = dc_yh - dc_yl + 1; 
 
   if (count <= 0)    // Zero length, column does not exceed a pixel.
     return; 
                                  
 #ifdef RANGECHECK 
-  if ((unsigned)dc_x >= vid.width
+  if (unsigned(dc_x) >= vid.width
       || dc_yl < 0
       || dc_yh >= vid.height) 
     I_Error ("R_DrawColumn: %i to %i at %i", dc_yl, dc_yh, dc_x); 
@@ -469,18 +381,15 @@ void R_DrawTranslucentColumn_8()
   // Framebuffer destination address.
   // Use ylookup LUT to avoid multiply with ScreenWidth.
   // Use columnofs LUT for subwindows? 
-
-  dest = ylookup[dc_yl] + columnofs[dc_x];  
-
+  register byte *dest = ylookup[dc_yl] + columnofs[dc_x];  
+  
   // Determine scaling, which is the only mapping to be done.
-
-  fracstep = dc_iscale; 
-  frac = dc_texturemid + (dc_yl-centery)*fracstep; 
+  register fixed_t fracstep = dc_iscale; 
+  register fixed_t frac = dc_texturemid + (dc_yl-centery)*fracstep; 
 
   // Inner loop that does the actual texture mapping,
   //  e.g. a DDA-lile scaling.
   // This is as fast as it gets.
-
   {
     register const byte *source = dc_source;            
     //register const lighttable_t *colormap = dc_colormap;
@@ -502,7 +411,7 @@ void R_DrawTranslucentColumn_8()
 	    //  using a lighting/special effects LUT.
 	    // fheightmask is the Tutti-Frutti fix -- killough
                       
-	    *dest = dc_colormap[*( dc_transmap + (source[frac.floor()] <<8) + (*dest) )];
+	    *dest = dc_colormap[dc_transmap[(source[frac.floor()] <<8 ) + *dest]];
 	    dest += vid.width;
 	    if ((frac += fracstep) >= fheightmask)
 	      frac -= fheightmask;
@@ -513,122 +422,163 @@ void R_DrawTranslucentColumn_8()
       {
 	while ((count-=2)>=0)   // texture height is a power of 2 -- killough
           {
-	    *dest = dc_colormap[*( dc_transmap + (source[frac.floor()] <<8) + (*dest) )];
+	    *dest = dc_colormap[dc_transmap[(source[frac.floor()] <<8) + *dest]];
 	    dest += vid.width; 
 	    frac += fracstep;
-	    *dest = dc_colormap[*( dc_transmap + (source[frac.floor()] <<8) + (*dest) )];
+	    *dest = dc_colormap[dc_transmap[(source[frac.floor()] <<8) + *dest]];
 	    dest += vid.width; 
 	    frac += fracstep;
           }
 	if (count & 1)
-	  *dest = dc_colormap[*( dc_transmap + (source[frac.floor()] <<8) + (*dest) )];
+	  *dest = dc_colormap[dc_transmap[(source[frac.floor()] <<8) + *dest]];
       }
   }
 }
-#endif // USEBOOMFUNC
-#endif
 
 
 //
 //  Draw columns upto 128high but remap the green ramp to other colors
 //
-//#ifndef USEASM        // STILL NOT IN ASM, TO DO..
 void R_DrawTranslatedColumn_8()
 {
-    register int     count;
-    register byte*   dest;
-    register fixed_t frac;
-    register fixed_t fracstep;
+  register int count = dc_yh - dc_yl;
 
-    count = dc_yh - dc_yl;
-    if (count < 0)
-        return;
+  if (count < 0)
+    return;
 
 #ifdef RANGECHECK
-    if ((unsigned)dc_x >= vid.width
-        || dc_yl < 0
-        || dc_yh >= vid.height)
+  if (unsigned(dc_x) >= vid.width
+      || dc_yl < 0
+      || dc_yh >= vid.height)
     {
-        I_Error ( "R_DrawColumn: %i to %i at %i",
-                  dc_yl, dc_yh, dc_x);
+      I_Error("R_DrawColumn: %i to %i at %i", dc_yl, dc_yh, dc_x);
     }
-
 #endif
-    // FIXME. As above.
-    dest = ylookup[dc_yl] + columnofs[dc_x];
+  // FIXME. As above.
+  register byte *dest = ylookup[dc_yl] + columnofs[dc_x];
 
-    // Looks familiar.
-    fracstep = dc_iscale;
-    frac = dc_texturemid + (dc_yl-centery)*fracstep;
+  // Looks familiar.
+  register fixed_t fracstep = dc_iscale;
+  register fixed_t frac = dc_texturemid + (dc_yl-centery)*fracstep;
 
-    // Here we do an additional index re-mapping.
-    do
+  // Here we do an additional index re-mapping.
+  do
     {
-        // Translation tables are used
-        //  to map certain colorramps to other ones,
-        //  used with PLAY sprites.
-        // Thus the "green" ramp of the player 0 sprite
-        //  is mapped to gray, red, black/indigo.
-        *dest = dc_colormap[dc_translation[dc_source[frac.floor()]]];
+      // Translation tables are used to map certain colorramps to other ones, used with PLAY sprites.
+      // Thus the "green" ramp of the player 0 sprite is mapped to gray, red, black/indigo.
+      *dest = dc_colormap[dc_translation[dc_source[frac.floor()]]];
 
-        dest += vid.width;
-
-        frac += fracstep;
+      dest += vid.width;
+      frac += fracstep;
     } while (count--);
 }
-//#endif
 
 
-// ==========================================================================
-// SPANS
-// ==========================================================================
-
-
-//  Draws the actual span.
-//
-#ifndef USEASM
-#ifndef USEBOOMFUNC
-void R_DrawSpan_8()
+//SoM: Fog wall.
+void R_DrawFogColumn_8()
 {
-  register Uint32 xfrac;
-  register Uint32 yfrac;
-  register byte  *dest;
-  register int    count;
+  int count = dc_yh - dc_yl;
+
+  // Zero length, column does not exceed a pixel.
+  if (count < 0)
+    return;
 
 #ifdef RANGECHECK
-    if (ds_x2 < ds_x1
-        || ds_x1<0
-        || ds_x2>=vid.width
-        || (unsigned)ds_y>vid.height)
-    {
-        I_Error( "R_DrawSpan: %i to %i at %i",
-                 ds_x1,ds_x2,ds_y);
-    }
+  if (unsigned(dc_x) >= vid.width
+      || dc_yl < 0
+      || dc_yh >= vid.height)
+    I_Error ("R_DrawColumn: %i to %i at %i", dc_yl, dc_yh, dc_x);
 #endif
 
-    xfrac = ds_xfrac.value() & 0x3fFFff; // this does the % 64
-    yfrac = ds_yfrac.value();
+  // Framebuffer destination address.
+  // Use ylookup LUT to avoid multiply with ScreenWidth.
+  // Use columnofs LUT for subwindows?
+  byte *dest = ylookup[dc_yl] + columnofs[dc_x];
 
-    dest = ylookup[ds_y] + columnofs[ds_x1];
-
-    // We do not check for zero spans here?
-    count = ds_x2 - ds_x1;
-
-    do
+  do
     {
-        // Lookup pixel from flat texture tile,
-        //  re-index using light/colormap.
-        *dest = ds_colormap[ds_source[((yfrac>>(16-6))&(0x3f<<6)) | (xfrac>>16)]];
-	dest++;
-
-        // Next step in u,v.
-        xfrac += ds_xstep;
-        yfrac += ds_ystep;
-        xfrac &= 0x3fFFff;
+      // Simple. Apply the colormap to what's already on the screen.
+      *dest = dc_colormap[*dest];
+      dest += vid.width;
     } while (count--);
 }
-#elif defined(USEHIRES)
-// TEST, arbitrary size textures.
+
+
+
+// SoM: This is for 3D floors that cast shadows on walls.
+// This function just cuts the column up into sections and calls
+// R_DrawColumn_8
+void R_DrawColumnShadowed_8()
+{
+  int realyh = dc_yh;
+  int realyl = dc_yl;
+
+  int count = dc_yh - dc_yl;
+
+  // Zero length, column does not exceed a pixel.
+  if (count < 0)
+    return;
+
+#ifdef RANGECHECK
+  if (unsigned(dc_x) >= vid.width
+      || dc_yl < 0
+      || dc_yh >= vid.height)
+    I_Error ("R_DrawColumn: %i to %i at %i", dc_yl, dc_yh, dc_x);
+#endif
+
+  int bheight = 0;
+
+  // SoM: This runs through the lightlist from top to bottom and cuts up
+  // the column accordingly.
+  for (int i = 0; i < dc_numlights; i++)
+    {
+      // If the height of the light is above the column, get the colormap
+      // anyway because the lighting of the top should be effected.
+      int solid = dc_lightlist[i].flags & FF_CUTSOLIDS;
+
+      int height = dc_lightlist[i].height.floor();
+      if (solid)
+        bheight = dc_lightlist[i].botheight.floor();
+      if (height <= dc_yl)
+	{
+	  dc_colormap = dc_lightlist[i].rcolormap;
+	  if (solid && dc_yl < bheight)
+	    dc_yl = bheight;
+	  continue;
+	}
+      // Found a break in the column!
+      dc_yh = height;
+
+      if (dc_yh > realyh)
+        dc_yh = realyh;
+      R_DrawColumn_8();
+      if (solid)
+        dc_yl = bheight;
+      else
+        dc_yl = dc_yh + 1;
+
+      dc_colormap = dc_lightlist[i].rcolormap;
+    }
+  dc_yh = realyh;
+  if (dc_yl <= realyh)
+    R_DrawColumn_8();
+}
+
+
+
+
+
+
+
+
+
+
+//==========================================================================
+// SPANS
+//==========================================================================
+
+#if defined(USEHIRES)
+/// For arbitrary-size Textures.
 void R_DrawSpan_8()
 { 
   byte *dest = ylookup[ds_y] + columnofs[ds_x1];
@@ -713,12 +663,11 @@ void R_DrawSpan_8()
       count--;
     } 
 }
-#endif // USEBOOMFUNC
 #endif
 
 
 #if defined (USEHIRES)
-// TEST, arbitrary size textures.
+/// For arbitrary-size Textures.
 void R_DrawTranslucentSpan_8()
 { 
   byte *dest = ylookup[ds_y] + columnofs[ds_x1];
@@ -817,142 +766,28 @@ void R_DrawTranslucentSpan_8()
 
 void R_DrawFogSpan_8()
 {
-  byte *colormap;
-  byte *transmap;
-  byte *dest;
-    
-  unsigned count;
-                
-  colormap = ds_colormap;
-  transmap = ds_transmap;
-  dest = ylookup[ds_y] + columnofs[ds_x1];       
-  count = ds_x2 - ds_x1 + 1; 
+  byte *colormap = ds_colormap;
+  //byte *transmap = ds_transmap;
+  byte *dest = ylookup[ds_y] + columnofs[ds_x1];       
+  unsigned count = ds_x2 - ds_x1 + 1; 
         
   while (count >= 4)
     { 
       dest[0] = colormap[dest[0]];
-
       dest[1] = colormap[dest[1]];
-        
       dest[2] = colormap[dest[2]];
-        
       dest[3] = colormap[dest[3]];
                 
       dest += 4;
       count -= 4;
-    } 
+    }
 
-  while (count--) {
+  while (count--)
+    {
       *dest = colormap[*dest];
       dest++;
-  }
-}
-
-
-
-//SoM: Fog wall.
-void R_DrawFogColumn_8()
-{
-    int                 count;
-    byte*               dest;
-
-    count = dc_yh - dc_yl;
-
-    // Zero length, column does not exceed a pixel.
-    if (count < 0)
-        return;
-
-#ifdef RANGECHECK
-    if ((unsigned)dc_x >= vid.width
-        || dc_yl < 0
-        || dc_yh >= vid.height)
-        I_Error ("R_DrawColumn: %i to %i at %i", dc_yl, dc_yh, dc_x);
-#endif
-
-    // Framebuffer destination address.
-    // Use ylookup LUT to avoid multiply with ScreenWidth.
-    // Use columnofs LUT for subwindows?
-    dest = ylookup[dc_yl] + columnofs[dc_x];
-
-    // Determine scaling,
-    //  which is the only mapping to be done.
-
-    do
-    {
-        //Simple. Apply the colormap to what's allready on the screen.
-        *dest = dc_colormap[*dest];
-        dest += vid.width;
-    } while (count--);
-}
-
-
-
-
-// SoM: This is for 3D floors that cast shadows on walls.
-// This function just cuts the column up into sections and calls
-// R_DrawColumn_8
-void R_DrawColumnShadowed_8()
-{
-    int                 count;
-    int                 realyh, realyl;
-    int                 i;
-    int                 height, bheight = 0;
-    int                 solid = 0;
-
-    realyh = dc_yh;
-    realyl = dc_yl;
-
-    count = dc_yh - dc_yl;
-
-    // Zero length, column does not exceed a pixel.
-    if (count < 0)
-        return;
-
-#ifdef RANGECHECK
-    if ((unsigned)dc_x >= vid.width
-        || dc_yl < 0
-        || dc_yh >= vid.height)
-        I_Error ("R_DrawColumn: %i to %i at %i", dc_yl, dc_yh, dc_x);
-#endif
-
-    // SoM: This runs through the lightlist from top to bottom and cuts up
-    // the column accordingly.
-    for(i = 0; i < dc_numlights; i++)
-    {
-      // If the height of the light is above the column, get the colormap
-      // anyway because the lighting of the top should be effected.
-      solid = dc_lightlist[i].flags & FF_CUTSOLIDS;
-
-      height = dc_lightlist[i].height.floor();
-      if(solid)
-        bheight = dc_lightlist[i].botheight.floor();
-      if(height <= dc_yl)
-      {
-        dc_colormap = dc_lightlist[i].rcolormap;
-        if(solid && dc_yl < bheight)
-          dc_yl = bheight;
-        continue;
-      }
-      // Found a break in the column!
-      dc_yh = height;
-
-      if(dc_yh > realyh)
-        dc_yh = realyh;
-      R_DrawColumn_8();
-      if(solid)
-        dc_yl = bheight;
-      else
-        dc_yl = dc_yh + 1;
-
-      dc_colormap = dc_lightlist[i].rcolormap;
     }
-    dc_yh = realyh;
-    if(dc_yl <= realyh)
-      R_DrawColumn_8();
 }
-
-
-
 
 
 

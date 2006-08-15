@@ -424,7 +424,7 @@ void spritepres_t::Project(Actor *p)
 short*          mfloorclip;
 short*          mceilingclip;
 
-fixed_t         spryscale; ///< texture coord * spryscale = screen coord
+fixed_t         spryscale; ///< distance scaling, does not include texture scaling
 /// sprite screen coords
 fixed_t         sprtopscreen;
 fixed_t         sprbotscreen;
@@ -437,11 +437,10 @@ void R_DrawMaskedColumn(column_t* column)
 
   for ( ; column->topdelta != 0xff ; )
     {
-      // calculate unclipped screen coordinates
-      //  for post
-      fixed_t topscreen = sprtopscreen + spryscale*column->topdelta;
-      fixed_t bottomscreen = sprbotscreen == fixed_t::FMAX ? topscreen + spryscale*column->length :
-	sprbotscreen + spryscale*column->length;
+      // calculate unclipped screen coordinates for post
+      fixed_t topscreen = sprtopscreen + column->topdelta / dc_iscale;
+      fixed_t bottomscreen = sprbotscreen == fixed_t::FMAX ? topscreen + column->length/dc_iscale :
+	sprbotscreen + column->length/dc_iscale;
 
       dc_yl = 1 + (topscreen - fixed_epsilon).floor();
       dc_yh = (bottomscreen - fixed_epsilon).floor();
@@ -521,25 +520,25 @@ void vissprite_t::DrawVisSprite()
 
   dc_colormap += lightmap;
 
-  spryscale = yscale / tex->yscale;
+  spryscale = yscale;
   sprtopscreen = centeryfrac - (sprite_top * yscale);
   windowtop = windowbottom = sprbotscreen = fixed_t::FMAX;
 
   // initialize drawers
-  dc_iscale = tex->yscale / yscale; // = 1 / spryscale;
+  dc_iscale = tex->yscale / yscale;
   dc_texturemid = sprite_top * tex->yscale;
   dc_texheight = 0; // clever way of drawing nonrepeating textures
 
   fixed_t frac = startfrac;
   for (dc_x = x1; dc_x <= x2; dc_x++, frac += xiscale)
     {
-      int texturecolumn = frac.floor();
 #ifdef RANGECHECK
+      int texturecolumn = frac.floor();
       if (texturecolumn < 0 || texturecolumn >= t->width)
         I_Error ("R_DrawSpriteRange: bad texturecolumn");
 #endif
       if (tex->Masked())
-	R_DrawMaskedColumn(tex->GetMaskedColumn(texturecolumn));
+	R_DrawMaskedColumn(tex->GetMaskedColumn(frac));
       // TODO unmasked drawer...
     }
 

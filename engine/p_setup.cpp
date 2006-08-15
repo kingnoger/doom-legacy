@@ -49,7 +49,6 @@
 #include "tables.h"
 
 #include "i_sound.h" //for I_PlayCD()..
-#include "r_sky.h"
 
 #include "r_render.h"
 #include "r_data.h"
@@ -1357,7 +1356,7 @@ void Map::SetupSky()
   skytexture = tc.GetPtr(info->sky1.c_str(), TEX_wall);
 
   // scale up the old skies, if needed
-  R_SetupSkyDraw(skytexture->height);
+  R_SetupSkyDraw(skytexture);
 
   // set the sky flat num  FIXME should be Map-dependant
   if (hexen_format)

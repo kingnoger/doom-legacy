@@ -34,10 +34,18 @@ VoodooDoll::VoodooDoll(const PlayerPawn &p)
   : PlayerPawn(p)
 {
   flags  = MF_SOLID | MF_SHOOTABLE | MF_DROPOFF | MF_PICKUP | MF_NOTMONSTER;
-  flags2 = MF2_WINDTHRUST | MF2_PUSHABLE | MF2_SLIDE | MF2_TELESTOMP;
+  flags2 = MF2_WINDTHRUST | MF2_PUSHABLE | MF2_SLIDE | MF2_TELESTOMP | MF2_PUSHWALL;
   eflags = 0;
   //pres->color = 2;
+
+  // NOTE: because of the default copy constructor, all pointer members are potential trouble!
+
   player = NULL; // so ~PlayerPawn does not cause trouble
+ 
+  // victim's geometry links (will get its own in Map::SpawnActor()) TODO should be part of Actor's copy constructor...
+  sprev = snext = bprev = bnext = NULL;
+  touching_sectorlist = NULL; // msecnode_t chain
+  subsector = NULL;
 }
 
 
@@ -79,8 +87,6 @@ void VoodooDoll::Spawn(PlayerInfo *p, mapthing_t *mthing)
 
   // set player, team?
   d->victim = p->pawn;
-
-  d->sprev = d->snext = NULL;
 
   Map *m = p->mp;
   m->SpawnActor(d);

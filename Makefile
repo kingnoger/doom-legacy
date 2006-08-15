@@ -22,7 +22,7 @@ ifdef OPT
 DEBUGFLAGS =
 OPTFLAGS = -O
 else
-DEBUGFLAGS = -g 
+DEBUGFLAGS = -g
 OPTFLAGS = -O0
 endif
 
@@ -48,6 +48,7 @@ ifdef LINUX
  interface = -DSDL
 # linker
  LIBS	= -L/usr/X11/lib -L/local/lib -lSDLmain -lSDL -lSDL_mixer -lpng -lz -L. -ltnl -ltomcrypt
+# LIBS	= -L/usr/X11/lib -L/local/lib -lSDLmain -lSDL -lSDL_mixer -lpng -lz -L. -ltnl32 -ltomcrypt32
  OPENGLLIBS = -lGL -lGLU
 # OPENGLLIBS = -lGL -lGLU -lCg -lCgGL
  LDFLAGS = -Wall

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -46,9 +45,9 @@
 #include "hardware/hwr_render.h"
 #endif
 
-// ==========================================================================
+//==========================================================================
 //                     COMMON DATA FOR 8bpp AND 16bpp
-// ==========================================================================
+//==========================================================================
 
 byte*           viewimage;
 int             viewwidth;
@@ -67,77 +66,80 @@ byte*           ylookup2[MAXVIDHEIGHT]; // for view2 (splitscreen)
                 // so the first column starts at (SCRWIDTH-VIEWWIDTH)/2
 int             columnofs[MAXVIDWIDTH];
 
-#ifdef HORIZONTALDRAW
-//Fab 17-06-98: horizontal column drawer optimisation
-byte*           yhlookup[MAXVIDWIDTH];
-int             hcolumnofs[MAXVIDHEIGHT];
-#endif
-
-// =========================================================================
-//                      COLUMN DRAWING CODE STUFF
-// =========================================================================
-
-lighttable_t           *dc_colormap;
-int                     dc_x;         // viewport x coordinate of the column
-int                     dc_yl, dc_yh; // low and high y limits of the column in viewport coords
-
-//Hurdler: 04/06/2000: asm code still use it
-//#ifdef OLDWATER
-int                     dc_yw;          //added:24-02-98: WATER!
-lighttable_t           *dc_wcolormap;   //added:24-02-98:WATER!
-//#endif
-
-fixed_t                 dc_iscale;
-fixed_t                 dc_texturemid;
-
-byte*                   dc_source;
-
-// -----------------------
-// translucency stuff here
-// -----------------------
-
-// R_DrawTransColumn uses this
-byte                   *dc_transmap; // one of the translucency tables
-
-
-// ----------------------
-// translation stuff here
-// ----------------------
 
 byte  translationtables[MAXSKINCOLORS][256];
-// R_DrawTranslatedColumn uses this
-byte*                   dc_translation;
 
+//=========================================================================
+//                      COLUMN DRAWING VARIABLES
+//=========================================================================
+
+/*!
+  \defgroup g_sw_columndrawer Software renderer: column drawing
+  \ingroup g_sw
+
+  The column drawing routines of the software renderer handle the drawing of wall textures and sprites to the framebuffer.
+  They use a number of global variables starting with "dc_" for parameter passing.
+
+  The texturemapping for the i:th pixel in the column is given by
+  ylookup[dc_yl+i][columnofs[dc_x]] = dc_colormap[dc_source[(dc_texturemid + (dc_yl+i-centery)*dc_iscale) % dc_texheight]];
+
+  *R_DrawColumn_8: basic
+  *R_DrawFuzzColumn_8: messes with dc_yl, dc_yh, uses dest[fuzzoffset[fuzzpos]] as source, maps it with lighttable 6
+  *R_DrawTranslucentColumn_8: adds a dc_transmap[source][dest] mapping before the final dc_colormap
+  R_DrawShadeColumn_8: chooses lightlevel colormap depending on source pixel, applies it on dest. What if source pixel >= 34?
+  R_DrawTranslatedColumn_8: adds a dc_translation colormap before the final dc_colormap
+  *R_DrawFogColumn_8: applies dc_colormap to dest, no source
+  *R_DrawColumnShadowed_8: for fake floors shadowing walls
+
+  @{*/
+int            dc_x;          ///< viewport x coordinate of the column
+int            dc_yl, dc_yh;  ///< low and high y limits of the column in viewport coords
+
+byte*          dc_source;     ///< unmasked column data for the source texture 
+int            dc_texheight;  ///< height of repeating source texture, zero for nonrepeating ones
+fixed_t        dc_iscale;     ///< inverse scaling factor (viewport_coord * dc_iscale = texture_coord)
+fixed_t        dc_texturemid; ///< texture y coordinate corresponding to the center of the viewport
+
+lighttable_t  *dc_colormap;    ///< lighttable to use
+byte          *dc_transmap;    ///< translucency table to use
+byte          *dc_translation; ///< translation colormap to use
+
+/// These are for 3D floors that cast shadows on walls.
 r_lightlist_t *dc_lightlist = NULL;
-int                     dc_numlights = 0;
-int                     dc_maxlights;
+int            dc_numlights = 0;
+int            dc_maxlights;
+//@}
 
-int     dc_texheight;
-
-// =========================================================================
+//=========================================================================
 //                      SPAN DRAWING CODE STUFF
-// =========================================================================
+//=========================================================================
 
-int                     ds_y;
-int                     ds_x1;
-int                     ds_x2;
+/*!
+  \defgroup g_sw_spandrawer Software renderer: span drawing
+  \ingroup g_sw
 
-lighttable_t*           ds_colormap;
+  The span drawing routines of the software renderer handle the drawing of floor textures to the framebuffer.
+  They use a number of global variables starting with "ds_" for parameter passing.
 
-fixed_t                 ds_xfrac;
-fixed_t                 ds_yfrac;
-fixed_t                 ds_xstep;
-fixed_t                 ds_ystep;
+  *R_DrawSpan_8: basic
+  *R_DrawTranslucentSpan_8: adds a ds_transmap[source][dest] mapping before the final ds_colormap
+  *R_DrawFogSpan_8: applies ds_colormap to dest, no source
+  @{*/
+int       ds_y;         ///< viewport y coordinate for the span
+int       ds_x1, ds_x2; ///< start and end viewport x coords for the span
 
-int ds_xbits, ds_ybits;
+byte     *ds_source;          ///< 2^n * 2^m -sized raw texture data
+int       ds_xbits, ds_ybits; ///< n, m
+fixed_t   ds_xfrac, ds_yfrac; ///< starting texture offsets
+fixed_t   ds_xstep, ds_ystep; ///< texture scaling
 
-byte*                   ds_source;      // start of a 64*64 tile image
-byte*                   ds_transmap;    // one of the translucency tables
+lighttable_t *ds_colormap; ///< lighttable to use
+byte         *ds_transmap; ///< translucency table to use
+//@}
 
-
-// ==========================================================================
+//==========================================================================
 //                        OLD DOOM FUZZY EFFECT
-// ==========================================================================
+//==========================================================================
 
 //
 // Spectre/Invisibility.
@@ -305,19 +307,6 @@ void R_InitViewBuffer(int width, int height)
       ylookup1[i] = vid.buffer + (i+viewwindowy)*vid.width*bytesperpixel;
       ylookup2[i] = vid.buffer + (i+(vid.height>>1))*vid.width*bytesperpixel; // for splitscreen
     }
-
-
-#ifdef HORIZONTALDRAW
-  //Fab 17-06-98
-  // create similar lookup tables for horizontal column draw optimisation
-
-  // (the first column is the bottom line)
-  for (i=0; i<width; i++)
-    yhlookup[i] = vid.screens[2] + ((width-i-1) * bytesperpixel * height);
-
-  for (i=0; i<height; i++)
-    hcolumnofs[i] = i * bytesperpixel;
-#endif
 }
 
 

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,8 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -541,11 +539,7 @@ void R_ExecuteSetViewSize()
   for (i=0 ; i<viewwidth ; i++)
     screenheightarray[i] = viewheight;
 
-  // setup sky scaling for old/new skies (uses pspriteyscale)
-  R_SetSkyScale();
-
   // planes
-
   if (rendermode == render_soft)
     {
       //added:02-02-98:now correct aspect ratio!
@@ -889,50 +883,6 @@ void Rend::R_SetupFrame(PlayerInfo *player)
   validcount++;
 }
 
-#ifdef HORIZONTALDRAW
-
-#define CACHEW 32      // bytes in cache line
-#define CACHELINES 32  // cache lines to use
-void R_RotateBuffere()
-{
-  byte    bh,bw;
-  //    int     modulo;
-  byte*   src,*srca,*srcr;
-  byte*   dest,*destr;
-  int     i,dl;
-
-
-#define modulo 200  //= viewheight;
-
-  srcr  = yhlookup[0];
-  destr = ylookup[0] + columnofs[0];
-
-  bh = viewwidth / CACHELINES;
-  while (bh--)
-    {
-      srca = srcr;
-      dest = destr;
-
-      bw = viewheight;
-      while (bw--)
-        {
-	  src  = srca++;
-	  for (i=0;i<CACHELINES/4;i++)  // fill 32 cache lines
-	    {
-	      *dest++ = *src;
-	      *dest++ = *(src-modulo);
-	      *dest++ = *(src-2*modulo);
-	      *dest++ = *(src-3*modulo);
-	      src -= 4*modulo;
-	    }
-	  dest = (dest - CACHELINES) + vid.width;
-        }
-      srcr  -= (CACHELINES*viewheight);
-      destr += CACHELINES;
-    }
-}
-#endif
-
 
 
 // ================
@@ -1003,14 +953,6 @@ void Rend::R_RenderPlayerView(int viewport, PlayerInfo *player)
   CONS_Printf("RenderBSPNode: 0x%d %d\n", *((int*)&mytotal+1), (int)mytotal );
 #endif
   //profile stuff ---------------------------------------------------------
-
-  // horizontal column draw optimisation test.. deceiving.
-#ifdef HORIZONTALDRAW
-  //    R_RotateBuffere ();
-  dc_source   = yhlookup[0];
-  dc_colormap = ylookup[0] + columnofs[0];
-  R_RotateBufferasm ();
-#endif
 
   // Check for new console commands.
   //NetUpdate ();

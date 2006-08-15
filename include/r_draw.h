@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -46,23 +45,15 @@ extern byte*            ylookup1[MAXVIDHEIGHT];
 extern byte*            ylookup2[MAXVIDHEIGHT];
 extern int              columnofs[MAXVIDWIDTH];
 
-#ifdef HORIZONTALDRAW
-//Fab 17-06-98
-extern byte*            yhlookup[MAXVIDWIDTH];
-extern int              hcolumnofs[MAXVIDHEIGHT];
-#endif
-
 // -------------------------
 // COLUMN DRAWING CODE STUFF
 // -------------------------
 
-extern int dc_x, dc_yl, dc_yh; ///< screen coordinates for the column
-extern fixed_t  dc_iscale;     ///< screen coord * dc_iscale = texture coord
-extern fixed_t  dc_texturemid; ///< this texture y coordinate corresponds to screen midpoint
-
-extern byte    *dc_source;     ///< first pixel in a column
-extern int      dc_texheight;  ///< height of repeating texture, zero for nonrepeating ones
-
+extern int dc_x, dc_yl, dc_yh;
+extern fixed_t  dc_iscale;
+extern fixed_t  dc_texturemid;
+extern byte    *dc_source;
+extern int      dc_texheight;
 extern lighttable_t    *dc_colormap;
 
 // translucency stuff here
@@ -163,13 +154,7 @@ void    R_DrawViewBorder();
 // 8bpp DRAWING CODE
 // -----------------
 
-#ifdef HORIZONTALDRAW
-//Fab 17-06-98
-void    R_DrawHColumn_8();
-#endif
-
 void    ASMCALL R_DrawColumn_8();
-void    ASMCALL R_DrawSkyColumn_8();
 void    ASMCALL R_DrawShadeColumn_8();             //smokie test..
 void    ASMCALL R_DrawFuzzColumn_8();
 void    ASMCALL R_DrawTranslucentColumn_8();
@@ -187,7 +172,6 @@ void    R_DrawPortalColumn_8();
 // ------------------
 
 void    ASMCALL R_DrawColumn_16();
-void    ASMCALL R_DrawSkyColumn_16();
 void    ASMCALL R_DrawFuzzColumn_16();
 void    ASMCALL R_DrawTranslucentColumn_16();
 void    ASMCALL R_DrawTranslatedColumn_16();

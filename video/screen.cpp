@@ -35,7 +35,7 @@
 #include "m_argv.h"
 #include "i_video.h"
 #include "r_data.h"
-#include "r_local.h"
+#include "r_draw.h"
 #include "d_main.h"
 #ifdef HWRENDER
 #include "hardware/hwr_render.h"
@@ -58,19 +58,12 @@ Video vid;
 // --------------------------------------------
 void (*skycolfunc) ();       //new sky column drawer draw posts >128 high
 void (*colfunc) ();          // standard column upto 128 high posts
-#ifdef HORIZONTALDRAW
-//Fab 17-06-98
-void (*hcolfunc) ();         // horizontal column drawer optimisation
-#endif
 void (*basecolfunc) ();
 void (*fuzzcolfunc) ();      // standard fuzzy effect column drawer
 void (*transcolfunc) ();     // translucent column drawer
 void (*shadecolfunc) ();     // smokie test..
 void (*spanfunc) ();         // span drawer, use a 64x64 tile
 void (*basespanfunc) ();     // default span func for color mode
-
-//  Short and Tall sky drawer, for the current color mode
-void (*skydrawerfunc[2]) ();
 
 
 // =========================================================================
@@ -253,34 +246,24 @@ void Video::SetMode()
   if (BytesPerPixel == 1)
     {
       colfunc = basecolfunc = R_DrawColumn_8;
-#ifdef HORIZONTALDRAW
-      hcolfunc = R_DrawHColumn_8;
-#endif
+      skycolfunc = R_DrawColumn_8;
 
       fuzzcolfunc = (cv_fuzzymode.value) ? R_DrawFuzzColumn_8 : R_DrawTranslucentColumn_8;
       transcolfunc = R_DrawTranslatedColumn_8;
       shadecolfunc = R_DrawShadeColumn_8;  //R_DrawColumn_8;
       spanfunc = basespanfunc = R_DrawSpan_8;
-
-      // set the apprpriate drawer for the sky (tall or short)
-      // FIXME: quick fix
-      skydrawerfunc[0] = R_DrawColumn_8;      //old skies
-      skydrawerfunc[1] = R_DrawSkyColumn_8;   //tall sky
     }
   else if (BytesPerPixel > 1)
     {
       CONS_Printf("using highcolor mode\n");
 
       colfunc = basecolfunc = R_DrawColumn_16;
+      skycolfunc = R_DrawColumn_16;
 
       fuzzcolfunc = (cv_fuzzymode.value) ? R_DrawFuzzColumn_16 : R_DrawTranslucentColumn_16;
       transcolfunc = R_DrawTranslatedColumn_16;
       shadecolfunc = NULL;      //detect error if used somewhere..
       spanfunc = basespanfunc = R_DrawSpan_16;
-
-      // FIXME: quick fix to think more..
-      skydrawerfunc[0] = R_DrawColumn_16;
-      skydrawerfunc[1] = R_DrawSkyColumn_16;
     }
   else
     I_Error("unknown bytes per pixel mode %d\n", BytesPerPixel);

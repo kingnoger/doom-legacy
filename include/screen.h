@@ -120,9 +120,6 @@ void SCR_SetDefaultMode();
 
 extern void     (*skycolfunc)();
 extern void     (*colfunc)();
-#ifdef HORIZONTALDRAW
- extern void     (*hcolfunc)();    //Fab 17-06-98
-#endif
 extern void     (*basecolfunc)();
 extern void     (*fuzzcolfunc)();
 extern void     (*transcolfunc)();

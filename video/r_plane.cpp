@@ -719,8 +719,7 @@ void Rend::R_DrawPlanes()
         if (pl->picnum == skyflatnum)
 	  {
             //added:12-02-98: use correct aspect ratio scale
-            //dc_iscale = FixedDiv (FRACUNIT, pspriteyscale);
-            dc_iscale = skyscale;
+            dc_iscale = (1 / pspriteyscale) * skytex->yscale;
 
 // Kik test non-moving sky .. weird
 // cy = centery;
@@ -733,10 +732,10 @@ void Rend::R_DrawPlanes()
 #if 0
             // BP: this fix sky not inversed in invuln but it is a original doom2 feature (bug?)
             if(fixedcolormap)
-	      dc_colormap = fixedcolormap + R.base_colormap;
+	      dc_colormap = fixedcolormap + base_colormap;
             else
 #endif
-	      dc_colormap = R.base_colormap;
+	      dc_colormap = base_colormap;
             dc_texturemid = skytexturemid;
             dc_texheight = skytex->height;
             for (x=pl->minx ; x <= pl->maxx ; x++)
@@ -746,9 +745,10 @@ void Rend::R_DrawPlanes()
 
                 if (dc_yl <= dc_yh)
 		  {
-		    int angle = (viewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
+		    fixed_t skycol;
+		    skycol.setvalue((viewangle + xtoviewangle[x]) >> (ANGLETOSKYSHIFT - fixed_t::FBITS));
                     dc_x = x;
-                    dc_source = skytex->GetColumn(angle);
+                    dc_source = skytex->GetColumn(skycol);
                     skycolfunc();
 		  }
 	      }

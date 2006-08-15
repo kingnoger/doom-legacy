@@ -1176,6 +1176,10 @@ void Map::SpawnLineSpecials()
 		  ff_flags |= FF_CUTSPRITES|FF_DOUBLESHADOW;
 		  break;
 
+		case 306: // Legacy: Invisible barrier
+		  ff_flags |= FF_SOLID;
+		  break;
+
 		default:
 		  goto error;
 		}

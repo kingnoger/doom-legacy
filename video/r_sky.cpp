@@ -29,17 +29,7 @@
 
 #include "doomdef.h"
 #include "r_sky.h"
-#include "r_local.h"
-#include "r_segs.h"
-#include "w_wad.h"
-#include "z_zone.h"
-
-#include "p_maputl.h" // P_PointOnLineSide
-
-// SoM: I know I should be moving portals out of r_sky.c and as soon
-// as I have time and a I will... But for now, they are mostly used
-// for sky boxes anyway so they have a mostly appropriate home here.
-
+#include "r_data.h"
 
 //
 // sky mapping
@@ -50,9 +40,6 @@
 int          skyflatnum; 
 int          skytexturemid;
 
-fixed_t      skyscale;
-int          skymode=0;  // old (0), new (1) (quick fix!)
-
 
 //  Setup sky draw for old or new skies (new skies = freelook 256x240)
 //
@@ -61,56 +48,28 @@ int          skymode=0;  // old (0), new (1) (quick fix!)
 //  NOTE: skycolfunc should be set at R_ExecuteSetViewSize ()
 //        I dont bother because we don't use low detail no more
 //
-void R_SetupSkyDraw(int skyheight)
+void R_SetupSkyDraw(Texture *skytex)
 {
-  int          height;
-  int          i;
-
   // parse the patches composing sky texture for the tallest one
   // patches are usually RSKY1,RSKY2... and unique
 
   // note: the TEXTURES lump doesn't have the taller size of Legacy
   //       skies, but the patches it use will give the right size
 
-
-  // DIRTY : should set the routine depending on colormode in screen.c
-  if (skyheight > 128)
+  if (skytex->height > 128)
     {
       // horizon line on 256x240 freelook textures of Legacy or heretic
       skytexturemid = 200;
-      skymode = 1;
+      // normal aspect ratio corrected scale
     }
   else
     {
       // the horizon line in a 256x128 sky texture
       skytexturemid = 100;
-      skymode = 0;
-    }
-
-  // get the right drawer, it was set by screen.c, depending on the
-  // current video mode bytes per pixel (quick fix)
-  skycolfunc = skydrawerfunc[skymode];
-
-  R_SetSkyScale();
-}
-
-
-// set the correct scale for the sky at setviewsize
-void R_SetSkyScale()
-{
-  //fix this quick mess
-  if (skytexturemid > 100)
-    {
-      // normal aspect ratio corrected scale
-      skyscale = 1 / pspriteyscale;
-    }
-  else
-    {
       // double the texture vertically, bleeergh!!
-      skyscale = (1 / pspriteyscale) >> 1;
+      skytex->yscale >>= 1;
     }
+
+
+  // skytexturemid = (100*skytex->height) / 128;
 }
-
-
-
-

@@ -316,9 +316,10 @@ byte *LumpTexture::Generate()
 }
 
 
-byte *LumpTexture::GetColumn(int col)
+byte *LumpTexture::GetColumn(fixed_t fcol)
 {
-  col %= width;
+  int col = (fcol * xscale).floor() % width;
+
   if (col < 0)
     col += width; // wraparound
 
@@ -441,9 +442,10 @@ byte *PatchTexture::GenerateData()
 }
 
 
-column_t *PatchTexture::GetMaskedColumn(int col)
+column_t *PatchTexture::GetMaskedColumn(fixed_t fcol)
 {
-  col %= width;
+  int col = (fcol * xscale).floor() % width;
+
   if (col < 0)
     col += width; // wraparound
 
@@ -452,9 +454,10 @@ column_t *PatchTexture::GetMaskedColumn(int col)
 }
 
 
-byte *PatchTexture::GetColumn(int col)
+byte *PatchTexture::GetColumn(fixed_t fcol)
 {
-  col %= width;
+  int col = (fcol * xscale).floor() % width;
+
   if (col < 0)
     col += width; // wraparound
 
@@ -613,16 +616,19 @@ byte *DoomTexture::GenerateData()
 
 
 // returns a pointer to column-major raw data
-byte *DoomTexture::GetColumn(int col)
+byte *DoomTexture::GetColumn(fixed_t fcol)
 {
+  int col = (fcol * xscale).floor();
+
   return GenerateData() + columnofs[col & widthmask];
 }
 
 
-column_t *DoomTexture::GetMaskedColumn(int col)
+column_t *DoomTexture::GetMaskedColumn(fixed_t fcol)
 {
   if (patchcount == 1)
     {
+      int col = (fcol * xscale).floor();
       patch_t *p = GeneratePatch();
       return (column_t *)(patch_data + p->columnofs[col & widthmask]);
     }

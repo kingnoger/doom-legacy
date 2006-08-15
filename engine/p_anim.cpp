@@ -136,8 +136,8 @@ public:
   };
 
   virtual bool Masked() { return Update()->Masked(); };
-  virtual byte *GetColumn(int col) { return Update()->GetColumn(col); }
-  virtual column_t *GetMaskedColumn(int col) { return Update()->GetMaskedColumn(col); }
+  virtual byte *GetColumn(fixed_t col) { return Update()->GetColumn(col); }
+  virtual column_t *GetMaskedColumn(fixed_t col) { return Update()->GetMaskedColumn(col); }
   virtual byte *GetData() { return Update()->GetData(); }
 
   /// The glid of the metatexture changes all the time.

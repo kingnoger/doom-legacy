@@ -135,10 +135,10 @@ public:
   virtual bool Masked() { return false; };
 
   /// sw renderer: Get masked column data. if Masked() is false, returns NULL
-  virtual column_t *GetMaskedColumn(int col) = 0;
+  virtual column_t *GetMaskedColumn(fixed_t col) = 0;
 
   /// sw renderer: Get raw unmasked texture column data.
-  virtual byte *GetColumn(int col) = 0;
+  virtual byte *GetColumn(fixed_t col) = 0;
 
   /// Get raw column-major texture data.
   virtual byte *GetData() = 0;
@@ -173,8 +173,8 @@ protected:
 public:
   LumpTexture(const char *name, int lump, int w, int h);
 
-  virtual column_t *GetMaskedColumn(int col) { return NULL; }
-  virtual byte *GetColumn(int col);
+  virtual column_t *GetMaskedColumn(fixed_t col) { return NULL; }
+  virtual byte *GetColumn(fixed_t col);
   virtual byte *GetData() { return Generate(); }
   virtual void Draw(int x, int y, int scrn);
   virtual void HWR_Draw(int x, int y, int flags);
@@ -216,8 +216,8 @@ public:
   virtual ~PatchTexture();
 
   virtual bool Masked() { return true; };
-  virtual column_t *GetMaskedColumn(int col);
-  virtual byte *GetColumn(int col);
+  virtual column_t *GetMaskedColumn(fixed_t col);
+  virtual byte *GetColumn(fixed_t col);
   virtual byte *GetData() { return GenerateData(); }
 
   virtual void Draw(int x, int y, int scrn);
@@ -262,8 +262,8 @@ public:
   virtual ~DoomTexture();
 
   virtual bool Masked() { return (patchcount == 1); };
-  virtual column_t *GetMaskedColumn(int col);
-  virtual byte *GetColumn(int col);
+  virtual column_t *GetMaskedColumn(fixed_t col);
+  virtual byte *GetColumn(fixed_t col);
   virtual byte *GetData() { return GenerateData(); }
 };
 
