@@ -147,6 +147,9 @@ struct vissprite_t
   fixed_t   sprite_top;
   Texture  *tex;
 
+  /// clipping away some of the lower part of the sprite
+  fixed_t floorclip;
+
   /// colormap index used for lightlevel changes
   int lightmap;
 
@@ -316,7 +319,9 @@ void spritepres_t::Project(Actor *p)
   vis->gz = gzt - (t->height / t->yscale);
   vis->gzt = gzt;
   vis->sprite_top = vis->gzt - R.viewz - p->floorclip;
-  // foot clipping FIXME applies also elsewhere! gz, gzt!
+
+  // foot clipping
+  vis->floorclip = p->floorclip;
 
   vis->x1 = x1 < 0 ? 0 : x1;
   vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
@@ -416,7 +421,6 @@ void spritepres_t::Project(Actor *p)
 
 
 //
-// R_DrawMaskedColumn
 // Used for sprites and masked mid textures.
 // Masked means: partly transparent, i.e. stored
 //  in posts/runs of opaque pixels.
@@ -439,8 +443,10 @@ void R_DrawMaskedColumn(column_t* column)
     {
       // calculate unclipped screen coordinates for post
       fixed_t topscreen = sprtopscreen + column->topdelta / dc_iscale;
-      fixed_t bottomscreen = sprbotscreen == fixed_t::FMAX ? topscreen + column->length/dc_iscale :
-	sprbotscreen + column->length/dc_iscale;
+      fixed_t bottomscreen = sprbotscreen == fixed_t::FMAX ?
+	topscreen + column->length/dc_iscale :
+	//sprbotscreen + column->length/dc_iscale; // huh???
+	sprbotscreen;
 
       dc_yl = 1 + (topscreen - fixed_epsilon).floor();
       dc_yh = (bottomscreen - fixed_epsilon).floor();
@@ -528,6 +534,9 @@ void vissprite_t::DrawVisSprite()
   dc_iscale = tex->yscale / yscale;
   dc_texturemid = sprite_top * tex->yscale;
   dc_texheight = 0; // clever way of drawing nonrepeating textures
+
+  if (floorclip != 0)
+    sprbotscreen = sprtopscreen + (tex->height/dc_iscale) -(floorclip * spryscale);
 
   fixed_t frac = startfrac;
   for (dc_x = x1; dc_x <= x2; dc_x++, frac += xiscale)
@@ -749,6 +758,7 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
     vis->sprite_top = BASEYCENTER;
 
   vis->sprite_top += 0.5f - psp->sy + (t->topoffset / t->yscale);
+  vis->floorclip = 0;
 
   /*
   if (game.mode >= gm_heretic)
