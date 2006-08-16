@@ -168,6 +168,7 @@ void Map::LoadSectors1(int lump)
 void Map::LoadSectors2(int lump)
 {
   byte *data = (byte *)fc.CacheLumpNum(lump, PU_STATIC);
+  // NOTE: The sector_t structs have been initialized with zeroes in LoadSectors1()
 
   mapsector_t *ms = (mapsector_t *)data;
   sector_t *ss = sectors;
@@ -201,7 +202,6 @@ void Map::LoadSectors2(int lump)
       ss->numattached = 0;
       ss->moved = true;
       ss->floor_xoffs = ss->ceiling_xoffs = ss->floor_yoffs = ss->ceiling_yoffs = 0;
-      ss->bottommap = ss->midmap = ss->topmap = NULL;
 
       // ----- for special tricks with HW renderer -----
       ss->pseudoSector = false;

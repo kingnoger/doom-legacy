@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -1519,7 +1519,7 @@ fadetable_t *R_CreateColormap(char *p1, char *p2, char *p3)
       // Create a rough approximation of the color (a 16 bit color)
       maskcolor = (cb >> 3) + ((cg >> 2) << 5) + ((cr >> 3) << 11);
 
-      maskamt /= 24.0;
+      maskamt /= 25.0;
 
       othermask = 1 - maskamt;
       maskamt /= 0xff;
@@ -1600,6 +1600,8 @@ fadetable_t *R_CreateColormap(char *p1, char *p2, char *p3)
     I_Error("R_CreateColormap: Too many colormaps!\n");
 
   f = new fadetable_t();
+  fadetables.push_back(f);
+
   f->maskcolor = maskcolor;
   f->fadecolor = fadecolor;
   f->maskamt = maskamt;

@@ -1026,6 +1026,8 @@ void Map::SpawnLineSpecials()
       line_t *l = &lines[i];
       line_t *l2;
       int special = l->special;
+      if (!special)
+	continue;
 
       int s, subtype;
       int tag = l->tag; // Doom format: use the tag if we have one
@@ -1083,7 +1085,7 @@ void Map::SpawnLineSpecials()
 	      // types which store data in the texture name fields
 	      switch (kind)
 		{
-		  // Boom: 242 fake floor and ceiling
+		  // Boom 242: fake floor and ceiling
 		case 1:
 		  for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0;)
 		    {
@@ -1091,7 +1093,7 @@ void Map::SpawnLineSpecials()
 		    }
 		  break;
 
-		  // Boom: 260 transparent middle texture
+		  // Boom 260: transparent middle texture
 		case 2:
 		  {
 		    int temp = l->transmap;
@@ -1109,7 +1111,7 @@ void Map::SpawnLineSpecials()
 		  }
 		  break;
 
-		  // Legacy: swimmable water with Boom 242-style colormaps
+		  // Legacy 280: swimmable water with Boom 242-style colormaps
 		case 3:
 		  for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0;)
 		    {
@@ -1118,7 +1120,7 @@ void Map::SpawnLineSpecials()
 		    }
 		  break;
 
-		  // Legacy: easy colormap/fog effect
+		  // Legacy 282: easy colormap/fog effect
 		case 4:
 		  for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0;)
 		    {
