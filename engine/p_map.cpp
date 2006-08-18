@@ -2163,7 +2163,9 @@ static bool PIT_RadiusAttack(Actor *thing)
 	  apy = (thing->pos.y - Bomb.b->pos.y) / (dist+1);
         }
       // must be in direct path
-      if (thing->Damage(Bomb.b, Bomb.owner, damage, Bomb.dtype) && !(thing->flags & MF_NOBLOOD))
+      if (thing->Damage(Bomb.b, Bomb.owner, damage, Bomb.dtype) &&
+	  !(thing->flags & MF_NOBLOOD) &&
+	  (Bomb.dtype & dt_TYPEMASK) < dt_LIVING)
 	thing->mp->SpawnBloodSplats(thing->pos, damage, apx, apy);
     }
 

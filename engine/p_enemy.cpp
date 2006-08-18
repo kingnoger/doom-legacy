@@ -1674,6 +1674,7 @@ void A_XScream(DActor *actor)
 void A_Explode(DActor *actor)
 {
   int  damage = 128;
+  int  dtype = dt_normal;
   int  distance = 128;
   bool damageSelf = true;
 
@@ -1735,7 +1736,8 @@ void A_Explode(DActor *actor)
       damageSelf = false;
       break;
     case MT_POISONCLOUD:
-      damage = 4 | dt_poison;
+      damage = 4;
+      dtype = dt_poison;
       distance = 40;
       break;
     case MT_ZXMAS_TREE:
@@ -1747,7 +1749,7 @@ void A_Explode(DActor *actor)
       break;
     }
 
-  actor->RadiusAttack(actor->owner, damage, distance, dt_normal, damageSelf);
+  actor->RadiusAttack(actor->owner, damage, distance, dtype, damageSelf);
 
   if (actor->pos.z <= actor->floorz + distance && actor->type != MT_POISONCLOUD)
     actor->HitFloor();

@@ -1600,13 +1600,17 @@ int MapInfo::Serialize(LArchive &a)
   a << found;
 
   a << lumpname << nicename << savename;
-  a << cluster << mapnumber;
+  a << cluster << mapnumber << hub;
+
+  a << version << author << description;
+  a << namepic;
 
   // only save those items that cannot be found in the MapInfo separator lump for sure!
   // note that MAPINFO is not read when loading a game!
-  a << partime;
+  a << partime << gravity;
+  // TODO thing number mappings?
   a << musiclump;
-
+  // the warp* numbers are not used and hence need not be stored
   a << nextlevel << secretlevel;
   a << doublesky << lightning;
 
@@ -1651,11 +1655,14 @@ int MapInfo::Unserialize(LArchive &a)
   a << found;
 
   a << lumpname << nicename << savename;
-  a << cluster << mapnumber;
+  a << cluster << mapnumber << hub;
+
+  a << version << author << description;
+  a << namepic;
 
   // only save those items that cannot be found in the MapInfo separator lump for sure!
   // note that MAPINFO is not read when loading a game!
-  a << partime;
+  a << partime << gravity;
   a << musiclump;
 
   a << nextlevel << secretlevel;

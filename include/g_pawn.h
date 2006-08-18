@@ -195,8 +195,7 @@ public:
   DActor *SPMAngle(mobjtype_t type, angle_t ang);
 
   bool CanUnlockGenDoor(struct line_t *line);
-  void ProcessSpecialSector(struct sector_t *sector, bool instantdamage);
-  void PlayerOnSpecial3DFloor();
+  void ProcessSpecialSector(struct sector_t *sector);
   void PlayerInSpecialSector();
 
   bool GivePower(int power);

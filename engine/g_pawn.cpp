@@ -1166,9 +1166,9 @@ bool PlayerPawn::CanUnlockGenDoor(line_t *line)
 
 
 // Function that actually applies the sector special to the player.
-void PlayerPawn::ProcessSpecialSector(sector_t *sector, bool instantdamage)
+void PlayerPawn::ProcessSpecialSector(sector_t *sector)
 {
-  if (instantdamage && sector->damage)
+  if (sector->damage)
     {
       int damage = sector->damage & dt_DAMAGEMASK;
       int dtype = sector->damage & dt_TYPEMASK;
@@ -1190,58 +1190,9 @@ void PlayerPawn::ProcessSpecialSector(sector_t *sector, bool instantdamage)
       
       mp->SpawnSmoke(pos.x, pos.y, pos.z);
     }
-
-  if (sector->special & SS_secret)
-    {
-      // SECRET SECTOR
-      player->secrets++;
-      player->SetMessage("\3You found a secret area!\n");
-      sector->special &= ~SS_secret;
-    }
 }
 
 
-// Checks to see if a player is standing on or is inside a 3D floor (water)
-// and applies any speicials..
-void PlayerPawn::PlayerOnSpecial3DFloor()
-{
-  sector_t* sec;
-  bool   instantdamage = false;
-  ffloor_t* rover;
-
-  sec = subsector->sector;
-  if(!sec->ffloors)
-    return;
-
-  for (rover = sec->ffloors; rover; rover = rover->next)
-    {
-      if (!rover->master->frontsector->special)
-	continue;
-
-      // Check the 3D floor's type...
-      if (rover->flags & FF_SOLID)
-	{
-	  // Player must be on top of the floor to be affected...
-	  if (pos.z != *rover->topheight)
-	    continue;
-
-	  if ((eflags & MFE_JUSTHITFLOOR) &&
-	      sec->heightsec == -1 && (mp->maptic & 1)) //SoM: penalize jumping less.
-	    instantdamage = true;
-	  else
-	    instantdamage = !(mp->maptic & 31);
-	}
-      else
-	{
-	  //Water and DEATH FOG!!! heh
-	  if (Feet() > *rover->topheight || Top() < *rover->bottomheight)
-	    continue;
-	  instantdamage = !(mp->maptic & 31);
-	}
-
-      ProcessSpecialSector(rover->master->frontsector, instantdamage);
-    }
-}
 
 
 //
@@ -1250,51 +1201,102 @@ void PlayerPawn::PlayerOnSpecial3DFloor()
 //
 void PlayerPawn::PlayerInSpecialSector()
 {
-  // SoM: Check 3D floors...
-  PlayerOnSpecial3DFloor();
+  sector_t *sec;
 
-  sector_t *sec = subsector->sector;
-
-  if (sec->floortype == FLOOR_LAVA && Feet() == floorz)
-    {
-      // Hexen lava
-      if (((eflags & MFE_JUSTHITFLOOR) && (mp->maptic & 2)) ||
-	  !(mp->maptic & 31))
-	{
-	  Damage(NULL, NULL, 10, dt_heat);
-	  S_StartSound(this, SFX_LAVA_SIZZLE);
-	}
-    }
-
-  //Fab: keep track of what sector type the player's currently in
-  specialsector = sec->special;
-
-  if (!specialsector)     // nothing special, exit
-    return;
-
-  // Falling, not all the way down yet?
-  //SoM: 3/17/2000: Damage if in slimey water!
-  if (sec->heightsec != -1)
-    {
-      if (pos.z > mp->sectors[sec->heightsec].floorheight)
-	return;
-    }
-  else if (pos.z != sec->floorheight)
-    return;
-
-  int temp = specialsector & SS_DAMAGEMASK;
-  bool instantdamage = false;
-
-  if (temp == SS_damage_32)
-    instantdamage = !(mp->maptic & 31);
-  else if (temp == SS_damage_16)
-    instantdamage = !(mp->maptic & 15);
-    
   //Fab: jumping in lava/slime does instant damage (no jump cheat)
-  if ((eflags & MFE_JUSTHITFLOOR) && (sec->heightsec == -1) && (mp->maptic & 2)) //SoM: penalize jumping less.
-    instantdamage = true;
+  bool instantdamage = (eflags & MFE_JUSTHITFLOOR) && (mp->maptic & 2);
 
-  ProcessSpecialSector(sec, instantdamage);
+  // More realistic damage: check all sectors we touch!
+  msecnode_t *node = touching_sectorlist;
+  while (node)
+    {
+      sec = node->m_sector;
+
+      specialsector = sec->special; //Fab: keep track of what sector type the player's currently in
+      bool onground = (Feet() <= sec->floorheight);
+
+      if (specialsector &&
+	  ((sec->heightsec != -1 && Feet() <= mp->sectors[sec->heightsec].floorheight) ||
+	   onground))
+	{
+	  //SoM: 3/17/2000: Damage if in slimey water!
+
+	  int temp = specialsector & SS_DAMAGEMASK;
+	  if ((temp == SS_damage_32 && !(mp->maptic & 31)) ||
+	      (temp == SS_damage_16 && !(mp->maptic & 15)) ||
+	      instantdamage)
+	    {
+	      ProcessSpecialSector(sec);
+	      break; // just one damage effect per round
+	    }
+	}
+
+      if (sec->floortype == FLOOR_LAVA && onground)
+	{
+	  if (instantdamage || !(mp->maptic & 31))
+	    {
+	      Damage(NULL, NULL, 10, dt_heat);
+	      S_StartSound(this, SFX_LAVA_SIZZLE);
+	      mp->SpawnSmoke(pos.x, pos.y, pos.z);
+	      break;
+	    }
+	}
+
+      ffloor_t *rover = sec->ffloors;
+      sec = NULL;
+      // Check if a player is standing on or is inside a 3D floor (water)
+      for ( ; rover; rover = rover->next)
+	{
+	  // each floor has its own control sector and thus own effect
+	  specialsector = rover->master->frontsector->special;
+
+	  if (!specialsector)
+	    continue;
+
+	  // Check the 3D floor's type...
+	  if (rover->flags & FF_SOLID)
+	    {
+	      // Player must be on top of the floor to be affected...
+	      if (Feet() != *rover->topheight)
+		continue;
+	    }
+	  else
+	    {
+	      // Water and DEATH FOG!!! heh
+	      if (Feet() > *rover->topheight || Top() < *rover->bottomheight)
+		continue;
+	    }
+
+	  int temp = specialsector & SS_DAMAGEMASK;
+	  if ((temp == SS_damage_32 && !(mp->maptic & 31)) ||
+	      (temp == SS_damage_16 && !(mp->maptic & 15)) ||
+	      instantdamage)
+	    {
+	      sec = rover->master->frontsector;
+	      break; // just one damage effect per round
+	    }
+	}
+
+      if (sec)
+	{
+	  // do the damage
+	  ProcessSpecialSector(sec);
+	  break; // just one damage effect per round
+	}
+
+      node = node->m_tnext;
+    }
+
+
+  // finally check secret, but only if we are _in_ the sector
+  sec = subsector->sector;
+  if (sec->special & SS_secret)
+    {
+      // SECRET SECTOR
+      player->secrets++;
+      player->SetMessage("\3You found a secret area!\n");
+      sec->special &= ~SS_secret;
+    }
 }
 
 
