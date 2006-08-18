@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -275,7 +274,7 @@ public:
 //  Sector effects
 //========================================================
 
-/// Base class for most moving geometry
+/// Base class for most moving geometry and other single sector -based effects
 class sectoreffect_t : public Thinker
 {
   friend class Map;
@@ -334,7 +333,7 @@ const int SLOWDARK     = 35;
 
 
 /// Sequential Hexen light effect
-class phasedlight_t: public sectoreffect_t
+class phasedlight_t : public sectoreffect_t
 {
   friend class Map;
   DECLARE_CLASS(phasedlight_t)
@@ -982,7 +981,7 @@ public:
 //============================================
 /// Boom push/pull effect
 
-class pusher_t : public Thinker
+class pusher_t : public sectoreffect_t
 {
   friend class Map;
   DECLARE_CLASS(pusher_t)
@@ -999,16 +998,15 @@ public:
   };
 
 private:
-  byte type;
+  short type;
   class DActor *source;  ///< Point source if point pusher
-  fixed_t x_mag, y_mag;  ///< X, Y Strength
-  fixed_t magnitude;     ///< Vector strength for point pusher
+  fixed_t x_mag, y_mag;  ///< X, Y strength
+  fixed_t magnitude;     ///< Length of strength-vector for point pusher
   fixed_t radius;        ///< Effective radius for point pusher
   fixed_t x, y;          ///< X, Y of point source if point pusher
-  int affectee;          ///< Number of affected sector
 
 public:
-  pusher_t(pusher_e t, fixed_t x_m, fixed_t y_m, DActor *src, int aff);
+  pusher_t(Map *m, sector_t *sec, pusher_e t, fixed_t x_m, fixed_t y_m, DActor *src);
   
   virtual void Think();
 

@@ -1013,8 +1013,8 @@ Actor *Actor::CheckOnmobj()
 // Allows the player to slide along any angled walls.
 //==========================================================================
 
-static fixed_t bestslidefrac, secondslidefrac;
-static line_t *bestslideline, *secondslideline;
+static fixed_t bestslidefrac;
+static line_t *bestslideline;
 static Actor *slidemo;
 static vec_t<fixed_t> tmmove;
 
@@ -1311,11 +1311,10 @@ void Actor::BounceWall(fixed_t nx, fixed_t ny)
 //   Autoaim, shooting with instahit weapons
 //==========================================================================
 
-static Actor *shootthing;
-
-Actor *linetarget;     // who got hit (or NULL) // TODO make static
-static fixed_t aimsine; // == Sin(pitch)
-static fixed_t bottomsine, topsine; // vertical aiming range
+static Actor   *shootthing;
+static Actor   *linetarget; // who got hit (or NULL)
+static fixed_t  aimsine;    // == Sin(pitch)
+static fixed_t  bottomsine, topsine; // vertical aiming range
 
 static fixed_t shootz; // bullet starting z
 static fixed_t lastz;  //SoM: The last z height of the bullet when it crossed a line
@@ -2504,11 +2503,11 @@ void Map::CreateSecNodeList(Actor *thing, fixed_t x, fixed_t y)
   thing->touching_sectorlist = msecnode_t::CleanSectorlist(sector_list);
   sector_list = NULL; // just to be sure
 
-#warning FIXME
-  // FIXME TEST
+  /*
   for (msecnode_t *p = thing->touching_sectorlist; p; p = p->m_tnext)
     if (!p->m_thing || !p->m_sector)
       I_Error("xxsdfsd");
+  */
 }
 
 

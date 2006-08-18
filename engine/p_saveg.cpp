@@ -281,8 +281,10 @@ int scroll_t::Marshal(LArchive &a)
 
 int pusher_t::Marshal(LArchive &a)
 {
+  sectoreffect_t::Marshal(a);
+
   a << type << x_mag << y_mag << magnitude << radius;
-  a << x << y << affectee;
+  a << x << y;
   if (a.IsStoring())
     Thinker::Serialize(source, a);
   else

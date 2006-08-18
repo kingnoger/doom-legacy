@@ -967,10 +967,12 @@ void msecnode_t::Free()
   headsecnode = this;
 
   // TEST
+  /*
   m_thing = NULL;
   m_sector = NULL;
   m_sprev = NULL;
   m_tprev = m_tnext = NULL;
+  */
 }
 
 // Deletes a sector node from the list of
@@ -997,18 +999,15 @@ msecnode_t *msecnode_t::Delete()
   if (m_snext)
     m_snext->m_sprev = m_sprev;
 
-#warning FIXME
-  // FIXME TEST
+  /*
   for (msecnode_t *p = m_sector->touching_thinglist; p; p = p->m_snext)
     if (!p->m_thing || !p->m_sector)
       I_Error("error during msecnode delete");
-
-  msecnode_t *xxxx = m_tnext;
+  */
 
   // Return this node to the freelist
   Free();
-  //return m_tnext; // unharmed by Free
-  return xxxx;
+  return m_tnext; // unharmed by Free
 }
 
 
@@ -1032,9 +1031,6 @@ msecnode_t *msecnode_t::AddToSectorlist(sector_t *s, Actor *thing, msecnode_t *s
 
   // Couldn't find an existing node for this sector. Add one at the head of the list.
   node = GetNode();
-
-  if (node == seclist)
-    I_Error("FIXME TEMP TEST");
 
   //mark new nodes unvisited.
   node->visited = false;

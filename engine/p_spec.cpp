@@ -1649,7 +1649,7 @@ void Map::SpawnFriction(line_t *l, int tag)
     {
       sectors[s].friction   = friction;
       sectors[s].movefactor = movefactor;
-      // TEST sectors[s].special |= SS_friction;
+      sectors[s].special |= SS_friction;
     }
 }
 
@@ -1663,10 +1663,12 @@ pusher_t::pusher_t() {}
 
 
 // constructor
-pusher_t::pusher_t(pusher_e t, fixed_t x_m, fixed_t y_m, DActor *src, int aff)
+pusher_t::pusher_t(Map *m, sector_t *s, pusher_e t, fixed_t x_m, fixed_t y_m, DActor *src)
+  : sectoreffect_t(m, s)
 {
-  source = src;
+  s->special |= SS_wind; // enable pushing
   type = t;
+  source = src;
   x_mag = x_m;
   y_mag = y_m;
   magnitude = P_AproxDistance(x_mag, y_mag);
@@ -1676,7 +1678,6 @@ pusher_t::pusher_t(pusher_e t, fixed_t x_m, fixed_t y_m, DActor *src, int aff)
       x = src->pos.x;
       y = src->pos.y;
     }
-  affectee = aff;
 }
 
 
@@ -1687,7 +1688,7 @@ static pusher_t *tmpusher; // pusher structure for blockmap searches
 
 bool PIT_PushThing(Actor* thing)
 {
-  if (thing->IsOf(PlayerPawn::_type) && !(thing->flags & (MF_NOGRAVITY | MF_NOCLIPLINE)))
+  if ((thing->flags2 & MF2_WINDTHRUST) && !(thing->flags & (MF_NOCLIPTHING | MF_NOCLIPLINE)))
     {
       fixed_t sx = tmpusher->x;
       fixed_t sy = tmpusher->y;
@@ -1718,12 +1719,10 @@ void pusher_t::Think()
   if (!allow_pushers)
     return;
 
-  sector_t *sec = mp->sectors + affectee;
-
   // Be sure the special sector type is still turned on. If so, proceed.
   // Else, bail out; the sector type has been changed on us.
 
-  if (!(sec->special & SS_wind))
+  if (!(sector->special & SS_wind))
     return;
 
   // For constant pushers (wind/current) there are 3 situations:
@@ -1763,26 +1762,24 @@ void pusher_t::Think()
   // constant pushers p_wind and p_current
   fixed_t ht = 0;
 
-  if (sec->heightsec != -1) // special water sector?
-    ht = mp->sectors[sec->heightsec].floorheight;
+  if (sector->heightsec != -1) // special water sector?
+    ht = mp->sectors[sector->heightsec].floorheight;
 
-  msecnode_t *node = sec->touching_thinglist; // things touching this sector
+  msecnode_t *node = sector->touching_thinglist; // things touching this sector
 
   for ( ; node ; node = node->m_snext)
     {
       Actor *thing = node->m_thing;
-      if (thing->flags & (MF_NOGRAVITY | MF_NOCLIPLINE))
-	continue;
 
-      // not a player? FIXME wind should also affect monsters....
-      if (!thing->IsOf(PlayerPawn::_type))
+      // does the push affect it?
+      if (!(thing->flags2 & MF2_WINDTHRUST) || (thing->flags & (MF_NOCLIPTHING | MF_NOCLIPLINE)))
 	continue;
 
       fixed_t xspeed, yspeed;
 
       if (type == p_wind)
 	{
-	  if (sec->heightsec == -1) // NOT special water sector
+	  if (sector->heightsec == -1) // NOT special water sector
 	    if (thing->Feet() > thing->floorz) // above ground
 	      {
 		xspeed = x_mag; // full force
@@ -1811,8 +1808,8 @@ void pusher_t::Think()
 	}
       else // p_current
 	{
-	  if (sec->heightsec == -1) // NOT special water sector
-	    if (thing->Feet() > sec->floorheight) // above ground
+	  if (sector->heightsec == -1) // NOT special water sector
+	    if (thing->Feet() > sector->floorheight) // above ground
 	      xspeed = yspeed = 0; // no force
 	    else // on ground
 	      {
@@ -1890,12 +1887,12 @@ void Map::SpawnPusher(line_t *l, int tag, int type)
     {
     case pusher_t::p_wind:
       for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0 ; )	  
-	AddThinker(new pusher_t(pusher_t::p_wind, dx, dy, NULL, s));
+	new pusher_t(this, &sectors[s], pusher_t::p_wind, dx, dy, NULL);
       break;
 
     case pusher_t::p_current:
       for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0 ; )
-	AddThinker(new pusher_t(pusher_t::p_current, dx, dy, NULL, s));
+	new pusher_t(this, &sectors[s], pusher_t::p_current, dx, dy, NULL);
       break;
 
     case pusher_t::p_point:
@@ -1904,7 +1901,7 @@ void Map::SpawnPusher(line_t *l, int tag, int type)
 	  {
 	    DActor *thing = GetPushThing(&sectors[s]);
 	    if (thing) // No MT_P* means no effect
-	      AddThinker(new pusher_t(pusher_t::p_point, dx, dy, thing, s));
+	      new pusher_t(this, &sectors[s], pusher_t::p_point, dx, dy, thing);
 	  }
       else
 	{
@@ -1912,7 +1909,7 @@ void Map::SpawnPusher(line_t *l, int tag, int type)
 	  Actor *m;
 	  for (s = -1; (m = FindFromTIDmap(tid, &s)) != NULL; )
 	    if (m->IsOf(DActor::_type))
-	      AddThinker(new pusher_t(pusher_t::p_point, dx, dy, (DActor *)m, s));
+	      new pusher_t(this, m->subsector->sector, pusher_t::p_point, dx, dy, reinterpret_cast<DActor*>(m));
 	}
       break;
     }
