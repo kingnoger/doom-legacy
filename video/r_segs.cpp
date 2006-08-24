@@ -458,12 +458,14 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
   mfloorclip = ds->sprbottomclip;
   mceilingclip = ds->sprtopclip;
 
+  dc_texheight = tex->height;
   fixed_t world_texturemid;
 
   if (curline->linedef->flags & ML_DONTPEGBOTTOM)
     {
       world_texturemid = frontsector->floorheight > backsector->floorheight
 	? frontsector->floorheight : backsector->floorheight;
+      world_texturemid += dc_texheight/tex->yscale;
     }
   else
     {
@@ -472,7 +474,6 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
     }
   world_texturemid += -viewz + curline->sidedef->rowoffset;
 
-  dc_texheight = tex->height;
   dc_texturemid = world_texturemid * tex->yscale;
 
   if (fixedcolormap)

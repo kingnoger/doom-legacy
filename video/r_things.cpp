@@ -446,7 +446,7 @@ void R_DrawMaskedColumn(column_t* column)
       fixed_t bottomscreen = sprbotscreen == fixed_t::FMAX ?
 	topscreen + column->length/dc_iscale :
 	//sprbotscreen + column->length/dc_iscale; // huh???
-	sprbotscreen;
+        sprbotscreen;
 
       dc_yl = 1 + (topscreen - fixed_epsilon).floor();
       dc_yh = (bottomscreen - fixed_epsilon).floor();

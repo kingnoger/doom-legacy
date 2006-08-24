@@ -381,7 +381,7 @@ void Map::LoadThings(int lump, bool heed_spawnflags)
       //======== first we spawn common THING types not affected by spawning flags ========
 
       // deathmatch start positions
-      if (ednum == 11)
+      if (ednum == EN_DM_START)
         {
           if (dmstarts.size() < MAX_DM_STARTS)
             dmstarts.push_back(t);
@@ -389,17 +389,17 @@ void Map::LoadThings(int lump, bool heed_spawnflags)
         }
 
       // normal playerstarts (normal 4 + 28 extra)
-      if ((ednum >= 1 && ednum <= 4) || (ednum >= 4001 && ednum <= 4028))
+      if ((ednum >= EN_START1 && ednum <= EN_START4) || (ednum >= EN_START5 && ednum <= EN_START32))
         {
-          if (ednum > 4000)
-            ednum -= 4001 - 5;
+          if (ednum >= EN_START5)
+            ednum += 5 - EN_START5;
 
           playerstarts.insert(pair<int, mapthing_t *>(ednum, t));
           // t->type is used as a timer
           continue;
         }
 
-      if (ednum == 14)
+      if (ednum == EN_TELEPORTMAN)
         {
           // a bit of a hack
           // same with doom / heretic / hexen, but only one mobjtype_t
@@ -408,12 +408,11 @@ void Map::LoadThings(int lump, bool heed_spawnflags)
         }
 
       // common polyobjects
-#define PO_BASE 9300-3000 // currently ZDoom compatible
-      if (ednum == PO_BASE+PO_ANCHOR_TYPE || ednum == PO_BASE+PO_SPAWN_TYPE || ednum == PO_BASE+PO_SPAWNCRUSH_TYPE)
+      if (ednum == EN_PO_ANCHOR || ednum == EN_PO_SPAWN || ednum == EN_PO_SPAWNCRUSH)
 	{
-	  t->type = ednum - PO_BASE; // internally we use Hexen numbers
+	  t->type = ednum; // internally we use the same numbers
 	  polyspawn.push_back(t);
-	  if (ednum != PO_BASE+PO_ANCHOR_TYPE)
+	  if (ednum != EN_PO_ANCHOR)
 	    NumPolyobjs++; // a polyobj spawn spot
 	  continue;
 	}
@@ -444,7 +443,7 @@ void Map::LoadThings(int lump, bool heed_spawnflags)
           high = MT_DOOM_END;
 
           // DoomII braintarget list
-          if (ednum == 87)
+          if (ednum == EN_DOOM_BRAINTARGET)
             braintargets.push_back(t);
         }
       else if (ednum >= info->heretic_offs[0] && ednum <= info->heretic_offs[1])
@@ -454,21 +453,21 @@ void Map::LoadThings(int lump, bool heed_spawnflags)
           high = MT_HERETIC_END;
 
           // Ambient sound sequences
-          if (ednum >= 1200 && ednum < 1210)
+          if (ednum >= EN_HERETIC_AMBIENTSND1 && ednum <= EN_HERETIC_AMBIENTSND10)
             {
               AmbientSeqs.push_back(ednum - 1200);
               continue;
             }
 
           // D'Sparil teleport spot (no Actor spawned)
-          if (ednum == 56)
+          if (ednum == EN_HERETIC_BOSSSPOT)
             {
               BossSpots.push_back(t);
               continue;
             }
 
           // Mace spot (no Actor spawned)
-          if (ednum == 2002)
+          if (ednum == EN_HERETIC_MACESPOT)
             {
               MaceSpots.push_back(t);
               continue;
@@ -483,38 +482,48 @@ void Map::LoadThings(int lump, bool heed_spawnflags)
           // The polyobject system is pretty stupid, since the mapthings are not always in
           // any particular order. Polyobjects have to be picked apart
           // from other things  => polyspawn vector
-          if (ednum == PO_ANCHOR_TYPE || ednum == PO_SPAWN_TYPE || ednum == PO_SPAWNCRUSH_TYPE)
+          if (ednum == EN_HEXEN_PO_ANCHOR || ednum == EN_HEXEN_PO_SPAWN || ednum == EN_HEXEN_PO_SPAWNCRUSH)
             {
-              t->type = ednum;
+              t->type = ednum - EN_HEXEN_PO_ANCHOR + EN_PO_ANCHOR;
               polyspawn.push_back(t);
-              if (ednum != PO_ANCHOR_TYPE)
+              if (ednum != EN_HEXEN_PO_ANCHOR)
                 NumPolyobjs++; // a polyobj spawn spot
               continue;
             }
 
           // Check for player starts 5 to 8
-          if (ednum >= 9100 && ednum <= 9103)
+          if (ednum >= EN_HEXEN_START5 && ednum <= EN_HEXEN_START8)
             {
-              ednum = 5 + ednum - 9100;
+              ednum += 5 - EN_HEXEN_START5;
               playerstarts.insert(pair<int, mapthing_t *>(ednum, t));
               continue;
             }
 
           // sector sound sequences
-          if (ednum >= 1400 && ednum < 1410)
+          if (ednum >= EN_HEXEN_SNDSEQ1 && ednum <= EN_HEXEN_SNDSEQ10)
             {
-              R_PointInSubsector(t->x, t->y)->sector->seqType = ednum - 1400;
+              R_PointInSubsector(t->x, t->y)->sector->seqType = ednum - EN_HEXEN_SNDSEQ1;
               continue;
             }
         }
 
-      // Spawning flags don't apply to playerstarts, teleport exits or polyobjs! Why, pray, is that?
+      // NOTE: Spawning flags don't apply to playerstarts, teleport exits or polyobjs! Why, pray, is that?
       // wrong flags?
       if (heed_spawnflags)
 	if ((t->flags & ffail) || !(t->flags & fskill) || !(t->flags & fmode) || !(t->flags & fclass))
 	  continue;
 
       //======== now common things affected by spawning flags ========
+
+      // TEST teamstartsec thing
+      if (ednum == EN_TEAMSTARTSEC)
+	{
+	  subsector_t *ss = R_PointInSubsector(t->x, t->y);
+	  if (ss)
+	    {
+	      ss->sector->teamstartsec = t->angle & 0xff; // high byte is free
+	    }
+	}
 
       for (n = MT_LEGACY; n <= MT_LEGACY_END; n++)
         if (orig_ednum == mobjinfo[n].doomednum)

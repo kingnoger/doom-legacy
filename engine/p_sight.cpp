@@ -71,9 +71,11 @@ static int P_DivlineSide(fixed_t x, fixed_t y, divline_t* node)
   fixed_t dx = x - node->x;
   fixed_t dy = y - node->y;
 
-#if 0
-  fixed_t left =  (node->dy>>FRACBITS) * (dx>>FRACBITS); // shift so result always fits in 32 bits
-  fixed_t right = (dy>>FRACBITS) * (node->dx>>FRACBITS);
+#if 1
+  //fixed_t left =  (node->dy>>FRACBITS) * (dx>>FRACBITS); // shift so result always fits in 32 bits
+  //fixed_t right = (dy>>FRACBITS) * (node->dx>>FRACBITS);
+  int left =  node->dy.floor() * dx.floor(); // shift so result always fits in 32 bits
+  int right = dy.floor() * node->dx.floor();
 #else
   Sint64 left = node->dy.value() * dx.value(); // TEST sharper sight
   Sint64 right = dy.value() * node->dx.value();

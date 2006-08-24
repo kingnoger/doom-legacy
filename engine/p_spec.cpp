@@ -1225,8 +1225,6 @@ void Map::SpawnLineSpecials()
 
 
       // finally check ungrouped specials 
-      bool clear = true;
-
       if (!tag)
 	tag = l->args[0]; // Hexen format: get the tag from args[0]
 
@@ -1315,20 +1313,11 @@ void Map::SpawnLineSpecials()
 	  break;
 
 	default:
-	  // FIXME teamstartsec not working TODO is this used? if not, replace it with a thing...
-	  if (special >= 1000 && special < 1032)
-            {
-	      for (s = -1; (s = FindSectorFromTag(l->tag, s)) >= 0;)
-		sectors[s].teamstartsec = special - 999; // only 999 so we know when it is set (it's != 0)
-	      break;
-            }
-	  else
-	    clear = false;
+	  continue; // do nothing
         }
 
 
-      if (clear)
-	l->special = 0;
+      l->special = 0;
     }
 }
 

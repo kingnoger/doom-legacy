@@ -309,10 +309,6 @@ Additionally, we have introduced a number of our own additions to the
 Doom linedef system.
 </p>
 
-<p>
-TODO how these are used in Hexen mode
-</p>
-
 <h3>FraggleScript triggers</h3>
 
 <table class="def">
@@ -467,7 +463,7 @@ Note that the shape of the control sector has no effect on the fake floor.
 </p>
 
 <table class="def">
-<tr><th>linedef type</th><th>effect</th></tr>
+<tr><th>LINEDEF type</th><th>effect</th></tr>
 <tr><td>281</td>
 <td>
 Solid opaque 3D floor.
@@ -519,6 +515,38 @@ This flag, when set, will allow all things to activate a W* line, with
 the exception of flying blood. :) This includes all generalized types
 that are W*.
 </p>
+
+
+<h3>Hexen-format maps</h3>
+<p>
+All the new linedef types can also be used in Hexen-format maps.
+We have extended the Hexen linedef system by one new type, 150.
+Under this type, the arg1 and arg2 fields determine the subtype of the effect.
+Also, you can use full 16-bit tags with linedeftype 150.
+arg4 holds the low byte and arg5 the high byte of the tag.
+<table class="def">
+<tr><th>LINEDEF type</th><th>arg1</th><th>arg2</th><th>effect</th></tr>
+
+<tr><td rowspan="8">150</td><td rowspan="4">4: Exotic use of texture names</td><td>1</td>
+<td>Boom 242</td></tr>
+<tr><td>2</td><td>Boom 260</td></tr>
+<tr><td>3</td><td>Legacy 280</td></tr>
+<tr><td>4</td><td>Legacy 282</td></tr>
+
+<tr><td>10: Fake floors</td><td>type</td>
+<td>Doom linedef type = type + 281</td></tr>
+
+<tr><td rowspan="2">11: Renderer effects</td><td>0</td>
+<td>Fog sheet</td></tr>
+
+<tr><td>100+n</td>
+<td>Software translucency: transmap n</td></tr>
+
+<tr><td>128: FraggleScript trigger</td><td>onesided</td>
+<td>If onesided is 1, line can only be activated from the first side.</td></tr>
+</table>
+</p>
+
 
 
 <hr />
@@ -791,14 +819,18 @@ done. Yes, the ones from Quake III Arena.
 </p>
 
 
-<h3>Colormaps, translation tables and translucency maps</h3>
+<h3>Colormaps, fadetables, translation tables and translucency maps</h3>
 
 <p>
-A <b>colormap</b> is a 256-byte array used to remap the
-colors inside a palette:<br/>
-newcolor = colormap[oldcolor].<br/>
-The Doom software renderer uses 34 different colormaps
-(stored in the COLORMAP lump) to simulate different light levels.
+A <b>colormap</b> is a 256-byte array used to remap the colors inside a palette:<br/>
+newcolor = colormap[oldcolor].
+</p>
+
+<p>
+The Doom software renderer uses a set of 34 different colormaps, called a
+<b><a name="fadetable">fadetable</a></b> or a lighttable, to simulate different visibility levels.
+The default fadetable is stored in the confusingly named COLORMAP lump.
+One can also simulate colored lighting and fog using fadetables.
 </p>
 
 <p>
@@ -1039,7 +1071,7 @@ extension instead.</td></tr>
 Legacy-specific codepointers.</td></tr>
 <tr><td>[STRINGS]</td><td>partial</td><td>Use <a href="#MAPINFO">MAPINFO</a>
 for intermission texts and nice mapnames.</td></tr>
-<tr><td>[PARS]</td><td>deprecated</td><td>Use <a href="#levelinfo">LevelInfo</a> instead.</td></tr>
+<tr><td>[PARS]</td><td>deprecated</td><td>Use <a href="#MAPINFO">MAPINFO</a> instead.</td></tr>
 </table>
 
 
@@ -1190,47 +1222,47 @@ Naturally, you can also replace these resources using PWADs.
 Plaintext lumps
 </td></tr>
 
-<tr><td>VERSION</td>
+<tr><td><a href="../resources/VERSION.txt">VERSION</a></td>
 <td>
 Legacy.wad version string
 </td></tr>
 
-<tr><td>MI_DOOM1</td>
+<tr><td><a href="../resources/MAPINFO_Doom.txt">MI_DOOM1</a></td>
 <td>
 MAPINFO lump for Doom1
 </td></tr>
 
-<tr><td>MI_DOOM2</td>
+<tr><td><a href="../resources/MAPINFO_Doom2.txt">MI_DOOM2</a></td>
 <td>
 MAPINFO lump for Doom2
 </td></tr>
 
-<tr><td>MI_TNT</td>
+<tr><td><a href="../resources/MAPINFO_Evilution.txt">MI_TNT</a></td>
 <td>
 MAPINFO lump for the Doom2 mission pack "TNT Evilution"
 </td></tr>
 
-<tr><td>MI_PLUT</td>
+<tr><td><a href="../resources/MAPINFO_Plutonia.txt">MI_PLUT</a></td>
 <td>
 MAPINFO lump for the Doom2 mission pack "Plutonia Experiment"
 </td></tr>
 
-<tr><td>MI_HTIC</td>
+<tr><td><a href="../resources/MAPINFO_Heretic.txt">MI_HTIC</a></td>
 <td>
 MAPINFO lump for Heretic
 </td></tr>
 
-<tr><td>SNDINFO</td>
+<tr><td><a href="../resources/SNDINFO.txt">SNDINFO</a></td>
 <td>
 Basic sound effect definitions
 </td></tr>
 
-<tr><td>SNDSEQ</td>
+<tr><td><a href="../resources/SNDSEQ.txt">SNDSEQ</a></td>
 <td>
 Basic sound sequence definitions
 </td></tr>
 
-<tr><td>THINGS.H</td>
+<tr><td><a href="../resources/FS_things.h">THINGS.H</a></td>
 <td>
 <a href="fs.html">FraggleScript</a> header file containing THING names
 and flags
@@ -1246,12 +1278,12 @@ End text
 Binary lumps
 </td></tr>
 
-<tr><td>XDOOM</td>
+<tr><td><a href="../resources/doom2hexen.txt">XDOOM</a></td>
 <td>
 Doom-to-Hexen linedeftype conversion table. Generated using tools/doom2hexen.exe.
 </td></tr>
 
-<tr><td>XHERETIC</td>
+<tr><td><a href="../resources/heretic2hexen.txt">XHERETIC</a></td>
 <td>
 Heretic-to-Hexen linedeftype conversion table
 </td></tr>
@@ -1267,21 +1299,19 @@ Default data items
 Default sound effect
 </td></tr>
 
-<tr><td>DEF_TEX</td>
+<tr><td><a href="../resources/DEF_texture.png">DEF_TEX</a></td>
 <td>
 Default texture
 </td></tr>
 
 
 <tr><td class="note" colspan="2">
-Color- and translucency maps
+<a href="#fadetable">Fadetables</a> and <a href="#transmap">translucency maps</a>
 </td></tr>
 
-<tr><td>
-WATERMAP
-</td>
+<tr><td>WATERMAP</td>
 <td>
-Boom underwater colormap.
+Boom underwater lightmap/fadetable.
 </td></tr>
 
 <tr><td>
