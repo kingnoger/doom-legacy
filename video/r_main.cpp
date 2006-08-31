@@ -603,7 +603,7 @@ static void TestAnims()
   mobjinfo_t *info;
   state_t *s, *n;
 
-  const statenum_t mobjinfo_t::*seqptr[9] =
+  state_t *mobjinfo_t::*seqptr[9] =
   {
     &mobjinfo_t::spawnstate,
     &mobjinfo_t::seestate,
@@ -634,18 +634,18 @@ static void TestAnims()
     {
       info = &mobjinfo[i];
 
-      s = &states[info->spawnstate];
+      s = info->spawnstate;
       spr = s->sprite;
       printf("\n%d: %s\n", i, sprnames[spr]);
 
       for (j = 0; j<9; j++)
-	seq[j] = &states[info->*seqptr[j]];;
+	seq[j] = info->*seqptr[j];
 
       for (j = 0; j<9; j++)
 	{
 	  s = n = seq[j];
 	  printf(" %s: ", snames[j]);
-	  if (n == &states[S_NULL])
+	  if (!n)
 	    {
 	      printf("(none)\n");
 	      continue;
@@ -671,7 +671,7 @@ static void TestAnims()
 		  break;
 		}
 
-	      n = &states[n->nextstate];
+	      n = n->nextstate;
 	      if (n == s)
 		{
 		  printf("loop, %d\n", k+1);

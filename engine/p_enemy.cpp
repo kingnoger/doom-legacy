@@ -1248,7 +1248,7 @@ bool PIT_VileCheck(Actor *th)
   if (thing->tics != -1)
     return true;    // not lying still yet
 
-  if (thing->info->raisestate == S_NULL)
+  if (!thing->info->raisestate)
     return true;    // monster doesn't have a raise state
 
   fixed_t maxdist = thing->info->radius + mobjinfo[MT_VILE].radius;

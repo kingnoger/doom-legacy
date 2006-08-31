@@ -248,7 +248,7 @@ void A_PotteryExplode(DActor *actor)
   for(i = (P_Random()&3)+3; i; i--)
     {
       mo = actor->mp->SpawnDActor(actor->pos, MT_POTTERYBIT1);
-      mo->SetState(statenum_t(mo->info->spawnstate + P_Random() % 5));
+      mo->SetState(mo->info->spawnstate + (P_Random() % 5));
       if (mo)
 	{
 	  mo->vel = vec_t<fixed_t>(((P_Random() & 7) + 5)*0.75f,
@@ -273,7 +273,7 @@ void A_PotteryExplode(DActor *actor)
 
 void A_PotteryChooseBit(DActor *actor)
 {
-  actor->SetState(statenum_t(actor->info->deathstate + 1 + 2*(P_Random() % 5)));
+  actor->SetState(actor->info->deathstate + 1 + 2*(P_Random() % 5));
   actor->tics = 256+(P_Random()<<1);
 }
 
@@ -294,7 +294,7 @@ void A_PotteryCheck(DActor *actor)
 	  (abs(R_PointToAngle2(pmo->pos.x, pmo->pos.y, actor->pos.x, actor->pos.y)-pmo->yaw) <= ANG45))
 	{
 	  // Previous state (pottery bit waiting state)
-	  actor->SetState(statenum_t(actor->state - &states[0] - 1));
+	  actor->SetState(actor->state - 1);
 	  return;
 	}
     }
@@ -329,7 +329,7 @@ void A_CorpseExplode(DActor *actor)
   for(i = (P_Random()&3)+3; i; i--)
     {
       mo = actor->mp->SpawnDActor(actor->pos, MT_CORPSEBIT);
-      mo->SetState(statenum_t(mo->info->spawnstate + P_Random() % 3));
+      mo->SetState(mo->info->spawnstate + (P_Random() % 3));
       if (mo)
 	{
 	  mo->vel = vec_t<fixed_t>(((P_Random()&7) + 5)*0.75f,
@@ -1186,7 +1186,7 @@ void A_SoAExplode(DActor *actor)
       vec_t<fixed_t> temp(x, y, (P_Random()*actor->height) >> 8);
       temp += actor->pos;
       mo = actor->mp->SpawnDActor(temp, MT_ZARMORCHUNK);
-      mo->SetState(statenum_t(mo->info->spawnstate + i));
+      mo->SetState(mo->info->spawnstate + i);
       if (mo)
 	mo->vel = vec_t<fixed_t>((P_Random() & 7) + 5, P_SignedFRandom(6), P_SignedFRandom(6));
     }

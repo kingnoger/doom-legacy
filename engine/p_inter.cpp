@@ -807,8 +807,7 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
       // chase after this one
       target = source;
       threshold = BASETHRESHOLD;
-      if (state == &states[info->spawnstate]
-	  && info->seestate != S_NULL)
+      if (state == info->spawnstate && info->seestate)
 	SetState(info->seestate);
     }
 

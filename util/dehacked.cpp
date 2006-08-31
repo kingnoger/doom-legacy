@@ -825,7 +825,7 @@ void dehacked_t::Read_Thing(const char *str)
 		  error("Thing %s : Weapon states must not be used with Things!\n", str);
 		  continue;
 		}
-	      mobjinfo[t].deathstate  = statenum_t(value);
+	      mobjinfo[t].deathstate  = &states[value];
 	    }
 	  else if (!strcasecmp(word,"sound")) mobjinfo[t].deathsound  = SoundMap(value);
 	}
@@ -844,13 +844,13 @@ void dehacked_t::Read_Thing(const char *str)
 	      continue;
 	    }
 
-	  if (!strcasecmp(word,"Initial"))        mobjinfo[t].spawnstate   = statenum_t(value);
-	  else if (!strcasecmp(word,"First"))     mobjinfo[t].seestate     = statenum_t(value);
-	  else if (!strcasecmp(word,"Injury"))    mobjinfo[t].painstate    = statenum_t(value);
-	  else if (!strcasecmp(word,"Close"))     mobjinfo[t].meleestate   = statenum_t(value);
-	  else if (!strcasecmp(word,"Far"))       mobjinfo[t].missilestate = statenum_t(value);
-	  else if (!strcasecmp(word,"Exploding")) mobjinfo[t].xdeathstate  = statenum_t(value);
-	  else if (!strcasecmp(word,"Respawn"))   mobjinfo[t].raisestate   = statenum_t(value);
+	  if (!strcasecmp(word,"Initial"))        mobjinfo[t].spawnstate   = &states[value];
+	  else if (!strcasecmp(word,"First"))     mobjinfo[t].seestate     = &states[value];
+	  else if (!strcasecmp(word,"Injury"))    mobjinfo[t].painstate    = &states[value];
+	  else if (!strcasecmp(word,"Close"))     mobjinfo[t].meleestate   = &states[value];
+	  else if (!strcasecmp(word,"Far"))       mobjinfo[t].missilestate = &states[value];
+	  else if (!strcasecmp(word,"Exploding")) mobjinfo[t].xdeathstate  = &states[value];
+	  else if (!strcasecmp(word,"Respawn"))   mobjinfo[t].raisestate   = &states[value];
 	  else error("Thing %s : Unknown field '%s'\n", str, word);
 	}
     }
@@ -906,7 +906,7 @@ void dehacked_t::Read_Frame(const char *str)
 		  continue;
 		}
 
-	      state->nextstate = statenum_t(value);
+	      state->nextstate = &states[value];
 	    }
 	  else if (!strcasecmp(word,"Codep"))
 	    {
@@ -934,7 +934,7 @@ void dehacked_t::Read_Frame(const char *str)
 		  continue;
 		}
 
-	      wstate->nextstate = weaponstatenum_t(-value);
+	      wstate->nextstate = &weaponstates[-value];
 	    }
 	  else if (!strcasecmp(word,"Codep"))
 	    {

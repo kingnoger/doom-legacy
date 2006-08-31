@@ -281,9 +281,9 @@ public:
 
   int  health;
 
-  int  flags;
-  int  flags2;
-  int  eflags;
+  Uint32  flags;
+  Uint32  flags2;
+  Uint32  eflags;
 
   /// \name Hexen fields
   //@{
@@ -409,7 +409,8 @@ public:
   virtual bool Morph(mobjtype_t form);
   virtual bool Damage(Actor *inflictor, Actor *source, int damage, int dtype = dt_normal);
 
-  bool SetState(statenum_t ns, bool call = true);
+  inline bool SetState(statenum_t snum, bool call = true) { return SetState(&states[snum], call); };
+  bool SetState(const state_t *ns, bool call = true);
 
   void NightmareRespawn();
 

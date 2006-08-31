@@ -1014,12 +1014,12 @@ int Map::Massacre()
 
 
 // helper function for Map::BossDeath
-static state_t *P_FinalState(statenum_t state)
+static const state_t *P_FinalState(const state_t *state)
 {
-  while(states[state].tics!=-1)
-    state=states[state].nextstate;
+  while (state->tics != -1)
+    state = state->nextstate;
 
-  return &states[state];
+  return state;
 }
 
 

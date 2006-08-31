@@ -3506,7 +3506,7 @@ void A_FreezeDeathChunks(DActor *actor)
       mo = actor->mp->SpawnDActor(actor->pos.x+(((P_Random()-128)*actor->radius)>>7), 
 		       actor->pos.y+(((P_Random()-128)*actor->radius)>>7), 
 		       actor->pos.z+(P_Random()*actor->height/255), MT_ICECHUNK);
-      mo->SetState(statenum_t(mo->info->spawnstate + P_Random()%3));
+      mo->SetState(mo->info->spawnstate + (P_Random()%3));
       if(mo)
 	{
 	  mo->vel.z = ((mo->pos.z - actor->pos.z) / actor->height) << 2;
@@ -3520,7 +3520,7 @@ void A_FreezeDeathChunks(DActor *actor)
       mo = actor->mp->SpawnDActor(actor->pos.x+(((P_Random()-128)*actor->radius)>>7), 
 		       actor->pos.y+(((P_Random()-128)*actor->radius)>>7), 
 		       actor->pos.z+(P_Random()*actor->height/255), MT_ICECHUNK);
-      mo->SetState(statenum_t(mo->info->spawnstate + P_Random()%3));
+      mo->SetState(mo->info->spawnstate + (P_Random()%3));
       if(mo)
 	{
 	  mo->vel.z = ((mo->pos.z-actor->pos.z) / actor->height) << 2;
@@ -3688,7 +3688,7 @@ void KSpiritInit(DActor *spirit, DActor *korax)
   for(i = 1; i < 3; i++)
     {
       next = spirit->mp->SpawnDActor(spirit->pos, MT_HOLY_TAIL);
-      next->SetState(statenum_t(next->info->spawnstate + 1));
+      next->SetState(next->info->spawnstate + 1);
       tail->target = next;
       tail = next;
     }

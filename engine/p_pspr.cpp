@@ -105,43 +105,41 @@ void PlayerPawn::SetupPsprites()
 
 
 
-void PlayerPawn::SetPsprite(int position, weaponstatenum_t stnum, bool call)
+void PlayerPawn::SetPsprite(int position, weaponstate_t *st, bool call)
 {
-  weaponstate_t  *state;
   pspdef_t *psp = &psprites[position];
 
   do
     {
-      if (!stnum)
+      if (st == &weaponstates[S_WNULL])
         {
 	  // object removed itself
 	  psp->state = NULL;
 	  break;
         }
 #ifdef PARANOIA
-      if(stnum>=NUMWEAPONSTATES)
-	I_Error("P_SetPsprite : state %d unknown\n",stnum);
+      //      if(stnum>=NUMWEAPONSTATES)
+      //	I_Error("P_SetPsprite : state %d unknown\n",stnum);
 #endif
-      state = &weaponstates[stnum];
-      psp->state = state;
-      psp->tics = state->tics;        // could be 0
-      if(state->misc1)
-	{ // Set coordinates.
-	  psp->sx = state->misc1;
-	}
-      if(state->misc2)
-	{
-	  psp->sy = state->misc2;
-	}
-      if (state->action && call)
+      psp->state = st;
+      psp->tics = st->tics;        // could be 0
+
+      // Set coordinates.
+      if (st->misc1)
+	psp->sx = st->misc1;
+
+      if (st->misc2)
+	psp->sy = st->misc2;
+
+      if (st->action && call)
 	{
 	  // Call action routine.
-	  state->action(this, psp);
-	  if(!psp->state)
+	  st->action(this, psp);
+	  if (!psp->state)
 	    break;
 	}
-      stnum = psp->state->nextstate;
-    } while(!psp->tics); // An initial state of 0 could cycle through.
+      st = psp->state->nextstate;
+    } while (!psp->tics); // An initial state of 0 could cycle through.
 }
 
 

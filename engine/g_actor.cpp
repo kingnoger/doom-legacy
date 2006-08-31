@@ -1199,7 +1199,7 @@ DActor::DActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
 
   // do not set the state with SetState,
   // because action routines can not be called yet
-  state = &states[info->spawnstate];
+  state = info->spawnstate;
   tics = state->tics;
 
   /*
@@ -1376,19 +1376,20 @@ bool DActor::SetState(statenum_t ns, bool call)
 */
 
 
+
 // DActors are basically finite state machines. This changes the state.
 // Returns true if the mobj is still present.
-bool DActor::SetState(statenum_t ns, bool call)
+bool DActor::SetState(const state_t *ns, bool call)
 {
   do {
-    if (ns == S_NULL)
+    if (!ns || ns == &states[S_NULL])
       {
 	state = &states[S_NULL]; // was state = NULL;
 	Remove(); // does not Think after this
 	return false;
       }
         
-    state = &states[ns];
+    state = ns;
     tics = state->tics;
 
     // Call action functions when the state is set

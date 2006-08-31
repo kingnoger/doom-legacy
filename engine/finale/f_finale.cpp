@@ -329,7 +329,7 @@ void F_StartCast(int dummy)
 
   force_wipe = true;
   castnum = 0;
-  caststate = &states[mobjinfo[castorder[castnum].type].seestate];
+  caststate = mobjinfo[castorder[castnum].type].seestate;
   casttics = caststate->tics;
   castdeath = false;
   castframes = 0;
@@ -348,7 +348,7 @@ void F_CastTicker()
   if (--casttics > 0)
     return;                 // not time to change state yet
 
-  if (caststate->tics == -1 || caststate->nextstate == S_NULL)
+  if (caststate->tics == -1 || caststate->nextstate == &states[S_NULL])
     {
       // switch from deathstate to next monster
       castnum++;
@@ -357,7 +357,7 @@ void F_CastTicker()
         castnum = 0;
       if (mobjinfo[castorder[castnum].type].seesound)
         S_StartLocalAmbSound(mobjinfo[castorder[castnum].type].seesound);
-      caststate = &states[mobjinfo[castorder[castnum].type].seestate];
+      caststate = mobjinfo[castorder[castnum].type].seestate;
       castframes = 0;
     }
   else
@@ -365,8 +365,9 @@ void F_CastTicker()
       // just advance to next state in animation
       if (caststate == &states[S_PLAY_ATK1])
         goto stopattack;    // Oh, gross hack!
-      st = caststate->nextstate;
-      caststate = &states[st];
+      caststate = caststate->nextstate;
+      st = caststate - states;
+
       castframes++;
 
       // sound hacks....
@@ -410,30 +411,28 @@ void F_CastTicker()
       // go into attack frame
       castattacking = true;
       if (castonmelee)
-        caststate=&states[mobjinfo[castorder[castnum].type].meleestate];
+        caststate = mobjinfo[castorder[castnum].type].meleestate;
       else
-        caststate=&states[mobjinfo[castorder[castnum].type].missilestate];
+        caststate = mobjinfo[castorder[castnum].type].missilestate;
       castonmelee ^= 1;
       if (caststate == &states[S_NULL])
         {
           if (castonmelee)
-            caststate=
-              &states[mobjinfo[castorder[castnum].type].meleestate];
+            caststate = mobjinfo[castorder[castnum].type].meleestate;
           else
-            caststate=
-              &states[mobjinfo[castorder[castnum].type].missilestate];
+            caststate = mobjinfo[castorder[castnum].type].missilestate;
         }
     }
 
   if (castattacking)
     {
       if (castframes == 24
-          ||  caststate == &states[mobjinfo[castorder[castnum].type].seestate] )
+          ||  caststate == mobjinfo[castorder[castnum].type].seestate )
         {
         stopattack:
           castattacking = false;
           castframes = 0;
-          caststate = &states[mobjinfo[castorder[castnum].type].seestate];
+          caststate = mobjinfo[castorder[castnum].type].seestate;
         }
     }
 
@@ -454,7 +453,7 @@ bool F_CastResponder(event_t* ev)
 
   // go into death frame
   castdeath = true;
-  caststate = &states[mobjinfo[castorder[castnum].type].deathstate];
+  caststate = mobjinfo[castorder[castnum].type].deathstate;
   casttics = caststate->tics;
   castframes = 0;
   castattacking = false;

@@ -77,7 +77,7 @@ enum mapthingspecial_e
 
   EN_HERETIC_BOSSSPOT     =   56, ///< D'Sparil teleport spot
   EN_HERETIC_AMBIENTSND1  = 1200, ///< ambient sound spawners
-  EN_HERETIC_AMBIENTSND10 = 1200,
+  EN_HERETIC_AMBIENTSND10 = 1209,
   EN_HERETIC_MACESPOT     = 2002, ///< Firemace spot
 
   EN_HEXEN_SNDSEQ1        = 1400, ///< sector sound sequences

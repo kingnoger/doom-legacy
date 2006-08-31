@@ -6480,7 +6480,7 @@ struct state_t
   Sint32        frame;     ///< Lowest 15 bits contain the frame number, the rest are flags for visual effects.
   Sint32        tics;      ///< Duration of the state in tics, -1 means infinite.
   actionf_p1    action;    ///< Action function to call when entering this state, or NULL if none.
-  statenum_t    nextstate; ///< The next state.
+  state_t      *nextstate; ///< The next state.
 };
 
 
@@ -6488,12 +6488,12 @@ struct state_t
 /// \ingroup g_thing
 struct weaponstate_t
 {
-  spritenum_t   sprite;       ///< Sprite to use.
-  long          frame;        ///< Lowest 15 bits contain the frame number, the rest are flags for visual effects.
-  long          tics;         ///< Duration of the state in tics, -1 means infinite.
-  actionf_p2    action;       ///< Action function to call when entering this state, or NULL if none.
-  weaponstatenum_t nextstate; ///< The next state.
-  int           misc1, misc2; ///< x and y coordinates for the weapon sprites.
+  spritenum_t    sprite;       ///< Sprite to use.
+  Sint32         frame;        ///< Lowest 15 bits contain the frame number, the rest are flags for visual effects.
+  Sint32         tics;         ///< Duration of the state in tics, -1 means infinite.
+  actionf_p2     action;       ///< Action function to call when entering this state, or NULL if none.
+  weaponstate_t *nextstate;    ///< The next state.
+  Sint32         misc1, misc2; ///< x and y coordinates for the weapon sprites.
 };
 
 
@@ -6501,31 +6501,35 @@ struct weaponstate_t
 /// \ingroup g_thing
 struct mobjinfo_t
 {
-  int doomednum;           ///< Editor number for this thing type or -1 if none.
-  statenum_t spawnstate;   ///< Initial state.
-  int spawnhealth;         ///< Initial health.
-  statenum_t seestate;     ///< Used when thing sees an enemy. Active.
-  int seesound;            ///< Played when thing sees an enemy.
-  int reactiontime;        ///< How soon (in tics) will the thing do something again.
-  int attacksound;         ///< Played when attacking.
-  statenum_t painstate;    ///< Used when thing is hurt.
-  int painchance;          ///< Probability of going into painstate when hurt.
-  int painsound;           ///< Played when hurt.
-  statenum_t meleestate;   ///< Used when thing executes a melee attack.
-  statenum_t missilestate; ///< Same, but for missile attacks.
-  statenum_t crashstate;   ///< Used when a flying thing has died and crashed on the ground.
-  statenum_t deathstate;   ///< Used when thing is killed.
-  statenum_t xdeathstate;  ///< Used when thing is killed in a messy way, e.g. exploded.
-  int deathsound;          ///< Played when thing dies.
-  float speed;             ///< Max. movement speed.
-  fixed_t radius;          ///< Thing radius.
-  fixed_t height;          ///< Thing height.
-  float   mass;            ///< Just take a guess.
-  int damage;              ///< Low 16 bits: damage for missiles, high 16 bits: see damage_t.
-  int activesound;         ///< Occasionally played when active.
-  int flags;               ///< mobjflag_t flags.
-  statenum_t raisestate;   ///< Used when thing is being raised from dead.
-  int flags2;              ///< mobjflag2_t flags.
+  int doomednum;         ///< Editor number for this thing type or -1 if none.
+  int spawnhealth;       ///< Initial health.
+  int reactiontime;      ///< How soon (in tics) will the thing do something again.
+  int painchance;        ///< Probability of going into painstate when hurt.
+  float speed;           ///< Max. movement speed.
+  fixed_t radius;        ///< Thing radius.
+  fixed_t height;        ///< Thing height.
+  float   mass;          ///< Just take a guess.
+  Uint32 damage;         ///< Low 16 bits: damage for missiles, high 16 bits: see damage_t.
+
+  Uint32 flags;          ///< mobjflag_t flags.
+  Uint32 flags2;         ///< mobjflag2_t flags.
+
+  int seesound;          ///< Played when thing sees an enemy.
+  int attacksound;       ///< Played when attacking.
+  int painsound;         ///< Played when hurt.
+  int deathsound;        ///< Played when thing dies.
+  int activesound;       ///< Occasionally played when active.
+
+  state_t *spawnstate;   ///< Initial state.
+  state_t *seestate;     ///< Used when thing sees an enemy. Active.
+  state_t *meleestate;   ///< Used when thing executes a melee attack.
+  state_t *missilestate; ///< Same, but for missile attacks.
+  state_t *painstate;    ///< Used when thing is hurt.
+  state_t *deathstate;   ///< Used when thing is killed.
+  state_t *xdeathstate;  ///< Used when thing is killed in a messy way, e.g. exploded.
+  state_t *crashstate;   ///< Used when a flying thing has died and crashed on the ground.
+  state_t *raisestate;   ///< Used when thing is being raised from dead.
+
   touchfunc_t touchf;      ///< If MF_TOUCHFUNC is set, this function is to be called when touching another Actor.
 };
 

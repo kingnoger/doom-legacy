@@ -448,7 +448,7 @@ void A_ZapMimic(DActor *actor)
   DActor *ow = reinterpret_cast<DActor*>(actor->owner);
   if (ow)
     {
-      if (ow->state >= &states[ow->info->deathstate]
+      if (ow->state >= ow->info->deathstate
 	  || ow->state == &states[S_FREETARGMOBJ])
 	{
 	  actor->ExplodeMissile();
@@ -1137,7 +1137,7 @@ void A_CHolyAttack2(DActor *actor)
       for (int i = 1; i < 3; i++)
 	{
 	  DActor *next = actor->mp->SpawnDActor(mo->pos, MT_HOLY_TAIL);
-	  next->SetState(statenum_t(next->info->spawnstate+1));
+	  next->SetState(next->info->spawnstate + 1);
 	  tail->target = next; // tail pieces use target field to point to next piece
 	  tail = next;
 	}
@@ -1207,11 +1207,6 @@ static void CHolyFindTarget(DActor *actor)
 
 static void CHolySeekerMissile(DActor *actor, angle_t thresh, angle_t turnMax)
 {
-  angle_t delta;
-  angle_t angle;
-  fixed_t newZ;
-  fixed_t deltaZ;
-
   Actor *target = actor->target;
   if (target == NULL)
     return;
@@ -1226,6 +1221,8 @@ static void CHolySeekerMissile(DActor *actor, angle_t thresh, angle_t turnMax)
       CHolyFindTarget(actor);
       return;
     }
+
+  angle_t delta;
   int dir = P_FaceMobj(actor, target, &delta);
   if(delta > thresh)
     {
@@ -1243,23 +1240,21 @@ static void CHolySeekerMissile(DActor *actor, angle_t thresh, angle_t turnMax)
     { // Turn counter clockwise
       actor->yaw -= delta;
     }
-  angle = actor->yaw>>ANGLETOFINESHIFT;
+
+  int angle = actor->yaw >> ANGLETOFINESHIFT;
   actor->vel.x = actor->info->speed * finecosine[angle];
   actor->vel.y = actor->info->speed * finesine[angle];
-  if (!(game.tic & 15) || actor->pos.z > target->Top() || actor->Top() < target->pos.z)
+  if (!(game.tic & 15) || actor->Feet() > target->Top() || actor->Top() < target->Feet())
     {
-      newZ = target->pos.z + (P_Random()*target->height >>8);
-      deltaZ = newZ - actor->pos.z;
-      if(abs(deltaZ) > 15)
+      fixed_t newZ = target->Feet() + (P_Random() * target->height) >> 8;
+      fixed_t deltaZ = newZ - actor->Feet();
+
+      if (abs(deltaZ) > 15)
 	{
-	  if(deltaZ > 0)
-	    {
-	      deltaZ = 15;
-	    }
+	  if (deltaZ > 0)
+	    deltaZ = 15;
 	  else
-	    {
-	      deltaZ = -15;
-	    }
+	    deltaZ = -15;
 	}
       fixed_t fdist = P_XYdist(target->pos, actor->pos) / actor->info->speed;
       int dist = fdist.floor();
@@ -1382,7 +1377,7 @@ void A_CHolyTail(DActor *actor)
 
   if (parent)
     {
-      if(parent->state >= &states[parent->info->deathstate])
+      if (parent->state >= parent->info->deathstate)
 	{ // Ghost removed, so remove all tail parts
 	  CHolyTailRemove(actor);
 	  return;

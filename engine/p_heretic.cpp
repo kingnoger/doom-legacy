@@ -232,8 +232,8 @@ void DoomPatchEngine()
   cv_fallingdamage.Set("0");
 
   // hacks: teleport fog, blood, gibs
-  mobjinfo[MT_TFOG].spawnstate = S_TFOG;
-  mobjinfo[MT_IFOG].spawnstate = S_IFOG;
+  mobjinfo[MT_TFOG].spawnstate = &states[S_TFOG];
+  mobjinfo[MT_IFOG].spawnstate = &states[S_IFOG];
   sprnames[SPR_BLUD] = "BLUD";
   states[S_GIBS].sprite = SPR_POL5;
 
@@ -250,8 +250,8 @@ void HereticPatchEngine()
   cv_fallingdamage.Set("0");
 
   // hacks
-  mobjinfo[MT_TFOG].spawnstate = S_HTFOG1;
-  mobjinfo[MT_IFOG].spawnstate = S_HTFOG1;
+  mobjinfo[MT_TFOG].spawnstate = &states[S_HTFOG1];
+  mobjinfo[MT_IFOG].spawnstate = &states[S_HTFOG1];
   sprnames[SPR_BLUD] = "BLOD";
   states[S_GIBS].sprite = SPR_BLOD;
 
@@ -273,8 +273,8 @@ void HexenPatchEngine()
   cv_fallingdamage.Set("23");
 
   // hacks
-  mobjinfo[MT_TFOG].spawnstate = S_XTFOG1;
-  mobjinfo[MT_IFOG].spawnstate = S_XTFOG1;
+  mobjinfo[MT_TFOG].spawnstate = &states[S_XTFOG1];
+  mobjinfo[MT_IFOG].spawnstate = &states[S_XTFOG1];
   sprnames[SPR_BLUD] = "BLOD";
   states[S_GIBS].sprite = SPR_GIBS;
 }

@@ -228,7 +228,9 @@ public:
   void MovePsprites();
   void UseFavoriteWeapon();
   void SetupPsprites();
-  void SetPsprite(int position, weaponstatenum_t stnum, bool call = true);
+  void SetPsprite(int position, weaponstate_t *st, bool call = true);
+  inline void SetPsprite(int position, weaponstatenum_t stnum, bool call = true) { SetPsprite(position, &weaponstates[stnum], call); }
+
   void DropWeapon();
   void FireWeapon();
   bool CheckAmmo();

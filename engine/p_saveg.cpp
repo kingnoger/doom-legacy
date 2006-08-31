@@ -544,8 +544,8 @@ int DActor::Marshal(LArchive &a)
       if (floorclip != 0) diff |= MD_FLOORCLIP;
       if (team) diff |= MD_TEAM;
 
-      if (state-states != info->spawnstate)   diff |= MD_STATE;
-      if (tics         != state->tics)        diff |= MD_TICS;
+      if (state != info->spawnstate)   diff |= MD_STATE;
+      if (tics  != state->tics)        diff |= MD_TICS;
 
       if (movedir)        diff |= MD_MOVEDIR;
       if (movecount)      diff |= MD_MOVECOUNT;
@@ -641,7 +641,7 @@ int DActor::Marshal(LArchive &a)
 	flags        = info->flags;
 	flags2       = info->flags2;
 	reactiontime = info->reactiontime;
-	state        = &states[info->spawnstate];
+	state        = info->spawnstate;
       }
 
       if (diff & MD_XY)

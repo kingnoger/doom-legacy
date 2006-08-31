@@ -725,7 +725,7 @@ spritepres_t::spritepres_t(const mobjinfo_t *inf, int col)
   animseq = Idle;
 
   if (info)
-    SetFrame(&states[info->spawnstate]); // corresponds to Idle animation
+    SetFrame(info->spawnstate); // corresponds to Idle animation
   else
     {
       state = &states[S_NULL]; // SetFrame or SetAnim fixes this
@@ -776,41 +776,41 @@ void spritepres_t::SetAnim(int seq)
     {
     case Idle:
     default:
-      st = &states[info->spawnstate];
+      st = info->spawnstate;
       break;
 
     case Run:
-      st = &states[info->seestate];
+      st = info->seestate;
       break;
 
     case Pain:
-      st = &states[info->painstate];
+      st = info->painstate;
       break;
 
     case Melee:
-      st = &states[info->meleestate];
-      if (st != &states[S_NULL])
+      st = info->meleestate;
+      if (st)
         break;
       // if no melee anim, fallthrough to shoot anim
 
     case Shoot:
-      st = &states[info->missilestate];
+      st = info->missilestate;
       break;
 
     case Death1:
-      st = &states[info->deathstate];
+      st = info->deathstate;
       break;
 
     case Death2:
-      st = &states[info->xdeathstate];
+      st = info->xdeathstate;
       break;
 
     case Death3:
-      st = &states[info->crashstate];
+      st = info->crashstate;
       break;
 
     case Raise:
-      st = &states[info->raisestate];
+      st = info->raisestate;
       break;
     }
 
@@ -828,8 +828,7 @@ bool spritepres_t::Update(int advance)
   while (st->tics >= 0 && advance >= st->tics)
     {
       advance -= st->tics;
-      int ns = st->nextstate;
-      st = &states[ns];
+      st = st->nextstate;
     }
 
   if (st != state)
@@ -837,7 +836,7 @@ bool spritepres_t::Update(int advance)
 
   lastupdate = advance;
 
-  if (state == &states[info->spawnstate])
+  if (state == info->spawnstate)
     animseq = Idle; // another HACK, since higher animations often end up here
 
   return true;
