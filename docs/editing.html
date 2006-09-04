@@ -732,34 +732,68 @@ simple will help reduce rendering times.
 
 <p>
 Any and all of the sprites, patches, textures and flats in the IWAD can be replaced
-using PWADs. In addition to the patch and flat formats, you can also use
-the <b>PNG</b> and (soon, TODO) <b>JPEG</b> formats for the graphics. In the
-following, we use the word "texture" for all graphics, not just the
+using PWADs. 
+In the following, we use the word "texture" for all graphics, not just the
 ones defined in the TEXTUREx lumps.
 </p>
 
 <p>
 The Legacy texture system is somewhat involved, which is caused by two main
-reasons: The original Doom graphics formats have no "magic numbers" by
+reasons: The original Doom graphics formats have no
+<a href="http://en.wikipedia.org/wiki/File_format#Magic_number">magic numbers</a> by
 which they could be reliably identified, and there are certain nasty
 texture namespace overlaps in the original IWADs.
 Legacy follows the <a href="http://glbsp.sourceforge.net/JointTextureSpec.txt">JDS texture
 standard</a>.</p>
 
-
-<h3>Advanced Textures</h3>
-
+<h3>Graphics formats</h3>
 <p>
-These are single-lump textures which must have magic numbers and reside
-between <b>TX_START</b> and <b>TX_END</b> markers.
+Doom natively supports two graphics formats: patches and flats. Doom Legacy
+also supports the <b>PNG</b> and (soon, TODO) <b>JPEG</b> image formats.
+</p>
+<p>
+<span class="keyword">Flats</span> are raw paletted images stored in a single lump. In the original Doom
+all the floor and ceiling graphics had to be flats.
+The lump only contains a width*height -sized array of one-byte palette indices.
+Flats implicitly use the PLAYPAL palette. 
+Flats contain no magic numbers and hence have to reside between the
+<b>F_START</b> and <b>F_END</b>
+(or FF_START and FF_END) markers. The supported flat sizes are 64*64,
+128*64 and 128*128 texels. Flats cannot be used as parts of a sprite.
+</p>
+<p>
+<span class="keyword">Patches</span> are a more advanced graphics format that
+the original Doom used for building wall textures, sprites and menu images.
+A patch consists of vertical runs of
+pixels possibly separated by holes. In most Doom wad editors the holes are
+denoted by the cyan color. Patches implicitly use the PLAYPAL palette.
+Each patch is stored in its own lump. They have no magic numbers.
+</p>
+<p>
+<span class="keyword">PNG</span> and <span class="keyword">JPEG</span>
+are modern graphics formats that have magic numbers. They require no external
+resources like a palette. They both support high color images and are compressed.
+Moreover, PNG images can have an alpha channel which enables variable
+transparency. In Doom Legacy, each PNG or JPEG image should be stored in its
+own lump.
 </p>
 
-
-<h3>Doom Textures</h3>
+<h3>Textures</h3>
 
 <p>
-These are the textures defined in the TEXTUREx and PNAMES lumps.
-TODO... explain scaling, hi-res textures
+Before a graphic can be used in a game, the game engine has to convert it into
+a texture. In Doom Legacy there are several ways this can be done. One
+important attribute of a texture is its <b>scaling</b>, i.e. how many texels
+are rendered over unit map/screen length. By default the x and y scales are 1.
+</p>
+
+<p>
+<span class="keyword">Doom Textures</span> are the textures defined in the
+TEXTURE* and PNAMES lumps.
+They are composed of one or more patches according to the TEXTURE* lumps.
+There are some unused zero fields in the texture definition structs. One of
+these has been adopted to set the scaling of the texture. However, Doom
+Textures are not very flexible and they cannot use PNG or JPEG images.
 </p>
 
 <table class="def">
@@ -775,22 +809,70 @@ format. If zero, scale is 1.</td></tr>
 </table>
 
 
-
-<h3>Flats</h3>
+<p>
+<span class="keyword">F_START textures</span> are textures consisting of a
+single flat. Each lump between <b>F_START</b> and <b>F_END</b> markers is
+converted into a F_START texture with the same name as the lump.
+</p>
 
 <p>
-Flats are raw paletted textures stored in a single lump. They contain no
-magic numbers and hence have to reside between the <b>F_START</b> and
-<b>F_END</b>
-(or FF_START and FF_END) markers. The supported flat sizes are 64*64,
-128*64 and 128*128. Flats cannot be used as parts of a sprite.
+<span class="keyword">S_START textures</span> are textures consisting of a
+single patch or an image with magic numbers. Each lump between <b>S_START</b> and <b>S_END</b> markers is
+converted into a S_START texture with the same name as the lump. They are used
+exclusively for sprite frames.
+</p>
+
+<p>
+<span class="keyword">TX_START textures</span>
+are built out of lumps residing between <b>TX_START</b> and <b>TX_END</b> markers.
+Each of these lumps must contain a single graphic in a known image format that has magic numbers.
+Each lump is converted into a texture that has the same name as the lump. The scaling is always 1.
+If this is OK, TX_START is the quickest and easiest way to add high-color
+textures to your WAD.
+</p>
+
+<p>
+<span class="keyword">H_START textures</span>
+are single-lump textures which must have magic numbers and reside
+between <b>H_START</b> and <b>H_END</b> markers.
+They work just like TX_START textures, except that the texture is scaled so
+that its worldsize matches a Doom Texture or F_START texture with the same
+name. Now read the previous sentence again. If no matching texture is found,
+the H_START texture is discarded. If it is found, the H_START texture replaces
+the original. H_START textures are meant for hi-res texture packs.
+</p>
+
+<p>
+<span class="keyword">NTEXTURE textures</span>
+are the most advanced and versatile type of textures Doom Legacy has to offer.
+They are defined in a plaintext lump named NTEXTURE. It contains any number of
+texture definitions, which look like this:
+<div class="code">// this is a comment
+texture MYNAME1 // the texture name 
+{
+    data LUMPNAME; // name of the lump containing the image
+    worldsize X Y; // the world size into which the texture is scaled
+    offset DX DY;  // optional internal offsets for the texture
+}
+</div>
+Other texture properties will be added later.
+</p>
+
+<p>
+<span class="keyword">NSPRITES textures</span>
+are just like NTEXTURE textures, except that the definition lump is called
+NSPRITES. Used exclusively for sprite frames.
 </p>
 
 
 <h3>Sprites</h3>
 
 <p>
-All the sprite replacement lumps should be between the <b>S_START</b> and
+Sprites are the objects used to represent mapthings in Doom. Each sprite
+consists of several frames, each of which is a texture.
+</p>
+<p>
+All the sprite definition lumps should be between the <b>S_START</b> and
 <b>S_END</b> (or SS_START and SS_END) markers.
 The marker lumps are not always necessary, but will make the sprite
 loading faster.
@@ -802,9 +884,9 @@ part of the PLAYxxxx sprite, which would cause some confusing error messages.
 </p>
 
 <p>
-When the spriteframe lumps are loaded, Legacy first looks for an Advanced
-Texture by that name, then a Doom Texture, and finally a patch (which
-normally is stored in that very spriteframe lump).
+When the sprite definition lumps are loaded, Legacy first looks for an NSPRITES
+texture by that name, and then a S_START texture (which normally is stored in
+that very lump).
 That's right, you can leave the spriteframe lumps empty if you supply
 the corresponding textures somewhere else. The lumps are only needed to
 declare the existence of the particular frames.
@@ -814,6 +896,7 @@ declare the existence of the particular frames.
 <h3>Models</h3>
 
 <p>
+3D models are what modern FPS games use to represent nonfixed map objects.
 Legacy will support MD3 models as soon as the new OpenGL renderer is
 done. Yes, the ones from Quake III Arena.
 </p>
