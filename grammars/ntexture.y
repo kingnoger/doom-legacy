@@ -15,7 +15,7 @@
 
 // The parsing context.
 %parse-param { ntexture_driver& d }
-//%lex-param   { ntexture_driver& driver }
+//%lex-param   { ntexture_driver& d }
 
 
 // token data types
@@ -133,7 +133,7 @@ tex_properties
 // now we know that t points to a valid texture object, let's just fill in the properties
 tex_property
 : WORLDSIZE num num ';' { d.t->xscale = d.t->width/$2; d.t->yscale = d.t->height/$3; }
-| SCALE num num ';'     { d.t->yscale = 1/$2; d.t->xscale = d.t->yscale/$3; /* TODO like this??? */ } 
+| SCALE num num ';'     { d.t->yscale = 1/$2; d.t->xscale = d.t->yscale/$3; } 
 | SCALE num ';'         { d.t->xscale = d.t->yscale = 1/$2; }
 | TEXELOFFSETS num ';'  { d.texeloffsets = $2; }
 | OFFSET num num ';'

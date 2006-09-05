@@ -990,7 +990,7 @@ bool texturecache_t::BuildLumpTexture(int lump, bool h_start, cachesource_t &sou
 
 
 
-bool Read_NTEXTURE(); // TEST FIXME
+bool Read_NTEXTURE(const char *lumpname);
 
 /// Initializes the texture cache, fills the cachesource_t containers with Texture objects.
 /// Follows the JDS texture standard.
@@ -1155,8 +1155,8 @@ int texturecache_t::ReadTextures()
 	  num_textures++;
     }
 
-  Read_NTEXTURE(); // TEST
-
+  Read_NTEXTURE("NTEXTURE");
+  Read_NTEXTURE("NSPRITES");
 
   // F_START, FF_START
   for (i = nwads-1; i >= 0; i--)

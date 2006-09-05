@@ -1,6 +1,24 @@
 // Emacs style mode select   -*- C++ -*-
-// Parsing driver class for the JDS NTEXTURE lump
-// Ville Bergholm 2005
+//---------------------------------------------------------------------
+//
+// $Id$
+//
+// Copyright (C) 2005-2006 by DooM Legacy Team.
+//
+// This program is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public License
+// as published by the Free Software Foundation; either version 2
+// of the License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+//---------------------------------------------------------------------
+
+/// \file
+/// \brief Parsing driver class for the JDS NTEXTURE lump
 
 #ifndef ntexture_h
 #define ntexture_h
@@ -19,10 +37,11 @@ namespace yy
 union YYSTYPE;
 
 
-// Conducting the whole scanning and parsing
+/// \brief Conducts the scanning and parsing
 class ntexture_driver
 {
 protected:
+  std::string lumpname;
   char *buffer;
   int   length;
 
@@ -37,6 +56,7 @@ public:
   bool texeloffsets;
   bool is_sprite;
 
+public:
   ntexture_driver(int lump);
   virtual ~ntexture_driver();
   
