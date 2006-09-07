@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 //  $Id$
 //
-// Copyright (C) 2002-2005 by DooM Legacy Team.
+// Copyright (C) 2002-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -277,6 +277,7 @@ U32 PlayerInfo::packUpdate(GhostConnection *c, U32 mask, class BitStream *stream
     mask = M_IDENTITY; // everything else is at default value at this point
 
 
+  int ret = 0;
   // check which states need to be updated, and write updates
 
   if (stream->writeFlag(mask & M_IDENTITY))
@@ -288,16 +289,26 @@ U32 PlayerInfo::packUpdate(GhostConnection *c, U32 mask, class BitStream *stream
       stream->write(team);
     }
 
-  if (stream->writeFlag(mask & M_PAWN))
+  if (mask & M_PAWN)
     {
-      CONS_Printf("---PI: sent pawn\n");
       // rarely
       S32 idx = c->getGhostIndex(pawn); // these indices replace pointers to other ghosts!
-      stream->write(idx);
+      S32 idx2 = c->getGhostIndex(pov);
 
-      idx = c->getGhostIndex(pov); // these indices replace pointers to other ghosts!
-      stream->write(idx);
+      if (stream->writeFlag(idx != -1 && idx2 != -1))
+	{
+	  stream->write(idx);
+	  stream->write(idx2);
+	  CONS_Printf("---PI: sent pawn\n");
+	}
+      else
+	{
+	  ret |= M_PAWN; // try again later
+	  CONS_Printf("---PI: postponed pawn send\n");
+	}
     }
+  else
+    stream->writeFlag(false);
 
   if (stream->writeFlag(mask & M_SCORE))
     {
@@ -306,7 +317,6 @@ U32 PlayerInfo::packUpdate(GhostConnection *c, U32 mask, class BitStream *stream
       stream->write(score);
       // kills, items, secrets?
     }
-
 
   // feedback (goes only to the owner)
   if (c != connection)
@@ -342,7 +352,7 @@ U32 PlayerInfo::packUpdate(GhostConnection *c, U32 mask, class BitStream *stream
 
   // the return value from packUpdate can set which states still
   // need to be updated for this object.
-  return 0;
+  return ret;
 }
 
 
@@ -421,6 +431,9 @@ PLAYERINFO_RPC_S2C(s2cEnterMap, (U8 mapnum), (mapnum))
 
   if (!m->Activate(this)) // clientside map activation
     I_Error("Crap!\n");
+
+  // TEST FIXME
+  game.currentcluster = game.FindCluster(m->cluster);
 }
 
 

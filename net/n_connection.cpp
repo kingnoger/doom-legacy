@@ -296,6 +296,7 @@ void LConnection::ConnectionTerminated(bool established)
   if (isConnectionToServer())
     {
       ((LNetInterface *)getInterface())->CL_Reset();
+      // TODO end/reset game? start intro loop?
     }
   else
     {

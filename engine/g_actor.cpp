@@ -113,6 +113,7 @@ Actor::~Actor()
 /// trick constructor
 Actor::Actor()
 {
+  //CONS_Printf("actor trick-constr. called\n");
   mp = NULL;
 
   pres = NULL;
@@ -282,6 +283,10 @@ void Actor::unpackUpdate(GhostConnection *connection, BitStream *stream)
 
   if (isInitialUpdate())
     {
+      PlayerPawn *p = IsOf(PlayerPawn::_type) ? reinterpret_cast<PlayerPawn*>(this) : NULL;
+
+      if (p)
+	CONS_Printf("ssss");
       // map number (only needed on initial update)
       int temp;
       stream->read(&temp);

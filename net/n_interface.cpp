@@ -374,6 +374,7 @@ void LNetInterface::CL_Reset()
   if (server_con)
     disconnect(server_con, NetConnection::ReasonSelfDisconnect, "Client quits.\n");
 
+  server_con = NULL;
   netstate = SV_Unconnected;
 }
 

@@ -104,7 +104,7 @@ public:
   void R_SetupFrame(PlayerInfo *player);
 
   // r_plane.cpp
-  void R_ClearPlanes(int tag);
+  void R_ClearPlanes();
   visplane_t *R_FindPlane(fixed_t height, int picnum, int lightlevel, fixed_t xoff, fixed_t yoff, fadetable_t* planecolormap, ffloor_t* ffloor);
   void R_DrawPlanes();
   void R_DrawSinglePlane(visplane_t* pl, bool handlesource);

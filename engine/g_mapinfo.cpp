@@ -183,9 +183,6 @@ bool MapInfo::Activate(PlayerInfo *p)
     return true; // map activated without players
 
   me->AddPlayer(p);
-
-  if (game.server)
-    p->s2cEnterMap(mapnumber);
   return true;
 }
 

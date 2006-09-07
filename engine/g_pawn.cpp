@@ -135,7 +135,10 @@ Pawn::Pawn()
 PlayerPawn::PlayerPawn()
   : Pawn()
 {
-  // NOTE! This constructor is only used when Unserializing, so not everything is initialized!
+  //CONS_Printf("playerpawn trick-constr. called\n");
+  // FIXME NOW initialize more for ghosting?
+
+  // NOTE! This constructor is used when Unserializing or Ghosting, so not everything is initialized!
   player = NULL;
   weaponinfo = NULL;
 
@@ -144,6 +147,10 @@ PlayerPawn::PlayerPawn()
 
   cheats = refire = 0;
   morphTics = 0;
+
+  extralight = fixedcolormap = 0;
+  pendingweapon = readyweapon = wp_none;
+  SetupPsprites();
 }
 
 

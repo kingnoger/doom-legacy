@@ -94,29 +94,37 @@ void GameType::performScopeQuery(GhostConnection *c)
       PlayerInfo *p = t->second;
       bool owner = (p->connection == c); // connection c owns this player
 
-      // TODO set/clear masks so that HUD data is only sent to the client owning the pinfo etc.
-      c->objectInScope(p); // player information is always in scope
+      c->objectInScope(p); // player information is always in scope for everyone
 
-      // pawns are usually in scope only to their owners
-      if ((!cv_hiddenplayers.value || owner)
-	  && p->pawn)
-        c->objectInScope(p->pawn);
+      // pawns and pov's are usually in scope only to their owners
+      if (!cv_hiddenplayers.value || owner)
+	{
+	  if (p->pawn)
+	    c->objectInScope(p->pawn);
+
+	  if (p->pov)
+	    c->objectInScope(p->pov);
+	}
     }
 
   // TODO in mods, here you could scope bases, flags etc.
 
-
-  // then actors in PVS, thinkers etc.
-
-  for (GameInfo::player_iter_t t = e.game->Players.begin(); t != e.game->Players.end(); t++)
+  LConnection *lc = static_cast<LConnection*>(c);
+  // then actors (and thinkers?) in PVSs of the players of this connection 
+  int n = lc->player.size();
+  for (int i=0; i<n; i++)
     {
-      PlayerInfo *p = t->second;
+      PlayerInfo *p = lc->player[i];
+      /*
       if (p->playerstate == PST_RESPAWN ||
 	  p->playerstate == PST_INMAP ||
 	  p->playerstate == PST_FINISHEDMAP)
+      */
+      Map *m = p->mp;
+      if (m)
 	{
-	  // in a Map, can see something
-	  Map *m = p->mp;
+	  // player is in a Map, can see something
+	  
 	  // TODO for now, ignore PVS, scope all stuff in Map
 	  // TODO use IterateThinkers?
 	  for (Thinker *t = m->thinkercap.next; t != &m->thinkercap; t = t->next)

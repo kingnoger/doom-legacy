@@ -21,7 +21,6 @@
 /// \brief Part of GameInfo class implementation.
 /// Methods related to game state changes.
 
-
 #include "g_game.h"
 #include "g_player.h"
 #include "g_team.h"
@@ -31,27 +30,15 @@
 #include "g_pawn.h"
 
 #include "command.h"
-#include "console.h"
 #include "cvars.h"
 
-#include "g_input.h" // gamekeydown!
-#include "dstrings.h"
-#include "m_random.h"
-#include "m_menu.h"
+#include "n_connection.h"
+
 #include "am_map.h"
-
-#include "sounds.h"
-#include "s_sound.h"
-
 #include "f_finale.h"
-#include "wi_stuff.h"
 #include "hud.h"
+#include "wi_stuff.h"
 
-#include "w_wad.h"
-#include "z_zone.h"
-
-
-void F_Ticker();
 
 
 // WARNING : check cv_fraglimit>0 before call this function !
@@ -293,67 +280,91 @@ void GameInfo::Ticker()
   MapInfo *m;
   PlayerInfo *p;
 
-  if (state == GS_LEVEL)
+  if (state != GS_LEVEL)
+    return;
+
+  // manage players
+  for (player_iter_t t = Players.begin(); t != Players.end(); )
     {
-      // manage players
-      for (player_iter_t t = Players.begin(); t != Players.end(); )
+      p = t->second;
+      t++; // because "old t" may be invalidated
+
+      if (p->playerstate == PST_REMOVE)
 	{
-	  p = t->second;
-	  t++; // because "old t" may be invalidated
+	  // the player is removed from the game (invalidates "old t")
+	  if (!p->mp)
+	    RemovePlayer(p->number); // first the maps throw out the removed player, then the game proper.
 
-	  if (p->playerstate == PST_REMOVE)
+	  // TODO purge the removed players from the frag maps of other players?
+	}
+    }
+
+  if (!server)
+    return;
+
+  //
+  for (player_iter_t t = Players.begin(); t != Players.end(); t++)
+    {
+      p = t->second;
+
+      if (p->playerstate == PST_NEEDMAP)
+	{
+	  LConnection *conn = p->connection;
+	  if (conn && !conn->isGhostAvailable(p))
 	    {
-	      // the player is removed from the game (invalidates "old t")
-	      if (!p->mp)
-		RemovePlayer(p->number); // first the maps throw out the removed player, then the game proper.
-
-	      // TODO purge the removed players from the frag maps of other players?
+	      // remote player, is it already being ghosted? if not, wait.
+	      CONS_Printf(" server waiting for client ghost\n");
 	      continue;
 	    }
-	  else if (server &&
-		   p->playerstate == PST_NEEDMAP)
+
+	  // assign the player to a map
+	  CONS_Printf("Map request..");
+
+	  if (p->requestmap == 0)
+	    m = entrypoint->minfo; // first map in game
+	  else
+	    m = FindMapInfo(p->requestmap);
+
+	  if (!m)
 	    {
-	      // assign the player to a map
-	      CONS_Printf("Map request..");
+	      // game ends
+	      currentcluster->Finish(p->requestmap, p->entrypoint);
+	      StartFinale(NULL);
+	      break;
+	    }
+	  else if (!m->found)
+	    m = currentcluster->maps[0]; // TODO or give an error?
 
-	      if (p->requestmap == 0)
-		m = entrypoint->minfo;
-		//m = currentcluster->maps[0]; // first map in cluster
-	      else
-		m = FindMapInfo(p->requestmap);
+	  // cluster change?
+	  if (currentcluster->number != m->cluster)
+	    {
+	      // TODO minor thing: if several players exit maps on the same tick,
+	      // and someone besides the first one causes a cluster change, some
+	      // maps could be loaded in vain...
 
-	      if (!m)
-		{
-		  // game ends
-		  currentcluster->Finish(p->requestmap, p->entrypoint);
-		  StartFinale(NULL);
-		  break;
-		}
-	      else if (!m->found)
-		m = currentcluster->maps[0];
+	      // cluster change!
+	      currentcluster->Finish(p->requestmap, p->entrypoint);
 
-	      // cluster change?
-	      if (currentcluster->number != m->cluster)
-		{
-		  // TODO minor thing: if several players exit maps on the same tick,
-		  // and someone besides the first one causes a cluster change, some
-		  // maps could be loaded in vain...
+	      MapCluster *next = FindCluster(m->cluster);
+	      StartFinale(next);
+	      currentcluster = next;
 
-		  // cluster change!
-		  currentcluster->Finish(p->requestmap, p->entrypoint);
+	      break; // this is important! no need to check the other players.
+	    }
 
-		  MapCluster *next = FindCluster(m->cluster);
-		  StartFinale(next);
-		  currentcluster = next;
+	  p->Reset(!currentcluster->keepstuff, true);
 
-		  break; // this is important! no need to check the other players.
-		}
+	  // normal individual mapchange
+	  if (!m->Activate(p))
+	    I_Error("Darn!\n");
 
-	      p->Reset(!currentcluster->keepstuff, true);
-
-	      // normal individual mapchange
-	      if (!m->Activate(p))
-		I_Error("Darn!\n");
+	  if (conn)
+	    {
+	      CONS_Printf(" server sending rpc\n");
+	      // nonlocal player enters a new map, notify client
+	      // send the EnterMap rpc only to the owning connection
+	      NetEvent *e = TNL_RPC_CONSTRUCT_NETEVENT(p, s2cEnterMap, (m->mapnumber));
+	      conn->postNetEvent(e);
 	    }
 	}
     }

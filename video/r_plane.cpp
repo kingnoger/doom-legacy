@@ -270,7 +270,7 @@ void R_MapPlane(int y, int x1, int x2) // t1
 //Fab:26-04-98:
 // NOTE : uses con_clipviewtop, so that when console is on,
 //        don't draw the part of the view hidden under the console
-void Rend::R_ClearPlanes(int tag)
+void Rend::R_ClearPlanes()
 {
     int         i, p;
     angle_t     angle;

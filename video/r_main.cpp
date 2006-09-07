@@ -924,9 +924,9 @@ void Rend::R_RenderPlayerView(int viewport, PlayerInfo *player)
 
 
   // Clear buffers.
-  R_ClearClipSegs ();
-  R_ClearDrawSegs ();
-  R_ClearPlanes(player->pawn->subsector->sector->tag); //needs OLDwaterheight in occupied sector
+  R_ClearClipSegs();
+  R_ClearDrawSegs();
+  R_ClearPlanes();
   //R_ClearPortals();
   R_ClearSprites();
 
