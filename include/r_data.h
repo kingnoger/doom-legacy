@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,7 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -168,7 +167,8 @@ public:
   int    lump;
 
 protected:
-  virtual byte *Generate();         ///< subclasses should redefine this
+  virtual byte   *Generate();   ///< Sets up pixels as indexed col-major. Subclasses should redefine this.
+  virtual RGBA_t *GenerateGL(); ///< Sets up pixels as RGBA row-major. Subclasses should redefine this.
 
 public:
   LumpTexture(const char *name, int lump, int w, int h);
@@ -176,6 +176,7 @@ public:
   virtual column_t *GetMaskedColumn(fixed_t col) { return NULL; }
   virtual byte *GetColumn(fixed_t col);
   virtual byte *GetData() { return Generate(); }
+  virtual GLuint GLPrepare();
   virtual void Draw(int x, int y, int scrn);
   virtual void HWR_Draw(int x, int y, int flags);
   virtual void DrawFill(int x, int y, int w, int h);
@@ -188,8 +189,9 @@ public:
 class PNGTexture : public LumpTexture
 {
 protected:
-  byte *ReadData(bool read_image);
-  virtual byte *Generate();
+  bool ReadData(bool read_image, bool col_major);
+  virtual byte   *Generate();
+  virtual RGBA_t *GenerateGL();
 
 public:
   PNGTexture(const char *name, int lump);
@@ -417,7 +419,7 @@ public:
 
 
 // Create RGBA texture from paletted data.
-byte* ColumnMajorToRGBA(byte *pixeldata, int w, int h);
+RGBA_t *ColumnMajorToRGBA(byte *pixeldata, int w, int h);
 
 
 // Quantizes an RGB color into current palette

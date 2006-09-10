@@ -83,7 +83,7 @@ static void PNG_warning(png_struct *png_p, const char *msg)
 PNGTexture::PNGTexture(const char *n, int l)
   : LumpTexture(n, l, 0, 0)
 {
-  ReadData(false); // read the header (height, width)
+  ReadData(false, false); // read the header (height, width)
   Initialize();
 }
 
@@ -92,13 +92,23 @@ PNGTexture::PNGTexture(const char *n, int l)
 byte *PNGTexture::Generate()
 {
   if (!pixels)
-    ReadData(true);
+    ReadData(true, true);
 
   return pixels;
 }
 
 
-byte *PNGTexture::ReadData(bool read_image)
+RGBA_t *PNGTexture::GenerateGL()
+{
+  if (!pixels)
+    ReadData(true, false);
+
+  return reinterpret_cast<RGBA_t*>(pixels);
+}
+
+
+
+bool PNGTexture::ReadData(bool read_image, bool sw_rend)
 {
   unsigned i, j;
   png_struct *png_p = NULL;
@@ -146,7 +156,7 @@ byte *PNGTexture::ReadData(bool read_image)
     {
       png_destroy_read_struct(&png_p, &info_p, NULL);
       Z_Free(tmpdata); // free the raw data
-      return NULL;
+      return false;
     }
   else
     {
@@ -179,15 +189,6 @@ byte *PNGTexture::ReadData(bool read_image)
           color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
         png_set_gray_to_rgb(png_p);
 
-      /*
-      // transparency to alpha channel
-      if (png_get_valid(png_p, info_p, PNG_INFO_tRNS))
-        png_set_tRNS_to_alpha(png_p);
-      */
-
-      // get rid of alpha channel TODO not with HW renderer
-      //if (color_type & PNG_COLOR_MASK_ALPHA)
-      png_set_strip_alpha(png_p);
 
       // one byte per pixel
       if (bit_depth < 8)
@@ -207,42 +208,74 @@ byte *PNGTexture::ReadData(bool read_image)
       */
 
       // read image data
-
-      RGB_t *rgb_buf = static_cast<RGB_t *>(Z_Malloc(w * h * sizeof(RGB_t), PU_TEXTURE, NULL));
       byte **row_pointers = static_cast<byte **>(alloca(h * sizeof(byte*)));
 
-      for (i=0, j=0; i<h; i++, j += w)
-        row_pointers[i] = reinterpret_cast<byte *>(rgb_buf + j);
-
-      png_read_image(png_p, row_pointers);
-      png_destroy_read_struct(&png_p, &info_p, NULL);
-      // discard any end chunks (comments etc.)
-      Z_Free(tmpdata); // free the raw data
-
-      // now convert RBG_t to current palette...
-      int len = w * h;
-      Z_Malloc(len, PU_TEXTURE, (void **)(&pixels));
-
-      // this takes some time, so better do it only once (never flush PNG textures automatically)
-      // colormap and transpose to col-major order
-      int dest = 0;
-      for (i=0; i<len; i++)
+      if (sw_rend)
 	{
-	  pixels[dest] = NearestColor(rgb_buf[i].r, rgb_buf[i].g, rgb_buf[i].b);
-	  dest += height;
-	  if (dest >= len)
-	    dest -= len - 1; // next column
-	}
+	  // software: need indexed col-major data
 
-      Z_Free(rgb_buf); // free the RGB data
+	  // get rid of alpha channel
+	  //if (color_type & PNG_COLOR_MASK_ALPHA)
+	  png_set_strip_alpha(png_p);
+
+	  // read and convert to doom palette
+	  RGB_t *rgb_buf = static_cast<RGB_t *>(Z_Malloc(w * h * sizeof(RGB_t), PU_TEXTURE, NULL));
+
+	  for (i=0, j=0; i<h; i++, j += w)
+	    row_pointers[i] = reinterpret_cast<byte *>(rgb_buf + j);
+
+	  png_read_image(png_p, row_pointers);
+	  png_destroy_read_struct(&png_p, &info_p, NULL);
+	  // discard any end chunks (comments etc.)
+	  Z_Free(tmpdata); // free the raw data
+
+	  // now convert RGB_t to current palette...
+	  int len = w * h;
+	  Z_Malloc(len, PU_TEXTURE, (void **)(&pixels));
+
+	  // this takes some time, so better do it only once (never flush PNG textures automatically)
+	  // colormap and transpose to col-major order
+	  int dest = 0;
+	  for (i=0; i<len; i++)
+	    {
+	      pixels[dest] = NearestColor(rgb_buf[i].r, rgb_buf[i].g, rgb_buf[i].b);
+	      dest += height;
+	      if (dest >= len)
+		dest -= len - 1; // next column
+	    }
+
+	  Z_Free(rgb_buf); // free the RGB data
+	}
+      else
+	{
+	  // OpenGL: need RGBA row-major data
+
+	  // transparency chunk to alpha channel
+	  if (png_get_valid(png_p, info_p, PNG_INFO_tRNS))
+	    png_set_tRNS_to_alpha(png_p);
+
+	  if (color_type == PNG_COLOR_TYPE_RGB)
+	    png_set_filler(png_p, 0xFF, PNG_FILLER_AFTER); // add opaque alpha channel if none present
+
+	  // read it to memory owned by pixels
+	  Z_Malloc(w * h * sizeof(RGBA_t), PU_TEXTURE, (void **)(&pixels));
+
+	  for (i=0, j=0; i<h; i++, j += w*sizeof(RGBA_t))
+	    row_pointers[i] = &pixels[j];
+
+	  png_read_image(png_p, row_pointers);
+	  png_destroy_read_struct(&png_p, &info_p, NULL);
+	  // discard any end chunks (comments etc.)
+	  Z_Free(tmpdata); // free the raw data
+	}
     }
 
-  return tmpdata;
+  return true; // success
 
  fail:
   png_destroy_read_struct(&png_p, &info_p, NULL);
   I_Error("Could not read PNG texture '%s'.\n", name);
-  return NULL;
+  return false;
 }
 
 

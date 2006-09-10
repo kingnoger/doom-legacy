@@ -864,6 +864,9 @@ void Rend::R_DrawSinglePlane(visplane_t* pl, bool handlesource)
   if (handlesource)
     {
       ds_tex = tc[pl->picnum];
+      if (!ds_tex)
+	return; // HACK, should be done more intelligently (earlier!)
+
       ds_source = ds_tex->GetData();
       ds_xbits = ds_tex->w_bits;
       ds_ybits  = ds_tex->h_bits;

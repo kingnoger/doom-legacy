@@ -229,7 +229,7 @@ GLuint Texture::GLPrepare()
   if (glid == NOTEXTURE)
     {
       GetData(); // reads pixels
-      byte *rgba = ColumnMajorToRGBA(pixels, width, height);
+      byte *rgba = reinterpret_cast<byte*>(ColumnMajorToRGBA(pixels, width, height));
 
       // Discard old texture if we had one.
       /*
@@ -283,6 +283,77 @@ LumpTexture::LumpTexture(const char *n, int l, int w, int h)
 }
 
 
+/// Creates a GL texture.
+/// LumpTextures are stored row-major, so it makes no sense to transpose them twice...
+GLuint LumpTexture::GLPrepare()
+{
+  if (glid == NOTEXTURE)
+    {
+      byte *rgba = reinterpret_cast<byte*>(GenerateGL()); // reads pixels untransposed
+
+      // Discard old texture if we had one.
+      /*
+      if(glid != NOTEXTURE)
+	glDeleteTextures(1, &glid);
+      */
+
+      glGenTextures(1, &glid);
+      glBindTexture(GL_TEXTURE_2D, glid);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, 
+		      GL_NEAREST_MIPMAP_NEAREST);
+      gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGBA, width, height, GL_RGBA, \
+			GL_UNSIGNED_BYTE, rgba);
+
+      //  CONS_Printf("Created GL texture %d for %s.\n", glid, name);
+    }
+
+  return glid;
+}
+
+
+/// This method handles the Doom flats and raw pages for OpenGL.
+RGBA_t *LumpTexture::GenerateGL()
+{
+  if (!pixels)
+    {
+      // load indexed data
+      int len = fc.LumpLength(lump); // len must be width*height (or more...)
+      byte *temp = static_cast<byte*>(Z_Malloc(len, PU_STATIC, NULL));
+      fc.ReadLump(lump, temp); // to avoid unnecessary memcpy
+
+      // allocate space for RGBA data, owner is pixels
+      Z_Malloc(sizeof(RGBA_t)*width*height, PU_TEXTURE, (void **)(&pixels));
+
+      // convert to RGBA
+      byte   *index_in = temp;
+      RGB_t  *palette  = static_cast<RGB_t*>(fc.CacheLumpName("PLAYPAL", PU_CACHE));
+      RGBA_t *rgba_out = reinterpret_cast<RGBA_t*>(pixels);
+
+      for (int i=0; i<width; i++)
+	for (int j=0; j<height; j++)
+	  {
+	    byte curbyte = *index_in++;
+	    RGB_t *rgb_in = &palette[curbyte];
+	    rgba_out->red   = rgb_in->r;
+	    rgba_out->green = rgb_in->g;
+	    rgba_out->blue  = rgb_in->b;
+	    if (curbyte == TRANSPARENTPIXEL)
+	      rgba_out->alpha = 0;
+	    else
+	      rgba_out->alpha = 255;
+
+	    rgba_out++;
+	  }
+
+      Z_Free(temp); // free indexed data
+    }
+
+  return reinterpret_cast<RGBA_t*>(pixels);
+}
+
 
 /// This method handles the Doom flats and raw pages.
 byte *LumpTexture::Generate()
@@ -291,9 +362,6 @@ byte *LumpTexture::Generate()
     {
       int len = fc.LumpLength(lump);
       Z_Malloc(len, PU_TEXTURE, (void **)(&pixels));
-
-      // to avoid unnecessary memcpy
-      //fc.ReadLump(lump, pixels);
 
       byte *temp = (byte *)fc.CacheLumpNum(lump, PU_STATIC);
 
@@ -1705,29 +1773,30 @@ void R_Init8to16()
     hicolormaps[i] = i<<1;
 }
 
+
 // Converts indexed data in column major order to RGBA data in row
 // major order. The caller is responsible for Z_Free:ing the resulting
 // graphic.
 
-byte* ColumnMajorToRGBA(byte *pixeldata, int w, int h) {
-  byte *result;
-  int i, j;
-  result = static_cast<byte*> (Z_Malloc(4*w*h, PU_STATIC, NULL));
-  byte *palette = (byte *)fc.CacheLumpName("PLAYPAL", PU_CACHE);
+RGBA_t *ColumnMajorToRGBA(byte *pixeldata, int w, int h)
+{
+  RGBA_t *result = static_cast<RGBA_t*>(Z_Malloc(sizeof(RGBA_t)*w*h, PU_TEXTURE, NULL));
+  RGB_t *palette = static_cast<RGB_t*>(fc.CacheLumpName("PLAYPAL", PU_CACHE));
 
-  for(i=0; i<w; i++)
-    for(j=0; j<h; j++) {
-      byte curbyte = pixeldata[i*h + j];
-      byte *rgb_in = palette + 3*curbyte;
-      byte *rgba_out = result + 4*(j*w + i);
-      *rgba_out++ = *rgb_in++;
-      *rgba_out++ = *rgb_in++;
-      *rgba_out++ = *rgb_in++;
-      if(curbyte == TRANSPARENTPIXEL)
-	*rgba_out = 0;
-      else
-	*rgba_out = 255;
-    }
+  for (int i=0; i<w; i++)
+    for (int j=0; j<h; j++)
+      {
+	byte curbyte = *pixeldata++;
+	RGB_t  *rgb_in = &palette[curbyte];
+	RGBA_t *rgba_out = &result[j*w + i]; // transposed
+	rgba_out->red   = rgb_in->r;
+	rgba_out->green = rgb_in->g;
+	rgba_out->blue  = rgb_in->b;
+	if (curbyte == TRANSPARENTPIXEL)
+	  rgba_out->alpha = 0;
+	else
+	  rgba_out->alpha = 255;
+      }
 
   return result;
 }
