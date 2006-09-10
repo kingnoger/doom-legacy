@@ -34,7 +34,6 @@ namespace yy
   class ntexture_parser;
 }
 
-union YYSTYPE;
 
 
 /// \brief Conducts the scanning and parsing
@@ -72,11 +71,5 @@ public:
   void error(const std::string& m);
 };
 
-
-// Announce to Flex the prototype we want for lexing function,
-//#define YY_DECL  int yylex(YYSTYPE *yylval, yy::location *yylloc, ntexture_driver& driver)
-#define YY_DECL  int yylex(YYSTYPE *yylval, yy::location *yylloc)
-// and declare it for the parser's sake.
-YY_DECL;
 
 #endif

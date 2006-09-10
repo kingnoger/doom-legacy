@@ -1223,9 +1223,6 @@ int texturecache_t::ReadTextures()
 	  num_textures++;
     }
 
-  Read_NTEXTURE("NTEXTURE");
-  Read_NTEXTURE("NSPRITES");
-
   // F_START, FF_START
   for (i = nwads-1; i >= 0; i--)
     {
@@ -1279,7 +1276,6 @@ int texturecache_t::ReadTextures()
 	  num_textures++;
 	}
     }
-
 
 
   // S_START, SS_START
@@ -1339,6 +1335,9 @@ int texturecache_t::ReadTextures()
 	    }
 	}
     }
+
+  Read_NTEXTURE("NTEXTURE");
+  Read_NTEXTURE("NSPRITES");
 
   return num_textures;
 }

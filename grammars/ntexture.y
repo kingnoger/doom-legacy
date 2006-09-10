@@ -11,6 +11,13 @@
 #include "ntexture.h"
 #include "doomdef.h"
 #include "r_data.h"
+
+// Announce to Flex the prototype we want for lexing function,
+//#define YY_DECL  int yylex(YYSTYPE *yylval, yy::location *yylloc, ntexture_driver& driver)
+#define YY_DECL  int yylex(union YYSTYPE *yylval, yy::location *yylloc)
+// and declare it for the parser's sake.
+YY_DECL;
+
 %}
 
 // The parsing context.
@@ -48,6 +55,7 @@
 %debug
 
 %locations
+%pure-parser
 %initial-action
 {
   // Initialize the initial location.
@@ -74,7 +82,6 @@ texture
       d.texname = $2;
       d.t = NULL;
       d.texeloffsets = false;
-      d.is_sprite = false;
     }
   tex_initialization tex_properties '}'
     {
