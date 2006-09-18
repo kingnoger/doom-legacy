@@ -543,6 +543,10 @@ void OGLRenderer::RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Texture *
     tx = x/tex->width;
     ty = 1.0 - y/tex->height;
 
+    // Hi-res texture scaling.
+    tx *=  tex->xscale.Float();
+    ty *= tex->yscale.Float();
+
     glTexCoord2f(tx, ty);
     glVertex3f(x, y, height);
     
@@ -660,6 +664,7 @@ void OGLRenderer::RenderGLSeg(int num) {
   GLfloat textop, texbottom, texleft, texright;
   GLfloat utexhei, ltexhei;
   GLfloat ls_height, tex_yoff;
+  GLfloat xscale, yscale;
   Texture *uppertex, *middletex, *lowertex;
 
   if(num < 0 || num > mp->numsegs)
@@ -738,9 +743,13 @@ void OGLRenderer::RenderGLSeg(int num) {
       // upper texture.
       if(ls->ceilingpic != skyflatnum || rs->ceilingpic != skyflatnum) {
 	glBindTexture(GL_TEXTURE_2D, uppertex->GLPrepare());
-	DrawSingleQuad(fv, tv, rs_ceil, ls_ceil, texleft/uppertex->width,
-		       texright/uppertex->width, textop/uppertex->height,
-		       texbottom/uppertex->height);
+	xscale = uppertex->xscale.Float();
+	yscale = uppertex->yscale.Float();
+	DrawSingleQuad(fv, tv, rs_ceil, ls_ceil, 
+		       texleft/uppertex->width*xscale,
+		       texright/uppertex->width*xscale,
+		       textop/uppertex->height*yscale,
+		       texbottom/uppertex->height*yscale);
       }
     }
     
@@ -754,9 +763,13 @@ void OGLRenderer::RenderGLSeg(int num) {
 	texbottom = textop + ltexhei;
       }
       glBindTexture(GL_TEXTURE_2D, lowertex->GLPrepare());
-      DrawSingleQuad(fv, tv, ls_floor, rs_floor, texleft/lowertex->width,
-		     texright/lowertex->width, textop/lowertex->height,
-		     texbottom/lowertex->height);
+      xscale = lowertex->xscale.Float();
+      yscale = lowertex->yscale.Float();
+      DrawSingleQuad(fv, tv, ls_floor, rs_floor,
+		     texleft/lowertex->width*xscale,
+		     texright/lowertex->width*xscale,
+		     textop/lowertex->height*yscale,
+		     texbottom/lowertex->height*yscale);
     }
 
     // Double sided middle textures do not repeat, so we need some
@@ -779,8 +792,12 @@ void OGLRenderer::RenderGLSeg(int num) {
 	bottom = top - middletex->height;
       }
       glBindTexture(GL_TEXTURE_2D, middletex->GLPrepare());
-      DrawSingleQuad(fv, tv, bottom, top, texleft/middletex->width, 
-		     texright/middletex->width);
+      xscale = middletex->xscale.Float();
+      yscale = middletex->yscale.Float();
+      DrawSingleQuad(fv, tv, bottom, top,
+		     texleft/middletex->width*xscale, 
+		     texright/middletex->width*xscale,
+		     0.0, 1.0*yscale);
       //, textop/middletex->height,
       //     texbottom/middletex->height);
     }
@@ -794,9 +811,13 @@ void OGLRenderer::RenderGLSeg(int num) {
       texbottom = textop + ls_height;
     }
     glBindTexture(GL_TEXTURE_2D, middletex->GLPrepare());
-    DrawSingleQuad(fv, tv, ls_floor, ls_ceil, texleft/middletex->width, 
-		   texright/middletex->width, textop/middletex->height,
-		   texbottom/middletex->height);
+    xscale = middletex->xscale.Float();
+    yscale = middletex->yscale.Float();
+    DrawSingleQuad(fv, tv, ls_floor, ls_ceil,
+		   texleft/middletex->width*xscale, 
+		   texright/middletex->width*xscale,
+		   textop/middletex->height*yscale,
+		   texbottom/middletex->height*yscale);
   }
 }
 
