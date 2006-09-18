@@ -956,8 +956,7 @@ void OGLRenderer::DrawSimpleSky() {
   right = 1.0;
 
   fovx = fov*screenar;
-  if(fovx > 90)
-    fovx = 90;
+  fovx *= 2.0; // I just love magic numbers. Don't you?
 
   texleft = (2.0*theta + fovx)/720.0;
   texright = (2.0*theta - fovx)/720.0;
