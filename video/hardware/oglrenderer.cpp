@@ -846,11 +846,21 @@ void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Texture *t, bool fli
 {
   GLfloat top, bottom, left, right;
   GLfloat texleft, texright, textop, texbottom;
+  GLfloat xscale, yscale;
   GLboolean isAlpha; // Alpha test enabled.
 
   // You can't draw the invisible.
   if(!t)
     return;
+
+  xscale = t->xscale.Float();
+  yscale = t->yscale.Float();
+
+  // Protect against div by zero.
+  if(xscale == 0.0)
+    xscale = 1.0;
+  if(yscale == 0.0)
+    yscale = 1.0;
 
   // Rendering sprite items requires skipping totally transparent
   // pixels. Since alpha testing may slow down rendering we want to
@@ -874,10 +884,10 @@ void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Texture *t, bool fli
   texbottom = 1.0;
   textop = 0.0;
 
-  left = t->width/2;
+  left = t->width/(2.0*xscale);
   right = -left;
   bottom = 0.0;
-  top = t->height;
+  top = t->height/yscale;
   glMatrixMode(GL_MODELVIEW);
   glPushMatrix();
 
