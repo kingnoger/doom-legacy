@@ -523,6 +523,7 @@ void Map::LoadThings(int lump, bool heed_spawnflags)
 	    {
 	      ss->sector->teamstartsec = t->angle & 0xff; // high byte is free
 	    }
+	  continue;
 	}
 
       for (n = MT_LEGACY; n <= MT_LEGACY_END; n++)

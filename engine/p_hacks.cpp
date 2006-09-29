@@ -108,8 +108,8 @@ void VoodooDoll::Spawn(PlayerInfo *p, mapthing_t *mthing)
 
 bool VoodooDoll::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 {
-  // tricky. Now even the recoil is given to the victim!
-  return victim->Damage(inflictor, source, damage, dtype);
+  // tricky. No recoil is given to the victim!
+  return victim->Damage(inflictor, source, damage, dtype | dt_norecoil);
 }
 
 
@@ -130,34 +130,20 @@ void VoodooDoll::Think()
       return;
     }
 
-  // CheckWater is also called at Actor::Think later...
-  CheckWater();
+  // TODO most power counters are probably unnecessary, since Damage and Touch are
+  // automatically rerouted to the victim, and monsters never target voodoo dolls.
+  // Only powers affecting movement and collision logic are needed?
 
-  // check special sectors : damage & secrets
-  PlayerInSpecialSector();
-
-  // Counters, time dependend power ups.
-  if (powers[pw_invulnerability])
-    powers[pw_invulnerability]--;
-
-  // the MF_SHADOW activates the tr_transhi translucency while it is set
-  // (it doesnt use a preset value through FF_TRANSMASK)
-  if (powers[pw_invisibility])
-    if (--powers[pw_invisibility] == 0)
-      flags &= ~MF_SHADOW;
-
-  if (powers[pw_ironfeet])
-    powers[pw_ironfeet]--;
-
-  if (powers[pw_flight])
+  if (victim->powers[pw_flight])
     {
-      if(--powers[pw_flight] == 0)
-	{
-	  eflags &= ~MFE_FLY;
-	  flags &= ~MF_NOGRAVITY;
-	}
+      eflags |= MFE_FLY;
+      flags  |= MF_NOGRAVITY;
     }
-
+  else
+    {
+      eflags &= ~MFE_FLY;
+      flags  &= ~MF_NOGRAVITY;
+    }
 
   // this is where the "actor part" of the thinking begins
   // we call Actor::Think(), because a playerpawn is an actor too
@@ -170,6 +156,7 @@ void VoodooDoll::Think()
 void VoodooDoll::XYFriction(fixed_t oldx, fixed_t oldy)
 {
   Actor::XYFriction(oldx, oldy);
+  // TODO or maybe normal PlayerPawn::XYFriction?
 }
 
 
