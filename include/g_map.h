@@ -329,6 +329,7 @@ public:
   bool BlockLinesIterator(int x, int y, line_iterator_t func);
   bool BlockThingsIterator(int x, int y, thing_iterator_t func);
   bool IterateThinkers(thinker_iterator_t func);
+  bool IterateActors(thing_iterator_t func);
   bool PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags, traverser_t trav);
   Actor *RoughBlockSearch(Actor *center, Actor *master, int distance, int flags);
   Actor *RoughBlockCheck(Actor *center, Actor *master, int index, int flags);

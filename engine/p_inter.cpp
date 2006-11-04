@@ -281,7 +281,7 @@ bool DActor::Touch(Actor *p)
   // Check for blasted thing running into another
   if (eflags & MFE_BLASTED &&
       p->flags & MF_SHOOTABLE &&
-      p->flags & MF_COUNTKILL &&
+      p->flags & MF_MONSTER &&
       !(p->flags2 & MF2_BOSS))
     {
       // what a mockery of physics :)
@@ -318,7 +318,7 @@ bool DActor::Touch(Actor *p)
 	    return false;
 
 	  if ((p->flags2 & MF2_REFLECTIVE) ||
-	      !(p->flags & (MF_COUNTKILL | MF_NOTMONSTER))) // TODO why? isn't MF_SHOOTABLE enough?
+	      !(p->flags & MF_VALIDTARGET)) // TODO why? isn't MF_SHOOTABLE enough?
 	    {
 	      yaw = R_PointToAngle2(p->pos, pos) + ANGLE_1*((P_Random()%16) - 8);
 	      fixed_t speed = 0.75 * P_AproxDistance(vel.x, vel.y);
@@ -755,7 +755,7 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 	    { // "electrocute" the target
 	      /* TODO fullbright
 	      frame |= FF_FULLBRIGHT;
-	      if (flags & MF_COUNTKILL && P_Random() < 128)
+	      if (flags & MF_MONSTER && P_Random() < 128)
 		Howl();
 	      */
 	    }
@@ -768,7 +768,7 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 	  /* TODO poisonhowl
 	  if (inflictor && inflictor->type == MT_POISONCLOUD)
 	    {
-	      if (flags & MF_COUNTKILL && P_Random() < 128)
+	      if (flags & MF_MONSTER && P_Random() < 128)
 		Howl();
 	    }
 	  */
@@ -1057,7 +1057,7 @@ void Actor::Die(Actor *inflictor, Actor *source, int dtype)
     flags &= ~MF_SHOOTABLE;
 
   // thing death actions
-  if (special) // formerly also demanded MF_COUNTKILL (MT_ZBELL!)
+  if (special) // formerly also demanded MF_MONSTER (MT_ZBELL!)
     {
       mp->ExecuteLineSpecial(special, args, NULL, 0, this);
       special = 0;

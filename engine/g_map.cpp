@@ -498,7 +498,7 @@ DActor *Map::SpawnMapThing(mapthing_t *mt, bool initial)
     return NULL;
 
   // don't spawn any monsters if -nomonsters
-  if (cv_nomonsters.value && (t == MT_SKULL || (mobjinfo[t].flags & MF_COUNTKILL)))
+  if (cv_nomonsters.value && (mobjinfo[t].flags & MF_MONSTER))
     return NULL;
 
   // spawn it
@@ -559,7 +559,7 @@ DActor *Map::SpawnMapThing(mapthing_t *mt, bool initial)
     }
 
   // yaw
-  if (p->flags & MF_COUNTKILL)
+  if (p->flags & MF_MONSTER)
     p->yaw = ANG45 * (mt->angle/45);
   else
     p->yaw = ((mt->angle << 8)/360) << 24; // full angle resolution
@@ -990,7 +990,7 @@ void Map::QueueBody(Actor *p)
 }
 
 
-/// Kills all monsters. Except skulls.
+/// Kills all monsters.
 int Map::Massacre()
 {
   int count = 0;
@@ -1000,8 +1000,8 @@ int Map::Massacre()
       if (!th->IsOf(DActor::_type))
 	continue; // Not a dactor
 	
-      Actor *mo = (Actor *)th;
-      if ((mo->flags & MF_COUNTKILL) && (mo->health > 0))
+      Actor *mo = reinterpret_cast<Actor*>(th);
+      if ((mo->flags & MF_MONSTER) && (mo->health > 0))
 	{
 	  mo->flags2 &= ~(MF2_NONSHOOTABLE + MF2_INVULNERABLE);
 	  mo->flags |= MF_SHOOTABLE;

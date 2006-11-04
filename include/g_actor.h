@@ -51,9 +51,8 @@ enum mobjflag_t
   MF_NOCLIPLINE       = 0x0010, ///< Does not clip against lines (walls)
   MF_NOCLIPTHING      = 0x0020, ///< Not blocked by other Actors. (chasecam, for example)
   MF_NOGRAVITY        = 0x0040, ///< Does not feel gravity
+
   // game mechanics
-  MF_NOTRIGGER        = 0x0080, ///< Can not trigger linedefs (mainly missiles, chasecam)
-  MF_NOTMONSTER       = 0x0100, ///< *Not affected by ML_BLOCKMONSTERS lines (PlayerPawns etc.)
   MF_PICKUP           = 0x0200, ///< Can/will pick up items. (players)
   MF_FLOAT            = 0x0400, ///< Active floater, can move freely in air (cacodemons etc.)
   MF_DROPOFF          = 0x0800, ///< Can jump/drop from high places
@@ -76,8 +75,11 @@ enum mobjflag_t
   MF_DROPPED      = 0x01000000, ///< *Dropped by a monster
   MF_MISSILE      = 0x02000000, ///< Player missiles as well as fireballs. Don't hit same species, explode on block.
   MF_CORPSE       = 0x04000000, ///< Dead. Acts like a corpse, falls down stairs etc.
+  MF_MONSTER      = 0x08000000, ///< Monster. Possible threat, can activate some SPAC_CROSS and SPAC_USE lines etc.
+  MF_PLAYER       = 0x10000000, ///< Treated as a player. Possible threat, can activate SPAC_CROSS and SPAC_USE lines.
+  MF_VALIDTARGET  = MF_MONSTER | MF_PLAYER, ///< Valid target for autoaim and bots (if not already dead)
 
-  MF_TOUCHFUNC    = 0x08000000, ///< Actor has a touch function. A HACK to handle complex Hexen mapthing behavior.
+  MF_TOUCHFUNC    = 0x80000000, ///< Actor has a touch function. A HACK to handle complex Hexen mapthing behavior.
   // 4 bits free
 };
 
@@ -95,7 +97,8 @@ enum mobjflag2_t
   MF2_CANNOTPUSH     =     0x0040,    ///< Cannot push other pushable actors
   MF2_FLOORHUGGER    =     0x0080,    ///< Stays on floor, climbs any step up or down
   MF2_CEILINGHUGGER  =     0x0100,    ///< Stays on ceiling, climbs any step down or up
-  // 3 bits free
+  MF2_NONBLASTABLE   =     0x0200,    ///< Cannot be blasted. Implied by MF2_BOSS.
+  // 2 bits free
 
   // game mechanics
   MF2_FLOATBOB       =     0x1000,    ///< Bobs up and down in the air (item)
@@ -119,14 +122,15 @@ enum mobjflag2_t
   MF2_REFLECTIVE     = 0x00800000,    ///< Reflects missiles
 
   // rendering
-  MF2_FOOTCLIP       = 0x01000000,    ///< Feet should be be clipped by floorclip units
+  MF2_FOOTCLIP       = 0x01000000,    ///< Feet should be be clipped by floorclip units when standing on liquid floor.
   MF2_DONTDRAW       = 0x02000000,    ///< Invisible (does not generate a vissprite)
 
   // giving hurt
   MF2_NODMGTHRUST    = 0x04000000,    ///< Does not thrust target when damaging        
   MF2_TELESTOMP      = 0x08000000,    ///< Can telefrag another Actor
 
-  // activation
+  // passive linedef activation (using is different)
+  // MF_PLAYER and MF_MONSTER can activate SPAC_CROSS.
   MF2_IMPACT	     = 0x10000000,    ///< Can activate SPAC_IMPACT
   MF2_PUSHWALL	     = 0x20000000,    ///< Can activate SPAC_PUSH
   MF2_MCROSS	     = 0x40000000,    ///< Can activate SPAC_MCROSS

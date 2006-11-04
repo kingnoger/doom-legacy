@@ -503,6 +503,25 @@ bool Map::IterateThinkers(thinker_iterator_t func)
 }
 
 
+/// \brief Iterate the Actors in the Thinker list
+/*!
+  Iterates through all the Actors in the Map, calling 'func' for each.
+  If the function returns false, exit with false without checking anything else.
+*/
+bool Map::IterateActors(thing_iterator_t func)
+{
+  Thinker *t, *n;
+  for (t = thinkercap.next; t != &thinkercap; t = n)
+    {
+      n = t->next; // if t is removed while it thinks, its 'next' pointer will no longer be valid.
+      if (t->IsOf(Actor::_type))
+	if (!func(reinterpret_cast<Actor*>(t)))
+	  return false;
+    }
+  return true;
+}
+
+
 //==========================================================================
 //  Trace/intercept routines
 //==========================================================================
@@ -900,7 +919,7 @@ Actor *Map::RoughBlockCheck(Actor *center, Actor *master, int index, int flags)
   Actor *link;
   for (link = blocklinks[index]; link; link = link->bnext)
     if ((link->flags & MF_SHOOTABLE) &&
-	((link->flags & MF_COUNTKILL) || (link->flags & MF_NOTMONSTER)) && // meaning "monster or player"
+	(link->flags & MF_VALIDTARGET) && // meaning "monster or player"
 	!(link->flags2 & MF2_DORMANT))
       {
 	if (link == master)

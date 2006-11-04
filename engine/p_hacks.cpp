@@ -33,7 +33,7 @@
 VoodooDoll::VoodooDoll(const PlayerPawn &p)
   : PlayerPawn(p)
 {
-  flags  = MF_SOLID | MF_SHOOTABLE | MF_DROPOFF | MF_PICKUP | MF_NOTMONSTER;
+  flags  = MF_SOLID | MF_SHOOTABLE | MF_DROPOFF | MF_PICKUP | MF_PLAYER;
   flags2 = MF2_WINDTHRUST | MF2_PUSHABLE | MF2_SLIDE | MF2_TELESTOMP | MF2_PUSHWALL;
   eflags = 0;
   //pres->color = 2;

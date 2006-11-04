@@ -214,10 +214,8 @@ void Map::LightningFlash()
 
 bool Map::ActivateLine(line_t *line, Actor *thing, int side, int atype)
 {
-  // Things that should NOT trigger specials...
-  // flying blood or water does not activate anything
-  if (thing->flags & MF_NOTRIGGER)
-    return false;
+  // The triggerer's ability to cause an atype activation has been checked by the caller.
+  // Next we check if the line responds to it.
 
   unsigned spec = unsigned(line->special);
   PlayerPawn *p = thing->IsOf(PlayerPawn::_type) ? reinterpret_cast<PlayerPawn*>(thing) : NULL;
@@ -346,10 +344,6 @@ bool Map::ActivateLine(line_t *line, Actor *thing, int side, int atype)
 
   if (!p)
     {
-      // do not let missiles trigger SPAC_CROSS lines...
-      if ((thing->flags & MF_MISSILE) && act == SPAC_CROSS)
-	return false;
-
       // ML_MONSTERS_CAN_ACTIVATE enables monsters to activate SPAC_CROSS and SPAC_USE,
       // for other activation types we have corresponding Actor flags.
       // HOWEVER: monsters never open secret doors

@@ -62,7 +62,7 @@ bool Actor::Morph(mobjtype_t form)
 
 bool DActor::Morph(mobjtype_t form)
 {
-  if (!(flags & MF_COUNTKILL))
+  if (!(flags & MF_MONSTER))
     return false;
   if (flags2 & MF2_BOSS)
     return false;
@@ -331,23 +331,23 @@ void P_ArtiTele(PlayerPawn *p)
 
 void P_TeleportOther(Actor *v)
 {
-  if (!(v->flags & MF_COUNTKILL) ||
-      v->flags2 & MF2_BOSS ||
-      v->flags2 & MF2_CANTLEAVEFLOORPIC)
-    return;
-
   Map *m = v->mp;
 
-  if (v->flags & MF_NOTMONSTER)
+  if (v->flags & MF_PLAYER)
     {
       if (!cv_deathmatch.value || !P_TeleportToDeathmatchStarts(v))
 	P_TeleportToPlayerStarts(v, 0, 0);
     }
   else
     {
+      if (!(v->flags & MF_MONSTER) ||
+	  v->flags2 & MF2_BOSS ||
+	  v->flags2 & MF2_CANTLEAVEFLOORPIC)
+	return;
+
       // For death actions, teleporting is as good as killing
       // FIXME possible bug: see A_SorcDeath
-      if (v->flags & MF_COUNTKILL && v->special)
+      if (v->special)
 	{
 	  m->RemoveFromTIDmap(v);
 	  m->ExecuteLineSpecial(v->special, v->args, NULL, 0, v);
@@ -489,46 +489,24 @@ static void P_BlastMobj(Actor *source, Actor *victim, fixed_t strength)
 }
 
 
-static bool IT_BlastRadius(Thinker *th)
+static bool IT_BlastRadius(Actor *a)
 {
-  Actor *a = NULL;
-  if (th->IsOf(DActor::_type))
-    {
-      DActor *m = (DActor *)th;
-
-      // must be missile, monster, corpse or poisoncloud
-      // must not be boss or dormant
-      if (!(m->type == MT_POISONCLOUD || (m->flags & MF_CORPSE) ||
-	    (m->flags & MF_COUNTKILL) || (m->flags & MF_MISSILE))
-	  || (m->flags2 & MF2_DORMANT) || (m->flags2 & MF2_BOSS))
-	return true;
-
-      switch (m->type)
-	{
-	case MT_SORCBALL1: // don't blast sorcerer balls
-	case MT_SORCBALL2:
-	case MT_SORCBALL3:
-	  return true;
-
-	default:
-	  break;
-	}
-
-      if (m->type == MT_WRAITHB && (m->flags2 & MF2_DONTDRAW))
-	return true; // no underground wraiths
-
-      if (m->type == MT_SPLASHBASE || m->type == MT_SPLASH)
-	return true;
-
-      if (m->type == MT_SERPENT || m->type == MT_SERPENTLEADER)
-	return true; // no swimmers
-
-      a = m;
-    }
-  else if (th->IsDescendantOf(Actor::_type))
-    a = (Actor *)th;
-  else
+  if (a->flags2 & (MF2_NONBLASTABLE | MF2_DORMANT | MF2_BOSS))
     return true;
+
+  if (a == caster)
+    return true;
+
+  if (!(a->flags & (MF_CORPSE | MF_MONSTER | MF_MISSILE)))
+    return true;
+
+  if (a->IsOf(DActor::_type))
+    {
+      DActor *m = reinterpret_cast<DActor*>(a);
+
+      // blastable must be live monster, poisoncloud, holyfx, icecorpse, missile
+      // TODO MT_POISONCLOUD can be blasted
+    }
 
   // dactors and playerpawns are blasted
   fixed_t dist = P_XYdist(caster->pos, a->pos);
@@ -546,7 +524,7 @@ static void P_BlastRadius(PlayerPawn *p)
   S_StartSound(p, SFX_ARTIFACT_BLAST);
   P_NoiseAlert(p, p);
   caster = p;
-  p->mp->IterateThinkers(IT_BlastRadius);
+  p->mp->IterateActors(IT_BlastRadius);
 }
 
 

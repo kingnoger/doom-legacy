@@ -1,5 +1,5 @@
 # Gnu Make makefile for Doom Legacy
-# Copyright (C) 2002-2004 by DooM Legacy Team.
+# Copyright (C) 2002-2006 by DooM Legacy Team.
 #
 # $Id$
 #
@@ -16,14 +16,12 @@ else
 export WIN=1
 endif
 
-# Debugging info
+# Debugging and optimization
 
 ifdef OPT
-DEBUGFLAGS =
-OPTFLAGS = -O
+CF = -O
 else
-DEBUGFLAGS = -g
-OPTFLAGS = -O0
+CF = -g -O0
 endif
 
 # Dynamic or static linkage? I like static.
@@ -42,16 +40,16 @@ ifdef LINUX
  RM = rm
 # assembler
  NASM = nasm
- nasmformat = elf - DLINUX # hmmm... a define here...
+ nasmformat = elf
 # compiler
- platform = -DLINUX -DNOMIXER
- interface = -DSDL
+ platform  = -DLINUX
+ interface = -DSDL -DNO_MIXER -DNO_OPENGL
 # linker
- LIBS	= -L/usr/X11/lib -L/local/lib -lSDLmain -lSDL -lSDL_mixer -lpng -lz -L. -ltnl -ltomcrypt
-# LIBS	= -L/usr/X11/lib -L/local/lib -lSDLmain -lSDL -lSDL_mixer -lpng -lz -L. -ltnl32 -ltomcrypt32
- OPENGLLIBS = -lGL -lGLU
-# OPENGLLIBS = -lGL -lGLU -lCg -lCgGL
- LDFLAGS = -Wall
+# LIBS	= -lSDLmain -lSDL -lSDL_mixer -lpng -lz -L. -ltnl -ltomcrypt
+ LIBS	= -lSDLmain -lSDL -lpng -lz -L. -ltnl32 -ltomcrypt32
+# OPENGLLIBS = -lGL -lGLU
+ CF += -m32
+ LDFLAGS = -Wall -m32
 # executable
  exename = Legacy
 
@@ -63,13 +61,11 @@ else # assume WIN32 is defined
  NASM 	= nasmw.exe
  nasmformat = win32
 # compiler
- platform = -D__WIN32__
-# FIXME when SDL_mixer works properly, put it back
- interface = -DSDL -DNOMIXER
- EXTRAFLAGS = -mwindows
+ platform  = -D__WIN32__
+ interface = -DSDL -DNO_MIXER
+ CF += -mwindows
 # linker
-# LIBS	= -lmingw32 -lSDLmain -lSDL SDL_mixer.lib -lz -lpng -L. -ltnl -ltomcrypt -lwsock32
- LIBS	= -lmingw32 -lSDLmain -lSDL -lz -lpng -L. -ltnl -ltomcrypt -lwsock32
+ LIBS	= -lmingw32 -lSDLmain -lSDL SDL_mixer.lib -lz -lpng -L. -ltnl -ltomcrypt -lwsock32
  OPENGLLIBS = -lopengl32 -lglu32
  LDFLAGS = -Wall -mwindows
 # executable
@@ -101,14 +97,12 @@ export CC = g++
 # WIN32_DIRECTX : compile the Win32 native version of Legacy. Use DirectX for multimedia interface
 #
 # Miscellaneous options: use as many as you like
+# NO_OPENGL : do not include OpenGL renderer in the build
+# NO_MIXER : do not include SDL_mixer in the build
 # USEASM : use assembler routines where possible
-# HWRENDER : compile with hardware renderer included
-# HW3SOUND : compile with hardware 3D sound included. Currently only for DirectX.
 
+export CF += -Wall $(platform) $(interface) $(linkage)
 
-defines := $(platform) $(interface) $(linkage) -DHWRENDER
-export CF := $(DEBUGFLAGS) $(OPTFLAGS) -Wall $(EXTRAFLAGS) $(defines) -I/local/include
- #-ansi
 INCLUDES = -Iinclude
 CFLAGS = $(CF) $(INCLUDES)
 
@@ -192,7 +186,6 @@ export engine_objects = \
 	$(objdir)/b_path.o
 
 export util_objects = \
-	$(objdir)/ntexture.o \
 	$(objdir)/command.o \
 	$(objdir)/console.o \
 	$(objdir)/dehacked.o \
@@ -265,6 +258,7 @@ export sdl_objects = \
 #	$(objdir)/filesrch.o \
 
 export grammar_objects = \
+	$(objdir)/ntexture.o \
 	$(objdir)/ntexture.tab.o \
 	$(objdir)/ntexture.yy.o
 
@@ -298,6 +292,8 @@ depend:
 	$(MAKE) -C util depend
 	touch net/net.dep
 	$(MAKE) -C net depend
+	touch grammars/grammars.dep
+	$(MAKE) -C grammars depend
 	touch interface/sdl/sdl.dep
 	$(MAKE) -C interface/sdl depend
 	touch tools/tools.dep
@@ -339,10 +335,10 @@ grammars	:
 
 ifdef DYNAMIC
 # main program
-$(exename) : engine util audio video net sdl
-	$(LD) $(LDFLAGS) $(objects) $(LIBS) -rdynamic -o $@
+$(exename) : engine util audio video net sdl grammars
+	$(LD) $(LDFLAGS) $(objects) $(LIBS) -o $@
 else
 # all in one
 $(exename) : engine util audio video net sdl grammars
-	$(LD) $(LDFLAGS) $(objects) $(LIBS) $(OPENGLLIBS) -rdynamic -o $@
+	$(LD) $(LDFLAGS) $(objects) $(LIBS) $(OPENGLLIBS) -o $@
 endif

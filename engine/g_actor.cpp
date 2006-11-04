@@ -196,8 +196,8 @@ bool Actor::onGhostAdd(class GhostConnection *c)
 void Actor::onGhostRemove()
 {
   CONS_Printf("Removing a %s.\n", Type()->name);
-  // TODO CHECK automatically destroyed after this?
-  //Remove();
+  // NOTE: The Actor is automatically deleted after this func by TNL, not by Map::PointerCleanup.
+  // This is why ghosts cannot have pointers to other ghosts
 }
 
 
@@ -287,6 +287,7 @@ void Actor::unpackUpdate(GhostConnection *connection, BitStream *stream)
 
       if (p)
 	CONS_Printf("ssss");
+
       // map number (only needed on initial update)
       int temp;
       stream->read(&temp);
@@ -300,6 +301,8 @@ void Actor::unpackUpdate(GhostConnection *connection, BitStream *stream)
 	if (!m->Activate(NULL)) // clientside map activation
 	  I_Error("Crap!\n");
 
+      pos = apos;
+      vel = avel;
       m->me->SpawnActor(this); // link the ghost to the correct Map
     }
 }

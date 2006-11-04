@@ -261,7 +261,7 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
     floorclip = 0;
 
   // if any special lines were hit, do the effect
-  if (!(flags & (MF_NOCLIPLINE | MF_NOTRIGGER)))
+  if (!(flags & MF_NOCLIPLINE))
     {
       while (spechit.size())
         {
@@ -271,21 +271,18 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 
 	  int side = P_PointOnLineSide(pos.x, pos.y, ld);
 	  int oldside = P_PointOnLineSide(oldx, oldy, ld);
-	  if (side != oldside)
+	  if (side != oldside && ld->special)
             {
-	      if (ld->special)
-		{
-		  if (flags2 & MF2_MCROSS &&
-		      mp->ActivateLine(ld, this, oldside, SPAC_MCROSS))
-		    continue;
+	      if (flags2 & MF2_MCROSS &&
+		  mp->ActivateLine(ld, this, oldside, SPAC_MCROSS))
+		continue;
 
-		  if (flags2 & MF2_PCROSS &&
-		      mp->ActivateLine(ld, this, oldside, SPAC_PCROSS))
-		    continue;
+	      if (flags2 & MF2_PCROSS &&
+		  mp->ActivateLine(ld, this, oldside, SPAC_PCROSS))
+		continue;
 		  
-		  if (flags & MF_NOTMONSTER || ld->flags & ML_MONSTERS_CAN_ACTIVATE)
-		    mp->ActivateLine(ld, this, oldside, SPAC_CROSS);
-		}
+	      if (flags & (MF_PLAYER | MF_MONSTER))
+		mp->ActivateLine(ld, this, oldside, SPAC_CROSS);
             }
         }
     }
@@ -476,7 +473,7 @@ void Actor::CheckLineImpact()
     return;
 
   // monsters don't shoot triggers (wrong) TODO
-  if (owner && !(owner->flags & MF_NOTMONSTER))
+  if (owner && !(owner->flags & MF_PLAYER))
     return;
 
   if (eflags & MFE_BLASTED)
@@ -629,7 +626,7 @@ static bool PIT_CheckLine(line_t *ld)
 
       if (ld->flags & ML_BLOCKING)
 	stopped = true; // block everything
-      else if ((ld->flags & ML_BLOCKMONSTERS) && !(tmthing->flags & MF_NOTMONSTER))
+      else if ((ld->flags & ML_BLOCKMONSTERS) && !(tmthing->flags & MF_PLAYER))
 	{
 	  stopped = true; // block monsters only
 	  push = false; // TODO why?
@@ -960,6 +957,8 @@ Actor *Actor::CheckOnmobj()
   fixed_t oldz = pos.z;
   fixed_t oldpz = vel.z;
   FakeZMovement();
+  // float vz+float_ai+fly change z, vz and z are clipped by geometry
+  // then check if new z position makes us hit things
   
   tmb.Set(pos.x, pos.y, radius);
 

@@ -242,25 +242,24 @@ void A_DripBlood(DActor *actor)
 
 void A_PotteryExplode(DActor *actor)
 {
-  DActor *mo=NULL;
-  int i;
+  DActor *mo = NULL;
 
-  for(i = (P_Random()&3)+3; i; i--)
+  for (int i = (P_Random()&3)+3; i; i--)
     {
       mo = actor->mp->SpawnDActor(actor->pos, MT_POTTERYBIT1);
       mo->SetState(mo->info->spawnstate + (P_Random() % 5));
       if (mo)
-	{
-	  mo->vel = vec_t<fixed_t>(((P_Random() & 7) + 5)*0.75f,
-				   P_SignedFRandom(6),
-				   P_SignedFRandom(6));
-	}
+	mo->vel = vec_t<fixed_t>(((P_Random() & 7) + 5)*0.75f, P_SignedFRandom(6), P_SignedFRandom(6));
     }
-  S_StartSound(mo, SFX_POTTERY_EXPLODE);
-  if(actor->args[0])
+
+  if (mo)
+    S_StartSound(mo, SFX_POTTERY_EXPLODE);
+
+  if (actor->args[0])
     { // Spawn an item
-      if (!(cv_nomonsters.value && mobjinfo[TranslateThingType[actor->args[0]]].flags & MF_COUNTKILL))
-	actor->mp->SpawnDActor(actor->pos, TranslateThingType[actor->args[0]]);
+      mobjtype_t temp = TranslateThingType[actor->args[0]];
+      if (!(cv_nomonsters.value && mobjinfo[temp].flags & MF_MONSTER))
+	actor->mp->SpawnDActor(actor->pos, temp);
     }
   actor->Remove();
 }
@@ -1193,10 +1192,12 @@ void A_SoAExplode(DActor *actor)
 
   if (actor->args[0])
     { // Spawn an item
-      if (!(cv_nomonsters.value && mobjinfo[TranslateThingType[actor->args[0]]].flags & MF_COUNTKILL))
-	actor->mp->SpawnDActor(actor->pos, TranslateThingType[actor->args[0]]);
+      mobjtype_t temp = TranslateThingType[actor->args[0]];
+      if (!(cv_nomonsters.value && mobjinfo[temp].flags & MF_MONSTER))
+	actor->mp->SpawnDActor(actor->pos, temp);
     }
-  S_StartSound(mo, SFX_SUITOFARMOR_BREAK);
+  if (mo)
+    S_StartSound(mo, SFX_SUITOFARMOR_BREAK);
   actor->Remove();
 }
 

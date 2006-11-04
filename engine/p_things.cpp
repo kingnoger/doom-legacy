@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1996 by Raven Software, Corp.
-// Copyright (C) 2003-2005 by DooM Legacy Team.
+// Copyright (C) 2003-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,8 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -42,7 +40,7 @@ extern mobjtype_t TranslateThingType[];
 
 bool DActor::Activate()
 {
-  if (flags & MF_COUNTKILL)
+  if (flags & MF_MONSTER)
     { // Monster
       if (flags2 & MF2_DORMANT)
 	{
@@ -126,7 +124,7 @@ bool DActor::Activate()
 
 bool DActor::Deactivate()
 {
-  if (flags & MF_COUNTKILL)
+  if (flags & MF_MONSTER)
     { // Monster
       if(!(flags2 & MF2_DORMANT))
 	{
@@ -197,7 +195,7 @@ bool Map::EV_ThingProjectile(byte *args, bool gravity)
   int searcher = -1;
   int tid = args[0];
   mobjtype_t moType = TranslateThingType[args[1]];
-  if (cv_nomonsters.value && (mobjinfo[moType].flags & MF_COUNTKILL))   
+  if (cv_nomonsters.value && (mobjinfo[moType].flags & MF_MONSTER))   
     return false;
     
   angle_t angle = int(args[2] << 24);
@@ -242,7 +240,7 @@ bool Map::EV_ThingSpawn(byte *args, bool fog)
   int searcher = -1;
   int tid = args[0];
   mobjtype_t moType = TranslateThingType[args[1]];
-  if (cv_nomonsters.value && (mobjinfo[moType].flags & MF_COUNTKILL))
+  if (cv_nomonsters.value && (mobjinfo[moType].flags & MF_MONSTER))
     return false;
 
   angle_t angle = int(args[2] << 24);

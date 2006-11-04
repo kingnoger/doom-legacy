@@ -587,7 +587,7 @@ static bool IT_FindEnemies(Thinker *th)
   if (!a)
     return true; // not an Actor
 	
-  if (!(a->flags & (MF_COUNTKILL | MF_NOTMONSTER)) ||
+  if (!(a->flags & MF_VALIDTARGET) ||
       !(a->flags & MF_SHOOTABLE) ||
       (a->flags & MF_CORPSE))
     {

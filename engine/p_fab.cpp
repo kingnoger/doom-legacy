@@ -274,7 +274,7 @@ int MT_HOLY_FX_touchfunc(DActor *d, Actor *p)
       return false;
     }
 
-  bool isplayer = (p->flags & MF_NOTMONSTER);
+  bool isplayer = (p->flags & MF_PLAYER);
 
   if ((p->flags2 & MF2_REFLECTIVE)
       && (isplayer || (p->flags2 & MF2_BOSS)))
@@ -285,7 +285,7 @@ int MT_HOLY_FX_touchfunc(DActor *d, Actor *p)
       return false;
     }
 
-  if ((p->flags & MF_COUNTKILL) || isplayer)
+  if (p->flags & MF_VALIDTARGET)
     d->target = p; // target monsters and players
 
   if (P_Random() < 96)
@@ -303,7 +303,7 @@ int MT_HOLY_FX_touchfunc(DActor *d, Actor *p)
 	{
 	  d->mp->SpawnDActor(d->pos, MT_HOLY_PUFF);
 	  S_StartSound(d, SFX_SPIRIT_ATTACK);
-	  if ((p->flags & MF_COUNTKILL) && P_Random() < 128)
+	  if ((p->flags & MF_MONSTER) && P_Random() < 128)
 	    p->Howl();
 	}
     }
@@ -351,7 +351,7 @@ int MT_LIGHTNING_touchfunc(DActor *d, Actor *p)
       if (!(S_PlayingSound(d, SFX_MAGE_LIGHTNING_ZAP)))
 	S_StartSound(d, SFX_MAGE_LIGHTNING_ZAP);
 
-      if ((p->flags & MF_COUNTKILL) && P_Random() < 64)
+      if ((p->flags & MF_MONSTER) && P_Random() < 64)
 	p->Howl();
     }
 

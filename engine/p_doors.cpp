@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -267,7 +267,7 @@ int Map::EV_DoDoor(int tag, line_t *line, Actor *mo, byte type, fixed_t speed, i
   else
     {
       // tag == 0, door is on the other side of the linedef
-      bool good = mo->flags & MF_NOTMONSTER;
+      bool good = mo->flags & MF_PLAYER;
 
       // if the wrong side of door is pushed, give oof sound
       if (!line->sideptr[1] && good)

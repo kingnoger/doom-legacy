@@ -67,9 +67,7 @@
 #include "z_zone.h"
 
 #include "i_video.h" // rendermode! fix!
-#ifdef HWRENDER
-#include "hardware/hwr_render.h"
-#endif
+
 
 /*!
   \defgroup g_central The most central classes of Doom Legacy

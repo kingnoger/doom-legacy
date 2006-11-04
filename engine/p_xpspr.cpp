@@ -778,7 +778,7 @@ void A_CStaffCheck(PlayerPawn *player, pspdef_t *psp)
 	{
 	  player->LineAttack(angle, STAFFRANGE, sine, damage);
 	  player->yaw = R_PointToAngle2(player->pos, targ->pos);
-	  if ((targ->flags & (MF_COUNTKILL|MF_NOTMONSTER))
+	  if ((targ->flags & MF_VALIDTARGET)
 	      && !(targ->flags2 & (MF2_DORMANT|MF2_INVULNERABLE)))
 	    {
 	      int newLife = player->health + (damage>>3);
@@ -796,7 +796,7 @@ void A_CStaffCheck(PlayerPawn *player, pspdef_t *psp)
 	{
 	  player->LineAttack(angle, STAFFRANGE, sine, damage);
 	  player->yaw = R_PointToAngle2(player->pos, targ->pos);
-	  if (targ->flags & (MF_COUNTKILL|MF_NOTMONSTER))
+	  if (targ->flags & MF_VALIDTARGET)
 	    {
 	      // FIXME cstaff wtf? different condition, different health leech on other side?
 	      int newLife = player->health + (damage>>4);
@@ -1212,7 +1212,7 @@ static void CHolySeekerMissile(DActor *actor, angle_t thresh, angle_t turnMax)
     return;
 
   if (!(target->flags & MF_SHOOTABLE) 
-      || !(target->flags & (MF_COUNTKILL|MF_NOTMONSTER)))
+      || !(target->flags & MF_VALIDTARGET))
     { // Target died/target isn't a player or creature
       actor->target = NULL;
       actor->flags &= ~(MF_NOCLIPLINE|MF_NOCLIPTHING);

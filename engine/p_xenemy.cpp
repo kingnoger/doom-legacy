@@ -391,7 +391,7 @@ static bool IT_XMinotaur(Thinker *t)
 
   DActor *mo = (DActor *)t;
   // must be monster, alive and shootable
-  if (!(mo->flags & MF_COUNTKILL)
+  if (!(mo->flags & MF_MONSTER)
       || mo->health <= 0
       || !(mo->flags & MF_SHOOTABLE))
     return true;
@@ -2023,8 +2023,7 @@ void A_WraithInit(DActor *actor)
 
 void A_WraithRaiseInit(DActor *actor)
 {
-  actor->flags2 &= ~MF2_DONTDRAW;
-  actor->flags2 &= ~MF2_NONSHOOTABLE;
+  actor->flags2 &= ~(MF2_NONSHOOTABLE | MF2_DONTDRAW | MF2_NONBLASTABLE);
   actor->flags |= MF_SHOOTABLE|MF_SOLID;
   actor->floorclip = actor->info->height;
 }
@@ -3443,7 +3442,7 @@ void A_FreezeDeath(DActor *actor)
     }
   else
   */
-  if (actor->flags&MF_COUNTKILL && actor->special)
+  if (actor->flags&MF_MONSTER && actor->special)
     { // Initiate monster death actions
       actor->mp->ExecuteLineSpecial(actor->special, actor->args, NULL, 0, actor);
     }

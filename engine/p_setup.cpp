@@ -62,10 +62,7 @@
 
 #include "t_parse.h"
 
-#ifdef HWRENDER
 #include "i_video.h"            //rendermode
-#include "hardware/hwr_render.h"
-#endif
 
 
 extern vector<mapthing_t *> polyspawn; // for spawning polyobjects
@@ -1517,12 +1514,14 @@ bool Map::Setup(tic_t start, bool spawnthings)
   if (precache)
     PrecacheMap();
 
+#ifndef NO_OPENGL
   // OpenGL renderer. TODO more friendly behavior
   if (rendermode == render_opengl && glvertexes == NULL)
     {
       CONS_Printf("Trying to use OpenGL renderer without GL nodes. Exiting.\n");
       return false;
     }
+#endif
 
   //CONS_Printf("%d vertexs %d segs %d subsector\n",numvertexes,numsegs,numsubsectors);
   return true;

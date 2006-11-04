@@ -234,7 +234,7 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, int type, int pcl)
 
   // note! here Map *mp is not yet set! This means you can't call functions such as
   // SetPosition that have something to do with a map.
-  flags |= (MF_NOTMONSTER | MF_PICKUP | MF_SHOOTABLE | MF_DROPOFF);
+  flags |= (MF_PLAYER | MF_PICKUP | MF_SHOOTABLE | MF_DROPOFF);
   flags &= ~MF_COUNTKILL;
   flags2 |= (MF2_WINDTHRUST | MF2_SLIDE | MF2_TELESTOMP | MF2_PUSHWALL);
 

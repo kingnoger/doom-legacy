@@ -14,7 +14,8 @@
 
 // Announce to Flex the prototype we want for lexing function,
 //#define YY_DECL  int yylex(YYSTYPE *yylval, yy::location *yylloc, ntexture_driver& driver)
-#define YY_DECL  int yylex(union YYSTYPE *yylval, yy::location *yylloc)
+//#define YY_DECL  int yylex(union YYSTYPE *yylval, yy::location *yylloc)
+#define YY_DECL  int yylex(union yy::ntexture_parser::semantic_type *yylval, yy::location *yylloc)
 // and declare it for the parser's sake.
 YY_DECL;
 

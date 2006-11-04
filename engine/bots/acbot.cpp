@@ -402,10 +402,10 @@ void ACBot::LookForThings()
       bool enemyFound = false;
       SearchNode_t *node;
 
-      if ((actor->flags & MF_COUNTKILL || type == MT_SKULL || type == MT_BARREL) &&
+      if ((actor->flags & MF_MONSTER || type == MT_BARREL) &&
 	  (actor->flags & MF_SOLID))
 	enemyFound = true; // a live monster
-      else if (actor->flags & MF_NOTMONSTER && actor->flags & MF_SOLID && actor != pawn)
+      else if (actor->flags & MF_PLAYER && actor->flags & MF_SOLID && actor != pawn)
 	{
 	  // a playerpawn or equivalent, but not ours
 	  if (actor->team != subject->team)
@@ -547,7 +547,7 @@ void ACBot::LookForThings()
 	    {
 	      // TODO prefer player enemies to monster enemies
 	      // 
-	      if (dist < cEnemy.dist || (actor->flags & MF_NOTMONSTER && !(cEnemy.a->flags & MF_NOTMONSTER)))
+	      if (dist < cEnemy.dist || (actor->flags & MF_PLAYER && !(cEnemy.a->flags & MF_PLAYER)))
 		{
 		  cEnemy.dist = dist;
 		  cEnemy.a = actor;
@@ -558,7 +558,7 @@ void ACBot::LookForThings()
 	      node = mp->botnodes->GetNodeAt(actor->pos);
 	      if (node &&
 		  (dist < cUnseenEnemy.dist ||
-		   (actor->flags & MF_NOTMONSTER && !(cEnemy.a->flags & MF_NOTMONSTER))))
+		   (actor->flags & MF_PLAYER && !(cEnemy.a->flags & MF_PLAYER))))
 		{
 		  cUnseenEnemy.dist = dist;
 		  cUnseenEnemy.a = actor;
