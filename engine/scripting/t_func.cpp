@@ -2326,9 +2326,9 @@ void SF_SetHUPicDisplay()
 
 
 // Hurdler: I'm enjoying FS capability :)
-
-#if 0 //FIXME: Hurdler, must be uncommented once the new dynamic light code is OK
-#ifdef HWRENDER
+#warning setcorona: Hurdler, must be uncommented once the new dynamic light code is OK
+#if 0
+#ifndef NO_OPENGL
 extern light_t lspr[];
 
 int String2Hex(const char *s)
@@ -2566,7 +2566,7 @@ void FS_init_functions()
 
   // Hurdler's stuff :)
 #if 0 //FIXME: Hurdler, must be uncommented once the new dynamic light code is OK
-#ifdef HWRENDER
+#ifndef NO_OPENGL
   new_function("setcorona", SF_SetCorona);
 #endif
 #endif

@@ -52,7 +52,7 @@
 #include "am_map.h"
 #include "d_main.h"
 
-#ifdef HWRENDER
+#ifndef NO_OPENGL
 # include "hardware/hwr_render.h"
 #endif
 
@@ -699,7 +699,7 @@ void HUD::HU_Erase()
   if (automap.active || viewwindowx==0)   // hud msgs don't need to be cleared
     return;
 
-#ifdef HWRENDER
+#ifndef NO_OPENGL
   if (rendermode!=render_soft)
     {
       // refresh just what is needed from the view borders

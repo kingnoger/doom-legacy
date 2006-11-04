@@ -53,7 +53,7 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
-#ifdef HWRENDER
+#ifndef NO_OPENGL
 #include "hardware/hwr_states.h"
 #endif
 
@@ -1159,7 +1159,7 @@ void HUD::PaletteFlash()
     {
       st_palette = palette;
 
-#ifdef HWRENDER
+#ifndef NO_OPENGL
       if (rendermode != render_soft)
         {
           switch (palette)
@@ -1211,7 +1211,7 @@ void HUD::ST_Recalc()
     {
       fgbuffer = FG | V_SCALE; // scale patch by default
 
-#ifdef HWRENDER
+#ifndef NO_OPENGL
       if (rendermode != render_soft)
         {
           st_x = 0;
