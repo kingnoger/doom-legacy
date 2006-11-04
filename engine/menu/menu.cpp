@@ -965,7 +965,6 @@ void M_SaveGame(int choice);
 static menuitem_t SinglePlayer_MI[] =
 {
   {IT_ACT, "M_NGAME" , "NEW GAME" ,{(consvar_t *)M_NewGame} ,'n'},
-  //{IT_ACT, NULL, "NEW MAPINFO GAME", {(consvar_t *)M_NewGame} ,'m'},
   {IT_ACT, "M_LOADG" , "LOAD GAME",{(consvar_t *)M_LoadGame},'l'},
   {IT_ACT, "M_SAVEG" , "SAVE GAME",{(consvar_t *)M_SaveGame},'s'},
   {IT_ACT, "M_ENDGAM", "END GAME" ,{(consvar_t *)M_EndGame},'e'}
@@ -986,6 +985,8 @@ void M_NewGame(int choice)
       return;
     }
 
+  // Menu order: main -> singleplayer -> (episode) -> (class) -> skill
+
   if (EpiDef.GetNumitems() == 1)
     {
       // no episode choice to make
@@ -997,7 +998,9 @@ void M_NewGame(int choice)
 	Menu::SetupNextMenu(&SkillDef); // episode/skill
     }
   else
-    Menu::SetupNextMenu(&EpiDef);
+    {
+      Menu::SetupNextMenu(&EpiDef);
+    }
 }
 
 //===========================================================================
@@ -1006,22 +1009,6 @@ void M_NewGame(int choice)
 
 void M_Episode(int choice)
 {
-  /*
-  if ((game.mode == gm_doom1s) && choice)
-    {
-      Menu::SetupNextMenu(&ReadDef1);
-      mbox.Set(SWSTRING,NULL,MsgBox::NOTHING);
-      return;
-    }
-
-  // Yet another hack...
-  if ((game.mode == gm_doom1) && (choice > 2))
-    {
-      I_Error("M_Episode: 4th episode requires Ultimate DOOM\n");
-      choice = 0;
-    }
-  */
-
   epi = choice;
 
   if (game.mode == gm_hexen) // episode/class/skill
@@ -1032,10 +1019,9 @@ void M_Episode(int choice)
 
 
 static const size_t MAX_EPISODES = 10; // should be enough...
-static menuitem_t Episode_MI[MAX_EPISODES]; 
+static menuitem_t Episode_MI[MAX_EPISODES]; // filled using MAPINFO
 
-
-Menu EpiDef("M_EPISOD", "Which Episode?", &MainMenuDef, ITEMS(Episode_MI), 48, 63);
+Menu EpiDef("M_EPISOD", "Which Episode?", &SinglePlayerDef, ITEMS(Episode_MI), 48, 63);
 
 
 //===========================================================================
@@ -1087,7 +1073,7 @@ static menuitem_t Class_MI[] =
   {IT_ACT, NULL, "MAGE", {(consvar_t *)M_Class}, 'm'}
 };
 
-Menu ClassDef(NULL, "Choose class:", &MainMenuDef, ITEMS(Class_MI), 66, 66,
+Menu ClassDef(NULL, "Choose class:", &SinglePlayerDef, ITEMS(Class_MI), 66, 66,
 	      0, &Menu::DrawClass);
 
 void Menu::DrawClass()
@@ -1135,7 +1121,7 @@ static menuitem_t HereticSkill_MI[]=
 };
 
 Menu SkillDef("M_SKILL", //"M_NEWG"
-	      "Choose skill", &MainMenuDef, ITEMS(Skill_MI), 48, 63, 3);
+	      "Choose skill", &SinglePlayerDef, ITEMS(Skill_MI), 48, 63, 3);
 
 
 void M_VerifyNightmare(int ch)
@@ -2025,7 +2011,7 @@ static menuitem_t VideoOptions_MI[]=
   {IT_CVAR, NULL, "Splats"          , {&cv_splats}        , 0},
   {IT_CVAR, NULL, "Bloodtime"       , {&cv_bloodtime}     , 0},
   {IT_CVAR, NULL, "Screenslink effect", {&cv_screenslink}   , 0},
-#ifdef HWRENDER
+#ifndef NO_OPENGL
   {IT_CALL | IT_STRING | IT_WHITE | IT_DY, NULL, "3D Card Options...", {(consvar_t *)M_OpenGLOption}, 20},
 #endif
 };
@@ -3231,27 +3217,18 @@ void Menu::Init()
     }
 
 
-  EpiDef.numitems = 0;
-
   switch (game.mode)
     {
-    case gm_doom2:
-      pointer[0] = tc.GetPtr("M_SKULL1");
-      pointer[1] = tc.GetPtr("M_SKULL2");
-      MainMenuDef.drawroutine = &Menu::DrawMenu;
-      SkillDef.items = Skill_MI;
-      SkillDef.parent = &MainMenuDef; // no episode menu
-      break;
-
     case gm_doom1s:
-      // Episodes 2 and 3 are handled,
-      //  branching to an ad screen.
     case gm_doom1:
     case gm_udoom:
-      // We are fine.
+      cv_menu_startmap.PossibleValue = exmy_cons_t;
+      // fallthru
+
+    case gm_doom2:
+      // Lack of episodes is handled by MAPINFO
       pointer[0] = tc.GetPtr("M_SKULL1");
       pointer[1] = tc.GetPtr("M_SKULL2");
-      cv_menu_startmap.PossibleValue = exmy_cons_t;
       MainMenuDef.drawroutine = &Menu::DrawMenu;
       SkillDef.items = Skill_MI;
       break;
@@ -3288,7 +3265,7 @@ void Menu::Init()
 // OpenGL specific options
 //======================================================================
 
-#ifdef HWRENDER
+#ifndef NO_OPENGL
 
 extern Menu OGL_LightingDef, OGL_FogDef, OGL_ColorDef, OGL_DevDef;
 
