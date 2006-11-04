@@ -427,15 +427,6 @@ static void R_InstallSpriteLump(const char *name, int frame, int rot, bool flip)
 
   Texture *t = tc.GetPtr(name, TEX_sprite);
 
-#ifdef HWRENDER
-  //BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
-  // TODO what is this?
-  //  -> Hurdler: this is because of the "monster feet under the ground" bug (see if we cannot fix that properly)
-  //if (rendermode != render_soft && t->topoffset > 0 && t->topoffset < t->height)
-    // perfect is patch.height but sometime it is too high
-    //t->topoffset = min(t->topoffset+4, t->height);
-#endif
-
   if (rot == 0)
     {
       // the lump should be used for all rotations

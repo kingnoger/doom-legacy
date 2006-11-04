@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2004 by Doom Legacy Team
+// Copyright (C) 2002-2006 by Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,7 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -95,6 +94,7 @@ cacheitem_t *modelcache_t::Load(const char *p)
 
 static int CreateTexture(int width, int height, int format, char *data)
 {
+#ifndef NO_OPENGL
   GLuint t;
   
   glGenTextures(1, &t);
@@ -114,6 +114,9 @@ static int CreateTexture(int width, int height, int format, char *data)
   gluBuild2DMipmaps(GL_TEXTURE_2D, 3, width, height, format, GL_UNSIGNED_BYTE, data);
 
   return t;
+#else
+  return 0;
+#endif
 }
 
 typedef unsigned char  byte; // 8 bit
@@ -284,9 +287,8 @@ bool MD3_t::Load(const char *filename)
 
 void MD3_t::LoadMeshTexture(const char *meshname, const char *imagefile)
 {
-  int i;
   // Find the right mesh item to assign the skin to
-  for (i=0; i < header.numMeshes; i++)
+  for (int i=0; i < header.numMeshes; i++)
     {
       // check it the two names are the same
       if (strcasecmp(meshes[i].header.name, meshname) == 0)
@@ -325,9 +327,7 @@ bool MD3_t::LoadSkinFile(const string & path, const string & filename)
 // link another model to a tag.
 void MD3_t::Link(const char *tagname, MD3_t *m)
 {
-  int i;
-
-  for (i=0; i<header.numTags; i++)
+  for (int i=0; i<header.numTags; i++)
     if (strcmp(tags[i].name, tagname) == 0)
       {
 	links[i] = m;
@@ -340,6 +340,7 @@ void MD3_t::Link(const char *tagname, MD3_t *m)
 // interp must be in the range [0, 1]
 void MD3_t::DrawInterpolated(MD3_animstate *st)
 {
+#ifndef NO_OPENGL
   GLfloat v1[3], v2[3], v[3], n1[3], n2[3], norm[3];
   int theta1, phi1, theta2, phi2;
   float interp = st->interp;
@@ -394,11 +395,13 @@ void MD3_t::DrawInterpolated(MD3_animstate *st)
 	}
       glEnd();
     }
+#endif
 }
 
 // draw this model and all the models that have been linked to it
 MD3_animstate *MD3_t::DrawRecursive(MD3_animstate *st)
 {
+#ifndef NO_OPENGL
   int i, j, k;
   MD3_t *mp;
 
@@ -454,6 +457,7 @@ MD3_animstate *MD3_t::DrawRecursive(MD3_animstate *st)
 	  glPopMatrix();
 	}
     }
+#endif
   return st;
 }
 

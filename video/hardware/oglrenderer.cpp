@@ -34,7 +34,8 @@
 
 extern int skyflatnum;
 
-OGLRenderer::OGLRenderer() {
+OGLRenderer::OGLRenderer()
+{
   screen = NULL;
   workinggl = false;
   curssec = NULL;
@@ -66,9 +67,41 @@ OGLRenderer::~OGLRenderer() {
   // No need to release screen. SDL does it automatically.
 }
 
-// Sets up those GL states that never change during rendering.
 
-void OGLRenderer::InitGLState() {
+#ifdef NO_OPENGL
+
+// Stub implementation of OpenGL renderer (now we don't have to link in OpenGL libs)
+void OGLRenderer::InitGLState() {}
+void OGLRenderer::StartFrame() {}
+void OGLRenderer::FinishFrame() {}
+void OGLRenderer::ClearDrawColor() {}
+bool OGLRenderer::WriteScreenshot(const char *fname) { return false; }
+bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen) { return false; }
+void OGLRenderer::Setup2DMode() {}
+void OGLRenderer::Setup3DMode() {}
+void OGLRenderer::Draw2DGraphic(GLfloat top, GLfloat left, GLfloat bottom, GLfloat right, GLuint tex, GLfloat textop, GLfloat texbottom, GLfloat texleft, GLfloat texright) {}
+void OGLRenderer::Draw2DGraphic_Doom(float x, float y, Texture *tex) {}
+void OGLRenderer::Draw2DGraphicFill_Doom(float x, float y, float width, float height, Texture *tex) {}
+void OGLRenderer::ClearAutomap() {}
+void OGLRenderer::DrawAutomapLine(const fline_t *line, const int color) {}
+void OGLRenderer::Render3DView(PlayerInfo *player) {}
+void OGLRenderer::RenderBSPNode(int nodenum) {}
+void OGLRenderer::RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Texture *tex, bool isFloor) {}
+void OGLRenderer::RenderGLSubsector(int num) {}
+void OGLRenderer::RenderActors(sector_t *sec) {}
+void OGLRenderer::RenderGLSeg(int num) {}
+void OGLRenderer::DrawSingleQuad(vertex_t *fv, vertex_t *tv, GLfloat lower, GLfloat upper, GLfloat texleft, GLfloat texright, GLfloat textop, GLfloat texbottom) {}
+void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Texture *t, bool flip) {}
+bool OGLRenderer::CheckVis(int fromss, int toss) { return false; }
+void OGLRenderer::DrawSimpleSky() {}
+
+
+#else
+
+
+/// Sets up those GL states that never change during rendering.
+void OGLRenderer::InitGLState()
+{
   glShadeModel(GL_SMOOTH);
   glEnable(GL_TEXTURE_2D);
 
@@ -82,25 +115,34 @@ void OGLRenderer::InitGLState() {
   glEnable(GL_CULL_FACE);
 }
 
-// Clean up stuffage so we can start drawing a new frame.
 
-void OGLRenderer::StartFrame() {
+/// Clean up stuffage so we can start drawing a new frame.
+void OGLRenderer::StartFrame()
+{
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   ClearDrawColor();
 }
 
-// Done with drawing. Swap buffers.
 
-void OGLRenderer::FinishFrame() {
+/// Done with drawing. Swap buffers.
+void OGLRenderer::FinishFrame()
+{
     SDL_GL_SwapBuffers(); // Double buffered OpenGL goodness.
     palette = NULL;       // It might have gotten uncached.
 }
 
+
+void OGLRenderer::ClearDrawColor()
+{
+  glColor4f(1.0, 1.0, 1.0, 1.0);
+}
+
+
 // Writes a screen shot to the specified file. Writing is done in BMP
 // format, as SDL has direct support of that. Adds proper file suffix
 // when necessary. Returns true on success.
-
-bool OGLRenderer::WriteScreenshot(const char *fname) {
+bool OGLRenderer::WriteScreenshot(const char *fname)
+{
   int fnamelength;
   string finalname;
   SDL_Surface *buffer;
@@ -164,7 +206,8 @@ bool OGLRenderer::WriteScreenshot(const char *fname) {
   return success;
 }
 
-bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen) {
+bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen)
+{
   Uint32 surfaceflags;
   int mindepth = 16;
   int temp;
@@ -258,14 +301,17 @@ bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen)
   else 
     Setup3DMode();
 
+  // Clear any old GL errors.
+  while (glGetError() != GL_NO_ERROR)
+    ;
 
   return true;
 }
 
 
-// Set up the GL matrices so that we can draw 2D stuff like menus.
-
-void OGLRenderer::Setup2DMode() {
+/// Set up the GL matrices so that we can draw 2D stuff like menus.
+void OGLRenderer::Setup2DMode()
+{
   GLfloat extraoffx, extraoffy, extrascalex, extrascaley;
   consolemode = true;
   ClearDrawColor();
@@ -299,9 +345,9 @@ void OGLRenderer::Setup2DMode() {
 }
 
 
-// Setup GL matrices to render level graphics.
-
-void OGLRenderer::Setup3DMode() {
+/// Setup GL matrices to render level graphics.
+void OGLRenderer::Setup3DMode()
+{
   consolemode = false;
   ClearDrawColor();
 
@@ -324,7 +370,8 @@ void OGLRenderer::Setup3DMode() {
 //
 // (0, 0) is the top left corner and (1, 1) is the bottom right.
 
-void OGLRenderer::Draw2DGraphic(GLfloat top, GLfloat left, GLfloat bottom, GLfloat right, GLuint tex, GLfloat textop, GLfloat texbottom, GLfloat texleft, GLfloat texright) {
+void OGLRenderer::Draw2DGraphic(GLfloat top, GLfloat left, GLfloat bottom, GLfloat right, GLuint tex, GLfloat textop, GLfloat texbottom, GLfloat texleft, GLfloat texright)
+{
   //  GLfloat scalex, scaley, offsetx, offsety;
   //  GLfloat texleft, texright, textop, texbottom;
   GLfloat temp;
@@ -392,14 +439,16 @@ void OGLRenderer::Draw2DGraphicFill_Doom(float x, float y, float width, float he
   */
 }
 
-// Currently a no-op. Possibly do something in the future.
 
-void OGLRenderer::ClearAutomap() {
+/// Currently a no-op. Possibly do something in the future.
+void OGLRenderer::ClearAutomap()
+{
 }
 
-// Draws the specified map line to screen.
 
-void OGLRenderer::DrawAutomapLine(const fline_t *line, const int color) {
+/// Draws the specified map line to screen.
+void OGLRenderer::DrawAutomapLine(const fline_t *line, const int color)
+{
   GLfloat c[4];
   
   if(!consolemode)
@@ -427,9 +476,8 @@ void OGLRenderer::DrawAutomapLine(const fline_t *line, const int color) {
 
 }
 
-// Set up state and draw a view of the level from the given viewpoint.
-// It is usually the place where the player is currently located.
-
+/// Set up state and draw a view of the level from the given viewpoint.
+/// It is usually the place where the player is currently located.
 void OGLRenderer::Render3DView(PlayerInfo *player)
 {
   // Set up the Map to be rendered. Needs to be done separately for each viewport, since the engine
@@ -469,9 +517,8 @@ void OGLRenderer::Render3DView(PlayerInfo *player)
 }
 
 
-// Walk through the BSP tree and render the level in back-to-front
-// order. Assumes that the OpenGL state is properly set elsewhere.
-
+/// Walk through the BSP tree and render the level in back-to-front
+/// order. Assumes that the OpenGL state is properly set elsewhere.
 void OGLRenderer::RenderBSPNode(int nodenum)
 {
   // Found a subsector (leaf node)?
@@ -499,10 +546,9 @@ void OGLRenderer::RenderBSPNode(int nodenum)
   RenderBSPNode(node->children[side]);
 }
 
-// Draws one single GL subsector polygon that is either a floor or a
-// ceiling. 
-
-void OGLRenderer::RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Texture *tex, bool isFloor) {
+/// Draws one single GL subsector polygon that is either a floor or a ceiling. 
+void OGLRenderer::RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Texture *tex, bool isFloor)
+{
   int curseg;
   int firstseg;
   int segcount;
@@ -559,8 +605,8 @@ void OGLRenderer::RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Texture *
 // Draw the floor and ceiling of a single GL subsector. The rendering
 // order is flats->wall segs->items, so there is no occlusion. In the
 // future render also 3D floors and polyobjs.
-
-void OGLRenderer::RenderGLSubsector(int num) {
+void OGLRenderer::RenderGLSubsector(int num)
+{
   int curseg;
   int firstseg;
   int segcount;
@@ -646,10 +692,10 @@ void OGLRenderer::RenderActors(sector_t *sec)
 
 
 
-// Renders one single GL seg. Minisegs and invalid parameters are
-// silently ignored.
-
-void OGLRenderer::RenderGLSeg(int num) {
+/// Renders one single GL seg. Minisegs and invalid parameters are
+/// silently ignored.
+void OGLRenderer::RenderGLSeg(int num)
+{
   seg_t *s;
   line_t *ld;
   vertex_t *fv;
@@ -821,9 +867,10 @@ void OGLRenderer::RenderGLSeg(int num) {
   }
 }
 
-// Draw a single textured wall segment.
 
-void OGLRenderer::DrawSingleQuad(vertex_t *fv, vertex_t *tv, GLfloat lower, GLfloat upper, GLfloat texleft, GLfloat texright, GLfloat textop, GLfloat texbottom) {
+/// Draw a single textured wall segment.
+void OGLRenderer::DrawSingleQuad(vertex_t *fv, vertex_t *tv, GLfloat lower, GLfloat upper, GLfloat texleft, GLfloat texright, GLfloat textop, GLfloat texbottom)
+{
   glBegin(GL_QUADS);
   
   glTexCoord2f(texleft, texbottom);
@@ -884,6 +931,8 @@ void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Texture *t, bool fli
   texbottom = 1.0;
   textop = 0.0;
 
+  sfijfdjsdj;
+  // FIXME NOW use texture offsets
   left = t->width/(2.0*xscale);
   right = -left;
   bottom = 0.0;
@@ -922,10 +971,11 @@ void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Texture *t, bool fli
     glDisable(GL_ALPHA_TEST);
 }
 
-// Check for visibility between the given glsubsectors. Returns true
-// if you can see from one to the other and false if not.
 
-bool OGLRenderer::CheckVis(int fromss, int toss) {
+/// Check for visibility between the given glsubsectors. Returns true
+/// if you can see from one to the other and false if not.
+bool OGLRenderer::CheckVis(int fromss, int toss)
+{
   byte *vis;
   if(mp->glvis == NULL)
     return true;
@@ -936,10 +986,10 @@ bool OGLRenderer::CheckVis(int fromss, int toss) {
   return false;
 }
 
-// Draws the background sky texture. Very simple, ignores looking
-// up/down.
 
-void OGLRenderer::DrawSimpleSky() {
+/// Draws the background sky texture. Very simple, ignores looking up/down.
+void OGLRenderer::DrawSimpleSky()
+{
   GLfloat left, right, top, bottom, texleft, texright, textop, texbottom;
   GLfloat fovx;
   GLboolean isdepth;
@@ -988,3 +1038,4 @@ void OGLRenderer::DrawSimpleSky() {
   glMatrixMode(GL_PROJECTION);
   glPopMatrix();
 }
+#endif // !NO_OPENGL

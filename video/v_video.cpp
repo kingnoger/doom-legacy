@@ -39,7 +39,7 @@
 #include "i_video.h"
 #include "z_zone.h"
 
-#ifdef HWRENDER
+#ifndef NO_OPENGL
 #include "hardware/hwr_render.h"
 #endif
 
@@ -480,8 +480,8 @@ void V_GetBlock(int x, int y, int scrn, int width, int height, byte *dest)
 //  Fills a box of pixels with a single color, NOTE: scaled to screen size
 void V_DrawFill(int x, int y, int w, int h, int c)
 {
-#ifdef HWRENDER
-  if (rendermode!=render_soft)
+#ifndef NO_OPENGL
+  if (rendermode != render_soft)
     {
       HWR.DrawFill(x, y, w, h, c);
       return;
@@ -507,7 +507,7 @@ void V_DrawFill(int x, int y, int w, int h, int c)
 //
 void V_DrawFadeScreen()
 {
-#ifdef HWRENDER
+#ifndef NO_OPENGL
   if (rendermode != render_soft)
     {
       HWR.FadeScreenMenuBack(0x01010160, 0);  //faB: hack, 0 means full height :o
@@ -555,7 +555,7 @@ void V_DrawFadeScreen()
 /// Simple translucence with one color, coords are true LFB coords
 void V_DrawFadeConsBack(int x1, int y1, int x2, int y2)
 {
-#ifdef HWRENDER
+#ifndef NO_OPENGL
   if (rendermode!=render_soft)
     {
       HWR.FadeScreenMenuBack(0x00500000, y2);
@@ -803,7 +803,7 @@ void R_DrawSpanNoWrap();   //tmap.S
 //
 //added:12-02-98:
 #ifdef TILTVIEW
-#ifdef HWRENDER
+#ifndef NO_OPENGL
 // TODO: Hurdler: see why we can't do it in software mode (it seems this only works for now with the DOS version)
 void V_DrawTiltView (byte *viewbuffer)  // don't touch direct video I'll find something..
 {}
@@ -882,7 +882,7 @@ void V_DrawTiltView (byte *viewbuffer)
 //
 //added:05-04-98:
 
-#ifdef HWRENDER
+#ifndef NO_OPENGL
 // TODO: Hurdler: see why we can't do it in software mode (it seems this only works for now with the DOS version)
 void V_DrawPerspView (byte *viewbuffer, int aiming)
 {}
@@ -890,43 +890,37 @@ void V_DrawPerspView (byte *viewbuffer, int aiming)
 
 void V_DrawPerspView (byte *viewbuffer, int aiming)
 {
+  /*
+  fixed_t    topfrac,bottomfrac,scale,scalestep;
+  fixed_t    xfrac,xfracstep;
 
-     byte*      source;
-     byte*      dest;
-     int        y;
-     int        x1,w;
-     int        offs;
+  byte *source = viewbuffer;
 
-     fixed_t    topfrac,bottomfrac,scale,scalestep;
-     fixed_t    xfrac,xfracstep;
+  //+16 to -16 fixed
+  int offs = ((aiming*20)<<16) / 100;
 
-    source = viewbuffer;
+  topfrac    = ((vid.width-40)<<16) - (offs*2);
+  bottomfrac = ((vid.width-40)<<16) + (offs*2);
 
-    //+16 to -16 fixed
-    offs = ((aiming*20)<<16) / 100;
+  scalestep  = (bottomfrac-topfrac) / vid.height;
+  scale      = topfrac;
 
-    topfrac    = ((vid.width-40)<<16) - (offs*2);
-    bottomfrac = ((vid.width-40)<<16) + (offs*2);
-
-    scalestep  = (bottomfrac-topfrac) / vid.height;
-    scale      = topfrac;
-
-    for (y=0; y<vid.height; y++)
+  for (int y=0; y<vid.height; y++)
     {
-        x1 = ((vid.width<<16) - scale)>>17;
-        dest = ((byte*) vid.direct) + (vid.rowbytes*y) + x1;
+      int x1 = ((vid.width<<16) - scale)>>17;
+      byte *dest = ((byte*) vid.direct) + (vid.rowbytes*y) + x1;
 
-        xfrac = (20<<FRACBITS) + ((!x1)&0xFFFF);
-        xfracstep = FixedDiv((vid.width<<FRACBITS)-(xfrac<<1),scale);
-        w = scale>>16;
-        while (w--)
+      xfrac = (20<<FRACBITS) + ((!x1)&0xFFFF);
+      xfracstep = FixedDiv((vid.width<<FRACBITS)-(xfrac<<1),scale);
+      int w = scale>>16;
+      while (w--)
         {
-            *dest++ = source[xfrac>>FRACBITS];
-            xfrac += xfracstep;
+	  *dest++ = source[xfrac>>FRACBITS];
+	  xfrac += xfracstep;
         }
-        scale += scalestep;
-        source += vid.width;
+      scale += scalestep;
+      source += vid.width;
     }
-
+  */
 }
 #endif

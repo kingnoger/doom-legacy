@@ -49,14 +49,14 @@
 
 #include "w_wad.h"
 
-#ifdef HWRENDER
+#ifndef NO_OPENGL
 #include "hardware/hwr_render.h"
 #endif
 
 #include"oglrenderer.hpp"
 
 Rend R;
-#ifdef HWRENDER
+#ifndef NO_OPENGL
 HWRend HWR;
 #endif
 
@@ -467,7 +467,7 @@ void R_ExecuteSetViewSize()
   if (cv_splitscreen.value && cv_viewsize.value < 11)
     cv_viewsize.Set(11);
 
-#ifdef HWRENDER
+#ifndef NO_OPENGL
   if ((rendermode != render_soft) && (cv_viewsize.value < 6))
     cv_viewsize.Set(6);
 #endif
@@ -582,7 +582,7 @@ void R_ExecuteSetViewSize()
 
   //faB: continue to do the software setviewsize as long as we use
   //     the reference software view
-#ifdef HWRENDER
+#ifndef NO_OPENGL
   if (rendermode!=render_soft)
     HWR.SetViewSize(cv_viewsize.value);
 #endif

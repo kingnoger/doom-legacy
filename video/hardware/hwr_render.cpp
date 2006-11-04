@@ -48,6 +48,15 @@
 #include "r_draw.h"
 #include "v_video.h"
 
+#ifdef NO_OPENGL
+
+// stubs for OpenGL functions
+void modelpres_t::Project(Actor *p) {}
+void PatchTexture::HWR_Draw(int x, int y, int flags) {}
+void LumpTexture::HWR_Draw(int x, int y, int flags) {}
+
+#else
+
 void OglSdlFinishUpdate(bool vidwait);
 
 void show_stackframe();
@@ -124,7 +133,6 @@ struct FTransform
 
 
 //=============================================================================
-
 
 HWRend::HWRend() :
   bsp(0)
@@ -668,3 +676,6 @@ void LumpTexture::HWR_Draw(int x, int y, int flags)
 {
   //CONS_Printf("LumpTexture::HWR_Draw: Not yet implemented\n");
 }
+
+
+#endif // NO_OPENGL

@@ -805,6 +805,8 @@ static fixed_t estimateFloorHeight(sector_t *thisSector)
 // FIXME: put some nice default texture in legacy.wad and use it
 void Rend::HWR_CorrectSWTricks()
 {
+#ifndef NO_OPENGL
+
   extern consvar_t cv_grcorrecttricks;
 
   int i, k;
@@ -990,4 +992,5 @@ void Rend::HWR_CorrectSWTricks()
     // release all linechains
     releaseLineChains();
     freeStacklists();
+#endif // NO_OPENGL
 }

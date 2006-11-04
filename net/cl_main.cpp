@@ -228,11 +228,9 @@ void CL_Init()
   cv_bloodtime.Reg();
   cv_psprites.Reg();
 
-#ifdef HWRENDER
+#ifndef NO_OPENGL
   if (rendermode != render_soft)
-  {
     HWR.AddCommands();
-  }
 #endif
 }
 

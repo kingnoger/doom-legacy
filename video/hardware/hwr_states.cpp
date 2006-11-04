@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,14 +15,15 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
-//
-// DESCRIPTION:
-//      manage OpenGL graphics states
-//
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief Manage OpenGL graphics states
+
 #include "hardware/hwr_states.h"
+
+
+#ifndef NO_OPENGL
 
 // Basic states
 TextureModifier TextureModifier::tm;
@@ -515,3 +516,5 @@ void State::SetGlobalBlendFunc(GLenum src, GLenum dst)
   global_blend_func_src = src;
   global_blend_func_dst = dst;
 }
+
+#endif // NO_OPENGL

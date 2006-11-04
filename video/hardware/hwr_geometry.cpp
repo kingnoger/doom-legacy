@@ -33,6 +33,9 @@
 #include "hardware/hwr_geometry.h"
 #include "doomdef.h"
 
+
+#ifndef NO_OPENGL
+
 #ifdef __WIN32__
 # define glClientActiveTexture(x)
 # warning glClientActiveTexture must be fixed!
@@ -298,3 +301,5 @@ void Geometry::Draw()
 
   //DisableArrays();
 }
+
+#endif // NO_OPENGL

@@ -226,6 +226,7 @@ void Texture::operator delete(void *mem)
 /// Creates a GL texture.
 GLuint Texture::GLPrepare()
 {
+#ifndef NO_OPENGL
   if (glid == NOTEXTURE)
     {
       GetData(); // reads pixels
@@ -251,18 +252,22 @@ GLuint Texture::GLPrepare()
 
       Z_Free(rgba);
     }
-
+#endif
   return glid;
 }
 
-// Returns true if texture existed and was deleted. False otherwise.
 
-bool Texture::ClearGLTexture() {
-  if(glid != NOTEXTURE) {
-    glDeleteTextures(1, &glid);
-    glid = NOTEXTURE;
-    return true;
-  }
+/// Returns true if texture existed and was deleted. False otherwise.
+bool Texture::ClearGLTexture()
+{
+  if (glid != NOTEXTURE)
+    {
+#ifndef NO_OPENGL
+      glDeleteTextures(1, &glid);
+#endif
+      glid = NOTEXTURE;
+      return true;
+    }
   return false;
 }
 
@@ -287,6 +292,7 @@ LumpTexture::LumpTexture(const char *n, int l, int w, int h)
 /// LumpTextures are stored row-major, so it makes no sense to transpose them twice...
 GLuint LumpTexture::GLPrepare()
 {
+#ifndef NO_OPENGL
   if (glid == NOTEXTURE)
     {
       byte *rgba = reinterpret_cast<byte*>(GenerateGL()); // reads pixels untransposed
@@ -309,7 +315,7 @@ GLuint LumpTexture::GLPrepare()
 
       //  CONS_Printf("Created GL texture %d for %s.\n", glid, name);
     }
-
+#endif
   return glid;
 }
 
@@ -1678,7 +1684,7 @@ fadetable_t *R_CreateColormap(char *p1, char *p2, char *p3)
   f->rgba = rgba;
 
 
-#ifdef HWRENDER
+#ifndef NO_OPENGL
   // OpenGL renderer does not need the colormap part
   if (rendermode == render_soft)
 #endif

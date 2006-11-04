@@ -36,8 +36,9 @@
 #include "i_video.h"
 #include "r_data.h"
 #include "r_draw.h"
-#include "d_main.h"
-#ifdef HWRENDER
+#include "r_main.h"
+
+#ifndef NO_OPENGL
 #include "hardware/hwr_render.h"
 #endif
 
@@ -334,7 +335,7 @@ void Video::Recalc()
 
   int i;
 
-#ifdef HWRENDER
+#ifndef NO_OPENGL
   if (rendermode != render_soft)
     {
       // hardware modes do not use screens[] pointers
@@ -475,7 +476,7 @@ void Video::SetPalette(int palettenum)
   // PLAYPAL lump contains 14 different 256 color RGB palettes (28 for Hexen)
   // VB: is software gamma correction used also with OpenGL palette?
 
-#ifdef HWRENDER
+#ifndef NO_OPENGL
   if (rendermode != render_soft)
   {
     HWR.SetPalette(&palette[palettenum*256]);
@@ -492,7 +493,7 @@ void Video::SetPaletteLump(const char *pal)
 {
   LoadPalette(pal);
   currentpalette = 0;
-#ifdef HWRENDER
+#ifndef NO_OPENGL
   if (rendermode != render_soft)
   {
     HWR.SetPalette(palette);

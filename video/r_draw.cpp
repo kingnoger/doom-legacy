@@ -41,7 +41,7 @@
 #include "z_zone.h"
 
 
-#ifdef HWRENDER
+#ifndef NO_OPENGL
 #include "hardware/hwr_render.h"
 #endif
 
@@ -430,7 +430,7 @@ void R_VideoErase(unsigned ofs, int count)
 //
 void R_DrawViewBorder()
 {
-#ifdef HWRENDER
+#ifndef NO_OPENGL
   if (rendermode != render_soft)
     {
       HWR.DrawViewBorder();
