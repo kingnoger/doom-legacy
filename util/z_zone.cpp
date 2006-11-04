@@ -30,9 +30,6 @@
 #include "i_system.h"
 #include "i_video.h"
 
-#ifdef HWRENDER
-#include "hardware/hwr_render.h"
-#endif
 
 using namespace std;
 
@@ -624,7 +621,7 @@ void Z_FileDumpHeap(FILE *f)
 
   for (unsigned int i=0; i < zones.size(); i++)
     {
-      fprintf(f, "Z_FileDumpHeap info for zone %d/%ld.\n", i, zones.size());
+      fprintf(f, "Z_FileDumpHeap info for zone %d/%d.\n", i, zones.size());
       zones[i]->FileDumpHeap(f);
     }
 }
@@ -837,7 +834,7 @@ void Command_Meminfo_f()
   CONS_Printf("purgable memory    : %7d kB\n", cache>>10);
   CONS_Printf("largest free block : %7d kB\n", largefreeblock>>10);
 
-#ifdef HWRENDER
+#ifndef NO_OPENGL
   // FIXME: Hurdler: this is probably not accurate with the new renderer
   if (rendermode != render_soft)
     {

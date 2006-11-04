@@ -173,7 +173,7 @@ int I_StartSound(soundchannel_t *c)
   if (nosound)
     return 0;
 
-#ifdef NOMIXER
+#ifdef NO_MIXER
   SDL_LockAudio();
 #endif
 
@@ -189,7 +189,7 @@ int I_StartSound(soundchannel_t *c)
 
   c->playing = true;
 
-#ifdef NOMIXER
+#ifdef NO_MIXER
   SDL_UnlockAudio();
 #endif
 
@@ -412,7 +412,7 @@ void I_StartupSound()
   I_SetChannels();
 
   // SDL_mixer controls the audio device, see I_InitMusic.
-#ifdef NOMIXER
+#ifdef NO_MIXER
   SDL_OpenAudio(&audio, NULL);
   CONS_Printf(" Audio device initialized: %d Hz, %d samples/slice.\n", audio.freq, audio.samples);
   SDL_PauseAudio(0);
@@ -432,7 +432,7 @@ void I_InitMusic()
       return;
     }
 
-#ifdef NOMIXER
+#ifdef NO_MIXER
   nomusic = true;
 #else
   // because we use SDL_mixer, audio is opened here.
@@ -477,7 +477,7 @@ void I_ShutdownSound()
     
   CONS_Printf("I_ShutdownSound: ");
 
-#ifdef NOMIXER
+#ifdef NO_MIXER
   SDL_CloseAudio();
 #else
   Mix_CloseAudio();
@@ -508,7 +508,7 @@ static struct music_channel_t
 /// starts playing the "registered" music
 void I_PlaySong(int handle, int looping)
 {
-#ifndef NOMIXER
+#ifndef NO_MIXER
   if (nomusic)
     return;
 
@@ -537,7 +537,7 @@ void I_ResumeSong(int handle)
 
 void I_StopSong(int handle)
 {
-#ifndef NOMIXER
+#ifndef NO_MIXER
   if (nomusic)
     return;
 
@@ -548,7 +548,7 @@ void I_StopSong(int handle)
 
 void I_UnRegisterSong(int handle)
 {
-#ifndef NOMIXER
+#ifndef NO_MIXER
   if (nomusic)
     return;
 
@@ -564,7 +564,7 @@ void I_UnRegisterSong(int handle)
 
 int I_RegisterSong(void* data, int len)
 {
-#ifndef NOMIXER
+#ifndef NO_MIXER
   if (nomusic)
     return 0;
 
@@ -610,7 +610,7 @@ int I_RegisterSong(void* data, int len)
 
 void I_SetMusicVolume(int volume)
 {
-#ifndef NOMIXER
+#ifndef NO_MIXER
   if (nomusic)
     return;
 

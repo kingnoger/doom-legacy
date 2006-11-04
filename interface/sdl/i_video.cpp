@@ -369,12 +369,8 @@ int I_SetVideoMode(int modeNum)
       // resolution. Unload them all, just in case.
       ClearGLTextures();
 
-      if(!oglrenderer->InitVideoMode(vid.width, vid.height,
-				     cv_fullscreen.value))
+      if (!oglrenderer->InitVideoMode(vid.width, vid.height, cv_fullscreen.value))
 	I_Error("Could not set OpenGL vidmode.\n");
-      // Clear any old GL errors.
-      while(glGetError() != GL_NO_ERROR)
-	  ;
     }
   I_StartupMouse();
   

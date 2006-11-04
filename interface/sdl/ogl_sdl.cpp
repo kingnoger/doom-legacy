@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,11 +15,10 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
-// DESCRIPTION:
-//      SDL specific part of the OpenGL API for Doom Legacy
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief SDL specific part of the OpenGL API for Doom Legacy
 
 #ifdef FREEBSD
 # include <SDL.h>
@@ -32,6 +31,8 @@
 #include "hardware/hwr_render.h"
 #include "command.h"
 #include "cvars.h"
+
+#ifndef NO_OPENGL
 
 static SDL_Surface *vidSurface = NULL; //use the one from i_video_sdl.c instead?
 
@@ -107,3 +108,5 @@ void OglSdlSetPalette(RGBA_t *palette, RGBA_t *gamma)
     Flush();
 }
 */
+
+#endif // NO_OPENGL

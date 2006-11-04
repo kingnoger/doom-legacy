@@ -1018,7 +1018,7 @@ void Console::DrawHudlines()
       for (int x=0; x<con_cols; x++)
         {
 #if 0 //FIXME: Hurdler, must be replaced by something compatible with the new renderer
-#ifdef HWRENDER
+#ifndef NO_OPENGL
           // TODO: Hurdler: see why we need to have a separate code here
           extern float gr_viewheight;
           if (con_lineowner[i%con_hudlines] == 2)
