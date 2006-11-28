@@ -59,20 +59,21 @@ source documentation system.</li>
 Finally, download the Doom Legacy
 <a href="http://sourceforge.net/projects/doomlegacy/">source</a>.
 You can either get the source package or, for the latest code
-snapshot, checkout the <b>doomlegacy_c++</b> branch from the CVS.
+snapshot, checkout the <b>legacy/trunk/</b> directory from the Subversion
+repository.
 </p>
 
 
 <h3>Compilation and linking</h3>
 
 <ol>
-<li>Open a shell window. Go to the doomlegacy_c++ directory.</li>
+<li>Open a shell window. Go to the legacy/trunk/ directory.</li>
 <li>Say 'make depend' to create the dependency files.</li>
 <li>Say 'make OPT=1' or just 'make' to build the executable.<br />
  Omitting the 'OPT=1' parameter adds debugging symbols to the
  executable.</li>
 <li>Copy the file legacy.wad from Doom Legacy version 1.40 (or later) to your
-doomlegacy_c++ directory.<br />
+legacy/trunk/ directory.<br />
 Say 'make wad' to generate an updated legacy.wad, which can be found
 in the directory wad/.</li>
 <li>Say 'make docs' to generate the Doxygen documentation.</li>
