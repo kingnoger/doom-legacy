@@ -53,7 +53,7 @@
 #include "hardware/hwr_render.h"
 #endif
 
-#include"oglrenderer.hpp"
+#include "hardware/oglrenderer.hpp"
 
 Rend R;
 #ifndef NO_OPENGL

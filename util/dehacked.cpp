@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,8 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -829,9 +827,9 @@ void dehacked_t::Read_Thing(const char *str)
 	    }
 	  else if (!strcasecmp(word,"sound")) mobjinfo[t].deathsound  = SoundMap(value);
 	}
-      else if (!strcasecmp(word,"Speed"))     mobjinfo[t].speed       = float(value)/fixed_t::UNIT;
-      else if (!strcasecmp(word,"Width"))     mobjinfo[t].radius      = float(value)/fixed_t::UNIT;
-      else if (!strcasecmp(word,"Height"))    mobjinfo[t].height      = float(value)/fixed_t::UNIT;
+      else if (!strcasecmp(word,"Speed"))     mobjinfo[t].speed       = float(value)/int(fixed_t::UNIT);
+      else if (!strcasecmp(word,"Width"))     mobjinfo[t].radius      = float(value)/int(fixed_t::UNIT);
+      else if (!strcasecmp(word,"Height"))    mobjinfo[t].height      = float(value)/int(fixed_t::UNIT);
       else if (!strcasecmp(word,"Mass"))      mobjinfo[t].mass        = value;
       else if (!strcasecmp(word,"Missile"))   mobjinfo[t].damage      = value;
       else if (!strcasecmp(word,"Action"))    mobjinfo[t].activesound = SoundMap(value);

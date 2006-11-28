@@ -2913,7 +2913,7 @@ bool Menu::Responder(event_t *ev)
 	    if (cv->flags & CV_FLOAT)
 	      {
 		char s[20];
-		sprintf(s, "%.4f", float(cv->value)/fixed_t::UNIT + change*(1.0f/16.0f));
+		sprintf(s, "%.4f", float(cv->value)/int(fixed_t::UNIT) + change*(1.0f/16.0f));
 		cv->Set(s);
 	      }
 	    else

@@ -30,7 +30,7 @@
 #include "r_things.h"
 #include "r_render.h"
 #include "i_video.h"
-#include "oglrenderer.hpp"
+#include "hardware/oglrenderer.hpp"
 
 #include "info.h"
 #include "tables.h"

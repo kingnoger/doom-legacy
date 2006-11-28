@@ -48,7 +48,7 @@
 #include "z_zone.h"
 #include "z_cache.h"
 
-#include "oglrenderer.hpp"
+#include "hardware/oglrenderer.hpp"
 
 #include "i_video.h"            //rendermode
 

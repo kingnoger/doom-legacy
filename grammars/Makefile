@@ -12,7 +12,8 @@ objdir := ../$(objdir)
 
 all	: $(grammar_objects)
 
-
+depend	:
+	$(CC) -MM $(CFLAGS) *.cpp | sed -e 's/^\([^ ]\)/$$(objdir)\/\1/' > grammars.dep
 
 ntexture.tab.h	: ntexture.y $(i)/ntexture.h
 	bison -d $<
@@ -30,3 +31,5 @@ $(objdir)/ntexture.o: ntexture.cpp $(i)/ntexture.h $(i)/w_wad.h ntexture.tab.h
 
 $(objdir)/%.o	: %.c
 	$(CC) -c $(CFLAGS) $< -o $@
+
+include grammars.dep

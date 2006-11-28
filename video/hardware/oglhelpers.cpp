@@ -14,10 +14,12 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
+//
+//-----------------------------------------------------------------------------
 
-#include"r_data.h"
-#include"doomdef.h"
-#include"oglhelpers.hpp"
+#include "r_data.h"
+#include "doomdef.h"
+#include "hardware/oglhelpers.hpp"
 
 static byte lightleveltonumlut[256];
 

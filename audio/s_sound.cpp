@@ -46,10 +46,6 @@
 #include "z_zone.h"
 #include "z_cache.h"
 
-
-// 3D Sound Interface
-#include "hardware/hw3sound.h"
-
 #include "m_swap.h"
 
 CV_PossibleValue_t soundvolume_cons_t[]={{0,"MIN"},{31,"MAX"},{0,NULL}};

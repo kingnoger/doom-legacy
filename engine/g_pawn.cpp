@@ -34,7 +34,7 @@
 #include "p_enemy.h"
 
 #include "dstrings.h"
-#include "hardware/hw3sound.h" // ugh.
+
 #include "hud.h"
 #include "sounds.h"
 #include "tables.h"

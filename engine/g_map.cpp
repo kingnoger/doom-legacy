@@ -31,7 +31,7 @@
 #include "command.h"
 #include "cvars.h"
 
-#include "bots/b_path.h"
+#include "b_path.h"
 
 #include "p_spec.h"
 #include "p_maputl.h"

@@ -14,17 +14,20 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
+//
+//-----------------------------------------------------------------------------
 
-#include "oglrenderer.hpp"
-#include "oglhelpers.hpp"
 #include "doomdef.h"
-#include "screen.h"
 
 #include "g_map.h"
 #include "g_player.h"
 #include "g_actor.h"
 #include "g_mapinfo.h"
 
+#include "hardware/oglrenderer.hpp"
+#include "hardware/oglhelpers.hpp"
+
+#include "screen.h"
 #include "tables.h"
 #include "r_data.h"
 #include "r_main.h"

@@ -45,9 +45,6 @@
 #include "tables.h"
 #include "dstrings.h"
 
-#include "hardware/hw3sound.h"
-
-
 
 //============================================================
 //  Morphing

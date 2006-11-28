@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,8 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -47,6 +45,10 @@ int  S_StartSound(struct mappoint_t *origin, int sfx_id, float volume = 1.0);
 int  S_StartSound(class Actor *origin, int sfx_id, float volume = 1.0);
 bool S_PlayingSound(Actor *origin, int sfx_id);
 bool S_StartMusic(int music_id, bool looping = false);
+
+// maybe we will need these some day
+#define S_StartScreamSound(actor, sfx_id) S_StartSound(actor, sfx_id)
+#define S_StartAttackSound(actor, sfx_id) S_StartSound(actor, sfx_id)
 
 void S_ClearSounds();
 int  S_Read_SNDINFO(int lump);

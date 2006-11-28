@@ -38,7 +38,6 @@
 #include "command.h"
 #include "cvars.h"
 
-#include "hardware/hw3sound.h"
 #include "z_zone.h"
 
 #include "m_fixed.h"

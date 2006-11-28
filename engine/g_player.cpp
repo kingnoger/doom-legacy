@@ -30,9 +30,9 @@
 #include "g_mapinfo.h"
 #include "g_actor.h"
 #include "g_pawn.h"
+#include "b_bot.h"
 
 #include "a_functions.h"
-#include "bots/b_bot.h"
 
 #include "n_connection.h"
 
