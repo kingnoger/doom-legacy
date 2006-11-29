@@ -418,6 +418,7 @@ void OGLRenderer::Draw2DGraphic(GLfloat top, GLfloat left, GLfloat bottom, GLflo
 
 void OGLRenderer::Draw2DGraphic_Doom(float x, float y, Texture *tex)
 {
+  // TODO scaling, offsets
   /*
   if((x+width) > doomscreenw || (y+height) > doomscreenh)
     printf("Tex %d out of bounds: (%.2f, %.2f) (%.2f, %.2f).\n", tex, x, y, x+width, y+height);  
@@ -934,12 +935,16 @@ void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Texture *t, bool fli
   texbottom = 1.0;
   textop = 0.0;
 
-  sfijfdjsdj;
-  // FIXME NOW use texture offsets
-  left = t->width/(2.0*xscale);
-  right = -left;
+  //left = t->width/(2.0*xscale);
+  //right = -left;
+  right = -t->leftoffset/xscale;
+  left = right + t->width/xscale;
+ 
   bottom = 0.0;
-  top = t->height/yscale;
+  top = t->height/yscale; // HACK
+  //top = t->topoffset/yscale; // FIXME this is correct but looks stupid???
+
+
   glMatrixMode(GL_MODELVIEW);
   glPushMatrix();
 

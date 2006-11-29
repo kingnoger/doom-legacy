@@ -43,13 +43,13 @@ ifdef LINUX
  nasmformat = elf
 # compiler
  platform  = -DLINUX
- interface = -DSDL -DNO_MIXER -DNO_OPENGL
+ interface = -DSDL #-DNO_MIXER
 # linker
-# LIBS	= -lSDLmain -lSDL -lSDL_mixer -lpng -lz -L. -ltnl -ltomcrypt
- LIBS	= -lSDLmain -lSDL -lpng -lz -L. -ltnl32 -ltomcrypt32
-# OPENGLLIBS = -lGL -lGLU
- CF += -m32
- LDFLAGS = -Wall -m32
+ LIBS	= -lSDLmain -lSDL -lSDL_mixer -lpng -lz -L. -ltnl -ltomcrypt
+# LIBS	= -lSDLmain -lSDL -lpng -lz -L. -ltnl32 -ltomcrypt32
+ OPENGLLIBS = -lGL -lGLU
+# CF += -m32
+ LDFLAGS = -Wall #-m32
 # executable
  exename = Legacy
 
@@ -149,8 +149,8 @@ export engine_objects = \
 	$(objdir)/p_enemy.o \
 	$(objdir)/p_henemy.o \
 	$(objdir)/p_xenemy.o \
-	$(objdir)/info_s.o \
-	$(objdir)/info_m.o \
+	$(objdir)/ai_mobjinfo.o \
+	$(objdir)/ai_states.o \
 	$(objdir)/t_oper.o \
 	$(objdir)/t_parse.o \
 	$(objdir)/t_prepro.o \
@@ -255,7 +255,6 @@ export sdl_objects = \
 	$(objdir)/i_video.o \
 	$(objdir)/ogl_sdl.o \
 	$(objdir)/searchp.o
-#	$(objdir)/filesrch.o \
 
 export grammar_objects = \
 	$(objdir)/ntexture.o \

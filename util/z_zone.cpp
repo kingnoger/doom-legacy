@@ -841,7 +841,7 @@ void Command_Meminfo_f()
       CONS_Printf("Patch info headers : %7d kB\n", Z_TagUsage(PU_HWRPATCHINFO)>>10);
       CONS_Printf("HW Texture cache   : %7d kB\n", Z_TagUsage(PU_HWRCACHE)>>10);
       CONS_Printf("Plane polygon      : %7d kB\n", Z_TagUsage(PU_HWRPLANE)>>10);
-      CONS_Printf("HW Texture used    : %7d kB\n", HWR.GetTextureUsed()>>10);
+      //CONS_Printf("HW Texture used    : %7d kB\n", HWR.GetTextureUsed()>>10);
     }
 #endif
 

@@ -1,30 +1,18 @@
 // Emacs style mode select   -*- C++ -*-
-// GNU Bison 2.0 grammar for the JDS NTEXTURE lumps.
+// GNU Bison 2.2 grammar for the JDS NTEXTURE lumps.
 // Generates a C++ parser class.
 // Copyright (C) Ville Bergholm 2005-2006
 
 %skeleton "lalr1.cc"
+%require "2.2"
 %define "parser_class_name" "ntexture_parser"
-%defines
+
 %{
-// prologue
+// first prologue
 #include "ntexture.h"
 #include "doomdef.h"
 #include "r_data.h"
-
-// Announce to Flex the prototype we want for lexing function,
-//#define YY_DECL  int yylex(YYSTYPE *yylval, yy::location *yylloc, ntexture_driver& driver)
-//#define YY_DECL  int yylex(union YYSTYPE *yylval, yy::location *yylloc)
-#define YY_DECL  int yylex(union yy::ntexture_parser::semantic_type *yylval, yy::location *yylloc)
-// and declare it for the parser's sake.
-YY_DECL;
-
 %}
-
-// The parsing context.
-%parse-param { ntexture_driver& d }
-//%lex-param   { ntexture_driver& d }
-
 
 // token data types
 %union
@@ -34,6 +22,21 @@ YY_DECL;
   const char *stype; // just a pointer, not a copy! thus no destructor!
 }
 
+
+%{
+// second prologue
+// Announce to Flex the prototype we want for lexing function,
+//#define YY_DECL  int yylex(YYSTYPE *yylval, yy::location *yylloc, ntexture_driver& driver)
+#define YY_DECL  int yylex(union yy::ntexture_parser::semantic_type *yylval, yy::location *yylloc)
+
+// and declare it for the parser's sake.
+YY_DECL;
+%}
+
+
+// The parsing context.
+%parse-param { ntexture_driver& d }
+//%lex-param   { ntexture_driver& d }
 
 // data types
 %token <itype> INT
@@ -65,10 +68,10 @@ YY_DECL;
 
 %start definitions // start symbol
 
+
 //============================================================================
 %% // grammar rules
 //============================================================================
-
 
 // sequence of 0-N texture definitions
 definitions
