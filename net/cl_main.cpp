@@ -31,8 +31,10 @@
 
 #include "g_game.h"
 #include "g_player.h"
+#include "g_pawn.h"
 #include "g_input.h"
 
+#include "p_camera.h"
 #include "screen.h"
 #include "console.h"
 #include "hud.h"
@@ -114,19 +116,35 @@ void Command_Player_f()
 
   const char *attr = COM_Argv(2);
   const char *val  = COM_Argv(3);
+  int ival = atoi(val);
 
   if (!strcasecmp(attr, "name"))
     p->name = val;
   else if (!strcasecmp(attr, "color"))
-    p->color = atoi(val);
+    p->color = ival;
   else if (!strcasecmp(attr, "autoaim"))
-    p->autoaim = atoi(val);
+    p->autoaim = ival;
   else if (!strcasecmp(attr, "messages"))
-    p->messagefilter = atoi(val);
+    p->messagefilter = ival;
   else if (!strcasecmp(attr, "autorun"))
-    p->autorun = atoi(val);
+    p->autorun = ival;
   else if (!strcasecmp(attr, "crosshair"))
-    p->crosshair = atoi(val);
+    p->crosshair = ival;
+  else if (!strcasecmp(attr, "chasecam"))
+    {
+      PlayerInfo *s = p->info; // FIXME... delayed attribute
+      if (!ival)
+	{
+	  // pov back to first person
+	  s->pov = s->pawn;
+	  // Fixed cams are never deleted (they're part of the Map), chasecam deletes itself.
+	}
+      else if (s->pov == s->pawn)
+	{
+	  // pov to chasecam
+	  s->pov = new Camera(s->pawn, s->pawn);
+	}
+    }
   else
     CONS_Printf("Unknown player attribute '%s'.\n", attr);
 }
@@ -185,6 +203,11 @@ void CL_Init()
   char *temp = I_GetUserName();
   if (temp)
     LocalPlayers[0].name = temp;
+
+  // chasecam properties
+  cv_cam_dist.Reg();
+  cv_cam_height.Reg();
+  cv_cam_speed.Reg();
 
   // client input
   cv_controlperkey.Reg();

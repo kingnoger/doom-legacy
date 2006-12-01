@@ -1166,6 +1166,19 @@ void consvar_t::AddValue(int increment)
 }
 
 
+/// Returns value as fixed_t, handles CV_FLOAT correctly.
+fixed_t consvar_t::Get() const
+{
+  fixed_t res;
+  if (flags & CV_FLOAT)
+    res.setvalue(value);
+  else
+    res = value;
+
+  return res;
+}
+
+
 //  Displays or changes variable from the console
 //
 //  Returns false if the passed command was not recognised as

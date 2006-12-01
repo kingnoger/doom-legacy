@@ -951,8 +951,9 @@ void Actor::FakeZMovement()
 // Checks if the new Z position is legal
 Actor *Actor::CheckOnmobj()
 {
-  int          xl,xh,yl,yh,bx,by;
-    
+  if (flags & MF_NOCLIPTHING)
+    return NULL;
+
   tmthing = this;
   fixed_t oldz = pos.z;
   fixed_t oldpz = vel.z;
@@ -974,16 +975,13 @@ Actor *Actor::CheckOnmobj()
    
   validcount++;
   spechit.clear();
-    
-  if (flags & MF_NOCLIPTHING)
-    return NULL;
-    
-  //
+        
   // check things first, possibly picking things up
   // the bounding box is extended by MAXRADIUS because Actors are grouped
   // into mapblocks based on their origin point, and can overlap into adjacent
   // blocks by up to MAXRADIUS units
-  //
+
+  int xl, xh, yl, yh, bx, by;
   xl = ((tmb[BOXLEFT] - mp->bmaporgx).floor() - MAXRADIUS) >> MAPBLOCKBITS;
   xh = ((tmb[BOXRIGHT] - mp->bmaporgx).floor() + MAXRADIUS) >> MAPBLOCKBITS;
   yl = ((tmb[BOXBOTTOM] - mp->bmaporgy).floor() - MAXRADIUS) >> MAPBLOCKBITS;

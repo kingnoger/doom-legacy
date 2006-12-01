@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004-2005 by DooM Legacy Team.
+// Copyright (C) 2004-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,12 +15,10 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
-//
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Console variable prototypes.
+/// \brief Console variable declarations.
 
 #ifndef cvars_h
 #define cvars_h 1
@@ -74,6 +72,11 @@ extern consvar_t cv_infighting;
 
 // client info (server needs to know)
 extern consvar_t cv_splitscreen;
+
+// client info shared by players
+extern consvar_t cv_cam_dist;
+extern consvar_t cv_cam_height;
+extern consvar_t cv_cam_speed;
 
 // client input (g_input.cpp)
 extern consvar_t cv_controlperkey;

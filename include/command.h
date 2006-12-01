@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,8 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -131,6 +129,9 @@ public:
 
   /// it a setvalue but with a modulo at the maximum
   void AddValue(int increment);
+
+  /// returns the value, handles CV_FLOAT properly
+  class fixed_t Get() const;
 
   /// register a variable for use at the console
   bool Reg();

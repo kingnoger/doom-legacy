@@ -445,10 +445,6 @@ void PlayerPawn::LandedOnThing(Actor *onmobj)
 
 void Actor::Think()
 {
-  PlayerPawn *p = NULL;
-  if (IsOf(PlayerPawn::_type))
-    p = (PlayerPawn *)this;
-
   // check possible sector water content, set water eflags, cause splashes on ffloors
   CheckWater();
 
@@ -500,6 +496,7 @@ void Actor::Think()
 	}
       else
 	{
+	  PlayerPawn *p = IsOf(PlayerPawn::_type) ? reinterpret_cast<PlayerPawn*>(this) : NULL; 
 	  if (p) // FIXME is this ok? For all Actors?
 	    {
 	      if (vel.z < -8 && !(eflags & MFE_FLY))
@@ -882,8 +879,7 @@ void Actor::ZMovement()
   else if (!(flags & MF_NOGRAVITY)) // Gravity!
     {
       // TODO per-sector gravity
-      fixed_t gravityadd;
-      gravityadd.setvalue(-cv_gravity.value);
+      fixed_t gravityadd = -cv_gravity.Get();
 
       if (flags2 & MF2_LOGRAV)
 	gravityadd >> 3; // feels just one-eight gravity

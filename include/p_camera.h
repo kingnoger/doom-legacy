@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2005 by DooM Legacy Team.
+// Copyright (C) 2002-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,27 +15,28 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Chasecam
+/// \brief Chasecam.
 
 #ifndef p_camera_h
 #define p_camera_h
 
-#include "m_fixed.h"
 #include "g_actor.h"
 
-/// \brief Chasecam, FS cameras.
+
+/// \brief Chasecam
+///
+/// target is the Actor the camera is following ("chasing").
+/// owner  is the PlayerPawn (sic!) whose pov this camera is.
+/// This is a HACK which allows us to make use of Actor data members.
 class Camera : public Actor
 {
   DECLARE_CLASS(Camera);
-public:
-  int  fixedcolormap;
-  bool chase;
 
-  Camera(struct mapthing_t *mt);
+public:
+  Camera(PlayerPawn *o, Actor *t);
 
   void ClearCamera();
   void ResetCamera(Actor *p);

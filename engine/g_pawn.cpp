@@ -713,7 +713,7 @@ void PlayerPawn::Move()
 	vel.z = 0.5f;
       else if (onground && !jumpdown && cv_jumpspeed.value) // can't jump while in air or while jumping
 	{
-	  vel.z.setvalue(cv_jumpspeed.value);
+	  vel.z = cv_jumpspeed.Get();
 	  if (!(cheats & CF_FLYAROUND))
 	    {
 	      S_StartScreamSound(this, sfx_jump);
