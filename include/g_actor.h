@@ -279,9 +279,9 @@ public:
   fixed_t height;
 
   /// quick z positions
-  inline fixed_t Top() { return pos.z + height; }
-  inline fixed_t Center() { return pos.z + (height >> 1); }
-  inline fixed_t Feet() { return pos.z; }
+  inline fixed_t Top()    const { return pos.z + height; }
+  inline fixed_t Center() const { return pos.z + (height >> 1); }
+  inline fixed_t Feet()   const { return pos.z; }
 
   int  health;
 
@@ -357,9 +357,10 @@ protected:
 public:
   void FakeZMovement();
   Actor *CheckOnmobj();
-  Actor *AimLineAttack(angle_t ang, fixed_t distance, fixed_t &sinpitch);
-  Actor *LineAttack(angle_t ang, fixed_t distance, fixed_t slope, int damage, int dtype = dt_normal);
-  void    RadiusAttack(Actor *culprit, int damage, fixed_t radius = -1, int dtype = dt_normal, bool downer = true);
+  Actor *AimLineAttack(angle_t ang, float distance, float& sinpitch);
+  Actor *LineTrace(angle_t ang, float distance, float sine, bool interact);
+  Actor *LineAttack(angle_t ang, float distance, float sine, int damage, int dtype = dt_normal);
+  void   RadiusAttack(Actor *culprit, int damage, fixed_t radius = -1, int dtype = dt_normal, bool downer = true);
 
   virtual void Howl() {};
 };

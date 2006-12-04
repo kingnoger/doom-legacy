@@ -281,8 +281,7 @@ public:
 		      mobjtype_t chunk = MT_NONE, bool randtics = true); 
   DActor *SpawnBlood(const vec_t<fixed_t>& r, int damage);
   void SpawnBloodSplats(const vec_t<fixed_t>& r, int damage, fixed_t px, fixed_t py);
-  void SpawnPuff(fixed_t nx, fixed_t ny, fixed_t nz);
-  inline void SpawnPuff(const vec_t<fixed_t>& r) { SpawnPuff(r.x, r.y, r.z); }
+  void SpawnPuff(const vec_t<fixed_t>& r, mobjtype_t pufftype);
   void SpawnSmoke(fixed_t x, fixed_t y, fixed_t z);
 
   void InsertIntoTIDmap(Actor *p, int tid);
@@ -330,7 +329,7 @@ public:
   bool BlockThingsIterator(int x, int y, thing_iterator_t func);
   bool IterateThinkers(thinker_iterator_t func);
   bool IterateActors(thing_iterator_t func);
-  bool PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags, traverser_t trav);
+  bool PathTraverse(const vec_t<fixed_t>& p1, const vec_t<fixed_t>& p2, int flags, traverser_t trav);
   Actor *RoughBlockSearch(Actor *center, Actor *master, int distance, int flags);
   Actor *RoughBlockCheck(Actor *center, Actor *master, int index, int flags);
   void CreateSecNodeList(Actor *thing, fixed_t x, fixed_t y);

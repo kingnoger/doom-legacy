@@ -641,7 +641,7 @@ void Actor::XYMovement()
 	  if (flags2 & MF2_SLIDE)
             {
 	      // try to slide along whatever blocked us
-	      if (!Blocking.thing)
+	      if (!PosCheck.block_thing)
 		{
 		  SlideMove(ptryx, ptryy); // Slide against wall
 		}
@@ -658,7 +658,7 @@ void Actor::XYMovement()
             }
 	    else if (flags & MF_MISSILE)
             {
-	      if (Blocking.thing)
+	      if (PosCheck.block_thing)
 		return; // explosions handled at Actor::Touch()
 
 	      // must have been blocked by a line
@@ -687,6 +687,8 @@ void Actor::XYMovement()
 
 
 	      // explode a missile, but not against the sky (hack)
+#warning FIXME NOW
+	      /*
 	      if (ceilingline &&
 		  ceilingline->backsector &&
 		  ceilingline->backsector->ceilingpic == skyflatnum &&
@@ -704,20 +706,21 @@ void Actor::XYMovement()
 		    Remove();
 		    return;
                   }
+	      */
 
 	      // draw damage on wall
-	      if (Blocking.line && !(flags & MF_NOSCORCH))  // set by last TryMove() that failed
+	      if (PosCheck.block_line && !(flags & MF_NOSCORCH))  // set by last TryMove() that failed
                 {
 		  divline_t   divl;
 		  divline_t   misl;
 
-		  divl.MakeDivline(Blocking.line);
+		  divl.MakeDivline(PosCheck.block_line);
 		  misl.x = pos.x;
 		  misl.y = pos.y;
 		  misl.dx = vel.x;
 		  misl.dy = vel.y;
 		  fixed_t frac = P_InterceptVector(&divl, &misl);
-		  mp->R_AddWallSplat(Blocking.line, P_PointOnLineSide(pos.x, pos.y, Blocking.line),
+		  mp->R_AddWallSplat(PosCheck.block_line, P_PointOnLineSide(pos.x, pos.y, PosCheck.block_line),
 				     "A_DMG3", pos.z, frac, SPLATDRAWMODE_SHADE);
                 }
 

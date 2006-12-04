@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
 //-----------------------------------------------------------------------------
 
 /// \file
@@ -24,14 +23,12 @@
 #ifndef p_enemy_h
 #define p_enemy_h 1
 
-#include "m_fixed.h"
-
 
 #define HITDICE(a) ((1+(P_Random() & 7))*(a))
 
-const fixed_t MELEERANGE   = 64;
-const fixed_t AIMRANGE     = 16*64;
-const fixed_t MISSILERANGE = 32*64;
+const int MELEERANGE   = 64;
+const int AIMRANGE     = 16*64;
+const int MISSILERANGE = 32*64;
 
 const float   FLOATSPEED = 4;
 
@@ -49,8 +46,8 @@ enum dirtype_t
   NUMDIRS
 };
 
-void    P_NoiseAlert(class Actor *target, Actor *emitter);
-fixed_t P_BulletSlope(class PlayerPawn *p);
+void   P_NoiseAlert(class Actor *target, Actor *emitter);
+float  P_BulletSlope(class PlayerPawn *p);
 
 void   A_FaceTarget(class DActor *actor);
 void   A_Chase(DActor *actor);

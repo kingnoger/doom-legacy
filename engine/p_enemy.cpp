@@ -237,9 +237,9 @@ static void P_RecursiveSound(sector_t *sec, int soundblocks)
       if (!(check->flags & ML_TWOSIDED))
 	continue;
 
-      line_opening_t *open = P_LineOpening(check);
+      line_opening_t *open = line_opening_t::Get(check, soundtarget); // TODO not accurate, but...
 
-      if (open->range <= 0)
+      if (open->Range() <= 0)
 	continue;   // closed door
 
       sector_t *other;
@@ -388,7 +388,7 @@ bool DActor::P_Move()
       if (flags & MF_FLOAT && floatok)
         {
 	  // must adjust height
-	  if (pos.z < tmfloorz)
+	  if (pos.z < PosCheck.floorz)
 	    pos.z += FLOATSPEED;
 	  else
 	    pos.z -= FLOATSPEED;
@@ -397,15 +397,15 @@ bool DActor::P_Move()
 	  return true;
         }
 
-      if (!spechit.size())
+      if (!PosCheck.spechit.size())
 	return false;
 
       movedir = DI_NODIR;
 
       bool good = false;
-      while (spechit.size())
+      while (PosCheck.spechit.size())
         {	  
-	  line_t *ld = spechit.back();
+	  line_t *ld = PosCheck.spechit.back();
 	  // if the special is not a door
 	  // that can be opened,
 	  // return false
@@ -413,7 +413,7 @@ bool DActor::P_Move()
 	    good = true;
 	  // Old version before use/cross/impact specials were combined
 	  //if (mp->UseSpecialLine(this, ld, 0))
-	  spechit.pop_back();
+	  PosCheck.spechit.pop_back();
         }
       return good;
     }
@@ -932,7 +932,7 @@ void A_PosAttack(DActor *actor)
 
   A_FaceTarget(actor);
   angle_t angle = actor->yaw;
-  fixed_t sine;
+  float sine;
   actor->AimLineAttack(angle, MISSILERANGE, sine);
   S_StartAttackSound(actor, sfx_pistol);
   angle += P_SignedRandom()<<20;
@@ -948,7 +948,7 @@ void A_SPosAttack(DActor *actor)
   S_StartAttackSound(actor, sfx_shotgn);
   A_FaceTarget (actor);
   angle_t bangle = actor->yaw;
-  fixed_t sine;
+  float sine;
   actor->AimLineAttack(bangle, MISSILERANGE, sine);
 
   for (int i=0 ; i<3 ; i++)
@@ -967,7 +967,7 @@ void A_CPosAttack(DActor *actor)
   S_StartAttackSound(actor, sfx_shotgn);
   A_FaceTarget (actor);
   angle_t bangle = actor->yaw;
-  fixed_t sine;
+  float sine;
   actor->AimLineAttack(bangle, MISSILERANGE, sine);
 
   angle_t angle  = (P_SignedRandom()<<20)+bangle;
@@ -1144,7 +1144,7 @@ void A_Tracer(DActor *actor)
     return;
 
   // spawn a puff of smoke behind the rocket
-  m->SpawnPuff(actor->pos);
+  m->SpawnPuff(actor->pos, MT_PUFF);
 
   DActor *th = m->SpawnDActor(actor->pos.x - actor->vel.x, actor->pos.y - actor->vel.y, actor->pos.z, MT_SMOKE);
 

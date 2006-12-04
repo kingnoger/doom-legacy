@@ -948,7 +948,7 @@ weapontype_t PlayerPawn::FindWeapon(int g)
 // Tries to aim at a nearby monster
 DActor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
 {
-  fixed_t sine = 0;
+  float sine = 0;
 
   if (player->options.autoaim && cv_allowautoaim.value)
     {
@@ -967,11 +967,11 @@ DActor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
             }
 
 	  if (!targ)
-	    sine = Sin(pitch);
+	    sine = Sin(pitch).Float();
         }
     }
   else
-    sine = Sin(pitch);
+    sine = Sin(pitch).Float();
 
   // if not autoaim, or if the autoaim didnt aim something, use the mouseaiming    
 
@@ -986,7 +986,7 @@ DActor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
 
   th->yaw = ang;
 
-  th->Thrust(ang, th->info->speed * sqrt(1 - sine*sine));
+  th->Thrust(ang, th->info->speed * sqrtf(1 - sine*sine));
 
   if (th->flags2 & (MF2_CEILINGHUGGER | MF2_FLOORHUGGER))
     sine = 0;

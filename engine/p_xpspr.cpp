@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1996 by Raven Software, Corp.
-// Copyright (C) 2003-2005 by DooM Legacy Team.
+// Copyright (C) 2003-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,8 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -44,8 +42,8 @@
 void A_UnHideThing(DActor *actor);
 int P_FaceMobj(Actor *source, Actor *target, angle_t *delta);
 
+extern line_t *target_line;
 extern mobjtype_t PuffType;
-extern Actor *PuffSpawned;
 
 
 //============================================================================
@@ -73,10 +71,10 @@ void Pawn::AdjustPlayerAngle(Actor *t)
 
 /// Helper function for melee weapons
 // Returns 1 if hit a target, 0 if not.
-static int MeleeBlow(PlayerPawn *player, int damage, fixed_t range, fixed_t power, angle_t sweep = ANG45/16)
+static int MeleeBlow(PlayerPawn *player, int damage, float range, fixed_t power, angle_t sweep = ANG45/16)
 {
   angle_t angle;
-  fixed_t sine;
+  float sine;
   Actor *targ;
 
   // sweep for targets in front
@@ -125,22 +123,19 @@ static int MeleeBlow(PlayerPawn *player, int damage, fixed_t range, fixed_t powe
 
 void A_SnoutAttack(PlayerPawn *player, pspdef_t *psp)
 {
-  fixed_t sine;
+  float sine;
 
   int damage = 3+(P_Random()&3);
   angle_t angle = player->yaw;
   player->AimLineAttack(angle, MELEERANGE, sine);
   PuffType = MT_SNOUTPUFF;
-  PuffSpawned = NULL;
   Actor *targ = player->LineAttack(angle, MELEERANGE, sine, damage);
   S_StartSound(player, SFX_PIG_ACTIVE1+(P_Random()&1));
   if (targ)
     {
       player->AdjustPlayerAngle(targ);
-      if (PuffSpawned)
-	{ // Bit something
-	  S_StartSound(player, SFX_PIG_ATTACK);
-	}
+      // Bit something
+      S_StartSound(player, SFX_PIG_ATTACK);
     }
 }
 
@@ -157,14 +152,13 @@ void A_FHammerAttack(PlayerPawn *player, pspdef_t *psp)
   int damage = 60+(P_Random()&63);
   fixed_t power = 10;
   PuffType = MT_HAMMERPUFF;
-  PuffSpawned = NULL;
 
   if (MeleeBlow(player, damage, HAMMER_RANGE, power, ANG45/32))
     player->attackphase = false; // Don't throw a hammer
   else
     {
-      // did we hit a wall?
-      player->attackphase = PuffSpawned ? false : true;
+      // did we hit a wall? if so, don't throw a hammer
+      player->attackphase = target_line ? false : true;
     }
 
   if (player->ammo[am_mana2] < player->weaponinfo[player->readyweapon].ammopershoot)
@@ -644,7 +638,7 @@ void A_MStaffAttack2(DActor *actor)
 void A_FPunchAttack(PlayerPawn *player, pspdef_t *psp)
 {
   angle_t angle;
-  fixed_t sine;
+  float sine;
 
   int damage = 40+(P_Random()&15);
   fixed_t power = 2;
@@ -772,7 +766,7 @@ void A_CStaffCheck(PlayerPawn *player, pspdef_t *psp)
   for (int i = 0; i < 3; i++)
     {
       angle_t angle = player->yaw + i*(ANG45/16);
-      fixed_t sine;
+      float sine;
       Actor *targ = player->AimLineAttack(angle, STAFFRANGE, sine);
       if (targ)
 	{
@@ -922,16 +916,16 @@ void A_CFlameMissile(DActor *actor)
   A_UnHideThing(actor);
   S_StartSound(actor, SFX_CLERIC_FLAME_EXPLODE);
 
-  if (Blocking.thing && Blocking.thing->flags & MF_SHOOTABLE)
+  if (PosCheck.block_thing && PosCheck.block_thing->flags & MF_SHOOTABLE)
     {
       // Hit something, so spawn the flame circle around the thing
-      fixed_t dist = Blocking.thing->radius+18;
+      fixed_t dist = PosCheck.block_thing->radius+18;
       for (int i = 0; i < 4; i++)
 	{
 	  int an = (i*ANG45) >> ANGLETOFINESHIFT;
 	  //int an90 = (i*ANG45 + ANG90) >> ANGLETOFINESHIFT;
 	  vec_t<fixed_t> temp(dist * finecosine[an], dist * finesine[an], 5);
-	  temp += Blocking.thing->pos;
+	  temp += PosCheck.block_thing->pos;
 
 	  DActor *mo = actor->mp->SpawnDActor(temp, MT_CIRCLEFLAME);
 	  if (mo)
@@ -945,7 +939,7 @@ void A_CFlameMissile(DActor *actor)
 	    }
 
 	  temp.Set(-dist * finecosine[an], -dist * finesine[an], fixed_t(5));
-	  temp += Blocking.thing->pos;
+	  temp += PosCheck.block_thing->pos;
 
 	  mo = actor->mp->SpawnDActor(temp, MT_CIRCLEFLAME);
 	  if (mo)
@@ -1157,7 +1151,7 @@ void A_CHolyAttack(PlayerPawn *p, pspdef_t *psp)
   p->ammo[am_mana1] -= mana;
   p->ammo[am_mana2] -= mana;
   DActor *mo = p->SpawnPlayerMissile(MT_HOLY_MISSILE);
-  fixed_t dummy;
+  float dummy;
   mo->target = p->AimLineAttack(p->yaw, AIMRANGE, dummy); // HACK to compensate SPMAngle without autoaim
 
   p->player->palette = STARTHOLYPAL;
@@ -1440,7 +1434,7 @@ void A_FireConePL1(PlayerPawn *player, pspdef_t *psp)
   for (int i = 0; i < 16; i++)
     {
       angle_t angle = player->yaw+i*(ANG45/16);
-      fixed_t sine;
+      float sine;
       Actor *targ = player->AimLineAttack(angle, MELEERANGE, sine);
       if (targ)
 	{

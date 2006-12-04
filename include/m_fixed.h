@@ -63,7 +63,7 @@ public:
   /// the compliler never adds an implicit cast for the input arguments.
   explicit inline fixed_t() {}
   inline fixed_t(int a) { val = a << FBITS; }
-  fixed_t(float f)
+  inline fixed_t(float f)
   {
     // No reason for this slowdown. We don't check int's either.
     //if (f < FMIN)
@@ -73,6 +73,8 @@ public:
     //else
       val = value_t(f * float(UNIT));
   }
+  inline fixed_t(double f) { val = value_t(f * double(UNIT)); }
+
   // copy constructor (has to be light!)
   inline fixed_t(const fixed_t& f) { val = f.val; }
 

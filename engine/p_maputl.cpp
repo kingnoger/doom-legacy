@@ -34,6 +34,7 @@
 
 #include "m_bbox.h"
 #include "r_poly.h"
+#include "r_sky.h"
 #include "p_maputl.h"
 
 #include "tables.h"
@@ -278,115 +279,192 @@ fixed_t P_InterceptVector(divline_t *v2, divline_t *v1)
 
 
 
-// Sets Open to the window through a two sided line.
-// OPTIMIZE: keep this precalculated
+//==========================================================================
+//  Line openings and vertical ranges
+//==========================================================================
+
+static list<range_t> Line_openings; // sorted from low to high
+
+
+list<range_t> *sector_t::FindLineOpeningsInRange(const range_t& in)
+{
+  Line_openings.clear();
+
+  // start chopping the range up with sector planes
+  // TODO sky-wall
+
+  range_t r = in;
+
+  if (floorheight > r.low)
+    r.low = floorheight;
+
+  if (ceilingheight < r.high)
+    r.high = ceilingheight;
+
+  if (r.high <= r.low)
+    return &Line_openings; // no opening
+
+  Line_openings.push_back(r);
+
+  for (ffloor_t *rover = ffloors; rover; rover = rover->next)
+    {
+      if (!(rover->flags & FF_SOLID))
+	continue;
+
+      fixed_t h = *rover->topheight;
+      fixed_t l = *rover->bottomheight;
+
+      list<range_t>::iterator a, b, o, t;
+
+      // find range of openings [a,b) which this ffloor changes, starting from the lowest
+      for (a = Line_openings.begin(); l >= a->high && a != Line_openings.end(); a++)
+	; // a is the first affected one
+
+      for (b = a; h > b->low && b != Line_openings.end(); b++)
+	; // b is past-the-end
+
+      for (o = a; o != b; )
+	{
+	  if (l <= o->low)
+	    {
+	      // cut from below
+	      if (h >= o->high)
+		{
+		  // entire opening is closed
+		  t = o;
+		  o++ ;
+		  Line_openings.erase(t);
+		  continue; // skip o++ at end of block
+		}
+	      else
+		o->low = h; // raise bottom
+	    }
+	  else if (h >= o->high)
+	    {
+	      // cut from above
+	      o->high = l; // lower top
+	    }
+	  else
+	    {
+	      // floor splits the opening into two: [o->low, l] and [h, o->high]
+	      r.low = o->low;
+	      r.high = l;
+	      Line_openings.insert(o, r); // inserted just before o
+	      o->low = h;
+	    }
+
+	  o++;
+	}
+    }
+
+  return &Line_openings;
+}
+
+
+
+/// Find the narrowest free vertical range in sector s containing z-coordinate z.
+range_t sector_t::FindZRange(fixed_t z)
+{
+  range_t r;
+
+  // NOTE z is assumed to be always between absolute floor and ceiling
+  r.low  = floorheight;
+  r.high = ceilingheight;
+
+  // see if fake floors make the range narrower
+  for (ffloor_t *rover = ffloors; rover; rover = rover->next)
+    {
+      if (!(rover->flags & FF_SOLID))
+	continue;
+
+      fixed_t h = *rover->topheight;
+      if (h <= z && h > r.low)
+	r.low = h;
+
+      h = *rover->bottomheight;
+      if (h >= z && h < r.high)
+	r.high = h;
+    }
+
+  return r;
+}
+
+
+
+void sector_t::FindZRange(const Actor *a, line_opening_t& op)
+{
+  fixed_t thingbot = a->Feet();
+  fixed_t thingtop = a->Top();
+
+  // Check fake floors
+  for (ffloor_t *rover = ffloors; rover; rover = rover->next)
+    {
+      if (!(rover->flags & FF_SOLID))
+	continue;
+
+      fixed_t ffcenter = (*rover->topheight + *rover->bottomheight)/2;
+      fixed_t delta1 = abs(thingbot - ffcenter);
+      fixed_t delta2 = abs(thingtop - ffcenter);
+	    
+      if (delta1 > delta2)
+	{
+	  // ffloor acts as a ceiling
+	  if (*rover->bottomheight < op.top)
+	    {
+	      op.top = *rover->bottomheight;
+	      op.sky = false;
+	    }
+	}
+      else
+	{
+	  // ffloor acts as a floor
+	  if (*rover->topheight > op.bottom)
+	    {
+	      op.lowfloor = op.bottom;
+	      op.bottom   = *rover->topheight;
+	    }
+	  else if (*rover->topheight > op.lowfloor)
+	    op.lowfloor = *rover->topheight; 
+	}
+    }
+
+  // then the sector ceiling and floor
+  if (ceilingheight < op.top)
+    {
+      op.top = ceilingheight;
+      if (ceilingpic == skyflatnum)
+	op.sky = true;
+    }
+
+  if (floorheight > op.bottom)
+    {
+      op.lowfloor = op.bottom;
+      op.bottom = floorheight;
+    }
+  else if (floorheight > op.lowfloor)
+    op.lowfloor = floorheight;
+}
+
+
 
 static line_opening_t Opening;
 
-line_opening_t *P_LineOpening(line_t *linedef, Actor *thing)
+/// Sets Opening to the window through a two sided line.
+line_opening_t *line_opening_t::Get(line_t *line, Actor *thing)
 {
-  if (linedef->sideptr[1] == NULL)
+  Opening.top = fixed_t::FMAX;
+  Opening.bottom = Opening.lowfloor = fixed_t::FMIN;
+  Opening.sky = false;
+
+  if (line->sideptr[1] == NULL)
     {
       // single sided line
-      Opening.range = 0;
+      Opening.bottom = Opening.top = 0;
       return &Opening;
     }
 
-  sector_t *front = linedef->frontsector;
-  sector_t *back  = linedef->backsector;
-#ifdef PARANOIA
-  if(!front)
-    I_Error("lindef without front");
-  if(!back)
-    I_Error("lindef without back");
-#endif
-
-  if (front->ceilingheight < back->ceilingheight)
-    Opening.top = front->ceilingheight;
-  else
-    Opening.top = back->ceilingheight;
-
-  if (front->floorheight > back->floorheight)
-    {
-      Opening.bottom = front->floorheight;
-      Opening.lowfloor = back->floorheight;
-    }
-  else
-    {
-      Opening.bottom = back->floorheight;
-      Opening.lowfloor = front->floorheight;
-    }
-
-  // TODO check ffloor handling
-  if (thing && (front->ffloors || back->ffloors))
-    {
-      //SoM: 3/27/2000: Check for fake floors in the sector.
-
-      fixed_t thingbot = thing->Feet();
-      fixed_t thingtop = thing->Top();
-
-      fixed_t lowestceiling = Opening.top;
-      fixed_t highestfloor = Opening.bottom;
-      fixed_t highest_lowfloor = Opening.lowfloor;
-      fixed_t delta1, delta2;
-
-      // Check for frontsector's fake floors
-      for (ffloor_t *rover = front->ffloors; rover; rover = rover->next)
-	{
-	  if (!(rover->flags & FF_SOLID))
-	    continue;
-
-	  delta1 = abs(thingbot - ((*rover->bottomheight + *rover->topheight) / 2));
-	  delta2 = abs(thingtop - ((*rover->bottomheight + *rover->topheight) / 2));
-	    
-	  if (delta1 >= delta2)
-	    {
-	      if (*rover->bottomheight < lowestceiling)
-		lowestceiling = *rover->bottomheight;
-	    }
-	  else
-	    {
-	      if (*rover->topheight > highestfloor)
-		highestfloor = *rover->topheight;
-	      else if (*rover->topheight > highest_lowfloor)
-		highest_lowfloor = *rover->topheight;
-	    }
-	}
-
-      // Check for backsectors fake floors
-      for (ffloor_t *rover = back->ffloors; rover; rover = rover->next)
-	{
-	  if (!(rover->flags & FF_SOLID))
-	    continue;
-
-	  delta1 = abs(thingbot - ((*rover->bottomheight + *rover->topheight) / 2));
-	  delta2 = abs(thingtop - ((*rover->bottomheight + *rover->topheight) / 2));
-	    
-	  if (delta1 >= delta2)
-	    {
-	      if (*rover->bottomheight < lowestceiling)
-		lowestceiling = *rover->bottomheight;
-	    }
-	  else
-	    {
-	      if (*rover->topheight > highestfloor)
-		highestfloor = *rover->topheight;
-	      else if (*rover->topheight > highest_lowfloor)
-		highest_lowfloor = *rover->topheight;
-	    }
-	}
-
-      if (lowestceiling < Opening.top)
-	Opening.top = lowestceiling;
-
-      if (highestfloor > Opening.bottom)
-	Opening.bottom = highestfloor;
-
-      if (highest_lowfloor > Opening.lowfloor)
-	Opening.lowfloor = highest_lowfloor;
-    }
-
-  Opening.range = Opening.top - Opening.bottom;
+  line->frontsector->FindZRange(thing, Opening);
+  line->backsector->FindZRange(thing, Opening);
 
   return &Opening;
 }
@@ -527,7 +605,7 @@ bool Map::IterateActors(thing_iterator_t func)
 //==========================================================================
 
 static vector<intercept_t> intercepts;
-divline_t   trace;
+trace_t trace;        ///< changed by Map::PathTraverse ONLY
 static bool earlyout;
 
 static Map *tempMap;
@@ -545,18 +623,18 @@ static bool PIT_AddLineIntercepts(line_t *ld)
   int  s1, s2;
 
   // avoid precision problems with two routines
-  if (trace.dx > 16 || trace.dy > 16
-      || trace.dx < -16 || trace.dy < -16)
+  if (trace.delta.x > 16 || trace.delta.y > 16
+      || trace.delta.x < -16 || trace.delta.y < -16)
     {
       //Hurdler: crash here with phobia when you shoot on the door next the stone bridge
       //stack overflow???
-      s1 = P_PointOnDivlineSide (ld->v1->x, ld->v1->y, &trace);
-      s2 = P_PointOnDivlineSide (ld->v2->x, ld->v2->y, &trace);
+      s1 = P_PointOnDivlineSide (ld->v1->x, ld->v1->y, &trace.dl);
+      s2 = P_PointOnDivlineSide (ld->v2->x, ld->v2->y, &trace.dl);
     }
   else
     {
-      s1 = P_PointOnLineSide (trace.x, trace.y, ld);
-      s2 = P_PointOnLineSide (trace.x+trace.dx, trace.y+trace.dy, ld);
+      s1 = P_PointOnLineSide (trace.start.x, trace.start.y, ld);
+      s2 = P_PointOnLineSide (trace.start.x+trace.delta.x, trace.start.y+trace.delta.y, ld);
     }
 
   if (s1 == s2)
@@ -565,7 +643,7 @@ static bool PIT_AddLineIntercepts(line_t *ld)
   // hit the line
   divline_t  dl;
   dl.MakeDivline(ld);
-  fixed_t frac = P_InterceptVector(&trace, &dl);
+  fixed_t frac = P_InterceptVector(&trace.dl, &dl);
 
   if (frac < 0)
     return true;    // behind source
@@ -598,7 +676,7 @@ static bool PIT_AddThingIntercepts(Actor *thing)
   fixed_t  x1, y1, x2, y2;
   int      s1, s2;
 
-  bool tracepositive = (trace.dx.value() ^ trace.dy.value()) > 0;
+  bool tracepositive = (trace.delta.x.value() ^ trace.delta.y.value()) > 0;
 
   // check a corner to corner crossection for hit
   if (tracepositive)
@@ -618,8 +696,8 @@ static bool PIT_AddThingIntercepts(Actor *thing)
       y2 = thing->pos.y + thing->radius;
     }
 
-  s1 = P_PointOnDivlineSide (x1, y1, &trace);
-  s2 = P_PointOnDivlineSide (x2, y2, &trace);
+  s1 = P_PointOnDivlineSide (x1, y1, &trace.dl);
+  s2 = P_PointOnDivlineSide (x2, y2, &trace.dl);
 
   if (s1 == s2)
     return true;            // line isn't crossed
@@ -630,7 +708,7 @@ static bool PIT_AddThingIntercepts(Actor *thing)
   dl.dx = x2-x1;
   dl.dy = y2-y1;
 
-  fixed_t frac = P_InterceptVector(&trace, &dl);
+  fixed_t frac = P_InterceptVector(&trace.dl, &dl);
 
   if (frac < 0)
     return true;            // behind source
@@ -699,6 +777,23 @@ static bool P_TraverseIntercepts(traverser_t func, fixed_t maxfrac)
 }
 
 
+
+void trace_t::Make(const vec_t<fixed_t>& v1, const vec_t<fixed_t>& v2)
+{
+  start = v1;
+  delta = v2-v1;
+  vec_t<float> temp;
+  temp.x = delta.x.Float();
+  temp.y = delta.y.Float();
+  temp.z = delta.z.Float();
+
+  length = temp.Norm();
+  sin_pitch = temp.z / length;
+  Init();
+}
+
+
+
 /// \brief Traces a line through the blockmap.
 /// \ingroup g_trace
 /*!
@@ -706,8 +801,12 @@ static bool P_TraverseIntercepts(traverser_t func, fixed_t maxfrac)
   adding line/thing intercepts and then calling the traverser function for each intercept.
   \return true if the traverser function returns true for all lines
 */
-bool Map::PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags, traverser_t trav)
+bool Map::PathTraverse(const vec_t<fixed_t>& v1, const vec_t<fixed_t>& v2, int flags, traverser_t trav)
 {
+  // small HACK: make local copies so we can change them
+  vec_t<fixed_t> p1(v1);
+  vec_t<fixed_t> p2(v2);
+
   earlyout = flags & PT_EARLYOUT;
 
   validcount++;
@@ -715,26 +814,24 @@ bool Map::PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags
 
 #define MAPBLOCKSIZE (MAPBLOCKUNITS * fixed_t::UNIT)
 
-  if (((x1-bmaporgx).value() & (MAPBLOCKSIZE-1)) == 0)
-    x1 += 1; // don't side exactly on a line
+  if (((p1.x-bmaporgx).value() & (MAPBLOCKSIZE-1)) == 0)
+    p1.x += 1; // don't side exactly on a line
 
-  if (((y1-bmaporgy).value() & (MAPBLOCKSIZE-1)) == 0)
-    y1 += 1; // don't side exactly on a line
+  if (((p1.y-bmaporgy).value() & (MAPBLOCKSIZE-1)) == 0)
+    p1.y += 1; // don't side exactly on a line
 
-  trace.x = x1;
-  trace.y = y1;
-  trace.dx = x2 - x1;
-  trace.dy = y2 - y1;
+  // set up the trace struct
+  trace.Make(p1, p2);
 
-  x1 -= bmaporgx;
-  y1 -= bmaporgy;
-  int xt1 = x1.floor() >> MAPBLOCKBITS;
-  int yt1 = y1.floor() >> MAPBLOCKBITS;
+  p1.x -= bmaporgx;
+  p1.y -= bmaporgy;
+  int xt1 = p1.x.floor() >> MAPBLOCKBITS;
+  int yt1 = p1.y.floor() >> MAPBLOCKBITS;
 
-  x2 -= bmaporgx;
-  y2 -= bmaporgy;
-  int xt2 = x2.floor() >> MAPBLOCKBITS;
-  int yt2 = y2.floor() >> MAPBLOCKBITS;
+  p2.x -= bmaporgx;
+  p2.y -= bmaporgy;
+  int xt2 = p2.x.floor() >> MAPBLOCKBITS;
+  int yt2 = p2.y.floor() >> MAPBLOCKBITS;
 
   fixed_t     xstep, ystep;
   fixed_t     partial;
@@ -743,14 +840,14 @@ bool Map::PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags
   if (xt2 > xt1)
     {
       mapxstep = 1;
-      partial = 1 - (x1 >> MAPBLOCKBITS).frac();
-      ystep = (y2-y1) / abs(x2-x1);
+      partial = 1 - (p1.x >> MAPBLOCKBITS).frac();
+      ystep = (p2.y-p1.y) / abs(p2.x-p1.x);
     }
   else if (xt2 < xt1)
     {
       mapxstep = -1;
-      partial = (x1 >> MAPBLOCKBITS).frac();
-      ystep = (y2-y1) / abs(x2-x1);
+      partial = (p1.x >> MAPBLOCKBITS).frac();
+      ystep = (p2.y-p1.y) / abs(p2.x-p1.x);
     }
   else
     {
@@ -759,19 +856,19 @@ bool Map::PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags
       ystep = 256;
     }
 
-  fixed_t yintercept = (y1 >> MAPBLOCKBITS) + (partial * ystep);
+  fixed_t yintercept = (p1.y >> MAPBLOCKBITS) + (partial * ystep);
 
   if (yt2 > yt1)
     {
       mapystep = 1;
-      partial = 1 - (y1 >> MAPBLOCKBITS).frac();
-      xstep = (x2-x1) / abs(y2-y1);
+      partial = 1 - (p1.y >> MAPBLOCKBITS).frac();
+      xstep = (p2.x-p1.x) / abs(p2.y-p1.y);
     }
   else if (yt2 < yt1)
     {
       mapystep = -1;
-      partial = (y1 >> MAPBLOCKBITS).frac();
-      xstep = (x2-x1) / abs(y2-y1);
+      partial = (p1.y >> MAPBLOCKBITS).frac();
+      xstep = (p2.x-p1.x) / abs(p2.y-p1.y);
     }
   else
     {
@@ -780,7 +877,7 @@ bool Map::PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags
       xstep = 256;
     }
 
-  fixed_t xintercept = (x1 >> MAPBLOCKBITS) + (partial * xstep);
+  fixed_t xintercept = (p1.x >> MAPBLOCKBITS) + (partial * xstep);
 
   // Step through map blocks.
   // Count is present to prevent a round off error
@@ -829,7 +926,7 @@ bool Map::PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags
 /// \brief Searches though the surrounding mapblocks for Actors.
 /// \ingroup g_iterators
 /*!
-  \param distance is in MAPBLOCKUNITS
+  \param[in] distance is in MAPBLOCKUNITS
 */
 Actor *Map::RoughBlockSearch(Actor *center, Actor *master, int distance, int flags)
 {

@@ -158,7 +158,7 @@ bool ACBot::QuickReachable(Actor *g)
       }
   //#endif
 
-  return mp->PathTraverse(pawn->pos.x, pawn->pos.y, goal->pos.x, goal->pos.y,
+  return mp->PathTraverse(pawn->pos, goal->pos,
 			  PT_ADDLINES|PT_ADDTHINGS, PTR_QuickReachable);
 }
 
@@ -170,8 +170,10 @@ bool ACBot::QuickReachable(fixed_t x, fixed_t y)
   bot = pawn;
   goal = NULL;
   last_sector = pawn->subsector->sector;
+  vec_t<fixed_t> r(x, y, 0);
 
-  return mp->PathTraverse(pawn->pos.x, pawn->pos.y, x, y, PT_ADDLINES|PT_ADDTHINGS, PTR_QuickReachable);
+  return mp->PathTraverse(pawn->pos, r,
+			  PT_ADDLINES|PT_ADDTHINGS, PTR_QuickReachable);
 }
 
 
@@ -1130,8 +1132,8 @@ void ACBot::BuildInput(PlayerInfo *p, int elapsed)
       fixed_t ny = pawn->pos.y + pawn->vel.y + cpy;
 
       bool blocked = !pawn->TestLocation(nx, ny) || // FIXME wrong
-	tmfloorz - pawn->Feet() > 24 ||
-	tmceilingz - tmfloorz < pawn->height;
+	PosCheck.floorz - pawn->Feet() > 24 ||
+	PosCheck.ceilingz - PosCheck.floorz < pawn->height;
       //if its time to change strafe directions, 
       if (sidemove && ((pawn->eflags & MFE_JUSTHIT) || blocked))
 	{
@@ -1143,18 +1145,18 @@ void ACBot::BuildInput(PlayerInfo *p, int elapsed)
 	{
 	  if (++blockedcount > 20 &&
 	      (P_AproxDistance(pawn->vel.x, pawn->vel.y) < 4 ||
-	       (Blocking.thing && (Blocking.thing->flags & MF_SOLID))))
+	       (PosCheck.block_thing && (PosCheck.block_thing->flags & MF_SOLID))))
 	    avoidtimer = 20;
 
-	  if (tmfloorz - pawn->Feet() > 24 &&
-	      (tmfloorz - pawn->Feet() <= 37 ||
-	       (tmfloorz - pawn->Feet() <= 45 && pawn->subsector->sector->floortype != FLOOR_WATER))) // FIXME cv_jumpspeed
+	  if (PosCheck.floorz - pawn->Feet() > 24 &&
+	      (PosCheck.floorz - pawn->Feet() <= 37 ||
+	       (PosCheck.floorz - pawn->Feet() <= 45 && pawn->subsector->sector->floortype != FLOOR_WATER))) // FIXME cv_jumpspeed
 	    cmd->buttons |= ticcmd_t::BT_JUMP;
 
-	  for (unsigned i=0; i < spechit.size(); i++)
-	    if (spechit[i]->backsector)
+	  for (unsigned i=0; i < PosCheck.spechit.size(); i++)
+	    if (PosCheck.spechit[i]->backsector)
 	      {
-		if (!spechit[i]->backsector->ceilingdata && !spechit[i]->backsector->floordata)
+		if (!PosCheck.spechit[i]->backsector->ceilingdata && !PosCheck.spechit[i]->backsector->floordata)
 		  cmd->buttons |= ticcmd_t::BT_USE;
 	      }
 	}

@@ -174,7 +174,7 @@ void A_BeakAttackPL1(PlayerPawn *p, pspdef_t *psp)
 {
   int damage = 1+(P_Random()&3);
   angle_t angle = p->yaw;
-  fixed_t sine;
+  float sine;
 
   p->AimLineAttack(angle, MELEERANGE, sine);
   PuffType = MT_BEAKPUFF;
@@ -197,7 +197,7 @@ void A_BeakAttackPL2(PlayerPawn *p, pspdef_t *psp)
 {
   int damage = HITDICE(4);
   angle_t angle = p->yaw;
-  fixed_t sine;
+  float sine;
   p->AimLineAttack(angle, MELEERANGE, sine);
   PuffType = MT_BEAKPUFF;
   Actor *targ = p->LineAttack(angle, MELEERANGE, sine, damage);
@@ -220,7 +220,7 @@ void A_StaffAttackPL1(PlayerPawn *p, pspdef_t *psp)
   int damage = 5+(P_Random()&15);
   angle_t angle = p->yaw;
   angle += P_SignedRandom()<<18;
-  fixed_t sine;
+  float sine;
   p->AimLineAttack(angle, MELEERANGE, sine);
   PuffType = MT_STAFFPUFF;
   Actor *targ = p->LineAttack(angle, MELEERANGE, sine, damage);
@@ -243,7 +243,7 @@ void A_StaffAttackPL2(PlayerPawn *p, pspdef_t *psp)
   int damage = 18+(P_Random()&63);
   angle_t angle = p->yaw;
   angle += P_SignedRandom()<<18;
-  fixed_t sine;
+  float sine;
   p->AimLineAttack(angle, MELEERANGE, sine);
   PuffType = MT_STAFFPUFF2;
 
@@ -438,7 +438,7 @@ void A_FireGoldWandPL2(PlayerPawn *p, pspdef_t *psp)
 
   PuffType = MT_GOLDWANDPUFF2;
 
-  fixed_t sine = P_BulletSlope(p);
+  float sine = P_BulletSlope(p);
   
   p->SPMAngle(MT_GOLDWANDFX2, p->yaw - (ANG45/8));
   p->SPMAngle(MT_GOLDWANDFX2, p->yaw + (ANG45/8));
@@ -627,7 +627,7 @@ void A_FireMacePL2(PlayerPawn *p, pspdef_t *psp)
       mo->vel.y += p->vel.y;
       mo->vel.z = 2 + Sin(p->pitch); // TEST approximate
 
-      fixed_t dummy;
+      float dummy;
       mo->target = p->AimLineAttack(p->yaw, AIMRANGE, dummy); // HACK to compensate SPMAngle without autoaim
     }
   S_StartSound(p, sfx_lobsht);
@@ -644,7 +644,7 @@ void A_DeathBallImpact(DActor *ball)
   int i;
   angle_t angle = 0;
   bool newAngle;
-  fixed_t dummy;
+  float dummy;
 
   if ((ball->pos.z <= ball->floorz) && (ball->HitFloor() != FLOOR_SOLID))
     { // Landed in some sort of liquid
@@ -822,7 +822,7 @@ void A_FireSkullRodPL2(PlayerPawn *p, pspdef_t *psp)
 	  mi->special2 = 2;
         }
 
-      fixed_t dummy;
+      float dummy;
       mi->target = p->AimLineAttack(p->yaw, AIMRANGE, dummy); // HACK to compensate SPMAngle without autoaim
         
       S_StartSound(mi, sfx_hrnpow);
@@ -1108,7 +1108,7 @@ void A_FloatPuff(DActor *puff)
 void A_GauntletAttack(PlayerPawn *p, pspdef_t *psp)
 {
   int damage;
-  fixed_t dist;
+  float dist;
 
   psp->sx = (P_Random() & 3) - 2;
   psp->sy = WEAPONTOP + (P_Random() & 3);
@@ -1127,7 +1127,7 @@ void A_GauntletAttack(PlayerPawn *p, pspdef_t *psp)
       angle += P_SignedRandom()<<18;
       PuffType = MT_GAUNTLETPUFF1;
     }
-  fixed_t sine;
+  float sine;
   p->AimLineAttack(angle, dist, sine);
   Actor *targ = p->LineAttack(angle, dist, sine, damage);
 

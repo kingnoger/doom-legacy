@@ -483,7 +483,7 @@ void A_Punch(PlayerPawn *p, pspdef_t *psp)
   angle_t angle = p->yaw;
   angle += P_SignedRandom() << 18;
 
-  fixed_t sine;
+  float sine;
   p->AimLineAttack(angle, MELEERANGE, sine);
   Actor *targ = p->LineAttack(angle, MELEERANGE, sine, damage);
 
@@ -510,7 +510,7 @@ void A_Saw(PlayerPawn *p, pspdef_t *psp)
   angle_t angle = p->yaw + (P_SignedRandom() << 18);
 
   // use meleerange + 1 se the puff doesn't skip the flash
-  fixed_t sine;
+  float sine;
   p->AimLineAttack(angle, MELEERANGE+1, sine);
   Actor *targ = p->LineAttack(angle, MELEERANGE+1, sine, damage, dt_cutting | dt_norecoil);
 
@@ -582,10 +582,10 @@ void A_FirePlasma(PlayerPawn *p, pspdef_t *psp)
 //
 
 //added:16-02-98: Fab comments: autoaim for the bullet-type weapons
-fixed_t P_BulletSlope(PlayerPawn *p)
+float P_BulletSlope(PlayerPawn *p)
 {
   angle_t an = p->yaw;
-  fixed_t sine;
+  float sine;
   Actor *targ;
   //added:18-02-98: if AUTOAIM, try to aim at something
   if (!p->player->options.autoaim || !cv_allowautoaim.value)
@@ -607,7 +607,7 @@ fixed_t P_BulletSlope(PlayerPawn *p)
     return sine;
 
  notargetfound:
-  return Sin(p->pitch);
+  return Sin(p->pitch).Float();
 }
 
 
@@ -616,18 +616,18 @@ fixed_t P_BulletSlope(PlayerPawn *p)
 //
 //added:16-02-98: used only for player (pistol,shotgun,chaingun)
 //                supershotgun use p_lineattack directely
-static fixed_t bulletsine;
+static float bulletsine;
 
 static void P_GunShot(PlayerPawn *p, bool accurate)
 {
   int damage = 5*(P_Random()%3 + 1);
   angle_t angle = p->yaw;
-  fixed_t sine = bulletsine;
+  float sine = bulletsine;
 
   if (!accurate)
     {
       angle += P_SignedRandom() << 18;
-      sine += P_SignedFRandom(12); // TEST vertical scatter
+      sine += P_SignedFRandom(12).Float(); // TEST vertical scatter
     }
 
   p->LineAttack(angle, MISSILERANGE, sine, damage);
@@ -684,7 +684,7 @@ void A_FireShotgun2(PlayerPawn *p, pspdef_t *psp)
 
   for (int i=0 ; i<20 ; i++)
     {
-      fixed_t sine = bulletsine + P_SignedFRandom(11);
+      float sine = bulletsine + P_SignedFRandom(11).Float();
       int damage = 5*(P_Random ()%3+1);
       angle_t angle = p->yaw + (P_SignedRandom() << 19);
       p->LineAttack(angle, MISSILERANGE, sine, damage);
@@ -763,7 +763,7 @@ void A_BFGSpray(DActor *mo)
       angle_t an = mo->yaw - ANG90/2 + ANG90/40*i;
 
       // mo->owner is the originator (player) of the missile
-      fixed_t dummy;
+      float dummy;
       Actor *targ = mo->owner->AimLineAttack(an, 16*64, dummy);
 
       if (!targ)

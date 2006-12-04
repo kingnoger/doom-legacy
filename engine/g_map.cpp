@@ -34,7 +34,6 @@
 #include "b_path.h"
 
 #include "p_spec.h"
-#include "p_maputl.h"
 #include "p_hacks.h"
 #include "r_poly.h"
 
@@ -187,6 +186,7 @@ Map::~Map()
 //             GAME SPAWN FUNCTIONS
 //===================================================
 
+
 void Map::SpawnActor(Actor *p)
 {
   AddThinker(p);     // AddThinker sets Map *mp
@@ -196,7 +196,8 @@ void Map::SpawnActor(Actor *p)
 }
 
 
-// when something disturbs a liquid surface, we get a splash
+
+/// when something disturbs a liquid surface, we get a splash
 DActor *Map::SpawnSplash(const vec_t<fixed_t>& pos, fixed_t z, int sound, mobjtype_t base,
 		      mobjtype_t chunk, bool randtics)
 {
@@ -220,106 +221,6 @@ DActor *Map::SpawnSplash(const vec_t<fixed_t>& pos, fixed_t z, int sound, mobjty
   return p;
 }
 
-
-//---------------------------------------
-//   Blood spawning
-//---------------------------------------
-
-static Actor   *bloodthing;
-static fixed_t  blood_x, blood_y;
-
-/// \brief Spray blood splats on walls.
-/// \ingroup g_ptr
-/*!
-  Adds a wall splat on the first solid wall encountered.
-*/
-static bool PTR_BloodTraverse(intercept_t *in)
-{
-  if (in->isaline)
-    {
-      line_t *li = in->line;
-      fixed_t z = bloodthing->pos.z + P_SignedFRandom(3);
-      if (li->flags & ML_TWOSIDED)
-	{
-	  line_opening_t *open = P_LineOpening(li);
-
-	  // hit lower or upper texture?
-	  if ((li->frontsector->floorheight == li->backsector->floorheight || open->bottom <= z) &&
-	      (li->frontsector->ceilingheight == li->backsector->ceilingheight || open->top >= z))
-	    return true; // nope
-	}
-
-      divline_t divl;
-      divl.MakeDivline(li);
-
-      fixed_t frac = P_InterceptVector(&divl, &trace);
-      if (game.mode >= gm_heretic)
-	in->m->R_AddWallSplat(li, P_PointOnLineSide(blood_x,blood_y,li),"BLODC0", z, frac, SPLATDRAWMODE_TRANS);
-      else
-	in->m->R_AddWallSplat(li, P_PointOnLineSide(blood_x,blood_y,li),"BLUDC0", z, frac, SPLATDRAWMODE_TRANS);
-      return false;
-    }
-
-  //continue
-  return true;
-}
-
-
-// First calls SpawnBlood for the usual blood sprites, then spawns blood splats around on walls.
-void Map::SpawnBloodSplats(const vec_t<fixed_t>& r, int damage, fixed_t px, fixed_t py)
-{
-  // spawn the usual falling blood sprites at location
-  bloodthing = SpawnBlood(r, damage);
-
-  fixed_t x2,y2;
-  angle_t angle;
-  angle_t anglemul = 1;
-
-  // traverse all linedefs and mobjs from the blockmap containing t1,
-  // to the blockmap containing the dest. point.
-  // Call the function for each mobj/line on the way,
-  // starting with the mobj/linedef at the shortest distance...
-
-  if (!px && !py)
-    {   
-      // from inside
-      angle = 0;
-      anglemul = 2; 
-    }
-  else
-    {
-      // get direction of damage
-      x2 = r.x + px;
-      y2 = r.y + py;
-      angle = R_PointToAngle2(r.x, r.y, x2, y2);
-    }
-
-  int distance = damage * 6;
-  int numsplats = damage/3 + 1;
-
-  if (numsplats > 20)
-    numsplats = 20;  // BFG is funy without this check
-
-  //CONS_Printf ("spawning %d bloodsplats at distance of %d\n", numsplats, distance);
-  //CONS_Printf ("damage %d\n", damage);
-  blood_x = r.x;
-  blood_y = r.y;
-
-  for (int i=0; i<numsplats; i++)
-    {
-      // find random angle between 0-180deg centered on damage angle
-      angle_t anglesplat = angle + (((P_Random() - 128) * FINEANGLES/512*anglemul)<<ANGLETOFINESHIFT);
-      x2 = r.x + distance*finecosine[anglesplat>>ANGLETOFINESHIFT];
-      y2 = r.y + distance*finesine[anglesplat>>ANGLETOFINESHIFT];
-      
-      PathTraverse(r.x, r.y, x2, y2, PT_ADDLINES, PTR_BloodTraverse);
-  }
-
-#ifdef FLOORSPLATS
-  // add a test floor splat
-  R_AddFloorSplat(bloodthing->subsector, "STEP2", r.x, r.y, bloodthing->floorz, SPLATDRAWMODE_SHADE);
-#endif
-}
 
 
 // spawn a blood sprite with falling z movement, at location
@@ -345,9 +246,7 @@ DActor *Map::SpawnBlood(const vec_t<fixed_t>& r, int damage)
 
 
 
-// ---------------------------------------
-// when player gets hurt by lava/slime, spawn at feet
-
+/// when player gets hurt by lava/slime, spawn at feet
 void Map::SpawnSmoke(fixed_t x, fixed_t y, fixed_t z)
 {
   x += (P_Random() & 8) - 4;
@@ -363,8 +262,8 @@ void Map::SpawnSmoke(fixed_t x, fixed_t y, fixed_t z)
 }
 
 
-// ---------------------------------------
-// adds a DActor to a Map
+
+/// adds a DActor to a Map
 DActor *Map::SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
 {
   DActor *p = new DActor(nx, ny, nz, t);
@@ -416,6 +315,7 @@ DActor *Map::SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
 
   return p;
 }
+
 
 
 // Called when a player is spawned on the level.

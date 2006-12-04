@@ -310,6 +310,9 @@ bool BotNodes::DirectlyReachable(Actor *mo, fixed_t x, fixed_t y, fixed_t destx,
   int nx = x2PosX(destx);
   int ny = y2PosY(desty);
 
+  vec_t<fixed_t> start(x,y,0);
+  vec_t<fixed_t> dest(destx, desty, 0);
+
   botteledestfound = false;
 
   if ((nx >= 0) && (nx < xSize) && (ny >= 0) && (ny < ySize))
@@ -317,10 +320,12 @@ bool BotNodes::DirectlyReachable(Actor *mo, fixed_t x, fixed_t y, fixed_t destx,
       botteledestx = destx;
       botteledesty = desty;
       last_sector = mp->R_PointInSubsector(x, y)->sector;
+
       if (mo)
 	{
 	  pawn_height = mo->height;
 	  if (mp->RadiusLinesCheck(destx, desty, mo->radius, PIT_BBoxFit) // does it fit there?
+	      /*
 	      && mp->PathTraverse(x, y, destx - 1, desty + 1, PT_ADDLINES|PT_ADDTHINGS, PTR_BotPath)
 	      && mp->PathTraverse(x, y, destx + 1, desty + 1, PT_ADDLINES|PT_ADDTHINGS, PTR_BotPath)
 	      && mp->PathTraverse(x, y, destx - 1, desty - 1, PT_ADDLINES|PT_ADDTHINGS, PTR_BotPath)
@@ -329,7 +334,8 @@ bool BotNodes::DirectlyReachable(Actor *mo, fixed_t x, fixed_t y, fixed_t destx,
 	      && mp->PathTraverse(x + 1, y + 1, destx, desty, PT_ADDLINES|PT_ADDTHINGS, PTR_BotPath)
 	      && mp->PathTraverse(x - 1, y - 1, destx, desty, PT_ADDLINES|PT_ADDTHINGS, PTR_BotPath)
 	      && mp->PathTraverse(x + 1, y - 1, destx, desty, PT_ADDLINES|PT_ADDTHINGS, PTR_BotPath)
-	      && mp->PathTraverse(x, y, destx, desty, PT_ADDLINES|PT_ADDTHINGS, PTR_BotPath))
+	      */
+	      && mp->PathTraverse(start, dest, PT_ADDLINES|PT_ADDTHINGS, PTR_BotPath))
 	    return true; // FIXME why do many traces with nearly identical endpoints??
 	  else
 	    {
@@ -340,7 +346,7 @@ bool BotNodes::DirectlyReachable(Actor *mo, fixed_t x, fixed_t y, fixed_t destx,
       else
 	{
 	  pawn_height = 56;
-	  return mp->PathTraverse(x, y, destx, desty, PT_ADDLINES, PTR_BotPath);
+	  return mp->PathTraverse(start, dest, PT_ADDLINES, PTR_BotPath);
 	}
     }
 

@@ -24,6 +24,8 @@
 #ifndef r_defs_h
 #define r_defs_h 1
 
+#include <list>
+
 // Some more or less basic data types we depend on.
 #include "m_fixed.h"
 #include "m_bbox.h"
@@ -226,6 +228,13 @@ struct sector_t
   // ----- end special tricks -----
 
 public:
+  /// Returns the narrowest free vertical range in the sector containing z-coordinate z.
+  struct range_t FindZRange(fixed_t z);
+  /// Shrinks the vertical opening op for Actor a by Z-planes in sector.
+  void FindZRange(const Actor *a, struct line_opening_t& op);
+  /// Shrinks and chops up the range in by Z-planes in sector, returns low-to-high sorted list of ranges.
+  std::list<range_t> *FindLineOpeningsInRange(const range_t& in);
+
   fixed_t FindLowestFloorSurrounding();
   fixed_t FindHighestFloorSurrounding();
   fixed_t FindLowestCeilingSurrounding();
