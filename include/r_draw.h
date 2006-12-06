@@ -50,17 +50,37 @@ extern int              columnofs[MAXVIDWIDTH];
 // -------------------------
 
 extern int dc_x, dc_yl, dc_yh;
-extern fixed_t  dc_iscale;
-extern fixed_t  dc_texturemid;
 extern byte    *dc_source;
 extern int      dc_texheight;
-extern lighttable_t    *dc_colormap;
+extern fixed_t  dc_iscale;
+extern fixed_t  dc_texturemid;
+extern lighttable_t *dc_colormap;
+extern byte         *dc_transmap;
+extern byte         *dc_translation;
+extern struct r_lightlist_t *dc_lightlist;
+extern int dc_numlights, dc_maxlights;
 
-// translucency stuff here
+
+// -----------------------
+// SPAN DRAWING CODE STUFF
+// -----------------------
+
+extern int ds_y, ds_x1, ds_x2;
+extern int ds_xbits, ds_ybits;
+extern fixed_t ds_xfrac, ds_yfrac;
+extern fixed_t ds_xstep, ds_ystep;
+extern byte*            ds_source;
+extern lighttable_t*    ds_colormap;
+extern byte*            ds_transmap;
+
+
+// -----------------------
+// Translucency stuff here
+// -----------------------
 
 #define  MAXTRANSTABLES  20  // how many translucency tables may be used
 extern byte  *transtables[MAXTRANSTABLES]; // translucency tables
-extern byte  *dc_transmap;
+
 
 // TODO: add another asm routine which use the fg and bg indexes in the
 //       inverse order so the 20-80 becomes 80-20 translucency, no need
@@ -78,34 +98,6 @@ enum transnum_t
 };
 
 
-
-/// Color translation stuff
-extern byte *dc_translation;
-
-extern struct r_lightlist_t *dc_lightlist;
-extern int              dc_numlights;
-extern int              dc_maxlights;
-
-
-
-// -----------------------
-// SPAN DRAWING CODE STUFF
-// -----------------------
-
-/// span y-coordinate and left/right x limits
-extern int ds_y, ds_x1, ds_x2;
-
-extern lighttable_t*    ds_colormap;
-
-/// span texture offset and stepping
-extern fixed_t ds_xfrac, ds_yfrac;
-extern fixed_t ds_xstep, ds_ystep;
-
-/// tex dimensions
-extern int ds_xbits, ds_ybits;
-
-extern byte*            ds_source;      // start of a 64*64 tile image
-extern byte*            ds_transmap;
 
 
 /// windowborder textures

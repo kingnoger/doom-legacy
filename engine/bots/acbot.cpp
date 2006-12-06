@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2005 by DooM Legacy Team.
+// Copyright (C) 2002-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,8 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -1132,8 +1130,8 @@ void ACBot::BuildInput(PlayerInfo *p, int elapsed)
       fixed_t ny = pawn->pos.y + pawn->vel.y + cpy;
 
       bool blocked = !pawn->TestLocation(nx, ny) || // FIXME wrong
-	PosCheck.floorz - pawn->Feet() > 24 ||
-	PosCheck.ceilingz - PosCheck.floorz < pawn->height;
+	PosCheck.op.bottom - pawn->Feet() > 24 ||
+	PosCheck.op.Range() < pawn->height;
       //if its time to change strafe directions, 
       if (sidemove && ((pawn->eflags & MFE_JUSTHIT) || blocked))
 	{
@@ -1148,9 +1146,9 @@ void ACBot::BuildInput(PlayerInfo *p, int elapsed)
 	       (PosCheck.block_thing && (PosCheck.block_thing->flags & MF_SOLID))))
 	    avoidtimer = 20;
 
-	  if (PosCheck.floorz - pawn->Feet() > 24 &&
-	      (PosCheck.floorz - pawn->Feet() <= 37 ||
-	       (PosCheck.floorz - pawn->Feet() <= 45 && pawn->subsector->sector->floortype != FLOOR_WATER))) // FIXME cv_jumpspeed
+	  if (PosCheck.op.bottom - pawn->Feet() > 24 &&
+	      (PosCheck.op.bottom - pawn->Feet() <= 37 ||
+	       (PosCheck.op.bottom - pawn->Feet() <= 45 && pawn->subsector->sector->floortype != FLOOR_WATER))) // FIXME cv_jumpspeed
 	    cmd->buttons |= ticcmd_t::BT_JUMP;
 
 	  for (unsigned i=0; i < PosCheck.spechit.size(); i++)

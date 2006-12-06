@@ -29,19 +29,19 @@ using namespace std;
 
 /// \brief Describes a single team.
 /// \ingroup g_central
-///
-/// Every single Actor in the game belongs to a team.
-/// Some teams are always fixed, others can be created and destroyed.
-/// Team 0 is always the "individual" team.
-///   Fellow teammates are targeted and attacked if the Actor AI so demands.
-///   In a DM game all players belong to team 0.
-/// Team -1 is the "Hellspawn" team, in which all Doom creatures belong by default.
-/// Team -2 is the "D'Sparil" team, in which all Heretic creatures belong by default.
-/// Team -3 is the "Korax" team, in which all Hexen creatures belong by default.
-///
-/// This means that if you put Hellspawn and Heretic monsters in the same room, they will
-/// attack each other unless they are specifically assigned to same team.
-/// Team score is only kept for teams > 0.
+/*!
+  Every single Actor in the game belongs to a team.
+  Some teams are always fixed, others can be created and destroyed.
+  - Team 0 is always the "individual" team.
+    Fellow teammates are targeted and attacked if the Actor AI so demands.
+    In a DM game all players belong to team 0.
+  - Team -1 is the "Hellspawn" team, in which all Doom creatures belong by default.
+  - Team -2 is the "D'Sparil" team, in which all Heretic creatures belong by default.
+  - Team -3 is the "Korax" team, in which all Hexen creatures belong by default.
+  This means that if you put Hellspawn and Heretic monsters in the same room, they will
+  attack each other unless they are specifically assigned to same team.
+  Team score is only kept for teams > 0.
+*/
 class TeamInfo
 {
   friend class GameInfo;

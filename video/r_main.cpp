@@ -50,29 +50,22 @@
 #include "w_wad.h"
 
 #ifndef NO_OPENGL
-#include "hardware/hwr_render.h"
-#endif
-
-#include "hardware/oglrenderer.hpp"
-
-Rend R;
-#ifndef NO_OPENGL
+# include "hardware/hwr_render.h"
 HWRend HWR;
 #endif
+#include "hardware/oglrenderer.hpp"
+
+/*!
+  \defgroup g_sw Software renderer
+
+  The Doom software renderer. This is the Legacy subsystem with probably
+  the largest amount of original Doom code.
+ */
+
+
+Rend R;
 
 angle_t G_ClipAimingPitch(angle_t pitch);
-
-
-//profile stuff ---------------------------------------------------------
-//#define TIMING
-#ifdef TIMING
-#include "p5prof.h"
-long long mycount;
-long long mytotal = 0;
-//unsigned long  nombre = 100000;
-#endif
-//profile stuff ---------------------------------------------------------
-
 
 // Fineangles in the SCREENWIDTH wide window.
 #define FIELDOFVIEW             2048

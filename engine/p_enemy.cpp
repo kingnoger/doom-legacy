@@ -388,7 +388,7 @@ bool DActor::P_Move()
       if (flags & MF_FLOAT && floatok)
         {
 	  // must adjust height
-	  if (pos.z < PosCheck.floorz)
+	  if (pos.z < PosCheck.op.bottom)
 	    pos.z += FLOATSPEED;
 	  else
 	    pos.z -= FLOATSPEED;
@@ -937,6 +937,7 @@ void A_PosAttack(DActor *actor)
   S_StartAttackSound(actor, sfx_pistol);
   angle += P_SignedRandom()<<20;
   int damage = ((P_Random()%5)+1)*3;
+  PuffType = MT_PUFF;
   actor->LineAttack(angle, MISSILERANGE, sine, damage);
 }
 
@@ -950,6 +951,8 @@ void A_SPosAttack(DActor *actor)
   angle_t bangle = actor->yaw;
   float sine;
   actor->AimLineAttack(bangle, MISSILERANGE, sine);
+
+  PuffType = MT_PUFF;
 
   for (int i=0 ; i<3 ; i++)
     {
@@ -973,6 +976,7 @@ void A_CPosAttack(DActor *actor)
   angle_t angle  = (P_SignedRandom()<<20)+bangle;
 
   int damage = ((P_Random()%5)+1)*3;
+  PuffType = MT_PUFF;
   actor->LineAttack(angle, MISSILERANGE, sine, damage);
 }
 

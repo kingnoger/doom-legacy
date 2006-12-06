@@ -37,7 +37,7 @@
 */
 
 /// \brief Your plain vanilla vertex
-/// \ingroup \g_mapgeometry
+/// \ingroup g_mapgeometry
 struct vertex_t
 {
   fixed_t  x, y;
@@ -60,7 +60,7 @@ struct mappoint_t
 
 
 /// "Fake floor" types
-/// \ingroup \g_mapgeometry
+/// \ingroup g_mapgeometry
 enum ffloortype_e
 {
   FF_EXISTS            = 0x0001,  ///< MAKE SURE IT'S VALID
@@ -86,8 +86,8 @@ enum ffloortype_e
 
 
 /// \brief Fake floor, better known as 3D floor:)
-/// \ingroup \g_mapgeometry
 ///
+/// \ingroup g_mapgeometry
 /// Store fake planes in a resizable array instead of just by
 /// heightsec. Allows for multiple fake planes.
 struct ffloor_t
@@ -123,7 +123,7 @@ struct ffloor_t
 
 
 /// Sector floor properties
-/// \ingroup \g_mapgeometry
+/// \ingroup g_mapgeometry
 enum floortype_t
 {
   FLOOR_SOLID,
@@ -136,7 +136,7 @@ enum floortype_t
 
 
 /// \brief Runtime map sector
-/// \ingroup \g_mapgeometry
+/// \ingroup g_mapgeometry
 struct sector_t
 {
   fixed_t  floorheight, ceilingheight;
@@ -228,10 +228,22 @@ struct sector_t
   // ----- end special tricks -----
 
 public:
-  /// Returns the narrowest free vertical range in the sector containing z-coordinate z.
+  /// Returns the free vertical range containing z-coordinate z.
   struct range_t FindZRange(fixed_t z);
-  /// Shrinks the vertical opening op for Actor a by Z-planes in sector.
-  void FindZRange(const Actor *a, struct line_opening_t& op);
+
+  /// Returns the free vertical range for Actor a.
+  range_t FindZRange(const Actor *a);
+
+  enum zcheck_t
+  {
+    z_Open,   ///< unobstructed, free space
+    z_Wall,   ///< above a ceiling or under a floor
+    z_Sky,    ///< above a ceiling or under a floor which is a sky
+    z_FFloor, ///< inside a solid ffloor_t
+  };
+  /// Returns the contents of the sector at height z.
+  zcheck_t CheckZ(fixed_t z);
+
   /// Shrinks and chops up the range in by Z-planes in sector, returns low-to-high sorted list of ranges.
   std::list<range_t> *FindLineOpeningsInRange(const range_t& in);
 
@@ -260,7 +272,7 @@ public:
 
 
 /// \brief SideDef
-/// \ingroup \g_mapgeometry
+/// \ingroup g_mapgeometry
 struct side_t
 {
   /// add this to the calculated texture column
@@ -284,7 +296,7 @@ struct side_t
 
 
 /// \brief Move clipping aid for LineDefs.
-/// \ingroup \g_mapgeometry
+/// \ingroup g_mapgeometry
 enum slopetype_t
 {
   ST_HORIZONTAL,
@@ -295,7 +307,7 @@ enum slopetype_t
 
 
 /// \brief LineDef flags
-/// \ingroup \g_mapgeometry
+/// \ingroup g_mapgeometry
 enum line_flags_e
 {
   /// Solid, is an obstacle.
@@ -367,7 +379,7 @@ enum line_flags_e
 
 
 /// \brief LineDef
-/// \ingroup \g_mapgeometry
+/// \ingroup g_mapgeometry
 struct line_t
 {
   /// Vertices, from v1 to v2.
@@ -413,8 +425,8 @@ struct line_t
 
 
 
-/// \brief SubSector, BSP leaf
-/// \ingroup \g_mapgeometry
+/// \brief SubSector, BSP leaf.
+/// \ingroup g_mapgeometry
 ///
 /// Each sector is divided into one or more convex subsectors during BSP nodebuilding.
 /// Basically, this is a list of LineSegs, indicating the visible walls that define
@@ -433,19 +445,19 @@ struct subsector_t
 
 
 /// \brief Sector list node, showing all sectors an Actor appears in.
-/// \ingroup \g_mapgeometry
-///
-/// There are two threads that flow through these nodes. The first thread
-/// starts at touching_thinglist in a sector_t and flows through the m_snext
-/// links to find all mobjs that are entirely or partially in the sector.
-/// The second thread starts at touching_sectorlist in an Actor and flows
-/// through the m_tnext links to find all sectors a thing touches. This is
-/// useful when applying friction or push effects to sectors. These effects
-/// can be done as thinkers that act upon all objects touching their sectors.
-/// As an Actor moves through the world, these nodes are created and
-/// destroyed, with the links changed appropriately.
-///
-/// For the links, NULL means top or end of list.
+/// \ingroup g_mapgeometry
+/*!
+  There are two threads that flow through these nodes. The first thread
+  starts at touching_thinglist in a sector_t and flows through the m_snext
+  links to find all mobjs that are entirely or partially in the sector.
+  The second thread starts at touching_sectorlist in an Actor and flows
+  through the m_tnext links to find all sectors a thing touches. This is
+  useful when applying friction or push effects to sectors. These effects
+  can be done as thinkers that act upon all objects touching their sectors.
+  As an Actor moves through the world, these nodes are created and
+  destroyed, with the links changed appropriately.
+  For the links, NULL means top or end of list.
+*/
 struct msecnode_t
 {
   sector_t    *m_sector; ///< a sector containing this object
@@ -487,7 +499,7 @@ public:
 
 
 /// \brief LineSeg
-/// \ingroup \g_mapgeometry
+/// \ingroup g_mapgeometry
 struct seg_t
 {
   vertex_t *v1, *v2;     ///< start and end vertices
@@ -513,7 +525,7 @@ struct seg_t
 
 
 /// \brief BSP node
-/// \ingroup \g_mapgeometry
+/// \ingroup g_mapgeometry
 struct node_t
 {
   /// Partition line.
@@ -531,7 +543,7 @@ struct node_t
 
 
 /// \brief Runtime mapthing
-/// \ingroup \g_mapgeometry
+/// \ingroup g_mapgeometry
 struct mapthing_t
 {
   short tid;      ///< Thing ID (from Hexen)
@@ -547,7 +559,7 @@ struct mapthing_t
 
 
 /// \brief mapthing_t flags
-/// \ingroup \g_mapgeometry
+/// \ingroup g_mapgeometry
 enum mapthing_flags_e
 {
   // original Doom flags
@@ -580,8 +592,8 @@ enum mapthing_flags_e
 
 
 /// \brief Data needed to render level geometry with GL renderer.
-/// \ingroup \g_mapgeometry
 ///
+/// \ingroup g_mapgeometry
 /// These are all unpacked, endianness-swapped and converted to v5 GL
 /// nodes.
 struct gllevel_t

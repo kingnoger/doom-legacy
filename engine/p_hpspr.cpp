@@ -50,7 +50,6 @@ inline angle_t R_PointToAngle2(vec_t<fixed_t>& a, vec_t<fixed_t>& b)
 }
 
 extern consvar_t  cv_deathmatch;
-extern mobjtype_t PuffType;
 
 //---------------------------------------------------------------------------
 //

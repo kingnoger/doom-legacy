@@ -21,7 +21,6 @@
 /// \file
 /// \brief Map geometry utility functions, blockmap iterators, traces and intercepts.
 ///
-/// @ref g_geometry
 /// BLOCKMAP iterator functions and some central PIT_* functions to use for iteration.
 /// Intercepts and traces.
 /// Functions for manipulating msecnode_t threads.
@@ -45,7 +44,7 @@
 //==========================================================================
 
 /*!
-  \defgroup g_geoutils Simple map geometry utility functions
+  \defgroup g_geoutils Simple geometry utility functions
 
   Distances, point vs. line problems, line intercepts, bounding boxes etc.
   Most of this is 2D stuff.
@@ -283,6 +282,29 @@ fixed_t P_InterceptVector(divline_t *v2, divline_t *v1)
 //  Line openings and vertical ranges
 //==========================================================================
 
+
+sector_t::zcheck_t sector_t::CheckZ(fixed_t z)
+{
+  if (z < floorheight)
+    return (floorpic == skyflatnum) ? z_Sky : z_Wall;
+
+  if (z > ceilingheight)
+    return (ceilingpic == skyflatnum) ? z_Sky : z_Wall;
+
+  for (ffloor_t *rover = ffloors; rover; rover = rover->next)
+    {
+      if (!(rover->flags & FF_SOLID))
+	continue;
+
+      if (z > *rover->bottomheight && z < *rover->topheight)
+	return z_FFloor;
+    }
+
+  return z_Open;
+}
+
+
+
 static list<range_t> Line_openings; // sorted from low to high
 
 
@@ -291,7 +313,6 @@ list<range_t> *sector_t::FindLineOpeningsInRange(const range_t& in)
   Line_openings.clear();
 
   // start chopping the range up with sector planes
-  // TODO sky-wall
 
   range_t r = in;
 
@@ -362,7 +383,6 @@ list<range_t> *sector_t::FindLineOpeningsInRange(const range_t& in)
 
 
 
-/// Find the narrowest free vertical range in sector s containing z-coordinate z.
 range_t sector_t::FindZRange(fixed_t z)
 {
   range_t r;
@@ -391,12 +411,22 @@ range_t sector_t::FindZRange(fixed_t z)
 
 
 
-void sector_t::FindZRange(const Actor *a, line_opening_t& op)
+range_t sector_t::FindZRange(const Actor *a)
 {
+  range_t r;
+
+  // start with real ceil and floor
+  r.high = ceilingheight;
+  r.low  = floorheight;
+
+  if (!ffloors)
+    return r;
+
+  // Check fake floors
+
   fixed_t thingbot = a->Feet();
   fixed_t thingtop = a->Top();
 
-  // Check fake floors
   for (ffloor_t *rover = ffloors; rover; rover = rover->next)
     {
       if (!(rover->flags & FF_SOLID))
@@ -405,46 +435,53 @@ void sector_t::FindZRange(const Actor *a, line_opening_t& op)
       fixed_t ffcenter = (*rover->topheight + *rover->bottomheight)/2;
       fixed_t delta1 = abs(thingbot - ffcenter);
       fixed_t delta2 = abs(thingtop - ffcenter);
+
+      // NOTE: this logic works only when max climbing height is less than Actor.height/2
 	    
       if (delta1 > delta2)
 	{
 	  // ffloor acts as a ceiling
-	  if (*rover->bottomheight < op.top)
-	    {
-	      op.top = *rover->bottomheight;
-	      op.sky = false;
-	    }
+	  if (*rover->bottomheight < r.high)
+	    r.high = *rover->bottomheight;
 	}
       else
 	{
 	  // ffloor acts as a floor
-	  if (*rover->topheight > op.bottom)
-	    {
-	      op.lowfloor = op.bottom;
-	      op.bottom   = *rover->topheight;
-	    }
-	  else if (*rover->topheight > op.lowfloor)
-	    op.lowfloor = *rover->topheight; 
+	  if (*rover->topheight > r.low)
+	    r.low = *rover->topheight;
 	}
     }
 
-  // then the sector ceiling and floor
-  if (ceilingheight < op.top)
-    {
-      op.top = ceilingheight;
-      if (ceilingpic == skyflatnum)
-	op.sky = true;
-    }
-
-  if (floorheight > op.bottom)
-    {
-      op.lowfloor = op.bottom;
-      op.bottom = floorheight;
-    }
-  else if (floorheight > op.lowfloor)
-    op.lowfloor = floorheight;
+  return r;
 }
 
+
+
+
+void line_opening_t::SubtractFromOpening(const Actor *a, sector_t *s)
+{
+  range_t r = s->FindZRange(a);
+
+  // now see if the opening is changed
+  if (r.high < top)
+    {
+      top = r.high;
+      top_sky = (s->ceilingpic == skyflatnum && r.high == s->ceilingheight);
+    }
+
+  // TEST originally lowfloor is the lowest floor encountered, now it is the second-highest.
+  // This makes monsters a little more bold in stairs etc.
+
+  if (r.low > bottom)
+    {
+      lowfloor = bottom;
+      bottom = r.low;
+      bottom_sky = (s->floorpic == skyflatnum && r.low == s->floorheight);
+      bottompic = s->floorpic;
+    }
+  else if (r.low > lowfloor)
+    lowfloor = r.low;
+}
 
 
 static line_opening_t Opening;
@@ -452,9 +489,7 @@ static line_opening_t Opening;
 /// Sets Opening to the window through a two sided line.
 line_opening_t *line_opening_t::Get(line_t *line, Actor *thing)
 {
-  Opening.top = fixed_t::FMAX;
-  Opening.bottom = Opening.lowfloor = fixed_t::FMIN;
-  Opening.sky = false;
+  Opening.Reset();
 
   if (line->sideptr[1] == NULL)
     {
@@ -463,8 +498,8 @@ line_opening_t *line_opening_t::Get(line_t *line, Actor *thing)
       return &Opening;
     }
 
-  line->frontsector->FindZRange(thing, Opening);
-  line->backsector->FindZRange(thing, Opening);
+  Opening.SubtractFromOpening(thing, line->frontsector);
+  Opening.SubtractFromOpening(thing, line->backsector);
 
   return &Opening;
 }
@@ -558,369 +593,6 @@ bool Map::BlockThingsIterator(int x, int y, thing_iterator_t func)
   return true;
 }
 
-
-//==========================================================================
-//  Thinker iteration
-//==========================================================================
-
-/// \brief Iterate the Thinker list
-/*!
-  Iterates through all the Thinkers in the Map, calling 'func' for each.
-  If the function returns false, exit with false without checking anything else.
-*/
-bool Map::IterateThinkers(thinker_iterator_t func)
-{
-  Thinker *t, *n;
-  for (t = thinkercap.next; t != &thinkercap; t = n)
-    {
-      n = t->next; // if t is removed while it thinks, its 'next' pointer will no longer be valid.
-      if (!func(t))
-	return false;
-    }
-  return true;
-}
-
-
-/// \brief Iterate the Actors in the Thinker list
-/*!
-  Iterates through all the Actors in the Map, calling 'func' for each.
-  If the function returns false, exit with false without checking anything else.
-*/
-bool Map::IterateActors(thing_iterator_t func)
-{
-  Thinker *t, *n;
-  for (t = thinkercap.next; t != &thinkercap; t = n)
-    {
-      n = t->next; // if t is removed while it thinks, its 'next' pointer will no longer be valid.
-      if (t->IsOf(Actor::_type))
-	if (!func(reinterpret_cast<Actor*>(t)))
-	  return false;
-    }
-  return true;
-}
-
-
-//==========================================================================
-//  Trace/intercept routines
-//==========================================================================
-
-static vector<intercept_t> intercepts;
-trace_t trace;        ///< changed by Map::PathTraverse ONLY
-static bool earlyout;
-
-static Map *tempMap;
-
-/// \brief Find lines intercepted by the trace.
-/// \ingroup g_pit
-/// \ingroup g_trace
-/*!
-  Checks if the line_t intercepts the given trace. If so, adds it to the intercepts list.
-  A line is crossed if its endpoints are on opposite sides of the trace.
-  Iteration is stopped if earlyout is true and a solid line is hit.
-*/
-static bool PIT_AddLineIntercepts(line_t *ld)
-{
-  int  s1, s2;
-
-  // avoid precision problems with two routines
-  if (trace.delta.x > 16 || trace.delta.y > 16
-      || trace.delta.x < -16 || trace.delta.y < -16)
-    {
-      //Hurdler: crash here with phobia when you shoot on the door next the stone bridge
-      //stack overflow???
-      s1 = P_PointOnDivlineSide (ld->v1->x, ld->v1->y, &trace.dl);
-      s2 = P_PointOnDivlineSide (ld->v2->x, ld->v2->y, &trace.dl);
-    }
-  else
-    {
-      s1 = P_PointOnLineSide (trace.start.x, trace.start.y, ld);
-      s2 = P_PointOnLineSide (trace.start.x+trace.delta.x, trace.start.y+trace.delta.y, ld);
-    }
-
-  if (s1 == s2)
-    return true;    // line isn't crossed
-
-  // hit the line
-  divline_t  dl;
-  dl.MakeDivline(ld);
-  fixed_t frac = P_InterceptVector(&trace.dl, &dl);
-
-  if (frac < 0)
-    return true;    // behind source
-
-  // try to early out the check
-  if (earlyout && frac < 1 && !ld->backsector)
-    {
-      return false;   // stop checking
-    }
-
-  intercept_t in;
-  in.m = tempMap;
-  in.frac = frac;
-  in.isaline = true;
-  in.line = ld;
-  intercepts.push_back(in);
-
-  return true;        // continue
-}
-
-
-/// \brief Find Actors intercepted by the trace.
-/// \ingroup g_pit
-/// \ingroup g_trace
-/*!
-  Checks if the Actor intercepts the given trace. If so, adds it to the intercepts list.
-*/
-static bool PIT_AddThingIntercepts(Actor *thing)
-{
-  fixed_t  x1, y1, x2, y2;
-  int      s1, s2;
-
-  bool tracepositive = (trace.delta.x.value() ^ trace.delta.y.value()) > 0;
-
-  // check a corner to corner crossection for hit
-  if (tracepositive)
-    {
-      x1 = thing->pos.x - thing->radius;
-      y1 = thing->pos.y + thing->radius;
-
-      x2 = thing->pos.x + thing->radius;
-      y2 = thing->pos.y - thing->radius;
-    }
-  else
-    {
-      x1 = thing->pos.x - thing->radius;
-      y1 = thing->pos.y - thing->radius;
-
-      x2 = thing->pos.x + thing->radius;
-      y2 = thing->pos.y + thing->radius;
-    }
-
-  s1 = P_PointOnDivlineSide (x1, y1, &trace.dl);
-  s2 = P_PointOnDivlineSide (x2, y2, &trace.dl);
-
-  if (s1 == s2)
-    return true;            // line isn't crossed
-
-  divline_t dl;
-  dl.x = x1;
-  dl.y = y1;
-  dl.dx = x2-x1;
-  dl.dy = y2-y1;
-
-  fixed_t frac = P_InterceptVector(&trace.dl, &dl);
-
-  if (frac < 0)
-    return true;            // behind source
-
-  intercept_t in;
-  in.m = tempMap;
-  in.frac = frac;
-  in.isaline = false;
-  in.thing = thing;
-  intercepts.push_back(in);
-
-  return true;                // keep going
-}
-
-/// \brief Calls the traverser function for all elements of the intercepts vector
-/// \ingroup g_trace
-/*!
-  Calls the traverser function on all intercept_t's in the
-  intercepts vector, in the nearness-of-intercept order.
-  \return true if the traverser function returns true for all lines
-*/
-static bool P_TraverseIntercepts(traverser_t func, fixed_t maxfrac)
-{
-  int count = intercepts.size();
-  int i = count;
-
-  // TODO introsort
-  intercept_t *in = NULL;
-  while (i--)
-    {
-      fixed_t dist = fixed_t::FMAX;
-
-      for (int j = 0; j < count; j++)
-	{
-	  intercept_t *scan = &intercepts[j];
-	  if (scan->frac < dist)
-	    {
-	      dist = scan->frac;
-	      in = scan;
-	    }
-	}
-
-      if (dist > maxfrac)
-	return true;        // checked everything in range
-
-#if 0  // UNUSED
-      {
-        // don't check these yet, there may be others inserted
-        in = scan = intercepts;
-        for (scan = intercepts ; scan<intercept_p ; scan++)
-	  if (scan->frac > maxfrac)
-	    *in++ = *scan;
-        intercept_p = in;
-        return false;
-      }
-#endif
-
-      // call the traverser function on the closest intercept_t
-      if (!func(in))
-	return false; // don't bother going farther
-
-      in->frac = fixed_t::FMAX; // make sure this intercept is not chosen again
-    }
-
-  return true; // everything was traversed
-}
-
-
-
-void trace_t::Make(const vec_t<fixed_t>& v1, const vec_t<fixed_t>& v2)
-{
-  start = v1;
-  delta = v2-v1;
-  vec_t<float> temp;
-  temp.x = delta.x.Float();
-  temp.y = delta.y.Float();
-  temp.z = delta.z.Float();
-
-  length = temp.Norm();
-  sin_pitch = temp.z / length;
-  Init();
-}
-
-
-
-/// \brief Traces a line through the blockmap.
-/// \ingroup g_trace
-/*!
-  Traces a line from x1,y1 to x2,y2 by stepping through the blockmap
-  adding line/thing intercepts and then calling the traverser function for each intercept.
-  \return true if the traverser function returns true for all lines
-*/
-bool Map::PathTraverse(const vec_t<fixed_t>& v1, const vec_t<fixed_t>& v2, int flags, traverser_t trav)
-{
-  // small HACK: make local copies so we can change them
-  vec_t<fixed_t> p1(v1);
-  vec_t<fixed_t> p2(v2);
-
-  earlyout = flags & PT_EARLYOUT;
-
-  validcount++;
-  intercepts.clear();
-
-#define MAPBLOCKSIZE (MAPBLOCKUNITS * fixed_t::UNIT)
-
-  if (((p1.x-bmaporgx).value() & (MAPBLOCKSIZE-1)) == 0)
-    p1.x += 1; // don't side exactly on a line
-
-  if (((p1.y-bmaporgy).value() & (MAPBLOCKSIZE-1)) == 0)
-    p1.y += 1; // don't side exactly on a line
-
-  // set up the trace struct
-  trace.Make(p1, p2);
-
-  p1.x -= bmaporgx;
-  p1.y -= bmaporgy;
-  int xt1 = p1.x.floor() >> MAPBLOCKBITS;
-  int yt1 = p1.y.floor() >> MAPBLOCKBITS;
-
-  p2.x -= bmaporgx;
-  p2.y -= bmaporgy;
-  int xt2 = p2.x.floor() >> MAPBLOCKBITS;
-  int yt2 = p2.y.floor() >> MAPBLOCKBITS;
-
-  fixed_t     xstep, ystep;
-  fixed_t     partial;
-  int         mapxstep, mapystep;
-
-  if (xt2 > xt1)
-    {
-      mapxstep = 1;
-      partial = 1 - (p1.x >> MAPBLOCKBITS).frac();
-      ystep = (p2.y-p1.y) / abs(p2.x-p1.x);
-    }
-  else if (xt2 < xt1)
-    {
-      mapxstep = -1;
-      partial = (p1.x >> MAPBLOCKBITS).frac();
-      ystep = (p2.y-p1.y) / abs(p2.x-p1.x);
-    }
-  else
-    {
-      mapxstep = 0;
-      partial = 1;
-      ystep = 256;
-    }
-
-  fixed_t yintercept = (p1.y >> MAPBLOCKBITS) + (partial * ystep);
-
-  if (yt2 > yt1)
-    {
-      mapystep = 1;
-      partial = 1 - (p1.y >> MAPBLOCKBITS).frac();
-      xstep = (p2.x-p1.x) / abs(p2.y-p1.y);
-    }
-  else if (yt2 < yt1)
-    {
-      mapystep = -1;
-      partial = (p1.y >> MAPBLOCKBITS).frac();
-      xstep = (p2.x-p1.x) / abs(p2.y-p1.y);
-    }
-  else
-    {
-      mapystep = 0;
-      partial = 1;
-      xstep = 256;
-    }
-
-  fixed_t xintercept = (p1.x >> MAPBLOCKBITS) + (partial * xstep);
-
-  // Step through map blocks.
-  // Count is present to prevent a round off error
-  // from skipping the break.
-  int mapx = xt1;
-  int mapy = yt1;
-
-  // argh. FIXME. I couldn't think of anything else.
-  // this is for PIT_AddLineIntercepts so it knows the right Map.
-  tempMap = this;
-
-  for (int count = 0 ; count < 64 ; count++)
-    {
-      if (flags & PT_ADDLINES)
-        {
-	  if (!BlockLinesIterator (mapx, mapy, PIT_AddLineIntercepts))
-	    return false;   // early out
-        }
-
-      if (flags & PT_ADDTHINGS)
-        {
-	  if (!BlockThingsIterator (mapx, mapy, PIT_AddThingIntercepts))
-	    return false;   // early out
-        }
-
-      if (mapx == xt2 && mapy == yt2)
-	break;
-
-      if (yintercept.floor() == mapy)
-        {
-	  yintercept += ystep;
-	  mapx += mapxstep;
-        }
-      else if (xintercept.floor() == mapx)
-        {
-	  xintercept += xstep;
-	  mapy += mapystep;
-        }
-
-    }
-  // go through the sorted list
-  return P_TraverseIntercepts(trav, 1);
-}
 
 
 /// \brief Searches though the surrounding mapblocks for Actors.
@@ -1045,6 +717,372 @@ Actor *Map::RoughBlockCheck(Actor *center, Actor *master, int index, int flags)
 
   return NULL;
 }
+
+
+
+//==========================================================================
+//  Thinker iteration
+//==========================================================================
+
+/// \brief Iterate the Thinker list
+/*!
+  Iterates through all the Thinkers in the Map, calling 'func' for each.
+  If the function returns false, exit with false without checking anything else.
+*/
+bool Map::IterateThinkers(thinker_iterator_t func)
+{
+  Thinker *t, *n;
+  for (t = thinkercap.next; t != &thinkercap; t = n)
+    {
+      n = t->next; // if t is removed while it thinks, its 'next' pointer will no longer be valid.
+      if (!func(t))
+	return false;
+    }
+  return true;
+}
+
+
+/// \brief Iterate the Actors in the Thinker list
+/*!
+  Iterates through all the Actors in the Map, calling 'func' for each.
+  If the function returns false, exit with false without checking anything else.
+*/
+bool Map::IterateActors(thing_iterator_t func)
+{
+  Thinker *t, *n;
+  for (t = thinkercap.next; t != &thinkercap; t = n)
+    {
+      n = t->next; // if t is removed while it thinks, its 'next' pointer will no longer be valid.
+      if (t->IsOf(Actor::_type))
+	if (!func(reinterpret_cast<Actor*>(t)))
+	  return false;
+    }
+  return true;
+}
+
+
+//==========================================================================
+//  Trace/intercept routines
+//==========================================================================
+
+trace_t trace;        ///< changed by Map::PathTraverse ONLY
+static bool earlyout;
+
+/// \brief Find lines intercepted by the trace.
+/// \ingroup g_pit
+/// \ingroup g_trace
+/*!
+  Checks if the line_t intercepts the given trace. If so, adds it to the intercepts list.
+  A line is crossed if its endpoints are on opposite sides of the trace.
+  Iteration is stopped if earlyout is true and a solid line is hit.
+*/
+static bool PIT_AddLineIntercepts(line_t *ld)
+{
+  int  s1, s2;
+
+  // avoid precision problems with two routines
+  if (trace.delta.x > 16 || trace.delta.y > 16
+      || trace.delta.x < -16 || trace.delta.y < -16)
+    {
+      //Hurdler: crash here with phobia when you shoot on the door next the stone bridge
+      //stack overflow???
+      s1 = P_PointOnDivlineSide (ld->v1->x, ld->v1->y, &trace.dl);
+      s2 = P_PointOnDivlineSide (ld->v2->x, ld->v2->y, &trace.dl);
+    }
+  else
+    {
+      s1 = P_PointOnLineSide (trace.start.x, trace.start.y, ld);
+      s2 = P_PointOnLineSide (trace.start.x+trace.delta.x, trace.start.y+trace.delta.y, ld);
+    }
+
+  if (s1 == s2)
+    return true;    // line isn't crossed
+
+  // hit the line
+  divline_t  dl;
+  dl.MakeDivline(ld);
+  fixed_t frac = P_InterceptVector(&trace.dl, &dl);
+
+  if (frac < 0)
+    return true;    // behind source
+
+  // try to early out the check
+  if (earlyout && frac < 1 && !ld->backsector)
+    {
+      return false;   // stop checking
+    }
+
+  intercept_t in;
+  in.frac = frac.Float();
+  in.isaline = true;
+  in.line = ld;
+  trace.intercepts.push_back(in);
+
+  return true;        // continue
+}
+
+
+/// \brief Find Actors intercepted by the trace.
+/// \ingroup g_pit
+/// \ingroup g_trace
+/*!
+  Checks if the Actor intercepts the given trace. If so, adds it to the intercepts list.
+*/
+static bool PIT_AddThingIntercepts(Actor *thing)
+{
+  fixed_t  x1, y1, x2, y2;
+  int      s1, s2;
+
+  bool tracepositive = (trace.delta.x.value() ^ trace.delta.y.value()) > 0;
+
+  // check a corner to corner crossection for hit
+  if (tracepositive)
+    {
+      x1 = thing->pos.x - thing->radius;
+      y1 = thing->pos.y + thing->radius;
+
+      x2 = thing->pos.x + thing->radius;
+      y2 = thing->pos.y - thing->radius;
+    }
+  else
+    {
+      x1 = thing->pos.x - thing->radius;
+      y1 = thing->pos.y - thing->radius;
+
+      x2 = thing->pos.x + thing->radius;
+      y2 = thing->pos.y + thing->radius;
+    }
+
+  s1 = P_PointOnDivlineSide (x1, y1, &trace.dl);
+  s2 = P_PointOnDivlineSide (x2, y2, &trace.dl);
+
+  if (s1 == s2)
+    return true;            // line isn't crossed
+
+  divline_t dl;
+  dl.x = x1;
+  dl.y = y1;
+  dl.dx = x2-x1;
+  dl.dy = y2-y1;
+
+  fixed_t frac = P_InterceptVector(&trace.dl, &dl);
+
+  if (frac < 0)
+    return true;            // behind source
+
+  intercept_t in;
+  in.frac = frac.Float();
+  in.isaline = false;
+  in.thing = thing;
+  trace.intercepts.push_back(in);
+
+  return true;                // keep going
+}
+
+/// \brief Traverses the accumulated intercepts in order of closeness up to maxfrac.
+/// \ingroup g_trace
+/*!
+  Calls the traverser function on all intercept_t's in the
+  intercepts vector, in the nearness-of-intercept order.
+  \return true if the traverser function returns true for all lines
+*/
+bool trace_t::TraverseIntercepts(traverser_t func, float maxfrac)
+{
+  int count = intercepts.size();
+  int i = count;
+
+  // TODO introsort
+  intercept_t *in = NULL;
+  while (i--)
+    {
+      float dist = fixed_t::FMAX;
+
+      for (int j = 0; j < count; j++)
+	{
+	  intercept_t *scan = &intercepts[j];
+	  if (scan->frac < dist)
+	    {
+	      dist = scan->frac;
+	      in = scan;
+	    }
+	}
+
+      if (dist > maxfrac)
+	return true;        // checked everything in range
+
+#if 0  // UNUSED
+      {
+        // don't check these yet, there may be others inserted
+        in = scan = intercepts;
+        for (scan = intercepts ; scan<intercept_p ; scan++)
+	  if (scan->frac > maxfrac)
+	    *in++ = *scan;
+        intercept_p = in;
+        return false;
+      }
+#endif
+
+      // call the traverser function on the closest intercept_t
+      if (!func(in))
+	return false; // don't bother going farther
+
+      in->frac = fixed_t::FMAX; // make sure this intercept is not chosen again
+    }
+
+  return true; // everything was traversed
+}
+
+
+
+void trace_t::Init(Map *m, const vec_t<fixed_t>& v1, const vec_t<fixed_t>& v2)
+{
+  mp = m;
+  start = v1;
+  delta = v2-v1;
+
+  vec_t<float> temp;
+  temp.x = delta.x.Float();
+  temp.y = delta.y.Float();
+  temp.z = delta.z.Float();
+
+  length = temp.Norm();
+  sin_pitch = temp.z / length;
+
+  intercepts.clear();
+
+  dl.x = start.x; dl.y = start.y;
+  dl.dx = delta.x; dl.dy = delta.y;
+
+  lastz = start.z;
+  frac = 0;
+}
+
+
+
+/// \brief Traces a line through the blockmap.
+/// \ingroup g_trace
+/*!
+  Traces a line from v1 to v2 by stepping through the blockmap
+  adding line/thing intercepts and then calling the traverser function for each intercept.
+  \return true if the traverser function returns true for all lines
+*/
+bool Map::PathTraverse(const vec_t<fixed_t>& v1, const vec_t<fixed_t>& v2, int flags, traverser_t trav)
+{
+  // small HACK: make local copies so we can change them
+  vec_t<fixed_t> p1(v1);
+  vec_t<fixed_t> p2(v2);
+
+  earlyout = flags & PT_EARLYOUT;
+
+  validcount++;
+
+#define MAPBLOCKSIZE (MAPBLOCKUNITS * fixed_t::UNIT)
+
+  if (((p1.x-bmaporgx).value() & (MAPBLOCKSIZE-1)) == 0)
+    p1.x += 1; // don't side exactly on a line
+
+  if (((p1.y-bmaporgy).value() & (MAPBLOCKSIZE-1)) == 0)
+    p1.y += 1; // don't side exactly on a line
+
+  // set up the trace struct
+  trace.Init(this, p1, p2);
+
+  p1.x -= bmaporgx;
+  p1.y -= bmaporgy;
+  int xt1 = p1.x.floor() >> MAPBLOCKBITS;
+  int yt1 = p1.y.floor() >> MAPBLOCKBITS;
+
+  p2.x -= bmaporgx;
+  p2.y -= bmaporgy;
+  int xt2 = p2.x.floor() >> MAPBLOCKBITS;
+  int yt2 = p2.y.floor() >> MAPBLOCKBITS;
+
+  fixed_t     xstep, ystep;
+  fixed_t     partial;
+  int         mapxstep, mapystep;
+
+  if (xt2 > xt1)
+    {
+      mapxstep = 1;
+      partial = 1 - (p1.x >> MAPBLOCKBITS).frac();
+      ystep = (p2.y-p1.y) / abs(p2.x-p1.x);
+    }
+  else if (xt2 < xt1)
+    {
+      mapxstep = -1;
+      partial = (p1.x >> MAPBLOCKBITS).frac();
+      ystep = (p2.y-p1.y) / abs(p2.x-p1.x);
+    }
+  else
+    {
+      mapxstep = 0;
+      partial = 1;
+      ystep = 256;
+    }
+
+  fixed_t yintercept = (p1.y >> MAPBLOCKBITS) + (partial * ystep);
+
+  if (yt2 > yt1)
+    {
+      mapystep = 1;
+      partial = 1 - (p1.y >> MAPBLOCKBITS).frac();
+      xstep = (p2.x-p1.x) / abs(p2.y-p1.y);
+    }
+  else if (yt2 < yt1)
+    {
+      mapystep = -1;
+      partial = (p1.y >> MAPBLOCKBITS).frac();
+      xstep = (p2.x-p1.x) / abs(p2.y-p1.y);
+    }
+  else
+    {
+      mapystep = 0;
+      partial = 1;
+      xstep = 256;
+    }
+
+  fixed_t xintercept = (p1.x >> MAPBLOCKBITS) + (partial * xstep);
+
+  // Step through map blocks.
+  // Count is present to prevent a round off error
+  // from skipping the break.
+  int mapx = xt1;
+  int mapy = yt1;
+
+  for (int count = 0 ; count < 64 ; count++)
+    {
+      if (flags & PT_ADDLINES)
+        {
+	  if (!BlockLinesIterator (mapx, mapy, PIT_AddLineIntercepts))
+	    return false;   // early out
+        }
+
+      if (flags & PT_ADDTHINGS)
+        {
+	  if (!BlockThingsIterator (mapx, mapy, PIT_AddThingIntercepts))
+	    return false;   // early out
+        }
+
+      if (mapx == xt2 && mapy == yt2)
+	break;
+
+      if (yintercept.floor() == mapy)
+        {
+	  yintercept += ystep;
+	  mapx += mapxstep;
+        }
+      else if (xintercept.floor() == mapx)
+        {
+	  xintercept += xstep;
+	  mapy += mapystep;
+        }
+
+    }
+  // go through the sorted list
+  return trace.TraverseIntercepts(trav, 1);
+}
+
+
 
 
 

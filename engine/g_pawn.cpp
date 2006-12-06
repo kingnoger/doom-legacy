@@ -1,6 +1,7 @@
 // Emacs style mode select   -*- C++ -*- 
 //-----------------------------------------------------------------------------
-//  $Id$
+//
+// $Id$
 //
 // Copyright (C) 1998-2006 by DooM Legacy Team.
 //
@@ -308,11 +309,14 @@ PlayerPawn::~PlayerPawn()
 
 void PlayerPawn::Think()
 {
-  ticcmd_t* cmd = &player->cmd;
-
-  // a corpse, for example. Thinks just like an actor.
+  // an abandoned corpse, for example. Thinks just like an actor.
   if (!player)
-    goto actor_think;
+    {
+      Actor::Think();
+      return;
+    }
+
+  ticcmd_t* cmd = &player->cmd;
 
   // Turn on required cheats
   if (cheats & CF_NOCLIP)
@@ -746,37 +750,17 @@ void PlayerPawn::Move()
 
 
 
-void PlayerPawn::XYMovement()
-{
-  fixed_t oldx, oldy;
-  oldx = pos.x;
-  oldy = pos.y;
-
-  Actor::XYMovement();
-
-  // slow down
-  if (cheats & CF_NOMOMENTUM)
-    {
-      // debug option for no sliding at all
-      vel.x = vel.y = 0;
-      return;
-    }
-  else if ((cheats & CF_FLYAROUND) || (eflags & MFE_FLY))
-    {
-      //XYFriction(oldx, oldy, true);
-      return;
-    }
-  //        if (z <= subsector->sector->floorheight)
-  //          XYFriction(oldx, oldy, false);
-
-}
-
-
-
 void PlayerPawn::ZMovement()
 {
+  if (!player)
+    {
+      // corpses etc.
+      Actor::ZMovement();
+      return;
+    }
+
   // check for smooth step up
-  if (player && (pos.z < floorz))
+  if (pos.z < floorz)
     {
       player->viewheight -= floorz - pos.z;
       player->deltaviewheight = (cv_viewheight.value - player->viewheight) >> 3;
@@ -842,12 +826,23 @@ void PlayerPawn::ZMovement()
 
 void PlayerPawn::XYFriction(fixed_t oldx, fixed_t oldy)
 {
-  if (player == NULL)
-    return;
+  // slow down
+  if (cheats & CF_NOMOMENTUM)
+    {
+      // debug option for no sliding at all
+      vel.x = vel.y = 0;
+      return;
+    }
+  else if (cheats & CF_FLYAROUND)
+    {
+      // no friction
+      return;
+    }
 
-  const fixed_t STOPSPEED  = 0.0625f;
+  const fixed_t STOPSPEED = 0.0625f;
 
-  if (vel.x > -STOPSPEED && vel.x < STOPSPEED && vel.y > -STOPSPEED && vel.y < STOPSPEED && 
+  if (player &&
+      vel.x > -STOPSPEED && vel.x < STOPSPEED && vel.y > -STOPSPEED && vel.y < STOPSPEED && 
       (player->cmd.forward == 0 && player->cmd.side == 0 ))
     {
       // if in a walking frame, stop moving

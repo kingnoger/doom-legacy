@@ -21,15 +21,24 @@
 /// \file
 /// \brief Movement, collision handling. Shooting and aiming.
 
+
+/*!
+  \defgroup g_physics Physics engine
+
+  The physics engine of Doom Legacy.
+ */
+
 /*!
   \defgroup g_collision Collision detection
+  \ingroup g_physics
 
-  Functions and methods used for collision detection and
-  interactions between Actors and line_t's.
+  Stuff used for collision detection and
+  interactions between multiple Actors, and Actors and line_t's.
  */
 
 /*!
   \defgroup g_iterators Map geometry iterator functions
+  \ingroup g_physics
 
   Functions and methods used to iterate through Map geometry.
  */
@@ -44,7 +53,7 @@
 
 /*!
   \defgroup g_trace Trace functions
-  \ingroup g_iterators
+  \ingroup g_physics
 
   A trace is a line segment drawn through the Map geometry
   from point A to point B. It may be intercepted by linedefs and Actors.
@@ -90,30 +99,24 @@
 extern int boomsupport;
 
 
-static Actor    *tmthing; // cp
-bbox_t tmb; // a bounding box; checkposition()
+static Actor *tmthing;
+bbox_t  tmb;      // a bounding box;
 fixed_t tmx, tmy; // mostly used here, set together with tmb
 
 
-// fakefloor LOGIC FIXME: stepheight must be less than height/2...
-// TODO MFE_ONGROUND == above ground??
-
 // If floatok is true, XY move would be ok if we were at the correct Z
-bool     floatok; // A::Trymove, DA:PMove
+bool    floatok;
 
 static bool interact; // touch or just see if it fits? shoot or just trace?
 
 // checkposition data (stuff in the XY footprint of the Actor)
 position_check_t PosCheck;
 
-// tmfloorthing is set when tmfloorz comes from a thing's top
-Actor *tmfloorthing; // the thing corresponding to tmfloorz or NULL if tmfloorz is from a sector FIXME
 
-
-
-
+const float   SHOOTFRAC   = 36.0/56; ///< fraction of Actor height where shots start
 const fixed_t MAXSTEPMOVE = 24; ///< Max Z move up or down without jumping. Above this, a heigth difference is considered a 'dropoff'
 const fixed_t MAXWATERSTEPMOVE = 37;
+
 
 // Attempt to move to a new position,
 // crossing special lines in the way.
@@ -123,35 +126,41 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
   floatok = false;
 
   // TODO the problems with the collision check code are
-  // 1) no traces are used, rather blockmapcells are iterated one by one and we stop
-  //    when the first blocking thing/line is found -> there might be others we actually hit first
-  // 2) z fit is only checked later
-  // 3) if no z fit, all accumulated impacts and pushes are processed. if z fit ok, all crossings are processed.
+  // No traces are used, rather blockmapcells are iterated one by one by PIT_CheckLine, and we stop
+  // when the first blocking thing/line is found =>
+  // 1) there might be others we actually hit first.
+  // If the iteration is stopped by a line we have immediate collision damage and impact activation.
+  // z fit is only checked later, possible z-blocking lines are pushed to spechit.
+  // Here, when we notice that move is not OK due to failed CheckPosition or z-blocking,
+  // 2) we AGAIN give collision damage and do impact activation for entire spechit.
+  // If z fit ok, all crossings in spechit are processed.
+
   if (!CheckPosition(nx, ny, true))
     {
       // blocked by an unpassable line or an Actor
       if (PosCheck.block_thing)
 	{
-	  // TODO try to climb on top of it TODO do always both line- and thingcheck! so we have tm* vars here!
-	  /*
-	  if (PosCheck.block_thing->Top() - Feet() > MAXSTEPMOVE ||
-	  PosCheck.block_thing->subsector->sector->ceilingheight - PosCheck.block_thing->Top() < height ||
-	  PosCheck.ceilingz - PosCheck.block_thing->Top() < height)
-	  tmfloorthing = PosCheck.block_thing;
-	  */
+	  // try to climb on top of it
+	  if (PosCheck.block_thing->Top() - Feet() <= MAXSTEPMOVE &&
+	      //PosCheck.block_thing->subsector->sector->ceilingheight - PosCheck.block_thing->Top() >= height &&
+	      PosCheck.op.top - PosCheck.block_thing->Top() >= height)
+	    PosCheck.floor_thing = PosCheck.block_thing;
+	  else
+	    return false;
+	}
+      else
+	{
+	  // must be a blocking line
+	  CheckLineImpact();
 	  return false;
 	}
-
-      // must be a blocking line
-      CheckLineImpact();
-      return false;
     }
 
   // handle z-lineclip and spechit
   if (!(flags & MF_NOCLIPLINE))
     {
       // do we fit in the z direction?
-      if (PosCheck.ceilingz - PosCheck.floorz < height)
+      if (PosCheck.op.Range() < height)
 	{
 	  CheckLineImpact();
 	  return false;
@@ -162,12 +171,12 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
       // When flying, we have a slight z-directional autopilot for convenience
       if (eflags & MFE_FLY)
 	{
-	  if (Top() > PosCheck.ceilingz)
+	  if (Top() > PosCheck.op.top)
 	    {
 	      vel.z = -8;
 	      return false;
 	    }
-	  else if (Feet() < PosCheck.floorz && PosCheck.floorz - PosCheck.dropoffz > MAXSTEPMOVE)
+	  else if (Feet() < PosCheck.op.bottom && PosCheck.op.Drop() > MAXSTEPMOVE)
 	    {
 	      vel.z = 8;
 	      return false;
@@ -175,37 +184,38 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 	}
 
       // do we hit the upper texture?
-      if (Top() > PosCheck.ceilingz &&
+      if (Top() > PosCheck.op.top &&
 	  !(flags2 & MF2_CEILINGHUGGER)) // ceilinghuggers step down any amount
 	{
 	  CheckLineImpact();
+	  PosCheck.skyimpact = PosCheck.op.top_sky;
 	  return false; // must lower itself to fit
 	}
 
       // do we hit the lower texture without being able to climb the step?
-      if (PosCheck.floorz > Feet() &&
+      if (PosCheck.op.bottom > Feet() &&
 	  !(flags2 & MF2_FLOORHUGGER)) // floorhuggers step up any amount
 	{
 	  // easier to move in water / climb out of water
 	  fixed_t maxstep = (eflags & MFE_UNDERWATER) ? MAXWATERSTEPMOVE : MAXSTEPMOVE;
 
 	  if (flags & MF_MISSILE || // missiles do not step up
-	      PosCheck.floorz - Feet() > maxstep)
+	      PosCheck.op.bottom - Feet() > maxstep)
 	    {
 	      CheckLineImpact();
+	      PosCheck.skyimpact = PosCheck.op.bottom_sky;
 	      return false;       // too big a step up
 	    }
 	}
 
       // are we afraid of the dropoff?
-      if (!allowdropoff)
-	if (PosCheck.floorz - PosCheck.dropoffz > MAXSTEPMOVE && !tmfloorthing &&
-	    !(flags & MF_DROPOFF) && !(eflags & MFE_BLASTED))
+      if (!allowdropoff && !(flags & MF_DROPOFF) && !(eflags & MFE_BLASTED))
+	if (PosCheck.op.Drop() > MAXSTEPMOVE && !PosCheck.floor_thing)
 	  return false; // don't go over a dropoff (unless blasted)
 
       // are we unable to leave the floor texture? (water monsters)
       if (flags2 & MF2_CANTLEAVEFLOORPIC
-	  && (PosCheck.floorpic != subsector->sector->floorpic || PosCheck.floorz != Feet()))
+	  && (PosCheck.op.bottompic != subsector->sector->floorpic || PosCheck.op.bottom != Feet()))
 	return false;
     }
 
@@ -219,7 +229,7 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
   pos.y = ny;
 
   //added:28-02-98:
-  if (tmfloorthing)
+  if (PosCheck.floor_thing)
     eflags &= ~MFE_ONGROUND;  //not on real floor
   else
     eflags |= MFE_ONGROUND;
@@ -350,9 +360,9 @@ bool Map::SetBMlink(fixed_t x, fixed_t y, Actor *a)
 */
 void Actor::SetPosition()
 {
-  // NOTE that PosCheck.floorz and PosCheck.ceilingz must be set (using CheckPosition() or something)
-  floorz = PosCheck.floorz;
-  ceilingz = PosCheck.ceilingz;
+  // NOTE that PosCheck.op.bottom and PosCheck.op.top must be set (using CheckPosition() or something)
+  floorz = PosCheck.op.bottom;
+  ceilingz = PosCheck.op.top;
 
   // link into subsector
   subsector_t *ss = mp->R_PointInSubsector(pos.x, pos.y);
@@ -460,7 +470,6 @@ void Actor::CheckLineImpact()
       line_t *ld = PosCheck.spechit[i];
       int side = P_PointOnLineSide(pos.x, pos.y, ld);
       CheckForPushSpecial(ld, side, this);
-      //was mp->ActivateLine(spechit[i], owner, 0, SPAC_IMPACT);
     }
 }
 
@@ -468,6 +477,7 @@ void Actor::CheckLineImpact()
 
 
 /// \brief Checks if an Actor is physically collided by another.
+/// \ingroup g_collision
 /// \ingroup g_pit
 /*!
   Iterator function for Actor->Actor collision checks. tmthing collides, thing gets collided.
@@ -528,10 +538,11 @@ static bool PIT_CheckThing(Actor *thing)
 
 
 /// \brief Checks if a line_t is hit by an Actor.
+/// \ingroup g_collision
 /// \ingroup g_pit
 /*!
   Iterator for Actor->Line collision checking.
-  Adjusts PosCheck.floorz and PosCheck.ceilingz as lines are contacted.
+  Adjusts PosCheck.op.bottom and PosCheck.op.top as lines are contacted.
   Sets PosCheck.block_line, pushes lines, adds them to spechit vector.
 */
 static bool PIT_CheckLine(line_t *ld)
@@ -557,9 +568,6 @@ static bool PIT_CheckLine(line_t *ld)
 
   if (!ld->backsector) // one-sided line
     {
-      if ((tmthing->flags2 & MF2_IMPACT) && ld->special)
-        PosCheck.spechit.push_back(ld); // possible impact activation
-
       stopped = true;
     }
   else if (!(tmthing->flags & MF_MISSILE))
@@ -590,31 +598,32 @@ static bool PIT_CheckLine(line_t *ld)
       return false;
     }
 
-  line_opening_t *open = line_opening_t::Get(ld, tmthing);
+  // We need just one check per sector, but a sector can be bordered by
+  // several line_t's and hence can appear here more than once.
 
-  if (open->Range() <= 0)
+  sector_t *s = ld->frontsector;
+  if (s->validcount != validcount)
+    {
+      s->validcount = validcount;
+      PosCheck.op.SubtractFromOpening(tmthing, s);
+    }
+
+  s = ld->backsector;
+  if (s->validcount != validcount)
+    {
+      s->validcount = validcount;
+      PosCheck.op.SubtractFromOpening(tmthing, s);
+    }
+
+  /*
+    // No early out, checked at Actor::TryMove
+  if (PosCheck.op.Range() < tmthing->height)
     return false; // collision? push? TODO
+  */
 
-  // adjust floor / ceiling heights
-  if (open->top < PosCheck.ceilingz)
-    {
-      PosCheck.ceilingz = open->top;
-      PosCheck.sky = open->sky;
-    }
-
-  if (open->bottom > PosCheck.floorz)
-    {
-      PosCheck.dropoffz = (PosCheck.floorz >= open->lowfloor) ? PosCheck.floorz : open->lowfloor;
-      PosCheck.floorz = open->bottom;
-      // TODO PosCheck.floorpic = ;
-    }
-  else if (open->bottom > PosCheck.dropoffz)
-    {
-      PosCheck.dropoffz = open->bottom;
-    }
-
+  // crossing the line is possible during this move
   // if contacted a special line, add it to the list
-  if (ld->special)
+  if (ld->special && interact)
     PosCheck.spechit.push_back(ld);
 
   return true;
@@ -630,7 +639,8 @@ static bool PIT_CheckLine(line_t *ld)
 /// \ingroup g_collision
 /*!
   Does full Actor->Actor collision checking, XY Actor-line_t collisions.
-  Actor does not need to be valid during check.
+  Actor does not need to be valid during check. Its z-coordinate will be used in
+  finding openings between sectors.
   Crossed special lines are stored into spechit.
   \param[in] act Should we generate collisions or just check fit?
   \return false if XY position is utterly impossible
@@ -642,28 +652,18 @@ bool Actor::CheckPosition(fixed_t nx, fixed_t ny, bool act)
 
   tmb.Set(nx, ny, radius);
 
-  line_opening_t op;
-  op.top = fixed_t::FMAX;
-  op.bottom = op.lowfloor = fixed_t::FMIN;
-  op.sky = false;
-
   // The base floor / ceiling is from the subsector that contains the point.
-  // Any contacted lines the step closer together will adjust them.
+  // Any contacted lines will adjust them closer together.
   subsector_t *ss = mp->R_PointInSubsector(nx,ny);
-  ss->sector->FindZRange(this, op);
 
-  PosCheck.floorz   = op.bottom;
-  PosCheck.ceilingz = op.top;
-  //PosCheck.floorpic = op.floorpic; // TODO???
-  PosCheck.dropoffz = op.lowfloor;
-
+  PosCheck.op.Reset();
+  PosCheck.op.SubtractFromOpening(this, ss->sector);
 
   PosCheck.spechit.clear();
   PosCheck.block_line = NULL;
   PosCheck.block_thing = NULL;
-
-
-  tmfloorthing = NULL; // FIXME for this to work, the lines should be checked first, then things...
+  PosCheck.floor_thing = NULL;
+  PosCheck.skyimpact = false;
 
   validcount++;
 
@@ -676,6 +676,19 @@ bool Actor::CheckPosition(fixed_t nx, fixed_t ny, bool act)
   int xl, xh, yl, yh, bx, by;
   fixed_t bmox = mp->bmaporgx; 
   fixed_t bmoy = mp->bmaporgy; 
+
+  if (!(flags & MF_NOCLIPLINE))
+    {
+      // check lines
+      xl = (tmb[BOXLEFT] - bmox).floor() >> MAPBLOCKBITS;
+      xh = (tmb[BOXRIGHT] - bmox).floor() >> MAPBLOCKBITS;
+      yl = (tmb[BOXBOTTOM] - bmoy).floor() >> MAPBLOCKBITS;
+      yh = (tmb[BOXTOP] - bmoy).floor() >> MAPBLOCKBITS;
+      for (bx=xl ; bx<=xh ; bx++)
+	for (by=yl ; by<=yh ; by++)
+	  if (!mp->BlockLinesIterator(bx,by,PIT_CheckLine))
+	    return false;
+    }
 
   if (!(flags & MF_NOCLIPTHING))
     {
@@ -691,19 +704,6 @@ bool Actor::CheckPosition(fixed_t nx, fixed_t ny, bool act)
 	    return false;
     }
 
-  if (!(flags & MF_NOCLIPLINE))
-    {
-      // check lines
-      xl = (tmb[BOXLEFT] - bmox).floor() >> MAPBLOCKBITS;
-      xh = (tmb[BOXRIGHT] - bmox).floor() >> MAPBLOCKBITS;
-      yl = (tmb[BOXBOTTOM] - bmoy).floor() >> MAPBLOCKBITS;
-      yh = (tmb[BOXTOP] - bmoy).floor() >> MAPBLOCKBITS;
-      for (bx=xl ; bx<=xh ; bx++)
-	for (by=yl ; by<=yh ; by++)
-	  if (!mp->BlockLinesIterator(bx,by,PIT_CheckLine))
-	    return false;
-    }
-
   return true;
 }
 
@@ -712,30 +712,18 @@ bool Actor::CheckPosition(fixed_t nx, fixed_t ny, bool act)
 // location, otherwise returns false.
 bool Actor::TestLocation()
 {
-  if (CheckPosition(pos.x, pos.y, false) &&
-      (Feet() >= floorz) && (Top() <= ceilingz))
-    {
-      PosCheck.spechit.clear(); // TODO we could not fill it in the first place...
-      return true;
-    }
-
-  PosCheck.spechit.clear();
-  return false;
+  return (CheckPosition(pos.x, pos.y, false) &&
+	  (Feet() >= PosCheck.op.bottom) &&
+	  (Top() <= PosCheck.op.top));
 }
 
 
 
 bool Actor::TestLocation(fixed_t nx, fixed_t ny)
 {
-  if (CheckPosition(nx, ny, false) &&
-      (Feet() >= floorz) && (Top() <= ceilingz))
-    {
-      PosCheck.spechit.clear(); // TODO we could not fill it in the first place...
-      return true;
-    }
-
-  PosCheck.spechit.clear();
-  return false;
+  return (CheckPosition(nx, ny, false) &&
+	  (Feet() >= PosCheck.op.bottom) &&
+	  (Top() <= PosCheck.op.top));
 }
 
 
@@ -908,7 +896,7 @@ Actor *Actor::CheckOnmobj()
 // Allows the player to slide along any angled walls.
 //==========================================================================
 
-static fixed_t bestslidefrac;
+static float   bestslidefrac;
 static line_t *bestslideline;
 static Actor  *slidemo;
 static vec_t<fixed_t> tmmove;
@@ -1021,8 +1009,7 @@ void Actor::SlideMove(fixed_t nx, fixed_t ny)
   slidemo = this;
   int hitcount = 0;
 
-  fixed_t fudge;   // FIXME find a better way
-  fudge.setvalue(0x800);
+  const float fudge = 1.0/32;   // TODO find a better way
 
  retry:
   if (++hitcount == 3)
@@ -1052,7 +1039,7 @@ void Actor::SlideMove(fixed_t nx, fixed_t ny)
       traily = pos.y + radius;
     }
 
-  bestslidefrac = 1 + fixed_epsilon;
+  bestslidefrac = 2;
 
   // find bestslideline and -frac
   corner.x = leadx; corner.y = leady;
@@ -1065,7 +1052,7 @@ void Actor::SlideMove(fixed_t nx, fixed_t ny)
   mp->PathTraverse(corner, corner + delta, PT_ADDLINES, PTR_SlideTraverse);
 
   // move up to the wall
-  if (bestslidefrac == 1 + fixed_epsilon)
+  if (bestslidefrac == 2)
     {
       // the move must have hit the middle, so stairstep
     stairstep:
@@ -1078,8 +1065,8 @@ void Actor::SlideMove(fixed_t nx, fixed_t ny)
   bestslidefrac -= fudge;
   if (bestslidefrac > 0)
     {
-      fixed_t newx = delta.x * bestslidefrac;
-      fixed_t newy = delta.y * bestslidefrac;
+      fixed_t newx = bestslidefrac * delta.x;
+      fixed_t newy = bestslidefrac * delta.y;
 
       if (!TryMove(pos.x+newx, pos.y+newy, true))
 	goto stairstep;
@@ -1095,8 +1082,8 @@ void Actor::SlideMove(fixed_t nx, fixed_t ny)
   if (bestslidefrac <= 0)
     return;
 
-  tmmove.x = delta.x * bestslidefrac;
-  tmmove.y = delta.y * bestslidefrac;
+  tmmove.x = bestslidefrac * delta.x;
+  tmmove.y = bestslidefrac * delta.y;
 
   P_HitSlideLine(bestslideline);     // clip the moves
 
@@ -1134,9 +1121,9 @@ static bool PTR_BounceTraverse(intercept_t *in)
     {
       line_opening_t *open = line_opening_t::Get(li, slidemo);
 
-      // will it fit through? FIXME does this include fake floors?
-      if (open->Range() >= slidemo->height &&
-	  open->top >= slidemo->Top()) // FIXME low limit
+      // will it fit through?
+      if (open->top >= slidemo->Top() &&
+	  open->bottom <= slidemo->Feet())
 	return true; // this line doesn't block movement
     }
 
@@ -1172,7 +1159,7 @@ void Actor::BounceWall(fixed_t nx, fixed_t ny)
   else
     leady = pos.y-radius;
 
-  bestslidefrac = 1 + fixed_epsilon;
+  bestslidefrac = 2;
   bestslideline = NULL;
 
   corner.x = leadx; corner.y = leady;
@@ -1214,12 +1201,12 @@ static Actor  *shootthing;   ///< Instigator of the trace.
 
 static bool    hitsky;       ///< Did we hit a sky plane or wall?
 static Actor  *target_actor; ///< Actor that got hit (or NULL)
-line_t *target_line;  ///< line_t that got hit (or NULL) TODO hit planes are not returned yet
-static vec_t<fixed_t> impact_point; ///< little backwards from the true impact point
+line_t *target_line;  ///< line_t that got hit (or NULL)
 
 static float bottomsine, topsine; // vertical aiming range
 
 
+mobjtype_t PuffType = MT_PUFF; ///< for Actor::LineAttack
 
 void Map::SpawnPuff(const vec_t<fixed_t>& r, mobjtype_t pufftype)
 {
@@ -1233,8 +1220,6 @@ void Map::SpawnPuff(const vec_t<fixed_t>& r, mobjtype_t pufftype)
   else if (puff->info->attacksound)
     S_StartSound(puff, puff->info->attacksound);
 
-  if (game.mode < gm_heretic)
-    pufftype = MT_PUFF;
 
   switch (pufftype)
     {
@@ -1272,7 +1257,7 @@ void Map::SpawnPuff(const vec_t<fixed_t>& r, mobjtype_t pufftype)
 */
 static bool PTR_AimTraverse(intercept_t *in)
 {
-  float dist = trace.length * in->frac.Float(); // 3D distance
+  float dist = trace.length * in->frac; // 3D distance
 
   if (in->isaline)
     {
@@ -1421,7 +1406,7 @@ Actor *Actor::AimLineAttack(angle_t ang, float distance, float& sinpitch)
 
   // start point
   vec_t<fixed_t> s(pos);
-  s.z = Center() + 8 - floorclip; // FIXME magic number
+  s.z = Feet() +SHOOTFRAC*height -floorclip;
 
   // Since monsters shouldn't change their "pitch" angle, why not use the same routine for them also?
   fixed_t temp = distance * Cos(pitch); // XY length
@@ -1437,13 +1422,11 @@ Actor *Actor::AimLineAttack(angle_t ang, float distance, float& sinpitch)
 
 
 /// helper function for traces, updates lastz
-/// \param[in] s
-/// \param[inout] frac
-/// \param[out] r
+/// \param[in] s sector to check
 /// \return true if we hit a Z-plane (and thus modified frac)
-bool trace_t::HitZPlane(sector_t *s, float& frac, range_t& r)
+bool trace_t::HitZPlane(sector_t *s)
 {
-  r = s->FindZRange(lastz);
+  range_t r = s->FindZRange(lastz);
 
   float dz = sin_pitch * length * frac;
   lastz = start.z + dz; // z at intercept
@@ -1451,7 +1434,7 @@ bool trace_t::HitZPlane(sector_t *s, float& frac, range_t& r)
   if (lastz > r.high) // hit ceiling
     {
       frac = (frac * (r.high - start.z).Float()) / dz;
-
+      lastz = r.high;
       // TODO skyhit?
 
       return true;
@@ -1459,6 +1442,7 @@ bool trace_t::HitZPlane(sector_t *s, float& frac, range_t& r)
   else if (lastz < r.low) // hit floor
     {
       frac = (frac * (r.low - start.z).Float()) / dz;
+      lastz = r.low;
       return true;
     }
 
@@ -1470,19 +1454,18 @@ bool trace_t::HitZPlane(sector_t *s, float& frac, range_t& r)
 /// \ingroup g_ptr
 /*!
   Sets target_actor or target_line if an actor or wall is hit.
-  \return true if the shot continues after this intercept
+  \return true if the trace continues after this intercept
 */
 static bool PTR_LineTrace(intercept_t *in)
 {
   // we need the right Map * from somewhere.
-  Map *m = in->m;
+  Map *m = trace.mp;
 
   // NOTE: The Map::PathTraverse tracing system works strictly in the XY plane using blockmap.
   // Hence a Z-plane (floor, ceiling, fake floor) may actually intercept the trace
   // BEFORE it reaches its next designated intercept_t.
 
-  float frac = in->frac.Float(); // actual intercept fraction (trace may hit horizontal planes too)
-  range_t r;
+  trace.frac = in->frac; // actual intercept fraction (trace may hit horizontal planes too)
 
   if (in->isaline)
     {
@@ -1496,9 +1479,7 @@ static bool PTR_LineTrace(intercept_t *in)
 
       sector_t *front = li->sideptr[side]->sector;
 
-      if (trace.HitZPlane(front, frac, r))
-	; // TODO sky impacts
-      else
+      if (!trace.HitZPlane(front))
 	{
 	  // we did hit the line
 	  if (li->special && interact)
@@ -1506,35 +1487,29 @@ static bool PTR_LineTrace(intercept_t *in)
 
 	  if (li->flags & ML_TWOSIDED)
 	    {
-	      //added:18-02-98: remember : diff ceil heights
-	      //diffheights = true;
-
-	      // We got the frontsector range_t r from HitZPlane.
-	      // Now let's chop it up with backsector geometry:
-	      list<range_t> *o = li->sideptr[!side]->sector->FindLineOpeningsInRange(r);
-
-	      list<range_t>::iterator t;
-	      for (t = o->begin(); t != o->end(); t++)
+	      // HitZPlane updated trace.lastz
+	      // Let's see what happens with backsector geometry:
+	      switch (li->sideptr[!side]->sector->CheckZ(trace.lastz))
 		{
-		  if (trace.lastz < t->low)
-		    break; // hit wall
-		  else if (trace.lastz <= t->high)
-		    return true; // went thru, shot continues
-		}
-	      // hit topmost wall
+		case sector_t::z_Open: // went thru, shot continues
+		  return true; 
 
-	      //TODO skywall hit?
+		case sector_t::z_Sky: // hit a skywall (no puffs or scorchmarks!)
+		  hitsky = true;
+		  break;
+
+		default:
+		  break;
+		  // hit a solid wall
+		}
 	    }
 
 	  target_line = li; // we impacted a wall
 	}
-
-      // position a bit closer
-      frac -= 4.0 / trace.length;
     }
   else
     {
-      // shoot a thing
+      // intercepted by a thing
       Actor *th = in->thing;
       if (th == shootthing)
 	return true; // can't shoot self
@@ -1543,7 +1518,7 @@ static bool PTR_LineTrace(intercept_t *in)
 	return true; // nonshootable
 
       // an Actor can be in several sectors at once, so we need the exact impact point and its sector
-      impact_point = trace.Point(frac);
+      vec_t<fixed_t> impact_point(trace.Point(trace.frac));
 
       if (impact_point.z > th->Top())
 	return true; // over
@@ -1553,23 +1528,17 @@ static bool PTR_LineTrace(intercept_t *in)
 
       sector_t *sec = m->R_PointInSubsector(impact_point.x, impact_point.y)->sector;
       
-      if (trace.HitZPlane(sec, frac, r))
+      if (trace.HitZPlane(sec))
 	; // Z-plane shielded Actor, trace hit the plane
       else
 	target_actor = th; // we hit a thing
-      
-      // position a bit closer
-      frac -= 10 / trace.length;
     }
-
-  impact_point = trace.Point(frac);
 
   // don't go any farther
   return false;
 }
 
 
-mobjtype_t PuffType = MT_PUFF; ///< for Actor::LineAttack only
 
 /// \brief Shoots an insta-hit projectile from Actor to the direction determined by (yaw, pitch)
 /// \ingroup g_trace
@@ -1588,6 +1557,11 @@ Actor *Actor::LineAttack(angle_t ang, float distance, float sine, int damage, in
   // do the trace
   LineTrace(ang, distance, sine, true);
 
+  if (hitsky)
+    return NULL;
+
+  vec_t<fixed_t> ipoint;
+
   // do the damage, puffs and splats
   
   if (target_line)
@@ -1598,6 +1572,9 @@ Actor *Actor::LineAttack(angle_t ang, float distance, float sine, int damage, in
       fixed_t fr = P_InterceptVector(&divl, &trace.dl);
       int side = P_PointOnLineSide(trace.start.x, trace.start.y, target_line);
       mp->R_AddWallSplat(target_line, side, "A_DMG1", trace.lastz, fr, SPLATDRAWMODE_SHADE);
+
+      // position a bit closer
+      ipoint = trace.Point(trace.frac - 4.0 / trace.length);
     }
   else if (target_actor)
     {
@@ -1614,6 +1591,9 @@ Actor *Actor::LineAttack(angle_t ang, float distance, float sine, int damage, in
       // hit thing, do damage
       target_actor->Damage(this, this, damage, dtype);
 
+      // position a bit closer
+      ipoint = trace.Point(trace.frac - 10.0 / trace.length);
+
       if (!(target_actor->flags & MF_NOBLOOD ||
 	    target_actor->flags2 & MF2_INVULNERABLE))
 	{
@@ -1629,26 +1609,28 @@ Actor *Actor::LineAttack(angle_t ang, float distance, float sine, int damage, in
 	     }
 	  */
 
-	  mp->SpawnBloodSplats(impact_point, damage, trace.delta.x, trace.delta.y);
+	  mp->SpawnBloodSplats(ipoint, damage, trace.delta.x, trace.delta.y);
 	}
 
       if (game.mode < gm_heretic)
 	return target_actor;
+
+      if (PuffType == MT_BLASTERPUFF1)   
+	PuffType = MT_BLASTERPUFF2;  // Make blaster big puff
     }
   else
-    return NULL; // hit Z-plane or nothing
+    // hit Z-plane or nothing
+    // position a bit closer
+    ipoint = trace.Point(trace.frac - 4.0 / trace.length);
 
-
-  if (PuffType == MT_BLASTERPUFF1)   
-    PuffType = MT_BLASTERPUFF2;  // Make blaster big puff
-
-  mp->SpawnPuff(impact_point, PuffType);
+  if (PuffType != MT_NONE)
+    mp->SpawnPuff(ipoint, PuffType);
 
   return target_actor;
 
   /* TODO missed cleric flame attack:
      case MT_FLAMEPUFF:
-     P_SpawnPuff(x2, y2, shootz+FixedMul(sine, distance));
+     mp->SpawnPuff(trace.Point(1), MT_FLAMEPUFF);
   */
 }
 
@@ -1674,7 +1656,7 @@ Actor *Actor::LineTrace(angle_t ang, float distance, float sine, bool inter)
 
   // start point
   vec_t<fixed_t> s(pos);
-  s.z = Center() + 8 - floorclip; // FIXME magic number
+  s.z = Feet() +SHOOTFRAC*height -floorclip;
 
   float temp = sqrt(1 - sine*sine) * distance; // XY length
 
@@ -1721,9 +1703,9 @@ static bool PTR_BloodTraverse(intercept_t *in)
 
       fixed_t frac = P_InterceptVector(&divl, &trace.dl);
       if (game.mode >= gm_heretic)
-	in->m->R_AddWallSplat(li, P_PointOnLineSide(blood_x,blood_y,li),"BLODC0", z, frac, SPLATDRAWMODE_TRANS);
+	trace.mp->R_AddWallSplat(li, P_PointOnLineSide(blood_x,blood_y,li),"BLODC0", z, frac, SPLATDRAWMODE_TRANS);
       else
-	in->m->R_AddWallSplat(li, P_PointOnLineSide(blood_x,blood_y,li),"BLUDC0", z, frac, SPLATDRAWMODE_TRANS);
+	trace.mp->R_AddWallSplat(li, P_PointOnLineSide(blood_x,blood_y,li),"BLUDC0", z, frac, SPLATDRAWMODE_TRANS);
       return false;
     }
 
@@ -2062,17 +2044,17 @@ void Actor::RadiusAttack(Actor *culprit, int damage, fixed_t rad, int dtype, boo
 // and false will be returned.
 static bool P_ThingHeightClip(Actor *thing)
 {
-  // TODO check, tmfloorthing...
+  // TODO check this
   bool onfloor = (thing->pos.z <= thing->floorz);
 
   thing->CheckPosition(thing->pos.x, thing->pos.y, true);
 
   // what about stranding a monster partially off an edge?
 
-  thing->floorz = PosCheck.floorz;
-  thing->ceilingz = PosCheck.ceilingz;
+  thing->floorz = PosCheck.op.bottom;
+  thing->ceilingz = PosCheck.op.top;
 
-  if (!tmfloorthing && onfloor && !(thing->flags & MF_NOGRAVITY))
+  if (onfloor && !(thing->flags & MF_NOGRAVITY))
     {
       // walking monsters rise and fall with the floor TODO allow 9 units altitude (Hexen)?
       thing->pos.z = thing->floorz;
@@ -2082,7 +2064,7 @@ static bool P_ThingHeightClip(Actor *thing)
       // don't adjust a floating monster unless forced to
       //added:18-04-98:test onfloor
       if (!onfloor)                    //was tmsectorceilingz
-	if (thing->Top() > PosCheck.ceilingz)
+	if (thing->Top() > PosCheck.op.top)
 	  thing->pos.z = thing->ceilingz - thing->height;
 
       //thing->eflags &= ~MFE_ONGROUND;
@@ -2409,8 +2391,8 @@ bool Actor::TeleportMove(fixed_t nx, fixed_t ny)
 
   // TODO do a linecheck first to see if we fit
   // this is a simplification which only works fully within a sector with no fakefloors
-  PosCheck.floorz = newsec->floorheight;
-  PosCheck.ceilingz = newsec->ceilingheight;
+  PosCheck.op.bottom = newsec->floorheight;
+  PosCheck.op.top = newsec->ceilingheight;
 
   validcount++;
 

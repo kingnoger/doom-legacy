@@ -1051,6 +1051,7 @@ void Actor::Die(Actor *inflictor, Actor *source, int dtype)
     }
 
   flags |= (MF_CORPSE | MF_DROPOFF); // it's dead now.
+  flags &= ~MF_PICKUP;
 
   // dead target is no more shootable
   if (!cv_solidcorpse.value)

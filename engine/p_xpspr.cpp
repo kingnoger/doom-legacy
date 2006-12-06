@@ -42,9 +42,6 @@
 void A_UnHideThing(DActor *actor);
 int P_FaceMobj(Actor *source, Actor *target, angle_t *delta);
 
-extern line_t *target_line;
-extern mobjtype_t PuffType;
-
 
 //============================================================================
 //

@@ -39,9 +39,8 @@ extern int validcount;
 /// \brief Vertical range.
 struct range_t
 {
-  fixed_t low;
   fixed_t high;
-  //fixed_t lowfloor;
+  fixed_t low;
 };
 
 
@@ -52,14 +51,28 @@ struct line_opening_t
   fixed_t top;
   fixed_t bottom;
   fixed_t lowfloor;  ///< one floor down from bottom
+  int     bottompic; ///< floorpic of bottom plane
 
-  bool sky; ///< top limit is by a sky plane
+  bool top_sky;      ///< top    limit is set by a sky plane
+  bool bottom_sky;   ///< bottom limit is set by a sky plane
 
 public:
+  inline void Reset()
+  {
+    top = fixed_t::FMAX;
+    bottom = lowfloor = fixed_t::FMIN;
+    bottompic = -1;
+    top_sky = bottom_sky = false;
+  }
+
   inline fixed_t Range() { return top - bottom; }
+  inline fixed_t  Drop() { return bottom - lowfloor; }
+
+  /// Shrinks the vertical opening for Actor a by Z-planes in sector s.
+  void SubtractFromOpening(const class Actor *a, struct sector_t *s);
 
   /// Returns the opening for an Actor across a line.
-  static line_opening_t *Get(struct line_t *line, class Actor *thing);
+  static line_opening_t *Get(struct line_t *line, Actor *thing);
 };
 
 
@@ -77,45 +90,12 @@ struct divline_t
 
 
 
-/// \brief Defines a 3D line trace.
-/// \ingroup g_trace
-struct trace_t
-{
-  vec_t<fixed_t> start; ///< starting point
-  vec_t<fixed_t> delta; ///< == end-start
-  float sin_pitch;      ///< sine of the pitch angle
-  float length;         ///< == |delta|
-
-  divline_t dl; ///< copy of the XY part
-
-  /// Work var, last confirmed z-coord. NOTE make sure that only one func at a time changes this!
-  fixed_t lastz;
-
-private:
-  inline void Init() { dl.x = start.x; dl.y = start.y; dl.dx = delta.x; dl.dy = delta.y; lastz = start.z; }
-
-public:
-  /// Initializes the trace.
-  void Make(const vec_t<fixed_t>& v1, const vec_t<fixed_t>& v2);
-
-  /// Returns a point along the trace, frac is in [0,1].
-  inline vec_t<fixed_t> Point(float frac) { return start + delta * frac; }
-
-  /// Checks if trace hits a Z-plane while traversing sector s up to fraction frac. lastz must be correct.
-  bool HitZPlane(struct sector_t *s, float& frac, range_t& r);
-};
-
-extern trace_t trace;
-
-
-
-/// \brief Describes a single intercept of a trace line, either an Actor or a line_t
+/// \brief Describes a single intercept of a trace_t line, either an Actor or a line_t.
 /// \ingroup g_trace
 struct intercept_t
 {
-  class Map    *m; ///< Ugly but necessary, since line_t's don't carry a Map *. Actors do.
-  fixed_t    frac; ///< Fractional position of the intercept along the 2D trace line.
-  bool    isaline;
+  float frac;    ///< Fractional position of the intercept along the 2D trace line.
+  bool  isaline;
   union
   {
     class  Actor  *thing;
@@ -123,6 +103,42 @@ struct intercept_t
   };
 };
 
+
+/// \brief Defines a 3D line trace.
+/// \ingroup g_trace
+struct trace_t
+{
+  typedef bool (*traverser_t)(intercept_t *in);
+
+  class Map     *mp;    ///< Necessary, since line_t's don't carry a Map *. Actors do.  
+  vec_t<fixed_t> start; ///< starting point
+  vec_t<fixed_t> delta; ///< == end-start
+  float sin_pitch;      ///< sine of the pitch angle
+  float length;         ///< == |delta|
+
+  divline_t dl; ///< copy of the XY part
+
+  vector<intercept_t> intercepts; ///< intercepting Actors and/or line_t's
+
+  /// Work vars, NOTE make sure that only one func at a time changes them!
+  fixed_t lastz; ///< last confirmed z-coord. 
+  float   frac;  ///< last confirmed fraction of length
+
+public:
+  /// Initializes the trace.
+  void Init(Map *m, const vec_t<fixed_t>& v1, const vec_t<fixed_t>& v2);
+
+  /// Traverses the accumulated intercepts in order of closeness up to maxfrac.
+  bool TraverseIntercepts(traverser_t func, float maxfrac);
+
+  /// Returns a point along the trace, f is in [0,1].
+  inline vec_t<fixed_t> Point(float f) { return start + delta * f; }
+
+  /// Checks if trace hits a Z-plane while traversing sector s from height lastz up to fraction frac.
+  bool HitZPlane(struct sector_t *s);
+};
+
+extern trace_t trace;
 
 
 /// \brief Flags for Map::PathTraverse
@@ -141,21 +157,15 @@ enum
 /// \ingroup g_collision
 struct position_check_t
 {
-  fixed_t  floorz;   ///< highest floor
-  fixed_t  ceilingz; ///< lowest ceiling
-  fixed_t  dropoffz; ///< lowest floor
-  int      floorpic; ///< floorpic of highest floor
-  //fixed_t  sectorfloorz, sectorceilingz; ///< not counting fake floors
+  line_opening_t op;
 
-  // thing or line that blocked the position (NULL if not blocked)
-  // block_thing is set only if an actual collision takes place, and iteration is stopped (z and flags included)
-  class  Actor  *block_thing;
-  struct line_t *block_line;
+  Actor  *block_thing; ///< thing that blocked position (or NULL)
+  line_t *block_line;  ///< line that blocked position (or NULL)
+  Actor  *floor_thing; ///< thing we are climbing on
 
   vector<line_t*> spechit; ///< line crossings (impacts and pushes are done at once)
 
-  /// Keep track of the line that lowers the ceiling, so missiles don't explode against sky hack walls.
-  bool sky;
+  bool skyimpact; ///< Did the actor collide with a sky wall?
 };
 
 extern position_check_t PosCheck;

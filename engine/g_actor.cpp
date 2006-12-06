@@ -597,7 +597,6 @@ float Actor::GetMoveFactor()
 /// Handles horizontal movement
 void Actor::XYMovement()
 {
-  extern int skyflatnum;
   const fixed_t MAXMOVE = 30;
 
   if (vel.x > MAXMOVE)
@@ -686,27 +685,14 @@ void Actor::XYMovement()
 		}
 
 
-	      // explode a missile, but not against the sky (hack)
-#warning FIXME NOW
-	      /*
-	      if (ceilingline &&
-		  ceilingline->backsector &&
-		  ceilingline->backsector->ceilingpic == skyflatnum &&
-		  ceilingline->frontsector &&
-		  ceilingline->frontsector->ceilingpic == skyflatnum &&
-		  subsector->sector->ceilingheight == ceilingz)
-		if (!boomsupport ||
-                    pos.z > ceilingline->backsector->ceilingheight)
-                  {
-                    // Hack to prevent missiles exploding against the sky.
-                    // Does not handle sky floors.
-		    
-		    // if (type == MT_HOLY_FX) ExplodeMissile(); // TODO some things do explode against sky
-
-		    Remove();
-		    return;
-                  }
-	      */
+	      // explode a missile, but not against a sky wall
+	      if (PosCheck.skyimpact)
+		{
+		  // Hack to prevent missiles exploding against the sky.
+		  // if (type == MT_HOLY_FX) ExplodeMissile(); // TODO some things do explode against sky
+		  Remove();
+		  return;
+		}
 
 	      // draw damage on wall
 	      if (PosCheck.block_line && !(flags & MF_NOSCORCH))  // set by last TryMove() that failed

@@ -485,6 +485,7 @@ void A_Punch(PlayerPawn *p, pspdef_t *psp)
 
   float sine;
   p->AimLineAttack(angle, MELEERANGE, sine);
+  PuffType = MT_NONE;
   Actor *targ = p->LineAttack(angle, MELEERANGE, sine, damage);
 
   // turn to face target
@@ -512,6 +513,7 @@ void A_Saw(PlayerPawn *p, pspdef_t *psp)
   // use meleerange + 1 se the puff doesn't skip the flash
   float sine;
   p->AimLineAttack(angle, MELEERANGE+1, sine);
+  PuffType = MT_PUFF;
   Actor *targ = p->LineAttack(angle, MELEERANGE+1, sine, damage, dt_cutting | dt_norecoil);
 
   if (!targ)
@@ -630,6 +632,7 @@ static void P_GunShot(PlayerPawn *p, bool accurate)
       sine += P_SignedFRandom(12).Float(); // TEST vertical scatter
     }
 
+  PuffType = MT_PUFF;
   p->LineAttack(angle, MISSILERANGE, sine, damage);
 }
 
@@ -681,6 +684,7 @@ void A_FireShotgun2(PlayerPawn *p, pspdef_t *psp)
   p->SetPsprite(ps_flash, p->weaponinfo[p->readyweapon].flashstate);
 
   bulletsine = P_BulletSlope(p);
+  PuffType = MT_PUFF;
 
   for (int i=0 ; i<20 ; i++)
     {
