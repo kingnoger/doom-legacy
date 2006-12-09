@@ -20,7 +20,9 @@
 #include "doomdef.h"
 
 #include "g_map.h"
+#include "p_maputl.h"
 #include "g_player.h"
+#include "g_pawn.h"
 #include "g_actor.h"
 #include "g_mapinfo.h"
 
@@ -36,6 +38,7 @@
 #include "w_wad.h" // Need file cache to get playpal.
 
 extern int skyflatnum;
+extern trace_t trace;
 
 OGLRenderer::OGLRenderer()
 {
@@ -514,6 +517,21 @@ void OGLRenderer::Render3DView(PlayerInfo *player)
     I_Error("Trying to render level but level geometry is not set.\n");
 
   RenderBSPNode(mp->numnodes-1);
+
+  // Find out the point where the player is aiming and draw crosshairs
+  // there.
+  vec_t<fixed_t> target;
+  player->pawn->LineTrace(player->pov->yaw, 30000, Sin(player->pov->pitch).Float(), false);
+  target = trace.Point(1.0);
+
+  glDisable(GL_DEPTH_TEST);
+  glBindTexture(GL_TEXTURE_2D, 0);
+  glColor4f(1.0, 0.0, 0.0, 1.0);
+  glBegin(GL_LINES);
+  glVertex3f(target.x.Float(), target.y.Float(), target.z.Float());
+  glVertex3f(x-5.0, y-5.0, z-10.0);
+  glEnd();
+  glEnable(GL_DEPTH_TEST);
 
   // Pretty soon we want to draw HUD graphics and stuff.
   Setup2DMode();
