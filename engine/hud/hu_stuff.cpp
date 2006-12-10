@@ -93,7 +93,7 @@ static char hu_tick;
 
 
 #define HU_CROSSHAIRS 3
-static Texture* crosshair[HU_CROSSHAIRS]; // precached crosshair graphics
+Texture* crosshair[HU_CROSSHAIRS]; // precached crosshair graphics
 static Texture* PatchRankings;
 
 
