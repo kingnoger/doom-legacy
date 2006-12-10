@@ -39,7 +39,6 @@
 
 extern int skyflatnum;
 extern trace_t trace;
-extern Texture* crosshair;
 
 OGLRenderer::OGLRenderer()
 {
@@ -64,6 +63,8 @@ OGLRenderer::OGLRenderer()
   consolemode = true;
 
   InitLumLut();
+
+  chx = chy = 0.0;
 
   CONS_Printf("New OpenGL renderer created.\n");
 }
@@ -519,31 +520,63 @@ void OGLRenderer::Render3DView(PlayerInfo *player)
 
   RenderBSPNode(mp->numnodes-1);
 
-  // Find out the point where the player is aiming and draw crosshairs
-  // there.
+  // Find out the point on the screen where the player is aiming.
   vec_t<fixed_t> target;
   player->pawn->LineTrace(player->pov->yaw, 30000, Sin(player->pov->pitch).Float(), false);
   target = trace.Point(trace.frac);
 
-  // FIXME currently always draws the first type of crosshairs
-  // regardless of the setup.
-  if(crosshair == NULL)
-    I_Error("Crosshairs not set.\n");
+  GLdouble model[16];
+  GLdouble proj[16];
+  GLint vp[4];
+  GLdouble chz; // This one is useless.
+  glGetDoublev(GL_MODELVIEW_MATRIX, model);
+  glGetDoublev(GL_PROJECTION_MATRIX, proj);
+  glGetIntegerv(GL_VIEWPORT, vp);
+  gluProject(target.x.Float(), target.y.Float(), target.z.Float(),
+	     model, proj, vp,
+	     &chx, &chy, &chz);
 
+  // Draw a red dot there. Used for testing.
   glDisable(GL_DEPTH_TEST);
   glBindTexture(GL_TEXTURE_2D, 0);
   glColor4f(1.0, 0.0, 0.0, 1.0);
   glBegin(GL_POINTS);
   glVertex3f(target.x.Float(), target.y.Float(), target.z.Float());
-  //  glVertex3f(x-10.0, y-10.0, z-10.0);
   glEnd();
-  DrawSpriteItem(target, crosshair, false);
+  ClearDrawColor();
 
   glEnable(GL_DEPTH_TEST);
 
   // Pretty soon we want to draw HUD graphics and stuff.
   Setup2DMode();
 
+}
+
+// Draw the given crosshair graphics at the location determined
+// earlier.
+
+void OGLRenderer::DrawCrosshairs(Texture *t) {
+  //  printf("%f %f\n", chx, chy);
+  GLfloat top, left, bottom, right;
+  GLfloat dx, dy;
+  dx = t->width/GLfloat(viewportw);
+  dy = t->height/GLfloat(viewporth);
+  /*
+  top = (chy - t->height)/viewporth;
+  bottom = (chy + t->height)/viewporth;
+  left = (chx - t->height)/viewportw;
+  right = (chx + t->height)/viewportw;
+  */
+  left = (chx - t->width)/viewportw;
+  right = (chx + t->width)/viewportw;
+  bottom = 1.0 - (chy - t->height)/viewporth;
+  top = 1.0 - (chy + t->height)/viewporth;
+  /*
+  top = 1.0 - top;
+  bottom = 1.0 - bottom;
+  */
+
+  Draw2DGraphic(top, left, bottom, right, t->GLPrepare());
 }
 
 
@@ -990,6 +1023,8 @@ void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Texture *t, bool fli
   glEnd();
 
   /* The world famous black triangles look.
+  glBindTexture(GL_TEXTURE_2D, 0);
+  glColor4f(0.0, 0.0, 0.0, 1.0);
   glBegin(GL_TRIANGLES);
   glVertex3f(0.0, 0.0, 128.0);
   glVertex3f(0.0, 32.0, 0.0);

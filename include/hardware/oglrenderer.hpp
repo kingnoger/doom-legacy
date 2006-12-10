@@ -52,6 +52,9 @@ private:
   double phi;     // Up-down rotation angle of camera in degrees.
   subsector_t *curssec; // The gl subsector the camera is in.
 
+  GLdouble chx;    // X-location of crosshairs on the screen.
+  GLdouble chy;    // Y-location of crosshairs on the screen.
+
   double fov;     // Field of view in degrees.
 
   bool consolemode; // Are we drawing 3D level graphics or 2D console
@@ -100,6 +103,7 @@ public:
   void Draw2DGraphicFill_Doom(float x, float y, float width, float height, Texture *tex);
   void ClearAutomap();
   void DrawAutomapLine(const fline_t *line, const int color);
+  void DrawCrosshairs(Texture *t);
 
   void Setup3DMode();
 

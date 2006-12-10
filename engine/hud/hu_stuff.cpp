@@ -54,6 +54,7 @@
 
 #ifndef NO_OPENGL
 # include "hardware/hwr_render.h"
+#include "hardware/oglrenderer.hpp"
 #endif
 
 
@@ -93,7 +94,7 @@ static char hu_tick;
 
 
 #define HU_CROSSHAIRS 3
-Texture* crosshair[HU_CROSSHAIRS]; // precached crosshair graphics
+static Texture* crosshair[HU_CROSSHAIRS]; // precached crosshair graphics
 static Texture* PatchRankings;
 
 
@@ -466,7 +467,14 @@ void HUD::Draw(bool redrawsbar)
 	  if (LocalPlayers[i].crosshair) // && !LocalPlayers[i].chasecam)
 	    {
 	      int c = LocalPlayers[i].crosshair & 3;
-	      crosshair[c-1]->Draw(vid.width >> 1, y, V_TL | V_SSIZE);
+	      if(rendermode == render_opengl)
+		{
+		  oglrenderer->DrawCrosshairs(crosshair[c-1]);
+		}
+	      else
+		{
+		  crosshair[c-1]->Draw(vid.width >> 1, y, V_TL | V_SSIZE);
+		}
 	    }
 	  y += viewheight;
 	}
