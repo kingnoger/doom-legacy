@@ -39,6 +39,7 @@
 
 extern int skyflatnum;
 extern trace_t trace;
+extern Texture* crosshair;
 
 OGLRenderer::OGLRenderer()
 {
@@ -522,15 +523,22 @@ void OGLRenderer::Render3DView(PlayerInfo *player)
   // there.
   vec_t<fixed_t> target;
   player->pawn->LineTrace(player->pov->yaw, 30000, Sin(player->pov->pitch).Float(), false);
-  target = trace.Point(1.0);
+  target = trace.Point(trace.frac);
+
+  // FIXME currently always draws the first type of crosshairs
+  // regardless of the setup.
+  if(crosshair == NULL)
+    I_Error("Crosshairs not set.\n");
 
   glDisable(GL_DEPTH_TEST);
   glBindTexture(GL_TEXTURE_2D, 0);
   glColor4f(1.0, 0.0, 0.0, 1.0);
-  glBegin(GL_LINES);
+  glBegin(GL_POINTS);
   glVertex3f(target.x.Float(), target.y.Float(), target.z.Float());
-  glVertex3f(x-5.0, y-5.0, z-10.0);
+  //  glVertex3f(x-10.0, y-10.0, z-10.0);
   glEnd();
+  DrawSpriteItem(target, crosshair, false);
+
   glEnable(GL_DEPTH_TEST);
 
   // Pretty soon we want to draw HUD graphics and stuff.
