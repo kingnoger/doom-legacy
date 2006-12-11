@@ -177,6 +177,9 @@ public:
   PlayerPawn(fixed_t x, fixed_t y, fixed_t z, int type, int pclass = PCLASS_NONE);
   ~PlayerPawn();
 
+  /// If this actor is used as a pov, at which height are the eyes?
+  virtual fixed_t GetViewZ() const;
+
   virtual void Think();
   void DeathThink();
   void MorphThink();

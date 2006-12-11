@@ -819,12 +819,9 @@ void Rend::R_SetupFrame(PlayerInfo *player)
 
   viewx = viewactor->pos.x;
   viewy = viewactor->pos.y;
+  viewz = viewactor->GetViewZ(); // bobbing
 
   drawPsprites = (viewactor == viewplayer);
-  if (drawPsprites)
-    viewz = player->viewz; // enable bobbing
-  else
-    viewz = viewactor->pos.z;
 
   int fixedcolormap_setup = player->pawn->fixedcolormap;
   //fixedcolormap_setup = script_camera->fixedcolormap;
@@ -890,18 +887,15 @@ void Rend::R_SetupFrame(PlayerInfo *player)
 
 void Rend::R_RenderPlayerView(int viewport, PlayerInfo *player)
 {
-  SetMap(player->mp);
-  R_SetupFrame(player); // some of this is needed for OpenGL too!
-
   // OpenGL
   if (rendermode == render_opengl)
     {
-      oglrenderer->Render3DView(player);
-      // Draw weapon sprites. 
-      R_DrawPlayerSprites();
+      oglrenderer->RenderPlayerView(player);
       return;
     }
 
+  SetMap(player->mp);
+  R_SetupFrame(player);
 
 
   if (viewport == 0) // support just two viewports for now

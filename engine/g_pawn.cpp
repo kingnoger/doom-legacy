@@ -307,6 +307,15 @@ PlayerPawn::~PlayerPawn()
 }
 
 
+fixed_t PlayerPawn::GetViewZ() const
+{
+  if (player)
+    return player->viewz;
+
+  return Top();
+}
+
+
 void PlayerPawn::Think()
 {
   // an abandoned corpse, for example. Thinks just like an actor.

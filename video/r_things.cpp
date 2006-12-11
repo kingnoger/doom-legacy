@@ -837,13 +837,7 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
   else
     vis->extra_colormap = viewplayer->subsector->sector->extra_colormap;
 
-  if(rendermode == render_soft)
-    vis->DrawVisSprite();
-  else if(rendermode == render_opengl)
-    {
-      // FIXME, the number 100 was taken at random to look good.
-      oglrenderer->Draw2DGraphic_Doom(vis->x1, -100-vis->sprite_top.Float()+BASEVIDHEIGHT, vis->tex);
-    }
+  vis->DrawVisSprite();
 }
 
 
@@ -854,8 +848,7 @@ void Rend::R_DrawPlayerSprites()
   int         lightnum;
   int         light = 0;
 
-  if (rendermode != render_soft && 
-      rendermode != render_opengl)
+  if (rendermode != render_soft)
     return;
 
   // get light level

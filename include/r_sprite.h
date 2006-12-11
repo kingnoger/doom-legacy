@@ -15,11 +15,10 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Sprites and sprite skins
+/// \brief Sprites and sprite skins.
 
 #ifndef r_sprite_h
 #define r_sprite_h 1
@@ -184,9 +183,9 @@ public:
   int GetAnim() { return animseq; };
 
   virtual bool Update(int nowtic)      = 0; // Updates the animation, called before drawing
-  virtual void Project(class Actor *p) = 0; // This is hopefully a temporary hack.. it generates a vissprite
-  virtual bool Draw(const Actor *p)    = 0; // Not sure how this works yet
-  virtual spriteframe_t *GetFrame() { return NULL; }; // or this. Menu uses it.
+  virtual void Project(class Actor *p) = 0; ///< Drawing in SW renderer. Generates a vissprite_t.
+  virtual bool Draw(const Actor *p) = 0; ///< Drawing in OpenGL.
+  virtual spriteframe_t *GetFrame() { return NULL; }; // Menu uses this.
   virtual int Marshal(class LArchive &a) = 0;
 
   void *operator new(size_t size);

@@ -14,7 +14,11 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
+//
+//-----------------------------------------------------------------------------
 
+/// \file
+/// \brief OpenGL renderer.
 
 #ifndef oglrenderer_hpp_
 #define oglrenderer_hpp_
@@ -31,44 +35,47 @@ class Texture;
 class Actor;
 struct fline_t;
 
-// This is an attempt at creating a new OpenGL renderer for Legacy.
-// The basic idea is that ALL rendering related stuff is kept inside
-// this one class. Avoid intertwingling at all costs! Otherwise we
-// just get a huge mess.
+/// \brief OpenGL renderer.
+/*!
+  This is an attempt at creating a new OpenGL renderer for Legacy.
+  The basic idea is that ALL rendering related stuff is kept inside
+  this one class. Avoid intertwingling at all costs! Otherwise we
+  just get a huge mess.
 
-// There are two basic rendering modes. The first is the 3D mode for
-// rendering level graphics. The second is 2D mode for drawing HUD
-// graphics, menus, the console etc.
+  There are two basic rendering modes. The first is the 3D mode for
+  rendering level graphics. The second is 2D mode for drawing HUD
+  graphics, menus, the console etc.
 
-// The renderer should work regardless of screen aspect ratio. This
-// should make people with widescreen monitors happy.
-
-class OGLRenderer {
-
+  The renderer should work regardless of screen aspect ratio. This
+  should make people with widescreen monitors happy.
+*/
+class OGLRenderer
+{
+  friend class spritepres_t;
 private:
 
-  double x, y, z; // Location of camera.
-  double theta;   // Rotation angle of camera in degrees.
-  double phi;     // Up-down rotation angle of camera in degrees.
-  subsector_t *curssec; // The gl subsector the camera is in.
+  double x, y, z; ///< Location of camera.
+  double theta;   ///< Rotation angle of camera in degrees.
+  double phi;     ///< Up-down rotation angle of camera in degrees.
+  subsector_t *curssec; ///< The gl subsector the camera is in.
 
-  GLdouble chx;    // X-location of crosshairs on the screen.
-  GLdouble chy;    // Y-location of crosshairs on the screen.
+  GLdouble chx;    ///< X-location of crosshairs on the screen.
+  GLdouble chy;    ///< Y-location of crosshairs on the screen.
 
-  double fov;     // Field of view in degrees.
+  double fov;     ///< Field of view in degrees.
 
-  bool consolemode; // Are we drawing 3D level graphics or 2D console
-		    // graphics.
+  bool consolemode; ///< Are we drawing 3D level graphics or 2D console
+		    ///< graphics.
 
-  double hudar;     // HUD aspect ratio.
-  double screenar;  // Aspect ratio of the physical screen (monitor).
+  double hudar;     ///< HUD aspect ratio.
+  double screenar;  ///< Aspect ratio of the physical screen (monitor).
 
-  int viewportw; // Width of current viewport in pixels.
-  int viewporth; // Height of current viewport in pixels.
+  int viewportw; ///< Width of current viewport in pixels.
+  int viewporth; ///< Height of current viewport in pixels.
 
-  SDL_Surface *screen; // Main screen turn on.
+  SDL_Surface *screen; ///< Main screen turn on.
 
-  bool workinggl;  // Do we have a working OpenGL context?
+  bool workinggl;  ///< Do we have a working OpenGL context?
 
   class Map *mp;  ///< Map to be rendered
   byte *palette;  ///< Converting palette data to OGL colors.
@@ -107,7 +114,9 @@ public:
 
   void Setup3DMode();
 
+  void RenderPlayerView(PlayerInfo *player);
   void Render3DView(PlayerInfo *player);
+  void DrawPSprites(class PlayerPawn *p);
   void DrawSpriteItem(const vec_t<fixed_t>& pos, Texture *t, bool flip);
 
   bool CheckVis(int fromss, int toss);

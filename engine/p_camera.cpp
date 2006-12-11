@@ -54,7 +54,7 @@ Camera::Camera()
   mass = 10;
   radius = 20;
   //height = 16;
-  height = 0;
+  height = 5;
 }
 
 
@@ -68,7 +68,7 @@ Camera::Camera(PlayerPawn *o, Actor *t)
   health = 1000;
   mass = 10;
   radius = 20;
-  height = 0;
+  height = 5;
 
   owner = o;
 
@@ -157,20 +157,17 @@ void Camera::Think()
   if (temp.Norm() > 2.5f*dist)
     ResetCamera(target);
 
-  // P_PathTraverse ( target->x, target->y, x, y, PT_ADDLINES, PTR_UseTraverse );
-
   // move camera down to move under lower ceilings
   subsector_t *newsubsec = mp->R_IsPointInSubsector((target->pos.x + t.x) >> 1, (target->pos.y + t.y) >> 1);
-              
   if (!newsubsec)
     {
-      // use player sector 
-      if (target->subsector->sector->ceilingheight < t.z + height)
-	t.z = target->subsector->sector->ceilingheight - height;// - 11;
-      // don't be blocked by a opened door
+      // use player sector
+      newsubsec = target->subsector;
     }
-  else if (newsubsec->sector->ceilingheight < t.z + height)
+
+  if (newsubsec->sector->ceilingheight < t.z + height)
     t.z = newsubsec->sector->ceilingheight - height;// - 11; // No ticket!
+  // don't be blocked by a opened door
 
   // does the camera fit in its own sector
   newsubsec = mp->R_PointInSubsector(t.x, t.y);

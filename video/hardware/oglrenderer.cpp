@@ -18,6 +18,8 @@
 //-----------------------------------------------------------------------------
 
 #include "doomdef.h"
+#include "command.h"
+#include "cvars.h"
 
 #include "g_map.h"
 #include "p_maputl.h"
@@ -485,9 +487,7 @@ void OGLRenderer::DrawAutomapLine(const fline_t *line, const int color)
 
 }
 
-/// Set up state and draw a view of the level from the given viewpoint.
-/// It is usually the place where the player is currently located.
-void OGLRenderer::Render3DView(PlayerInfo *player)
+void OGLRenderer::RenderPlayerView(PlayerInfo *player)
 {
   // Set up the Map to be rendered. Needs to be done separately for each viewport, since the engine
   // can run several Maps at once.
@@ -495,12 +495,72 @@ void OGLRenderer::Render3DView(PlayerInfo *player)
 
   x = player->pov->pos.x.Float();
   y = player->pov->pos.y.Float();
-  z = player->viewz.Float();
+  z = player->pov->GetViewZ().Float();
+
   curssec = player->pov->subsector;
 
-  theta = (double)(player->pov->yaw>>ANGLETOFINESHIFT)*(360.0f/(double)FINEANGLES);
-  phi = (double)(player->pov->pitch>>ANGLETOFINESHIFT)*(360.0f/(double)FINEANGLES);
+  theta = double(player->pov->yaw) * 360.0 / (1L << 32);
+  phi = double(player->pov->pitch) * 360.0 / (1L << 32);
 
+  Render3DView(player);
+
+  bool drawPsprites = (player->pov == player->pawn);
+
+  // Draw weapon sprites.
+  if (drawPsprites && cv_psprites.value)
+    DrawPSprites(player->pawn);
+}
+
+
+void OGLRenderer::DrawPSprites(PlayerPawn *p)
+{
+  // add all active psprites
+  pspdef_t *psp = p->psprites;
+  for (int i=0; i<NUMPSPRITES; i++, psp++)
+    {
+      if (!psp->state)
+	continue; // not active
+
+      // decide which patch to use
+      sprite_t *sprdef = sprites.Get(sprnames[psp->state->sprite]);
+      spriteframe_t *sprframe = &sprdef->spriteframes[psp->state->frame & TFF_FRAMEMASK];
+
+#ifdef PARANOIA
+      if (!sprframe)
+	I_Error("sprframes NULL for state %d\n", psp->state - weaponstates);
+#endif
+
+      Texture *t = sprframe->tex[0];
+
+      //added:02-02-98:spriteoffset should be abs coords for psprites, based on 320x200
+      fixed_t tx = psp->sx - t->leftoffset / t->xscale;
+      fixed_t ty = psp->sy -(t->topoffset / t->yscale);
+
+      // lots of TODOs for psprites
+      /*
+      if (sprframe->flip[0])
+
+      if (viewplayer->flags & MF_SHADOW)      // invisibility effect
+      {
+	if (viewplayer->powers[pw_invisibility] > 4*TICRATE
+	    || viewplayer->powers[pw_invisibility] & 8)
+      }
+      else if (fixedcolormap)
+      else if (psp->state->frame & TFF_FULLBRIGHT)
+      else
+      // local light
+      */
+      // TODO extralight, extra_colormap, planelights
+
+      Draw2DGraphic_Doom(tx.Float(), ty.Float(), t);
+    }
+}
+
+
+/// Set up state and draw a view of the level from the given viewpoint.
+/// It is usually the place where the player is currently located.
+void OGLRenderer::Render3DView(PlayerInfo *player)
+{
   // This simple sky rendering algorithm uses 2D mode. We should
   // probably do something more fancy in the future.
   DrawSimpleSky();
@@ -521,29 +581,35 @@ void OGLRenderer::Render3DView(PlayerInfo *player)
   RenderBSPNode(mp->numnodes-1);
 
   // Find out the point on the screen where the player is aiming.
-  vec_t<fixed_t> target;
-  player->pawn->LineTrace(player->pov->yaw, 30000, Sin(player->pov->pitch).Float(), false);
-  target = trace.Point(trace.frac);
+  if (player->pawn)
+    {
+      player->pawn->LineTrace(player->pawn->yaw, 30000, Sin(player->pawn->pitch).Float(), false);
+      vec_t<fixed_t> target = trace.Point(trace.frac);
 
-  GLdouble model[16];
-  GLdouble proj[16];
-  GLint vp[4];
-  GLdouble chz; // This one is useless.
-  glGetDoublev(GL_MODELVIEW_MATRIX, model);
-  glGetDoublev(GL_PROJECTION_MATRIX, proj);
-  glGetIntegerv(GL_VIEWPORT, vp);
-  gluProject(target.x.Float(), target.y.Float(), target.z.Float(),
-	     model, proj, vp,
-	     &chx, &chy, &chz);
+      GLdouble model[16];
+      GLdouble proj[16];
+      GLint vp[4];
+      GLdouble chz; // This one is useless.
+      glGetDoublev(GL_MODELVIEW_MATRIX, model);
+      glGetDoublev(GL_PROJECTION_MATRIX, proj);
+      glGetIntegerv(GL_VIEWPORT, vp);
+      gluProject(target.x.Float(), target.y.Float(), target.z.Float(),
+		 model, proj, vp,
+		 &chx, &chy, &chz);
 
-  // Draw a red dot there. Used for testing.
-  glDisable(GL_DEPTH_TEST);
-  glBindTexture(GL_TEXTURE_2D, 0);
-  glColor4f(1.0, 0.0, 0.0, 1.0);
-  glBegin(GL_POINTS);
-  glVertex3f(target.x.Float(), target.y.Float(), target.z.Float());
-  glEnd();
-  ClearDrawColor();
+      // Draw a red dot there. Used for testing.
+      glDisable(GL_DEPTH_TEST);
+      glBindTexture(GL_TEXTURE_2D, 0);
+      glColor4f(1.0, 0.0, 0.0, 1.0);
+      glBegin(GL_POINTS);
+      glVertex3f(target.x.Float(), target.y.Float(), target.z.Float());
+      glEnd();
+      ClearDrawColor();
+    }
+  else
+    {
+      chx = chy = 0;
+    }
 
   glEnable(GL_DEPTH_TEST);
 

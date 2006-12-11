@@ -860,7 +860,7 @@ bool spritepres_t::Draw(const Actor *p)
   if (sprframe->rotate)
     {
       // choose a different rotation based on player view
-      angle_t ang = R.R_PointToAngle(p->pos.x, p->pos.y); // uses viewx,viewy
+      angle_t ang = R_PointToAngle2(fixed_t(oglrenderer->x), fixed_t(oglrenderer->y), p->pos.x, p->pos.y);
       unsigned rot = (ang - p->yaw + unsigned(ANG45/2) * 9) >> 29;
 
       t = sprframe->tex[rot];

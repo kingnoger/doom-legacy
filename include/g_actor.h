@@ -320,6 +320,9 @@ public:
 
   void ClientInterpolate(); ///< Netcode: clientside movement interpolation
 
+  /// If this actor is used as a pov, at which height are the eyes?
+  virtual fixed_t GetViewZ() const { return pos.z; }
+
   void CheckWater();  ///< set some eflags if sector contains water
 
   float GetMoveFactor();
