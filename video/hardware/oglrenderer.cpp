@@ -499,8 +499,8 @@ void OGLRenderer::RenderPlayerView(PlayerInfo *player)
 
   curssec = player->pov->subsector;
 
-  theta = double(player->pov->yaw) * 360.0 / (1L << 32);
-  phi = double(player->pov->pitch) * 360.0 / (1L << 32);
+  theta = (double)(player->pov->yaw>>ANGLETOFINESHIFT)*(360.0f/(double)FINEANGLES);
+  phi = (double)(player->pov->pitch>>ANGLETOFINESHIFT)*(360.0f/(double)FINEANGLES);
 
   Render3DView(player);
 
@@ -604,14 +604,13 @@ void OGLRenderer::Render3DView(PlayerInfo *player)
       glBegin(GL_POINTS);
       glVertex3f(target.x.Float(), target.y.Float(), target.z.Float());
       glEnd();
+      glEnable(GL_DEPTH_TEST);
       ClearDrawColor();
     }
   else
     {
-      chx = chy = 0;
+      chx = chy = 0.0;
     }
-
-  glEnable(GL_DEPTH_TEST);
 
   // Pretty soon we want to draw HUD graphics and stuff.
   Setup2DMode();
