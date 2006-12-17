@@ -583,7 +583,14 @@ void OGLRenderer::Render3DView(PlayerInfo *player)
   // Find out the point on the screen where the player is aiming.
   if (player->pawn)
     {
-      player->pawn->LineTrace(player->pawn->yaw, 30000, Sin(player->pawn->pitch).Float(), false);
+      float aimsine = 0.0;
+      if(player->options.autoaim) {
+	player->pawn->AimLineAttack(player->pawn->yaw, 3000, aimsine);
+      } else {
+	aimsine = Sin(player->pawn->pitch).Float();
+      }
+      player->pawn->LineTrace(player->pawn->yaw, 30000, aimsine, false);
+
       vec_t<fixed_t> target = trace.Point(trace.frac);
 
       GLdouble model[16];
