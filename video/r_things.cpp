@@ -48,8 +48,6 @@
 #include "z_zone.h"
 #include "z_cache.h"
 
-#include "hardware/oglrenderer.hpp"
-
 #include "i_video.h"            //rendermode
 
 extern bool devparm;			//in d_main.cpp
@@ -249,14 +247,14 @@ void spritepres_t::Project(Actor *p)
   fixed_t  yscale = projectiony / proj_tz; //added:02-02-98:aaargll..if I were a math-guy!!!
 
   // calculate edges of the shape
-  proj_tx -= t->leftoffset / t->xscale; // left edge of sprite, world    TODO scaled offsets?**
+  proj_tx -= t->leftoffs; // left edge of sprite, world
   int x1 = (centerxfrac + (proj_tx * xscale)).floor(); // in screen coords
 
   // off the right side?
   if (x1 > viewwidth)
     return;
 
-  proj_tx += t->width / t->xscale;
+  proj_tx += t->worldwidth;
   int x2 = (centerxfrac + (proj_tx * xscale)).floor() - 1;
 
   // off the left side
@@ -264,7 +262,7 @@ void spritepres_t::Project(Actor *p)
     return;
 
   //SoM: 3/17/2000: Disregard sprites that are out of view..
-  fixed_t gzt = p->pos.z + (t->topoffset / t->yscale); // top edge of sprite, world **
+  fixed_t gzt = p->pos.z + t->topoffs; // top edge of sprite, world units
   int light = 0;
 
   sector_t *sec = p->subsector->sector;
@@ -316,7 +314,7 @@ void spritepres_t::Project(Actor *p)
   vis->pz = p->Feet();
   vis->pzt = p->Top();
 
-  vis->gz = gzt - (t->height / t->yscale);
+  vis->gz = gzt - t->worldheight;
   vis->gzt = gzt;
   vis->sprite_top = vis->gzt - R.viewz - p->floorclip;
 
@@ -336,7 +334,7 @@ void spritepres_t::Project(Actor *p)
 
   if (flip)
     {
-      vis->startfrac = t->width - fixed_epsilon;
+      vis->startfrac = t->width - fixed_epsilon; // TODO what about x2?
       vis->xiscale = -t->xscale / xscale;
     }
   else
@@ -536,7 +534,7 @@ void vissprite_t::DrawVisSprite()
   dc_texheight = 0; // clever way of drawing nonrepeating textures
 
   if (floorclip != 0)
-    sprbotscreen = sprtopscreen + (tex->height/dc_iscale) -(floorclip * spryscale);
+    sprbotscreen = sprtopscreen + (tex->worldheight*yscale) -(floorclip * spryscale);
 
   fixed_t frac = startfrac;
   for (dc_x = x1; dc_x <= x2; dc_x++, frac += xiscale)
@@ -735,14 +733,14 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
 
   //added:02-02-98:spriteoffset should be abs coords for psprites, based on
   //               320x200
-  tx -= t->leftoffset / t->xscale;
+  tx -= t->leftoffs;
   int x1 = (centerxfrac + (tx * pspritescale)).floor();
 
   // off the right side
   if (x1 > viewwidth)
     return;
 
-  tx += t->width / t->xscale;
+  tx += t->worldwidth;
   int x2 = (centerxfrac + (tx * pspritescale)).floor() - 1;
 
   // off the left side
@@ -757,7 +755,7 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
   else
     vis->sprite_top = BASEYCENTER;
 
-  vis->sprite_top += 0.5f - psp->sy + (t->topoffset / t->yscale);
+  vis->sprite_top += - psp->sy + t->topoffs + 0.5f;
   vis->floorclip = 0;
 
   /*
@@ -775,7 +773,7 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
   if (sprframe->flip[0])
     {
       vis->xiscale = -pspriteiscale * t->xscale;
-      vis->startfrac = t->width - fixed_epsilon;
+      vis->startfrac = t->width - fixed_epsilon; // TODO what about x2?
     }
   else
     {

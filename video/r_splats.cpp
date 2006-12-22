@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,8 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -133,9 +131,9 @@ void Map::R_AddWallSplat(line_t *line, int side, char *name, fixed_t top, fixed_
   
   // offset needed by draw code for texture mapping
   fixed_t linelength = P_SegLength(line);
-  splat->offset = (wallfrac * linelength) - (fixed_t(t->width) >> 1);
+  splat->offset = wallfrac*linelength - t->worldwidth/2;
   //CONS_Printf("offset splat %d\n",splat->offset);
-  fixed_t fracsplat = (fixed_t(t->width) >> 1) / linelength;
+  fixed_t fracsplat = (t->worldwidth/2) / linelength;
     
   wallfrac -= fracsplat;
   if (wallfrac > linelength)

@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,8 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -1017,16 +1015,8 @@ void Console::DrawHudlines()
 
       for (int x=0; x<con_cols; x++)
         {
-#if 0 //FIXME: Hurdler, must be replaced by something compatible with the new renderer
-#ifndef NO_OPENGL
-          // TODO: Hurdler: see why we need to have a separate code here
-          extern float gr_viewheight;
-          if (con_lineowner[i%con_hudlines] == 2)
-            V_DrawCharacter(x<<3, int(y2+gr_viewheight), p[x]);
-          else
-#endif
-#endif
-            hud_font->DrawCharacter(x<<3, y, p[x]);
+	  // TODO console uses monospace font (DrawCharacter instead of DrawString), fix this everywhere.
+	  hud_font->DrawCharacter(x<<3, y, p[x], 0);
         }
       if (con_lineowner[i%con_hudlines] == 2)
         y2 += 8;
@@ -1053,7 +1043,7 @@ void Console::DrawConsole()
     con_backpic->Draw(0, y, V_SSIZE);
   else
     {
-      int w = con_rborder->width*vid.dupx;
+      int w = con_rborder->worldwidth*vid.dupx;
       x = vid.width - w;
       con_lborder->Draw(0, y, V_SSIZE);
       con_rborder->Draw(x, y, V_SSIZE);
@@ -1082,7 +1072,7 @@ void Console::DrawConsole()
       char *p = &con_buffer[(i % con_lines) * con_cols];
 
       for (x = 0; x < con_cols; x++)
-        hud_font->DrawCharacter((x+1) << 3, y, p[x]);
+        hud_font->DrawCharacter((x+1) << 3, y, p[x], 0);
     }
 
 
@@ -1097,12 +1087,12 @@ void Console::DrawConsole()
       int y = con_height - 12;
 
       for (x=0; x<con_cols; x++)
-        hud_font->DrawCharacter((x+1)<<3, y, p[x]);
+        hud_font->DrawCharacter((x+1)<<3, y, p[x], 0);
 
       // draw the blinking cursor
       int x = (input_cx>=con_cols) ? con_cols - 1 : input_cx;
       if (con_tick < 4)
-        hud_font->DrawCharacter((x+1) << 3, y, 0x80 | '_');
+        hud_font->DrawCharacter((x+1) << 3, y, 0x80 | '_', 0);
     }
 }
 

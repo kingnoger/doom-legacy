@@ -133,6 +133,10 @@ public:
     yscale = frames[0].tx->yscale;
     w_bits = frames[0].tx->w_bits;
     h_bits = frames[0].tx->h_bits;
+    worldwidth = frames[0].tx->worldwidth;
+    worldheight = frames[0].tx->worldheight;
+    leftoffs = frames[0].tx->leftoffs;
+    topoffs = frames[0].tx->topoffs;
   };
 
   virtual bool Masked() { return Update()->Masked(); };

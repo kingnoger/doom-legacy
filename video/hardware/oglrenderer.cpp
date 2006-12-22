@@ -32,6 +32,7 @@
 #include "hardware/oglhelpers.hpp"
 
 #include "screen.h"
+#include "v_video.h"
 #include "tables.h"
 #include "r_data.h"
 #include "r_main.h"
@@ -291,12 +292,7 @@ bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen)
   CONS_Printf("HUD aspect ratio %.2f.\n", hudar);
 
   workinggl = true;
-  //  vid.setmodeneeded = 0;
 
-  // Let the software portions of the renderer think that we are
-  // running the base resolution. It uses weird offsets otherwise.
-  vid.width = BASEVIDWIDTH;
-  vid.height = BASEVIDHEIGHT;
   InitGLState();
 
   // ADD: currently we only use one viewport, so we set it here. When
@@ -377,14 +373,14 @@ void OGLRenderer::Setup3DMode()
 
 // Draws a square defined by the parameters. The square is filled by
 // the specified texture.
-//
-// (0, 0) is the top left corner and (1, 1) is the bottom right.
-
-void OGLRenderer::Draw2DGraphic(GLfloat top, GLfloat left, GLfloat bottom, GLfloat right, GLuint tex, GLfloat textop, GLfloat texbottom, GLfloat texleft, GLfloat texright)
+void OGLRenderer::Draw2DGraphic(GLfloat left, GLfloat bottom,
+				GLfloat right, GLfloat top,
+				GLuint tex,
+				GLfloat texleft, GLfloat texbottom,
+				GLfloat texright, GLfloat textop)
 {
   //  GLfloat scalex, scaley, offsetx, offsety;
   //  GLfloat texleft, texright, textop, texbottom;
-  GLfloat temp;
 
   if(!workinggl)
     return;
@@ -394,19 +390,7 @@ void OGLRenderer::Draw2DGraphic(GLfloat top, GLfloat left, GLfloat bottom, GLflo
 
   //  printf("Drawing tex %d at (%.2f, %.2f) (%.2f, %.2f).\n", tex, top, left, bottom, right);
 
-  // OpenGL origo is at the bottom left corner. Doom is at top left.
-  // Fix that.
-  bottom = 1.0-bottom;
-  top = 1.0-top;
-
   glBindTexture(GL_TEXTURE_2D, tex);
-
-  // FIXME. This should not be done. But unless we do this the
-  // textures get drawn upside down. However I just spent 3 hours
-  // trying to debug this thing and failing spectacularly, so fuck it.
-  temp = textop;
-  textop = texbottom;
-  texbottom = temp;
 
   glBegin(GL_QUADS);
   glTexCoord2f(texleft, texbottom);
@@ -423,31 +407,60 @@ void OGLRenderer::Draw2DGraphic(GLfloat top, GLfloat left, GLfloat bottom, GLflo
 // Just like the earlier one, except the coordinates are given in Doom
 // units. (screen is 320 wide and 200 high.)
 
-void OGLRenderer::Draw2DGraphic_Doom(float x, float y, Texture *tex)
+void OGLRenderer::Draw2DGraphic_Doom(float x, float y, Texture *tex, int flags)
 {
-  // TODO scaling, offsets
+  // OpenGL origin is at the bottom left corner. Doom origin is at top left.
+  // Texture coordinates follow the Doom convention.
+
   /*
   if((x+width) > doomscreenw || (y+height) > doomscreenh)
     printf("Tex %d out of bounds: (%.2f, %.2f) (%.2f, %.2f).\n", tex, x, y, x+width, y+height);  
   */
-  Draw2DGraphic(y/BASEVIDHEIGHT, x/BASEVIDWIDTH, 
-		(y+tex->height)/BASEVIDHEIGHT, (x+tex->width)/BASEVIDWIDTH,
-		tex->GLPrepare());
+  float l, r, t, b;
+
+  // location scaling
+  if (flags & V_SLOC)
+    {
+      l = x / BASEVIDWIDTH;
+      t = y / BASEVIDHEIGHT;
+    }
+  else
+    {
+      l = x / viewportw;
+      t = y / viewporth;
+    }
+
+  // size scaling
+  // assume offsets in world units
+  if (flags & V_SSIZE)
+    {
+      l -= tex->leftoffs / BASEVIDWIDTH;
+      r = l + tex->worldwidth / BASEVIDWIDTH;
+
+      t -= tex->topoffs / BASEVIDHEIGHT;
+      b = t + tex->worldheight / BASEVIDHEIGHT;
+    }
+  else
+    {
+      l -= tex->leftoffs / viewportw;
+      r = l + tex->worldwidth / viewportw;
+
+      t -= tex->topoffs / viewporth;
+      b = t + tex->worldheight / viewporth;
+    }
+
+  Draw2DGraphic(l, 1-b, r, 1-t, tex->GLPrepare());
 }
 
 void OGLRenderer::Draw2DGraphicFill_Doom(float x, float y, float width, float height, Texture *tex)
 {
   //  CONS_Printf("w: %f, h: %f, texw: %f, texh: %f.\n", width, height, texwidth, texheight);
   //  CONS_Printf("xrepeat %.2f, yrepeat %.2f.\n", width/texwidth, height/texheight);
-  Draw2DGraphic(y/BASEVIDHEIGHT, x/BASEVIDWIDTH, 
-		(y+height)/BASEVIDHEIGHT, (x+width)/BASEVIDWIDTH,
-		tex->GLPrepare(), 1.0, 1.0-height/tex->height, 1.0, 1.0-width/tex->width);
-
-  /*
-  Draw2DGraphic(y/BASEVIDHEIGHT, x/BASEVIDWIDTH, 
-		(y+height)/BASEVIDHEIGHT, (x+width)/BASEVIDWIDTH,
-		tex, 0.0, 4.0, 0.0, 4.0);
-  */
+  // here we may ignore offsets (original Doom behavior)
+  Draw2DGraphic(x/BASEVIDWIDTH, 1-(y+height)/BASEVIDHEIGHT,
+		(x+width)/BASEVIDWIDTH, 1-y/BASEVIDHEIGHT,
+		tex->GLPrepare(),
+		0.0, height/tex->worldheight, width/tex->worldwidth, 0.0);
 }
 
 
@@ -499,8 +512,8 @@ void OGLRenderer::RenderPlayerView(PlayerInfo *player)
 
   curssec = player->pov->subsector;
 
-  theta = (double)(player->pov->yaw>>ANGLETOFINESHIFT)*(360.0f/(double)FINEANGLES);
-  phi = (double)(player->pov->pitch>>ANGLETOFINESHIFT)*(360.0f/(double)FINEANGLES);
+  theta = Degrees(player->pov->yaw);
+  phi = Degrees(player->pov->pitch);
 
   Render3DView(player);
 
@@ -533,8 +546,8 @@ void OGLRenderer::DrawPSprites(PlayerPawn *p)
       Texture *t = sprframe->tex[0];
 
       //added:02-02-98:spriteoffset should be abs coords for psprites, based on 320x200
-      fixed_t tx = psp->sx - t->leftoffset / t->xscale;
-      fixed_t ty = psp->sy -(t->topoffset / t->yscale);
+      float tx = psp->sx.Float();// - t->leftoffs;
+      float ty = psp->sy.Float();// - t->topoffs;
 
       // lots of TODOs for psprites
       /*
@@ -551,8 +564,8 @@ void OGLRenderer::DrawPSprites(PlayerPawn *p)
       // local light
       */
       // TODO extralight, extra_colormap, planelights
-
-      Draw2DGraphic_Doom(tx.Float(), ty.Float(), t);
+#warning FIXME NOW
+      Draw2DGraphic_Doom(tx, ty, t, V_SCALE);
     }
 }
 
@@ -627,28 +640,18 @@ void OGLRenderer::Render3DView(PlayerInfo *player)
 // Draw the given crosshair graphics at the location determined
 // earlier.
 
-void OGLRenderer::DrawCrosshairs(Texture *t) {
+void OGLRenderer::DrawCrosshairs(Texture *t)
+{
   //  printf("%f %f\n", chx, chy);
+  // chx, chy origin is at left bottom corner
   GLfloat top, left, bottom, right;
-  GLfloat dx, dy;
-  dx = t->width/GLfloat(viewportw);
-  dy = t->height/GLfloat(viewporth);
-  /*
-  top = (chy - t->height)/viewporth;
-  bottom = (chy + t->height)/viewporth;
-  left = (chx - t->height)/viewportw;
-  right = (chx + t->height)/viewportw;
-  */
-  left = (chx - t->width)/viewportw;
-  right = (chx + t->width)/viewportw;
-  bottom = 1.0 - (chy - t->height)/viewporth;
-  top = 1.0 - (chy + t->height)/viewporth;
-  /*
-  top = 1.0 - top;
-  bottom = 1.0 - bottom;
-  */
 
-  Draw2DGraphic(top, left, bottom, right, t->GLPrepare());
+  left   = (chx - t->leftoffs) / viewportw;
+  right  = left + t->worldwidth / viewportw;
+  top    = (chy + t->topoffs) / viewporth;
+  bottom = top - t->worldheight / viewporth;
+
+  Draw2DGraphic(left, bottom, right, top, t->GLPrepare());
 }
 
 
@@ -674,6 +677,7 @@ void OGLRenderer::RenderBSPNode(int nodenum)
   // OpenGL requires back-to-front drawing for translucency effects to
   // work properly. Thus we first check the back.
 
+#warning TODO frustum culling
   // if (R_CheckBBox(node->bbox[side^1]))
   RenderBSPNode(node->children[side^1]);
 
@@ -721,12 +725,8 @@ void OGLRenderer::RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Texture *
     x = v->x.Float();
     y = v->y.Float();
     
-    tx = x/tex->width;
-    ty = 1.0 - y/tex->height;
-
-    // Hi-res texture scaling.
-    tx *=  tex->xscale.Float();
-    ty *= tex->yscale.Float();
+    tx = x/tex->worldwidth;
+    ty = 1.0 - y/tex->worldheight;
 
     glTexCoord2f(tx, ty);
     glVertex3f(x, y, height);
@@ -845,7 +845,6 @@ void OGLRenderer::RenderGLSeg(int num)
   GLfloat textop, texbottom, texleft, texright;
   GLfloat utexhei, ltexhei;
   GLfloat ls_height, tex_yoff;
-  GLfloat xscale, yscale;
   Texture *uppertex, *middletex, *lowertex;
 
   if(num < 0 || num > mp->numsegs)
@@ -924,33 +923,29 @@ void OGLRenderer::RenderGLSeg(int num)
       // upper texture.
       if(ls->ceilingpic != skyflatnum || rs->ceilingpic != skyflatnum) {
 	glBindTexture(GL_TEXTURE_2D, uppertex->GLPrepare());
-	xscale = uppertex->xscale.Float();
-	yscale = uppertex->yscale.Float();
 	DrawSingleQuad(fv, tv, rs_ceil, ls_ceil, 
-		       texleft/uppertex->width*xscale,
-		       texright/uppertex->width*xscale,
-		       textop/uppertex->height*yscale,
-		       texbottom/uppertex->height*yscale);
+		       texleft/uppertex->worldwidth,
+		       texright/uppertex->worldwidth,
+		       textop/uppertex->worldheight,
+		       texbottom/uppertex->worldheight);
       }
     }
     
     if(rs_floor > ls_floor && lowertex) {
       // Lower textures are a major PITA.
       if(ld->flags & ML_DONTPEGBOTTOM) {
-	texbottom = tex_yoff + ls_height - lowertex->height;
+	texbottom = tex_yoff + ls_height - lowertex->worldheight;
 	textop = texbottom - ltexhei;
       } else {
 	textop = tex_yoff;
 	texbottom = textop + ltexhei;
       }
       glBindTexture(GL_TEXTURE_2D, lowertex->GLPrepare());
-      xscale = lowertex->xscale.Float();
-      yscale = lowertex->yscale.Float();
       DrawSingleQuad(fv, tv, ls_floor, rs_floor,
-		     texleft/lowertex->width*xscale,
-		     texright/lowertex->width*xscale,
-		     textop/lowertex->height*yscale,
-		     texbottom/lowertex->height*yscale);
+		     texleft/lowertex->worldwidth,
+		     texright/lowertex->worldwidth,
+		     textop/lowertex->worldheight,
+		     texbottom/lowertex->worldheight);
     }
 
     // Double sided middle textures do not repeat, so we need some
@@ -962,7 +957,7 @@ void OGLRenderer::RenderGLSeg(int num)
 	  bottom = rs_floor;
 	else
 	  bottom = ls_floor;
-	top = bottom + middletex->height; // FIXME, should be at most
+	top = bottom + middletex->worldheight; // FIXME, should be at most
 					  // the height of the remote
 					  // sector?
       } else {
@@ -970,15 +965,13 @@ void OGLRenderer::RenderGLSeg(int num)
 	  top = ls_ceil;
 	else
 	  top = rs_ceil;
-	bottom = top - middletex->height;
+	bottom = top - middletex->worldheight;
       }
       glBindTexture(GL_TEXTURE_2D, middletex->GLPrepare());
-      xscale = middletex->xscale.Float();
-      yscale = middletex->yscale.Float();
       DrawSingleQuad(fv, tv, bottom, top,
-		     texleft/middletex->width*xscale, 
-		     texright/middletex->width*xscale,
-		     0.0, 1.0*yscale);
+		     texleft/middletex->worldwidth,
+		     texright/middletex->worldwidth,
+		     0.0, 1.0);
       //, textop/middletex->height,
       //     texbottom/middletex->height);
     }
@@ -992,13 +985,11 @@ void OGLRenderer::RenderGLSeg(int num)
       texbottom = textop + ls_height;
     }
     glBindTexture(GL_TEXTURE_2D, middletex->GLPrepare());
-    xscale = middletex->xscale.Float();
-    yscale = middletex->yscale.Float();
     DrawSingleQuad(fv, tv, ls_floor, ls_ceil,
-		   texleft/middletex->width*xscale, 
-		   texright/middletex->width*xscale,
-		   textop/middletex->height*yscale,
-		   texbottom/middletex->height*yscale);
+		   texleft/middletex->worldwidth,
+		   texright/middletex->worldwidth,
+		   textop/middletex->worldheight,
+		   texbottom/middletex->worldheight);
   }
 }
 
@@ -1028,21 +1019,11 @@ void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Texture *t, bool fli
 {
   GLfloat top, bottom, left, right;
   GLfloat texleft, texright, textop, texbottom;
-  GLfloat xscale, yscale;
   GLboolean isAlpha; // Alpha test enabled.
 
   // You can't draw the invisible.
   if(!t)
     return;
-
-  xscale = t->xscale.Float();
-  yscale = t->yscale.Float();
-
-  // Protect against div by zero.
-  if(xscale == 0.0)
-    xscale = 1.0;
-  if(yscale == 0.0)
-    yscale = 1.0;
 
   // Rendering sprite items requires skipping totally transparent
   // pixels. Since alpha testing may slow down rendering we want to
@@ -1068,12 +1049,12 @@ void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Texture *t, bool fli
 
   //left = t->width/(2.0*xscale);
   //right = -left;
-  right = -t->leftoffset/xscale;
-  left = right + t->width/xscale;
+  right = -t->leftoffs;
+  left = right + t->worldwidth;
  
   bottom = 0.0;
-  top = t->height/yscale; // HACK
-  //top = t->topoffset/yscale; // FIXME this is correct but looks stupid???
+  top = t->worldheight; // HACK
+  //top = t->topoffs; // FIXME this is correct but looks stupid???
 
 
   glMatrixMode(GL_MODELVIEW);

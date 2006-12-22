@@ -232,7 +232,7 @@ void Rend::R_DrawWallSplats()
       // frontsector = ds_p->curline->frontsector;
 
       Texture *tex = splat->tex;
-      fixed_t world_texturemid = splat->top + (fixed_t(tex->height) >> 1) - viewz; // FIXME scaling
+      fixed_t world_texturemid = splat->top + (0.5 * tex->worldheight) - viewz;
 
       if (splat->yoffset)
 	world_texturemid += *splat->yoffset;
@@ -299,7 +299,7 @@ void Rend::R_DrawWallSplats()
 	  //                         FIXED_TO_FLOAT(texturecolumn), tex->width,
 	  //                         dc_x,FIXED_TO_FLOAT(rw_offset2),FIXED_TO_FLOAT(splat->offset),angle,FIXED_TO_FLOAT(finetangent[angle]),FIXED_TO_FLOAT(rw_distance),FIXED_TO_FLOAT(FixedMul(finetangent[angle],rw_distance)));
 
-	  if (texturecolumn < 0 || texturecolumn>=tex->width)  // FIXME scaling
+	  if (texturecolumn < 0 || texturecolumn >= tex->worldwidth)
 	    continue;
 
 	  // draw the texture
@@ -323,7 +323,7 @@ void Rend::R_DrawWallSplats()
 //  way we don't have to store extra post_t info with each column for
 //  multi-patch textures. They are not normally needed as multi-patch
 //  textures don't have holes in it. At least not for now.
-static int  column2s_length;     // column->length : for multi-patch on 2sided wall = texture->height
+static int column2s_length;     // column->length : for multi-patch on 2sided wall = texture->height
 
 void R_Render2sidedMultiPatchColumn(column_t *column)
 {
@@ -465,7 +465,7 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
     {
       world_texturemid = frontsector->floorheight > backsector->floorheight
 	? frontsector->floorheight : backsector->floorheight;
-      world_texturemid += dc_texheight/tex->yscale;
+      world_texturemid += tex->worldheight;
     }
   else
     {
@@ -501,7 +501,7 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
 	    {
 	      sprbotscreen = fixed_t::FMAX;
 	      sprtopscreen = windowtop = centeryfrac - (world_texturemid * spryscale);
-	      fixed_t realbot = windowbottom = tex->height * spryscale + sprtopscreen;
+	      fixed_t realbot = windowbottom = tex->worldheight*spryscale + sprtopscreen;
 
 	      for(i = 0; i < dc_numlights; i++)
 		{

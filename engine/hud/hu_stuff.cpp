@@ -378,7 +378,7 @@ void HU_DrawRanking(const char *title, int x, int y, fragsort_t *fragtable, int 
     colornum = 0x78;
 
   if (title)
-    hud_font->DrawString(x, y-14, title);
+    hud_font->DrawString(x, y-14, title, V_SCALE);
 
   // draw rankings
   for (int i=0; i<scorelines; i++)
@@ -390,7 +390,7 @@ void HU_DrawRanking(const char *title, int x, int y, fragsort_t *fragtable, int 
       // draw frags count
       char num[12];
       sprintf(num, "%3i", fragtable[i].count);
-      hud_font->DrawString(x+(large ? 32 : 24) - hud_font->StringWidth(num), y, num);
+      hud_font->DrawString(x+(large ? 32 : 24) - hud_font->StringWidth(num), y, num, V_SCALE);
 
       // draw name
       hud_font->DrawString(x+(large ? 64 : 29), y, fragtable[i].name,
@@ -409,7 +409,7 @@ void HU_drawDeathmatchRankings()
   fragsort_t  *fragtab;
 
   // draw the ranking title panel
-  PatchRankings->Draw((BASEVIDWIDTH - PatchRankings->width)/2, 5, V_SCALE);
+  PatchRankings->Draw((BASEVIDWIDTH - PatchRankings->worldwidth)/2, 5, V_SCALE);
 
   // TODO alloc fragtab here...
   int scorelines = game.GetFrags(&fragtab, 0);
@@ -449,7 +449,7 @@ void HUD::Draw(bool redrawsbar)
       hud_font->DrawString(HU_INPUTX, HU_INPUTY, chat_msg.c_str(), V_SCALE | V_WHITEMAP);
       int cx = HU_INPUTX + hud_font->StringWidth(chat_msg.c_str());
       if (hu_tick < 4)
-	hud_font->DrawCharacter(cx, HU_INPUTY, '_' | 0x80);
+	hud_font->DrawCharacter(cx, HU_INPUTY, '_' | 0x80, V_SCALE);
     }
 
   // draw deathmatch rankings
@@ -544,7 +544,7 @@ HudTip::HudTip(string &text, int tiptime)
 void HudTip::Draw(int x, int y)
 {
   time--;
-  hud_font->DrawString(x, y, tip.c_str());
+  hud_font->DrawString(x, y, tip.c_str(), V_SCALE);
 }
 
 
@@ -602,7 +602,7 @@ public:
       return;
     if (xpos >= vid.width || ypos >= vid.height)
       return;
-    if ((xpos + data->width) < 0 || (ypos + data->height) < 0)
+    if ((xpos + data->worldwidth) < 0 || (ypos + data->worldheight) < 0)
       return;
 
     data->Draw(xpos, ypos, V_SCALE);

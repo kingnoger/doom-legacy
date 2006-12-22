@@ -119,48 +119,61 @@ void VID_BlitLinearScreen(byte *src, byte *dest, int width, int height,
 //                    2D Drawing of Textures
 //=================================================================
 
-void PatchTexture::Draw(int x, int y, int scrn = 0)
+void PatchTexture::Draw(float x, float y, int scrn)
 {
   int flags = scrn & V_FLAGMASK;
   scrn &= V_SCREENMASK;
 
-  /*
-  if(x > 320 || y > 200)
-    printf("Patchtexture %s drawing outside screen: %d %d.\n", name, x, y);
-  */
+  if (rendermode == render_opengl)
+    {
+      if (oglrenderer && oglrenderer->ReadyToDraw())
+	// Console tries to use some patches before graphics are
+	// initialized. If this is the case, then create the missing
+	// texture.
+	oglrenderer->Draw2DGraphic_Doom(x, y, this, flags);
+      return;
+    }
 
-  if(rendermode == render_opengl){
-    if(oglrenderer && oglrenderer->ReadyToDraw())
-      // Console tries to use some patches before graphics are
-      // initialized. If this is the case, then create the missing
-      // texture.
-      oglrenderer->Draw2DGraphic_Doom(x, y, this);
-    return;
-  }
+  byte *dest_tl = vid.screens[scrn]; // destination top left
 
-  byte *desttop = vid.screens[scrn];
-
-  // scaling
+  // location scaling
   if (flags & V_SLOC)
     {
       x *= vid.dupx;
       y *= vid.dupy;
-      desttop += vid.scaledofs;
+      dest_tl += vid.scaledofs;
     }
+
+  // size scaling
+  fixed_t colfrac = xscale;
+  fixed_t rowfrac = yscale;
+
+  // clipping to LFB
+  int x2, y2; // past-the-end coords for lower right corner
 
   if (flags & V_SSIZE)
     {
-      x -= leftoffset * vid.dupx;
-      y -= topoffset * vid.dupy;
+      x -= leftoffs * vid.dupx;
+      y -= topoffs * vid.dupy;
+      x2 = min(int(x + worldwidth * vid.dupx), vid.width);
+      y2 = int(y + worldheight * vid.dupy); // TODO we do not clip y, just check it...
+      colfrac /= vid.dupx;
+      rowfrac /= vid.dupy;
     }
   else
     {
-      x -= leftoffset;
-      y -= topoffset;
+      x -= leftoffs;
+      y -= topoffs;
+      x2 = min(int(x + worldwidth), vid.width);
+      y2 = int(y + worldheight);
     }
 
+  // clipped left side
+  int x1 = max(int(x), 0);
+  int y1 = int(y);
+
 #ifdef RANGECHECK
-  if (x<0 || x + width > vid.width || y<0 || y + height > vid.height || scrn > 4)
+  if (y < 0 || y2 > vid.height || scrn > 4)
     {
       fprintf(stderr, "Patch at %d,%d exceeds LFB\n", x,y);
       // No I_Error abort - what is up with TNT.WAD?
@@ -169,72 +182,58 @@ void PatchTexture::Draw(int x, int y, int scrn = 0)
     }
 #endif
 
-  desttop += y * vid.width + x;
+  dest_tl += y1*vid.width + x1; // top left corner
+  byte *dest_tr = dest_tl + x2 - x1; // top right, past-the-end
 
-  byte *destend;
-  fixed_t rowfrac = 1, colfrac = 1;
-  fixed_t col = 0;
-  int icol, idelta;
-  if (flags & V_SSIZE)
+  // starting location in texture space
+  fixed_t col;
+  if (flags & V_FLIPX)
     {
-      colfrac /= vid.dupx;
-      rowfrac /= vid.dupy;
-      destend = desttop + width*vid.dupx;
-
-      if (flags & V_FLIPX)
-        {
-          colfrac = -colfrac;
-          col = colfrac + width;
-        }
+      col = (x2 - x - 1)*colfrac; // a little back from right edge
+      colfrac = -colfrac; // reverse stride
     }
   else
     {
-      icol = 0;
-      idelta = 1;
-
-      destend = desttop + width;
-
-      if (flags & V_FLIPX)
-        {
-          idelta = -1;
-          icol = width - 1;
-        }
+      col = (x1 - x)*colfrac;
     }
-
 
   patch_t *p = GeneratePatch();
 
-  if (flags & V_SSIZE)
-    for ( ; desttop < destend; col += colfrac, desttop++)
-      {
-        post_t *post = (post_t *)(patch_data + p->columnofs[col.floor()]);
+  for ( ; dest_tl < dest_tr; col += colfrac, dest_tl++)
+    {
+      byte *dest = dest_tl;
+      post_t *post = (post_t *)(patch_data + p->columnofs[col.floor()]);
 
-        // step through the posts in a column
-        while (post->topdelta != 0xff)
-          {
-            byte *source = post->data;
-            byte *dest   = desttop + post->topdelta*vid.dupy*vid.width;
-            int count  = post->length*vid.dupy;
+      // step through the posts in a column
+      while (post->topdelta != 0xff)
+	{
+	  // step through the posts in a column
+	  dest += (post->topdelta/rowfrac).floor() * vid.width;
 
-            fixed_t row = 0;
-            while (count--)
-              {
-                byte pixel = source[row.floor()];
+	  byte *source = post->data;
+	  int count = (post->length/rowfrac).floor();
 
-                // the compiler is supposed to optimize the ifs out of the loop
-                if (flags & V_MAP)
-                  pixel = current_colormap[pixel];
+	  fixed_t row = 0;
+	  while (count--)
+	    {
+	      byte pixel = source[row.floor()];
 
-                if (flags & V_TL)
-                  pixel = transtables[0][(pixel << 8) + *dest];
+	      // the compiler is supposed to optimize the ifs out of the loop
+	      if (flags & V_MAP)
+		pixel = current_colormap[pixel];
 
-                *dest = pixel;
-                dest += vid.width;
-                row += rowfrac;
-              }
-            post = (post_t *)&post->data[post->length + 1]; // next post
-          }
-      }
+	      if (flags & V_TL)
+		pixel = transtables[0][(pixel << 8) + *dest];
+
+	      *dest = pixel;
+	      dest += vid.width;
+	      row += rowfrac;
+	    }
+	  post = (post_t *)&post->data[post->length + 1]; // next post
+	}
+    }
+  /*
+  int icol, idelta;
   else // unscaled, perhaps a bit faster?
     for ( ; desttop < destend; icol += idelta, desttop++)
       {
@@ -264,28 +263,24 @@ void PatchTexture::Draw(int x, int y, int scrn = 0)
             post = (post_t *)&post->data[post->length + 1];
           }
       }
+  */
 }
 
 
 
-void LumpTexture::Draw(int x, int y, int scrn = 0)
+void LumpTexture::Draw(float x, float y, int scrn)
 {
   int flags = scrn & V_FLAGMASK;
   scrn &= V_SCREENMASK;
 
-  /*
-  if(x > 320 || y > 200)
-    printf("Lumptexture %s drawing outside screen: %d %d.\n", name, x, y);
-  */
-
-  if(rendermode == render_opengl){
-    if(oglrenderer && oglrenderer->ReadyToDraw()) 
-      oglrenderer->Draw2DGraphic_Doom(x, y, this);
-    return;
-  }
+  if (rendermode == render_opengl)
+    {
+      if (oglrenderer && oglrenderer->ReadyToDraw()) 
+	oglrenderer->Draw2DGraphic_Doom(x, y, this, flags);
+      return;
+    }
 
   byte *dest_tl = vid.screens[scrn];
-  byte *base = Generate(); // in col-major order!
 
   // location scaling
   if (flags & V_SLOC)
@@ -299,48 +294,48 @@ void LumpTexture::Draw(int x, int y, int scrn = 0)
   fixed_t colfrac = xscale;
   fixed_t rowfrac = yscale;
 
-  // visible (LFB) width after scaling
-  int vis_width  = int(width  / xscale.Float());
-  int vis_height = int(height / yscale.Float());
-
   // clipping to LFB
   int x2, y2; // clipped past-the-end coordinates of the lower right corner in LFB
 
   if (flags & V_SSIZE)
     {
-      x -= leftoffset * vid.dupx;
-      y -= topoffset * vid.dupy;
-      x2 = min(x + vis_width*vid.dupx, vid.width);
-      y2 = min(y + vis_height*vid.dupy, vid.height);
+      x -= leftoffs * vid.dupx;
+      y -= topoffs * vid.dupy;
+      x2 = min(int(x + worldwidth * vid.dupx), vid.width);
+      y2 = min(int(y + worldheight * vid.dupy), vid.height);
       colfrac /= vid.dupx;
       rowfrac /= vid.dupy;
     }
   else
     {
-      x -= leftoffset;
-      y -= topoffset;
-      x2 = min(x + vis_width, vid.width);
-      y2 = min(y + vis_height, vid.height);
+      x -= leftoffs;
+      y -= topoffs;
+      x2 = min(int(x + worldwidth), vid.width);
+      y2 = min(int(y + worldheight), vid.height);
     }
 
   // clipped upper left corner
-  int x1 = max(x, 0);
-  int y1 = max(y, 0);
-
-  // starting location in texture space
-  fixed_t col = (x1 - x)*xscale;
-  fixed_t startrow = (y1 - y)*yscale;
-
-  if (flags & V_SSIZE)
-    {
-      col /= vid.dupx;
-      startrow /= vid.dupy;
-    }
+  int x1 = max(int(x), 0);
+  int y1 = max(int(y), 0);
 
   dest_tl += y1*vid.width + x1; // top left
   byte *dest_tr = dest_tl + x2 - x1; // top right, past-the-end
 
-  int zzz = (y2-y1)*vid.width;
+  // starting location in texture space
+  fixed_t startrow = (y1 - y)*rowfrac;
+  fixed_t col;
+  if (flags & V_FLIPX)
+    {
+      col = (x2 - x - 1)*colfrac; // a little back from right edge
+      colfrac = -colfrac; // reverse stride
+    }
+  else
+    {
+      col = (x1 - x)*colfrac;
+    }
+
+  int zzz = (y2-y1)*vid.width; // LFB offset from top to bottom, past-the-end
+  byte *base = Generate(); // in col-major order!
 
   for ( ; dest_tl < dest_tr; col += colfrac, dest_tl++)
     {
@@ -635,19 +630,19 @@ font_t::font_t(int startlump, int endlump, char firstchar)
   // use the character '0' as a "prototype" for the font
   if (start <= '0' && '0' <= end)
     {
-      height = font['0' - start]->height;
-      width = font['0' - start]->width;
+      height = font['0' - start]->worldheight;
+      width = font['0' - start]->worldwidth;
     }
   else
     {
-      height = font[0]->height;
-      width = font[0]->width;
+      height = font[0]->worldheight;
+      width = font[0]->worldwidth;
     }
 }
 
 
 // Writes a single character (draw WHITE if bit 7 set)
-void font_t::DrawCharacter(int x, int y, char c, int flags)
+void font_t::DrawCharacter(float x, float y, char c, int flags)
 {
   if (c & 0x80)
     {
@@ -662,9 +657,6 @@ void font_t::DrawCharacter(int x, int y, char c, int flags)
     return;
 
   Texture *t = font[c - start];
-  if (x + t->width > vid.width)
-    return;
-
   t->Draw(x, y, flags);
 }
 
@@ -672,38 +664,57 @@ void font_t::DrawCharacter(int x, int y, char c, int flags)
 
 //  Draw a string using the font
 //  NOTE: the text is centered for screens larger than the base width
-void font_t::DrawString(int x, int y, const char *str, int flags)
+void font_t::DrawString(float x, float y, const char *str, int flags)
 {
-
   if (flags & V_WHITEMAP)
     {
       current_colormap = whitemap;
       flags |= V_MAP;
     }
 
-  int dupx, dupy;
+  float dupx = 1;
+  float dupy = 1;
 
-
-  if (flags & V_SSIZE)
+  if (rendermode == render_opengl)
     {
-      dupx = vid.dupx;
-      dupy = vid.dupy;
+      // TODO damn scaledofs
+      if (flags & V_SSIZE)
+	{
+	  dupx = vid.fdupx;
+	  dupy = vid.fdupy;
+	}
+
+      if (flags & V_SLOC)
+	{
+	  x *= vid.fdupx;
+	  y *= vid.fdupy;
+	  flags &= ~V_SLOC; // not passed on to Texture::Draw
+	}
     }
   else
     {
-      dupx = dupy = 1;
+      if (flags & V_SSIZE)
+	{
+	  dupx = vid.dupx;
+	  dupy = vid.dupy;
+	}
+
+      if (flags & V_SLOC)
+	{
+	  x *= vid.dupx;
+	  y *= vid.dupy;
+	  flags &= ~V_SLOC; // not passed on to Texture::Draw
+	}
+
+      // unravel scaledofs
+      x += vid.scaledofs % vid.width;
+      y += vid.scaledofs / vid.width;
     }
 
-  if (flags & V_SLOC)
-    {
-      x *= vid.dupx;
-      y *= vid.dupy;
-      flags &= ~V_SLOC; // not passed on to Texture::Draw
-    }
   // cursor coordinates
-  int cx = x + vid.scaledofs % vid.width;
-  int cy = y + vid.scaledofs / vid.height;
-  int rowheight = (height + 1) * dupy;
+  float cx = x;
+  float cy = y;
+  float rowheight = (height + 1) * dupy;
 
   while (1)
     {
@@ -726,22 +737,17 @@ void font_t::DrawString(int x, int y, const char *str, int flags)
         }
 
       Texture *t = font[c - start];
-
-      int w = t->width * dupx;
-      if (cx + w > vid.width)
-        break;
-
       t->Draw(cx, cy, flags);
 
-      cx += w;
+      cx += t->worldwidth * dupx;
     }
 }
 
 
-// returns the width of the string
-int font_t::StringWidth(const char *str)
+// returns the width of the string (unscaled)
+float font_t::StringWidth(const char *str)
 {
-  int w = 0;
+  float w = 0;
 
   for (int i = 0; str[i]; i++)
     {
@@ -749,7 +755,7 @@ int font_t::StringWidth(const char *str)
       if (c < start || c > end)
         w += 4;
       else
-        w += font[c - start]->width;
+        w += font[c - start]->worldwidth;
     }
 
   return w;
@@ -757,9 +763,9 @@ int font_t::StringWidth(const char *str)
 
 
 // returns the width of the next n chars of str
-int font_t::StringWidth(const char *str, int n)
+float font_t::StringWidth(const char *str, int n)
 {
-  int w = 0;
+  float w = 0;
 
   for (int i = 0; i<n && str[i]; i++)
     {
@@ -767,14 +773,14 @@ int font_t::StringWidth(const char *str, int n)
       if (c < start || c > end)
         w += 4;
       else
-        w += font[c - start]->width;
+        w += font[c - start]->worldwidth;
     }
 
   return w;
 }
 
 
-int font_t::StringHeight(const char *str)
+float font_t::StringHeight(const char *str)
 {
   return height;
 }

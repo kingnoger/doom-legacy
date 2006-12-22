@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -49,20 +48,23 @@ enum texture_draw_e
 class font_t
 {
 protected:
-  char  start, end;  ///< first and last ascii characters included in the font
-  class Texture **font;
+  char  start, end;     ///< first and last ASCII characters included in the font
+  class Texture **font; ///< one Texture per symbol
 
 public:
-  int height, width; ///< dimensions of the character '0' in the font
+  float height, width;  ///< world dimensions of the character '0' in the font
 
 public:
   font_t(int startlump, int endlump, char firstchar = '!');
 
-  void DrawCharacter(int x, int y, char c, int flags = 0);
-  void DrawString(int x, int y, const char *str, int flags = V_SCALE);
-  int  StringWidth(const char *str);
-  int  StringWidth(const char *str, int n);
-  int  StringHeight(const char *str);
+  /// Write a single character (draw WHITE if bit 7 set)
+  void DrawCharacter(float x, float y, char c, int flags);
+  /// Write a string using the font.
+  void DrawString(float x, float y, const char *str, int flags);
+  /// Returns the width of the string in unscaled pixels
+  float StringWidth(const char *str);
+  float StringWidth(const char *str, int n);
+  float StringHeight(const char *str);
 };
 
 /// color translation

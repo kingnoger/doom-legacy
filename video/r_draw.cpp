@@ -372,8 +372,8 @@ void R_FillBackScreen()
 
   Texture *t = window_background;
 
-  for (y=0; y<vid.height; y += t->height)
-    for (x=0; x<vid.width; x += t->width)
+  for (y=0; y<vid.height; y += t->worldheight)
+    for (x=0; x<vid.width; x += t->worldwidth)
       t->Draw(x, y, 1);
 
   //added:08-01-98:dont draw the borders when viewwidth is full vid.width.

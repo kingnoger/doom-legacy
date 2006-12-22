@@ -55,19 +55,6 @@ static int R_TransmapNumForName(const char *name);
 //  R_ClearColormaps();
 
 
-//
-// Graphics.
-// DOOM graphics for walls and sprites
-// are stored in vertical runs of opaque pixels (posts).
-// A column is composed of zero or more posts,
-// a patch or sprite is composed of zero or more columns.
-//
-
-#ifdef OLDWATER
-int             firstwaterflat; //added:18-02-98:WATER!
-#endif
-
-
 //faB: for debugging/info purpose
 int             flatmemory;
 int             spritememory;
@@ -190,10 +177,12 @@ Texture::Texture(const char *n)
   : cacheitem_t(n)
 {
   width = height = 0;
-  leftoffset = topoffset = 0;
   xscale = yscale = 1;
-  pixels = NULL;
+  worldwidth = worldheight = 0;
+  leftoffs = topoffs = 0;
   w_bits = h_bits = 0;
+
+  pixels = NULL;
 
   // crap follows.
   id = 0;
@@ -281,6 +270,7 @@ bool Texture::ClearGLTexture()
 LumpTexture::LumpTexture(const char *n, int l, int w, int h)
   : Texture(n)
 {
+  // TODO does Initialize() need to be in constructor? 
   lump = l;
   width = w;
   height = h;
@@ -442,8 +432,8 @@ PatchTexture::PatchTexture(const char *n, int l)
   fc.ReadLumpHeader(lump, &p, sizeof(patch_t));
   width = SHORT(p.width);
   height = SHORT(p.height);
-  leftoffset = SHORT(p.leftoffset);
-  topoffset = SHORT(p.topoffset);
+  leftoffs = SHORT(p.leftoffset);
+  topoffs = SHORT(p.topoffset);
 
   Initialize();
   // nothing more is needed until the texture is Generated.

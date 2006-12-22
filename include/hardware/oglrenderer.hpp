@@ -105,8 +105,9 @@ public:
   bool In2DMode() const {return consolemode;}
 
   void Setup2DMode();
-  void Draw2DGraphic(GLfloat top, GLfloat left, GLfloat bottom, GLfloat right, GLuint tex, GLfloat textop=1.0, GLfloat texbottom=0.0, GLfloat texleft=0.0, GLfloat texright=1.0);
-  void Draw2DGraphic_Doom(float x, float y, Texture *tex);
+  void Draw2DGraphic(GLfloat left, GLfloat bottom, GLfloat right, GLfloat top, GLuint tex,
+		     GLfloat texleft=0.0, GLfloat texbottom=1.0, GLfloat texright=1.0, GLfloat textop=0.0);
+  void Draw2DGraphic_Doom(float x, float y, Texture *tex, int flags);
   void Draw2DGraphicFill_Doom(float x, float y, float width, float height, Texture *tex);
   void ClearAutomap();
   void DrawAutomapLine(const fline_t *line, const int color);

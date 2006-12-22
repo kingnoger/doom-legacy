@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -16,26 +16,22 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
-//
-// DESCRIPTION:
-//      Sky rendering. The DOOM sky is a texture map like any
-//      wall, wrapping around. A 1024 columns equal 360 degrees.
-//      The default sky map is 256 columns and repeats 4 times
-//      on a 320 screen?
-//  
-//
 //-----------------------------------------------------------------------------
+
+/// \file
+/*!
+  \brief Sky rendering.
+
+  The DOOM sky is a texture map like any wall, wrapping around. A 1024 columns equal 360 degrees.
+  The default sky map is 256 columns and repeats 4 times on a 320 screen?
+
+  The "sky flat" is not used in rendering, just to let the engine know
+  that a particular sector ceiling is in fact the sky.
+*/
 
 #include "doomdef.h"
 #include "r_sky.h"
 #include "r_data.h"
-
-//
-// sky mapping
-//
-// the "sky flat" is not used in rendering, just to let the engine know
-// that a particular sector ceiling is in fact the sky.
 
 int          skyflatnum; 
 int          skytexturemid;

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -67,8 +66,8 @@ void HudNumber::Update(bool force)
 void HudNumber::Draw()
 {
   int lnum = oldn = *n; // the number to be drawn
-  int w = nums[0]->width;
-  int h = nums[0]->height;
+  int w = nums[0]->worldwidth;
+  int h = nums[0]->worldheight;
   int dx = x - digits * w; // drawing x coord (right-aligned field!)
 
   // clear the area (right aligned field)
@@ -164,10 +163,10 @@ void HudMultIcon::Draw()
       // sw mode: background is not always fully redrawn
       int w, h;
       int dx, dy;
-      dx = x - icons[oldinum]->leftoffset;
-      dy = y - icons[oldinum]->topoffset;
-      w = icons[oldinum]->width;
-      h = icons[oldinum]->height;
+      dx = x - icons[oldinum]->leftoffs;
+      dy = y - icons[oldinum]->topoffs;
+      w = icons[oldinum]->worldwidth;
+      h = icons[oldinum]->worldheight;
 
       V_CopyRect(dx, dy, BG, w, h, dx, dy, fgbuffer);
     }
@@ -211,10 +210,10 @@ void HudBinIcon::Draw()
     {
       int w, h;
       int dx, dy;
-      dx = x - icons[1]->leftoffset;
-      dy = y - icons[1]->topoffset;
-      w = icons[1]->width;
-      h = icons[1]->height;
+      dx = x - icons[1]->leftoffs;
+      dy = y - icons[1]->topoffs;
+      w = icons[1]->worldwidth;
+      h = icons[1]->worldheight;
 
       V_CopyRect(dx, dy, BG, w, h, dx, dy, fgbuffer);
     }
@@ -355,7 +354,7 @@ void HudInventory::DrawNumber(int x, int y, int val)
   if (val == 1)
     return;
 
-  int w = nums[0]->width; // was 4
+  int w = nums[0]->worldwidth; // was 4
     
   if (val > 9)
     nums[val/10]->Draw(x, y, fgbuffer);

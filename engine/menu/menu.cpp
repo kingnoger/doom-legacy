@@ -276,8 +276,8 @@ void MsgBox::SetText(const char *str)
       return;
     }
 
-  int height = rows * hud_font->height;
-  int width  = (columns + 1) * hud_font->width;
+  float height = rows * hud_font->height;
+  float width  = (columns + 1) * hud_font->width;
 
   x = (BASEVIDWIDTH - width)/2;
   y = (BASEVIDHEIGHT - height)/2;
@@ -300,7 +300,7 @@ void MsgBox::Draw()
           slength = p-s;
 
           *p = '\0';
-          hud_font->DrawString((BASEVIDWIDTH - slength * hud_font->width)/2, ytemp, s);
+          hud_font->DrawString((BASEVIDWIDTH - slength * hud_font->width)/2, ytemp, s, V_SCALE);
           ytemp += hud_font->height;
           s = p+1;
           *p = '\n';
@@ -309,7 +309,7 @@ void MsgBox::Draw()
 
   // last line
   slength = p-s;
-  hud_font->DrawString((BASEVIDWIDTH - slength * hud_font->width)/2, ytemp, s);
+  hud_font->DrawString((BASEVIDWIDTH - slength * hud_font->width)/2, ytemp, s, V_SCALE);
 }
 
 
@@ -539,7 +539,7 @@ static void M_DrawThermo(int x, int y, consvar_t *cv)
   Texture *p = tc.GetPtr(leftlump);
   p->Draw(xx, y, V_SCALE);
 
-  xx += p->width - p->leftoffset;
+  xx += p->worldwidth - p->leftoffs;
   for (int i=0;i<16;i++)
     {
       tc.GetPtr(centerlump[i & 1])->Draw(xx, y, V_SCALE);
@@ -653,8 +653,8 @@ static void M_DrawTextBox(int x, int y, int columns, int lines)
 /// Write a string centered using the hud_font
 static void M_CenterText(int y, const char *str)
 {
-  int x = (BASEVIDWIDTH - hud_font->StringWidth(str)) >> 1;
-  hud_font->DrawString(x, y, str);
+  float x = (BASEVIDWIDTH - hud_font->StringWidth(str))/2;
+  hud_font->DrawString(x, y, str, V_SCALE);
 }
 
 
@@ -668,7 +668,7 @@ void Menu::DrawTitle()
       if (xtitle < 0) xtitle=0;
       if (ytitle < 0) ytitle=0;
 
-      font->DrawString(xtitle, ytitle, title);
+      font->DrawString(xtitle, ytitle, title, V_SCALE);
     }
   else if (titlepic)
     {
@@ -676,8 +676,8 @@ void Menu::DrawTitle()
 
       //int xtitle = 94;
       //int ytitle = 2;
-      int xtitle = (BASEVIDWIDTH - p->width)/2;
-      int ytitle = (y - p->height)/2;
+      int xtitle = (BASEVIDWIDTH - p->worldwidth)/2;
+      int ytitle = (y - p->worldheight)/2;
 
       if (xtitle < 0) xtitle=0;
       if (ytitle < 0) ytitle=0;
@@ -763,12 +763,12 @@ void Menu::DrawMenu()
 	      if (items[i].flags & IT_TEXTBOX_IN_USE)
 		{
 		  const char *t = textbox.GetText();
-		  hud_font->DrawString(x+8, dy+12, t);
+		  hud_font->DrawString(x+8, dy+12, t, V_SCALE);
 		  if (AnimCount < 4)
 		    hud_font->DrawCharacter(x+8+hud_font->StringWidth(t), dy + 12, '_' | 0x80, V_SCALE);
 		}
 	      else
-		hud_font->DrawString(x+8, dy+12, cv->str);
+		hud_font->DrawString(x+8, dy+12, cv->str, V_SCALE);
 	      h = 26;
 	      break;
 
@@ -1207,7 +1207,7 @@ void Menu::DrawLoad()
   for (int i=0; i < 6; i++)
     {
       M_DrawSaveLoadBorder(x, y+LINEHEIGHT*i);
-      hud_font->DrawString(x, y+LINEHEIGHT*i, savegamestrings[i]);
+      hud_font->DrawString(x, y+LINEHEIGHT*i, savegamestrings[i], V_SCALE);
     }
 }
 
@@ -1318,11 +1318,11 @@ void Menu::DrawSave()
       if (items[i].flags & IT_TEXTBOX_IN_USE)
 	{
 	  const char *p = textbox.GetText();
-	  hud_font->DrawString(x, y+LINEHEIGHT*i, p);
-	  hud_font->DrawString(x+hud_font->StringWidth(p), y+LINEHEIGHT*i, "_");
+	  hud_font->DrawString(x, y+LINEHEIGHT*i, p, V_SCALE);
+	  hud_font->DrawString(x+hud_font->StringWidth(p), y+LINEHEIGHT*i, "_", V_SCALE);
 	}
       else
-	hud_font->DrawString(x, y+LINEHEIGHT*i, savegamestrings[i]);
+	hud_font->DrawString(x, y+LINEHEIGHT*i, savegamestrings[i], V_SCALE);
     }
 }
 
@@ -1607,13 +1607,13 @@ static menuitem_t Connect_MI[] =
 
 void serverinfo_t::Draw(int x, int y)
 {
-  hud_font->DrawString(x, y, name.c_str());
+  hud_font->DrawString(x, y, name.c_str(), V_SCALE);
   char *p = va("%d", ping);
-  hud_font->DrawString(x + 184 - hud_font->StringWidth(p), y, p);
+  hud_font->DrawString(x + 184 - hud_font->StringWidth(p), y, p, V_SCALE);
   p = va("%d/%d", players, maxplayers);
-  hud_font->DrawString(x + 250 - hud_font->StringWidth(p), y, p);
+  hud_font->DrawString(x + 250 - hud_font->StringWidth(p), y, p, V_SCALE);
   p = va("%s", gt_name.c_str());
-  hud_font->DrawString(x + 270 - hud_font->StringWidth(p), y, p);
+  hud_font->DrawString(x + 270 - hud_font->StringWidth(p), y, p, V_SCALE);
 }
 
 void Menu::DrawConnect()
@@ -1625,7 +1625,7 @@ void Menu::DrawConnect()
   n = min(n, m);
 
   if (n <= 0)
-    hud_font->DrawString(x, cy, "No servers found");
+    hud_font->DrawString(x, cy, "No servers found", V_SCALE);
   else for (; i<n; i++)
     {
       game.net->serverlist[i]->Draw(x, cy + i*STRINGHEIGHT);

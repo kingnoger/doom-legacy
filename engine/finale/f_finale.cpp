@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,8 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -274,7 +272,7 @@ void F_TextWrite(int sx, int sy)
   // small hack
   char c = finaletext[count];
   finaletext[count] = '\0';
-  hud_font->DrawString(sx, sy, finaletext.c_str());
+  hud_font->DrawString(sx, sy, finaletext.c_str(), V_SCALE);
   finaletext[count] = c;
 }
 
@@ -466,7 +464,7 @@ bool F_CastResponder(event_t* ev)
 
 void F_CastPrint(char* text)
 {
-  hud_font->DrawString((BASEVIDWIDTH - hud_font->StringWidth(text)) / 2, 180, text);
+  hud_font->DrawString((BASEVIDWIDTH - hud_font->StringWidth(text)) / 2, 180, text, V_SCALE);
 }
 
 

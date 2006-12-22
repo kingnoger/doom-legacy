@@ -93,6 +93,7 @@ texture
       if (d.t != &d.dummy)
 	{
 	  CONS_Printf(" Built texture '%s'.\n", d.t->GetName());
+	  d.t->Initialize();
 	  if (d.is_sprite)
 	    tc.InsertSprite(d.t);
 	  else
@@ -151,13 +152,13 @@ tex_property
     {
       if (d.texeloffsets)
 	{
-	  d.t->leftoffset = int($2);
-	  d.t->topoffset = int($3);
+	  d.t->leftoffs = ($2 / d.t->xscale).floor();
+	  d.t->topoffs = ($3 / d.t->yscale).floor();
 	}
       else
 	{
-	  d.t->leftoffset = ($2 * d.t->xscale).floor();
-	  d.t->topoffset = ($3 * d.t->yscale).floor();
+	  d.t->leftoffs = $2;
+	  d.t->topoffs = $3;
 	}
     }
 ;

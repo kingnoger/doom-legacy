@@ -199,10 +199,11 @@ public:
   /// "conversion operators", must not be implicitly used
   inline float   Float() const { return float(val) / float(UNIT); }
 
-  inline value_t floor() const { return val >> FBITS; }
-  inline value_t ceil() const { return (val & FMASK) ? (val >> FBITS)+1 : val >> FBITS; }
+  inline value_t trunc() const { return val >> FBITS; } ///< was erroneously named floor before, usage in code may be wrong...
+  inline value_t floor() const { return (val >= 0) ? val >> FBITS : ((val+1) >> FBITS)-1; }
+  inline value_t ceil() const { return (val > 0) ? ((val-1) >> FBITS)+1 : val >> FBITS; }
 
-  /// returns the fractional part
+  /// returns the fractional part of _nonnegative_ number
   inline fixed_t frac() const { fixed_t res; res.val = val & FMASK; return res; }
 
   /// conveniences, remove them if you can!

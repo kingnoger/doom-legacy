@@ -41,11 +41,11 @@
 /// and we compose textures from the TEXTURE1/2 lists of patches.
 struct patch_t
 {
-  Uint16 width;         /// bounding box size
+  Uint16 width;         ///< bounding box size
   Uint16 height;
-  Sint16 leftoffset;    /// pixels to the left of origin
-  Sint16 topoffset;     /// pixels below the origin
-  Uint32 columnofs[0];  /// [width] byte offsets to the columns
+  Sint16 leftoffset;    ///< pixels to the left of origin
+  Sint16 topoffset;     ///< pixels below the origin
+  Uint32 columnofs[0];  ///< [width] byte offsets to the columns
 } __attribute__((packed));
 
 
@@ -102,25 +102,29 @@ struct pic_t
 class Texture : public cacheitem_t
 {
   friend class texturecache_t;
-protected:
-  GLuint glid;   ///< OpenGL handle. Accessed using GLPrepare().
-
 public:
-  int     id;  ///< unique texture ID  TODO temp solution, replace with pointers?
-  short   width, height;          ///< bitmap dimensions in texels
-  short   leftoffset, topoffset;
-  fixed_t xscale, yscale;         ///< texel-size / world-size
-  byte    w_bits, h_bits;         ///< largest power-of-two sizes <= actual bitmap size
+  int     id;    ///< unique texture ID  TODO temp solution, replace with pointers?
+  float   worldwidth, worldheight; ///< dimensions in world units
+  float   leftoffs, topoffs;       ///< internal image offsets in world units
+  byte    w_bits, h_bits;          ///< largest power-of-two sizes <= actual bitmap size
 
-  byte  *pixels; ///< raw bitmap data in column-major order for sw renderer
+  short   width, height;           ///< bitmap dimensions in texels
+  fixed_t xscale, yscale;          ///< texel-size / world-size
+
+protected:
+  byte    *pixels; ///< raw bitmap data in column-major order for sw renderer
+  GLuint   glid;   ///< OpenGL handle. Accessed using GLPrepare().
   static const GLuint NOTEXTURE = 0;
 
-protected:
-  /// To be called after bitmap size is known
+public:
+  /// To be called after bitmap size and scale are known
   inline void Initialize()
   {
     for (w_bits = 0; 1 << (w_bits+1) <= width;  w_bits++);
     for (h_bits = 0; 1 << (h_bits+1) <= height; h_bits++);
+
+    worldwidth  = width / xscale.Float();
+    worldheight = height / yscale.Float();
   }
 
 public:
@@ -149,8 +153,8 @@ public:
   virtual bool ClearGLTexture();
 
   /// draw the Texture flat on screen.
-  virtual void Draw(int x, int y, int scrn) {}; // scrn may contain flags
-  virtual void HWR_Draw(int x, int y, int flags) {};
+  virtual void Draw(float x, float y, int scrn) {}; // scrn may contain flags
+  virtual void HWR_Draw(float x, float y, int flags) {};
 
   /// tile an area of the screen with the Texture
   virtual void DrawFill(int x, int y, int w, int h) {};
@@ -177,8 +181,8 @@ public:
   virtual byte *GetColumn(fixed_t col);
   virtual byte *GetData() { return Generate(); }
   virtual GLuint GLPrepare();
-  virtual void Draw(int x, int y, int scrn);
-  virtual void HWR_Draw(int x, int y, int flags);
+  virtual void Draw(float x, float y, int scrn);
+  virtual void HWR_Draw(float x, float y, int flags);
   virtual void DrawFill(int x, int y, int w, int h);
 };
 
@@ -222,8 +226,8 @@ public:
   virtual byte *GetColumn(fixed_t col);
   virtual byte *GetData() { return GenerateData(); }
 
-  virtual void Draw(int x, int y, int scrn);
-  virtual void HWR_Draw(int x, int y, int flags);
+  virtual void Draw(float x, float y, int scrn);
+  virtual void HWR_Draw(float x, float y, int flags);
 };
 
 
