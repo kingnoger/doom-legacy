@@ -658,6 +658,7 @@ bool Actor::CheckPosition(fixed_t nx, fixed_t ny, bool act)
 
   PosCheck.op.Reset();
   PosCheck.op.SubtractFromOpening(this, ss->sector);
+  PosCheck.op.lowfloor = PosCheck.op.bottom; // necessary if no lines are encountered...
 
   PosCheck.spechit.clear();
   PosCheck.block_line = NULL;
@@ -1435,14 +1436,14 @@ bool trace_t::HitZPlane(sector_t *s)
     {
       frac = (frac * (r.high - start.z).Float()) / dz;
       lastz = r.high;
-      // TODO skyhit?
-
+      hitsky = (s->ceilingpic == skyflatnum && r.high == s->ceilingheight);
       return true;
     }
   else if (lastz < r.low) // hit floor
     {
       frac = (frac * (r.low - start.z).Float()) / dz;
       lastz = r.low;
+      hitsky = (s->floorpic == skyflatnum && r.low == s->floorheight);
       return true;
     }
 

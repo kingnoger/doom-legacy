@@ -471,7 +471,6 @@ void line_opening_t::SubtractFromOpening(const Actor *a, sector_t *s)
 
   // TEST originally lowfloor is the lowest floor encountered, now it is the second-highest.
   // This makes monsters a little more bold in stairs etc.
-
   if (r.low > bottom)
     {
       lowfloor = bottom;
@@ -481,6 +480,18 @@ void line_opening_t::SubtractFromOpening(const Actor *a, sector_t *s)
     }
   else if (r.low > lowfloor)
     lowfloor = r.low;
+
+  /*
+    // original lowfloor logic
+  if (r.low > bottom)
+    {
+      bottom = r.low;
+      bottom_sky = (s->floorpic == skyflatnum && r.low == s->floorheight);
+      bottompic = s->floorpic;
+    }
+  else if (r.low < lowfloor)
+    lowfloor = r.low;
+  */
 }
 
 
