@@ -47,7 +47,7 @@ void I_UngrabMouse();
 void I_GrabMouse();
 
 OGLRenderer *oglrenderer = NULL;
-//GLuint missingtexture = 0xFFFF;
+
 
 #ifdef DYNAMIC_LINKAGE
 static LegacyDLL OGL_renderer;

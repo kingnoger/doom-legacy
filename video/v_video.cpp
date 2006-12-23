@@ -28,7 +28,6 @@
 #include "command.h"
 
 #include "r_data.h"
-#include "r_main.h"
 #include "r_draw.h"
 
 #include "v_video.h"
@@ -46,73 +45,6 @@
 using namespace std;
 
 byte *current_colormap; // for applying colormaps to Drawn Textures
-
-//=================================================================
-//                         Blitting
-//=================================================================
-
-/// Copies a rectangular area from one screen buffer to another
-void V_CopyRect(int srcx, int srcy, int srcscrn,
-                int width, int height,
-                int destx, int desty, int destscrn)
-{
-  // WARNING don't mix
-  if ((srcscrn & V_SLOC) || (destscrn & V_SLOC))
-    {
-      srcx*=vid.dupx;
-      srcy*=vid.dupy;
-      width*=vid.dupx;
-      height*=vid.dupy;
-      destx*=vid.dupx;
-      desty*=vid.dupy;
-    }
-  srcscrn &= 0xffff;
-  destscrn &= 0xffff;
-
-#ifdef RANGECHECK
-  if (srcx<0
-      ||srcx+width >vid.width
-      || srcy<0
-      || srcy+height>vid.height
-      ||destx<0||destx+width >vid.width
-      || desty<0
-      || desty+height>vid.height
-      || (unsigned)srcscrn>4
-      || (unsigned)destscrn>4)
-    I_Error ("Bad V_CopyRect %d %d %d %d %d %d %d %d", srcx, srcy,
-             srcscrn, width, height, destx, desty, destscrn);
-#endif
-
-  byte *src = vid.screens[srcscrn]+vid.width*srcy+srcx;
-  byte *dest = vid.screens[destscrn]+vid.width*desty+destx;
-
-  for (; height>0 ; height--)
-    {
-      memcpy (dest, src, width);
-      src += vid.width;
-      dest += vid.width;
-    }
-}
-
-
-// Copy a rectangular area from one bitmap to another (8bpp)
-void VID_BlitLinearScreen(byte *src, byte *dest, int width, int height,
-                          int srcrowbytes, int destrowbytes)
-{
-  if (srcrowbytes == destrowbytes)
-    memcpy(dest, src, srcrowbytes * height);
-  else
-    {
-      while (height--)
-        {
-          memcpy(dest, src, width);
-
-          dest += destrowbytes;
-          src += srcrowbytes;
-        }
-    }
-}
-
 
 
 //=================================================================
@@ -173,11 +105,10 @@ void PatchTexture::Draw(float x, float y, int scrn)
   int y1 = int(y);
 
 #ifdef RANGECHECK
-  if (y < 0 || y2 > vid.height || scrn > 4)
+  if (y < 0 || y2 > vid.height)
     {
-      fprintf(stderr, "Patch at %d,%d exceeds LFB\n", x,y);
+      fprintf(stderr, "Patch at (%f,%f) exceeds LFB.\n", x,y);
       // No I_Error abort - what is up with TNT.WAD?
-      fprintf(stderr, "V_DrawPatch: bad patch (ignored)\n");
       return;
     }
 #endif
@@ -201,15 +132,13 @@ void PatchTexture::Draw(float x, float y, int scrn)
 
   for ( ; dest_tl < dest_tr; col += colfrac, dest_tl++)
     {
-      byte *dest = dest_tl;
       post_t *post = (post_t *)(patch_data + p->columnofs[col.floor()]);
 
       // step through the posts in a column
       while (post->topdelta != 0xff)
 	{
 	  // step through the posts in a column
-	  dest += (post->topdelta/rowfrac).floor() * vid.width;
-
+	  byte *dest = dest_tl + (post->topdelta/rowfrac).floor()*vid.width;
 	  byte *source = post->data;
 	  int count = (post->length/rowfrac).floor();
 
@@ -232,38 +161,6 @@ void PatchTexture::Draw(float x, float y, int scrn)
 	  post = (post_t *)&post->data[post->length + 1]; // next post
 	}
     }
-  /*
-  int icol, idelta;
-  else // unscaled, perhaps a bit faster?
-    for ( ; desttop < destend; icol += idelta, desttop++)
-      {
-        post_t *post = (post_t *)(patch_data + p->columnofs[icol]);
-
-        // step through the posts in a column
-        while (post->topdelta != 0xff)
-          {
-            byte *source = post->data;
-            byte *dest = desttop + post->topdelta*vid.width;
-            int count = post->length;
-
-            while (count--)
-              {
-                byte pixel = *source++;
-
-                // the compiler is supposed to optimize the ifs out of the loop
-                if (flags & V_MAP)
-                  pixel = current_colormap[pixel];
-
-                if (flags & V_TL)
-                  pixel = transtables[0][(pixel << 8) + *dest];
-
-                *dest = pixel;
-                dest += vid.width;
-              }
-            post = (post_t *)&post->data[post->length + 1];
-          }
-      }
-  */
 }
 
 
@@ -358,29 +255,6 @@ void LumpTexture::Draw(float x, float y, int scrn)
 	  *dest = pixel;
 	}
     }
-  /*
-  else // unscaled, perhaps a bit faster?
-    for ( ; dest_tl < dest_tr; col++, dest_tl++)
-      {
-	byte *dest_end = dest_tl + x2 - x1;
-	byte *source = base + height * col.floor();
-	int col = y1-y;
-	for (int row = x1-x; dest_left < dest_end; row++, dest_left += vid.width)
-	  {
-	    byte pixel = base[col];
-
-	    // the compiler is supposed to optimize the ifs out of the loop
-	    if (flags & V_MAP)
-	      pixel = current_colormap[pixel];
-
-	    if (flags & V_TL)
-	      pixel = transtables[0][(pixel << 8) + *dest];
-
-	    *dest = pixel;
-	  }
-        base += width;
-      }
-  */
 }
 
 
@@ -420,54 +294,79 @@ void LumpTexture::DrawFill(int x, int y, int w, int h)
 
 
 
+//=================================================================
+//                         Blitting
+//=================================================================
 
-//======================================================================
-//                     Misc. drawing stuff
-//======================================================================
-
-// Draw a linear block of pixels into the view buffer.
-void V_DrawBlock(int x, int y, int scrn, int width, int height, byte* src)
+/// Copies a rectangular area from one screen buffer to another
+void V_CopyRect(int srcx, int srcy, int srcscrn,
+                int width, int height,
+                int destx, int desty, int destscrn)
 {
+  // WARNING don't mix
+  if ((srcscrn & V_SLOC) || (destscrn & V_SLOC))
+    {
+      srcx*=vid.dupx;
+      srcy*=vid.dupy;
+      width*=vid.dupx;
+      height*=vid.dupy;
+      destx*=vid.dupx;
+      desty*=vid.dupy;
+    }
+  srcscrn &= 0xffff;
+  destscrn &= 0xffff;
+
 #ifdef RANGECHECK
-  if (x<0 ||x+width >vid.width || y<0 || y+height>vid.height || scrn > 4)
-    I_Error ("Bad V_DrawBlock");
+  if (srcx<0
+      ||srcx+width >vid.width
+      || srcy<0
+      || srcy+height>vid.height
+      ||destx<0||destx+width >vid.width
+      || desty<0
+      || desty+height>vid.height
+      || (unsigned)srcscrn>4
+      || (unsigned)destscrn>4)
+    I_Error ("Bad V_CopyRect %d %d %d %d %d %d %d %d", srcx, srcy,
+             srcscrn, width, height, destx, desty, destscrn);
 #endif
 
-  byte *dest = vid.screens[scrn] + y*vid.width + x;
+  byte *src = vid.screens[srcscrn]+vid.width*srcy+srcx;
+  byte *dest = vid.screens[destscrn]+vid.width*desty+destx;
 
-  while (height--)
+  for (; height>0 ; height--)
     {
-      memcpy(dest, src, width);
-
-      src += width;
+      memcpy (dest, src, width);
+      src += vid.width;
       dest += vid.width;
     }
 }
 
 
-
-// Gets a linear block of pixels from the view buffer.
-void V_GetBlock(int x, int y, int scrn, int width, int height, byte *dest)
+// Copy a rectangular area from one bitmap to another (8bpp)
+void VID_BlitLinearScreen(byte *src, byte *dest, int width, int height,
+                          int srcrowbytes, int destrowbytes)
 {
-  if (rendermode!=render_soft)
-    I_Error ("V_GetBlock: called in non-software mode");
-
-#ifdef RANGECHECK
-  if (x<0 ||x+width >vid.width || y<0 || y+height>vid.height || scrn > 4)
-    I_Error ("Bad V_GetBlock");
-#endif
-
-  byte *src = vid.screens[scrn] + y*vid.width+x;
-
-  while (height--)
+  if (srcrowbytes == destrowbytes)
+    memcpy(dest, src, srcrowbytes * height);
+  else
     {
-      memcpy(dest, src, width);
-      src += vid.width;
-      dest += width;
+      while (height--)
+        {
+          memcpy(dest, src, width);
+
+          dest += destrowbytes;
+          src += srcrowbytes;
+        }
     }
 }
 
 
+
+
+
+//======================================================================
+//                     Misc. drawing stuff
+//======================================================================
 
 
 //  Fills a box of pixels with a single color, NOTE: scaled to screen size
@@ -784,147 +683,3 @@ float font_t::StringHeight(const char *str)
 {
   return height;
 }
-
-
-
-//========================================================================
-
-
-
-
-
-
-struct modelvertex_t
-{
-  int px;
-  int py;
-};
-
-void R_DrawSpanNoWrap();   //tmap.S
-
-//
-//  Tilts the view like DukeNukem...
-//
-//added:12-02-98:
-#ifdef TILTVIEW
-#ifndef NO_OPENGL
-// TODO: Hurdler: see why we can't do it in software mode (it seems this only works for now with the DOS version)
-void V_DrawTiltView (byte *viewbuffer)  // don't touch direct video I'll find something..
-{}
-#else
-
-static modelvertex_t vertex[4];
-
-void V_DrawTiltView (byte *viewbuffer)
-{
-    fixed_t    leftxfrac;
-    fixed_t    leftyfrac;
-    fixed_t    xstep;
-    fixed_t    ystep;
-
-    int        y;
-
-    vertex[0].px = 0;   // tl
-    vertex[0].py = 53;
-    vertex[1].px = 212; // tr
-    vertex[1].py = 0;
-    vertex[2].px = 264; // br
-    vertex[2].py = 144;
-    vertex[3].px = 53;  // bl
-    vertex[3].py = 199;
-
-    // resize coords to screen
-    for (y=0;y<4;y++)
-    {
-        vertex[y].px = (vertex[y].px * vid.width) / BASEVIDWIDTH;
-        vertex[y].py = (vertex[y].py * vid.height) / BASEVIDHEIGHT;
-    }
-
-    ds_colormap = fixedcolormap;
-    ds_source = viewbuffer;
-
-    // starting points top-left and top-right
-    leftxfrac  = vertex[0].px <<FRACBITS;
-    leftyfrac  = vertex[0].py <<FRACBITS;
-
-    // steps
-    xstep = ((vertex[3].px - vertex[0].px)<<FRACBITS) / vid.height;
-    ystep = ((vertex[3].py - vertex[0].py)<<FRACBITS) / vid.height;
-
-    ds_y  = (int) vid.direct;
-    ds_x1 = 0;
-    ds_x2 = vid.width-1;
-    ds_xstep = ((vertex[1].px - vertex[0].px)<<FRACBITS) / vid.width;
-    ds_ystep = ((vertex[1].py - vertex[0].py)<<FRACBITS) / vid.width;
-
-
-//    I_Error("ds_y %d ds_x1 %d ds_x2 %d ds_xstep %x ds_ystep %x \n"
-//            "ds_xfrac %x ds_yfrac %x ds_source %x\n", ds_y,
-//                      ds_x1,ds_x2,ds_xstep,ds_ystep,leftxfrac,leftyfrac,
-//                      ds_source);
-
-    // render spans
-    for (y=0; y<vid.height; y++)
-    {
-        // FAST ASM routine!
-        ds_xfrac = leftxfrac;
-        ds_yfrac = leftyfrac;
-        R_DrawSpanNoWrap ();
-        ds_y += vid.rowbytes;
-
-        // move along the left and right edges of the polygon
-        leftxfrac += xstep;
-        leftyfrac += ystep;
-    }
-
-}
-#endif
-#endif
-
-//
-// Test 'scrunch perspective correction' tm (c) ect.
-//
-//added:05-04-98:
-
-#ifndef NO_OPENGL
-// TODO: Hurdler: see why we can't do it in software mode (it seems this only works for now with the DOS version)
-void V_DrawPerspView (byte *viewbuffer, int aiming)
-{}
-#else
-
-void V_DrawPerspView (byte *viewbuffer, int aiming)
-{
-  /*
-  fixed_t    topfrac,bottomfrac,scale,scalestep;
-  fixed_t    xfrac,xfracstep;
-
-  byte *source = viewbuffer;
-
-  //+16 to -16 fixed
-  int offs = ((aiming*20)<<16) / 100;
-
-  topfrac    = ((vid.width-40)<<16) - (offs*2);
-  bottomfrac = ((vid.width-40)<<16) + (offs*2);
-
-  scalestep  = (bottomfrac-topfrac) / vid.height;
-  scale      = topfrac;
-
-  for (int y=0; y<vid.height; y++)
-    {
-      int x1 = ((vid.width<<16) - scale)>>17;
-      byte *dest = ((byte*) vid.direct) + (vid.rowbytes*y) + x1;
-
-      xfrac = (20<<FRACBITS) + ((!x1)&0xFFFF);
-      xfracstep = FixedDiv((vid.width<<FRACBITS)-(xfrac<<1),scale);
-      int w = scale>>16;
-      while (w--)
-        {
-	  *dest++ = source[xfrac>>FRACBITS];
-	  xfrac += xfracstep;
-        }
-      scale += scalestep;
-      source += vid.width;
-    }
-  */
-}
-#endif
