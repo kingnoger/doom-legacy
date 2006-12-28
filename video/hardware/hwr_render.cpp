@@ -52,8 +52,6 @@
 
 // stubs for OpenGL functions
 void modelpres_t::Project(Actor *p) {}
-void PatchTexture::HWR_Draw(int x, int y, int flags) {}
-void LumpTexture::HWR_Draw(int x, int y, int flags) {}
 
 #else
 
@@ -276,29 +274,29 @@ void HWRend::DrawViewBorder()
   // top edge
   if (clearlines > basewindowy-8)
     for (x=0 ; x<baseviewwidth; x+=8)
-      window_border[BRDR_T]->HWR_Draw(basewindowx+x,basewindowy-8,0);
+      window_border[BRDR_T]->Draw(basewindowx+x,basewindowy-8,0);
   // bottom edge
   if (clearlines > basewindowy+baseviewheight)
     for (x=0 ; x<baseviewwidth ; x+=8)
-      window_border[BRDR_B]->HWR_Draw(basewindowx+x,basewindowy+baseviewheight,0);
+      window_border[BRDR_B]->Draw(basewindowx+x,basewindowy+baseviewheight,0);
   // left edge
   if (clearlines > basewindowy)
     for (y=0 ; y<baseviewheight && (basewindowy+y < clearlines); y+=8)
-      window_border[BRDR_L]->HWR_Draw(basewindowx-8,basewindowy+y,0);
+      window_border[BRDR_L]->Draw(basewindowx-8,basewindowy+y,0);
   // right edge
   if (clearlines > basewindowy)
     for (y=0 ; y<baseviewheight && (basewindowy+y < clearlines); y+=8)
-      window_border[BRDR_R]->HWR_Draw(basewindowx+baseviewwidth,basewindowy+y,0);
+      window_border[BRDR_R]->Draw(basewindowx+baseviewwidth,basewindowy+y,0);
 
   // Draw beveled corners.
   if (clearlines > basewindowy-8)
-    window_border[BRDR_TL]->HWR_Draw(basewindowx-8,basewindowy-8,0);
+    window_border[BRDR_TL]->Draw(basewindowx-8,basewindowy-8,0);
   if (clearlines > basewindowy-8)
-    window_border[BRDR_TR]->HWR_Draw(basewindowx+baseviewwidth, basewindowy-8,0);
+    window_border[BRDR_TR]->Draw(basewindowx+baseviewwidth, basewindowy-8,0);
   if (clearlines > basewindowy+baseviewheight)
-    window_border[BRDR_BL]->HWR_Draw(basewindowx-8, basewindowy+baseviewheight,0);
+    window_border[BRDR_BL]->Draw(basewindowx-8, basewindowy+baseviewheight,0);
   if (clearlines > basewindowy+baseviewheight)
-    window_border[BRDR_BR]->HWR_Draw(basewindowx+baseviewwidth, basewindowy+baseviewheight,0);
+    window_border[BRDR_BR]->Draw(basewindowx+baseviewwidth, basewindowy+baseviewheight,0);
 }
 
 int HWRend::GetTextureUsed()
@@ -646,6 +644,7 @@ void modelpres_t::Project(Actor *p)
 {
   //CONS_Printf("modelpres_t::Project: Not yet implemented\n");
 }
+/*
 void PatchTexture::HWR_Draw(float x, float y, int flags)
 {
   static Geometry *geo = 0;
@@ -672,10 +671,6 @@ void PatchTexture::HWR_Draw(float x, float y, int flags)
   state->Apply();
   geo->Draw();
 }
-void LumpTexture::HWR_Draw(float x, float y, int flags)
-{
-  //CONS_Printf("LumpTexture::HWR_Draw: Not yet implemented\n");
-}
-
+*/
 
 #endif // NO_OPENGL

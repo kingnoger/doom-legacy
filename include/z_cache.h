@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2003-2005 by DooM Legacy Team.
+// Copyright (C) 2003-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,7 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //---------------------------------------------------------------------
 
@@ -40,9 +39,9 @@ class cacheitem_t
   friend class cachesource_t;
   friend class cache_t;
   friend class texturecache_t;
-
+#define CACHE_NAME_LEN 63 // was 8
 protected:
-  char  name[9];    ///< name of the item, NUL-terminated
+  char  name[CACHE_NAME_LEN+1]; ///< name of the item, NUL-terminated
   int   usefulness; ///< how many times has it been used?
   int   refcount;   ///< reference count, number of current users
 
@@ -58,7 +57,7 @@ public:
   const char *GetName() { return name; };
 
   /// change the name of the item
-  void SetName(const char *n) { strncpy(name, n, 8); };
+  void SetName(const char *n) { strncpy(name, n, CACHE_NAME_LEN); };
 
   void *operator new(size_t size);
   void  operator delete(void *mem);
@@ -75,11 +74,11 @@ class cachesource_t
 protected:
   // annoying namespace declarations, because hash_map is an extension...
 #if (__GNUC__ != 2)
-  //typedef __gnu_cxx::hash_map<const char*, cacheitem_t*, __gnu_cxx::hash<const char *>, equal_cstring> c_map_t;
-  typedef __gnu_cxx::hash_map<const char*, cacheitem_t*, hash_cstring8, equal_cstring8> c_map_t;
+  typedef __gnu_cxx::hash_map<const char*, cacheitem_t*, __gnu_cxx::hash<const char *>, equal_cstring> c_map_t;
+  //typedef __gnu_cxx::hash_map<const char*, cacheitem_t*, hash_cstring8, equal_cstring8> c_map_t;
 #else
-  //typedef hash_map<const char*, cacheitem_t*, hash<const char *>, equal_cstring> c_map_t;
-  typedef std::hash_map<const char*, cacheitem_t*, hash_cstring8, equal_cstring8> c_map_t;
+  typedef hash_map<const char*, cacheitem_t*, hash<const char *>, equal_cstring> c_map_t;
+  //typedef std::hash_map<const char*, cacheitem_t*, hash_cstring8, equal_cstring8> c_map_t;
 #endif
 
   typedef c_map_t::iterator c_iter_t;

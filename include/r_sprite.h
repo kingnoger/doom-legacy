@@ -28,61 +28,6 @@
 #include "z_cache.h"
 
 
-/*
-MD2 sequences?
-
-IDLE1         The first of four idle animations
-RUN           Animation for the model running. RUN FORREST RUN!
-SHOT_STAND    Animation for when the model gets shot, but stays standing
-SHOT_SHOULDER Animation for when the model gets shot in the shoulder (still standing though)
-JUMP          Animation for the model jumping
-IDLE2         The second of four idle animations
-SHOT_FALLDOWN Animation for the model getting shot, and falling to the ground (used for getting shot by big weapons)
-IDLE3         The third of four idle animations
-IDLE4         The fourth of four idle animations
-CROUCH        Animation for making the model crouch
-CROUCH_CRAWL  Having the model crawl while crouching
-CROUCH_IDLE   An idle animation while in a crouching position
-CROUCH_DEATH  The model dying while in a crouching position
-DEATH_FALLBACK     The model dying while falling backwards (death shot from the front)
-DEATH_FALLFORWARD  The model dying while falling forwards (death shot from the back)
-DEATH_FALLBACKSLOW The model dying while falling backwards slowly
-*/
-
-
-enum MD3_animseq_e
-{
-  BOTH_DEATH1 = 0,
-  BOTH_DEAD1  = 1,
-  BOTH_DEATH2 = 2,
-  BOTH_DEAD2  = 3,
-  BOTH_DEATH3 = 4,
-  BOTH_DEAD3  = 5,
-
-  TORSO_GESTURE = 6,
-  TORSO_ATTACK  = 7,
-  TORSO_ATTACK2 = 8,
-  TORSO_DROP    = 9,
-  TORSO_RAISE   = 10,
-  TORSO_STAND   = 11,
-  TORSO_STAND2  = 12,
-
-  LEGS_WALKCR   = 13,
-  LEGS_WALK     = 14,
-  LEGS_RUN      = 15,
-  LEGS_BACK     = 16,
-  LEGS_SWIM     = 17,
-  LEGS_JUMP     = 18,
-  LEGS_LAND     = 19,
-  LEGS_JUMPB    = 20,
-  LEGS_LANDB    = 21,
-  LEGS_IDLE     = 22,
-  LEGS_IDLECR   = 23,
-  LEGS_TURN     = 24,
-  MAX_ANIMATIONS = 25
-};
-
-
 //========================================================
 //                       Sprites
 //========================================================
@@ -148,7 +93,7 @@ extern spritecache_t sprites;
 ///
 /// Idea: Game entities have a pointer to a graphic presentation.
 /// The animation data is stored in the presentation object.
-/// The actual implementation of the "graphic presentation" can be a sprite, md3 or anything.
+/// The actual implementation of the "graphic presentation" can be a sprite, MD3 or anything.
 class presentation_t
 {
 protected:
@@ -171,15 +116,15 @@ public:
     Other
   };
 
-  char  color;    // well.
-  char  animseq;  // current animation sequence
-  int   flags;    // Effects. Translucency, fullbright etc.
-  int   lastupdate; // in tics
+  char  color;       ///< Skin colormap.
+  animseq_e animseq; ///< Current animation sequence.
+  int   flags;       ///< Effects. Translucency, fullbright etc.
+  int   lastupdate;  ///< Time of last update in tics.
 
-  virtual ~presentation_t() = 0;
+  virtual ~presentation_t() {};
 
   virtual void SetFrame(const struct state_t *st) = 0; // Only used by DActors with sprites
-  virtual void SetAnim(int seq) = 0;  // starts a requested animation sequence
+  virtual void SetAnim(animseq_e seq) = 0;  // starts a requested animation sequence
   int GetAnim() { return animseq; };
 
   virtual bool Update(int nowtic)      = 0; // Updates the animation, called before drawing
@@ -221,7 +166,7 @@ public:
   virtual ~spritepres_t();
 
   virtual void SetFrame(const state_t *st); // Only used by DActors with sprites
-  virtual void SetAnim(int seq);
+  virtual void SetAnim(animseq_e seq);
 
   virtual bool Update(int nowtic);
   virtual void Project(Actor *p);
@@ -237,33 +182,96 @@ public:
 };
 
 
+
+/*
+MD2 sequences?
+
+IDLE1         The first of four idle animations
+RUN           Animation for the model running. RUN FORREST RUN!
+SHOT_STAND    Animation for when the model gets shot, but stays standing
+SHOT_SHOULDER Animation for when the model gets shot in the shoulder (still standing though)
+JUMP          Animation for the model jumping
+IDLE2         The second of four idle animations
+SHOT_FALLDOWN Animation for the model getting shot, and falling to the ground (used for getting shot by big weapons)
+IDLE3         The third of four idle animations
+IDLE4         The fourth of four idle animations
+CROUCH        Animation for making the model crouch
+CROUCH_CRAWL  Having the model crawl while crouching
+CROUCH_IDLE   An idle animation while in a crouching position
+CROUCH_DEATH  The model dying while in a crouching position
+DEATH_FALLBACK     The model dying while falling backwards (death shot from the front)
+DEATH_FALLFORWARD  The model dying while falling forwards (death shot from the back)
+DEATH_FALLBACKSLOW The model dying while falling backwards slowly
+*/
+
+
+/// \brief Animation state for an MD3 model.
 struct MD3_animstate
 {
-  MD3_animseq_e seq; // current animation sequence
-  float interp;      // [0, 1) interpolation phase between frame and nextframe
-  int   frame, nextframe;
+  enum MD3_animseq_e
+  {
+    BOTH_DEATH1 = 0,
+    BOTH_DEAD1  = 1,
+    BOTH_DEATH2 = 2,
+    BOTH_DEAD2  = 3,
+    BOTH_DEATH3 = 4,
+    BOTH_DEAD3  = 5,
+
+    TORSO_GESTURE = 6,
+    TORSO_ATTACK  = 7,
+    TORSO_ATTACK2 = 8,
+    TORSO_DROP    = 9,
+    TORSO_RAISE   = 10,
+    TORSO_STAND   = 11,
+    TORSO_STAND2  = 12,
+
+    LEGS_WALKCR   = 13,
+    LEGS_WALK     = 14,
+    LEGS_RUN      = 15,
+    LEGS_BACK     = 16,
+    LEGS_SWIM     = 17,
+    LEGS_JUMP     = 18,
+    LEGS_LAND     = 19,
+    LEGS_JUMPB    = 20,
+    LEGS_LANDB    = 21,
+    LEGS_IDLE     = 22,
+    LEGS_IDLECR   = 23,
+    LEGS_TURN     = 24,
+    MAX_ANIMATIONS = 25
+  };
+
+  int   seq;    ///< current animation sequence
+  float interp; ///< [0, 1) interpolation phase between frame and nextframe
+  int   frame, nextframe; ///< current and next animation frames
+
+  /// advance the animation sequence by time dt using definitions 'anim'
+  void Advance(struct MD3_anim *anim, float dt);
 };
 
 
-/// \brief 3D model presentation
+/// \brief MD3 model presentation
 class modelpres_t : public presentation_t
 {
-  class MD3_player *mdl;
-
-  MD3_animstate st[3]; // legs, torso, head
+  class MD3_player *mdl; ///< MD3 player model to be used
+  MD3_animstate st[3];   ///< animation states for legs, torso, head
 
 public:
-
   modelpres_t(const char *mname, int col = 0, const char *skin = "default");
   virtual ~modelpres_t();
 
   virtual void SetFrame(const state_t *st) {}; // do nothing
-  virtual void SetAnim(int seq);
+  virtual void SetAnim(animseq_e seq);
 
   virtual bool Update(int nowtic);
   virtual void Project(Actor *p);
   virtual bool Draw(const Actor *p);
   virtual int  Marshal(LArchive &a);
+
+  /// Netcode
+  virtual void   Pack(class TNL::BitStream *s);
+  virtual void Unpack(class TNL::BitStream *s);
+  virtual void   PackAnim(class TNL::BitStream *s);
+  virtual void UnpackAnim(class TNL::BitStream *s);
 };
 
 

@@ -20,24 +20,20 @@
 /// \file
 /// \brief Quake III MD3 model class for Doom Legacy
 
-#include <iostream>
 #include <string.h>
 #include <math.h>
 
-#if defined(__MACOS__) || defined(__APPLE_CC__)
-#include <OpenGL/gl.h>
-#include <OpenGL/glext.h>
-#include <OpenGL/glu.h>
-#else
 #include <GL/gl.h>
-#include <GL/glext.h>
-#include <GL/glu.h>
-#endif
 
+#include "doomtype.h"
 #include "g_actor.h"
 #include "g_map.h"
-#include "g_game.h"
+
 #include "m_swap.h"
+#include "r_data.h"
+
+#include "tables.h"
+#include "w_wad.h"
 #include "z_zone.h"
 #include "hardware/md3.h"
 
@@ -89,238 +85,263 @@ cacheitem_t *modelcache_t::Load(const char *p)
 
 
 //====================================================
-// texture loading
-//====================================================
 
-static int CreateTexture(int width, int height, int format, char *data)
+/// \brief Class for TGA Textures
+class TGATexture : public LumpTexture
 {
-#ifndef NO_OPENGL
-  GLuint t;
-  
-  glGenTextures(1, &t);
-  glBindTexture(GL_TEXTURE_2D, t);
-  glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE); //Texture blends with object background
-  //glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);  //Texture does NOT blend with object background
+  // Loads 24 and 32bpp (alpha channel) TGA textures
+  // TGA format is little-endian (LSB)
+  struct TGAheader
+  {
+    byte IDlength;  // image ID field lenght
+    byte colormaptype; // 0 = no color maps used, 1 = color map included
+    byte imagetype; // 2 = uncompressed truecolor
+    byte colormapspec[5]; 
+    Uint16 xorigin;
+    Uint16 yorigin;
+    Uint16 width;
+    Uint16 height;
+    byte bpp;
+    byte imagedescriptor;  // bit flags
+    // image ID
+    // color map
+    // data
+    // and other fields follow...
+  };
 
-  //Select a filtering type. BiLinear filtering produces very good results with little performance impact
-  //GL_NEAREST               - Basic texture (grainy looking texture)
-  //GL_LINEAR                - BiLinear filtering
-  //GL_LINEAR_MIPMAP_NEAREST - Basic mipmapped texture
-  //GL_LINEAR_MIPMAP_LINEAR  - BiLinear Mipmapped texture  
+  int bpp;
 
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+protected:
+  virtual void GLGetData();
 
-  gluBuild2DMipmaps(GL_TEXTURE_2D, 3, width, height, format, GL_UNSIGNED_BYTE, data);
-
-  return t;
-#else
-  return 0;
-#endif
-}
-
-typedef unsigned char  byte; // 8 bit
-typedef unsigned short word; // 16 bit
-
-// Loads 24 and 32bpp (alpha channel) TGA textures
-// TGA format is little-endian (LSB)
-struct TGAheader
-{
-  byte IDlength;  // image ID field lenght
-  byte colormaptype; // 0 = no color maps used, 1 = color map included
-  byte imagetype; // 2 = uncompressed truecolor
-  byte colormapspec[5]; 
-  word xorigin;
-  word yorigin;
-  word width;
-  word height;
-  byte bpp;
-  byte imagedescriptor;  // bit flags
-  // image ID
-  // color map
-  // data
-  // and other fields follow...
+public:
+  TGATexture(const char *name, int lump);
+  virtual byte *GetData() { return NULL; };
 };
 
 
-static int LoadTGATexture(const char *filename)
+TGATexture::TGATexture(const char *filename, int l)
+  : LumpTexture(filename, l, 0, 0)
 {
   TGAheader h;
 
   FILE *file = fopen(filename, "rb");
   if (!file)
-    return -1;
+    {
+      I_Error("TGA file could not be opened.\n");
+      return;
+    }
 
   // read header 
   fread(&h, sizeof(TGAheader), 1, file);
+  fclose(file);
 
   //cout << "TGA: IDl = " << h.IDlength << ", cmt = " << h.colormaptype << ", it = " << h.imagetype << endl;
 
   // Only support uncompressed truecolor images with no color maps
   if (h.IDlength != 0 || h.imagetype != 2 || h.colormaptype != 0 || h.bpp < 24)
     {
-      fclose(file);
-      cout << "Unsupported TGA file type.\n";
-      return -1;
+      I_Error("Unsupported TGA file type.\n");
+      return;
     }
 
   // Get the width, height, and color depth
-  h.width = SHORT(h.width);
-  h.height = SHORT(h.height);
-  int imagesize = h.width * h.height * (h.bpp / 8);
+  width = SHORT(h.width);
+  height = SHORT(h.height);
+  bpp = h.bpp;
 
-  char *image = new char[imagesize];
-  fread(image, imagesize, 1, file);
-
-  //cout << "TGA: w = " << h.width << ", h = " << h.height << ", bpp = " << int(h.bpp) << endl;
-
-  int texture;
-  // TGAs are stored BGR and not RGB
-  // 32 bit TGA files have alpha channel and get loaded differently
-  if (h.bpp == 24)
-    texture = CreateTexture(h.width, h.height, GL_BGR, image);
-  else
-    texture = CreateTexture(h.width, h.height, GL_BGRA, image);
-
-  delete image;
-  return texture;
+  Initialize();
 }
 
-static int LoadTexture(const char *filename)
+
+void TGATexture::GLGetData()
 {
-  cout << "Loading texture file " << filename << ".\n";
-  return LoadTGATexture(filename);
+  if (!pixels)
+    {
+      FILE *file = fopen(name, "rb");
+      if (!file)
+	{
+	  I_Error("TGA file could not be opened.\n");
+	  return;
+	}
+
+      int imagesize = width * height * (bpp / 8);
+      // allocate space for RGBA data, owner is pixels
+      Z_Malloc(imagesize, PU_TEXTURE, (void **)(&pixels));
+
+      fread(pixels, imagesize, 1, file);
+      fclose(file);
+
+      // TGAs are stored BGR and not RGB
+      // 32 bit TGA files have alpha channel and get loaded differently
+      if (bpp == 24)
+	format = GL_BGR;
+      else
+	format = GL_BGRA;
+    }
 }
 
 //======================================================
 // MD3 class implementation
 //======================================================
 
+// constructor
+MD3_t::MD3_t()
+{
+  data = NULL;
+  meshes = NULL;
+}
+
+// destructor
+MD3_t::~MD3_t()
+{
+  if (data)
+    Z_Free(data);
+
+  if (meshes)
+    Z_Free(meshes);
+}
 
 // given a *.md3 file name, loads the model to memory
-bool MD3_t::Load(const char *filename)
+bool MD3_t::Load(const string& filename)
 {
   int i;
+  //cout << "Loading md3 file " << filename << endl;
 
-  cout << "Loading md3 file " << filename << endl;
-
-  FILE *file = fopen(filename, "rb");
-  if (!file)
+  int lump = fc.FindNumForName(filename.c_str());
+  if (lump < 0)
     {
+      CONS_Printf("MD3 file '%s' not found.\n", filename.c_str());
       return false;
     }
 
-  // read in header 
-  fread(&header, sizeof(MD3_header), 1, file);
+  data = static_cast<byte*>(fc.CacheLumpNum(lump, PU_MODEL));
+
+  // make a correct-endian copy of header (saves some pointer dereferences during rendering...)
+  MD3_header *h = reinterpret_cast<MD3_header*>(data);
+  memcpy(&header, h, 4+4+64); // first three fields
+  header.version = LONG(header.version);
 
   if (header.magic[0] != 'I' || header.magic[1] != 'D' ||
       header.magic[2] != 'P' || header.magic[3] != '3'
       || header.version != 15)
     {
-      fclose(file);
       return false;
     }
 
+  header.flags     = LONG(h->flags);
+  header.numFrames = LONG(h->numFrames);
+  header.numTags   = LONG(h->numTags);
+  header.numMeshes = LONG(h->numMeshes);
+  header.numSkins  = LONG(h->numSkins);
+  header.ofsFrames = LONG(h->ofsFrames);
+  header.ofsTags   = LONG(h->ofsTags);
+  header.ofsMeshes = LONG(h->ofsMeshes);
+  header.ofsEOF    = LONG(h->ofsEOF);
+
+
   // read frames
-  int nf = header.numFrames;
-  frames = (MD3_frame *)malloc(nf * sizeof(MD3_frame));
-  // frames = new MD3_frame[nf];
-  fseek(file, header.ofsFrames, SEEK_SET);
-  fread(frames, sizeof(MD3_frame), nf, file);
+  frames = reinterpret_cast<MD3_frame*>(data + header.ofsFrames);
 
   // read tags
   int nt = header.numTags;
-  tags = (MD3_tag *)malloc(nf * nt * sizeof(MD3_tag));
-  fseek(file, header.ofsTags, SEEK_SET);
-  fread(tags, sizeof(MD3_tag), nf * nt, file);
+  tags = reinterpret_cast<MD3_tag*>(data + header.ofsTags);
 
   // init links
-  links = (MD3_t **)malloc(nt);
-  for (i=0; i<nt; i++)
-    links[i] = NULL;
+  links.resize(nt, NULL);
 
   // read meshes
   int nm = header.numMeshes;
-  meshes = (MD3_mesh *)malloc(nm * sizeof(MD3_mesh));
-  int base = header.ofsMeshes;
+  meshes = (MD3_mesh *)Z_Malloc(nm * sizeof(MD3_mesh), PU_MODEL, NULL);
+  byte *meshbase = data + header.ofsMeshes;
   for (i=0; i<nm; i++)
     {
-      int n, m;
       // go to a new mesh
-      fseek(file, base, SEEK_SET);
-      fread(&meshes[i].header, sizeof(MD3_mesh_header), 1, file);
+      MD3_mesh_header *mh = reinterpret_cast<MD3_mesh_header*>(meshbase);
+      memcpy(&meshes[i].header, mh, 4+64); // first two fields
+
+      meshes[i].header.flags = LONG(mh->flags);
+      meshes[i].header.numFrames    = LONG(mh->numFrames);
+      meshes[i].header.numShaders   = LONG(mh->numShaders);
+      meshes[i].header.numVertices  = LONG(mh->numVertices);
+      meshes[i].header.numTriangles = LONG(mh->numTriangles);
+      meshes[i].header.ofsTriangles = LONG(mh->ofsTriangles);
+      meshes[i].header.ofsShaders   = LONG(mh->ofsShaders);
+      meshes[i].header.ofsST        = LONG(mh->ofsST);
+      meshes[i].header.ofsVertices  = LONG(mh->ofsVertices);
+      meshes[i].header.ofsEND       = LONG(mh->ofsEND);
 
       // load the shaders (skins)
       // TODO how are these used?
-      n = meshes[i].header.numShaders;
-      meshes[i].shaders = (MD3_shader *)malloc(n * sizeof(MD3_shader));
-      fseek(file, base + meshes[i].header.ofsShaders, SEEK_SET);
-      fread(meshes[i].shaders, sizeof(MD3_shader), n, file);
+      meshes[i].shaders = reinterpret_cast<MD3_mesh_shader*>(meshbase + meshes[i].header.ofsShaders);
 
       // triangles
-      n = meshes[i].header.numTriangles;
-      meshes[i].triangles = (MD3_triangle *)malloc(n * sizeof(MD3_triangle));
-      fseek(file, base + meshes[i].header.ofsTriangles, SEEK_SET);
-      fread(meshes[i].triangles, sizeof(MD3_triangle), n, file);
+      meshes[i].triangles = reinterpret_cast<MD3_mesh_triangle*>(meshbase + meshes[i].header.ofsTriangles);
 
-      // texture coordinates
-      n = meshes[i].header.numVertices;
-      meshes[i].texcoords = (MD3_texcoord *)malloc(n * sizeof(MD3_texcoord));
-      fseek(file, base + meshes[i].header.ofsST, SEEK_SET);
-      fread(meshes[i].texcoords, sizeof(MD3_texcoord), n, file);
+      // texture coordinates (count == numVertices)
+      meshes[i].texcoords = reinterpret_cast<MD3_mesh_texcoord*>(meshbase + meshes[i].header.ofsST);
 
-      // and vertices
-      m = meshes[i].header.numFrames;
-      meshes[i].vertices = (MD3_vertex *)malloc(n * m * sizeof(MD3_vertex));
-      fseek(file, base + meshes[i].header.ofsVertices, SEEK_SET);
-      fread(meshes[i].vertices, sizeof(MD3_vertex), n * m, file);
+      // and vertices (count == numVertices * numFrames)
+      meshes[i].vertices = reinterpret_cast<MD3_mesh_vertex*>(meshbase + meshes[i].header.ofsVertices);
 
-      meshes[i].texture = 0;
-      base = base + meshes[i].header.ofsEND;
+      meshes[i].texture = NULL;
+      meshbase += meshes[i].header.ofsEND;
     }
-
-  fclose(file);
 
   //header.numFrames--; // why?
   return true;
 }
 
-void MD3_t::LoadMeshTexture(const char *meshname, const char *imagefile)
-{
-  // Find the right mesh item to assign the skin to
-  for (int i=0; i < header.numMeshes; i++)
-    {
-      // check it the two names are the same
-      if (strcasecmp(meshes[i].header.name, meshname) == 0)
-	meshes[i].texture = LoadTexture(imagefile);
-    }
-}
+
 
 // reads the *.skin files and loads the mesh skin textures accordingly
-bool MD3_t::LoadSkinFile(const string & path, const string & filename)
+bool MD3_t::LoadSkinFile(const string& path, const string& filename)
 {
   char meshname[50]; // enough? 
-  char imagefile[50]; 
+  char texname[50]; 
 
-  cout << "Loading skin file " << path << filename << endl;
-  FILE *file = fopen((path+filename).c_str(), "rb");
-  if (!file)
-    return false;
-
-  while (fscanf(file, "%49[^,]%49s\n", meshname, imagefile) != EOF)
+  //cout << "Loading skin file " << path << filename << endl;
+  int lump = fc.FindNumForName((path + filename).c_str());
+  if (lump < 0)
     {
-      if (strlen(imagefile) > 1 && strlen(meshname) > 0 &&
+      CONS_Printf("MD3 skin file '%s' not found.\n", filename.c_str());
+      return false;
+    }
+
+  // parse the lump
+  char * const base = static_cast<char*>(fc.CacheLumpNum(lump, PU_STATIC));
+  base[fc.LumpLength(lump) - 1] = 0; // HACK, add NUL char at the end, overwrites part of last tag_ declaration...
+  char *r = base;
+
+  while (sscanf(r, "%49[^,],%49[^\n\r]", meshname, texname) == 2)
+    {
+      r = strchr(r, '\n');
+      if (!r)
+	break; // probably hit NUL in sscanf
+
+      r += 1; // jump to char after newline
+
+      if (strlen(texname) > 1 && strlen(meshname) > 0 &&
 	  strncmp(meshname, "tag_", 4) != 0) // tags dont have skins
 	{
-	  // we must strip the path away from imagefile and replace it with our own:
-	  char *p = strrchr(imagefile, '/'); // find last slash
-	  string ifile = path + string(p+1);
-	  cout << " -- mesh " << meshname << " -- Texture " << ifile << endl;
-	  LoadMeshTexture(meshname, ifile.c_str());
+	  // we must strip the path away from texname and replace it with our own:
+	  char *p = strrchr(texname, '/'); // find last slash
+	  if (!p)
+	    continue;
+
+	  string tname = path + string(p+1);
+
+	  // Find the right mesh item to assign the skin to
+	  for (int i=0; i < header.numMeshes; i++)
+	    {
+	      // check it the two names are the same
+	      if (strcasecmp(meshes[i].header.name, meshname) == 0)
+		meshes[i].texture = tc.GetPtr(tname.c_str(), TEX_lod, false); // TEST use long names!
+	    }
 	}
     }
 
-  fclose(file);
+  Z_Free(base);
   return true;
 }
 
@@ -350,11 +371,11 @@ void MD3_t::DrawInterpolated(MD3_animstate *st)
   for (int m=0; m<header.numMeshes; m++, mesh++)
     {
       // pointers to the vertex data of the frames
-      MD3_vertex *cv = &mesh->vertices[st->frame * mesh->header.numVertices];
-      MD3_vertex *nv = &mesh->vertices[st->nextframe * mesh->header.numVertices];
+      MD3_mesh_vertex *cv = &mesh->vertices[st->frame * mesh->header.numVertices];
+      MD3_mesh_vertex *nv = &mesh->vertices[st->nextframe * mesh->header.numVertices];
 
-      if (mesh->texture != 0)
-	glBindTexture(GL_TEXTURE_2D, mesh->texture);
+      if (mesh->texture)
+	glBindTexture(GL_TEXTURE_2D, mesh->texture->GLPrepare());
 
       int i, j, k, n = mesh->header.numTriangles;
       GLfloat s, t;
@@ -386,7 +407,7 @@ void MD3_t::DrawInterpolated(MD3_animstate *st)
 
 	      s = mesh->texcoords[index].s;
 	      t = mesh->texcoords[index].t;
-	      glTexCoord2f(s, 1-t);
+	      glTexCoord2f(s, t);
 
 	      glNormal3fv(norm);
 	      glVertex3fv(v);
@@ -470,44 +491,36 @@ MD3_player::MD3_player(const char *n)
 {
 }
 
-MD3_player::~MD3_player()
-{
-  // TODO free model data
-}
+MD3_player::~MD3_player() {}
 
 
 // loads a player model to memory
 // path should end in a slash
-bool MD3_player::Load(const string & path, const string & skin)
+bool MD3_player::Load(const string& path, const string& skin)
 {
   // TODO: load a model from PK3 archive!
   // TODO: switch skins online!
 
-  bool ok;
-  ok = legs.Load((path + string("lower.md3")).c_str()) &&
-    torso.Load((path + string("upper.md3")).c_str()) &&
-    head.Load((path + string("head.md3")).c_str());
+  if (!legs.Load(path + string("lower.md3")) && !legs.Load(path + string("lower.MD3")))
+    return false;
 
-  if (!ok)
-    {
-      cout << "problem 1\n";
-      return false;
-    }
+  if (!torso.Load(path + string("upper.md3")) && !torso.Load(path + string("upper.MD3")))
+    return false;
 
-  ok = legs.LoadSkinFile(path, string("lower_") + skin + string(".skin")) &&
-    torso.LoadSkinFile(path, string("upper_") + skin + string(".skin")) &&
-    head.LoadSkinFile(path, string("head_") + skin + string(".skin"));
+  if (!head.Load(path + string("head.md3")) && !head.Load(path + string("head.MD3")))
+    return false;
 
-  // FIXME generate textures here, now the same texture file is read N times
-  // and N textures are generated...
+  if (!legs.LoadSkinFile(path, string("lower_") + skin + string(".skin")))
+    return false;
 
-  if (!ok)
-    {
-      cout << "problem 2\n";
-      return false;
-    }
+  if (!torso.LoadSkinFile(path, string("upper_") + skin + string(".skin")))
+    return false;
 
-  LoadAnim((path + string("animation.cfg")).c_str());
+  if (!head.LoadSkinFile(path, string("head_") + skin + string(".skin")))
+    return false;
+
+  if (!LoadAnim(path + string("animation.cfg")))
+    return false;
 
   legs.Link("tag_torso", &torso);
   torso.Link("tag_head", &head);
@@ -516,20 +529,28 @@ bool MD3_player::Load(const string & path, const string & skin)
 }
 
 // load animation sequences, *.cfg
-bool MD3_player::LoadAnim(const char *filename)
+bool MD3_player::LoadAnim(const string& filename)
 {
   char buf[100];
   int first, num, loop, fps;
 
-  cout << "Loading animations file " << filename << endl;
+  //cout << "Loading animations file " << filename << endl;
+  int lump = fc.FindNumForName(filename.c_str());
+  if (lump < 0)
+    {
+      CONS_Printf("MD3 animations file '%s' not found.\n", filename.c_str());
+      return false;
+    }
 
-  FILE *file = fopen(filename, "rb");
-  if (!file)
-    return false;
+  // parse the lump
+  char * const base = static_cast<char*>(fc.CacheLumpNum(lump, PU_STATIC));
+  char *r = base;
 
   int i = 0;
-  while (fscanf(file, "%99[^\n]\n", buf) != EOF)
+  while (sscanf(r, "%99[^\n]\n", buf) != EOF)
     {
+      r = strchr(r, '\n') + 1; // jump to char after newline
+
       // TODO these probably also mean something...
       //if (strstr(buf, "sex") != NULL) {}
       //else if (strstr(buf, "headoffset") != NULL) {}
@@ -544,11 +565,11 @@ bool MD3_player::LoadAnim(const char *filename)
 	  i++;
 	}
     }
-  fclose(file);
+  Z_Free(base);
 
   // legs and torso are independent models
-  int skip = anim[LEGS_WALKCR].firstframe - anim[TORSO_GESTURE].firstframe;
-  for (i=LEGS_WALKCR; i<MAX_ANIMATIONS; i++)
+  int skip = anim[MD3_animstate::LEGS_WALKCR].firstframe - anim[MD3_animstate::TORSO_GESTURE].firstframe;
+  for (i=MD3_animstate::LEGS_WALKCR; i<MD3_animstate::MAX_ANIMATIONS; i++)
     {
       anim[i].firstframe -= skip;
       anim[i].lastframe -= skip;
@@ -564,14 +585,14 @@ bool MD3_player::LoadAnim(const char *filename)
 
 modelpres_t::modelpres_t(const char *name, int col, const char *skin)
 {
-  // TODO skin is not used
+  // TODO skin is not used (mesh textures (skins) should be stored here, not with meshes)
   color = col;
   mdl = models.Get(name);
 
-  SetAnim(TORSO_STAND);
-  SetAnim(LEGS_IDLE);
-  st[3].nextframe = 0;
-  st[3].seq = MD3_animseq_e(0);
+  SetAnim(Idle);
+
+  st[2].nextframe = 0;
+  st[2].seq = MD3_animstate::MD3_animseq_e(0);
 
   for (int i=0; i<3; i++)
     {
@@ -579,7 +600,7 @@ modelpres_t::modelpres_t(const char *name, int col, const char *skin)
       st[i].interp = 0.0f;
     }
 
-  lastupdate = game.tic;
+  lastupdate = 0;
 }
 
 
@@ -590,30 +611,162 @@ modelpres_t::~modelpres_t()
 
 
 // set a new animation sequence for the player
-void modelpres_t::SetAnim(int seq)
+void modelpres_t::SetAnim(animseq_e seq)
 {
-  if (seq < 0)
-    return;
-  else if (seq <= BOTH_DEAD3)
+  /*
+  if (animseq == seq)
+    return; // do not interrupt the animation
+  */
+
+  animseq = seq;
+
+  // map Legacy animation sequence to Q3 sequences
+  int torso_seq = st[1].seq, leg_seq = st[0].seq;
+  switch (seq)
     {
-      // common sequences
-      st[0].seq = st[1].seq = MD3_animseq_e(seq);
-      st[0].nextframe = st[1].nextframe = mdl->anim[seq].firstframe;
+    case Idle:
+    default:
+      torso_seq = MD3_animstate::TORSO_STAND;
+      leg_seq = MD3_animstate::LEGS_IDLE;
+      break;
+
+    case Run:
+      //torso_seq = MD3_animstate::TORSO_STAND2;
+      leg_seq = MD3_animstate::LEGS_WALK;
+      break;
+
+    case Pain:
+      torso_seq = MD3_animstate::TORSO_GESTURE;
+      break;
+
+    case Melee:
+      torso_seq = MD3_animstate::TORSO_ATTACK2;
+      break;
+
+    case Shoot:
+      torso_seq = MD3_animstate::TORSO_ATTACK;
+      break;
+
+    case Death1:
+      torso_seq = leg_seq = MD3_animstate::BOTH_DEATH1;
+      break;
+
+    case Death2:
+      torso_seq = leg_seq = MD3_animstate::BOTH_DEATH2;
+      break;
+
+    case Death3:
+      torso_seq = leg_seq = MD3_animstate::BOTH_DEATH3;
+      break;
+
+    case Raise:
+      torso_seq = MD3_animstate::TORSO_STAND2;
+      leg_seq = MD3_animstate::LEGS_IDLECR;
+      break;
     }
-  else if (seq <= TORSO_STAND2)
+
+  if (torso_seq != st[1].seq)
     {
-      // torso sequences
-      st[1].seq = MD3_animseq_e(seq);
-      st[1].nextframe = mdl->anim[seq].firstframe;
+      // change torso sequence
+      st[1].seq = torso_seq;
+      st[1].nextframe = mdl->anim[torso_seq].firstframe;
     }
-  else if (seq <= LEGS_TURN)
+
+  if (leg_seq != st[0].seq)
     {
       // leg sequences
-      st[0].seq = MD3_animseq_e(seq);
-      st[0].nextframe = mdl->anim[seq].firstframe;
+      st[0].seq = leg_seq;
+      st[0].nextframe = mdl->anim[leg_seq].firstframe;
     }
+
+  // original Q3 sequences
+  /*
+  if (q3seq <= MD3_animstate::BOTH_DEAD3)
+    {
+      // common sequences
+      st[0].seq = st[1].seq = q3seq;
+      st[0].nextframe = st[1].nextframe = mdl->anim[q3seq].firstframe;
+    }
+  else if (q3seq <= MD3_animstate::TORSO_STAND2)
+    {
+      // torso sequences
+      st[1].seq = q3seq;
+      st[1].nextframe = mdl->anim[q3seq].firstframe;
+    }
+  else if (q3seq <= MD3_animstate::LEGS_TURN)
+    {
+      // leg sequences
+      st[0].seq = q3seq;
+      st[0].nextframe = mdl->anim[q3seq].firstframe;
+    }
+  */
 }
 
+
+void MD3_animstate::Advance(MD3_anim *anim, float dt)
+{
+  const int next_looping[MAX_ANIMATIONS] =
+    {
+      BOTH_DEAD1,
+      BOTH_DEAD1,
+      BOTH_DEAD2,
+      BOTH_DEAD2,
+      BOTH_DEAD3,
+      BOTH_DEAD3,
+
+      TORSO_STAND,
+      TORSO_STAND,
+      TORSO_STAND,
+      TORSO_STAND,
+      TORSO_STAND,
+      TORSO_STAND,
+      TORSO_STAND2,
+
+      LEGS_WALKCR,
+      LEGS_WALK,
+      LEGS_RUN,
+      LEGS_BACK,
+      LEGS_SWIM,
+      LEGS_IDLE,
+      LEGS_IDLE,
+      LEGS_IDLE,
+      LEGS_IDLE,
+      LEGS_IDLE,
+      LEGS_IDLECR,
+      LEGS_TURN
+    };
+
+  // current animation
+  MD3_anim *a = &anim[seq];
+
+  // advance interpolation by elapsed time
+  float in = interp + a->fps*dt;
+
+  if (in > 10)
+    in = 10; // TODO long lapses are skipped
+
+  while (in >= 1.0)
+    {
+      // advance one frame
+      in--;
+      frame = nextframe;
+      if (++nextframe > a->lastframe)
+	{
+	  // find the next looping sequence
+	  if (a->loopframes <= 0)
+	    {
+	      seq = next_looping[seq];
+	      a = &anim[seq];
+	      nextframe = a->firstframe;
+	      continue;
+	    }
+	  else
+	    nextframe -= a->loopframes;
+	}
+    }
+
+  interp = in; // remainder
+}
 
 bool modelpres_t::Update(int nowtic)
 {
@@ -622,24 +775,9 @@ bool modelpres_t::Update(int nowtic)
   // For some reason head is never animated? Always frame 0 for head.
   for (int i=0; i<2; i++)
     {
-      MD3_anim *a = &mdl->anim[st[i].seq];
-
-      // advance interpolation by elapsed time
-      float in = st[i].interp + a->fps*dt;
-      
-      if (in > 10)
-	in = 10; // FIXME long lapses are skipped
-
-      while (in >= 1.0)
-	{
-	  in--;
-	  st[i].frame = st[i].nextframe;
-	  if (++(st[i].nextframe) > a->lastframe)
-	    st[i].nextframe -= a->loopframes;
-	}
-
-      st[i].interp = in; // remainder
+      st[i].Advance(mdl->anim, dt);
     }
+
   lastupdate = nowtic;
   return true;
 }
@@ -649,22 +787,42 @@ bool modelpres_t::Update(int nowtic)
 bool modelpres_t::Draw(const Actor *p)
 {
   Update(p->mp->maptic);
-  /*
-    // TODO T&L for models
+
+  glFrontFace(GL_CW); // MD3s use this winding
+  glMatrixMode(GL_MODELVIEW);
   glPushMatrix();
 
-  float ang = (R_PointToAngle(thing->x, thing->y) >> 24);
+  vec_t<fixed_t> pos = p->pos;
 
-  glTranslatef(tr->tx, ty, -tz);
+  // TODO what is the correct floorlevel offset?
+  glTranslatef(pos.x.Float(), pos.y.Float(), pos.z.Float() + mdl->legs.frames[st[0].frame].radius*0.66);
+  glScalef(0.7, 0.7, 0.7);
+  //glRotatef(Degrees(p->pitch), 1, 0, 0);
+  glRotatef(Degrees(p->yaw), 0, 0, 1);
 
-  glScalef(1,1,1);
-  glRotatef((p->aiming >> 24)*(360.0f/256), 1, 0, 0);
-  glRotatef((p->angle >> 24)*(360.0f/256), 0, 0, 1);
-
-  legs.DrawRecursive(st);
+  mdl->legs.DrawRecursive(&st[0]);
 
   glPopMatrix();
-  */
-
+  glFrontFace(GL_CCW);
   return true;
+}
+
+
+// TODO netcode for MD3 models
+void modelpres_t::Pack(TNL::BitStream *s)
+{
+}
+
+void modelpres_t::Unpack(TNL::BitStream *s)
+{
+}
+
+
+void modelpres_t::PackAnim(TNL::BitStream *s)
+{
+}
+
+
+void modelpres_t::UnpackAnim(TNL::BitStream *s)
+{
 }

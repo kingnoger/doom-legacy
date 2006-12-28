@@ -750,6 +750,7 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 	    {
 	      eflags |= MFE_JUSTHIT; // fight back!
 	      SetState(info->painstate);
+	      pres->SetAnim(presentation_t::Pain);
 	    }
 	  else
 	    { // "electrocute" the target
@@ -764,6 +765,7 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 	{
 	  eflags |= MFE_JUSTHIT;    // fight back!
 	  SetState(info->painstate);
+	  pres->SetAnim(presentation_t::Pain);
 
 	  /* TODO poisonhowl
 	  if (inflictor && inflictor->type == MT_POISONCLOUD)
@@ -808,7 +810,10 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
       target = source;
       threshold = BASETHRESHOLD;
       if (state == info->spawnstate && info->seestate)
-	SetState(info->seestate);
+	{
+	  SetState(info->seestate);
+	  pres->SetAnim(presentation_t::Run);
+	}
     }
 
   return true;
@@ -1098,6 +1103,7 @@ void DActor::Die(Actor *inflictor, Actor *source, int dtype)
       else
 	{
 	  SetState(S_GIBS);
+	  pres->SetAnim(presentation_t::Death3);
 	  S_StartSound(this, sfx_gib); // lets have a neat 'crunch' sound!
 	}
 
@@ -1126,9 +1132,15 @@ void DActor::Die(Actor *inflictor, Actor *source, int dtype)
   if (((game.mode < gm_heretic && health < -info->spawnhealth)
        ||(game.mode >= gm_heretic && health < -(info->spawnhealth>>1)))
       && info->xdeathstate)
-    SetState(info->xdeathstate);
+    {
+      SetState(info->xdeathstate);
+      pres->SetAnim(presentation_t::Death2);
+    }
   else
-    SetState(info->deathstate);
+    {
+      SetState(info->deathstate);
+      pres->SetAnim(presentation_t::Death1);
+    }
   // Normally, A_Fall or A_NoBlocking follow the deathstate and make the thing a nonsolid corpse
 
   tics -= P_Random()&3;

@@ -89,7 +89,7 @@ PNGTexture::PNGTexture(const char *n, int l)
 
 
 
-byte *PNGTexture::Generate()
+byte *PNGTexture::GetData()
 {
   if (!pixels)
     ReadData(true, true);
@@ -98,12 +98,10 @@ byte *PNGTexture::Generate()
 }
 
 
-RGBA_t *PNGTexture::GenerateGL()
+void PNGTexture::GLGetData()
 {
   if (!pixels)
     ReadData(true, false);
-
-  return reinterpret_cast<RGBA_t*>(pixels);
 }
 
 
@@ -267,6 +265,7 @@ bool PNGTexture::ReadData(bool read_image, bool sw_rend)
 	  png_destroy_read_struct(&png_p, &info_p, NULL);
 	  // discard any end chunks (comments etc.)
 	  Z_Free(tmpdata); // free the raw data
+	  format = GL_RGBA;
 	}
     }
 

@@ -36,7 +36,7 @@
 #include "tables.h"
 #include "w_wad.h"
 
-
+#include "hardware/md3.h"
 
 //==========================================================================
 //                         Global functions
@@ -51,7 +51,9 @@ void R_InitSprites(char** namelist)
     negonearray[i] = -1;
 
   sprites.SetDefaultItem("SMOK");
-  //models.SetDefaultItem("models/sarge/");
+#ifdef TEST_MD3
+  models.SetDefaultItem("models/players/imp/");
+#endif
   //MD3_InitNormLookup();
 
   // now check for sprite skins
@@ -659,9 +661,6 @@ void presentation_t::operator delete(void *mem)
   Z_Free(mem);
 }
 
-presentation_t::~presentation_t()
-{}
-
 
 spritepres_t::spritepres_t()
 {
@@ -702,7 +701,7 @@ void spritepres_t::PackAnim(BitStream *s)
 
 void spritepres_t::UnpackAnim(BitStream *s)
 {
-  animseq = s->readInt(8);
+  animseq = animseq_e(s->readInt(8));
   SetFrame(&states[s->readInt(16)]);
 }
 
@@ -755,8 +754,9 @@ void spritepres_t::SetFrame(const state_t *st)
 
 
 /// This is needed for PlayerPawns.
-void spritepres_t::SetAnim(int seq)
+void spritepres_t::SetAnim(animseq_e seq)
 {
+  /*
   const state_t *st;
 
   if (animseq == seq)
@@ -806,6 +806,7 @@ void spritepres_t::SetAnim(int seq)
     }
 
   SetFrame(st);
+  */
 }
 
 

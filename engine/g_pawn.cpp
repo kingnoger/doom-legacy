@@ -844,8 +844,9 @@ void PlayerPawn::XYFriction(fixed_t oldx, fixed_t oldy)
     }
   else if (cheats & CF_FLYAROUND)
     {
-      // no friction
-      return;
+      // no friction when airborne
+      if (pos.z > floorz)
+	return;
     }
 
   const fixed_t STOPSPEED = 0.0625f;

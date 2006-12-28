@@ -39,17 +39,26 @@ struct wadheader_t
   int  diroffset;  // offset to WAD directory
 };
 
-// a WAD directory entry
+// a WAD file directory entry
+struct waddir_file_t
+{
+  int  offset;  // file offset of the resource
+  int  size;    // size of the resource
+  char name[8]; // name of the resource (NUL-padded)
+};
+
+// a runtime WAD directory entry
 struct waddir_t
 {
   int  offset;  // file offset of the resource
   int  size;    // size of the resource
   union
   {
-    char name[8]; // name of the resource (NUL-padded)
+    char name[9]; // name of the resource (NUL-terminated)
     int  iname[2];
   };
 };
+
 
 // a WAD2 or WAD3 directory entry
 struct wad3dir_t
@@ -186,19 +195,24 @@ bool Wad::Open(const char *fname)
 
   // read wad file directory
   fseek(stream, diroffset, SEEK_SET);
-  waddir_t *p = directory = (waddir_t *)Z_Malloc(numitems * sizeof(waddir_t), PU_STATIC, NULL); 
-  fread(directory, sizeof(waddir_t), numitems, stream);  
+  waddir_file_t *temp = (waddir_file_t *)Z_Malloc(numitems * sizeof(waddir_file_t), PU_STATIC, NULL); 
+  fread(temp, sizeof(waddir_file_t), numitems, stream);  
 
-  // endianness conversion for directory
-  for (int i = 0; i < numitems; i++, p++)
+  directory = (waddir_t *)Z_Malloc(numitems * sizeof(waddir_t), PU_STATIC, NULL);
+  memset(directory, 0, numitems * sizeof(waddir_t));
+
+  // endianness conversion and NUL-termination for directory
+  for (int i = 0; i < numitems; i++)
     {
-      p->offset = LONG(p->offset);
-      p->size   = LONG(p->size);
-      TestPadding(p->name, 8);
+      directory[i].offset = LONG(temp[i].offset);
+      directory[i].size   = LONG(temp[i].size);
+      TestPadding(temp[i].name, 8);
+      strncpy(directory[i].name, temp[i].name, 8);
     }
 
-  h.numentries = 0; // what a great hack!
+  Z_Free(temp);
 
+  h.numentries = 0; // what a great hack!
   CONS_Printf("Added %s file %s (%i lumps)\n", h.magic, filename.c_str(), numitems);
   LoadDehackedLumps();
   return true;

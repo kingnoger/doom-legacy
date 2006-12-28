@@ -232,7 +232,7 @@ void LumpTexture::Draw(float x, float y, int scrn)
     }
 
   int zzz = (y2-y1)*vid.width; // LFB offset from top to bottom, past-the-end
-  byte *base = Generate(); // in col-major order!
+  byte *base = GetData(); // in col-major order!
 
   for ( ; dest_tl < dest_tr; col += colfrac, dest_tl++)
     {
@@ -269,7 +269,7 @@ void LumpTexture::DrawFill(int x, int y, int w, int h)
     return;
   }
 
-  byte *flat = Generate(); // in col-major order
+  byte *flat = GetData(); // in col-major order
   byte *base_dest = vid.screens[0] + y*vid.dupy*vid.width + x*vid.dupx + vid.scaledofs;
 
   w *= vid.dupx;

@@ -212,14 +212,48 @@ void Texture::operator delete(void *mem)
 }
 
 
+// This basic version of the virtual method is used for native indexed col-major formats.
+void Texture::GLGetData()
+{
+  if (!pixels)
+    {
+      GetData(); // reads data into pixels as indexed, col-major
+      byte *index_in = pixels;
+
+      RGBA_t *result = static_cast<RGBA_t*>(Z_Malloc(sizeof(RGBA_t)*width*height, PU_TEXTURE, NULL));
+      RGB_t *palette = static_cast<RGB_t*>(fc.CacheLumpName("PLAYPAL", PU_CACHE));
+
+      for (int i=0; i<width; i++)
+	for (int j=0; j<height; j++)
+	  {
+	    byte curbyte = *index_in++;
+	    RGB_t  *rgb_in = &palette[curbyte];
+	    RGBA_t *rgba_out = &result[j*width + i]; // transposed
+	    rgba_out->red   = rgb_in->r;
+	    rgba_out->green = rgb_in->g;
+	    rgba_out->blue  = rgb_in->b;
+	    if (curbyte == TRANSPARENTPIXEL)
+	      rgba_out->alpha = 0;
+	    else
+	      rgba_out->alpha = 255;
+	  }
+
+      // replace pixels by the RGBA row-major version
+      Z_Free(pixels);
+      pixels = reinterpret_cast<byte*>(result);
+      format = GL_RGBA;
+    }
+}
+
+
 /// Creates a GL texture.
+/// Uses the virtualized GLGetData().
 GLuint Texture::GLPrepare()
 {
 #ifndef NO_OPENGL
   if (glid == NOTEXTURE)
     {
-      GetData(); // reads pixels
-      byte *rgba = reinterpret_cast<byte*>(ColumnMajorToRGBA(pixels, width, height));
+      GLGetData();
 
       // Discard old texture if we had one.
       /*
@@ -231,15 +265,13 @@ GLuint Texture::GLPrepare()
       glBindTexture(GL_TEXTURE_2D, glid);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+      // TODO: per-texture filtering mode
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, 
-		      GL_NEAREST_MIPMAP_NEAREST);
-      gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGBA, width, height, GL_RGBA, \
-			GL_UNSIGNED_BYTE, rgba);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+      gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGBA, width, height, format, GL_UNSIGNED_BYTE, pixels);
 
       //  CONS_Printf("Created GL texture %d for %s.\n", glid, name);
-
-      Z_Free(rgba);
+      // TODO free and null pixels?
     }
 #endif
   return glid;
@@ -261,6 +293,19 @@ bool Texture::ClearGLTexture()
 }
 
 
+
+// Basic form for GetColumn, uses virtualized GetData.
+byte *Texture::GetColumn(fixed_t fcol)
+{
+  int col = (fcol * xscale).floor() % width;
+
+  if (col < 0)
+    col += width; // wraparound
+
+  return GetData() + col * height;
+}
+
+
 //==================================================================
 //  LumpTexture
 //==================================================================
@@ -278,40 +323,9 @@ LumpTexture::LumpTexture(const char *n, int l, int w, int h)
 }
 
 
-/// Creates a GL texture.
-/// LumpTextures are stored row-major, so it makes no sense to transpose them twice...
-GLuint LumpTexture::GLPrepare()
-{
-#ifndef NO_OPENGL
-  if (glid == NOTEXTURE)
-    {
-      byte *rgba = reinterpret_cast<byte*>(GenerateGL()); // reads pixels untransposed
-
-      // Discard old texture if we had one.
-      /*
-      if(glid != NOTEXTURE)
-	glDeleteTextures(1, &glid);
-      */
-
-      glGenTextures(1, &glid);
-      glBindTexture(GL_TEXTURE_2D, glid);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, 
-		      GL_NEAREST_MIPMAP_NEAREST);
-      gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGBA, width, height, GL_RGBA, \
-			GL_UNSIGNED_BYTE, rgba);
-
-      //  CONS_Printf("Created GL texture %d for %s.\n", glid, name);
-    }
-#endif
-  return glid;
-}
-
 
 /// This method handles the Doom flats and raw pages for OpenGL.
-RGBA_t *LumpTexture::GenerateGL()
+void LumpTexture::GLGetData()
 {
   if (!pixels)
     {
@@ -332,7 +346,7 @@ RGBA_t *LumpTexture::GenerateGL()
 	for (int j=0; j<height; j++)
 	  {
 	    byte curbyte = *index_in++;
-	    RGB_t *rgb_in = &palette[curbyte];
+	    RGB_t *rgb_in = &palette[curbyte]; // untransposed
 	    rgba_out->red   = rgb_in->r;
 	    rgba_out->green = rgb_in->g;
 	    rgba_out->blue  = rgb_in->b;
@@ -345,14 +359,13 @@ RGBA_t *LumpTexture::GenerateGL()
 	  }
 
       Z_Free(temp); // free indexed data
+      format = GL_RGBA;
     }
-
-  return reinterpret_cast<RGBA_t*>(pixels);
 }
 
 
 /// This method handles the Doom flats and raw pages.
-byte *LumpTexture::Generate()
+byte *LumpTexture::GetData()
 {
   if (!pixels)
     {
@@ -372,22 +385,17 @@ byte *LumpTexture::Generate()
 	}
       Z_Free(temp);
 
+      // do a palette conversion if needed
+      byte *colormap = tc.GetPaletteConv(lump >> 16);
+      if (colormap)
+	for (int i=0; i<len; i++)
+	  pixels[i] = colormap[pixels[i]];
+
       // convert to high color
       // short pix16 = ((color8to16[*data++] & 0x7bde) + ((i<<9|j<<4) & 0x7bde))>>1;
     }
 
   return pixels;
-}
-
-
-byte *LumpTexture::GetColumn(fixed_t fcol)
-{
-  int col = (fcol * xscale).floor() % width;
-
-  if (col < 0)
-    col += width; // wraparound
-
-  return Generate() + col * height;
 }
 
 
@@ -483,7 +491,7 @@ patch_t *PatchTexture::GeneratePatch()
 
 
 /// sets pixels (which implies that patch_data is also set)
-byte *PatchTexture::GenerateData()
+byte *PatchTexture::GetData()
 {
   if (!pixels)
     {
@@ -499,7 +507,6 @@ byte *PatchTexture::GenerateData()
 	  column_t *patchcol = reinterpret_cast<column_t*>(patch_data + p->columnofs[col]);
 	  R_DrawColumnInCache(patchcol, pixels + col * height, 0, height);
 	}
-
     }
 
   return pixels;
@@ -518,25 +525,13 @@ column_t *PatchTexture::GetMaskedColumn(fixed_t fcol)
 }
 
 
-byte *PatchTexture::GetColumn(fixed_t fcol)
-{
-  int col = (fcol * xscale).floor() % width;
-
-  if (col < 0)
-    col += width; // wraparound
-
-  return GenerateData() + col * height;
-}
-
-
-
 //==================================================================
 //  DoomTexture
 //==================================================================
 
 
-DoomTexture::DoomTexture(const maptexture_t *mtex)
-  : Texture(mtex->name)
+DoomTexture::DoomTexture(const char *n, const maptexture_t *mtex)
+  : Texture(n)
 {
   patchcount = SHORT(mtex->patchcount);
   patches = (texpatch_t *)Z_Malloc(sizeof(texpatch_t)*patchcount, PU_TEXTURE, 0);
@@ -622,7 +617,7 @@ patch_t *DoomTexture::GeneratePatch()
 }
 
 
-byte *DoomTexture::GenerateData()
+byte *DoomTexture::GetData()
 {
   if (!pixels)
     {
@@ -669,8 +664,7 @@ byte *DoomTexture::GenerateData()
 	  Z_Free(p);
         }
 
-      // Now that the texture has been built in column cache,
-      //  it is purgable from zone memory.
+      // TODO do a palette conversion if needed
       //Z_ChangeTag(pixels, PU_CACHE);
     }
 
@@ -684,7 +678,7 @@ byte *DoomTexture::GetColumn(fixed_t fcol)
 {
   int col = (fcol * xscale).floor();
 
-  return GenerateData() + columnofs[col & widthmask];
+  return GetData() + columnofs[col & widthmask];
 }
 
 
@@ -860,44 +854,50 @@ void texturecache_t::InitPaletteConversion()
 
 
 /// Returns pointer to an existing Texture, or tries creating it if nonexistant.
-Texture *texturecache_t::GetPtr(const char *name, texture_class_t mode)
+Texture *texturecache_t::GetPtr(const char *name, texture_class_t mode, bool name_8chars)
 {
   // "No texture" marker.
   if (name[0] == '-')
     return NULL;
 
-  // TODO unfortunate, could be avoided if we used a non-case-sensitive string comparison functor...
   char name8[9];
-  strncpy(name8, name, 8);
-  name8[8] = '\0';
-  strupr(name8);
+
+  if (name_8chars)
+    {
+      // NOTE texture names in Doom map format are max 8 chars long and not always NUL-terminated!
+      strncpy(name8, name, 8);
+      name8[8] = '\0';
+      // TODO unfortunate, could be avoided if we used a non-case-sensitive string comparison functor...
+      strupr(name8);
+      name = name8;
+    }
 
   cacheitem_t *t;
 
   switch (mode)
     {
     case TEX_wall: // walls
-      if (!(t = new_tex.Find(name8)))
-	if (!(t = doom_tex.Find(name8)))
-	  t = flat_tex.Find(name8);
+      if (!(t = new_tex.Find(name)))
+	if (!(t = doom_tex.Find(name)))
+	  t = flat_tex.Find(name);
       break;
 
     case TEX_floor: // floors, ceilings
-      if (!(t = new_tex.Find(name8)))
-	if (!(t = flat_tex.Find(name8)))
-	  t = doom_tex.Find(name8);
+      if (!(t = new_tex.Find(name)))
+	if (!(t = flat_tex.Find(name)))
+	  t = doom_tex.Find(name);
       break;
 
     case TEX_sprite: // sprite frames
-      t = sprite_tex.Find(name8);
+      t = sprite_tex.Find(name);
       break;
 
     case TEX_lod: // menu, HUD, console, background images
-      if (!(t = new_tex.Find(name8)))
-	if (!(t = lod_tex.Find(name8)))
+      if (!(t = new_tex.Find(name)))
+	if (!(t = lod_tex.Find(name)))
 	  {
 	    // Not found there either, try loading on demand
-	    Texture *temp = Load(name8);
+	    Texture *temp = Load(name);
 	    if (temp)
 	      Insert(temp, lod_tex);
 	    t = temp;
@@ -910,7 +910,7 @@ Texture *texturecache_t::GetPtr(const char *name, texture_class_t mode)
       // Item not found at all.
       // Some nonexistant items are asked again and again.
       // We use a special cacheitem_t to link their names to the default item.
-      t = new cacheitem_t(name8);
+      t = new cacheitem_t(name);
       t->usefulness = -1; // negative usefulness marks them as links
 
       // NOTE insertion to cachesource only, not to id-map
@@ -929,7 +929,7 @@ Texture *texturecache_t::GetPtr(const char *name, texture_class_t mode)
       default_item->refcount++;
       default_item->usefulness++;
 
-      // CONS_Printf("Def. texture used for '%s'\n", name8);
+      // CONS_Printf("Def. texture used for '%s'\n", name);
       return default_item;
     }
   else
@@ -1008,7 +1008,7 @@ int texturecache_t::GetTextureOrTransmap(const char *name, int& map_num)
 /// Lump number must be valid. Returns true if succesful.
 bool texturecache_t::BuildLumpTexture(int lump, bool h_start, cachesource_t &source)
 {
-  const char *name = fc.FindNameForNum(lump); // not always NUL-terminated!
+  const char *name = fc.FindNameForNum(lump); // now always NUL-terminated!
   Texture *orig = reinterpret_cast<Texture *>(source.Find(name));
   if ((h_start && !orig) || (!h_start && orig))
     return false; // not to be added
@@ -1151,7 +1151,8 @@ int texturecache_t::ReadTextures()
 	// maptexture describes texture name, size, and
 	// used patches in z order from bottom to top
 	maptexture_t *mtex = (maptexture_t *)((byte *)maptex + offset);
-	DoomTexture *tex = new DoomTexture(mtex);
+	strncpy(name8, mtex->name, 8);
+	DoomTexture *tex = new DoomTexture(name8, mtex);
 
 	mappatch_t *mp = mtex->patches;
 	DoomTexture::texpatch_t *p = tex->patches;
@@ -1247,7 +1248,7 @@ int texturecache_t::ReadTextures()
 	{
 	  LumpTexture *t;
 
-	  const char *name = fc.FindNameForNum(lump); // not always NUL-terminated!
+	  const char *name = fc.FindNameForNum(lump); // now always NUL-terminated
 	  if (flat_tex.Find(name))
 	    continue; // already defined
 
@@ -1766,34 +1767,6 @@ void R_Init8to16()
   hicolormaps = (short int *)Z_Malloc(32768 /**34*/, PU_STATIC, 0);
   for (i=0;i<16384;i++)
     hicolormaps[i] = i<<1;
-}
-
-
-// Converts indexed data in column major order to RGBA data in row
-// major order. The caller is responsible for Z_Free:ing the resulting
-// graphic.
-
-RGBA_t *ColumnMajorToRGBA(byte *pixeldata, int w, int h)
-{
-  RGBA_t *result = static_cast<RGBA_t*>(Z_Malloc(sizeof(RGBA_t)*w*h, PU_TEXTURE, NULL));
-  RGB_t *palette = static_cast<RGB_t*>(fc.CacheLumpName("PLAYPAL", PU_CACHE));
-
-  for (int i=0; i<w; i++)
-    for (int j=0; j<h; j++)
-      {
-	byte curbyte = *pixeldata++;
-	RGB_t  *rgb_in = &palette[curbyte];
-	RGBA_t *rgba_out = &result[j*w + i]; // transposed
-	rgba_out->red   = rgb_in->r;
-	rgba_out->green = rgb_in->g;
-	rgba_out->blue  = rgb_in->b;
-	if (curbyte == TRANSPARENTPIXEL)
-	  rgba_out->alpha = 0;
-	else
-	  rgba_out->alpha = 255;
-      }
-
-  return result;
 }
 
 

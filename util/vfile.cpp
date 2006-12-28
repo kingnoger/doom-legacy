@@ -162,8 +162,8 @@ bool VDir::Open(const char *fname)
       const char *temp = d->d_name;
       if (temp[0] != '.')
 	{
-	  strncpy(contents[i].name, temp, MAX_VDIR_ITEM_NAME);
 	  string fullname = filename + temp;
+	  strncpy(contents[i].name, fullname.c_str(), MAX_VDIR_ITEM_NAME);
 
 	  if (stat(fullname.c_str(), &tempstat))
 	    {
@@ -174,6 +174,7 @@ bool VDir::Open(const char *fname)
 	    contents[i].size = tempstat.st_size;
 
 	  imap.insert(pair<const char *, int>(contents[i].name, i)); // fill the name map
+	  // TODO also insert just last part of filename to map?
 	  i++;
 	}
     }
@@ -181,6 +182,8 @@ bool VDir::Open(const char *fname)
   // set up caching
   cache = (lumpcache_t *)Z_Malloc(numitems * sizeof(lumpcache_t), PU_STATIC, NULL);
   memset(cache, 0, numitems * sizeof(lumpcache_t));
+
+  //ListItems();
 
   return true;
 }
@@ -214,12 +217,11 @@ int VDir::ReadItemHeader(int i, void *dest, int size)
   if (size == 0 || size > item->size)
     size = item->size;
 
-  string temp = filename + item->name;
   // cache cannot be used here, because this function is used in the caching process
-  FILE *str = fopen(temp.c_str(), "rb");
+  FILE *str = fopen(item->name, "rb");
   if (!str)
     {
-      I_Error("Could not access file %s within directory %s!\n", item->name, filename.c_str());
+      I_Error("Could not access file '%s'!\n", item->name);
       return 0;
     }
 

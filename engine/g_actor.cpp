@@ -1195,11 +1195,12 @@ DActor::DActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
   state = info->spawnstate;
   tics = state->tics;
 
-  /*
-  if (t == MT_SHOTGUY)
-    pres = new modelpres_t("models/sarge/");
+#ifdef TEST_MD3
+#warning TESTing MD3 models!
+  if (t == MT_TROOP)
+    pres = new modelpres_t("models/players/imp/");
   else
-  */
+#endif
   pres = new spritepres_t(info, 0);
 }
 

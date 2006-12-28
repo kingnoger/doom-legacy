@@ -18,7 +18,7 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Texture cache, texture data structures
+/// \brief Texture cache, Texture classes, fadetables.
 
 #ifndef r_data_h
 #define r_data_h 1
@@ -44,7 +44,7 @@ struct patch_t
   Uint16 width;         ///< bounding box size
   Uint16 height;
   Sint16 leftoffset;    ///< pixels to the left of origin
-  Sint16 topoffset;     ///< pixels below the origin
+  Sint16 topoffset;     ///< pixels above the origin
   Uint32 columnofs[0];  ///< [width] byte offsets to the columns
 } __attribute__((packed));
 
@@ -106,13 +106,17 @@ public:
   int     id;    ///< unique texture ID  TODO temp solution, replace with pointers?
   float   worldwidth, worldheight; ///< dimensions in world units
   float   leftoffs, topoffs;       ///< internal image offsets in world units
-  byte    w_bits, h_bits;          ///< largest power-of-two sizes <= actual bitmap size
 
   short   width, height;           ///< bitmap dimensions in texels
+  byte    w_bits, h_bits;          ///< largest power-of-two sizes <= actual bitmap size
   fixed_t xscale, yscale;          ///< texel-size / world-size
 
 protected:
-  byte    *pixels; ///< raw bitmap data in column-major order for sw renderer
+  /// Indexed column-major data for sw renderer, built and accessed using GetData(), OR
+  /// row-major data for OpenGL, built using GLGetData(), format in 'format'.
+  /// NOTE: GLPrepare _must not_ be used on a Texture if any of the "sw renderer" functions are.
+  byte    *pixels;
+  GLenum   format; ///< Storage format of pixels for OpenGL.
   GLuint   glid;   ///< OpenGL handle. Accessed using GLPrepare().
   static const GLuint NOTEXTURE = 0;
 
@@ -137,24 +141,28 @@ public:
   /// sw renderer: True means that texture is available in column_t format using GetMaskedColumn
   virtual bool Masked() { return false; };
 
-  /// sw renderer: Get masked column data. if Masked() is false, returns NULL
-  virtual column_t *GetMaskedColumn(fixed_t col) = 0;
+  /// sw renderer: Get masked indexed texture column data. if Masked() is false, returns NULL
+  virtual column_t *GetMaskedColumn(fixed_t col) { return NULL; };
 
-  /// sw renderer: Get raw unmasked texture column data.
-  virtual byte *GetColumn(fixed_t col) = 0;
+  /// sw renderer: Get unmasked indexed texture column data.
+  virtual byte *GetColumn(fixed_t col);
 
-  /// Get raw column-major texture data.
+  /// sw renderer: Get indexed column-major texture data.
   virtual byte *GetData() = 0;
 
-  /// Creates an OpenGL texture if necessary, returns the handle.
+protected:
+  /// Helper function for preparing OpenGL textures. Sets 'pixels' pointing to data in format described by 'format'.
+  virtual void GLGetData();
+
+public:
+  /// Creates an OpenGL texture if necessary, returns the handle. Uses the virtualized GLGetData().
   virtual GLuint GLPrepare();
 
   /// Unloads the texture from OpenGL. 
-  virtual bool ClearGLTexture();
+  bool ClearGLTexture();
 
   /// draw the Texture flat on screen.
   virtual void Draw(float x, float y, int scrn) {}; // scrn may contain flags
-  virtual void HWR_Draw(float x, float y, int flags) {};
 
   /// tile an area of the screen with the Texture
   virtual void DrawFill(int x, int y, int w, int h) {};
@@ -164,25 +172,20 @@ public:
 
 /// \brief Textures which reside in a single lump.
 /// This class handles raw pages and Doom flats, derived classes handle png and jpeg,
-/// ideally by redefining the constructor and the function Generate() only.
+/// ideally by redefining the constructor and the *GetData() functions only.
 class LumpTexture : public Texture
 {
 public:
   int    lump;
 
 protected:
-  virtual byte   *Generate();   ///< Sets up pixels as indexed col-major. Subclasses should redefine this.
-  virtual RGBA_t *GenerateGL(); ///< Sets up pixels as RGBA row-major. Subclasses should redefine this.
+  virtual void GLGetData(); ///< Sets up pixels as RGBA row-major. Subclasses should redefine this.
 
 public:
   LumpTexture(const char *name, int lump, int w, int h);
 
-  virtual column_t *GetMaskedColumn(fixed_t col) { return NULL; }
-  virtual byte *GetColumn(fixed_t col);
-  virtual byte *GetData() { return Generate(); }
-  virtual GLuint GLPrepare();
+  virtual byte *GetData(); ///< pixels to indexed column-major texture data. Subclasses should redefine this.
   virtual void Draw(float x, float y, int scrn);
-  virtual void HWR_Draw(float x, float y, int flags);
   virtual void DrawFill(int x, int y, int w, int h);
 };
 
@@ -194,11 +197,11 @@ class PNGTexture : public LumpTexture
 {
 protected:
   bool ReadData(bool read_image, bool col_major);
-  virtual byte   *Generate();
-  virtual RGBA_t *GenerateGL();
+  virtual void GLGetData();
 
 public:
   PNGTexture(const char *name, int lump);
+  virtual byte *GetData();
 };
 
 
@@ -215,7 +218,6 @@ class PatchTexture : public Texture
 
 protected:
   patch_t *GeneratePatch();
-  byte    *GenerateData();
 
 public:
   PatchTexture(const char *name, int lump);
@@ -223,11 +225,9 @@ public:
 
   virtual bool Masked() { return true; };
   virtual column_t *GetMaskedColumn(fixed_t col);
-  virtual byte *GetColumn(fixed_t col);
-  virtual byte *GetData() { return GenerateData(); }
+  virtual byte *GetData();
 
   virtual void Draw(float x, float y, int scrn);
-  virtual void HWR_Draw(float x, float y, int flags);
 };
 
 
@@ -235,12 +235,12 @@ public:
 /// \brief Doom Textures (which are built out of patches)
 ///
 /// All the patches are drawn back to front into the cached texture.
-/// In SW mode, the texture data is stored in column-major order (like patches)
+/// In SW mode, a single-patch DoomTexture is also stored in patch_t format.
 class DoomTexture : public Texture
 {
 public:
-  // A single patch from a texture definition,
-  // basically a rectangular area within the texture rectangle.
+  /// A single patch from a texture definition,
+  /// basically a rectangular area within the texture rectangle.
   struct texpatch_t
   {
     /// Block origin (always UL), which has already accounted for the internal origin of the patch.
@@ -254,23 +254,21 @@ public:
 
   Uint32     *columnofs;   ///< offsets from texdata to raw column data
   byte       *patch_data;  ///< texture data in patch_t format
-  //byte       *bitmap_data; ///< texture data in raw column-major format
 
 protected:
   short       widthmask;  ///<  (1 << w_bits) - 1
 
 protected:
   patch_t *GeneratePatch();
-  byte    *GenerateData();
 
 public:
-  DoomTexture(const struct maptexture_t *mtex);
+  DoomTexture(const char *name, const struct maptexture_t *mtex);
   virtual ~DoomTexture();
 
   virtual bool Masked() { return (patchcount == 1); };
   virtual column_t *GetMaskedColumn(fixed_t col);
   virtual byte *GetColumn(fixed_t col);
-  virtual byte *GetData() { return GenerateData(); }
+  virtual byte *GetData();
 };
 
 
@@ -352,7 +350,7 @@ public:
   inline void InsertDoomTex(Texture *t) { Insert(t, doom_tex, true); };
 
   /// Returns pointer to an existing Texture, or tries creating it if nonexistant.
-  Texture *GetPtr(const char *name, texture_class_t mode = TEX_lod);
+  Texture *GetPtr(const char *name, texture_class_t mode = TEX_lod, bool name_8chars = true);
 
   /// like GetPtr, but takes a lump number instead of a name. For TEX_lod ONLY!
   Texture *GetPtrNum(int n);
@@ -421,9 +419,6 @@ public:
   ~fadetable_t();
 };
 
-
-// Create RGBA texture from paletted data.
-RGBA_t *ColumnMajorToRGBA(byte *pixeldata, int w, int h);
 
 
 // Quantizes an RGB color into current palette

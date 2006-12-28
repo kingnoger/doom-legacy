@@ -17,7 +17,6 @@ export WIN=1
 endif
 
 # Debugging and optimization
-
 ifdef OPT
 CF = -O
 else
@@ -25,11 +24,15 @@ CF = -g -O0
 endif
 
 # Dynamic or static linkage? I like static.
-
 ifdef DYNAMIC
 linkage = -DDYNAMIC_LINKAGE
 else
 linkage = 
+endif
+
+# Freeform defines
+ifdef DEF
+CF += -D$(DEF)
 endif
 
 

@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2003-2005 by DooM Legacy Team.
+// Copyright (C) 2003-2006 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,7 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //---------------------------------------------------------------------
 
@@ -29,8 +28,8 @@
 
 cacheitem_t::cacheitem_t(const char *n)
 {
-  strncpy(name, n, 8); // we make a copy so it stays intact as long as this cacheitem lives
-  name[8] = '\0';      // NUL-terminated to be safe
+  strncpy(name, n, CACHE_NAME_LEN); // we make a copy so it stays intact as long as this cacheitem lives
+  name[CACHE_NAME_LEN] = '\0';      // NUL-terminated to be safe
   usefulness = 0;
   refcount = 0;
 }

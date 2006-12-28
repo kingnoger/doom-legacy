@@ -37,6 +37,7 @@
 #include "g_pawn.h"
 #include "g_player.h"
 
+#include "r_sprite.h"
 #include "sounds.h"
 #include "m_random.h"
 #include "p_maputl.h"
@@ -755,6 +756,7 @@ void A_Look(DActor *actor)
     }
 
   actor->SetState(actor->info->seestate);
+  actor->pres->SetAnim(presentation_t::Run);
 }
 
 
@@ -810,6 +812,7 @@ void A_Chase(DActor *actor)
 	return;     // got a new target
 
       actor->SetState(actor->info->spawnstate);
+      actor->pres->SetAnim(presentation_t::Idle);
       return;
     }
 
@@ -829,6 +832,7 @@ void A_Chase(DActor *actor)
 	S_StartAttackSound(actor, actor->info->attacksound);
 
       actor->SetState(actor->info->meleestate);
+      actor->pres->SetAnim(presentation_t::Melee);
       return;
     }
 
@@ -842,6 +846,7 @@ void A_Chase(DActor *actor)
 	goto nomissile;
 
       actor->SetState(actor->info->missilestate);
+      actor->pres->SetAnim(presentation_t::Shoot);
       actor->eflags |= MFE_JUSTATTACKED;
       return;
     }
@@ -1317,6 +1322,7 @@ void A_VileChase(DActor *actor)
 		  info = corpsehit->info;
 
 		  corpsehit->SetState(info->raisestate);
+		  corpsehit->pres->SetAnim(presentation_t::Raise);
 
 		  corpsehit->height = info->height;
 		  corpsehit->radius = info->radius;
@@ -1939,7 +1945,10 @@ void A_SpawnFly(DActor *mo)
   DActor *newmobj = mo->mp->SpawnDActor(targ->pos, type);
 
   if (newmobj->LookForEnemies(true))
-    newmobj->SetState(newmobj->info->seestate);
+    {
+      newmobj->SetState(newmobj->info->seestate);
+      newmobj->pres->SetAnim(presentation_t::Run);
+    }
 
   // telefrag anything in this spot
   newmobj->flags2 |= MF2_TELESTOMP;

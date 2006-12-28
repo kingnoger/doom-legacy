@@ -394,7 +394,7 @@ int spritepres_t::Marshal(LArchive &a)
       SetFrame(st);
     }
 
-  a << color << animseq;
+  a << color << (temp = animseq);
   return 0;
 }
 
@@ -411,7 +411,8 @@ int modelpres_t::Marshal(LArchive &a)
       // and restore it: mdl = models.Get("xxx");
     }
 
-  a << color << animseq;
+  a << color << temp;
+  animseq = animseq_e(temp);
   return 0;
 }
 

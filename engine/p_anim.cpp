@@ -140,15 +140,15 @@ public:
   };
 
   virtual bool Masked() { return Update()->Masked(); };
-  virtual byte *GetColumn(fixed_t col) { return Update()->GetColumn(col); }
   virtual column_t *GetMaskedColumn(fixed_t col) { return Update()->GetMaskedColumn(col); }
+  virtual byte *GetColumn(fixed_t col) { return Update()->GetColumn(col); }
   virtual byte *GetData() { return Update()->GetData(); }
+  virtual void GLGetData() {};
 
-  /// The glid of the metatexture changes all the time.
-  virtual GLuint GLPrepare() { return glid = Update()->GLPrepare(); }
+  /// The glid of the metatexture is never changed from NOTEXTURE
+  virtual GLuint GLPrepare() { return Update()->GLPrepare(); }
 
-  virtual void Draw(int x, int y, int scrn) { Update()->Draw(x, y, scrn); }
-  virtual void HWR_Draw(int x, int y, int flags) { Update()->HWR_Draw(x, y, flags); }
+  virtual void Draw(float x, float y, int scrn) { Update()->Draw(x, y, scrn); }
 };
 
 
