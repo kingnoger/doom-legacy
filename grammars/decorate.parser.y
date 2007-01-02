@@ -1,7 +1,7 @@
 // Emacs style mode select   -*- C++ -*-
 //---------------------------------------------------------------------
 //
-// $Id:$
+// $Id: $
 //
 // Copyright (C) 2006-2007 by DooM Legacy Team.
 //
@@ -42,6 +42,7 @@
 %type num {float}
 
 %include {
+#include "g_decorate.h"
 #include "parser_driver.h"
 }
 
